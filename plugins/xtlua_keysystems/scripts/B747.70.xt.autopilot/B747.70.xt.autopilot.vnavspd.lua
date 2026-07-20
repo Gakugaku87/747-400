@@ -18,6 +18,7 @@ vnavSPD_conditions["below"]=-1
 vnavSPD_conditions["above"]=-1
 vnavSPD_conditions["leg"]=0
 vnavSPD_conditions["name"]="unknown"
+vnavSPD_conditions["accelHt"]=-1
 local vnavSPD_state={}
 vnavSPD_state["targetSpd"]=180
 vnavSPD_state["targetAlt"]=5000
@@ -30,12 +31,15 @@ vnavSPD_state["vnavcalcwithTargetAlt"]=0
 vnavSPD_state["gotVNAVSpeed"]=false
 vnavSPD_state["recalcAfter"]=0
 vnavSPD_state["setBaro"]=false
+local function getTakeoffAccelHeight()
+	return tonumber(getFMSData("accelht")) or 1500
+end
 --[[
     clb_src_next()
-    First state during climb, get the altitude for next update as 200ft agl
+    First state during climb, get the pressure altitude corresponding to the selected AGL acceleration height
 ]]
 function clb_src_next()
-    return simDR_pressureAlt1+(100-simDR_radarAlt1) --400ft agl at current pressure alt
+    return simDR_pressureAlt1+(getTakeoffAccelHeight()-simDR_radarAlt1)
 end
 
 --[[
@@ -385,6 +389,11 @@ function B747_update_vnav_speed()
        vnavSPD_state["gotVNAVSpeed"]=false
        lastVNAVSpeed=simDRTime
     end
+    if B747DR_ap_inVNAVdescent==0 and vnavSPD_conditions["accelHt"]~=getFMSData("accelht") then
+       print("new accelHt")
+       vnavSPD_state["gotVNAVSpeed"]=false
+       lastVNAVSpeed=simDRTime
+    end
     if vnavSPD_conditions["leg"]~=B747DR_fmscurrentIndex then
        print("new crzSpd leg")
        vnavSPD_state["gotVNAVSpeed"]=false
@@ -439,6 +448,7 @@ function B747_vnav_setClimbspeed()
     vnavSPD_conditions["descent"]=true
     vnavSPD_conditions["crzAlt"]=B747BR_cruiseAlt
     vnavSPD_conditions["crzSpd"]=getFMSData("crzspd")
+    vnavSPD_conditions["accelHt"]=getFMSData("accelht")
     vnavSPD_conditions["leg"]=B747DR_fmscurrentIndex
     vnavSPD_state["spdIsMach"]=simDR_autopilot_airspeed_is_mach
     vnavSPD_state["gotVNAVSpeed"]=true

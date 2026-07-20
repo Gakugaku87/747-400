@@ -693,6 +693,12 @@ function validFL(value)
 
   return "FL".. (val/100)
 end
+function validAccelHeight(value)
+	if type(value)~="string" or string.match(value,"^%d+$")==nil then return nil end
+	local val=tonumber(value)
+	if val==nil or val%1~=0 or val<400 or val>9999 then return nil end
+	return string.format("%d",val)
+end
 function validateMachSpeed(value)
   local val=tonumber(value)
   
@@ -997,6 +1003,42 @@ function fmsFunctions.setdata(fmsO,value)
     --fmsModules["data"]["fltdst"]=dst
     setFMSData("fltdep",dep)
     setFMSData("fltdst",dst)
+  elseif value=="takeoffFlapAccel" then
+		if del==true then
+			setFMSData("accelht","1500")
+		elseif string.len(fmsO["scratchpad"])==0 then
+			fmsO["scratchpad"]="/"..string.format("%d",tonumber(getFMSData("accelht")) or 1500)
+			return
+		else
+			local entry=fmsO["scratchpad"]
+			local slash=string.find(entry,"/",1,true)
+			local flapValue=nil
+			local accelValue=nil
+
+			if slash~=nil then
+				if slash>1 then flapValue=tonumber(string.sub(entry,1,slash-1)) end
+				if slash<string.len(entry) then accelValue=validAccelHeight(string.sub(entry,slash+1)) end
+				if (slash>1 and flapValue==nil) or (slash<string.len(entry) and accelValue==nil) then
+					fmsO["notify"]="INVALID ENTRY"
+					return
+				end
+			else
+				local numericEntry=tonumber(entry)
+				if numericEntry==10 or numericEntry==20 then
+					flapValue=numericEntry
+				else
+					accelValue=validAccelHeight(entry)
+				end
+			end
+
+			if (flapValue~=nil and flapValue~=10 and flapValue~=20)
+			or (flapValue==nil and accelValue==nil) then
+				fmsO["notify"]="INVALID ENTRY"
+				return
+			end
+			if flapValue~=nil then B747DR_airspeed_flapsRef=flapValue end
+			if accelValue~=nil then setFMSData("accelht",accelValue) end
+		end
   elseif value=="clbspd" then
     if validateSpeed(fmsO["scratchpad"]) ==false then 
       fmsO["notify"]="INVALID ENTRY"
@@ -1037,12 +1079,27 @@ function fmsFunctions.setdata(fmsO,value)
     else
       setFMSData("crzspd",validateMachSpeed(fmsO["scratchpad"]))
     end
-  elseif value=="stepalt" then
-    if validFL(fmsO["scratchpad"]) ~=nil then 
-		setFMSData("stepalt",validFL(fmsO["scratchpad"]))
-    else
-      fmsO["notify"]="INVALID ENTRY"
-    end
+  elseif value=="stepto" then
+		if del==true then
+			setFMSData("stepto","*****")
+		elseif string.len(fmsO["scratchpad"])==0 then
+			local stepTo=getFMSData("stepto")
+			if stepTo=="*****" then stepTo=getFMSData("stepalt") end
+			fmsO["scratchpad"]=stepTo
+			return
+		else
+			local stepTo=validFL(fmsO["scratchpad"])
+			if stepTo~=nil then
+				local stepToFeet=tonumber(string.sub(stepTo,3))*100
+				if B747BR_cruiseAlt>0 and stepToFeet<=B747BR_cruiseAlt then
+					fmsO["notify"]="INVALID ENTRY"
+					return
+				end
+				setFMSData("stepto",stepTo)
+			else
+				fmsO["notify"]="INVALID ENTRY"
+			end
+		end
   elseif value=="desspds" then
     div = string.find(fmsO["scratchpad"], "%/")
     spd=getFMSData("desspd")
