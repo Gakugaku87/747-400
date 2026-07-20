@@ -607,6 +607,7 @@ function defaultFMSData()
   grwt="***.*   ",
   crzalt=string.rep("*", 5),
   accelht="1500",
+  thrredht="1000",
   acarsMessage="",
   clbspd="250",
   transpd="272",
