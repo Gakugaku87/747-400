@@ -93,6 +93,7 @@ fmsPages["TAKEOFF"].getSmallPage=function(self,pgNo,fmsID)
   --Marauder28
   local stab_trim = ""
   local accel_ht = string.format("%d",tonumber(fmsModules["data"].accelht) or 1500)
+  local thrust_reduction_ht = string.format("%d",tonumber(fmsModules["data"].thrredht) or 1000)
   
   if string.len(cg_lineLg) > 0 then
 	  if fmsModules["data"].stab_trim ~= "    " then
@@ -103,8 +104,6 @@ fmsPages["TAKEOFF"].getSmallPage=function(self,pgNo,fmsID)
   end
   --Marauder28
 
-  clbF_Sm = string.format("%-8s", "FLAPS 5")
-  
     return{
 
 "                        ",
@@ -113,7 +112,7 @@ string.format("  /%-21s", accel_ht.."FT"),
 " E/O ACCEL HT     REF VR",
 "1500FT                  ",
 " THR REDUCTION    REF V2",
-clbF_Sm.."                 ",
+string.format("%-24s", thrust_reduction_ht.."FT"),
 --"                        ",
 "               TRIM   CG",
 --"                        ",
@@ -134,3 +133,4 @@ fmsFunctionsDefs["TAKEOFF"]["R2"]={"setDref","VR"}
 fmsFunctionsDefs["TAKEOFF"]["R3"]={"setDref","V2"}
 fmsFunctionsDefs["TAKEOFF"]["R4"]={"setdata","cg_mac"}
 fmsFunctionsDefs["TAKEOFF"]["L1"]={"setdata","takeoffFlapAccel"}
+fmsFunctionsDefs["TAKEOFF"]["L3"]={"setdata","thrustReductionHeight"}

@@ -1039,6 +1039,20 @@ function fmsFunctions.setdata(fmsO,value)
 			if flapValue~=nil then B747DR_airspeed_flapsRef=flapValue end
 			if accelValue~=nil then setFMSData("accelht",accelValue) end
 		end
+  elseif value=="thrustReductionHeight" then
+		if del==true then
+			setFMSData("thrredht","1000")
+		elseif string.len(fmsO["scratchpad"])==0 then
+			fmsO["scratchpad"]=string.format("%d",tonumber(getFMSData("thrredht")) or 1000)
+			return
+		else
+			local thrustReductionHeight=validAccelHeight(fmsO["scratchpad"])
+			if thrustReductionHeight==nil then
+				fmsO["notify"]="INVALID ENTRY"
+				return
+			end
+			setFMSData("thrredht",thrustReductionHeight)
+		end
   elseif value=="clbspd" then
     if validateSpeed(fmsO["scratchpad"]) ==false then 
       fmsO["notify"]="INVALID ENTRY"
