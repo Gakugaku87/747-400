@@ -180,7 +180,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["L3"]=nil
       fmsFunctionsDefs["VNAV"]["L4"]=nil
       fmsFunctionsDefs["VNAV"]["L6"]={"setpage","PROGRESS"}
-      fmsFunctionsDefs["VNAV"]["R1"]={"setdata","stepalt"}
+      fmsFunctionsDefs["VNAV"]["R1"]={"setdata","stepto"}
       fmsFunctionsDefs["VNAV"]["R3"]=nil
       fmsFunctionsDefs["VNAV"]["R6"]={"setpage","LRC"}
       
@@ -204,8 +204,9 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       local czak = -1
       local crzaltString = fmsModules["data"]["crzalt"]
       local stepTD = "  ****z /****NM"
+      local stepTo = fmsModules["data"]["stepto"] or "*****"
 
-      if(crzaltString ~= "*****" and crzaltString ~= nil and gwtk ~= nil) then
+      if(stepTo == "*****" and crzaltString ~= "*****" and crzaltString ~= nil and gwtk ~= nil) then
       
         if(string.sub(crzaltString,1,2) == "FL") then
           czak = string.sub(crzaltString,3)/10 --altitude in thousands of feet
@@ -254,6 +255,9 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
           stepTD = "****z /****NM"    
         end
       end
+
+      local stepAltDisplay = fmsModules["data"]["stepalt"]
+      if stepTo ~= "*****" then stepAltDisplay=stepTo end
 
       -- Calculate ETA based on sim time
       local dtogo = dNM 
@@ -315,7 +319,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       return{
         line1,
       "                        ",
-      fmsModules["data"]["crzalt"].."              "..fmsModules["data"]["stepalt"],
+      fmsModules["data"]["crzalt"].."              "..stepAltDisplay,
       "                        ",
       --"."..fmsModules["data"]["crzspd"].."       ****z /****NM",
       "."..fmsModules["data"]["crzspd"].."     "..stepTD,

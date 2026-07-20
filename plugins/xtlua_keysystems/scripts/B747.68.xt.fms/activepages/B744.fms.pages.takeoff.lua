@@ -92,6 +92,7 @@ fmsPages["TAKEOFF"].getSmallPage=function(self,pgNo,fmsID)
 
   --Marauder28
   local stab_trim = ""
+  local accel_ht = string.format("%d",tonumber(fmsModules["data"].accelht) or 1500)
   
   if string.len(cg_lineLg) > 0 then
 	  if fmsModules["data"].stab_trim ~= "    " then
@@ -108,7 +109,7 @@ fmsPages["TAKEOFF"].getSmallPage=function(self,pgNo,fmsID)
 
 "                        ",
 " FLAP/ACCEL HT    REF V1",
-"  /1500FT               ",
+string.format("  /%-21s", accel_ht.."FT"),
 " E/O ACCEL HT     REF VR",
 "1500FT                  ",
 " THR REDUCTION    REF V2",
@@ -132,4 +133,4 @@ fmsFunctionsDefs["TAKEOFF"]["R1"]={"setDref","V1"}
 fmsFunctionsDefs["TAKEOFF"]["R2"]={"setDref","VR"}
 fmsFunctionsDefs["TAKEOFF"]["R3"]={"setDref","V2"}
 fmsFunctionsDefs["TAKEOFF"]["R4"]={"setdata","cg_mac"}
-fmsFunctionsDefs["TAKEOFF"]["L1"]={"setDref","flapsRef"}
+fmsFunctionsDefs["TAKEOFF"]["L1"]={"setdata","takeoffFlapAccel"}
