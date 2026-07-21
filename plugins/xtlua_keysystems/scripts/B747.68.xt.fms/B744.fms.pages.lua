@@ -699,6 +699,18 @@ function validAccelHeight(value)
 	if val==nil or val%1~=0 or val<400 or val>9999 then return nil end
 	return string.format("%d",val)
 end
+function validStepAltitude(value)
+	if type(value)~="string" then return nil end
+	local val=nil
+	if string.match(value,"^FL%d+$")~=nil then
+		val=tonumber(string.sub(value,3))*100
+	elseif string.match(value,"^%d+$")~=nil then
+		val=tonumber(value)
+		if val~=nil and val<1000 then val=val*100 end
+	end
+	if val==nil or val%100~=0 or val<10000 or val>45100 then return nil end
+	return string.format("FL%03d",val/100)
+end
 function validateMachSpeed(value)
   local val=tonumber(value)
   
@@ -1102,7 +1114,7 @@ function fmsFunctions.setdata(fmsO,value)
 			fmsO["scratchpad"]=stepTo
 			return
 		else
-			local stepTo=validFL(fmsO["scratchpad"])
+			local stepTo=validStepAltitude(fmsO["scratchpad"])
 			if stepTo~=nil then
 				local stepToFeet=tonumber(string.sub(stepTo,3))*100
 				if B747BR_cruiseAlt>0 and stepToFeet<=B747BR_cruiseAlt then
@@ -1262,6 +1274,7 @@ function fmsFunctions.setdata(fmsO,value)
 		if string.len(fmsO["scratchpad"])>0 then
 			local alt=validAlt(fmsO["scratchpad"])
 			if alt~=nil then 
+				setFMSData("stepto","*****")
 				simCMD_FMS_key[fmsO.id]["fpln"]:once()--make sure we arent on the vnav page
 				simCMD_FMS_key[fmsO.id]["clb"]:once()--go to the vnav page
 				simCMD_FMS_key[fmsO.id]["next"]:once() --go to the vnav page 2
