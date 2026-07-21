@@ -176,17 +176,6 @@ function VNAV_CLB(numAPengaged,fmsO)
 
 
 end
-local consumedStepToAltitude=nil
-local function getStepToAltitude()
-	local stepTo=getFMSData("stepto")
-	if stepTo==nil then return nil end
-	stepTo=tostring(stepTo)
-	if string.sub(stepTo,1,2)=="FL" then
-		local flightLevel=tonumber(string.sub(stepTo,3))
-		if flightLevel~=nil then return flightLevel*100 end
-	end
-	return tonumber(stepTo)
-end
 function VNAV_CRZ(numAPengaged,dist)
     --print("VNAV_CRZ alt hold")
     if simDR_autopilot_alt_hold_status == 0 or simDR_autopilot_vs_status~=0 or simDR_autopilot_flch_status~=0 then
@@ -206,19 +195,8 @@ function VNAV_CRZ(numAPengaged,dist)
        -- print("VNAV_CRZ alt hold")
         B747DR_ap_vnav_state=2
     end
-    local stepToAltitude=getStepToAltitude()
-    if stepToAltitude==nil then
-        consumedStepToAltitude=nil
-    elseif consumedStepToAltitude~=stepToAltitude
-      and stepToAltitude>B747BR_cruiseAlt
-      and B747DR_autopilot_altitude_ft>=stepToAltitude
-      and B747DR_ap_inVNAVdescent==0 and dist>50 then
-        consumedStepToAltitude=stepToAltitude
-        B747BR_cruiseAlt=stepToAltitude
-        print("begin VNAV cruise climb to "..stepToAltitude)
-        update_new_crzalt()
-        return
-    end
+    -- STEP TO is advisory only.  As on the airplane, the crew must set the
+    -- MCP altitude and push the altitude selector to initiate CRZ CLB.
     if simDR_autopilot_hold_altitude_ft>B747BR_cruiseAlt and simDR_autopilot_alt_hold_status > 0 and dist>0 then
         B747BR_cruiseAlt=simDR_autopilot_hold_altitude_ft
     end
