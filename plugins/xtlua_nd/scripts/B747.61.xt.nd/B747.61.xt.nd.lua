@@ -68,6 +68,7 @@ end
 navAidsJSON   = find_dataref("xtlua/navaids")
 fmsJSON = find_dataref("xtlua/fms")
 xpFMSDataJSON = find_dataref("xtlua/xpFMSData")
+B747DR_FMSdata = find_dataref("laminar/B747/fms/data")
 simDRTime=find_dataref("sim/time/total_running_time_sec")
 simDR_latitude				= find_dataref("sim/flightmodel/position/latitude")
 simDR_longitude				= find_dataref("sim/flightmodel/position/longitude")
@@ -126,6 +127,7 @@ local usedNaviadsTableFO={}
 local usedNaviadsTableCapt={}
 local currentNaviadsTable={}
 local fmsTable={}
+local fmsData={}
 local lastCaptNavaid=0
 local lastFONavaid=0
 local lastUpdate=0
@@ -154,6 +156,13 @@ function decodeFlightPlan()
   end
   
 end
+function decodeFMSData()
+  if B747DR_FMSdata~=nil and string.len(B747DR_FMSdata)>2 then
+    fmsData=json.decode(B747DR_FMSdata)
+  else
+    fmsData={}
+  end
+end
 function getHeading(lat1,lon1,lat2,lon2)
   b10=math.rad(lat1)
   b11=math.rad(lon1)
@@ -180,6 +189,41 @@ function getDistance(lat1,lon1,lat2,lon2)
   --print(lat1.." "..lon1.." "..lat2.." "..lon2)
   --print("Distance = "..retVal) 
   return retVal
+end
+
+function movePoint(lat1,lon1,distanceInNM,bearing)
+  local brngRad=math.rad(bearing)
+  local latRad=math.rad(lat1)
+  local lonRad=math.rad(lon1)
+  local distFrac=distanceInNM/3440
+  local latitudeResult=math.asin(math.sin(latRad)*math.cos(distFrac)+math.cos(latRad)*math.sin(distFrac)*math.cos(brngRad))
+  local longitudeOffset=math.atan2(math.sin(brngRad)*math.sin(distFrac)*math.cos(latRad),math.cos(distFrac)-math.sin(latRad)*math.sin(latitudeResult))
+  local longitudeResult=(lonRad+longitudeOffset+3*math.pi)%(2*math.pi)-math.pi
+  return math.deg(latitudeResult),math.deg(longitudeResult)
+end
+
+function getRoutePointAtDistance(distanceInNM)
+  local remaining=tonumber(distanceInNM)
+  if remaining==nil or remaining<=0 or table.getn(fmsTable)==0 then return nil,nil end
+
+  local start=B747DR_fmscurrentIndex
+  if start<1 then start=1 end
+  local fromLat=simDR_latitude
+  local fromLong=simDR_longitude
+  for n=start,table.getn(fmsTable),1 do
+    if fmsTable[n]~=nil and tonumber(fmsTable[n][5])~=nil and tonumber(fmsTable[n][6])~=nil then
+      local toLat=tonumber(fmsTable[n][5])
+      local toLong=tonumber(fmsTable[n][6])
+      local legDistance=getDistance(fromLat,fromLong,toLat,toLong)
+      if remaining<=legDistance then
+        return movePoint(fromLat,fromLong,remaining,getHeading(fromLat,fromLong,toLat,toLong))
+      end
+      remaining=remaining-legDistance
+      fromLat=toLat
+      fromLong=toLong
+    end
+  end
+  return nil,nil
 end
 function makeIcon(iconTextData,navtype,text,latitude,longitude,distance)
   if text~=nil and string.lower(text)~="latlong" and iconTextData==iconTextDataCapt and usedNaviadsTableCapt[text]~=nil then return end
@@ -405,6 +449,7 @@ function updateIcons()
 end
 
 function newIcons()
+  decodeFMSData()
   lastCaptNavaid=0
   lastFONavaid=0
   if B747DR_pfd_mode_capt>0 or simDR_map_mode==4 then
@@ -490,6 +535,22 @@ function newIcons()
     if B747DR_nd_mode_fo_sel_dial_pos==2 then
       if tocdist < ranges[simDR_range_dial_fo + 1] and simDR_radarAlt1>-5000 then 
         makeIcon(iconTextDataFO,3008,"T/C",B747BR_tocLat,B747BR_tocLong,tocdist)
+      end
+    end
+  end
+  -- Planned step-climb point.  The FMC prediction is advisory; this symbol
+  -- does not command a climb and disappears when no future step is predicted.
+  local stepDistance=tonumber(fmsData.stepdistance)
+  if B747BR_cruiseAlt>0 and stepDistance~=nil and stepDistance>0 and simDR_radarAlt1>5000 then
+    local stepLat,stepLong=getRoutePointAtDistance(stepDistance)
+    if stepLat~=nil and stepLong~=nil then
+      local scdist=getDistance(display_latitude_cpt,display_longitude_cpt,stepLat,stepLong)
+      if B747DR_nd_mode_capt_sel_dial_pos==2 and scdist<ranges[simDR_range_dial_capt+1] then
+        makeIcon(iconTextDataCapt,3008,"S/C",stepLat,stepLong,scdist)
+      end
+      scdist=getDistance(display_latitude_fo,display_longitude_fo,stepLat,stepLong)
+      if B747DR_nd_mode_fo_sel_dial_pos==2 and scdist<ranges[simDR_range_dial_fo+1] then
+        makeIcon(iconTextDataFO,3008,"S/C",stepLat,stepLong,scdist)
       end
     end
   end
