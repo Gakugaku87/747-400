@@ -672,6 +672,7 @@ function B747_ap_switch_vnavalt_mode_CMDhandler(phase, duration)
 
 		if B747DR_autopilot_altitude_ft > B747BR_cruiseAlt then
 			B747BR_cruiseAlt = B747DR_autopilot_altitude_ft
+			setFMSData("stepto", "*****")
 			print("set new cruise to "..B747BR_cruiseAlt)
 			if is_timer_scheduled(update_new_crzalt) then
 				stop_timer(update_new_crzalt)

@@ -33,6 +33,139 @@ local ClbV2 = 0 --backup of V2 speed which
 
 local conv = 1.0 --converter (pounds to kilos)
 
+local function parseCruiseAltitude(value)
+  if value == nil then return nil end
+  value = tostring(value)
+  if string.sub(value, 1, 2) == "FL" then
+    local flightLevel = tonumber(string.sub(value, 3))
+    if flightLevel ~= nil then return flightLevel * 100 end
+  end
+  return tonumber(value)
+end
+
+local function getStepSizeFeet(cruiseAltitude)
+  local stepSize = tostring(fmsModules["data"].stepsize or "ICAO")
+  if string.sub(stepSize, 1, 4) == "ICAO" then
+    if cruiseAltitude ~= nil and cruiseAltitude >= 41000 then return 4000, "ICAO" end
+    return 2000, "ICAO"
+  end
+  local stepSizeFeet = tonumber(stepSize)
+  if stepSizeFeet == nil then return 2000, "ICAO" end
+  return stepSizeFeet, string.format("%d", stepSizeFeet)
+end
+
+local function formatStepTimeDistance(hoursFromNow, distanceNm)
+  local eta = (tonumber(hh) or 0) + (tonumber(mm) or 0) / 60 + hoursFromNow
+  local etaHour = math.floor(eta) % 24
+  local etaMinute = math.floor((eta - math.floor(eta)) * 60 + 0.5)
+  if etaMinute >= 60 then
+    etaMinute = etaMinute - 60
+    etaHour = (etaHour + 1) % 24
+  end
+  return string.format("%02d%02dz/%4.0fNM", etaHour, etaMinute, math.max(0, distanceNm))
+end
+
+local function publishStepClimbAdvisory(advisory)
+  fmsModules["data"].stepdistance = string.format("%.3f", advisory.distance or -1)
+  return advisory
+end
+
+function B747_getStepClimbAdvisory()
+  local advisory = {
+    target = "",
+    manual = false,
+    label = "NONE",
+    value = "",
+    stepSize = "ICAO",
+    distance = -1
+  }
+
+  local distanceToTod = B747BR_totalDistance - B747BR_tod
+  local groundSpeedKts = 1.94384 * simDR_groundspeed
+  if groundSpeedKts < 200 then groundSpeedKts = 400 end
+  if B747BR_tod > 0 and distanceToTod > 0 and distanceToTod <= 200 then
+    advisory.label = "TO T/D"
+    advisory.value = formatStepTimeDistance(distanceToTod / groundSpeedKts, distanceToTod)
+    fmsModules["data"].stepalt = "*****"
+    return publishStepClimbAdvisory(advisory)
+  end
+
+  local cruiseAltitude = tonumber(B747BR_cruiseAlt)
+  if cruiseAltitude == nil or cruiseAltitude <= 0 then
+    cruiseAltitude = parseCruiseAltitude(fmsModules["data"].crzalt)
+  end
+  local stepSizeFeet, stepSizeDisplay = getStepSizeFeet(cruiseAltitude)
+  advisory.stepSize = stepSizeDisplay
+  if cruiseAltitude == nil or stepSizeFeet == 0 then
+    fmsModules["data"].stepalt = "*****"
+    return publishStepClimbAdvisory(advisory)
+  end
+
+  local enteredStepAltitude = parseCruiseAltitude(fmsModules["data"].stepto)
+  local targetAltitude = nil
+  if enteredStepAltitude ~= nil and enteredStepAltitude > cruiseAltitude then
+    targetAltitude = enteredStepAltitude
+    advisory.manual = true
+  else
+    targetAltitude = cruiseAltitude + stepSizeFeet
+  end
+
+  if targetAltitude > 45100 then
+    fmsModules["data"].stepalt = "*****"
+    return publishStepClimbAdvisory(advisory)
+  end
+
+  advisory.target = string.format("FL%03d", targetAltitude / 100)
+  fmsModules["data"].stepalt = advisory.target
+
+  local grossWeightThousandsKg = simDR_GRWT / 1000
+  local targetThousandsFeet = targetAltitude / 1000
+  local crossoverThousandsFeet = (cruiseAltitude + targetAltitude) / 2000
+
+  -- The step point occurs when the rising optimum-altitude profile reaches
+  -- the midpoint between the present and next step levels.  If buffet/thrust
+  -- limits make the target unavailable at that point, show the later AVAIL AT.
+  local weightAtOptimumStep = (56.87272727 - crossoverThousandsFeet) / 0.07227273
+  local weightAtMaximumStep = (58.16363636 - targetThousandsFeet) / 0.06154545
+  local predictionWeight = weightAtOptimumStep
+  advisory.label = "AT"
+  if weightAtMaximumStep < predictionWeight then
+    predictionWeight = weightAtMaximumStep
+    advisory.label = "AVAIL AT"
+  end
+
+  local weightToBurnKg = math.max(0, (grossWeightThousandsKg - predictionWeight) * 1000)
+  if weightToBurnKg <= 0 then
+    advisory.label = "NOW"
+    advisory.value = ""
+    advisory.distance = 0
+    return publishStepClimbAdvisory(advisory)
+  end
+
+  local fuelFlowKgHour = (simDR_eng_fuel_flow_kg_sec[0]
+    + simDR_eng_fuel_flow_kg_sec[1]
+    + simDR_eng_fuel_flow_kg_sec[2]
+    + simDR_eng_fuel_flow_kg_sec[3]) * 3600
+  if fuelFlowKgHour <= 0 then fuelFlowKgHour = 11000 end
+  local hoursToStep = weightToBurnKg / fuelFlowKgHour
+  local distanceToStep = hoursToStep * groundSpeedKts
+
+  -- Boeing logic does not predict a step point inside 200 NM of T/D.
+  if B747BR_tod > 0 and distanceToTod > 200 and distanceToStep > distanceToTod - 200 then
+    advisory.label = "NONE"
+    advisory.value = ""
+    if not advisory.manual then
+      advisory.target = ""
+      fmsModules["data"].stepalt = "*****"
+    end
+    return publishStepClimbAdvisory(advisory)
+  end
+
+  advisory.distance = distanceToStep
+  advisory.value = formatStepTimeDistance(hoursToStep, distanceToStep)
+  return publishStepClimbAdvisory(advisory)
+end
+
 fmsPages["VNAV"]=createPage("VNAV")
 fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be this way
   
@@ -178,7 +311,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["L1"]={"setdata","crzalt"}
       fmsFunctionsDefs["VNAV"]["L2"]={"setdata","crzspd"}
       fmsFunctionsDefs["VNAV"]["L3"]=nil
-      fmsFunctionsDefs["VNAV"]["L4"]=nil
+      fmsFunctionsDefs["VNAV"]["L4"]={"setdata","stepsize"}
       fmsFunctionsDefs["VNAV"]["L6"]={"setpage","PROGRESS"}
       fmsFunctionsDefs["VNAV"]["R1"]={"setdata","stepto"}
       fmsFunctionsDefs["VNAV"]["R3"]=nil
@@ -199,65 +332,9 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
         optmax = string.format("FL%03.0f  FL%03.0f",optA*10,maxA*10) -- displayed in flight levels
       end
   
-      -- Calculate altitude, and time/distance to step climb altitude
-      -- only show if crz alt +2000 < max
-      local czak = -1
-      local crzaltString = fmsModules["data"]["crzalt"]
-      local stepTD = "  ****z /****NM"
-      local stepTo = fmsModules["data"]["stepto"] or "*****"
-
-      if(stepTo == "*****" and crzaltString ~= "*****" and crzaltString ~= nil and gwtk ~= nil) then
-      
-        if(string.sub(crzaltString,1,2) == "FL") then
-          czak = string.sub(crzaltString,3)/10 --altitude in thousands of feet
-        else
-          czak = crzaltString/1000 ----altitude in thousands of feet
-        end
-        if((czak + 2) < maxA) then
-          fmsModules["data"]["stepalt"] = "FL"..string.format("%03.0f",(czak+2)*10)
-          --stepTD = string.format("     %02d%02dz %04d",hh,mm,dNM)
-          stepTD = string.format("          %02d%02dz",hh,mm)
-
-        elseif(czak+2 < svcCeil) then --step climb below service ceiline
-
-          local stepAlt = maxA + 2 --in thousands of feet
-          rgw = (58.16363636 - stepAlt) / 0.06154545 -- required gross weight, thousands of kg
-
-          --gross weight to lose == kg*1000 fuel to burn
-          gwl = gwtk - rgw -- thousands of kg
-          
-          local hh_sc = hh --default to current time
-          local mm_sc = mm --default to current time
-          local ffkgh = (simDR_eng_fuel_flow_kg_sec[0] + simDR_eng_fuel_flow_kg_sec[1] + simDR_eng_fuel_flow_kg_sec[2] + simDR_eng_fuel_flow_kg_sec[3]) * 3600.0
-          if(ffkgh == nil or ffkgh == 0) then ffkgh = 11000 end
-          if(ffkgh > 0) then
-            htsc = (gwl*1000) / ffkgh --hours to step climb
-            tasc = hh+mm/60 + htsc --time at step climb
-            hh_sc = math.floor(tasc)
-            mm_sc = math.floor(60*(tasc - hh_sc))
-            if(hh_sc > 24) then hh_sc = hh_sc%24 end
-
-            local nmsc = htsc*400 --default, eg., used on ground to approximate time of step climb
-            if(gsKTS > 200) then
-              nmsc = htsc * gsKTS
-            end
-            stepTD = string.format("%02d%02dz/ %4.1fNM",hh_sc,mm_sc,nmsc) --"****z /****NM"
-
-          else
-            --engines not running
-            stepTD="NO ENG PERF"
-          end
-
-          fmsModules["data"]["stepalt"] = string.format("FL%03d",(czak+2)*10)
-
-        else --cannot climb above service ceiling
-          fmsModules["data"]["stepalt"] = "*****"
-          stepTD = "****z /****NM"    
-        end
-      end
-
-      local stepAltDisplay = fmsModules["data"]["stepalt"]
-      if stepTo ~= "*****" then stepAltDisplay=stepTo end
+      local stepAdvisory = B747_getStepClimbAdvisory()
+      local stepAltLarge = ""
+      if stepAdvisory.manual then stepAltLarge = stepAdvisory.target end
 
       -- Calculate ETA based on sim time
       local dtogo = dNM 
@@ -319,15 +396,14 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       return{
         line1,
       "                        ",
-      fmsModules["data"]["crzalt"].."              "..stepAltDisplay,
+      string.format("%-5s%14s%5s", fmsModules["data"]["crzalt"], "", stepAltLarge),
       "                        ",
-      --"."..fmsModules["data"]["crzspd"].."       ****z /****NM",
-      "."..fmsModules["data"]["crzspd"].."     "..stepTD,
+      string.format(".%s%5s%-15s", fmsModules["data"]["crzspd"], "", stepAdvisory.value),
       "                        ",
       --pctn1.."    ****z /***.*",
       pctn1.."%       "..etafuel,
       "                        ",
-      "ICAO        "..optmax,
+      string.format("%-12s%s", stepAdvisory.stepSize, optmax),
       "------------------------",
       "                ENG OUT>", 
       "                        ",
@@ -473,11 +549,15 @@ fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
       }
     elseif pgNo==2 then 
 
+      local stepAdvisory = B747_getStepClimbAdvisory()
+      local stepAltSmall = ""
+      if not stepAdvisory.manual then stepAltSmall = stepAdvisory.target end
+
       return{
       "                    2/3 ",
       " CRZ ALT         STEP TO",
-      "                        ",
-      " ECON SPD             AT",
+      string.format("%19s%5s", "", stepAltSmall),
+      string.format(" ECON SPD%15s", stepAdvisory.label),
       "                        ",
       " N1        "..dICAO.." ETA/FUEL",  
       "                        ",

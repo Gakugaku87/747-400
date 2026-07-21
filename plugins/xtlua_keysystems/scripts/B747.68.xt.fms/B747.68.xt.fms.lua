@@ -618,6 +618,7 @@ function defaultFMSData()
   clbrestalt="5000 ",
   stepalt="FL360",
   stepto=string.rep("*", 5),
+  stepdistance="-1.000",
   crzspd="810",
   desspdmach="805",
   desspd="270",
@@ -1229,6 +1230,7 @@ function after_physics()
 	cM=mm
 	cM=ss
     setNotifications()
+    B747_getStepClimbAdvisory()
     B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
     --print(B747DR_FMSdata)
     fmsL:B747_fms_display()
