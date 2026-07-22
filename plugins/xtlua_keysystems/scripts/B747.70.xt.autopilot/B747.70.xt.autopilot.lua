@@ -542,6 +542,69 @@ function isATEnabled()
 	if B747DR_toggle_switch_position[29] == 1 and B747DR_autothrottle_fail == 0 then return true end
 	return false
 end
+local B747_afds_helpers = dofile("B747.70.xt.autopilot.afds_helpers.lua")
+
+-- Set true only while collecting AFDS tuning data.  Output is rate limited below.
+local AFDS_DIAGNOSTICS_ENABLED = false
+local AFDS_DIAGNOSTIC_INTERVAL_SEC = 1.0
+local AFDS_DIAGNOSTIC_TURN_BANK_DEG = 25.0
+local AFDS_DIAGNOSTIC_MIN_ANTICIPATION_NM = 0.5
+local AFDS_DIAGNOSTIC_MAX_ANTICIPATION_NM = 8.0
+local B747_afds_last_diagnostic_time = -AFDS_DIAGNOSTIC_INTERVAL_SEC
+
+local function B747_afds_valid_waypoint(waypoint)
+	return waypoint ~= nil and type(waypoint[5]) == "number" and type(waypoint[6]) == "number"
+end
+
+local function B747_afds_log_diagnostics(fms)
+	if not AFDS_DIAGNOSTICS_ENABLED or simDRTime - B747_afds_last_diagnostic_time < AFDS_DIAGNOSTIC_INTERVAL_SEC then
+		return
+	end
+	B747_afds_last_diagnostic_time = simDRTime
+
+	local leg_index = B747DR_fmscurrentIndex
+	local distance_nm = -1
+	local turn_angle_deg = -1
+	local turn_radius_nm = -1
+	local anticipation_nm = -1
+	local signed_xtk_nm = 0
+	if fms ~= nil and B747_afds_valid_waypoint(fms[leg_index]) then
+		distance_nm = getDistance(simDR_latitude, simDR_longitude, fms[leg_index][5], fms[leg_index][6])
+		if B747_afds_valid_waypoint(fms[leg_index - 1]) then
+			signed_xtk_nm = B747_afds_helpers.signed_cross_track_nm(
+				fms[leg_index - 1][5], fms[leg_index - 1][6], fms[leg_index][5], fms[leg_index][6],
+				simDR_latitude, simDR_longitude, getDistance, getHeading) or 0
+		end
+		if B747_afds_valid_waypoint(fms[leg_index - 1]) and B747_afds_valid_waypoint(fms[leg_index + 1]) then
+			local incoming_heading = getHeading(fms[leg_index - 1][5], fms[leg_index - 1][6],
+				fms[leg_index][5], fms[leg_index][6])
+			local outgoing_heading = getHeading(fms[leg_index][5], fms[leg_index][6],
+				fms[leg_index + 1][5], fms[leg_index + 1][6])
+			turn_angle_deg = math.abs(getHeadingDifference(outgoing_heading, incoming_heading))
+			local anticipation, radius = B747_afds_helpers.turn_anticipation_nm(
+				simDR_groundspeed * 1.94384449, AFDS_DIAGNOSTIC_TURN_BANK_DEG, turn_angle_deg,
+				AFDS_DIAGNOSTIC_MIN_ANTICIPATION_NM, AFDS_DIAGNOSTIC_MAX_ANTICIPATION_NM)
+			anticipation_nm = anticipation or -1
+			turn_radius_nm = radius or -1
+		end
+	end
+
+	local vnav_state = "unknown"
+	local vnav_reason = "none"
+	if B747_get_vnav_speed_diagnostics ~= nil then
+		local diagnostics = B747_get_vnav_speed_diagnostics()
+		vnav_state = diagnostics.state or vnav_state
+		vnav_reason = diagnostics.reason or vnav_reason
+	end
+
+	print(string.format(
+		"[AFDS NAV] roll=%d/%d pitch=%d/%d leg=%d dist=%.2fnm turn=%.1fdeg radius=%.2fnm anticipate=%.2fnm xtk=%+.2fnm heading=%.1f bankCmd=%.1f bank=%.1f vnav=%s target=%.2f reason=%s",
+		B747DR_ap_FMA_active_roll_mode, B747DR_ap_FMA_armed_roll_mode,
+		B747DR_ap_FMA_active_pitch_mode, B747DR_ap_FMA_armed_pitch_mode,
+		leg_index, distance_nm, turn_angle_deg, turn_radius_nm, anticipation_nm, signed_xtk_nm,
+		simDR_autopilot_heading_deg, B747DR_ap_target_roll, simDR_capt_roll,
+		tostring(vnav_state), B747DR_ap_ias_dial_value, tostring(vnav_reason)))
+end
 dofile("B747.70.xt.autopilot.vnav.lua")
 function autothrottle_reengage()
 	if B747DR_autothrottle_active == 0 and isATEnabled() and simDR_onGround == 0 then
@@ -618,7 +681,7 @@ function B747_ap_switch_vnavspeed_mode_CMDhandler(phase, duration)
 		if B747DR_ap_vnav_state == 2 and B747DR_switchingIASMode==0 then
 			setVNAVState("manualVNAVspd", 1 - getVNAVState("manualVNAVspd"))
 			if getVNAVState("manualVNAVspd") == 0 then
-				setVNAVState("gotVNAVSpeed", false)
+				B747_invalidate_vnav_speed("manual speed intervention ended")
 				B747_vnav_speed()
 			end
 		end
@@ -640,7 +703,7 @@ function update_new_crzalt()
 		B747DR_mcp_hold_pressed = simDRTime
 		setVNAVState("vnavcalcwithTargetAlt", 0)
 		if getVNAVState("manualVNAVspd") == 0 then
-			setVNAVState("gotVNAVSpeed", false)
+			B747_invalidate_vnav_speed("new cruise altitude accepted")
 			B747_vnav_speed()
 		end
 
@@ -696,7 +759,7 @@ function B747_ap_switch_vnavalt_mode_CMDhandler(phase, duration)
 			B747DR_mcp_hold_pressed = simDRTime
 			setVNAVState("vnavcalcwithTargetAlt", 0)
 			if getVNAVState("manualVNAVspd") == 0 then
-				setVNAVState("gotVNAVSpeed", false)
+				B747_invalidate_vnav_speed("MCP altitude selector pushed")
 				B747_vnav_speed()
 			end
 
@@ -1039,7 +1102,7 @@ function B747_ap_VNAV_mode_CMDhandler(phase, duration)
 		elseif B747DR_ap_FMA_active_pitch_mode==1 then
 			B747DR_ap_vnav_state = 1
 			setDescent(false)
-			setVNAVState("gotVNAVSpeed", false)
+			B747_invalidate_vnav_speed("VNAV armed during TOGA")
 			B747_vnav_speed()
 		else
 			B747DR_ap_vnav_state = 1
@@ -1049,7 +1112,7 @@ function B747_ap_VNAV_mode_CMDhandler(phase, duration)
 			B747DR_mcp_hold=0
 			B747DR_ap_inVNAVdescent = 0
 			setDescent(false)
-			setVNAVState("gotVNAVSpeed", false)
+			B747_invalidate_vnav_speed("VNAV armed")
 			B747_vnav_speed()
 		end
 	elseif phase == 2 then
@@ -2181,6 +2244,26 @@ function B747_getCurrentWayPoint(fmsO)
 	end
 end
 
+local LNAV_MAX_PREEMPT_XTK_NM=2.0
+local LNAV_MIN_PREEMPT_XTK_NM=0.3
+local LNAV_PREEMPT_XTK_LEG_FRACTION=0.2
+local LNAV_MAX_AUTOMATIC_SEQUENCE_ADVANCE_LEGS=1
+
+local function B747_lnav_leg_supports_preemption(waypoint)
+	if waypoint==nil or type(waypoint[5])~="number" or type(waypoint[6])~="number" then return false end
+	local waypointType=tonumber(waypoint[2])
+	local waypointName=string.upper(tostring(waypoint[8] or ""))
+	if waypointType==nil or waypointType==0 or waypointType==2048 then return false end
+	if waypointName=="" or waypointName=="PPOS" or waypointName=="VECTOR" or waypointName=="LATLON" then
+		return false
+	end
+	if string.find(waypointName,"DISCONT",1,true) or string.find(waypointName,"HOLD",1,true)
+		or string.find(waypointName,"PROC TURN",1,true) then
+		return false
+	end
+	return true
+end
+
 function B747_getCurrentWayPoint_function(fmsO)
 	
 	if simDR_radarAlt1<1000 and simDR_vvi_fpm_pilot < 500.0 then return end --surpress during final/on ground
@@ -2275,7 +2358,11 @@ function B747_getCurrentWayPoint_function(fmsO)
 						local pemptNext=B747_rescale(0,1,160,20,headingChange)
 						pemptNext=math.min( pemptNext,8)
 						pemptNext=B747_rescale(120,pemptNext/5,320,pemptNext,simDR_groundspeed)
-						if track[1]>math.max((trackLength-pemptNext),0.5) then
+						local maximumPreemptXtk=math.min(LNAV_MAX_PREEMPT_XTK_NM,
+							math.max(LNAV_MIN_PREEMPT_XTK_NM,trackLength*LNAV_PREEMPT_XTK_LEG_FRACTION))
+						local canPreempt=B747_lnav_leg_supports_preemption(fmsO[i])
+							and B747_lnav_leg_supports_preemption(fmsO[i+1]) and track[2]<=maximumPreemptXtk
+						if canPreempt and track[1]>math.max((trackLength-pemptNext),0.5) then
 							--print("End of Track to waypoint "..headingChange.." "..pemptNext)
 							best=i+1
 							bestheadingDiff=headingmatch
@@ -2292,6 +2379,10 @@ function B747_getCurrentWayPoint_function(fmsO)
 		
 		B747DR_ap_lnav_xtk_error=bestOffTrack
 		--print("best Track to waypoint="..best.." / "..bestOffTrack)
+		if B747DR_ap_lnav_xtk_target>-99 and B747DR_fmscurrentIndex>0
+			and best>B747DR_fmscurrentIndex+LNAV_MAX_AUTOMATIC_SEQUENCE_ADVANCE_LEGS then
+			best=B747DR_fmscurrentIndex+LNAV_MAX_AUTOMATIC_SEQUENCE_ADVANCE_LEGS
+		end
 		if best>0 and (best>B747DR_fmscurrentIndex or best<B747DR_fmscurrentIndex-1) and B747DR_fmscurrentIndex ~=best then
 			B747DR_fms_setCurrent = best
 			B747DR_fmscurrentIndex = best
@@ -3554,6 +3645,7 @@ function after_physics()
 	B474_ap_target_heading()
 
 	B747_ap_monitor_AI()
+	B747_afds_log_diagnostics(fms)
 end
 
 --function after_replay() end

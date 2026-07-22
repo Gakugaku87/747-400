@@ -120,9 +120,9 @@ function VNAV_CLB(numAPengaged,fmsO)
 
     --print("VNAV_CLB "..waypointDiff .. " " .. mcpDiff.. " " .. waypointAlt .. " " .. start.. " " .. fmsO[start][9].. " " .. simDR_pressureAlt1)
     if simDR_autopilot_alt_hold_status==2 and (waypointDiff>1000 and (mcpDiff>1000 or mcpDiff<-1000)) then
-        setVNAVState("vnavcalcwithTargetAlt",0)
+		setVNAVState("vnavcalcwithTargetAlt",0)
 		if getVNAVState("manualVNAVspd")==0 then
-		    setVNAVState("gotVNAVSpeed",false)
+		    B747_invalidate_vnav_speed("VNAV climb resumed toward new target altitude")
 		    B747_vnav_speed()
 		end
         B747DR_ap_vnav_state = 3 --resume
