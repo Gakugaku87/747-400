@@ -1,5 +1,5 @@
 -- B747 Auto Step Climb
--- Standalone FlyWithLua NG script for X-Plane 12.
+-- Standalone FlyWithLua NG+ script for X-Plane 12.
 --
 -- This script does not modify the aircraft.  It reads the FMC step-climb
 -- advisory published by the aircraft, sets the MCP altitude at the predicted
@@ -20,16 +20,16 @@ B747_ASC_CONFIG = {
 
 -- Aircraft/FMC interface.  These are public X-Plane datarefs and commands;
 -- no file inside the aircraft is changed by this script.
-dataref("B747_ASC_fms_data", "laminar/B747/fms/data")
+dataref("B747_ASC_fms_data", "laminar/B747/fms/data", "readonly")
 dataref("B747_ASC_mcp_altitude", "laminar/B747/autopilot/heading/altitude_dial_ft", "writable")
-dataref("B747_ASC_cruise_altitude", "laminar/B747/autopilot/dist/cruise_alt")
-dataref("B747_ASC_pressure_altitude", "sim/cockpit2/gauges/indicators/altitude_ft_pilot")
-dataref("B747_ASC_radio_altitude", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
-dataref("B747_ASC_on_ground", "sim/flightmodel/failures/onground_any")
-dataref("B747_ASC_vnav_state", "laminar/B747/autopilot/vnav_state")
-dataref("B747_ASC_vnav_descent", "laminar/B747/autopilot/vnav_descent")
-dataref("B747_ASC_servos_on", "laminar/B747/autopilot/servos_on")
-dataref("B747_ASC_sim_time", "sim/time/total_running_time_sec")
+dataref("B747_ASC_cruise_altitude", "laminar/B747/autopilot/dist/cruise_alt", "readonly")
+dataref("B747_ASC_pressure_altitude", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "readonly")
+dataref("B747_ASC_radio_altitude", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", "readonly")
+dataref("B747_ASC_on_ground", "sim/flightmodel/failures/onground_any", "readonly")
+dataref("B747_ASC_vnav_state", "laminar/B747/autopilot/vnav_state", "readonly")
+dataref("B747_ASC_vnav_descent", "laminar/B747/autopilot/vnav_descent", "readonly")
+dataref("B747_ASC_servos_on", "laminar/B747/autopilot/servos_on", "readonly")
+dataref("B747_ASC_sim_time", "sim/time/total_running_time_sec", "readonly")
 
 local ALT_SELECTOR_COMMAND = "laminar/B747/button_switch/press_altitude"
 local LOG_PREFIX = "[B747 Auto S/C] "
