@@ -12,6 +12,11 @@
 *
 --]]
 
+local vnav_afds_helpers = dofile("B747.70.xt.autopilot.afds_helpers.lua")
+local VNAV_SPEED_FALLBACK_REFRESH_SEC = 60.0
+local VNAV_IAS_DATAREF_SYNC_DELAY_SEC = 0.25
+local VNAV_MACH_TRANSITION_HYSTERESIS = 0.005
+
 local vnavSPD_conditions={}
 vnavSPD_conditions["onground"]=0
 vnavSPD_conditions["below"]=-1
@@ -31,6 +36,130 @@ vnavSPD_state["vnavcalcwithTargetAlt"]=0
 vnavSPD_state["gotVNAVSpeed"]=false
 vnavSPD_state["recalcAfter"]=0
 vnavSPD_state["setBaro"]=false
+vnavSPD_state["lastInvalidationReason"]="initialization"
+vnavSPD_state["lastRecalculationReason"]="none"
+local lastVNAVSpeed=0
+local vnavSPD_observed=nil
+
+local VNAV_SPEED_WATCHED_VALUES={
+    {key="on_ground", reason="air/ground transition"},
+    {key="accel_height_ft", reason="selected ACCEL HT changed"},
+    {key="climb_restriction_alt_ft", reason="FMC climb restriction altitude changed"},
+    {key="climb_restriction_speed_kts", reason="FMC climb restriction speed changed"},
+    {key="climb_transition_alt_ft", reason="FMC climb transition altitude changed"},
+    {key="climb_speed_kts", reason="FMC climb speed changed"},
+    {key="transition_speed_kts", reason="FMC transition speed changed"},
+    {key="transition_alt_ft", reason="FMC transition altitude changed"},
+    {key="cruise_speed", reason="FMC cruise speed changed"},
+    {key="cost_index", reason="FMC cost index changed"},
+    {key="descent_mach", reason="FMC descent Mach changed"},
+    {key="descent_speed_kts", reason="FMC descent speed changed"},
+    {key="descent_transition_speed_kts", reason="FMC descent transition speed changed"},
+    {key="descent_transition_alt_ft", reason="FMC descent transition altitude changed"},
+    {key="descent_restriction_speed_kts", reason="FMC descent restriction speed changed"},
+    {key="descent_restriction_alt_ft", reason="FMC descent restriction altitude changed"},
+    {key="flap_bucket", reason="flap speed limit changed"},
+    {key="leg_index", reason="flight-plan leg sequenced"},
+    {key="flight_phase", reason="climb/cruise/descent phase changed"},
+    {key="in_vnav_descent", reason="VNAV climb/descent state changed"},
+    {key="vnav_state", reason="VNAV active state changed"},
+    {key="cruise_altitude_ft", reason="FMC cruise altitude changed"},
+    {key="mcp_altitude_ft", reason="MCP altitude changed"},
+    {key="vnav_target_altitude_ft", reason="VNAV target altitude changed"},
+    {key="mach_transition_ready", reason="IAS/Mach transition threshold crossed"},
+    {key="descent_mach_transition_ready", reason="descent IAS/Mach transition threshold crossed"},
+    {key="cruise_transition_ready", reason="cruise IAS/Mach transition threshold crossed"}
+}
+
+local function B747_vnav_speed_snapshot()
+    local cruise_speed = tonumber(getFMSData("crzspd"))
+    local transition_speed = tonumber(getFMSData("transpd"))
+    local transition_altitude = tonumber(getFMSData("transalt"))
+    local descent_mach = tonumber(getFMSData("desspdmach"))
+    local mach_transition_ready = false
+    local descent_mach_transition_ready = false
+    local cruise_transition_ready = false
+    if cruise_speed ~= nil then
+        local threshold = (cruise_speed / 10) / 100
+        if vnavSPD_observed ~= nil and vnavSPD_observed.mach_transition_ready then
+            threshold = threshold - VNAV_MACH_TRANSITION_HYSTERESIS
+        else
+            threshold = threshold + VNAV_MACH_TRANSITION_HYSTERESIS
+        end
+        mach_transition_ready = simDR_airspeed_mach > threshold
+    end
+    if descent_mach ~= nil then
+        local threshold = (descent_mach / 10) / 100
+        if vnavSPD_observed ~= nil and vnavSPD_observed.descent_mach_transition_ready then
+            threshold = threshold - VNAV_MACH_TRANSITION_HYSTERESIS
+        else
+            threshold = threshold + VNAV_MACH_TRANSITION_HYSTERESIS
+        end
+        descent_mach_transition_ready = simDR_airspeed_mach > threshold
+    end
+    if transition_speed ~= nil and transition_altitude ~= nil then
+        cruise_transition_ready = simDR_pressureAlt1 >= transition_altitude
+            or simDR_ind_airspeed_kts_pilot >= transition_speed - 1
+    end
+
+    return {
+        pressure_alt_ft=simDR_pressureAlt1,
+        on_ground=simDR_onGround,
+        accel_height_ft=getFMSData("accelht"),
+        climb_restriction_alt_ft=getFMSData("clbrestalt"),
+        climb_restriction_speed_kts=getFMSData("clbrestspd"),
+        climb_transition_alt_ft=getFMSData("spdtransalt"),
+        climb_speed_kts=getFMSData("clbspd"),
+        transition_speed_kts=getFMSData("transpd"),
+        transition_alt_ft=getFMSData("transalt"),
+        cruise_speed=getFMSData("crzspd"),
+        cost_index=getFMSData("costindex"),
+        descent_mach=getFMSData("desspdmach"),
+        descent_speed_kts=getFMSData("desspd"),
+        descent_transition_speed_kts=getFMSData("destranspd"),
+        descent_transition_alt_ft=getFMSData("desspdtransalt"),
+        descent_restriction_speed_kts=getFMSData("desrestspd"),
+        descent_restriction_alt_ft=getFMSData("desrestalt"),
+        flap_bucket=vnav_afds_helpers.flap_speed_bucket(simDR_flap_ratio_control),
+        leg_index=B747DR_fmscurrentIndex,
+        flight_phase=B747DR_ap_flightPhase,
+        in_vnav_descent=(B747DR_ap_inVNAVdescent > 0),
+        vnav_state=B747DR_ap_vnav_state,
+        cruise_altitude_ft=B747BR_cruiseAlt,
+        mcp_altitude_ft=simDR_autopilot_altitude_ft,
+        vnav_target_altitude_ft=B747DR_ap_vnav_target_alt,
+        mach_transition_ready=mach_transition_ready,
+        descent_mach_transition_ready=descent_mach_transition_ready,
+        cruise_transition_ready=cruise_transition_ready
+    }
+end
+
+function B747_invalidate_vnav_speed(reason)
+    vnavSPD_state["gotVNAVSpeed"]=false
+    vnavSPD_state["lastInvalidationReason"]=reason or "explicit refresh request"
+end
+
+function B747_get_vnav_speed_diagnostics()
+    local reasonPrefix="pending:"
+    local reason=vnavSPD_state["lastInvalidationReason"]
+    if vnavSPD_state["gotVNAVSpeed"] then
+        reasonPrefix="recalculated:"
+        reason=vnavSPD_state["lastRecalculationReason"]
+    end
+    return {
+        state=vnavSPD_conditions["name"]..(vnavSPD_state["spdIsMach"] and "/MACH" or "/IAS"),
+        reason=reasonPrefix..tostring(reason)
+    }
+end
+
+function B747_schedule_updateIAS()
+    local timer_is_scheduled=is_timer_scheduled(B747_updateIAS)
+    if vnav_afds_helpers.should_schedule_ias_update(timer_is_scheduled) then
+        run_after_time(B747_updateIAS, VNAV_IAS_DATAREF_SYNC_DELAY_SEC)
+        return true
+    end
+    return false
+end
 local function getTakeoffAccelHeight()
 	return tonumber(getFMSData("accelht")) or 1500
 end
@@ -164,7 +293,7 @@ function clb_src_setSpd()
         B747DR_ap_ias_dial_value = math.min(399.0, B747DR_airspeed_V2)
         B747DR_switchingIASMode=1
         B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
-        run_after_time(B747_updateIAS, 0.25)
+        B747_schedule_updateIAS()
     end
     vnavSPD_state["setBaro"]=false
 end
@@ -176,7 +305,7 @@ function clb_aptres_setSpd()
     B747DR_ap_ias_dial_value = math.min(399.0, spdval)
     B747DR_switchingIASMode=1
     B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
-    run_after_time(B747_updateIAS, 0.25)
+    B747_schedule_updateIAS()
 
 end
 function clb_spcres_setSpd()
@@ -201,7 +330,7 @@ function clb_spcres_setSpd()
       B747DR_ap_ias_dial_value = math.min(399.0, spdval)
       B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
     end
-    run_after_time(B747_updateIAS, 0.25)
+    B747_schedule_updateIAS()
 
 end
 function clb_nores_setSpd()
@@ -228,7 +357,7 @@ function clb_nores_setSpd()
       B747DR_ap_ias_dial_value = math.min(399.0, spdval)
       B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
     end
-    run_after_time(B747_updateIAS, 0.25)
+    B747_schedule_updateIAS()
 
 end
 function clb_crz_setSpd()
@@ -279,7 +408,7 @@ function clb_crz_setSpd()
         simDR_autopilot_airspeed_is_mach = 1
         B747DR_ap_ias_dial_value = spdval
         B747DR_lastap_dial_airspeed=spdval*0.01
-        run_after_time(B747_updateIAS, 0.25)
+        B747_schedule_updateIAS()
     end
 end
 
@@ -309,7 +438,7 @@ function des_src_setSpd()
       B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
 
     end
-    run_after_time(B747_updateIAS, 0.25)
+    B747_schedule_updateIAS()
 end
 function des_aptres_setSpd()
     local spdval=tonumber(getFMSData("destranspd"))
@@ -322,7 +451,7 @@ function des_aptres_setSpd()
     print("convert to destranspd speed ".. spdval)
     B747DR_ap_ias_dial_value = math.min(399.0, spdval)
     B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
-    run_after_time(B747_updateIAS, 0.25)
+    B747_schedule_updateIAS()
     if B747DR_autothrottle_active == 0 and simDR_ind_airspeed_kts_pilot < spdval+5 then							-- AUTOTHROTTLE IS "OFF"
        if isATEnabled() then
         B747DR_autothrottle_active=1
@@ -337,7 +466,7 @@ function des_spcres_setSpd()
     print("convert to desrestspd speed ".. spdval)
     B747DR_ap_ias_dial_value = math.min(399.0, spdval)
     B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
-    run_after_time(B747_updateIAS, 0.25)
+    B747_schedule_updateIAS()
     if B747DR_autothrottle_active == 0 and simDR_ind_airspeed_kts_pilot < spdval+5 then							-- AUTOTHROTTLE IS "OFF"
         if isATEnabled() then
             B747DR_autothrottle_active=1
@@ -361,56 +490,21 @@ end
 function getVNAVState(name)
     return vnavSPD_state[name]
 end
-local lastVNAVSpeed=0
 function B747_update_vnav_speed()
-    if simDR_onGround~=vnavSPD_conditions["onground"] then vnavSPD_state["gotVNAVSpeed"]=false end
-    if vnavSPD_conditions["above"]>0 and vnavSPD_conditions["above"]<simDR_pressureAlt1 then
-      print("above "..vnavSPD_conditions["above"].. " " ..vnavSPD_conditions["name"])
-      vnavSPD_state["gotVNAVSpeed"]=false
-      lastVNAVSpeed=simDRTime
-    end
-    if vnavSPD_conditions["descent"]==(B747DR_ap_inVNAVdescent>0) then
-       print("descent "..B747DR_ap_inVNAVdescent.. " " ..vnavSPD_conditions["name"])
-       vnavSPD_state["gotVNAVSpeed"]=false
-       lastVNAVSpeed=simDRTime
-    end
-    if vnavSPD_conditions["below"]>0 and vnavSPD_conditions["below"]>simDR_pressureAlt1 then
-       print("below "..vnavSPD_conditions["below"].. " " ..vnavSPD_conditions["name"])
-       vnavSPD_state["gotVNAVSpeed"]=false
-       lastVNAVSpeed=simDRTime
-    end
-    if vnavSPD_conditions["crzAlt"]~=B747BR_cruiseAlt then
-       print("new crzAlt")
-       vnavSPD_state["gotVNAVSpeed"]=false
-       lastVNAVSpeed=simDRTime
-    end
-    if vnavSPD_conditions["crzSpd"]~=getFMSData("crzspd") then
-       print("new crzSpd")
-       vnavSPD_state["gotVNAVSpeed"]=false
-       lastVNAVSpeed=simDRTime
-    end
-    if B747DR_ap_inVNAVdescent==0 and vnavSPD_conditions["accelHt"]~=getFMSData("accelht") then
-       print("new accelHt")
-       vnavSPD_state["gotVNAVSpeed"]=false
-       lastVNAVSpeed=simDRTime
-    end
-    if vnavSPD_conditions["leg"]~=B747DR_fmscurrentIndex then
-       print("new crzSpd leg")
-       vnavSPD_state["gotVNAVSpeed"]=false
-       lastVNAVSpeed=simDRTime
-    end
+    local current=B747_vnav_speed_snapshot()
+    local reason=vnav_afds_helpers.vnav_speed_change_reason(vnavSPD_observed, current, {
+        above=vnavSPD_conditions["above"],
+        below=vnavSPD_conditions["below"],
+        above_reason=vnavSPD_conditions["aboveReason"],
+        below_reason=vnavSPD_conditions["belowReason"]
+    }, VNAV_SPEED_WATCHED_VALUES)
+    vnavSPD_observed=current
 
-    local diff=simDRTime-lastVNAVSpeed
-    if diff>30 then
-       vnavSPD_state["gotVNAVSpeed"]=false
-       lastVNAVSpeed=simDRTime
+    if reason~=nil then
+        B747_invalidate_vnav_speed(reason)
+    elseif vnavSPD_state["gotVNAVSpeed"] and simDRTime-lastVNAVSpeed>VNAV_SPEED_FALLBACK_REFRESH_SEC then
+        B747_invalidate_vnav_speed("periodic fault-recovery refresh")
     end
-    --probably not needed?
-    --[[if vnavSPD_conditions["mcpAlt"]~=B747DR_autopilot_altitude_ft then
-        print("new mcpAlt")
-        vnavSPD_conditions["mcpAlt"]=B747DR_autopilot_altitude_ft
-        vnavSPD_state["gotVNAVSpeed"]=false
-     end]]
 end
 function B747_vnav_setClimbspeed()
     local lastAlt=simDR_pressureAlt1+(simDR_radarAlt1-400)
@@ -445,15 +539,20 @@ function B747_vnav_setClimbspeed()
     vnavSPD_conditions["onground"]=simDR_onGround
     vnavSPD_conditions["below"]=lastAlt
     vnavSPD_conditions["above"]=nextAlt
-    vnavSPD_conditions["descent"]=true
+    vnavSPD_conditions["descent"]=(B747DR_ap_inVNAVdescent>0)
+    vnavSPD_conditions["aboveReason"]=(cState=="src") and "crossed selected ACCEL HT"
+        or ("crossed climb speed boundary after "..vnavSPD_conditions["name"])
+    vnavSPD_conditions["belowReason"]="descended below climb speed boundary"
     vnavSPD_conditions["crzAlt"]=B747BR_cruiseAlt
     vnavSPD_conditions["crzSpd"]=getFMSData("crzspd")
     vnavSPD_conditions["accelHt"]=getFMSData("accelht")
     vnavSPD_conditions["leg"]=B747DR_fmscurrentIndex
-    vnavSPD_state["spdIsMach"]=simDR_autopilot_airspeed_is_mach
     vnavSPD_state["gotVNAVSpeed"]=true
     print("climb cState " .. cState .. " lastAlt "..lastAlt .. " nextAlt "..nextAlt)
     spd_states["clb"][cState]["spdfunc"]()
+    vnavSPD_state["spdIsMach"]=(simDR_autopilot_airspeed_is_mach==1)
+    lastVNAVSpeed=simDRTime
+    vnavSPD_state["lastRecalculationReason"]=vnavSPD_state["lastInvalidationReason"]
 end
 
 function B747_vnav_setDescendspeed()
@@ -472,14 +571,18 @@ function B747_vnav_setDescendspeed()
     vnavSPD_conditions["onground"]=simDR_onGround
     vnavSPD_conditions["below"]=nextAlt
     vnavSPD_conditions["above"]=lastAlt
-    vnavSPD_conditions["descent"]=false
+    vnavSPD_conditions["descent"]=(B747DR_ap_inVNAVdescent>0)
+    vnavSPD_conditions["aboveReason"]="climbed above descent speed boundary"
+    vnavSPD_conditions["belowReason"]="crossed descent speed boundary"
     vnavSPD_conditions["crzAlt"]=B747BR_cruiseAlt
     vnavSPD_conditions["crzSpd"]=getFMSData("crzspd")
     vnavSPD_conditions["leg"]=B747DR_fmscurrentIndex
-    vnavSPD_state["spdIsMach"]=simDR_autopilot_airspeed_is_mach
     vnavSPD_state["gotVNAVSpeed"]=true
     print("des cState " .. cState .. " lastAlt "..lastAlt .. " nextAlt "..nextAlt)
     spd_states["des"][cState]["spdfunc"]()
+    vnavSPD_state["spdIsMach"]=(simDR_autopilot_airspeed_is_mach==1)
+    lastVNAVSpeed=simDRTime
+    vnavSPD_state["lastRecalculationReason"]=vnavSPD_state["lastInvalidationReason"]
 end
 function B747_vnav_speed()
     
