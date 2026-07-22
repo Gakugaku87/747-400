@@ -79,6 +79,39 @@ for _, frame_duration in ipairs({0.016, 0.033, 0.101, 0.2}) do
 end
 assert_near(controls.pitch_transition_value(2, 8, variable_frame_elapsed, 0.7),
     2 + (6 * variable_frame_elapsed / 0.7), 0.0001, "variable-frame pitch blend")
+assert(controls.pitch_controller_update_due(true, 0, 0.3),
+    "a pitch mode change must update the controller immediately")
+assert(not controls.pitch_controller_update_due(false, 0.05, 0.3),
+    "transition display refresh must not accelerate the pitch controller")
+assert(controls.pitch_controller_update_due(false, 0.3, 0.3),
+    "pitch controller must update at its normal sample interval")
+
+assert_equal(controls.vertical_direction_for_altitude(10000, 20000, 200),
+    controls.VERTICAL_DIRECTION_CLIMB, "selected-altitude climb direction")
+assert_equal(controls.vertical_direction_for_altitude(20000, 10000, 200),
+    controls.VERTICAL_DIRECTION_DESCENT, "selected-altitude descent direction")
+assert_equal(controls.vertical_direction_for_altitude(10000, 10100, 200),
+    controls.VERTICAL_DIRECTION_LEVEL, "altitude capture direction")
+
+assert_near(controls.limit_speed_pitch_target(-0.2, 0.1, controls.VERTICAL_DIRECTION_CLIMB,
+    800, 245, 250, 160, 340, 0.3), 0.0, 0.0001, "climb target cannot cross below level")
+assert_near(controls.limit_speed_pitch_target(2.9, 3.0, controls.VERTICAL_DIRECTION_CLIMB,
+    800, 245, 250, 160, 340, 0.3), 2.9, 0.0001, "climb may trade excess climb rate for speed")
+assert_near(controls.limit_speed_pitch_target(2.9, 3.0, controls.VERTICAL_DIRECTION_CLIMB,
+    50, 245, 250, 160, 340, 0.3), 3.0, 0.0001, "climb pitch-down stops near level flight")
+assert_near(controls.limit_speed_pitch_target(3.0, 3.0, controls.VERTICAL_DIRECTION_CLIMB,
+    -200, 245, 250, 160, 340, 0.3), 3.3, 0.0001, "wrong-way climb recovers upward")
+assert_near(controls.limit_speed_pitch_target(-0.2, 0.1, controls.VERTICAL_DIRECTION_CLIMB,
+    50, 230, 250, 160, 340, 0.3), -0.2, 0.0001, "severe underspeed overrides climb floor")
+
+assert_near(controls.limit_speed_pitch_target(5.2, 4.9, controls.VERTICAL_DIRECTION_DESCENT,
+    -800, 260, 250, 160, 340, 0.3), 5.0, 0.0001, "descent target cannot pitch above envelope")
+assert_near(controls.limit_speed_pitch_target(4.1, 4.0, controls.VERTICAL_DIRECTION_DESCENT,
+    -50, 260, 250, 160, 340, 0.3), 4.0, 0.0001, "descent pitch-up stops near level flight")
+assert_near(controls.limit_speed_pitch_target(4.0, 4.0, controls.VERTICAL_DIRECTION_DESCENT,
+    200, 260, 250, 160, 340, 0.3), 3.7, 0.0001, "wrong-way descent recovers downward")
+assert_near(controls.limit_speed_pitch_target(5.2, 4.9, controls.VERTICAL_DIRECTION_DESCENT,
+    -50, 336, 250, 160, 340, 0.3), 5.2, 0.0001, "severe overspeed overrides descent ceiling")
 
 local large_roll_step = controls.adaptive_roll_filter(0, 20, 0.1, false)
 local small_roll_step = controls.adaptive_roll_filter(0, 2, 0.1, false)

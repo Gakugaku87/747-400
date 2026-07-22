@@ -584,7 +584,7 @@ function ap_director_pitch(pitchMode)
         return ap_director_pitch_retVal(pitchMode,B744DR_autolandPitch)
     end
     --B747DR_ap_flightPhase == 3 and simDR_autopilot_vs_fpm == -500
-    if ((pitchMode==4 and B747DR_ap_flightPhase ~= 3) or pitchMode==8) 
+    if (pitchMode==4 or pitchMode==8)
     and (simDR_pressureAlt1> holdAlt+B747DR_alt_capture_window or simDR_pressureAlt1< holdAlt-B747DR_alt_capture_window) then
         --local pitchError=math.abs(simDR_AHARS_pitch_heading_deg_pilot-last_simDR_AHARS_pitch_heading_deg_pilot)
         local pitchError=simDR_AHARS_pitch_heading_deg_pilot-last_simDR_AHARS_pitch_heading_deg_pilot
@@ -609,15 +609,19 @@ function ap_director_pitch(pitchMode)
         local min_speedDelta=0
         local max_speedDelta=0
         local minSafeSpeed = B747DR_airspeed_Vmc + 10
+        local maxSafeSpeed = B747DR_airspeed_Vmax
         local speedDiff=math.abs(simDR_ind_airspeed_kts_pilot-simDR_autopilot_airspeed_kts)
-        local canDescend = true
-        local canAscend = true
-       -- if simDR_pressureAlt1> holdAlt and simDR_vvi_fpm_pilot > -200 and simDR_ind_airspeed_kts_pilot<B747DR_airspeed_Vmax-10 then canAscend = false end
-        --if simDR_pressureAlt1< holdAlt and simDR_vvi_fpm_pilot < 200 and simDR_ind_airspeed_kts_pilot>minSafeSpeed then canDescend = false end
+        local canPitchDown = true
+        local canPitchUp = true
+        local verticalDirection=B747_afds_controls.vertical_direction_for_altitude(
+            simDR_pressureAlt1,holdAlt,B747DR_alt_capture_window)
 
-        if simDR_vvi_fpm_pilot > 200 and (simDR_ind_airspeed_kts_pilot<simDR_autopilot_airspeed_kts-5) then canAscend = false end
-        if simDR_vvi_fpm_pilot < -200 and (simDR_ind_airspeed_kts_pilot>simDR_autopilot_airspeed_kts+5) then canDescend = false end
-        if B747DR_ap_inVNAVdescent>0 and simDR_vvi_fpm_pilot < -500 and simDR_autopilot_airspeed_kts< simDR_ind_airspeed_kts_pilot+5 then canDescend = false end
+        if simDR_vvi_fpm_pilot > 200 and (simDR_ind_airspeed_kts_pilot<simDR_autopilot_airspeed_kts-5) then canPitchUp = false end
+        if simDR_vvi_fpm_pilot < -200 and (simDR_ind_airspeed_kts_pilot>simDR_autopilot_airspeed_kts+5) then canPitchDown = false end
+        if verticalDirection==B747_afds_controls.VERTICAL_DIRECTION_DESCENT and simDR_vvi_fpm_pilot < -500
+            and simDR_autopilot_airspeed_kts<simDR_ind_airspeed_kts_pilot+5 then
+            canPitchDown = false
+        end
         if  speedDiff > 1 then
             if (simDR_autopilot_airspeed_kts< simDR_ind_airspeed_kts_pilot-1) then
                 max_speedDelta=0.001+speedDiff/250
@@ -627,31 +631,30 @@ function ap_director_pitch(pitchMode)
             min_speedDelta=max_speedDelta/3
         end
 
-        if ((simDR_autopilot_airspeed_kts> simDR_ind_airspeed_kts_pilot+1) and speed_delta<max_speedDelta 
-            or (simDR_autopilot_airspeed_kts< simDR_ind_airspeed_kts_pilot-1) and speed_delta<-max_speedDelta) and pitchError<0.5 and canDescend
+        local previousPitchTarget=last_simDR_AHARS_pitch_heading_deg_pilot
+        local requestedPitchTarget=previousPitchTarget
+        if ((simDR_autopilot_airspeed_kts> simDR_ind_airspeed_kts_pilot+1) and speed_delta<max_speedDelta
+            or (simDR_autopilot_airspeed_kts< simDR_ind_airspeed_kts_pilot-1) and speed_delta<-max_speedDelta) and pitchError<0.5 and canPitchDown
         then
             if debug_flight_directors==1 then
                 print("-simDR_AHARS_pitch_heading_deg_pilot "..simDR_AHARS_pitch_heading_deg_pilot.." simDR_autopilot_airspeed_kts "..simDR_autopilot_airspeed_kts.." simDR_ind_airspeed_kts_pilot "..simDR_ind_airspeed_kts_pilot.." speed_delta "..speed_delta.." min_speedDelta "..min_speedDelta.." max_speedDelta "..max_speedDelta.." rog "..rog)
             end
-            last_simDR_AHARS_pitch_heading_deg_pilot= (last_simDR_AHARS_pitch_heading_deg_pilot-rog)
+            requestedPitchTarget=previousPitchTarget-rog
         elseif ((simDR_autopilot_airspeed_kts< simDR_ind_airspeed_kts_pilot-1) and speed_delta>-min_speedDelta 
-            or (simDR_autopilot_airspeed_kts> simDR_ind_airspeed_kts_pilot+1) and speed_delta>min_speedDelta ) and pitchError>-0.5 and canAscend
+            or (simDR_autopilot_airspeed_kts> simDR_ind_airspeed_kts_pilot+1) and speed_delta>min_speedDelta ) and pitchError>-0.5 and canPitchUp
         then
             if debug_flight_directors==1 then
                 print("+simDR_AHARS_pitch_heading_deg_pilot "..simDR_AHARS_pitch_heading_deg_pilot.." simDR_autopilot_airspeed_kts "..simDR_autopilot_airspeed_kts.." simDR_ind_airspeed_kts_pilot "..simDR_ind_airspeed_kts_pilot.." speed_delta "..speed_delta.." min_speedDelta "..min_speedDelta.." max_speedDelta "..max_speedDelta.." rog "..rog)
             end
-            last_simDR_AHARS_pitch_heading_deg_pilot= (last_simDR_AHARS_pitch_heading_deg_pilot+rog)
+            requestedPitchTarget=previousPitchTarget+rog
         end
 
         last_altitude=simDR_pressureAlt1
-        if last_simDR_AHARS_pitch_heading_deg_pilot<-3.5 then
-            last_simDR_AHARS_pitch_heading_deg_pilot=-3.5
-        elseif last_simDR_AHARS_pitch_heading_deg_pilot>15 then 
-            last_simDR_AHARS_pitch_heading_deg_pilot=15
-        end
+        last_simDR_AHARS_pitch_heading_deg_pilot=B747_afds_controls.limit_speed_pitch_target(
+            requestedPitchTarget,previousPitchTarget,verticalDirection,simDR_vvi_fpm_pilot,
+            simDR_ind_airspeed_kts_pilot,simDR_autopilot_airspeed_kts,minSafeSpeed,maxSafeSpeed,time)
         retval=last_simDR_AHARS_pitch_heading_deg_pilot
-        last_simDR_AHARS_pitch_heading_deg_pilot=retval
-        
+
         return ap_director_pitch_retVal(pitchMode,retval)
     elseif pitchMode~=2 and 
     (pitchMode==5 or pitchMode==9 or 
@@ -946,6 +949,8 @@ function ap_director_yaw_integral()
 end
 local current_pitch_intregal=0
 local directorLastPitchMode=0
+local directorLastRawPitch=0
+local director_lastPitchControlUpdate=0
 function ap_director_pitch_integral()
     local displayUpdate=false
     local pitchMode=B747DR_ap_FMA_active_pitch_mode
@@ -957,7 +962,20 @@ function ap_director_pitch_integral()
     if modeChanged or (simDRTime-director_lastPitchRecordUpdate)>effectiveSampleRate then
         displayUpdate=true
         director_lastPitchRecordUpdate=simDRTime
-        local directorPitch=ap_director_pitch(pitchMode)
+        -- Transition blending needs a fast display refresh, but the underlying
+        -- pitch controller must keep its normal sample rate.  Calling the
+        -- controller at the blend rate multiplies its per-update correction
+        -- during FLCH/VNAV handoffs and can produce a sharp pitch-down.
+        local controllerUpdateDue=B747_afds_controls.pitch_controller_update_due(modeChanged,
+            simDRTime-director_lastPitchControlUpdate,directorSampleRate)
+        local directorPitch
+        if controllerUpdateDue then
+            directorPitch=ap_director_pitch(pitchMode)
+            directorLastRawPitch=B747_afds_pitch_target_before_blend
+            director_lastPitchControlUpdate=simDRTime
+        else
+            directorPitch=ap_director_pitch_retVal(pitchMode,directorLastRawPitch)
+        end
         if modeChanged and B747_pitch_transition_active() then
             -- The transition itself supplies damping; discard stale samples from the old mode.
             for i=1,10,1 do
@@ -1067,6 +1085,8 @@ function ap_pitch_assist()
         simDR_electric_trim=1
         B747_reset_pitch_transition()
         directorLastPitchMode=0
+        directorLastRawPitch=simDR_AHARS_pitch_heading_deg_pilot
+        director_lastPitchControlUpdate=simDRTime
     end
     if retval==nil then return 0 end
     return retval
