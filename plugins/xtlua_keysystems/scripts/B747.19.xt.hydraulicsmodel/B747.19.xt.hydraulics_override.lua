@@ -16,6 +16,16 @@
 --sim/flightmodel2/controls/slat2_deploy_ratio
 --sim/flightmodel2/controls/slat1_deploy_ratio
 dofile("pid.lua")
+local B747_afds_controls = dofile("B747.19.xt.hydraulics_afds_helpers.lua")
+
+-- Set true only while collecting AFDS tuning data.  Output is rate limited below.
+local AFDS_CONTROL_DIAGNOSTICS_ENABLED = false
+local AFDS_CONTROL_DIAGNOSTIC_INTERVAL_SEC = 1.0
+local B747_afds_last_control_diagnostic_time = -AFDS_CONTROL_DIAGNOSTIC_INTERVAL_SEC
+local B747DR_afds_armed_roll_mode = find_dataref("laminar/B747/autopilot/FMA/armed_roll_mode")
+local B747DR_afds_armed_pitch_mode = find_dataref("laminar/B747/autopilot/FMA/armed_pitch_mode")
+local B747_afds_pitch_target_before_blend = 0
+local B747_afds_pitch_target_after_blend = 0
 
 B747DR_ap_AFDS_mode_box_status_pilot = find_dataref("laminar/B747/autopilot/AFDS/mode_box_status_pilot")
 B747DR_ap_AFDS_mode_box_status_copilot =find_dataref("laminar/B747/autopilot/AFDS/mode_box_status_copilot")
@@ -383,13 +393,6 @@ local director_lastPitchRecordUpdate=0
 for i=1,10,1 do
     director_pitchRecord[i]=0
 end
-local director_rollRecord={}
-local director_currentrollRecord=1
-local director_lastrollRecordUpdate=0
-for i=1,10,1 do
-    director_rollRecord[i]=0
-end
-
 local director_yawRecord={}
 local director_currentyawRecord=1
 local director_lastyawRecordUpdate=0
@@ -400,7 +403,6 @@ local last_simDR_ind_airspeed_kts_pilot=0
 local last_simDR_AHARS_pitch_heading_deg_pilot=0
 local last_altitude=0
 local directorSampleRate=0.02
-local directorRollSampleRate=0.1
 local directoryawSampleRate=0.03
 local lastAPTargetRoll=0
 local capturedLocTime=0
@@ -433,25 +435,72 @@ end
 local lastPitchMode=0
 local lastPitchModeChange=0
 local lastRetVal=0
+local pitchTransitionFrom=0
+local pitchTransitionActive=false
+local PITCH_TRANSITION_SAMPLE_INTERVAL_SEC=0.05
+
+local function B747_pitch_transition_is_protected(pitchMode)
+    return B747DR_ap_autoland==1 or pitchMode==1 or pitchMode==2 or pitchMode==3
+end
+
+function B747_pitch_transition_active()
+    return pitchTransitionActive
+end
+
+function B747_reset_pitch_transition()
+    pitchTransitionActive=false
+    lastPitchMode=0
+    lastPitchModeChange=simDRTime
+    lastRetVal=simDR_AHARS_pitch_heading_deg_pilot
+    pitchTransitionFrom=lastRetVal
+    B747_afds_pitch_target_before_blend=lastRetVal
+    B747_afds_pitch_target_after_blend=lastRetVal
+end
+
 function ap_director_pitch_retVal(pitchMode,retVal)
+    B747_afds_pitch_target_before_blend=retVal
+    if pitchMode==nil or pitchMode<=0 then
+        pitchTransitionActive=false
+        lastPitchMode=0
+        lastRetVal=retVal
+        B747_afds_pitch_target_after_blend=retVal
+        return retVal
+    end
+
     if pitchMode~=lastPitchMode then
         lastPitchModeChange=simDRTime
-        lastPitchMode=pitchMode
-        
-    end
-    local diff=simDRTime-lastPitchModeChange
-    if diff<0.7 then
-        if debug_flight_directors==1 then
-            print("last ap_director_pitch_retVal "..lastRetVal .." retVal "..retVal .." pitchMode "..pitchMode)
+        if B747_pitch_transition_is_protected(pitchMode) then
+            pitchTransitionActive=false
+        else
+            if lastPitchMode==0 then
+                pitchTransitionFrom=simDR_AHARS_pitch_heading_deg_pilot
+            else
+                pitchTransitionFrom=lastRetVal
+            end
+            pitchTransitionActive=true
         end
-        last_simDR_AHARS_pitch_heading_deg_pilot=lastRetVal
-        return lastRetVal
+        lastPitchMode=pitchMode
+    end
+
+    local result=retVal
+    if pitchTransitionActive then
+        local elapsed_sec=math.max(simDRTime-lastPitchModeChange,0)
+        result=B747_afds_controls.pitch_transition_value(pitchTransitionFrom, retVal, elapsed_sec,
+            B747_afds_controls.PITCH_TRANSITION_DURATION_SEC)
+        if elapsed_sec>=B747_afds_controls.PITCH_TRANSITION_DURATION_SEC then
+            pitchTransitionActive=false
+        end
+        if debug_flight_directors==1 then
+            print("blend ap_director_pitch_retVal "..pitchTransitionFrom .." retVal "..retVal
+                .." result "..result.." pitchMode "..pitchMode)
+        end
     end
     if debug_flight_directors==1 then
-        print("ap_director_pitch_retVal "..retVal.." retVal "..retVal .." pitchMode "..pitchMode)
+        print("ap_director_pitch_retVal "..result.." retVal "..retVal .." pitchMode "..pitchMode)
     end
-    lastRetVal=retVal
-    return retVal
+    lastRetVal=result
+    B747_afds_pitch_target_after_blend=result
+    return result
 
 end
 local thisTargetGlideslipeFPM=-800
@@ -505,8 +554,12 @@ function ap_director_pitch(pitchMode)
     time=simDRTime-previous_pitchTime
     previous_pitchTime=simDRTime
     --print("ap_director_pitch" ..time.. " "..directorSampleRate)
-    if time>5 or time==0 or B747DR_ap_pitch_mode_box_status==1 then
+    if time>5 then
+        B747_reset_pitch_transition()
         return simDR_AHARS_pitch_heading_deg_pilot
+    end
+    if time==0 then
+        return ap_director_pitch_retVal(pitchMode,simDR_AHARS_pitch_heading_deg_pilot)
     end
    -- print("ap_director_pitc go")
     local alt_delta=simDR_pressureAlt1-last_altitude
@@ -743,13 +796,13 @@ function ap_director_pitch(pitchMode)
             last_simDR_AHARS_pitch_heading_deg_pilot=10
         end
         retval=last_simDR_AHARS_pitch_heading_deg_pilot
-        last_simDR_AHARS_pitch_heading_deg_pilot=ap_director_pitch_retVal(pitchMode,retval)--retval
+        local blendedRetval=ap_director_pitch_retVal(pitchMode,retval)
         --
         --if pitchMode==2 then
         --    ap_director_pitch_retVal(pitchMode,retval)--log it
         --    return retval
         --else
-            return last_simDR_AHARS_pitch_heading_deg_pilot--ap_director_pitch_retVal(pitchMode,retval)
+            return blendedRetval
         --end
     elseif pitchMode==1 then
        -- print("simDR_autopilot_TOGA_pitch_deg ="..simDR_autopilot_TOGA_pitch_deg)
@@ -801,36 +854,30 @@ function ap_director_pitch(pitchMode)
     last_simDR_AHARS_pitch_heading_deg_pilot=retval
     return ap_director_pitch_retVal(pitchMode,retval)
 end
-local current_roll_intregal=0
+local filteredDirectorRoll=0
+local director_lastRollFilterUpdate=0
+local director_rollFilterInitialized=false
+
+local function B747_roll_approach_protected()
+    return B747DR_ap_autoland==1 or B747DR_ap_FMA_active_roll_mode==3
+        or simDR_autopilot_nav_status==2 or B747DR_autopilot_nav_status==2
+end
+
 function ap_director_roll_integral()
-    --return B747DR_ap_target_roll
-    local displayUpdate=false
-    --[[if math.abs(simDR_AHARS_roll_heading_deg_pilot)>5 then
-        directorRollSampleRate=0.1
-    else
-        directorRollSampleRate=1
-    end]]
-    directorRollSampleRate=B747_rescale(0,1,10,0.3,math.abs(simDR_AHARS_roll_heading_deg_pilot))
-    
-    if (simDRTime-director_lastrollRecordUpdate)>directorRollSampleRate then
-        displayUpdate=true
-        director_lastrollRecordUpdate=simDRTime
-        director_rollRecord[director_currentrollRecord]=ap_director_roll()
-        director_currentrollRecord=director_currentrollRecord+1
-        --print("currentPitchRecord "..director_currentPitchRecord)
-        if director_currentrollRecord>10 then
-            director_currentrollRecord=1
-        end
-        current_roll_intregal=0
-        for i=1,10,1 do
-            current_roll_intregal=current_roll_intregal+director_rollRecord[i]
-           --if displayUpdate then print("i "..i.." = " ..pitchRecord[i].. " " ..retval) end
-        end
+    local rawDirectorRoll=ap_director_roll()
+    local rollMode=B747DR_ap_FMA_active_roll_mode
+    local elapsedSec=simDRTime-director_lastRollFilterUpdate
+    if not director_rollFilterInitialized or elapsedSec>1 or rollMode==0 then
+        filteredDirectorRoll=(rollMode==0) and rawDirectorRoll or simDR_AHARS_roll_heading_deg_pilot
+        director_rollFilterInitialized=true
+        director_lastRollFilterUpdate=simDRTime
+    elseif elapsedSec>0 then
+        filteredDirectorRoll=B747_afds_controls.adaptive_roll_filter(filteredDirectorRoll,rawDirectorRoll,
+            elapsedSec,B747_roll_approach_protected())
+        director_lastRollFilterUpdate=simDRTime
     end
-    local retval=current_roll_intregal/10
-    B747DR_flight_director_roll=retval
-   -- if displayUpdate then print("retval "..retval.." "..simDRTime) end
-    return retval
+    B747DR_flight_director_roll=filteredDirectorRoll
+    return filteredDirectorRoll
 end
 
 function dampSlip()
@@ -898,12 +945,28 @@ function ap_director_yaw_integral()
     return current_yaw_intregal
 end
 local current_pitch_intregal=0
+local directorLastPitchMode=0
 function ap_director_pitch_integral()
     local displayUpdate=false
-    if (simDRTime-director_lastPitchRecordUpdate)>directorSampleRate then
+    local pitchMode=B747DR_ap_FMA_active_pitch_mode
+    local modeChanged=pitchMode~=directorLastPitchMode
+    local effectiveSampleRate=directorSampleRate
+    if modeChanged or B747_pitch_transition_active() then
+        effectiveSampleRate=math.min(effectiveSampleRate,PITCH_TRANSITION_SAMPLE_INTERVAL_SEC)
+    end
+    if modeChanged or (simDRTime-director_lastPitchRecordUpdate)>effectiveSampleRate then
         displayUpdate=true
         director_lastPitchRecordUpdate=simDRTime
-        director_pitchRecord[director_currentPitchRecord]=ap_director_pitch(B747DR_ap_FMA_active_pitch_mode)
+        local directorPitch=ap_director_pitch(pitchMode)
+        if modeChanged and B747_pitch_transition_active() then
+            -- The transition itself supplies damping; discard stale samples from the old mode.
+            for i=1,10,1 do
+                director_pitchRecord[i]=directorPitch
+            end
+        else
+            director_pitchRecord[director_currentPitchRecord]=directorPitch
+        end
+        directorLastPitchMode=pitchMode
         director_currentPitchRecord=director_currentPitchRecord+1
         --print("currentPitchRecord "..director_currentPitchRecord)
         if director_currentPitchRecord>10 then
@@ -1002,6 +1065,8 @@ function ap_pitch_assist()
     else
         pitchPid:compute(true)
         simDR_electric_trim=1
+        B747_reset_pitch_transition()
+        directorLastPitchMode=0
     end
     if retval==nil then return 0 end
     return retval
@@ -1016,6 +1081,20 @@ rollPid.target=0
 rollPid.input = 0
 rollPid:compute()
 
+local function B747_log_afds_control_diagnostics(flight_director_roll)
+    if not AFDS_CONTROL_DIAGNOSTICS_ENABLED
+        or simDRTime-B747_afds_last_control_diagnostic_time<AFDS_CONTROL_DIAGNOSTIC_INTERVAL_SEC then
+        return
+    end
+    B747_afds_last_control_diagnostic_time=simDRTime
+    print(string.format(
+        "[AFDS CTRL] roll=%d/%d pitch=%d/%d bankCmd=%.2f bank=%.2f fdBank=%.2f rollPID=%.3f pitchRaw=%.2f pitchBlend=%.2f",
+        B747DR_ap_FMA_active_roll_mode,B747DR_afds_armed_roll_mode,
+        B747DR_ap_FMA_active_pitch_mode,B747DR_afds_armed_pitch_mode,
+        B747DR_ap_target_roll,simDR_AHARS_roll_heading_deg_pilot,flight_director_roll,
+        rollPid.output or 0,B747_afds_pitch_target_before_blend,B747_afds_pitch_target_after_blend))
+end
+
 function ap_roll_assist()
     local retval=B747DR_sim_roll_ratio--B747_interpolate_value(B747DR_sim_roll_ratio,0,-1,1,20)
     local flight_director_roll=ap_director_roll_integral()
@@ -1029,13 +1108,17 @@ function ap_roll_assist()
         if doCompute==1 then
             rollPid:compute()
         end
-        local speed=B747_rescale(0.1,3,10,5,math.abs(flight_director_roll-simDR_AHARS_roll_heading_deg_pilot))
+        local bankError=flight_director_roll-simDR_AHARS_roll_heading_deg_pilot
         if rollPid.output==nil then return 0 end
-        retval=B747_interpolate_value(B747DR_sim_roll_ratio,rollPid.output,-1,1,speed) 
-        --print("flight_director_roll "..flight_director_roll.." speed "..speed .." simDR_AHARS_roll_heading_deg_pilot "..simDR_AHARS_roll_heading_deg_pilot .." retval "..retval)
+        local responseSec=B747_afds_controls.roll_output_response_sec(bankError,B747DR_sim_roll_ratio,
+            rollPid.output,B747_roll_approach_protected())
+        retval=B747_interpolate_value(B747DR_sim_roll_ratio,rollPid.output,-1,1,responseSec)
+        --print("flight_director_roll "..flight_director_roll.." responseSec "..responseSec .." simDR_AHARS_roll_heading_deg_pilot "..simDR_AHARS_roll_heading_deg_pilot .." retval "..retval)
     else
         rollPid:compute(true)
+        director_rollFilterInitialized=false
     end
+    B747_log_afds_control_diagnostics(flight_director_roll)
     return retval
 end
 local yawPid = newPid()
