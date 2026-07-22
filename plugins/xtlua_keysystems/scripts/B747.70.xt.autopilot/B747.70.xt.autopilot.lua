@@ -2254,7 +2254,8 @@ local function B747_lnav_leg_supports_preemption(waypoint)
 	local waypointType=tonumber(waypoint[2])
 	local waypointName=string.upper(tostring(waypoint[8] or ""))
 	if waypointType==nil or waypointType==0 or waypointType==2048 then return false end
-	if waypointName=="" or waypointName=="PPOS" or waypointName=="VECTOR" or waypointName=="LATLON" then
+	if waypointName=="" or waypointName=="PPOS" or waypointName=="LATLON"
+		or string.find(waypointName,"VECTOR",1,true) then
 		return false
 	end
 	if string.find(waypointName,"DISCONT",1,true) or string.find(waypointName,"HOLD",1,true)
@@ -2381,7 +2382,7 @@ function B747_getCurrentWayPoint_function(fmsO)
 		--print("best Track to waypoint="..best.." / "..bestOffTrack)
 		if B747DR_ap_lnav_xtk_target>-99 and B747DR_fmscurrentIndex>0
 			and best>B747DR_fmscurrentIndex+LNAV_MAX_AUTOMATIC_SEQUENCE_ADVANCE_LEGS then
-			best=B747DR_fmscurrentIndex+LNAV_MAX_AUTOMATIC_SEQUENCE_ADVANCE_LEGS
+			best=B747DR_fmscurrentIndex
 		end
 		if best>0 and (best>B747DR_fmscurrentIndex or best<B747DR_fmscurrentIndex-1) and B747DR_fmscurrentIndex ~=best then
 			B747DR_fms_setCurrent = best
