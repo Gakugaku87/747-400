@@ -7,6 +7,39 @@ local KNOT_TO_MPS = 0.514444
 local METERS_PER_NM = 1852.0
 local GRAVITY_MPS2 = 9.80665
 
+afds.VNAV_ENERGY_PATH_ENTER_FT = 150
+afds.VNAV_ENERGY_PATH_EXIT_FT = 75
+afds.VNAV_ENERGY_SPEED_ENTER_KTS = 5
+afds.VNAV_ENERGY_SPEED_EXIT_KTS = 2
+afds.VNAV_ENERGY_MAX_DESCENT_FPM = -3500
+afds.VNAV_ENERGY_MIN_DESCENT_FPM = 0
+afds.VNAV_ENERGY_DESCENT_RATE_LIMIT_FPM_PER_SEC = 400
+afds.VNAV_ENERGY_SHALLOW_RATE_LIMIT_FPM_PER_SEC = 600
+afds.VNAV_ENERGY_PROTECTION_MARGIN_KTS = 15
+afds.VNAV_ENERGY_PROTECTION_RELEASE_KTS = 5
+afds.VNAV_ENERGY_DRAG_PATH_ERROR_FT = 1000
+
+afds.VNAV_ENERGY_STATE_INACTIVE = 0
+afds.VNAV_ENERGY_STATE_ABOVE_ABOVE = 1
+afds.VNAV_ENERGY_STATE_ABOVE_BELOW = 2
+afds.VNAV_ENERGY_STATE_BELOW_BELOW = 3
+afds.VNAV_ENERGY_STATE_BELOW_ABOVE = 4
+afds.VNAV_ENERGY_STATE_ABOVE_ON_SPEED = 5
+afds.VNAV_ENERGY_STATE_BELOW_ON_SPEED = 6
+afds.VNAV_ENERGY_STATE_ON_PATH_BELOW = 7
+afds.VNAV_ENERGY_STATE_ON_PATH_ABOVE = 8
+afds.VNAV_ENERGY_STATE_ON_PATH_ON_SPEED = 9
+
+afds.VNAV_ENERGY_THRUST_NORMAL = 0
+afds.VNAV_ENERGY_THRUST_IDLE = 1
+afds.VNAV_ENERGY_THRUST_ALLOW = 2
+
+afds.VNAV_ENERGY_THRUST_REASON_NONE = 0
+afds.VNAV_ENERGY_THRUST_REASON_UNDERSPEED_PROTECTION = 1
+afds.VNAV_ENERGY_THRUST_REASON_BELOW_PATH_BELOW_SPEED = 2
+afds.VNAV_ENERGY_THRUST_REASON_PATH_RECOVERY_LIMITED = 3
+afds.VNAV_ENERGY_THRUST_REASON_ON_PATH_BELOW_SPEED = 4
+
 function afds.clamp(value, minimum, maximum)
     if value < minimum then return minimum end
     if value > maximum then return maximum end
@@ -113,6 +146,185 @@ end
 
 function afds.should_schedule_ias_update(timer_is_scheduled)
     return timer_is_scheduled ~= true
+end
+
+local function hysteresis_axis(value, previous_axis, enter_threshold, exit_threshold)
+    value = tonumber(value) or 0
+    previous_axis = tonumber(previous_axis) or 0
+
+    if previous_axis > 0 and value >= exit_threshold then return 1 end
+    if previous_axis < 0 and value <= -exit_threshold then return -1 end
+    if value >= enter_threshold then return 1 end
+    if value <= -enter_threshold then return -1 end
+    return 0
+end
+
+function afds.vnav_energy_axes(path_error_ft, speed_error_kts, previous_path_axis, previous_speed_axis)
+    return hysteresis_axis(path_error_ft, previous_path_axis,
+            afds.VNAV_ENERGY_PATH_ENTER_FT, afds.VNAV_ENERGY_PATH_EXIT_FT),
+        hysteresis_axis(speed_error_kts, previous_speed_axis,
+            afds.VNAV_ENERGY_SPEED_ENTER_KTS, afds.VNAV_ENERGY_SPEED_EXIT_KTS)
+end
+
+function afds.vnav_energy_state(path_axis, speed_axis)
+    if path_axis > 0 and speed_axis > 0 then return afds.VNAV_ENERGY_STATE_ABOVE_ABOVE end
+    if path_axis > 0 and speed_axis < 0 then return afds.VNAV_ENERGY_STATE_ABOVE_BELOW end
+    if path_axis < 0 and speed_axis < 0 then return afds.VNAV_ENERGY_STATE_BELOW_BELOW end
+    if path_axis < 0 and speed_axis > 0 then return afds.VNAV_ENERGY_STATE_BELOW_ABOVE end
+    if path_axis > 0 then return afds.VNAV_ENERGY_STATE_ABOVE_ON_SPEED end
+    if path_axis < 0 then return afds.VNAV_ENERGY_STATE_BELOW_ON_SPEED end
+    if speed_axis < 0 then return afds.VNAV_ENERGY_STATE_ON_PATH_BELOW end
+    if speed_axis > 0 then return afds.VNAV_ENERGY_STATE_ON_PATH_ABOVE end
+    return afds.VNAV_ENERGY_STATE_ON_PATH_ON_SPEED
+end
+
+function afds.vnav_energy_state_name(state)
+    local names = {
+        [afds.VNAV_ENERGY_STATE_INACTIVE] = "INACTIVE",
+        [afds.VNAV_ENERGY_STATE_ABOVE_ABOVE] = "ABOVE_PATH_ABOVE_SPEED",
+        [afds.VNAV_ENERGY_STATE_ABOVE_BELOW] = "ABOVE_PATH_BELOW_SPEED",
+        [afds.VNAV_ENERGY_STATE_BELOW_BELOW] = "BELOW_PATH_BELOW_SPEED",
+        [afds.VNAV_ENERGY_STATE_BELOW_ABOVE] = "BELOW_PATH_ABOVE_SPEED",
+        [afds.VNAV_ENERGY_STATE_ABOVE_ON_SPEED] = "ABOVE_PATH_ON_SPEED",
+        [afds.VNAV_ENERGY_STATE_BELOW_ON_SPEED] = "BELOW_PATH_ON_SPEED",
+        [afds.VNAV_ENERGY_STATE_ON_PATH_BELOW] = "ON_PATH_BELOW_SPEED",
+        [afds.VNAV_ENERGY_STATE_ON_PATH_ABOVE] = "ON_PATH_ABOVE_SPEED",
+        [afds.VNAV_ENERGY_STATE_ON_PATH_ON_SPEED] = "ON_PATH_ON_SPEED"
+    }
+    return names[state] or "UNKNOWN"
+end
+
+function afds.vnav_energy_thrust_reason_name(reason)
+    local names = {
+        [afds.VNAV_ENERGY_THRUST_REASON_NONE] = "none",
+        [afds.VNAV_ENERGY_THRUST_REASON_UNDERSPEED_PROTECTION] = "underspeed protection",
+        [afds.VNAV_ENERGY_THRUST_REASON_BELOW_PATH_BELOW_SPEED] = "below path and below speed",
+        [afds.VNAV_ENERGY_THRUST_REASON_PATH_RECOVERY_LIMITED] = "path recovery limited",
+        [afds.VNAV_ENERGY_THRUST_REASON_ON_PATH_BELOW_SPEED] = "on path and below speed"
+    }
+    return names[reason] or "unknown"
+end
+
+function afds.rate_limit(current_value, target_value, elapsed_sec, decreasing_rate_per_sec,
+        increasing_rate_per_sec)
+    if type(target_value) ~= "number" then return current_value end
+    if type(current_value) ~= "number" then return target_value end
+    elapsed_sec = afds.clamp(tonumber(elapsed_sec) or 0, 0, 1)
+    decreasing_rate_per_sec = math.max(tonumber(decreasing_rate_per_sec) or 0, 0)
+    increasing_rate_per_sec = math.max(tonumber(increasing_rate_per_sec) or decreasing_rate_per_sec, 0)
+    if target_value < current_value then
+        return math.max(target_value, current_value - decreasing_rate_per_sec * elapsed_sec)
+    end
+    return math.min(target_value, current_value + increasing_rate_per_sec * elapsed_sec)
+end
+
+function afds.vnav_energy_mode_is_active(input)
+    input = input or {}
+    return (tonumber(input.in_vnav_descent) or 0) > 0
+        and (tonumber(input.vnav_state) or 0) > 0
+        and (tonumber(input.active_pitch_mode) or 0) == 6
+        and (tonumber(input.vs_status) or 0) == 2
+        and (tonumber(input.flch_status) or 0) == 0
+        and (tonumber(input.alt_hold_status) or 0) ~= 2
+        and (tonumber(input.gs_status) or 0) < 1
+        and (tonumber(input.actual_gs_status) or 0) < 1
+        and (tonumber(input.approach_mode) or 0) == 0
+        and (tonumber(input.actual_approach_status) or 0) < 1
+        and (tonumber(input.autoland) or 0) ~= 1
+        and (tonumber(input.active_land) or 0) < 1
+        and (tonumber(input.radar_alt_ft) or 0) > 1000
+        and (tonumber(input.altitude_to_capture_ft) or 0)
+            > math.max(600, tonumber(input.capture_window_ft) or 0)
+end
+
+function afds.vnav_energy_guidance(input)
+    input = input or {}
+    local path_error_ft = tonumber(input.path_error_ft) or 0
+    local path_trend_fpm = tonumber(input.path_trend_fpm) or 0
+    local target_speed_kts = tonumber(input.target_speed_kts) or 0
+    local actual_speed_kts = tonumber(input.actual_speed_kts) or target_speed_kts
+    local speed_trend_kts_per_sec = tonumber(input.speed_trend_kts_per_sec) or 0
+    local nominal_vspeed_fpm = tonumber(input.nominal_vspeed_fpm) or 0
+    local min_safe_speed_kts = tonumber(input.min_safe_speed_kts) or 0
+    local maximum_descent_fpm = tonumber(input.maximum_descent_fpm)
+        or afds.VNAV_ENERGY_MAX_DESCENT_FPM
+    local minimum_descent_fpm = tonumber(input.minimum_descent_fpm)
+        or afds.VNAV_ENERGY_MIN_DESCENT_FPM
+    local speed_error_kts = actual_speed_kts - target_speed_kts
+    local path_axis, speed_axis = afds.vnav_energy_axes(path_error_ft, speed_error_kts,
+        input.previous_path_axis, input.previous_speed_axis)
+    local state = afds.vnav_energy_state(path_axis, speed_axis)
+
+    local worsening_path_fpm = 0
+    if path_axis > 0 then
+        worsening_path_fpm = math.max(path_trend_fpm, 0)
+    elseif path_axis < 0 then
+        worsening_path_fpm = math.min(path_trend_fpm, 0)
+    end
+    local path_correction_fpm = afds.clamp(path_error_ft * 0.45 + worsening_path_fpm * 0.20,
+        -900, 1200)
+    local speed_adjustment_fpm = 0
+
+    if state == afds.VNAV_ENERGY_STATE_ABOVE_BELOW then
+        speed_adjustment_fpm = -math.min(math.abs(speed_error_kts) * 45, 900)
+    elseif state == afds.VNAV_ENERGY_STATE_BELOW_BELOW then
+        speed_adjustment_fpm = math.min(math.abs(speed_error_kts) * 35, 700)
+    elseif state == afds.VNAV_ENERGY_STATE_BELOW_ABOVE then
+        speed_adjustment_fpm = math.min(speed_error_kts * 25, 500)
+    elseif state == afds.VNAV_ENERGY_STATE_ON_PATH_BELOW then
+        speed_adjustment_fpm = math.min(math.abs(speed_error_kts) * 20, 400)
+    end
+
+    local unconstrained_vspeed_fpm = nominal_vspeed_fpm - path_correction_fpm + speed_adjustment_fpm
+    local target_vspeed_fpm = afds.clamp(unconstrained_vspeed_fpm,
+        maximum_descent_fpm, minimum_descent_fpm)
+    local recovery_limited = unconstrained_vspeed_fpm < maximum_descent_fpm
+    local protection_speed_kts = math.max(min_safe_speed_kts,
+        target_speed_kts - afds.VNAV_ENERGY_PROTECTION_MARGIN_KTS)
+    local protection_active = actual_speed_kts <= protection_speed_kts
+    if input.protection_active == true then
+        protection_active = actual_speed_kts
+            < protection_speed_kts + afds.VNAV_ENERGY_PROTECTION_RELEASE_KTS
+    end
+
+    local thrust_policy = afds.VNAV_ENERGY_THRUST_IDLE
+    local thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_NONE
+    if protection_active then
+        thrust_policy = afds.VNAV_ENERGY_THRUST_ALLOW
+        thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_UNDERSPEED_PROTECTION
+    elseif state == afds.VNAV_ENERGY_STATE_BELOW_BELOW then
+        thrust_policy = afds.VNAV_ENERGY_THRUST_ALLOW
+        thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_BELOW_PATH_BELOW_SPEED
+    elseif state == afds.VNAV_ENERGY_STATE_ON_PATH_BELOW then
+        thrust_policy = afds.VNAV_ENERGY_THRUST_ALLOW
+        thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_ON_PATH_BELOW_SPEED
+    elseif state == afds.VNAV_ENERGY_STATE_ABOVE_BELOW and recovery_limited
+        and speed_error_kts <= -afds.VNAV_ENERGY_SPEED_ENTER_KTS
+        and speed_trend_kts_per_sec <= 0 then
+        thrust_policy = afds.VNAV_ENERGY_THRUST_ALLOW
+        thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_PATH_RECOVERY_LIMITED
+    end
+
+    local drag_required = path_axis > 0
+        and ((speed_axis > 0 and speed_error_kts >= 10)
+            or (recovery_limited and path_error_ft >= afds.VNAV_ENERGY_DRAG_PATH_ERROR_FT))
+
+    return {
+        path_axis = path_axis,
+        speed_axis = speed_axis,
+        state = state,
+        state_name = afds.vnav_energy_state_name(state),
+        speed_error_kts = speed_error_kts,
+        target_vspeed_fpm = target_vspeed_fpm,
+        unconstrained_vspeed_fpm = unconstrained_vspeed_fpm,
+        thrust_policy = thrust_policy,
+        thrust_reason = thrust_reason,
+        thrust_reason_name = afds.vnav_energy_thrust_reason_name(thrust_reason),
+        protection_active = protection_active,
+        protection_speed_kts = protection_speed_kts,
+        recovery_limited = recovery_limited,
+        drag_required = drag_required
+    }
 end
 
 return afds

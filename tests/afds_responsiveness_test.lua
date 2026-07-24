@@ -90,6 +90,137 @@ assert_equal(nav.climb_speed_for_state("spcres", climb_profile), 250,
 assert_equal(nav.climb_speed_for_state("nores", climb_profile), 272,
     "ECON CLB value is selected above transition altitude")
 
+local function energy_guidance(path_error_ft, actual_speed_kts, nominal_vspeed_fpm,
+        speed_trend_kts_per_sec, previous_path_axis, previous_speed_axis, protection_active)
+    return nav.vnav_energy_guidance({
+        path_error_ft = path_error_ft,
+        path_trend_fpm = 0,
+        target_speed_kts = 250,
+        actual_speed_kts = actual_speed_kts,
+        speed_trend_kts_per_sec = speed_trend_kts_per_sec or 0,
+        nominal_vspeed_fpm = nominal_vspeed_fpm or -1800,
+        min_safe_speed_kts = 210,
+        previous_path_axis = previous_path_axis,
+        previous_speed_axis = previous_speed_axis,
+        protection_active = protection_active
+    })
+end
+
+local above_above = energy_guidance(500, 265)
+assert_equal(above_above.state, nav.VNAV_ENERGY_STATE_ABOVE_ABOVE,
+    "above path / above speed quadrant")
+assert(above_above.target_vspeed_fpm < -1800,
+    "above path / above speed commands more descent")
+tests_run = tests_run + 1
+assert_equal(above_above.thrust_policy, nav.VNAV_ENERGY_THRUST_IDLE,
+    "above path / above speed retains idle thrust")
+assert_equal(above_above.drag_required, true,
+    "above path / above speed requests drag")
+
+local above_below = energy_guidance(500, 240)
+assert_equal(above_below.state, nav.VNAV_ENERGY_STATE_ABOVE_BELOW,
+    "above path / below speed quadrant")
+assert(above_below.target_vspeed_fpm < above_above.target_vspeed_fpm,
+    "above path / below speed exchanges more altitude for speed")
+tests_run = tests_run + 1
+assert_equal(above_below.thrust_policy, nav.VNAV_ENERGY_THRUST_IDLE,
+    "recoverable above path / below speed retains idle thrust")
+
+local below_below = energy_guidance(-500, 240)
+assert_equal(below_below.state, nav.VNAV_ENERGY_STATE_BELOW_BELOW,
+    "below path / below speed quadrant")
+assert(below_below.target_vspeed_fpm > -1800,
+    "below path / below speed reduces descent")
+tests_run = tests_run + 1
+assert_equal(below_below.thrust_policy, nav.VNAV_ENERGY_THRUST_ALLOW,
+    "below path / below speed permits thrust")
+
+local below_above = energy_guidance(-500, 260)
+assert_equal(below_above.state, nav.VNAV_ENERGY_STATE_BELOW_ABOVE,
+    "below path / above speed quadrant")
+assert(below_above.target_vspeed_fpm > -1800,
+    "below path / above speed reduces descent")
+tests_run = tests_run + 1
+assert_equal(below_above.thrust_policy, nav.VNAV_ENERGY_THRUST_IDLE,
+    "below path / above speed does not add thrust")
+
+local protected = energy_guidance(500, 230)
+assert_equal(protected.thrust_policy, nav.VNAV_ENERGY_THRUST_ALLOW,
+    "genuine underspeed protection permits thrust above path")
+assert_equal(protected.thrust_reason, nav.VNAV_ENERGY_THRUST_REASON_UNDERSPEED_PROTECTION,
+    "underspeed protection reason")
+local protected_hysteresis = energy_guidance(500, 238, -1800, 0, 1, -1, true)
+assert_equal(protected_hysteresis.protection_active, true,
+    "underspeed protection remains latched inside release hysteresis")
+local protected_released = energy_guidance(500, 241, -1800, 0, 1, -1, true)
+assert_equal(protected_released.protection_active, false,
+    "underspeed protection releases above its hysteresis band")
+
+local limited_recovery = energy_guidance(2000, 240, -2500, -0.1)
+assert_equal(limited_recovery.recovery_limited, true,
+    "path recovery identifies descent-rate saturation")
+assert_equal(limited_recovery.thrust_reason, nav.VNAV_ENERGY_THRUST_REASON_PATH_RECOVERY_LIMITED,
+    "limited pitch recovery may permit protected thrust")
+assert_equal(limited_recovery.drag_required, true,
+    "unrecoverable high path preserves DRAG REQUIRED")
+
+local path_axis, speed_axis = nav.vnav_energy_axes(160, -6, 0, 0)
+assert_equal(path_axis, 1, "path axis enters above-path state")
+assert_equal(speed_axis, -1, "speed axis enters below-speed state")
+path_axis, speed_axis = nav.vnav_energy_axes(100, -3, path_axis, speed_axis)
+assert_equal(path_axis, 1, "path axis holds inside hysteresis")
+assert_equal(speed_axis, -1, "speed axis holds inside hysteresis")
+path_axis, speed_axis = nav.vnav_energy_axes(70, -1, path_axis, speed_axis)
+assert_equal(path_axis, 0, "path axis exits below hysteresis")
+assert_equal(speed_axis, 0, "speed axis exits below hysteresis")
+
+assert_near(nav.rate_limit(-1800, -3000, 0.5, 400, 600), -2000, 0.001,
+    "steeper descent command rate limit")
+assert_near(nav.rate_limit(-1800, -1000, 0.5, 400, 600), -1500, 0.001,
+    "shallower descent command rate limit")
+
+local vnav_path_mode = {
+    in_vnav_descent = 1,
+    vnav_state = 2,
+    active_pitch_mode = 6,
+    vs_status = 2,
+    flch_status = 0,
+    alt_hold_status = 0,
+    gs_status = 0,
+    actual_gs_status = 0,
+    approach_mode = 0,
+    actual_approach_status = 0,
+    autoland = 0,
+    active_land = 0,
+    radar_alt_ft = 5000,
+    altitude_to_capture_ft = 5000,
+    capture_window_ft = 1000
+}
+assert_equal(nav.vnav_energy_mode_is_active(vnav_path_mode), true,
+    "combined energy control is active only in established VNAV PATH descent")
+for _, excluded_mode in ipairs({
+    {"FLCH", "flch_status", 2},
+    {"altitude capture", "alt_hold_status", 2},
+    {"glideslope", "gs_status", 1},
+    {"actual glideslope", "actual_gs_status", 1},
+    {"approach", "approach_mode", 1},
+    {"actual approach", "actual_approach_status", 1},
+    {"autoland", "autoland", 1},
+    {"active landing", "active_land", 1},
+    {"non-PTH pitch mode", "active_pitch_mode", 4},
+    {"external V/S", "vnav_state", 0}
+}) do
+    local field = excluded_mode[2]
+    local original = vnav_path_mode[field]
+    vnav_path_mode[field] = excluded_mode[3]
+    assert_equal(nav.vnav_energy_mode_is_active(vnav_path_mode), false,
+        excluded_mode[1] .. " is isolated from VNAV energy control")
+    vnav_path_mode[field] = original
+end
+vnav_path_mode.altitude_to_capture_ft = 900
+assert_equal(nav.vnav_energy_mode_is_active(vnav_path_mode), false,
+    "altitude-capture window is isolated from VNAV energy control")
+
 assert_near(controls.pitch_transition_value(2, 8, 0, 0.7), 2, 0.0001, "pitch blend start")
 assert_near(controls.pitch_transition_value(2, 8, 0.35, 0.7), 5, 0.0001, "pitch blend midpoint")
 assert_near(controls.pitch_transition_value(2, 8, 0.7, 0.7), 8, 0.0001, "pitch blend completion")

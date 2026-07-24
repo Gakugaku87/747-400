@@ -320,6 +320,8 @@ B747DR_radio_altitude				= deferred_dataref("laminar/B747/efis/radio_altitude")
 simDR_radarAlt1           	= find_dataref("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
 B747DR_altitude_dial				= deferred_dataref("laminar/B747/autopilot/heading/altitude_dial_ft")
 B747DR_ap_flightPhase 				= deferred_dataref("laminar/B747/autopilot/flightPhase", "number")
+B747DR_vnav_energy_active			= deferred_dataref("laminar/B747/autopilot/vnav/energy_active", "number")
+B747DR_vnav_energy_thrust_policy	= deferred_dataref("laminar/B747/autopilot/vnav/energy_thrust_policy", "number")
 B747DR_toderate						= deferred_dataref("laminar/B747/engine/derate/TO","number")
 B747DR_clbderate					= deferred_dataref("laminar/B747/engine/derate/CLB","number")
 B747DR_ref_line_magenta				= deferred_dataref("laminar/B747/engines/display_ref_line_magenta", "number")
@@ -931,6 +933,13 @@ function ecc_throttle()
 	    local input=1
 		local target=1
 		local minSafeSpeed = math.max(B747DR_airspeed_Vmc + 10,simDR_autopilot_airspeed_kts-5)
+		if B747DR_vnav_energy_active == 1 and B747DR_vnav_energy_thrust_policy == 1 then
+			-- Coordinated VNAV PATH uses excess altitude before thrust.  IDLE
+			-- remains protected by maneuver margin or a genuine 15 kt
+			-- underspeed, rather than the normal tight +/-5 kt speed loop.
+			minSafeSpeed = math.max(B747DR_airspeed_Vmc + 15,
+				simDR_autopilot_airspeed_kts - 15)
+		end
 		--if simDR_radarAlt1<25.1 then minSafeSpeed=0 end
 		local previous_pitchTime=0
 
