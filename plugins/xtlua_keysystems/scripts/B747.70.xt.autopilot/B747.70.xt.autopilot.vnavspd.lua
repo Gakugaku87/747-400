@@ -73,7 +73,7 @@ local VNAV_SPEED_WATCHED_VALUES={
 
 local function B747_vnav_speed_snapshot()
     local cruise_speed = tonumber(getFMSData("crzspd"))
-    local transition_speed = tonumber(getFMSData("transpd"))
+    local climb_speed = tonumber(getFMSData("clbspd"))
     local transition_altitude = tonumber(getFMSData("transalt"))
     local descent_mach = tonumber(getFMSData("desspdmach"))
     local mach_transition_ready = false
@@ -97,9 +97,9 @@ local function B747_vnav_speed_snapshot()
         end
         descent_mach_transition_ready = simDR_airspeed_mach > threshold
     end
-    if transition_speed ~= nil and transition_altitude ~= nil then
+    if climb_speed ~= nil and transition_altitude ~= nil then
         cruise_transition_ready = simDR_pressureAlt1 >= transition_altitude
-            or simDR_ind_airspeed_kts_pilot >= transition_speed - 1
+            or simDR_ind_airspeed_kts_pilot >= climb_speed - 1
     end
 
     return {
@@ -298,7 +298,7 @@ function clb_src_setSpd()
     vnavSPD_state["setBaro"]=false
 end
 function clb_aptres_setSpd()
-    local spdval=modFlapSpeed(tonumber(getFMSData("clbrestspd")))
+    local spdval=modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("aptres", getFMSData))
     spdval=math.max(spdval,simDR_ind_airspeed_kts_pilot-15)
     simDR_autopilot_airspeed_is_mach = 0
     print("convert to clb clbrestspd ".. spdval)
@@ -309,7 +309,7 @@ function clb_aptres_setSpd()
 
 end
 function clb_spcres_setSpd()
-    local spdval=modFlapSpeed(tonumber(getFMSData("clbspd")))
+    local spdval=modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("spcres", getFMSData))
     B747DR_switchingIASMode=1
     local crzspdval=tonumber(getFMSData("crzspd"))/10
     if simDR_airspeed_mach > (crzspdval/100) then
@@ -326,7 +326,7 @@ function clb_spcres_setSpd()
       end]]--
       spdval=math.max(spdval,simDR_ind_airspeed_kts_pilot-15)
       simDR_autopilot_airspeed_is_mach = 0
-      print("convert to clb speed ".. spdval.. " at "..simDR_ind_airspeed_kts_pilot)
+      print("convert to climb transition speed ".. spdval.. " at "..simDR_ind_airspeed_kts_pilot)
       B747DR_ap_ias_dial_value = math.min(399.0, spdval)
       B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
     end
@@ -334,7 +334,7 @@ function clb_spcres_setSpd()
 
 end
 function clb_nores_setSpd()
-    local spdval=modFlapSpeed(tonumber(getFMSData("transpd")))
+    local spdval=modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("nores", getFMSData))
     B747DR_switchingIASMode=1
     local crzspdval=tonumber(getFMSData("crzspd"))/10
     if simDR_airspeed_mach > (crzspdval/100) then
@@ -353,7 +353,7 @@ function clb_nores_setSpd()
         simDR_autopilot_airspeed_is_mach = 0
      end
       spdval=math.max(spdval,simDR_ind_airspeed_kts_pilot-15)
-      print("convert to transpd speed ".. spdval)
+      print("convert to ECON climb speed ".. spdval)
       B747DR_ap_ias_dial_value = math.min(399.0, spdval)
       B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
     end
@@ -402,8 +402,8 @@ function clb_crz_setSpd()
         spdval = ci_mach/10
     end
     local transalt=tonumber(getFMSData("transalt"))
-    local tspdval=modFlapSpeed(tonumber(getFMSData("transpd")))
-    if simDR_pressureAlt1>=transalt or simDR_ind_airspeed_kts_pilot>=tspdval-1 then
+    local climbspdval=modFlapSpeed(tonumber(getFMSData("clbspd")))
+    if simDR_pressureAlt1>=transalt or simDR_ind_airspeed_kts_pilot>=climbspdval-1 then
         print("convert to cruise speed in clb_crz_setSpd ".. spdval)
         simDR_autopilot_airspeed_is_mach = 1
         B747DR_ap_ias_dial_value = spdval

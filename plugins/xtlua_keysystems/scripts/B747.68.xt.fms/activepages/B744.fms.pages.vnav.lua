@@ -233,16 +233,17 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
               --spdalt = " ***/*****"
               spdalt = "     FL"..string.format("%03d",alt/100)
               if(i <= maxidx and math.abs(maxalt-simDR_pressureAlt1) > 500) then -- climb phase
-                local restSpd = tonumber(fmsModules["data"]["clbrestspd"])   -- 180
-                local restAlt = tonumber(fmsModules["data"]["clbrestalt"])   -- 5000
-                local transSpd = tonumber(fmsModules["data"]["transpd"])     -- 272
+                local restSpd = tonumber(fmsModules["data"]["clbrestspd"])
+                local restAlt = tonumber(fmsModules["data"]["clbrestalt"])
+                local transSpd = tonumber(fmsModules["data"]["transpd"])
                 local transAlt = tonumber(fmsModules["data"]["spdtransalt"]) -- 10000
+                local econSpd = tonumber(fmsModules["data"]["clbspd"])
                 if(alt < restAlt) then
                   spdalt = restSpd.."/"..alt
                 elseif(alt < transAlt) then
-                  spdalt = "250/"..alt
-                else
                   spdalt = transSpd.."/"..alt
+                else
+                  spdalt = econSpd.."/"..alt
                 end
                 
                 local altdif = math.abs(simDR_pressureAlt1 - alt) --diff actual vs cruise altitude
