@@ -609,8 +609,10 @@ function defaultFMSData()
   accelht="1500",
   thrredht="1000",
   acarsMessage="",
-  clbspd="250",
-  transpd="272",
+  -- Climb-speed semantics: clbspd is the unrestricted ECON target;
+  -- transpd is the limiting speed below spdtransalt.
+  clbspd="272",
+  transpd="250",
   spdtransalt="10000",
   transalt="18000",
   clbrestspd="250",

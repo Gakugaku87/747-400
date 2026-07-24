@@ -70,6 +70,21 @@ function afds.flap_speed_bucket(flap_ratio)
     return 30
 end
 
+function afds.climb_speed_key_for_state(state)
+    if state == "aptres" then return "clbrestspd" end
+    if state == "spcres" then return "transpd" end
+    if state == "nores" then return "clbspd" end
+    return nil
+end
+
+function afds.climb_speed_for_state(state, data_source)
+    local key = afds.climb_speed_key_for_state(state)
+    if key == nil then return nil end
+    if type(data_source) == "function" then return tonumber(data_source(key)) end
+    if type(data_source) == "table" then return tonumber(data_source[key]) end
+    return nil
+end
+
 function afds.first_changed_value(previous, current, watched_values)
     if previous == nil or current == nil then return nil end
     for i = 1, #watched_values do

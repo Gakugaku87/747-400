@@ -70,6 +70,26 @@ assert_equal(nav.vnav_speed_change_reason(previous, current, {}, watched_values)
 assert_equal(nav.should_schedule_ias_update(false), true, "unscheduled IAS update is accepted")
 assert_equal(nav.should_schedule_ias_update(true), false, "duplicate IAS update is rejected")
 
+assert_equal(nav.climb_speed_key_for_state("aptres"), "clbrestspd",
+    "climb restriction state uses SPD REST")
+assert_equal(nav.climb_speed_key_for_state("spcres"), "transpd",
+    "below-transition climb state uses SPD TRANS")
+assert_equal(nav.climb_speed_key_for_state("nores"), "clbspd",
+    "unrestricted climb state uses ECON CLB")
+assert_equal(nav.climb_speed_key_for_state("crz"), nil,
+    "cruise state does not select an IAS climb field")
+local climb_profile = {
+    clbrestspd = "210",
+    transpd = "250",
+    clbspd = "272"
+}
+assert_equal(nav.climb_speed_for_state("aptres", climb_profile), 210,
+    "SPD REST value is selected below its altitude")
+assert_equal(nav.climb_speed_for_state("spcres", climb_profile), 250,
+    "SPD TRANS value is selected below transition altitude")
+assert_equal(nav.climb_speed_for_state("nores", climb_profile), 272,
+    "ECON CLB value is selected above transition altitude")
+
 assert_near(controls.pitch_transition_value(2, 8, 0, 0.7), 2, 0.0001, "pitch blend start")
 assert_near(controls.pitch_transition_value(2, 8, 0.35, 0.7), 5, 0.0001, "pitch blend midpoint")
 assert_near(controls.pitch_transition_value(2, 8, 0.7, 0.7), 8, 0.0001, "pitch blend completion")
