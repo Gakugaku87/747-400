@@ -336,7 +336,14 @@ function VNAV_DES(numAPengaged,fms)
     local forceOn=false
     if B747DR_ap_ias_dial_value<=spdval and simDR_autopilot_airspeed_is_mach==0 and B747DR_ap_ias_mach_window_open == 0 then forceOn=true end
     if B747BR_totalDistance-B747BR_tod<=0 and simDR_autopilot_airspeed_is_mach==0 and B747DR_ap_ias_mach_window_open == 0 and isManualSpeed==false then forceOn=true end
-    if B747DR_ap_inVNAVdescent >0 and B747DR_autothrottle_active == 1 and simDR_allThrottle<0.02 and forceOn==false then							-- AUTOTHROTTLE IS "ON"
+    if B747DR_vnav_energy_active == 1 then
+        -- Keep the A/T engaged so the EEC can command a controlled idle or
+        -- protected SPD recovery according to the combined path/speed state.
+        if B747DR_autothrottle_active == 0 and isATEnabled() then
+            B747DR_autothrottle_active=1
+            B747DR_ap_VNAV_lastCommand=simDRTime
+        end
+    elseif B747DR_ap_inVNAVdescent >0 and B747DR_autothrottle_active == 1 and simDR_allThrottle<0.02 and forceOn==false then							-- AUTOTHROTTLE IS "ON"
        -- simCMD_autopilot_autothrottle_off:once()									-- DEACTIVATE THE AUTOTHROTTLE
         B747DR_autothrottle_active=0
         B747DR_ap_VNAV_lastCommand=simDRTime

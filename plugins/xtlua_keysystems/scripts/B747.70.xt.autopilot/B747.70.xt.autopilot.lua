@@ -389,6 +389,13 @@ B747DR_ap_lnav_xtk_error           	= deferred_dataref("laminar/B747/autopilot/l
 B747DR_ap_lnav_xtk_target           	= deferred_dataref("laminar/B747/autopilot/lnav/xtk_target", "number")
 B747DR_ap_inVNAVdescent = deferred_dataref("laminar/B747/autopilot/vnav_descent", "number")
 B747DR_ap_inDescent 		= deferred_dataref("laminar/B747/autopilot/vnav/after_tod", "number")
+B747DR_vnav_energy_active = deferred_dataref("laminar/B747/autopilot/vnav/energy_active", "number")
+B747DR_vnav_energy_state = deferred_dataref("laminar/B747/autopilot/vnav/energy_state", "number")
+B747DR_vnav_energy_thrust_policy = deferred_dataref("laminar/B747/autopilot/vnav/energy_thrust_policy", "number")
+B747DR_vnav_energy_thrust_reason = deferred_dataref("laminar/B747/autopilot/vnav/energy_thrust_reason", "number")
+B747DR_vnav_energy_path_trend = deferred_dataref("laminar/B747/autopilot/vnav/energy_path_trend_fpm", "number")
+B747DR_vnav_energy_target_vspeed = deferred_dataref("laminar/B747/autopilot/vnav/energy_target_vspeed_fpm", "number")
+B747DR_vnav_energy_drag_required = deferred_dataref("laminar/B747/autopilot/vnav/energy_drag_required", "number")
 B747DR_ap_flightPhase = deferred_dataref("laminar/B747/autopilot/flightPhase", "number")
 B747DR_ap_active_land = deferred_dataref("laminar/B747/autopilot/active_land", "number")
 -- 0 take off
@@ -407,6 +414,7 @@ B747DR_ap_autothrottle_armed = deferred_dataref("laminar/B747/autothrottle/armed
 B747DR_ap_mach_decimal_visibiilty = deferred_dataref("laminar/B747/autopilot/mach_dec_vis", "number")
 B747DR_ap_fpa = deferred_dataref("laminar/B747/autopilot/navadata/fpa", "number")
 B747DR_ap_vb = deferred_dataref("laminar/B747/autopilot/navadata/vb", "number")
+B747DR_flight_director_pitch = find_dataref("laminar/B747/autopilot/flight_director_pitch_deg")
 
 B747DR_ap_FMA_autothrottle_mode_box_status =
 	deferred_dataref("laminar/B747/autopilot/FMA/autothrottle/mode_box_status", "number")
@@ -2948,6 +2956,13 @@ function B747_ap_fma(fms)
 			(((simDR_autopilot_flch_status > 0 and (simDR_pressureAlt1> simDR_autopilot_altitude_ft+B747DR_alt_capture_window or simDR_pressureAlt1< simDR_autopilot_altitude_ft-B747DR_alt_capture_window)) or B747DR_engine_TOGA_mode == 1) and B747DR_ap_inVNAVdescent == 0)
 	 then
 		B747DR_ap_FMA_autothrottle_mode = 5 --THR REF
+	elseif B747DR_vnav_energy_active == 1 and B747DR_ap_inVNAVdescent > 0
+		and B747DR_autothrottle_active == 1 then
+		if B747DR_vnav_energy_thrust_policy == B747_afds_helpers.VNAV_ENERGY_THRUST_IDLE then
+			B747DR_ap_FMA_autothrottle_mode = 2 --IDLE
+		else
+			B747DR_ap_FMA_autothrottle_mode = 3 --SPD
+		end
 	elseif B747DR_autothrottle_active == 1 then
 		if B747DR_ap_vnav_state > 0 and simDR_allThrottle < 0.1 and B747DR_ap_inVNAVdescent > 0 then
 			B747DR_ap_FMA_autothrottle_mode = 2 --IDLE
@@ -3490,7 +3505,10 @@ function B747_ap_EICAS_msg()
 		B747DR_CAS_caution_status[5] = 0
 	end
 
-	if
+	if B747DR_vnav_energy_active == 1 and B747DR_vnav_energy_drag_required == 1
+		and B747DR_speedbrake_lever < 0.3 and simDR_radarAlt1 > 1000 then
+		B747DR_fmc_notifications[9] = 1 --DRAG REQUIRED: path recovery is at its normal limit
+	elseif
 		B747DR_speedbrake_lever < 0.3 and simDR_ind_airspeed_kts_pilot > (simDR_autopilot_airspeed_kts + 10) and
 			simDR_ind_airspeed_kts_pilot > last_airspeed and
 			simDR_autopilot_vs_status >= 1 and
@@ -3628,6 +3646,7 @@ function after_physics()
 	local fms = json.decode(fmsSTR)
 	B747_getCurrentWayPoint(fms)
 	B747_monitorAP(fms)
+	B747_update_vnav_energy_mode_isolation()
 	B747_ap_fma(fms)
 	B747_ap_button_switch_animation()
 	B747_fltmgmt_setILS(fms)
@@ -3647,6 +3666,7 @@ function after_physics()
 
 	B747_ap_monitor_AI()
 	B747_afds_log_diagnostics(fms)
+	B747_log_vnav_energy_diagnostics()
 end
 
 --function after_replay() end
