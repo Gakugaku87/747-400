@@ -12,6 +12,7 @@
 *
 --]]
 dofile("B747.70.xt.autopilot.vnavspd.lua")
+local B747_afds_helpers = dofile("B747.70.xt.autopilot.afds_helpers.lua")
 
 local VNAV_ENERGY_THRUST_ENTRY_DELAY_SEC = 2.0
 local VNAV_ENERGY_THRUST_EXIT_DELAY_SEC = 5.0

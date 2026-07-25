@@ -32,4 +32,30 @@ local control_helpers = load_helper_with_xtlua_dofile(
 assert(type(control_helpers) == "table", "XTLua dofile discarded the control helper table")
 assert(type(control_helpers.adaptive_roll_filter) == "function", "control helper table is not callable")
 
+local function load_script_with_xtlua_dofile(path, script_directory)
+    runtime.XLuaGetCode = function(requested_path)
+        local resolved_path = requested_path
+        if not string.find(requested_path, "/", 1, true) then
+            resolved_path = script_directory .. "/" .. requested_path
+        end
+        local chunk, load_error = loadfile(resolved_path)
+        assert(chunk ~= nil, load_error)
+        return chunk
+    end
+
+    local namespace = {}
+    setmetatable(namespace, {__index = _G})
+    namespace.dofile = runtime.get_run_file_in_namespace(namespace)
+    namespace.dofile(path)
+    return namespace
+end
+
+local autopilot_directory =
+    "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot"
+local vnav_namespace = load_script_with_xtlua_dofile(
+    autopilot_directory .. "/B747.70.xt.autopilot.vnav.lua",
+    autopilot_directory)
+assert(type(vnav_namespace.B747_reset_vnav_energy) == "function",
+    "VNAV module failed to load its AFDS helper in its own XTLua chunk")
+
 print("XTLua dofile return-value tests passed")
