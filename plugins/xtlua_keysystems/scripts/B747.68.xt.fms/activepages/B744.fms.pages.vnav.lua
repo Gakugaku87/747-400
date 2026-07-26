@@ -33,6 +33,11 @@ local ClbV2 = 0 --backup of V2 speed which
 
 local conv = 1.0 --converter (pounds to kilos)
 
+local function selectedClimbSpeed()
+  local mode = tostring(fmsModules["data"].clbspdmode or "ECON")
+  return string.sub(mode, 1, 3) == "SEL"
+end
+
 local function parseCruiseAltitude(value)
   if value == nil then return nil end
   value = tostring(value)
@@ -287,9 +292,19 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
 
       VxSpeed = string.format("  %03d",ClbV2 + vxadj)
 
-      line1="       ECON CLB         " 
+      local isSelectedClimb = selectedClimbSpeed()
+      line1="       ECON CLB         "
+      if isSelectedClimb then
+        line1=string.format("       %3dKT CLB        ",
+          tonumber(fmsModules["data"]["clbspd"]) or 340)
+      end
       if B747DR_ap_flightPhase==1 then
-        line1="     ACT ECON CLB       "
+        if isSelectedClimb then
+          line1=string.format("    ACT %3dKT CLB       ",
+            tonumber(fmsModules["data"]["clbspd"]) or 340)
+        else
+          line1="     ACT ECON CLB       "
+        end
       end
       return{
         line1,
@@ -532,12 +547,15 @@ end
 
 fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
     if pgNo==1 then
-          
+      local climbSpeedLabel = " ECON SPD          ERROR"
+      if selectedClimbSpeed() then
+        climbSpeedLabel = " SEL SPD           ERROR"
+      end
       return{
       "                    1/3 ",
       " CRZ ALT        AT "..nxWpt,
       "                        ",
-      " ECON SPD          ERROR",
+      climbSpeedLabel,
       "                        ",
       " SPD TRANS     TRANS ALT",
       "                        ",
@@ -610,3 +628,4 @@ end
 function trim1(s)
   return (s:gsub("^%s*(.-)%s*$", "%1"))
 end
+

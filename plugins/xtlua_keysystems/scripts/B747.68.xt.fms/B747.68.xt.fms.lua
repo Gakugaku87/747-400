@@ -147,6 +147,7 @@ function deferred_dataref(name,nilType,callFunction)
     return find_dataref(name)
 end
 dofile("json/json.lua")
+local fmsPerformance = dofile("B744.fms.performance.lua")
 hh=find_dataref("sim/cockpit2/clock_timer/zulu_time_hours")
 mm=find_dataref("sim/cockpit2/clock_timer/zulu_time_minutes")
 ss=find_dataref("sim/cockpit2/clock_timer/zulu_time_seconds")
@@ -609,9 +610,11 @@ function defaultFMSData()
   accelht="1500",
   thrredht="1000",
   acarsMessage="",
-  -- Climb-speed semantics: clbspd is the unrestricted ECON target;
-  -- transpd is the limiting speed below spdtransalt.
-  clbspd="272",
+  -- clbspd is the unrestricted ECON target.  It is continuously calculated
+  -- once PERF INIT data is available; 340 is the Boeing data-unavailable
+  -- fallback for the 747-400.
+  clbspd="340",
+  clbspdmode="ECON",
   transpd="250",
   spdtransalt="10000",
   transalt="18000",
@@ -719,6 +722,15 @@ fmsModules["setData"]=function(self,id,value)
 	B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
 end
 function setFMSData(id,value)
+	if id=="clbspd" then
+		-- A crew-entered value selects fixed-speed climb.  Deleting it restores
+		-- the continuously calculated ECON schedule.
+		if value=="" then
+			fmsModules["data"].clbspdmode="ECON"
+		else
+			fmsModules["data"].clbspdmode="SEL "
+		end
+	end
 	if not string.starts(id,"acars") then 
 		print("setting " .. id )
 		print(" to "..value)
@@ -726,6 +738,52 @@ function setFMSData(id,value)
 	end
    fmsModules:setData(id,value)
 end  
+
+local function totalEngineFuelFlowKgSec()
+	local total=0
+	for engine=0,3,1 do
+		total=total+(tonumber(simDR_eng_fuel_flow_kg_sec[engine]) or 0)
+	end
+	return total
+end
+
+function B747_updateEconClimbSpeed()
+	local climbMode=tostring(fmsModules["data"].clbspdmode or "ECON")
+	if string.sub(climbMode,1,3)=="SEL" then return end
+
+	local cruiseAltitude=fmsPerformance.parse_cruise_altitude_ft(
+		fmsModules["data"].crzalt)
+	if cruiseAltitude==nil or cruiseAltitude<=0 then cruiseAltitude=35000 end
+
+	local predictedWeight=fmsPerformance.estimate_top_of_climb_weight_kg({
+		gross_weight_kg=simDR_GRWT,
+		current_altitude_ft=simDR_pressureAlt1,
+		cruise_altitude_ft=cruiseAltitude,
+		total_fuel_flow_kg_sec=totalEngineFuelFlowKgSec(),
+		distance_to_toc_nm=B747BR_toc,
+		ground_speed_kts=simDR_groundspeed*1.94384449
+	})
+
+	local headwind=0
+	if simDR_onGround==0 then
+		headwind=fmsPerformance.headwind_component_kts(
+			simDR_wind_degrees,simDR_wind_speed,simDR_aircraft_hdg)
+	end
+	local isaDeviation=simDR_air_temp
+		-fmsPerformance.isa_temperature_c(simDR_pressureAlt1)
+	local econSpeed=fmsPerformance.econ_climb_speed_kcas({
+		top_of_climb_weight_kg=predictedWeight,
+		cost_index=fmsModules["data"].costindex,
+		headwind_kts=headwind,
+		isa_deviation_c=isaDeviation,
+		cruise_altitude_ft=cruiseAltitude
+	})
+	local formattedSpeed=string.format("%3d",econSpeed)
+	if fmsModules["data"].clbspd~=formattedSpeed then
+		fmsModules["data"].clbspd=formattedSpeed
+	end
+end
+
 function getFMSData(id)
   if hasChild(fmsModules["data"],id) then
     return fmsModules["data"][id]
@@ -1232,6 +1290,7 @@ function after_physics()
 	cM=mm
 	cM=ss
     setNotifications()
+    B747_updateEconClimbSpeed()
     B747_getStepClimbAdvisory()
     B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
     --print(B747DR_FMSdata)
