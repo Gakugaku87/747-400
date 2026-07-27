@@ -92,6 +92,38 @@ fmsFunctionsDefs["INDEX"]["R4"]={"setpage","GNDHNDL"}
 fmsFunctionsDefs["INDEX"]["R6"]={"setpage","MAINTSIMCONFIG"}
 --fmsFunctionsDefs["INDEX"]["R6"]={"setpage", "MAINTSIMCONFIG"}
 
+local function getRTEFieldValue(fmsID, label, fallbackLine, fallbackStart, fallbackEnd, maxLength)
+  local value=nil
+  for lineNo=2,11,2 do
+    local labelLine=cleanFMSLine(B747DR_srcfms[fmsID][lineNo])
+    local labelColumn=string.find(labelLine,label,1,true)
+    if labelColumn~=nil then
+      local dataLine=cleanFMSLine(B747DR_srcfms[fmsID][lineNo+1])
+      if labelColumn<=12 then
+        value=string.sub(dataLine,1,12)
+      else
+        value=string.sub(dataLine,13,24)
+      end
+      break
+    end
+  end
+  if value==nil then
+    value=string.sub(cleanFMSLine(B747DR_srcfms[fmsID][fallbackLine]),fallbackStart,fallbackEnd)
+  end
+  value=string.gsub(value,"^%s+","")
+  value=string.gsub(value,"%s+$","")
+  if string.len(value)>maxLength then value=string.sub(value,1,maxLength) end
+  return value
+end
+
+local function formatRTEFieldLine(leftValue,rightValue)
+  local left=tostring(leftValue or "")
+  local right=tostring(rightValue or "")
+  local available=24-string.len(left)
+  if string.len(right)>available then right=string.sub(right,1,available) end
+  return left..string.rep(" ",24-string.len(left)-string.len(right))..right
+end
+
 fmsPages["RTE1"]=createPage("RTE1")
 fmsPages["RTE1"].getPage=function(self,pgNo,fmsID)
   local l1=cleanFMSLine(B747DR_srcfms[fmsID][1])
@@ -156,14 +188,16 @@ fmsPages["RTE1"].getPage=function(self,pgNo,fmsID)
   fmsFunctionsDefs["RTE1"]["R2"]={"custom2fmc","R3"}
   fmsFunctionsDefs["RTE1"]["L4"]={"custom2fmc","L4"}
   fmsFunctionsDefs["RTE1"]["R3"]={"setpage","FMC"}
-  local line5="                "..string.sub(cleanFMSLine(B747DR_srcfms[fmsID][5]),1,8)
-  if acarsSystem.provider.online() then line5=" <SEND          "..string.sub(cleanFMSLine(B747DR_srcfms[fmsID][5]),1,8) end
+  local fltNo=getRTEFieldValue(fmsID,"FLT NO",7,-8,-1,8)
+  local coRoute=getRTEFieldValue(fmsID,"CO ROUTE",5,1,10,10)
+  local line5=formatRTEFieldLine("",coRoute)
+  if acarsSystem.provider.online() then line5=formatRTEFieldLine(" <SEND",coRoute) end
   local page={
   "      ACT RTE 1     " .. string.sub(cleanFMSLine(B747DR_srcfms[fmsID][1]),-4,-1) ,
   "                        ",
   cleanFMSLine(B747DR_srcfms[fmsID][3]),
   "                        ",
-  fmsModules["data"]["runway"] .."            ".. string.sub(cleanFMSLine(B747DR_srcfms[fmsID][7]),-7,-1), 
+  formatRTEFieldLine(fmsModules["data"]["runway"],fltNo),
   "                        ",
   line5,
   cleanFMSLine(B747DR_srcfms[fmsID][8]),
