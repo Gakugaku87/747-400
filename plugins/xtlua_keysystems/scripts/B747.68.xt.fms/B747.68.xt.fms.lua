@@ -623,6 +623,7 @@ function defaultFMSData()
   clbrestalt="5000 ",
   stepalt="FL360",
   stepto=string.rep("*", 5),
+  stepatwpt="",
   stepdistance="-1.000",
   crzspd="810",
   desspdmach="805",
