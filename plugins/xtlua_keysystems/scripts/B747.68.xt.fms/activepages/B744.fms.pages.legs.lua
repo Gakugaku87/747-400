@@ -52,12 +52,13 @@ fmsPages["LEGS"].getPage=function(self,pgNo,fmsID)
   local l2="                        "
   local l3=cleanFMSLine(B747DR_srcfms[fmsID][3])
   local l5=cleanFMSLine(B747DR_srcfms[fmsID][5])
+  -- The active waypoint occupies R1 on LEGS page 1.  Keep the native line
+  -- formatting there, but still route its altitude field through the step
+  -- handler so entries such as 330S are stored and reflected on VNAV CRZ.
+  fmsFunctionsDefs["LEGS"]["R1"]={"setlegstep","R1"}
   if (pageNo~=nil and pageNo~=1) or string.starts(l5,"***") then
     l2=cleanFMSLine(B747DR_srcfms[fmsID][2])
     l3=cleanFMSLine(B747DR_srcfms[fmsID][3])
-    fmsFunctionsDefs["LEGS"]["R1"]={"setlegstep","R1"}
-  else
-    fmsFunctionsDefs["LEGS"]["R1"]=nil
   end
 
   local page={
