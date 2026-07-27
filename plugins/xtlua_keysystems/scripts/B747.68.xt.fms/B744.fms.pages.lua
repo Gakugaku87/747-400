@@ -646,6 +646,59 @@ function fmsFunctions.key2fmc(fmsO,value)
   fmsO["scratchpad"]=""
   fmsO["notify"]=""
 end
+
+function fmsFunctions.setlegstep(fmsO,value)
+  local waypoint=B747_getLegStepWaypoint(fmsO,value)
+  local scratchpad=fmsO["scratchpad"] or ""
+  local programmedWaypoint=tostring(getFMSData("stepatwpt") or "")
+
+  if scratchpad=="DELETE" then
+    if waypoint~="" and waypoint==programmedWaypoint then
+      setFMSData("stepto","*****")
+      setFMSData("stepatwpt","")
+      fmsO["scratchpad"]=""
+      fmsO["notify"]=""
+    else
+      fmsFunctions["key2fmc"](fmsO,value)
+    end
+    return
+  end
+
+  if string.len(scratchpad)==0 then
+    if waypoint~="" and waypoint==programmedWaypoint then
+      local stepTo=validStepAltitude(getFMSData("stepto"))
+      if stepTo~=nil then
+        fmsO["scratchpad"]=stepTo.."S"
+        return
+      end
+    end
+    fmsFunctions["key2fmc"](fmsO,value)
+    return
+  end
+
+  if string.sub(scratchpad,-1)~="S" then
+    fmsFunctions["key2fmc"](fmsO,value)
+    return
+  end
+
+  local stepTo=validStepAltitude(string.sub(scratchpad,1,-2))
+  if stepTo==nil or waypoint=="" then
+    fmsO["notify"]="INVALID ENTRY"
+    return
+  end
+
+  local stepToFeet=tonumber(string.sub(stepTo,3))*100
+  local cruiseAltitude=tonumber(B747BR_cruiseAlt) or 0
+  if cruiseAltitude>0 and stepToFeet<=cruiseAltitude then
+    fmsO["notify"]="INVALID ENTRY"
+    return
+  end
+
+  setFMSData("stepatwpt",waypoint)
+  setFMSData("stepto",stepTo)
+  fmsO["scratchpad"]=""
+  fmsO["notify"]=""
+end
 local updateFrom="fmsL"
 local lastCrz=0
 
@@ -1142,6 +1195,7 @@ function fmsFunctions.setdata(fmsO,value)
   elseif value=="stepto" then
 		if del==true then
 			setFMSData("stepto","*****")
+			setFMSData("stepatwpt","")
 		elseif string.len(fmsO["scratchpad"])==0 then
 			local stepTo=getFMSData("stepto")
 			if stepTo=="*****" then stepTo=getFMSData("stepalt") end
@@ -1155,6 +1209,7 @@ function fmsFunctions.setdata(fmsO,value)
 					fmsO["notify"]="INVALID ENTRY"
 					return
 				end
+				setFMSData("stepatwpt","")
 				setFMSData("stepto",stepTo)
 			else
 				fmsO["notify"]="INVALID ENTRY"
@@ -1309,6 +1364,7 @@ function fmsFunctions.setdata(fmsO,value)
 			local alt=validAlt(fmsO["scratchpad"])
 			if alt~=nil then 
 				setFMSData("stepto","*****")
+				setFMSData("stepatwpt","")
 				simCMD_FMS_key[fmsO.id]["fpln"]:once()--make sure we arent on the vnav page
 				simCMD_FMS_key[fmsO.id]["clb"]:once()--go to the vnav page
 				simCMD_FMS_key[fmsO.id]["next"]:once() --go to the vnav page 2

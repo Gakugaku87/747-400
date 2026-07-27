@@ -75,6 +75,62 @@ local function publishStepClimbAdvisory(advisory)
   return advisory
 end
 
+local function trimStepWaypoint(value)
+  value=tostring(value or "")
+  value=string.gsub(value,"^%s+","")
+  value=string.gsub(value,"%s+$","")
+  return value
+end
+
+local function programmedStepDistance(stepWaypoint)
+  if stepWaypoint=="" or string.len(fmsJson)<=2 then return nil,false end
+
+  local decoded,flightPlan=pcall(json.decode,fmsJson)
+  if not decoded or type(flightPlan)~="table" or table.getn(flightPlan)==0 then
+    return nil,false
+  end
+
+  local currentIndex=nil
+  local targetIndex=nil
+  local passed=false
+  local waypointCount=table.getn(flightPlan)
+  for i=1,waypointCount,1 do
+    if flightPlan[i][10]==true then
+      currentIndex=i
+      break
+    end
+  end
+  if currentIndex==nil then return nil,false end
+
+  for i=1,waypointCount,1 do
+    if trimStepWaypoint(flightPlan[i][8])==stepWaypoint then
+      if i>=currentIndex and targetIndex==nil then
+        targetIndex=i
+      elseif i<currentIndex then
+        passed=true
+      end
+    end
+  end
+  if targetIndex==nil then
+    if passed then return 0,true end
+    return nil,false
+  end
+
+  local targetLat=tonumber(flightPlan[currentIndex][5])
+  local targetLon=tonumber(flightPlan[currentIndex][6])
+  if targetLat==nil or targetLon==nil then return nil,false end
+  local distance=getDistance(simDR_latitude,simDR_longitude,targetLat,targetLon)
+  for i=currentIndex,targetIndex-1,1 do
+    local lat1=tonumber(flightPlan[i][5])
+    local lon1=tonumber(flightPlan[i][6])
+    local lat2=tonumber(flightPlan[i+1][5])
+    local lon2=tonumber(flightPlan[i+1][6])
+    if lat1==nil or lon1==nil or lat2==nil or lon2==nil then return nil,false end
+    distance=distance+getDistance(lat1,lon1,lat2,lon2)
+  end
+  return distance,false
+end
+
 function B747_getStepClimbAdvisory()
   local advisory = {
     target = "",
@@ -122,6 +178,23 @@ function B747_getStepClimbAdvisory()
 
   advisory.target = string.format("FL%03d", targetAltitude / 100)
   fmsModules["data"].stepalt = advisory.target
+
+  local programmedWaypoint=trimStepWaypoint(fmsModules["data"].stepatwpt)
+  if advisory.manual and programmedWaypoint~="" then
+    local distanceToWaypoint,passedWaypoint=programmedStepDistance(programmedWaypoint)
+    if distanceToWaypoint~=nil then
+      advisory.distance=math.max(0,distanceToWaypoint)
+      if passedWaypoint or advisory.distance<=1 then
+        advisory.label="NOW"
+        advisory.value=""
+      else
+        advisory.label="AT "..string.sub(programmedWaypoint,1,8)
+        advisory.value=formatStepTimeDistance(advisory.distance/groundSpeedKts,advisory.distance)
+      end
+      return publishStepClimbAdvisory(advisory)
+    end
+    fmsModules["data"].stepatwpt=""
+  end
 
   local grossWeightThousandsKg = simDR_GRWT / 1000
   local targetThousandsFeet = targetAltitude / 1000

@@ -741,9 +741,17 @@ function B747_ap_switch_vnavalt_mode_CMDhandler(phase, duration)
 
 		B747_ap_button_switch_position_target[16] = 1 -- SET THE ALT KNOB ANIMATION TO "IN"
 
-		if B747DR_autopilot_altitude_ft > B747BR_cruiseAlt then
+		local currentCruiseAltitude=tonumber(B747BR_cruiseAlt) or 0
+		local isVnavCruise=simDR_onGround==0
+			and B747DR_ap_vnav_state>1
+			and B747DR_ap_inVNAVdescent==0
+			and simDR_autopilot_alt_hold_status==2
+			and currentCruiseAltitude>0
+			and math.abs(simDR_pressureAlt1-currentCruiseAltitude)<=500
+		if isVnavCruise and B747DR_autopilot_altitude_ft>currentCruiseAltitude then
 			B747BR_cruiseAlt = B747DR_autopilot_altitude_ft
 			setFMSData("stepto", "*****")
+			setFMSData("stepatwpt", "")
 			print("set new cruise to "..B747BR_cruiseAlt)
 			if is_timer_scheduled(update_new_crzalt) then
 				stop_timer(update_new_crzalt)
