@@ -76,10 +76,7 @@ local function publishStepClimbAdvisory(advisory)
 end
 
 local function trimStepWaypoint(value)
-  value=tostring(value or "")
-  value=string.gsub(value,"^%s+","")
-  value=string.gsub(value,"%s+$","")
-  return value
+  return B747_fms_step.trim(value)
 end
 
 local function programmedStepDistance(stepWaypoint)

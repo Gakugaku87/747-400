@@ -148,6 +148,7 @@ function deferred_dataref(name,nilType,callFunction)
 end
 dofile("json/json.lua")
 local fmsPerformance = dofile("B744.fms.performance.lua")
+B747_fms_step = dofile("B744.fms.step.lua")
 hh=find_dataref("sim/cockpit2/clock_timer/zulu_time_hours")
 mm=find_dataref("sim/cockpit2/clock_timer/zulu_time_minutes")
 ss=find_dataref("sim/cockpit2/clock_timer/zulu_time_seconds")
@@ -623,7 +624,7 @@ function defaultFMSData()
   clbrestalt="5000 ",
   stepalt="FL360",
   stepto=string.rep("*", 5),
-  stepatwpt="",
+  stepatwpt=string.rep(" ", 12),
   stepdistance="-1.000",
   crzspd="810",
   desspdmach="805",
@@ -711,12 +712,8 @@ fmsModules["setData"]=function(self,id,value)
       end
     end
     len=string.len(self["data"][id])
-    if len < string.len(value) and id~="acarsMessage" then 
-      value=string.sub(value,1,3)
-    end
-    --newVal=string.sub(value,1,len)
 	if id~="acarsMessage" then
-    	self["data"][id]=string.format("%s%"..(len-string.len(value)).."s",value,"")
+		self["data"][id]=B747_fms_step.fixed_width(value,len)
 	else
 		self["data"][id]=value
 	end

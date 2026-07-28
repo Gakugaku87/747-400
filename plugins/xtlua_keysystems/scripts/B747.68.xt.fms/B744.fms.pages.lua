@@ -650,7 +650,7 @@ end
 function fmsFunctions.setlegstep(fmsO,value)
   local waypoint=B747_getLegStepWaypoint(fmsO,value)
   local scratchpad=fmsO["scratchpad"] or ""
-  local programmedWaypoint=tostring(getFMSData("stepatwpt") or "")
+  local programmedWaypoint=B747_fms_step.trim(getFMSData("stepatwpt"))
 
   if scratchpad=="DELETE" then
     if waypoint~="" and waypoint==programmedWaypoint then
@@ -676,12 +676,12 @@ function fmsFunctions.setlegstep(fmsO,value)
     return
   end
 
-  if string.sub(scratchpad,-1)~="S" then
+  if string.sub(string.upper(B747_fms_step.trim(scratchpad)),-1)~="S" then
     fmsFunctions["key2fmc"](fmsO,value)
     return
   end
 
-  local stepTo=validStepAltitude(string.sub(scratchpad,1,-2))
+  local stepTo=validStepAltitude(B747_fms_step.altitude_token(scratchpad))
   if stepTo==nil or waypoint=="" then
     fmsO["notify"]="INVALID ENTRY"
     return
