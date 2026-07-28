@@ -1,8 +1,5 @@
 local function trimLegWaypoint(value)
-  value=tostring(value or "")
-  value=string.gsub(value,"^%s+","")
-  value=string.gsub(value,"%s+$","")
-  return value
+  return B747_fms_step.trim(value)
 end
 
 local function legWaypointFromLine(line)
@@ -13,11 +10,11 @@ local function legWaypointFromLine(line)
     if decoded and type(flightPlan)=="table" then
       for i=1,table.getn(flightPlan),1 do
         local waypoint=trimLegWaypoint(flightPlan[i][8])
-        if waypoint~="" and waypoint~="latlon" and string.find(left,waypoint,1,true)~=nil then
+        if waypoint~="" and string.upper(waypoint)~="LATLON"
+          and string.find(left,waypoint,1,true)~=nil then
           return waypoint
         end
       end
-      return ""
     end
   end
 
