@@ -625,6 +625,7 @@ function defaultFMSData()
   stepalt="FL360",
   stepto=string.rep("*", 5),
   stepatwpt=string.rep(" ", 12),
+  plannedsteps="[]",
   stepdistance="-1.000",
   crzspd="810",
   desspdmach="805",
@@ -712,7 +713,7 @@ fmsModules["setData"]=function(self,id,value)
       end
     end
     len=string.len(self["data"][id])
-	if id~="acarsMessage" then
+	if id~="acarsMessage" and id~="plannedsteps" then
 		self["data"][id]=B747_fms_step.fixed_width(value,len)
 	else
 		self["data"][id]=value
@@ -793,6 +794,23 @@ function getFMSData(id)
   end
   return fmsModules["data"][id]
 end 
+
+function B747_getPlannedSteps()
+  local rawSteps=fmsModules["data"].plannedsteps
+  if type(rawSteps)=="table" then
+    return B747_fms_step.normalize_list(rawSteps)
+  end
+  if type(rawSteps)~="string" or string.len(rawSteps)<2 then return {} end
+
+  local decoded,steps=pcall(json.decode,rawSteps)
+  if not decoded or type(steps)~="table" then return {} end
+  return B747_fms_step.normalize_list(steps)
+end
+
+function B747_setPlannedSteps(steps)
+  setFMSData("plannedsteps",json.encode(B747_fms_step.normalize_list(steps)))
+end
+
 fmsModules["lastcmd"]=" "
 fmsModules["cmds"]={}
 fmsModules["cmdstrings"]={}
