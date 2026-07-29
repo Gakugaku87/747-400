@@ -11,6 +11,8 @@ function deferred_dataref(name,type,notifier)
 end
 B747DR_ap_vnav_pause            = deferred_dataref("laminar/B747/autopilot/vnav_pause","number")
 B747DR_fmc_notifications            = deferred_dataref("laminar/B747/fms/notification","array[56]")
+B747DR_fms_exec_light            = deferred_dataref("laminar/B747/fms/exec_light","number")
+B747DR_fms_exec_light=0
 ilsData=deferred_dataref("laminar/B747/radio/ilsData", "string")
 acars=create_dataref("laminar/B747/comm/acars","number")  
 toderate=deferred_dataref("laminar/B747/engine/derate/TO","number") 

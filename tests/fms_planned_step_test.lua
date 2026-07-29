@@ -60,6 +60,23 @@ local flight_plan={
     route_leg("ECHO",29000,false)
 }
 
+local active_plan=step.upsert({},"BRAVO","FL310",3)
+local modified_plan=step.normalize_list(active_plan)
+modified_plan=step.upsert(modified_plan,"DELTA","FL330",5)
+assert_equal(#active_plan,1,
+    "MOD entry leaves the active planned-step list unchanged")
+assert_equal(#modified_plan,2,
+    "MOD entry is retained in the provisional planned-step list")
+assert_equal(step.lists_equal(active_plan,modified_plan,flight_plan),false,
+    "pending vertical-profile change is detected")
+
+local executed_plan=step.normalize_list(modified_plan)
+assert_equal(step.lists_equal(executed_plan,modified_plan,flight_plan),true,
+    "EXEC can promote the complete provisional list")
+local erased_plan=step.normalize_list(active_plan)
+assert_equal(step.lists_equal(erased_plan,active_plan,flight_plan),true,
+    "ERASE can restore the unchanged active list")
+
 local planned={}
 planned=step.upsert(planned,"BRAVO","FL310",3)
 planned=step.upsert(planned,"DELTA","FL330",5)
@@ -109,5 +126,23 @@ assert_equal(#planned,1,
     "deleting one planned step retains the others")
 assert_equal(planned[1].waypoint,"DELTA",
     "remaining planned step survives deletion")
+
+run_after_time=function() end
+switchCustomMode=function() end
+dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B744.createfms.lua")
+local modification_executed=false
+local native_exec_forwarded=false
+B747_executePlannedStepModification=function()
+    modification_executed=true
+    return true
+end
+simCMD_FMS_key.test={
+    exec={once=function() native_exec_forwarded=true end}
+}
+keyDown("test","exec")
+assert_equal(modification_executed,true,
+    "EXEC promotes a pending planned-step modification")
+assert_equal(native_exec_forwarded,true,
+    "EXEC also reaches the native FMC modification handler")
 
 print("FMS planned-step tests passed: "..tests_run)

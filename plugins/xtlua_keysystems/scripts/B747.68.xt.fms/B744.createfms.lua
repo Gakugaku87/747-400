@@ -41,6 +41,13 @@ function keyDown(fmsModule,key)
     B747DR_fdr_log_json=fmsModule.. " do " .. key
   end
   lastKeyDown =  fmsModule.. " did " .. key
+  if key=="exec" and type(B747_executePlannedStepModification)=="function"
+    and B747_executePlannedStepModification() then
+    if simCMD_FMS_key[fmsModule]["exec"]~=nil then
+      simCMD_FMS_key[fmsModule]["exec"]:once()
+    end
+    return
+  end
   if key=="index" then
       fmsModules[fmsModule].targetCustomFMC=true
       fmsModules[fmsModule].targetPage="INITREF"

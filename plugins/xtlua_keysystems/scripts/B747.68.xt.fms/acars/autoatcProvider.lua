@@ -9,7 +9,7 @@ sendDataref=find_dataref("autoatc/acars/out")
 hasMobile=find_dataref("autoatc/hasMobile")
 cduDataref=find_dataref("autoatc/cdu")
 
-execLightDataref=find_dataref("sim/cockpit2/radios/indicators/fms_exec_light_copilot")
+execLightDataref=find_dataref("laminar/B747/fms/exec_light")
 com_power = find_dataref ("autoatc/com_power")
 com_freq_override = find_dataref ("autoatc/com_frequency_override")
 simDR_com1_power = find_dataref ("sim/cockpit2/radios/actuators/com1_power")

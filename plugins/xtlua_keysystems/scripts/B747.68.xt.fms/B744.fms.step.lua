@@ -101,6 +101,25 @@ function step.normalize_list(entries)
   return normalized
 end
 
+function step.lists_equal(left_entries,right_entries,flight_plan)
+  local left=step.sorted(left_entries,flight_plan)
+  local right=step.sorted(right_entries,flight_plan)
+  if #left~=#right then return false end
+
+  for index=1,#left,1 do
+    local left_route_index=step.resolve_route_index(left[index],flight_plan)
+      or math.floor(tonumber(left[index].routeIndex) or 0)
+    local right_route_index=step.resolve_route_index(right[index],flight_plan)
+      or math.floor(tonumber(right[index].routeIndex) or 0)
+    if left[index].waypoint~=right[index].waypoint
+      or left[index].altitude~=right[index].altitude
+      or left_route_index~=right_route_index then
+      return false
+    end
+  end
+  return true
+end
+
 function step.find(entries,waypoint,route_index)
   waypoint=step.trim(waypoint)
   route_index=math.floor(tonumber(route_index) or 0)

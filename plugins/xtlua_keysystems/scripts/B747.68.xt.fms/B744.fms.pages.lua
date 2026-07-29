@@ -655,25 +655,11 @@ local function legStepFlightPlan()
   return flightPlan
 end
 
-local function publishNextPlannedStep(plannedSteps,flightPlan)
-  local currentIndex=B747_fms_step.current_route_index(flightPlan) or 1
-  local cruiseAltitude=tonumber(B747BR_cruiseAlt) or 0
-  local entry=B747_fms_step.next_entry(
-    plannedSteps,flightPlan,currentIndex,cruiseAltitude)
-  if entry~=nil then
-    setFMSData("stepatwpt",entry.waypoint)
-    setFMSData("stepto",entry.altitude)
-  else
-    setFMSData("stepto","*****")
-    setFMSData("stepatwpt","")
-  end
-end
-
 function fmsFunctions.setlegstep(fmsO,value)
   local waypoint,routeIndex=B747_getLegStepWaypoint(fmsO,value)
   local scratchpad=fmsO["scratchpad"] or ""
   local flightPlan=legStepFlightPlan()
-  local plannedSteps=B747_getPlannedSteps()
+  local plannedSteps=B747_getDisplayedPlannedSteps()
   local programmedStep=B747_fms_step.entry_at_index(
     plannedSteps,flightPlan,routeIndex)
 
@@ -681,8 +667,7 @@ function fmsFunctions.setlegstep(fmsO,value)
     if waypoint~="" and programmedStep~=nil then
       plannedSteps=B747_fms_step.remove(
         plannedSteps,programmedStep.waypoint,programmedStep.routeIndex)
-      B747_setPlannedSteps(plannedSteps)
-      publishNextPlannedStep(plannedSteps,flightPlan)
+      B747_setModifiedPlannedSteps(plannedSteps,flightPlan)
       fmsO["scratchpad"]=""
       fmsO["notify"]=""
     else
@@ -728,8 +713,25 @@ function fmsFunctions.setlegstep(fmsO,value)
     return
   end
 
-  B747_setPlannedSteps(updatedSteps)
-  publishNextPlannedStep(updatedSteps,flightPlan)
+  B747_setModifiedPlannedSteps(updatedSteps,flightPlan)
+  fmsO["scratchpad"]=""
+  fmsO["notify"]=""
+end
+
+function fmsFunctions.eraselegstepmod(fmsO,value)
+  if not B747_hasPlannedStepModification() then
+    fmsFunctions["key2fmc"](fmsO,value)
+    return
+  end
+
+  local sourceTitle=""
+  if B747DR_srcfms[fmsO.id]~=nil then
+    sourceTitle=cleanFMSLine(B747DR_srcfms[fmsO.id][1])
+  end
+  B747_discardPlannedStepModification()
+  if string.find(sourceTitle,"MOD",1,true)~=nil then
+    simCMD_FMS_key[fmsO.id][value]:once()
+  end
   fmsO["scratchpad"]=""
   fmsO["notify"]=""
 end
