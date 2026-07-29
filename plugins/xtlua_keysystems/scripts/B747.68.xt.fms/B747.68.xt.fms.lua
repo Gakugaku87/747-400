@@ -48,6 +48,9 @@ simDR_autopilot_airspeed_kts_mach   	= find_dataref("sim/cockpit2/autopilot/airs
 simDR_autopilot_airspeed_kts   		= find_dataref("sim/cockpit2/autopilot/airspeed_dial_kts")
 B747DR_elec_ext_pwr1_available      = find_dataref("laminar/B747/electrical/ext_pwr1_avail")
 simDR_xpdr_code         = find_dataref("sim/cockpit2/radios/actuators/transponder_code")
+simDR_fms_exec_light_pilot = find_dataref("sim/cockpit2/radios/indicators/fms_exec_light_pilot")
+simDR_fms_exec_light_copilot = find_dataref("sim/cockpit2/radios/indicators/fms_exec_light_copilot")
+B747DR_fms_exec_light = find_dataref("laminar/B747/fms/exec_light")
 --Workaround for stack overflow in init.lua namespace_read
 
 
@@ -626,6 +629,8 @@ function defaultFMSData()
   stepto=string.rep("*", 5),
   stepatwpt=string.rep(" ", 12),
   plannedsteps="[]",
+  modplannedsteps="[]",
+  stepmodactive="0",
   stepdistance="-1.000",
   crzspd="810",
   desspdmach="805",
@@ -713,7 +718,7 @@ fmsModules["setData"]=function(self,id,value)
       end
     end
     len=string.len(self["data"][id])
-	if id~="acarsMessage" and id~="plannedsteps" then
+	if id~="acarsMessage" and id~="plannedsteps" and id~="modplannedsteps" then
 		self["data"][id]=B747_fms_step.fixed_width(value,len)
 	else
 		self["data"][id]=value
@@ -795,8 +800,7 @@ function getFMSData(id)
   return fmsModules["data"][id]
 end 
 
-function B747_getPlannedSteps()
-  local rawSteps=fmsModules["data"].plannedsteps
+local function decodePlannedSteps(rawSteps)
   if type(rawSteps)=="table" then
     return B747_fms_step.normalize_list(rawSteps)
   end
@@ -807,8 +811,102 @@ function B747_getPlannedSteps()
   return B747_fms_step.normalize_list(steps)
 end
 
+local function decodedPlannedStepFlightPlan()
+  local sources={tostring(fmsJSON or ""),tostring(fmsFlightPlan or "")}
+  for index=1,#sources,1 do
+    if string.len(sources[index])>2 then
+      local decoded,flightPlan=pcall(json.decode,sources[index])
+      if decoded and type(flightPlan)=="table" and #flightPlan>0 then
+        return flightPlan
+      end
+    end
+  end
+  return {}
+end
+
+local function publishFMSData()
+  B747DR_FMSdata=json.encode(fmsModules["data"]["values"])
+end
+
+function B747_getPlannedSteps()
+  return decodePlannedSteps(fmsModules["data"].plannedsteps)
+end
+
 function B747_setPlannedSteps(steps)
   setFMSData("plannedsteps",json.encode(B747_fms_step.normalize_list(steps)))
+end
+
+function B747_hasPlannedStepModification()
+  return tostring(fmsModules["data"].stepmodactive or "0")=="1"
+end
+
+function B747_getModifiedPlannedSteps()
+  if not B747_hasPlannedStepModification() then return B747_getPlannedSteps() end
+  return decodePlannedSteps(fmsModules["data"].modplannedsteps)
+end
+
+function B747_getDisplayedPlannedSteps()
+  if B747_hasPlannedStepModification() then
+    return B747_getModifiedPlannedSteps()
+  end
+  return B747_getPlannedSteps()
+end
+
+function B747_discardPlannedStepModification()
+  if not B747_hasPlannedStepModification() then return false end
+  fmsModules["data"].modplannedsteps="[]"
+  fmsModules["data"].stepmodactive="0"
+  publishFMSData()
+  return true
+end
+
+function B747_setModifiedPlannedSteps(steps,flightPlan)
+  steps=B747_fms_step.normalize_list(steps)
+  flightPlan=flightPlan or decodedPlannedStepFlightPlan()
+  if B747_fms_step.lists_equal(steps,B747_getPlannedSteps(),flightPlan) then
+    B747_discardPlannedStepModification()
+    return false
+  end
+  fmsModules["data"].modplannedsteps=json.encode(steps)
+  fmsModules["data"].stepmodactive="1"
+  publishFMSData()
+  return true
+end
+
+function B747_syncActivePlannedStepFields(flightPlan)
+  flightPlan=flightPlan or decodedPlannedStepFlightPlan()
+  local currentIndex=B747_fms_step.current_route_index(flightPlan) or 1
+  local cruiseAltitude=tonumber(B747BR_cruiseAlt) or 0
+  local entry=B747_fms_step.next_entry(
+    B747_getPlannedSteps(),flightPlan,currentIndex,cruiseAltitude)
+  if entry~=nil then
+    fmsModules["data"].stepatwpt=B747_fms_step.fixed_width(entry.waypoint,12)
+    fmsModules["data"].stepto=B747_fms_step.fixed_width(entry.altitude,5)
+  else
+    fmsModules["data"].stepatwpt=string.rep(" ",12)
+    fmsModules["data"].stepto=string.rep("*",5)
+  end
+end
+
+function B747_executePlannedStepModification()
+  if not B747_hasPlannedStepModification() then return false end
+  local flightPlan=decodedPlannedStepFlightPlan()
+  local modifiedSteps=B747_getModifiedPlannedSteps()
+  fmsModules["data"].plannedsteps=json.encode(modifiedSteps)
+  fmsModules["data"].modplannedsteps="[]"
+  fmsModules["data"].stepmodactive="0"
+  B747_syncActivePlannedStepFields(flightPlan)
+  publishFMSData()
+  return true
+end
+
+function B747_updateFmsExecLight()
+  local nativeLight=math.max(
+    tonumber(simDR_fms_exec_light_pilot) or 0,
+    tonumber(simDR_fms_exec_light_copilot) or 0)
+  local plannedStepLight=0
+  if B747_hasPlannedStepModification() then plannedStepLight=1 end
+  B747DR_fms_exec_light=math.max(nativeLight,plannedStepLight)
 end
 
 fmsModules["lastcmd"]=" "
@@ -1278,6 +1376,7 @@ function throttleDataRefresh()
 end
 
 function after_physics()
+  B747_updateFmsExecLight()
   if debug_fms>0 then return end
 	
   if hasSimConfig()==false then return end

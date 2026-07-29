@@ -5907,7 +5907,7 @@ END_SOUND_ATTACHMENT
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/fmc_ding
     VEH_XYZ 0 4.9 -26
-        EVENT_START_COND sim/cockpit2/radios/indicators/fms_exec_light_pilot == 1
+        EVENT_START_COND laminar/B747/fms/exec_light == 1
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT

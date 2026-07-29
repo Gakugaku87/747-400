@@ -111,7 +111,12 @@ fmsPages["LEGS"]=createPage("LEGS")
 fmsPages["LEGS"].getPage=function(self,pgNo,fmsID)
   local l1=cleanFMSLine(B747DR_srcfms[fmsID][1])
   local pageNo=tonumber(string.sub(l1,21,22))
-  l1=" ACT RTE 1 LEGS    "..string.sub(l1,20,24)
+  local plannedStepModification=B747_hasPlannedStepModification()
+  if plannedStepModification then
+    l1=" MOD RTE 1 LEGS    "..string.sub(l1,20,24)
+  else
+    l1=" ACT RTE 1 LEGS    "..string.sub(l1,20,24)
+  end
   local l2="                        "
   local l3=cleanFMSLine(B747DR_srcfms[fmsID][3])
   local l5=cleanFMSLine(B747DR_srcfms[fmsID][5])
@@ -132,7 +137,11 @@ fmsPages["LEGS"].getPage=function(self,pgNo,fmsID)
   local _,routeIndex3=routeIndexForLegRow(fmsID,3,l7,flightPlan)
   local _,routeIndex4=routeIndexForLegRow(fmsID,4,l9,flightPlan)
   local _,routeIndex5=routeIndexForLegRow(fmsID,5,l11,flightPlan)
-  local plannedSteps=B747_getPlannedSteps()
+  local plannedSteps=B747_getDisplayedPlannedSteps()
+  local l13=cleanFMSLine(B747DR_srcfms[fmsID][13])
+  if plannedStepModification then
+    l13=string.format("%-12s%s","<ERASE",string.sub(l13,13,24))
+  end
 
   local page={
     l1,
@@ -147,7 +156,7 @@ fmsPages["LEGS"].getPage=function(self,pgNo,fmsID)
     cleanFMSLine(B747DR_srcfms[fmsID][10]),
     renderLegStep(l11,routeIndex5,flightPlan,plannedSteps),
     cleanFMSLine(B747DR_srcfms[fmsID][12]),
-    cleanFMSLine(B747DR_srcfms[fmsID][13]),
+    l13,
   }
   return page
 end
@@ -157,7 +166,7 @@ fmsFunctionsDefs["LEGS"]["L2"]={"key2fmc","L2"}
 fmsFunctionsDefs["LEGS"]["L3"]={"key2fmc","L3"}
 fmsFunctionsDefs["LEGS"]["L4"]={"key2fmc","L4"}
 fmsFunctionsDefs["LEGS"]["L5"]={"key2fmc","L5"}
-fmsFunctionsDefs["LEGS"]["L6"]={"key2fmc","L6"}
+fmsFunctionsDefs["LEGS"]["L6"]={"eraselegstepmod","L6"}
 
 fmsFunctionsDefs["LEGS"]["R2"]={"setlegstep","R2"}
 fmsFunctionsDefs["LEGS"]["R3"]={"setlegstep","R3"}
