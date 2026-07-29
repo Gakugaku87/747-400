@@ -79,32 +79,40 @@ local function trimStepWaypoint(value)
   return B747_fms_step.trim(value)
 end
 
-local function programmedStepDistance(stepWaypoint)
-  if stepWaypoint=="" or string.len(fmsJson)<=2 then return nil,false end
-
-  local decoded,flightPlan=pcall(json.decode,fmsJson)
-  if not decoded or type(flightPlan)~="table" or table.getn(flightPlan)==0 then
-    return nil,false
+local function decodedStepFlightPlan()
+  local flightPlanText=tostring(fmsJson or "")
+  if string.len(flightPlanText)<=2 then
+    flightPlanText=tostring(fmsFlightPlan or "")
   end
+  if string.len(flightPlanText)<=2 then return {} end
 
-  local currentIndex=nil
+  local decoded,flightPlan=pcall(json.decode,flightPlanText)
+  if not decoded or type(flightPlan)~="table" then return {} end
+  return flightPlan
+end
+
+local function programmedStepDistance(flightPlan,stepWaypoint,preferredTargetIndex)
+  if stepWaypoint=="" or type(flightPlan)~="table"
+    or table.getn(flightPlan)==0 then return nil,false end
+
+  local currentIndex=B747_fms_step.current_route_index(flightPlan)
   local targetIndex=nil
   local passed=false
   local waypointCount=table.getn(flightPlan)
-  for i=1,waypointCount,1 do
-    if flightPlan[i][10]==true then
-      currentIndex=i
-      break
-    end
-  end
   if currentIndex==nil then return nil,false end
 
-  for i=1,waypointCount,1 do
-    if trimStepWaypoint(flightPlan[i][8])==stepWaypoint then
-      if i>=currentIndex and targetIndex==nil then
-        targetIndex=i
-      elseif i<currentIndex then
-        passed=true
+  preferredTargetIndex=math.floor(tonumber(preferredTargetIndex) or 0)
+  if preferredTargetIndex>=currentIndex and preferredTargetIndex<=waypointCount
+    and trimStepWaypoint(flightPlan[preferredTargetIndex][8])==stepWaypoint then
+    targetIndex=preferredTargetIndex
+  else
+    for i=1,waypointCount,1 do
+      if trimStepWaypoint(flightPlan[i][8])==stepWaypoint then
+        if i>=currentIndex and targetIndex==nil then
+          targetIndex=i
+        elseif i<currentIndex then
+          passed=true
+        end
       end
     end
   end
@@ -159,7 +167,25 @@ function B747_getStepClimbAdvisory()
     return publishStepClimbAdvisory(advisory)
   end
 
-  local enteredStepAltitude = parseCruiseAltitude(fmsModules["data"].stepto)
+  local flightPlan=decodedStepFlightPlan()
+  local currentIndex=B747_fms_step.current_route_index(flightPlan) or 1
+  local plannedSteps=B747_getPlannedSteps()
+  local plannedStep,plannedRouteIndex=B747_fms_step.next_entry(
+    plannedSteps,flightPlan,currentIndex,cruiseAltitude)
+  if plannedStep~=nil then
+    fmsModules["data"].stepto=B747_fms_step.fixed_width(plannedStep.altitude,5)
+    fmsModules["data"].stepatwpt=B747_fms_step.fixed_width(plannedStep.waypoint,12)
+  elseif #plannedSteps>0 then
+    fmsModules["data"].stepto=string.rep("*",5)
+    fmsModules["data"].stepatwpt=string.rep(" ",12)
+  end
+
+  local enteredStepAltitude = nil
+  if plannedStep~=nil then
+    enteredStepAltitude=B747_fms_step.altitude_feet(plannedStep.altitude)
+  else
+    enteredStepAltitude=parseCruiseAltitude(fmsModules["data"].stepto)
+  end
   local targetAltitude = nil
   if enteredStepAltitude ~= nil and enteredStepAltitude > cruiseAltitude then
     targetAltitude = enteredStepAltitude
@@ -178,7 +204,8 @@ function B747_getStepClimbAdvisory()
 
   local programmedWaypoint=trimStepWaypoint(fmsModules["data"].stepatwpt)
   if advisory.manual and programmedWaypoint~="" then
-    local distanceToWaypoint,passedWaypoint=programmedStepDistance(programmedWaypoint)
+    local distanceToWaypoint,passedWaypoint=programmedStepDistance(
+      flightPlan,programmedWaypoint,plannedRouteIndex)
     if distanceToWaypoint~=nil then
       advisory.distance=math.max(0,distanceToWaypoint)
       if passedWaypoint or advisory.distance<=1 then

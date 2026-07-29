@@ -647,15 +647,42 @@ function fmsFunctions.key2fmc(fmsO,value)
   fmsO["notify"]=""
 end
 
+local function legStepFlightPlan()
+  local flightPlanText=tostring(fmsFlightPlan or "")
+  if string.len(flightPlanText)<=2 then return {} end
+  local decoded,flightPlan=pcall(json.decode,flightPlanText)
+  if not decoded or type(flightPlan)~="table" then return {} end
+  return flightPlan
+end
+
+local function publishNextPlannedStep(plannedSteps,flightPlan)
+  local currentIndex=B747_fms_step.current_route_index(flightPlan) or 1
+  local cruiseAltitude=tonumber(B747BR_cruiseAlt) or 0
+  local entry=B747_fms_step.next_entry(
+    plannedSteps,flightPlan,currentIndex,cruiseAltitude)
+  if entry~=nil then
+    setFMSData("stepatwpt",entry.waypoint)
+    setFMSData("stepto",entry.altitude)
+  else
+    setFMSData("stepto","*****")
+    setFMSData("stepatwpt","")
+  end
+end
+
 function fmsFunctions.setlegstep(fmsO,value)
-  local waypoint=B747_getLegStepWaypoint(fmsO,value)
+  local waypoint,routeIndex=B747_getLegStepWaypoint(fmsO,value)
   local scratchpad=fmsO["scratchpad"] or ""
-  local programmedWaypoint=B747_fms_step.trim(getFMSData("stepatwpt"))
+  local flightPlan=legStepFlightPlan()
+  local plannedSteps=B747_getPlannedSteps()
+  local programmedStep=B747_fms_step.entry_at_index(
+    plannedSteps,flightPlan,routeIndex)
 
   if scratchpad=="DELETE" then
-    if waypoint~="" and waypoint==programmedWaypoint then
-      setFMSData("stepto","*****")
-      setFMSData("stepatwpt","")
+    if waypoint~="" and programmedStep~=nil then
+      plannedSteps=B747_fms_step.remove(
+        plannedSteps,programmedStep.waypoint,programmedStep.routeIndex)
+      B747_setPlannedSteps(plannedSteps)
+      publishNextPlannedStep(plannedSteps,flightPlan)
       fmsO["scratchpad"]=""
       fmsO["notify"]=""
     else
@@ -665,12 +692,9 @@ function fmsFunctions.setlegstep(fmsO,value)
   end
 
   if string.len(scratchpad)==0 then
-    if waypoint~="" and waypoint==programmedWaypoint then
-      local stepTo=validStepAltitude(getFMSData("stepto"))
-      if stepTo~=nil then
-        fmsO["scratchpad"]=stepTo.."S"
-        return
-      end
+    if waypoint~="" and programmedStep~=nil then
+      fmsO["scratchpad"]=programmedStep.altitude.."S"
+      return
     end
     fmsFunctions["key2fmc"](fmsO,value)
     return
@@ -687,15 +711,25 @@ function fmsFunctions.setlegstep(fmsO,value)
     return
   end
 
-  local stepToFeet=tonumber(string.sub(stepTo,3))*100
-  local cruiseAltitude=tonumber(B747BR_cruiseAlt) or 0
-  if cruiseAltitude>0 and stepToFeet<=cruiseAltitude then
+  if programmedStep~=nil then
+    plannedSteps=B747_fms_step.remove(
+      plannedSteps,programmedStep.waypoint,programmedStep.routeIndex)
+  end
+  local updatedSteps=B747_fms_step.upsert(
+    plannedSteps,waypoint,stepTo,routeIndex)
+  local cruiseAltitude=B747_fms_step.altitude_feet(getFMSData("crzalt"))
+  if cruiseAltitude==nil or cruiseAltitude<=0 then
+    cruiseAltitude=tonumber(B747BR_cruiseAlt) or 0
+  end
+  local currentIndex=B747_fms_step.current_route_index(flightPlan) or 1
+  if not B747_fms_step.valid_climb_sequence(
+    updatedSteps,flightPlan,math.max(0,cruiseAltitude),currentIndex) then
     fmsO["notify"]="INVALID ENTRY"
     return
   end
 
-  setFMSData("stepatwpt",waypoint)
-  setFMSData("stepto",stepTo)
+  B747_setPlannedSteps(updatedSteps)
+  publishNextPlannedStep(updatedSteps,flightPlan)
   fmsO["scratchpad"]=""
   fmsO["notify"]=""
 end
