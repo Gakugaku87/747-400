@@ -656,9 +656,9 @@ local function legStepFlightPlan()
 end
 
 function fmsFunctions.setlegstep(fmsO,value)
-  local waypoint,routeIndex=B747_getLegStepWaypoint(fmsO,value)
+  local waypoint,routeIndex,flightPlan=B747_getLegStepWaypoint(fmsO,value)
   local scratchpad=fmsO["scratchpad"] or ""
-  local flightPlan=legStepFlightPlan()
+  flightPlan=flightPlan or legStepFlightPlan()
   local plannedSteps=B747_getDisplayedPlannedSteps()
   local programmedStep=B747_fms_step.entry_at_index(
     plannedSteps,flightPlan,routeIndex)
@@ -691,7 +691,7 @@ function fmsFunctions.setlegstep(fmsO,value)
   end
 
   local stepTo=validStepAltitude(B747_fms_step.altitude_token(scratchpad))
-  if stepTo==nil or waypoint=="" then
+  if stepTo==nil or waypoint=="" or routeIndex==nil then
     fmsO["notify"]="INVALID ENTRY"
     return
   end
