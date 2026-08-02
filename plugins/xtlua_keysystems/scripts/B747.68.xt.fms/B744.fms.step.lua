@@ -47,6 +47,53 @@ local function route_waypoint(flight_plan,index)
   return step.trim(flight_plan[index][8])
 end
 
+function step.page_number(page_title)
+  local page_number=string.match(tostring(page_title or ""),"(%d+)%s*/%s*%d+")
+  return math.max(1,math.floor(tonumber(page_number) or 1))
+end
+
+local function waypoint_from_leg_line(line)
+  local left=string.sub(tostring(line or ""),1,12)
+  local waypoint=string.match(left,"[%w][%w%./%-]*")
+  return step.trim(waypoint)
+end
+
+function step.resolve_leg_row(flight_plan,current_index,page_number,row,line)
+  current_index=math.max(1,math.floor(tonumber(current_index) or 1))
+  page_number=math.max(1,math.floor(tonumber(page_number) or 1))
+  row=math.max(1,math.floor(tonumber(row) or 1))
+  local left=string.upper(string.sub(tostring(line or ""),1,12))
+  local preferred_index=current_index+(page_number-1)*5+(row-1)
+
+  local function matches(index)
+    local waypoint=route_waypoint(flight_plan,index)
+    return waypoint~="" and string.upper(waypoint)~="LATLON"
+      and string.find(left,string.upper(waypoint),1,true)~=nil
+  end
+
+  if matches(preferred_index) then
+    return route_waypoint(flight_plan,preferred_index),preferred_index
+  end
+
+  if type(flight_plan)=="table" then
+    for index=current_index,#flight_plan,1 do
+      if matches(index) then return route_waypoint(flight_plan,index),index end
+    end
+    for index=1,current_index-1,1 do
+      if matches(index) then return route_waypoint(flight_plan,index),index end
+    end
+  end
+
+  return waypoint_from_leg_line(line),nil
+end
+
+function step.exec_light_value(pilot_light,copilot_light,mod_active)
+  local native_light=math.max(
+    tonumber(pilot_light) or 0,
+    tonumber(copilot_light) or 0)
+  return math.max(native_light,mod_active and 1 or 0)
+end
+
 function step.current_route_index(flight_plan)
   if type(flight_plan)~="table" then return nil end
   for index=1,#flight_plan,1 do
@@ -223,7 +270,8 @@ function step.valid_climb_sequence(entries,flight_plan,base_altitude,minimum_ind
   local sorted=step.sorted(entries,flight_plan)
   for index=1,#sorted,1 do
     local route_index=step.resolve_route_index(sorted[index],flight_plan)
-    if route_index==nil or route_index>=minimum_index then
+    if route_index==nil then return false end
+    if route_index>=minimum_index then
       local altitude=step.altitude_feet(sorted[index].altitude)
       if altitude==nil or altitude<=previous_altitude then return false end
       previous_altitude=altitude

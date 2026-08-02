@@ -3,11 +3,16 @@ local function trimLegWaypoint(value)
 end
 
 local function decodeLegFlightPlan()
-  local flightPlanText=tostring(fmsFlightPlan or "")
-  if string.len(flightPlanText)<=2 then return {} end
-  local decoded,flightPlan=pcall(json.decode,flightPlanText)
-  if not decoded or type(flightPlan)~="table" then return {} end
-  return flightPlan
+  local sources={tostring(fmsFlightPlan or ""),tostring(fmsJSON or "")}
+  for index=1,#sources,1 do
+    if string.len(sources[index])>2 then
+      local decoded,flightPlan=pcall(json.decode,sources[index])
+      if decoded and type(flightPlan)=="table" and #flightPlan>0 then
+        return flightPlan
+      end
+    end
+  end
+  return {}
 end
 
 local function routeWaypoint(flightPlan,index)
@@ -17,39 +22,12 @@ local function routeWaypoint(flightPlan,index)
   return trimLegWaypoint(flightPlan[index][8])
 end
 
-local function legWaypointFromLine(line,flightPlan,preferredIndex)
-  local left=string.sub(tostring(line or ""),1,12)
-  preferredIndex=math.floor(tonumber(preferredIndex) or 0)
-  if preferredIndex>0 then
-    local waypoint=routeWaypoint(flightPlan,preferredIndex)
-    if waypoint~="" and string.upper(waypoint)~="LATLON"
-      and string.find(left,waypoint,1,true)~=nil then
-      return waypoint,preferredIndex
-    end
-  end
-
-  if type(flightPlan)=="table" then
-    local currentIndex=B747_fms_step.current_route_index(flightPlan) or 1
-    for i=currentIndex,table.getn(flightPlan),1 do
-      local waypoint=routeWaypoint(flightPlan,i)
-      if waypoint~="" and string.upper(waypoint)~="LATLON"
-        and string.find(left,waypoint,1,true)~=nil then
-        return waypoint,i
-      end
-    end
-  end
-
-  local waypoint=string.match(left,"[%w][%w%./%-]*")
-  return trimLegWaypoint(waypoint),nil
-end
-
 local function routeIndexForLegRow(fmsID,row,line,flightPlan)
   local currentIndex=B747_fms_step.current_route_index(flightPlan) or 1
   local pageLine=cleanFMSLine(B747DR_srcfms[fmsID][1])
-  local pageNumber=tonumber(string.sub(pageLine,21,22)) or 1
-  local preferredIndex=currentIndex+(pageNumber-1)*5+(row-1)
-  local waypoint,routeIndex=legWaypointFromLine(line,flightPlan,preferredIndex)
-  return waypoint,routeIndex
+  local pageNumber=B747_fms_step.page_number(pageLine)
+  return B747_fms_step.resolve_leg_row(
+    flightPlan,currentIndex,pageNumber,row,line)
 end
 
 function B747_getLegStepWaypoint(fmsO,key)
@@ -59,7 +37,8 @@ function B747_getLegStepWaypoint(fmsO,key)
   local sourceLine=row*2+1
   local line=cleanFMSLine(B747DR_srcfms[fmsO.id][sourceLine])
   local flightPlan=decodeLegFlightPlan()
-  return routeIndexForLegRow(fmsO.id,row,line,flightPlan)
+  local waypoint,routeIndex=routeIndexForLegRow(fmsO.id,row,line,flightPlan)
+  return waypoint,routeIndex,flightPlan
 end
 
 local function hasPriorPlannedStep(entries,flightPlan,routeIndex)
@@ -73,7 +52,6 @@ end
 local function renderLegStep(line,routeIndex,flightPlan,plannedSteps)
   line=string.sub(tostring(line or "")..string.rep(" ",24),1,24)
   local waypoint=routeWaypoint(flightPlan,routeIndex)
-  if waypoint=="" then waypoint=legWaypointFromLine(line,flightPlan,routeIndex) end
   if waypoint=="" or routeIndex==nil then return line end
 
   local entry=B747_fms_step.entry_at_index(plannedSteps,flightPlan,routeIndex)
@@ -110,7 +88,7 @@ end
 fmsPages["LEGS"]=createPage("LEGS")
 fmsPages["LEGS"].getPage=function(self,pgNo,fmsID)
   local l1=cleanFMSLine(B747DR_srcfms[fmsID][1])
-  local pageNo=tonumber(string.sub(l1,21,22))
+  local pageNo=B747_fms_step.page_number(l1)
   local plannedStepModification=B747_hasPlannedStepModification()
   if plannedStepModification then
     l1=" MOD RTE 1 LEGS    "..string.sub(l1,20,24)

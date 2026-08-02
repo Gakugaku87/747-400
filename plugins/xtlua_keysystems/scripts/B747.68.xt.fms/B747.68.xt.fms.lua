@@ -828,6 +828,12 @@ local function publishFMSData()
   B747DR_FMSdata=json.encode(fmsModules["data"]["values"])
 end
 
+local function refreshFmsExecLight()
+  if type(B747_updateFmsExecLight)=="function" then
+    B747_updateFmsExecLight()
+  end
+end
+
 function B747_getPlannedSteps()
   return decodePlannedSteps(fmsModules["data"].plannedsteps)
 end
@@ -857,6 +863,7 @@ function B747_discardPlannedStepModification()
   fmsModules["data"].modplannedsteps="[]"
   fmsModules["data"].stepmodactive="0"
   publishFMSData()
+  refreshFmsExecLight()
   return true
 end
 
@@ -870,6 +877,7 @@ function B747_setModifiedPlannedSteps(steps,flightPlan)
   fmsModules["data"].modplannedsteps=json.encode(steps)
   fmsModules["data"].stepmodactive="1"
   publishFMSData()
+  refreshFmsExecLight()
   return true
 end
 
@@ -897,16 +905,15 @@ function B747_executePlannedStepModification()
   fmsModules["data"].stepmodactive="0"
   B747_syncActivePlannedStepFields(flightPlan)
   publishFMSData()
+  refreshFmsExecLight()
   return true
 end
 
 function B747_updateFmsExecLight()
-  local nativeLight=math.max(
-    tonumber(simDR_fms_exec_light_pilot) or 0,
-    tonumber(simDR_fms_exec_light_copilot) or 0)
-  local plannedStepLight=0
-  if B747_hasPlannedStepModification() then plannedStepLight=1 end
-  B747DR_fms_exec_light=math.max(nativeLight,plannedStepLight)
+  B747DR_fms_exec_light=B747_fms_step.exec_light_value(
+    simDR_fms_exec_light_pilot,
+    simDR_fms_exec_light_copilot,
+    B747_hasPlannedStepModification())
 end
 
 fmsModules["lastcmd"]=" "
