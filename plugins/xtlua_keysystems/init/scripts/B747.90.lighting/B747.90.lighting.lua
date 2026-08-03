@@ -35,7 +35,7 @@ per-frame callback you’d do fuel = fuel + 3 * SIM_PERIOD.
 
 NUM_SPILL_LIGHT_INDICES = 9
 NUM_LANDING_LIGHTS      = 4
-NUM_ANNUN_LIGHTS        = 270
+NUM_ANNUN_LIGHTS        = 271
 
 
 --*************************************************************************************--

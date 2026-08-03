@@ -44,7 +44,7 @@ function deferred_dataref(name,nilType,callFunction)
 end
 NUM_SPILL_LIGHT_INDICES = 9
 NUM_LANDING_LIGHTS      = 4
-NUM_ANNUN_LIGHTS        = 270
+NUM_ANNUN_LIGHTS        = 271
 
 
 --*************************************************************************************--
@@ -486,6 +486,7 @@ B747DR_init_lighting_CD                 = deferred_dataref("laminar/B747/lightin
 
 ----- ANNUNCIATORS ----------------------------------------------------------------------
 B747DR_annun_brightness_ratio           = deferred_dataref("laminar/B747/annunciator/brightness_ratio", "array[" .. tostring(NUM_ANNUN_LIGHTS) .. "]")
+B747DR_fms_exec_light                   = deferred_dataref("laminar/B747/fms/exec_light", "number")
 
 B747DR_ap_FMA_autothrottle_mode     	= deferred_dataref("laminar/B747/autopilot/FMA/autothrottle_mode", "number")
 
@@ -2089,6 +2090,9 @@ function B747_ind_lights()
     B747DR_annun_brightness_ratio[267]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_CMD_L * brightness_level))
     B747DR_annun_brightness_ratio[268]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_CMD_C * brightness_level))
     B747DR_annun_brightness_ratio[269]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_CMD_R * brightness_level))
+
+    -- FMC EXEC
+    B747DR_annun_brightness_ratio[270]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (B747DR_fms_exec_light * brightness_level))
 
     --wxr panel
         --not XP12.3
