@@ -86,6 +86,8 @@ B747DR_next_waypoint				= deferred_dataref("laminar/B747/nd/next_waypoint", "str
 --Waypoint info for ND DISPLAY
 B747DR_ND_waypoint_eta					= deferred_dataref("laminar/B747/nd/waypoint_eta", "string")
 B747DR_ND_current_waypoint				= deferred_dataref("laminar/B747/nd/current_waypoint", "string")
+B747DR_ND_current_waypoint_capt			= deferred_dataref("laminar/B747/nd/current_waypoint_capt", "string")
+B747DR_ND_current_waypoint_fo				= deferred_dataref("laminar/B747/nd/current_waypoint_fo", "string")
 B747DR_ND_waypoint_distance				= deferred_dataref("laminar/B747/nd/waypoint_distance", "string")
 
 --ND Range DISPLAY

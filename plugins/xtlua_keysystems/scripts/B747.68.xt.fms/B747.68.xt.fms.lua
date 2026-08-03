@@ -152,6 +152,7 @@ end
 dofile("json/json.lua")
 local fmsPerformance = dofile("B744.fms.performance.lua")
 B747_fms_step = dofile("B744.fms.step.lua")
+local B747_nd_plan = dofile("B744.fms.nd.lua")
 hh=find_dataref("sim/cockpit2/clock_timer/zulu_time_hours")
 mm=find_dataref("sim/cockpit2/clock_timer/zulu_time_minutes")
 ss=find_dataref("sim/cockpit2/clock_timer/zulu_time_seconds")
@@ -185,6 +186,7 @@ simDR_fueL_tank_weight_total_kg     = find_dataref("sim/flightmodel/weight/m_fue
 navAidsJSON   = find_dataref("xtlua/navaids")
 fmsJSON = find_dataref("xtlua/fms")
 fmsFlightPlan = find_dataref("xtlua/fltpln")
+xpFMSDataJSON = find_dataref("xtlua/xpFMSData")
 
 B747DR_fms1_display_mode            = find_dataref("laminar/B747/fms1/display_mode")
 
@@ -313,6 +315,8 @@ B747DR_next_waypoint				= deferred_dataref("laminar/B747/nd/next_waypoint", "str
 --Waypoint info for ND DISPLAY
 B747DR_ND_waypoint_eta					= deferred_dataref("laminar/B747/nd/waypoint_eta", "string")
 B747DR_ND_current_waypoint				= deferred_dataref("laminar/B747/nd/current_waypoint", "string")
+B747DR_ND_current_waypoint_capt			= deferred_dataref("laminar/B747/nd/current_waypoint_capt", "string")
+B747DR_ND_current_waypoint_fo				= deferred_dataref("laminar/B747/nd/current_waypoint_fo", "string")
 B747DR_ND_waypoint_distance				= deferred_dataref("laminar/B747/nd/waypoint_distance", "string")
 
 --ND Range DISPLAY
@@ -1097,6 +1101,26 @@ function get_waypoint_estimate(latitude,longitude,fms_waypoint, fms_latitude, fm
   return fms_distance_to_waypoint,time_to_waypoint,hours,mins,secs
 end
 
+local function decodedPlanDisplayData()
+	local displayText=tostring(xpFMSDataJSON or "")
+	if string.len(displayText)<3 then return nil end
+	local decoded,displayData=pcall(json.decode,displayText)
+	if not decoded or type(displayData)~="table" then return nil end
+	return displayData
+end
+
+local function updateNDDisplayWaypoints(activeWaypoint,activeRoute)
+	local displayData=nil
+	if tonumber(simDR_nd_mode_dial_capt)==3
+	  or tonumber(simDR_nd_mode_dial_fo)==3 then
+		displayData=decodedPlanDisplayData()
+	end
+	B747DR_ND_current_waypoint_capt=B747_nd_plan.display_waypoint(
+	  activeWaypoint,activeRoute,displayData,simDR_nd_mode_dial_capt)
+	B747DR_ND_current_waypoint_fo=B747_nd_plan.display_waypoint(
+	  activeWaypoint,activeRoute,displayData,simDR_nd_mode_dial_fo)
+end
+
 
 function waypoint_eta_display()
 	local hours = 0
@@ -1156,6 +1180,7 @@ function waypoint_eta_display()
 		B747DR_ND_waypoint_distance = string.format("%5.1f".."nm", fms_distance_to_waypoint)
 		B747DR_ND_waypoint_eta = string.format("%02d%02d.%d".."z", hours, mins, secs * 10)			
 	end
+	updateNDDisplayWaypoints(B747DR_ND_current_waypoint,fms)
 	if B747DR_last_waypoint=="" then
 	  B747DR_last_waypoint="-----"
 	  B747DR_waypoint_ata="------Z"

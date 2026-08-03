@@ -32,6 +32,12 @@ local control_helpers = load_helper_with_xtlua_dofile(
 assert(type(control_helpers) == "table", "XTLua dofile discarded the control helper table")
 assert(type(control_helpers.adaptive_roll_filter) == "function", "control helper table is not callable")
 
+local nd_plan_helpers = load_helper_with_xtlua_dofile(
+    "plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B744.fms.nd.lua")
+assert(type(nd_plan_helpers) == "table", "XTLua dofile discarded the ND PLN helper table")
+assert(nd_plan_helpers.display_waypoint("RJAA", {{0, 0, 0, 0, 0, 0, 0, "ALPHA"}},
+    {1}, 3) == "ALPHA", "ND PLN helper table is not callable")
+
 local function load_script_with_xtlua_dofile(path, script_directory)
     runtime.XLuaGetCode = function(requested_path)
         local resolved_path = requested_path
