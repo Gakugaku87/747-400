@@ -20,12 +20,10 @@ function M.selected_plan_waypoint(route,displayData)
 end
 
 function M.display_waypoint(activeWaypoint,route,displayData,mode)
-  if tonumber(mode)~=3 then
-    return activeWaypoint
-  end
-  local planWaypoint=M.selected_plan_waypoint(route,displayData)
-  if planWaypoint==nil then return activeWaypoint end
-  return planWaypoint
+  -- FCOM 10.10.65-68: PLAN changes the map centre, not the active waypoint
+  -- information at the top. Its identifier, ETA and distance must all refer
+  -- to the same active leg, independently of the CDU STEP selection.
+  return activeWaypoint
 end
 
 return M

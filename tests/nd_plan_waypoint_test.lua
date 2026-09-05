@@ -24,17 +24,19 @@ local waypoint,index=ndPlan.selected_plan_waypoint(route,{3})
 assert_equal(waypoint,"BRAVO",
   "PLN selection resolves the selected route waypoint instead of the origin")
 assert_equal(index,3,"PLN selection retains the route index")
-assert_equal(ndPlan.display_waypoint("RJAA",route,{2},3),"ALPHA",
-  "captain PLN mode displays the selected waypoint")
-assert_equal(ndPlan.display_waypoint("RJAA",route,{4},3),"CHARL",
-  "first officer PLN mode displays the selected waypoint")
+assert_equal(ndPlan.display_waypoint("RJAA",route,{2},3),"RJAA",
+  "captain PLN header retains the active waypoint")
+assert_equal(ndPlan.display_waypoint("RJAA",route,{4},3),"RJAA",
+  "first officer PLN header retains the active waypoint")
 assert_equal(ndPlan.display_waypoint("RJAA",route,{3},2),"RJAA",
   "MAP mode keeps the active waypoint display")
 assert_equal(ndPlan.display_waypoint("RJAA",route,{8},3),"RJAA",
   "an out-of-range PLN selection keeps the active waypoint")
 
 route[2][8]=" latlon "
-assert_equal(ndPlan.display_waypoint("RJAA",route,{2},3),"-----",
-  "coordinate-only PLN legs use the placeholder identifier")
+assert_equal(ndPlan.display_waypoint("RJAA",route,{2},3),"RJAA",
+  "viewing a coordinate-only leg does not replace active waypoint information")
+assert_equal(ndPlan.selected_plan_waypoint(route,{2}),"-----",
+  "coordinate-only map centres retain their placeholder identifier")
 
 print("ND PLN waypoint tests passed: "..testsRun)

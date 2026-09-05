@@ -12,9 +12,9 @@ local fms_data = {
 
 local runtime = {
     dofile = function(path)
-        assert(path == "B747.70.xt.autopilot.afds_helpers.lua",
-            "unexpected helper path: " .. tostring(path))
-        return helpers
+        if path == "B747.70.xt.autopilot.afds_helpers.lua" then return helpers end
+        assert(path == "B747.70.xt.autopilot.takeoff.lua", "unexpected helper path: "..tostring(path))
+        return dofile("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/"..path)
     end,
     getFMSData = function(name)
         return fms_data[name]

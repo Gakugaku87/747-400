@@ -13,6 +13,8 @@
 --]]
 
 local vnav_afds_helpers = dofile("B747.70.xt.autopilot.afds_helpers.lua")
+local takeoff_profile = dofile("B747.70.xt.autopilot.takeoff.lua")
+local takeoff_state = takeoff_profile.new()
 local VNAV_SPEED_FALLBACK_REFRESH_SEC = 60.0
 local VNAV_IAS_DATAREF_SYNC_DELAY_SEC = 0.25
 local VNAV_MACH_TRANSITION_HYSTERESIS = 0.005
@@ -139,6 +141,40 @@ function B747_invalidate_vnav_speed(reason)
     vnavSPD_state["lastInvalidationReason"]=reason or "explicit refresh request"
 end
 
+function B747_reset_takeoff_profile()
+    takeoff_state = takeoff_profile.new()
+    B747_invalidate_vnav_speed("new flight takeoff reference")
+end
+
+function B747_update_takeoff_profile()
+    local was_accelerated = takeoff_state.acceleration_complete
+    local previous_speed = takeoff_state.vnav_speed_kts
+    takeoff_profile.update(takeoff_state, {
+        on_ground=simDR_onGround == 1,
+        ias_kts=simDR_ind_airspeed_kts_pilot,
+        altitude_ft=simDR_pressureAlt1,
+        baro_inhg=simDR_altimeter_baro_inHg,
+        v2_kts=B747DR_airspeed_V2,
+        vnav_active=((tonumber(B747DR_ap_vnav_state) or 0) > 1
+            or simDR_autopilot_fms_vnav == 1) and B747DR_ap_inVNAVdescent == 0,
+        accel_height_ft=getFMSData("accelht"),
+        thrust_height_ft=getFMSData("thrredht")
+    })
+    if was_accelerated ~= takeoff_state.acceleration_complete
+        or previous_speed ~= takeoff_state.vnav_speed_kts then
+        B747_invalidate_vnav_speed("takeoff acceleration or VNAV speed capture")
+    end
+end
+
+function B747_takeoff_height()
+    return takeoff_profile.height(takeoff_state, simDR_pressureAlt1,
+        simDR_altimeter_baro_inHg)
+end
+
+function B747_takeoff_thrust_reduction_reached()
+    return takeoff_state.thrust_reduction_complete
+end
+
 function B747_get_vnav_speed_diagnostics()
     local reasonPrefix="pending:"
     local reason=vnavSPD_state["lastInvalidationReason"]
@@ -165,10 +201,14 @@ local function getTakeoffAccelHeight()
 end
 --[[
     clb_src_next()
-    First state during climb, get the pressure altitude corresponding to the selected AGL acceleration height
+    First climb state, using the frozen departure barometric reference.
 ]]
 function clb_src_next()
-    return simDR_pressureAlt1+(getTakeoffAccelHeight()-simDR_radarAlt1)
+    local altitude=simDR_pressureAlt1+(getTakeoffAccelHeight()-(B747_takeoff_height() or 0))
+    if takeoff_state.acceleration_complete then
+        return math.min(altitude,simDR_pressureAlt1-1)
+    end
+    return altitude
 end
 
 --[[
@@ -290,7 +330,10 @@ function clb_src_setSpd()
     
     if B747DR_airspeed_V2<900 then
         simDR_autopilot_airspeed_is_mach = 0
-        B747DR_ap_ias_dial_value = math.min(399.0, B747DR_airspeed_V2)
+        -- Keep V2 while VNAV is armed on the ground; once active, hold the
+        -- captured airspeed instead of decelerating back to the V2 entry.
+        B747DR_ap_ias_dial_value = math.min(399.0,
+            takeoff_state.vnav_speed_kts or B747DR_airspeed_V2)
         B747DR_switchingIASMode=1
         B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
         B747_schedule_updateIAS()
@@ -507,7 +550,8 @@ function B747_update_vnav_speed()
     end
 end
 function B747_vnav_setClimbspeed()
-    local lastAlt=simDR_pressureAlt1+(simDR_radarAlt1-400)
+    B747_update_takeoff_profile()
+    local lastAlt=-1
     local cState="src"
     local nextAlt=spd_states["clb"]["src"]["nextfunc"]()
      --print("B747_vnav_setClimbspeed "..nextAlt.." "..simDR_pressureAlt1)

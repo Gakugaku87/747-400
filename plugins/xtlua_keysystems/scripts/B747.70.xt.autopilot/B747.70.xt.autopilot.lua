@@ -3591,6 +3591,7 @@ end
 
 function flight_start()
 	B747_flight_start_autopilot()
+	B747_reset_takeoff_profile()
 	simDR_elevator = 0
 	simDR_rudder = 0
 	simDR_pitch = 0
@@ -3652,6 +3653,7 @@ function after_physics()
 
 	local fmsSTR = fmsJSON
 	local fms = json.decode(fmsSTR)
+	B747_update_takeoff_profile()
 	B747_getCurrentWayPoint(fms)
 	B747_monitorAP(fms)
 	B747_update_vnav_energy_mode_isolation()

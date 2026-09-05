@@ -784,7 +784,8 @@ function B747_updateEconClimbSpeed()
 		cost_index=fmsModules["data"].costindex,
 		headwind_kts=headwind,
 		isa_deviation_c=isaDeviation,
-		cruise_altitude_ft=cruiseAltitude
+		cruise_altitude_ft=cruiseAltitude,
+		cruise_mach=(tonumber(fmsModules["data"].crzspd) or 0)/1000
 	})
 	local formattedSpeed=string.format("%3d",econSpeed)
 	if fmsModules["data"].clbspd~=formattedSpeed then
@@ -1101,24 +1102,13 @@ function get_waypoint_estimate(latitude,longitude,fms_waypoint, fms_latitude, fm
   return fms_distance_to_waypoint,time_to_waypoint,hours,mins,secs
 end
 
-local function decodedPlanDisplayData()
-	local displayText=tostring(xpFMSDataJSON or "")
-	if string.len(displayText)<3 then return nil end
-	local decoded,displayData=pcall(json.decode,displayText)
-	if not decoded or type(displayData)~="table" then return nil end
-	return displayData
-end
-
 local function updateNDDisplayWaypoints(activeWaypoint,activeRoute)
-	local displayData=nil
-	if tonumber(simDR_nd_mode_dial_capt)==3
-	  or tonumber(simDR_nd_mode_dial_fo)==3 then
-		displayData=decodedPlanDisplayData()
-	end
+	-- Keep the side-specific aliases compatible with custom panels, while the
+	-- shipped ACF and panel exports use the common active-waypoint dataref.
 	B747DR_ND_current_waypoint_capt=B747_nd_plan.display_waypoint(
-	  activeWaypoint,activeRoute,displayData,simDR_nd_mode_dial_capt)
+	  activeWaypoint,activeRoute,nil,simDR_nd_mode_dial_capt)
 	B747DR_ND_current_waypoint_fo=B747_nd_plan.display_waypoint(
-	  activeWaypoint,activeRoute,displayData,simDR_nd_mode_dial_fo)
+	  activeWaypoint,activeRoute,nil,simDR_nd_mode_dial_fo)
 end
 
 

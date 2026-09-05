@@ -11,7 +11,7 @@ B747_ASC_CONFIG = {
     mcp_settle_seconds = 0.35,
     scan_interval_seconds = 0.25,
     cooldown_seconds = 10.0,
-    cruise_altitude_tolerance_ft = 1200,
+    cruise_altitude_tolerance_ft = 500,
     minimum_step_ft = 500,
     minimum_radio_altitude_ft = 5000,
     require_vnav = true,
@@ -28,6 +28,7 @@ dataref("B747_ASC_radio_altitude", "sim/cockpit2/gauges/indicators/radio_altimet
 dataref("B747_ASC_on_ground", "sim/flightmodel/failures/onground_any", "readonly")
 dataref("B747_ASC_vnav_state", "laminar/B747/autopilot/vnav_state", "readonly")
 dataref("B747_ASC_vnav_descent", "laminar/B747/autopilot/vnav_descent", "readonly")
+dataref("B747_ASC_alt_hold_status", "laminar/B747/autopilot/altitude_hold_status", "readonly")
 dataref("B747_ASC_servos_on", "laminar/B747/autopilot/servos_on", "readonly")
 dataref("B747_ASC_sim_time", "sim/time/total_running_time_sec", "readonly")
 
@@ -101,6 +102,8 @@ local function asc_environment_is_safe(target)
     if B747_ASC_on_ground ~= 0 then return false end
     if B747_ASC_radio_altitude < B747_ASC_CONFIG.minimum_radio_altitude_ft then return false end
     if B747_ASC_vnav_descent ~= 0 then return false end
+    -- Match the aircraft's ALT-selector CRZ CLB acceptance conditions.
+    if B747_ASC_alt_hold_status ~= 2 then return false end
     if B747_ASC_CONFIG.require_vnav and B747_ASC_vnav_state < 2 then return false end
     if B747_ASC_CONFIG.require_autopilot and B747_ASC_servos_on <= 0 then return false end
     if B747_ASC_cruise_altitude == nil or B747_ASC_cruise_altitude <= 0 then return false end
@@ -143,7 +146,6 @@ local function asc_handle_pending(now)
     end
 
     command_once(ALT_SELECTOR_COMMAND)
-    B747_ASC.last_executed_target = target
     B747_ASC.awaiting_target = target
     B747_ASC.verify_deadline = now + 5.0
     B747_ASC.cooldown_until = now + B747_ASC_CONFIG.cooldown_seconds
@@ -157,6 +159,7 @@ local function asc_verify_acceptance(now)
     local target = B747_ASC.awaiting_target
     if target == nil then return end
     if B747_ASC_cruise_altitude >= target - 50 then
+        B747_ASC.last_executed_target = target
         asc_log(string.format("CRZ CLB accepted to FL%03d", target / 100))
         B747_ASC.awaiting_target = nil
         return
@@ -179,7 +182,8 @@ function B747_ASC_update()
         B747_ASC.armed_target = nil
         return
     end
-    if B747_ASC.pending_target ~= nil or now < B747_ASC.cooldown_until then return end
+    if B747_ASC.pending_target ~= nil or B747_ASC.awaiting_target ~= nil
+        or now < B747_ASC.cooldown_until then return end
 
     local target, distance = asc_get_target()
     if target == nil or distance == nil or distance < 0 then

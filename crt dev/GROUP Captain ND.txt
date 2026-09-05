@@ -7171,7 +7171,7 @@ END_GROUP
       gen_text Active Waypoint CAPT CENTERED
         POS 593.500000 398.000000
         IMAGE CRT Displays/TEXT/TXT.2.28.magenta
-        DATAREF laminar/B747/nd/current_waypoint_capt
+        DATAREF laminar/B747/nd/current_waypoint
         LOCKED
         LIGHT_MODE GLASS_AUTO
         LIGHT_RHEOSTAT 0
@@ -8029,7 +8029,7 @@ END_GROUP
       gen_text Active Waypoint 2
         POS 593.500000 398.000000
         IMAGE CRT Displays/TEXT/TXT.2.28.magenta
-        DATAREF laminar/B747/nd/current_waypoint_capt
+        DATAREF laminar/B747/nd/current_waypoint
         LOCKED
         LIGHT_MODE GLASS_AUTO
         LIGHT_RHEOSTAT 0
