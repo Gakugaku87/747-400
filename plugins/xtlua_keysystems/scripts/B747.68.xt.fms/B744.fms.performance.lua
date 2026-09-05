@@ -9,9 +9,10 @@
 --     747-400 VNAV-generated target is limited to 349 KCAS.
 --   * With FMC performance data unavailable, use 340 KCAS/.84 Mach.
 --
--- The zero-wind curves below interpolate those documented 747-400 anchor
--- points.  Keeping the calculation here makes the approximation explicit,
--- deterministic and independently testable.
+-- The curves below are a simulator approximation, not a Boeing performance
+-- database. The data-unavailable 340/.84 schedule and the LRC-equivalent CI
+-- do not establish ECON climb calibration points. Current sensed wind and
+-- temperature are proxies; engine-specific accuracy still needs validation.
 
 local performance = {}
 
@@ -76,9 +77,8 @@ function performance.estimate_top_of_climb_weight_kg(input)
     local altitude_remaining = math.max(0, cruise_altitude - current_altitude)
     if altitude_remaining == 0 then return gross_weight end
 
-    -- A standard 747-400 climb burns about 6,000 kg.  Scale that baseline
-    -- with remaining altitude and weight when a live trajectory prediction
-    -- is not usable.
+    -- Simulator fallback estimate, not an engine-specific performance table.
+    -- Scale with remaining altitude/weight when trajectory data is unavailable.
     local standard_burn = 6000.0
         * clamp(altitude_remaining / 35000.0, 0, 1.25)
         * (clamp(gross_weight, 180000, 400000) / 330000.0) ^ 0.7
@@ -109,9 +109,8 @@ function performance.econ_climb_speed_kcas(input)
     local weight_tonnes = clamp(weight_kg / 1000.0, 180, 400)
     local ci = clamp(cost_index, 0, 9999)
 
-    -- Zero-wind 747-400 schedule.  At 384 t the CI-230 result is 340 KCAS,
-    -- matching the documented 340 KCAS fallback and published heavy-weight
-    -- FMC examples; at low weight CI 0 is about 300 KCAS.
+    -- Heuristic zero-wind schedule. These coefficients have not been
+    -- validated against the airplane's FMC performance database.
     local minimum_fuel_speed = 282.0 + 0.095 * weight_tonnes
     local lrc_equivalent_speed = 305.0 + 0.090 * weight_tonnes
     local speed
@@ -158,4 +157,3 @@ function performance.econ_climb_speed_kcas(input)
 end
 
 return performance
-

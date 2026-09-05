@@ -7172,7 +7172,7 @@ END_GROUP
       gen_text Active Waypoint FO CENTERED
         POS 1273.500000 398.000000
         IMAGE CRT Displays/TEXT/TXT.2.28.magenta
-        DATAREF laminar/B747/nd/current_waypoint_fo
+        DATAREF laminar/B747/nd/current_waypoint
         LOCKED
         LIGHT_MODE GLASS_AUTO
         LIGHT_RHEOSTAT 3
@@ -8034,7 +8034,7 @@ END_GROUP
       gen_text Active Waypoint FO EXPANDED
         POS 1273.500000 398.000000
         IMAGE CRT Displays/TEXT/TXT.2.28.magenta
-        DATAREF laminar/B747/nd/current_waypoint_fo
+        DATAREF laminar/B747/nd/current_waypoint
         LOCKED
         LIGHT_MODE GLASS_AUTO
         LIGHT_RHEOSTAT 3

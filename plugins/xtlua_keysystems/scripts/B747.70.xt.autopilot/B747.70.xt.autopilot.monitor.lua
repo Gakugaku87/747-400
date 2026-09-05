@@ -365,10 +365,6 @@ function VNAV_DES(numAPengaged,fms)
     B747DR_ap_vnav_state=2
 end
 local last_THR_REF=0
-local DEFAULT_THR_REDUCTION_HEIGHT_FT=1000
-local function getTakeoffThrustReductionHeight()
-    return tonumber(getFMSData("thrredht")) or DEFAULT_THR_REDUCTION_HEIGHT_FT
-end
 
 function B747_monitor_THR_REF_AT()
     local timediff=simDRTime-B747DR_ap_lastCommand
@@ -407,7 +403,7 @@ function B747_monitor_THR_REF_AT()
         ref_throttle=math.floor(20+B747_rescale(-10000,0,0,30,altDiff))
         B747DR_ap_flightPhase=3
         --print("THR REF descend at ref_throttle "..ref_throttle.." altDiff "..altDiff)
-    elseif simDR_radarAlt1<getTakeoffThrustReductionHeight()
+    elseif not B747_takeoff_thrust_reduction_reached()
       and B747DR_ap_thrust_mode<3 and B747DR_ap_flightPhase==0 then
         if toderate==1 then ref_throttle=96
         elseif toderate==2 then ref_throttle=86

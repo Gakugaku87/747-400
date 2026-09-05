@@ -41,14 +41,6 @@ function B747_getLegStepWaypoint(fmsO,key)
   return waypoint,routeIndex,flightPlan
 end
 
-local function hasPriorPlannedStep(entries,flightPlan,routeIndex)
-  for index=1,#entries,1 do
-    local entryIndex=B747_fms_step.resolve_route_index(entries[index],flightPlan)
-    if entryIndex~=nil and entryIndex<routeIndex then return true end
-  end
-  return false
-end
-
 local function renderLegStep(line,routeIndex,flightPlan,plannedSteps)
   line=string.sub(tostring(line or "")..string.rep(" ",24),1,24)
   local waypoint=routeWaypoint(flightPlan,routeIndex)
@@ -59,29 +51,10 @@ local function renderLegStep(line,routeIndex,flightPlan,plannedSteps)
     return string.sub(line,1,18)..string.format("%6s",entry.altitude.."S")
   end
 
-  local baseAltitude=B747_fms_step.altitude_feet(fmsModules["data"].crzalt)
-  if baseAltitude==nil or baseAltitude<=0 then
-    baseAltitude=tonumber(B747BR_cruiseAlt)
-  end
-  if baseAltitude==nil or baseAltitude<=0
-    or not hasPriorPlannedStep(plannedSteps,flightPlan,routeIndex) then
-    return line
-  end
-
-  local nativeAltitude=nil
-  if type(flightPlan[routeIndex])=="table" then
-    nativeAltitude=tonumber(flightPlan[routeIndex][9])
-  end
-  if nativeAltitude~=nil and nativeAltitude<baseAltitude-500 then
-    return line
-  end
-
-  local plannedAltitude=B747_fms_step.planned_altitude_for_index(
-    plannedSteps,flightPlan,routeIndex,baseAltitude)
-  if plannedAltitude~=nil then
-    local displayAltitude=string.format("FL%03d",plannedAltitude/100)
-    return string.sub(line,1,18)..string.format("%6s",displayAltitude)
-  end
+  -- The route JSON does not distinguish a predicted cruise altitude from a
+  -- hard constraint at that same altitude. Preserve native fields (including
+  -- A/B and window constraints) until the native trajectory is updated too.
+  -- Only a waypoint explicitly edited as a planned step gets the S overlay.
   return line
 end
 
@@ -91,9 +64,10 @@ fmsPages["LEGS"].getPage=function(self,pgNo,fmsID)
   local pageNo=B747_fms_step.page_number(l1)
   local plannedStepModification=B747_hasPlannedStepModification()
   if plannedStepModification then
-    l1=" MOD RTE 1 LEGS    "..string.sub(l1,20,24)
-  else
-    l1=" ACT RTE 1 LEGS    "..string.sub(l1,20,24)
+    l1=string.gsub(l1,"ACT","MOD",1)
+    if string.find(l1,"MOD",1,true)==nil then
+      l1=" MOD RTE 1 LEGS    "..string.sub(l1,20,24)
+    end
   end
   local l2="                        "
   local l3=cleanFMSLine(B747DR_srcfms[fmsID][3])

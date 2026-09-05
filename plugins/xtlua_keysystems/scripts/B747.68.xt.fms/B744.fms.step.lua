@@ -289,7 +289,11 @@ function step.next_entry(entries,flight_plan,current_index,current_altitude)
     local entry=sorted[index]
     local entry_route_index=step.resolve_route_index(entry,flight_plan,current_index)
     local entry_altitude=step.altitude_feet(entry.altitude)
-    if entry_route_index~=nil and entry_route_index>=current_index
+    -- Sequencing a fly-by leg is not an executed cruise climb. Keep an
+    -- unaccepted step as NOW after sequencing, until CRZ ALT accepts its
+    -- altitude or the crew deletes it. This also preserves the advisory used
+    -- by the optional MCP automation across LNAV's turn anticipation.
+    if entry_route_index~=nil
       and entry_altitude~=nil and entry_altitude>current_altitude+50 then
       return entry,entry_route_index
     end
