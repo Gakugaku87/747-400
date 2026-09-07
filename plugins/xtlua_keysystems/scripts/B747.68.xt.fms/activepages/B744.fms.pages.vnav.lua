@@ -390,25 +390,33 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       VxSpeed = string.format("  %03d",ClbV2 + vxadj)
 
       local isSelectedClimb = selectedClimbSpeed()
+      -- FCOM CLB page titles: "ACT ECON CLB" and "ACT 230 CLB" - the selected
+      -- speed carries no unit suffix and sits in the same columns as ECON.
       line1="       ECON CLB         "
       if isSelectedClimb then
-        line1=string.format("       %3dKT CLB        ",
+        line1=string.format("       %3d CLB          ",
           tonumber(fmsModules["data"]["clbspd"]) or 340)
       end
       if B747DR_ap_flightPhase==1 then
         if isSelectedClimb then
-          line1=string.format("    ACT %3dKT CLB       ",
+          line1=string.format("     ACT %3d CLB        ",
             tonumber(fmsModules["data"]["clbspd"]) or 340)
         else
           line1="     ACT ECON CLB       "
         end
       end
+
+      -- ECON/SEL SPD is a CAS/Mach pair (FCOM CLB page shows "280/.780").
+      local climbSpeedField = string.format("%3s/.%3s",
+        B747_fms_step.trim(fmsModules["data"]["clbspd"]),
+        B747_fms_step.trim(fmsModules["data"]["clbmach"] or "840"))
       return{
         line1,
       "                        ",
       fmsModules["data"]["crzalt"].."         "..spdalt,
       "                        ",
-      fmsModules["data"]["clbspd"].."    "..error_line,
+      string.format("%-8s%16s", climbSpeedField,
+        B747_fms_step.trim(error_line)),
                                         --**** LO  ** LONG
       "                        ",
       fmsModules["data"]["transpd"].."/"..fmsModules["data"]["spdtransalt"].."          "..fmsModules["data"]["transalt"],

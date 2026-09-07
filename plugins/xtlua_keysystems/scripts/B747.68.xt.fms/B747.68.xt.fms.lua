@@ -616,12 +616,18 @@ function defaultFMSData()
   grwt="***.*   ",
   crzalt=string.rep("*", 5),
   accelht="1500",
-  thrredht="1000",
+  -- FCOM PERF FACTORS defaults: THR RED 1500, ACCEL HT 1500.  thrredflap
+  -- holds the flap-based schedule ("FLAPS 5" on the TAKEOFF REF page) and is
+  -- blank while the height above is in use.
+  thrredht="1500",
+  thrredflap="  ",
   acarsMessage="",
   -- clbspd is the unrestricted ECON target.  It is continuously calculated
   -- once PERF INIT data is available; 340 is the Boeing data-unavailable
   -- fallback for the 747-400.
   clbspd="340",
+  -- ECON CLB is a CAS/Mach pair; 340/.84 is the data-unavailable fallback.
+  clbmach="840",
   clbspdmode="ECON",
   transpd="250",
   spdtransalt="10000",
@@ -779,17 +785,29 @@ function B747_updateEconClimbSpeed()
 	end
 	local isaDeviation=simDR_air_temp
 		-fmsPerformance.isa_temperature_c(simDR_pressureAlt1)
+	local cruiseMach=(tonumber(fmsModules["data"].crzspd) or 0)/1000
 	local econSpeed=fmsPerformance.econ_climb_speed_kcas({
 		top_of_climb_weight_kg=predictedWeight,
 		cost_index=fmsModules["data"].costindex,
 		headwind_kts=headwind,
 		isa_deviation_c=isaDeviation,
 		cruise_altitude_ft=cruiseAltitude,
-		cruise_mach=(tonumber(fmsModules["data"].crzspd) or 0)/1000
+		cruise_mach=cruiseMach
 	})
 	local formattedSpeed=string.format("%3d",econSpeed)
 	if fmsModules["data"].clbspd~=formattedSpeed then
 		fmsModules["data"].clbspd=formattedSpeed
+	end
+
+	-- The Mach half of the ECON CLB pair.  VNAV flies it from the CAS/Mach
+	-- crossover to top of climb, where the cruise Mach takes over.
+	local econMach=fmsPerformance.econ_climb_mach({
+		cost_index=fmsModules["data"].costindex,
+		cruise_mach=cruiseMach
+	})
+	local formattedMach=string.format("%03d",math.floor(econMach*1000+0.5))
+	if fmsModules["data"].clbmach~=formattedMach then
+		fmsModules["data"].clbmach=formattedMach
 	end
 end
 

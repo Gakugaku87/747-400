@@ -2,6 +2,11 @@
 -- Boeing 747-400 FCOM 4.20.9: record barometric altitude passing 100 KIAS;
 -- VNAV captures the current airspeed on activation. TO/GA's own pitch and
 -- engine-out speed schedules remain with the existing TO/GA controller.
+--
+-- TAKEOFF REF accepts THR REDUCTION as either a height above the departure
+-- datum or a flap setting ("FLAPS 5").  A flap-based schedule reduces to
+-- climb thrust when the flaps reach that position and has no height
+-- backstop, so the two are mutually exclusive here as they are on the page.
 local takeoff = {}
 
 function takeoff.new()
@@ -64,13 +69,18 @@ function takeoff.update(state, input)
             end
         end
         local height = takeoff.height(state, altitude, setting)
-        if height ~= nil then
-            if height >= (tonumber(input.accel_height_ft) or 1500) then
-                state.acceleration_complete = true
-            end
-            if height >= (tonumber(input.thrust_height_ft) or 1000) then
+        if height ~= nil and height >= (tonumber(input.accel_height_ft) or 1500) then
+            state.acceleration_complete = true
+        end
+        local thrust_flap = tonumber(input.thrust_reduction_flap)
+        if thrust_flap ~= nil and thrust_flap > 0 then
+            local flap = tonumber(input.flap_position)
+            if flap ~= nil and flap <= thrust_flap then
                 state.thrust_reduction_complete = true
             end
+        elseif height ~= nil
+            and height >= (tonumber(input.thrust_height_ft) or 1500) then
+            state.thrust_reduction_complete = true
         end
         if active and not state.vnav_active and not state.acceleration_complete then
             local v2 = tonumber(input.v2_kts) or 0

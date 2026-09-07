@@ -17,6 +17,12 @@ local function update(state, ground, ias, altitude, active, setting)
         altitude_ft=altitude, vnav_active=active, v2_kts=160,
         baro_inhg=setting or 29.92, accel_height_ft=1500, thrust_height_ft=1000})
 end
+local function update_flap(state, ground, ias, altitude, flap, thrust_flap)
+    return profile.update(state, {on_ground=ground, ias_kts=ias,
+        altitude_ft=altitude, vnav_active=true, v2_kts=160, baro_inhg=29.92,
+        accel_height_ft=1500, thrust_height_ft=1000,
+        thrust_reduction_flap=thrust_flap, flap_position=flap})
+end
 
 local state = profile.new()
 update(state, true, 99, 4990, false)
@@ -70,6 +76,39 @@ update(state, false, 280, 22000, true)
 equal(state.acceleration_complete, true, "airborne reload does not guess departure from RA")
 equal(state.thrust_reduction_complete, true, "airborne reload stays out of takeoff thrust")
 
+-- TAKEOFF REF also accepts a flap setting for THR REDUCTION.  A flap-based
+-- schedule reduces at flap retraction only; there is no height backstop.
+state = profile.new()
+update_flap(state, true, 100, 1000, 20, 5)
+update_flap(state, false, 170, 1600, 20, 5)
+equal(state.thrust_reduction_complete, false,
+    "flap schedule does not reduce thrust at the height")
+update_flap(state, false, 190, 4000, 10, 5)
+equal(state.thrust_reduction_complete, false,
+    "flap schedule waits for the selected flap position")
+update_flap(state, false, 210, 4500, 5, 5)
+equal(state.thrust_reduction_complete, true,
+    "flap schedule reduces thrust at the selected flap position")
+
+state = profile.new()
+update_flap(state, true, 100, 1000, 20, 5)
+update_flap(state, false, 200, 5000, 0, 5)
+equal(state.thrust_reduction_complete, true,
+    "flaps up is past the selected thrust reduction flap")
+
+-- FCOM PERF FACTORS default THR RED is 1500 FT, used when the page value is
+-- unreadable and no flap schedule is selected.
+state = profile.new()
+profile.update(state, {on_ground=true, ias_kts=100, altitude_ft=0,
+    baro_inhg=29.92, vnav_active=false, v2_kts=160})
+profile.update(state, {on_ground=false, ias_kts=180, altitude_ft=1499,
+    baro_inhg=29.92, vnav_active=true, v2_kts=160})
+equal(state.thrust_reduction_complete, false, "below the 1500 FT default")
+profile.update(state, {on_ground=false, ias_kts=180, altitude_ft=1500,
+    baro_inhg=29.92, vnav_active=true, v2_kts=160})
+equal(state.thrust_reduction_complete, true, "1500 FT default thrust reduction")
+
+-- A crew-selected THR REDUCTION height (400-9999 FT) overrides the default.
 local fms = {accelht="1500", thrredht="1000", clbrestalt="10000",
     clbrestspd="250", spdtransalt="10000", transpd="250", clbspd="320",
     crzspd="810", transalt="18000", costindex="200"}

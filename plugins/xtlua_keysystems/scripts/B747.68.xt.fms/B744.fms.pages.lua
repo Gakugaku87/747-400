@@ -822,6 +822,21 @@ function validAccelHeight(value)
 	if val==nil or val%1~=0 or val<400 or val>9999 then return nil end
 	return string.format("%d",val)
 end
+-- TAKEOFF REF THR REDUCTION also accepts a flap setting.  Heights are at
+-- least 400 FT, so a bare flap number cannot be confused with one.
+function validThrustReductionFlap(value)
+	if type(value)~="string" then return nil end
+	local entry=string.upper(value)
+	entry=string.gsub(entry,"^%s+","")
+	entry=string.gsub(entry,"%s+$","")
+	local digits=string.match(entry,"^FLAPS?%s*(%d+)$")
+	if digits==nil then digits=string.match(entry,"^F(%d+)$") end
+	if digits==nil then digits=string.match(entry,"^(%d+)$") end
+	if digits==nil then return nil end
+	local flap=tonumber(digits)
+	if flap~=1 and flap~=5 and flap~=10 and flap~=20 then return nil end
+	return string.format("%d",flap)
+end
 function validStepAltitude(value)
 	if type(value)~="string" then return nil end
 	local val=nil
@@ -1176,17 +1191,36 @@ function fmsFunctions.setdata(fmsO,value)
 		end
   elseif value=="thrustReductionHeight" then
 		if del==true then
-			setFMSData("thrredht","1000")
+			setFMSData("thrredht","1500")
+			setFMSData("thrredflap","")
 		elseif string.len(fmsO["scratchpad"])==0 then
-			fmsO["scratchpad"]=string.format("%d",tonumber(getFMSData("thrredht")) or 1000)
+			local thrustReductionFlap=tonumber(getFMSData("thrredflap"))
+			if thrustReductionFlap~=nil and thrustReductionFlap>0 then
+				fmsO["scratchpad"]=string.format("FLAPS %d",thrustReductionFlap)
+			else
+				fmsO["scratchpad"]=string.format("%d",tonumber(getFMSData("thrredht")) or 1500)
+			end
 			return
 		else
+			local thrustReductionFlap=validThrustReductionFlap(fmsO["scratchpad"])
+			if thrustReductionFlap~=nil then
+				-- Climb thrust is set while retracting, so the schedule must
+				-- name a flap position below the takeoff flap setting.
+				local takeoffFlap=tonumber(B747DR_airspeed_flapsRef) or 0
+				if takeoffFlap>0 and tonumber(thrustReductionFlap)>=takeoffFlap then
+					fmsO["notify"]="INVALID ENTRY"
+					return
+				end
+				setFMSData("thrredflap",thrustReductionFlap)
+				return
+			end
 			local thrustReductionHeight=validAccelHeight(fmsO["scratchpad"])
 			if thrustReductionHeight==nil then
 				fmsO["notify"]="INVALID ENTRY"
 				return
 			end
 			setFMSData("thrredht",thrustReductionHeight)
+			setFMSData("thrredflap","")
 		end
   elseif value=="clbspd" then
     if validateSpeed(fmsO["scratchpad"]) ==false then 

@@ -85,6 +85,24 @@ local estimated_toc_weight = performance.estimate_top_of_climb_weight_kg({
 assert_equal(math.floor(estimated_toc_weight + 0.5), 324000,
     "standard climb burn is included in predicted T/C weight")
 
+-- ECON CLB is a CAS/Mach pair; the FMC flies the Mach half from the
+-- crossover to top of climb, so it can never exceed the cruise Mach.
+assert_equal(performance.econ_climb_mach({}), 0.840,
+    "missing PERF INIT data uses the 340/.84 fallback pair")
+local min_fuel_mach = performance.econ_climb_mach({cost_index = 0})
+local lrc_mach = performance.econ_climb_mach({cost_index = 230})
+local min_time_mach = performance.econ_climb_mach({cost_index = 9999})
+assert_equal(min_fuel_mach, 0.76, "CI 0 climb Mach")
+assert_equal(lrc_mach, 0.8, "LRC-equivalent climb Mach")
+assert_equal(min_time_mach, 0.86, "minimum-time climb Mach")
+assert_true(lrc_mach > min_fuel_mach and min_time_mach > lrc_mach,
+    "climb Mach must increase with cost index")
+assert_equal(performance.econ_climb_mach({cost_index = 9999, cruise_mach = 0.81}),
+    0.81, "climb Mach is limited to the cruise Mach")
+assert_true(performance.econ_climb_mach({cost_index = 500, cruise_mach = 0.85})
+        < 0.85,
+    "a normal cost index still climbs below the cruise Mach")
+
 assert_equal(performance.parse_cruise_altitude_ft("FL350"), 35000,
     "flight level parsing")
 assert_true(performance.mach_to_cas_kts(0.81, 10000)

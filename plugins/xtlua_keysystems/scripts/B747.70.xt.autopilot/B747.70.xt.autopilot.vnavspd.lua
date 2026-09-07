@@ -50,6 +50,7 @@ local VNAV_SPEED_WATCHED_VALUES={
     {key="climb_restriction_speed_kts", reason="FMC climb restriction speed changed"},
     {key="climb_transition_alt_ft", reason="FMC climb transition altitude changed"},
     {key="climb_speed_kts", reason="FMC climb speed changed"},
+    {key="climb_mach", reason="FMC climb Mach changed"},
     {key="transition_speed_kts", reason="FMC transition speed changed"},
     {key="transition_alt_ft", reason="FMC transition altitude changed"},
     {key="cruise_speed", reason="FMC cruise speed changed"},
@@ -73,16 +74,23 @@ local VNAV_SPEED_WATCHED_VALUES={
     {key="cruise_transition_ready", reason="cruise IAS/Mach transition threshold crossed"}
 }
 
+-- ECON CLB is a CAS/Mach pair.  Climb uses the climb Mach at the crossover;
+-- the cruise Mach only takes over at top of climb.  Fall back to the cruise
+-- Mach when no climb Mach has been scheduled yet.
+function B747_climb_mach_thousandths()
+    return tonumber(getFMSData("clbmach")) or tonumber(getFMSData("crzspd")) or 840
+end
+
 local function B747_vnav_speed_snapshot()
-    local cruise_speed = tonumber(getFMSData("crzspd"))
+    local climb_mach = B747_climb_mach_thousandths()
     local climb_speed = tonumber(getFMSData("clbspd"))
     local transition_altitude = tonumber(getFMSData("transalt"))
     local descent_mach = tonumber(getFMSData("desspdmach"))
     local mach_transition_ready = false
     local descent_mach_transition_ready = false
     local cruise_transition_ready = false
-    if cruise_speed ~= nil then
-        local threshold = (cruise_speed / 10) / 100
+    if climb_mach ~= nil then
+        local threshold = (climb_mach / 10) / 100
         if vnavSPD_observed ~= nil and vnavSPD_observed.mach_transition_ready then
             threshold = threshold - VNAV_MACH_TRANSITION_HYSTERESIS
         else
@@ -115,6 +123,7 @@ local function B747_vnav_speed_snapshot()
         transition_speed_kts=getFMSData("transpd"),
         transition_alt_ft=getFMSData("transalt"),
         cruise_speed=getFMSData("crzspd"),
+        climb_mach=getFMSData("clbmach"),
         cost_index=getFMSData("costindex"),
         descent_mach=getFMSData("desspdmach"),
         descent_speed_kts=getFMSData("desspd"),
@@ -158,7 +167,9 @@ function B747_update_takeoff_profile()
         vnav_active=((tonumber(B747DR_ap_vnav_state) or 0) > 1
             or simDR_autopilot_fms_vnav == 1) and B747DR_ap_inVNAVdescent == 0,
         accel_height_ft=getFMSData("accelht"),
-        thrust_height_ft=getFMSData("thrredht")
+        thrust_height_ft=getFMSData("thrredht"),
+        thrust_reduction_flap=getFMSData("thrredflap"),
+        flap_position=vnav_afds_helpers.flap_speed_bucket(simDR_flap_ratio_control)
     })
     if was_accelerated ~= takeoff_state.acceleration_complete
         or previous_speed ~= takeoff_state.vnav_speed_kts then
@@ -354,12 +365,12 @@ end
 function clb_spcres_setSpd()
     local spdval=modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("spcres", getFMSData))
     B747DR_switchingIASMode=1
-    local crzspdval=tonumber(getFMSData("crzspd"))/10
-    if simDR_airspeed_mach > (crzspdval/100) then
-      print("convert to cruise speed in clb ".. crzspdval)
+    local clbmachval=B747_climb_mach_thousandths()/10
+    if simDR_airspeed_mach > (clbmachval/100) then
+      print("convert to climb Mach in clb ".. clbmachval)
       simDR_autopilot_airspeed_is_mach = 1
-      B747DR_ap_ias_dial_value = crzspdval
-      B747DR_lastap_dial_airspeed=crzspdval*0.01
+      B747DR_ap_ias_dial_value = clbmachval
+      B747DR_lastap_dial_airspeed=clbmachval*0.01
     else
 
       --[[if B747DR_ap_ias_dial_value+5<simDR_ind_airspeed_kts_pilot then
@@ -379,12 +390,12 @@ end
 function clb_nores_setSpd()
     local spdval=modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("nores", getFMSData))
     B747DR_switchingIASMode=1
-    local crzspdval=tonumber(getFMSData("crzspd"))/10
-    if simDR_airspeed_mach > (crzspdval/100) then
-      print("convert to cruise speed in clb".. crzspdval)
+    local clbmachval=B747_climb_mach_thousandths()/10
+    if simDR_airspeed_mach > (clbmachval/100) then
+      print("convert to climb Mach in clb".. clbmachval)
       simDR_autopilot_airspeed_is_mach = 1
-      B747DR_ap_ias_dial_value = crzspdval
-      B747DR_lastap_dial_airspeed=crzspdval*0.01
+      B747DR_ap_ias_dial_value = clbmachval
+      B747DR_lastap_dial_airspeed=clbmachval*0.01
     else
       if simDR_autopilot_airspeed_is_mach == 0 then
       --[[if(B747DR_ap_ias_dial_value<spdval) then

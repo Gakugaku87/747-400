@@ -21,9 +21,15 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   step advisory through early LNAV sequencing, optional FlyWithLua automation
   and the actual ALT-selector handler; crew intervention and refused commands;
   the production ECON updater's cruise-Mach input.
+- `takeoff_ref_thrust_reduction_test.lua`: the TAKEOFF REF THR REDUCTION
+  field - the 1500 FT default from PERF FACTORS, flap entries ("FLAPS 5",
+  "10", "F20"), height entries, rejected entries, blank-line-select recall,
+  DELETE, and the FLAP/ACCEL HT field beside it.
+- `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230 CLB"),
+  the ECON/SEL SPD label, and the CAS/Mach speed pair.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
-  ECON calculations, ND waypoint selection, climb-speed semantics and the
-  XTLua `dofile` loader.
+  ECON calculations (CAS and Mach), ND waypoint selection, climb-speed
+  semantics including the climb-Mach crossover, and the XTLua `dofile` loader.
 
 The standalone tests verify logic and interfaces. Before making the aircraft
 release-ready, validate these scenarios in X-Plane with both flight directors
@@ -37,8 +43,11 @@ and the applicable autopilot/autothrottle modes:
 | Native route MOD and downstream altitude constraints | Native title/constraints remain visible; only explicit step waypoints receive S overlays. |
 | Captain/FO MAP and PLAN, stepping the CDU view | Header identifier stays on the active waypoint and agrees with its ETA/distance; map centre can change. |
 | Low cruise altitude with ECON, then manual SEL speed | Cruise Mach reaches the existing CAS-floor calculation; SEL speed is preserved. |
+| THR REDUCTION left at 1500FT, then set to FLAPS 5 | Climb thrust is set at 1500 FT above the departure datum; with the flap schedule it is set at flap retraction instead, with no height backstop. |
+| ECON climb through the CAS/Mach crossover | Speed changes over at the CLB page Mach, and only accelerates to the cruise Mach at top of climb. |
 
-ECON coefficients remain an uncalibrated simulator approximation. The tests do
+ECON coefficients, CAS and Mach alike, remain an uncalibrated simulator
+approximation. The tests do
 not establish engine-specific Boeing performance, full TO/GA/engine-out speed
 logic, or closed-loop flight-model accuracy. Planned steps remain advisory;
 this patch preserves native downstream predictions/constraints rather than
