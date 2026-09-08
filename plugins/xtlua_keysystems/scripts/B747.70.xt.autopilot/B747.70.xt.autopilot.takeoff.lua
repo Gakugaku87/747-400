@@ -1,8 +1,20 @@
 -- Departure reference shared by VNAV acceleration and thrust reduction.
--- Boeing 747-400 FCOM 4.20.9: record barometric altitude passing 100 KIAS;
--- VNAV captures the current airspeed on activation. TO/GA's own pitch and
--- engine-out speed schedules remain with the existing TO/GA controller.
+-- Boeing 747-400 FCOM 4.20.9: record barometric altitude passing 100 KIAS.
+--
+-- The initial climb target is V2 + 10 kt, or the airspeed VNAV engaged at
+-- when that is higher, limited to V2 + 25 kt; VNAV holds it until the
+-- acceleration height.  TO/GA's own pitch law (including its 5-second
+-- adaptive target) and the engine-out schedules remain with the existing
+-- TO/GA controller.
+--
+-- TAKEOFF REF accepts THR REDUCTION as either a height above the departure
+-- datum or a flap setting ("FLAPS 5").  A flap-based schedule reduces to
+-- climb thrust when the flaps reach that position and has no height
+-- backstop, so the two are mutually exclusive here as they are on the page.
 local takeoff = {}
+
+takeoff.TARGET_ABOVE_V2_KTS = 10
+takeoff.TARGET_LIMIT_ABOVE_V2_KTS = 25
 
 function takeoff.new()
     return {acceleration_complete=false, thrust_reduction_complete=false,
@@ -24,6 +36,19 @@ function takeoff.height(state, altitude, setting)
     if state.reference_altitude_ft == nil then return nil end
     return takeoff.reference_altitude(altitude, setting, state.reference_setting)
         - state.reference_altitude_ft
+end
+
+-- V2 + 10 kt, the engagement airspeed when that is higher, and never more
+-- than V2 + 25 kt.
+function takeoff.initial_climb_speed(v2_kts, ias_kts)
+    local v2 = tonumber(v2_kts)
+    if v2 == nil or v2 <= 0 then return nil end
+    local speed = tonumber(ias_kts) or 0
+    local minimum = v2 + takeoff.TARGET_ABOVE_V2_KTS
+    local maximum = v2 + takeoff.TARGET_LIMIT_ABOVE_V2_KTS
+    if speed < minimum then return minimum end
+    if speed > maximum then return maximum end
+    return speed
 end
 
 function takeoff.update(state, input)
@@ -64,18 +89,23 @@ function takeoff.update(state, input)
             end
         end
         local height = takeoff.height(state, altitude, setting)
-        if height ~= nil then
-            if height >= (tonumber(input.accel_height_ft) or 1500) then
-                state.acceleration_complete = true
-            end
-            if height >= (tonumber(input.thrust_height_ft) or 1000) then
+        if height ~= nil and height >= (tonumber(input.accel_height_ft) or 1500) then
+            state.acceleration_complete = true
+        end
+        local thrust_flap = tonumber(input.thrust_reduction_flap)
+        if thrust_flap ~= nil and thrust_flap > 0 then
+            local flap = tonumber(input.flap_position)
+            if flap ~= nil and flap <= thrust_flap then
                 state.thrust_reduction_complete = true
             end
+        elseif height ~= nil
+            and height >= (tonumber(input.thrust_height_ft) or 1500) then
+            state.thrust_reduction_complete = true
         end
         if active and not state.vnav_active and not state.acceleration_complete then
             local v2 = tonumber(input.v2_kts) or 0
             if v2 > 0 and v2 < 900 then
-                state.vnav_speed_kts = math.max(v2, ias)
+                state.vnav_speed_kts = takeoff.initial_climb_speed(v2, ias)
             end
         end
     end

@@ -822,6 +822,21 @@ function validAccelHeight(value)
 	if val==nil or val%1~=0 or val<400 or val>9999 then return nil end
 	return string.format("%d",val)
 end
+-- TAKEOFF REF THR REDUCTION also accepts a flap setting.  Heights are at
+-- least 400 FT, so a bare flap number cannot be confused with one.
+function validThrustReductionFlap(value)
+	if type(value)~="string" then return nil end
+	local entry=string.upper(value)
+	entry=string.gsub(entry,"^%s+","")
+	entry=string.gsub(entry,"%s+$","")
+	local digits=string.match(entry,"^FLAPS?%s*(%d+)$")
+	if digits==nil then digits=string.match(entry,"^F(%d+)$") end
+	if digits==nil then digits=string.match(entry,"^(%d+)$") end
+	if digits==nil then return nil end
+	local flap=tonumber(digits)
+	if flap~=1 and flap~=5 and flap~=10 and flap~=20 then return nil end
+	return string.format("%d",flap)
+end
 function validStepAltitude(value)
 	if type(value)~="string" then return nil end
 	local val=nil
@@ -1176,17 +1191,36 @@ function fmsFunctions.setdata(fmsO,value)
 		end
   elseif value=="thrustReductionHeight" then
 		if del==true then
-			setFMSData("thrredht","1000")
+			setFMSData("thrredht","1500")
+			setFMSData("thrredflap","")
 		elseif string.len(fmsO["scratchpad"])==0 then
-			fmsO["scratchpad"]=string.format("%d",tonumber(getFMSData("thrredht")) or 1000)
+			local thrustReductionFlap=tonumber(getFMSData("thrredflap"))
+			if thrustReductionFlap~=nil and thrustReductionFlap>0 then
+				fmsO["scratchpad"]=string.format("FLAPS %d",thrustReductionFlap)
+			else
+				fmsO["scratchpad"]=string.format("%d",tonumber(getFMSData("thrredht")) or 1500)
+			end
 			return
 		else
+			local thrustReductionFlap=validThrustReductionFlap(fmsO["scratchpad"])
+			if thrustReductionFlap~=nil then
+				-- Climb thrust is set while retracting, so the schedule must
+				-- name a flap position below the takeoff flap setting.
+				local takeoffFlap=tonumber(B747DR_airspeed_flapsRef) or 0
+				if takeoffFlap>0 and tonumber(thrustReductionFlap)>=takeoffFlap then
+					fmsO["notify"]="INVALID ENTRY"
+					return
+				end
+				setFMSData("thrredflap",thrustReductionFlap)
+				return
+			end
 			local thrustReductionHeight=validAccelHeight(fmsO["scratchpad"])
 			if thrustReductionHeight==nil then
 				fmsO["notify"]="INVALID ENTRY"
 				return
 			end
 			setFMSData("thrredht",thrustReductionHeight)
+			setFMSData("thrredflap","")
 		end
   elseif value=="clbspd" then
     if validateSpeed(fmsO["scratchpad"]) ==false then 
@@ -1212,14 +1246,19 @@ function fmsFunctions.setdata(fmsO,value)
       fmsO["notify"]="INVALID ENTRY"
     end
   elseif value=="clbrest" then
-    spd=string.sub(fmsO["scratchpad"],1,3)
-    alt=string.sub(fmsO["scratchpad"],5)
-    if validateSpeed(spd) ==false then 
-      fmsO["notify"]="INVALID ENTRY"
+    -- SPD REST is a speed/altitude pair: both halves are entered together,
+    -- and DELETE returns the field to "---/-----".
+    if del==true then
+      setFMSData("clbrestspd","")
+      setFMSData("clbrestalt","")
     else
-      setFMSData("clbrestspd",spd)
-      if validAlt(alt) ~=nil then 
-	setFMSData("clbrestalt",validAlt(alt))
+      spd=string.sub(fmsO["scratchpad"],1,3)
+      alt=validAlt(string.sub(fmsO["scratchpad"],5))
+      if validateSpeed(spd)==false or alt==nil then
+        fmsO["notify"]="INVALID ENTRY"
+      else
+        setFMSData("clbrestspd",spd)
+        setFMSData("clbrestalt",alt)
       end
     end
   elseif value=="crzspd" then
@@ -1280,14 +1319,18 @@ function fmsFunctions.setdata(fmsO,value)
       end
     end 
    elseif value=="desrest" then
-    spd=string.sub(fmsO["scratchpad"],1,3)
-    alt=string.sub(fmsO["scratchpad"],5)
-    if validateSpeed(spd) ==false then 
-      fmsO["notify"]="INVALID ENTRY"
+    -- Same speed/altitude pair as the CLB page SPD REST.
+    if del==true then
+      setFMSData("desrestspd","")
+      setFMSData("desrestalt","")
     else
-      setFMSData("desrestspd",spd)
-      if validAlt(alt) ~=nil then 
-	setFMSData("desrestalt",validAlt(alt))
+      spd=string.sub(fmsO["scratchpad"],1,3)
+      alt=validAlt(string.sub(fmsO["scratchpad"],5))
+      if validateSpeed(spd)==false or alt==nil then
+        fmsO["notify"]="INVALID ENTRY"
+      else
+        setFMSData("desrestspd",spd)
+        setFMSData("desrestalt",alt)
       end
     end
   elseif value=="airportpos" then --and string.len(fmsO["scratchpad"])>3 then

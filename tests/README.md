@@ -13,17 +13,28 @@ X-Plane installation is needed for these tests.
 
 The audit regressions load production Lua code with mocked simulator interfaces:
 
-- `takeoff_profile_test.lua`: 100-KIAS departure reference, VNAV airspeed
-  capture, acceleration/thrust-reduction boundaries, changing terrain,
-  QNH/STD changes, rearming and airborne reload. Also runs the production
+- `takeoff_profile_test.lua`: 100-KIAS departure reference, the V2 + 10 to
+  V2 + 25 initial-climb band, acceleration/thrust-reduction boundaries,
+  changing terrain, QNH/STD changes, rearming and airborne reload. Also runs the production
   VNAV speed state machine and thrust monitor together.
 - `fmc_audit_integration_test.lua`: native LEGS altitude fields and MOD title;
   step advisory through early LNAV sequencing, optional FlyWithLua automation
   and the actual ALT-selector handler; crew intervention and refused commands;
   the production ECON updater's cruise-Mach input.
+- `takeoff_ref_thrust_reduction_test.lua`: the TAKEOFF REF THR REDUCTION
+  field - the 1500 FT default from PERF FACTORS, flap entries ("FLAPS 5",
+  "10", "F20"), height entries, rejected entries, blank-line-select recall,
+  DELETE, and the FLAP/ACCEL HT field beside it.
+- `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230 CLB"),
+  the ECON/SEL SPD label, the CAS/Mach speed pair, and the blank SPD REST
+  field.
+- `vnav_speed_restriction_test.lua`: SPD REST on both the CLB and DES pages -
+  the blank "---/-----" field skipping the restriction state, an entered
+  restriction bringing it back and being left behind above it, and the CDU
+  pair entry, rejection and DELETE.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
-  ECON calculations, ND waypoint selection, climb-speed semantics and the
-  XTLua `dofile` loader.
+  ECON calculations (CAS and Mach), ND waypoint selection, climb-speed
+  semantics including the climb-Mach crossover, and the XTLua `dofile` loader.
 
 The standalone tests verify logic and interfaces. Before making the aircraft
 release-ready, validate these scenarios in X-Plane with both flight directors
@@ -37,8 +48,13 @@ and the applicable autopilot/autothrottle modes:
 | Native route MOD and downstream altitude constraints | Native title/constraints remain visible; only explicit step waypoints receive S overlays. |
 | Captain/FO MAP and PLAN, stepping the CDU view | Header identifier stays on the active waypoint and agrees with its ETA/distance; map centre can change. |
 | Low cruise altitude with ECON, then manual SEL speed | Cruise Mach reaches the existing CAS-floor calculation; SEL speed is preserved. |
+| THR REDUCTION left at 1500FT, then set to FLAPS 5 | Climb thrust is set at 1500 FT above the departure datum; with the flap schedule it is set at flap retraction instead, with no height backstop. |
+| ECON climb through the CAS/Mach crossover | Speed changes over at the CLB page Mach, and only accelerates to the cruise Mach at top of climb. |
+| VNAV engaged at 400 ft at various weights | Initial climb holds V2 + 10 when slow and no more than V2 + 25 when fast, until the acceleration height. |
+| Departure and arrival with SPD REST left blank, then entered | Blank holds SPD TRANS through the restriction band; an entered pair is honoured and released above/below it. |
 
-ECON coefficients remain an uncalibrated simulator approximation. The tests do
+ECON coefficients, CAS and Mach alike, remain an uncalibrated simulator
+approximation. The tests do
 not establish engine-specific Boeing performance, full TO/GA/engine-out speed
 logic, or closed-loop flight-model accuracy. Planned steps remain advisory;
 this patch preserves native downstream predictions/constraints rather than

@@ -17,6 +17,12 @@ local function update(state, ground, ias, altitude, active, setting)
         altitude_ft=altitude, vnav_active=active, v2_kts=160,
         baro_inhg=setting or 29.92, accel_height_ft=1500, thrust_height_ft=1000})
 end
+local function update_flap(state, ground, ias, altitude, flap, thrust_flap)
+    return profile.update(state, {on_ground=ground, ias_kts=ias,
+        altitude_ft=altitude, vnav_active=true, v2_kts=160, baro_inhg=29.92,
+        accel_height_ft=1500, thrust_height_ft=1000,
+        thrust_reduction_flap=thrust_flap, flap_position=flap})
+end
 
 local state = profile.new()
 update(state, true, 99, 4990, false)
@@ -28,6 +34,14 @@ update(state, false, 180, 5499, true)
 equal(state.vnav_speed_kts, 180, "VNAV activation captures current IAS")
 update(state, false, 174, 5999, true)
 equal(state.vnav_speed_kts, 180, "speed is held rather than following IAS")
+-- The initial climb target is V2 + 10 kt, or the engagement airspeed when
+-- that is higher, limited to V2 + 25 kt.
+equal(profile.initial_climb_speed(160, 150), 170, "below the band commands V2 + 10")
+equal(profile.initial_climb_speed(160, 170), 170, "the bottom of the band is V2 + 10")
+equal(profile.initial_climb_speed(160, 180), 180, "inside the band holds the engagement speed")
+equal(profile.initial_climb_speed(160, 185), 185, "the top of the band is V2 + 25")
+equal(profile.initial_climb_speed(160, 220), 185, "above the band is limited to V2 + 25")
+equal(profile.initial_climb_speed(nil, 180), nil, "no V2 gives no takeoff target")
 equal(state.thrust_reduction_complete, false, "below selected thrust reduction")
 update(state, false, 174, 6000, true)
 equal(state.thrust_reduction_complete, true, "thrust reduction at selected height")
@@ -45,7 +59,13 @@ equal(state.vnav_speed_kts, nil, "rearm clears previous departure speed")
 equal(state.acceleration_complete, false, "rearm clears acceleration latch")
 update(state, true, 100, 1000, false)
 update(state, false, 165, 1500, true)
-equal(state.vnav_speed_kts, 165, "new departure uses new activation speed")
+equal(state.vnav_speed_kts, 170,
+    "a new departure below V2 + 10 still commands V2 + 10")
+state = profile.new()
+update(state, true, 100, 1000, false)
+update(state, false, 230, 1500, true)
+equal(state.vnav_speed_kts, 185,
+    "a fast departure is limited to V2 + 25 rather than held")
 
 -- Same static pressure, displayed on QNH 30.12 and then STD 29.92. The STD
 -- altitude below is an independently evaluated standard-atmosphere value.
@@ -70,6 +90,39 @@ update(state, false, 280, 22000, true)
 equal(state.acceleration_complete, true, "airborne reload does not guess departure from RA")
 equal(state.thrust_reduction_complete, true, "airborne reload stays out of takeoff thrust")
 
+-- TAKEOFF REF also accepts a flap setting for THR REDUCTION.  A flap-based
+-- schedule reduces at flap retraction only; there is no height backstop.
+state = profile.new()
+update_flap(state, true, 100, 1000, 20, 5)
+update_flap(state, false, 170, 1600, 20, 5)
+equal(state.thrust_reduction_complete, false,
+    "flap schedule does not reduce thrust at the height")
+update_flap(state, false, 190, 4000, 10, 5)
+equal(state.thrust_reduction_complete, false,
+    "flap schedule waits for the selected flap position")
+update_flap(state, false, 210, 4500, 5, 5)
+equal(state.thrust_reduction_complete, true,
+    "flap schedule reduces thrust at the selected flap position")
+
+state = profile.new()
+update_flap(state, true, 100, 1000, 20, 5)
+update_flap(state, false, 200, 5000, 0, 5)
+equal(state.thrust_reduction_complete, true,
+    "flaps up is past the selected thrust reduction flap")
+
+-- FCOM PERF FACTORS default THR RED is 1500 FT, used when the page value is
+-- unreadable and no flap schedule is selected.
+state = profile.new()
+profile.update(state, {on_ground=true, ias_kts=100, altitude_ft=0,
+    baro_inhg=29.92, vnav_active=false, v2_kts=160})
+profile.update(state, {on_ground=false, ias_kts=180, altitude_ft=1499,
+    baro_inhg=29.92, vnav_active=true, v2_kts=160})
+equal(state.thrust_reduction_complete, false, "below the 1500 FT default")
+profile.update(state, {on_ground=false, ias_kts=180, altitude_ft=1500,
+    baro_inhg=29.92, vnav_active=true, v2_kts=160})
+equal(state.thrust_reduction_complete, true, "1500 FT default thrust reduction")
+
+-- A crew-selected THR REDUCTION height (400-9999 FT) overrides the default.
 local fms = {accelht="1500", thrredht="1000", clbrestalt="10000",
     clbrestspd="250", spdtransalt="10000", transpd="250", clbspd="320",
     crzspd="810", transalt="18000", costindex="200"}

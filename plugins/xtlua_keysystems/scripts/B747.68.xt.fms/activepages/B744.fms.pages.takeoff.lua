@@ -93,7 +93,14 @@ fmsPages["TAKEOFF"].getSmallPage=function(self,pgNo,fmsID)
   --Marauder28
   local stab_trim = ""
   local accel_ht = string.format("%d",tonumber(fmsModules["data"].accelht) or 1500)
-  local thrust_reduction_ht = string.format("%d",tonumber(fmsModules["data"].thrredht) or 1000)
+  -- THR REDUCTION is either a height above the departure datum or a flap
+  -- setting; FCOM TAKEOFF REF shows the flap form as "FLAPS 5".
+  local thrust_reduction_flap = tonumber(fmsModules["data"].thrredflap)
+  local thrust_reduction = string.format("%dFT",
+    tonumber(fmsModules["data"].thrredht) or 1500)
+  if thrust_reduction_flap ~= nil and thrust_reduction_flap > 0 then
+    thrust_reduction = string.format("FLAPS %d", thrust_reduction_flap)
+  end
   
   if string.len(cg_lineLg) > 0 then
 	  if fmsModules["data"].stab_trim ~= "    " then
@@ -112,7 +119,7 @@ string.format("  /%-21s", accel_ht.."FT"),
 " E/O ACCEL HT     REF VR",
 "1500FT                  ",
 " THR REDUCTION    REF V2",
-string.format("%-24s", thrust_reduction_ht.."FT"),
+string.format("%-24s", thrust_reduction),
 --"                        ",
 "               TRIM   CG",
 --"                        ",

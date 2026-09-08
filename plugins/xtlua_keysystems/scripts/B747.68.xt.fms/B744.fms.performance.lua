@@ -156,4 +156,31 @@ function performance.econ_climb_speed_kcas(input)
     return math.floor(clamp(speed, 251, 349) + 0.5)
 end
 
+-- ECON CLB is a CAS/Mach pair.  The Mach half rises with cost index and is
+-- flown once the climb CAS reaches it, so it is never above the cruise Mach.
+-- Like the CAS schedule above, these coefficients are a simulator
+-- approximation rather than a Boeing performance database; only the
+-- data-unavailable 340/.84 pair is a documented reference point.
+function performance.econ_climb_mach(input)
+    input = input or {}
+    local cost_index = tonumber(input.cost_index)
+    local mach
+    if cost_index == nil then
+        mach = 0.840
+    else
+        local ci = clamp(cost_index, 0, 9999)
+        if ci <= 230 then
+            mach = interpolate(0.760, 0.800, (ci / 230.0) ^ 0.45)
+        else
+            mach = interpolate(0.800, 0.860, ((ci - 230.0) / (9999.0 - 230.0)) ^ 0.5)
+        end
+    end
+
+    local cruise_mach = tonumber(input.cruise_mach)
+    if cruise_mach ~= nil and cruise_mach >= 0.5 and cruise_mach <= 0.95 then
+        mach = math.min(mach, cruise_mach)
+    end
+    return math.floor(clamp(mach, 0.700, 0.900) * 1000 + 0.5) / 1000
+end
+
 return performance
