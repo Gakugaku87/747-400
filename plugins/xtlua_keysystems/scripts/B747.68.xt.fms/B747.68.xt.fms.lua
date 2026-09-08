@@ -632,9 +632,11 @@ function defaultFMSData()
   transpd="250",
   spdtransalt="10000",
   transalt="18000",
-  clbrestspd="250",
+  -- SPD REST is blank until the crew enters one (FCOM CLB page shows
+  -- "---/-----"); the climb then holds SPD TRANS to the transition altitude.
+  clbrestspd="---",
   maxkts="420",
-  clbrestalt="5000 ",
+  clbrestalt="-----",
   stepalt="FL360",
   stepto=string.rep("*", 5),
   stepatwpt=string.rep(" ", 12),
@@ -647,8 +649,10 @@ function defaultFMSData()
   desspd="270",
   destranspd="240",
   desspdtransalt="10000",
-  desrestspd="180",
-  desrestalt="5000 ",
+  -- SPD REST is blank on the DES page too; with none entered the descent
+  -- stays on SPD TRANS all the way down.
+  desrestspd="---",
+  desrestalt="-----",
   fpa="*.*",
   vb="*.*",
   vs="****",

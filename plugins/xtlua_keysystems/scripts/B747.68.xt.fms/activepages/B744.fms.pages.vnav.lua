@@ -340,7 +340,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
                 local transSpd = tonumber(fmsModules["data"]["transpd"])
                 local transAlt = tonumber(fmsModules["data"]["spdtransalt"]) -- 10000
                 local econSpd = tonumber(fmsModules["data"]["clbspd"])
-                if(alt < restAlt) then
+                if(restAlt ~= nil and restSpd ~= nil and alt < restAlt) then
                   spdalt = restSpd.."/"..alt
                 elseif(alt < transAlt) then
                   spdalt = transSpd.."/"..alt
@@ -614,7 +614,8 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       if(nxtalt < dtransalt) then
         nxtspd = dtransspd
       end
-      if(nxtalt < drestalt) then
+      -- SPD REST only shapes the prediction once the crew has entered one.
+      if(drestalt ~= nil and drestspd ~= nil and nxtalt < drestalt) then
         nxtspd = drestspd
       end
       local edaltText="****"

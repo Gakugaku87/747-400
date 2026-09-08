@@ -221,13 +221,17 @@ function deceleratedDesent(targetvspeed)
   if simDR_autopilot_airspeed_is_mach == 1 then return targetvspeed end --can't do this in mach mode, slow tf down already
 
   local meet = B747_rescale(0,0,400,500,B747BR_fpe)
-  local upperAlt=math.max(tonumber(getFMSData("desspdtransalt")),tonumber(getFMSData("desrestalt")))
+  -- SPD REST is blank until the crew enters one; SPD TRANS is then both
+  -- boundaries and there is no lower speed to decelerate towards.
+  local transitionAlt=tonumber(getFMSData("desspdtransalt"))
+  local restrictionAlt=tonumber(getFMSData("desrestalt")) or transitionAlt
+  local upperAlt=math.max(transitionAlt,restrictionAlt)
   if simDR_pressureAlt1>upperAlt+1000 then 
     return targetvspeed -meet
   end --nowhere near a restriction yet
-  local lowerAlt=math.min(tonumber(getFMSData("desspdtransalt")),tonumber(getFMSData("desrestalt")))
+  local lowerAlt=math.min(transitionAlt,restrictionAlt)
   local upperAltspdval=tonumber(getFMSData("destranspd"))
-  local lowerAltspdval=tonumber(getFMSData("desrestspd"))
+  local lowerAltspdval=tonumber(getFMSData("desrestspd")) or upperAltspdval
 
   if simDR_ind_airspeed_kts_pilot<=(lowerAltspdval+5) then return targetvspeed end --already low enough
   --less than upperAlt+1000

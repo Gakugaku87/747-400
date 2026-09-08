@@ -229,7 +229,11 @@ end
 ]]
 function clb_aptres_next()
     --return tonumber(getFMSData("clbrestalt"))+100
-    local tAlt=tonumber(getFMSData("clbrestalt"))+100
+    local restAlt=tonumber(getFMSData("clbrestalt"))
+    -- SPD REST reads "---/-----" until the crew enters one.  With no
+    -- restriction there is no state to hold, so hand straight to SPD TRANS.
+    if restAlt==nil then return simDR_pressureAlt1-1 end
+    local tAlt=restAlt+100
     if tAlt>simDR_pressureAlt1+500 then
         tAlt=math.min(simDR_pressureAlt1+500,tAlt)
     end
@@ -274,6 +278,9 @@ function des_src_next()
 end
 function des_aptres_next()
     local tAlt=tonumber(getFMSData("desrestalt"))
+    -- No SPD REST entered: there is no lower restriction state to descend
+    -- into, so SPD TRANS is held to the ground.
+    if tAlt==nil then return -100 end
     if tAlt<simDR_pressureAlt1-500 then
         tAlt=math.max(simDR_pressureAlt1-500,tAlt)
     end
@@ -352,7 +359,10 @@ function clb_src_setSpd()
     vnavSPD_state["setBaro"]=false
 end
 function clb_aptres_setSpd()
-    local spdval=modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("aptres", getFMSData))
+    -- Reached only with a SPD REST entered; fall back to SPD TRANS otherwise.
+    local restSpd=vnav_afds_helpers.climb_speed_for_state("aptres", getFMSData)
+        or tonumber(getFMSData("transpd")) or 250
+    local spdval=modFlapSpeed(restSpd)
     spdval=math.max(spdval,simDR_ind_airspeed_kts_pilot-15)
     simDR_autopilot_airspeed_is_mach = 0
     print("convert to clb clbrestspd ".. spdval)
@@ -500,7 +510,10 @@ function des_aptres_setSpd()
 
 
     local nextspdval=tonumber(getFMSData("desrestspd"))
-    spdval=B747_rescale(lowerAlt+1000,nextspdval,lowerAlt+1500,spdval,simDR_pressureAlt1)
+    -- Blend into SPD REST only when one is entered; hold SPD TRANS otherwise.
+    if lowerAlt~=nil and nextspdval~=nil then
+        spdval=B747_rescale(lowerAlt+1000,nextspdval,lowerAlt+1500,spdval,simDR_pressureAlt1)
+    end
     simDR_autopilot_airspeed_is_mach = 0
     print("convert to destranspd speed ".. spdval)
     B747DR_ap_ias_dial_value = math.min(399.0, spdval)
@@ -515,7 +528,9 @@ function des_aptres_setSpd()
     end
 end
 function des_spcres_setSpd()
+    -- Reached only with a SPD REST entered; fall back to SPD TRANS otherwise.
     local spdval=tonumber(getFMSData("desrestspd"))
+        or tonumber(getFMSData("destranspd")) or 240
     simDR_autopilot_airspeed_is_mach = 0
     print("convert to desrestspd speed ".. spdval)
     B747DR_ap_ias_dial_value = math.min(399.0, spdval)

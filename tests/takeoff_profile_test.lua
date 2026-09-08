@@ -34,6 +34,14 @@ update(state, false, 180, 5499, true)
 equal(state.vnav_speed_kts, 180, "VNAV activation captures current IAS")
 update(state, false, 174, 5999, true)
 equal(state.vnav_speed_kts, 180, "speed is held rather than following IAS")
+-- The initial climb target is V2 + 10 kt, or the engagement airspeed when
+-- that is higher, limited to V2 + 25 kt.
+equal(profile.initial_climb_speed(160, 150), 170, "below the band commands V2 + 10")
+equal(profile.initial_climb_speed(160, 170), 170, "the bottom of the band is V2 + 10")
+equal(profile.initial_climb_speed(160, 180), 180, "inside the band holds the engagement speed")
+equal(profile.initial_climb_speed(160, 185), 185, "the top of the band is V2 + 25")
+equal(profile.initial_climb_speed(160, 220), 185, "above the band is limited to V2 + 25")
+equal(profile.initial_climb_speed(nil, 180), nil, "no V2 gives no takeoff target")
 equal(state.thrust_reduction_complete, false, "below selected thrust reduction")
 update(state, false, 174, 6000, true)
 equal(state.thrust_reduction_complete, true, "thrust reduction at selected height")
@@ -51,7 +59,13 @@ equal(state.vnav_speed_kts, nil, "rearm clears previous departure speed")
 equal(state.acceleration_complete, false, "rearm clears acceleration latch")
 update(state, true, 100, 1000, false)
 update(state, false, 165, 1500, true)
-equal(state.vnav_speed_kts, 165, "new departure uses new activation speed")
+equal(state.vnav_speed_kts, 170,
+    "a new departure below V2 + 10 still commands V2 + 10")
+state = profile.new()
+update(state, true, 100, 1000, false)
+update(state, false, 230, 1500, true)
+equal(state.vnav_speed_kts, 185,
+    "a fast departure is limited to V2 + 25 rather than held")
 
 -- Same static pressure, displayed on QNH 30.12 and then STD 29.92. The STD
 -- altitude below is an independently evaluated standard-atmosphere value.

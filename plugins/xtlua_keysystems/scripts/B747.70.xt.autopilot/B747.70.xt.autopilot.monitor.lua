@@ -231,7 +231,11 @@ function VNAV_DES(numAPengaged,fms)
 
     setDescentVSpeed(fms)
     if B747DR_switchingIASMode==1 then return end
-    local upperAlt=math.max(tonumber(getFMSData("desspdtransalt")),tonumber(getFMSData("desrestalt")))
+    -- SPD REST is blank until the crew enters one, leaving SPD TRANS as the
+    -- only descent speed boundary.
+    local transitionAlt=tonumber(getFMSData("desspdtransalt"))
+    local upperAlt=math.max(transitionAlt,
+        tonumber(getFMSData("desrestalt")) or transitionAlt)
     --print("upperAlt "..upperAlt)
     if B747DR_ap_ias_mach_window_open == 1 then
 

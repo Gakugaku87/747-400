@@ -14,8 +14,8 @@ end
 
 local step = dofile(FMS.."B744.fms.step.lua")
 local data = {clbspd="280", clbmach="780", clbspdmode="ECON", crzalt="FL350",
-    transpd="250", spdtransalt="10000", transalt="18000", clbrestspd="250",
-    clbrestalt="5000 ", crzspd="810", stepsize="ICAO"}
+    transpd="250", spdtransalt="10000", transalt="18000", clbrestspd="---",
+    clbrestalt="-----", crzspd="810", stepsize="ICAO"}
 local runtime = setmetatable({
     print=function() end,
     fmsPages={},
@@ -61,6 +61,16 @@ equal(page()[1], "       230 CLB          ", "armed selected-speed CLB title")
 equal(smallPage()[4], " SEL SPD           ERROR", "SEL SPD label")
 equal(page()[5]:sub(1, 8), "230/.780",
     "a selected CAS keeps the scheduled climb Mach")
+
+-- SPD REST reads "---/-----" until the crew enters one, and the page must
+-- render a blank field rather than an invented 250/5000 restriction.
+equal(smallPage()[8], " SPD REST      MAX ANGLE", "SPD REST label")
+equal(page()[9]:sub(1, 9), "---/-----", "SPD REST is blank by default")
+data.clbrestspd = "210"
+data.clbrestalt = "8000 "
+equal(page()[9]:sub(1, 9), "210/8000 ", "an entered SPD REST is displayed")
+data.clbrestspd = "---"
+data.clbrestalt = "-----"
 
 for _, line in ipairs(page()) do
     checks = checks + 1
