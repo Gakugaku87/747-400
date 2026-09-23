@@ -1,6 +1,6 @@
 -- Run from the repository root with Lua 5.1 or LuaJIT.
 -- Renders the production VNAV CLB page against the FCOM page layout:
---   *     ACT ECON CLB   1/3 *      *     ACT 230 CLB    1/3 *
+--   *     ACT ECON CLB   1/3 *      *     ACT 230KT CLB  1/3 *
 --   * ECON SPD   ERR AT RUBEL*      * SEL SPD    ERR AT RUBEL*
 --   *280/.780     350LO 2LONG*
 -- Simulator interfaces are mocked; this validates page text only.
@@ -52,12 +52,13 @@ equal(smallPage()[4], " ECON SPD          ERROR", "ECON SPD label")
 equal(page()[5]:sub(1, 8), "280/.780", "ECON SPD shows the CAS/Mach pair")
 
 -- A crew-entered climb speed selects a fixed-speed climb.  The FCOM title is
--- "ACT 230 CLB" - no unit suffix, and in the same columns as ECON.
+-- "ACT 230KT CLB" - the xxxKT form the reference pages also use for
+-- "ACT E/O 230KT CLB" and "ACT 230KT DES" - in the same columns as ECON.
 data.clbspdmode = "SEL "
 data.clbspd = "230"
-equal(page()[1], "     ACT 230 CLB        ", "active selected-speed CLB title")
+equal(page()[1], "     ACT 230KT CLB      ", "active selected-speed CLB title")
 runtime.B747DR_ap_flightPhase = 0
-equal(page()[1], "       230 CLB          ", "armed selected-speed CLB title")
+equal(page()[1], "       230KT CLB        ", "armed selected-speed CLB title")
 equal(smallPage()[4], " SEL SPD           ERROR", "SEL SPD label")
 equal(page()[5]:sub(1, 8), "230/.780",
     "a selected CAS keeps the scheduled climb Mach")

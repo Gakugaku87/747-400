@@ -151,6 +151,25 @@ advisory = r.B747_getStepClimbAdvisory()
 equal(advisory.target, "FL330", "second step follows acceptance of first")
 check(advisory.distance > 101 and advisory.distance < 103, "second step distance is retained")
 
+-- STEP SIZE 0 stops only the computed optimum steps.  Planned LEGS steps -
+-- normally flown with STEP SIZE 0 - and a crew STEP TO entry still apply.
+r.fmsModules.data.stepsize = "0"
+advisory = r.B747_getStepClimbAdvisory()
+equal(advisory.target, "FL330", "STEP SIZE 0 keeps the planned LEGS step")
+check(advisory.distance > 101 and advisory.distance < 103, "planned step point kept at STEP SIZE 0")
+local plannedSteps = steps
+steps = {}
+r.fmsModules.data.stepto, r.fmsModules.data.stepatwpt = "*****", ""
+advisory = r.B747_getStepClimbAdvisory()
+equal(advisory.target, "", "STEP SIZE 0 computes no optimum step")
+equal(advisory.label, "NONE", "STEP SIZE 0 with nothing planned shows no step")
+r.fmsModules.data.stepto = "FL350"
+advisory = r.B747_getStepClimbAdvisory()
+equal(advisory.target, "FL350", "STEP SIZE 0 keeps a crew STEP TO entry")
+check(advisory.manual, "crew STEP TO entry is a manual step")
+steps = plannedSteps
+r.fmsModules.data.stepsize, r.fmsModules.data.stepto = "ICAO", "*****"
+
 -- Reuse the public script entry points for crew intervention and refusal.
 local function reset_auto()
     r.B747_ASC_disable_command()
@@ -190,6 +209,37 @@ equal(r.B747_ASC.last_executed_target, nil, "dispatch alone is not execution")
 scan(212)
 equal(r.B747_ASC.awaiting_target, nil, "unaccepted command times out")
 equal(r.B747_ASC.last_executed_target, nil, "refused command remains unexecuted")
+
+-- VNAV climb altitude intervention: still climbing, an MCP altitude above
+-- CRZ ALT resets CRZ ALT when the selector is pushed; it is not a cruise
+-- climb, so no cruise-climb transition is scheduled.
+local function push_altitude_selector()
+    r.B747_ap_switch_vnavalt_mode_CMDhandler(0,0)
+    r.B747_ap_switch_vnavalt_mode_CMDhandler(2,0)
+end
+r.run_after_time = function() error("VNAV climb intervention scheduled a cruise climb") end
+r.setVNAVState, r.getVNAVState = function() end, function() return 1 end
+r.B747BR_cruiseAlt, r.B747DR_autopilot_altitude_ft = 35000, 37000
+r.simDR_pressureAlt1, r.simDR_autopilot_alt_hold_status = 24000, 0
+r.B747DR_ap_flightPhase, r.B747DR_ap_vnav_state = 1, 2
+push_altitude_selector()
+equal(r.B747BR_cruiseAlt, 37000, "ALT push in VNAV climb raises CRZ ALT to the MCP altitude")
+r.B747DR_autopilot_altitude_ft = 33000
+push_altitude_selector()
+equal(r.B747BR_cruiseAlt, 37000, "an MCP altitude below CRZ ALT leaves CRZ ALT alone")
+-- Levelled in VNAV ALT at an intermediate MCP altitude, then cleared above
+-- CRZ ALT: CRZ ALT is raised and the climb resumes.
+r.B747BR_cruiseAlt, r.B747DR_autopilot_altitude_ft = 35000, 37000
+r.simDR_autopilot_alt_hold_status, r.simDR_autopilot_altitude_ft = 2, 24000
+push_altitude_selector()
+equal(r.B747BR_cruiseAlt, 37000, "ALT push from VNAV ALT raises CRZ ALT")
+equal(r.simDR_autopilot_alt_hold_status, 0, "ALT push from VNAV ALT resumes the climb")
+equal(r.simDR_autopilot_altitude_ft, 37000, "the resumed climb targets the MCP altitude")
+r.B747DR_ap_inVNAVdescent, r.B747BR_cruiseAlt = 1, 35000
+r.simDR_autopilot_alt_hold_status = 0
+push_altitude_selector()
+equal(r.B747BR_cruiseAlt, 35000, "no CRZ ALT change during a VNAV descent")
+r.B747DR_ap_inVNAVdescent = 0
 
 -- Load the production updater and its helper, not a reconstructed input list.
 local perf = dofile(FMS.."B744.fms.performance.lua")

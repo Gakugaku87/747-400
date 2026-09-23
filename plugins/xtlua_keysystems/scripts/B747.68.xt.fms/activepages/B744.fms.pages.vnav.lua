@@ -162,7 +162,7 @@ function B747_getStepClimbAdvisory()
   end
   local stepSizeFeet, stepSizeDisplay = getStepSizeFeet(cruiseAltitude)
   advisory.stepSize = stepSizeDisplay
-  if cruiseAltitude == nil or stepSizeFeet == 0 then
+  if cruiseAltitude == nil then
     fmsModules["data"].stepalt = "*****"
     return publishStepClimbAdvisory(advisory)
   end
@@ -190,6 +190,11 @@ function B747_getStepClimbAdvisory()
   if enteredStepAltitude ~= nil and enteredStepAltitude > cruiseAltitude then
     targetAltitude = enteredStepAltitude
     advisory.manual = true
+  elseif stepSizeFeet == 0 then
+    -- STEP SIZE 0 only stops the computed optimum steps; steps planned on
+    -- LEGS (the usual way to fly planned steps) or entered as STEP TO remain.
+    fmsModules["data"].stepalt = "*****"
+    return publishStepClimbAdvisory(advisory)
   else
     targetAltitude = cruiseAltitude + stepSizeFeet
   end
@@ -390,16 +395,17 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       VxSpeed = string.format("  %03d",ClbV2 + vxadj)
 
       local isSelectedClimb = selectedClimbSpeed()
-      -- FCOM CLB page titles: "ACT ECON CLB" and "ACT 230 CLB" - the selected
-      -- speed carries no unit suffix and sits in the same columns as ECON.
+      -- FCOM CLB page titles: "ACT ECON CLB" and, for a selected CAS,
+      -- "ACT 230KT CLB" - the same xxxKT form as "ACT E/O 230KT CLB" and
+      -- "ACT 230KT DES" (and M.xxx on CRZ), in the same columns as ECON.
       line1="       ECON CLB         "
       if isSelectedClimb then
-        line1=string.format("       %3d CLB          ",
+        line1=string.format("       %3dKT CLB        ",
           tonumber(fmsModules["data"]["clbspd"]) or 340)
       end
       if B747DR_ap_flightPhase==1 then
         if isSelectedClimb then
-          line1=string.format("     ACT %3d CLB        ",
+          line1=string.format("     ACT %3dKT CLB      ",
             tonumber(fmsModules["data"]["clbspd"]) or 340)
         else
           line1="     ACT ECON CLB       "
