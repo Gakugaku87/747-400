@@ -344,6 +344,15 @@ function modFlapSpeed(speed)
     elseif speed>maxSafeSpeed then return maxSafeSpeed
     else return speed end
 end
+-- Flap placard speeds (flaps 1/5/10/20/25/30).  VNAV never targets more than
+-- the placard minus 5 kt for the selected flap, in descent as in climb; with
+-- no SPD REST entered this is what slows the descent as flaps are extended.
+local FLAP_PLACARD_KTS={[1]=280,[5]=260,[10]=240,[20]=230,[25]=205,[30]=180}
+function flapPlacardSpeedLimit()
+    local placard=FLAP_PLACARD_KTS[vnav_afds_helpers.flap_speed_bucket(simDR_flap_ratio_control)]
+    if placard==nil then return 399.0 end
+    return placard-5
+end
 function clb_src_setSpd()
     
     if B747DR_airspeed_V2<900 then
@@ -496,6 +505,7 @@ function des_src_setSpd()
         local upperAlt=lowerAlt+1500
         spdval=B747_rescale(lowerAlt,nextspdval,upperAlt,spdval,simDR_pressureAlt1)
       end
+      spdval=math.min(spdval,flapPlacardSpeedLimit())
       simDR_autopilot_airspeed_is_mach = 0
       print("des_src_setSpd:convert to descend speed ".. spdval)
       B747DR_ap_ias_dial_value = math.min(399.0, spdval)
@@ -514,6 +524,7 @@ function des_aptres_setSpd()
     if lowerAlt~=nil and nextspdval~=nil then
         spdval=B747_rescale(lowerAlt+1000,nextspdval,lowerAlt+1500,spdval,simDR_pressureAlt1)
     end
+    spdval=math.min(spdval,flapPlacardSpeedLimit())
     simDR_autopilot_airspeed_is_mach = 0
     print("convert to destranspd speed ".. spdval)
     B747DR_ap_ias_dial_value = math.min(399.0, spdval)
@@ -531,6 +542,7 @@ function des_spcres_setSpd()
     -- Reached only with a SPD REST entered; fall back to SPD TRANS otherwise.
     local spdval=tonumber(getFMSData("desrestspd"))
         or tonumber(getFMSData("destranspd")) or 240
+    spdval=math.min(spdval,flapPlacardSpeedLimit())
     simDR_autopilot_airspeed_is_mach = 0
     print("convert to desrestspd speed ".. spdval)
     B747DR_ap_ias_dial_value = math.min(399.0, spdval)

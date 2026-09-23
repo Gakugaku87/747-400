@@ -742,11 +742,12 @@ function B747_ap_switch_vnavalt_mode_CMDhandler(phase, duration)
 		B747_ap_button_switch_position_target[16] = 1 -- SET THE ALT KNOB ANIMATION TO "IN"
 
 		local currentCruiseAltitude=tonumber(B747BR_cruiseAlt) or 0
-		local isVnavCruise=simDR_onGround==0
+		local isVnavClimbOrCruise=simDR_onGround==0
 			and B747DR_ap_vnav_state>1
 			and B747DR_ap_inVNAVdescent==0
-			and simDR_autopilot_alt_hold_status==2
 			and currentCruiseAltitude>0
+		local isVnavCruise=isVnavClimbOrCruise
+			and simDR_autopilot_alt_hold_status==2
 			and math.abs(simDR_pressureAlt1-currentCruiseAltitude)<=500
 		if isVnavCruise and B747DR_autopilot_altitude_ft>currentCruiseAltitude then
 			B747BR_cruiseAlt = B747DR_autopilot_altitude_ft
@@ -759,6 +760,14 @@ function B747_ap_switch_vnavalt_mode_CMDhandler(phase, duration)
 			run_after_time(update_new_crzalt, 2.0)
 			B747DR_mcp_hold_pressed = simDRTime
 			return
+		end
+
+		-- VNAV climb altitude intervention: with the MCP altitude above CRZ
+		-- ALT, pushing the selector resets CRZ ALT to the MCP altitude and
+		-- VNAV keeps climbing to it (resuming from VNAV ALT below).
+		if isVnavClimbOrCruise and B747DR_autopilot_altitude_ft>currentCruiseAltitude then
+			B747BR_cruiseAlt = B747DR_autopilot_altitude_ft
+			print("set new cruise in climb to "..B747BR_cruiseAlt)
 		end
 
 		if simDR_autopilot_alt_hold_status==2 and B747DR_ap_vnav_state>1 then

@@ -108,6 +108,27 @@ equal(runtime.des_aptres_next(), -100,
 runtime.des_aptres_setSpd()
 equal(runtime.B747DR_ap_ias_dial_value, 240,
     "the descent holds SPD TRANS with no SPD REST entered")
+
+-- VNAV never targets more than the flap placard minus 5 kt (flaps 5/10/20/
+-- 25/30: 260/240/230/205/180 kt).  With no SPD REST entered, that is what
+-- slows the descent as the flaps are extended.
+for _, case in ipairs({{0.25, 240, "flaps 5"}, {0.45, 235, "flaps 10"},
+        {0.6, 225, "flaps 20"}, {0.8, 200, "flaps 25"}, {1.0, 175, "flaps 30"}}) do
+    runtime.simDR_flap_ratio_control = case[1]
+    runtime.des_aptres_setSpd()
+    equal(runtime.B747DR_ap_ias_dial_value, case[2],
+        case[3].." placard limits the SPD TRANS descent target")
+end
+runtime.simDR_flap_ratio_control = 0
+runtime.simDR_pressureAlt1 = 13000
+runtime.B747DR_ap_ias_dial_value = 270
+runtime.des_src_setSpd()
+equal(runtime.B747DR_ap_ias_dial_value, 270, "clean, the ECON descent CAS is flown")
+runtime.simDR_flap_ratio_control = 0.25
+runtime.des_src_setSpd()
+equal(runtime.B747DR_ap_ias_dial_value, 255, "flaps 5 placard limits the ECON descent CAS")
+runtime.simDR_flap_ratio_control = 0
+runtime.simDR_pressureAlt1 = 3000
 fms.desrestspd = "180"
 fms.desrestalt = "5000"
 runtime.simDR_pressureAlt1 = 5200
@@ -116,6 +137,11 @@ equal(runtime.des_aptres_next(), 5000,
 runtime.des_spcres_setSpd()
 equal(runtime.B747DR_ap_ias_dial_value, 180,
     "the descent restriction state commands SPD REST")
+runtime.simDR_flap_ratio_control = 1.0
+runtime.des_spcres_setSpd()
+equal(runtime.B747DR_ap_ias_dial_value, 175,
+    "flaps 30 placard limits an entered descent SPD REST")
+runtime.simDR_flap_ratio_control = 0
 
 -- The descent VNAV planner reads both halves of SPD REST; with the field
 -- blank it must fall back to SPD TRANS rather than dereference a dash.
