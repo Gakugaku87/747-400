@@ -296,6 +296,26 @@ econ.fmsModules.data.crzalt, econ.fmsModules.data.costindex = "FL310", "100"
 econ.B747_updateEconClimbSpeed()
 equal(econ.fmsModules.data.crzspd, "836", "typical cruise Mach: CI 100 at 350 t/FL310")
 equal(econ.fmsModules.data.clbmach, "836", "climb Mach follows the same schedule")
+-- Wind reaches the ECON targets through a 60 s lag: a gust or a turn does
+-- not move them at once (50 kt head = +.010, 50 kt tail = -.020 to MRC).
+econ.simDR_wind_degrees, econ.simDR_wind_speed, econ.simDR_aircraft_hdg = 0, 50, 0
+econ.simDRTime = 1
+econ.B747_updateEconClimbSpeed()
+equal(econ.fmsModules.data.crzspd, "836", "a sudden 50 kt headwind does not move ECON at once")
+econ.simDRTime = 1000
+econ.B747_updateEconClimbSpeed()
+equal(econ.fmsModules.data.crzspd, "846", "a steady 50 kt headwind raises ECON by .010")
+equal(econ.fmsModules.data.clbmach, "846", "the climb Mach sees the same headwind")
+econ.simDR_aircraft_hdg = 180
+econ.simDRTime = 1001
+econ.B747_updateEconClimbSpeed()
+equal(econ.fmsModules.data.crzspd, "845", "turning into a tailwind moves ECON gradually")
+econ.simDRTime = 2000
+econ.B747_updateEconClimbSpeed()
+equal(econ.fmsModules.data.crzspd, "827", "a steady 50 kt tailwind takes ECON to MRC")
+econ.simDR_wind_speed, econ.simDR_aircraft_hdg, econ.simDRTime = 0, 0, 3000
+econ.B747_updateEconClimbSpeed()
+equal(econ.fmsModules.data.crzspd, "836", "calm air returns to the no-wind ECON Mach")
 econ.fmsModules.data.costindex = "****"
 econ.B747_updateEconClimbSpeed()
 equal(econ.fmsModules.data.clbmach, "840", "without a cost index the climb Mach is the .84 fallback")

@@ -776,6 +776,10 @@ local function totalEngineFuelFlowKgSec()
 	return total
 end
 
+-- Headwind used by the ECON schedules, lagged against turns and gusts.
+local econHeadwind=nil
+local econHeadwindTime=nil
+
 function B747_updateEconClimbSpeed()
 	local climbMode=tostring(fmsModules["data"].clbspdmode or "ECON")
 	local cruiseMode=tostring(fmsModules["data"].crzspdmode or "ECON")
@@ -798,6 +802,12 @@ function B747_updateEconClimbSpeed()
 		headwind=fmsPerformance.headwind_component_kts(
 			simDR_wind_degrees,simDR_wind_speed,simDR_aircraft_hdg)
 	end
+	local now=tonumber(simDRTime) or 0
+	local elapsed=nil
+	if econHeadwindTime~=nil then elapsed=now-econHeadwindTime end
+	econHeadwind=fmsPerformance.smoothed_headwind_kts(econHeadwind,headwind,elapsed)
+	econHeadwindTime=now
+	headwind=econHeadwind
 	local isaDeviation=simDR_air_temp
 		-fmsPerformance.isa_temperature_c(simDR_pressureAlt1)
 
