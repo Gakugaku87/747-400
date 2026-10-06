@@ -434,46 +434,12 @@ function clb_nores_setSpd()
 
 end
 function clb_crz_setSpd()
-    local spdval=tonumber(getFMSData("crzspd"))/10
-
-    local ci = tonumber( getFMSData("costindex") )
-    local ci_mach = 850
-    if(ci == nil or ci == "****") then
-        if(spdval == nil) then
-          spdval = 85
-        end
-    else
-        -- mach numbers in thousands...
-        local lrcMach = 388.2356 + 0.6203 * gwtKG/1000 + 7.8061 * simDR_pressureAlt1/1000
-        local mrcMach = lrcMach -  20
-        local maxMach = 920 - 20
-        local ci_mach = lrcMach --default
-
-        if(ci <= 230) then --LRC or less  (CI 230 corresponds to LRC - ref Boeing)
-          ci_mach = mrcMach + 20 * (ci / 230)
-        else
-          ci_mach = lrcMach + (maxMach - lrcMach) * ((ci-230)/(9999-230)) -- interpolate LRC to Mmo wrt. CI=230 to CI=9999, respectively.
-        end
-
-        -- Faster with headwind, slower with tailwind (cf., LRC which does not adjust for wind)
-        -- Source: https://mediawiki.ivao.aero/index.php?title=Cost_Index and https://www.pprune.org/tech-log/248931-use-cost-index-winds.html
-        local tas = simDR_TAS_mps * 1.94384 -- true airspeed in knots
-        local gs = simDR_GS_mps * 1.94384 -- ground speed in knots
-        local relWind = tas - gs  -- headwind positive, tailwind negative
-        local adjWind = 0
-        if(relWind > 0) then
-          adjWind = 10 * relWind/50 -- plus M0.01 per 50 knots of headwind
-        else
-          adjWind = 20 * relWind/50 -- minus M0.02 per 50 knots of tailwind
-        end
-        ci_mach = ci_mach + adjWind
-
-        if(ci_mach < mrcMach) then ci_mach = mrcMach end
-        if(ci_mach > maxMach) then ci_mach = maxMach end
-
-        ci_mach = math.floor(ci_mach)
-        spdval = ci_mach/10
-    end
+    -- crzspd is the ECON cruise Mach the FMC keeps current from the shared
+    -- performance model (B747_updateEconClimbSpeed), or the crew-selected
+    -- cruise Mach; it is the same value the CRZ page shows.
+    local spdval=tonumber(getFMSData("crzspd"))
+    if spdval==nil then spdval=850 end
+    spdval=spdval/10
     local transalt=tonumber(getFMSData("transalt"))
     local climbspdval=modFlapSpeed(tonumber(getFMSData("clbspd")))
     if simDR_pressureAlt1>=transalt or simDR_ind_airspeed_kts_pilot>=climbspdval-1 then

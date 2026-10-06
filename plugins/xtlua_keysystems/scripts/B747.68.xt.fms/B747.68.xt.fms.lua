@@ -644,7 +644,10 @@ function defaultFMSData()
   modplannedsteps="[]",
   stepmodactive="0",
   stepdistance="-1.000",
+  -- crzspd is the ECON cruise Mach the FMC keeps current (shared with the
+  -- CLB page Mach and the cruise speed state) until the crew selects one.
   crzspd="810",
+  crzspdmode="ECON",
   desspdmach="805",
   desspd="270",
   destranspd="240",
@@ -749,6 +752,14 @@ function setFMSData(id,value)
 			fmsModules["data"].clbspdmode="SEL "
 		end
 	end
+	if id=="crzspd" then
+		-- Likewise a crew-entered cruise Mach; DELETE restores ECON.
+		if value=="" then
+			fmsModules["data"].crzspdmode="ECON"
+		else
+			fmsModules["data"].crzspdmode="SEL "
+		end
+	end
 	if not string.starts(id,"acars") then 
 		print("setting " .. id )
 		print(" to "..value)
@@ -767,7 +778,7 @@ end
 
 function B747_updateEconClimbSpeed()
 	local climbMode=tostring(fmsModules["data"].clbspdmode or "ECON")
-	if string.sub(climbMode,1,3)=="SEL" then return end
+	local cruiseMode=tostring(fmsModules["data"].crzspdmode or "ECON")
 
 	local cruiseAltitude=fmsPerformance.parse_cruise_altitude_ft(
 		fmsModules["data"].crzalt)
@@ -789,29 +800,47 @@ function B747_updateEconClimbSpeed()
 	end
 	local isaDeviation=simDR_air_temp
 		-fmsPerformance.isa_temperature_c(simDR_pressureAlt1)
-	local cruiseMach=(tonumber(fmsModules["data"].crzspd) or 0)/1000
+
+	-- The Mach half of the ECON CLB pair is the ECON cruise Mach at the
+	-- predicted top-of-climb weight and the entered cruise altitude (FCTM).
+	-- VNAV flies it from the CAS/Mach crossover to top of climb, and the
+	-- same value is the ECON cruise Mach shown on the CRZ page and flown in
+	-- cruise, where predictedWeight is the present weight.
+	local econMach=fmsPerformance.econ_climb_mach({
+		top_of_climb_weight_kg=predictedWeight,
+		cruise_altitude_ft=cruiseAltitude,
+		cost_index=fmsModules["data"].costindex,
+		headwind_kts=headwind
+	})
+	local formattedMach=string.format("%03d",math.floor(econMach*1000+0.5))
+	if fmsModules["data"].clbmach~=formattedMach then
+		fmsModules["data"].clbmach=formattedMach
+	end
+	local econCruiseMach=fmsPerformance.econ_cruise_mach_thousandths({
+		gross_weight_kg=predictedWeight,
+		altitude_ft=cruiseAltitude,
+		cost_index=fmsModules["data"].costindex,
+		headwind_kts=headwind
+	})
+	if string.sub(cruiseMode,1,3)~="SEL" and econCruiseMach~=nil then
+		local formattedCruiseMach=string.format("%03d",econCruiseMach)
+		if fmsModules["data"].crzspd~=formattedCruiseMach then
+			fmsModules["data"].crzspd=formattedCruiseMach
+		end
+	end
+
+	if string.sub(climbMode,1,3)=="SEL" then return end
 	local econSpeed=fmsPerformance.econ_climb_speed_kcas({
 		top_of_climb_weight_kg=predictedWeight,
 		cost_index=fmsModules["data"].costindex,
 		headwind_kts=headwind,
 		isa_deviation_c=isaDeviation,
 		cruise_altitude_ft=cruiseAltitude,
-		cruise_mach=cruiseMach
+		cruise_mach=econMach
 	})
 	local formattedSpeed=string.format("%3d",econSpeed)
 	if fmsModules["data"].clbspd~=formattedSpeed then
 		fmsModules["data"].clbspd=formattedSpeed
-	end
-
-	-- The Mach half of the ECON CLB pair.  VNAV flies it from the CAS/Mach
-	-- crossover to top of climb, where the cruise Mach takes over.
-	local econMach=fmsPerformance.econ_climb_mach({
-		cost_index=fmsModules["data"].costindex,
-		cruise_mach=cruiseMach
-	})
-	local formattedMach=string.format("%03d",math.floor(econMach*1000+0.5))
-	if fmsModules["data"].clbmach~=formattedMach then
-		fmsModules["data"].clbmach=formattedMach
 	end
 end
 

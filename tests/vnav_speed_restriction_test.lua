@@ -176,9 +176,9 @@ equal(runtime.deceleratedDesent(-2000), -500,
 local FMS = "plugins/xtlua_keysystems/scripts/B747.68.xt.fms/"
 local step = dofile(FMS.."B744.fms.step.lua")
 local data = {clbrestspd="---", clbrestalt="-----",
-    desrestspd="---", desrestalt="-----"}
+    desrestspd="---", desrestalt="-----", clbspd="320", crzspd="810"}
 local defaults = {clbrestspd="---", clbrestalt="-----",
-    desrestspd="---", desrestalt="-----"}
+    desrestspd="---", desrestalt="-----", clbspd="340", crzspd="810"}
 local pages = setmetatable({
     print=function() end,
     fmsFunctions={},
@@ -205,6 +205,9 @@ file:close()
 local first = assert(source:find("function fmsFunctions.setdata(fmsO,value)", 1, true))
 local last = assert(source:find("function fmsFunctions.setDref(fmsO,value)", first, true))
 setfenv(assert(loadstring(source:sub(first, last-1))), pages)()
+local machFirst = assert(source:find("function validateMachSpeed(value)", 1, true))
+local machLast = assert(source:find("-- VALIDATE ENTRY OF WEIGHT UNITS", machFirst, true))
+setfenv(assert(loadstring(source:sub(machFirst, machLast-1))), pages)()
 
 local function enter(field, text)
     local fmsO = {id="fmsL", scratchpad=text, notify=""}
@@ -230,5 +233,15 @@ equal(step.trim(data.desrestspd).."/"..step.trim(data.desrestalt), "180/5000",
 equal(enter("desrest", "DELETE").notify, "", "DELETE is accepted on the DES page")
 equal(step.trim(data.desrestspd).."/"..step.trim(data.desrestalt), "---/-----",
     "DELETE blanks the DES page field too")
+
+-- CLB and CRZ speed entries: DELETE returns a selected speed to ECON.
+equal(enter("clbspd", "230").notify, "", "a climb CAS is accepted")
+equal(step.trim(data.clbspd), "230", "the selected climb CAS is stored")
+equal(enter("clbspd", "DELETE").notify, "", "DELETE on the climb speed is accepted")
+equal(step.trim(data.clbspd), "340", "DELETE returns the climb speed to ECON")
+equal(enter("crzspd", ".80").notify, "", "a cruise Mach is accepted")
+equal(step.trim(data.crzspd), "800", "the selected cruise Mach is stored")
+equal(enter("crzspd", "DELETE").notify, "", "DELETE on the cruise Mach is accepted")
+equal(step.trim(data.crzspd), "810", "DELETE returns the cruise Mach to ECON")
 
 print("VNAV speed-restriction tests passed: "..checks)

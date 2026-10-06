@@ -243,16 +243,23 @@ r.B747DR_ap_inVNAVdescent = 0
 
 -- Load the production updater and its helper, not a reconstructed input list.
 local perf = dofile(FMS.."B744.fms.performance.lua")
+local fms_defaults = {clbspd="340", crzspd="810"}
 local econ = environment({
     fmsPerformance=perf,
-    fmsModules={data={clbspdmode="ECON",crzalt="FL200",crzspd="810",costindex="230"}},
+    string=setmetatable({starts=function(value,prefix) return value:sub(1,#prefix)==prefix end},
+        {__index=string}),
+    fmsModules={data={clbspdmode="ECON",crzspdmode="ECON",crzalt="FL200",crzspd="810",costindex="230"},
+        setData=function(self,id,value)
+            if value=="" then value=fms_defaults[id] end
+            self.data[id]=value
+        end},
     simDR_GRWT=300000, simDR_pressureAlt1=20000, B747BR_toc=0,
     simDR_eng_fuel_flow_kg_sec={[0]=1,1,1,1}, simDR_groundspeed=220,
     simDR_onGround=0, simDR_wind_degrees=0, simDR_wind_speed=0,
     simDR_aircraft_hdg=0, simDR_air_temp=perf.isa_temperature_c(20000)
 })
 load_in(FMS.."B747.68.xt.fms.lua", econ,
-    "local function totalEngineFuelFlowKgSec()", "function getFMSData(id)")
+    "function setFMSData(id,value)", "function getFMSData(id)")
 local helper = perf.econ_climb_speed_kcas
 local actual_input
 perf.econ_climb_speed_kcas = function(input)
@@ -260,11 +267,38 @@ perf.econ_climb_speed_kcas = function(input)
     return helper(input)
 end
 econ.B747_updateEconClimbSpeed()
-equal(actual_input.cruise_mach, 0.810, "production ECON caller supplies cruise Mach")
--- 349 is this repository's bounded model result, not Boeing calibration data.
-equal(tonumber(econ.fmsModules.data.clbspd), 349, "low cruise altitude reaches existing CAS floor")
+-- At FL200 with 300 t and CI 230 the ECON cruise Mach is .730; the climb
+-- Mach is that value (FCTM) and it also sets the climb CAS floor.
+equal(actual_input.cruise_mach, 0.730, "production ECON caller supplies the ECON cruise Mach at T/C")
+equal(econ.fmsModules.data.clbmach, "730", "climb Mach is the ECON cruise Mach for the cruise altitude")
+equal(econ.fmsModules.data.crzspd, "730", "CRZ page ECON SPD is the same cruise Mach")
+-- 338 is this repository's bounded CAS model result, not Boeing calibration data.
+equal(tonumber(econ.fmsModules.data.clbspd), 338, "low cruise altitude raises climb CAS to the cruise-Mach CAS")
 econ.fmsModules.data.clbspdmode, econ.fmsModules.data.clbspd = "SEL", "312"
 econ.B747_updateEconClimbSpeed()
 equal(econ.fmsModules.data.clbspd, "312", "manual climb speed is preserved")
+equal(econ.fmsModules.data.clbmach, "730", "a selected climb CAS keeps the ECON climb Mach")
+-- A crew-selected cruise Mach is kept and shown; the ECON climb Mach is the
+-- *economy* cruise Mach, so it is unaffected.
+econ.setFMSData("crzspd", "800")
+equal(econ.fmsModules.data.crzspdmode, "SEL ", "entering a cruise Mach selects it")
+econ.B747_updateEconClimbSpeed()
+equal(econ.fmsModules.data.crzspd, "800", "selected cruise Mach is preserved")
+equal(econ.fmsModules.data.clbmach, "730", "selected cruise Mach does not alter the ECON climb Mach")
+econ.setFMSData("crzspd", "")
+equal(econ.fmsModules.data.crzspdmode, "ECON", "DELETE restores ECON cruise")
+econ.B747_updateEconClimbSpeed()
+equal(econ.fmsModules.data.crzspd, "730", "ECON cruise Mach returns after DELETE")
+-- In cruise the predicted T/C weight is the present weight, so the CRZ page
+-- and the cruise speed state follow burn-off: CI 100 at 350 t/FL310 is .836.
+econ.simDR_GRWT, econ.simDR_pressureAlt1 = 350000, 31000
+econ.fmsModules.data.crzalt, econ.fmsModules.data.costindex = "FL310", "100"
+econ.B747_updateEconClimbSpeed()
+equal(econ.fmsModules.data.crzspd, "836", "typical cruise Mach: CI 100 at 350 t/FL310")
+equal(econ.fmsModules.data.clbmach, "836", "climb Mach follows the same schedule")
+econ.fmsModules.data.costindex = "****"
+econ.B747_updateEconClimbSpeed()
+equal(econ.fmsModules.data.clbmach, "840", "without a cost index the climb Mach is the .84 fallback")
+equal(econ.fmsModules.data.crzspd, "836", "without a cost index the cruise Mach is left alone")
 
 print("FMC audit integration tests passed: "..checks)

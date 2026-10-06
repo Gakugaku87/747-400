@@ -38,6 +38,11 @@ local function selectedClimbSpeed()
   return string.sub(mode, 1, 3) == "SEL"
 end
 
+local function selectedCruiseSpeed()
+  local mode = tostring(fmsModules["data"].crzspdmode or "ECON")
+  return string.sub(mode, 1, 3) == "SEL"
+end
+
 local function parseCruiseAltitude(value)
   if value == nil then return nil end
   value = tostring(value)
@@ -516,9 +521,20 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       --local utcNow = string.formt("%02f%02f",dt1hour,dt1.min)
 
       etafuel = string.format("%02d%02dz/ %03.1f",eta_h,eta_m,conv*fad/1000)
-      line1="       ECON CRZ         " 
+      -- FCOM CRZ page titles: "ACT ECON CRZ" and, for a selected Mach,
+      -- "ACT M.801 CRZ", in the same columns.
+      local isSelectedCruise = selectedCruiseSpeed()
+      local cruiseMach = B747_fms_step.trim(fmsModules["data"]["crzspd"])
+      line1="       ECON CRZ         "
+      if isSelectedCruise then
+        line1=string.format("       M.%-3s CRZ        ", cruiseMach)
+      end
       if B747DR_ap_flightPhase==2 then
-        line1="     ACT ECON CRZ       "
+        if isSelectedCruise then
+          line1=string.format("     ACT M.%-3s CRZ      ", cruiseMach)
+        else
+          line1="     ACT ECON CRZ       "
+        end
       end
       return{
         line1,
@@ -688,7 +704,8 @@ fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
       "                    2/3 ",
       " CRZ ALT         STEP TO",
       string.format("%19s%5s", "", stepAltSmall),
-      string.format(" ECON SPD%15s", stepAdvisory.label),
+      string.format(" %-8s%15s", selectedCruiseSpeed() and "SEL SPD" or "ECON SPD",
+        stepAdvisory.label),
       "                        ",
       " N1        "..dICAO.." ETA/FUEL",  
       "                        ",

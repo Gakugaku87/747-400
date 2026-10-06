@@ -1223,7 +1223,9 @@ function fmsFunctions.setdata(fmsO,value)
 			setFMSData("thrredflap","")
 		end
   elseif value=="clbspd" then
-    if validateSpeed(fmsO["scratchpad"]) ==false then 
+    if del==true then
+      setFMSData("clbspd","") -- back to the ECON schedule
+    elseif validateSpeed(fmsO["scratchpad"]) ==false then
       fmsO["notify"]="INVALID ENTRY"
     else
       setFMSData("clbspd",fmsO["scratchpad"])
@@ -1262,7 +1264,9 @@ function fmsFunctions.setdata(fmsO,value)
       end
     end
   elseif value=="crzspd" then
-    if validateMachSpeed(fmsO["scratchpad"]) ==nil then 
+    if del==true then
+      setFMSData("crzspd","") -- back to the ECON cruise Mach
+    elseif validateMachSpeed(fmsO["scratchpad"]) ==nil then
       fmsO["notify"]="INVALID ENTRY"
     else
       setFMSData("crzspd",validateMachSpeed(fmsO["scratchpad"]))
