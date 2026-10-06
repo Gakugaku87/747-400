@@ -29,6 +29,7 @@ local runtime = {
     B747DR_airspeed_Vmo = 400,
     simDR_flap_ratio_control = 0,
     simDR_ind_airspeed_kts_pilot = 200,
+    simDR_pressureAlt1 = 12000,
     simDR_airspeed_mach = 0,
     simDR_autopilot_airspeed_is_mach = 0,
     B747DR_switchingIASMode = 0,
@@ -89,5 +90,20 @@ runtime.clb_nores_setSpd()
 assert(runtime.B747DR_ap_ias_dial_value == 81,
     "fallback did not use the cruise Mach")
 fms_data.clbmach = "780"
+
+-- At top of climb the cruise state flies the ECON cruise Mach the FMC keeps
+-- in crzspd (shared with the CLB page Mach), or the crew-selected one.
+runtime.simDR_pressureAlt1 = 35000
+fms_data.crzspd = "846"
+runtime.clb_crz_setSpd()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 1,
+    "cruise did not change over to Mach")
+assert(runtime.B747DR_ap_ias_dial_value == 84.6,
+    "cruise did not fly the FMC ECON cruise Mach")
+fms_data.crzspd = "800"
+runtime.clb_crz_setSpd()
+assert(runtime.B747DR_ap_ias_dial_value == 80,
+    "cruise did not fly the selected cruise Mach")
+fms_data.crzspd = "810"
 
 print("VNAV climb-speed semantic tests passed")

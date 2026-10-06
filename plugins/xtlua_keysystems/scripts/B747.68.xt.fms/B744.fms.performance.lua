@@ -1,15 +1,17 @@
 -- Pure 747-400 FMC performance calculations.
 --
 -- Boeing's FMC performance database is proprietary, but the documented
--- scheduling rules are public:
+-- scheduling rules are public (FCTM, Climb/Cruise):
 --   * ECON CLB is a fixed CAS/Mach schedule.
 --   * CAS depends on predicted top-of-climb gross weight, cost index,
 --     predicted top-of-climb wind and ISA deviation.
+--   * The constant Mach of the ECON climb is the economy cruise Mach
+--     calculated for the entered cruise altitude (at top-of-climb weight).
 --   * CI 0 is the minimum-fuel schedule, CI 230 approximates LRC, and the
 --     747-400 VNAV-generated target is limited to 349 KCAS.
 --   * With FMC performance data unavailable, use 340 KCAS/.84 Mach.
 --
--- The curves below are a simulator approximation, not a Boeing performance
+-- The CAS curve below is a simulator approximation, not a Boeing performance
 -- database. The data-unavailable 340/.84 schedule and the LRC-equivalent CI
 -- do not establish ECON climb calibration points. Current sensed wind and
 -- temperature are proxies; engine-specific accuracy still needs validation.
@@ -156,30 +158,64 @@ function performance.econ_climb_speed_kcas(input)
     return math.floor(clamp(speed, 251, 349) + 0.5)
 end
 
--- ECON CLB is a CAS/Mach pair.  The Mach half rises with cost index and is
--- flown once the climb CAS reaches it, so it is never above the cruise Mach.
--- Like the CAS schedule above, these coefficients are a simulator
--- approximation rather than a Boeing performance database; only the
--- data-unavailable 340/.84 pair is a documented reference point.
-function performance.econ_climb_mach(input)
+-- ECON cruise Mach, in thousandths, as the cruise speed state flies it: LRC
+-- from gross weight and altitude, MRC .020 below it, CI 0..230 blending
+-- MRC to LRC (CI 230 corresponds to LRC - ref Boeing) and CI 230..9999
+-- blending LRC to Mmo - .02.  Faster with headwind (+.01 per 50 kt), slower
+-- with tailwind (-.02 per 50 kt), never below MRC.  nil without weight,
+-- altitude or cost index.
+function performance.econ_cruise_mach_thousandths(input)
     input = input or {}
+    local weight_kg = tonumber(input.gross_weight_kg)
+    local altitude_ft = tonumber(input.altitude_ft)
     local cost_index = tonumber(input.cost_index)
-    local mach
-    if cost_index == nil then
-        mach = 0.840
-    else
-        local ci = clamp(cost_index, 0, 9999)
-        if ci <= 230 then
-            mach = interpolate(0.760, 0.800, (ci / 230.0) ^ 0.45)
-        else
-            mach = interpolate(0.800, 0.860, ((ci - 230.0) / (9999.0 - 230.0)) ^ 0.5)
-        end
+    if weight_kg == nil or weight_kg <= 0 or altitude_ft == nil
+        or cost_index == nil then
+        return nil
     end
 
-    local cruise_mach = tonumber(input.cruise_mach)
-    if cruise_mach ~= nil and cruise_mach >= 0.5 and cruise_mach <= 0.95 then
-        mach = math.min(mach, cruise_mach)
+    local lrc_mach = 388.2356 + 0.6203 * weight_kg / 1000
+        + 7.8061 * altitude_ft / 1000
+    local mrc_mach = lrc_mach - 20
+    local max_mach = 920 - 20
+    local ci = clamp(cost_index, 0, 9999)
+    local mach
+    if ci <= 230 then
+        mach = mrc_mach + 20 * (ci / 230)
+    else
+        mach = lrc_mach + (max_mach - lrc_mach) * ((ci - 230) / (9999 - 230))
     end
+
+    local headwind = tonumber(input.headwind_kts) or 0
+    if headwind > 0 then
+        mach = mach + 10 * headwind / 50
+    else
+        mach = mach + 20 * headwind / 50
+    end
+
+    return math.floor(clamp(mach, mrc_mach, max_mach))
+end
+
+function performance.econ_cruise_mach(input)
+    local thousandths = performance.econ_cruise_mach_thousandths(input)
+    if thousandths == nil then return nil end
+    return thousandths / 1000
+end
+
+-- ECON CLB is a CAS/Mach pair.  FCTM: the constant Mach used in the ECON
+-- climb speed is the economy cruise Mach calculated for the cruise altitude,
+-- so it is the cruise schedule above evaluated at the predicted top-of-climb
+-- weight and the entered cruise altitude.  340/.84 is the data-unavailable
+-- fallback.
+function performance.econ_climb_mach(input)
+    input = input or {}
+    local mach = performance.econ_cruise_mach({
+        gross_weight_kg = input.top_of_climb_weight_kg or input.gross_weight_kg,
+        altitude_ft = input.cruise_altitude_ft,
+        cost_index = input.cost_index,
+        headwind_kts = input.headwind_kts
+    })
+    if mach == nil then return 0.840 end
     return math.floor(clamp(mach, 0.700, 0.900) * 1000 + 0.5) / 1000
 end
 

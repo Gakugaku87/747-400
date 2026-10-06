@@ -15,7 +15,7 @@ end
 local step = dofile(FMS.."B744.fms.step.lua")
 local data = {clbspd="280", clbmach="780", clbspdmode="ECON", crzalt="FL350",
     transpd="250", spdtransalt="10000", transalt="18000", clbrestspd="---",
-    clbrestalt="-----", crzspd="810", stepsize="ICAO"}
+    clbrestalt="-----", crzspd="810", crzspdmode="ECON", stepsize="ICAO"}
 local runtime = setmetatable({
     print=function() end,
     fmsPages={},
@@ -24,12 +24,20 @@ local runtime = setmetatable({
     createPage=function(name) return {name=name} end,
     find_dataref=function() return 0 end,
     B747_fms_step=step,
+    B747_getPlannedSteps=function() return {} end,
     json=dofile(FMS.."json/json.lua"),
     fmsJson="[]",
     simConfigData={data={SIM={weight_display_units="KGS", kgs_to_lbs=2.205}}},
     simDR_groundspeed=250,
     simDR_pressureAlt1=12000,
     simDR_onGround=0,
+    simDR_GRWT=300000,
+    simDR_latitude=0, simDR_longitude=0,
+    simDR_vvi_fpm_pilot=0,
+    simDR_fueL_tank_weight_total_kg=80000,
+    simDR_eng_fuel_flow_kg_sec={[0]=1,1,1,1},
+    hh=12, mm=0,
+    B747BR_cruiseAlt=35000, B747BR_totalDistance=1000, B747BR_tod=100,
     B747DR_airspeed_V2=160,
     B747DR_ap_flightPhase=0
 }, {__index=_G})
@@ -78,5 +86,35 @@ for _, line in ipairs(page()) do
     assert(string.len(line) == 24,
         "CLB page line is not 24 columns: ["..line.."]")
 end
+
+-- CRZ page: the ECON cruise Mach the FMC keeps current, then a crew-selected
+-- Mach, which the FCOM page titles "ACT M.801 CRZ".
+local function crzPage()
+    return runtime.fmsPages.VNAV:getPage(2, "fmsL")
+end
+local function crzSmallPage()
+    return runtime.fmsPages.VNAV:getSmallPage(2, "fmsL")
+end
+data.crzspd = "846"
+runtime.B747DR_ap_flightPhase = 2
+equal(crzPage()[1], "     ACT ECON CRZ       ", "active ECON CRZ title")
+equal(crzPage()[5]:sub(1, 4), ".846", "CRZ page shows the FMC ECON cruise Mach")
+equal(crzSmallPage()[4]:sub(1, 9), " ECON SPD", "ECON SPD label on the CRZ page")
+data.crzspd = "801"
+data.crzspdmode = "SEL "
+equal(crzPage()[1], "     ACT M.801 CRZ      ", "active selected-Mach CRZ title")
+equal(crzSmallPage()[4]:sub(1, 9), " SEL SPD ", "SEL SPD label on the CRZ page")
+runtime.B747DR_ap_flightPhase = 0
+equal(crzPage()[1], "       M.801 CRZ        ", "armed selected-Mach CRZ title")
+-- The title and ECON SPD lines must stay 24 columns (the pre-existing N1/ETA
+-- line is 23 columns with fuel below 100.0 and is not covered here).
+for _, row in ipairs({1, 5}) do
+    local line = crzPage()[row]
+    checks = checks + 1
+    assert(string.len(line) == 24,
+        "CRZ page line is not 24 columns: ["..line.."]")
+end
+data.crzspd = "810"
+data.crzspdmode = "ECON"
 
 print("VNAV CLB page tests passed: "..checks)

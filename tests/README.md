@@ -21,22 +21,28 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   step advisory through early LNAV sequencing, optional FlyWithLua automation
   and the actual ALT-selector handler; planned and STEP TO steps kept at STEP
   SIZE 0; VNAV climb altitude intervention raising CRZ ALT; crew intervention
-  and refused commands; the production ECON updater's cruise-Mach input.
+  and refused commands; the production ECON updater keeping the climb Mach,
+  the CRZ page Mach and the cruise speed state on one ECON cruise Mach, with
+  a selected cruise Mach preserved and DELETE restoring ECON.
 - `takeoff_ref_thrust_reduction_test.lua`: the TAKEOFF REF THR REDUCTION
   field - the 1500 FT default from PERF FACTORS, flap entries ("FLAPS 5",
   "10", "F20"), height entries, rejected entries, blank-line-select recall,
   DELETE, and the FLAP/ACCEL HT field beside it.
 - `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230KT CLB"),
-  the ECON/SEL SPD label, the CAS/Mach speed pair, and the blank SPD REST
-  field.
+  the ECON/SEL SPD label, the CAS/Mach speed pair, the blank SPD REST
+  field, and the CRZ page titles ("ACT ECON CRZ" / "ACT M.801 CRZ") with the
+  FMC-kept ECON cruise Mach.
 - `vnav_speed_restriction_test.lua`: SPD REST on both the CLB and DES pages -
   the blank "---/-----" field skipping the restriction state, an entered
   restriction bringing it back and being left behind above it, the flap
-  placard minus 5 kt limiting every descent target, and the CDU pair entry,
-  rejection and DELETE.
+  placard minus 5 kt limiting every descent target, the CDU pair entry,
+  rejection and DELETE, and DELETE returning a selected climb CAS or cruise
+  Mach to ECON.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
-  ECON calculations (CAS and Mach), ND waypoint selection, climb-speed
-  semantics including the climb-Mach crossover, and the XTLua `dofile` loader.
+  ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
+  cruise altitude at top-of-climb weight), ND waypoint selection, climb-speed
+  semantics including the climb-Mach crossover and the cruise state flying
+  the FMC cruise Mach, and the XTLua `dofile` loader.
 
 The standalone tests verify logic and interfaces. Before making the aircraft
 release-ready, validate these scenarios in X-Plane with both flight directors
@@ -51,15 +57,17 @@ and the applicable autopilot/autothrottle modes:
 | Captain/FO MAP and PLAN, stepping the CDU view | Header identifier stays on the active waypoint and agrees with its ETA/distance; map centre can change. |
 | Low cruise altitude with ECON, then manual SEL speed | Cruise Mach reaches the existing CAS-floor calculation; SEL speed is preserved. |
 | THR REDUCTION left at 1500FT, then set to FLAPS 5 | Climb thrust is set at 1500 FT above the departure datum; with the flap schedule it is set at flap retraction instead, with no height backstop. |
-| ECON climb through the CAS/Mach crossover | Speed changes over at the CLB page Mach, and only accelerates to the cruise Mach at top of climb. |
+| ECON climb through the CAS/Mach crossover | Speed changes over at the CLB page Mach, which equals the CRZ page ECON Mach; no acceleration at top of climb. With CI 100 at 350 t/FL310 expect about 32x/.836. |
+| Cruise Mach entered on the CRZ page, then DELETE | Title reads ACT M.xxx CRZ and the selected Mach is flown; the CLB page Mach stays ECON; DELETE returns to ACT ECON CRZ and the ECON Mach. |
 | VNAV engaged at 400 ft at various weights | Initial climb holds V2 + 10 when slow and no more than V2 + 25 when fast, until the acceleration height. |
 | Departure and arrival with SPD REST left blank, then entered | Blank holds SPD TRANS through the restriction band; an entered pair is honoured and released above/below it. |
 | VNAV descent below 10000 FT with SPD REST blank, extending flaps 1 through 30 | Target never exceeds the flap placard minus 5 kt (275/255/235/225/200/175 kt). |
 | VNAV climb (and VNAV ALT at an intermediate level) with MCP set above CRZ ALT, ALT selector pushed | CRZ ALT resets to the MCP altitude and VNAV climbs to it. |
 | STEP SIZE 0 with planned LEGS steps | STEP TO/AT show the planned step; no computed optimum step appears when none is planned. |
 
-ECON coefficients, CAS and Mach alike, remain an uncalibrated simulator
-approximation. The tests do
+The ECON climb CAS curve and the LRC/MRC cruise Mach curve remain an
+uncalibrated simulator approximation; the climb Mach is tied to that cruise
+Mach as the FCTM describes, not to a Boeing performance database. The tests do
 not establish engine-specific Boeing performance, full TO/GA/engine-out speed
 logic, or closed-loop flight-model accuracy. Planned steps remain advisory;
 this patch preserves native downstream predictions/constraints rather than

@@ -85,23 +85,57 @@ local estimated_toc_weight = performance.estimate_top_of_climb_weight_kg({
 assert_equal(math.floor(estimated_toc_weight + 0.5), 324000,
     "standard climb burn is included in predicted T/C weight")
 
--- ECON CLB is a CAS/Mach pair; the FMC flies the Mach half from the
--- crossover to top of climb, so it can never exceed the cruise Mach.
+-- ECON CLB is a CAS/Mach pair.  FCTM: the constant Mach of the ECON climb
+-- is the economy cruise Mach calculated for the cruise altitude, at the
+-- top-of-climb weight - the same schedule the cruise speed state flies.
 assert_equal(performance.econ_climb_mach({}), 0.840,
     "missing PERF INIT data uses the 340/.84 fallback pair")
-local min_fuel_mach = performance.econ_climb_mach({cost_index = 0})
-local lrc_mach = performance.econ_climb_mach({cost_index = 230})
-local min_time_mach = performance.econ_climb_mach({cost_index = 9999})
-assert_equal(min_fuel_mach, 0.76, "CI 0 climb Mach")
-assert_equal(lrc_mach, 0.8, "LRC-equivalent climb Mach")
-assert_equal(min_time_mach, 0.86, "minimum-time climb Mach")
-assert_true(lrc_mach > min_fuel_mach and min_time_mach > lrc_mach,
+local function cruise_mach(cost_index, headwind_kts)
+    return performance.econ_cruise_mach_thousandths({
+        gross_weight_kg = 300000,
+        altitude_ft = 35000,
+        cost_index = cost_index,
+        headwind_kts = headwind_kts
+    })
+end
+assert_equal(cruise_mach(0), 827, "CI 0 cruise Mach is MRC (LRC - .020)")
+assert_equal(cruise_mach(115), 837, "CI 115 blends MRC towards LRC")
+assert_equal(cruise_mach(230), 847, "CI 230 cruise Mach is LRC")
+assert_equal(cruise_mach(9999), 900, "CI 9999 cruise Mach is Mmo - .02")
+assert_equal(cruise_mach(115, 50), 847, "a 50 kt headwind adds .010")
+assert_equal(cruise_mach(115, -50), 827,
+    "a 50 kt tailwind subtracts .020, floored at MRC")
+assert_equal(performance.econ_cruise_mach_thousandths({
+    gross_weight_kg = 350000, altitude_ft = 31000, cost_index = 100}), 836,
+    "typical heavy cruise: CI 100 at 350 t/FL310")
+assert_equal(performance.econ_cruise_mach({cost_index = 100}), nil,
+    "no weight or altitude: no ECON cruise Mach")
+
+local function climb_mach(cost_index, cruise_altitude_ft, headwind_kts)
+    return performance.econ_climb_mach({
+        top_of_climb_weight_kg = 300000,
+        cruise_altitude_ft = cruise_altitude_ft or 35000,
+        cost_index = cost_index,
+        headwind_kts = headwind_kts
+    })
+end
+assert_equal(climb_mach(0), 0.827, "CI 0 climb Mach")
+assert_equal(climb_mach(115), 0.837, "CI 115 climb Mach")
+assert_equal(climb_mach(230), 0.847, "LRC-equivalent climb Mach")
+assert_equal(climb_mach(9999), 0.900, "minimum-time climb Mach")
+assert_true(climb_mach(230) > climb_mach(0),
     "climb Mach must increase with cost index")
-assert_equal(performance.econ_climb_mach({cost_index = 9999, cruise_mach = 0.81}),
-    0.81, "climb Mach is limited to the cruise Mach")
-assert_true(performance.econ_climb_mach({cost_index = 500, cruise_mach = 0.85})
-        < 0.85,
-    "a normal cost index still climbs below the cruise Mach")
+for _, cost_index in ipairs({0, 80, 230, 500, 9999}) do
+    assert_equal(climb_mach(cost_index), cruise_mach(cost_index) / 1000,
+        "climb Mach equals the ECON cruise Mach for the cruise altitude, CI "
+        .. cost_index)
+end
+assert_equal(climb_mach(115, 29000), 0.790,
+    "a lower cruise altitude lowers the climb Mach")
+assert_equal(climb_mach(115, 35000, 50), 0.847,
+    "a predicted headwind raises the climb Mach")
+assert_equal(performance.econ_climb_mach({cost_index = 115}), 0.840,
+    "no weight or altitude: fallback climb Mach")
 
 assert_equal(performance.parse_cruise_altitude_ft("FL350"), 35000,
     "flight level parsing")
