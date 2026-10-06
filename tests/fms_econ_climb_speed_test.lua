@@ -132,6 +132,21 @@ for _, cost_index in ipairs({0, 80, 230, 500, 9999}) do
 end
 assert_equal(climb_mach(115, 29000), 0.790,
     "a lower cruise altitude lowers the climb Mach")
+assert_equal(climb_mach(115, 15000), performance.econ_cruise_mach_thousandths({
+    gross_weight_kg = 300000, altitude_ft = 15000, cost_index = 115}) / 1000,
+    "climb and cruise Mach agree at a low cruise altitude too")
+
+-- The ECON wind input follows the sensed headwind through a 60 s lag.
+assert_equal(performance.smoothed_headwind_kts(nil, 40, nil), 40,
+    "the first sample starts the lag")
+assert_equal(performance.smoothed_headwind_kts(0, 60, 30), 30,
+    "half the time constant moves half way")
+assert_equal(performance.smoothed_headwind_kts(0, 60, 600), 60,
+    "a long gap takes the new sample")
+assert_equal(performance.smoothed_headwind_kts(20, -50, -5), -50,
+    "time running backwards restarts the lag")
+assert_equal(performance.smoothed_headwind_kts(20, -50, 0), 20,
+    "no elapsed time holds the lagged value")
 assert_equal(climb_mach(115, 35000, 50), 0.847,
     "a predicted headwind raises the climb Mach")
 assert_equal(performance.econ_climb_mach({cost_index = 115}), 0.840,

@@ -50,6 +50,21 @@ function performance.headwind_component_kts(wind_from_deg, wind_speed_kts, headi
     return speed * math.cos(math.rad(direction - heading))
 end
 
+-- The FMC plans ECON speeds from the wind along the route, not the gust or
+-- the heading of the moment.  The sensed headwind is followed through a
+-- first-order lag so that turns and turbulence do not make the ECON targets
+-- hunt.  A first sample, or time running backwards, restarts the lag.
+performance.ECON_WIND_TIME_CONSTANT_SEC = 60
+
+function performance.smoothed_headwind_kts(previous_kts, sample_kts, elapsed_sec)
+    local sample = tonumber(sample_kts) or 0
+    local previous = tonumber(previous_kts)
+    local elapsed = tonumber(elapsed_sec)
+    if previous == nil or elapsed == nil or elapsed < 0 then return sample end
+    local fraction = clamp(elapsed / performance.ECON_WIND_TIME_CONSTANT_SEC, 0, 1)
+    return previous + (sample - previous) * fraction
+end
+
 local function pressure_ratio_at_altitude(altitude_ft)
     local altitude_m = math.max(0, tonumber(altitude_ft) or 0) * 0.3048
     if altitude_m <= 11000 then
@@ -205,8 +220,8 @@ end
 -- ECON CLB is a CAS/Mach pair.  FCTM: the constant Mach used in the ECON
 -- climb speed is the economy cruise Mach calculated for the cruise altitude,
 -- so it is the cruise schedule above evaluated at the predicted top-of-climb
--- weight and the entered cruise altitude.  340/.84 is the data-unavailable
--- fallback.
+-- weight and the entered cruise altitude, with no separate limits of its
+-- own so the two always agree.  340/.84 is the data-unavailable fallback.
 function performance.econ_climb_mach(input)
     input = input or {}
     local mach = performance.econ_cruise_mach({
@@ -216,7 +231,7 @@ function performance.econ_climb_mach(input)
         headwind_kts = input.headwind_kts
     })
     if mach == nil then return 0.840 end
-    return math.floor(clamp(mach, 0.700, 0.900) * 1000 + 0.5) / 1000
+    return math.floor(mach * 1000 + 0.5) / 1000
 end
 
 return performance

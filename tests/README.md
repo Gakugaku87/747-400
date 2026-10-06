@@ -23,7 +23,8 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   SIZE 0; VNAV climb altitude intervention raising CRZ ALT; crew intervention
   and refused commands; the production ECON updater keeping the climb Mach,
   the CRZ page Mach and the cruise speed state on one ECON cruise Mach, with
-  a selected cruise Mach preserved and DELETE restoring ECON.
+  a selected cruise Mach preserved and DELETE restoring ECON, and the sensed
+  headwind reaching the ECON targets only through its 60 s lag.
 - `takeoff_ref_thrust_reduction_test.lua`: the TAKEOFF REF THR REDUCTION
   field - the 1500 FT default from PERF FACTORS, flap entries ("FLAPS 5",
   "10", "F20"), height entries, rejected entries, blank-line-select recall,
@@ -58,6 +59,7 @@ and the applicable autopilot/autothrottle modes:
 | Low cruise altitude with ECON, then manual SEL speed | Cruise Mach reaches the existing CAS-floor calculation; SEL speed is preserved. |
 | THR REDUCTION left at 1500FT, then set to FLAPS 5 | Climb thrust is set at 1500 FT above the departure datum; with the flap schedule it is set at flap retraction instead, with no height backstop. |
 | ECON climb through the CAS/Mach crossover | Speed changes over at the CLB page Mach, which equals the CRZ page ECON Mach; no acceleration at top of climb. With CI 100 at 350 t/FL310 expect about 32x/.836. |
+| ECON cruise through a 90-180 degree turn in a strong wind | The CRZ page Mach and the cruise target drift over about a minute instead of stepping during the turn. |
 | Cruise Mach entered on the CRZ page, then DELETE | Title reads ACT M.xxx CRZ and the selected Mach is flown; the CLB page Mach stays ECON; DELETE returns to ACT ECON CRZ and the ECON Mach. |
 | VNAV engaged at 400 ft at various weights | Initial climb holds V2 + 10 when slow and no more than V2 + 25 when fast, until the acceleration height. |
 | Departure and arrival with SPD REST left blank, then entered | Blank holds SPD TRANS through the restriction band; an entered pair is honoured and released above/below it. |
