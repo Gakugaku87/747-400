@@ -2563,7 +2563,7 @@ function B747_ap_appr_mode_beforeCMDhandler(phase, duration)
 		end
 
 		B747DR_ap_lastCommand = simDRTime
-		B747DR_ap_heading_deg = roundToIncrement(simDR_radio_nav_obs_deg[0], 1) -- SET THE SELECTED HEADING VALUE TO THE LOC COURSE
+		-- leave the MCP heading at the crew selection: HDG SEL keeps flying it while LOC is armed
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[9] = 0 -- SET THE LOC SWITCH ANIMATION TO "OUT"
 	end
@@ -2706,7 +2706,7 @@ function B747_ap_appr_mode()
 		B747DR_ap_approach_mode = 0
 	end
 
-	if B747DR_ap_lnav_state > 0 and simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status == 0 then
+	if B747DR_ap_lnav_state > 0 and simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status ~= 2 then
 		print("simCMD_autopilot_heading_select in appr_mode")
 		simCMD_autopilot_heading_select:once()
 		B747DR_ap_ATT = 0.0
@@ -3500,7 +3500,7 @@ function B474_ap_target_heading()
 		B747DR_ap_activate_target_heading_deg=0
 		print("change to HDG SEL")
 	end
-	if simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status == 0 and B747DR_ap_lnav_state > 0 then
+	if simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state > 0 then
 		if diff < 0.05 then
 			return
 		end	

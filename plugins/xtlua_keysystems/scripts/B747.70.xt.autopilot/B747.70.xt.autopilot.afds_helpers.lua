@@ -441,4 +441,73 @@ function afds.cruise_climb_action(cruise_alt_ft, altitude_ft, distance_to_tod_nm
     return "climb"
 end
 
+-- [e] Approach LOC and G/S capture windows
+-- LOC captures within 2 dots while closing on the localizer, or within 1 dot
+-- when settled; G/S captures only after LOC, with both within 1.5 dots.
+afds.LOC_CAPTURE_MAX_DOTS = 2.0
+afds.LOC_CAPTURE_STEADY_DOTS = 1.0
+afds.LOC_CAPTURE_CLOSING_DOTS_PER_SEC = 0.01
+afds.LOC_CAPTURE_STEADY_GROWTH_DOTS_PER_SEC = 0.02
+afds.LOC_CAPTURE_MAX_INTERCEPT_DEG = 90
+afds.LOC_CAPTURE_SAMPLE_SEC = 1.0
+afds.GS_CAPTURE_MAX_LOC_DOTS = 1.5
+afds.GS_CAPTURE_MAX_GS_DOTS = 1.5
+
+-- Mean LOC deviation of the two receivers, in dots without sign.
+function afds.loc_deviation_dots(nav1_dots, nav2_dots)
+    nav1_dots = tonumber(nav1_dots)
+    nav2_dots = tonumber(nav2_dots)
+    if nav1_dots == nil or nav2_dots == nil then return nil end
+    return math.abs((nav1_dots + nav2_dots) / 2)
+end
+
+local function heading_difference_deg(from_deg, to_deg)
+    local difference = math.fmod(to_deg - from_deg, 360)
+    if difference > 180 then difference = difference - 360 end
+    if difference < -180 then difference = difference + 360 end
+    return difference
+end
+
+-- input.sample is an earlier {time, dots} reading of loc_deviation_dots; it
+-- must be at least LOC_CAPTURE_SAMPLE_SEC older than input.time so the rate
+-- of change is measured over a useful interval.
+function afds.loc_capture_ready(input)
+    input = input or {}
+    if (tonumber(input.nav1_signal) or 0) ~= 1 or (tonumber(input.nav2_signal) or 0) ~= 1 then
+        return false
+    end
+    local course_deg = tonumber(input.course_deg)
+    local heading_deg = tonumber(input.heading_deg)
+    if course_deg == nil or heading_deg == nil
+        or math.abs(heading_difference_deg(course_deg, heading_deg)) > afds.LOC_CAPTURE_MAX_INTERCEPT_DEG then
+        return false
+    end
+    local dots = afds.loc_deviation_dots(input.nav1_dots, input.nav2_dots)
+    if dots == nil or dots > afds.LOC_CAPTURE_MAX_DOTS then return false end
+
+    local sample = input.sample
+    local time = tonumber(input.time)
+    if type(sample) ~= "table" or time == nil
+        or tonumber(sample.time) == nil or tonumber(sample.dots) == nil then
+        return false
+    end
+    local elapsed = time - tonumber(sample.time)
+    if elapsed < afds.LOC_CAPTURE_SAMPLE_SEC then return false end
+    local rate = (dots - tonumber(sample.dots)) / elapsed
+    if rate <= -afds.LOC_CAPTURE_CLOSING_DOTS_PER_SEC then return true end
+    return dots <= afds.LOC_CAPTURE_STEADY_DOTS and rate < afds.LOC_CAPTURE_STEADY_GROWTH_DOTS_PER_SEC
+end
+
+function afds.gs_capture_ready(input)
+    input = input or {}
+    if input.loc_captured ~= true then return false end
+    local loc_dots = afds.loc_deviation_dots(input.nav1_dots, input.nav2_dots)
+    local gs_dots = tonumber(input.gs_dots)
+    return loc_dots ~= nil and loc_dots <= afds.GS_CAPTURE_MAX_LOC_DOTS
+        and gs_dots ~= nil and math.abs(gs_dots) < afds.GS_CAPTURE_MAX_GS_DOTS
+        and (tonumber(input.nav1_gs_flag) or 1) == 0 and (tonumber(input.nav2_gs_flag) or 1) == 0
+        and (tonumber(input.nav1_vertical_signal) or 0) == 1
+        and (tonumber(input.nav2_vertical_signal) or 0) == 1
+end
+
 return afds

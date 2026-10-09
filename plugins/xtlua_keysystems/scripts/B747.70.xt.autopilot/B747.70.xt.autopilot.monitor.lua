@@ -737,6 +737,10 @@ function getWCAforHeading(theading)
       return hV
 end
 local onApproach=false
+-- LOC deviation readings taken while LOC is armed: locArmLatest is the newest,
+-- locArmSample the one before it (at least 1 s older), used for the closing rate
+local locArmSample=nil
+local locArmLatest=nil
 function B747_updateApproachHeading(fmsO)
 
    --[[print("simDR_hsi_ldef_dots_nav1 " .. simDR_hsi_ldef_dots_nav1 ..
@@ -750,12 +754,34 @@ function B747_updateApproachHeading(fmsO)
     " simDR_hsi_vdef_dots_pilot " .. simDR_hsi_vdef_dots_pilot.. "B747DR_ap_lastCommand "..B747DR_ap_lastCommand )]]--
     
     local diff = simDRTime - B747DR_ap_lastCommand
-    if simDR_autopilot_nav_status==1 and simDR_hsi_nav1_horizontal_signal==1 and simDR_hsi_nav2_horizontal_signal==1  and diff>0.5 then
+    if simDR_autopilot_nav_status==1 and simDR_hsi_nav1_horizontal_signal==1 and simDR_hsi_nav2_horizontal_signal==1 then
+        if locArmLatest==nil or simDRTime-locArmLatest.time>=B747_afds_helpers.LOC_CAPTURE_SAMPLE_SEC then
+            locArmSample=locArmLatest
+            locArmLatest={time=simDRTime,dots=B747_afds_helpers.loc_deviation_dots(simDR_hsi_ldef_dots_nav1,simDR_hsi_ldef_dots_nav2)}
+        end
+    else
+        locArmSample=nil
+        locArmLatest=nil
+    end
+    -- capture LOC only inside the capture window (close to and closing on the localizer);
+    -- a LOC captured before (signal glitch or APP pressed again) recaptures at once
+    if simDR_autopilot_nav_status==1 and simDR_hsi_nav1_horizontal_signal==1 and simDR_hsi_nav2_horizontal_signal==1  and diff>0.5
+        and (B747DR_autopilot_nav_status==2 or B747_afds_helpers.loc_capture_ready({
+            nav1_signal=simDR_hsi_nav1_horizontal_signal,nav2_signal=simDR_hsi_nav2_horizontal_signal,
+            course_deg=simDR_radio_nav_obs_deg[0],heading_deg=simDR_AHARS_heading_deg_pilot,
+            nav1_dots=simDR_hsi_ldef_dots_nav1,nav2_dots=simDR_hsi_ldef_dots_nav2,
+            time=simDRTime,sample=locArmSample})) then
         simDR_autopilot_nav_status=2
         B747DR_ap_lastCommand = simDRTime
     end
 
-    if simDR_autopilot_nav_status==2 and simDR_nav1_gs_flag ==0 and simDR_nav2_gs_flag ==0 and simDR_autopilot_gs_status==1 and math.abs(simDR_hsi_vdef_dots_pilot)<1.5 and simDR_hsi_nav1_vertical_signal==1 and simDR_hsi_nav2_vertical_signal ==1 and diff>0.5 then
+    -- capture G/S only after LOC with both inside their windows, and not in the LOC capture frame
+    local gsDiff = simDRTime - B747DR_ap_lastCommand
+    if simDR_autopilot_gs_status==1 and gsDiff>0.5 and B747_afds_helpers.gs_capture_ready({
+            loc_captured=(simDR_autopilot_nav_status==2),
+            nav1_dots=simDR_hsi_ldef_dots_nav1,nav2_dots=simDR_hsi_ldef_dots_nav2,
+            gs_dots=simDR_hsi_vdef_dots_pilot,nav1_gs_flag=simDR_nav1_gs_flag,nav2_gs_flag=simDR_nav2_gs_flag,
+            nav1_vertical_signal=simDR_hsi_nav1_vertical_signal,nav2_vertical_signal=simDR_hsi_nav2_vertical_signal}) then
         simDR_autopilot_gs_status=2
         B747DR_ap_lastCommand = simDRTime
     end
@@ -808,7 +834,8 @@ function B747_updateApproachHeading(fmsO)
         return
     end
 
-    if (B747DR_ap_approach_mode~=0 or B747DR_ap_lnavHeading_mode~=0) and simDR_autopilot_nav_status==0 and B747DR_ap_lnav_state>0 and diff>0.5 then
+    -- LNAV keeps steering while LOC is only armed
+    if (B747DR_ap_approach_mode~=0 or B747DR_ap_lnavHeading_mode~=0) and simDR_autopilot_nav_status~=2 and B747DR_ap_lnav_state>0 and diff>0.5 then
         if simDR_autopilot_heading_status == 0 then
             print("simCMD_autopilot_heading_select in B747DR_ap_approach_mode~=0")
             simCMD_autopilot_heading_select:once()

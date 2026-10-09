@@ -78,6 +78,13 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   descent, distances, T/D and climb targets, also with a missed approach
   whose vectors point X-Plane puts hundreds of NM away (left out after the
   arrival runway).
+- `approach_capture_test.lua`: the APP switch, APP arming and approach monitor
+  together - LOC capturing only within 2.0 dots while closing (or settled
+  within 1.0 dot) on an intercept of 90 degrees or less, a saturated or
+  diverging LOC staying armed, a previously captured LOC recapturing at once,
+  G/S capturing only after LOC with LOC and G/S both within 1.5 dots and
+  never in the LOC capture frame, APP leaving the MCP heading alone, and LNAV
+  still steering (and reselecting the heading mode) while LOC is armed.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, climb-speed
