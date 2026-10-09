@@ -142,6 +142,13 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   the attitude is held (limited to -3.5..15 degrees) instead of 0 degrees,
   so the following VNAV SPD, and VNAV PTH holding the altitude, continue from
   it.
+- `engines_reverse_hold_test.lua`: the all-engine reverse-hold command, its
+  reverse monitor and the auto-stow timers run frame by frame - releasing a
+  hold of 0.5 s or more returns to reverse idle at once (fast or below
+  65 KIAS), a shorter tap keeps full reverse latched, the timers still select
+  reverse idle 5 s and stow 8 s after 65 KIAS (after the release when already
+  slower), and a hold that never deployed (reverser lockout in the air) leaves
+  the levers alone on release.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the
