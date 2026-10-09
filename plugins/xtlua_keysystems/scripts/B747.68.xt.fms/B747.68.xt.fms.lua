@@ -51,6 +51,9 @@ simDR_xpdr_code         = find_dataref("sim/cockpit2/radios/actuators/transponde
 simDR_fms_exec_light_pilot = find_dataref("sim/cockpit2/radios/indicators/fms_exec_light_pilot")
 simDR_fms_exec_light_copilot = find_dataref("sim/cockpit2/radios/indicators/fms_exec_light_copilot")
 B747DR_fms_exec_light = find_dataref("laminar/B747/fms/exec_light")
+-- CRZ ALT hand-over to the native FMS (monitorCRZALT/updateCRZ)
+simDR_fms_transition_alt = find_dataref("sim/cockpit2/radios/indicators/fms_transition_alt")
+B747DR_crzalt_sync_fault = find_dataref("laminar/B747/fms/crzalt_sync_fault")
 --Workaround for stack overflow in init.lua namespace_read
 
 

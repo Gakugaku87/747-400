@@ -417,4 +417,28 @@ function afds.vnav_entry_slope(previous_alt_ft, alt_ft, distance_nm, from_tod, c
     return (start_alt_ft - alt_ft) / distance_nm, alt_ft
 end
 
+-- [d] Cruise climb after the ALT selector push
+-- The climb starts 2 s after the push.  By then CRZ ALT may be back at the
+-- level being flown (put back, or the step cancelled), and close to T/D a
+-- climb would only be followed by the descent: a 2,000 ft step takes 15-20 NM
+-- and VNAV leaves the cruise climb 10 NM before T/D.
+afds.CRUISE_CLIMB_TOD_MARGIN_NM = 50
+
+-- Returns "climb", "cancelled" (CRZ ALT not above the aircraft by more than
+-- the capture window) or "tod" (T/D within CRUISE_CLIMB_TOD_MARGIN_NM, or
+-- already passed).
+function afds.cruise_climb_action(cruise_alt_ft, altitude_ft, distance_to_tod_nm, capture_window_ft)
+    local cruise_alt = tonumber(cruise_alt_ft)
+    local altitude = tonumber(altitude_ft)
+    local window = tonumber(capture_window_ft) or 0
+    if cruise_alt == nil or altitude == nil or cruise_alt <= altitude + window then
+        return "cancelled"
+    end
+    local distance = tonumber(distance_to_tod_nm)
+    if distance == nil or distance <= afds.CRUISE_CLIMB_TOD_MARGIN_NM then
+        return "tod"
+    end
+    return "climb"
+end
+
 return afds

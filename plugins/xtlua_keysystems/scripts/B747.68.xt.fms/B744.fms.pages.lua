@@ -737,41 +737,102 @@ function fmsFunctions.eraselegstepmod(fmsO,value)
 end
 local updateFrom="fmsL"
 local lastCrz=0
+-- CRZ ALT the 747 itself sent to the native FMS (ALT selector, VNAV climb
+-- intervention, VNAV monitor).  While it is set the 747 value stands and the
+-- native read-back only confirms it.  nil means the native value is the CRZ
+-- ALT (CDU entry).
+local pendingCrz=nil
+local crzSyncFaultMessage="CRZ ALT SYNC FAULT"
+
+-- Empty the native scratchpad before typing into it.  A message such as
+-- [INVALID ENTRY] hides the characters under it, so its length says nothing
+-- about them: press CLR a fixed 25 times (the message and up to 24
+-- characters), then DEL and CLR as custom2fmc does.
+local function clearNativeScratchpad(fmsO)
+  if string.len(string.gsub(B747DR_srcfms[fmsO.id][14],"[ %[%]]",""))>0 then
+    for i=1,25,1 do
+      simCMD_FMS_key[fmsO.id]["clear"]:once()
+    end
+  end
+  simCMD_FMS_key[fmsO.id]["del"]:once()
+  simCMD_FMS_key[fmsO.id]["clear"]:once()
+end
+
+-- Shown only once the native scratchpad is clear: until then the native
+-- message replaces the CDU message (createfms.lua).
+local function showCRZSyncFault()
+  if B747DR_crzalt_sync_fault~=1 then return end
+  fmsModules["fmsL"]["notify"]=crzSyncFaultMessage
+  fmsModules["fmsC"]["notify"]=crzSyncFaultMessage
+  fmsModules["fmsR"]["notify"]=crzSyncFaultMessage
+end
 
 function updateCRZ()
   local setVal=string.sub(B747DR_srcfms[updateFrom][3],20,24)
   print("from line".. updateFrom.." "..B747DR_srcfms[updateFrom][3])
   print("to:"..setVal)
-  local alt=validAlt(setVal)
-  if alt~=nil then 
-	B747BR_cruiseAlt=alt 
+  local requested=pendingCrz
+  pendingCrz=nil
+  if requested==nil then
+    -- CDU entry: the native read-back is the CRZ ALT.
+    local alt=validAlt(setVal)
+    if alt~=nil then
+	B747BR_cruiseAlt=alt
 	lastCrz=B747BR_cruiseAlt
+	fmsModules:setData("crzalt",setVal)
+	B747DR_crzalt_sync_fault=0
+    end
+    return
   end
-  fmsModules:setData("crzalt",setVal)
+  local readBack=B747_fms_step.altitude_feet(setVal)
+  if readBack~=nil and math.abs(readBack-requested)<=50 then
+    fmsModules:setData("crzalt",setVal)
+    B747DR_crzalt_sync_fault=0
+    return
+  end
+  -- The native FMS refused the 747 CRZ ALT.  Keep the 747 value instead of
+  -- putting the old one back; the native T/D and waypoint predictions stay
+  -- on the old value meanwhile.
+  print("native FMS refused CRZ ALT "..requested..", it still has "..setVal)
+  fmsModules:setData("crzalt",
+    B747_fms_step.native_cruise_altitude_entry(requested,simDR_fms_transition_alt) or ""..requested)
+  B747DR_crzalt_sync_fault=1
+  clearNativeScratchpad(fmsModules[updateFrom])
+  run_after_time(showCRZSyncFault,0.5)
 end
 
 function monitorCRZALT()
-	local thisCRZ=B747BR_cruiseAlt
-	if not(thisCRZ==lastCrz) then
+	local thisCRZ=tonumber(B747BR_cruiseAlt) or 0
+	if thisCRZ~=(tonumber(lastCrz) or 0) then
 		print("update because "..thisCRZ.."!="..lastCrz)
+		lastCrz=thisCRZ
+		local entry=B747_fms_step.native_cruise_altitude_entry(thisCRZ,simDR_fms_transition_alt)
+		if entry==nil then
+			-- Nothing the native FMS could take (CRZ ALT deleted): leave it
+			-- alone, and drop any read-back still to come.
+			if is_timer_scheduled(updateCRZ) == true then
+				stop_timer(updateCRZ)
+			end
+			pendingCrz=nil
+			B747DR_crzalt_sync_fault=0
+			return
+		end
 		local fmsO=fmsL
 		simCMD_FMS_key[fmsO.id]["fpln"]:once()--make sure we arent on the vnav page
 		simCMD_FMS_key[fmsO.id]["clb"]:once()--go to the vnav page
 		simCMD_FMS_key[fmsO.id]["next"]:once() --go to the vnav page 2
-		local newcrzalt=""..B747BR_cruiseAlt
-		for c in string.gmatch(newcrzalt,".") do
-			local v=c
-		  	if v=="/" then v="slash" end
-			simCMD_FMS_key[fmsO["id"]][v]:once()
+		clearNativeScratchpad(fmsO)
+		for c in string.gmatch(entry,".") do
+			simCMD_FMS_key[fmsO["id"]][c]:once()
 		end
 		simCMD_FMS_key[fmsO["id"]]["R1"]:once()
+		pendingCrz=thisCRZ
 		updateFrom=fmsO.id
 		local toGet=B747DR_srcfms[updateFrom][3] --make sure we update it
 		if is_timer_scheduled(updateCRZ) == true then
 			stop_timer(updateCRZ)                                -- KILL THE TIMER
 		end
 		run_after_time(updateCRZ,2.0)
-		lastCrz=B747BR_cruiseAlt
 	end
 	
 end
@@ -1452,6 +1513,11 @@ function fmsFunctions.setdata(fmsO,value)
 				simCMD_FMS_key[fmsO.id]["clb"]:once()--go to the vnav page
 				simCMD_FMS_key[fmsO.id]["next"]:once() --go to the vnav page 2
 
+				-- The native FMS takes a flight level above its transition
+				-- altitude: 33000, 330 and FL330 are all sent as FL330.
+				fmsO["scratchpad"]=B747_fms_step.native_cruise_altitude_entry(
+					tonumber(alt),simDR_fms_transition_alt) or alt
+				pendingCrz=nil -- the native read-back is the CRZ ALT
 				fmsFunctions["custom2fmc"](fmsO,"R1")
 				updateFrom=fmsO.id
 				local toGet=B747DR_srcfms[updateFrom][3] --make sure we update it

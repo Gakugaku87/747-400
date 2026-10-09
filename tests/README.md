@@ -20,11 +20,21 @@ The audit regressions load production Lua code with mocked simulator interfaces:
 - `fmc_audit_integration_test.lua`: native LEGS altitude fields and MOD title;
   step advisory through early LNAV sequencing, optional FlyWithLua automation
   and the actual ALT-selector handler; planned and STEP TO steps kept at STEP
-  SIZE 0; VNAV climb altitude intervention raising CRZ ALT; crew intervention
+  SIZE 0; VNAV climb altitude intervention raising CRZ ALT, and an ALT push
+  for a climb within 50 NM of T/D not beginning the descent; crew intervention
   and refused commands; the production ECON updater keeping the climb Mach,
   the CRZ page Mach and the cruise speed state on one ECON cruise Mach, with
   a selected cruise Mach preserved and DELETE restoring ECON, and the sensed
   headwind reaching the ECON targets only through its 60 s lag.
+- `crz_alt_sync_test.lua`: CRZ ALT handed from the 747 to a mock native FMS -
+  sent as FL330 above the transition altitude (18000 FT when the native value
+  is unset) and in feet below it, nothing sent for CRZ ALT 0, a leftover
+  native entry and INVALID ENTRY cleared before typing, a refused value kept
+  in the 747 with `laminar/B747/fms/crzalt_sync_fault` and a delayed CDU
+  message instead of being put back, 31237 accepted as FL312 without
+  re-entry, the CDU CRZ ALT entry (33000, 330 or FL330) sent as FL330, and
+  the cruise climb 2 s after the ALT push skipped when CRZ ALT is back at the
+  level flown or T/D is within 50 NM.
 - `takeoff_ref_thrust_reduction_test.lua`: the TAKEOFF REF THR REDUCTION
   field - the 1500 FT default from PERF FACTORS, flap entries ("FLAPS 5",
   "10", "F20"), height entries, rejected entries, blank-line-select recall,
@@ -95,6 +105,7 @@ and the applicable autopilot/autothrottle modes:
 | Departure and arrival with SPD REST left blank, then entered | Blank holds SPD TRANS through the restriction band; an entered pair is honoured and released above/below it. |
 | VNAV descent below 10000 FT with SPD REST blank, extending flaps 1 through 30 | Target never exceeds the flap placard minus 5 kt (275/255/235/225/200/175 kt). |
 | VNAV climb (and VNAV ALT at an intermediate level) with MCP set above CRZ ALT, ALT selector pushed | CRZ ALT resets to the MCP altitude and VNAV climbs to it. |
+| Cruise step climb above the transition altitude with the ALT selector (MCP above CRZ ALT) | The native VNAV CRZ page shows the new FLxxx, `crzalt_sync_fault` stays 0, CRZ ALT is not put back and VNAV SPD follows without a recapture of the old level. |
 | STEP SIZE 0 with planned LEGS steps | STEP TO/AT show the planned step; no computed optimum step appears when none is planned. |
 
 The ECON climb CAS curve and the LRC/MRC cruise Mach curve remain an

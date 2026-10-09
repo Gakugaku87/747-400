@@ -701,6 +701,14 @@ end
 function update_new_crzalt()
 	print("doing set new cruise to "..B747BR_cruiseAlt)
 	if simDR_autopilot_alt_hold_status==2 and B747DR_ap_vnav_state>1 then
+		-- Leave the hold only for a climb that still stands: CRZ ALT may be
+		-- back at this level by now, and near T/D the climb is not started.
+		local climbAction=B747_afds_helpers.cruise_climb_action(B747BR_cruiseAlt,
+			simDR_pressureAlt1, B747BR_totalDistance - B747BR_tod, B747DR_alt_capture_window)
+		if climbAction~="climb" then
+			print("no cruise climb to "..B747BR_cruiseAlt..": "..climbAction)
+			return
+		end
 		B747DR_mcp_hold = 0
 		simDR_autopilot_alt_hold_status=0
 		if B747DR_autopilot_altitude_ft > simDR_pressureAlt1 then
@@ -718,7 +726,9 @@ function update_new_crzalt()
 		if B747DR_ap_vnav_state == 2 then
 			B747DR_ap_vnav_state = 3 --resume
 		end
-		if B747BR_totalDistance - B747BR_tod <= 50 then
+		-- Near T/D, descend only to an MCP altitude below the aircraft.
+		if B747BR_totalDistance - B747BR_tod <= 50
+			and B747DR_autopilot_altitude_ft < simDR_pressureAlt1 then
 			B747DR_ap_inVNAVdescent = 1
 			B747DR_ap_flightPhase = 3
 			setDescent(true)
@@ -791,7 +801,10 @@ function B747_ap_switch_vnavalt_mode_CMDhandler(phase, duration)
 			if B747DR_ap_vnav_state == 2 then
 				B747DR_ap_vnav_state = 3 --resume
 			end
-			if B747BR_totalDistance - B747BR_tod <= 50 then
+			-- Near T/D, descend only to an MCP altitude below the aircraft:
+			-- a push for a climb must not start the descent.
+			if B747BR_totalDistance - B747BR_tod <= 50
+				and B747DR_autopilot_altitude_ft < simDR_pressureAlt1 then
 				B747DR_ap_inVNAVdescent = 1
 				B747DR_ap_flightPhase = 3
 				setDescent(true)
