@@ -200,7 +200,8 @@ function afds.vnav_energy_thrust_reason_name(reason)
         [afds.VNAV_ENERGY_THRUST_REASON_UNDERSPEED_PROTECTION] = "underspeed protection",
         [afds.VNAV_ENERGY_THRUST_REASON_BELOW_PATH_BELOW_SPEED] = "below path and below speed",
         [afds.VNAV_ENERGY_THRUST_REASON_PATH_RECOVERY_LIMITED] = "path recovery limited",
-        [afds.VNAV_ENERGY_THRUST_REASON_ON_PATH_BELOW_SPEED] = "on path and below speed"
+        [afds.VNAV_ENERGY_THRUST_REASON_ON_PATH_BELOW_SPEED] = "on path and below speed",
+        [afds.VNAV_ENERGY_THRUST_REASON_SPEEDBRAKE_HOLD] = "speedbrake hold"
     }
     return names[reason] or "unknown"
 end
@@ -287,6 +288,20 @@ function afds.vnav_energy_guidance(input)
             < protection_speed_kts + afds.VNAV_ENERGY_PROTECTION_RELEASE_KTS
     end
 
+    -- Thrust allowed while the path is out of pitch reach is kept until the
+    -- recovery limit clears or the speed is high.  Re-deciding it from the
+    -- speed trend every sample switched IDLE and SPD each time the thrust
+    -- stopped the deceleration.
+    local previous_thrust_reason = tonumber(input.previous_thrust_reason)
+    local recovery_hold = path_axis > 0 and speed_axis <= 0 and recovery_limited
+        and tonumber(input.previous_thrust_policy) == afds.VNAV_ENERGY_THRUST_ALLOW
+    local recovery_thrust = (state == afds.VNAV_ENERGY_STATE_ABOVE_BELOW and recovery_limited
+        and speed_error_kts <= -afds.VNAV_ENERGY_SPEED_ENTER_KTS
+        and speed_trend_kts_per_sec <= 0)
+        or (recovery_hold
+            and previous_thrust_reason == afds.VNAV_ENERGY_THRUST_REASON_PATH_RECOVERY_LIMITED)
+    local speedbrake_extended = afds.vnav_energy_speedbrake_extended(input.speedbrake_lever)
+
     local thrust_policy = afds.VNAV_ENERGY_THRUST_IDLE
     local thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_NONE
     if protection_active then
@@ -298,9 +313,18 @@ function afds.vnav_energy_guidance(input)
     elseif state == afds.VNAV_ENERGY_STATE_ON_PATH_BELOW then
         thrust_policy = afds.VNAV_ENERGY_THRUST_ALLOW
         thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_ON_PATH_BELOW_SPEED
-    elseif state == afds.VNAV_ENERGY_STATE_ABOVE_BELOW and recovery_limited
-        and speed_error_kts <= -afds.VNAV_ENERGY_SPEED_ENTER_KTS
-        and speed_trend_kts_per_sec <= 0 then
+    elseif speedbrake_extended and recovery_hold
+        and previous_thrust_reason == afds.VNAV_ENERGY_THRUST_REASON_UNDERSPEED_PROTECTION then
+        -- With the speedbrake out the speed decays again as soon as the
+        -- protection releases, so keep the protection thrust while the
+        -- recovery is limited instead of cycling through its release band.
+        thrust_policy = afds.VNAV_ENERGY_THRUST_ALLOW
+        thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_UNDERSPEED_PROTECTION
+    elseif recovery_thrust and speedbrake_extended then
+        -- Do not run thrust against an extended speedbrake; underspeed
+        -- protection still adds thrust if the speed decays that far.
+        thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_SPEEDBRAKE_HOLD
+    elseif recovery_thrust then
         thrust_policy = afds.VNAV_ENERGY_THRUST_ALLOW
         thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_PATH_RECOVERY_LIMITED
     end
@@ -678,6 +702,15 @@ function afds.limited_mach_target(mach, max_mach)
     max_mach = tonumber(max_mach)
     if max_mach == nil or max_mach < 0.5 then return mach end
     return math.min(mach, max_mach - 0.01)
+end
+
+-- [h-2] VNAV PTH thrust with the speedbrake extended
+-- Lever positions beyond ARM (0.125) count as extended.
+afds.VNAV_ENERGY_SPEEDBRAKE_EXTENDED_LEVER = 0.15
+afds.VNAV_ENERGY_THRUST_REASON_SPEEDBRAKE_HOLD = 5
+
+function afds.vnav_energy_speedbrake_extended(speedbrake_lever)
+    return (tonumber(speedbrake_lever) or 0) >= afds.VNAV_ENERGY_SPEEDBRAKE_EXTENDED_LEVER
 end
 
 return afds

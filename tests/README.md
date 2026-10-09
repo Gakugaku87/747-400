@@ -149,6 +149,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   reverse idle 5 s and stow 8 s after 65 KIAS (after the release when already
   slower), and a hold that never deployed (reverser lockout in the air) leaves
   the levers alone on release.
+- `vnav_speedbrake_thrust_test.lua`: VNAV PTH energy thrust high on the path
+  with pitch recovery limited - thrust allowed for the limited recovery stays
+  in SPD until the limit clears or the speed is high, instead of switching
+  IDLE/SPD with the speed trend; with the speedbrake beyond ARM (lever 0.15
+  and up, not 0.125) the A/T holds IDLE (reason 5, speedbrake hold) until
+  underspeed protection, whose thrust is then kept while the limit lasts;
+  DRAG REQUIRED unchanged. Also runs the production `setDescentVSpeed`
+  loaded through the XTLua `dofile`.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the
