@@ -104,10 +104,12 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   steady sample was taken, derotation at 1 deg/s to -0.5 deg) and the
   production autoland logic flown from 300 ft RA to 8 s after touchdown
   against a simple point-mass model - four approaches and two pitch-loop
-  responses, ground falling away 24 ft under the flare, a noisy VSI, a
-  vh_ind_fpm that reads 0 at flare entry (XTLua's first read, seen in
-  X-Plane) and a second autoland in the same session: touchdown sink -80
-  to -250 fpm with
+  responses, ground falling away 24 ft under the flare, a noisy VSI, the
+  VSI and the indicated VVI (vh_ind_fpm) lagging the flight path by 1.2 s
+  as in X-Plane (the flare law flies the flight-path vertical speed,
+  local_vy), the vertical speed reading 0 at flare entry (XTLua's first
+  read, seen in X-Plane) and a second autoland in the same session:
+  touchdown sink -80 to -250 fpm with
   no float, FLARE to touchdown within 10 s (11 s with the terrain), no
   nose-down before main gear touchdown, a rate-limited derotation, and A/T
   IDLE no higher than 25 ft.

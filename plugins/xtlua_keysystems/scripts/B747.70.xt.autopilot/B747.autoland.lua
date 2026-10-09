@@ -29,6 +29,11 @@ local flareState={} -- flare law state (afds_helpers flare_pitch_target)
 local derotPitch=0 -- pitch target while the nose comes down after touchdown
 local lastPitchTime=0
 
+-- flight-path vertical speed for the flare law, fpm (local_vy is m/s, up positive)
+local function flare_vspeed_fpm()
+  return simDR_local_vy*196.850394
+end
+
 
 function start_flare()
   local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
@@ -54,7 +59,7 @@ function start_flare()
     pinThrottle=0;
     zeroRatePitch=B747_afds_helpers.flare_base_pitch(neutralPitch,pitchMeasurements,simDR_AHARS_pitch_heading_deg_pilot)
     -- the flare law starts from the current pitch and sink rate
-    flareState={tp=simDR_AHARS_pitch_heading_deg_pilot,entry_vs=simDR_vh_ind_fpm,trim=0}
+    flareState={tp=simDR_AHARS_pitch_heading_deg_pilot,entry_vs=flare_vspeed_fpm(),trim=0}
     lastPitchTime=simDRTime
 end
 local targetPitch
@@ -92,9 +97,10 @@ function doPitch()
   -- The sink rate and pitch rate come from the flight model, not the lagging VSI.
   local dt=B747_afds_helpers.clamp(simDRTime-lastPitchTime,0,0.2)
   lastPitchTime=simDRTime
+  local vspeed=flare_vspeed_fpm()
   targetPitch=B747_afds_helpers.flare_pitch_target(flareState,zeroRatePitch,simDR_radarAlt1,
-    simDR_vh_ind_fpm,simDR_ind_airspeed_kts_pilot,simDR_pitch_rate_deg_sec,dt)
-  print("flare vs "..simDR_vh_ind_fpm.." targetPitch "..targetPitch.." zeroRatePitch "..zeroRatePitch.." simDR_AHARS_pitch_heading_deg_pilot "..simDR_AHARS_pitch_heading_deg_pilot)
+    vspeed,simDR_ind_airspeed_kts_pilot,simDR_pitch_rate_deg_sec,dt)
+  print("flare vs "..vspeed.." targetPitch "..targetPitch.." zeroRatePitch "..zeroRatePitch.." simDR_AHARS_pitch_heading_deg_pilot "..simDR_AHARS_pitch_heading_deg_pilot)
   --[[if inrollout==true then
     local tP=(simDR_radarAlt1-4.0)
     if simDR_radarAlt1 < 7 then
@@ -163,8 +169,10 @@ end
 local targetAirspeed
 B747DR_airspeed_Vf25                            = find_dataref("laminar/B747/airspeed/Vf25")
 B747DR_airspeed_Vf30                            = find_dataref("laminar/B747/airspeed/Vf30")
--- flare law inputs: flight-model vertical speed (fpm) and pitch rate (deg/s)
-simDR_vh_ind_fpm                                = find_dataref("sim/flightmodel/position/vh_ind_fpm")
+-- flare law inputs: the flight-path vertical speed (m/s) and the pitch rate (deg/s).
+-- vh_ind_fpm is the indicated VVI: in X-Plane (2026-10-10) it lagged the flight
+-- path by about a second like the VSI, and the late sink rate over-flared.
+simDR_local_vy                                  = find_dataref("sim/flightmodel/position/local_vy")
 simDR_pitch_rate_deg_sec                        = find_dataref("sim/flightmodel/position/Q")
 function doThrottle()
   local refSpeed

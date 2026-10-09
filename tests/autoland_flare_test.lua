@@ -109,6 +109,8 @@ local function autoland_runtime()
 end
 
 local KT_FPM = 101.269 -- feet per minute per knot
+local FPM_PER_MS = 196.850394
+local VSI_LAG_S = 1.2
 local DT = 0.05
 local GROUND_SECONDS = 8
 
@@ -119,8 +121,11 @@ local GROUND_SECONDS = 8
 -- vvi_noise: the VSI reads +20/-20/0 fpm off in turn, so the steady-descent
 -- pitch sampler never takes a sample. runtime: an autoland already loaded and
 -- flown (a later landing in the same session); the clock carries on from it.
--- vh_zero_at_flare_entry: vh_ind_fpm reads 0 until FLARE has engaged, as XTLua
--- gave start_flare in X-Plane on 2026-10-10 (its first read of that dataref).
+-- vh_zero_at_flare_entry: the vertical speed reads 0 until FLARE has engaged, as
+-- XTLua gave start_flare in X-Plane on 2026-10-10 (its first read of vh_ind_fpm).
+-- The VSI (vvi_fpm_pilot) and vh_ind_fpm, the indicated VVI, lag the flight path
+-- by VSI_LAG_S, as in X-Plane (2026-10-10: -725 fpm on the VSI at 46 ft while the
+-- radio altitude fell at 583 fpm); local_vy is the flight-path vertical speed.
 local function fly(label, approach, model, terrain, vvi_noise, flare_limit_s, runtime, vh_zero_at_flare_entry)
     local r = runtime
     if r == nil then
@@ -130,6 +135,7 @@ local function fly(label, approach, model, terrain, vvi_noise, flare_limit_s, ru
     local start_time = rawget(r, "simDRTime") or 1000
     local zeta, wn = model[1], model[2]
     local ias, pitch, q, vs = approach.ias, approach.pitch, 0, approach.vs
+    local vsi = vs
     local gamma = math.deg(math.asin(approach.vs/(approach.ias*KT_FPM)))
     local alpha0 = approach.pitch - gamma
     local drop_ft = terrain and terrain.drop_ft or 0
@@ -150,11 +156,13 @@ local function fly(label, approach, model, terrain, vvi_noise, flare_limit_s, ru
         r.simDR_radarAlt1 = ra
         r.simDR_AHARS_pitch_heading_deg_pilot = pitch
         r.simDR_ind_airspeed_kts_pilot = ias
-        r.simDR_vh_ind_fpm = vs
-        if vh_zero_at_flare_entry and flare_time == nil then r.simDR_vh_ind_fpm = 0 end
+        vsi = vsi + (vs - vsi)*DT/VSI_LAG_S
+        r.simDR_vh_ind_fpm = vsi
+        r.simDR_local_vy = vs/FPM_PER_MS
+        if vh_zero_at_flare_entry and flare_time == nil then r.simDR_vh_ind_fpm, r.simDR_local_vy = 0, 0 end
         r.simDR_pitch_rate_deg_sec = q
-        r.simDR_vvi_fpm_pilot = vs
-        if vvi_noise then r.simDR_vvi_fpm_pilot = vs + ({20, -20, 0})[step % 3 + 1] end
+        r.simDR_vvi_fpm_pilot = vsi
+        if vvi_noise then r.simDR_vvi_fpm_pilot = vsi + ({20, -20, 0})[step % 3 + 1] end
         r.simDR_onGround = touchdown_time and 1 or 0
         r.simDR_touchGround = r.simDR_onGround
         r.runAutoland()
