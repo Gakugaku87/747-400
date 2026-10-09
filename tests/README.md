@@ -113,6 +113,12 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   thrust recovery below 50 ft RA, the retard from approach thrust to idle
   over about 2 s, and the IDLE low-speed recovery kept outside the autoland
   flare.
+- `afds_responsiveness_test.lua`: the AFDS helper calculations (turn
+  anticipation, VNAV speed change reasons, VNAV energy guidance, pitch blend
+  and roll filters) and the speed-on-pitch limiter - the severe underspeed
+  threshold with the minimum safe speed capped at target - 5 kt, so an
+  initial climb on V2 + 10 kt with takeoff flaps (Vmc + 10 kt above it)
+  keeps the climb guard and only a real underspeed may pitch down.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, climb-speed

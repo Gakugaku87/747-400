@@ -17,6 +17,9 @@ afds_controls.SPEED_PITCH_DESCENT_MAX_TARGET_DEG = 5.0
 afds_controls.SPEED_PITCH_DIRECTION_GUARD_FPM = 100.0
 afds_controls.SPEED_PITCH_PHASE_RECOVERY_DEG_PER_SEC = 1.0
 afds_controls.SPEED_PITCH_SEVERE_UNDERSPEED_MARGIN_KTS = 15.0
+-- The minimum safe speed never lifts the severe underspeed threshold above
+-- target - 5 kt (with takeoff flaps Vmc + 10 kt can be above V2 + 10 kt).
+afds_controls.SPEED_PITCH_SEVERE_UNDERSPEED_FLOOR_MARGIN_KTS = 5.0
 afds_controls.SPEED_PITCH_SEVERE_OVERSPEED_MARGIN_KTS = 5.0
 
 afds_controls.ROLL_FILTER_LARGE_ERROR_DEG = 10.0
@@ -198,11 +201,14 @@ afds_controls.ALTITUDE_HOLD_SPEED_LIMITED_FPM = 500.0
 afds_controls.ALTITUDE_HOLD_OVERSPEED_MARGIN_KTS = 15.0
 
 -- Highest speed that counts as a severe underspeed: target - 15 kt, but not
--- below the minimum safe speed. Shared by the FLCH pitch limiter and ALT hold.
+-- below the minimum safe speed, itself capped at target - 5 kt so that a
+-- climb on target is never a severe underspeed. Shared by the FLCH pitch
+-- limiter and ALT hold.
 function afds_controls.severe_underspeed_threshold(target_speed_kts, min_safe_speed_kts)
     local threshold_kts = target_speed_kts - afds_controls.SPEED_PITCH_SEVERE_UNDERSPEED_MARGIN_KTS
     if type(min_safe_speed_kts) == "number" and min_safe_speed_kts > 0 then
-        threshold_kts = math.max(threshold_kts, min_safe_speed_kts)
+        threshold_kts = math.max(threshold_kts, math.min(min_safe_speed_kts,
+            target_speed_kts - afds_controls.SPEED_PITCH_SEVERE_UNDERSPEED_FLOOR_MARGIN_KTS))
     end
     return threshold_kts
 end

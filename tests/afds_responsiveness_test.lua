@@ -255,6 +255,25 @@ assert_near(controls.limit_speed_pitch_target(3.0, 3.0, controls.VERTICAL_DIRECT
 assert_near(controls.limit_speed_pitch_target(-0.2, 0.1, controls.VERTICAL_DIRECTION_CLIMB,
     50, 230, 250, 160, 340, 0.3), -0.2, 0.0001, "severe underspeed overrides climb floor")
 
+-- [g-1] The minimum safe speed (Vmc + 10 kt) never lifts the severe underspeed
+-- threshold above target - 5 kt. Flaps 20 at 310 t: Vmc + 10 kt is 174.2 kt,
+-- above the V2 + 10 kt target of 169.5 kt, so the climb guard used to drop
+-- with the speed on target.
+assert_near(controls.severe_underspeed_threshold(169.5, 174.2), 164.5, 0.0001,
+    "minimum safe speed above the target is capped at target - 5 kt")
+assert_near(controls.severe_underspeed_threshold(250, 160), 235, 0.0001,
+    "target - 15 kt above the minimum safe speed is unchanged")
+assert_near(controls.severe_underspeed_threshold(200, 190), 190, 0.0001,
+    "minimum safe speed below target - 5 kt is unchanged")
+local on_target_pitch, on_target_severe = controls.limit_speed_pitch_target(9.0, 10.0,
+    controls.VERTICAL_DIRECTION_CLIMB, 50, 170.0, 169.5, 174.2, 365, 0.3)
+assert_near(on_target_pitch, 10.0, 0.0001, "initial climb on the V2 + 10 target keeps the climb guard")
+assert_equal(on_target_severe, false, "initial climb on the V2 + 10 target is not a severe underspeed")
+local slow_pitch, slow_severe = controls.limit_speed_pitch_target(9.0, 10.0,
+    controls.VERTICAL_DIRECTION_CLIMB, 50, 147.6, 169.5, 174.2, 365, 0.3)
+assert_near(slow_pitch, 9.0, 0.0001, "initial climb 22 kt slow may still pitch down")
+assert_equal(slow_severe, true, "initial climb 22 kt slow is a severe underspeed")
+
 assert_near(controls.limit_speed_pitch_target(5.2, 4.9, controls.VERTICAL_DIRECTION_DESCENT,
     -800, 260, 250, 160, 340, 0.3), 5.0, 0.0001, "descent target cannot pitch above envelope")
 assert_near(controls.limit_speed_pitch_target(4.1, 4.0, controls.VERTICAL_DIRECTION_DESCENT,
