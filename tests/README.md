@@ -157,6 +157,13 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   underspeed protection, whose thrust is then kept while the limit lasts;
   DRAG REQUIRED unchanged. Also runs the production `setDescentVSpeed`
   loaded through the XTLua `dofile`.
+- `afds_toga_roll_test.lua`: the TO/GA roll annunciation - HDG SEL, HDG HOLD
+  or LNAV in flight replacing TO/GA roll while TO/GA pitch stays, the roll
+  FMA going straight from TO/GA to HDG SEL frame by frame, LOC capture,
+  an airborne TO/GA press or TO/GA engaged again bringing TO/GA roll back
+  (a press just before HDG SEL does not undo HDG SEL), and nothing being
+  remembered on the ground: a HDG SEL press before liftoff, LNAV left
+  active from the last flight, or a selection that outlived the landing.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the

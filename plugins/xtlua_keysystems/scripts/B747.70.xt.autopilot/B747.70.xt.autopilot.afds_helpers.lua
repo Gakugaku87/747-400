@@ -713,4 +713,12 @@ function afds.vnav_energy_speedbrake_extended(speedbrake_lever)
     return (tonumber(speedbrake_lever) or 0) >= afds.VNAV_ENERGY_SPEEDBRAKE_EXTENDED_LEVER
 end
 
+-- [h-3] TO/GA roll mode
+-- TO/GA pitch and roll share one status flag. The roll annunciation stays
+-- TO/GA only until a roll mode replaces it: active LNAV, LOC capture, or
+-- HDG SEL / HDG HOLD selected in flight (roll_cleared).
+function afds.toga_roll_mode_active(toga_status, lnav_state, nav_status, roll_cleared)
+    return toga_status ~= 0 and lnav_state ~= 2 and nav_status ~= 2 and not roll_cleared
+end
+
 return afds

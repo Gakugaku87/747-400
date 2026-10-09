@@ -1661,6 +1661,7 @@ function B747_ap_heading_hold_mode_afterCMDhandler(phase, duration)
 	if phase == 0 then
 		B747CMD_fdr_log_headhold:once()
 		B747DR_ap_ATT = 0.0
+		B747_ap_clear_toga_roll() -- HDG HOLD replaces TO/GA roll in flight
 		B747_ap_button_switch_position_target[5] = 1
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[5] = 0
@@ -2745,6 +2746,19 @@ end
 dofile("B747.autoland.lua")
 dofile("B747.70.xt.autopilot.monitor.lua")
 local apWasOn=0
+-- TO/GA roll is replaced by HDG SEL / HDG HOLD selected in flight or by LNAV,
+-- while TO/GA pitch (B747DR_autopilot_TOGA_status) stays until a pitch mode
+-- clears it. A new TO/GA press in the air (the engines module sets autoland
+-- to -2) brings TO/GA roll back, and nothing is remembered on the ground.
+local togaRollCleared=false
+local lastAutolandSeen=0
+function B747_ap_clear_toga_roll()
+	if simDR_onGround == 0 and B747DR_autopilot_TOGA_status ~= 0 then
+		togaRollCleared=true
+		-- a TO/GA press made before this selection must not undo it
+		lastAutolandSeen=B747DR_ap_autoland
+	end
+end
 function fma_rollModes()
 	local diff = simDRTime - B747DR_ap_lastCommand
 
@@ -2784,6 +2798,15 @@ function fma_rollModes()
 	--B747DR_ap_FMA_active_roll_mode = 0
 
 	-- (TOGA) --
+	-- on the ground the roll FMA stays as before; a stale LNAV state or a
+	-- selection from the last flight must not hide TO/GA roll at the next takeoff
+	if B747DR_autopilot_TOGA_status == 0 or simDR_onGround == 1
+		or (B747DR_ap_autoland == -2 and lastAutolandSeen ~= -2) then
+		togaRollCleared=false
+	elseif B747DR_ap_lnav_state == 2 then
+		togaRollCleared=true
+	end
+	lastAutolandSeen=B747DR_ap_autoland
 	local navcrz = simDR_nav1_radio_course_deg
 	--print("navcrz "..navcrz)
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
@@ -2791,7 +2814,8 @@ function fma_rollModes()
 		B747DR_ap_FMA_active_roll_mode = 0 -- (NONE) --
 	elseif math.abs(B747DR_ap_ATT) >= 5.0 then
 		B747DR_ap_FMA_active_roll_mode = 5
-	elseif B747DR_autopilot_TOGA_status~=0 and B747DR_ap_lnav_state ~= 2 then --simDR_autopilot_TOGA_lat_status == 2 then
+	elseif B747_afds_helpers.toga_roll_mode_active(B747DR_autopilot_TOGA_status, B747DR_ap_lnav_state,
+			B747DR_autopilot_nav_status, togaRollCleared) then --simDR_autopilot_TOGA_lat_status == 2 then
 		B747DR_ap_FMA_active_roll_mode = 1 -- (TOGA) --
 	elseif simDR_onGround == 1 then
 		B747DR_ap_FMA_active_roll_mode = 0 -- (NONE) --
@@ -3522,6 +3546,10 @@ function B474_ap_target_heading()
 		B747DR_ap_lnav_state = 0
 		B747DR_ap_lastCommand=simDRTime
 		B747DR_ap_activate_target_heading_deg=0
+		-- HDG SEL replaces TO/GA roll in flight. Done here, where X-Plane's
+		-- heading mode is engaged, not in the button handler, so the roll FMA
+		-- (run earlier in the frame) never goes blank in between.
+		B747_ap_clear_toga_roll()
 		print("change to HDG SEL")
 	end
 	if simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state > 0 then
