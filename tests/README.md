@@ -130,7 +130,12 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   target at the current altitude (a step climb from FL310 flies M.815 instead
   of a 326 kt target 26 kt above the speed, and does not flip between CAS
   and Mach as the Mach changes), and the cruise state flying the FMC cruise
-  Mach.
+  Mach. Every climb and descent speed state, the MCP IAS/MACH button and the
+  automatic IAS/Mach changeover write the X-Plane autopilot target in the new
+  unit together with the speed mode (a Mach target limited to Mmo - 0.01, a
+  knots target converted to Mach at the current altitude by the button and
+  the changeover), instead of leaving the old value in the new unit until
+  the 0.25 s IAS update.
 - `afds_fma_none_pitch_memory_test.lua`: the production flight-director
   pitch target while no pitch mode is active (the FMA shows NONE for about
   0.5 s after an ALT selector push), using the recorded TST744L step climb -

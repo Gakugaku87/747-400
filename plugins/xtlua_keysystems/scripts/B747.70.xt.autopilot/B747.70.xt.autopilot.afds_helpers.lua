@@ -669,4 +669,15 @@ function afds.climb_speed_uses_mach(cas_target_kts, climb_mach, pressure_alt_ft,
     return target_mach >= threshold
 end
 
+-- [g-5] Autopilot Mach target written with the speed mode
+
+-- Mach target for the X-Plane autopilot: limited to Mmo - 0.01, as
+-- B747_ap_ias_mach_mode limits the dial Mach. An unset or implausible Mmo
+-- (below M.50) does not limit it.
+function afds.limited_mach_target(mach, max_mach)
+    max_mach = tonumber(max_mach)
+    if max_mach == nil or max_mach < 0.5 then return mach end
+    return math.min(mach, max_mach - 0.01)
+end
+
 return afds
