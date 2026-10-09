@@ -3,6 +3,7 @@
 *        COPYRIGHT � 2020 Mark Parker/mSparks CC-BY-NC4
 *****************************************************************************************
 ]]
+local B747_afds_helpers = dofile("B747.70.xt.autopilot.afds_helpers.lua")
 local seenApproach=false
 
 local pinThrottle=0;
@@ -24,6 +25,9 @@ local totalLift=0
 local liftMeasurements=0;
 local neutralPitch=0
 local pitchMeasurements=0;
+local flareState={} -- flare law state (afds_helpers flare_pitch_target)
+local derotPitch=0 -- pitch target while the nose comes down after touchdown
+local lastPitchTime=0
 
 
 function start_flare()
@@ -48,7 +52,10 @@ function start_flare()
     maxThrottle=simDR_allThrottle
     lastAlt=0
     pinThrottle=0;
-    zeroRatePitch=(neutralPitch/pitchMeasurements)
+    zeroRatePitch=B747_afds_helpers.flare_base_pitch(neutralPitch,pitchMeasurements,simDR_AHARS_pitch_heading_deg_pilot)
+    -- the flare law starts from the current pitch and sink rate
+    flareState={tp=simDR_AHARS_pitch_heading_deg_pilot,entry_vs=simDR_vh_ind_fpm,trim=0}
+    lastPitchTime=simDRTime
 end
 local targetPitch
 function B747_rescale(in1, out1, in2, out2, x)
@@ -62,19 +69,16 @@ function doPitch()
 
   local doRollout=((4.5+simDR_AHARS_pitch_heading_deg_pilot))
 
-  if simDR_radarAlt1 >flareAt then
-    targetPitch=zeroRatePitch
-
-  end
+  -- ROLLOUT is annunciated at the same heights as before, but the pitch
+  -- target stays on the flare law until the main gear is on the ground;
+  -- end_Flare and do_touchdown lower the nose after that.
   if simDR_radarAlt1 < 5.3 then
-    targetPitch=-1
     maxPitch=1
     inrollout=true
     B747DR_ap_FMA_active_roll_mode=4
     B747DR_ap_FMA_armed_roll_mode=0
     --B747DR_ap_FMA_active_pitch_mode=0
   elseif simDR_radarAlt1 < doRollout then
-    targetPitch=0.1--zeroRatePitch-0.5
     maxPitch=4
     inrollout=true
     B747DR_ap_FMA_active_roll_mode=4
@@ -83,26 +87,14 @@ function doPitch()
     --B747DR_ap_FMA_armed_pitch_mode=0
   end
 
-
-
-
-  if simDR_radarAlt1 < flareAt and simDR_radarAlt1 > doRollout then
-
-    --[[local progressPitch=((55-(simDR_radarAlt1)))/(zeroRatePitch-0.5)
-    if progressPitch>zeroRatePitch-0.5 then
-      targetPitch=zeroRatePitch-0.5
-    elseif progressPitch<simDR_AHARS_pitch_heading_deg_pilot and simDR_AHARS_pitch_heading_deg_pilot>zeroRatePitch-2 and simDR_AHARS_pitch_heading_deg_pilot<zeroRatePitch then --dont nose down in final 50 feet
-      targetPitch=simDR_AHARS_pitch_heading_deg_pilot
-    elseif progressPitch<zeroRatePitch-2 then
-      targetPitch=zeroRatePitch-2
-     else
-      targetPitch=progressPitch
-    end]]--
-    flareRate=B747_rescale(130,2.5,180,1.0,simDR_ind_airspeed_kts_pilot)
-
-    targetPitch=zeroRatePitch+flareRate --0.5
-    print("flareRate "..flareRate.." targetPitch "..targetPitch.." flareAt "..flareAt.." simDR_AHARS_pitch_heading_deg_pilot "..simDR_AHARS_pitch_heading_deg_pilot)
-  end
+  -- Flare law (afds_helpers [f]): command a sink rate that shrinks with height
+  -- and turn the sink rate error into a pitch target, limited in rate and size.
+  -- The sink rate and pitch rate come from the flight model, not the lagging VSI.
+  local dt=B747_afds_helpers.clamp(simDRTime-lastPitchTime,0,0.2)
+  lastPitchTime=simDRTime
+  targetPitch=B747_afds_helpers.flare_pitch_target(flareState,zeroRatePitch,simDR_radarAlt1,
+    simDR_vh_ind_fpm,simDR_ind_airspeed_kts_pilot,simDR_pitch_rate_deg_sec,dt)
+  print("flare vs "..simDR_vh_ind_fpm.." targetPitch "..targetPitch.." zeroRatePitch "..zeroRatePitch.." simDR_AHARS_pitch_heading_deg_pilot "..simDR_AHARS_pitch_heading_deg_pilot)
   --[[if inrollout==true then
     local tP=(simDR_radarAlt1-4.0)
     if simDR_radarAlt1 < 7 then
@@ -171,6 +163,9 @@ end
 local targetAirspeed
 B747DR_airspeed_Vf25                            = find_dataref("laminar/B747/airspeed/Vf25")
 B747DR_airspeed_Vf30                            = find_dataref("laminar/B747/airspeed/Vf30")
+-- flare law inputs: flight-model vertical speed (fpm) and pitch rate (deg/s)
+simDR_vh_ind_fpm                                = find_dataref("sim/flightmodel/position/vh_ind_fpm")
+simDR_pitch_rate_deg_sec                        = find_dataref("sim/flightmodel/position/Q")
 function doThrottle()
   local refSpeed
   if simDR_flap_ratio_control<=0.668 then --flaps 25
@@ -216,7 +211,7 @@ function during_Flare()
   --doThrottle()
   if simDR_onGround==1 then
     B747DR_ap_FMA_autothrottle_mode = 0
-  elseif simDR_radarAlt1<40 then
+  elseif simDR_radarAlt1<B747_afds_helpers.FLARE_RETARD_FT then -- same height as the EEC SPD cut; SPD until then
     B747DR_ap_FMA_autothrottle_mode = 2
   end
   doPitch()
@@ -231,6 +226,11 @@ function end_Flare()
         B747DR_ap_active_land=1.0
 
         B747DR_ap_FMA_autothrottle_mode = 0
+        -- main gear on the ground: lower the nose from the touchdown pitch at
+        -- a limited rate (do_touchdown) instead of stepping to a fixed target
+        derotPitch=simDR_AHARS_pitch_heading_deg_pilot
+        lastPitchTime=simDRTime
+        B744DR_autolandPitch=derotPitch
 end
 --[[function touchdown_elevator()
       if simDR_AHARS_pitch_heading_deg_pilot>2 then targetPitch=1
@@ -263,7 +263,7 @@ function preLand_measure()
         print("pitchMeasurements="..pitchMeasurements.. " Pitch="..B744DR_autolandPitch.. " landingvviError="..landingvviError)
         lastVVI=simDR_vvi_fpm_pilot
       end
-      B744DR_autolandPitch=(neutralPitch/pitchMeasurements)
+      B744DR_autolandPitch=B747_afds_helpers.flare_base_pitch(neutralPitch,pitchMeasurements,simDR_AHARS_pitch_heading_deg_pilot)
 
 
 end
@@ -277,11 +277,15 @@ end
 end]]
 function do_touchdown()
      --touchdown_elevator()
+     local dt=B747_afds_helpers.clamp(simDRTime-lastPitchTime,0,0.2)
+     lastPitchTime=simDRTime
      if simDR_onGround==1 then
 	      simDR_rudder=B747_set_ap_animation_position(simDR_rudder,0,-1,1,3)
+	      derotPitch=B747_afds_helpers.derotation_pitch_target(derotPitch,dt)
      else
-	      doYaw()
+	      doYaw() -- bounced: hold the derotation target
      end
+     B744DR_autolandPitch=derotPitch
 
 
       if simDR_onGround==1 and simDR_ind_airspeed_kts_pilot<65 then
@@ -320,12 +324,13 @@ function runAutoland()
 	      return true
       end
 
-      if simDR_radarAlt1 < 5 and B747DR_ap_active_land<0.5 then -- watch the bounce!
+      if simDR_onGround==1 and B747DR_ap_active_land<0.5 then -- watch the bounce! flare until the main gear touches down
         end_Flare()
 	      return true
       end
 
-      if simDR_radarAlt1 > flareAt and simDR_radarAlt1 < 800 and numAPengaged>=2 then
+      -- once in FLARE, stay in it if the ground falls away and RA rises above 50 ft again
+      if simDR_radarAlt1 > flareAt and simDR_radarAlt1 < 800 and numAPengaged>=2 and B747DR_ap_FMA_active_pitch_mode ~= 3 then
         preLand_measure()
       elseif B747DR_ap_FMA_active_pitch_mode ~= 3 and numAPengaged>=2 then
         lastAlt=simDR_radarAlt1 --begin alt tracking
@@ -354,6 +359,10 @@ function runAutoland()
     if simDR_radarAlt1 < 100 and numAPengaged>2 then
       --preFlare_elevator()
       B747DR_ap_autoland=1
+      -- a new autoland has not touched down yet; active_land can still be 1
+      -- from an earlier landing in this session, and do_touchdown would then
+      -- fly the old derotation target from 100 ft instead of the flare
+      B747DR_ap_active_land=0.0
 -- 	print("autoland preflare ".. simDR_radarAlt1.. " " .. simDR_AHARS_pitch_heading_deg_pilot .." " ..targetPitch)
       return true
     elseif simDR_radarAlt1 < 800 and numAPengaged>2 then

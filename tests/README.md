@@ -99,6 +99,20 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   ALT sync fault flag in the FMS after_physics, and the localizer and
   glideslope signals, flags and deviations of the LOC and G/S capture gates in
   the autopilot monitor (B747_monitorAP).
+- `autoland_flare_test.lua`: the autoland flare law helpers (sink-rate
+  command, pitch-target size and rate limits, the approach pitch when no
+  steady sample was taken, derotation at 1 deg/s to -0.5 deg) and the
+  production autoland logic flown from 300 ft RA to 8 s after touchdown
+  against a simple point-mass model - four approaches and two pitch-loop
+  responses, ground falling away 24 ft under the flare, a noisy VSI and a
+  second autoland in the same session: touchdown sink -80 to -250 fpm with
+  no float, FLARE to touchdown within 10 s (11 s with the terrain), no
+  nose-down before main gear touchdown, a rate-limited derotation, and A/T
+  IDLE no higher than 25 ft.
+- `eec_flare_retard_test.lua`: EEC IDLE in the autoland flare - no low-speed
+  thrust recovery below 50 ft RA, the retard from approach thrust to idle
+  over about 2 s, and the IDLE low-speed recovery kept outside the autoland
+  flare.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, climb-speed

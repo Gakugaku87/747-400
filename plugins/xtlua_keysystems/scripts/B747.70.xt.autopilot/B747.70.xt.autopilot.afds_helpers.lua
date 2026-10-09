@@ -556,4 +556,75 @@ function afds.route_tod_distance(route, eod_index, cruise_alt_ft, distance_fn)
     return tod_nm, eod_alt
 end
 
+-- [f] Autoland flare law, derotation and thrust retard height
+-- The flare commands a sink rate that shrinks with height and turns the sink
+-- rate error into a pitch target, instead of holding a fixed attitude. The
+-- autoland retards the thrust at the same height as the EEC SPD cut
+-- (radarAlt1 < 25.1 in B747.42.xt.EEC.lua spd_throttle).
+afds.FLARE_RETARD_FT = 25
+afds.FLARE_SINK_TIME_CONSTANT_SEC = 5
+afds.FLARE_HEIGHT_BIAS_FT = 12
+afds.FLARE_MIN_SINK_FPM = 100
+afds.FLARE_PITCH_PER_FPM = 0.004
+afds.FLARE_PITCH_INTEGRAL_PER_FPM_SEC = 0.001
+afds.FLARE_PITCH_RATE_DAMPING_SEC = 0.7
+afds.FLARE_PITCH_UP_RATE_DEG_PER_SEC = 1.5
+afds.FLARE_PITCH_DOWN_RATE_DEG_PER_SEC = 1.0
+afds.FLARE_PITCH_BELOW_BASE_DEG = 0.5
+afds.FLARE_PITCH_ABOVE_BASE_DEG = 4.0
+afds.FLARE_MAX_PITCH_DEG = 7.5
+afds.DEROTATION_RATE_DEG_PER_SEC = 1.0
+afds.DEROTATION_PITCH_DEG = -0.5
+
+local FPM_PER_KNOT = 101.269
+
+-- Sink rate the flare asks for: 60*(RA + 12)/5 fpm, never deeper than the
+-- sink rate at flare entry and never shallower than 100 fpm, so the
+-- aircraft keeps sinking onto the runway instead of floating.
+function afds.flare_vspeed_command_fpm(radio_altitude_ft, entry_vspeed_fpm)
+    local command_fpm = -60 * (radio_altitude_ft + afds.FLARE_HEIGHT_BIAS_FT)
+        / afds.FLARE_SINK_TIME_CONSTANT_SEC
+    command_fpm = math.max(command_fpm, math.min(entry_vspeed_fpm, -afds.FLARE_MIN_SINK_FPM))
+    return math.min(command_fpm, -afds.FLARE_MIN_SINK_FPM)
+end
+
+-- Flare pitch target. state keeps tp (last target), entry_vs (sink rate at
+-- flare entry) and trim (integral term) between calls; missing fields start
+-- from the current values. The target is the approach pitch plus the change
+-- in flight-path angle the sink command needs, a PI term on the sink rate
+-- error and pitch rate damping. It stays between base - 0.5 and
+-- min(base + 4, 7.5) and moves at most 1.5 deg/s up and 1.0 deg/s down.
+function afds.flare_pitch_target(state, base_pitch_deg, radio_altitude_ft, vspeed_fpm,
+        airspeed_kts, pitch_rate_deg_sec, elapsed_sec)
+    state.entry_vs = state.entry_vs or vspeed_fpm
+    local command_fpm = afds.flare_vspeed_command_fpm(radio_altitude_ft, state.entry_vs)
+    local error_fpm = command_fpm - vspeed_fpm
+    state.trim = afds.clamp((state.trim or 0)
+        + afds.FLARE_PITCH_INTEGRAL_PER_FPM_SEC * error_fpm * elapsed_sec,
+        -1, afds.FLARE_PITCH_ABOVE_BASE_DEG)
+    local path_change_deg = math.deg((command_fpm - state.entry_vs)
+        / (math.max(airspeed_kts, 100) * FPM_PER_KNOT))
+    local target = base_pitch_deg + path_change_deg + state.trim
+        + afds.FLARE_PITCH_PER_FPM * error_fpm
+        - afds.FLARE_PITCH_RATE_DAMPING_SEC * pitch_rate_deg_sec
+    target = afds.clamp(target, base_pitch_deg - afds.FLARE_PITCH_BELOW_BASE_DEG,
+        math.min(base_pitch_deg + afds.FLARE_PITCH_ABOVE_BASE_DEG, afds.FLARE_MAX_PITCH_DEG))
+    state.tp = afds.rate_limit(state.tp or base_pitch_deg, target, elapsed_sec,
+        afds.FLARE_PITCH_DOWN_RATE_DEG_PER_SEC, afds.FLARE_PITCH_UP_RATE_DEG_PER_SEC)
+    return state.tp
+end
+
+-- Approach pitch measured during the steady part of the approach. With no
+-- steady sample the current pitch is used instead of dividing 0 by 0.
+function afds.flare_base_pitch(pitch_sum_deg, pitch_samples, current_pitch_deg)
+    if pitch_samples == nil or pitch_samples <= 0 then return current_pitch_deg end
+    return pitch_sum_deg / pitch_samples
+end
+
+-- After main gear touchdown the nose comes down at 1.0 deg/s to -0.5 deg.
+function afds.derotation_pitch_target(current_pitch_deg, elapsed_sec)
+    return afds.rate_limit(current_pitch_deg, afds.DEROTATION_PITCH_DEG, elapsed_sec,
+        afds.DEROTATION_RATE_DEG_PER_SEC, afds.DEROTATION_RATE_DEG_PER_SEC)
+end
+
 return afds
