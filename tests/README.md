@@ -131,6 +131,12 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   of a 326 kt target 26 kt above the speed, and does not flip between CAS
   and Mach as the Mach changes), and the cruise state flying the FMC cruise
   Mach.
+- `afds_fma_none_pitch_memory_test.lua`: the production flight-director
+  pitch target while no pitch mode is active (the FMA shows NONE for about
+  0.5 s after an ALT selector push), using the recorded TST744L step climb -
+  the attitude is held (limited to -3.5..15 degrees) instead of 0 degrees,
+  so the following VNAV SPD, and VNAV PTH holding the altitude, continue from
+  it.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the

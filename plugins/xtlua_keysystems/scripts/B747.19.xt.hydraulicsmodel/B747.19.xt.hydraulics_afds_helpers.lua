@@ -314,4 +314,15 @@ function afds_controls.accelerating_underspeed_threshold(target_speed_kts, min_s
         target_speed_kts - afds_controls.SPEED_PITCH_SEVERE_UNDERSPEED_FLOOR_MARGIN_KTS)
 end
 
+-- [g-4] Pitch target with no active pitch mode
+
+-- With no pitch mode (the FMA shows NONE for about 0.5 s after an ALT
+-- selector push, or FLARE without autoland) the director holds the current
+-- attitude, limited to the speed-on-pitch range, instead of 0 degrees, so the
+-- next mode starts from the attitude. Without an attitude it is level.
+function afds_controls.inactive_mode_pitch_target(pitch_deg)
+    if type(pitch_deg) ~= "number" then return 0 end
+    return clamp(pitch_deg, afds_controls.SPEED_PITCH_MIN_TARGET_DEG, afds_controls.SPEED_PITCH_MAX_TARGET_DEG)
+end
+
 return afds_controls

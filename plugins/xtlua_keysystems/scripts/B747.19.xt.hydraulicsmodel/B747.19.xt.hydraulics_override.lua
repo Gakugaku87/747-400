@@ -848,8 +848,11 @@ function ap_director_pitch(pitchMode)
      --   directorSampleRate=0.5
     else
         --print("ap_director_pitch for off")
-        last_simDR_AHARS_pitch_heading_deg_pilot=0
-        return 0
+        --no pitch mode (NONE after an ALT selector push, FLARE without autoland):
+        --hold the attitude so that the next mode starts from it, not from 0 degrees
+        retval=B747_afds_controls.inactive_mode_pitch_target(simDR_AHARS_pitch_heading_deg_pilot)
+        last_simDR_AHARS_pitch_heading_deg_pilot=retval
+        return ap_director_pitch_retVal(pitchMode,retval)
     end
     local retval=simDR_flight_director_pitch
     if debug_flight_directors==1 then
