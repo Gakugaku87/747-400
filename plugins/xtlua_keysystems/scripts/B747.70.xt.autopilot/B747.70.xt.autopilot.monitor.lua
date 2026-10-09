@@ -33,6 +33,10 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
     local lowerAlt=tonumber(getFMSData("transalt"))
     --print("setVNAV "..B747BR_vnavProfile)
     local endI = table.getn(fms)
+    -- distance flown along the route to fms[i], compared with the route distance to the T/D;
+    -- the straight-line distance cannot be used, because on a route back to the departure
+    -- airport the arrival fixes are close to the aircraft while it is still climbing out
+    local alongDist=0
     --print("FMS ="..fmsJSON)
     for i=1,endI,1 do
       --print("i="..i.." began="..tostring(began))
@@ -40,6 +44,7 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
             began=true
             currentIndex=i
             local nextDistance=getDistance(simDR_latitude,simDR_longitude,fms[i][5],fms[i][6])
+            alongDist=nextDistance
             B747DR_fmstargetDistance=nextDistance
             if nextDistance>dist_to_TOD and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and B747BR_cruiseAlt>0 then
                 targetAlt=B747BR_cruiseAlt
@@ -48,15 +53,15 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
             end
             if dist_to_TOD<0 and fms[i][9]>0 and fms[i][9]<lowerAlt and fms[i][2] ~= 1 and numAPengaged>0 then targetAlt=fms[i][9] targetIndex=i break end
         elseif began==true then
-            local nextDistance=getDistance(simDR_latitude,simDR_longitude,fms[i][5],fms[i][6])
             local thisDistance=getDistance(fms[i-1][5],fms[i-1][6],fms[i][5],fms[i][6])
+            alongDist=alongDist+thisDistance
             B747DR_fmstargetDistance=B747DR_fmstargetDistance+thisDistance
-            if nextDistance>dist_to_TOD and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and B747BR_cruiseAlt>0 then
+            if alongDist>dist_to_TOD and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and B747BR_cruiseAlt>0 then
                 targetAlt=B747BR_cruiseAlt
                 targetIndex=i
                 break
                 end
-            if B747BR_totalDistance>0 and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and (nextDistance)>dist_to_TOD then break end
+            if B747BR_totalDistance>0 and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and (alongDist)>dist_to_TOD then break end
             if dist_to_TOD<0 and fms[i][9]>0 and fms[i][9]<lowerAlt and fms[i][2] ~= 1 then targetAlt=fms[i][9] targetIndex=i break end
             local dtoAirport = getDistance(fms[i][5], fms[i][6], fms[endI][5], fms[endI][6])
 		--print("i=".. i .." B747DR_fmscurrentIndex="..B747DR_fmscurrentIndex .." speed="..simDR_groundspeed .. " distance="..totalDistance.." dtoAirport="..dtoAirport.. " ".. fmsO[i][5].." ".. fmsO[i][6].." ".. fmsO[i+1][5].." ".. fmsO[i+1][6])

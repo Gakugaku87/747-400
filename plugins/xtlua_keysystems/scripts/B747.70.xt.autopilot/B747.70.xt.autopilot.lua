@@ -2163,7 +2163,9 @@ function setDistances(fmsO)
 	local totalDistance = LastLeg
 	local nextDistanceInFeet = totalDistance * 6076.12
 
-	local eod = endI
+	-- the end of descent comes after the farthest point of the route, so a route
+	-- back to the departure airport does not end at its own departure fixes
+	local eod = B747_afds_helpers.route_eod_index(fmsO, getDistance, 10)
 	local setTOD = false
 	local setTOC = false
 	local todDist = B747BR_totalDistance - B747BR_tod
@@ -2173,6 +2175,8 @@ function setDistances(fmsO)
 	--print("setDistances")
 	local usedToD=false
 	for i = 1, endI - 1, 1 do
+		-- true when the T/D lies on a leg before this entry (set by an earlier pass)
+		local todBeforePoint = setTOD
 		if i >= start then
 			iLat = fmsO[i][5]
 			iLong = fmsO[i][6]
@@ -2202,10 +2206,7 @@ function setDistances(fmsO)
 			end
 		end
 		--print("setVNAV "..i.." "..fmsO[i][5]..":"..fmsO[i][6].."/"..fmsO[i][9])
-		dtoAirport = getDistance(fmsO[i][5], fmsO[i][6], fmsO[endI][5], fmsO[endI][6])
-		--print("i=".. i .." B747DR_fmscurrentIndex="..B747DR_fmscurrentIndex .." speed="..simDR_groundspeed .. " distance="..totalDistance.." dtoAirport="..dtoAirport.. " ".. fmsO[i][5].." ".. fmsO[i][6].." ".. fmsO[i+1][5].." ".. fmsO[i+1][6])
-		if dtoAirport < 10 then
-			eod = i
+		if i == eod then
 			--print("end fms"..i.."=at alt "..fms[i][3])
 			break
 		end
@@ -2220,16 +2221,18 @@ function setDistances(fmsO)
 				local tAlt=fmsO[i][9]
 				if i>1 then
 					local distance=getDistance(fmsO[i-1][5],fmsO[i-1][6], fmsO[i][5],fmsO[i][6])
-					if fmsO[i][9]<lastVnavAlt and not(usedToD) and B747BR_totalDistance > 0 and B747BR_todLat ~=0 and B747BR_todLong ~=0 then
+					local fromToD=false
+					-- with no constraint before it (route entries without an altitude), the first constraint
+					-- below CRZ ALT ahead of the aircraft also starts at the T/D, when the T/D lies before it
+					-- on the route or the aircraft has already passed the T/D
+					local firstDescent=i>=start and lastVnavAlt<0 and fmsO[i][9]<B747BR_cruiseAlt and (todBeforePoint or todDist<=0)
+					if (fmsO[i][9]<lastVnavAlt or firstDescent) and not(usedToD) and B747BR_totalDistance > 0 and B747BR_todLat ~=0 and B747BR_todLong ~=0 then
 						distance=getDistance(B747BR_todLat,B747BR_todLong, fmsO[i][5],fmsO[i][6])
 						usedToD=true
+						fromToD=true
 					end
-					if distance>0.1 then
-					  vAlt=(lastVnavAlt-fmsO[i][9])/distance
-					else
-						vAlt=0
-						tAlt=lastVnavAlt
-					end
+					-- a path from the T/D starts at CRZ ALT, not at an older route altitude
+					vAlt,tAlt=B747_afds_helpers.vnav_entry_slope(lastVnavAlt,fmsO[i][9],distance,fromToD,B747BR_cruiseAlt)
 				end
 				local vNavdataI={fmsO[i][5],fmsO[i][6],tAlt,i>=start,vAlt}
 				vnavData[vnavI]=vNavdataI

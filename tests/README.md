@@ -58,6 +58,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   VNAV ALT on the ground or below 400 ft RA; LNAV ground arm, the airborne
   engage and the PERF/VNAV UNAVAILABLE refusal unchanged; and the VNAV button
   decision table.
+- `vnav_route_eod_test.lua`: a route that starts and ends at the same
+  airport - the end of descent on the arrival side (after the fix farthest
+  from the airport, not at the departure fixes), the remaining distance and
+  T/D on the ground, in cruise and on final, the VNAV path into the first
+  descent constraint starting from CRZ ALT at the T/D (also once the T/D is
+  behind), and VNAV climb targets judged by the along-route distance so the
+  arrival constraints are not climbed to. Ordinary routes keep their end of
+  descent, distances, T/D and climb targets.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, climb-speed
