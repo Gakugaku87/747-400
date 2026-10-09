@@ -385,7 +385,9 @@ function clb_spcres_setSpd()
     local spdval=modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("spcres", getFMSData))
     B747DR_switchingIASMode=1
     local clbmachval=B747_climb_mach_thousandths()/10
-    if simDR_airspeed_mach > (clbmachval/100) then
+    -- Mach once the CAS target at this altitude (or the current Mach) reaches the climb Mach
+    if vnav_afds_helpers.climb_speed_uses_mach(spdval, clbmachval/100, simDR_pressureAlt1,
+        simDR_airspeed_mach, simDR_autopilot_airspeed_is_mach) then
       print("convert to climb Mach in clb ".. clbmachval)
       simDR_autopilot_airspeed_is_mach = 1
       B747DR_ap_ias_dial_value = clbmachval
@@ -410,7 +412,9 @@ function clb_nores_setSpd()
     local spdval=modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("nores", getFMSData))
     B747DR_switchingIASMode=1
     local clbmachval=B747_climb_mach_thousandths()/10
-    if simDR_airspeed_mach > (clbmachval/100) then
+    -- Mach once the CAS target at this altitude (or the current Mach) reaches the climb Mach
+    if vnav_afds_helpers.climb_speed_uses_mach(spdval, clbmachval/100, simDR_pressureAlt1,
+        simDR_airspeed_mach, simDR_autopilot_airspeed_is_mach) then
       print("convert to climb Mach in clb".. clbmachval)
       simDR_autopilot_airspeed_is_mach = 1
       B747DR_ap_ias_dial_value = clbmachval

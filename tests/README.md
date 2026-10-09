@@ -122,13 +122,20 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   acceleration latch for a raised speed target (flap retraction, 250 to the
   ECON climb speed at 10,000 ft), which keeps the climb guard until the speed
   is within 5 kt of the target, also in the production flight director, while
-  a real underspeed below the minimum safe speed is never latched.
+  a real underspeed below the minimum safe speed is never latched. Also the
+  CAS to Mach conversion (the inverse of the FMC Mach to CAS) and the climb
+  CAS/Mach crossover rule.
+- `vnav_climb_speed_semantics_test.lua`: the climb speed states (SPD REST,
+  SPD TRANS, ECON CLB), the crossover to the climb Mach judged on the CAS
+  target at the current altitude (a step climb from FL310 flies M.815 instead
+  of a 326 kt target 26 kt above the speed, and does not flip between CAS
+  and Mach as the Mach changes), and the cruise state flying the FMC cruise
+  Mach.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
-  cruise altitude at top-of-climb weight), ND waypoint selection, climb-speed
-  semantics including the climb-Mach crossover and the cruise state flying
-  the FMC cruise Mach, and the XTLua `dofile` loader (including the autopilot
-  monitor loading the AFDS helpers exactly once).
+  cruise altitude at top-of-climb weight), ND waypoint selection, and the
+  XTLua `dofile` loader (including the autopilot monitor loading the AFDS
+  helpers exactly once).
 
 The standalone tests verify logic and interfaces. Before making the aircraft
 release-ready, validate these scenarios in X-Plane with both flight directors

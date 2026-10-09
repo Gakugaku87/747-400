@@ -627,4 +627,46 @@ function afds.derotation_pitch_target(current_pitch_deg, elapsed_sec)
         afds.DEROTATION_RATE_DEG_PER_SEC, afds.DEROTATION_RATE_DEG_PER_SEC)
 end
 
+-- [g-3] Climb CAS/Mach crossover judged on the CAS target
+
+-- ISA pressure ratio p/p0 at a pressure altitude, as in
+-- B744.fms.performance.lua (mach_to_cas_kts).
+local function isa_pressure_ratio(pressure_alt_ft)
+    local altitude_m = math.max(0, tonumber(pressure_alt_ft) or 0) * 0.3048
+    if altitude_m <= 11000 then
+        return (1.0 - 2.25577e-5 * altitude_m) ^ 5.25588
+    end
+    return 0.223361 * math.exp(-(altitude_m - 11000) / 6341.62)
+end
+
+-- Mach number of a calibrated airspeed at a pressure altitude: the inverse
+-- of performance.mach_to_cas_kts (340.294 m/s is the sea-level speed of
+-- sound). nil for a missing or non-positive speed.
+function afds.cas_to_mach(cas_kts, pressure_alt_ft)
+    local cas = tonumber(cas_kts)
+    if cas == nil or cas <= 0 then return nil end
+    local cas_ratio = (cas / 1.94384449) / 340.294
+    local impact_pressure_ratio = ((1.0 + 0.2 * cas_ratio * cas_ratio) ^ 3.5 - 1.0)
+        / isa_pressure_ratio(pressure_alt_ft)
+    return math.sqrt(5.0 * ((impact_pressure_ratio + 1.0) ^ (2.0 / 7.0) - 1.0))
+end
+
+afds.CLIMB_MACH_CROSSOVER_HYSTERESIS = 0.005
+
+-- Whether the climb flies the climb Mach instead of the CAS target: when the
+-- CAS target is at or above the climb Mach at this altitude (0.005 lower
+-- while Mach is already selected, so the choice does not flip back and forth
+-- as the Mach changes), or, as before, when the current Mach is above the
+-- climb Mach.
+function afds.climb_speed_uses_mach(cas_target_kts, climb_mach, pressure_alt_ft, current_mach, is_mach)
+    climb_mach = tonumber(climb_mach)
+    if climb_mach == nil then return false end
+    if (tonumber(current_mach) or 0) > climb_mach then return true end
+    local target_mach = afds.cas_to_mach(cas_target_kts, pressure_alt_ft)
+    if target_mach == nil then return false end
+    local threshold = climb_mach
+    if tonumber(is_mach) == 1 then threshold = threshold - afds.CLIMB_MACH_CROSSOVER_HYSTERESIS end
+    return target_mach >= threshold
+end
+
 return afds

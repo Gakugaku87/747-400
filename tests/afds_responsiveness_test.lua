@@ -90,6 +90,31 @@ assert_equal(nav.climb_speed_for_state("spcres", climb_profile), 250,
 assert_equal(nav.climb_speed_for_state("nores", climb_profile), 272,
     "ECON CLB value is selected above transition altitude")
 
+-- [g-3] CAS to Mach with the ISA pressure ratio of the FMC performance model,
+-- and the climb CAS/Mach crossover judged on the CAS target.
+local performance = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B744.fms.performance.lua")
+assert_near(nav.cas_to_mach(326, 31000), 0.869, 0.002, "326 kt at FL310")
+assert_near(nav.cas_to_mach(300.4, 31000), 0.807, 0.002, "recorded 300.4 kt at FL310")
+assert_near(nav.cas_to_mach(performance.mach_to_cas_kts(0.815, 31000), 31000), 0.815, 0.0001,
+    "CAS to Mach inverts the FMC Mach to CAS at FL310")
+assert_near(nav.cas_to_mach(performance.mach_to_cas_kts(0.78, 39000), 39000), 0.78, 0.0001,
+    "CAS to Mach inverts the FMC Mach to CAS above the tropopause")
+assert_equal(nav.cas_to_mach(nil, 31000), nil, "missing CAS has no Mach")
+-- Arguments: CAS target, climb Mach, pressure altitude, current Mach, is_mach.
+assert_equal(nav.climb_speed_uses_mach(326, 0.815, 31000, 0.807, 0), true,
+    "CAS target above the climb Mach selects Mach")
+assert_equal(nav.climb_speed_uses_mach(272, 0.78, 12000, 0.70, 1), false,
+    "CAS target below the climb Mach stays on CAS")
+assert_equal(nav.climb_speed_uses_mach(272, 0.78, 12000, 0.79, 0), true,
+    "current Mach above the climb Mach still selects Mach")
+-- 302.5 kt is M.812 at FL310: below the M.815 climb Mach, within 0.005 of it.
+assert_equal(nav.climb_speed_uses_mach(302.5, 0.815, 31000, 0.70, 0), false,
+    "CAS target just below the climb Mach stays on CAS")
+assert_equal(nav.climb_speed_uses_mach(302.5, 0.815, 31000, 0.70, 1), true,
+    "selected Mach is kept within 0.005 of the climb Mach")
+assert_equal(nav.climb_speed_uses_mach(300, 0.815, 31000, 0.70, 1), false,
+    "selected Mach returns to CAS more than 0.005 below the climb Mach")
+
 local function energy_guidance(path_error_ft, actual_speed_kts, nominal_vspeed_fpm,
         speed_trend_kts_per_sec, previous_path_axis, previous_speed_axis, protection_active)
     return nav.vnav_energy_guidance({

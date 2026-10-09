@@ -106,4 +106,46 @@ assert(runtime.B747DR_ap_ias_dial_value == 80,
     "cruise did not fly the selected cruise Mach")
 fms_data.crzspd = "810"
 
+-- [g-3] The crossover is judged on the CAS target, not on the current Mach.
+-- TST744L step climb from FL310: ECON 326 kt / M.815 at 300.4 kt and M.807.
+-- 326 kt is M.869 at FL310, so the climb Mach is flown, with no 26 kt
+-- underspeed on the CAS target and no CAS/Mach flip as M.807 changes to
+-- M.810 and back.
+fms_data.clbspd = "326"
+fms_data.clbmach = "815"
+runtime.simDR_pressureAlt1 = 31000
+runtime.simDR_ind_airspeed_kts_pilot = 300.4
+runtime.simDR_airspeed_mach = 0.807
+runtime.simDR_autopilot_airspeed_is_mach = 1
+runtime.clb_nores_setSpd()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 1,
+    "climb at FL310 left the climb Mach for a CAS target above it")
+assert(runtime.B747DR_ap_ias_dial_value == 81.5,
+    "climb at FL310 did not fly the climb Mach")
+runtime.simDR_pressureAlt1 = 31138
+runtime.simDR_airspeed_mach = 0.810
+runtime.clb_nores_setSpd()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 1 and runtime.B747DR_ap_ias_dial_value == 81.5,
+    "climb at FL311 and M.810 flipped back to CAS")
+runtime.simDR_pressureAlt1 = 31000
+runtime.simDR_airspeed_mach = 0.807
+runtime.simDR_autopilot_airspeed_is_mach = 0
+runtime.clb_nores_setSpd()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 1 and runtime.B747DR_ap_ias_dial_value == 81.5,
+    "a CAS climb at FL310 did not change over to the climb Mach")
+-- The SPD TRANS state uses the same crossover: 250 kt is M.711 at FL330,
+-- above a M.700 climb Mach.
+fms_data.clbmach = "700"
+runtime.simDR_pressureAlt1 = 33000
+runtime.simDR_ind_airspeed_kts_pilot = 245
+runtime.simDR_airspeed_mach = 0.69
+runtime.simDR_autopilot_airspeed_is_mach = 0
+runtime.clb_spcres_setSpd()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 1 and runtime.B747DR_ap_ias_dial_value == 70,
+    "SPD TRANS state did not change over at the CAS target's Mach")
+fms_data.clbspd = "272"
+fms_data.clbmach = "780"
+runtime.simDR_pressureAlt1 = 12000
+runtime.simDR_ind_airspeed_kts_pilot = 200
+
 print("VNAV climb-speed semantic tests passed")
