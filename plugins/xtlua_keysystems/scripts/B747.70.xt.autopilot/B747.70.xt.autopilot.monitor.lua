@@ -11,6 +11,7 @@
 *
 *
 --]]
+local B747_afds_helpers = dofile("B747.70.xt.autopilot.afds_helpers.lua")
 
 --get the glideslope to an FMS entry
 function getSlope(fmsIndex)
@@ -510,7 +511,9 @@ function VNAV_modeSwitch(fmsO)
     local diff2=simDRTime-lastVNAVSwitch
     if diff<0.5 or diff2<0.1 then return end --mode switch at 0.1 second intervals
 
-    if B747DR_ap_vnav_state == 1 then --check if we need to enter as VNAV ALT
+    --check if we need to enter as VNAV ALT; not on the ground or below the VNAV
+    --engage height, where ALT HOLD would cancel TO/GA and the takeoff thrust
+    if B747DR_ap_vnav_state == 1 and B747_afds_helpers.vnav_engage_height_reached(simDR_onGround, simDR_radarAlt1) then
         local mcpDiff=simDR_pressureAlt1-B747DR_autopilot_altitude_ft
         if math.abs(mcpDiff)<1000 then
             B747DR_mcp_hold=1

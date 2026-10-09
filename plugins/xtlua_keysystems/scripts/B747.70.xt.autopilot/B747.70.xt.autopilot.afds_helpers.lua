@@ -327,4 +327,35 @@ function afds.vnav_energy_guidance(input)
     }
 end
 
+-- [b] VNAV button on the ground and VNAV engage height
+
+-- What a VNAV button press does, in the existing order: PERF/VNAV UNAVAILABLE
+-- first (no cruise altitude, or less than 10 NM to T/D on the ground), then a
+-- press with VNAV armed or active turns it off. On the ground, or in TO/GA,
+-- VNAV is only armed and VNAV_CLB engages it after takeoff. Only an airborne
+-- press outside TO/GA engages VNAV at once.
+afds.VNAV_BUTTON_REFUSE = 1
+afds.VNAV_BUTTON_DISARM = 2
+afds.VNAV_BUTTON_ARM = 3
+afds.VNAV_BUTTON_ENGAGE = 4
+
+-- Lowest radio altitude at which an armed VNAV may engage (as in VNAV_CLB).
+afds.VNAV_ENGAGE_MIN_RA_FT = 400
+
+function afds.vnav_button_action(vnav_state, cruise_alt_ft, dist_to_tod_nm, on_ground, active_pitch_mode)
+    local grounded = tonumber(on_ground) == 1
+    if (tonumber(cruise_alt_ft) or 0) < 10
+        or ((tonumber(dist_to_tod_nm) or 0) < 10 and grounded) then
+        return afds.VNAV_BUTTON_REFUSE
+    end
+    if (tonumber(vnav_state) or 0) > 0 then return afds.VNAV_BUTTON_DISARM end
+    if grounded or tonumber(active_pitch_mode) == 1 then return afds.VNAV_BUTTON_ARM end
+    return afds.VNAV_BUTTON_ENGAGE
+end
+
+function afds.vnav_engage_height_reached(on_ground, radio_alt_ft)
+    return tonumber(on_ground) ~= 1
+        and (tonumber(radio_alt_ft) or 0) > afds.VNAV_ENGAGE_MIN_RA_FT
+end
+
 return afds

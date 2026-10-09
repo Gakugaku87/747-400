@@ -51,11 +51,19 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   hydraulics override file writes is bound in the hydraulics script's XTLua
   namespace, with the FLCH and V/S requests bound to the datarefs the
   autopilot reads.
+- `vnav_ground_arm_test.lua`: VNAV pressed on the ground before the flight
+  directors (and in TO/GA) only arms - no ALT HOLD, a stale MCP altitude hold
+  and VNAV descent cleared - so the thrust monitor keeps TO/GA, engine TO/GA
+  and the takeoff phase; an MCP altitude near the field is not captured as
+  VNAV ALT on the ground or below 400 ft RA; LNAV ground arm, the airborne
+  engage and the PERF/VNAV UNAVAILABLE refusal unchanged; and the VNAV button
+  decision table.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, climb-speed
   semantics including the climb-Mach crossover and the cruise state flying
-  the FMC cruise Mach, and the XTLua `dofile` loader.
+  the FMC cruise Mach, and the XTLua `dofile` loader (including the autopilot
+  monitor loading the AFDS helpers exactly once).
 
 The standalone tests verify logic and interfaces. Before making the aircraft
 release-ready, validate these scenarios in X-Plane with both flight directors

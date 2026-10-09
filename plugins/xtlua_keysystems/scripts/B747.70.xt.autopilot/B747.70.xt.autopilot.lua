@@ -1111,11 +1111,13 @@ function B747_ap_VNAV_mode_CMDhandler(phase, duration)
 		B747CMD_fdr_log_vnav:once()
 		B747_ap_button_switch_position_target[3] = 1
 		local dist = B747BR_totalDistance - B747BR_tod
-		if B747BR_cruiseAlt < 10 or (dist < 10 and simDR_onGround == 1) then
+		local action = B747_afds_helpers.vnav_button_action(B747DR_ap_vnav_state, B747BR_cruiseAlt,
+			dist, simDR_onGround, B747DR_ap_FMA_active_pitch_mode)
+		if action == B747_afds_helpers.VNAV_BUTTON_REFUSE then
 			B747DR_fmc_notifications[30] = 1
 			return
 		end
-		if B747DR_ap_vnav_state > 0 then
+		if action == B747_afds_helpers.VNAV_BUTTON_DISARM then
 			B747DR_ap_vnav_state = 0
 			B747DR_ap_inVNAVdescent = 0
 			B747DR_ap_thrust_mode = 0
@@ -1124,10 +1126,21 @@ function B747_ap_VNAV_mode_CMDhandler(phase, duration)
 				--simCMD_autopilot_autothrottle_on:once()
 				B747DR_autothrottle_active=1
 			end
-		elseif B747DR_ap_FMA_active_pitch_mode==1 then
+		elseif action == B747_afds_helpers.VNAV_BUTTON_ARM then
+			-- On the ground or in TO/GA VNAV is only armed; VNAV_CLB engages it after
+			-- takeoff. Do not write ALT HOLD here: the thrust monitor reads it as
+			-- cruise and cancels TO/GA and the takeoff thrust.
 			B747DR_ap_vnav_state = 1
+			local reason = "VNAV armed during TOGA"
+			if simDR_onGround == 1 then
+				-- Clear a stale MCP altitude hold or VNAV descent, as the engage
+				-- branch does; a held MCP altitude stops VNAV_CLB after takeoff.
+				B747DR_mcp_hold=0
+				B747DR_ap_inVNAVdescent = 0
+				if B747DR_ap_FMA_active_pitch_mode~=1 then reason = "VNAV armed on the ground" end
+			end
 			setDescent(false)
-			B747_invalidate_vnav_speed("VNAV armed during TOGA")
+			B747_invalidate_vnav_speed(reason)
 			B747_vnav_speed()
 		else
 			B747DR_ap_vnav_state = 1
