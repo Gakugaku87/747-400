@@ -67,12 +67,8 @@ function afds_controls.limit_speed_pitch_target(requested_target_deg, previous_t
 
     local severe_underspeed = false
     if type(actual_speed_kts) == "number" and type(target_speed_kts) == "number" then
-        local underspeed_threshold_kts = target_speed_kts
-            - afds_controls.SPEED_PITCH_SEVERE_UNDERSPEED_MARGIN_KTS
-        if type(min_safe_speed_kts) == "number" and min_safe_speed_kts > 0 then
-            underspeed_threshold_kts = math.max(underspeed_threshold_kts, min_safe_speed_kts)
-        end
-        severe_underspeed = actual_speed_kts <= underspeed_threshold_kts
+        severe_underspeed = actual_speed_kts
+            <= afds_controls.severe_underspeed_threshold(target_speed_kts, min_safe_speed_kts)
     end
 
     local severe_overspeed = type(actual_speed_kts) == "number"
@@ -187,6 +183,84 @@ function afds_controls.roll_output_response_sec(bank_error_deg, current_output, 
         return afds_controls.ROLL_OUTPUT_MEDIUM_RESPONSE_SEC
     end
     return afds_controls.ROLL_OUTPUT_SMALL_RESPONSE_SEC
+end
+
+-- [a] ALT capture and ALT hold protection
+
+-- ALT hold flies 2 fpm per foot of altitude error (the hold altitude in about
+-- 30 s). A normal capture starts inside the capture window, which is at most
+-- 1000 ft, so the 2000 fpm limit only slows holds that start far away.
+afds_controls.ALTITUDE_HOLD_FPM_PER_FT = 2.0
+afds_controls.ALTITUDE_HOLD_MAX_TARGET_FPM = 2000.0
+-- While the speed runs away in the direction of the altitude change, ALT hold
+-- slows the change to this rate instead of trading more speed for altitude.
+afds_controls.ALTITUDE_HOLD_SPEED_LIMITED_FPM = 500.0
+afds_controls.ALTITUDE_HOLD_OVERSPEED_MARGIN_KTS = 15.0
+
+-- Highest speed that counts as a severe underspeed: target - 15 kt, but not
+-- below the minimum safe speed. Shared by the FLCH pitch limiter and ALT hold.
+function afds_controls.severe_underspeed_threshold(target_speed_kts, min_safe_speed_kts)
+    local threshold_kts = target_speed_kts - afds_controls.SPEED_PITCH_SEVERE_UNDERSPEED_MARGIN_KTS
+    if type(min_safe_speed_kts) == "number" and min_safe_speed_kts > 0 then
+        threshold_kts = math.max(threshold_kts, min_safe_speed_kts)
+    end
+    return threshold_kts
+end
+
+-- Target vertical speed for ALT hold: 2 x altitude error, limited to
+-- +/-2000 fpm. Descending at target + 15 kt (or Vmax - 5 kt) or climbing at the
+-- severe underspeed threshold limits it further to +/-500 fpm. The direction is
+-- never reversed and errors under 250 ft are unchanged.
+function afds_controls.altitude_hold_target_fpm(hold_altitude_ft, altitude_ft, actual_speed_kts,
+        target_speed_kts, min_safe_speed_kts, max_safe_speed_kts)
+    local target_fpm = clamp((hold_altitude_ft - altitude_ft) * afds_controls.ALTITUDE_HOLD_FPM_PER_FT,
+        -afds_controls.ALTITUDE_HOLD_MAX_TARGET_FPM, afds_controls.ALTITUDE_HOLD_MAX_TARGET_FPM)
+    if type(actual_speed_kts) ~= "number" or type(target_speed_kts) ~= "number" then
+        return target_fpm
+    end
+
+    if target_fpm < 0 then
+        local overspeed_threshold_kts = target_speed_kts + afds_controls.ALTITUDE_HOLD_OVERSPEED_MARGIN_KTS
+        if type(max_safe_speed_kts) == "number" and max_safe_speed_kts > 0 then
+            overspeed_threshold_kts = math.min(overspeed_threshold_kts,
+                max_safe_speed_kts - afds_controls.SPEED_PITCH_SEVERE_OVERSPEED_MARGIN_KTS)
+        end
+        if actual_speed_kts >= overspeed_threshold_kts then
+            target_fpm = math.max(target_fpm, -afds_controls.ALTITUDE_HOLD_SPEED_LIMITED_FPM)
+        end
+    elseif target_fpm > 0 and actual_speed_kts
+            <= afds_controls.severe_underspeed_threshold(target_speed_kts, min_safe_speed_kts) then
+        target_fpm = math.min(target_fpm, afds_controls.ALTITUDE_HOLD_SPEED_LIMITED_FPM)
+    end
+    return target_fpm
+end
+
+-- Altitude to capture when the director enters the ALT branch without an ALT
+-- hold. Inside the capture window (the same strict test as ap_director_pitch)
+-- it is the MCP altitude. Outside it, a FLCH or V/S request means the FMA has
+-- not caught up with a mode push yet, so nothing is captured (nil). Otherwise
+-- the current altitude is held.
+function afds_controls.implicit_altitude_capture_target(flch_status, vs_status, altitude_ft,
+        mcp_altitude_ft, capture_window_ft)
+    capture_window_ft = tonumber(capture_window_ft) or 0
+    if altitude_ft < mcp_altitude_ft + capture_window_ft and altitude_ft > mcp_altitude_ft - capture_window_ft then
+        return mcp_altitude_ft
+    end
+    if flch_status == 2 or vs_status == 2 then return nil end
+    return altitude_ft
+end
+
+-- Whether ap_director_pitch may drop an ALT hold in this pitch mode. ALT (9),
+-- VNAV ALT (5) and VNAV PTH (6) keep it. FLCH (8) and V/S (7) drop it only
+-- when that mode is requested, and VNAV SPD (4) only when FLCH or V/S is
+-- requested (the FMA shows it only then); otherwise the FMA is stale after an
+-- ALT HOLD push and the hold must survive until the FMA catches up.
+function afds_controls.altitude_hold_release_allowed(pitch_mode, flch_status, vs_status)
+    if pitch_mode == 5 or pitch_mode == 6 or pitch_mode == 9 then return false end
+    if pitch_mode == 8 and flch_status ~= 2 then return false end
+    if pitch_mode == 7 and vs_status ~= 2 then return false end
+    if pitch_mode == 4 and flch_status ~= 2 and vs_status ~= 2 then return false end
+    return true
 end
 
 return afds_controls

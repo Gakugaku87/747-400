@@ -39,6 +39,18 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   placard minus 5 kt limiting every descent target, the CDU pair entry,
   rejection and DELETE, and DELETE returning a selected climb CAS or cruise
   Mach to ECON.
+- `afds_alt_capture_test.lua`: ALT capture and ALT hold in the production
+  flight-director pitch code - a FLCH or V/S push outside the capture window
+  surviving the update that still shows the old ALT FMA, an ALT HOLD push
+  surviving a stale FLCH, V/S or VNAV SPD FMA, capture at the MCP altitude
+  inside the window and at the current altitude otherwise, and the ALT hold
+  vertical speed limited to 2000 fpm, and to 500 fpm when descending 15 kt
+  fast (or near Vmax) or climbing 15 kt slow (or near Vmc), using recorded
+  TST744L cases.
+- `hydraulics_dataref_binding_test.lua`: every `simDR_`/`B747DR_` name that the
+  hydraulics override file writes is bound in the hydraulics script's XTLua
+  namespace, with the FLCH and V/S requests bound to the datarefs the
+  autopilot reads.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, climb-speed
