@@ -618,15 +618,22 @@ end
 -- in flight-path angle the sink command needs, a PI term on the sink rate
 -- error and pitch rate damping. It stays between base - 0.5 and
 -- min(base + 4, 7.5) and moves at most 1.5 deg/s up and 1.0 deg/s down.
+-- An entry sink rate that is not a descent is not kept: XTLua gave start_flare
+-- 0 for its first read of vh_ind_fpm (X-Plane 2026-10-10), which held the
+-- command at -100 fpm from 50 ft; the first descending sample is used instead.
 function afds.flare_pitch_target(state, base_pitch_deg, radio_altitude_ft, vspeed_fpm,
         airspeed_kts, pitch_rate_deg_sec, elapsed_sec)
-    state.entry_vs = state.entry_vs or vspeed_fpm
-    local command_fpm = afds.flare_vspeed_command_fpm(radio_altitude_ft, state.entry_vs)
+    if state.entry_vs == nil or state.entry_vs > -afds.FLARE_MIN_SINK_FPM then
+        state.entry_vs = nil
+        if vspeed_fpm < -afds.FLARE_MIN_SINK_FPM then state.entry_vs = vspeed_fpm end
+    end
+    local entry_vs = state.entry_vs or vspeed_fpm
+    local command_fpm = afds.flare_vspeed_command_fpm(radio_altitude_ft, entry_vs)
     local error_fpm = command_fpm - vspeed_fpm
     state.trim = afds.clamp((state.trim or 0)
         + afds.FLARE_PITCH_INTEGRAL_PER_FPM_SEC * error_fpm * elapsed_sec,
         -1, afds.FLARE_PITCH_ABOVE_BASE_DEG)
-    local path_change_deg = math.deg((command_fpm - state.entry_vs)
+    local path_change_deg = math.deg((command_fpm - entry_vs)
         / (math.max(airspeed_kts, 100) * FPM_PER_KNOT))
     local target = base_pitch_deg + path_change_deg + state.trim
         + afds.FLARE_PITCH_PER_FPM * error_fpm

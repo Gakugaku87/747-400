@@ -52,6 +52,18 @@ for _ = 1, 100 do
 end
 near(state.tp, 6.5, 1e-9, "the pitch target tops out at base + 4")
 
+-- A sink rate of 0 taken at flare entry is not one: XTLua gave start_flare 0 for its
+-- first read of vh_ind_fpm in X-Plane on 2026-10-10, which held the command at
+-- -100 fpm from 48 ft. The first descending sample replaces it.
+state = {tp=2.2, entry_vs=0, trim=0}
+afds.flare_pitch_target(state, 2.2, 48, 0, 153, 0, 0.05)
+equal(state.entry_vs, nil, "a 0 fpm sink rate is not kept as the flare entry")
+afds.flare_pitch_target(state, 2.2, 47, -630, 153, 0, 0.05)
+equal(state.entry_vs, -630, "the first descending sample is the flare entry")
+afds.flare_pitch_target(state, 2.2, 30, -600, 153, 0, 0.05)
+equal(state.entry_vs, -630, "the flare entry then stays")
+equal(afds.flare_vspeed_command_fpm(30, state.entry_vs), -504, "so the command follows the height profile")
+
 -- Base pitch: the measured approach pitch, or the current pitch when no
 -- steady sample was taken (instead of 0/0).
 equal(afds.flare_base_pitch(0, 0, 2.7), 2.7, "no measurement uses the current pitch")
@@ -107,7 +119,9 @@ local GROUND_SECONDS = 8
 -- vvi_noise: the VSI reads +20/-20/0 fpm off in turn, so the steady-descent
 -- pitch sampler never takes a sample. runtime: an autoland already loaded and
 -- flown (a later landing in the same session); the clock carries on from it.
-local function fly(label, approach, model, terrain, vvi_noise, flare_limit_s, runtime)
+-- vh_zero_at_flare_entry: vh_ind_fpm reads 0 until FLARE has engaged, as XTLua
+-- gave start_flare in X-Plane on 2026-10-10 (its first read of that dataref).
+local function fly(label, approach, model, terrain, vvi_noise, flare_limit_s, runtime, vh_zero_at_flare_entry)
     local r = runtime
     if r == nil then
         r = autoland_runtime()
@@ -137,6 +151,7 @@ local function fly(label, approach, model, terrain, vvi_noise, flare_limit_s, ru
         r.simDR_AHARS_pitch_heading_deg_pilot = pitch
         r.simDR_ind_airspeed_kts_pilot = ias
         r.simDR_vh_ind_fpm = vs
+        if vh_zero_at_flare_entry and flare_time == nil then r.simDR_vh_ind_fpm = 0 end
         r.simDR_pitch_rate_deg_sec = q
         r.simDR_vvi_fpm_pilot = vs
         if vvi_noise then r.simDR_vvi_fpm_pilot = vs + ({20, -20, 0})[step % 3 + 1] end
@@ -229,6 +244,15 @@ for _, model in ipairs(models) do
     end
 end
 fly("VSI noise, no steady sample", approaches[1], models[1], nil, true, 10)
+-- X-Plane 2026-10-10 (P3 circuit): with a sink rate of 0 taken at flare entry the
+-- command stayed at -100 fpm from 48 ft, the aircraft ballooned to +58 fpm at 31 ft
+-- and touched down at -504 fpm 14 s after FLARE.
+for _, model in ipairs(models) do
+    for _, approach in ipairs(approaches) do
+        fly(approach.name.." zeta "..model[1].." wn "..model[2]..", vh_ind_fpm 0 at flare entry",
+            approach, model, nil, false, 10, nil, true)
+    end
+end
 
 -- Part D: a second autoland in the same session. The first rollout ends below
 -- 65 kt (AUTOLAND and the autopilots off), and nothing on the ground resets
