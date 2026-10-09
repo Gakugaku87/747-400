@@ -510,4 +510,50 @@ function afds.gs_capture_ready(input)
         and (tonumber(input.nav2_vertical_signal) or 0) == 1
 end
 
+-- [c-4] T/D from the descent constraints and the end of descent altitude
+-- Planned descent gradient of the T/D (2.9 NM per 1,000 ft, as before).
+afds.VNAV_TOD_FT_PER_NM = 290
+
+-- Distance (NM) before the destination at which the descent from cruise_alt_ft
+-- starts, and the end of descent altitude. As in setDistances, the route runs
+-- to the end of descent (eod_index) and then straight to the destination (the
+-- last entry). The end of descent altitude is its route altitude ([9]), reached
+-- at the end of descent, or the destination elevation when it has none ([3] is
+-- a frequency on a navaid).
+-- Each descent constraint up to the end of descent must also be reached at
+-- 290 ft/nm from CRZ ALT, so the T/D is the earliest of these. Walking back
+-- from the end of descent, the descent constraints are the route altitudes
+-- that lie after the T/D found so far (one at or above CRZ ALT there cannot
+-- move it). A route altitude before it is cruise (such as the older CRZ ALT
+-- left in [9] after a step climb), and an entry closer to the start of the
+-- route than to its end is climb (a SID constraint). Passed constraints count
+-- as well, so the T/D does not move while the aircraft passes them on the
+-- descent.
+function afds.route_tod_distance(route, eod_index, cruise_alt_ft, distance_fn)
+    local count = #route
+    if count < 1 then return 0, 0 end
+    local cruise_alt = tonumber(cruise_alt_ft) or 0
+    local eod = math.max(1, math.min(tonumber(eod_index) or count, count))
+    local eod_alt = tonumber(route[eod][9]) or 0
+    if eod_alt <= 0 then eod_alt = tonumber(route[count][9]) or 0 end
+    local tod_nm = (cruise_alt - eod_alt) / afds.VNAV_TOD_FT_PER_NM
+    if type(distance_fn) ~= "function" then return tod_nm, eod_alt end
+    -- distance from each entry along the route to the end of descent, then to the destination
+    local to_end = {}
+    to_end[eod] = distance_fn(route[eod][5], route[eod][6], route[count][5], route[count][6])
+    for i = eod - 1, 1, -1 do
+        to_end[i] = to_end[i + 1] + distance_fn(route[i][5], route[i][6], route[i + 1][5], route[i + 1][6])
+    end
+    for i = eod, 1, -1 do
+        -- the route altitude of the end of descent applies there, even when CRZ ALT is
+        -- so close to it that the T/D from the destination lies after that point
+        if i < eod and (to_end[i] >= tod_nm or to_end[i] * 2 > to_end[1]) then break end
+        local alt = tonumber(route[i][9]) or 0
+        if alt > 0 and alt < cruise_alt then
+            tod_nm = math.max(tod_nm, to_end[i] + (cruise_alt - alt) / afds.VNAV_TOD_FT_PER_NM)
+        end
+    end
+    return tod_nm, eod_alt
+end
+
 return afds

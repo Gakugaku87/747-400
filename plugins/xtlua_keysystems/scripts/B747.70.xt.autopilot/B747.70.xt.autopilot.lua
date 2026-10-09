@@ -2188,6 +2188,12 @@ function setDistances(fmsO)
 	--print("setDistances")
 	local usedToD=false
 	for i = 1, endI - 1, 1 do
+		-- the route ends at the end of descent and then runs straight to the destination
+		-- (added after the loop), so the leg after the end of descent is not added
+		if i == eod then
+			--print("end fms"..i.."=at alt "..fms[i][3])
+			break
+		end
 		-- true when the T/D lies on a leg before this entry (set by an earlier pass)
 		local todBeforePoint = setTOD
 		if i >= start then
@@ -2219,10 +2225,6 @@ function setDistances(fmsO)
 			end
 		end
 		--print("setVNAV "..i.." "..fmsO[i][5]..":"..fmsO[i][6].."/"..fmsO[i][9])
-		if i == eod then
-			--print("end fms"..i.."=at alt "..fms[i][3])
-			break
-		end
 		if fmsO[i][9]>0 then
 			--construct vnav profile
 			--[[local isNext="false"
@@ -2282,8 +2284,10 @@ function setDistances(fmsO)
 		B747BR_fpe	= simDR_pressureAlt1-glideAlt
 	end
 	B747BR_nextDistanceInFeet = nextDistanceInFeet
-	local cruiseTOD = ((B747BR_cruiseAlt - fmsO[eod][3]) / 100) / 2.9
-	local currentTOD = ((simDR_pressureAlt1 - fmsO[eod][3]) / 100) / 2.9
+	-- the T/D reaches every descent constraint and the end of descent altitude ([9], or the
+	-- destination elevation) at 290 ft/nm; [3] of the end of descent is a frequency on a navaid
+	local cruiseTOD, eodAlt = B747_afds_helpers.route_tod_distance(fmsO, eod, B747BR_cruiseAlt, getDistance)
+	local currentTOD = ((simDR_pressureAlt1 - eodAlt) / 100) / 2.9
 	
 	B747BR_tod = cruiseTOD
 end

@@ -1,6 +1,8 @@
 -- Run from the repository root with Lua 5.1 or LuaJIT.
 -- End of descent, remaining distance, T/D and the VNAV descent path on routes
--- that start and end at the same airport, and the VNAV climb target on them.
+-- that start and end at the same airport, and the VNAV climb target on them;
+-- the T/D from the descent constraints and the end of descent altitude, and
+-- the remaining distance without the leg after the end of descent.
 -- Production setDistances and VNAV_NEXT_ALT run against mocked datarefs; this
 -- does not validate flight dynamics.
 local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/"
@@ -124,15 +126,31 @@ local function profile_point(r, lat, lon, alt)
 end
 
 -- The descent into the IAF must start at the T/D from CRZ ALT, whatever the
--- route altitude in [9] says.
+-- route altitude in [9] says. With the T/D taken from the IAF itself, the
+-- path into it is the planned 290 ft/nm (319 ft/nm while the T/D came from
+-- the destination alone and the leg after the end of descent).
 local function check_iaf_path(r, label)
     local iaf = profile_point(r, 1.25, 1, 3000)
     check(iaf ~= nil, label..": IAF 3000 is in the VNAV profile "..r.B747BR_vnavProfile)
     equal(iaf[4], true, label..": IAF is still ahead")
-    near(iaf[5], 319.12, 0.5, label..": IAF path gradient ft/nm")
+    near(iaf[5], 290, 0.5, label..": IAF path gradient ft/nm")
     local from_tod = r.getDistance(r.B747BR_todLat, r.B747BR_todLong, 1.25, 1)
     near(iaf[5] * from_tod + 3000, 35000, 5, label..": path altitude at the T/D")
 end
+
+-- Distance along a list of {lat, lon} points.
+local function along(points)
+    local total = 0
+    for i = 1, #points - 1 do
+        total = total + distance_nm(points[i][1], points[i][2], points[i + 1][1], points[i + 1][2])
+    end
+    return total
+end
+
+-- T/D of both fixtures at CRZ ALT 35000: the IAF at 3000 ft, 9 + 6 NM before
+-- the destination, at 290 ft/nm.
+local CIRCUIT_TOD = along({{1.25, 1}, {1.1, 1}, {1, 1}}) + 32000 / 290   -- 125.35
+local NORMAL_TOD = along({{1, 5.75}, {1, 5.9}, {1, 6}}) + 32000 / 290     -- 125.35
 
 -- The rule setDistances used before: the first entry within 10 NM of the
 -- destination, or the destination itself.
@@ -145,13 +163,15 @@ local function first_within_10nm(route)
 end
 
 -- [c-1] EOD, remaining distance and T/D
+-- (distances and T/D as measured since c-4: no leg after the end of descent,
+-- and the T/D from the IAF)
 
 case("circuit in cruise: EOD on the arrival side", function()
     local r = new_runtime(circuit(0), 2.5, 4, 5)
     settle(r)
     equal(r.B747BR_eod_index, 8, "EOD is the FAF, not the departure airport")
-    near(r.B747BR_totalDistance, 455.26, 0.05, "remaining distance runs to the arrival")
-    near(r.B747BR_tod, 120.69, 0.01, "T/D distance")
+    near(r.B747BR_totalDistance, 449.86, 0.05, "remaining distance runs to the arrival")
+    near(r.B747BR_tod, CIRCUIT_TOD, 0.01, "T/D distance")
     -- vnav.lua:157 of the FMS pages shows TO T/D when 0 < rem - T/D <= 200.
     check(r.B747BR_totalDistance - r.B747BR_tod > 200,
         "cruise STEP advisory stays clear of TO T/D: rem-T/D "
@@ -162,7 +182,7 @@ case("circuit on the ground: VNAV climb branch available", function()
     local r = new_runtime(circuit(0), 1, 1, 3)
     settle(r)
     -- VNAV_modeSwitch climbs only while rem - T/D > 10 (monitor.lua:528).
-    near(r.B747BR_totalDistance - r.B747BR_tod, 604.7, 0.1, "rem-T/D at brake release")
+    near(r.B747BR_totalDistance - r.B747BR_tod, 594.65, 0.1, "rem-T/D at brake release")
 end)
 
 case("circuit on final approach: EOD already passed", function()
@@ -172,12 +192,12 @@ case("circuit on final approach: EOD already passed", function()
     near(r.B747BR_totalDistance, 8.41, 0.05, "remaining distance on final")
 end)
 
-case("normal route: EOD and distances unchanged", function()
+case("normal route: EOD unchanged", function()
     local r = new_runtime(normal(0), 1, 2, 3)
     settle(r)
     equal(r.B747BR_eod_index, 5, "EOD is the FAF")
-    near(r.B747BR_totalDistance, 245.52, 0.05, "remaining distance")
-    near(r.B747BR_tod, 120.69, 0.01, "T/D distance")
+    near(r.B747BR_totalDistance, 240.12, 0.05, "remaining distance")
+    near(r.B747BR_tod, NORMAL_TOD, 0.01, "T/D distance")
 end)
 
 case("route_eod_index: whole route inside 10 NM", function()
@@ -280,10 +300,10 @@ end)
 
 -- The T/D on the leg to the active fix belongs to that fix, not to a passed
 -- entry that still carries a route altitude.
-case("circuit, IAF active with the T/D 35 NM ahead, route altitude 31000", function()
+case("circuit, IAF active with the T/D 25 NM ahead, route altitude 31000", function()
     local r = new_runtime(circuit(31000), 3.5, 1, 7)
     settle(r)
-    near(r.getDistance(3.5, 1, r.B747BR_todLat, r.B747BR_todLong), 35, 0.5, "T/D ahead")
+    near(r.getDistance(3.5, 1, r.B747BR_todLat, r.B747BR_todLong), 24.74, 0.5, "T/D ahead")
     check_iaf_path(r, "route [9]=31000, IAF active")
 end)
 
@@ -299,14 +319,14 @@ case("circuit, IAF active, route altitude 0, before and past the T/D", function(
     check_iaf_path(r, "route [9]=0, past the T/D")
 end)
 
--- With the route altitude at CRZ ALT the path is the one built before.
+-- The route altitude does not change the path into the IAF.
 case("normal route: IAF path", function()
     for _, route_alt in ipairs({0, 31000, 35000}) do
         local r = new_runtime(normal(route_alt), 1, 2, 3)
         settle(r)
         local iaf = profile_point(r, 1, 5.75, 3000)
         check(iaf ~= nil, "IAF in profile "..r.B747BR_vnavProfile)
-        near(iaf[5], 319.11, 0.5, "normal route [9]="..route_alt.." IAF gradient")
+        near(iaf[5], 290, 0.5, "normal route [9]="..route_alt.." IAF gradient")
     end
 end)
 
@@ -339,7 +359,7 @@ for _, approach_alts in ipairs({true, false}) do
             ..tostring(approach_alts), function()
         local r = new_runtime(circuit(0, approach_alts), 1, 1.2, 4)
         r.simDR_autopilot_altitude_ft = 12000
-        r.B747BR_totalDistance, r.B747BR_tod = 713.40, 120.69
+        r.B747BR_totalDistance, r.B747BR_tod = 708.00, 125.35
         equal(r.VNAV_NEXT_ALT(1, r.route), 35000, "climb target")
     end)
 end
@@ -347,7 +367,8 @@ end
 case("circuit: setDistances gives the climb distance used above", function()
     local r = new_runtime(circuit(0), 1, 1.2, 4)
     settle(r)
-    near(r.B747BR_totalDistance, 713.40, 0.05, "remaining distance after takeoff")
+    near(r.B747BR_totalDistance, 708.00, 0.05, "remaining distance after takeoff")
+    near(r.B747BR_tod, 125.35, 0.01, "T/D distance after takeoff")
 end)
 
 case("normal route climb targets unchanged", function()
@@ -370,6 +391,148 @@ case("circuit descent: next descent constraint unchanged", function()
     r.B747BR_totalDistance, r.B747BR_tod = 100, 120.69
     r.B747DR_ap_inVNAVdescent = 1
     equal(r.VNAV_NEXT_ALT(1, r.route), 3000, "descent target is the IAF")
+end)
+
+-- [c-4] T/D from the descent constraints, end of descent altitude, and the
+-- remaining distance without the leg after the end of descent
+
+-- The T/D was (CRZ ALT - [3] of the end of descent) / 290 before the
+-- destination: it ignored the descent constraints and read [3], which is a
+-- frequency on a navaid. Now each descent constraint must be reached at
+-- 290 ft/nm from CRZ ALT, and the end of descent altitude is its route
+-- altitude, or the destination elevation.
+case("normal route: T/D from the IAF 15 NM before the destination", function()
+    local r = new_runtime(normal(0), 1, 2, 3)
+    settle(r)
+    check(r.B747BR_tod >= 15 + 32000 / 290, "T/D reaches 3000 ft at the IAF: "..r.B747BR_tod)
+    near(r.B747BR_tod, NORMAL_TOD, 0.01, "T/D distance")
+end)
+
+-- ORIG, RW09, WPT1, a VOR 9 NM before the destination as the end of descent,
+-- RW27 and DEST; no altitude constraints.
+local function vor_route(vor_alt, dest_elevation)
+    local route = {
+        fix("ORIG", 1, 1, 0, 1), fix("RW09", 1, 1.01), fix("WPT1", 1, 3.5),
+        fix("VOR", 1, 5.85, vor_alt, 4), fix("RW27", 1, 5.99), fix("DEST", 1, 6, dest_elevation, 1)
+    }
+    route[4][3] = 11330   -- 113.30 MHz, not an altitude
+    return route
+end
+
+case("end of descent at a VOR: [3] is not its altitude", function()
+    local r = new_runtime(vor_route(0, 0), 1, 2, 3)
+    settle(r)
+    equal(r.B747BR_eod_index, 4, "EOD is the VOR")
+    near(r.B747BR_tod, 35000 / 290, 0.01, "T/D to the destination elevation 0")
+
+    r = new_runtime(vor_route(0, 1000), 1, 2, 3)
+    settle(r)
+    near(r.B747BR_tod, 34000 / 290, 0.01, "T/D to the destination elevation 1000 ft")
+
+    r = new_runtime(vor_route(3000, 0), 1, 2, 3)
+    settle(r)
+    near(r.B747BR_tod, along({{1, 5.85}, {1, 6}}) + 32000 / 290, 0.01,
+        "T/D to the EOD route altitude 3000 ft at the VOR")
+
+    -- CRZ ALT only 1,500 ft above the EOD altitude: 5.2 NM from the destination
+    -- would put the T/D after the VOR 9 NM out
+    r = new_runtime(vor_route(2000, 0), 1, 2, 3)
+    r.B747BR_cruiseAlt = 3500
+    settle(r)
+    near(r.B747BR_tod, along({{1, 5.85}, {1, 6}}) + 1500 / 290, 0.01,
+        "T/D before the VOR with CRZ ALT 3500 ft")
+end)
+
+case("remaining distance ends at the end of descent and the destination", function()
+    local r = new_runtime(normal(0), 1, 2, 3)
+    settle(r)
+    -- WPT1, IAF and FAF (the EOD), then straight to DEST; not FAF-RW27 as well
+    near(r.B747BR_totalDistance, along({{1, 2}, {1, 3.5}, {1, 5.75}, {1, 5.9}, {1, 6}}), 0.01,
+        "normal route remaining distance")
+    r = new_runtime(circuit(0), 2.5, 4, 5)
+    settle(r)
+    near(r.B747BR_totalDistance, along({{2.5, 4}, {4, 4}, {4, 1}, {1.25, 1}, {1.1, 1}, {1, 1}}), 0.01,
+        "circuit remaining distance")
+end)
+
+case("descent constraint farther out moves the T/D back", function()
+    local route = normal(0)
+    table.insert(route, 4, fix("STAR", 1, 4.33, 24000))
+    local r = new_runtime(route, 1, 2, 3)
+    settle(r)
+    -- FL240 about 100 NM before the destination needs 11000 ft at 290 ft/nm
+    near(r.B747BR_tod, along({{1, 4.33}, {1, 5.75}, {1, 5.9}, {1, 6}}) + 11000 / 290, 0.01,
+        "T/D from the FL240 constraint")
+end)
+
+-- A route altitude before the T/D is cruise, not descent: the old CRZ ALT left
+-- in [9] after a step climb must not bring the T/D forward to it.
+case("route cruise altitude in [9] is not a descent constraint", function()
+    local r = new_runtime(circuit(31000), 2.5, 4, 5)
+    settle(r)
+    near(r.B747BR_tod, CIRCUIT_TOD, 0.01, "circuit [9]=31000 T/D")
+    r = new_runtime(normal(31000), 1, 2, 3)
+    settle(r)
+    near(r.B747BR_tod, NORMAL_TOD, 0.01, "normal route [9]=31000 T/D")
+end)
+
+-- A SID constraint is a climb constraint. On a 180 NM route the 5000 ft SID
+-- fix lies within the T/D distance of the destination, but closer to the
+-- departure; taken as a descent constraint it would put the T/D behind the
+-- aircraft at brake release.
+case("SID climb constraint is not a descent constraint", function()
+    local route = {
+        fix("ORIG", 1, 1, 0, 1), fix("RW09", 1, 1.01), fix("SID1", 1, 1.5),
+        fix("SID2", 1, 2.17, 5000), fix("IAF", 1, 3.75, 3000), fix("FAF", 1, 3.9, 2000),
+        fix("RW27", 1, 3.99), fix("DEST", 1, 4, 0, 1)
+    }
+    local r = new_runtime(route, 1, 1, 2)
+    settle(r)
+    equal(r.B747BR_eod_index, 6, "EOD is the FAF")
+    near(r.B747BR_tod, along({{1, 3.75}, {1, 3.9}, {1, 4}}) + 32000 / 290, 0.01, "T/D from the IAF")
+    check(r.B747BR_totalDistance - r.B747BR_tod > 10,
+        "VNAV climb branch available at brake release: rem-T/D "
+        ..(r.B747BR_totalDistance - r.B747BR_tod))
+
+    route = normal(0)
+    table.insert(route, 3, fix("SID1", 1, 1.4))
+    table.insert(route, 4, fix("SID2", 1, 1.6, 5000))
+    r = new_runtime(route, 1, 1, 2)
+    settle(r)
+    near(r.B747BR_tod, NORMAL_TOD, 0.01, "normal route with a SID constraint")
+end)
+
+-- Passed constraints still count: the aircraft is already below CRZ ALT
+-- there, so dropping them would move the T/D after the aircraft and turn
+-- rem - T/D positive in the descent (VNAV_modeSwitch climbs above 10 NM).
+case("T/D does not move as the descent constraints are passed", function()
+    local positions = {
+        {"ground", 1, 1, 3}, {"cruise", 2.5, 4, 5}, {"IAF active", 3.5, 1, 7},
+        {"FAF active", 1.2, 1, 8}, {"final", 1.05, 1, 9}
+    }
+    for i = 1, #positions do
+        local p = positions[i]
+        local r = new_runtime(circuit(0), p[2], p[3], p[4])
+        settle(r)
+        near(r.B747BR_tod, CIRCUIT_TOD, 0.01, p[1].." T/D")
+    end
+end)
+
+case("route_tod_distance", function()
+    -- returns the T/D distance and the end of descent altitude
+    local tod, eod_alt = afds.route_tod_distance(vor_route(0, 1000), 4, 35000, distance_nm)
+    near(tod, 34000 / 290, 1e-9, "T/D to the destination elevation")
+    equal(eod_alt, 1000, "destination elevation")
+    tod, eod_alt = afds.route_tod_distance(vor_route(3000, 1000), 4, 35000, distance_nm)
+    equal(eod_alt, 3000, "EOD route altitude")
+    -- a route altitude at or above CRZ ALT inside the descent is no constraint
+    local route = normal(0)
+    table.insert(route, 4, fix("HIGH", 1, 5, 36000))
+    near(afds.route_tod_distance(route, 6, 35000, distance_nm), NORMAL_TOD, 1e-9, "36000 ft fix")
+    -- no CRZ ALT: no T/D before the destination, as before
+    check(afds.route_tod_distance(normal(0), 5, 0, distance_nm) <= 0, "no CRZ ALT")
+    check(afds.route_tod_distance(vor_route(2000, 0), 4, 0, distance_nm) <= 0,
+        "no CRZ ALT with an EOD route altitude 9 NM out")
 end)
 
 if #failures > 0 then

@@ -75,9 +75,16 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   descent constraint starting from CRZ ALT at the T/D (also once the T/D is
   behind), and VNAV climb targets judged by the along-route distance so the
   arrival constraints are not climbed to. Ordinary routes keep their end of
-  descent, distances, T/D and climb targets, also with a missed approach
-  whose vectors point X-Plane puts hundreds of NM away (left out after the
-  arrival runway).
+  descent and climb targets. On every route the T/D reaches each descent
+  constraint and the end of descent altitude (its route altitude or the
+  destination elevation, not the navaid frequency in [3]) at 290 ft/nm, so
+  the path into the IAF is 290 ft/nm; route altitudes before the T/D (an older
+  CRZ ALT) and SID constraints nearer the departure are not descent
+  constraints, and the T/D stays put as the constraints are passed. The
+  remaining distance ends at the end of descent and then runs straight to the
+  destination, without the leg after the end of descent, also with a missed
+  approach whose vectors point X-Plane puts hundreds of NM away (left out
+  after the arrival runway).
 - `approach_capture_test.lua`: the APP switch, APP arming and approach monitor
   together - LOC capturing only within 2.0 dots while closing (or settled
   within 1.0 dot) on an intercept of 90 degrees or less, a saturated or
