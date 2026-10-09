@@ -274,6 +274,33 @@ local slow_pitch, slow_severe = controls.limit_speed_pitch_target(9.0, 10.0,
 assert_near(slow_pitch, 9.0, 0.0001, "initial climb 22 kt slow may still pitch down")
 assert_equal(slow_severe, true, "initial climb 22 kt slow is a severe underspeed")
 
+-- [g-2] Accelerating to a raised speed target (flap retraction +20 kt, 250 to
+-- 326 kt at 10,000 ft) is latched: set when the target rises 5 kt or more
+-- above the reference while the speed is above the minimum safe speed, kept
+-- until the speed is within 5 kt of the target. Arguments: latched, reference
+-- target, target, IAS, minimum safe speed.
+assert_equal(controls.update_speed_target_acceleration(false, 250, 326, 249, 225), true,
+    "a 76 kt target step latches the acceleration")
+assert_equal(controls.update_speed_target_acceleration(true, 326, 326, 300, 225), true,
+    "the latch holds while the speed is more than 5 kt below the target")
+assert_equal(controls.update_speed_target_acceleration(true, 326, 326, 322, 225), false,
+    "the latch releases within 5 kt of the target")
+assert_equal(controls.update_speed_target_acceleration(false, 155.2, 210, 130, 160), false,
+    "a target step below the minimum safe speed is a real underspeed, not latched")
+assert_equal(controls.update_speed_target_acceleration(false, 250, 254, 240, 225), false,
+    "a target change under 5 kt does not latch")
+-- While latched only the minimum safe speed (capped at target - 5 kt) is a
+-- severe underspeed, so the climb guard stays and the aircraft accelerates
+-- without descending.
+local latched_pitch, latched_severe = controls.limit_speed_pitch_target(2.6, 2.7,
+    controls.VERTICAL_DIRECTION_CLIMB, 50, 280, 326, 225, 365, 0.3, true)
+assert_near(latched_pitch, 2.7, 0.0001, "latched acceleration keeps the climb guard 46 kt slow")
+assert_equal(latched_severe, false, "latched acceleration 46 kt slow is not a severe underspeed")
+latched_pitch, latched_severe = controls.limit_speed_pitch_target(2.6, 2.7,
+    controls.VERTICAL_DIRECTION_CLIMB, 50, 220, 326, 225, 365, 0.3, true)
+assert_near(latched_pitch, 2.6, 0.0001, "latched acceleration below the minimum safe speed may pitch down")
+assert_equal(latched_severe, true, "latched acceleration below the minimum safe speed is severe")
+
 assert_near(controls.limit_speed_pitch_target(5.2, 4.9, controls.VERTICAL_DIRECTION_DESCENT,
     -800, 260, 250, 160, 340, 0.3), 5.0, 0.0001, "descent target cannot pitch above envelope")
 assert_near(controls.limit_speed_pitch_target(4.1, 4.0, controls.VERTICAL_DIRECTION_DESCENT,
@@ -293,5 +320,67 @@ assert_equal(controls.roll_output_response_sec(1, 0.1, 0.2, false),
     controls.ROLL_OUTPUT_SMALL_RESPONSE_SEC, "small roll output damping")
 assert_equal(controls.roll_output_response_sec(15, 0.1, -0.8, false),
     controls.ROLL_OUTPUT_REVERSAL_RESPONSE_SEC, "roll reversal smoothing")
+
+-- [g-2] The production ap_director_pitch (hydraulics_override.lua) passes the
+-- latch to the limiter. ap_director_pitch and its file locals are loaded with
+-- mocked datarefs; B747_afds_controls and the pitch-target records are file
+-- locals above the slice, so here they are globals of the environment.
+local HYD = "plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/"
+local function slice(path, first_marker, last_marker)
+    local file = assert(io.open(path))
+    local source = file:read("*a")
+    file:close()
+    local first = assert(source:find(first_marker, 1, true), first_marker)
+    local last = assert(source:find(last_marker, first, true), last_marker)
+    return source:sub(first, last - 1)
+end
+local director_source = slice(HYD .. "B747.19.xt.hydraulics_override.lua",
+    "local last_simDR_ind_airspeed_kts_pilot=0", "local filteredDirectorRoll=0")
+
+-- VNAV SPD climb through 10,000 ft toward FL350 at 250 kt, +50 fpm.
+local director = setmetatable({
+    print = function() end,
+    B747_afds_controls = controls,
+    B747_interpolate_value = function(current, target) return target end,
+    debug_flight_directors = 0, B747DR_ap_autoland = 0, B744DR_autolandPitch = 0,
+    simDR_AHARS_pitch_heading_deg_pilot = 2.7, simDR_flight_director_pitch = 0,
+    simDR_autopilot_TOGA_pitch_deg = 2.7,
+    B747DR_airspeed_Vmc = 215, B747DR_airspeed_Vmax = 365,
+    simDR_ind_airspeed_kts_pilot = 250, simDR_autopilot_airspeed_kts = 250,
+    simDR_vvi_fpm_pilot = 50, B747DR_alt_capture_window = 400,
+    simDR_pressureAlt1 = 10100, simDR_autopilot_altitude_ft = 35000,
+    simDR_autopilot_hold_altitude_ft = 35000, simDR_autopilot_alt_hold_status = 0,
+    simDR_autopilot_flch_status = 2, simDR_autopilot_vs_status = 0,
+    B747_afds_pitch_target_before_blend = 0, B747_afds_pitch_target_after_blend = 0,
+    simDRTime = 100
+}, {__index = _G})
+setfenv(assert(loadstring(director_source)), director)()
+
+-- One director update 0.3 s after the previous one; the attitude follows the
+-- raw pitch target, as the servo loop would. Returns the raw pitch target.
+local function director_update(pitch_mode)
+    director.simDRTime = director.simDRTime + 0.3
+    director.simDR_AHARS_pitch_heading_deg_pilot = director.B747_afds_pitch_target_before_blend
+    director.ap_director_pitch(pitch_mode)
+    return director.B747_afds_pitch_target_before_blend
+end
+director.ap_director_pitch(1) -- first update only resets the director
+director_update(1)              -- TO/GA sets the pitch target to 2.7 degrees
+for _ = 1, 3 do director_update(4) end
+assert_near(director.B747_afds_pitch_target_before_blend, 2.7, 0.0001, "VNAV SPD on speed holds 2.7 degrees")
+director.simDR_autopilot_airspeed_kts = 326
+local lowest_pitch = 2.7
+for _ = 1, 10 do
+    director.simDR_ind_airspeed_kts_pilot = director.simDR_ind_airspeed_kts_pilot + 0.5
+    lowest_pitch = math.min(lowest_pitch, director_update(4))
+end
+assert_near(lowest_pitch, 2.7, 0.0001, "250 to 326 kt target step at +50 fpm does not pitch down")
+-- The latch keeps only the descent guard: climbing faster than +100 fpm the
+-- director still trades climb rate for speed.
+director.simDR_vvi_fpm_pilot = 600
+director.simDR_ind_airspeed_kts_pilot = director.simDR_ind_airspeed_kts_pilot + 0.5
+local before_trade = director.B747_afds_pitch_target_before_blend
+assert(director_update(4) < before_trade - 0.05, "latched acceleration at +600 fpm still pitches down")
+tests_run = tests_run + 1
 
 print("AFDS responsiveness tests passed: " .. tests_run)

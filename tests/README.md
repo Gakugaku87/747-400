@@ -118,7 +118,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   and roll filters) and the speed-on-pitch limiter - the severe underspeed
   threshold with the minimum safe speed capped at target - 5 kt, so an
   initial climb on V2 + 10 kt with takeoff flaps (Vmc + 10 kt above it)
-  keeps the climb guard and only a real underspeed may pitch down.
+  keeps the climb guard and only a real underspeed may pitch down; and the
+  acceleration latch for a raised speed target (flap retraction, 250 to the
+  ECON climb speed at 10,000 ft), which keeps the climb guard until the speed
+  is within 5 kt of the target, also in the production flight director, while
+  a real underspeed below the minimum safe speed is never latched.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, climb-speed

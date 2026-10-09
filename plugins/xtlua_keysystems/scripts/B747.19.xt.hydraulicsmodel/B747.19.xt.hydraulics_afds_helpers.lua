@@ -63,15 +63,22 @@ end
 
 function afds_controls.limit_speed_pitch_target(requested_target_deg, previous_target_deg, vertical_direction,
         vertical_speed_fpm, actual_speed_kts, target_speed_kts, min_safe_speed_kts, max_safe_speed_kts,
-        elapsed_sec)
+        elapsed_sec, accelerating_to_target)
     if type(previous_target_deg) ~= "number" then previous_target_deg = requested_target_deg or 0 end
     if type(requested_target_deg) ~= "number" then requested_target_deg = previous_target_deg end
     vertical_speed_fpm = tonumber(vertical_speed_fpm) or 0
 
+    -- While accelerating to a raised target (update_speed_target_acceleration)
+    -- the target - 15 kt rule is not used, so the climb guard stays.
     local severe_underspeed = false
     if type(actual_speed_kts) == "number" and type(target_speed_kts) == "number" then
-        severe_underspeed = actual_speed_kts
-            <= afds_controls.severe_underspeed_threshold(target_speed_kts, min_safe_speed_kts)
+        if accelerating_to_target then
+            severe_underspeed = actual_speed_kts
+                <= afds_controls.accelerating_underspeed_threshold(target_speed_kts, min_safe_speed_kts)
+        else
+            severe_underspeed = actual_speed_kts
+                <= afds_controls.severe_underspeed_threshold(target_speed_kts, min_safe_speed_kts)
+        end
     end
 
     local severe_overspeed = type(actual_speed_kts) == "number"
@@ -267,6 +274,44 @@ function afds_controls.altitude_hold_release_allowed(pitch_mode, flch_status, vs
     if pitch_mode == 7 and vs_status ~= 2 then return false end
     if pitch_mode == 4 and flch_status ~= 2 and vs_status ~= 2 then return false end
     return true
+end
+
+-- [g-2] Acceleration to a raised speed target
+
+-- The VNAV speed target steps up (+20 kt at flap retraction, 250 to the ECON
+-- climb speed above 10,000 ft) and a step of more than 15 kt used to be a
+-- severe underspeed at once, so the speed-on-pitch modes dropped the climb
+-- guard and descended at climb thrust. A rise of at least 5 kt is latched as
+-- an acceleration until the speed is within 5 kt of the target.
+afds_controls.SPEED_TARGET_ACCELERATION_STEP_KTS = 5.0
+afds_controls.SPEED_TARGET_ACCELERATION_RELEASE_KTS = 5.0
+
+-- Whether the aircraft is accelerating to a raised target. The latch is set
+-- when the target is at least 5 kt above the reference target (the previous
+-- target, or the speed when the mode engages) and the speed is above the
+-- minimum safe speed, so a real underspeed is never latched. It is kept until
+-- the speed is within 5 kt of the target.
+function afds_controls.update_speed_target_acceleration(latched, reference_target_kts, target_speed_kts,
+        actual_speed_kts, min_safe_speed_kts)
+    if type(target_speed_kts) ~= "number" or type(actual_speed_kts) ~= "number" then return false end
+    if actual_speed_kts >= target_speed_kts - afds_controls.SPEED_TARGET_ACCELERATION_RELEASE_KTS then
+        return false
+    end
+    if latched == true then return true end
+    return type(reference_target_kts) == "number" and type(min_safe_speed_kts) == "number"
+        and target_speed_kts - reference_target_kts >= afds_controls.SPEED_TARGET_ACCELERATION_STEP_KTS
+        and actual_speed_kts > min_safe_speed_kts
+end
+
+-- Highest speed that counts as a severe underspeed while accelerating to a
+-- raised target: the minimum safe speed, capped at target - 5 kt. Without a
+-- minimum safe speed the usual threshold applies.
+function afds_controls.accelerating_underspeed_threshold(target_speed_kts, min_safe_speed_kts)
+    if type(min_safe_speed_kts) ~= "number" or min_safe_speed_kts <= 0 then
+        return afds_controls.severe_underspeed_threshold(target_speed_kts, min_safe_speed_kts)
+    end
+    return math.min(min_safe_speed_kts,
+        target_speed_kts - afds_controls.SPEED_PITCH_SEVERE_UNDERSPEED_FLOOR_MARGIN_KTS)
 end
 
 return afds_controls
