@@ -65,7 +65,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   descent constraint starting from CRZ ALT at the T/D (also once the T/D is
   behind), and VNAV climb targets judged by the along-route distance so the
   arrival constraints are not climbed to. Ordinary routes keep their end of
-  descent, distances, T/D and climb targets.
+  descent, distances, T/D and climb targets, also with a missed approach
+  whose vectors point X-Plane puts hundreds of NM away (left out after the
+  arrival runway).
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, climb-speed

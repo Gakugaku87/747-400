@@ -365,20 +365,38 @@ end
 -- On a route that starts and ends at the same airport the departure entries
 -- are inside the radius too, and must not end the route there. If no entry
 -- qualifies, or the whole route is inside the radius, the destination is used.
+-- The missed approach after the arrival runway (the last runway entry inside
+-- the radius with route outside it before) is left out: X-Plane ends a
+-- missed approach's vectors leg ("(VECT)") hundreds of NM away, which would
+-- otherwise be the farthest point and put the EOD at the destination.
 function afds.route_eod_index(route, distance_fn, radius_nm)
     local count = #route
     if count < 2 or type(distance_fn) ~= "function" then return count end
     local destination = route[count]
     local distances = {}
-    local farthest_index, farthest_nm = 1, -1
     for i = 1, count - 1 do
         distances[i] = distance_fn(route[i][5], route[i][6], destination[5], destination[6])
+    end
+    local last = count - 1
+    for i = count - 1, 1, -1 do
+        if string.sub(tostring(route[i][8] or ""), 1, 2) == "RW" and distances[i] < radius_nm then
+            for k = 1, i - 1 do
+                if distances[k] >= radius_nm then
+                    last = i
+                    break
+                end
+            end
+            break
+        end
+    end
+    local farthest_index, farthest_nm = 1, -1
+    for i = 1, last do
         if distances[i] > farthest_nm then
             farthest_index, farthest_nm = i, distances[i]
         end
     end
     if farthest_nm < radius_nm then return count end
-    for i = farthest_index + 1, count - 1 do
+    for i = farthest_index + 1, last do
         if distances[i] < radius_nm then return i end
     end
     return count

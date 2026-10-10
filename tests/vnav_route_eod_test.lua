@@ -209,6 +209,43 @@ case("route_eod_index: distant T-P first", function()
         "EOD found without a departure airport at the start")
 end)
 
+-- The missed approach after the arrival runway: X-Plane ends its vectors leg
+-- ("(VECT)", EHAM ILS 18R's missed approach on 299 deg after AM624) about
+-- 640 NM away (2026-10-10, EIDW to EHAM: the 747's remaining distance 1,732 NM
+-- for a 440 NM route, its T/D about 1,300 NM late). That point is no route's
+-- farthest point, and the EOD stays before the runway.
+local function with_far_missed_approach()
+    return {
+        fix("ORIG", 1, 1, 0, 1), fix("RW09", 1, 1.01), fix("WPT1", 1, 3.5),
+        fix("IAF", 1, 5.75, 3000), fix("FAF", 1, 5.9, 2000), fix("RW27", 1, 5.99, 50),
+        fix("(500)", 1, 6.02, 500, 2048), fix("MAP1", 1.1, 6.1, 2000), fix("(VECT)", 6, 15, 2000, 2048),
+        fix("DEST", 1, 6, 0, 1)
+    }
+end
+
+case("route_eod_index: a missed approach's distant vectors point", function()
+    equal(afds.route_eod_index(with_far_missed_approach(), distance_nm, 10), 5,
+        "the EOD is the FAF, as without the missed approach")
+end)
+
+case("setDistances: a missed approach's distant vectors point", function()
+    local r = new_runtime(with_far_missed_approach(), 1, 2, 3)
+    settle(r)
+    local plain = new_runtime(normal(0), 1, 2, 3)
+    settle(plain)
+    equal(r.B747BR_eod_index, 5, "EOD is the FAF")
+    near(r.B747BR_totalDistance, plain.B747BR_totalDistance, 0.05,
+        "remaining distance as on the same route without the missed approach")
+end)
+
+case("route_eod_index: a SID's runway on a route back without an approach", function()
+    -- the departure runway is near the destination too, but nothing of the route
+    -- lies before it: the EOD is still found after the farthest point
+    local route = circuit(0)
+    table.remove(route, 9)      -- no arrival runway
+    equal(afds.route_eod_index(route, distance_nm, 10), 8, "EOD is the FAF")
+end)
+
 case("route_eod_index: normal routes keep the old EOD", function()
     local routes = {
         {normal(0), 5},
