@@ -1476,6 +1476,9 @@ function after_physics()
   end
   if systemsWarmedUp==false then return end
   local refreshmins=B747DR_airspeed_Vmc
+  -- read at a CRZ ALT entry or change only: XTLua gives 0 for a dataref's first read
+  local refreshTransitionAlt=simDR_fms_transition_alt
+  local refreshSyncFault=B747DR_crzalt_sync_fault
   if didFlightInit==false and simDR_startup_running == 1 and simDR_onGround==0 then
 	print("activate AP stuff")
 	

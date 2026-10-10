@@ -92,6 +92,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   G/S capturing only after LOC with LOC and G/S both within 1.5 dots and
   never in the LOC capture frame, APP leaving the MCP heading alone, and LNAV
   still steering (and reselecting the heading mode) while LOC is armed.
+- `xtlua_warm_reads_test.lua`: XTLua gives 0 for the first read of a
+  dataref in a script module, so the datarefs that a fix first reads at a
+  critical moment are read every frame in the module's per-frame function
+  (the "local refresh...=" reads): the native transition altitude and the CRZ
+  ALT sync fault flag in the FMS after_physics.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, climb-speed
