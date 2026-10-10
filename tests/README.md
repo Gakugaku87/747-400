@@ -141,7 +141,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   unit together with the speed mode (a Mach target limited to Mmo - 0.01, a
   knots target converted to Mach at the current altitude by the button and
   the changeover), instead of leaving the old value in the new unit until
-  the 0.25 s IAS update.
+  the 0.25 s IAS update; the button and the changeover do so from the speed
+  and unit they decide, also when the last-airspeed and is-Mach datarefs
+  read back their old values in that frame.
 - `afds_fma_none_pitch_memory_test.lua`: the production flight-director
   pitch target while no pitch mode is active (the FMA shows NONE for about
   0.5 s after an ALT selector push), using the recorded TST744L step climb -

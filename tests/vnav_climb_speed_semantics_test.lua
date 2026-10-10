@@ -270,4 +270,59 @@ ap.B747_ap_ias_mach_mode()
 assert(ap.simDR_autopilot_airspeed_is_mach == 0, "descent above 310 kt did not change over to knots")
 near_ap_target(320, "automatic change to knots did not write the knots target")
 
+-- The same with the two datarefs these calls write and then use,
+-- laminar/B747/autopilot/ap_monitor/last_airspeed and
+-- sim/cockpit2/autopilot/airspeed_is_mach, reading back their old values
+-- until the next frame (sync), as an XTLua dataref might (its first read
+-- gives 0): the new-unit target must come from the speed and unit just
+-- decided, not from those datarefs read back.
+local synced = {B747DR_lastap_dial_airspeed = 0, simDR_autopilot_airspeed_is_mach = 0}
+local pending = {}
+for key in pairs(synced) do rawset(ap, key, nil) end
+setmetatable(ap, {
+    __index = function(_, key)
+        if synced[key] ~= nil then return synced[key] end
+        return _G[key]
+    end,
+    __newindex = function(t, key, value)
+        if synced[key] ~= nil then pending[key] = value return end
+        rawset(t, key, value)
+    end})
+local function sync()
+    for key, value in pairs(pending) do synced[key] = value end
+    pending = {}
+end
+ap.B747DR_ap_ias_mach_window_open = 1
+ap.B747DR_switchingIASMode = 0
+ap.simDR_airspeed_mach = 0.83
+ap.simDR_vvi_fpm_pilot = 1500
+ap.simDR_autopilot_airspeed_kts = 300
+ap.simDR_autopilot_airspeed_kts_mach = 300
+ap.B747_ap_knots_mach_toggle_CMDhandler(0, 0)
+sync()
+assert(ap.simDR_autopilot_airspeed_is_mach == 1, "IAS/MACH button (stale read-back) did not select Mach")
+near_ap_target(mach_300kt_fl330, "IAS/MACH button to Mach with a stale read-back did not write the Mach of 300 kt")
+ap.B747DR_ap_ias_mach_window_open = 1
+ap.B747DR_switchingIASMode = 0
+ap.simDR_autopilot_airspeed_kts_mach = mach_300kt_fl330
+ap.B747_ap_knots_mach_toggle_CMDhandler(0, 0)
+sync()
+assert(ap.simDR_autopilot_airspeed_is_mach == 0, "IAS/MACH button (stale read-back) did not select knots")
+near_ap_target(300, "IAS/MACH button to knots with a stale read-back did not write 300 kt")
+ap.B747DR_switchingIASMode = 0
+ap.simDR_airspeed_mach = 0.845
+ap.B747_ap_ias_mach_mode()
+sync()
+assert(ap.simDR_autopilot_airspeed_is_mach == 1, "climb above M.84 (stale read-back) did not change over to Mach")
+near_ap_target(mach_300kt_fl330, "automatic change to Mach with a stale read-back did not write the Mach of 300 kt")
+ap.B747DR_switchingIASMode = 0
+ap.simDR_airspeed_mach = 0.80
+ap.simDR_vvi_fpm_pilot = -1500
+ap.simDR_autopilot_airspeed_kts = 320
+ap.simDR_autopilot_airspeed_kts_mach = 0.825
+ap.B747_ap_ias_mach_mode()
+sync()
+assert(ap.simDR_autopilot_airspeed_is_mach == 0, "descent above 310 kt (stale read-back) did not change over to knots")
+near_ap_target(320, "automatic change to knots with a stale read-back did not write 320 kt")
+
 print("VNAV climb-speed semantic tests passed")
