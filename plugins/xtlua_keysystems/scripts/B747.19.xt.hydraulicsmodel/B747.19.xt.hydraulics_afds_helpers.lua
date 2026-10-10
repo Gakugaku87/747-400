@@ -347,13 +347,23 @@ afds_controls.CLIMB_SPEED_PITCH_ACCEL_BAND_KTS_PER_SEC = 0.1
 afds_controls.CLIMB_SPEED_PITCH_GAIN_DEG_PER_KT = 0.6
 afds_controls.CLIMB_SPEED_PITCH_MAX_RATE_DEG_PER_SEC = 0.5
 afds_controls.CLIMB_SPEED_PITCH_ATTITUDE_LAG_DEG = 0.5
+-- Below the target the pitch comes down only while the aircraft climbs at
+-- more than +300 fpm, and from there at most 0.5 deg/s per 1,000 fpm above
+-- it: at altitude climb thrust leaves little to accelerate with (FL330,
+-- 282 t: about +700 fpm at a steady speed), and the wanted acceleration was
+-- taken from a descent until the climb guard pulled the nose back up at
+-- 1 deg/s (2026-10-10 TST744L step to FL350: -851 fpm, then 0.8 -> 7.4 deg
+-- and +3,800 fpm).
+afds_controls.CLIMB_SPEED_PITCH_MIN_CLIMB_FPM = 300.0
+afds_controls.CLIMB_SPEED_PITCH_DOWN_RATE_DEG_PER_SEC_PER_KFPM = 0.5
 
 -- Pitch target for a speed-on-pitch climb more than 2 kt from the target, or
 -- nil to leave it to the speed law. speed_change_kts is the change since the
 -- previous update, elapsed_sec the time since it, pitch_error_deg the
--- attitude minus the previous target.
+-- attitude minus the previous target, vertical_speed_fpm the vertical speed
+-- (nil: no climb floor).
 function afds_controls.climb_speed_pitch_target(previous_target_deg, speed_change_kts, elapsed_sec,
-        actual_speed_kts, target_speed_kts, vertical_direction, pitch_error_deg)
+        actual_speed_kts, target_speed_kts, vertical_direction, pitch_error_deg, vertical_speed_fpm)
     if vertical_direction ~= afds_controls.VERTICAL_DIRECTION_CLIMB then return nil end
     if type(previous_target_deg) ~= "number" or type(speed_change_kts) ~= "number"
         or type(actual_speed_kts) ~= "number" or type(target_speed_kts) ~= "number" then
@@ -373,9 +383,16 @@ function afds_controls.climb_speed_pitch_target(previous_target_deg, speed_chang
     pitch_error_deg = tonumber(pitch_error_deg) or 0
     local lag = afds_controls.CLIMB_SPEED_PITCH_ATTITUDE_LAG_DEG
     local rate
+    local max_down_rate = afds_controls.CLIMB_SPEED_PITCH_MAX_RATE_DEG_PER_SEC
+    vertical_speed_fpm = tonumber(vertical_speed_fpm)
+    if vertical_speed_fpm then
+        max_down_rate = math.min(max_down_rate, math.max(0,
+            vertical_speed_fpm - afds_controls.CLIMB_SPEED_PITCH_MIN_CLIMB_FPM) / 1000
+            * afds_controls.CLIMB_SPEED_PITCH_DOWN_RATE_DEG_PER_SEC_PER_KFPM)
+    end
     if acceleration < low then
-        if pitch_error_deg >= lag then return previous_target_deg end
-        rate = -afds_controls.CLIMB_SPEED_PITCH_GAIN_DEG_PER_KT * (low - acceleration)
+        if pitch_error_deg >= lag or max_down_rate <= 0 then return previous_target_deg end
+        rate = -math.min(afds_controls.CLIMB_SPEED_PITCH_GAIN_DEG_PER_KT * (low - acceleration), max_down_rate)
     elseif acceleration > high then
         if pitch_error_deg <= -lag then return previous_target_deg end
         rate = afds_controls.CLIMB_SPEED_PITCH_GAIN_DEG_PER_KT * (acceleration - high)

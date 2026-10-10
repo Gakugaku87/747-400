@@ -165,9 +165,13 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   retraction the flaps are up below 6,500 ft and 250 kt is not passed by more
   than 6 kt; the 250 to 326 kt rise at 10,000 ft is reached within 150 s
   without descending; the same with slower, more oscillatory or faster
-  attitude loops and 15 % less or more thrust. Also the climb speed pitch
-  step itself (the acceleration wanted, its band, the rate limit, the
-  attitude interlock, and no change within 2 kt, level or descending).
+  attitude loops and 15 % less or more thrust; and a step climb from FL330
+  with the M .829 target above M .816 (clean polar and thrust fitted above
+  FL250 to the 2026-10-10 TST744L flight, the fitted attitude loop) without
+  descending, the attitude within 2 deg and the target reached within 120 s.
+  Also the climb speed pitch step itself (the acceleration wanted, its band,
+  the rate limit, the attitude interlock, the climb floor, and no change
+  within 2 kt, level or descending).
 - `engines_reverse_hold_test.lua`: the all-engine reverse-hold command, its
   reverse monitor and the auto-stow timers run frame by frame - releasing a
   hold of 0.5 s or more returns to reverse idle at once (fast or below

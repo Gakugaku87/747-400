@@ -117,6 +117,8 @@ local function fly(case, loop, thrust_factor)
     local vsi = case.vs
     local flaps = case.flaps
     local cl0, cd0 = AERO[flaps].cl0, AERO[flaps].cd0
+    local cla, kind = 0.064, 0.063
+    if case.polar then cl0, cla, cd0, kind = case.polar.cl0, case.polar.cla, case.polar.cd0, case.polar.k end
     local flap_move
     local thrust_scale = case.takeoff_thrust or 1.0
     local env = new_director(case.pitch)
@@ -133,7 +135,7 @@ local function fly(case, loop, thrust_factor)
         local ias = tas*math.sqrt(rho/1.225)/KT
         local vs = tas*math.sin(gamma)*FPM
         vsi = vsi + (vs - vsi)*DT/1.2
-        local target = case.target(t, flaps)
+        local target = case.target(t, flaps, altitude)
         env.simDRTime = env.simDRTime + DT
         env.simDR_pressureAlt1 = altitude
         env.simDR_radarAlt1 = altitude - 19
@@ -151,6 +153,7 @@ local function fly(case, loop, thrust_factor)
             thrust_scale = math.max(1.0, thrust_scale - ((case.takeoff_thrust or 1.0) - 1.0)*DT/20)
         end
         local thrust = CLB_THRUST_N*(rho/CLB_THRUST_RHO)^1.13*thrust_scale*(thrust_factor or 1)
+        if case.thrust then thrust = case.thrust(t, rho)*(thrust_factor or 1) end
         -- the kit's flap retraction at Vf(next) + 5 kt; the flaps run for 10 s
         if case.retract and not flap_move and NEXT_FLAP[flaps] and ias >= VF[NEXT_FLAP[flaps]] + 5 then
             flap_move = {from=flaps, to=NEXT_FLAP[flaps], start=t}
@@ -164,8 +167,8 @@ local function fly(case, loop, thrust_factor)
             if f >= 1 then flap_move = nil end
         end
         local alpha = pitch - math.deg(gamma)
-        local cl = cl0 + 0.064*alpha
-        local cd = cd0 + 0.063*cl*cl
+        local cl = cl0 + cla*alpha
+        local cd = cd0 + kind*cl*cl
         local qs = 0.5*rho*tas*tas*S
         local a = math.rad(alpha)
         local dtas = (thrust*math.cos(a) - qs*cd)/mass - G*math.sin(gamma)
@@ -173,6 +176,10 @@ local function fly(case, loop, thrust_factor)
         tas = tas + dtas*DT
         gamma = gamma + dgamma*DT
         altitude = altitude + tas*math.sin(gamma)*DT/0.3048
+        if t > case.step_t then
+            result.min_pitch = math.min(result.min_pitch or math.huge, pitch)
+            result.max_pitch = math.max(result.max_pitch or -math.huge, pitch)
+        end
         if t > case.step_t + 1 then
             result.min_vs = math.min(result.min_vs, vs)
             if result.reached then result.overshoot = math.max(result.overshoot, ias - target) end
@@ -236,7 +243,43 @@ check(r.reached and r.reached <= 150, where("10,000 ft 250 -> 326 kt", r))
 check(r.min_vs >= 0, where("10,000 ft 250 -> 326 kt (no descent)", r))
 check(r.overshoot <= 3, where("10,000 ft 250 -> 326 kt (no overshoot)", r))
 
--- 4. Other pitch loops and 15 % less or more thrust: the targets are still
+-- 4. A step climb at altitude with the target above the speed: the
+-- 2026-10-10 TST744L step 2 (P3, fix-h2), FL330 -> FL350 at 282 t, M .816
+-- (291 kt) and the VNAV climb target M .829 (297 kt, falling with height),
+-- clean polar and thrust fitted to that flight above FL250 (M .82:
+-- CL = 0.273 + 0.0793 alpha, CD = 0.0264 + 0.043 CL^2; 225 kN level, climb
+-- thrust 270 kN reached over the first 30 s). In X-Plane the law pitched
+-- down until the 747 descended (-851 fpm, 54 ft lost inside the climb), the
+-- climb guard then raised the target at 1 deg/s and the attitude went from
+-- 0.8 to 7.4 deg (+3,800 fpm); this model repeats that cycle every 22 s
+-- (-803 fpm, 0.3..6.0 deg). Climb thrust gives only about +700 fpm at a
+-- steady speed there, so the acceleration has to come slowly: no descent,
+-- the attitude kept within 2 deg, the target reached within 120 s.
+local function mach_to_ias(mach, altitude_ft)
+    local T = 288.15 - 0.0019812*math.min(altitude_ft, 36089)
+    local p = 101325*(T/288.15)^5.2559
+    local qc = p*((1 + 0.2*mach*mach)^3.5 - 1)
+    return 661.47*math.sqrt(5*((qc/101325 + 1)^(1/3.5) - 1))
+end
+local step_fl330 = {mass=282400, altitude=32998, ias=291.1, vs=-70, pitch=1.84, flaps=0, vmc=230, vmax=365,
+    mcp=35000, step_t=2, duration=180, stop_ft=34990,
+    polar={cl0=0.273, cla=0.0793, cd0=0.0264, k=0.043},
+    thrust=function(t, rho)
+        local level, climb = 225e3, 270e3*(rho/0.4135)^0.8
+        if t < 2 then return level end
+        return level + (climb - level)*math.min(1, (t - 2)/30)
+    end,
+    target=function(t, flaps, altitude)
+        if t < 2 then return 290.4 end
+        return mach_to_ias(0.829, altitude)
+    end}
+r = fly(step_fl330)
+check(r.min_vs >= 0, where("FL330 -> FL350, M .829 above M .816 (no descent)", r))
+check(r.max_pitch - r.min_pitch <= 2, where("FL330 -> FL350, M .829 above M .816 (attitude within 2 deg)", r)
+    ..string.format("; pitch %.2f..%.2f", r.min_pitch, r.max_pitch))
+check(r.reached and r.reached <= 120, where("FL330 -> FL350, M .829 above M .816 (target reached)", r))
+
+-- 5. Other pitch loops and 15 % less or more thrust: the targets are still
 -- reached, without descending by more than 200 fpm and without passing them
 -- by more than 9 kt.
 for _, variant in ipairs({
@@ -249,7 +292,7 @@ for _, variant in ipairs({
     end
 end
 
--- 5. The pitch step itself (afds_controls.climb_speed_pitch_target).
+-- 6. The pitch step itself (afds_controls.climb_speed_pitch_target).
 local f = controls.climb_speed_pitch_target
 local CLIMB, LEVEL, DESCENT = controls.VERTICAL_DIRECTION_CLIMB, controls.VERTICAL_DIRECTION_LEVEL,
     controls.VERTICAL_DIRECTION_DESCENT
@@ -280,5 +323,14 @@ check(f(10, 0, 0.3, 161, 182, DESCENT, 0) == nil, "descending")
 check(f(10, 0, 0.3, nil, 182, CLIMB, 0) == nil, "no airspeed")
 -- no time since the last update: unchanged
 near(f(10, 0, 0, 161, 182, CLIMB, 0), 10, 1e-9, "no elapsed time")
+-- the climb floor: 21 kt slow and steady at +2,000 fpm, down at the usual
+-- 0.5 deg/s; at +500 fpm at most 0.5 x 0.2 = 0.1 deg/s; at or below
+-- +300 fpm, or descending, held; the pitch still goes up when the aircraft
+-- accelerates faster than wanted
+near(f(10, 0, 0.3, 161, 182, CLIMB, 0, 2000), 10 - 0.5*0.3, 1e-9, "21 kt slow at +2,000 fpm")
+near(f(10, 0, 0.3, 161, 182, CLIMB, 0, 500), 10 - 0.1*0.3, 1e-9, "21 kt slow at +500 fpm")
+near(f(10, 0, 0.3, 161, 182, CLIMB, 0, 300), 10, 1e-9, "21 kt slow at +300 fpm: held")
+near(f(10, 0, 0.3, 161, 182, CLIMB, 0, -500), 10, 1e-9, "21 kt slow, descending: held")
+near(f(10, 0.45, 0.3, 161, 182, CLIMB, 0, 100), 10 + 0.6*0.4*0.3, 1e-9, "accelerating faster than wanted at +100 fpm")
 
 print("VNAV climb acceleration tests passed: "..checks)

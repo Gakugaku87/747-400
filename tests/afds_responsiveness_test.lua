@@ -400,14 +400,14 @@ for _ = 1, 10 do
     lowest_pitch = math.min(lowest_pitch, director_update(4))
 end
 assert_near(lowest_pitch, 2.7, 0.0001, "250 to 326 kt target step at +50 fpm does not pitch down")
--- The latch keeps only the descent guard: climbing faster than +100 fpm the
--- director still trades climb rate for speed. Here the speed rises 0.1 kt in
--- the 0.3 s (0.33 kt/s), less than the 1 kt/s the climb speed law (g-6) wants
--- 70 kt below the target.
+-- The latch keeps only the descent guard: climbing the director still trades
+-- climb rate for speed. Here the speed rises 0.1 kt in the 0.3 s (0.33 kt/s),
+-- less than the 1 kt/s the climb speed law (g-6) wants 70 kt below the
+-- target; at +600 fpm its climb floor allows 0.5 deg/s per 1,000 fpm above
+-- +300 fpm, 0.15 deg/s, so 0.045 deg in the 0.3 s.
 director.simDR_vvi_fpm_pilot = 600
 director.simDR_ind_airspeed_kts_pilot = director.simDR_ind_airspeed_kts_pilot + 0.1
 local before_trade = director.B747_afds_pitch_target_before_blend
-assert(director_update(4) < before_trade - 0.05, "latched acceleration at +600 fpm still pitches down")
-tests_run = tests_run + 1
+assert_near(director_update(4), before_trade - 0.045, 0.002, "latched acceleration at +600 fpm still pitches down")
 
 print("AFDS responsiveness tests passed: " .. tests_run)
