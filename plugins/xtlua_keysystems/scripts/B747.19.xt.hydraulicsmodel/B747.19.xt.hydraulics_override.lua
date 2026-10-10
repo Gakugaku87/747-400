@@ -402,10 +402,12 @@ end
 local last_simDR_ind_airspeed_kts_pilot=0
 local last_simDR_AHARS_pitch_heading_deg_pilot=0
 local last_altitude=0
---speed target at the previous FLCH/VNAV SPD update, and whether the aircraft
---is still accelerating to a raised target (update_speed_target_acceleration)
+--speed target at the previous FLCH/VNAV SPD update, whether the aircraft is
+--still accelerating to a raised target (update_speed_target_acceleration) and
+--the speed that acceleration started from
 local last_speedPitchTarget=nil
 local speedPitchAccelerating=false
+local speedPitchAcceleratedFrom=nil
 local directorSampleRate=0.02
 local directoryawSampleRate=0.03
 local lastAPTargetRoll=0
@@ -672,11 +674,16 @@ function ap_director_pitch(pitchMode)
         end
         speedPitchAccelerating=B747_afds_controls.update_speed_target_acceleration(wasAccelerating,
             speedReference,simDR_autopilot_airspeed_kts,simDR_ind_airspeed_kts_pilot,minSafeSpeed)
+        if not speedPitchAccelerating then
+            speedPitchAcceleratedFrom=nil
+        elseif not wasAccelerating then
+            speedPitchAcceleratedFrom=simDR_ind_airspeed_kts_pilot
+        end
         last_speedPitchTarget=simDR_autopilot_airspeed_kts
         last_simDR_AHARS_pitch_heading_deg_pilot=B747_afds_controls.limit_speed_pitch_target(
             requestedPitchTarget,previousPitchTarget,verticalDirection,simDR_vvi_fpm_pilot,
             simDR_ind_airspeed_kts_pilot,simDR_autopilot_airspeed_kts,minSafeSpeed,maxSafeSpeed,time,
-            speedPitchAccelerating)
+            speedPitchAccelerating and (speedPitchAcceleratedFrom or true))
         retval=last_simDR_AHARS_pitch_heading_deg_pilot
 
         return ap_director_pitch_retVal(pitchMode,retval)

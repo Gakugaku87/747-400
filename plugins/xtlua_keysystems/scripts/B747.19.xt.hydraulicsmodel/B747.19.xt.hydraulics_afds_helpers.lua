@@ -68,13 +68,14 @@ function afds_controls.limit_speed_pitch_target(requested_target_deg, previous_t
     if type(requested_target_deg) ~= "number" then requested_target_deg = previous_target_deg end
     vertical_speed_fpm = tonumber(vertical_speed_fpm) or 0
 
-    -- While accelerating to a raised target (update_speed_target_acceleration)
-    -- the target - 15 kt rule is not used, so the climb guard stays.
+    -- While accelerating to a raised target (update_speed_target_acceleration;
+    -- accelerating_to_target true, or the speed it started from) the target -
+    -- 15 kt rule is not used, so the climb guard stays.
     local severe_underspeed = false
     if type(actual_speed_kts) == "number" and type(target_speed_kts) == "number" then
         if accelerating_to_target then
-            severe_underspeed = actual_speed_kts
-                <= afds_controls.accelerating_underspeed_threshold(target_speed_kts, min_safe_speed_kts)
+            severe_underspeed = actual_speed_kts <= afds_controls.accelerating_underspeed_threshold(
+                target_speed_kts, min_safe_speed_kts, tonumber(accelerating_to_target))
         else
             severe_underspeed = actual_speed_kts
                 <= afds_controls.severe_underspeed_threshold(target_speed_kts, min_safe_speed_kts)
@@ -305,13 +306,26 @@ end
 
 -- Highest speed that counts as a severe underspeed while accelerating to a
 -- raised target: the minimum safe speed, capped at target - 5 kt. Without a
--- minimum safe speed the usual threshold applies.
-function afds_controls.accelerating_underspeed_threshold(target_speed_kts, min_safe_speed_kts)
+-- minimum safe speed the usual threshold applies. Given the speed the
+-- acceleration started from, also 15 kt below that (capped the same way): with
+-- thrust lost on the way (an engine early in a VNAV step) the climb guard held
+-- the aircraft up while the speed ran down to the minimum safe speed, 221 kt at
+-- FL310 at 294 t (model: 306 kt -> +4,862 fpm, then 202 kt).
+afds_controls.SPEED_TARGET_ACCELERATION_LOSS_KTS = 15.0
+function afds_controls.accelerating_underspeed_threshold(target_speed_kts, min_safe_speed_kts, accelerated_from_kts)
+    local threshold_kts
     if type(min_safe_speed_kts) ~= "number" or min_safe_speed_kts <= 0 then
-        return afds_controls.severe_underspeed_threshold(target_speed_kts, min_safe_speed_kts)
+        threshold_kts = afds_controls.severe_underspeed_threshold(target_speed_kts, min_safe_speed_kts)
+    else
+        threshold_kts = math.min(min_safe_speed_kts,
+            target_speed_kts - afds_controls.SPEED_PITCH_SEVERE_UNDERSPEED_FLOOR_MARGIN_KTS)
     end
-    return math.min(min_safe_speed_kts,
-        target_speed_kts - afds_controls.SPEED_PITCH_SEVERE_UNDERSPEED_FLOOR_MARGIN_KTS)
+    if type(accelerated_from_kts) == "number" then
+        threshold_kts = math.max(threshold_kts, math.min(
+            accelerated_from_kts - afds_controls.SPEED_TARGET_ACCELERATION_LOSS_KTS,
+            target_speed_kts - afds_controls.SPEED_PITCH_SEVERE_UNDERSPEED_FLOOR_MARGIN_KTS))
+    end
+    return threshold_kts
 end
 
 -- [g-4] Pitch target with no active pitch mode

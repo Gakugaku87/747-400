@@ -325,6 +325,26 @@ latched_pitch, latched_severe = controls.limit_speed_pitch_target(2.6, 2.7,
     controls.VERTICAL_DIRECTION_CLIMB, 50, 220, 326, 225, 365, 0.3, true)
 assert_near(latched_pitch, 2.6, 0.0001, "latched acceleration below the minimum safe speed may pitch down")
 assert_equal(latched_severe, true, "latched acceleration below the minimum safe speed is severe")
+-- Given the speed the acceleration started from (accelerating_to_target is
+-- that speed), 15 kt below it is a severe underspeed too: thrust lost on the
+-- way to the raised target (a step from 306.7 kt to 312.5: 291.7 kt, not the
+-- minimum safe speed of 221 kt); capped at target - 5 kt like the rest.
+assert_near(controls.accelerating_underspeed_threshold(312.5, 221, 306.7), 291.7, 0.0001,
+    "15 kt below the speed the acceleration started from")
+assert_near(controls.accelerating_underspeed_threshold(312.5, 221), 221, 0.0001,
+    "without the start speed the minimum safe speed")
+assert_near(controls.accelerating_underspeed_threshold(182, 170, 168), 170, 0.0001,
+    "a minimum safe speed above start - 15 kt is kept")
+assert_near(controls.accelerating_underspeed_threshold(312.5, 221, 330), 307.5, 0.0001,
+    "start - 15 kt capped at target - 5 kt")
+latched_pitch, latched_severe = controls.limit_speed_pitch_target(2.6, 2.7,
+    controls.VERTICAL_DIRECTION_CLIMB, 50, 290, 312.5, 221, 365, 0.3, 306.7)
+assert_near(latched_pitch, 2.6, 0.0001, "latched, 16.7 kt below the start speed: may pitch down")
+assert_equal(latched_severe, true, "latched, 16.7 kt below the start speed is severe")
+latched_pitch, latched_severe = controls.limit_speed_pitch_target(2.6, 2.7,
+    controls.VERTICAL_DIRECTION_CLIMB, 50, 295, 312.5, 221, 365, 0.3, 306.7)
+assert_near(latched_pitch, 2.7, 0.0001, "latched, 11.7 kt below the start speed: climb guard kept")
+assert_equal(latched_severe, false, "latched, 11.7 kt below the start speed is not severe")
 
 assert_near(controls.limit_speed_pitch_target(5.2, 4.9, controls.VERTICAL_DIRECTION_DESCENT,
     -800, 260, 250, 160, 340, 0.3), 5.0, 0.0001, "descent target cannot pitch above envelope")

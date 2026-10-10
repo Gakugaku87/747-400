@@ -182,6 +182,7 @@ local function fly(case, loop, thrust_factor)
         end
         if t > case.step_t + 1 then
             result.min_vs = math.min(result.min_vs, vs)
+            result.min_ias = math.min(result.min_ias or math.huge, ias)
             if result.reached then result.overshoot = math.max(result.overshoot, ias - target) end
         end
         if not result.reached and t > case.step_t and ias >= target - 2 then result.reached = t - case.step_t end
@@ -278,6 +279,35 @@ check(r.min_vs >= 0, where("FL330 -> FL350, M .829 above M .816 (no descent)", r
 check(r.max_pitch - r.min_pitch <= 2, where("FL330 -> FL350, M .829 above M .816 (attitude within 2 deg)", r)
     ..string.format("; pitch %.2f..%.2f", r.min_pitch, r.max_pitch))
 check(r.reached and r.reached <= 120, where("FL330 -> FL350, M .829 above M .816 (target reached)", r))
+
+-- 4b. Thrust lost while a step is still accelerating to its raised target
+-- (latched, update_speed_target_acceleration): the 2026-10-10 final-L1 step 1
+-- at FL310 (294 t, M .82, 306.7 kt; polar and thrust fitted to it: CL =
+-- 0.2406 + 0.0724 x alpha, CD = 0.0181 + 0.0808 x CL^2, 231 kN level, 57 kN
+-- more over 7 s), the target 305.9 -> 312.5 kt, MCP FL370 and 25 % of the
+-- thrust lost 5 s in, so not even level flight can be held at the speed the
+-- acceleration started from. While latched only the minimum safe speed
+-- (Vmc + 10 = 221 kt) was a severe underspeed: the climb guard held the
+-- aircraft up (+4,862 fpm) until the speed was down to 202 kt, and it stayed
+-- at 202-207 kt. 15 kt below the speed the acceleration started from is one
+-- too: not below 265 kt, above 285 kt after 15 min (272.9, then 288.1 kt).
+local rho_fl310 = isa_rho(31000)
+local step_thrust_lost = {mass=294300, altitude=31000, ias=306.7, vs=0, pitch=1.51, flaps=0, vmc=211, vmax=349,
+    mcp=37000, step_t=0, duration=900, stop_ft=36990,
+    polar={cl0=0.2406, cla=0.0724, cd0=0.0181, k=0.0808},
+    thrust=function(t, rho)
+        local thrust = 231.3e3
+        if t >= 1.4 then thrust = thrust + 57e3*(1 - math.exp(-(t - 1.4)/7)) end
+        if t >= 5 then thrust = thrust*(1 - 0.25*math.min(1, (t - 5)/3)) end
+        return thrust*(rho/rho_fl310)^0.8
+    end,
+    target=function(t, flaps, altitude)
+        if t < 1.5 then return 305.9 end
+        return 312.5 - 0.0069*(altitude - 31000)
+    end}
+r = fly(step_thrust_lost, {0.28, 0.5, 0.0})
+check(r.min_ias >= 265 and r.ias >= 285, where("thrust lost 5 s into a step", r)
+    ..string.format("; lowest %.1f kt", r.min_ias))
 
 -- 5. Other pitch loops and 15 % less or more thrust: the targets are still
 -- reached, without descending by more than 200 fpm and without passing them
