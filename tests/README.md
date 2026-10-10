@@ -131,6 +131,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   G/S capturing only after LOC with LOC and G/S both within 1.5 dots and
   never in the LOC capture frame, APP leaving the MCP heading alone, and LNAV
   still steering (and reselecting the heading mode) while LOC is armed.
+- `eec_climb_thrust_test.lua`: the CLB thrust reference of the GE, PW and RR
+  EEC modules - the weight-based target for a light aircraft below
+  20,000 ft, max climb above it (as upstream gave the GE engines), and max
+  climb for a heavy aircraft.
 - `xtlua_warm_reads_test.lua`: XTLua gives 0 for the first read of a
   dataref in a script module, so the datarefs that a fix first reads at a
   critical moment are read every frame in the module's per-frame function
