@@ -104,6 +104,9 @@ end
 -- raised target, the lowest VS and the highest speed above the target after
 -- that, the flap retractions and the end state.
 -- loop = {zeta, wn, delay}: the attitude response to the flight-director pitch.
+-- case.bank(t) rolls the model (deg; the lift tilts with it) and
+-- case.lift_loss(t) is a lift coefficient change (roll spoilers); the director
+-- reads the model's angle of attack, true airspeed and bank.
 local function fly(case, loop, thrust_factor)
     loop = loop or {0.1, 1.1, 0.2}
     local zeta, wn = loop[1], loop[2]
@@ -136,12 +139,17 @@ local function fly(case, loop, thrust_factor)
         local vs = tas*math.sin(gamma)*FPM
         vsi = vsi + (vs - vsi)*DT/1.2
         local target = case.target(t, flaps, altitude)
+        -- pitch = flight path + alpha x cos bank
+        local bank = math.rad(case.bank and case.bank(t) or 0)
         env.simDRTime = env.simDRTime + DT
         env.simDR_pressureAlt1 = altitude
         env.simDR_radarAlt1 = altitude - 19
         env.simDR_ind_airspeed_kts_pilot = ias
         env.simDR_vvi_fpm_pilot = vsi
         env.simDR_AHARS_pitch_heading_deg_pilot = pitch
+        env.simDR_AHARS_roll_heading_deg_pilot = math.deg(bank)
+        env.simDR_alpha_deg = (pitch - math.deg(gamma))/math.cos(bank)
+        env.simDR_TAS_mps = tas
         env.simDR_autopilot_airspeed_kts = target
         env.B747DR_alt_capture_window = 200 + math.min(math.abs(vsi), 3000)*800/3000
         commands[#commands + 1] = env.ap_director_pitch_integral()
@@ -166,13 +174,13 @@ local function fly(case, loop, thrust_factor)
             cd0 = AERO[flap_move.from].cd0 + (AERO[flap_move.to].cd0 - AERO[flap_move.from].cd0)*f
             if f >= 1 then flap_move = nil end
         end
-        local alpha = pitch - math.deg(gamma)
-        local cl = cl0 + cla*alpha
+        local alpha = (pitch - math.deg(gamma))/math.cos(bank)
+        local cl = cl0 + cla*alpha + (case.lift_loss and case.lift_loss(t) or 0)
         local cd = cd0 + kind*cl*cl
         local qs = 0.5*rho*tas*tas*S
         local a = math.rad(alpha)
         local dtas = (thrust*math.cos(a) - qs*cd)/mass - G*math.sin(gamma)
-        local dgamma = (qs*cl + thrust*math.sin(a) - mass*G*math.cos(gamma))/(mass*tas)
+        local dgamma = ((qs*cl + thrust*math.sin(a))*math.cos(bank) - mass*G*math.cos(gamma))/(mass*tas)
         tas = tas + dtas*DT
         gamma = gamma + dgamma*DT
         altitude = altitude + tas*math.sin(gamma)*DT/0.3048
@@ -182,7 +190,11 @@ local function fly(case, loop, thrust_factor)
         end
         if t > case.step_t + 1 then
             result.min_vs = math.min(result.min_vs, vs)
+            result.max_vs = math.max(result.max_vs or -math.huge, vs)
             result.min_ias = math.min(result.min_ias or math.huge, ias)
+            if t > case.step_t + (case.speed_error_after or 0) then
+                result.min_speed_error = math.min(result.min_speed_error or math.huge, ias - target)
+            end
             if result.reached then result.overshoot = math.max(result.overshoot, ias - target) end
         end
         if not result.reached and t > case.step_t and ias >= target - 2 then result.reached = t - case.step_t end
@@ -362,5 +374,156 @@ near(f(10, 0, 0.3, 161, 182, CLIMB, 0, 500), 10 - 0.1*0.3, 1e-9, "21 kt slow at 
 near(f(10, 0, 0.3, 161, 182, CLIMB, 0, 300), 10, 1e-9, "21 kt slow at +300 fpm: held")
 near(f(10, 0, 0.3, 161, 182, CLIMB, 0, -500), 10, 1e-9, "21 kt slow, descending: held")
 near(f(10, 0.45, 0.3, 161, 182, CLIMB, 0, 100), 10 + 0.6*0.4*0.3, 1e-9, "accelerating faster than wanted at +100 fpm")
+
+-- 7. A step climb that starts in a turn: the 2026-10-10 final-L1 step 1 (P4
+-- 0dd3b35d), FL310 -> FL330 at 294 t and M .82 (306.7 kt). The step began at a
+-- waypoint where LNAV rolled into a 20 deg bank (the roll spoilers took about
+-- 7 % of the lift for 1.5 s), VNAV SPD raised the target to 312.5 kt (falling
+-- 0.0069 kt/ft) and the thrust rose from 231 kN by 57 kN over about 20 s.
+-- Polar and attitude loop fitted to that climb: CL = 0.2406 + 0.0724 x alpha,
+-- CD = 0.0181 + 0.0808 x CL^2 (q from the IAS, as everywhere here), damping
+-- 0.28, 0.5 rad/s, no delay. In X-Plane the turn sank the aircraft to -300 fpm
+-- and the climb guard raised the target at 1 deg/s for as long as the VSI
+-- showed more than 100 fpm down: 7.6 deg, +4,229 fpm and 18 kt lost; the speed
+-- law then pitched down to -815 fpm and the guard zoomed again to +4,745 fpm,
+-- 24 kt below the target at the level-off (step 2 at FL330 after a 5 deg roll:
+-- -725/+4,687 fpm). This model with the guard: -550..+5,031 fpm, 1.2..8.7 deg,
+-- down to 280 kt. Held at or above the attitude that flies level at the angle
+-- of attack once the VSI shows +100 fpm or less instead: no descent below -200
+-- fpm, no zoom above +2,000 fpm, the attitude within 2 deg, no speed lost and
+-- the climb going on (-124..+1,112 fpm, 1.5..2.8 deg); with the other pitch
+-- loops and 15 % less or more thrust within -200..+2,500 fpm and 2.5 deg, and
+-- not more than 5 kt below the speed at the start (-146..+1,977 fpm, 2.2 deg,
+-- 303.4 kt).
+local rho_fl310 = isa_rho(31000)
+local step_in_turn = {mass=294300, altitude=31000, ias=306.7, vs=0, pitch=1.51, flaps=0, vmc=211, vmax=349,
+    mcp=33000, step_t=0, duration=120, stop_ft=32990,
+    polar={cl0=0.2406, cla=0.0724, cd0=0.0181, k=0.0808},
+    thrust=function(t, rho)
+        local level = 231.3e3
+        if t < 1.4 then return level*(rho/rho_fl310)^0.8 end
+        return (level + 57e3*(1 - math.exp(-(t - 1.4)/7)))*(rho/rho_fl310)^0.8
+    end,
+    bank=function(t)
+        local f = math.min(1, t/3.5)
+        return 20*f*f*(3 - 2*f)
+    end,
+    lift_loss=function(t)
+        if t > 2 then return 0 end
+        return -0.025*math.sin(math.pi*t/2)
+    end,
+    target=function(t, flaps, altitude)
+        if t < 1.5 then return 305.9 end
+        return 312.5 - 0.0069*(altitude - 31000)
+    end}
+local function turn_where(name, r)
+    return string.format("%s: VS %.0f..%.0f fpm, pitch %.2f..%.2f, lowest %.1f kt, end %.0f ft %.1f kt for %.1f",
+        name, r.min_vs, r.max_vs, r.min_pitch, r.max_pitch, r.min_ias, r.altitude, r.ias, r.target)
+end
+r = fly(step_in_turn, {0.28, 0.5, 0.0})
+check(r.min_vs >= -200, turn_where("step climb in a turn (no descent)", r))
+check(r.max_vs <= 2000, turn_where("step climb in a turn (no zoom)", r))
+check(r.max_pitch - r.min_pitch <= 2, turn_where("step climb in a turn (attitude within 2 deg)", r))
+check(r.min_ias >= 304.7, turn_where("step climb in a turn (no speed lost)", r))
+check(r.altitude >= 31500, turn_where("step climb in a turn (climbing)", r))
+for _, variant in ipairs({
+        {"takeoff pitch loop", {0.1, 1.1, 0.2}}, {"slow pitch loop", {0.5, 0.5, 0.8}},
+        {"oscillatory pitch loop", {0.2, 0.8, 0.5}}, {"fast pitch loop", {0.7, 1.2, 0.2}}}) do
+    for _, factor in ipairs({0.85, 1.0, 1.15}) do
+        r = fly(step_in_turn, variant[2], factor)
+        local name = string.format("step climb in a turn, %s, thrust x %.2f", variant[1], factor)
+        check(r.min_vs >= -200 and r.max_vs <= 2500 and r.max_pitch - r.min_pitch <= 2.5 and r.min_ias >= 301.7,
+            turn_where(name, r))
+    end
+end
+
+-- 8. The level attitude itself (afds_controls.climb_path_pitch_deg and the
+-- climb_path_pitch_deg argument of limit_speed_pitch_target).
+local path = controls.climb_path_pitch_deg
+-- level: the attitude is the angle of attack, banked alpha x cos bank
+near(path(1.5, 252, 0), 1.5, 1e-9, "level attitude, wings level")
+near(path(2.0, 252, 20), 2.0*math.cos(math.rad(20)), 1e-9, "level attitude in a 20 deg bank")
+check(path(nil, 252, 0) == nil and path(1.5, nil, 0) == nil and path(1.5, 0, 0) == nil,
+    "no level attitude without the angle of attack or the airspeed")
+local limit = controls.limit_speed_pitch_target
+-- at +100 fpm or less on the VSI the target rises to it at 1 deg/s at most;
+-- above it a descent on the VSI no longer raises the target
+near(limit(1.5, 1.5, CLIMB, -300, 306, 312, 221, 349, 0.3, true, 1.62), 1.62, 1e-9,
+    "target raised to the level attitude")
+near(limit(1.5, 1.5, CLIMB, -300, 306, 312, 221, 349, 0.3, true, 3.0), 1.8, 1e-9,
+    "level attitude approached at 1 deg/s")
+near(limit(4.0, 4.0, CLIMB, -300, 306, 312, 221, 349, 0.3, true, 1.62), 4.0, 1e-9,
+    "above the level attitude a descent on the VSI does not raise the target")
+near(limit(1.0, 2.0, CLIMB, 50, 306, 312, 221, 349, 0.3, true, 2.5), 2.3, 1e-9,
+    "+50 fpm below the level attitude: held, then raised at 1 deg/s")
+-- climbing at more than +100 fpm (the angle of attack of a hunting attitude
+-- would ratchet the target up), in a severe underspeed or in a descent it
+-- does nothing; without it the VSI recovery (+1 deg/s below -100 fpm) is
+-- unchanged
+near(limit(1.0, 2.0, CLIMB, 500, 306, 312, 221, 349, 0.3, true, 1.62), 1.0, 1e-9,
+    "climbing at +500 fpm: no level attitude")
+near(limit(1.0, 2.0, CLIMB, 50, 215, 312, 221, 349, 0.3, true, 1.62), 1.0, 1e-9,
+    "severe underspeed: no level attitude")
+near(limit(1.0, 2.0, DESCENT, -500, 306, 300, 221, 349, 0.3, false, 1.62), 1.0, 1e-9,
+    "descending: no level attitude")
+near(limit(1.5, 1.5, CLIMB, -300, 306, 312, 221, 349, 0.3, true), 1.8, 1e-9,
+    "no level attitude: VSI recovery")
+-- the director passes the bank: an angle of attack of 2 deg in a 60 deg bank
+-- is a level attitude of 1 deg (already flown), wings level 2 deg
+local function director_level_target(bank_deg)
+    local env = new_director(1.0)
+    env.B747DR_airspeed_Vmc, env.B747DR_airspeed_Vmax = 211, 349
+    env.simDR_autopilot_altitude_ft, env.simDR_autopilot_hold_altitude_ft = 33000, 33000
+    env.simDR_pressureAlt1, env.simDR_radarAlt1 = 31000, 30981
+    env.simDR_ind_airspeed_kts_pilot, env.simDR_autopilot_airspeed_kts = 300, 300
+    env.simDR_vvi_fpm_pilot, env.B747DR_alt_capture_window = -300, 400
+    env.simDR_alpha_deg, env.simDR_TAS_mps, env.simDR_AHARS_roll_heading_deg_pilot = 2.0, 252, bank_deg
+    local command
+    for _ = 1, 200 do
+        env.simDRTime = env.simDRTime + DT
+        command = env.ap_director_pitch_integral()
+    end
+    return command
+end
+local banked, wings_level = director_level_target(60), director_level_target(0)
+check(wings_level > banked + 0.5 and math.abs(banked - 1.0) < 0.2,
+    string.format("the director passes the bank: %.2f deg wings level, %.2f deg in a 60 deg bank", wings_level, banked))
+
+-- 9. Climbs that thrust limits (review of the first version of 7, which held
+-- +100 fpm instead of level: it climbed on through the thrust-limited ceiling
+-- by giving up speed, while accelerating to a raised target - every VNAV
+-- step - down to the minimum safe speed, 221 kt here, before 4b). The
+-- section 7 polar, MCP FL370, wings level, climb thrust 231 kN + the margin:
+-- (a) +15 kN, the target 308 -> 309 kt (not latched): the climb stops at the
+-- ceiling on speed (lowest IAS - target after a minute -0.1 kt; +100 fpm: -9.3
+-- kt after 30 min); (b) +8 kN, the target 10 kt up (latched): level at the
+-- ceiling without losing speed (lowest 306.7 kt, the speed at the start; +100
+-- fpm: 295.0 after 15 min and falling); (c) an engine failure 60 s into the
+-- section 7 step (75 % thrust): no zoom, not below 287 kt (-371..+1,200 fpm,
+-- 289.4 kt; the VSI guard: +4,507 fpm and 273.6 kt; +100 fpm: 285.4 kt).
+local function limited(margin, from_kt, to_kt, fail_t, duration)
+    return {mass=294300, altitude=31000, ias=306.7, vs=0, pitch=1.51, flaps=0, vmc=211, vmax=349,
+        mcp=37000, step_t=0, duration=duration, stop_ft=36990,
+        polar={cl0=0.2406, cla=0.0724, cd0=0.0181, k=0.0808},
+        thrust=function(t, rho)
+            local level = 231.3e3
+            local thrust = level*(rho/rho_fl310)^0.8
+            if t >= 1.4 then thrust = (level + margin*(1 - math.exp(-(t - 1.4)/7)))*(rho/rho_fl310)^0.8 end
+            if fail_t and t >= fail_t then thrust = thrust*(1 - 0.25*math.min(1, (t - fail_t)/3)) end
+            return thrust
+        end,
+        target=function(t, flaps, altitude)
+            if t < 1.5 then return from_kt end
+            return to_kt - 0.0069*(altitude - 31000)
+        end,
+        speed_error_after=60}
+end
+r = fly(limited(15e3, 308.0, 309.0, nil, 1800), {0.28, 0.5, 0.0})
+check(r.min_speed_error >= -2, turn_where("thrust-limited ceiling", r)
+    ..string.format("; lowest IAS - target %.1f kt", r.min_speed_error))
+r = fly(limited(8e3, 306.7, 316.7, nil, 900), {0.28, 0.5, 0.0})
+check(r.min_ias >= 305, turn_where("thrust-limited ceiling, accelerating to a raised target", r))
+r = fly(limited(57e3, 305.9, 312.5, 60, 900), {0.28, 0.5, 0.0})
+check(r.max_vs <= 2000 and r.min_ias >= 287, turn_where("engine failure in a step climb", r))
 
 print("VNAV climb acceleration tests passed: "..checks)

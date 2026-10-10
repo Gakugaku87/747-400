@@ -89,7 +89,8 @@ The audit regressions load production Lua code with mocked simulator interfaces:
 - `hydraulics_dataref_binding_test.lua`: every `simDR_`/`B747DR_` name that the
   hydraulics override file writes is bound in the hydraulics script's XTLua
   namespace, with the FLCH and V/S requests bound to the datarefs the
-  autopilot reads.
+  autopilot reads and the angle of attack, true airspeed and bank that the
+  speed-on-pitch climb guard reads bound to X-Plane's.
 - `vnav_ground_arm_test.lua`: VNAV pressed on the ground before the flight
   directors (and in TO/GA) only arms - no ALT HOLD, a stale MCP altitude hold
   and VNAV descent cleared - so the thrust monitor keeps TO/GA, engine TO/GA
@@ -224,7 +225,19 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   202 kt) but kept above 265 kt and settles above 285 kt. Also the climb speed
   pitch step itself (the acceleration wanted, its band, the rate limit, the
   attitude interlock, the climb floor, and no change within 2 kt, level or
-  descending).
+  descending). And a step climb from FL310 that starts in a 20 deg bank turn
+  at a waypoint (the 2026-10-10 final-L1 step 1, with polar, thrust and
+  attitude loop fitted to it and a short roll-spoiler lift loss): held at or
+  above the attitude that flies level at the angle of attack once the VSI
+  shows +100 fpm or less, it neither descends below -200 fpm nor zooms above
+  +2,000 fpm, the attitude stays within 2 deg and no speed is lost (the
+  VSI-driven guard: -550..+5,031 fpm, down to 280 kt); with the other attitude
+  loops and 15 % less or more thrust within -200..+2,500 fpm, 2.5 deg and 5 kt
+  of the starting speed. Climbs that thrust limits: into the thrust-limited
+  ceiling the climb stops on speed (also while accelerating to a raised
+  target), and an engine failure in the step neither zooms nor falls below 287
+  kt. And that level attitude, its use by limit_speed_pitch_target and the
+  bank the director passes to it.
 - `engines_reverse_hold_test.lua`: the all-engine reverse-hold command, its
   reverse monitor and the auto-stow timers run frame by frame - releasing a
   hold of 0.5 s or more returns to reverse idle at once (fast or below

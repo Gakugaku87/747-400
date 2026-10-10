@@ -703,10 +703,13 @@ function ap_director_pitch(pitchMode)
             speedPitchAcceleratedFrom=simDR_ind_airspeed_kts_pilot
         end
         last_speedPitchTarget=simDR_autopilot_airspeed_kts
+        --in a climb that has stopped climbing, not below the attitude that flies level at this angle of attack
+        local climbPathPitch=B747_afds_controls.climb_path_pitch_deg(simDR_alpha_deg,simDR_TAS_mps,
+            simDR_AHARS_roll_heading_deg_pilot)
         last_simDR_AHARS_pitch_heading_deg_pilot=B747_afds_controls.limit_speed_pitch_target(
             requestedPitchTarget,previousPitchTarget,verticalDirection,simDR_vvi_fpm_pilot,
             simDR_ind_airspeed_kts_pilot,simDR_autopilot_airspeed_kts,minSafeSpeed,maxSafeSpeed,time,
-            speedPitchAccelerating and (speedPitchAcceleratedFrom or true))
+            speedPitchAccelerating and (speedPitchAcceleratedFrom or true),climbPathPitch)
         retval=last_simDR_AHARS_pitch_heading_deg_pilot
 
         return ap_director_pitch_retVal(pitchMode,retval)
