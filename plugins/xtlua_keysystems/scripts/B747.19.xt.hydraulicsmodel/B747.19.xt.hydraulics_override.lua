@@ -544,8 +544,31 @@ local last_vvi_update=0
 local prev_vvi_update=0.5
 local fpmBias=0
 local lastFlapsFPM=0
+local fpmBiasRunStart=nil   -- first call of the current run of calls (the ALT, V/S, VNAV PTH or G/S branch)
+local lastFPMBiasTime=nil
+-- a longer gap between calls ends a run: the ALT branch calls every 0.1 s, the
+-- V/S, VNAV PTH and G/S branch every 1.0 s (plus a frame) when on target
+local FPM_BIAS_RUN_GAP_SEC=2.5
+-- The bias answers a flap handle move seen while this director runs above
+-- 3,000 ft RA. The reference follows the handle whenever a move cannot be
+-- one: for the first 0.5 s of a run of calls (a fresh load has no reference,
+-- and FLCH, VNAV SPD and TO/GA do not call this, so the handle may have moved
+-- in between) and below 3,000 ft RA. ap_pitch_assist reads the handle every
+-- frame, as XTLua gives 0 for the first read of a dataref. A bias left from an earlier run is dropped. Before, the
+-- reference started at 0 and moved only inside the condition below, so the
+-- first ALT/VNAV PTH update above 3,000 ft with flaps out added 6000 x the
+-- handle ratio (+4,000 fpm at flaps 20) and pitched the 747 down at the
+-- capture (flight tests 2026-10-10).
 function get_FPM_bias()
     local fpmBiasMax=6000
+    if lastFPMBiasTime==nil or simDRTime-lastFPMBiasTime>FPM_BIAS_RUN_GAP_SEC or simDRTime<lastFPMBiasTime then
+        fpmBiasRunStart=simDRTime
+        fpmBias=0
+    end
+    lastFPMBiasTime=simDRTime
+    if simDRTime-fpmBiasRunStart<0.5 or simDR_radarAlt1<=3000 then
+        lastFlapsFPM=B747DR_flap_ratio
+    end
     if B747DR_flap_ratio~=lastFlapsFPM and B747DR_flap_lever_detent==0 and simDR_radarAlt1>3000 then
         local Flaps_change=B747DR_flap_ratio-lastFlapsFPM
         print("Flaps_change "..Flaps_change)
@@ -1093,6 +1116,9 @@ function ap_pitch_assist()
     local retval=B747DR_sim_pitch_ratio--B747_interpolate_value(B747DR_sim_pitch_ratio,0,-1,1,20)
     local refreshsimDR_electric_trim=simDR_electric_trim
     local refresh_trim=simDR_elevator_trim
+    -- read by get_FPM_bias only while the director runs ALT, V/S, VNAV PTH or G/S
+    local refreshFlapRatio=B747DR_flap_ratio
+    local refreshFlapDetent=B747DR_flap_lever_detent
 
     B747DR_pidPitchP=B747_rescale(3000,B747DR_pidPitchPL,40000,B747DR_pidPitchPH,B747DR_autopilot_altitude_ft_pfd)
     if B747DR_ap_AFDS_mode_box_status_pilot==1 or B747DR_ap_AFDS_mode_box_status_copilot==1 then

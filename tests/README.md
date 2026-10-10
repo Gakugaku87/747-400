@@ -57,6 +57,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   vertical speed limited to 2000 fpm, and to 500 fpm when descending 15 kt
   fast (or near Vmax) or climbing 15 kt slow (or near Vmc), using recorded
   TST744L cases.
+- `fpm_bias_test.lua`: the flap-movement vertical-speed bias of the flight
+  director with the production interpolation and a 44 fps frame period - no
+  bias at the first ALT/VNAV PTH update after a fresh load with flaps out, nor
+  for handle moves made while the director did not run (a pause, or below
+  3,000 ft RA), no bias carried across a pause, the pitch target at the
+  recorded 10,000 ft capture with flaps 20, and the designed bias for a
+  handle move above 3,000 ft RA in ALT hold and in a steady V/S (whose
+  director updates come 1.0 s apart, driven at the frame rate).
 - `hydraulics_dataref_binding_test.lua`: every `simDR_`/`B747DR_` name that the
   hydraulics override file writes is bound in the hydraulics script's XTLua
   namespace, with the FLCH and V/S requests bound to the datarefs the
@@ -98,9 +106,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   (the "local refresh...=" reads): the native transition altitude and the CRZ
   ALT sync fault flag in the FMS after_physics, and the localizer and
   glideslope signals, flags and deviations of the LOC and G/S capture gates in
-  the autopilot monitor (B747_monitorAP), and the flight-path vertical speed
+  the autopilot monitor (B747_monitorAP), the flight-path vertical speed
   and pitch rate of the autoland flare law in preLand_measure (every frame
-  from 800 ft down to the flare height).
+  from 800 ft down to the flare height), and the flap handle of the flight
+  director's flap-change VS bias in the hydraulics ap_pitch_assist.
 - `autoland_flare_test.lua`: the autoland flare law helpers (flare height,
   sink-rate command, pitch-target size and rate limits, pitch-rate damping,
   the approach pitch when no steady sample was taken, derotation at 1 deg/s
