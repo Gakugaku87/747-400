@@ -382,6 +382,21 @@ function afds.vnav_engage_height_reached(on_ground, radio_alt_ft)
         and (tonumber(radio_alt_ft) or 0) > afds.VNAV_ENGAGE_MIN_RA_FT
 end
 
+-- Altitude-terminated legs (CA, VA, FA): X-Plane names the end of such a leg
+-- after its altitude, "(650)" for 28R heading to 650 ft at EIDW. The leg ends
+-- where the altitude is reached; with the 747 overriding X-Plane's sequencing
+-- that point then stays about 0.05 NM ahead of the aircraft. Returns the
+-- altitude (the entry's route altitude, else the one in its name), nil for any
+-- other entry ("(VECT)", "(INTC)", a fix).
+function afds.altitude_leg_end_ft(entry)
+    if type(entry) ~= "table" then return nil end
+    local digits = string.match(tostring(entry[8] or ""), "^%((%d+)%)$")
+    if digits == nil then return nil end
+    local altitude = tonumber(entry[9])
+    if altitude == nil or altitude <= 0 then altitude = tonumber(digits) end
+    return altitude
+end
+
 -- [c] Route end of descent and VNAV descent path entry
 -- Index of the end of descent in an xtlua/fms route: the first entry within
 -- radius_nm of the destination (the last entry) after the entry farthest from

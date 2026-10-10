@@ -65,7 +65,11 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
             if dist_to_TOD<0 and fms[i][9]>0 and fms[i][9]<lowerAlt and fms[i][2] ~= 1 then targetAlt=fms[i][9] targetIndex=i break end
             local dtoAirport = getDistance(fms[i][5], fms[i][6], fms[endI][5], fms[endI][6])
 		--print("i=".. i .." B747DR_fmscurrentIndex="..B747DR_fmscurrentIndex .." speed="..simDR_groundspeed .. " distance="..totalDistance.." dtoAirport="..dtoAirport.. " ".. fmsO[i][5].." ".. fmsO[i][6].." ".. fmsO[i+1][5].." ".. fmsO[i+1][6])
-            if dtoAirport < 10 or fms[i][9]>0 then
+            -- the end of an altitude-terminated leg (CA/VA/FA, "(650)") is climbed through,
+            -- not levelled at
+            local altitudeLegEnd=dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0
+                and B747_afds_helpers.altitude_leg_end_ft(fms[i])~=nil
+            if (dtoAirport < 10 or fms[i][9]>0) and not altitudeLegEnd then
                 targetIndex = i
                 targetAlt=fms[i][9]
                 B747DR_fmstargetDistance=B747DR_fmstargetDistance+dtoAirport
