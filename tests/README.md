@@ -119,7 +119,8 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   the autopilot monitor (B747_monitorAP), the flight-path vertical speed
   and pitch rate of the autoland flare law in preLand_measure (every frame
   from 800 ft down to the flare height), and the flap handle of the flight
-  director's flap-change VS bias in the hydraulics ap_pitch_assist.
+  director's flap-change VS bias and the autoland pitch target in the
+  hydraulics ap_pitch_assist.
 - `autoland_flare_test.lua`: the autoland flare law helpers (flare height,
   sink-rate command, pitch-target size and rate limits, pitch-rate damping,
   the approach pitch when no steady sample was taken, derotation at 1 deg/s

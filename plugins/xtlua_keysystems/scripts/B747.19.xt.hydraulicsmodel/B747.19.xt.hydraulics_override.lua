@@ -1119,6 +1119,8 @@ function ap_pitch_assist()
     -- read by get_FPM_bias only while the director runs ALT, V/S, VNAV PTH or G/S
     local refreshFlapRatio=B747DR_flap_ratio
     local refreshFlapDetent=B747DR_flap_lever_detent
+    -- read by the director only once AUTOLAND engages; XTLua gives 0 for a dataref's first read
+    local refreshAutolandPitch=B744DR_autolandPitch
 
     B747DR_pidPitchP=B747_rescale(3000,B747DR_pidPitchPL,40000,B747DR_pidPitchPH,B747DR_autopilot_altitude_ft_pfd)
     if B747DR_ap_AFDS_mode_box_status_pilot==1 or B747DR_ap_AFDS_mode_box_status_copilot==1 then
