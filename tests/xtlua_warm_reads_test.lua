@@ -37,6 +37,7 @@ local function reads(body, name)
 end
 
 local FMS = "plugins/xtlua_keysystems/scripts/B747.68.xt.fms/"
+local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/"
 local cases = {
     -- [d] the CRZ ALT entry for the native FMS (B744.fms.step.lua
     -- native_cruise_altitude_entry) is formatted with the native transition
@@ -45,6 +46,15 @@ local cases = {
     -- 0.5 s after its write, for the CDU message.
     {file=FMS.."B747.68.xt.fms.lua", func="after_physics",
         names={"simDR_fms_transition_alt", "B747DR_crzalt_sync_fault"}},
+    -- [e] the LOC and G/S capture gates (B747_updateApproachHeading) read
+    -- the localizer and glideslope signals, flags and deviations only once
+    -- the approach is armed: LOC took a 0 as its first 1 s sample, and G/S
+    -- was safe only because all its inputs read 0 together on that frame.
+    {file=AP.."B747.70.xt.autopilot.monitor.lua", func="B747_monitorAP",
+        names={"simDR_hsi_nav1_horizontal_signal", "simDR_hsi_nav2_horizontal_signal",
+            "simDR_hsi_ldef_dots_nav1", "simDR_hsi_ldef_dots_nav2", "simDR_hsi_vdef_dots_pilot",
+            "simDR_nav1_gs_flag", "simDR_nav2_gs_flag",
+            "simDR_hsi_nav1_vertical_signal", "simDR_hsi_nav2_vertical_signal"}},
 }
 
 for _, case in ipairs(cases) do

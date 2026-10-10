@@ -917,6 +917,17 @@ function B747_monitorAP(fmsO)
     local autothrottlemode=B747DR_autothrottle_active
     local flch_status=simDR_autopilot_flch_status
     local vs_status=simDR_autopilot_vs_status
+    -- the LOC and G/S capture gates read these only once the approach is armed:
+    -- XTLua gives 0 for a dataref's first read, so keep them fresh every frame
+    local nav1Signal=simDR_hsi_nav1_horizontal_signal
+    local nav2Signal=simDR_hsi_nav2_horizontal_signal
+    local nav1Dots=simDR_hsi_ldef_dots_nav1
+    local nav2Dots=simDR_hsi_ldef_dots_nav2
+    local gsDots=simDR_hsi_vdef_dots_pilot
+    local nav1GsFlag=simDR_nav1_gs_flag
+    local nav2GsFlag=simDR_nav2_gs_flag
+    local nav1Vertical=simDR_hsi_nav1_vertical_signal
+    local nav2Vertical=simDR_hsi_nav2_vertical_signal
     --print("1 simDRTime " .. simDRTime .. "B747DR_ap_lastCommand " .. B747DR_ap_lastCommand )
     B747_monitorAT()
     --print("2 simDRTime " .. simDRTime .. "B747DR_ap_lastCommand " .. B747DR_ap_lastCommand )
