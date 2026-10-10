@@ -100,29 +100,31 @@ for _, name in ipairs({"(VECT)", "(INTC)"}) do
     check(env.B747DR_fmscurrentIndex == 4, name.." at 10,700 ft: not ended by altitude, index "..env.B747DR_fmscurrentIndex)
 end
 
--- 4. Flying the departure from DE28R at 300 ft: 200 kt, 2,000 fpm, turning at
--- 2 deg/s toward the 747's active fix, for 10 minutes. "(650)" lies where the
--- climb reaches 650 ft and, while it is the active leg's end above that,
--- 0.05 NM ahead of the aircraft (as seen in X-Plane). Whether X-Plane keeps it
--- moving with the aircraft after the 747 has passed it or leaves it there,
--- the legs after it are sequenced in order to ENDEQ (a leg ending there no
--- longer counts, and the leg after it is measured from DE28R: from a point
--- riding with the aircraft DW128 was never passed and the aircraft circled
--- it).
-for _, behaviour in ipairs({"moving", "left behind"}) do
-    local env = new_runtime({53.4380, -6.2900}, 277, 300, 3)
+-- 4. Flying the departure: 200 kt, turning at 2 deg/s toward the 747's active
+-- fix, for 10 minutes. "(650)" lies where the climb reaches 650 ft and, while
+-- it is the active leg's end above that, 0.05 NM ahead of the aircraft (as
+-- seen in X-Plane). Whether X-Plane keeps it moving with the aircraft after
+-- the 747 has passed it or leaves it there, and whether 650 ft comes before or
+-- after DE28R, the legs after it are sequenced in order to ENDEQ: a leg ending
+-- there no longer counts and is no leg in the one-leg advance limit, and the
+-- leg after it is measured from DE28R. (From a point riding with the aircraft
+-- DW128 was never passed and the aircraft circled it; with 650 ft reached
+-- while DE28R was active the 747 stayed on DE28R and circled it - X-Plane,
+-- the second line flight, 2026-10-10.)
+local function fly_departure(behaviour, start, altitude, fpm, index)
+    local env = new_runtime(start, 277, altitude, index)
     local route = departure(env)
-    local lat, lon, heading, altitude = 53.4380, -6.2900, 277, 300
-    local reached, back = 3, false
+    local lat, lon, heading = start[1], start[2], 277
+    local reached, back = index, false
     for _ = 1, 2400 do
         local dt = 0.25
         if env.B747DR_fmscurrentIndex <= 4 or behaviour == "moving" then
-            local ahead = math.max(0.05, (650 - altitude)/2000*200/60)
+            local ahead = math.max(0.05, (650 - altitude)/fpm*200/60)
             route[4][5], route[4][6] = env.movePoint(lat, lon, ahead, heading)
         end
         for i = 1, #route do route[i][10] = (i == env.B747DR_fmscurrentIndex) end
         env.simDR_latitude, env.simDR_longitude, env.simDR_true_heading = lat, lon, heading
-        env.simDR_pressureAlt1, env.simDR_radarAlt1 = altitude, altitude - 242
+        env.simDR_pressureAlt1, env.simDR_radarAlt1, env.simDR_vvi_fpm_pilot = altitude, altitude - 242, fpm
         local before = env.B747DR_fmscurrentIndex
         env.B747_getCurrentWayPoint_function(route)
         if env.B747DR_fmscurrentIndex < before then back = true end
@@ -131,10 +133,23 @@ for _, behaviour in ipairs({"moving", "left behind"}) do
         local turn = env.getHeadingDifference(heading, env.getHeading(lat, lon, active[5], active[6]))
         heading = (heading + math.max(-2*dt, math.min(2*dt, turn))) % 360
         lat, lon = env.movePoint(lat, lon, 200/3600*dt, heading)
-        altitude = altitude + 2000/60*dt
+        altitude = altitude + fpm/60*dt
     end
-    check(reached >= 9 and not back, string.format("departure with the passed (650) %s: up to %s in order (back %s)",
-        behaviour, route[reached][8], tostring(back)))
+    return route[reached][8], reached, back
+end
+local DE28R = {53.4380, -6.2900}
+local probe = new_runtime(DE28R, 277, 0, 3)
+local BEFORE_DE28R = {probe.movePoint(DE28R[1], DE28R[2], 1.0, 97)}
+local PAST_DE28R = {probe.movePoint(DE28R[1], DE28R[2], 2.0, 277)}
+for _, case in ipairs({
+        {"from DE28R at 300 ft, 2,000 fpm", DE28R, 300, 2000},
+        {"650 ft reached 0.8 NM before DE28R (3,000 fpm)", BEFORE_DE28R, 560, 3000},
+        {"DE28R still active 2 NM past it at 3,000 ft, as the second line flight", PAST_DE28R, 3000, 2000}}) do
+    for _, behaviour in ipairs({"moving", "left behind"}) do
+        local name, reached, back = fly_departure(behaviour, case[2], case[3], case[4], 3)
+        check(reached >= 9 and not back, string.format("departure %s, the passed (650) %s: up to %s in order (back %s)",
+            case[1], behaviour, name, tostring(back)))
+    end
 end
 
 -- 5. The helper: the altitude of an altitude leg's end, its route altitude

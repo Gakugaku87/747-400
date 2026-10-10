@@ -2491,8 +2491,18 @@ function B747_getCurrentWayPoint_function(fmsO)
 		
 		B747DR_ap_lnav_xtk_error=bestOffTrack
 		--print("best Track to waypoint="..best.." / "..bestOffTrack)
+		-- an altitude-terminated leg's end whose altitude is reached is no leg to stop at
+		local maxAdvance=LNAV_MAX_AUTOMATIC_SEQUENCE_ADVANCE_LEGS
+		local skipIndex=B747DR_fmscurrentIndex+1
+		while skipIndex<best and skipIndex<=B747DR_fmscurrentIndex+maxAdvance do
+			local skipAlt=B747_afds_helpers.altitude_leg_end_ft(fmsO[skipIndex])
+			if skipAlt~=nil and simDR_pressureAlt1>=skipAlt then
+				maxAdvance=maxAdvance+1
+			end
+			skipIndex=skipIndex+1
+		end
 		if B747DR_ap_lnav_xtk_target>-99 and B747DR_fmscurrentIndex>0
-			and best>B747DR_fmscurrentIndex+LNAV_MAX_AUTOMATIC_SEQUENCE_ADVANCE_LEGS then
+			and best>B747DR_fmscurrentIndex+maxAdvance then
 			best=B747DR_fmscurrentIndex
 		end
 		if best>0 and (best>B747DR_fmscurrentIndex or best<B747DR_fmscurrentIndex-1) and B747DR_fmscurrentIndex ~=best then

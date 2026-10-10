@@ -122,7 +122,8 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   it nor on the ground, and only a name that is an altitude counts; and the
   ENDE3J departure flown for 10 minutes, the legs after "(650)" sequenced in
   order to ENDEQ whether X-Plane keeps that point moving with the aircraft
-  or leaves it behind.
+  or leaves it behind, and whether 650 ft comes before or after DE28R (or
+  DE28R is still active 2 NM past it at 3,000 ft).
 - `approach_capture_test.lua`: the APP switch, APP arming and approach monitor
   together - LOC capturing only within 2.0 dots while closing (or settled
   within 1.0 dot) on an intercept of 90 degrees or less, a saturated or
