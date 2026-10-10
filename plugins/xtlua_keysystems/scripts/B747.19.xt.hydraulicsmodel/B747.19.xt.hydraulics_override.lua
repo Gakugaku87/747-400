@@ -1139,7 +1139,16 @@ function ap_pitch_assist()
         pitchPid.input = simDR_AHARS_pitch_heading_deg_pilot
         pitchPid.target= flight_director_pitch
         if doCompute==1 then
-            pitchPid:compute()
+            if simDRTime-B747DR_switching_servos_on<2 then
+                -- flight_controls_override applies the command only 2 s after the servos came on: until
+                -- then keep the integral at the servo's position instead of winding it up on the
+                -- engagement error (2026-10-10, circuit hand-off 4.3 deg below the FD: the first applied
+                -- command was full nose-up and the attitude overshot by 4.7 deg)
+                pitchPid.output=B747DR_sim_pitch_ratio
+                pitchPid:compute(true)
+            else
+                pitchPid:compute()
+            end
         end
         local speed=B747_rescale(1,3,10,10,math.abs(flight_director_pitch-simDR_AHARS_pitch_heading_deg_pilot))
         if pitchPid.output==nil then return 0 end
