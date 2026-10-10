@@ -119,11 +119,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   of an altitude-terminated leg (CA, VA, FA: X-Plane's "(650)", which rides
   just ahead of the aircraft once its altitude is reached) - the next leg
   becomes active above the altitude (also when it is long passed), not below
-  it nor on the ground, and only a name that is an altitude counts; and the
-  ENDE3J departure flown for 10 minutes, the legs after "(650)" sequenced in
-  order to ENDEQ whether X-Plane keeps that point moving with the aircraft
-  or leaves it behind, and whether 650 ft comes before or after DE28R (or
-  DE28R is still active 2 NM past it at 3,000 ft).
+  it nor on the ground nor below 400 ft above it (a misset altimeter), and
+  only a name that is an altitude counts; the ENDE3J departure flown for 10
+  minutes, the legs after "(650)" sequenced in order to ENDEQ whether X-Plane
+  keeps that point moving with the aircraft or leaves it behind, and whether
+  650 ft comes before or after DE28R (or DE28R is still active 2 NM past it
+  at 3,000 ft); a SID turning back after its CA leg, and two altitude legs in
+  a row, sequenced in order too; and EHAM 18R's runway kept on final above
+  the missed approach's 500 ft, AM624 next on a go-around past the threshold.
 - `approach_capture_test.lua`: the APP switch, APP arming and approach monitor
   together - LOC capturing only within 2.0 dots while closing (or settled
   within 1.0 dot) on an intercept of 90 degrees or less, a saturated or
