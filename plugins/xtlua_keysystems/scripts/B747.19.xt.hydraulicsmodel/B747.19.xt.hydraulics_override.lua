@@ -639,7 +639,12 @@ function ap_director_pitch(pitchMode)
 
         local previousPitchTarget=last_simDR_AHARS_pitch_heading_deg_pilot
         local requestedPitchTarget=previousPitchTarget
-        if ((simDR_autopilot_airspeed_kts> simDR_ind_airspeed_kts_pilot+1) and speed_delta<max_speedDelta
+        --more than 2 kt from the target in a climb the pitch follows the acceleration still missing
+        local climbPitchTarget=B747_afds_controls.climb_speed_pitch_target(previousPitchTarget,speed_delta,time,
+            simDR_ind_airspeed_kts_pilot,simDR_autopilot_airspeed_kts,verticalDirection,pitchError)
+        if climbPitchTarget~=nil then
+            requestedPitchTarget=climbPitchTarget
+        elseif ((simDR_autopilot_airspeed_kts> simDR_ind_airspeed_kts_pilot+1) and speed_delta<max_speedDelta
             or (simDR_autopilot_airspeed_kts< simDR_ind_airspeed_kts_pilot-1) and speed_delta<-max_speedDelta) and pitchError<0.5 and canPitchDown
         then
             if debug_flight_directors==1 then

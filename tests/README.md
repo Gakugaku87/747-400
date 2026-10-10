@@ -146,6 +146,19 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   the attitude is held (limited to -3.5..15 degrees) instead of 0 degrees,
   so the following VNAV SPD, and VNAV PTH holding the altitude, continue from
   it.
+- `vnav_climb_acceleration_test.lua`: the production flight director (from
+  its pitch records through the 10-sample pitch integral) flying a simple
+  point-mass climb model fitted to the X-Plane forces, alpha and
+  flight-director pitch of a 2026-10-10 takeoff (flaps 20 polar, climb thrust
+  against air density, a lightly damped attitude loop): the 156 to 182 kt
+  VNAV target rise at the 1,500 ft acceleration height with flaps 20 is
+  reached within 90 s keeping more than +1,000 fpm; with the kit's flap
+  retraction the flaps are up below 6,500 ft and 250 kt is not passed by more
+  than 6 kt; the 250 to 326 kt rise at 10,000 ft is reached within 150 s
+  without descending; the same with slower, more oscillatory or faster
+  attitude loops and 15 % less or more thrust. Also the climb speed pitch
+  step itself (the acceleration wanted, its band, the rate limit, the
+  attitude interlock, and no change within 2 kt, level or descending).
 - `engines_reverse_hold_test.lua`: the all-engine reverse-hold command, its
   reverse monitor and the auto-stow timers run frame by frame - releasing a
   hold of 0.5 s or more returns to reverse idle at once (fast or below

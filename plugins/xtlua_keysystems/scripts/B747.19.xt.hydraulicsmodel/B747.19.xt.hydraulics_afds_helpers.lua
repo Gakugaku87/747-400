@@ -325,4 +325,65 @@ function afds_controls.inactive_mode_pitch_target(pitch_deg)
     return clamp(pitch_deg, afds_controls.SPEED_PITCH_MIN_TARGET_DEG, afds_controls.SPEED_PITCH_MAX_TARGET_DEG)
 end
 
+-- [g-6] Speed-on-pitch climb away from the target speed
+
+-- More than 2 kt from the target in a FLCH SPD or VNAV SPD climb, the pitch
+-- target moves with the acceleration still missing. The wanted acceleration
+-- is the speed error over 20 s, at most 1 kt/s either way. Below the target
+-- the pitch goes down while the aircraft accelerates less than wanted and up
+-- once it accelerates more than 0.1 kt/s beyond it (mirrored above the
+-- target), at 0.6 deg/s per kt/s of difference and at most 0.5 deg/s, and
+-- not while the attitude is still 0.5 deg or more on the far side of the last
+-- target (the same interlock as the speed law). Within 2 kt, level or
+-- descending the speed law is unchanged. That law moved the pitch by
+-- (0.01 + 0.5 x the speed change)/3 deg an update below the target, about
+-- 0.01 deg/s at a steady speed, so a 26 kt rise with takeoff flaps was not
+-- flown in 250 s of climb. The climb guard of limit_speed_pitch_target still
+-- applies to the result.
+afds_controls.CLIMB_SPEED_PITCH_MARGIN_KTS = 2.0
+afds_controls.CLIMB_SPEED_PITCH_TIME_CONSTANT_SEC = 20.0
+afds_controls.CLIMB_SPEED_PITCH_MAX_ACCEL_KTS_PER_SEC = 1.0
+afds_controls.CLIMB_SPEED_PITCH_ACCEL_BAND_KTS_PER_SEC = 0.1
+afds_controls.CLIMB_SPEED_PITCH_GAIN_DEG_PER_KT = 0.6
+afds_controls.CLIMB_SPEED_PITCH_MAX_RATE_DEG_PER_SEC = 0.5
+afds_controls.CLIMB_SPEED_PITCH_ATTITUDE_LAG_DEG = 0.5
+
+-- Pitch target for a speed-on-pitch climb more than 2 kt from the target, or
+-- nil to leave it to the speed law. speed_change_kts is the change since the
+-- previous update, elapsed_sec the time since it, pitch_error_deg the
+-- attitude minus the previous target.
+function afds_controls.climb_speed_pitch_target(previous_target_deg, speed_change_kts, elapsed_sec,
+        actual_speed_kts, target_speed_kts, vertical_direction, pitch_error_deg)
+    if vertical_direction ~= afds_controls.VERTICAL_DIRECTION_CLIMB then return nil end
+    if type(previous_target_deg) ~= "number" or type(speed_change_kts) ~= "number"
+        or type(actual_speed_kts) ~= "number" or type(target_speed_kts) ~= "number" then
+        return nil
+    end
+    local speed_error_kts = target_speed_kts - actual_speed_kts
+    if math.abs(speed_error_kts) <= afds_controls.CLIMB_SPEED_PITCH_MARGIN_KTS then return nil end
+    elapsed_sec = tonumber(elapsed_sec) or 0
+    if elapsed_sec <= 0 then return previous_target_deg end
+    local acceleration = speed_change_kts / elapsed_sec
+    local limit = afds_controls.CLIMB_SPEED_PITCH_MAX_ACCEL_KTS_PER_SEC
+    local wanted = clamp(speed_error_kts / afds_controls.CLIMB_SPEED_PITCH_TIME_CONSTANT_SEC, -limit, limit)
+    local low, high = wanted, wanted + afds_controls.CLIMB_SPEED_PITCH_ACCEL_BAND_KTS_PER_SEC
+    if speed_error_kts < 0 then
+        low, high = wanted - afds_controls.CLIMB_SPEED_PITCH_ACCEL_BAND_KTS_PER_SEC, wanted
+    end
+    pitch_error_deg = tonumber(pitch_error_deg) or 0
+    local lag = afds_controls.CLIMB_SPEED_PITCH_ATTITUDE_LAG_DEG
+    local rate
+    if acceleration < low then
+        if pitch_error_deg >= lag then return previous_target_deg end
+        rate = -afds_controls.CLIMB_SPEED_PITCH_GAIN_DEG_PER_KT * (low - acceleration)
+    elseif acceleration > high then
+        if pitch_error_deg <= -lag then return previous_target_deg end
+        rate = afds_controls.CLIMB_SPEED_PITCH_GAIN_DEG_PER_KT * (acceleration - high)
+    else
+        return previous_target_deg
+    end
+    local max_rate = afds_controls.CLIMB_SPEED_PITCH_MAX_RATE_DEG_PER_SEC
+    return previous_target_deg + clamp(rate, -max_rate, max_rate) * elapsed_sec
+end
+
 return afds_controls
