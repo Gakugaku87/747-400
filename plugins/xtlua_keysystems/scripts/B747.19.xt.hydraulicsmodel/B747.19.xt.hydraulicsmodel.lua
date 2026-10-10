@@ -544,7 +544,8 @@ function flight_start()
   B747DR_pidPitchPL = 0.07 --low 0.15 high 0.05
   B747DR_pidPitchPH = 0.04 --low 0.15 high 0.05
   B747DR_pidPitchI = 0.07 --0.07
-  B747DR_pidPitchD = 0.0002
+  -- damps the attitude's hunt around the flight director (the integral gain equals P)
+  B747DR_pidPitchD = 0.07
 
 
   B747DR_pidyawP = 1.0

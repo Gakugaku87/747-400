@@ -1103,6 +1103,9 @@ function doTrim()
 end
 local previous_simDR_AHARS_pitch_heading_deg_pilot=0
 
+-- the pitch PID derivative while AUTOLAND flies the flare (below 100 ft RA): the flare law
+-- (B747.autoland.lua) was tuned in X-Plane with this nearly undamped loop
+local AUTOLAND_PITCH_KD=0.0002
 local pitchPid = newPid()
 pitchPid.minout=-1
 pitchPid.maxout=1
@@ -1132,7 +1135,7 @@ function ap_pitch_assist()
     B747DR_pidPitchI=B747DR_pidPitchP--*0.1 --scale this with P
     pitchPid.kp=B747DR_pidPitchP
     pitchPid.ki=B747DR_pidPitchI
-    pitchPid.kd=B747DR_pidPitchD
+    pitchPid.kd=B747DR_ap_autoland==1 and AUTOLAND_PITCH_KD or B747DR_pidPitchD
     
     if simDR_autopilot_servos_on>0 and (B747DR_ap_FMA_active_pitch_mode>0 or B747DR_ap_autoland == 1) then
         simDR_electric_trim=0

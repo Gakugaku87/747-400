@@ -70,11 +70,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
 - `ap_pitch_loop_test.lua`: the AP pitch servo loop (ap_pitch_assist: the
   pitch PID with the gains flight_start sets, its altitude schedule and rate
   limit, and the stab trim) flying a longitudinal model fitted to the kit's
-  2026-10-10 circuit (flaps 20 polar at 155 kt, pitch moment from the
-  elevator command reconstructed through the production PID), with
+  2026-10-10 circuits (flaps 20 polar at 155 kt, pitch moment fitted to the
+  recorded elevator, alpha and pitch rate at flaps 20 and 5), with
   flight_controls_override's 2 s before the command is applied - CMD 4.3 deg
   below the flight director as at the circuit's hand-off: no integral wind-up
-  in the 2 s, no near-full nose-up command, a bounded overshoot.
+  in the 2 s, no near-full nose-up command, a bounded overshoot; a 1 deg
+  flight-director step with the AP on at flaps 20 and 5: no hunt (at most 4
+  turning points beyond 5 % of the step, at most 10 % below it after the
+  first overshoot); and AUTOLAND keeping the flare's 0.0002 derivative.
 - `fpm_bias_test.lua`: the flap-movement vertical-speed bias of the flight
   director with the production interpolation and a 44 fps frame period - no
   bias at the first ALT/VNAV PTH update after a fresh load with flaps out, nor
