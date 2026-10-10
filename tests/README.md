@@ -101,20 +101,25 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   the autopilot monitor (B747_monitorAP), and the flight-path vertical speed
   and pitch rate of the autoland flare law in preLand_measure (every frame
   from 800 ft down to the flare height).
-- `autoland_flare_test.lua`: the autoland flare law helpers (sink-rate
-  command, pitch-target size and rate limits, the approach pitch when no
-  steady sample was taken, derotation at 1 deg/s to -0.5 deg) and the
-  production autoland logic flown from 300 ft RA to 8 s after touchdown
-  against a simple point-mass model - four approaches and two pitch-loop
-  responses, ground falling away 24 ft under the flare, a noisy VSI, the
-  VSI and the indicated VVI (vh_ind_fpm) lagging the flight path by 1.2 s
-  as in X-Plane (the flare law flies the flight-path vertical speed,
-  local_vy), the vertical speed reading 0 at flare entry (XTLua's first
-  read, seen in X-Plane) and a second autoland in the same session:
-  touchdown sink -80 to -250 fpm with
-  no float, FLARE to touchdown within 10 s (11 s with the terrain), no
-  nose-down before main gear touchdown, a rate-limited derotation, and A/T
-  IDLE no higher than 25 ft.
+- `autoland_flare_test.lua`: the autoland flare law helpers (flare height,
+  sink-rate command, pitch-target size and rate limits, pitch-rate damping,
+  the approach pitch when no steady sample was taken, derotation at 1 deg/s
+  to -0.5 deg) and the production autoland logic flown from 300 ft RA to 8 s
+  after touchdown against a point-mass model fitted to the kit's recordings
+  of the 2026-10-10 circuits (flaps 30 polar, ground effect, the thrust
+  spooling down after the retard, the VSI lagging the flight path by 1.2 s,
+  and the attitude following the autoland target through the lightly
+  damped, delayed AFDS pitch loop: damping 0.15, 0.8 rad/s, 0.8 s, and three
+  other loops) - 220, 257 and 300 t on level ground and on ground falling
+  25 ft under the flare as at EINN 06, a noisy VSI, noise on the law's own
+  inputs (local_vy and Q, frame to frame and at 0.7 and 1.1 Hz), the vertical
+  speed reading 0 at flare entry (XTLua's first read, seen in X-Plane) and a
+  second autoland in the same session, judged as the flight-test kit judges
+  a landing: touchdown VSI -300 fpm or less (and not a skim), float at most
+  0.5 s, FLARE to touchdown within 11 s, touchdown within 900 m of the FLARE
+  point, no climb in the flare (20 fpm and 0.5 s more room for the other
+  loops), no nose-down before main gear touchdown, a rate-limited
+  derotation, and A/T IDLE no higher than 25 ft.
 - `eec_flare_retard_test.lua`: EEC IDLE in the autoland flare - no low-speed
   thrust recovery below 50 ft RA, the retard from approach thrust to idle
   over about 2 s, and the IDLE low-speed recovery kept outside the autoland

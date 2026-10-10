@@ -585,25 +585,32 @@ end
 -- rate error into a pitch target, instead of holding a fixed attitude. The
 -- autoland retards the thrust at the same height as the EEC SPD cut
 -- (radarAlt1 < 25.1 in B747.42.xt.EEC.lua spd_throttle).
+-- The constants are tuned against a point-mass model fitted to the X-Plane
+-- circuits of 2026-10-10 (ground effect, the AFDS pitch loop: damping about
+-- 0.15, 0.8 rad/s, 0.8 s delay, and the ground falling about 25 ft under the
+-- flare at EINN 06): with the lightly damped loop the law needs a strong
+-- pitch-rate damping term and a firm sink-rate gain, and the sink it aims
+-- for at touchdown is about 220 fpm.
+afds.FLARE_HEIGHT_FT = 43
 afds.FLARE_RETARD_FT = 25
-afds.FLARE_SINK_TIME_CONSTANT_SEC = 5
-afds.FLARE_HEIGHT_BIAS_FT = 12
-afds.FLARE_MIN_SINK_FPM = 100
-afds.FLARE_PITCH_PER_FPM = 0.004
-afds.FLARE_PITCH_INTEGRAL_PER_FPM_SEC = 0.001
-afds.FLARE_PITCH_RATE_DAMPING_SEC = 0.7
-afds.FLARE_PITCH_UP_RATE_DEG_PER_SEC = 1.5
-afds.FLARE_PITCH_DOWN_RATE_DEG_PER_SEC = 1.0
+afds.FLARE_SINK_TIME_CONSTANT_SEC = 5.5
+afds.FLARE_HEIGHT_BIAS_FT = 20
+afds.FLARE_MIN_SINK_FPM = 60
+afds.FLARE_PITCH_PER_FPM = 0.008
+afds.FLARE_PITCH_INTEGRAL_PER_FPM_SEC = 0.0007
+afds.FLARE_PITCH_RATE_DAMPING_SEC = 2.4
+afds.FLARE_PITCH_UP_RATE_DEG_PER_SEC = 1.3
+afds.FLARE_PITCH_DOWN_RATE_DEG_PER_SEC = 1.3
 afds.FLARE_PITCH_BELOW_BASE_DEG = 0.5
-afds.FLARE_PITCH_ABOVE_BASE_DEG = 4.0
+afds.FLARE_PITCH_ABOVE_BASE_DEG = 3.5
 afds.FLARE_MAX_PITCH_DEG = 7.5
 afds.DEROTATION_RATE_DEG_PER_SEC = 1.0
 afds.DEROTATION_PITCH_DEG = -0.5
 
 local FPM_PER_KNOT = 101.269
 
--- Sink rate the flare asks for: 60*(RA + 12)/5 fpm, never deeper than the
--- sink rate at flare entry and never shallower than 100 fpm, so the
+-- Sink rate the flare asks for: 60*(RA + 20)/5.5 fpm, never deeper than the
+-- sink rate at flare entry and never shallower than 60 fpm, so the
 -- aircraft keeps sinking onto the runway instead of floating.
 function afds.flare_vspeed_command_fpm(radio_altitude_ft, entry_vspeed_fpm)
     local command_fpm = -60 * (radio_altitude_ft + afds.FLARE_HEIGHT_BIAS_FT)
@@ -617,7 +624,7 @@ end
 -- from the current values. The target is the approach pitch plus the change
 -- in flight-path angle the sink command needs, a PI term on the sink rate
 -- error and pitch rate damping. It stays between base - 0.5 and
--- min(base + 4, 7.5) and moves at most 1.5 deg/s up and 1.0 deg/s down.
+-- min(base + 3.5, 7.5) and moves at most 1.3 deg/s up or down.
 -- An entry sink rate that is not a descent is not kept: XTLua gave start_flare
 -- 0 for its first read of vh_ind_fpm (X-Plane 2026-10-10), which held the
 -- command at -100 fpm from 50 ft; the first descending sample is used instead.

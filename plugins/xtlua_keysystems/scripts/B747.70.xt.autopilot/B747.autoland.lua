@@ -19,7 +19,7 @@ local pinRoll=0
 local windCorrectAngle=0
 local maxPitch=0
 local maxThrottle=1
-local flareAt=50
+local flareAt=B747_afds_helpers.FLARE_HEIGHT_FT -- FLARE engages below this radio altitude (ft)
 local zeroRatePitch=6
 local totalLift=0
 local liftMeasurements=0;
@@ -341,7 +341,7 @@ function runAutoland()
 	      return true
       end
 
-      -- once in FLARE, stay in it if the ground falls away and RA rises above 50 ft again
+      -- once in FLARE, stay in it if the ground falls away and RA rises above the flare height again
       if simDR_radarAlt1 > flareAt and simDR_radarAlt1 < 800 and numAPengaged>=2 and B747DR_ap_FMA_active_pitch_mode ~= 3 then
         preLand_measure()
       elseif B747DR_ap_FMA_active_pitch_mode ~= 3 and numAPengaged>=2 then
