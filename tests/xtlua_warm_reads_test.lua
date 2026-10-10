@@ -55,6 +55,12 @@ local cases = {
             "simDR_hsi_ldef_dots_nav1", "simDR_hsi_ldef_dots_nav2", "simDR_hsi_vdef_dots_pilot",
             "simDR_nav1_gs_flag", "simDR_nav2_gs_flag",
             "simDR_hsi_nav1_vertical_signal", "simDR_hsi_nav2_vertical_signal"}},
+    -- [f] the flare law reads the flight-path vertical speed and the pitch
+    -- rate from FLARE engagement on (start_flare and doPitch,
+    -- B747.autoland.lua); preLand_measure runs every frame from 800 ft to the
+    -- 50 ft flare height, so they are read there first.
+    {file=AP.."B747.autoland.lua", func="preLand_measure",
+        names={"simDR_local_vy", "simDR_pitch_rate_deg_sec"}},
 }
 
 for _, case in ipairs(cases) do

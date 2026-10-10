@@ -98,7 +98,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   (the "local refresh...=" reads): the native transition altitude and the CRZ
   ALT sync fault flag in the FMS after_physics, and the localizer and
   glideslope signals, flags and deviations of the LOC and G/S capture gates in
-  the autopilot monitor (B747_monitorAP).
+  the autopilot monitor (B747_monitorAP), and the flight-path vertical speed
+  and pitch rate of the autoland flare law in preLand_measure (every frame
+  from 800 ft down to the flare height).
 - `autoland_flare_test.lua`: the autoland flare law helpers (sink-rate
   command, pitch-target size and rate limits, the approach pitch when no
   steady sample was taken, derotation at 1 deg/s to -0.5 deg) and the

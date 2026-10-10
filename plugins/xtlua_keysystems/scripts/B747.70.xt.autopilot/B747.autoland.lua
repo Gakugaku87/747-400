@@ -256,6 +256,10 @@ local lastVVI=0
 local landingvviTime=0
 function preLand_measure()
      --totalLift=totalLift+(simDR_Lift/10000)
+     -- the flare law reads these from FLARE engagement on; XTLua gives 0 for a
+     -- dataref's first read, so read them every frame from 800 ft
+     local refreshVy=simDR_local_vy
+     local refreshPitchRate=simDR_pitch_rate_deg_sec
 
      local currentFPM=simDR_vvi_fpm_pilot
      local diff=simDRTime-landingvviTime
