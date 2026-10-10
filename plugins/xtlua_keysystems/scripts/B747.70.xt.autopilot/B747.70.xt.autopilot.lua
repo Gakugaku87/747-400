@@ -681,10 +681,8 @@ end
 function B747_ap_switch_vnavspeed_mode_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747CMD_fdr_log_spdmod:once()
-		if B747_ap_button_switch_position_target[15] == 1 then
-			B747_ap_button_switch_position_target[15] = 0
-			return
-		end
+		-- every push acts: a push that finds the knob still in (its release lost,
+		-- as for a command fired once) is a new push, not the release
 		B747_ap_button_switch_position_target[15] = 1 -- SET THE SPEED KNOB ANIMATION TO "IN"
 		if B747DR_ap_vnav_state == 2 and B747DR_switchingIASMode==0 then
 			setVNAVState("manualVNAVspd", 1 - getVNAVState("manualVNAVspd"))
@@ -744,11 +742,8 @@ function B747_ap_switch_vnavalt_mode_CMDhandler(phase, duration)
 		B747DR_ap_lastCommand = simDRTime
 		print("vnav alt button")
 
-		if B747_ap_button_switch_position_target[16] == 1 then
-			B747_ap_button_switch_position_target[16] = 0
-			return
-		end
-
+		-- every push acts: a push that finds the knob still in (its release lost,
+		-- as for a command fired once) is a new push, not the release
 		B747_ap_button_switch_position_target[16] = 1 -- SET THE ALT KNOB ANIMATION TO "IN"
 
 		local currentCruiseAltitude=tonumber(B747BR_cruiseAlt) or 0

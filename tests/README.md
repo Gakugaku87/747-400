@@ -57,6 +57,16 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   vertical speed limited to 2000 fpm, and to 500 fpm when descending 15 kt
   fast (or near Vmax) or climbing 15 kt slow (or near Vmc), using recorded
   TST744L cases.
+- `ap_knob_push_test.lua`: the production MCP speed-knob and ALT-selector
+  push handlers when the release of the previous push never arrives (XTLua
+  does not pass the end phase of a command fired once): every push acts -
+  the second speed-knob push ends the VNAV speed intervention and the second
+  ALT push makes the new CRZ ALT and schedules the cruise climb - and with
+  the releases the knobs go back out; and the VR controls' "use" click on
+  those knobs (B747.99.VRcontrols.lua) as one held push: the speed
+  intervention opens once, the ALT push waits for the scheduled cruise climb,
+  and the knob goes out on the release even when the view has moved to
+  another knob.
 - `fpm_bias_test.lua`: the flap-movement vertical-speed bias of the flight
   director with the production interpolation and a 44 fps frame period - no
   bias at the first ALT/VNAV PTH update after a fresh load with flaps out, nor
