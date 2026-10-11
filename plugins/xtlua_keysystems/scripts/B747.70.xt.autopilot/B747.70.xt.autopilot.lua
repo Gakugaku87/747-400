@@ -681,10 +681,8 @@ end
 function B747_ap_switch_vnavspeed_mode_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747CMD_fdr_log_spdmod:once()
-		if B747_ap_button_switch_position_target[15] == 1 then
-			B747_ap_button_switch_position_target[15] = 0
-			return
-		end
+		-- every push acts: a push that finds the knob still in (its release lost,
+		-- as for a command fired once) is a new push, not the release
 		B747_ap_button_switch_position_target[15] = 1 -- SET THE SPEED KNOB ANIMATION TO "IN"
 		if B747DR_ap_vnav_state == 2 and B747DR_switchingIASMode==0 then
 			setVNAVState("manualVNAVspd", 1 - getVNAVState("manualVNAVspd"))
@@ -744,11 +742,8 @@ function B747_ap_switch_vnavalt_mode_CMDhandler(phase, duration)
 		B747DR_ap_lastCommand = simDRTime
 		print("vnav alt button")
 
-		if B747_ap_button_switch_position_target[16] == 1 then
-			B747_ap_button_switch_position_target[16] = 0
-			return
-		end
-
+		-- every push acts: a push that finds the knob still in (its release lost,
+		-- as for a command fired once) is a new push, not the release
 		B747_ap_button_switch_position_target[16] = 1 -- SET THE ALT KNOB ANIMATION TO "IN"
 
 		local currentCruiseAltitude=tonumber(B747BR_cruiseAlt) or 0
@@ -2352,8 +2347,67 @@ local function B747_lnav_leg_supports_preemption(waypoint)
 	return true
 end
 
+-- An altitude-terminated leg's end (CA/VA/FA, "(650)") is reached once the aircraft is airborne at or
+-- above its altitude and 400 ft above the ground (no departure turn is designed lower; a misset
+-- altimeter does not end the leg on the runway)
+local LNAV_ALTITUDE_LEG_MIN_RA_FT=400
+local function B747_altitude_leg_reached(entry)
+	local legEndAlt=B747_afds_helpers.altitude_leg_end_ft(entry)
+	return legEndAlt~=nil and simDR_onGround==0 and simDR_radarAlt1>=LNAV_ALTITUDE_LEG_MIN_RA_FT
+		and simDR_pressureAlt1>=legEndAlt
+end
+
+-- The start of the leg to fmsO[i]: the entry before it, but for the leg after altitude-terminated legs'
+-- ends ("(650)", which X-Plane may keep moving with the aircraft) the entry before them
+local function B747_lnav_leg_start(fmsO, i)
+	local k=i-1
+	while k>1 and B747_afds_helpers.altitude_leg_end_ft(fmsO[k])~=nil do
+		k=k-1
+	end
+	return fmsO[k]
+end
+
+local function B747_lnav_sequence_to(index, why)
+	B747DR_fms_setCurrent=index
+	B747DR_fmscurrentIndex=index
+	if B747DR_ap_lnav_state==2 then
+		B747DR_ap_lnavHeading_mode=index
+	end
+	print("B747DR_fmscurrentIndex="..index.." "..why)
+	setVNAVState("recalcAfter", index)
+end
+
 function B747_getCurrentWayPoint_function(fmsO)
-	
+	local current=B747DR_fmscurrentIndex
+	local count=table.getn(fmsO)
+	-- the end of an altitude-terminated leg is reached at its altitude: X-Plane, whose sequencing the
+	-- 747 overrides, keeps that point just ahead of the aircraft after it
+	if current<count and B747_altitude_leg_reached(fmsO[current]) then
+		B747_lnav_sequence_to(current+1, "past the altitude leg end "..tostring(fmsO[current][8]))
+		return
+	end
+	-- the fix before such legs passed with their altitude reached: on to the fix after them (the leg
+	-- search finds no leg to it when it lies behind, and the 747 turned back to the passed fix); the
+	-- departure runway (after the origin airport) counts as passed in the air
+	if current>1 and current<count-1 and B747_altitude_leg_reached(fmsO[current+1]) then
+		local fix=fmsO[current]
+		local legStart=B747_lnav_leg_start(fmsO,current)
+		local dToFix=getDistance(simDR_latitude,simDR_longitude,fix[5],fix[6])
+		local legLength=getDistance(legStart[5],legStart[6],fix[5],fix[6])
+		local passed=dToFix<0.3 or (current==2 and fmsO[1][2]==1)
+		if not passed and legLength>0.1 then
+			local dFromStart=getDistance(simDR_latitude,simDR_longitude,legStart[5],legStart[6])
+			passed=getTriSpaceSolver(legLength,dFromStart,dToFix)[1]>=legLength
+		end
+		if passed then
+			local nextIndex=current+1
+			while nextIndex<count and B747_altitude_leg_reached(fmsO[nextIndex]) do
+				nextIndex=nextIndex+1
+			end
+			B747_lnav_sequence_to(nextIndex, "past "..tostring(fix[8]).." and the altitude legs after it")
+			return
+		end
+	end
 	if simDR_radarAlt1<1000 and simDR_vvi_fpm_pilot < 500.0 then return end --surpress during final/on ground
 	if (B747DR_fmscurrentIndex>1 and fmsO[B747DR_fmscurrentIndex-1][8]=="PPOS") then
 		simDR_override_fms_progress=0
@@ -2379,11 +2433,20 @@ function B747_getCurrentWayPoint_function(fmsO)
 			bestheadingDiff=120
 		end
 	end
+	-- the legs up to an altitude-terminated leg's end that is reached are flown: the search does not go
+	-- back to them (a SID turning back over the airport matched the runway's legs again)
+	for k=B747DR_fmscurrentIndex-1,2,-1 do
+		if B747_altitude_leg_reached(fmsO[k]) then
+			minPhaseLeg=math.max(minPhaseLeg,k+1)
+			break
+		end
+	end
 	local canNew=true
 	if B747DR_fmscurrentIndex>1 then
 		local dToNext=getDistance(simDR_latitude,simDR_longitude,fmsO[B747DR_fmscurrentIndex][5],fmsO[B747DR_fmscurrentIndex][6])
-		dFromLast=getDistance(simDR_latitude,simDR_longitude,fmsO[B747DR_fmscurrentIndex-1][5],fmsO[B747DR_fmscurrentIndex-1][6])
-		trackLength=getDistance(fmsO[B747DR_fmscurrentIndex-1][5],fmsO[B747DR_fmscurrentIndex-1][6],fmsO[B747DR_fmscurrentIndex][5],fmsO[B747DR_fmscurrentIndex][6])
+		local legStart=B747_lnav_leg_start(fmsO,B747DR_fmscurrentIndex)
+		dFromLast=getDistance(simDR_latitude,simDR_longitude,legStart[5],legStart[6])
+		trackLength=getDistance(legStart[5],legStart[6],fmsO[B747DR_fmscurrentIndex][5],fmsO[B747DR_fmscurrentIndex][6])
 		local track=getTriSpaceSolver(trackLength,dFromLast,dToNext)
 		if track[1]<math.max(trackLength-5,trackLength*2/3) then
 			canNew=false
@@ -2412,21 +2475,25 @@ function B747_getCurrentWayPoint_function(fmsO)
 			local trackLength=1
 			local dToNext=getDistance(simDR_latitude,simDR_longitude,fmsO[i][5],fmsO[i][6])
 
+			local legStart=nil
 			if i>1 then
-				dFromLast=getDistance(simDR_latitude,simDR_longitude,fmsO[i-1][5],fmsO[i-1][6])
-				trackLength=getDistance(fmsO[i-1][5],fmsO[i-1][6],fmsO[i][5],fmsO[i][6])
+				legStart=B747_lnav_leg_start(fmsO,i)
+				dFromLast=getDistance(simDR_latitude,simDR_longitude,legStart[5],legStart[6])
+				trackLength=getDistance(legStart[5],legStart[6],fmsO[i][5],fmsO[i][6])
 			else
 				trackLength=dToNext+0.11
 			end
 
 			
 			
-			if trackLength>0.1 then
+			-- a leg to an altitude-terminated leg's end is done once its altitude is reached (X-Plane may
+			-- keep that point just ahead of the aircraft, which would make it the leg flown)
+			if trackLength>0.1 and not B747_altitude_leg_reached(fmsO[i]) then
 				local track=getTriSpaceSolver(trackLength,dFromLast,dToNext)
 				
 				local thisHeading=0
 				if i>1 then
-					thisHeading=getHeading(fmsO[i-1][5],fmsO[i-1][6],fmsO[i][5],fmsO[i][6])
+					thisHeading=getHeading(legStart[5],legStart[6],fmsO[i][5],fmsO[i][6])
 				else
 					thisHeading=getHeading(simDR_latitude,simDR_longitude,fmsO[i][5],fmsO[i][6])
 					track[2]=dToNext
@@ -2467,8 +2534,17 @@ function B747_getCurrentWayPoint_function(fmsO)
 		
 		B747DR_ap_lnav_xtk_error=bestOffTrack
 		--print("best Track to waypoint="..best.." / "..bestOffTrack)
+		-- an altitude-terminated leg's end whose altitude is reached is no leg to stop at
+		local maxAdvance=LNAV_MAX_AUTOMATIC_SEQUENCE_ADVANCE_LEGS
+		local skipIndex=B747DR_fmscurrentIndex+1
+		while skipIndex<best and skipIndex<=B747DR_fmscurrentIndex+maxAdvance do
+			if B747_altitude_leg_reached(fmsO[skipIndex]) then
+				maxAdvance=maxAdvance+1
+			end
+			skipIndex=skipIndex+1
+		end
 		if B747DR_ap_lnav_xtk_target>-99 and B747DR_fmscurrentIndex>0
-			and best>B747DR_fmscurrentIndex+LNAV_MAX_AUTOMATIC_SEQUENCE_ADVANCE_LEGS then
+			and best>B747DR_fmscurrentIndex+maxAdvance then
 			best=B747DR_fmscurrentIndex
 		end
 		if best>0 and (best>B747DR_fmscurrentIndex or best<B747DR_fmscurrentIndex-1) and B747DR_fmscurrentIndex ~=best then

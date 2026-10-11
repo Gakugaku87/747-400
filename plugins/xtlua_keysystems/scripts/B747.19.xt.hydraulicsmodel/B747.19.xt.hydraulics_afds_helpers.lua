@@ -16,6 +16,19 @@ afds_controls.SPEED_PITCH_CLIMB_MIN_TARGET_DEG = 0.0
 afds_controls.SPEED_PITCH_DESCENT_MAX_TARGET_DEG = 5.0
 afds_controls.SPEED_PITCH_DIRECTION_GUARD_FPM = 100.0
 afds_controls.SPEED_PITCH_PHASE_RECOVERY_DEG_PER_SEC = 1.0
+-- In a climb, while the VSI shows +100 fpm or less, the target is not left
+-- below the attitude that flies level at the current angle of attack and bank
+-- (climb_path_pitch_deg) and rises to it at the recovery rate. It used to rise
+-- at that rate for as long as the VSI showed more than 100 fpm down, but the
+-- VSI lags the flight path and the attitude lags the target, and at altitude
+-- 1 deg is about 850 fpm: on 2026-10-10 (final-L1, P4 0dd3b35d) the step
+-- climbs began at waypoints where LNAV rolled, a -300 fpm sink in the turn
+-- became +4,745 fpm and the speed fell 24 kt below the target. Level, not a
+-- climb, so that at a thrust-limited ceiling the speed is still held; only at
+-- +100 fpm or less, so that the angle of attack of a hunting attitude ratchets
+-- the target up only once the climb has nearly stopped. Without the angle of
+-- attack the VSI rule stays.
+afds_controls.SPEED_PITCH_CLIMB_PATH_FPM = 0.0
 afds_controls.SPEED_PITCH_SEVERE_UNDERSPEED_MARGIN_KTS = 15.0
 -- The minimum safe speed never lifts the severe underspeed threshold above
 -- target - 5 kt (with takeoff flaps Vmc + 10 kt can be above V2 + 10 kt).
@@ -61,9 +74,21 @@ function afds_controls.vertical_direction_for_altitude(current_altitude_ft, targ
     return afds_controls.VERTICAL_DIRECTION_LEVEL
 end
 
+-- The attitude that climbs at SPEED_PITCH_CLIMB_PATH_FPM (level) at this angle
+-- of attack, true airspeed (m/s) and bank (pitch = flight path + alpha x cos
+-- bank), or nil without them.
+function afds_controls.climb_path_pitch_deg(alpha_deg, true_airspeed_mps, bank_deg)
+    if type(alpha_deg) ~= "number" or type(true_airspeed_mps) ~= "number" or true_airspeed_mps <= 0 then
+        return nil
+    end
+    local climb_mps = afds_controls.SPEED_PITCH_CLIMB_PATH_FPM * 0.3048 / 60
+    local path_deg = math.deg(math.asin(math.min(1, climb_mps / true_airspeed_mps)))
+    return path_deg + alpha_deg * math.cos(math.rad(tonumber(bank_deg) or 0))
+end
+
 function afds_controls.limit_speed_pitch_target(requested_target_deg, previous_target_deg, vertical_direction,
         vertical_speed_fpm, actual_speed_kts, target_speed_kts, min_safe_speed_kts, max_safe_speed_kts,
-        elapsed_sec, accelerating_to_target)
+        elapsed_sec, accelerating_to_target, climb_path_pitch_deg)
     if type(previous_target_deg) ~= "number" then previous_target_deg = requested_target_deg or 0 end
     if type(requested_target_deg) ~= "number" then requested_target_deg = previous_target_deg end
     vertical_speed_fpm = tonumber(vertical_speed_fpm) or 0
@@ -104,7 +129,13 @@ function afds_controls.limit_speed_pitch_target(requested_target_deg, previous_t
             and requested_target_deg < previous_target_deg then
             requested_target_deg = previous_target_deg
         end
-        if vertical_speed_fpm < -afds_controls.SPEED_PITCH_DIRECTION_GUARD_FPM then
+        if type(climb_path_pitch_deg) == "number" then
+            if vertical_speed_fpm <= afds_controls.SPEED_PITCH_DIRECTION_GUARD_FPM
+                and requested_target_deg < climb_path_pitch_deg then
+                requested_target_deg = math.max(requested_target_deg,
+                    math.min(climb_path_pitch_deg, previous_target_deg + recovery_step_deg))
+            end
+        elseif vertical_speed_fpm < -afds_controls.SPEED_PITCH_DIRECTION_GUARD_FPM then
             requested_target_deg = math.max(requested_target_deg, previous_target_deg + recovery_step_deg)
         end
     elseif vertical_direction == afds_controls.VERTICAL_DIRECTION_DESCENT and not severe_overspeed then

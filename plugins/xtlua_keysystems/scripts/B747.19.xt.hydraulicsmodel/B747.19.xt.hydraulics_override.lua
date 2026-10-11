@@ -544,8 +544,31 @@ local last_vvi_update=0
 local prev_vvi_update=0.5
 local fpmBias=0
 local lastFlapsFPM=0
+local fpmBiasRunStart=nil   -- first call of the current run of calls (the ALT, V/S, VNAV PTH or G/S branch)
+local lastFPMBiasTime=nil
+-- a longer gap between calls ends a run: the ALT branch calls every 0.1 s, the
+-- V/S, VNAV PTH and G/S branch every 1.0 s (plus a frame) when on target
+local FPM_BIAS_RUN_GAP_SEC=2.5
+-- The bias answers a flap handle move seen while this director runs above
+-- 3,000 ft RA. The reference follows the handle whenever a move cannot be
+-- one: for the first 0.5 s of a run of calls (a fresh load has no reference,
+-- and FLCH, VNAV SPD and TO/GA do not call this, so the handle may have moved
+-- in between) and below 3,000 ft RA. ap_pitch_assist reads the handle every
+-- frame, as XTLua gives 0 for the first read of a dataref. A bias left from an earlier run is dropped. Before, the
+-- reference started at 0 and moved only inside the condition below, so the
+-- first ALT/VNAV PTH update above 3,000 ft with flaps out added 6000 x the
+-- handle ratio (+4,000 fpm at flaps 20) and pitched the 747 down at the
+-- capture (flight tests 2026-10-10).
 function get_FPM_bias()
     local fpmBiasMax=6000
+    if lastFPMBiasTime==nil or simDRTime-lastFPMBiasTime>FPM_BIAS_RUN_GAP_SEC or simDRTime<lastFPMBiasTime then
+        fpmBiasRunStart=simDRTime
+        fpmBias=0
+    end
+    lastFPMBiasTime=simDRTime
+    if simDRTime-fpmBiasRunStart<0.5 or simDR_radarAlt1<=3000 then
+        lastFlapsFPM=B747DR_flap_ratio
+    end
     if B747DR_flap_ratio~=lastFlapsFPM and B747DR_flap_lever_detent==0 and simDR_radarAlt1>3000 then
         local Flaps_change=B747DR_flap_ratio-lastFlapsFPM
         print("Flaps_change "..Flaps_change)
@@ -680,10 +703,13 @@ function ap_director_pitch(pitchMode)
             speedPitchAcceleratedFrom=simDR_ind_airspeed_kts_pilot
         end
         last_speedPitchTarget=simDR_autopilot_airspeed_kts
+        --in a climb that has stopped climbing, not below the attitude that flies level at this angle of attack
+        local climbPathPitch=B747_afds_controls.climb_path_pitch_deg(simDR_alpha_deg,simDR_TAS_mps,
+            simDR_AHARS_roll_heading_deg_pilot)
         last_simDR_AHARS_pitch_heading_deg_pilot=B747_afds_controls.limit_speed_pitch_target(
             requestedPitchTarget,previousPitchTarget,verticalDirection,simDR_vvi_fpm_pilot,
             simDR_ind_airspeed_kts_pilot,simDR_autopilot_airspeed_kts,minSafeSpeed,maxSafeSpeed,time,
-            speedPitchAccelerating and (speedPitchAcceleratedFrom or true))
+            speedPitchAccelerating and (speedPitchAcceleratedFrom or true),climbPathPitch)
         retval=last_simDR_AHARS_pitch_heading_deg_pilot
 
         return ap_director_pitch_retVal(pitchMode,retval)
@@ -1080,6 +1106,9 @@ function doTrim()
 end
 local previous_simDR_AHARS_pitch_heading_deg_pilot=0
 
+-- the pitch PID derivative while AUTOLAND flies the flare (below 100 ft RA): the flare law
+-- (B747.autoland.lua) was tuned in X-Plane with this nearly undamped loop
+local AUTOLAND_PITCH_KD=0.0002
 local pitchPid = newPid()
 pitchPid.minout=-1
 pitchPid.maxout=1
@@ -1093,6 +1122,11 @@ function ap_pitch_assist()
     local retval=B747DR_sim_pitch_ratio--B747_interpolate_value(B747DR_sim_pitch_ratio,0,-1,1,20)
     local refreshsimDR_electric_trim=simDR_electric_trim
     local refresh_trim=simDR_elevator_trim
+    -- read by get_FPM_bias only while the director runs ALT, V/S, VNAV PTH or G/S
+    local refreshFlapRatio=B747DR_flap_ratio
+    local refreshFlapDetent=B747DR_flap_lever_detent
+    -- read by the director only once AUTOLAND engages; XTLua gives 0 for a dataref's first read
+    local refreshAutolandPitch=B744DR_autolandPitch
 
     B747DR_pidPitchP=B747_rescale(3000,B747DR_pidPitchPL,40000,B747DR_pidPitchPH,B747DR_autopilot_altitude_ft_pfd)
     if B747DR_ap_AFDS_mode_box_status_pilot==1 or B747DR_ap_AFDS_mode_box_status_copilot==1 then
@@ -1104,14 +1138,23 @@ function ap_pitch_assist()
     B747DR_pidPitchI=B747DR_pidPitchP--*0.1 --scale this with P
     pitchPid.kp=B747DR_pidPitchP
     pitchPid.ki=B747DR_pidPitchI
-    pitchPid.kd=B747DR_pidPitchD
+    pitchPid.kd=B747DR_ap_autoland==1 and AUTOLAND_PITCH_KD or B747DR_pidPitchD
     
     if simDR_autopilot_servos_on>0 and (B747DR_ap_FMA_active_pitch_mode>0 or B747DR_ap_autoland == 1) then
         simDR_electric_trim=0
         pitchPid.input = simDR_AHARS_pitch_heading_deg_pilot
         pitchPid.target= flight_director_pitch
         if doCompute==1 then
-            pitchPid:compute()
+            if simDRTime-B747DR_switching_servos_on<2 then
+                -- flight_controls_override applies the command only 2 s after the servos came on: until
+                -- then keep the integral at the servo's position instead of winding it up on the
+                -- engagement error (2026-10-10, circuit hand-off 4.3 deg below the FD: the first applied
+                -- command was full nose-up and the attitude overshot by 4.7 deg)
+                pitchPid.output=B747DR_sim_pitch_ratio
+                pitchPid:compute(true)
+            else
+                pitchPid:compute()
+            end
         end
         local speed=B747_rescale(1,3,10,10,math.abs(flight_director_pitch-simDR_AHARS_pitch_heading_deg_pilot))
         if pitchPid.output==nil then return 0 end

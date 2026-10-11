@@ -61,6 +61,17 @@ local cases = {
     -- 50 ft flare height, so they are read there first.
     {file=AP.."B747.autoland.lua", func="preLand_measure",
         names={"simDR_local_vy", "simDR_pitch_rate_deg_sec"}},
+    -- the hydraulics flight director's flap-change VS bias (get_FPM_bias)
+    -- reads the flap handle only while it runs ALT, V/S, VNAV PTH or G/S; a 0
+    -- as the reference would be taken as a whole flap extension at the next
+    -- call of a V/S run (1.0 s later, after its first 0.5 s).
+    {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
+        func="ap_pitch_assist", names={"B747DR_flap_ratio", "B747DR_flap_lever_detent"}},
+    -- the hydraulics flight director reads the autoland pitch target only
+    -- once AUTOLAND has engaged (ap_director_pitch, below 100 ft RA), so its
+    -- first sample in the 10-sample flight-director average was 0 deg.
+    {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
+        func="ap_pitch_assist", names={"B744DR_autolandPitch"}},
 }
 
 for _, case in ipairs(cases) do

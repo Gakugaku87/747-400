@@ -80,4 +80,12 @@ equal(autopilot.simDR_autopilot_vs_status, hydraulics.simDR_autopilot_vs_status,
 equal(autopilot.simDR_autopilot_flch_status, hydraulics.simDR_autopilot_flch_status,
     "FLCH request is the dataref the autopilot reads")
 
+-- The speed-on-pitch climb holds the attitude that flies level at the angle
+-- of attack (climb_path_pitch_deg); unbound, those reads are nil and the climb
+-- guard falls back to the VSI.
+equal(hydraulics.simDR_alpha_deg, "sim/flightmodel/position/alpha", "hydraulics binds the angle of attack")
+equal(hydraulics.simDR_TAS_mps, "sim/flightmodel/position/true_airspeed", "hydraulics binds the true airspeed")
+equal(hydraulics.simDR_AHARS_roll_heading_deg_pilot, "sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot",
+    "hydraulics binds the bank")
+
 print("Hydraulics dataref binding tests passed: "..checks.." ("..#written_names.." names)")

@@ -386,6 +386,37 @@ case("normal route climb targets unchanged", function()
     equal(r.VNAV_NEXT_ALT(1, r.route), 5000, "SID constraint after the active fix")
 end)
 
+-- A CA, VA or FA leg ends where its altitude is reached ("(650)" in the native
+-- route, EIDW 28R ENDE3J): it is no altitude to level off at. At the 400 ft
+-- hand-off with the runway's end still the active fix, VNAV took 650 ft as its
+-- climb target (route_integrity's WARN on the 2026-10-10 line flight).
+case("SID: an altitude leg's end is no climb target", function()
+    local route = normal(0)
+    table.insert(route, 3, fix("(650)", 1, 1.03, 650, 2048))
+    local r = new_runtime(route, 1, 1.015, 2)
+    r.simDR_pressureAlt1, r.simDR_autopilot_altitude_ft = 640, 35000
+    settle(r)
+    equal(r.VNAV_NEXT_ALT(1, r.route), 35000, "climb to CRZ ALT past the CA leg's 650 ft")
+
+    table.insert(route, 4, fix("SID2", 1, 1.6, 5000))
+    r = new_runtime(route, 1, 1.015, 2)
+    r.simDR_pressureAlt1, r.simDR_autopilot_altitude_ft = 640, 35000
+    settle(r)
+    equal(r.VNAV_NEXT_ALT(1, r.route), 5000, "the SID constraint after the CA leg")
+end)
+
+-- On a route back to the departure airport the fix after the CA leg is within
+-- 10 NM of the destination: an entry without an altitude is no climb target
+-- (it gave 0 ft, which VNAV_CLB_ALT writes to the AP altitude).
+case("circuit SID: a departure fix without an altitude is no climb target", function()
+    local route = circuit(0)
+    table.insert(route, 3, fix("(650)", 1, 1.03, 650, 2048))
+    local r = new_runtime(route, 1, 1.015, 2)
+    r.simDR_pressureAlt1, r.simDR_autopilot_altitude_ft = 640, 35000
+    settle(r)
+    equal(r.VNAV_NEXT_ALT(1, r.route), 35000, "climb to CRZ ALT past the CA leg and DEP1")
+end)
+
 case("circuit descent: next descent constraint unchanged", function()
     local r = new_runtime(circuit(0), 4, 1.5, 6)
     r.B747BR_totalDistance, r.B747BR_tod = 100, 120.69

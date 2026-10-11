@@ -213,6 +213,24 @@ simCMD_vs_down					= find_command("sim/autopilot/vertical_speed_down")
 simCMD_vs_up					= find_command("sim/autopilot/vertical_speed_up")
 simCMD_vs_press					= find_command("laminar/B747/autopilot/button_switch/vs_mode")
 
+-- A VR "use" on the IAS or ALT knob is one push, held from the button's press
+-- to its release like the cockpit knob: the autopilot acts on every push and
+-- puts the knob out on the release. (Firing the push once on the press and
+-- once more on the release pushed the knob twice.) The release ends the held
+-- push wherever the view points by then.
+local vrHeldPush=nil
+local function vr_hold_push(command)
+  if vrHeldPush~=nil then vrHeldPush:stop() end
+  vrHeldPush=command
+  command:start()
+end
+local function vr_release_push()
+  if vrHeldPush~=nil then
+    vrHeldPush:stop()
+    vrHeldPush=nil
+  end
+end
+
 function useIAS(direction,phase, duration)
   --print(phase.." use useIAS "..direction)
   if phase==0 then
@@ -221,10 +239,8 @@ function useIAS(direction,phase, duration)
      elseif direction>0 then
       simCMD_airspeed_up:once()
      else
-      simCMD_airspeed_press:once()
+      vr_hold_push(simCMD_airspeed_press)
      end
-    elseif phase==2 and direction==0 then
-      simCMD_airspeed_press:once()
     end
 end
 function useHDG(direction,phase, duration)
@@ -248,10 +264,8 @@ function useAlt(direction,phase, duration)
      elseif direction>0 then
       simCMD_altitude_up:once()
      else
-      simCMD_altitude_press:once()
+      vr_hold_push(simCMD_altitude_press)
      end
-    elseif phase==2 and direction==0 then
-      simCMD_altitude_press:once()
     end
 end
 function useVS(direction,phase, duration)
@@ -333,6 +347,7 @@ function VR_down_CMDhandler(phase, duration)
   functionCall(-1,phase, duration)
 end
 function VR_use_CMDhandler(phase, duration)
+  if phase==2 then vr_release_push() end
   local functionCall=findHotSpot(0)
   functionCall(0,phase, duration)
 end
@@ -350,6 +365,7 @@ function VR_down_right_CMDhandler(phase, duration)
   functionCall(-1,phase, duration)
 end
 function VR_use_right_CMDhandler(phase, duration)
+  if phase==2 then vr_release_push() end
   local functionCall=findHotSpot(1)
   functionCall(0,phase, duration)
 end
@@ -367,6 +383,7 @@ function VR_down_key_CMDhandler(phase, duration)
   functionCall(-1,phase, duration)
 end
 function VR_use_key_CMDhandler(phase, duration)
+  if phase==2 then vr_release_push() end
   local functionCall=findHotSpot(2)
   functionCall(0,phase, duration)
 end

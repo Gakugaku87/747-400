@@ -57,10 +57,40 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   vertical speed limited to 2000 fpm, and to 500 fpm when descending 15 kt
   fast (or near Vmax) or climbing 15 kt slow (or near Vmc), using recorded
   TST744L cases.
+- `ap_knob_push_test.lua`: the production MCP speed-knob and ALT-selector
+  push handlers when the release of the previous push never arrives (XTLua
+  does not pass the end phase of a command fired once): every push acts -
+  the second speed-knob push ends the VNAV speed intervention and the second
+  ALT push makes the new CRZ ALT and schedules the cruise climb - and with
+  the releases the knobs go back out; and the VR controls' "use" click on
+  those knobs (B747.99.VRcontrols.lua) as one held push: the speed
+  intervention opens once, the ALT push waits for the scheduled cruise climb,
+  and the knob goes out on the release even when the view has moved to
+  another knob.
+- `ap_pitch_loop_test.lua`: the AP pitch servo loop (ap_pitch_assist: the
+  pitch PID with the gains flight_start sets, its altitude schedule and rate
+  limit, and the stab trim) flying a longitudinal model fitted to the kit's
+  2026-10-10 circuits (flaps 20 polar at 155 kt, pitch moment fitted to the
+  recorded elevator, alpha and pitch rate at flaps 20 and 5), with
+  flight_controls_override's 2 s before the command is applied - CMD 4.3 deg
+  below the flight director as at the circuit's hand-off: no integral wind-up
+  in the 2 s, no near-full nose-up command, a bounded overshoot; a 1 deg
+  flight-director step with the AP on at flaps 20 and 5: no hunt (at most 4
+  turning points beyond 5 % of the step, at most 10 % below it after the
+  first overshoot); and AUTOLAND keeping the flare's 0.0002 derivative.
+- `fpm_bias_test.lua`: the flap-movement vertical-speed bias of the flight
+  director with the production interpolation and a 44 fps frame period - no
+  bias at the first ALT/VNAV PTH update after a fresh load with flaps out, nor
+  for handle moves made while the director did not run (a pause, or below
+  3,000 ft RA), no bias carried across a pause, the pitch target at the
+  recorded 10,000 ft capture with flaps 20, and the designed bias for a
+  handle move above 3,000 ft RA in ALT hold and in a steady V/S (whose
+  director updates come 1.0 s apart, driven at the frame rate).
 - `hydraulics_dataref_binding_test.lua`: every `simDR_`/`B747DR_` name that the
   hydraulics override file writes is bound in the hydraulics script's XTLua
   namespace, with the FLCH and V/S requests bound to the datarefs the
-  autopilot reads.
+  autopilot reads and the angle of attack, true airspeed and bank that the
+  speed-on-pitch climb guard reads bound to X-Plane's.
 - `vnav_ground_arm_test.lua`: VNAV pressed on the ground before the flight
   directors (and in TO/GA) only arms - no ALT HOLD, a stale MCP altitude hold
   and VNAV descent cleared - so the thrust monitor keeps TO/GA, engine TO/GA
@@ -84,7 +114,20 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   remaining distance ends at the end of descent and then runs straight to the
   destination, without the leg after the end of descent, also with a missed
   approach whose vectors point X-Plane puts hundreds of NM away (left out
-  after the arrival runway).
+  after the arrival runway). A SID's altitude-terminated leg end ("(650)")
+  is climbed through, not taken as the climb target.
+- `lnav_altitude_leg_test.lua`: the production waypoint sequencing at the end
+  of an altitude-terminated leg (CA, VA, FA: X-Plane's "(650)", which rides
+  just ahead of the aircraft once its altitude is reached) - the next leg
+  becomes active above the altitude (also when it is long passed), not below
+  it nor on the ground nor below 400 ft above it (a misset altimeter), and
+  only a name that is an altitude counts; the ENDE3J departure flown for 10
+  minutes, the legs after "(650)" sequenced in order to ENDEQ whether X-Plane
+  keeps that point moving with the aircraft or leaves it behind, and whether
+  650 ft comes before or after DE28R (or DE28R is still active 2 NM past it
+  at 3,000 ft); a SID turning back after its CA leg, and two altitude legs in
+  a row, sequenced in order too; and EHAM 18R's runway kept on final above
+  the missed approach's 500 ft, AM624 next on a go-around past the threshold.
 - `approach_capture_test.lua`: the APP switch, APP arming and approach monitor
   together - LOC capturing only within 2.0 dots while closing (or settled
   within 1.0 dot) on an intercept of 90 degrees or less, a saturated or
@@ -92,15 +135,21 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   G/S capturing only after LOC with LOC and G/S both within 1.5 dots and
   never in the LOC capture frame, APP leaving the MCP heading alone, and LNAV
   still steering (and reselecting the heading mode) while LOC is armed.
+- `eec_climb_thrust_test.lua`: the CLB thrust reference of the GE, PW and RR
+  EEC modules - the weight-based target for a light aircraft below
+  20,000 ft, max climb above it (as upstream gave the GE engines), and max
+  climb for a heavy aircraft.
 - `xtlua_warm_reads_test.lua`: XTLua gives 0 for the first read of a
   dataref in a script module, so the datarefs that a fix first reads at a
   critical moment are read every frame in the module's per-frame function
   (the "local refresh...=" reads): the native transition altitude and the CRZ
   ALT sync fault flag in the FMS after_physics, and the localizer and
   glideslope signals, flags and deviations of the LOC and G/S capture gates in
-  the autopilot monitor (B747_monitorAP), and the flight-path vertical speed
+  the autopilot monitor (B747_monitorAP), the flight-path vertical speed
   and pitch rate of the autoland flare law in preLand_measure (every frame
-  from 800 ft down to the flare height).
+  from 800 ft down to the flare height), and the flap handle of the flight
+  director's flap-change VS bias and the autoland pitch target in the
+  hydraulics ap_pitch_assist.
 - `autoland_flare_test.lua`: the autoland flare law helpers (flare height,
   sink-rate command, pitch-target size and rate limits, pitch-rate damping,
   the approach pitch when no steady sample was taken, derotation at 1 deg/s
@@ -176,7 +225,19 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   202 kt) but kept above 265 kt and settles above 285 kt. Also the climb speed
   pitch step itself (the acceleration wanted, its band, the rate limit, the
   attitude interlock, the climb floor, and no change within 2 kt, level or
-  descending).
+  descending). And a step climb from FL310 that starts in a 20 deg bank turn
+  at a waypoint (the 2026-10-10 final-L1 step 1, with polar, thrust and
+  attitude loop fitted to it and a short roll-spoiler lift loss): held at or
+  above the attitude that flies level at the angle of attack once the VSI
+  shows +100 fpm or less, it neither descends below -200 fpm nor zooms above
+  +2,000 fpm, the attitude stays within 2 deg and no speed is lost (the
+  VSI-driven guard: -550..+5,031 fpm, down to 280 kt); with the other attitude
+  loops and 15 % less or more thrust within -200..+2,500 fpm, 2.5 deg and 5 kt
+  of the starting speed. Climbs that thrust limits: into the thrust-limited
+  ceiling the climb stops on speed (also while accelerating to a raised
+  target), and an engine failure in the step neither zooms nor falls below 287
+  kt. And that level attitude, its use by limit_speed_pitch_target and the
+  bank the director passes to it.
 - `engines_reverse_hold_test.lua`: the all-engine reverse-hold command, its
   reverse monitor and the auto-stow timers run frame by frame - releasing a
   hold of 0.5 s or more returns to reverse idle at once (fast or below
