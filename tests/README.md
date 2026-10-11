@@ -39,11 +39,41 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   placard minus 5 kt limiting every descent target, the CDU pair entry,
   rejection and DELETE, and DELETE returning a selected climb CAS or cruise
   Mach to ECON.
+- `afds_alt_capture_test.lua`: ALT capture and ALT hold in the production
+  flight-director pitch code - a FLCH or V/S push outside the capture window
+  surviving the update that still shows the old ALT FMA, an ALT HOLD push
+  surviving a stale FLCH, V/S or VNAV SPD FMA, capture at the MCP altitude
+  inside the window and at the current altitude otherwise, and the ALT hold
+  vertical speed limited to 2000 fpm, and to 500 fpm when descending 15 kt
+  fast (or near Vmax) or climbing 15 kt slow (or near Vmc), using recorded
+  TST744L cases.
+- `hydraulics_dataref_binding_test.lua`: every `simDR_`/`B747DR_` name that the
+  hydraulics override file writes is bound in the hydraulics script's XTLua
+  namespace, with the FLCH and V/S requests bound to the datarefs the
+  autopilot reads.
+- `vnav_ground_arm_test.lua`: VNAV pressed on the ground before the flight
+  directors (and in TO/GA) only arms - no ALT HOLD, a stale MCP altitude hold
+  and VNAV descent cleared - so the thrust monitor keeps TO/GA, engine TO/GA
+  and the takeoff phase; an MCP altitude near the field is not captured as
+  VNAV ALT on the ground or below 400 ft RA; LNAV ground arm, the airborne
+  engage and the PERF/VNAV UNAVAILABLE refusal unchanged; and the VNAV button
+  decision table.
+- `vnav_route_eod_test.lua`: a route that starts and ends at the same
+  airport - the end of descent on the arrival side (after the fix farthest
+  from the airport, not at the departure fixes), the remaining distance and
+  T/D on the ground, in cruise and on final, the VNAV path into the first
+  descent constraint starting from CRZ ALT at the T/D (also once the T/D is
+  behind), and VNAV climb targets judged by the along-route distance so the
+  arrival constraints are not climbed to. Ordinary routes keep their end of
+  descent, distances, T/D and climb targets, also with a missed approach
+  whose vectors point X-Plane puts hundreds of NM away (left out after the
+  arrival runway).
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, climb-speed
   semantics including the climb-Mach crossover and the cruise state flying
-  the FMC cruise Mach, and the XTLua `dofile` loader.
+  the FMC cruise Mach, and the XTLua `dofile` loader (including the autopilot
+  monitor loading the AFDS helpers exactly once).
 
 The standalone tests verify logic and interfaces. Before making the aircraft
 release-ready, validate these scenarios in X-Plane with both flight directors

@@ -11,6 +11,7 @@
 *
 *
 --]]
+local B747_afds_helpers = dofile("B747.70.xt.autopilot.afds_helpers.lua")
 
 --get the glideslope to an FMS entry
 function getSlope(fmsIndex)
@@ -32,6 +33,10 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
     local lowerAlt=tonumber(getFMSData("transalt"))
     --print("setVNAV "..B747BR_vnavProfile)
     local endI = table.getn(fms)
+    -- distance flown along the route to fms[i], compared with the route distance to the T/D;
+    -- the straight-line distance cannot be used, because on a route back to the departure
+    -- airport the arrival fixes are close to the aircraft while it is still climbing out
+    local alongDist=0
     --print("FMS ="..fmsJSON)
     for i=1,endI,1 do
       --print("i="..i.." began="..tostring(began))
@@ -39,6 +44,7 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
             began=true
             currentIndex=i
             local nextDistance=getDistance(simDR_latitude,simDR_longitude,fms[i][5],fms[i][6])
+            alongDist=nextDistance
             B747DR_fmstargetDistance=nextDistance
             if nextDistance>dist_to_TOD and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and B747BR_cruiseAlt>0 then
                 targetAlt=B747BR_cruiseAlt
@@ -47,15 +53,15 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
             end
             if dist_to_TOD<0 and fms[i][9]>0 and fms[i][9]<lowerAlt and fms[i][2] ~= 1 and numAPengaged>0 then targetAlt=fms[i][9] targetIndex=i break end
         elseif began==true then
-            local nextDistance=getDistance(simDR_latitude,simDR_longitude,fms[i][5],fms[i][6])
             local thisDistance=getDistance(fms[i-1][5],fms[i-1][6],fms[i][5],fms[i][6])
+            alongDist=alongDist+thisDistance
             B747DR_fmstargetDistance=B747DR_fmstargetDistance+thisDistance
-            if nextDistance>dist_to_TOD and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and B747BR_cruiseAlt>0 then
+            if alongDist>dist_to_TOD and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and B747BR_cruiseAlt>0 then
                 targetAlt=B747BR_cruiseAlt
                 targetIndex=i
                 break
                 end
-            if B747BR_totalDistance>0 and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and (nextDistance)>dist_to_TOD then break end
+            if B747BR_totalDistance>0 and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and (alongDist)>dist_to_TOD then break end
             if dist_to_TOD<0 and fms[i][9]>0 and fms[i][9]<lowerAlt and fms[i][2] ~= 1 then targetAlt=fms[i][9] targetIndex=i break end
             local dtoAirport = getDistance(fms[i][5], fms[i][6], fms[endI][5], fms[endI][6])
 		--print("i=".. i .." B747DR_fmscurrentIndex="..B747DR_fmscurrentIndex .." speed="..simDR_groundspeed .. " distance="..totalDistance.." dtoAirport="..dtoAirport.. " ".. fmsO[i][5].." ".. fmsO[i][6].." ".. fmsO[i+1][5].." ".. fmsO[i+1][6])
@@ -510,7 +516,9 @@ function VNAV_modeSwitch(fmsO)
     local diff2=simDRTime-lastVNAVSwitch
     if diff<0.5 or diff2<0.1 then return end --mode switch at 0.1 second intervals
 
-    if B747DR_ap_vnav_state == 1 then --check if we need to enter as VNAV ALT
+    --check if we need to enter as VNAV ALT; not on the ground or below the VNAV
+    --engage height, where ALT HOLD would cancel TO/GA and the takeoff thrust
+    if B747DR_ap_vnav_state == 1 and B747_afds_helpers.vnav_engage_height_reached(simDR_onGround, simDR_radarAlt1) then
         local mcpDiff=simDR_pressureAlt1-B747DR_autopilot_altitude_ft
         if math.abs(mcpDiff)<1000 then
             B747DR_mcp_hold=1

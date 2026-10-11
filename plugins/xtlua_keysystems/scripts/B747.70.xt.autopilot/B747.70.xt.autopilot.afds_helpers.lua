@@ -327,4 +327,94 @@ function afds.vnav_energy_guidance(input)
     }
 end
 
+-- [b] VNAV button on the ground and VNAV engage height
+
+-- What a VNAV button press does, in the existing order: PERF/VNAV UNAVAILABLE
+-- first (no cruise altitude, or less than 10 NM to T/D on the ground), then a
+-- press with VNAV armed or active turns it off. On the ground, or in TO/GA,
+-- VNAV is only armed and VNAV_CLB engages it after takeoff. Only an airborne
+-- press outside TO/GA engages VNAV at once.
+afds.VNAV_BUTTON_REFUSE = 1
+afds.VNAV_BUTTON_DISARM = 2
+afds.VNAV_BUTTON_ARM = 3
+afds.VNAV_BUTTON_ENGAGE = 4
+
+-- Lowest radio altitude at which an armed VNAV may engage (as in VNAV_CLB).
+afds.VNAV_ENGAGE_MIN_RA_FT = 400
+
+function afds.vnav_button_action(vnav_state, cruise_alt_ft, dist_to_tod_nm, on_ground, active_pitch_mode)
+    local grounded = tonumber(on_ground) == 1
+    if (tonumber(cruise_alt_ft) or 0) < 10
+        or ((tonumber(dist_to_tod_nm) or 0) < 10 and grounded) then
+        return afds.VNAV_BUTTON_REFUSE
+    end
+    if (tonumber(vnav_state) or 0) > 0 then return afds.VNAV_BUTTON_DISARM end
+    if grounded or tonumber(active_pitch_mode) == 1 then return afds.VNAV_BUTTON_ARM end
+    return afds.VNAV_BUTTON_ENGAGE
+end
+
+function afds.vnav_engage_height_reached(on_ground, radio_alt_ft)
+    return tonumber(on_ground) ~= 1
+        and (tonumber(radio_alt_ft) or 0) > afds.VNAV_ENGAGE_MIN_RA_FT
+end
+
+-- [c] Route end of descent and VNAV descent path entry
+-- Index of the end of descent in an xtlua/fms route: the first entry within
+-- radius_nm of the destination (the last entry) after the entry farthest from
+-- it. On an A to B route this is the first entry inside the radius, as before.
+-- On a route that starts and ends at the same airport the departure entries
+-- are inside the radius too, and must not end the route there. If no entry
+-- qualifies, or the whole route is inside the radius, the destination is used.
+-- The missed approach after the arrival runway (the last runway entry inside
+-- the radius with route outside it before) is left out: X-Plane ends a
+-- missed approach's vectors leg ("(VECT)") hundreds of NM away, which would
+-- otherwise be the farthest point and put the EOD at the destination.
+function afds.route_eod_index(route, distance_fn, radius_nm)
+    local count = #route
+    if count < 2 or type(distance_fn) ~= "function" then return count end
+    local destination = route[count]
+    local distances = {}
+    for i = 1, count - 1 do
+        distances[i] = distance_fn(route[i][5], route[i][6], destination[5], destination[6])
+    end
+    local last = count - 1
+    for i = count - 1, 1, -1 do
+        if string.sub(tostring(route[i][8] or ""), 1, 2) == "RW" and distances[i] < radius_nm then
+            for k = 1, i - 1 do
+                if distances[k] >= radius_nm then
+                    last = i
+                    break
+                end
+            end
+            break
+        end
+    end
+    local farthest_index, farthest_nm = 1, -1
+    for i = 1, last do
+        if distances[i] > farthest_nm then
+            farthest_index, farthest_nm = i, distances[i]
+        end
+    end
+    if farthest_nm < radius_nm then return count end
+    for i = farthest_index + 1, last do
+        if distances[i] < radius_nm then return i end
+    end
+    return count
+end
+
+-- Gradient (ft/nm) and target altitude of one VNAV profile entry. The path
+-- normally starts at the previous constraint; from_tod starts it at the T/D
+-- instead, at CRZ ALT or at a higher previous route altitude. An unset
+-- previous altitude (below zero) or a leg of 0.1 NM or less gives no gradient,
+-- and only a real previous altitude may replace the target altitude.
+function afds.vnav_entry_slope(previous_alt_ft, alt_ft, distance_nm, from_tod, cruise_alt_ft)
+    local start_alt_ft = previous_alt_ft
+    if from_tod then start_alt_ft = math.max(previous_alt_ft, cruise_alt_ft) end
+    if start_alt_ft <= 0 or distance_nm <= 0.1 then
+        if previous_alt_ft > 0 then return 0, previous_alt_ft end
+        return 0, alt_ft
+    end
+    return (start_alt_ft - alt_ft) / distance_nm, alt_ft
+end
+
 return afds

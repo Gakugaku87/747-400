@@ -567,7 +567,9 @@ function ap_director_pitch(pitchMode)
     local holdAlt=simDR_autopilot_altitude_ft 
     local refreshHoldAlt=simDR_autopilot_hold_altitude_ft
     local refreshfd=simDR_flight_director_pitch
-    if simDR_autopilot_alt_hold_status==2 and (pitchMode~=5 and pitchMode~=6 and pitchMode~=9) then
+    --keep a just-pushed ALT HOLD while the FMA still shows the previous FLCH/V/S/VNAV SPD mode
+    if simDR_autopilot_alt_hold_status==2 and B747_afds_controls.altitude_hold_release_allowed(
+        pitchMode,simDR_autopilot_flch_status,simDR_autopilot_vs_status) then
         simDR_autopilot_alt_hold_status=0
     end
     if simDR_autopilot_alt_hold_status==2 then
@@ -666,7 +668,13 @@ function ap_director_pitch(pitchMode)
 
         end 
         if simDR_autopilot_alt_hold_status~=2 then
-            simDR_autopilot_hold_altitude_ft=simDR_autopilot_altitude_ft
+            --a FLCH/V/S push outside the capture window is waiting for the FMA to update: do not capture over it
+            local captureAlt=B747_afds_controls.implicit_altitude_capture_target(simDR_autopilot_flch_status,
+                simDR_autopilot_vs_status,simDR_pressureAlt1,simDR_autopilot_altitude_ft,B747DR_alt_capture_window)
+            if captureAlt==nil then
+                return ap_director_pitch_retVal(pitchMode,last_simDR_AHARS_pitch_heading_deg_pilot)
+            end
+            simDR_autopilot_hold_altitude_ft=captureAlt
             simDR_autopilot_alt_hold_status=2
             simDR_autopilot_vs_status=0
             simDR_autopilot_flch_status=0
@@ -676,7 +684,9 @@ function ap_director_pitch(pitchMode)
         end
         local fpmBias=get_FPM_bias()
         local altDiff=math.abs(simDR_pressureAlt1-holdAlt+fpmBias*40)
-        local targetFPM=(holdAlt-simDR_pressureAlt1)*2 --target alt in 30 secs
+        --target alt in 30 secs, limited to 2000 fpm and slowed when the speed runs away
+        local targetFPM=B747_afds_controls.altitude_hold_target_fpm(holdAlt,simDR_pressureAlt1,
+            simDR_ind_airspeed_kts_pilot,simDR_autopilot_airspeed_kts,B747DR_airspeed_Vmc + 10,B747DR_airspeed_Vmax)
         --local pitchError=math.abs(simDR_AHARS_pitch_heading_deg_pilot-last_simDR_AHARS_pitch_heading_deg_pilot)
         local pitchError=simDR_AHARS_pitch_heading_deg_pilot-last_simDR_AHARS_pitch_heading_deg_pilot
 
