@@ -353,16 +353,31 @@ function flapPlacardSpeedLimit()
     if placard==nil then return 399.0 end
     return placard-5
 end
+-- Write the speed mode and the MCP dial together with the X-Plane autopilot
+-- target (airspeed_dial_kts_mach) in the new unit. B747_ap_ias_mach_mode only
+-- writes that target after the 0.25 s IAS update (B747_updateIAS), and until
+-- then X-Plane read the old value in the new unit (325 kt as a Mach number,
+-- M.825 as knots). A Mach target is limited to Mmo - 0.01 as there.
+local function B747_set_vnav_speed_target(is_mach, dial_value)
+    simDR_autopilot_airspeed_is_mach = is_mach
+    B747DR_ap_ias_dial_value = dial_value
+    if is_mach == 1 then
+        B747DR_lastap_dial_airspeed=dial_value*0.01
+        simDR_autopilot_airspeed_kts_mach = vnav_afds_helpers.limited_mach_target(dial_value*0.01,
+            B747DR_airspeed_Mms)
+    else
+        B747DR_lastap_dial_airspeed=dial_value
+        simDR_autopilot_airspeed_kts_mach = dial_value
+    end
+end
 function clb_src_setSpd()
     
     if B747DR_airspeed_V2<900 then
-        simDR_autopilot_airspeed_is_mach = 0
         -- Keep V2 while VNAV is armed on the ground; once active, hold the
         -- captured airspeed instead of decelerating back to the V2 entry.
-        B747DR_ap_ias_dial_value = math.min(399.0,
-            takeoff_state.vnav_speed_kts or B747DR_airspeed_V2)
+        B747_set_vnav_speed_target(0, math.min(399.0,
+            takeoff_state.vnav_speed_kts or B747DR_airspeed_V2))
         B747DR_switchingIASMode=1
-        B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
         B747_schedule_updateIAS()
     end
     vnavSPD_state["setBaro"]=false
@@ -373,11 +388,9 @@ function clb_aptres_setSpd()
         or tonumber(getFMSData("transpd")) or 250
     local spdval=modFlapSpeed(restSpd)
     spdval=math.max(spdval,simDR_ind_airspeed_kts_pilot-15)
-    simDR_autopilot_airspeed_is_mach = 0
     print("convert to clb clbrestspd ".. spdval)
-    B747DR_ap_ias_dial_value = math.min(399.0, spdval)
+    B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     B747DR_switchingIASMode=1
-    B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
     B747_schedule_updateIAS()
 
 end
@@ -385,11 +398,11 @@ function clb_spcres_setSpd()
     local spdval=modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("spcres", getFMSData))
     B747DR_switchingIASMode=1
     local clbmachval=B747_climb_mach_thousandths()/10
-    if simDR_airspeed_mach > (clbmachval/100) then
+    -- Mach once the CAS target at this altitude (or the current Mach) reaches the climb Mach
+    if vnav_afds_helpers.climb_speed_uses_mach(spdval, clbmachval/100, simDR_pressureAlt1,
+        simDR_airspeed_mach, simDR_autopilot_airspeed_is_mach) then
       print("convert to climb Mach in clb ".. clbmachval)
-      simDR_autopilot_airspeed_is_mach = 1
-      B747DR_ap_ias_dial_value = clbmachval
-      B747DR_lastap_dial_airspeed=clbmachval*0.01
+      B747_set_vnav_speed_target(1, clbmachval)
     else
 
       --[[if B747DR_ap_ias_dial_value+5<simDR_ind_airspeed_kts_pilot then
@@ -398,10 +411,8 @@ function clb_spcres_setSpd()
         spdval=math.min(B747DR_ap_ias_dial_value+5,spdval)
       end]]--
       spdval=math.max(spdval,simDR_ind_airspeed_kts_pilot-15)
-      simDR_autopilot_airspeed_is_mach = 0
       print("convert to climb transition speed ".. spdval.. " at "..simDR_ind_airspeed_kts_pilot)
-      B747DR_ap_ias_dial_value = math.min(399.0, spdval)
-      B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
+      B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     end
     B747_schedule_updateIAS()
 
@@ -410,11 +421,11 @@ function clb_nores_setSpd()
     local spdval=modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("nores", getFMSData))
     B747DR_switchingIASMode=1
     local clbmachval=B747_climb_mach_thousandths()/10
-    if simDR_airspeed_mach > (clbmachval/100) then
+    -- Mach once the CAS target at this altitude (or the current Mach) reaches the climb Mach
+    if vnav_afds_helpers.climb_speed_uses_mach(spdval, clbmachval/100, simDR_pressureAlt1,
+        simDR_airspeed_mach, simDR_autopilot_airspeed_is_mach) then
       print("convert to climb Mach in clb".. clbmachval)
-      simDR_autopilot_airspeed_is_mach = 1
-      B747DR_ap_ias_dial_value = clbmachval
-      B747DR_lastap_dial_airspeed=clbmachval*0.01
+      B747_set_vnav_speed_target(1, clbmachval)
     else
       if simDR_autopilot_airspeed_is_mach == 0 then
       --[[if(B747DR_ap_ias_dial_value<spdval) then
@@ -427,8 +438,7 @@ function clb_nores_setSpd()
      end
       spdval=math.max(spdval,simDR_ind_airspeed_kts_pilot-15)
       print("convert to ECON climb speed ".. spdval)
-      B747DR_ap_ias_dial_value = math.min(399.0, spdval)
-      B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
+      B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     end
     B747_schedule_updateIAS()
 
@@ -444,9 +454,7 @@ function clb_crz_setSpd()
     local climbspdval=modFlapSpeed(tonumber(getFMSData("clbspd")))
     if simDR_pressureAlt1>=transalt or simDR_ind_airspeed_kts_pilot>=climbspdval-1 then
         print("convert to cruise speed in clb_crz_setSpd ".. spdval)
-        simDR_autopilot_airspeed_is_mach = 1
-        B747DR_ap_ias_dial_value = spdval
-        B747DR_lastap_dial_airspeed=spdval*0.01
+        B747_set_vnav_speed_target(1, spdval)
         B747_schedule_updateIAS()
     end
 end
@@ -457,9 +465,7 @@ function des_src_setSpd()
     local nextspdval=tonumber(getFMSData("destranspd"))
     if simDR_airspeed_mach > (crzspdval/100) then
       print("convert to mach descend speed in des".. crzspdval)
-      simDR_autopilot_airspeed_is_mach = 1
-      B747DR_ap_ias_dial_value = crzspdval
-      B747DR_lastap_dial_airspeed=crzspdval*0.01
+      B747_set_vnav_speed_target(1, crzspdval)
     else
 
       if simDR_autopilot_airspeed_is_mach==1 then
@@ -472,10 +478,8 @@ function des_src_setSpd()
         spdval=B747_rescale(lowerAlt,nextspdval,upperAlt,spdval,simDR_pressureAlt1)
       end
       spdval=math.min(spdval,flapPlacardSpeedLimit())
-      simDR_autopilot_airspeed_is_mach = 0
       print("des_src_setSpd:convert to descend speed ".. spdval)
-      B747DR_ap_ias_dial_value = math.min(399.0, spdval)
-      B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
+      B747_set_vnav_speed_target(0, math.min(399.0, spdval))
 
     end
     B747_schedule_updateIAS()
@@ -491,10 +495,8 @@ function des_aptres_setSpd()
         spdval=B747_rescale(lowerAlt+1000,nextspdval,lowerAlt+1500,spdval,simDR_pressureAlt1)
     end
     spdval=math.min(spdval,flapPlacardSpeedLimit())
-    simDR_autopilot_airspeed_is_mach = 0
     print("convert to destranspd speed ".. spdval)
-    B747DR_ap_ias_dial_value = math.min(399.0, spdval)
-    B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
+    B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     B747_schedule_updateIAS()
     if B747DR_autothrottle_active == 0 and simDR_ind_airspeed_kts_pilot < spdval+5 then							-- AUTOTHROTTLE IS "OFF"
        if isATEnabled() then
@@ -509,10 +511,8 @@ function des_spcres_setSpd()
     local spdval=tonumber(getFMSData("desrestspd"))
         or tonumber(getFMSData("destranspd")) or 240
     spdval=math.min(spdval,flapPlacardSpeedLimit())
-    simDR_autopilot_airspeed_is_mach = 0
     print("convert to desrestspd speed ".. spdval)
-    B747DR_ap_ias_dial_value = math.min(399.0, spdval)
-    B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
+    B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     B747_schedule_updateIAS()
     if B747DR_autothrottle_active == 0 and simDR_ind_airspeed_kts_pilot < spdval+5 then							-- AUTOTHROTTLE IS "OFF"
         if isATEnabled() then

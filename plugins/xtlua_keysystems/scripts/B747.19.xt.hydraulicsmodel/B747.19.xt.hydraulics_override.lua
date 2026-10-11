@@ -402,6 +402,12 @@ end
 local last_simDR_ind_airspeed_kts_pilot=0
 local last_simDR_AHARS_pitch_heading_deg_pilot=0
 local last_altitude=0
+--speed target at the previous FLCH/VNAV SPD update, whether the aircraft is
+--still accelerating to a raised target (update_speed_target_acceleration) and
+--the speed that acceleration started from
+local last_speedPitchTarget=nil
+local speedPitchAccelerating=false
+local speedPitchAcceleratedFrom=nil
 local directorSampleRate=0.02
 local directoryawSampleRate=0.03
 local lastAPTargetRoll=0
@@ -635,7 +641,12 @@ function ap_director_pitch(pitchMode)
 
         local previousPitchTarget=last_simDR_AHARS_pitch_heading_deg_pilot
         local requestedPitchTarget=previousPitchTarget
-        if ((simDR_autopilot_airspeed_kts> simDR_ind_airspeed_kts_pilot+1) and speed_delta<max_speedDelta
+        --more than 2 kt from the target in a climb the pitch follows the acceleration still missing
+        local climbPitchTarget=B747_afds_controls.climb_speed_pitch_target(previousPitchTarget,speed_delta,time,
+            simDR_ind_airspeed_kts_pilot,simDR_autopilot_airspeed_kts,verticalDirection,pitchError,simDR_vvi_fpm_pilot)
+        if climbPitchTarget~=nil then
+            requestedPitchTarget=climbPitchTarget
+        elseif ((simDR_autopilot_airspeed_kts> simDR_ind_airspeed_kts_pilot+1) and speed_delta<max_speedDelta
             or (simDR_autopilot_airspeed_kts< simDR_ind_airspeed_kts_pilot-1) and speed_delta<-max_speedDelta) and pitchError<0.5 and canPitchDown
         then
             if debug_flight_directors==1 then
@@ -652,9 +663,27 @@ function ap_director_pitch(pitchMode)
         end
 
         last_altitude=simDR_pressureAlt1
+        --a raised speed target (or, when this mode engages, a target above the speed)
+        --is flown by accelerating without descending until the speed is within 5 kt.
+        --lastPitchMode is the pitch mode of the previous director update
+        local speedReference=last_speedPitchTarget
+        local wasAccelerating=speedPitchAccelerating
+        if pitchMode~=lastPitchMode or speedReference==nil then
+            speedReference=simDR_ind_airspeed_kts_pilot
+            wasAccelerating=false
+        end
+        speedPitchAccelerating=B747_afds_controls.update_speed_target_acceleration(wasAccelerating,
+            speedReference,simDR_autopilot_airspeed_kts,simDR_ind_airspeed_kts_pilot,minSafeSpeed)
+        if not speedPitchAccelerating then
+            speedPitchAcceleratedFrom=nil
+        elseif not wasAccelerating then
+            speedPitchAcceleratedFrom=simDR_ind_airspeed_kts_pilot
+        end
+        last_speedPitchTarget=simDR_autopilot_airspeed_kts
         last_simDR_AHARS_pitch_heading_deg_pilot=B747_afds_controls.limit_speed_pitch_target(
             requestedPitchTarget,previousPitchTarget,verticalDirection,simDR_vvi_fpm_pilot,
-            simDR_ind_airspeed_kts_pilot,simDR_autopilot_airspeed_kts,minSafeSpeed,maxSafeSpeed,time)
+            simDR_ind_airspeed_kts_pilot,simDR_autopilot_airspeed_kts,minSafeSpeed,maxSafeSpeed,time,
+            speedPitchAccelerating and (speedPitchAcceleratedFrom or true))
         retval=last_simDR_AHARS_pitch_heading_deg_pilot
 
         return ap_director_pitch_retVal(pitchMode,retval)
@@ -831,8 +860,11 @@ function ap_director_pitch(pitchMode)
      --   directorSampleRate=0.5
     else
         --print("ap_director_pitch for off")
-        last_simDR_AHARS_pitch_heading_deg_pilot=0
-        return 0
+        --no pitch mode (NONE after an ALT selector push, FLARE without autoland):
+        --hold the attitude so that the next mode starts from it, not from 0 degrees
+        retval=B747_afds_controls.inactive_mode_pitch_target(simDR_AHARS_pitch_heading_deg_pilot)
+        last_simDR_AHARS_pitch_heading_deg_pilot=retval
+        return ap_director_pitch_retVal(pitchMode,retval)
     end
     local retval=simDR_flight_director_pitch
     if debug_flight_directors==1 then

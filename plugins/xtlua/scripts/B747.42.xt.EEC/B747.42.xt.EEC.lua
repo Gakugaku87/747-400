@@ -948,8 +948,12 @@ function ecc_throttle()
 		if time>1 or time==0 then
 			return
 		end
+		-- Autoland flare below 50 ft RA: IDLE is the landing retard. The speed
+		-- bleeds below Vmc + 10 in the flare, so the low-speed thrust recovery
+		-- must not push the throttles back up there.
+		local autolandFlare=(B747DR_ap_autoland==1 and simDR_onGround==0 and simDR_radarAlt1<50)
 		if B747DR_ap_FMA_autothrottle_mode==3 --SPD
-		or (B747DR_ap_FMA_autothrottle_mode==2 and simDR_ind_airspeed_kts_pilot<minSafeSpeed) --IDLE need thrust
+		or (B747DR_ap_FMA_autothrottle_mode==2 and simDR_ind_airspeed_kts_pilot<minSafeSpeed and not autolandFlare) --IDLE need thrust
 		then
 				spd_throttle()
 				return
@@ -993,6 +997,8 @@ function ecc_throttle()
 		local animTime=1
 		if simDR_onGround == 1 and simDR_ias_pilot<30 then
 			animTime=5
+		elseif autolandFlare and B747DR_ap_FMA_autothrottle_mode==2 then
+			animTime=8 -- autoland retard: 0.125 per second, approach thrust to idle in about 2 s
 		end	
 		for i = 0, 3 do
 			--simDR_engn_thro[i]=B747_interpolate_value(simDR_engn_thro[i],spd_target_throttle,0,1.00,2)

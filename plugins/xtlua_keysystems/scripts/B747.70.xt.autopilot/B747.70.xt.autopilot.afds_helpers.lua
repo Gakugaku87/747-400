@@ -200,7 +200,8 @@ function afds.vnav_energy_thrust_reason_name(reason)
         [afds.VNAV_ENERGY_THRUST_REASON_UNDERSPEED_PROTECTION] = "underspeed protection",
         [afds.VNAV_ENERGY_THRUST_REASON_BELOW_PATH_BELOW_SPEED] = "below path and below speed",
         [afds.VNAV_ENERGY_THRUST_REASON_PATH_RECOVERY_LIMITED] = "path recovery limited",
-        [afds.VNAV_ENERGY_THRUST_REASON_ON_PATH_BELOW_SPEED] = "on path and below speed"
+        [afds.VNAV_ENERGY_THRUST_REASON_ON_PATH_BELOW_SPEED] = "on path and below speed",
+        [afds.VNAV_ENERGY_THRUST_REASON_SPEEDBRAKE_HOLD] = "speedbrake hold"
     }
     return names[reason] or "unknown"
 end
@@ -287,6 +288,20 @@ function afds.vnav_energy_guidance(input)
             < protection_speed_kts + afds.VNAV_ENERGY_PROTECTION_RELEASE_KTS
     end
 
+    -- Thrust allowed while the path is out of pitch reach is kept until the
+    -- recovery limit clears or the speed is high.  Re-deciding it from the
+    -- speed trend every sample switched IDLE and SPD each time the thrust
+    -- stopped the deceleration.
+    local previous_thrust_reason = tonumber(input.previous_thrust_reason)
+    local recovery_hold = path_axis > 0 and speed_axis <= 0 and recovery_limited
+        and tonumber(input.previous_thrust_policy) == afds.VNAV_ENERGY_THRUST_ALLOW
+    local recovery_thrust = (state == afds.VNAV_ENERGY_STATE_ABOVE_BELOW and recovery_limited
+        and speed_error_kts <= -afds.VNAV_ENERGY_SPEED_ENTER_KTS
+        and speed_trend_kts_per_sec <= 0)
+        or (recovery_hold
+            and previous_thrust_reason == afds.VNAV_ENERGY_THRUST_REASON_PATH_RECOVERY_LIMITED)
+    local speedbrake_extended = afds.vnav_energy_speedbrake_extended(input.speedbrake_lever)
+
     local thrust_policy = afds.VNAV_ENERGY_THRUST_IDLE
     local thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_NONE
     if protection_active then
@@ -298,9 +313,18 @@ function afds.vnav_energy_guidance(input)
     elseif state == afds.VNAV_ENERGY_STATE_ON_PATH_BELOW then
         thrust_policy = afds.VNAV_ENERGY_THRUST_ALLOW
         thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_ON_PATH_BELOW_SPEED
-    elseif state == afds.VNAV_ENERGY_STATE_ABOVE_BELOW and recovery_limited
-        and speed_error_kts <= -afds.VNAV_ENERGY_SPEED_ENTER_KTS
-        and speed_trend_kts_per_sec <= 0 then
+    elseif speedbrake_extended and recovery_hold
+        and previous_thrust_reason == afds.VNAV_ENERGY_THRUST_REASON_UNDERSPEED_PROTECTION then
+        -- With the speedbrake out the speed decays again as soon as the
+        -- protection releases, so keep the protection thrust while the
+        -- recovery is limited instead of cycling through its release band.
+        thrust_policy = afds.VNAV_ENERGY_THRUST_ALLOW
+        thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_UNDERSPEED_PROTECTION
+    elseif recovery_thrust and speedbrake_extended then
+        -- Do not run thrust against an extended speedbrake; underspeed
+        -- protection still adds thrust if the speed decays that far.
+        thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_SPEEDBRAKE_HOLD
+    elseif recovery_thrust then
         thrust_policy = afds.VNAV_ENERGY_THRUST_ALLOW
         thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_PATH_RECOVERY_LIMITED
     end
@@ -554,6 +578,161 @@ function afds.route_tod_distance(route, eod_index, cruise_alt_ft, distance_fn)
         end
     end
     return tod_nm, eod_alt
+end
+
+-- [f] Autoland flare law, derotation and thrust retard height
+-- The flare commands a sink rate that shrinks with height and turns the sink
+-- rate error into a pitch target, instead of holding a fixed attitude. The
+-- autoland retards the thrust at the same height as the EEC SPD cut
+-- (radarAlt1 < 25.1 in B747.42.xt.EEC.lua spd_throttle).
+-- The constants are tuned against a point-mass model fitted to the X-Plane
+-- circuits of 2026-10-10 (ground effect, the AFDS pitch loop: damping about
+-- 0.15, 0.8 rad/s, 0.8 s delay, and the ground falling about 25 ft under the
+-- flare at EINN 06): with the lightly damped loop the law needs a strong
+-- pitch-rate damping term and a firm sink-rate gain, and the sink it aims
+-- for at touchdown is about 220 fpm.
+afds.FLARE_HEIGHT_FT = 43
+afds.FLARE_RETARD_FT = 25
+afds.FLARE_SINK_TIME_CONSTANT_SEC = 5.5
+afds.FLARE_HEIGHT_BIAS_FT = 20
+afds.FLARE_MIN_SINK_FPM = 60
+afds.FLARE_PITCH_PER_FPM = 0.008
+afds.FLARE_PITCH_INTEGRAL_PER_FPM_SEC = 0.0007
+afds.FLARE_PITCH_RATE_DAMPING_SEC = 2.4
+afds.FLARE_PITCH_UP_RATE_DEG_PER_SEC = 1.3
+afds.FLARE_PITCH_DOWN_RATE_DEG_PER_SEC = 1.3
+afds.FLARE_PITCH_BELOW_BASE_DEG = 0.5
+afds.FLARE_PITCH_ABOVE_BASE_DEG = 3.5
+afds.FLARE_MAX_PITCH_DEG = 7.5
+afds.DEROTATION_RATE_DEG_PER_SEC = 1.0
+afds.DEROTATION_PITCH_DEG = -0.5
+
+local FPM_PER_KNOT = 101.269
+
+-- Sink rate the flare asks for: 60*(RA + 20)/5.5 fpm, never deeper than the
+-- sink rate at flare entry and never shallower than 60 fpm, so the
+-- aircraft keeps sinking onto the runway instead of floating.
+function afds.flare_vspeed_command_fpm(radio_altitude_ft, entry_vspeed_fpm)
+    local command_fpm = -60 * (radio_altitude_ft + afds.FLARE_HEIGHT_BIAS_FT)
+        / afds.FLARE_SINK_TIME_CONSTANT_SEC
+    command_fpm = math.max(command_fpm, math.min(entry_vspeed_fpm, -afds.FLARE_MIN_SINK_FPM))
+    return math.min(command_fpm, -afds.FLARE_MIN_SINK_FPM)
+end
+
+-- Flare pitch target. state keeps tp (last target), entry_vs (sink rate at
+-- flare entry) and trim (integral term) between calls; missing fields start
+-- from the current values. The target is the approach pitch plus the change
+-- in flight-path angle the sink command needs, a PI term on the sink rate
+-- error and pitch rate damping. It stays between base - 0.5 and
+-- min(base + 3.5, 7.5) and moves at most 1.3 deg/s up or down.
+-- An entry sink rate that is not a descent is not kept: XTLua gave start_flare
+-- 0 for its first read of vh_ind_fpm (X-Plane 2026-10-10), which held the
+-- command at -100 fpm from 50 ft; the first descending sample is used instead.
+function afds.flare_pitch_target(state, base_pitch_deg, radio_altitude_ft, vspeed_fpm,
+        airspeed_kts, pitch_rate_deg_sec, elapsed_sec)
+    if state.entry_vs == nil or state.entry_vs > -afds.FLARE_MIN_SINK_FPM then
+        state.entry_vs = nil
+        if vspeed_fpm < -afds.FLARE_MIN_SINK_FPM then state.entry_vs = vspeed_fpm end
+    end
+    local entry_vs = state.entry_vs or vspeed_fpm
+    local command_fpm = afds.flare_vspeed_command_fpm(radio_altitude_ft, entry_vs)
+    local error_fpm = command_fpm - vspeed_fpm
+    state.trim = afds.clamp((state.trim or 0)
+        + afds.FLARE_PITCH_INTEGRAL_PER_FPM_SEC * error_fpm * elapsed_sec,
+        -1, afds.FLARE_PITCH_ABOVE_BASE_DEG)
+    local path_change_deg = math.deg((command_fpm - entry_vs)
+        / (math.max(airspeed_kts, 100) * FPM_PER_KNOT))
+    local target = base_pitch_deg + path_change_deg + state.trim
+        + afds.FLARE_PITCH_PER_FPM * error_fpm
+        - afds.FLARE_PITCH_RATE_DAMPING_SEC * pitch_rate_deg_sec
+    target = afds.clamp(target, base_pitch_deg - afds.FLARE_PITCH_BELOW_BASE_DEG,
+        math.min(base_pitch_deg + afds.FLARE_PITCH_ABOVE_BASE_DEG, afds.FLARE_MAX_PITCH_DEG))
+    state.tp = afds.rate_limit(state.tp or base_pitch_deg, target, elapsed_sec,
+        afds.FLARE_PITCH_DOWN_RATE_DEG_PER_SEC, afds.FLARE_PITCH_UP_RATE_DEG_PER_SEC)
+    return state.tp
+end
+
+-- Approach pitch measured during the steady part of the approach. With no
+-- steady sample the current pitch is used instead of dividing 0 by 0.
+function afds.flare_base_pitch(pitch_sum_deg, pitch_samples, current_pitch_deg)
+    if pitch_samples == nil or pitch_samples <= 0 then return current_pitch_deg end
+    return pitch_sum_deg / pitch_samples
+end
+
+-- After main gear touchdown the nose comes down at 1.0 deg/s to -0.5 deg.
+function afds.derotation_pitch_target(current_pitch_deg, elapsed_sec)
+    return afds.rate_limit(current_pitch_deg, afds.DEROTATION_PITCH_DEG, elapsed_sec,
+        afds.DEROTATION_RATE_DEG_PER_SEC, afds.DEROTATION_RATE_DEG_PER_SEC)
+end
+
+-- [g-3] Climb CAS/Mach crossover judged on the CAS target
+
+-- ISA pressure ratio p/p0 at a pressure altitude, as in
+-- B744.fms.performance.lua (mach_to_cas_kts).
+local function isa_pressure_ratio(pressure_alt_ft)
+    local altitude_m = math.max(0, tonumber(pressure_alt_ft) or 0) * 0.3048
+    if altitude_m <= 11000 then
+        return (1.0 - 2.25577e-5 * altitude_m) ^ 5.25588
+    end
+    return 0.223361 * math.exp(-(altitude_m - 11000) / 6341.62)
+end
+
+-- Mach number of a calibrated airspeed at a pressure altitude: the inverse
+-- of performance.mach_to_cas_kts (340.294 m/s is the sea-level speed of
+-- sound). nil for a missing or non-positive speed.
+function afds.cas_to_mach(cas_kts, pressure_alt_ft)
+    local cas = tonumber(cas_kts)
+    if cas == nil or cas <= 0 then return nil end
+    local cas_ratio = (cas / 1.94384449) / 340.294
+    local impact_pressure_ratio = ((1.0 + 0.2 * cas_ratio * cas_ratio) ^ 3.5 - 1.0)
+        / isa_pressure_ratio(pressure_alt_ft)
+    return math.sqrt(5.0 * ((impact_pressure_ratio + 1.0) ^ (2.0 / 7.0) - 1.0))
+end
+
+afds.CLIMB_MACH_CROSSOVER_HYSTERESIS = 0.005
+
+-- Whether the climb flies the climb Mach instead of the CAS target: when the
+-- CAS target is at or above the climb Mach at this altitude (0.005 lower
+-- while Mach is already selected, so the choice does not flip back and forth
+-- as the Mach changes), or, as before, when the current Mach is above the
+-- climb Mach.
+function afds.climb_speed_uses_mach(cas_target_kts, climb_mach, pressure_alt_ft, current_mach, is_mach)
+    climb_mach = tonumber(climb_mach)
+    if climb_mach == nil then return false end
+    if (tonumber(current_mach) or 0) > climb_mach then return true end
+    local target_mach = afds.cas_to_mach(cas_target_kts, pressure_alt_ft)
+    if target_mach == nil then return false end
+    local threshold = climb_mach
+    if tonumber(is_mach) == 1 then threshold = threshold - afds.CLIMB_MACH_CROSSOVER_HYSTERESIS end
+    return target_mach >= threshold
+end
+
+-- [g-5] Autopilot Mach target written with the speed mode
+
+-- Mach target for the X-Plane autopilot: limited to Mmo - 0.01, as
+-- B747_ap_ias_mach_mode limits the dial Mach. An unset or implausible Mmo
+-- (below M.50) does not limit it.
+function afds.limited_mach_target(mach, max_mach)
+    max_mach = tonumber(max_mach)
+    if max_mach == nil or max_mach < 0.5 then return mach end
+    return math.min(mach, max_mach - 0.01)
+end
+
+-- [h-2] VNAV PTH thrust with the speedbrake extended
+-- Lever positions beyond ARM (0.125) count as extended.
+afds.VNAV_ENERGY_SPEEDBRAKE_EXTENDED_LEVER = 0.15
+afds.VNAV_ENERGY_THRUST_REASON_SPEEDBRAKE_HOLD = 5
+
+function afds.vnav_energy_speedbrake_extended(speedbrake_lever)
+    return (tonumber(speedbrake_lever) or 0) >= afds.VNAV_ENERGY_SPEEDBRAKE_EXTENDED_LEVER
+end
+
+-- [h-3] TO/GA roll mode
+-- TO/GA pitch and roll share one status flag. The roll annunciation stays
+-- TO/GA only until a roll mode replaces it: active LNAV, LOC capture, or
+-- HDG SEL / HDG HOLD selected in flight (roll_cleared).
+function afds.toga_roll_mode_active(toga_status, lnav_state, nav_status, roll_cleared)
+    return toga_status ~= 0 and lnav_state ~= 2 and nav_status ~= 2 and not roll_cleared
 end
 
 return afds

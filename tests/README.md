@@ -98,13 +98,112 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   (the "local refresh...=" reads): the native transition altitude and the CRZ
   ALT sync fault flag in the FMS after_physics, and the localizer and
   glideslope signals, flags and deviations of the LOC and G/S capture gates in
-  the autopilot monitor (B747_monitorAP).
+  the autopilot monitor (B747_monitorAP), and the flight-path vertical speed
+  and pitch rate of the autoland flare law in preLand_measure (every frame
+  from 800 ft down to the flare height).
+- `autoland_flare_test.lua`: the autoland flare law helpers (flare height,
+  sink-rate command, pitch-target size and rate limits, pitch-rate damping,
+  the approach pitch when no steady sample was taken, derotation at 1 deg/s
+  to -0.5 deg) and the production autoland logic flown from 300 ft RA to 8 s
+  after touchdown against a point-mass model fitted to the kit's recordings
+  of the 2026-10-10 circuits (flaps 30 polar, ground effect, the thrust
+  spooling down after the retard, the VSI lagging the flight path by 1.2 s,
+  and the attitude following the autoland target through the lightly
+  damped, delayed AFDS pitch loop: damping 0.15, 0.8 rad/s, 0.8 s, and three
+  other loops) - 220, 257 and 300 t on level ground and on ground falling
+  25 ft under the flare as at EINN 06, a noisy VSI, noise on the law's own
+  inputs (local_vy and Q, frame to frame and at 0.7 and 1.1 Hz), the vertical
+  speed reading 0 at flare entry (XTLua's first read, seen in X-Plane) and a
+  second autoland in the same session, judged as the flight-test kit judges
+  a landing: touchdown VSI -300 fpm or less (and not a skim), float at most
+  0.5 s, FLARE to touchdown within 11 s, touchdown within 900 m of the FLARE
+  point, no climb in the flare (20 fpm and 0.5 s more room for the other
+  loops), no nose-down before main gear touchdown, a rate-limited
+  derotation, and A/T IDLE no higher than 25 ft.
+- `eec_flare_retard_test.lua`: EEC IDLE in the autoland flare - no low-speed
+  thrust recovery below 50 ft RA, the retard from approach thrust to idle
+  over about 2 s, and the IDLE low-speed recovery kept outside the autoland
+  flare.
+- `afds_responsiveness_test.lua`: the AFDS helper calculations (turn
+  anticipation, VNAV speed change reasons, VNAV energy guidance, pitch blend
+  and roll filters) and the speed-on-pitch limiter - the severe underspeed
+  threshold with the minimum safe speed capped at target - 5 kt, so an
+  initial climb on V2 + 10 kt with takeoff flaps (Vmc + 10 kt above it)
+  keeps the climb guard and only a real underspeed may pitch down; and the
+  acceleration latch for a raised speed target (flap retraction, 250 to the
+  ECON climb speed at 10,000 ft), which keeps the climb guard until the speed
+  is within 5 kt of the target, also in the production flight director, while
+  a real underspeed below the minimum safe speed is never latched, and a loss
+  of 15 kt from the speed the acceleration started from counts as a severe
+  underspeed while latched. Also the
+  CAS to Mach conversion (the inverse of the FMC Mach to CAS) and the climb
+  CAS/Mach crossover rule.
+- `vnav_climb_speed_semantics_test.lua`: the climb speed states (SPD REST,
+  SPD TRANS, ECON CLB), the crossover to the climb Mach judged on the CAS
+  target at the current altitude (a step climb from FL310 flies M.815 instead
+  of a 326 kt target 26 kt above the speed, and does not flip between CAS
+  and Mach as the Mach changes), and the cruise state flying the FMC cruise
+  Mach. Every climb and descent speed state, the MCP IAS/MACH button and the
+  automatic IAS/Mach changeover write the X-Plane autopilot target in the new
+  unit together with the speed mode (a Mach target limited to Mmo - 0.01, a
+  knots target converted to Mach at the current altitude by the button and
+  the changeover), instead of leaving the old value in the new unit until
+  the 0.25 s IAS update; the button and the changeover do so from the speed
+  and unit they decide, also when the last-airspeed and is-Mach datarefs
+  read back their old values in that frame.
+- `afds_fma_none_pitch_memory_test.lua`: the production flight-director
+  pitch target while no pitch mode is active (the FMA shows NONE for about
+  0.5 s after an ALT selector push), using the recorded TST744L step climb -
+  the attitude is held (limited to -3.5..15 degrees) instead of 0 degrees,
+  so the following VNAV SPD, and VNAV PTH holding the altitude, continue from
+  it.
+- `vnav_climb_acceleration_test.lua`: the production flight director (from its
+  pitch records through the 10-sample pitch integral) flying a simple
+  point-mass climb model fitted to the X-Plane forces, alpha and
+  flight-director pitch of a 2026-10-10 takeoff (flaps 20 polar, climb thrust
+  against air density, a lightly damped attitude loop): the 156 to 182 kt VNAV
+  target rise at the 1,500 ft acceleration height with flaps 20 is reached
+  within 90 s keeping more than +1,000 fpm; with the kit's flap retraction the
+  flaps are up below 6,500 ft and 250 kt is not passed by more than 6 kt; the
+  250 to 326 kt rise at 10,000 ft is reached within 150 s without descending;
+  the same with slower, more oscillatory or faster attitude loops and 15 %
+  less or more thrust; and a step climb from FL330 with the M .829 target
+  above M .816 (clean polar and thrust fitted above FL250 to the 2026-10-10
+  TST744L flight, the fitted attitude loop) without descending, the attitude
+  within 2 deg and the target reached within 120 s; and thrust lost 5 s into a
+  step at FL310 (still accelerating to the raised target): the speed is not
+  run down to the minimum safe speed (the climb guard held the aircraft up to
+  202 kt) but kept above 265 kt and settles above 285 kt. Also the climb speed
+  pitch step itself (the acceleration wanted, its band, the rate limit, the
+  attitude interlock, the climb floor, and no change within 2 kt, level or
+  descending).
+- `engines_reverse_hold_test.lua`: the all-engine reverse-hold command, its
+  reverse monitor and the auto-stow timers run frame by frame - releasing a
+  hold of 0.5 s or more returns to reverse idle at once (fast or below
+  65 KIAS), a shorter tap keeps full reverse latched, the timers still select
+  reverse idle 5 s and stow 8 s after 65 KIAS (after the release when already
+  slower), and a hold that never deployed (reverser lockout in the air) leaves
+  the levers alone on release.
+- `vnav_speedbrake_thrust_test.lua`: VNAV PTH energy thrust high on the path
+  with pitch recovery limited - thrust allowed for the limited recovery stays
+  in SPD until the limit clears or the speed is high, instead of switching
+  IDLE/SPD with the speed trend; with the speedbrake beyond ARM (lever 0.15
+  and up, not 0.125) the A/T holds IDLE (reason 5, speedbrake hold) until
+  underspeed protection, whose thrust is then kept while the limit lasts;
+  DRAG REQUIRED unchanged. Also runs the production `setDescentVSpeed`
+  loaded through the XTLua `dofile`.
+- `afds_toga_roll_test.lua`: the TO/GA roll annunciation - HDG SEL, HDG HOLD
+  or LNAV in flight replacing TO/GA roll while TO/GA pitch stays, the roll
+  FMA going straight from TO/GA to HDG SEL frame by frame, LOC capture,
+  an airborne TO/GA press or TO/GA engaged again bringing TO/GA roll back
+  (a press just before HDG SEL does not undo HDG SEL), and nothing being
+  remembered on the ground: a HDG SEL press before liftoff, LNAV left
+  active from the last flight, or a selection that outlived the landing.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
-  cruise altitude at top-of-climb weight), ND waypoint selection, climb-speed
-  semantics including the climb-Mach crossover and the cruise state flying
-  the FMC cruise Mach, and the XTLua `dofile` loader (including the autopilot
-  monitor loading the AFDS helpers exactly once).
+  cruise altitude at top-of-climb weight), ND waypoint selection, and the
+  XTLua `dofile` loader (including the autopilot monitor loading the AFDS
+  helpers exactly once).
 
 The standalone tests verify logic and interfaces. Before making the aircraft
 release-ready, validate these scenarios in X-Plane with both flight directors

@@ -157,7 +157,12 @@ local function B747_vnav_energy_target_vspeed(nominalVSpeed)
     min_safe_speed_kts = B747DR_airspeed_Vmc + 15,
     previous_path_axis = vnavEnergy.pathAxis,
     previous_speed_axis = vnavEnergy.speedAxis,
-    protection_active = vnavEnergy.protectionActive
+    protection_active = vnavEnergy.protectionActive,
+    -- The latched thrust policy lets a limited path recovery keep its
+    -- thrust; an extended speedbrake holds that thrust at idle instead.
+    previous_thrust_policy = vnavEnergy.thrustPolicy,
+    previous_thrust_reason = vnavEnergy.thrustReason,
+    speedbrake_lever = B747DR_speedbrake_lever
   })
 
   if not vnavEnergy.active then
