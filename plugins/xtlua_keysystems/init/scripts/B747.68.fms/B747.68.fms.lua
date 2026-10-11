@@ -13,6 +13,9 @@ B747DR_ap_vnav_pause            = deferred_dataref("laminar/B747/autopilot/vnav_
 B747DR_fmc_notifications            = deferred_dataref("laminar/B747/fms/notification","array[56]")
 B747DR_fms_exec_light            = deferred_dataref("laminar/B747/fms/exec_light","number")
 B747DR_fms_exec_light=0
+-- 1 while the native FMS has refused the CRZ ALT the 747 sent it
+B747DR_crzalt_sync_fault            = deferred_dataref("laminar/B747/fms/crzalt_sync_fault","number")
+B747DR_crzalt_sync_fault=0
 ilsData=deferred_dataref("laminar/B747/radio/ilsData", "string")
 acars=create_dataref("laminar/B747/comm/acars","number")  
 toderate=deferred_dataref("laminar/B747/engine/derate/TO","number") 

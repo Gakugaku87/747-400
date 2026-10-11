@@ -40,6 +40,22 @@ function step.altitude_feet(value)
   return altitude
 end
 
+-- CRZ ALT as the native X-Plane FMS takes it: a flight level at or above its
+-- transition altitude (FL330) and feet below it (10000).  In flight the
+-- native FMS answered "33000" with INVALID ENTRY but took FL330 from the CDU.
+-- The native default transition altitude is 18000 FT.  Returns nil when there
+-- is nothing to enter.
+function step.native_cruise_altitude_entry(altitude_feet,transition_feet)
+  local altitude=tonumber(altitude_feet)
+  if altitude==nil or altitude~=altitude or altitude<=0 then return nil end
+  local transition=tonumber(transition_feet)
+  if transition==nil or transition<=0 then transition=18000 end
+  if altitude>=transition then
+    return string.format("FL%03d",math.floor(altitude/100+0.5))
+  end
+  return string.format("%d",math.floor(altitude+0.5))
+end
+
 local function route_waypoint(flight_plan,index)
   if type(flight_plan)~="table" or type(flight_plan[index])~="table" then
     return ""

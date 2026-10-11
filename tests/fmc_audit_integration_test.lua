@@ -240,6 +240,18 @@ r.simDR_autopilot_alt_hold_status = 0
 push_altitude_selector()
 equal(r.B747BR_cruiseAlt, 35000, "no CRZ ALT change during a VNAV descent")
 r.B747DR_ap_inVNAVdescent = 0
+-- Within 50 NM of T/D, an ALT push for a climb (MCP above the aircraft) must
+-- not begin the descent.
+local descent_started = false
+r.setDescent, r.getDescentTarget = function() descent_started = true end, function() end
+r.B747DR_ap_vnav_state, r.simDR_autopilot_alt_hold_status = 2, 2
+r.simDR_pressureAlt1, r.B747BR_cruiseAlt, r.B747DR_autopilot_altitude_ft = 24000, 35000, 37000
+r.B747BR_totalDistance, r.B747BR_tod = 140, 100
+push_altitude_selector()
+equal(r.B747DR_ap_inVNAVdescent, 0, "an ALT push for a climb near T/D does not begin the descent")
+check(not descent_started, "no descent path is set up for a climb")
+equal(r.B747DR_ap_flightPhase, 1, "the ALT push near T/D keeps the climb phase")
+r.B747BR_totalDistance, r.B747BR_tod = 1500, 100
 
 -- Load the production updater and its helper, not a reconstructed input list.
 local perf = dofile(FMS.."B744.fms.performance.lua")

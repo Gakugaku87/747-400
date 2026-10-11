@@ -417,4 +417,143 @@ function afds.vnav_entry_slope(previous_alt_ft, alt_ft, distance_nm, from_tod, c
     return (start_alt_ft - alt_ft) / distance_nm, alt_ft
 end
 
+-- [d] Cruise climb after the ALT selector push
+-- The climb starts 2 s after the push.  By then CRZ ALT may be back at the
+-- level being flown (put back, or the step cancelled), and close to T/D a
+-- climb would only be followed by the descent: a 2,000 ft step takes 15-20 NM
+-- and VNAV leaves the cruise climb 10 NM before T/D.
+afds.CRUISE_CLIMB_TOD_MARGIN_NM = 50
+
+-- Returns "climb", "cancelled" (CRZ ALT not above the aircraft by more than
+-- the capture window) or "tod" (T/D within CRUISE_CLIMB_TOD_MARGIN_NM, or
+-- already passed).
+function afds.cruise_climb_action(cruise_alt_ft, altitude_ft, distance_to_tod_nm, capture_window_ft)
+    local cruise_alt = tonumber(cruise_alt_ft)
+    local altitude = tonumber(altitude_ft)
+    local window = tonumber(capture_window_ft) or 0
+    if cruise_alt == nil or altitude == nil or cruise_alt <= altitude + window then
+        return "cancelled"
+    end
+    local distance = tonumber(distance_to_tod_nm)
+    if distance == nil or distance <= afds.CRUISE_CLIMB_TOD_MARGIN_NM then
+        return "tod"
+    end
+    return "climb"
+end
+
+-- [e] Approach LOC and G/S capture windows
+-- LOC captures within 2 dots while closing on the localizer, or within 1 dot
+-- when settled; G/S captures only after LOC, with both within 1.5 dots.
+afds.LOC_CAPTURE_MAX_DOTS = 2.0
+afds.LOC_CAPTURE_STEADY_DOTS = 1.0
+afds.LOC_CAPTURE_CLOSING_DOTS_PER_SEC = 0.01
+afds.LOC_CAPTURE_STEADY_GROWTH_DOTS_PER_SEC = 0.02
+afds.LOC_CAPTURE_MAX_INTERCEPT_DEG = 90
+afds.LOC_CAPTURE_SAMPLE_SEC = 1.0
+afds.GS_CAPTURE_MAX_LOC_DOTS = 1.5
+afds.GS_CAPTURE_MAX_GS_DOTS = 1.5
+
+-- Mean LOC deviation of the two receivers, in dots without sign.
+function afds.loc_deviation_dots(nav1_dots, nav2_dots)
+    nav1_dots = tonumber(nav1_dots)
+    nav2_dots = tonumber(nav2_dots)
+    if nav1_dots == nil or nav2_dots == nil then return nil end
+    return math.abs((nav1_dots + nav2_dots) / 2)
+end
+
+local function heading_difference_deg(from_deg, to_deg)
+    local difference = math.fmod(to_deg - from_deg, 360)
+    if difference > 180 then difference = difference - 360 end
+    if difference < -180 then difference = difference + 360 end
+    return difference
+end
+
+-- input.sample is an earlier {time, dots} reading of loc_deviation_dots; it
+-- must be at least LOC_CAPTURE_SAMPLE_SEC older than input.time so the rate
+-- of change is measured over a useful interval.
+function afds.loc_capture_ready(input)
+    input = input or {}
+    if (tonumber(input.nav1_signal) or 0) ~= 1 or (tonumber(input.nav2_signal) or 0) ~= 1 then
+        return false
+    end
+    local course_deg = tonumber(input.course_deg)
+    local heading_deg = tonumber(input.heading_deg)
+    if course_deg == nil or heading_deg == nil
+        or math.abs(heading_difference_deg(course_deg, heading_deg)) > afds.LOC_CAPTURE_MAX_INTERCEPT_DEG then
+        return false
+    end
+    local dots = afds.loc_deviation_dots(input.nav1_dots, input.nav2_dots)
+    if dots == nil or dots > afds.LOC_CAPTURE_MAX_DOTS then return false end
+
+    local sample = input.sample
+    local time = tonumber(input.time)
+    if type(sample) ~= "table" or time == nil
+        or tonumber(sample.time) == nil or tonumber(sample.dots) == nil then
+        return false
+    end
+    local elapsed = time - tonumber(sample.time)
+    if elapsed < afds.LOC_CAPTURE_SAMPLE_SEC then return false end
+    local rate = (dots - tonumber(sample.dots)) / elapsed
+    if rate <= -afds.LOC_CAPTURE_CLOSING_DOTS_PER_SEC then return true end
+    return dots <= afds.LOC_CAPTURE_STEADY_DOTS and rate < afds.LOC_CAPTURE_STEADY_GROWTH_DOTS_PER_SEC
+end
+
+function afds.gs_capture_ready(input)
+    input = input or {}
+    if input.loc_captured ~= true then return false end
+    local loc_dots = afds.loc_deviation_dots(input.nav1_dots, input.nav2_dots)
+    local gs_dots = tonumber(input.gs_dots)
+    return loc_dots ~= nil and loc_dots <= afds.GS_CAPTURE_MAX_LOC_DOTS
+        and gs_dots ~= nil and math.abs(gs_dots) < afds.GS_CAPTURE_MAX_GS_DOTS
+        and (tonumber(input.nav1_gs_flag) or 1) == 0 and (tonumber(input.nav2_gs_flag) or 1) == 0
+        and (tonumber(input.nav1_vertical_signal) or 0) == 1
+        and (tonumber(input.nav2_vertical_signal) or 0) == 1
+end
+
+-- [c-4] T/D from the descent constraints and the end of descent altitude
+-- Planned descent gradient of the T/D (2.9 NM per 1,000 ft, as before).
+afds.VNAV_TOD_FT_PER_NM = 290
+
+-- Distance (NM) before the destination at which the descent from cruise_alt_ft
+-- starts, and the end of descent altitude. As in setDistances, the route runs
+-- to the end of descent (eod_index) and then straight to the destination (the
+-- last entry). The end of descent altitude is its route altitude ([9]), reached
+-- at the end of descent, or the destination elevation when it has none ([3] is
+-- a frequency on a navaid).
+-- Each descent constraint up to the end of descent must also be reached at
+-- 290 ft/nm from CRZ ALT, so the T/D is the earliest of these. Walking back
+-- from the end of descent, the descent constraints are the route altitudes
+-- that lie after the T/D found so far (one at or above CRZ ALT there cannot
+-- move it). A route altitude before it is cruise (such as the older CRZ ALT
+-- left in [9] after a step climb), and an entry closer to the start of the
+-- route than to its end is climb (a SID constraint). Passed constraints count
+-- as well, so the T/D does not move while the aircraft passes them on the
+-- descent.
+function afds.route_tod_distance(route, eod_index, cruise_alt_ft, distance_fn)
+    local count = #route
+    if count < 1 then return 0, 0 end
+    local cruise_alt = tonumber(cruise_alt_ft) or 0
+    local eod = math.max(1, math.min(tonumber(eod_index) or count, count))
+    local eod_alt = tonumber(route[eod][9]) or 0
+    if eod_alt <= 0 then eod_alt = tonumber(route[count][9]) or 0 end
+    local tod_nm = (cruise_alt - eod_alt) / afds.VNAV_TOD_FT_PER_NM
+    if type(distance_fn) ~= "function" then return tod_nm, eod_alt end
+    -- distance from each entry along the route to the end of descent, then to the destination
+    local to_end = {}
+    to_end[eod] = distance_fn(route[eod][5], route[eod][6], route[count][5], route[count][6])
+    for i = eod - 1, 1, -1 do
+        to_end[i] = to_end[i + 1] + distance_fn(route[i][5], route[i][6], route[i + 1][5], route[i + 1][6])
+    end
+    for i = eod, 1, -1 do
+        -- the route altitude of the end of descent applies there, even when CRZ ALT is
+        -- so close to it that the T/D from the destination lies after that point
+        if i < eod and (to_end[i] >= tod_nm or to_end[i] * 2 > to_end[1]) then break end
+        local alt = tonumber(route[i][9]) or 0
+        if alt > 0 and alt < cruise_alt then
+            tod_nm = math.max(tod_nm, to_end[i] + (cruise_alt - alt) / afds.VNAV_TOD_FT_PER_NM)
+        end
+    end
+    return tod_nm, eod_alt
+end
+
 return afds

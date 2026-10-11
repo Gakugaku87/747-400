@@ -701,6 +701,14 @@ end
 function update_new_crzalt()
 	print("doing set new cruise to "..B747BR_cruiseAlt)
 	if simDR_autopilot_alt_hold_status==2 and B747DR_ap_vnav_state>1 then
+		-- Leave the hold only for a climb that still stands: CRZ ALT may be
+		-- back at this level by now, and near T/D the climb is not started.
+		local climbAction=B747_afds_helpers.cruise_climb_action(B747BR_cruiseAlt,
+			simDR_pressureAlt1, B747BR_totalDistance - B747BR_tod, B747DR_alt_capture_window)
+		if climbAction~="climb" then
+			print("no cruise climb to "..B747BR_cruiseAlt..": "..climbAction)
+			return
+		end
 		B747DR_mcp_hold = 0
 		simDR_autopilot_alt_hold_status=0
 		if B747DR_autopilot_altitude_ft > simDR_pressureAlt1 then
@@ -718,7 +726,9 @@ function update_new_crzalt()
 		if B747DR_ap_vnav_state == 2 then
 			B747DR_ap_vnav_state = 3 --resume
 		end
-		if B747BR_totalDistance - B747BR_tod <= 50 then
+		-- Near T/D, descend only to an MCP altitude below the aircraft.
+		if B747BR_totalDistance - B747BR_tod <= 50
+			and B747DR_autopilot_altitude_ft < simDR_pressureAlt1 then
 			B747DR_ap_inVNAVdescent = 1
 			B747DR_ap_flightPhase = 3
 			setDescent(true)
@@ -791,7 +801,10 @@ function B747_ap_switch_vnavalt_mode_CMDhandler(phase, duration)
 			if B747DR_ap_vnav_state == 2 then
 				B747DR_ap_vnav_state = 3 --resume
 			end
-			if B747BR_totalDistance - B747BR_tod <= 50 then
+			-- Near T/D, descend only to an MCP altitude below the aircraft:
+			-- a push for a climb must not start the descent.
+			if B747BR_totalDistance - B747BR_tod <= 50
+				and B747DR_autopilot_altitude_ft < simDR_pressureAlt1 then
 				B747DR_ap_inVNAVdescent = 1
 				B747DR_ap_flightPhase = 3
 				setDescent(true)
@@ -2175,6 +2188,12 @@ function setDistances(fmsO)
 	--print("setDistances")
 	local usedToD=false
 	for i = 1, endI - 1, 1 do
+		-- the route ends at the end of descent and then runs straight to the destination
+		-- (added after the loop), so the leg after the end of descent is not added
+		if i == eod then
+			--print("end fms"..i.."=at alt "..fms[i][3])
+			break
+		end
 		-- true when the T/D lies on a leg before this entry (set by an earlier pass)
 		local todBeforePoint = setTOD
 		if i >= start then
@@ -2206,10 +2225,6 @@ function setDistances(fmsO)
 			end
 		end
 		--print("setVNAV "..i.." "..fmsO[i][5]..":"..fmsO[i][6].."/"..fmsO[i][9])
-		if i == eod then
-			--print("end fms"..i.."=at alt "..fms[i][3])
-			break
-		end
 		if fmsO[i][9]>0 then
 			--construct vnav profile
 			--[[local isNext="false"
@@ -2269,8 +2284,10 @@ function setDistances(fmsO)
 		B747BR_fpe	= simDR_pressureAlt1-glideAlt
 	end
 	B747BR_nextDistanceInFeet = nextDistanceInFeet
-	local cruiseTOD = ((B747BR_cruiseAlt - fmsO[eod][3]) / 100) / 2.9
-	local currentTOD = ((simDR_pressureAlt1 - fmsO[eod][3]) / 100) / 2.9
+	-- the T/D reaches every descent constraint and the end of descent altitude ([9], or the
+	-- destination elevation) at 290 ft/nm; [3] of the end of descent is a frequency on a navaid
+	local cruiseTOD, eodAlt = B747_afds_helpers.route_tod_distance(fmsO, eod, B747BR_cruiseAlt, getDistance)
+	local currentTOD = ((simDR_pressureAlt1 - eodAlt) / 100) / 2.9
 	
 	B747BR_tod = cruiseTOD
 end
@@ -2550,7 +2567,7 @@ function B747_ap_appr_mode_beforeCMDhandler(phase, duration)
 		end
 
 		B747DR_ap_lastCommand = simDRTime
-		B747DR_ap_heading_deg = roundToIncrement(simDR_radio_nav_obs_deg[0], 1) -- SET THE SELECTED HEADING VALUE TO THE LOC COURSE
+		-- leave the MCP heading at the crew selection: HDG SEL keeps flying it while LOC is armed
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[9] = 0 -- SET THE LOC SWITCH ANIMATION TO "OUT"
 	end
@@ -2693,7 +2710,7 @@ function B747_ap_appr_mode()
 		B747DR_ap_approach_mode = 0
 	end
 
-	if B747DR_ap_lnav_state > 0 and simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status == 0 then
+	if B747DR_ap_lnav_state > 0 and simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status ~= 2 then
 		print("simCMD_autopilot_heading_select in appr_mode")
 		simCMD_autopilot_heading_select:once()
 		B747DR_ap_ATT = 0.0
@@ -3487,7 +3504,7 @@ function B474_ap_target_heading()
 		B747DR_ap_activate_target_heading_deg=0
 		print("change to HDG SEL")
 	end
-	if simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status == 0 and B747DR_ap_lnav_state > 0 then
+	if simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state > 0 then
 		if diff < 0.05 then
 			return
 		end	
