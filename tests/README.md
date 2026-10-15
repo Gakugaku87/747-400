@@ -340,6 +340,13 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   their fixes, NIRSI held, AM622's at or above 160 no limit, and the
   descent's targets capped by it below and above 10,000 ft, the descent Mach
   turned to the constraint's CAS, and the flaps' manoeuvring speed kept.
+- `xtlua_route_constraints_test.lua`: the route constraints' code as XTLua runs
+  it - every laminar/ dataref the xt autopilot binds created by an init
+  script of one of the aircraft's XTLua plugins (in the xt autopilot
+  deferred_dataref is find_dataref), and B747_update_route_constraints,
+  B747_update_constraint_speed and VNAV_NEXT_ALT run in init.lua's namespace,
+  where a global table without a metatable would be wrapped and its missing
+  index read would overflow the stack.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the
