@@ -334,7 +334,12 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   DW129, DW129 held while LNAV has sequenced it early, 290 kt to ENDEQ, none
   after it, none for an at or above), and the climb's targets capped by it
   below and above 10,000 ft and where ECON would be the climb Mach, never
-  below the manoeuvring speed of the flaps set, recalculated when it changes.
+  below the manoeuvring speed of the flaps set, recalculated when it changes;
+  in the descent (EHAM ILS 18R via SUG1D) NETOM's 250 and NIRSI's 220 from
+  where the deceleration to them begins (at 0.5 kt/s plus 1 nm) and on after
+  their fixes, NIRSI held, AM622's at or above 160 no limit, and the
+  descent's targets capped by it below and above 10,000 ft, the descent Mach
+  turned to the constraint's CAS, and the flaps' manoeuvring speed kept.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the

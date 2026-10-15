@@ -52,7 +52,8 @@ local function autopilot()
     local file = assert(io.open(AP.."B747.70.xt.autopilot.lua"))
     local source = file:read("*a")
     file:close()
-    local first = source:find("function B747_update_constraint_speed(fmsO)", 1, true)
+    local first = source:find("local VNAV_CONSTRAINT_DECEL_KT_PER_SEC", 1, true)
+        or source:find("function B747_update_constraint_speed(fmsO)", 1, true)
     if first == nil then return nil end
     local last = assert(source:find("function B747_getCurrentWayPoint_default(fmsO)", first, true))
     local env = setmetatable({print = function() end, B747_afds_helpers = afds}, {__index = _G})
@@ -171,6 +172,104 @@ case("a change of the constraint recalculates", function()
     r.B747DR_vnav_constraint_speed = 0
     r.B747_vnav_speed()
     check(r.B747DR_ap_ias_dial_value == 234, "it goes: 234 at once, got "..tostring(r.B747DR_ap_ias_dial_value))
+end)
+
+-- 3. The descent (EHAM LAMS2A, ILS 18R via SUG1D): a STAR's or an approach's at or below (or at) speed
+-- holds from its fix on, and before it from where VNAV has to start slowing to have it at the fix -
+-- (IAS - speed) at 0.5 kt/s (the 747 slowed 0.6 kt/s on its path, idle, the descent shallowed) at the
+-- ground speed, plus 1 nm. The kit's flights passed NIRSI (at or below 220 kt) at 233 kt.
+local function eham()
+    return {entry("EIDW", 53.4213, -6.2703, 242, 1), entry("LAMSO", 52.732889, 2.994361, 21438),
+        entry("ETPOS", 52.585122, 3.414178, 16752), entry("SUGOL", 52.525511, 3.96735, 11315),
+        entry("NETOM", 52.422444, 4.387917, 7849), entry("NIRSI", 52.583878, 4.513372, 5563),
+        entry("AM607", 52.583889, 4.646889, 4272), entry("AM608", 52.539417, 4.728139, 3400),
+        entry("AM621", 52.462694, 4.721111, 2000), entry("AM622", 52.426722, 4.717806, 1310),
+        entry("RW18R", 52.360258, 4.711725, 37), entry("EHAM", 52.3175, 4.7716, -11, 1)}
+end
+local SUGOL, NETOM, NIRSI, AM607, AM622 = 4, 5, 6, 7, 10
+local function sug1d()
+    return {[2] = {alt_desc = "-", ceiling = 23000, phase = "descent"},
+        [SUGOL] = {alt_desc = "B", floor = 10000, ceiling = 14000, phase = "descent"},
+        [NETOM] = {alt_desc = "+", floor = 7000, speed_desc = "-", speed = 250, phase = "descent"},
+        [NIRSI] = {alt_desc = "+", floor = 5500, speed_desc = "-", speed = 220, phase = "descent"},
+        [AM622] = {alt_desc = "H", floor = 1310, speed_desc = "+", speed = 160, phase = "descent"}}
+end
+case("the descent's speed now", function()
+    local env = autopilot()
+    local route = eham()
+    env.B747_route_constraints = sug1d()
+    env.B747DR_ap_inVNAVdescent = 1
+    -- the aircraft dist_nm before the fix on the leg to it, at ias kt and 260 kt over the ground
+    local function at(active, dist_nm, ias, held)
+        local fix, from = route[active], route[active - 1]
+        local d = env.getDistance(from[5], from[6], fix[5], fix[6])
+        local f = dist_nm / d
+        env.simDR_latitude = fix[5] + (from[5] - fix[5]) * f
+        env.simDR_longitude = fix[6] + (from[6] - fix[6]) * f
+        env.simDR_ind_airspeed_kts_pilot, env.simDR_groundspeed = ias, 260 / 1.94384
+        env.B747DR_fmscurrentIndex, env.B747DR_vnav_hold_index = active, held or 0
+        env.B747_update_constraint_speed(route)
+        return env.B747DR_vnav_constraint_speed
+    end
+    -- NETOM, at or below 250: from (260 - 250) / 0.5 s at 260 kt + 1 nm = 2.4 nm
+    check(at(NETOM, 10, 260) == 0, "10 nm before NETOM at 260 kt: none yet, got "..tostring(at(NETOM, 10, 260)))
+    check(at(NETOM, 2, 260) == 250, "2 nm before NETOM at 260 kt: 250, got "..tostring(at(NETOM, 2, 260)))
+    -- NIRSI, at or below 220: from (248 - 220) / 0.5 s at 260 kt + 1 nm = 5.0 nm; NETOM's 250 meanwhile
+    check(at(NIRSI, 12, 248) == 250, "12 nm before NIRSI, NETOM passed: 250, got "..tostring(at(NIRSI, 12, 248)))
+    check(at(NIRSI, 4.5, 248) == 220, "4.5 nm before NIRSI at 248 kt: 220, got "..tostring(at(NIRSI, 4.5, 248)))
+    -- slowing, the distance it needs shrinks below the distance left: the deceleration stays begun
+    check(at(NIRSI, 4.3, 232) == 220, "4.3 nm before NIRSI, slowed to 232 kt: still 220, got "
+        ..tostring(at(NIRSI, 4.3, 232)))
+    check(at(AM607, 8, 222) == 220, "NIRSI passed: 220 on, got "..tostring(at(AM607, 8, 222)))
+    check(at(AM607, 3, 225, NIRSI) == 220, "NIRSI held: 220, got "..tostring(at(AM607, 3, 225, NIRSI)))
+    -- AM622's at or above 160 is the crew's: still 220
+    check(at(AM622, 1, 180) == 220, "before AM622 (at or above 160): 220, got "..tostring(at(AM622, 1, 180)))
+    -- the climb takes no descent constraint
+    env.B747DR_ap_inVNAVdescent = 0
+    check(at(NIRSI, 2, 248) == 0, "climbing: none, got "..tostring(at(NIRSI, 2, 248)))
+end)
+case("the descent's targets", function()
+    local r = speeds()
+    r.B747DR_ap_inVNAVdescent, r.simDR_flap_ratio_control = 1, 0
+    -- below 10,000 ft: SPD TRANS 240, or NIRSI's 220
+    r.simDR_pressureAlt1, r.simDR_ind_airspeed_kts_pilot = 6000, 238
+    r.des_aptres_setSpd()
+    check(r.B747DR_ap_ias_dial_value == 240, "below 10,000 ft: 240, got "..tostring(r.B747DR_ap_ias_dial_value))
+    r.B747DR_vnav_constraint_speed = 220
+    r.des_aptres_setSpd()
+    check(r.B747DR_ap_ias_dial_value == 220, "at or below 220: 220, got "..tostring(r.B747DR_ap_ias_dial_value))
+    -- above 10,000 ft: ECON 270, or a STAR's 250
+    r.B747DR_vnav_constraint_speed = 0
+    r.simDR_pressureAlt1, r.simDR_ind_airspeed_kts_pilot, r.B747DR_ap_ias_dial_value = 14000, 268, 270
+    r.des_src_setSpd()
+    check(r.B747DR_ap_ias_dial_value == 270, "above 10,000 ft: ECON 270, got "..tostring(r.B747DR_ap_ias_dial_value))
+    r.B747DR_vnav_constraint_speed = 250
+    r.des_src_setSpd()
+    check(r.B747DR_ap_ias_dial_value == 250, "at or below 250: 250 at once, got "..tostring(r.B747DR_ap_ias_dial_value))
+    -- in the Mach part of the descent a constraint ahead turns it to the constraint's CAS
+    r.B747DR_vnav_constraint_speed = 0
+    r.simDR_pressureAlt1, r.simDR_airspeed_mach, r.simDR_ind_airspeed_kts_pilot = 28000, 0.81, 300
+    r.simDR_autopilot_airspeed_is_mach = 1
+    r.des_src_setSpd()
+    check(r.simDR_autopilot_airspeed_is_mach == 1, "FL280 at M.81: the descent Mach")
+    r.B747DR_vnav_constraint_speed = 280
+    r.des_src_setSpd()
+    check(r.simDR_autopilot_airspeed_is_mach == 0 and r.B747DR_ap_ias_dial_value == 280,
+        "FL280 at 300 kt, at or below 280 ahead: 280 kt, got "..tostring(r.B747DR_ap_ias_dial_value)
+        .." mach "..tostring(r.simDR_autopilot_airspeed_is_mach))
+    -- slowed below it at the next recalculation, still Mach above the descent Mach: the constraint's CAS
+    -- stays (it went back to the descent Mach)
+    r.simDR_pressureAlt1, r.simDR_airspeed_mach, r.simDR_ind_airspeed_kts_pilot = 30000, 0.82, 276
+    r.des_src_setSpd()
+    check(r.simDR_autopilot_airspeed_is_mach == 0 and r.B747DR_ap_ias_dial_value <= 280,
+        "FL300 at M.82 and 276 kt, at or below 280: CAS, got "..tostring(r.B747DR_ap_ias_dial_value)
+        .." mach "..tostring(r.simDR_autopilot_airspeed_is_mach))
+    -- with flaps out, never below their manoeuvring speed
+    r.simDR_pressureAlt1, r.simDR_ind_airspeed_kts_pilot, r.simDR_airspeed_mach = 4000, 190, 0.3
+    r.simDR_flap_ratio_control, r.B747DR_vnav_constraint_speed = 0.25, 160
+    r.des_aptres_setSpd()
+    check(r.B747DR_ap_ias_dial_value == 179, "flaps 5, at or below 160: flaps 5's 179, got "
+        ..tostring(r.B747DR_ap_ias_dial_value))
 end)
 
 if #failures > 0 then

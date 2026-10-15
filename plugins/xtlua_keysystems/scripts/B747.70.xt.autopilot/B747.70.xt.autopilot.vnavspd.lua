@@ -484,7 +484,10 @@ function des_src_setSpd()
     local crzspdval=tonumber(getFMSData("desspdmach"))/10
     local spdval=tonumber(getFMSData("desspd"))
     local nextspdval=tonumber(getFMSData("destranspd"))
-    if simDR_airspeed_mach > (crzspdval/100) then
+    -- while a route speed constraint holds the descent flies its CAS, not the descent Mach (whether the IAS
+    -- is still above it at a recalculation or not)
+    local constraintSpeed=tonumber(B747DR_vnav_constraint_speed) or 0
+    if simDR_airspeed_mach > (crzspdval/100) and constraintSpeed<=0 then
       print("convert to mach descend speed in des".. crzspdval)
       B747_set_vnav_speed_target(1, crzspdval)
     else
@@ -498,7 +501,7 @@ function des_src_setSpd()
         local upperAlt=lowerAlt+1500
         spdval=B747_rescale(lowerAlt,nextspdval,upperAlt,spdval,simDR_pressureAlt1)
       end
-      spdval=math.min(spdval,flapPlacardSpeedLimit())
+      spdval=B747_constraint_speed_cap(math.min(spdval,flapPlacardSpeedLimit()))
       print("des_src_setSpd:convert to descend speed ".. spdval)
       B747_set_vnav_speed_target(0, math.min(399.0, spdval))
 
@@ -515,7 +518,7 @@ function des_aptres_setSpd()
     if lowerAlt~=nil and nextspdval~=nil then
         spdval=B747_rescale(lowerAlt+1000,nextspdval,lowerAlt+1500,spdval,simDR_pressureAlt1)
     end
-    spdval=math.min(spdval,flapPlacardSpeedLimit())
+    spdval=B747_constraint_speed_cap(math.min(spdval,flapPlacardSpeedLimit()))
     print("convert to destranspd speed ".. spdval)
     B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     B747_schedule_updateIAS()
@@ -531,7 +534,7 @@ function des_spcres_setSpd()
     -- Reached only with a SPD REST entered; fall back to SPD TRANS otherwise.
     local spdval=tonumber(getFMSData("desrestspd"))
         or tonumber(getFMSData("destranspd")) or 240
-    spdval=math.min(spdval,flapPlacardSpeedLimit())
+    spdval=B747_constraint_speed_cap(math.min(spdval,flapPlacardSpeedLimit()))
     print("convert to desrestspd speed ".. spdval)
     B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     B747_schedule_updateIAS()

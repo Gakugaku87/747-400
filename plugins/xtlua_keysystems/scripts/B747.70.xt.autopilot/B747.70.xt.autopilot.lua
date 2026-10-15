@@ -2798,8 +2798,17 @@ end
 -- The speed the route's constraints (B747_route_constraints) allow VNAV now (laminar/B747/autopilot/vnav/
 -- constraint_speed, kt; 0 for none). In the climb a SID's at or below (or at) speed holds from the
 -- departure until its fix is passed - a fix LNAV sequenced early for its turn until past the turn's
--- bisector - as the FMC keeps a climb speed constraint over the legs before its fix. An at or above
--- speed is the crew's (MCP), not VNAV's.
+-- bisector - as the FMC keeps a climb speed constraint over the legs before its fix. In the descent a
+-- STAR's or an approach's holds from its fix on (until a later one), and before it from where VNAV has
+-- to start slowing to have it at the fix: (IAS - speed) at VNAV_CONSTRAINT_DECEL_KT_PER_SEC (the 747
+-- slowed 0.6 kt/s on its path at idle, the descent shallowed) at the ground speed, plus
+-- VNAV_CONSTRAINT_DECEL_MARGIN_NM. An at or above speed is the crew's (MCP), not VNAV's.
+local VNAV_CONSTRAINT_DECEL_KT_PER_SEC=0.5
+local VNAV_CONSTRAINT_DECEL_MARGIN_NM=1.0
+local function B747_speed_limit_of(c,phase)
+	if c~=nil and c.phase==phase and c.speed~=nil and (c.speed_desc=="-" or c.speed_desc=="@") then return c.speed end
+	return nil
+end
 function B747_update_constraint_speed(fmsO)
 	local limit=0
 	local constraints=B747_route_constraints
@@ -2808,13 +2817,37 @@ function B747_update_constraint_speed(fmsO)
 		local first=active
 		local held=B747DR_vnav_hold_index or 0
 		if held>0 and held<first then first=held end
+		local n=table.getn(fmsO)
 		if B747DR_ap_inVNAVdescent==0 then
-			for i=first,table.getn(fmsO) do
+			for i=first,n do
+				local speed=B747_speed_limit_of(constraints[i],"climb")
+				if speed~=nil and (limit==0 or speed<limit) then limit=speed end
+			end
+		else
+			-- the latest fix passed with one (a fix held for its turn is passed for this)
+			for i=1,math.min(active-1,n) do
+				local speed=B747_speed_limit_of(constraints[i],"descent")
+				if speed~=nil then limit=speed end
+			end
+			-- those ahead whose deceleration has begun (it stays begun: slowing shortens the distance it
+			-- needs, which would let the speed go and come back)
+			local gs=math.max(simDR_groundspeed*1.94384,100)
+			local along=0
+			local lat,lon=simDR_latitude,simDR_longitude
+			for i=active,n do
+				local fix=fmsO[i]
+				along=along+getDistance(lat,lon,fix[5],fix[6])
+				lat,lon=fix[5],fix[6]
 				local c=constraints[i]
-				if c~=nil and c.phase=="climb" and c.speed~=nil and (c.speed_desc=="-" or c.speed_desc=="@")
-					and (limit==0 or c.speed<limit) then
-					limit=c.speed
+				local speed=B747_speed_limit_of(c,"descent")
+				if speed~=nil then
+					local decel=math.max(0,simDR_ind_airspeed_kts_pilot-speed)/VNAV_CONSTRAINT_DECEL_KT_PER_SEC*gs/3600
+						+VNAV_CONSTRAINT_DECEL_MARGIN_NM
+					if along<=decel then c.decelerating=true end
+					if c.decelerating and (limit==0 or speed<limit) then limit=speed end
 				end
+				-- no deceleration starts that far before its fix
+				if along>40 then break end
 			end
 		end
 	end
