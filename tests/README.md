@@ -312,6 +312,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   and the autopilot's per-frame update by route index.
   With `XPLANE_ROOT` set to an X-Plane 12 folder it also checks the real
   EIDW 28R ENDE3J, EHAM LAMS2A and ILS 18R via SUG1D, and EINN's ILS 06.
+- `vnav_climb_constraints_test.lua`: VNAV's climb with the SID's constraints
+  (EIDW 28R ENDE3J) - the target and the dial at the lowest ceiling of the
+  fixes not passed yet (DW124's FL090 from DW129 on), no resume while
+  levelled there, on to ENDEQ's FL230 once DW124 is passed and to CRZ ALT
+  past ENDEQ, DW124 held while LNAV has sequenced it early, no level-off at an
+  at or above, at an at's altitude and a window's top, a ceiling far below
+  the aircraft let go, the MCP below the ceiling standing, and nothing
+  without the constraints or in the descent.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the

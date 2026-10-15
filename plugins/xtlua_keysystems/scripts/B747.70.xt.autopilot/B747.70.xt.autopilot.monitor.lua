@@ -67,9 +67,12 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
 		--print("i=".. i .." B747DR_fmscurrentIndex="..B747DR_fmscurrentIndex .." speed="..simDR_groundspeed .. " distance="..totalDistance.." dtoAirport="..dtoAirport.. " ".. fmsO[i][5].." ".. fmsO[i][6].." ".. fmsO[i+1][5].." ".. fmsO[i+1][6])
             -- in the climb the end of an altitude-terminated leg (CA/VA/FA, "(650)") is climbed
             -- through, not levelled at, and an entry without an altitude (a departure fix near the
-            -- airport on a route back to it) is no target
+            -- airport on a route back to it) is no target; nor is a fix with a SID constraint from the
+            -- CIFP, whose ceiling is taken below and whose at or above is no level-off
+            local climbConstraint=B747_route_constraints~=nil and B747_route_constraints[i] or nil
             local noClimbTarget=dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0
-                and (B747_afds_helpers.altitude_leg_end_ft(fms[i])~=nil or fms[i][9]<=0)
+                and (B747_afds_helpers.altitude_leg_end_ft(fms[i])~=nil or fms[i][9]<=0
+                    or (climbConstraint~=nil and climbConstraint.phase=="climb"))
             if (dtoAirport < 10 or fms[i][9]>0) and not noClimbTarget then
                 targetIndex = i
                 targetAlt=fms[i][9]
@@ -77,6 +80,30 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
                 --print("end fms"..i.."=at alt "..fms[i][9])
                 break
             end
+        end
+    end
+    -- in the climb the lowest ceiling (at or below, at, a window's top) of the SID's constraints
+    -- (B747_route_constraints, from the CIFP) at the fixes not passed yet is the target: from the active
+    -- fix, or from a fix LNAV sequenced early for its turn until past the turn's bisector; one more than
+    -- 300 ft below the aircraft is let go (the climb does not descend to it)
+    if dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and B747_route_constraints~=nil and currentIndex>0 then
+        local first=currentIndex
+        local held=B747DR_vnav_hold_index or 0
+        if held>0 and held<first then first=held end
+        local ceiling=targetAlt
+        if targetIndex==0 and B747BR_cruiseAlt>0 then ceiling=B747BR_cruiseAlt end
+        local ceilingIndex=0
+        for i=first,endI do
+            local c=B747_route_constraints[i]
+            if c~=nil and c.phase=="climb" and c.ceiling~=nil and c.ceiling<ceiling
+                and c.ceiling>simDR_pressureAlt1-300 then
+                ceiling=c.ceiling
+                ceilingIndex=i
+            end
+        end
+        if ceilingIndex>0 then
+            targetAlt=ceiling
+            targetIndex=ceilingIndex
         end
     end
     -- in the descent a fix LNAV sequenced early for its turn keeps its altitude as the floor until the
@@ -132,7 +159,9 @@ function VNAV_CLB(numAPengaged,fmsO)
     if start == 0 then
 		start = 1
 	end
-    local waypointAlt=fmsO[start][9]
+    -- the climb resumes from ALT towards VNAV's target (VNAV_CLB_ALT), not the active fix's [9]: levelled at
+    -- a SID's ceiling before its fix ([9] 0, so the MCP's) it climbed on at once
+    local waypointAlt=B747DR_ap_vnav_target_alt
     if waypointAlt==0 or simDR_radarAlt1<3000 then waypointAlt=B747DR_autopilot_altitude_ft end
     local waypointDiff=waypointAlt-simDR_pressureAlt1
     local mcpDiff=simDR_pressureAlt1-B747DR_autopilot_altitude_ft
