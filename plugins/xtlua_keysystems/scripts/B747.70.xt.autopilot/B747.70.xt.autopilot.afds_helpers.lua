@@ -174,6 +174,70 @@ function afds.past_turn_bisector(east_nm, north_nm, in_course_deg, out_course_de
     return east_nm * mean_east + north_nm * mean_north >= 0
 end
 
+-- [i-1b] The lateral path at a fly-by fix: the inbound leg on course_in_deg,
+-- the arc of radius_nm tangent to it and to the outbound leg on course_out_deg
+-- (true courses), R tan(turn / 2) before and after the fix, and the outbound
+-- leg; east_nm and north_nm are the aircraft's position from the fix. Returns
+-- the element the aircraft is abeam ("in", "arc", "out"), its signed
+-- cross-track from the path (+ right of it; from the arc while abeam it), the
+-- path's course there, its distance along the path from the arc's start
+-- (negative on the inbound leg), the arc's start before the fix, and the point
+-- a look-ahead further along the path that a pure-pursuit guidance aims at,
+-- never nearer than the cross-track (on a leg at most 45 deg off its course).
+-- nil without a radius, a look-ahead or courses, and for a turn of 175 deg or
+-- more (no tangent arc).
+function afds.lnav_path_at(east_nm, north_nm, course_in_deg, course_out_deg, radius_nm, lookahead_nm)
+    if type(east_nm) ~= "number" or type(north_nm) ~= "number" or type(course_in_deg) ~= "number"
+        or type(course_out_deg) ~= "number" or type(radius_nm) ~= "number" or radius_nm <= 0
+        or type(lookahead_nm) ~= "number" or lookahead_nm <= 0 then
+        return nil
+    end
+    local turn = (course_out_deg - course_in_deg + 540) % 360 - 180
+    if math.abs(turn) >= 175 then return nil end
+    local side = turn < 0 and -1 or 1
+    local in_east, in_north = math.sin(math.rad(course_in_deg)), math.cos(math.rad(course_in_deg))
+    local out_east, out_north = math.sin(math.rad(course_out_deg)), math.cos(math.rad(course_out_deg))
+    local tangent = radius_nm * math.tan(math.rad(math.abs(turn)) / 2)
+    local start_east, start_north = -tangent * in_east, -tangent * in_north
+    local end_east, end_north = tangent * out_east, tangent * out_north
+    -- the centre lies R to the turn's side of the inbound leg at the arc's start
+    local centre_east = start_east + side * radius_nm * in_north
+    local centre_north = start_north - side * radius_nm * in_east
+    local arc_nm = radius_nm * math.rad(math.abs(turn))
+    local start_bearing = math.atan2(start_east - centre_east, start_north - centre_north)
+    local function point_at(along_nm)
+        if along_nm <= 0 then
+            return start_east + along_nm * in_east, start_north + along_nm * in_north
+        end
+        if along_nm >= arc_nm then
+            return end_east + (along_nm - arc_nm) * out_east, end_north + (along_nm - arc_nm) * out_north
+        end
+        local bearing = start_bearing + side * along_nm / radius_nm
+        return centre_east + radius_nm * math.sin(bearing), centre_north + radius_nm * math.cos(bearing)
+    end
+    local before = (east_nm - start_east) * in_east + (north_nm - start_north) * in_north
+    local after = (east_nm - end_east) * out_east + (north_nm - end_north) * out_north
+    local element, along, xtk, course
+    if before <= 0 then
+        element, along, course = "in", before, course_in_deg
+        xtk = (east_nm - start_east) * in_north - (north_nm - start_north) * in_east
+    elseif after >= 0 then
+        element, along, course = "out", arc_nm + after, course_out_deg
+        xtk = (east_nm - end_east) * out_north - (north_nm - end_north) * out_east
+    else
+        local d_east, d_north = east_nm - centre_east, north_nm - centre_north
+        local bearing = math.atan2(d_east, d_north)
+        local angle = (side * (bearing - start_bearing) + math.pi) % (2 * math.pi) - math.pi
+        element = "arc"
+        along = math.max(0, math.min(arc_nm, radius_nm * angle))
+        xtk = side * (radius_nm - math.sqrt(d_east * d_east + d_north * d_north))
+        course = math.deg(bearing) + side * 90
+    end
+    local aim_east, aim_north = point_at(along + math.max(lookahead_nm, math.abs(xtk)))
+    return {element = element, xtk_nm = xtk, course_deg = course % 360, along_nm = along,
+        arc_start_nm = tangent, aim_east_nm = aim_east, aim_north_nm = aim_north}
+end
+
 function afds.flap_speed_bucket(flap_ratio)
     if type(flap_ratio) ~= "number" or flap_ratio <= 0 then return 0 end
     if flap_ratio <= 0.168 then return 1 end
