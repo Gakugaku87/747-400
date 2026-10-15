@@ -260,6 +260,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   (a press just before HDG SEL does not undo HDG SEL), and nothing being
   remembered on the ground: a HDG SEL press before liftoff, LNAV left
   active from the last flight, or a selection that outlived the landing.
+- `afds_roll_rate_limit_test.lua`: the roll rate of HDG SEL and LNAV turns -
+  the filtered roll command moving at most 3 deg/s outside the approach at
+  20, 30 and 60 fps (a roll-in, a 6 deg change, a reversal and a roll-out),
+  the approach keeping its 8 deg/s; and X-Plane's HDG SEL with the production
+  filter and the bank response, both fitted to the kit's 2026-10-11
+  recordings (FL310 and 5,000 ft), flying heading changes of 5, 20 and 90 deg
+  and a +/-60 deg reversal within 4.5 deg/s (1 s mean), 1 deg of heading
+  overshoot and a time bound.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the

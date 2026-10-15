@@ -47,6 +47,13 @@ afds_controls.ROLL_FILTER_MEDIUM_SLEW_DEG_PER_SEC = 12.0
 afds_controls.ROLL_FILTER_SMALL_SLEW_DEG_PER_SEC = 4.0
 afds_controls.ROLL_FILTER_REVERSAL_SLEW_DEG_PER_SEC = 10.0
 afds_controls.ROLL_FILTER_APPROACH_SLEW_DEG_PER_SEC = 8.0
+-- Outside the approach the filtered command moves at most this fast.
+-- X-Plane's HDG SEL slews its command at about 6 deg/s and the filter let the
+-- large errors through at up to 25 deg/s; the roll loop, underdamped at
+-- altitude, then rolled the aircraft at 7-8.7 deg/s (2026-10-11 final3-L1:
+-- a 5 deg heading change at FL310, 14 deg of bank at 8.7 deg/s). The
+-- approach (LOC, autoland) keeps its response.
+afds_controls.ROLL_FILTER_MAX_SLEW_DEG_PER_SEC = 3.0
 
 afds_controls.ROLL_OUTPUT_LARGE_RESPONSE_SEC = 1.8
 afds_controls.ROLL_OUTPUT_MEDIUM_RESPONSE_SEC = 2.8
@@ -202,6 +209,9 @@ function afds_controls.adaptive_roll_filter(current_deg, target_deg, elapsed_sec
     else
         time_constant_sec = afds_controls.ROLL_FILTER_SMALL_TIME_CONSTANT_SEC
         slew_deg_per_sec = afds_controls.ROLL_FILTER_SMALL_SLEW_DEG_PER_SEC
+    end
+    if not approach_protected then
+        slew_deg_per_sec = math.min(slew_deg_per_sec, afds_controls.ROLL_FILTER_MAX_SLEW_DEG_PER_SEC)
     end
 
     local alpha = 1 - math.exp(-math.min(elapsed_sec, 0.25) / time_constant_sec)
