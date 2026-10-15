@@ -155,6 +155,25 @@ function afds.signed_cross_track_nm(leg_start_lat, leg_start_lon, leg_end_lat, l
     return cross_track
 end
 
+-- Whether the aircraft, east_nm and north_nm from a fix, is past the bisector
+-- of the turn there from in_course_deg to out_course_deg (true courses): past
+-- it once its position along the mean of the two courses is not negative. For
+-- a straight fix that is abeam it; near a course reversal, where the mean
+-- vanishes, it is abeam it on the inbound course.
+function afds.past_turn_bisector(east_nm, north_nm, in_course_deg, out_course_deg)
+    if type(east_nm) ~= "number" or type(north_nm) ~= "number"
+        or type(in_course_deg) ~= "number" or type(out_course_deg) ~= "number" then
+        return nil
+    end
+    local in_east, in_north = math.sin(math.rad(in_course_deg)), math.cos(math.rad(in_course_deg))
+    local mean_east = in_east + math.sin(math.rad(out_course_deg))
+    local mean_north = in_north + math.cos(math.rad(out_course_deg))
+    if mean_east * mean_east + mean_north * mean_north < 0.01 then
+        mean_east, mean_north = in_east, in_north
+    end
+    return east_nm * mean_east + north_nm * mean_north >= 0
+end
+
 function afds.flap_speed_bucket(flap_ratio)
     if type(flap_ratio) ~= "number" or flap_ratio <= 0 then return 0 end
     if flap_ratio <= 0.168 then return 1 end

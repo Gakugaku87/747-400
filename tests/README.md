@@ -286,6 +286,15 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   direct-to), from the fix before an altitude leg's end, from PPOS on native
   sequencing, 0 without a leg; and PROGRESS page 2 showing L or R and the
   distance.
+- `vnav_turn_hold_test.lua`: a fix LNAV sequences early for its turn keeping
+  its altitude as VNAV's descent floor until the aircraft is past the turn's
+  bisector - the bisector for straight fixes, 65-137 deg turns both ways and
+  a reversal; EHAM's NIRSI (at or above FL055, 5563 ft) in its 65 deg turn with
+  the production LNAV and VNAV_NEXT_ALT: held from the switch 1.6 nm before
+  through the turn, AM607's 4272 past the bisector; and no hold below the
+  fix's altitude, in the climb, after a jump of the active fix or one from
+  afar, at a straight fix once abeam, when vectored away, or for an altitude
+  leg's end or the origin.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the

@@ -389,6 +389,9 @@ B747DR_ap_vnav_state = deferred_dataref("laminar/B747/autopilot/vnav_state", "nu
 B747DR_ap_lnav_state = deferred_dataref("laminar/B747/autopilot/lnav_state", "number")
 B747DR_ap_lnav_xtk_error           	= deferred_dataref("laminar/B747/autopilot/lnav/xtk_error", "number")
 B747DR_ap_lnav_xtk_target           	= deferred_dataref("laminar/B747/autopilot/lnav/xtk_target", "number")
+-- the route index of a fix LNAV sequenced early for its turn, whose altitude VNAV keeps until the aircraft
+-- is past the turn's bisector; 0 when none
+B747DR_vnav_hold_index           	= deferred_dataref("laminar/B747/autopilot/lnav/vnav_hold_index", "number")
 B747DR_ap_inVNAVdescent = deferred_dataref("laminar/B747/autopilot/vnav_descent", "number")
 B747DR_ap_inDescent 		= deferred_dataref("laminar/B747/autopilot/vnav/after_tod", "number")
 B747DR_vnav_energy_active = deferred_dataref("laminar/B747/autopilot/vnav/energy_active", "number")
@@ -2327,6 +2330,7 @@ function B747_getCurrentWayPoint(fmsO)
 		B747_getCurrentWayPoint_function(fmsO)
 	end
 	B747_lnav_update_xtk(fmsO)
+	B747_lnav_update_vnav_hold(fmsO)
 end
 
 local LNAV_MAX_PREEMPT_XTK_NM=2.0
@@ -2692,6 +2696,57 @@ function B747_lnav_update_xtk(fmsO)
 		xtk=xtk-B747DR_ap_lnav_xtk_target
 	end
 	B747DR_ap_lnav_xtk_error=xtk
+end
+
+-- A fix LNAV sequenced early for its turn stays VNAV's fix (B747DR_vnav_hold_index) until the aircraft
+-- is past the turn's bisector, where the FMC sequences it: VNAV's targets were the active fix's, so at
+-- the start of the turn they dropped to the next fix's and the descent went on through the passed fix's
+-- constraint (EHAM's NIRSI, at or above FL055, passed 95 ft low). A fix is held when the active one
+-- moved on from it by one entry within its turn's lead (plus LNAV_VNAV_HOLD_MARGIN_NM) of it, not a
+-- direct-to from afar; it is let go past the bisector, as the courses were then, or once the aircraft is
+-- half as far again from it (vectored away).
+local LNAV_VNAV_HOLD_MARGIN_NM=1.0
+local lnavHoldLastIndex=0
+local lnavHoldIndex=0
+local lnavHoldInCourse=0
+local lnavHoldOutCourse=0
+local lnavHoldMaxNm=0
+function B747_lnav_update_vnav_hold(fmsO)
+	local current=B747DR_fmscurrentIndex
+	if current~=lnavHoldLastIndex then
+		local passed=lnavHoldLastIndex
+		lnavHoldLastIndex=current
+		lnavHoldIndex=0
+		local fix=fmsO[passed]
+		local nextFix=fmsO[current]
+		if current==passed+1 and passed>=2 and nextFix~=nil and B747_lnav_leg_supports_preemption(fix)
+			and B747_lnav_leg_supports_preemption(nextFix) and tonumber(fix[2])~=1
+			and B747_afds_helpers.altitude_leg_end_ft(fix)==nil then
+			local inCourse=B747_lnav_inbound_course(fmsO,passed)
+			local outCourse=getHeading(fix[5],fix[6],nextFix[5],nextFix[6])
+			local distance=getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)
+			if distance<=B747_lnav_turn_anticipation_nm(inCourse,outCourse)+LNAV_VNAV_HOLD_MARGIN_NM then
+				lnavHoldIndex=passed
+				lnavHoldInCourse=inCourse
+				lnavHoldOutCourse=outCourse
+				lnavHoldMaxNm=1.5*distance+LNAV_VNAV_HOLD_MARGIN_NM
+			end
+		end
+	end
+	if lnavHoldIndex>0 then
+		local fix=fmsO[lnavHoldIndex]
+		if fix==nil then
+			lnavHoldIndex=0
+		else
+			local distance=getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)
+			local bearing=math.rad(getHeading(fix[5],fix[6],simDR_latitude,simDR_longitude))
+			if distance>lnavHoldMaxNm or B747_afds_helpers.past_turn_bisector(distance*math.sin(bearing),
+				distance*math.cos(bearing),lnavHoldInCourse,lnavHoldOutCourse)~=false then
+				lnavHoldIndex=0
+			end
+		end
+	end
+	B747DR_vnav_hold_index=lnavHoldIndex
 end
 
 function B747_getCurrentWayPoint_default(fmsO)

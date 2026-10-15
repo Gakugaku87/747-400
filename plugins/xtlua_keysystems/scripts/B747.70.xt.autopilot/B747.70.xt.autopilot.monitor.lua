@@ -76,8 +76,16 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
                 B747DR_fmstargetDistance=B747DR_fmstargetDistance+dtoAirport
                 --print("end fms"..i.."=at alt "..fms[i][9])
                 break
-            end    
+            end
         end
+    end
+    -- in the descent a fix LNAV sequenced early for its turn keeps its altitude as the floor until the
+    -- aircraft is past the turn's bisector (B747_lnav_update_vnav_hold), while the aircraft is not below it
+    local hold=fms[B747DR_vnav_hold_index or 0]
+    if hold~=nil and dist_to_TOD<0 and numAPengaged>0 and hold[9]>0 and hold[9]<lowerAlt and hold[2]~=1
+        and hold[9]>targetAlt and simDR_pressureAlt1>hold[9]-100 then
+        targetAlt=hold[9]
+        targetIndex=B747DR_vnav_hold_index
     end
     local dtoAirport = getDistance(simDR_latitude,simDR_longitude, fms[endI][5], fms[endI][6])
     local altFromairport = simDR_pressureAlt1-fms[endI][9]
