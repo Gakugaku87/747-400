@@ -2326,6 +2326,7 @@ function B747_getCurrentWayPoint(fmsO)
 	else
 		B747_getCurrentWayPoint_function(fmsO)
 	end
+	B747_lnav_update_xtk(fmsO)
 end
 
 local LNAV_MAX_PREEMPT_XTK_NM=2.0
@@ -2633,7 +2634,6 @@ function B747_getCurrentWayPoint_function(fmsO)
 		end
 		--if best==1 then best=2 end
 		
-		B747DR_ap_lnav_xtk_error=bestOffTrack
 		--print("best Track to waypoint="..best.." / "..bestOffTrack)
 		-- an altitude-terminated leg's end whose altitude is reached is no leg to stop at
 		local maxAdvance=LNAV_MAX_AUTOMATIC_SEQUENCE_ADVANCE_LEGS
@@ -2672,6 +2672,28 @@ function B747_getCurrentWayPoint_function(fmsO)
 	end
 end
 
+-- The cross-track error every frame (laminar/B747/autopilot/lnav/xtk_error,
+-- the PROGRESS page's XTK ERROR): the signed distance from the active leg,
+-- + right of it, from the offset track while an offset is flown; 0 without a
+-- leg. It was written only by the leg search, which runs near a leg's end.
+function B747_lnav_update_xtk(fmsO)
+	local current=B747DR_fmscurrentIndex
+	local fix=fmsO[current]
+	if current<2 or fix==nil then
+		B747DR_ap_lnav_xtk_error=0
+		return
+	end
+	local legStart=B747_lnav_leg_start(fmsO,current)
+	local xtk=B747_afds_helpers.signed_cross_track_nm(legStart[5],legStart[6],fix[5],fix[6],
+		simDR_latitude,simDR_longitude,getDistance,getHeading)
+	if xtk==nil then return end
+	-- offsets are -99 (L99) to 99 as LNAV steers them; -100 is a direct-to
+	if B747DR_ap_lnav_xtk_target>=-99 then
+		xtk=xtk-B747DR_ap_lnav_xtk_target
+	end
+	B747DR_ap_lnav_xtk_error=xtk
+end
+
 function B747_getCurrentWayPoint_default(fmsO)
 	B747DR_ap_lnavHeading_mode = 0
 	for i = 1, table.getn(fmsO), 1 do
@@ -2680,14 +2702,6 @@ function B747_getCurrentWayPoint_default(fmsO)
 		if fmsO[i][10] == true then
 			B747DR_fmscurrentIndex = i
 			B747DR_ap_lnavHeading_mode = B747DR_fmscurrentIndex
-			if i>1 then
-				local dFromLast=getDistance(simDR_latitude,simDR_longitude,fmsO[i-1][5],fmsO[i-1][6])
-				local dToNext=getDistance(simDR_latitude,simDR_longitude,fmsO[i][5],fmsO[i][6])
-				local trackLength=getDistance(fmsO[i-1][5],fmsO[i-1][6],fmsO[i][5],fmsO[i][6])
-				local track=getTriSpaceSolver(trackLength,dFromLast,dToNext)
-				B747DR_ap_lnav_xtk_error=track[2]
-				--print("Track Data "..track[1].." "..track[2].." "..dFromLast.." "..dToNext.." "..trackLength)
-			end
 			setVNAVState("recalcAfter", i)
 			break
 		end

@@ -280,6 +280,12 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   0.3-0.4 nm of the fly-by path (1 nm for BILTO's 137 deg downwind), the fixes
   in order; and no anticipation from the origin airport, before a lat/lon point
   or VECTORS, more than 2 nm off the leg or after a direct-to.
+- `lnav_xtk_error_test.lua`: LNAV's cross-track error every frame - the signed
+  distance from the active leg (+ right) mid-leg on both sides and near its
+  end, from the offset track while an offset is flown (not after a
+  direct-to), from the fix before an altitude leg's end, from PPOS on native
+  sequencing, 0 without a leg; and PROGRESS page 2 showing L or R and the
+  distance.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the

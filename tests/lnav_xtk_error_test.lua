@@ -1,0 +1,160 @@
+-- Run from the repository root with Lua 5.1 or LuaJIT.
+-- LNAV's cross-track error (laminar/B747/autopilot/lnav/xtk_error, the
+-- PROGRESS page's XTK ERROR): every frame the signed distance from the active
+-- leg, + right of it, from the offset track when an offset is flown. It used
+-- to be written only by the leg search (the smallest unsigned distance of the
+-- legs it looked at, 100 when none), which runs in the last 5 nm or third of
+-- a leg, so in flight it stayed at an old value for most of a leg (the kit
+-- recorded 100 or 0.0015 for hours). The production waypoint functions
+-- (B747.70.xt.autopilot.lua) run against mocked datarefs; the PROGRESS page
+-- (B744.fms.pages.progress.lua) is rendered with mocked datarefs.
+local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/"
+local FMS = "plugins/xtlua_keysystems/scripts/B747.68.xt.fms/"
+local afds = dofile(AP.."B747.70.xt.autopilot.afds_helpers.lua")
+
+local checks = 0
+local function check(condition, message)
+    checks = checks + 1
+    assert(condition, message)
+end
+
+local file = assert(io.open(AP.."B747.70.xt.autopilot.lua"))
+local source = file:read("*a")
+file:close()
+local function slice(first_marker, last_marker)
+    local first = assert(source:find(first_marker, 1, true), first_marker)
+    local last = assert(source:find(last_marker, first, true), last_marker)
+    return source:sub(first, last - 1)
+end
+
+local function entry(name, lat, lon, alt, kind)
+    return {0, kind or 512, 0, 0, lat, lon, 0, name, alt or 0, false}
+end
+
+local function new_runtime()
+    local env = setmetatable({print = function() end, B747_afds_helpers = afds}, {__index = _G})
+    for _, chunk in ipairs({
+            slice("function B747_rescale(", "function getFMSData(name)"),
+            slice("function getTriSpaceSolver(ab,ac,cb)", "local beganDescentAny"),
+            slice("function getHeading(lat1, lon1, lat2, lon2)", "function movePoint("),
+            slice("function movePoint(", "\nend\n").."\nend\n",
+            slice("function B747_getCurrentWayPoint(fmsO)", "local LNAV_MAX_PREEMPT_XTK_NM"),
+            slice("local LNAV_MAX_PREEMPT_XTK_NM", "function B747_ap_altitude(fms)")}) do
+        setfenv(assert(loadstring(chunk)), env)()
+    end
+    env.simDR_pressureAlt1, env.simDR_radarAlt1, env.simDR_vvi_fpm_pilot, env.simDR_onGround = 31000, 31000, 0, 0
+    env.simDR_groundspeed, env.simDR_TAS_mps = 246, 246
+    env.simDR_autopilot_bank_limit, env.simDR_autopilot_bank_angles = 4, {[0] = 5, 10, 15, 20, 25, 30}
+    env.B747DR_ap_lnav_state, env.B747DR_ap_approach_mode = 2, 0
+    env.B747DR_ap_lnav_xtk_target, env.B747DR_ap_lnav_xtk_error = 0, 0
+    env.B747DR_CAS_caution_status, env.simDR_override_fms_progress = {}, 1
+    env.setVNAVState = function() end
+    return env
+end
+
+-- A route north along 10 W: START, a fix 100 nm on, the next 100 nm further.
+local function route_north(env, extra)
+    local start = {50, -10}
+    local fix = {env.movePoint(start[1], start[2], 100, 0)}
+    local after = {env.movePoint(fix[1], fix[2], 100, 0)}
+    local route = {entry("ORIG", 49, -10, 0, 1), entry("START", start[1], start[2]), entry("FIX", fix[1], fix[2]),
+        entry("NEXT", after[1], after[2]), entry("DEST", 55, -10, 0, 1)}
+    if extra then extra(route) end
+    return route
+end
+-- The aircraft along_nm on the leg START -> FIX and right_nm to its right.
+local function place(env, route, along_nm, right_nm, index)
+    local lat, lon = env.movePoint(route[2][5], route[2][6], along_nm, 0)
+    if right_nm ~= 0 then lat, lon = env.movePoint(lat, lon, math.abs(right_nm), right_nm > 0 and 90 or 270) end
+    env.simDR_latitude, env.simDR_longitude, env.simDR_true_heading, env.simDR_ground_track_true = lat, lon, 0, 0
+    env.B747DR_fmscurrentIndex, env.B747DR_fms_setCurrent, env.B747DR_ap_lnavHeading_mode = index, index, index
+    for i = 1, #route do route[i][10] = (i == index) end
+end
+local function near(value, expected, message)
+    check(type(value) == "number" and math.abs(value - expected) < 0.02,
+        string.format("%s: %s (expected %+.2f)", message, tostring(value), expected))
+end
+
+-- 1. Mid-leg, where the leg search does not run: the distance and its side.
+for _, right in ipairs({1.2, -1.2, 0.3, -7}) do
+    local env = new_runtime()
+    local route = route_north(env)
+    place(env, route, 40, right, 3)
+    env.B747_getCurrentWayPoint(route)
+    near(env.B747DR_ap_lnav_xtk_error, right, string.format("40 nm along the leg, %+.1f nm", right))
+    check(env.B747DR_fmscurrentIndex == 3, "40 nm along the leg: FIX still active")
+end
+
+-- 2. In the last 5 nm, where the search runs: signed, not its smallest
+-- unsigned distance.
+local env = new_runtime()
+local route = route_north(env)
+place(env, route, 96, -0.4, 3)
+env.B747_getCurrentWayPoint(route)
+near(env.B747DR_ap_lnav_xtk_error, -0.4, "4 nm before the fix, 0.4 nm left")
+
+-- 3. Flying an offset (2 nm right): the error from the offset track.
+env = new_runtime()
+route = route_north(env)
+place(env, route, 40, 1.5, 3)
+env.B747DR_ap_lnav_xtk_target = 2
+env.B747_getCurrentWayPoint(route)
+near(env.B747DR_ap_lnav_xtk_error, -0.5, "an offset 2 nm right, 1.5 nm right of the leg")
+env.B747DR_ap_lnav_xtk_target = -100     -- a direct-to: no offset
+env.B747_getCurrentWayPoint(route)
+near(env.B747DR_ap_lnav_xtk_error, 1.5, "after a direct-to (-100), 1.5 nm right")
+-- the largest offset, L99 (-99), is one too (LNAV steers it: monitor.lua)
+env = new_runtime()
+route = route_north(env)
+place(env, route, 40, -98.5, 3)
+env.B747DR_ap_lnav_xtk_target = -99
+env.B747_getCurrentWayPoint(route)
+near(env.B747DR_ap_lnav_xtk_error, 0.5, "an offset L99, 98.5 nm left of the leg")
+
+-- 4. The leg after an altitude-terminated leg's end ("(650)") starts at the
+-- fix before it.
+env = new_runtime()
+route = route_north(env, function(r)
+    local lat, lon = env.movePoint(r[2][5], r[2][6], 2, 60)
+    table.insert(r, 3, entry("(650)", lat, lon, 650, 2048))
+end)
+env.simDR_pressureAlt1 = 31000
+place(env, route, 40, 1.0, 4)
+env.B747_getCurrentWayPoint(route)
+near(env.B747DR_ap_lnav_xtk_error, 1.0, "after (650): from START to FIX, 1 nm right")
+
+-- 5. After a direct-to the native FMS sequences (PPOS before the active fix):
+-- the leg from PPOS.
+env = new_runtime()
+route = route_north(env, function(r) r[2][8] = "PPOS" end)
+place(env, route, 40, -2.0, 3)
+env.B747_getCurrentWayPoint(route)
+near(env.B747DR_ap_lnav_xtk_error, -2.0, "native sequencing from PPOS, 2 nm left")
+
+-- 6. No active leg: none.
+env = new_runtime()
+route = route_north(env)
+place(env, route, 40, 1.2, 1)
+env.B747DR_ap_lnav_xtk_error = 3.3
+env.B747_getCurrentWayPoint(route)
+check(env.B747DR_ap_lnav_xtk_error == 0, "the origin active: no cross-track, "..tostring(env.B747DR_ap_lnav_xtk_error))
+
+-- 7. The PROGRESS page shows the side of the error and its size.
+local page_env = setmetatable({
+    print = function() end, fmsPages = {}, fmsFunctionsDefs = {PROGRESS = {}},
+    createPage = function(name) return {name = name} end,
+    simConfigData = {data = {SIM = {weight_display_units = "KGS", kgs_to_lbs = 2.205}}},
+    is_timer_scheduled = function() return true end, run_after_time = function() end,
+    simDR_onGround = 0, simDR_fueL_tank_weight_total_kg = 80000, B747DR_engine_used_fuel = {[0] = 1000, 1000, 1000, 1000, 4000},
+    B747DR_ND_Wind_Bearing = 30, simDR_wind_speed = 40, B747DR_ND_Wind_Line = "270`/ 40", B747DR_TAS_pilot = 478,
+    simDR_air_temp = -45, B747DR_ap_lnav_xtk_error = 0}, {__index = _G})
+setfenv(assert(loadfile(FMS.."activepages/B744.fms.pages.progress.lua")), page_env)()
+for _, case in ipairs({{1.24, "R 1.2"}, {-1.24, "L 1.2"}, {-12.3, "L 12.3"}}) do
+    page_env.B747DR_ap_lnav_xtk_error = case[1]
+    page_env.refreshPages()
+    local line = page_env.fmsPages.PROGRESS:getPage(2, "fmsL")[5]
+    check(line:sub(1, #case[2]) == case[2], string.format("PROGRESS 2 for %+.2f nm: [%s] starts with [%s]", case[1],
+        line, case[2]))
+end
+
+print("LNAV cross-track error tests passed: "..checks)
