@@ -143,6 +143,7 @@ simDRTime = find_dataref("sim/time/total_running_time_sec")
 simDR_autopilot_autothrottle_enabled = find_dataref("sim/cockpit2/autopilot/autothrottle_enabled")
 simDR_autopilot_autothrottle_arm = find_dataref("sim/cockpit2/autopilot/autothrottle_arm")
 simDR_autopilot_bank_limit = find_dataref("sim/cockpit2/autopilot/bank_angle_mode")
+simDR_autopilot_bank_angles = find_dataref("sim/cockpit2/autopilot/bank_angles_values")
 simDR_autopilot_airspeed_is_mach = find_dataref("sim/cockpit2/autopilot/airspeed_is_mach")
 simDR_autopilot_altitude_ft = find_dataref("laminar/B747/autopilot/altitude_dial_ft")
 simDR_disabled_autopilot_altitude_ft = find_dataref("sim/cockpit2/autopilot/altitude_dial_ft")
@@ -232,6 +233,7 @@ simDR_ind_airspeed_kts_pilot = find_dataref("laminar/B747/gauges/indicators/airs
 simDR_groundspeed = find_dataref("sim/flightmodel/position/groundspeed")
 simDR_latitude = find_dataref("sim/flightmodel/position/latitude")
 simDR_longitude = find_dataref("sim/flightmodel/position/longitude")
+simDR_ground_track_true = find_dataref("sim/cockpit2/gauges/indicators/ground_track_true_pilot")
 B747DR_airspeed_Vmc = find_dataref("laminar/B747/airspeed/Vmc")
 B747DR_airspeed_Vmo = find_dataref("laminar/B747/airspeed/Vmo")
 simDR_flap_ratio_control = find_dataref("sim/cockpit2/controls/flap_ratio") -- FLAP HANDLE
@@ -2330,6 +2332,43 @@ local LNAV_MAX_PREEMPT_XTK_NM=2.0
 local LNAV_MIN_PREEMPT_XTK_NM=0.3
 local LNAV_PREEMPT_XTK_LEG_FRACTION=0.2
 local LNAV_MAX_AUTOMATIC_SEQUENCE_ADVANCE_LEGS=1
+-- A leg flown direct to its fix (after an altitude leg's end, VECTORS ...):
+-- its turn is anticipated once the track is within LNAV_DIRECT_TO_TRACK_DEG of
+-- the fix, after an altitude leg's end (a departure or a missed approach) as a
+-- fly-by only up to LNAV_DIRECT_TO_MAX_TURN_DEG (beyond, the fix is passed
+-- within LNAV_DIRECT_TO_PASS_NM: a turn-back started near the runway), and
+-- the fix is passed within LNAV_DIRECT_TO_ABEAM_NM whatever the track.
+local LNAV_DIRECT_TO_TRACK_DEG=30
+local LNAV_DIRECT_TO_MAX_TURN_DEG=90
+local LNAV_DIRECT_TO_PASS_NM=0.3
+local LNAV_DIRECT_TO_ABEAM_NM=0.5
+
+-- X-Plane's HDG SEL bank limit for its bank angle mode (1-6), 20 deg in AUTO;
+-- a mode or a limit that cannot be (XTLua's 0 on a first read) is AUTO's 20
+local function B747_lnav_bank_limit_deg()
+	local mode=tonumber(simDR_autopilot_bank_limit)
+	if mode==nil or mode<1 or mode>6 or mode~=math.floor(mode) then return 20 end
+	local limit=tonumber(simDR_autopilot_bank_angles[mode-1])
+	if limit==nil or limit<5 or limit>35 then return 20 end
+	return limit
+end
+
+-- How far before the fix the fly-by turn from inCourse to outCourse (true, the
+-- inbound one at the fix) starts, from the TAS, the bank limit and the wind
+-- (the ground velocity less the air velocity); 0 on the ground, below 400 ft
+-- above it (as LNAV_ALTITUDE_LEG_MIN_RA_FT: no departure turn is designed
+-- lower) and when it is no fly-by
+local function B747_lnav_turn_anticipation_nm(inCourse,outCourse)
+	if simDR_onGround==1 or simDR_radarAlt1<400 then return 0 end
+	local tas=simDR_TAS_mps*1.94384
+	local gs=simDR_groundspeed*1.94384
+	local track=math.rad(simDR_ground_track_true)
+	local heading=math.rad(simDR_true_heading)
+	local windEast=gs*math.sin(track)-tas*math.sin(heading)
+	local windNorth=gs*math.cos(track)-tas*math.cos(heading)
+	return B747_afds_helpers.lnav_turn_anticipation_nm(tas,windEast,windNorth,B747_lnav_bank_limit_deg(),
+		inCourse,outCourse,B747_afds_helpers.LNAV_ROLL_RATE_DEG_PER_SEC,gs)
+end
 
 local function B747_lnav_leg_supports_preemption(waypoint)
 	if waypoint==nil or type(waypoint[5])~="number" or type(waypoint[6])~="number" then return false end
@@ -2365,6 +2404,25 @@ local function B747_lnav_leg_start(fmsO, i)
 		k=k-1
 	end
 	return fmsO[k]
+end
+
+-- The inbound course at fmsO[i] (true) for its turn, whether its leg is flown
+-- direct to the fix from where the aircraft is, and whether that is after an
+-- altitude-terminated leg's end: after such ends ("(650)", reached, from where
+-- their altitude was reached) and from an entry that is no course's start
+-- (VECTORS, "(VECT)", a discontinuity, a hold, a procedure turn, PPOS) the
+-- course is the aircraft's to the fix
+local function B747_lnav_inbound_course(fmsO,i)
+	local fix=fmsO[i]
+	local previous=fmsO[i-1]
+	local legStart=B747_lnav_leg_start(fmsO,i)
+	local name=string.upper(tostring(legStart[8] or ""))
+	local afterAltitude=previous~=nil and B747_afds_helpers.altitude_leg_end_ft(previous)~=nil
+	if afterAltitude or name=="(VECT)" or string.find(name,"VECTOR",1,true) or string.find(name,"DISCONT",1,true)
+		or string.find(name,"HOLD",1,true) or string.find(name,"PROC TURN",1,true) or name=="PPOS" then
+		return (getHeading(fix[5],fix[6],simDR_latitude,simDR_longitude)+180)%360,true,afterAltitude
+	end
+	return (getHeading(fix[5],fix[6],legStart[5],legStart[6])+180)%360,false,false
 end
 
 local function B747_lnav_sequence_to(index, why)
@@ -2441,6 +2499,45 @@ function B747_getCurrentWayPoint_function(fmsO)
 			break
 		end
 	end
+	-- the active leg's fly-by turn starts its lead before the fix (the search
+	-- below looks only at the last 5 nm or third of a leg, and a 90 deg turn at
+	-- cruise needs about 9 nm); not on the leg from the origin airport, nor
+	-- after a direct-to or with an offset (as before)
+	local current=B747DR_fmscurrentIndex
+	if current>1 and current<table.getn(fmsO)-1 and B747DR_ap_lnav_xtk_target==0 then
+		local fix,nextFix=fmsO[current],fmsO[current+1]
+		local legStart=B747_lnav_leg_start(fmsO,current)
+		local inCourse,directTo,afterAltitude=B747_lnav_inbound_course(fmsO,current)
+		if tonumber(legStart[2])~=1 and B747_lnav_leg_supports_preemption(fix)
+			and B747_lnav_leg_supports_preemption(nextFix) then
+			local outCourse=getHeading(fix[5],fix[6],nextFix[5],nextFix[6])
+			local lead=B747_lnav_turn_anticipation_nm(inCourse,outCourse)
+			local dToFix=getDistance(simDR_latitude,simDR_longitude,fix[5],fix[6])
+			local legLength=getDistance(legStart[5],legStart[6],fix[5],fix[6])
+			local due=false
+			if directTo then
+				-- not while still turning to the fix (a turn-back SID after its
+				-- altitude); no large fly-by; passed close by
+				local trackError=math.abs(getHeadingDifference(getHeading(simDR_latitude,simDR_longitude,fix[5],fix[6]),
+					simDR_ground_track_true))
+				if afterAltitude and math.abs(getHeadingDifference(outCourse,inCourse))>LNAV_DIRECT_TO_MAX_TURN_DEG then
+					lead=0
+				end
+				due=(trackError<=LNAV_DIRECT_TO_TRACK_DEG and dToFix<=math.max(lead,LNAV_DIRECT_TO_PASS_NM))
+					or (trackError>LNAV_DIRECT_TO_TRACK_DEG and dToFix<=LNAV_DIRECT_TO_ABEAM_NM)
+			elseif legLength>0.1 then
+				local dFromStart=getDistance(simDR_latitude,simDR_longitude,legStart[5],legStart[6])
+				local track=getTriSpaceSolver(legLength,dFromStart,dToFix)
+				local maximumPreemptXtk=math.min(LNAV_MAX_PREEMPT_XTK_NM,
+					math.max(LNAV_MIN_PREEMPT_XTK_NM,legLength*LNAV_PREEMPT_XTK_LEG_FRACTION))
+				due=track[1]>0 and track[2]<=maximumPreemptXtk and legLength-track[1]<=lead
+			end
+			if due then
+				B747_lnav_sequence_to(current+1,string.format("turn anticipation %.1f nm before ",lead)..tostring(fix[8]))
+				return
+			end
+		end
+	end
 	local canNew=true
 	if B747DR_fmscurrentIndex>1 then
 		local dToNext=getDistance(simDR_latitude,simDR_longitude,fmsO[B747DR_fmscurrentIndex][5],fmsO[B747DR_fmscurrentIndex][6])
@@ -2509,10 +2606,14 @@ function B747_getCurrentWayPoint_function(fmsO)
 						bestOffTrack=track[2]
 						
 						local nextHeading=getHeading(fmsO[i][5],fmsO[i][6],fmsO[i+1][5],fmsO[i+1][6])
-						local headingChange=math.abs(getHeadingDifference(nextHeading,thisHeading))
-						local pemptNext=B747_rescale(0,1,160,20,headingChange)
-						pemptNext=math.min( pemptNext,8)
-						pemptNext=B747_rescale(120,pemptNext/5,320,pemptNext,simDR_groundspeed)
+						-- a leg flown direct to its fix is anticipated above
+						local pemptNext=0
+						if i>1 then
+							local inCourse,directTo=B747_lnav_inbound_course(fmsO,i)
+							if not directTo then
+								pemptNext=B747_lnav_turn_anticipation_nm(inCourse,nextHeading)
+							end
+						end
 						local maximumPreemptXtk=math.min(LNAV_MAX_PREEMPT_XTK_NM,
 							math.max(LNAV_MIN_PREEMPT_XTK_NM,trackLength*LNAV_PREEMPT_XTK_LEG_FRACTION))
 						local canPreempt=B747_lnav_leg_supports_preemption(fmsO[i])
@@ -3804,6 +3905,12 @@ function after_physics()
 	local tHeading = simDR_autopilot_heading_deg --constant refresh of data
 	local headingStatus = simDR_autopilot_heading_hold_status --constant refresh of data
 	local groundspeed = simDR_groundspeed
+	-- the fly-by turn anticipation's inputs: XTLua gives 0 for a first read
+	local groundTrack = simDR_ground_track_true
+	local trueHeading = simDR_true_heading
+	local trueAirspeed = simDR_TAS_mps
+	local bankLimit = simDR_autopilot_bank_angles[3]
+	local bankMode = simDR_autopilot_bank_limit
 	 --constant refresh of dat
 	local latitude = simDR_latitude
 	 --constant refresh of dat

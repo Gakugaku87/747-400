@@ -147,9 +147,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   glideslope signals, flags and deviations of the LOC and G/S capture gates in
   the autopilot monitor (B747_monitorAP), the flight-path vertical speed
   and pitch rate of the autoland flare law in preLand_measure (every frame
-  from 800 ft down to the flare height), and the flap handle of the flight
+  from 800 ft down to the flare height), the flap handle of the flight
   director's flap-change VS bias and the autoland pitch target in the
-  hydraulics ap_pitch_assist.
+  hydraulics ap_pitch_assist, and the ground track, true heading, TAS, ground
+  speed and bank limits of LNAV's fly-by turn anticipation in the autopilot
+  after_physics.
 - `autoland_flare_test.lua`: the autoland flare law helpers (flare height,
   sink-rate command, pitch-target size and rate limits, pitch-rate damping,
   the approach pitch when no steady sample was taken, derotation at 1 deg/s
@@ -268,6 +270,16 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   recordings (FL310 and 5,000 ft), flying heading changes of 5, 20 and 90 deg
   and a +/-60 deg reversal within 4.5 deg/s (1 s mean), 1 deg of heading
   overshoot and a time bound.
+- `lnav_turn_anticipation_test.lua`: LNAV fly-by turns - the anticipation
+  (the arc at the bank limit, half the 3 deg/s roll-in, and in wind where the
+  drifting turn ends on the outbound leg; nothing beyond 150 deg or with an
+  implausible wind), and the production sequencing, LNAV steering and roll
+  filter flying a lateral model fitted to the kit's 2026-10-11 recordings:
+  EIDW's DW129 (+90 deg), EHAM's NETOM to AM608, TST744L's BEDRA and BILTO in
+  a 96 kt wind and ELPOM, and 15-120 deg turns at 250 and 478 kt, each within
+  0.3-0.4 nm of the fly-by path (1 nm for BILTO's 137 deg downwind), the fixes
+  in order; and no anticipation from the origin airport, before a lat/lon point
+  or VECTORS, more than 2 nm off the leg or after a direct-to.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the

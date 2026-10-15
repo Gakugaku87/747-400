@@ -72,6 +72,13 @@ local cases = {
     -- first sample in the 10-sample flight-director average was 0 deg.
     {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
         func="ap_pitch_assist", names={"B744DR_autolandPitch"}},
+    -- LNAV's fly-by turn anticipation (B747_getCurrentWayPoint_function)
+    -- takes the wind from the ground track, the true heading, the TAS and the
+    -- ground speed, and the bank from the bank limits: a 0 track on a first
+    -- read would be a wind of the TAS and start a turn early.
+    {file=AP.."B747.70.xt.autopilot.lua", func="after_physics",
+        names={"simDR_ground_track_true", "simDR_true_heading", "simDR_TAS_mps", "simDR_groundspeed",
+            "simDR_autopilot_bank_angles", "simDR_autopilot_bank_limit"}},
 }
 
 for _, case in ipairs(cases) do

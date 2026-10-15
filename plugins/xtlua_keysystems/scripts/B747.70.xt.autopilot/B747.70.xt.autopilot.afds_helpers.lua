@@ -69,6 +69,68 @@ function afds.turn_anticipation_nm(speed_kts, bank_angle_deg, turn_angle_deg, mi
     return afds.clamp(anticipation_nm, minimum_nm or 0, maximum_nm or anticipation_nm), radius_nm
 end
 
+-- LNAV fly-by turns. LNAV steers X-Plane's HDG SEL, which turns at its bank
+-- limit; the 747's flight director rolls into it at the roll rate limit of the
+-- hydraulics (ROLL_FILTER_MAX_SLEW_DEG_PER_SEC, 3 deg/s outside the approach).
+afds.LNAV_ROLL_RATE_DEG_PER_SEC = 3.0
+-- Larger course changes are no fly-by: the next leg once abeam the fix.
+afds.LNAV_FLYBY_MAX_TURN_DEG = 150
+-- A wind estimate beyond this is no wind (XTLua gives 0 for a first read).
+afds.LNAV_MAX_WIND_KTS = 300
+
+-- Distance before a fly-by fix at which the turn onto the next leg starts:
+-- where a turn at the bank limit, rolled in at roll_rate_dps (half the roll-in
+-- before the turn proper) and drifting with the wind, ends on the outbound
+-- leg. Without wind that is R tan(turn / 2), R = TAS^2 / (g tan bank). Courses
+-- are true, the inbound one at the fix; the wind is the air's motion (kt east
+-- and north). 0 without a turn, a speed or a bank, and beyond
+-- LNAV_FLYBY_MAX_TURN_DEG (sequenced abeam the fix, as over a fly-over fix:
+-- with no lead at all the fix stayed active once passed, and LNAV flew back to
+-- it).
+function afds.lnav_turn_anticipation_nm(tas_kts, wind_east_kts, wind_north_kts, bank_deg, course_in_deg,
+        course_out_deg, roll_rate_dps, ground_speed_kts)
+    if type(tas_kts) ~= "number" or tas_kts <= 0 or type(bank_deg) ~= "number" or bank_deg <= 0 or bank_deg >= 89
+        or type(course_in_deg) ~= "number" or type(course_out_deg) ~= "number" then
+        return 0
+    end
+    local course_change = (course_out_deg - course_in_deg + 540) % 360 - 180
+    if math.abs(course_change) < 1 then return 0 end
+    if math.abs(course_change) > afds.LNAV_FLYBY_MAX_TURN_DEG then return 0 end
+    local side = course_change > 0 and 1 or -1
+    local speed = tas_kts * KNOT_TO_MPS
+    local wind_east, wind_north = (tonumber(wind_east_kts) or 0) * KNOT_TO_MPS, (tonumber(wind_north_kts) or 0) * KNOT_TO_MPS
+    if math.sqrt(wind_east * wind_east + wind_north * wind_north) > afds.LNAV_MAX_WIND_KTS * KNOT_TO_MPS then
+        wind_east, wind_north = 0, 0
+    end
+    -- the heading that holds a course in this wind
+    local function heading_for(course_deg)
+        local course = math.rad(course_deg)
+        local cross = (wind_east * math.cos(course) - wind_north * math.sin(course)) / speed
+        return course_deg + math.deg(math.asin(afds.clamp(-cross, -0.9, 0.9)))
+    end
+    local heading_in = heading_for(course_in_deg)
+    local heading_change = (heading_for(course_out_deg) - heading_in + 540) % 360 - 180
+    if heading_change * side <= 0 then heading_change = heading_change + 360 * side end
+    -- the turn: an arc in the air, the wind's drift over its duration
+    local turn_rate = side * GRAVITY_MPS2 * math.tan(math.rad(bank_deg)) / speed
+    local duration = math.rad(heading_change) / turn_rate
+    local h1, h2 = math.rad(heading_in), math.rad(heading_in + heading_change)
+    local east = speed / turn_rate * (math.cos(h1) - math.cos(h2)) + wind_east * duration
+    local north = speed / turn_rate * (math.sin(h2) - math.sin(h1)) + wind_north * duration
+    -- that displacement is the distance before the fix along the inbound leg
+    -- plus the distance after it along the outbound one
+    local in_east, in_north = math.sin(math.rad(course_in_deg)), math.cos(math.rad(course_in_deg))
+    local out_east, out_north = math.sin(math.rad(course_out_deg)), math.cos(math.rad(course_out_deg))
+    local determinant = in_east * out_north - in_north * out_east
+    if math.abs(determinant) < 1e-6 then return 0 end
+    local before_m = (east * out_north - north * out_east) / determinant
+    local roll_in_nm = 0
+    if type(roll_rate_dps) == "number" and roll_rate_dps > 0 then
+        roll_in_nm = (tonumber(ground_speed_kts) or tas_kts) / 3600 * (bank_deg / roll_rate_dps) / 2
+    end
+    return math.max(0, before_m / METERS_PER_NM + roll_in_nm)
+end
+
 function afds.signed_cross_track_nm(leg_start_lat, leg_start_lon, leg_end_lat, leg_end_lon,
         aircraft_lat, aircraft_lon, distance_func, heading_func)
     if type(distance_func) ~= "function" or type(heading_func) ~= "function" then return nil end
