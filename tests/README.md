@@ -328,6 +328,13 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   staying the target where it is higher (SUGOL's 11315, NIRSI's 5563), the
   floor where [9] is missing, no level-off above an aircraft already below
   the floor, and nothing without the constraints or in the climb.
+- `vnav_speed_constraints_test.lua`: VNAV's speed with the route's speed
+  constraints - in the climb (EIDW 28R ENDE3J) the speed allowed now
+  (laminar/B747/autopilot/vnav/constraint_speed: 210 kt from the runway to
+  DW129, DW129 held while LNAV has sequenced it early, 290 kt to ENDEQ, none
+  after it, none for an at or above), and the climb's targets capped by it
+  below and above 10,000 ft and where ECON would be the climb Mach, never
+  below the manoeuvring speed of the flaps set, recalculated when it changes.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the

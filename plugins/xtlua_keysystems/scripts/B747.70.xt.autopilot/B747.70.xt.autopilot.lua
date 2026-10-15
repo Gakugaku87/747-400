@@ -394,6 +394,8 @@ B747DR_ap_lnav_xtk_target           	= deferred_dataref("laminar/B747/autopilot/
 B747DR_vnav_hold_index           	= deferred_dataref("laminar/B747/autopilot/lnav/vnav_hold_index", "number")
 -- the SID, STAR and approach found in the CIFP for the route's constraints (B747_update_route_constraints)
 B747DR_vnav_procedures           	= deferred_dataref("laminar/B747/autopilot/vnav/procedures", "string")
+-- the speed (kt) the route's constraints allow VNAV now, 0 for none (B747_update_constraint_speed)
+B747DR_vnav_constraint_speed     	= deferred_dataref("laminar/B747/autopilot/vnav/constraint_speed", "number")
 B747DR_ap_inVNAVdescent = deferred_dataref("laminar/B747/autopilot/vnav_descent", "number")
 B747DR_ap_inDescent 		= deferred_dataref("laminar/B747/autopilot/vnav/after_tod", "number")
 B747DR_vnav_energy_active = deferred_dataref("laminar/B747/autopilot/vnav/energy_active", "number")
@@ -2793,6 +2795,32 @@ function B747_update_route_constraints(fmsO)
 	end
 end
 
+-- The speed the route's constraints (B747_route_constraints) allow VNAV now (laminar/B747/autopilot/vnav/
+-- constraint_speed, kt; 0 for none). In the climb a SID's at or below (or at) speed holds from the
+-- departure until its fix is passed - a fix LNAV sequenced early for its turn until past the turn's
+-- bisector - as the FMC keeps a climb speed constraint over the legs before its fix. An at or above
+-- speed is the crew's (MCP), not VNAV's.
+function B747_update_constraint_speed(fmsO)
+	local limit=0
+	local constraints=B747_route_constraints
+	local active=B747DR_fmscurrentIndex
+	if constraints~=nil and active>0 then
+		local first=active
+		local held=B747DR_vnav_hold_index or 0
+		if held>0 and held<first then first=held end
+		if B747DR_ap_inVNAVdescent==0 then
+			for i=first,table.getn(fmsO) do
+				local c=constraints[i]
+				if c~=nil and c.phase=="climb" and c.speed~=nil and (c.speed_desc=="-" or c.speed_desc=="@")
+					and (limit==0 or c.speed<limit) then
+					limit=c.speed
+				end
+			end
+		end
+	end
+	B747DR_vnav_constraint_speed=limit
+end
+
 function B747_getCurrentWayPoint_default(fmsO)
 	B747DR_ap_lnavHeading_mode = 0
 	for i = 1, table.getn(fmsO), 1 do
@@ -4050,6 +4078,7 @@ function after_physics()
 	B747_update_takeoff_profile()
 	B747_update_route_constraints(fms)
 	B747_getCurrentWayPoint(fms)
+	B747_update_constraint_speed(fms)
 	B747_monitorAP(fms)
 	B747_update_vnav_energy_mode_isolation()
 	B747_ap_fma(fms)
