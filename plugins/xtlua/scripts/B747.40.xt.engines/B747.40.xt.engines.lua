@@ -62,6 +62,10 @@ function deferred_dataref(name,nilType,callFunction)
 end
 local B747_hold_rev_on_engine		= {0, 0, 0, 0}
 local B747_hold_rev_on_all			= 0
+-- SET WHILE THE ALL-ENGINE REVERSE HOLD HAS DEPLOYED THE REVERSERS; RELEASING A HOLD OF
+-- AT LEAST B747_REV_HOLD_TAP_SEC RETURNS TO REVERSE IDLE, A SHORTER TAP STAYS LATCHED
+local B747_rev_hold_commanded		= false
+local B747_REV_HOLD_TAP_SEC			= 0.5
 
 --local B747_igniter_status = {0, 0, 0, 0}
 local B747_ignition_startup_flag = {1, 1, 1, 1}
@@ -502,6 +506,7 @@ function B747_thrust_rev_hold_max_all_CMDhandler(phase, duration)
 				simDR_prop_mode[3] = 3		
 				simDR_engine_throttle_jet_all = -1 --B747_animate_value(simDR_engine_throttle_jet_all,-1,-1,1,1)
 				B747_hold_rev_on_all = 1
+				B747_rev_hold_commanded = true
 		--else
 		--  simDR_engine_throttle_jet_all=B747_animate_value(simDR_engine_throttle_jet_all,0,0,1,1)
 		end
@@ -512,20 +517,19 @@ function B747_thrust_rev_hold_max_all_CMDhandler(phase, duration)
 		
 	end		
 	
-	--[[if phase == 2 then
-		
-		if B747_hold_rev_on_all == 1 then
-			--simDR_prop_mode[0] = 1													
-			--simDR_prop_mode[1] = 1													
-			--simDR_prop_mode[2] = 1													
-			--simDR_prop_mode[3] = 1	
-            --print("canx rev")	
+	-- COMMAND RELEASED: A TAP SHORTER THAN B747_REV_HOLD_TAP_SEC KEEPS FULL REVERSE LATCHED,
+	-- A LONGER HOLD RETURNS TO REVERSE IDLE. THE STOW TIMERS ARE NOT TOUCHED: BELOW 65 KTS
+	-- (OR FROM THE RELEASE WHEN ALREADY SLOWER) THE REVERSE MONITOR STILL SELECTS REVERSE
+	-- IDLE AFTER 5 SECONDS AND STOWS THE REVERSERS 3 SECONDS LATER
+	if phase == 2 then
+
+		if B747_rev_hold_commanded and duration >= B747_REV_HOLD_TAP_SEC then
 			simDR_engine_throttle_jet_all = -0.01
-            run_after_time(canx_revHold,5)
 		end
-					
-    end]]--
-    
+		B747_rev_hold_commanded = false
+
+    end
+
 end
 
 

@@ -20,11 +20,21 @@ The audit regressions load production Lua code with mocked simulator interfaces:
 - `fmc_audit_integration_test.lua`: native LEGS altitude fields and MOD title;
   step advisory through early LNAV sequencing, optional FlyWithLua automation
   and the actual ALT-selector handler; planned and STEP TO steps kept at STEP
-  SIZE 0; VNAV climb altitude intervention raising CRZ ALT; crew intervention
+  SIZE 0; VNAV climb altitude intervention raising CRZ ALT, and an ALT push
+  for a climb within 50 NM of T/D not beginning the descent; crew intervention
   and refused commands; the production ECON updater keeping the climb Mach,
   the CRZ page Mach and the cruise speed state on one ECON cruise Mach, with
   a selected cruise Mach preserved and DELETE restoring ECON, and the sensed
   headwind reaching the ECON targets only through its 60 s lag.
+- `crz_alt_sync_test.lua`: CRZ ALT handed from the 747 to a mock native FMS -
+  sent as FL330 above the transition altitude (18000 FT when the native value
+  is unset) and in feet below it, nothing sent for CRZ ALT 0, a leftover
+  native entry and INVALID ENTRY cleared before typing, a refused value kept
+  in the 747 with `laminar/B747/fms/crzalt_sync_fault` and a delayed CDU
+  message instead of being put back, 31237 accepted as FL312 without
+  re-entry, the CDU CRZ ALT entry (33000, 330 or FL330) sent as FL330, and
+  the cruise climb 2 s after the ALT push skipped when CRZ ALT is back at the
+  level flown or T/D is within 50 NM.
 - `takeoff_ref_thrust_reduction_test.lua`: the TAKEOFF REF THR REDUCTION
   field - the 1500 FT default from PERF FACTORS, flap entries ("FLAPS 5",
   "10", "F20"), height entries, rejected entries, blank-line-select recall,
@@ -47,10 +57,40 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   vertical speed limited to 2000 fpm, and to 500 fpm when descending 15 kt
   fast (or near Vmax) or climbing 15 kt slow (or near Vmc), using recorded
   TST744L cases.
+- `ap_knob_push_test.lua`: the production MCP speed-knob and ALT-selector
+  push handlers when the release of the previous push never arrives (XTLua
+  does not pass the end phase of a command fired once): every push acts -
+  the second speed-knob push ends the VNAV speed intervention and the second
+  ALT push makes the new CRZ ALT and schedules the cruise climb - and with
+  the releases the knobs go back out; and the VR controls' "use" click on
+  those knobs (B747.99.VRcontrols.lua) as one held push: the speed
+  intervention opens once, the ALT push waits for the scheduled cruise climb,
+  and the knob goes out on the release even when the view has moved to
+  another knob.
+- `ap_pitch_loop_test.lua`: the AP pitch servo loop (ap_pitch_assist: the
+  pitch PID with the gains flight_start sets, its altitude schedule and rate
+  limit, and the stab trim) flying a longitudinal model fitted to the kit's
+  2026-10-10 circuits (flaps 20 polar at 155 kt, pitch moment fitted to the
+  recorded elevator, alpha and pitch rate at flaps 20 and 5), with
+  flight_controls_override's 2 s before the command is applied - CMD 4.3 deg
+  below the flight director as at the circuit's hand-off: no integral wind-up
+  in the 2 s, no near-full nose-up command, a bounded overshoot; a 1 deg
+  flight-director step with the AP on at flaps 20 and 5: no hunt (at most 4
+  turning points beyond 5 % of the step, at most 10 % below it after the
+  first overshoot); and AUTOLAND keeping the flare's 0.0002 derivative.
+- `fpm_bias_test.lua`: the flap-movement vertical-speed bias of the flight
+  director with the production interpolation and a 44 fps frame period - no
+  bias at the first ALT/VNAV PTH update after a fresh load with flaps out, nor
+  for handle moves made while the director did not run (a pause, or below
+  3,000 ft RA), no bias carried across a pause, the pitch target at the
+  recorded 10,000 ft capture with flaps 20, and the designed bias for a
+  handle move above 3,000 ft RA in ALT hold and in a steady V/S (whose
+  director updates come 1.0 s apart, driven at the frame rate).
 - `hydraulics_dataref_binding_test.lua`: every `simDR_`/`B747DR_` name that the
   hydraulics override file writes is bound in the hydraulics script's XTLua
   namespace, with the FLCH and V/S requests bound to the datarefs the
-  autopilot reads.
+  autopilot reads and the angle of attack, true airspeed and bank that the
+  speed-on-pitch climb guard reads bound to X-Plane's.
 - `vnav_ground_arm_test.lua`: VNAV pressed on the ground before the flight
   directors (and in TO/GA) only arms - no ALT HOLD, a stale MCP altitude hold
   and VNAV descent cleared - so the thrust monitor keeps TO/GA, engine TO/GA
@@ -65,15 +105,166 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   descent constraint starting from CRZ ALT at the T/D (also once the T/D is
   behind), and VNAV climb targets judged by the along-route distance so the
   arrival constraints are not climbed to. Ordinary routes keep their end of
-  descent, distances, T/D and climb targets, also with a missed approach
-  whose vectors point X-Plane puts hundreds of NM away (left out after the
-  arrival runway).
+  descent and climb targets. On every route the T/D reaches each descent
+  constraint and the end of descent altitude (its route altitude or the
+  destination elevation, not the navaid frequency in [3]) at 290 ft/nm, so
+  the path into the IAF is 290 ft/nm; route altitudes before the T/D (an older
+  CRZ ALT) and SID constraints nearer the departure are not descent
+  constraints, and the T/D stays put as the constraints are passed. The
+  remaining distance ends at the end of descent and then runs straight to the
+  destination, without the leg after the end of descent, also with a missed
+  approach whose vectors point X-Plane puts hundreds of NM away (left out
+  after the arrival runway). A SID's altitude-terminated leg end ("(650)")
+  is climbed through, not taken as the climb target.
+- `lnav_altitude_leg_test.lua`: the production waypoint sequencing at the end
+  of an altitude-terminated leg (CA, VA, FA: X-Plane's "(650)", which rides
+  just ahead of the aircraft once its altitude is reached) - the next leg
+  becomes active above the altitude (also when it is long passed), not below
+  it nor on the ground nor below 400 ft above it (a misset altimeter), and
+  only a name that is an altitude counts; the ENDE3J departure flown for 10
+  minutes, the legs after "(650)" sequenced in order to ENDEQ whether X-Plane
+  keeps that point moving with the aircraft or leaves it behind, and whether
+  650 ft comes before or after DE28R (or DE28R is still active 2 NM past it
+  at 3,000 ft); a SID turning back after its CA leg, and two altitude legs in
+  a row, sequenced in order too; and EHAM 18R's runway kept on final above
+  the missed approach's 500 ft, AM624 next on a go-around past the threshold.
+- `approach_capture_test.lua`: the APP switch, APP arming and approach monitor
+  together - LOC capturing only within 2.0 dots while closing (or settled
+  within 1.0 dot) on an intercept of 90 degrees or less, a saturated or
+  diverging LOC staying armed, a previously captured LOC recapturing at once,
+  G/S capturing only after LOC with LOC and G/S both within 1.5 dots and
+  never in the LOC capture frame, APP leaving the MCP heading alone, and LNAV
+  still steering (and reselecting the heading mode) while LOC is armed.
+- `eec_climb_thrust_test.lua`: the CLB thrust reference of the GE, PW and RR
+  EEC modules - the weight-based target for a light aircraft below
+  20,000 ft, max climb above it (as upstream gave the GE engines), and max
+  climb for a heavy aircraft.
+- `xtlua_warm_reads_test.lua`: XTLua gives 0 for the first read of a
+  dataref in a script module, so the datarefs that a fix first reads at a
+  critical moment are read every frame in the module's per-frame function
+  (the "local refresh...=" reads): the native transition altitude and the CRZ
+  ALT sync fault flag in the FMS after_physics, and the localizer and
+  glideslope signals, flags and deviations of the LOC and G/S capture gates in
+  the autopilot monitor (B747_monitorAP), the flight-path vertical speed
+  and pitch rate of the autoland flare law in preLand_measure (every frame
+  from 800 ft down to the flare height), and the flap handle of the flight
+  director's flap-change VS bias and the autoland pitch target in the
+  hydraulics ap_pitch_assist.
+- `autoland_flare_test.lua`: the autoland flare law helpers (flare height,
+  sink-rate command, pitch-target size and rate limits, pitch-rate damping,
+  the approach pitch when no steady sample was taken, derotation at 1 deg/s
+  to -0.5 deg) and the production autoland logic flown from 300 ft RA to 8 s
+  after touchdown against a point-mass model fitted to the kit's recordings
+  of the 2026-10-10 circuits (flaps 30 polar, ground effect, the thrust
+  spooling down after the retard, the VSI lagging the flight path by 1.2 s,
+  and the attitude following the autoland target through the lightly
+  damped, delayed AFDS pitch loop: damping 0.15, 0.8 rad/s, 0.8 s, and three
+  other loops) - 220, 257 and 300 t on level ground and on ground falling
+  25 ft under the flare as at EINN 06, a noisy VSI, noise on the law's own
+  inputs (local_vy and Q, frame to frame and at 0.7 and 1.1 Hz), the vertical
+  speed reading 0 at flare entry (XTLua's first read, seen in X-Plane) and a
+  second autoland in the same session, judged as the flight-test kit judges
+  a landing: touchdown VSI -300 fpm or less (and not a skim), float at most
+  0.5 s, FLARE to touchdown within 11 s, touchdown within 900 m of the FLARE
+  point, no climb in the flare (20 fpm and 0.5 s more room for the other
+  loops), no nose-down before main gear touchdown, a rate-limited
+  derotation, and A/T IDLE no higher than 25 ft.
+- `eec_flare_retard_test.lua`: EEC IDLE in the autoland flare - no low-speed
+  thrust recovery below 50 ft RA, the retard from approach thrust to idle
+  over about 2 s, and the IDLE low-speed recovery kept outside the autoland
+  flare.
+- `afds_responsiveness_test.lua`: the AFDS helper calculations (turn
+  anticipation, VNAV speed change reasons, VNAV energy guidance, pitch blend
+  and roll filters) and the speed-on-pitch limiter - the severe underspeed
+  threshold with the minimum safe speed capped at target - 5 kt, so an
+  initial climb on V2 + 10 kt with takeoff flaps (Vmc + 10 kt above it)
+  keeps the climb guard and only a real underspeed may pitch down; and the
+  acceleration latch for a raised speed target (flap retraction, 250 to the
+  ECON climb speed at 10,000 ft), which keeps the climb guard until the speed
+  is within 5 kt of the target, also in the production flight director, while
+  a real underspeed below the minimum safe speed is never latched, and a loss
+  of 15 kt from the speed the acceleration started from counts as a severe
+  underspeed while latched. Also the
+  CAS to Mach conversion (the inverse of the FMC Mach to CAS) and the climb
+  CAS/Mach crossover rule.
+- `vnav_climb_speed_semantics_test.lua`: the climb speed states (SPD REST,
+  SPD TRANS, ECON CLB), the crossover to the climb Mach judged on the CAS
+  target at the current altitude (a step climb from FL310 flies M.815 instead
+  of a 326 kt target 26 kt above the speed, and does not flip between CAS
+  and Mach as the Mach changes), and the cruise state flying the FMC cruise
+  Mach. Every climb and descent speed state, the MCP IAS/MACH button and the
+  automatic IAS/Mach changeover write the X-Plane autopilot target in the new
+  unit together with the speed mode (a Mach target limited to Mmo - 0.01, a
+  knots target converted to Mach at the current altitude by the button and
+  the changeover), instead of leaving the old value in the new unit until
+  the 0.25 s IAS update; the button and the changeover do so from the speed
+  and unit they decide, also when the last-airspeed and is-Mach datarefs
+  read back their old values in that frame.
+- `afds_fma_none_pitch_memory_test.lua`: the production flight-director
+  pitch target while no pitch mode is active (the FMA shows NONE for about
+  0.5 s after an ALT selector push), using the recorded TST744L step climb -
+  the attitude is held (limited to -3.5..15 degrees) instead of 0 degrees,
+  so the following VNAV SPD, and VNAV PTH holding the altitude, continue from
+  it.
+- `vnav_climb_acceleration_test.lua`: the production flight director (from its
+  pitch records through the 10-sample pitch integral) flying a simple
+  point-mass climb model fitted to the X-Plane forces, alpha and
+  flight-director pitch of a 2026-10-10 takeoff (flaps 20 polar, climb thrust
+  against air density, a lightly damped attitude loop): the 156 to 182 kt VNAV
+  target rise at the 1,500 ft acceleration height with flaps 20 is reached
+  within 90 s keeping more than +1,000 fpm; with the kit's flap retraction the
+  flaps are up below 6,500 ft and 250 kt is not passed by more than 6 kt; the
+  250 to 326 kt rise at 10,000 ft is reached within 150 s without descending;
+  the same with slower, more oscillatory or faster attitude loops and 15 %
+  less or more thrust; and a step climb from FL330 with the M .829 target
+  above M .816 (clean polar and thrust fitted above FL250 to the 2026-10-10
+  TST744L flight, the fitted attitude loop) without descending, the attitude
+  within 2 deg and the target reached within 120 s; and thrust lost 5 s into a
+  step at FL310 (still accelerating to the raised target): the speed is not
+  run down to the minimum safe speed (the climb guard held the aircraft up to
+  202 kt) but kept above 265 kt and settles above 285 kt. Also the climb speed
+  pitch step itself (the acceleration wanted, its band, the rate limit, the
+  attitude interlock, the climb floor, and no change within 2 kt, level or
+  descending). And a step climb from FL310 that starts in a 20 deg bank turn
+  at a waypoint (the 2026-10-10 final-L1 step 1, with polar, thrust and
+  attitude loop fitted to it and a short roll-spoiler lift loss): held at or
+  above the attitude that flies level at the angle of attack once the VSI
+  shows +100 fpm or less, it neither descends below -200 fpm nor zooms above
+  +2,000 fpm, the attitude stays within 2 deg and no speed is lost (the
+  VSI-driven guard: -550..+5,031 fpm, down to 280 kt); with the other attitude
+  loops and 15 % less or more thrust within -200..+2,500 fpm, 2.5 deg and 5 kt
+  of the starting speed. Climbs that thrust limits: into the thrust-limited
+  ceiling the climb stops on speed (also while accelerating to a raised
+  target), and an engine failure in the step neither zooms nor falls below 287
+  kt. And that level attitude, its use by limit_speed_pitch_target and the
+  bank the director passes to it.
+- `engines_reverse_hold_test.lua`: the all-engine reverse-hold command, its
+  reverse monitor and the auto-stow timers run frame by frame - releasing a
+  hold of 0.5 s or more returns to reverse idle at once (fast or below
+  65 KIAS), a shorter tap keeps full reverse latched, the timers still select
+  reverse idle 5 s and stow 8 s after 65 KIAS (after the release when already
+  slower), and a hold that never deployed (reverser lockout in the air) leaves
+  the levers alone on release.
+- `vnav_speedbrake_thrust_test.lua`: VNAV PTH energy thrust high on the path
+  with pitch recovery limited - thrust allowed for the limited recovery stays
+  in SPD until the limit clears or the speed is high, instead of switching
+  IDLE/SPD with the speed trend; with the speedbrake beyond ARM (lever 0.15
+  and up, not 0.125) the A/T holds IDLE (reason 5, speedbrake hold) until
+  underspeed protection, whose thrust is then kept while the limit lasts;
+  DRAG REQUIRED unchanged. Also runs the production `setDescentVSpeed`
+  loaded through the XTLua `dofile`.
+- `afds_toga_roll_test.lua`: the TO/GA roll annunciation - HDG SEL, HDG HOLD
+  or LNAV in flight replacing TO/GA roll while TO/GA pitch stays, the roll
+  FMA going straight from TO/GA to HDG SEL frame by frame, LOC capture,
+  an airborne TO/GA press or TO/GA engaged again bringing TO/GA roll back
+  (a press just before HDG SEL does not undo HDG SEL), and nothing being
+  remembered on the ground: a HDG SEL press before liftoff, LNAV left
+  active from the last flight, or a selection that outlived the landing.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
-  cruise altitude at top-of-climb weight), ND waypoint selection, climb-speed
-  semantics including the climb-Mach crossover and the cruise state flying
-  the FMC cruise Mach, and the XTLua `dofile` loader (including the autopilot
-  monitor loading the AFDS helpers exactly once).
+  cruise altitude at top-of-climb weight), ND waypoint selection, and the
+  XTLua `dofile` loader (including the autopilot monitor loading the AFDS
+  helpers exactly once).
 
 The standalone tests verify logic and interfaces. Before making the aircraft
 release-ready, validate these scenarios in X-Plane with both flight directors
@@ -95,6 +286,7 @@ and the applicable autopilot/autothrottle modes:
 | Departure and arrival with SPD REST left blank, then entered | Blank holds SPD TRANS through the restriction band; an entered pair is honoured and released above/below it. |
 | VNAV descent below 10000 FT with SPD REST blank, extending flaps 1 through 30 | Target never exceeds the flap placard minus 5 kt (275/255/235/225/200/175 kt). |
 | VNAV climb (and VNAV ALT at an intermediate level) with MCP set above CRZ ALT, ALT selector pushed | CRZ ALT resets to the MCP altitude and VNAV climbs to it. |
+| Cruise step climb above the transition altitude with the ALT selector (MCP above CRZ ALT) | The native VNAV CRZ page shows the new FLxxx, `crzalt_sync_fault` stays 0, CRZ ALT is not put back and VNAV SPD follows without a recapture of the old level. |
 | STEP SIZE 0 with planned LEGS steps | STEP TO/AT show the planned step; no computed optimum step appears when none is planned. |
 
 The ECON climb CAS curve and the LRC/MRC cruise Mach curve remain an

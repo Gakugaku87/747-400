@@ -681,10 +681,8 @@ end
 function B747_ap_switch_vnavspeed_mode_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747CMD_fdr_log_spdmod:once()
-		if B747_ap_button_switch_position_target[15] == 1 then
-			B747_ap_button_switch_position_target[15] = 0
-			return
-		end
+		-- every push acts: a push that finds the knob still in (its release lost,
+		-- as for a command fired once) is a new push, not the release
 		B747_ap_button_switch_position_target[15] = 1 -- SET THE SPEED KNOB ANIMATION TO "IN"
 		if B747DR_ap_vnav_state == 2 and B747DR_switchingIASMode==0 then
 			setVNAVState("manualVNAVspd", 1 - getVNAVState("manualVNAVspd"))
@@ -701,6 +699,14 @@ end
 function update_new_crzalt()
 	print("doing set new cruise to "..B747BR_cruiseAlt)
 	if simDR_autopilot_alt_hold_status==2 and B747DR_ap_vnav_state>1 then
+		-- Leave the hold only for a climb that still stands: CRZ ALT may be
+		-- back at this level by now, and near T/D the climb is not started.
+		local climbAction=B747_afds_helpers.cruise_climb_action(B747BR_cruiseAlt,
+			simDR_pressureAlt1, B747BR_totalDistance - B747BR_tod, B747DR_alt_capture_window)
+		if climbAction~="climb" then
+			print("no cruise climb to "..B747BR_cruiseAlt..": "..climbAction)
+			return
+		end
 		B747DR_mcp_hold = 0
 		simDR_autopilot_alt_hold_status=0
 		if B747DR_autopilot_altitude_ft > simDR_pressureAlt1 then
@@ -718,7 +724,9 @@ function update_new_crzalt()
 		if B747DR_ap_vnav_state == 2 then
 			B747DR_ap_vnav_state = 3 --resume
 		end
-		if B747BR_totalDistance - B747BR_tod <= 50 then
+		-- Near T/D, descend only to an MCP altitude below the aircraft.
+		if B747BR_totalDistance - B747BR_tod <= 50
+			and B747DR_autopilot_altitude_ft < simDR_pressureAlt1 then
 			B747DR_ap_inVNAVdescent = 1
 			B747DR_ap_flightPhase = 3
 			setDescent(true)
@@ -734,11 +742,8 @@ function B747_ap_switch_vnavalt_mode_CMDhandler(phase, duration)
 		B747DR_ap_lastCommand = simDRTime
 		print("vnav alt button")
 
-		if B747_ap_button_switch_position_target[16] == 1 then
-			B747_ap_button_switch_position_target[16] = 0
-			return
-		end
-
+		-- every push acts: a push that finds the knob still in (its release lost,
+		-- as for a command fired once) is a new push, not the release
 		B747_ap_button_switch_position_target[16] = 1 -- SET THE ALT KNOB ANIMATION TO "IN"
 
 		local currentCruiseAltitude=tonumber(B747BR_cruiseAlt) or 0
@@ -791,7 +796,10 @@ function B747_ap_switch_vnavalt_mode_CMDhandler(phase, duration)
 			if B747DR_ap_vnav_state == 2 then
 				B747DR_ap_vnav_state = 3 --resume
 			end
-			if B747BR_totalDistance - B747BR_tod <= 50 then
+			-- Near T/D, descend only to an MCP altitude below the aircraft:
+			-- a push for a climb must not start the descent.
+			if B747BR_totalDistance - B747BR_tod <= 50
+				and B747DR_autopilot_altitude_ft < simDR_pressureAlt1 then
 				B747DR_ap_inVNAVdescent = 1
 				B747DR_ap_flightPhase = 3
 				setDescent(true)
@@ -1338,19 +1346,41 @@ function B747_updateIASMaxSpeed()
 	print("set max kts_mach to " .. B747DR_max_dial_machspeed)
 	B747DR_switchingIASMode = 0
 end
+-- After a knots/Mach swap, write the X-Plane autopilot target in the new unit
+-- in the same call: the knots target, or that target as a Mach number at the
+-- current altitude (limited to Mmo - 0.01). B747_ap_ias_mach_mode only writes
+-- it after the 0.25 s B747_updateIASWindow, and until then X-Plane read the
+-- old value in the new unit (325 kt as a Mach number, M.825 as knots).
+-- The callers pass the speed and unit they have just written rather than
+-- reading those datarefs back in the same frame.
+function B747_ap_set_speed_target_in_unit(target_kts, is_mach)
+	if is_mach == 1 then
+		local mach = B747_afds_helpers.cas_to_mach(target_kts, simDR_pressureAlt1)
+		if mach ~= nil then
+			simDR_autopilot_airspeed_kts_mach = B747_afds_helpers.limited_mach_target(mach, B747DR_airspeed_Mms)
+		end
+	else
+		simDR_autopilot_airspeed_kts_mach = target_kts
+	end
+end
 function B747_ap_knots_mach_toggle_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747_ap_button_switch_position_target[13] = 1
 		if B747DR_ap_ias_mach_window_open == 1 then
 			if simDR_airspeed_mach > 0.4 then
-				B747DR_lastap_dial_airspeed = simDR_autopilot_airspeed_kts -- READ THE CURRENT AIRSPEED SETTING
-				simDR_autopilot_airspeed_is_mach = 1 - simDR_autopilot_airspeed_is_mach -- SWAP THE MACH/KNOTS STATE
+				local target = simDR_autopilot_airspeed_kts -- READ THE CURRENT AIRSPEED SETTING
+				local is_mach = 1 - simDR_autopilot_airspeed_is_mach
+				B747DR_lastap_dial_airspeed = target
+				simDR_autopilot_airspeed_is_mach = is_mach -- SWAP THE MACH/KNOTS STATE
+				B747_ap_set_speed_target_in_unit(target, is_mach)
 				B747DR_ap_ias_mach_window_open = 0 -- WRITE THE NEW VALUE TO FORCE CONVERSION TO CORRECT UNITS
 				B747DR_switchingIASMode = 1
 				run_after_time(B747_updateIASWindow, 0.25) --update target
 			elseif simDR_airspeed_mach <= 0.4 and simDR_autopilot_airspeed_is_mach == 1 then
-				B747DR_lastap_dial_airspeed = simDR_autopilot_airspeed_kts -- READ THE CURRENT AIRSPEED SETTING
+				local target = simDR_autopilot_airspeed_kts -- READ THE CURRENT AIRSPEED SETTING
+				B747DR_lastap_dial_airspeed = target
 				simDR_autopilot_airspeed_is_mach = 0 -- SWAP THE MACH/KNOTS STATE
+				B747_ap_set_speed_target_in_unit(target, 0)
 				B747DR_ap_ias_mach_window_open = 0 -- WRITE THE NEW VALUE TO FORCE CONVERSION TO CORRECT UNITS
 				B747DR_switchingIASMode = 1
 				run_after_time(B747_updateIASWindow, 0.25) --update target
@@ -1631,6 +1661,7 @@ function B747_ap_heading_hold_mode_afterCMDhandler(phase, duration)
 	if phase == 0 then
 		B747CMD_fdr_log_headhold:once()
 		B747DR_ap_ATT = 0.0
+		B747_ap_clear_toga_roll() -- HDG HOLD replaces TO/GA roll in flight
 		B747_ap_button_switch_position_target[5] = 1
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[5] = 0
@@ -2000,8 +2031,10 @@ function B747_ap_ias_mach_mode()
 		if simDR_vvi_fpm_pilot < -250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 1 then
 				--simDR_autopilot_airspeed_kts = ap_dial_airspeed								-- WRITE THE NEW VALUE TO FORCE CONVERSION TO CORRECT UNITS
-				B747DR_lastap_dial_airspeed = simDR_autopilot_airspeed_kts
+				local target = simDR_autopilot_airspeed_kts
+				B747DR_lastap_dial_airspeed = target
 				simDR_autopilot_airspeed_is_mach = 0 -- CHANGE TO KNOTS
+				B747_ap_set_speed_target_in_unit(target, 0)
 				B747DR_ap_ias_mach_window_open = 0 -- WRITE THE NEW VALUE TO FORCE CONVERSION TO CORRECT UNITS
 				B747DR_switchingIASMode = 1
 				print("AUTO-SWITCH AUTOPILOT IAS/MACH WINDOW AIRSPEED MODE")
@@ -2013,9 +2046,11 @@ function B747_ap_ias_mach_mode()
 	if simDR_airspeed_mach > 0.84 and B747DR_switchingIASMode == 0 and B747DR_ap_vnav_state == 0 then
 		if simDR_vvi_fpm_pilot > 250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 0 then
-				B747DR_lastap_dial_airspeed = simDR_autopilot_airspeed_kts
+				local target = simDR_autopilot_airspeed_kts
+				B747DR_lastap_dial_airspeed = target
 				--simDR_autopilot_airspeed_kts = ap_dial_airspeed								-- WRITE THE NEW VALUE TO FORCE CONVERSION TO CORRECT UNITS
 				simDR_autopilot_airspeed_is_mach = 1 -- CHANGE TO KNOTS
+				B747_ap_set_speed_target_in_unit(target, 1)
 				B747DR_ap_ias_mach_window_open = 0 -- WRITE THE NEW VALUE TO FORCE CONVERSION TO CORRECT UNITS
 				B747DR_switchingIASMode = 1
 				run_after_time(B747_updateIASWindow, 0.25) --update target
@@ -2025,9 +2060,11 @@ function B747_ap_ias_mach_mode()
 	if simDR_autopilot_airspeed_kts > 310 and B747DR_switchingIASMode == 0 and B747DR_ap_vnav_state == 0 then
 		if simDR_vvi_fpm_pilot < -250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 1 then
-				B747DR_lastap_dial_airspeed = simDR_autopilot_airspeed_kts
+				local target = simDR_autopilot_airspeed_kts
+				B747DR_lastap_dial_airspeed = target
 				--simDR_autopilot_airspeed_kts = ap_dial_airspeed								-- WRITE THE NEW VALUE TO FORCE CONVERSION TO CORRECT UNITS
 				simDR_autopilot_airspeed_is_mach = 0 -- CHANGE TO KNOTS
+				B747_ap_set_speed_target_in_unit(target, 0)
 				B747DR_ap_ias_mach_window_open = 0 -- WRITE THE NEW VALUE TO FORCE CONVERSION TO CORRECT UNITS
 				B747DR_switchingIASMode = 1
 				run_after_time(B747_updateIASWindow, 0.25) --update target
@@ -2175,6 +2212,12 @@ function setDistances(fmsO)
 	--print("setDistances")
 	local usedToD=false
 	for i = 1, endI - 1, 1 do
+		-- the route ends at the end of descent and then runs straight to the destination
+		-- (added after the loop), so the leg after the end of descent is not added
+		if i == eod then
+			--print("end fms"..i.."=at alt "..fms[i][3])
+			break
+		end
 		-- true when the T/D lies on a leg before this entry (set by an earlier pass)
 		local todBeforePoint = setTOD
 		if i >= start then
@@ -2206,10 +2249,6 @@ function setDistances(fmsO)
 			end
 		end
 		--print("setVNAV "..i.." "..fmsO[i][5]..":"..fmsO[i][6].."/"..fmsO[i][9])
-		if i == eod then
-			--print("end fms"..i.."=at alt "..fms[i][3])
-			break
-		end
 		if fmsO[i][9]>0 then
 			--construct vnav profile
 			--[[local isNext="false"
@@ -2269,8 +2308,10 @@ function setDistances(fmsO)
 		B747BR_fpe	= simDR_pressureAlt1-glideAlt
 	end
 	B747BR_nextDistanceInFeet = nextDistanceInFeet
-	local cruiseTOD = ((B747BR_cruiseAlt - fmsO[eod][3]) / 100) / 2.9
-	local currentTOD = ((simDR_pressureAlt1 - fmsO[eod][3]) / 100) / 2.9
+	-- the T/D reaches every descent constraint and the end of descent altitude ([9], or the
+	-- destination elevation) at 290 ft/nm; [3] of the end of descent is a frequency on a navaid
+	local cruiseTOD, eodAlt = B747_afds_helpers.route_tod_distance(fmsO, eod, B747BR_cruiseAlt, getDistance)
+	local currentTOD = ((simDR_pressureAlt1 - eodAlt) / 100) / 2.9
 	
 	B747BR_tod = cruiseTOD
 end
@@ -2306,8 +2347,67 @@ local function B747_lnav_leg_supports_preemption(waypoint)
 	return true
 end
 
+-- An altitude-terminated leg's end (CA/VA/FA, "(650)") is reached once the aircraft is airborne at or
+-- above its altitude and 400 ft above the ground (no departure turn is designed lower; a misset
+-- altimeter does not end the leg on the runway)
+local LNAV_ALTITUDE_LEG_MIN_RA_FT=400
+local function B747_altitude_leg_reached(entry)
+	local legEndAlt=B747_afds_helpers.altitude_leg_end_ft(entry)
+	return legEndAlt~=nil and simDR_onGround==0 and simDR_radarAlt1>=LNAV_ALTITUDE_LEG_MIN_RA_FT
+		and simDR_pressureAlt1>=legEndAlt
+end
+
+-- The start of the leg to fmsO[i]: the entry before it, but for the leg after altitude-terminated legs'
+-- ends ("(650)", which X-Plane may keep moving with the aircraft) the entry before them
+local function B747_lnav_leg_start(fmsO, i)
+	local k=i-1
+	while k>1 and B747_afds_helpers.altitude_leg_end_ft(fmsO[k])~=nil do
+		k=k-1
+	end
+	return fmsO[k]
+end
+
+local function B747_lnav_sequence_to(index, why)
+	B747DR_fms_setCurrent=index
+	B747DR_fmscurrentIndex=index
+	if B747DR_ap_lnav_state==2 then
+		B747DR_ap_lnavHeading_mode=index
+	end
+	print("B747DR_fmscurrentIndex="..index.." "..why)
+	setVNAVState("recalcAfter", index)
+end
+
 function B747_getCurrentWayPoint_function(fmsO)
-	
+	local current=B747DR_fmscurrentIndex
+	local count=table.getn(fmsO)
+	-- the end of an altitude-terminated leg is reached at its altitude: X-Plane, whose sequencing the
+	-- 747 overrides, keeps that point just ahead of the aircraft after it
+	if current<count and B747_altitude_leg_reached(fmsO[current]) then
+		B747_lnav_sequence_to(current+1, "past the altitude leg end "..tostring(fmsO[current][8]))
+		return
+	end
+	-- the fix before such legs passed with their altitude reached: on to the fix after them (the leg
+	-- search finds no leg to it when it lies behind, and the 747 turned back to the passed fix); the
+	-- departure runway (after the origin airport) counts as passed in the air
+	if current>1 and current<count-1 and B747_altitude_leg_reached(fmsO[current+1]) then
+		local fix=fmsO[current]
+		local legStart=B747_lnav_leg_start(fmsO,current)
+		local dToFix=getDistance(simDR_latitude,simDR_longitude,fix[5],fix[6])
+		local legLength=getDistance(legStart[5],legStart[6],fix[5],fix[6])
+		local passed=dToFix<0.3 or (current==2 and fmsO[1][2]==1)
+		if not passed and legLength>0.1 then
+			local dFromStart=getDistance(simDR_latitude,simDR_longitude,legStart[5],legStart[6])
+			passed=getTriSpaceSolver(legLength,dFromStart,dToFix)[1]>=legLength
+		end
+		if passed then
+			local nextIndex=current+1
+			while nextIndex<count and B747_altitude_leg_reached(fmsO[nextIndex]) do
+				nextIndex=nextIndex+1
+			end
+			B747_lnav_sequence_to(nextIndex, "past "..tostring(fix[8]).." and the altitude legs after it")
+			return
+		end
+	end
 	if simDR_radarAlt1<1000 and simDR_vvi_fpm_pilot < 500.0 then return end --surpress during final/on ground
 	if (B747DR_fmscurrentIndex>1 and fmsO[B747DR_fmscurrentIndex-1][8]=="PPOS") then
 		simDR_override_fms_progress=0
@@ -2333,11 +2433,20 @@ function B747_getCurrentWayPoint_function(fmsO)
 			bestheadingDiff=120
 		end
 	end
+	-- the legs up to an altitude-terminated leg's end that is reached are flown: the search does not go
+	-- back to them (a SID turning back over the airport matched the runway's legs again)
+	for k=B747DR_fmscurrentIndex-1,2,-1 do
+		if B747_altitude_leg_reached(fmsO[k]) then
+			minPhaseLeg=math.max(minPhaseLeg,k+1)
+			break
+		end
+	end
 	local canNew=true
 	if B747DR_fmscurrentIndex>1 then
 		local dToNext=getDistance(simDR_latitude,simDR_longitude,fmsO[B747DR_fmscurrentIndex][5],fmsO[B747DR_fmscurrentIndex][6])
-		dFromLast=getDistance(simDR_latitude,simDR_longitude,fmsO[B747DR_fmscurrentIndex-1][5],fmsO[B747DR_fmscurrentIndex-1][6])
-		trackLength=getDistance(fmsO[B747DR_fmscurrentIndex-1][5],fmsO[B747DR_fmscurrentIndex-1][6],fmsO[B747DR_fmscurrentIndex][5],fmsO[B747DR_fmscurrentIndex][6])
+		local legStart=B747_lnav_leg_start(fmsO,B747DR_fmscurrentIndex)
+		dFromLast=getDistance(simDR_latitude,simDR_longitude,legStart[5],legStart[6])
+		trackLength=getDistance(legStart[5],legStart[6],fmsO[B747DR_fmscurrentIndex][5],fmsO[B747DR_fmscurrentIndex][6])
 		local track=getTriSpaceSolver(trackLength,dFromLast,dToNext)
 		if track[1]<math.max(trackLength-5,trackLength*2/3) then
 			canNew=false
@@ -2366,21 +2475,25 @@ function B747_getCurrentWayPoint_function(fmsO)
 			local trackLength=1
 			local dToNext=getDistance(simDR_latitude,simDR_longitude,fmsO[i][5],fmsO[i][6])
 
+			local legStart=nil
 			if i>1 then
-				dFromLast=getDistance(simDR_latitude,simDR_longitude,fmsO[i-1][5],fmsO[i-1][6])
-				trackLength=getDistance(fmsO[i-1][5],fmsO[i-1][6],fmsO[i][5],fmsO[i][6])
+				legStart=B747_lnav_leg_start(fmsO,i)
+				dFromLast=getDistance(simDR_latitude,simDR_longitude,legStart[5],legStart[6])
+				trackLength=getDistance(legStart[5],legStart[6],fmsO[i][5],fmsO[i][6])
 			else
 				trackLength=dToNext+0.11
 			end
 
 			
 			
-			if trackLength>0.1 then
+			-- a leg to an altitude-terminated leg's end is done once its altitude is reached (X-Plane may
+			-- keep that point just ahead of the aircraft, which would make it the leg flown)
+			if trackLength>0.1 and not B747_altitude_leg_reached(fmsO[i]) then
 				local track=getTriSpaceSolver(trackLength,dFromLast,dToNext)
 				
 				local thisHeading=0
 				if i>1 then
-					thisHeading=getHeading(fmsO[i-1][5],fmsO[i-1][6],fmsO[i][5],fmsO[i][6])
+					thisHeading=getHeading(legStart[5],legStart[6],fmsO[i][5],fmsO[i][6])
 				else
 					thisHeading=getHeading(simDR_latitude,simDR_longitude,fmsO[i][5],fmsO[i][6])
 					track[2]=dToNext
@@ -2421,8 +2534,17 @@ function B747_getCurrentWayPoint_function(fmsO)
 		
 		B747DR_ap_lnav_xtk_error=bestOffTrack
 		--print("best Track to waypoint="..best.." / "..bestOffTrack)
+		-- an altitude-terminated leg's end whose altitude is reached is no leg to stop at
+		local maxAdvance=LNAV_MAX_AUTOMATIC_SEQUENCE_ADVANCE_LEGS
+		local skipIndex=B747DR_fmscurrentIndex+1
+		while skipIndex<best and skipIndex<=B747DR_fmscurrentIndex+maxAdvance do
+			if B747_altitude_leg_reached(fmsO[skipIndex]) then
+				maxAdvance=maxAdvance+1
+			end
+			skipIndex=skipIndex+1
+		end
 		if B747DR_ap_lnav_xtk_target>-99 and B747DR_fmscurrentIndex>0
-			and best>B747DR_fmscurrentIndex+LNAV_MAX_AUTOMATIC_SEQUENCE_ADVANCE_LEGS then
+			and best>B747DR_fmscurrentIndex+maxAdvance then
 			best=B747DR_fmscurrentIndex
 		end
 		if best>0 and (best>B747DR_fmscurrentIndex or best<B747DR_fmscurrentIndex-1) and B747DR_fmscurrentIndex ~=best then
@@ -2550,7 +2672,7 @@ function B747_ap_appr_mode_beforeCMDhandler(phase, duration)
 		end
 
 		B747DR_ap_lastCommand = simDRTime
-		B747DR_ap_heading_deg = roundToIncrement(simDR_radio_nav_obs_deg[0], 1) -- SET THE SELECTED HEADING VALUE TO THE LOC COURSE
+		-- leave the MCP heading at the crew selection: HDG SEL keeps flying it while LOC is armed
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[9] = 0 -- SET THE LOC SWITCH ANIMATION TO "OUT"
 	end
@@ -2693,7 +2815,7 @@ function B747_ap_appr_mode()
 		B747DR_ap_approach_mode = 0
 	end
 
-	if B747DR_ap_lnav_state > 0 and simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status == 0 then
+	if B747DR_ap_lnav_state > 0 and simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status ~= 2 then
 		print("simCMD_autopilot_heading_select in appr_mode")
 		simCMD_autopilot_heading_select:once()
 		B747DR_ap_ATT = 0.0
@@ -2708,6 +2830,19 @@ end
 dofile("B747.autoland.lua")
 dofile("B747.70.xt.autopilot.monitor.lua")
 local apWasOn=0
+-- TO/GA roll is replaced by HDG SEL / HDG HOLD selected in flight or by LNAV,
+-- while TO/GA pitch (B747DR_autopilot_TOGA_status) stays until a pitch mode
+-- clears it. A new TO/GA press in the air (the engines module sets autoland
+-- to -2) brings TO/GA roll back, and nothing is remembered on the ground.
+local togaRollCleared=false
+local lastAutolandSeen=0
+function B747_ap_clear_toga_roll()
+	if simDR_onGround == 0 and B747DR_autopilot_TOGA_status ~= 0 then
+		togaRollCleared=true
+		-- a TO/GA press made before this selection must not undo it
+		lastAutolandSeen=B747DR_ap_autoland
+	end
+end
 function fma_rollModes()
 	local diff = simDRTime - B747DR_ap_lastCommand
 
@@ -2747,6 +2882,15 @@ function fma_rollModes()
 	--B747DR_ap_FMA_active_roll_mode = 0
 
 	-- (TOGA) --
+	-- on the ground the roll FMA stays as before; a stale LNAV state or a
+	-- selection from the last flight must not hide TO/GA roll at the next takeoff
+	if B747DR_autopilot_TOGA_status == 0 or simDR_onGround == 1
+		or (B747DR_ap_autoland == -2 and lastAutolandSeen ~= -2) then
+		togaRollCleared=false
+	elseif B747DR_ap_lnav_state == 2 then
+		togaRollCleared=true
+	end
+	lastAutolandSeen=B747DR_ap_autoland
 	local navcrz = simDR_nav1_radio_course_deg
 	--print("navcrz "..navcrz)
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
@@ -2754,7 +2898,8 @@ function fma_rollModes()
 		B747DR_ap_FMA_active_roll_mode = 0 -- (NONE) --
 	elseif math.abs(B747DR_ap_ATT) >= 5.0 then
 		B747DR_ap_FMA_active_roll_mode = 5
-	elseif B747DR_autopilot_TOGA_status~=0 and B747DR_ap_lnav_state ~= 2 then --simDR_autopilot_TOGA_lat_status == 2 then
+	elseif B747_afds_helpers.toga_roll_mode_active(B747DR_autopilot_TOGA_status, B747DR_ap_lnav_state,
+			B747DR_autopilot_nav_status, togaRollCleared) then --simDR_autopilot_TOGA_lat_status == 2 then
 		B747DR_ap_FMA_active_roll_mode = 1 -- (TOGA) --
 	elseif simDR_onGround == 1 then
 		B747DR_ap_FMA_active_roll_mode = 0 -- (NONE) --
@@ -3485,9 +3630,13 @@ function B474_ap_target_heading()
 		B747DR_ap_lnav_state = 0
 		B747DR_ap_lastCommand=simDRTime
 		B747DR_ap_activate_target_heading_deg=0
+		-- HDG SEL replaces TO/GA roll in flight. Done here, where X-Plane's
+		-- heading mode is engaged, not in the button handler, so the roll FMA
+		-- (run earlier in the frame) never goes blank in between.
+		B747_ap_clear_toga_roll()
 		print("change to HDG SEL")
 	end
-	if simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status == 0 and B747DR_ap_lnav_state > 0 then
+	if simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state > 0 then
 		if diff < 0.05 then
 			return
 		end	

@@ -796,7 +796,9 @@ function engine_idle_control_RR(altitude_ft_in)
   
         --Set target bugs
       for i = 0, 3 do
-        if EPR_actual > EPR_max_climb then
+        -- max climb above 20,000 ft, as upstream e286c7da did for the GE engines: the weight-based
+        -- target left a light 747 climbing at a few hundred fpm in the 20s
+        if EPR_actual > EPR_max_climb or altitude_ft_in > 20000 then
           if EPR_initial_climb > EPR_max_climb then
             EPR_target_bug[i] = string.format("%3.2f", EPR_initial_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value
             display_EPR_ref[i] = math.min(string.format("%3.2f", EPR_initial_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value, 1.90)

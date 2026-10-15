@@ -199,6 +199,8 @@ simDR_autopilot_servos_on           	= find_dataref("laminar/B747/autopilot/serv
 B747DR_ap_FMA_active_pitch_mode     	= find_dataref("laminar/B747/autopilot/FMA/active_pitch_mode")
 B747DR_ap_FMA_active_roll_mode      	= find_dataref("laminar/B747/autopilot/FMA/active_roll_mode")
 simDR_vvi_fpm_pilot                 = find_dataref("sim/cockpit2/gauges/indicators/vvi_fpm_pilot")
+simDR_alpha_deg                     = find_dataref("sim/flightmodel/position/alpha")
+simDR_TAS_mps                       = find_dataref("sim/flightmodel/position/true_airspeed")
 simDR_autopilot_alt_hold_status     	= find_dataref("laminar/B747/autopilot/altitude_hold_status")
 --simCMD_autopilot_alt_hold_mode      = find_command("sim/autopilot/altitude_hold")
 B747_controls_left_outer_aileron           = deferred_dataref("laminar/B747/cablecontrols/left_outer_aileron", "number")
@@ -544,7 +546,8 @@ function flight_start()
   B747DR_pidPitchPL = 0.07 --low 0.15 high 0.05
   B747DR_pidPitchPH = 0.04 --low 0.15 high 0.05
   B747DR_pidPitchI = 0.07 --0.07
-  B747DR_pidPitchD = 0.0002
+  -- damps the attitude's hunt around the flight director (the integral gain equals P)
+  B747DR_pidPitchD = 0.07
 
 
   B747DR_pidyawP = 1.0

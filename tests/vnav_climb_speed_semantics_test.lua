@@ -34,7 +34,9 @@ local runtime = {
     simDR_autopilot_airspeed_is_mach = 0,
     B747DR_switchingIASMode = 0,
     B747DR_ap_ias_dial_value = 0,
-    B747DR_lastap_dial_airspeed = 0
+    B747DR_lastap_dial_airspeed = 0,
+    B747DR_airspeed_Mms = 0.92,
+    simDR_autopilot_airspeed_kts_mach = 0
 }
 setmetatable(runtime, {__index = _G})
 
@@ -105,5 +107,222 @@ runtime.clb_crz_setSpd()
 assert(runtime.B747DR_ap_ias_dial_value == 80,
     "cruise did not fly the selected cruise Mach")
 fms_data.crzspd = "810"
+
+-- [g-3] The crossover is judged on the CAS target, not on the current Mach.
+-- TST744L step climb from FL310: ECON 326 kt / M.815 at 300.4 kt and M.807.
+-- 326 kt is M.869 at FL310, so the climb Mach is flown, with no 26 kt
+-- underspeed on the CAS target and no CAS/Mach flip as M.807 changes to
+-- M.810 and back.
+fms_data.clbspd = "326"
+fms_data.clbmach = "815"
+runtime.simDR_pressureAlt1 = 31000
+runtime.simDR_ind_airspeed_kts_pilot = 300.4
+runtime.simDR_airspeed_mach = 0.807
+runtime.simDR_autopilot_airspeed_is_mach = 1
+runtime.clb_nores_setSpd()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 1,
+    "climb at FL310 left the climb Mach for a CAS target above it")
+assert(runtime.B747DR_ap_ias_dial_value == 81.5,
+    "climb at FL310 did not fly the climb Mach")
+runtime.simDR_pressureAlt1 = 31138
+runtime.simDR_airspeed_mach = 0.810
+runtime.clb_nores_setSpd()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 1 and runtime.B747DR_ap_ias_dial_value == 81.5,
+    "climb at FL311 and M.810 flipped back to CAS")
+runtime.simDR_pressureAlt1 = 31000
+runtime.simDR_airspeed_mach = 0.807
+runtime.simDR_autopilot_airspeed_is_mach = 0
+runtime.clb_nores_setSpd()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 1 and runtime.B747DR_ap_ias_dial_value == 81.5,
+    "a CAS climb at FL310 did not change over to the climb Mach")
+-- The SPD TRANS state uses the same crossover: 250 kt is M.711 at FL330,
+-- above a M.700 climb Mach.
+fms_data.clbmach = "700"
+runtime.simDR_pressureAlt1 = 33000
+runtime.simDR_ind_airspeed_kts_pilot = 245
+runtime.simDR_airspeed_mach = 0.69
+runtime.simDR_autopilot_airspeed_is_mach = 0
+runtime.clb_spcres_setSpd()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 1 and runtime.B747DR_ap_ias_dial_value == 70,
+    "SPD TRANS state did not change over at the CAS target's Mach")
+fms_data.clbspd = "272"
+fms_data.clbmach = "780"
+runtime.simDR_pressureAlt1 = 12000
+runtime.simDR_ind_airspeed_kts_pilot = 200
+
+-- [g-5] The speed states write the X-Plane autopilot target
+-- (airspeed_dial_kts_mach) in the new unit together with the speed mode.
+-- Before, B747_ap_ias_mach_mode wrote it only after the 0.25 s IAS update,
+-- and X-Plane read the old value in the new unit meanwhile (326 kt as a
+-- Mach number, M.815 as knots).
+local function near_target(expected, message)
+    local actual = runtime.simDR_autopilot_airspeed_kts_mach
+    assert(type(actual) == "number" and math.abs(actual - expected) < 1e-9,
+        message..": autopilot target "..tostring(actual)..", expected "..expected)
+end
+fms_data.clbspd = "326"
+fms_data.clbmach = "815"
+runtime.simDR_pressureAlt1 = 31000
+runtime.simDR_ind_airspeed_kts_pilot = 300.4
+runtime.simDR_airspeed_mach = 0.82
+runtime.simDR_autopilot_airspeed_is_mach = 0
+runtime.simDR_autopilot_airspeed_kts_mach = 326
+runtime.clb_nores_setSpd()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 1, "climb at FL310 did not select Mach")
+near_target(0.815, "CAS to Mach change did not write the climb Mach")
+fms_data.clbspd = "272"
+runtime.simDR_pressureAlt1 = 12000
+runtime.simDR_ind_airspeed_kts_pilot = 270
+runtime.simDR_airspeed_mach = 0.70
+runtime.clb_nores_setSpd()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 0, "climb at 12000 ft did not select CAS")
+near_target(272, "Mach to CAS change did not write the ECON climb CAS")
+runtime.simDR_pressureAlt1 = 35000
+runtime.clb_crz_setSpd()
+near_target(0.81, "cruise state did not write the cruise Mach")
+-- The Mach target is limited to Mmo - 0.01, as B747_ap_ias_mach_mode limits
+-- it; an unset Mmo does not limit it.
+runtime.B747DR_airspeed_Mms = 0.80
+runtime.clb_crz_setSpd()
+near_target(0.79, "cruise Mach above Mmo - 0.01 was not limited")
+runtime.B747DR_airspeed_Mms = nil
+runtime.clb_crz_setSpd()
+near_target(0.81, "cruise Mach without Mmo")
+runtime.B747DR_airspeed_Mms = 0.92
+-- The descent states write it the same way.
+fms_data.desspdmach = "805"
+runtime.simDR_airspeed_mach = 0.82
+runtime.des_src_setSpd()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 1, "descent at M.82 did not select Mach")
+near_target(0.805, "descent Mach was not written")
+fms_data.desrestspd = "240"
+runtime.B747DR_autothrottle_active = 1
+runtime.des_spcres_setSpd()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 0, "SPD REST descent did not select CAS")
+near_target(240, "descent SPD REST was not written")
+runtime.simDR_ind_airspeed_kts_pilot = 200
+
+-- The MCP IAS/MACH button and the automatic changeover in
+-- B747_ap_ias_mach_mode (B747.70.xt.autopilot.lua) write the target in the
+-- new unit in the same call: the knots target (X-Plane keeps
+-- airspeed_dial_kts in knots), or that target as a Mach number at the
+-- current altitude. The two slices load into one environment;
+-- B747_afds_helpers is a file local of the autopilot script, so here it is a
+-- global of the environment.
+local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/"
+local function slice(path, first_marker, last_marker)
+    local file = assert(io.open(path))
+    local source = file:read("*a")
+    file:close()
+    local first = assert(source:find(first_marker, 1, true), first_marker)
+    local last = assert(source:find(last_marker, first, true), last_marker)
+    return source:sub(first, last - 1)
+end
+local ap = setmetatable({
+    print = function() end,
+    B747_afds_helpers = helpers,
+    run_after_time = function() end,
+    getVNAVState = function() return 0 end,
+    setFMSData = function() end,
+    B747_ap_button_switch_position_target = {},
+    B747DR_ap_ias_mach_window_open = 1, B747DR_switchingIASMode = 0,
+    B747DR_lastap_dial_airspeed = 0, B747DR_ap_ias_dial_value = 300,
+    B747DR_ap_autoland = 0, B747DR_ap_vnav_state = 0, B747DR_ap_inVNAVdescent = 0,
+    B747DR_airspeed_Vmc = 200, B747DR_airspeed_Vmo = 365, B747DR_airspeed_Mms = 0.92,
+    B747DR_ap_ias_bug_value = 300, simDR_flap_ratio_control = 0, simDR_radarAlt1 = 30000,
+    simDR_autopilot_flch_status = 2, simDR_ind_airspeed_kts_pilot = 300,
+    simDR_pressureAlt1 = 33000, simDR_airspeed_mach = 0.83, simDR_vvi_fpm_pilot = 1500,
+    simDR_autopilot_airspeed_kts = 300, simDR_autopilot_airspeed_kts_mach = 300,
+    simDR_autopilot_airspeed_is_mach = 0
+}, {__index = _G})
+setfenv(assert(loadstring(slice(AP.."B747.70.xt.autopilot.lua",
+    "function B747_updateIASWindow()", "function B747_ap_airspeed_up_CMDhandler(phase, duration)"))), ap)()
+setfenv(assert(loadstring(slice(AP.."B747.70.xt.autopilot.lua",
+    "function B747_ap_ias_mach_mode()", "function setDistances(fmsO)"))), ap)()
+local function near_ap_target(expected, message)
+    local actual = ap.simDR_autopilot_airspeed_kts_mach
+    assert(type(actual) == "number" and math.abs(actual - expected) < 1e-9,
+        message..": autopilot target "..tostring(actual)..", expected "..expected)
+end
+local mach_300kt_fl330 = helpers.cas_to_mach(300, 33000)
+ap.B747_ap_knots_mach_toggle_CMDhandler(0, 0)
+assert(ap.simDR_autopilot_airspeed_is_mach == 1, "IAS/MACH button did not select Mach")
+near_ap_target(mach_300kt_fl330, "IAS/MACH button to Mach did not write the Mach of the knots target")
+ap.B747DR_ap_ias_mach_window_open = 1
+ap.B747DR_switchingIASMode = 0
+ap.simDR_autopilot_airspeed_kts_mach = mach_300kt_fl330
+ap.B747_ap_knots_mach_toggle_CMDhandler(0, 0)
+assert(ap.simDR_autopilot_airspeed_is_mach == 0, "IAS/MACH button did not select knots")
+near_ap_target(300, "IAS/MACH button to knots did not write the knots target")
+-- Automatic changeover to Mach above M.84 in a climb.
+ap.B747DR_switchingIASMode = 0
+ap.simDR_airspeed_mach = 0.845
+ap.B747_ap_ias_mach_mode()
+assert(ap.simDR_autopilot_airspeed_is_mach == 1, "climb above M.84 did not change over to Mach")
+near_ap_target(mach_300kt_fl330, "automatic change to Mach did not write the Mach of the knots target")
+-- Automatic changeover to knots above 310 kt in a descent.
+ap.B747DR_switchingIASMode = 0
+ap.simDR_airspeed_mach = 0.80
+ap.simDR_vvi_fpm_pilot = -1500
+ap.simDR_autopilot_airspeed_kts = 320
+ap.simDR_autopilot_airspeed_kts_mach = 0.825
+ap.B747_ap_ias_mach_mode()
+assert(ap.simDR_autopilot_airspeed_is_mach == 0, "descent above 310 kt did not change over to knots")
+near_ap_target(320, "automatic change to knots did not write the knots target")
+
+-- The same with the two datarefs these calls write and then use,
+-- laminar/B747/autopilot/ap_monitor/last_airspeed and
+-- sim/cockpit2/autopilot/airspeed_is_mach, reading back their old values
+-- until the next frame (sync), as an XTLua dataref might (its first read
+-- gives 0): the new-unit target must come from the speed and unit just
+-- decided, not from those datarefs read back.
+local synced = {B747DR_lastap_dial_airspeed = 0, simDR_autopilot_airspeed_is_mach = 0}
+local pending = {}
+for key in pairs(synced) do rawset(ap, key, nil) end
+setmetatable(ap, {
+    __index = function(_, key)
+        if synced[key] ~= nil then return synced[key] end
+        return _G[key]
+    end,
+    __newindex = function(t, key, value)
+        if synced[key] ~= nil then pending[key] = value return end
+        rawset(t, key, value)
+    end})
+local function sync()
+    for key, value in pairs(pending) do synced[key] = value end
+    pending = {}
+end
+ap.B747DR_ap_ias_mach_window_open = 1
+ap.B747DR_switchingIASMode = 0
+ap.simDR_airspeed_mach = 0.83
+ap.simDR_vvi_fpm_pilot = 1500
+ap.simDR_autopilot_airspeed_kts = 300
+ap.simDR_autopilot_airspeed_kts_mach = 300
+ap.B747_ap_knots_mach_toggle_CMDhandler(0, 0)
+sync()
+assert(ap.simDR_autopilot_airspeed_is_mach == 1, "IAS/MACH button (stale read-back) did not select Mach")
+near_ap_target(mach_300kt_fl330, "IAS/MACH button to Mach with a stale read-back did not write the Mach of 300 kt")
+ap.B747DR_ap_ias_mach_window_open = 1
+ap.B747DR_switchingIASMode = 0
+ap.simDR_autopilot_airspeed_kts_mach = mach_300kt_fl330
+ap.B747_ap_knots_mach_toggle_CMDhandler(0, 0)
+sync()
+assert(ap.simDR_autopilot_airspeed_is_mach == 0, "IAS/MACH button (stale read-back) did not select knots")
+near_ap_target(300, "IAS/MACH button to knots with a stale read-back did not write 300 kt")
+ap.B747DR_switchingIASMode = 0
+ap.simDR_airspeed_mach = 0.845
+ap.B747_ap_ias_mach_mode()
+sync()
+assert(ap.simDR_autopilot_airspeed_is_mach == 1, "climb above M.84 (stale read-back) did not change over to Mach")
+near_ap_target(mach_300kt_fl330, "automatic change to Mach with a stale read-back did not write the Mach of 300 kt")
+ap.B747DR_switchingIASMode = 0
+ap.simDR_airspeed_mach = 0.80
+ap.simDR_vvi_fpm_pilot = -1500
+ap.simDR_autopilot_airspeed_kts = 320
+ap.simDR_autopilot_airspeed_kts_mach = 0.825
+ap.B747_ap_ias_mach_mode()
+sync()
+assert(ap.simDR_autopilot_airspeed_is_mach == 0, "descent above 310 kt (stale read-back) did not change over to knots")
+near_ap_target(320, "automatic change to knots with a stale read-back did not write 320 kt")
 
 print("VNAV climb-speed semantic tests passed")

@@ -90,6 +90,31 @@ assert_equal(nav.climb_speed_for_state("spcres", climb_profile), 250,
 assert_equal(nav.climb_speed_for_state("nores", climb_profile), 272,
     "ECON CLB value is selected above transition altitude")
 
+-- [g-3] CAS to Mach with the ISA pressure ratio of the FMC performance model,
+-- and the climb CAS/Mach crossover judged on the CAS target.
+local performance = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B744.fms.performance.lua")
+assert_near(nav.cas_to_mach(326, 31000), 0.869, 0.002, "326 kt at FL310")
+assert_near(nav.cas_to_mach(300.4, 31000), 0.807, 0.002, "recorded 300.4 kt at FL310")
+assert_near(nav.cas_to_mach(performance.mach_to_cas_kts(0.815, 31000), 31000), 0.815, 0.0001,
+    "CAS to Mach inverts the FMC Mach to CAS at FL310")
+assert_near(nav.cas_to_mach(performance.mach_to_cas_kts(0.78, 39000), 39000), 0.78, 0.0001,
+    "CAS to Mach inverts the FMC Mach to CAS above the tropopause")
+assert_equal(nav.cas_to_mach(nil, 31000), nil, "missing CAS has no Mach")
+-- Arguments: CAS target, climb Mach, pressure altitude, current Mach, is_mach.
+assert_equal(nav.climb_speed_uses_mach(326, 0.815, 31000, 0.807, 0), true,
+    "CAS target above the climb Mach selects Mach")
+assert_equal(nav.climb_speed_uses_mach(272, 0.78, 12000, 0.70, 1), false,
+    "CAS target below the climb Mach stays on CAS")
+assert_equal(nav.climb_speed_uses_mach(272, 0.78, 12000, 0.79, 0), true,
+    "current Mach above the climb Mach still selects Mach")
+-- 302.5 kt is M.812 at FL310: below the M.815 climb Mach, within 0.005 of it.
+assert_equal(nav.climb_speed_uses_mach(302.5, 0.815, 31000, 0.70, 0), false,
+    "CAS target just below the climb Mach stays on CAS")
+assert_equal(nav.climb_speed_uses_mach(302.5, 0.815, 31000, 0.70, 1), true,
+    "selected Mach is kept within 0.005 of the climb Mach")
+assert_equal(nav.climb_speed_uses_mach(300, 0.815, 31000, 0.70, 1), false,
+    "selected Mach returns to CAS more than 0.005 below the climb Mach")
+
 local function energy_guidance(path_error_ft, actual_speed_kts, nominal_vspeed_fpm,
         speed_trend_kts_per_sec, previous_path_axis, previous_speed_axis, protection_active)
     return nav.vnav_energy_guidance({
@@ -255,6 +280,72 @@ assert_near(controls.limit_speed_pitch_target(3.0, 3.0, controls.VERTICAL_DIRECT
 assert_near(controls.limit_speed_pitch_target(-0.2, 0.1, controls.VERTICAL_DIRECTION_CLIMB,
     50, 230, 250, 160, 340, 0.3), -0.2, 0.0001, "severe underspeed overrides climb floor")
 
+-- [g-1] The minimum safe speed (Vmc + 10 kt) never lifts the severe underspeed
+-- threshold above target - 5 kt. Flaps 20 at 310 t: Vmc + 10 kt is 174.2 kt,
+-- above the V2 + 10 kt target of 169.5 kt, so the climb guard used to drop
+-- with the speed on target.
+assert_near(controls.severe_underspeed_threshold(169.5, 174.2), 164.5, 0.0001,
+    "minimum safe speed above the target is capped at target - 5 kt")
+assert_near(controls.severe_underspeed_threshold(250, 160), 235, 0.0001,
+    "target - 15 kt above the minimum safe speed is unchanged")
+assert_near(controls.severe_underspeed_threshold(200, 190), 190, 0.0001,
+    "minimum safe speed below target - 5 kt is unchanged")
+local on_target_pitch, on_target_severe = controls.limit_speed_pitch_target(9.0, 10.0,
+    controls.VERTICAL_DIRECTION_CLIMB, 50, 170.0, 169.5, 174.2, 365, 0.3)
+assert_near(on_target_pitch, 10.0, 0.0001, "initial climb on the V2 + 10 target keeps the climb guard")
+assert_equal(on_target_severe, false, "initial climb on the V2 + 10 target is not a severe underspeed")
+local slow_pitch, slow_severe = controls.limit_speed_pitch_target(9.0, 10.0,
+    controls.VERTICAL_DIRECTION_CLIMB, 50, 147.6, 169.5, 174.2, 365, 0.3)
+assert_near(slow_pitch, 9.0, 0.0001, "initial climb 22 kt slow may still pitch down")
+assert_equal(slow_severe, true, "initial climb 22 kt slow is a severe underspeed")
+
+-- [g-2] Accelerating to a raised speed target (flap retraction +20 kt, 250 to
+-- 326 kt at 10,000 ft) is latched: set when the target rises 5 kt or more
+-- above the reference while the speed is above the minimum safe speed, kept
+-- until the speed is within 5 kt of the target. Arguments: latched, reference
+-- target, target, IAS, minimum safe speed.
+assert_equal(controls.update_speed_target_acceleration(false, 250, 326, 249, 225), true,
+    "a 76 kt target step latches the acceleration")
+assert_equal(controls.update_speed_target_acceleration(true, 326, 326, 300, 225), true,
+    "the latch holds while the speed is more than 5 kt below the target")
+assert_equal(controls.update_speed_target_acceleration(true, 326, 326, 322, 225), false,
+    "the latch releases within 5 kt of the target")
+assert_equal(controls.update_speed_target_acceleration(false, 155.2, 210, 130, 160), false,
+    "a target step below the minimum safe speed is a real underspeed, not latched")
+assert_equal(controls.update_speed_target_acceleration(false, 250, 254, 240, 225), false,
+    "a target change under 5 kt does not latch")
+-- While latched only the minimum safe speed (capped at target - 5 kt) is a
+-- severe underspeed, so the climb guard stays and the aircraft accelerates
+-- without descending.
+local latched_pitch, latched_severe = controls.limit_speed_pitch_target(2.6, 2.7,
+    controls.VERTICAL_DIRECTION_CLIMB, 50, 280, 326, 225, 365, 0.3, true)
+assert_near(latched_pitch, 2.7, 0.0001, "latched acceleration keeps the climb guard 46 kt slow")
+assert_equal(latched_severe, false, "latched acceleration 46 kt slow is not a severe underspeed")
+latched_pitch, latched_severe = controls.limit_speed_pitch_target(2.6, 2.7,
+    controls.VERTICAL_DIRECTION_CLIMB, 50, 220, 326, 225, 365, 0.3, true)
+assert_near(latched_pitch, 2.6, 0.0001, "latched acceleration below the minimum safe speed may pitch down")
+assert_equal(latched_severe, true, "latched acceleration below the minimum safe speed is severe")
+-- Given the speed the acceleration started from (accelerating_to_target is
+-- that speed), 15 kt below it is a severe underspeed too: thrust lost on the
+-- way to the raised target (a step from 306.7 kt to 312.5: 291.7 kt, not the
+-- minimum safe speed of 221 kt); capped at target - 5 kt like the rest.
+assert_near(controls.accelerating_underspeed_threshold(312.5, 221, 306.7), 291.7, 0.0001,
+    "15 kt below the speed the acceleration started from")
+assert_near(controls.accelerating_underspeed_threshold(312.5, 221), 221, 0.0001,
+    "without the start speed the minimum safe speed")
+assert_near(controls.accelerating_underspeed_threshold(182, 170, 168), 170, 0.0001,
+    "a minimum safe speed above start - 15 kt is kept")
+assert_near(controls.accelerating_underspeed_threshold(312.5, 221, 330), 307.5, 0.0001,
+    "start - 15 kt capped at target - 5 kt")
+latched_pitch, latched_severe = controls.limit_speed_pitch_target(2.6, 2.7,
+    controls.VERTICAL_DIRECTION_CLIMB, 50, 290, 312.5, 221, 365, 0.3, 306.7)
+assert_near(latched_pitch, 2.6, 0.0001, "latched, 16.7 kt below the start speed: may pitch down")
+assert_equal(latched_severe, true, "latched, 16.7 kt below the start speed is severe")
+latched_pitch, latched_severe = controls.limit_speed_pitch_target(2.6, 2.7,
+    controls.VERTICAL_DIRECTION_CLIMB, 50, 295, 312.5, 221, 365, 0.3, 306.7)
+assert_near(latched_pitch, 2.7, 0.0001, "latched, 11.7 kt below the start speed: climb guard kept")
+assert_equal(latched_severe, false, "latched, 11.7 kt below the start speed is not severe")
+
 assert_near(controls.limit_speed_pitch_target(5.2, 4.9, controls.VERTICAL_DIRECTION_DESCENT,
     -800, 260, 250, 160, 340, 0.3), 5.0, 0.0001, "descent target cannot pitch above envelope")
 assert_near(controls.limit_speed_pitch_target(4.1, 4.0, controls.VERTICAL_DIRECTION_DESCENT,
@@ -274,5 +365,69 @@ assert_equal(controls.roll_output_response_sec(1, 0.1, 0.2, false),
     controls.ROLL_OUTPUT_SMALL_RESPONSE_SEC, "small roll output damping")
 assert_equal(controls.roll_output_response_sec(15, 0.1, -0.8, false),
     controls.ROLL_OUTPUT_REVERSAL_RESPONSE_SEC, "roll reversal smoothing")
+
+-- [g-2] The production ap_director_pitch (hydraulics_override.lua) passes the
+-- latch to the limiter. ap_director_pitch and its file locals are loaded with
+-- mocked datarefs; B747_afds_controls and the pitch-target records are file
+-- locals above the slice, so here they are globals of the environment.
+local HYD = "plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/"
+local function slice(path, first_marker, last_marker)
+    local file = assert(io.open(path))
+    local source = file:read("*a")
+    file:close()
+    local first = assert(source:find(first_marker, 1, true), first_marker)
+    local last = assert(source:find(last_marker, first, true), last_marker)
+    return source:sub(first, last - 1)
+end
+local director_source = slice(HYD .. "B747.19.xt.hydraulics_override.lua",
+    "local last_simDR_ind_airspeed_kts_pilot=0", "local filteredDirectorRoll=0")
+
+-- VNAV SPD climb through 10,000 ft toward FL350 at 250 kt, +50 fpm.
+local director = setmetatable({
+    print = function() end,
+    B747_afds_controls = controls,
+    B747_interpolate_value = function(current, target) return target end,
+    debug_flight_directors = 0, B747DR_ap_autoland = 0, B744DR_autolandPitch = 0,
+    simDR_AHARS_pitch_heading_deg_pilot = 2.7, simDR_flight_director_pitch = 0,
+    simDR_autopilot_TOGA_pitch_deg = 2.7,
+    B747DR_airspeed_Vmc = 215, B747DR_airspeed_Vmax = 365,
+    simDR_ind_airspeed_kts_pilot = 250, simDR_autopilot_airspeed_kts = 250,
+    simDR_vvi_fpm_pilot = 50, B747DR_alt_capture_window = 400,
+    simDR_pressureAlt1 = 10100, simDR_autopilot_altitude_ft = 35000,
+    simDR_autopilot_hold_altitude_ft = 35000, simDR_autopilot_alt_hold_status = 0,
+    simDR_autopilot_flch_status = 2, simDR_autopilot_vs_status = 0,
+    B747_afds_pitch_target_before_blend = 0, B747_afds_pitch_target_after_blend = 0,
+    simDRTime = 100
+}, {__index = _G})
+setfenv(assert(loadstring(director_source)), director)()
+
+-- One director update 0.3 s after the previous one; the attitude follows the
+-- raw pitch target, as the servo loop would. Returns the raw pitch target.
+local function director_update(pitch_mode)
+    director.simDRTime = director.simDRTime + 0.3
+    director.simDR_AHARS_pitch_heading_deg_pilot = director.B747_afds_pitch_target_before_blend
+    director.ap_director_pitch(pitch_mode)
+    return director.B747_afds_pitch_target_before_blend
+end
+director.ap_director_pitch(1) -- first update only resets the director
+director_update(1)              -- TO/GA sets the pitch target to 2.7 degrees
+for _ = 1, 3 do director_update(4) end
+assert_near(director.B747_afds_pitch_target_before_blend, 2.7, 0.0001, "VNAV SPD on speed holds 2.7 degrees")
+director.simDR_autopilot_airspeed_kts = 326
+local lowest_pitch = 2.7
+for _ = 1, 10 do
+    director.simDR_ind_airspeed_kts_pilot = director.simDR_ind_airspeed_kts_pilot + 0.5
+    lowest_pitch = math.min(lowest_pitch, director_update(4))
+end
+assert_near(lowest_pitch, 2.7, 0.0001, "250 to 326 kt target step at +50 fpm does not pitch down")
+-- The latch keeps only the descent guard: climbing the director still trades
+-- climb rate for speed. Here the speed rises 0.1 kt in the 0.3 s (0.33 kt/s),
+-- less than the 1 kt/s the climb speed law (g-6) wants 70 kt below the
+-- target; at +600 fpm its climb floor allows 0.5 deg/s per 1,000 fpm above
+-- +300 fpm, 0.15 deg/s, so 0.045 deg in the 0.3 s.
+director.simDR_vvi_fpm_pilot = 600
+director.simDR_ind_airspeed_kts_pilot = director.simDR_ind_airspeed_kts_pilot + 0.1
+local before_trade = director.B747_afds_pitch_target_before_blend
+assert_near(director_update(4), before_trade - 0.045, 0.002, "latched acceleration at +600 fpm still pitches down")
 
 print("AFDS responsiveness tests passed: " .. tests_run)
