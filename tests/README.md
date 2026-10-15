@@ -320,6 +320,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   at or above, at an at's altitude and a window's top, a ceiling far below
   the aircraft let go, the MCP below the ceiling standing, and nothing
   without the constraints or in the descent.
+- `vnav_descent_floors_test.lua`: VNAV's descent with the STAR's and the
+  approach's constraints (EHAM LAMS2A, ILS 18R via SUG1D, and a made-up at or
+  above FL200 above the transition altitude) - the highest floor of the
+  fixes not passed yet as a level-off whatever its height, a fix held while
+  LNAV has sequenced it early included, the native FMS's path altitude
+  staying the target where it is higher (SUGOL's 11315, NIRSI's 5563), the
+  floor where [9] is missing, no level-off above an aircraft already below
+  the floor, and nothing without the constraints or in the climb.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the

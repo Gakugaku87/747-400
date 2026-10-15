@@ -114,6 +114,24 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
         targetAlt=hold[9]
         targetIndex=B747DR_vnav_hold_index
     end
+    -- in the descent the highest floor (at or above, at, a window's bottom, a FAF's glide slope altitude)
+    -- of the STAR's and the approach's constraints (B747_route_constraints, from the CIFP) at the fixes not
+    -- passed yet, a fix sequenced early for its turn included, is a level-off whatever its height ([9] is
+    -- taken only below the transition altitude), unless the aircraft is already below it; the native FMS's
+    -- path altitude ([9]) stays the target where it is higher
+    if dist_to_TOD<0 and numAPengaged>0 and B747_route_constraints~=nil and currentIndex>0 then
+        local first=currentIndex
+        local held=B747DR_vnav_hold_index or 0
+        if held>0 and held<first then first=held end
+        for i=first,endI do
+            local c=B747_route_constraints[i]
+            if c~=nil and c.phase=="descent" and c.floor~=nil and c.floor>targetAlt
+                and simDR_pressureAlt1>c.floor-100 then
+                targetAlt=c.floor
+                targetIndex=i
+            end
+        end
+    end
     local dtoAirport = getDistance(simDR_latitude,simDR_longitude, fms[endI][5], fms[endI][6])
     local altFromairport = simDR_pressureAlt1-fms[endI][9]
     if targetIndex>0 and dist_to_TOD>0 then
