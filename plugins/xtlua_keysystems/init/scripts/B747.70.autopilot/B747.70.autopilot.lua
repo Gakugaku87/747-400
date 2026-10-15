@@ -75,6 +75,7 @@ B747DR_ap_vnav_target_alt            	= deferred_dataref("laminar/B747/autopilot
 B747DR_ap_lnav_xtk_error           	= deferred_dataref("laminar/B747/autopilot/lnav/xtk_error", "number")
 B747DR_ap_lnav_xtk_target           	= deferred_dataref("laminar/B747/autopilot/lnav/xtk_target", "number")
 B747DR_vnav_hold_index           	= deferred_dataref("laminar/B747/autopilot/lnav/vnav_hold_index", "number")
+B747DR_vnav_procedures           	= deferred_dataref("laminar/B747/autopilot/vnav/procedures", "string")
 B747DR_fms_setCurrent = find_dataref("xtlua/currentFMS")
 B747DR_ap_vnav_state            	= deferred_dataref("laminar/B747/autopilot/vnav_state", "number")
 B747DR_ap_lnav_state            	= deferred_dataref("laminar/B747/autopilot/lnav_state", "number")

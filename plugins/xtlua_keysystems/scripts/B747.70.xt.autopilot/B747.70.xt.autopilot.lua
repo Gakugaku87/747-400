@@ -392,6 +392,8 @@ B747DR_ap_lnav_xtk_target           	= deferred_dataref("laminar/B747/autopilot/
 -- the route index of a fix LNAV sequenced early for its turn, whose altitude VNAV keeps until the aircraft
 -- is past the turn's bisector; 0 when none
 B747DR_vnav_hold_index           	= deferred_dataref("laminar/B747/autopilot/lnav/vnav_hold_index", "number")
+-- the SID, STAR and approach found in the CIFP for the route's constraints (B747_update_route_constraints)
+B747DR_vnav_procedures           	= deferred_dataref("laminar/B747/autopilot/vnav/procedures", "string")
 B747DR_ap_inVNAVdescent = deferred_dataref("laminar/B747/autopilot/vnav_descent", "number")
 B747DR_ap_inDescent 		= deferred_dataref("laminar/B747/autopilot/vnav/after_tod", "number")
 B747DR_vnav_energy_active = deferred_dataref("laminar/B747/autopilot/vnav/energy_active", "number")
@@ -556,6 +558,7 @@ function isATEnabled()
 	return false
 end
 local B747_afds_helpers = dofile("B747.70.xt.autopilot.afds_helpers.lua")
+local B747_constraints = dofile("B747.70.xt.autopilot.constraints.lua")
 
 -- Set true only while collecting AFDS tuning data.  Output is rate limited below.
 local AFDS_DIAGNOSTICS_ENABLED = false
@@ -2749,6 +2752,47 @@ function B747_lnav_update_vnav_hold(fmsO)
 	B747DR_vnav_hold_index=lnavHoldIndex
 end
 
+-- The constraints of the route's SID, STAR and approach (B747.70.xt.autopilot.constraints.lua), read from
+-- X-Plane's CIFP when the route's idents change, a few hundred lines a frame: B747_route_constraints by
+-- route index, for VNAV; laminar/B747/autopilot/vnav/procedures names the procedures found with the
+-- number of their fixes on the route ("SID ENDE3J/6 STAR LAMS2A/3 APPCH I18R SUG1D/7"), "reading" while
+-- the files are read. The table has a metatable: XTLua stores a global table without one as a namespace
+-- of its own, whose read of a missing index recurses until the stack overflows.
+B747_route_constraints=setmetatable({},{})
+local routeConstraintLoader=nil
+local routeConstraintSignature=""
+local routeConstraintPending=false
+function B747_update_route_constraints(fmsO)
+	local n=table.getn(fmsO)
+	local names={}
+	for i=1,n do names[i]=tostring(fmsO[i][8]) end
+	local signature=table.concat(names,",")
+	if signature~=routeConstraintSignature then
+		routeConstraintSignature=signature
+		B747_route_constraints=setmetatable({},{})
+		routeConstraintPending=false
+		B747DR_vnav_procedures=""
+		-- without a route a file being read for the one before is closed (loader_start closes it otherwise)
+		if n<3 and routeConstraintLoader~=nil then B747_constraints.loader_start(routeConstraintLoader,{}) end
+		if n>=3 then
+			if routeConstraintLoader==nil then routeConstraintLoader=B747_constraints.new_loader() end
+			local airports={}
+			if fmsO[1][2]==1 then airports[table.getn(airports)+1]=names[1] end
+			if fmsO[n][2]==1 then airports[table.getn(airports)+1]=names[n] end
+			B747_constraints.loader_start(routeConstraintLoader,airports)
+			routeConstraintPending=true
+			B747DR_vnav_procedures="reading"
+		end
+	end
+	if routeConstraintPending and B747_constraints.loader_step(routeConstraintLoader,B747_constraints.LINES_PER_STEP) then
+		routeConstraintPending=false
+		local result=B747_constraints.match_route(fmsO,routeConstraintLoader.records)
+		B747_route_constraints=setmetatable(result.constraints,{})
+		B747DR_vnav_procedures=result.summary
+		print("route constraints: "..result.summary)
+	end
+end
+
 function B747_getCurrentWayPoint_default(fmsO)
 	B747DR_ap_lnavHeading_mode = 0
 	for i = 1, table.getn(fmsO), 1 do
@@ -4004,6 +4048,7 @@ function after_physics()
 	local fmsSTR = fmsJSON
 	local fms = json.decode(fmsSTR)
 	B747_update_takeoff_profile()
+	B747_update_route_constraints(fms)
 	B747_getCurrentWayPoint(fms)
 	B747_monitorAP(fms)
 	B747_update_vnav_energy_mode_isolation()

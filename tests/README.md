@@ -295,6 +295,23 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   fix's altitude, in the climb, after a jump of the active fix or one from
   afar, at a straight fix once abeam, when vectored away, or for an altitude
   leg's end or the origin.
+- `vnav_cifp_constraints_test.lua`: the SID, STAR and approach constraints read
+  from X-Plane's CIFP (`B747.70.xt.autopilot.constraints.lua`) - records as
+  X-Plane writes them (a CA leg, windows, flight levels, the glide slope
+  kinds at the FACF and FAF, the missed approach's start), and on made-up
+  airports in that form the procedures found from the route's idents: the SID
+  for the runway against one differing only in its last fix, another
+  runway's, an enroute transition; the STAR and the approach transition at
+  the same fix (the transition's constraint stands, as the native FMS keeps
+  it), the ILS against an RNAV approach without its FAF, the final alone, a
+  route back to the departure airport, no file, Custom Data before the
+  default data; legs at one fix in a row (a hold after it), a SID's altitude
+  leg before its first fix, a join where the later procedure has none; the
+  files read a few lines a frame, kept for a new route to the same airports,
+  an airport read in part read again, the file closed when the route goes,
+  and the autopilot's per-frame update by route index.
+  With `XPLANE_ROOT` set to an X-Plane 12 folder it also checks the real
+  EIDW 28R ENDE3J, EHAM LAMS2A and ILS 18R via SUG1D, and EINN's ILS 06.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the
