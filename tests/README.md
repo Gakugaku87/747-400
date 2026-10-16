@@ -361,7 +361,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
 - `vnav_approach_autothrottle_test.lua`: the A/T in the approach (EINN ILS 06,
   the IAS window open at idle 15.6 nm out) - VNAV_DES keeps it on and turns
   it back on, B747_ap_fma shows SPD at idle, and VNAV PTH stays with the
-  window open above SPD TRANS (VNAV SPD 30 nm out); 30 nm out the descent's
+  window open above SPD TRANS (VNAV SPD 30 nm out), also resuming the descent
+  from ALT HOLD (the datarefs read back as XTLua does within a frame: their
+  values from the frame's start, the writes after it); 30 nm out the descent's
   energy mode and IDLE as before, also near a level-off with the A/T off
   (the window open) or on (the window shut). It loads the production code
   with `approach_model.lua`.

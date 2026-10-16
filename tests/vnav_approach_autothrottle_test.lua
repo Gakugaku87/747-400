@@ -1,13 +1,15 @@
 -- Run from the repository root with Lua 5.1 or LuaJIT.
 -- In the approach the A/T holds the speed, VNAV's or the IAS window's: VNAV_DES
 -- does not turn it off at idle, and its FMA is SPD at idle; VNAV PTH stays with
--- the window open, also above SPD TRANS (no VNAV SPD in the approach). Before, with the
+-- the window open, also above SPD TRANS (no VNAV SPD in the approach), and the
+-- descent resumes from ALT HOLD there in VNAV PTH. Before, with the
 -- window open (the kit's speed intervention for the flaps) VNAV_DES turned the
 -- A/T off as soon as the throttles were at idle and left it off until the
 -- speed fell below Vmc + 15 kt: p6-line1 (EHAM, 2026-10-16) slowed from 194 to
 -- 149 kt after APP; in the approach model EINN's A/T went off at 15.6 nm.
 -- The production VNAV_DES, setDescentVSpeed and B747_ap_fma run in the
--- autopilot's namespace (approach_model.lua's loader) against mocked datarefs.
+-- autopilot's namespace (approach_model.lua's loader) against mocked datarefs,
+-- for the resumed descent read back as XTLua does within a frame.
 local model = dofile("tests/approach_model.lua")
 
 local checks, failures = 0, {}
@@ -24,10 +26,10 @@ local function case(name, body)
 end
 
 -- EINN ILS 06 descending to ELPOM (3,000 ft) at 236 kt with flaps 5, nm_before ELPOM, the IAS window open
--- at 230 kt and the throttles at idle; the A/T engaged or not.
-local function new_runtime(nm_before, at_active)
+-- at 230 kt and the throttles at idle; the A/T engaged or not. datarefs: the datarefs' table ({}).
+local function new_runtime(nm_before, at_active, datarefs)
     local o = model.einn()
-    local d = {}
+    local d = datarefs or {}
     local ap = model.load(d, {fmsData = o.fms_data, B747_route_constraints = o.constraints})
     model.set_datarefs(d, o, 0.01)
     local route = o.route
@@ -36,8 +38,7 @@ local function new_runtime(nm_before, at_active)
         ap.getHeading(elpom[5], elpom[6], bilto[5], bilto[6]))
     for i = 1, #route do route[i][10] = (i == 6) end
     d.B747DR_fmscurrentIndex = 6
-    d.simDR_pressureAlt1 = 3000 + nm_before * 290
-    d.simDR_radarAlt1 = d.simDR_pressureAlt1 - 46
+    d.simDR_pressureAlt1, d.simDR_radarAlt1 = 3000 + nm_before * 290, 3000 + nm_before * 290 - 46
     d.simDR_ind_airspeed_kts_pilot, d.simDR_groundspeed = 236, 236 * 0.514444
     d.simDR_vvi_fpm_pilot = -1000
     d.B747DR_airspeed_Vmc = model.vmc(279000, 5)
@@ -76,6 +77,37 @@ case("the window open above SPD TRANS in the approach", function()
     d.simDR_pressureAlt1, d.simDR_radarAlt1 = 15100, 15054
     ap.VNAV_DES(1, route)
     check(d.simDR_autopilot_flch_status == 2 and d.B747DR_ap_thrust_mode == 2, "30 nm out: VNAV SPD")
+end)
+
+-- Datarefs as XTLua gives them to a script: within a frame it reads back their values from the frame's start,
+-- and its writes (and commands) take effect after it. The second result ends a frame.
+local function xtlua_datarefs()
+    local now, written = {}, {}
+    local d = setmetatable({}, {
+        __index = function(_, key) return now[key] end,
+        __newindex = function(_, key, value) written[key] = value end})
+    return d, function()
+        for key, value in pairs(written) do now[key] = value end
+        written = {}
+    end
+end
+
+case("resuming the descent above SPD TRANS in the approach, the window open", function()
+    -- 10,000 ft above the path 7 nm before ELPOM in ALT HOLD (VNAV ALT), the MCP below: in that frame the
+    -- window's block's V/S reads back ALT HOLD, so VNAV_DES goes on to resume the descent - with V/S (VNAV
+    -- PTH), not VNAV SPD (FLCH) as above SPD TRANS before the approach
+    local d, end_frame = xtlua_datarefs()
+    local _, ap, route = new_runtime(7, 1, d)
+    d.simDR_pressureAlt1, d.simDR_radarAlt1 = 15100, 15054
+    d.simDR_autopilot_alt_hold_status, d.simDR_autopilot_vs_status, d.simDR_autopilot_flch_status = 2, 0, 0
+    d.B747DR_ap_inVNAVdescent = 1
+    end_frame()
+    ap.VNAV_DES(1, route)
+    end_frame()
+    check(d.B747DR_ap_inVNAVdescent == 2, "the descent resumed")
+    check(d.simDR_autopilot_flch_status == 0 and d.simDR_autopilot_vs_status == 2
+        and d.simDR_autopilot_alt_hold_status == 0, "resumed in VNAV PTH's V/S, not FLCH")
+    check(d.B747DR_ap_thrust_mode == 0, "resumed without THR REF")
 end)
 
 case("before the approach", function()
