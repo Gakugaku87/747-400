@@ -2680,17 +2680,19 @@ end
 -- active leg - abeam it past its start in the route's direction, before the start within that of the fix it starts
 -- at - or on a track towards the leg at up to 90 deg where the turn onto it begins (the turn's anticipation across the
 -- leg: 3.0 nm for 45 deg at 480 kt and 20 deg of bank, 9.7 for 90; before the leg's start only where that turn ends
--- about on the leg); and abeam the leg into the fix the active leg starts at, up to that fix (sequenced at its turn's
--- lead while LNAV was only armed). The leg is read as a segment at its start only: past its end its line counts.
+-- about on the leg); and abeam the leg into the fix the active leg starts at, closing on that fix within its turn's
+-- lead and 2.5 nm (sequenced at the lead while LNAV was only armed). Before its start the leg counts only so, not as
+-- its whole line; past its end its line counts.
 -- Otherwise LNAV stays armed and the roll mode before it (HDG SEL, HDG HOLD) flies on, as on Aerowinx PSX's 747-400
 -- (2.5 nm; the FCOM's figure to be confirmed). At once where there is no such leg: none active, from the origin
 -- airport, of no length, flown direct (after VECTORS, an altitude leg's end, PPOS, a hold), with an offset or a
 -- direct-to (the 747's own: from where it is).
 local LNAV_CAPTURE_XTK_NM=2.5
 -- Whether the 747 is where armed LNAV captures the leg to fmsO[i] (true or false), nil where there is no such leg.
--- active: the active leg, before its start within LNAV_CAPTURE_XTK_NM of the fix it starts at, or where it captures
--- the leg into that fix; else (that leg into the fix, nextCourse the active leg's) only abeam it within
--- LNAV_CAPTURE_XTK_NM, closing on its fix, where the FMC could have sequenced that fix at its turn's lead.
+-- active: the active leg; before its start within LNAV_CAPTURE_XTK_NM of the fix it starts at, where the turn onto
+-- it begins and ends about on the leg, or where it captures the leg into that fix. Else (that leg into the fix,
+-- nextCourse the active leg's) only abeam it within LNAV_CAPTURE_XTK_NM, closing on its fix, where the FMC could
+-- have sequenced that fix at its turn's lead.
 local function B747_lnav_captures_leg(fmsO,i,active,nextCourse)
 	local fix=fmsO[i]
 	if i<2 or fix==nil or type(fix[5])~="number" or type(fix[6])~="number" then return nil end
@@ -2711,9 +2713,12 @@ local function B747_lnav_captures_leg(fmsO,i,active,nextCourse)
 	-- the active leg on a track towards it at up to 90 deg, where the turn onto it begins: the anticipation of the
 	-- fly-by turn from the track onto the leg (the arc at the bank limit, half the roll-in, the wind) across the leg,
 	-- from the leg's course abeam the 747 (a long great-circle leg turns: 1 deg in 50 nm at 52 N), before the start
-	-- the course it starts on; before the start only within that and LNAV_CAPTURE_XTK_NM of the start along the leg,
-	-- so that the turn ends about on the leg (90 deg towards its line 1 nm before the start at 480 kt, LNAV engaged
-	-- only 2.3 nm off it, near the start fix, and went 7.4 nm through it; 1 nm past the start 9.7 nm off, and onto it)
+	-- the course it starts on. Before the start only where that turn ends about on the leg: the track crosses the
+	-- leg's line at most the anticipation and LNAV_CAPTURE_XTK_NM before the start (85 deg towards the line 1 nm
+	-- before the start at 480 kt, LNAV engaged only 2.5 nm off it, near the start fix, and went 6.4 nm through it;
+	-- 1 nm past the start 8.9 nm off, and onto it). Judged where the 747 was rather than where its track crosses
+	-- the line, a 45 deg track crossing 6 nm before the start entered that window only 0.7 nm off the line and went
+	-- 2.3 nm through it.
 	local turnIn=0
 	if active then
 		local course=legCourse
@@ -2724,7 +2729,10 @@ local function B747_lnav_captures_leg(fmsO,i,active,nextCourse)
 		local towards=getHeadingDifference(course,simDR_ground_track_true)
 		if xtk*towards<0 and math.abs(towards)<=90 then
 			local lead=B747_lnav_turn_anticipation_nm(simDR_ground_track_true,course)
-			if along>=0 or -along<=lead+LNAV_CAPTURE_XTK_NM then turnIn=lead*math.sin(math.rad(math.abs(towards))) end
+			local crossing=along+math.abs(xtk)/math.tan(math.rad(math.max(math.abs(towards),1)))
+			if along>=0 or crossing+lead>=-LNAV_CAPTURE_XTK_NM then
+				turnIn=lead*math.sin(math.rad(math.abs(towards)))
+			end
 		end
 	end
 	local captured=false

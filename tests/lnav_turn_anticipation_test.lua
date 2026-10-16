@@ -1040,9 +1040,10 @@ do
         "LNAV pushed 1 nm off the leg's line 10 nm before its start: engaged %s (2.5 nm from it at %.0f s)",
         out.engaged and string.format("at %.0f s", out.engaged.t) or "never", t_a))
     -- 12 nm off, 85 deg towards the leg's line 1 nm before its start: engaged as 1 nm past it, where the turn onto it
-    -- begins (8.9 nm off), and onto the leg. Only within 2.5 nm of A before its start it engaged 2.3 nm off and went
-    -- 7 nm through the leg (a review, at 90 deg: 7.4 nm). 20 nm before the start the turn would end on the line far
-    -- before the leg: armed, crossing it.
+    -- begins (8.9 nm off), and onto the leg. Only within 2.5 nm of A before its start it engaged 2.5 nm off and went
+    -- 6.4 nm through the leg (a review, at 90 deg: 2.3 and 7.4 nm). 20 nm before the start the turn would end on the
+    -- line far before the leg: armed, crossing it (here the leg into A is from the origin airport; along the line of
+    -- a leg into A that the 747 crosses within A's lead and 2.5 nm, closing on A, it would engage abeam that leg).
     local engaged_at = {}
     for _, along_nm in ipairs({1, -1}) do
         out = cruise({start = start(along_nm, 12), heading = 185, seconds = 900})
@@ -1059,6 +1060,22 @@ do
     check(engaged_at[1] and engaged_at[-1] and math.abs(engaged_at[1] - engaged_at[-1]) <= 0.3, string.format(
         "... 1 nm before the start engaged as 1 nm past it (%s, %s nm off)", tostring(engaged_at[-1]),
         tostring(engaged_at[1])))
+    -- 45 deg towards the leg's line, crossing it 6 nm before its start: engaged where the turn onto it begins (3.0 nm
+    -- off) and onto the line and the leg; judged where the 747 was rather than where its track crosses the line, it
+    -- entered the window only 0.7 nm off and went 2.2 nm through (a review)
+    local c_lat, c_lon = probe.movePoint(a_lat, a_lon, 6, 90)
+    local s45 = {probe.movePoint(c_lat, c_lon, 15, 45)}
+    out = cruise({start = s45, heading = 225, seconds = 600})
+    do
+        local at = out.engaged and xtk(out.engaged.lat, out.engaged.lon)
+        local through = 0
+        for _, q in ipairs(out.track) do through = math.max(through, -xtk(q.lat, q.lon)) end
+        last = out.track[#out.track]
+        local final = math.abs(xtk(last.lat, last.lon))
+        check(at ~= nil and math.abs(at - 3.0) <= 0.3 and through <= 0.3 and final <= 0.1, string.format(
+            "LNAV pushed 45 deg towards the leg's line crossing it 6 nm before its start: engaged %s nm off it (3.0), then %.2f nm through it at most (0.3), %.2f nm off at the end (0.1)",
+            at and string.format("%.2f", at) or "never", through, final))
+    end
     out = cruise({start = start(-20, 12), heading = 185, seconds = 300})
     last = out.track[#out.track]
     check(out.engaged == nil and xtk(last.lat, last.lon) < -2, string.format(
