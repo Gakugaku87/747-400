@@ -136,7 +136,7 @@ local function fly(s)
         end
         t = t + dt
         rates[#rates + 1] = rate
-        out.track[#out.track + 1] = {lat = lat, lon = lon, gs = gs, t = t}
+        out.track[#out.track + 1] = {lat = lat, lon = lon, gs = gs, t = t, alt = alt, bank = bank}
     end
     out.roll_rate = 0
     for i = 1, #rates do
@@ -674,6 +674,26 @@ for _, speed in ipairs({{250, "low", 5000}, {480, "cruise", 33000}}) do
     local name = string.format("FIX twice at %d kt", speed[1])
     check(out.turned <= 120, string.format("%s: %.0f deg of turning in all (one 60 deg turn)", name, out.turned))
     check(fixes_in_order(out, route, 3, 4), name..": FIX and FIX2 sequenced in order")
+end
+
+-- 7. No turn starts below 400 ft above the ground (as the anticipation): a SID's first fix 1.5 nm past the
+-- lift-off with a 90 deg turn, climbing at 1,800 fpm at 165 kt. LNAV's path started its arc at once, banking
+-- at 118 ft.
+do
+    local rw = {52.0, 0.0}
+    local f1 = {probe.movePoint(rw[1], rw[2], 2.5, 270)}
+    local f2 = {probe.movePoint(f1[1], f1[2], 20, 0)}
+    local f3 = {probe.movePoint(f2[1], f2[2], 20, 0)}
+    route = {E("ORIG", rw[1], rw[2] + 0.01, 0, 1), E("RW27", rw[1], rw[2]), E("FIX1", f1[1], f1[2]), E("FIX2", f2[1], f2[2]),
+        E("FIX3", f3[1], f3[2]), E("DEST", 50, 0, 0, 1)}
+    out = fly({route = route, index = 3, start = {probe.movePoint(rw[1], rw[2], 1.0, 270)}, heading = 270, tas_kt = 165,
+        alt_ft = 30, vs_fpm = 1800, alt_max_ft = 6000, loop = "low", seconds = 200})
+    local first
+    for _, p in ipairs(out.track) do
+        if first == nil and math.abs(p.bank) > 3 then first = p end
+    end
+    check(first ~= nil and first.alt >= 400, string.format("FIX1 1.5 nm past the lift-off: banking from %s ft (at least 400)",
+        first and string.format("%.0f", first.alt) or "-"))
 end
 
 print("LNAV turn anticipation tests passed: "..checks)

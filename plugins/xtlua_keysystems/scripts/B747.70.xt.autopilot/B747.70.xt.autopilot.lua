@@ -2452,7 +2452,8 @@ end
 
 -- [i-1b] The lateral path through fmsO[k] (afds.lnav_path_at at the aircraft): the leg into it, the fly-by arc
 -- of its turn of radius radius_nm and the leg after it; a turn LNAV does not fly by (into an entry that is no
--- fix, or of more than LNAV_FLYBY_MAX_TURN_DEG) straight on through the fix; the turn to the leg after a fix
+-- fix, or of more than LNAV_FLYBY_MAX_TURN_DEG; on the ground or below LNAV_ALTITUDE_LEG_MIN_RA_FT above it, as
+-- the anticipation: a SID's arc banked from 118 ft) straight on through the fix; the turn to the leg after a fix
 -- listed twice in a row (a leg of no length, whose course is none: the path took it as 000 or 180 and
 -- orbited). nil where the leg into it is no course from a fix: from the origin airport, flown direct to the
 -- fix (after an altitude leg's end, from VECTORS, a hold, PPOS...), or of no length.
@@ -2475,7 +2476,8 @@ local function B747_lnav_path_at_fix(fmsO,k,radius_nm,lookahead_nm,capture_nm)
 	local n=k+1
 	if fmsO[n]~=nil and not B747_lnav_leg_has_course(fix,fmsO[n]) then n=n+1 end
 	local nextFix=fmsO[n]
-	if n<count and B747_lnav_leg_supports_preemption(nextFix) and B747_lnav_leg_has_course(fix,nextFix) then
+	if n<count and simDR_onGround==0 and simDR_radarAlt1>=LNAV_ALTITUDE_LEG_MIN_RA_FT
+		and B747_lnav_leg_supports_preemption(nextFix) and B747_lnav_leg_has_course(fix,nextFix) then
 		local course=getHeading(fix[5],fix[6],nextFix[5],nextFix[6])
 		if math.abs(getHeadingDifference(course,inCourse))<=B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG then
 			outCourse=course
