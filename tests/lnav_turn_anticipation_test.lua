@@ -913,4 +913,44 @@ for _, c in ipairs({{170, 10, -90, 0.6}, {-165, 15, 90, 0.3}}) do
     check(fixes_in_order(out, route, 3, 4), name..": FIX and NEXT sequenced in order")
 end
 
+-- 14. After a leg LNAV steered as before (from VECTORS), a 747 established on it flies the next fix's arc from the
+-- hand-over (by the lead), also where the arc - drawn for the highest ground speed across the turn - began before
+-- the lead in the wind and the 747 was already 0.4 nm into it, the arc's course 9 deg round (250 kt, +90 deg,
+-- 000/40): it was taken for a 747 off the path, and LNAV flew the next leg's 45 deg capture instead.
+local function handover_runtime()
+    local lat0, lon0 = 50, -10
+    local fix_lat, fix_lon = probe.movePoint(lat0, lon0, 30, 0)
+    local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, 40, 0)
+    local after_lat, after_lon = probe.movePoint(next_lat, next_lon, 40, 90)
+    local far_lat, far_lon = probe.movePoint(after_lat, after_lon, 40, 90)
+    local r = {E("ORIG", lat0 - 1, lon0, 0, 1), E("VECTORS", lat0, lon0), E("FIX", fix_lat, fix_lon),
+        E("NEXT", next_lat, next_lon), E("AFTER", after_lat, after_lon), E("FAR", far_lat, far_lon),
+        E("DEST", far_lat + 5, far_lon, 0, 1)}
+    local env = new_runtime()
+    -- the track LNAV's path commands with AFTER flown to, before_nm before NEXT and off_nm right of the leg to it,
+    -- on track, at 250 kt TAS in 000/40
+    local function steer(before_nm, off_nm, track)
+        local lat, lon = env.movePoint(next_lat, next_lon, before_nm, 180)
+        lat, lon = env.movePoint(lat, lon, off_nm, 90)
+        env.simDR_latitude, env.simDR_longitude = lat, lon
+        env.simDR_true_heading, env.simDR_ground_track_true = track, track
+        env.simDR_TAS_mps, env.simDR_groundspeed = 250 * KT, 210 * KT
+        env.simDR_pressureAlt1, env.simDR_radarAlt1 = 5000, 5000
+        env.B747DR_fmscurrentIndex = 5
+        return env.B747_lnav_path_track(r, 5)
+    end
+    return env, steer
+end
+do
+    local _, steer = handover_runtime()
+    local track = steer(2.09, 0, 0)
+    check(track ~= nil and track < 38, string.format(
+        "on the leg from VECTORS at NEXT's hand-over in 000/40, 0.4 nm into its arc: NEXT's arc (track %s; the next leg's capture 45)",
+        tostring(track and math.floor(track + 0.5))))
+    _, steer = handover_runtime()
+    track = steer(2.09, 0.5, 0)
+    check(track ~= nil and track >= 40, string.format(
+        "0.5 nm off the leg at the hand-over: the next leg's path (track %s)", tostring(track and math.floor(track + 0.5))))
+end
+
 print("LNAV turn anticipation tests passed: "..checks)

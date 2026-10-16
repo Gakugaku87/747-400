@@ -2597,10 +2597,13 @@ end
 
 -- [i-1b] Whether the arc at the fix before (fmsO[k], LNAV's path through it path) is flown once that fix has
 -- been sequenced: after a leg LNAV steered as before (the fix before k no fly-by), only if the 747 was on that
--- path then, within LNAV_PATH_ON_LEG_NM and LNAV_PATH_ON_LEG_DEG of it; else LNAV takes the next leg's path.
--- Drawn from a leg the 747 was not on, k's arc first rolled it away from its turn: 1.16 nm outside the leg after
--- a 90 deg turn 10 nm after a 170 deg turn-back (0.6 nm inside the leg to it, 19 deg off), 0.42 nm 15 nm after a
--- 165 deg one (0.2 nm, 7 deg off), steered as before 0.54 and 0.24. Decided once for each fix flown to.
+-- path or on the leg into k then, within LNAV_PATH_ON_LEG_NM and LNAV_PATH_ON_LEG_DEG of either; else LNAV takes
+-- the next leg's path. Drawn from a leg the 747 was not on, k's arc first rolled it away from its turn: 1.16 nm
+-- outside the leg after a 90 deg turn 10 nm after a 170 deg turn-back (0.6 nm inside the leg to it, 19 deg off),
+-- 0.42 nm 15 nm after a 165 deg one (0.2 nm, 7 deg off), steered as before 0.54 and 0.24. The leg too: the arc,
+-- drawn for the highest ground speed across the turn, begins before the anticipation's lead in wind, and a 747
+-- on the leg is already into it, the arc's course turned away (9 deg at 250 kt, +90 deg, 000/40). Decided once
+-- for each fix flown to.
 local LNAV_PATH_ON_LEG_NM=0.1
 local LNAV_PATH_ON_LEG_DEG=5
 local lnavArcBefore={current=0,lat=0,lon=0,flown=false}
@@ -2609,8 +2612,18 @@ local function B747_lnav_arc_before_flown(fmsO,k,current,path)
 	if lnavArcBefore.current~=current or lnavArcBefore.lat~=before[5] or lnavArcBefore.lon~=before[6] then
 		local _,noFlyBy=B747_lnav_fix_before(fmsO,k)
 		lnavArcBefore.current,lnavArcBefore.lat,lnavArcBefore.lon=current,before[5],before[6]
-		lnavArcBefore.flown=not noFlyBy or (math.abs(path.xtk_nm)<=LNAV_PATH_ON_LEG_NM
-			and math.abs(getHeadingDifference(simDR_ground_track_true,path.course_deg))<=LNAV_PATH_ON_LEG_DEG)
+		local onPath=math.abs(path.xtk_nm)<=LNAV_PATH_ON_LEG_NM
+			and math.abs(getHeadingDifference(simDR_ground_track_true,path.course_deg))<=LNAV_PATH_ON_LEG_DEG
+		local onLeg=false
+		if noFlyBy and not onPath then
+			local legStart=B747_lnav_leg_start(fmsO,k)
+			local legXtk=B747_afds_helpers.signed_cross_track_nm(legStart[5],legStart[6],before[5],before[6],
+				simDR_latitude,simDR_longitude,getDistance,getHeading)
+			local inCourse=B747_lnav_inbound_course(fmsO,k)
+			onLeg=legXtk~=nil and math.abs(legXtk)<=LNAV_PATH_ON_LEG_NM
+				and math.abs(getHeadingDifference(simDR_ground_track_true,inCourse))<=LNAV_PATH_ON_LEG_DEG
+		end
+		lnavArcBefore.flown=not noFlyBy or onPath or onLeg
 	end
 	return lnavArcBefore.flown
 end
