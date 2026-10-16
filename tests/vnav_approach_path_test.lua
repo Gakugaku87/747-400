@@ -298,6 +298,12 @@ case("EHAM between AM608 and AM621", function()
     r.setDescentVSpeed(route)
     near(r.B747DR_ap_vb, math.deg(math.atan((on_path + 300 - 2000) / (2.0 * 6076.12))), 0.01,
         "V/B 300 ft above the path: to AM621")
+    -- vectored 6 nm east of AM621, AM621 flown to (farther from the runway than AM608 is): still to AM621
+    lat, lon = geo.movePoint(route[AM621][5], route[AM621][6], 6, 90)
+    r = new_runtime(route, AM621, lat, lon, 2500, 2000)
+    r.setDescentVSpeed(route)
+    near(r.B747DR_ap_vb, math.deg(math.atan(500 / (6 * 6076.12))), 0.01, "V/B off the route: to AM621, not AM608")
+    lat, lon = before(route, AM621, 2.0)
     -- setDistances leaves the path error to the path: no 290 ft/nm line to the airport's reference point
     r = new_runtime(route, AM621, lat, lon, on_path, 2000)
     r.setDistances(route)
@@ -327,6 +333,11 @@ case("EINN level at 3,000 ft before the glide slope", function()
     r.setDescentVSpeed(route)
     near(r.B747BR_fpe, 0, 1, "on the final "..d.." nm long")
     near(r.simDR_autopilot_vs_fpm, -GLIDE * 3, 2, "the final's V/S at 180 kt")
+    -- level at 3,000 ft between ASGON and the glide slope intercept: the V/B to the runway, not to the intercept
+    lat, lon = before(route, RW06, 9.2)
+    r = new_runtime(route, RW06, lat, lon, 3000, 3000, nil, 35000)
+    r.setDescentVSpeed(route)
+    near(r.B747DR_ap_vb, math.deg(math.atan((3000 - 101) / (9.2 * 6076.12))), 0.01, "V/B to RW06's 101 ft")
     -- 7 nm before ELPOM, coming down from the T/D: the descent's 290 ft/nm, BILTO's 35,000 ft not a fix of it
     lat, lon = before(route, ELPOM, 7)
     r = new_runtime(route, ELPOM, lat, lon, 3000 + 7 * 290, 3000, nil, 35000)

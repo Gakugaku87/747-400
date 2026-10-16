@@ -291,9 +291,11 @@ function B747_vnav_approach_path(fmsO)
     return nil
   end
   local alt, gradient = B747_afds_helpers.vnav_path_at(points, distance)
+  -- the next fix ahead in the route's order (the one flown to, or held, and on), not by distance: off the route
+  -- the distance to the fix flown to can be more than to the one before it
   local ahead = points[1]
   for _, point in ipairs(points) do
-    if point.index ~= nil and point.d < distance and point.d > ahead.d then ahead = point end
+    if point.index ~= nil and point.index >= first and point.index < ahead.index then ahead = point end
   end
   return {alt = alt, gradient = gradient, distance = distance, ahead = ahead}
 end
