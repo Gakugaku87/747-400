@@ -162,6 +162,11 @@ local function on_turn(outside_nm)
 end
 near(on_turn(0), 0, "on the arc's middle, NEXT active: on the path")
 near(on_turn(0.5), -0.5, "0.5 nm outside the arc's middle: 0.5 nm left of the path")
+-- the arc is LNAV's path only within the anticipation's 2 nm of it: 3 nm outside it is the leg after the turn's
+-- (FIX to NEXT, east), 0.79 nm from FIX on 135, right of it
+near(on_turn(1.0), -1.0, "1 nm outside the arc's middle: still the arc's, 1 nm left")
+local radius = 246 ^ 2 / (9.80665 * math.tan(math.rad(20))) / 1852
+near(on_turn(3.0), math.sqrt(0.5) * (radius * (math.sqrt(2) - 1) - 3), "3 nm outside it: from the leg after the turn")
 
 -- 7. The PROGRESS page shows the side of the error and its size.
 local page_env = setmetatable({

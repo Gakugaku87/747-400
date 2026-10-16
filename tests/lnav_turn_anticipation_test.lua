@@ -455,6 +455,25 @@ check(one_frame({start_name = "VECTORS", next_course = 60, dist = 8}) == 0,
 -- a fix's name that only begins like it is no VECTORS: its leg keeps the
 -- 2 nm cross-track limit
 check(one_frame({start_name = "VECTA", xtk = 2.5}) == 0, "the leg from a fix VECTA, 2.5 nm off it: not anticipated")
+-- the steering with a ground speed that is no number (NaN): no path, the heading LNAV writes a number
+do
+    local env = new_runtime()
+    local lat0, lon0 = 50, -10
+    local fix_lat, fix_lon = env.movePoint(lat0, lon0, 40, 0)
+    local next_lat, next_lon = env.movePoint(fix_lat, fix_lon, 40, 90)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("FIX", fix_lat, fix_lon), E("NEXT", next_lat, next_lon),
+        E("DEST", next_lat + 5, next_lon, 0, 1)}
+    env.B747DR_fmscurrentIndex, env.B747DR_fms_setCurrent, env.B747DR_ap_lnavHeading_mode = 3, 3, 3
+    env.simDR_latitude, env.simDR_longitude = env.movePoint(lat0, lon0, 20, 0)
+    env.simDR_true_heading, env.simDR_ground_track_true, env.simDR_wind_speed_kts, env.simDRTime = 0, 0, 0, 10
+    env.simDR_pressureAlt1, env.simDR_radarAlt1, env.simDR_vvi_fpm_pilot = 31000, 31000, 0
+    env.simDR_groundspeed, env.simDR_TAS_mps = 0 / 0, 478 * KT
+    route[3][10] = true
+    env.B747_updateApproachHeading(route)
+    local heading = env.simDR_autopilot_heading_deg
+    check(type(heading) == "number" and heading == heading, "a ground speed that is no number: the heading "
+        ..tostring(heading))
+end
 -- with an offset the new lead is not taken from the route's turn point
 check(one_frame({target = 2, xtk = 2}) == 0, "on a 2 nm offset: not anticipated")
 -- a bank angle mode outside 1-6 (XTLua's 0 on a first read) is the 20 deg of

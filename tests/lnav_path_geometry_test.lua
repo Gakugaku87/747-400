@@ -61,6 +61,11 @@ near(p.xtk_nm, 2 - 2 * math.sqrt(2), 1e-9, "the fix is 0.83 nm left of (outside)
 -- inside the arc, right of the path
 p = path(1.5, -1.5, 0, 90, 2, 2)
 near(p.xtk_nm, 2 - math.sqrt(0.5), 1e-9, "inside the arc: right of the path")
+-- with a look-ahead shorter than that cross-track the aim is the cross-track along the arc (45 deg at most)
+p = path(1.5, -1.5, 0, 90, 2, 0.5)
+local aim_bearing = -math.pi / 2 + (2 * math.pi / 4 + (2 - math.sqrt(0.5))) / 2
+near(p.aim_east_nm, 2 + 2 * math.sin(aim_bearing), 1e-9, "inside the arc, 0.5 nm look-ahead: aim 1.29 nm round it (east)")
+near(p.aim_north_nm, -2 + 2 * math.cos(aim_bearing), 1e-9, "inside the arc, 0.5 nm look-ahead: aim 1.29 nm round it (north)")
 
 -- on the outbound leg
 p = path(5, 0.3, 0, 90, 2, 2)
