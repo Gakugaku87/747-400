@@ -2412,13 +2412,13 @@ local function B747_altitude_leg_reached(entry)
 end
 
 -- The start of the leg to fmsO[i]: the entry before it, but for the leg after altitude-terminated legs'
--- ends ("(650)", which X-Plane may keep moving with the aircraft) the entry before them
+-- ends ("(650)", which X-Plane may keep moving with the aircraft) the entry before them; and its index
 local function B747_lnav_leg_start(fmsO, i)
 	local k=i-1
 	while k>1 and B747_afds_helpers.altitude_leg_end_ft(fmsO[k])~=nil do
 		k=k-1
 	end
-	return fmsO[k]
+	return fmsO[k],k
 end
 
 -- The inbound course at fmsO[i] (true) for its turn, whether its leg is flown
@@ -2678,50 +2678,64 @@ end
 
 -- [i-1b] LNAV ARM: LNAV pushed in flight (armed, B747DR_ap_lnav_state 1) engages within LNAV_CAPTURE_XTK_NM of the
 -- active leg, abeam it (past the leg's start in the route's direction, or before it near its start fix), or on a
--- track towards the leg at up to
--- 90 deg where the turn onto it begins (the turn's anticipation across the leg: 3.0 nm for 45 deg at 480 kt and
--- 20 deg of bank, 9.7 for 90); otherwise it stays armed and the roll mode before it (HDG SEL, HDG HOLD) flies on, as on
--- Aerowinx PSX's 747-400 (2.5 nm; the FCOM's figure to be confirmed). At once where there is no such leg: none
--- active, from the origin airport, of no length, flown direct (after VECTORS, an altitude leg's end, PPOS, a hold),
--- with an offset or a direct-to (the 747's own: from where it is).
+-- track towards the leg at up to 90 deg where the turn onto it begins (the turn's anticipation across the leg: 3.0 nm
+-- for 45 deg at 480 kt and 20 deg of bank, 9.7 for 90); and abeam the leg into the fix the active leg starts at, up
+-- to that fix (sequenced at its turn's lead while LNAV was only armed). Otherwise it stays armed and the
+-- roll mode before it (HDG SEL, HDG HOLD) flies on, as on Aerowinx PSX's 747-400 (2.5 nm; the FCOM's figure to be
+-- confirmed). At once where there is no such leg: none active, from the origin airport, of no length, flown direct
+-- (after VECTORS, an altitude leg's end, PPOS, a hold), with an offset or a direct-to (the 747's own: from where it
+-- is).
 local LNAV_CAPTURE_XTK_NM=2.5
-local function B747_lnav_capture_now(fmsO)
-	local current=B747DR_fmscurrentIndex
-	local fix=fmsO[current]
-	if current<2 or fix==nil or type(fix[5])~="number" or type(fix[6])~="number" or B747DR_ap_lnav_xtk_target~=0 then
-		return true
-	end
-	local legStart=B747_lnav_leg_start(fmsO,current)
+-- Whether the 747 is where armed LNAV captures the leg to fmsO[i] (true or false), nil where that is no such leg.
+-- active: the active leg, before its start within LNAV_CAPTURE_XTK_NM of the fix it starts at, or where it captures
+-- the leg into that fix; else (that leg into the fix) only abeam it within LNAV_CAPTURE_XTK_NM, between its start
+-- and its end.
+local function B747_lnav_captures_leg(fmsO,i,active)
+	local fix=fmsO[i]
+	if i<2 or fix==nil or type(fix[5])~="number" or type(fix[6])~="number" then return nil end
+	local legStart,startIndex=B747_lnav_leg_start(fmsO,i)
 	if legStart==nil or tonumber(legStart[2])==1 or type(legStart[5])~="number" or type(legStart[6])~="number"
 		or not B747_lnav_leg_has_course(legStart,fix) then
-		return true
+		return nil
 	end
-	local _,directTo=B747_lnav_inbound_course(fmsO,current)
-	if directTo then return true end
+	local _,directTo=B747_lnav_inbound_course(fmsO,i)
+	if directTo then return nil end
 	local xtk=B747_afds_helpers.signed_cross_track_nm(legStart[5],legStart[6],fix[5],fix[6],simDR_latitude,
 		simDR_longitude,getDistance,getHeading)
-	if xtk==nil then return true end
+	if xtk==nil then return nil end
 	local legCourse=getHeading(legStart[5],legStart[6],fix[5],fix[6])
-	local along=getDistance(legStart[5],legStart[6],simDR_latitude,simDR_longitude)*math.cos(math.rad(
+	local fromStart=getDistance(legStart[5],legStart[6],simDR_latitude,simDR_longitude)
+	local along=fromStart*math.cos(math.rad(
 		getHeadingDifference(legCourse,getHeading(legStart[5],legStart[6],simDR_latitude,simDR_longitude))))
-	-- before the leg's start (a fix sequenced while LNAV was only armed, or the leg ahead seen from behind): within
-	-- LNAV_CAPTURE_XTK_NM of the fix it starts at (pushed just past a fly-by fix flown through in HDG SEL, it stayed
-	-- armed while HDG SEL flew away)
+	local captured=false
 	if along<0 then
-		return getDistance(legStart[5],legStart[6],simDR_latitude,simDR_longitude)<=LNAV_CAPTURE_XTK_NM
+		-- before the leg's start (a fix sequenced while LNAV was only armed, or the leg ahead seen from behind):
+		-- within LNAV_CAPTURE_XTK_NM of the fix it starts at (pushed just past a fly-by fix flown through in HDG
+		-- SEL, it stayed armed while HDG SEL flew away)
+		captured=active and fromStart<=LNAV_CAPTURE_XTK_NM
+	elseif active or along<=getDistance(legStart[5],legStart[6],fix[5],fix[6]) then
+		-- the leg's course abeam the 747 (a long great-circle leg turns: 1 deg in 50 nm at 52 N)
+		local abeamLat,abeamLon=movePoint(legStart[5],legStart[6],along,legCourse)
+		local course=(getHeading(abeamLat,abeamLon,legStart[5],legStart[6])+180)%360
+		local capture=LNAV_CAPTURE_XTK_NM
+		local towards=getHeadingDifference(course,simDR_ground_track_true)
+		if active and xtk*towards<0 and math.abs(towards)<=90 then
+			-- the anticipation of the fly-by turn from the track onto the leg (the arc at the bank limit, half the
+			-- roll-in, the wind), across the leg
+			capture=math.max(capture,B747_lnav_turn_anticipation_nm(simDR_ground_track_true,course)
+				*math.sin(math.rad(math.abs(towards))))
+		end
+		captured=math.abs(xtk)<=capture
 	end
-	-- the leg's course abeam the 747 (a long great-circle leg turns: 1 deg in 50 nm at 52 N)
-	local abeamLat,abeamLon=movePoint(legStart[5],legStart[6],along,legCourse)
-	local course=(getHeading(abeamLat,abeamLon,legStart[5],legStart[6])+180)%360
-	local capture=LNAV_CAPTURE_XTK_NM
-	local towards=getHeadingDifference(course,simDR_ground_track_true)
-	if xtk*towards<0 and math.abs(towards)<=90 then
-		-- the anticipation of the fly-by turn from the track onto the leg (the arc at the bank limit, half the
-		-- roll-in, the wind), across the leg
-		capture=math.max(capture,B747_lnav_turn_anticipation_nm(simDR_ground_track_true,course)
-			*math.sin(math.rad(math.abs(towards))))
-	end
-	return math.abs(xtk)<=capture
+	if captured or not active then return captured end
+	-- the leg into the fix the active leg starts at, which the FMC sequenced at its turn's lead while LNAV was only
+	-- armed (pushed 5 nm before a +90 deg turn's fix at 480 kt, 1.5 nm off the leg to it, LNAV engaged only 2.5 nm
+	-- from the fix, 22.5 s late, and went 7.7 nm outside the next leg, 4.8 engaged at once; diverging, never)
+	return B747_lnav_captures_leg(fmsO,startIndex,false)==true
+end
+local function B747_lnav_capture_now(fmsO)
+	if B747DR_ap_lnav_xtk_target~=0 then return true end
+	return B747_lnav_captures_leg(fmsO,B747DR_fmscurrentIndex,true)~=false
 end
 
 -- [i-1b] Armed LNAV engages above 50 ft where B747_lnav_capture_now allows, and when it was armed on the ground for

@@ -323,10 +323,13 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   (2.7-3.3 and 9.4-10 nm off at 480 kt) and onto it within 0.2 nm; 1 nm off
   engaged at once, 10 nm before the leg's start only once within 2.5 nm of it,
   1 nm past a fly-by fix flown through in HDG SEL at once and onto the next
-  leg; at once on a
-  leg flown direct (from VECTORS) or after the 747's own DIRECT TO; armed on the
-  runway, engaged above 50 ft, also 1 nm before the leg's start (armed on the
-  ground for the takeoff).
+  leg, and 5 nm before a fix the FMC sequenced at its turn's lead (480 kt,
+  1.5 nm off the leg to it, HDG SEL 000 or 345) at the push, as LNAV engaging
+  at once flies it, but 10 nm past that fix on the line of the leg to it,
+  flying away from the next leg, still armed; at once on a leg flown direct
+  (from VECTORS) or after the 747's own DIRECT TO; armed on the runway,
+  engaged above 50 ft, also 1 nm before the leg's start (armed on the ground
+  for the takeoff).
 - `lnav_xtk_error_test.lua`: LNAV's cross-track error every frame - the signed
   distance from the active leg (+ right) mid-leg on both sides and near its
   end, from the offset track while an offset is flown (not after a

@@ -79,7 +79,8 @@ end
 -- tas_max_kt, alt_ft, vs_fpm, alt_max_ft, loop = "cruise"|"low", wind_from_deg,
 -- wind_kt, seconds, setup = function(env) before the first frame, armed = LNAV
 -- pushed (armed) with HDG SEL on the start heading: out.engaged = {t, lat, lon}
--- when it engages}.
+-- when it engages; arm_at_s = HDG SEL on the start heading, LNAV off, pushed at
+-- that time: out.pushed = {t, index}}.
 local LOOPS = {cruise = {3.2, 0.22}, low = {4.7, 0.73}}
 local function fly(s)
     local env = new_runtime()
@@ -91,6 +92,7 @@ local function fly(s)
     local wind_from, wind_kt = s.wind_from_deg or 0, s.wind_kt or 0
     env.B747DR_fmscurrentIndex, env.B747DR_fms_setCurrent, env.B747DR_ap_lnavHeading_mode = s.index, s.index, s.index
     if s.armed then env.B747DR_ap_lnav_state, env.simDR_autopilot_heading_deg = 1, s.heading end
+    if s.arm_at_s then env.B747DR_ap_lnav_state, env.simDR_autopilot_heading_deg = 0, s.heading end
     if s.ground then env.simDR_onGround = 1 end
     if s.setup then s.setup(env) end
     local alt = s.alt_ft
@@ -119,6 +121,9 @@ local function fly(s)
             out.switches[#out.switches + 1] = {from = previous, to = env.B747DR_fmscurrentIndex,
                 nm = env.getDistance(lat, lon, fix[5], fix[6]), lat = lat, lon = lon, t = t}
             previous = env.B747DR_fmscurrentIndex
+        end
+        if s.arm_at_s and not out.pushed and t >= s.arm_at_s then
+            env.B747DR_ap_lnav_state, out.pushed = 1, {t = t, index = env.B747DR_fmscurrentIndex}
         end
         if env.B747DR_ap_lnav_state == 1 then
             -- armed LNAV engaging (B747_ap_fma; before LNAV ARM it engaged at once above 50 ft)
@@ -1059,6 +1064,54 @@ do
     check(out.engaged ~= nil and out.engaged.t <= 0.1 and through <= 0.3 and final <= 0.1, string.format(
         "LNAV pushed 1 nm past a fly-by fix flown through in HDG SEL: engaged %s, %.2f nm through the next leg, %.2f off it at the end",
         out.engaged and string.format("at %.1f s", out.engaged.t) or "never", through, final))
+end
+-- LNAV pushed after the FMC sequenced a fly-by fix ahead at its turn's lead (480 kt, +90 deg at NEXT, the lead
+-- 9.7 nm: sequenced 6.1 nm before NEXT, once HDG SEL 1.5 nm left of the leg to it was 2 nm off its arc; pushed 5 nm
+-- before it, so the active leg starts ahead): engaged at the push, abeam the leg to NEXT, and flown as LNAV engaging
+-- at once flies it, the heading closing on the next leg (000) or not (345). Within 2.5 nm of NEXT only it engaged
+-- 22.5 s late, 7.7 nm outside the next leg (at once 4.8), or never (72 nm off after 10 min; a review).
+do
+    local lat0, lon0 = 52, -12
+    local next_lat, next_lon = probe.movePoint(lat0, lon0, 60, 0)
+    local after_lat, after_lon = probe.movePoint(next_lat, next_lon, 60, 90)
+    local far_lat, far_lon = probe.movePoint(after_lat, after_lon, 60, 90)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("NEXT", next_lat, next_lon),
+        E("AFTER", after_lat, after_lon), E("FAR", far_lat, far_lon), E("DEST", far_lat, far_lon + 1, 0, 1)}
+    -- at the push 5 nm before NEXT and 1.5 nm left of the leg to it, on the heading for 5 nm before that
+    local p_lat, p_lon = probe.movePoint(next_lat, next_lon, 5, 180)
+    p_lat, p_lon = probe.movePoint(p_lat, p_lon, 1.5, 270)
+    local push = 5 / 480 * 3600
+    local function arm(heading, at_once)
+        local s_lat, s_lon = probe.movePoint(p_lat, p_lon, 5, (heading + 180) % 360)
+        local o = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = heading, tas_kt = 480,
+            alt_ft = 33000, loop = "cruise", seconds = 600, arm_at_s = push,
+            setup = at_once and function(env) env.B747_lnav_engage_armed = nil end or nil})
+        local outside = 0
+        for _, q in ipairs(o.track) do
+            outside = math.max(outside, -afds.signed_cross_track_nm(next_lat, next_lon, after_lat, after_lon, q.lat,
+                q.lon, probe.getDistance, probe.getHeading))
+        end
+        return o, outside
+    end
+    for _, heading in ipairs({0, 345}) do
+        local o, outside = arm(heading)
+        local _, reference = arm(heading, true)
+        local name = string.format("LNAV pushed 5 nm before NEXT (sequenced at its lead) on HDG SEL %03d", heading)
+        check(o.pushed and o.pushed.index == 4, name..": NEXT sequenced before the push")
+        check(o.engaged ~= nil and o.engaged.t - o.pushed.t <= 0.1 and math.abs(outside - reference) <= 0.1,
+            string.format("%s: engaged %s, %.2f nm outside the next leg (engaged at once %.2f)", name,
+                o.engaged and string.format("%.1f s after the push", o.engaged.t - o.pushed.t) or "never", outside,
+                reference))
+    end
+    -- the leg to NEXT only up to NEXT: 10 nm past it, 0.5 nm outside its turn, flying on away from the next leg
+    -- (10 nm off it), armed
+    local q_lat, q_lon = probe.movePoint(next_lat, next_lon, 10, 0)
+    q_lat, q_lon = probe.movePoint(q_lat, q_lon, 0.5, 270)
+    out = fly({route = route, index = 4, start = {q_lat, q_lon}, heading = 0, tas_kt = 480, alt_ft = 33000,
+        loop = "cruise", seconds = 60, armed = true})
+    check(out.engaged == nil, string.format(
+        "LNAV pushed 10 nm past NEXT on the line of the leg to it, flying away from the next leg: armed (engaged %s)",
+        out.engaged and string.format("at %.1f s", out.engaged.t) or "never"))
 end
 -- the leg flown direct (from VECTORS) or the 747's own direct-to: engaged at once as before (a leg from where the
 -- 747 is); on the runway armed, engaged above 50 ft
