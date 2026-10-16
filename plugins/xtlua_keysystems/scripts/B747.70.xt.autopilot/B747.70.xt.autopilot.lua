@@ -2495,15 +2495,6 @@ local function B747_lnav_path_at_fix(fmsO,k,p)
 		radius,p.lookahead,capture),fix
 end
 
--- [i-1b] The lateral path LNAV flies now (afds.lnav_path_at, with the fix it is about): the fix flown to's,
--- but right after its turn's anticipation the fix before's until its arc ends (unless the aircraft is farther
--- off it than the anticipation allows). The arcs at the bank limit with the wind behind (the TAS plus the
--- wind's speed: an arc the 747 can follow all round); the aim a look-ahead (LNAV_PATH_LOOKAHEAD_S of ground
--- speed) along round the arcs and LNAV_PATH_CAPTURE_RADII along the legs, never nearer than the cross-track
--- (an intercept of at most 45 deg). nil without such a path, with an offset or a direct-to
--- (B747DR_ap_lnav_xtk_target), or not moving; and after a fix that was no fly-by (reached direct, or a turn of
--- more than LNAV_FLYBY_MAX_TURN_DEG passed abeam), whose next leg starts behind the 747 (on a 170 deg turn the
--- path guidance orbited round it) and is flown direct to its fix.
 -- What LNAV's path is drawn with now: the TAS, the wind (kt east and north; none when it cannot be), the
 -- bank limit and the look-ahead; nil not moving.
 local function B747_lnav_path_parameters()
@@ -2533,9 +2524,19 @@ local function B747_lnav_direct_to_index(current)
 	return lnavDirectToIndex
 end
 
+-- [i-1b] The lateral path LNAV flies now (afds.lnav_path_at through a fix, B747_lnav_path_at_fix), with the
+-- fix it is about: the fix flown to's, but after its turn has been sequenced the fix before's until its arc
+-- ends, the aircraft gets farther off it than the anticipation allows (2 nm), or the fix flown to's arc is
+-- within the look-ahead. The aim a look-ahead (LNAV_PATH_LOOKAHEAD_S of ground speed) along round the arcs
+-- and LNAV_PATH_CAPTURE_RADII of the turn radius along the legs, never nearer than the cross-track (an
+-- intercept of at most 45 deg). nil without such a path, with an offset or a direct-to
+-- (B747DR_ap_lnav_xtk_target, the 747's own direct-to until its fix is passed), or not moving; and after a
+-- fix that was no fly-by (reached direct, or a turn of more than LNAV_FLYBY_MAX_TURN_DEG passed abeam), whose
+-- next leg starts behind the 747 (on a 170 deg turn the path guidance orbited round it): LNAV steers as
+-- before there (at the fix within 10 nm of it, 5 nm along the leg beyond).
 local function B747_lnav_path_now(fmsO,current)
-	local directTo=B747_lnav_direct_to_index(current)
-	if B747DR_ap_lnav_xtk_target~=0 or current<2 or fmsO[current]==nil or directTo==current then return nil end
+	local directToIndex=B747_lnav_direct_to_index(current)
+	if B747DR_ap_lnav_xtk_target~=0 or current<2 or fmsO[current]==nil or directToIndex==current then return nil end
 	local p=B747_lnav_path_parameters()
 	if p==nil then return nil end
 	local path,fix=nil,nil
@@ -2543,7 +2544,7 @@ local function B747_lnav_path_now(fmsO,current)
 	local k=current-1
 	if k>2 and not B747_lnav_leg_has_course(B747_lnav_leg_start(fmsO,k),fmsO[k]) then k=k-1 end
 	local before=fmsO[k]
-	if k>=2 and k~=directTo and B747_lnav_leg_supports_preemption(before) and tonumber(B747_lnav_leg_start(fmsO,k)[2])~=1
+	if k>=2 and k~=directToIndex and B747_lnav_leg_supports_preemption(before) and tonumber(B747_lnav_leg_start(fmsO,k)[2])~=1
 		and B747_lnav_leg_has_course(B747_lnav_leg_start(fmsO,k),before)
 		and B747_lnav_leg_has_course(before,fmsO[current]) then
 		local inCourse,directTo=B747_lnav_inbound_course(fmsO,k)
