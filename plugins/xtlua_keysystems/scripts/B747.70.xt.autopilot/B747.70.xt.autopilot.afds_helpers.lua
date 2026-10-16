@@ -184,9 +184,12 @@ end
 -- (negative on the inbound leg), the arc's start before the fix, and the point
 -- a look-ahead further along the path that a pure-pursuit guidance aims at,
 -- never nearer than the cross-track (on a leg at most 45 deg off its course).
--- nil without a radius, a look-ahead or courses, and for a turn of 175 deg or
--- more (no tangent arc).
-function afds.lnav_path_at(east_nm, north_nm, course_in_deg, course_out_deg, radius_nm, lookahead_nm)
+-- On the legs the aim is capture_nm along (rolling out onto a leg takes room
+-- that grows with the turn radius; the look-ahead without it), but on the
+-- inbound leg it waits at the arc's start until the look-ahead reaches it (a
+-- longer one starts the turn early). nil without a radius, a look-ahead or
+-- courses, and for a turn of 175 deg or more (no tangent arc).
+function afds.lnav_path_at(east_nm, north_nm, course_in_deg, course_out_deg, radius_nm, lookahead_nm, capture_nm)
     if type(east_nm) ~= "number" or type(north_nm) ~= "number" or type(course_in_deg) ~= "number"
         or type(course_out_deg) ~= "number" or type(radius_nm) ~= "number" or radius_nm <= 0
         or type(lookahead_nm) ~= "number" or lookahead_nm <= 0 then
@@ -236,7 +239,15 @@ function afds.lnav_path_at(east_nm, north_nm, course_in_deg, course_out_deg, rad
         xtk = side * (radius_nm - math.sqrt(d_east * d_east + d_north * d_north))
         course = math.deg(bearing) + side * 90
     end
-    local aim_east, aim_north = point_at(along + math.max(lookahead_nm, math.abs(xtk)))
+    local off = math.abs(xtk)
+    local capture = math.max(lookahead_nm, tonumber(capture_nm) or lookahead_nm)
+    local aim_along = along + math.max(lookahead_nm, off)
+    if element == "out" then
+        aim_along = along + math.max(capture, off)
+    elseif element == "in" then
+        aim_along = math.max(aim_along, math.min(along + math.max(capture, off), 0))
+    end
+    local aim_east, aim_north = point_at(aim_along)
     return {element = element, xtk_nm = xtk, course_deg = course % 360, along_nm = along,
         arc_start_nm = tangent, aim_east_nm = aim_east, aim_north_nm = aim_north}
 end

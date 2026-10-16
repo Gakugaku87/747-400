@@ -134,6 +134,26 @@ p = path(0, -10, 0, 120, 2.5, 1)
 check(p.element == "in", "120 deg: 10 nm before the fix on the inbound leg")
 near(p.xtk_nm, 0, 1e-9, "120 deg: on the inbound leg")
 
+-- A capture look-ahead for the legs (rolling out onto a leg takes room that grows with the turn radius), the
+-- look-ahead round the arc: on the inbound leg the aim waits at the arc's start until the look-ahead reaches
+-- it. 90 deg right, R 2 (the arc from 2 nm before the fix), look-ahead 0.5 nm, capture 3 nm.
+p = path(0.4, -10, 0, 90, 2, 0.5, 3)
+near(p.aim_east_nm, 0, 1e-9, "8 nm before the arc: aim on the inbound leg (east)")
+near(p.aim_north_nm, -7, 1e-9, "8 nm before the arc: aim the capture's 3 nm along it")
+p = path(0.4, -4, 0, 90, 2, 0.5, 3)
+near(p.aim_east_nm, 0, 1e-9, "2 nm before the arc: aim at its start (east)")
+near(p.aim_north_nm, -2, 1e-9, "2 nm before the arc: aim at its start (north)")
+p = path(0, -2.3, 0, 90, 2, 0.5, 3)
+near(p.aim_east_nm, 2 - 2 * math.cos(0.1), 1e-9, "0.3 nm before the arc: aim 0.2 nm onto it (east)")
+near(p.aim_north_nm, -2 + 2 * math.sin(0.1), 1e-9, "0.3 nm before the arc: aim 0.2 nm onto it (north)")
+p = path(m, -m, 0, 90, 2, 0.5, 3)
+near(p.aim_east_nm, 2 + 2 * math.sin(math.rad(315) + 0.25), 1e-9, "on the arc: the look-ahead (east)")
+p = path(5, 0.3, 0, 90, 2, 0.5, 3)
+near(p.aim_east_nm, 8, 1e-9, "on the outbound leg: the capture's 3 nm along it")
+near(p.aim_north_nm, 0, 1e-9, "on the outbound leg: aim on it")
+p = path(5, 4, 0, 90, 2, 0.5, 3)
+near(p.aim_east_nm, 9, 1e-9, "4 nm off the outbound leg: aim 4 nm along it (45 deg)")
+
 -- 6. Not a path: no radius, no courses, a reversal.
 check(path(0, 0, 0, 90, 0, 2) == nil, "no radius")
 check(path(0, 0, nil, 90, 2, 2) == nil, "no inbound course")

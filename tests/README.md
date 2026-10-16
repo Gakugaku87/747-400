@@ -303,8 +303,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   the leg, round the arc and onto the next leg, at most 45 deg off a leg;
   90 deg turns both ways, no turn, 150 deg, past turns of 120 and 150 deg the
   outbound leg (behind the arc's start in the inbound leg's frame: the turn's
-  bisector parts the two legs' sides), and no path without a radius, courses
-  or a look-ahead, or for a reversal.
+  bisector parts the two legs' sides), a capture look-ahead on the legs (the
+  aim waiting at the arc's start until the look-ahead reaches it), and no
+  path without a radius, courses or a look-ahead, or for a reversal.
 - `vnav_turn_hold_test.lua`: a fix LNAV sequences early for its turn keeping
   its altitude as VNAV's descent floor until the aircraft is past the turn's
   bisector - the bisector for straight fixes, 65-137 deg turns both ways and
