@@ -369,14 +369,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   with `approach_model.lua`.
 - `approach_model_test.lua`: EHAM ILS 18R via SUG1D and EINN ILS 06 flown in
   the approach model from where the line flights of 2026-10-16 were, 300 ft
-  higher or lower, faster or slower, 30 nm out, with APP later and the LOC
-  sooner, 1,000 and 1,500 ft high (also with VNAV's speed at the A/T's cap),
-  in a tailwind and a headwind (EINN in TST744L's westerly): the real glide
-  slope captured (below 4 deg, by 5 nm), never over the flaps' placard, the A/T
-  on, no climb, within 0.75 dot at 1,000 and 500 ft and 30 ft at 200 ft,
-  VREF to VREF + 20 kt at 500 ft; and EHAM 1,000 ft high at the A/T's flaps 1
-  cap in a tailwind growing to 70 kt never over the placard with the A/T on
-  (it ends on the false lobe, without the speedbrake).
+  (EINN 500 ft) higher or lower, faster or slower, 30 nm out, with APP later
+  and the LOC sooner, 1,000 and 1,500 ft high (also with VNAV's speed at the
+  A/T's cap), in a tailwind and a headwind (EINN in TST744L's westerly): the
+  real glide slope captured (below 4 deg, by 5 nm), never over the flaps'
+  placard, the A/T on, no climb, within 0.75 dot at 1,000 and 500 ft and 30 ft
+  at 200 ft, VREF to VREF + 20 kt at 500 ft; and EHAM 1,000 ft high at the
+  A/T's flaps 1 cap in a tailwind growing to 70 kt never over the placard with
+  the A/T on (it ends on the false lobe, without the speedbrake).
 - `approach_model.lua` (not a suite): a closed-loop longitudinal model of the
   final descent and ILS approach - the production autopilot (VNAV, the FMA,
   setDistances), AFDS pitch director and EEC throttle code, each script in

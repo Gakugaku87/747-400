@@ -2,9 +2,10 @@
 -- EHAM ILS 18R via SUG1D and EINN ILS 06 flown in the closed-loop approach
 -- model (approach_model.lua: the production VNAV, FMA, AFDS pitch director and
 -- A/T code with a point-mass 747 and the kit's approach procedure), from where
--- the line flights of 2026-10-16 were and from 300 ft higher or lower, 10 to
--- 15 kt faster or slower, 30 nm out, with APP later and the LOC sooner, EHAM
--- with a 15 kt tailwind and a 25 kt headwind (EINN in TST744L's westerly).
+-- the line flights of 2026-10-16 were and from 300 ft (EINN 500 ft) higher or
+-- lower, 10 to 15 kt faster or slower, 30 nm out, with APP later and the LOC
+-- sooner, EHAM with a 15 kt tailwind and a 25 kt headwind (EINN in TST744L's
+-- westerly).
 -- Each must capture the real glide slope (below 4 deg from its origin; the
 -- false lobes are at 6 and 9 deg) by 5 nm out, keep the A/T on, never go over
 -- the placard of the flaps set (also from 1,000 to 1,500 ft high, and with
