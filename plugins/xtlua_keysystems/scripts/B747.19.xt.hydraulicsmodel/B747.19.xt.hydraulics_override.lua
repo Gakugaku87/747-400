@@ -527,7 +527,11 @@ function getGlideSlopeFPM()
     if math.abs(nextVdef)>2.0 then
         nextVdef=nextVdef*3
     end
-    local correction=(75*nextVdef)
+    -- the deviation in feet is about dots x 0.1 x the height (0.3 deg a dot on a 3 deg slope): 0.25 x the
+    -- radio altitude fpm a dot takes it out in about 24 s at any height, 75 fpm a dot near the ground as
+    -- before, at most 1,000 fpm; 75 everywhere left a capture 0.75 dot above (190 ft at 8 nm) there to 500 ft
+    local correction=nextVdef*math.max(75,0.25*simDR_radarAlt1)
+    correction=math.max(-1000,math.min(1000,correction))
     local resultTargetGlideslipeFPM=thisTargetGlideslipeFPM-correction --was 75 last testing
     --print("fin thisTargetGlideslipeFPM "..thisTargetGlideslipeFPM.." correction "..correction.." resultTargetGlideslipeFPM "..resultTargetGlideslipeFPM)
     if debug_flight_directors==1 then
