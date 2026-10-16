@@ -12,7 +12,8 @@
 --   the EEC: the A/T's speed and idle throttle (ecc_throttle, spd_throttle: B747.42.xt.EEC.lua).
 -- Replicas of what the aircraft's other code does each frame: LNAV's sequencing with the P5 turn anticipation and
 -- the fix held for its turn (vnav_hold_index), the IAS window (B747_ap_ias_mach_mode) and VNAV's speed with it
--- shut (B747_vnav_speed), the altitude capture window (B747_ap_altitude), the APP arming, the G/S capture
+-- shut (B747_vnav_speed), both at most the flaps' placard - 5 kt, the altitude capture window (B747_ap_altitude),
+-- the APP arming, the G/S capture
 -- (B747_updateApproachHeading with afds.gs_capture_ready), the V/S and FLCH commands (the manipulators' handlers),
 -- B747DR_airspeed_Vmc (setVmc).
 -- The kit's approach procedure (fullflight.py phase_approach, every 0.2 s): flaps by the route distance one detent
@@ -495,8 +496,14 @@ function M.fly(o)
                     if dist_thr <= vs_entry[1] then vnav_speed = vs_entry[2] end
                 end
             end
+            vnav_speed = math.min(vnav_speed, ap.flapPlacardSpeedLimit())   -- vnavspd: at most the placard - 5
             d.simDR_autopilot_airspeed_kts = vnav_speed
             d.B747DR_ap_ias_dial_value = vnav_speed
+        elseif d.B747DR_ap_ias_mach_window_open == 1 then
+            -- the window's speed, at most the flaps' placard - 5 (B747_ap_ias_mach_mode's maxSafeSpeed)
+            local detent = M.FLAP_DETENTS[math.floor(state.flap_handle * 6 + 0.5) + 1]
+            local cap = detent == 0 and d.B747DR_airspeed_Vmo or M.FLAP_PLACARD[detent] - 5
+            d.simDR_autopilot_airspeed_kts = math.min(d.B747DR_ap_ias_dial_value, cap)
         end
         -- B747_ap_altitude
         d.B747DR_alt_capture_window = rescale(0, 200, 3000, 1000, math.abs(d.simDR_vvi_fpm_pilot))
@@ -629,8 +636,7 @@ function M.fly(o)
                 gs = d.simDR_autopilot_gs_status, dots = d.simDR_hsi_vdef_dots_pilot, elevation = elevation,
                 spd = d.simDR_autopilot_airspeed_kts, window = d.B747DR_ap_ias_mach_window_open,
                 vs_status = d.simDR_autopilot_vs_status, alt_hold = d.simDR_autopilot_alt_hold_status,
-                flch = d.simDR_autopilot_flch_status, vmc = d.B747DR_airspeed_Vmc, handle = state.flap_handle,
-                drag = d.B747DR_vnav_energy_drag_required}
+                flch = d.simDR_autopilot_flch_status, vmc = d.B747DR_airspeed_Vmc, handle = state.flap_handle}
         end
         if d.B747DR_ap_FMA_autothrottle_mode == 0 and not m.at_off_logged then
             m.at_off_logged = true

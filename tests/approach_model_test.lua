@@ -7,7 +7,8 @@
 -- with a 15 kt tailwind and a 25 kt headwind (EINN in TST744L's westerly).
 -- Each must capture the real glide slope (below 4 deg from its origin; the
 -- false lobes are at 6 and 9 deg) by 5 nm out, keep the A/T on, never go over
--- the placard of the flaps set (also from 1,000 to 1,500 ft high), never climb
+-- the placard of the flaps set (also from 1,000 to 1,500 ft high, and with
+-- VNAV's speed at the A/T's cap, the placard - 5), never climb
 -- 200 ft, be within 0.75 dot of the beam at 1,000 and 500 ft above the
 -- runway and within 30 ft of it at 200 ft, at VREF to VREF + 20 kt at 500 ft
 -- and never 10 kt below the speed set after the capture. On the code before
@@ -34,6 +35,7 @@ local CASES = {
     {"einn", {}}, {"einn", {ias_kt = 252}}, {"einn", {alt_ft = 5640}}, {"einn", {alt_ft = 4640}},
     {"einn", {ias_kt = 230}}, {"einn", {loc_delay_s = 15}}, {"einn", {alt_ft = 6140}, "1,000 ft high"},
     {"einn", {alt_ft = 6640}, "1,500 ft high"},
+    {"einn", {flaps = 3 / 6, ias_kt = 235, vnav_speed_kt = 235, alt_ft = 6140}, "1,000 ft high at the A/T's cap"},
     {"einn", {start_nm = 16, alt_ft = 7736, ias_kt = 238, vs_fpm = -1368, flaps = 0, at_mode = 3}, "29 nm out"},
 }
 

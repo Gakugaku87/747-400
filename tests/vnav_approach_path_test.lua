@@ -336,7 +336,8 @@ case("EINN level at 3,000 ft before the glide slope", function()
 end)
 
 case("the speed limit in the approach", function()
-    -- 7 nm before ELPOM, 600 ft above the descent from the T/D, flaps 5 (placard 260 kt)
+    -- 7 nm before ELPOM, 600 ft above the descent from the T/D, flaps 5 (placard 260 kt): the limit is the
+    -- placard - 2 kt, above every A/T target (VNAV's and the window's at most the placard - 5)
     local route = einn()
     local lat, lon = before(route, ELPOM, 7)
     local function vspeed(ias, vmo)
@@ -345,9 +346,9 @@ case("the speed limit in the approach", function()
         r.setDescentVSpeed(route)
         return r.simDR_autopilot_vs_fpm
     end
-    near(vspeed(240), -870 - 900, 2, "240 kt, 15 kt below the placard - 5: back to the path at 900 fpm more")
-    near(vspeed(252), -870 - 540, 2, "252 kt: 3 kt from the limit, 60 percent of it")
-    near(vspeed(262), -870 * 0.3, 2, "262 kt: 7 kt over, the descent shallows")
+    near(vspeed(240), -870 - 900, 2, "240 kt, 18 kt below the placard - 2: back to the path at 900 fpm more")
+    near(vspeed(255.5), -870 - 450, 2, "255.5 kt, just over the A/T's cap: 2.5 kt from the limit, half of it")
+    near(vspeed(262), -870 * 0.6, 2, "262 kt: 4 kt over, the descent shallows")
     -- flaps up the limit is Vmo - 11 kt
     local r = new_runtime(route, ELPOM, lat, lon, 3000 + 7 * 290 + 600, 3000, nil, 35000)
     r.simDR_flap_ratio_control, r.simDR_ind_airspeed_kts_pilot, r.B747DR_airspeed_Vmo = 0, 351, 365
