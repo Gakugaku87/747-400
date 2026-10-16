@@ -341,6 +341,19 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   06: the path error and V/S on the path, above and below it, within 600 ft
   above the AP altitude, by a fix LNAV sequenced early, and nothing beyond
   25 nm.
+- `vnav_approach_autothrottle_test.lua`: the A/T in the approach (EINN ILS 06,
+  the IAS window open at idle 15.6 nm out) - VNAV_DES keeps it on and turns
+  it back on, and B747_ap_fma shows SPD at idle; 30 nm out the descent's
+  energy mode and IDLE as before. It loads the production code with
+  `approach_model.lua`.
+- `approach_model.lua` (not a suite): a closed-loop longitudinal model of the
+  final descent and ILS approach - the production autopilot (VNAV, the FMA,
+  setDistances), AFDS pitch director and EEC throttle code, each script in
+  its own namespace with the datarefs shared as in XTLua, replicas of LNAV's
+  sequencing, the IAS window, the APP arming and G/S capture, the kit's
+  approach procedure, and a point-mass 747 (lift, drag and thrust fitted to
+  the kit's recordings), with EHAM ILS 18R and EINN ILS 06 as flown; its
+  loader runs the production code for the suites' own scenarios.
 - `vnav_speed_constraints_test.lua`: VNAV's speed with the route's speed
   constraints - in the climb (EIDW 28R ENDE3J) the speed allowed now
   (laminar/B747/autopilot/vnav/constraint_speed: 210 kt from the runway to

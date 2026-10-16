@@ -3422,7 +3422,9 @@ function B747_ap_fma(fms)
 			B747DR_ap_FMA_autothrottle_mode = 3 --SPD
 		end
 	elseif B747DR_autothrottle_active == 1 then
-		if B747DR_ap_vnav_state > 0 and simDR_allThrottle < 0.1 and B747DR_ap_inVNAVdescent > 0 then
+		-- in the approach (setDescentVSpeed) VNAV PTH's A/T is SPD, at idle too
+		if B747DR_ap_vnav_state > 0 and simDR_allThrottle < 0.1 and B747DR_ap_inVNAVdescent > 0
+			and not B747_vnav_approach_active then
 			B747DR_ap_FMA_autothrottle_mode = 2 --IDLE
 		elseif simDR_onGround == 0 and B747DR_ap_FMA_active_pitch_mode==1 then --TOGA
 			B747DR_ap_FMA_autothrottle_mode = 5 --THR REF

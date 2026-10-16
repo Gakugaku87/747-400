@@ -406,6 +406,8 @@ function VNAV_DES(numAPengaged,fms)
     local forceOn=false
     if B747DR_ap_ias_dial_value<=spdval and simDR_autopilot_airspeed_is_mach==0 and B747DR_ap_ias_mach_window_open == 0 then forceOn=true end
     if B747BR_totalDistance-B747BR_tod<=0 and simDR_autopilot_airspeed_is_mach==0 and B747DR_ap_ias_mach_window_open == 0 and isManualSpeed==false then forceOn=true end
+    -- in the approach (setDescentVSpeed) the A/T holds the speed, the IAS window's too, idle included
+    if B747_vnav_approach_active then forceOn=true end
     if B747DR_vnav_energy_active == 1 then
         -- Keep the A/T engaged so the EEC can command a controlled idle or
         -- protected SPD recovery according to the combined path/speed state.
