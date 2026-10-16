@@ -659,4 +659,21 @@ do
     check(fixes_in_order(out, route, 3, 4), "130 deg at 480 kt in a 040/90 wind: FIX and NEXT in order")
 end
 
+-- 6. A fix listed twice in a row (a leg of no length, whose course is none): one turn, the fixes in order. LNAV's
+-- path took the zero-length leg's course as 000 or 180 and orbited (966 deg of turning at 250 kt, the second
+-- entry never sequenced).
+for _, speed in ipairs({{250, "low", 5000}, {480, "cruise", 33000}}) do
+    local lat0, lon0 = 50, -10
+    local fix_lat, fix_lon = probe.movePoint(lat0, lon0, 60, 90)
+    local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, 50, 150)
+    local after_lat, after_lon = probe.movePoint(next_lat, next_lon, 50, 150)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("FIX", fix_lat, fix_lon), E("FIX2", fix_lat, fix_lon),
+        E("NEXT", next_lat, next_lon), E("AFTER", after_lat, after_lon), E("DEST", after_lat + 5, after_lon, 0, 1)}
+    out = fly({route = route, index = 3, start = {probe.movePoint(lat0, lon0, 30, 90)}, heading = 90, tas_kt = speed[1],
+        alt_ft = speed[3], loop = speed[2], seconds = 70 / speed[1] * 3600})
+    local name = string.format("FIX twice at %d kt", speed[1])
+    check(out.turned <= 120, string.format("%s: %.0f deg of turning in all (one 60 deg turn)", name, out.turned))
+    check(fixes_in_order(out, route, 3, 4), name..": FIX and FIX2 sequenced in order")
+end
+
 print("LNAV turn anticipation tests passed: "..checks)
