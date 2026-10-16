@@ -676,6 +676,121 @@ function afds.route_tod_distance(route, eod_index, cruise_alt_ft, distance_fn)
     return tod_nm, eod_alt
 end
 
+-- [A-5] The approach's descent path to the runway
+-- In the approach VNAV PTH flies the FMC's descent path, built back from the
+-- end of descent at the runway: the runway entry's route altitude (the
+-- CIFP's threshold crossing altitude, RW18R 37 ft), up the final approach
+-- angle (the CIFP's, 3.0 deg without one) to where it meets the altitude of
+-- the fix before it (the glide slope intercept), then through the route
+-- altitudes ([9]) of the fixes before, each no lower than the one after it
+-- (a descent path does not climb: EINN's ASGON 3,046 ft after ELPOM's 3,000),
+-- and from the farthest of them up to CRZ ALT at the T/D's 290 ft/nm. Route
+-- altitudes at or above the transition altitude are cruise, as are those
+-- before them. The approach is within 25 NM of the runway along the route.
+afds.VNAV_APPROACH_RANGE_NM = 25
+afds.VNAV_APPROACH_GLIDE_DEG = 3.0
+-- V/S along the path: its gradient at the ground speed, and 1.5 fpm per ft of
+-- path error, at most 1,500 fpm, back to it
+afds.VNAV_PATH_GAIN_FPM_PER_FT = 1.5
+afds.VNAV_PATH_MAX_CORRECTION_FPM = 1500
+
+-- Index of the arrival runway in an xtlua/fms route: the last runway entry
+-- within radius_nm of the destination (the last entry) with an entry outside
+-- the radius before it (not the departure runway of a route back to the
+-- departure airport), or nil.
+function afds.route_runway_index(route, distance_fn, radius_nm)
+    local count = #route
+    if count < 3 or type(distance_fn) ~= "function" then return nil end
+    local destination = route[count]
+    local function inside(i)
+        return distance_fn(route[i][5], route[i][6], destination[5], destination[6]) < radius_nm
+    end
+    for i = count - 1, 2, -1 do
+        if string.sub(tostring(route[i][8] or ""), 1, 2) == "RW" and inside(i) then
+            for k = 1, i - 1 do
+                if not inside(k) then return i end
+            end
+            return nil
+        end
+    end
+    return nil
+end
+
+-- The path from the runway (runway_index) back to the fix before first_index
+-- (the fix flown to, or one sequenced early for its turn): points {d = NM to
+-- the runway along the route, alt = ft} from the runway out, and the distance
+-- along the route from each entry up to the runway to it.
+function afds.vnav_approach_path(route, runway_index, first_index, distance_fn, transition_alt_ft,
+        cruise_alt_ft, glide_deg)
+    local to_runway = {}
+    to_runway[runway_index] = 0
+    for i = runway_index - 1, 1, -1 do
+        to_runway[i] = to_runway[i + 1]
+            + distance_fn(route[i][5], route[i][6], route[i + 1][5], route[i + 1][6])
+    end
+    local transition_alt = tonumber(transition_alt_ft) or 18000
+    local fixes = {}
+    for i = math.max(1, first_index - 1), runway_index - 1 do
+        local alt = tonumber(route[i][9]) or 0
+        if route[i][2] ~= 1 and string.sub(tostring(route[i][8] or ""), 1, 1) ~= "(" and alt > 0 then
+            if alt >= transition_alt then
+                fixes = {}
+            else
+                fixes[#fixes + 1] = {d = to_runway[i], alt = alt}
+            end
+        end
+    end
+    local lowest = math.huge
+    for k = 1, #fixes do
+        fixes[k].alt = math.min(fixes[k].alt, lowest)
+        lowest = fixes[k].alt
+    end
+    local end_alt = tonumber(route[runway_index][9]) or 0
+    if end_alt <= 0 then end_alt = (tonumber(route[#route][9]) or 0) + 50 end
+    end_alt = math.min(end_alt, lowest)
+    local points = {{d = 0, alt = end_alt}}
+    if #fixes > 0 then
+        local final = fixes[#fixes]
+        local gradient = math.tan(math.rad(tonumber(glide_deg) or afds.VNAV_APPROACH_GLIDE_DEG)) * 6076.12
+        local intercept = (final.alt - end_alt) / gradient
+        if intercept < final.d - 0.01 then points[#points + 1] = {d = intercept, alt = final.alt} end
+    end
+    for k = #fixes, 1, -1 do points[#points + 1] = fixes[k] end
+    local far = points[#points]
+    local cruise_alt = tonumber(cruise_alt_ft) or 0
+    if cruise_alt > far.alt then
+        points[#points + 1] = {d = far.d + (cruise_alt - far.alt) / afds.VNAV_TOD_FT_PER_NM, alt = cruise_alt}
+    end
+    return points, to_runway
+end
+
+-- The path's altitude (ft) and gradient (ft/NM, positive descending to the
+-- runway) distance_nm before the runway; past its far end, level there.
+function afds.vnav_path_at(points, distance_nm)
+    if distance_nm <= points[1].d then
+        if #points < 2 then return points[1].alt, 0 end
+        return points[1].alt, (points[2].alt - points[1].alt) / math.max(points[2].d - points[1].d, 0.001)
+    end
+    for k = 1, #points - 1 do
+        local a, b = points[k], points[k + 1]
+        if distance_nm <= b.d then
+            local gradient = (b.alt - a.alt) / math.max(b.d - a.d, 0.001)
+            return a.alt + (distance_nm - a.d) * gradient, gradient
+        end
+    end
+    return points[#points].alt, 0
+end
+
+-- V/S along the path (fpm): its gradient at the ground speed, less the path
+-- error times VNAV_PATH_GAIN_FPM_PER_FT (at most VNAV_PATH_MAX_CORRECTION_FPM);
+-- never a climb, nor below VNAV_ENERGY_MAX_DESCENT_FPM.
+function afds.vnav_path_vspeed(gradient_ft_per_nm, groundspeed_kts, path_error_ft)
+    local correction = afds.clamp(path_error_ft * afds.VNAV_PATH_GAIN_FPM_PER_FT,
+        -afds.VNAV_PATH_MAX_CORRECTION_FPM, afds.VNAV_PATH_MAX_CORRECTION_FPM)
+    return afds.clamp(-gradient_ft_per_nm * groundspeed_kts / 60 - correction,
+        afds.VNAV_ENERGY_MAX_DESCENT_FPM, 0)
+end
+
 -- [f] Autoland flare law, derotation and thrust retard height
 -- The flare commands a sink rate that shrinks with height and turns the sink
 -- rate error into a pitch target, instead of holding a fixed attitude. The

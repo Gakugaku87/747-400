@@ -298,7 +298,8 @@ The audit regressions load production Lua code with mocked simulator interfaces:
 - `vnav_cifp_constraints_test.lua`: the SID, STAR and approach constraints read
   from X-Plane's CIFP (`B747.70.xt.autopilot.constraints.lua`) - records as
   X-Plane writes them (a CA leg, windows, flight levels, the glide slope
-  kinds at the FACF and FAF, the missed approach's start), and on made-up
+  kinds at the FACF and FAF, the final approach angle, the missed approach's
+  start), and on made-up
   airports in that form the procedures found from the route's idents: the SID
   for the runway against one differing only in its last fix, another
   runway's, an enroute transition; the STAR and the approach transition at
@@ -328,6 +329,18 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   staying the target where it is higher (SUGOL's 11315, NIRSI's 5563), the
   floor where [9] is missing, no level-off above an aircraft already below
   the floor, and nothing without the constraints or in the climb.
+- `vnav_approach_path_test.lua`: VNAV PTH in the approach (within 25 nm of
+  the arrival runway along the route) on the path to the runway - the arrival
+  runway (not the departure end of a route back to the departure airport),
+  the path from the runway's threshold crossing altitude up the final
+  approach angle (3.0, 3.2 or 2.5 deg) to the glide slope intercept, through
+  the route altitudes never climbing (EINN's ASGON 3,046 ft after ELPOM's
+  3,000) and up to CRZ ALT at 290 ft/nm, the V/S from its gradient and the
+  path error (never a climb, at most 1,500 fpm of correction); and the
+  production setDescentVSpeed and setDistances on EHAM ILS 18R and EINN ILS
+  06: the path error and V/S on the path, above and below it, within 600 ft
+  above the AP altitude, by a fix LNAV sequenced early, and nothing beyond
+  25 nm.
 - `vnav_speed_constraints_test.lua`: VNAV's speed with the route's speed
   constraints - in the climb (EIDW 28R ENDE3J) the speed allowed now
   (laminar/B747/autopilot/vnav/constraint_speed: 210 kt from the runway to

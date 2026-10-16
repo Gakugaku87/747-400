@@ -50,6 +50,8 @@ local function new_runtime(route, lat, lon, current_index)
         json = json,
         -- Production keeps this as a local at autopilot.lua:553, outside the slice.
         B747_afds_helpers = afds,
+        -- vnav.lua's approach path, for the path error only (vnav_approach_path_test.lua)
+        B747_vnav_approach_path = function() return nil end,
         B747BR_cruiseAlt = 35000, B747DR_ap_flightPhase = 2, simDR_pressureAlt1 = 35000,
         simDR_groundspeed = 0, B744_fpm = 0,
         B747BR_totalDistance = 0, B747BR_tod = 0, B747BR_toc = 0,

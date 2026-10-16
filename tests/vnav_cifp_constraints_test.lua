@@ -23,15 +23,16 @@ local function case(name, body)
     end
 end
 
--- One CIFP record: 38 fields after "KIND:", as X-Plane writes them.
-local function rec(kind, seq, route_type, proc, trans, fix, desc, path, alt_desc, alt1, alt2, speed_desc, speed)
+-- One CIFP record: 38 fields after "KIND:", as X-Plane writes them (vangle: the final approach angle, "-300").
+local function rec(kind, seq, route_type, proc, trans, fix, desc, path, alt_desc, alt1, alt2, speed_desc, speed,
+        vangle)
     local f = {}
     for i = 1, 38 do f[i] = " " end
     f[1], f[2], f[3], f[4], f[5] = seq, route_type, proc, trans, fix ~= "" and fix or " "
     if fix ~= "" then f[6], f[7], f[8] = "ZZ", "P", "C" end
     f[9], f[12] = desc or "E   ", path or "TF"
     f[23], f[24], f[25] = alt_desc or " ", alt1 or "     ", alt2 or "     "
-    f[27], f[28] = speed_desc or " ", speed or "   "
+    f[27], f[28], f[29] = speed_desc or " ", speed or "   ", vangle or "    "
     return kind..":"..table.concat(f, ",")..";"
 end
 
@@ -79,8 +80,8 @@ local ZZAR = table.concat({
     rec("APPCH", "020", "A", "I18R", "JOINH", "ZHOLD", "V  H", "TF", "+", "FL070", nil, "-", "220"),
     -- the ILS final: the IF, the FAF on the glide slope, the runway, then the missed approach
     rec("APPCH", "010", "I", "I18R", " ", "ZA621", "E  I", "IF", "J", "02000", "02000"),
-    rec("APPCH", "020", "I", "I18R", " ", "ZA622", "E  F", "CF", "H", "02000", "01310", "+", "160"),
-    rec("APPCH", "030", "I", "I18R", " ", "RW18R", "G  M", "CF", nil, "00037"),
+    rec("APPCH", "020", "I", "I18R", " ", "ZA622", "E  F", "CF", "H", "02000", "01310", "+", "160", "-300"),
+    rec("APPCH", "030", "I", "I18R", " ", "RW18R", "G  M", "CF", nil, "00037", nil, nil, nil, "-300"),
     rec("APPCH", "040", "I", "I18R", " ", "RW18R", "G M ", "FA", "+", "00500"),
     rec("APPCH", "050", "I", "I18R", " ", "ZA624", "E   ", "DF", nil, "02000", nil, "-", "220"),
     -- an RNAV approach to the same runway without the FAF ZA622, from the same transition
@@ -142,15 +143,18 @@ case("records", function()
         "the CA leg: at or above 650, at or below 210 kt")
     r = C.parse_record(rec("STAR", "030", "5", "STAR1A", "ALL", "JOINX", "EECH", "TF", "B", "FL100", "FL070", "-", "250"))
     check(r.floor == 7000 and r.ceiling == 10000 and r.fl == true and r.speed == 250, "a window FL070-FL100")
-    r = C.parse_record(rec("APPCH", "030", "I", "I18R", " ", "RW18R", "G  M", "CF", nil, "00037"))
+    r = C.parse_record(rec("APPCH", "030", "I", "I18R", " ", "RW18R", "G  M", "CF", nil, "00037", nil, nil, nil, "-300"))
     check(r.alt_desc == "@" and r.floor == 37 and r.ceiling == 37 and r.missed_start == false, "the runway at 37 ft")
+    check(r.vangle == 3, "the final approach angle 3.00 deg: "..tostring(r.vangle))
+    r = C.parse_record(rec("APPCH", "030", "I", "I18R", " ", "RW18R", "G  M", "CF", nil, "00037", nil, nil, nil, "-250"))
+    check(r.vangle == 2.5, "2.50 deg: "..tostring(r.vangle))
     r = C.parse_record(rec("APPCH", "040", "I", "I18R", " ", "RW18R", "G M ", "FA", "+", "00500"))
     check(r.missed_start == true, "the missed approach's first leg")
     r = C.parse_record(rec("APPCH", "020", "I", "I18R", " ", "ZA622", "E  F", "CF", "H", "02000", "01310", "+", "160"))
     check(r.floor == 1310 and r.ceiling == nil and r.speed_desc == "+" and r.speed == 160,
         "the FAF: its glide slope altitude 1310, at or above 160 kt")
     r = C.parse_record(rec("APPCH", "010", "I", "I18R", " ", "ZA621", "E  I", "IF", "J", "02000", "02000"))
-    check(r.floor == 2000 and r.ceiling == nil, "the FACF: at or above 2000")
+    check(r.floor == 2000 and r.ceiling == nil and r.vangle == nil, "the FACF: at or above 2000, no angle")
     check(C.parse_record("RWY:RW09,+0100,      ,0123, ,     , ,   ;N50000000,E000000000,0000;") == nil, "no RWY record")
     check(C.parse_record("PRDAT:010,5,ALPHA1,RW09,ZD09E;") == nil, "no PRDAT record")
     check(select(1, C.parse_altitude("-0013")) == -13 and select(1, C.parse_altitude("FL090")) == 9000,
@@ -179,8 +183,8 @@ case("the flight", function()
     check(at("APP02").floor == 5500 and at("APP02").speed == 220, "APP02 at or above FL055, 220 kt (I18R, not R18R)")
     check(at("APP03") == nil, "no constraint at APP03")
     check(at("ZA621").alt_desc == "J" and at("ZA621").floor == 2000, "ZA621: the final's IF")
-    check(at("ZA622").floor == 1310 and at("ZA622").speed_desc == "+", "ZA622: the FAF")
-    check(at("RW18R").floor == 37 and at("RW18R").ceiling == 37, "RW18R at 37 ft")
+    check(at("ZA622").floor == 1310 and at("ZA622").speed_desc == "+" and at("ZA622").vangle == 3, "ZA622: the FAF")
+    check(at("RW18R").floor == 37 and at("RW18R").ceiling == 37 and at("RW18R").vangle == 3, "RW18R at 37 ft, 3 deg")
     check(at("(500)") == nil and at("ZA624") == nil, "nothing from the missed approach")
 end)
 
@@ -442,6 +446,7 @@ if root ~= nil and root ~= "" then
         check(at("AM621").floor == 2000, "AM621 at or above 2000")
         check(at("AM622").floor == 1310 and at("AM622").speed_desc == "+" and at("AM622").speed == 160,
             "AM622: the glide slope's 1310, at or above 160 kt")
+        check(at("AM622").vangle == 3 and at("RW18R").vangle == 3, "ILS 18R's 3.00 deg final")
         check(c[index_of(names, "AM624")] == nil, "nothing from the missed approach")
     end)
     case("TST744L: EINN back to EINN, ILS 06 from ELPOM", function()
@@ -451,6 +456,7 @@ if root ~= nil and root ~= "" then
         local c = result.constraints
         check(string.find(result.summary, "APPCH I06", 1, true) ~= nil, "ILS 06: "..result.summary)
         check(c[7] ~= nil and c[7].floor == 3000 and c[8] ~= nil and c[8].floor == 3000, "ELPOM and ASGON at 3000")
+        check(c[8].vangle == 3 and c[9] ~= nil and c[9].vangle == 3, "ILS 06's 3.00 deg final")
         check(c[3] == nil and c[6] == nil, "nothing on the oceanic fixes")
     end)
 else

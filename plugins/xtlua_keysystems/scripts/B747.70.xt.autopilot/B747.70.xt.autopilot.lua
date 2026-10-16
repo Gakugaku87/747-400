@@ -2312,7 +2312,12 @@ function setDistances(fmsO)
 	--simDR_autopilot_altitude_ft
 	B747BR_eod_index = eod
 	B747BR_totalDistance = totalDistance
-	if B747BR_totalDistance<15 then
+	-- in the approach the path error is from the path to the runway, as setDescentVSpeed has it; else
+	-- within 15 NM from a 290 ft/nm line to the destination
+	local approach = B747_vnav_approach_path(fmsO)
+	if approach ~= nil then
+		B747BR_fpe = simDR_pressureAlt1 - approach.alt
+	elseif B747BR_totalDistance<15 then
 		local dtoAirport = getDistance(simDR_latitude, simDR_longitude, fmsO[endI][5], fmsO[endI][6])
 		local glideAlt= dtoAirport*290 +fmsO[endI][9]
 		B747BR_fpe	= simDR_pressureAlt1-glideAlt

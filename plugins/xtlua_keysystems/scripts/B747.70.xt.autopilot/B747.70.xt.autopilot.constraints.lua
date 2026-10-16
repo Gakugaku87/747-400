@@ -88,6 +88,9 @@ function constraints.parse_record(line)
         if speedDesc == "" then speedDesc = "@" end
         record.speed_desc, record.speed = speedDesc, speed
     end
+    -- the final approach angle, in hundredths of a degree down ("-300" 3.00 deg)
+    local vangle = tonumber(trim(f[29]))
+    if vangle ~= nil and vangle < 0 then record.vangle = -vangle / 100 end
     return record
 end
 
@@ -351,7 +354,7 @@ end
 local function constraint_of(leg, phase, source)
     if leg.alt_desc == nil and leg.speed_desc == nil then return nil end
     return {alt_desc = leg.alt_desc, floor = leg.floor, ceiling = leg.ceiling, fl = leg.fl,
-        speed_desc = leg.speed_desc, speed = leg.speed, phase = phase, source = source}
+        speed_desc = leg.speed_desc, speed = leg.speed, vangle = leg.vangle, phase = phase, source = source}
 end
 
 local function assign(result, best, phase)

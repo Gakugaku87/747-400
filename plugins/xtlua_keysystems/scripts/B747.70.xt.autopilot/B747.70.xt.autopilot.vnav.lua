@@ -258,7 +258,54 @@ function deceleratedDesent(targetvspeed)
 
 
 end
+-- [A-5] The approach's path to the runway (B747_afds_helpers.vnav_approach_path) at the aircraft:
+-- {alt, gradient, distance} within VNAV_APPROACH_RANGE_NM of the arrival runway along the route, else
+-- nil. The distance goes by a fix sequenced early for its turn until it is passed, and the final
+-- approach angle is the CIFP's (B747_route_constraints) from there to the runway.
+function B747_vnav_approach_path(fmsO)
+  if fmsO == nil then return nil end
+  local runway = B747_afds_helpers.route_runway_index(fmsO, getDistance, 10)
+  local active = B747DR_fmscurrentIndex
+  if runway == nil or active < 1 or active > runway then return nil end
+  local first = active
+  local held = B747DR_vnav_hold_index or 0
+  if held > 0 and held < first then first = held end
+  local glide = B747_afds_helpers.VNAV_APPROACH_GLIDE_DEG
+  if B747_route_constraints ~= nil then
+    for i = first, runway do
+      local c = B747_route_constraints[i]
+      if c ~= nil and c.vangle ~= nil then glide = c.vangle end
+    end
+  end
+  local points, toRunway = B747_afds_helpers.vnav_approach_path(fmsO, runway, first, getDistance,
+    tonumber(getFMSData("transalt")), B747BR_cruiseAlt, glide)
+  local distance = getDistance(simDR_latitude, simDR_longitude, fmsO[first][5], fmsO[first][6]) + toRunway[first]
+  if distance > B747_afds_helpers.VNAV_APPROACH_RANGE_NM then return nil end
+  local alt, gradient = B747_afds_helpers.vnav_path_at(points, distance)
+  return {alt = alt, gradient = gradient, distance = distance}
+end
 function setDescentVSpeed(fmsO)
+  -- [A-5] In the approach VNAV PTH flies the path to the runway: the path error is from it, and the V/S
+  -- is its gradient at the ground speed corrected by the path error, never a climb, also within 600 ft
+  -- above the AP altitude (the altitude capture levels off there). Before, within 15 NM of the end of
+  -- descent the path error was from a 290 ft/nm line to the airport's reference point and the V/S aimed
+  -- at the next fix's altitude, left alone within 600 ft above the AP altitude: p6-line1 (EHAM,
+  -- 2026-10-16) climbed at +600 fpm to a passed fix's 3,400 ft and p6-L1 (EINN) stayed at 3,450 ft,
+  -- 450 ft above the 3,000 ft it was cleared to; both then captured a false glide slope lobe.
+  local approach = nil
+  if simDR_radarAlt1 > 10 then approach = B747_vnav_approach_path(fmsO) end
+  B747_vnav_approach_active = approach ~= nil and B747DR_ap_vnav_state > 0
+  if approach ~= nil then
+    B747BR_fpe = simDR_pressureAlt1 - approach.alt
+    B747_reset_vnav_energy()
+    if B747DR_ap_vnav_state > 0 then
+      simDR_autopilot_vs_fpm = B747_afds_helpers.vnav_path_vspeed(approach.gradient,
+        simDR_groundspeed * 1.94384, B747BR_fpe)
+    end
+    B747DR_ap_vb = math.deg(math.atan(approach.gradient / 6076.12))
+    B747DR_ap_fpa = math.atan2(simDR_autopilot_vs_fpm, simDR_groundspeed * 196.85) * -57.2958
+    return
+  end
 
   if B747BR_totalDistance>=15 then
     --set in setDistances when < 15
