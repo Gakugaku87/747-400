@@ -2810,7 +2810,12 @@ function B747_getCurrentWayPoint_function(fmsO)
 			else
 				maxError=1
 			end
-			if B747DR_ap_lnav_xtk_target>=-99 and track[2]>maxError and track[1]>math.min(5,trackLength/5) then
+			-- [i-1b] off the path LNAV flies (round a fly-by turn's arc: in its first half the 747 is up to
+			-- R (1 - cos(turn / 2)) off the leg to the fix, and with APP armed UNABLE RNP flashed), else off the leg
+			local offTrack=track[2]
+			local path=B747_lnav_path_now(fmsO,B747DR_fmscurrentIndex)
+			if path~=nil then offTrack=math.abs(path.xtk_nm) end
+			if B747DR_ap_lnav_xtk_target>=-99 and offTrack>maxError and track[1]>math.min(5,trackLength/5) then
 				B747DR_CAS_caution_status[66]=1 --its an advisory when > 40
 			else
 				B747DR_CAS_caution_status[66]=0

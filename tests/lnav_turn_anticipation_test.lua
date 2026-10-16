@@ -467,9 +467,11 @@ local function frame_on_path(o)
     route = {E("ORIG", 53.0, -10.0, 0, 1), E("START", lat0, lon0), E("FIX", fix_lat, fix_lon), E("NEXT", next_lat, next_lon),
         E("AFTER", after_lat, after_lon), E("DEST", next_lat, next_lon + 0.2, 0, 1)}
     env.B747DR_fmscurrentIndex, env.B747DR_fms_setCurrent, env.B747DR_ap_lnavHeading_mode = 3, 3, o.mode or 3
-    local lat, lon = env.movePoint(lat0, lon0, 20, 0)
+    env.B747DR_ap_approach_mode = o.approach or 0
+    local lat, lon = env.movePoint(lat0, lon0, 30 - (o.before or 10), 0)
     lat, lon = env.movePoint(lat, lon, o.xtk or 0, 90)
-    env.simDR_latitude, env.simDR_longitude, env.simDR_true_heading, env.simDR_ground_track_true = lat, lon, 0, 0
+    env.simDR_latitude, env.simDR_longitude = lat, lon
+    env.simDR_true_heading, env.simDR_ground_track_true = o.track or 0, o.track or 0
     env.simDR_pressureAlt1, env.simDR_radarAlt1, env.simDR_vvi_fpm_pilot = 5000, 5000, 0
     env.simDR_groundspeed, env.simDR_TAS_mps = 250 * KT, 250 * KT
     route[3][10] = true
@@ -485,6 +487,20 @@ check(env_rnp.B747DR_fmscurrentIndex == 3 and env_rnp.B747DR_CAS_caution_status[
     "1.5 nm off the leg 27 nm from the destination, on the path: UNABLE RNP, got "
     ..tostring(env_rnp.B747DR_CAS_caution_status[66]))
 check(frame_on_path({xtk = 0.2}).B747DR_CAS_caution_status[66] == 0, "0.2 nm off it: no UNABLE RNP")
+-- with APP armed (0.3 nm) on FIX's arc in the first half of its 90 deg turn (40 deg round, 0.59 nm inside the leg
+-- to FIX at 250 kt and 20 deg of bank): no UNABLE RNP, the 747 on the path (from the straight leg it flashed in
+-- such turns); 0.4 nm off the leg 10 nm before FIX, where the path is the leg: UNABLE RNP
+do
+    local radius = afds.turn_radius_nm(250, 20)
+    local round = math.rad(40)
+    local env_arc = frame_on_path({approach = 1, before = radius * (1 - math.sin(round)),
+        xtk = radius * (1 - math.cos(round)), track = 40})
+    check(env_arc.B747DR_fmscurrentIndex == 3 and env_arc.B747DR_CAS_caution_status[66] == 0,
+        string.format("APP armed, on FIX's arc %.2f nm inside the leg to it: no UNABLE RNP, got %s",
+            radius * (1 - math.cos(round)), tostring(env_arc.B747DR_CAS_caution_status[66])))
+    check(frame_on_path({approach = 1, xtk = 0.4}).B747DR_CAS_caution_status[66] == 1,
+        "APP armed, 0.4 nm off the leg 10 nm before FIX: UNABLE RNP")
+end
 -- an altitude leg's end at the fix before (a CA leg's "(5000)", typed as a fix here) is no fix listed twice:
 -- not passed with the fix before it, below its altitude
 do

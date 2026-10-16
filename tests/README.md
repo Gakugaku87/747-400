@@ -299,13 +299,15 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   turns at the end of legs LNAV steers as before (DW129 after "(650)", a fix's
   turn after one flown direct from VECTORS) anticipated by the lead, within
   0.4 nm; on a leg flown by the path LNAV's heading mode following the fix
-  flown to and UNABLE RNP set 1.5 nm off a leg near the destination; and two
-  turns the same way at the ends of a short leg turned the right way round
-  (their arcs sharing the leg), but a 120 deg turn whose next fix, a short leg
-  on, turns 2 deg keeping its arc (within 0.4 nm of the leg after it at 250 kt,
-  1 nm at 480 kt); and a 90 deg turn 10-15 nm after a turn-back (the leg
-  between steered as before, the 747 not on it) entered rolling its way, no
-  farther outside the leg after it than before i-1b (0.6 and 0.3 nm).
+  flown to and UNABLE RNP set 1.5 nm off a leg near the destination (0.4 nm
+  with APP armed), from the path's cross-track (none on a fly-by arc 0.59 nm
+  inside the leg); and two turns the same way at the ends of a short leg
+  turned the right way round (their arcs sharing the leg), but a 120 deg turn
+  whose next fix, a short leg on, turns 2 deg keeping its arc (within 0.4 nm
+  of the leg after it at 250 kt, 1 nm at 480 kt); and a 90 deg turn 10-15 nm
+  after a turn-back (the leg between steered as before, the 747 not on it)
+  entered rolling its way, no farther outside the leg after it than before
+  i-1b (0.6 and 0.3 nm).
   LNAV's path guidance on the model: within 0.1 nm of the leg to DW124 90 and
   120 s after DW129, and back on a leg from 1, 3 and 10 nm off within 60, 120
   and 300 s at most 45 deg to it and not 0.2 nm through it.
