@@ -10,9 +10,11 @@
 -- the placard of the flaps set (also from 1,000 to 1,500 ft high), never climb
 -- 200 ft, be within 0.75 dot of the beam at 1,000 and 500 ft above the
 -- runway and within 30 ft of it at 200 ft, at VREF to VREF + 20 kt at 500 ft
--- and never 10 kt below the speed set after the capture. Before the P8
--- fixes every EHAM case captured the 6 deg lobe at 4.4 to 5.5 nm, 1,200 to
--- 1,900 ft above the beam at 200 ft, and EINN 252 kt and 300 ft high did too.
+-- and never 10 kt below the speed set after the capture. On the code before
+-- the P8 fixes (49c55514) 90 of the 200 checks fail: every EHAM case captures
+-- the 6 deg lobe at 5.1 to 5.9 nm and is 1,570 to 1,930 ft above the beam at
+-- 200 ft, EINN's basic and 252 kt cases at 4.6 and 4.7 nm, and the A/T goes off
+-- in 9 cases.
 local model = dofile("tests/approach_model.lua")
 
 local checks, failures = 0, {}
