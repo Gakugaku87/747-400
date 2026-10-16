@@ -2640,6 +2640,9 @@ end
 -- next leg starts behind the 747 (on a 170 deg turn the path guidance orbited round it): LNAV steers as
 -- before there (at the fix within 10 nm of it, 5 nm along the leg beyond).
 local function B747_lnav_path_now(fmsO,current)
+	-- another fix flown to: B747_lnav_arc_before_flown decides again when the same one comes back (a reposition,
+	-- back-sequencing)
+	if lnavArcBefore.current~=current then lnavArcBefore.current=0 end
 	local directToIndex=B747_lnav_direct_to_index(current)
 	if B747DR_ap_lnav_xtk_target~=0 or current<2 or fmsO[current]==nil or directToIndex==current then return nil end
 	local p=B747_lnav_path_parameters()

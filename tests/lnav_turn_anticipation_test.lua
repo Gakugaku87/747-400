@@ -939,7 +939,7 @@ local function handover_runtime()
         env.B747DR_fmscurrentIndex = 5
         return env.B747_lnav_path_track(r, 5)
     end
-    return env, steer
+    return env, steer, r
 end
 do
     local _, steer = handover_runtime()
@@ -951,6 +951,17 @@ do
     track = steer(2.09, 0.5, 0)
     check(track ~= nil and track >= 40, string.format(
         "0.5 nm off the leg at the hand-over: the next leg's path (track %s)", tostring(track and math.floor(track + 0.5))))
+    -- decided again when NEXT is sequenced again (a reposition, back-sequencing: FIX flown to in between); the
+    -- first decision was kept for the same fixes
+    local env, r
+    env, steer, r = handover_runtime()
+    steer(2.09, 0.5, 0)
+    env.B747DR_fmscurrentIndex = 3
+    env.B747_lnav_path_track(r, 3)
+    track = steer(2.09, 0, 0)
+    check(track ~= nil and track < 38, string.format(
+        "NEXT sequenced again after FIX flown to, on the leg: NEXT's arc (track %s), decided again",
+        tostring(track and math.floor(track + 0.5))))
 end
 
 print("LNAV turn anticipation tests passed: "..checks)
