@@ -22,8 +22,9 @@
 -- capture with landing flaps the MCP to an at or above speed ahead (AM622 +160) until its fix, then VREF + 5.
 -- The aircraft: a point mass, lift and drag by flap ratio and gear fitted to the kit's recordings
 -- (dev/cckit/p8/fit_aero.py, 5 flights), thrust per engine 7.9 kN + 154.8 kN x throttle with a 2.5 s spool lag,
--- the attitude following the flight director's pitch (1.5 s, at most 3 deg/s), the VSI 1 s behind, no wind, the
--- flaps 5 s per detent and the gear 10 s to travel; the route's legs flown as straight lines from fix to fix.
+-- the attitude following the flight director's pitch (1.5 s, at most 3 deg/s), the VSI 1 s behind, the flaps
+-- 5 s per detent and the gear 10 s to travel; the route's legs flown as straight lines from fix to fix, with the
+-- wind's component along them (o.wind by altitude: TST744L's westerly for EINN, EHAM's flights were calm).
 -- The ILS G/S of gs_deg from 300 m past the threshold with its false lobes: the needle 0.30 deg per dot,
 -- + above, reversing through 2 x and 3 x gs_deg as X-Plane 12 drew EHAM 18R's, at most 2.5 dots.
 local M = {}
@@ -345,9 +346,30 @@ function M.fly(o)
             if s <= cum[i] or i == n then
                 local f = math.max(0, math.min(1, (s - cum[i - 1]) / math.max(cum[i] - cum[i - 1], 1e-6)))
                 return route[i - 1][5] + (route[i][5] - route[i - 1][5]) * f,
-                    route[i - 1][6] + (route[i][6] - route[i - 1][6]) * f
+                    route[i - 1][6] + (route[i][6] - route[i - 1][6]) * f, i
             end
         end
+    end
+    -- the wind's component along the leg (kt, + a tailwind): o.wind = {{alt_ft, from_deg, kt}, ...} by altitude
+    local leg_track = {}
+    for i = 2, n do leg_track[i] = ap.getHeading(route[i - 1][5], route[i - 1][6], route[i][5], route[i][6]) end
+    local function tailwind(alt_ft, leg)
+        local layers = o.wind
+        if layers == nil or #layers == 0 then return 0 end
+        local from, kt = layers[1][2], layers[1][3]
+        if alt_ft >= layers[#layers][1] then
+            from, kt = layers[#layers][2], layers[#layers][3]
+        else
+            for k = 2, #layers do
+                if alt_ft < layers[k][1] then
+                    local f = math.max(0, (alt_ft - layers[k - 1][1]) / (layers[k][1] - layers[k - 1][1]))
+                    from = layers[k - 1][2] + (layers[k][2] - layers[k - 1][2]) * f
+                    kt = layers[k - 1][3] + (layers[k][3] - layers[k - 1][3]) * f
+                    break
+                end
+            end
+        end
+        return kt * math.cos(math.rad(leg_track[leg] - (from + 180)))
     end
     local thr = o.threshold
     local gs_deg = o.gs_deg or 3.0
@@ -399,7 +421,8 @@ function M.fly(o)
     local seconds = o.seconds or 600
     while d.simDRTime - t0 < seconds do
         local now = d.simDRTime
-        local lat, lon = position(state.s)
+        local lat, lon, leg = position(state.s)
+        local wind_ms = tailwind(state.h, leg) * KT
         local dist_thr = cum[runway] - state.s
         local direct = ap.getDistance(lat, lon, thr[1], thr[2])
         local rho = density(state.h)
@@ -416,7 +439,7 @@ function M.fly(o)
         d.simDR_pressureAlt1, d.simDR_radarAlt1 = state.h, agl
         d.simDR_ind_airspeed_kts_pilot, d.simDR_ias_pilot = ias, ias
         d.simDR_vvi_fpm_pilot = state.vsi
-        d.simDR_groundspeed = state.V * math.cos(state.gamma)
+        d.simDR_groundspeed = state.V * math.cos(state.gamma) + wind_ms
         d.simDR_TAS_mps, d.simDR_alpha_deg = state.V, alpha
         d.simDR_AHARS_pitch_heading_deg_pilot = state.theta
         d.simDR_hsi_vdef_dots_pilot = M.gs_dots(elevation, gs_deg)
@@ -591,7 +614,7 @@ function M.fly(o)
         state.V = state.V + vdot * dt
         state.gamma = state.gamma + gdot * dt
         state.h = state.h + state.V * math.sin(state.gamma) / FT * dt
-        state.s = state.s + state.V * math.cos(state.gamma) / NM * dt
+        state.s = state.s + (state.V * math.cos(state.gamma) + wind_ms) / NM * dt
 
         if now >= next_sample then
             next_sample = now + 0.5
@@ -701,6 +724,7 @@ function M.einn(overrides)
         gs_deg = 3.0, active = 6, start_nm = 7.2, alt_ft = 5140, ias_kt = 241, vs_fpm = -1260, flaps = 1 / 6,
         weight_kg = 279000, mcp_alt_ft = 3000, vnav_speed_kt = 240, cruise_alt_ft = 35000, at_mode = 2,
         tod_before = {6, (35000 - 3000) / 290},
+        wind = {{1000, 270, 0}, {5000, 270, 20}, {10000, 270, 40}, {18000, 270, 60}},
         fms_data = {desspdtransalt = "10000", destranspd = "240", desspd = "270", desrestspd = "---",
             desrestalt = "-----", transalt = "18000", crzalt = "FL350"},
         app_nm = 11.0, loc_delay_s = 40, vref_kt = 153, min_speeds = {},

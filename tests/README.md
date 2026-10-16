@@ -356,7 +356,8 @@ The audit regressions load production Lua code with mocked simulator interfaces:
 - `approach_model_test.lua`: EHAM ILS 18R via SUG1D and EINN ILS 06 flown in
   the approach model from where the line flights of 2026-10-16 were, 300 ft
   higher or lower, faster or slower, 30 nm out, with APP later and the LOC
-  sooner: the real glide slope captured (below 3.5 deg, by 5 nm), the A/T
+  sooner, in a tailwind and a headwind (EINN in TST744L's westerly): the real
+  glide slope captured (below 3.5 deg, by 5 nm), the A/T
   on, no climb, within 0.75 dot at 1,000 and 500 ft and 30 ft at 200 ft,
   VREF to VREF + 20 kt at 500 ft.
 - `approach_model.lua` (not a suite): a closed-loop longitudinal model of the

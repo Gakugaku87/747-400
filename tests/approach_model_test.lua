@@ -3,7 +3,8 @@
 -- model (approach_model.lua: the production VNAV, FMA, AFDS pitch director and
 -- A/T code with a point-mass 747 and the kit's approach procedure), from where
 -- the line flights of 2026-10-16 were and from 300 ft higher or lower, 10 to
--- 15 kt faster or slower, 30 nm out, with APP later and the LOC sooner.
+-- 15 kt faster or slower, 30 nm out, with APP later and the LOC sooner, EHAM
+-- with a 15 kt tailwind and a 25 kt headwind (EINN in TST744L's westerly).
 -- Each must capture the real glide slope (below 3.5 deg from its origin; the
 -- false lobes are at 6 and 9 deg) by 5 nm out, keep the A/T on, never climb
 -- 200 ft, be within 0.75 dot of the beam at 1,000 and 500 ft above the
@@ -24,6 +25,8 @@ local CASES = {
     {"eham", {ias_kt = 210, alt_ft = 5450}}, {"eham", {app_nm = 8.2, loc_delay_s = 20}},
     {"eham", {active = 7, start_nm = 10.5, alt_ft = 8000, ias_kt = 235, vs_fpm = -1100, flaps = 0, at_mode = 3,
         vnav_speed_kt = 240, vnav_speeds = {{24, 220}}}, "30 nm out"},
+    {"eham", {wind = {{0, 360, 15}, {10000, 360, 15}}}, "15 kt tailwind"},
+    {"eham", {wind = {{0, 180, 25}, {10000, 180, 25}}}, "25 kt headwind"},
     {"einn", {}}, {"einn", {ias_kt = 252}}, {"einn", {alt_ft = 5640}}, {"einn", {alt_ft = 4640}},
     {"einn", {ias_kt = 230}}, {"einn", {loc_delay_s = 15}},
     {"einn", {start_nm = 16, alt_ft = 7736, ias_kt = 238, vs_fpm = -1368, flaps = 0, at_mode = 3}, "29 nm out"},
