@@ -799,4 +799,23 @@ do
         overshoot))
 end
 
+-- 10. Two turns the same way at the ends of a short leg: their arcs share it (no overlap), so the path turns
+-- the right way round. Overlapping, they handed the 747 over to the next leg's capture while it still faced
+-- away from it, and it turned the wrong way round (527 deg of turning for two 120 deg turns 2 nm apart at
+-- 250 kt). Opposite turns (an S) keep their arcs.
+for _, c in ipairs({{120, 2, 120, 360}, {145, 4, 120, 400}}) do
+    local lat0, lon0 = 50, -10
+    local f1_lat, f1_lon = probe.movePoint(lat0, lon0, 40, 0)
+    local f2_lat, f2_lon = probe.movePoint(f1_lat, f1_lon, c[2], c[1])
+    local f3_lat, f3_lon = probe.movePoint(f2_lat, f2_lon, 40, c[1] + c[3])
+    local f4_lat, f4_lon = probe.movePoint(f3_lat, f3_lon, 40, c[1] + c[3])
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("F1", f1_lat, f1_lon), E("F2", f2_lat, f2_lon),
+        E("F3", f3_lat, f3_lon), E("F4", f4_lat, f4_lon), E("DEST", f4_lat + 5, f4_lon, 0, 1)}
+    out = fly({route = route, index = 3, start = {probe.movePoint(lat0, lon0, 20, 0)}, heading = 0, tas_kt = 250,
+        alt_ft = 5000, loop = "low", seconds = (20 + c[2] + 30) / 250 * 3600 + 120})
+    local name = string.format("%+d deg, %d nm, %+d deg at 250 kt", c[1], c[2], c[3])
+    check(out.turned <= c[4], string.format("%s: %.0f deg of turning in all (at most %d)", name, out.turned, c[4]))
+    check(fixes_in_order(out, route, 3, 4), name..": F1 and F2 sequenced in order")
+end
+
 print("LNAV turn anticipation tests passed: "..checks)

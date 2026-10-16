@@ -2463,11 +2463,16 @@ local LNAV_PATH_MIN_LEG_NM=0.1
 local function B747_lnav_leg_has_course(a,b)
 	return a~=nil and b~=nil and getDistance(a[5],a[6],b[5],b[6])>=LNAV_PATH_MIN_LEG_NM
 end
-local function B747_lnav_path_at_fix(fmsO,k,p)
+-- The turn LNAV's path makes at fmsO[k], as B747_lnav_path_at_fix says (nil where there is no path through it):
+-- the fix, the inbound and outbound courses, the radius for the ground speed across the turn at the bank
+-- limit, and the entries at both ends of its legs with their indexes.
+local function B747_lnav_turn_at(fmsO,k,p)
 	local count=table.getn(fmsO)
 	local fix=fmsO[k]
 	if k<2 or k>=count or not B747_lnav_leg_supports_preemption(fix) then return nil end
-	local legStart=B747_lnav_leg_start(fmsO,k)
+	local s=k-1
+	while s>1 and B747_afds_helpers.altitude_leg_end_ft(fmsO[s])~=nil do s=s-1 end
+	local legStart=fmsO[s]
 	if legStart==nil or tonumber(legStart[2])==1 or type(legStart[5])~="number" or type(legStart[6])~="number"
 		or not B747_lnav_leg_has_course(legStart,fix) then
 		return nil
@@ -2488,7 +2493,40 @@ local function B747_lnav_path_at_fix(fmsO,k,p)
 	local radius=B747_afds_helpers.turn_radius_nm(B747_afds_helpers.lnav_turn_ground_speed_kts(p.tas,p.windEast,
 		p.windNorth,inCourse,outCourse),p.bank)
 	if radius==nil then return nil end
+	return fix,inCourse,outCourse,radius,legStart,s,nextFix,n
+end
+
+-- How far before (and after) fmsO[j] the arc of LNAV's path starts (ends), before the legs are shared, and
+-- the turn's side (1 right, -1 left); 0, 0 without a fly-by turn there.
+local function B747_lnav_turn_tangent_nm(fmsO,j,p)
+	local fix,inCourse,outCourse,radius=B747_lnav_turn_at(fmsO,j,p)
+	if fix==nil then return 0,0 end
+	local turn=(outCourse-inCourse+540)%360-180
+	return radius*math.tan(math.rad(math.abs(turn))/2),(turn<0 and -1 or 1)
+end
+
+local function B747_lnav_path_at_fix(fmsO,k,p)
+	local fix,inCourse,outCourse,radius,legStart,s,nextFix,n=B747_lnav_turn_at(fmsO,k,p)
+	if fix==nil then return nil end
 	local capture=math.min(radius*B747_afds_helpers.LNAV_PATH_CAPTURE_RADII,B747_afds_helpers.LNAV_PATH_MAX_LOOKAHEAD_NM)
+	-- the arcs of turns the same way at the two ends of a leg share it: where they would overlap both are made
+	-- smaller in proportion, so the path runs round the one, along the leg and round the other in turn
+	-- (overlapping on a short leg, they handed the 747 over to the next leg's capture while it still faced
+	-- away from it, and it turned the wrong way round: 287 deg more than two 120 deg turns 2 nm apart at
+	-- 250 kt). Opposite turns' arcs cross where they overlap, and the 747 goes from the one to the other.
+	local turn=(outCourse-inCourse+540)%360-180
+	if math.abs(turn)>=1 then
+		local side=turn<0 and -1 or 1
+		local tangent=radius*math.tan(math.rad(math.abs(turn))/2)
+		local share=1
+		local other,otherSide=B747_lnav_turn_tangent_nm(fmsO,s,p)
+		local into=getDistance(legStart[5],legStart[6],fix[5],fix[6])
+		if otherSide==side and tangent+other>into then share=math.min(share,into/(tangent+other)) end
+		other,otherSide=B747_lnav_turn_tangent_nm(fmsO,n,p)
+		local outof=getDistance(fix[5],fix[6],nextFix[5],nextFix[6])
+		if otherSide==side and tangent+other>outof then share=math.min(share,outof/(tangent+other)) end
+		radius=radius*share
+	end
 	local distance=getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)
 	local bearing=math.rad(getHeading(fix[5],fix[6],simDR_latitude,simDR_longitude))
 	return B747_afds_helpers.lnav_path_at(distance*math.sin(bearing),distance*math.cos(bearing),inCourse,outCourse,
