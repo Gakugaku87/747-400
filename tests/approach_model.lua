@@ -166,8 +166,11 @@ local function load_production(datarefs, stubs)
     local noop = function() end
 
     -- the autopilot (its monitor and VNAV modules share its namespace); B747_afds_helpers is a local of the file
+    -- B747_lnav_engage_armed (LNAV ARM) lives in the LNAV part of the file the model does not load: the model
+    -- keeps LNAV engaged
     local ap_globals = {print = noop, json = json, B747_afds_helpers = afds, apWasOn = 1,
         run_after_time = noop, fma_rollModes = noop, runAutoland = function() return false end,
+        B747_lnav_engage_armed = noop,
         B747_ap_all_cmd_modes_off = noop, B747_takeoff_thrust_reduction_reached = function() return true end,
         toderate = 0, clbderate = 0, B744_fpm = 0}
     for key, value in pairs(stubs) do ap_globals[key] = value end

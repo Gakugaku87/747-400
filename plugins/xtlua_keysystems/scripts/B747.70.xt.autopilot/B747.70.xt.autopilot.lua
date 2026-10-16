@@ -1458,14 +1458,14 @@ function B747_ap_heading_up_CMDhandler(phase, duration)
 		--if B747DR_ap_hdg_sel_mode == 1 then simDR_autopilot_heading_deg = B747DR_ap_heading_deg end
 		--simDR_autopilot_heading_deg =	math.floor(math.fmod((simDR_autopilot_heading_deg + 1), 360.0)	)
 		B747DR_ap_heading_deg = math.floor(math.fmod((B747DR_ap_heading_deg + 1), 360.0))
-		if not (B747DR_ap_approach_mode ~= 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state > 0) then
+		if not (B747DR_ap_approach_mode ~= 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state == 2) then
 			simDR_autopilot_heading_deg = B747DR_ap_heading_deg
 		end
 	elseif phase == 1 then
 		if duration > 0.5 then
 			--simDR_autopilot_heading_deg =	math.floor(math.fmod((simDR_autopilot_heading_deg + 1), 360.0)	)
 			B747DR_ap_heading_deg = math.floor(math.fmod((B747DR_ap_heading_deg + 1), 360.0))
-			if not (B747DR_ap_approach_mode ~= 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state > 0) then
+			if not (B747DR_ap_approach_mode ~= 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state == 2) then
 				simDR_autopilot_heading_deg = B747DR_ap_heading_deg
 			end
 		--if B747DR_ap_hdg_sel_mode == 1 then simDR_autopilot_heading_deg = B747DR_ap_heading_deg end
@@ -1482,7 +1482,7 @@ function B747_ap_heading_down_CMDhandler(phase, duration)
 		if B747DR_ap_heading_deg < 0.0 then
 			B747DR_ap_heading_deg = B747DR_ap_heading_deg + 360.0
 		end
-		if not (B747DR_ap_approach_mode ~= 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state > 0) then
+		if not (B747DR_ap_approach_mode ~= 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state == 2) then
 			simDR_autopilot_heading_deg = B747DR_ap_heading_deg
 		end
 	elseif phase == 1 then
@@ -1493,7 +1493,7 @@ function B747_ap_heading_down_CMDhandler(phase, duration)
 			if B747DR_ap_heading_deg < 0.0 then
 				B747DR_ap_heading_deg = B747DR_ap_heading_deg + 360.0
 			end
-			if not (B747DR_ap_approach_mode ~= 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state > 0) then
+			if not (B747DR_ap_approach_mode ~= 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state == 2) then
 				simDR_autopilot_heading_deg = B747DR_ap_heading_deg
 			end
 		--if B747DR_ap_hdg_sel_mode == 1 then simDR_autopilot_heading_deg = B747DR_ap_heading_deg end
@@ -2676,6 +2676,65 @@ function B747_lnav_path_track(fmsO,current)
 	return getHeading(simDR_latitude,simDR_longitude,aimLat,aimLon)
 end
 
+-- [i-1b] LNAV ARM: LNAV pushed in flight (armed, B747DR_ap_lnav_state 1) engages within LNAV_CAPTURE_XTK_NM of the
+-- active leg, abeam it (past the leg's start in the route's direction), or on a track towards the leg at up to
+-- 90 deg where the turn onto it begins (the turn's anticipation across the leg: 3.0 nm for 45 deg at 480 kt and
+-- 20 deg of bank, 9.7 for 90); otherwise it stays armed and the roll mode before it (HDG SEL, HDG HOLD) flies on, as on
+-- Aerowinx PSX's 747-400 (2.5 nm; the FCOM's figure to be confirmed). At once where there is no such leg: none
+-- active, from the origin airport, of no length, flown direct (after VECTORS, an altitude leg's end, PPOS, a hold),
+-- with an offset or a direct-to (the 747's own: from where it is).
+local LNAV_CAPTURE_XTK_NM=2.5
+local function B747_lnav_capture_now(fmsO)
+	local current=B747DR_fmscurrentIndex
+	local fix=fmsO[current]
+	if current<2 or fix==nil or type(fix[5])~="number" or type(fix[6])~="number" or B747DR_ap_lnav_xtk_target~=0 then
+		return true
+	end
+	local legStart=B747_lnav_leg_start(fmsO,current)
+	if legStart==nil or tonumber(legStart[2])==1 or type(legStart[5])~="number" or type(legStart[6])~="number"
+		or not B747_lnav_leg_has_course(legStart,fix) then
+		return true
+	end
+	local _,directTo=B747_lnav_inbound_course(fmsO,current)
+	if directTo then return true end
+	local xtk=B747_afds_helpers.signed_cross_track_nm(legStart[5],legStart[6],fix[5],fix[6],simDR_latitude,
+		simDR_longitude,getDistance,getHeading)
+	if xtk==nil then return true end
+	local legCourse=getHeading(legStart[5],legStart[6],fix[5],fix[6])
+	local along=getDistance(legStart[5],legStart[6],simDR_latitude,simDR_longitude)*math.cos(math.rad(
+		getHeadingDifference(legCourse,getHeading(legStart[5],legStart[6],simDR_latitude,simDR_longitude))))
+	if along<0 then return false end
+	-- the leg's course abeam the 747 (a long great-circle leg turns: 1 deg in 50 nm at 52 N)
+	local abeamLat,abeamLon=movePoint(legStart[5],legStart[6],along,legCourse)
+	local course=(getHeading(abeamLat,abeamLon,legStart[5],legStart[6])+180)%360
+	local capture=LNAV_CAPTURE_XTK_NM
+	local towards=getHeadingDifference(course,simDR_ground_track_true)
+	if xtk*towards<0 and math.abs(towards)<=90 then
+		-- the anticipation of the fly-by turn from the track onto the leg (the arc at the bank limit, half the
+		-- roll-in, the wind), across the leg
+		capture=math.max(capture,B747_lnav_turn_anticipation_nm(simDR_ground_track_true,course)
+			*math.sin(math.rad(math.abs(towards))))
+	end
+	return math.abs(xtk)<=capture
+end
+
+-- [i-1b] Armed LNAV engages above 50 ft where B747_lnav_capture_now allows, and when it was armed on the ground for
+-- the takeoff as before (a leg from a runway end ahead of the 747 lifting off), from B747_ap_fma; before LNAV ARM it
+-- engaged at once, wherever the 747 was.
+local lnavArmedForTakeoff=false
+function B747_lnav_engage_armed(fmsO)
+	if B747DR_ap_lnav_state~=1 then
+		lnavArmedForTakeoff=false
+		return
+	end
+	if simDR_onGround==1 then lnavArmedForTakeoff=true end
+	if simDR_radarAlt1>50 and (lnavArmedForTakeoff or B747_lnav_capture_now(fmsO)) then
+		B747DR_ap_lnav_state=2
+		lnavArmedForTakeoff=false
+		print("LNAV engaged")
+	end
+end
+
 function B747_getCurrentWayPoint_function(fmsO)
 	local current=B747DR_fmscurrentIndex
 	local count=table.getn(fmsO)
@@ -3361,7 +3420,8 @@ function B747_ap_appr_mode()
 		B747DR_ap_approach_mode = 0
 	end
 
-	if B747DR_ap_lnav_state > 0 and simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status ~= 2 then
+	if (B747DR_ap_lnav_state == 2 or (B747DR_ap_lnav_state == 1 and simDR_onGround == 1))
+		and simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status ~= 2 then
 		print("simCMD_autopilot_heading_select in appr_mode")
 		simCMD_autopilot_heading_select:once()
 		B747DR_ap_ATT = 0.0
@@ -3457,13 +3517,13 @@ function fma_rollModes()
 		B747DR_ap_lnav_state = 0
 	elseif B747DR_ap_lnav_state == 2 then
 		B747DR_ap_FMA_active_roll_mode = 2 -- (LNAV) --
-	elseif simDR_autopilot_heading_status == 2 and B747DR_ap_lnav_state == 0 then
-		-- (HDG SEL) --
+	elseif simDR_autopilot_heading_status == 2 and B747DR_ap_lnav_state ~= 2 then
+		-- (HDG SEL) -- (also with LNAV armed)
 		simDR_autopilot_heading_deg = B747DR_ap_heading_deg
 		B747DR_ap_FMA_active_roll_mode = 6 -- (HDG SEL) --
 	elseif simDR_autopilot_heading_hold_status == 2 then
+		-- (an armed LNAV stays armed: LNAV ARM; it cleared it)
 		B747DR_ap_FMA_active_roll_mode = 7 -- (HDG HLD) --
-		B747DR_ap_lnav_state = 0
 	else
 		B747DR_ap_FMA_active_roll_mode = 0 -- (NONE) --
 	end
@@ -3708,11 +3768,7 @@ function B747_ap_fma(fms)
 		end
 	end
 
-	if simDR_radarAlt1 > 50 and B747DR_ap_lnav_state == 1 then
-		B747DR_ap_lnav_state = 2
-		print("simDR_radarAlt1>50 and B747DR_ap_lnav_state==1")
-
-	end
+	B747_lnav_engage_armed(fms)
 
 	if B747DR_toggle_switch_position[23] == 0.0 and B747DR_toggle_switch_position[24] == 0.0  and numAPengaged == 0 then
 		B747DR_ap_approach_mode = 0
@@ -4184,7 +4240,8 @@ function B474_ap_target_heading()
 		B747_ap_clear_toga_roll()
 		print("change to HDG SEL")
 	end
-	if simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state > 0 then
+	if simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status ~= 2
+		and (B747DR_ap_lnav_state == 2 or (B747DR_ap_lnav_state == 1 and simDR_onGround == 1)) then
 		if diff < 0.05 then
 			return
 		end	

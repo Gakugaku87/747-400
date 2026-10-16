@@ -77,7 +77,9 @@ end
 
 -- Fly s = {route, index, start = {lat, lon}, heading, tas_kt, accel_kt_s,
 -- tas_max_kt, alt_ft, vs_fpm, alt_max_ft, loop = "cruise"|"low", wind_from_deg,
--- wind_kt, seconds, setup = function(env) before the first frame}.
+-- wind_kt, seconds, setup = function(env) before the first frame, armed = LNAV
+-- pushed (armed) with HDG SEL on the start heading: out.engaged = {t, lat, lon}
+-- when it engages}.
 local LOOPS = {cruise = {3.2, 0.22}, low = {4.7, 0.73}}
 local function fly(s)
     local env = new_runtime()
@@ -88,6 +90,8 @@ local function fly(s)
     local history, rates = {}, {}
     local wind_from, wind_kt = s.wind_from_deg or 0, s.wind_kt or 0
     env.B747DR_fmscurrentIndex, env.B747DR_fms_setCurrent, env.B747DR_ap_lnavHeading_mode = s.index, s.index, s.index
+    if s.armed then env.B747DR_ap_lnav_state, env.simDR_autopilot_heading_deg = 1, s.heading end
+    if s.ground then env.simDR_onGround = 1 end
     if s.setup then s.setup(env) end
     local alt = s.alt_ft
     env.simDR_pressureAlt1, env.simDR_radarAlt1, env.simDR_vvi_fpm_pilot = alt, alt, s.vs_fpm or 0
@@ -116,6 +120,15 @@ local function fly(s)
                 nm = env.getDistance(lat, lon, fix[5], fix[6]), lat = lat, lon = lon, t = t}
             previous = env.B747DR_fmscurrentIndex
         end
+        if env.B747DR_ap_lnav_state == 1 then
+            -- armed LNAV engaging (B747_ap_fma; before LNAV ARM it engaged at once above 50 ft)
+            if env.B747_lnav_engage_armed then
+                env.B747_lnav_engage_armed(route)
+            elseif env.simDR_radarAlt1 > 50 then
+                env.B747DR_ap_lnav_state = 2
+            end
+            if env.B747DR_ap_lnav_state == 2 then out.engaged = {t = t, lat = lat, lon = lon} end
+        end
         env.B747_updateApproachHeading(route)
         -- X-Plane's HDG SEL (variation 0: magnetic is true here)
         local limit = env.simDR_autopilot_bank_angles[env.simDR_autopilot_bank_limit - 1]
@@ -135,6 +148,7 @@ local function fly(s)
             alt = math.min(s.alt_max_ft, alt + s.vs_fpm / 60 * dt)
             env.simDR_pressureAlt1, env.simDR_radarAlt1 = alt, alt
         end
+        if s.ground then env.simDR_onGround = alt <= 0 and 1 or 0 end
         t = t + dt
         rates[#rates + 1] = rate
         out.track[#out.track + 1] = {lat = lat, lon = lon, gs = gs, t = t, alt = alt, bank = bank}
@@ -962,6 +976,91 @@ do
     check(track ~= nil and track < 38, string.format(
         "NEXT sequenced again after FIX flown to, on the leg: NEXT's arc (track %s), decided again",
         tostring(track and math.floor(track + 0.5))))
+end
+
+-- 15. LNAV ARM: LNAV pushed in flight engages only within 2.5 nm of the active leg, abeam it (past the leg's start
+-- in the route's direction), or on a track towards it at up to 90 deg where the turn onto it begins; otherwise it
+-- stays armed and the 747 keeps its selected heading (HDG SEL), Aerowinx PSX's 747-400 and the user's choice of
+-- 2026-10-16. It engaged at once wherever the 747 was and turned it back to the leg (the kit's TST744L rejoin
+-- after the AFDS block: 19.7 nm off, at 76 deg).
+do
+    local a_lat, a_lon = 52, -12
+    local b_lat, b_lon = probe.movePoint(a_lat, a_lon, 300, 270)
+    local c_lat, c_lon = probe.movePoint(b_lat, b_lon, 100, 270)
+    route = {E("ORIG", 53, -11, 0, 1), E("A", a_lat, a_lon), E("B", b_lat, b_lon), E("C", c_lat, c_lon),
+        E("DEST", c_lat, c_lon - 2, 0, 1)}
+    local function start(along_nm, off_nm)
+        local lat, lon = probe.movePoint(a_lat, a_lon, along_nm, 270)
+        return {probe.movePoint(lat, lon, off_nm, 0)}
+    end
+    local function xtk(lat, lon)
+        return afds.signed_cross_track_nm(a_lat, a_lon, b_lat, b_lon, lat, lon, probe.getDistance, probe.getHeading)
+    end
+    local function cruise(o)
+        return fly({route = route, index = 3, start = o.start, heading = o.heading, tas_kt = 480, alt_ft = 33000,
+            loop = "cruise", seconds = o.seconds, armed = true})
+    end
+    -- 20 nm right of the leg on a parallel heading: armed after 10 min, the heading kept
+    out = cruise({start = start(50, 20), heading = 270, seconds = 600})
+    local last = out.track[#out.track]
+    check(out.engaged == nil and out.env.B747DR_ap_lnav_state == 1, string.format(
+        "LNAV pushed 20 nm off the leg on a parallel heading: still armed after 10 min (engaged %s)",
+        out.engaged and string.format("at %.0f s", out.engaged.t) or "never"))
+    check(math.abs(wrap(out.env.simDR_true_heading - 270)) <= 1 and xtk(last.lat, last.lon) >= 19, string.format(
+        "... on its heading %.0f, %.1f nm off the leg", out.env.simDR_true_heading, xtk(last.lat, last.lon)))
+    -- 45 and 90 deg towards the leg: engaged where the turn onto it begins (its anticipation across the leg: 3.0 and
+    -- 9.7 nm at 480 kt and 20 deg; never nearer than 2.5 nm), then onto it without going through it
+    for _, c in ipairs({{225, 3.0}, {180, 9.7}}) do
+        out = cruise({start = start(50, 20), heading = c[1], seconds = 900})
+        local at = out.engaged and xtk(out.engaged.lat, out.engaged.lon)
+        local name = string.format("LNAV pushed 20 nm off the leg, %d deg towards it", 270 - c[1])
+        check(at ~= nil and math.abs(at - c[2]) <= 0.3, string.format("%s: engaged %s nm off it (%.1f)", name,
+            at and string.format("%.2f", at) or "never", c[2]))
+        local through = 0
+        for _, q in ipairs(out.track) do through = math.max(through, -xtk(q.lat, q.lon)) end
+        last = out.track[#out.track]
+        local final = math.abs(xtk(last.lat, last.lon))
+        check(through <= 0.2 and final <= 0.1, string.format(
+            "%s: then onto the leg, %.2f nm through it at most (0.2), %.2f nm off at the end (0.1)", name, through, final))
+    end
+    -- 1 nm off: at once
+    out = cruise({start = start(50, 1), heading = 270, seconds = 2})
+    check(out.engaged ~= nil and out.engaged.t <= 0.1, "LNAV pushed 1 nm off the leg: engaged at once")
+    -- 1 nm off the leg's line 10 nm before its start (A): armed until abeam the leg, past A
+    out = cruise({start = start(-10, 1), heading = 270, seconds = 120})
+    local t_a = 10 / 480 * 3600
+    check(out.engaged ~= nil and math.abs(out.engaged.t - t_a) <= 3, string.format(
+        "LNAV pushed 1 nm off the leg's line 10 nm before its start: engaged %s (passing it at %.0f s)",
+        out.engaged and string.format("at %.0f s", out.engaged.t) or "never", t_a))
+end
+-- the leg flown direct (from VECTORS) or the 747's own direct-to: engaged at once as before (a leg from where the
+-- 747 is); on the runway armed, engaged above 50 ft
+do
+    local lat0, lon0 = 52, -12
+    local fix_lat, fix_lon = probe.movePoint(lat0, lon0, 40, 0)
+    local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, 40, 0)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("VECTORS", lat0, lon0), E("FIX", fix_lat, fix_lon),
+        E("NEXT", next_lat, next_lon), E("DEST", next_lat + 1, next_lon, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(lat0, lon0, 10, 90)
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 2, armed = true})
+    check(out.engaged ~= nil and out.engaged.t <= 0.1, "LNAV pushed 10 nm off the line from VECTORS (flown direct): engaged at once")
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("FIX", fix_lat, fix_lon),
+        E("NEXT", next_lat, next_lon), E("DEST", next_lat + 1, next_lon, 0, 1)}
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 2, armed = true, setup = function(env) env.B747DR_ap_lnav_xtk_target = -100 end})
+    check(out.engaged ~= nil and out.engaged.t <= 0.1, "LNAV pushed 10 nm off the leg after the 747's own DIRECT TO: engaged at once")
+    out = fly({route = route, index = 3, start = {lat0, lon0}, heading = 0, tas_kt = 160, alt_ft = 0, vs_fpm = 1500,
+        alt_max_ft = 3000, loop = "low", seconds = 10, armed = true})
+    check(out.engaged ~= nil and out.engaged.t >= 1.5 and out.engaged.t <= 2.5, string.format(
+        "LNAV armed on the runway: engaged above 50 ft (%s)", out.engaged and string.format("at %.1f s", out.engaged.t) or "never"))
+    -- armed on the ground 1 nm before the leg's start (a runway end fix ahead): engaged above 50 ft as before
+    local r_lat, r_lon = probe.movePoint(lat0, lon0, 1, 180)
+    out = fly({route = route, index = 3, start = {r_lat, r_lon}, heading = 0, tas_kt = 160, alt_ft = 0, vs_fpm = 1500,
+        alt_max_ft = 3000, loop = "low", seconds = 10, armed = true, ground = true})
+    check(out.engaged ~= nil and out.engaged.t >= 1.5 and out.engaged.t <= 2.5, string.format(
+        "LNAV armed on the ground 1 nm before the leg's start: engaged above 50 ft (%s)",
+        out.engaged and string.format("at %.1f s", out.engaged.t) or "never"))
 end
 
 print("LNAV turn anticipation tests passed: "..checks)

@@ -899,8 +899,9 @@ function B747_updateApproachHeading(fmsO)
         return
     end
 
-    -- LNAV keeps steering while LOC is only armed
-    if (B747DR_ap_approach_mode~=0 or B747DR_ap_lnavHeading_mode~=0) and simDR_autopilot_nav_status~=2 and B747DR_ap_lnav_state>0 and diff>0.5 then
+    -- LNAV keeps steering while LOC is only armed; armed itself, it does not steer (LNAV ARM: the roll mode before
+    -- it flies on until B747_lnav_engage_armed engages it)
+    if (B747DR_ap_approach_mode~=0 or B747DR_ap_lnavHeading_mode~=0) and simDR_autopilot_nav_status~=2 and B747DR_ap_lnav_state==2 and diff>0.5 then
         if simDR_autopilot_heading_status == 0 then
             print("simCMD_autopilot_heading_select in B747DR_ap_approach_mode~=0")
             simCMD_autopilot_heading_select:once()

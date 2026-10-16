@@ -270,7 +270,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   an airborne TO/GA press or TO/GA engaged again bringing TO/GA roll back
   (a press just before HDG SEL does not undo HDG SEL), and nothing being
   remembered on the ground: a HDG SEL press before liftoff, LNAV left
-  active from the last flight, or a selection that outlived the landing.
+  active from the last flight, or a selection that outlived the landing; and
+  LNAV armed in flight (LNAV ARM) under HDG SEL or HDG HOLD, which stays the
+  active roll mode with LNAV armed (X-Plane's heading select left alone in HDG
+  HOLD), as on the ground before, and the heading knob setting X-Plane's
+  heading with APP armed while LNAV is only armed, not while it steers.
 - `afds_roll_rate_limit_test.lua`: the roll rate of HDG SEL and LNAV turns -
   the filtered roll command moving at most 3 deg/s outside the approach at
   20, 30 and 60 fps (a roll-in, a 6 deg change, a reversal and a roll-out),
@@ -313,7 +317,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   sequenced again after the one before was flown to.
   LNAV's path guidance on the model: within 0.1 nm of the leg to DW124 90 and
   120 s after DW129, and back on a leg from 1, 3 and 10 nm off within 60, 120
-  and 300 s at most 45 deg to it and not 0.2 nm through it.
+  and 300 s at most 45 deg to it and not 0.2 nm through it. LNAV ARM: LNAV
+  pushed 20 nm off a leg on a parallel heading still armed after 10 min on that
+  heading; on 45 and 90 deg towards it engaged where the turn onto it begins
+  (2.7-3.3 and 9.4-10 nm off at 480 kt) and onto it within 0.2 nm; 1 nm off
+  engaged at once, 10 nm before the leg's start only once past it; at once on a
+  leg flown direct (from VECTORS) or after the 747's own DIRECT TO; armed on the
+  runway, engaged above 50 ft, also 1 nm before the leg's start (armed on the
+  ground for the takeoff).
 - `lnav_xtk_error_test.lua`: LNAV's cross-track error every frame - the signed
   distance from the active leg (+ right) mid-leg on both sides and near its
   end, from the offset track while an offset is flown (not after a
