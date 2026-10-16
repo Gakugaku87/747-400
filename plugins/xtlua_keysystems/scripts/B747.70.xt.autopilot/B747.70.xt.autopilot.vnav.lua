@@ -264,7 +264,7 @@ end
 -- within VNAV_APPROACH_LEAVE_NM), else nil. The distance goes by a fix sequenced early for its turn until
 -- it is passed, and the final approach angle is the CIFP's (B747_route_constraints) from there to the
 -- runway.
-local approachRunway = nil   -- the runway of the approach the aircraft is in
+local approachRunway = nil   -- the runway of the approach the aircraft is in: its name and position
 function B747_vnav_approach_path(fmsO)
   if fmsO == nil then approachRunway = nil return nil end
   local runway = B747_afds_helpers.route_runway_index(fmsO, getDistance, 10)
@@ -284,9 +284,10 @@ function B747_vnav_approach_path(fmsO)
     tonumber(getFMSData("transalt")), B747BR_cruiseAlt, glide)
   if points == nil then approachRunway = nil return nil end
   local distance = getDistance(simDR_latitude, simDR_longitude, fmsO[first][5], fmsO[first][6]) + toRunway[first]
+  local runwayKey = tostring(fmsO[runway][8]).."|"..tostring(fmsO[runway][5]).."|"..tostring(fmsO[runway][6])
   if distance <= B747_afds_helpers.VNAV_APPROACH_RANGE_NM then
-    approachRunway = runway
-  elseif approachRunway ~= runway or distance > B747_afds_helpers.VNAV_APPROACH_LEAVE_NM then
+    approachRunway = runwayKey
+  elseif approachRunway ~= runwayKey or distance > B747_afds_helpers.VNAV_APPROACH_LEAVE_NM then
     approachRunway = nil
     return nil
   end

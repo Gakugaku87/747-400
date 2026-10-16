@@ -413,6 +413,26 @@ case("into and out of the approach", function()
     check(at(26.9), "26.9 nm: still the approach")
     check(not at(27.5), "27.5 nm: out of it")
     check(not at(26), "26 nm again: not until 25 nm")
+    -- held by the runway, not by its place in the route: a fix added before it keeps the approach, another
+    -- runway in its place does not
+    check(at(24.5), "24.5 nm: the approach again")
+    table.insert(route, AM607, entry("XTRA", 52.59, 4.60, 4800))
+    for i = 1, #route do route[i][10] = (i == NIRSI) end
+    check(at(26), "a fix added before the runway: still the approach at 26 nm")
+    check(at(24.5), "24.5 nm: the approach")
+    route[RW18R + 1][8], route[RW18R + 1][6] = "RW18C", 4.75
+    check(not at(26), "another runway in its place: not the approach at 26 nm")
+    table.remove(route, AM607)
+    route[RW18R][8], route[RW18R][6] = "RW18R", 4.711725
+    -- let go when the route is gone or the runway passed
+    check(at(24.5), "24.5 nm: the approach")
+    check(r.B747_vnav_approach_path(nil) == nil, "no route: none")
+    check(not at(26), "after no route: not at 26 nm")
+    check(at(24.5), "24.5 nm: the approach")
+    r.B747DR_fmscurrentIndex = RW18R + 1
+    check(r.B747_vnav_approach_path(route) == nil, "past the runway: none")
+    r.B747DR_fmscurrentIndex = NIRSI
+    check(not at(26), "after the runway: not at 26 nm")
 end)
 
 case("outside the approach", function()
