@@ -686,8 +686,10 @@ end
 -- (a descent path does not climb: EINN's ASGON 3,046 ft after ELPOM's 3,000),
 -- and from the farthest of them up to CRZ ALT at the T/D's 290 ft/nm. Route
 -- altitudes at or above the transition altitude are cruise, as are those
--- before them. The approach is within 25 NM of the runway along the route.
+-- before them. The approach is within 25 NM of the runway along the route, and
+-- once in it, within 27 NM (radar vectors or a hold about 25 NM out).
 afds.VNAV_APPROACH_RANGE_NM = 25
+afds.VNAV_APPROACH_LEAVE_NM = 27
 afds.VNAV_APPROACH_GLIDE_DEG = 3.0
 -- V/S along the path: its gradient at the ground speed, and 1.5 fpm per ft of
 -- path error, at most 1,500 fpm, back to it

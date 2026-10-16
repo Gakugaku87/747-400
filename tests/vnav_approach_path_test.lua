@@ -377,6 +377,25 @@ case("VNAV off", function()
     check(r.B747_vnav_approach_active == false, "VNAV off: not VNAV's approach")
 end)
 
+case("into and out of the approach", function()
+    -- on NETOM -> NIRSI (NIRSI 19.7 nm from RW18R): into the approach at 25 nm, out of it beyond 27 nm, so
+    -- radar vectors or a hold about 25 nm out do not switch it on and off
+    local route = eham()
+    local to_nirsi = along(route, NIRSI, RW18R)
+    local r = new_runtime(route, NIRSI, 0, 0, 7000, 2000)
+    local function at(nm)
+        r.simDR_latitude, r.simDR_longitude = before(route, NIRSI, nm - to_nirsi)
+        r.setDescentVSpeed(route)
+        return r.B747_vnav_approach_active == true
+    end
+    check(not at(26), "26 nm, coming from farther out: not yet")
+    check(at(24.5), "24.5 nm: the approach")
+    check(at(26), "26 nm after it: still the approach")
+    check(at(26.9), "26.9 nm: still the approach")
+    check(not at(27.5), "27.5 nm: out of it")
+    check(not at(26), "26 nm again: not until 25 nm")
+end)
+
 case("outside the approach", function()
     -- 28 nm out on NETOM -> NIRSI: the approach's path is not flown yet
     local route = eham()

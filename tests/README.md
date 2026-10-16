@@ -353,7 +353,8 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   06: the path error and V/S on the path, above and below it, within 600 ft
   above the AP altitude, by a fix LNAV sequenced early, near the flaps 5
   placard and Vmo, with EHAM's missed approach, with VNAV off (the path error
-  only), and nothing beyond 25 nm.
+  only), into the approach at 25 nm and out of it beyond 27 nm, and nothing
+  beyond 25 nm from farther out.
 - `vnav_approach_autothrottle_test.lua`: the A/T in the approach (EINN ILS 06,
   the IAS window open at idle 15.6 nm out) - VNAV_DES keeps it on and turns
   it back on, and B747_ap_fma shows SPD at idle; 30 nm out the descent's

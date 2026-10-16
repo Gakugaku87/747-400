@@ -259,14 +259,16 @@ function deceleratedDesent(targetvspeed)
 
 end
 -- [A-5] The approach's path to the runway (B747_afds_helpers.vnav_approach_path) at the aircraft:
--- {alt, gradient, distance} within VNAV_APPROACH_RANGE_NM of the arrival runway along the route, else
--- nil. The distance goes by a fix sequenced early for its turn until it is passed, and the final
--- approach angle is the CIFP's (B747_route_constraints) from there to the runway.
+-- {alt, gradient, distance} within VNAV_APPROACH_RANGE_NM of the arrival runway along the route (then
+-- within VNAV_APPROACH_LEAVE_NM), else nil. The distance goes by a fix sequenced early for its turn until
+-- it is passed, and the final approach angle is the CIFP's (B747_route_constraints) from there to the
+-- runway.
+local approachRunway = nil   -- the runway of the approach the aircraft is in
 function B747_vnav_approach_path(fmsO)
-  if fmsO == nil then return nil end
+  if fmsO == nil then approachRunway = nil return nil end
   local runway = B747_afds_helpers.route_runway_index(fmsO, getDistance, 10)
   local active = B747DR_fmscurrentIndex
-  if runway == nil or active < 1 or active > runway then return nil end
+  if runway == nil or active < 1 or active > runway then approachRunway = nil return nil end
   local first = active
   local held = B747DR_vnav_hold_index or 0
   if held > 0 and held < first then first = held end
@@ -279,9 +281,14 @@ function B747_vnav_approach_path(fmsO)
   end
   local points, toRunway = B747_afds_helpers.vnav_approach_path(fmsO, runway, first, getDistance,
     tonumber(getFMSData("transalt")), B747BR_cruiseAlt, glide)
-  if points == nil then return nil end
+  if points == nil then approachRunway = nil return nil end
   local distance = getDistance(simDR_latitude, simDR_longitude, fmsO[first][5], fmsO[first][6]) + toRunway[first]
-  if distance > B747_afds_helpers.VNAV_APPROACH_RANGE_NM then return nil end
+  if distance <= B747_afds_helpers.VNAV_APPROACH_RANGE_NM then
+    approachRunway = runway
+  elseif approachRunway ~= runway or distance > B747_afds_helpers.VNAV_APPROACH_LEAVE_NM then
+    approachRunway = nil
+    return nil
+  end
   local alt, gradient = B747_afds_helpers.vnav_path_at(points, distance)
   return {alt = alt, gradient = gradient, distance = distance}
 end
