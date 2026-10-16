@@ -331,6 +331,8 @@ case("EHAM between AM608 and AM621", function()
     r = new_runtime(route, AM621, lat, lon, alt608, 2000, AM608)
     r.setDescentVSpeed(route)
     near(r.B747BR_fpe, 0, 1, "AM608 held: the path by AM608, "..at.." nm out")
+    near(r.B747DR_ap_vb, math.deg(math.atan((alt608 - 3400) / (0.4 * 6076.12))), 0.01,
+        "AM608 held: the V/B to AM608's 3,400 ft, not AM621's")
 end)
 
 case("EINN level at 3,000 ft before the glide slope", function()
