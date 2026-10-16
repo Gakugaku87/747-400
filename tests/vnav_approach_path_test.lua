@@ -435,6 +435,15 @@ case("into and out of the approach", function()
     table.insert(route, AM607, entry("XTRA", 52.59, 4.60, 4800))
     for i = 1, #route do route[i][10] = (i == NIRSI) end
     check(at(26), "a fix added before the runway: still the approach at 26 nm")
+    -- the runway's name and its position each count
+    check(at(24.5), "24.5 nm: the approach")
+    route[RW18R + 1][6] = 4.75
+    check(not at(26), "a runway of that name elsewhere (another airport's): not the approach at 26 nm")
+    route[RW18R + 1][6] = 4.711725
+    check(at(24.5), "24.5 nm: the approach")
+    route[RW18R + 1][8] = "RW18C"
+    check(not at(26), "another runway's name at its place: not the approach at 26 nm")
+    route[RW18R + 1][8] = "RW18R"
     check(at(24.5), "24.5 nm: the approach")
     route[RW18R + 1][8], route[RW18R + 1][6] = "RW18C", 4.75
     check(not at(26), "another runway in its place: not the approach at 26 nm")
