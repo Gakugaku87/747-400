@@ -1129,6 +1129,26 @@ do
                 o.engaged and string.format("%.1f s after the push", o.engaged.t - o.pushed.t) or "never", outside,
                 reference))
     end
+    -- the leg to NEXT only where the FMC could have sequenced NEXT at its lead, closing on NEXT: 10 and 20 nm before
+    -- it, 1 nm off that leg, flying away from NEXT, armed; 20 nm before it flying towards it, armed until 12.2 nm
+    -- before it (the lead 9.7 nm and 2.5). Engaged anywhere on that leg, it turned more than 270 deg and was still
+    -- 41 nm off the active leg after 7 min (a review: 135 of 135 such cases engaged, 55 not on the leg at 7 min).
+    for _, c in ipairs({{10, 180}, {20, 180}, {20, 0}}) do
+        local b_lat, b_lon = probe.movePoint(next_lat, next_lon, c[1], 180)
+        b_lat, b_lon = probe.movePoint(b_lat, b_lon, 1, 270)
+        out = fly({route = route, index = 4, start = {b_lat, b_lon}, heading = c[2], tas_kt = 480, alt_ft = 33000,
+            loop = "cruise", seconds = 90, armed = true})
+        local name = string.format("LNAV pushed %d nm before NEXT (sequenced) on the leg to it, HDG SEL %03d", c[1], c[2])
+        if c[2] == 180 then
+            check(out.engaged == nil, string.format("%s, flying away from NEXT: armed (engaged %s)", name,
+                out.engaged and string.format("at %.1f s", out.engaged.t) or "never"))
+        else
+            local t_lead = (20 - 12.16) / 480 * 3600
+            check(out.engaged ~= nil and math.abs(out.engaged.t - t_lead) <= 3, string.format(
+                "%s, towards NEXT: engaged %s (12.2 nm before NEXT at %.0f s)", name,
+                out.engaged and string.format("at %.1f s", out.engaged.t) or "never", t_lead))
+        end
+    end
     -- the leg to NEXT only up to NEXT: 10 nm past it, 0.5 nm outside its turn, flying on away from the next leg
     -- (10 nm off it), armed
     local q_lat, q_lon = probe.movePoint(next_lat, next_lon, 10, 0)
