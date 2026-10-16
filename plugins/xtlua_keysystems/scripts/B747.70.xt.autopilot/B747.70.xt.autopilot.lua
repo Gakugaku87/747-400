@@ -2479,15 +2479,16 @@ local function B747_lnav_path_at_fix(fmsO,k,radius_nm,lookahead_nm,capture_nm)
 		radius_nm,lookahead_nm,capture_nm),fix
 end
 
--- [i-1b] LNAV's path guidance: the true track to a point a look-ahead (LNAV_PATH_LOOKAHEAD_S of ground speed)
--- along the lateral path, never nearer than the cross-track (an intercept of at most 45 deg). The arcs are
--- flown at the bank limit with the wind behind (the TAS plus the wind's speed: an arc the 747 can follow all
--- round). The fix flown to's path, but right after its turn's anticipation the fix before's until its arc
--- ends (unless the aircraft is farther off it than the anticipation allows). nil without such a path, with an
--- offset or a direct-to (B747DR_ap_lnav_xtk_target), or not moving: LNAV steers as before; and so after a fix
--- that was no fly-by (reached direct, or a turn of more than LNAV_FLYBY_MAX_TURN_DEG passed abeam), whose next
--- leg starts behind the 747 (on a 170 deg turn the path guidance orbited round it), flown direct to its fix.
-function B747_lnav_path_track(fmsO,current)
+-- [i-1b] The lateral path LNAV flies now (afds.lnav_path_at, with the fix it is about): the fix flown to's,
+-- but right after its turn's anticipation the fix before's until its arc ends (unless the aircraft is farther
+-- off it than the anticipation allows). The arcs at the bank limit with the wind behind (the TAS plus the
+-- wind's speed: an arc the 747 can follow all round); the aim a look-ahead (LNAV_PATH_LOOKAHEAD_S of ground
+-- speed) along round the arcs and LNAV_PATH_CAPTURE_RADII along the legs, never nearer than the cross-track
+-- (an intercept of at most 45 deg). nil without such a path, with an offset or a direct-to
+-- (B747DR_ap_lnav_xtk_target), or not moving; and after a fix that was no fly-by (reached direct, or a turn of
+-- more than LNAV_FLYBY_MAX_TURN_DEG passed abeam), whose next leg starts behind the 747 (on a 170 deg turn the
+-- path guidance orbited round it) and is flown direct to its fix.
+local function B747_lnav_path_now(fmsO,current)
 	if B747DR_ap_lnav_xtk_target~=0 or current<2 or fmsO[current]==nil then return nil end
 	local tas=simDR_TAS_mps*1.94384
 	local gs=simDR_groundspeed*1.94384
@@ -2513,6 +2514,14 @@ function B747_lnav_path_track(fmsO,current)
 		if path~=nil and (path.element=="out" or math.abs(path.xtk_nm)>LNAV_MAX_PREEMPT_XTK_NM) then path=nil end
 	end
 	if path==nil then path,fix=B747_lnav_path_at_fix(fmsO,current,radius,lookahead,capture) end
+	if path==nil then return nil end
+	return path,fix
+end
+
+-- [i-1b] LNAV's path guidance: the true track to the aim point along the path (B747_lnav_path_now); nil
+-- without a path, LNAV then steering as before.
+function B747_lnav_path_track(fmsO,current)
+	local path,fix=B747_lnav_path_now(fmsO,current)
 	if path==nil then return nil end
 	local aimDistance=math.sqrt(path.aim_east_nm*path.aim_east_nm+path.aim_north_nm*path.aim_north_nm)
 	local aimLat,aimLon=movePoint(fix[5],fix[6],aimDistance,math.deg(math.atan2(path.aim_east_nm,path.aim_north_nm))%360)
@@ -2764,6 +2773,12 @@ function B747_lnav_update_xtk(fmsO)
 	local fix=fmsO[current]
 	if current<2 or fix==nil then
 		B747DR_ap_lnav_xtk_error=0
+		return
+	end
+	-- from the path LNAV flies (the arc in a fly-by turn), else from the active leg
+	local path=B747_lnav_path_now(fmsO,current)
+	if path~=nil then
+		B747DR_ap_lnav_xtk_error=path.xtk_nm
 		return
 	end
 	local legStart=B747_lnav_leg_start(fmsO,current)

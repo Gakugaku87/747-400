@@ -1,7 +1,8 @@
 -- Run from the repository root with Lua 5.1 or LuaJIT.
 -- LNAV's cross-track error (laminar/B747/autopilot/lnav/xtk_error, the
 -- PROGRESS page's XTK ERROR): every frame the signed distance from the active
--- leg, + right of it, from the offset track when an offset is flown. It used
+-- leg, + right of it, from the offset track when an offset is flown, and from
+-- the path LNAV flies (the arc in a fly-by turn) where it flies one. It used
 -- to be written only by the leg search (the smallest unsigned distance of the
 -- legs it looked at, 100 when none), which runs in the last 5 nm or third of
 -- a leg, so in flight it stayed at an old value for most of a leg (the kit
@@ -138,6 +139,29 @@ place(env, route, 40, 1.2, 1)
 env.B747DR_ap_lnav_xtk_error = 3.3
 env.B747_getCurrentWayPoint(route)
 check(env.B747DR_ap_lnav_xtk_error == 0, "the origin active: no cross-track, "..tostring(env.B747DR_ap_lnav_xtk_error))
+
+-- 8. In a fly-by turn the cross-track is from the path LNAV flies (item i-1b), the arc: it was from the next
+-- leg once the turn's anticipation had made it active, 2.7 nm right on the arc of a 90 deg turn at 478 kt.
+-- START -> FIX 100 nm north, NEXT 100 nm east of FIX: the arc of R 9.16 nm (478 kt, 20 deg) centred 9.16 nm
+-- east and south of FIX, its middle 3.79 nm from FIX on 135.
+local function on_turn(outside_nm)
+    local e = new_runtime()
+    local start = {50, -10}
+    local fix = {e.movePoint(start[1], start[2], 100, 0)}
+    local after = {e.movePoint(fix[1], fix[2], 100, 90)}
+    local r = {entry("ORIG", 49, -10, 0, 1), entry("START", start[1], start[2]), entry("FIX", fix[1], fix[2]),
+        entry("NEXT", after[1], after[2]), entry("DEST", after[1] + 5, after[2], 0, 1)}
+    local radius = 246 ^ 2 / (9.80665 * math.tan(math.rad(20))) / 1852
+    local lat, lon = e.movePoint(fix[1], fix[2], radius * (math.sqrt(2) - 1) - outside_nm, 135)
+    e.simDR_latitude, e.simDR_longitude, e.simDR_true_heading, e.simDR_ground_track_true = lat, lon, 45, 45
+    e.B747DR_fmscurrentIndex, e.B747DR_fms_setCurrent, e.B747DR_ap_lnavHeading_mode = 4, 4, 4
+    for i = 1, #r do r[i][10] = (i == 4) end
+    e.B747_getCurrentWayPoint(r)
+    check(e.B747DR_fmscurrentIndex == 4, "on the turn: NEXT active, "..e.B747DR_fmscurrentIndex)
+    return e.B747DR_ap_lnav_xtk_error
+end
+near(on_turn(0), 0, "on the arc's middle, NEXT active: on the path")
+near(on_turn(0.5), -0.5, "0.5 nm outside the arc's middle: 0.5 nm left of the path")
 
 -- 7. The PROGRESS page shows the side of the error and its size.
 local page_env = setmetatable({
