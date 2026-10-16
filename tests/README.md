@@ -49,6 +49,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   placard minus 5 kt limiting every descent target, the CDU pair entry,
   rejection and DELETE, and DELETE returning a selected climb CAS or cruise
   Mach to ECON.
+- `afds_pitch_limits_test.lua`: the flight director's pitch target limits -
+  down to -10 deg in VNAV PTH, V/S, G/S and ALT (it stopped at -3.5 deg,
+  where the 747 flies level with flaps 20 at 210 kt), up to +10 and +15 deg.
 - `afds_alt_capture_test.lua`: ALT capture and ALT hold in the production
   flight-director pitch code - a FLCH or V/S push outside the capture window
   surviving the update that still shows the old ALT FMA, an ALT HOLD push

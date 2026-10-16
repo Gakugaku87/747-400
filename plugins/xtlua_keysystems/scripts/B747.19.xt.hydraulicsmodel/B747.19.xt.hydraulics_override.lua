@@ -579,6 +579,9 @@ function get_FPM_bias()
    -- print("fpmBias "..fpmBias)
     return fpmBias
 end
+-- lowest pitch target of V/S, VNAV PTH, G/S and ALT: the 747 flies level at about -2 deg with flaps 20
+-- at 210 kt, and the -3.5 deg it was left VNAV PTH at -300 to -850 fpm on EHAM's approach (2026-10-16)
+local AFDS_MIN_PITCH_DEG=-10
 function ap_director_pitch(pitchMode)
     time=simDRTime-previous_pitchTime
     previous_pitchTime=simDRTime
@@ -767,9 +770,9 @@ function ap_director_pitch(pitchMode)
                 print("=last_altitude "..simDR_AHARS_pitch_heading_deg_pilot.." simDR_vvi_fpm_pilot "..currentFPM.." rog "..rog.." targetFPM "..targetFPM.. " pitchError "..pitchError)
             end
         end
-        if last_simDR_AHARS_pitch_heading_deg_pilot<-3.5 then
-            last_simDR_AHARS_pitch_heading_deg_pilot=-3.5
-        elseif last_simDR_AHARS_pitch_heading_deg_pilot>15 then 
+        if last_simDR_AHARS_pitch_heading_deg_pilot<AFDS_MIN_PITCH_DEG then
+            last_simDR_AHARS_pitch_heading_deg_pilot=AFDS_MIN_PITCH_DEG
+        elseif last_simDR_AHARS_pitch_heading_deg_pilot>15 then
             last_simDR_AHARS_pitch_heading_deg_pilot=15
         end
         retval=last_simDR_AHARS_pitch_heading_deg_pilot
@@ -858,9 +861,9 @@ function ap_director_pitch(pitchMode)
                 print("=simDR_vvi_fpm_pilot "..simDR_AHARS_pitch_heading_deg_pilot.." simDR_vvi_fpm_pilot "..currentFPM.." rog "..rog.." speed_delta "..speed_delta.." min_speedDelta "..min_speedDelta.." max_speedDelta "..max_speedDelta)
             end
        -- end
-        if last_simDR_AHARS_pitch_heading_deg_pilot<-3.5 then
-            last_simDR_AHARS_pitch_heading_deg_pilot=-3.5
-        elseif last_simDR_AHARS_pitch_heading_deg_pilot>10 then 
+        if last_simDR_AHARS_pitch_heading_deg_pilot<AFDS_MIN_PITCH_DEG then
+            last_simDR_AHARS_pitch_heading_deg_pilot=AFDS_MIN_PITCH_DEG
+        elseif last_simDR_AHARS_pitch_heading_deg_pilot>10 then
             last_simDR_AHARS_pitch_heading_deg_pilot=10
         end
         retval=last_simDR_AHARS_pitch_heading_deg_pilot
