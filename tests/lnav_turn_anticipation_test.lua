@@ -836,4 +836,30 @@ for _, c in ipairs({{120, 2, 120, 360}, {145, 4, 120, 400}}) do
     check(fixes_in_order(out, route, 3, 4), name..": F1 and F2 sequenced in order")
 end
 
+-- 11. A turn whose next fix, a short leg on, turns less than a degree the same way: no leg to share with it,
+-- the arc keeps its radius (squeezed to end at that fix, it could not be flown: 2.2 nm outside the leg after it
+-- for 120 deg at 250 kt with a 1.5 nm leg, 9.5 nm at 480 kt with 4.5 nm).
+for _, c in ipairs({{250, "low", 5000, 1.5, 0.4}, {480, "cruise", 33000, 4.5, 1.0}}) do
+    local lat0, lon0 = 50, -10
+    local f2_lat, f2_lon = probe.movePoint(lat0, lon0, 40, 0)
+    local f3_lat, f3_lon = probe.movePoint(f2_lat, f2_lon, c[4], 120)
+    local f4_lat, f4_lon = probe.movePoint(f3_lat, f3_lon, 40, 122)
+    local f5_lat, f5_lon = probe.movePoint(f4_lat, f4_lon, 40, 122)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("F2", f2_lat, f2_lon), E("F3", f3_lat, f3_lon),
+        E("F4", f4_lat, f4_lon), E("F5", f5_lat, f5_lon), E("DEST", f5_lat + 5, f5_lon, 0, 1)}
+    out = fly({route = route, index = 3, start = {probe.movePoint(lat0, lon0, 20, 0)}, heading = 0, tas_kt = c[1],
+        alt_ft = c[3], loop = c[2], seconds = (20 + c[4] + 30) / c[1] * 3600 + 120})
+    local outside = 0
+    for _, q in ipairs(out.track) do
+        local d = probe.getDistance(f3_lat, f3_lon, q.lat, q.lon)
+        local brg = probe.getHeading(f3_lat, f3_lon, q.lat, q.lon)
+        if d < 25 and math.abs(wrap(brg - 122)) < 90 then
+            outside = math.max(outside, -afds.signed_cross_track_nm(f3_lat, f3_lon, f4_lat, f4_lon, q.lat, q.lon,
+                probe.getDistance, probe.getHeading))
+        end
+    end
+    check(outside <= c[5], string.format("+120 deg then %.1f nm to a 2 deg turn at %d kt: %.2f nm outside the leg after it "
+        .."(at most %.1f)", c[4], c[1], outside, c[5]))
+end
+
 print("LNAV turn anticipation tests passed: "..checks)
