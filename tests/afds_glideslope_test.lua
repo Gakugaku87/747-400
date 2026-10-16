@@ -52,7 +52,7 @@ near(glide_slope_fpm(1000, -2.5), NOMINAL + 1000, 0.01, "full scale below (x3): 
 -- below the beam by 500 ft, slowing from 160 to 140 kt after AM622. Its other modes keep their rates.
 -- (ap_director_pitch_integral as ap_pitch_assist runs it every frame, approach_model.lua's loader)
 local model = dofile("tests/approach_model.lua")
-local function pitch_change(pitch_mode, seconds)
+local function pitch_change(pitch_mode, seconds, before_mode, before_seconds)
     local d = {}
     local _, hyd = model.load(d)
     model.set_datarefs(d, model.eham(), 0.3)
@@ -66,17 +66,27 @@ local function pitch_change(pitch_mode, seconds)
     d.B747DR_flap_ratio, d.B747DR_airspeed_Vmc = 1, 130
     hyd.MODEL_init_director(0)
     d.simDR_AHARS_pitch_heading_deg_pilot = 0
-    local t0 = d.simDRTime
-    while d.simDRTime < t0 + seconds do
-        d.simDRTime = d.simDRTime + 0.05
-        hyd.ap_director_pitch_integral()
-        d.simDR_AHARS_pitch_heading_deg_pilot = hyd.MODEL_director_state().raw
+    local function fly(mode, duration)
+        d.B747DR_ap_FMA_active_pitch_mode = mode
+        local t0 = d.simDRTime
+        while d.simDRTime < t0 + duration do
+            d.simDRTime = d.simDRTime + 0.05
+            hyd.ap_director_pitch_integral()
+            d.simDR_AHARS_pitch_heading_deg_pilot = hyd.MODEL_director_state().raw
+        end
     end
-    return hyd.MODEL_director_state().raw
+    if before_mode then fly(before_mode, before_seconds) end
+    local start = hyd.MODEL_director_state().raw
+    fly(pitch_mode, seconds)
+    return hyd.MODEL_director_state().raw - start
 end
 local gs, path = pitch_change(2, 10), pitch_change(6, 10)
 check(gs > 0.9, "G/S: 104 fpm too steep at 150 kt, pitched up "..gs.." deg in 10 s (every 0.2 s; 0.3 deg before)")
 check(path > 0.2 and path < 0.5, "VNAV PTH: pitched up "..path.." deg in 10 s (every 0.8 s, as before)")
+-- VNAV PTH straight after G/S (or after under 2 s in another mode; 2 s in TO/GA already brought the
+-- rate back) at its own rate, not G/S's
+local after = pitch_change(6, 10, 2, 10)
+check(after > 0.2 and after < 0.5, "VNAV PTH after G/S: pitched up "..after.." deg in 10 s (every 0.8 s)")
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("AFDS glide slope tests passed: "..checks)

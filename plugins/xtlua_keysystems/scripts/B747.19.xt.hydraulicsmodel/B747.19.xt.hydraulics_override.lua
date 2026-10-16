@@ -551,7 +551,7 @@ local lastFlapsFPM=0
 local fpmBiasRunStart=nil   -- first call of the current run of calls (the ALT, V/S, VNAV PTH or G/S branch)
 local lastFPMBiasTime=nil
 -- a longer gap between calls ends a run: the ALT branch calls every 0.1 s, the
--- V/S, VNAV PTH and G/S branch every 1.0 s (plus a frame) when on target
+-- V/S and VNAV PTH branch every 1.0 s (plus a frame) when on target, G/S every 0.2 s
 local FPM_BIAS_RUN_GAP_SEC=2.5
 -- The bias answers a flap handle move seen while this director runs above
 -- 3,000 ft RA. The reference follows the handle whenever a move cannot be
@@ -818,10 +818,11 @@ function ap_director_pitch(pitchMode)
         end]]--
         --if pitchError<1.3 then
         directorSampleRate=math.min(B747_rescale(0,1,500,0.2,math.abs(vviError)),minUpdateRate,prev_vvi_update)
-        -- G/S every 0.2 s: the pitch follows the beam as the 747 slows down on it (at 0.8 s it fell 1.8 dots
-        -- below by 500 ft slowing from 160 to 140 kt in the approach model)
-        if pitchMode==2 then directorSampleRate=math.min(directorSampleRate,0.2) end
         prev_vvi_update=directorSampleRate
+        -- G/S every 0.2 s: the pitch follows the beam as the 747 slows down on it (at 0.8 s it fell 1.8 dots
+        -- below by 500 ft slowing from 160 to 140 kt in the approach model); not kept in prev_vvi_update,
+        -- so the mode after G/S (V/S, VNAV PTH) runs at its own rate
+        if pitchMode==2 then directorSampleRate=math.min(directorSampleRate,0.2) end
         --end
        
         --local rog=0.001+0.00004*vviError/(time*30)
