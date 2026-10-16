@@ -2677,7 +2677,8 @@ function B747_lnav_path_track(fmsO,current)
 end
 
 -- [i-1b] LNAV ARM: LNAV pushed in flight (armed, B747DR_ap_lnav_state 1) engages within LNAV_CAPTURE_XTK_NM of the
--- active leg, abeam it (past the leg's start in the route's direction), or on a track towards the leg at up to
+-- active leg, abeam it (past the leg's start in the route's direction, or before it near its start fix), or on a
+-- track towards the leg at up to
 -- 90 deg where the turn onto it begins (the turn's anticipation across the leg: 3.0 nm for 45 deg at 480 kt and
 -- 20 deg of bank, 9.7 for 90); otherwise it stays armed and the roll mode before it (HDG SEL, HDG HOLD) flies on, as on
 -- Aerowinx PSX's 747-400 (2.5 nm; the FCOM's figure to be confirmed). At once where there is no such leg: none
@@ -2703,7 +2704,12 @@ local function B747_lnav_capture_now(fmsO)
 	local legCourse=getHeading(legStart[5],legStart[6],fix[5],fix[6])
 	local along=getDistance(legStart[5],legStart[6],simDR_latitude,simDR_longitude)*math.cos(math.rad(
 		getHeadingDifference(legCourse,getHeading(legStart[5],legStart[6],simDR_latitude,simDR_longitude))))
-	if along<0 then return false end
+	-- before the leg's start (a fix sequenced while LNAV was only armed, or the leg ahead seen from behind): within
+	-- LNAV_CAPTURE_XTK_NM of the fix it starts at (pushed just past a fly-by fix flown through in HDG SEL, it stayed
+	-- armed while HDG SEL flew away)
+	if along<0 then
+		return getDistance(legStart[5],legStart[6],simDR_latitude,simDR_longitude)<=LNAV_CAPTURE_XTK_NM
+	end
 	-- the leg's course abeam the 747 (a long great-circle leg turns: 1 deg in 50 nm at 52 N)
 	local abeamLat,abeamLon=movePoint(legStart[5],legStart[6],along,legCourse)
 	local course=(getHeading(abeamLat,abeamLon,legStart[5],legStart[6])+180)%360

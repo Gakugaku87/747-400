@@ -1026,12 +1026,39 @@ do
     -- 1 nm off: at once
     out = cruise({start = start(50, 1), heading = 270, seconds = 2})
     check(out.engaged ~= nil and out.engaged.t <= 0.1, "LNAV pushed 1 nm off the leg: engaged at once")
-    -- 1 nm off the leg's line 10 nm before its start (A): armed until abeam the leg, past A
+    -- 1 nm off the leg's line 10 nm before its start (A): armed until within 2.5 nm of A (abeam the leg past it, or
+    -- near the fix it starts at)
     out = cruise({start = start(-10, 1), heading = 270, seconds = 120})
-    local t_a = 10 / 480 * 3600
+    local t_a = (10 - math.sqrt(2.5 * 2.5 - 1)) / 480 * 3600
     check(out.engaged ~= nil and math.abs(out.engaged.t - t_a) <= 3, string.format(
-        "LNAV pushed 1 nm off the leg's line 10 nm before its start: engaged %s (passing it at %.0f s)",
+        "LNAV pushed 1 nm off the leg's line 10 nm before its start: engaged %s (2.5 nm from it at %.0f s)",
         out.engaged and string.format("at %.0f s", out.engaged.t) or "never", t_a))
+end
+-- LNAV pushed just past a fly-by fix the 747 flew straight through in HDG SEL (1 nm past NEXT, 0.5 nm outside its
+-- +90 deg turn, NEXT sequenced, so the next leg starts behind the 747's abeam point): engaged at once, near the leg's
+-- start, then onto that leg. Waiting to be abeam the leg past its start it stayed armed while HDG SEL flew away (a
+-- review: 42-44 nm off after 10 min).
+do
+    local lat0, lon0 = 52, -12
+    local next_lat, next_lon = probe.movePoint(lat0, lon0, 40, 0)
+    local after_lat, after_lon = probe.movePoint(next_lat, next_lon, 40, 90)
+    local far_lat, far_lon = probe.movePoint(after_lat, after_lon, 40, 90)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("NEXT", next_lat, next_lon),
+        E("AFTER", after_lat, after_lon), E("FAR", far_lat, far_lon), E("DEST", far_lat, far_lon + 1, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(next_lat, next_lon, 1, 0)
+    s_lat, s_lon = probe.movePoint(s_lat, s_lon, 0.5, 270)
+    out = fly({route = route, index = 4, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000, loop = "low",
+        seconds = 300, armed = true})
+    local through, last = 0, out.track[#out.track]
+    for _, q in ipairs(out.track) do
+        through = math.max(through, afds.signed_cross_track_nm(next_lat, next_lon, after_lat, after_lon, q.lat, q.lon,
+            probe.getDistance, probe.getHeading))
+    end
+    local final = math.abs(afds.signed_cross_track_nm(next_lat, next_lon, after_lat, after_lon, last.lat, last.lon,
+        probe.getDistance, probe.getHeading))
+    check(out.engaged ~= nil and out.engaged.t <= 0.1 and through <= 0.3 and final <= 0.1, string.format(
+        "LNAV pushed 1 nm past a fly-by fix flown through in HDG SEL: engaged %s, %.2f nm through the next leg, %.2f off it at the end",
+        out.engaged and string.format("at %.1f s", out.engaged.t) or "never", through, final))
 end
 -- the leg flown direct (from VECTORS) or the 747's own direct-to: engaged at once as before (a leg from where the
 -- 747 is); on the runway armed, engaged above 50 ft

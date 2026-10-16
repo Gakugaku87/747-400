@@ -321,7 +321,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   pushed 20 nm off a leg on a parallel heading still armed after 10 min on that
   heading; on 45 and 90 deg towards it engaged where the turn onto it begins
   (2.7-3.3 and 9.4-10 nm off at 480 kt) and onto it within 0.2 nm; 1 nm off
-  engaged at once, 10 nm before the leg's start only once past it; at once on a
+  engaged at once, 10 nm before the leg's start only once within 2.5 nm of it,
+  1 nm past a fly-by fix flown through in HDG SEL at once and onto the next
+  leg; at once on a
   leg flown direct (from VECTORS) or after the 747's own DIRECT TO; armed on the
   runway, engaged above 50 ft, also 1 nm before the leg's start (armed on the
   ground for the takeoff).
