@@ -80,7 +80,10 @@ case("the window open above SPD TRANS in the approach", function()
 end)
 
 -- Datarefs as XTLua gives them to a script: within a frame it reads back their values from the frame's start,
--- and its writes (and commands) take effect after it. The second result ends a frame.
+-- and its writes (and commands) take effect after it. The second result ends a frame. Not emulated: a write to
+-- an element of an array dataref (B747DR_throttle[i]) takes effect at once; and the last write to a dataref
+-- in the frame stands, the commands' (closures writing datarefs here) included in the order they were issued,
+-- which need not be the order XTLua applies them in.
 local function xtlua_datarefs()
     local now, written = {}, {}
     local d = setmetatable({}, {
