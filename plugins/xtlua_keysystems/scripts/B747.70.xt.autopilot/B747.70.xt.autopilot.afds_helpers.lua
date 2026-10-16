@@ -217,11 +217,14 @@ function afds.lnav_path_at(east_nm, north_nm, course_in_deg, course_out_deg, rad
     end
     local before = (east_nm - start_east) * in_east + (north_nm - start_north) * in_north
     local after = (east_nm - end_east) * out_east + (north_nm - end_north) * out_north
+    -- the turn's bisector (through the fix and the centre) parts the inbound leg's side from the outbound
+    -- leg's: past a turn of more than 90 deg the outbound leg also lies behind the arc's start
+    local inbound_side = east_nm * (in_east + out_east) + north_nm * (in_north + out_north) < 0
     local element, along, xtk, course
-    if before <= 0 then
+    if inbound_side and before <= 0 then
         element, along, course = "in", before, course_in_deg
         xtk = (east_nm - start_east) * in_north - (north_nm - start_north) * in_east
-    elseif after >= 0 then
+    elseif not inbound_side and after >= 0 then
         element, along, course = "out", arc_nm + after, course_out_deg
         xtk = (east_nm - end_east) * out_north - (north_nm - end_north) * out_east
     else

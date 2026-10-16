@@ -106,6 +106,34 @@ near(p.arc_start_nm, 2 * math.tan(math.rad(75)), 1e-9, "150 deg: R tan(75) befor
 p = path(0, -20, 0, -150, 2, 2)
 near(p.arc_start_nm, 2 * math.tan(math.rad(75)), 1e-9, "150 deg left: the same")
 
+-- Past a turn of more than 90 deg the outbound leg runs back behind the arc's start in the inbound leg's
+-- frame: the turn's bisector (through the fix and the arc's centre) parts the inbound leg's side from the
+-- outbound leg's. 120 deg right, R 2.5 nm: 8.7 nm along the outbound leg is 4.35 nm behind the fix, the arc
+-- starting 4.33 nm before it.
+local function on_leg(nm, course) return nm * math.sin(math.rad(course)), nm * math.cos(math.rad(course)) end
+local e, n = on_leg(8.7, 120)
+p = path(e, n, 0, 120, 2.5, 1)
+check(p.element == "out", "120 deg: 8.7 nm along the outbound leg is on it, got "..tostring(p.element))
+near(p.xtk_nm, 0, 1e-9, "120 deg: on the outbound leg, no cross-track")
+near(p.course_deg, 120, 1e-9, "120 deg: the outbound leg's course")
+local ae, an = on_leg(9.7, 120)
+near(p.aim_east_nm, ae, 1e-9, "120 deg: aim 1 nm further along the outbound leg (east)")
+near(p.aim_north_nm, an, 1e-9, "120 deg: aim 1 nm further along the outbound leg (north)")
+e, n = on_leg(8.7, 240)
+p = path(e, n, 0, 240, 2.5, 1)
+check(p.element == "out", "120 deg left: the same, got "..tostring(p.element))
+-- 150 deg right, R 2 nm: 10 nm along the outbound leg (8.66 nm behind the fix, the arc from 7.46 nm), 0.4 nm
+-- right of it
+e, n = on_leg(10, 150)
+local re, rn = on_leg(0.4, 240)
+p = path(e + re, n + rn, 0, 150, 2, 1)
+check(p.element == "out", "150 deg: 10 nm along the outbound leg is on it, got "..tostring(p.element))
+near(p.xtk_nm, 0.4, 1e-9, "150 deg: 0.4 nm right of the outbound leg")
+-- the inbound leg's side is the inbound leg's, also where the outbound leg's extension behind the fix runs
+p = path(0, -10, 0, 120, 2.5, 1)
+check(p.element == "in", "120 deg: 10 nm before the fix on the inbound leg")
+near(p.xtk_nm, 0, 1e-9, "120 deg: on the inbound leg")
+
 -- 6. Not a path: no radius, no courses, a reversal.
 check(path(0, 0, 0, 90, 0, 2) == nil, "no radius")
 check(path(0, 0, nil, 90, 2, 2) == nil, "no inbound course")

@@ -301,8 +301,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   signed cross-track from the legs and from the arc (the fix outside it, a
   point inside it), the path's course, and the pure-pursuit aim point along
   the leg, round the arc and onto the next leg, at most 45 deg off a leg;
-  90 deg turns both ways, no turn, 150 deg, and no path without a radius,
-  courses or a look-ahead, or for a reversal.
+  90 deg turns both ways, no turn, 150 deg, past turns of 120 and 150 deg the
+  outbound leg (behind the arc's start in the inbound leg's frame: the turn's
+  bisector parts the two legs' sides), and no path without a radius, courses
+  or a look-ahead, or for a reversal.
 - `vnav_turn_hold_test.lua`: a fix LNAV sequences early for its turn keeping
   its altitude as VNAV's descent floor until the aircraft is past the turn's
   bisector - the bisector for straight fixes, 65-137 deg turns both ways and
