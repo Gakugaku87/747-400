@@ -2578,10 +2578,48 @@ local function B747_lnav_direct_to_index(current)
 	return lnavDirectToIndex
 end
 
+-- The fix before fmsO[i] (past one listed twice in a row) where a leg to fmsO[i] starts that LNAV's path could
+-- take (nil from the origin airport, from an entry that is no fix, or for a leg of no length), and whether that
+-- fix was no fly-by: reached direct, or a turn of more than LNAV_FLYBY_MAX_TURN_DEG (passed abeam).
+local function B747_lnav_fix_before(fmsO,i)
+	local k=i-1
+	if k>2 and not B747_lnav_leg_has_course(B747_lnav_leg_start(fmsO,k),fmsO[k]) then k=k-1 end
+	local before=fmsO[k]
+	if k<2 or not B747_lnav_leg_supports_preemption(before) or tonumber(B747_lnav_leg_start(fmsO,k)[2])==1
+		or not B747_lnav_leg_has_course(B747_lnav_leg_start(fmsO,k),before)
+		or not B747_lnav_leg_has_course(before,fmsO[i]) then
+		return nil,false
+	end
+	local inCourse,directTo=B747_lnav_inbound_course(fmsO,k)
+	local outCourse=getHeading(before[5],before[6],fmsO[i][5],fmsO[i][6])
+	return k,(directTo or math.abs(getHeadingDifference(outCourse,inCourse))>B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG)
+end
+
+-- [i-1b] Whether the arc at the fix before (fmsO[k], LNAV's path through it path) is flown once that fix has
+-- been sequenced: after a leg LNAV steered as before (the fix before k no fly-by), only if the 747 was on that
+-- path then, within LNAV_PATH_ON_LEG_NM and LNAV_PATH_ON_LEG_DEG of it; else LNAV takes the next leg's path.
+-- Drawn from a leg the 747 was not on, k's arc first rolled it away from its turn: 1.16 nm outside the leg after
+-- a 90 deg turn 10 nm after a 170 deg turn-back (0.6 nm inside the leg to it, 19 deg off), 0.42 nm 15 nm after a
+-- 165 deg one (0.2 nm, 7 deg off), steered as before 0.54 and 0.24. Decided once for each fix flown to.
+local LNAV_PATH_ON_LEG_NM=0.1
+local LNAV_PATH_ON_LEG_DEG=5
+local lnavArcBefore={current=0,lat=0,lon=0,flown=false}
+local function B747_lnav_arc_before_flown(fmsO,k,current,path)
+	local before=fmsO[k]
+	if lnavArcBefore.current~=current or lnavArcBefore.lat~=before[5] or lnavArcBefore.lon~=before[6] then
+		local _,noFlyBy=B747_lnav_fix_before(fmsO,k)
+		lnavArcBefore.current,lnavArcBefore.lat,lnavArcBefore.lon=current,before[5],before[6]
+		lnavArcBefore.flown=not noFlyBy or (math.abs(path.xtk_nm)<=LNAV_PATH_ON_LEG_NM
+			and math.abs(getHeadingDifference(simDR_ground_track_true,path.course_deg))<=LNAV_PATH_ON_LEG_DEG)
+	end
+	return lnavArcBefore.flown
+end
+
 -- [i-1b] The lateral path LNAV flies now (afds.lnav_path_at through a fix, B747_lnav_path_at_fix), with the
 -- fix it is about: the fix flown to's, but after its turn has been sequenced the fix before's until its arc
 -- ends, the aircraft gets farther off it than the anticipation allows (2 nm), or the fix flown to's arc is
--- within the look-ahead. The aim a look-ahead (LNAV_PATH_LOOKAHEAD_S of ground speed) along round the arcs
+-- within the look-ahead (and not after a leg steered as before the 747 was not on: B747_lnav_arc_before_flown).
+-- The aim a look-ahead (LNAV_PATH_LOOKAHEAD_S of ground speed) along round the arcs
 -- and LNAV_PATH_CAPTURE_RADII of the turn radius along the legs, never nearer than the cross-track (an
 -- intercept of at most 45 deg). nil without such a path, with an offset or a direct-to
 -- (B747DR_ap_lnav_xtk_target, the 747's own direct-to until its fix is passed), or not moving; and after a
@@ -2594,20 +2632,14 @@ local function B747_lnav_path_now(fmsO,current)
 	local p=B747_lnav_path_parameters()
 	if p==nil then return nil end
 	local path,fix=nil,nil
-	-- the fix before (past one listed twice in a row)
-	local k=current-1
-	if k>2 and not B747_lnav_leg_has_course(B747_lnav_leg_start(fmsO,k),fmsO[k]) then k=k-1 end
-	local before=fmsO[k]
-	if k>=2 and k~=directToIndex and B747_lnav_leg_supports_preemption(before) and tonumber(B747_lnav_leg_start(fmsO,k)[2])~=1
-		and B747_lnav_leg_has_course(B747_lnav_leg_start(fmsO,k),before)
-		and B747_lnav_leg_has_course(before,fmsO[current]) then
-		local inCourse,directTo=B747_lnav_inbound_course(fmsO,k)
-		local outCourse=getHeading(before[5],before[6],fmsO[current][5],fmsO[current][6])
-		if directTo or math.abs(getHeadingDifference(outCourse,inCourse))>B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG then
-			return nil
-		end
+	local k,noFlyBy=B747_lnav_fix_before(fmsO,current)
+	if k~=nil and k~=directToIndex then
+		if noFlyBy then return nil end
 		path,fix=B747_lnav_path_at_fix(fmsO,k,p)
-		if path~=nil and (path.element=="out" or math.abs(path.xtk_nm)>LNAV_MAX_PREEMPT_XTK_NM) then path=nil end
+		if path~=nil and (path.element=="out" or math.abs(path.xtk_nm)>LNAV_MAX_PREEMPT_XTK_NM
+			or not B747_lnav_arc_before_flown(fmsO,k,current,path)) then
+			path=nil
+		end
 	end
 	-- the fix flown to's path once its arc is within the look-ahead: on a short leg the arcs at its two ends
 	-- meet (EIDW DW128-DW129, 3.7 nm), and following the fix before's to its end the 747 began DW129's turn

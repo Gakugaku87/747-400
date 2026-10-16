@@ -862,4 +862,39 @@ for _, c in ipairs({{250, "low", 5000, 1.5, 0.4}, {480, "cruise", 33000, 4.5, 1.
         .."(at most %.1f)", c[4], c[1], outside, c[5]))
 end
 
+-- 12. A turn-back (more than 150 deg, no fly-by) and a 90 deg turn 10-15 nm on at 200 kt: the leg between is
+-- steered as before, and the 747, not yet on it when the 90 deg turn is sequenced (flying direct to its fix), rolls
+-- the turn's way and is no farther outside the leg after it than before i-1b (0.54 and 0.24 nm). The 90 deg turn's
+-- arc, drawn from the leg the 747 was not on, first rolled it the wrong way: 1.16 and 0.42 nm outside.
+for _, c in ipairs({{170, 10, -90, 0.6}, {-165, 15, 90, 0.3}}) do
+    local lat0, lon0 = 50, -10
+    local fix_lat, fix_lon = probe.movePoint(lat0, lon0, 20, 0)
+    local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, c[2], c[1] % 360)
+    local course = (c[1] + c[3]) % 360
+    local after_lat, after_lon = probe.movePoint(next_lat, next_lon, 30, course)
+    local far_lat, far_lon = probe.movePoint(after_lat, after_lon, 30, course)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("FIX", fix_lat, fix_lon), E("NEXT", next_lat, next_lon),
+        E("AFTER", after_lat, after_lon), E("FAR", far_lat, far_lon), E("DEST", far_lat - 5, far_lon, 0, 1)}
+    out = fly({route = route, index = 3, start = {probe.movePoint(lat0, lon0, 15, 0)}, heading = 0, tas_kt = 200,
+        alt_ft = 3000, loop = "low", seconds = 700})
+    local outside, side = 0, c[3] > 0 and 1 or -1
+    for _, q in ipairs(out.track) do
+        local d = probe.getDistance(next_lat, next_lon, q.lat, q.lon)
+        local brg = probe.getHeading(next_lat, next_lon, q.lat, q.lon)
+        if d < 20 and math.abs(wrap(brg - course)) < 90 then
+            outside = math.max(outside, -side * afds.signed_cross_track_nm(next_lat, next_lon, after_lat, after_lon,
+                q.lat, q.lon, probe.getDistance, probe.getHeading))
+        end
+    end
+    local name = string.format("turn-back %+d deg, %d nm, then %+d deg", c[1], c[2], c[3])
+    check(outside <= c[4], string.format("%s: %.2f nm outside the leg after it (at most %.1f)", name, outside, c[4]))
+    local sequenced, roll = nil, 0
+    for _, sw in ipairs(out.switches) do if sw.from == 4 then sequenced = sw.t end end
+    for _, q in ipairs(out.track) do
+        if sequenced and q.t > sequenced and math.abs(q.bank) > 5 then roll = q.bank break end
+    end
+    check(roll * side > 0, string.format("%s: first rolled %+.0f deg after NEXT was sequenced (its turn's way)", name, roll))
+    check(fixes_in_order(out, route, 3, 4), name..": FIX and NEXT sequenced in order")
+end
+
 print("LNAV turn anticipation tests passed: "..checks)
