@@ -2685,8 +2685,10 @@ function B747_getCurrentWayPoint_function(fmsO)
 	-- a turn passed abeam) keeps the lead: flown straight at its fix, the 747 reached the bisector only at the
 	-- fix (EIDW's DW129 after "(650)": 3.2 nm outside).
 	local current=B747DR_fmscurrentIndex
-	-- a fix listed again right after itself (a leg of no length) is passed with the one before it
+	-- a fix listed again right after itself (a leg of no length) is passed with the one before it; not an
+	-- altitude leg's end there, which is passed at its altitude
 	if current>2 and current<table.getn(fmsO)-1 and B747_lnav_leg_supports_preemption(fmsO[current])
+		and B747_afds_helpers.altitude_leg_end_ft(fmsO[current])==nil
 		and not B747_lnav_leg_has_course(B747_lnav_leg_start(fmsO,current),fmsO[current]) then
 		B747_lnav_sequence_to(current+1,"listed again: "..tostring(fmsO[current][8]))
 		return

@@ -485,6 +485,24 @@ check(env_rnp.B747DR_fmscurrentIndex == 3 and env_rnp.B747DR_CAS_caution_status[
     "1.5 nm off the leg 27 nm from the destination, on the path: UNABLE RNP, got "
     ..tostring(env_rnp.B747DR_CAS_caution_status[66]))
 check(frame_on_path({xtk = 0.2}).B747DR_CAS_caution_status[66] == 0, "0.2 nm off it: no UNABLE RNP")
+-- an altitude leg's end at the fix before (a CA leg's "(5000)", typed as a fix here) is no fix listed twice:
+-- not passed with the fix before it, below its altitude
+do
+    local env = new_runtime()
+    local lat0, lon0 = 50, -10
+    local fix_lat, fix_lon = env.movePoint(lat0, lon0, 30, 0)
+    local next_lat, next_lon = env.movePoint(fix_lat, fix_lon, 30, 60)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("FIX", fix_lat, fix_lon),
+        E("(5000)", fix_lat, fix_lon, 5000, 512), E("NEXT", next_lat, next_lon), E("DEST", next_lat + 5, next_lon, 0, 1)}
+    env.B747DR_fmscurrentIndex, env.B747DR_fms_setCurrent, env.B747DR_ap_lnavHeading_mode = 4, 4, 4
+    env.simDR_latitude, env.simDR_longitude = env.movePoint(fix_lat, fix_lon, 0.5, 0)
+    env.simDR_true_heading, env.simDR_ground_track_true = 0, 0
+    env.simDR_pressureAlt1, env.simDR_radarAlt1, env.simDR_vvi_fpm_pilot = 3000, 3000, 2000
+    env.simDR_groundspeed, env.simDR_TAS_mps = 250 * KT, 250 * KT
+    route[4][10] = true
+    env.B747_getCurrentWayPoint_function(route)
+    check(env.B747DR_fmscurrentIndex == 4, "(5000) at FIX, at 3,000 ft: not passed, got "..env.B747DR_fmscurrentIndex)
+end
 -- the steering with a ground speed that is no number (NaN): no path, the heading LNAV writes a number
 do
     local env = new_runtime()
