@@ -455,6 +455,36 @@ check(one_frame({start_name = "VECTORS", next_course = 60, dist = 8}) == 0,
 -- a fix's name that only begins like it is no VECTORS: its leg keeps the
 -- 2 nm cross-track limit
 check(one_frame({start_name = "VECTA", xtk = 2.5}) == 0, "the leg from a fix VECTA, 2.5 nm off it: not anticipated")
+-- On a leg LNAV flies by its path the rest of the sequencing's bookkeeping still runs: LNAV's heading mode
+-- follows the fix flown to once LNAV is engaged (0 when it engages after take-off: the steering wrote no
+-- heading until the next sequencing), and UNABLE RNP (CAS 66) within 40 nm of the destination, 1 nm off a leg.
+local function frame_on_path(o)
+    local env = new_runtime()
+    local lat0, lon0 = 54.0, -10.0
+    local fix_lat, fix_lon = env.movePoint(lat0, lon0, 30, 0)
+    local next_lat, next_lon = env.movePoint(fix_lat, fix_lon, 20, 90)
+    local after_lat, after_lon = env.movePoint(next_lat, next_lon, 20, 90)
+    route = {E("ORIG", 53.0, -10.0, 0, 1), E("START", lat0, lon0), E("FIX", fix_lat, fix_lon), E("NEXT", next_lat, next_lon),
+        E("AFTER", after_lat, after_lon), E("DEST", next_lat, next_lon + 0.2, 0, 1)}
+    env.B747DR_fmscurrentIndex, env.B747DR_fms_setCurrent, env.B747DR_ap_lnavHeading_mode = 3, 3, o.mode or 3
+    local lat, lon = env.movePoint(lat0, lon0, 20, 0)
+    lat, lon = env.movePoint(lat, lon, o.xtk or 0, 90)
+    env.simDR_latitude, env.simDR_longitude, env.simDR_true_heading, env.simDR_ground_track_true = lat, lon, 0, 0
+    env.simDR_pressureAlt1, env.simDR_radarAlt1, env.simDR_vvi_fpm_pilot = 5000, 5000, 0
+    env.simDR_groundspeed, env.simDR_TAS_mps = 250 * KT, 250 * KT
+    route[3][10] = true
+    env.B747_getCurrentWayPoint_function(route)
+    return env
+end
+local env_mode = frame_on_path({mode = 0})
+check(env_mode.B747DR_fmscurrentIndex == 3 and env_mode.B747DR_ap_lnavHeading_mode == 3,
+    "LNAV engaged with its heading mode 0, on the path: the mode follows FIX, got "
+    ..tostring(env_mode.B747DR_ap_lnavHeading_mode))
+local env_rnp = frame_on_path({xtk = 1.5})
+check(env_rnp.B747DR_fmscurrentIndex == 3 and env_rnp.B747DR_CAS_caution_status[66] == 1,
+    "1.5 nm off the leg 27 nm from the destination, on the path: UNABLE RNP, got "
+    ..tostring(env_rnp.B747DR_CAS_caution_status[66]))
+check(frame_on_path({xtk = 0.2}).B747DR_CAS_caution_status[66] == 0, "0.2 nm off it: no UNABLE RNP")
 -- the steering with a ground speed that is no number (NaN): no path, the heading LNAV writes a number
 do
     local env = new_runtime()

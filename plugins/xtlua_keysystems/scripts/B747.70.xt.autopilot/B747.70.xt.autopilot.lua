@@ -2640,12 +2640,12 @@ function B747_getCurrentWayPoint_function(fmsO)
 	end
 	-- [i-1b] a turn LNAV flies by its path (B747_lnav_path_at_fix, on a leg it flies by the path:
 	-- B747_lnav_path_now) is sequenced at its bisector, where the FMC sequences it, while the aircraft is as near
-	-- that path as the anticipation below allows; the anticipation's lead is for the turns flown otherwise. The
-	-- path's arc allows for the wind and so does not start where the lead does: a 137 deg turn in a crosswind,
-	-- already 2 nm into its arc at the lead, was never sequenced (the 747 flew on past the next fix). A leg LNAV
-	-- steers as before (after an altitude leg's end, from VECTORS or PPOS, after a turn passed abeam) keeps the
-	-- lead: flown straight at its fix, the 747 reached the bisector only at the fix (EIDW's DW129 after "(650)":
-	-- 3.2 nm outside).
+	-- that path as the anticipation below allows; neither the anticipation nor the leg search move the fix
+	-- before. The path's arc allows for the wind and so does not start where the anticipation's lead does: a
+	-- 137 deg turn in a crosswind, already 2 nm into its arc at the lead, was never sequenced (the 747 flew on
+	-- past the next fix). A leg LNAV steers as before (after an altitude leg's end, from VECTORS or PPOS, after
+	-- a turn passed abeam) keeps the lead: flown straight at its fix, the 747 reached the bisector only at the
+	-- fix (EIDW's DW129 after "(650)": 3.2 nm outside).
 	local current=B747DR_fmscurrentIndex
 	-- a fix listed again right after itself (a leg of no length) is passed with the one before it
 	if current>2 and current<table.getn(fmsO)-1 and B747_lnav_leg_supports_preemption(fmsO[current])
@@ -2653,6 +2653,7 @@ function B747_getCurrentWayPoint_function(fmsO)
 		B747_lnav_sequence_to(current+1,"listed again: "..tostring(fmsO[current][8]))
 		return
 	end
+	local pathFlown=false
 	if current>1 and current<table.getn(fmsO)-1 and B747DR_ap_lnav_xtk_target==0
 		and B747_lnav_path_now(fmsO,current)~=nil then
 		local p=B747_lnav_path_parameters()
@@ -2660,15 +2661,16 @@ function B747_getCurrentWayPoint_function(fmsO)
 		if path and math.abs(path.xtk_nm)<=LNAV_MAX_PREEMPT_XTK_NM then
 			if path.past_bisector then
 				B747_lnav_sequence_to(current+1,"past the bisector of the turn at "..tostring(fmsO[current][8]))
+				return
 			end
-			return
+			pathFlown=true
 		end
 	end
 	-- the active leg's fly-by turn starts its lead before the fix (the search
 	-- below looks only at the last 5 nm or third of a leg, and a 90 deg turn at
 	-- cruise needs about 9 nm); not on the leg from the origin airport, nor
 	-- after a direct-to or with an offset (as before)
-	if current>1 and current<table.getn(fmsO)-1 and B747DR_ap_lnav_xtk_target==0 then
+	if not pathFlown and current>1 and current<table.getn(fmsO)-1 and B747DR_ap_lnav_xtk_target==0 then
 		local fix,nextFix=fmsO[current],fmsO[current+1]
 		local legStart=B747_lnav_leg_start(fmsO,current)
 		local inCourse,directTo,afterAltitude=B747_lnav_inbound_course(fmsO,current)
@@ -2729,7 +2731,7 @@ function B747_getCurrentWayPoint_function(fmsO)
 		
 	end
 	--print("Start Track Data "..minPhaseLeg.."->"..maxPhaseLeg)
-	if canNew then
+	if canNew and not pathFlown then
 		for i = minPhaseLeg, maxPhaseLeg, 1 do --last is always the airport, never go past last track
 
 			local dFromLast=0.1
