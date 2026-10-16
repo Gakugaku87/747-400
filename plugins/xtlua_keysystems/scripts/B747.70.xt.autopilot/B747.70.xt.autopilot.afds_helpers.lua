@@ -694,6 +694,11 @@ afds.VNAV_APPROACH_GLIDE_DEG = 3.0
 afds.VNAV_PATH_GAIN_FPM_PER_FT = 1.5
 afds.VNAV_PATH_MAX_CORRECTION_FPM = 1500
 
+-- Whether a route entry is a runway (RW06, RW18R).
+local function is_runway_entry(entry)
+    return string.match(tostring(entry[8] or ""), "^RW%d%d[LRC]?$") ~= nil
+end
+
 -- Index of the arrival runway in an xtlua/fms route: the last runway entry
 -- within radius_nm of the destination (the last entry) with an entry outside
 -- the radius before it (not the departure runway of a route back to the
@@ -706,7 +711,7 @@ function afds.route_runway_index(route, distance_fn, radius_nm)
         return distance_fn(route[i][5], route[i][6], destination[5], destination[6]) < radius_nm
     end
     for i = count - 1, 2, -1 do
-        if string.sub(tostring(route[i][8] or ""), 1, 2) == "RW" and inside(i) then
+        if is_runway_entry(route[i]) and inside(i) then
             for k = 1, i - 1 do
                 if not inside(k) then return i end
             end
@@ -719,9 +724,19 @@ end
 -- The path from the runway (runway_index) back to the fix before first_index
 -- (the fix flown to, or one sequenced early for its turn): points {d = NM to
 -- the runway along the route, alt = ft} from the runway out, and the distance
--- along the route from each entry up to the runway to it.
+-- along the route from each entry up to the runway to it. nil while that fix
+-- lies before the route's farthest point from the destination: on a route back
+-- to the departure airport (a circuit) the way out is not the approach, and
+-- its fixes (the departure runway at 41 ft) are left out of it.
 function afds.vnav_approach_path(route, runway_index, first_index, distance_fn, transition_alt_ft,
         cruise_alt_ft, glide_deg)
+    local destination = route[#route]
+    local far_index, far_nm = 1, -1
+    for i = 1, runway_index - 1 do
+        local nm = distance_fn(route[i][5], route[i][6], destination[5], destination[6])
+        if nm > far_nm then far_index, far_nm = i, nm end
+    end
+    if first_index - 1 < far_index then return nil end
     local to_runway = {}
     to_runway[runway_index] = 0
     for i = runway_index - 1, 1, -1 do
@@ -732,7 +747,8 @@ function afds.vnav_approach_path(route, runway_index, first_index, distance_fn, 
     local fixes = {}
     for i = math.max(1, first_index - 1), runway_index - 1 do
         local alt = tonumber(route[i][9]) or 0
-        if route[i][2] ~= 1 and string.sub(tostring(route[i][8] or ""), 1, 1) ~= "(" and alt > 0 then
+        if route[i][2] ~= 1 and string.sub(tostring(route[i][8] or ""), 1, 1) ~= "(" and not is_runway_entry(route[i])
+            and alt > 0 then
             if alt >= transition_alt then
                 fixes = {}
             else

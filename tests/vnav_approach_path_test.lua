@@ -90,15 +90,33 @@ local function before(route, j, nm)
 end
 local GLIDE = math.tan(math.rad(3)) * 6076.12
 
+-- TST744L as the native FMS has it: the departure runway, the oceanic fixes, ILS 06 and its missed approach
+local function tst744l()
+    return {entry("EINN", 52.701992, -8.924772, 41, 1), entry("RW24", 52.710008, -8.906353, 41),
+        entry("EMPER", 49, -9, 31000), entry("BEDRA", 49, -15, 33000), entry("ETARI", 55.5, -15, 35000),
+        entry("BILTO", 56.5, -15, 35000), entry("ELPOM", 52.560306, -9.224111, 3000),
+        entry("ASGON", 52.598444, -9.143917, 3046), entry("RW06", 52.693172, -8.943519, 101),
+        entry("NN005", 52.7303, -8.8633, 4000), entry("SHA", 52.7214, -8.8853, 4000), entry("EINN", 52.701992, -8.924772, 41, 1)}
+end
+
 -- 1. The arrival runway.
 case("the arrival runway", function()
     check(afds.route_runway_index(eham(), getDistance, 10) == RW18R, "EHAM: RW18R")
-    check(afds.route_runway_index(einn(), getDistance, 10) == RW06,
-        "EINN back to EINN: RW06, not the departure end")
-    -- a route back to the departure airport without an approach: its departure runway is no arrival runway
-    local loop = {entry("EINN", 52.701992, -8.924772, 41, 1), entry("RW24", 52.7100, -8.9000, 41),
-        entry("BILTO", 56.5, -15, 35000), entry("EINN", 52.701992, -8.924772, 41, 1)}
+    -- with its missed approach, a vectors leg's end hundreds of nm away
+    local route = eham()
+    table.insert(route, RW18R + 1, entry("(500)", 52.345, 4.711, 500, 2048))
+    table.insert(route, RW18R + 2, entry("AM624", 52.2667, 4.6333, 2000))
+    table.insert(route, RW18R + 3, entry("(VECT)", 60.5, 15.0, 2000, 2048))
+    check(afds.route_runway_index(route, getDistance, 10) == RW18R, "EHAM with its missed approach: RW18R")
+    check(afds.route_runway_index(tst744l(), getDistance, 10) == 9, "TST744L: RW06, not the departure's RW24")
+    -- the route back to EINN without its approach: the departure runway is no arrival runway
+    local loop = tst744l()
+    for _ = 7, 11 do table.remove(loop, 7) end
     check(afds.route_runway_index(loop, getDistance, 10) == nil, "no approach: no arrival runway")
+    -- only a runway's name: not a fix whose name begins with RW
+    route = eham()
+    route[RW18R][8] = "RWY18"
+    check(afds.route_runway_index(route, getDistance, 10) == nil, "RWY18 is no runway")
 end)
 
 -- 2. The path: EHAM from AM607 (NIRSI before it), EINN from ELPOM (BILTO before it is cruise).
@@ -151,6 +169,35 @@ case("the path to RW06", function()
     near(points[2].d, (3000 - 101) / (math.tan(math.rad(3.2)) * 6076.12), 0.001, "a 3.2 deg final")
     points = afds.vnav_approach_path(route, RW06, ELPOM, getDistance, 18000, 35000, 2.5)
     near(points[2].d, d_asgon, 0.001, "a 2.5 deg final: no intercept before ASGON")
+end)
+
+-- The fixes of the approach's path: after the route's farthest point from the destination, without a
+-- departure runway, pseudo fixes ("(...)") or airports.
+case("the approach's fixes", function()
+    -- a short circuit: the departure runway at 41 ft and a fix at 2,000 ft before the downwind at 3,000 ft
+    local circuit = {entry("EINN", 52.701992, -8.924772, 41, 1), entry("RW24", 52.710008, -8.906353, 41),
+        entry("DEP1", 52.75, -8.98, 2000), entry("DW1", 52.80, -8.90, 3000), entry("BASE", 52.62, -8.80, 3000),
+        entry("FAF", 52.65, -8.99, 2500), entry("RW06", 52.693172, -8.943519, 101),
+        entry("EINN", 52.701992, -8.924772, 41, 1)}
+    -- DW1 flown to: still outbound, before the circuit's farthest point (BASE): no approach yet
+    check(afds.vnav_approach_path(circuit, 7, 4, getDistance, 18000, 3000, 3.0) == nil, "outbound: no approach")
+    -- FAF flown to: the path from BASE's 3,000 ft, the departure's 2,000 and 41 ft left out
+    local points = afds.vnav_approach_path(circuit, 7, 6, getDistance, 18000, 3000, 3.0)
+    local alts = {}
+    for _, point in ipairs(points or {}) do alts[#alts + 1] = point.alt end
+    check(table.concat(alts, " ") == "101 2500 3000", "the circuit's path: the runway's 101 ft, the FAF's 2,500"
+        .." (3.1 nm out, below the 3 deg line), BASE's 3,000, no 2,000 or 41 ft: "..table.concat(alts, " "))
+    local route = eham()
+    table.insert(route, AM608, entry("(INTC)", 52.56, 4.69, 3800, 2048))
+    route[RW18R + 1][9] = 0
+    points = afds.vnav_approach_path(route, RW18R + 1, AM607, getDistance, 18000, 37000, 3.0)
+    check(points[1].alt == -11 + 50, "the runway without an altitude: the destination's + 50 ft")
+    for _, point in ipairs(points) do check(point.alt ~= 3800, "no pseudo fix in the path") end
+    -- the runway active, nothing before it with an altitude: the runway's and the T/D's 290 ft/nm
+    route = eham()
+    route[AM622][9] = 0
+    points = afds.vnav_approach_path(route, RW18R, RW18R, getDistance, 18000, 37000, 3.0)
+    check(#points == 2 and points[2].alt == 37000, "no fix: from the runway at 290 ft/nm")
 end)
 
 -- 3. The V/S along the path.
@@ -299,6 +346,35 @@ case("the speed limit in the approach", function()
     r.simDR_flap_ratio_control, r.simDR_ind_airspeed_kts_pilot, r.B747DR_airspeed_Vmo = 0, 351, 365
     r.setDescentVSpeed(route)
     near(r.simDR_autopilot_vs_fpm, -870 - 540, 2, "351 kt flaps up: 3 kt below Vmo - 11")
+end)
+
+case("setDistances with the missed approach after the runway", function()
+    local route = eham()
+    table.insert(route, RW18R + 1, entry("(500)", 52.345, 4.711, 500, 2048))
+    table.insert(route, RW18R + 2, entry("AM624", 52.2667, 4.6333, 2000))
+    table.insert(route, RW18R + 3, entry("(VECT)", 60.5, 15.0, 2000, 2048))
+    local gradient = 1400 / along(route, AM608, AM621)
+    local lat, lon = before(route, AM621, 2.0)
+    local r = new_runtime(route, AM621, lat, lon, 2000 + 2.0 * gradient + 100, 2000)
+    r.setDistances(route)
+    near(r.B747BR_fpe, 100, 1, "100 ft above the path to RW18R")
+    -- past the runway: no approach any more
+    r = new_runtime(route, RW18R + 2, 52.30, 4.70, 600, 2000)
+    r.B747BR_fpe = 4321
+    r.setDescentVSpeed(route)
+    check(r.B747_vnav_approach_active ~= true, "on the missed approach: no approach path")
+end)
+
+case("VNAV off", function()
+    -- VNAV disengaged in the descent (inDescent 1, vnav_state 0): the path error only, no V/S
+    local route = eham()
+    local lat, lon = before(route, AM621, 2.0)
+    local r = new_runtime(route, AM621, lat, lon, 2600, 2000)
+    r.B747DR_ap_vnav_state = 0
+    r.setDescentVSpeed(route)
+    check(r.simDR_autopilot_vs_fpm == -1234, "VNAV off: the V/S left alone")
+    check(r.B747BR_fpe < 1000 and r.B747BR_fpe > -1000, "VNAV off: the path error from the path")
+    check(r.B747_vnav_approach_active == false, "VNAV off: not VNAV's approach")
 end)
 
 case("outside the approach", function()

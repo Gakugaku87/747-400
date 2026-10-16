@@ -279,6 +279,7 @@ function B747_vnav_approach_path(fmsO)
   end
   local points, toRunway = B747_afds_helpers.vnav_approach_path(fmsO, runway, first, getDistance,
     tonumber(getFMSData("transalt")), B747BR_cruiseAlt, glide)
+  if points == nil then return nil end
   local distance = getDistance(simDR_latitude, simDR_longitude, fmsO[first][5], fmsO[first][6]) + toRunway[first]
   if distance > B747_afds_helpers.VNAV_APPROACH_RANGE_NM then return nil end
   local alt, gradient = B747_afds_helpers.vnav_path_at(points, distance)
