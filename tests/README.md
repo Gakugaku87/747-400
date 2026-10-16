@@ -288,8 +288,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   a 96 kt wind and ELPOM, and 15-120 deg turns at 250 and 478 kt, each within
   0.3-0.4 nm of the fly-by path (1 nm for BILTO's 137 deg downwind), the fixes
   in order; and no anticipation from the origin airport, before a lat/lon point
-  or VECTORS, more than 2 nm off the leg or after a direct-to. LNAV's path
-  guidance (item i-1b) on the model: within 0.1 nm of the leg to DW124 90 and
+  or VECTORS, more than 2 nm off the leg or after a direct-to; a turn LNAV
+  flies by its path (item i-1b) sequenced at its bisector instead (one frame
+  before and past it; BILTO's 137 deg at FL350 in a 355/96 wind from 58 nm out
+  and 130 deg at 480 kt in a 040/90 wind, which the lead never sequenced).
+  LNAV's path guidance on the model: within 0.1 nm of the leg to DW124 90 and
   120 s after DW129, and back on a leg from 1, 3 and 10 nm off within 60, 120
   and 300 s at most 45 deg to it and not 0.2 nm through it.
 - `lnav_xtk_error_test.lua`: LNAV's cross-track error every frame - the signed
@@ -300,25 +303,28 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   LNAV flies) on it and outside it; and PROGRESS page 2 showing L or R and
   the distance.
 - `lnav_path_geometry_test.lua`: the lateral path at a fly-by fix for LNAV's
-  path guidance (item i-1b) - the arc tangent to
-  both legs R tan(turn / 2) from the fix, the element abeam the aircraft, the
-  signed cross-track from the legs and from the arc (the fix outside it, a
-  point inside it), the path's course, and the pure-pursuit aim point along
-  the leg, round the arc and onto the next leg, at most 45 deg off a leg;
-  90 deg turns both ways, no turn, 150 deg, past turns of 120 and 150 deg the
-  outbound leg (behind the arc's start in the inbound leg's frame: the turn's
-  bisector parts the two legs' sides), a capture look-ahead on the legs (the
-  aim waiting at the arc's start until the look-ahead reaches it), and no
-  path without a radius, courses or a look-ahead, or for a reversal.
+  path guidance (item i-1b) - the arc tangent to both legs R tan(turn / 2)
+  from the fix, the element abeam the aircraft, the signed cross-track from
+  the legs and from the arc (the fix outside it, a point inside it), the
+  path's course, and the pure-pursuit aim point along the leg, round the arc
+  and onto the next leg, at most 45 deg off a leg; 90 deg turns both ways, no
+  turn, 150 deg, past turns of 120 and 150 deg the outbound leg (behind the
+  arc's start in the inbound leg's frame: the turn's bisector parts the two
+  legs' sides), whether the aircraft is past the bisector, a capture
+  look-ahead on the legs (the aim waiting at the arc's start until the
+  look-ahead reaches it), and no path without a radius, courses or a
+  look-ahead, or for a reversal.
 - `vnav_turn_hold_test.lua`: a fix LNAV sequences early for its turn keeping
   its altitude as VNAV's descent floor until the aircraft is past the turn's
   bisector - the bisector for straight fixes, 65-137 deg turns both ways and
   a reversal; EHAM's NIRSI (at or above FL055, 5563 ft) in its 65 deg turn with
-  the production LNAV and VNAV_NEXT_ALT: held from the switch 1.6 nm before
-  through the turn, AM607's 4272 past the bisector; and no hold below the
-  fix's altitude, in the climb, after a jump of the active fix or one from
-  afar, at a straight fix once abeam, when vectored away, or for an altitude
-  leg's end or the origin.
+  the production LNAV and VNAV_NEXT_ALT, its leg flown direct (from VECTORS):
+  held from the switch 1.6 nm before through the turn, AM607's 4272 past the
+  bisector; and no hold below the fix's altitude, in the climb, after a jump of
+  the active fix or one from afar, at a straight fix once abeam, when vectored
+  away, or for an altitude leg's end or the origin. Flown by its path (item
+  i-1b), NIRSI itself is sequenced at the bisector: its 5563 without a hold
+  until there.
 - `vnav_cifp_constraints_test.lua`: the SID, STAR and approach constraints read
   from X-Plane's CIFP (`B747.70.xt.autopilot.constraints.lua`) - records as
   X-Plane writes them (a CA leg, windows, flight levels, the glide slope

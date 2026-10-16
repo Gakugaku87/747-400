@@ -1,6 +1,10 @@
 -- Run from the repository root with Lua 5.1 or LuaJIT.
 -- A fix LNAV sequences early for its turn keeps its altitude as VNAV's floor
 -- until the aircraft is past the turn's bisector, where the FMC sequences it.
+-- A turn LNAV flies by its path (item i-1b) is itself sequenced at the
+-- bisector, so its fix stays the active one and VNAV's until there; the early
+-- sequencing and this hold remain for the turns at the end of a leg flown
+-- direct to its fix (after VECTORS here).
 -- LNAV starts a fly-by turn at the turn's lead before the fix and makes the
 -- next fix the active one there; VNAV's descent target was the active fix's
 -- altitude, so it dropped to the next fix's at the start of the turn and the
@@ -127,6 +131,12 @@ local function eham()
         entry("RW18R", 52.360258, 4.711725, 37), entry("EHAM", 52.3175, 4.7716, -11, 1)}
 end
 local NIRSI, AM607 = 4, 5
+-- The same with NIRSI's leg flown direct to it (from VECTORS where NETOM is), its turn sequenced at the lead.
+local function eham_direct()
+    local route = eham()
+    route[3][8] = "VECTORS"
+    return route
+end
 local geo = new_runtime()
 local ROUTE = eham()
 local inbound = geo.getHeading(ROUTE[3][5], ROUTE[3][6], ROUTE[NIRSI][5], ROUTE[NIRSI][6])
@@ -152,7 +162,7 @@ end
 
 -- 2a. NIRSI: before the turn, after LNAV made AM607 active, past the bisector.
 case("NIRSI's turn", function()
-    local env, route = new_runtime(), eham()
+    local env, route = new_runtime(), eham_direct()
     start_on_leg(env, route, NIRSI)
     local lat, lon = from_nirsi(4, inbound + 180)
     local target = frame(env, route, lat, lon, inbound)
@@ -179,7 +189,7 @@ end)
 -- 2b. Already below the passed fix's altitude: no hold above the aircraft
 -- (the dial would be behind it).
 case("below the passed fix", function()
-    local env, route = new_runtime(), eham()
+    local env, route = new_runtime(), eham_direct()
     start_on_leg(env, route, NIRSI)
     env.simDR_pressureAlt1 = 5300
     local lat, lon = from_nirsi(4, inbound + 180)
@@ -193,7 +203,7 @@ end)
 -- 2c. In the climb the target is not the passed fix's (VNAV's climb targets
 -- are unchanged).
 case("climb", function()
-    local env, route = new_runtime(), eham()
+    local env, route = new_runtime(), eham_direct()
     env.B747BR_totalDistance, env.B747BR_tod, env.B747DR_ap_inVNAVdescent = 300, 100, 0
     env.simDR_pressureAlt1, env.simDR_autopilot_altitude_ft = 5850, 37000
     start_on_leg(env, route, NIRSI)
@@ -239,7 +249,7 @@ end)
 -- 2f. Far from the held fix without crossing its bisector (vectored away): the
 -- hold ends.
 case("vectored away", function()
-    local env, route = new_runtime(), eham()
+    local env, route = new_runtime(), eham_direct()
     start_on_leg(env, route, NIRSI)
     local lat, lon = from_nirsi(4, inbound + 180)
     frame(env, route, lat, lon, inbound)
@@ -281,6 +291,33 @@ case("two in a row", function()
     env.B747_lnav_update_vnav_hold(route)
     check(env.B747DR_vnav_hold_index == AM607, "AM607 sequenced 1 nm before it: the hold is on AM607, got "
         ..tostring(env.B747DR_vnav_hold_index))
+end)
+
+-- 3. NIRSI's turn flown by its path (SUG1D as it is): sequenced at the bisector, NIRSI VNAV's fix until
+-- there without a hold (the arc of R 2.6 nm starts 1.65 nm before NIRSI, its middle 0.5 nm from it).
+case("NIRSI's turn flown by its path", function()
+    local env, route = new_runtime(), eham()
+    start_on_leg(env, route, NIRSI)
+    local lat, lon = from_nirsi(4, inbound + 180)
+    local target = frame(env, route, lat, lon, inbound)
+    check(env.B747DR_fmscurrentIndex == NIRSI and target == 5563, "path: 4 nm before NIRSI: NIRSI, 5563, got "
+        ..tostring(env.B747DR_fmscurrentIndex).." "..tostring(target))
+    lat, lon = from_nirsi(1.6, inbound + 180)
+    target = frame(env, route, lat, lon, inbound)
+    check(env.B747DR_fmscurrentIndex == NIRSI and target == 5563,
+        "path: 1.6 nm before NIRSI, at its arc's start: still NIRSI, 5563, got "
+        ..tostring(env.B747DR_fmscurrentIndex).." "..tostring(target))
+    check(env.B747DR_vnav_hold_index == 0, "path: no hold, got "..tostring(env.B747DR_vnav_hold_index))
+    lat, lon = from_nirsi(0.6, inbound + 180)
+    lat, lon = geo.movePoint(lat, lon, 0.12, (inbound + 90) % 360)
+    target = frame(env, route, lat, lon, (inbound + 25) % 360)
+    check(env.B747DR_fmscurrentIndex == NIRSI and target == 5563, "path: on the arc short of the bisector: NIRSI, 5563, got "
+        ..tostring(env.B747DR_fmscurrentIndex).." "..tostring(target))
+    lat, lon = from_nirsi(0.4, outbound)
+    target = frame(env, route, lat, lon, outbound)
+    check(env.B747DR_fmscurrentIndex == AM607 and env.B747DR_vnav_hold_index == 0 and target == 4272,
+        "path: past the bisector: AM607, no hold, 4272, got "..tostring(env.B747DR_fmscurrentIndex).." "
+        ..tostring(env.B747DR_vnav_hold_index).." "..tostring(target))
 end)
 
 if #failures > 0 then

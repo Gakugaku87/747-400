@@ -112,7 +112,7 @@ local function fly(s)
             if env.B747DR_fmscurrentIndex < previous then out.back = true end
             local fix = route[previous]
             out.switches[#out.switches + 1] = {from = previous, to = env.B747DR_fmscurrentIndex,
-                nm = env.getDistance(lat, lon, fix[5], fix[6])}
+                nm = env.getDistance(lat, lon, fix[5], fix[6]), lat = lat, lon = lon, t = t}
             previous = env.B747DR_fmscurrentIndex
         end
         env.B747_updateApproachHeading(route)
@@ -397,7 +397,7 @@ end
 -- nm), with o = {kind, name (of the next entry), xtk (nm right of the leg),
 -- target (the LNAV offset), from_airport, ra, vs, start_name, start_kind,
 -- dist, mode (bank angle mode), garbage (what the bank angles give outside
--- 0-5), next_course (90)}.
+-- 0-5), next_course (90), from_fix = {bearing, nm} (placed from the fix instead)}.
 local function one_frame(o)
     o = o or {}
     local env = new_runtime()
@@ -410,6 +410,7 @@ local function one_frame(o)
     if o.from_airport then table.remove(route, 2) index = 2 end
     local lat, lon = env.movePoint(lat0, lon0, 40 - (o.dist or 8), 0)
     if o.xtk then lat, lon = env.movePoint(lat, lon, o.xtk, 90) end
+    if o.from_fix then lat, lon = env.movePoint(fix_lat, fix_lon, o.from_fix[2], o.from_fix[1]) end
     env.B747DR_fmscurrentIndex, env.B747DR_fms_setCurrent, env.B747DR_ap_lnavHeading_mode = index, index, index
     env.B747DR_ap_lnav_xtk_target = o.target or 0
     env.simDR_latitude, env.simDR_longitude, env.simDR_true_heading = lat, lon, 0
@@ -423,7 +424,11 @@ local function one_frame(o)
     env.B747_getCurrentWayPoint_function(route)
     return env.B747DR_fmscurrentIndex - index
 end
-check(one_frame() == 1, "8 nm before a 90 deg fly-by at 478 kt: the next leg is active")
+-- LNAV flies this turn by its path (item i-1b): the arc of R 9.16 nm (478 kt, 20 deg), sequenced at its
+-- bisector (its middle is 3.79 nm from the fix on 135), as the FMC does, not at the anticipation's lead
+check(one_frame() == 0, "8 nm before a 90 deg fly-by at 478 kt, on its path: still the fix")
+check(one_frame({from_fix = {140, 3.79}}) == 0, "on the arc, before its bisector: still the fix")
+check(one_frame({from_fix = {130, 3.79}}) == 1, "on the arc, past its bisector: the next leg")
 check(one_frame({kind = 2048}) == 0, "the next entry a lat/lon point: not anticipated")
 check(one_frame({name = "VECTORS"}) == 0, "the next entry VECTORS: not anticipated")
 check(one_frame({xtk = 2.5}) == 0, "2.5 nm off the leg: not anticipated")
@@ -432,7 +437,7 @@ check(one_frame({from_airport = true}) == 0, "the leg from the origin airport: n
 -- no turn starts below 400 ft above the ground (a SID's first fix close to
 -- the runway was skipped at 20 ft and the turn began at LNAV's 50 ft)
 check(one_frame({ra = 300, vs = 2000}) == 0, "300 ft above the ground: not anticipated")
-check(one_frame({ra = 500, vs = 2000}) == 1, "500 ft above the ground: anticipated")
+check(one_frame({ra = 500, vs = 2000, from_fix = {130, 3.79}}) == 1, "500 ft above the ground, past the bisector: the next leg")
 -- a leg from VECTORS (or a discontinuity, a hold) is flown direct to its fix,
 -- so its turn is anticipated as after "(650)" below (60 deg here: 5.7 nm)
 check(one_frame({start_name = "VECTORS", next_course = 60, dist = 5}) == 1,
@@ -609,6 +614,49 @@ for _, o in ipairs({{1, 60}, {3, 120}, {10, 300}}) do
         tostring(within), o[2]))
     check(intercept <= 46, string.format("%s: up to %.0f deg to the leg (at most 45)", name, intercept))
     check(through <= 0.2, string.format("%s: %.2f nm through the leg (at most 0.2)", name, through))
+end
+
+-- 5. A turn LNAV flies by its path is sequenced at its bisector (item i-1b), where the FMC sequences it: the
+-- path's arc, whose radius allows for the wind, starts earlier than the anticipation's lead in a wind not
+-- behind the turn, and from the lead the 747 was already more than 2 nm into the arc: the fix was never
+-- sequenced and LNAV flew on past the next (BILTO's 137 deg at FL350 in a wind from 355 at 96 kt, from 58 nm
+-- before it, passed ELPOM without turning).
+local function sequenced_at_bisector(out, route, k)
+    for _, sw in ipairs(out.switches) do
+        if sw.from == k then
+            local f, a, b = route[k], route[k - 1], route[k + 1]
+            local d = probe.getDistance(f[5], f[6], sw.lat, sw.lon)
+            local brg = math.rad(probe.getHeading(f[5], f[6], sw.lat, sw.lon))
+            local cin = (probe.getHeading(f[5], f[6], a[5], a[6]) + 180) % 360
+            local cout = probe.getHeading(f[5], f[6], b[5], b[6])
+            return sw.to == k + 1 and afds.past_turn_bisector(d * math.sin(brg), d * math.cos(brg), cin, cout) == true
+                and afds.past_turn_bisector((d - 0.3) * math.sin(brg), (d - 0.3) * math.cos(brg), cin, cout) ~= nil, sw
+        end
+    end
+    return false
+end
+route = tst744l()
+out = fly({route = route, index = 6, start = {probe.movePoint(56.5, -15.0, 58, 180)}, heading = 0, tas_kt = 482,
+    alt_ft = 35000, loop = "cruise", wind_from_deg = 355, wind_kt = 96, seconds = 1500})
+local at_bisector, sw = sequenced_at_bisector(out, route, 6)
+check(at_bisector, string.format("BILTO in a 355/96 wind from 58 nm: sequenced at its bisector, %s",
+    sw and string.format("%d -> %d %.1f nm from it", sw.from, sw.to, sw.nm) or "never"))
+turn, overshoot = turn_metrics(out, route, 6)
+check(overshoot <= 1.0, string.format("BILTO in a 355/96 wind: overshoot %.2f nm (at most 1)", overshoot))
+-- 130 deg at 480 kt in a 90 kt wind across the turn, from 50 nm before the fix
+do
+    local lat0, lon0 = 50, -10
+    local fix_lat, fix_lon = probe.movePoint(lat0, lon0, 60, 0)
+    local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, 60, 130)
+    local after_lat, after_lon = probe.movePoint(next_lat, next_lon, 60, 130)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("FIX", fix_lat, fix_lon),
+        E("NEXT", next_lat, next_lon), E("AFTER", after_lat, after_lon), E("DEST", after_lat + 5, after_lon, 0, 1)}
+    out = fly({route = route, index = 3, start = {probe.movePoint(fix_lat, fix_lon, 50, 180)}, heading = 0, tas_kt = 480,
+        alt_ft = 35000, loop = "cruise", wind_from_deg = 40, wind_kt = 90, seconds = 900})
+    at_bisector, sw = sequenced_at_bisector(out, route, 3)
+    check(at_bisector, string.format("130 deg at 480 kt in a 040/90 wind: sequenced at its bisector, %s",
+        sw and string.format("%.1f nm from the fix", sw.nm) or "never"))
+    check(fixes_in_order(out, route, 3, 4), "130 deg at 480 kt in a 040/90 wind: FIX and NEXT in order")
 end
 
 print("LNAV turn anticipation tests passed: "..checks)

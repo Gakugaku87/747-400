@@ -185,8 +185,9 @@ end
 -- the arc of radius_nm tangent to it and to the outbound leg on course_out_deg
 -- (true courses), R tan(turn / 2) before and after the fix, and the outbound
 -- leg; east_nm and north_nm are the aircraft's position from the fix. Returns
--- the element the aircraft is abeam ("in", "arc", "out"), its signed
--- cross-track from the path (+ right of it; from the arc while abeam it), the
+-- the element the aircraft is abeam ("in", "arc", "out"), whether it is past
+-- the turn's bisector (as afds.past_turn_bisector, where the FMC sequences the
+-- turn), its signed cross-track from the path (+ right of it; from the arc while abeam it), the
 -- path's course there, its distance along the path from the arc's start
 -- (negative on the inbound leg), the arc's start before the fix, and the point
 -- a look-ahead further along the path that a pure-pursuit guidance aims at,
@@ -255,7 +256,7 @@ function afds.lnav_path_at(east_nm, north_nm, course_in_deg, course_out_deg, rad
         aim_along = math.max(aim_along, math.min(along + math.max(capture, off), 0))
     end
     local aim_east, aim_north = point_at(aim_along)
-    return {element = element, xtk_nm = xtk, course_deg = course % 360, along_nm = along,
+    return {element = element, xtk_nm = xtk, course_deg = course % 360, along_nm = along, past_bisector = not inbound_side,
         arc_start_nm = tangent, aim_east_nm = aim_east, aim_north_nm = aim_north}
 end
 

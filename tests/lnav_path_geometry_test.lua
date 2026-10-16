@@ -154,6 +154,13 @@ near(p.aim_north_nm, 0, 1e-9, "on the outbound leg: aim on it")
 p = path(5, 4, 0, 90, 2, 0.5, 3)
 near(p.aim_east_nm, 9, 1e-9, "4 nm off the outbound leg: aim 4 nm along it (45 deg)")
 
+-- The turn's bisector (through the fix and the arc's middle): whether the aircraft is past it, where the
+-- FMC sequences the turn.
+check(path(0, -10, 0, 90, 2, 2).past_bisector == false, "10 nm before the fix: not past the bisector")
+check(path(m + 0.01, -m, 0, 90, 2, 2).past_bisector == true, "just past the arc's middle: past it")
+check(path(m - 0.01, -m, 0, 90, 2, 2).past_bisector == false, "just before the arc's middle: not past it")
+check(path(5, 0.3, 0, 90, 2, 2).past_bisector == true, "on the outbound leg: past it")
+
 -- 6. Not a path: no radius, no courses, a reversal.
 check(path(0, 0, 0, 90, 0, 2) == nil, "no radius")
 check(path(0, 0, nil, 90, 2, 2) == nil, "no inbound course")
