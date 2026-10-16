@@ -47,5 +47,36 @@ near(glide_slope_fpm(200, 1), NOMINAL - 75, 0.01, "200 ft: 75 fpm a dot, as befo
 near(glide_slope_fpm(3000, 1.5), NOMINAL - 1000, 0.01, "1.5 dots at 3,000 ft: at most 1,000 fpm")
 near(glide_slope_fpm(1000, -2.5), NOMINAL + 1000, 0.01, "full scale below (x3): at most 1,000 fpm")
 
+-- In G/S the director runs every 0.2 s, so its 10-sample filter spans 2 s and the pitch follows the beam
+-- as the 747 slows down on it: at 0.8 s for a small V/S error, EHAM's approach in the model went 1.8 dots
+-- below the beam by 500 ft, slowing from 160 to 140 kt after AM622. Its other modes keep their rates.
+-- (ap_director_pitch_integral as ap_pitch_assist runs it every frame, approach_model.lua's loader)
+local model = dofile("tests/approach_model.lua")
+local function pitch_change(pitch_mode, seconds)
+    local d = {}
+    local _, hyd = model.load(d)
+    model.set_datarefs(d, model.eham(), 0.3)
+    d.B747DR_ap_FMA_active_pitch_mode = pitch_mode
+    d.simDR_pressureAlt1, d.simDR_radarAlt1 = 1500, 1500
+    d.simDR_groundspeed, d.simDR_ind_airspeed_kts_pilot = 150 * 0.514444, 150
+    d.simDR_hsi_vdef_dots_pilot = 0
+    d.simDR_vvi_fpm_pilot = -900                     -- 104 fpm steeper than the beam (and the V/S target)
+    d.simDR_autopilot_vs_fpm = NOMINAL
+    d.simDR_autopilot_altitude_ft, d.simDR_autopilot_hold_altitude_ft = 0, 0     -- no altitude to capture
+    d.B747DR_flap_ratio, d.B747DR_airspeed_Vmc = 1, 130
+    hyd.MODEL_init_director(0)
+    d.simDR_AHARS_pitch_heading_deg_pilot = 0
+    local t0 = d.simDRTime
+    while d.simDRTime < t0 + seconds do
+        d.simDRTime = d.simDRTime + 0.05
+        hyd.ap_director_pitch_integral()
+        d.simDR_AHARS_pitch_heading_deg_pilot = hyd.MODEL_director_state().raw
+    end
+    return hyd.MODEL_director_state().raw
+end
+local gs, path = pitch_change(2, 10), pitch_change(6, 10)
+check(gs > 0.9, "G/S: 104 fpm too steep at 150 kt, pitched up "..gs.." deg in 10 s (every 0.2 s; 0.3 deg before)")
+check(path > 0.2 and path < 0.5, "VNAV PTH: pitched up "..path.." deg in 10 s (every 0.8 s, as before)")
+
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("AFDS glide slope tests passed: "..checks)

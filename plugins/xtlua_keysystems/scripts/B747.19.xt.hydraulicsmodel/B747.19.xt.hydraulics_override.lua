@@ -818,6 +818,9 @@ function ap_director_pitch(pitchMode)
         end]]--
         --if pitchError<1.3 then
         directorSampleRate=math.min(B747_rescale(0,1,500,0.2,math.abs(vviError)),minUpdateRate,prev_vvi_update)
+        -- G/S every 0.2 s: the pitch follows the beam as the 747 slows down on it (at 0.8 s it fell 1.8 dots
+        -- below by 500 ft slowing from 160 to 140 kt in the approach model)
+        if pitchMode==2 then directorSampleRate=math.min(directorSampleRate,0.2) end
         prev_vvi_update=directorSampleRate
         --end
        
