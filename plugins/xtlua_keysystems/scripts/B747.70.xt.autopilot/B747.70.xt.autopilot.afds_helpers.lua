@@ -727,10 +727,12 @@ end
 -- (the fix flown to, or one sequenced early for its turn): points {d = NM to
 -- the runway along the route, alt = ft, index = the route entry of a fix or
 -- the runway} from the runway out, and the distance
--- along the route from each entry up to the runway to it. nil while that fix
--- lies before the route's farthest point from the destination: on a route back
--- to the departure airport (a circuit) the way out is not the approach, and
--- its fixes (the departure runway at 41 ft) are left out of it.
+-- along the route from each entry up to the runway to it. Only the fixes from
+-- the route's farthest point from the destination on: on a route back to the
+-- departure airport (a circuit) the way out is not the approach, and its
+-- fixes (the departure runway at 41 ft) are left out; before that point the
+-- path is the one beyond its far end. (After a DIRECT TO that left only the
+-- origin before it, the fix flown to is that farthest point.)
 function afds.vnav_approach_path(route, runway_index, first_index, distance_fn, transition_alt_ft,
         cruise_alt_ft, glide_deg)
     local destination = route[#route]
@@ -739,7 +741,6 @@ function afds.vnav_approach_path(route, runway_index, first_index, distance_fn, 
         local nm = distance_fn(route[i][5], route[i][6], destination[5], destination[6])
         if nm > far_nm then far_index, far_nm = i, nm end
     end
-    if first_index - 1 < far_index then return nil end
     local to_runway = {}
     to_runway[runway_index] = 0
     for i = runway_index - 1, 1, -1 do
@@ -748,7 +749,7 @@ function afds.vnav_approach_path(route, runway_index, first_index, distance_fn, 
     end
     local transition_alt = tonumber(transition_alt_ft) or 18000
     local fixes = {}
-    for i = math.max(1, first_index - 1), runway_index - 1 do
+    for i = math.max(1, first_index - 1, far_index), runway_index - 1 do
         local alt = tonumber(route[i][9]) or 0
         if route[i][2] ~= 1 and string.sub(tostring(route[i][8] or ""), 1, 1) ~= "(" and not is_runway_entry(route[i])
             and alt > 0 then

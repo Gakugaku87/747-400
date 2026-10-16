@@ -179,14 +179,29 @@ case("the approach's fixes", function()
         entry("DEP1", 52.75, -8.98, 2000), entry("DW1", 52.80, -8.90, 3000), entry("BASE", 52.62, -8.80, 3000),
         entry("FAF", 52.65, -8.99, 2500), entry("RW06", 52.693172, -8.943519, 101),
         entry("EINN", 52.701992, -8.924772, 41, 1)}
-    -- DW1 flown to: still outbound, before the circuit's farthest point (BASE): no approach yet
-    check(afds.vnav_approach_path(circuit, 7, 4, getDistance, 18000, 3000, 3.0) == nil, "outbound: no approach")
-    -- FAF flown to: the path from BASE's 3,000 ft, the departure's 2,000 and 41 ft left out
-    local points = afds.vnav_approach_path(circuit, 7, 6, getDistance, 18000, 3000, 3.0)
-    local alts = {}
-    for _, point in ipairs(points or {}) do alts[#alts + 1] = point.alt end
-    check(table.concat(alts, " ") == "101 2500 3000", "the circuit's path: the runway's 101 ft, the FAF's 2,500"
-        .." (3.1 nm out, below the 3 deg line), BASE's 3,000, no 2,000 or 41 ft: "..table.concat(alts, " "))
+    -- DW1 flown to (still on the way out) and FAF flown to: the path from the circuit's farthest point
+    -- (BASE) in, the departure's 2,000 and 41 ft left out; level at BASE's 3,000 ft beyond it
+    for _, flown_to in ipairs({4, 6}) do
+        local points = afds.vnav_approach_path(circuit, 7, flown_to, getDistance, 18000, 3000, 3.0)
+        local alts = {}
+        for _, point in ipairs(points or {}) do alts[#alts + 1] = point.alt end
+        check(table.concat(alts, " ") == "101 2500 3000", "the circuit's path, "..circuit[flown_to][8].." flown"
+            .." to: the runway's 101 ft, the FAF's 2,500 (3.1 nm out, below the 3 deg line), BASE's 3,000, no"
+            .." 2,000 or 41 ft: "..table.concat(alts, " "))
+    end
+    local points = afds.vnav_approach_path(circuit, 7, 4, getDistance, 18000, 3000, 3.0)
+    check(afds.vnav_path_at(points, 12) == 3000, "on the way out: level at BASE's 3,000 ft")
+    -- a DIRECT TO ELPOM that left only the origin before it: ELPOM is the farthest point, the path from it
+    local direct = tst744l()
+    for _ = 2, 6 do table.remove(direct, 2) end
+    points = afds.vnav_approach_path(direct, 4, 2, getDistance, 18000, 35000, 3.0)
+    check(points ~= nil and #points == 5 and points[4].alt == 3000,
+        "DIRECT TO ELPOM: the path from ELPOM ("..(points and #points or 0).." points)")
+    -- a runway entry before the arrival runway (a runway change left in the route) is no fix of the path
+    local changed = eham()
+    table.insert(changed, RW18R, entry("RW18C", 52.37, 4.737, 50))
+    points = afds.vnav_approach_path(changed, RW18R + 1, AM621, getDistance, 18000, 37000, 3.0)
+    for _, point in ipairs(points) do check(point.alt ~= 50, "no runway entry as a fix of the path") end
     local route = eham()
     table.insert(route, AM608, entry("(INTC)", 52.56, 4.69, 3800, 2048))
     route[RW18R + 1][9] = 0

@@ -341,8 +341,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   arrival runway along the route) on the path to the runway - the arrival
   runway by its name (EHAM with its missed approach's far vectors leg, TST744L
   with its departure runway, not the departure end of a route back to the
-  departure airport), only the fixes after the route's farthest point (none on
-  a circuit's way out), no pseudo fix, a runway without an altitude, the path
+  departure airport), only the fixes from the route's farthest point on (a
+  circuit's way out left out, level beyond; after a DIRECT TO), no runway or
+  pseudo fix, a runway without an altitude, the path
   from the runway's threshold crossing altitude up the final approach angle
   (3.0, 3.2 or 2.5 deg) to the glide slope intercept, through the route
   altitudes never climbing (EINN's ASGON 3,046 ft after ELPOM's 3,000) and up

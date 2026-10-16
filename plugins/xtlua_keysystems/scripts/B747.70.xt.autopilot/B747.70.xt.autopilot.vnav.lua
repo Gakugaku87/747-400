@@ -282,7 +282,6 @@ function B747_vnav_approach_path(fmsO)
   end
   local points, toRunway = B747_afds_helpers.vnav_approach_path(fmsO, runway, first, getDistance,
     tonumber(getFMSData("transalt")), B747BR_cruiseAlt, glide)
-  if points == nil then approachRunway = nil return nil end
   local distance = getDistance(simDR_latitude, simDR_longitude, fmsO[first][5], fmsO[first][6]) + toRunway[first]
   local runwayKey = tostring(fmsO[runway][8]).."|"..tostring(fmsO[runway][5]).."|"..tostring(fmsO[runway][6])
   if distance <= B747_afds_helpers.VNAV_APPROACH_RANGE_NM then
