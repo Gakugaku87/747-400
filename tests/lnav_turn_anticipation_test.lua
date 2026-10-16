@@ -77,7 +77,7 @@ end
 
 -- Fly s = {route, index, start = {lat, lon}, heading, tas_kt, accel_kt_s,
 -- tas_max_kt, alt_ft, vs_fpm, alt_max_ft, loop = "cruise"|"low", wind_from_deg,
--- wind_kt, seconds}.
+-- wind_kt, seconds, setup = function(env) before the first frame}.
 local LOOPS = {cruise = {3.2, 0.22}, low = {4.7, 0.73}}
 local function fly(s)
     local env = new_runtime()
@@ -88,6 +88,7 @@ local function fly(s)
     local history, rates = {}, {}
     local wind_from, wind_kt = s.wind_from_deg or 0, s.wind_kt or 0
     env.B747DR_fmscurrentIndex, env.B747DR_fms_setCurrent, env.B747DR_ap_lnavHeading_mode = s.index, s.index, s.index
+    if s.setup then s.setup(env) end
     local alt = s.alt_ft
     env.simDR_pressureAlt1, env.simDR_radarAlt1, env.simDR_vvi_fpm_pilot = alt, alt, s.vs_fpm or 0
     local out = {track = {}, switches = {}, back = false, env = env}
@@ -699,6 +700,27 @@ do
     end
     check(first ~= nil and first.alt >= 400, string.format("FIX1 1.5 nm past the lift-off: banking from %s ft (at least 400)",
         first and string.format("%.0f", first.alt) or "-"))
+end
+
+-- 8. The 747's own DIRECT TO (B747DR_ap_lnav_xtk_target -100, made 0 within 10 nm of the fix by the steering):
+-- flown direct to the fix until it is passed. LNAV's path took the leg back once the target was 0 and passed
+-- the fix 4 to 7.5 nm off; from 30 nm on courses 60 deg right and 40 deg left of the leg START-FIX (090).
+for _, case in ipairs({{250, "low", 5000, -60}, {480, "cruise", 33000, -60}, {250, "low", 5000, 40}}) do
+    local speed = case
+    local lat0, lon0 = 50, -10
+    local fix_lat, fix_lon = probe.movePoint(lat0, lon0, 60, 90)
+    local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, 40, 150)
+    local after_lat, after_lon = probe.movePoint(next_lat, next_lon, 40, 150)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("FIX", fix_lat, fix_lon), E("NEXT", next_lat, next_lon),
+        E("AFTER", after_lat, after_lon), E("DEST", after_lat + 5, after_lon, 0, 1)}
+    local bearing = (270 + case[4]) % 360
+    out = fly({route = route, index = 3, start = {probe.movePoint(fix_lat, fix_lon, 30, bearing)}, heading = (bearing + 180) % 360,
+        tas_kt = speed[1], alt_ft = speed[3], loop = speed[2], seconds = 60 / speed[1] * 3600,
+        setup = function(env) env.B747DR_ap_lnav_xtk_target = -100 end})
+    local passed = 1e9
+    for _, p in ipairs(out.track) do passed = math.min(passed, probe.getDistance(fix_lat, fix_lon, p.lat, p.lon)) end
+    check(passed <= 1.0, string.format("DIRECT TO FIX at %d kt from %03d: passed %.2f nm from it (at most 1)", speed[1],
+        bearing, passed))
 end
 
 print("LNAV turn anticipation tests passed: "..checks)

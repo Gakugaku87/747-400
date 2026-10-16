@@ -2520,8 +2520,22 @@ local function B747_lnav_path_parameters()
 			B747_afds_helpers.LNAV_PATH_MIN_LOOKAHEAD_NM,B747_afds_helpers.LNAV_PATH_MAX_LOOKAHEAD_NM)}
 end
 
+-- The fix of the 747's own DIRECT TO (B747DR_ap_lnav_xtk_target -100, which the steering makes 0 within 10 nm
+-- of it): its leg is flown direct to it until it is passed, and it is no fly-by turn's fix after that (LNAV's
+-- path took the leg back once the target was 0 and passed the fix 4 to 7.5 nm off). 0 for none.
+local lnavDirectToIndex=0
+local function B747_lnav_direct_to_index(current)
+	if B747DR_ap_lnav_xtk_target<=-99.5 then
+		lnavDirectToIndex=current
+	elseif current~=lnavDirectToIndex and current~=lnavDirectToIndex+1 then
+		lnavDirectToIndex=0
+	end
+	return lnavDirectToIndex
+end
+
 local function B747_lnav_path_now(fmsO,current)
-	if B747DR_ap_lnav_xtk_target~=0 or current<2 or fmsO[current]==nil then return nil end
+	local directTo=B747_lnav_direct_to_index(current)
+	if B747DR_ap_lnav_xtk_target~=0 or current<2 or fmsO[current]==nil or directTo==current then return nil end
 	local p=B747_lnav_path_parameters()
 	if p==nil then return nil end
 	local path,fix=nil,nil
@@ -2529,7 +2543,7 @@ local function B747_lnav_path_now(fmsO,current)
 	local k=current-1
 	if k>2 and not B747_lnav_leg_has_course(B747_lnav_leg_start(fmsO,k),fmsO[k]) then k=k-1 end
 	local before=fmsO[k]
-	if k>=2 and B747_lnav_leg_supports_preemption(before) and tonumber(B747_lnav_leg_start(fmsO,k)[2])~=1
+	if k>=2 and k~=directTo and B747_lnav_leg_supports_preemption(before) and tonumber(B747_lnav_leg_start(fmsO,k)[2])~=1
 		and B747_lnav_leg_has_course(B747_lnav_leg_start(fmsO,k),before)
 		and B747_lnav_leg_has_course(before,fmsO[current]) then
 		local inCourse,directTo=B747_lnav_inbound_course(fmsO,k)
@@ -2635,7 +2649,8 @@ function B747_getCurrentWayPoint_function(fmsO)
 		B747_lnav_sequence_to(current+1,"listed again: "..tostring(fmsO[current][8]))
 		return
 	end
-	if current>1 and current<table.getn(fmsO)-1 and B747DR_ap_lnav_xtk_target==0 then
+	if current>1 and current<table.getn(fmsO)-1 and B747DR_ap_lnav_xtk_target==0
+		and B747_lnav_direct_to_index(current)~=current then
 		local p=B747_lnav_path_parameters()
 		local path=p and B747_lnav_path_at_fix(fmsO,current,p)
 		if path and math.abs(path.xtk_nm)<=LNAV_MAX_PREEMPT_XTK_NM then
