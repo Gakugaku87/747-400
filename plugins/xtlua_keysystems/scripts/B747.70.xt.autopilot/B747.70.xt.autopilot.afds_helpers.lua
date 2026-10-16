@@ -479,6 +479,11 @@ function afds.altitude_leg_end_ft(entry)
 end
 
 -- [c] Route end of descent and VNAV descent path entry
+-- Whether a route entry is a runway (RW06, RW18R), by its name.
+local function is_runway_entry(entry)
+    return string.match(tostring(entry[8] or ""), "^RW%d%d[LRC]?$") ~= nil
+end
+
 -- Index of the end of descent in an xtlua/fms route: the first entry within
 -- radius_nm of the destination (the last entry) after the entry farthest from
 -- it. On an A to B route this is the first entry inside the radius, as before.
@@ -499,7 +504,7 @@ function afds.route_eod_index(route, distance_fn, radius_nm)
     end
     local last = count - 1
     for i = count - 1, 1, -1 do
-        if string.sub(tostring(route[i][8] or ""), 1, 2) == "RW" and distances[i] < radius_nm then
+        if is_runway_entry(route[i]) and distances[i] < radius_nm then
             for k = 1, i - 1 do
                 if distances[k] >= radius_nm then
                     last = i
@@ -695,11 +700,6 @@ afds.VNAV_APPROACH_GLIDE_DEG = 3.0
 -- path error, at most 1,500 fpm, back to it
 afds.VNAV_PATH_GAIN_FPM_PER_FT = 1.5
 afds.VNAV_PATH_MAX_CORRECTION_FPM = 1500
-
--- Whether a route entry is a runway (RW06, RW18R).
-local function is_runway_entry(entry)
-    return string.match(tostring(entry[8] or ""), "^RW%d%d[LRC]?$") ~= nil
-end
 
 -- Index of the arrival runway in an xtlua/fms route: the last runway entry
 -- within radius_nm of the destination (the last entry) with an entry outside

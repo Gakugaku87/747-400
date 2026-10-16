@@ -122,8 +122,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   remaining distance ends at the end of descent and then runs straight to the
   destination, without the leg after the end of descent, also with a missed
   approach whose vectors point X-Plane puts hundreds of NM away (left out
-  after the arrival runway). A SID's altitude-terminated leg end ("(650)")
-  is climbed through, not taken as the climb target.
+  after the arrival runway; the runway is known by its name, RW and two
+  digits, so a fix named RW... is no runway). A SID's altitude-terminated
+  leg end ("(650)") is climbed through, not taken as the climb target.
 - `lnav_altitude_leg_test.lua`: the production waypoint sequencing at the end
   of an altitude-terminated leg (CA, VA, FA: X-Plane's "(650)", which rides
   just ahead of the aircraft once its altitude is reached) - the next leg

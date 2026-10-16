@@ -250,6 +250,14 @@ case("route_eod_index: a missed approach's distant vectors point", function()
         "the EOD is the FAF, as without the missed approach")
 end)
 
+case("route_eod_index: a fix named RW... after the vectors point is no runway", function()
+    -- only a runway's name (RW27, RW18R) marks the arrival runway: a fix named RWNEW after the vectors point
+    -- would take the vectors point into the search and put the EOD after it
+    local route = with_far_missed_approach()
+    table.insert(route, #route, fix("RWNEW", 1, 6.05, 2000))
+    equal(afds.route_eod_index(route, distance_nm, 10), 5, "the EOD is the FAF")
+end)
+
 case("setDistances: a missed approach's distant vectors point", function()
     local r = new_runtime(with_far_missed_approach(), 1, 2, 3)
     settle(r)
