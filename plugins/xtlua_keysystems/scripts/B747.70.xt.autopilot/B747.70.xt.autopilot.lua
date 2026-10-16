@@ -2638,11 +2638,14 @@ function B747_getCurrentWayPoint_function(fmsO)
 			break
 		end
 	end
-	-- [i-1b] a turn LNAV flies by its path (B747_lnav_path_at_fix) is sequenced at its bisector, where the
-	-- FMC sequences it, while the aircraft is as near that path as the anticipation below allows; the
-	-- anticipation's lead is for the turns flown otherwise. The path's arc allows for the wind and so does
-	-- not start where the lead does: a 137 deg turn in a crosswind, already 2 nm into its arc at the lead,
-	-- was never sequenced (the 747 flew on past the next fix).
+	-- [i-1b] a turn LNAV flies by its path (B747_lnav_path_at_fix, on a leg it flies by the path:
+	-- B747_lnav_path_now) is sequenced at its bisector, where the FMC sequences it, while the aircraft is as near
+	-- that path as the anticipation below allows; the anticipation's lead is for the turns flown otherwise. The
+	-- path's arc allows for the wind and so does not start where the lead does: a 137 deg turn in a crosswind,
+	-- already 2 nm into its arc at the lead, was never sequenced (the 747 flew on past the next fix). A leg LNAV
+	-- steers as before (after an altitude leg's end, from VECTORS or PPOS, after a turn passed abeam) keeps the
+	-- lead: flown straight at its fix, the 747 reached the bisector only at the fix (EIDW's DW129 after "(650)":
+	-- 3.2 nm outside).
 	local current=B747DR_fmscurrentIndex
 	-- a fix listed again right after itself (a leg of no length) is passed with the one before it
 	if current>2 and current<table.getn(fmsO)-1 and B747_lnav_leg_supports_preemption(fmsO[current])
@@ -2651,7 +2654,7 @@ function B747_getCurrentWayPoint_function(fmsO)
 		return
 	end
 	if current>1 and current<table.getn(fmsO)-1 and B747DR_ap_lnav_xtk_target==0
-		and B747_lnav_direct_to_index(current)~=current then
+		and B747_lnav_path_now(fmsO,current)~=nil then
 		local p=B747_lnav_path_parameters()
 		local path=p and B747_lnav_path_at_fix(fmsO,current,p)
 		if path and math.abs(path.xtk_nm)<=LNAV_MAX_PREEMPT_XTK_NM then

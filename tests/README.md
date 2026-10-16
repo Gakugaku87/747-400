@@ -294,8 +294,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   and 130 deg at 480 kt in a 040/90 wind, which the lead never sequenced), and
   a fix listed twice in a row (one turn, in order, at 250 and 480 kt), no
   bank below 400 ft after lift-off with a SID's turn 1.5 nm on, BEDRA in the
-  westerly passed within 4.5 nm, and the 747's own DIRECT TO flown direct to
-  its fix (passed within 1 nm) after the steering's reset of the target.
+  westerly passed within 4.5 nm, the 747's own DIRECT TO flown direct to its
+  fix (passed within 1 nm) after the steering's reset of the target, and the
+  turns at the end of legs LNAV steers as before (DW129 after "(650)", a fix's
+  turn after one flown direct from VECTORS) anticipated by the lead, within
+  0.4 nm.
   LNAV's path guidance on the model: within 0.1 nm of the leg to DW124 90 and
   120 s after DW129, and back on a leg from 1, 3 and 10 nm off within 60, 120
   and 300 s at most 45 deg to it and not 0.2 nm through it.

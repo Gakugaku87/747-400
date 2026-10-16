@@ -742,4 +742,31 @@ for _, case in ipairs({{250, "low", 5000, -60}, {480, "cruise", 33000, -60}, {25
         bearing, passed))
 end
 
+-- 9. A leg LNAV steers as before (no path: after an altitude leg's end, from VECTORS, after a turn passed
+-- abeam) keeps the anticipation's lead for the turn at its end. With the bisector's sequencing there, LNAV
+-- flew straight at the fix, reached the bisector only at the fix and went 2.7 nm outside EIDW's DW129: the
+-- native route has "(650)" (the CA leg's end) before DW128, which is flown direct.
+route = eidw()
+table.insert(route, 4, E("(650)", 53.4375, -6.2866, 650, 2048))
+start, course = along(route, 6, 0.5)
+out = fly({route = route, index = 6, start = start, heading = course, tas_kt = 243, accel_kt_s = 0.45, tas_max_kt = 272,
+    alt_ft = 4800, loop = "low", seconds = 240})
+turn, overshoot = turn_metrics(out, route, 6)
+check(overshoot <= 0.4, string.format("DW129 after (650) %+.0f deg: overshoot %.2f nm (at most 0.4)", turn, overshoot))
+-- from VECTORS: FIX flown direct, then NEXT's 90 deg turn at 250 kt
+do
+    local lat0, lon0 = 50, -10
+    local fix_lat, fix_lon = probe.movePoint(lat0, lon0, 20, 0)
+    local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, 20, 90)
+    local after_lat, after_lon = probe.movePoint(next_lat, next_lon, 20, 180)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("VECTORS", lat0, lon0), E("FIX", fix_lat, fix_lon), E("NEXT", next_lat, next_lon),
+        E("AFTER", after_lat, after_lon), E("DEST", after_lat - 5, after_lon, 0, 1)}
+    start, course = along(route, 4, 0.5)
+    out = fly({route = route, index = 4, start = start, heading = course, tas_kt = 250, alt_ft = 5000, loop = "low",
+        seconds = 360})
+    turn, overshoot = turn_metrics(out, route, 4)
+    check(overshoot <= 0.4, string.format("NEXT after FIX from VECTORS %+.0f deg: overshoot %.2f nm (at most 0.4)", turn,
+        overshoot))
+end
+
 print("LNAV turn anticipation tests passed: "..checks)
