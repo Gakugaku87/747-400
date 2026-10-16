@@ -93,6 +93,16 @@ case("before the approach", function()
     check(d.B747DR_vnav_energy_active == 0 and d.B747DR_autothrottle_active == 0, "30 nm out, no energy mode: off")
     ap.B747_ap_fma(route)
     check(d.B747DR_ap_FMA_autothrottle_mode == 2, "30 nm out, off at idle: IDLE, got "..d.B747DR_ap_FMA_autothrottle_mode)
+    -- the same with the window shut: past the T/D the A/T stays on for VNAV's speed, and on at idle its FMA is
+    -- IDLE too (SPD at idle only in the approach)
+    d, ap, route = new_runtime(17, 1)
+    d.B747DR_ap_ias_mach_window_open = 0
+    d.simDR_autopilot_altitude_ft, d.B747DR_autopilot_altitude_ft = 7500, 7500
+    ap.VNAV_DES(1, route)
+    check(d.B747DR_vnav_energy_active == 0 and d.B747DR_autothrottle_active == 1, "the window shut, 30 nm out: on")
+    ap.B747_ap_fma(route)
+    check(d.B747DR_ap_FMA_autothrottle_mode == 2,
+        "the window shut, 30 nm out, on at idle: IDLE, got "..d.B747DR_ap_FMA_autothrottle_mode)
 end)
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
