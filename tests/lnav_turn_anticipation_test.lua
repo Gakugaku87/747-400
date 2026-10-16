@@ -560,4 +560,55 @@ for _, side in ipairs({80, 110, 130}) do
         overshoot))
 end
 
+-- 4. LNAV's path guidance (item i-1b): LNAV steers along the lateral path, the legs and the fly-by arcs
+-- between them (afds.lnav_path_at), at a point a look-ahead along it, never nearer than the cross-track (an
+-- intercept of at most 45 deg). Before, it aimed 5 nm along the leg, or at the fix within 10 nm of it: 1 nm
+-- off a leg it took 162 s to come within 0.1 nm of it, 10 nm off 384 s at up to 59 deg, and 90 s after DW129
+-- it was still 0.24 nm off the leg to DW124.
+local function xtk_from(out, a, b, t)
+    for _, p in ipairs(out.track) do
+        if p.t >= t then
+            return afds.signed_cross_track_nm(a[5], a[6], b[5], b[6], p.lat, p.lon, probe.getDistance, probe.getHeading)
+        end
+    end
+end
+route = eidw()
+start, course = along(route, 5, 0.5)
+out = fly({route = route, index = 5, start = start, heading = course, tas_kt = 243, accel_kt_s = 0.45,
+    tas_max_kt = 272, alt_ft = 4800, loop = "low", seconds = 240})
+for _, t in ipairs({90, 120}) do
+    local x = xtk_from(out, route[5], route[6], t)
+    check(x ~= nil and math.abs(x) <= 0.1, string.format("%d s after DW129: %.2f nm off the leg to DW124 (at most 0.1)",
+        t, x or 99))
+end
+-- 1, 3 and 10 nm left of a 60 nm leg on 090, flying 090 at 250 kt: back within 0.1 nm in 60, 120 and 300 s, at
+-- most 45 deg to the leg, and not 0.2 nm through it
+for _, o in ipairs({{1, 60}, {3, 120}, {10, 300}}) do
+    local lat0, lon0 = 50, -10
+    local fix_lat, fix_lon = probe.movePoint(lat0, lon0, 60, 90)
+    local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, 40, 90)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("FIX", fix_lat, fix_lon),
+        E("NEXT", next_lat, next_lon), E("DEST", next_lat + 5, next_lon, 0, 1)}
+    local slat, slon = probe.movePoint(lat0, lon0, 5, 90)
+    slat, slon = probe.movePoint(slat, slon, o[1], 0)
+    out = fly({route = route, index = 3, start = {slat, slon}, heading = 90, tas_kt = 250, alt_ft = 5000, loop = "low",
+        seconds = 600})
+    local within, intercept, through, previous = nil, 0, 0, nil
+    for _, p in ipairs(out.track) do
+        local x = afds.signed_cross_track_nm(lat0, lon0, fix_lat, fix_lon, p.lat, p.lon, probe.getDistance,
+            probe.getHeading)
+        if previous then
+            intercept = math.max(intercept, math.abs(wrap(probe.getHeading(previous.lat, previous.lon, p.lat, p.lon) - 90)))
+        end
+        previous = p
+        if not within and math.abs(x) <= 0.1 then within = p.t end
+        through = math.max(through, x)
+    end
+    local name = string.format("%d nm left of the leg", o[1])
+    check(within ~= nil and within <= o[2], string.format("%s: within 0.1 nm after %s s (at most %d)", name,
+        tostring(within), o[2]))
+    check(intercept <= 46, string.format("%s: up to %.0f deg to the leg (at most 45)", name, intercept))
+    check(through <= 0.2, string.format("%s: %.2f nm through the leg (at most 0.2)", name, through))
+end
+
 print("LNAV turn anticipation tests passed: "..checks)

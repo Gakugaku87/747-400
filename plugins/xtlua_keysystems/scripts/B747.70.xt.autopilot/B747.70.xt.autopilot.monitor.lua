@@ -912,7 +912,11 @@ function B747_updateApproachHeading(fmsO)
         local targetLong=fmsO[start][6]
         local distanceToTarget=getDistance(simDR_latitude,simDR_longitude,targetLat,targetLong)
         --print("distanceToTarget "..distanceToTarget)
-        if B747DR_ap_lnav_xtk_target==0 and start>1 then -- -100 direct to, 
+        -- along the lateral path, the legs and the fly-by arcs between them (B747_lnav_path_track); else as before
+        local pathTrack=B747_lnav_path_track(fmsO,start)
+        if pathTrack~=nil then
+            -- steered by the path
+        elseif B747DR_ap_lnav_xtk_target==0 and start>1 then -- -100 direct to,
             --print("B747DR_ap_lnav_xtk_target "..B747DR_ap_lnav_xtk_target)
             --we are more than 10 miles away from the target, and we want 0 track error
             -- find a correction target to put us back on track
@@ -969,7 +973,7 @@ function B747_updateApproachHeading(fmsO)
             print("B747DR_ap_lnav_xtk_target "..B747DR_ap_lnav_xtk_target)
         end
 
-        local ap2Heading=getHeading(simDR_latitude,simDR_longitude,targetLat,targetLong)
+        local ap2Heading=pathTrack or getHeading(simDR_latitude,simDR_longitude,targetLat,targetLong)
         --print("ap2Heading "..ap2Heading)
         local hV=getWCAforHeading(ap2Heading+simDR_variation)
         --print("B747_ set Heading hV="..hV.." wca="..wca.." wca_deg="..wca.." simDR_wind_speed_kts="..simDR_wind_speed_kts.." ap2Heading="..ap2Heading )

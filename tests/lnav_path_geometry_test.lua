@@ -7,7 +7,7 @@
 -- there, and the point a look-ahead distance further along the path that a
 -- pure-pursuit guidance aims at (on a straight leg at most 45 deg off its
 -- course: the look-ahead is never shorter than the cross-track). Pure
--- geometry from afds_helpers; nothing in the aircraft uses it yet.
+-- geometry from afds_helpers; LNAV's path guidance (B747_lnav_path_track) flies it.
 local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/"
 local afds = dofile(AP.."B747.70.xt.autopilot.afds_helpers.lua")
 

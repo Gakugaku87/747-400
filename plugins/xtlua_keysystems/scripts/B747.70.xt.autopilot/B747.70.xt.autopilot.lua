@@ -2450,6 +2450,75 @@ local function B747_lnav_sequence_to(index, why)
 	setVNAVState("recalcAfter", index)
 end
 
+-- [i-1b] The lateral path through fmsO[k] (afds.lnav_path_at at the aircraft): the leg into it, the fly-by arc
+-- of its turn of radius radius_nm and the leg after it; a turn LNAV does not fly by (into an entry that is no
+-- fix, or of more than LNAV_FLYBY_MAX_TURN_DEG) straight on through the fix. nil where the leg into it is no
+-- course from a fix: from the origin airport, or flown direct to the fix (after an altitude leg's end, from
+-- VECTORS, a hold, PPOS...).
+local function B747_lnav_path_at_fix(fmsO,k,radius_nm,lookahead_nm,capture_nm)
+	local count=table.getn(fmsO)
+	local fix=fmsO[k]
+	if k<2 or k>=count or not B747_lnav_leg_supports_preemption(fix) then return nil end
+	local legStart=B747_lnav_leg_start(fmsO,k)
+	if legStart==nil or tonumber(legStart[2])==1 or type(legStart[5])~="number" or type(legStart[6])~="number" then
+		return nil
+	end
+	local inCourse,directTo=B747_lnav_inbound_course(fmsO,k)
+	if directTo then return nil end
+	local outCourse=inCourse
+	local nextFix=fmsO[k+1]
+	if k<count-1 and B747_lnav_leg_supports_preemption(nextFix) then
+		local course=getHeading(fix[5],fix[6],nextFix[5],nextFix[6])
+		if math.abs(getHeadingDifference(course,inCourse))<=B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG then
+			outCourse=course
+		end
+	end
+	local distance=getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)
+	local bearing=math.rad(getHeading(fix[5],fix[6],simDR_latitude,simDR_longitude))
+	return B747_afds_helpers.lnav_path_at(distance*math.sin(bearing),distance*math.cos(bearing),inCourse,outCourse,
+		radius_nm,lookahead_nm,capture_nm),fix
+end
+
+-- [i-1b] LNAV's path guidance: the true track to a point a look-ahead (LNAV_PATH_LOOKAHEAD_S of ground speed)
+-- along the lateral path, never nearer than the cross-track (an intercept of at most 45 deg). The arcs are
+-- flown at the bank limit with the wind behind (the TAS plus the wind's speed: an arc the 747 can follow all
+-- round). The fix flown to's path, but right after its turn's anticipation the fix before's until its arc
+-- ends (unless the aircraft is farther off it than the anticipation allows). nil without such a path, with an
+-- offset or a direct-to (B747DR_ap_lnav_xtk_target), or not moving: LNAV steers as before; and so after a fix
+-- that was no fly-by (reached direct, or a turn of more than LNAV_FLYBY_MAX_TURN_DEG passed abeam), whose next
+-- leg starts behind the 747 (on a 170 deg turn the path guidance orbited round it), flown direct to its fix.
+function B747_lnav_path_track(fmsO,current)
+	if B747DR_ap_lnav_xtk_target~=0 or current<2 or fmsO[current]==nil then return nil end
+	local tas=simDR_TAS_mps*1.94384
+	local gs=simDR_groundspeed*1.94384
+	local track,heading=math.rad(simDR_ground_track_true),math.rad(simDR_true_heading)
+	local windEast=gs*math.sin(track)-tas*math.sin(heading)
+	local windNorth=gs*math.cos(track)-tas*math.cos(heading)
+	local wind=math.sqrt(windEast*windEast+windNorth*windNorth)
+	if wind~=wind or wind>B747_afds_helpers.LNAV_MAX_WIND_KTS then wind=0 end
+	local radius=B747_afds_helpers.turn_radius_nm(tas+wind,B747_lnav_bank_limit_deg())
+	if radius==nil or gs<=0 then return nil end
+	local lookahead=B747_afds_helpers.clamp(gs*B747_afds_helpers.LNAV_PATH_LOOKAHEAD_S/3600,
+		B747_afds_helpers.LNAV_PATH_MIN_LOOKAHEAD_NM,B747_afds_helpers.LNAV_PATH_MAX_LOOKAHEAD_NM)
+	local capture=math.min(radius*B747_afds_helpers.LNAV_PATH_CAPTURE_RADII,B747_afds_helpers.LNAV_PATH_MAX_LOOKAHEAD_NM)
+	local path,fix=nil,nil
+	local before=fmsO[current-1]
+	if current>2 and B747_lnav_leg_supports_preemption(before) and tonumber(B747_lnav_leg_start(fmsO,current-1)[2])~=1 then
+		local inCourse,directTo=B747_lnav_inbound_course(fmsO,current-1)
+		local outCourse=getHeading(before[5],before[6],fmsO[current][5],fmsO[current][6])
+		if directTo or math.abs(getHeadingDifference(outCourse,inCourse))>B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG then
+			return nil
+		end
+		path,fix=B747_lnav_path_at_fix(fmsO,current-1,radius,lookahead,capture)
+		if path~=nil and (path.element=="out" or math.abs(path.xtk_nm)>LNAV_MAX_PREEMPT_XTK_NM) then path=nil end
+	end
+	if path==nil then path,fix=B747_lnav_path_at_fix(fmsO,current,radius,lookahead,capture) end
+	if path==nil then return nil end
+	local aimDistance=math.sqrt(path.aim_east_nm*path.aim_east_nm+path.aim_north_nm*path.aim_north_nm)
+	local aimLat,aimLon=movePoint(fix[5],fix[6],aimDistance,math.deg(math.atan2(path.aim_east_nm,path.aim_north_nm))%360)
+	return getHeading(simDR_latitude,simDR_longitude,aimLat,aimLon)
+end
+
 function B747_getCurrentWayPoint_function(fmsO)
 	local current=B747DR_fmscurrentIndex
 	local count=table.getn(fmsO)

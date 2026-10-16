@@ -77,6 +77,13 @@ afds.LNAV_ROLL_RATE_DEG_PER_SEC = 3.0
 afds.LNAV_FLYBY_MAX_TURN_DEG = 150
 -- A wind estimate beyond this is no wind (XTLua gives 0 for a first read).
 afds.LNAV_MAX_WIND_KTS = 300
+-- [i-1b] LNAV's path guidance aims this long of ground speed along the path round its arcs, within these
+-- distances (a short look-ahead follows them: 40 s cut them by 0.5 to 0.9 nm in the closed-loop model), and
+-- on its legs this part of the turn radius (rolling out onto a leg takes room that grows with it).
+afds.LNAV_PATH_LOOKAHEAD_S = 12
+afds.LNAV_PATH_MIN_LOOKAHEAD_NM = 0.4
+afds.LNAV_PATH_MAX_LOOKAHEAD_NM = 6
+afds.LNAV_PATH_CAPTURE_RADII = 0.4
 
 -- Distance before a fly-by fix at which the turn onto the next leg starts:
 -- where a turn at the bank limit, rolled in at roll_rate_dps (half the roll-in

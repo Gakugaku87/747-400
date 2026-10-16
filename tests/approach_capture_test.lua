@@ -82,6 +82,9 @@ local function new_runtime()
         "function B747_ap_appr_mode()", "----- FLIGHT MODE ANNUNCIATORS")
     load_in(AP.."B747.70.xt.autopilot.lua", r,
         "function B474_ap_target_heading()", "----- EICAS MESSAGES")
+    -- LNAV's path guidance (B747_lnav_path_track), which B747_updateApproachHeading steers by
+    load_in(AP.."B747.70.xt.autopilot.lua", r,
+        "local LNAV_MAX_PREEMPT_XTK_NM", "function B747_getCurrentWayPoint_default(fmsO)")
     load_in(AP.."B747.70.xt.autopilot.monitor.lua", r)
     return r
 end
