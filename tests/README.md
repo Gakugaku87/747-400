@@ -356,7 +356,8 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   beyond 27 nm, and nothing beyond 25 nm from farther out.
 - `vnav_approach_autothrottle_test.lua`: the A/T in the approach (EINN ILS 06,
   the IAS window open at idle 15.6 nm out) - VNAV_DES keeps it on and turns
-  it back on, and B747_ap_fma shows SPD at idle; 30 nm out the descent's
+  it back on, B747_ap_fma shows SPD at idle, and VNAV PTH stays with the
+  window open above SPD TRANS (VNAV SPD 30 nm out); 30 nm out the descent's
   energy mode and IDLE as before. It loads the production code with
   `approach_model.lua`.
 - `approach_model_test.lua`: EHAM ILS 18R via SUG1D and EINN ILS 06 flown in

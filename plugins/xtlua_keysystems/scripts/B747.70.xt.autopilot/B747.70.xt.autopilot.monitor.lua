@@ -304,8 +304,10 @@ function VNAV_DES(numAPengaged,fms)
         tonumber(getFMSData("desrestalt")) or transitionAlt)
     --print("upperAlt "..upperAlt)
     if B747DR_ap_ias_mach_window_open == 1 then
-
-        if simDR_pressureAlt1>upperAlt and simDR_ind_airspeed_kts_pilot>=B747DR_airspeed_Vmc+15 then
+        -- the IAS window open: VNAV SPD (FLCH) above SPD TRANS, but in the approach (setDescentVSpeed)
+        -- VNAV PTH stays, the A/T holding the window's speed
+        if simDR_pressureAlt1>upperAlt and simDR_ind_airspeed_kts_pilot>=B747DR_airspeed_Vmc+15
+            and not B747_vnav_approach_active then
             --descentstatus = simDR_autopilot_flch_status
             simDR_autopilot_vs_status=0
             simDR_autopilot_flch_status=2
@@ -376,7 +378,8 @@ function VNAV_DES(numAPengaged,fms)
         if B747DR_autopilot_gs_status < 1 then
             --if B747DR_ap_ias_mach_window_open == 0 or simDR_pressureAlt1<=upperAlt or simDR_ind_airspeed_kts_pilot<B747DR_airspeed_Vmc+15 then
 
-            if simDR_pressureAlt1>upperAlt and B747DR_ap_ias_mach_window_open == 1 and simDR_autopilot_flch_status == 0 then
+            if simDR_pressureAlt1>upperAlt and B747DR_ap_ias_mach_window_open == 1 and simDR_autopilot_flch_status == 0
+                and not B747_vnav_approach_active then
                 simCMD_autopilot_flch_mode:once()
                 simDR_autopilot_flch_status=2
                 simDR_autopilot_vs_status=0

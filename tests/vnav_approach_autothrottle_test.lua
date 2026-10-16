@@ -1,6 +1,7 @@
 -- Run from the repository root with Lua 5.1 or LuaJIT.
 -- In the approach the A/T holds the speed, VNAV's or the IAS window's: VNAV_DES
--- does not turn it off at idle, and its FMA is SPD at idle. Before, with the
+-- does not turn it off at idle, and its FMA is SPD at idle; VNAV PTH stays with
+-- the window open, also above SPD TRANS (no VNAV SPD in the approach). Before, with the
 -- window open (the kit's speed intervention for the flaps) VNAV_DES turned the
 -- A/T off as soon as the throttles were at idle and left it off until the
 -- speed fell below Vmc + 15 kt: p6-line1 (EHAM, 2026-10-16) slowed from 194 to
@@ -60,6 +61,21 @@ case("in the approach", function()
     d, ap, route = new_runtime(2.7, 0)
     ap.VNAV_DES(1, route)
     check(d.B747DR_autothrottle_active == 1, "off before: back on at 236 kt")
+end)
+
+case("the window open above SPD TRANS in the approach", function()
+    -- 10,000 ft above the path 7 nm before ELPOM (a high airport's approach): VNAV PTH stays, the A/T holds the
+    -- window's speed (above SPD TRANS VNAV_DES made it VNAV SPD, FLCH, against the A/T's SPD)
+    local d, ap, route = new_runtime(7, 1)
+    d.simDR_pressureAlt1, d.simDR_radarAlt1 = 15100, 15054
+    ap.VNAV_DES(1, route)
+    check(d.simDR_autopilot_flch_status == 0 and d.simDR_autopilot_vs_status == 2, "VNAV PTH's V/S, not FLCH")
+    check(d.B747DR_ap_thrust_mode == 0, "no THR REF")
+    -- 30 nm out it is VNAV SPD (FLCH) as before
+    d, ap, route = new_runtime(17, 1)
+    d.simDR_pressureAlt1, d.simDR_radarAlt1 = 15100, 15054
+    ap.VNAV_DES(1, route)
+    check(d.simDR_autopilot_flch_status == 2 and d.B747DR_ap_thrust_mode == 2, "30 nm out: VNAV SPD")
 end)
 
 case("before the approach", function()
