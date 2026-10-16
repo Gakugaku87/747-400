@@ -349,7 +349,7 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   (3.0, 3.2 or 2.5 deg) to the glide slope intercept, through the route
   altitudes never climbing (EINN's ASGON 3,046 ft after ELPOM's 3,000) and up
   to CRZ ALT at 290 ft/nm, the V/S from its gradient and the path error (never
-  a climb, at most 1,500 fpm of correction, kept within the flaps' placard - 3
+  a climb, at most 1,500 fpm of correction, kept within the flaps' placard - 2
   kt and Vmo - 11 kt by fading the correction and then shallowing); and the
   production setDescentVSpeed and setDistances on EHAM ILS 18R and EINN ILS
   06: the path error, V/S and V/B (to the next fix) on the path, above and
@@ -371,12 +371,13 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   the approach model from where the line flights of 2026-10-16 were, 300 ft
   (EINN 500 ft) higher or lower, faster or slower, 30 nm out, with APP later
   and the LOC sooner, 1,000 and 1,500 ft high (also with VNAV's speed at the
-  A/T's cap), in a tailwind and a headwind (EINN in TST744L's westerly): the
-  real glide slope captured (below 4 deg, by 5 nm), never over the flaps'
-  placard, the A/T on, no climb, within 0.75 dot at 1,000 and 500 ft and 30 ft
-  at 200 ft, VREF to VREF + 20 kt at 500 ft; and EHAM 1,000 ft high at the
-  A/T's flaps 1 cap in a tailwind growing to 70 kt never over the placard with
-  the A/T on (it ends on the false lobe, without the speedbrake).
+  A/T's cap, and so in a tailwind), in a tailwind and a headwind (EINN in
+  TST744L's westerly): the real glide slope captured (below 4 deg, by 5 nm),
+  never over the flaps' placard, the A/T on, no climb, within 0.75 dot at
+  1,000 and 500 ft and 30 ft at 200 ft, VREF to VREF + 20 kt at 500 ft; and
+  EHAM 1,000 ft high at the A/T's flaps 1 cap in a tailwind growing to 70 kt
+  at most 0.5 kt over the placard with the A/T on (it ends on the false lobe,
+  without the speedbrake).
 - `approach_model.lua` (not a suite): a closed-loop longitudinal model of the
   final descent and ILS approach - the production autopilot (VNAV, the FMA,
   setDistances), AFDS pitch director and EEC throttle code, each script in
