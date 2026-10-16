@@ -291,6 +291,13 @@ case("EHAM between AM608 and AM621", function()
     r = new_runtime(route, AM621, lat, lon, on_path - 400, 2000)
     r.setDescentVSpeed(route)
     near(r.simDR_autopilot_vs_fpm, math.min(0, -gradient * 3 + 600), 2, "400 ft below: shallower, not a climb")
+    -- the DES page's V/B: the angle from here down to the next fix's altitude (AM621's 2,000 ft, 2 nm on)
+    near(r.B747DR_ap_vb, math.deg(math.atan((on_path - 400 - 2000) / (2.0 * 6076.12))), 0.01,
+        "V/B 400 ft below the path: to AM621")
+    r = new_runtime(route, AM621, lat, lon, on_path + 300, 2000)
+    r.setDescentVSpeed(route)
+    near(r.B747DR_ap_vb, math.deg(math.atan((on_path + 300 - 2000) / (2.0 * 6076.12))), 0.01,
+        "V/B 300 ft above the path: to AM621")
     -- setDistances leaves the path error to the path: no 290 ft/nm line to the airport's reference point
     r = new_runtime(route, AM621, lat, lon, on_path, 2000)
     r.setDistances(route)

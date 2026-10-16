@@ -336,25 +336,24 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   staying the target where it is higher (SUGOL's 11315, NIRSI's 5563), the
   floor where [9] is missing, no level-off above an aircraft already below
   the floor, and nothing without the constraints or in the climb.
-- `vnav_approach_path_test.lua`: VNAV PTH in the approach (within 25 nm of
-  the arrival runway along the route) on the path to the runway - the arrival
-  runway by its name (EHAM with its missed approach's far vectors leg,
-  TST744L with its departure runway, not the departure end of a route back
-  to the departure airport), only the fixes after the route's farthest point
-  (none on a circuit's way out), no pseudo fix, a runway without an altitude,
-  the path from the runway's threshold crossing altitude up the final
-  approach angle (3.0, 3.2 or 2.5 deg) to the glide slope intercept, through
-  the route altitudes never climbing (EINN's ASGON 3,046 ft after ELPOM's
-  3,000) and up to CRZ ALT at 290 ft/nm, the V/S from its gradient and the
-  path error (never a climb, at most 1,500 fpm of correction, kept within
-  the flaps' placard - 5 kt and Vmo - 11 kt by fading the correction and then
-  shallowing); and the
+- `vnav_approach_path_test.lua`: VNAV PTH in the approach (within 25 nm of the
+  arrival runway along the route) on the path to the runway - the arrival
+  runway by its name (EHAM with its missed approach's far vectors leg, TST744L
+  with its departure runway, not the departure end of a route back to the
+  departure airport), only the fixes after the route's farthest point (none on
+  a circuit's way out), no pseudo fix, a runway without an altitude, the path
+  from the runway's threshold crossing altitude up the final approach angle
+  (3.0, 3.2 or 2.5 deg) to the glide slope intercept, through the route
+  altitudes never climbing (EINN's ASGON 3,046 ft after ELPOM's 3,000) and up
+  to CRZ ALT at 290 ft/nm, the V/S from its gradient and the path error (never
+  a climb, at most 1,500 fpm of correction, kept within the flaps' placard - 5
+  kt and Vmo - 11 kt by fading the correction and then shallowing); and the
   production setDescentVSpeed and setDistances on EHAM ILS 18R and EINN ILS
-  06: the path error and V/S on the path, above and below it, within 600 ft
-  above the AP altitude, by a fix LNAV sequenced early, near the flaps 5
-  placard and Vmo, with EHAM's missed approach, with VNAV off (the path error
-  only), into the approach at 25 nm and out of it beyond 27 nm, and nothing
-  beyond 25 nm from farther out.
+  06: the path error, V/S and V/B (to the next fix) on the path, above and
+  below it, within 600 ft above the AP altitude, by a fix LNAV sequenced
+  early, near the flaps 5 placard and Vmo, with EHAM's missed approach, with
+  VNAV off (the path error only), into the approach at 25 nm and out of it
+  beyond 27 nm, and nothing beyond 25 nm from farther out.
 - `vnav_approach_autothrottle_test.lua`: the A/T in the approach (EINN ILS 06,
   the IAS window open at idle 15.6 nm out) - VNAV_DES keeps it on and turns
   it back on, and B747_ap_fma shows SPD at idle; 30 nm out the descent's

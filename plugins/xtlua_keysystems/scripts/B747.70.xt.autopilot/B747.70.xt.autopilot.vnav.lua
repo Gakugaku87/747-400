@@ -259,7 +259,8 @@ function deceleratedDesent(targetvspeed)
 
 end
 -- [A-5] The approach's path to the runway (B747_afds_helpers.vnav_approach_path) at the aircraft:
--- {alt, gradient, distance} within VNAV_APPROACH_RANGE_NM of the arrival runway along the route (then
+-- {alt, gradient, distance, ahead = the next fix's point} within VNAV_APPROACH_RANGE_NM of the arrival
+-- runway along the route (then
 -- within VNAV_APPROACH_LEAVE_NM), else nil. The distance goes by a fix sequenced early for its turn until
 -- it is passed, and the final approach angle is the CIFP's (B747_route_constraints) from there to the
 -- runway.
@@ -290,7 +291,11 @@ function B747_vnav_approach_path(fmsO)
     return nil
   end
   local alt, gradient = B747_afds_helpers.vnav_path_at(points, distance)
-  return {alt = alt, gradient = gradient, distance = distance}
+  local ahead = points[1]
+  for _, point in ipairs(points) do
+    if point.index ~= nil and point.d < distance and point.d > ahead.d then ahead = point end
+  end
+  return {alt = alt, gradient = gradient, distance = distance, ahead = ahead}
 end
 function setDescentVSpeed(fmsO)
   -- [A-5] In the approach VNAV PTH flies the path to the runway: the path error is from it, and the V/S
@@ -314,7 +319,9 @@ function setDescentVSpeed(fmsO)
       simDR_autopilot_vs_fpm = B747_afds_helpers.vnav_path_vspeed(approach.gradient,
         simDR_groundspeed * 1.94384, B747BR_fpe, speedLimit - simDR_ind_airspeed_kts_pilot)
     end
-    B747DR_ap_vb = math.deg(math.atan(approach.gradient / 6076.12))
+    -- the vertical bearing: from here down to the next fix's altitude
+    B747DR_ap_vb = math.deg(math.atan((simDR_pressureAlt1 - approach.ahead.alt)
+      / (math.max(approach.distance - approach.ahead.d, 0.1) * 6076.12)))
     B747DR_ap_fpa = math.atan2(simDR_autopilot_vs_fpm, simDR_groundspeed * 196.85) * -57.2958
     return
   end

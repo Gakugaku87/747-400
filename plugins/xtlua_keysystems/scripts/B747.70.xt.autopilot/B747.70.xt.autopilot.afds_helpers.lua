@@ -725,7 +725,8 @@ end
 
 -- The path from the runway (runway_index) back to the fix before first_index
 -- (the fix flown to, or one sequenced early for its turn): points {d = NM to
--- the runway along the route, alt = ft} from the runway out, and the distance
+-- the runway along the route, alt = ft, index = the route entry of a fix or
+-- the runway} from the runway out, and the distance
 -- along the route from each entry up to the runway to it. nil while that fix
 -- lies before the route's farthest point from the destination: on a route back
 -- to the departure airport (a circuit) the way out is not the approach, and
@@ -754,7 +755,7 @@ function afds.vnav_approach_path(route, runway_index, first_index, distance_fn, 
             if alt >= transition_alt then
                 fixes = {}
             else
-                fixes[#fixes + 1] = {d = to_runway[i], alt = alt}
+                fixes[#fixes + 1] = {d = to_runway[i], alt = alt, index = i}
             end
         end
     end
@@ -766,7 +767,7 @@ function afds.vnav_approach_path(route, runway_index, first_index, distance_fn, 
     local end_alt = tonumber(route[runway_index][9]) or 0
     if end_alt <= 0 then end_alt = (tonumber(route[#route][9]) or 0) + 50 end
     end_alt = math.min(end_alt, lowest)
-    local points = {{d = 0, alt = end_alt}}
+    local points = {{d = 0, alt = end_alt, index = runway_index}}
     if #fixes > 0 then
         local final = fixes[#fixes]
         local gradient = math.tan(math.rad(tonumber(glide_deg) or afds.VNAV_APPROACH_GLIDE_DEG)) * 6076.12
