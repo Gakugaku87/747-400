@@ -181,6 +181,28 @@ function afds.past_turn_bisector(east_nm, north_nm, in_course_deg, out_course_de
     return east_nm * mean_east + north_nm * mean_north >= 0
 end
 
+-- [i-1b] The ground speed a fly-by arc from course_in_deg to course_out_deg
+-- (true) is drawn for: the TAS plus the wind (the air's motion, kt east and
+-- north) along the track, the highest of the tracks across the turn, so that
+-- the 747 can follow the arc all round at the bank limit without making it
+-- bigger than that (with the wind's whole speed a crosswind turn cut far
+-- inside: BEDRA passed 5.9 nm from it, 3.0 before).
+function afds.lnav_turn_ground_speed_kts(tas_kts, wind_east_kts, wind_north_kts, course_in_deg, course_out_deg)
+    local turn = (course_out_deg - course_in_deg + 540) % 360 - 180
+    local function along(course_deg)
+        return wind_east_kts * math.sin(math.rad(course_deg)) + wind_north_kts * math.cos(math.rad(course_deg))
+    end
+    local best = math.max(along(course_in_deg), along(course_out_deg))
+    local speed = math.sqrt(wind_east_kts * wind_east_kts + wind_north_kts * wind_north_kts)
+    if speed > 0 then
+        -- the wind's own direction, if the turn sweeps through it
+        local toward = math.deg(math.atan2(wind_east_kts, wind_north_kts))
+        local swept = ((toward - course_in_deg) * (turn < 0 and -1 or 1)) % 360
+        if swept <= math.abs(turn) then best = speed end
+    end
+    return tas_kts + best
+end
+
 -- [i-1b] The lateral path at a fly-by fix: the inbound leg on course_in_deg,
 -- the arc of radius_nm tangent to it and to the outbound leg on course_out_deg
 -- (true courses), R tan(turn / 2) before and after the fix, and the outbound

@@ -333,6 +333,11 @@ out = fly({route = route, index = 4, start = start, heading = course, tas_kt = 4
 turn, overshoot, deviation = turn_metrics(out, route, 4)
 check(overshoot <= 0.4, string.format("BEDRA %+.0f deg in wind: overshoot %.2f nm (at most 0.4)", turn, overshoot))
 check(out.roll_rate <= 4.5, string.format("BEDRA: roll rate %.2f deg/s", out.roll_rate))
+-- LNAV's path (item i-1b): the arc for the highest ground speed the wind gives across the turn (486 kt,
+-- R 9.4 nm, its middle 3.9 nm from BEDRA); with the TAS plus the wind's whole speed it cut 5.9 nm inside
+local bedra_nm = 1e9
+for _, p in ipairs(out.track) do bedra_nm = math.min(bedra_nm, probe.getDistance(49.0, -15.0, p.lat, p.lon)) end
+check(bedra_nm <= 4.5, string.format("BEDRA in wind passed %.1f nm from it (at most 4.5)", bedra_nm))
 route = tst744l()
 start, course = along(route, 6, 30)
 out = fly({route = route, index = 6, start = start, heading = course, tas_kt = 482, alt_ft = 35000, loop = "cruise",

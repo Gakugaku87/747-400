@@ -292,8 +292,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   flies by its path (item i-1b) sequenced at its bisector instead (one frame
   before and past it; BILTO's 137 deg at FL350 in a 355/96 wind from 58 nm out
   and 130 deg at 480 kt in a 040/90 wind, which the lead never sequenced), and
-  a fix listed twice in a row (one turn, in order, at 250 and 480 kt), and no
-  bank below 400 ft after lift-off with a SID's turn 1.5 nm on.
+  a fix listed twice in a row (one turn, in order, at 250 and 480 kt), no
+  bank below 400 ft after lift-off with a SID's turn 1.5 nm on, and BEDRA in
+  the westerly passed within 4.5 nm.
   LNAV's path guidance on the model: within 0.1 nm of the leg to DW124 90 and
   120 s after DW129, and back on a leg from 1, 3 and 10 nm off within 60, 120
   and 300 s at most 45 deg to it and not 0.2 nm through it.
@@ -312,7 +313,8 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   and onto the next leg, at most 45 deg off a leg; 90 deg turns both ways, no
   turn, 150 deg, past turns of 120 and 150 deg the outbound leg (behind the
   arc's start in the inbound leg's frame: the turn's bisector parts the two
-  legs' sides), whether the aircraft is past the bisector, a capture
+  legs' sides), whether the aircraft is past the bisector, the ground speed
+  an arc is drawn for (the highest the wind gives across the turn), a capture
   look-ahead on the legs (the aim waiting at the arc's start until the
   look-ahead reaches it), and no path without a radius, courses or a
   look-ahead, or for a reversal.

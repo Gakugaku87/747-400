@@ -2451,7 +2451,9 @@ local function B747_lnav_sequence_to(index, why)
 end
 
 -- [i-1b] The lateral path through fmsO[k] (afds.lnav_path_at at the aircraft): the leg into it, the fly-by arc
--- of its turn of radius radius_nm and the leg after it; a turn LNAV does not fly by (into an entry that is no
+-- of its turn and the leg after it, with the parameters p (B747_lnav_path_parameters): the arc's radius the
+-- turn's at the bank limit and the highest ground speed the wind gives across it (also the capture
+-- look-ahead's base); a turn LNAV does not fly by (into an entry that is no
 -- fix, or of more than LNAV_FLYBY_MAX_TURN_DEG; on the ground or below LNAV_ALTITUDE_LEG_MIN_RA_FT above it, as
 -- the anticipation: a SID's arc banked from 118 ft) straight on through the fix; the turn to the leg after a fix
 -- listed twice in a row (a leg of no length, whose course is none: the path took it as 000 or 180 and
@@ -2461,7 +2463,7 @@ local LNAV_PATH_MIN_LEG_NM=0.1
 local function B747_lnav_leg_has_course(a,b)
 	return a~=nil and b~=nil and getDistance(a[5],a[6],b[5],b[6])>=LNAV_PATH_MIN_LEG_NM
 end
-local function B747_lnav_path_at_fix(fmsO,k,radius_nm,lookahead_nm,capture_nm)
+local function B747_lnav_path_at_fix(fmsO,k,p)
 	local count=table.getn(fmsO)
 	local fix=fmsO[k]
 	if k<2 or k>=count or not B747_lnav_leg_supports_preemption(fix) then return nil end
@@ -2483,10 +2485,14 @@ local function B747_lnav_path_at_fix(fmsO,k,radius_nm,lookahead_nm,capture_nm)
 			outCourse=course
 		end
 	end
+	local radius=B747_afds_helpers.turn_radius_nm(B747_afds_helpers.lnav_turn_ground_speed_kts(p.tas,p.windEast,
+		p.windNorth,inCourse,outCourse),p.bank)
+	if radius==nil then return nil end
+	local capture=math.min(radius*B747_afds_helpers.LNAV_PATH_CAPTURE_RADII,B747_afds_helpers.LNAV_PATH_MAX_LOOKAHEAD_NM)
 	local distance=getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)
 	local bearing=math.rad(getHeading(fix[5],fix[6],simDR_latitude,simDR_longitude))
 	return B747_afds_helpers.lnav_path_at(distance*math.sin(bearing),distance*math.cos(bearing),inCourse,outCourse,
-		radius_nm,lookahead_nm,capture_nm),fix
+		radius,p.lookahead,capture),fix
 end
 
 -- [i-1b] The lateral path LNAV flies now (afds.lnav_path_at, with the fix it is about): the fix flown to's,
@@ -2498,27 +2504,26 @@ end
 -- (B747DR_ap_lnav_xtk_target), or not moving; and after a fix that was no fly-by (reached direct, or a turn of
 -- more than LNAV_FLYBY_MAX_TURN_DEG passed abeam), whose next leg starts behind the 747 (on a 170 deg turn the
 -- path guidance orbited round it) and is flown direct to its fix.
--- The arcs' radius, the look-ahead and the capture look-ahead of LNAV's path now; nil not moving.
+-- What LNAV's path is drawn with now: the TAS, the wind (kt east and north; none when it cannot be), the
+-- bank limit and the look-ahead; nil not moving.
 local function B747_lnav_path_parameters()
 	local tas=simDR_TAS_mps*1.94384
 	local gs=simDR_groundspeed*1.94384
+	if not (tas>0) or not (gs>0) then return nil end
 	local track,heading=math.rad(simDR_ground_track_true),math.rad(simDR_true_heading)
 	local windEast=gs*math.sin(track)-tas*math.sin(heading)
 	local windNorth=gs*math.cos(track)-tas*math.cos(heading)
 	local wind=math.sqrt(windEast*windEast+windNorth*windNorth)
-	if wind~=wind or wind>B747_afds_helpers.LNAV_MAX_WIND_KTS then wind=0 end
-	local radius=B747_afds_helpers.turn_radius_nm(tas+wind,B747_lnav_bank_limit_deg())
-	if radius==nil or not (gs>0) then return nil end
-	local lookahead=B747_afds_helpers.clamp(gs*B747_afds_helpers.LNAV_PATH_LOOKAHEAD_S/3600,
-		B747_afds_helpers.LNAV_PATH_MIN_LOOKAHEAD_NM,B747_afds_helpers.LNAV_PATH_MAX_LOOKAHEAD_NM)
-	local capture=math.min(radius*B747_afds_helpers.LNAV_PATH_CAPTURE_RADII,B747_afds_helpers.LNAV_PATH_MAX_LOOKAHEAD_NM)
-	return radius,lookahead,capture
+	if wind~=wind or wind>B747_afds_helpers.LNAV_MAX_WIND_KTS then windEast,windNorth=0,0 end
+	return {tas=tas,windEast=windEast,windNorth=windNorth,bank=B747_lnav_bank_limit_deg(),
+		lookahead=B747_afds_helpers.clamp(gs*B747_afds_helpers.LNAV_PATH_LOOKAHEAD_S/3600,
+			B747_afds_helpers.LNAV_PATH_MIN_LOOKAHEAD_NM,B747_afds_helpers.LNAV_PATH_MAX_LOOKAHEAD_NM)}
 end
 
 local function B747_lnav_path_now(fmsO,current)
 	if B747DR_ap_lnav_xtk_target~=0 or current<2 or fmsO[current]==nil then return nil end
-	local radius,lookahead,capture=B747_lnav_path_parameters()
-	if radius==nil then return nil end
+	local p=B747_lnav_path_parameters()
+	if p==nil then return nil end
 	local path,fix=nil,nil
 	-- the fix before (past one listed twice in a row)
 	local k=current-1
@@ -2532,14 +2537,14 @@ local function B747_lnav_path_now(fmsO,current)
 		if directTo or math.abs(getHeadingDifference(outCourse,inCourse))>B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG then
 			return nil
 		end
-		path,fix=B747_lnav_path_at_fix(fmsO,k,radius,lookahead,capture)
+		path,fix=B747_lnav_path_at_fix(fmsO,k,p)
 		if path~=nil and (path.element=="out" or math.abs(path.xtk_nm)>LNAV_MAX_PREEMPT_XTK_NM) then path=nil end
 	end
 	-- the fix flown to's path once its arc is within the look-ahead: on a short leg the arcs at its two ends
 	-- meet (EIDW DW128-DW129, 3.7 nm), and following the fix before's to its end the 747 began DW129's turn
 	-- 0.4 nm into its arc
-	local own,ownFix=B747_lnav_path_at_fix(fmsO,current,radius,lookahead,capture)
-	if path==nil or (own~=nil and own.along_nm+lookahead>=0) then path,fix=own,ownFix end
+	local own,ownFix=B747_lnav_path_at_fix(fmsO,current,p)
+	if path==nil or (own~=nil and own.along_nm+p.lookahead>=0) then path,fix=own,ownFix end
 	if path==nil then return nil end
 	return path,fix
 end
@@ -2631,8 +2636,8 @@ function B747_getCurrentWayPoint_function(fmsO)
 		return
 	end
 	if current>1 and current<table.getn(fmsO)-1 and B747DR_ap_lnav_xtk_target==0 then
-		local radius,lookahead,capture=B747_lnav_path_parameters()
-		local path=radius and B747_lnav_path_at_fix(fmsO,current,radius,lookahead,capture)
+		local p=B747_lnav_path_parameters()
+		local path=p and B747_lnav_path_at_fix(fmsO,current,p)
 		if path and math.abs(path.xtk_nm)<=LNAV_MAX_PREEMPT_XTK_NM then
 			if path.past_bisector then
 				B747_lnav_sequence_to(current+1,"past the bisector of the turn at "..tostring(fmsO[current][8]))

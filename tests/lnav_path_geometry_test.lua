@@ -161,6 +161,22 @@ check(path(m + 0.01, -m, 0, 90, 2, 2).past_bisector == true, "just past the arc'
 check(path(m - 0.01, -m, 0, 90, 2, 2).past_bisector == false, "just before the arc's middle: not past it")
 check(path(5, 0.3, 0, 90, 2, 2).past_bisector == true, "on the outbound leg: past it")
 
+-- The ground speed a fly-by arc is drawn for: the TAS plus the wind along the track, the highest across the
+-- turn (an arc the 747 can follow all round at the bank limit, no bigger).
+local gsk = afds.lnav_turn_ground_speed_kts
+check(type(gsk) == "function", "afds.lnav_turn_ground_speed_kts exists")
+if type(gsk) == "function" then
+    local function wind(from_deg, kt) return -kt * math.sin(math.rad(from_deg)), -kt * math.cos(math.rad(from_deg)) end
+    local we, wn = wind(265, 96)
+    near(gsk(478, 0, 0, 270, 0), 478, 1e-9, "no wind: the TAS")
+    near(gsk(478, we, wn, 270, 0), 478 + 96 * math.cos(math.rad(275)), 1e-6, "BEDRA (270 to 000) in 265/96: the highest at 000")
+    we, wn = wind(355, 96)
+    near(gsk(482, we, wn, 0, 137), 482 + 96 * math.cos(math.rad(38)), 1e-6, "BILTO (000 to 137) in 355/96: the highest at 137")
+    we, wn = wind(270, 90)
+    near(gsk(250, we, wn, 0, 170), 340, 1e-6, "000 to 170 right through the wind toward 090: its whole speed")
+    near(gsk(250, we, wn, 0, -170), 250, 1e-6, "000 to 190 left, never toward 090: the start's, across the wind")
+end
+
 -- 6. Not a path: no radius, no courses, a reversal.
 check(path(0, 0, 0, 90, 0, 2) == nil, "no radius")
 check(path(0, 0, nil, 90, 2, 2) == nil, "no inbound course")
