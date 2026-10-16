@@ -8,14 +8,14 @@
 -- Each must capture the real glide slope (below 4 deg from its origin; the
 -- false lobes are at 6 and 9 deg) by 5 nm out, keep the A/T on, never go over
 -- the placard of the flaps set (also from 1,000 to 1,500 ft high, and with
--- VNAV's speed at the A/T's cap, the placard - 5), never climb
--- 200 ft, be within 0.75 dot of the beam at 1,000 and 500 ft above the
--- runway and within 30 ft of it at 200 ft, at VREF to VREF + 20 kt at 500 ft
--- and never 10 kt below the speed set after the capture. On the code before
--- the P8 fixes (49c55514) 90 of the 200 checks fail: every EHAM case captures
--- the 6 deg lobe at 5.1 to 5.9 nm and is 1,570 to 1,930 ft above the beam at
--- 200 ft, EINN's basic and 252 kt cases at 4.6 and 4.7 nm, and the A/T goes off
--- in 9 cases.
+-- VNAV's speed at the A/T's cap, the placard - 5, also with flaps 1 in a
+-- strong tailwind), never climb 200 ft, be within 0.75 dot of the beam at
+-- 1,000 and 500 ft above the runway and within 30 ft of it at 200 ft, at VREF
+-- to VREF + 20 kt at 500 ft and never 10 kt below the speed set after the
+-- capture. On the code before the P8 fixes (49c55514) 89 of the 213 checks
+-- fail: every EHAM case captures the 6 deg lobe at 5.1 to 5.8 nm and is 1,470
+-- to 1,900 ft above the beam at 200 ft, EINN's 252 kt and low cases at 4.7 nm,
+-- and the A/T goes off in 9 cases.
 local model = dofile("tests/approach_model.lua")
 
 local checks, failures = 0, {}
@@ -39,6 +39,15 @@ local CASES = {
     {"einn", {start_nm = 16, alt_ft = 7736, ias_kt = 238, vs_fpm = -1368, flaps = 0, at_mode = 3}, "29 nm out"},
 }
 
+-- The first point of a flight over the placard of the flaps set, if any.
+local function over_placard(track)
+    for _, p in ipairs(track) do
+        local placard = model.FLAP_PLACARD[model.FLAP_DETENTS[math.floor(p.handle * 6 + 0.5) + 1]] or 365
+        if p.ias > placard then return p end
+    end
+    return nil
+end
+
 for _, case in ipairs(CASES) do
     local o = model[case[1]](case[2])
     local name = case[1]
@@ -57,11 +66,10 @@ for _, case in ipairs(CASES) do
         local gs = m.events.gs_capture
         check(gs ~= nil and gs.elevation < 4 and gs.dist_thr > 5, name..": the real glide slope by 5 nm, got "
             ..(gs and string.format("%.2f deg at %.1f nm", gs.elevation, gs.dist_thr) or "none"))
-        local at1000, at500, last, climb, at_off, slow, over = nil, nil, nil, 0, nil, 0, nil
+        local at1000, at500, last, climb, at_off, slow = nil, nil, nil, 0, nil, 0
+        local over = over_placard(m.track)
         for k, p in ipairs(m.track) do
             local agl = p.alt - elev
-            local placard = model.FLAP_PLACARD[model.FLAP_DETENTS[math.floor(p.handle * 6 + 0.5) + 1]] or 365
-            if over == nil and p.ias > placard then over = p end
             if p.gs == 2 then
                 if at1000 == nil and agl <= 1000 then at1000 = p end
                 if at500 == nil and agl <= 500 then at500 = p end
@@ -86,6 +94,24 @@ for _, case in ipairs(CASES) do
         check(last ~= nil and last.alt - elev <= 210 and math.abs(above) <= 30,
             name..string.format(": within 30 ft of the beam at 200 ft, %.0f ft", above))
     end
+end
+
+-- EHAM 1,000 ft high with VNAV's speed at the A/T's cap with flaps 1 (275 kt) in a tailwind from 15 kt at the
+-- runway to 70 kt at 5,000 ft: the path's limit keeps the speed within the placard (at the placard - 2 the
+-- 747 went 0.3 kt over it at 11.4 nm, the V/S lagging the path's command). So much energy still ends on the
+-- 6 deg lobe without the speedbrake (left as it is), so only the placard and the A/T are checked.
+local o = model.eham({alt_ft = 6150, flaps = 1 / 6, vnav_speed_kt = 275, ias_kt = 275,
+    wind = {{0, 360, 15}, {5000, 360, 70}, {10000, 360, 70}}})
+local ok, m = pcall(model.fly, o)
+check(ok, "eham at the flaps 1 cap in a 15 to 70 kt tailwind: "..tostring(m))
+if ok then
+    local over, at_off = over_placard(m.track), nil
+    for _, p in ipairs(m.track) do
+        if at_off == nil and p.at_active ~= 1 then at_off = p end
+    end
+    check(over == nil, "eham at the flaps 1 cap in a 15 to 70 kt tailwind: never over the flaps' placard"
+        ..(over and string.format(", %.1f kt at %.1f nm", over.ias, over.dist_thr) or ""))
+    check(at_off == nil, "eham at the flaps 1 cap in a 15 to 70 kt tailwind: the A/T on")
 end
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
