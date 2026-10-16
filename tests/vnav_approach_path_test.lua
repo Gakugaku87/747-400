@@ -162,6 +162,16 @@ case("the V/S along the path", function()
     near(afds.vnav_path_vspeed(0, 180, 450), -675, 0.001, "450 ft above a level path")
     near(afds.vnav_path_vspeed(304, 180, 2000), -2412, 0.001, "far above: at most 1,500 fpm more")
     near(afds.vnav_path_vspeed(500, 250, 2000), -3500, 0.001, "not below -3,500 fpm")
+    -- the speed: the path's correction down fades over the last 5 kt below the limit (the flaps' placard
+    -- - 5 kt, Vmo - 11 kt), and beyond it the descent shallows, level 10 kt over
+    near(afds.vnav_path_vspeed(304, 180, 200, 20), -1212, 0.001, "20 kt below the limit: all of it")
+    near(afds.vnav_path_vspeed(304, 180, 200, 5), -1212, 0.001, "5 kt below the limit: all of it")
+    near(afds.vnav_path_vspeed(304, 180, 200, 2.5), -1062, 0.001, "2.5 kt below the limit: half the correction")
+    near(afds.vnav_path_vspeed(304, 180, 200, 0), -912, 0.001, "at the limit: the path's gradient only")
+    near(afds.vnav_path_vspeed(304, 180, 200, -5), -456, 0.001, "5 kt over: half the gradient")
+    near(afds.vnav_path_vspeed(304, 180, 200, -12), 0, 0.001, "10 kt over and more: level")
+    near(afds.vnav_path_vspeed(304, 180, -300, -5), -6, 0.001, "below the path 5 kt over: shallower still")
+    near(afds.vnav_path_vspeed(304, 180, -300, 3), -462, 0.001, "below the path near the limit: as before")
 end)
 
 -- 4. setDescentVSpeed (vnav.lua through the XTLua dofile) and setDistances in the approach.
@@ -269,6 +279,26 @@ case("EINN level at 3,000 ft before the glide slope", function()
     r.setDescentVSpeed(route)
     near(r.B747BR_fpe, 0, 1, "on the descent into ELPOM")
     near(r.simDR_autopilot_vs_fpm, -290 * 3, 2, "290 ft/nm at 180 kt")
+end)
+
+case("the speed limit in the approach", function()
+    -- 7 nm before ELPOM, 600 ft above the descent from the T/D, flaps 5 (placard 260 kt)
+    local route = einn()
+    local lat, lon = before(route, ELPOM, 7)
+    local function vspeed(ias, vmo)
+        local r = new_runtime(route, ELPOM, lat, lon, 3000 + 7 * 290 + 600, 3000, nil, 35000)
+        r.simDR_flap_ratio_control, r.simDR_ind_airspeed_kts_pilot, r.B747DR_airspeed_Vmo = 2 / 6, ias, vmo
+        r.setDescentVSpeed(route)
+        return r.simDR_autopilot_vs_fpm
+    end
+    near(vspeed(240), -870 - 900, 2, "240 kt, 15 kt below the placard - 5: back to the path at 900 fpm more")
+    near(vspeed(252), -870 - 540, 2, "252 kt: 3 kt from the limit, 60 percent of it")
+    near(vspeed(262), -870 * 0.3, 2, "262 kt: 7 kt over, the descent shallows")
+    -- flaps up the limit is Vmo - 11 kt
+    local r = new_runtime(route, ELPOM, lat, lon, 3000 + 7 * 290 + 600, 3000, nil, 35000)
+    r.simDR_flap_ratio_control, r.simDR_ind_airspeed_kts_pilot, r.B747DR_airspeed_Vmo = 0, 351, 365
+    r.setDescentVSpeed(route)
+    near(r.simDR_autopilot_vs_fpm, -870 - 540, 2, "351 kt flaps up: 3 kt below Vmo - 11")
 end)
 
 case("outside the approach", function()

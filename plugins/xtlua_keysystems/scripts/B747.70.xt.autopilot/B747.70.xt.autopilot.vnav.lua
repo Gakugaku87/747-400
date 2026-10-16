@@ -292,6 +292,8 @@ function setDescentVSpeed(fmsO)
   -- at the next fix's altitude, left alone within 600 ft above the AP altitude: p6-line1 (EHAM,
   -- 2026-10-16) climbed at +600 fpm to a passed fix's 3,400 ft and p6-L1 (EINN) stayed at 3,450 ft,
   -- 450 ft above the 3,000 ft it was cleared to; both then captured a false glide slope lobe.
+  -- The path holds the speed within the flaps' placard - 5 kt and Vmo - 11 kt: at idle above the path the
+  -- 747 accelerated through the flaps 5 placard in the approach model.
   local approach = nil
   if simDR_radarAlt1 > 10 then approach = B747_vnav_approach_path(fmsO) end
   B747_vnav_approach_active = approach ~= nil and B747DR_ap_vnav_state > 0
@@ -299,8 +301,10 @@ function setDescentVSpeed(fmsO)
     B747BR_fpe = simDR_pressureAlt1 - approach.alt
     B747_reset_vnav_energy()
     if B747DR_ap_vnav_state > 0 then
+      local speedLimit = flapPlacardSpeedLimit()
+      if (B747DR_airspeed_Vmo or 0) > 100 then speedLimit = math.min(speedLimit, B747DR_airspeed_Vmo - 11) end
       simDR_autopilot_vs_fpm = B747_afds_helpers.vnav_path_vspeed(approach.gradient,
-        simDR_groundspeed * 1.94384, B747BR_fpe)
+        simDR_groundspeed * 1.94384, B747BR_fpe, speedLimit - simDR_ind_airspeed_kts_pilot)
     end
     B747DR_ap_vb = math.deg(math.atan(approach.gradient / 6076.12))
     B747DR_ap_fpa = math.atan2(simDR_autopilot_vs_fpm, simDR_groundspeed * 196.85) * -57.2958

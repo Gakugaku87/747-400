@@ -5,8 +5,9 @@
 -- the line flights of 2026-10-16 were and from 300 ft higher or lower, 10 to
 -- 15 kt faster or slower, 30 nm out, with APP later and the LOC sooner, EHAM
 -- with a 15 kt tailwind and a 25 kt headwind (EINN in TST744L's westerly).
--- Each must capture the real glide slope (below 3.5 deg from its origin; the
--- false lobes are at 6 and 9 deg) by 5 nm out, keep the A/T on, never climb
+-- Each must capture the real glide slope (below 4 deg from its origin; the
+-- false lobes are at 6 and 9 deg) by 5 nm out, keep the A/T on, never go over
+-- the placard of the flaps set (also from 1,000 to 1,500 ft high), never climb
 -- 200 ft, be within 0.75 dot of the beam at 1,000 and 500 ft above the
 -- runway and within 30 ft of it at 200 ft, at VREF to VREF + 20 kt at 500 ft
 -- and never 10 kt below the speed set after the capture. Before the P8
@@ -25,10 +26,12 @@ local CASES = {
     {"eham", {ias_kt = 210, alt_ft = 5450}}, {"eham", {app_nm = 8.2, loc_delay_s = 20}},
     {"eham", {active = 7, start_nm = 10.5, alt_ft = 8000, ias_kt = 235, vs_fpm = -1100, flaps = 0, at_mode = 3,
         vnav_speed_kt = 240, vnav_speeds = {{24, 220}}}, "30 nm out"},
+    {"eham", {alt_ft = 6150}, "1,000 ft high"}, {"eham", {alt_ft = 6650}, "1,500 ft high"},
     {"eham", {wind = {{0, 360, 15}, {10000, 360, 15}}}, "15 kt tailwind"},
     {"eham", {wind = {{0, 180, 25}, {10000, 180, 25}}}, "25 kt headwind"},
     {"einn", {}}, {"einn", {ias_kt = 252}}, {"einn", {alt_ft = 5640}}, {"einn", {alt_ft = 4640}},
-    {"einn", {ias_kt = 230}}, {"einn", {loc_delay_s = 15}},
+    {"einn", {ias_kt = 230}}, {"einn", {loc_delay_s = 15}}, {"einn", {alt_ft = 6140}, "1,000 ft high"},
+    {"einn", {alt_ft = 6640}, "1,500 ft high"},
     {"einn", {start_nm = 16, alt_ft = 7736, ias_kt = 238, vs_fpm = -1368, flaps = 0, at_mode = 3}, "29 nm out"},
 }
 
@@ -48,11 +51,13 @@ for _, case in ipairs(CASES) do
     if ok then
         local elev = o.threshold[3]
         local gs = m.events.gs_capture
-        check(gs ~= nil and gs.elevation < 3.5 and gs.dist_thr > 5, name..": the real glide slope by 5 nm, got "
+        check(gs ~= nil and gs.elevation < 4 and gs.dist_thr > 5, name..": the real glide slope by 5 nm, got "
             ..(gs and string.format("%.2f deg at %.1f nm", gs.elevation, gs.dist_thr) or "none"))
-        local at1000, at500, last, climb, at_off, slow = nil, nil, nil, 0, nil, 0
+        local at1000, at500, last, climb, at_off, slow, over = nil, nil, nil, 0, nil, 0, nil
         for k, p in ipairs(m.track) do
             local agl = p.alt - elev
+            local placard = model.FLAP_PLACARD[model.FLAP_DETENTS[math.floor(p.handle * 6 + 0.5) + 1]] or 365
+            if over == nil and p.ias > placard then over = p end
             if p.gs == 2 then
                 if at1000 == nil and agl <= 1000 then at1000 = p end
                 if at500 == nil and agl <= 500 then at500 = p end
@@ -63,6 +68,8 @@ for _, case in ipairs(CASES) do
             last = p
         end
         check(at_off == nil, name..": the A/T on, off at "..(at_off and string.format("%.1f nm", at_off.dist_thr) or ""))
+        check(over == nil, name..": never over the flaps' placard"
+            ..(over and string.format(", %.0f kt at %.1f nm", over.ias, over.dist_thr) or ""))
         check(climb < 200, name..string.format(": no 200 ft climb in 10 s, %.0f ft", climb))
         check(at1000 ~= nil and math.abs(at1000.dots) <= 0.75,
             name..": within 0.75 dot at 1,000 ft, "..(at1000 and string.format("%.2f", at1000.dots) or "not on G/S"))

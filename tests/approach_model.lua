@@ -274,6 +274,7 @@ function M.set_datarefs(d, o, throttle, dt)
         B747DR_speedbrake_lever = 0, B747DR_fmc_notifications = {}, simDR_override_throttles = 1,
         -- the aircraft
         simDR_onGround = 0, simDR_variation = 0, simDR_autopilot_servos_on = 1, B747DR_airspeed_Vmax = 365,
+        B747DR_airspeed_Vmo = 365,
         B747DR_flap_lever_detent = 0, simDR_glideslope1 = o.gs_deg or 3.0, simDR_nav1_gs_flag = 0, simDR_nav2_gs_flag = 0,
         simDR_hsi_nav1_vertical_signal = 1, simDR_hsi_nav2_vertical_signal = 1,
         simDR_hsi_ldef_dots_nav1 = 0, simDR_hsi_ldef_dots_nav2 = 0,
@@ -443,7 +444,7 @@ function M.fly(o)
         d.simDR_TAS_mps, d.simDR_alpha_deg = state.V, alpha
         d.simDR_AHARS_pitch_heading_deg_pilot = state.theta
         d.simDR_hsi_vdef_dots_pilot = M.gs_dots(elevation, gs_deg)
-        d.B747DR_flap_ratio = state.flap
+        d.B747DR_flap_ratio, d.simDR_flap_ratio_control = state.flap, state.flap_handle
         d.B747DR_airspeed_Vmc = M.vmc(mass, flap_deg(state.flap))
 
         -- the autopilot script's frame (after_physics)
@@ -628,7 +629,8 @@ function M.fly(o)
                 gs = d.simDR_autopilot_gs_status, dots = d.simDR_hsi_vdef_dots_pilot, elevation = elevation,
                 spd = d.simDR_autopilot_airspeed_kts, window = d.B747DR_ap_ias_mach_window_open,
                 vs_status = d.simDR_autopilot_vs_status, alt_hold = d.simDR_autopilot_alt_hold_status,
-                flch = d.simDR_autopilot_flch_status, vmc = d.B747DR_airspeed_Vmc}
+                flch = d.simDR_autopilot_flch_status, vmc = d.B747DR_airspeed_Vmc, handle = state.flap_handle,
+                drag = d.B747DR_vnav_energy_drag_required}
         end
         if d.B747DR_ap_FMA_autothrottle_mode == 0 and not m.at_off_logged then
             m.at_off_logged = true

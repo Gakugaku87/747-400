@@ -783,12 +783,27 @@ end
 
 -- V/S along the path (fpm): its gradient at the ground speed, less the path
 -- error times VNAV_PATH_GAIN_FPM_PER_FT (at most VNAV_PATH_MAX_CORRECTION_FPM);
--- never a climb, nor below VNAV_ENERGY_MAX_DESCENT_FPM.
-function afds.vnav_path_vspeed(gradient_ft_per_nm, groundspeed_kts, path_error_ft)
+-- never a climb, nor below VNAV_ENERGY_MAX_DESCENT_FPM. With speed_margin_kts
+-- (the speed limit less the IAS) the path keeps the speed within its limit, as
+-- VNAV PTH does, departing the path when it must: the correction down fades
+-- over the last VNAV_PATH_SPEED_FADE_KTS below the limit, and beyond it the
+-- descent shallows, level VNAV_PATH_SPEED_LEVEL_KTS over.
+afds.VNAV_PATH_SPEED_FADE_KTS = 5
+afds.VNAV_PATH_SPEED_LEVEL_KTS = 10
+function afds.vnav_path_vspeed(gradient_ft_per_nm, groundspeed_kts, path_error_ft, speed_margin_kts)
+    local nominal = -gradient_ft_per_nm * groundspeed_kts / 60
     local correction = afds.clamp(path_error_ft * afds.VNAV_PATH_GAIN_FPM_PER_FT,
         -afds.VNAV_PATH_MAX_CORRECTION_FPM, afds.VNAV_PATH_MAX_CORRECTION_FPM)
-    return afds.clamp(-gradient_ft_per_nm * groundspeed_kts / 60 - correction,
-        afds.VNAV_ENERGY_MAX_DESCENT_FPM, 0)
+    local margin = tonumber(speed_margin_kts)
+    if margin ~= nil then
+        if correction > 0 then
+            correction = correction * afds.clamp(margin / afds.VNAV_PATH_SPEED_FADE_KTS, 0, 1)
+        end
+        if margin < 0 then
+            nominal = nominal * afds.clamp(1 + margin / afds.VNAV_PATH_SPEED_LEVEL_KTS, 0, 1)
+        end
+    end
+    return afds.clamp(nominal - correction, afds.VNAV_ENERGY_MAX_DESCENT_FPM, 0)
 end
 
 -- [f] Autoland flare law, derotation and thrust retard height

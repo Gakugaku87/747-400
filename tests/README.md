@@ -343,11 +343,13 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   approach angle (3.0, 3.2 or 2.5 deg) to the glide slope intercept, through
   the route altitudes never climbing (EINN's ASGON 3,046 ft after ELPOM's
   3,000) and up to CRZ ALT at 290 ft/nm, the V/S from its gradient and the
-  path error (never a climb, at most 1,500 fpm of correction); and the
+  path error (never a climb, at most 1,500 fpm of correction, kept within
+  the flaps' placard - 5 kt and Vmo - 11 kt by fading the correction and then
+  shallowing); and the
   production setDescentVSpeed and setDistances on EHAM ILS 18R and EINN ILS
   06: the path error and V/S on the path, above and below it, within 600 ft
-  above the AP altitude, by a fix LNAV sequenced early, and nothing beyond
-  25 nm.
+  above the AP altitude, by a fix LNAV sequenced early, near the flaps 5
+  placard and Vmo, and nothing beyond 25 nm.
 - `vnav_approach_autothrottle_test.lua`: the A/T in the approach (EINN ILS 06,
   the IAS window open at idle 15.6 nm out) - VNAV_DES keeps it on and turns
   it back on, and B747_ap_fma shows SPD at idle; 30 nm out the descent's
@@ -356,8 +358,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
 - `approach_model_test.lua`: EHAM ILS 18R via SUG1D and EINN ILS 06 flown in
   the approach model from where the line flights of 2026-10-16 were, 300 ft
   higher or lower, faster or slower, 30 nm out, with APP later and the LOC
-  sooner, in a tailwind and a headwind (EINN in TST744L's westerly): the real
-  glide slope captured (below 3.5 deg, by 5 nm), the A/T
+  sooner, 1,000 and 1,500 ft high, in a tailwind and a headwind (EINN in
+  TST744L's westerly): the real glide slope captured (below 4 deg, by 5 nm),
+  never over the flaps' placard, the A/T
   on, no climb, within 0.75 dot at 1,000 and 500 ft and 30 ft at 200 ft,
   VREF to VREF + 20 kt at 500 ft.
 - `approach_model.lua` (not a suite): a closed-loop longitudinal model of the
