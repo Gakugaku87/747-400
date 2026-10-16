@@ -322,6 +322,8 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   heading; on 45 and 90 deg towards it engaged where the turn onto it begins
   (2.7-3.3 and 9.4-10 nm off at 480 kt) and onto it within 0.2 nm; 1 nm off
   engaged at once, 10 nm before the leg's start only once within 2.5 nm of it,
+  85 deg towards its line 1 nm before its start as 1 nm past it (8.9 nm off)
+  and onto it, 20 nm before its start still armed across the line,
   1 nm past a fly-by fix flown through in HDG SEL at once and onto the next
   leg, and 5 nm before a fix the FMC sequenced at its turn's lead (480 kt,
   1.5 nm off the leg to it, HDG SEL 000 or 345) at the push, as LNAV engaging

@@ -983,11 +983,12 @@ do
         tostring(track and math.floor(track + 0.5))))
 end
 
--- 15. LNAV ARM: LNAV pushed in flight engages only within 2.5 nm of the active leg, abeam it (past the leg's start
--- in the route's direction), or on a track towards it at up to 90 deg where the turn onto it begins; otherwise it
--- stays armed and the 747 keeps its selected heading (HDG SEL), Aerowinx PSX's 747-400 and the user's choice of
--- 2026-10-16. It engaged at once wherever the 747 was and turned it back to the leg (the kit's TST744L rejoin
--- after the AFDS block: 19.7 nm off, at 76 deg).
+-- 15. LNAV ARM: LNAV pushed in flight engages only within 2.5 nm of the active leg (abeam it past its start in the
+-- route's direction, before the start within 2.5 nm of the fix it starts at), or on a track towards it at up to
+-- 90 deg where the turn onto it begins (before the start only where that turn ends about on the leg), or abeam the
+-- leg into the fix the active leg starts at; otherwise it stays armed and the 747 keeps its selected heading (HDG
+-- SEL), Aerowinx PSX's 747-400 and the user's choice of 2026-10-16. It engaged at once wherever the 747 was and
+-- turned it back to the leg (the kit's TST744L rejoin after the AFDS block: 19.7 nm off, at 76 deg).
 do
     local a_lat, a_lon = 52, -12
     local b_lat, b_lon = probe.movePoint(a_lat, a_lon, 300, 270)
@@ -1038,6 +1039,31 @@ do
     check(out.engaged ~= nil and math.abs(out.engaged.t - t_a) <= 3, string.format(
         "LNAV pushed 1 nm off the leg's line 10 nm before its start: engaged %s (2.5 nm from it at %.0f s)",
         out.engaged and string.format("at %.0f s", out.engaged.t) or "never", t_a))
+    -- 12 nm off, 85 deg towards the leg's line 1 nm before its start: engaged as 1 nm past it, where the turn onto it
+    -- begins (8.9 nm off), and onto the leg. Only within 2.5 nm of A before its start it engaged 2.3 nm off and went
+    -- 7 nm through the leg (a review, at 90 deg: 7.4 nm). 20 nm before the start the turn would end on the line far
+    -- before the leg: armed, crossing it.
+    local engaged_at = {}
+    for _, along_nm in ipairs({1, -1}) do
+        out = cruise({start = start(along_nm, 12), heading = 185, seconds = 900})
+        local at = out.engaged and xtk(out.engaged.lat, out.engaged.lon)
+        engaged_at[along_nm] = at
+        local through = 0
+        for _, q in ipairs(out.track) do through = math.max(through, -xtk(q.lat, q.lon)) end
+        last = out.track[#out.track]
+        local final = math.abs(xtk(last.lat, last.lon))
+        check(at ~= nil and at >= 8 and through <= 0.2 and final <= 0.1, string.format(
+            "LNAV pushed 12 nm off the leg, 85 deg towards it, 1 nm %s its start: engaged %s nm off it, then %.2f nm through it at most (0.2), %.2f nm off at the end (0.1)",
+            along_nm < 0 and "before" or "past", at and string.format("%.2f", at) or "never", through, final))
+    end
+    check(engaged_at[1] and engaged_at[-1] and math.abs(engaged_at[1] - engaged_at[-1]) <= 0.3, string.format(
+        "... 1 nm before the start engaged as 1 nm past it (%s, %s nm off)", tostring(engaged_at[-1]),
+        tostring(engaged_at[1])))
+    out = cruise({start = start(-20, 12), heading = 185, seconds = 300})
+    last = out.track[#out.track]
+    check(out.engaged == nil and xtk(last.lat, last.lon) < -2, string.format(
+        "LNAV pushed 12 nm off the leg's line 20 nm before its start, 85 deg towards it: armed across the line (engaged %s, %.1f nm across)",
+        out.engaged and string.format("at %.0f s", out.engaged.t) or "never", -xtk(last.lat, last.lon)))
 end
 -- LNAV pushed just past a fly-by fix the 747 flew straight through in HDG SEL (1 nm past NEXT, 0.5 nm outside its
 -- +90 deg turn, NEXT sequenced, so the next leg starts behind the 747's abeam point): engaged at once, near the leg's
