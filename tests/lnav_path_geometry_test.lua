@@ -265,6 +265,41 @@ if type(capped) == "function" and type(extent) == "function" then
     near(c and c.beta_deg, math.deg(math.acos(1 - c.outside_nm / (2 * R))), 1e-9, "151 deg: on just enough")
     check(c and c.beta_deg < 20 and c.straight_nm == 0, "151 deg: less than 20 deg on and no straight line")
     check(path(0, 0, 0, 174.9, R, 1) ~= nil and path(0, 0, 0, 175, R, 1) == nil, "a path below 175 deg, none from it")
+    -- [review 15] Near such a fix the inbound leg and the outbound side of the path run close (2.3 nm apart 13 nm before
+    -- a 170 deg fix at 250 kt), and the nearest element by distance took the one for the other, the turn's bisector line
+    -- (5 deg off the inbound leg for 170) the same: 0.9 nm inside the inbound leg 10 nm before the fix was the inbound
+    -- leg but past the bisector, and 1 nm inside the straight line the inbound leg. The element now moves on only from
+    -- the caller's last one (min_element) to the next, and the bisector is the path's: on it, as far along as where the
+    -- first arc crosses the bisector line (44 deg round it for 170).
+    p = path(0.9, -10, 0, 170, R, 1, nil, 1)
+    check(p ~= nil and p.element == "in" and p.past_bisector == false, string.format(
+        "170 deg: 0.9 nm inside the inbound leg 10 nm before the fix: the inbound leg, not past the bisector (%s, %s)",
+        tostring(p and p.element), tostring(p and p.past_bisector)))
+    check(p ~= nil and p.element_index == 1, "170 deg: its element's index 1, "..tostring(p and p.element_index))
+    local c170 = capped(170, R)
+    local h1 = 170 + c170.beta_deg
+    local se0 = R - R * math.cos(math.rad(h1)) + c170.straight_nm / 2 * math.sin(math.rad(h1))
+    local sn0 = -T + R * math.sin(math.rad(h1)) + c170.straight_nm / 2 * math.cos(math.rad(h1))
+    -- 1 nm inside the straight line's middle (right of its course 215, towards the inbound leg)
+    local ie, inn = math.cos(math.rad(h1)), -math.sin(math.rad(h1))
+    p = path(se0 + ie, sn0 + inn, 0, 170, R, 1, nil, 3)
+    check(p ~= nil and p.element_index ~= nil and p.element_index >= 3, string.format(
+        "170 deg: 1 nm inside the straight line, the straight line its least: not back to the inbound leg (%s)",
+        tostring(p and p.element)))
+    near(p and p.xtk_nm, 1, 1e-9, "170 deg: 1 nm right of the straight line")
+    p = path(se0 + ie, sn0 + inn, 0, 170, R, 1, nil, 1)
+    check(p ~= nil and p.element_index ~= nil and p.element_index <= 2, string.format(
+        "170 deg: the same place from the inbound leg reaches the first arc at most (%s)", tostring(p and p.element)))
+    -- the bisector on the path: 30 and 60 deg round the first arc
+    local function arc1(psi) return R - R * math.cos(math.rad(psi)), -T + R * math.sin(math.rad(psi)) end
+    local a30e, a30n = arc1(30)
+    local a60e, a60n = arc1(60)
+    p = path(a30e, a30n, 0, 170, R, 1, nil, 2)
+    check(p ~= nil and p.past_bisector == false, "170 deg: 30 deg round the first arc not past the bisector")
+    p = path(a60e, a60n, 0, 170, R, 1, nil, 2)
+    check(p ~= nil and p.past_bisector == true, "170 deg: 60 deg round the first arc past the bisector")
+    check(p ~= nil and p.bisector_along_nm ~= nil and math.abs(p.bisector_along_nm - R * math.rad(44)) < 0.05, string.format(
+        "170 deg: the first arc crosses the bisector 44 deg round it (%s nm along)", tostring(p and p.bisector_along_nm)))
 end
 
 -- 6. Not a path: no radius, no courses, a reversal.

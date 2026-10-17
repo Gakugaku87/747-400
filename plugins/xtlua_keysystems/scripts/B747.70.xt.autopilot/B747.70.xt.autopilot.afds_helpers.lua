@@ -259,9 +259,14 @@ end
 
 -- The path of afds.lnav_capped_turn at a fix (east_nm, north_nm the aircraft's position from it): its elements,
 -- lines {e, n (start), h (course), len (nil: on and on), before (the inbound leg, up to its end)} and arcs {ce, cn
--- (centre), side (+1 right), h0 (the course at its start), sweep (deg)}; the element nearest the aircraft, as
--- afds.lnav_path_at returns it.
-local function capped_path_at(east_nm, north_nm, course_in_deg, course_out_deg, radius_nm, lookahead_nm, capture_nm)
+-- (centre), side (+1 right), h0 (the course at its start), sweep (deg)}, as afds.lnav_path_at returns it. The
+-- aircraft is on the element nearest it of min_element (the caller's last) and the next, of all without one: near
+-- such a fix the inbound leg and the outbound side run close (2.3 nm apart 13 nm before a 170 deg fix at 250 kt), and
+-- the nearest of all took the one for the other. It is past the bisector once on the path as far as where the first arc
+-- crosses the turn's bisector line (bisector_along_nm): only (180 - turn) / 2 off the inbound leg (5 deg for 170),
+-- that line put the aircraft 0.9 nm inside the inbound leg 10 nm before the fix past it (a review).
+local function capped_path_at(east_nm, north_nm, course_in_deg, course_out_deg, radius_nm, lookahead_nm, capture_nm,
+        min_element)
     local turn = (course_out_deg - course_in_deg + 540) % 360 - 180
     local capped = afds.lnav_capped_turn(turn, radius_nm)
     local side = turn < 0 and -1 or 1
@@ -316,10 +321,17 @@ local function capped_path_at(east_nm, north_nm, course_in_deg, course_out_deg, 
         local pe, pn = point(el, along)
         return math.sqrt((east_nm - pe) ^ 2 + (north_nm - pn) ^ 2), along, x, el.h
     end
+    local first, last = 1, #elements
+    if tonumber(min_element) then
+        first = math.max(1, math.min(#elements, math.floor(tonumber(min_element))))
+        last = first + 1
+    end
     local best, start, nearest = math.huge, 0, nil
     for i, el in ipairs(elements) do
-        local d, a, x, course = view(el)
-        if d < best then best, nearest = d, {i = i, along = (i == 1) and a or start + a, xtk = x, course = course} end
+        if i >= first and i <= last then
+            local d, a, x, course = view(el)
+            if d < best then best, nearest = d, {i = i, along = (i == 1) and a or start + a, xtk = x, course = course} end
+        end
         if i > 1 then start = start + length(el) end
     end
     local function point_along(a)
@@ -340,11 +352,26 @@ local function capped_path_at(east_nm, north_nm, course_in_deg, course_out_deg, 
         aim_along = math.max(aim_along, math.min(nearest.along + math.max(capture, off), 0))
     end
     local aim_east, aim_north = point_along(aim_along)
+    -- where the first arc crosses the turn's bisector line (through the fix, along the mean of the two courses)
     local out_east, out_north = unit(course_out_deg)
-    local inbound_side = east_nm * (in_east + out_east) + north_nm * (in_north + out_north) < 0
-    return {element = elements[nearest.i].name, xtk_nm = nearest.xtk, course_deg = nearest.course % 360,
-        along_nm = nearest.along, past_bisector = not inbound_side, arc_start_nm = capped.before_nm,
-        aim_east_nm = aim_east, aim_north_nm = aim_north}
+    local mean_east, mean_north = in_east + out_east, in_north + out_north
+    local function inbound_side(along)
+        local pe, pn = point(elements[2], along)
+        return pe * mean_east + pn * mean_north < 0
+    end
+    local lo, hi = 0, length(elements[2])
+    if inbound_side(hi) then
+        lo = hi
+    else
+        for _ = 1, 40 do
+            local mid = (lo + hi) / 2
+            if inbound_side(mid) then lo = mid else hi = mid end
+        end
+    end
+    local past = nearest.i > 2 or (nearest.i == 2 and nearest.along >= lo)
+    return {element = elements[nearest.i].name, element_index = nearest.i, xtk_nm = nearest.xtk,
+        course_deg = nearest.course % 360, along_nm = nearest.along, past_bisector = past, bisector_along_nm = lo,
+        arc_start_nm = capped.before_nm, aim_east_nm = aim_east, aim_north_nm = aim_north}
 end
 
 -- [i-1b] The lateral path at a fly-by fix: the inbound leg on course_in_deg,
@@ -364,8 +391,9 @@ end
 -- longer one starts the turn early). nil without a radius, a look-ahead or
 -- courses, and from LNAV_FLYBY_REVERSAL_DEG (no fly-by); beyond
 -- LNAV_FLYBY_MAX_TURN_DEG the path of afds.lnav_capped_turn (elements "in",
--- "arc", "straight", "arc", "out").
-function afds.lnav_path_at(east_nm, north_nm, course_in_deg, course_out_deg, radius_nm, lookahead_nm, capture_nm)
+-- "arc", "straight", "arc", "out"; its element_index, from min_element on).
+function afds.lnav_path_at(east_nm, north_nm, course_in_deg, course_out_deg, radius_nm, lookahead_nm, capture_nm,
+        min_element)
     if type(east_nm) ~= "number" or type(north_nm) ~= "number" or type(course_in_deg) ~= "number"
         or type(course_out_deg) ~= "number" or type(radius_nm) ~= "number" or radius_nm <= 0
         or type(lookahead_nm) ~= "number" or lookahead_nm <= 0 then
@@ -374,7 +402,8 @@ function afds.lnav_path_at(east_nm, north_nm, course_in_deg, course_out_deg, rad
     local turn = (course_out_deg - course_in_deg + 540) % 360 - 180
     if math.abs(turn) >= afds.LNAV_FLYBY_REVERSAL_DEG then return nil end
     if math.abs(turn) > afds.LNAV_FLYBY_MAX_TURN_DEG then
-        return capped_path_at(east_nm, north_nm, course_in_deg, course_out_deg, radius_nm, lookahead_nm, capture_nm)
+        return capped_path_at(east_nm, north_nm, course_in_deg, course_out_deg, radius_nm, lookahead_nm, capture_nm,
+            min_element)
     end
     local side = turn < 0 and -1 or 1
     local in_east, in_north = math.sin(math.rad(course_in_deg)), math.cos(math.rad(course_in_deg))

@@ -329,7 +329,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   it, the fixes in order; LNAV pushed 1 nm before a +165 deg fix at 250 kt
   after HDG SEL flew on past the turn's start, the turn passed abeam as before
   (at most 260 deg of turning and one bank reversal; round the path from there
-  514-595 deg).
+  514-595 deg). Such a turn decided once as the 747 comes to the path's start:
+  LNAV armed 1.5 nm inside the leg into +170 and +174 deg fixes 14 and 20 nm
+  before them sequenced where the path crosses the bisector (6-9 nm before
+  them), the path's fit at a TAS hunting 250 +-1.5 kt decided once (no bank
+  reversal beyond 10 deg but the path's), the turn after a leg steered as
+  before passed abeam (within 1 nm), and decided again once the 747 is back
+  on the leg before the start with LNAV (flown, sequenced 6-9 nm before the
+  fix).
   LNAV's path guidance on the model: within 0.1 nm of the leg to DW124 90 and
   120 s after DW129, and back on a leg from 1, 3 and 10 nm off within 60, 120
   and 300 s at most 45 deg to it and not 0.2 nm through it. LNAV ARM: LNAV
@@ -395,7 +402,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   path joins it, on the first arc, on the straight line and on the leg after
   it (cross-track, course, along), the left turn mirrored, 151 deg turning on
   just enough and back at once, and how far before and after the fix the
-  path leaves and joins the legs.
+  path leaves and joins the legs; the element moving on only from the
+  caller's last one (0.9 nm inside the inbound leg 10 nm before a 170 deg fix
+  the inbound leg and not past the bisector, 1 nm inside the straight line
+  not back to the inbound leg) and the bisector the path's (where the first
+  arc crosses the bisector line, 44 deg round it for 170 deg).
 - `vnav_turn_hold_test.lua`: a fix LNAV sequences early for its turn keeping
   its altitude as VNAV's descent floor until the aircraft is past the turn's
   bisector - the bisector for straight fixes, 65-137 deg turns both ways and

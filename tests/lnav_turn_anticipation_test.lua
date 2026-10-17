@@ -1546,6 +1546,103 @@ for _, off in ipairs({-2, -1, -0.3}) do
     check(final <= 0.2 and fixes_in_order(out, route, 4, 4), string.format(
         "%s: NEXT sequenced, %.2f nm off the leg after it at the end (0.2)", name, final))
 end
+-- [review 15] A turn of more than 150 deg is decided once, as the 747 comes to where its path starts: flown by its path
+-- if LNAV is engaged then, the 747 on the leg into it (within 2 nm, its track within 90 deg of the leg), the fix before
+-- flown by and the path fitting on its legs; else passed abeam as before. The 747's place on the path only moves on,
+-- and the FMC sequences the fix where the path crosses the turn's bisector. The routes are at 250 kt, +170 deg unless
+-- said, the turn starting 9.3 nm before the fix.
+local function capped_route(turn, into_nm, out_nm, next_turn, before_kind)
+    local lat0, lon0 = 50, -10
+    local fix_lat, fix_lon = probe.movePoint(lat0, lon0, into_nm, 0)
+    local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, out_nm, turn % 360)
+    local after_lat, after_lon = probe.movePoint(next_lat, next_lon, 40, (turn + (next_turn or 0)) % 360)
+    local far_lat, far_lon = probe.movePoint(after_lat, after_lon, 40, (turn + (next_turn or 0)) % 360)
+    local r = {E("ORIG", lat0 - 1, lon0, 0, 1), E(before_kind or "START", lat0, lon0), E("FIX", fix_lat, fix_lon),
+        E("NEXT", next_lat, next_lon), E("AFTER", after_lat, after_lon), E("FAR", far_lat, far_lon),
+        E("DEST", far_lat - 3, far_lon, 0, 1)}
+    return r, fix_lat, fix_lon
+end
+local function fix_switch_nm(o)
+    for _, sw in ipairs(o.switches) do if sw.from == 3 then return sw.nm end end
+end
+-- LNAV armed 1.5 nm inside the leg into a +170 deg fix 14 nm before it, and into a +174 deg one 20 nm before it: the
+-- fix sequenced where the path crosses its bisector, 7.6 and 8.0 nm before it, not at once (inside the leg the 747 was
+-- taken for one on the path's outbound side past the bisector: 14.1 and 20.1 nm before the fix; a review).
+for _, c in ipairs({{170, 14}, {174, 20}}) do
+    route = capped_route(c[1], 60, 40)
+    local s_lat, s_lon = probe.movePoint(route[3][5], route[3][6], c[2], 180)
+    s_lat, s_lon = probe.movePoint(s_lat, s_lon, 1.5, 90)
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 600, armed = true})
+    local at = fix_switch_nm(out)
+    check(at ~= nil and at >= 6 and at <= 9, string.format(
+        "LNAV armed 1.5 nm inside the leg into a +%d deg fix %d nm before it: the fix sequenced %s nm before it (6-9)",
+        c[1], c[2], at and string.format("%.1f", at) or "never"))
+end
+-- The decision once: +170 deg with NEXT 17.6 nm on and +90 deg there, the path's fit on that leg at 250.4 kt, the TAS
+-- 250 +-1.5 kt every 20 s: one decision, the bank reversing beyond 10 deg only where the path does (into the second arc,
+-- into NEXT's turn); decided every frame it flipped 20 times, the bank swinging +19.8, -6.0, +17.5, -9.4 deg (a
+-- review). The speed's own swing leaves a few rolls of 5-6 deg.
+do
+    route = capped_route(170, 60, 17.6, 90)
+    local s_lat, s_lon = probe.movePoint(route[3][5], route[3][6], 20, 180)
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 900, tas_fn = function(t) return 250 + 1.5 * math.sin(2 * math.pi * t / 20) end})
+    local reversals, sign = 0, 0
+    for _, q in ipairs(out.track) do
+        if math.abs(q.bank) > 10 then
+            local sg = q.bank > 0 and 1 or -1
+            if sign ~= 0 and sg ~= sign then reversals = reversals + 1 end
+            sign = sg
+        end
+    end
+    check(reversals <= 2 and fixes_in_order(out, route, 3, 4), string.format(
+        "+170 deg, its fit at the TAS of 250 +-1.5 kt: decided once, %d bank reversals beyond 10 deg (2), the fixes in order",
+        reversals))
+end
+-- After a leg LNAV steers as before (here the leg to PREV from VECTORS, then PREV -> FIX 25 nm), in 40 kt from 090: the
+-- turn at FIX passed abeam, FIX passed within 1 nm (sequenced at the 150 deg turn's lead it was 7.5 nm before FIX and
+-- its path given up, closest 5.3 nm; a review).
+do
+    local lat0, lon0 = 50, -10
+    local prev_lat, prev_lon = probe.movePoint(lat0, lon0, 20, 0)
+    local fix_lat, fix_lon = probe.movePoint(prev_lat, prev_lon, 25, 0)
+    local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, 40, 170)
+    local after_lat, after_lon = probe.movePoint(next_lat, next_lon, 40, 170)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("VECTORS", lat0, lon0), E("PREV", prev_lat, prev_lon),
+        E("FIX", fix_lat, fix_lon), E("NEXT", next_lat, next_lon), E("AFTER", after_lat, after_lon),
+        E("DEST", after_lat - 3, after_lon, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(prev_lat, prev_lon, 5, 180)
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 900, wind_from_deg = 90, wind_kt = 40})
+    local closest = math.huge
+    for _, q in ipairs(out.track) do closest = math.min(closest, probe.getDistance(fix_lat, fix_lon, q.lat, q.lon)) end
+    local at = nil
+    for _, sw in ipairs(out.switches) do if sw.from == 4 then at = sw.nm end end
+    check(closest <= 1 and at ~= nil and at <= 1.5, string.format(
+        "+170 deg after a leg LNAV steers as before: FIX passed %.1f nm off, sequenced %s nm from it (passed abeam)",
+        closest, at and string.format("%.1f", at) or "never"))
+end
+-- Decided again when the 747 is back on the leg before the path's start: on the leg 3 nm before FIX flying away with
+-- LNAV off (passed abeam: past the start, LNAV not engaged), turned back and onto the leg with LNAV from 35 nm before
+-- FIX: the turn flown, FIX sequenced 6-9 nm before it (latched once, it was passed abeam for good; a review).
+do
+    route = capped_route(170, 60, 40)
+    local s_lat, s_lon = probe.movePoint(route[3][5], route[3][6], 3, 180)
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 180, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 1500, arm_at_s = 1e9,
+        hook = function(env, t)
+            if t >= 460 and t < 460 + 0.05 then env.simDR_autopilot_heading_deg = 0 end
+            if t >= 560 and t < 560 + 0.05 then
+                env.simDR_autopilot_heading_deg = 330
+                env.B747DR_ap_lnav_state = 1
+            end
+        end})
+    local at = fix_switch_nm(out)
+    check(out.engaged ~= nil and at ~= nil and at >= 6 and at <= 9, string.format(
+        "+170 deg passed abeam once, back on the leg before its start with LNAV: flown, FIX sequenced %s nm before it (6-9)",
+        at and string.format("%.1f", at) or "never"))
+end
 -- the leg flown direct (from VECTORS) or the 747's own direct-to: engaged at once as before (a leg from where the
 -- 747 is); on the runway armed, engaged above 50 ft
 do
