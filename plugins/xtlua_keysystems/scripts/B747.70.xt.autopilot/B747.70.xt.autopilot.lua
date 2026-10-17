@@ -3100,12 +3100,14 @@ function B747_lnav_update_xtk(fmsO)
 		B747DR_ap_lnav_xtk_error=0
 		return
 	end
-	-- from the path LNAV flies (the arc in a fly-by turn), else from the active leg; [P14] not from the active fix's
-	-- own path past its turn's bisector: while LNAV is not engaged the FMC sequences the fix only abeam it, and until
-	-- then the active leg is the leg to it (the path's arc or next leg gave the next leg's side and size, and the kit's
-	-- rejoin intercepted away from the active leg: a review)
+	-- from the path LNAV flies (the arc in a fly-by turn), else from the active leg; [P14] while LNAV is not engaged
+	-- not from the active fix's own path past its turn's bisector: the FMC then sequences the fix only abeam it, and
+	-- until then the active leg is the leg to it (the path's arc or next leg gave the next leg's side and size, and the
+	-- kit's rejoin intercepted away from the active leg: a review). Engaged, LNAV steers that path also past the
+	-- bisector more than LNAV_MAX_PREEMPT_XTK_NM off it, where the fix is not sequenced (from the leg the XTK jumped
+	-- to the other side of the path and grew to 27 nm: a review).
 	local path,pathFix=B747_lnav_path_now(fmsO,current)
-	if path~=nil and not (pathFix==fix and path.past_bisector) then
+	if path~=nil and not (pathFix==fix and path.past_bisector and B747DR_ap_lnav_state~=2) then
 		B747DR_ap_lnav_xtk_error=path.xtk_nm
 		return
 	end

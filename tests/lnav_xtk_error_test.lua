@@ -174,15 +174,15 @@ near(on_turn(3.0), math.sqrt(0.5) * (radius * (math.sqrt(2) - 1) - 3), "3 nm out
 -- kit's rejoin took the next leg's side for the active leg's, its intercept heading pointed away and LNAV never
 -- engaged: a review). The 90 deg turn of 8 at FIX, the 747 5 nm east of the leg to FIX and 3 nm before FIX. With
 -- LNAV engaged FIX is sequenced at its bisector, and the cross-track is from its arc as in 8.
-local function past_bisector(lnav_state)
+local function past_bisector(lnav_state, east_nm, before_nm)
     local e = new_runtime()
     local start = {50, -10}
     local fix = {e.movePoint(start[1], start[2], 100, 0)}
     local after = {e.movePoint(fix[1], fix[2], 100, 90)}
     local r = {entry("ORIG", 49, -10, 0, 1), entry("START", start[1], start[2]), entry("FIX", fix[1], fix[2]),
         entry("NEXT", after[1], after[2]), entry("DEST", after[1] + 5, after[2], 0, 1)}
-    local lat, lon = e.movePoint(fix[1], fix[2], 3, 180)
-    lat, lon = e.movePoint(lat, lon, 5, 90)
+    local lat, lon = e.movePoint(fix[1], fix[2], before_nm or 3, 180)
+    lat, lon = e.movePoint(lat, lon, east_nm or 5, 90)
     e.simDR_latitude, e.simDR_longitude, e.simDR_true_heading, e.simDR_ground_track_true = lat, lon, 0, 0
     e.B747DR_ap_lnav_state = lnav_state
     e.B747DR_fmscurrentIndex, e.B747DR_fms_setCurrent, e.B747DR_ap_lnavHeading_mode = 3, 3, 3
@@ -205,6 +205,19 @@ do
     check(index == 4, "LNAV engaged past FIX's bisector: FIX sequenced ("..index..")")
     check(type(xtk) == "number" and math.abs(xtk - arc) < 0.05, string.format(
         "LNAV engaged past FIX's bisector: from FIX's arc, %.2f nm right (%s)", arc, tostring(xtk)))
+end
+-- 10. With LNAV engaged a fix is sequenced at its bisector only within LNAV_MAX_PREEMPT_XTK_NM of its path; farther
+-- off, past the bisector with the fix still active, the cross-track is from the path LNAV steers, the fix's own (from
+-- the leg to the fix it jumped from 5.3 nm one side of the path to 7.2 the other and grew to 27 nm while LNAV steered
+-- back to the path: a review). The 747 6 nm east of the leg to FIX and 4 nm before FIX, 3.1 nm inside its arc.
+do
+    local index, xtk = past_bisector(2, 6, 4)
+    local radius = 246 ^ 2 / (9.80665 * math.tan(math.rad(20))) / 1852
+    local arc = radius - math.sqrt((6 - radius) ^ 2 + (-4 + radius) ^ 2)
+    check(index == 3, "LNAV engaged 3.1 nm inside FIX's arc past its bisector: FIX still active ("..index..")")
+    check(type(xtk) == "number" and math.abs(xtk - arc) < 0.05, string.format(
+        "LNAV engaged 3.1 nm inside FIX's arc past its bisector: from FIX's arc, %.2f nm right (%s)", arc,
+        tostring(xtk)))
 end
 
 -- 7. The PROGRESS page shows the side of the error and its size.
