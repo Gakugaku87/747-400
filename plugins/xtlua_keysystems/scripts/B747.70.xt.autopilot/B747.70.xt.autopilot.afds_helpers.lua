@@ -172,8 +172,10 @@ end
 -- Whether the aircraft, east_nm and north_nm from a fix, is past the bisector
 -- of the turn there from in_course_deg to out_course_deg (true courses): past
 -- it once its position along the mean of the two courses is not negative. For
--- a straight fix that is abeam it; near a course reversal, where the mean
--- vanishes, it is abeam it on the inbound course.
+-- a straight fix that is abeam it; for a reversal (LNAV_FLYBY_REVERSAL_DEG or
+-- more), where the mean vanishes, it is abeam it on the inbound course. [P15]
+-- Judged by the mean's size (from 174.3 deg) a capped turn's path, which never
+-- passes abeam its fix, kept VNAV's held fix until 13 nm past it (a review).
 function afds.past_turn_bisector(east_nm, north_nm, in_course_deg, out_course_deg)
     if type(east_nm) ~= "number" or type(north_nm) ~= "number"
         or type(in_course_deg) ~= "number" or type(out_course_deg) ~= "number" then
@@ -182,7 +184,8 @@ function afds.past_turn_bisector(east_nm, north_nm, in_course_deg, out_course_de
     local in_east, in_north = math.sin(math.rad(in_course_deg)), math.cos(math.rad(in_course_deg))
     local mean_east = in_east + math.sin(math.rad(out_course_deg))
     local mean_north = in_north + math.cos(math.rad(out_course_deg))
-    if mean_east * mean_east + mean_north * mean_north < 0.01 then
+    local turn = (out_course_deg - in_course_deg + 540) % 360 - 180
+    if math.abs(turn) >= afds.LNAV_FLYBY_REVERSAL_DEG then
         mean_east, mean_north = in_east, in_north
     end
     return east_nm * mean_east + north_nm * mean_north >= 0

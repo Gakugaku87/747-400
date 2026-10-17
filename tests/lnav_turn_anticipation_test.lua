@@ -1643,6 +1643,23 @@ do
         "+170 deg passed abeam once, back on the leg before its start with LNAV: flown, FIX sequenced %s nm before it (6-9)",
         at and string.format("%.1f", at) or "never"))
 end
+-- VNAV's held fix let go once the 747 is past the turn's bisector also for +174.6 deg: within 5 s of the sequencing
+-- (taken abeam the fix on the inbound course from 174.3 deg it was kept 153-155 s, let go 13 nm from FIX; a review).
+do
+    route = capped_route(174.6, 60, 40)
+    local s_lat, s_lon = probe.movePoint(route[3][5], route[3][6], 20, 180)
+    local held_until = nil
+    local sequenced = nil
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 700,
+        hook = function(env, t)
+            if env.B747DR_fmscurrentIndex == 4 and sequenced == nil then sequenced = t end
+            if sequenced and env.B747DR_vnav_hold_index == 3 then held_until = t end
+        end})
+    check(sequenced ~= nil and (held_until == nil or held_until - sequenced <= 5), string.format(
+        "+174.6 deg: VNAV's held fix let go within 5 s of FIX's sequencing (%s s)",
+        sequenced and string.format("%.0f", (held_until or sequenced) - sequenced) or "never sequenced"))
+end
 -- the leg flown direct (from VECTORS) or the 747's own direct-to: engaged at once as before (a leg from where the
 -- 747 is); on the runway armed, engaged above 50 ft
 do
