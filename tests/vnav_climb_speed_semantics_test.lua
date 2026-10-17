@@ -282,15 +282,28 @@ local function cruise_at_fl310()
     local m, d = climb_speed("level at CRZ ALT FL310")
     assert(m == 1 and d == 81, "at CRZ ALT FL310 not the cruise Mach: "..tostring(d))
 end
--- a descent in FLCH from cruise to FL250 and VNAV's climb back: still the cruise, the cruise Mach
+-- a descent in FLCH from cruise to FL250 and VNAV's climb back: still the cruise phase, at the cruise Mach's CAS at
+-- the level the cruise was flown at (.810 at FL310: 301 kt) up to 500 ft below it, the cruise Mach from there. The
+-- cruise Mach itself was 342 KCAS at FL250, from FL260 down to FL190 335-385 KCAS against a Vmo of 365 (a review).
 cruise_at_fl310()
 runtime.B747DR_ap_vnav_state, runtime.B747DR_ap_flightPhase, runtime.simDR_pressureAlt1 = 0, 3, 25000
 runtime.B747_vnav_speed()
 runtime.B747DR_ap_vnav_state, runtime.B747DR_ap_flightPhase = 2, 1
-runtime.simDR_airspeed_mach, runtime.simDR_ind_airspeed_kts_pilot = 0.81, 340
+runtime.simDR_ind_airspeed_kts_pilot, runtime.simDR_autopilot_airspeed_is_mach = 320, 0
+runtime.simDR_airspeed_mach = helpers.cas_to_mach(320, 25000)
 is_mach, dial = climb_speed("VNAV climb back to CRZ ALT after FLCH")
-assert(is_mach == 1 and dial == 81, "the climb back to CRZ ALT after a descent in FLCH left the cruise Mach: "
-    ..tostring(dial)..(is_mach == 1 and " (Mach)" or " kt"))
+assert(is_mach == 0 and dial == 301, "the climb back from FL250 to CRZ ALT FL310 after a descent in FLCH flew "
+    ..tostring(dial)..(is_mach == 1 and " (Mach)" or " kt")..", not 301 kt (the cruise Mach's CAS at FL310)")
+runtime.simDR_pressureAlt1, runtime.simDR_ind_airspeed_kts_pilot = 28000, 301
+runtime.simDR_airspeed_mach = helpers.cas_to_mach(301, 28000)
+is_mach, dial = climb_speed("climbing through FL280")
+assert(is_mach == 0 and dial == 301, "the climb back through FL280 flew "..tostring(dial)
+    ..(is_mach == 1 and " (Mach)" or " kt")..", not 301 kt")
+runtime.simDR_pressureAlt1 = 30600
+runtime.simDR_airspeed_mach = helpers.cas_to_mach(301, 30600)
+is_mach, dial = climb_speed("climbing through FL306")
+assert(is_mach == 1 and dial == 81, "the climb back within 500 ft of FL310 flew "..tostring(dial)
+    ..(is_mach == 1 and " (Mach)" or " kt")..", not the cruise Mach .810")
 -- the approach (G/S) and a go-around with VNAV pushed at 3,000 ft: the climb speed, not the cruise Mach nor a stale
 -- target
 for _, c in ipairs({{flap = 0, ias = 250, want = 250, name = "flaps up at 250 kt"},

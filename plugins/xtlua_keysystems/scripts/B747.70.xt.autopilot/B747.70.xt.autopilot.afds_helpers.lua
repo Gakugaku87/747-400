@@ -1230,6 +1230,15 @@ function afds.cas_to_mach(cas_kts, pressure_alt_ft)
     return math.sqrt(5.0 * ((impact_pressure_ratio + 1.0) ^ (2.0 / 7.0) - 1.0))
 end
 
+-- Calibrated airspeed (kt) of a Mach number at a pressure altitude, as
+-- performance.mach_to_cas_kts. nil for a missing or non-positive Mach.
+function afds.mach_to_cas(mach, pressure_alt_ft)
+    local m = tonumber(mach)
+    if m == nil or m <= 0 then return nil end
+    local impact_pressure_ratio = isa_pressure_ratio(pressure_alt_ft) * ((1.0 + 0.2 * m * m) ^ 3.5 - 1.0)
+    return 340.294 * math.sqrt(5.0 * ((impact_pressure_ratio + 1.0) ^ (2.0 / 7.0) - 1.0)) * 1.94384449
+end
+
 afds.CLIMB_MACH_CROSSOVER_HYSTERESIS = 0.005
 
 -- Whether the climb flies the climb Mach instead of the CAS target: when the

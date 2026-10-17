@@ -46,7 +46,9 @@ vnavSPD_state["lastRecalculationReason"]="none"
 -- and its climb Mach are for the climb from the departure (TST744L's BEDRA step from FL310 flew the climb Mach .836,
 -- 326 kt below the crossover, against a cruise Mach of about .82). It is entered only at a valid CRZ ALT, at or
 -- above the transition altitude, and it ends out of cruise even while VNAV is off (B747_update_cruise_phase).
+-- cruiseLevelFt: the lowest CRZ ALT the cruise has been flown at since then (clb_crz_setSpd)
 vnavSPD_state["cruisePhase"]=false
+vnavSPD_state["cruiseLevelFt"]=nil
 local lastVNAVSpeed=0
 local vnavSPD_observed=nil
 
@@ -481,6 +483,22 @@ function clb_crz_setSpd()
     spdval=spdval/10
     local transalt=tonumber(getFMSData("transalt"))
     local climbspdval=modFlapSpeed(tonumber(getFMSData("clbspd")))
+    -- [B-8] in the cruise phase more than 500 ft below the level the cruise was flown at (after a descent VNAV did
+    -- not fly, in FLCH or V/S above the transition altitude) the cruise Mach's CAS at that level, until the cruise
+    -- Mach is reached: the cruise Mach itself was 335-385 KCAS from FL260 down to FL190 (Vmo 365; a review). A step
+    -- climb starts at that level and flies the cruise Mach throughout.
+    local levelFt=tonumber(vnavSPD_state["cruiseLevelFt"])
+    if vnavSPD_state["cruisePhase"] and levelFt~=nil and simDR_pressureAlt1<levelFt-500 then
+        local levelCas=vnav_afds_helpers.mach_to_cas(spdval/100, levelFt)
+        if levelCas~=nil and not vnav_afds_helpers.climb_speed_uses_mach(levelCas, spdval/100, simDR_pressureAlt1,
+            simDR_airspeed_mach, simDR_autopilot_airspeed_is_mach) then
+            levelCas=math.floor(levelCas+0.5)
+            print("cruise speed below the cruise level: its CAS ".. levelCas)
+            B747_set_vnav_speed_target(0, math.min(399.0, levelCas))
+            B747_schedule_updateIAS()
+            return
+        end
+    end
     if simDR_pressureAlt1>=transalt or simDR_ind_airspeed_kts_pilot>=climbspdval-1 then
         print("convert to cruise speed in clb_crz_setSpd ".. spdval)
         B747_set_vnav_speed_target(1, spdval)
@@ -622,6 +640,12 @@ function B747_vnav_setClimbspeed()
     -- the cruise phase (vnavSPD_state["cruisePhase"]): a climb from it is a cruise climb at the cruise speed, all the
     -- way to the new CRZ ALT (no lower boundary: what ends it is B747_update_cruise_phase's)
     if cState=="crz" and B747_cruise_phase_possible() then
+        local crzAlt=tonumber(B747BR_cruiseAlt)
+        if not vnavSPD_state["cruisePhase"] or vnavSPD_state["cruiseLevelFt"]==nil then
+            vnavSPD_state["cruiseLevelFt"]=crzAlt
+        else
+            vnavSPD_state["cruiseLevelFt"]=math.min(vnavSPD_state["cruiseLevelFt"],crzAlt)
+        end
         vnavSPD_state["cruisePhase"]=true
     elseif vnavSPD_state["cruisePhase"] then
         cState="crz"
