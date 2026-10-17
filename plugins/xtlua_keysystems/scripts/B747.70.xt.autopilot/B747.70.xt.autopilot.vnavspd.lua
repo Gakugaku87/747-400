@@ -40,6 +40,12 @@ vnavSPD_state["recalcAfter"]=0
 vnavSPD_state["setBaro"]=false
 vnavSPD_state["lastInvalidationReason"]="initialization"
 vnavSPD_state["lastRecalculationReason"]="none"
+-- [B-8] The FMC's cruise phase: once VNAV's climb has reached the cruise state (within 500 ft of CRZ ALT) it stays in
+-- cruise until the descent or the ground. A climb from it to a new, higher CRZ ALT (a step climb) is a cruise climb,
+-- flown at the cruise speed (the ECON cruise Mach or the crew's, crzspd) with CLB thrust; the climb speed schedule
+-- and its climb Mach are for the climb from the departure (TST744L's BEDRA step from FL310 flew the climb Mach .836,
+-- 326 kt below the crossover, against a cruise Mach of about .82).
+vnavSPD_state["cruisePhase"]=false
 local lastVNAVSpeed=0
 local vnavSPD_observed=nil
 
@@ -154,6 +160,7 @@ end
 
 function B747_reset_takeoff_profile()
     takeoff_state = takeoff_profile.new()
+    vnavSPD_state["cruisePhase"]=false
     B747_invalidate_vnav_speed("new flight takeoff reference")
 end
 
@@ -579,6 +586,7 @@ function B747_update_vnav_speed()
 end
 function B747_vnav_setClimbspeed()
     B747_update_takeoff_profile()
+    if simDR_onGround==1 then vnavSPD_state["cruisePhase"]=false end
     local lastAlt=-1
     local cState="src"
     local nextAlt=spd_states["clb"]["src"]["nextfunc"]()
@@ -591,6 +599,15 @@ function B747_vnav_setClimbspeed()
         end
         nextAlt=spd_states["clb"][cState]["nextfunc"]()
         print("B747_vnav_setClimbspeed "..lastAlt .. " cState ".. cState.. " nextAlt ".. nextAlt)
+    end
+    -- the cruise phase (vnavSPD_state["cruisePhase"]): a climb from it is a cruise climb at the cruise speed, all the
+    -- way to the new CRZ ALT (no lower boundary: nothing below it changes the state but the descent or the ground)
+    if cState=="crz" and simDR_onGround==0 then
+        vnavSPD_state["cruisePhase"]=true
+    elseif vnavSPD_state["cruisePhase"] then
+        cState="crz"
+        lastAlt=-1000
+        nextAlt=spd_states["clb"]["crz"]["nextfunc"]()
     end
     local transalt=tonumber(getFMSData("transalt"))
     if vnavSPD_state["setBaro"]==false and nextAlt>transalt and simDR_pressureAlt1<=transalt then
@@ -628,6 +645,7 @@ function B747_vnav_setClimbspeed()
 end
 
 function B747_vnav_setDescendspeed()
+    vnavSPD_state["cruisePhase"]=false
     local lastAlt=simDR_pressureAlt1+1000
     local cState="src"
     local nextAlt=spd_states["des"]["src"]["nextfunc"]()

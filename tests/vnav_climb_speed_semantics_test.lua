@@ -109,7 +109,9 @@ assert(runtime.B747DR_ap_ias_dial_value == 80,
 fms_data.crzspd = "810"
 
 -- [g-3] The crossover is judged on the CAS target, not on the current Mach.
--- TST744L step climb from FL310: ECON 326 kt / M.815 at 300.4 kt and M.807.
+-- A climb through FL310 (TST744L's step climb from FL310 flew this state
+-- before a climb from the cruise phase kept the cruise Mach, B-8 below):
+-- ECON 326 kt / M.815 at 300.4 kt and M.807.
 -- 326 kt is M.869 at FL310, so the climb Mach is flown, with no 26 kt
 -- underspeed on the CAS target and no CAS/Mach flip as M.807 changes to
 -- M.810 and back.
@@ -201,6 +203,66 @@ runtime.des_spcres_setSpd()
 assert(runtime.simDR_autopilot_airspeed_is_mach == 0, "SPD REST descent did not select CAS")
 near_target(240, "descent SPD REST was not written")
 runtime.simDR_ind_airspeed_kts_pilot = 200
+
+-- [B-8] A step climb from the cruise phase is a cruise climb, flown at the cruise speed: once VNAV reached the
+-- cruise state (within 500 ft of CRZ ALT), a climb to a higher CRZ ALT keeps the ECON cruise Mach (crzspd, here
+-- .810) instead of the climb schedule (326 kt or the climb Mach .836: TST744L's BEDRA step from FL310 flew .836 and
+-- 326 kt below the crossover). The descent and the ground end the cruise phase: a climb after them is a climb.
+runtime.print = function() end
+runtime.B747_rescale = function(in1, out1, in2, out2, x)
+    if x < in1 then return out1 end
+    if x > in2 then return out2 end
+    return out1 + (out2 - out1) * (x - in1) / (in2 - in1)
+end
+for k, v in pairs({clbspd = "326", clbmach = "836", crzspd = "810", accelht = "1500", thrredht = "1500",
+        spdtransalt = "10000", transalt = "18000", desspdmach = "820", desspd = "300", destranspd = "250",
+        desspdtransalt = "10000"}) do
+    fms_data[k] = v
+end
+fms_data.clbrestalt, fms_data.desrestalt, fms_data.thrredflap = nil, nil, nil
+for k, v in pairs({simDR_onGround = 0, simDR_altimeter_baro_inHg = 29.92, B747DR_airspeed_V2 = 160,
+        B747DR_ap_vnav_state = 2, simDR_autopilot_fms_vnav = 0, B747DR_ap_inVNAVdescent = 0,
+        B747DR_alt_capture_window = 500, B747DR_fmscurrentIndex = 5, simDRTime = 1000, B747BR_cruiseAlt = 31000,
+        simDR_pressureAlt1 = 31000, simDR_ind_airspeed_kts_pilot = 306, simDR_airspeed_mach = 0.81,
+        simDR_autopilot_airspeed_is_mach = 1, B747DR_vnav_constraint_speed = 0}) do
+    runtime[k] = v
+end
+local function climb_speed(reason)
+    runtime.B747_invalidate_vnav_speed(reason)
+    runtime.B747_vnav_setClimbspeed()
+    return runtime.simDR_autopilot_airspeed_is_mach, runtime.B747DR_ap_ias_dial_value
+end
+local is_mach, dial = climb_speed("level at CRZ ALT FL310")
+assert(is_mach == 1 and dial == 81, "at CRZ ALT the cruise state did not fly the cruise Mach: "..tostring(dial))
+runtime.B747BR_cruiseAlt = 33000
+is_mach, dial = climb_speed("new cruise altitude accepted")
+assert(is_mach == 1 and dial == 81,
+    "the step climb from FL310 to FL330 left the cruise Mach .810 for "..tostring(dial)..(is_mach == 1 and " (Mach)" or " kt"))
+runtime.simDR_pressureAlt1 = 32200
+is_mach, dial = climb_speed("climbing through FL322")
+assert(is_mach == 1 and dial == 81, "the step climb through FL322 left the cruise Mach: "..tostring(dial))
+-- the descent ends the cruise phase: a climb from 20,000 ft after it flies the climb schedule
+runtime.B747DR_ap_inVNAVdescent = 1
+runtime.simDR_pressureAlt1 = 25000
+runtime.B747_invalidate_vnav_speed("descent")
+runtime.B747_vnav_setDescendspeed()
+runtime.B747DR_ap_inVNAVdescent = 0
+runtime.simDR_pressureAlt1, runtime.simDR_airspeed_mach, runtime.simDR_ind_airspeed_kts_pilot = 20000, 0.70, 300
+runtime.simDR_autopilot_airspeed_is_mach = 0
+is_mach, dial = climb_speed("climb after the descent")
+assert(is_mach == 0 and dial == 326, "a climb after the descent did not fly the climb speed 326 kt: "..tostring(dial))
+-- so does the ground: the next flight's climb
+runtime.simDR_pressureAlt1, runtime.B747BR_cruiseAlt = 31000, 31000
+runtime.simDR_airspeed_mach, runtime.simDR_ind_airspeed_kts_pilot, runtime.simDR_autopilot_airspeed_is_mach = 0.81, 306, 1
+climb_speed("level at CRZ ALT again")
+runtime.simDR_onGround, runtime.simDR_pressureAlt1 = 1, 50
+climb_speed("landed")
+runtime.simDR_onGround = 0
+runtime.simDR_pressureAlt1, runtime.simDR_airspeed_mach, runtime.simDR_ind_airspeed_kts_pilot = 20000, 0.70, 300
+runtime.simDR_autopilot_airspeed_is_mach = 0
+is_mach, dial = climb_speed("the next flight's climb")
+assert(is_mach == 0 and dial == 326, "the next flight's climb did not fly the climb speed 326 kt: "..tostring(dial))
+runtime.print = print
 
 -- The MCP IAS/MACH button and the automatic changeover in
 -- B747_ap_ias_mach_mode (B747.70.xt.autopilot.lua) write the target in the

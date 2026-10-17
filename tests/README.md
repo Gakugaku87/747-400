@@ -200,10 +200,12 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   CAS/Mach crossover rule.
 - `vnav_climb_speed_semantics_test.lua`: the climb speed states (SPD REST,
   SPD TRANS, ECON CLB), the crossover to the climb Mach judged on the CAS
-  target at the current altitude (a step climb from FL310 flies M.815 instead
+  target at the current altitude (a climb through FL310 flies M.815 instead
   of a 326 kt target 26 kt above the speed, and does not flip between CAS
   and Mach as the Mach changes), and the cruise state flying the FMC cruise
-  Mach. Every climb and descent speed state, the MCP IAS/MACH button and the
+  Mach, also through a step climb from the cruise phase (FL310 to FL330 at
+  M.810, not the climb Mach .836) until the descent or the ground ends that
+  phase. Every climb and descent speed state, the MCP IAS/MACH button and the
   automatic IAS/Mach changeover write the X-Plane autopilot target in the new
   unit together with the speed mode (a Mach target limited to Mmo - 0.01, a
   knots target converted to Mach at the current altitude by the button and
