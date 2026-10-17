@@ -77,9 +77,10 @@ end
 
 local TAS = 300 * 0.514444 * 1.6         -- 300 kt IAS at FL310, m/s
 
--- Drive the dampers through motion(t) -> {bank, rate (deg/s), beta (deg)} at fps frames a second (IAS 300 kt,
--- FL310, or opts.ias and opts.tas, m/s; on the ground with opts.on_ground), the heading following the yaw rate.
--- Returns the upper damper's output each frame.
+-- Drive the dampers through motion(t) -> {bank, rate (the body axes' yaw rate, deg/s), beta (deg), p (the roll rate,
+-- deg/s, 0 without), alpha (deg, 0 without)} at fps frames a second (IAS 300 kt, FL310, or opts.ias and opts.tas,
+-- m/s; on the ground with opts.on_ground), the heading following the yaw rate. Returns the upper damper's output each
+-- frame.
 local function fly(motion, seconds, fps, opts)
     opts = opts or {}
     local ias, tas = opts.ias or 300, opts.tas or TAS
@@ -96,6 +97,7 @@ local function fly(motion, seconds, fps, opts)
         env.simDR_AHARS_heading_deg_pilot = heading
         env.simDR_sideslip = m.beta
         env.simDR_yaw_rate = m.rate
+        env.simDR_roll_rate, env.simDR_alpha_deg = m.p or 0, m.alpha or 0
         env.simDR_touchGround = opts.on_ground and 1 or 0
         env.simDR_ind_airspeed_kts_pilot, env.simDR_ias_pilot, env.simDR_TAS_mps = ias, ias, tas
         env.B747DR_autopilot_altitude_ft_pfd = 31000
@@ -195,16 +197,23 @@ check(step <= 0.02, string.format("rolling in through 5 deg of bank the output m
 
 -- 3b. A roll-in to 30 deg at 3 deg/s at 160 kt (TAS 82 m/s), coordinated: no rudder into the turn. Taking the
 -- heading's rate for the coordinated turn the dampers put in up to +0.24 of their command (0.8 deg of rudder; a
--- review).
+-- review). At an angle of attack the roll is about the flight path, and X-Plane's body axes yaw by its rate times
+-- sin(alpha) (p11-L1: +0.040 p above 270 kt, +0.077 p below 200 kt): at 6 deg, as at 160 kt, the dampers put in up to
+-- -0.29 against the roll (1 deg of rudder; a review). With alpha 0 and 6 deg.
 local slow_tas = 160 * 0.514444
-local slow_roll = function(t)
-    local bank = math.min(30, 3 * math.max(0, t - 1))
-    return {bank = bank, rate = turn_rate(bank, slow_tas), beta = 0}
+for _, alpha in ipairs({0, 6}) do
+    local slow_roll = function(t)
+        local bank = math.min(30, 3 * math.max(0, t - 1))
+        local p = (t > 1 and t < 11) and 3 or 0
+        local a = math.rad(alpha)
+        return {bank = bank, rate = turn_rate(bank, slow_tas) * math.cos(a) + p * math.sin(a), beta = 0,
+            p = p * math.cos(a), alpha = alpha}
+    end
+    out = fly(slow_roll, 20, 30, {ias = 160, tas = slow_tas})
+    lo, hi = extremes(out, "u")
+    check(math.max(-lo, hi) <= 0.03, string.format(
+        "rolling into a 30 deg turn at 160 kt, alpha %d deg, the output stays within 0.03 (%.3f..%.3f)", alpha, lo, hi))
 end
-out = fly(slow_roll, 20, 30, {ias = 160, tas = slow_tas})
-lo, hi = extremes(out, "u")
-check(math.max(-lo, hi) <= 0.03, string.format(
-    "rolling into a 30 deg turn at 160 kt the output stays within 0.03 (%.3f..%.3f)", lo, hi))
 
 -- 3c. On the ground no rudder from the dampers: taxi turns at 1, 3 and 5 deg/s at 15 kt and a heading correction of
 -- +-0.5 deg/s on the takeoff roll at 120 kt. Below 50 m/s there is no coordinated turn to take away and the gain is at

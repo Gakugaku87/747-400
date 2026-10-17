@@ -461,22 +461,27 @@ end
 -- [B-10] The yaw dampers' law, both channels alike: the 747-400's Dutch roll damping and turn coordination. The rudder
 -- command (-1..1, the dampers' authority) is against the yaw rate less the yaw rate of a coordinated turn at this bank
 -- and true airspeed, washed out with YAW_DAMPER_WASHOUT_SEC so that a steady yaw rate keeps no rudder, at a gain that
--- rises as the indicated airspeed falls. The yaw rate is X-Plane's body axes' (sim/flightmodel/position/R): a
--- coordinated turn's is g sin(bank) / TAS (the heading's rate times cos(bank); recorded at 19.9 deg, FL310, 301 kt:
--- 0.77-0.78 deg/s). Taking the heading's rate, g tan(bank) / TAS, the dampers put rudder into a roll-in (+0.24 of
--- their command rolling into 30 deg at 160 kt; a review). One law at every bank, the same both ways, at any frame rate. state is a
--- table the caller keeps; the first call, or one after a gap of more than a second, starts the filter (0).
+-- rises as the indicated airspeed falls. The yaw rate is the stability axes', r cos(alpha) - p sin(alpha) from X-Plane's
+-- body axes' yaw and roll rates (sim/flightmodel/position/R, P) and the angle of attack: rolling about the flight path
+-- the body axes yaw by p sin(alpha), which is no Dutch roll (p11-L1: +0.040 p above 270 kt, +0.077 p below 200 kt), and
+-- the dampers put rudder against a roll-in (-0.29 of their command rolling in at 3 deg/s, 160 kt, alpha 6 deg; a
+-- review). A coordinated turn's is g sin(bank) / TAS (the heading's rate times cos(bank); recorded at 19.9 deg, FL310,
+-- 301 kt: 0.77-0.78 deg/s). Taking the heading's rate, g tan(bank) / TAS, the dampers put rudder into a roll-in (+0.24
+-- of their command rolling into 30 deg at 160 kt; a review). One law at every bank, the same both ways, at any frame
+-- rate. state is a table the caller keeps; the first call, or one after a gap of more than a second, starts the filter
+-- (0). roll_rate_dps and alpha_deg: 0 without.
 afds_controls.YAW_DAMPER_WASHOUT_SEC = 2.5
 afds_controls.YAW_DAMPER_GAIN_PER_DEG_SEC = 0.6      -- at 300 kt IAS: the full command at 1.7 deg/s
 afds_controls.YAW_DAMPER_GAIN_REFERENCE_KTS = 300
 afds_controls.YAW_DAMPER_GAIN_MIN_SCALE = 0.8
 afds_controls.YAW_DAMPER_GAIN_MAX_SCALE = 1.6
 
-function afds_controls.yaw_damper_command(state, yaw_rate_dps, bank_deg, tas_mps, ias_kts, time_s)
+function afds_controls.yaw_damper_command(state, yaw_rate_dps, bank_deg, tas_mps, ias_kts, time_s, roll_rate_dps,
+        alpha_deg)
     -- an input that is no number (NaN) starts the filter again, as a gap does (math.min and math.max pass it through
     -- in LuaJIT: the filter kept it, and the rudder command was NaN)
     if yaw_rate_dps ~= yaw_rate_dps or bank_deg ~= bank_deg or tas_mps ~= tas_mps or ias_kts ~= ias_kts
-        or time_s ~= time_s then
+        or time_s ~= time_s or roll_rate_dps ~= roll_rate_dps or alpha_deg ~= alpha_deg then
         state.time, state.command = nil, 0
         return 0
     end
@@ -485,7 +490,8 @@ function afds_controls.yaw_damper_command(state, yaw_rate_dps, bank_deg, tas_mps
         local bank = math.max(-60, math.min(60, bank_deg or 0))
         coordinated = math.deg(9.80665 * math.sin(math.rad(bank)) / tas_mps)
     end
-    local input = (yaw_rate_dps or 0) - coordinated
+    local alpha = math.rad(math.max(-30, math.min(30, alpha_deg or 0)))
+    local input = (yaw_rate_dps or 0) * math.cos(alpha) - (roll_rate_dps or 0) * math.sin(alpha) - coordinated
     local dt = state.time ~= nil and time_s - state.time or nil
     if dt == nil or dt < 0 or dt > 1.0 then
         state.time, state.input, state.washed, state.command = time_s, input, 0, 0

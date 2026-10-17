@@ -1160,7 +1160,7 @@ function ap_roll_assist()
     return retval
 end
 -- [B-10] The yaw dampers (B747_afds_controls.yaw_damper_command: Dutch roll damping and turn coordination, the rudder
--- against the yaw rate less a coordinated turn's, washed out), each channel moving at most over its range in 0.3 s
+-- against the stability axes' yaw rate less a coordinated turn's, washed out), each channel moving at most over its range in 0.3 s
 -- (yaw_damper_slew) and centred when off. It replaced a law that switched between the sideslip (above 5 deg of bank) and the heading's
 -- deviation from its 0.9 s mean (below), cleared its memory at each switch, acted one way only below 5 deg and
 -- differentiated an input held for 0.03 s: in TST744L its output jumped up to 0.29 at the 5 deg crossings, and with
@@ -1176,7 +1176,8 @@ function yaw_damper_system()
         yawDamperState={}
     else
         command=B747_afds_controls.yaw_damper_command(yawDamperState,simDR_yaw_rate,
-            simDR_AHARS_roll_heading_deg_pilot,simDR_TAS_mps,simDR_ind_airspeed_kts_pilot,simDRTime)
+            simDR_AHARS_roll_heading_deg_pilot,simDR_TAS_mps,simDR_ind_airspeed_kts_pilot,simDRTime,simDR_roll_rate,
+            simDR_alpha_deg)
     end
     B747DR_yaw_damper_upr=B747_afds_controls.yaw_damper_slew(B747DR_yaw_damper_upr,
         B747DR_yaw_damper_upr_on==1 and command or 0,SIM_PERIOD)

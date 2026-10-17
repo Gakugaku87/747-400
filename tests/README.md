@@ -297,7 +297,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   (the yaw rate X-Plane's body axes', g sin(bank) / TAS in a coordinated
   turn): the output opposes the yaw rate both ways at every bank, does not
   jump as the bank crosses 5 deg, puts no rudder into a coordinated roll-in
-  to 30 deg at 160 kt (within 0.03), keeps none on the ground (taxi turns
+  to 30 deg at 160 kt (within 0.03), also at an angle of attack of 6 deg
+  (the roll about the flight path, X-Plane's body axes yawing by its rate
+  times sin(alpha)), keeps none on the ground (taxi turns
   of 1-5 deg/s at 15 kt, a heading correction on the takeoff roll at
   120 kt), fades out in the steady turn, stays a number within +-1 through
   a yaw rate that is NaN for a frame and acts again after it, is the
