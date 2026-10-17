@@ -473,6 +473,13 @@ afds_controls.YAW_DAMPER_GAIN_MIN_SCALE = 0.8
 afds_controls.YAW_DAMPER_GAIN_MAX_SCALE = 1.6
 
 function afds_controls.yaw_damper_command(state, yaw_rate_dps, bank_deg, tas_mps, ias_kts, time_s)
+    -- an input that is no number (NaN) starts the filter again, as a gap does (math.min and math.max pass it through
+    -- in LuaJIT: the filter kept it, and the rudder command was NaN)
+    if yaw_rate_dps ~= yaw_rate_dps or bank_deg ~= bank_deg or tas_mps ~= tas_mps or ias_kts ~= ias_kts
+        or time_s ~= time_s then
+        state.time, state.command = nil, 0
+        return 0
+    end
     local coordinated = 0
     if tas_mps ~= nil and tas_mps > 50 then
         local bank = math.max(-60, math.min(60, bank_deg or 0))
@@ -499,6 +506,9 @@ end
 -- near the command and then by a whole step: stair steps of 0.22 at 30 fps, and a lag that grew with the frame time)
 afds_controls.YAW_DAMPER_FULL_TRAVEL_SEC = 0.3
 function afds_controls.yaw_damper_slew(current, command, elapsed_sec)
+    if current ~= current then current = 0 end
+    if command ~= command then command = 0 end
+    if elapsed_sec ~= elapsed_sec then elapsed_sec = 0 end
     local step = 2 / afds_controls.YAW_DAMPER_FULL_TRAVEL_SEC * math.max(elapsed_sec or 0, 0)
     return current + math.max(-step, math.min(step, command - current))
 end
