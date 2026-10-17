@@ -2368,19 +2368,47 @@ local function B747_lnav_bank_limit_deg()
 	return limit
 end
 
+-- [P18] The wind LNAV draws its turns and its path with (kt east and north): the ground velocity less the TAS along
+-- the nose, filtered over LNAV_WIND_FILTER_SEC as an IRS's wind is. Taken frame by frame it swung with the nose off
+-- the air path (sideslip in the yaw and roll motion: TAS x beta, 2.5 kt for 0.3 deg at 481 kt), and the arc's radius
+-- with it: in a cruise arc a 0.3 deg swing at 3.5 s swung LNAV's heading command 4.8 deg and the bank 2.6 (TST744L's
+-- BILTO in p11-L1 and p16-L1: 10-15 deg of bank swinging at about 3.5 s through the arc). The filter starts again
+-- after a gap of more than LNAV_WIND_GAP_SEC; a wind that is no number or more than LNAV_MAX_WIND_KTS is none, and
+-- the filter keeps what it had.
+local LNAV_WIND_FILTER_SEC=30
+local LNAV_WIND_GAP_SEC=5
+local lnavWind={time=nil,east=0,north=0}
+local function B747_lnav_wind()
+	local tas=simDR_TAS_mps*1.94384
+	local gs=simDR_groundspeed*1.94384
+	local track,heading=math.rad(simDR_ground_track_true),math.rad(simDR_true_heading)
+	local east=gs*math.sin(track)-tas*math.sin(heading)
+	local north=gs*math.cos(track)-tas*math.cos(heading)
+	local wind=math.sqrt(east*east+north*north)
+	if wind~=wind or wind>B747_afds_helpers.LNAV_MAX_WIND_KTS then return 0,0 end
+	local now=tonumber(simDRTime) or 0
+	local dt=lnavWind.time~=nil and now-lnavWind.time or nil
+	if dt==nil or dt<0 or dt>LNAV_WIND_GAP_SEC then
+		lnavWind.east,lnavWind.north=east,north
+	elseif dt>0 then
+		local a=dt/(LNAV_WIND_FILTER_SEC+dt)
+		lnavWind.east=lnavWind.east+a*(east-lnavWind.east)
+		lnavWind.north=lnavWind.north+a*(north-lnavWind.north)
+	end
+	lnavWind.time=now
+	return lnavWind.east,lnavWind.north
+end
+
 -- How far before the fix the fly-by turn from inCourse to outCourse (true, the
 -- inbound one at the fix) starts, from the TAS, the bank limit and the wind
--- (the ground velocity less the air velocity); 0 on the ground, below 400 ft
+-- (B747_lnav_wind); 0 on the ground, below 400 ft
 -- above it (as LNAV_ALTITUDE_LEG_MIN_RA_FT: no departure turn is designed
 -- lower) and when it is no fly-by
 local function B747_lnav_turn_anticipation_nm(inCourse,outCourse)
 	if simDR_onGround==1 or simDR_radarAlt1<400 then return 0 end
 	local tas=simDR_TAS_mps*1.94384
 	local gs=simDR_groundspeed*1.94384
-	local track=math.rad(simDR_ground_track_true)
-	local heading=math.rad(simDR_true_heading)
-	local windEast=gs*math.sin(track)-tas*math.sin(heading)
-	local windNorth=gs*math.cos(track)-tas*math.cos(heading)
+	local windEast,windNorth=B747_lnav_wind()
 	return B747_afds_helpers.lnav_turn_anticipation_nm(tas,windEast,windNorth,B747_lnav_bank_limit_deg(),
 		inCourse,outCourse,B747_afds_helpers.LNAV_ROLL_RATE_DEG_PER_SEC,gs)
 end
@@ -2670,17 +2698,13 @@ local function B747_lnav_path_at_fix(fmsO,k,p)
 	return path,fix
 end
 
--- What LNAV's path is drawn with now: the TAS, the wind (kt east and north; none when it cannot be), the
--- bank limit and the look-ahead; nil not moving.
+-- What LNAV's path is drawn with now: the TAS, the wind (B747_lnav_wind: kt east and north; none when it cannot
+-- be), the bank limit and the look-ahead; nil not moving.
 local function B747_lnav_path_parameters()
 	local tas=simDR_TAS_mps*1.94384
 	local gs=simDR_groundspeed*1.94384
 	if not (tas>0) or not (gs>0) then return nil end
-	local track,heading=math.rad(simDR_ground_track_true),math.rad(simDR_true_heading)
-	local windEast=gs*math.sin(track)-tas*math.sin(heading)
-	local windNorth=gs*math.cos(track)-tas*math.cos(heading)
-	local wind=math.sqrt(windEast*windEast+windNorth*windNorth)
-	if wind~=wind or wind>B747_afds_helpers.LNAV_MAX_WIND_KTS then windEast,windNorth=0,0 end
+	local windEast,windNorth=B747_lnav_wind()
 	return {tas=tas,windEast=windEast,windNorth=windNorth,bank=B747_lnav_bank_limit_deg(),
 		lookahead=B747_afds_helpers.clamp(gs*B747_afds_helpers.LNAV_PATH_LOOKAHEAD_S/3600,
 			B747_afds_helpers.LNAV_PATH_MIN_LOOKAHEAD_NM,B747_afds_helpers.LNAV_PATH_MAX_LOOKAHEAD_NM)}

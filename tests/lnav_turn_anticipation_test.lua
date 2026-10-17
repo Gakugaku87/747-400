@@ -83,8 +83,9 @@ end
 -- that time: out.pushed = {t, index}; hook = function(env, t, out) every frame
 -- after the sequencing; tas_fn = function(t) the TAS; jump = {t, start = {lat,
 -- lon}, heading, index}: the 747 put there with that fix active (a reposition,
--- the leg search moving back), out.jump_turned the turning until then}. A frame
--- as the 747's:
+-- the leg search moving back), out.jump_turned the turning until then; beta_fn =
+-- function(t) the nose off the air velocity (deg; the velocity along the
+-- model's heading), as in X-Plane's yaw and roll motion}. A frame as the 747's:
 -- the sequencing with the cross-track and VNAV's held fix (B747_getCurrentWayPoint),
 -- LNAV's steering (B747_monitorAP), then the armed LNAV engaging (B747_ap_fma).
 local LOOPS = {cruise = {3.2, 0.22}, low = {4.7, 0.73}}
@@ -120,7 +121,8 @@ local function fly(s)
         local track = math.deg(math.atan2(vx, vy)) % 360
         env.simDRTime = t
         env.simDR_latitude, env.simDR_longitude = lat, lon
-        env.simDR_true_heading, env.simDR_AHARS_heading_deg_pilot = heading, heading
+        local nose = (heading + (s.beta_fn and s.beta_fn(t) or 0)) % 360
+        env.simDR_true_heading, env.simDR_AHARS_heading_deg_pilot = nose, nose
         env.simDR_groundspeed, env.simDR_TAS_mps, env.simDR_ground_track_true = gs, v, track
         env.simDR_wind_speed_kts = wind_kt
         -- the ND wind bearing as B747.68.xt.fms makes it (relative to the heading)
@@ -1857,6 +1859,45 @@ do
     check(out.engaged ~= nil and out.engaged.t >= 1.5 and out.engaged.t <= 2.5, string.format(
         "LNAV armed on the ground 1 nm before the leg's start: engaged above 50 ft (%s)",
         out.engaged and string.format("at %.1f s", out.engaged.t) or "never"))
+end
+
+-- [P18] The wind LNAV draws its path with, the ground vector less the TAS along the nose, swung with the nose off the
+-- air path (sideslip in the yaw and roll motion: TAS x beta) and the arc's radius with it. TST744L's BILTO (000 to
+-- 137.4 deg true at FL350, 472 kt, 270/100) with the nose swinging 0.3 deg at 3.5 s: the heading command swung about
+-- its 10 s mean and the bank with it (p11-L1 and p16-L1 flew that arc at 10-15 deg of bank, swinging at about 3.5 s,
+-- the nose swinging 0.22 deg off the track).
+do
+    local b_lat, b_lon = 56.5, -15.0
+    local c_lat, c_lon = probe.movePoint(b_lat, b_lon, 150, 137.4)
+    local a_lat, a_lon = probe.movePoint(b_lat, b_lon, 120, 180)
+    route = {E("ORIG", a_lat - 1, a_lon, 0, 1), E("A", a_lat, a_lon), E("BILTO", b_lat, b_lon), E("C", c_lat, c_lon),
+        E("DEST", c_lat - 1, c_lon, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(b_lat, b_lon, 48, 180)
+    local commands = {}
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = (360 - math.deg(math.asin(100 / 472))) % 360,
+        tas_kt = 472, alt_ft = 35000, loop = "cruise", seconds = 400, wind_from_deg = 270, wind_kt = 100,
+        beta_fn = function(t) return 0.3 * math.sin(2 * math.pi * t / 3.5) end,
+        hook = function(env) commands[#commands + 1] = env.simDR_autopilot_heading_deg end})
+    -- the largest swing about the 10 s mean (+-5 s) through the turn, 125-300 s (not its roll-in and roll-out)
+    local function swing(get)
+        local worst = 0
+        for i = 1, #out.track do
+            local t = out.track[i].t
+            if t >= 125 and t <= 300 then
+                local sum, count = 0, 0
+                for j = math.max(1, i - 100), math.min(#out.track, i + 100) do
+                    sum, count = sum + wrap(get(j) - get(i)), count + 1
+                end
+                worst = math.max(worst, math.abs(sum / count))
+            end
+        end
+        return worst
+    end
+    local command_swing = swing(function(j) return commands[j] or commands[#commands] end)
+    local bank_swing = swing(function(j) return out.track[j].bank end)
+    check(command_swing <= 0.5 and bank_swing <= 0.6, string.format(
+        "BILTO at FL350 with the nose swinging 0.3 deg at 3.5 s: the heading command swings %.2f deg (0.5) and the bank %.2f (0.6)",
+        command_swing, bank_swing))
 end
 
 print("LNAV turn anticipation tests passed: "..checks)

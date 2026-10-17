@@ -351,6 +351,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   the first turn, not down to -7.4);
   VNAV's held fix let go with its sequencing also at +174.6 deg (within
   5 s; kept until 13 nm past the fix while its bisector was taken abeam it).
+  LNAV's wind filtered (item P18): TST744L's BILTO at FL350 with the nose
+  swinging 0.3 deg off the air path at 3.5 s, the heading command within
+  0.5 deg of its 10 s mean and the bank within 0.6 (4.8 and 2.6 with the wind
+  taken frame by frame).
   LNAV's path guidance on the model: within 0.1 nm of the leg to DW124 90 and
   120 s after DW129, and back on a leg from 1, 3 and 10 nm off within 60, 120
   and 300 s at most 45 deg to it and not 0.2 nm through it. LNAV ARM: LNAV
