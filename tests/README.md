@@ -205,7 +205,12 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   and Mach as the Mach changes), and the cruise state flying the FMC cruise
   Mach, also through a step climb from the cruise phase (FL310 to FL330 at
   M.810, not the climb Mach .836) until the descent or the ground ends that
-  phase. Every climb and descent speed state, the MCP IAS/MACH button and the
+  phase, and after a descent in FLCH in cruise; but ended even with VNAV off
+  on the approach, in TOGA and below the transition altitude (a go-around
+  climb in VNAV at 3,000 ft at 250 and 245 kt, not .81 or a stale 180 kt),
+  and never entered with CRZ ALT deleted (326 kt at FL205 after deleting and
+  entering it again). Every climb and descent speed state, the MCP IAS/MACH
+  button and the
   automatic IAS/Mach changeover write the X-Plane autopilot target in the new
   unit together with the speed mode (a Mach target limited to Mmo - 0.01, a
   knots target converted to Mach at the current altitude by the button and

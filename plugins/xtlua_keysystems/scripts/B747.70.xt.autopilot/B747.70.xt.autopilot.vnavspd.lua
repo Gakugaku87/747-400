@@ -44,7 +44,8 @@ vnavSPD_state["lastRecalculationReason"]="none"
 -- cruise until the descent or the ground. A climb from it to a new, higher CRZ ALT (a step climb) is a cruise climb,
 -- flown at the cruise speed (the ECON cruise Mach or the crew's, crzspd) with CLB thrust; the climb speed schedule
 -- and its climb Mach are for the climb from the departure (TST744L's BEDRA step from FL310 flew the climb Mach .836,
--- 326 kt below the crossover, against a cruise Mach of about .82).
+-- 326 kt below the crossover, against a cruise Mach of about .82). It is entered only at a valid CRZ ALT, at or
+-- above the transition altitude, and it ends out of cruise even while VNAV is off (B747_update_cruise_phase).
 vnavSPD_state["cruisePhase"]=false
 local lastVNAVSpeed=0
 local vnavSPD_observed=nil
@@ -584,9 +585,27 @@ function B747_update_vnav_speed()
         B747_invalidate_vnav_speed("periodic fault-recovery refresh")
     end
 end
+-- [B-8] Whether the 747 can be in the cruise phase: in the air, with a CRZ ALT (none once it is deleted), at or
+-- above the transition altitude
+local function B747_cruise_phase_possible()
+    return simDR_onGround==0 and (tonumber(B747BR_cruiseAlt) or 0)>0
+        and simDR_pressureAlt1>=(tonumber(getFMSData("transalt")) or 18000)
+end
+-- The cruise phase ends out of cruise every frame, whatever VNAV does (B747_vnav_speed returns early while VNAV is
+-- off or the speed is the crew's): on the ground, with CRZ ALT deleted, below the transition altitude, on the
+-- approach (flight phase 4, the G/S) and in TOGA. A descent VNAV did not fly (FLCH, V/S, APP) left it set, and VNAV
+-- pushed in the go-around at 3,000 ft climbed at the cruise Mach .81 (520 KCAS) or kept a stale 180 kt; with CRZ ALT
+-- deleted in the climb the cruise state (500 ft below a CRZ ALT of 0) set it, and the rest of the climb flew .81 from
+-- FL205 (400 KCAS; a review). A descent in FLCH in cruise above the transition altitude keeps it (still the cruise).
+function B747_update_cruise_phase()
+    if vnavSPD_state["cruisePhase"] and (not B747_cruise_phase_possible()
+        or (tonumber(B747DR_ap_flightPhase) or 0)>=4 or B747DR_ap_FMA_active_pitch_mode==1) then
+        vnavSPD_state["cruisePhase"]=false
+    end
+end
 function B747_vnav_setClimbspeed()
     B747_update_takeoff_profile()
-    if simDR_onGround==1 then vnavSPD_state["cruisePhase"]=false end
+    B747_update_cruise_phase()
     local lastAlt=-1
     local cState="src"
     local nextAlt=spd_states["clb"]["src"]["nextfunc"]()
@@ -601,8 +620,8 @@ function B747_vnav_setClimbspeed()
         print("B747_vnav_setClimbspeed "..lastAlt .. " cState ".. cState.. " nextAlt ".. nextAlt)
     end
     -- the cruise phase (vnavSPD_state["cruisePhase"]): a climb from it is a cruise climb at the cruise speed, all the
-    -- way to the new CRZ ALT (no lower boundary: nothing below it changes the state but the descent or the ground)
-    if cState=="crz" and simDR_onGround==0 then
+    -- way to the new CRZ ALT (no lower boundary: what ends it is B747_update_cruise_phase's)
+    if cState=="crz" and B747_cruise_phase_possible() then
         vnavSPD_state["cruisePhase"]=true
     elseif vnavSPD_state["cruisePhase"] then
         cState="crz"
@@ -675,7 +694,7 @@ function B747_vnav_setDescendspeed()
     vnavSPD_state["lastRecalculationReason"]=vnavSPD_state["lastInvalidationReason"]
 end
 function B747_vnav_speed()
-    
+    B747_update_cruise_phase()
     if B747DR_ap_vnav_state==0 then return end
     if getFMSData("crzalt")==nil then
         print("B747_vnav_speed nil "..B747BR_cruiseAlt)
