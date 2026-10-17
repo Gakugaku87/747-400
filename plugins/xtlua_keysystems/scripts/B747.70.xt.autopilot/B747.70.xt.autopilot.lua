@@ -2604,11 +2604,18 @@ end
 
 -- How far before fmsO[j] LNAV's path leaves the leg into it and how far after it the path joins the leg after
 -- it (afds.lnav_turn_extent_nm), before the legs are shared, and the turn there (deg, + right); 0, 0, 0 without a
--- fly-by turn there.
+-- fly-by turn there. [review 17] None for a turn of more than LNAV_FLYBY_MAX_TURN_DEG until it is decided flown (its
+-- path then fits, B747_lnav_capped_turn_fits, and leaves room for the arcs next to it): as the active fix's undecided
+-- turn it was taken as flown though it did not fit, the arc before it shrank mid-turn, the 747 rolled from +20 to
+-- -5.9 deg, and 9 s later, decided abeam, the arc grew back (1.2 nm outside it; a review).
 local function B747_lnav_turn_tangent_nm(fmsO,j,p)
 	local fix,inCourse,outCourse,radius=B747_lnav_turn_at(fmsO,j,p)
 	if fix==nil then return 0,0,0 end
 	local turn=(outCourse-inCourse+540)%360-180
+	if math.abs(turn)>B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG then
+		local state=lnavCapped[j..":"..tostring(fix[5])..":"..tostring(fix[6])]
+		if state==nil or state.decided~="flown" then return 0,0,0 end
+	end
 	local before,after=B747_afds_helpers.lnav_turn_extent_nm(turn,radius)
 	return before,after,turn
 end

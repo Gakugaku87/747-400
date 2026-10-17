@@ -1647,6 +1647,41 @@ do
         "+170 deg flown, then put back 10 nm before the fix with it active: sequenced %s nm before it (6-9), %.0f deg of turning from there (300)",
         seq and string.format("%.1f", seq.nm) or "never", turned))
 end
+-- [review 17] +90 deg at F1, 38 nm on +170 deg at CAP, at 480 kt: CAP's path does not fit on that leg after F1's arc,
+-- and CAP is passed abeam. As CAP became active (F1 sequenced at its bisector) its undecided turn was taken as flown
+-- and F1's arc shared the leg with its path: the arc shrank mid-turn (the path 0.5 nm away, the command 15 deg back)
+-- and the 747 rolled from +20 to -5.9 deg; decided abeam 9 s later the arc grew back, and the 747 went 1.2 nm outside
+-- it (a review). Through F1's turn the bank stays above 10 deg and the command moves less than 3 deg a frame.
+do
+    local lat0, lon0 = 50, -10
+    local f1_lat, f1_lon = probe.movePoint(lat0, lon0, 120, 0)
+    local cap_lat, cap_lon = probe.movePoint(f1_lat, f1_lon, 38, 90)
+    local next_lat, next_lon = probe.movePoint(cap_lat, cap_lon, 60, 260)
+    local after_lat, after_lon = probe.movePoint(next_lat, next_lon, 40, 260)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("F1", f1_lat, f1_lon), E("CAP", cap_lat, cap_lon),
+        E("NEXT", next_lat, next_lon), E("AFTER", after_lat, after_lon), E("DEST", after_lat - 3, after_lon, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(f1_lat, f1_lon, 40, 180)
+    local frames = {}
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 480, alt_ft = 35000,
+        loop = "cruise", seconds = 420,
+        hook = function(env, t) frames[#frames + 1] = {t = t, cmd = env.simDR_autopilot_heading_deg} end})
+    local seq = nil
+    for _, sw in ipairs(out.switches) do
+        if sw.from == 3 then seq = sw.t break end
+    end
+    local low, jump = 90, 0
+    for i, q in ipairs(out.track) do
+        if seq and q.t >= seq - 2 and q.t <= seq + 30 then
+            low = math.min(low, q.bank)
+            if i > 1 and frames[i] and frames[i - 1] then
+                jump = math.max(jump, math.abs(wrap(frames[i].cmd - frames[i - 1].cmd)))
+            end
+        end
+    end
+    check(seq ~= nil and low >= 10 and jump <= 3, string.format(
+        "+90 deg at F1, 38 nm on +170 deg at 480 kt: through F1's turn the bank down to %.1f deg (10), the command moving %.1f deg a frame (3)",
+        low, jump))
+end
 -- LNAV armed 1.5 nm inside the leg into a +170 deg fix 14 nm before it, and into a +174 deg one 20 nm before it: the
 -- fix sequenced where the path crosses its bisector, 7.6 and 8.0 nm before it, not at once (inside the leg the 747 was
 -- taken for one on the path's outbound side past the bisector: 14.1 and 20.1 nm before the fix; a review).
