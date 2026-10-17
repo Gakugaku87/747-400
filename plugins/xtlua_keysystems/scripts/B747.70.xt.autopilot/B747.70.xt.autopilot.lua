@@ -2741,6 +2741,12 @@ B747_lnav_capped_decide=function(state,fmsO,k,p,inCourse,outCourse,radius,legSta
 			and B747_lnav_capped_turn_fits(fmsO,p,inCourse,outCourse,radius,legStart,s,fix,nextFix,n)
 		state.decided=flown and "flown" or "abeam"
 	end
+	-- [review 17] flown, then LNAV not engaged past the start (HDG SEL, LNAV disconnected): passed abeam from then on.
+	-- Kept flown, LNAV pushed again 3 nm before the fix steered for the path's arc 4.3 nm away, the leg search
+	-- sequenced the fix 2.4 nm out and the path switched back to the arc: 612-705 deg of turning (a review)
+	if state.decided=="flown" and alongStart>=0 and B747DR_ap_lnav_state~=2 then
+		state.decided="abeam"
+	end
 end
 
 -- [i-1b] Whether the arc at the fix before (fmsO[k], LNAV's path through it path) is flown once that fix has

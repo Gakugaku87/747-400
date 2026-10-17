@@ -338,6 +338,8 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   on the leg before the start with LNAV (flown, sequenced 6-9 nm before the
   fix); turns of 150 to about 159 deg, without a straight line between the
   arcs (+150.5, +153 and -158 deg at 250 kt), flown round without circling;
+  a turn decided flown passed abeam once LNAV is let go past its start
+  (pushed again 3 nm before the fix: 286 deg of turning, not 617);
   VNAV's held fix let go with its sequencing also at +174.6 deg (within
   5 s; kept until 13 nm past the fix while its bisector was taken abeam it).
   LNAV's path guidance on the model: within 0.1 nm of the leg to DW124 90 and

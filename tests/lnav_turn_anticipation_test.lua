@@ -1582,6 +1582,41 @@ for _, turn in ipairs({150.5, 153, -158}) do
         "%+.1f deg at 250 kt, LNAV on the leg: FIX sequenced (%s), %.0f deg of turning (300), %.2f nm off the leg after it (0.5)",
         turn, tostring(fix_switch_nm(out) ~= nil), out.turned, off))
 end
+-- [review 17] +170 deg decided flown, then LNAV off with HDG SEL 000 just past the path's start and pushed again 3 nm
+-- before the fix: passed abeam from then on (two bank reversals, HDG SEL's and LNAV's). Kept flown, LNAV engaged
+-- again steered for the path's arc 4.3 nm away, the leg search sequenced the fix 2.4 nm out and the path switched back
+-- to the arc: 612-705 deg of turning and 6 bank reversals (a review).
+do
+    route = capped_route(170, 60, 40, 90)
+    local fix_lat, fix_lon = route[3][5], route[3][6]
+    local s_lat, s_lon = probe.movePoint(fix_lat, fix_lon, 20, 180)
+    local off, pushed = false, false
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 750,
+        hook = function(env)
+            local d = probe.getDistance(fix_lat, fix_lon, env.simDR_latitude, env.simDR_longitude)
+            local north = d * math.cos(math.rad(probe.getHeading(fix_lat, fix_lon, env.simDR_latitude,
+                env.simDR_longitude)))
+            if not off and north >= -9.1 then
+                off = true
+                env.B747DR_ap_lnav_state, env.simDR_autopilot_heading_deg = 0, 0
+            elseif off and not pushed and north >= -3 then
+                pushed = true
+                env.B747DR_ap_lnav_state = 1
+            end
+        end})
+    local reversals, sign = 0, 0
+    for _, q in ipairs(out.track) do
+        if math.abs(q.bank) > 10 then
+            local sg = q.bank > 0 and 1 or -1
+            if sign ~= 0 and sg ~= sign then reversals = reversals + 1 end
+            sign = sg
+        end
+    end
+    check(pushed and out.turned <= 400 and reversals <= 2, string.format(
+        "+170 deg decided flown, LNAV off past the path's start and pushed 3 nm before the fix: %.0f deg of turning (400), %d bank reversals (2: HDG SEL's and LNAV's)",
+        out.turned, reversals))
+end
 -- LNAV armed 1.5 nm inside the leg into a +170 deg fix 14 nm before it, and into a +174 deg one 20 nm before it: the
 -- fix sequenced where the path crosses its bisector, 7.6 and 8.0 nm before it, not at once (inside the leg the 747 was
 -- taken for one on the path's outbound side past the bisector: 14.1 and 20.1 nm before the fix; a review).
