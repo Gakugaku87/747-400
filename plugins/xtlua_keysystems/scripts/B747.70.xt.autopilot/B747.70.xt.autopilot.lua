@@ -2758,7 +2758,14 @@ B747_lnav_capped_decide=function(state,fmsO,k,p,inCourse,outCourse,radius,legSta
 	-- Kept flown, LNAV pushed again 3 nm before the fix steered for the path's arc 4.3 nm away, the leg search
 	-- sequenced the fix 2.4 nm out and the path switched back to the arc: 612-705 deg of turning (a review)
 	if state.decided=="flown" and alongStart>=0 and B747DR_ap_lnav_state~=2 then
-		state.decided="abeam"
+		-- [review 18] only once the 747 is more than LNAV_MAX_PREEMPT_XTK_NM off the path, as for the fix before's:
+		-- let go for 5 s 20 s into the path, the 747 went back to the inbound leg and passed the fix abeam (507 deg of
+		-- turning, against 359 on round the path; a review)
+		local capture=math.min(radius*B747_afds_helpers.LNAV_PATH_CAPTURE_RADII,B747_afds_helpers.LNAV_PATH_MAX_LOOKAHEAD_NM)
+		local path=B747_afds_helpers.lnav_path_at(east,north,inCourse,outCourse,radius,p.lookahead,capture,state.element)
+		if path==nil or math.abs(path.xtk_nm)>LNAV_MAX_PREEMPT_XTK_NM then
+			state.decided="abeam"
+		end
 	end
 end
 

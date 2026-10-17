@@ -1705,6 +1705,35 @@ for _, c in ipairs({{turn = 153, tas = 250, wind_from = 180, wind = 80, into = 6
         "%+.1f deg at %d kt, wind %d kt from %03d, LNAV on the leg: %s deg of turning until NEXT is sequenced (the route %.0f, +120)",
         c.turn, c.tas, c.wind, c.wind_from, at_next and string.format("%.0f", at_next) or "never", route_turn))
 end
+-- [review 18] ... but only once the 747 is more than 2 nm off the path: +170 deg decided flown, LNAV let go (HDG HOLD)
+-- 20 s into the path and pushed again 5 s later: on round the path, FIX sequenced at its bisector 6-9 nm before it. Let
+-- go so briefly the turn went abeam at once, the 747 went back to the inbound leg and passed FIX abeam: 507 deg of
+-- turning, against 359 (a review).
+do
+    route = capped_route(170, 60, 40, 90)
+    local fix_lat, fix_lon = route[3][5], route[3][6]
+    local s_lat, s_lon = probe.movePoint(fix_lat, fix_lon, 30, 180)
+    local start_t, off, pushed = nil, false, false
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 900,
+        hook = function(env, t)
+            local d = probe.getDistance(fix_lat, fix_lon, env.simDR_latitude, env.simDR_longitude)
+            local north = d * math.cos(math.rad(probe.getHeading(fix_lat, fix_lon, env.simDR_latitude,
+                env.simDR_longitude)))
+            if start_t == nil and north >= -9.3 then start_t = t end
+            if start_t and not off and t >= start_t + 20 then
+                off = true
+                env.B747DR_ap_lnav_state, env.simDR_autopilot_heading_deg = 0, env.simDR_true_heading
+            elseif off and not pushed and t >= start_t + 25 then
+                pushed = true
+                env.B747DR_ap_lnav_state = 1
+            end
+        end})
+    local at = fix_switch_nm(out)
+    check(pushed and at ~= nil and at >= 6 and at <= 9, string.format(
+        "+170 deg decided flown, LNAV let go 20 s into the path for 5 s: FIX sequenced %s nm before it (6-9: on round the path)",
+        at and string.format("%.1f", at) or "never"))
+end
 -- LNAV armed 1.5 nm inside the leg into a +170 deg fix 14 nm before it, and into a +174 deg one 20 nm before it: the
 -- fix sequenced where the path crosses its bisector, 7.6 and 8.0 nm before it, not at once (inside the leg the 747 was
 -- taken for one on the path's outbound side past the bisector: 14.1 and 20.1 nm before the fix; a review).

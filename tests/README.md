@@ -341,7 +341,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   also in head and tail winds (+153 and -151 deg at 250 kt with 80 kt behind,
   +150.1 deg at 480 kt with 100 kt ahead);
   a turn decided flown passed abeam once LNAV is let go past its start
-  (pushed again 3 nm before the fix: 286 deg of turning, not 617);
+  and the 747 is more than 2 nm off the path (pushed again 3 nm before the
+  fix: 286 deg of turning, not 617; let go for 5 s 20 s into the path: on
+  round it, the fix sequenced 7.7 nm before it);
   the decisions forgotten when the active fix moves back (put back 10 nm
   before a fix flown by: sequenced at the bisector, not in that frame);
   a capped turn's path sharing no leg with the arc before it until decided
