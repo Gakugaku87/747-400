@@ -290,6 +290,16 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   active roll mode with LNAV armed (X-Plane's heading select left alone in HDG
   HOLD), as on the ground before, and the heading knob setting X-Plane's
   heading with APP armed while LNAV is only armed, not while it steers.
+- `yaw_damper_test.lua`: the yaw dampers (item B-10) driven frame by frame
+  through the production flight_controls_override with a Dutch-roll-like
+  yaw motion wings level and at +-19 deg of bank (p9-L1's 5.1 s, yaw rate
+  +-2.4 deg/s), a roll-in through 5 deg of bank and a steady 20 deg turn:
+  the output opposes the yaw rate both ways at every bank, does not jump as
+  the bank crosses 5 deg, fades out in the steady turn, is the same at 20,
+  30 and 60 fps and stays within +-1, both dampers alike; and in a Dutch
+  roll model (5.1 s, bare damping 0.03, rudder effect 0.2-0.6 rad/s2 per
+  rad) three cycles take 2 deg of sideslip below 35 % with the dampers and
+  leave it above 70 % without.
 - `afds_roll_rate_limit_test.lua`: the roll rate of HDG SEL and LNAV turns -
   the filtered roll command moving at most 3 deg/s outside the approach at
   20, 30 and 60 fps (a roll-in, a 6 deg change, a reversal and a roll-out),

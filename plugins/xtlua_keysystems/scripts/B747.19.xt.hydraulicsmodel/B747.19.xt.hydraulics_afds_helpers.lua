@@ -458,4 +458,46 @@ function afds_controls.climb_speed_pitch_target(previous_target_deg, speed_chang
     return previous_target_deg + clamp(rate, -max_rate, max_rate) * elapsed_sec
 end
 
+-- [B-10] The yaw dampers' law, both channels alike: the 747-400's Dutch roll damping and turn coordination. The rudder
+-- command (-1..1, the dampers' authority) is against the yaw rate less the yaw rate of a coordinated turn at this bank
+-- and true airspeed, washed out with YAW_DAMPER_WASHOUT_SEC so that a steady yaw rate keeps no rudder, at a gain that
+-- rises as the indicated airspeed falls. One law at every bank, the same both ways, at any frame rate. state is a
+-- table the caller keeps; the first call, or one after a gap of more than a second, starts the filter (0).
+afds_controls.YAW_DAMPER_WASHOUT_SEC = 2.5
+afds_controls.YAW_DAMPER_GAIN_PER_DEG_SEC = 0.6      -- at 300 kt IAS: the full command at 1.7 deg/s
+afds_controls.YAW_DAMPER_GAIN_REFERENCE_KTS = 300
+afds_controls.YAW_DAMPER_GAIN_MIN_SCALE = 0.8
+afds_controls.YAW_DAMPER_GAIN_MAX_SCALE = 1.6
+
+function afds_controls.yaw_damper_command(state, yaw_rate_dps, bank_deg, tas_mps, ias_kts, time_s)
+    local coordinated = 0
+    if tas_mps ~= nil and tas_mps > 50 then
+        local bank = math.max(-60, math.min(60, bank_deg or 0))
+        coordinated = math.deg(9.80665 * math.tan(math.rad(bank)) / tas_mps)
+    end
+    local input = (yaw_rate_dps or 0) - coordinated
+    local dt = state.time ~= nil and time_s - state.time or nil
+    if dt == nil or dt < 0 or dt > 1.0 then
+        state.time, state.input, state.washed, state.command = time_s, input, 0, 0
+        return 0
+    end
+    if dt == 0 then return state.command end
+    local washout = afds_controls.YAW_DAMPER_WASHOUT_SEC
+    state.washed = washout / (washout + dt) * (state.washed + input - state.input)
+    state.input, state.time = input, time_s
+    local scale = afds_controls.YAW_DAMPER_GAIN_REFERENCE_KTS / math.max(ias_kts or 0, 1)
+    scale = math.max(afds_controls.YAW_DAMPER_GAIN_MIN_SCALE, math.min(afds_controls.YAW_DAMPER_GAIN_MAX_SCALE, scale))
+    state.command = math.max(-1, math.min(1, -afds_controls.YAW_DAMPER_GAIN_PER_DEG_SEC * scale * state.washed))
+    return state.command
+end
+
+-- A yaw damper channel's output moving towards its command at most over its range (-1..1) in
+-- YAW_DAMPER_FULL_TRAVEL_SEC, the same at any frame rate (B747_interpolate_value moved it a tenth of the way a frame
+-- near the command and then by a whole step: stair steps of 0.22 at 30 fps, and a lag that grew with the frame time)
+afds_controls.YAW_DAMPER_FULL_TRAVEL_SEC = 0.3
+function afds_controls.yaw_damper_slew(current, command, elapsed_sec)
+    local step = 2 / afds_controls.YAW_DAMPER_FULL_TRAVEL_SEC * math.max(elapsed_sec or 0, 0)
+    return current + math.max(-step, math.min(step, command - current))
+end
+
 return afds_controls
