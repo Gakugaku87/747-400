@@ -210,7 +210,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   phase, and after a descent in FLCH in cruise from 500 ft below the level
   the cruise was flown at (below it that Mach's CAS there: 301 kt for .810
   at FL310, not .810 at 342 KCAS at FL250; the change-over a boundary of
-  VNAV's per-frame update); but ended even with VNAV off
+  VNAV's per-frame update; that CAS capped as the climb's own: 250 kt below
+  10,000 ft, 301 from 10,100 ft, 270 under a 270 kt constraint); but ended
+  even with VNAV off
   on the approach, in TOGA and below the transition altitude (a go-around
   climb in VNAV at 3,000 ft at 250 and 245 kt, not .81 or a stale 180 kt;
   the G/S and TOGA each alone above a transition altitude of 3,000 ft),

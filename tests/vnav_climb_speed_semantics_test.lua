@@ -325,6 +325,43 @@ assert(runtime.simDR_autopilot_airspeed_is_mach == 1 and runtime.B747DR_ap_ias_d
     "VNAV's per-frame update climbing through FL305 back to FL310 flew "..tostring(runtime.B747DR_ap_ias_dial_value)
     ..(runtime.simDR_autopilot_airspeed_is_mach == 1 and " (Mach)" or " kt")..", not the cruise Mach .810")
 fms_data.crzalt = nil
+-- [review 17] that CAS is capped as the climb's own: the SPD TRANS below its altitude (and the SPD REST below its), the
+-- route's constraint speed and the flaps'. With a transition altitude of 3,000 ft a descent in FLCH from the cruise at
+-- FL310 to 8,000 ft keeps the cruise phase, and VNAV's climb back flew 301 kt below 10,000 ft; under a 270 kt
+-- constraint, 301 (a review). The SPD TRANS altitude is a boundary of the climb: 301 kt from 10,100 ft.
+fms_data.transalt = "3000"
+cruise_at_fl310()
+runtime.B747DR_ap_vnav_state, runtime.B747DR_ap_flightPhase, runtime.simDR_pressureAlt1 = 0, 3, 8000
+runtime.B747_vnav_speed()
+runtime.B747DR_ap_vnav_state, runtime.B747DR_ap_flightPhase = 2, 1
+runtime.simDR_ind_airspeed_kts_pilot, runtime.simDR_autopilot_airspeed_is_mach = 260, 0
+runtime.simDR_airspeed_mach = helpers.cas_to_mach(260, 8000)
+is_mach, dial = climb_speed("VNAV climb back from 8,000 ft")
+assert(is_mach == 0 and dial == 250, "VNAV's climb back in the cruise phase from 8,000 ft flew "..tostring(dial)
+    ..(is_mach == 1 and " (Mach)" or " kt")..", not the SPD TRANS 250 kt")
+fms_data.crzalt = "FL310"
+runtime.simDRTime = runtime.simDRTime + 1
+runtime.B747_vnav_speed()
+runtime.simDR_pressureAlt1, runtime.simDR_ind_airspeed_kts_pilot = 10200, 250
+runtime.simDR_airspeed_mach = helpers.cas_to_mach(250, 10200)
+runtime.simDRTime = runtime.simDRTime + 1
+runtime.B747_vnav_speed()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 0 and runtime.B747DR_ap_ias_dial_value == 301,
+    "VNAV's per-frame update climbing back through 10,100 ft flew "..tostring(runtime.B747DR_ap_ias_dial_value)
+    ..(runtime.simDR_autopilot_airspeed_is_mach == 1 and " (Mach)" or " kt")..", not 301 kt")
+fms_data.crzalt = nil
+fms_data.transalt = "18000"
+cruise_at_fl310()
+runtime.B747DR_ap_vnav_state, runtime.B747DR_ap_flightPhase, runtime.simDR_pressureAlt1 = 0, 3, 25000
+runtime.B747_vnav_speed()
+runtime.B747DR_ap_vnav_state, runtime.B747DR_ap_flightPhase = 2, 1
+runtime.simDR_ind_airspeed_kts_pilot, runtime.simDR_autopilot_airspeed_is_mach = 280, 0
+runtime.simDR_airspeed_mach = helpers.cas_to_mach(280, 25000)
+runtime.B747DR_vnav_constraint_speed = 270
+is_mach, dial = climb_speed("VNAV climb back under a 270 kt constraint")
+assert(is_mach == 0 and dial == 270, "VNAV's climb back from FL250 under a 270 kt constraint flew "..tostring(dial)
+    ..(is_mach == 1 and " (Mach)" or " kt")..", not 270 kt")
+runtime.B747DR_vnav_constraint_speed = 0
 -- the approach (G/S) and a go-around with VNAV pushed at 3,000 ft: the climb speed, not the cruise Mach nor a stale
 -- target
 for _, c in ipairs({{flap = 0, ias = 250, want = 250, name = "flaps up at 250 kt"},

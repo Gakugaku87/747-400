@@ -474,6 +474,16 @@ function clb_nores_setSpd()
     B747_schedule_updateIAS()
 
 end
+-- [review 17] The climb's limits at this altitude: the SPD REST below its altitude and the SPD TRANS below its (as
+-- clb_aptres and clb_spcres fly them, to 100 ft above); 999 above them.
+local function B747_climb_speed_limit_here()
+    local limit=999
+    local restAlt,restSpd=tonumber(getFMSData("clbrestalt")),tonumber(getFMSData("clbrestspd"))
+    if restAlt~=nil and restSpd~=nil and simDR_pressureAlt1<restAlt+100 then limit=math.min(limit,restSpd) end
+    local transAlt,transSpd=tonumber(getFMSData("spdtransalt")),tonumber(getFMSData("transpd"))
+    if transAlt~=nil and transSpd~=nil and simDR_pressureAlt1<transAlt+100 then limit=math.min(limit,transSpd) end
+    return limit
+end
 function clb_crz_setSpd()
     -- crzspd is the ECON cruise Mach the FMC keeps current from the shared
     -- performance model (B747_updateEconClimbSpeed), or the crew-selected
@@ -492,7 +502,11 @@ function clb_crz_setSpd()
         local levelCas=vnav_afds_helpers.mach_to_cas(spdval/100, levelFt)
         if levelCas~=nil and not vnav_afds_helpers.climb_speed_uses_mach(levelCas, spdval/100, simDR_pressureAlt1,
             simDR_airspeed_mach, simDR_autopilot_airspeed_is_mach) then
-            levelCas=math.floor(levelCas+0.5)
+            -- capped as the climb's own CAS: the SPD REST and SPD TRANS below their altitudes, the route's constraint
+            -- speed and the flaps' (with a transition altitude of 3,000 ft the climb back from 8,000 ft after a descent
+            -- in FLCH flew 301 kt below 10,000 ft, under a 270 kt constraint 301: a review)
+            levelCas=B747_constraint_speed_cap(modFlapSpeed(math.min(math.floor(levelCas+0.5),
+                B747_climb_speed_limit_here())))
             print("cruise speed below the cruise level: its CAS ".. levelCas)
             B747_set_vnav_speed_target(0, math.min(399.0, levelCas))
             B747_schedule_updateIAS()
@@ -657,6 +671,11 @@ function B747_vnav_setClimbspeed()
     local levelFt=tonumber(vnavSPD_state["cruiseLevelFt"])
     if vnavSPD_state["cruisePhase"] and levelFt~=nil and simDR_pressureAlt1<levelFt-500 then
         nextAlt=math.min(nextAlt,levelFt-500)
+        -- so are the SPD REST and SPD TRANS altitudes below them (B747_climb_speed_limit_here)
+        local restAlt=tonumber(getFMSData("clbrestalt"))
+        if restAlt~=nil and simDR_pressureAlt1<restAlt+100 then nextAlt=math.min(nextAlt,restAlt+100) end
+        local transAlt=tonumber(getFMSData("spdtransalt"))
+        if transAlt~=nil and simDR_pressureAlt1<transAlt+100 then nextAlt=math.min(nextAlt,transAlt+100) end
     end
     local transalt=tonumber(getFMSData("transalt"))
     if vnavSPD_state["setBaro"]==false and nextAlt>transalt and simDR_pressureAlt1<=transalt then
