@@ -78,8 +78,8 @@ end
 local TAS = 300 * 0.514444 * 1.6         -- 300 kt IAS at FL310, m/s
 
 -- Drive the dampers through motion(t) -> {bank, rate (deg/s), beta (deg)} at fps frames a second (IAS 300 kt,
--- FL310, or opts.ias and opts.tas, m/s), the heading following the yaw rate. Returns the upper damper's output each
--- frame.
+-- FL310, or opts.ias and opts.tas, m/s; on the ground with opts.on_ground), the heading following the yaw rate.
+-- Returns the upper damper's output each frame.
 local function fly(motion, seconds, fps, opts)
     opts = opts or {}
     local ias, tas = opts.ias or 300, opts.tas or TAS
@@ -96,6 +96,7 @@ local function fly(motion, seconds, fps, opts)
         env.simDR_AHARS_heading_deg_pilot = heading
         env.simDR_sideslip = m.beta
         env.simDR_yaw_rate = m.rate
+        env.simDR_touchGround = opts.on_ground and 1 or 0
         env.simDR_ind_airspeed_kts_pilot, env.simDR_ias_pilot, env.simDR_TAS_mps = ias, ias, tas
         env.B747DR_autopilot_altitude_ft_pfd = 31000
         env.flight_controls_override()
@@ -204,6 +205,20 @@ out = fly(slow_roll, 20, 30, {ias = 160, tas = slow_tas})
 lo, hi = extremes(out, "u")
 check(math.max(-lo, hi) <= 0.03, string.format(
     "rolling into a 30 deg turn at 160 kt the output stays within 0.03 (%.3f..%.3f)", lo, hi))
+
+-- 3c. On the ground no rudder from the dampers: taxi turns at 1, 3 and 5 deg/s at 15 kt and a heading correction of
+-- +-0.5 deg/s on the takeoff roll at 120 kt. Below 50 m/s there is no coordinated turn to take away and the gain is at
+-- its largest: the taxi turns drove the output to -0.90, -1.0 and -1.0 (the whole +-3.5 deg of rudder), the
+-- correction to -0.46 against the steering (a review).
+for _, c in ipairs({{1, 15}, {3, 15}, {5, 15}, {0.5, 120}}) do
+    local taxi = c[2] < 50
+    out = fly(function(t)
+        return {bank = 0, rate = taxi and math.min(c[1], c[1] * t / 2) or c[1] * math.sin(2 * math.pi * t / 6), beta = 0}
+    end, 12, 30, {ias = c[2], tas = c[2] * 0.514444, on_ground = true})
+    lo, hi = extremes(out, "u")
+    check(math.max(-lo, hi) <= 0.01, string.format("on the ground at %d kt, a yaw rate of %s%.1f deg/s: no rudder (%.3f..%.3f)",
+        c[2], taxi and "" or "+-", c[1], lo, hi))
+end
 
 -- 4. A steady 20 deg turn: no rudder from the dampers once the turn is steady (the yaw rate washed out).
 local steady = function() return {bank = 20, rate = turn_rate(20), beta = 0} end

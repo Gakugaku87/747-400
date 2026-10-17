@@ -1165,10 +1165,19 @@ end
 -- deviation from its 0.9 s mean (below), cleared its memory at each switch, acted one way only below 5 deg and
 -- differentiated an input held for 0.03 s: in TST744L its output jumped up to 0.29 at the 5 deg crossings, and with
 -- a ~5 s oscillation of +-19 deg of bank it moved with the yaw rate (pumping it; p9-L1, 62 min).
+-- On the ground the dampers keep no rudder and their filter starts again at lift-off: below 50 m/s there is no
+-- coordinated turn to take away and the gain is at its largest, so taxi turns of 1-5 deg/s drove them to -0.9 to -1
+-- (the whole +-3.5 deg of rudder) and a heading correction of 0.5 deg/s on the takeoff roll at 120 kt to -0.46,
+-- against the steering (a review; whether the 747-400's yaw dampers act on the ground is not settled here).
 local yawDamperState={}
 function yaw_damper_system()
-    local command=B747_afds_controls.yaw_damper_command(yawDamperState,simDR_yaw_rate,
-        simDR_AHARS_roll_heading_deg_pilot,simDR_TAS_mps,simDR_ind_airspeed_kts_pilot,simDRTime)
+    local command=0
+    if simDR_touchGround==1 then
+        yawDamperState={}
+    else
+        command=B747_afds_controls.yaw_damper_command(yawDamperState,simDR_yaw_rate,
+            simDR_AHARS_roll_heading_deg_pilot,simDR_TAS_mps,simDR_ind_airspeed_kts_pilot,simDRTime)
+    end
     B747DR_yaw_damper_upr=B747_afds_controls.yaw_damper_slew(B747DR_yaw_damper_upr,
         B747DR_yaw_damper_upr_on==1 and command or 0,SIM_PERIOD)
     B747DR_yaw_damper_lwr=B747_afds_controls.yaw_damper_slew(B747DR_yaw_damper_lwr,
