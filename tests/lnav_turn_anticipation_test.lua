@@ -1332,6 +1332,32 @@ do
         string.format("LNAV armed parallel to the leg into a +30 deg fix, 2.6 nm inside, engaging as the fix is sequenced abeam: %s, %.2f nm through the next leg (0.1), %.0f deg of turning (45)",
         out.engaged and string.format("engaged at %.0f s", out.engaged.t) or "never", through, out.turned))
 end
+-- A leg flown direct to its fix (here from VECTORS) runs from where the 747 was when the fix became active: with
+-- LNAV off it is sequenced abeam the fix, past that leg's wayline, like any leg. HDG SEL 000 from 20 nm before FIX
+-- and 1.2 nm east passes it 1.2 nm abeam: FIX sequenced there. Judged by the distance only (within 0.3 or 0.5 nm),
+-- FIX stayed active once passed, and LNAV pushed then engaged at once and turned back to it (after EIDW's "(650)" a
+-- 747 passing DW128 0.75-1.24 nm off turned up to 180 deg back: a review).
+do
+    local lat0, lon0 = 52, -12
+    local fix_lat, fix_lon = probe.movePoint(lat0, lon0, 40, 0)
+    local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, 40, 60)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("VECTORS", lat0, lon0), E("FIX", fix_lat, fix_lon),
+        E("NEXT", next_lat, next_lon), E("DEST", next_lat + 1, next_lon, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(fix_lat, fix_lon, 20, 180)
+    s_lat, s_lon = probe.movePoint(s_lat, s_lon, 1.2, 90)
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 22 / 250 * 3600, arm_at_s = 1e9})
+    local at = nil
+    for _, sw in ipairs(out.switches) do
+        if sw.from == 3 then
+            at = probe.getDistance(fix_lat, fix_lon, sw.lat, sw.lon) * math.cos(math.rad(
+                probe.getHeading(fix_lat, fix_lon, sw.lat, sw.lon)))
+        end
+    end
+    check(at ~= nil and math.abs(at) <= 0.5, string.format(
+        "LNAV off on a leg flown direct to FIX from VECTORS, passing it 1.2 nm abeam: FIX sequenced %s",
+        at and string.format("%.2f nm %s abeam it", math.abs(at), at < 0 and "before" or "past") or "never"))
+end
 -- the leg flown direct (from VECTORS) or the 747's own direct-to: engaged at once as before (a leg from where the
 -- 747 is); on the runway armed, engaged above 50 ft
 do

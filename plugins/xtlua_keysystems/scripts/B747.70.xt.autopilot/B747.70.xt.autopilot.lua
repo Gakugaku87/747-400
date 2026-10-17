@@ -2445,9 +2445,11 @@ end
 -- B747_getCurrentWayPoint_function). Noted only on that first call, a fix sequenced abeam while LNAV was armed was
 -- taken for one sequenced with LNAV engaged when LNAV engaged in the same frame (within 2.5 nm of the leg after it),
 -- and its arc flown: +30 deg, 2.6 nm inside at 480 kt, 0.92 nm through the leg after it, 63 deg of turning (a review).
-local lnavSequenced={current=0,engaged=false}
+-- Where the 747 was then is noted too: where a leg flown direct to that fix starts (B747_lnav_passed_abeam).
+local lnavSequenced={current=0,engaged=false,lat=0,lon=0}
 local function B747_lnav_note_sequenced(current)
 	lnavSequenced.current,lnavSequenced.engaged=current,B747DR_ap_lnav_state==2
+	lnavSequenced.lat,lnavSequenced.lon=simDR_latitude,simDR_longitude
 end
 local function B747_lnav_sequenced_engaged(current)
 	if lnavSequenced.current~=current then B747_lnav_note_sequenced(current) end
@@ -2771,8 +2773,11 @@ end
 -- of the leg (Honeywell's FMC in heading mode keeps track of the active leg within 21 nm of the path and makes the
 -- next leg active as the aircraft passes the wayline: US 7,024,287), not at the turn's lead, which LNAV flies only
 -- while it steers. On the leg that is at the fix, where the turn's bisector crosses it; 15 nm off, abeam the fix; 25 nm
--- off, never. A leg flown direct to its fix (no course from a fix: after VECTORS, an altitude leg's end, a hold) is
--- passed as the anticipation passes it, without the lead. In HDG SEL along the leg to a +90 deg turn at 480 kt (its
+-- off, never. A leg flown direct to its fix (no course from a fix: after VECTORS, an altitude leg's end, a hold) runs
+-- from where the 747 was when the fix became active (B747_lnav_note_sequenced: where the altitude was reached...), as
+-- a real DF leg from where it began: its wayline that leg's (passed only within 0.3 or 0.5 nm, a fix passed 0.75-1.24 nm
+-- off stayed active, and LNAV pushed then turned back to it: a review); without such a start, as the anticipation
+-- passes it, without the lead. In HDG SEL along the leg to a +90 deg turn at 480 kt (its
 -- lead 9.7 nm) the FMC sequenced the fix 2.8 nm before it, once the 747 was 2 nm off the turn's arc (6.1 nm before it
 -- 1.5 nm left of the leg), and LNAV pushed then had a leg starting ahead of the 747 to capture.
 local LNAV_ABEAM_SEQUENCE_MAX_NM=21
@@ -2781,7 +2786,11 @@ local function B747_lnav_passed_abeam(fmsO,i)
 	local legStart=B747_lnav_leg_start(fmsO,i)
 	local inCourse,directTo=B747_lnav_inbound_course(fmsO,i)
 	local dToFix=getDistance(simDR_latitude,simDR_longitude,fix[5],fix[6])
-	if directTo or not B747_lnav_leg_has_course(legStart,fix) then
+	if directTo and lnavSequenced.current==i
+		and getDistance(lnavSequenced.lat,lnavSequenced.lon,fix[5],fix[6])>=LNAV_PATH_MIN_LEG_NM then
+		legStart={0,0,0,0,lnavSequenced.lat,lnavSequenced.lon}
+		inCourse=(getHeading(fix[5],fix[6],legStart[5],legStart[6])+180)%360
+	elseif directTo or not B747_lnav_leg_has_course(legStart,fix) then
 		local trackError=math.abs(getHeadingDifference(getHeading(simDR_latitude,simDR_longitude,fix[5],fix[6]),
 			simDR_ground_track_true))
 		return (trackError<=LNAV_DIRECT_TO_TRACK_DEG and dToFix<=LNAV_DIRECT_TO_PASS_NM)
