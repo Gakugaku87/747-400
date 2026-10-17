@@ -1525,9 +1525,14 @@ function fmsFunctions.setdata(fmsO,value)
 			else
 				fmsO["notify"]="INVALID CRZ ALT"
 			end
+		elseif del then
+			-- CRZ ALT is not deleted, as the FMC does (an entry replaces it): with CRZ ALT 0 in the climb VNAV
+			-- flew the cruise Mach .81 from FL205, 400 KCAS (a review)
+			fmsO["notify"]="INVALID DELETE"
 		else
-			fmsModules:setData("crzalt","")
-			B747BR_cruiseAlt=0
+			-- an empty press copies it to the scratchpad (nothing without one)
+			local crz=tostring(getFMSData("crzalt") or "")
+			if string.find(crz,"%d") then fmsO["scratchpad"]=string.gsub(crz,"%s","") end
 		end	
 	end
 	--[[if string.len(fmsO["scratchpad"])>0 then

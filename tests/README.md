@@ -32,7 +32,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   native entry and INVALID ENTRY cleared before typing, a refused value kept
   in the 747 with `laminar/B747/fms/crzalt_sync_fault` and a delayed CDU
   message instead of being put back, 31237 accepted as FL312 without
-  re-entry, the CDU CRZ ALT entry (33000, 330 or FL330) sent as FL330, and
+  re-entry, the CDU CRZ ALT entry (33000, 330 or FL330) sent as FL330, CRZ
+  ALT not deleted (DELETE gives INVALID DELETE, an empty press copies it to
+  the scratchpad), and
   the cruise climb 2 s after the ALT push skipped when CRZ ALT is back at the
   level flown or T/D is within 50 NM.
 - `takeoff_ref_thrust_reduction_test.lua`: the TAKEOFF REF THR REDUCTION
