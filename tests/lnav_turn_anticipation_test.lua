@@ -1565,6 +1565,23 @@ end
 local function fix_switch_nm(o)
     for _, sw in ipairs(o.switches) do if sw.from == 3 then return sw.nm end end
 end
+-- [review 17] A turn of 150 to about 159 deg has no straight line between its arcs (the first arc closes on the
+-- outbound leg at less than 45 deg): past the first arc's end the straight line of no length and that end were as near,
+-- the first arc was kept and the aim stood still; the 747 flew over it and circled (+-150.5 deg at 250 kt: 1348-1687
+-- deg of turning, NEXT never reached; a review). +150.5, +153 and -158 deg at 250 kt, LNAV engaged on the leg 30 nm
+-- before the fix: within 700 s FIX sequenced, at most 300 deg of turning and on the leg after it within 0.5 nm.
+for _, turn in ipairs({150.5, 153, -158}) do
+    route = capped_route(turn, 60, 40)
+    local s_lat, s_lon = probe.movePoint(route[3][5], route[3][6], 30, 180)
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 700})
+    local last = out.track[#out.track]
+    local off = math.abs(afds.signed_cross_track_nm(route[3][5], route[3][6], route[4][5], route[4][6], last.lat,
+        last.lon, probe.getDistance, probe.getHeading))
+    check(fix_switch_nm(out) ~= nil and out.turned <= 300 and off <= 0.5, string.format(
+        "%+.1f deg at 250 kt, LNAV on the leg: FIX sequenced (%s), %.0f deg of turning (300), %.2f nm off the leg after it (0.5)",
+        turn, tostring(fix_switch_nm(out) ~= nil), out.turned, off))
+end
 -- LNAV armed 1.5 nm inside the leg into a +170 deg fix 14 nm before it, and into a +174 deg one 20 nm before it: the
 -- fix sequenced where the path crosses its bisector, 7.6 and 8.0 nm before it, not at once (inside the leg the 747 was
 -- taken for one on the path's outbound side past the bisector: 14.1 and 20.1 nm before the fix; a review).

@@ -329,11 +329,14 @@ local function capped_path_at(east_nm, north_nm, course_in_deg, course_out_deg, 
         first = math.max(1, math.min(#elements, math.floor(tonumber(min_element))))
         last = first + 1
     end
+    -- as near to two elements, the later: below about 159 deg the straight line has no length, and past the first
+    -- arc's end it and that end were as near; keeping the arc, the aim stood still and the 747 circled over it (a
+    -- review)
     local best, start, nearest = math.huge, 0, nil
     for i, el in ipairs(elements) do
         if i >= first and i <= last then
             local d, a, x, course = view(el)
-            if d < best then best, nearest = d, {i = i, along = (i == 1) and a or start + a, xtk = x, course = course} end
+            if d <= best then best, nearest = d, {i = i, along = (i == 1) and a or start + a, xtk = x, course = course} end
         end
         if i > 1 then start = start + length(el) end
     end
