@@ -2445,14 +2445,33 @@ end
 -- B747_getCurrentWayPoint_function). Noted only on that first call, a fix sequenced abeam while LNAV was armed was
 -- taken for one sequenced with LNAV engaged when LNAV engaged in the same frame (within 2.5 nm of the leg after it),
 -- and its arc flown: +30 deg, 2.6 nm inside at 480 kt, 0.92 nm through the leg after it, 63 deg of turning (a review).
--- Where the 747 was then is noted too: where a leg flown direct to that fix starts (B747_lnav_passed_abeam).
-local lnavSequenced={current=0,engaged=false,lat=0,lon=0}
-local function B747_lnav_note_sequenced(current)
-	lnavSequenced.current,lnavSequenced.engaged=current,B747DR_ap_lnav_state==2
-	lnavSequenced.lat,lnavSequenced.lon=simDR_latitude,simDR_longitude
+-- Where the 747 was then is noted too: where a leg flown direct to that fix starts (B747_lnav_passed_abeam). Noted
+-- with the fix's position (fixLat, fixLon; nil as B747_lnav_sequence_to notes it, completed on the next call), and
+-- again when another fix takes the active one's place at its index (a route edit), and not a position of 0/0 (XTLua's
+-- first read after a script reload): the leg ran from where the 747 was when the fix before became active, or from
+-- 0N 0E, and the fix was sequenced 8.9 or 2.1 nm off its wayline (a review).
+local lnavSequenced={current=0,engaged=false,lat=nil,lon=nil,fixLat=nil,fixLon=nil}
+local function B747_lnav_note_position()
+	if simDR_latitude~=0 or simDR_longitude~=0 then
+		lnavSequenced.lat,lnavSequenced.lon=simDR_latitude,simDR_longitude
+	else
+		lnavSequenced.lat,lnavSequenced.lon=nil,nil
+	end
 end
-local function B747_lnav_sequenced_engaged(current)
-	if lnavSequenced.current~=current then B747_lnav_note_sequenced(current) end
+local function B747_lnav_note_sequenced(current,fix)
+	lnavSequenced.current,lnavSequenced.engaged=current,B747DR_ap_lnav_state==2
+	lnavSequenced.fixLat,lnavSequenced.fixLon=fix and fix[5],fix and fix[6]
+	B747_lnav_note_position()
+end
+local function B747_lnav_sequenced_engaged(fmsO,current)
+	local fix=fmsO[current]
+	if lnavSequenced.current~=current or (fix~=nil and lnavSequenced.fixLat~=nil
+		and (lnavSequenced.fixLat~=fix[5] or lnavSequenced.fixLon~=fix[6])) then
+		B747_lnav_note_sequenced(current,fix)
+	else
+		if fix~=nil and lnavSequenced.fixLat==nil then lnavSequenced.fixLat,lnavSequenced.fixLon=fix[5],fix[6] end
+		if lnavSequenced.lat==nil then B747_lnav_note_position() end
+	end
 	return lnavSequenced.engaged
 end
 
@@ -2632,7 +2651,7 @@ local function B747_lnav_arc_before_flown(fmsO,k,current,path)
 	local before=fmsO[k]
 	if lnavArcBefore.current~=current or lnavArcBefore.lat~=before[5] or lnavArcBefore.lon~=before[6] then
 		local _,noFlyBy=B747_lnav_fix_before(fmsO,k)
-		local turnFlown=not noFlyBy and B747_lnav_sequenced_engaged(current)
+		local turnFlown=not noFlyBy and B747_lnav_sequenced_engaged(fmsO,current)
 		lnavArcBefore.current,lnavArcBefore.lat,lnavArcBefore.lon=current,before[5],before[6]
 		local onPath=math.abs(path.xtk_nm)<=LNAV_PATH_ON_LEG_NM
 			and math.abs(getHeadingDifference(simDR_ground_track_true,path.course_deg))<=LNAV_PATH_ON_LEG_DEG
@@ -2786,7 +2805,7 @@ local function B747_lnav_passed_abeam(fmsO,i)
 	local legStart=B747_lnav_leg_start(fmsO,i)
 	local inCourse,directTo=B747_lnav_inbound_course(fmsO,i)
 	local dToFix=getDistance(simDR_latitude,simDR_longitude,fix[5],fix[6])
-	if directTo and lnavSequenced.current==i
+	if directTo and lnavSequenced.current==i and lnavSequenced.lat~=nil
 		and getDistance(lnavSequenced.lat,lnavSequenced.lon,fix[5],fix[6])>=LNAV_PATH_MIN_LEG_NM then
 		legStart={0,0,0,0,lnavSequenced.lat,lnavSequenced.lon}
 		inCourse=(getHeading(fix[5],fix[6],legStart[5],legStart[6])+180)%360
@@ -2808,7 +2827,7 @@ end
 function B747_getCurrentWayPoint_function(fmsO)
 	local current=B747DR_fmscurrentIndex
 	local count=table.getn(fmsO)
-	B747_lnav_sequenced_engaged(current)
+	B747_lnav_sequenced_engaged(fmsO,current)
 	-- the end of an altitude-terminated leg is reached at its altitude: X-Plane, whose sequencing the
 	-- 747 overrides, keeps that point just ahead of the aircraft after it
 	if current<count and B747_altitude_leg_reached(fmsO[current]) then

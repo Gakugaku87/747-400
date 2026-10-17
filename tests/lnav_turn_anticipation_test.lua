@@ -1358,6 +1358,56 @@ do
         "LNAV off on a leg flown direct to FIX from VECTORS, passing it 1.2 nm abeam: FIX sequenced %s",
         at and string.format("%.2f nm %s abeam it", math.abs(at), at < 0 and "before" or "past") or "never"))
 end
+-- The start of such a leg is noted with its fix: not a position of 0/0, XTLua's first read after a script reload (the
+-- leg ran from 0N 0E), and again when another fix takes the active one's place at the same index (a route edit: the
+-- leg ran from where the 747 was when the fix before it became active: a review). HDG SEL 000 with LNAV off from 20 nm
+-- before FIX and 10 nm east: FIX sequenced where the 747 crosses the wayline of the leg from there.
+local function direct_leg_switch(setup)
+    local lat0, lon0 = 52, -12
+    local fix_lat, fix_lon = probe.movePoint(lat0, lon0, 40, 0)
+    local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, 40, 60)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("VECTORS", lat0, lon0), E("FIX", fix_lat, fix_lon),
+        E("NEXT", next_lat, next_lon), E("DEST", next_lat + 1, next_lon, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(fix_lat, fix_lon, 20, 180)
+    s_lat, s_lon = probe.movePoint(s_lat, s_lon, 10, 90)
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 36 / 250 * 3600, arm_at_s = 1e9, setup = function(env)
+            env.simDR_pressureAlt1, env.simDR_radarAlt1, env.simDR_vvi_fpm_pilot = 5000, 5000, 0
+            env.simDR_groundspeed, env.simDR_TAS_mps, env.simDR_true_heading = 250 * KT, 250 * KT, 0
+            setup(env, route, s_lat, s_lon)
+        end})
+    local in_course = (probe.getHeading(fix_lat, fix_lon, s_lat, s_lon) + 180) % 360
+    for _, sw in ipairs(out.switches) do
+        if sw.from == 3 then
+            return probe.getDistance(fix_lat, fix_lon, sw.lat, sw.lon) * math.cos(math.rad(
+                probe.getHeading(fix_lat, fix_lon, sw.lat, sw.lon) - in_course))
+        end
+    end
+end
+do
+    -- XTLua's first frame after a reload reads the position 0/0
+    local at = direct_leg_switch(function(env, r)
+        for i = 1, #r do r[i][10] = (i == 3) end
+        env.simDR_latitude, env.simDR_longitude, env.simDR_ground_track_true = 0, 0, 0
+        env.B747_getCurrentWayPoint_function(r)
+    end)
+    check(at ~= nil and math.abs(at) <= 0.5, string.format(
+        "a leg flown direct to FIX, the first read 0/0, passing FIX 10 nm off: sequenced %s the wayline of the leg from the first position (0.5)",
+        at and string.format("%.2f nm %s", math.abs(at), at < 0 and "before" or "past") or "never at"))
+    -- before the edit another fix was active at index 3, made so 20 nm west of where the 747 is
+    at = direct_leg_switch(function(env, r, lat, lon)
+        local before = {}
+        for i = 1, #r do before[i] = r[i] end
+        before[3] = E("OTHER", probe.movePoint(r[3][5], r[3][6], 3, 270))
+        for i = 1, #before do before[i][10] = (i == 3) end
+        env.simDR_latitude, env.simDR_longitude = probe.movePoint(lat, lon, 20, 270)
+        env.simDR_ground_track_true = 0
+        env.B747_getCurrentWayPoint_function(before)
+    end)
+    check(at ~= nil and math.abs(at) <= 0.5, string.format(
+        "the active fix replaced at its index (a route edit) on a leg flown direct, passed 10 nm off: sequenced %s the wayline of the leg from the edit (0.5)",
+        at and string.format("%.2f nm %s", math.abs(at), at < 0 and "before" or "past") or "never at"))
+end
 -- the leg flown direct (from VECTORS) or the 747's own direct-to: engaged at once as before (a leg from where the
 -- 747 is); on the runway armed, engaged above 50 ft
 do

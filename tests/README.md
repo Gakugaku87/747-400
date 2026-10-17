@@ -348,7 +348,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   at the fix, 15 nm off abeam it and 25 nm off never (480 kt, +90 deg at the
   fix, its lead 9.7 nm); a leg flown direct to its fix
   (from VECTORS) from where the 747 was when the fix became active, so a fix
-  passed 1.2 nm off is sequenced abeam it (not only within 0.3 or 0.5 nm).
+  passed 1.2 nm off is sequenced abeam it (not only within 0.3 or 0.5 nm),
+  that start noted with the fix (again when a route edit puts another fix at
+  the active index) and not at 0/0 (XTLua's first read after a reload).
 - `lnav_xtk_error_test.lua`: LNAV's cross-track error every frame - the signed
   distance from the active leg (+ right) mid-leg on both sides and near its
   end, from the offset track while an offset is flown (not after a
