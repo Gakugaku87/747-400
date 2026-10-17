@@ -1301,6 +1301,37 @@ do
     check(at == nil, string.format("LNAV off 25 nm left of the leg to NEXT: NEXT not sequenced passing abeam it (%s)",
         at and string.format("sequenced %.1f nm along", at) or "not sequenced"))
 end
+-- LNAV armed with HDG SEL parallel to the leg into a +30 deg fix B at 480 kt, 2.6 nm inside the turn: B sequenced
+-- abeam it (LNAV not engaged), and LNAV engaging there in the same frame (within 2.5 nm of the leg after B) flies
+-- that leg, not B's arc, which LNAV did not fly. Noted on the first call after the change of fix, B was taken for
+-- one sequenced with LNAV engaged: 0.92 nm through the leg after B and 63 deg of turning (a review).
+do
+    local a_lat, a_lon = 50, -10
+    local b_lat, b_lon = probe.movePoint(a_lat, a_lon, 60, 0)
+    local c_lat, c_lon = probe.movePoint(b_lat, b_lon, 60, 30)
+    local d_lat, d_lon = probe.movePoint(c_lat, c_lon, 60, 30)
+    route = {E("ORIG", 49, -10, 0, 1), E("A", a_lat, a_lon), E("B", b_lat, b_lon), E("C", c_lat, c_lon),
+        E("D", d_lat, d_lon), E("DEST", d_lat + 1, d_lon, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(b_lat, b_lon, 25, 180)
+    s_lat, s_lon = probe.movePoint(s_lat, s_lon, 2.6, 90)
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 480, alt_ft = 31000,
+        loop = "cruise", seconds = 600, armed = true})
+    local function bc_xtk(lat, lon)
+        return afds.signed_cross_track_nm(b_lat, b_lon, c_lat, c_lon, lat, lon, probe.getDistance, probe.getHeading)
+    end
+    local x0, through, turned, last_heading = nil, 0, 0, nil
+    for _, q in ipairs(out.track) do
+        if out.engaged and q.t >= out.engaged.t then
+            local x = bc_xtk(q.lat, q.lon)
+            x0 = x0 or x
+            if x * x0 < 0 then through = math.max(through, math.abs(x)) end
+        end
+    end
+    local last = out.track[#out.track]
+    check(out.engaged ~= nil and through <= 0.1 and out.turned <= 45 and math.abs(bc_xtk(last.lat, last.lon)) <= 0.1,
+        string.format("LNAV armed parallel to the leg into a +30 deg fix, 2.6 nm inside, engaging as the fix is sequenced abeam: %s, %.2f nm through the next leg (0.1), %.0f deg of turning (45)",
+        out.engaged and string.format("engaged at %.0f s", out.engaged.t) or "never", through, out.turned))
+end
 -- the leg flown direct (from VECTORS) or the 747's own direct-to: engaged at once as before (a leg from where the
 -- 747 is); on the runway armed, engaged above 50 ft
 do

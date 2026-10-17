@@ -2440,7 +2440,22 @@ local function B747_lnav_inbound_course(fmsO,i)
 	return (getHeading(fix[5],fix[6],legStart[5],legStart[6])+180)%360,false,false
 end
 
+-- [P14] Whether LNAV was engaged when the active fix became fmsO[current]: noted as B747_lnav_sequence_to sequences
+-- it, else on the first call after another change of the active fix (every frame from
+-- B747_getCurrentWayPoint_function). Noted only on that first call, a fix sequenced abeam while LNAV was armed was
+-- taken for one sequenced with LNAV engaged when LNAV engaged in the same frame (within 2.5 nm of the leg after it),
+-- and its arc flown: +30 deg, 2.6 nm inside at 480 kt, 0.92 nm through the leg after it, 63 deg of turning (a review).
+local lnavSequenced={current=0,engaged=false}
+local function B747_lnav_note_sequenced(current)
+	lnavSequenced.current,lnavSequenced.engaged=current,B747DR_ap_lnav_state==2
+end
+local function B747_lnav_sequenced_engaged(current)
+	if lnavSequenced.current~=current then B747_lnav_note_sequenced(current) end
+	return lnavSequenced.engaged
+end
+
 local function B747_lnav_sequence_to(index, why)
+	B747_lnav_note_sequenced(index)
 	B747DR_fms_setCurrent=index
 	B747DR_fmscurrentIndex=index
 	if B747DR_ap_lnav_state==2 then
@@ -2610,15 +2625,6 @@ end
 -- off, 2.0 nm). Decided once for each fix flown to.
 local LNAV_PATH_ON_LEG_NM=0.1
 local LNAV_PATH_ON_LEG_DEG=5
--- Whether LNAV was engaged when the active fix became fmsO[current] (the first call for it, every frame from
--- B747_getCurrentWayPoint_function)
-local lnavSequenced={current=0,engaged=false}
-local function B747_lnav_sequenced_engaged(current)
-	if lnavSequenced.current~=current then
-		lnavSequenced.current,lnavSequenced.engaged=current,B747DR_ap_lnav_state==2
-	end
-	return lnavSequenced.engaged
-end
 local lnavArcBefore={current=0,lat=0,lon=0,flown=false}
 local function B747_lnav_arc_before_flown(fmsO,k,current,path)
 	local before=fmsO[k]
