@@ -312,6 +312,28 @@ for _, c in ipairs({{flap = 0, ias = 250, want = 250, name = "flaps up at 250 kt
         tostring(dial), is_mach == 1 and " (Mach)" or " kt", c.want))
 end
 runtime.simDR_flap_ratio_control, runtime.B747DR_ap_FMA_active_pitch_mode = 0, 0
+-- the approach (G/S, flight phase 4) and TOGA end it themselves, also above the transition altitude (here 3,000 ft,
+-- the descent in FLCH and the approach above it): each alone, the other not there (with the approach below the
+-- transition altitude the cases above pass without either)
+fms_data.transalt = "3000"
+for _, c in ipairs({{phase = 4, pitch = 0, name = "the G/S captured"}, {phase = 3, pitch = 1, name = "TOGA"}}) do
+    cruise_at_fl310()
+    runtime.B747DR_ap_vnav_state, runtime.B747DR_ap_flightPhase, runtime.simDR_pressureAlt1 = 0, 3, 12000
+    runtime.B747_vnav_speed()
+    runtime.B747DR_ap_flightPhase, runtime.B747DR_ap_FMA_active_pitch_mode = c.phase, c.pitch
+    runtime.simDR_pressureAlt1 = 3500
+    runtime.B747_vnav_speed()
+    runtime.B747DR_ap_FMA_active_pitch_mode, runtime.B747DR_ap_vnav_state, runtime.B747DR_ap_flightPhase = 4, 2, 1
+    runtime.simDR_flap_ratio_control, runtime.simDR_ind_airspeed_kts_pilot, runtime.simDR_pressureAlt1 = 0, 250, 4000
+    runtime.simDR_airspeed_mach, runtime.simDR_autopilot_airspeed_is_mach = 250 / 600, 0
+    runtime.B747DR_ap_ias_dial_value, runtime.simDR_autopilot_airspeed_kts_mach = 180, 180
+    is_mach, dial = climb_speed("go-around, VNAV pushed")
+    assert(is_mach == 0 and dial == 250, string.format(
+        "a climb in VNAV at 4,000 ft after %s at 3,500 ft (transition altitude 3,000 ft) flew %s%s, not 250 kt", c.name,
+        tostring(dial), is_mach == 1 and " (Mach)" or " kt"))
+end
+fms_data.transalt = "18000"
+runtime.B747DR_ap_FMA_active_pitch_mode = 0
 -- CRZ ALT deleted in the climb (B744.fms.pages: B747BR_cruiseAlt 0) and entered again: still the climb speed
 runtime.simDR_onGround, runtime.simDR_pressureAlt1 = 1, 50
 climb_speed("on the ground")
