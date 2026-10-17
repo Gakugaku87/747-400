@@ -293,9 +293,12 @@ The audit regressions load production Lua code with mocked simulator interfaces:
 - `yaw_damper_test.lua`: the yaw dampers (item B-10) driven frame by frame
   through the production flight_controls_override with a Dutch-roll-like
   yaw motion wings level and at +-19 deg of bank (p9-L1's 5.1 s, yaw rate
-  +-2.4 deg/s), a roll-in through 5 deg of bank and a steady 20 deg turn:
-  the output opposes the yaw rate both ways at every bank, does not jump as
-  the bank crosses 5 deg, fades out in the steady turn, is the same at 20,
+  +-2.4 deg/s), a roll-in through 5 deg of bank and a steady 20 deg turn
+  (the yaw rate X-Plane's body axes', g sin(bank) / TAS in a coordinated
+  turn): the output opposes the yaw rate both ways at every bank, does not
+  jump as the bank crosses 5 deg, puts no rudder into a coordinated roll-in
+  to 30 deg at 160 kt (within 0.03), fades out in the steady turn, is the
+  same at 20,
   30 and 60 fps and stays within +-1, both dampers alike; and in a Dutch
   roll model (5.1 s, bare damping 0.03, rudder effect 0.2-0.6 rad/s2 per
   rad) three cycles take 2 deg of sideslip below 35 % with the dampers and

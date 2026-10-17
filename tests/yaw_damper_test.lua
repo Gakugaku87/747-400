@@ -78,8 +78,11 @@ end
 local TAS = 300 * 0.514444 * 1.6         -- 300 kt IAS at FL310, m/s
 
 -- Drive the dampers through motion(t) -> {bank, rate (deg/s), beta (deg)} at fps frames a second (IAS 300 kt,
--- FL310), the heading following the yaw rate. Returns the upper damper's output each frame.
-local function fly(motion, seconds, fps)
+-- FL310, or opts.ias and opts.tas, m/s), the heading following the yaw rate. Returns the upper damper's output each
+-- frame.
+local function fly(motion, seconds, fps, opts)
+    opts = opts or {}
+    local ias, tas = opts.ias or 300, opts.tas or TAS
     local env = new_runtime()
     local dt = 1 / fps
     local heading = 90
@@ -93,7 +96,7 @@ local function fly(motion, seconds, fps)
         env.simDR_AHARS_heading_deg_pilot = heading
         env.simDR_sideslip = m.beta
         env.simDR_yaw_rate = m.rate
-        env.simDR_ind_airspeed_kts_pilot, env.simDR_ias_pilot, env.simDR_TAS_mps = 300, 300, TAS
+        env.simDR_ind_airspeed_kts_pilot, env.simDR_ias_pilot, env.simDR_TAS_mps = ias, ias, tas
         env.B747DR_autopilot_altitude_ft_pfd = 31000
         env.flight_controls_override()
         out[#out + 1] = {t = t, u = env.B747DR_yaw_damper_upr, lower = env.B747DR_yaw_damper_lwr, rate = m.rate,
@@ -143,7 +146,10 @@ local function largest_step(w, seconds)
 end
 
 local OMEGA = 2 * math.pi / 5.1          -- p9-L1's oscillation, 5.1 s
-local function turn_rate(bank) return math.deg(9.80665 * math.tan(math.rad(bank)) / TAS) end
+-- X-Plane's yaw rate (sim/flightmodel/position/R) is the body axes': in a coordinated turn g sin(bank) / TAS (the
+-- heading's rate g tan(bank) / TAS, times cos(bank); recorded at 19.9 deg, FL310, 301 kt: 0.77-0.78 deg/s, g sin 0.78,
+-- g tan 0.83)
+local function turn_rate(bank, tas) return math.deg(9.80665 * math.sin(math.rad(bank)) / (tas or TAS)) end
 
 -- 1. A Dutch-roll-like yaw motion wings level (+-2 deg of bank, yaw rate +-1 deg/s): the output opposes the yaw rate,
 -- the same both ways.
@@ -185,6 +191,19 @@ end
 out = fly(roll_in, 10, 30)
 step = largest_step(window(out, 2.0, 4.5), 0.125)
 check(step <= 0.02, string.format("rolling in through 5 deg of bank the output moves at most 0.02 in 0.125 s (%.3f)", step))
+
+-- 3b. A roll-in to 30 deg at 3 deg/s at 160 kt (TAS 82 m/s), coordinated: no rudder into the turn. Taking the
+-- heading's rate for the coordinated turn the dampers put in up to +0.24 of their command (0.8 deg of rudder; a
+-- review).
+local slow_tas = 160 * 0.514444
+local slow_roll = function(t)
+    local bank = math.min(30, 3 * math.max(0, t - 1))
+    return {bank = bank, rate = turn_rate(bank, slow_tas), beta = 0}
+end
+out = fly(slow_roll, 20, 30, {ias = 160, tas = slow_tas})
+lo, hi = extremes(out, "u")
+check(math.max(-lo, hi) <= 0.03, string.format(
+    "rolling into a 30 deg turn at 160 kt the output stays within 0.03 (%.3f..%.3f)", lo, hi))
 
 -- 4. A steady 20 deg turn: no rudder from the dampers once the turn is steady (the yaw rate washed out).
 local steady = function() return {bank = 20, rate = turn_rate(20), beta = 0} end

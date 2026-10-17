@@ -461,7 +461,10 @@ end
 -- [B-10] The yaw dampers' law, both channels alike: the 747-400's Dutch roll damping and turn coordination. The rudder
 -- command (-1..1, the dampers' authority) is against the yaw rate less the yaw rate of a coordinated turn at this bank
 -- and true airspeed, washed out with YAW_DAMPER_WASHOUT_SEC so that a steady yaw rate keeps no rudder, at a gain that
--- rises as the indicated airspeed falls. One law at every bank, the same both ways, at any frame rate. state is a
+-- rises as the indicated airspeed falls. The yaw rate is X-Plane's body axes' (sim/flightmodel/position/R): a
+-- coordinated turn's is g sin(bank) / TAS (the heading's rate times cos(bank); recorded at 19.9 deg, FL310, 301 kt:
+-- 0.77-0.78 deg/s). Taking the heading's rate, g tan(bank) / TAS, the dampers put rudder into a roll-in (+0.24 of
+-- their command rolling into 30 deg at 160 kt; a review). One law at every bank, the same both ways, at any frame rate. state is a
 -- table the caller keeps; the first call, or one after a gap of more than a second, starts the filter (0).
 afds_controls.YAW_DAMPER_WASHOUT_SEC = 2.5
 afds_controls.YAW_DAMPER_GAIN_PER_DEG_SEC = 0.6      -- at 300 kt IAS: the full command at 1.7 deg/s
@@ -473,7 +476,7 @@ function afds_controls.yaw_damper_command(state, yaw_rate_dps, bank_deg, tas_mps
     local coordinated = 0
     if tas_mps ~= nil and tas_mps > 50 then
         local bank = math.max(-60, math.min(60, bank_deg or 0))
-        coordinated = math.deg(9.80665 * math.tan(math.rad(bank)) / tas_mps)
+        coordinated = math.deg(9.80665 * math.sin(math.rad(bank)) / tas_mps)
     end
     local input = (yaw_rate_dps or 0) - coordinated
     local dt = state.time ~= nil and time_s - state.time or nil
