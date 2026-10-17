@@ -298,6 +298,24 @@ if type(capped) == "function" and type(extent) == "function" then
     check(p ~= nil and p.past_bisector == false, "170 deg: 30 deg round the first arc not past the bisector")
     p = path(a60e, a60n, 0, 170, R, 1, nil, 2)
     check(p ~= nil and p.past_bisector == true, "170 deg: 60 deg round the first arc past the bisector")
+    -- [review 18] below about 159 deg the straight line has no length: just past the first arc's end (0.02-0.3 nm on
+    -- along its last course) the element moves on from the first arc (min_element 2), at any radius. The arc's end and
+    -- the line of no length are as near, worked out two ways, and rounding kept the arc (150.1 deg from 000: at every
+    -- radius; 1326 of 18360 places in a review's sweep under LuaJIT, 660 under Lua 5.1)
+    local stuck, tried = 0, 0
+    for r = 1.5, 14, 0.25 do
+        local c1 = capped(150.1, r)
+        local h = 150.1 + c1.beta_deg
+        local ee, en = r - r * math.cos(math.rad(h)), -c1.before_nm + r * math.sin(math.rad(h))
+        for _, d in ipairs({0.02, 0.1, 0.3}) do
+            local q = path(ee + d * math.sin(math.rad(h)), en + d * math.cos(math.rad(h)), 0, 150.1, r, 0.83, 1.0, 2)
+            tried = tried + 1
+            if not (q and q.element_index and q.element_index >= 3) then stuck = stuck + 1 end
+        end
+    end
+    check(stuck == 0, string.format(
+        "150.1 deg from 000, just past the first arc's end: the element moves on (%d of %d stayed on the arc)", stuck,
+        tried))
     check(p ~= nil and p.bisector_along_nm ~= nil and math.abs(p.bisector_along_nm - R * math.rad(44)) < 0.05, string.format(
         "170 deg: the first arc crosses the bisector 44 deg round it (%s nm along)", tostring(p and p.bisector_along_nm)))
 end

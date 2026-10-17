@@ -1682,6 +1682,29 @@ do
         "+90 deg at F1, 38 nm on +170 deg at 480 kt: through F1's turn the bank down to %.1f deg (10), the command moving %.1f deg a frame (3)",
         low, jump))
 end
+-- [review 18] ... in head and tail winds too: past the first arc's end the two elements' distances are equal, worked out
+-- two ways, and rounding still kept the first arc in 1326 of 18360 places (LuaJIT; 660 in Lua 5.1), and the 747 circled
+-- (+153 deg at 250 kt with 80 kt behind: 595 deg of turning; +150.1 deg at 480 kt with 100 kt ahead: 559; a review).
+-- +153 and -151 deg at 250 kt with 80 kt from behind, NEXT 40 nm on and a 90 deg turn there, and +150.1 deg at 480 kt
+-- with 100 kt from ahead, NEXT 100 nm on, LNAV engaged on the leg: no more than the route's turning and 120 deg until
+-- NEXT is sequenced.
+for _, c in ipairs({{turn = 153, tas = 250, wind_from = 180, wind = 80, into = 60, out = 40, before = 30},
+        {turn = -151, tas = 250, wind_from = 180, wind = 80, into = 60, out = 40, before = 30},
+        {turn = 150.1, tas = 480, wind_from = 0, wind = 100, into = 120, out = 100, before = 60}}) do
+    route = capped_route(c.turn, c.into, c.out, c.turn > 0 and 90 or -90)
+    local s_lat, s_lon = probe.movePoint(route[3][5], route[3][6], c.before, 180)
+    local at_next = nil
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = c.tas,
+        alt_ft = c.tas > 300 and 35000 or 5000, loop = c.tas > 300 and "cruise" or "low",
+        seconds = (c.before + c.out) / c.tas * 3600 + 500, wind_from_deg = c.wind_from, wind_kt = c.wind,
+        hook = function(env, _, o)
+            if at_next == nil and env.B747DR_fmscurrentIndex >= 5 then at_next = o.turned or 0 end
+        end})
+    local route_turn = math.abs(c.turn) + 90
+    check(at_next ~= nil and at_next <= route_turn + 120, string.format(
+        "%+.1f deg at %d kt, wind %d kt from %03d, LNAV on the leg: %s deg of turning until NEXT is sequenced (the route %.0f, +120)",
+        c.turn, c.tas, c.wind, c.wind_from, at_next and string.format("%.0f", at_next) or "never", route_turn))
+end
 -- LNAV armed 1.5 nm inside the leg into a +170 deg fix 14 nm before it, and into a +174 deg one 20 nm before it: the
 -- fix sequenced where the path crosses its bisector, 7.6 and 8.0 nm before it, not at once (inside the leg the 747 was
 -- taken for one on the path's outbound side past the bisector: 14.1 and 20.1 nm before the fix; a review).

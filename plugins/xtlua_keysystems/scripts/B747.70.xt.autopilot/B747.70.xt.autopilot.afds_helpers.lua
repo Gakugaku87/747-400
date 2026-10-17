@@ -331,12 +331,15 @@ local function capped_path_at(east_nm, north_nm, course_in_deg, course_out_deg, 
     end
     -- as near to two elements, the later: below about 159 deg the straight line has no length, and past the first
     -- arc's end it and that end were as near; keeping the arc, the aim stood still and the 747 circled over it (a
-    -- review)
+    -- review). As near within 1e-9 nm: the two distances are worked out two ways, and rounding kept the arc in head
+    -- and tail winds (595 deg of turning: a review)
     local best, start, nearest = math.huge, 0, nil
     for i, el in ipairs(elements) do
         if i >= first and i <= last then
             local d, a, x, course = view(el)
-            if d <= best then best, nearest = d, {i = i, along = (i == 1) and a or start + a, xtk = x, course = course} end
+            if d <= best + 1e-9 then
+                best, nearest = d, {i = i, along = (i == 1) and a or start + a, xtk = x, course = course}
+            end
         end
         if i > 1 then start = start + length(el) end
     end

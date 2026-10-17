@@ -337,7 +337,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   before passed abeam (within 1 nm), and decided again once the 747 is back
   on the leg before the start with LNAV (flown, sequenced 6-9 nm before the
   fix); turns of 150 to about 159 deg, without a straight line between the
-  arcs (+150.5, +153 and -158 deg at 250 kt), flown round without circling;
+  arcs (+150.5, +153 and -158 deg at 250 kt), flown round without circling,
+  also in head and tail winds (+153 and -151 deg at 250 kt with 80 kt behind,
+  +150.1 deg at 480 kt with 100 kt ahead);
   a turn decided flown passed abeam once LNAV is let go past its start
   (pushed again 3 nm before the fix: 286 deg of turning, not 617);
   the decisions forgotten when the active fix moves back (put back 10 nm
@@ -415,8 +417,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   path leaves and joins the legs; the element moving on only from the
   caller's last one (0.9 nm inside the inbound leg 10 nm before a 170 deg fix
   the inbound leg and not past the bisector, 1 nm inside the straight line
-  not back to the inbound leg) and the bisector the path's (where the first
-  arc crosses the bisector line, 44 deg round it for 170 deg).
+  not back to the inbound leg; just past the first arc's end of a 150.1 deg
+  turn, which has no straight line, on at any radius) and the bisector the
+  path's (where the first arc crosses the bisector line, 44 deg round it
+  for 170 deg).
 - `vnav_turn_hold_test.lua`: a fix LNAV sequences early for its turn keeping
   its altitude as VNAV's descent floor until the aircraft is past the turn's
   bisector - the bisector for straight fixes, 65-137 deg turns both ways and
