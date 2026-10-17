@@ -80,7 +80,10 @@ end
 -- wind_kt, seconds, setup = function(env) before the first frame, armed = LNAV
 -- pushed (armed) with HDG SEL on the start heading: out.engaged = {t, lat, lon}
 -- when it engages; arm_at_s = HDG SEL on the start heading, LNAV off, pushed at
--- that time: out.pushed = {t, index}}.
+-- that time: out.pushed = {t, index}; hook = function(env, t, out) every frame
+-- after the sequencing; tas_fn = function(t) the TAS}. A frame as the 747's:
+-- the sequencing with the cross-track and VNAV's held fix (B747_getCurrentWayPoint),
+-- LNAV's steering (B747_monitorAP), then the armed LNAV engaging (B747_ap_fma).
 local LOOPS = {cruise = {3.2, 0.22}, low = {4.7, 0.73}}
 local function fly(s)
     local env = new_runtime()
@@ -100,6 +103,7 @@ local function fly(s)
     local out = {track = {}, switches = {}, back = false, env = env}
     local t, previous = 0, s.index
     while t < s.seconds do
+        if s.tas_fn then tas = s.tas_fn(t) end
         local v = tas * KT
         local vx = v * math.sin(math.rad(heading)) - wind_kt * KT * math.sin(math.rad(wind_from))
         local vy = v * math.cos(math.rad(heading)) - wind_kt * KT * math.cos(math.rad(wind_from))
@@ -115,6 +119,9 @@ local function fly(s)
         env.B747DR_ND_Wind_Bearing = wrap(bearing < 0 and bearing + 180 or bearing - 180)
         for i = 1, #route do route[i][10] = (i == env.B747DR_fmscurrentIndex) end
         env.B747_getCurrentWayPoint_function(route)
+        env.B747_lnav_update_xtk(route)
+        env.B747_lnav_update_vnav_hold(route)
+        if s.hook then s.hook(env, t, out) end
         if env.B747DR_fmscurrentIndex ~= previous then
             if env.B747DR_fmscurrentIndex < previous then out.back = true end
             local fix = route[previous]
@@ -125,6 +132,7 @@ local function fly(s)
         if s.arm_at_s and not out.pushed and t >= s.arm_at_s then
             env.B747DR_ap_lnav_state, out.pushed = 1, {t = t, index = env.B747DR_fmscurrentIndex}
         end
+        env.B747_updateApproachHeading(route)
         if env.B747DR_ap_lnav_state == 1 then
             -- armed LNAV engaging (B747_ap_fma; before LNAV ARM it engaged at once above 50 ft)
             if env.B747_lnav_engage_armed then
@@ -134,7 +142,6 @@ local function fly(s)
             end
             if env.B747DR_ap_lnav_state == 2 then out.engaged = {t = t, lat = lat, lon = lon} end
         end
-        env.B747_updateApproachHeading(route)
         -- X-Plane's HDG SEL (variation 0: magnetic is true here)
         local limit = env.simDR_autopilot_bank_angles[env.simDR_autopilot_bank_limit - 1]
         local want = math.max(-limit, math.min(limit, 0.165 * gs / G * wrap(env.simDR_autopilot_heading_deg - heading)))
