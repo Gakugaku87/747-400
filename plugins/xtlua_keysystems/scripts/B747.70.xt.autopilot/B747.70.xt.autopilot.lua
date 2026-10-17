@@ -2602,20 +2602,34 @@ end
 -- outside the leg after a 90 deg turn 10 nm after a 170 deg turn-back (0.6 nm inside the leg to it, 19 deg off),
 -- 0.42 nm 15 nm after a 165 deg one (0.2 nm, 7 deg off), steered as before 0.54 and 0.24. The leg too: the arc,
 -- drawn for the highest ground speed across the turn, begins before the anticipation's lead in wind, and a 747
--- on the leg is already into it, the arc's course turned away (9 deg at 250 kt, +90 deg, 000/40). Decided once
--- for each fix flown to.
+-- on the leg is already into it, the arc's course turned away (9 deg at 250 kt, +90 deg, 000/40). [P14] So too
+-- after a fix sequenced while LNAV was not engaged (abeam it, B747_lnav_passed_abeam), whose turn LNAV did not
+-- fly: armed LNAV engaging on the active leg flew the fix before's leg and arc instead (LNAV pushed at 250 kt
+-- 12 nm off, 90 deg towards the leg 1 nm past its start, 1 nm beside the leg into its start: engaged 5.2 nm off
+-- the active leg, it turned 208 deg and went 0.68 nm through it; engaged where the turn onto it begins, 2.7 nm
+-- off, 2.0 nm). Decided once for each fix flown to.
 local LNAV_PATH_ON_LEG_NM=0.1
 local LNAV_PATH_ON_LEG_DEG=5
+-- Whether LNAV was engaged when the active fix became fmsO[current] (the first call for it, every frame from
+-- B747_getCurrentWayPoint_function)
+local lnavSequenced={current=0,engaged=false}
+local function B747_lnav_sequenced_engaged(current)
+	if lnavSequenced.current~=current then
+		lnavSequenced.current,lnavSequenced.engaged=current,B747DR_ap_lnav_state==2
+	end
+	return lnavSequenced.engaged
+end
 local lnavArcBefore={current=0,lat=0,lon=0,flown=false}
 local function B747_lnav_arc_before_flown(fmsO,k,current,path)
 	local before=fmsO[k]
 	if lnavArcBefore.current~=current or lnavArcBefore.lat~=before[5] or lnavArcBefore.lon~=before[6] then
 		local _,noFlyBy=B747_lnav_fix_before(fmsO,k)
+		local turnFlown=not noFlyBy and B747_lnav_sequenced_engaged(current)
 		lnavArcBefore.current,lnavArcBefore.lat,lnavArcBefore.lon=current,before[5],before[6]
 		local onPath=math.abs(path.xtk_nm)<=LNAV_PATH_ON_LEG_NM
 			and math.abs(getHeadingDifference(simDR_ground_track_true,path.course_deg))<=LNAV_PATH_ON_LEG_DEG
 		local onLeg=false
-		if noFlyBy and not onPath then
+		if not turnFlown and not onPath then
 			local legStart=B747_lnav_leg_start(fmsO,k)
 			local legXtk=B747_afds_helpers.signed_cross_track_nm(legStart[5],legStart[6],before[5],before[6],
 				simDR_latitude,simDR_longitude,getDistance,getHeading)
@@ -2623,7 +2637,7 @@ local function B747_lnav_arc_before_flown(fmsO,k,current,path)
 			onLeg=legXtk~=nil and math.abs(legXtk)<=LNAV_PATH_ON_LEG_NM
 				and math.abs(getHeadingDifference(simDR_ground_track_true,inCourse))<=LNAV_PATH_ON_LEG_DEG
 		end
-		lnavArcBefore.flown=not noFlyBy or onPath or onLeg
+		lnavArcBefore.flown=turnFlown or onPath or onLeg
 	end
 	return lnavArcBefore.flown
 end
@@ -2814,6 +2828,7 @@ end
 function B747_getCurrentWayPoint_function(fmsO)
 	local current=B747DR_fmscurrentIndex
 	local count=table.getn(fmsO)
+	B747_lnav_sequenced_engaged(current)
 	-- the end of an altitude-terminated leg is reached at its altitude: X-Plane, whose sequencing the
 	-- 747 overrides, keeps that point just ahead of the aircraft after it
 	if current<count and B747_altitude_leg_reached(fmsO[current]) then

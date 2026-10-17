@@ -1108,6 +1108,35 @@ do
         "LNAV pushed 1 nm past a fly-by fix flown through in HDG SEL: engaged %s, %.2f nm through the next leg, %.2f off it at the end",
         out.engaged and string.format("at %.1f s", out.engaged.t) or "never", through, final))
 end
+-- LNAV pushed beside the leg into the active leg's start fix A, which the FMC sequenced while LNAV was not engaged
+-- (A->B on 090 active, the leg into A from the north, a -90 deg turn at A), 12 nm off A->B and 1 nm past A at 90 deg
+-- towards it, 1 nm off the leg into A: engaged and onto A->B, not round A's arc, which LNAV did not fly (from A's
+-- leg and arc at 250 kt it turned 208-216 deg and went 0.7-2.0 nm through A->B).
+do
+    local a_lat, a_lon = 52, -12
+    local p_lat, p_lon = probe.movePoint(a_lat, a_lon, 40, 0)
+    local p0_lat, p0_lon = probe.movePoint(p_lat, p_lon, 40, 0)
+    local b_lat, b_lon = probe.movePoint(a_lat, a_lon, 60, 90)
+    local c_lat, c_lon = probe.movePoint(b_lat, b_lon, 60, 90)
+    route = {E("ORIG", p0_lat - 1, p0_lon, 0, 1), E("P0", p0_lat, p0_lon), E("P", p_lat, p_lon), E("A", a_lat, a_lon),
+        E("B", b_lat, b_lon), E("C", c_lat, c_lon), E("DEST", c_lat, c_lon + 3, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(a_lat, a_lon, 1, 90)
+    s_lat, s_lon = probe.movePoint(s_lat, s_lon, 12, 0)
+    out = fly({route = route, index = 5, start = {s_lat, s_lon}, heading = 180, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 400, armed = true})
+    local function ab_xtk(lat, lon)
+        return afds.signed_cross_track_nm(a_lat, a_lon, b_lat, b_lon, lat, lon, probe.getDistance, probe.getHeading)
+    end
+    -- HDG SEL holds 180 until LNAV engages: the heading's changes all after that
+    local through = 0
+    for _, q in ipairs(out.track) do through = math.max(through, ab_xtk(q.lat, q.lon)) end
+    local last = out.track[#out.track]
+    local final = math.abs(ab_xtk(last.lat, last.lon))
+    check(out.engaged ~= nil and out.turned <= 120 and through <= 0.3 and final <= 0.1, string.format(
+        "LNAV pushed beside the leg into the active leg's start fix (sequenced while LNAV was not engaged): engaged %s, turned %.0f deg (120), %.2f nm through A->B (0.3), %.2f off it at the end (0.1)",
+        out.engaged and string.format("%.2f nm off A->B", math.abs(ab_xtk(out.engaged.lat, out.engaged.lon))) or "never",
+        out.turned, through, final))
+end
 -- LNAV pushed 5 nm before a fly-by fix (480 kt, +90 deg at NEXT, its lead 9.7 nm) in HDG SEL 1.5 nm left of the leg
 -- to it: NEXT not yet sequenced (while LNAV is not engaged the FMC sequences abeam the fix, not at its lead), engaged
 -- at the push, abeam the leg to NEXT, and flown as LNAV engaging at once flies it, the heading closing on the next

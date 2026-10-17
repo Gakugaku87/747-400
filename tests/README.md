@@ -327,7 +327,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   and onto it, 20 nm before its start still armed across the line (the leg
   into the start from the origin airport),
   1 nm past a fly-by fix flown through in HDG SEL at once and onto the next
-  leg, and 5 nm before a fix (480 kt, 1.5 nm off the leg to it, HDG SEL 000
+  leg, 12 nm off a leg 1 nm past its start at 90 deg towards it and 1 nm
+  beside the leg into its start (that fix sequenced while LNAV was not
+  engaged) onto the leg, not round that fix's arc,
+  and 5 nm before a fix (480 kt, 1.5 nm off the leg to it, HDG SEL 000
   or 345; not sequenced at its turn's lead, LNAV not engaged) at the push, as
   LNAV engaging at once flies it, but 10 nm past that fix on the line of the
   leg to it (the fix sequenced),
