@@ -2781,6 +2781,36 @@ function B747_lnav_engage_armed(fmsO)
 	end
 end
 
+-- [P14] While LNAV is not engaged (off, or only armed) the FMC sequences the active fix as the 747 passes abeam it:
+-- past its leg's wayline, the perpendicular to the leg's inbound course at the fix, within LNAV_ABEAM_SEQUENCE_MAX_NM
+-- of the leg (Honeywell's FMC in heading mode keeps track of the active leg within 21 nm of the path and makes the
+-- next leg active as the aircraft passes the wayline: US 7,024,287), not at the turn's lead, which LNAV flies only
+-- while it steers. On the leg that is at the fix, where the turn's bisector crosses it; 15 nm off, abeam the fix; 25 nm
+-- off, never. A leg flown direct to its fix (no course from a fix: after VECTORS, an altitude leg's end, a hold) is
+-- passed as the anticipation passes it, without the lead. In HDG SEL along the leg to a +90 deg turn at 480 kt (its
+-- lead 9.7 nm) the FMC sequenced the fix 2.8 nm before it, once the 747 was 2 nm off the turn's arc (6.1 nm before it
+-- 1.5 nm left of the leg), and LNAV pushed then had a leg starting ahead of the 747 to capture.
+local LNAV_ABEAM_SEQUENCE_MAX_NM=21
+local function B747_lnav_passed_abeam(fmsO,i)
+	local fix=fmsO[i]
+	local legStart=B747_lnav_leg_start(fmsO,i)
+	local inCourse,directTo=B747_lnav_inbound_course(fmsO,i)
+	local dToFix=getDistance(simDR_latitude,simDR_longitude,fix[5],fix[6])
+	if directTo or not B747_lnav_leg_has_course(legStart,fix) then
+		local trackError=math.abs(getHeadingDifference(getHeading(simDR_latitude,simDR_longitude,fix[5],fix[6]),
+			simDR_ground_track_true))
+		return (trackError<=LNAV_DIRECT_TO_TRACK_DEG and dToFix<=LNAV_DIRECT_TO_PASS_NM)
+			or (trackError>LNAV_DIRECT_TO_TRACK_DEG and dToFix<=LNAV_DIRECT_TO_ABEAM_NM)
+	end
+	if dToFix>0.01
+		and math.abs(getHeadingDifference(getHeading(fix[5],fix[6],simDR_latitude,simDR_longitude),inCourse))>90 then
+		return false
+	end
+	local xtk=B747_afds_helpers.signed_cross_track_nm(legStart[5],legStart[6],fix[5],fix[6],simDR_latitude,
+		simDR_longitude,getDistance,getHeading)
+	return xtk~=nil and math.abs(xtk)<=LNAV_ABEAM_SEQUENCE_MAX_NM
+end
+
 function B747_getCurrentWayPoint_function(fmsO)
 	local current=B747DR_fmscurrentIndex
 	local count=table.getn(fmsO)
@@ -2862,8 +2892,21 @@ function B747_getCurrentWayPoint_function(fmsO)
 		B747_lnav_sequence_to(current+1,"listed again: "..tostring(fmsO[current][8]))
 		return
 	end
+	-- [P14] LNAV not engaged: a fix only abeam it (B747_lnav_passed_abeam), not at its turn's lead nor its arc's
+	-- bisector, and no leg search; on the leg from the origin airport or to an entry that is no fix, the leg search
+	-- below without the lead, as before
+	local lnavEngaged=B747DR_ap_lnav_state==2
+	local abeamOnly=false
+	if not lnavEngaged and current>1 and current<table.getn(fmsO)-1 and B747_lnav_leg_supports_preemption(fmsO[current])
+		and tonumber(B747_lnav_leg_start(fmsO,current)[2])~=1 then
+		if B747_lnav_passed_abeam(fmsO,current) then
+			B747_lnav_sequence_to(current+1,"abeam "..tostring(fmsO[current][8]).." (LNAV not engaged)")
+			return
+		end
+		abeamOnly=true
+	end
 	local pathFlown=false
-	if current>1 and current<table.getn(fmsO)-1 and B747DR_ap_lnav_xtk_target==0
+	if lnavEngaged and current>1 and current<table.getn(fmsO)-1 and B747DR_ap_lnav_xtk_target==0
 		and B747_lnav_path_now(fmsO,current)~=nil then
 		local p=B747_lnav_path_parameters()
 		local path=p and B747_lnav_path_at_fix(fmsO,current,p)
@@ -2879,7 +2922,7 @@ function B747_getCurrentWayPoint_function(fmsO)
 	-- below looks only at the last 5 nm or third of a leg, and a 90 deg turn at
 	-- cruise needs about 9 nm); not on the leg from the origin airport, nor
 	-- after a direct-to or with an offset (as before)
-	if not pathFlown and current>1 and current<table.getn(fmsO)-1 and B747DR_ap_lnav_xtk_target==0 then
+	if lnavEngaged and not pathFlown and current>1 and current<table.getn(fmsO)-1 and B747DR_ap_lnav_xtk_target==0 then
 		local fix,nextFix=fmsO[current],fmsO[current+1]
 		local legStart=B747_lnav_leg_start(fmsO,current)
 		local inCourse,directTo,afterAltitude=B747_lnav_inbound_course(fmsO,current)
@@ -2945,7 +2988,7 @@ function B747_getCurrentWayPoint_function(fmsO)
 		
 	end
 	--print("Start Track Data "..minPhaseLeg.."->"..maxPhaseLeg)
-	if canNew and not pathFlown then
+	if canNew and not pathFlown and not abeamOnly then
 		for i = minPhaseLeg, maxPhaseLeg, 1 do --last is always the airport, never go past last track
 
 			local dFromLast=0.1
@@ -2986,9 +3029,9 @@ function B747_getCurrentWayPoint_function(fmsO)
 						bestOffTrack=track[2]
 						
 						local nextHeading=getHeading(fmsO[i][5],fmsO[i][6],fmsO[i+1][5],fmsO[i+1][6])
-						-- a leg flown direct to its fix is anticipated above
+						-- a leg flown direct to its fix is anticipated above; none while LNAV is not engaged
 						local pemptNext=0
-						if i>1 then
+						if i>1 and lnavEngaged then
 							local inCourse,directTo=B747_lnav_inbound_course(fmsO,i)
 							if not directTo then
 								pemptNext=B747_lnav_turn_anticipation_nm(inCourse,nextHeading)

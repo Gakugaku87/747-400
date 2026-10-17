@@ -327,17 +327,21 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   and onto it, 20 nm before its start still armed across the line (the leg
   into the start from the origin airport),
   1 nm past a fly-by fix flown through in HDG SEL at once and onto the next
-  leg, and 5 nm before a fix the FMC sequenced at its turn's lead (480 kt,
-  1.5 nm off the leg to it, HDG SEL 000 or 345) at the push, as LNAV engaging
-  at once flies it, but 10 nm past that fix on the line of the leg to it,
+  leg, and 5 nm before a fix (480 kt, 1.5 nm off the leg to it, HDG SEL 000
+  or 345; not sequenced at its turn's lead, LNAV not engaged) at the push, as
+  LNAV engaging at once flies it, but 10 nm past that fix on the line of the
+  leg to it (the fix sequenced),
   flying away from the next leg, and 20 nm before it on that leg flying away,
   still armed (20 nm before it flying towards it engaged 12.2 nm before it,
   its lead and 2.5 nm; 10 nm before it at once on any track); at a dogleg's
-  FIX (+90 deg onto a 3 nm leg, -90 deg at NEXT, both sequenced at 480 kt)
+  FIX (+90 deg onto a 3 nm leg, -90 deg at NEXT, 480 kt, NEXT not sequenced)
   engaged at the push and onto the leg after NEXT; at once on a leg flown direct
   (from VECTORS) or after the 747's own DIRECT TO; armed on the runway,
   engaged above 50 ft, also 1 nm before the leg's start (armed on the ground
-  for the takeoff).
+  for the takeoff). While LNAV is not engaged (off or armed) the active fix
+  sequenced abeam it, past the perpendicular to its leg at the fix, within
+  21 nm of the leg: along the leg at the fix, 15 nm off abeam it and 25 nm off
+  never (480 kt, +90 deg at the fix, its lead 9.7 nm).
 - `lnav_xtk_error_test.lua`: LNAV's cross-track error every frame - the signed
   distance from the active leg (+ right) mid-leg on both sides and near its
   end, from the offset track while an offset is flown (not after a

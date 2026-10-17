@@ -1108,11 +1108,12 @@ do
         "LNAV pushed 1 nm past a fly-by fix flown through in HDG SEL: engaged %s, %.2f nm through the next leg, %.2f off it at the end",
         out.engaged and string.format("at %.1f s", out.engaged.t) or "never", through, final))
 end
--- LNAV pushed after the FMC sequenced a fly-by fix ahead at its turn's lead (480 kt, +90 deg at NEXT, the lead
--- 9.7 nm: sequenced 6.1 nm before NEXT, once HDG SEL 1.5 nm left of the leg to it was 2 nm off its arc; pushed 5 nm
--- before it, so the active leg starts ahead): engaged at the push, abeam the leg to NEXT, and flown as LNAV engaging
--- at once flies it, the heading closing on the next leg (000) or not (345). Within 2.5 nm of NEXT only it engaged
--- 22.5 s late, 7.7 nm outside the next leg (at once 4.8), or never (72 nm off after 10 min; a review).
+-- LNAV pushed 5 nm before a fly-by fix (480 kt, +90 deg at NEXT, its lead 9.7 nm) in HDG SEL 1.5 nm left of the leg
+-- to it: NEXT not yet sequenced (while LNAV is not engaged the FMC sequences abeam the fix, not at its lead), engaged
+-- at the push, abeam the leg to NEXT, and flown as LNAV engaging at once flies it, the heading closing on the next
+-- leg (000) or not (345). Sequenced at the lead (6.1 nm before NEXT, once HDG SEL was 2 nm off its arc) the active
+-- leg started ahead: within 2.5 nm of NEXT only it engaged 22.5 s late, 7.7 nm outside the next leg (at once 4.8), or
+-- never (72 nm off after 10 min; a review).
 do
     local lat0, lon0 = 52, -12
     local next_lat, next_lon = probe.movePoint(lat0, lon0, 60, 0)
@@ -1139,8 +1140,8 @@ do
     for _, heading in ipairs({0, 345}) do
         local o, outside = arm(heading)
         local _, reference = arm(heading, true)
-        local name = string.format("LNAV pushed 5 nm before NEXT (sequenced at its lead) on HDG SEL %03d", heading)
-        check(o.pushed and o.pushed.index == 4, name..": NEXT sequenced before the push")
+        local name = string.format("LNAV pushed 5 nm before NEXT on HDG SEL %03d", heading)
+        check(o.pushed and o.pushed.index == 3, name..": NEXT not sequenced before the push (abeam, not at its lead)")
         check(o.engaged ~= nil and o.engaged.t - o.pushed.t <= 0.1 and math.abs(outside - reference) <= 0.1,
             string.format("%s: engaged %s, %.2f nm outside the next leg (engaged at once %.2f)", name,
                 o.engaged and string.format("%.1f s after the push", o.engaged.t - o.pushed.t) or "never", outside,
@@ -1182,10 +1183,9 @@ do
         out.engaged and string.format("at %.1f s", out.engaged.t) or "never"))
 end
 -- A dogleg at 480 kt: +90 deg at FIX onto a 3 nm leg, -90 deg at NEXT, NEXT->AFTER parallel to the leg to FIX and
--- 3 nm across. Both leads are longer than the short leg, so the FMC sequences FIX and NEXT while HDG SEL flies on
--- along the leg to FIX; LNAV pushed at FIX, abeam the leg into NEXT within its lead, crossing it at 90 deg: engaged at
--- the push and onto NEXT->AFTER. Only on a track closing on NEXT along that leg (within 90 deg of it) it never engaged
--- and flew on parallel to the active leg, 3 nm off (a review: 5 of 288 short-leg cases).
+-- 3 nm across. LNAV pushed at FIX in HDG SEL along the leg to it: NEXT not sequenced (abeam only while LNAV is not
+-- engaged; at the leads, both longer than the short leg, the FMC had sequenced FIX and NEXT and left the active leg
+-- parallel, 3 nm across), engaged at the push and onto NEXT->AFTER.
 do
     local lat0, lon0 = 52, -12
     local fix_lat, fix_lon = probe.movePoint(lat0, lon0, 60, 0)
@@ -1201,11 +1201,49 @@ do
     local last = out.track[#out.track]
     local final = math.abs(afds.signed_cross_track_nm(next_lat, next_lon, after_lat, after_lon, last.lat, last.lon,
         probe.getDistance, probe.getHeading))
-    check(out.pushed and out.pushed.index == 5 and out.engaged ~= nil and out.engaged.t - out.pushed.t <= 0.1
+    check(out.pushed and out.pushed.index <= 4 and out.engaged ~= nil and out.engaged.t - out.pushed.t <= 0.1
         and final <= 0.1, string.format(
-        "LNAV pushed at a dogleg's FIX, FIX and NEXT sequenced (index %s): engaged %s, %.2f nm off NEXT->AFTER at the end",
+        "LNAV pushed at a dogleg's FIX, NEXT not sequenced (index %s): engaged %s, %.2f nm off NEXT->AFTER at the end",
         tostring(out.pushed and out.pushed.index), out.engaged and string.format("%.1f s after the push",
         out.engaged.t - out.pushed.t) or "never", final))
+end
+-- 16. While LNAV is not engaged (off, or only armed) the FMC sequences the active fix as the aircraft passes abeam it,
+-- past the perpendicular to its leg at the fix within 21 nm of the leg, not at the turn's lead (LNAV flies the lead
+-- only while it steers): at 480 kt along the leg to NEXT (+90 deg, its lead 9.7 nm) in HDG SEL, with LNAV off and
+-- with LNAV armed, NEXT is sequenced at the fix; 15 nm off the leg abeam NEXT, 25 nm off not at all.
+do
+    local lat0, lon0 = 52, -12
+    local next_lat, next_lon = probe.movePoint(lat0, lon0, 60, 0)
+    local after_lat, after_lon = probe.movePoint(next_lat, next_lon, 60, 90)
+    local far_lat, far_lon = probe.movePoint(after_lat, after_lon, 60, 90)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("NEXT", next_lat, next_lon),
+        E("AFTER", after_lat, after_lon), E("FAR", far_lat, far_lon), E("DEST", far_lat, far_lon + 1, 0, 1)}
+    local function along_leg(off_nm, armed)
+        local s_lat, s_lon = probe.movePoint(next_lat, next_lon, 20, 180)
+        s_lat, s_lon = probe.movePoint(s_lat, s_lon, math.abs(off_nm), off_nm < 0 and 270 or 90)
+        local o = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 480, alt_ft = 33000,
+            loop = "cruise", seconds = 240, armed = armed, arm_at_s = (not armed) and 1e9 or nil,
+            setup = armed and function(env) env.B747_lnav_engage_armed = function() end end or nil})
+        for _, sw in ipairs(o.switches) do
+            if sw.from == 3 then
+                local d_lat, d_lon = sw.lat, sw.lon
+                local along = probe.getDistance(next_lat, next_lon, d_lat, d_lon) * math.cos(math.rad(
+                    probe.getHeading(next_lat, next_lon, d_lat, d_lon)))
+                return along, o
+            end
+        end
+        return nil, o
+    end
+    for _, c in ipairs({{0, false, "LNAV off"}, {0, true, "LNAV armed"},
+            {-15, false, "LNAV off, 15 nm left of the leg"}}) do
+        local at = along_leg(c[1], c[2])
+        check(at ~= nil and math.abs(at) <= 0.5, string.format(
+            "%s along the leg to NEXT (+90 deg at 480 kt): NEXT sequenced %s (abeam it, not 9.7 nm before)", c[3],
+            at and string.format("%.1f nm %s it", math.abs(at), at < 0 and "before" or "past") or "never"))
+    end
+    local at = along_leg(-25, false)
+    check(at == nil, string.format("LNAV off 25 nm left of the leg to NEXT: NEXT not sequenced passing abeam it (%s)",
+        at and string.format("sequenced %.1f nm along", at) or "not sequenced"))
 end
 -- the leg flown direct (from VECTORS) or the 747's own direct-to: engaged at once as before (a leg from where the
 -- 747 is); on the runway armed, engaged above 50 ft
