@@ -3091,9 +3091,12 @@ function B747_lnav_update_xtk(fmsO)
 		B747DR_ap_lnav_xtk_error=0
 		return
 	end
-	-- from the path LNAV flies (the arc in a fly-by turn), else from the active leg
-	local path=B747_lnav_path_now(fmsO,current)
-	if path~=nil then
+	-- from the path LNAV flies (the arc in a fly-by turn), else from the active leg; [P14] not from the active fix's
+	-- own path past its turn's bisector: while LNAV is not engaged the FMC sequences the fix only abeam it, and until
+	-- then the active leg is the leg to it (the path's arc or next leg gave the next leg's side and size, and the kit's
+	-- rejoin intercepted away from the active leg: a review)
+	local path,pathFix=B747_lnav_path_now(fmsO,current)
+	if path~=nil and not (pathFix==fix and path.past_bisector) then
 		B747DR_ap_lnav_xtk_error=path.xtk_nm
 		return
 	end

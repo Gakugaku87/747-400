@@ -352,8 +352,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   end, from the offset track while an offset is flown (not after a
   direct-to), from the fix before an altitude leg's end, from PPOS on native
   sequencing, 0 without a leg, and in a fly-by turn from its arc (the path
-  LNAV flies) on it and outside it; and PROGRESS page 2 showing L or R and
-  the distance.
+  LNAV flies) on it and outside it, but with LNAV off or armed past the
+  turn's bisector before the fix is sequenced abeam from the leg to it (LNAV
+  engaged: the fix sequenced, from its arc); and PROGRESS page 2 showing L
+  or R and the distance.
 - `lnav_path_geometry_test.lua`: the lateral path at a fly-by fix for LNAV's
   path guidance (item i-1b) - the arc tangent to both legs R tan(turn / 2)
   from the fix, the element abeam the aircraft, the signed cross-track from

@@ -168,6 +168,45 @@ near(on_turn(1.0), -1.0, "1 nm outside the arc's middle: still the arc's, 1 nm l
 local radius = 246 ^ 2 / (9.80665 * math.tan(math.rad(20))) / 1852
 near(on_turn(3.0), math.sqrt(0.5) * (radius * (math.sqrt(2) - 1) - 3), "3 nm outside it: from the leg after the turn")
 
+-- 9. [P14] While LNAV is not engaged the FMC sequences a fix only abeam it, so the 747 can be past its turn's
+-- bisector with the fix still active: the cross-track is still from the leg to that fix, the active leg the PROGRESS
+-- page and X-Plane's course show, not from the turn's path beyond the bisector (its arc or the leg after it; the
+-- kit's rejoin took the next leg's side for the active leg's, its intercept heading pointed away and LNAV never
+-- engaged: a review). The 90 deg turn of 8 at FIX, the 747 5 nm east of the leg to FIX and 3 nm before FIX. With
+-- LNAV engaged FIX is sequenced at its bisector, and the cross-track is from its arc as in 8.
+local function past_bisector(lnav_state)
+    local e = new_runtime()
+    local start = {50, -10}
+    local fix = {e.movePoint(start[1], start[2], 100, 0)}
+    local after = {e.movePoint(fix[1], fix[2], 100, 90)}
+    local r = {entry("ORIG", 49, -10, 0, 1), entry("START", start[1], start[2]), entry("FIX", fix[1], fix[2]),
+        entry("NEXT", after[1], after[2]), entry("DEST", after[1] + 5, after[2], 0, 1)}
+    local lat, lon = e.movePoint(fix[1], fix[2], 3, 180)
+    lat, lon = e.movePoint(lat, lon, 5, 90)
+    e.simDR_latitude, e.simDR_longitude, e.simDR_true_heading, e.simDR_ground_track_true = lat, lon, 0, 0
+    e.B747DR_ap_lnav_state = lnav_state
+    e.B747DR_fmscurrentIndex, e.B747DR_fms_setCurrent, e.B747DR_ap_lnavHeading_mode = 3, 3, 3
+    for i = 1, #r do r[i][10] = (i == 3) end
+    e.B747_getCurrentWayPoint(r)
+    return e.B747DR_fmscurrentIndex, e.B747DR_ap_lnav_xtk_error, e
+end
+for _, state in ipairs({0, 1}) do
+    local index, xtk = past_bisector(state)
+    check(index == 3, string.format("LNAV %s past FIX's bisector, before its wayline: FIX still active (%d)",
+        state == 0 and "off" or "armed", index))
+    near(xtk, 5.0, string.format("LNAV %s past FIX's bisector, FIX active: from the leg to FIX, 5 nm right",
+        state == 0 and "off" or "armed"))
+end
+do
+    local index, xtk = past_bisector(2)
+    local radius = 246 ^ 2 / (9.80665 * math.tan(math.rad(20))) / 1852
+    local centre_e, centre_n = radius, -radius
+    local arc = radius - math.sqrt((5 - centre_e) ^ 2 + (-3 - centre_n) ^ 2)
+    check(index == 4, "LNAV engaged past FIX's bisector: FIX sequenced ("..index..")")
+    check(type(xtk) == "number" and math.abs(xtk - arc) < 0.05, string.format(
+        "LNAV engaged past FIX's bisector: from FIX's arc, %.2f nm right (%s)", arc, tostring(xtk)))
+end
+
 -- 7. The PROGRESS page shows the side of the error and its size.
 local page_env = setmetatable({
     print = function() end, fmsPages = {}, fmsFunctionsDefs = {PROGRESS = {}},
