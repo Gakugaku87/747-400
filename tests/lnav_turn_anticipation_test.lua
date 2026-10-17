@@ -81,7 +81,10 @@ end
 -- pushed (armed) with HDG SEL on the start heading: out.engaged = {t, lat, lon}
 -- when it engages; arm_at_s = HDG SEL on the start heading, LNAV off, pushed at
 -- that time: out.pushed = {t, index}; hook = function(env, t, out) every frame
--- after the sequencing; tas_fn = function(t) the TAS}. A frame as the 747's:
+-- after the sequencing; tas_fn = function(t) the TAS; jump = {t, start = {lat,
+-- lon}, heading, index}: the 747 put there with that fix active (a reposition,
+-- the leg search moving back), out.jump_turned the turning until then}. A frame
+-- as the 747's:
 -- the sequencing with the cross-track and VNAV's held fix (B747_getCurrentWayPoint),
 -- LNAV's steering (B747_monitorAP), then the armed LNAV engaging (B747_ap_fma).
 local LOOPS = {cruise = {3.2, 0.22}, low = {4.7, 0.73}}
@@ -103,6 +106,12 @@ local function fly(s)
     local out = {track = {}, switches = {}, back = false, env = env}
     local t, previous = 0, s.index
     while t < s.seconds do
+        if s.jump and not out.jump_turned and t >= s.jump.t then
+            lat, lon, heading = s.jump.start[1], s.jump.start[2], s.jump.heading
+            env.B747DR_fmscurrentIndex, env.B747DR_fms_setCurrent = s.jump.index, s.jump.index
+            env.B747DR_ap_lnavHeading_mode, previous = s.jump.index, s.jump.index
+            out.jump_turned = out.turned or 0
+        end
         if s.tas_fn then tas = s.tas_fn(t) end
         local v = tas * KT
         local vx = v * math.sin(math.rad(heading)) - wind_kt * KT * math.sin(math.rad(wind_from))
@@ -1616,6 +1625,27 @@ do
     check(pushed and out.turned <= 400 and reversals <= 2, string.format(
         "+170 deg decided flown, LNAV off past the path's start and pushed 3 nm before the fix: %.0f deg of turning (400), %d bank reversals (2: HDG SEL's and LNAV's)",
         out.turned, reversals))
+end
+-- [review 17] The active fix moved back to a capped fix flown by (the leg search moving back, a reposition): its turn
+-- decided again. +170 deg flown, then the 747 put back on the leg 10 nm before the fix (0.7 nm before the path's start)
+-- with the fix active: sequenced where the path crosses the bisector (6-9 nm before it), and no more than 300 deg of
+-- turning from there. With the decision kept (flown, at the path's last element) the fix was sequenced in that frame,
+-- 10 nm before it, and the 747 turned 355-375 deg (a review).
+do
+    route = capped_route(170, 60, 40)
+    local fix_lat, fix_lon = route[3][5], route[3][6]
+    local s_lat, s_lon = probe.movePoint(fix_lat, fix_lon, 20, 180)
+    local b_lat, b_lon = probe.movePoint(fix_lat, fix_lon, 10, 180)
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 1300, jump = {t = 700, start = {b_lat, b_lon}, heading = 0, index = 3}})
+    local seq = nil
+    for _, sw in ipairs(out.switches) do
+        if sw.from == 3 and sw.t > 700 then seq = sw break end
+    end
+    local turned = out.turned - (out.jump_turned or 0)
+    check(out.jump_turned ~= nil and seq ~= nil and seq.nm >= 6 and seq.nm <= 9 and turned <= 300, string.format(
+        "+170 deg flown, then put back 10 nm before the fix with it active: sequenced %s nm before it (6-9), %.0f deg of turning from there (300)",
+        seq and string.format("%.1f", seq.nm) or "never", turned))
 end
 -- LNAV armed 1.5 nm inside the leg into a +170 deg fix 14 nm before it, and into a +174 deg one 20 nm before it: the
 -- fix sequenced where the path crosses its bisector, 7.6 and 8.0 nm before it, not at once (inside the leg the 747 was

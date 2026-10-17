@@ -2510,7 +2510,13 @@ local B747_lnav_capped_decide
 -- The decisions, per fix flown to or just behind (by its index and position): decided ("flown", "abeam", nil before
 -- the path's start) and the element of its path the 747 has come to (B747_lnav_path_at_fix: it only moves on)
 local lnavCapped={}
+-- [review 17] the active fix as last seen: when it moves back (the leg search moving back, a reposition) no decision is
+-- kept. A fix flown by and active again had its path from its last element on, and was sequenced in that frame, 10 nm
+-- before it, the 747 turning 355-375 deg (a review).
+local lnavCappedCurrent=0
 local function B747_lnav_capped_state(fmsO,k)
+	if B747DR_fmscurrentIndex<lnavCappedCurrent then lnavCapped={} end
+	lnavCappedCurrent=B747DR_fmscurrentIndex
 	local fix=fmsO[k]
 	local key=k..":"..tostring(fix[5])..":"..tostring(fix[6])
 	local state=lnavCapped[key]
