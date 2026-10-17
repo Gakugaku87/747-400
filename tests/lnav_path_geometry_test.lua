@@ -182,6 +182,91 @@ if type(gsk) == "function" then
     near(gsk(250, we, wn, 0, -170), 250, 1e-6, "000 to 190 left, never toward 090: the start's, across the wind")
 end
 
+-- 5b. [P15] A turn of more than 150 deg (and less than 175) starts where a 150 deg turn's arc would, R tan(75)
+-- before the fix (its own tangent arc would start R tan(turn / 2) before it: 11.4 R for 170 deg). Round an arc of R
+-- from there the 747 reaches the outbound course outside the outbound leg by R (1 - cos turn) - R tan(75) sin turn;
+-- the path turns on by up to 45 deg, closes on the leg on a straight line and rolls out onto it, all at R.
+-- 170 deg right, R 2 nm: 7.46 nm before the fix, 2.67 nm outside, 45 deg on, 2.12 nm of straight line.
+local capped = afds.lnav_capped_turn
+check(type(capped) == "function", "afds.lnav_capped_turn exists")
+local extent = afds.lnav_turn_extent_nm
+check(type(extent) == "function", "afds.lnav_turn_extent_nm exists")
+if type(capped) == "function" and type(extent) == "function" then
+    local R, T = 2, 2 * math.tan(math.rad(75))
+    local c = capped(170, R)
+    check(c ~= nil, "170 deg: a capped turn")
+    near(c.before_nm, T, 1e-9, "170 deg: the turn starts R tan(75) before the fix")
+    near(c.outside_nm, R * (1 - math.cos(math.rad(170))) - T * math.sin(math.rad(170)), 1e-9,
+        "170 deg: outside the outbound leg at its course")
+    near(c.beta_deg, 45, 1e-9, "170 deg: 45 deg on")
+    near(c.straight_nm, (c.outside_nm - 2 * R * (1 - math.cos(math.rad(45)))) / math.sin(math.rad(45)), 1e-9,
+        "170 deg: the straight line closing on the leg")
+    check(c.after_nm > T, "170 deg: onto the outbound leg farther after the fix than the turn starts before it, "
+        ..tostring(c.after_nm))
+    local before, after = extent(170, R)
+    near(before, T, 1e-9, "170 deg: the extent before the fix")
+    near(after, c.after_nm, 1e-9, "170 deg: the extent after it")
+    before, after = extent(90, R)
+    check(math.abs(before - R) < 1e-9 and math.abs(after - R) < 1e-9, "90 deg: R tan(45) before and after")
+    before, after = extent(-150, R)
+    check(math.abs(before - T) < 1e-9 and math.abs(after - T) < 1e-9, "150 deg left: R tan(75) before and after")
+    check(capped(150, R) == nil and capped(175, R) == nil and capped(-176, R) == nil,
+        "no capped turn at 150 deg or less, nor at 175 deg or more")
+    -- points on the path (in 000, out 170, right): arc 1 round (R, -T)
+    local function on_arc1(psi)
+        return R - R * math.cos(math.rad(psi)), -T + R * math.sin(math.rad(psi))
+    end
+    local e0, n0 = on_arc1(90)
+    p = path(e0, n0, 0, 170, R, 1)
+    check(p ~= nil and p.element == "arc", "170 deg: a quarter round the first arc is on it, got "
+        ..tostring(p and p.element))
+    near(p and p.xtk_nm, 0, 1e-9, "170 deg: on the first arc, no cross-track")
+    near(p and p.course_deg, 90, 1e-9, "170 deg: the first arc's course there")
+    near(p and p.along_nm, R * math.pi / 2, 1e-9, "170 deg: a quarter round the arc along it")
+    near(p and p.arc_start_nm, T, 1e-9, "170 deg: the arc starts R tan(75) before the fix")
+    check(p and p.past_bisector == true, "170 deg: a quarter round the first arc is past the bisector")
+    -- on the first arc at the outbound course: outside the outbound leg (left of it) by outside_nm
+    local e1, n1 = on_arc1(170)
+    near(e1 * math.cos(math.rad(170)) - n1 * math.sin(math.rad(170)), -c.outside_nm, 1e-9,
+        "170 deg: on the outbound course, outside_nm left of the outbound leg")
+    p = path(e1, n1, 0, 170, R, 1)
+    near(p and p.xtk_nm, 0, 1e-9, "170 deg: there on the path")
+    -- the middle of the straight line, on course 215
+    local ee, en = on_arc1(215)
+    local se = ee + c.straight_nm / 2 * math.sin(math.rad(215))
+    local sn = en + c.straight_nm / 2 * math.cos(math.rad(215))
+    p = path(se, sn, 0, 170, R, 1)
+    check(p ~= nil and p.element == "straight", "170 deg: the straight line's middle is on it, got "
+        ..tostring(p and p.element))
+    near(p and p.xtk_nm, 0, 1e-9, "170 deg: on the straight line, no cross-track")
+    near(p and p.course_deg, 215, 1e-9, "170 deg: the straight line's course, 45 deg on")
+    near(p and p.along_nm, R * math.rad(215) + c.straight_nm / 2, 1e-9, "170 deg: along the path to it")
+    -- 0.5 nm right of the outbound leg 3 nm after the path joins it
+    local oe, on = math.sin(math.rad(170)), math.cos(math.rad(170))
+    local re, rn = math.cos(math.rad(170)), -math.sin(math.rad(170))
+    p = path((c.after_nm + 3) * oe + 0.5 * re, (c.after_nm + 3) * on + 0.5 * rn, 0, 170, R, 1)
+    check(p ~= nil and p.element == "out", "170 deg: after the path joins the outbound leg, on it, got "
+        ..tostring(p and p.element))
+    near(p and p.xtk_nm, 0.5, 1e-9, "170 deg: 0.5 nm right of the outbound leg")
+    near(p and p.along_nm, R * math.rad(215) + c.straight_nm + R * math.rad(45) + 3, 1e-9,
+        "170 deg: along the whole path")
+    -- on the inbound leg: not past the bisector, the aim as on any path
+    p = path(0, -20, 0, 170, R, 1)
+    check(p ~= nil and p.element == "in" and p.past_bisector == false,
+        "170 deg: 20 nm before the fix on the inbound leg")
+    near(p and p.along_nm, T - 20, 1e-9, "170 deg: before the arc's start")
+    -- the left turn is its mirror
+    p = path(-e0, n0, 0, -170, R, 1)
+    check(p ~= nil and p.element == "arc", "170 deg left: on its first arc")
+    near(p and p.xtk_nm, 0, 1e-9, "170 deg left: no cross-track")
+    near(p and p.course_deg, 270, 1e-9, "170 deg left: the first arc's course there")
+    -- just past 150 deg the 747 is little outside: it turns on less and back at once (no straight line)
+    c = capped(151, R)
+    near(c and c.beta_deg, math.deg(math.acos(1 - c.outside_nm / (2 * R))), 1e-9, "151 deg: on just enough")
+    check(c and c.beta_deg < 20 and c.straight_nm == 0, "151 deg: less than 20 deg on and no straight line")
+    check(path(0, 0, 0, 174.9, R, 1) ~= nil and path(0, 0, 0, 175, R, 1) == nil, "a path below 175 deg, none from it")
+end
+
 -- 6. Not a path: no radius, no courses, a reversal.
 check(path(0, 0, 0, 90, 0, 2) == nil, "no radius")
 check(path(0, 0, nil, 90, 2, 2) == nil, "no inbound course")

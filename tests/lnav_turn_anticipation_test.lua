@@ -283,8 +283,13 @@ if type(anticipation) == "function" then
         (250 * KT) ^ 2 / (G * math.tan(math.rad(25))) / 1852 * math.tan(math.rad(60)) + 250 / 3600 * (25 / 3) / 2,
         0.01, "120 deg at 250 kt and 25 deg of bank")
     check(anticipation(478, 0, 0, 20, 90, 90.5, 3, 478) == 0, "no turn: no anticipation")
-    check(anticipation(478, 0, 0, 20, 0, 160, 3, 478) == 0,
-        "160 deg: no fly-by, the next leg once abeam the fix (0), "..tostring(anticipation(478, 0, 0, 20, 0, 160, 3, 478)))
+    -- [P15] beyond 150 deg the turn starts where a 150 deg turn would; from 175 deg a reversal, no fly-by
+    near(anticipation(478, 0, 0, 20, 0, 160, 3, 478), radius * math.tan(math.rad(75)) + roll_in, 0.01,
+        "160 deg: where a 150 deg turn starts")
+    near(anticipation(478, 0, 0, 20, 0, -170, 3, 478), radius * math.tan(math.rad(75)) + roll_in, 0.01,
+        "170 deg left: where a 150 deg turn starts")
+    check(anticipation(478, 0, 0, 20, 0, 176, 3, 478) == 0, "176 deg: a reversal, no fly-by, the next leg once abeam "
+        .."the fix (0), "..tostring(anticipation(478, 0, 0, 20, 0, 176, 3, 478)))
     check(anticipation(0, 0, 0, 20, 0, 90, 3, 0) == 0 and anticipation(478, 0, 0, 0, 0, 90, 3, 478) == 0,
         "no speed or no bank: none")
     -- BEDRA at FL310 (wind from 265 at 96 kt): into the wind, then across it
@@ -391,11 +396,13 @@ for _, speed in ipairs({{250, "low", 5000}, {478, "cruise", 31000}}) do
     end
 end
 
--- Turning back by more than 150 deg (no fly-by: the next leg once abeam the
--- fix) at 200 kt and 3,000 ft: the turn is flown once, toward the next fix,
--- not as an orbit back over the passed fix (with no lead at all the fix stayed
--- active and LNAV flew back to it: 572 deg of turning on a turn-back SID).
-for _, angle in ipairs({170, -165}) do
+-- Turning back by more than 150 deg at 200 kt and 3,000 ft: the turn is flown once, toward the next fix, not as an
+-- orbit back over the passed fix (with no lead at all the fix stayed active and LNAV flew back to it: 572 deg of
+-- turning on a turn-back SID). [P15] A fly-by from where a 150 deg turn starts (R tan(75), 6.0 nm before the fix at
+-- 1.6 nm of radius), the path fitting on the 10 nm leg: the 747 2.18 and 1.64 nm outside the next leg (the path
+-- 2.14 and 1.60) and 266 and 261 deg of turning; passed abeam 3.22 and 3.21 nm. A reversal (178 deg) is passed abeam
+-- as before.
+for _, angle in ipairs({170, -165, 178}) do
     local lat0, lon0 = 50, -10
     local fix_lat, fix_lon = probe.movePoint(lat0, lon0, 20, 0)
     local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, 10, angle % 360)
@@ -415,6 +422,86 @@ for _, angle in ipairs({170, -165}) do
     check(fixes_in_order(out, route, 3, 4), name..": FIX and NEXT sequenced in order")
     check(passed_next <= 1.0 and at_next <= 600, string.format("%s: NEXT passed at %.2f nm after %.0f s", name,
         passed_next, at_next or -1))
+    local side = angle > 0 and 1 or -1
+    local outside = 0
+    for _, q in ipairs(out.track) do
+        outside = math.max(outside, -side * afds.signed_cross_track_nm(fix_lat, fix_lon, next_lat, next_lon, q.lat,
+            q.lon, probe.getDistance, probe.getHeading))
+    end
+    local capped = afds.lnav_capped_turn and afds.lnav_capped_turn(angle, afds.turn_radius_nm(200, 20))
+    if math.abs(angle) < 175 then
+        check(capped ~= nil and outside <= capped.outside_nm + 0.4, string.format(
+            "%s: %.2f nm outside the next leg (the fly-by path %s)", name, outside,
+            capped and string.format("%.2f", capped.outside_nm) or "none"))
+    else
+        local at_fix = nil
+        for _, sw in ipairs(out.switches) do if sw.from == 3 then at_fix = sw.nm end end
+        check(at_fix ~= nil and at_fix <= 1, string.format("%s: a reversal, FIX sequenced abeam it (%s nm)", name,
+            at_fix and string.format("%.2f", at_fix) or "never"))
+    end
+end
+
+-- 17. [P15] Fly-by turns of more than 150 deg at FL350 and 480 kt (R 9.2 nm at 20 deg of bank; 13.3 nm drawn for
+-- the 96 kt wind): the turn starts where a 150 deg turn's arc would, R tan(75) before the fix (34 nm; 50 in the
+-- wind), and the 747 follows the path - on round the arc by up to 45 deg past the outbound course, a straight line
+-- closing on the outbound leg, an arc back onto it - within 0.5 nm, no farther outside the outbound leg than the
+-- path (6.1 nm for 160 deg, 12.3 for 170) and on it within 0.15 nm once the path has joined it; FIX sequenced at the
+-- turn's bisector, NEXT after it. Passed abeam (no fly-by) the 747 turned only at the fix and went 18.1-18.5 nm
+-- outside (24.3 in the wind), with 295-326 deg of turning.
+for _, c in ipairs({{160, 0, 0}, {170, 0, 0}, {-170, 0, 0}, {165, 270, 96}}) do
+    local lat0, lon0 = 50, -10
+    local fix_lat, fix_lon = probe.movePoint(lat0, lon0, 80, 0)
+    local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, 110, c[1] % 360)
+    local after_lat, after_lon = probe.movePoint(next_lat, next_lon, 60, c[1] % 360)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", lat0, lon0), E("FIX", fix_lat, fix_lon),
+        E("NEXT", next_lat, next_lon), E("AFTER", after_lat, after_lon), E("DEST", after_lat - 5, after_lon, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(fix_lat, fix_lon, 70, 180)
+    -- the heading for a 000 track in the wind
+    local cross = -c[3] * math.sin(math.rad(c[2]))
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = (-math.deg(math.asin(cross / 480))) % 360,
+        tas_kt = 480, alt_ft = 35000, loop = "cruise", wind_from_deg = c[2], wind_kt = c[3], seconds = 1500})
+    local name = string.format("%+d deg at 480 kt%s", c[1], c[3] > 0 and string.format(" in %03d/%d", c[2], c[3]) or "")
+    local R = afds.turn_radius_nm(480 + c[3], 20)
+    local capped = afds.lnav_capped_turn and afds.lnav_capped_turn(c[1], R)
+    check(capped ~= nil, name..": a capped fly-by turn")
+    if capped then
+        local in_course = (probe.getHeading(fix_lat, fix_lon, lat0, lon0) + 180) % 360
+        local out_course = probe.getHeading(fix_lat, fix_lon, next_lat, next_lon)
+        local side = c[1] > 0 and 1 or -1
+        local deviation, outside, rejoined, start_nm = 0, 0, 0, nil
+        for _, q in ipairs(out.track) do
+            local d = probe.getDistance(fix_lat, fix_lon, q.lat, q.lon)
+            local b = math.rad(probe.getHeading(fix_lat, fix_lon, q.lat, q.lon))
+            local pth = afds.lnav_path_at(d * math.sin(b), d * math.cos(b), in_course, out_course, R, 1.6, 3.7)
+            local x = afds.signed_cross_track_nm(fix_lat, fix_lon, next_lat, next_lon, q.lat, q.lon, probe.getDistance,
+                probe.getHeading)
+            local along_out = d * math.cos(b - math.rad(out_course))
+            if pth and pth.along_nm > -30 and along_out < capped.after_nm + 5 then
+                deviation = math.max(deviation, math.abs(pth.xtk_nm))
+            end
+            if pth and pth.past_bisector then outside = math.max(outside, -side * x) end
+            if pth and pth.element == "out" and along_out > capped.after_nm + 5 and along_out < 100 then
+                rejoined = math.max(rejoined, math.abs(x))
+            end
+            if start_nm == nil and q.bank * side > 5 then
+                start_nm = -(d * math.cos(b - math.rad(in_course)))
+            end
+        end
+        check(start_nm ~= nil and start_nm >= capped.before_nm - 0.5 and start_nm <= capped.before_nm + 2.5,
+            string.format("%s: turned from %s nm before the fix (the path's arc from %.1f)", name,
+            start_nm and string.format("%.1f", start_nm) or "nowhere", capped.before_nm))
+        check(deviation <= 0.5, string.format("%s: %.2f nm from the path at most (0.5)", name, deviation))
+        check(outside <= capped.outside_nm + 0.5, string.format("%s: %.2f nm outside the outbound leg (the path %.2f)",
+            name, outside, capped.outside_nm))
+        check(rejoined <= 0.15, string.format("%s: %.2f nm off the outbound leg after the path joins it (0.15)", name,
+            rejoined))
+        -- and the heading's crab into the wind, which changes round the turn
+        local crab = math.deg(math.asin(c[3] / 480))
+        check(out.turned <= math.abs(c[1]) + 2 * capped.beta_deg + 20 + 2 * crab, string.format(
+            "%s: %.0f deg of turning in all (%d, twice %.0f on and back, twice %.0f of crab)", name, out.turned,
+            math.abs(c[1]), capped.beta_deg, crab))
+        check(fixes_in_order(out, route, 3, 4), name..": FIX and NEXT sequenced in order")
+    end
 end
 
 -- 3. Where the turn is not anticipated: one frame on a 90 deg turn at 478 kt,
@@ -897,11 +984,14 @@ for _, c in ipairs({{250, "low", 5000, 1.5, 0.4}, {480, "cruise", 33000, 4.5, 1.
         .."(at most %.1f)", c[4], c[1], outside, c[5]))
 end
 
--- 12. A turn-back (more than 150 deg, no fly-by) and a 90 deg turn 10-15 nm on at 200 kt: the leg between is
--- steered as before, and the 747, not yet on it when the 90 deg turn is sequenced (flying direct to its fix), rolls
--- the turn's way and is no farther outside the leg after it than before i-1b (0.54 and 0.24 nm). The 90 deg turn's
--- arc, drawn from the leg the 747 was not on, first rolled it the wrong way: 1.16 and 0.42 nm outside.
-for _, c in ipairs({{170, 10, -90, 0.6}, {-165, 15, 90, 0.3}}) do
+-- 12. A turn-back (more than 150 deg) and a 90 deg turn 10-15 nm on at 200 kt. 170 deg then 10 nm: the turn-back's
+-- fly-by path (P15) would join the leg only 9.6 nm on, past where the 90 deg turn's arc starts (8.4 nm), so it is
+-- passed abeam; the leg between is steered as before, and the 747, not yet on it when the 90 deg turn is sequenced
+-- (flying direct to its fix), rolls the turn's way and is no farther outside the leg after it than before i-1b
+-- (0.54 nm; flown by, still 45 deg on there, 1.16). The 90 deg turn's arc, drawn from the leg the 747 was not on,
+-- first rolled it the wrong way: 1.16 nm outside. 165 deg then 15 nm: flown by, 0.03 nm (passed abeam 0.24; the
+-- wrong way 0.42).
+for _, c in ipairs({{170, 10, -90, 0.6, false}, {-165, 15, 90, 0.1, true}}) do
     local lat0, lon0 = 50, -10
     local fix_lat, fix_lon = probe.movePoint(lat0, lon0, 20, 0)
     local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, c[2], c[1] % 360)
@@ -930,6 +1020,11 @@ for _, c in ipairs({{170, 10, -90, 0.6}, {-165, 15, 90, 0.3}}) do
     end
     check(roll * side > 0, string.format("%s: first rolled %+.0f deg after NEXT was sequenced (its turn's way)", name, roll))
     check(fixes_in_order(out, route, 3, 4), name..": FIX and NEXT sequenced in order")
+    local fix_at = nil
+    for _, sw in ipairs(out.switches) do if sw.from == 3 then fix_at = sw.nm end end
+    check(fix_at ~= nil and (c[5] and fix_at >= 2 or not c[5] and fix_at <= 1), string.format(
+        "%s: the turn-back %s, FIX sequenced %s nm from it", name, c[5] and "flown by"
+        or "passed abeam (its path does not fit)", fix_at and string.format("%.1f", fix_at) or "never"))
 end
 
 -- 14. After a leg LNAV steered as before (from VECTORS), a 747 established on it flies the next fix's arc from the
@@ -1407,6 +1502,42 @@ do
     check(at ~= nil and math.abs(at) <= 0.5, string.format(
         "the active fix replaced at its index (a route edit) on a leg flown direct, passed 10 nm off: sequenced %s the wayline of the leg from the edit (0.5)",
         at and string.format("%.2f nm %s", math.abs(at), at < 0 and "before" or "past") or "never at"))
+end
+-- [P15] LNAV pushed 1 nm before a +165 deg fix at 250 kt after HDG SEL flew on along the leg to it, 0.3-2 nm
+-- outside the turn, past where the turn's path starts (9.3 nm before the fix): engaged at once, the turn passed abeam
+-- as before P15 (217-241 deg of turning, no bank reversal) rather than round the path from there (514-595 deg, 3-4
+-- reversals), and onto the next leg.
+for _, off in ipairs({-2, -1, -0.3}) do
+    local lat0, lon0 = 50, -10
+    local start_lat, start_lon = probe.movePoint(lat0, lon0, 20, 0)
+    local fix_lat, fix_lon = probe.movePoint(start_lat, start_lon, 30, 0)
+    local next_lat, next_lon = probe.movePoint(fix_lat, fix_lon, 40, 0)
+    local after_lat, after_lon = probe.movePoint(next_lat, next_lon, 40, 165)
+    local far_lat, far_lon = probe.movePoint(after_lat, after_lon, 40, 165)
+    route = {E("ORIG", lat0 - 1, lon0, 0, 1), E("START", start_lat, start_lon), E("FIX", fix_lat, fix_lon),
+        E("NEXT", next_lat, next_lon), E("AFTER", after_lat, after_lon), E("FAR", far_lat, far_lon),
+        E("DEST", far_lat + 3, far_lon, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(next_lat, next_lon, 15, 180)
+    s_lat, s_lon = probe.movePoint(s_lat, s_lon, math.abs(off), off < 0 and 270 or 90)
+    out = fly({route = route, index = 4, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 14 / 250 * 3600 + 420, arm_at_s = 14 / 250 * 3600})
+    local reversals, last_sign = 0, 0
+    for _, q in ipairs(out.track) do
+        if math.abs(q.bank) > 5 then
+            local sign = q.bank > 0 and 1 or -1
+            if last_sign ~= 0 and sign ~= last_sign then reversals = reversals + 1 end
+            last_sign = sign
+        end
+    end
+    local last = out.track[#out.track]
+    local final = math.abs(afds.signed_cross_track_nm(next_lat, next_lon, after_lat, after_lon, last.lat, last.lon,
+        probe.getDistance, probe.getHeading))
+    local name = string.format("LNAV pushed 1 nm before a +165 deg fix at 250 kt, %.1f nm outside the turn", -off)
+    check(out.engaged ~= nil and out.engaged.t - out.pushed.t <= 0.1, name..": engaged at once")
+    check(out.turned <= 260 and reversals <= 1, string.format(
+        "%s: passed abeam, %.0f deg of turning (260) and %d bank reversals (1)", name, out.turned, reversals))
+    check(final <= 0.2 and fixes_in_order(out, route, 4, 4), string.format(
+        "%s: NEXT sequenced, %.2f nm off the leg after it at the end (0.2)", name, final))
 end
 -- the leg flown direct (from VECTORS) or the 747's own direct-to: engaged at once as before (a leg from where the
 -- 747 is); on the runway armed, engaged above 50 ft

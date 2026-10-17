@@ -285,8 +285,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   overshoot and a time bound.
 - `lnav_turn_anticipation_test.lua`: LNAV fly-by turns - the anticipation
   (the arc at the bank limit, half the 3 deg/s roll-in, and in wind where the
-  drifting turn ends on the outbound leg; nothing beyond 150 deg or with an
-  implausible wind), and the production sequencing, LNAV steering and roll
+  drifting turn ends on the outbound leg; beyond 150 deg a 150 deg turn's,
+  nothing from 175 deg or with an implausible wind), and the production
+  sequencing, LNAV steering and roll
   filter flying a lateral model fitted to the kit's 2026-10-11 recordings:
   EIDW's DW129 (+90 deg), EHAM's NETOM to AM608, TST744L's BEDRA and BILTO in
   a 96 kt wind and ELPOM, and 15-120 deg turns at 250 and 478 kt, each within
@@ -309,12 +310,26 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   turned the right way round (their arcs sharing the leg), but a 120 deg turn
   whose next fix, a short leg on, turns 2 deg keeping its arc (within 0.4 nm
   of the leg after it at 250 kt, 1 nm at 480 kt); and a 90 deg turn 10-15 nm
-  after a turn-back (the leg between steered as before, the 747 not on it)
-  entered rolling its way, no farther outside the leg after it than before
-  i-1b (0.6 and 0.3 nm), while a 747 established on such a leg (from VECTORS)
+  after a turn-back entered rolling its way, no farther outside the leg after
+  it than before i-1b (170 deg with 10 nm on passed abeam, its fly-by path not
+  fitting before the 90 deg turn's arc, the leg between steered as before and
+  the 747 not on it: 0.6 nm; 165 deg with 15 nm flown by: 0.1 nm), while a 747
+  established on such a leg (from VECTORS)
   flies the next fix's arc from the hand-over also 0.4 nm into it in 000/40,
   0.5 nm off the leg the next leg's path, decided again when that fix is
-  sequenced again after the one before was flown to.
+  sequenced again after the one before was flown to. Turns of more than
+  150 deg (item P15) flown by from where a 150 deg turn starts, on round the
+  arc by up to 45 deg past the outbound course and back onto the outbound
+  leg: 170 and -165 deg at 200 kt at most 0.4 nm farther outside the next leg
+  than the path (2.18 and 1.64 nm; passed abeam 3.22 and 3.21), a 178 deg
+  reversal passed abeam as before; 160, 170 and -170 deg at 480 kt and 165 deg
+  in 270/96 turning from the path's start (34 and 50 nm before the fix),
+  within 0.5 nm of the path, no farther outside the outbound leg than it
+  (6.2-13.3 nm; passed abeam 18.1-24.3) and on that leg after the path joins
+  it, the fixes in order; LNAV pushed 1 nm before a +165 deg fix at 250 kt
+  after HDG SEL flew on past the turn's start, the turn passed abeam as before
+  (at most 260 deg of turning and one bank reversal; round the path from there
+  514-595 deg).
   LNAV's path guidance on the model: within 0.1 nm of the leg to DW124 90 and
   120 s after DW129, and back on a leg from 1, 3 and 10 nm off within 60, 120
   and 300 s at most 45 deg to it and not 0.2 nm through it. LNAV ARM: LNAV
@@ -373,7 +388,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   an arc is drawn for (the highest the wind gives across the turn), a capture
   look-ahead on the legs (the aim waiting at the arc's start until the
   look-ahead reaches it), and no path without a radius, courses or a
-  look-ahead, or for a reversal.
+  look-ahead, or for a reversal (175 deg or more). Beyond 150 deg (item P15)
+  the turn starting R tan(75) before the fix, where a 150 deg turn starts:
+  for 170 deg R (1 - cos 170) - R tan(75) sin 170 outside the outbound leg on
+  its course, 45 deg on, the straight line closing on the leg and where the
+  path joins it, on the first arc, on the straight line and on the leg after
+  it (cross-track, course, along), the left turn mirrored, 151 deg turning on
+  just enough and back at once, and how far before and after the fix the
+  path leaves and joins the legs.
 - `vnav_turn_hold_test.lua`: a fix LNAV sequences early for its turn keeping
   its altitude as VNAV's descent floor until the aircraft is past the turn's
   bisector - the bisector for straight fixes, 65-137 deg turns both ways and

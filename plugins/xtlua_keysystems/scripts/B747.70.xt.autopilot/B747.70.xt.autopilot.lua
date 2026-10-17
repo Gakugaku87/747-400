@@ -2490,7 +2490,7 @@ end
 -- of its turn and the leg after it, with the parameters p (B747_lnav_path_parameters): the arc's radius the
 -- turn's at the bank limit and the highest ground speed the wind gives across it (also the capture
 -- look-ahead's base); a turn LNAV does not fly by (into an entry that is no
--- fix, or of more than LNAV_FLYBY_MAX_TURN_DEG; on the ground or below LNAV_ALTITUDE_LEG_MIN_RA_FT above it, as
+-- fix, or of LNAV_FLYBY_REVERSAL_DEG or more; on the ground or below LNAV_ALTITUDE_LEG_MIN_RA_FT above it, as
 -- the anticipation: a SID's arc banked from 118 ft) straight on through the fix; the turn to the leg after a fix
 -- listed twice in a row (a leg of no length, whose course is none: the path took it as 000 or 180 and
 -- orbited). nil where the leg into it is no course from a fix: from the origin airport, flown direct to the
@@ -2501,8 +2501,28 @@ local function B747_lnav_leg_has_course(a,b)
 end
 -- The turn LNAV's path makes at fmsO[k], as B747_lnav_path_at_fix says (nil where there is no path through it):
 -- the fix, the inbound and outbound courses, the radius for the ground speed across the turn at the bank
--- limit, and the entries at both ends of its legs with their indexes.
-local function B747_lnav_turn_at(fmsO,k,p)
+-- limit (for a turn of more than LNAV_FLYBY_MAX_TURN_DEG, whose path sweeps on past the outbound course, the
+-- wind's whole speed: afds.lnav_capped_turn), and the entries at both ends of its legs with their indexes.
+-- [P15] Such a turn is flown by only where its path fits on its legs, between the turns at their other ends
+-- (B747_lnav_capped_turn_fits; raw: as if it did, for the turns next to it), and not once the 747 has gone on past
+-- its start off its path (B747_lnav_capped_turn_passed); else straight on through the fix, passed abeam as a
+-- reversal is.
+local B747_lnav_capped_turn_fits
+-- A capped turn whose fix is flown to with the 747 past the path's start more than LNAV_MAX_PREEMPT_XTK_NM off the
+-- path (LNAV pushed after HDG SEL flew on past the turn's start; B747_lnav_path_at_fix notes it) is passed abeam:
+-- flying the path from there LNAV turned back round it (+165 deg at 250 kt, pushed 1 nm before the fix 0.3-2 nm off
+-- the leg: 514-595 deg of turning, 3-4 bank reversals; passed abeam 217-241, none). Noted for that fix while it is
+-- flown to and while it is the fix before.
+local lnavCappedPassed={index=0,lat=0,lon=0}
+local function B747_lnav_capped_turn_passed(fmsO,k)
+	local current=B747DR_fmscurrentIndex
+	if lnavCappedPassed.index>0 and current~=lnavCappedPassed.index and current~=lnavCappedPassed.index+1 then
+		lnavCappedPassed.index=0
+	end
+	local fix=fmsO[k]
+	return lnavCappedPassed.index>0 and fix~=nil and fix[5]==lnavCappedPassed.lat and fix[6]==lnavCappedPassed.lon
+end
+local function B747_lnav_turn_at(fmsO,k,p,raw)
 	local count=table.getn(fmsO)
 	local fix=fmsO[k]
 	if k<2 or k>=count or not B747_lnav_leg_supports_preemption(fix) then return nil end
@@ -2522,23 +2542,60 @@ local function B747_lnav_turn_at(fmsO,k,p)
 	if n<count and simDR_onGround==0 and simDR_radarAlt1>=LNAV_ALTITUDE_LEG_MIN_RA_FT
 		and B747_lnav_leg_supports_preemption(nextFix) and B747_lnav_leg_has_course(fix,nextFix) then
 		local course=getHeading(fix[5],fix[6],nextFix[5],nextFix[6])
-		if math.abs(getHeadingDifference(course,inCourse))<=B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG then
+		if math.abs(getHeadingDifference(course,inCourse))<B747_afds_helpers.LNAV_FLYBY_REVERSAL_DEG then
 			outCourse=course
 		end
 	end
-	local radius=B747_afds_helpers.turn_radius_nm(B747_afds_helpers.lnav_turn_ground_speed_kts(p.tas,p.windEast,
-		p.windNorth,inCourse,outCourse),p.bank)
+	local capped=math.abs(getHeadingDifference(outCourse,inCourse))>B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG
+	local groundSpeed
+	if capped then
+		groundSpeed=p.tas+math.sqrt(p.windEast*p.windEast+p.windNorth*p.windNorth)
+	else
+		groundSpeed=B747_afds_helpers.lnav_turn_ground_speed_kts(p.tas,p.windEast,p.windNorth,inCourse,outCourse)
+	end
+	local radius=B747_afds_helpers.turn_radius_nm(groundSpeed,p.bank)
 	if radius==nil then return nil end
+	if capped and not raw and (B747_lnav_capped_turn_passed(fmsO,k)
+		or not B747_lnav_capped_turn_fits(fmsO,p,inCourse,outCourse,radius,legStart,s,fix,nextFix,n)) then
+		outCourse=inCourse
+		radius=B747_afds_helpers.turn_radius_nm(B747_afds_helpers.lnav_turn_ground_speed_kts(p.tas,p.windEast,
+			p.windNorth,inCourse,outCourse),p.bank)
+		if radius==nil then return nil end
+	end
 	return fix,inCourse,outCourse,radius,legStart,s,nextFix,n
 end
 
--- How far before (and after) fmsO[j] the arc of LNAV's path starts (ends), before the legs are shared, and
--- the turn there (deg, + right); 0, 0 without a fly-by turn there.
+-- Whether the path of a turn of more than LNAV_FLYBY_MAX_TURN_DEG at fix (from legStart, fmsO[s], to nextFix,
+-- fmsO[n]) fits on its legs: where it leaves the leg into the fix (afds.lnav_turn_extent_nm) no farther back than
+-- where the turn at legStart joins that leg, and where it joins the leg after the fix no farther on than where the
+-- turn at nextFix leaves it (those turns flown by). On a 10 nm leg after a 170 deg turn-back at 200 kt the path
+-- joined the leg only after the next turn's arc began (9.6 and 8.4 nm along it): still 45 deg on, the 747 went
+-- 1.16 nm outside the leg after that 90 deg turn (0.54 passed abeam).
+B747_lnav_capped_turn_fits=function(fmsO,p,inCourse,outCourse,radius,legStart,s,fix,nextFix,n)
+	local before,after=B747_afds_helpers.lnav_turn_extent_nm((outCourse-inCourse+540)%360-180,radius)
+	local prevAfter,nextBefore=0,0
+	local _,pIn,pOut,pRadius=B747_lnav_turn_at(fmsO,s,p,true)
+	if pIn~=nil then
+		local _,a=B747_afds_helpers.lnav_turn_extent_nm((pOut-pIn+540)%360-180,pRadius)
+		prevAfter=a
+	end
+	local _,nIn,nOut,nRadius=B747_lnav_turn_at(fmsO,n,p,true)
+	if nIn~=nil then
+		nextBefore=B747_afds_helpers.lnav_turn_extent_nm((nOut-nIn+540)%360-180,nRadius)
+	end
+	return before+prevAfter<=getDistance(legStart[5],legStart[6],fix[5],fix[6])
+		and after+nextBefore<=getDistance(fix[5],fix[6],nextFix[5],nextFix[6])
+end
+
+-- How far before fmsO[j] LNAV's path leaves the leg into it and how far after it the path joins the leg after
+-- it (afds.lnav_turn_extent_nm), before the legs are shared, and the turn there (deg, + right); 0, 0, 0 without a
+-- fly-by turn there.
 local function B747_lnav_turn_tangent_nm(fmsO,j,p)
 	local fix,inCourse,outCourse,radius=B747_lnav_turn_at(fmsO,j,p)
-	if fix==nil then return 0,0 end
+	if fix==nil then return 0,0,0 end
 	local turn=(outCourse-inCourse+540)%360-180
-	return radius*math.tan(math.rad(math.abs(turn))/2),turn
+	local before,after=B747_afds_helpers.lnav_turn_extent_nm(turn,radius)
+	return before,after,turn
 end
 
 -- Whether the arc of a fly-by turn (turn, deg + right) shares a leg with the turn at the leg's other end
@@ -2565,24 +2622,33 @@ local function B747_lnav_path_at_fix(fmsO,k,p)
 	-- other.
 	local turn=(outCourse-inCourse+540)%360-180
 	if math.abs(turn)>=1 then
-		local tangent=radius*math.tan(math.rad(math.abs(turn))/2)
+		local before,after=B747_afds_helpers.lnav_turn_extent_nm(turn,radius)
 		local share=1
-		local other,otherTurn=B747_lnav_turn_tangent_nm(fmsO,s,p)
+		local _,otherAfter,otherTurn=B747_lnav_turn_tangent_nm(fmsO,s,p)
 		local into=getDistance(legStart[5],legStart[6],fix[5],fix[6])
-		if B747_lnav_arc_shares_leg(turn,otherTurn) and tangent+other>into then
-			share=math.min(share,into/(tangent+other))
+		if B747_lnav_arc_shares_leg(turn,otherTurn) and before+otherAfter>into then
+			share=math.min(share,into/(before+otherAfter))
 		end
-		other,otherTurn=B747_lnav_turn_tangent_nm(fmsO,n,p)
+		local otherBefore
+		otherBefore,_,otherTurn=B747_lnav_turn_tangent_nm(fmsO,n,p)
 		local outof=getDistance(fix[5],fix[6],nextFix[5],nextFix[6])
-		if B747_lnav_arc_shares_leg(turn,otherTurn) and tangent+other>outof then
-			share=math.min(share,outof/(tangent+other))
+		if B747_lnav_arc_shares_leg(turn,otherTurn) and after+otherBefore>outof then
+			share=math.min(share,outof/(after+otherBefore))
 		end
 		radius=radius*share
 	end
 	local distance=getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)
 	local bearing=math.rad(getHeading(fix[5],fix[6],simDR_latitude,simDR_longitude))
-	return B747_afds_helpers.lnav_path_at(distance*math.sin(bearing),distance*math.cos(bearing),inCourse,outCourse,
-		radius,p.lookahead,capture),fix
+	local path=B747_afds_helpers.lnav_path_at(distance*math.sin(bearing),distance*math.cos(bearing),inCourse,outCourse,
+		radius,p.lookahead,capture)
+	-- [P15] a capped turn flown to with the 747 past its start off its path: passed abeam (B747_lnav_capped_turn_passed)
+	if path~=nil and math.abs(turn)>B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG and k==B747DR_fmscurrentIndex
+		and math.abs(path.xtk_nm)>LNAV_MAX_PREEMPT_XTK_NM
+		and distance*math.cos(bearing-math.rad(inCourse))>-path.arc_start_nm then
+		lnavCappedPassed.index,lnavCappedPassed.lat,lnavCappedPassed.lon=k,fix[5],fix[6]
+		return B747_lnav_path_at_fix(fmsO,k,p)
+	end
+	return path,fix
 end
 
 -- What LNAV's path is drawn with now: the TAS, the wind (kt east and north; none when it cannot be), the
@@ -2601,6 +2667,18 @@ local function B747_lnav_path_parameters()
 			B747_afds_helpers.LNAV_PATH_MIN_LOOKAHEAD_NM,B747_afds_helpers.LNAV_PATH_MAX_LOOKAHEAD_NM)}
 end
 
+-- [P15] Whether the turn at fmsO[k] (of turnDeg) is flown by: up to LNAV_FLYBY_MAX_TURN_DEG; beyond it, short of
+-- LNAV_FLYBY_REVERSAL_DEG, where its path fits on its legs (B747_lnav_turn_at); never not moving.
+local function B747_lnav_turn_flown_by(fmsO,k,turnDeg)
+	local turn=math.abs(turnDeg)
+	if turn>=B747_afds_helpers.LNAV_FLYBY_REVERSAL_DEG then return false end
+	if turn<=B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG then return true end
+	local p=B747_lnav_path_parameters()
+	if p==nil then return false end
+	local fix,inCourse,outCourse=B747_lnav_turn_at(fmsO,k,p)
+	return fix~=nil and math.abs(getHeadingDifference(outCourse,inCourse))>B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG
+end
+
 -- The fix of the 747's own DIRECT TO (B747DR_ap_lnav_xtk_target -100, which the steering makes 0 within 10 nm
 -- of it): its leg is flown direct to it until it is passed, and it is no fly-by turn's fix after that (LNAV's
 -- path took the leg back once the target was 0 and passed the fix 4 to 7.5 nm off). 0 for none.
@@ -2616,7 +2694,7 @@ end
 
 -- The fix before fmsO[i] (past one listed twice in a row) where a leg to fmsO[i] starts that LNAV's path could
 -- take (nil from the origin airport, from an entry that is no fix, or for a leg of no length), and whether that
--- fix was no fly-by: reached direct, or a turn of more than LNAV_FLYBY_MAX_TURN_DEG (passed abeam).
+-- fix was no fly-by: reached direct, or a turn not flown by (B747_lnav_turn_flown_by: passed abeam).
 local function B747_lnav_fix_before(fmsO,i)
 	local k=i-1
 	if k>2 and not B747_lnav_leg_has_course(B747_lnav_leg_start(fmsO,k),fmsO[k]) then k=k-1 end
@@ -2628,7 +2706,7 @@ local function B747_lnav_fix_before(fmsO,i)
 	end
 	local inCourse,directTo=B747_lnav_inbound_course(fmsO,k)
 	local outCourse=getHeading(before[5],before[6],fmsO[i][5],fmsO[i][6])
-	return k,(directTo or math.abs(getHeadingDifference(outCourse,inCourse))>B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG)
+	return k,(directTo or not B747_lnav_turn_flown_by(fmsO,k,getHeadingDifference(outCourse,inCourse)))
 end
 
 -- [i-1b] Whether the arc at the fix before (fmsO[k], LNAV's path through it path) is flown once that fix has
@@ -2677,9 +2755,9 @@ end
 -- and LNAV_PATH_CAPTURE_RADII of the turn radius along the legs, never nearer than the cross-track (an
 -- intercept of at most 45 deg). nil without such a path, with an offset or a direct-to
 -- (B747DR_ap_lnav_xtk_target, the 747's own direct-to until its fix is passed), or not moving; and after a
--- fix that was no fly-by (reached direct, or a turn of more than LNAV_FLYBY_MAX_TURN_DEG passed abeam), whose
--- next leg starts behind the 747 (on a 170 deg turn the path guidance orbited round it): LNAV steers as
--- before there (at the fix within 10 nm of it, 5 nm along the leg beyond).
+-- fix that was no fly-by (reached direct, or a turn not flown by passed abeam: B747_lnav_fix_before), whose
+-- next leg starts behind the 747 (on a 170 deg turn passed abeam the path guidance orbited round it): LNAV
+-- steers as before there (at the fix within 10 nm of it, 5 nm along the leg beyond).
 local function B747_lnav_path_now(fmsO,current)
 	-- another fix flown to: B747_lnav_arc_before_flown decides again when the same one comes back (a reposition,
 	-- back-sequencing)
@@ -2943,7 +3021,10 @@ function B747_getCurrentWayPoint_function(fmsO)
 		if tonumber(legStart[2])~=1 and B747_lnav_leg_supports_preemption(fix)
 			and B747_lnav_leg_supports_preemption(nextFix) then
 			local outCourse=getHeading(fix[5],fix[6],nextFix[5],nextFix[6])
-			local lead=B747_lnav_turn_anticipation_nm(inCourse,outCourse)
+			local lead=0
+			if B747_lnav_turn_flown_by(fmsO,current,getHeadingDifference(outCourse,inCourse)) then
+				lead=B747_lnav_turn_anticipation_nm(inCourse,outCourse)
+			end
 			local dToFix=getDistance(simDR_latitude,simDR_longitude,fix[5],fix[6])
 			local legLength=getDistance(legStart[5],legStart[6],fix[5],fix[6])
 			local due=false
@@ -3047,7 +3128,7 @@ function B747_getCurrentWayPoint_function(fmsO)
 						local pemptNext=0
 						if i>1 and lnavEngaged then
 							local inCourse,directTo=B747_lnav_inbound_course(fmsO,i)
-							if not directTo then
+							if not directTo and B747_lnav_turn_flown_by(fmsO,i,getHeadingDifference(nextHeading,inCourse)) then
 								pemptNext=B747_lnav_turn_anticipation_nm(inCourse,nextHeading)
 							end
 						end
