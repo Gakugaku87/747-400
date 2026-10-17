@@ -84,8 +84,9 @@ end
 -- after the sequencing; tas_fn = function(t) the TAS; jump = {t, start = {lat,
 -- lon}, heading, index}: the 747 put there with that fix active (a reposition,
 -- the leg search moving back), out.jump_turned the turning until then; beta_fn =
--- function(t) the nose off the air velocity (deg; the velocity along the
--- model's heading), as in X-Plane's yaw and roll motion}. A frame as the 747's:
+-- function(t) X-Plane's sideslip beta (deg) and alpha_deg its angle of attack:
+-- the nose off the air velocity (along the model's heading) by beta cos(bank) +
+-- alpha sin(bank), as X-Plane's is}. A frame as the 747's:
 -- the sequencing with the cross-track and VNAV's held fix (B747_getCurrentWayPoint),
 -- LNAV's steering (B747_monitorAP), then the armed LNAV engaging (B747_ap_fma).
 local LOOPS = {cruise = {3.2, 0.22}, low = {4.7, 0.73}}
@@ -121,8 +122,10 @@ local function fly(s)
         local track = math.deg(math.atan2(vx, vy)) % 360
         env.simDRTime = t
         env.simDR_latitude, env.simDR_longitude = lat, lon
-        local nose = (heading + (s.beta_fn and s.beta_fn(t) or 0)) % 360
+        local beta, alpha = s.beta_fn and s.beta_fn(t) or 0, s.alpha_deg or 0
+        local nose = (heading + beta * math.cos(math.rad(bank)) + alpha * math.sin(math.rad(bank))) % 360
         env.simDR_true_heading, env.simDR_AHARS_heading_deg_pilot = nose, nose
+        env.simDR_beta_deg, env.simDR_alpha_deg, env.simDR_AHARS_roll_deg_pilot = beta, alpha, bank
         env.simDR_groundspeed, env.simDR_TAS_mps, env.simDR_ground_track_true = gs, v, track
         env.simDR_wind_speed_kts = wind_kt
         -- the ND wind bearing as B747.68.xt.fms makes it (relative to the heading)
@@ -1898,6 +1901,34 @@ do
     check(command_swing <= 0.5 and bank_swing <= 0.6, string.format(
         "BILTO at FL350 with the nose swinging 0.3 deg at 3.5 s: the heading command swings %.2f deg (0.5) and the bank %.2f (0.6)",
         command_swing, bank_swing))
+end
+
+-- [review 18] In a bank X-Plane's nose is also off the air path by alpha sin(bank), steadily: BILTO with an angle of
+-- attack of 2.65 deg (p16-L1: 2.6-2.9), the nose 0.8 deg inside the air path at 20 deg of bank. Taken along the nose the
+-- wind was 6.6 kt off and turned with the 747; the filter passed it, the arc moved through the turn, and the 747 held
+-- the bank limit 125 s and went 0.37 nm outside the path (a review). Along the air path: at most 0.15 nm outside, at most
+-- 100 s at the bank limit.
+do
+    local b_lat, b_lon = 56.5, -15.0
+    local c_lat, c_lon = probe.movePoint(b_lat, b_lon, 150, 137.4)
+    local a_lat, a_lon = probe.movePoint(b_lat, b_lon, 120, 180)
+    route = {E("ORIG", a_lat - 1, a_lon, 0, 1), E("A", a_lat, a_lon), E("BILTO", b_lat, b_lon), E("C", c_lat, c_lon),
+        E("DEST", c_lat - 1, c_lon, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(b_lat, b_lon, 48, 180)
+    local outside = 0
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = (360 - math.deg(math.asin(100 / 472))) % 360,
+        tas_kt = 472, alt_ft = 35000, loop = "cruise", seconds = 420, wind_from_deg = 270, wind_kt = 100, alpha_deg = 2.65,
+        hook = function(env, t)
+            if t > 60 and env.B747DR_fmscurrentIndex <= 4 then
+                outside = math.max(outside, -(env.B747DR_ap_lnav_xtk_error or 0))
+            end
+        end})
+    local at_limit, dt = 0, out.track[2].t - out.track[1].t
+    for _, q in ipairs(out.track) do
+        if math.abs(q.bank) >= 19.8 then at_limit = at_limit + dt end
+    end
+    check(outside <= 0.15 and at_limit <= 100, string.format(
+        "BILTO at FL350, alpha 2.65 deg: %.2f nm outside the path (0.15), %.0f s at the bank limit (100)", outside, at_limit))
 end
 
 print("LNAV turn anticipation tests passed: "..checks)

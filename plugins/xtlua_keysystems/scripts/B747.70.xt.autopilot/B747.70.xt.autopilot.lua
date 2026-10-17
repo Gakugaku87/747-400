@@ -284,6 +284,8 @@ throttlederate = find_dataref("sim/aircraft/engine/acf_throtmax_FWD") -- can use
 -- Datarefs for cost index calculations
 gwtKG = find_dataref("sim/flightmodel/weight/m_total") -- kilograms
 simDR_TAS_mps = find_dataref("sim/flightmodel/position/true_airspeed") -- true airspeed in meters per second
+simDR_alpha_deg = find_dataref("sim/flightmodel/position/alpha")
+simDR_beta_deg = find_dataref("sim/flightmodel/position/beta")
 simDR_GS_mps = find_dataref("sim/flightmodel/position/groundspeed") -- ground airspeed in meters per secon
 
 --*************************************************************************************--
@@ -2369,23 +2371,47 @@ local function B747_lnav_bank_limit_deg()
 end
 
 -- [P18] The wind LNAV draws its turns and its path with (kt east and north): the ground velocity less the TAS along
--- the nose, filtered over LNAV_WIND_FILTER_SEC as an IRS's wind is. Taken frame by frame it swung with the nose off
--- the air path (sideslip in the yaw and roll motion: TAS x beta, 2.5 kt for 0.3 deg at 481 kt), and the arc's radius
--- with it: in a cruise arc a 0.3 deg swing at 3.5 s swung LNAV's heading command 4.8 deg and the bank 2.6 (TST744L's
--- BILTO in p11-L1 and p16-L1: 10-15 deg of bank swinging at about 3.5 s through the arc). The filter starts again
--- after a gap of more than LNAV_WIND_GAP_SEC; a wind that is no number or more than LNAV_MAX_WIND_KTS is none, and
--- the filter keeps what it had.
-local LNAV_WIND_FILTER_SEC=30
+-- the air path (B747_lnav_air_heading_deg), filtered over LNAV_WIND_FILTER_SEC as an IRS's wind is. Taken frame by
+-- frame along the nose it swung with the nose off the air path (sideslip in the yaw and roll motion: TAS x beta,
+-- 2.5 kt for 0.3 deg at 481 kt), and the arc's radius with it: in a cruise arc a 0.3 deg swing at 3.5 s swung LNAV's
+-- heading command 4.8 deg and the bank 2.6 (TST744L's BILTO in p11-L1 and p16-L1: 10-15 deg of bank swinging at
+-- about 3.5 s through the arc). The filter starts again after a gap of more than LNAV_WIND_GAP_SEC; a sample that is
+-- no number or more than LNAV_MAX_WIND_KTS leaves the filtered wind as it was (none before the first; it gave none for
+-- that frame, and the radius jumped: a review).
+-- [review 18] The air path's heading: the nose's less the sideslip's and the angle of attack's share in a bank,
+-- psi - (beta cos(phi) + alpha sin(phi)) in X-Plane's signs. Taken along the nose the wind also carried alpha sin(phi),
+-- steadily: 0.8 deg in a 20 deg bank at FL350 (alpha 2.65 deg), 6.6 kt turning with the 747, which the 30 s filter
+-- passed. Through BILTO's turn in a 270/100 wind (p11-L1, p16-L1, p17-L1) the wind along the nose went from 92 to
+-- 104 kt with the heading, along the air path it held 98-100 kt (X-Plane's wind indicator goes as the nose's). In the
+-- model the arc moved through the turn (radius 13.10, 12.86, 13.29 nm) and the 747 held the bank limit 125 s and went
+-- 0.37 nm outside it (a review).
+-- Along the air path a 10 s filter is enough: the 3-8 s swing is gone from the sample itself. A sideslip or an angle of
+-- attack that is no number counts as 0; both are taken at most 30 deg.
+local LNAV_WIND_FILTER_SEC=10
 local LNAV_WIND_GAP_SEC=5
+local function B747_lnav_air_heading_deg()
+	local phi,beta,alpha=tonumber(simDR_AHARS_roll_deg_pilot) or 0,tonumber(simDR_beta_deg) or 0,tonumber(simDR_alpha_deg) or 0
+	if phi~=phi then phi=0 end
+	if beta~=beta then beta=0 end
+	if alpha~=alpha then alpha=0 end
+	phi=math.rad(phi)
+	beta=B747_afds_helpers.clamp(beta,-30,30)
+	alpha=B747_afds_helpers.clamp(alpha,-30,30)
+	return simDR_true_heading-(beta*math.cos(phi)+alpha*math.sin(phi))
+end
 local lnavWind={time=nil,east=0,north=0}
 local function B747_lnav_wind()
 	local tas=simDR_TAS_mps*1.94384
 	local gs=simDR_groundspeed*1.94384
-	local track,heading=math.rad(simDR_ground_track_true),math.rad(simDR_true_heading)
+	local track,heading=math.rad(simDR_ground_track_true),math.rad(B747_lnav_air_heading_deg())
 	local east=gs*math.sin(track)-tas*math.sin(heading)
 	local north=gs*math.cos(track)-tas*math.cos(heading)
 	local wind=math.sqrt(east*east+north*north)
-	if wind~=wind or wind>B747_afds_helpers.LNAV_MAX_WIND_KTS then return 0,0 end
+	-- [review 18] a sample that is no wind keeps the filtered one (it gave none for that frame: the radius jumped)
+	if wind~=wind or wind>B747_afds_helpers.LNAV_MAX_WIND_KTS then
+		if lnavWind.time~=nil then return lnavWind.east,lnavWind.north end
+		return 0,0
+	end
 	local now=tonumber(simDRTime) or 0
 	local dt=lnavWind.time~=nil and now-lnavWind.time or nil
 	if dt==nil or dt<0 or dt>LNAV_WIND_GAP_SEC then
