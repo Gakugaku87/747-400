@@ -2680,19 +2680,19 @@ end
 -- active leg - abeam it past its start in the route's direction, before the start within that of the fix it starts
 -- at - or on a track towards the leg at up to 90 deg where the turn onto it begins (the turn's anticipation across the
 -- leg: 3.0 nm for 45 deg at 480 kt and 20 deg of bank, 9.7 for 90; before the leg's start only where that turn ends
--- about on the leg); and abeam the leg into the fix the active leg starts at, closing on that fix within its turn's
--- lead and 2.5 nm (sequenced at the lead while LNAV was only armed). Before its start the leg counts only so, not as
--- its whole line; past its end its line counts.
+-- about on the leg); and abeam the leg into the fix the active leg starts at, within that fix's turn's lead and
+-- 2.5 nm of it (sequenced at the lead while LNAV was only armed), whenever the active leg does not capture. Before
+-- its start the active leg's line counts only in these ways; past its end its line counts.
 -- Otherwise LNAV stays armed and the roll mode before it (HDG SEL, HDG HOLD) flies on, as on Aerowinx PSX's 747-400
 -- (2.5 nm; the FCOM's figure to be confirmed). At once where there is no such leg: none active, from the origin
 -- airport, of no length, flown direct (after VECTORS, an altitude leg's end, PPOS, a hold), with an offset or a
 -- direct-to (the 747's own: from where it is).
 local LNAV_CAPTURE_XTK_NM=2.5
 -- Whether the 747 is where armed LNAV captures the leg to fmsO[i] (true or false), nil where there is no such leg.
--- active: the active leg; before its start within LNAV_CAPTURE_XTK_NM of the fix it starts at, where the turn onto
--- it begins and ends about on the leg, or where it captures the leg into that fix. Else (that leg into the fix,
--- nextCourse the active leg's) only abeam it within LNAV_CAPTURE_XTK_NM, closing on its fix, where the FMC could
--- have sequenced that fix at its turn's lead.
+-- active: the active leg (before its start within LNAV_CAPTURE_XTK_NM of the fix it starts at, or where the turn onto
+-- it begins and ends about on the leg), and where it does not capture, the leg into its start fix. Else (that leg,
+-- nextCourse the active leg's) only abeam it within LNAV_CAPTURE_XTK_NM, where the FMC could have sequenced its fix
+-- at that fix's turn's lead.
 local function B747_lnav_captures_leg(fmsO,i,active,nextCourse)
 	local fix=fmsO[i]
 	if i<2 or fix==nil or type(fix[5])~="number" or type(fix[6])~="number" then return nil end
@@ -2745,17 +2745,13 @@ local function B747_lnav_captures_leg(fmsO,i,active,nextCourse)
 	elseif active then
 		captured=math.abs(xtk)<=math.max(LNAV_CAPTURE_XTK_NM,turnIn)
 	else
-		-- the leg into the active leg's start fix: within that fix's turn's lead and LNAV_CAPTURE_XTK_NM of it, on a
-		-- track closing on it (anywhere on that leg, also flying away from the fix 20 nm before it, LNAV engaged and
-		-- turned more than 270 deg, 41 nm off the active leg after 7 min)
+		-- the leg into the active leg's start fix, within that fix's turn's lead and LNAV_CAPTURE_XTK_NM of it, where
+		-- the FMC sequences it, on any track (anywhere on that leg, also flying away from the fix 20 nm before it, LNAV
+		-- engaged and turned more than 270 deg, 41 nm off the active leg after 7 min; only closing on the fix, within
+		-- 90 deg of the leg, a 747 crossing a dogleg's short leg at 90 deg never engaged)
 		local toGo=getDistance(legStart[5],legStart[6],fix[5],fix[6])-along
-		local course=legCourse
-		if along>0 then
-			local abeamLat,abeamLon=movePoint(legStart[5],legStart[6],along,legCourse)
-			course=(getHeading(abeamLat,abeamLon,legStart[5],legStart[6])+180)%360
-		end
 		captured=toGo>=0 and toGo<=B747_lnav_turn_anticipation_nm(inCourse,nextCourse)+LNAV_CAPTURE_XTK_NM
-			and math.abs(getHeadingDifference(course,simDR_ground_track_true))<=90 and math.abs(xtk)<=LNAV_CAPTURE_XTK_NM
+			and math.abs(xtk)<=LNAV_CAPTURE_XTK_NM
 	end
 	if captured or not active then return captured end
 	-- the leg into the fix the active leg starts at, which the FMC sequenced at its turn's lead while LNAV was only

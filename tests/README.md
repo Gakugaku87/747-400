@@ -330,9 +330,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   leg, and 5 nm before a fix the FMC sequenced at its turn's lead (480 kt,
   1.5 nm off the leg to it, HDG SEL 000 or 345) at the push, as LNAV engaging
   at once flies it, but 10 nm past that fix on the line of the leg to it,
-  flying away from the next leg, and 10 or 20 nm before it on that leg
-  flying away, still armed (20 nm before it flying towards it engaged 12.2 nm
-  before it, its lead and 2.5 nm); at once on a leg flown direct
+  flying away from the next leg, and 20 nm before it on that leg flying away,
+  still armed (20 nm before it flying towards it engaged 12.2 nm before it,
+  its lead and 2.5 nm; 10 nm before it at once on any track); at a dogleg's
+  FIX (+90 deg onto a 3 nm leg, -90 deg at NEXT, both sequenced at 480 kt)
+  engaged at the push and onto the leg after NEXT; at once on a leg flown direct
   (from VECTORS) or after the 747's own DIRECT TO; armed on the runway,
   engaged above 50 ft, also 1 nm before the leg's start (armed on the ground
   for the takeoff).
