@@ -652,6 +652,12 @@ function B747_vnav_setClimbspeed()
         lastAlt=-1000
         nextAlt=spd_states["clb"]["crz"]["nextfunc"]()
     end
+    -- [review 17] below the cruise level the change-over to the cruise Mach 500 ft below it (clb_crz_setSpd) is the
+    -- climb's upper boundary: it came at the next recalculation, often the 60 s refresh, up to 1,500 ft late (a review)
+    local levelFt=tonumber(vnavSPD_state["cruiseLevelFt"])
+    if vnavSPD_state["cruisePhase"] and levelFt~=nil and simDR_pressureAlt1<levelFt-500 then
+        nextAlt=math.min(nextAlt,levelFt-500)
+    end
     local transalt=tonumber(getFMSData("transalt"))
     if vnavSPD_state["setBaro"]==false and nextAlt>transalt and simDR_pressureAlt1<=transalt then
         nextAlt=transalt

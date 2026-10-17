@@ -304,6 +304,27 @@ runtime.simDR_airspeed_mach = helpers.cas_to_mach(301, 30600)
 is_mach, dial = climb_speed("climbing through FL306")
 assert(is_mach == 1 and dial == 81, "the climb back within 500 ft of FL310 flew "..tostring(dial)
     ..(is_mach == 1 and " (Mach)" or " kt")..", not the cruise Mach .810")
+-- [review 17] the change-over 500 ft below the level is a boundary of the climb: VNAV's per-frame update
+-- (B747_vnav_speed) changes over as the 747 climbs through it, without another reason to recalculate (it came at the
+-- next one, often the 60 s refresh: up to 1,500 ft late, about M.83; a review)
+cruise_at_fl310()
+runtime.B747DR_ap_vnav_state, runtime.B747DR_ap_flightPhase, runtime.simDR_pressureAlt1 = 0, 3, 25000
+runtime.B747_vnav_speed()
+runtime.B747DR_ap_vnav_state, runtime.B747DR_ap_flightPhase = 2, 1
+runtime.getVNAVState = function() return 0 end
+fms_data.crzalt = "FL310"
+runtime.simDR_ind_airspeed_kts_pilot, runtime.simDR_autopilot_airspeed_is_mach = 301, 0
+runtime.simDR_pressureAlt1, runtime.simDR_airspeed_mach = 28000, helpers.cas_to_mach(301, 28000)
+climb_speed("VNAV climb back to CRZ ALT after FLCH")
+runtime.simDRTime = runtime.simDRTime + 1
+runtime.B747_vnav_speed()
+runtime.simDR_pressureAlt1, runtime.simDR_airspeed_mach = 30600, helpers.cas_to_mach(301, 30600)
+runtime.simDRTime = runtime.simDRTime + 1
+runtime.B747_vnav_speed()
+assert(runtime.simDR_autopilot_airspeed_is_mach == 1 and runtime.B747DR_ap_ias_dial_value == 81,
+    "VNAV's per-frame update climbing through FL305 back to FL310 flew "..tostring(runtime.B747DR_ap_ias_dial_value)
+    ..(runtime.simDR_autopilot_airspeed_is_mach == 1 and " (Mach)" or " kt")..", not the cruise Mach .810")
+fms_data.crzalt = nil
 -- the approach (G/S) and a go-around with VNAV pushed at 3,000 ft: the climb speed, not the cruise Mach nor a stale
 -- target
 for _, c in ipairs({{flap = 0, ias = 250, want = 250, name = "flaps up at 250 kt"},
