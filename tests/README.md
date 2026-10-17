@@ -302,7 +302,8 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   times sin(alpha)), keeps none on the ground (taxi turns
   of 1-5 deg/s at 15 kt, a heading correction on the takeoff roll at
   120 kt), fades out in the steady turn, stays a number within +-1 through
-  a yaw rate that is NaN for a frame and acts again after it, is the
+  a yaw rate that is NaN or infinite (either sign) for a frame and acts
+  again after it, is the
   same at 20,
   30 and 60 fps and stays within +-1, both dampers alike; and in a Dutch
   roll model (5.1 s, bare damping 0.03, rudder effect 0.2-0.6 rad/s2 per

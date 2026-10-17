@@ -271,6 +271,23 @@ r = correlation(window(out, 20, 40), "u", "rate")
 check(finite and r <= -0.8, string.format(
     "one NaN yaw rate: the output stays a number within +-1 (%s) and opposes the yaw rate again after it (%.2f)",
     tostring(finite), r))
+-- an infinite one too, either sign: inf - inf left NaN in the filter, and the output stayed 0 (LuaJIT) or +1 (Lua 5.1,
+-- the whole 3.5 deg of rudder) until a gap of more than a second (a review)
+for _, value in ipairs({math.huge, -math.huge}) do
+    out = fly(function(t)
+        local m = dutch_level(t)
+        if math.abs(t - 10) < 0.5 / 30 then m.rate = value end
+        return m
+    end, 40, 30)
+    finite = true
+    for _, q in ipairs(out) do
+        if q.u ~= q.u or q.lower ~= q.lower or math.abs(q.u) > 1 then finite = false end
+    end
+    r = correlation(window(out, 20, 40), "u", "rate")
+    check(finite and r <= -0.8, string.format(
+        "one yaw rate of %s: the output stays a number within +-1 (%s) and opposes the yaw rate again after it (%.2f)",
+        tostring(value), tostring(finite), r))
+end
 
 -- 7. A Dutch roll model (yaw and sideslip, 5.1 s, bare damping 0.03; the rudder +-3.5 deg times the rudder ratio at
 -- 300 kt, its yaw acceleration 0.2-0.6 rad/s2 per rad): from 2 deg of sideslip the dampers take three cycles' amplitude
