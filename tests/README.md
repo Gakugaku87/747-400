@@ -182,6 +182,16 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   point, no climb in the flare (20 fpm and 0.5 s more room for the other
   loops), no nose-down before main gear touchdown, a rate-limited
   derotation, and A/T IDLE no higher than 25 ft.
+- `mcp_alt_dial_test.lua`: the MCP altitude knob while it is dialled (item
+  B-12), the production knob, VNAV, FMA, approach modes and pitch director
+  in `mcp_alt_dial_model.lua`'s closed loop at the kit's 0.079 s a click -
+  the knob writes no lastCommand; a VNAV or FLCH climb dialled up does not
+  level at a passing altitude; T/D in a dial starts the descent at T/D;
+  VNAV PTH's V/S target keeps changing in a dial; G/S captures on time; a
+  V/S stop at 10,000 does not take the old 11,000; and guards: a stop climb
+  (VNAV and FLCH, three cadences) and a stop descent level at the final
+  value, ALT HOLD and VNAV ALT unchanged, T/D after a first click and a
+  pause still descends.
 - `eec_flare_retard_test.lua`: EEC IDLE in the autoland flare - no low-speed
   thrust recovery below 50 ft RA, the retard from approach thrust to idle
   over about 2 s, and the IDLE low-speed recovery kept outside the autoland

@@ -141,18 +141,20 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
     return targetAlt
 end
 
+-- [B-12] VNAV takes the MCP altitude as a level-off only once it has been still for MCP_ALT_SETTLE_SEC
+-- (autopilot.lua's B747_mcp_alt_settled; nil where a test loads VNAV without the knob: settled, as before)
 function VNAV_CLB_ALT(numAPengaged,fms)
     local targetAlt=VNAV_NEXT_ALT(numAPengaged,fms)
     --print("VNAV_CLB_ALT ".. simDR_autopilot_altitude_ft .. " "  .. targetAlt .. " ")
     B747DR_ap_vnav_target_alt=targetAlt
     local lastHold=simDRTime-B747DR_mcp_hold_pressed
-    if targetAlt>B747DR_autopilot_altitude_ft and simDR_pressureAlt1<B747DR_autopilot_altitude_ft+100 and lastHold>30 then
+    if targetAlt>B747DR_autopilot_altitude_ft and simDR_pressureAlt1<B747DR_autopilot_altitude_ft+100 and lastHold>30 and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) then
         targetAlt=B747DR_autopilot_altitude_ft
     end
     local mcpDiff=simDR_pressureAlt1-B747DR_autopilot_altitude_ft
     if B747DR_mcp_hold~=1 and simDR_autopilot_alt_hold_status==2 and targetAlt==B747DR_autopilot_altitude_ft
      and (mcpDiff<B747DR_alt_capture_window and mcpDiff>-B747DR_alt_capture_window)
-     and lastHold>30 and B747BR_cruiseAlt>B747DR_autopilot_altitude_ft-B747DR_alt_capture_window
+     and lastHold>30 and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) and B747BR_cruiseAlt>B747DR_autopilot_altitude_ft-B747DR_alt_capture_window
      and targetAlt~=B747BR_cruiseAlt then
         B747DR_mcp_hold=1
         simDR_autopilot_vs_status=0
@@ -271,11 +273,11 @@ function VNAV_DES_ALT(numAPengaged,fms)
     local targetAlt=VNAV_NEXT_ALT(numAPengaged,fms)
     local lastHold=simDRTime-B747DR_mcp_hold_pressed
 
-    if targetAlt<B747DR_autopilot_altitude_ft and simDR_pressureAlt1>B747DR_autopilot_altitude_ft-100 and lastHold>30 then
+    if targetAlt<B747DR_autopilot_altitude_ft and simDR_pressureAlt1>B747DR_autopilot_altitude_ft-100 and lastHold>30 and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) then
         targetAlt=B747DR_autopilot_altitude_ft
     end
     local mcpDiff=simDR_pressureAlt1-B747DR_autopilot_altitude_ft
-    if simDR_autopilot_alt_hold_status==2 and targetAlt==B747DR_autopilot_altitude_ft   and (mcpDiff<B747DR_alt_capture_window and mcpDiff>-B747DR_alt_capture_window) and lastHold>30 and B747BR_cruiseAlt>B747DR_autopilot_altitude_ft-B747DR_alt_capture_window then
+    if simDR_autopilot_alt_hold_status==2 and targetAlt==B747DR_autopilot_altitude_ft   and (mcpDiff<B747DR_alt_capture_window and mcpDiff>-B747DR_alt_capture_window) and lastHold>30 and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) and B747BR_cruiseAlt>B747DR_autopilot_altitude_ft-B747DR_alt_capture_window then
         B747DR_mcp_hold=1
         --print("set B747DR_mcp_hold in VNAV_DES_ALT")
     end
@@ -366,9 +368,13 @@ function VNAV_DES(numAPengaged,fms)
             simCMD_autopilot_vert_speed_mode:once()
             B747DR_ap_VNAV_lastCommand=simDRTime+2
             return
-        else
+        elseif (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) then
             B747DR_mcp_hold=2
             print("set B747DR_mcp_hold")
+            return
+        else
+            -- [B-12] the MCP altitude moving at T/D: no VNAV ALT on a passing value; the descent starts once it is
+            -- below (the value of the moment) or it settles
             return
         end
     end
@@ -585,7 +591,7 @@ function VNAV_modeSwitch(fmsO)
     --engage height, where ALT HOLD would cancel TO/GA and the takeoff thrust
     if B747DR_ap_vnav_state == 1 and B747_afds_helpers.vnav_engage_height_reached(simDR_onGround, simDR_radarAlt1) then
         local mcpDiff=simDR_pressureAlt1-B747DR_autopilot_altitude_ft
-        if math.abs(mcpDiff)<1000 then
+        if math.abs(mcpDiff)<1000 and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) then
             B747DR_mcp_hold=1
             B747DR_ap_vnav_state=2
             simDR_autopilot_alt_hold_status = 2

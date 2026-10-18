@@ -1567,33 +1567,48 @@ function B747_ap_vertical_speed_down_CMDhandler(phase, duration)
 	end
 end
 
+-- [B-12] The MCP altitude knob freezes nothing. It wrote B747DR_ap_lastCommand 1 s ahead at each click (and every frame
+-- held), and everything waiting 0.5 s on it stopped for the whole dial and 1.5 s after it: VNAV's mode switching, its
+-- descent V/S target and the start of the descent at T/D, the A/T modes, LOC and G/S capture, the roll FMA, APP
+-- arming, AFDS status (the kit's 37000 -> 2000 ft before T/D: 28 s at 0.079 s a click). A real 747-400 uses the
+-- selection at once. Unfrozen, VNAV's altitude legs took each passing value as a level-off (a stop climb at FL200 from
+-- 23,000 levelled 100-400 ft high in 23 of 30 model runs), so VNAV now takes the MCP altitude as one only once it has
+-- been still for MCP_ALT_SETTLE_SEC (B747_mcp_alt_settled; B747_mcp_alt_dial_time is the last click).
+-- Outside VNAV the AFDS altitude takes the MCP once it has settled (was 3 s, which left a stale altitude to capture:
+-- V/S at 10,150 ft towards 11,000 cleared to 10,000 levelled at 11,000), and at once when a click takes it farther from
+-- the aircraft on the same side (it cannot make a capture and drops a stale one); in VNAV it is VNAV's to set.
 function setSimAlt()
-	--if B747DR_ap_vnav_state == 0 then
+	if B747DR_ap_vnav_state<2 then
 		simDR_autopilot_altitude_ft = B747DR_autopilot_altitude_ft
 		print("set sim alt")
-	--end
+	end
+end
+MCP_ALT_SETTLE_SEC=1.5
+B747_mcp_alt_dial_time=-100
+function B747_mcp_alt_settled()
+	return simDRTime-B747_mcp_alt_dial_time>=MCP_ALT_SETTLE_SEC
+end
+local function B747_mcp_alt_dialled()
+	B747_mcp_alt_dial_time=simDRTime
+	if B747DR_ap_vnav_state<2 then
+		local old=simDR_autopilot_altitude_ft-simDR_pressureAlt1
+		local new=B747DR_autopilot_altitude_ft-simDR_pressureAlt1
+		if old*new>0 and math.abs(new)>math.abs(old) then simDR_autopilot_altitude_ft=B747DR_autopilot_altitude_ft end
+	end
+	if is_timer_scheduled(setSimAlt) then
+		stop_timer(setSimAlt)
+	end
+	run_after_time(setSimAlt, MCP_ALT_SETTLE_SEC)
 end
 
 function B747_ap_altitude_up_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747DR_autopilot_altitude_ft = math.min(50000.0, B747DR_autopilot_altitude_ft + 100)
-		B747DR_ap_lastCommand = simDRTime + 1
-		--if B747DR_ap_vnav_state == 0 then
-			if is_timer_scheduled(setSimAlt) then
-				stop_timer(setSimAlt)
-			end
-			run_after_time(setSimAlt, 3.0)
-		--end
+		B747_mcp_alt_dialled()
 	elseif phase == 1 then
 		if duration > 0.5 then
 			B747DR_autopilot_altitude_ft = math.min(50000.0, B747DR_autopilot_altitude_ft + 100)
-			B747DR_ap_lastCommand = simDRTime + 1
-			--if B747DR_ap_vnav_state == 0 then
-				if is_timer_scheduled(setSimAlt) then
-					stop_timer(setSimAlt)
-				end
-				run_after_time(setSimAlt, 3.0)
-			--end
+			B747_mcp_alt_dialled()
 		end
 	end
 end
@@ -1601,23 +1616,11 @@ end
 function B747_ap_altitude_down_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747DR_autopilot_altitude_ft = math.max(0.0, B747DR_autopilot_altitude_ft - 100)
-		B747DR_ap_lastCommand = simDRTime + 1
-		--if B747DR_ap_vnav_state == 0 then
-			if is_timer_scheduled(setSimAlt) then
-				stop_timer(setSimAlt)
-			end
-			run_after_time(setSimAlt, 3.0)
-		--end
+		B747_mcp_alt_dialled()
 	elseif phase == 1 then
 		if duration > 0.5 then
 			B747DR_autopilot_altitude_ft = math.max(0.0, B747DR_autopilot_altitude_ft - 100)
-			B747DR_ap_lastCommand = simDRTime + 1
-			--if B747DR_ap_vnav_state == 0 then
-				if is_timer_scheduled(setSimAlt) then
-					stop_timer(setSimAlt)
-				end
-				run_after_time(setSimAlt, 3.0)
-			--end
+			B747_mcp_alt_dialled()
 		end
 	end
 end
