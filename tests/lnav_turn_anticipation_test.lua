@@ -1975,4 +1975,29 @@ do
         .. " flight without them (0.01); the command held %.2f s", command_off, bank_off, held))
 end
 
+-- [review 20] While X-Plane's heading mode is not HDG SEL, LNAV sends HDG SEL at most once in 0.5 s
+-- (B747DR_ap_lastCommand) and goes on writing the heading every frame: BEDRA's arc with X-Plane's HDG SEL off for
+-- 2 s (heading_status 0) sends it 5 times at most, not every frame, and the heading command moves every frame.
+do
+    local r = tst744l()
+    local s, c = along(r, 4, probe.getDistance(49.0, -9.0, 49.0, -15.0) - 20)
+    local seq, sent, moved, frames, last = nil, 0, 0, 0, nil
+    fly({route = r, index = 4, start = s, heading = c, tas_kt = 478, alt_ft = 31000, loop = "cruise",
+        wind_from_deg = 265, wind_kt = 96, seconds = 240,
+        setup = function(env) env.simCMD_autopilot_heading_select = {once = function() sent = sent + 1 end} end,
+        hook = function(env, t)
+            if seq == nil and env.B747DR_fmscurrentIndex == 5 then seq = t end
+            local off = seq ~= nil and t >= seq + 2 and t < seq + 4
+            env.simDR_autopilot_heading_status = off and 0 or 2
+            if off then
+                frames = frames + 1
+                if last ~= nil and env.simDR_autopilot_heading_deg ~= last then moved = moved + 1 end
+            end
+            last = env.simDR_autopilot_heading_deg
+        end})
+    check(seq ~= nil and sent >= 1 and sent <= 5 and moved >= frames - 1, string.format(
+        "BEDRA's arc with X-Plane's HDG SEL off for 2 s: HDG SEL sent %d times (1 to 5), the heading command moved in"
+        .. " %d of %d frames", sent, moved, frames))
+end
+
 print("LNAV turn anticipation tests passed: "..checks)
