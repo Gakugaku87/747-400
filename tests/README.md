@@ -358,6 +358,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   The wind taken along the air path (the nose less beta cos(bank) + alpha
   sin(bank)): BILTO with an angle of attack of 2.65 deg 0.04 nm outside the
   path and 70 s at the bank limit (0.37 nm and 125 s along the nose).
+  LNAV steering on through AP commands: BEDRA at FL310 with two commands
+  0.55 s apart in the arc flies as without them (the heading command and the
+  bank within 0.01 deg; 0.30 and 0.58 deg with the steering held 0.5 s after
+  each).
   LNAV's path guidance on the model: within 0.1 nm of the leg to DW124 90 and
   120 s after DW129, and back on a leg from 1, 3 and 10 nm off within 60, 120
   and 300 s at most 45 deg to it and not 0.2 nm through it. LNAV ARM: LNAV

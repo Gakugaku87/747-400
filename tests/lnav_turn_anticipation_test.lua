@@ -1931,4 +1931,48 @@ do
         "BILTO at FL350, alpha 2.65 deg: %.2f nm outside the path (0.15), %.0f s at the bank limit (100)", outside, at_limit))
 end
 
+-- [review 19] LNAV steers on through an AP command. B747DR_ap_lastCommand's 0.5 s held back HDG SEL's command and
+-- also stopped LNAV writing the heading, so a mode change in a turn froze the heading command (p17-L1: BEDRA's step
+-- climb began in the arc, CRZ ALT and VNAV SPD 0.55 s apart; the command held 0.98 s and then jumped 0.70 deg, the
+-- bank command went 14.8, 13.2, 15.4, 12.7, 15.8, and the yaw and roll motion grew from there; a review). BEDRA at
+-- FL310 with two commands 0.55 s apart in the arc, 2 s after the sequencing: the heading command and the bank as in
+-- the same flight without them (within 0.01 deg).
+do
+    local function bedra(kicks)
+        local r = tst744l()
+        local s, c = along(r, 4, probe.getDistance(49.0, -9.0, 49.0, -15.0) - 20)
+        local seq, commands, sent = nil, {}, {}
+        local o = fly({route = r, index = 4, start = s, heading = c, tas_kt = 478, alt_ft = 31000, loop = "cruise",
+            wind_from_deg = 265, wind_kt = 96, seconds = 300,
+            hook = function(env, t)
+                if seq == nil and env.B747DR_fmscurrentIndex == 5 then seq = t end
+                if kicks and seq ~= nil then
+                    for k, after in ipairs({2.0, 2.55}) do
+                        if not sent[k] and t >= seq + after - 1e-6 then env.B747DR_ap_lastCommand, sent[k] = t, true end
+                    end
+                end
+                commands[#commands + 1] = env.simDR_autopilot_heading_deg or 0
+            end})
+        return o, commands, seq
+    end
+    local plain, plain_commands, plain_seq = bedra(false)
+    local kicked, kicked_commands, seq = bedra(true)
+    local command_off, bank_off, held, run = 0, 0, 0, 0
+    for i = 2, math.min(#plain.track, #kicked.track) do
+        command_off = math.max(command_off, math.abs(wrap(kicked_commands[i] - plain_commands[i])))
+        bank_off = math.max(bank_off, math.abs(kicked.track[i].bank - plain.track[i].bank))
+        local t = kicked.track[i].t
+        if seq ~= nil and t >= seq and t <= seq + 6 and kicked_commands[i] == kicked_commands[i - 1] then
+            run = run + (t - kicked.track[i - 1].t)
+            held = math.max(held, run)
+        else
+            run = 0
+        end
+    end
+    check(plain_seq ~= nil and seq ~= nil, "BEDRA sequenced in both flights")
+    check(command_off <= 0.01 and bank_off <= 0.01, string.format(
+        "BEDRA, two AP commands 0.55 s apart in the arc: the heading command %.2f deg and the bank %.2f deg off the"
+        .. " flight without them (0.01); the command held %.2f s", command_off, bank_off, held))
+end
+
 print("LNAV turn anticipation tests passed: "..checks)

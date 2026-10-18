@@ -901,8 +901,11 @@ function B747_updateApproachHeading(fmsO)
 
     -- LNAV keeps steering while LOC is only armed; armed itself, it does not steer (LNAV ARM: the roll mode before
     -- it flies on until B747_lnav_engage_armed engages it)
-    if (B747DR_ap_approach_mode~=0 or B747DR_ap_lnavHeading_mode~=0) and simDR_autopilot_nav_status~=2 and B747DR_ap_lnav_state==2 and diff>0.5 then
-        if simDR_autopilot_heading_status == 0 then
+    -- [review 19] It writes the heading every frame: B747DR_ap_lastCommand's 0.5 s holds back only HDG SEL's command,
+    -- as on the localizer. It stopped LNAV's steering too, and a mode change in a turn froze the heading command
+    -- (p17-L1: BEDRA's step climb in the arc, CRZ ALT and VNAV SPD 0.55 s apart: held 0.98 s, then +0.70 deg).
+    if (B747DR_ap_approach_mode~=0 or B747DR_ap_lnavHeading_mode~=0) and simDR_autopilot_nav_status~=2 and B747DR_ap_lnav_state==2 then
+        if simDR_autopilot_heading_status == 0 and diff>0.5 then
             print("simCMD_autopilot_heading_select in B747DR_ap_approach_mode~=0")
             simCMD_autopilot_heading_select:once()
             B747DR_ap_ATT = 0.0
