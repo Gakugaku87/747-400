@@ -2765,14 +2765,33 @@ local function B747_lnav_path_at_fix(fmsO,k,p)
 	return path,fix
 end
 
--- What LNAV's path is drawn with now: the TAS, the wind (B747_lnav_wind: kt east and north; none when it cannot
--- be), the bank limit and the look-ahead; nil not moving.
+-- [review 21] The TAS the 747 is coming to: the AFDS's speed target as a TAS (at the IAS's or the Mach's ratio of the
+-- moment) when it is faster than the TAS, by at most LNAV_TARGET_TAS_MAX_RATIO; else, or when it cannot be told, the
+-- TAS. A turn's radius fixed at its arc start from the TAS of the moment was too tight for an accelerating 747 later in
+-- the turn (DW129 at 0.45 kt/s: 0.20 nm outside, 0.16 drawn every frame; a review), as a real FMC draws a turn for the
+-- speed it predicts there.
+local LNAV_TARGET_TAS_MAX_RATIO=1.3
+local function B747_lnav_target_tas_kts(tas)
+	local ratio
+	if simDR_autopilot_airspeed_is_mach==1 then
+		local mach,target=tonumber(simDR_airspeed_mach),tonumber(simDR_autopilot_airspeed_kts_mach)
+		if mach~=nil and target~=nil and mach>0.2 then ratio=target/mach end
+	else
+		local ias,target=tonumber(simDR_ind_airspeed_kts_pilot),tonumber(simDR_autopilot_airspeed_kts)
+		if ias~=nil and target~=nil and ias>60 then ratio=target/ias end
+	end
+	if ratio==nil or not (ratio>1) then return tas end
+	return tas*math.min(ratio,LNAV_TARGET_TAS_MAX_RATIO)
+end
+
+-- What LNAV's path is drawn with now: the TAS the 747 is coming to (B747_lnav_target_tas_kts), the wind
+-- (B747_lnav_wind: kt east and north; none when it cannot be), the bank limit and the look-ahead; nil not moving.
 local function B747_lnav_path_parameters()
 	local tas=simDR_TAS_mps*1.94384
 	local gs=simDR_groundspeed*1.94384
 	if not (tas>0) or not (gs>0) then return nil end
 	local windEast,windNorth=B747_lnav_wind()
-	return {tas=tas,windEast=windEast,windNorth=windNorth,bank=B747_lnav_bank_limit_deg(),
+	return {tas=B747_lnav_target_tas_kts(tas),windEast=windEast,windNorth=windNorth,bank=B747_lnav_bank_limit_deg(),
 		lookahead=B747_afds_helpers.clamp(gs*B747_afds_helpers.LNAV_PATH_LOOKAHEAD_S/3600,
 			B747_afds_helpers.LNAV_PATH_MIN_LOOKAHEAD_NM,B747_afds_helpers.LNAV_PATH_MAX_LOOKAHEAD_NM)}
 end

@@ -2062,4 +2062,38 @@ do
         .. " bank limit (30)", outside, at_limit))
 end
 
+-- [review 21] An accelerating turn: its radius fixed at the arc start from the TAS of the moment was too tight for the
+-- speed later in it (DW129 at 0.45 kt/s: 0.20 nm outside, 0.16 drawn every frame; a review). Drawn for the TAS the 747
+-- is coming to when it is faster (the AFDS's speed target): a 90 deg turn at 5,000 ft, the target 280 kt, the TAS from
+-- 230 kt accelerating 1 kt/s from just before the arc: at most 0.10 nm outside the path and 25 s at the bank limit.
+do
+    local b_lat, b_lon = 53.0, -6.0
+    local a_lat, a_lon = probe.movePoint(b_lat, b_lon, 20, 180)
+    local c_lat, c_lon = probe.movePoint(b_lat, b_lon, 20, 90)
+    route = {E("ORIG", a_lat - 1, a_lon, 0, 1), E("A", a_lat, a_lon), E("B", b_lat, b_lon), E("C", c_lat, c_lon),
+        E("DEST", c_lat - 1, c_lon, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(b_lat, b_lon, 12, 180)
+    local outside = 0
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 230, alt_ft = 5000,
+        loop = "low", seconds = 300,
+        tas_fn = function(t) return 230 + math.max(0, math.min(50, t - 130)) end,
+        setup = function(env)
+            env.simDR_autopilot_airspeed_is_mach, env.simDR_autopilot_airspeed_kts = 0, 280
+            env.simDR_ind_airspeed_kts_pilot = 230
+        end,
+        hook = function(env, t)
+            env.simDR_ind_airspeed_kts_pilot = env.simDR_TAS_mps / KT -- the IAS as the TAS here
+            if t > 60 and env.B747DR_fmscurrentIndex <= 4 then
+                outside = math.max(outside, -(env.B747DR_ap_lnav_xtk_error or 0))
+            end
+        end})
+    local at_limit, dt = 0, out.track[2].t - out.track[1].t
+    for _, q in ipairs(out.track) do
+        if math.abs(q.bank) >= 19.8 then at_limit = at_limit + dt end
+    end
+    check(outside <= 0.10 and at_limit <= 25, string.format(
+        "a 90 deg turn accelerating from 230 kt to the target 280: %.2f nm outside the path (0.10), %.0f s at the bank"
+        .. " limit (25)", outside, at_limit))
+end
+
 print("LNAV turn anticipation tests passed: "..checks)
