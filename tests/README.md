@@ -191,7 +191,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   and without overshoot, from idle within 12 s (before HOLD at 65 kt), GE
   from 70% N1 within 8 s; from levers at 0.60, also after a landing that left
   the A/T at idle, no step back before takeoff thrust (the A/T's target from
-  the levers when it takes them).
+  the levers when it takes them). A go-around in flight from approach thrust:
+  GA thrust within 6 s at 20, 30, 45 and 60 fps alike (11.0 / 8.5 / 5.3 /
+  5.4 s when the levers went the last step by a tenth of the way a frame).
 - `afds_responsiveness_test.lua`: the AFDS helper calculations (turn
   anticipation, VNAV speed change reasons, VNAV energy guidance, pitch blend
   and roll filters) and the speed-on-pitch limiter - the severe underspeed

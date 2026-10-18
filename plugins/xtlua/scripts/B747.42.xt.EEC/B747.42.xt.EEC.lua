@@ -930,6 +930,16 @@ end
 local previous_throttleTime=0
 local THR_LEVER_RATE=0.003
 local THR_LEVER_GAIN=0.005
+-- [review 21] The A/T's levers in its thrust modes move towards their target at most over their range in `seconds`, and
+-- onto it when nearer: the same at any frame rate. B747_interpolate_value goes the last step by a tenth of the way a
+-- frame, and the A/T moves its target only with the levers within 0.02 of it, so in flight (the levers over their
+-- range in 1 s) GA thrust from approach thrust took 11.0 / 8.5 / 5.3 / 5.4 s at 20 / 30 / 45 / 60 fps.
+local function B747_thrust_lever_slew(current,target,seconds)
+	local step=SIM_PERIOD/seconds
+	if math.abs(target-current)<=step then return target end
+	if target>current then return current+step end
+	return current-step
+end
 function ecc_throttle()
 	--print("---ECC Throttle---")
 	    local input=1
@@ -1017,7 +1027,7 @@ function ecc_throttle()
 		end	
 		for i = 0, 3 do
 			--simDR_engn_thro[i]=B747_interpolate_value(simDR_engn_thro[i],spd_target_throttle,0,1.00,2)
-			B747DR_throttle[i]=B747_interpolate_value(B747DR_throttle[i],spd_target_throttle,0,1.00,animTime)
+			B747DR_throttle[i]=B747_thrust_lever_slew(B747DR_throttle[i],spd_target_throttle,animTime)
 			average_throttle=average_throttle+B747DR_throttle[i]
 			--simDR_throttle_ratio[i]	= B747DR_throttle[i]
 		end

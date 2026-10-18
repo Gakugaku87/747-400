@@ -140,4 +140,52 @@ for _, after_landing in ipairs({false, true}) do
         after_landing and " after a landing" or "", lowest, tostring(reached4 and string.format("%.1f", reached4))))
 end
 
+-- T5 [review 21]: a go-around in flight, THR REF from approach thrust (EPR 1.15) to the GA reference (EPR 1.48), the
+-- levers over their range in 1 s: GA thrust within 6 s at 20, 30, 45 and 60 frames a second alike (within 0.5 s) and
+-- no more than the reference. The levers went the last step by a tenth of the way a frame and the A/T moved its target
+-- only with the levers within 0.02 of it: 11.0, 8.5, 5.3 and 5.4 s.
+local function go_around(dt)
+    local runtime = {print=function() end, SIM_PERIOD=dt, simDRTime=100, B747DR_airspeed_Vmc=120,
+        simDR_autopilot_airspeed_kts=150, B747DR_engineType=0, B747DR_ref_thr_limit_mode="GA",
+        B747DR_vnav_energy_active=0, B747DR_vnav_energy_thrust_policy=0, B747DR_ap_FMA_autothrottle_mode=5,
+        B747DR_ap_autoland=0, simDR_onGround=0, simDR_radarAlt1=200, simDR_ind_airspeed_kts_pilot=145,
+        simDR_ias_pilot=145, throttle_resolver_angle_GE=function(i) return 0 end,
+        B747DR_throttle_resolver_angle={[0]=0, 0, 0, 0}, simDR_N1_target_bug={[0]=95, 95, 95, 95},
+        simDR_EPR_target_bug={[0]=1.48, 1.48, 1.48, 1.48},
+        B747DR_display_EPR_max={[0]=EPR_MAX, EPR_MAX, EPR_MAX, EPR_MAX}}
+    local throttle = (1.15 - 0.95) / (EPR_MAX - 0.95)
+    runtime.B747DR_throttle = {[0]=throttle, throttle, throttle, throttle}
+    runtime.simDR_engine_throttle_jet_all = throttle
+    setmetatable(runtime, {__index=_G})
+    load_in(EEC, runtime, "function B747_animate_value", "function B747_setMaxThrust")
+    load_in(EEC, runtime, "function B747_interpolate_value", "local previous_altitude = 0")
+    local function refresh()
+        for i = 0, 3 do runtime.B747DR_throttle_resolver_angle[i] = pw_command(runtime.B747DR_throttle[i]) end
+    end
+    refresh()
+    runtime.ecc_throttle() -- TO/GA: the A/T takes the levers
+    local t, reached, highest = 0, nil, -1e9
+    while t < 30 do
+        t = t + dt
+        runtime.simDRTime = runtime.simDRTime + dt
+        refresh()
+        runtime.ecc_throttle()
+        refresh()
+        local c = pw_command(runtime.B747DR_throttle[0])
+        highest = math.max(highest, c)
+        if reached == nil and math.abs(c - 1.48) <= 0.005 then reached = t end
+    end
+    return reached, highest
+end
+local ga = {}
+for _, fps in ipairs({20, 30, 45, 60}) do
+    local reached5, highest5 = go_around(1 / fps)
+    ga[#ga + 1] = reached5 or 1e9
+    check(reached5 ~= nil and reached5 <= 6 and highest5 <= 1.48 + 0.01, string.format(
+        "GA at %d fps: GA thrust after %s s (6), the lever's command up to EPR %.3f (1.490)", fps,
+        tostring(reached5 and string.format("%.1f", reached5)), highest5))
+end
+check(math.max(ga[1], ga[2], ga[3], ga[4]) - math.min(ga[1], ga[2], ga[3], ga[4]) <= 0.5, string.format(
+    "GA thrust after %.1f / %.1f / %.1f / %.1f s at 20 / 30 / 45 / 60 fps (within 0.5 s)", ga[1], ga[2], ga[3], ga[4]))
+
 print("EEC takeoff thrust tests passed: "..checks)
