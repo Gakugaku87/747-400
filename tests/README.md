@@ -316,6 +316,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   15 nm before LAMSO: it sat 150-225 ft below it aiming 250 ft below each
   point), and the vertical bearing is from the aircraft; approach_model.lua's
   closed loop.
+- `vnav_descent_point_test.lua`: VNAV PTH's V/S in the last nm before a point
+  of the FMC's profile is the path's own (within 15 %, on the path at 400 kt:
+  it fell to -177 of -1,773 fpm at 0.1 nm) and steeper with the 747 100 ft
+  above the path; the production setDescentVSpeed and energy mode.
 - `vnav_descent_at_hold_test.lua`: the A/T's FMA in an idle VNAV PTH descent -
   IDLE while the levers come back, HOLD once they are at idle (only after
   IDLE), SPD when VNAV allows thrust; in that HOLD a pilot's lever movement

@@ -376,9 +376,11 @@ function setDescentVSpeed(fmsO)
     return
   end
 
+  local pathGradient=nil -- ft/nm, the path's into the target, where the path error is from the FMC's profile
   if B747BR_totalDistance>=15 then
     --set in setDistances when < 15
     local glideAlt= B747DR_fmstargetDistance*290 +B747DR_ap_vnav_target_alt
+    pathGradient=290
     if string.len(B747BR_vnavProfile)>2 then
       local vnavData=json.decode(B747BR_vnavProfile)
       --print("B747BR_vnavProfile in setDescentVSpeed="..B747BR_vnavProfile)
@@ -390,6 +392,7 @@ function setDescentVSpeed(fmsO)
 
           local legDist = getDistance(simDR_latitude, simDR_longitude, vnavData[i][1], vnavData[i][2])
           glideAlt= legDist*vnavData[i][5] +vnavData[i][3]
+          pathGradient=vnavData[i][5]
           B747DR_ap_vnav_target_alt=vnavData[i][3]
           B747DR_fmstargetDistance=legDist
           --print("setDescentVSpeed "..glideAlt)
@@ -421,6 +424,14 @@ function setDescentVSpeed(fmsO)
   -- energy mode's on top).
   local vdiff=B747DR_ap_vnav_target_alt-simDR_pressureAlt1 --to be negative
   local vspeed=vdiff/time
+  -- [B-13] Within the last nm (the distance held at 1 nm above) the path's own V/S - its gradient at the ground
+  -- speed - and the path error over the time the 1 nm takes, which is vdiff / time further out. vdiff over the 1 nm's
+  -- time took the V/S down with the distance to 0 at the point (p23-line1: -1,700 to 0 fpm in the last 8 s at each
+  -- point): the 747 levelled off there, and with the next segment's path below it the descent went on 130-275 ft
+  -- above the path, the A/T to IDLE and HOLD, and SPD again once the speed fell.
+  if pathGradient~=nil and B747DR_fmstargetDistance<1 then
+    vspeed=-pathGradient*simDR_groundspeed*1.94384/60-B747BR_fpe/time
+  end
   --[[if B747DR_ap_vnav_target_alt>simDR_pressureAlt1 then
     vspeed=0
   end]]--
