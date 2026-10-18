@@ -11,6 +11,8 @@ afds.VNAV_ENERGY_PATH_ENTER_FT = 150
 afds.VNAV_ENERGY_PATH_EXIT_FT = 75
 afds.VNAV_ENERGY_SPEED_ENTER_KTS = 5
 afds.VNAV_ENERGY_SPEED_EXIT_KTS = 2
+-- [B-13] thrust for a slow speed on or below the path ends this far above the target (vnav_energy_guidance)
+afds.VNAV_ENERGY_THRUST_RELEASE_KTS = 2
 afds.VNAV_ENERGY_MAX_DESCENT_FPM = -3500
 afds.VNAV_ENERGY_MIN_DESCENT_FPM = 0
 afds.VNAV_ENERGY_DESCENT_RATE_LIMIT_FPM_PER_SEC = 400
@@ -677,6 +679,16 @@ function afds.vnav_energy_guidance(input)
         or (recovery_hold
             and previous_thrust_reason == afds.VNAV_ENERGY_THRUST_REASON_PATH_RECOVERY_LIMITED)
     local speedbrake_extended = afds.vnav_energy_speedbrake_extended(input.speedbrake_lever)
+    -- [B-13] Thrust allowed for a speed below the target on or below the path is kept while the aircraft is not
+    -- above the path and the speed is less than VNAV_ENERGY_THRUST_RELEASE_KTS above the target. Released as soon as
+    -- the speed was back within VNAV_ENERGY_SPEED_EXIT_KTS of the target, the A/T went to IDLE on a path it needed
+    -- thrust for, slowed again and went back to SPD every 15-35 s through the descents (p20-line1: about 40 times,
+    -- p20-L1: about 30); a real 747-400's A/T in SPD holds the speed with the thrust it needs. On a path steep enough
+    -- at idle the speed goes past the target and the thrust ends.
+    local below_hold = tonumber(input.previous_thrust_policy) == afds.VNAV_ENERGY_THRUST_ALLOW
+        and (previous_thrust_reason == afds.VNAV_ENERGY_THRUST_REASON_ON_PATH_BELOW_SPEED
+            or previous_thrust_reason == afds.VNAV_ENERGY_THRUST_REASON_BELOW_PATH_BELOW_SPEED)
+        and path_axis <= 0 and speed_error_kts < afds.VNAV_ENERGY_THRUST_RELEASE_KTS
 
     local thrust_policy = afds.VNAV_ENERGY_THRUST_IDLE
     local thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_NONE
@@ -689,6 +701,9 @@ function afds.vnav_energy_guidance(input)
     elseif state == afds.VNAV_ENERGY_STATE_ON_PATH_BELOW then
         thrust_policy = afds.VNAV_ENERGY_THRUST_ALLOW
         thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_ON_PATH_BELOW_SPEED
+    elseif below_hold then
+        thrust_policy = afds.VNAV_ENERGY_THRUST_ALLOW
+        thrust_reason = previous_thrust_reason
     elseif speedbrake_extended and recovery_hold
         and previous_thrust_reason == afds.VNAV_ENERGY_THRUST_REASON_UNDERSPEED_PROTECTION then
         -- With the speedbrake out the speed decays again as soon as the

@@ -287,6 +287,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   underspeed protection, whose thrust is then kept while the limit lasts;
   DRAG REQUIRED unchanged. Also runs the production `setDescentVSpeed`
   loaded through the XTLua `dofile`.
+- `vnav_descent_thrust_hold_test.lua`: VNAV PTH descent thrust for a slow
+  speed on or below the path kept until the speed is 2 kt past the target
+  or the aircraft is above the path - a path idle cannot hold the speed on
+  changes the A/T once (to SPD, 30 times in 300 s before) with the speed on
+  the target; on a path steep enough at idle the thrust ends.
 - `afds_toga_roll_test.lua`: the TO/GA roll annunciation - HDG SEL, HDG HOLD
   or LNAV in flight replacing TO/GA roll while TO/GA pitch stays, the roll
   FMA going straight from TO/GA to HDG SEL frame by frame, LOC capture,
