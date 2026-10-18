@@ -2031,4 +2031,35 @@ do
         .. " limit (30)", outside, at_limit))
 end
 
+-- [review 21] A fix listed twice: the fix before's arc is the one two back once the duplicate is sequenced in the next
+-- frame (B747_lnav_fix_before), and its fixed radius was let go there (kept for the fix before only): the arc jumped to
+-- the radius of the moment, the cross-track from -0.03 to +0.42 nm, the bank from +19.4 to -6.5 deg (a review). BILTO
+-- listed twice with the TAS falling 11 kt through the turn: as listed once, at most 0.10 nm outside the path and 30 s at
+-- the bank limit.
+do
+    local b_lat, b_lon = 56.5, -15.0
+    local c_lat, c_lon = probe.movePoint(b_lat, b_lon, 150, 137.4)
+    local a_lat, a_lon = probe.movePoint(b_lat, b_lon, 120, 180)
+    route = {E("ORIG", a_lat - 1, a_lon, 0, 1), E("A", a_lat, a_lon), E("BILTO", b_lat, b_lon), E("BILTO", b_lat, b_lon),
+        E("C", c_lat, c_lon), E("DEST", c_lat - 1, c_lon, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(b_lat, b_lon, 48, 180)
+    local outside = 0
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = (360 - math.deg(math.asin(100 / 479))) % 360,
+        tas_kt = 479, alt_ft = 35000, loop = "cruise", seconds = 420, wind_from_deg = 270, wind_kt = 100,
+        alpha_deg = 2.65,
+        tas_fn = function(t) return 479 - 11 * math.max(0, math.min(1, (t - 100) / 220)) end,
+        hook = function(env, t)
+            if t > 60 and env.B747DR_fmscurrentIndex <= 5 then
+                outside = math.max(outside, -(env.B747DR_ap_lnav_xtk_error or 0))
+            end
+        end})
+    local at_limit, dt = 0, out.track[2].t - out.track[1].t
+    for _, q in ipairs(out.track) do
+        if math.abs(q.bank) >= 19.8 then at_limit = at_limit + dt end
+    end
+    check(outside <= 0.10 and at_limit <= 30, string.format(
+        "BILTO listed twice, the TAS falling 11 kt through the turn: %.2f nm outside the path (0.10), %.0f s at the"
+        .. " bank limit (30)", outside, at_limit))
+end
+
 print("LNAV turn anticipation tests passed: "..checks)

@@ -2589,7 +2589,8 @@ end
 -- frame from the TAS of the moment, the arc moved as the speed changed in the turn: p20-L1's BILTO (137 deg at FL350)
 -- slowed from M.836 to .816, the arc's radius went from 13.4 to 12.95 nm, and the 747, round it at the 20 deg bank
 -- limit with nothing to spare, held the limit 99 s and went 0.54 nm outside it. Kept while the fix is the one flown to
--- or the one before it; let go when the route there changes (keyed by the fix's place), when the active fix moves back
+-- or the one before it (two back past a fix listed twice, as B747_lnav_fix_before takes it); let go when the route
+-- there changes (keyed by the fix's place), when the active fix moves back
 -- (the leg search, a reposition), and when the 747 is back on the leg more than LNAV_TURN_RADIUS_RELATCH_NM before
 -- where the turn starts.
 local LNAV_TURN_RADIUS_RELATCH_NM=1
@@ -2600,9 +2601,9 @@ local function B747_lnav_turn_radius_fixed(fmsO,k,inCourse,outCourse,radius)
 	if current<lnavTurnRadiusCurrent then lnavTurnRadius={} end
 	lnavTurnRadiusCurrent=current
 	for other,o in pairs(lnavTurnRadius) do
-		if o.index<current-1 or o.index>current then lnavTurnRadius[other]=nil end
+		if o.index<current-2 or o.index>current then lnavTurnRadius[other]=nil end
 	end
-	if k~=current and k~=current-1 then return radius end
+	if k<current-2 or k>current then return radius end
 	local fix=fmsO[k]
 	local key=k..":"..tostring(fix[5])..":"..tostring(fix[6])
 	local turn=(outCourse-inCourse+540)%360-180
