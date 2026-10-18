@@ -2000,4 +2000,35 @@ do
         .. " %d of %d frames", sent, moved, frames))
 end
 
+-- [P21] A turn's radius is fixed where its arc starts. Drawn every frame from the TAS of the moment, the arc moved as
+-- the speed changed in the turn: p20-L1's BILTO slowed from M.836 to .816, the radius went from 13.4 to 12.95 nm, and
+-- the 747, round it at the 20 deg bank limit with nothing to spare, held the limit 99 s and went 0.54 nm outside it.
+-- BILTO at FL350 in 270/100 with the TAS falling 11 kt through the turn: at most 0.10 nm outside the path and at most
+-- 30 s at the bank limit (0.14 nm and 98 s with the radius drawn every frame).
+do
+    local b_lat, b_lon = 56.5, -15.0
+    local c_lat, c_lon = probe.movePoint(b_lat, b_lon, 150, 137.4)
+    local a_lat, a_lon = probe.movePoint(b_lat, b_lon, 120, 180)
+    route = {E("ORIG", a_lat - 1, a_lon, 0, 1), E("A", a_lat, a_lon), E("BILTO", b_lat, b_lon), E("C", c_lat, c_lon),
+        E("DEST", c_lat - 1, c_lon, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(b_lat, b_lon, 48, 180)
+    local outside = 0
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = (360 - math.deg(math.asin(100 / 479))) % 360,
+        tas_kt = 479, alt_ft = 35000, loop = "cruise", seconds = 420, wind_from_deg = 270, wind_kt = 100,
+        alpha_deg = 2.65,
+        tas_fn = function(t) return 479 - 11 * math.max(0, math.min(1, (t - 100) / 220)) end,
+        hook = function(env, t)
+            if t > 60 and env.B747DR_fmscurrentIndex <= 4 then
+                outside = math.max(outside, -(env.B747DR_ap_lnav_xtk_error or 0))
+            end
+        end})
+    local at_limit, dt = 0, out.track[2].t - out.track[1].t
+    for _, q in ipairs(out.track) do
+        if math.abs(q.bank) >= 19.8 then at_limit = at_limit + dt end
+    end
+    check(outside <= 0.10 and at_limit <= 30, string.format(
+        "BILTO at FL350, the TAS falling 11 kt through the turn: %.2f nm outside the path (0.10), %.0f s at the bank"
+        .. " limit (30)", outside, at_limit))
+end
+
 print("LNAV turn anticipation tests passed: "..checks)

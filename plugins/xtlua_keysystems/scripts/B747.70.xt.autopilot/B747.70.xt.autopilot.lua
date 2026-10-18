@@ -2584,6 +2584,45 @@ local function B747_lnav_capped_state(fmsO,k)
 	end
 	return state
 end
+-- [P21] A fly-by turn's radius is fixed once the 747 comes to where its path leaves the leg into the fix, as a real
+-- FMC builds a turn's transition from the ground speed it predicts and keeps it while the turn is flown. Drawn every
+-- frame from the TAS of the moment, the arc moved as the speed changed in the turn: p20-L1's BILTO (137 deg at FL350)
+-- slowed from M.836 to .816, the arc's radius went from 13.4 to 12.95 nm, and the 747, round it at the 20 deg bank
+-- limit with nothing to spare, held the limit 99 s and went 0.54 nm outside it. Kept while the fix is the one flown to
+-- or the one before it; let go when the route there changes (keyed by the fix's place), when the active fix moves back
+-- (the leg search, a reposition), and when the 747 is back on the leg more than LNAV_TURN_RADIUS_RELATCH_NM before
+-- where the turn starts.
+local LNAV_TURN_RADIUS_RELATCH_NM=1
+local lnavTurnRadius={}
+local lnavTurnRadiusCurrent=0
+local function B747_lnav_turn_radius_fixed(fmsO,k,inCourse,outCourse,radius)
+	local current=B747DR_fmscurrentIndex
+	if current<lnavTurnRadiusCurrent then lnavTurnRadius={} end
+	lnavTurnRadiusCurrent=current
+	for other,o in pairs(lnavTurnRadius) do
+		if o.index<current-1 or o.index>current then lnavTurnRadius[other]=nil end
+	end
+	if k~=current and k~=current-1 then return radius end
+	local fix=fmsO[k]
+	local key=k..":"..tostring(fix[5])..":"..tostring(fix[6])
+	local turn=(outCourse-inCourse+540)%360-180
+	-- where the 747 is along the leg into the fix (0 at the fix, - before it)
+	local distance=getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)
+	local bearing=math.rad(getHeading(fix[5],fix[6],simDR_latitude,simDR_longitude))
+	local inRad=math.rad(inCourse)
+	local along=distance*(math.sin(bearing)*math.sin(inRad)+math.cos(bearing)*math.cos(inRad))
+	local fixed=lnavTurnRadius[key]
+	if fixed~=nil then
+		local before=B747_afds_helpers.lnav_turn_extent_nm(turn,fixed.radius)
+		if k~=current or along+before>=-LNAV_TURN_RADIUS_RELATCH_NM then return fixed.radius end
+		lnavTurnRadius[key]=nil
+	end
+	if k==current and along+B747_afds_helpers.lnav_turn_extent_nm(turn,radius)>=0 then
+		lnavTurnRadius[key]={index=k,radius=radius}
+	end
+	return radius
+end
+
 local function B747_lnav_turn_at(fmsO,k,p,raw)
 	local count=table.getn(fmsO)
 	local fix=fmsO[k]
@@ -2617,6 +2656,7 @@ local function B747_lnav_turn_at(fmsO,k,p,raw)
 	end
 	local radius=B747_afds_helpers.turn_radius_nm(groundSpeed,p.bank)
 	if radius==nil then return nil end
+	radius=B747_lnav_turn_radius_fixed(fmsO,k,inCourse,outCourse,radius)
 	if capped and not raw then
 		local state=B747_lnav_capped_state(fmsO,k)
 		local active=k==B747DR_fmscurrentIndex
