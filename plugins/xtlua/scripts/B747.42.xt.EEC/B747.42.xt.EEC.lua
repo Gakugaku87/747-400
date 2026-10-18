@@ -928,6 +928,8 @@ function spd_throttle()
 	simDR_engine_throttle_jet_all = average_throttle / 4
 end
 local previous_throttleTime=0
+local THR_LEVER_RATE=0.003
+local THR_LEVER_GAIN=0.005
 function ecc_throttle()
 	--print("---ECC Throttle---")
 	    local input=1
@@ -973,7 +975,13 @@ function ecc_throttle()
 				--print("throttle target="..target.. " current "..input.." targetBug "..targetBug.." inputBug "..inputBug)
 			end
 		end
-	local rog=0.0001+(math.abs(input-target))*time*0.0005
+	-- [B-11] The lever target moves per second, whatever the frame rate: THR_LEVER_RATE plus THR_LEVER_GAIN of the
+	-- error (PW/RR: EPR x 200, GE: N1 x 5), a time constant of about 1.5 s on the PW levers. It moved 0.0001 a frame
+	-- plus 0.0005 of the error a second (about 15 s): takeoff thrust took 30-40 s from EPR 1.10 and HOLD at 65 kt
+	-- froze the levers short of it, at 0.846-0.856 on EIDW's runway as the frame rate went. A real 747-400's A/T sets
+	-- takeoff thrust within seconds of TO/GA. The levers still move at most as fast as below (5 s end to end on the
+	-- ground below 30 kt).
+	local rog=(THR_LEVER_RATE+math.abs(input-target)*THR_LEVER_GAIN)*time
 	
 	--print("rog"..rog.." B747DR_throttle_resolver_angle[0] "..B747DR_throttle_resolver_angle[0].." spd_target_throttle "..spd_target_throttle.. " simDR_N1_target_bug[0] "..simDR_N1_target_bug[0])
 	--[[if(rog>0.005) then

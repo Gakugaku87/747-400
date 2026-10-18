@@ -186,6 +186,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   thrust recovery below 50 ft RA, the retard from approach thrust to idle
   over about 2 s, and the IDLE low-speed recovery kept outside the autoland
   flare.
+- `eec_takeoff_thrust_test.lua`: the A/T setting takeoff thrust (THR REF on
+  the takeoff roll) - PW from EPR 1.10 within 8 s at 20, 30 and 60 fps alike
+  and without overshoot, from idle within 12 s (before HOLD at 65 kt), GE
+  from 70% N1 within 8 s.
 - `afds_responsiveness_test.lua`: the AFDS helper calculations (turn
   anticipation, VNAV speed change reasons, VNAV energy guidance, pitch blend
   and roll filters) and the speed-on-pitch limiter - the severe underspeed
