@@ -17,8 +17,9 @@ local B747_afds_helpers = dofile("B747.70.xt.autopilot.afds_helpers.lua")
 local VNAV_ENERGY_THRUST_ENTRY_DELAY_SEC = 2.0
 local VNAV_ENERGY_THRUST_EXIT_DELAY_SEC = 5.0
 local VNAV_ENERGY_DIAGNOSTIC_INTERVAL_SEC = 1.0
--- [B-13] The A/T's thrust is at idle for the descent's thrust release once its levers are at idle and the engines'
--- highest N1 has stopped falling: less than VNAV_ENERGY_IDLE_N1_SETTLED_PCT_PER_SEC over VNAV_ENERGY_N1_WINDOW_SEC.
+-- [B-13] The A/T's thrust is at idle for the descent's thrust release once its levers are at idle and X-Plane's
+-- highest engine N1 (simDR_engine_N1) has stopped falling: less than VNAV_ENERGY_IDLE_N1_SETTLED_PCT_PER_SEC over
+-- VNAV_ENERGY_N1_WINDOW_SEC.
 local VNAV_ENERGY_IDLE_N1_SETTLED_PCT_PER_SEC = 0.1
 local VNAV_ENERGY_N1_WINDOW_SEC = 2.0
 local vnavEnergy = {
@@ -95,13 +96,16 @@ local function B747_vnav_energy_update_trends(pathError, actualSpeed)
   return math.max(elapsed, 0)
 end
 
--- [B-13] The engines' highest N1 (nil where it is not known) and how fast it moved over at least
--- VNAV_ENERGY_N1_WINDOW_SEC (%/s; nil until it has been seen that long: the N1 shown moves in steps of 0.1).
+-- [B-13] X-Plane's highest engine N1 (nil where it is not known) and how fast it moved over at least
+-- VNAV_ENERGY_N1_WINDOW_SEC (%/s; nil until it has been seen that long). [review 24] Not the EEC's display N1
+-- (laminar/B747/engines/display_N1): the PW EEC's is at least its low idle (48-50 % at FL260-350, X-Plane's idle
+-- about 36 %) and lags X-Plane's N1 by about 10 s when its thrust formula reads low, so after a short SPD burst it sat
+-- flat while X-Plane's N1 still fell and the speed rose (p23-line1, t=2846: the thrust would have ended 5 s after idle).
 local function B747_vnav_energy_n1_rate()
   local n1 = nil
-  if B747DR_display_N1 == nil then return nil, nil end
+  if simDR_engine_N1 == nil then return nil, nil end
   for i = 0, 3 do
-    local value = tonumber(B747DR_display_N1[i])
+    local value = tonumber(simDR_engine_N1[i])
     if value ~= nil and (n1 == nil or value > n1) then n1 = value end
   end
   if n1 == nil then return nil, nil end
@@ -174,8 +178,8 @@ end
 
 local function B747_vnav_energy_target_vspeed(nominalVSpeed)
   local pathError = B747BR_fpe
-  -- [B-13] the A/T's thrust at idle: its levers at idle and the engines spooled down there (the levers alone where
-  -- the N1 is not known; nil where the throttle is not known: released at 2 kt past the target). The levers at idle
+  -- [B-13] the A/T's thrust at idle: its levers at idle and X-Plane's N1 settled there (the levers alone where the
+  -- N1 is not known; nil where the throttle is not known: released at 2 kt past the target). The levers at idle
   -- alone, the thrust ended while X-Plane's engines were still spooling down (N1 77 to 46 in 37 s at FL290) and the
   -- speed still rising, on a path idle could not hold the speed on (p23-line1: SPD, HOLD, SPD every 80-95 s).
   local atIdle = nil

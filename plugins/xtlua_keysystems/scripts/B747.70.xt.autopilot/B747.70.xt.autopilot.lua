@@ -153,6 +153,7 @@ simDR_autopilot_tod_distance = find_dataref("sim/cockpit2/radios/indicators/fms_
 B747DR_alt_capture_window        = deferred_dataref("laminar/B747/autopilot/ap_monitor/alt_capture_window", "number")
 B747DR_switching_servos_on = deferred_dataref("laminar/B747/autopilot/ap_monitor/servos_on_time", "number")
 B747DR_display_N1 = find_dataref("laminar/B747/engines/display_N1")
+simDR_engine_N1 = find_dataref("sim/cockpit2/engine/indicators/N1_percent") -- [review 24] X-Plane's N1 (vnav.lua)
 B747DR_display_N2 = find_dataref("laminar/B747/engines/display_N2")
 simDR_true_heading			= find_dataref("sim/flightmodel/position/psi")
 B747DR_fmc_notifications = find_dataref("laminar/B747/fms/notification")

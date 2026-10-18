@@ -136,10 +136,11 @@ check(step({actual_speed_kts = 273, previous_speed_axis = 1, thrust_at_idle = tr
 -- D5 [B-13]: the production vnav.lua (its trends, latches and release) with the A/T's own speed loop (the EEC's
 -- spd_throttle, a frame of 0.02 s) and engines fitted to p23-line1's descent at FL260-300: N1 = idle + (96 - idle) x
 -- lever^0.3 (76-78 at 0.22-0.24, 84 at 0.41, still 73.8 at 0.095 on the way down), up 1.5 s, down 35 s (with the
--- levers at idle 76 to 46 in 38 s, 72 to 49 in 37 s, 67 to 50 in 28 s towards 36: 27-38 s), shown to 0.1 %. With the
+-- levers at idle 76 to 46 in 38 s, 72 to 49 in 37 s, 67 to 50 in 28 s towards 36: 27-38 s) as X-Plane's N1
+-- (sim/cockpit2/engine/indicators/N1_percent), the EEC's display N1 at least its low idle (48 here) to 0.1 %. With the
 -- levers at idle the speed went on rising for 7-18 s while the engines spooled down; released then, the thrust ended
--- on a path idle could not hold the speed on (p23-line1: 36 A/T changes in the descent). Released only once the
--- engines have spooled down to idle.
+-- on a path idle could not hold the speed on (p23-line1: 36 A/T changes in the descent). Released only once X-Plane's
+-- N1 has stopped falling at idle.
 local function load_in_environment(path, environment)
     local chunk, load_error = loadfile(path)
     assert(chunk ~= nil, load_error)
@@ -174,7 +175,7 @@ local function load_vnav()
         simDR_autopilot_airspeed_is_mach = 1, simDR_autopilot_airspeed_kts = 270,
         simDR_ind_airspeed_kts_pilot = 270, simDR_vvi_fpm_pilot = -1500,
         simDR_autopilot_vs_fpm = -1500, B747DR_airspeed_Vmc = 150, B747DR_speedbrake_lever = 0,
-        simDR_allThrottle = 0, B747DR_display_N1 = {[0] = 38, 38, 38, 38}}
+        simDR_allThrottle = 0, simDR_engine_N1 = {[0] = 38, 38, 38, 38}, B747DR_display_N1 = {[0] = 48, 48, 48, 48}}
     for key, value in pairs(sim) do vnav[key] = value end
     vnav.B747_reset_vnav_energy()
     return vnav
@@ -198,7 +199,8 @@ local function descend_xp(idle_kt_s, speed, seconds, down_s, start_spd)
     for k = 1, math.floor(seconds / dt) do
         local t = k * dt
         vnav.simDR_ind_airspeed_kts_pilot, vnav.simDR_allThrottle = speed, lever
-        local shown = math.floor(n1 * 10 + 0.5) / 10
+        local shown = math.floor(math.max(n1, 48) * 10 + 0.5) / 10
+        vnav.simDR_engine_N1 = {[0] = n1, n1, n1, n1}
         vnav.B747DR_display_N1 = {[0] = shown, shown, shown, shown}
         vnav.setDescentVSpeed({})
         local p = vnav.B747DR_vnav_energy_thrust_policy
@@ -243,5 +245,40 @@ local c5, p5 = descend_xp(0.1, 263, 300, 35, true)
 check(c5 == 1 and p5 == IDLE, string.format(
     "D5 steep path (+0.10 kt/s at idle) from 7 kt slow in SPD: thrust released once (%d changes), ends %s", c5,
     p5 == IDLE and "at IDLE" or "in SPD"))
+
+-- D6 [review 24]: after a short SPD burst the PW EEC's display N1 lags X-Plane's and sat flat (t=2846 in p23-line1:
+-- 76.6 to 77.0 before idle, -0.05 to 0.00 %/s for 5 s after) while X-Plane's N1 fell and the speed still rose 3 kt
+-- fast: read from the display, the thrust ended 5 s after idle on a path idle could not hold. The production vnav.lua:
+-- SPD for 7 kt slow, the speed up to 3 kt fast at 0.5 kt/s, then the levers at idle with the speed still rising at
+-- 0.3 kt/s for 15 s while X-Plane's N1 falls from 77 towards 36 (35 s) and the display stays at 76.8: still SPD; then
+-- X-Plane's N1 steady at idle with the speed rising: IDLE.
+local vnav6 = load_vnav()
+local t6 = 0
+local function run6(seconds, speed_rate, lever, n1_of_t, display)
+    for _ = 1, math.floor(seconds / 0.02) do
+        local n1 = n1_of_t(t6)
+        vnav6.simDR_ind_airspeed_kts_pilot = vnav6.simDR_ind_airspeed_kts_pilot + speed_rate * 0.02
+        vnav6.simDR_allThrottle = lever
+        vnav6.simDR_engine_N1 = {[0] = n1, n1, n1, n1}
+        vnav6.B747DR_display_N1 = {[0] = display, display, display, display}
+        vnav6.setDescentVSpeed({})
+        vnav6.simDRTime = vnav6.simDRTime + 0.02
+        t6 = t6 + 0.02
+    end
+    return vnav6.B747DR_vnav_energy_thrust_policy
+end
+vnav6.simDR_ind_airspeed_kts_pilot = 263
+local p6 = run6(5, 0, 0.1, function() return 60 end, 60)
+check(p6 == ALLOW, "D6 7 kt slow on the path: SPD")
+p6 = run6(20, 0.5, 0.24, function() return 77 end, 76.6)
+check(p6 == ALLOW, string.format("D6 back to %.1f kt (3 kt fast) on the burst's thrust: still SPD",
+    vnav6.simDR_ind_airspeed_kts_pilot))
+local idle_at = t6
+p6 = run6(15, 0.3, 0, function(t) return 36 + 41 * math.exp(-(t - idle_at) / 35) end, 76.8)
+check(p6 == ALLOW, string.format(
+    "D6 levers at idle 15 s, the speed rising (%.1f kt) and X-Plane's N1 falling to %.1f, the display N1 flat: still SPD",
+    vnav6.simDR_ind_airspeed_kts_pilot, vnav6.simDR_engine_N1[0]))
+p6 = run6(10, 0.1, 0, function() return 36 end, 48)
+check(p6 == IDLE, "D6 X-Plane's N1 steady at idle and the speed still rising: the thrust ends (IDLE)")
 
 print("VNAV descent thrust hold tests passed: "..checks)

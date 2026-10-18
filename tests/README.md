@@ -309,8 +309,12 @@ The audit regressions load production Lua code with mocked simulator interfaces:
 - `vnav_descent_thrust_hold_test.lua` D5: the production vnav.lua with the
   EEC's speed law and engines fitted to p23-line1's spool-down (N1 down with
   a time constant of 35 s): the thrust for a slow speed is released only once
-  the engines' N1 has stopped falling at idle (on paths 0.15-0.55 kt/s slower
+  X-Plane's N1 has stopped falling at idle (on paths 0.15-0.55 kt/s slower
   at idle, at most 1 change in 900 s: 14 and 3 with the levers at idle alone).
+  D6: after a short SPD burst, with the levers at idle, the speed rising and
+  X-Plane's N1 still falling, SPD stays though the EEC's display N1 sits flat
+  (read from the display, the thrust ended 5 s after idle); with X-Plane's N1
+  steady at idle the thrust ends.
 - `vnav_descent_path_test.lua`: VNAV PTH's descent between the route's points
   follows the path (within 100 ft, mean within 40 ft, on the EHAM route from
   15 nm before LAMSO: it sat 150-225 ft below it aiming 250 ft below each
