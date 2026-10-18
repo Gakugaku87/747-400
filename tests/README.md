@@ -296,6 +296,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   overshoots, the thrust for a slow speed is released only with the levers at
   idle and the speed not falling (on a path idle cannot hold, SPD stays: at
   most 1 change in 600 s, at least 3 released at +2 kt alone).
+- `vnav_descent_thrust_hold_test.lua` D5: the production vnav.lua with the
+  EEC's speed law and engines fitted to p23-line1's spool-down (N1 down with
+  a time constant of 35 s): the thrust for a slow speed is released only once
+  the engines' N1 has stopped falling at idle (on paths 0.15-0.55 kt/s slower
+  at idle, at most 1 change in 900 s: 14 and 3 with the levers at idle alone).
 - `vnav_descent_path_test.lua`: VNAV PTH's descent between the route's points
   follows the path (within 100 ft, mean within 40 ft, on the EHAM route from
   15 nm before LAMSO: it sat 150-225 ft below it aiming 250 ft below each

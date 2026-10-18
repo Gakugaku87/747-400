@@ -133,4 +133,115 @@ check(step({actual_speed_kts = 273, previous_speed_axis = 1, thrust_at_idle = tr
 check(step({actual_speed_kts = 273, previous_speed_axis = 1, thrust_at_idle = true,
     speed_trend_kts_per_sec = 0.05}).thrust_policy == IDLE, "D4 3 kt fast at idle, not slowing: IDLE")
 
+-- D5 [B-13]: the production vnav.lua (its trends, latches and release) with the A/T's own speed loop (the EEC's
+-- spd_throttle, a frame of 0.02 s) and engines fitted to p23-line1's descent at FL260-300: N1 = idle + (96 - idle) x
+-- lever^0.3 (76-78 at 0.22-0.24, 84 at 0.41, still 73.8 at 0.095 on the way down), up 1.5 s, down 35 s (with the
+-- levers at idle 76 to 46 in 38 s, 72 to 49 in 37 s, 67 to 50 in 28 s towards 36: 27-38 s), shown to 0.1 %. With the
+-- levers at idle the speed went on rising for 7-18 s while the engines spooled down; released then, the thrust ended
+-- on a path idle could not hold the speed on (p23-line1: 36 A/T changes in the descent). Released only once the
+-- engines have spooled down to idle.
+local function load_in_environment(path, environment)
+    local chunk, load_error = loadfile(path)
+    assert(chunk ~= nil, load_error)
+    setfenv(chunk, environment)
+    chunk()
+end
+local runtime = setmetatable({}, {__index = _G})
+load_in_environment("plugins/xtlua_keysystems/init.lua", runtime)
+runtime.XLuaGetCode = function(requested_path)
+    local resolved_path = requested_path
+    if not string.find(requested_path, "/", 1, true) then resolved_path = AP..requested_path end
+    local chunk, load_error = loadfile(resolved_path)
+    assert(chunk ~= nil, load_error)
+    return chunk
+end
+local function load_vnav()
+    local vnav = setmetatable({}, {__index = _G})
+    vnav.dofile = runtime.get_run_file_in_namespace(vnav)
+    vnav.dofile(AP.."B747.70.xt.autopilot.vnav.lua")
+    local sim = {
+        simDRTime = 100, B747BR_totalDistance = 10, B747BR_fpe = 0, B747BR_vnavProfile = "",
+        B747DR_fmstargetDistance = 50, B747DR_ap_vnav_target_alt = 10000,
+        simDR_pressureAlt1 = 28000, simDR_autopilot_altitude_ft = 3000,
+        simDR_groundspeed = 230, simDR_radarAlt1 = 28000,
+        B747DR_ap_inVNAVdescent = 2, B747DR_ap_vnav_state = 2,
+        B747DR_ap_FMA_active_pitch_mode = 6, simDR_autopilot_vs_status = 2,
+        simDR_autopilot_flch_status = 0, simDR_autopilot_alt_hold_status = 0,
+        B747DR_autopilot_gs_status = 0, simDR_autopilot_gs_status = 0,
+        B747DR_ap_approach_mode = 0, simDR_autopilot_approach_status = 0,
+        B747DR_ap_autoland = 0, B747DR_ap_active_land = 0, B747DR_alt_capture_window = 1000,
+        -- a Mach target (setDescentVSpeed's deceleratedDesent wants the FMC's speed transition without one)
+        simDR_autopilot_airspeed_is_mach = 1, simDR_autopilot_airspeed_kts = 270,
+        simDR_ind_airspeed_kts_pilot = 270, simDR_vvi_fpm_pilot = -1500,
+        simDR_autopilot_vs_fpm = -1500, B747DR_airspeed_Vmc = 150, B747DR_speedbrake_lever = 0,
+        simDR_allThrottle = 0, B747DR_display_N1 = {[0] = 38, 38, 38, 38}}
+    for key, value in pairs(sim) do vnav[key] = value end
+    vnav.B747_reset_vnav_energy()
+    return vnav
+end
+local IDLE_N1 = 38
+local function n1_target(lever)
+    if lever <= 0 then return IDLE_N1 end
+    return IDLE_N1 + (96 - IDLE_N1) * lever ^ 0.3
+end
+-- The descent for `seconds` on the path from `speed` kt (target 270), the speed changing by idle_kt_s at idle and by
+-- 0.65 kt/s more at N1 77; the A/T in SPD while VNAV allows thrust (the EEC's spd_throttle, its levers at 0.5 a
+-- second), else its levers to idle at 1 a second. Returns VNAV's thrust policy changes, the last policy, the speed
+-- and its extremes after 120 s.
+local function descend_xp(idle_kt_s, speed, seconds, down_s, start_spd)
+    local vnav = load_vnav()
+    local dt, target = 0.02, 270
+    local lever, thr, n1 = 0, 0, IDLE_N1
+    local lastSample, lastIas, sd, lastSpd = 0, speed, 0, -10
+    local changes, policy, hi, lo = 0, nil, -1e9, 1e9
+    if start_spd then lever, thr, n1 = 0.24, 0.24, n1_target(0.24) end
+    for k = 1, math.floor(seconds / dt) do
+        local t = k * dt
+        vnav.simDR_ind_airspeed_kts_pilot, vnav.simDR_allThrottle = speed, lever
+        local shown = math.floor(n1 * 10 + 0.5) / 10
+        vnav.B747DR_display_N1 = {[0] = shown, shown, shown, shown}
+        vnav.setDescentVSpeed({})
+        local p = vnav.B747DR_vnav_energy_thrust_policy
+        if policy ~= nil and p ~= policy then changes = changes + 1 end
+        policy = p
+        if p == ALLOW or (start_spd and t < 1) then
+            if t - lastSpd > 1 then thr = lever end
+            lastSpd = t
+            if t - lastSample > 0.1 then sd, lastSample, lastIas = speed - lastIas, t, speed end
+            local err = math.abs(speed - target)
+            local rog = math.min(0.005, math.max(0.0001 + 0.0001 * err, 0.0001 + 0.005 * math.abs(sd)))
+            local maxsd, minsd = 0, 0
+            if err > 1 then maxsd = 0.001 + err / 100; minsd = maxsd / 5 end
+            if (target > speed + 0.5 and sd < minsd) or (target < speed - 0.5 and sd < -maxsd) then
+                thr = thr + rog
+            elseif (target < speed - 0.5 and sd > -minsd) or (target > speed + 0.5 and sd > maxsd) then
+                thr = thr - rog
+            end
+            thr = math.max(0, math.min(1, thr))
+            local step = 0.5 * dt
+            if math.abs(thr - lever) <= step then lever = lever + (thr - lever) * 0.1
+            elseif thr > lever then lever = lever + step else lever = lever - step end
+        else
+            lever = math.max(0, lever - dt)
+            if lever < 1e-4 then lever = 0 end
+        end
+        local goal = n1_target(lever)
+        n1 = n1 + (goal - n1) * dt / (goal > n1 and 1.5 or down_s)
+        speed = speed + (idle_kt_s + 0.65 * (n1 - IDLE_N1) / (77 - IDLE_N1)) * dt
+        if t > 120 then hi, lo = math.max(hi, speed - target), math.min(lo, speed - target) end
+        vnav.simDRTime = vnav.simDRTime + dt
+    end
+    return changes, policy, speed, hi, lo
+end
+for _, idle in ipairs({-0.15, -0.35, -0.55}) do
+    local c, p, s, hi, lo = descend_xp(idle, 270, 900, 35)
+    check(c <= 1 and p == ALLOW, string.format(
+        "D5 path %.2f kt/s at idle, X-Plane's spool-down: %d thrust policy changes in 900 s (at most 1, to SPD), ends %s"
+        .. " at %.1f kt (%+.1f to %+.1f after 120 s)", idle, c, p == ALLOW and "SPD" or "IDLE", s, lo, hi))
+end
+local c5, p5 = descend_xp(0.1, 263, 300, 35, true)
+check(c5 == 1 and p5 == IDLE, string.format(
+    "D5 steep path (+0.10 kt/s at idle) from 7 kt slow in SPD: thrust released once (%d changes), ends %s", c5,
+    p5 == IDLE and "at IDLE" or "in SPD"))
+
 print("VNAV descent thrust hold tests passed: "..checks)

@@ -17,6 +17,10 @@ local B747_afds_helpers = dofile("B747.70.xt.autopilot.afds_helpers.lua")
 local VNAV_ENERGY_THRUST_ENTRY_DELAY_SEC = 2.0
 local VNAV_ENERGY_THRUST_EXIT_DELAY_SEC = 5.0
 local VNAV_ENERGY_DIAGNOSTIC_INTERVAL_SEC = 1.0
+-- [B-13] The A/T's thrust is at idle for the descent's thrust release once its levers are at idle and the engines'
+-- highest N1 has stopped falling: less than VNAV_ENERGY_IDLE_N1_SETTLED_PCT_PER_SEC over VNAV_ENERGY_N1_WINDOW_SEC.
+local VNAV_ENERGY_IDLE_N1_SETTLED_PCT_PER_SEC = 0.1
+local VNAV_ENERGY_N1_WINDOW_SEC = 2.0
 local vnavEnergy = {
   active = false,
   pathAxis = 0,
@@ -37,7 +41,10 @@ local vnavEnergy = {
   state = B747_afds_helpers.VNAV_ENERGY_STATE_INACTIVE,
   stateName = "INACTIVE",
   recoveryLimited = false,
-  dragRequired = false
+  dragRequired = false,
+  n1SampleTime = nil,
+  n1Sample = nil,
+  n1Rate = nil
 }
 
 function B747_reset_vnav_energy()
@@ -59,6 +66,8 @@ function B747_reset_vnav_energy()
   vnavEnergy.stateName = "INACTIVE"
   vnavEnergy.recoveryLimited = false
   vnavEnergy.dragRequired = false
+  vnavEnergy.n1SampleTime = nil
+  vnavEnergy.n1Rate = nil
   B747DR_vnav_energy_active = 0
   B747DR_vnav_energy_state = B747_afds_helpers.VNAV_ENERGY_STATE_INACTIVE
   B747DR_vnav_energy_thrust_policy = B747_afds_helpers.VNAV_ENERGY_THRUST_NORMAL
@@ -84,6 +93,27 @@ local function B747_vnav_energy_update_trends(pathError, actualSpeed)
   vnavEnergy.lastSpeed = actualSpeed
   vnavEnergy.lastSampleTime = now
   return math.max(elapsed, 0)
+end
+
+-- [B-13] The engines' highest N1 (nil where it is not known) and how fast it moved over at least
+-- VNAV_ENERGY_N1_WINDOW_SEC (%/s; nil until it has been seen that long: the N1 shown moves in steps of 0.1).
+local function B747_vnav_energy_n1_rate()
+  local n1 = nil
+  if B747DR_display_N1 == nil then return nil, nil end
+  for i = 0, 3 do
+    local value = tonumber(B747DR_display_N1[i])
+    if value ~= nil and (n1 == nil or value > n1) then n1 = value end
+  end
+  if n1 == nil then return nil, nil end
+  local now = simDRTime
+  local since = vnavEnergy.n1SampleTime
+  if since == nil or now < since or now - since > 3 * VNAV_ENERGY_N1_WINDOW_SEC then
+    vnavEnergy.n1SampleTime, vnavEnergy.n1Sample, vnavEnergy.n1Rate = now, n1, nil
+  elseif now - since >= VNAV_ENERGY_N1_WINDOW_SEC then
+    vnavEnergy.n1Rate = (n1 - vnavEnergy.n1Sample) / (now - since)
+    vnavEnergy.n1SampleTime, vnavEnergy.n1Sample = now, n1
+  end
+  return n1, vnavEnergy.n1Rate
 end
 
 local function B747_vnav_energy_latch_thrust(guidance)
@@ -144,9 +174,18 @@ end
 
 local function B747_vnav_energy_target_vspeed(nominalVSpeed)
   local pathError = B747BR_fpe
-  -- [B-13] the A/T's levers at idle (nil where the throttle is not known: released at 2 kt past the target)
+  -- [B-13] the A/T's thrust at idle: its levers at idle and the engines spooled down there (the levers alone where
+  -- the N1 is not known; nil where the throttle is not known: released at 2 kt past the target). The levers at idle
+  -- alone, the thrust ended while X-Plane's engines were still spooling down (N1 77 to 46 in 37 s at FL290) and the
+  -- speed still rising, on a path idle could not hold the speed on (p23-line1: SPD, HOLD, SPD every 80-95 s).
   local atIdle = nil
-  if tonumber(simDR_allThrottle) ~= nil then atIdle = simDR_allThrottle <= 0.001 end
+  local n1, n1Rate = B747_vnav_energy_n1_rate()
+  if tonumber(simDR_allThrottle) ~= nil then
+    atIdle = simDR_allThrottle <= 0.001
+    if n1 ~= nil then
+      atIdle = atIdle and n1Rate ~= nil and n1Rate > -VNAV_ENERGY_IDLE_N1_SETTLED_PCT_PER_SEC
+    end
+  end
   local actualSpeed = simDR_ind_airspeed_kts_pilot
   local elapsed = B747_vnav_energy_update_trends(pathError, actualSpeed)
   local guidance = B747_afds_helpers.vnav_energy_guidance({
@@ -166,7 +205,7 @@ local function B747_vnav_energy_target_vspeed(nominalVSpeed)
     previous_thrust_policy = vnavEnergy.thrustPolicy,
     previous_thrust_reason = vnavEnergy.thrustReason,
     speedbrake_lever = B747DR_speedbrake_lever,
-    -- [B-13] the thrust for a slow speed ends only with the levers at idle (and the speed not falling)
+    -- [B-13] the thrust for a slow speed ends only with the thrust at idle (and the speed not falling)
     thrust_at_idle = atIdle
   })
 
