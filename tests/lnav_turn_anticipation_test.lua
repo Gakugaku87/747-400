@@ -2096,4 +2096,40 @@ do
         .. " limit (25)", outside, at_limit))
 end
 
+-- [review 22] The share of a leg between two turns the same way: the next turn's arc is drawn for the AFDS's target
+-- until its own start (44ddc99b), so a target step in the first arc grew the next radius (x1.69 at the 1.3 cap), and
+-- through the share the arc being flown shrank (2.90 to 2.23 nm at 250 kt: 25 deg of bank against the 20 deg limit; a
+-- review). Fixed with the turn's radius: two 90 deg turns right 6 nm apart at 250 kt and 5,000 ft, the target 250 kt,
+-- then 325 kt 10 s into the first arc: at most 0.10 nm outside the path in the first turn (the arcs are drawn at the
+-- bank limit, which a constant speed holds round the turn).
+do
+    local b_lat, b_lon = 53.0, -6.0
+    local a_lat, a_lon = probe.movePoint(b_lat, b_lon, 20, 180)
+    local c_lat, c_lon = probe.movePoint(b_lat, b_lon, 6, 90)
+    local d_lat, d_lon = probe.movePoint(c_lat, c_lon, 20, 180)
+    route = {E("ORIG", a_lat - 1, a_lon, 0, 1), E("A", a_lat, a_lon), E("B", b_lat, b_lon), E("C", c_lat, c_lon),
+        E("D", d_lat, d_lon), E("DEST", d_lat - 1, d_lon, 0, 1)}
+    local s_lat, s_lon = probe.movePoint(b_lat, b_lon, 12, 180)
+    local outside, arc_t = 0, nil
+    out = fly({route = route, index = 3, start = {s_lat, s_lon}, heading = 0, tas_kt = 250, alt_ft = 5000,
+        loop = "low", seconds = 240,
+        setup = function(env)
+            env.simDR_autopilot_airspeed_is_mach, env.simDR_autopilot_airspeed_kts = 0, 250
+            env.simDR_ind_airspeed_kts_pilot = 250
+        end,
+        hook = function(env, t)
+            env.simDR_ind_airspeed_kts_pilot = env.simDR_TAS_mps / KT -- the IAS as the TAS here
+            local bank = env.simDR_AHARS_roll_deg_pilot or 0
+            if arc_t == nil and bank > 5 then arc_t = t end
+            if arc_t ~= nil and t >= arc_t + 10 then env.simDR_autopilot_airspeed_kts = 325 end
+            -- the first turn: from its arc's start for 70 s (about 66 s round it)
+            if arc_t ~= nil and t <= arc_t + 70 then
+                outside = math.max(outside, -(env.B747DR_ap_lnav_xtk_error or 0))
+            end
+        end})
+    check(arc_t ~= nil and outside <= 0.10, string.format(
+        "two 90 deg turns 6 nm apart, the target 250 -> 325 kt in the first arc: %.2f nm outside the path in the first"
+        .. " turn (0.10)", outside))
+end
+
 print("LNAV turn anticipation tests passed: "..checks)

@@ -2752,6 +2752,14 @@ local function B747_lnav_path_at_fix(fmsO,k,p)
 		if B747_lnav_arc_shares_leg(turn,otherTurn) and after+otherBefore>outof then
 			share=math.min(share,outof/(after+otherBefore))
 		end
+		-- [review 22] the share fixed with the turn's radius (B747_lnav_turn_radius_fixed): the next turn's arc, drawn
+		-- for the AFDS's target until its own start, grew with a target step (x1.69 at the cap), and through the share
+		-- the arc being flown shrank (2.90 to 2.23 nm at 250 kt: 25 deg of bank; a review)
+		local fixed=lnavTurnRadius[k..":"..tostring(fix[5])..":"..tostring(fix[6])]
+		if fixed~=nil then
+			if fixed.share==nil then fixed.share=share end
+			share=fixed.share
+		end
 		radius=radius*share
 	end
 	local distance=getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)

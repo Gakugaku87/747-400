@@ -369,7 +369,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   BILTO listed twice, the same (2.44 nm and 118 s when the radius was let go
   at the duplicate). A turn accelerating from 230 kt to the target 280: at most
   0.10 nm outside and 25 s at the bank limit (0.39 nm and 59 s drawn for the
-  TAS at the arc's start).
+  TAS at the arc's start). Two 90 deg turns 6 nm apart with the target stepping
+  from 250 to 325 kt in the first arc: at most 0.10 nm outside in it (0.32 nm
+  when the share of the leg followed the next arc).
   LNAV's path guidance on the model: within 0.1 nm of the leg to DW124 90 and
   120 s after DW129, and back on a leg from 1, 3 and 10 nm off within 60, 120
   and 300 s at most 45 deg to it and not 0.2 nm through it. LNAV ARM: LNAV
