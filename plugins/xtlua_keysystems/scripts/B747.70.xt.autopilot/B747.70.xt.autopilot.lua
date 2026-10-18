@@ -4113,7 +4113,13 @@ function B747_ap_fma(fms)
 	elseif B747DR_vnav_energy_active == 1 and B747DR_ap_inVNAVdescent > 0
 		and B747DR_autothrottle_active == 1 then
 		if B747DR_vnav_energy_thrust_policy == B747_afds_helpers.VNAV_ENERGY_THRUST_IDLE then
-			B747DR_ap_FMA_autothrottle_mode = 2 --IDLE
+			-- [B-13] IDLE while the A/T takes the levers back, HOLD once they are at idle (the servos off), as on a real
+			-- 747-400 (THR, IDLE, HOLD); it stayed IDLE all the way down. HOLD only after IDLE, so it always follows it.
+			if simDR_allThrottle<=0.001 and (B747DR_ap_FMA_autothrottle_mode==2 or B747DR_ap_FMA_autothrottle_mode==1) then
+				B747DR_ap_FMA_autothrottle_mode = 1 --HOLD
+			else
+				B747DR_ap_FMA_autothrottle_mode = 2 --IDLE
+			end
 		else
 			B747DR_ap_FMA_autothrottle_mode = 3 --SPD
 		end

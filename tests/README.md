@@ -292,6 +292,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   or the aircraft is above the path - a path idle cannot hold the speed on
   changes the A/T once (to SPD, 30 times in 300 s before) with the speed on
   the target; on a path steep enough at idle the thrust ends.
+- `vnav_descent_at_hold_test.lua`: the A/T's FMA in an idle VNAV PTH descent -
+  IDLE while the levers come back, HOLD once they are at idle (only after
+  IDLE), SPD when VNAV allows thrust; the production `B747_ap_fma` through
+  approach_model.lua's loader.
 - `afds_toga_roll_test.lua`: the TO/GA roll annunciation - HDG SEL, HDG HOLD
   or LNAV in flight replacing TO/GA roll while TO/GA pitch stays, the roll
   FMA going straight from TO/GA to HDG SEL frame by frame, LOC capture,
