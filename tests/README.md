@@ -294,7 +294,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   the target; on a path steep enough at idle the thrust ends.
 - `vnav_descent_at_hold_test.lua`: the A/T's FMA in an idle VNAV PTH descent -
   IDLE while the levers come back, HOLD once they are at idle (only after
-  IDLE), SPD when VNAV allows thrust; the production `B747_ap_fma` through
+  IDLE), SPD when VNAV allows thrust; in that HOLD a pilot's lever movement
+  stays (HOLD while VNAV wants idle; a HOLD from before the descent with the
+  levers up goes IDLE first); the production `B747_ap_fma` through
   approach_model.lua's loader.
 - `afds_toga_roll_test.lua`: the TO/GA roll annunciation - HDG SEL, HDG HOLD
   or LNAV in flight replacing TO/GA roll while TO/GA pitch stays, the roll

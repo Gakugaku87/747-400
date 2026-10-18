@@ -4060,6 +4060,8 @@ function fma_PitchModes()
 	end
 end
 
+-- [review 21] B747_ap_fma set HOLD in a VNAV descent's idle in the frame before
+local vnavDescentHold=false
 function B747_ap_fma(fms)
 	B747DR_capt_ap_roll = B747_animate_value(B747DR_capt_ap_roll, B747DR_ap_target_roll - simDR_capt_roll, -25, 25, 10)
 	B747DR_fo_ap_roll = B747_animate_value(B747DR_fo_ap_roll, B747DR_ap_target_roll - simDR_fo_roll, -25, 25, 10)
@@ -4087,6 +4089,8 @@ function B747_ap_fma(fms)
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
 	-- AUTOTHROTTLE
 	-------------------------------------------------------------------------------------
+	local descentHold=vnavDescentHold
+	vnavDescentHold=false
 	if B747DR_ap_autoland == 1 and simDR_radarAlt1 < 25 then
 
 		B747DR_ap_FMA_autothrottle_mode = 2 --IDLE
@@ -4115,8 +4119,12 @@ function B747_ap_fma(fms)
 		if B747DR_vnav_energy_thrust_policy == B747_afds_helpers.VNAV_ENERGY_THRUST_IDLE then
 			-- [B-13] IDLE while the A/T takes the levers back, HOLD once they are at idle (the servos off), as on a real
 			-- 747-400 (THR, IDLE, HOLD); it stayed IDLE all the way down. HOLD only after IDLE, so it always follows it.
-			if simDR_allThrottle<=0.001 and (B747DR_ap_FMA_autothrottle_mode==2 or B747DR_ap_FMA_autothrottle_mode==1) then
+			-- [review 21] Then HOLD while VNAV wants idle: a pilot's lever movement stays (the servos are off; it went
+			-- back to IDLE, which took the levers to idle again). A HOLD from before the descent goes IDLE first.
+			if (descentHold and B747DR_ap_FMA_autothrottle_mode==1)
+				or (simDR_allThrottle<=0.001 and (B747DR_ap_FMA_autothrottle_mode==2 or B747DR_ap_FMA_autothrottle_mode==1)) then
 				B747DR_ap_FMA_autothrottle_mode = 1 --HOLD
+				vnavDescentHold=true
 			else
 				B747DR_ap_FMA_autothrottle_mode = 2 --IDLE
 			end

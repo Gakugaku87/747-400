@@ -2,7 +2,8 @@
 -- The A/T's FMA in an idle VNAV PTH descent: IDLE while the A/T takes the
 -- thrust levers back, then HOLD once they are at idle (the servos off), as on
 -- a real 747-400 (THR, IDLE, HOLD); SPD when VNAV allows thrust for a slow
--- speed. It stayed IDLE all the way down.
+-- speed. It stayed IDLE all the way down. In that HOLD a pilot's lever movement
+-- stays (HOLD while VNAV wants idle).
 -- The production B747_ap_fma runs in the autopilot's namespace
 -- (approach_model.lua's loader) against mocked datarefs.
 local model = dofile("tests/approach_model.lua")
@@ -56,6 +57,19 @@ check(fma(IDLE_POLICY, 0.0) == 1, "at idle again: HOLD, got "..d.B747DR_ap_FMA_a
 d.B747DR_ap_FMA_autothrottle_mode = 3
 check(fma(IDLE_POLICY, 0.0) == 2, "from SPD with the levers at idle: IDLE first, got "..d.B747DR_ap_FMA_autothrottle_mode)
 check(fma(IDLE_POLICY, 0.0) == 1, "then HOLD, got "..d.B747DR_ap_FMA_autothrottle_mode)
+-- [review 21] in HOLD a pilot's levers stay: HOLD while VNAV wants idle (it went back to IDLE, which took the levers to
+-- idle again); SPD when VNAV allows thrust, and from there IDLE first again
+check(fma(IDLE_POLICY, 0.20) == 1, "a pilot's levers at 0.20 in HOLD: HOLD, got "..d.B747DR_ap_FMA_autothrottle_mode)
+check(fma(IDLE_POLICY, 0.20) == 1, "and on: HOLD, got "..d.B747DR_ap_FMA_autothrottle_mode)
+check(fma(IDLE_POLICY, 0.0) == 1, "the pilot's levers back to idle: HOLD, got "..d.B747DR_ap_FMA_autothrottle_mode)
+check(fma(IDLE_POLICY, 0.20) == 1, "and up again: HOLD, got "..d.B747DR_ap_FMA_autothrottle_mode)
+check(fma(ALLOW, 0.20) == 3, "VNAV allows thrust: SPD, got "..d.B747DR_ap_FMA_autothrottle_mode)
+check(fma(IDLE_POLICY, 0.20) == 2, "idle again, the levers up: IDLE, got "..d.B747DR_ap_FMA_autothrottle_mode)
+-- a HOLD from before the idle descent (not its own) with the levers up: IDLE first, as before
+d.B747DR_ap_FMA_autothrottle_mode = 1
+check(fma(IDLE_POLICY, 0.20) == 2, "a HOLD from before with the levers up: IDLE first, got "
+    ..d.B747DR_ap_FMA_autothrottle_mode)
+check(fma(IDLE_POLICY, 0.0) == 1, "then HOLD at idle, got "..d.B747DR_ap_FMA_autothrottle_mode)
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV descent A/T HOLD tests passed: "..checks)
