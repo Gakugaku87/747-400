@@ -26,12 +26,13 @@ end
 local EPR_MAX, EPR_TO = 1.60, 1.52
 -- the PW lever's command (B747.42.xt.EEC.PW.lua throttle_resolver_angle_PW): EPR 0.95 at idle to the maximum at full
 local function pw_command(throttle) return 0.95 + (EPR_MAX - 0.95) * throttle end
--- the GE one as a line from idle to full (throttle_resolver_angle_GE is curved; the loop only needs it monotonic)
-local function ge_command(throttle) return 25 + 75 * throttle end
+-- the GE one (B747.42.xt.EEC.GE.lua: B747_rescale(0, 25, 1, 116))
+local function ge_command(throttle) return 25 + 91 * throttle end
 
 -- A takeoff roll from a lever at `throttle`, THR REF, at a frame time of dt: the seconds until the lever's command is
--- within the A/T's deadband of the takeoff reference, and the highest command seen (nil if not within 30 s).
-local function takeoff(engine, throttle, dt)
+-- within the A/T's deadband of the takeoff reference, the highest command seen (nil if not within 30 s) and the lowest
+-- lever before takeoff thrust. after_landing: the A/T had taken the levers to idle (IDLE) before it was off.
+local function takeoff(engine, throttle, dt, after_landing)
     local runtime = {
         print=function() end,
         SIM_PERIOD=dt,
@@ -66,13 +67,25 @@ local function takeoff(engine, throttle, dt)
         for i = 0, 3 do runtime.B747DR_throttle_resolver_angle[i] = command(runtime.B747DR_throttle[i]) end
     end
     refresh()
-    -- TO/GA pushed: a frame before THR REF, where the lever target follows the levers, then THR REF
-    runtime.B747DR_ap_FMA_autothrottle_mode = 0
-    runtime.ecc_throttle() -- the first call only starts the frame timer
-    runtime.simDRTime = runtime.simDRTime + dt
-    runtime.ecc_throttle()
+    if after_landing then
+        -- the landing: the A/T at IDLE takes the levers to idle, then it is off (ecc_throttle not called) and the levers
+        -- are moved by hand to where the takeoff starts
+        runtime.B747DR_ap_FMA_autothrottle_mode = 2
+        runtime.simDR_ind_airspeed_kts_pilot, runtime.simDR_ias_pilot = 200, 200   -- in the air: no low-speed recovery
+        for _ = 1, math.floor(5 / dt) do
+            runtime.simDRTime = runtime.simDRTime + dt
+            runtime.ecc_throttle()
+        end
+        runtime.simDR_ind_airspeed_kts_pilot, runtime.simDR_ias_pilot = 0, 0
+        for i = 0, 3 do runtime.B747DR_throttle[i] = throttle end
+        runtime.simDR_engine_throttle_jet_all = throttle
+        runtime.simDRTime = runtime.simDRTime + 60
+        refresh()
+    end
+    -- TO/GA pushed: THR REF, as in production (ecc_throttle runs only while the A/T has the levers)
     runtime.B747DR_ap_FMA_autothrottle_mode = 5
-    local t, reached, highest = 0, nil, -1e9
+    runtime.ecc_throttle() -- the first call after the A/T was off: no step
+    local t, reached, highest, lowest = 0, nil, -1e9, 1e9
     while t < 30 do
         t = t + dt
         runtime.simDRTime = runtime.simDRTime + dt
@@ -83,9 +96,10 @@ local function takeoff(engine, throttle, dt)
         refresh()
         local c = command(runtime.B747DR_throttle[0])
         highest = math.max(highest, c)
+        if reached == nil then lowest = math.min(lowest, runtime.B747DR_throttle[0]) end
         if reached == nil and math.abs(c - target) <= band then reached = t end
     end
-    return reached, highest, target, band
+    return reached, highest, target, band, lowest
 end
 
 -- T1: PW from the stabilised lever (EPR 1.10, the FCTM's "about 70% N1"): takeoff thrust within 8 s, the same at 20,
@@ -111,9 +125,19 @@ check(reached ~= nil and reached <= 12, string.format("PW from idle: takeoff thr
 
 -- T3: GE from about 70% N1: within 8 s and no overshoot.
 local highest, target
-reached, highest, target = takeoff(1, (70 - 25) / 75, 1 / 30)
+reached, highest, target = takeoff(1, (70 - 25) / 91, 1 / 30)
 check(reached ~= nil and reached <= 8, string.format("GE from 70%% N1: takeoff thrust after %s s (8)",
     tostring(reached and string.format("%.1f", reached))))
 check(highest <= target + 0.4, string.format("GE: the lever's command went to %.1f%% N1 (%.1f)", highest, target))
+
+-- T4 [review 21]: the A/T's lever target from the levers when it takes them: from the FCTM's start with the levers at
+-- 0.60 (above its 0.5 from load), and after a landing that left it at idle, the levers do not go back first (they went
+-- to 0.513, and to idle, before advancing).
+for _, after_landing in ipairs({false, true}) do
+    local reached4, _, _, _, lowest = takeoff(0, 0.60, 1 / 30, after_landing)
+    check(lowest >= 0.595 and reached4 ~= nil and reached4 <= 8, string.format(
+        "PW from a lever of 0.60%s: the levers down to %.3f before takeoff thrust (0.595), takeoff thrust after %s s (8)",
+        after_landing and " after a landing" or "", lowest, tostring(reached4 and string.format("%.1f", reached4))))
+end
 
 print("EEC takeoff thrust tests passed: "..checks)

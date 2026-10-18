@@ -189,7 +189,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
 - `eec_takeoff_thrust_test.lua`: the A/T setting takeoff thrust (THR REF on
   the takeoff roll) - PW from EPR 1.10 within 8 s at 20, 30 and 60 fps alike
   and without overshoot, from idle within 12 s (before HOLD at 65 kt), GE
-  from 70% N1 within 8 s.
+  from 70% N1 within 8 s; from levers at 0.60, also after a landing that left
+  the A/T at idle, no step back before takeoff thrust (the A/T's target from
+  the levers when it takes them).
 - `afds_responsiveness_test.lua`: the AFDS helper calculations (turn
   anticipation, VNAV speed change reasons, VNAV energy guidance, pitch blend
   and roll filters) and the speed-on-pitch limiter - the severe underspeed

@@ -947,7 +947,14 @@ function ecc_throttle()
 
 		time=simDRTime-previous_throttleTime
 		previous_throttleTime=simDRTime
-		if time>1 or time==0 then
+		if time>1 then
+			-- [review 21] the A/T taking the levers again (its first frame after a second without them: TO/GA, SPD
+			-- after HOLD): its lever target from where they are. It kept its last (0.5 from load, idle after a landing)
+			-- and took the levers there first: from the FCTM's 70 % N1 start (about 0.6) back to 0.51 at TO/GA.
+			spd_target_throttle=(B747DR_throttle[0]+B747DR_throttle[1]+B747DR_throttle[2]+B747DR_throttle[3])/4
+			simDR_engine_throttle_jet_all=spd_target_throttle
+			return
+		elseif time==0 then
 			return
 		end
 		-- Autoland flare below 50 ft RA: IDLE is the landing retard. The speed
