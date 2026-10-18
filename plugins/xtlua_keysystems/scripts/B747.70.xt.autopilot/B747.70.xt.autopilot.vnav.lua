@@ -144,6 +144,9 @@ end
 
 local function B747_vnav_energy_target_vspeed(nominalVSpeed)
   local pathError = B747BR_fpe
+  -- [B-13] the A/T's levers at idle (nil where the throttle is not known: released at 2 kt past the target)
+  local atIdle = nil
+  if tonumber(simDR_allThrottle) ~= nil then atIdle = simDR_allThrottle <= 0.001 end
   local actualSpeed = simDR_ind_airspeed_kts_pilot
   local elapsed = B747_vnav_energy_update_trends(pathError, actualSpeed)
   local guidance = B747_afds_helpers.vnav_energy_guidance({
@@ -162,7 +165,9 @@ local function B747_vnav_energy_target_vspeed(nominalVSpeed)
     -- thrust; an extended speedbrake holds that thrust at idle instead.
     previous_thrust_policy = vnavEnergy.thrustPolicy,
     previous_thrust_reason = vnavEnergy.thrustReason,
-    speedbrake_lever = B747DR_speedbrake_lever
+    speedbrake_lever = B747DR_speedbrake_lever,
+    -- [B-13] the thrust for a slow speed ends only with the levers at idle (and the speed not falling)
+    thrust_at_idle = atIdle
   })
 
   if not vnavEnergy.active then

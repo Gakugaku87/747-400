@@ -292,6 +292,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   or the aircraft is above the path - a path idle cannot hold the speed on
   changes the A/T once (to SPD, 30 times in 300 s before) with the speed on
   the target; on a path steep enough at idle the thrust ends.
+- `vnav_descent_thrust_hold_test.lua` D4: with the A/T's own speed loop, which
+  overshoots, the thrust for a slow speed is released only with the levers at
+  idle and the speed not falling (on a path idle cannot hold, SPD stays: at
+  most 1 change in 600 s, at least 3 released at +2 kt alone).
 - `vnav_descent_path_test.lua`: VNAV PTH's descent between the route's points
   follows the path (within 100 ft, mean within 40 ft, on the EHAM route from
   15 nm before LAMSO: it sat 150-225 ft below it aiming 250 ft below each

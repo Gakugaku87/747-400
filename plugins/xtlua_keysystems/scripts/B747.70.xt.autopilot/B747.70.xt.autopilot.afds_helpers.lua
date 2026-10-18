@@ -685,10 +685,17 @@ function afds.vnav_energy_guidance(input)
     -- thrust for, slowed again and went back to SPD every 15-35 s through the descents (p20-line1: about 40 times,
     -- p20-L1: about 30); a real 747-400's A/T in SPD holds the speed with the thrust it needs. On a path steep enough
     -- at idle the speed goes past the target and the thrust ends.
+    -- [B-13] Released 2 kt past the target only with the A/T's levers at idle (input.thrust_at_idle) and the speed not
+    -- falling: idle holds the speed on this path. After the A/T's speed loop overshot (3-4 kt) its levers came to idle
+    -- and the thrust ended on a path idle could not hold the speed on, which slowed it to SPD again (p21-line1: SPD,
+    -- IDLE, HOLD, SPD on the path). Without thrust_at_idle, released at 2 kt past the target, as before.
+    local at_idle = input.thrust_at_idle
+    local released = speed_error_kts >= afds.VNAV_ENERGY_THRUST_RELEASE_KTS
+        and (at_idle == nil or (at_idle == true and speed_trend_kts_per_sec >= 0))
     local below_hold = tonumber(input.previous_thrust_policy) == afds.VNAV_ENERGY_THRUST_ALLOW
         and (previous_thrust_reason == afds.VNAV_ENERGY_THRUST_REASON_ON_PATH_BELOW_SPEED
             or previous_thrust_reason == afds.VNAV_ENERGY_THRUST_REASON_BELOW_PATH_BELOW_SPEED)
-        and path_axis <= 0 and speed_error_kts < afds.VNAV_ENERGY_THRUST_RELEASE_KTS
+        and path_axis <= 0 and not released
 
     local thrust_policy = afds.VNAV_ENERGY_THRUST_IDLE
     local thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_NONE

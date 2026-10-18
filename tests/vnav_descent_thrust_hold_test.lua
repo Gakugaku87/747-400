@@ -78,4 +78,59 @@ check(step({path_error_ft = 400, previous_path_axis = 1}).thrust_policy == IDLE,
 check(step({previous_thrust_policy = IDLE, previous_thrust_reason = NONE}).thrust_policy == IDLE,
     "D3 an idle descent 1 kt slow does not start thrust")
 
+-- D4 [B-13]: with the A/T's own speed loop, which overshoots: SPD from the target - 5 kt went 3-4 kt past the target,
+-- the levers came to idle and the thrust was released on a path idle could not hold the speed on, which slowed it to
+-- SPD again (p21-line1: SPD, IDLE, HOLD, SPD on the path). Released only with the levers at idle and the speed not
+-- falling. The A/T: a PI loop on the speed (0.05 per kt, 0.004 per kt s), its thrust 4 s behind, 1 kt/s at full; the
+-- energy mode's latches (2 s to SPD, 5 s to IDLE) as vnav.lua's; 600 s.
+local function descend_at(idle_kt_s, speed, policy, reason, with_idle)
+    local target, dt = 270, 0.5
+    local prev = {path = 0, speed = 0, policy = policy, reason = reason}
+    local latched, pending, since = policy, nil, 0
+    local cmd, thrust, integral, trend, changes = 0, 0, 0, 0, 0
+    for k = 1, math.floor(600 / dt) do
+        local t = k * dt
+        local input = {path_error_ft = 0, path_trend_fpm = 0, target_speed_kts = target, actual_speed_kts = speed,
+            speed_trend_kts_per_sec = trend, nominal_vspeed_fpm = -2000, min_safe_speed_kts = 200,
+            previous_path_axis = prev.path, previous_speed_axis = prev.speed,
+            previous_thrust_policy = latched, previous_thrust_reason = prev.reason}
+        if with_idle then input.thrust_at_idle = cmd <= 0.001 end
+        local g = nav.vnav_energy_guidance(input)
+        if g.thrust_policy == latched then
+            pending = nil
+        elseif pending ~= g.thrust_policy then
+            pending, since = g.thrust_policy, t
+        elseif t - since >= (latched == ALLOW and 5 or 2) then
+            latched, pending, changes = g.thrust_policy, nil, changes + 1
+        end
+        if latched == ALLOW then
+            local err = target - speed
+            integral = math.max(-50, math.min(250, integral + err * dt))
+            cmd = math.max(0, math.min(1, 0.05 * err + 0.004 * integral))
+        else
+            cmd, integral = 0, 0
+        end
+        thrust = thrust + (cmd - thrust) * dt / 4
+        local accel = idle_kt_s + thrust
+        speed, trend = speed + accel * dt, trend * 0.7 + accel * 0.3
+        prev = {path = g.path_axis, speed = g.speed_axis, reason = g.thrust_reason}
+    end
+    return changes, latched, speed
+end
+local c_old = descend_at(-0.15, 270, IDLE, NONE, false)
+local c_new, p_new, s_new = descend_at(-0.15, 270, IDLE, NONE, true)
+check(c_old >= 3 and c_new <= 1 and p_new == ALLOW and math.abs(s_new - 270) <= 3, string.format(
+    "D4 shallow path, the A/T's own loop: %d policy changes in 600 s (%d released at +2 kt alone), ends %s at %.1f kt",
+    c_new, c_old, p_new == ALLOW and "in SPD" or "at IDLE", s_new))
+local c_steep, p_steep = descend_at(0.15, 263, ALLOW, ON_PATH_BELOW, true)
+check(c_steep == 1 and p_steep == IDLE, string.format(
+    "D4 steep path, the A/T's own loop: thrust released once (%d changes), ends %s", c_steep,
+    p_steep == IDLE and "at IDLE" or "in SPD"))
+check(step({actual_speed_kts = 273, previous_speed_axis = 1, thrust_at_idle = false}).thrust_policy == ALLOW,
+    "D4 3 kt fast with the levers above idle: still SPD")
+check(step({actual_speed_kts = 273, previous_speed_axis = 1, thrust_at_idle = true,
+    speed_trend_kts_per_sec = -0.1}).thrust_policy == ALLOW, "D4 3 kt fast at idle, slowing: still SPD")
+check(step({actual_speed_kts = 273, previous_speed_axis = 1, thrust_at_idle = true,
+    speed_trend_kts_per_sec = 0.05}).thrust_policy == IDLE, "D4 3 kt fast at idle, not slowing: IDLE")
+
 print("VNAV descent thrust hold tests passed: "..checks)
