@@ -308,7 +308,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   30 and 60 fps and stays within +-1, both dampers alike; and in a Dutch
   roll model (5.1 s, bare damping 0.03, rudder effect 0.2-0.6 rad/s2 per
   rad) three cycles take 2 deg of sideslip below 35 % with the dampers and
-  leave it above 70 % without.
+  leave it above 70 % without. The 747's law (P25, NASA CR-2144 Fig IX-4):
+  1.37 deg of rudder per deg/s of yaw rate at 0.9 rad/s within 10 % of 1.23
+  flaps up at 180, 300 and 350 kt, twice that with the flaps out, and +-4 deg
+  of rudder command per damper not scaled by the rudder ratio.
 - `afds_roll_rate_limit_test.lua`: the roll rate of HDG SEL and LNAV turns -
   the filtered roll command moving at most 3 deg/s outside the approach at
   20, 30 and 60 fps (a roll-in, a 6 deg change, a reversal and a roll-out),

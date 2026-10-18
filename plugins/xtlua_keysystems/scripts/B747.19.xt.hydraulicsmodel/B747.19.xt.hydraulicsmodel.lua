@@ -571,8 +571,10 @@ function flight_start()
     if initialiseControls then
 
       --YAW DAMPER
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3.5,"maxout":3.5,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_lwr","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3.5,"maxout":3.5,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_upr","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
+      -- [P25] each damper +-4 deg of rudder command at any airspeed (FAA NPRM FAA-2011-0571, 76 FR 36391: the damper's
+      -- piston in each rudder PCM, past the pedals' ratio changer); it was +-3.5 deg times the rudder ratio
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-4,"maxout":4,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_lwr","dstDref":"laminar/B747/cablecontrols/lower_rudder"}';
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-4,"maxout":4,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_upr","dstDref":"laminar/B747/cablecontrols/upper_rudder"}';
 
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-32,"maxout":32,"scale":1.0,"srcDref":"sim/cockpit2/controls/total_heading_ratio","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-32,"maxout":32,"scale":1.0,"srcDref":"sim/cockpit2/controls/total_heading_ratio","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';

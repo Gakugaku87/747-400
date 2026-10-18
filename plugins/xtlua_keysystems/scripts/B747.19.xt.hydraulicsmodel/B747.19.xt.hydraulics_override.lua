@@ -1177,7 +1177,7 @@ function yaw_damper_system()
     else
         command=B747_afds_controls.yaw_damper_command(yawDamperState,simDR_yaw_rate,
             simDR_AHARS_roll_heading_deg_pilot,simDR_TAS_mps,simDR_ind_airspeed_kts_pilot,simDRTime,simDR_roll_rate,
-            simDR_alpha_deg)
+            simDR_alpha_deg,simDR_flap_ratio)
     end
     B747DR_yaw_damper_upr=B747_afds_controls.yaw_damper_slew(B747DR_yaw_damper_upr,
         B747DR_yaw_damper_upr_on==1 and command or 0,SIM_PERIOD)

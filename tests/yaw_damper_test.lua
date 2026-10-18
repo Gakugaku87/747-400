@@ -100,6 +100,7 @@ local function fly(motion, seconds, fps, opts)
         env.simDR_roll_rate, env.simDR_alpha_deg = m.p or 0, m.alpha or 0
         env.simDR_touchGround = opts.on_ground and 1 or 0
         env.simDR_ind_airspeed_kts_pilot, env.simDR_ias_pilot, env.simDR_TAS_mps = ias, ias, tas
+        env.simDR_flap_ratio = opts.flaps or 0
         env.B747DR_autopilot_altitude_ft_pfd = 31000
         env.flight_controls_override()
         out[#out + 1] = {t = t, u = env.B747DR_yaw_damper_upr, lower = env.B747DR_yaw_damper_lwr, rate = m.rate,
@@ -289,9 +290,9 @@ for _, value in ipairs({math.huge, -math.huge}) do
         tostring(value), tostring(finite), r))
 end
 
--- 7. A Dutch roll model (yaw and sideslip, 5.1 s, bare damping 0.03; the rudder +-3.5 deg times the rudder ratio at
--- 300 kt, its yaw acceleration 0.2-0.6 rad/s2 per rad): from 2 deg of sideslip the dampers take three cycles' amplitude
--- below 35 %; without them it stays above 70 %.
+-- 7. A Dutch roll model (yaw and sideslip, 5.1 s, bare damping 0.03; the rudder +-4 deg, the dampers' authority, its
+-- yaw acceleration 0.2-0.6 rad/s2 per rad): from 2 deg of sideslip the dampers take three cycles' amplitude below 35 %;
+-- without them it stays above 70 %.
 local function dutch_roll(rudder_effect, dampers_on)
     local env = new_runtime()
     env.B747DR_yaw_damper_upr_on, env.B747DR_yaw_damper_lwr_on = dampers_on and 1 or 0, dampers_on and 1 or 0
@@ -299,11 +300,10 @@ local function dutch_roll(rudder_effect, dampers_on)
     local n_beta, n_r, y_beta = OMEGA * OMEGA, -2 * 0.03 * OMEGA, 0
     local beta, rate = math.rad(2), 0
     local heading = 90
-    local ratio = 1.0 - (300 - 150) / (450 - 150) * 0.84375
     local first, peak = nil, 0
     for i = 1, math.floor(3 * 5.1 * fps + 0.5) do
         local t = i * dt
-        local rudder = math.rad(3.5 * ratio * env.B747DR_yaw_damper_upr)
+        local rudder = math.rad(4 * env.B747DR_yaw_damper_upr)
         local beta_dot = y_beta * beta - rate
         local rate_dot = n_beta * beta + n_r * rate + rudder_effect * rudder
         beta, rate = beta + beta_dot * dt, rate + rate_dot * dt
@@ -327,5 +327,36 @@ for _, effect in ipairs({0.2, 0.4, 0.6}) do
         "a Dutch roll (rudder %.1f rad/s2 per rad): three cycles on %.0f %% of the sideslip with the dampers, %.0f %% without",
         effect, 100 * with, 100 * without))
 end
+
+-- 8. [P25] The 747's law (NASA CR-2144, Heffley and Jewell 1972, Fig IX-4, from Boeing's 747 simulator description
+-- D6-30643): flaps up 1.37 deg of rudder per deg/s of yaw rate through a 2.72 s washout and a 0.27 s lag (1.23 at the
+-- Dutch roll's 0.9 rad/s), whatever the airspeed, doubled with the flaps out; each damper +-4 deg of rudder command at
+-- any airspeed (FAA NPRM FAA-2011-0571, 76 FR 36391: "Yaw damper authority is limited to +/- 4 degrees of rudder
+-- command"; the damper's piston in each rudder PCM, past the pedals' ratio changer). A yaw rate of +-0.3 deg/s at
+-- 0.9 rad/s wings level: the rudder (4 deg x the output) per deg/s within 10 % of 1.23 flaps up at 180, 300 and 350 kt,
+-- of 2.47 with the flaps at 20 at 180 kt; the dampers' rows in hydraulicsmodel.lua +-4 deg without the rudder ratio.
+local function rudder_per_rate(ias, flaps)
+    local w = 0.9
+    local o = fly(function(t) return {bank = 0, rate = 0.3 * math.sin(w * t), beta = 0} end, 60, 30,
+        {ias = ias, tas = ias * 0.514444 * 1.4, flaps = flaps})
+    local l, h = extremes(window(o, 30, 60), "u")
+    return 4 * (h - l) / 2 / 0.3
+end
+for _, c in ipairs({{180, 0, 1.23}, {300, 0, 1.23}, {350, 0, 1.23}, {180, 20 / 30, 2.47}}) do
+    local k = rudder_per_rate(c[1], c[2])
+    check(math.abs(k - c[3]) <= 0.1 * c[3], string.format(
+        "at %d kt with the flap handle at %.2f: %.2f deg of rudder per deg/s of yaw rate at 0.9 rad/s (%.2f +- 10 %%)",
+        c[1], c[2], k, c[3]))
+end
+local rows, plain = 0, true
+for row in model_source:gmatch("B747DR_controlOverrides = '([^']*)'") do
+    if row:find("yaw_damper_", 1, true) then
+        rows = rows + 1
+        plain = plain and row:find('"minout":-4,', 1, true) ~= nil and row:find('"maxout":4,', 1, true) ~= nil
+            and row:find("scaledref", 1, true) == nil
+    end
+end
+check(rows == 2 and plain, string.format(
+    "each yaw damper's command is +-4 deg of rudder, not scaled by the rudder ratio (%d rows, %s)", rows, tostring(plain)))
 
 print("yaw damper tests passed: "..checks)

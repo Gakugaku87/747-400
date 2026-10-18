@@ -470,11 +470,19 @@ end
 -- of their command rolling into 30 deg at 160 kt; a review). One law at every bank, the same both ways, at any frame
 -- rate. state is a table the caller keeps; the first call, or one after a gap of more than a second, starts the filter
 -- (0). roll_rate_dps and alpha_deg: 0 without.
-afds_controls.YAW_DAMPER_WASHOUT_SEC = 2.5
-afds_controls.YAW_DAMPER_GAIN_PER_DEG_SEC = 0.6      -- at 300 kt IAS: the full command at 1.7 deg/s
-afds_controls.YAW_DAMPER_GAIN_REFERENCE_KTS = 300
-afds_controls.YAW_DAMPER_GAIN_MIN_SCALE = 0.8
-afds_controls.YAW_DAMPER_GAIN_MAX_SCALE = 1.6
+-- [P25] The gain and filters are the 747's (NASA CR-2144, Heffley and Jewell 1972, Fig IX-4, from Boeing's 747
+-- simulator description D6-30643): delta_r = 5.05 s / ((s + 0.368)(s + 3.68)) r flaps up - the yaw rate through a
+-- 2.72 s washout and a 0.27 s lag, 1.37 deg of rudder per deg/s - and twice that with the flaps out (blended over the
+-- flap handle's first detent; the 747-100's law adds bank-angle terms there, which the coordinated turn's yaw rate
+-- taken away stands for here). The command's +-1 is each damper's authority, +-4 deg of rudder at any airspeed (FAA
+-- NPRM FAA-2011-0571, 76 FR 36391; hydraulicsmodel.lua's control overrides). It was +-3.5 deg times the pedals' rudder
+-- ratio (2.0 deg at 300 kt) with a gain against the IAS (0.8 to 1.6 times 0.6 of the command per deg/s), no lag and a
+-- 2.5 s washout: about the 747's at 300 kt, half its authority, and 36 % above it at 160 kt with the flaps out.
+afds_controls.YAW_DAMPER_WASHOUT_SEC = 2.72
+afds_controls.YAW_DAMPER_LAG_SEC = 0.27
+afds_controls.YAW_DAMPER_AUTHORITY_DEG = 4.0
+afds_controls.YAW_DAMPER_GAIN_DEG_PER_DEG_SEC = 1.37
+afds_controls.YAW_DAMPER_FLAPS_DOUBLE_RATIO = 1 / 6    -- the flap handle ratio (flaps 1) where the gain is doubled
 
 -- whether x is no NaN nor infinite (nil is: the inputs that may be missing default to 0)
 local function finite(x)
@@ -482,12 +490,12 @@ local function finite(x)
 end
 
 function afds_controls.yaw_damper_command(state, yaw_rate_dps, bank_deg, tas_mps, ias_kts, time_s, roll_rate_dps,
-        alpha_deg)
+        alpha_deg, flap_ratio)
     -- an input that is no number (NaN) or infinite starts the filter again, as a gap does (math.min and math.max pass
     -- NaN through in LuaJIT: the filter kept it, and the rudder command was NaN; inf - inf left NaN in it, and the
     -- output stayed 0 under LuaJIT or +1 under Lua 5.1: a review)
     if not (finite(yaw_rate_dps) and finite(bank_deg) and finite(tas_mps) and finite(ias_kts) and finite(time_s)
-        and finite(roll_rate_dps) and finite(alpha_deg)) then
+        and finite(roll_rate_dps) and finite(alpha_deg) and finite(flap_ratio)) then
         state.time, state.command = nil, 0
         return 0
     end
@@ -500,16 +508,17 @@ function afds_controls.yaw_damper_command(state, yaw_rate_dps, bank_deg, tas_mps
     local input = (yaw_rate_dps or 0) * math.cos(alpha) - (roll_rate_dps or 0) * math.sin(alpha) - coordinated
     local dt = state.time ~= nil and time_s - state.time or nil
     if dt == nil or dt < 0 or dt > 1.0 then
-        state.time, state.input, state.washed, state.command = time_s, input, 0, 0
+        state.time, state.input, state.washed, state.lagged, state.command = time_s, input, 0, 0, 0
         return 0
     end
     if dt == 0 then return state.command end
-    local washout = afds_controls.YAW_DAMPER_WASHOUT_SEC
+    local washout, lag = afds_controls.YAW_DAMPER_WASHOUT_SEC, afds_controls.YAW_DAMPER_LAG_SEC
     state.washed = washout / (washout + dt) * (state.washed + input - state.input)
+    state.lagged = (state.lagged or 0) + dt / (lag + dt) * (state.washed - (state.lagged or 0))
     state.input, state.time = input, time_s
-    local scale = afds_controls.YAW_DAMPER_GAIN_REFERENCE_KTS / math.max(ias_kts or 0, 1)
-    scale = math.max(afds_controls.YAW_DAMPER_GAIN_MIN_SCALE, math.min(afds_controls.YAW_DAMPER_GAIN_MAX_SCALE, scale))
-    state.command = math.max(-1, math.min(1, -afds_controls.YAW_DAMPER_GAIN_PER_DEG_SEC * scale * state.washed))
+    local flaps = math.max(0, math.min(1, (flap_ratio or 0) / afds_controls.YAW_DAMPER_FLAPS_DOUBLE_RATIO))
+    local gain = afds_controls.YAW_DAMPER_GAIN_DEG_PER_DEG_SEC * (1 + flaps) / afds_controls.YAW_DAMPER_AUTHORITY_DEG
+    state.command = math.max(-1, math.min(1, -gain * state.lagged))
     return state.command
 end
 
