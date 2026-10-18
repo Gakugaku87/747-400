@@ -483,6 +483,13 @@ afds_controls.YAW_DAMPER_LAG_SEC = 0.27
 afds_controls.YAW_DAMPER_AUTHORITY_DEG = 4.0
 afds_controls.YAW_DAMPER_GAIN_DEG_PER_DEG_SEC = 1.37
 afds_controls.YAW_DAMPER_FLAPS_DOUBLE_RATIO = 1 / 6    -- the flap handle ratio (flaps 1) where the gain is doubled
+-- [review 23] X-Plane's rudder follows the dampers' output a tenth of the way a frame (hydraulics_override.lua's
+-- pressure_output, B747_animate_value: 9 frames behind on average, 0.18 s at 50 fps and 0.30 s at 30 fps), a frame
+-- after the cable controls have the output and a frame before the flight model has the rudder (the control override
+-- rows). YAW_DAMPER_LAG_SEC is the lag all the way to the rudder; the law's own is what those 11 frames leave of it
+-- (0.05 s at 50 fps, none below 41 fps). The law's whole 0.27 s on top of them put the rudder 11 deg behind CR-2144's
+-- law at the Dutch roll's 0.9 rad/s at 50 fps and 18 deg at 30 fps (a review: the damping fell with the frame rate).
+afds_controls.YAW_DAMPER_RUDDER_FRAMES = 11
 
 -- whether x is no NaN nor infinite (nil is: the inputs that may be missing default to 0)
 local function finite(x)
@@ -512,7 +519,8 @@ function afds_controls.yaw_damper_command(state, yaw_rate_dps, bank_deg, tas_mps
         return 0
     end
     if dt == 0 then return state.command end
-    local washout, lag = afds_controls.YAW_DAMPER_WASHOUT_SEC, afds_controls.YAW_DAMPER_LAG_SEC
+    local washout = afds_controls.YAW_DAMPER_WASHOUT_SEC
+    local lag = math.max(0, afds_controls.YAW_DAMPER_LAG_SEC - afds_controls.YAW_DAMPER_RUDDER_FRAMES * dt)
     state.washed = washout / (washout + dt) * (state.washed + input - state.input)
     state.lagged = (state.lagged or 0) + dt / (lag + dt) * (state.washed - (state.lagged or 0))
     state.input, state.time = input, time_s

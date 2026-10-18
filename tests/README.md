@@ -303,15 +303,19 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   of 1-5 deg/s at 15 kt, a heading correction on the takeoff roll at
   120 kt), fades out in the steady turn, stays a number within +-1 through
   a yaw rate that is NaN or infinite (either sign) for a frame and acts
-  again after it, is the
-  same at 20,
-  30 and 60 fps and stays within +-1, both dampers alike; and in a Dutch
+  again after it, moves the rudder alike at 45, 50 and 60 fps through
+  X-Plane's chain (the same output at 20 and 30 fps, where the chain leaves
+  the law no lag of its own) and stays within +-1, both dampers alike; and in a Dutch
   roll model (5.1 s, bare damping 0.03, rudder effect 0.2-0.6 rad/s2 per
   rad) three cycles take 2 deg of sideslip below 35 % with the dampers and
   leave it above 70 % without. The 747's law (P25, NASA CR-2144 Fig IX-4):
   1.37 deg of rudder per deg/s of yaw rate at 0.9 rad/s within 10 % of 1.23
   flaps up at 180, 300 and 350 kt, twice that with the flaps out, and +-4 deg
-  of rudder command per damper not scaled by the rudder ratio.
+  of rudder command per damper not scaled by the rudder ratio. Through
+  X-Plane's chain to the rudder (the control override rows, pressure_input,
+  pressure_output's tenth of the way a frame: 11 frames) the rudder per deg/s
+  and its phase are CR-2144's law's (1.23, 8.5 deg ahead of the yaw rate)
+  within 5 % and 2 deg at 45, 50 and 60 fps, and 7 deg at 30 fps (review 23).
 - `afds_roll_rate_limit_test.lua`: the roll rate of HDG SEL and LNAV turns -
   the filtered roll command moving at most 3 deg/s outside the approach at
   20, 30 and 60 fps (a roll-in, a 6 deg change, a reversal and a roll-out),

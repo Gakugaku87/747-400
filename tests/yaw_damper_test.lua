@@ -80,11 +80,17 @@ local TAS = 300 * 0.514444 * 1.6         -- 300 kt IAS at FL310, m/s
 -- Drive the dampers through motion(t) -> {bank, rate (the body axes' yaw rate, deg/s), beta (deg), p (the roll rate,
 -- deg/s, 0 without), alpha (deg, 0 without)} at fps frames a second (IAS 300 kt, FL310, or opts.ias and opts.tas,
 -- m/s; on the ground with opts.on_ground), the heading following the yaw rate. Returns the upper damper's output each
--- frame.
+-- frame; with opts.chain the rudder it moves through X-Plane's chain instead, in its +-4 deg (section 9's way).
 local function fly(motion, seconds, fps, opts)
     opts = opts or {}
     local ias, tas = opts.ias or 300, opts.tas or TAS
     local env = new_runtime()
+    if opts.chain then
+        env.B747DR_spoilers, env.B747DR_outer_spoilers = {}, {[0] = 0, 0}
+        for k = 1, 12 do env.B747DR_spoilers[k] = 0 end
+        env.B747DR_flaps = {[0] = 0, 0, 0, 0, 0}
+        env.B747DR_rudder_lwr_pos, env.B747DR_rudder_upr_pos = 0, 0
+    end
     local dt = 1 / fps
     local heading = 90
     local out = {}
@@ -93,6 +99,14 @@ local function fly(motion, seconds, fps, opts)
         local m = motion(t)
         heading = (heading + m.rate * dt) % 360
         env.simDRTime, env.SIM_PERIOD = t, dt
+        local surface
+        if opts.chain then
+            surface = env.B747DR_rudder_upr_pos / 4
+            env.B747_controls_lower_rudder = 4 * env.B747DR_yaw_damper_lwr
+            env.B747_controls_upper_rudder = 4 * env.B747DR_yaw_damper_upr
+            env.pressure_input()
+            env.pressure_output()
+        end
         env.simDR_AHARS_roll_heading_deg_pilot = m.bank
         env.simDR_AHARS_heading_deg_pilot = heading
         env.simDR_sideslip = m.beta
@@ -103,8 +117,8 @@ local function fly(motion, seconds, fps, opts)
         env.simDR_flap_ratio = opts.flaps or 0
         env.B747DR_autopilot_altitude_ft_pfd = 31000
         env.flight_controls_override()
-        out[#out + 1] = {t = t, u = env.B747DR_yaw_damper_upr, lower = env.B747DR_yaw_damper_lwr, rate = m.rate,
-            bank = m.bank}
+        out[#out + 1] = {t = t, u = surface or env.B747DR_yaw_damper_upr, lower = env.B747DR_yaw_damper_lwr,
+            rate = m.rate, bank = m.bank}
     end
     return out
 end
@@ -235,19 +249,26 @@ local steady = function() return {bank = 20, rate = turn_rate(20), beta = 0} end
 out = fly(steady, 30, 30)
 check(math.abs(out[#out].u) <= 0.02, string.format("in a steady 20 deg turn the output fades out (%.3f)", out[#out].u))
 
--- 5. The same output at 20, 30 and 60 frames a second (motion 2).
-local traces = {}
-for _, fps in ipairs({20, 30, 60}) do traces[fps] = fly(dutch_banked, 30, fps) end
+-- 5. The same rudder at 45, 50 and 60 frames a second through X-Plane's chain (motion 2; section 9), and the same
+-- output at 20 and 30, where the chain's 11 frames leave the law no lag of its own.
 local function at(trace, t)
     for _, q in ipairs(trace) do if q.t >= t - 1e-9 then return q.u end end
     return trace[#trace].u
 end
-local spread = 0
-for t = 10, 30, 0.5 do
-    local a, b, c = at(traces[20], t), at(traces[30], t), at(traces[60], t)
-    spread = math.max(spread, math.max(a, b, c) - math.min(a, b, c))
+local function spread_of(list)
+    local spread = 0
+    for t = 10, 30, 0.5 do
+        local lo, hi = math.huge, -math.huge
+        for _, trace in ipairs(list) do lo, hi = math.min(lo, at(trace, t)), math.max(hi, at(trace, t)) end
+        spread = math.max(spread, hi - lo)
+    end
+    return spread
 end
-check(spread <= 0.05, string.format("the output is the same at 20, 30 and 60 fps (spread %.3f)", spread))
+local spread = spread_of({fly(dutch_banked, 30, 45, {chain = true}), fly(dutch_banked, 30, 50, {chain = true}),
+    fly(dutch_banked, 30, 60, {chain = true})})
+check(spread <= 0.05, string.format("the rudder is the same at 45, 50 and 60 fps (spread %.3f of +-4 deg)", spread))
+spread = spread_of({fly(dutch_banked, 30, 20), fly(dutch_banked, 30, 30)})
+check(spread <= 0.05, string.format("the output is the same at 20 and 30 fps (spread %.3f)", spread))
 
 -- 6. Within the dampers' authority, and both dampers alike: a yaw rate of 10 deg/s.
 out = fly(function(t) return {bank = 0, rate = 10 * math.sin(OMEGA * t), beta = 0} end, 20, 30)
@@ -358,5 +379,63 @@ for row in model_source:gmatch("B747DR_controlOverrides = '([^']*)'") do
 end
 check(rows == 2 and plain, string.format(
     "each yaw damper's command is +-4 deg of rudder, not scaled by the rudder ratio (%d rows, %s)", rows, tostring(plain)))
+
+-- 9. [review 23] The rudder the dampers move, through X-Plane's chain: their output to the cable controls (the control
+-- override rows, a frame), pressure_input and pressure_output (B747_animate_value: a tenth of the way a frame) to the
+-- rudder's position, and to the flight model (the rows, a frame). A yaw rate of +-0.3 deg/s at 0.9 rad/s wings level at
+-- 300 kt, flaps up: the rudder per deg/s and its phase against the yaw rate's (the rudder against it) as CR-2144's law
+-- has them (1.23 deg per deg/s, 8.5 deg ahead: the washout's 22.2 ahead, the lag's 13.7 behind) within 5 % and 2 deg at
+-- 45, 50 and 60 fps, and within 7 deg at 30 fps. The law's 0.27 s lag on top of the chain (0.19 s at 50 fps, 0.32 s at
+-- 30 fps, and the frames) put the rudder 3.3 deg behind the yaw rate at 50 fps and 11 deg behind at 30 fps.
+local function chain_rudder(fps)
+    local env = new_runtime()
+    -- pressure_output's surfaces (only the rudder's is looked at here)
+    env.B747DR_spoilers, env.B747DR_outer_spoilers = {}, {[0] = 0, 0}
+    for k = 1, 12 do env.B747DR_spoilers[k] = 0 end
+    env.B747DR_flaps = {[0] = 0, 0, 0, 0, 0}
+    env.B747DR_rudder_lwr_pos, env.B747DR_rudder_upr_pos = 0, 0
+    local dt, w = 1 / fps, 0.9
+    local heading, yd = 90, 0
+    local sa, ca, sr, cr, n = 0, 0, 0, 0, 0
+    local surface = 0
+    for i = 1, math.floor(80 * fps + 0.5) do
+        local t = i * dt
+        local rate = 0.3 * math.sin(w * t)
+        heading = (heading + rate * dt) % 360
+        env.simDRTime, env.SIM_PERIOD = t, dt
+        -- the rudder the flight model has this frame: its position at the end of the last one (the rows)
+        surface = env.B747DR_rudder_lwr_pos or 0
+        -- the cable controls from the dampers' output of the last frame (the rows), then the frame's order
+        env.B747_controls_lower_rudder, env.B747_controls_upper_rudder = 4 * yd, 4 * yd
+        env.pressure_input()
+        env.pressure_output()
+        env.simDR_AHARS_roll_heading_deg_pilot = 0
+        env.simDR_AHARS_heading_deg_pilot = heading
+        env.simDR_sideslip, env.simDR_yaw_rate = 0, rate
+        env.simDR_roll_rate, env.simDR_alpha_deg = 0, 0
+        env.simDR_touchGround = 0
+        env.simDR_ind_airspeed_kts_pilot, env.simDR_ias_pilot, env.simDR_TAS_mps = 300, 300, TAS
+        env.simDR_flap_ratio = 0
+        env.B747DR_autopilot_altitude_ft_pfd = 31000
+        env.flight_controls_override()
+        yd = env.B747DR_yaw_damper_lwr
+        -- the last 20 s: whole cycles' sine and cosine parts of the rudder and of the yaw rate
+        if t > 80 - 2 * math.pi / w * 2.865 then
+            sa, ca = sa - surface * math.sin(w * t), ca - surface * math.cos(w * t)
+            sr, cr = sr + rate * math.sin(w * t), cr + rate * math.cos(w * t)
+            n = n + 1
+        end
+    end
+    local amp = math.sqrt(sa * sa + ca * ca) / math.sqrt(sr * sr + cr * cr)
+    local phase = math.deg(math.atan2(ca, sa) - math.atan2(cr, sr))
+    return amp, (phase + 180) % 360 - 180
+end
+local law_phase = math.deg(math.atan(1 / (0.9 * 2.72)) - math.atan(0.9 * 0.272))
+for _, c in ipairs({{45, 2}, {50, 2}, {60, 2}, {30, 7}}) do
+    local amp, phase = chain_rudder(c[1])
+    check(math.abs(amp - 1.23) <= 0.05 * 1.23 and math.abs(phase - law_phase) <= c[2], string.format(
+        "at %d fps the rudder through X-Plane's chain: %.2f deg per deg/s (1.23 +- 5 %%), %.1f deg ahead of the yaw rate"
+        .. " (CR-2144's law %.1f +- %d)", c[1], amp, phase, law_phase, c[2]))
+end
 
 print("yaw damper tests passed: "..checks)
