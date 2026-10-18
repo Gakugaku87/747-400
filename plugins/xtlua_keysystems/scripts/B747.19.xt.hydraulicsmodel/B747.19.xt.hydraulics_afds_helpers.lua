@@ -460,8 +460,8 @@ end
 
 -- [B-10] The yaw dampers' law, both channels alike: the 747-400's Dutch roll damping and turn coordination. The rudder
 -- command (-1..1, the dampers' authority) is against the yaw rate less the yaw rate of a coordinated turn at this bank
--- and true airspeed, washed out with YAW_DAMPER_WASHOUT_SEC so that a steady yaw rate keeps no rudder, at a gain that
--- rises as the indicated airspeed falls. The yaw rate is the stability axes', r cos(alpha) - p sin(alpha) from X-Plane's
+-- and true airspeed, washed out with YAW_DAMPER_WASHOUT_SEC so that a steady yaw rate keeps no rudder, at the 747's
+-- gain (P25, below; ias_kts is not used). The yaw rate is the stability axes', r cos(alpha) - p sin(alpha) from X-Plane's
 -- body axes' yaw and roll rates (sim/flightmodel/position/R, P) and the angle of attack: rolling about the flight path
 -- the body axes yaw by p sin(alpha), which is no Dutch roll (p11-L1: +0.040 p above 270 kt, +0.077 p below 200 kt), and
 -- the dampers put rudder against a roll-in (-0.29 of their command rolling in at 3 deg/s, 160 kt, alpha 6 deg; a
@@ -474,10 +474,13 @@ end
 -- simulator description D6-30643): delta_r = 5.05 s / ((s + 0.368)(s + 3.68)) r flaps up - the yaw rate through a
 -- 2.72 s washout and a 0.27 s lag, 1.37 deg of rudder per deg/s - and twice that with the flaps out (blended over the
 -- flap handle's first detent; the 747-100's law adds bank-angle terms there, which the coordinated turn's yaw rate
--- taken away stands for here). The command's +-1 is each damper's authority, +-4 deg of rudder at any airspeed (FAA
--- NPRM FAA-2011-0571, 76 FR 36391; hydraulicsmodel.lua's control overrides). It was +-3.5 deg times the pedals' rudder
+-- taken away stands for here). The command's +-1 is each damper's authority, +-4 deg of rudder command (FAA NPRM
+-- FAA-2011-0571, 76 FR 36391, which puts the damper's piston in each rudder's PCM and does not say whether the 4 deg
+-- changes with the airspeed: taken here at any airspeed, past the pedals' ratio changer; hydraulicsmodel.lua's control
+-- overrides). It was +-3.5 deg times the pedals' rudder
 -- ratio (2.0 deg at 300 kt) with a gain against the IAS (0.8 to 1.6 times 0.6 of the command per deg/s), no lag and a
--- 2.5 s washout: about the 747's at 300 kt, half its authority, and 36 % above it at 160 kt with the flaps out.
+-- 2.5 s washout: about the 747's at 300 kt, half its authority, and about 20 % above it at 160 kt with the flaps out
+-- (at the Dutch roll's 0.9 rad/s).
 afds_controls.YAW_DAMPER_WASHOUT_SEC = 2.72
 afds_controls.YAW_DAMPER_LAG_SEC = 0.27
 afds_controls.YAW_DAMPER_AUTHORITY_DEG = 4.0

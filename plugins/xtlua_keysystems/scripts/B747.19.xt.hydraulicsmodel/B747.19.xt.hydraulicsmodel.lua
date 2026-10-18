@@ -571,8 +571,8 @@ function flight_start()
     if initialiseControls then
 
       --YAW DAMPER
-      -- [P25] each damper +-4 deg of rudder command at any airspeed (FAA NPRM FAA-2011-0571, 76 FR 36391: the damper's
-      -- piston in each rudder PCM, past the pedals' ratio changer); it was +-3.5 deg times the rudder ratio
+      -- [P25] each damper +-4 deg of rudder command (FAA NPRM FAA-2011-0571, 76 FR 36391: the damper's piston in each
+      -- rudder PCM), taken at any airspeed past the pedals' ratio changer; it was +-3.5 deg times the rudder ratio
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-4,"maxout":4,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_lwr","dstDref":"laminar/B747/cablecontrols/lower_rudder"}';
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-4,"maxout":4,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_upr","dstDref":"laminar/B747/cablecontrols/upper_rudder"}';
 

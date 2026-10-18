@@ -1167,7 +1167,8 @@ end
 -- a ~5 s oscillation of +-19 deg of bank it moved with the yaw rate (pumping it; p9-L1, 62 min).
 -- On the ground the dampers keep no rudder and their filter starts again at lift-off: below 50 m/s there is no
 -- coordinated turn to take away and the gain is at its largest, so taxi turns of 1-5 deg/s drove them to -0.9 to -1
--- (the whole +-3.5 deg of rudder) and a heading correction of 0.5 deg/s on the takeoff roll at 120 kt to -0.46,
+-- (their whole authority, then +-3.5 deg of rudder) and a heading correction of 0.5 deg/s on the takeoff roll at
+-- 120 kt to -0.46,
 -- against the steering (a review; whether the 747-400's yaw dampers act on the ground is not settled here).
 local yawDamperState={}
 function yaw_damper_system()

@@ -353,7 +353,7 @@ end
 -- D6-30643): flaps up 1.37 deg of rudder per deg/s of yaw rate through a 2.72 s washout and a 0.27 s lag (1.23 at the
 -- Dutch roll's 0.9 rad/s), whatever the airspeed, doubled with the flaps out; each damper +-4 deg of rudder command at
 -- any airspeed (FAA NPRM FAA-2011-0571, 76 FR 36391: "Yaw damper authority is limited to +/- 4 degrees of rudder
--- command"; the damper's piston in each rudder PCM, past the pedals' ratio changer). A yaw rate of +-0.3 deg/s at
+-- command"; the damper's piston in each rudder PCM - taken past the pedals' ratio changer). A yaw rate of +-0.3 deg/s at
 -- 0.9 rad/s wings level: the rudder (4 deg x the output) per deg/s within 10 % of 1.23 flaps up at 180, 300 and 350 kt,
 -- of 2.47 with the flaps at 20 at 180 kt; the dampers' rows in hydraulicsmodel.lua +-4 deg without the rudder ratio.
 local function rudder_per_rate(ias, flaps)
