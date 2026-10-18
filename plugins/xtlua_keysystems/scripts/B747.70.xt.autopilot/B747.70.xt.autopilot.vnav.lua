@@ -368,15 +368,13 @@ function setDescentVSpeed(fmsO)
 
   local nextDistanceInFeet=distanceNM*6076.12
   local time=distanceNM*30.8666/(simDR_groundspeed) --time in minutes, gs in m/s....
-  local early=100
-  if B747DR_ap_vnav_target_alt>simDR_pressureAlt1 then
-    early=0
-  elseif simDR_autopilot_altitude_ft>5000 then
-    early=250 
-  else
-    early=B747BR_fpe
-  end
-  local vdiff=B747DR_ap_vnav_target_alt-simDR_pressureAlt1-early --to be negative
+  -- [B-13] The V/S aims at the target's altitude from the aircraft's (the energy mode corrects the path error, which
+  -- is from the path through the target). With the MCP above 5,000 ft it aimed 250 ft below the target: the 747 sat
+  -- below the path, reached the point's altitude about 1 nm before the point, levelled off there 230-270 ft below the
+  -- path and climbed back with thrust after it: the A/T SPD, IDLE, HOLD, SPD at every point of EIDW-EHAM's descent
+  -- (p21-line1: 37 changes, every 95-105 s). At or below 5,000 ft it aimed at the target less the path error, which
+  -- doubled its own correction of the path error (the energy mode's on top).
+  local vdiff=B747DR_ap_vnav_target_alt-simDR_pressureAlt1 --to be negative
   local vspeed=vdiff/time
   --[[if B747DR_ap_vnav_target_alt>simDR_pressureAlt1 then
     vspeed=0
