@@ -1479,6 +1479,11 @@ function after_physics()
   -- read at a CRZ ALT entry or change only: XTLua gives 0 for a dataref's first read
   local refreshTransitionAlt=simDR_fms_transition_alt
   local refreshSyncFault=B747DR_crzalt_sync_fault
+  -- read at THRUST LIM's takeoff rating keys and the GR WT and ZFW entries only (the takeoff speeds' deletion)
+  local refreshOnGround=simDR_onground
+  local refreshV1=B747DR_airspeed_V1
+  local refreshVr=B747DR_airspeed_Vr
+  local refreshV2=B747DR_airspeed_V2
   if didFlightInit==false and simDR_startup_running == 1 and simDR_onGround==0 then
 	print("activate AP stuff")
 	

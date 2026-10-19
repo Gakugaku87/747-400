@@ -46,6 +46,12 @@ local cases = {
     -- 0.5 s after its write, for the CDU message.
     {file=FMS.."B747.68.xt.fms.lua", func="after_physics",
         names={"simDR_fms_transition_alt", "B747DR_crzalt_sync_fault"}},
+    -- the takeoff speeds' deletion (THRUST LIM's TO, TO 1 and TO 2 keys, the GR WT and ZFW entries:
+    -- B744.fms.pages.lua) reads the ground flag and the speeds only at those keys: a 0 on the ground flag kept the
+    -- old rating's speeds at the first rating change of a session, and speeds of 0 would be taken as set (review
+    -- 39)
+    {file=FMS.."B747.68.xt.fms.lua", func="after_physics",
+        names={"simDR_onground", "B747DR_airspeed_V1", "B747DR_airspeed_Vr", "B747DR_airspeed_V2"}},
     -- [e] the LOC and G/S capture gates (B747_updateApproachHeading) read
     -- the localizer and glideslope signals, flags and deviations only once
     -- the approach is armed: LOC took a 0 as its first 1 s sample, and G/S
