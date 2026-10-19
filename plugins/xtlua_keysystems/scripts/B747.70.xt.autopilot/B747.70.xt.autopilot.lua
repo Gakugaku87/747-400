@@ -3525,8 +3525,10 @@ local function B747_lnav_turn_ended(fmsO,t)
 	return distance*math.cos(bearing-course)>=t.lead_nm
 end
 -- How far the aircraft is off t's fly-by path (B747_lnav_path_at_fix: the inbound leg, the arc LNAV flies, the
--- outbound leg), or the carried turn's (prev) if nearer, nm; 0 where that cannot be told (no such path: VNAV's own
--- cross-track blend then). Taken from t's path alone, on a short leg with the 747 still on prev's arc it was 0.5 nm.
+-- outbound leg), or off the carried turn's (prev) inbound leg and arc if nearer, nm; 0 where that cannot be told (no
+-- such path: VNAV's own cross-track blend then). Taken from t's path alone, on a short leg with the 747 still on
+-- prev's arc it was 0.5 nm; prev's outbound leg runs on through t's fix, and taken from it too, the 747 flown straight
+-- on past t's arc kept t's turn 0.9 nm longer.
 local function B747_lnav_turn_path_offset(fmsO,t)
 	local p=B747_lnav_path_parameters()
 	if p==nil then return 0 end

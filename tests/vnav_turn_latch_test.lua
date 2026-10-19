@@ -81,6 +81,15 @@ local function move(lat, lon, nm, brg)
     local lo2 = lo + math.atan2(math.sin(br) * math.sin(df) * math.cos(la), math.cos(df) - math.sin(la) * math.sin(la2))
     return math.deg(la2), math.deg(lo2)
 end
+-- a production local (a module's state or function) reached through the upvalues of a global function that uses it
+local function upvalue(fn, name)
+    local i = 1
+    while true do
+        local n, v = debug.getupvalue(fn, i)
+        if n == nil or n == name then return v end
+        i = i + 1
+    end
+end
 
 -- Flies through the fly-by turns at the route's consecutive indexes ks: from_fix nm before the first fix on its
 -- inbound leg, the arcs of each turn at the bank flown (shortened in proportion where two turns' tangents overlap on a
@@ -94,8 +103,8 @@ end
 -- opts.seq_after = {s, mode}: that mode from s). Each sample: s, the path's altitude (path), the active fix, the
 -- turn's fix (tfix, 0 without one), whether released (rel), its outbound course (out), its start_nm (start), its
 -- fade and the turn it carries (prev, 0 without), the fix whose arc the 747 flies (arc, 0 on a leg or flown off the
--- path), the
--- held fix (hold) and the distance to the first fix (d1).
+-- path), the held fix (hold), the distance to the first fix (d1) and, with opts.offsets, the 747's distance off the
+-- turn's path as LNAV takes it for the fade (off, B747_lnav_turn_path_offset; nil without a turn).
 local function fly(ks, opts, mutate)
     local route, d, ap = setup(mutate)
     local lat0, lon0 = route[ks[1]][5], route[ks[1]][6]
@@ -221,6 +230,7 @@ local function fly(ks, opts, mutate)
     ap.setDistances(route)
     local ds = opts.ds or 0.02
     local steps_2s = math.max(1, math.floor(tas / 3600 * 2 / ds + 0.5))
+    local turnOffset = opts.offsets and upvalue(ap.B747_lnav_update_vnav_hold, "B747_lnav_turn_path_offset")
     local samples = {}
     local s, step, edited, hooked = 0, 0, false, {}
     while s <= total do
@@ -261,7 +271,8 @@ local function fly(ks, opts, mutate)
         samples[#samples + 1] = {s = s, path = path, active = active, tfix = t and t.fix or 0, rel = t and t.released,
             out = t and t.out_course, start = t and t.start_nm, hold = d.B747DR_vnav_hold_index,
             fade = t and t.fade or 0, prev = t and t.prev and t.prev.fix or 0, arc = seg and seg.fix or 0,
-            d1 = ap.getDistance(route[ks[1]][5], route[ks[1]][6], d.simDR_latitude, d.simDR_longitude)}
+            d1 = ap.getDistance(route[ks[1]][5], route[ks[1]][6], d.simDR_latitude, d.simDR_longitude),
+            off = turnOffset and t and turnOffset(route, t) or nil}
         s, step = s + ds, step + 1
     end
     return samples
@@ -539,15 +550,21 @@ worst, where = largest_step(r, 0, 1e9)
 check(math.abs(worst) <= 15, string.format("LNAV engaged 1 nm outside NETOM's turn, then HDG SEL 2.2 nm before NETOM: "
     .."largest step %+.0f ft in 0.02 nm at %.2f nm", worst, where or -1))
 -- HDG SEL on a 2.6 nm leg while AM607's turn carries NIRSI's and the 747 flies on round NIRSI's arc: on the path,
--- the turn does not fade (its offset taken from AM607's path alone, 0.5 nm: faded 0.23; review 30 NIT)
-r = fly({NIRSI, AM607}, {tas = 270, bank = 20, alt = 6000, from_fix = 5, after = 3,
+-- the 747 is on it as LNAV takes it and the turn does not fade (taken from AM607's path alone, up to 0.27 nm off on
+-- the arc here, 0.5 nm with arcs LNAV shares between the turns: faded 0.23; review 30 NIT, review 32 NIT 2)
+r = fly({NIRSI, AM607}, {tas = 270, bank = 20, alt = 6000, from_fix = 5, after = 3, offsets = true,
     hooks = {{s = 5.3, fn = hdg_sel}}, seq_after = {s = 5.3, mode = "abeam"}}, short_leg(2.6))
-local carried = 0
+local carried, offArc, onArc = 0, 0, 0
 for _, p in ipairs(r) do
-    if p.s > 5.3 and p.prev ~= 0 and p.arc == NIRSI and p.fade > carried then carried = p.fade end
+    if p.s > 5.3 and p.prev ~= 0 and p.arc == NIRSI then
+        onArc = onArc + 1
+        if p.fade > carried then carried = p.fade end
+        if (p.off or 1) > offArc then offArc = p.off or 1 end
+    end
 end
-check(carried <= 0.1, string.format("HDG SEL on a 2.6 nm leg, the 747 on NIRSI's arc while AM607's turn carries it: "
-    .."the turn's fade at most %.2f", carried))
+check(onArc > 0 and offArc <= 0.05 and carried <= 0.1, string.format("HDG SEL on a 2.6 nm leg, the 747 on NIRSI's arc "
+    .."while AM607's turn carries it (%d samples): off the turn's path at most %.2f nm, its fade at most %.2f", onArc,
+    offArc, carried))
 -- and HDG SEL straight on along that leg past AM607's arc: NIRSI's outbound leg - AM607's inbound - does not keep the
 -- turn on its path; measured from it, AM607's turn lived on 0.9 nm longer (review 31 NIT)
 for _, at in ipairs({5.6, 6.0}) do
@@ -597,14 +614,6 @@ check(math.abs(worstDiff) <= 20, string.format("NETOM's 110 deg turn edited to s
 -- the 250 ft that are taken out, so the path is the new route's at once, the bisector's blend with it - as with the
 -- blend's state cleared at the edit; the blend carried on through the edit, the path stepped -265 ft at once and ran
 -- up to 265 ft off the new route's path (review 32 MINOR 1)
-local function upvalue(fn, name)
-    local i = 1
-    while true do
-        local n, v = debug.getupvalue(fn, i)
-        if n == nil or n == name then return v end
-        i = i + 1
-    end
-end
 local function clear_blend(d, ap)
     upvalue(ap.setDescentVSpeed, "vnavPathBlend").lat = nil
     upvalue(ap.B747_vnav_approach_path, "approachPathBlend").lat = nil
