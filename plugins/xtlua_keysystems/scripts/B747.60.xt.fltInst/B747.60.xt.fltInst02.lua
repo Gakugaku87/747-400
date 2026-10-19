@@ -3102,8 +3102,12 @@ end
 function B747_Vs()
 
     -- Vs (STALL SPEED OR MINIMUM STEADY FLIGHT SPEED FOR WHICH THE AIRCRAFT IS STILL CONTROLLABLE)
-    local weight_max = math.min(400000, roundToIncrement(simDR_acf_weight_total_kg, 20000))
-    local weight_min = math.max(200000, weight_max-20000)
+    -- [landing speeds] between the table's weights that bracket the gross weight, along its end rows' slope beyond
+    -- 200-400 t (to the nearest 20 t the lower row was held through the lower half of each 20 t: 225 t flaps up
+    -- 150.7 for 152.5)
+    local weight = simDR_acf_weight_total_kg
+    local weight_min = math.max(200000, math.min(380000, math.floor(weight / 20000) * 20000))
+    local weight_max = weight_min + 20000
 
     local alt_min = -2000
     local alt_max = 0.0
@@ -3163,11 +3167,14 @@ function B747_Vs()
 
     local weight_min_index          = weight_min*0.001
     local weight_max_index          = weight_max*0.001
-    local Vs_min_flap_min_alt_speed = B747_rescale(weight_min, VsData[flap_min][alt_min][weight_min_index], weight_max, VsData[flap_min][alt_min][weight_max_index], simDR_acf_weight_total_kg)
-    local Vs_min_flap_max_alt_speed = B747_rescale(weight_min, VsData[flap_min][alt_max][weight_min_index], weight_max, VsData[flap_min][alt_max][weight_max_index], simDR_acf_weight_total_kg)
+    local function by_weight(row)
+        return row[weight_min_index] + (row[weight_max_index] - row[weight_min_index]) * (weight - weight_min) / 20000
+    end
+    local Vs_min_flap_min_alt_speed = by_weight(VsData[flap_min][alt_min])
+    local Vs_min_flap_max_alt_speed = by_weight(VsData[flap_min][alt_max])
     local Vs_min_flap_alt_speed     = B747_rescale(alt_min, Vs_min_flap_min_alt_speed, alt_max, Vs_min_flap_max_alt_speed, simDR_altitude_ft_pilot)
-    local Vs_max_flap_min_alt_speed = B747_rescale(weight_min, VsData[flap_max][alt_min][weight_min_index], weight_max, VsData[flap_max][alt_min][weight_max_index], simDR_acf_weight_total_kg)
-    local Vs_max_flap_max_alt_speed = B747_rescale(weight_min, VsData[flap_max][alt_max][weight_min_index], weight_max, VsData[flap_max][alt_max][weight_max_index], simDR_acf_weight_total_kg)
+    local Vs_max_flap_min_alt_speed = by_weight(VsData[flap_max][alt_min])
+    local Vs_max_flap_max_alt_speed = by_weight(VsData[flap_max][alt_max])
     local Vs_max_flap_alt_speed     = B747_rescale(alt_min, Vs_max_flap_min_alt_speed, alt_max, Vs_max_flap_max_alt_speed, simDR_altitude_ft_pilot)
     local target_airspeed_Vs              = B747_rescale(flap_min, Vs_min_flap_alt_speed, flap_max, Vs_max_flap_alt_speed, simDR_wing_flap1_deg[0])
     if simDR_airspeed > target_airspeed_Vs then
