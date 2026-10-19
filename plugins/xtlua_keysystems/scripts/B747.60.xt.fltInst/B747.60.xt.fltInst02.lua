@@ -2843,16 +2843,24 @@ end
 
 B747DR_airspeed_flapsRef                              = find_dataref("laminar/B747/airspeed/flapsRef")
 lastFlaps=-1
+local lastDerate = nil
 -- V1 / Vr / V2
 function B747_setV1VrV2()
 
     local weight_max = math.min(420000, roundUpToIncrement(simDR_acf_weight_total_kg, 20000))
     local weight_min = math.max(200000, weight_max-20000)
+    local derate = B747DR_toderate  -- read every frame: XTLua gives 0 for a dataref's first read
+    -- [takeoff speeds] a takeoff thrust rating changed on the ground once the speeds are set deletes them, and the
+    -- flaps entry with them, as the FMC does: entered again they are worked out for the new rating (they were left
+    -- as for the one before: TO 2's V1 108 under full thrust's VMCG 121; review 36)
+    if lastDerate ~= nil and derate ~= lastDerate and simDR_all_wheels_on_ground == 1 and lastFlaps >= 10 then
+        B747DR_airspeed_flapsRef = 0
+    end
+    lastDerate = derate
     local flaps = roundToIncrement(B747DR_airspeed_flapsRef, 10)
     if B747DR_radio_altitude>1000 then
         B747DR_airspeed_flapsRef=0
     end
-    local derate = B747DR_toderate  -- read every frame: XTLua gives 0 for a dataref's first read
 
     if flaps >= 10.0 and flaps <= 20.0 and lastFlaps~=flaps then
 

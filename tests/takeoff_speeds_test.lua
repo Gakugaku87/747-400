@@ -27,9 +27,16 @@ local function slice(first_marker, last_marker)
     return string.rep("\n", lines)..source:sub(first, last - 1)
 end
 
--- V1, VR and V2 for a weight (kg), flaps (10, 20), airport altitude (ft, the altimeter's), OAT (C), wind (from, kt),
--- runway heading, takeoff derate (0, 1, 2), the altimeter setting (inHg; 29.92 without)
-local function speeds(weight, flaps, altitude, oat, wind_from, wind_kt, heading, derate, baro)
+-- The production V speeds in a mocked namespace for a weight (kg), flaps (10, 20), airport altitude (ft, the
+-- altimeter's), OAT (C), wind (from, kt), runway heading, takeoff derate (0, 1, 2), the altimeter setting (inHg; 29.92
+-- without); run(env) is one frame of fltInst02's after_physics for them
+local function run(env)
+    env.B747_setTempAltRegion()
+    env.B747_V1_wind_adjustment()
+    env.B747_setV1VrV2()
+    return env.B747DR_airspeed_V1, env.B747DR_airspeed_Vr, env.B747DR_airspeed_V2
+end
+local function load(weight, flaps, altitude, oat, wind_from, wind_kt, heading, derate, baro)
     local d = {simDR_acf_weight_total_kg = weight, B747DR_airspeed_flapsRef = flaps, B747DR_radio_altitude = 0,
         simDR_OAT_degC = oat, simDR_altitude_ft_pilot = altitude, simDR_wind_heading_deg = wind_from or 0,
         simDR_wind_speed_kts = wind_kt or 0, simDR_position_mag_psi = heading or 0, simDR_all_wheels_on_ground = 1,
@@ -49,10 +56,11 @@ local function speeds(weight, flaps, altitude, oat, wind_from, wind_kt, heading,
         if part[1] == "local tempAltRegion = 0" then code = code.."end\n" end
         setfenv(assert(loadstring(code)), env)()
     end
-    env.B747_setTempAltRegion()
-    env.B747_V1_wind_adjustment()
-    env.B747_setV1VrV2()
-    return env.B747DR_airspeed_V1, env.B747DR_airspeed_Vr, env.B747DR_airspeed_V2
+    return env
+end
+-- V1, VR and V2 after one frame
+local function speeds(...)
+    return run(load(...))
 end
 local function near(got, want, tolerance) return got and math.abs(got - want) <= tolerance end
 local function show(v1, vr, v2) return string.format("%.1f/%.1f/%.1f", v1 or -1, vr or -1, v2 or -1) end
@@ -99,6 +107,20 @@ check(ok and near(high_v1, 135, 0.5), "300 t, flaps 20, 9,000 ft, 0 C (above reg
 v1, vr = speeds(233100, 20, 0, 15, 0, 0, 0, 0, 28.92)
 check(near(v1, 119.5, 0.3) and near(vr, 122.5, 0.3), "233 t, flaps 20, sea level, QNH 28.92: "..show(v1, vr)
     .." (119.5/122.5 at a pressure altitude of 1,000 ft)")
+-- a takeoff thrust rating changed once the speeds are set deletes them, as the FMC does (and the flaps entry with
+-- them: entered again, they are worked out for the new rating): TO 2's 108 left with full thrust's VMCG 121 (review
+-- 36)
+do
+    local env = load(233100, 20, 0, 15, 0, 0, 0, 2)
+    local first = run(env)
+    env.B747DR_toderate = 0
+    local deleted = run(env)
+    env.B747DR_airspeed_flapsRef = 20
+    local again = run(env)
+    check(near(first, 108, 0.6) and deleted == 999 and env.B747DR_airspeed_flapsRef == 20 and near(again, 121, 0.5),
+        string.format("233 t, flaps 20, TO 2 then TO: V1 %.1f, then %.1f (999: deleted), entered again %.1f "
+        .."(108, 999, 121)", first or -1, deleted or -1, again or -1))
+end
 -- V1 never above VR
 for _, w in ipairs({200000, 233100, 260000, 300000, 360000, 400000}) do
     for _, f in ipairs({10, 20}) do
