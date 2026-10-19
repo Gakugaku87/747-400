@@ -547,6 +547,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   away, or for an altitude leg's end or the origin. Flown by its path (item
   i-1b), NIRSI itself is sequenced at the bisector: its 5563 without a hold
   until there.
+- `vnav_held_fix_path_test.lua`: a fix LNAV sequences early for its turn stays
+  the next point of VNAV's descent path (setDistances' profile) until its
+  bisector - 1 nm before NETOM with NIRSI active and NETOM held,
+  setDescentVSpeed aims at NETOM's 7849 on the path (it aimed at NIRSI's 5563,
+  180 ft above that path), and past the bisector at NIRSI's.
 - `vnav_cifp_constraints_test.lua`: the SID, STAR and approach constraints read
   from X-Plane's CIFP (`B747.70.xt.autopilot.constraints.lua`) - records as
   X-Plane writes them (a CA leg, windows, flight levels, the glide slope

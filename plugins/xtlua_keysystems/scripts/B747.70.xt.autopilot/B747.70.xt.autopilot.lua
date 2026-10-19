@@ -2196,6 +2196,13 @@ function setDistances(fmsO)
 	if start == 0 then
 		start = 1
 	end
+	-- [B-14] a fix LNAV sequenced early for its turn (B747DR_vnav_hold_index) stays the path's next point until the
+	-- aircraft is past the turn's bisector, as it stays the approach path's and the speed limits' fix: marked only
+	-- from the active fix, the profile had setDescentVSpeed aim at the fix after it from the turn's start (NETOM's
+	-- 97 deg turn: at NIRSI, 10 nm on, 180 ft below the leg into NETOM), and only the AFDS's altitude at the held
+	-- fix's stopped the descent there
+	local held = B747DR_vnav_hold_index or 0
+	if held >= start then held = 0 end
 	local iLat = simDR_latitude
 	local iLong = simDR_longitude
 	local endI = table.getn(fmsO)
@@ -2271,7 +2278,7 @@ function setDistances(fmsO)
 			if i==start then
 				isNext="true"
 			end]]--
-			if fmsO[i][9]~=lastVnavAlt or i==start then
+			if fmsO[i][9]~=lastVnavAlt or i==start or i==held then
 				local vAlt=0
 				local tAlt=fmsO[i][9]
 				if i>1 then
@@ -2289,7 +2296,7 @@ function setDistances(fmsO)
 					-- a path from the T/D starts at CRZ ALT, not at an older route altitude
 					vAlt,tAlt=B747_afds_helpers.vnav_entry_slope(lastVnavAlt,fmsO[i][9],distance,fromToD,B747BR_cruiseAlt)
 				end
-				local vNavdataI={fmsO[i][5],fmsO[i][6],tAlt,i>=start,vAlt}
+				local vNavdataI={fmsO[i][5],fmsO[i][6],tAlt,i>=start or i==held,vAlt}
 				vnavData[vnavI]=vNavdataI
 				vnavI=vnavI+1
 				lastVnavAlt=fmsO[i][9]
