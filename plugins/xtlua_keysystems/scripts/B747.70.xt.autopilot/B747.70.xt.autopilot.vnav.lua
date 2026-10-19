@@ -334,12 +334,43 @@ local function B747_vnav_point_distance(fmsO, point, direct)
   end
   return direct
 end
+-- [B-14] When the path's next point (lat, lon) changes, the path's altitude is carried on from where it was and the
+-- step is taken out over the next VNAV_PATH_BLEND_NM of `distance` (a real FMC's path is one line along the lateral
+-- path): the turns' legs and arcs do not quite match (LNAV draws its arc for the TAS it is coming to, in the wind), and
+-- the descent profile's flags change up to 2 s after the bisector. A step over VNAV_PATH_BLEND_MAX_FT (a new route, a
+-- direct-to) is taken at once. state: the descent profile's (vnavPathBlend) or the approach path's.
+local VNAV_PATH_BLEND_NM = 2
+local VNAV_PATH_BLEND_MAX_FT = 250
+local vnavPathBlend = {lat = nil, lon = nil, alt = 0, offset = 0, from = 0, t = -100}
+local approachPathBlend = {lat = nil, lon = nil, alt = 0, offset = 0, from = 0, t = -100}
+local function B747_vnav_path_continuity(state, lat, lon, distance, alt)
+  local b = state
+  if b.lat ~= nil and simDRTime - b.t <= 5 then
+    if math.abs(lat - b.lat) > 1e-7 or math.abs(lon - b.lon) > 1e-7 then
+      local step = b.alt - alt
+      if math.abs(step) <= VNAV_PATH_BLEND_MAX_FT then b.offset, b.from = step, distance else b.offset = 0 end
+    end
+  else
+    b.offset = 0
+  end
+  local offset = 0
+  if b.offset ~= 0 then
+    local w = math.max(0, math.min(1, 1 - (b.from - distance) / VNAV_PATH_BLEND_NM))
+    offset = b.offset * w
+    if w <= 0 then b.offset = 0 end
+  end
+  b.lat, b.lon, b.t = lat, lon, simDRTime
+  b.alt = alt + offset
+  return b.alt
+end
 -- [A-5] The approach's path to the runway (B747_afds_helpers.vnav_approach_path) at the aircraft:
 -- {alt, gradient, distance, ahead = the next fix's point} within VNAV_APPROACH_RANGE_NM of the arrival
 -- runway along the route (then
 -- within VNAV_APPROACH_LEAVE_NM), else nil. The distance goes by a fix sequenced early for its turn until
 -- it is passed, and the final approach angle is the CIFP's (B747_route_constraints) from there to the
--- runway.
+-- runway. [B-14] Through a fly-by turn the distance goes along the turn (B747_vnav_turn_distance) and the path
+-- carries on across the change of the fix it goes by (B747_vnav_path_continuity): straight to the held fix and then
+-- to the next one it stepped by 100-200 ft at the bisector.
 local approachRunway = nil   -- the runway of the approach the aircraft is in: its name and position
 function B747_vnav_approach_path(fmsO)
   if fmsO == nil then approachRunway = nil return nil end
@@ -358,7 +389,8 @@ function B747_vnav_approach_path(fmsO)
   end
   local points, toRunway = B747_afds_helpers.vnav_approach_path(fmsO, runway, first, getDistance,
     tonumber(getFMSData("transalt")), B747BR_cruiseAlt, glide)
-  local distance = getDistance(simDR_latitude, simDR_longitude, fmsO[first][5], fmsO[first][6]) + toRunway[first]
+  local distance = B747_vnav_turn_distance(fmsO, first,
+    getDistance(simDR_latitude, simDR_longitude, fmsO[first][5], fmsO[first][6])) + toRunway[first]
   local runwayKey = tostring(fmsO[runway][8]).."|"..tostring(fmsO[runway][5]).."|"..tostring(fmsO[runway][6])
   if distance <= B747_afds_helpers.VNAV_APPROACH_RANGE_NM then
     approachRunway = runwayKey
@@ -367,6 +399,7 @@ function B747_vnav_approach_path(fmsO)
     return nil
   end
   local alt, gradient = B747_afds_helpers.vnav_path_at(points, distance)
+  alt = B747_vnav_path_continuity(approachPathBlend, fmsO[first][5], fmsO[first][6], distance, alt)
   -- the next fix ahead in the route's order (the one flown to, or held, and on), not by distance: off the route
   -- the distance to the fix flown to can be more than to the one before it
   local ahead = points[1]
@@ -374,33 +407,6 @@ function B747_vnav_approach_path(fmsO)
     if point.index ~= nil and point.index >= first and point.index < ahead.index then ahead = point end
   end
   return {alt = alt, gradient = gradient, distance = distance, ahead = ahead}
-end
--- [B-14] When the path's next point changes, the path's altitude is carried on from where it was and the step is
--- taken out over the next VNAV_PATH_BLEND_NM (a real FMC's path is one line along the lateral path): the turns' legs
--- and arcs do not quite match (LNAV draws its arc for the TAS it is coming to, in the wind), and the profile's flags
--- change up to 2 s after the bisector. A step over VNAV_PATH_BLEND_MAX_FT (a new route, a direct-to) is taken at once.
-local VNAV_PATH_BLEND_NM = 2
-local VNAV_PATH_BLEND_MAX_FT = 250
-local vnavPathBlend = {lat = nil, lon = nil, alt = 0, offset = 0, from = 0, t = -100}
-local function B747_vnav_path_continuity(point, distance, alt)
-  local b = vnavPathBlend
-  if b.lat ~= nil and simDRTime - b.t <= 5 then
-    if math.abs(point[1] - b.lat) > 1e-7 or math.abs(point[2] - b.lon) > 1e-7 then
-      local step = b.alt - alt
-      if math.abs(step) <= VNAV_PATH_BLEND_MAX_FT then b.offset, b.from = step, distance else b.offset = 0 end
-    end
-  else
-    b.offset = 0
-  end
-  local offset = 0
-  if b.offset ~= 0 then
-    local w = math.max(0, math.min(1, 1 - (b.from - distance) / VNAV_PATH_BLEND_NM))
-    offset = b.offset * w
-    if w <= 0 then b.offset = 0 end
-  end
-  b.lat, b.lon, b.t = point[1], point[2], simDRTime
-  b.alt = alt + offset
-  return b.alt
 end
 function setDescentVSpeed(fmsO)
   -- [A-5] In the approach VNAV PTH flies the path to the runway: the path error is from it, and the V/S
@@ -451,7 +457,8 @@ function setDescentVSpeed(fmsO)
 
           local legDist = B747_vnav_point_distance(fmsO, vnavData[i],
             getDistance(simDR_latitude, simDR_longitude, vnavData[i][1], vnavData[i][2]))
-          glideAlt = B747_vnav_path_continuity(vnavData[i], legDist, legDist*vnavData[i][5] +vnavData[i][3])
+          glideAlt = B747_vnav_path_continuity(vnavPathBlend, vnavData[i][1], vnavData[i][2], legDist,
+            legDist*vnavData[i][5] +vnavData[i][3])
           pathGradient=vnavData[i][5]
           B747DR_ap_vnav_target_alt=vnavData[i][3]
           B747DR_fmstargetDistance=legDist
