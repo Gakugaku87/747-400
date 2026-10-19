@@ -605,12 +605,24 @@ function engine_idle_control_PW(altitude_ft_in)
       -- [climb thrust] the rated climb EPR at every altitude and weight (B747_clb_share), not the thrust the EEC's
       -- drag model gives for a design climb rate (2,750 fpm below 10,000 ft for the PW4056) where that was less: at
       -- 231 t the 747 climbed 1,560 fpm at 10,000 ft and 250 kt (max climb thrust gives about 4,000) and 30 fpm
-      -- accelerating to 290 kt there. Max climb is tabled for the 340 kt / M.84 climb; slower, the rating is higher
-      -- (the Initial Climb table at 200 KIAS: 1.50 at 10,000 ft against 1.35, -0.01 to -0.02 EPR per 20 kt above
-      -- 200): 0.6 EPR per Mach below the schedule's, from 200 KIAS up. A derate as the thrust above EPR 1.
+      -- accelerating to 290 kt there. Max climb is tabled for the 340 kt / M.84 climb; slower, the rating is higher,
+      -- up to the Initial Climb table's at 200 KIAS (1.49 at 10,000 ft against 1.35 on the cold side, down to 1.35 at
+      -- 30 C): from its value at 200 KIAS to max climb at the schedule's Mach, linear in Mach. Below 11,000 ft that
+      -- value is the table's (B747_PW_initial_climb_EPR, at the altitude less 1,000 ft and the OAT plus 2 C), above
+      -- 12,000 ft (no table) 0.6 EPR per Mach below the schedule, as the cold side of the table; at 0.6 per Mach
+      -- everywhere warm days ran up to 0.15 over the table (review 34). Held to the table's top, 1.64. A derate as the
+      -- thrust above EPR 1.
       local schedule = math.min(0.84, B747_cas_to_mach(340, altitude_ft_in))
-      local slow = math.max(mach, B747_cas_to_mach(200, altitude_ft_in))
-      local EPR_climb = EPR_max_climb + 0.6 * math.max(0, schedule - slow)
+      local m200 = B747_cas_to_mach(200, altitude_ft_in)
+      local EPR_200 = EPR_max_climb + 0.6 * math.max(0, schedule - m200)
+      if altitude_ft_in < 12000 then
+        local tabled = B747_PW_initial_climb_EPR(altitude_ft_in - 1000, simDR_temperature + 2)
+        EPR_200 = EPR_200 + (tabled - EPR_200) * B747_rescale(11000.0, 1.0, 12000.0, 0.0, altitude_ft_in)
+      end
+      local slow = 0
+      if schedule > m200 then slow = B747_rescale(m200, 1.0, schedule, 0.0, mach) end
+      local EPR_climb = EPR_max_climb + math.max(0, EPR_200 - EPR_max_climb) * slow
+      EPR_climb = math.min(EPR_climb, 1.64)
       EPR_climb = 1 + (EPR_climb - 1) * B747_clb_share(B747DR_clbderate, altitude_ft_in)
       local EPR_ref = string.format("%3.2f", EPR_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value
 

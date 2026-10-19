@@ -6,11 +6,12 @@
 -- at 231 t the 747 climbed 1,560 fpm at 10,000 ft and 250 kt (the FCOM's max climb thrust gives about 4,000), and
 -- in the acceleration to 290 kt there it fell to 30 fpm (p30-line1, 2026-10-19). Upstream e286c7da had made the GE
 -- module use max climb above 20,000 ft, and the PW and RR modules followed (a light 747 crept up at 100-360 fpm in
--- the 20s). The PW4056's max climb EPR is tabled for the 340 kt / M.84 climb; slower, the rating is higher (the
--- Initial Climb table at 200 KIAS: 1.50 at 10,000 ft against 1.35): about 0.6 EPR per Mach below the schedule, from
--- 200 KIAS up. CLB 1 and CLB 2 take 10 and 20 % off the climb thrust to 10,000 ft and give it back linearly by
--- 15,000 ft (as an EPR above 1, or N1 to the power 0.4 for thrust about N1^2.5). Each module's CLB branch runs against
--- mocked ratings; this does not validate the engine model.
+-- the 20s). The PW4056's max climb EPR is tabled for the 340 kt / M.84 climb; slower, the rating is higher, up to the
+-- Initial Climb table's at 200 KIAS (1.49 at 10,000 ft on the cold side against 1.35, less on warm days): linear in
+-- Mach between the two, the table's value below 11,000 ft, 0.6 EPR per Mach below the schedule above 12,000 ft (no
+-- table). CLB 1 and CLB 2 take 10 and 20 % off the climb thrust to 10,000 ft and give it back linearly by 15,000 ft
+-- (as an EPR above 1, or N1 to the power 0.4 for thrust about N1^2.5). Each module's CLB branch runs against mocked
+-- ratings; this does not validate the engine model.
 local EEC = "plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.xt.EEC."
 
 local checks, failures = 0, {}
@@ -31,30 +32,34 @@ local function clb_branch(engine)
     local last = assert(source:find('elseif string.match(B747DR_ref_thr_limit_mode, "CRZ") then', first, true))
     return "if false then\n"..source:sub(first, last - 1).."end\n"
 end
--- the shared helpers of B747.42.xt.EEC.lua from B747_rescale on to round_thrustcalc
+-- the shared helpers of B747.42.xt.EEC.lua from B747_rescale on to round_thrustcalc, and the EEC's tables
 local function helpers(env)
     local source = read(EEC.."lua")
     local first = assert(source:find("function B747_rescale(", 1, true))
     local last = assert(source:find("function round_thrustcalc(", first, true))
     setfenv(assert(loadstring(source:sub(first, last - 1))), env)()
+    setfenv(assert(loadstring(read(EEC.."tbls.lua"))), env)()
 end
 
 -- The CLB target bug of one module: altitude ft, Mach, CLB derate (0, 1, 2), a light aircraft (the design climb
--- rate's thrust below the rating) or a heavy one (above it), flaps up or out.
+-- rate's thrust below the rating) or a heavy one (above it), flaps up or out, the outside air temperature (C; ISA
+-- without), the max climb rating (RATING without).
 local RATING = {GE = 95.0, PW = 1.35, RR = 1.50}
-local function clb_target(engine, altitude, mach, derate, light, flaps)
+local function clb_target(engine, altitude, mach, derate, light, flaps, sat, max_climb)
     local env = setmetatable({B747DR_ref_thr_limit_mode = "CLB", altitude_ft_in = altitude, mach = mach,
         simDR_altitude = altitude, B747DR_clbderate = derate, packs_adjustment_value = 0,
-        engine_anti_ice_adjustment_value = 0, simDR_flap_ratio = flaps or 0, takeoff_TOGA_n1 = 100}, {__index = _G})
+        engine_anti_ice_adjustment_value = 0, simDR_flap_ratio = flaps or 0, takeoff_TOGA_n1 = 100,
+        simDR_temperature = sat or 15 - 1.9812 * altitude / 1000}, {__index = _G})
     helpers(env)
+    local rating = max_climb or RATING[engine]
     if engine == "GE" then
         local actual = light and 80.0 or 97.0
-        env.in_flight_N1_GE = function() return 0, actual, 0, 0, RATING.GE, 0, 0, 0 end
+        env.in_flight_N1_GE = function() return 0, actual, 0, 0, rating, 0, 0, 0 end
         env.N1_target_bug, env.display_N1_ref, env.display_N1_max = {}, {}, {}
         env.B747DR_display_N1_max, env.B747DR_display_N1_ref = {[0] = 0, 0, 0, 0}, {[0] = 0, 0, 0, 0}
     else
         local actual = light and 1.20 or 1.60
-        env["in_flight_EPR_"..engine] = function() return actual, 1.40, RATING[engine] end
+        env["in_flight_EPR_"..engine] = function() return actual, 1.40, rating end
         env.EPR_target_bug, env.display_EPR_ref, env.display_EPR_max = {}, {}, {}
         env.B747DR_display_EPR_max, env.B747DR_display_EPR_ref = {[0] = 0, 0, 0, 0}, {[0] = 0, 0, 0, 0}
     end
@@ -77,15 +82,28 @@ for _, engine in ipairs({"GE", "PW", "RR"}) do
         end
     end
 end
--- the PW's rating slower than its schedule: at 10,000 ft, 250 KIAS (M.452) 1.35 + 0.6 x (0.611 - 0.452) = 1.445
--- (the table at 240 KIAS: 1.46); at 200 KIAS (M.363) and slower 1.35 + 0.6 x 0.248 = 1.499 (the Initial Climb
--- table: 1.50); at M.84 at 25,000 ft nothing added
-for _, case in ipairs({{10000, 0.452, 1.445}, {10000, 0.363, 1.499}, {10000, 0.30, 1.499}, {25000, 0.84, 1.35}}) do
+-- the PW's rating slower than its schedule, from its value at 200 KIAS down to the schedule's Mach. Below 11,000 ft
+-- the value at 200 KIAS is the Initial Climb table's, entered with the altitude less 1,000 ft and the OAT plus 2 C:
+-- at 10,000 ft (the table at 9,000 ft) 1.49 on the cold side (ISA), 1.43 at 20 C, 1.35 at 30 C; 250 KIAS (M.452)
+-- is 64 % of the way from 200 KIAS (M.363) to 340 (M.611): 1.35 + 0.14 x 0.64 = 1.440 (the FCOM at 240 KIAS: 1.46),
+-- 1.401 at 20 C. Above 12,000 ft (no table) 0.6 EPR per Mach below the schedule: 1.453 at 15,000 ft, 250 KIAS
+-- (M.497; M.669 at 340). On warm days 0.6 per Mach overshot the table by up to 0.15 (review 34). At M.84 nothing is
+-- added; and a rating so raised is held to the table's top, 1.64: M.81 at 35,000 ft gave 1.66
+for _, case in ipairs({{10000, 0.452, nil, 1.440}, {10000, 0.363, nil, 1.49}, {10000, 0.30, nil, 1.49},
+        {10000, 0.363, 28, 1.35}, {10000, 0.452, 18, 1.401}, {15000, 0.4966, nil, 1.453}, {15000, 0.4966, 25, 1.453},
+        {25000, 0.84, nil, 1.35}, {35000, 0.81, nil, 1.64, 1.64}}) do
     for _, light in ipairs({true, false}) do
-        local got = clb_target("PW", case[1], case[2], 0, light)
-        check(got and math.abs(got - case[3]) < 0.006, string.format("PW CLB at %d ft, M%.3f, %s: %s (%.3f)", case[1],
-            case[2], light and "light" or "heavy", tostring(got), case[3]))
+        local got = clb_target("PW", case[1], case[2], 0, light, 0, case[3], case[5])
+        check(got and math.abs(got - case[4]) < 0.006, string.format("PW CLB at %d ft, M%.3f, %s C, %s: %s (%.3f)",
+            case[1], case[2], tostring(case[3] or "ISA"), light and "light" or "heavy", tostring(got), case[4]))
     end
+end
+-- the Initial Climb table's 15 C column at 8,000 ft read 1.7 (1.46 at 7,000 ft, 1.47 at 9,000)
+do
+    local env = setmetatable({}, {__index = _G})
+    helpers(env)
+    local value = env.INITIAL_CLIMB_epr_PW4056[15][8000]
+    check(value >= 1.46 and value <= 1.47, "the Initial Climb table at 15 C and 8,000 ft: "..value)
 end
 -- CLB 1 and CLB 2: 10 and 20 % off to 10,000 ft, given back by 15,000 ft (at 12,500 ft half of it)
 local function derated(engine, share)

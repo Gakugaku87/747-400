@@ -92,6 +92,30 @@ function B747_cas_to_mach(cas_kt, altitude_ft)
     local qc = (1 + 0.2 * (cas_kt / 661.47) ^ 2) ^ 3.5 - 1
     return math.sqrt(5 * ((qc / delta + 1) ^ (2 / 7) - 1))
 end
+-- The PW4056's Initial Climb EPR (FCOM; INITIAL_CLIMB_epr_PW4056: 200 KIAS 1,000 ft above the airport) at an airport
+-- altitude (ft) and OAT (C), bilinear between the table's columns (10 to 54 C; colder as 10 C) and rows (-2,000 to
+-- 10,000 ft); a blank (0.00: too hot for that altitude) takes the next cooler column's value.
+local INITIAL_CLIMB_OAT_C = {10, 15, 20, 25, 30, 35, 40, 45, 50, 54}
+local function B747_initial_climb_cell(column, altitude_ft)
+    for c = column, 1, -1 do
+        local value = INITIAL_CLIMB_epr_PW4056[INITIAL_CLIMB_OAT_C[c]][altitude_ft]
+        if value ~= nil and value > 0 then return value end
+    end
+    return 0
+end
+function B747_PW_initial_climb_EPR(airport_alt_ft, oat_c)
+    local alt = math.max(-2000, math.min(10000, airport_alt_ft))
+    local a1 = math.min(9000, math.floor(alt / 1000) * 1000)
+    local fa = (alt - a1) / 1000
+    local oat = math.max(10, math.min(54, oat_c))
+    local c1 = 1
+    while c1 < #INITIAL_CLIMB_OAT_C - 1 and INITIAL_CLIMB_OAT_C[c1 + 1] <= oat do c1 = c1 + 1 end
+    local fo = (oat - INITIAL_CLIMB_OAT_C[c1]) / (INITIAL_CLIMB_OAT_C[c1 + 1] - INITIAL_CLIMB_OAT_C[c1])
+    local function at(c, a) return B747_initial_climb_cell(c, a) end
+    local low = at(c1, a1) + (at(c1, a1 + 1000) - at(c1, a1)) * fa
+    local high = at(c1 + 1, a1) + (at(c1 + 1, a1 + 1000) - at(c1 + 1, a1)) * fa
+    return low + (high - low) * fo
+end
 
 function round_thrustcalc(x, input_type)
     --print("x IN = "..x)

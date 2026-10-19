@@ -153,10 +153,13 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   setting, as on the 747-400 (the thrust for the EEC's design climb rate,
   taken below 20,000 ft where it was less, left a light 747 at 1,560 fpm at
   10,000 ft and 250 kt; 46 of the 62 checks failed before): the PW's max
-  climb EPR is raised below its 340 kt / M.84 schedule by 0.6 EPR per Mach
-  from 200 KIAS up (1.45 at 10,000 ft and 250 KIAS, 1.50 at 200 KIAS, as
-  the FCOM's tables), and CLB 1 and CLB 2 take 10 and 20 % off the climb
-  thrust to 10,000 ft and give it back by 15,000 ft.
+  climb EPR is raised below its 340 kt / M.84 schedule up to its value at
+  200 KIAS, linear in Mach - below 11,000 ft the FCOM's Initial Climb
+  table's (1.49 at 10,000 ft on the cold side, 1.43 at 20 C, 1.35 at
+  30 C; at 0.6 EPR per Mach, as above 12,000 ft, warm days ran up to 0.15
+  over it), held to 1.64 (M.81 at 35,000 ft gave 1.66), the table's 1.7 at
+  15 C and 8,000 ft read as 1.47 - and CLB 1 and CLB 2 take 10 and 20 % off
+  the climb thrust to 10,000 ft and give it back by 15,000 ft.
 - `xtlua_warm_reads_test.lua`: XTLua gives 0 for the first read of a
   dataref in a script module, so the datarefs that a fix first reads at a
   critical moment are read every frame in the module's per-frame function
