@@ -578,16 +578,24 @@ for _, at in ipairs({5.6, 6.0}) do
     check(lastTurn <= 8.3, string.format("HDG SEL %.1f nm on, straight on past AM607's arc on a 2.6 nm leg: its turn "
         .."has ended by 8.3 nm (last at %.2f)", at, lastTurn))
 end
+-- HDG SEL 0.8 nm before LNAV's arc, the 747 turning at 15 deg of bank inside it: the step at NETOM's bisector (+623 ft)
+-- is still being taken out where the turn ends at the same point, and goes on (-503 ft at once there). The path falls
+-- about 7 ft in 0.01 nm while that step is taken out, so the steps are taken against its slope, in 0.01 nm steps (the
+-- turn's end holds the path for one step, as in 4.) (after the turn is taken there: before it, no turn at all, NETOM is
+-- passed abeam only 5 nm on - a sequence of LNAV not engaged, not the turn's)
 local R15 = (270 * 0.514444) ^ 2 / (9.80665 * math.tan(math.rad(15))) / 1852
--- (after the turn is taken there: before it, no turn at all, NETOM is passed abeam only 5 nm on - a sequence of LNAV
--- not engaged, not the turn's)
 at = 5.3
-r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, noturn = true,
+r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, noturn = true, ds = 0.01,
     hooks = {{s = at, fn = hdg_sel}}, seq_after = {s = at, mode = "abeam"},
     maneuver = {s = at, radius = R15, turn = turnN}})
-worst, where = largest_step(r, 0, 1e9)
-check(math.abs(worst) <= 15, string.format("HDG SEL 0.8 nm before LNAV's arc, the 747 turning at 15 deg of bank: "
-    .."largest step %+.0f ft in 0.02 nm at %.2f nm", worst, where or -1))
+local ended
+for n = 2, #r do
+    if ended == nil and r[n - 1].tfix ~= 0 and r[n].tfix == 0 then ended = r[n].s end
+end
+worst, where = largest_jump(r)
+check(ended ~= nil and math.abs(worst) <= 15, string.format("HDG SEL 0.8 nm before LNAV's arc, the 747 turning at "
+    .."15 deg of bank, the turn ended at %.2f nm: largest step against the path's slope %+.0f ft in 0.01 nm at %.2f nm",
+    ended or -1, worst, where or -1))
 
 -- a route edit making NETOM's 110 deg turn straight on (NIRSI moved on along the inbound course) 3 nm before NETOM,
 -- with the turn's cut partly taken off: the path is the new route's at once, its step (+258 ft) over the 250 ft that

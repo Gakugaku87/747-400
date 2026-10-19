@@ -625,8 +625,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   747 is at most 0.05 nm off as LNAV takes it and the fade stays at most
   0.1; from AM607's path alone up to 0.27 nm, and 0.5 nm with arcs LNAV
   shares: faded 0.23); a change carries the step still being taken out
-  on (HDG SEL 0.8 nm before NETOM's arc, the 747 at 15 deg of bank:
-  -503 ft at once at the turn's end), and a
+  on (HDG SEL 0.8 nm before NETOM's arc, the 747 at 15 deg of bank: no
+  step against the path's slope over 15 ft; -503 ft at once at the turn's
+  end), and a
   route edit's own step over 250 ft is taken at once (NETOM's 110 deg
   turn edited to straight on 3 nm before it: the new route's path at
   once; blended, 229 ft off it), the blend still being taken out with it
