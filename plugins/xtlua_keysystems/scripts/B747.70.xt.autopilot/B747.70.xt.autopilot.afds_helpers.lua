@@ -911,6 +911,37 @@ function afds.vnav_turn_distance_nm(east_nm, north_nm, in_course_deg, out_course
     return distance + (direct_nm - distance) * off
 end
 
+-- [B-14] A route point's altitude on VNAV's descent path, route[i] with its descent constraint from the CIFP
+-- (constraints[i], as B747_route_constraints): afds.vnav_path_alt for a point with the native FMS's altitude ([9]); for
+-- one without, the path's altitude there, interpolated along the route (distance_fn) between the nearest points with
+-- one on either side, kept inside the constraint (its floor or ceiling where the straight path would break it). It
+-- took the floor, else the ceiling, whatever the points around: a floor far under the straight path put a dive and a
+-- level-off into it, and a ceiling above the point before a level-off until the path came down to it (review 26
+-- MINOR 5). Without points on both sides, the floor or ceiling, as before.
+function afds.vnav_route_point_alt(route, i, constraints, distance_fn)
+    local entry = route[i]
+    if entry == nil then return 0 end
+    local constraint = constraints ~= nil and constraints[i] or nil
+    local native = tonumber(entry[9]) or 0
+    if native > 0 or type(constraint) ~= "table" or constraint.phase ~= "descent" or type(distance_fn) ~= "function" then
+        return afds.vnav_path_alt(native, constraint)
+    end
+    local function nearest(step)
+        local k, along = i, 0
+        while route[k + step] ~= nil do
+            along = along + distance_fn(route[k][5], route[k][6], route[k + step][5], route[k + step][6])
+            k = k + step
+            local alt = tonumber(route[k][9]) or 0
+            if alt > 0 and route[k][2] ~= 1 then return alt, along end
+        end
+        return nil, nil
+    end
+    local before, before_nm = nearest(-1)
+    local after, after_nm = nearest(1)
+    if before == nil or after == nil or before_nm + after_nm <= 0 then return afds.vnav_path_alt(0, constraint) end
+    return afds.vnav_path_alt(before + (after - before) * before_nm / (before_nm + after_nm), constraint)
+end
+
 -- [d] Cruise climb after the ALT selector push
 -- The climb starts 2 s after the push.  By then CRZ ALT may be back at the
 -- level being flown (put back, or the step cancelled), and close to T/D a

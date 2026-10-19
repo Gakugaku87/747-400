@@ -2272,10 +2272,10 @@ function setDistances(fmsO)
 			end
 		end
 		--print("setVNAV "..i.." "..fmsO[i][5]..":"..fmsO[i][6].."/"..fmsO[i][9])
-		-- [B-14] the point's altitude on the path: [9] inside its CIFP constraint (afds.vnav_path_alt). The profile took
-		-- [9] alone, and a point below its floor was kept above it only by the AFDS's altitude at the floor
-		local pointAlt=B747_afds_helpers.vnav_path_alt(fmsO[i][9],
-			B747_route_constraints~=nil and B747_route_constraints[i] or nil)
+		-- [B-14] the point's altitude on the path: [9] inside its CIFP constraint, a point without [9] the path's there
+		-- inside it (afds.vnav_route_point_alt). The profile took [9] alone, and a point below its floor was kept above
+		-- it only by the AFDS's altitude at the floor
+		local pointAlt=B747_afds_helpers.vnav_route_point_alt(fmsO,i,B747_route_constraints,getDistance)
 		if pointAlt>0 then
 			--construct vnav profile
 			--[[local isNext="false"

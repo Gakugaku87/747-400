@@ -14,13 +14,15 @@ local function check(condition, message)
     if not condition then failures[#failures + 1] = message end
 end
 
-local ETPOS, SUGOL, NETOM, AM608 = 4, 5, 6, 9
+local LAMSO, ETPOS, SUGOL, NETOM, AM608 = 3, 4, 5, 6, 9
 local FMS_DATA = {desspdtransalt = "10000", destranspd = "240", desspd = "270", desrestspd = "---",
     desrestalt = "-----", transalt = "18000", crzalt = "FL370"}
--- the profile's altitude at the route's point (nil without one), with the aircraft 10 nm before `active` on its leg
-local function profile(changes, active)
+-- the profile's altitude at the route's point (nil without one), with the aircraft 10 nm before `active` on its leg;
+-- changes to the native FMS's altitudes ([9]) and to the constraints
+local function profile(changes, active, constraint_changes)
     local o = model.eham({active = active, mcp_alt_ft = 2000, vnav_speed_kt = 250, at_mode = 3})
     for index, alt in pairs(changes) do o.route[index][9] = alt end
+    for index, c in pairs(constraint_changes or {}) do o.constraints[index] = c end
     local d = {}
     local ap = model.load(d, {fmsData = FMS_DATA, B747_route_constraints = o.constraints})
     model.set_datarefs(d, o, 0.05)
@@ -61,6 +63,20 @@ p = profile({[AM608] = 0}, SUGOL)
 check(p[AM608] == 3400, "AM608 without an altitude: its floor 3400, got "..tostring(p[AM608]))
 local _, target = profile({[NETOM] = 6800}, NETOM)
 check(target == 7000, "NETOM next with 6800 below its floor: setDescentVSpeed aims at 7000, got "..tostring(target))
+-- [review 26 MINOR 5] a point without [9] takes the straight path's altitude between its neighbours, inside its
+-- constraint
+p = profile({[SUGOL] = 0}, SUGOL)
+check(p[SUGOL] ~= nil and p[SUGOL] > 11700 and p[SUGOL] < 11950, "SUGOL without an altitude: the straight path from "
+    .."ETPOS's 16752 to NETOM's 7849 (about 11,830), inside its window FL100-FL140 (it took the floor 10000), got "
+    ..tostring(p[SUGOL]))
+local AT_OR_BELOW = function(ft) return {alt_desc = "-", ceiling = ft, fl = true, phase = "descent"} end
+p = profile({[LAMSO] = 0}, SUGOL, {[LAMSO] = AT_OR_BELOW(23000)})
+check(p[LAMSO] ~= nil and p[LAMSO] > 21300 and p[LAMSO] < 21600, "LAMSO without an altitude, at or below FL230: the "
+    .."straight path from DIBAL's 26309 to ETPOS's 16752 (about 21,450; it took the ceiling 23000, a level-off), got "
+    ..tostring(p[LAMSO]))
+p = profile({[LAMSO] = 0}, SUGOL, {[LAMSO] = AT_OR_BELOW(20000)})
+check(p[LAMSO] == 20000, "LAMSO without an altitude, at or below FL200 under the straight path: 20000, got "
+    ..tostring(p[LAMSO]))
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV profile constraints tests passed: "..checks)

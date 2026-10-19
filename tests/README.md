@@ -555,9 +555,13 @@ The audit regressions load production Lua code with mocked simulator interfaces:
 - `vnav_profile_constraints_test.lua`: VNAV's descent path (setDistances'
   profile) crosses each point inside its CIFP constraint - the native FMS's
   altitude raised to the floor (NETOM's 6800 to FL070), lowered to the
-  ceiling (SUGOL's 15000 to its window's FL140, 9500 to FL100), a point
-  without an altitude at its floor (AM608 3400), and setDescentVSpeed aims
-  there; inside their constraints the points keep the native FMS's.
+  ceiling (SUGOL's 15000 to its window's FL140, 9500 to FL100), and
+  setDescentVSpeed aims there; inside their constraints the points keep the
+  native FMS's. A point without an altitude takes the straight path's
+  between its neighbours inside its constraint (SUGOL about 11,830 in its
+  window, LAMSO about 21,450 under an at or below FL230, FL200 under an at
+  or below FL200, AM608 its floor 3400); it took the floor, else the
+  ceiling.
 - `vnav_descent_points_test.lua`: VNAV PTH's descent through the route's
   points below the transition altitude, the production autopilot, VNAV,
   energy mode and A/T in approach_model.lua's closed loop on the EHAM route
