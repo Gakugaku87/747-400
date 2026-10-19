@@ -143,18 +143,23 @@ end
 
 -- [B-12] VNAV takes the MCP altitude as a level-off only once it has been still for MCP_ALT_SETTLE_SEC
 -- (autopilot.lua's B747_mcp_alt_settled; nil where a test loads VNAV without the knob: settled, as before)
+-- The MCP altitude below VNAV's target is the AFDS's, and VNAV ALT is set there, also within 30 s of an ALT selector
+-- push (B747DR_mcp_hold_pressed), as a real 747-400's VNAV never climbs above the MCP altitude: within them the AFDS's
+-- altitude was VNAV's next target (33000 for the MCP's 11000 at 10,500 ft), and the 747 could climb through the MCP
+-- altitude before they were up (review 28 MINOR 3).
 function VNAV_CLB_ALT(numAPengaged,fms)
     local targetAlt=VNAV_NEXT_ALT(numAPengaged,fms)
     --print("VNAV_CLB_ALT ".. simDR_autopilot_altitude_ft .. " "  .. targetAlt .. " ")
     B747DR_ap_vnav_target_alt=targetAlt
-    local lastHold=simDRTime-B747DR_mcp_hold_pressed
-    if targetAlt>B747DR_autopilot_altitude_ft and simDR_pressureAlt1<B747DR_autopilot_altitude_ft+100 and lastHold>30 and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) then
+    if targetAlt>B747DR_autopilot_altitude_ft and simDR_pressureAlt1<B747DR_autopilot_altitude_ft+100
+        and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) then
         targetAlt=B747DR_autopilot_altitude_ft
     end
     local mcpDiff=simDR_pressureAlt1-B747DR_autopilot_altitude_ft
     if B747DR_mcp_hold~=1 and simDR_autopilot_alt_hold_status==2 and targetAlt==B747DR_autopilot_altitude_ft
      and (mcpDiff<B747DR_alt_capture_window and mcpDiff>-B747DR_alt_capture_window)
-     and lastHold>30 and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) and B747BR_cruiseAlt>B747DR_autopilot_altitude_ft-B747DR_alt_capture_window
+     and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled())
+     and B747BR_cruiseAlt>B747DR_autopilot_altitude_ft-B747DR_alt_capture_window
      and targetAlt~=B747BR_cruiseAlt then
         B747DR_mcp_hold=1
         simDR_autopilot_vs_status=0
@@ -361,7 +366,6 @@ function VNAV_DES(numAPengaged,fms)
     VNAV_DES_ALT(numAPengaged,fms) --sets altitude target
     local diff2 = simDR_autopilot_altitude_ft - simDR_pressureAlt1
     local diff3 = B747DR_autopilot_altitude_ft- simDR_pressureAlt1
-    local lastHold=simDRTime-B747DR_mcp_hold_pressed
     local descentstatus=0
     local diff = simDRTime - B747DR_ap_VNAV_lastCommand
 

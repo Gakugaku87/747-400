@@ -84,5 +84,47 @@ _, hold, held = after_push({nm = 8, alt_ft = 11000, mcp_ft = 11000, afds_ft = 11
 check(hold == 1 and held == 2, "VNAV_DES 1 s after a push at the MCP's 11,000 where the 747 is levelled: VNAV ALT "
     .."stays, got mcp_hold "..hold..", alt_hold_status "..held)
 
+-- [review 28 MINOR 3] the climb as the descent: within 30 s of a push the AFDS's altitude was VNAV's next target, not
+-- the MCP altitude below it (33000 for the MCP's 11000 at 10,500 ft), and the 747 could climb through the MCP altitude
+-- before the 30 s were up; VNAV ALT waited for them too. The production VNAV_CLB_ALT on TST744L's EINN route, 150 nm
+-- before EMPER on its leg from EINN, CRZ ALT FL350
+local function climb_push(o)
+    local e = model.einn({active = 2, mcp_alt_ft = o.mcp_ft, vnav_speed_kt = 250, at_mode = 3})
+    local d = {}
+    local ap = model.load(d, {fmsData = e.fms_data, B747_route_constraints = setmetatable({}, {})})
+    model.set_datarefs(d, e, 0.05)
+    local f = assert(io.open("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.xt.autopilot.monitor.lua"))
+    local source = f:read("*a"); f:close()
+    local first = assert(source:find("function VNAV_CLB_ALT(numAPengaged,fms)", 1, true))
+    local last = assert(source:find("function VNAV_CLB(numAPengaged,fmsO)", first + 1, true))
+    setfenv(assert(loadstring(source:sub(first, last - 1), "@VNAV_CLB_ALT")), ap)()
+    local route = e.route
+    for i = 1, #route do route[i][10] = (i == 2) end
+    d.simDR_latitude, d.simDR_longitude = ap.movePoint(route[2][5], route[2][6], 150,
+        ap.getHeading(route[2][5], route[2][6], route[1][5], route[1][6]))
+    d.simDR_pressureAlt1, d.simDR_radarAlt1 = o.alt_ft, o.alt_ft
+    d.simDR_ind_airspeed_kts_pilot, d.simDR_ias_pilot, d.simDR_groundspeed = 290, 290, 170
+    d.simDR_TAS_mps, d.simDR_alpha_deg, d.B747DR_airspeed_Vmc = 170, 2, 150
+    d.B747DR_fmscurrentIndex, d.B747DR_vnav_hold_index = 2, 0
+    d.B747BR_cruiseAlt = 35000
+    d.B747DR_ap_inVNAVdescent = 0
+    d.simDR_autopilot_flch_status, d.simDR_autopilot_vs_status = o.alt_hold == 2 and 0 or 2, 0
+    d.simDR_autopilot_alt_hold_status = o.alt_hold or 0
+    d.simDRTime = 1000
+    d.B747DR_mcp_hold_pressed = d.simDRTime - o.pushed
+    d.B747DR_mcp_hold = 0
+    d.simDR_autopilot_altitude_ft = o.mcp_ft
+    for _ = 1, 3 do ap.setDistances(route) end
+    ap.VNAV_CLB_ALT(1, route)
+    return d.simDR_autopilot_altitude_ft, d.B747DR_mcp_hold
+end
+a = climb_push({mcp_ft = 11000, alt_ft = 10500, pushed = 25})
+check(a == 11000, "climbing at 10,500 ft 25 s after a push, the MCP at 11000: the AFDS's altitude 11000 (not VNAV's "
+    .."next target), got "..a)
+a = climb_push({mcp_ft = 11000, alt_ft = 10500, pushed = 35})
+check(a == 11000, "35 s after the push: 11000, got "..a)
+_, hold = climb_push({mcp_ft = 11000, alt_ft = 11010, pushed = 5, alt_hold = 2})
+check(hold == 1, "5 s after a push in the climb, holding the MCP's 11000: VNAV ALT, got mcp_hold "..hold)
+
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV MCP push tests passed: "..checks)
