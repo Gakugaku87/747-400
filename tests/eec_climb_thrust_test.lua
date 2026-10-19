@@ -87,12 +87,15 @@ end
 -- the value at 200 KIAS is the Initial Climb table's, entered with the altitude less 1,000 ft and the OAT plus 2 C:
 -- at 10,000 ft (the table at 9,000 ft) 1.49 on the cold side (ISA), 1.43 at 20 C, 1.35 at 30 C; 250 KIAS (M.452)
 -- is 64 % of the way from 200 KIAS (M.363) to 340 (M.611): 1.35 + 0.14 x 0.64 = 1.440 (the FCOM at 240 KIAS: 1.46),
--- 1.401 at 20 C. Above 12,000 ft (no table) 0.6 EPR per Mach below the schedule: 1.453 at 15,000 ft, 250 KIAS
--- (M.497; M.669 at 340). On warm days 0.6 per Mach overshot the table by up to 0.15 (review 34). At M.84 nothing is
--- added; and a rating so raised is held to the table's top, 1.64: M.81 at 35,000 ft gave 1.66
+-- 1.401 at 20 C. Above 12,000 ft (no table) 0.6 EPR per Mach below the schedule (the table's cold side), kept to the
+-- table's warm-day share at its 10,000 ft row for the same ISA deviation: at 15,000 ft, 250 KIAS (M.497; M.669 at
+-- 340) 1.453 at ISA (-14.7 C), 1.425 at ISA+20 (5.3 C: the row at 15.2 C reads 1.458, 72 % of the way from 1.35 to
+-- 1.50), max climb itself at ISA+40 (25 C). On warm days 0.6 per Mach overshot the table by up to 0.15 (review 34),
+-- above 12,000 ft by 0.03-0.15 (review 35). At M.84 nothing is added; and a rating so raised is held to the table's
+-- top, 1.64: M.81 at 35,000 ft gave 1.66
 for _, case in ipairs({{10000, 0.452, nil, 1.440}, {10000, 0.363, nil, 1.49}, {10000, 0.30, nil, 1.49},
-        {10000, 0.363, 28, 1.35}, {10000, 0.452, 18, 1.401}, {15000, 0.4966, nil, 1.453}, {15000, 0.4966, 25, 1.453},
-        {25000, 0.84, nil, 1.35}, {35000, 0.81, nil, 1.64, 1.64}}) do
+        {10000, 0.363, 28, 1.35}, {10000, 0.452, 18, 1.401}, {15000, 0.4966, nil, 1.453}, {15000, 0.4966, 5.3, 1.425},
+        {15000, 0.4966, 25, 1.35}, {25000, 0.84, nil, 1.35}, {35000, 0.81, nil, 1.64, 1.64}}) do
     for _, light in ipairs({true, false}) do
         local got = clb_target("PW", case[1], case[2], 0, light, 0, case[3], case[5])
         check(got and math.abs(got - case[4]) < 0.006, string.format("PW CLB at %d ft, M%.3f, %s C, %s: %s (%.3f)",

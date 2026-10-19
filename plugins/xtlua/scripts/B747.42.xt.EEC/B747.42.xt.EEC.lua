@@ -111,9 +111,9 @@ function B747_PW_initial_climb_EPR(airport_alt_ft, oat_c)
     local c1 = 1
     while c1 < #INITIAL_CLIMB_OAT_C - 1 and INITIAL_CLIMB_OAT_C[c1 + 1] <= oat do c1 = c1 + 1 end
     local fo = (oat - INITIAL_CLIMB_OAT_C[c1]) / (INITIAL_CLIMB_OAT_C[c1 + 1] - INITIAL_CLIMB_OAT_C[c1])
-    local function at(c, a) return B747_initial_climb_cell(c, a) end
-    local low = at(c1, a1) + (at(c1, a1 + 1000) - at(c1, a1)) * fa
-    local high = at(c1 + 1, a1) + (at(c1 + 1, a1 + 1000) - at(c1 + 1, a1)) * fa
+    local cell = B747_initial_climb_cell
+    local low = cell(c1, a1) + (cell(c1, a1 + 1000) - cell(c1, a1)) * fa
+    local high = cell(c1 + 1, a1) + (cell(c1 + 1, a1 + 1000) - cell(c1 + 1, a1)) * fa
     return low + (high - low) * fo
 end
 

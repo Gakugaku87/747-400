@@ -609,13 +609,16 @@ function engine_idle_control_PW(altitude_ft_in)
       -- up to the Initial Climb table's at 200 KIAS (1.49 at 10,000 ft against 1.35 on the cold side, down to 1.35 at
       -- 30 C): from its value at 200 KIAS to max climb at the schedule's Mach, linear in Mach. Below 11,000 ft that
       -- value is the table's (B747_PW_initial_climb_EPR, at the altitude less 1,000 ft and the OAT plus 2 C), above
-      -- 12,000 ft (no table) 0.6 EPR per Mach below the schedule, as the cold side of the table; at 0.6 per Mach
-      -- everywhere warm days ran up to 0.15 over the table (review 34). Held to the table's top, 1.64. A derate as the
-      -- EPR above 1: CLB 1 about 0.04 less, as crews see it (0.03-0.05); for X-Plane's thrust through the EEC's EPR
-      -- model (EPR_display_PW) that is about 5 % (10 for CLB 2), the model's EPR moving half as fast with thrust.
+      -- 12,000 ft (no table) 0.6 EPR per Mach below the schedule, as the cold side of the table, kept to the table's
+      -- warm-day share at its 10,000 ft row for the same ISA deviation (1.50 on the cold side to 1.35 at 30 C); at
+      -- 0.6 per Mach warm days ran up to 0.15 over the table (reviews 34 and 35). Held to the table's top, 1.64. A
+      -- derate as the EPR above 1: CLB 1 about 0.04 less, as crews see it (0.03-0.05); for X-Plane's thrust through
+      -- the EEC's EPR model (EPR_display_PW) that is about 5 % (10 for CLB 2), the model's EPR moving half as fast.
       local schedule = math.min(0.84, B747_cas_to_mach(340, altitude_ft_in))
       local m200 = B747_cas_to_mach(200, altitude_ft_in)
-      local EPR_200 = EPR_max_climb + 0.6 * math.max(0, schedule - m200)
+      local row_oat = simDR_temperature + 2 + 1.98 * (altitude_ft_in - 11000) / 1000
+      local warm = math.max(0, math.min(1, (B747_PW_initial_climb_EPR(10000, row_oat) - 1.35) / 0.15))
+      local EPR_200 = EPR_max_climb + 0.6 * math.max(0, schedule - m200) * warm
       if altitude_ft_in < 12000 then
         local tabled = B747_PW_initial_climb_EPR(altitude_ft_in - 1000, simDR_temperature + 2)
         EPR_200 = EPR_200 + (tabled - EPR_200) * B747_rescale(11000.0, 1.0, 12000.0, 0.0, altitude_ft_in)

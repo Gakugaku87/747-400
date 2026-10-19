@@ -163,8 +163,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   climb EPR is raised below its 340 kt / M.84 schedule up to its value at
   200 KIAS, linear in Mach - below 11,000 ft the FCOM's Initial Climb
   table's (1.49 at 10,000 ft on the cold side, 1.43 at 20 C, 1.35 at
-  30 C; at 0.6 EPR per Mach, as above 12,000 ft, warm days ran up to 0.15
-  over it), held to 1.64 (M.81 at 35,000 ft gave 1.66), the table's 1.7 at
+  30 C; at 0.6 EPR per Mach warm days ran up to 0.15 over it), above
+  12,000 ft 0.6 EPR per Mach kept to the table's warm-day share at its
+  10,000 ft row for the same ISA deviation (15,000 ft, 250 KIAS: 1.453 at
+  ISA, 1.425 at ISA+20, max climb at ISA+40; 0.03-0.15 over before), held
+  to 1.64 (M.81 at 35,000 ft gave 1.66), the table's 1.7 at
   15 C and 8,000 ft read as 1.47 - and CLB 1 and CLB 2 take 10 and 20 % off
   the climb thrust to 10,000 ft and give it back by 15,000 ft: the PW and
   RR as their EPR above 1 (CLB 1 about 0.04 EPR less, as crews see it), the
