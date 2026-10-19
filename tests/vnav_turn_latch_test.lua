@@ -23,7 +23,7 @@
 -- 8. the turn's fade moves with the distance flown also where LNAV engages or lets go off the path (review 30 MAJOR 1),
 --    and is measured from the turn carried on too on a short leg, but not from its outbound leg (review 30 NIT, review
 --    31 NIT); a change carries the step still being taken out on (review 30 MINOR 2), and a route edit's own step over
---    250 ft is taken at once (review 31 MINOR 1).
+--    250 ft is taken at once, that step with it (review 31 MINOR 1, review 32 MINOR 1).
 -- The production LNAV (B747_lnav_update_xtk and B747_lnav_update_vnav_hold, as B747_getCurrentWayPoint calls them),
 -- setDescentVSpeed (the approach's path inside 25 nm) and setDistances every 2 s (approach_model.lua's loader) on the
 -- EHAM route in the production order, the 747 flown along the legs and the fly-by arcs at the bank flown, in a flat
@@ -592,6 +592,52 @@ for n, p in ipairs(r) do
 end
 check(math.abs(worstDiff) <= 20, string.format("NETOM's 110 deg turn edited to straight on 3 nm before it: the new "
     .."route's path at once, largest difference %+.0f ft at %.2f nm", worstDiff, worstAt or -1))
+-- and a route edit while the step at a short leg's bisector is still being taken out (AM608 moved 1 nm back along its
+-- leg 0.05-0.8 nm after AM607's bisector on a 2.0 nm leg, that step -270 ft): the edit's own step (+266 ft) is over
+-- the 250 ft that are taken out, so the path is the new route's at once, the bisector's blend with it - as with the
+-- blend's state cleared at the edit; the blend carried on through the edit, the path stepped -265 ft at once and ran
+-- up to 265 ft off the new route's path (review 32 MINOR 1)
+local function upvalue(fn, name)
+    local i = 1
+    while true do
+        local n, v = debug.getupvalue(fn, i)
+        if n == nil or n == name then return v end
+        i = i + 1
+    end
+end
+local function clear_blend(d, ap)
+    upvalue(ap.setDescentVSpeed, "vnavPathBlend").lat = nil
+    upvalue(ap.B747_vnav_approach_path, "approachPathBlend").lat = nil
+end
+local function am608_back(route)
+    route[AM608][5], route[AM608][6] = move(route[AM607][5], route[AM607][6], 3, 177.4)
+end
+local function short_opts(extra)
+    local o = {tas = 270, bank = 20, alt = 6000, from_fix = 5, after = 3, ds = 0.01}
+    for k, v in pairs(extra or {}) do o[k] = v end
+    return o
+end
+r = fly({NIRSI, AM607}, short_opts(), short_leg(2.0))
+local switch
+for _, p in ipairs(r) do
+    if switch == nil and p.active == AM608 then switch = p.s end
+end
+check(switch ~= nil, "a 2.0 nm leg: AM608 made active at AM607's bisector")
+for _, after in ipairs({0.05, 0.3, 0.8}) do
+    local e = (switch or 0) + after
+    r = fly({NIRSI, AM607}, short_opts({edit = {s = e, fn = am608_back}}), short_leg(2.0))
+    reference = fly({NIRSI, AM607}, short_opts({edit = {s = e, fn = am608_back}, hooks = {{s = e, fn = clear_blend}}}),
+        short_leg(2.0))
+    worstDiff, worstAt = 0, nil
+    for n, p in ipairs(r) do
+        local w = reference[n]
+        if p.s >= e and p.path and w and w.path and math.abs(p.path - w.path) > math.abs(worstDiff) then
+            worstDiff, worstAt = p.path - w.path, p.s
+        end
+    end
+    check(math.abs(worstDiff) <= 5, string.format("AM608 moved 1 nm back %.2f nm after AM607's bisector on a 2.0 nm "
+        .."leg: the new route's path at once, largest difference %+.0f ft at %.2f nm", after, worstDiff, worstAt or -1))
+end
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV turn latch tests passed: "..checks)

@@ -627,7 +627,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   the 747 at 15 deg of bank: -503 ft at once at the turn's end), and a
   route edit's own step over 250 ft is taken at once (NETOM's 110 deg
   turn edited to straight on 3 nm before it: the new route's path at
-  once; blended, 229 ft off it). The turn carried on counts towards the
+  once; blended, 229 ft off it), the blend still being taken out with it
+  (AM608 moved 1 nm back 0.05-0.8 nm after AM607's bisector on a 2.0 nm
+  leg: the new route's path at once, as with the blend's state cleared at
+  the edit; carried on, -265 ft at once and up to 265 ft off it). The
+  turn carried on counts towards the
   distance off the path only up to its own outbound leg: flown straight on
   past AM607's arc in HDG SEL on the 2.6 nm leg, AM607's turn ends by
   8.3 nm (8.80 measured from that leg too).

@@ -361,12 +361,13 @@ end
 -- is taken at once, but one at a turn's own bisector - the path's point going from the turn's fix to the next (or the
 -- turn before's, carried on) - is taken out up to VNAV_PATH_BLEND_TURN_MAX_FT: on a leg shorter than about 2.4 nm the
 -- 747 crosses the next fix's bisector inside the turn's cut, and the step there (+255 ft with 2.2 nm, +268 with 2.0)
--- was taken at once (review 28 MINOR 2). What the blend still had to take out goes on through a change, whatever the
--- change's own step (raw: the path before the blend): with the step at a bisector still being taken out when the turn
--- ended, the two together went over 250 ft and at once (-503 ft; review 30 MINOR 2), and a route edit's own step
--- over 250 ft blended with them as a turn's end ran the path up to 258 ft off the new one (review 31 MINOR 1). Taken
--- out only as the distance fell, a step stayed while it grew under vectors (review 27). state: the descent profile's
--- (vnavPathBlend) or the approach path's.
+-- was taken at once (review 28 MINOR 2). What the blend still had to take out goes on through a change whose own step
+-- (raw: the path before the blend) is within the limit: with the step at a bisector still being taken out when the
+-- turn ended, the two together went over 250 ft and at once (-503 ft; review 30 MINOR 2). Over it, the new path is
+-- shown at once, the blend with it: a route edit's own step over 250 ft blended as a turn's end ran the path up to
+-- 258 ft off the new one (review 31 MINOR 1), and with the blend carried on through it the path stepped -265 ft at
+-- once and ran as far off the new one (review 32 MINOR 1). Taken out only as the distance fell, a step stayed while it
+-- grew under vectors (review 27). state: the descent profile's (vnavPathBlend) or the approach path's.
 local VNAV_PATH_BLEND_NM = 2
 local VNAV_PATH_BLEND_MAX_FT = 250
 local VNAV_PATH_BLEND_TURN_MAX_FT = 1000
@@ -388,8 +389,11 @@ local function B747_vnav_path_continuity(state, lat, lon, distance, alt)
           or B747_vnav_turn_switch(turn.prev, b.lat, b.lon, lat, lon)) then
         limit = VNAV_PATH_BLEND_TURN_MAX_FT
       end
-      if math.abs(own) > limit then own = 0 end
-      b.offset, b.from = carry + own, distance
+      if math.abs(own) > limit then
+        b.offset = 0
+      else
+        b.offset, b.from = carry + own, distance
+      end
     end
   else
     b.offset = 0
