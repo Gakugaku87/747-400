@@ -178,7 +178,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   30 C; at 0.6 EPR per Mach warm days ran up to 0.15 over it), above
   12,000 ft 0.6 EPR per Mach kept to the table's warm-day share at its
   10,000 ft row for the same ISA deviation (15,000 ft, 250 KIAS: 1.453 at
-  ISA, 1.425 at ISA+20, max climb at ISA+40; 0.03-0.15 over before), held
+  ISA, 1.425 at ISA+20, max climb at ISA+40; 0.03-0.15 over before; the
+  lapse to the row stopped at the tropopause: FL410 ISA+15 M.75 1.404, not
+  1.375; blended at 11,500 ft), held
   to 1.64 (M.81 at 35,000 ft gave 1.66), the table's 1.7 at
   15 C and 8,000 ft read as 1.47 - and CLB 1 and CLB 2 take 10 and 20 % off
   the climb thrust to 10,000 ft and give it back by 15,000 ft: the PW and
