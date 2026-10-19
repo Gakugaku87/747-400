@@ -2754,12 +2754,21 @@ end
 
 -- V1 WIND ADJUSTMENT
 local B747_V1windAdj = 0
+-- one row of the wind table (a headwind of hw kt) at the gross weight, between its weights
+local function B747_V1_wind_row(hw, weight_min, weight_max)
+    return B747_rescale(weight_min, V1windAdj[hw][weight_min], weight_max, V1windAdj[hw][weight_max],
+        simDR_acf_weight_total_kg)
+end
 function B747_V1_wind_adjustment()
 
     local weight_max = math.min(420000, roundUpToIncrement(simDR_acf_weight_total_kg, 20000))
     local weight_min = math.max(200000, weight_max-20000)
     weight_max = math.max(200000,weight_max)
-    local HW = simDR_wind_speed_kts * math.cos(math.rad(recipAngle(simDR_wind_heading_deg))-math.rad(simDR_position_mag_psi))
+    -- [takeoff speeds] the headwind component (the wind comes from wind_heading_deg_mag), + ahead: the table's rows
+    -- are headwinds (+10..+40 kt) and tailwinds (-5..-15 kt), each row between its weights. Taken as the tailwind
+    -- component and interpolated on the wind speed (and diagonally across the weights), a 20 kt headwind took 3 kt
+    -- off V1 at 310 t and a 10 kt tailwind added 1 (review 36)
+    local HW = simDR_wind_speed_kts * math.cos(math.rad(simDR_wind_heading_deg - simDR_position_mag_psi))
     local HWmax = 0
     local HWmin = 0
 
@@ -2771,7 +2780,8 @@ function B747_V1_wind_adjustment()
         HWmin = math.max(0, HWmax - 10)
     end
 
-    B747_V1windAdj = B747_rescale(HWmin, V1windAdj[HWmin][weight_min], HWmax, V1windAdj[HWmax][weight_max], simDR_wind_speed_kts)
+    B747_V1windAdj = B747_rescale(HWmin, B747_V1_wind_row(HWmin, weight_min, weight_max), HWmax,
+        B747_V1_wind_row(HWmax, weight_min, weight_max), HW)
 
 end
 

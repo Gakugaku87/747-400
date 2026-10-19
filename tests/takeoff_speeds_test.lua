@@ -81,6 +81,14 @@ check(near(v1, 116, 0.6) and near(vr, 119, 0.6), "233 t, flaps 20, sea level, TO
 v1, vr = speeds(233100, 20, 0, 15, 0, 0, 0, 2)
 check(near(v1, 108, 0.6) and near(vr, 114.2, 0.6), "233 t, flaps 20, sea level, TO 2: "..show(v1, vr)
     .." (108/114.2: VMCG, and the table's VR above VRMIN 111)")
+-- the V1 wind correction by the headwind component (the table's +10..+40 kt rows add 1-4 kt, its -5..-15 kt tailwind
+-- rows take 1-6 off), between its rows and weights: at 310 t (V1 125.9 calm) on a runway heading 280, wind from 280
+-- at 20 kt +2, from 100 at 10 kt -2.5 (the -10 kt row: -2 at 300 t, -3 at 320 t). Taken as the tailwind component
+-- and interpolated on the wind speed, a 40 kt headwind took 3 kt off (review 36)
+v1 = speeds(309700, 20, 20, 15, 280, 20, 280)
+check(near(v1, 127.9, 0.5), "310 t, flaps 20, runway 280, wind 280/20 (headwind): V1 "..show(v1).." (127.9)")
+v1 = speeds(309700, 20, 20, 15, 100, 10, 280)
+check(near(v1, 123.4, 0.5), "310 t, flaps 20, runway 280, wind 100/10 (tailwind): V1 "..show(v1).." (123.4)")
 -- V1 never above VR
 for _, w in ipairs({200000, 233100, 260000, 300000, 360000, 400000}) do
     for _, f in ipairs({10, 20}) do

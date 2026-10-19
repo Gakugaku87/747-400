@@ -47,7 +47,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   VR; the PW4056's VMCG/VRMIN by pressure altitude and actual OAT, lower
   with TO 1 / TO 2: at 233 t, flaps 20, sea level 121/124/144 (the tables'
   101/114/139), at 6,000 ft 10 C 113/116, at 40 C 117/120, and 310 t
-  unchanged at 126/141.5/159.5 (6 of the 19 checks failed before).
+  unchanged at 126/141.5/159.5 (6 of the 19 checks failed before); the
+  V1 wind correction goes by the headwind component, between the table's
+  rows and weights (310 t: +2 for a 20 kt headwind, -2.5 for a 10 kt
+  tailwind; as the tailwind component on the wind speed -3 and +1).
 - `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230KT CLB"),
   the ECON/SEL SPD label, the CAS/Mach speed pair, the blank SPD REST
   field, and the CRZ page titles ("ACT ECON CRZ" / "ACT M.801 CRZ") with the
