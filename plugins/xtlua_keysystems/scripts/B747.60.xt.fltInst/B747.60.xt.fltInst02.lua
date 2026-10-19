@@ -2734,15 +2734,21 @@ function B747_setTempAltRegion()
     B747_getTempAltRegions()
 
     local num_regions = #regions
-    local altitude = B747_takeoff_pressure_altitude()
+    -- [takeoff speeds] below the chart's bottom (-2,000 ft) or colder than its left edge (-60 C) the chart is entered
+    -- on that edge, and each region runs from its bottom and left edge to its top and right edge, so that a point on
+    -- the line between two is in the higher one; above region E's top (about 8,000 ft at 0 C) or hotter than its right
+    -- edge region E. Left at 0, the speeds' lookup failed on a nil index (review 36); with strict edges a point on a
+    -- line was in no region and taken as E, and -62 C at 9,000 ft as A (review 38)
+    local altitude = math.max(B747_takeoff_pressure_altitude(), regions[1].b)
+    local oat = math.max(simDR_OAT_degC, regions[1].l)
 
     for i=1, num_regions do
 
         local r = regions[i]
 
-        if (simDR_OAT_degC > r.l) and (simDR_OAT_degC < r.r) then
+        if (oat >= r.l) and (oat < r.r) then
 
-            if (altitude > r.b) and (altitude < r.t) then
+            if (altitude >= r.b) and (altitude < r.t) then
 
                 r.f()
 
@@ -2752,14 +2758,7 @@ function B747_setTempAltRegion()
         end -- TEMPERATURE TEST
     end -- LOOP ALL REGIONS
 
-    -- [takeoff speeds] beyond the chart's regions the nearest: below region A's bottom or colder than its left edge
-    -- A, else (above region E's top - about 8,000 ft at 0 C - or hotter than its right edge) E. Left at 0, the speeds'
-    -- lookup failed on a nil index (review 36)
-    if altitude <= regions[1].b or simDR_OAT_degC <= regions[1].l then
-        tempAltRegion = 1
-    else
-        tempAltRegion = num_regions
-    end
+    tempAltRegion = num_regions
     return false
 
 end

@@ -139,6 +139,19 @@ check(ok and high_v1 == 135, "300 t, flaps 20, 9,000 ft, 0 C (above region E): V
 local cold_ok, cold_v1 = pcall(speeds, 300000, 20, 0, -62)
 check(cold_ok and cold_v1 == 123, "300 t, flaps 20, sea level, -62 C (left of the chart): V1 "..tostring(cold_v1)
     .." (123, region A)")
+-- colder than the chart its left edge at the airport's altitude: -62 C at 9,000 ft region E (V1 135, not A's 123);
+-- and a point on the line between two regions in the higher one: at 0 C on region A's top (1,050.89 ft) 360 t is
+-- region B's 143/160/173, between A's 140/158/173 below and B above (strict edges left it in no region, then E:
+-- 152/166/174; review 38)
+local cold_high_ok, cold_high_v1 = pcall(speeds, 300000, 20, 9000, -62)
+check(cold_high_ok and cold_high_v1 == 135, "300 t, flaps 20, 9,000 ft, -62 C: V1 "..tostring(cold_high_v1)
+    .." (135, region E)")
+-- and below its bottom on its bottom: -1,240 ft with QNH 30.92 (a pressure altitude of -2,240 ft) region A
+local low_ok, low_v1 = pcall(speeds, 300000, 20, -1240, 15, 0, 0, 0, 0, 30.92)
+check(low_ok and low_v1 == 123, "300 t, flaps 20, -1,240 ft, QNH 30.92: V1 "..tostring(low_v1).." (123, region A)")
+v1, vr, v2 = speeds(360000, 20, 1050.89, 0)
+check(v1 == 143 and vr == 160 and v2 == 173, "360 t, flaps 20, 0 C on region A's top (1,050.89 ft): "
+    ..show(v1, vr, v2).." (143/160/173, region B)")
 -- by pressure altitude, as the FCOM's tables: at a sea level airport with QNH 28.92 inHg (pressure altitude about
 -- 1,000 ft) VMCG/VRMIN 119.5/122.5, not the altimeter's sea level 121/124 (review 36)
 v1, vr = speeds(233100, 20, 0, 15, 0, 0, 0, 0, 28.92)
@@ -221,15 +234,15 @@ do
 end
 for _, w in ipairs({360000, 380000, 400000}) do
     v1, vr, v2 = speeds(w, 20, 9000, 0)
-    check(v1 and v2 and v1 <= vr and vr < v2, string.format("%d t, flaps 20, 9,000 ft, 0 C (region E): %s (V1 <= VR < V2)",
-        w / 1000, show(v1, vr, v2)))
+    check(v1 and v2 and v1 <= vr and vr < v2, string.format("%d t, flaps 20, 9,000 ft, 0 C (region E): %s "
+        .."(V1 <= VR < V2)", w / 1000, show(v1, vr, v2)))
 end
 -- V1 never above VR
 for _, w in ipairs({200000, 233100, 260000, 300000, 360000, 400000}) do
     for _, f in ipairs({10, 20}) do
         v1, vr, v2 = speeds(w, f, 0, 15)
-        check(v1 and v2 and v1 <= vr + 1e-6 and vr < v2, string.format("%d t, flaps %d: V1 <= VR < V2 (%s)", w / 1000, f,
-            show(v1, vr, v2)))
+        check(v1 and v2 and v1 <= vr + 1e-6 and vr < v2, string.format("%d t, flaps %d: V1 <= VR < V2 (%s)",
+            w / 1000, f, show(v1, vr, v2)))
     end
 end
 
