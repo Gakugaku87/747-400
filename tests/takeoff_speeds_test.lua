@@ -68,8 +68,8 @@ local function show(v1, vr, v2) return string.format("%.1f/%.1f/%.1f", v1 or -1,
 -- light: V1 at VMCG, VR at VRMIN, V2 the "V2 for VRMIN" (flaps 20: VR 120 -> 140/140/139/139 at 200/220/240/260 t,
 -- VR 125 -> 147/146/145/145)
 local v1, vr, v2 = speeds(233100, 20, 200, 15)
-check(v1 == 121 and vr == 124 and v2 == 145, "233 t, flaps 20, sea level, 15 C: "
-    ..show(v1, vr, v2).." (121/124/145: VMCG, VRMIN and the V2 for VRMIN, rounded up)")
+check(v1 == 121 and vr == 124 and v2 == 144, "233 t, flaps 20, sea level, 15 C: "
+    ..show(v1, vr, v2).." (121/124/144: VMCG and VRMIN rounded up, the V2 for that VR, 144.1, rounded)")
 -- heavy enough: the tables' own speeds (126/141.5/159.5 at 310 t)
 v1, vr, v2 = speeds(309700, 20, 20, 15)
 check(v1 == 126 and vr == 141 and v2 == 159, "310 t, flaps 20, sea level, 15 C: "
@@ -124,8 +124,8 @@ do
 end
 -- between the minimum tables' rows and on their slopes (review 36: changes that dropped the altitude interpolation,
 -- the VR in the V2 for VRMIN or the V1 <= VR clamp still passed): 1,000 ft 13 C 119.5/122.5/142.3 (120/123/143),
--- 3,000 ft 9 C 116.5/119.5/138.7 (117/120/140), sea level 35 C 119.8/122.8/142.7 (120/123/143)
-for _, case in ipairs({{1000, 13, 120, 123, 143}, {3000, 9, 117, 120, 140}, {0, 35, 120, 123, 143}}) do
+-- 3,000 ft 9 C 116.5/119.5/138.7 (117/120/139), sea level 35 C 119.8/122.8/142.7 (120/123/143)
+for _, case in ipairs({{1000, 13, 120, 123, 143}, {3000, 9, 117, 120, 139}, {0, 35, 120, 123, 143}}) do
     v1, vr, v2 = speeds(233100, 20, case[1], case[2])
     check(v1 == case[3] and vr == case[4] and v2 == case[5], string.format("233 t, flaps 20, %d ft, %d C: %s "
         .."(%d/%d/%d)", case[1], case[2], show(v1, vr, v2), case[3], case[4], case[5]))
