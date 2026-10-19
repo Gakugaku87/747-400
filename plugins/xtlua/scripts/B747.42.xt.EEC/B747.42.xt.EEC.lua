@@ -76,6 +76,23 @@ function B747_rescale(in1, out1, in2, out2, x)
     return out1 + (out2 - out1) * (x - in1) / (in2 - in1)
 end
 
+-- [climb thrust] The 747-400's CLB, CLB 1 and CLB 2 are rated thrusts: the FMC's reference EPR/N1 from pressure
+-- altitude and TAT, which the A/T holds in THR REF; the climb rate is the result (FCOM). CLB 1 and CLB 2 take 10 and
+-- 20 % off the climb thrust to 10,000 ft and give it back linearly by 15,000 ft (the common schedule; 744 FCOM via BA
+-- and Virgin). The share of the climb thrust kept, for a derate (0, 1 or 2) at an altitude (ft):
+function B747_clb_share(derate, altitude_ft)
+    if derate == 1 then return B747_rescale(10000.0, 0.9, 15000.0, 1.0, altitude_ft) end
+    if derate == 2 then return B747_rescale(10000.0, 0.8, 15000.0, 1.0, altitude_ft) end
+    return 1.0
+end
+-- the Mach of a calibrated airspeed (kt) at a pressure altitude (ft) in the standard atmosphere
+function B747_cas_to_mach(cas_kt, altitude_ft)
+    local delta = (1 - 6.8756e-6 * math.min(altitude_ft, 36089)) ^ 5.2559
+    if altitude_ft > 36089 then delta = delta * math.exp(-4.8063e-5 * (altitude_ft - 36089)) end
+    local qc = (1 + 0.2 * (cas_kt / 661.47) ^ 2) ^ 3.5 - 1
+    return math.sqrt(5 * ((qc / delta + 1) ^ (2 / 7) - 1))
+end
+
 function round_thrustcalc(x, input_type)
     --print("x IN = "..x)
 

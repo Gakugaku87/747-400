@@ -149,9 +149,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   never in the LOC capture frame, APP leaving the MCP heading alone, and LNAV
   still steering (and reselecting the heading mode) while LOC is armed.
 - `eec_climb_thrust_test.lua`: the CLB thrust reference of the GE, PW and RR
-  EEC modules - the weight-based target for a light aircraft below
-  20,000 ft, max climb above it (as upstream gave the GE engines), and max
-  climb for a heavy aircraft.
+  EEC modules is the rated climb thrust at every altitude, weight and flap
+  setting, as on the 747-400 (the thrust for the EEC's design climb rate,
+  taken below 20,000 ft where it was less, left a light 747 at 1,560 fpm at
+  10,000 ft and 250 kt; 46 of the 62 checks failed before): the PW's max
+  climb EPR is raised below its 340 kt / M.84 schedule by 0.6 EPR per Mach
+  from 200 KIAS up (1.45 at 10,000 ft and 250 KIAS, 1.50 at 200 KIAS, as
+  the FCOM's tables), and CLB 1 and CLB 2 take 10 and 20 % off the climb
+  thrust to 10,000 ft and give it back by 15,000 ft.
 - `xtlua_warm_reads_test.lua`: XTLua gives 0 for the first read of a
   dataref in a script module, so the datarefs that a fix first reads at a
   critical moment are read every frame in the module's per-frame function

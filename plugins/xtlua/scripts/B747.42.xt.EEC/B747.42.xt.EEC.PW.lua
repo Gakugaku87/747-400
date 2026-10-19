@@ -601,24 +601,23 @@ function engine_idle_control_PW(altitude_ft_in)
         orig_thrust_n = simDR_thrust_max
       end
     elseif string.match(B747DR_ref_thr_limit_mode, "CLB") then
-      EPR_actual, EPR_initial_climb, EPR_max_climb = in_flight_EPR_PW(altitude_ft_in, 0)
-  
+      _, _, EPR_max_climb = in_flight_EPR_PW(altitude_ft_in, 0)
+      -- [climb thrust] the rated climb EPR at every altitude and weight (B747_clb_share), not the thrust the EEC's
+      -- drag model gives for a design climb rate (2,750 fpm below 10,000 ft for the PW4056) where that was less: at
+      -- 231 t the 747 climbed 1,560 fpm at 10,000 ft and 250 kt (max climb thrust gives about 4,000) and 30 fpm
+      -- accelerating to 290 kt there. Max climb is tabled for the 340 kt / M.84 climb; slower, the rating is higher
+      -- (the Initial Climb table at 200 KIAS: 1.50 at 10,000 ft against 1.35, -0.01 to -0.02 EPR per 20 kt above
+      -- 200): 0.6 EPR per Mach below the schedule's, from 200 KIAS up. A derate as the thrust above EPR 1.
+      local schedule = math.min(0.84, B747_cas_to_mach(340, altitude_ft_in))
+      local slow = math.max(mach, B747_cas_to_mach(200, altitude_ft_in))
+      local EPR_climb = EPR_max_climb + 0.6 * math.max(0, schedule - slow)
+      EPR_climb = 1 + (EPR_climb - 1) * B747_clb_share(B747DR_clbderate, altitude_ft_in)
+      local EPR_ref = string.format("%3.2f", EPR_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value
+
         --Set target bugs
       for i = 0, 3 do
-        -- max climb above 20,000 ft, as upstream e286c7da did for the GE engines: the weight-based
-        -- target left a light 747 climbing at a few hundred fpm in the 20s
-        if EPR_actual > EPR_max_climb or altitude_ft_in > 20000 then
-          if EPR_initial_climb > EPR_max_climb then
-            EPR_target_bug[i] = string.format("%3.2f", EPR_initial_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value
-            display_EPR_ref[i] = math.min(string.format("%3.2f", EPR_initial_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value, 1.71)
-          else
-            EPR_target_bug[i] = string.format("%3.2f", EPR_max_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value
-            display_EPR_ref[i] = math.min(string.format("%3.2f", EPR_max_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value, 1.71)
-          end
-        else
-          EPR_target_bug[i] = string.format("%3.2f", EPR_actual) + packs_adjustment_value + engine_anti_ice_adjustment_value
-          display_EPR_ref[i] = math.min(string.format("%3.2f", EPR_actual) + packs_adjustment_value + engine_anti_ice_adjustment_value, 1.71)
-        end
+        EPR_target_bug[i] = EPR_ref
+        display_EPR_ref[i] = math.min(EPR_ref, 1.71)
 
         if B747DR_display_EPR_max[i] < B747DR_display_EPR_ref[i] then
           display_EPR_max[i] = B747DR_display_EPR_ref[i]
