@@ -2199,7 +2199,7 @@ function setDistances(fmsO)
 	-- [B-14] a fix LNAV sequenced early for its turn (B747DR_vnav_hold_index) stays the path's next point until the
 	-- aircraft is past the turn's bisector, as it stays the approach path's and the speed limits' fix: marked only
 	-- from the active fix, the profile had setDescentVSpeed aim at the fix after it from the turn's start (NETOM's
-	-- 97 deg turn: at NIRSI, 10 nm on, 180 ft below the leg into NETOM), and only the AFDS's altitude at the held
+	-- 86 deg turn: at NIRSI, 10 nm on, 180 ft below the leg into NETOM), and only the AFDS's altitude at the held
 	-- fix's stopped the descent there
 	local held = B747DR_vnav_hold_index or 0
 	if held >= start then held = 0 end
@@ -3431,12 +3431,18 @@ local lnavHoldIndex=0
 local lnavHoldInCourse=0
 local lnavHoldOutCourse=0
 local lnavHoldMaxNm=0
+-- [B-14] The held fix's turn for VNAV's descent path (setDescentVSpeed, afds.vnav_turn_distance_nm): {fix (its
+-- index), in_course, out_course, lead_nm (B747_lnav_turn_anticipation_nm when it was held), start_nm (the distance
+-- to it then), released (past the bisector)}, kept once released until the active fix changes again; nil without a
+-- held turn and once vectored away.
+B747_lnav_vnav_turn=nil
 function B747_lnav_update_vnav_hold(fmsO)
 	local current=B747DR_fmscurrentIndex
 	if current~=lnavHoldLastIndex then
 		local passed=lnavHoldLastIndex
 		lnavHoldLastIndex=current
 		lnavHoldIndex=0
+		B747_lnav_vnav_turn=nil
 		local fix=fmsO[passed]
 		local nextFix=fmsO[current]
 		if current==passed+1 and passed>=2 and nextFix~=nil and B747_lnav_leg_supports_preemption(fix)
@@ -3445,11 +3451,14 @@ function B747_lnav_update_vnav_hold(fmsO)
 			local inCourse=B747_lnav_inbound_course(fmsO,passed)
 			local outCourse=getHeading(fix[5],fix[6],nextFix[5],nextFix[6])
 			local distance=getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)
-			if distance<=B747_lnav_turn_anticipation_nm(inCourse,outCourse)+LNAV_VNAV_HOLD_MARGIN_NM then
+			local lead=B747_lnav_turn_anticipation_nm(inCourse,outCourse)
+			if distance<=lead+LNAV_VNAV_HOLD_MARGIN_NM then
 				lnavHoldIndex=passed
 				lnavHoldInCourse=inCourse
 				lnavHoldOutCourse=outCourse
 				lnavHoldMaxNm=1.5*distance+LNAV_VNAV_HOLD_MARGIN_NM
+				B747_lnav_vnav_turn={fix=passed,in_course=inCourse,out_course=outCourse,lead_nm=lead,start_nm=distance,
+					released=false}
 			end
 		end
 	end
@@ -3457,12 +3466,17 @@ function B747_lnav_update_vnav_hold(fmsO)
 		local fix=fmsO[lnavHoldIndex]
 		if fix==nil then
 			lnavHoldIndex=0
+			B747_lnav_vnav_turn=nil
 		else
 			local distance=getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)
 			local bearing=math.rad(getHeading(fix[5],fix[6],simDR_latitude,simDR_longitude))
-			if distance>lnavHoldMaxNm or B747_afds_helpers.past_turn_bisector(distance*math.sin(bearing),
+			if distance>lnavHoldMaxNm then
+				lnavHoldIndex=0
+				B747_lnav_vnav_turn=nil
+			elseif B747_afds_helpers.past_turn_bisector(distance*math.sin(bearing),
 				distance*math.cos(bearing),lnavHoldInCourse,lnavHoldOutCourse)~=false then
 				lnavHoldIndex=0
+				if B747_lnav_vnav_turn~=nil then B747_lnav_vnav_turn.released=true end
 			end
 		end
 	end

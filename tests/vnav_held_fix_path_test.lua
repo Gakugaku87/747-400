@@ -2,7 +2,7 @@
 -- [B-14] A fix LNAV sequenced early for its turn (B747DR_vnav_hold_index) stays the next point of VNAV's descent
 -- path (setDistances' profile) until the aircraft is past the turn's bisector, as it stays the approach path's and
 -- the speed limits' fix: the profile marked only the active fix and those after it, so at the start of NETOM's
--- 97 deg turn (sequenced at its lead) setDescentVSpeed aimed at NIRSI's 5563 ft, 10 nm on, the aircraft 180 ft above
+-- 86 deg turn (sequenced at its lead) setDescentVSpeed aimed at NIRSI's 5563 ft, 10 nm on, the aircraft 180 ft above
 -- that path, and descended through NETOM's 7849 before reaching it; only the AFDS's altitude at the held fix's
 -- (VNAV_NEXT_ALT) stopped it there. The production setDistances and setDescentVSpeed (approach_model.lua's loader)
 -- on the EHAM route, 1 nm before NETOM on the leg from SUGOL at its path's altitude, NIRSI active and NETOM held.

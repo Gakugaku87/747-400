@@ -306,6 +306,34 @@ function deceleratedDesent(targetvspeed)
 
 
 end
+-- [B-14] The distance to the route's entry fmsO[index] through the fly-by turn LNAV flies at the fix it holds
+-- (B747_lnav_vnav_turn, afds.vnav_turn_distance_nm): to that fix (until the bisector, and on past it while the path
+-- still aims at it: the profile's flags change up to 2 s later), or once past the bisector to the fix after it;
+-- elsewhere the straight distance (direct)
+local function B747_vnav_turn_distance(fmsO, index, direct)
+  local turn = B747_lnav_vnav_turn
+  if turn == nil or fmsO == nil or fmsO[turn.fix] == nil or fmsO[index] == nil then return direct end
+  local toFix = index == turn.fix
+  if not toFix and not (turn.released and index == turn.fix + 1) then return direct end
+  local fix = fmsO[turn.fix]
+  local d = getDistance(fix[5], fix[6], simDR_latitude, simDR_longitude)
+  local b = math.rad(getHeading(fix[5], fix[6], simDR_latitude, simDR_longitude))
+  local leg = toFix and 0 or getDistance(fix[5], fix[6], fmsO[index][5], fmsO[index][6])
+  return B747_afds_helpers.vnav_turn_distance_nm(d * math.sin(b), d * math.cos(b), turn.in_course, turn.out_course,
+    turn.lead_nm, turn.start_nm, toFix, leg, direct)
+end
+-- the same to the descent profile's entry `point` (its position), when that is the turn's fix or the one after it
+local function B747_vnav_point_distance(fmsO, point, direct)
+  local turn = B747_lnav_vnav_turn
+  if turn == nil or fmsO == nil then return direct end
+  for _, index in ipairs({turn.fix, turn.fix + 1}) do
+    local entry = fmsO[index]
+    if entry ~= nil and math.abs(entry[5] - point[1]) <= 1e-7 and math.abs(entry[6] - point[2]) <= 1e-7 then
+      return B747_vnav_turn_distance(fmsO, index, direct)
+    end
+  end
+  return direct
+end
 -- [A-5] The approach's path to the runway (B747_afds_helpers.vnav_approach_path) at the aircraft:
 -- {alt, gradient, distance, ahead = the next fix's point} within VNAV_APPROACH_RANGE_NM of the arrival
 -- runway along the route (then
@@ -346,6 +374,33 @@ function B747_vnav_approach_path(fmsO)
     if point.index ~= nil and point.index >= first and point.index < ahead.index then ahead = point end
   end
   return {alt = alt, gradient = gradient, distance = distance, ahead = ahead}
+end
+-- [B-14] When the path's next point changes, the path's altitude is carried on from where it was and the step is
+-- taken out over the next VNAV_PATH_BLEND_NM (a real FMC's path is one line along the lateral path): the turns' legs
+-- and arcs do not quite match (LNAV draws its arc for the TAS it is coming to, in the wind), and the profile's flags
+-- change up to 2 s after the bisector. A step over VNAV_PATH_BLEND_MAX_FT (a new route, a direct-to) is taken at once.
+local VNAV_PATH_BLEND_NM = 2
+local VNAV_PATH_BLEND_MAX_FT = 250
+local vnavPathBlend = {lat = nil, lon = nil, alt = 0, offset = 0, from = 0, t = -100}
+local function B747_vnav_path_continuity(point, distance, alt)
+  local b = vnavPathBlend
+  if b.lat ~= nil and simDRTime - b.t <= 5 then
+    if math.abs(point[1] - b.lat) > 1e-7 or math.abs(point[2] - b.lon) > 1e-7 then
+      local step = b.alt - alt
+      if math.abs(step) <= VNAV_PATH_BLEND_MAX_FT then b.offset, b.from = step, distance else b.offset = 0 end
+    end
+  else
+    b.offset = 0
+  end
+  local offset = 0
+  if b.offset ~= 0 then
+    local w = math.max(0, math.min(1, 1 - (b.from - distance) / VNAV_PATH_BLEND_NM))
+    offset = b.offset * w
+    if w <= 0 then b.offset = 0 end
+  end
+  b.lat, b.lon, b.t = point[1], point[2], simDRTime
+  b.alt = alt + offset
+  return b.alt
 end
 function setDescentVSpeed(fmsO)
   -- [A-5] In the approach VNAV PTH flies the path to the runway: the path error is from it, and the V/S
@@ -394,8 +449,9 @@ function setDescentVSpeed(fmsO)
           --if i==1 then break end
           --local altDiff=vnavData[i-1][3]-vnavData[i][3]
 
-          local legDist = getDistance(simDR_latitude, simDR_longitude, vnavData[i][1], vnavData[i][2])
-          glideAlt= legDist*vnavData[i][5] +vnavData[i][3]
+          local legDist = B747_vnav_point_distance(fmsO, vnavData[i],
+            getDistance(simDR_latitude, simDR_longitude, vnavData[i][1], vnavData[i][2]))
+          glideAlt = B747_vnav_path_continuity(vnavData[i], legDist, legDist*vnavData[i][5] +vnavData[i][3])
           pathGradient=vnavData[i][5]
           B747DR_ap_vnav_target_alt=vnavData[i][3]
           B747DR_fmstargetDistance=legDist

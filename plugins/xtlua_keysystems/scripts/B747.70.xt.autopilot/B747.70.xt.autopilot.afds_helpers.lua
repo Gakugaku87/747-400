@@ -874,6 +874,43 @@ function afds.vnav_path_alt(native_alt_ft, constraint)
     return alt
 end
 
+-- [B-14] The distance VNAV's descent path (setDescentVSpeed) takes to a point through a fly-by turn at the fix F:
+-- along the legs, as the profile's gradients are (fix to fix), and not straight to the point, with F's altitude the
+-- path's at the turn's bisector, where the FMC sequences F. east_nm, north_nm: the aircraft from F; the turn from
+-- in_course_deg to out_course_deg (true) starts lead_nm before F (B747_lnav_vnav_turn, as LNAV flies it), and F was
+-- held start_nm from it (nil: lead_nm); to_fix:
+-- the distance to F (held for its turn until the bisector), else to the next fix, leg_nm from F; direct_nm: the
+-- straight distance to that point, taken from 2 nm off the leg (vectored; 1 nm more than the arc's middle where that
+-- is farther) to all of it 2 nm farther. On the legs the
+-- along-track distance; the arc's middle lies cut_nm (lead (1 - cos(turn / 2))) short of F along the inbound leg and
+-- as far past it along the outbound one, which is taken off from where F was held to the bisector and given back
+-- from there to the turn's end, so the path is continuous at the bisector and at F's altitude there. The straight distance made the path about 200 ft high at NETOM's bisector
+-- (86 deg, 1 nm inside the fix) and, cutting the turn to the next fix, 300-380 ft lower once F was let go there.
+function afds.vnav_turn_distance_nm(east_nm, north_nm, in_course_deg, out_course_deg, lead_nm, start_nm, to_fix,
+        leg_nm, direct_nm)
+    local turn = math.abs(((out_course_deg - in_course_deg + 540) % 360) - 180)
+    local cut = lead_nm * (1 - math.cos(math.rad(turn / 2)))
+    local course = to_fix and in_course_deg or out_course_deg
+    local ue, un = math.sin(math.rad(course)), math.cos(math.rad(course))
+    local along = east_nm * ue + north_nm * un                  -- past F along the leg, negative before it
+    local cross = math.abs(east_nm * un - north_nm * ue)
+    local distance
+    if to_fix then
+        local before = -along
+        local from = start_nm or lead_nm
+        local w = 1
+        if from > cut then w = math.max(0, math.min(1, (from - before) / (from - cut))) end
+        distance = before - cut * w
+    else
+        local w = 1
+        if lead_nm > cut then w = math.max(0, math.min(1, (along - cut) / (lead_nm - cut))) end
+        distance = leg_nm - along + cut * (1 - w)
+    end
+    local inside = turn > 0.5 and cut / math.tan(math.rad(turn / 2)) or 0
+    local off = math.max(0, math.min(1, (cross - math.max(2, inside + 1)) / 2))
+    return distance + (direct_nm - distance) * off
+end
+
 -- [d] Cruise climb after the ALT selector push
 -- The climb starts 2 s after the push.  By then CRZ ALT may be back at the
 -- level being flown (put back, or the step cancelled), and close to T/D a

@@ -567,6 +567,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   above FL070, each within 200 ft of its path, and the V/S stays at 500 fpm
   or more within 30 s of each (each point's altitude was the AFDS's
   level-off).
+- `vnav_turn_path_test.lua`: VNAV's descent path through a fly-by turn is
+  continuous and at the fix's altitude at the turn's bisector - the
+  production LNAV (the hold of NETOM for its 86 deg turn and its release at
+  the bisector), setDistances and setDescentVSpeed, the 747 flown along the
+  inbound leg, the arc LNAV draws (and a tighter one) and the outbound leg:
+  no step over 15 ft in 0.02 nm (the straight distance to the point dropped
+  the path 480 ft at the release), NETOM's 7849 at the bisector, and the
+  legs' paths as before away from the turn.
 - `vnav_spd_level_off_test.lua`: VNAV SPD's descent (FLCH: the IAS window
   open above SPD TRANS) still levels off at the route's points and the
   STAR's floors - SUGOL's 11315 with the MCP at 2000, also where it levelled
