@@ -582,6 +582,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   the path 480 ft at the release), NETOM's 7849 at the bisector, and the
   legs' paths as before away from the turn; so is the approach's path
   (B747_vnav_approach_path) through NIRSI's 65 deg turn (it stepped 168 ft).
+  Both also with the turn sequenced at its bisector, as LNAV sequences a turn
+  it flies by its path (with the turn known only from that sequence NETOM's
+  path stepped 290 ft and NIRSI's was 59 ft high at the bisector).
 - `vnav_mcp_push_test.lua`: after an ALT selector push in the descent (the
   MCP dialled down from VNAV ALT) the AFDS's altitude is the new MCP
   altitude at once (it was NETOM's 7849 above the cleared 7000 for 30 s),

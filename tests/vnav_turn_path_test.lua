@@ -9,7 +9,9 @@
 -- hold and its release at the bisector), setDistances, setDescentVSpeed and B747_vnav_approach_path
 -- (approach_model.lua's loader) on the EHAM route, the 747 flown along the inbound leg, the fly-by arc from the turn's
 -- lead (afds.lnav_turn_anticipation_nm at LNAV's 20 deg of bank, and a tighter 25 deg one) and the outbound leg, the
--- next fix made the active one at the turn's start as LNAV does, the descent profile rebuilt every 2 s.
+-- next fix made the active one at the turn's bisector as LNAV does for a turn it flies by its path (review 27: with the
+-- turn known only from that sequence the path still stepped 245 ft at NETOM), or at the turn's start as for the leg
+-- after a direct-to (the fix held to the bisector), the descent profile rebuilt every 2 s.
 local model = dofile("tests/approach_model.lua")
 local afds = dofile("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.xt.autopilot.afds_helpers.lua")
 local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/"
@@ -53,9 +55,10 @@ ap.B747_reset_vnav_energy()
 local function unit(h) return math.sin(math.rad(h)), math.cos(math.rad(h)) end
 -- flies to route[k]'s turn: `before` nm of the inbound leg to the turn's start, the fly-by arc for bank_deg (from its
 -- lead before the fix to as far past it) and 4 nm of the outbound leg, in 0.02 nm steps at tas_kt and alt_ft, the
--- descent profile rebuilt every 2 s; observe() gives the path's altitude. Returns the samples, where the hold began
--- and ended, the largest step and where, and helpers.
-local function fly(k, bank_deg, tas_kt, alt_ft, before, observe)
+-- descent profile rebuilt every 2 s; observe() gives the path's altitude; the next fix made the active one at the
+-- turn's bisector (seq "bisector") or start (else). Returns the samples, where the hold began and ended (where the
+-- next fix became active, sequenced at the bisector), the largest step and where, and helpers.
+local function fly(k, bank_deg, tas_kt, alt_ft, before, observe, seq)
     local F = route[k]
     local inCourse = (ap.getHeading(F[5], F[6], route[k - 1][5], route[k - 1][6]) + 180) % 360
     local outCourse = ap.getHeading(F[5], F[6], route[k + 1][5], route[k + 1][6])
@@ -88,17 +91,24 @@ local function fly(k, bank_deg, tas_kt, alt_ft, before, observe)
         local ee, en = lead * oe, lead * on
         return ee + (s - before - arcLen) * oe, en + (s - before - arcLen) * on, outCourse
     end
-    local samples, active = {}, k
+    local samples, active, switched = {}, k, nil
     local steps_2s = math.max(1, math.floor(tas_kt / 3600 * 2 / 0.02 + 0.5))
     d.B747DR_fmscurrentIndex = k
     for i = 1, #route do route[i][10] = (i == k) end
+    local e0, n0 = position(0)
+    d.simDR_latitude, d.simDR_longitude = at(e0, n0)
+    d.simDR_true_heading, d.simDR_ground_track_true = inCourse, inCourse
     ap.B747_lnav_update_vnav_hold(route)
     local s, step = 0, 0
     while s <= before + arcLen + 4 do
         local east, north, track = position(s)
         d.simDR_latitude, d.simDR_longitude = at(east, north)
         d.simDR_true_heading, d.simDR_ground_track_true = track % 360, track % 360
-        if active == k and s >= before then active = k + 1 end      -- LNAV makes the next fix active at the turn's start
+        -- LNAV makes the next fix active at the turn's bisector or start
+        if active == k and s >= (seq == "bisector" and before + arcLen / 2 or before) then
+            active = k + 1
+            switched = #samples + 1
+        end
         for i = 1, #route do route[i][10] = (i == active) end
         d.B747DR_fmscurrentIndex = active
         ap.B747_lnav_update_vnav_hold(route)
@@ -111,6 +121,7 @@ local function fly(k, bank_deg, tas_kt, alt_ft, before, observe)
         if q.hold == k and held == nil then held = n end
         if held and q.hold == 0 and released == nil then released = n end
     end
+    if seq == "bisector" then held, released = switched, switched end
     local worst, where = 0, samples[1]
     for n = 2, #samples do
         if samples[n].path and samples[n - 1].path then
@@ -173,6 +184,19 @@ end
 samples, held, released, worst, where = fly(NIRSI, 25, 240, 5600, 3, approach_path)
 check(worst <= 15, string.format("NIRSI with a 25 deg arc against LNAV's 20 deg lead: largest step %.0f ft in 0.02 nm "
     .."at %.2f nm", worst, where.s))
+-- 4. the turns as LNAV sequences those it flies by its path: at the bisector (review 27)
+for _, c in ipairs({{NETOM, 290, 8000, 6, descent_path, "the descent path"},
+        {NIRSI, 240, 5600, 3, approach_path, "the approach's path"}}) do
+    F = route[c[1]]
+    samples, held, released, worst, where, at, turn = fly(c[1], 20, c[2], c[3], c[4], c[5], "bisector")
+    check(released ~= nil and worst <= 15, string.format("%s through %s's %.0f deg turn sequenced at its bisector: "
+        .."largest step %.0f ft in 0.02 nm at %.2f nm (the sequence: %s nm)", c[6], F[8], turn, worst, where.s,
+        released and string.format("%.2f", samples[released].s) or "none"))
+    if released then
+        check(math.abs(samples[released].path - F[9]) <= 30, string.format("%s at %s's bisector: its %d ft, got %.0f",
+            c[6], F[8], F[9], samples[released].path))
+    end
+end
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV turn path tests passed: "..checks)

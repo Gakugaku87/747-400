@@ -3432,19 +3432,64 @@ local lnavHoldIndex=0
 local lnavHoldInCourse=0
 local lnavHoldOutCourse=0
 local lnavHoldMaxNm=0
--- [B-14] The held fix's turn for VNAV's descent path (setDescentVSpeed, afds.vnav_turn_distance_nm): {fix (its
--- index), in_course, out_course, lead_nm (B747_lnav_turn_anticipation_nm when it was held), start_nm (the distance
--- to it then), released (past the bisector)}, kept once released until the active fix changes again; nil without a
--- held turn and once vectored away. With a metatable, as B747_route_constraints: XTLua copies a global table without
--- one into a namespace of its own, whose read of a missing index recurses until the stack overflows.
+-- [B-14] The turn VNAV's descent path goes through (setDescentVSpeed, afds.vnav_turn_distance_nm): {fix (its
+-- index), in_course, out_course, lead_nm (B747_lnav_turn_anticipation_nm), start_nm (the distance to the fix when
+-- taken), released (past the bisector)}: the active fix's from its lead (plus LNAV_VNAV_HOLD_MARGIN_NM) before it
+-- (B747_lnav_active_turn), kept through its sequence - at the bisector for a turn LNAV flies by its path, where it is
+-- released, or at the turn's start for a held fix, released at the bisector - and once released until the turn has
+-- ended (B747_lnav_turn_ended) and the next fix's begins; nil without a turn and once vectored away. Taken only from
+-- the held fix's sequence, the path ran straight to a fix LNAV sequences at the bisector through the first half of its
+-- turn and stepped 245-290 ft there (NETOM; review 27). With a metatable, as B747_route_constraints: XTLua copies a
+-- global table without one into a namespace of its own, whose read of a missing index recurses until the stack
+-- overflows.
 B747_lnav_vnav_turn=nil
+-- Whether fmsO[k]'s turn is one VNAV's path goes through: a fly-by of at most LNAV_FLYBY_MAX_TURN_DEG between two fixes
+-- with courses (a capped turn's path is no tangent arc); its inbound and outbound courses and its lead
+local function B747_lnav_vnav_turn_at(fmsO,k)
+	local fix,nextFix=fmsO[k],fmsO[k+1]
+	if k<2 or fix==nil or nextFix==nil or not B747_lnav_leg_supports_preemption(fix)
+		or not B747_lnav_leg_supports_preemption(nextFix) or tonumber(fix[2])==1
+		or B747_afds_helpers.altitude_leg_end_ft(fix)~=nil then
+		return nil
+	end
+	local inCourse=B747_lnav_inbound_course(fmsO,k)
+	local outCourse=getHeading(fix[5],fix[6],nextFix[5],nextFix[6])
+	local turn=math.abs((outCourse-inCourse+540)%360-180)
+	if turn<1 or turn>B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG then return nil end
+	return inCourse,outCourse,B747_lnav_turn_anticipation_nm(inCourse,outCourse)
+end
+-- The active fix's turn once within its lead (plus the margin) of it, latched when first taken (t, if it is that
+-- fix's and not released); else nil
+local function B747_lnav_active_turn(fmsO,current,t)
+	if t~=nil and t.fix==current and not t.released then return t end
+	local fix=fmsO[current]
+	if fix==nil then return nil end
+	local inCourse,outCourse,lead=B747_lnav_vnav_turn_at(fmsO,current)
+	if inCourse==nil then return nil end
+	local distance=getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)
+	if distance>lead+LNAV_VNAV_HOLD_MARGIN_NM then return nil end
+	return setmetatable({fix=current,in_course=inCourse,out_course=outCourse,lead_nm=lead,start_nm=distance,
+		released=false},{})
+end
+-- Whether the aircraft is past the end of t's turn: its lead along the outbound course past the fix
+local function B747_lnav_turn_ended(fmsO,t)
+	local fix=fmsO[t.fix]
+	if fix==nil then return true end
+	local distance=getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)
+	local bearing=math.rad(getHeading(fix[5],fix[6],simDR_latitude,simDR_longitude))
+	local course=math.rad(t.out_course)
+	return distance*math.cos(bearing-course)>=t.lead_nm
+end
 function B747_lnav_update_vnav_hold(fmsO)
 	local current=B747DR_fmscurrentIndex
 	if current~=lnavHoldLastIndex then
 		local passed=lnavHoldLastIndex
 		lnavHoldLastIndex=current
 		lnavHoldIndex=0
-		B747_lnav_vnav_turn=nil
+		-- the passed fix's turn, taken while it was the active one, stays through its sequence
+		local t=B747_lnav_vnav_turn
+		if t==nil or t.fix~=passed or current~=passed+1 then t=nil end
+		B747_lnav_vnav_turn=t
 		local fix=fmsO[passed]
 		local nextFix=fmsO[current]
 		if current==passed+1 and passed>=2 and nextFix~=nil and B747_lnav_leg_supports_preemption(fix)
@@ -3459,10 +3504,14 @@ function B747_lnav_update_vnav_hold(fmsO)
 				lnavHoldInCourse=inCourse
 				lnavHoldOutCourse=outCourse
 				lnavHoldMaxNm=1.5*distance+LNAV_VNAV_HOLD_MARGIN_NM
-				B747_lnav_vnav_turn=setmetatable({fix=passed,in_course=inCourse,out_course=outCourse,lead_nm=lead,
-					start_nm=distance,released=false},{})
+				if B747_lnav_vnav_turn==nil then
+					B747_lnav_vnav_turn=setmetatable({fix=passed,in_course=inCourse,out_course=outCourse,lead_nm=lead,
+						start_nm=distance,released=false},{})
+				end
 			end
 		end
+		-- not held: sequenced at (or past) the bisector
+		if B747_lnav_vnav_turn~=nil and lnavHoldIndex==0 then B747_lnav_vnav_turn.released=true end
 	end
 	if lnavHoldIndex>0 then
 		local fix=fmsO[lnavHoldIndex]
@@ -3480,6 +3529,13 @@ function B747_lnav_update_vnav_hold(fmsO)
 				lnavHoldIndex=0
 				if B747_lnav_vnav_turn~=nil then B747_lnav_vnav_turn.released=true end
 			end
+		end
+	end
+	-- without a held fix: the passed fix's turn until it has ended, then the active fix's from its lead
+	if lnavHoldIndex==0 then
+		local t=B747_lnav_vnav_turn
+		if t==nil or not t.released or B747_lnav_turn_ended(fmsO,t) then
+			B747_lnav_vnav_turn=B747_lnav_active_turn(fmsO,current,t)
 		end
 	end
 	B747DR_vnav_hold_index=lnavHoldIndex
