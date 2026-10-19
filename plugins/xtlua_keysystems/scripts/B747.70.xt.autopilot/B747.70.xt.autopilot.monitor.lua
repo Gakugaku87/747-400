@@ -277,20 +277,27 @@ end
 -- and alt_hold_status went 2, 0, 2 several times a second there. While the MCP altitude moves (B-12) the AFDS's stays
 -- as it was below the aircraft; not below it (the cruise's at the T/D) VNAV_NEXT_ALT's target stays, as before, and
 -- the descent starts at the T/D (P23). With the MCP more than 100 ft above the aircraft VNAV_NEXT_ALT's stays too.
--- So does it in VNAV SPD (VNAV_DES_IS_SPD: VNAV_DES' FLCH, the IAS window open above SPD TRANS), in its FLCH and where
--- it levelled off: the idle descent, its pitch on the speed, levels off at the points and the CIFP's floors, as a real
--- 747-400's VNAV SPD at the constraints, not at the MCP alone. Right after an ALT selector push the MCP altitude is the
+-- In VNAV SPD (VNAV_DES_IS_SPD: VNAV_DES' FLCH, the IAS window open above SPD TRANS) the idle descent, its pitch on the
+-- speed, also levels off at the constraints' floors ahead (VNAV_DES_SPD_FLOOR), as a real 747-400's VNAV SPD (FCOM
+-- 4.10.5: VNAV PTH once it meets an altitude constraint), not at the points' predicted altitudes: it took
+-- VNAV_NEXT_ALT's target, every point's altitude below the transition altitude (review 26 MINOR 2). Right after an ALT
+-- selector push the MCP altitude is the
 -- AFDS's too, the descent resuming to it (VNAV ALT waits 30 s after the push, as before); it waited 30 s, and until
 -- then the next point's altitude was the AFDS's (review 26 MINOR 3).
 function VNAV_DES_ALT(numAPengaged,fms)
     local targetAlt=VNAV_NEXT_ALT(numAPengaged,fms)
     local lastHold=simDRTime-B747DR_mcp_hold_pressed
 
-    if B747DR_autopilot_altitude_ft<simDR_pressureAlt1+100 and not VNAV_DES_IS_SPD(VNAV_DES_SPD_LIMIT_ALT()) then
+    if B747DR_autopilot_altitude_ft<simDR_pressureAlt1+100 then
+        local level=nil
         if B747_mcp_alt_settled==nil or B747_mcp_alt_settled() then
-            targetAlt=B747DR_autopilot_altitude_ft
+            level=B747DR_autopilot_altitude_ft
         elseif simDR_autopilot_altitude_ft<simDR_pressureAlt1-100 then
-            targetAlt=simDR_autopilot_altitude_ft
+            level=simDR_autopilot_altitude_ft
+        end
+        if level~=nil then
+            if VNAV_DES_IS_SPD(VNAV_DES_SPD_LIMIT_ALT()) then level=VNAV_DES_SPD_FLOOR(fms,level) end
+            targetAlt=level
         end
     elseif targetAlt<B747DR_autopilot_altitude_ft and simDR_pressureAlt1>B747DR_autopilot_altitude_ft-100 and lastHold>30 and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) then
         targetAlt=B747DR_autopilot_altitude_ft
@@ -315,6 +322,22 @@ function VNAV_DES_IS_SPD(upperAlt)
     return B747DR_ap_ias_mach_window_open==1 and simDR_pressureAlt1>upperAlt
         and simDR_ind_airspeed_kts_pilot>=B747DR_airspeed_Vmc+15 and not B747_vnav_approach_active
 end
+-- VNAV SPD's level-off in the descent, level (the MCP's) raised to the highest floor (at or above, at, a window's
+-- bottom, the FAF's) of the STAR's and the approach's constraints (B747_route_constraints, from the CIFP) at the fixes
+-- not passed yet (a fix held for its turn included), but not to one the aircraft is already below
+function VNAV_DES_SPD_FLOOR(fms,level)
+    if B747_route_constraints==nil or fms==nil then return level end
+    local first=B747DR_fmscurrentIndex or 1
+    local held=B747DR_vnav_hold_index or 0
+    if held>0 and held<first then first=held end
+    for i=math.max(first,1),table.getn(fms) do
+        local c=B747_route_constraints[i]
+        if c~=nil and c.phase=="descent" and c.floor~=nil and c.floor>level and simDR_pressureAlt1>c.floor-100 then
+            level=c.floor
+        end
+    end
+    return level
+end
 
 B747DR_ap_VNAV_lastCommand=0
 function VNAV_DES(numAPengaged,fms)
@@ -338,10 +361,18 @@ function VNAV_DES(numAPengaged,fms)
         -- VNAV PTH stays, the A/T holding the window's speed
         if VNAV_DES_IS_SPD(upperAlt) then
             --descentstatus = simDR_autopilot_flch_status
-            simDR_autopilot_vs_status=0
-            simDR_autopilot_flch_status=2
-            simDR_autopilot_alt_hold_status=0
-            B747DR_ap_thrust_mode=2
+            local holding=tonumber(simDR_autopilot_hold_altitude_ft) or -1e9
+            if simDR_autopilot_alt_hold_status==2 and math.abs(holding-simDR_autopilot_altitude_ft)<100 then
+                -- [B-14] X-Plane holding VNAV SPD's level-off (a constraint's floor, the MCP altitude): it holds it,
+                -- FMA VNAV PTH or VNAV ALT, the A/T on the speed, until the level-off moves below (its fix passed);
+                -- FLCH put back every 0.2 s made the FMA go VNAV SPD, VNAV PTH every 0.6 s there (review 26 MINOR 2)
+                B747DR_ap_thrust_mode=0
+            else
+                simDR_autopilot_vs_status=0
+                simDR_autopilot_flch_status=2
+                simDR_autopilot_alt_hold_status=0
+                B747DR_ap_thrust_mode=2
+            end
             descentstatus = 2
         else
             --descentstatus = simDR_autopilot_vs_status

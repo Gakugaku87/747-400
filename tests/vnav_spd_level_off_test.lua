@@ -1,9 +1,9 @@
 -- Run from the repository root with Lua 5.1 or LuaJIT.
--- [B-14] VNAV SPD's descent (FLCH: the IAS window open above SPD TRANS, idle, the pitch on the speed) still levels
--- off at the route's points and the STAR's floors, as a real 747-400's VNAV SPD levels off at the constraints; only
--- VNAV PTH, which flies the path through them, takes the MCP altitude alone as the AFDS's. With the MCP altitude the
--- AFDS's in VNAV SPD too, the idle descent went through SUGOL's FL100-FL140 window and NETOM's at or above FL070 to
--- the MCP. The production VNAV_DES_ALT (approach_model.lua's loader) on the EHAM route, its CIFP constraints as
+-- [B-14] VNAV SPD's descent (FLCH: the IAS window open above SPD TRANS) still levels off at the STAR's constraints
+-- (their floors), as a real 747-400's VNAV SPD (FCOM 4.10.5), not at the points' predicted altitudes; only VNAV PTH,
+-- which flies the path through them, takes the MCP altitude alone as the AFDS's. With the MCP altitude the AFDS's in
+-- VNAV SPD too, the idle descent went through SUGOL's FL100-FL140 window and NETOM's at or above FL070 to the MCP. The
+-- production VNAV_DES_ALT (approach_model.lua's loader) on the EHAM route, its CIFP constraints as
 -- approach_model.lua's, the T/D passed, the MCP still for 30 s.
 local model = dofile("tests/approach_model.lua")
 
@@ -20,6 +20,7 @@ local FMS_DATA = {desspdtransalt = "10000", destranspd = "240", desspd = "270", 
 local function afds_alt(o)
     local e = model.eham({active = o.active, mcp_alt_ft = o.mcp or 2000, vnav_speed_kt = 250, at_mode = 3})
     for index, alt in pairs(o.changes or {}) do e.route[index][9] = alt end
+    for index, c in pairs(o.constraints or {}) do e.constraints[index] = c end
     local d = {}
     local ap = model.load(d, {fmsData = FMS_DATA, B747_route_constraints = e.constraints})
     model.set_datarefs(d, e, 0.05)
@@ -50,11 +51,12 @@ local function afds_alt(o)
 end
 
 local a = afds_alt({active = SUGOL, nm = 5, alt_ft = 13000, mode = "spd"})
-check(a == 11315, "VNAV SPD at 13,000 ft 5 nm before SUGOL (FL100-FL140, its path 11315), the MCP at 2000: the "
-    .."AFDS levels off at SUGOL's 11315, got "..a)
-a = afds_alt({active = SUGOL, nm = 2, alt_ft = 11315, mode = "spd level"})
-check(a == 11315, "VNAV SPD levelled off at SUGOL's 11315 2 nm before it (X-Plane's ALT HOLD, the IAS window "
-    .."open): the AFDS stays at 11315 until SUGOL, got "..a)
+check(a == 10000, "VNAV SPD at 13,000 ft 5 nm before SUGOL (FL100-FL140, its path 11315), the MCP at 2000: the "
+    .."AFDS levels off at SUGOL's floor 10000 (not its predicted 11315), got "..a)
+a = afds_alt({active = SUGOL, nm = 2, alt_ft = 11000, mode = "spd level",
+    constraints = {[SUGOL] = {alt_desc = "B", floor = 11000, ceiling = 14000, fl = true, phase = "descent"}}})
+check(a == 11000, "VNAV SPD levelled off at SUGOL's floor (made FL110) 2 nm before it (X-Plane's ALT HOLD, the IAS "
+    .."window open): the AFDS stays at 11000 until SUGOL, got "..a)
 a = afds_alt({active = SUGOL, nm = 5, alt_ft = 13000, mode = "spd", changes = {[SUGOL] = 9500}})
 check(a == 10000, "VNAV SPD at 13,000 ft 5 nm before SUGOL, the native FMS's 9500 below its window's FL100: at the "
     .."floor 10000, got "..a)

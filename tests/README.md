@@ -585,11 +585,16 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   altitude at once (it was NETOM's 7849 above the cleared 7000 for 30 s),
   and VNAV ALT is still not set again within 30 s of the push.
 - `vnav_spd_level_off_test.lua`: VNAV SPD's descent (FLCH: the IAS window
-  open above SPD TRANS) still levels off at the route's points and the
-  STAR's floors - SUGOL's 11315 with the MCP at 2000, also where it levelled
-  off (X-Plane's ALT HOLD), SUGOL's 9500 raised to its window's FL100, the
-  MCP where it is higher - while VNAV PTH, also with the window open below
-  SPD TRANS, takes the MCP altitude alone (the production VNAV_DES_ALT).
+  open above SPD TRANS) still levels off at the STAR's constraints - SUGOL's
+  floor FL100 (not its predicted 11315) with the MCP at 2000, also where it
+  levelled off (X-Plane's ALT HOLD), the MCP where it is higher - while VNAV
+  PTH, also with the window open below SPD TRANS, takes the MCP altitude
+  alone (the production VNAV_DES_ALT).
+- `vnav_spd_descent_test.lua`: VNAV SPD's descent in the closed loop
+  (mcp_alt_dial_model.lua): from FL250 it levels at an at or above FL150 and
+  holds it with one pitch-mode change until the fix (FLCH put back every
+  0.2 s made the FMA flip every 0.6 s), then descends to the MCP without
+  levelling at the next point's predicted altitude.
 - `vnav_cifp_constraints_test.lua`: the SID, STAR and approach constraints read
   from X-Plane's CIFP (`B747.70.xt.autopilot.constraints.lua`) - records as
   X-Plane writes them (a CA leg, windows, flight levels, the glide slope
