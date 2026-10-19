@@ -361,8 +361,10 @@ end
 -- is taken at once, but one at a turn's own bisector - the path's point going from the turn's fix to the next (or the
 -- turn before's, carried on) - is taken out up to VNAV_PATH_BLEND_TURN_MAX_FT: on a leg shorter than about 2.4 nm the
 -- 747 crosses the next fix's bisector inside the turn's cut, and the step there (+255 ft with 2.2 nm, +268 with 2.0)
--- was taken at once (review 28 MINOR 2). Taken out only as the distance fell, a step stayed while it grew under vectors
--- (review 27). state: the descent profile's (vnavPathBlend) or the approach path's.
+-- was taken at once (review 28 MINOR 2); so is the end of a turn where the point stays, with the step at its bisector
+-- maybe still being taken out: dropped there over 250 ft, it went at once (-503 ft; review 30 MINOR 2). Taken out only
+-- as the distance fell, a step stayed while it grew under vectors (review 27). state: the descent profile's
+-- (vnavPathBlend) or the approach path's.
 local VNAV_PATH_BLEND_NM = 2
 local VNAV_PATH_BLEND_MAX_FT = 250
 local VNAV_PATH_BLEND_TURN_MAX_FT = 1000
@@ -382,6 +384,8 @@ local function B747_vnav_path_continuity(state, lat, lon, distance, alt)
       local limit = VNAV_PATH_BLEND_MAX_FT
       if turn ~= nil and turn == b.turn and (B747_vnav_turn_switch(turn, b.lat, b.lon, lat, lon)
           or B747_vnav_turn_switch(turn.prev, b.lat, b.lon, lat, lon)) then
+        limit = VNAV_PATH_BLEND_TURN_MAX_FT
+      elseif turn == nil and b.turn ~= nil and math.abs(lat - b.lat) <= 1e-7 and math.abs(lon - b.lon) <= 1e-7 then
         limit = VNAV_PATH_BLEND_TURN_MAX_FT
       end
       if math.abs(step) <= limit then b.offset, b.from = step, distance else b.offset = 0 end

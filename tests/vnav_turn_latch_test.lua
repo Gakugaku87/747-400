@@ -21,7 +21,8 @@
 --    and ended 0.5 nm off LNAV's path +330 to +500 ft (review 29 MAJOR 1);
 -- 7. the turn carried on (prev) on a short leg ends with a route edit of its fix without a step (review 28 NIT);
 -- 8. the turn's fade moves with the distance flown also where LNAV engages or lets go off the path (review 30 MAJOR 1),
---    and is measured from the turn carried on too on a short leg (review 30 NIT).
+--    and is measured from the turn carried on too on a short leg (review 30 NIT); a turn's end at an unchanged point
+--    carries the bisector's step on (review 30 MINOR 2).
 -- The production LNAV (B747_lnav_update_xtk and B747_lnav_update_vnav_hold, as B747_getCurrentWayPoint calls them),
 -- setDescentVSpeed (the approach's path inside 25 nm) and setDistances every 2 s (approach_model.lua's loader) on the
 -- EHAM route in the production order, the 747 flown along the legs and the fly-by arcs at the bank flown, in a flat
@@ -516,7 +517,9 @@ for _, at in ipairs({5.2, 5.8}) do
 end
 
 -- 8. LNAV engaged again, or let go, off the turn's path: the turn's fade moves with the distance flown, not at once;
--- set from the distance off the path in each frame, it stepped as LNAV's state changed (review 30 MAJOR 1)
+-- set from the distance off the path in each frame, it stepped as LNAV's state changed (review 30 MAJOR 1). And a turn
+-- that ends where the path's point is unchanged, while the step at its bisector is still being taken out, keeps that
+-- going: dropped there, -503 ft at once (review 30 MINOR 2)
 r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, noturn = true,
     hooks = {{s = 6.0, fn = hdg_sel}, {s = 8.5, fn = lnav_on}}, seq_after = {s = 6.0, mode = "abeam"}})
 worst, where = largest_step(r, 0, 1e9)
@@ -543,6 +546,16 @@ for _, p in ipairs(r) do
 end
 check(carried <= 0.1, string.format("HDG SEL on a 2.6 nm leg, the 747 on NIRSI's arc while AM607's turn carries it: "
     .."the turn's fade at most %.2f", carried))
+local R15 = (270 * 0.514444) ^ 2 / (9.80665 * math.tan(math.rad(15))) / 1852
+-- (after the turn is taken there: before it, no turn at all, NETOM is passed abeam only 5 nm on - a sequence of LNAV
+-- not engaged, not the turn's)
+at = 5.3
+r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, noturn = true,
+    hooks = {{s = at, fn = hdg_sel}}, seq_after = {s = at, mode = "abeam"},
+    maneuver = {s = at, radius = R15, turn = turnN}})
+worst, where = largest_step(r, 0, 1e9)
+check(math.abs(worst) <= 15, string.format("HDG SEL 0.8 nm before LNAV's arc, the 747 turning at 15 deg of bank: "
+    .."largest step %+.0f ft in 0.02 nm at %.2f nm", worst, where or -1))
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV turn latch tests passed: "..checks)
