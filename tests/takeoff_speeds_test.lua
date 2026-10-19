@@ -152,16 +152,26 @@ check(low_ok and low_v1 == 123, "300 t, flaps 20, -1,240 ft, QNH 30.92: V1 "..to
 v1, vr, v2 = speeds(360000, 20, 1050.89, 0)
 check(v1 == 143 and vr == 160 and v2 == 173, "360 t, flaps 20, 0 C on region A's top (1,050.89 ft): "
     ..show(v1, vr, v2).." (143/160/173, region B)")
--- by pressure altitude, as the FCOM's tables: at a sea level airport with QNH 28.92 inHg (pressure altitude about
--- 1,000 ft) VMCG/VRMIN 119.5/122.5, not the altimeter's sea level 121/124 (review 36)
+-- by pressure altitude, as the FCOM's tables: at a sea level airport with QNH 28.92 inHg (pressure altitude 939 ft)
+-- VMCG/VRMIN 119.6/122.6, not the altimeter's sea level 121/124 (review 36)
 v1, vr = speeds(233100, 20, 0, 15, 0, 0, 0, 0, 28.92)
 check(v1 == 120 and vr == 123, "233 t, flaps 20, sea level, QNH 28.92: "..show(v1, vr)
-    .." (119.5/122.5 at a pressure altitude of 1,000 ft: 120/123)")
+    .." (119.6/122.6 at a pressure altitude of 939 ft: 120/123)")
 -- and the chart's regions: a 1,000 ft airport at 15 C is in region A by its altimeter (360 t, flaps 20: 140/158/173)
--- but in region B at the pressure altitude of 2,000 ft that QNH 28.92 gives (143/160/173; review 38)
+-- but in region B at the pressure altitude of 1,932 ft that QNH 28.92 gives (143/160/173; review 38)
 v1, vr, v2 = speeds(360000, 20, 1000, 15, 0, 0, 0, 0, 28.92)
 check(v1 == 143 and vr == 160 and v2 == 173, "360 t, flaps 20, 1,000 ft, 15 C, QNH 28.92: "..show(v1, vr, v2)
     .." (143/160/173, region B)")
+-- the pressure altitude by the standard atmosphere's altimeter relation (as autopilot.takeoff.lua), not 1,000 ft per
+-- inHg: at 180 ft with QNH 28.92 it is 1,118 ft, under region A's top at 15 C (1,137 ft; 1,000 ft per inHg gave
+-- 1,180 ft, region B's 143/160/173), and a setting read as 0 (XTLua's first read) leaves the altimeter's altitude
+-- (review 38)
+v1, vr, v2 = speeds(360000, 20, 180, 15, 0, 0, 0, 0, 28.92)
+check(v1 == 140 and vr == 158 and v2 == 173, "360 t, flaps 20, 180 ft, 15 C, QNH 28.92: "..show(v1, vr, v2)
+    .." (140/158/173, region A)")
+v1, vr, v2 = speeds(233100, 20, 200, 15, 0, 0, 0, 0, 0)
+check(v1 == 121 and vr == 124 and v2 == 144, "233 t, flaps 20, sea level, the setting read as 0: "
+    ..show(v1, vr, v2).." (121/124/144)")
 -- a takeoff thrust rating changed once the speeds are set deletes them, as the FMC does (and the flaps entry with
 -- them: entered again, they are worked out for the new rating): TO 2's 108 left with full thrust's VMCG 121 (review
 -- 36)

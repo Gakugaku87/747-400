@@ -2642,10 +2642,14 @@ end
 local regions = {}
 local tempAltRegion = 0
 -- [takeoff speeds] the pressure altitude (ft) the takeoff speed charts and the minimum control speeds are entered
--- with: the captain's altimeter less its setting's difference from 29.92 inHg at 1,000 ft per inHg. With the
--- altimeter's own altitude VMCG/VRMIN were 1.5 kt high at a sea level airport on a 980 hPa day (review 36)
+-- with: the captain's altimeter taken from its setting to 29.92 inHg by the standard atmosphere's altimeter relation
+-- (as B747.70.xt.autopilot.takeoff.lua's reference_altitude; at 1,000 ft per inHg QNH 28.92 read 6 % high), a setting
+-- read as 0 (XTLua's first read) leaving the altimeter's altitude. With the altimeter's own altitude VMCG/VRMIN were
+-- 1.5 kt high at a sea level airport on a 980 hPa day (review 36)
 local function B747_takeoff_pressure_altitude()
-    return simDR_altitude_ft_pilot + (29.92 - simDR_altimeter_baro_inHg) * 1000
+    local setting = simDR_altimeter_baro_inHg
+    if setting <= 0 then return simDR_altitude_ft_pilot end
+    return 145442.16 - (145442.16 - simDR_altitude_ft_pilot) * (setting / 29.92126) ^ 0.190263
 end
 
 function B747_getTempAltRegions()
