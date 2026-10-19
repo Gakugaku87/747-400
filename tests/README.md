@@ -622,10 +622,12 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   (-86, -269 and +101 ft at once with the fade set from the distance off
   the path each frame); on a short leg the distance off the path is taken
   from the turn carried on too (on NIRSI's arc 2.6 nm before AM607 the
-  fade stays at most 0.1; 0.23 from AM607's path alone); and a turn's end
-  where the path's point is unchanged carries the bisector's step on
-  (HDG SEL 0.8 nm before NETOM's arc, the 747 at 15 deg of bank: -503 ft
-  at once).
+  fade stays at most 0.1; 0.23 from AM607's path alone); a change carries
+  the step still being taken out on (HDG SEL 0.8 nm before NETOM's arc,
+  the 747 at 15 deg of bank: -503 ft at once at the turn's end), and a
+  route edit's own step over 250 ft is taken at once (NETOM's 110 deg
+  turn edited to straight on 3 nm before it: the new route's path at
+  once; blended, 229 ft off it).
 - `vnav_mcp_push_test.lua`: after an ALT selector push in the descent (the
   MCP dialled down from VNAV ALT) the AFDS's altitude is the new MCP
   altitude at once (it was NETOM's 7849 above the cleared 7000 for 30 s),

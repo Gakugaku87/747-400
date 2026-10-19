@@ -21,8 +21,8 @@
 --    and ended 0.5 nm off LNAV's path +330 to +500 ft (review 29 MAJOR 1);
 -- 7. the turn carried on (prev) on a short leg ends with a route edit of its fix without a step (review 28 NIT);
 -- 8. the turn's fade moves with the distance flown also where LNAV engages or lets go off the path (review 30 MAJOR 1),
---    and is measured from the turn carried on too on a short leg (review 30 NIT); a turn's end at an unchanged point
---    carries the bisector's step on (review 30 MINOR 2).
+--    and is measured from the turn carried on too on a short leg (review 30 NIT); a change carries the step still being
+--    taken out on (review 30 MINOR 2), and a route edit's own step over 250 ft is taken at once (review 31 MINOR 1).
 -- The production LNAV (B747_lnav_update_xtk and B747_lnav_update_vnav_hold, as B747_getCurrentWayPoint calls them),
 -- setDescentVSpeed (the approach's path inside 25 nm) and setDistances every 2 s (approach_model.lua's loader) on the
 -- EHAM route in the production order, the 747 flown along the legs and the fly-by arcs at the bank flown, in a flat
@@ -523,14 +523,14 @@ end
 r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, noturn = true,
     hooks = {{s = 6.0, fn = hdg_sel}, {s = 8.5, fn = lnav_on}}, seq_after = {s = 6.0, mode = "abeam"}})
 worst, where = largest_step(r, 0, 1e9)
-check(math.abs(worst) <= 15, string.format("HDG SEL 3 nm before NETOM, straight on, LNAV again about 1 nm off its "
+check(math.abs(worst) <= 15, string.format("HDG SEL 3 nm before NETOM, straight on, LNAV again about 0.8 nm off its "
     .."path: largest step %+.0f ft in 0.02 nm at %.2f nm", worst, where or -1))
 r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, noturn = true,
     hooks = {{s = 9 - lead110 + 0.2, fn = hdg_sel}, {s = 7.4, fn = lnav_on}},
     seq_after = {s = 9 - lead110 + 0.2, mode = "abeam"}}, turn_110)
 worst, where = largest_step(r, 0, 1e9)
 check(math.abs(worst) <= 15, string.format("a 110 deg turn, HDG SEL 0.2 nm into LNAV's arc, straight on, LNAV again "
-    .."about 1.1 nm off its path: largest step %+.0f ft in 0.02 nm at %.2f nm", worst, where or -1))
+    .."about 1.0 nm off its path: largest step %+.0f ft in 0.02 nm at %.2f nm", worst, where or -1))
 r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, offset = 1.0,
     hooks = {{s = 6.8, fn = hdg_sel}}, seq_after = {s = 6.8, mode = "abeam"}})
 worst, where = largest_step(r, 0, 1e9)
@@ -556,6 +556,27 @@ r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, not
 worst, where = largest_step(r, 0, 1e9)
 check(math.abs(worst) <= 15, string.format("HDG SEL 0.8 nm before LNAV's arc, the 747 turning at 15 deg of bank: "
     .."largest step %+.0f ft in 0.02 nm at %.2f nm", worst, where or -1))
+
+-- a route edit making NETOM's 110 deg turn straight on (NIRSI moved on along the inbound course) 3 nm before NETOM,
+-- with the turn's cut partly taken off: the path is the new route's at once, its step (+258 ft) over the 250 ft that
+-- are taken out; blended up to 1000 ft as a turn's end at NETOM, it ran up to 258 ft off the new path (review 31
+-- MINOR 1)
+local function straight_on(route)
+    local cin = (bearing(route[NETOM], route[SUGOL]) + 180) % 360
+    route[NIRSI][5], route[NIRSI][6] = move(route[NETOM][5], route[NETOM][6], 10.7, cin)
+end
+local reference = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6}, straight_on)
+r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, edit = {s = 6.0, fn = straight_on}},
+    turn_110)
+worstDiff, worstAt = 0, nil
+for n, p in ipairs(r) do
+    local w = reference[n]
+    if p.s >= 6.2 and p.path and w and w.path and math.abs(p.path - w.path) > math.abs(worstDiff) then
+        worstDiff, worstAt = p.path - w.path, p.s
+    end
+end
+check(math.abs(worstDiff) <= 20, string.format("NETOM's 110 deg turn edited to straight on 3 nm before it: the new "
+    .."route's path at once, largest difference %+.0f ft at %.2f nm", worstDiff, worstAt or -1))
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV turn latch tests passed: "..checks)

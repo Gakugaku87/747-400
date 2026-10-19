@@ -361,15 +361,17 @@ end
 -- is taken at once, but one at a turn's own bisector - the path's point going from the turn's fix to the next (or the
 -- turn before's, carried on) - is taken out up to VNAV_PATH_BLEND_TURN_MAX_FT: on a leg shorter than about 2.4 nm the
 -- 747 crosses the next fix's bisector inside the turn's cut, and the step there (+255 ft with 2.2 nm, +268 with 2.0)
--- was taken at once (review 28 MINOR 2); so is the end of a turn where the point stays, with the step at its bisector
--- maybe still being taken out: dropped there over 250 ft, it went at once (-503 ft; review 30 MINOR 2). Taken out only
--- as the distance fell, a step stayed while it grew under vectors (review 27). state: the descent profile's
+-- was taken at once (review 28 MINOR 2). What the blend still had to take out goes on through a change, whatever the
+-- change's own step (raw: the path before the blend): with the step at a bisector still being taken out when the turn
+-- ended, the two together went over 250 ft and at once (-503 ft; review 30 MINOR 2), and a route edit's own step
+-- over 250 ft blended with them as a turn's end ran the path up to 258 ft off the new one (review 31 MINOR 1). Taken
+-- out only as the distance fell, a step stayed while it grew under vectors (review 27). state: the descent profile's
 -- (vnavPathBlend) or the approach path's.
 local VNAV_PATH_BLEND_NM = 2
 local VNAV_PATH_BLEND_MAX_FT = 250
 local VNAV_PATH_BLEND_TURN_MAX_FT = 1000
-local vnavPathBlend = {lat = nil, lon = nil, turn = nil, alt = 0, offset = 0, from = 0, t = -100}
-local approachPathBlend = {lat = nil, lon = nil, turn = nil, alt = 0, offset = 0, from = 0, t = -100}
+local vnavPathBlend = {lat = nil, lon = nil, turn = nil, alt = 0, raw = 0, offset = 0, from = 0, t = -100}
+local approachPathBlend = {lat = nil, lon = nil, turn = nil, alt = 0, raw = 0, offset = 0, from = 0, t = -100}
 -- whether the path's point going from (fromLat, fromLon) to (lat, lon) is turn t's bisector: its fix to the next
 local function B747_vnav_turn_switch(t, fromLat, fromLon, lat, lon)
   return t ~= nil and t.lat ~= nil and math.abs(fromLat - t.lat) <= 1e-7 and math.abs(fromLon - t.lon) <= 1e-7
@@ -380,15 +382,14 @@ local function B747_vnav_path_continuity(state, lat, lon, distance, alt)
   local turn = B747_lnav_vnav_turn
   if b.lat ~= nil and simDRTime - b.t <= 5 then
     if math.abs(lat - b.lat) > 1e-7 or math.abs(lon - b.lon) > 1e-7 or turn ~= b.turn then
-      local step = b.alt - alt
+      local carry, own = b.alt - b.raw, b.raw - alt
       local limit = VNAV_PATH_BLEND_MAX_FT
       if turn ~= nil and turn == b.turn and (B747_vnav_turn_switch(turn, b.lat, b.lon, lat, lon)
           or B747_vnav_turn_switch(turn.prev, b.lat, b.lon, lat, lon)) then
         limit = VNAV_PATH_BLEND_TURN_MAX_FT
-      elseif turn == nil and b.turn ~= nil and math.abs(lat - b.lat) <= 1e-7 and math.abs(lon - b.lon) <= 1e-7 then
-        limit = VNAV_PATH_BLEND_TURN_MAX_FT
       end
-      if math.abs(step) <= limit then b.offset, b.from = step, distance else b.offset = 0 end
+      if math.abs(own) > limit then own = 0 end
+      b.offset, b.from = carry + own, distance
     end
   else
     b.offset = 0
@@ -400,7 +401,7 @@ local function B747_vnav_path_continuity(state, lat, lon, distance, alt)
     if w <= 0 then b.offset = 0 end
   end
   b.lat, b.lon, b.turn, b.t = lat, lon, turn, simDRTime
-  b.alt = alt + offset
+  b.raw, b.alt = alt, alt + offset
   return b.alt
 end
 -- [A-5] The approach's path to the runway (B747_afds_helpers.vnav_approach_path) at the aircraft:
