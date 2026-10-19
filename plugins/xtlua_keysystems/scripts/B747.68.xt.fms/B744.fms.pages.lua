@@ -1681,7 +1681,8 @@ function fmsFunctions.setdata(fmsO,value)
 		return 
 	end
 	local vref=tonumber(string.sub(fmsO["scratchpad"],4))
-	if vref==nil or vref<110 or vref>180 then 
+	-- [landing speeds] any VREF APPROACH REF offers: VREF25 is over 180 kt from 356 t, 192 at 400 t
+	if vref==nil or vref<110 or vref>200 then 
 		fmsO["notify"]="INVALID ENTRY" 
 		return 
 	end
