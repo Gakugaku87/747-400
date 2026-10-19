@@ -285,12 +285,12 @@ end
 -- speed, also levels off at the constraints' floors ahead (VNAV_DES_SPD_FLOOR), as a real 747-400's VNAV SPD (FCOM
 -- 4.10.5: VNAV PTH once it meets an altitude constraint), not at the points' predicted altitudes: it took
 -- VNAV_NEXT_ALT's target, every point's altitude below the transition altitude (review 26 MINOR 2). Right after an ALT
--- selector push the MCP altitude is the
--- AFDS's too, the descent resuming to it (VNAV ALT waits 30 s after the push, as before); it waited 30 s, and until
--- then the next point's altitude was the AFDS's (review 26 MINOR 3).
+-- selector push the MCP altitude is the AFDS's too, the descent resuming to it, and VNAV ALT is set as soon as X-Plane
+-- holds it, as a real 747-400's. Both waited 30 s after the push (B747DR_mcp_hold_pressed): until then the next point's
+-- altitude was the AFDS's (review 26 MINOR 3), and a step down reached within them was held by X-Plane and taken back
+-- by VNAV_DES every 0.2 s ("clear descent"), FMA VNAV PTH (review 27 MINOR 3).
 function VNAV_DES_ALT(numAPengaged,fms)
     local targetAlt=VNAV_NEXT_ALT(numAPengaged,fms)
-    local lastHold=simDRTime-B747DR_mcp_hold_pressed
 
     local settled=B747_mcp_alt_settled==nil or B747_mcp_alt_settled()
     local conflict=B747_vnav_mcp_conflict
@@ -317,7 +317,10 @@ function VNAV_DES_ALT(numAPengaged,fms)
         targetAlt=level
     end
     local mcpDiff=simDR_pressureAlt1-B747DR_autopilot_altitude_ft
-    if simDR_autopilot_alt_hold_status==2 and targetAlt==B747DR_autopilot_altitude_ft   and (mcpDiff<B747DR_alt_capture_window and mcpDiff>-B747DR_alt_capture_window) and lastHold>30 and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) and B747BR_cruiseAlt>B747DR_autopilot_altitude_ft-B747DR_alt_capture_window then
+    if simDR_autopilot_alt_hold_status==2 and targetAlt==B747DR_autopilot_altitude_ft
+        and (mcpDiff<B747DR_alt_capture_window and mcpDiff>-B747DR_alt_capture_window)
+        and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled())
+        and B747BR_cruiseAlt>B747DR_autopilot_altitude_ft-B747DR_alt_capture_window then
         B747DR_mcp_hold=1
         --print("set B747DR_mcp_hold in VNAV_DES_ALT")
     end

@@ -588,7 +588,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
 - `vnav_mcp_push_test.lua`: after an ALT selector push in the descent (the
   MCP dialled down from VNAV ALT) the AFDS's altitude is the new MCP
   altitude at once (it was NETOM's 7849 above the cleared 7000 for 30 s),
-  and VNAV ALT is still not set again within 30 s of the push.
+  and VNAV ALT is set as soon as X-Plane holds it, also within 30 s of the
+  push (VNAV_DES took the capture back every 0.2 s until the 30 s were up);
+  a push where the 747 is levelled at the MCP altitude leaves VNAV ALT.
 - `vnav_spd_level_off_test.lua`: VNAV SPD's descent (FLCH: the IAS window
   open above SPD TRANS) still levels off at the STAR's constraints - SUGOL's
   floor FL100 (not its predicted 11315) with the MCP at 2000, also where it
