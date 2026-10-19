@@ -2272,34 +2272,38 @@ function setDistances(fmsO)
 			end
 		end
 		--print("setVNAV "..i.." "..fmsO[i][5]..":"..fmsO[i][6].."/"..fmsO[i][9])
-		if fmsO[i][9]>0 then
+		-- [B-14] the point's altitude on the path: [9] inside its CIFP constraint (afds.vnav_path_alt). The profile took
+		-- [9] alone, and a point below its floor was kept above it only by the AFDS's altitude at the floor
+		local pointAlt=B747_afds_helpers.vnav_path_alt(fmsO[i][9],
+			B747_route_constraints~=nil and B747_route_constraints[i] or nil)
+		if pointAlt>0 then
 			--construct vnav profile
 			--[[local isNext="false"
 			if i==start then
 				isNext="true"
 			end]]--
-			if fmsO[i][9]~=lastVnavAlt or i==start or i==held then
+			if pointAlt~=lastVnavAlt or i==start or i==held then
 				local vAlt=0
-				local tAlt=fmsO[i][9]
+				local tAlt=pointAlt
 				if i>1 then
 					local distance=getDistance(fmsO[i-1][5],fmsO[i-1][6], fmsO[i][5],fmsO[i][6])
 					local fromToD=false
 					-- with no constraint before it (route entries without an altitude), the first constraint
 					-- below CRZ ALT ahead of the aircraft also starts at the T/D, when the T/D lies before it
 					-- on the route or the aircraft has already passed the T/D
-					local firstDescent=i>=start and lastVnavAlt<0 and fmsO[i][9]<B747BR_cruiseAlt and (todBeforePoint or todDist<=0)
-					if (fmsO[i][9]<lastVnavAlt or firstDescent) and not(usedToD) and B747BR_totalDistance > 0 and B747BR_todLat ~=0 and B747BR_todLong ~=0 then
+					local firstDescent=i>=start and lastVnavAlt<0 and pointAlt<B747BR_cruiseAlt and (todBeforePoint or todDist<=0)
+					if (pointAlt<lastVnavAlt or firstDescent) and not(usedToD) and B747BR_totalDistance > 0 and B747BR_todLat ~=0 and B747BR_todLong ~=0 then
 						distance=getDistance(B747BR_todLat,B747BR_todLong, fmsO[i][5],fmsO[i][6])
 						usedToD=true
 						fromToD=true
 					end
 					-- a path from the T/D starts at CRZ ALT, not at an older route altitude
-					vAlt,tAlt=B747_afds_helpers.vnav_entry_slope(lastVnavAlt,fmsO[i][9],distance,fromToD,B747BR_cruiseAlt)
+					vAlt,tAlt=B747_afds_helpers.vnav_entry_slope(lastVnavAlt,pointAlt,distance,fromToD,B747BR_cruiseAlt)
 				end
 				local vNavdataI={fmsO[i][5],fmsO[i][6],tAlt,i>=start or i==held,vAlt}
 				vnavData[vnavI]=vNavdataI
 				vnavI=vnavI+1
-				lastVnavAlt=fmsO[i][9]
+				lastVnavAlt=pointAlt
 				--print("setVNAV "..i.." "..fmsO[i][5]..":"..fmsO[i][6].."/"..fmsO[i][9].." "..vAlt)
 			end
 		end

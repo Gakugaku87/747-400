@@ -859,6 +859,21 @@ function afds.vnav_entry_slope(previous_alt_ft, alt_ft, distance_nm, from_tod, c
     return (start_alt_ft - alt_ft) / distance_nm, alt_ft
 end
 
+-- [B-14] A route point's altitude on VNAV's descent path (setDistances' profile): the native FMS's ([9], 0 without
+-- one) inside the point's descent constraint from the CIFP (B747_route_constraints' entry: floor and/or ceiling, phase
+-- "descent"; nil without one): raised to the floor, lowered to the ceiling; without [9] the floor, else the ceiling;
+-- 0 without either. A real 747-400's FMC builds its descent path through the constraints, and its AFDS levels off at
+-- the MCP altitude only.
+function afds.vnav_path_alt(native_alt_ft, constraint)
+    local alt = tonumber(native_alt_ft) or 0
+    if type(constraint) ~= "table" or constraint.phase ~= "descent" then return alt end
+    local floor, ceiling = tonumber(constraint.floor), tonumber(constraint.ceiling)
+    if alt <= 0 then return floor or ceiling or 0 end
+    if floor ~= nil and alt < floor then alt = floor end
+    if ceiling ~= nil and alt > ceiling then alt = ceiling end
+    return alt
+end
+
 -- [d] Cruise climb after the ALT selector push
 -- The climb starts 2 s after the push.  By then CRZ ALT may be back at the
 -- level being flown (put back, or the step cancelled), and close to T/D a

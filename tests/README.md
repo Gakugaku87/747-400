@@ -552,6 +552,12 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   bisector - 1 nm before NETOM with NIRSI active and NETOM held,
   setDescentVSpeed aims at NETOM's 7849 on the path (it aimed at NIRSI's 5563,
   180 ft above that path), and past the bisector at NIRSI's.
+- `vnav_profile_constraints_test.lua`: VNAV's descent path (setDistances'
+  profile) crosses each point inside its CIFP constraint - the native FMS's
+  altitude raised to the floor (NETOM's 6800 to FL070), lowered to the
+  ceiling (SUGOL's 15000 to its window's FL140, 9500 to FL100), a point
+  without an altitude at its floor (AM608 3400), and setDescentVSpeed aims
+  there; inside their constraints the points keep the native FMS's.
 - `vnav_cifp_constraints_test.lua`: the SID, STAR and approach constraints read
   from X-Plane's CIFP (`B747.70.xt.autopilot.constraints.lua`) - records as
   X-Plane writes them (a CA leg, windows, flight levels, the glide slope
