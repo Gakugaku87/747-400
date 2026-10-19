@@ -14,7 +14,7 @@ local function check(condition, message)
     if not condition then failures[#failures + 1] = message end
 end
 
-local LAMSO, ETPOS, SUGOL, NETOM, AM608 = 3, 4, 5, 6, 9
+local DIBAL, LAMSO, ETPOS, SUGOL, NETOM, AM608 = 2, 3, 4, 5, 6, 9
 local FMS_DATA = {desspdtransalt = "10000", destranspd = "240", desspd = "270", desrestspd = "---",
     desrestalt = "-----", transalt = "18000", crzalt = "FL370"}
 -- the profile's altitude at the route's point (nil without one), with the aircraft 10 nm before `active` on its leg;
@@ -77,6 +77,13 @@ check(p[LAMSO] ~= nil and p[LAMSO] > 21300 and p[LAMSO] < 21600, "LAMSO without 
 p = profile({[LAMSO] = 0}, SUGOL, {[LAMSO] = AT_OR_BELOW(20000)})
 check(p[LAMSO] == 20000, "LAMSO without an altitude, at or below FL200 under the straight path: 20000, got "
     ..tostring(p[LAMSO]))
+-- [review 27 MINOR 4] after a point in the cruise (its [9] the CRZ ALT) the path is level to the T/D and comes down at
+-- the T/D's 290 ft/nm: a point without [9] takes that line back from the next point with one, not the straight line
+-- from the cruise point
+p = profile({[DIBAL] = 37000, [LAMSO] = 0}, SUGOL, {[LAMSO] = AT_OR_BELOW(23000)})
+check(p[LAMSO] ~= nil and p[LAMSO] > 21700 and p[LAMSO] < 22050, "LAMSO without an altitude after DIBAL in the "
+    .."cruise (FL370), at or below FL230: 290 ft/nm back from ETPOS's 16752 (about 21,870; the straight line from "
+    .."DIBAL's 37000 took the ceiling 23000), got "..tostring(p[LAMSO]))
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV profile constraints tests passed: "..checks)

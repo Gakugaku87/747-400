@@ -932,8 +932,11 @@ end
 -- one on either side, kept inside the constraint (its floor or ceiling where the straight path would break it). It
 -- took the floor, else the ceiling, whatever the points around: a floor far under the straight path put a dive and a
 -- level-off into it, and a ceiling above the point before a level-off until the path came down to it (review 26
--- MINOR 5). Without points on both sides, the floor or ceiling, as before.
-function afds.vnav_route_point_alt(route, i, constraints, distance_fn)
+-- MINOR 5). Without points on both sides, the floor or ceiling, as before. After a point in the cruise (its altitude
+-- within 100 ft of cruise_alt_ft, CRZ ALT; nil: none known) the path is level to the T/D and comes down at the T/D's
+-- VNAV_TOD_FT_PER_NM: the point takes that line back from the point after it (CRZ ALT at most), not the straight line
+-- from the cruise point, which put it thousands of feet off the path (review 27 MINOR 4).
+function afds.vnav_route_point_alt(route, i, constraints, distance_fn, cruise_alt_ft)
     local entry = route[i]
     if entry == nil then return 0 end
     local constraint = constraints ~= nil and constraints[i] or nil
@@ -955,6 +958,10 @@ function afds.vnav_route_point_alt(route, i, constraints, distance_fn)
     local before, before_nm = nearest(-1)
     local after, after_nm = nearest(1)
     if before == nil or after == nil or before_nm + after_nm <= 0 then return afds.vnav_path_alt(0, constraint) end
+    local cruise = tonumber(cruise_alt_ft)
+    if cruise ~= nil and cruise > 0 and before >= cruise - 100 then
+        return afds.vnav_path_alt(math.min(cruise, after + afds.VNAV_TOD_FT_PER_NM * after_nm), constraint)
+    end
     return afds.vnav_path_alt(before + (after - before) * before_nm / (before_nm + after_nm), constraint)
 end
 
@@ -1091,7 +1098,7 @@ function afds.route_tod_distance(route, eod_index, cruise_alt_ft, distance_fn, c
         if i < eod and (to_end[i] >= tod_nm or to_end[i] * 2 > to_end[1]) then break end
         -- [B-14] the point's altitude on the descent path: [9] inside its CIFP constraint (constraints, as
         -- B747_route_constraints; afds.vnav_route_point_alt), as setDistances' profile takes it
-        local alt = afds.vnav_route_point_alt(route, i, constraints, distance_fn)
+        local alt = afds.vnav_route_point_alt(route, i, constraints, distance_fn, cruise_alt_ft)
         if alt > 0 and alt < cruise_alt then
             tod_nm = math.max(tod_nm, to_end[i] + (cruise_alt - alt) / afds.VNAV_TOD_FT_PER_NM)
         end
@@ -1171,7 +1178,7 @@ function afds.vnav_approach_path(route, runway_index, first_index, distance_fn, 
         -- [B-14] inside its CIFP constraint (constraints, as B747_route_constraints; afds.vnav_route_point_alt), as the
         -- descent profile's points: the path took [9] alone, and a point below its floor was kept above it only by the
         -- AFDS's altitude at the floor, now the MCP's (review 26 MINOR 6)
-        local alt = afds.vnav_route_point_alt(route, i, constraints, distance_fn)
+        local alt = afds.vnav_route_point_alt(route, i, constraints, distance_fn, cruise_alt_ft)
         if route[i][2] ~= 1 and string.sub(tostring(route[i][8] or ""), 1, 1) ~= "(" and not is_runway_entry(route[i])
             and alt > 0 then
             if alt >= transition_alt then

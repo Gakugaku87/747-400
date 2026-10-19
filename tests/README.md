@@ -563,7 +563,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   between its neighbours inside its constraint (SUGOL about 11,830 in its
   window, LAMSO about 21,450 under an at or below FL230, FL200 under an at
   or below FL200, AM608 its floor 3400); it took the floor, else the
-  ceiling.
+  ceiling. After a point in the cruise it takes the T/D's 290 ft/nm line
+  back from the next point (LAMSO about 21,870 after DIBAL at FL370; the
+  straight line from DIBAL took the ceiling 23000).
 - `vnav_descent_points_test.lua`: VNAV PTH's descent through the route's
   points below the transition altitude, the production autopilot, VNAV,
   energy mode and A/T in approach_model.lua's closed loop on the EHAM route
