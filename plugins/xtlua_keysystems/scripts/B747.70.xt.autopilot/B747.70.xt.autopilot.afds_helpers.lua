@@ -884,8 +884,9 @@ end
 -- is farther) to all of it 2 nm farther. On the legs the
 -- along-track distance; the arc's middle lies cut_nm (lead (1 - cos(turn / 2))) short of F along the inbound leg and
 -- as far past it along the outbound one, which is taken off from where F was held to the bisector and given back
--- from there to the turn's end, so the path is continuous at the bisector and at F's altitude there. The straight distance made the path about 200 ft high at NETOM's bisector
--- (86 deg, 1 nm inside the fix) and, cutting the turn to the next fix, 300-380 ft lower once F was let go there.
+-- from there to the turn's end, so the path is continuous at the bisector and at F's altitude there. The straight
+-- distance made the path about 200 ft high at NETOM's bisector (86 deg, 1 nm inside the fix) and, cutting the turn to
+-- the next fix, 300-380 ft lower once F was let go there.
 function afds.vnav_turn_distance_nm(east_nm, north_nm, in_course_deg, out_course_deg, lead_nm, start_nm, to_fix,
         leg_nm, direct_nm)
     local turn = math.abs(((out_course_deg - in_course_deg + 540) % 360) - 180)
@@ -923,7 +924,8 @@ function afds.vnav_route_point_alt(route, i, constraints, distance_fn)
     if entry == nil then return 0 end
     local constraint = constraints ~= nil and constraints[i] or nil
     local native = tonumber(entry[9]) or 0
-    if native > 0 or type(constraint) ~= "table" or constraint.phase ~= "descent" or type(distance_fn) ~= "function" then
+    if native > 0 or type(constraint) ~= "table" or constraint.phase ~= "descent"
+        or type(distance_fn) ~= "function" then
         return afds.vnav_path_alt(native, constraint)
     end
     local function nearest(step)
