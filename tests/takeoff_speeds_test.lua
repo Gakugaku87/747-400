@@ -146,6 +146,11 @@ check(cold_ok and cold_v1 == 123, "300 t, flaps 20, sea level, -62 C (left of th
 local cold_high_ok, cold_high_v1 = pcall(speeds, 300000, 20, 9000, -62)
 check(cold_high_ok and cold_high_v1 == 135, "300 t, flaps 20, 9,000 ft, -62 C: V1 "..tostring(cold_high_v1)
     .." (135, region E)")
+-- region B's top at 36.84 C is about 1,300 ft on the AOM's chart (research_vspeeds.md; the table repeated 26.84 C's
+-- 2,876 ft there, so that on hot days region B rose back over 1,300-2,900 ft): at 37 C and 2,000 ft 360 t is region
+-- C's 146 (B's 143; review 39)
+v1 = speeds(360000, 20, 2000, 37)
+check(v1 == 146, "360 t, flaps 20, 2,000 ft, 37 C: V1 "..show(v1).." (146, region C)")
 -- and below its bottom on its bottom: -1,240 ft with QNH 30.92 (a pressure altitude of -2,240 ft) region A
 local low_ok, low_v1 = pcall(speeds, 300000, 20, -1240, 15, 0, 0, 0, 0, 30.92)
 check(low_ok and low_v1 == 123, "300 t, flaps 20, -1,240 ft, QNH 30.92: V1 "..tostring(low_v1).." (123, region A)")

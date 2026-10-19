@@ -19,9 +19,12 @@
 ----- V-SPEEDS (DATA TABLES) ------------------------------------------------------------
 
 -- TEMPERATURE / ALTITUDE REGIONS
+-- the takeoff speed chart's region lines (PMDG AOM): each region's top by OAT. Region B's point at 36.84 C is about
+-- 1,300 ft on the chart (cckit research_vspeeds.md); it repeated 26.84 C's 2,876.05 ft, so region B rose back over
+-- region C's 1,300-2,900 ft on hot days (review 39)
 VtempAltRegionData = {
     {{temp=-60.00, alt=607.23}, {temp=-40.00, alt=747.78}, {temp=-20.00, alt=916.48}, {temp=0.0, alt=1050.89}, {temp=22.74, alt=1181.28}, {temp=30.39, alt=1089.34}, {temp=34.98, alt=622.42}, {temp=43.71, alt=-1229.37}, {temp=46.29, alt=-2000.00}},
-    {{temp=-60.00, alt=2422.14}, {temp=-40.00, alt=2570.61}, {temp=-20.00, alt=2750.69}, {temp=0.0, alt=2915.57}, {temp=20.94, alt=3047.64}, {temp=26.84, alt=2876.05}, {temp=32.11, alt=2275.44}, {temp=36.84, alt=2876.05}, {temp=45.95, alt=-633.42}, {temp=50.16, alt=-2000.00}},
+    {{temp=-60.00, alt=2422.14}, {temp=-40.00, alt=2570.61}, {temp=-20.00, alt=2750.69}, {temp=0.0, alt=2915.57}, {temp=20.94, alt=3047.64}, {temp=26.84, alt=2876.05}, {temp=32.11, alt=2275.44}, {temp=36.84, alt=1300.00}, {temp=45.95, alt=-633.42}, {temp=50.16, alt=-2000.00}},
     {{temp=-60.00, alt=4308.97}, {temp=-40.00, alt=4435.40}, {temp=-20.00, alt=4553.35}, {temp=0.0, alt=4706.86}, {temp=21.58, alt=4846.29}, {temp=28.27, alt=4583.68}, {temp=33.87, alt=3860.08}, {temp=38.24, alt=3004.26}, {temp=48.44, alt=501.83}, {temp=55.53, alt=-2000.00}},
     {{temp=-60.00, alt=6015.93}, {temp=-40.00, alt=6090.55}, {temp=-20.00, alt=6248.58}, {temp=0.0, alt=6397.62}, {temp=19.48, alt=6508.86}, {temp=26.04, alt=6436.63}, {temp=32.46, alt=5757.63}, {temp=36.84, alt=4992.28}, {temp=45.70, alt=3019.45}, {temp=49.48, alt=2049.65}, {temp=52.74, alt=936.44}, {temp=60.31, alt=-2000.00}},
     {{temp=-60.00, alt=7543.84}, {temp=-40.00, alt=7670.00}, {temp=-20.00, alt=7821.49}, {temp=0.0, alt=7977.39}, {temp=22.24, alt=8142.12}, {temp=29.92, alt=7695.57}, {temp=35.53, alt=6832.54}, {temp=39.62, alt=6047.88}, {temp=48.26, alt=3980.77}, {temp=51.53, alt=3005.33}, {temp=54.48, alt=2035.02}, {temp=64.80, alt=-2000.00}}
