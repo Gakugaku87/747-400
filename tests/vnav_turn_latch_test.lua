@@ -17,7 +17,8 @@
 --    (+255 ft with 2.2 nm, +268 with 2.0: review 28 MINOR 2);
 -- 5. far from the fix (the cruise) LNAV works the turn out every 5 s at most: it did every frame (review 27b NIT);
 -- 6. in HDG SEL the turn stays while the 747 flies on round its path, and LNAV takes a held fix's turn again: ended at
---    the HDG SEL, the path stepped -740 to -820 ft where the fix was sequenced abeam (review 28 MAJOR 1).
+--    the HDG SEL, the path stepped -740 to -820 ft where the fix was sequenced abeam (review 28 MAJOR 1);
+-- 7. the turn carried on (prev) on a short leg ends with a route edit of its fix without a step (review 28 NIT).
 -- The production LNAV (B747_lnav_update_xtk and B747_lnav_update_vnav_hold, as B747_getCurrentWayPoint calls them),
 -- setDescentVSpeed (the approach's path inside 25 nm) and setDistances every 2 s (approach_model.lua's loader) on the
 -- EHAM route in the production order, the 747 flown along the legs and the fly-by arcs at the bank flown, in a flat
@@ -241,12 +242,12 @@ local function largest_step(samples, from, to)
     return worst, where
 end
 -- the largest step of the path against its own slope (the step less the mean of the steps before and after it), and
--- where: on a steep path (a short leg) the steps themselves are large
-local function largest_jump(samples)
+-- where, between s from and to (all if nil): on a steep path (a short leg) the steps themselves are large
+local function largest_jump(samples, from, to)
     local worst, where = 0, nil
     for n = 3, #samples - 1 do
         local a, p, q, b = samples[n - 2], samples[n - 1], samples[n], samples[n + 1]
-        if a.path and p.path and q.path and b.path then
+        if a.path and p.path and q.path and b.path and q.s >= (from or -1e9) and q.s <= (to or 1e9) then
             local jump = (q.path - p.path) - ((p.path - a.path) + (b.path - q.path)) / 2
             if math.abs(jump) > math.abs(worst) then worst, where = jump, q.s end
         end
@@ -447,6 +448,17 @@ for _, p in ipairs(r) do
 end
 check(retaken == true, "NETOM held, its turn ended and LNAV engaged again: the held fix's turn taken again (got "
     ..tostring(retaken)..")")
+
+-- 7. The fix of the turn carried on (prev) moved while the next turn carries it (NIRSI nudged 1 m north on a 3.2 nm leg
+-- to AM607): the path takes out what that turn gave back; dropped from the turn in place, it stepped -105 ft at once
+-- (review 28 NIT)
+for _, at in ipairs({5.2, 5.8}) do
+    r = fly({NIRSI, AM607}, {tas = 270, bank = 25, alt = 6000, from_fix = 5, after = 3, ds = 0.01,
+        edit = {s = at, fn = function(route) route[NIRSI][5] = route[NIRSI][5] + 0.00001 end}}, short_leg(3.2))
+    worst, where = largest_jump(r, at - 0.05, at + 0.1)
+    check(math.abs(worst) <= 8, string.format("NIRSI nudged at %.1f nm while AM607's turn carries its turn: largest "
+        .."step against the path's slope %+.0f ft in 0.01 nm at %.2f nm", at, worst, where or -1))
+end
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV turn latch tests passed: "..checks)

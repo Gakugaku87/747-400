@@ -609,7 +609,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   approach's path has no step against its slope over 8 ft (the next turn,
   taken only once the one before had ended, stepped it -375 ft with a
   2.6 nm leg; below 2.4 nm the step at AM607's bisector, over the blend's
-  250 ft, was taken at once: +259 ft with 2.2 nm); far from the
+  250 ft, was taken at once: +259 ft with 2.2 nm), also when the turn
+  carried on ends with a route edit of its fix (NIRSI nudged 1 m: -94 ft
+  at once); far from the
   fix (40 nm, the cruise) LNAV works the turn out every 5 s at most, not
   every frame.
 - `vnav_mcp_push_test.lua`: after an ALT selector push in the descent (the

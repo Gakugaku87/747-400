@@ -3538,7 +3538,14 @@ function B747_lnav_update_vnav_hold(fmsO)
 		if lnavHoldIndex==edited.fix then lnavHoldIndex=0 end
 		B747_lnav_vnav_turn=nil
 	elseif edited~=nil and edited.prev~=nil and not B747_lnav_turn_on_route(fmsO,edited.prev) then
-		edited.prev=nil
+		-- the turn carried on ends: a new table without it, so that VNAV's path takes out what it gave back
+		-- (B747_vnav_path_continuity goes by the table); dropped from the table in place, the path stepped -105 ft at
+		-- once with NIRSI nudged 1 m on a 3.2 nm leg (review 28)
+		local t=setmetatable({},{})
+		for key,value in pairs(edited) do
+			if key~="prev" then t[key]=value end
+		end
+		B747_lnav_vnav_turn=t
 	end
 	-- the aircraft vectored away from the fix before its turn, or LNAV no longer flying the turns (HDG SEL, an offset, a
 	-- direct-to) and the aircraft off the turn's path: the turn ends; flown on round its arc in HDG SEL it stays
