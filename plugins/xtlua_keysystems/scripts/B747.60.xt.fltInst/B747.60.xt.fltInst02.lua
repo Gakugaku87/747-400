@@ -2924,23 +2924,20 @@ end
 
 
 -- Vref30
--- [landing speeds] between the table's weights that bracket the gross weight, carried on along its end rows' slope
--- beyond 200-400 t (the CF6 table has 121 kt at 181 t). Taken to the nearest 20 t, the lower row was held through the
--- lower half of each 20 t: up to 3 kt low (225 t: 133.8 for 135.4)
-function B747_setVref30()
-
-    local weight = simDR_acf_weight_total_kg
+-- [landing speeds] VREF for flaps (30, 25) at a gross weight (kg) from the FCOM's table (B747_VREF), as the FMC works it
+-- out by the gross weight alone (by the present altitude in steps it read 140.3 at FL370, where crews select it, for
+-- 137.7 at 233.4 t, and the flap speeds stepped down at 6,000 and 2,000 ft on the approach): between the table's
+-- weights that bracket it, carried on along its end rows' slope beyond 200-400 t (the CF6 table has 121 kt at 181 t;
+-- taken to the nearest 20 t, the lower row was held through the lower half of each 20 t, up to 3 kt low)
+function B747_vref(flaps, weight)
+    local speed = B747_VREF[flaps]
     local weight_min = math.max(200000, math.min(380000, math.floor(weight / 20000) * 20000))
     local weight_max = weight_min + 20000
+    return speed[weight_min] + (speed[weight_max] - speed[weight_min]) * (weight - weight_min) / 20000
+end
+function B747_setVref30()
 
-    local speed = {}
-    if simDR_altitude_ft_pilot <= -2000 then speed = Vref30data.speedMinus2k
-        elseif simDR_altitude_ft_pilot <= 0 then speed = Vref30data.speed0k
-        elseif simDR_altitude_ft_pilot <= 2000 then speed = Vref30data.speed2k
-        elseif simDR_altitude_ft_pilot <= 6000 then speed = Vref30data.speed6k
-        else speed = Vref30data.speed10k
-    end
-    B747DR_airspeed_Vref30 = speed[weight_min] + (speed[weight_max] - speed[weight_min]) * (weight - weight_min) / 20000
+    B747DR_airspeed_Vref30 = B747_vref(30, simDR_acf_weight_total_kg)
 
 end
 

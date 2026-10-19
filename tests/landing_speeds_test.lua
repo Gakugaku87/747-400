@@ -1,8 +1,9 @@
 -- Run from the repository root with Lua 5.1 or LuaJIT.
--- The landing reference speeds (B747_setVref30 and B747_Vspeeds, B747.60.xt.fltInst02.lua): VREF30 between the
--- table's weights that bracket the gross weight, carried on along its end rows' slope beyond 200-400 t (the CF6 table
--- has 121 kt at 181 t), as the FCOM's table reads (PI.10.2; cckit research_vref.md). The production functions run in
--- XTLua's namespace (the plugin's init.lua) against mocked datarefs.
+-- The landing reference speeds (B747_setVref30 and B747_Vspeeds, B747.60.xt.fltInst02.lua): VREF30 from the FCOM's
+-- table (PI.10.2, 747-400/PW4056: 127 kt at 200 t to 184 at 400 t; cckit research_vref.md) by the gross weight alone,
+-- as the FMC works it out, between the table's weights that bracket it and carried on along its end rows' slope beyond
+-- 200-400 t (the CF6 table has 121 kt at 181 t). The production functions run in XTLua's namespace (the plugin's
+-- init.lua) against mocked datarefs.
 local DIR = "plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/"
 
 local checks, failures = 0, {}
@@ -45,7 +46,7 @@ local function load(weight, altitude)
     tables = tables:sub(1, assert(tables:find('dofile("B747.60.xt.fltInst02.lua")', 1, true)) - 1)
     setfenv(assert(loadstring(tables)), env)()
     for _, part in ipairs({{"function B747_rescale(", "function roundUp(x)"},
-            {"function B747_setVref30()", "function B747_animate_value("}}) do
+            {"function B747_vref(flaps, weight)", "function B747_animate_value("}}) do
         setfenv(assert(loadstring(slice(part[1], part[2]))), env)()
     end
     return env
@@ -63,12 +64,19 @@ local function frame(env)
 end
 local function near(got, want) return got ~= nil and math.abs(got - want) < 0.01 end
 
--- between the weights that bracket the gross weight: at 225 t a quarter of the way from 220 t's 133.80 to 240 t's
--- 140.12, 135.38 (to the nearest 20 t the lower row was held through the lower half of each 20 t: 133.80); at a row
--- itself its value; beyond the table along its end rows (181 t: 120.99; 410 t: 186.90; held at 127.23 and 184.35)
-for _, case in ipairs({{225000, 135.38}, {300000, 157.82}, {219000, 133.47}, {181000, 120.99}, {410000, 186.90}}) do
+-- between the weights that bracket the gross weight: at 225 t a quarter of the way from 220 t's 133 to 240 t's 140,
+-- 134.75 (to the nearest 20 t the lower row was held through the lower half of each 20 t); at a row itself its value;
+-- beyond the table along its end rows (181 t: 121.3; 410 t: 186.5; they were held)
+for _, case in ipairs({{225000, 134.75}, {300000, 157}, {219000, 132.70}, {181000, 121.3}, {410000, 186.5}}) do
     local vref = frame(load(case[1]))
     check(near(vref, case[2]), string.format("VREF30 at %.0f t: %s (%.2f)", case[1] / 1000, tostring(vref), case[2]))
+end
+-- by the gross weight alone, not the present altitude: 233.4 t 137.69 at FL370, 6,000 ft, sea level and -1,000 ft
+-- (the stall speed source's rows by the altitude in steps gave 140.25 at FL370 and 139.28 at 6,000 ft, where crews
+-- select VREF, and the flap speeds stepped down at 6,000 and 2,000 ft on the approach)
+for _, altitude in ipairs({37000, 6000, 0, -1000}) do
+    local vref = frame(load(233400, altitude))
+    check(near(vref, 137.69), string.format("VREF30 at 233.4 t and %d ft: %s (137.69)", altitude, tostring(vref)))
 end
 
 check(frame_error == nil, "a frame failed: "..tostring(frame_error))
