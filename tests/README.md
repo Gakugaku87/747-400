@@ -52,10 +52,16 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   rows and weights (310 t: +2 for a 20 kt headwind, -2.5 for a 10 kt
   tailwind; as the tailwind component on the wind speed -3 and +1), and
   beyond the chart's regions the nearest is taken (9,000 ft at 0 C: region
-  E; no region at all failed on a nil index), all by pressure altitude (a
-  sea level airport with QNH 28.92: 119.5/122.5, not 121/124); a takeoff
-  thrust rating changed once the speeds are set deletes them with the flaps
-  entry, as the FMC does (TO 2's V1 108 stayed under full thrust). Cases
+  E; no region at all failed on a nil index; below its bottom or colder than
+  its left edge on that edge, -62 C at 9,000 ft region E), a point on a
+  line between two regions in the higher one (0 C on region A's top: B; it
+  was in none and taken as E), all by pressure altitude from the standard
+  atmosphere's altimeter relation (a sea level airport with QNH 28.92:
+  939 ft, 119.6/122.6, not 121/124; at 1,000 ft per inHg 180 ft read as
+  region B; a setting read as 0 leaves the altimeter's altitude); after
+  the FMC deletes the speeds for a new takeoff rating
+  (fmc_takeoff_rating_test) the flaps entered again give the new rating's
+  (TO 2's V1 108, then full thrust's 121). Cases
   between the minimum tables' rows, on their hot-day slope and with V1
   brought down to VR pin the interpolations and the clamp. The speeds are
   whole knots as the FMC sets them, the tables' rounded, VMCG and VRMIN up
@@ -66,15 +72,21 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   instead of 179, 15 wind cells 1 kt off), and above region E's top V2
   stays above VR at 360-400 t. Cases for the changes review 38's mutants
   got past: the regions by pressure altitude (360 t, 1,000 ft, QNH 28.92:
-  region B), colder than the chart region A, a rating changed in the air or
-  before the speeds are set (XTLua's first reads of 0) not deleting them,
-  each wind row between its weights (302 t, 10 kt tailwind: V1 122) and the
-  minimums rounded up (400 ft: 121/124/144). The speeds run in XTLua's own
+  region B), colder than the chart region A, each wind row between its
+  weights (302 t, 10 kt tailwind: V1 122) and the minimums rounded up
+  (400 ft: 121/124/144). The speeds run in XTLua's own
   namespace (the plugin's init.lua), where a global table without a
   metatable reads a missing index by overflowing the stack and has no
   length: the minimum tables have one (B747_VMCG_VRMIN_DERATE[0] stopped
   the instruments, the FMC and the autopilot at the flaps entry in p32;
   38 of 64 checks failed before).
+- `fmc_takeoff_rating_test.lua`: THRUST LIM's TO, TO 1 and TO 2 keys
+  (fmsFunctions.setDref) delete the takeoff speeds with the TAKEOFF REF
+  flaps entry and show TAKEOFF SPEEDS DELETED when the rating changes on
+  the ground after the speeds are set, as a GR WT or ZFW entry does (the
+  instruments' script did it without a message); not for the rating
+  already selected, not in the air, and with no speeds set nothing to
+  delete. The handler runs in XTLua's namespace.
 - `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230KT CLB"),
   the ECON/SEL SPD label, the CAS/Mach speed pair, the blank SPD REST
   field, and the CRZ page titles ("ACT ECON CRZ" / "ACT M.801 CRZ") with the
