@@ -11,8 +11,10 @@
 -- 3. where the turn ends before its own end (HDG SEL, a route edit) the path carries on and the step is taken out over
 --    2 nm, nearer or farther: the cut the turn had taken off dropped at once;
 -- 4. on a leg too short for the turn before to end before the next one begins (NIRSI's 64 deg, then AM607's 90 deg
---    2.6-4.0 nm on) the path is continuous: the next turn, taken only once the one before had ended, was taken late and
---    the path stepped -34 ft at once with a 3.2 nm leg, -375 ft with 2.6 nm (review 27b MINOR 2);
+--    2.0-4.0 nm on) the path is continuous: the next turn, taken only once the one before had ended, was taken late and
+--    the path stepped -34 ft at once with a 3.2 nm leg, -375 ft with 2.6 nm (review 27b MINOR 2); below 2.4 nm the
+--    747 crosses AM607's bisector inside the turn's cut, and the step there, over the blend's 250 ft, was taken at once
+--    (+255 ft with 2.2 nm, +268 with 2.0: review 28 MINOR 2);
 -- 5. far from the fix (the cruise) LNAV works the turn out every 5 s at most: it did every frame (review 27b NIT);
 -- 6. in HDG SEL the turn stays while the 747 flies on round its path, and LNAV takes a held fix's turn again: ended at
 --    the HDG SEL, the path stepped -740 to -820 ft where the fix was sequenced abeam (review 28 MAJOR 1).
@@ -76,11 +78,11 @@ end
 
 -- Flies through the fly-by turns at the route's consecutive indexes ks: from_fix nm before the first fix on its
 -- inbound leg, the arcs of each turn at the bank flown (shortened in proportion where two turns' tangents overlap on a
--- short leg; none with opts.noturn, straight on through the fixes) and `after` nm on past the last; 0.02 nm steps at
--- tas kt and alt ft. opts.edit = {s, fn}: fn(route) at path distance s, the path from there the new route's;
--- opts.hooks = {{s, fn}}: fn(d, ap) at s (HDG SEL, a direct-to); opts.vector = {s, heading}: straight on that heading
--- from s. LNAV makes the next fix active as the 747 crosses the turn's bisector (opts.seq "abeam": abeam the fix, as
--- with LNAV not engaged; "start": at the turn's start, the fix then held to the bisector; "none": never;
+-- short leg; none with opts.noturn, straight on through the fixes) and `after` nm on past the last; 0.02 nm steps
+-- (opts.ds) at tas kt and alt ft. opts.edit = {s, fn}: fn(route) at path distance s, the path from there the new
+-- route's; opts.hooks = {{s, fn}}: fn(d, ap) at s (HDG SEL, a direct-to); opts.vector = {s, heading}: straight on that
+-- heading from s. LNAV makes the next fix active as the 747 crosses the turn's bisector (opts.seq "abeam": abeam
+-- the fix, as with LNAV not engaged; "start": at the turn's start, the fix then held to the bisector; "none": never;
 -- opts.seq_after = {s, mode}: that mode from s). Each sample: s, the path's altitude (path), the active fix, the
 -- turn's fix (tfix, 0 without one), whether released (rel), its outbound course (out) and its start_nm (start), the
 -- held fix (hold) and the distance to the first fix (d1).
@@ -180,7 +182,8 @@ local function fly(ks, opts, mutate)
     ap.B747_lnav_update_xtk(route)
     ap.B747_lnav_update_vnav_hold(route)
     ap.setDistances(route)
-    local steps_2s = math.max(1, math.floor(tas / 3600 * 2 / 0.02 + 0.5))
+    local ds = opts.ds or 0.02
+    local steps_2s = math.max(1, math.floor(tas / 3600 * 2 / ds + 0.5))
     local samples = {}
     local s, step, edited, hooked = 0, 0, false, {}
     while s <= total do
@@ -195,7 +198,7 @@ local function fly(ks, opts, mutate)
         local east, north, track = along(s)
         d.simDR_latitude, d.simDR_longitude = toLatLon(east, north)
         d.simDR_true_heading, d.simDR_ground_track_true = track % 360, track % 360
-        d.simDRTime = d.simDRTime + 0.02 / tas * 3600
+        d.simDRTime = d.simDRTime + ds / tas * 3600
         -- LNAV's sequence of the active fix at its turn's bisector (or abeam it, or at its start)
         local k = active
         local seq = opts.seq
@@ -221,7 +224,7 @@ local function fly(ks, opts, mutate)
         samples[#samples + 1] = {s = s, path = path, active = active, tfix = t and t.fix or 0, rel = t and t.released,
             out = t and t.out_course, start = t and t.start_nm, hold = d.B747DR_vnav_hold_index,
             d1 = ap.getDistance(route[ks[1]][5], route[ks[1]][6], d.simDR_latitude, d.simDR_longitude)}
-        s, step = s + 0.02, step + 1
+        s, step = s + ds, step + 1
     end
     return samples
 end
@@ -370,23 +373,26 @@ end
 check(math.abs(worstDiff) <= 15, string.format("HDG SEL and turned back 2.5 nm before NETOM: from 2.1 nm on the path "
     .."is the one without the turn: largest difference %+.0f ft at %.2f nm", worstDiff, worstAt or -1))
 
--- 4. Short legs: NIRSI's 64 deg turn, then AM607's 90 deg one with AM607 moved to 2.6-4.0 nm after NIRSI (AM608 4 nm
+-- 4. Short legs: NIRSI's 64 deg turn, then AM607's 90 deg one with AM607 moved to 2.0-4.0 nm after NIRSI (AM608 4 nm
 -- on, 90 deg right), on the approach's path at 270 kt TAS. The path is steep there (5563 to 4272 ft in 2.6 nm, and
--- the turn's cut: 15-17 ft in 0.02 nm), so the steps are taken against its own slope
+-- the turn's cut: 15-17 ft in 0.02 nm), so the steps are taken against its own slope, in 0.01 nm steps: a change of the
+-- turn holds the path for one step (its own fall in that step, 9-11 ft in 0.02 nm here; a frame's, about 1 ft, at
+-- 50 Hz)
 local function short_leg(leg)
     return function(route)
         route[AM607][5], route[AM607][6] = move(route[NIRSI][5], route[NIRSI][6], leg, 87.4)
         route[AM608][5], route[AM608][6] = move(route[AM607][5], route[AM607][6], 4, 177.4)
     end
 end
-for _, leg in ipairs({4.0, 3.2, 2.6}) do
+for _, leg in ipairs({4.0, 3.2, 2.6, 2.4, 2.2, 2.0}) do
     for _, bank in ipairs({20, 25}) do
-        r = fly({NIRSI, AM607}, {tas = 270, bank = bank, alt = 6000, from_fix = 5, after = 3}, short_leg(leg))
+        r = fly({NIRSI, AM607}, {tas = 270, bank = bank, alt = 6000, from_fix = 5, after = 3, ds = 0.01},
+            short_leg(leg))
         local all = true
         for _, p in ipairs(r) do if p.path == nil then all = false end end
         worst, where = largest_jump(r)
         check(all and math.abs(worst) <= 8, string.format("a %.1f nm leg from NIRSI's turn to AM607's, %d deg arcs: "
-            .."largest step against the path's slope %+.0f ft in 0.02 nm at %.2f nm%s", leg, bank, worst, where or -1,
+            .."largest step against the path's slope %+.0f ft in 0.01 nm at %.2f nm%s", leg, bank, worst, where or -1,
             all and "" or " (not on the approach's path all the way)"))
     end
 end

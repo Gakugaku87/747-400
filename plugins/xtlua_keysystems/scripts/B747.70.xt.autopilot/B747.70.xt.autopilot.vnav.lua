@@ -354,19 +354,33 @@ end
 -- do not quite match (LNAV draws its arc for the TAS it is coming to, in the wind), the descent profile's flags change
 -- up to 2 s after the bisector, and a turn that ends at HDG SEL, a direct-to or a route edit leaves the cut it had
 -- taken off (77 ft 2.5 nm before NETOM's 86 deg turn). A step over VNAV_PATH_BLEND_MAX_FT (a new route, a direct-to)
--- is taken at once. Taken out only as the distance fell, a step stayed while it grew under vectors (review 27).
--- state: the descent profile's (vnavPathBlend) or the approach path's.
+-- is taken at once, but one at a turn's own bisector - the path's point going from the turn's fix to the next (or the
+-- turn before's, carried on) - is taken out up to VNAV_PATH_BLEND_TURN_MAX_FT: on a leg shorter than about 2.4 nm the
+-- 747 crosses the next fix's bisector inside the turn's cut, and the step there (+255 ft with 2.2 nm, +268 with 2.0)
+-- was taken at once (review 28 MINOR 2). Taken out only as the distance fell, a step stayed while it grew under vectors
+-- (review 27). state: the descent profile's (vnavPathBlend) or the approach path's.
 local VNAV_PATH_BLEND_NM = 2
 local VNAV_PATH_BLEND_MAX_FT = 250
+local VNAV_PATH_BLEND_TURN_MAX_FT = 1000
 local vnavPathBlend = {lat = nil, lon = nil, turn = nil, alt = 0, offset = 0, from = 0, t = -100}
 local approachPathBlend = {lat = nil, lon = nil, turn = nil, alt = 0, offset = 0, from = 0, t = -100}
+-- whether the path's point going from (fromLat, fromLon) to (lat, lon) is turn t's bisector: its fix to the next
+local function B747_vnav_turn_switch(t, fromLat, fromLon, lat, lon)
+  return t ~= nil and t.lat ~= nil and math.abs(fromLat - t.lat) <= 1e-7 and math.abs(fromLon - t.lon) <= 1e-7
+    and math.abs(lat - t.next_lat) <= 1e-7 and math.abs(lon - t.next_lon) <= 1e-7
+end
 local function B747_vnav_path_continuity(state, lat, lon, distance, alt)
   local b = state
   local turn = B747_lnav_vnav_turn
   if b.lat ~= nil and simDRTime - b.t <= 5 then
     if math.abs(lat - b.lat) > 1e-7 or math.abs(lon - b.lon) > 1e-7 or turn ~= b.turn then
       local step = b.alt - alt
-      if math.abs(step) <= VNAV_PATH_BLEND_MAX_FT then b.offset, b.from = step, distance else b.offset = 0 end
+      local limit = VNAV_PATH_BLEND_MAX_FT
+      if turn ~= nil and turn == b.turn and (B747_vnav_turn_switch(turn, b.lat, b.lon, lat, lon)
+          or B747_vnav_turn_switch(turn.prev, b.lat, b.lon, lat, lon)) then
+        limit = VNAV_PATH_BLEND_TURN_MAX_FT
+      end
+      if math.abs(step) <= limit then b.offset, b.from = step, distance else b.offset = 0 end
     end
   else
     b.offset = 0
