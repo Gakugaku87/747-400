@@ -19,7 +19,8 @@
 -- 6. in HDG SEL the turn stays while the 747 flies on round its path and fades out of the path as the 747 goes off
 --    it: ended at the HDG SEL, the path stepped -740 to -820 ft where the fix was sequenced abeam (review 28 MAJOR 1),
 --    and ended 0.5 nm off LNAV's path +330 to +500 ft (review 29 MAJOR 1);
--- 7. the turn carried on (prev) on a short leg ends with a route edit of its fix without a step (review 28 NIT).
+-- 7. the turn carried on (prev) on a short leg ends with a route edit of its fix without a step (review 28 NIT);
+-- 8. the turn's fade moves with the distance flown also where LNAV engages or lets go off the path (review 30 MAJOR 1).
 -- The production LNAV (B747_lnav_update_xtk and B747_lnav_update_vnav_hold, as B747_getCurrentWayPoint calls them),
 -- setDescentVSpeed (the approach's path inside 25 nm) and setDistances every 2 s (approach_model.lua's loader) on the
 -- EHAM route in the production order, the 747 flown along the legs and the fly-by arcs at the bank flown, in a flat
@@ -83,11 +84,13 @@ end
 -- short leg; none with opts.noturn, straight on through the fixes) and `after` nm on past the last; 0.02 nm steps
 -- (opts.ds) at tas kt and alt ft. opts.edit = {s, fn}: fn(route) at path distance s, the path from there the new
 -- route's; opts.hooks = {{s, fn}}: fn(d, ap) at s (HDG SEL, a direct-to); opts.vector = {s, heading}: straight on that
--- heading from s; opts.maneuver = {s, radius, turn}: from s an arc of that radius through turn deg, then straight.
+-- heading from s; opts.maneuver = {s, radius, turn}: from s an arc of that radius through turn deg, then straight;
+-- opts.offset: the path flown that far right of the track (nm, left when negative).
 -- LNAV makes the next fix active as the 747 crosses the turn's bisector (opts.seq "abeam": abeam the fix, as with
 -- LNAV not engaged; "start": at the turn's start, the fix then held to the bisector; "none": never;
 -- opts.seq_after = {s, mode}: that mode from s). Each sample: s, the path's altitude (path), the active fix, the
--- turn's fix (tfix, 0 without one), whether released (rel), its outbound course (out) and its start_nm (start), the
+-- turn's fix (tfix, 0 without one), whether released (rel), its outbound course (out), its start_nm (start), its
+-- fade and the turn it carries (prev, 0 without), the
 -- held fix (hold) and the distance to the first fix (d1).
 local function fly(ks, opts, mutate)
     local route, d, ap = setup(mutate)
@@ -189,6 +192,14 @@ local function fly(ks, opts, mutate)
             return e + (s - m.s - alen) * he, n + (s - m.s - alen) * hn, h
         end
     end
+    if opts.offset then
+        -- the whole path flown opts.offset nm to the right of the track (left when negative)
+        local base = along
+        along = function(s)
+            local e, n, h = base(s)
+            return e + opts.offset * math.cos(math.rad(h)), n - opts.offset * math.sin(math.rad(h)), h
+        end
+    end
     d.simDR_TAS_mps, d.simDR_groundspeed = tas / 1.94384, tas / 1.94384
     d.simDR_ind_airspeed_kts_pilot, d.simDR_ias_pilot = 250, 250
     d.simDR_pressureAlt1, d.simDR_radarAlt1 = opts.alt, opts.alt
@@ -245,6 +256,7 @@ local function fly(ks, opts, mutate)
         if (step + 1) % steps_2s == 0 then ap.setDistances(route) end
         samples[#samples + 1] = {s = s, path = path, active = active, tfix = t and t.fix or 0, rel = t and t.released,
             out = t and t.out_course, start = t and t.start_nm, hold = d.B747DR_vnav_hold_index,
+            fade = t and t.fade or 0, prev = t and t.prev and t.prev.fix or 0,
             d1 = ap.getDistance(route[ks[1]][5], route[ks[1]][6], d.simDR_latitude, d.simDR_longitude)}
         s, step = s + ds, step + 1
     end
@@ -501,6 +513,25 @@ for _, at in ipairs({5.2, 5.8}) do
     check(math.abs(worst) <= 8, string.format("NIRSI nudged at %.1f nm while AM607's turn carries its turn: largest "
         .."step against the path's slope %+.0f ft in 0.01 nm at %.2f nm", at, worst, where or -1))
 end
+
+-- 8. LNAV engaged again, or let go, off the turn's path: the turn's fade moves with the distance flown, not at once;
+-- set from the distance off the path in each frame, it stepped as LNAV's state changed (review 30 MAJOR 1)
+r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, noturn = true,
+    hooks = {{s = 6.0, fn = hdg_sel}, {s = 8.5, fn = lnav_on}}, seq_after = {s = 6.0, mode = "abeam"}})
+worst, where = largest_step(r, 0, 1e9)
+check(math.abs(worst) <= 15, string.format("HDG SEL 3 nm before NETOM, straight on, LNAV again about 1 nm off its "
+    .."path: largest step %+.0f ft in 0.02 nm at %.2f nm", worst, where or -1))
+r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, noturn = true,
+    hooks = {{s = 9 - lead110 + 0.2, fn = hdg_sel}, {s = 7.4, fn = lnav_on}},
+    seq_after = {s = 9 - lead110 + 0.2, mode = "abeam"}}, turn_110)
+worst, where = largest_step(r, 0, 1e9)
+check(math.abs(worst) <= 15, string.format("a 110 deg turn, HDG SEL 0.2 nm into LNAV's arc, straight on, LNAV again "
+    .."about 1.1 nm off its path: largest step %+.0f ft in 0.02 nm at %.2f nm", worst, where or -1))
+r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, offset = 1.0,
+    hooks = {{s = 6.8, fn = hdg_sel}}, seq_after = {s = 6.8, mode = "abeam"}})
+worst, where = largest_step(r, 0, 1e9)
+check(math.abs(worst) <= 15, string.format("LNAV engaged 1 nm outside NETOM's turn, then HDG SEL 2.2 nm before NETOM: "
+    .."largest step %+.0f ft in 0.02 nm at %.2f nm", worst, where or -1))
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV turn latch tests passed: "..checks)

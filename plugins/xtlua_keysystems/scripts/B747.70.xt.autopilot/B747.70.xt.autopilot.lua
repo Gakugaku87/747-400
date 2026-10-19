@@ -3432,29 +3432,28 @@ local lnavHoldIndex=0
 local lnavHoldInCourse=0
 local lnavHoldOutCourse=0
 local lnavHoldMaxNm=0
--- [B-14] The turn VNAV's descent path goes through (setDescentVSpeed, afds.vnav_turn_distance_nm): {fix (its
--- index), in_course, out_course, lead_nm (B747_lnav_turn_anticipation_nm), start_nm (the distance to the fix when
--- taken), released (past the bisector), lat, lon and next_lat, next_lon (where the fix and the one after it were), prev
--- (the turn before, on a short leg), off_nm (the aircraft off the turn's path while LNAV does not fly the turns)}: the
--- active fix's from its lead (plus LNAV_VNAV_HOLD_MARGIN_NM) before it
--- (B747_lnav_active_turn), kept through its sequence - at the bisector for a turn LNAV flies by its path, where it is
--- released, or at the turn's start for a held fix, released at the bisector - and once released until the turn has
--- ended (B747_lnav_turn_ended) and the next fix's begins; nil without a turn and once vectored away. Taken only from
--- the held fix's sequence, the path ran straight to a fix LNAV sequences at the bisector through the first half of its
--- turn and stepped 245-290 ft there (NETOM; review 27). A route edit that moves the fix or the one after it, or puts
--- another fix in their place (B747_lnav_turn_on_route), ends the turn and a hold of its fix, and the new route's is
--- taken: latched by its index, the turn kept the old courses and lead, and with NIRSI moved 2.5 nm before NETOM the
--- path stepped +303 ft after the bisector and -142 ft at the old turn's end (review 27b MINOR 1). Only a turn LNAV
--- flies is taken - LNAV engaged with no offset and no direct-to (B747_lnav_flies_turns), on its path - and it ends,
--- before the fix, once the aircraft is vectored more than the margin farther from it than where it was taken. While
--- LNAV does not fly the turns (HDG SEL, the kit's DIRECT TO) the aircraft's distance off the turn's path (off_nm,
--- B747_lnav_turn_path_offset) fades the turn out of VNAV's path (B747_vnav_turn_distance): taken without LNAV, kept in
--- HDG SEL and released at a sequence abeam the fix, it put the path about 170 ft high behind NETOM flown straight past
--- it (review 27b MINOR 3); ended at HDG SEL whatever the 747 then flew, the path ran straight to the fix while the 747
--- turned on round the arc and stepped 740-820 ft where the fix was sequenced abeam (review 28 MAJOR 1); ended 0.5 nm
--- off LNAV's path, it stepped 330-500 ft there (review 29 MAJOR 1). With a metatable, as B747_route_constraints: XTLua
--- copies a global table without one into a namespace of its own, whose read of a missing index recurses until the
--- stack overflows.
+-- [B-14] The turn VNAV's descent path goes through (setDescentVSpeed, afds.vnav_turn_distance_nm): {fix (its index),
+-- in_course, out_course, lead_nm (B747_lnav_turn_anticipation_nm), start_nm (the distance to the fix when taken),
+-- released (past the bisector), lat, lon and next_lat, next_lon (where the fix and the one after it were), prev (the
+-- turn before, on a short leg), fade (out of VNAV's path while LNAV does not fly the turns; fade_lat, fade_lon)}: the
+-- active fix's from its lead (plus LNAV_VNAV_HOLD_MARGIN_NM) before it (B747_lnav_active_turn), kept through its
+-- sequence - at the bisector for a turn LNAV flies by its path, where it is released, or at the turn's start for a held
+-- fix, released at the bisector - and once released until the turn has ended (B747_lnav_turn_ended) and the next fix's
+-- begins; nil without a turn and once vectored away. Taken only from the held fix's sequence, the path ran straight to
+-- a fix LNAV sequences at the bisector through the first half of its turn and stepped 245-290 ft there (NETOM; review
+-- 27). A route edit that moves the fix or the one after it, or puts another fix in their place
+-- (B747_lnav_turn_on_route), ends the turn and a hold of its fix, and the new route's is taken: latched by its index,
+-- the turn kept the old courses and lead, and with NIRSI moved 2.5 nm before NETOM the path stepped +303 ft after the
+-- bisector and -142 ft at the old turn's end (review 27b MINOR 1). Only a turn LNAV flies is taken - LNAV engaged with
+-- no offset and no direct-to (B747_lnav_flies_turns), on its path - and it ends, before the fix, once the aircraft is
+-- vectored more than the margin farther from it than where it was taken. While LNAV does not fly the turns (HDG SEL,
+-- the kit's DIRECT TO) the aircraft's distance off the turn's path (B747_lnav_turn_path_offset) fades the turn out of
+-- VNAV's path (fade, B747_vnav_turn_distance): taken without LNAV, kept in HDG SEL and released at a sequence abeam the
+-- fix, it put the path about 170 ft high behind NETOM flown straight past it (review 27b MINOR 3); ended at HDG SEL
+-- whatever the 747 then flew, the path ran straight to the fix while the 747 turned on round the arc and stepped
+-- 740-820 ft where the fix was sequenced abeam (review 28 MAJOR 1); ended 0.5 nm off LNAV's path, it stepped 330-500 ft
+-- there (review 29 MAJOR 1). With a metatable, as B747_route_constraints: XTLua copies a global table without one into
+-- a namespace of its own, whose read of a missing index recurses until the stack overflows.
 B747_lnav_vnav_turn=nil
 -- The turn at fmsO[k] for VNAV's path, taken distance nm from the fix (B747_lnav_vnav_turn's form)
 local function B747_lnav_new_vnav_turn(fmsO,k,inCourse,outCourse,lead,distance)
@@ -3529,8 +3528,10 @@ end
 -- outbound leg), nm; 0 where that cannot be told (no such path: VNAV's own cross-track blend then)
 local function B747_lnav_turn_path_offset(fmsO,t)
 	local p=B747_lnav_path_parameters()
-	local path=p and B747_lnav_path_at_fix(fmsO,t.fix,p)
-	return path and math.abs(path.xtk_nm) or 0
+	if p==nil then return 0 end
+	local path=B747_lnav_path_at_fix(fmsO,t.fix,p)
+	local off=path and math.abs(path.xtk_nm) or 0
+	return off
 end
 function B747_lnav_update_vnav_hold(fmsO)
 	local current=B747DR_fmscurrentIndex
@@ -3549,18 +3550,30 @@ function B747_lnav_update_vnav_hold(fmsO)
 		end
 		B747_lnav_vnav_turn=t
 	end
-	-- the aircraft vectored away from the fix before its turn: the turn ends. While LNAV does not fly the turns (HDG
-	-- SEL, an offset, a direct-to) the aircraft's distance off the turn's path (off_nm) fades the turn out of VNAV's
-	-- path (B747_vnav_turn_distance), and it ends once it has faded out
+	-- the aircraft vectored away from the fix before its turn: the turn ends. The turn fades out of VNAV's path
+	-- (fade, B747_vnav_turn_distance) towards its target - 0 while LNAV flies the turns, else the aircraft's distance off
+	-- the turn's path from VNAV_TURN_FADE_FROM_NM over VNAV_TURN_FADE_NM - by at most the distance flown over
+	-- VNAV_TURN_FADE_RATE_NM, and ends once it has faded out. Set at once from the distance off the path, it stepped where
+	-- LNAV engaged or let go off the path (-123 ft 1 nm off NETOM's, -381 ft off a 110 deg turn's; review 30 MAJOR 1).
 	local taken=B747_lnav_vnav_turn
 	if taken~=nil then
 		local fix=fmsO[taken.fix]
 		local away=not taken.released
 			and getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)>taken.start_nm+LNAV_VNAV_HOLD_MARGIN_NM
-		taken.off_nm=B747_lnav_flies_turns() and 0 or B747_lnav_turn_path_offset(fmsO,taken)
-		if away or taken.off_nm>=B747_afds_helpers.VNAV_TURN_FADE_FROM_NM+B747_afds_helpers.VNAV_TURN_FADE_NM then
-			B747_lnav_vnav_turn=nil
+		local target=0
+		if not B747_lnav_flies_turns() then
+			target=B747_afds_helpers.clamp((B747_lnav_turn_path_offset(fmsO,taken)-B747_afds_helpers.VNAV_TURN_FADE_FROM_NM)
+				/B747_afds_helpers.VNAV_TURN_FADE_NM,0,1)
 		end
+		local flown=0
+		if taken.fade_lat~=nil then
+			flown=getDistance(taken.fade_lat,taken.fade_lon,simDR_latitude,simDR_longitude)
+		end
+		taken.fade_lat,taken.fade_lon=simDR_latitude,simDR_longitude
+		local most=flown/B747_afds_helpers.VNAV_TURN_FADE_RATE_NM
+		local fade=taken.fade or 0
+		taken.fade=fade+B747_afds_helpers.clamp(target-fade,-most,most)
+		if away or taken.fade>=1 then B747_lnav_vnav_turn=nil end
 	end
 	if current~=lnavHoldLastIndex then
 		local passed=lnavHoldLastIndex

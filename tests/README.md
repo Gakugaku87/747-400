@@ -616,7 +616,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   carried on ends with a route edit of its fix (NIRSI nudged 1 m: -94 ft
   at once); far from the
   fix (40 nm, the cruise) LNAV works the turn out every 5 s at most, not
-  every frame.
+  every frame. The turn's fade moves with the distance flown, so LNAV
+  engaged again about 1 nm off the path (NETOM, a 110 deg turn) and HDG
+  SEL with LNAV engaged 1 nm outside NETOM's turn leave no step over 15 ft
+  (-86, -269 and +101 ft at once with the fade set from the distance off
+  the path each frame).
 - `vnav_mcp_push_test.lua`: after an ALT selector push in the descent (the
   MCP dialled down from VNAV ALT) the AFDS's altitude is the new MCP
   altitude at once (it was NETOM's 7849 above the cleared 7000 for 30 s),

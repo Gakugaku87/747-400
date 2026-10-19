@@ -915,9 +915,11 @@ function afds.vnav_turn_distance_nm(east_nm, north_nm, in_course_deg, out_course
 end
 
 -- [B-14] While LNAV does not fly the turns, a fly-by turn fades out of VNAV's path from VNAV_TURN_FADE_FROM_NM off its
--- path over VNAV_TURN_FADE_NM more (B747_vnav_turn_distance), and LNAV ends it once it has (B747_lnav_update_vnav_hold)
+-- path over VNAV_TURN_FADE_NM more (B747_vnav_turn_distance), the fade moving by at most the distance flown over
+-- VNAV_TURN_FADE_RATE_NM, and LNAV ends it once it has (B747_lnav_update_vnav_hold)
 afds.VNAV_TURN_FADE_FROM_NM = 0.3
 afds.VNAV_TURN_FADE_NM = 1.0
+afds.VNAV_TURN_FADE_RATE_NM = 2.0
 
 -- [B-14] What a fly-by turn at F still gives back of its cut past the bisector (afds.vnav_turn_distance_nm), the
 -- aircraft east_nm, north_nm from F: all of it (cut_nm, lead (1 - cos(turn / 2))) up to cut_nm along the outbound
