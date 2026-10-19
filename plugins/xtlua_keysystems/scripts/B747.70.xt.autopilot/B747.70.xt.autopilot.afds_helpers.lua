@@ -1054,7 +1054,7 @@ afds.VNAV_TOD_FT_PER_NM = 290
 -- route than to its end is climb (a SID constraint). Passed constraints count
 -- as well, so the T/D does not move while the aircraft passes them on the
 -- descent.
-function afds.route_tod_distance(route, eod_index, cruise_alt_ft, distance_fn)
+function afds.route_tod_distance(route, eod_index, cruise_alt_ft, distance_fn, constraints)
     local count = #route
     if count < 1 then return 0, 0 end
     local cruise_alt = tonumber(cruise_alt_ft) or 0
@@ -1073,7 +1073,9 @@ function afds.route_tod_distance(route, eod_index, cruise_alt_ft, distance_fn)
         -- the route altitude of the end of descent applies there, even when CRZ ALT is
         -- so close to it that the T/D from the destination lies after that point
         if i < eod and (to_end[i] >= tod_nm or to_end[i] * 2 > to_end[1]) then break end
-        local alt = tonumber(route[i][9]) or 0
+        -- [B-14] the point's altitude on the descent path: [9] inside its CIFP constraint (constraints, as
+        -- B747_route_constraints; afds.vnav_route_point_alt), as setDistances' profile takes it
+        local alt = afds.vnav_route_point_alt(route, i, constraints, distance_fn)
         if alt > 0 and alt < cruise_alt then
             tod_nm = math.max(tod_nm, to_end[i] + (cruise_alt - alt) / afds.VNAV_TOD_FT_PER_NM)
         end
@@ -1134,7 +1136,7 @@ end
 -- path is the one beyond its far end. (After a DIRECT TO that left only the
 -- origin before it, the fix flown to is that farthest point.)
 function afds.vnav_approach_path(route, runway_index, first_index, distance_fn, transition_alt_ft,
-        cruise_alt_ft, glide_deg)
+        cruise_alt_ft, glide_deg, constraints)
     local destination = route[#route]
     local far_index, far_nm = 1, -1
     for i = 1, runway_index - 1 do
@@ -1150,7 +1152,10 @@ function afds.vnav_approach_path(route, runway_index, first_index, distance_fn, 
     local transition_alt = tonumber(transition_alt_ft) or 18000
     local fixes = {}
     for i = math.max(1, first_index - 1, far_index), runway_index - 1 do
-        local alt = tonumber(route[i][9]) or 0
+        -- [B-14] inside its CIFP constraint (constraints, as B747_route_constraints; afds.vnav_route_point_alt), as the
+        -- descent profile's points: the path took [9] alone, and a point below its floor was kept above it only by the
+        -- AFDS's altitude at the floor, now the MCP's (review 26 MINOR 6)
+        local alt = afds.vnav_route_point_alt(route, i, constraints, distance_fn)
         if route[i][2] ~= 1 and string.sub(tostring(route[i][8] or ""), 1, 1) ~= "(" and not is_runway_entry(route[i])
             and alt > 0 then
             if alt >= transition_alt then

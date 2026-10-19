@@ -388,7 +388,7 @@ function B747_vnav_approach_path(fmsO)
     end
   end
   local points, toRunway = B747_afds_helpers.vnav_approach_path(fmsO, runway, first, getDistance,
-    tonumber(getFMSData("transalt")), B747BR_cruiseAlt, glide)
+    tonumber(getFMSData("transalt")), B747BR_cruiseAlt, glide, B747_route_constraints)
   local distance = B747_vnav_turn_distance(fmsO, first,
     getDistance(simDR_latitude, simDR_longitude, fmsO[first][5], fmsO[first][6])) + toRunway[first]
   local runwayKey = tostring(fmsO[runway][8]).."|"..tostring(fmsO[runway][5]).."|"..tostring(fmsO[runway][6])

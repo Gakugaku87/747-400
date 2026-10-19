@@ -2342,7 +2342,8 @@ function setDistances(fmsO)
 	B747BR_nextDistanceInFeet = nextDistanceInFeet
 	-- the T/D reaches every descent constraint and the end of descent altitude ([9], or the
 	-- destination elevation) at 290 ft/nm; [3] of the end of descent is a frequency on a navaid
-	local cruiseTOD, eodAlt = B747_afds_helpers.route_tod_distance(fmsO, eod, B747BR_cruiseAlt, getDistance)
+	local cruiseTOD, eodAlt = B747_afds_helpers.route_tod_distance(fmsO, eod, B747BR_cruiseAlt, getDistance,
+		B747_route_constraints)
 	local currentTOD = ((simDR_pressureAlt1 - eodAlt) / 100) / 2.9
 	
 	B747BR_tod = cruiseTOD

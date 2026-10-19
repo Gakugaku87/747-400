@@ -116,7 +116,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   behind), and VNAV climb targets judged by the along-route distance so the
   arrival constraints are not climbed to. Ordinary routes keep their end of
   descent and climb targets. On every route the T/D reaches each descent
-  constraint and the end of descent altitude (its route altitude or the
+  constraint (its altitude through its CIFP constraint: an IAF's 3000 above
+  an at or below 2500 moves the T/D 1.7 nm out) and the end of descent
+  altitude (its route altitude or the
   destination elevation, not the navaid frequency in [3]) at 290 ft/nm, so
   the path into the IAF is 290 ft/nm; route altitudes before the T/D (an older
   CRZ ALT) and SID constraints nearer the departure are not descent
@@ -634,8 +636,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   floor where [9] is missing, no level-off above an aircraft already below
   the floor, and nothing without the constraints or in the climb.
 - `vnav_approach_path_test.lua`: VNAV PTH in the approach (within 25 nm of the
-  arrival runway along the route) on the path to the runway - the arrival
-  runway by its name (EHAM with its missed approach's far vectors leg, TST744L
+  arrival runway along the route) on the path to the runway - the fixes'
+  altitudes through their CIFP constraints (AM608's 3300 below its floor at
+  3400), the arrival runway by its name (EHAM with its missed approach's far vectors leg, TST744L
   with its departure runway, not the departure end of a route back to the
   departure airport), only the fixes from the route's farthest point on (a
   circuit's way out left out, level beyond; after a DIRECT TO), no runway or

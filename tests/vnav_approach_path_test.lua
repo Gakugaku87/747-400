@@ -119,6 +119,21 @@ case("the arrival runway", function()
     check(afds.route_runway_index(route, getDistance, 10) == nil, "RWY18 is no runway")
 end)
 
+-- [B-14] The path through the CIFP's constraints: AM608's 3300 below its floor (at or above 3400) is crossed at
+-- 3400; the path took the native FMS's altitude alone (review 26 MINOR 6).
+case("the path through the constraints", function()
+    local route = eham()
+    route[AM608][9] = 3300
+    local function at_am608(constraints)
+        for _, p in ipairs(afds.vnav_approach_path(route, RW18R, AM607, getDistance, 18000, 37000, 3.0, constraints)) do
+            if p.index == AM608 then return p.alt end
+        end
+    end
+    local floor = {[AM608] = {alt_desc = "+", floor = 3400, phase = "descent"}}
+    check(at_am608(floor) == 3400, "AM608's 3300 below its floor: the path at 3400, got "..tostring(at_am608(floor)))
+    check(at_am608(nil) == 3300, "without constraints the native FMS's 3300, got "..tostring(at_am608(nil)))
+end)
+
 -- 2. The path: EHAM from AM607 (NIRSI before it), EINN from ELPOM (BILTO before it is cruise).
 case("the path to RW18R", function()
     local route = eham()

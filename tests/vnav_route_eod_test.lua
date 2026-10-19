@@ -570,6 +570,12 @@ case("route_tod_distance", function()
     local route = normal(0)
     table.insert(route, 4, fix("HIGH", 1, 5, 36000))
     near(afds.route_tod_distance(route, 6, 35000, distance_nm), NORMAL_TOD, 1e-9, "36000 ft fix")
+    -- [B-14] a point's altitude through its CIFP constraint, as the profile's: the IAF's 3000 above an at or below
+    -- 2500 needs the T/D 500 / 290 nm farther out (review 26 MINOR 6)
+    local ceiling = {[4] = {alt_desc = "-", ceiling = 2500, phase = "descent"}}
+    near(afds.route_tod_distance(normal(0), 5, 35000, distance_nm, ceiling), NORMAL_TOD + 500 / 290, 1e-9,
+        "the IAF's 3000 above its at or below 2500")
+    near(afds.route_tod_distance(normal(0), 5, 35000, distance_nm), NORMAL_TOD, 1e-9, "without constraints, as before")
     -- no CRZ ALT: no T/D before the destination, as before
     check(afds.route_tod_distance(normal(0), 5, 0, distance_nm) <= 0, "no CRZ ALT")
     check(afds.route_tod_distance(vor_route(2000, 0), 4, 0, distance_nm) <= 0,
