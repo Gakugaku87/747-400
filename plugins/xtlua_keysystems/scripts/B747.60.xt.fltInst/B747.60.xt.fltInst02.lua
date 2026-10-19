@@ -2641,6 +2641,12 @@ end
 -- V1 / Vr / V2 - TEMPERATURE/ALTITUDE REGIONS
 local regions = {}
 local tempAltRegion = 0
+-- [takeoff speeds] the pressure altitude (ft) the takeoff speed charts and the minimum control speeds are entered
+-- with: the captain's altimeter less its setting's difference from 29.92 inHg at 1,000 ft per inHg. With the
+-- altimeter's own altitude VMCG/VRMIN were 1.5 kt high at a sea level airport on a 980 hPa day (review 36)
+local function B747_takeoff_pressure_altitude()
+    return simDR_altitude_ft_pilot + (29.92 - simDR_altimeter_baro_inHg) * 1000
+end
 
 function B747_getTempAltRegions()
 
@@ -2728,6 +2734,7 @@ function B747_setTempAltRegion()
     B747_getTempAltRegions()
 
     local num_regions = #regions
+    local altitude = B747_takeoff_pressure_altitude()
 
     for i=1, num_regions do
 
@@ -2735,7 +2742,7 @@ function B747_setTempAltRegion()
 
         if (simDR_OAT_degC > r.l) and (simDR_OAT_degC < r.r) then
 
-            if (simDR_altitude_ft_pilot > r.b) and (simDR_altitude_ft_pilot < r.t) then
+            if (altitude > r.b) and (altitude < r.t) then
 
                 r.f()
 
@@ -2748,7 +2755,7 @@ function B747_setTempAltRegion()
     -- [takeoff speeds] beyond the chart's regions the nearest: below region A's bottom or colder than its left edge
     -- A, else (above region E's top - about 8,000 ft at 0 C - or hotter than its right edge) E. Left at 0, the speeds'
     -- lookup failed on a nil index (review 36)
-    if simDR_altitude_ft_pilot <= regions[1].b or simDR_OAT_degC <= regions[1].l then
+    if altitude <= regions[1].b or simDR_OAT_degC <= regions[1].l then
         tempAltRegion = 1
     else
         tempAltRegion = num_regions
@@ -2862,7 +2869,7 @@ function B747_setV1VrV2()
         -- [takeoff speeds] the FCOM's minimums (PI.18.2): V1 not below VMCG; VR not below VRMIN nor VMCG, and V2 then
         -- not below the V2 for that VR; V1 not above VR. The tables gave 101/114/139 at 233 t, flaps 20, sea level
         -- (the FCOM's 121/124/144): the 747 rotated 10 kt early on the line flights
-        local vmcg, vrmin = B747_vmcg_vrmin(simDR_altitude_ft_pilot, simDR_OAT_degC, derate)
+        local vmcg, vrmin = B747_vmcg_vrmin(B747_takeoff_pressure_altitude(), simDR_OAT_degC, derate)
         B747DR_airspeed_V1 = math.max(B747DR_airspeed_V1, vmcg)
         local vr = math.max(B747DR_airspeed_Vr, vrmin, vmcg)
         if vr > B747DR_airspeed_Vr then

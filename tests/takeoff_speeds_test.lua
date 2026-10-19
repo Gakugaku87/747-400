@@ -27,14 +27,14 @@ local function slice(first_marker, last_marker)
     return string.rep("\n", lines)..source:sub(first, last - 1)
 end
 
--- V1, VR and V2 for a weight (kg), flaps (10, 20), airport altitude (ft), OAT (C), wind (from, kt), runway heading,
--- takeoff derate (0, 1, 2)
-local function speeds(weight, flaps, altitude, oat, wind_from, wind_kt, heading, derate)
+-- V1, VR and V2 for a weight (kg), flaps (10, 20), airport altitude (ft, the altimeter's), OAT (C), wind (from, kt),
+-- runway heading, takeoff derate (0, 1, 2), the altimeter setting (inHg; 29.92 without)
+local function speeds(weight, flaps, altitude, oat, wind_from, wind_kt, heading, derate, baro)
     local d = {simDR_acf_weight_total_kg = weight, B747DR_airspeed_flapsRef = flaps, B747DR_radio_altitude = 0,
         simDR_OAT_degC = oat, simDR_altitude_ft_pilot = altitude, simDR_wind_heading_deg = wind_from or 0,
         simDR_wind_speed_kts = wind_kt or 0, simDR_position_mag_psi = heading or 0, simDR_all_wheels_on_ground = 1,
         simDR_airspeed = 0, B747DR_airspeed_V1 = 0, B747DR_airspeed_Vr = 0, B747DR_airspeed_V2 = 0,
-        B747DR_toderate = derate or 0, lastFlaps = -1}
+        B747DR_toderate = derate or 0, lastFlaps = -1, simDR_altimeter_baro_inHg = baro or 29.92}
     local env = setmetatable(d, {__index = _G})
     -- the tables (fltInst.lua up to its dofile of the other parts)
     local tables = read(DIR.."B747.60.xt.fltInst.lua")
@@ -94,6 +94,11 @@ check(near(v1, 123.4, 0.5), "310 t, flaps 20, runway 280, wind 100/10 (tailwind)
 local ok, high_v1 = pcall(speeds, 300000, 20, 9000, 0)
 check(ok and near(high_v1, 135, 0.5), "300 t, flaps 20, 9,000 ft, 0 C (above region E): V1 "..tostring(high_v1)
     .." (135, region E)")
+-- by pressure altitude, as the FCOM's tables: at a sea level airport with QNH 28.92 inHg (pressure altitude about
+-- 1,000 ft) VMCG/VRMIN 119.5/122.5, not the altimeter's sea level 121/124 (review 36)
+v1, vr = speeds(233100, 20, 0, 15, 0, 0, 0, 0, 28.92)
+check(near(v1, 119.5, 0.3) and near(vr, 122.5, 0.3), "233 t, flaps 20, sea level, QNH 28.92: "..show(v1, vr)
+    .." (119.5/122.5 at a pressure altitude of 1,000 ft)")
 -- V1 never above VR
 for _, w in ipairs({200000, 233100, 260000, 300000, 360000, 400000}) do
     for _, f in ipairs({10, 20}) do
