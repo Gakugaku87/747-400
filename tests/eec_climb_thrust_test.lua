@@ -101,13 +101,17 @@ end
 -- 1.50), max climb itself at ISA+40 (25 C). On warm days 0.6 per Mach overshot the table by up to 0.15 (review 34),
 -- above 12,000 ft by 0.03-0.15 (review 35). The ISA deviation is the same at the row only with the lapse stopped at
 -- the tropopause: at 41,000 ft and ISA+15 (-41.5 C) M.75, 1.404 (the row at 10.2 C: 99 %; lapsed on above 36,089 ft
--- it read 19.9 C, 47 %: 1.375; review 37). Between 11,000 and 12,000 ft the two are blended: at 11,500 ft and ISA+40
--- (32.2 C) at 200 KIAS (M.373) the table and the share both give max climb. At M.84 nothing is added; and a rating so
--- raised is held to the table's top, 1.64: M.81 at 35,000 ft gave 1.66
+-- it read 19.9 C, 47 %: 1.375; review 37), and at 37,000 ft, ISA+20 (-36.5 C), M.65 1.43 (the row at 15.2 C; lapsed
+-- on above 35,000 ft, 13.0 C: 1.45). Between 11,000 and 12,000 ft the two are blended: at 11,500 ft and ISA+40
+-- (32.2 C) at 200 KIAS (M.373) the table and the share both give max climb; at ISA with a max climb of 1.30 the
+-- table's 1.50 (its 10,000 ft row, the 10 C column for colder) and the share's 1.45 (1.30 + 0.6 x (M.628 - M.373))
+-- give 1.49 at 11,250 ft, 1.48 at 11,500 and 1.46 at 11,800 (review 38: changes to the blend passed the ISA+40 case).
+-- At M.84 nothing is added; and a rating so raised is held to the table's top, 1.64: M.81 at 35,000 ft gave 1.66
 for _, case in ipairs({{10000, 0.452, nil, 1.440}, {10000, 0.363, nil, 1.49}, {10000, 0.30, nil, 1.49},
         {10000, 0.363, 28, 1.35}, {10000, 0.452, 18, 1.401}, {15000, 0.4966, nil, 1.453}, {15000, 0.4966, 5.3, 1.425},
         {15000, 0.4966, 25, 1.35}, {41000, 0.75, -41.5, 1.404}, {11500, 0.3733, 32.2, 1.35}, {25000, 0.84, nil, 1.35},
-        {35000, 0.81, nil, 1.64, 1.64}}) do
+        {35000, 0.81, nil, 1.64, 1.64}, {37000, 0.65, -36.5, 1.43}, {11250, 0.3714, nil, 1.49, 1.30},
+        {11500, 0.3732, nil, 1.48, 1.30}, {11800, 0.3754, nil, 1.46, 1.30}}) do
     for _, light in ipairs({true, false}) do
         local got = clb_target("PW", case[1], case[2], 0, light, 0, case[3], case[5])
         check(got and math.abs(got - case[4]) < 0.006, string.format("PW CLB at %d ft, M%.3f, %s C, %s: %s (%.3f)",
