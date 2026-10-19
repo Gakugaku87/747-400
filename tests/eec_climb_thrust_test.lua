@@ -12,8 +12,13 @@
 -- table). CLB 1 and CLB 2 take 10 and 20 % off the climb thrust to 10,000 ft and give it back linearly by 15,000 ft
 -- (the PW and RR as their EPR above 1: CLB 1 about 0.04 EPR less, as crews see it; the GE as N1 to the power 1/3.1,
 -- the EEC's N1 for thrust about N1^3.1). Each module's CLB branch runs against mocked ratings; this does not validate
--- the engine model.
+-- the engine model. They run in XTLua's namespace (init.lua's create_namespace), where a global table without a
+-- metatable is copied into a namespace of its own that reads a missing index by recursing until the stack overflows
+-- (the takeoff speeds' B747_VMCG_VRMIN_DERATE[0] stopped the keysystems plugin's scripts: p32, 2026-10-20).
 local EEC = "plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.xt.EEC."
+-- XTLua's script runtime (the EEC's plugin), for its namespaces
+local runtime = setmetatable({}, {__index = _G})
+setfenv(assert(loadfile("plugins/xtlua/init.lua")), runtime)()
 
 local checks, failures = 0, {}
 local function check(condition, message)
@@ -47,10 +52,13 @@ end
 -- without), the max climb rating (RATING without).
 local RATING = {GE = 95.0, PW = 1.35, RR = 1.50}
 local function clb_target(engine, altitude, mach, derate, light, flaps, sat, max_climb)
-    local env = setmetatable({B747DR_ref_thr_limit_mode = "CLB", altitude_ft_in = altitude, mach = mach,
-        simDR_altitude = altitude, B747DR_clbderate = derate, packs_adjustment_value = 0,
-        engine_anti_ice_adjustment_value = 0, simDR_flap_ratio = flaps or 0, takeoff_TOGA_n1 = 100,
-        simDR_temperature = sat or 15 - 1.9812 * altitude / 1000}, {__index = _G})
+    local env = runtime.create_namespace()
+    for name, value in pairs({B747DR_ref_thr_limit_mode = "CLB", altitude_ft_in = altitude, mach = mach,
+            simDR_altitude = altitude, B747DR_clbderate = derate, packs_adjustment_value = 0,
+            engine_anti_ice_adjustment_value = 0, simDR_flap_ratio = flaps or 0, takeoff_TOGA_n1 = 100,
+            simDR_temperature = sat or 15 - 1.9812 * altitude / 1000}) do
+        env[name] = value
+    end
     helpers(env)
     local rating = max_climb or RATING[engine]
     if engine == "GE" then
@@ -108,7 +116,7 @@ for _, case in ipairs({{10000, 0.452, nil, 1.440}, {10000, 0.363, nil, 1.49}, {1
 end
 -- the Initial Climb table's 15 C column at 8,000 ft read 1.7 (1.46 at 7,000 ft, 1.47 at 9,000)
 do
-    local env = setmetatable({}, {__index = _G})
+    local env = runtime.create_namespace()
     helpers(env)
     local value = env.INITIAL_CLIMB_epr_PW4056[15][8000]
     check(value >= 1.46 and value <= 1.47, "the Initial Climb table at 15 C and 8,000 ft: "..value)
