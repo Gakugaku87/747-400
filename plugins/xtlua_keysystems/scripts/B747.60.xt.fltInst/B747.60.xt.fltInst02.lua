@@ -2924,10 +2924,14 @@ end
 
 
 -- Vref30
+-- [landing speeds] between the table's weights that bracket the gross weight, carried on along its end rows' slope
+-- beyond 200-400 t (the CF6 table has 121 kt at 181 t). Taken to the nearest 20 t, the lower row was held through the
+-- lower half of each 20 t: up to 3 kt low (225 t: 133.8 for 135.4)
 function B747_setVref30()
 
-    local weight_max = math.min(400000, roundToIncrement(simDR_acf_weight_total_kg, 20000))
-    local weight_min = math.max(200000, weight_max-20000)
+    local weight = simDR_acf_weight_total_kg
+    local weight_min = math.max(200000, math.min(380000, math.floor(weight / 20000) * 20000))
+    local weight_max = weight_min + 20000
 
     local speed = {}
     if simDR_altitude_ft_pilot <= -2000 then speed = Vref30data.speedMinus2k
@@ -2936,7 +2940,7 @@ function B747_setVref30()
         elseif simDR_altitude_ft_pilot <= 6000 then speed = Vref30data.speed6k
         else speed = Vref30data.speed10k
     end
-    B747DR_airspeed_Vref30 = B747_rescale(weight_min, speed[weight_min], weight_max, speed[weight_max], simDR_acf_weight_total_kg)
+    B747DR_airspeed_Vref30 = speed[weight_min] + (speed[weight_max] - speed[weight_min]) * (weight - weight_min) / 20000
 
 end
 

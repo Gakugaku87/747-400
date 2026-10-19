@@ -90,6 +90,12 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   landing, where the instruments leave V1 at 998 (no speeds in the air):
   that showed the message on a turnaround (3 of 12 checks failed before).
   The handlers run in XTLua's namespace.
+- `landing_speeds_test.lua`: the landing reference speeds (B747_setVref30
+  and B747_Vspeeds): VREF30 between the table's weights that bracket the
+  gross weight and along its end rows' slope beyond 200-400 t (to the
+  nearest 20 t the lower row was held through the lower half of each 20 t,
+  up to 3 kt low: 225 t 133.8 for 135.4; 3 of 6 checks failed before). The
+  functions run in XTLua's namespace.
 - `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230KT CLB"),
   the ECON/SEL SPD label, the CAS/Mach speed pair, the blank SPD REST
   field, and the CRZ page titles ("ACT ECON CRZ" / "ACT M.801 CRZ") with the
