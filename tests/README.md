@@ -60,8 +60,8 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   939 ft, 119.6/122.6, not 121/124; at 1,000 ft per inHg 180 ft read as
   region B; a setting read as 0 leaves the altimeter's altitude); after
   the FMC deletes the speeds for a new takeoff rating
-  (fmc_takeoff_rating_test) the flaps entered again give the new rating's
-  (TO 2's V1 108, then full thrust's 121). Cases
+  (fmc_takeoff_speeds_deleted_test) the flaps entered again give the new
+  rating's (TO 2's V1 108, then full thrust's 121). Cases
   between the minimum tables' rows, on their hot-day slope and with V1
   brought down to VR pin the interpolations and the clamp. The speeds are
   whole knots as the FMC sets them, the tables' rounded, VMCG and VRMIN up
@@ -80,13 +80,16 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   length: the minimum tables have one (B747_VMCG_VRMIN_DERATE[0] stopped
   the instruments, the FMC and the autopilot at the flaps entry in p32;
   38 of 64 checks failed before).
-- `fmc_takeoff_rating_test.lua`: THRUST LIM's TO, TO 1 and TO 2 keys
-  (fmsFunctions.setDref) delete the takeoff speeds with the TAKEOFF REF
-  flaps entry and show TAKEOFF SPEEDS DELETED when the rating changes on
-  the ground after the speeds are set, as a GR WT or ZFW entry does (the
-  instruments' script did it without a message); not for the rating
-  already selected, not in the air, and with no speeds set nothing to
-  delete. The handler runs in XTLua's namespace.
+- `fmc_takeoff_speeds_deleted_test.lua`: THRUST LIM's TO, TO 1 and TO 2
+  keys (fmsFunctions.setDref) delete the takeoff speeds with the TAKEOFF
+  REF flaps entry and show TAKEOFF SPEEDS DELETED when the rating changes
+  on the ground after the speeds are set, as the GR WT and ZFW entries
+  (fmsFunctions.setdata) do (the instruments' script did it without a
+  message); not for the rating already selected, not in the air, and with
+  no speeds set nothing to delete - before the flaps entry, or after a
+  landing, where the instruments leave V1 at 998 (no speeds in the air):
+  that showed the message on a turnaround (3 of 12 checks failed before).
+  The handlers run in XTLua's namespace.
 - `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230KT CLB"),
   the ECON/SEL SPD label, the CAS/Mach speed pair, the blank SPD REST
   field, and the CRZ page titles ("ACT ECON CRZ" / "ACT M.801 CRZ") with the
@@ -228,7 +231,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   director's flap-change VS bias and the autoland pitch target in the
   hydraulics ap_pitch_assist, and the ground track, true heading, TAS, ground
   speed and bank limits of LNAV's fly-by turn anticipation in the autopilot
-  after_physics.
+  after_physics, and the ground flag and V1/VR/V2 that the takeoff speeds'
+  deletion reads at THRUST LIM's rating keys and the GR WT and ZFW entries
+  in the FMS after_physics.
 - `autoland_flare_test.lua`: the autoland flare law helpers (flare height,
   sink-rate command, pitch-target size and rate limits, pitch-rate damping,
   the approach pitch when no steady sample was taken, derotation at 1 deg/s

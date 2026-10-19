@@ -1726,7 +1726,8 @@ function fmsFunctions.setdata(fmsO,value)
 	setFMSData(value, grwt)
 	setFMSData("zfw", zfw)
 	calc_CGMAC()  --Recalc CG %MAC and TRIM units
-	if (B747DR_airspeed_V1 < 999 or B747DR_airspeed_Vr < 999 or B747DR_airspeed_V2 < 999) and simDR_onground == 1 then
+	-- [takeoff speeds] set speeds only: the instruments leave V1 at 998 (no speeds in the air) after a landing
+	if (B747DR_airspeed_V1 < 998 or B747DR_airspeed_Vr < 998 or B747DR_airspeed_V2 < 998) and simDR_onground == 1 then
 		B747DR_airspeed_flapsRef = 0
 		--B747DR_airspeed_V1 = 999
 		--B747DR_airspeed_Vr = 999
@@ -1754,7 +1755,8 @@ function fmsFunctions.setdata(fmsO,value)
 	setFMSData(value, zfw)
 	setFMSData("grwt", grwt)
 	calc_CGMAC()  --Recalc CG %MAC and TRIM units
-	if (B747DR_airspeed_V1 < 999 or B747DR_airspeed_Vr < 999 or B747DR_airspeed_V2 < 999) and simDR_onground == 1 then
+	-- [takeoff speeds] set speeds only: the instruments leave V1 at 998 (no speeds in the air) after a landing
+	if (B747DR_airspeed_V1 < 998 or B747DR_airspeed_Vr < 998 or B747DR_airspeed_V2 < 998) and simDR_onground == 1 then
 		B747DR_airspeed_flapsRef = 0
 		--B747DR_airspeed_V1 = 999
 		--B747DR_airspeed_Vr = 999
@@ -2873,8 +2875,9 @@ function fmsFunctions.setDref(fmsO,value)
     if value=="TO1" then rating = 1 elseif value=="TO2" then rating = 2 end
     -- [takeoff speeds] a takeoff thrust rating changed once the speeds are set deletes them with the flaps entry, as
     -- a GR WT or ZFW entry above: entered again they are worked out for the new rating (TO 2's V1 108 stayed under
-    -- full thrust's VMCG 121; reviews 36 and 38)
-    if rating ~= toderate and (B747DR_airspeed_V1 < 999 or B747DR_airspeed_Vr < 999 or B747DR_airspeed_V2 < 999)
+    -- full thrust's VMCG 121; reviews 36 and 38). Set speeds only: V1 998 is the instruments' "none in the air",
+    -- kept after a landing (review 39)
+    if rating ~= toderate and (B747DR_airspeed_V1 < 998 or B747DR_airspeed_Vr < 998 or B747DR_airspeed_V2 < 998)
         and simDR_onground == 1 then
       B747DR_airspeed_flapsRef = 0
       fmsO["notify"] = "TAKEOFF SPEEDS DELETED"
