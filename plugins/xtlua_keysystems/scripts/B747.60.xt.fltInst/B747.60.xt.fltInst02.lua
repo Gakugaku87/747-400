@@ -150,6 +150,7 @@ simDR_acf_weight_total_kg           = find_dataref("sim/flightmodel/weight/m_tot
 simDR_wing_flap1_deg                = find_dataref("sim/flightmodel2/wing/flap1_deg")
 
 simDR_OAT_degC                      = find_dataref("sim/cockpit2/temperature/outside_air_temp_degc")
+B747DR_toderate                     = find_dataref("laminar/B747/engine/derate/TO")
 simDR_wind_heading_deg              = find_dataref("sim/cockpit2/gauges/indicators/wind_heading_deg_mag")
 simDR_wind_speed_kts                = find_dataref("sim/cockpit2/gauges/indicators/wind_speed_kts")
 simDR_position_mag_psi              = find_dataref("sim/flightmodel/position/mag_psi")
@@ -2777,6 +2778,44 @@ end
 
 
 
+-- [takeoff speeds] The minimum control speeds (B747_VMCG_VRMIN) at a pressure altitude (ft) and OAT (C), for a takeoff
+-- derate (0, 1, 2): linear between the table's rows, each flat to its corner and 0.6 kt per C less above it
+local function B747_vmcg_vrmin_row(row, oat)
+    local hot = 0.6 * math.max(0, oat - row.corner)
+    return row.vmcg - hot, row.vrmin - hot
+end
+function B747_vmcg_vrmin(altitude, oat, derate)
+    local rows = B747_VMCG_VRMIN
+    local i = 1
+    while i < #rows - 1 and rows[i + 1].alt <= altitude do i = i + 1 end
+    local f = math.max(0, math.min(1, (altitude - rows[i].alt) / (rows[i + 1].alt - rows[i].alt)))
+    local vmcg1, vrmin1 = B747_vmcg_vrmin_row(rows[i], oat)
+    local vmcg2, vrmin2 = B747_vmcg_vrmin_row(rows[i + 1], oat)
+    local vmcg, vrmin = vmcg1 + (vmcg2 - vmcg1) * f, vrmin1 + (vrmin2 - vrmin1) * f
+    local share = B747_VMCG_VRMIN_DERATE[derate]
+    if share ~= nil then vmcg, vrmin = vmcg * share.vmcg, vrmin * share.vrmin end
+    return vmcg, vrmin
+end
+-- the V2 for a VR raised to VRMIN (B747_V2_FOR_VRMIN): between the table's weights (held at its ends), linear in VR
+-- through its VR 120 and 125 rows
+function B747_v2_for_vrmin(flaps, vr, weight)
+    local t = B747_V2_FOR_VRMIN[flaps]
+    if t == nil then return 0 end
+    local function at(row)
+        local lo, hi
+        for w, _ in pairs(row) do
+            if w <= weight and (lo == nil or w > lo) then lo = w end
+            if w >= weight and (hi == nil or w < hi) then hi = w end
+        end
+        lo, hi = lo or hi, hi or lo
+        if hi == lo then return row[lo] end
+        return row[lo] + (row[hi] - row[lo]) * (weight - lo) / (hi - lo)
+    end
+    local v120, v125 = at(t[120]), at(t[125])
+    return v120 + (v125 - v120) * (vr - 120) / 5
+end
+
+
 B747DR_airspeed_flapsRef                              = find_dataref("laminar/B747/airspeed/flapsRef")
 lastFlaps=-1
 -- V1 / Vr / V2
@@ -2788,6 +2827,7 @@ function B747_setV1VrV2()
     if B747DR_radio_altitude>1000 then
         B747DR_airspeed_flapsRef=0
     end
+    local derate = B747DR_toderate  -- read every frame: XTLua gives 0 for a dataref's first read
 
     if flaps >= 10.0 and flaps <= 20.0 and lastFlaps~=flaps then
 
@@ -2800,6 +2840,18 @@ function B747_setV1VrV2()
 
         -- V2
         B747DR_airspeed_V2 = B747_rescale(weight_min, B747_V2[flaps][tempAltRegion][weight_min], weight_max, B747_V2[flaps][tempAltRegion][weight_max], simDR_acf_weight_total_kg)
+
+        -- [takeoff speeds] the FCOM's minimums (PI.18.2): V1 not below VMCG; VR not below VRMIN nor VMCG, and V2 then
+        -- not below the V2 for that VR; V1 not above VR. The tables gave 101/114/139 at 233 t, flaps 20, sea level
+        -- (the FCOM's 121/124/144): the 747 rotated 10 kt early on the line flights
+        local vmcg, vrmin = B747_vmcg_vrmin(simDR_altitude_ft_pilot, simDR_OAT_degC, derate)
+        B747DR_airspeed_V1 = math.max(B747DR_airspeed_V1, vmcg)
+        local vr = math.max(B747DR_airspeed_Vr, vrmin, vmcg)
+        if vr > B747DR_airspeed_Vr then
+            B747DR_airspeed_Vr = vr
+            B747DR_airspeed_V2 = math.max(B747DR_airspeed_V2, B747_v2_for_vrmin(flaps, vr, simDR_acf_weight_total_kg))
+        end
+        B747DR_airspeed_V1 = math.min(B747DR_airspeed_V1, B747DR_airspeed_Vr)
         lastFlaps=flaps
     elseif lastFlaps~=flaps then
         if simDR_all_wheels_on_ground==1 then
