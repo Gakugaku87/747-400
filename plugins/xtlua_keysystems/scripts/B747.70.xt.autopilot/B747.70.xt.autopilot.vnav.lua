@@ -311,7 +311,9 @@ end
 -- still aims at it: the profile's flags change up to 2 s later), or once past the bisector to the fix after it;
 -- elsewhere the straight distance (direct). A turn taken while the one before it still gives back its cut (prev, a
 -- short leg) adds what that one gives back to the distance to its fix, and the turn before serves its own fix (the
--- profile up to 2 s late).
+-- profile up to 2 s late). The aircraft off the turn's path while LNAV does not fly the turns (turn.off_nm: HDG SEL, a
+-- direct-to) fades the turn out towards the straight distance, from afds.VNAV_TURN_FADE_FROM_NM off it over
+-- afds.VNAV_TURN_FADE_NM more: continuous wherever the 747 goes (review 29 MAJOR 1).
 local function B747_vnav_turn_distance(fmsO, index, direct)
   local turn = B747_lnav_vnav_turn
   if turn == nil or fmsO == nil or fmsO[index] == nil then return direct end
@@ -332,8 +334,11 @@ local function B747_vnav_turn_distance(fmsO, index, direct)
     extra = B747_afds_helpers.vnav_turn_give_back_nm(pd * math.sin(pb), pd * math.cos(pb), prev.in_course,
       prev.out_course, prev.lead_nm)
   end
-  return B747_afds_helpers.vnav_turn_distance_nm(d * math.sin(b), d * math.cos(b), turn.in_course, turn.out_course,
-    turn.lead_nm, turn.start_nm, toFix, leg, direct, extra)
+  local distance = B747_afds_helpers.vnav_turn_distance_nm(d * math.sin(b), d * math.cos(b), turn.in_course,
+    turn.out_course, turn.lead_nm, turn.start_nm, toFix, leg, direct, extra)
+  local fade = math.max(0, math.min(1, ((turn.off_nm or 0) - B747_afds_helpers.VNAV_TURN_FADE_FROM_NM)
+    / B747_afds_helpers.VNAV_TURN_FADE_NM))
+  return distance + (direct - distance) * fade
 end
 -- the same to the descent profile's entry `point` (its position), when that is the turn's fix, the one after it or
 -- the fix of the turn before it

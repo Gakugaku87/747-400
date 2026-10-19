@@ -5,7 +5,7 @@
 --    the new route's: the turn, latched by its index, kept the old courses and lead, and the path stepped +303 ft at
 --    the profile's refresh after the bisector and -142 ft at the old turn's end (review 27b MINOR 1);
 -- 2. the turn is taken only while LNAV flies the turns on its path - engaged, no offset, no direct-to - and ends once
---    LNAV no longer does (HDG SEL, the kit's DIRECT TO) and the 747 is off its path, or once it is vectored away:
+--    LNAV no longer does (HDG SEL, the kit's DIRECT TO) and the 747 has gone off its path, or once it is vectored away:
 --    taken and kept without LNAV, flown straight past NETOM it put the path ~170 ft high behind the fix (review 27b
 --    MINOR 3);
 -- 3. where the turn ends before its own end (HDG SEL, a route edit) the path carries on and the step is taken out over
@@ -16,8 +16,9 @@
 --    747 crosses AM607's bisector inside the turn's cut, and the step there, over the blend's 250 ft, was taken at once
 --    (+255 ft with 2.2 nm, +268 with 2.0: review 28 MINOR 2);
 -- 5. far from the fix (the cruise) LNAV works the turn out every 5 s at most: it did every frame (review 27b NIT);
--- 6. in HDG SEL the turn stays while the 747 flies on round its path, and LNAV takes a held fix's turn again: ended at
---    the HDG SEL, the path stepped -740 to -820 ft where the fix was sequenced abeam (review 28 MAJOR 1);
+-- 6. in HDG SEL the turn stays while the 747 flies on round its path and fades out of the path as the 747 goes off
+--    it: ended at the HDG SEL, the path stepped -740 to -820 ft where the fix was sequenced abeam (review 28 MAJOR 1),
+--    and ended 0.5 nm off LNAV's path +330 to +500 ft (review 29 MAJOR 1);
 -- 7. the turn carried on (prev) on a short leg ends with a route edit of its fix without a step (review 28 NIT).
 -- The production LNAV (B747_lnav_update_xtk and B747_lnav_update_vnav_hold, as B747_getCurrentWayPoint calls them),
 -- setDescentVSpeed (the approach's path inside 25 nm) and setDistances every 2 s (approach_model.lua's loader) on the
@@ -82,8 +83,9 @@ end
 -- short leg; none with opts.noturn, straight on through the fixes) and `after` nm on past the last; 0.02 nm steps
 -- (opts.ds) at tas kt and alt ft. opts.edit = {s, fn}: fn(route) at path distance s, the path from there the new
 -- route's; opts.hooks = {{s, fn}}: fn(d, ap) at s (HDG SEL, a direct-to); opts.vector = {s, heading}: straight on that
--- heading from s. LNAV makes the next fix active as the 747 crosses the turn's bisector (opts.seq "abeam": abeam
--- the fix, as with LNAV not engaged; "start": at the turn's start, the fix then held to the bisector; "none": never;
+-- heading from s; opts.maneuver = {s, radius, turn}: from s an arc of that radius through turn deg, then straight.
+-- LNAV makes the next fix active as the 747 crosses the turn's bisector (opts.seq "abeam": abeam the fix, as with
+-- LNAV not engaged; "start": at the turn's start, the fix then held to the bisector; "none": never;
 -- opts.seq_after = {s, mode}: that mode from s). Each sample: s, the path's altitude (path), the active fix, the
 -- turn's fix (tfix, 0 without one), whether released (rel), its outbound course (out) and its start_nm (start), the
 -- held fix (hold) and the distance to the first fix (d1).
@@ -166,6 +168,25 @@ local function fly(ks, opts, mutate)
             local e, n = position(opts.vector.s)
             local ue, un = unit(opts.vector.heading)
             return e + (s - opts.vector.s) * ue, n + (s - opts.vector.s) * un, opts.vector.heading
+        end
+    end
+    if opts.maneuver then
+        -- from s on: an arc of `radius` nm through `turn` deg (+ right) from where the 747 is, then straight on
+        local m, base = opts.maneuver, along
+        along = function(s)
+            if s <= m.s then return base(s) end
+            local e0, n0, h0 = base(m.s)
+            local side = m.turn > 0 and 1 or -1
+            local ue, un = unit(h0)
+            local ce, cn = e0 + side * m.radius * un, n0 - side * m.radius * ue
+            local alen = m.radius * math.rad(math.abs(m.turn))
+            local a = math.min(s - m.s, alen) / m.radius
+            local re, rn = e0 - ce, n0 - cn
+            local c, sa = math.cos(-side * a), math.sin(-side * a)
+            local e, n, h = ce + re * c - rn * sa, cn + re * sa + rn * c, h0 + side * math.deg(a)
+            if s - m.s <= alen then return e, n, h end
+            local he, hn = unit(h)
+            return e + (s - m.s - alen) * he, n + (s - m.s - alen) * hn, h
         end
     end
     d.simDR_TAS_mps, d.simDR_groundspeed = tas / 1.94384, tas / 1.94384
@@ -302,8 +323,8 @@ local r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 
 local q = taken_between(r, 0, 1e9)
 check(q == nil, string.format("LNAV not engaged, straight on past NETOM: no turn taken (%s)",
     q and string.format("NETOM's taken at %.2f nm", q.s) or "none"))
--- HDG SEL 3.5 nm before NETOM, after its turn was taken, flown straight on: the turn ends once the 747 is off its path
--- (0.5 nm into the arc's side), before NETOM is passed abeam, and none is taken again
+-- HDG SEL 3.5 nm before NETOM, after its turn was taken, flown straight on: the turn fades out of the path as the 747
+-- goes off it and has ended (1.3 nm off it) 2 nm past NETOM's abeam point, and none is taken again
 local function hdg_sel(d) d.B747DR_ap_lnav_state = 0 end
 local function abeam_at(samples)
     for _, p in ipairs(samples) do if p.active ~= NETOM then return p.s end end
@@ -312,16 +333,16 @@ end
 r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, noturn = true, seq = "abeam",
     hooks = {{s = 5.5, fn = hdg_sel}}})
 check(taken_between(r, 0, 5.48) ~= nil, "NETOM's turn taken before the HDG SEL")
-q = taken_between(r, abeam_at(r) - 0.02, 1e9)
-check(q == nil, string.format("HDG SEL 3.5 nm before NETOM, straight on: its turn has ended before NETOM is passed "
-    .."abeam (%s)", q and string.format("still taken at %.2f nm", q.s) or "it had"))
+q = taken_between(r, abeam_at(r) + 2, 1e9)
+check(q == nil, string.format("HDG SEL 3.5 nm before NETOM, straight on: its turn has ended 2 nm past NETOM's abeam "
+    .."point (%s)", q and string.format("still taken at %.2f nm", q.s) or "it had"))
 -- the kit's DIRECT TO NETOM 3.5 nm before it (an LNAV direct-to, xtk target -100), straight on: the same
 local function direct_to(d) d.B747DR_ap_lnav_xtk_target = -100 end
 r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, noturn = true, seq = "abeam",
     hooks = {{s = 5.5, fn = direct_to}}})
-q = taken_between(r, abeam_at(r) - 0.02, 1e9)
-check(q == nil, string.format("a direct-to NETOM 3.5 nm before it, straight on: its turn has ended before NETOM is "
-    .."passed abeam (%s)", q and string.format("still taken at %.2f nm", q.s) or "it had"))
+q = taken_between(r, abeam_at(r) + 2, 1e9)
+check(q == nil, string.format("a direct-to NETOM 3.5 nm before it, straight on: its turn has ended 2 nm past NETOM's "
+    .."abeam point (%s)", q and string.format("still taken at %.2f nm", q.s) or "it had"))
 -- turned away from NETOM 3.5 nm before it, LNAV still engaged: the turn ends 1 nm farther from NETOM than where it was
 -- taken, not before
 local function bearing(a, b)
@@ -432,22 +453,43 @@ for _, at in ipairs({6.0, 7.0, 8.0}) do
         .."%+.0f ft in 0.02 nm at %.2f nm", 9 - at, worst, where or -1))
 end
 -- NETOM held for its turn (sequenced at the turn's start), HDG SEL 2 nm before it and LNAV again 1 nm on, round the
--- arc: the path continuous (-327 ft at the release); and with the held fix's turn ended meanwhile, LNAV takes it again
+-- arc: the path continuous (-327 ft at the release)
 local function lnav_on(d) d.B747DR_ap_lnav_state = 2 end
 r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, seq = "start",
     hooks = {{s = 7.0, fn = hdg_sel}, {s = 8.0, fn = lnav_on}}})
 worst, where = largest_step(r, 0, 1e9)
 check(math.abs(worst) <= 15, string.format("NETOM held for its turn, HDG SEL 2 nm before it, LNAV again 1 nm on: "
     .."largest step %+.0f ft in 0.02 nm at %.2f nm", worst, where or -1))
-local function turn_ended(d, ap) d.B747DR_ap_lnav_state = 0; ap.B747_lnav_vnav_turn = nil end
-r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, seq = "start",
-    hooks = {{s = 7.0, fn = turn_ended}, {s = 7.5, fn = lnav_on}}})
-local retaken = nil
-for _, p in ipairs(r) do
-    if p.s >= 7.52 and p.hold == NETOM and retaken == nil then retaken = p.tfix == NETOM end
+-- off LNAV's path in HDG SEL the turn fades out of the path with the 747's distance off it: kept until 0.5 nm off and
+-- ended there, it stepped +330 to +500 ft at once (review 29 MAJOR 1). LNAV's arc drawn for a 300 kt target (324 kt
+-- TAS, as for the highest ground speed in a wind), the 747 turning at 20 deg of bank for its 270 kt from 0.3 nm into it
+local cinN = (bearing(rt[NETOM], rt[SUGOL]) + 180) % 360
+local turnN = wrap(bearing(rt[NETOM], rt[NIRSI]) - cinN)
+local leadL = afds.lnav_turn_anticipation_nm(324, 0, 0, 20, cinN, cinN + turnN, afds.LNAV_ROLL_RATE_DEG_PER_SEC, 324)
+local R270 = (270 * 0.514444) ^ 2 / (9.80665 * math.tan(math.rad(20))) / 1852
+local function target_300(d) d.simDR_autopilot_airspeed_is_mach, d.simDR_autopilot_airspeed_kts = 0, 300 end
+local at = 9 - leadL + 0.3
+r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, noturn = true,
+    hooks = {{s = 0, fn = target_300}, {s = at, fn = hdg_sel}}, seq_after = {s = at, mode = "abeam"},
+    maneuver = {s = at, radius = R270, turn = turnN}})
+worst, where = largest_step(r, 0, 1e9)
+check(math.abs(worst) <= 15, string.format("LNAV's arc drawn for 324 kt, HDG SEL 0.3 nm into it, the 747 turning at "
+    .."20 deg inside it: largest step %+.0f ft in 0.02 nm at %.2f nm", worst, where or -1))
+-- straight on before a 110 deg turn (NIRSI moved): HDG SEL 0.8 nm before LNAV's arc and 0.2 nm into it
+local function turn_110(route)
+    local cin = (bearing(route[NETOM], route[SUGOL]) + 180) % 360
+    route[NIRSI][5], route[NIRSI][6] = move(route[NETOM][5], route[NETOM][6], 10.7, (cin - 110) % 360)
 end
-check(retaken == true, "NETOM held, its turn ended and LNAV engaged again: the held fix's turn taken again (got "
-    ..tostring(retaken)..")")
+local lead110 = afds.lnav_turn_anticipation_nm(270, 0, 0, 20, cinN, cinN - 110, afds.LNAV_ROLL_RATE_DEG_PER_SEC, 270)
+for _, off in ipairs({-0.8, 0.2}) do
+    at = 9 - lead110 + off
+    r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, noturn = true,
+        hooks = {{s = at, fn = hdg_sel}}, seq_after = {s = at, mode = "abeam"}}, turn_110)
+    worst, where = largest_step(r, 0, 1e9)
+    check(math.abs(worst) <= 15, string.format("a 110 deg turn at NETOM, HDG SEL %.1f nm %s LNAV's arc, straight on: "
+        .."largest step %+.0f ft in 0.02 nm at %.2f nm", math.abs(off), off < 0 and "before" or "into", worst,
+        where or -1))
+end
 
 -- 7. The fix of the turn carried on (prev) moved while the next turn carries it (NIRSI nudged 1 m north on a 3.2 nm leg
 -- to AM607): the path takes out what that turn gave back; dropped from the turn in place, it stepped -105 ft at once

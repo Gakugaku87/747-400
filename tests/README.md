@@ -595,13 +595,16 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   turn goes out on the new course and the path is the new route's, with no
   step over 15 ft (the old turn, latched by its index, stepped the path
   +303 ft after the bisector); the turn is taken only while LNAV flies the
-  turns (none with LNAV armed, flown straight past NETOM) and ends in HDG
-  SEL or a direct-to once the 747 is off its path (flown straight on,
-  before NETOM is passed abeam) and once it is vectored 1 nm farther from
-  the fix than where it was taken, but stays while the 747 turns on round
-  its arc in HDG SEL (ended at the HDG SEL, the path stepped -740 to
-  -820 ft where NETOM was sequenced abeam), and LNAV takes a held fix's turn
-  again; where it ends before its own end (HDG SEL, the route edit) the
+  turns (none with LNAV armed, flown straight past NETOM) and ends once
+  the 747 is vectored 1 nm farther from the fix than where it was taken;
+  in HDG SEL or a direct-to it stays while the 747 turns on round its arc
+  (ended at the HDG SEL, the path stepped -740 to -820 ft where NETOM was
+  sequenced abeam) and fades out of the path as the 747 goes off it - with
+  LNAV's arc drawn for 324 kt and the 747 turning inside it, and flown
+  straight on before a 110 deg turn, no step over 15 ft (ended 0.5 nm off
+  LNAV's path it stepped +281 and +332 ft at once) - and has ended 2 nm
+  past NETOM's abeam point flown straight on; where it ends before its own
+  end (HDG SEL, the route edit) the
   path carries on, the step taken out over 2 nm, also turned back from the
   fix (the cut taken off was dropped at once: +77 ft);
   and on a leg too short for one turn to end before the next begins
