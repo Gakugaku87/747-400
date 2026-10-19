@@ -302,8 +302,9 @@ function VNAV_DES_ALT(numAPengaged,fms)
     elseif B747DR_autopilot_altitude_ft<simDR_pressureAlt1+100 then
         level=B747DR_autopilot_altitude_ft
     elseif not B747_vnav_approach_active then
-        -- the MCP altitude above: level off where the conflict began
-        if conflict==nil then conflict={alt=simDR_pressureAlt1} end
+        -- the MCP altitude above: level off where the conflict began (B747_vnav_mcp_conflict, with a metatable for
+        -- XTLua, as B747_route_constraints)
+        if conflict==nil then conflict=setmetatable({alt=simDR_pressureAlt1},{}) end
         conflict.t=simDRTime
         B747_vnav_mcp_conflict=conflict
         targetAlt=conflict.alt

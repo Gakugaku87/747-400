@@ -3435,7 +3435,8 @@ local lnavHoldMaxNm=0
 -- [B-14] The held fix's turn for VNAV's descent path (setDescentVSpeed, afds.vnav_turn_distance_nm): {fix (its
 -- index), in_course, out_course, lead_nm (B747_lnav_turn_anticipation_nm when it was held), start_nm (the distance
 -- to it then), released (past the bisector)}, kept once released until the active fix changes again; nil without a
--- held turn and once vectored away.
+-- held turn and once vectored away. With a metatable, as B747_route_constraints: XTLua copies a global table without
+-- one into a namespace of its own, whose read of a missing index recurses until the stack overflows.
 B747_lnav_vnav_turn=nil
 function B747_lnav_update_vnav_hold(fmsO)
 	local current=B747DR_fmscurrentIndex
@@ -3458,8 +3459,8 @@ function B747_lnav_update_vnav_hold(fmsO)
 				lnavHoldInCourse=inCourse
 				lnavHoldOutCourse=outCourse
 				lnavHoldMaxNm=1.5*distance+LNAV_VNAV_HOLD_MARGIN_NM
-				B747_lnav_vnav_turn={fix=passed,in_course=inCourse,out_course=outCourse,lead_nm=lead,start_nm=distance,
-					released=false}
+				B747_lnav_vnav_turn=setmetatable({fix=passed,in_course=inCourse,out_course=outCourse,lead_nm=lead,
+					start_nm=distance,released=false},{})
 			end
 		end
 	end

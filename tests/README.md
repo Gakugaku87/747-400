@@ -592,6 +592,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   levelled off (X-Plane's ALT HOLD), the MCP where it is higher - while VNAV
   PTH, also with the window open below SPD TRANS, takes the MCP altitude
   alone (the production VNAV_DES_ALT).
+- `xtlua_vnav_tables_test.lua`: VNAV's new global tables in XTLua's namespace
+  (init.lua's create_namespace): LNAV's held turn (B747_lnav_vnav_turn) and
+  the MCP altitude's conflict (B747_vnav_mcp_conflict) read as plain tables,
+  a missing index nil (without a metatable XTLua copied them into a
+  namespace whose missing-index read overflowed the stack).
 - `vnav_mcp_above_test.lua`: the MCP altitude dialled above the 747 in a
   VNAV PTH descent (9000 to 13,000 at 12,000 ft): it levels off where it is
   and holds in VNAV ALT (FCOM 4.10.7), neither climbing nor going on
