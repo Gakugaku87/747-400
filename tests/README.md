@@ -55,7 +55,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   E; no region at all failed on a nil index), all by pressure altitude (a
   sea level airport with QNH 28.92: 119.5/122.5, not 121/124); a takeoff
   thrust rating changed once the speeds are set deletes them with the flaps
-  entry, as the FMC does (TO 2's V1 108 stayed under full thrust).
+  entry, as the FMC does (TO 2's V1 108 stayed under full thrust). Cases
+  between the minimum tables' rows, on their hot-day slope and with V1
+  brought down to VR pin the interpolations and the clamp.
 - `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230KT CLB"),
   the ECON/SEL SPD label, the CAS/Mach speed pair, the blank SPD REST
   field, and the CRZ page titles ("ACT ECON CRZ" / "ACT M.801 CRZ") with the

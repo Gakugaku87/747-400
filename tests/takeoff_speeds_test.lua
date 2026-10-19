@@ -121,6 +121,22 @@ do
         string.format("233 t, flaps 20, TO 2 then TO: V1 %.1f, then %.1f (999: deleted), entered again %.1f "
         .."(108, 999, 121)", first or -1, deleted or -1, again or -1))
 end
+-- between the minimum tables' rows and on their slopes (review 36: changes that dropped the altitude interpolation,
+-- the VR in the V2 for VRMIN or the V1 <= VR clamp still passed): 1,000 ft 13 C 119.5/122.5/142.3, 3,000 ft 9 C
+-- 116.5/119.5/138.7, sea level 35 C 119.8/122.8/142.7
+for _, case in ipairs({{1000, 13, 119.5, 122.5, 142.3}, {3000, 9, 116.5, 119.5, 138.7},
+        {0, 35, 119.8, 122.8, 142.7}}) do
+    v1, vr, v2 = speeds(233100, 20, case[1], case[2])
+    check(near(v1, case[3], 0.3) and near(vr, case[4], 0.3) and near(v2, case[5], 0.3), string.format("233 t, flaps "
+        .."20, %d ft, %d C: %s (%.1f/%.1f/%.1f)", case[1], case[2], show(v1, vr, v2), case[3], case[4], case[5]))
+end
+-- and V1 brought down to VR when the wind correction takes it above (a +30 kt correction on the 40 kt row)
+do
+    local env = load(309700, 20, 20, 15, 280, 40, 280)
+    env.V1windAdj[40][300000], env.V1windAdj[40][320000] = 30, 30
+    v1, vr = run(env)
+    check(v1 == vr and near(vr, 141.5, 0.5), "310 t, flaps 20, a +30 kt V1 correction: V1 "..show(v1, vr).." (= VR)")
+end
 -- V1 never above VR
 for _, w in ipairs({200000, 233100, 260000, 300000, 360000, 400000}) do
     for _, f in ipairs({10, 20}) do
