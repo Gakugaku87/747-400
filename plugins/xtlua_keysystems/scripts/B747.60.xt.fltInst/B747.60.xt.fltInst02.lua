@@ -2973,7 +2973,9 @@ function B747_Vspeeds()
     B747DR_airspeed_Vf5 = B747DR_airspeed_Vref30+40
     B747DR_airspeed_Vf10 = B747DR_airspeed_Vref30+20
     B747DR_airspeed_Vf20 = B747DR_airspeed_Vref30+10
-    B747DR_airspeed_Vf25 = B747DR_airspeed_Vref30+5
+    -- [landing speeds] flaps 25: VREF25 from its own column of the FCOM's table, 5 kt over VREF30 at 200 t and 8 kt at
+    -- 400 t (VREF30 + 5 was up to 3 kt low from 300 t up; cckit research_vref.md)
+    B747DR_airspeed_Vf25 = B747_vref(25, simDR_acf_weight_total_kg)
     B747DR_airspeed_Vf30 = B747DR_airspeed_Vref30
     
     

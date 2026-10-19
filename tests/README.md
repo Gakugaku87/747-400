@@ -98,7 +98,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   table's weights that bracket the gross weight and along its end rows'
   slope beyond 200-400 t (to the nearest 20 t the lower row was held
   through the lower half of each 20 t, up to 3 kt low; 3 of 6 checks
-  failed before). The functions run in XTLua's namespace.
+  failed before); VREF25 (Vf25: the flaps 25 manoeuvre speed and VREF)
+  from the table's own column, 5 kt over VREF30 at 200 t and 8 kt at
+  400 t (VREF30 + 5 was up to 3 kt low; 4 of 14 checks failed before).
+  The functions run in XTLua's namespace.
 - `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230KT CLB"),
   the ECON/SEL SPD label, the CAS/Mach speed pair, the blank SPD REST
   field, and the CRZ page titles ("ACT ECON CRZ" / "ACT M.801 CRZ") with the

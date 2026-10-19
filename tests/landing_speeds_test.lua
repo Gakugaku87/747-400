@@ -2,8 +2,8 @@
 -- The landing reference speeds (B747_setVref30 and B747_Vspeeds, B747.60.xt.fltInst02.lua): VREF30 from the FCOM's
 -- table (PI.10.2, 747-400/PW4056: 127 kt at 200 t to 184 at 400 t; cckit research_vref.md) by the gross weight alone,
 -- as the FMC works it out, between the table's weights that bracket it and carried on along its end rows' slope beyond
--- 200-400 t (the CF6 table has 121 kt at 181 t). The production functions run in XTLua's namespace (the plugin's
--- init.lua) against mocked datarefs.
+-- 200-400 t (the CF6 table has 121 kt at 181 t); VREF25 from its own column of the table, the flaps 25 manoeuvre
+-- speed. The production functions run in XTLua's namespace (the plugin's init.lua) against mocked datarefs.
 local DIR = "plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/"
 
 local checks, failures = 0, {}
@@ -77,6 +77,16 @@ end
 for _, altitude in ipairs({37000, 6000, 0, -1000}) do
     local vref = frame(load(233400, altitude))
     check(near(vref, 137.69), string.format("VREF30 at 233.4 t and %d ft: %s (137.69)", altitude, tostring(vref)))
+end
+
+-- VREF25 (Vf25: the flaps 25 manoeuvre speed, APPROACH REF's 25/ line, the PFD's 25 bug, VNAV's and the autoland's
+-- flaps 25 speed) from the table's VREF25 column, 5 kt over VREF30 at 200 t and 8 kt at 400 t: 300 t 164, 233.4 t
+-- 143.69, 181 t 125.35 (the CF6 table's 126), 410 t 194.5 (VREF30 + 5: 162, 142.69, 126.3, 191.5)
+for _, case in ipairs({{300000, 164}, {233400, 143.69}, {181000, 125.35}, {410000, 194.5}}) do
+    local env = load(case[1])
+    frame(env)
+    check(near(env.B747DR_airspeed_Vf25, case[2]), string.format("VREF25 (Vf25) at %.1f t: %s (%.2f)",
+        case[1] / 1000, tostring(env.B747DR_airspeed_Vf25), case[2]))
 end
 
 check(frame_error == nil, "a frame failed: "..tostring(frame_error))
