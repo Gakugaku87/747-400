@@ -585,6 +585,14 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   Both also with the turn sequenced at its bisector, as LNAV sequences a turn
   it flies by its path (with the turn known only from that sequence NETOM's
   path stepped 290 ft and NIRSI's was 59 ft high at the bisector).
+- `vnav_turn_latch_test.lua`: the fly-by turn LNAV hands VNAV's path is the
+  route's as it stands - the production LNAV (cross-track error, hold and
+  turn), setDescentVSpeed and setDistances in the production order, the 747
+  flown through the turns: after a route edit at the turn's fix or the next
+  one (NIRSI moved 2.5 nm before NETOM, its turn 40 deg instead of 86) the
+  turn goes out on the new course and the path is the new route's, with no
+  step over 15 ft (the old turn, latched by its index, stepped the path
+  +303 ft after the bisector).
 - `vnav_mcp_push_test.lua`: after an ALT selector push in the descent (the
   MCP dialled down from VNAV ALT) the AFDS's altitude is the new MCP
   altitude at once (it was NETOM's 7849 above the cleared 7000 for 30 s),
