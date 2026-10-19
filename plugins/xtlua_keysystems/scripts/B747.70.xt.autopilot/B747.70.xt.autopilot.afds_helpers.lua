@@ -886,9 +886,11 @@ end
 -- as far past it along the outbound one, which is taken off from where F was held to the bisector and given back
 -- from there to the turn's end, so the path is continuous at the bisector and at F's altitude there. The straight
 -- distance made the path about 200 ft high at NETOM's bisector (86 deg, 1 nm inside the fix) and, cutting the turn to
--- the next fix, 300-380 ft lower once F was let go there.
+-- the next fix, 300-380 ft lower once F was let go there. extra_nm (0 if nil) is added to the distance along the legs:
+-- what the turn before F, on a leg too short for it to end before F's begins, still gives back
+-- (afds.vnav_turn_give_back_nm).
 function afds.vnav_turn_distance_nm(east_nm, north_nm, in_course_deg, out_course_deg, lead_nm, start_nm, to_fix,
-        leg_nm, direct_nm)
+        leg_nm, direct_nm, extra_nm)
     local turn = math.abs(((out_course_deg - in_course_deg + 540) % 360) - 180)
     local cut = lead_nm * (1 - math.cos(math.rad(turn / 2)))
     local course = to_fix and in_course_deg or out_course_deg
@@ -903,13 +905,25 @@ function afds.vnav_turn_distance_nm(east_nm, north_nm, in_course_deg, out_course
         if from > cut then w = math.max(0, math.min(1, (from - before) / (from - cut))) end
         distance = before - cut * w
     else
-        local w = 1
-        if lead_nm > cut then w = math.max(0, math.min(1, (along - cut) / (lead_nm - cut))) end
-        distance = leg_nm - along + cut * (1 - w)
+        distance = leg_nm - along + afds.vnav_turn_give_back_nm(east_nm, north_nm, in_course_deg, out_course_deg,
+            lead_nm)
     end
+    distance = distance + (extra_nm or 0)
     local inside = turn > 0.5 and cut / math.tan(math.rad(turn / 2)) or 0
     local off = math.max(0, math.min(1, (cross - math.max(2, inside + 1)) / 2))
     return distance + (direct_nm - distance) * off
+end
+
+-- [B-14] What a fly-by turn at F still gives back of its cut past the bisector (afds.vnav_turn_distance_nm), the
+-- aircraft east_nm, north_nm from F: all of it (cut_nm, lead (1 - cos(turn / 2))) up to cut_nm along the outbound
+-- course past F, none from the turn's end (lead_nm past it), in proportion between
+function afds.vnav_turn_give_back_nm(east_nm, north_nm, in_course_deg, out_course_deg, lead_nm)
+    local turn = math.abs(((out_course_deg - in_course_deg + 540) % 360) - 180)
+    local cut = lead_nm * (1 - math.cos(math.rad(turn / 2)))
+    local along = east_nm * math.sin(math.rad(out_course_deg)) + north_nm * math.cos(math.rad(out_course_deg))
+    local w = 1
+    if lead_nm > cut then w = math.max(0, math.min(1, (along - cut) / (lead_nm - cut))) end
+    return cut * (1 - w)
 end
 
 -- [B-14] A route point's altitude on VNAV's descent path, route[i] with its descent constraint from the CIFP

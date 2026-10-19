@@ -3434,8 +3434,8 @@ local lnavHoldOutCourse=0
 local lnavHoldMaxNm=0
 -- [B-14] The turn VNAV's descent path goes through (setDescentVSpeed, afds.vnav_turn_distance_nm): {fix (its
 -- index), in_course, out_course, lead_nm (B747_lnav_turn_anticipation_nm), start_nm (the distance to the fix when
--- taken), released (past the bisector), lat, lon and next_lat, next_lon (where the fix and the one after it were)}: the
--- active fix's from its lead (plus LNAV_VNAV_HOLD_MARGIN_NM) before it
+-- taken), released (past the bisector), lat, lon and next_lat, next_lon (where the fix and the one after it were), prev
+-- (the turn before, on a short leg)}: the active fix's from its lead (plus LNAV_VNAV_HOLD_MARGIN_NM) before it
 -- (B747_lnav_active_turn), kept through its sequence - at the bisector for a turn LNAV flies by its path, where it is
 -- released, or at the turn's start for a held fix, released at the bisector - and once released until the turn has
 -- ended (B747_lnav_turn_ended) and the next fix's begins; nil without a turn and once vectored away. Taken only from
@@ -3513,6 +3513,8 @@ function B747_lnav_update_vnav_hold(fmsO)
 	if edited~=nil and not B747_lnav_turn_on_route(fmsO,edited) then
 		if lnavHoldIndex==edited.fix then lnavHoldIndex=0 end
 		B747_lnav_vnav_turn=nil
+	elseif edited~=nil and edited.prev~=nil and not B747_lnav_turn_on_route(fmsO,edited.prev) then
+		edited.prev=nil
 	end
 	-- LNAV no longer flying the turns (HDG SEL, an offset, a direct-to), or the aircraft vectored away from the fix
 	-- before its turn: the turn ends
@@ -3571,12 +3573,26 @@ function B747_lnav_update_vnav_hold(fmsO)
 			end
 		end
 	end
-	-- without a held fix: the passed fix's turn until it has ended, then the active fix's from its lead
+	-- without a held fix: the passed fix's turn until it has ended, and the active fix's from its lead, also before the
+	-- passed one's has ended on a leg too short for both: it carries that one on (prev) until it has ended or its own
+	-- fix is passed, what that one still gives back of its cut counting towards the distance to its fix. Taken only
+	-- once the passed turn had ended, it was taken late, close to the fix, and the path stepped by up to its cut: about
+	-- 375 ft at AM607's 90 deg 2.6 nm after NIRSI (review 27b MINOR 2).
 	if lnavHoldIndex==0 then
 		local t=B747_lnav_vnav_turn
-		if t==nil or not t.released or B747_lnav_turn_ended(fmsO,t) then
+		if t==nil or not t.released then
 			B747_lnav_vnav_turn=B747_lnav_active_turn(fmsO,current,t)
+		elseif B747_lnav_turn_ended(fmsO,t) then
+			B747_lnav_vnav_turn=B747_lnav_active_turn(fmsO,current,nil)
+		elseif t.fix+1==current then
+			local nextTurn=B747_lnav_active_turn(fmsO,current,nil)
+			if nextTurn~=nil then
+				nextTurn.prev=t
+				B747_lnav_vnav_turn=nextTurn
+			end
 		end
+		local c=B747_lnav_vnav_turn
+		if c~=nil and c.prev~=nil and (c.released or B747_lnav_turn_ended(fmsO,c.prev)) then c.prev=nil end
 	end
 	B747DR_vnav_hold_index=lnavHoldIndex
 end

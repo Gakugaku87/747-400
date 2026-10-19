@@ -8,7 +8,10 @@
 --    LNAV no longer does (HDG SEL, the kit's DIRECT TO) or the 747 is vectored away from the fix: taken and kept
 --    without LNAV, flown straight past NETOM it put the path ~170 ft high behind the fix (review 27b MINOR 3);
 -- 3. where the turn ends before its own end (HDG SEL, a route edit) the path carries on and the step is taken out over
---    2 nm, nearer or farther: the cut the turn had taken off dropped at once.
+--    2 nm, nearer or farther: the cut the turn had taken off dropped at once;
+-- 4. on a leg too short for the turn before to end before the next one begins (NIRSI's 64 deg, then AM607's 90 deg
+--    2.6-4.0 nm on) the path is continuous: the next turn, taken only once the one before had ended, was taken late and
+--    the path stepped -34 ft at once with a 3.2 nm leg, -375 ft with 2.6 nm (review 27b MINOR 2).
 -- The production LNAV (B747_lnav_update_xtk and B747_lnav_update_vnav_hold, as B747_getCurrentWayPoint calls them),
 -- setDescentVSpeed (the approach's path inside 25 nm) and setDistances every 2 s (approach_model.lua's loader) on the
 -- EHAM route in the production order, the 747 flown along the legs and the fly-by arcs at the bank flown, in a flat
@@ -224,6 +227,19 @@ local function largest_step(samples, from, to)
     end
     return worst, where
 end
+-- the largest step of the path against its own slope (the step less the mean of the steps before and after it), and
+-- where: on a steep path (a short leg) the steps themselves are large
+local function largest_jump(samples)
+    local worst, where = 0, nil
+    for n = 3, #samples - 1 do
+        local a, p, q, b = samples[n - 2], samples[n - 1], samples[n], samples[n + 1]
+        if a.path and p.path and q.path and b.path then
+            local jump = (q.path - p.path) - ((p.path - a.path) + (b.path - q.path)) / 2
+            if math.abs(jump) > math.abs(worst) then worst, where = jump, q.s end
+        end
+    end
+    return worst, where
+end
 
 -- 1. A route edit while NETOM's turn is taken: NIRSI moved to 10.7 nm from NETOM on 069, so that NETOM's turn is
 -- 40 deg instead of 86, 2.5 nm before NETOM (inside the 86 deg turn's lead and margin, outside the 40 deg one's); the
@@ -338,6 +354,27 @@ for n, p in ipairs(r) do
 end
 check(math.abs(worstDiff) <= 15, string.format("HDG SEL and turned back 2.5 nm before NETOM: from 2.1 nm on the path "
     .."is the one without the turn: largest difference %+.0f ft at %.2f nm", worstDiff, worstAt or -1))
+
+-- 4. Short legs: NIRSI's 64 deg turn, then AM607's 90 deg one with AM607 moved to 2.6-4.0 nm after NIRSI (AM608 4 nm
+-- on, 90 deg right), on the approach's path at 270 kt TAS. The path is steep there (5563 to 4272 ft in 2.6 nm, and
+-- the turn's cut: 15-17 ft in 0.02 nm), so the steps are taken against its own slope
+local function short_leg(leg)
+    return function(route)
+        route[AM607][5], route[AM607][6] = move(route[NIRSI][5], route[NIRSI][6], leg, 87.4)
+        route[AM608][5], route[AM608][6] = move(route[AM607][5], route[AM607][6], 4, 177.4)
+    end
+end
+for _, leg in ipairs({4.0, 3.2, 2.6}) do
+    for _, bank in ipairs({20, 25}) do
+        r = fly({NIRSI, AM607}, {tas = 270, bank = bank, alt = 6000, from_fix = 5, after = 3}, short_leg(leg))
+        local all = true
+        for _, p in ipairs(r) do if p.path == nil then all = false end end
+        worst, where = largest_jump(r)
+        check(all and math.abs(worst) <= 8, string.format("a %.1f nm leg from NIRSI's turn to AM607's, %d deg arcs: "
+            .."largest step against the path's slope %+.0f ft in 0.02 nm at %.2f nm%s", leg, bank, worst, where or -1,
+            all and "" or " (not on the approach's path all the way)"))
+    end
+end
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV turn latch tests passed: "..checks)

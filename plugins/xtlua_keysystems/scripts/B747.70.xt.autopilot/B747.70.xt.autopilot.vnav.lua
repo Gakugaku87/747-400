@@ -309,24 +309,38 @@ end
 -- [B-14] The distance to the route's entry fmsO[index] through the fly-by turn LNAV flies at the fix it holds
 -- (B747_lnav_vnav_turn, afds.vnav_turn_distance_nm): to that fix (until the bisector, and on past it while the path
 -- still aims at it: the profile's flags change up to 2 s later), or once past the bisector to the fix after it;
--- elsewhere the straight distance (direct)
+-- elsewhere the straight distance (direct). A turn taken while the one before it still gives back its cut (prev, a
+-- short leg) adds what that one gives back to the distance to its fix, and the turn before serves its own fix (the
+-- profile up to 2 s late).
 local function B747_vnav_turn_distance(fmsO, index, direct)
   local turn = B747_lnav_vnav_turn
-  if turn == nil or fmsO == nil or fmsO[turn.fix] == nil or fmsO[index] == nil then return direct end
+  if turn == nil or fmsO == nil or fmsO[index] == nil then return direct end
+  local prev = turn.prev
+  if prev ~= nil and index == prev.fix then turn, prev = prev, nil end
+  if fmsO[turn.fix] == nil then return direct end
   local toFix = index == turn.fix
   if not toFix and not (turn.released and index == turn.fix + 1) then return direct end
   local fix = fmsO[turn.fix]
   local d = getDistance(fix[5], fix[6], simDR_latitude, simDR_longitude)
   local b = math.rad(getHeading(fix[5], fix[6], simDR_latitude, simDR_longitude))
   local leg = toFix and 0 or getDistance(fix[5], fix[6], fmsO[index][5], fmsO[index][6])
+  local extra = 0
+  if toFix and prev ~= nil and fmsO[prev.fix] ~= nil then
+    local p = fmsO[prev.fix]
+    local pd = getDistance(p[5], p[6], simDR_latitude, simDR_longitude)
+    local pb = math.rad(getHeading(p[5], p[6], simDR_latitude, simDR_longitude))
+    extra = B747_afds_helpers.vnav_turn_give_back_nm(pd * math.sin(pb), pd * math.cos(pb), prev.in_course,
+      prev.out_course, prev.lead_nm)
+  end
   return B747_afds_helpers.vnav_turn_distance_nm(d * math.sin(b), d * math.cos(b), turn.in_course, turn.out_course,
-    turn.lead_nm, turn.start_nm, toFix, leg, direct)
+    turn.lead_nm, turn.start_nm, toFix, leg, direct, extra)
 end
--- the same to the descent profile's entry `point` (its position), when that is the turn's fix or the one after it
+-- the same to the descent profile's entry `point` (its position), when that is the turn's fix, the one after it or
+-- the fix of the turn before it
 local function B747_vnav_point_distance(fmsO, point, direct)
   local turn = B747_lnav_vnav_turn
   if turn == nil or fmsO == nil then return direct end
-  for _, index in ipairs({turn.fix, turn.fix + 1}) do
+  for _, index in ipairs({turn.fix, turn.fix + 1, turn.prev ~= nil and turn.prev.fix or 0}) do
     local entry = fmsO[index]
     if entry ~= nil and math.abs(entry[5] - point[1]) <= 1e-7 and math.abs(entry[6] - point[2]) <= 1e-7 then
       return B747_vnav_turn_distance(fmsO, index, direct)
