@@ -3443,9 +3443,13 @@ local lnavHoldMaxNm=0
 -- turn and stepped 245-290 ft there (NETOM; review 27). A route edit that moves the fix or the one after it, or puts
 -- another fix in their place (B747_lnav_turn_on_route), ends the turn and a hold of its fix, and the new route's is
 -- taken: latched by its index, the turn kept the old courses and lead, and with NIRSI moved 2.5 nm before NETOM the
--- path stepped +303 ft after the bisector and -142 ft at the old turn's end (review 27b MINOR 1). With a metatable,
--- as B747_route_constraints: XTLua copies a global table without one into a namespace of its own, whose read of a
--- missing index recurses until the stack overflows.
+-- path stepped +303 ft after the bisector and -142 ft at the old turn's end (review 27b MINOR 1). Only a turn LNAV
+-- flies is taken - LNAV engaged with no offset and no direct-to (B747_lnav_flies_turns), on its path - and it ends once
+-- LNAV no longer flies the turns (HDG SEL, the kit's DIRECT TO) or, before the fix, the aircraft is vectored more than
+-- the margin farther from it than where it was taken: taken without LNAV, kept in HDG SEL and released at a sequence
+-- abeam the fix, it put the path about 170 ft high behind NETOM flown straight past it (review 27b MINOR 3). With a
+-- metatable, as B747_route_constraints: XTLua copies a global table without one into a namespace of its own, whose
+-- read of a missing index recurses until the stack overflows.
 B747_lnav_vnav_turn=nil
 -- The turn at fmsO[k] for VNAV's path, taken distance nm from the fix (B747_lnav_vnav_turn's form)
 local function B747_lnav_new_vnav_turn(fmsO,k,inCourse,outCourse,lead,distance)
@@ -3473,10 +3477,18 @@ local function B747_lnav_vnav_turn_at(fmsO,k)
 	if turn<1 or turn>B747_afds_helpers.LNAV_FLYBY_MAX_TURN_DEG then return nil end
 	return inCourse,outCourse,B747_lnav_turn_anticipation_nm(inCourse,outCourse)
 end
--- The active fix's turn once within its lead (plus the margin) of it, latched when first taken (t, if it is that
--- fix's and not released); else nil
+-- Whether LNAV flies the route's fly-by turns by their path: engaged, with no offset and no direct-to (as
+-- B747_getCurrentWayPoint_function's path and anticipation take them)
+local function B747_lnav_flies_turns()
+	return B747DR_ap_lnav_state==2 and B747DR_ap_lnav_xtk_target==0
+end
+-- The active fix's turn once within its lead (plus the margin) of it, LNAV flying the turns and on its path (within
+-- LNAV_MAX_PREEMPT_XTK_NM), latched when first taken (t, if it is that fix's and not released); else nil
 local function B747_lnav_active_turn(fmsO,current,t)
 	if t~=nil and t.fix==current and not t.released then return t end
+	if not B747_lnav_flies_turns() or math.abs(tonumber(B747DR_ap_lnav_xtk_error) or 0)>LNAV_MAX_PREEMPT_XTK_NM then
+		return nil
+	end
 	local fix=fmsO[current]
 	if fix==nil then return nil end
 	local inCourse,outCourse,lead=B747_lnav_vnav_turn_at(fmsO,current)
@@ -3502,6 +3514,15 @@ function B747_lnav_update_vnav_hold(fmsO)
 		if lnavHoldIndex==edited.fix then lnavHoldIndex=0 end
 		B747_lnav_vnav_turn=nil
 	end
+	-- LNAV no longer flying the turns (HDG SEL, an offset, a direct-to), or the aircraft vectored away from the fix
+	-- before its turn: the turn ends
+	local taken=B747_lnav_vnav_turn
+	if taken~=nil then
+		local fix=fmsO[taken.fix]
+		local away=not taken.released
+			and getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)>taken.start_nm+LNAV_VNAV_HOLD_MARGIN_NM
+		if away or not B747_lnav_flies_turns() then B747_lnav_vnav_turn=nil end
+	end
 	if current~=lnavHoldLastIndex then
 		local passed=lnavHoldLastIndex
 		lnavHoldLastIndex=current
@@ -3524,7 +3545,7 @@ function B747_lnav_update_vnav_hold(fmsO)
 				lnavHoldInCourse=inCourse
 				lnavHoldOutCourse=outCourse
 				lnavHoldMaxNm=1.5*distance+LNAV_VNAV_HOLD_MARGIN_NM
-				if B747_lnav_vnav_turn==nil then
+				if B747_lnav_vnav_turn==nil and B747_lnav_flies_turns() then
 					B747_lnav_vnav_turn=B747_lnav_new_vnav_turn(fmsO,passed,inCourse,outCourse,lead,distance)
 				end
 			end
