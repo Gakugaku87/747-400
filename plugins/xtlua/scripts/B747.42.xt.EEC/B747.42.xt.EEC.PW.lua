@@ -611,7 +611,8 @@ function engine_idle_control_PW(altitude_ft_in)
       -- value is the table's (B747_PW_initial_climb_EPR, at the altitude less 1,000 ft and the OAT plus 2 C), above
       -- 12,000 ft (no table) 0.6 EPR per Mach below the schedule, as the cold side of the table; at 0.6 per Mach
       -- everywhere warm days ran up to 0.15 over the table (review 34). Held to the table's top, 1.64. A derate as the
-      -- thrust above EPR 1.
+      -- EPR above 1: CLB 1 about 0.04 less, as crews see it (0.03-0.05); for X-Plane's thrust through the EEC's EPR
+      -- model (EPR_display_PW) that is about 5 % (10 for CLB 2), the model's EPR moving half as fast with thrust.
       local schedule = math.min(0.84, B747_cas_to_mach(340, altitude_ft_in))
       local m200 = B747_cas_to_mach(200, altitude_ft_in)
       local EPR_200 = EPR_max_climb + 0.6 * math.max(0, schedule - m200)

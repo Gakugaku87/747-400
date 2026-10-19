@@ -10,8 +10,9 @@
 -- Initial Climb table's at 200 KIAS (1.49 at 10,000 ft on the cold side against 1.35, less on warm days): linear in
 -- Mach between the two, the table's value below 11,000 ft, 0.6 EPR per Mach below the schedule above 12,000 ft (no
 -- table). CLB 1 and CLB 2 take 10 and 20 % off the climb thrust to 10,000 ft and give it back linearly by 15,000 ft
--- (as an EPR above 1, or N1 to the power 0.4 for thrust about N1^2.5). Each module's CLB branch runs against mocked
--- ratings; this does not validate the engine model.
+-- (the PW and RR as their EPR above 1: CLB 1 about 0.04 EPR less, as crews see it; the GE as N1 to the power 1/3.1,
+-- the EEC's N1 for thrust about N1^3.1). Each module's CLB branch runs against mocked ratings; this does not validate
+-- the engine model.
 local EEC = "plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.xt.EEC."
 
 local checks, failures = 0, {}
@@ -105,9 +106,11 @@ do
     local value = env.INITIAL_CLIMB_epr_PW4056[15][8000]
     check(value >= 1.46 and value <= 1.47, "the Initial Climb table at 15 C and 8,000 ft: "..value)
 end
--- CLB 1 and CLB 2: 10 and 20 % off to 10,000 ft, given back by 15,000 ft (at 12,500 ft half of it)
+-- CLB 1 and CLB 2: 10 and 20 % off to 10,000 ft, given back by 15,000 ft (at 12,500 ft half of it). The GE's N1 as
+-- the 1/3.1 power of the thrust kept, the EEC's N1 model (N1_display_GE: thrust about N1^3.1): to the 0.4 power the
+-- thrust was 12-13 and 25-26 % less (review 34 MINOR 2)
 local function derated(engine, share)
-    if engine == "GE" then return RATING.GE * share ^ 0.4 end
+    if engine == "GE" then return RATING.GE * share ^ (1 / 3.1) end
     return 1 + (RATING[engine] - 1) * share
 end
 for _, engine in ipairs({"GE", "PW", "RR"}) do
