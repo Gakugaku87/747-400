@@ -102,6 +102,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   from the table's own column, 5 kt over VREF30 at 200 t and 8 kt at
   400 t (VREF30 + 5 was up to 3 kt low; 4 of 14 checks failed before).
   The functions run in XTLua's namespace.
+- `fmc_approach_ref_test.lua`: APPROACH REF shows VREF for flaps 25 and
+  30 in whole knots, rounded, and its 1R/2R keys bring them to the
+  scratchpad as 25/xxx and 30/xxx the same (%3d cut 143.69/137.69 to
+  143/137; 3 of 4 checks failed before). The page and handler run in
+  XTLua's namespace.
 - `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230KT CLB"),
   the ECON/SEL SPD label, the CAS/Mach speed pair, the blank SPD REST
   field, and the CRZ page titles ("ACT ECON CRZ" / "ACT M.801 CRZ") with the
