@@ -4,7 +4,10 @@
 -- not below VRMIN (nor VMCG), and V2 not below the "V2 for VRMIN" where VR was raised (FCOM PI.18.2; the PW4056's
 -- VMCG/VRMIN by pressure altitude and the actual OAT, PI.10.10; cckit research_vspeeds.md). At 233 t, flaps 20, sea
 -- level the tables gave 101/114/139 (the 747 rotated at 114 kt on the EIDW-EHAM line flights) against 121/124/144.
--- The production functions run against mocked datarefs; this does not validate the tables' own figures.
+-- The production functions run against mocked datarefs in XTLua's namespace (init.lua's create_namespace), where a
+-- global table without a metatable is copied into a namespace of its own that reads a missing index by recursing
+-- until the stack overflows and has no length (B747_VMCG_VRMIN_DERATE[0] stopped the instruments, the FMC and the
+-- autopilot at the flaps entry: p32, 2026-10-20); this does not validate the tables' own figures.
 local DIR = "plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/"
 
 local checks, failures = 0, {}
@@ -27,22 +30,36 @@ local function slice(first_marker, last_marker)
     return string.rep("\n", lines)..source:sub(first, last - 1)
 end
 
--- The production V speeds in a mocked namespace for a weight (kg), flaps (10, 20), airport altitude (ft, the
+-- XTLua's script runtime, for its namespaces
+local runtime = setmetatable({}, {__index = _G})
+setfenv(assert(loadfile("plugins/xtlua_keysystems/init.lua")), runtime)()
+
+-- The production V speeds in XTLua's namespace for a weight (kg), flaps (10, 20), airport altitude (ft, the
 -- altimeter's), OAT (C), wind (from, kt), runway heading, takeoff derate (0, 1, 2), the altimeter setting (inHg; 29.92
--- without); run(env) is one frame of fltInst02's after_physics for them
+-- without); run(env) is one frame of fltInst02's after_physics for them (nil if it failed: the error kept for a check)
+local frame_error
 local function run(env)
-    env.B747_setTempAltRegion()
-    env.B747_V1_wind_adjustment()
-    env.B747_setV1VrV2()
+    local ok, err = pcall(function()
+        env.B747_setTempAltRegion()
+        env.B747_V1_wind_adjustment()
+        env.B747_setV1VrV2()
+    end)
+    if not ok then
+        frame_error = frame_error or err
+        return nil
+    end
     return env.B747DR_airspeed_V1, env.B747DR_airspeed_Vr, env.B747DR_airspeed_V2
 end
 local function load(weight, flaps, altitude, oat, wind_from, wind_kt, heading, derate, baro)
-    local d = {simDR_acf_weight_total_kg = weight, B747DR_airspeed_flapsRef = flaps, B747DR_radio_altitude = 0,
-        simDR_OAT_degC = oat, simDR_altitude_ft_pilot = altitude, simDR_wind_heading_deg = wind_from or 0,
-        simDR_wind_speed_kts = wind_kt or 0, simDR_position_mag_psi = heading or 0, simDR_all_wheels_on_ground = 1,
-        simDR_airspeed = 0, B747DR_airspeed_V1 = 0, B747DR_airspeed_Vr = 0, B747DR_airspeed_V2 = 0,
-        B747DR_toderate = derate or 0, lastFlaps = -1, simDR_altimeter_baro_inHg = baro or 29.92}
-    local env = setmetatable(d, {__index = _G})
+    local env = runtime.create_namespace()
+    for name, value in pairs({simDR_acf_weight_total_kg = weight, B747DR_airspeed_flapsRef = flaps,
+            B747DR_radio_altitude = 0, simDR_OAT_degC = oat, simDR_altitude_ft_pilot = altitude,
+            simDR_wind_heading_deg = wind_from or 0, simDR_wind_speed_kts = wind_kt or 0,
+            simDR_position_mag_psi = heading or 0, simDR_all_wheels_on_ground = 1, simDR_airspeed = 0,
+            B747DR_airspeed_V1 = 0, B747DR_airspeed_Vr = 0, B747DR_airspeed_V2 = 0, B747DR_toderate = derate or 0,
+            lastFlaps = -1, simDR_altimeter_baro_inHg = baro or 29.92}) do
+        env[name] = value
+    end
     -- the tables (fltInst.lua up to its dofile of the other parts)
     local tables = read(DIR.."B747.60.xt.fltInst.lua")
     tables = tables:sub(1, assert(tables:find('dofile("B747.60.xt.fltInst02.lua")', 1, true)) - 1)
@@ -51,9 +68,9 @@ local function load(weight, flaps, altitude, oat, wind_from, wind_kt, heading, d
     env.find_dataref = function() return env.B747DR_airspeed_flapsRef end
     for _, part in ipairs({{"function B747_rescale(", "function roundUp(x)"},
             {"function recipAngle(angle)", "----- CLOCK (CAPTAIN)"},
-            {"local tempAltRegion = 0", "    -- crazytimtimtim V1 callout"}}) do
+            {"local regions = {}", "    -- crazytimtimtim V1 callout"}}) do
         local code = slice(part[1], part[2])
-        if part[1] == "local tempAltRegion = 0" then code = code.."end\n" end
+        if part[1] == "local regions = {}" then code = code.."end\n" end
         setfenv(assert(loadstring(code)), env)()
     end
     return env
@@ -63,6 +80,17 @@ local function speeds(...)
     return run(load(...))
 end
 local function near(got, want, tolerance) return got and math.abs(got - want) <= tolerance end
+
+-- the minimum tables as XTLua holds them: plain tables (a metatable keeps the namespace from copying them), a missing
+-- index nil (full thrust's derate 0, flaps 30), the rows' count 7
+do
+    local env = load(233100, 20, 0, 15)
+    local ok, got = pcall(function() return env.B747_VMCG_VRMIN_DERATE[0] end)
+    check(ok and got == nil, "B747_VMCG_VRMIN_DERATE[0] in XTLua's namespace: "..tostring(got).." (nil)")
+    ok, got = pcall(function() return env.B747_V2_FOR_VRMIN[30] end)
+    check(ok and got == nil, "B747_V2_FOR_VRMIN[30] in XTLua's namespace: "..tostring(got).." (nil)")
+    check(#env.B747_VMCG_VRMIN == 7, "#B747_VMCG_VRMIN in XTLua's namespace: "..#env.B747_VMCG_VRMIN.." (7)")
+end
 local function show(v1, vr, v2) return string.format("%.1f/%.1f/%.1f", v1 or -1, vr or -1, v2 or -1) end
 
 -- light: V1 at VMCG, VR at VRMIN, V2 the "V2 for VRMIN" (flaps 20: VR 120 -> 140/140/139/139 at 200/220/240/260 t,
@@ -193,17 +221,19 @@ do
 end
 for _, w in ipairs({360000, 380000, 400000}) do
     v1, vr, v2 = speeds(w, 20, 9000, 0)
-    check(v1 <= vr and vr < v2, string.format("%d t, flaps 20, 9,000 ft, 0 C (region E): %s (V1 <= VR < V2)",
+    check(v1 and v2 and v1 <= vr and vr < v2, string.format("%d t, flaps 20, 9,000 ft, 0 C (region E): %s (V1 <= VR < V2)",
         w / 1000, show(v1, vr, v2)))
 end
 -- V1 never above VR
 for _, w in ipairs({200000, 233100, 260000, 300000, 360000, 400000}) do
     for _, f in ipairs({10, 20}) do
         v1, vr, v2 = speeds(w, f, 0, 15)
-        check(v1 <= vr + 1e-6 and vr < v2, string.format("%d t, flaps %d: V1 <= VR < V2 (%s)", w / 1000, f,
+        check(v1 and v2 and v1 <= vr + 1e-6 and vr < v2, string.format("%d t, flaps %d: V1 <= VR < V2 (%s)", w / 1000, f,
             show(v1, vr, v2)))
     end
 end
+
+check(frame_error == nil, "a frame failed: "..tostring(frame_error))
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("Takeoff speed tests passed: "..checks)

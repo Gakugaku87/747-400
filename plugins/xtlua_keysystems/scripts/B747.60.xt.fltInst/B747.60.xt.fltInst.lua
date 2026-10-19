@@ -203,8 +203,11 @@ B747_V2 = {
 
 -- [takeoff speeds] The PW4056's minimum control speeds at maximum takeoff thrust (FCOM PI.10.10, KIAS), by pressure
 -- altitude and the actual OAT: VMCG and VRMIN flat to `corner` (C), less 0.6 kt per C above it (the sea level row:
--- 121/124 to 33 C, 120/123 at 35, 117/120 at 40, 111/114 at 50, 104/107 at 60); 10,000 ft's corner taken as 10 C
-B747_VMCG_VRMIN = {
+-- 121/124 to 33 C, 120/123 at 35, 117/120 at 40, 111/114 at 50, 104/107 at 60); 10,000 ft's corner taken as 10 C.
+-- These three tables have a metatable: XTLua copies a global table without one into a namespace of its own, which has
+-- no length and reads a missing index by recursing until the stack overflows (full thrust's derate 0 stopped the
+-- instruments, the FMC and the autopilot at the flaps entry: p32, 2026-10-20)
+B747_VMCG_VRMIN = setmetatable({
     {alt = -2000, corner = 40, vmcg = 122, vrmin = 125},
     {alt = 0,     corner = 33, vmcg = 121, vrmin = 124},
     {alt = 2000,  corner = 30, vmcg = 118, vrmin = 121},
@@ -212,11 +215,12 @@ B747_VMCG_VRMIN = {
     {alt = 6000,  corner = 20, vmcg = 113, vrmin = 116},
     {alt = 8000,  corner = 15, vmcg = 110, vrmin = 113},
     {alt = 10000, corner = 10, vmcg = 107, vrmin = 110}
-}
+}, {})
 -- derated takeoff (sea level, 33 C and below: TO 1 116/119, TO 2 20 % 108/111) as shares of the full thrust's
-B747_VMCG_VRMIN_DERATE = {[1] = {vmcg = 116 / 121, vrmin = 119 / 124}, [2] = {vmcg = 108 / 121, vrmin = 111 / 124}}
+B747_VMCG_VRMIN_DERATE = setmetatable({[1] = {vmcg = 116 / 121, vrmin = 119 / 124},
+    [2] = {vmcg = 108 / 121, vrmin = 111 / 124}}, {})
 -- V2 for VRMIN (FCOM PW4056): flaps -> VR -> gross weight (kg) -> V2
-B747_V2_FOR_VRMIN = {
+B747_V2_FOR_VRMIN = setmetatable({
     [10] = {
         [120] = {[200000] = 142, [220000] = 142, [240000] = 141},
         [125] = {[200000] = 149, [220000] = 148, [240000] = 147}
@@ -225,7 +229,7 @@ B747_V2_FOR_VRMIN = {
         [120] = {[200000] = 140, [220000] = 140, [240000] = 139, [260000] = 139},
         [125] = {[200000] = 147, [220000] = 146, [240000] = 145, [260000] = 145}
     }
-}
+}, {})
 
 
 -- Vref30 SPEEDS
