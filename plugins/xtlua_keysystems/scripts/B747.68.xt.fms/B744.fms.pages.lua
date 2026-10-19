@@ -2868,9 +2868,20 @@ function fmsFunctions.setDref(fmsO,value)
 
 
  	
-  if value=="TO" then toderate=0 clbderate=0 return  end
-  if value=="TO1" then toderate=1 clbderate=1 return  end
-  if value=="TO2" then toderate=2 clbderate=2 return  end
+  if value=="TO" or value=="TO1" or value=="TO2" then
+    local rating = 0
+    if value=="TO1" then rating = 1 elseif value=="TO2" then rating = 2 end
+    -- [takeoff speeds] a takeoff thrust rating changed once the speeds are set deletes them with the flaps entry, as
+    -- a GR WT or ZFW entry above: entered again they are worked out for the new rating (TO 2's V1 108 stayed under
+    -- full thrust's VMCG 121; reviews 36 and 38)
+    if rating ~= toderate and (B747DR_airspeed_V1 < 999 or B747DR_airspeed_Vr < 999 or B747DR_airspeed_V2 < 999)
+        and simDR_onground == 1 then
+      B747DR_airspeed_flapsRef = 0
+      fmsO["notify"] = "TAKEOFF SPEEDS DELETED"
+    end
+    toderate=rating clbderate=rating
+    return
+  end
   if value=="CLB" then clbderate=0 return  end
   if value=="CLB1" then clbderate=1 return  end
   if value=="CLB2" then clbderate=2  return end

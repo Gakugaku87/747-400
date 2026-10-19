@@ -172,37 +172,18 @@ check(v1 == 140 and vr == 158 and v2 == 173, "360 t, flaps 20, 180 ft, 15 C, QNH
 v1, vr, v2 = speeds(233100, 20, 200, 15, 0, 0, 0, 0, 0)
 check(v1 == 121 and vr == 124 and v2 == 144, "233 t, flaps 20, sea level, the setting read as 0: "
     ..show(v1, vr, v2).." (121/124/144)")
--- a takeoff thrust rating changed once the speeds are set deletes them, as the FMC does (and the flaps entry with
--- them: entered again, they are worked out for the new rating): TO 2's 108 left with full thrust's VMCG 121 (review
--- 36)
+-- a takeoff thrust rating changed once the speeds are set: the FMC deletes them with the flaps entry
+-- (fmc_takeoff_rating_test) and, entered again, they are worked out for the new rating: TO 2's 108, then full
+-- thrust's VMCG 121 (review 36)
 do
     local env = load(233100, 20, 0, 15, 0, 0, 0, 2)
     local first = run(env)
-    env.B747DR_toderate = 0
+    env.B747DR_toderate, env.B747DR_airspeed_flapsRef = 0, 0
     local deleted = run(env)
     env.B747DR_airspeed_flapsRef = 20
     local again = run(env)
-    check(first == 108 and deleted == 999 and env.B747DR_airspeed_flapsRef == 20 and again == 121,
-        string.format("233 t, flaps 20, TO 2 then TO: V1 %.1f, then %.1f (999: deleted), entered again %.1f "
-        .."(108, 999, 121)", first or -1, deleted or -1, again or -1))
-end
--- but not in the air, where the PFD keeps its bugs (a rating changed below 1,000 ft), nor before the speeds are set:
--- XTLua reads a dataref as 0 the first time, so a TO 1 and a flaps entry already made read 0 and 0 in the scripts'
--- first frame and the rating's change in the next must not delete the entry (review 38)
-do
-    local env = load(233100, 20, 0, 15)
-    local first = run(env)
-    env.simDR_all_wheels_on_ground, env.B747DR_radio_altitude, env.B747DR_toderate = 0, 500, 1
-    local airborne = run(env)
-    check(first == 121 and airborne == 121 and env.B747DR_airspeed_flapsRef == 20, string.format("233 t, flaps 20, "
-        .."TO 1 selected at 500 ft: V1 %.1f, then %.1f, flaps %s (121, 121, 20)", first or -1, airborne or -1,
-        tostring(env.B747DR_airspeed_flapsRef)))
-    env = load(233100, 0, 0, 15)
-    run(env)
-    env.B747DR_toderate, env.B747DR_airspeed_flapsRef = 1, 20
-    v1, vr = run(env)
-    check(v1 == 116 and vr == 119 and env.B747DR_airspeed_flapsRef == 20, "233 t, TO 1 and flaps 20 read as 0 in "
-        .."the first frame: "..show(v1, vr).." flaps "..tostring(env.B747DR_airspeed_flapsRef).." (116/119, 20)")
+    check(first == 108 and deleted == 999 and again == 121, string.format("233 t, flaps 20, TO 2 then TO: V1 %.1f, "
+        .."then %.1f (999: deleted), entered again %.1f (108, 999, 121)", first or -1, deleted or -1, again or -1))
 end
 -- between the minimum tables' rows and on their slopes (review 36: changes that dropped the altitude interpolation,
 -- the VR in the V2 for VRMIN or the V1 <= VR clamp still passed): 1,000 ft 13 C 119.5/122.5/142.3 (120/123/143),
