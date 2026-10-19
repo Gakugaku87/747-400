@@ -2,8 +2,9 @@
 -- The stall speed (B747_Vs, B747.60.xt.fltInst02.lua: the PFD's red checker box, the stall warning and TO/GA's pitch
 -- below V2 + 10) from the stall speed table (VsData: flaps, altitude, gross weight in t): between the table's weights
 -- that bracket the gross weight (to the nearest 20 t the lower row was held through the lower half of each 20 t) and
--- its rows by altitude. The production function runs in XTLua's namespace against mocked datarefs; its smoothing is
--- run to the end.
+-- between its rows by altitude that bracket the altitude, held at 10,000 ft above (the band tests ran from the lowest,
+-- so above sea level only 0-2,000 ft was ever taken). The production function runs in XTLua's namespace against
+-- mocked datarefs; its smoothing is run to the end.
 local DIR = "plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/"
 
 local checks, failures = 0, {}
@@ -65,6 +66,15 @@ for _, case in ipairs({{225000, 152.545}, {230000, 154.35}, {300000, 179.72}, {4
     local vs = stall_speed(case[1], 0)
     check(near(vs, case[2]), string.format("Vs flaps up, sea level, %.0f t: %s (%.3f)", case[1] / 1000, show(vs),
         case[2]))
+end
+
+-- by altitude, flaps up at 240 t (-2,000/0/2,000/6,000/10,000 ft rows 157.53/157.96/158.63/160.12/161.66): FL370 and
+-- 10,000 ft 161.66, 8,000 ft 160.89, 4,000 ft 159.375, 1,000 ft 158.295, -1,000 ft 157.745, -3,000 ft 157.53 (from
+-- 2,000 ft up it was held at 158.63)
+for _, case in ipairs({{37000, 161.66}, {10000, 161.66}, {8000, 160.89}, {4000, 159.375}, {1000, 158.295},
+        {-1000, 157.745}, {-3000, 157.53}}) do
+    local vs = stall_speed(240000, case[1])
+    check(near(vs, case[2]), string.format("Vs flaps up, 240 t, %d ft: %s (%.3f)", case[1], show(vs), case[2]))
 end
 
 check(frame_error == nil, "a frame failed: "..tostring(frame_error))

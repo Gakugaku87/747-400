@@ -107,8 +107,11 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   the stall speed table's weights that bracket the gross weight and along
   its end rows' slope beyond 200-400 t (to the nearest 20 t the lower row
   was held through the lower half of each 20 t: 225 t flaps up 150.7 for
-  152.5; 2 of 5 checks failed before). The function runs in XTLua's
-  namespace.
+  152.5; 2 of 5 checks failed before), and between its rows by altitude
+  that bracket the altitude, held at 10,000 ft above (the band tests ran
+  from the lowest, so above sea level only 0-2,000 ft was taken: 240 t at
+  FL370 158.6 for 161.7; 4 of 12 checks failed before). The function runs
+  in XTLua's namespace.
 - `fmc_approach_ref_test.lua`: APPROACH REF shows VREF for flaps 25 and
   30 in whole knots, rounded, and its 1R/2R keys bring them to the
   scratchpad as 25/xxx and 30/xxx the same (%3d cut 143.69/137.69 to

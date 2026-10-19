@@ -3109,20 +3109,22 @@ function B747_Vs()
     local weight_min = math.max(200000, math.min(380000, math.floor(weight / 20000) * 20000))
     local weight_max = weight_min + 20000
 
+    -- the table's rows by altitude that bracket the altitude, held at 10,000 ft above (the tests ran from the lowest
+    -- band, so above sea level only 0-2,000 ft was taken: 240 t flaps up at FL370 158.6 for 161.7)
     local alt_min = -2000
     local alt_max = 0.0
-    if simDR_altitude_ft_pilot >= 0.0 then
-        alt_min = 0.0
-        alt_max = 2000.0
-    elseif simDR_altitude_ft_pilot >= 2000.0 then
-        alt_min = 2000.0
-        alt_max = 6000.0
+    if simDR_altitude_ft_pilot >= 10000.0 then
+        alt_min = 10000.0
+        alt_max = 10000.0
     elseif simDR_altitude_ft_pilot >= 6000.0 then
         alt_min = 6000.0
         alt_max = 10000.0
-    elseif simDR_altitude_ft_pilot >= 10000.0 then
-        alt_min = 10000.0
-        alt_max = 10000.0
+    elseif simDR_altitude_ft_pilot >= 2000.0 then
+        alt_min = 2000.0
+        alt_max = 6000.0
+    elseif simDR_altitude_ft_pilot >= 0.0 then
+        alt_min = 0.0
+        alt_max = 2000.0
     end
 
     local flap_min = 0
