@@ -279,13 +279,14 @@ end
 -- the descent starts at the T/D (P23). With the MCP more than 100 ft above the aircraft VNAV_NEXT_ALT's stays too.
 -- So does it in VNAV SPD (VNAV_DES_IS_SPD: VNAV_DES' FLCH, the IAS window open above SPD TRANS), in its FLCH and where
 -- it levelled off: the idle descent, its pitch on the speed, levels off at the points and the CIFP's floors, as a real
--- 747-400's VNAV SPD at the constraints, not at the MCP alone.
+-- 747-400's VNAV SPD at the constraints, not at the MCP alone. Right after an ALT selector push the MCP altitude is the
+-- AFDS's too, the descent resuming to it (VNAV ALT waits 30 s after the push, as before); it waited 30 s, and until
+-- then the next point's altitude was the AFDS's (review 26 MINOR 3).
 function VNAV_DES_ALT(numAPengaged,fms)
     local targetAlt=VNAV_NEXT_ALT(numAPengaged,fms)
     local lastHold=simDRTime-B747DR_mcp_hold_pressed
 
-    if B747DR_autopilot_altitude_ft<simDR_pressureAlt1+100 and lastHold>30
-        and not VNAV_DES_IS_SPD(VNAV_DES_SPD_LIMIT_ALT()) then
+    if B747DR_autopilot_altitude_ft<simDR_pressureAlt1+100 and not VNAV_DES_IS_SPD(VNAV_DES_SPD_LIMIT_ALT()) then
         if B747_mcp_alt_settled==nil or B747_mcp_alt_settled() then
             targetAlt=B747DR_autopilot_altitude_ft
         elseif simDR_autopilot_altitude_ft<simDR_pressureAlt1-100 then

@@ -1,0 +1,66 @@
+-- Run from the repository root with Lua 5.1 or LuaJIT.
+-- [B-14] After the ALT selector is pushed in the descent (a lower MCP altitude set from VNAV ALT), the AFDS's altitude
+-- is the new MCP altitude at once, as a real 747-400's descent resumes to it; VNAV ALT is not set again for 30 s
+-- (B747DR_mcp_hold_pressed), as before. VNAV_DES_ALT took the MCP altitude only 30 s after a push, and until then
+-- VNAV_NEXT_ALT's target - the next point's altitude below the transition altitude - was the AFDS's: the descent
+-- levelled off at NETOM's 7849 above the cleared 7000 (review 26 MINOR 3). The production VNAV_DES_ALT
+-- (approach_model.lua's loader) on the EHAM route, its CIFP constraints as approach_model.lua's.
+local model = dofile("tests/approach_model.lua")
+
+local checks, failures = 0, {}
+local function check(condition, message)
+    checks = checks + 1
+    if not condition then failures[#failures + 1] = message end
+end
+
+local NETOM = 6
+local FMS_DATA = {desspdtransalt = "10000", destranspd = "240", desspd = "270", desrestspd = "---",
+    desrestalt = "-----", transalt = "18000", crzalt = "FL370"}
+-- VNAV_DES_ALT nm before NETOM at alt_ft in VNAV PTH, pushed seconds after the ALT selector's push, the MCP at mcp_ft;
+-- returns the AFDS's altitude and B747DR_mcp_hold
+local function after_push(o)
+    local e = model.eham({active = NETOM, mcp_alt_ft = o.mcp_ft, vnav_speed_kt = 250, at_mode = 3})
+    local d = {}
+    local ap = model.load(d, {fmsData = FMS_DATA, B747_route_constraints = e.constraints})
+    model.set_datarefs(d, e, 0.05)
+    local route = e.route
+    for i = 1, #route do route[i][10] = (i == NETOM) end
+    local prev = route[NETOM - 1]
+    d.simDR_latitude, d.simDR_longitude = ap.movePoint(route[NETOM][5], route[NETOM][6], o.nm,
+        ap.getHeading(route[NETOM][5], route[NETOM][6], prev[5], prev[6]))
+    d.simDR_pressureAlt1, d.simDR_radarAlt1 = o.alt_ft, o.alt_ft
+    d.simDR_ind_airspeed_kts_pilot, d.simDR_ias_pilot, d.simDR_groundspeed = 250, 250, 150
+    d.simDR_TAS_mps, d.simDR_alpha_deg, d.B747DR_airspeed_Vmc = 150, 2, 150
+    d.B747DR_fmscurrentIndex, d.B747DR_vnav_hold_index = NETOM, 0
+    d.B747BR_cruiseAlt, d.B747BR_tod = 37000, 400
+    d.B747BR_todLat, d.B747BR_todLong = route[2][5], route[2][6]
+    d.B747DR_ap_inVNAVdescent = 1
+    d.simDR_autopilot_flch_status, d.simDR_autopilot_vs_status = 0, 2
+    d.simDR_autopilot_alt_hold_status = o.alt_hold or 0
+    d.B747DR_ap_ias_mach_window_open = 0
+    d.simDRTime = 1000
+    d.B747DR_mcp_hold_pressed = d.simDRTime - o.pushed
+    d.B747DR_mcp_hold = 0
+    d.simDR_autopilot_altitude_ft = o.afds_ft or o.mcp_ft
+    ap.B747_reset_vnav_energy()
+    for _ = 1, 3 do ap.setDistances(route) end
+    ap.VNAV_DES_ALT(1, route)
+    return d.simDR_autopilot_altitude_ft, d.B747DR_mcp_hold
+end
+
+-- levelled in VNAV ALT at 11,000 ft, the MCP dialled to 7000 and the selector pushed: the descent resumes to 7000
+local a = after_push({nm = 8, alt_ft = 11000, mcp_ft = 7000, afds_ft = 11000, pushed = 2})
+check(a == 7000, "2 s after the push from VNAV ALT at 11,000 ft, the MCP at 7000: the AFDS's altitude is 7000 (not "
+    .."NETOM's 7849), got "..a)
+a = after_push({nm = 6, alt_ft = 10500, mcp_ft = 7000, afds_ft = 7000, pushed = 20})
+check(a == 7000, "20 s after the push at 10,500 ft: still 7000, got "..a)
+a = after_push({nm = 6, alt_ft = 10500, mcp_ft = 7000, afds_ft = 7000, pushed = 40})
+check(a == 7000, "40 s after the push: 7000, got "..a)
+-- VNAV ALT is not set again within 30 s of the push, as before
+local _, hold = after_push({nm = 2, alt_ft = 7010, mcp_ft = 7000, afds_ft = 7000, pushed = 5, alt_hold = 2})
+check(hold == 0, "5 s after a push, holding 7000 at the MCP's 7000: no VNAV ALT yet, got mcp_hold "..hold)
+_, hold = after_push({nm = 2, alt_ft = 7010, mcp_ft = 7000, afds_ft = 7000, pushed = 40, alt_hold = 2})
+check(hold == 1, "40 s after the push, holding the MCP's 7000: VNAV ALT, got mcp_hold "..hold)
+
+assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
+print("VNAV MCP push tests passed: "..checks)

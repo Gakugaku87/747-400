@@ -575,6 +575,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   no step over 15 ft in 0.02 nm (the straight distance to the point dropped
   the path 480 ft at the release), NETOM's 7849 at the bisector, and the
   legs' paths as before away from the turn.
+- `vnav_mcp_push_test.lua`: after an ALT selector push in the descent (the
+  MCP dialled down from VNAV ALT) the AFDS's altitude is the new MCP
+  altitude at once (it was NETOM's 7849 above the cleared 7000 for 30 s),
+  and VNAV ALT is still not set again within 30 s of the push.
 - `vnav_spd_level_off_test.lua`: VNAV SPD's descent (FLCH: the IAS window
   open above SPD TRANS) still levels off at the route's points and the
   STAR's floors - SUGOL's 11315 with the MCP at 2000, also where it levelled
