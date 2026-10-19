@@ -78,9 +78,10 @@ check(v1 == 126 and vr == 141 and v2 == 159, "310 t, flaps 20, sea level, 15 C: 
 v1, vr, v2 = speeds(200000, 10, 0, 15)
 check(v1 == 121 and vr == 124 and v2 == 148, "200 t, flaps 10, sea level, 15 C: "
     ..show(v1, vr, v2).." (121/124/148)")
--- VMCG/VRMIN lower at altitude and on hot days: 6,000 ft at 10 C 113/116; sea level at 40 C 117/120
+-- VMCG/VRMIN lower at altitude and on hot days: 6,000 ft at 10 C 113/116 (region D's VR there 118.6: 119); sea level
+-- at 40 C 117/120
 v1, vr = speeds(233100, 20, 6000, 10)
-check(v1 == 113 and vr == 116, "233 t, flaps 20, 6,000 ft, 10 C: "..show(v1, vr).." (113/116)")
+check(v1 == 113 and vr == 119, "233 t, flaps 20, 6,000 ft, 10 C: "..show(v1, vr).." (113: VMCG; 119: the table)")
 v1, vr = speeds(233100, 20, 0, 40)
 check(v1 == 117 and vr == 120, "233 t, flaps 20, sea level, 40 C: "..show(v1, vr).." (117/120)")
 -- and with the takeoff derated (TO 1 10 %, TO 2 20 %): sea level 116/119 and 108/111 (VR then the table's 114.2)
@@ -135,6 +136,32 @@ do
     env.V1windAdj[40][300000], env.V1windAdj[40][320000] = 30, 30
     v1, vr = run(env)
     check(v1 == vr and vr == 141, "310 t, flaps 20, a +30 kt V1 correction: V1 "..show(v1, vr).." (= VR, 141)")
+end
+-- the tables as the PMDG AOM's pages they were copied from (research_vspeeds.md; reviews 36 and 38): flaps 10 region
+-- D VR at 320-420 t read 93-111 (rotating 40-65 kt early at a 5,500 ft airport), flaps 20 region D VR at 220 t 97,
+-- flaps 20 region E V2 at 380 t 149 (V2 under VR at 360-400 t, in the region now taken above E's top), and 15 cells
+-- of the wind table 1 kt off
+do
+    local env = load(233100, 20, 0, 15)
+    for _, c in ipairs({
+            {env.B747_Vr[10][4], {[320000] = 156, [340000] = 163, [360000] = 170, [380000] = 176, [400000] = 181,
+                [420000] = 187}, "flaps 10 region D VR"},
+            {env.B747_Vr[20][4], {[220000] = 114}, "flaps 20 region D VR"},
+            {env.B747_V2[20][5], {[380000] = 179}, "flaps 20 region E V2"},
+            {env.V1windAdj[-15], {[380000] = -5}, "wind -15 kt"},
+            {env.V1windAdj[10], {[300000] = 1, [340000] = 1, [400000] = 1}, "wind +10 kt"},
+            {env.V1windAdj[30], {[260000] = 2, [280000] = 2, [300000] = 2, [320000] = 2, [340000] = 2}, "wind +30 kt"},
+            {env.V1windAdj[40], {[260000] = 3, [280000] = 3, [300000] = 3, [320000] = 3, [340000] = 3, [360000] = 3},
+                "wind +40 kt"}}) do
+        for w, want in pairs(c[2]) do
+            check(c[1][w] == want, string.format("%s at %d t: %s (%s)", c[3], w / 1000, tostring(c[1][w]), want))
+        end
+    end
+end
+for _, w in ipairs({360000, 380000, 400000}) do
+    v1, vr, v2 = speeds(w, 20, 9000, 0)
+    check(v1 <= vr and vr < v2, string.format("%d t, flaps 20, 9,000 ft, 0 C (region E): %s (V1 <= VR < V2)",
+        w / 1000, show(v1, vr, v2)))
 end
 -- V1 never above VR
 for _, w in ipairs({200000, 233100, 260000, 300000, 360000, 400000}) do

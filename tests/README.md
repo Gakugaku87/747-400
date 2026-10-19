@@ -60,6 +60,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   brought down to VR pin the interpolations and the clamp. The speeds are
   whole knots as the FMC sets them, the tables' rounded and the minimums up
   (233 t: 121/124/145; the CDU had cut 120.6/123.6/143.7 to 120/123/143).
+  The tables read as the PMDG AOM's pages (flaps 10 region D VR 320-420 t
+  93-111 instead of 156-187, flaps 20 region D VR 220 t 97 instead of 114,
+  flaps 20 region E V2 380 t 149 instead of 179, 15 wind cells 1 kt off),
+  and above region E's top V2 stays above VR at 360-400 t.
 - `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230KT CLB"),
   the ECON/SEL SPD label, the CAS/Mach speed pair, the blank SPD REST
   field, and the CRZ page titles ("ACT ECON CRZ" / "ACT M.801 CRZ") with the
