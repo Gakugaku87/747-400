@@ -20,7 +20,8 @@
 --    it: ended at the HDG SEL, the path stepped -740 to -820 ft where the fix was sequenced abeam (review 28 MAJOR 1),
 --    and ended 0.5 nm off LNAV's path +330 to +500 ft (review 29 MAJOR 1);
 -- 7. the turn carried on (prev) on a short leg ends with a route edit of its fix without a step (review 28 NIT);
--- 8. the turn's fade moves with the distance flown also where LNAV engages or lets go off the path (review 30 MAJOR 1).
+-- 8. the turn's fade moves with the distance flown also where LNAV engages or lets go off the path (review 30 MAJOR 1),
+--    and is measured from the turn carried on too on a short leg (review 30 NIT).
 -- The production LNAV (B747_lnav_update_xtk and B747_lnav_update_vnav_hold, as B747_getCurrentWayPoint calls them),
 -- setDescentVSpeed (the approach's path inside 25 nm) and setDistances every 2 s (approach_model.lua's loader) on the
 -- EHAM route in the production order, the 747 flown along the legs and the fly-by arcs at the bank flown, in a flat
@@ -532,6 +533,16 @@ r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, off
 worst, where = largest_step(r, 0, 1e9)
 check(math.abs(worst) <= 15, string.format("LNAV engaged 1 nm outside NETOM's turn, then HDG SEL 2.2 nm before NETOM: "
     .."largest step %+.0f ft in 0.02 nm at %.2f nm", worst, where or -1))
+-- HDG SEL on a 2.6 nm leg while AM607's turn carries NIRSI's and the 747 flies on round NIRSI's arc: on the path,
+-- the turn does not fade (its offset taken from AM607's path alone, 0.5 nm: faded 0.23; review 30 NIT)
+r = fly({NIRSI, AM607}, {tas = 270, bank = 20, alt = 6000, from_fix = 5, after = 3,
+    hooks = {{s = 5.3, fn = hdg_sel}}, seq_after = {s = 5.3, mode = "abeam"}}, short_leg(2.6))
+local carried = 0
+for _, p in ipairs(r) do
+    if p.s > 5.3 and p.prev ~= 0 and p.fade > carried then carried = p.fade end
+end
+check(carried <= 0.1, string.format("HDG SEL on a 2.6 nm leg, the 747 on NIRSI's arc while AM607's turn carries it: "
+    .."the turn's fade at most %.2f", carried))
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV turn latch tests passed: "..checks)
