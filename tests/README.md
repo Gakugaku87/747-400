@@ -595,7 +595,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   +303 ft after the bisector); the turn is taken only while LNAV flies the
   turns (none with LNAV armed, flown straight past NETOM) and ends at HDG
   SEL, at a direct-to and once the 747 is vectored 1 nm farther from the
-  fix than where it was taken.
+  fix than where it was taken; where it ends before its own end (HDG SEL,
+  the route edit) the path carries on, the step taken out over 2 nm, also
+  turned back from the fix (the cut taken off was dropped at once: +77 ft).
 - `vnav_mcp_push_test.lua`: after an ALT selector push in the descent (the
   MCP dialled down from VNAV ALT) the AFDS's altitude is the new MCP
   altitude at once (it was NETOM's 7849 above the cleared 7000 for 30 s),

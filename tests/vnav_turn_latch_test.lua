@@ -6,7 +6,9 @@
 --    profile's refresh after the bisector and -142 ft at the old turn's end (review 27b MINOR 1);
 -- 2. the turn is taken only while LNAV flies the turns on its path - engaged, no offset, no direct-to - and ends once
 --    LNAV no longer does (HDG SEL, the kit's DIRECT TO) or the 747 is vectored away from the fix: taken and kept
---    without LNAV, flown straight past NETOM it put the path ~170 ft high behind the fix (review 27b MINOR 3).
+--    without LNAV, flown straight past NETOM it put the path ~170 ft high behind the fix (review 27b MINOR 3);
+-- 3. where the turn ends before its own end (HDG SEL, a route edit) the path carries on and the step is taken out over
+--    2 nm, nearer or farther: the cut the turn had taken off dropped at once.
 -- The production LNAV (B747_lnav_update_xtk and B747_lnav_update_vnav_hold, as B747_getCurrentWayPoint calls them),
 -- setDescentVSpeed (the approach's path inside 25 nm) and setDistances every 2 s (approach_model.lua's loader) on the
 -- EHAM route in the production order, the 747 flown along the legs and the fly-by arcs at the bank flown, in a flat
@@ -243,17 +245,17 @@ local stale, worstDiff, worstAt = nil, 0, nil
 for n, q in ipairs(edited) do
     if q.s >= EDIT_S and q.tfix == NETOM and math.abs(wrap(q.out - 69)) > 1 and stale == nil then stale = q end
     local r = ref[n]
-    if q.s >= EDIT_S + 0.5 and q.path and r and r.path and math.abs(q.path - r.path) > math.abs(worstDiff) then
+    if q.s >= EDIT_S + 2.1 and q.path and r and r.path and math.abs(q.path - r.path) > math.abs(worstDiff) then
         worstDiff, worstAt = q.path - r.path, q.s
     end
 end
 check(stale == nil, string.format("after the edit NETOM's turn goes out on the new course 069: %s",
     stale and string.format("%.0f at %.2f nm", stale.out, stale.s) or "yes"))
-check(math.abs(worstDiff) <= 15, string.format("from 0.5 nm after the edit the path is the new route's: largest "
-    .."difference %+.0f ft at %.2f nm", worstDiff, worstAt or -1))
-local worst, where = largest_step(edited, EDIT_S + 0.02, 1e9)
-check(math.abs(worst) <= 15, string.format("after the edit the path is continuous: largest step %+.0f ft in 0.02 nm at "
-    .."%.2f nm", worst, where or -1))
+check(math.abs(worstDiff) <= 15, string.format("from 2.1 nm after the edit (its step taken out over 2 nm) the path is "
+    .."the new route's: largest difference %+.0f ft at %.2f nm", worstDiff, worstAt or -1))
+local worst, where = largest_step(edited, EDIT_S - 0.02, 1e9)
+check(math.abs(worst) <= 15, string.format("through the edit and after it the path is continuous: largest step %+.0f "
+    .."ft in 0.02 nm at %.2f nm", worst, where or -1))
 
 -- 2. The turn only where LNAV flies it. On to NETOM 9 nm before it at 270 kt TAS; its 86 deg turn is taken about
 -- 3.9 nm before it (its lead and the margin) with LNAV engaged
@@ -308,6 +310,34 @@ check(start ~= nil and early == nil and late == nil, string.format("turned back 
     .."nm from it ends 1 nm farther (%s)", start and string.format("%.2f", start) or "never",
     early and string.format("ended early at %.2f nm from NETOM", early.d1) or late and string.format("still "
     .."taken at %.2f nm from NETOM", late.d1) or "it does"))
+
+-- 3. Where the turn ends before its own end - HDG SEL, a route edit (1.) - the cut it had taken off is not dropped at
+-- once: taken out over 2 nm, as a change of the next point. HDG SEL 2.5 nm before NETOM, 1.5 nm into the turn's taper
+-- (about 75 ft of its cut taken off), flown straight on and sequenced abeam
+r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 6, noturn = true, seq = "abeam",
+    hooks = {{s = 6.5, fn = hdg_sel}}})
+local abeam = nil
+for _, p in ipairs(r) do
+    if p.active ~= NETOM and abeam == nil then abeam = p.s end
+end
+worst, where = largest_step(r, 6.4, (abeam or 1e9) - 0.03)
+check(math.abs(worst) <= 15, string.format("HDG SEL 2.5 nm before NETOM: the path continuous up to the sequence abeam "
+    .."NETOM (%.2f nm): largest step %+.0f ft in 0.02 nm at %.2f nm", abeam or -1, worst, where or -1))
+-- and turned back there, the step is taken out as the distance grows too: the path as without the turn 2.1 nm on
+local back = (bearing(rt[SUGOL], rt[NETOM]) + 180) % 360
+r = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 8, seq = "none",
+    hooks = {{s = 6.5, fn = hdg_sel}}, vector = {s = 6.5, heading = back}})
+local plain = fly({NETOM}, {tas = 270, bank = 20, alt = 8000, from_fix = 9, after = 8, seq = "none",
+    hooks = {{s = 0, fn = hdg_sel}}, vector = {s = 6.5, heading = back}})
+worstDiff, worstAt = 0, nil
+for n, p in ipairs(r) do
+    local w = plain[n]
+    if p.s >= 6.5 + 2.1 and p.path and w and w.path and math.abs(p.path - w.path) > math.abs(worstDiff) then
+        worstDiff, worstAt = p.path - w.path, p.s
+    end
+end
+check(math.abs(worstDiff) <= 15, string.format("HDG SEL and turned back 2.5 nm before NETOM: from 2.1 nm on the path "
+    .."is the one without the turn: largest difference %+.0f ft at %.2f nm", worstDiff, worstAt or -1))
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV turn latch tests passed: "..checks)

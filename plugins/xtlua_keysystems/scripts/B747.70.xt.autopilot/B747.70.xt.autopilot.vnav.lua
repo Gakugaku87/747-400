@@ -334,19 +334,23 @@ local function B747_vnav_point_distance(fmsO, point, direct)
   end
   return direct
 end
--- [B-14] When the path's next point (lat, lon) changes, the path's altitude is carried on from where it was and the
--- step is taken out over the next VNAV_PATH_BLEND_NM of `distance` (a real FMC's path is one line along the lateral
--- path): the turns' legs and arcs do not quite match (LNAV draws its arc for the TAS it is coming to, in the wind), and
--- the descent profile's flags change up to 2 s after the bisector. A step over VNAV_PATH_BLEND_MAX_FT (a new route, a
--- direct-to) is taken at once. state: the descent profile's (vnavPathBlend) or the approach path's.
+-- [B-14] When the path's next point (lat, lon) changes, or LNAV's turn (B747_lnav_vnav_turn: taken, ended, another),
+-- the path's altitude is carried on from where it was and the step is taken out over the next VNAV_PATH_BLEND_NM of
+-- `distance` flown, nearer or farther (a real FMC's path is one line along the lateral path): the turns' legs and arcs
+-- do not quite match (LNAV draws its arc for the TAS it is coming to, in the wind), the descent profile's flags change
+-- up to 2 s after the bisector, and a turn that ends at HDG SEL, a direct-to or a route edit leaves the cut it had
+-- taken off (77 ft 2.5 nm before NETOM's 86 deg turn). A step over VNAV_PATH_BLEND_MAX_FT (a new route, a direct-to)
+-- is taken at once. Taken out only as the distance fell, a step stayed while it grew under vectors (review 27).
+-- state: the descent profile's (vnavPathBlend) or the approach path's.
 local VNAV_PATH_BLEND_NM = 2
 local VNAV_PATH_BLEND_MAX_FT = 250
-local vnavPathBlend = {lat = nil, lon = nil, alt = 0, offset = 0, from = 0, t = -100}
-local approachPathBlend = {lat = nil, lon = nil, alt = 0, offset = 0, from = 0, t = -100}
+local vnavPathBlend = {lat = nil, lon = nil, turn = nil, alt = 0, offset = 0, from = 0, t = -100}
+local approachPathBlend = {lat = nil, lon = nil, turn = nil, alt = 0, offset = 0, from = 0, t = -100}
 local function B747_vnav_path_continuity(state, lat, lon, distance, alt)
   local b = state
+  local turn = B747_lnav_vnav_turn
   if b.lat ~= nil and simDRTime - b.t <= 5 then
-    if math.abs(lat - b.lat) > 1e-7 or math.abs(lon - b.lon) > 1e-7 then
+    if math.abs(lat - b.lat) > 1e-7 or math.abs(lon - b.lon) > 1e-7 or turn ~= b.turn then
       local step = b.alt - alt
       if math.abs(step) <= VNAV_PATH_BLEND_MAX_FT then b.offset, b.from = step, distance else b.offset = 0 end
     end
@@ -355,11 +359,11 @@ local function B747_vnav_path_continuity(state, lat, lon, distance, alt)
   end
   local offset = 0
   if b.offset ~= 0 then
-    local w = math.max(0, math.min(1, 1 - (b.from - distance) / VNAV_PATH_BLEND_NM))
+    local w = math.max(0, math.min(1, 1 - math.abs(b.from - distance) / VNAV_PATH_BLEND_NM))
     offset = b.offset * w
     if w <= 0 then b.offset = 0 end
   end
-  b.lat, b.lon, b.t = lat, lon, simDRTime
+  b.lat, b.lon, b.turn, b.t = lat, lon, turn, simDRTime
   b.alt = alt + offset
   return b.alt
 end
