@@ -2745,6 +2745,14 @@ function B747_setTempAltRegion()
         end -- TEMPERATURE TEST
     end -- LOOP ALL REGIONS
 
+    -- [takeoff speeds] beyond the chart's regions the nearest: below region A's bottom or colder than its left edge
+    -- A, else (above region E's top - about 8,000 ft at 0 C - or hotter than its right edge) E. Left at 0, the speeds'
+    -- lookup failed on a nil index (review 36)
+    if simDR_altitude_ft_pilot <= regions[1].b or simDR_OAT_degC <= regions[1].l then
+        tempAltRegion = 1
+    else
+        tempAltRegion = num_regions
+    end
     return false
 
 end

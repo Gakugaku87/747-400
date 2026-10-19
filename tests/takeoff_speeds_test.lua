@@ -89,6 +89,11 @@ v1 = speeds(309700, 20, 20, 15, 280, 20, 280)
 check(near(v1, 127.9, 0.5), "310 t, flaps 20, runway 280, wind 280/20 (headwind): V1 "..show(v1).." (127.9)")
 v1 = speeds(309700, 20, 20, 15, 100, 10, 280)
 check(near(v1, 123.4, 0.5), "310 t, flaps 20, runway 280, wind 100/10 (tailwind): V1 "..show(v1).." (123.4)")
+-- beyond the chart's regions the nearest: above region E's top (about 8,000 ft at 0 C) region E (flaps 20, 300 t:
+-- V1 135); no region at all left the lookup on a nil index (review 36)
+local ok, high_v1 = pcall(speeds, 300000, 20, 9000, 0)
+check(ok and near(high_v1, 135, 0.5), "300 t, flaps 20, 9,000 ft, 0 C (above region E): V1 "..tostring(high_v1)
+    .." (135, region E)")
 -- V1 never above VR
 for _, w in ipairs({200000, 233100, 260000, 300000, 360000, 400000}) do
     for _, f in ipairs({10, 20}) do
