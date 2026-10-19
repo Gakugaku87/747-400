@@ -2877,14 +2877,20 @@ function B747_setV1VrV2()
         -- [takeoff speeds] the FCOM's minimums (PI.18.2): V1 not below VMCG; VR not below VRMIN nor VMCG, and V2 then
         -- not below the V2 for that VR; V1 not above VR. The tables gave 101/114/139 at 233 t, flaps 20, sea level
         -- (the FCOM's 121/124/144): the 747 rotated 10 kt early on the line flights
+        -- In whole knots, as the FMC shows and sets them: the tables' speeds rounded, the minimums up (the CDU's %3d
+        -- cut 120.6/123.6/143.7 to 120/123/143, below VMCG; review 36)
         local vmcg, vrmin = B747_vmcg_vrmin(B747_takeoff_pressure_altitude(), simDR_OAT_degC, derate)
-        B747DR_airspeed_V1 = math.max(B747DR_airspeed_V1, vmcg)
-        local vr = math.max(B747DR_airspeed_Vr, vrmin, vmcg)
-        if vr > B747DR_airspeed_Vr then
-            B747DR_airspeed_Vr = vr
-            B747DR_airspeed_V2 = math.max(B747DR_airspeed_V2, B747_v2_for_vrmin(flaps, vr, simDR_acf_weight_total_kg))
+        vmcg, vrmin = math.ceil(vmcg - 1e-6), math.ceil(vrmin - 1e-6)
+        local v1 = math.floor(B747DR_airspeed_V1 + 0.5)
+        local vr = math.floor(B747DR_airspeed_Vr + 0.5)
+        local v2 = math.floor(B747DR_airspeed_V2 + 0.5)
+        v1 = math.max(v1, vmcg)
+        local raised = math.max(vr, vrmin, vmcg)
+        if raised > vr then
+            vr = raised
+            v2 = math.max(v2, math.ceil(B747_v2_for_vrmin(flaps, vr, simDR_acf_weight_total_kg) - 1e-6))
         end
-        B747DR_airspeed_V1 = math.min(B747DR_airspeed_V1, B747DR_airspeed_Vr)
+        B747DR_airspeed_V1, B747DR_airspeed_Vr, B747DR_airspeed_V2 = math.min(v1, vr), vr, v2
         lastFlaps=flaps
     elseif lastFlaps~=flaps then
         if simDR_all_wheels_on_ground==1 then

@@ -57,7 +57,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   thrust rating changed once the speeds are set deletes them with the flaps
   entry, as the FMC does (TO 2's V1 108 stayed under full thrust). Cases
   between the minimum tables' rows, on their hot-day slope and with V1
-  brought down to VR pin the interpolations and the clamp.
+  brought down to VR pin the interpolations and the clamp. The speeds are
+  whole knots as the FMC sets them, the tables' rounded and the minimums up
+  (233 t: 121/124/145; the CDU had cut 120.6/123.6/143.7 to 120/123/143).
 - `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230KT CLB"),
   the ECON/SEL SPD label, the CAS/Mach speed pair, the blank SPD REST
   field, and the CRZ page titles ("ACT ECON CRZ" / "ACT M.801 CRZ") with the

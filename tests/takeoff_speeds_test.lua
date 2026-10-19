@@ -68,45 +68,45 @@ local function show(v1, vr, v2) return string.format("%.1f/%.1f/%.1f", v1 or -1,
 -- light: V1 at VMCG, VR at VRMIN, V2 the "V2 for VRMIN" (flaps 20: VR 120 -> 140/140/139/139 at 200/220/240/260 t,
 -- VR 125 -> 147/146/145/145)
 local v1, vr, v2 = speeds(233100, 20, 200, 15)
-check(near(v1, 121, 0.5) and near(vr, 124, 0.5) and near(v2, 144.2, 0.6), "233 t, flaps 20, sea level, 15 C: "
-    ..show(v1, vr, v2).." (121/124/144: VMCG, VRMIN and the V2 for VRMIN)")
+check(v1 == 121 and vr == 124 and v2 == 145, "233 t, flaps 20, sea level, 15 C: "
+    ..show(v1, vr, v2).." (121/124/145: VMCG, VRMIN and the V2 for VRMIN, rounded up)")
 -- heavy enough: the tables' own speeds (126/141.5/159.5 at 310 t)
 v1, vr, v2 = speeds(309700, 20, 20, 15)
-check(near(v1, 126.0, 0.5) and near(vr, 141.5, 0.5) and near(v2, 159.5, 0.5), "310 t, flaps 20, sea level, 15 C: "
-    ..show(v1, vr, v2).." (the tables' 126/141.5/159.5)")
+check(v1 == 126 and vr == 141 and v2 == 159, "310 t, flaps 20, sea level, 15 C: "
+    ..show(v1, vr, v2).." (the tables' 125.9/141.4/159.4, rounded)")
 -- flaps 10 at 200 t: V2 for VRMIN 142 + 7 x 0.8 = 147.6 at VR 124
 v1, vr, v2 = speeds(200000, 10, 0, 15)
-check(near(v1, 121, 0.5) and near(vr, 124, 0.5) and near(v2, 147.6, 0.6), "200 t, flaps 10, sea level, 15 C: "
-    ..show(v1, vr, v2).." (121/124/147.6)")
+check(v1 == 121 and vr == 124 and v2 == 148, "200 t, flaps 10, sea level, 15 C: "
+    ..show(v1, vr, v2).." (121/124/148)")
 -- VMCG/VRMIN lower at altitude and on hot days: 6,000 ft at 10 C 113/116; sea level at 40 C 117/120
 v1, vr = speeds(233100, 20, 6000, 10)
-check(near(v1, 113, 0.5) and near(vr, 116, 0.5), "233 t, flaps 20, 6,000 ft, 10 C: "..show(v1, vr).." (113/116)")
+check(v1 == 113 and vr == 116, "233 t, flaps 20, 6,000 ft, 10 C: "..show(v1, vr).." (113/116)")
 v1, vr = speeds(233100, 20, 0, 40)
-check(near(v1, 117, 0.5) and near(vr, 120, 0.5), "233 t, flaps 20, sea level, 40 C: "..show(v1, vr).." (117/120)")
+check(v1 == 117 and vr == 120, "233 t, flaps 20, sea level, 40 C: "..show(v1, vr).." (117/120)")
 -- and with the takeoff derated (TO 1 10 %, TO 2 20 %): sea level 116/119 and 108/111 (VR then the table's 114.2)
 v1, vr = speeds(233100, 20, 0, 15, 0, 0, 0, 1)
-check(near(v1, 116, 0.6) and near(vr, 119, 0.6), "233 t, flaps 20, sea level, TO 1: "..show(v1, vr).." (116/119)")
+check(v1 == 116 and vr == 119, "233 t, flaps 20, sea level, TO 1: "..show(v1, vr).." (116/119)")
 v1, vr = speeds(233100, 20, 0, 15, 0, 0, 0, 2)
-check(near(v1, 108, 0.6) and near(vr, 114.2, 0.6), "233 t, flaps 20, sea level, TO 2: "..show(v1, vr)
-    .." (108/114.2: VMCG, and the table's VR above VRMIN 111)")
+check(v1 == 108 and vr == 114, "233 t, flaps 20, sea level, TO 2: "..show(v1, vr)
+    .." (108/114: VMCG, and the table's VR above VRMIN 111)")
 -- the V1 wind correction by the headwind component (the table's +10..+40 kt rows add 1-4 kt, its -5..-15 kt tailwind
 -- rows take 1-6 off), between its rows and weights: at 310 t (V1 125.9 calm) on a runway heading 280, wind from 280
 -- at 20 kt +2, from 100 at 10 kt -2.5 (the -10 kt row: -2 at 300 t, -3 at 320 t). Taken as the tailwind component
 -- and interpolated on the wind speed, a 40 kt headwind took 3 kt off (review 36)
 v1 = speeds(309700, 20, 20, 15, 280, 20, 280)
-check(near(v1, 127.9, 0.5), "310 t, flaps 20, runway 280, wind 280/20 (headwind): V1 "..show(v1).." (127.9)")
+check(v1 == 128, "310 t, flaps 20, runway 280, wind 280/20 (headwind): V1 "..show(v1).." (127.9: 128)")
 v1 = speeds(309700, 20, 20, 15, 100, 10, 280)
-check(near(v1, 123.4, 0.5), "310 t, flaps 20, runway 280, wind 100/10 (tailwind): V1 "..show(v1).." (123.4)")
+check(v1 == 123, "310 t, flaps 20, runway 280, wind 100/10 (tailwind): V1 "..show(v1).." (123.4: 123)")
 -- beyond the chart's regions the nearest: above region E's top (about 8,000 ft at 0 C) region E (flaps 20, 300 t:
 -- V1 135); no region at all left the lookup on a nil index (review 36)
 local ok, high_v1 = pcall(speeds, 300000, 20, 9000, 0)
-check(ok and near(high_v1, 135, 0.5), "300 t, flaps 20, 9,000 ft, 0 C (above region E): V1 "..tostring(high_v1)
+check(ok and high_v1 == 135, "300 t, flaps 20, 9,000 ft, 0 C (above region E): V1 "..tostring(high_v1)
     .." (135, region E)")
 -- by pressure altitude, as the FCOM's tables: at a sea level airport with QNH 28.92 inHg (pressure altitude about
 -- 1,000 ft) VMCG/VRMIN 119.5/122.5, not the altimeter's sea level 121/124 (review 36)
 v1, vr = speeds(233100, 20, 0, 15, 0, 0, 0, 0, 28.92)
-check(near(v1, 119.5, 0.3) and near(vr, 122.5, 0.3), "233 t, flaps 20, sea level, QNH 28.92: "..show(v1, vr)
-    .." (119.5/122.5 at a pressure altitude of 1,000 ft)")
+check(v1 == 120 and vr == 123, "233 t, flaps 20, sea level, QNH 28.92: "..show(v1, vr)
+    .." (119.5/122.5 at a pressure altitude of 1,000 ft: 120/123)")
 -- a takeoff thrust rating changed once the speeds are set deletes them, as the FMC does (and the flaps entry with
 -- them: entered again, they are worked out for the new rating): TO 2's 108 left with full thrust's VMCG 121 (review
 -- 36)
@@ -117,25 +117,24 @@ do
     local deleted = run(env)
     env.B747DR_airspeed_flapsRef = 20
     local again = run(env)
-    check(near(first, 108, 0.6) and deleted == 999 and env.B747DR_airspeed_flapsRef == 20 and near(again, 121, 0.5),
+    check(first == 108 and deleted == 999 and env.B747DR_airspeed_flapsRef == 20 and again == 121,
         string.format("233 t, flaps 20, TO 2 then TO: V1 %.1f, then %.1f (999: deleted), entered again %.1f "
         .."(108, 999, 121)", first or -1, deleted or -1, again or -1))
 end
 -- between the minimum tables' rows and on their slopes (review 36: changes that dropped the altitude interpolation,
--- the VR in the V2 for VRMIN or the V1 <= VR clamp still passed): 1,000 ft 13 C 119.5/122.5/142.3, 3,000 ft 9 C
--- 116.5/119.5/138.7, sea level 35 C 119.8/122.8/142.7
-for _, case in ipairs({{1000, 13, 119.5, 122.5, 142.3}, {3000, 9, 116.5, 119.5, 138.7},
-        {0, 35, 119.8, 122.8, 142.7}}) do
+-- the VR in the V2 for VRMIN or the V1 <= VR clamp still passed): 1,000 ft 13 C 119.5/122.5/142.3 (120/123/143),
+-- 3,000 ft 9 C 116.5/119.5/138.7 (117/120/140), sea level 35 C 119.8/122.8/142.7 (120/123/143)
+for _, case in ipairs({{1000, 13, 120, 123, 143}, {3000, 9, 117, 120, 140}, {0, 35, 120, 123, 143}}) do
     v1, vr, v2 = speeds(233100, 20, case[1], case[2])
-    check(near(v1, case[3], 0.3) and near(vr, case[4], 0.3) and near(v2, case[5], 0.3), string.format("233 t, flaps "
-        .."20, %d ft, %d C: %s (%.1f/%.1f/%.1f)", case[1], case[2], show(v1, vr, v2), case[3], case[4], case[5]))
+    check(v1 == case[3] and vr == case[4] and v2 == case[5], string.format("233 t, flaps 20, %d ft, %d C: %s "
+        .."(%d/%d/%d)", case[1], case[2], show(v1, vr, v2), case[3], case[4], case[5]))
 end
 -- and V1 brought down to VR when the wind correction takes it above (a +30 kt correction on the 40 kt row)
 do
     local env = load(309700, 20, 20, 15, 280, 40, 280)
     env.V1windAdj[40][300000], env.V1windAdj[40][320000] = 30, 30
     v1, vr = run(env)
-    check(v1 == vr and near(vr, 141.5, 0.5), "310 t, flaps 20, a +30 kt V1 correction: V1 "..show(v1, vr).." (= VR)")
+    check(v1 == vr and vr == 141, "310 t, flaps 20, a +30 kt V1 correction: V1 "..show(v1, vr).." (= VR, 141)")
 end
 -- V1 never above VR
 for _, w in ipairs({200000, 233100, 260000, 300000, 360000, 400000}) do
