@@ -277,11 +277,15 @@ end
 -- and alt_hold_status went 2, 0, 2 several times a second there. While the MCP altitude moves (B-12) the AFDS's stays
 -- as it was below the aircraft; not below it (the cruise's at the T/D) VNAV_NEXT_ALT's target stays, as before, and
 -- the descent starts at the T/D (P23). With the MCP more than 100 ft above the aircraft VNAV_NEXT_ALT's stays too.
+-- So does it in VNAV SPD (VNAV_DES_IS_SPD: VNAV_DES' FLCH, the IAS window open above SPD TRANS), in its FLCH and where
+-- it levelled off: the idle descent, its pitch on the speed, levels off at the points and the CIFP's floors, as a real
+-- 747-400's VNAV SPD at the constraints, not at the MCP alone.
 function VNAV_DES_ALT(numAPengaged,fms)
     local targetAlt=VNAV_NEXT_ALT(numAPengaged,fms)
     local lastHold=simDRTime-B747DR_mcp_hold_pressed
 
-    if B747DR_autopilot_altitude_ft<simDR_pressureAlt1+100 and lastHold>30 then
+    if B747DR_autopilot_altitude_ft<simDR_pressureAlt1+100 and lastHold>30
+        and not VNAV_DES_IS_SPD(VNAV_DES_SPD_LIMIT_ALT()) then
         if B747_mcp_alt_settled==nil or B747_mcp_alt_settled() then
             targetAlt=B747DR_autopilot_altitude_ft
         elseif simDR_autopilot_altitude_ft<simDR_pressureAlt1-100 then
@@ -296,6 +300,19 @@ function VNAV_DES_ALT(numAPengaged,fms)
         --print("set B747DR_mcp_hold in VNAV_DES_ALT")
     end
     if B747DR_mcp_hold==0 then simDR_autopilot_altitude_ft=targetAlt end
+end
+
+-- The descent's speed limit altitude: SPD TRANS's, or SPD REST's above it (SPD REST is blank until the crew enters
+-- one, leaving SPD TRANS as the only descent speed boundary)
+function VNAV_DES_SPD_LIMIT_ALT()
+    local transitionAlt=tonumber(getFMSData("desspdtransalt"))
+    return math.max(transitionAlt,tonumber(getFMSData("desrestalt")) or transitionAlt)
+end
+-- VNAV SPD in the descent (VNAV_DES' FLCH): the IAS window open above the speed limit altitude, the speed at least
+-- Vmc + 15; in the approach (setDescentVSpeed) VNAV PTH stays, the A/T holding the window's speed
+function VNAV_DES_IS_SPD(upperAlt)
+    return B747DR_ap_ias_mach_window_open==1 and simDR_pressureAlt1>upperAlt
+        and simDR_ind_airspeed_kts_pilot>=B747DR_airspeed_Vmc+15 and not B747_vnav_approach_active
 end
 
 B747DR_ap_VNAV_lastCommand=0
@@ -313,17 +330,12 @@ function VNAV_DES(numAPengaged,fms)
 
     setDescentVSpeed(fms)
     if B747DR_switchingIASMode==1 then return end
-    -- SPD REST is blank until the crew enters one, leaving SPD TRANS as the
-    -- only descent speed boundary.
-    local transitionAlt=tonumber(getFMSData("desspdtransalt"))
-    local upperAlt=math.max(transitionAlt,
-        tonumber(getFMSData("desrestalt")) or transitionAlt)
+    local upperAlt=VNAV_DES_SPD_LIMIT_ALT()
     --print("upperAlt "..upperAlt)
     if B747DR_ap_ias_mach_window_open == 1 then
         -- the IAS window open: VNAV SPD (FLCH) above SPD TRANS, but in the approach (setDescentVSpeed)
         -- VNAV PTH stays, the A/T holding the window's speed
-        if simDR_pressureAlt1>upperAlt and simDR_ind_airspeed_kts_pilot>=B747DR_airspeed_Vmc+15
-            and not B747_vnav_approach_active then
+        if VNAV_DES_IS_SPD(upperAlt) then
             --descentstatus = simDR_autopilot_flch_status
             simDR_autopilot_vs_status=0
             simDR_autopilot_flch_status=2

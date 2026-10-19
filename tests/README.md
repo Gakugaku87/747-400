@@ -567,6 +567,12 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   above FL070, each within 200 ft of its path, and the V/S stays at 500 fpm
   or more within 30 s of each (each point's altitude was the AFDS's
   level-off).
+- `vnav_spd_level_off_test.lua`: VNAV SPD's descent (FLCH: the IAS window
+  open above SPD TRANS) still levels off at the route's points and the
+  STAR's floors - SUGOL's 11315 with the MCP at 2000, also where it levelled
+  off (X-Plane's ALT HOLD), SUGOL's 9500 raised to its window's FL100, the
+  MCP where it is higher - while VNAV PTH, also with the window open below
+  SPD TRANS, takes the MCP altitude alone (the production VNAV_DES_ALT).
 - `vnav_cifp_constraints_test.lua`: the SID, STAR and approach constraints read
   from X-Plane's CIFP (`B747.70.xt.autopilot.constraints.lua`) - records as
   X-Plane writes them (a CA leg, windows, flight levels, the glide slope
