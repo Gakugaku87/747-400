@@ -11,7 +11,8 @@
 --    2 nm, nearer or farther: the cut the turn had taken off dropped at once;
 -- 4. on a leg too short for the turn before to end before the next one begins (NIRSI's 64 deg, then AM607's 90 deg
 --    2.6-4.0 nm on) the path is continuous: the next turn, taken only once the one before had ended, was taken late and
---    the path stepped -34 ft at once with a 3.2 nm leg, -375 ft with 2.6 nm (review 27b MINOR 2).
+--    the path stepped -34 ft at once with a 3.2 nm leg, -375 ft with 2.6 nm (review 27b MINOR 2);
+-- 5. far from the fix (the cruise) LNAV works the turn out every 5 s at most: it did every frame (review 27b NIT).
 -- The production LNAV (B747_lnav_update_xtk and B747_lnav_update_vnav_hold, as B747_getCurrentWayPoint calls them),
 -- setDescentVSpeed (the approach's path inside 25 nm) and setDistances every 2 s (approach_model.lua's loader) on the
 -- EHAM route in the production order, the 747 flown along the legs and the fly-by arcs at the bank flown, in a flat
@@ -374,6 +375,29 @@ for _, leg in ipairs({4.0, 3.2, 2.6}) do
             .."largest step against the path's slope %+.0f ft in 0.02 nm at %.2f nm%s", leg, bank, worst, where or -1,
             all and "" or " (not on the approach's path all the way)"))
     end
+end
+
+-- 5. Far from the fix - 40 nm before NETOM at 480 kt, the cruise's distances - LNAV works the active fix's turn out
+-- (its courses, the wind and the lead: getHeading twice) every 5 s at most, not every frame
+do
+    local route, d, ap = setup()
+    local F = route[NETOM]
+    local inCourse = bearing(route[SUGOL], F)
+    d.simDR_TAS_mps, d.simDR_groundspeed = 480 / 1.94384, 480 / 1.94384
+    d.simDR_pressureAlt1, d.simDR_radarAlt1 = 37000, 37000
+    d.B747DR_fmscurrentIndex = NETOM
+    for i = 1, #route do route[i][10] = (i == NETOM) end
+    d.simDR_true_heading, d.simDR_ground_track_true = inCourse, inCourse
+    local calls, getHeading = 0, ap.getHeading
+    ap.getHeading = function(...) calls = calls + 1 return getHeading(...) end
+    for n = 0, 249 do
+        d.simDR_latitude, d.simDR_longitude = move(F[5], F[6], 40 - n * 480 / 3600 * 0.02, (inCourse + 180) % 360)
+        d.simDRTime = d.simDRTime + 0.02
+        ap.B747_lnav_update_vnav_hold(route)
+    end
+    ap.getHeading = getHeading
+    check(calls <= 10, string.format("40 nm before NETOM, 5 s of frames at 50 Hz: its turn worked out every 5 s at "
+        .."most (getHeading called %d times)", calls))
 end
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))

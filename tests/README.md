@@ -601,7 +601,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   and on a leg too short for one turn to end before the next begins
   (AM607's 90 deg 2.6-4.0 nm after NIRSI's 64 deg) the approach's path has
   no step against its slope over 8 ft (the next turn, taken only once the
-  one before had ended, stepped it -375 ft with a 2.6 nm leg).
+  one before had ended, stepped it -375 ft with a 2.6 nm leg); far from the
+  fix (40 nm, the cruise) LNAV works the turn out every 5 s at most, not
+  every frame.
 - `vnav_mcp_push_test.lua`: after an ALT selector push in the descent (the
   MCP dialled down from VNAV ALT) the AFDS's altitude is the new MCP
   altitude at once (it was NETOM's 7849 above the cleared 7000 for 30 s),

@@ -3482,6 +3482,13 @@ end
 local function B747_lnav_flies_turns()
 	return B747DR_ap_lnav_state==2 and B747DR_ap_lnav_xtk_target==0
 end
+-- The active fix's turn worked out last (B747_lnav_active_turn): the fix's index and position, when (t) and its lead
+-- (0 without a turn VNAV's path goes through). Farther from the fix than that lead, the margin and
+-- LNAV_VNAV_TURN_LOOK_NM, it is worked out again only every LNAV_VNAV_TURN_LOOK_SEC: its courses, the wind and the
+-- anticipation were worked out every frame of the cruise (review 27b NIT).
+local LNAV_VNAV_TURN_LOOK_NM=2.0
+local LNAV_VNAV_TURN_LOOK_SEC=5.0
+local lnavTurnLook={fix=0,lat=nil,lon=nil,t=0,lead=0}
 -- The active fix's turn once within its lead (plus the margin) of it, LNAV flying the turns and on its path (within
 -- LNAV_MAX_PREEMPT_XTK_NM), latched when first taken (t, if it is that fix's and not released); else nil
 local function B747_lnav_active_turn(fmsO,current,t)
@@ -3491,9 +3498,16 @@ local function B747_lnav_active_turn(fmsO,current,t)
 	end
 	local fix=fmsO[current]
 	if fix==nil then return nil end
-	local inCourse,outCourse,lead=B747_lnav_vnav_turn_at(fmsO,current)
-	if inCourse==nil then return nil end
 	local distance=getDistance(fix[5],fix[6],simDR_latitude,simDR_longitude)
+	local look=lnavTurnLook
+	local now=tonumber(simDRTime)
+	if now~=nil and look.fix==current and look.lat==fix[5] and look.lon==fix[6] and now>=look.t
+		and now-look.t<=LNAV_VNAV_TURN_LOOK_SEC and distance>look.lead+LNAV_VNAV_HOLD_MARGIN_NM+LNAV_VNAV_TURN_LOOK_NM then
+		return nil
+	end
+	local inCourse,outCourse,lead=B747_lnav_vnav_turn_at(fmsO,current)
+	look.fix,look.lat,look.lon,look.t,look.lead=current,fix[5],fix[6],now or 0,lead or 0
+	if inCourse==nil then return nil end
 	if distance>lead+LNAV_VNAV_HOLD_MARGIN_NM then return nil end
 	return B747_lnav_new_vnav_turn(fmsO,current,inCourse,outCourse,lead,distance)
 end
