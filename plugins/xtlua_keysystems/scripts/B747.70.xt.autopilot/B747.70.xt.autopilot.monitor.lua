@@ -276,7 +276,11 @@ end
 -- the A/T went from SPD to IDLE and HOLD (p27-line1: 13 of the descent's 16 A/T changes, at ETPOS, SUGOL and NETOM)
 -- and alt_hold_status went 2, 0, 2 several times a second there. While the MCP altitude moves (B-12) the AFDS's stays
 -- as it was below the aircraft; not below it (the cruise's at the T/D) VNAV_NEXT_ALT's target stays, as before, and
--- the descent starts at the T/D (P23). With the MCP more than 100 ft above the aircraft VNAV_NEXT_ALT's stays too.
+-- the descent starts at the T/D (P23). With the MCP set more than 100 ft above the aircraft it levels off where it is,
+-- VNAV ALT, the A/T on the speed, as a real 747-400 (FCOM 4.10.7, 4.20.7: the VNAV profile and the MCP altitude in
+-- conflict), neither climbing to the MCP altitude nor going on descending to VNAV_NEXT_ALT's target, as it did (review
+-- 26 MINOR 4); a selector push does not make VNAV climb. Not on VNAV's approach path, where the MCP altitude is set to
+-- the missed approach's and the descent goes on.
 -- In VNAV SPD (VNAV_DES_IS_SPD: VNAV_DES' FLCH, the IAS window open above SPD TRANS) the idle descent, its pitch on the
 -- speed, also levels off at the constraints' floors ahead (VNAV_DES_SPD_FLOOR), as a real 747-400's VNAV SPD (FCOM
 -- 4.10.5: VNAV PTH once it meets an altitude constraint), not at the points' predicted altitudes: it took
@@ -288,19 +292,28 @@ function VNAV_DES_ALT(numAPengaged,fms)
     local targetAlt=VNAV_NEXT_ALT(numAPengaged,fms)
     local lastHold=simDRTime-B747DR_mcp_hold_pressed
 
-    if B747DR_autopilot_altitude_ft<simDR_pressureAlt1+100 then
-        local level=nil
-        if B747_mcp_alt_settled==nil or B747_mcp_alt_settled() then
-            level=B747DR_autopilot_altitude_ft
-        elseif simDR_autopilot_altitude_ft<simDR_pressureAlt1-100 then
-            level=simDR_autopilot_altitude_ft
+    local settled=B747_mcp_alt_settled==nil or B747_mcp_alt_settled()
+    local conflict=B747_vnav_mcp_conflict
+    if conflict~=nil and simDRTime-conflict.t>5 then conflict=nil end
+    B747_vnav_mcp_conflict=nil
+    local level=nil
+    if not settled then
+        if simDR_autopilot_altitude_ft<simDR_pressureAlt1-100 then level=simDR_autopilot_altitude_ft end
+    elseif B747DR_autopilot_altitude_ft<simDR_pressureAlt1+100 then
+        level=B747DR_autopilot_altitude_ft
+    elseif not B747_vnav_approach_active then
+        -- the MCP altitude above: level off where the conflict began
+        if conflict==nil then conflict={alt=simDR_pressureAlt1} end
+        conflict.t=simDRTime
+        B747_vnav_mcp_conflict=conflict
+        targetAlt=conflict.alt
+        if simDR_autopilot_alt_hold_status==2 and math.abs(simDR_pressureAlt1-targetAlt)<B747DR_alt_capture_window then
+            B747DR_mcp_hold=1
         end
-        if level~=nil then
-            if VNAV_DES_IS_SPD(VNAV_DES_SPD_LIMIT_ALT()) then level=VNAV_DES_SPD_FLOOR(fms,level) end
-            targetAlt=level
-        end
-    elseif targetAlt<B747DR_autopilot_altitude_ft and simDR_pressureAlt1>B747DR_autopilot_altitude_ft-100 and lastHold>30 and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) then
-        targetAlt=B747DR_autopilot_altitude_ft
+    end
+    if level~=nil then
+        if VNAV_DES_IS_SPD(VNAV_DES_SPD_LIMIT_ALT()) then level=VNAV_DES_SPD_FLOOR(fms,level) end
+        targetAlt=level
     end
     local mcpDiff=simDR_pressureAlt1-B747DR_autopilot_altitude_ft
     if simDR_autopilot_alt_hold_status==2 and targetAlt==B747DR_autopilot_altitude_ft   and (mcpDiff<B747DR_alt_capture_window and mcpDiff>-B747DR_alt_capture_window) and lastHold>30 and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) and B747BR_cruiseAlt>B747DR_autopilot_altitude_ft-B747DR_alt_capture_window then

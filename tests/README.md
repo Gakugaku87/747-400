@@ -590,6 +590,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   levelled off (X-Plane's ALT HOLD), the MCP where it is higher - while VNAV
   PTH, also with the window open below SPD TRANS, takes the MCP altitude
   alone (the production VNAV_DES_ALT).
+- `vnav_mcp_above_test.lua`: the MCP altitude dialled above the 747 in a
+  VNAV PTH descent (9000 to 13,000 at 12,000 ft): it levels off where it is
+  and holds in VNAV ALT (FCOM 4.10.7), neither climbing nor going on
+  descending to the next point (mcp_alt_dial_model.lua's closed loop).
 - `vnav_spd_descent_test.lua`: VNAV SPD's descent in the closed loop
   (mcp_alt_dial_model.lua): from FL250 it levels at an at or above FL150 and
   holds it with one pitch-mode change until the fix (FLCH put back every
