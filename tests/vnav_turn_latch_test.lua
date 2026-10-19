@@ -21,8 +21,9 @@
 --    and ended 0.5 nm off LNAV's path +330 to +500 ft (review 29 MAJOR 1);
 -- 7. the turn carried on (prev) on a short leg ends with a route edit of its fix without a step (review 28 NIT);
 -- 8. the turn's fade moves with the distance flown also where LNAV engages or lets go off the path (review 30 MAJOR 1),
---    and is measured from the turn carried on too on a short leg (review 30 NIT); a change carries the step still being
---    taken out on (review 30 MINOR 2), and a route edit's own step over 250 ft is taken at once (review 31 MINOR 1).
+--    and is measured from the turn carried on too on a short leg, but not from its outbound leg (review 30 NIT, review
+--    31 NIT); a change carries the step still being taken out on (review 30 MINOR 2), and a route edit's own step over
+--    250 ft is taken at once (review 31 MINOR 1).
 -- The production LNAV (B747_lnav_update_xtk and B747_lnav_update_vnav_hold, as B747_getCurrentWayPoint calls them),
 -- setDescentVSpeed (the approach's path inside 25 nm) and setDistances every 2 s (approach_model.lua's loader) on the
 -- EHAM route in the production order, the 747 flown along the legs and the fly-by arcs at the bank flown, in a flat
@@ -92,7 +93,8 @@ end
 -- LNAV not engaged; "start": at the turn's start, the fix then held to the bisector; "none": never;
 -- opts.seq_after = {s, mode}: that mode from s). Each sample: s, the path's altitude (path), the active fix, the
 -- turn's fix (tfix, 0 without one), whether released (rel), its outbound course (out), its start_nm (start), its
--- fade and the turn it carries (prev, 0 without), the
+-- fade and the turn it carries (prev, 0 without), the fix whose arc the 747 flies (arc, 0 on a leg or flown off the
+-- path), the
 -- held fix (hold) and the distance to the first fix (d1).
 local function fly(ks, opts, mutate)
     local route, d, ap = setup(mutate)
@@ -138,7 +140,7 @@ local function fly(ks, opts, mutate)
                 local side = turn[k] > 0 and 1 or -1
                 local alen = R[k] * math.rad(math.abs(turn[k]))
                 segs[#segs + 1] = {kind = "arc", ce = st[1] + side * R[k] * un, cn = st[2] - side * R[k] * ue,
-                    se = st[1], sn = st[2], side = side, R = R[k], h = cin[k], len = alen}
+                    se = st[1], sn = st[2], side = side, R = R[k], h = cin[k], len = alen, fix = k}
                 s = s + alen
             end
             local oe, on = unit(cout[k])
@@ -153,12 +155,12 @@ local function fly(ks, opts, mutate)
             if s <= g.len then
                 if g.kind == "line" then
                     local ue, un = unit(g.h)
-                    return g.e + s * ue, g.n + s * un, g.h
+                    return g.e + s * ue, g.n + s * un, g.h, g
                 end
                 local a = s / g.R
                 local re, rn = g.se - g.ce, g.sn - g.cn
                 local c, sa = math.cos(-g.side * a), math.sin(-g.side * a)
-                return g.ce + re * c - rn * sa, g.cn + re * sa + rn * c, g.h + g.side * math.deg(a)
+                return g.ce + re * c - rn * sa, g.cn + re * sa + rn * c, g.h + g.side * math.deg(a), g
             end
             s = s - g.len
         end
@@ -230,7 +232,7 @@ local function fly(ks, opts, mutate)
         for n, h in ipairs(opts.hooks or {}) do
             if not hooked[n] and s >= h.s then h.fn(d, ap); hooked[n] = true end
         end
-        local east, north, track = along(s)
+        local east, north, track, seg = along(s)
         d.simDR_latitude, d.simDR_longitude = toLatLon(east, north)
         d.simDR_true_heading, d.simDR_ground_track_true = track % 360, track % 360
         d.simDRTime = d.simDRTime + ds / tas * 3600
@@ -258,7 +260,7 @@ local function fly(ks, opts, mutate)
         if (step + 1) % steps_2s == 0 then ap.setDistances(route) end
         samples[#samples + 1] = {s = s, path = path, active = active, tfix = t and t.fix or 0, rel = t and t.released,
             out = t and t.out_course, start = t and t.start_nm, hold = d.B747DR_vnav_hold_index,
-            fade = t and t.fade or 0, prev = t and t.prev and t.prev.fix or 0,
+            fade = t and t.fade or 0, prev = t and t.prev and t.prev.fix or 0, arc = seg and seg.fix or 0,
             d1 = ap.getDistance(route[ks[1]][5], route[ks[1]][6], d.simDR_latitude, d.simDR_longitude)}
         s, step = s + ds, step + 1
     end
@@ -542,10 +544,23 @@ r = fly({NIRSI, AM607}, {tas = 270, bank = 20, alt = 6000, from_fix = 5, after =
     hooks = {{s = 5.3, fn = hdg_sel}}, seq_after = {s = 5.3, mode = "abeam"}}, short_leg(2.6))
 local carried = 0
 for _, p in ipairs(r) do
-    if p.s > 5.3 and p.prev ~= 0 and p.fade > carried then carried = p.fade end
+    if p.s > 5.3 and p.prev ~= 0 and p.arc == NIRSI and p.fade > carried then carried = p.fade end
 end
 check(carried <= 0.1, string.format("HDG SEL on a 2.6 nm leg, the 747 on NIRSI's arc while AM607's turn carries it: "
     .."the turn's fade at most %.2f", carried))
+-- and HDG SEL straight on along that leg past AM607's arc: NIRSI's outbound leg - AM607's inbound - does not keep the
+-- turn on its path; measured from it, AM607's turn lived on 0.9 nm longer (review 31 NIT)
+for _, at in ipairs({5.6, 6.0}) do
+    r = fly({NIRSI, AM607}, {tas = 270, bank = 20, alt = 6000, from_fix = 5, after = 4,
+        hooks = {{s = at, fn = hdg_sel}}, seq_after = {s = at, mode = "abeam"}, vector = {s = at, heading = 87.4}},
+        short_leg(2.6))
+    local lastTurn = 0
+    for _, p in ipairs(r) do
+        if p.tfix == AM607 then lastTurn = p.s end
+    end
+    check(lastTurn <= 8.3, string.format("HDG SEL %.1f nm on, straight on past AM607's arc on a 2.6 nm leg: its turn "
+        .."has ended by 8.3 nm (last at %.2f)", at, lastTurn))
+end
 local R15 = (270 * 0.514444) ^ 2 / (9.80665 * math.tan(math.rad(15))) / 1852
 -- (after the turn is taken there: before it, no turn at all, NETOM is passed abeam only 5 nm on - a sequence of LNAV
 -- not engaged, not the turn's)

@@ -627,7 +627,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   the 747 at 15 deg of bank: -503 ft at once at the turn's end), and a
   route edit's own step over 250 ft is taken at once (NETOM's 110 deg
   turn edited to straight on 3 nm before it: the new route's path at
-  once; blended, 229 ft off it).
+  once; blended, 229 ft off it). The turn carried on counts towards the
+  distance off the path only up to its own outbound leg: flown straight on
+  past AM607's arc in HDG SEL on the 2.6 nm leg, AM607's turn ends by
+  8.3 nm (8.80 measured from that leg too).
 - `vnav_mcp_push_test.lua`: after an ALT selector push in the descent (the
   MCP dialled down from VNAV ALT) the AFDS's altitude is the new MCP
   altitude at once (it was NETOM's 7849 above the cleared 7000 for 30 s),

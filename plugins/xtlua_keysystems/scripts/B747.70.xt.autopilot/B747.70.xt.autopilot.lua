@@ -3534,7 +3534,7 @@ local function B747_lnav_turn_path_offset(fmsO,t)
 	local off=path and math.abs(path.xtk_nm) or 0
 	if t.prev~=nil then
 		local before=B747_lnav_path_at_fix(fmsO,t.prev.fix,p)
-		if before~=nil then off=math.min(off,math.abs(before.xtk_nm)) end
+		if before~=nil and before.element~="out" then off=math.min(off,math.abs(before.xtk_nm)) end
 	end
 	return off
 end
