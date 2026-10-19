@@ -98,16 +98,29 @@ v1 = speeds(309700, 20, 20, 15, 280, 20, 280)
 check(v1 == 128, "310 t, flaps 20, runway 280, wind 280/20 (headwind): V1 "..show(v1).." (127.9: 128)")
 v1 = speeds(309700, 20, 20, 15, 100, 10, 280)
 check(v1 == 123, "310 t, flaps 20, runway 280, wind 100/10 (tailwind): V1 "..show(v1).." (123.4: 123)")
+-- each row between its weights: at 302 t the -10 kt row is -2.1 (124.4 - 2.1: 122), not the 320 t cell's -3 (121;
+-- review 38)
+v1 = speeds(302000, 20, 20, 15, 100, 10, 280)
+check(v1 == 122, "302 t, flaps 20, runway 280, wind 100/10 (tailwind): V1 "..show(v1).." (122.3: 122)")
 -- beyond the chart's regions the nearest: above region E's top (about 8,000 ft at 0 C) region E (flaps 20, 300 t:
 -- V1 135); no region at all left the lookup on a nil index (review 36)
 local ok, high_v1 = pcall(speeds, 300000, 20, 9000, 0)
 check(ok and high_v1 == 135, "300 t, flaps 20, 9,000 ft, 0 C (above region E): V1 "..tostring(high_v1)
     .." (135, region E)")
+-- and colder than its left edge (-60 C) at sea level region A (300 t: 123, as at 15 C; review 38)
+local cold_ok, cold_v1 = pcall(speeds, 300000, 20, 0, -62)
+check(cold_ok and cold_v1 == 123, "300 t, flaps 20, sea level, -62 C (left of the chart): V1 "..tostring(cold_v1)
+    .." (123, region A)")
 -- by pressure altitude, as the FCOM's tables: at a sea level airport with QNH 28.92 inHg (pressure altitude about
 -- 1,000 ft) VMCG/VRMIN 119.5/122.5, not the altimeter's sea level 121/124 (review 36)
 v1, vr = speeds(233100, 20, 0, 15, 0, 0, 0, 0, 28.92)
 check(v1 == 120 and vr == 123, "233 t, flaps 20, sea level, QNH 28.92: "..show(v1, vr)
     .." (119.5/122.5 at a pressure altitude of 1,000 ft: 120/123)")
+-- and the chart's regions: a 1,000 ft airport at 15 C is in region A by its altimeter (360 t, flaps 20: 140/158/173)
+-- but in region B at the pressure altitude of 2,000 ft that QNH 28.92 gives (143/160/173; review 38)
+v1, vr, v2 = speeds(360000, 20, 1000, 15, 0, 0, 0, 0, 28.92)
+check(v1 == 143 and vr == 160 and v2 == 173, "360 t, flaps 20, 1,000 ft, 15 C, QNH 28.92: "..show(v1, vr, v2)
+    .." (143/160/173, region B)")
 -- a takeoff thrust rating changed once the speeds are set deletes them, as the FMC does (and the flaps entry with
 -- them: entered again, they are worked out for the new rating): TO 2's 108 left with full thrust's VMCG 121 (review
 -- 36)
@@ -122,10 +135,30 @@ do
         string.format("233 t, flaps 20, TO 2 then TO: V1 %.1f, then %.1f (999: deleted), entered again %.1f "
         .."(108, 999, 121)", first or -1, deleted or -1, again or -1))
 end
+-- but not in the air, where the PFD keeps its bugs (a rating changed below 1,000 ft), nor before the speeds are set:
+-- XTLua reads a dataref as 0 the first time, so a TO 1 and a flaps entry already made read 0 and 0 in the scripts'
+-- first frame and the rating's change in the next must not delete the entry (review 38)
+do
+    local env = load(233100, 20, 0, 15)
+    local first = run(env)
+    env.simDR_all_wheels_on_ground, env.B747DR_radio_altitude, env.B747DR_toderate = 0, 500, 1
+    local airborne = run(env)
+    check(first == 121 and airborne == 121 and env.B747DR_airspeed_flapsRef == 20, string.format("233 t, flaps 20, "
+        .."TO 1 selected at 500 ft: V1 %.1f, then %.1f, flaps %s (121, 121, 20)", first or -1, airborne or -1,
+        tostring(env.B747DR_airspeed_flapsRef)))
+    env = load(233100, 0, 0, 15)
+    run(env)
+    env.B747DR_toderate, env.B747DR_airspeed_flapsRef = 1, 20
+    v1, vr = run(env)
+    check(v1 == 116 and vr == 119 and env.B747DR_airspeed_flapsRef == 20, "233 t, TO 1 and flaps 20 read as 0 in "
+        .."the first frame: "..show(v1, vr).." flaps "..tostring(env.B747DR_airspeed_flapsRef).." (116/119, 20)")
+end
 -- between the minimum tables' rows and on their slopes (review 36: changes that dropped the altitude interpolation,
 -- the VR in the V2 for VRMIN or the V1 <= VR clamp still passed): 1,000 ft 13 C 119.5/122.5/142.3 (120/123/143),
--- 3,000 ft 9 C 116.5/119.5/138.7 (117/120/139), sea level 35 C 119.8/122.8/142.7 (120/123/143)
-for _, case in ipairs({{1000, 13, 120, 123, 143}, {3000, 9, 117, 120, 139}, {0, 35, 120, 123, 143}}) do
+-- 3,000 ft 9 C 116.5/119.5/138.7 (117/120/139), sea level 35 C 119.8/122.8/142.7 (120/123/143); and rounded up, not
+-- to the nearest knot: 400 ft 15 C 120.4/123.4 (121/124/144, not 120/123/143; review 38)
+for _, case in ipairs({{1000, 13, 120, 123, 143}, {3000, 9, 117, 120, 139}, {0, 35, 120, 123, 143},
+        {400, 15, 121, 124, 144}}) do
     v1, vr, v2 = speeds(233100, 20, case[1], case[2])
     check(v1 == case[3] and vr == case[4] and v2 == case[5], string.format("233 t, flaps 20, %d ft, %d C: %s "
         .."(%d/%d/%d)", case[1], case[2], show(v1, vr, v2), case[3], case[4], case[5]))
