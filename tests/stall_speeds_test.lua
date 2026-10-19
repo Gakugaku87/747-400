@@ -77,6 +77,15 @@ for _, case in ipairs({{37000, 161.66}, {10000, 161.66}, {8000, 160.89}, {4000, 
     check(near(vs, case[2]), string.format("Vs flaps up, 240 t, %d ft: %s (%.3f)", case[1], show(vs), case[2]))
 end
 
+-- the table's flaps 20 cells as its neighbours read: 200 t at 10,000 ft 113.60 (133.60, 20 kt over its 6,000 ft row's
+-- 113.03 and its 220 t neighbour's 119.47) and 360 t at sea level 153.66 (156.66, over 380 t's 157.72 less 4 kt and
+-- between -2,000 and 2,000 ft's 153.32 and 154.09)
+for _, case in ipairs({{200000, 10000, 113.60}, {360000, 0, 153.66}}) do
+    local vs = stall_speed(case[1], case[2], 20)
+    check(near(vs, case[3]), string.format("Vs flaps 20, %.0f t, %d ft: %s (%.2f)", case[1] / 1000, case[2], show(vs),
+        case[3]))
+end
+
 check(frame_error == nil, "a frame failed: "..tostring(frame_error))
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("Stall speed tests passed: "..checks)

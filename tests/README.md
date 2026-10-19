@@ -110,8 +110,10 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   152.5; 2 of 5 checks failed before), and between its rows by altitude
   that bracket the altitude, held at 10,000 ft above (the band tests ran
   from the lowest, so above sea level only 0-2,000 ft was taken: 240 t at
-  FL370 158.6 for 161.7; 4 of 12 checks failed before). The function runs
-  in XTLua's namespace.
+  FL370 158.6 for 161.7; 4 of 12 checks failed before); the table's
+  flaps 20 cells 200 t at 10,000 ft and 360 t at sea level as their
+  neighbours read (113.60 and 153.66 for 133.60 and 156.66; 2 of 14 checks
+  failed before). The function runs in XTLua's namespace.
 - `fmc_approach_ref_test.lua`: APPROACH REF shows VREF for flaps 25 and
   30 in whole knots, rounded, and its 1R/2R keys bring them to the
   scratchpad as 25/xxx and 30/xxx the same (%3d cut 143.69/137.69 to
