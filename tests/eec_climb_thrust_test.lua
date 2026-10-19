@@ -144,5 +144,36 @@ for _, engine in ipairs({"GE", "PW", "RR"}) do
     end
 end
 
+-- The PW's max climb EPR itself (in_flight_EPR_PW's third value) is the FCOM's Max Climb EPR table
+-- (MAX_CLIMB_epr_PW4056: TAT -20 to 60 C by 10 C, 0 to 45,000 ft by 5,000 ft; research_clb_thrust.md: ISA 1.25 at
+-- sea level to 1.64 at 35,000 ft), bilinear between its columns and rows, a blank (too hot for that altitude) as the
+-- next cooler column. Two fitted surfaces met nowhere at TAT 10 C at 30,000 ft: 1.561 at 9.9 C, 1.437 at 10.1 C,
+-- where the table reads 1.52 (review 37); at 20,000 ft and ISA (TAT 3.4 C) the fit read 1.454 for 1.43.
+do
+    local source = read(EEC.."PW.lua")
+    local first = assert(source:find("  local EPR_initial_climb = 0.0", 1, true))
+    local last = assert(source:find("  local last_thrust_n = {0.0, 0.0, 0.0, 0.0}", first, true))
+    local function max_climb(altitude, tat)
+        local env = runtime.create_namespace()
+        helpers(env)
+        for name, value in pairs({simConfigData = {data = {PLANE = {engines = "PW4056"}}}, simDR_altitude = altitude,
+                fmc_alt = 0, B747DR_ref_thr_limit_mode = "CLB", tas_mtrs_sec = 230, simDR_acf_weight_total_kg = 300000,
+                sigma_density_ratio = 0.5, mach = 0.8, simDR_TAT = tat, B747DR_log_level = 0,
+                in_flight_thrust = function() return 0, 80000, 0, 18000 end}) do
+            env[name] = value
+        end
+        setfenv(assert(loadstring(source:sub(first, last - 1))), env)()
+        local ok, _, _, epr = pcall(env.in_flight_EPR_PW, altitude, 0)
+        return ok and epr or nil
+    end
+    for _, case in ipairs({{0, 15, 1.25}, {10000, 15.2, 1.35}, {20000, 3.4, 1.43}, {30000, -12, 1.57},
+            {35000, -23.5, 1.64}, {30000, 9.9, 1.5205}, {30000, 10.1, 1.519}, {25000, 25, 1.37},
+            {30000, 35, 1.42}, {45000, -40, 1.58}}) do
+        local got = max_climb(case[1], case[2])
+        check(got and math.abs(got - case[3]) < 0.0015, string.format("PW max climb EPR at %d ft, TAT %.1f C: %s "
+            .."(%.4f)", case[1], case[2], tostring(got), case[3]))
+    end
+end
+
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("EEC climb thrust tests passed: "..checks)

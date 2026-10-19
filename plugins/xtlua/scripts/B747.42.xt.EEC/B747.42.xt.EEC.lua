@@ -116,6 +116,31 @@ function B747_PW_initial_climb_EPR(airport_alt_ft, oat_c)
     local high = cell(c1 + 1, a1) + (cell(c1 + 1, a1 + 1000) - cell(c1 + 1, a1)) * fa
     return low + (high - low) * fo
 end
+-- The PW4056's Max Climb EPR (FCOM; MAX_CLIMB_epr_PW4056: the 340 kt / M.84 schedule) at a pressure altitude (ft)
+-- and TAT (C), bilinear between the table's columns (-20 to 60 C; colder as -20 C) and rows (0 to 45,000 ft); a blank
+-- (0.00: too hot for that altitude) takes the next cooler column's value. Two fitted surfaces stood in for it and met
+-- nowhere at TAT 10 C at 30,000 ft (1.561 at 9.9 C, 1.437 at 10.1 C, the table 1.52; review 37).
+local MAX_CLIMB_TAT_C = {-20, -10, 0, 10, 20, 30, 40, 50, 60}
+local function B747_max_climb_cell(column, altitude_ft)
+    for c = column, 1, -1 do
+        local value = MAX_CLIMB_epr_PW4056[MAX_CLIMB_TAT_C[c]][altitude_ft]
+        if value ~= nil and value > 0 then return value end
+    end
+    return 0
+end
+function B747_PW_max_climb_EPR(altitude_ft, tat_c)
+    local alt = math.max(0, math.min(45000, altitude_ft))
+    local a1 = math.min(40000, math.floor(alt / 5000) * 5000)
+    local fa = (alt - a1) / 5000
+    local tat = math.max(-20, math.min(60, tat_c))
+    local c1 = 1
+    while c1 < #MAX_CLIMB_TAT_C - 1 and MAX_CLIMB_TAT_C[c1 + 1] <= tat do c1 = c1 + 1 end
+    local ft = (tat - MAX_CLIMB_TAT_C[c1]) / (MAX_CLIMB_TAT_C[c1 + 1] - MAX_CLIMB_TAT_C[c1])
+    local function at(c, a) return B747_max_climb_cell(c, a) end
+    local low = at(c1, a1) + (at(c1, a1 + 5000) - at(c1, a1)) * fa
+    local high = at(c1 + 1, a1) + (at(c1 + 1, a1 + 5000) - at(c1 + 1, a1)) * fa
+    return low + (high - low) * ft
+end
 
 function round_thrustcalc(x, input_type)
     --print("x IN = "..x)

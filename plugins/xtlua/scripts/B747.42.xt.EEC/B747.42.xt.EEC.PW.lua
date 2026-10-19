@@ -264,12 +264,9 @@ function engine_idle_control_PW(altitude_ft_in)
         end
       end
 
-      --Calculate Max Climb EPR
-      if altitude_ft_in > (-10.336 * simDR_TAT^2 - 278.25 * simDR_TAT + 33812) then
-        EPR_max_climb = (-4.97E-11 * simDR_TAT^3 + 4.34E-09 * simDR_TAT^2 + 2.29E-08 * simDR_TAT - 7.19E-06) * altitude_ft_in + (-0.009808 * simDR_TAT + 1.7329)
-      else
-        EPR_max_climb = 0.0000107 * altitude_ft_in + 1.24
-      end
+      --Calculate Max Climb EPR: the FCOM's table by pressure altitude and TAT (two fitted surfaces jumped 0.12 at their
+      --seam: 30,000 ft TAT 10 C; review 37)
+      EPR_max_climb = B747_PW_max_climb_EPR(altitude_ft_in, simDR_TAT)
 
       --Keep the Initial and Max Climb values per the FCOM tables
       if EPR_initial_climb > 1.50 then
