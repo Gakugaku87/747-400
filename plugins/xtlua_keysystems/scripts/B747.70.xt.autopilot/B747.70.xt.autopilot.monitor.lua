@@ -269,11 +269,25 @@ function VNAV_CRZ(numAPengaged,dist)
         B747BR_cruiseAlt=simDR_autopilot_hold_altitude_ft
     end
 end
+-- [B-14] In the descent the AFDS's altitude is the MCP's, as a real 747-400's: the route's points and the STAR's
+-- constraints shape the path (setDistances' profile), which VNAV PTH flies through them (setDescentVSpeed), and it
+-- levels off at the MCP altitude only (VNAV ALT). VNAV_NEXT_ALT's target - each point's altitude below the transition
+-- altitude, the CIFP's floors, a held fix's - was the AFDS's level-off: the energy mode let go 600 ft above each point,
+-- the A/T went from SPD to IDLE and HOLD (p27-line1: 13 of the descent's 16 A/T changes, at ETPOS, SUGOL and NETOM)
+-- and alt_hold_status went 2, 0, 2 several times a second there. While the MCP altitude moves (B-12) the AFDS's stays
+-- as it was below the aircraft; not below it (the cruise's at the T/D) VNAV_NEXT_ALT's target stays, as before, and
+-- the descent starts at the T/D (P23). With the MCP more than 100 ft above the aircraft VNAV_NEXT_ALT's stays too.
 function VNAV_DES_ALT(numAPengaged,fms)
     local targetAlt=VNAV_NEXT_ALT(numAPengaged,fms)
     local lastHold=simDRTime-B747DR_mcp_hold_pressed
 
-    if targetAlt<B747DR_autopilot_altitude_ft and simDR_pressureAlt1>B747DR_autopilot_altitude_ft-100 and lastHold>30 and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) then
+    if B747DR_autopilot_altitude_ft<simDR_pressureAlt1+100 and lastHold>30 then
+        if B747_mcp_alt_settled==nil or B747_mcp_alt_settled() then
+            targetAlt=B747DR_autopilot_altitude_ft
+        elseif simDR_autopilot_altitude_ft<simDR_pressureAlt1-100 then
+            targetAlt=simDR_autopilot_altitude_ft
+        end
+    elseif targetAlt<B747DR_autopilot_altitude_ft and simDR_pressureAlt1>B747DR_autopilot_altitude_ft-100 and lastHold>30 and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) then
         targetAlt=B747DR_autopilot_altitude_ft
     end
     local mcpDiff=simDR_pressureAlt1-B747DR_autopilot_altitude_ft

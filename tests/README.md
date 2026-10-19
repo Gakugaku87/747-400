@@ -558,6 +558,15 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   ceiling (SUGOL's 15000 to its window's FL140, 9500 to FL100), a point
   without an altitude at its floor (AM608 3400), and setDescentVSpeed aims
   there; inside their constraints the points keep the native FMS's.
+- `vnav_descent_points_test.lua`: VNAV PTH's descent through the route's
+  points below the transition altitude, the production autopilot, VNAV,
+  energy mode and A/T in approach_model.lua's closed loop on the EHAM route
+  from 12 nm before SUGOL, the MCP at 2000 ft: the AFDS's altitude stays the
+  MCP's, the energy mode stays on and the A/T's mode the same through SUGOL
+  and NETOM, SUGOL is crossed inside its FL100-FL140 window and NETOM at or
+  above FL070, each within 200 ft of its path, and the V/S stays at 500 fpm
+  or more within 30 s of each (each point's altitude was the AFDS's
+  level-off).
 - `vnav_cifp_constraints_test.lua`: the SID, STAR and approach constraints read
   from X-Plane's CIFP (`B747.70.xt.autopilot.constraints.lua`) - records as
   X-Plane writes them (a CA leg, windows, flight levels, the glide slope
