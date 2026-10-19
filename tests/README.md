@@ -58,12 +58,23 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   entry, as the FMC does (TO 2's V1 108 stayed under full thrust). Cases
   between the minimum tables' rows, on their hot-day slope and with V1
   brought down to VR pin the interpolations and the clamp. The speeds are
-  whole knots as the FMC sets them, the tables' rounded and the minimums up
-  (233 t: 121/124/145; the CDU had cut 120.6/123.6/143.7 to 120/123/143).
-  The tables read as the PMDG AOM's pages (flaps 10 region D VR 320-420 t
-  93-111 instead of 156-187, flaps 20 region D VR 220 t 97 instead of 114,
-  flaps 20 region E V2 380 t 149 instead of 179, 15 wind cells 1 kt off),
-  and above region E's top V2 stays above VR at 360-400 t.
+  whole knots as the FMC sets them, the tables' rounded, VMCG and VRMIN up
+  and the V2 for VRMIN to the nearest knot (233 t: 121/124/144; the CDU had
+  cut 120.6/123.6/143.7 to 120/123/143). The tables read as the PMDG AOM's
+  pages (flaps 10 region D VR 320-420 t 93-111 instead of 156-187, flaps 20
+  region D VR 220 t 97 instead of 114, flaps 20 region E V2 380 t 149
+  instead of 179, 15 wind cells 1 kt off), and above region E's top V2
+  stays above VR at 360-400 t. Cases for the changes review 38's mutants
+  got past: the regions by pressure altitude (360 t, 1,000 ft, QNH 28.92:
+  region B), colder than the chart region A, a rating changed in the air or
+  before the speeds are set (XTLua's first reads of 0) not deleting them,
+  each wind row between its weights (302 t, 10 kt tailwind: V1 122) and the
+  minimums rounded up (400 ft: 121/124/144). The speeds run in XTLua's own
+  namespace (the plugin's init.lua), where a global table without a
+  metatable reads a missing index by overflowing the stack and has no
+  length: the minimum tables have one (B747_VMCG_VRMIN_DERATE[0] stopped
+  the instruments, the FMC and the autopilot at the flaps entry in p32;
+  38 of 64 checks failed before).
 - `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230KT CLB"),
   the ECON/SEL SPD label, the CAS/Mach speed pair, the blank SPD REST
   field, and the CRZ page titles ("ACT ECON CRZ" / "ACT M.801 CRZ") with the
@@ -190,7 +201,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   the climb thrust to 10,000 ft and give it back by 15,000 ft: the PW and
   RR as their EPR above 1 (CLB 1 about 0.04 EPR less, as crews see it), the
   GE as N1 to the 1/3.1 power of the thrust kept, the EEC's N1 model (to
-  the 0.4 power the thrust was 12-13 % less for CLB 1).
+  the 0.4 power the thrust was 12-13 % less for CLB 1). The modules run in
+  XTLua's namespace (the plugin's init.lua), on the EEC's tables as XTLua
+  holds them.
 - `xtlua_warm_reads_test.lua`: XTLua gives 0 for the first read of a
   dataref in a script module, so the datarefs that a fix first reads at a
   critical moment are read every frame in the module's per-frame function
