@@ -256,7 +256,9 @@ do
         step(env, 8, 0.1, 0)
     end
     local drop = before - env.B747_afds_pitch_target_before_blend
-    check(drop >= 0.3 and drop <= 1.1, "A/T in IDLE, the thrust falling: the pitch down with it ("..drop.." deg in 5 s)")
+    -- 0.78 deg: led at the full rate until 0.005 below the peak, then at half (all at the full rate 0.98, all at half
+    -- 0.49; review 46c)
+    check(drop >= 0.6 and drop <= 0.9, "A/T in IDLE, the thrust falling: the pitch down with it ("..drop.." deg in 5 s)")
 end
 -- the flight director alone (servos off): the law's pitch stays within 2 deg of the attitude
 do
