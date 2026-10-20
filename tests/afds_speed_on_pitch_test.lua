@@ -83,16 +83,18 @@ else
         "T/W: the four engines' thrust over the weight")
     check(tw_of({[0] = 100000, 100000, 100000, 100000}, 0) == nil, "T/W: no mass (XTLua's first read of 0)")
     check(tw_of(nil, 200000) == nil, "T/W: no thrust dataref")
-    -- the engines' shared thrust: one engine's loss (a failure, one lever) is not the A/T's (review 46's MAJOR-1)
-    near(tw_of({[0] = 100000, 100000, 100000, 0}, 200000), 400000 / (200000 * 9.80665), 1e-12,
-        "T/W: one engine failed, the shared thrust of the other three")
-    -- 4 x the second-highest engine's: uneven engines read at their common thrust (the sum would be 420 kN), and a
-    -- second engine's failure is left to the integrator too (review 46b's MINOR-1: the two middle engines' mean read
-    -- it at twice its size)
-    near(tw_of({[0] = 80000, 100000, 100000, 140000}, 200000), 400000 / (200000 * 9.80665), 1e-12,
-        "T/W: 4 x the second-highest engine")
-    near(tw_of({[0] = 0, 100000, 0, 100000}, 200000), 400000 / (200000 * 9.80665), 1e-12,
-        "T/W: two engines failed, the shared thrust of the other two")
+    -- the four engines together: 4 x the second-highest engine's thrust while the lowest is within 15 % of it (at
+    -- least 5 kN); an engine apart (a failure, a lever) leaves T/W unknown and the law flies without the lead, as P43.
+    -- Fed the sum an engine failure took the climb to -100 fpm (review 46's MAJOR-1); the two middle engines' mean read
+    -- a second failure at twice its size (review 46b's MINOR-1); the second-highest engine's alone read the engines
+    -- left at 4/3 after one failure and 2x after two (review 46b's NIT-1, review 46c's MINOR-1)
+    near(tw_of({[0] = 95000, 100000, 105000, 140000}, 200000), 420000 / (200000 * 9.80665), 1e-12,
+        "T/W: 4 x the second-highest engine (the sum would be 440 kN, the middle pair's 410)")
+    near(tw_of({[0] = 3000, 5000, 6000, 6000}, 200000), 24000 / (200000 * 9.80665), 1e-12,
+        "T/W: at idle the engines within 5 kN")
+    check(tw_of({[0] = 100000, 100000, 100000, 0}, 200000) == nil, "T/W: one engine failed, none")
+    check(tw_of({[0] = 80000, 100000, 100000, 100000}, 200000) == nil, "T/W: one engine 20 % apart, none")
+    check(tw_of({[0] = 0, 100000, 0, 100000}, 200000) == nil, "T/W: two engines failed, none")
     local f, r = lead(nil, nil, 0.2, 0.1)
     check(f == 0.2 and r == 0, "lead: the filter starts from T/W, no rate")
     f, r = lead(0.2, 0.2, 0.21, 0.1)
@@ -480,6 +482,54 @@ for _, fps in ipairs({20, 34}) do
         for _, p in ipairs(m.track) do if p.t >= 30 then vs_min = math.min(vs_min, p.vs) end end
         check(vs_min >= 100, string.format("two engines failing at 300 t (%s, %d fps): still climbing after the second, "
             .."V/S at least %+.0f fpm", mode == 1 and "TO/GA" or "VNAV SPD", fps, vs_min))
+    end
+    -- a3. Engine-out go-arounds (afds_toga_speed_test's: 1,000 ft on a 3 deg approach, flaps 30 -> 20 at 3 s, the gear
+    -- up from 8 s; the running engines from the approach's thrust to 185 kN over 4.5 s): with the engines left read at
+    -- 4/3 or 2x, the lead pitched up for thrust it did not have, the IAS 2.4 kt (one engine out, 285 t) and 6.3 kt (two
+    -- out, 250 t) lower than P43 alone (reviews 46b, 46c). Without the lead after a failure: as P43, within 1 kt.
+    local function go_around_out(out, mass_t, ias0, lead)
+        local alt, weight = 1000, mass_t * 1000
+        local gamma = math.rad(-3)
+        local rho = 1.225 * ((288.15 - 0.0019812 * alt) / 288.15) ^ 4.2559
+        local V0 = ias0 * KT * math.sqrt(1.225 / rho)
+        local p = AM.polar(1.0)
+        local q = 0.5 * rho * V0 * V0
+        local cl = weight * G * math.cos(gamma) / (q * S)
+        local gear = 0.05 * q * S
+        local running = 4 - out
+        local approach = ((q * S * (p[3] + p[4] * cl * cl) + weight * G * math.sin(gamma)) + gear) / running
+        local m = CM.fly({alt_ft = alt, ias_kt = ias0, vs_fpm = V0 * math.sin(gamma) / 0.3048 * 60, weight_kg = weight,
+            flaps = 1.0, pitch_mode = 1, target_kt = ias0, mcp_alt_ft = 3000, seconds = 40, dt = 1 / fps,
+            vmc_kt = 130, vmax_kt = 230, at_mode = 5,
+            thrust = function(t)
+                local x = math.max(0, math.min(1, (t - 0.5) / 4.5))
+                local f = x * x * (3 - 2 * x)
+                local gear_drag = gear / running * (t < 8 and 1 or math.max(0, 1 - (t - 8) / 10))
+                local e = approach + (185000 - approach) * f - gear_drag
+                local engines = {[0] = e, e, e, e}
+                for i = running, 3 do engines[i] = 0 end
+                return engines
+            end,
+            setup = function(mm)
+                if not lead then mm.controls.SPEED_PITCH_THRUST_FEED_FORWARD = 0 end
+                mm.d.B747DR_airspeed_V2, mm.d.B747DR_ap_ias_dial_value = 999, ias0
+                mm.d.simDR_touchGround = 0
+                mm.d.B747DR_autopilot_TOGA_status = 1
+            end,
+            frame = function(mm, t)
+                if t > 3 then mm.state.flap = 0.667 end
+                mm.d.B747DR_ap_FMA_active_pitch_mode = (mm.d.B747DR_autopilot_TOGA_status == 1) and 1
+                    or (mm.d.simDR_autopilot_alt_hold_status == 2 and 9 or 1)
+            end})
+        local low = math.huge
+        for _, pt in ipairs(m.track) do if pt.t <= 39 then low = math.min(low, pt.ias - pt.target) end end
+        return low
+    end
+    for _, case in ipairs({{1, 285, 156}, {2, 250, 150}}) do
+        local with_lead, without = go_around_out(case[1], case[2], case[3], true),
+            go_around_out(case[1], case[2], case[3], false)
+        check(math.abs(with_lead - without) <= 1.0, string.format("go-around with %d engine(s) out at %d t (%d fps): "
+            .."the lowest IAS within 1 kt of P43's: %+.1f against %+.1f kt", case[1], case[2], fps, with_lead, without))
     end
     -- b. The takeoff's thrust reduction at 10 s (190 kN an engine -> 82 % over a 1.5 s first order) at 233 t, V2 144,
     -- 1,200 ft, the four engines alike: the lead took the director down at 0.7-1.0 deg/s and the attitude went 1.9 deg

@@ -533,18 +533,25 @@ end
 
 -- [P45] The engines' shared thrust over the weight: thrust_n the four engines' thrust (N, indexed 0-3:
 -- sim/flightmodel/engine/POINT_thrust), mass_kg the aircraft's mass (sim/flightmodel/weight/m_total); nil without a
--- mass a 747 can have (XTLua's first read gives 0). The shared thrust is 4 x the second-highest engine's: the A/T
--- moves the four levers together, and one or two engines' loss (a failure, a lever) is left to the integrator. Fed the
--- sum, an engine failure at 397 t with 400 fpm on three engines took the director down at the law's 0.1 g and the
--- climb to -100 fpm for about 5 s (review 46); the two middle engines' mean read a second engine's failure at twice
--- its size, and two failing on one side at 300 t took the climb to -33 fpm (review 46b). After a failure a change of
--- the engines left is read at 4/3 (one failed) or 2 (two).
+-- mass a 747 can have (XTLua's first read gives 0). The shared thrust is 4 x the second-highest engine's while the four
+-- engines are together (the lowest within SPEED_PITCH_THRUST_TOGETHER_SHARE of it, at least
+-- SPEED_PITCH_THRUST_TOGETHER_MIN_N), else nil: the A/T moves the four levers together, and with an engine apart (a
+-- failure, a lever) the law flies without the lead, as P43 alone. Fed the sum, an engine failure at 397 t with 400 fpm
+-- on three engines took the climb to -100 fpm for about 5 s (review 46); the two middle engines' mean read a second
+-- failure at twice its size (review 46b); the second-highest engine's alone read the engines left at 4/3 after one
+-- failure and 2x after two, and engine-out go-arounds lost 2.4 kt (one out, 285 t) and 6.3 kt (two out, 250 t) more
+-- than P43 (reviews 46b, 46c).
+afds_controls.SPEED_PITCH_THRUST_TOGETHER_SHARE = 0.15
+afds_controls.SPEED_PITCH_THRUST_TOGETHER_MIN_N = 5000
 function afds_controls.speed_pitch_thrust_weight(thrust_n, mass_kg)
     local mass = tonumber(mass_kg)
     if mass == nil or mass < 100000 or thrust_n == nil then return nil end
     local thrust = {}
     for i = 0, 3 do thrust[i + 1] = tonumber(thrust_n[i]) or 0 end
     table.sort(thrust)
+    local apart = math.max(afds_controls.SPEED_PITCH_THRUST_TOGETHER_SHARE * thrust[3],
+        afds_controls.SPEED_PITCH_THRUST_TOGETHER_MIN_N)
+    if thrust[1] < thrust[3] - apart then return nil end
     return 4 * thrust[3] / (mass * 9.80665)
 end
 
