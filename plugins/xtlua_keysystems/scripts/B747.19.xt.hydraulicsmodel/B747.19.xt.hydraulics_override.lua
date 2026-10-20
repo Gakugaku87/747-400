@@ -587,8 +587,10 @@ local lastGlideSlopeElevation=0
 -- attitude; descending, the mirror; the severe underspeed and overspeed exceptions), which move the integrator with
 -- what they take. With the flight director alone (servos off) the integrator stays within 2 deg of the attitude.
 -- [P45] The integrator also turns with the thrust over the weight (speed_pitch_thrust_lead: T/W at the last update and
--- filtered), except with the A/T in SPD (3), where the thrust works on the speed too, and for increases in IDLE (2),
--- where the EEC adds thrust for the speed below its minimum safe speed (review 46).
+-- filtered), except with the A/T in SPD (3), where the thrust works on the speed too, for increases in IDLE (2), where
+-- the EEC adds thrust for the speed below its minimum safe speed (review 46), and while the engines are apart
+-- (speed_pitch_thrust_weight: a failure, a lever moved alone; reviews 46-47). The apart state (speedPitchThrustApart)
+-- lasts across the law's restarts, as the engines do: a run that ends apart starts the next apart, to rejoin within 8 %.
 -- lastDirectorUpdate: the time of the director's update before this one; targetSpeed: the speed to fly (the AFDS's,
 -- simDR_autopilot_airspeed_kts, when nil; TO/GA's, P39).
 local speedPitchBase=0
