@@ -131,6 +131,8 @@ local function load_hydraulics(d, patches)
     run_in(hyd, director..[[
 
 function MODEL_init_director(pitch, ias)
+    -- the director's first call a frame after this one (its first call after more than 5 s only resets)
+    previous_pitchTime=simDRTime-SIM_PERIOD
     last_simDR_AHARS_pitch_heading_deg_pilot=pitch
     last_simDR_ind_airspeed_kts_pilot=ias
     lastRetVal=pitch
@@ -142,6 +144,9 @@ function MODEL_init_director(pitch, ias)
 end
 function MODEL_director_state()
     return {raw=last_simDR_AHARS_pitch_heading_deg_pilot, sample_rate=directorSampleRate}
+end
+function MODEL_toga_state()
+    return togaSpeedState
 end
 ]], name)
     for _, patch in ipairs(patches or {}) do

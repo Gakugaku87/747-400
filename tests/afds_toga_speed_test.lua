@@ -207,7 +207,9 @@ do
 end
 
 -- 3. p35-line1's climb-out with the A/P from 400 ft: TO/GA (the takeoff state from the ground: V2 144, no rotation
--- recorded), VNAV SPD from 577 ft (154 kt, V2 + 10) as recorded, the recorded thrust
+-- recorded), VNAV SPD from 577 ft (154 kt, V2 + 10) as recorded, the recorded thrust. climb_model's director now
+-- updates from the first frame: its first call only reset, so the ground frame never reached TO/GA and the takeoff was
+-- flown as a go-around (the window's 144 kt, not V2 + 10; review 45c's MINOR-3).
 local function load_csv(name)
     local rows, head = {}, nil
     for line in io.lines(name) do
@@ -253,6 +255,10 @@ for _, fps in ipairs({15, 20, 34}) do
             mm.d.B747DR_ap_FMA_active_pitch_mode = mode
             mm.target_kt = mode == 1 and 144 or interp(P35, t0 + t, "tgt")
         end})
+    local toga = m.hyd.MODEL_toga_state()
+    check(toga.go_around == false and toga.v2 == 144, "after takeoff: TO/GA flew the takeoff's speed, not a go-around's"
+        ..at..string.format(": go-around %s, V2 %s, target %s", tostring(toga.go_around), tostring(toga.v2),
+        tostring(toga.target)))
     local low, high_ias, low_ias, change = math.huge, -math.huge, math.huge, 0
     local p0 = CM.at(m, 0).theta
     for _, p in ipairs(m.track) do
