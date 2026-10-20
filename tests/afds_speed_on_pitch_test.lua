@@ -573,9 +573,13 @@ end
 -- it at 0.2-0.6 Hz). A decrease led at half the rate and an increase at the full one turn a jitter into a steady
 -- pitch-up, and the integrator holds it with the IAS low: in the takeoff climb (TO/GA, 233 t, V2 144, 1,200 ft,
 -- 190 kN an engine) with the recorded jitter at twice its size the mean IAS sat about 2 kt lower than with P43 alone
--- (reviews 46b, 46c). The jitter: tests/data/p35-line1_takeoff.csv's thrust less its 4 s centred mean, looped, the
--- four engines together.
-local TAKEOFF = load_csv("tests/data/p35-line1_takeoff.csv")
+-- (reviews 46b, 46c). The jitter: tests/data/p35-line1_takeoff.csv's thrust at takeoff thrust (to 283 s, before the
+-- thrust reduction at 285-289 s, which the 4 s mean would leave as a +4 / -3 kN doublet; review 47) less its 4 s centred
+-- mean, looped, the four engines together.
+local TAKEOFF = {}
+for _, r in ipairs(load_csv("tests/data/p35-line1_takeoff.csv")) do
+    if r.t <= 283 then TAKEOFF[#TAKEOFF + 1] = r end
+end
 local takeoff_jitter = {}
 for i, r in ipairs(TAKEOFF) do
     local sum, n = 0, 0
