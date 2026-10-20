@@ -93,6 +93,9 @@ else
     f, r = lead(0.2, 0.2, 0.21, 0.1)
     near(f, 0.2 + 0.01 * 0.1 / 2, 1e-12, "lead: T/W through a 2 s first order")
     near(r, math.deg(0.01 * 0.1 / 2) / 0.1, 1e-9, "lead: the path's rate from the filtered change")
+    -- a decrease leads at half the rate (review 46's MINOR-1)
+    f, r = lead(0.2, 0.2, 0.19, 0.1)
+    near(r, 0.5 * math.deg(-0.01 * 0.1 / 2) / 0.1, 1e-9, "lead: a decrease at half the rate")
     f, r = lead(0.2, 0.0, 0.25, 0.1)
     check(f == 0.25 and r == 0, "lead: a first read of 0, then 0.25 in 0.1 s: the filter starts again, no rate")
     f, r = lead(0.2, 0.2, nil, 0.1)
@@ -425,6 +428,24 @@ for _, fps in ipairs({20, 34}) do
         for _, p in ipairs(m.track) do if p.t >= 20 then vs_min = math.min(vs_min, p.vs) end end
         check(vs_min >= 100, string.format("engine failure at 397 t (400 fpm on three, %s, %d fps): still climbing, V/S "
             .."at least %+.0f fpm", mode == 1 and "TO/GA" or "VNAV SPD", fps, vs_min))
+    end
+    -- b. The takeoff's thrust reduction at 10 s (190 kN an engine -> 82 % over a 1.5 s first order) at 233 t, V2 144,
+    -- 1,200 ft, the four engines alike: the lead took the director down at 0.7-1.0 deg/s and the attitude went 1.9 deg
+    -- below where it settled, -0.104 g (P43 alone: 0.02 deg, -0.055 g, but the IAS 6.3 kt low; review 46's MINOR-1).
+    for _, mode in ipairs({4, 1}) do
+        local T0 = 190000
+        local m = climb_on(mode, 1200, 233000, 144, T0, function(t)
+            if t < 10 then return T0 end
+            return T0 * (0.82 + 0.18 * math.exp(-(t - 10) / 1.5))
+        end, fps, 5)
+        local low, nz = math.huge, 0
+        for _, p in ipairs(m.track) do
+            if p.t >= 10 then low, nz = math.min(low, p.theta), math.min(nz, p.nz) end
+        end
+        local settled = CM.at(m, 50).theta
+        check(settled - low <= 1.0 and nz >= -0.09, string.format("thrust reduction at 233 t (%s, %d fps): the attitude "
+            .."at most 1 deg below where it settles, nz at least -0.09 g: %.2f deg, %+.3f g",
+            mode == 1 and "TO/GA" or "VNAV SPD", fps, settled - low, nz))
     end
 end
 
