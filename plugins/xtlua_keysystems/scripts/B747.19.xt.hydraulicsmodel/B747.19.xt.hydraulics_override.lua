@@ -599,6 +599,9 @@ local function ap_director_speed_on_pitch(pitchMode,holdAlt,lastDirectorUpdate,t
     local ias=simDR_ind_airspeed_kts_pilot
     local target=targetSpeed or simDR_autopilot_airspeed_kts
     local verticalDirection=C.vertical_direction_for_altitude(simDR_pressureAlt1,holdAlt,B747DR_alt_capture_window)
+    -- TO/GA always climbs, whatever the MCP altitude (with it below, a non-ILS approach's minima, the descent guards
+    -- pitched a go-around down to -4.5 deg and back below its altitude at 230 kt: review 45)
+    if pitchMode==1 then verticalDirection=C.VERTICAL_DIRECTION_CLIMB end
     local dt=simDRTime-lastSpeedPitchUpdate
     local pathError,pitchRate=0,0
     if dt>1 or dt<=0 or lastSpeedPitchUpdate<lastDirectorUpdate-0.001 then

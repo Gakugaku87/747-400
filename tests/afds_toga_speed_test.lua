@@ -9,7 +9,7 @@
 -- attitude went from 19.8 to 4.7 deg, the IAS to 175 kt for 154 (V2 + 10) and the climb from 3,700 to 970 fpm.
 -- 1. toga_target_speed; 2. the production director with mocked datarefs; 3. climb_model on p35-line1's climb-out
 -- (tests/data/p35-line1_takeoff.csv) with the A/P in TO/GA from 400 ft and VNAV SPD from 577 ft, at 15, 20 and
--- 34 fps.
+-- 34 fps; 4. go-arounds in climb_model with the MCP altitude above and below.
 local HYD = "plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/"
 local controls = dofile(HYD.."B747.19.xt.hydraulics_afds_helpers.lua")
 local CM = dofile("tests/climb_model.lua")
@@ -204,6 +204,57 @@ for _, fps in ipairs({15, 20, 34}) do
     check(low >= 14, "TO/GA and VNAV SPD after takeoff: not down to 12 deg"..at..string.format(": %.1f", low))
     check(high_ias <= 144 + 25 + 2 and low_ias >= 144 + 5, "after takeoff: V2 + 5 .. V2 + 27"..at
         ..string.format(": %.1f .. %.1f", low_ias, high_ias))
+end
+
+-- 4. Go-arounds in climb_model: TO/GA pushed at 1,000 ft on a 3 deg approach (250 t, 150 kt, flaps 30 -> 20 at 3 s, the
+-- gear up from 8 s), GA thrust in 4.5 s, the window's 150 kt, with the MCP altitude above (3,000 ft) and below (0: a
+-- non-ILS approach with the MCP still at the minima, review 45). TO/GA always climbs: in the air it took the speed
+-- law's guards from the MCP altitude, so with the MCP below it pitched down to -4.5 deg at +100 fpm and went back
+-- down to 923 ft at 230 kt (review 45's B1).
+local AM = dofile("tests/approach_model.lua")
+local function go_around(mcp_ft, fps)
+    local G, KT, S = 9.80665, 0.514444, 541.2
+    local alt, weight, ias0 = 1000, 250000, 150
+    local gamma = math.rad(-3)
+    local rho = 1.225 * ((288.15 - 0.0019812 * alt) / 288.15) ^ 4.2559
+    local V = ias0 * KT * math.sqrt(1.225 / rho)
+    local p = AM.polar(1.0)
+    local q = 0.5 * rho * V * V
+    local cl = weight * G * math.cos(gamma) / (q * S)
+    local gear = 0.05 * q * S
+    local approach = (q * S * (p[3] + p[4] * cl * cl) + weight * G * math.sin(gamma)) / 4 + gear / 4
+    return CM.fly({alt_ft = alt, ias_kt = ias0, vs_fpm = V * math.sin(gamma) / 0.3048 * 60, weight_kg = weight,
+        flaps = 1.0, pitch_mode = 1, target_kt = ias0, mcp_alt_ft = mcp_ft, seconds = 30, dt = 1 / fps,
+        vmc_kt = 130, vmax_kt = 230,
+        thrust = function(t)
+            local f = math.max(0, math.min(1, (t - 0.5) / 4.5))
+            local gear_drag = gear / 4 * (t < 8 and 1 or math.max(0, 1 - (t - 8) / 10))
+            return approach + (185000 - approach) * f - gear_drag
+        end,
+        setup = function(mm)
+            mm.d.B747DR_airspeed_V2, mm.d.B747DR_ap_ias_dial_value = 999, ias0
+            mm.d.simDR_touchGround = 0
+        end,
+        frame = function(mm, t)
+            if t > 3 then mm.state.flap = 0.667 end
+        end})
+end
+for _, fps in ipairs({20, 34}) do
+    for _, mcp in ipairs({3000, 0}) do
+        local m = go_around(mcp, fps)
+        local low, high_ias = math.huge, -math.huge
+        for _, p in ipairs(m.track) do
+            low = math.min(low, p.alt)
+            high_ias = math.max(high_ias, p.ias)
+        end
+        local last = m.track[#m.track]
+        local at = string.format(" (MCP %d ft, %d fps)", mcp, fps)
+        check(1000 - low <= 100, "go-around: at most 100 ft lost"..at..string.format(": %.0f", 1000 - low))
+        check(last.alt >= 1050 and last.vs > 500, "go-around: climbing 30 s later"..at
+            ..string.format(": %.0f ft, %+.0f fpm", last.alt, last.vs))
+        check(high_ias <= 150 + 30, "go-around: the IAS within 30 kt of the window's 150"..at
+            ..string.format(": %.1f", high_ias))
+    end
 end
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
