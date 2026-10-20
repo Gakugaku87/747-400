@@ -1009,7 +1009,9 @@ local THR_REF_FLIGHT_ADVANCE_PITCH_MODES={[4]=true,[8]=true}
 -- [P46] The advance's rate comes up from THR_REF_FLIGHT_ONSET_SHARE of it over THR_REF_FLIGHT_ONSET_SEC from its start
 -- (a new start after half a second without advancing: the time of the frames here that do not advance or run in IDLE,
 -- where the levers go to idle whatever the reference, and the time spent outside this branch, but not one long frame of
--- an advance; review 48): real 744s resuming the climb add excess thrust at about 0.004 W
+-- an advance up to 1 s; a frame over 1 s goes through the resync above and counts as outside, and HOLD or the A/T not
+-- armed counts only from 1 s, as the next frame's length; review 48, 49): real 744s resuming the climb add excess
+-- thrust at about 0.004 W
 -- a second from the start, the V/S 580 / 1,150 / 1,980 / 2,500 fpm 5 / 10 / 15 / 20 s into it (ADS-B, median); at the
 -- steady rate p37-line1 (2026-10-21) went 703 / 1,457 / 2,469 / 3,476 fpm. The lever 0.07 up after 5 s (0.125 before),
 -- 0.175 after 10 s (0.25), climb thrust from level flight's after about 23 s.
