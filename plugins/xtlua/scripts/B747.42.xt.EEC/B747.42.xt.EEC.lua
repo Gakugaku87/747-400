@@ -1012,9 +1012,9 @@ local THR_REF_FLIGHT_ADVANCE_PITCH_MODES={[4]=true,[8]=true}
 -- an advance up to 1 s. A frame over 1 s goes through ecc_throttle's resync below and counts as outside; HOLD or the
 -- A/T not armed for up to 1 s makes the next frame that long, which counts only if that frame does not advance;
 -- reviews 48-50): real 744s resuming the climb add excess thrust at about 0.004 W a second from the start, the V/S
--- 580 / 1,150 / 1,980 / 2,500 fpm 5 / 10 / 15 / 20 s into it (ADS-B, median); at the
--- steady rate p37-line1 (2026-10-21) went 703 / 1,457 / 2,469 / 3,476 fpm. The lever 0.07 up after 5 s (0.125 before),
--- 0.175 after 10 s (0.25), climb thrust from level flight's after about 23 s.
+-- 580 / 1,150 / 1,980 / 2,500 fpm 5 / 10 / 15 / 20 s into it (ADS-B, median); at the steady rate p37-line1 (2026-10-21)
+-- went 703 / 1,457 / 2,469 / 3,476 fpm. The lever 0.07 up after 5 s (0.125 before), 0.175 after 10 s (0.25), climb
+-- thrust from level flight's after about 23 s.
 local THR_REF_FLIGHT_ONSET_SHARE=0.4
 local THR_REF_FLIGHT_ONSET_SEC=10
 local thrRefAdvanceStart=nil
