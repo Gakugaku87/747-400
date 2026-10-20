@@ -1001,8 +1001,11 @@ local THR_LEVER_GAIN=0.005
 -- flight's (0.15 -> 0.66 at 250 kt) in about 20 s. They came in 4-6 s (p35-line1, 2026-10-20: resuming the climb at
 -- 8,948 ft, 0.16 -> 0.67 in 4 s and the IAS 251 -> 271 kt); real 744s pass 1,000 fpm about 9 s and 2,000 fpm about
 -- 15 s into a climb resumed in VNAV, the IAS 3 kt (0-6) over the target (ADS-B, research_reclimb.md): the climb thrust
--- comes in over about 20-25 s. The takeoff (TO references) and a go-around (GA) keep the faster rate above.
+-- comes in over about 20-25 s. Only with the pitch on speed (VNAV SPD, FLCH SPD): a go-around's reference is CLB a
+-- quarter of a second after TO/GA when the MCP altitude is more than 1,000 ft above (flight phase 1), or CRZ above
+-- 1,500 ft RA (review 45), and its thrust keeps the faster rate above, as the takeoff's.
 local THR_REF_FLIGHT_ADVANCE_PER_SEC=0.025
+local THR_REF_FLIGHT_ADVANCE_PITCH_MODES={[4]=true,[8]=true}
 -- [review 21] The A/T's levers in its thrust modes move towards their target at most over their range in `seconds`, and
 -- onto it when nearer: the same at any frame rate. B747_interpolate_value goes the last step by a tenth of the way a
 -- frame, and the A/T moves its target only with the levers within 0.02 of it, so in flight (the levers over their
@@ -1079,7 +1082,10 @@ function ecc_throttle()
 	end]]--
 	local advance=rog
 	local reference=B747DR_ref_thr_limit_mode or ""
-	if simDR_onGround==0 and (string.sub(reference,1,3)=="CLB" or reference=="CRZ") then
+	-- read in every frame of the thrust modes, from the takeoff roll on (XTLua gives 0 for a module's first read)
+	local pitchMode=B747DR_ap_FMA_active_pitch_mode
+	if simDR_onGround==0 and (string.sub(reference,1,3)=="CLB" or reference=="CRZ")
+		and THR_REF_FLIGHT_ADVANCE_PITCH_MODES[pitchMode] then
 		advance=math.min(advance,THR_REF_FLIGHT_ADVANCE_PER_SEC*time)
 	end
 	if (target> input+1) and math.abs(simDR_engine_throttle_jet_all-spd_target_throttle)<0.02 then

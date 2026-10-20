@@ -101,6 +101,10 @@ local cases = {
     {file=AP.."B747.70.xt.autopilot.lua", func="after_physics",
         names={"simDR_ground_track_true", "simDR_true_heading", "simDR_TAS_mps", "simDR_groundspeed",
             "simDR_autopilot_bank_angles", "simDR_autopilot_bank_limit"}},
+    -- [P44, review 45] the A/T's in-flight THR REF advance is slower only with the pitch in VNAV SPD or FLCH SPD: a
+    -- 0 pitch mode at the first climb resumption would give it the takeoff's rate
+    {file="plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.xt.EEC.lua", func="ecc_throttle",
+        names={"B747DR_ap_FMA_active_pitch_mode"}},
 }
 
 for _, case in ipairs(cases) do

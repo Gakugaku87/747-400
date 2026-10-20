@@ -8,6 +8,9 @@
 -- Real 744s (ADS-B, research_reclimb.md, 18 climb resumptions): the IAS over the target by 3 kt (0 to 6), the climb
 -- 1,000 fpm after about 9 s, 2,000 after 15 s, the climb thrust in about 20-25 s at a medium weight. On the ground
 -- (the takeoff) and with the TO and GA references the levers move as before.
+-- [review 45, M3] Only with the pitch in VNAV SPD or FLCH SPD: a go-around's reference is CLB a quarter of a second
+-- after TO/GA when the MCP altitude is more than 1,000 ft above (flight phase 1; the A/P off: autoland -2 for a frame;
+-- the A/P on above 1,500 ft RA: cleared at once), and its thrust must come as fast as GA's.
 -- Simulator interfaces are mocks; this does not validate engine dynamics.
 local EEC = "plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.xt.EEC.lua"
 local checks, failures = 0, {}
@@ -30,15 +33,21 @@ local function pw_command(throttle) return 0.95 + (EPR_MAX - 0.95) * throttle en
 
 -- THR REF from a lever at `from` towards the reference EPR `ref` (mode: the reference's name, on_ground) at a frame time
 -- of dt: the seconds until the lever's command is within the A/T's deadband of the reference (nil if not within 60 s)
--- and the largest lever change in any second.
-local function advance(mode, ref, from, dt, on_ground)
+-- and the largest lever change in any second. opts.pitch_mode: the FMA's pitch mode (4, VNAV SPD, when not given);
+-- opts.phase: the reference from ecc_mode_set every frame with this flight phase, starting from `mode`; opts.flaps,
+-- opts.radio_alt: for ecc_mode_set.
+local function advance(mode, ref, from, dt, on_ground, opts)
+    opts = opts or {}
     local runtime = {
         print=function() end, SIM_PERIOD=dt, simDRTime=100,
+        B747DR_ap_FMA_active_pitch_mode=opts.pitch_mode or 4,
+        B747DR_ap_flightPhase=opts.phase or 1, B747DR_toderate=0, B747DR_clbderate=0,
+        simDR_flap_ratio=opts.flaps or 0, simDR_radarAlt1=opts.radio_alt or (on_ground and 0 or 9000),
         B747DR_airspeed_Vmc=150, simDR_autopilot_airspeed_kts=250,
         B747DR_engineType=0, B747DR_ref_thr_limit_mode=mode,
         B747DR_vnav_energy_active=0, B747DR_vnav_energy_thrust_policy=0,
         B747DR_ap_FMA_autothrottle_mode=5, B747DR_ap_autoland=0,
-        simDR_onGround=on_ground and 1 or 0, simDR_radarAlt1=on_ground and 0 or 9000,
+        simDR_onGround=on_ground and 1 or 0,
         simDR_ind_airspeed_kts_pilot=on_ground and 0 or 250, simDR_ias_pilot=on_ground and 0 or 250,
         throttle_resolver_angle_GE=function() return 0 end,
         B747DR_throttle_resolver_angle={[0]=0, 0, 0, 0},
@@ -51,6 +60,7 @@ local function advance(mode, ref, from, dt, on_ground)
     setmetatable(runtime, {__index=_G})
     load_in(EEC, runtime, "function B747_animate_value", "function B747_setMaxThrust")
     load_in(EEC, runtime, "function B747_interpolate_value", "local previous_altitude = 0")
+    if opts.phase then load_in(EEC, runtime, "lastNewTargetModeTime=0", "function B747_interpolate_value") end
     local function refresh()
         for i = 0, 3 do runtime.B747DR_throttle_resolver_angle[i] = pw_command(runtime.B747DR_throttle[i]) end
     end
@@ -61,6 +71,7 @@ local function advance(mode, ref, from, dt, on_ground)
         t = t + dt
         runtime.simDRTime = runtime.simDRTime + dt
         refresh()
+        if opts.phase then runtime.ecc_mode_set() end
         runtime.ecc_throttle()
         refresh()
         history[#history + 1] = {t, runtime.B747DR_throttle[0]}
@@ -98,6 +109,34 @@ end
 local reached = advance("TO", CLB_EPR, 0.15, 1 / 30, false)
 check(reached ~= nil and reached <= 8, string.format("TO in flight: thrust after %s s (8, as before)",
     tostring(reached and string.format("%.1f", reached))))
+
+-- A4: FLCH SPD (pitch mode 8) climbing with CLB is limited like VNAV SPD
+reached = advance("CLB", CLB_EPR, 0.15, 1 / 30, false, {pitch_mode=8})
+check(reached ~= nil and reached >= 18 and reached <= 26, string.format("FLCH SPD with CLB: climb thrust after %s s (18-26)",
+    tostring(reached and string.format("%.1f", reached))))
+
+-- A5 [review 45, M3]: the reference from ecc_mode_set. A go-around from approach thrust (lever 0.40; GA on the approach:
+-- flight phase 2, the flaps out, below 1,500 ft RA) whose flight phase becomes 1 (the MCP more than 1,000 ft above, the
+-- A/T in THR REF): the reference CLB after 0.25 s, the pitch in TO/GA (1). The thrust as fast as GA's: within 8 s.
+local GA_EPR = 0.95 + (EPR_MAX - 0.95) * 0.80
+for _, fps in ipairs({20, 30, 60}) do
+    local reached_ga = advance("GA", GA_EPR, 0.40, 1 / fps, false, {pitch_mode=1, phase=1, flaps=0.5, radio_alt=300})
+    check(reached_ga ~= nil and reached_ga <= 8, string.format(
+        "a go-around (TO/GA, the reference CLB from flight phase 1) at %d fps: thrust after %s s (8)", fps,
+        tostring(reached_ga and string.format("%.1f", reached_ga))))
+end
+-- a go-around started above 1,500 ft RA in flight phase 2 (the reference CRZ): as fast
+reached = advance("CRZ", GA_EPR, 0.40, 1 / 30, false, {pitch_mode=1, phase=2, flaps=0.5, radio_alt=2500})
+check(reached ~= nil and reached <= 8, string.format(
+    "a go-around above 1,500 ft RA (TO/GA, the reference CRZ): thrust after %s s (8)",
+    tostring(reached and string.format("%.1f", reached))))
+-- the climb resumed in VNAV SPD and FLCH SPD with the reference from ecc_mode_set (CLB in flight phase 1): limited
+for _, pitch_mode in ipairs({4, 8}) do
+    reached = advance("CRZ", CLB_EPR, 0.15, 1 / 30, false, {pitch_mode=pitch_mode, phase=1})
+    check(reached ~= nil and reached >= 18 and reached <= 26, string.format(
+        "pitch mode %d, the reference CLB from flight phase 1: climb thrust after %s s (18-26)", pitch_mode,
+        tostring(reached and string.format("%.1f", reached))))
+end
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("EEC THR REF climb tests passed: "..checks)
