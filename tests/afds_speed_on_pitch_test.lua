@@ -235,7 +235,7 @@ for _, fps in ipairs({15, 20, 34}) do
     near(m.hyd.MODEL_director_state().sample_rate, 0.1, 1e-9, "VNAV SPD: the director samples every 0.1 s"..at)
     local base, rise = CM.at(m, 0).theta, CM.at(m, 8).theta
     check(rise - base >= 1.5, "re-climb: the attitude up 1.5 deg within 8 s"..at..string.format(": %.2f", rise - base))
-    check(s.over <= 19, "re-climb: the IAS at most 19 kt over 250"..at..string.format(": %+.1f kt", s.over))
+    check(s.over <= 18.5, "re-climb: the IAS at most 18.5 kt over 250"..at..string.format(": %+.1f kt", s.over))
     check(s.reversals <= 1 and s.rate <= 0.6 and s.nz <= 0.16, "re-climb: smooth"..at
         ..string.format(": %d F/D reversals, %.2f deg/s, %.3f g", s.reversals, s.rate, s.nz))
     -- b. p34-L1 FLCH SPD from ALT at FL310 (MCP FL270), the A/T at idle from 2 s, M .84's speed rising 302 -> 310 kt
