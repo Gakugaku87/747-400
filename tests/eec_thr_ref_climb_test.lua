@@ -162,7 +162,8 @@ for _, fps in ipairs({20, 30, 60}) do
 end
 
 -- A7 [review 48]: an advance's restarts. One runtime through a script of phases {seconds, A/T mode, the reference as a
--- lever, frame time (1/30 s), levers set at the start}; spd_throttle (A/T SPD) stubbed: the levers stay. Returns the
+-- lever ("hold": the levers' position as the phase starts), levers set at the start (only the first phase's stick: the
+-- A/T's lever target is the EEC's own), a long frame}; spd_throttle (A/T SPD) stubbed: the levers stay. Returns the
 -- lever's travel from the start of phase k after s seconds.
 local function script_run(phases)
     local runtime = {
@@ -196,7 +197,7 @@ local function script_run(phases)
             runtime.simDR_engine_throttle_jet_all = p.levers
             runtime.spd_target_throttle = p.levers
         end
-        local ref = pw_command(p.ref)
+        local ref = pw_command(p.ref == "hold" and runtime.B747DR_throttle[0] or p.ref)
         for i = 0, 3 do runtime.simDR_EPR_target_bug[i] = ref end
         runtime.B747DR_ap_FMA_autothrottle_mode = p.at
         starts[k] = {t, runtime.B747DR_throttle[0]}
@@ -220,11 +221,12 @@ local function script_run(phases)
         return nil
     end
 end
--- a. A second advance after 2 s at the reference (a capture's level flight, then a new climb or a step climb): the
--- onset again, the lever 0.06-0.08 up 5 s into it. (A gap test that never restarts passed every check.)
+-- a. A second advance after 2 s with the reference at the levers (then a new climb or a step climb): the onset again,
+-- the lever 0.06-0.08 up 5 s into it. (A gap test that never restarts passed every check; the first advance stops at
+-- 12 s, before climb thrust, so the 2 s are its only quiet time: thresholds of 5 or 8 s fail; review 49.)
 local travel_of = script_run({
-    {seconds=30, at=5, ref=0.66, levers=0.15},
-    {seconds=2, at=5, ref=0.66},
+    {seconds=12, at=5, ref=0.66, levers=0.15},
+    {seconds=2, at=5, ref="hold"},
     {seconds=10, at=5, ref=0.96}})
 local second = travel_of(3, 5)
 check(second ~= nil and second >= 0.060 and second <= 0.080, string.format("a second advance after 2 s at the "
@@ -235,14 +237,34 @@ travel_of = script_run({{seconds=12, at=5, ref=0.66, levers=0.15, long_at=4, lon
 local at10 = travel_of(1, 10)
 check(at10 ~= nil and at10 >= 0.165 and at10 <= 0.19, string.format("one 0.7 s frame 4 s into the advance: no restart, "
     .."the lever %.3f up after 10 s (0.165-0.19)", at10 or -1))
--- c. 10 s in IDLE (FLCH descending, the CLB reference above the idle levers), then THR REF (the descent reversed into
--- a climb): the onset, the lever 0.06-0.08 up after 5 s (IDLE's frames counted as advancing: 0.125)
+-- c. 5 s of an advance, 10 s in IDLE (FLCH descending, the CLB reference above the idle levers), then THR REF (the
+-- descent reversed into a climb): the onset, the lever 0.06-0.08 up after 5 s (IDLE's frames counted as advancing,
+-- or adding no quiet time: 0.125; review 49)
 travel_of = script_run({
+    {seconds=5, at=5, ref=0.66, levers=0.15},
     {seconds=10, at=2, ref=0.66, levers=0.0},
     {seconds=10, at=5, ref=0.66}})
-local out_of_idle = travel_of(2, 5)
+local out_of_idle = travel_of(3, 5)
 check(out_of_idle ~= nil and out_of_idle >= 0.060 and out_of_idle <= 0.080, string.format("an advance out of IDLE: "
     .."the onset, the lever %.3f up after 5 s (0.06-0.08)", out_of_idle or -1))
+-- d. 12 s of an advance, 2 s with the A/T in SPD (a capture: the time outside this branch), then a new climb: the onset
+-- again, 0.06-0.08 up after 5 s (no time outside counted: 0.125; review 49)
+travel_of = script_run({
+    {seconds=12, at=5, ref=0.66, levers=0.15},
+    {seconds=2, at=3, ref=0.66},
+    {seconds=10, at=5, ref=0.96}})
+local after_spd = travel_of(3, 5)
+check(after_spd ~= nil and after_spd >= 0.060 and after_spd <= 0.080, string.format("a new climb after 2 s in SPD: the "
+    .."onset again, the lever %.3f up after 5 s (0.06-0.08)", after_spd or -1))
+-- e. 6 s of an advance, 0.3 s in SPD, the same advance again: no restart (0.105-0.13 up 5 s on; a threshold of 0 gives
+-- 0.069)
+travel_of = script_run({
+    {seconds=6, at=5, ref=0.66, levers=0.15},
+    {seconds=0.3, at=3, ref=0.66},
+    {seconds=10, at=5, ref=0.66}})
+local short_spd = travel_of(3, 5)
+check(short_spd ~= nil and short_spd >= 0.105 and short_spd <= 0.13, string.format("0.3 s in SPD mid-advance: no "
+    .."restart, the lever %.3f up 5 s on (0.105-0.13)", short_spd or -1))
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("EEC THR REF climb tests passed: "..checks)
