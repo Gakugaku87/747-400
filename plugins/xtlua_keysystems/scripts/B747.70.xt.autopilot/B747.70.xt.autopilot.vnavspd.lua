@@ -432,7 +432,7 @@ local function B747_climb_speed_floored(climbSpeed)
     return math.max(climbSpeed,B747_flap_manoeuvre_speed())
 end
 -- [P47] A climb restriction's speed (SPD REST, SPD TRANS) is a limit, not a target: the FMC flies the ECON (or
--- selected) climb speed when that is lower. A SPD REST of 340/12000 above an ECON of 320 kt was flown at 340, and SPD
+-- selected) climb speed when that is lower. A SPD REST of 300/12000 above an ECON of 290 kt was flown at 300, and SPD
 -- TRANS's 250 kt above a selected 240 (review 44, NIT-4).
 local function B747_climb_restriction_speed(restriction)
     local climbSpeed=B747_climb_speed_floored(getFMSData("clbspd"))
@@ -441,8 +441,8 @@ local function B747_climb_restriction_speed(restriction)
 end
 -- [P48] The current Mach climb_speed_uses_mach weighs (above the climb Mach it keeps the climb in Mach), except while a
 -- route constraint caps the CAS target (spdval below the speed it caps, base): then the constraint's CAS against the
--- climb Mach alone decides, so the slower is flown. A 250 kt constraint at FL300 at M.80 gave M.78, about 288 kt
--- (review 44, NIT-4).
+-- climb Mach alone decides, so the slower is flown. A 250 kt constraint at FL300 at M.80 gave M.78, 295.6 kt by
+-- afds.mach_to_cas (review 44, NIT-4).
 local function B747_climb_mach_weighed(spdval,base)
     if spdval<base then return 0 end
     return simDR_airspeed_mach
