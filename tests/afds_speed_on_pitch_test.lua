@@ -92,6 +92,9 @@ else
         "T/W: 4 x the second-highest engine (the sum would be 408 kN, the middle pair's 410)")
     near(tw_of({[0] = 3000, 5000, 6000, 6000}, 200000), 24000 / (200000 * 9.80665), 1e-12,
         "T/W: at idle the engines within 5 kN")
+    -- an engine failed at idle, at 0 or windmilling below the others: apart beyond the 5 kN (review 47's NIT-3)
+    check(tw_of({[0] = 0, 6000, 6000, 6000}, 200000) == nil, "T/W: at idle one engine at 0, none")
+    check(tw_of({[0] = -14000, -8000, -8000, -8000}, 200000) == nil, "T/W: at idle one engine windmilling, none")
     check(tw_of({[0] = 100000, 100000, 100000, 0}, 200000) == nil, "T/W: one engine failed, none")
     check(tw_of({[0] = 80000, 100000, 100000, 100000}, 200000) == nil, "T/W: one engine 20 % apart, none")
     check(tw_of({[0] = 0, 100000, 0, 100000}, 200000) == nil, "T/W: two engines failed, none")
