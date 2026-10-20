@@ -432,8 +432,8 @@ end
 -- climb thrust and the IAS went from 251 to 271 kt; FLCH at idle at FL310 (p34-L1) pitched down at 0.08 deg/s and fell
 -- 26 kt below the Mach's speed; accelerating at 10,000 ft (p34-L1) it kept 22-31 % of the climb, where 744s in ADS-B
 -- keep 40-55 % (median 47 %) at 0.45-0.77 kt/s (research_climb_accel.md: 55-70 % of the energy into the acceleration).
--- In climb_model (the production director and pitch loop on a point mass fitted to those flights): 271 -> 267 kt,
--- -25 -> -8 kt, and 46-57 % of the climb at 0.56 kt/s.
+-- In climb_model (the production director and pitch loop on a point mass fitted to those flights): 271 -> 268 kt,
+-- -25 -> -8 kt, and 43-57 % of the climb at 0.56 kt/s.
 afds_controls.SPEED_PITCH_TIME_CONSTANT_SEC = 20.0
 afds_controls.SPEED_PITCH_MAX_ACCEL_KTS_PER_SEC = 1.0
 afds_controls.SPEED_PITCH_ACCEL_FILTER_SEC = 1.0
