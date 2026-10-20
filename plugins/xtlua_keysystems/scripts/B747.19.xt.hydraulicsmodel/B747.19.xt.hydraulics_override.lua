@@ -587,7 +587,8 @@ local lastGlideSlopeElevation=0
 -- attitude; descending, the mirror; the severe underspeed and overspeed exceptions), which move the integrator with
 -- what they take. With the flight director alone (servos off) the integrator stays within 2 deg of the attitude.
 -- [P45] The integrator also turns with the thrust over the weight (speed_pitch_thrust_lead: T/W at the last update and
--- filtered), except with the A/T in SPD (3), where the thrust works on the speed too.
+-- filtered), except with the A/T in SPD (3), where the thrust works on the speed too, and for increases in IDLE (2),
+-- where the EEC adds thrust for the speed below its minimum safe speed (review 46).
 -- lastDirectorUpdate: the time of the director's update before this one; targetSpeed: the speed to fly (the AFDS's,
 -- simDR_autopilot_airspeed_kts, when nil; TO/GA's, P39).
 local speedPitchBase=0
@@ -625,6 +626,8 @@ local function ap_director_speed_on_pitch(pitchMode,holdAlt,lastDirectorUpdate,t
         speedPitchThrustWeight,thrustRate=C.speed_pitch_thrust_lead(speedPitchThrustWeight,lastSpeedPitchThrustWeight,
             thrustWeight,dt)
         if B747DR_ap_FMA_autothrottle_mode==3 then thrustRate=0 end
+        -- in IDLE the EEC's speed loop adds thrust below its minimum safe speed (spd_throttle): only decreases lead there
+        if B747DR_ap_FMA_autothrottle_mode==2 then thrustRate=math.min(0,thrustRate) end
         speedPitchBase=speedPitchBase
             +math.max(-maxRate,math.min(maxRate,C.SPEED_PITCH_KI*errorDeg+thrustRate))*math.min(dt,0.5)
         pathError=math.max(-C.SPEED_PITCH_P_LIMIT_DEG,math.min(C.SPEED_PITCH_P_LIMIT_DEG,errorDeg))

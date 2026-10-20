@@ -207,7 +207,9 @@ end
 -- [P45] on speed and steady at 233 t, the thrust rising 0.0054 T/W a second (the A/T's 20 s to climb thrust): in THR
 -- REF the pitch rises with it, the IAS still (5 s: 0.31 deg/s behind the 2 s filter, about 1 deg); with the A/T in SPD
 -- the thrust's lead stays out
-for _, at_mode in ipairs({5, 3}) do
+-- [review 46 MINOR-2] With the A/T in IDLE the EEC's speed loop (spd_throttle below its minimum safe speed) may add
+-- thrust for the speed too: the lead takes only the thrust's decreases there
+for _, at_mode in ipairs({5, 3, 2}) do
     local thrust = {[0] = 50000, 50000, 50000, 50000}
     local env = new_director({simDR_engine_thrust_n = thrust, simDR_acf_weight_total_kg = 233000,
         B747DR_ap_FMA_autothrottle_mode = at_mode})
@@ -221,7 +223,8 @@ for _, at_mode in ipairs({5, 3}) do
     if at_mode == 5 then
         check(rise >= 0.85 and rise <= 1.1, "THR REF: the pitch follows the thrust ("..rise.." deg in 5 s)")
     else
-        near(rise, 0, 1e-6, "A/T in SPD: the thrust's lead stays out")
+        near(rise, 0, 1e-6, (at_mode == 3 and "A/T in SPD" or "A/T in IDLE, the thrust rising")
+            ..": the thrust's lead stays out")
     end
 end
 -- the flight director alone (servos off): the law's pitch stays within 2 deg of the attitude
