@@ -586,6 +586,8 @@ local lastGlideSlopeElevation=0
 -- limit_speed_pitch_target's guards (climbing: no pitch-down while the VSI shows +100 fpm or less, not below the level
 -- attitude; descending, the mirror; the severe underspeed and overspeed exceptions), which move the integrator with
 -- what they take. With the flight director alone (servos off) the integrator stays within 2 deg of the attitude.
+-- [P45] The integrator also turns with the thrust over the weight (speed_pitch_thrust_lead: T/W at the last update and
+-- filtered), except with the A/T in SPD (3), where the thrust works on the speed too.
 -- lastDirectorUpdate: the time of the director's update before this one; targetSpeed: the speed to fly (the AFDS's,
 -- simDR_autopilot_airspeed_kts, when nil; TO/GA's, P39).
 local speedPitchBase=0
@@ -593,6 +595,8 @@ local lastSpeedPitchUpdate=-100
 local lastSpeedPitchIAS=0
 local speedPitchAccel=0
 local lastSpeedPitchAttitude=0
+local lastSpeedPitchThrustWeight=nil
+local speedPitchThrustWeight=nil
 local function ap_director_speed_on_pitch(pitchMode,holdAlt,lastDirectorUpdate,targetSpeed)
     local C=B747_afds_controls
     directorSampleRate=0.1
@@ -604,10 +608,12 @@ local function ap_director_speed_on_pitch(pitchMode,holdAlt,lastDirectorUpdate,t
     if pitchMode==1 then verticalDirection=C.VERTICAL_DIRECTION_CLIMB end
     local dt=simDRTime-lastSpeedPitchUpdate
     local pathError,pitchRate=0,0
+    local thrustWeight=C.speed_pitch_thrust_weight(simDR_engine_thrust_n,simDR_acf_weight_total_kg)
     if dt>1 or dt<=0 or lastSpeedPitchUpdate<lastDirectorUpdate-0.001 then
         speedPitchBase=last_simDR_AHARS_pitch_heading_deg_pilot
         if pitchMode==1 then speedPitchBase=simDR_AHARS_pitch_heading_deg_pilot end
         speedPitchAccel=0
+        speedPitchThrustWeight=thrustWeight
         dt=0
     else
         speedPitchAccel=C.speed_pitch_accel(speedPitchAccel,ias-lastSpeedPitchIAS,dt)
@@ -615,7 +621,12 @@ local function ap_director_speed_on_pitch(pitchMode,holdAlt,lastDirectorUpdate,t
             speedPitchAccel,simDR_vvi_fpm_pilot,simDR_TAS_mps)
         local errorDeg=C.speed_pitch_path_error_deg(speedPitchAccel,wanted,simDR_TAS_mps,ias)
         local maxRate=C.speed_pitch_max_rate_deg(simDR_TAS_mps)
-        speedPitchBase=speedPitchBase+math.max(-maxRate,math.min(maxRate,C.SPEED_PITCH_KI*errorDeg))*math.min(dt,0.5)
+        local thrustRate
+        speedPitchThrustWeight,thrustRate=C.speed_pitch_thrust_lead(speedPitchThrustWeight,lastSpeedPitchThrustWeight,
+            thrustWeight,dt)
+        if B747DR_ap_FMA_autothrottle_mode==3 then thrustRate=0 end
+        speedPitchBase=speedPitchBase
+            +math.max(-maxRate,math.min(maxRate,C.SPEED_PITCH_KI*errorDeg+thrustRate))*math.min(dt,0.5)
         pathError=math.max(-C.SPEED_PITCH_P_LIMIT_DEG,math.min(C.SPEED_PITCH_P_LIMIT_DEG,errorDeg))
         pitchRate=(simDR_AHARS_pitch_heading_deg_pilot-lastSpeedPitchAttitude)/dt
     end
@@ -651,6 +662,7 @@ local function ap_director_speed_on_pitch(pitchMode,holdAlt,lastDirectorUpdate,t
     lastSpeedPitchUpdate=simDRTime
     lastSpeedPitchIAS=ias
     lastSpeedPitchAttitude=simDR_AHARS_pitch_heading_deg_pilot
+    lastSpeedPitchThrustWeight=thrustWeight
     last_simDR_AHARS_pitch_heading_deg_pilot=limited
     return ap_director_pitch_retVal(pitchMode,limited)
 end
@@ -1120,6 +1132,15 @@ function ap_pitch_assist()
     local refreshV2=B747DR_airspeed_V2
     local refreshWindow=B747DR_ap_ias_dial_value
     local refreshWindowMach=simDR_autopilot_airspeed_is_mach
+    -- [P45] read by the speed law's thrust lead (its filter would start again from a first read's 0, then the value)
+    if simDR_engine_thrust_n~=nil then
+        local refreshThrust0=simDR_engine_thrust_n[0]
+        local refreshThrust1=simDR_engine_thrust_n[1]
+        local refreshThrust2=simDR_engine_thrust_n[2]
+        local refreshThrust3=simDR_engine_thrust_n[3]
+    end
+    local refreshMass=simDR_acf_weight_total_kg
+    local refreshATMode=B747DR_ap_FMA_autothrottle_mode
 
     B747DR_pidPitchP=B747_rescale(3000,B747DR_pidPitchPL,40000,B747DR_pidPitchPH,B747DR_autopilot_altitude_ft_pfd)
     if B747DR_ap_AFDS_mode_box_status_pilot==1 or B747DR_ap_AFDS_mode_box_status_copilot==1 then

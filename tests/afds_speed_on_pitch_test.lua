@@ -7,6 +7,10 @@
 -- 271 kt; FLCH at idle from FL310 on p34-L1 (TST744L) pitched down at 0.08 deg/s and fell 26 kt below M .84's speed;
 -- accelerating from 250 to 326 kt at 10,000 ft on p34-L1 it kept 22-31 % of the 2,234 fpm climb, where 744s in ADS-B
 -- keep 40-55 % (median 47 %) at 0.45-0.77 kt/s.
+-- [P45] The thrust's lead: the integrator also turns the path with the thrust over the weight (T/W) through a 2 s
+-- filter, except with the A/T in SPD. On its own the integrator followed a thrust ramp with a steady error: resuming
+-- the climb with the A/T's 20 s to climb thrust (P44) the IAS 11 kt over the target, 9.4 kt with 30 s, where 744s in
+-- ADS-B are 3 kt (0-6) over.
 -- 1. the helpers; 2. the production director with mocked datarefs; 3. climb_model (the production director and pitch
 -- loop on a point mass fitted to those flights) on their recorded thrust and targets (tests/data/p35-line1_speed_pitch.csv,
 -- tests/data/p34-L1_speed_pitch.csv), at 15, 20 and 34 fps.
@@ -69,6 +73,33 @@ else
     near(path(-0.5, 0.5, 150, 250), -k * 150 / (250 * 0.514444), 1e-9, "path error: 1 kt/s too little")
     near(path(0.3, 0.3, 150, 250), 0, 1e-12, "path error: as wanted")
     near(path(1, 0, nil, nil), k, 1e-9, "path error: no TAS and IAS (30 m/s each)")
+end
+-- [P45] T/W and the thrust's lead
+local tw_of, lead = controls.speed_pitch_thrust_weight, controls.speed_pitch_thrust_lead
+if type(tw_of) ~= "function" or type(lead) ~= "function" then
+    check(false, "the thrust lead's helpers (speed_pitch_thrust_weight, speed_pitch_thrust_lead)")
+else
+    near(tw_of({[0] = 100000, 100000, 100000, 100000}, 200000), 400000 / (200000 * 9.80665), 1e-12,
+        "T/W: the four engines' thrust over the weight")
+    check(tw_of({[0] = 100000, 100000, 100000, 100000}, 0) == nil, "T/W: no mass (XTLua's first read of 0)")
+    check(tw_of(nil, 200000) == nil, "T/W: no thrust dataref")
+    local f, r = lead(nil, nil, 0.2, 0.1)
+    check(f == 0.2 and r == 0, "lead: the filter starts from T/W, no rate")
+    f, r = lead(0.2, 0.2, 0.21, 0.1)
+    near(f, 0.2 + 0.01 * 0.1 / 2, 1e-12, "lead: T/W through a 2 s first order")
+    near(r, math.deg(0.01 * 0.1 / 2) / 0.1, 1e-9, "lead: the path's rate from the filtered change")
+    f, r = lead(0.2, 0.0, 0.25, 0.1)
+    check(f == 0.25 and r == 0, "lead: a first read of 0, then 0.25 in 0.1 s: the filter starts again, no rate")
+    f, r = lead(0.2, 0.2, nil, 0.1)
+    check(f == nil and r == 0, "lead: no T/W")
+    -- the A/T's 20 s to climb thrust at 233 t, 0.0054 T/W a second: after 10 s the path's rate within 1 % of it
+    local filtered, previous, tw = 0.10, 0.10, 0.10
+    for _ = 1, 100 do
+        tw = tw + 0.00054
+        filtered, r = lead(filtered, previous, tw, 0.1)
+        previous = tw
+    end
+    near(r, math.deg(0.0054), math.deg(0.0054) * 0.01, "lead: a 20 s thrust ramp's path rate after 10 s")
 end
 
 -- 2. The production director (ap_director_pitch with its file locals; B747_afds_controls and the pitch records are
@@ -165,6 +196,26 @@ do
     check(env.B747_afds_pitch_target_before_blend >= 5 - 1e-9, "20 kt slow at +50 fpm: the climb guard holds the pitch ("
         ..env.B747_afds_pitch_target_before_blend..")")
 end
+-- [P45] on speed and steady at 233 t, the thrust rising 0.0054 T/W a second (the A/T's 20 s to climb thrust): in THR
+-- REF the pitch rises with it, the IAS still (5 s: 0.31 deg/s behind the 2 s filter, about 1 deg); with the A/T in SPD
+-- the thrust's lead stays out
+for _, at_mode in ipairs({5, 3}) do
+    local thrust = {[0] = 50000, 50000, 50000, 50000}
+    local env = new_director({simDR_engine_thrust_n = thrust, simDR_acf_weight_total_kg = 233000,
+        B747DR_ap_FMA_autothrottle_mode = at_mode})
+    step(env, 4, 0.1)
+    local before = env.B747_afds_pitch_target_before_blend
+    for _ = 1, 50 do
+        for i = 0, 3 do thrust[i] = thrust[i] + 0.0054 * 233000 * 9.80665 / 4 * 0.1 end
+        step(env, 4, 0.1, 0)
+    end
+    local rise = env.B747_afds_pitch_target_before_blend - before
+    if at_mode == 5 then
+        check(rise >= 0.85 and rise <= 1.1, "THR REF: the pitch follows the thrust ("..rise.." deg in 5 s)")
+    else
+        near(rise, 0, 1e-6, "A/T in SPD: the thrust's lead stays out")
+    end
+end
 -- the flight director alone (servos off): the law's pitch stays within 2 deg of the attitude
 do
     local env = new_director({simDR_autopilot_servos_on = 0, simDR_autopilot_airspeed_kts = 200})
@@ -216,7 +267,7 @@ local P35 = load_csv("tests/data/p35-line1_speed_pitch.csv")
 local P34 = load_csv("tests/data/p34-L1_speed_pitch.csv")
 -- a recorded stretch from t0 for span s: the thrust an engine, the targets (at most cap_kt below cap_ft), the flaps,
 -- the pitch mode, the MCP altitude and the capture window as recorded
-local function fly(rows, t0, span, fps, cap_kt, cap_ft)
+local function fly(rows, t0, span, fps, cap_kt, cap_ft, thrust)
     local first
     for _, r in ipairs(rows) do if r.t >= t0 then first = r break end end
     local function target(t, h)
@@ -227,7 +278,7 @@ local function fly(rows, t0, span, fps, cap_kt, cap_ft)
     return CM.fly({alt_ft = first.alt, ias_kt = first.ias, vs_fpm = first.vs, weight_kg = first.weight,
         flaps = first.flap, pitch_mode = first.fma, target_kt = target(0, first.alt), mcp_alt_ft = first.mcp_alt,
         capture_window_ft = first.window, seconds = span, dt = 1 / fps,
-        thrust = function(t) return interp(rows, t0 + t, "thrust") end,
+        thrust = thrust or function(t) return interp(rows, t0 + t, "thrust") end,
         frame = function(m, t)
             m.target_kt = target(t, m.state.h)
             m.state.flap = interp(rows, t0 + t, "flap")
@@ -239,28 +290,50 @@ local function fly(rows, t0, span, fps, cap_kt, cap_ft)
             d.B747DR_alt_capture_window = interp(rows, t0 + t, "window")
         end})
 end
+-- [P45] p35-line1's climb resumption with the thrust's rise (48 -> 114 kN an engine from 1.5 s, 4.5 s as recorded)
+-- stretched to rise_s, as the A/T brings it in since P44
+local function stretched(rise_s)
+    return function(t)
+        local start, recorded = 1.5, 4.5
+        if t <= start then return interp(P35, 505 + t, "thrust") end
+        if t <= start + rise_s then return interp(P35, 505 + start + (t - start) * recorded / rise_s, "thrust") end
+        return interp(P35, 505 + t - rise_s + recorded, "thrust")
+    end
+end
 for _, fps in ipairs({15, 20, 34}) do
     local at = string.format(" (%d fps)", fps)
     -- a. p35-line1 resuming the climb at 8,948 ft: VNAV PTH -> VNAV SPD, the A/T to THR REF (the thrust from 48 to
     -- 114 kN an engine in 6 s), VNAV's 250 kt (P42 caps it there; it rose to 255 kt with the IAS). The old law: the
-    -- attitude up 0.9 deg in the first 8 s, the IAS to 271.1 kt.
+    -- attitude up 0.9 deg in the first 8 s, the IAS to 271.1 kt; P43 alone 18.0-18.1 kt over.
     local m = fly(P35, 505, 70, fps, 250, 10100)
     local s = CM.summary(m, 0, 50)
     near(m.hyd.MODEL_director_state().sample_rate, 0.1, 1e-9, "VNAV SPD: the director samples every 0.1 s"..at)
     local base, rise = CM.at(m, 0).theta, CM.at(m, 8).theta
     check(rise - base >= 1.5, "re-climb: the attitude up 1.5 deg within 8 s"..at..string.format(": %.2f", rise - base))
-    check(s.over <= 18.5, "re-climb: the IAS at most 18.5 kt over 250"..at..string.format(": %+.1f kt", s.over))
+    check(s.over <= 17, "re-climb: the IAS at most 17 kt over 250"..at..string.format(": %+.1f kt", s.over))
     check(s.reversals <= 1 and s.rate <= 0.6 and s.nz <= 0.16, "re-climb: smooth"..at
         ..string.format(": %d F/D reversals, %.2f deg/s, %.3f g", s.reversals, s.rate, s.nz))
+    -- a2. [P45] the same with the A/T's thrust over 20 s (P44's) and 30 s: P43 alone 10.9-11.0 and 9.3-9.4 kt over.
+    -- The largest nz is the 10,000 ft acceleration's pitch-down at about 40 s (the target 290 kt from 29 s): 0.163 g at
+    -- 15 fps with the lead, 0.148 without it, 0.13 at 20 and 34 fps.
+    for _, case in ipairs({{20, 7.5}, {30, 5.0}}) do
+        m = fly(P35, 505, 70, fps, 250, 10100, stretched(case[1]))
+        s = CM.summary(m, 0, 50)
+        check(s.over <= case[2], string.format("re-climb, the thrust over %d s: the IAS at most %.1f kt over 250%s: %+.1f kt",
+            case[1], case[2], at, s.over))
+        check(s.reversals <= 1 and s.nz <= 0.17, string.format("re-climb, the thrust over %d s: smooth%s: %d F/D "
+            .."reversals, %.3f g", case[1], at, s.reversals, s.nz))
+    end
     -- b. p34-L1 FLCH SPD from ALT at FL310 (MCP FL270), the A/T at idle from 2 s, M .84's speed rising 302 -> 310 kt
-    -- as it descends, then 283 kt from 48 s. The old law: 25.5 kt below.
+    -- as it descends, then 283 kt from 48 s. The old law: 25.5 kt below; P43 alone 7.9 (the A/T's retard now pitches
+    -- down with it, P45).
     m = fly(P34, 2094, 82, fps)
     local lowest, highest_vs = math.huge, -math.huge
     for _, p in ipairs(m.track) do
         if p.t < 47 then lowest = math.min(lowest, p.ias - p.target) end
         if p.t > 5 then highest_vs = math.max(highest_vs, p.vs) end
     end
-    check(lowest >= -10, "FLCH at idle: within 10 kt of M .84's speed"..at..string.format(": %.1f kt", lowest))
+    check(lowest >= -6.5, "FLCH at idle: within 6.5 kt of M .84's speed"..at..string.format(": %.1f kt", lowest))
     check(highest_vs <= 200, "FLCH at idle: no climbing"..at..string.format(": %+.0f fpm", highest_vs))
     -- c. p34-L1 VNAV SPD at 10,105 ft, 250 -> 326 kt (from 7 s) at +2,263 fpm: 40 % of the climb or more from 15 s
     -- after the step until 5 kt from the target, no overshoot. The old law: 22 % (500 fpm), 0.95 kt/s.
@@ -277,14 +350,14 @@ for _, fps in ipairs({15, 20, 34}) do
     -- (ADS-B: 55-80 kt in 75-170 s)
     check(reached and reached <= 7 + 170, "10,000 ft: 326 kt within 170 s"..at..": "..tostring(reached))
     -- d. p35-line1's flap retraction steps (154 -> 192 kt at 1,723 ft with flaps 20 -> 10, 192 -> 210 at 2,940 ft):
-    -- the IAS 3 kt up within 20 s of the step, the thrust coming back to CLB in it. The old law: 23 s.
+    -- the IAS 3 kt up within 16 s of the step, the thrust coming back to CLB in it. The old law: 23 s; P43 alone 18.
     m = fly(P35, 280, 60, fps)
     local step_t, ias0, up_t
     for _, p in ipairs(m.track) do
         if not step_t and p.target >= 190 then step_t, ias0 = p.t, p.ias end
         if step_t and not up_t and p.ias >= ias0 + 3 then up_t = p.t - step_t end
     end
-    check(up_t and up_t <= 20, "flaps up: accelerating within 20 s of the step"..at..": "..tostring(up_t))
+    check(up_t and up_t <= 16, "flaps up: accelerating within 16 s of the step"..at..": "..tostring(up_t))
 end
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))

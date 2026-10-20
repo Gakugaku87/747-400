@@ -50,6 +50,11 @@ local cases = {
     {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
         func="ap_pitch_assist", names={"B747DR_airspeed_V2", "B747DR_ap_ias_dial_value",
             "simDR_autopilot_airspeed_is_mach"}},
+    -- [P45] the speed law's thrust lead: the engines' thrust, the mass and the A/T's mode (a first read of 0 would
+    -- start its filter again; a 0 A/T mode would let the lead act with the A/T in SPD)
+    {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
+        func="ap_pitch_assist", names={"simDR_engine_thrust_n", "simDR_acf_weight_total_kg",
+            "B747DR_ap_FMA_autothrottle_mode"}},
     -- [d] the CRZ ALT entry for the native FMS (B744.fms.step.lua
     -- native_cruise_altitude_entry) is formatted with the native transition
     -- altitude, read only at a CRZ ALT entry or change; a 0 fell back to

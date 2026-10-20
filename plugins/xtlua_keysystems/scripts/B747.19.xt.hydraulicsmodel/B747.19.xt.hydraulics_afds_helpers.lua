@@ -444,6 +444,19 @@ afds_controls.SPEED_PITCH_MAX_LOAD_FACTOR_G = 0.10
 afds_controls.SPEED_PITCH_KP = 0.3
 afds_controls.SPEED_PITCH_P_LIMIT_DEG = 1.0
 afds_controls.SPEED_PITCH_RATE_DAMPING = 1.0
+-- [P45] The thrust's lead: a change of the thrust over the weight (T/W) changes the flight path that holds the speed
+-- by as much (radians), so the integrator also turns the path at SPEED_PITCH_THRUST_FEED_FORWARD of T/W's rate,
+-- within the same 0.1 g. On its own it followed a thrust ramp with a steady error of (the path's rate) / KI: resuming
+-- the climb with the A/T's 20 s to climb thrust (P44) about 3 deg of path, the IAS 11 kt over the target, where 744s
+-- in ADS-B are 3 kt (0-6) over with the IAS flat for 10-25 s (research_reclimb.md). A larger KI followed it but took
+-- the 10,000 ft acceleration's climb away and turned the flap steps into pitch reversals (review 45).
+afds_controls.SPEED_PITCH_THRUST_FEED_FORWARD = 1.0
+-- T/W through a first order of this many seconds: X-Plane's thrust moves 1-4 kN an engine in 0.25 s as the A/T works
+-- the levers on the takeoff (p35-line1), 0.4-1.6 deg/s of path unfiltered
+afds_controls.SPEED_PITCH_THRUST_FILTER_SEC = 2.0
+-- a T/W changing faster than this a second is not thrust (engines spool from idle to takeoff thrust's 0.25 in 6-8 s):
+-- XTLua's first read of 0, a weight read; the filter starts again from it
+afds_controls.SPEED_PITCH_THRUST_MAX_RATE = 0.2
 
 -- The IAS's rate (kt/s): the last one moved towards the IAS's change over elapsed_sec by a first order of
 -- SPEED_PITCH_ACCEL_FILTER_SEC. A change faster than SPEED_PITCH_MAX_IAS_RATE_KTS_PER_SEC (a first read of 0, a jump
@@ -482,6 +495,33 @@ end
 -- The pitch rate (deg/s) that turns the flight path with SPEED_PITCH_MAX_LOAD_FACTOR_G at a TAS (m/s, at least 60).
 function afds_controls.speed_pitch_max_rate_deg(tas_mps)
     return math.deg(afds_controls.SPEED_PITCH_MAX_LOAD_FACTOR_G * 9.80665 / math.max(tonumber(tas_mps) or 0, 60))
+end
+
+-- [P45] The thrust's lead over elapsed_sec: T/W (tw, nil when unknown; previous_tw at the last update) through
+-- SPEED_PITCH_THRUST_FILTER_SEC's first order from filtered_tw, and the path's rate (deg/s) its change asks for,
+-- SPEED_PITCH_THRUST_FEED_FORWARD of it. The filter starts from tw with no rate after an unknown T/W or a change faster
+-- than SPEED_PITCH_THRUST_MAX_RATE. Returns the filtered T/W (nil when unknown) and the rate.
+function afds_controls.speed_pitch_thrust_lead(filtered_tw, previous_tw, tw, elapsed_sec)
+    elapsed_sec = tonumber(elapsed_sec) or 0
+    if tw == nil then return nil, 0 end
+    if filtered_tw == nil or previous_tw == nil or elapsed_sec <= 0
+        or math.abs(tw - previous_tw) > afds_controls.SPEED_PITCH_THRUST_MAX_RATE * elapsed_sec then
+        return tw, 0
+    end
+    local next_tw = filtered_tw
+        + (tw - filtered_tw) * math.min(1, elapsed_sec / afds_controls.SPEED_PITCH_THRUST_FILTER_SEC)
+    return next_tw, afds_controls.SPEED_PITCH_THRUST_FEED_FORWARD * math.deg(next_tw - filtered_tw) / elapsed_sec
+end
+
+-- [P45] The engines' thrust over the weight: thrust_n the four engines' thrust (N, indexed 0-3:
+-- sim/flightmodel/engine/POINT_thrust), mass_kg the aircraft's mass (sim/flightmodel/weight/m_total); nil without a
+-- mass a 747 can have (XTLua's first read gives 0).
+function afds_controls.speed_pitch_thrust_weight(thrust_n, mass_kg)
+    local mass = tonumber(mass_kg)
+    if mass == nil or mass < 100000 or thrust_n == nil then return nil end
+    local total = 0
+    for i = 0, 3 do total = total + (tonumber(thrust_n[i]) or 0) end
+    return total / (mass * 9.80665)
 end
 
 -- [review 45] ALT (15 deg) and V/S and VNAV PTH (10 deg) taking over above their upper pitch limit: the pitch comes

@@ -248,11 +248,7 @@ function M.fly(o)
         d.simDR_autopilot_airspeed_kts = m.target_kt
         if o.frame then o.frame(m, t) end
 
-        local ratio = hyd.ap_pitch_assist()
-        d.B747DR_sim_pitch_ratio, d.B747DR_custom_pitch_ratio = ratio, ratio
-        local fd = d.B747DR_flight_director_pitch
-
-        -- the thrust an engine
+        -- the thrust an engine (sim/flightmodel/engine/POINT_thrust) and the mass, read by the speed law (P45)
         local thrust
         if o.thrust then
             thrust = o.thrust(t, m)
@@ -262,6 +258,12 @@ function M.fly(o)
             state.thrust = (state.thrust or want) + (want - (state.thrust or want)) * math.min(1, dt / (o.spool_s or 2.5))
             thrust = state.thrust
         end
+        d.simDR_engine_thrust_n = {[0] = thrust, thrust, thrust, thrust}
+        d.simDR_acf_weight_total_kg = mass
+
+        local ratio = hyd.ap_pitch_assist()
+        d.B747DR_sim_pitch_ratio, d.B747DR_custom_pitch_ratio = ratio, ratio
+        local fd = d.B747DR_flight_director_pitch
 
         -- the pitch: pressure_output moves the surface towards the last frame's ratio
         state.elevator = hyd.B747_interpolate_value(state.elevator, AM.elevator_deg(state.last_ratio), -22, 17, 0.75)
