@@ -541,18 +541,26 @@ end
 -- failure at twice its size (review 46b); the second-highest engine's alone read the engines left at 4/3 after one
 -- failure and 2x after two, and engine-out go-arounds lost 2.4 kt (one out, 285 t) and 6.3 kt (two out, 250 t) more
 -- than P43 (reviews 46b, 46c).
+-- Once apart they are together again only within SPEED_PITCH_THRUST_REJOIN_SHARE (at least
+-- SPEED_PITCH_THRUST_REJOIN_MIN_N): with one hard edge an engine parked at it (a partial loss of power, a lever split by
+-- hand) turned the lead on and off with the others' jitter, every restart leaving a pitch-down, and the IAS sat 1-6 kt
+-- fast (review 47). was_apart: the last answer's apart. Returns T/W (nil when unknown or apart) and whether apart.
 afds_controls.SPEED_PITCH_THRUST_TOGETHER_SHARE = 0.15
 afds_controls.SPEED_PITCH_THRUST_TOGETHER_MIN_N = 5000
-function afds_controls.speed_pitch_thrust_weight(thrust_n, mass_kg)
+afds_controls.SPEED_PITCH_THRUST_REJOIN_SHARE = 0.08
+afds_controls.SPEED_PITCH_THRUST_REJOIN_MIN_N = 2500
+function afds_controls.speed_pitch_thrust_weight(thrust_n, mass_kg, was_apart)
     local mass = tonumber(mass_kg)
-    if mass == nil or mass < 100000 or thrust_n == nil then return nil end
+    if mass == nil or mass < 100000 or thrust_n == nil then return nil, was_apart == true end
     local thrust = {}
     for i = 0, 3 do thrust[i + 1] = tonumber(thrust_n[i]) or 0 end
     table.sort(thrust)
-    local apart = math.max(afds_controls.SPEED_PITCH_THRUST_TOGETHER_SHARE * math.abs(thrust[3]),
-        afds_controls.SPEED_PITCH_THRUST_TOGETHER_MIN_N)
-    if thrust[4] - thrust[1] > apart then return nil end
-    return 4 * thrust[3] / (mass * 9.80665)
+    local share, floor = afds_controls.SPEED_PITCH_THRUST_TOGETHER_SHARE, afds_controls.SPEED_PITCH_THRUST_TOGETHER_MIN_N
+    if was_apart then
+        share, floor = afds_controls.SPEED_PITCH_THRUST_REJOIN_SHARE, afds_controls.SPEED_PITCH_THRUST_REJOIN_MIN_N
+    end
+    if thrust[4] - thrust[1] > math.max(share * math.abs(thrust[3]), floor) then return nil, true end
+    return 4 * thrust[3] / (mass * 9.80665), false
 end
 
 -- [review 45] ALT (15 deg) and V/S and VNAV PTH (10 deg) taking over above their upper pitch limit: the pitch comes

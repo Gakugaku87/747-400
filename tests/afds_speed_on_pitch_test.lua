@@ -98,6 +98,15 @@ else
     -- an engine apart above the others too (three levers pulled back, one left forward: the three read at 4/3; review
     -- 47's NIT-1): the whole spread within it
     check(tw_of({[0] = 100000, 100000, 100000, 120000}, 200000) == nil, "T/W: one engine 20 % above, none")
+    -- once apart, together again only within 8 % (at least 2.5 kN): an engine parked at the 15 % edge turned the lead on
+    -- and off with the others' jitter, and every restart left a pitch-down (review 47's MINOR-1)
+    local tw, apart = tw_of({[0] = 90000, 100000, 100000, 100000}, 200000, true)
+    check(tw == nil and apart == true, "T/W: apart, 10 % is still apart")
+    tw, apart = tw_of({[0] = 90000, 100000, 100000, 100000}, 200000, false)
+    near(tw, 400000 / (200000 * 9.80665), 1e-12, "T/W: together, 10 % is still together")
+    check(apart == false, "T/W: together, 10 %: not apart")
+    tw, apart = tw_of({[0] = 93000, 100000, 100000, 100000}, 200000, true)
+    near(tw, 400000 / (200000 * 9.80665), 1e-12, "T/W: apart, 7 % is together again")
     local f, r = lead(nil, nil, 0.2, 0.1)
     check(f == 0.2 and r == 0, "lead: the filter starts from T/W, no rate")
     f, r = lead(0.2, 0.2, 0.21, 0.1)
@@ -576,7 +585,7 @@ local function recorded_jitter(t)
     local a, b = takeoff_jitter[i], takeoff_jitter[i % #takeoff_jitter + 1]
     return a + (b - a) * (x - i)
 end
-local function jitter_climb(fps, lead)
+local function jitter_climb(fps, lead, parked)
     local T0 = 190000
     local function jitter(t)
         if t < 20 then return 0 end
@@ -588,7 +597,11 @@ local function jitter_climb(fps, lead)
     local m = CM.fly({alt_ft = 1200, ias_kt = target, vs_fpm = V * math.sin(math.rad(gamma)) / 0.3048 * 60,
         weight_kg = 233000, flaps = 0.667, pitch_mode = 1, target_kt = target, mcp_alt_ft = 37000, seconds = 120,
         dt = 1 / fps, vmc_kt = 134, vmax_kt = 250, at_mode = 5,
-        thrust = function(t) return T0 + jitter(t) end,
+        thrust = function(t)
+            local e = T0 + jitter(t)
+            if not parked then return e end
+            return {[0] = (1 - parked) * T0, e, e, e}
+        end,
         setup = function(mm)
             if not lead then mm.controls.SPEED_PITCH_THRUST_FEED_FORWARD = 0 end
             mm.d.B747DR_airspeed_V2, mm.d.B747DR_ap_ias_dial_value = 144, 144
@@ -609,6 +622,11 @@ for _, fps in ipairs({20, 34}) do
     local with_lead, without = jitter_climb(fps, true), jitter_climb(fps, false)
     check(math.abs(with_lead - without) <= 0.3, string.format("thrust jitter in the takeoff climb (%d fps): the mean IAS "
         .."within 0.3 kt of P43's: %+.2f against %+.2f kt", fps, with_lead, without))
+    -- one engine parked 13 % below the others (a partial loss of power, a lever split by hand), the others with the
+    -- jitter: at the gate's edge it turned the lead on and off, the IAS 6.4 kt fast (review 47's MINOR-1)
+    with_lead, without = jitter_climb(fps, true, 0.13), jitter_climb(fps, false, 0.13)
+    check(math.abs(with_lead - without) <= 0.5, string.format("an engine parked 13 %% below, the others jittering (%d "
+        .."fps): the mean IAS within 0.5 kt of P43's: %+.2f against %+.2f kt", fps, with_lead, without))
 end
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))

@@ -598,6 +598,7 @@ local speedPitchAccel=0
 local lastSpeedPitchAttitude=0
 local lastSpeedPitchThrustWeight=nil
 local speedPitchThrustWeight=nil
+local speedPitchThrustApart=false
 local speedPitchThrustPeak=nil
 local function ap_director_speed_on_pitch(pitchMode,holdAlt,lastDirectorUpdate,targetSpeed)
     local C=B747_afds_controls
@@ -610,7 +611,9 @@ local function ap_director_speed_on_pitch(pitchMode,holdAlt,lastDirectorUpdate,t
     if pitchMode==1 then verticalDirection=C.VERTICAL_DIRECTION_CLIMB end
     local dt=simDRTime-lastSpeedPitchUpdate
     local pathError,pitchRate=0,0
-    local thrustWeight=C.speed_pitch_thrust_weight(simDR_engine_thrust_n,simDR_acf_weight_total_kg)
+    local thrustWeight
+    thrustWeight,speedPitchThrustApart=C.speed_pitch_thrust_weight(simDR_engine_thrust_n,simDR_acf_weight_total_kg,
+        speedPitchThrustApart)
     if dt>1 or dt<=0 or lastSpeedPitchUpdate<lastDirectorUpdate-0.001 then
         speedPitchBase=last_simDR_AHARS_pitch_heading_deg_pilot
         if pitchMode==1 then speedPitchBase=simDR_AHARS_pitch_heading_deg_pilot end
