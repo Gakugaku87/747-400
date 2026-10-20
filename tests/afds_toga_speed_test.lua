@@ -258,9 +258,11 @@ end
 -- gear up from 8 s), GA thrust in 4.5 s, the window's 150 kt, with the MCP altitude above (3,000 ft) and below (0: a
 -- non-ILS approach with the MCP still at the minima, review 45). TO/GA always climbs: in the air it took the speed
 -- law's guards from the MCP altitude, so with the MCP below it pitched down to -4.5 deg at +100 fpm and went back
--- down to 923 ft at 230 kt (review 45's B1).
+-- down to 923 ft at 230 kt (review 45's B1). With the MCP below but inside the capture window (700 ft, the window
+-- 413 ft at -800 fpm) the director's ALT branch captured it at once, cancelled TO/GA and levelled at 700 ft, the IAS
+-- to 235 kt (review 45b's MINOR-2): TO/GA captures only an altitude above it. window_ft: the capture window (300).
 local AM = dofile("tests/approach_model.lua")
-local function go_around(mcp_ft, fps)
+local function go_around(mcp_ft, fps, window_ft)
     local G, KT, S = 9.80665, 0.514444, 541.2
     local alt, weight, ias0 = 1000, 250000, 150
     local gamma = math.rad(-3)
@@ -273,7 +275,7 @@ local function go_around(mcp_ft, fps)
     local approach = (q * S * (p[3] + p[4] * cl * cl) + weight * G * math.sin(gamma)) / 4 + gear / 4
     return CM.fly({alt_ft = alt, ias_kt = ias0, vs_fpm = V * math.sin(gamma) / 0.3048 * 60, weight_kg = weight,
         flaps = 1.0, pitch_mode = 1, target_kt = ias0, mcp_alt_ft = mcp_ft, seconds = 30, dt = 1 / fps,
-        vmc_kt = 130, vmax_kt = 230,
+        vmc_kt = 130, vmax_kt = 230, capture_window_ft = window_ft,
         thrust = function(t)
             local f = math.max(0, math.min(1, (t - 0.5) / 4.5))
             local gear_drag = gear / 4 * (t < 8 and 1 or math.max(0, 1 - (t - 8) / 10))
@@ -282,14 +284,18 @@ local function go_around(mcp_ft, fps)
         setup = function(mm)
             mm.d.B747DR_airspeed_V2, mm.d.B747DR_ap_ias_dial_value = 999, ias0
             mm.d.simDR_touchGround = 0
+            mm.d.B747DR_autopilot_TOGA_status = 1
         end,
         frame = function(mm, t)
             if t > 3 then mm.state.flap = 0.667 end
+            -- the FMA as fma_PitchModes sets it: TO/GA while TOGA_status is 1, ALT once the director captured
+            mm.d.B747DR_ap_FMA_active_pitch_mode = (mm.d.B747DR_autopilot_TOGA_status == 1) and 1
+                or (mm.d.simDR_autopilot_alt_hold_status == 2 and 9 or 1)
         end})
 end
 for _, fps in ipairs({20, 34}) do
-    for _, mcp in ipairs({3000, 0}) do
-        local m = go_around(mcp, fps)
+    for _, mcp in ipairs({3000, 0, 700}) do
+        local m = go_around(mcp, fps, mcp == 700 and 413 or nil)
         local low, high_ias = math.huge, -math.huge
         for _, p in ipairs(m.track) do
             low = math.min(low, p.alt)
@@ -302,6 +308,10 @@ for _, fps in ipairs({20, 34}) do
             ..string.format(": %.0f ft, %+.0f fpm", last.alt, last.vs))
         check(high_ias <= 150 + 25, "go-around: the IAS within 25 kt of the window's 150 (FCOM)"..at
             ..string.format(": %.1f", high_ias))
+        check(m.d.B747DR_autopilot_TOGA_status == 1 and m.d.simDR_autopilot_alt_hold_status ~= 2,
+            "go-around: still TO/GA, no altitude captured"..at..string.format(": TOGA %s, ALT hold %s at %s ft",
+            tostring(m.d.B747DR_autopilot_TOGA_status), tostring(m.d.simDR_autopilot_alt_hold_status),
+            tostring(m.d.simDR_autopilot_hold_altitude_ft)))
     end
 end
 

@@ -702,8 +702,10 @@ function ap_director_pitch(pitchMode)
     elseif pitchMode~=2 and 
     (pitchMode==5 or pitchMode==9 or 
     (simDR_autopilot_alt_hold_status==2) or 
-    (simDR_pressureAlt1< holdAlt+B747DR_alt_capture_window and simDR_pressureAlt1> holdAlt-B747DR_alt_capture_window)) then
-        --ALT
+    (simDR_pressureAlt1< holdAlt+B747DR_alt_capture_window and simDR_pressureAlt1> holdAlt-B747DR_alt_capture_window
+    and (pitchMode~=1 or holdAlt>simDR_pressureAlt1))) then
+        --ALT (TO/GA captures only an altitude above it: a go-around inside the window above an MCP left at the
+        --minima levelled there, review 45b)
         if debug_flight_directors==1 then
             print("ap_director_pitch for ALT")
 
