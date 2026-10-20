@@ -32,9 +32,9 @@ if type(speed) ~= "function" then
 else
     -- the takeoff roll (V2 144, the window at V2), rotation at 124 kt, liftoff: V2 + 10
     local s, t = {}, 100
-    local function at(on_ground, pitch, ias, v2, window, dt)
+    local function at(on_ground, pitch, ias, v2, window, dt, floor)
         t = t + (dt or 0.1)
-        return speed(s, on_ground, pitch, ias, v2 or 144, window or 144, t)
+        return speed(s, on_ground, pitch, ias, v2 or 144, window or 144, t, floor)
     end
     check(at(true, 0, 30) == nil, "on the ground: no target")
     at(true, 0, 100)
@@ -79,6 +79,17 @@ else
     near(at(false, 10, 190, 144, 150), 175, 1e-9, "go-around 190 kt for 5.2 s: at most the window + 25")
     s, t = {}, 100
     near(at(false, 2, 155, 144, 0), 155, 1e-9, "go-around with the window read as 0: the IAS")
+    -- a go-around's floor (the add-on's Vmc, fltInst02's minimum manoeuvring speed for the flaps) as TO/GA came on:
+    -- the window's 130 under it is 150, and it stays 150 as the flaps come up and that speed with them (it followed
+    -- them every update, up to 199 kt flaps up at 250 t: review 45c's NIT-2); a takeoff's target has no floor
+    s, t = {}, 100
+    near(at(false, 2, 150, 144, 130, nil, 150), 150, 1e-9, "go-around, window 130 under the floor 150: 150")
+    for _ = 1, 30 do at(false, 5, 150, 144, 130, nil, 165) end
+    near(at(false, 5, 150, 144, 130, nil, 165), 150, 1e-9, "go-around: the floor as TO/GA came on, not the flaps' later")
+    near(s.limit, 175, 1e-9, "go-around: at most the floored target + 25")
+    s, t = {}, 100
+    at(true, 0, 100, 159, 159, nil, 164.3)
+    near(at(false, 9, 165, 159, 159, nil, 164.3), 169, 1e-9, "takeoff (V2 159): V2 + 10, no floor")
     -- TO/GA again after more than a second: a go-around after the takeoff
     s, t = {}, 100
     at(true, 3, 130)
@@ -145,6 +156,25 @@ do
     local pitch
     for _ = 1, 100 do pitch = step(env, 0.1) end
     check(pitch > 13.5 and pitch <= 14.3 + 1e-6, "airborne 20 kt fast: up past 12 deg ("..pitch..")")
+end
+
+-- A go-around with the window at 130 under the add-on's Vmc (150) as TO/GA came on, held at 150 kt: the flaps come up
+-- 3 s later and that speed with them (165); the target stays 150 and the pitch with it. Re-read every update the floor
+-- went to 165 and the director pitched down 1.2 deg (review 45c's NIT-2).
+do
+    local env = new_director({simDR_touchGround = 0, simDR_ind_airspeed_kts_pilot = 150, simDR_TAS_mps = 80,
+        simDR_AHARS_pitch_heading_deg_pilot = 8, simDR_pressureAlt1 = 1500, simDR_autopilot_altitude_ft = 3000,
+        simDR_autopilot_hold_altitude_ft = 3000, simDR_vvi_fpm_pilot = 1000, simDR_alpha_deg = 6,
+        B747DR_airspeed_Vmc = 150, B747DR_ap_ias_dial_value = 130, simDR_autopilot_airspeed_is_mach = 0,
+        simDR_autopilot_servos_on = 1})
+    step(env, 0.1)
+    local start, pitch = env.B747_afds_pitch_target_before_blend, nil
+    for i = 1, 100 do
+        if i == 30 then env.B747DR_airspeed_Vmc = 165 end
+        pitch = step(env, 0.1)
+    end
+    check(math.abs(pitch - start) <= 0.5, "go-around, the flaps coming up: the floor as TO/GA came on, 150 held ("
+        ..string.format("%.2f -> %.2f deg", start, pitch)..")")
 end
 
 -- On the takeoff roll with the MCP set inside the capture window above the field (300 ft at a 46 ft field): TO/GA is

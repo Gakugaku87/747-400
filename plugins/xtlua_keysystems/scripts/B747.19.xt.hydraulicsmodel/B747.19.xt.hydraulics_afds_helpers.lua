@@ -514,9 +514,11 @@ afds_controls.TOGA_GO_AROUND_LIMIT_ABOVE_WINDOW_KTS = 25
 
 -- TO/GA's speed (kt) for state (a table the caller keeps; TO/GA again after more than a second without a call), or nil
 -- on the ground (the F/D is parked there). v2_kts: the FMC's V2 (none at 0 or 900+: the window's speed), window_kts:
--- the IAS/MACH window's speed (none below 60 kt: the IAS), time_sec: the simulator's time. A takeoff when TO/GA was on
--- on the ground, a go-around when it came on in the air.
-function afds_controls.toga_target_speed(state, on_ground, pitch_deg, ias_kts, v2_kts, window_kts, time_sec)
+-- the IAS/MACH window's speed (none below 60 kt: the IAS), time_sec: the simulator's time, floor_kts: a go-around's
+-- lowest target, taken as TO/GA comes on (the add-on's Vmc, fltInst02's minimum manoeuvring speed for the flaps: a
+-- window set low; kept as the flaps come up, as the FCOM's target does; review 45c). A takeoff when TO/GA was on on
+-- the ground (no floor: with takeoff flaps that speed is above V2), a go-around when it came on in the air.
+function afds_controls.toga_target_speed(state, on_ground, pitch_deg, ias_kts, v2_kts, window_kts, time_sec, floor_kts)
     ias_kts = tonumber(ias_kts) or 0
     time_sec = tonumber(time_sec) or 0
     local window = tonumber(window_kts)
@@ -539,9 +541,9 @@ function afds_controls.toga_target_speed(state, on_ground, pitch_deg, ias_kts, v
     end
     if state.target == nil then
         if state.v2 == nil then
-            -- a go-around: the window's speed (the IAS when it reads none), up to it + 25 kt
+            -- a go-around: the window's speed (the IAS when it reads none), at least the floor, up to it + 25 kt
             state.go_around = true
-            state.target = window or ias_kts
+            state.target = math.max(window or ias_kts, tonumber(floor_kts) or 0)
             state.limit = state.target + afds_controls.TOGA_GO_AROUND_LIMIT_ABOVE_WINDOW_KTS
         else
             state.target = math.max(state.v2, state.rotation_ias or state.v2) + afds_controls.TOGA_TARGET_ABOVE_V2_KTS
