@@ -162,10 +162,11 @@ for _, fps in ipairs({20, 30, 60}) do
 end
 
 -- A7 [review 48]: an advance's restarts. One runtime through a script of phases {seconds, A/T mode, the reference as a
--- lever ("hold": the levers' position as the phase starts), levers set at the start (only the first phase's stick: the
--- A/T's lever target is the EEC's own), a long frame}; spd_throttle (A/T SPD) stubbed: the levers stay. Returns the
--- lever's travel from the start of phase k after s seconds.
+-- lever ("hold": the levers' position as the phase starts), the levers at the start (the first phase only: the A/T's
+-- lever target is the EEC's own, so a later phase's levers would jump back; review 50), a long frame}; spd_throttle
+-- (A/T SPD) stubbed: the levers stay. Returns the lever's travel from the start of phase k after s seconds.
 local function script_run(phases)
+    for k = 2, #phases do assert(phases[k].levers == nil, "script_run: levers in the first phase only") end
     local runtime = {
         print=function() end, SIM_PERIOD=1 / 30, simDRTime=100,
         B747DR_ap_FMA_active_pitch_mode=4, B747DR_ap_flightPhase=1, B747DR_toderate=0, B747DR_clbderate=0,
@@ -192,10 +193,9 @@ local function script_run(phases)
     runtime.ecc_throttle()
     local starts, history, t = {}, {}, 0
     for k, p in ipairs(phases) do
-        if p.levers then
-            for i = 0, 3 do runtime.B747DR_throttle[i] = p.levers end
-            runtime.simDR_engine_throttle_jet_all = p.levers
-            runtime.spd_target_throttle = p.levers
+        if k == 1 then
+            for i = 0, 3 do runtime.B747DR_throttle[i] = from end
+            runtime.simDR_engine_throttle_jet_all = from
         end
         local ref = pw_command(p.ref == "hold" and runtime.B747DR_throttle[0] or p.ref)
         for i = 0, 3 do runtime.simDR_EPR_target_bug[i] = ref end
@@ -242,7 +242,7 @@ check(at10 ~= nil and at10 >= 0.165 and at10 <= 0.19, string.format("one 0.7 s f
 -- or adding no quiet time: 0.125; review 49)
 travel_of = script_run({
     {seconds=5, at=5, ref=0.66, levers=0.15},
-    {seconds=10, at=2, ref=0.66, levers=0.0},
+    {seconds=10, at=2, ref=0.66},
     {seconds=10, at=5, ref=0.66}})
 local out_of_idle = travel_of(3, 5)
 check(out_of_idle ~= nil and out_of_idle >= 0.060 and out_of_idle <= 0.080, string.format("an advance out of IDLE: "
