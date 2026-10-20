@@ -168,11 +168,18 @@ fms.clbrestalt = "-----"
 state, target = climb(6000, 240)
 equal(state, "clb_spcres/IAS", "SPD TRANS state with a 240 kt climb speed")
 equal(target, 240, "a 240 kt climb speed below SPD TRANS 250/10000: 240 kt, not 250")
+-- the IAS - 15 floor over it at 262 kt: 247 (review 51)
+state, target = climb(6000, 262)
+equal(target, 247, "a 240 kt climb speed below SPD TRANS at 262 kt: IAS - 15, 247 kt")
 -- a selected climb speed below the flaps' manoeuvre speed (130 kt, Vf0 220) gives the manoeuvre speed under SPD TRANS,
--- as a constraint does (review 51): it gave Vmc + 10 (145 kt here; 204 kt at 233 t, 14 kt under Vf0)
+-- as a constraint does (review 51): it gave Vmc + 10 (145 kt here, 185 at 200 kt with the IAS - 15 floor; 204 kt at
+-- 233 t, 14 kt under Vf0)
 fms.clbspd = "130"
 state, target = climb(6000, 200)
 equal(target, 220, "a 130 kt climb speed below SPD TRANS with Vf0 220: 220 kt, not Vmc + 10")
+-- with flaps 5 the flaps 5 manoeuvre speed (Vf5 190), not Vf0 (review 52)
+state, target = climb(6000, 180, 0.25)
+equal(target, 190, "a 130 kt climb speed below SPD TRANS with flaps 5: Vf5 190 kt")
 -- and the same above SPD TRANS: clb_nores floored it only at Vmc + 10, so the target dropped past 10,100 ft (217.7 to
 -- 204.3 kt at 233 t; review 52)
 state, target = climb(12000, 200)
