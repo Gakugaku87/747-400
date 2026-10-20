@@ -173,7 +173,7 @@ state, target = climb(6000, 262)
 equal(target, 247, "a 240 kt climb speed below SPD TRANS at 262 kt: IAS - 15, 247 kt")
 -- a selected climb speed below the flaps' manoeuvre speed (130 kt, Vf0 220) gives the manoeuvre speed under SPD TRANS,
 -- as a constraint does (review 51): it gave Vmc + 10 (145 kt here, 185 at 200 kt with the IAS - 15 floor; 204 kt at
--- 233 t, 14 kt under Vf0)
+-- 233 t, 13.4 kt under Vf0)
 fms.clbspd = "130"
 state, target = climb(6000, 200)
 equal(target, 220, "a 130 kt climb speed below SPD TRANS with Vf0 220: 220 kt, not Vmc + 10")

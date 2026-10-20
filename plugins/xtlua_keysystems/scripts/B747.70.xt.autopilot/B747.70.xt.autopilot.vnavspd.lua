@@ -423,9 +423,9 @@ local function B747_climb_ias_target(spdval)
     local limit=B747_constraint_speed_cap(modFlapSpeed(B747_climb_speed_limit_here()))
     return math.min(math.max(spdval,simDR_ind_airspeed_kts_pilot-15),limit)
 end
--- The ECON (or selected) climb speed, no lower than the flaps' manoeuvre speed, as a constraint (CDU: 130-300 kt): a
--- selected 130 kt left only modFlapSpeed's Vmc + 10 under it, below SPD TRANS (review 51) and above it, where the
--- target then dropped 13 kt past 10,100 ft at 233 t (review 52). nil when unknown.
+-- The ECON (or selected) climb speed, no lower than the flaps' manoeuvre speed, as a constraint: a selected 130 kt
+-- (the CLB page takes 130-300 kt) left only modFlapSpeed's Vmc + 10 under it, below SPD TRANS (review 51) and above
+-- it, where the target then dropped 13.4 kt past 10,100 ft at 233 t (review 52). nil when unknown.
 local function B747_climb_speed_floored(climbSpeed)
     climbSpeed=tonumber(climbSpeed)
     if climbSpeed==nil then return nil end
