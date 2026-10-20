@@ -300,17 +300,19 @@ for _, fps in ipairs({20, 34}) do
         check(1000 - low <= 100, "go-around: at most 100 ft lost"..at..string.format(": %.0f", 1000 - low))
         check(last.alt >= 1050 and last.vs > 500, "go-around: climbing 30 s later"..at
             ..string.format(": %.0f ft, %+.0f fpm", last.alt, last.vs))
-        check(high_ias <= 150 + 30, "go-around: the IAS within 30 kt of the window's 150"..at
+        check(high_ias <= 150 + 25, "go-around: the IAS within 25 kt of the window's 150 (FCOM)"..at
             ..string.format(": %.1f", high_ias))
     end
 end
 
 -- 5. A steep climb-out into an ALT capture and into V/S (review 45's M1): p35-line1's climb-out at 165 t (16-20 deg in
--- VNAV SPD), the MCP at 3,000 ft (window 1,000), or V/S 1,500 fpm selected 10 s in. The speed modes go to 25 deg (P39)
--- but ALT kept its 15 deg limit and V/S its 10 deg, taken in one update, and the V/S law its own steps on: -0.36 to
--- -0.39 g into ALT, -0.57 to -0.59 g into V/S. Now the director comes down to the limit at 0.1 g; what is left is the
--- pitch loop's lag and overshoot after the ramp (the attitude 2 deg behind it, then 2 deg past). With the MCP 1,000 ft
--- above at 6,000 fpm the capture overshoots by 1,100 ft either way: the capture window's 1,000 ft (pre-existing).
+-- VNAV SPD), the MCP at 3,000 ft (window 1,000), or V/S 1,500 fpm selected 20 s in (after the flaps 20 -> 10 at 14 s,
+-- where climb_model switches the polar at once). The speed modes go to 25 deg (P39) but ALT kept its 15 deg limit and
+-- V/S its 10 deg, taken in one update, and the V/S law its own steps on: -0.36 to -0.39 g into ALT, -0.40 to -0.43 g
+-- into V/S, from the mode change on (review 45b). Now the director comes down to the limit at 0.1 g; what is left is
+-- the pitch loop's lag and overshoot after the ramp (the attitude up to 1.8 deg behind it, then about 1 deg past;
+-- -0.18 to -0.20 g into ALT, -0.22 to -0.24 g into V/S). With the MCP 1,000 ft above at 6,000 fpm the capture
+-- overshoots by 1,100-1,260 ft: the capture window's 1,000 ft (pre-existing).
 local function steep(mode_change, fps)
     local t0 = 254.0
     local first
@@ -328,7 +330,7 @@ local function steep(mode_change, fps)
             mm.state.flap = interp(P35, t0 + t, "flap")
             local mode = math.floor(interp(P35, t0 + t, "fma") + 0.5)
             if mm.d.simDR_autopilot_alt_hold_status == 2 then mode = 9 end
-            if mode_change == "vs" and t > 10 then
+            if mode_change == "vs" and t > 20 then
                 mode = 7
                 mm.d.simDR_autopilot_vs_status, mm.d.simDR_autopilot_vs_fpm = 2, 1500
             end
@@ -339,14 +341,20 @@ end
 for _, fps in ipairs({20, 34}) do
     for _, change in ipairs({"alt", "vs"}) do
         local m = steep(change, fps)
-        local lowest_nz, highest_pitch, worst_rate = math.huge, -math.huge, 0
+        -- the attitude before the mode change, nz and the pitch rate from it on
+        local lowest_nz, highest_pitch, worst_rate, changed = math.huge, -math.huge, 0, false
         for _, p in ipairs(m.track) do
-            lowest_nz = math.min(lowest_nz, p.nz)
-            highest_pitch = math.max(highest_pitch, p.theta)
-            worst_rate = math.max(worst_rate, -p.q)
+            changed = changed or p.mode == 9 or p.mode == 7
+            if changed then
+                lowest_nz = math.min(lowest_nz, p.nz)
+                worst_rate = math.max(worst_rate, -p.q)
+            else
+                highest_pitch = math.max(highest_pitch, p.theta)
+            end
         end
         local at = string.format(" (%s, %d fps)", change == "alt" and "ALT capture at 3,000 ft" or "V/S 1,500", fps)
-        local nz_floor = change == "alt" and -0.31 or -0.45
+        local nz_floor = change == "alt" and -0.25 or -0.30
+        check(changed, "steep climb-out: the mode changed"..at)
         check(highest_pitch >= 15.5, "steep climb-out: the attitude above 15.5 deg before"..at
             ..string.format(": %.1f", highest_pitch))
         check(lowest_nz >= nz_floor, "steep climb-out: no snap, nz at least "..nz_floor.." g"..at
