@@ -39,6 +39,12 @@ end
 local FMS = "plugins/xtlua_keysystems/scripts/B747.68.xt.fms/"
 local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/"
 local cases = {
+    -- [P43] the speed-on-pitch law (ap_director_speed_on_pitch) reads the IAS, the TAS, the VSI and the angle of
+    -- attack at its updates only, from the first of a FLCH SPD or VNAV SPD: a 0 IAS would be a jump of the IAS's rate,
+    -- a 0 TAS a level path
+    {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
+        func="ap_pitch_assist", names={"simDR_ind_airspeed_kts_pilot", "simDR_TAS_mps", "simDR_vvi_fpm_pilot",
+            "simDR_alpha_deg"}},
     -- [d] the CRZ ALT entry for the native FMS (B744.fms.step.lua
     -- native_cruise_altitude_entry) is formatted with the native transition
     -- altitude, read only at a CRZ ALT entry or change; a 0 fell back to

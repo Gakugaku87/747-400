@@ -80,10 +80,14 @@ near(spd_pitch, 1.66, 0.01, "VNAV SPD after NONE starts from the attitude")
 local check_raw = env.B747_afds_pitch_target_before_blend
 checks = checks + 1
 assert(check_raw > 1.5, "VNAV SPD after NONE continues from the held pitch, not 0 degrees: "..check_raw)
--- Speed 4.1 kt fast and steady in a climb: one pitch-up step of the climb
--- speed law (g-6), 0.6 deg/s per kt/s of the 0.205 kt/s deceleration wanted
--- (4.1 kt over 20 s), for 0.3 s.
-near(check_raw, 1.66 + 0.6*(4.1/20)*0.3, 1e-6, "VNAV SPD after NONE pitches up from the held pitch")
+-- Speed 4.1 kt fast and steady in a climb: the speed law (P43) holds the
+-- pitch at its first update after another branch, then pitches up from it
+-- for the 0.205 kt/s deceleration wanted (4.1 kt over 20 s).
+near(check_raw, 1.66, 1e-6, "VNAV SPD after NONE holds the held pitch at its first update")
+update(env, 101.0, 4)
+checks = checks + 1
+assert(env.B747_afds_pitch_target_before_blend > check_raw + 0.01,
+    "VNAV SPD after NONE pitches up from the held pitch: "..env.B747_afds_pitch_target_before_blend)
 
 -- The same when VNAV PTH then holds 33,000 ft (ALT branch): above 10,000 ft
 -- the ALT branch changes the pitch by only about 0.0006 degrees per update

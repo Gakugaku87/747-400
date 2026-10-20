@@ -334,46 +334,9 @@ for _, variant in ipairs({
     end
 end
 
--- 6. The pitch step itself (afds_controls.climb_speed_pitch_target).
-local f = controls.climb_speed_pitch_target
-local CLIMB, LEVEL, DESCENT = controls.VERTICAL_DIRECTION_CLIMB, controls.VERTICAL_DIRECTION_LEVEL,
-    controls.VERTICAL_DIRECTION_DESCENT
--- 21 kt slow and not accelerating: 1 kt/s wanted, 0.6 deg/s per kt/s of
--- shortfall, at most 0.5 deg/s, here 0.15 deg in 0.3 s
-near(f(10, 0, 0.3, 161, 182, CLIMB, 0), 9.85, 1e-9, "21 kt slow, steady speed")
--- 3 kt slow and steady: 0.15 kt/s wanted, 0.09 deg/s
-near(f(10, 0, 0.5, 179, 182, CLIMB, 0), 10 - 0.6*0.15*0.5, 1e-9, "3 kt slow, steady speed")
--- accelerating 1.05 kt/s, inside the 1.0..1.1 kt/s band: held
-near(f(10, 0.315, 0.3, 161, 182, CLIMB, 0), 10, 1e-9, "accelerating as wanted")
--- accelerating 1.5 kt/s: up by 0.6 x 0.4 deg/s
-near(f(10, 0.45, 0.3, 161, 182, CLIMB, 0), 10 + 0.6*0.4*0.3, 1e-9, "accelerating faster than wanted")
--- decelerating 2 kt/s: down by at most 0.5 deg/s
-near(f(10, -0.6, 0.3, 161, 182, CLIMB, 0), 10 - 0.5*0.3, 1e-9, "decelerating, limited to 0.5 deg/s")
--- the attitude is still 0.5 deg above the last target: no further step down,
--- 0.5 deg below it: no step up
-near(f(10, 0, 0.3, 161, 182, CLIMB, 0.5), 10, 1e-9, "attitude behind a lower target")
-near(f(10, 0.45, 0.3, 161, 182, CLIMB, -0.5), 10, 1e-9, "attitude behind a higher target")
--- 5 kt fast and steady: -0.25 kt/s wanted, up by 0.6 x 0.25 deg/s
-near(f(10, 0, 0.3, 255, 250, CLIMB, 0), 10 + 0.6*0.25*0.3, 1e-9, "5 kt fast, steady speed")
--- 5 kt fast and slowing 0.3 kt/s, inside -0.35..-0.25: held; slowing 0.6 kt/s: down
-near(f(10, -0.09, 0.3, 255, 250, CLIMB, 0), 10, 1e-9, "5 kt fast, slowing as wanted")
-near(f(10, -0.18, 0.3, 255, 250, CLIMB, 0), 10 - 0.6*0.25*0.3, 1e-9, "5 kt fast, slowing faster than wanted")
--- within 2 kt, not climbing, or no speed: the speed law is unchanged (nil)
-check(f(10, 0, 0.3, 180.5, 182, CLIMB, 0) == nil, "within 2 kt of the target")
-check(f(10, 0, 0.3, 161, 182, LEVEL, 0) == nil, "level (inside the capture window)")
-check(f(10, 0, 0.3, 161, 182, DESCENT, 0) == nil, "descending")
-check(f(10, 0, 0.3, nil, 182, CLIMB, 0) == nil, "no airspeed")
--- no time since the last update: unchanged
-near(f(10, 0, 0, 161, 182, CLIMB, 0), 10, 1e-9, "no elapsed time")
--- the climb floor: 21 kt slow and steady at +2,000 fpm, down at the usual
--- 0.5 deg/s; at +500 fpm at most 0.5 x 0.2 = 0.1 deg/s; at or below
--- +300 fpm, or descending, held; the pitch still goes up when the aircraft
--- accelerates faster than wanted
-near(f(10, 0, 0.3, 161, 182, CLIMB, 0, 2000), 10 - 0.5*0.3, 1e-9, "21 kt slow at +2,000 fpm")
-near(f(10, 0, 0.3, 161, 182, CLIMB, 0, 500), 10 - 0.1*0.3, 1e-9, "21 kt slow at +500 fpm")
-near(f(10, 0, 0.3, 161, 182, CLIMB, 0, 300), 10, 1e-9, "21 kt slow at +300 fpm: held")
-near(f(10, 0, 0.3, 161, 182, CLIMB, 0, -500), 10, 1e-9, "21 kt slow, descending: held")
-near(f(10, 0.45, 0.3, 161, 182, CLIMB, 0, 100), 10 + 0.6*0.4*0.3, 1e-9, "accelerating faster than wanted at +100 fpm")
+-- 6. The pitch law itself: afds_speed_on_pitch_test.lua (P43; the step law of g-6, climb_speed_pitch_target, it
+-- replaced was tested here).
+local CLIMB, DESCENT = controls.VERTICAL_DIRECTION_CLIMB, controls.VERTICAL_DIRECTION_DESCENT
 
 -- 7. A step climb that starts in a turn: the 2026-10-10 final-L1 step 1 (P4
 -- 0dd3b35d), FL310 -> FL330 at 294 t and M .82 (306.7 kt). The step began at a

@@ -578,6 +578,76 @@ local glideSlopePitchBase=0
 local lastGlideSlopeUpdate=-100
 local lastGlideSlopePitch=0
 local lastGlideSlopeElevation=0
+-- [P43] FLCH SPD and VNAV SPD outside the capture window: the flight path law on the acceleration error
+-- (hydraulics_afds_helpers.lua's SPEED_PITCH_* and speed_pitch_*), every 0.1 s; its pitch (the integrator) from the
+-- director's pitch when the law began (again after a second without an update, or when another branch of the director
+-- ran after its last update: the first update holds it), the IAS's rate and the attitude at the last update; then
+-- limit_speed_pitch_target's guards (climbing: no pitch-down while the VSI shows +100 fpm or less, not below the level
+-- attitude; descending, the mirror; the severe underspeed and overspeed exceptions), which move the integrator with
+-- what they take. With the flight director alone (servos off) the integrator stays within 2 deg of the attitude.
+-- lastDirectorUpdate: the time of the director's update before this one.
+local speedPitchBase=0
+local lastSpeedPitchUpdate=-100
+local lastSpeedPitchIAS=0
+local speedPitchAccel=0
+local lastSpeedPitchAttitude=0
+local function ap_director_speed_on_pitch(pitchMode,holdAlt,lastDirectorUpdate)
+    local C=B747_afds_controls
+    directorSampleRate=0.1
+    local ias=simDR_ind_airspeed_kts_pilot
+    local target=simDR_autopilot_airspeed_kts
+    local verticalDirection=C.vertical_direction_for_altitude(simDR_pressureAlt1,holdAlt,B747DR_alt_capture_window)
+    local dt=simDRTime-lastSpeedPitchUpdate
+    local pathError,pitchRate=0,0
+    if dt>1 or dt<=0 or lastSpeedPitchUpdate<lastDirectorUpdate-0.001 then
+        speedPitchBase=last_simDR_AHARS_pitch_heading_deg_pilot
+        speedPitchAccel=0
+        dt=0
+    else
+        speedPitchAccel=C.speed_pitch_accel(speedPitchAccel,ias-lastSpeedPitchIAS,dt)
+        local wanted=C.speed_pitch_wanted_accel(target,ias,verticalDirection==C.VERTICAL_DIRECTION_CLIMB,
+            speedPitchAccel,simDR_vvi_fpm_pilot,simDR_TAS_mps)
+        local errorDeg=C.speed_pitch_path_error_deg(speedPitchAccel,wanted,simDR_TAS_mps,ias)
+        local maxRate=C.speed_pitch_max_rate_deg(simDR_TAS_mps)
+        speedPitchBase=speedPitchBase+math.max(-maxRate,math.min(maxRate,C.SPEED_PITCH_KI*errorDeg))*math.min(dt,0.5)
+        pathError=math.max(-C.SPEED_PITCH_P_LIMIT_DEG,math.min(C.SPEED_PITCH_P_LIMIT_DEG,errorDeg))
+        pitchRate=(simDR_AHARS_pitch_heading_deg_pilot-lastSpeedPitchAttitude)/dt
+    end
+    if simDR_autopilot_servos_on==0 then
+        speedPitchBase=math.max(simDR_AHARS_pitch_heading_deg_pilot-2,
+            math.min(simDR_AHARS_pitch_heading_deg_pilot+2,speedPitchBase))
+    end
+    local requested=speedPitchBase+C.SPEED_PITCH_KP*pathError-C.SPEED_PITCH_RATE_DAMPING*pitchRate
+    --a raised speed target (or, when this mode engages, a target above the speed) is flown by accelerating without
+    --descending until the speed is within 5 kt (update_speed_target_acceleration); lastPitchMode is the pitch mode
+    --of the previous director update
+    local minSafeSpeed=B747DR_airspeed_Vmc+10
+    local maxSafeSpeed=B747DR_airspeed_Vmax
+    local speedReference=last_speedPitchTarget
+    local wasAccelerating=speedPitchAccelerating
+    if pitchMode~=lastPitchMode or speedReference==nil then
+        speedReference=ias
+        wasAccelerating=false
+    end
+    speedPitchAccelerating=C.update_speed_target_acceleration(wasAccelerating,speedReference,target,ias,minSafeSpeed)
+    if not speedPitchAccelerating then
+        speedPitchAcceleratedFrom=nil
+    elseif not wasAccelerating then
+        speedPitchAcceleratedFrom=ias
+    end
+    last_speedPitchTarget=target
+    --in a climb that has stopped climbing, not below the attitude that flies level at this angle of attack
+    local climbPathPitch=C.climb_path_pitch_deg(simDR_alpha_deg,simDR_TAS_mps,simDR_AHARS_roll_heading_deg_pilot)
+    local limited=C.limit_speed_pitch_target(requested,last_simDR_AHARS_pitch_heading_deg_pilot,verticalDirection,
+        simDR_vvi_fpm_pilot,ias,target,minSafeSpeed,maxSafeSpeed,dt,
+        speedPitchAccelerating and (speedPitchAcceleratedFrom or true),climbPathPitch)
+    speedPitchBase=speedPitchBase+(limited-requested)
+    lastSpeedPitchUpdate=simDRTime
+    lastSpeedPitchIAS=ias
+    lastSpeedPitchAttitude=simDR_AHARS_pitch_heading_deg_pilot
+    last_simDR_AHARS_pitch_heading_deg_pilot=limited
+    return ap_director_pitch_retVal(pitchMode,limited)
+end
 function ap_director_pitch(pitchMode)
     time=simDRTime-previous_pitchTime
     previous_pitchTime=simDRTime
@@ -616,102 +686,11 @@ function ap_director_pitch(pitchMode)
     --B747DR_ap_flightPhase == 3 and simDR_autopilot_vs_fpm == -500
     if (pitchMode==4 or pitchMode==8)
     and (simDR_pressureAlt1> holdAlt+B747DR_alt_capture_window or simDR_pressureAlt1< holdAlt-B747DR_alt_capture_window) then
-        --local pitchError=math.abs(simDR_AHARS_pitch_heading_deg_pilot-last_simDR_AHARS_pitch_heading_deg_pilot)
-        local pitchError=simDR_AHARS_pitch_heading_deg_pilot-last_simDR_AHARS_pitch_heading_deg_pilot
-
-        local speed_delta=simDR_ind_airspeed_kts_pilot-last_simDR_ind_airspeed_kts_pilot
-        --FLCH
+        --FLCH SPD, VNAV SPD (P43)
         if debug_flight_directors==1 then
-            print("ap_director_pitch for FLCH "..B747DR_ap_flightPhase)
+            print("ap_director_pitch for speed "..B747DR_ap_flightPhase)
         end
-        last_simDR_ind_airspeed_kts_pilot=simDR_ind_airspeed_kts_pilot
-        if (math.abs(simDR_autopilot_airspeed_kts-simDR_ind_airspeed_kts_pilot)>5) and math.abs(simDR_vvi_fpm_pilot)>100 then
-            directorSampleRate=0.3
-        else
-            directorSampleRate=0.5
-        end
-
-        local rog=0.01+math.abs(0.5*speed_delta)
-        if rog>0.3 then rog=0.3 end
-        if simDR_pressureAlt1>29000 or simDR_ind_airspeed_kts_pilot<simDR_autopilot_airspeed_kts then
-            rog=rog/3
-        end
-        local min_speedDelta=0
-        local max_speedDelta=0
-        local minSafeSpeed = B747DR_airspeed_Vmc + 10
-        local maxSafeSpeed = B747DR_airspeed_Vmax
-        local speedDiff=math.abs(simDR_ind_airspeed_kts_pilot-simDR_autopilot_airspeed_kts)
-        local canPitchDown = true
-        local canPitchUp = true
-        local verticalDirection=B747_afds_controls.vertical_direction_for_altitude(
-            simDR_pressureAlt1,holdAlt,B747DR_alt_capture_window)
-
-        if simDR_vvi_fpm_pilot > 200 and (simDR_ind_airspeed_kts_pilot<simDR_autopilot_airspeed_kts-5) then canPitchUp = false end
-        if simDR_vvi_fpm_pilot < -200 and (simDR_ind_airspeed_kts_pilot>simDR_autopilot_airspeed_kts+5) then canPitchDown = false end
-        if verticalDirection==B747_afds_controls.VERTICAL_DIRECTION_DESCENT and simDR_vvi_fpm_pilot < -500
-            and simDR_autopilot_airspeed_kts<simDR_ind_airspeed_kts_pilot+5 then
-            canPitchDown = false
-        end
-        if  speedDiff > 1 then
-            if (simDR_autopilot_airspeed_kts< simDR_ind_airspeed_kts_pilot-1) then
-                max_speedDelta=0.001+speedDiff/250
-            else
-                max_speedDelta=0.001+speedDiff/25
-            end
-            min_speedDelta=max_speedDelta/3
-        end
-
-        local previousPitchTarget=last_simDR_AHARS_pitch_heading_deg_pilot
-        local requestedPitchTarget=previousPitchTarget
-        --more than 2 kt from the target in a climb the pitch follows the acceleration still missing
-        local climbPitchTarget=B747_afds_controls.climb_speed_pitch_target(previousPitchTarget,speed_delta,time,
-            simDR_ind_airspeed_kts_pilot,simDR_autopilot_airspeed_kts,verticalDirection,pitchError,simDR_vvi_fpm_pilot)
-        if climbPitchTarget~=nil then
-            requestedPitchTarget=climbPitchTarget
-        elseif ((simDR_autopilot_airspeed_kts> simDR_ind_airspeed_kts_pilot+1) and speed_delta<max_speedDelta
-            or (simDR_autopilot_airspeed_kts< simDR_ind_airspeed_kts_pilot-1) and speed_delta<-max_speedDelta) and pitchError<0.5 and canPitchDown
-        then
-            if debug_flight_directors==1 then
-                print("-simDR_AHARS_pitch_heading_deg_pilot "..simDR_AHARS_pitch_heading_deg_pilot.." simDR_autopilot_airspeed_kts "..simDR_autopilot_airspeed_kts.." simDR_ind_airspeed_kts_pilot "..simDR_ind_airspeed_kts_pilot.." speed_delta "..speed_delta.." min_speedDelta "..min_speedDelta.." max_speedDelta "..max_speedDelta.." rog "..rog)
-            end
-            requestedPitchTarget=previousPitchTarget-rog
-        elseif ((simDR_autopilot_airspeed_kts< simDR_ind_airspeed_kts_pilot-1) and speed_delta>-min_speedDelta 
-            or (simDR_autopilot_airspeed_kts> simDR_ind_airspeed_kts_pilot+1) and speed_delta>min_speedDelta ) and pitchError>-0.5 and canPitchUp
-        then
-            if debug_flight_directors==1 then
-                print("+simDR_AHARS_pitch_heading_deg_pilot "..simDR_AHARS_pitch_heading_deg_pilot.." simDR_autopilot_airspeed_kts "..simDR_autopilot_airspeed_kts.." simDR_ind_airspeed_kts_pilot "..simDR_ind_airspeed_kts_pilot.." speed_delta "..speed_delta.." min_speedDelta "..min_speedDelta.." max_speedDelta "..max_speedDelta.." rog "..rog)
-            end
-            requestedPitchTarget=previousPitchTarget+rog
-        end
-
-        last_altitude=simDR_pressureAlt1
-        --a raised speed target (or, when this mode engages, a target above the speed)
-        --is flown by accelerating without descending until the speed is within 5 kt.
-        --lastPitchMode is the pitch mode of the previous director update
-        local speedReference=last_speedPitchTarget
-        local wasAccelerating=speedPitchAccelerating
-        if pitchMode~=lastPitchMode or speedReference==nil then
-            speedReference=simDR_ind_airspeed_kts_pilot
-            wasAccelerating=false
-        end
-        speedPitchAccelerating=B747_afds_controls.update_speed_target_acceleration(wasAccelerating,
-            speedReference,simDR_autopilot_airspeed_kts,simDR_ind_airspeed_kts_pilot,minSafeSpeed)
-        if not speedPitchAccelerating then
-            speedPitchAcceleratedFrom=nil
-        elseif not wasAccelerating then
-            speedPitchAcceleratedFrom=simDR_ind_airspeed_kts_pilot
-        end
-        last_speedPitchTarget=simDR_autopilot_airspeed_kts
-        --in a climb that has stopped climbing, not below the attitude that flies level at this angle of attack
-        local climbPathPitch=B747_afds_controls.climb_path_pitch_deg(simDR_alpha_deg,simDR_TAS_mps,
-            simDR_AHARS_roll_heading_deg_pilot)
-        last_simDR_AHARS_pitch_heading_deg_pilot=B747_afds_controls.limit_speed_pitch_target(
-            requestedPitchTarget,previousPitchTarget,verticalDirection,simDR_vvi_fpm_pilot,
-            simDR_ind_airspeed_kts_pilot,simDR_autopilot_airspeed_kts,minSafeSpeed,maxSafeSpeed,time,
-            speedPitchAccelerating and (speedPitchAcceleratedFrom or true),climbPathPitch)
-        retval=last_simDR_AHARS_pitch_heading_deg_pilot
-
-        return ap_director_pitch_retVal(pitchMode,retval)
+        return ap_director_speed_on_pitch(pitchMode,holdAlt,simDRTime-time)
     elseif pitchMode~=2 and 
     (pitchMode==5 or pitchMode==9 or 
     (simDR_autopilot_alt_hold_status==2) or 
@@ -1100,6 +1079,12 @@ function ap_pitch_assist()
     local refreshElevation=simDR_elevation
     local refreshGroundspeed=simDR_groundspeed
     local refreshGlideslope=simDR_glideslope1
+    -- [P43] read by the speed-on-pitch law at its updates (a 0 IAS would be a jump of the IAS's rate, a 0 TAS a
+    -- level path)
+    local refreshIAS=simDR_ind_airspeed_kts_pilot
+    local refreshTAS=simDR_TAS_mps
+    local refreshVVI=simDR_vvi_fpm_pilot
+    local refreshAlpha=simDR_alpha_deg
 
     B747DR_pidPitchP=B747_rescale(3000,B747DR_pidPitchPL,40000,B747DR_pidPitchPH,B747DR_autopilot_altitude_ft_pfd)
     if B747DR_ap_AFDS_mode_box_status_pilot==1 or B747DR_ap_AFDS_mode_box_status_copilot==1 then

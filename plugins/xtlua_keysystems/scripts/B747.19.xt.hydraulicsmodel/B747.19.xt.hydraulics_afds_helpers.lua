@@ -416,82 +416,79 @@ function afds_controls.inactive_mode_pitch_target(pitch_deg)
     return clamp(pitch_deg, afds_controls.SPEED_PITCH_MIN_TARGET_DEG, afds_controls.SPEED_PITCH_MAX_TARGET_DEG)
 end
 
--- [g-6] Speed-on-pitch climb away from the target speed
+-- [P43] Speed on pitch (FLCH SPD and VNAV SPD outside the capture window): a flight path law on the acceleration
+-- error, every 0.1 s (ap_director_speed_on_pitch). The IAS's rate (speed_pitch_accel) against the acceleration wanted
+-- (speed_pitch_wanted_accel: the speed error over SPEED_PITCH_TIME_CONSTANT_SEC within +-1 kt/s; climbing, at most
+-- SPEED_PITCH_CLIMB_ACCEL_SHARE of the energy rate) is a flight path the aircraft has too much or too little of
+-- (speed_pitch_path_error_deg): the pitch moves SPEED_PITCH_KI of it a second, at most the rate that turns the path
+-- with SPEED_PITCH_MAX_LOAD_FACTOR_G (speed_pitch_max_rate_deg: 0.37 deg/s at 150 m/s TAS), plus SPEED_PITCH_KP of it
+-- within +-SPEED_PITCH_P_LIMIT_DEG, less SPEED_PITCH_RATE_DAMPING s x the attitude's rate; then
+-- limit_speed_pitch_target's guards. The law it replaced moved the pitch by increments
+-- 0.3-0.5 s apart (0.01 + 0.5 x the speed change a step near the target; climb_speed_pitch_target's 0.6 deg/s per kt/s
+-- of the acceleration missing further away), none while the attitude was 0.5 deg behind, averaged over 10 updates:
+-- resuming the climb at 8,950 ft (p35-line1, 2026-10-20) it pitched up at about 0.4 deg/s 4-6 s after the A/T added
+-- climb thrust and the IAS went from 251 to 271 kt; FLCH at idle at FL310 (p34-L1) pitched down at 0.08 deg/s and fell
+-- 26 kt below the Mach's speed; accelerating at 10,000 ft (p34-L1) it kept 22-31 % of the climb, where 744s in ADS-B
+-- keep 40-55 % (median 47 %) at 0.45-0.77 kt/s (research_climb_accel.md: 55-70 % of the energy into the acceleration).
+-- In climb_model (the production director and pitch loop on a point mass fitted to those flights): 271 -> 267 kt,
+-- -25 -> -8 kt, and 46-57 % of the climb at 0.56 kt/s.
+afds_controls.SPEED_PITCH_TIME_CONSTANT_SEC = 20.0
+afds_controls.SPEED_PITCH_MAX_ACCEL_KTS_PER_SEC = 1.0
+afds_controls.SPEED_PITCH_ACCEL_FILTER_SEC = 1.0
+afds_controls.SPEED_PITCH_MAX_IAS_RATE_KTS_PER_SEC = 10.0
+afds_controls.SPEED_PITCH_CLIMB_ACCEL_SHARE = 0.6
+afds_controls.SPEED_PITCH_KI = 0.10
+afds_controls.SPEED_PITCH_MAX_LOAD_FACTOR_G = 0.10
+afds_controls.SPEED_PITCH_KP = 0.3
+afds_controls.SPEED_PITCH_P_LIMIT_DEG = 1.0
+afds_controls.SPEED_PITCH_RATE_DAMPING = 1.0
 
--- More than 2 kt from the target in a FLCH SPD or VNAV SPD climb, the pitch
--- target moves with the acceleration still missing. The wanted acceleration
--- is the speed error over 20 s, at most 1 kt/s either way. Below the target
--- the pitch goes down while the aircraft accelerates less than wanted and up
--- once it accelerates more than 0.1 kt/s beyond it (mirrored above the
--- target), at 0.6 deg/s per kt/s of difference and at most 0.5 deg/s, and
--- not while the attitude is still 0.5 deg or more on the far side of the last
--- target (the same interlock as the speed law). Within 2 kt, level or
--- descending the speed law is unchanged. That law moved the pitch by
--- (0.01 + 0.5 x the speed change)/3 deg an update below the target, about
--- 0.01 deg/s at a steady speed, so a 26 kt rise with takeoff flaps was not
--- flown in 250 s of climb. The climb guard of limit_speed_pitch_target still
--- applies to the result.
-afds_controls.CLIMB_SPEED_PITCH_MARGIN_KTS = 2.0
-afds_controls.CLIMB_SPEED_PITCH_TIME_CONSTANT_SEC = 20.0
-afds_controls.CLIMB_SPEED_PITCH_MAX_ACCEL_KTS_PER_SEC = 1.0
-afds_controls.CLIMB_SPEED_PITCH_ACCEL_BAND_KTS_PER_SEC = 0.1
-afds_controls.CLIMB_SPEED_PITCH_GAIN_DEG_PER_KT = 0.6
-afds_controls.CLIMB_SPEED_PITCH_MAX_RATE_DEG_PER_SEC = 0.5
-afds_controls.CLIMB_SPEED_PITCH_ATTITUDE_LAG_DEG = 0.5
--- Below the target the pitch comes down only while the aircraft climbs at
--- more than +300 fpm, and from there at most 0.5 deg/s per 1,000 fpm above
--- it: at altitude climb thrust leaves little to accelerate with (FL330,
--- 282 t: about +700 fpm at a steady speed), and the wanted acceleration was
--- taken from a descent until the climb guard pulled the nose back up at
--- 1 deg/s (2026-10-10 TST744L step to FL350: -851 fpm, then 0.8 -> 7.4 deg
--- and +3,800 fpm).
-afds_controls.CLIMB_SPEED_PITCH_MIN_CLIMB_FPM = 300.0
-afds_controls.CLIMB_SPEED_PITCH_DOWN_RATE_DEG_PER_SEC_PER_KFPM = 0.5
-
--- Pitch target for a speed-on-pitch climb more than 2 kt from the target, or
--- nil to leave it to the speed law. speed_change_kts is the change since the
--- previous update, elapsed_sec the time since it, pitch_error_deg the
--- attitude minus the previous target, vertical_speed_fpm the vertical speed
--- (nil: no climb floor).
-function afds_controls.climb_speed_pitch_target(previous_target_deg, speed_change_kts, elapsed_sec,
-        actual_speed_kts, target_speed_kts, vertical_direction, pitch_error_deg, vertical_speed_fpm)
-    if vertical_direction ~= afds_controls.VERTICAL_DIRECTION_CLIMB then return nil end
-    if type(previous_target_deg) ~= "number" or type(speed_change_kts) ~= "number"
-        or type(actual_speed_kts) ~= "number" or type(target_speed_kts) ~= "number" then
-        return nil
-    end
-    local speed_error_kts = target_speed_kts - actual_speed_kts
-    if math.abs(speed_error_kts) <= afds_controls.CLIMB_SPEED_PITCH_MARGIN_KTS then return nil end
+-- The IAS's rate (kt/s): the last one moved towards the IAS's change over elapsed_sec by a first order of
+-- SPEED_PITCH_ACCEL_FILTER_SEC. A change faster than SPEED_PITCH_MAX_IAS_RATE_KTS_PER_SEC (a first read of 0, a jump
+-- of the instrument) is left out.
+function afds_controls.speed_pitch_accel(previous_kts_per_sec, ias_change_kts, elapsed_sec)
+    previous_kts_per_sec = tonumber(previous_kts_per_sec) or 0
     elapsed_sec = tonumber(elapsed_sec) or 0
-    if elapsed_sec <= 0 then return previous_target_deg end
-    local acceleration = speed_change_kts / elapsed_sec
-    local limit = afds_controls.CLIMB_SPEED_PITCH_MAX_ACCEL_KTS_PER_SEC
-    local wanted = clamp(speed_error_kts / afds_controls.CLIMB_SPEED_PITCH_TIME_CONSTANT_SEC, -limit, limit)
-    local low, high = wanted, wanted + afds_controls.CLIMB_SPEED_PITCH_ACCEL_BAND_KTS_PER_SEC
-    if speed_error_kts < 0 then
-        low, high = wanted - afds_controls.CLIMB_SPEED_PITCH_ACCEL_BAND_KTS_PER_SEC, wanted
+    if elapsed_sec <= 0 or type(ias_change_kts) ~= "number" or ias_change_kts ~= ias_change_kts then
+        return previous_kts_per_sec
     end
-    pitch_error_deg = tonumber(pitch_error_deg) or 0
-    local lag = afds_controls.CLIMB_SPEED_PITCH_ATTITUDE_LAG_DEG
-    local rate
-    local max_down_rate = afds_controls.CLIMB_SPEED_PITCH_MAX_RATE_DEG_PER_SEC
-    vertical_speed_fpm = tonumber(vertical_speed_fpm)
-    if vertical_speed_fpm then
-        max_down_rate = math.min(max_down_rate, math.max(0,
-            vertical_speed_fpm - afds_controls.CLIMB_SPEED_PITCH_MIN_CLIMB_FPM) / 1000
-            * afds_controls.CLIMB_SPEED_PITCH_DOWN_RATE_DEG_PER_SEC_PER_KFPM)
+    local rate = ias_change_kts / elapsed_sec
+    if math.abs(rate) > afds_controls.SPEED_PITCH_MAX_IAS_RATE_KTS_PER_SEC then return previous_kts_per_sec end
+    return previous_kts_per_sec + (rate - previous_kts_per_sec)
+        * math.min(1, elapsed_sec / afds_controls.SPEED_PITCH_ACCEL_FILTER_SEC)
+end
+
+-- The acceleration (kt/s of IAS) wanted: the speed error over SPEED_PITCH_TIME_CONSTANT_SEC within
+-- +-SPEED_PITCH_MAX_ACCEL_KTS_PER_SEC. Climbing, an acceleration of at most SPEED_PITCH_CLIMB_ACCEL_SHARE of the
+-- energy rate (the IAS's rate and the climb's g sin(path) in kt/s of IAS, from the vertical speed in fpm and the TAS in
+-- m/s), none when that is not positive: the rest of it keeps climbing.
+function afds_controls.speed_pitch_wanted_accel(target_kts, ias_kts, climbing, accel_kts_per_sec, vertical_speed_fpm,
+        tas_mps)
+    if type(target_kts) ~= "number" or type(ias_kts) ~= "number" then return 0 end
+    local limit = afds_controls.SPEED_PITCH_MAX_ACCEL_KTS_PER_SEC
+    local wanted = clamp((target_kts - ias_kts) / afds_controls.SPEED_PITCH_TIME_CONSTANT_SEC, -limit, limit)
+    if climbing and wanted > 0 then
+        local tas = math.max(tonumber(tas_mps) or 0, 30)
+        local climb = (9.80665 / 0.514444) * ((tonumber(vertical_speed_fpm) or 0) * 0.00508 / tas)
+            * (ias_kts * 0.514444 / tas)
+        local energy = (tonumber(accel_kts_per_sec) or 0) + climb
+        wanted = math.min(wanted, math.max(0, afds_controls.SPEED_PITCH_CLIMB_ACCEL_SHARE * energy))
     end
-    if acceleration < low then
-        if pitch_error_deg >= lag or max_down_rate <= 0 then return previous_target_deg end
-        rate = -math.min(afds_controls.CLIMB_SPEED_PITCH_GAIN_DEG_PER_KT * (low - acceleration), max_down_rate)
-    elseif acceleration > high then
-        if pitch_error_deg <= -lag then return previous_target_deg end
-        rate = afds_controls.CLIMB_SPEED_PITCH_GAIN_DEG_PER_KT * (acceleration - high)
-    else
-        return previous_target_deg
-    end
-    local max_rate = afds_controls.CLIMB_SPEED_PITCH_MAX_RATE_DEG_PER_SEC
-    return previous_target_deg + clamp(rate, -max_rate, max_rate) * elapsed_sec
+    return wanted
+end
+
+-- The pitch rate (deg/s) that turns the flight path with SPEED_PITCH_MAX_LOAD_FACTOR_G at a TAS (m/s, at least 60).
+function afds_controls.speed_pitch_max_rate_deg(tas_mps)
+    return math.deg(afds_controls.SPEED_PITCH_MAX_LOAD_FACTOR_G * 9.80665 / math.max(tonumber(tas_mps) or 0, 60))
+end
+
+-- The flight path (deg) the aircraft has too much of (+: it accelerates more than wanted) or too little (-): 1 deg of
+-- path is g/57.3 m/s^2 of TAS a second, IAS/TAS of that in IAS.
+function afds_controls.speed_pitch_path_error_deg(accel_kts_per_sec, wanted_kts_per_sec, tas_mps, ias_kts)
+    local tas = math.max(tonumber(tas_mps) or 0, 30)
+    local ias = math.max((tonumber(ias_kts) or 0) * 0.514444, 30)
+    return math.deg(0.514444 / 9.80665) * tas / ias
+        * ((tonumber(accel_kts_per_sec) or 0) - (tonumber(wanted_kts_per_sec) or 0))
 end
 
 -- [B-10] The yaw dampers' law, both channels alike: the 747-400's Dutch roll damping and turn coordination. The rudder
