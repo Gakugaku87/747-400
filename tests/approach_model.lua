@@ -28,7 +28,19 @@
 -- wind's component along them (o.wind by altitude: TST744L's westerly for EINN, EHAM's flights were calm).
 -- The ILS G/S of gs_deg from 300 m past the threshold with its false lobes: the needle 0.30 deg per dot,
 -- + above, reversing through 2 x and 3 x gs_deg as X-Plane 12 drew EHAM 18R's, at most 2.5 dots.
+-- With o.pitch_loop the attitude is flown instead by the hydraulics' pitch loop (ap_pitch_assist: pid.lua's PID on
+-- the 10-sample FD with hydraulicsmodel.lua's gains, the ratio moved by B747_interpolate_value, doTrim), the
+-- elevator surface moved towards the ratio's deflection (-22 deg up / +17 deg down, as the control overrides map
+-- it) by pressure_output's B747_interpolate_value a frame later, against X-Plane's pitch dynamics, M.PITCH_DYNAMICS:
+--   dq/dt = s^2 (a0 + alpha x alpha + elevator x elevator + trim x trim) + q x s q,  s = IAS / 150 kt  (deg, deg/s)
+-- fitted to p32-line1's G/S (2026-10-20, flaps 30, 169 to 133 kt; approach_model_pitch_test): the recorded FD
+-- replayed through the loop at 34 fps (the surface 0.28 s behind the ratio there, B747_interpolate_value's tenth of
+-- the way a frame) gives the recorded attitude within 0.04 deg rms. The trim at the start is for no elevator. Both
+-- B747_interpolate_value's lags are 10 frames: the loop is slower at a lower frame rate (o.dt). The 1.5 s law hid
+-- the loop's hunt around the FD (review 41).
 local M = {}
+
+M.PITCH_DYNAMICS = {a0 = 17.8433, alpha = -1.2398, elevator = -0.6659, trim = 29.0945, q = -1.0802}
 
 local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/"
 local HYD = "plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/"
@@ -131,6 +143,17 @@ function M.gs_dots(elevation_deg, angle_deg)
     return math.max(-2.5, math.min(2.5, dots))
 end
 
+-- The elevator (deg, + trailing edge down) for the AP's pitch ratio, as the control overrides map it.
+function M.elevator_deg(ratio)
+    return ratio > 0 and -22 * ratio or -17 * ratio
+end
+
+-- The pitch acceleration (deg/s^2) of M.PITCH_DYNAMICS at an IAS, alpha (deg), elevator (deg), trim and pitch rate.
+function M.pitch_acceleration(ias_kt, alpha, elevator, trim, q)
+    local p, s = M.PITCH_DYNAMICS, ias_kt / 150
+    return s * s * (p.a0 + p.alpha * alpha + p.elevator * elevator + p.trim * trim) + p.q * s * q
+end
+
 -- X-Plane's datarefs (and commands) are shared by the scripts; every other global is the script's own.
 local function is_dataref(key)
     return type(key) == "string" and (key:find("^simDR") ~= nil or key:find("^simCMD") ~= nil
@@ -191,13 +214,16 @@ local function load_production(datarefs, stubs)
         run_in(ap, slice(part[1], part[2], part[3]))
     end
 
-    -- the hydraulics' flight director (B747_afds_controls is a local of the file); MODEL_init_director sets the
-    -- director's locals to an attitude, as if it had been flying it
-    local hyd = namespace(datarefs, {print = noop, B747_afds_controls = controls, debug_flight_directors = 0})
+    -- the hydraulics' flight director and pitch loop (B747_afds_controls is a local of the file; lastTrimmed is one
+    -- before the part loaded; flight_controls_override sets doCompute each frame, 1 at the model's 20 fps);
+    -- MODEL_init_director sets the director's locals to an attitude, as if it had been flying it
+    local hyd = namespace(datarefs, {print = noop, B747_afds_controls = controls, debug_flight_directors = 0,
+        lastTrimmed = 0, doCompute = 1})
     run_in(hyd, slice(HYD.."B747.19.xt.hydraulicsmodel.lua", "function B747_animate_value(", "function B747_rescale("))
     run_in(hyd, slice(HYD.."B747.19.xt.hydraulicsmodel.lua", "function B747_rescale(", "B747DR_switching_servos_on"))
+    run_in(hyd, read_source(HYD.."pid.lua"), "@"..HYD.."pid.lua")
     local director, name = slice(HYD.."B747.19.xt.hydraulics_override.lua", "local director_pitchRecord={}",
-        "local trimrate=25")
+        "local previous_simDR_AHARS_roll_heading_deg_pilot=0")
     run_in(hyd, director..[[
 
 function MODEL_init_director(pitch)
@@ -314,7 +340,8 @@ end
 --   app_nm (APP pressed at this direct distance to the threshold), loc_delay_s (the LOC captured this long after),
 --   vref_kt (VREF30), min_speeds = {{nm before the threshold, kt}} (at or above speeds), flap_schedule =
 --   {{detent, nm}}, flap_slow_lead_nm, gear_down_nm,
---   seconds (600), stop_agl_ft (200), dt (0.05), setup = function(m) called before the first frame}.
+--   seconds (600), stop_agl_ft (200), dt (0.05), setup = function(m) called before the first frame,
+--   pitch_loop (the attitude by the hydraulics' pitch loop and M.PITCH_DYNAMICS, not the 1.5 s law)}.
 -- Returns m = {track = samples every 0.5 s, events = {list and first of each kind}, d = datarefs, ap, hyd, eec}.
 function M.fly(o)
     local dt = o.dt or 0.05
@@ -406,6 +433,18 @@ function M.fly(o)
     ap.B747_reset_vnav_energy()
     hyd.MODEL_init_director(state.theta)
     eec.MODEL_init_eec(state.throttle, o.ias_kt, d.B747DR_ref_thr_limit_mode)
+    -- the pitch loop: hydraulicsmodel.lua's gains, the elevator at 0 with the trim for it
+    local pitch = o.pitch_loop and M.PITCH_DYNAMICS
+    if pitch then
+        local source = read_source(HYD.."B747.19.xt.hydraulicsmodel.lua")
+        for _, key in ipairs({"PL", "PH", "D"}) do
+            d["B747DR_pidPitch"..key] = assert(tonumber(source:match("\n%s*B747DR_pidPitch"..key.."%s*=%s*([%d%.]+)")))
+        end
+        d.B747DR_ap_AFDS_mode_box_status_pilot, d.B747DR_ap_AFDS_mode_box_status_copilot = 0, 0
+        d.B747DR_sim_pitch_ratio, d.B747DR_custom_pitch_ratio, d.simDR_electric_trim = 0, 0, 0
+        d.simDR_elevator_trim = -(pitch.a0 + pitch.alpha * (state.theta - math.deg(state.gamma))) / pitch.trim
+        state.q, state.elevator, state.last_ratio = 0, 0, 0
+    end
 
     -- LNAV sequences a fix this far before it (the P5 turn anticipation at the start's speed)
     local lead = {}
@@ -511,8 +550,17 @@ function M.fly(o)
         -- B747_ap_altitude
         d.B747DR_alt_capture_window = rescale(0, 200, 3000, 1000, math.abs(d.simDR_vvi_fpm_pilot))
 
-        -- the hydraulics' frame (ap_pitch_assist) and the EEC's (throttle_management)
-        local fd = hyd.ap_director_pitch_integral()
+        -- the hydraulics' frame (ap_pitch_assist; its director alone for the 1.5 s law) and the EEC's
+        -- (throttle_management)
+        local fd
+        if pitch then
+            d.B747DR_autopilot_altitude_ft_pfd = d.B747DR_autopilot_altitude_ft
+            local ratio = hyd.ap_pitch_assist()
+            d.B747DR_sim_pitch_ratio, d.B747DR_custom_pitch_ratio = ratio, ratio
+            fd = d.B747DR_flight_director_pitch
+        else
+            fd = hyd.ap_director_pitch_integral()
+        end
         if d.B747DR_ap_autothrottle_armed == 1 and d.B747DR_ap_FMA_autothrottle_mode > 1 then
             eec.ecc_throttle()
         end
@@ -612,7 +660,15 @@ function M.fly(o)
         if kit.gear then state.gear = math.min(1, state.gear + dt / 10) end
         state.throttle = throttle
         state.thrust = state.thrust + (7908 + 154802 * throttle - state.thrust) * math.min(1, dt / 2.5)
-        state.theta = state.theta + math.max(-3 * dt, math.min(3 * dt, (fd - state.theta) * dt / 1.5))
+        if pitch then
+            -- pressure_output: the surface towards the last frame's ratio
+            state.elevator = hyd.B747_interpolate_value(state.elevator, M.elevator_deg(state.last_ratio), -22, 17, 0.75)
+            state.last_ratio = d.B747DR_sim_pitch_ratio
+            state.q = state.q + M.pitch_acceleration(ias, alpha, state.elevator, d.simDR_elevator_trim, state.q) * dt
+            state.theta = state.theta + state.q * dt
+        else
+            state.theta = state.theta + math.max(-3 * dt, math.min(3 * dt, (fd - state.theta) * dt / 1.5))
+        end
         alpha = state.theta - math.deg(state.gamma)
         local p = polar(state.flap)
         local q = 0.5 * rho * state.V ^ 2
@@ -639,7 +695,8 @@ function M.fly(o)
                 gs = d.simDR_autopilot_gs_status, dots = d.simDR_hsi_vdef_dots_pilot, elevation = elevation,
                 spd = d.simDR_autopilot_airspeed_kts, window = d.B747DR_ap_ias_mach_window_open,
                 vs_status = d.simDR_autopilot_vs_status, alt_hold = d.simDR_autopilot_alt_hold_status,
-                flch = d.simDR_autopilot_flch_status, vmc = d.B747DR_airspeed_Vmc, handle = state.flap_handle}
+                flch = d.simDR_autopilot_flch_status, vmc = d.B747DR_airspeed_Vmc, handle = state.flap_handle,
+                elevator = state.elevator, trim = pitch and d.simDR_elevator_trim or nil}
         end
         if d.B747DR_ap_FMA_autothrottle_mode == 0 and not m.at_off_logged then
             m.at_off_logged = true

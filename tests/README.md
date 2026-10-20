@@ -891,7 +891,17 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   sequencing, the IAS window, the APP arming and G/S capture, the kit's
   approach procedure, and a point-mass 747 (lift, drag and thrust fitted to
   the kit's recordings), with EHAM ILS 18R and EINN ILS 06 as flown; its
-  loader runs the production code for the suites' own scenarios.
+  loader runs the production code for the suites' own scenarios. The
+  attitude follows the FD's pitch by a 1.5 s lag, or with `pitch_loop` by
+  the production pitch loop (ap_pitch_assist's PID, its output's and
+  pressure_output's B747_interpolate_value, doTrim) against X-Plane's pitch
+  dynamics fitted to p32-line1's G/S (`PITCH_DYNAMICS`).
+- `approach_model_pitch_test.lua`: the approach model's pitch loop - p32-line1's
+  G/S (`data/p32-line1_gs_pitch.csv`, from the kit's session.csv) replayed:
+  the recorded FD through the pitch loop as flown (kp = ki = kd = 0.07) at
+  34 fps against `PITCH_DYNAMICS` gives the recorded attitude within 0.08 deg
+  rms and 0.3 deg, the elevator's ratio within 0.07 rms; EHAM flown to 200 ft
+  with the loop at 20 and 34 fps, the attitude within 1 deg of the FD.
 - `vnav_speed_constraints_test.lua`: VNAV's speed with the route's speed
   constraints - in the climb (EIDW 28R ENDE3J) the speed allowed now
   (laminar/B747/autopilot/vnav/constraint_speed: 210 kt from the runway to
