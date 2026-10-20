@@ -86,8 +86,13 @@ else
     -- the engines' shared thrust: one engine's loss (a failure, one lever) is not the A/T's (review 46's MAJOR-1)
     near(tw_of({[0] = 100000, 100000, 100000, 0}, 200000), 400000 / (200000 * 9.80665), 1e-12,
         "T/W: one engine failed, the shared thrust of the other three")
-    near(tw_of({[0] = 90000, 100000, 110000, 100000}, 200000), 400000 / (200000 * 9.80665), 1e-12,
-        "T/W: 4 x the mean of the two middle engines")
+    -- 4 x the second-highest engine's: uneven engines read at their common thrust (the sum would be 420 kN), and a
+    -- second engine's failure is left to the integrator too (review 46b's MINOR-1: the two middle engines' mean read
+    -- it at twice its size)
+    near(tw_of({[0] = 80000, 100000, 100000, 140000}, 200000), 400000 / (200000 * 9.80665), 1e-12,
+        "T/W: 4 x the second-highest engine")
+    near(tw_of({[0] = 0, 100000, 0, 100000}, 200000), 400000 / (200000 * 9.80665), 1e-12,
+        "T/W: two engines failed, the shared thrust of the other two")
     local f, r = lead(nil, nil, 0.2, 0.1)
     check(f == 0.2 and r == 0, "lead: the filter starts from T/W, no rate")
     f, r = lead(0.2, 0.2, 0.21, 0.1)
@@ -435,6 +440,22 @@ for _, fps in ipairs({20, 34}) do
         for _, p in ipairs(m.track) do if p.t >= 20 then vs_min = math.min(vs_min, p.vs) end end
         check(vs_min >= 100, string.format("engine failure at 397 t (400 fpm on three, %s, %d fps): still climbing, V/S "
             .."at least %+.0f fpm", mode == 1 and "TO/GA" or "VNAV SPD", fps, vs_min))
+    end
+    -- a2. Two engines failing on one side, at 20 s and 30 s (each down with a 1.5 s first order), from full takeoff
+    -- thrust (230 kN an engine) at 300 t, V2 160, 1,200 ft: the second failure was read at twice its size (the two
+    -- middle engines' mean) on top of the integrator's recovery from the first, and the climb went to -1 / -33 fpm
+    -- (P43 alone: +271 / +297; review 46b's MINOR-1)
+    for _, mode in ipairs({1, 4}) do
+        local T2 = 230000
+        local m = climb_on(mode, 1200, 300000, 160, T2, function(t)
+            local first = t < 20 and T2 or T2 * math.exp(-(t - 20) / 1.5)
+            local second = t < 30 and T2 or T2 * math.exp(-(t - 30) / 1.5)
+            return {[0] = first, second, T2, T2}
+        end, fps, mode == 1 and 1 or 5)
+        local vs_min = math.huge
+        for _, p in ipairs(m.track) do if p.t >= 30 then vs_min = math.min(vs_min, p.vs) end end
+        check(vs_min >= 100, string.format("two engines failing at 300 t (%s, %d fps): still climbing after the second, "
+            .."V/S at least %+.0f fpm", mode == 1 and "TO/GA" or "VNAV SPD", fps, vs_min))
     end
     -- b. The takeoff's thrust reduction at 10 s (190 kN an engine -> 82 % over a 1.5 s first order) at 233 t, V2 144,
     -- 1,200 ft, the four engines alike: the lead took the director down at 0.7-1.0 deg/s and the attitude went 1.9 deg
