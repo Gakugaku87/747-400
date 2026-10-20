@@ -903,14 +903,15 @@ function ap_director_pitch(pitchMode)
             print("ap_director_pitch for TOGA")
         end
         -- [P39] in the air speed on pitch to TO/GA's speed; on the ground parked at fltInst's TO/GA pitch (8 deg)
-        -- the window's speed only in knots (in Mach it shows the hundredths: 84 for M .84, review 45); the target at
-        -- least Vmc + 10
+        -- the window's speed only in knots (in Mach it shows the hundredths: 84 for M .84, review 45); a go-around's
+        -- target at least B747DR_airspeed_Vmc, fltInst02's minimum manoeuvring speed for the flaps (the takeoff's stays
+        -- V2 + 10: with takeoff flaps that speed is above V2, and Vmc + 10 flew 310 t at V2 + 14, review 45b)
         local window=B747DR_ap_ias_dial_value
         if simDR_autopilot_airspeed_is_mach==1 then window=nil end
         local togaSpeed=B747_afds_controls.toga_target_speed(togaSpeedState,simDR_touchGround==1,
             simDR_AHARS_pitch_heading_deg_pilot,simDR_ind_airspeed_kts_pilot,B747DR_airspeed_V2,window,simDRTime)
         if togaSpeed~=nil then
-            togaSpeed=math.max(togaSpeed,B747DR_airspeed_Vmc+10)
+            if togaSpeedState.go_around then togaSpeed=math.max(togaSpeed,B747DR_airspeed_Vmc) end
             return ap_director_speed_on_pitch(pitchMode,holdAlt,simDRTime-time,togaSpeed)
         end
         directorSampleRate=0.1

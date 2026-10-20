@@ -148,7 +148,8 @@ do
 end
 
 -- TO/GA pushed in a climb at M .84 (the window shows 84, the Mach's hundredths): the window is no speed then, TO/GA
--- flies the IAS (it took 84 kt and pitched up toward 25 deg, review 45's m1); a window under Vmc + 10 is Vmc + 10
+-- flies the IAS (it took 84 kt and pitched up toward 25 deg, review 45's m1); a go-around's window under the add-on's
+-- Vmc (fltInst02's minimum manoeuvring speed for the flaps) is that Vmc
 do
     local env = new_director({simDR_touchGround = 0, simDR_ind_airspeed_kts_pilot = 290, simDR_TAS_mps = 250,
         simDR_AHARS_pitch_heading_deg_pilot = 4, simDR_pressureAlt1 = 30000, simDR_autopilot_altitude_ft = 37000,
@@ -161,7 +162,7 @@ do
     for _ = 1, 60 do pitch = step(env, 0.1) end
     check(pitch - start <= 0.5, "TO/GA in a Mach climb: the window's 84 is no speed, the IAS held ("
         ..string.format("%.2f -> %.2f deg", start, pitch)..")")
-    env = new_director({simDR_touchGround = 0, simDR_ind_airspeed_kts_pilot = 160, simDR_TAS_mps = 85,
+    env = new_director({simDR_touchGround = 0, simDR_ind_airspeed_kts_pilot = 150, simDR_TAS_mps = 80,
         simDR_AHARS_pitch_heading_deg_pilot = 8, simDR_pressureAlt1 = 1500, simDR_autopilot_altitude_ft = 3000,
         simDR_autopilot_hold_altitude_ft = 3000, simDR_vvi_fpm_pilot = 1000, simDR_alpha_deg = 6,
         B747DR_airspeed_Vmc = 150, B747DR_ap_ias_dial_value = 130, simDR_autopilot_airspeed_is_mach = 0,
@@ -169,7 +170,27 @@ do
     step(env, 0.1)
     start = env.B747_afds_pitch_target_before_blend
     for _ = 1, 60 do pitch = step(env, 0.1) end
-    check(pitch - start <= 0.5, "go-around with the window at 130 below Vmc + 10 (160): 160 held ("
+    check(math.abs(pitch - start) <= 0.5, "go-around with the window at 130 below the add-on's Vmc (150): 150 held ("
+        ..string.format("%.2f -> %.2f deg", start, pitch)..")")
+end
+
+-- A heavy takeoff (EINN, 310 t, flaps 20: V2 159; B747DR_airspeed_Vmc, fltInst02's minimum manoeuvring speed for the
+-- flaps, 164.3, above V2 with takeoff flaps): TO/GA flies V2 + 10 = 169 kt. A floor at Vmc + 10 made it 174.3 (review
+-- 45b): at 169 kt and steady the director pitched down to gain 5 kt.
+do
+    local env = new_director({B747DR_airspeed_Vmc = 164.3, B747DR_airspeed_V2 = 159, B747DR_ap_ias_dial_value = 159,
+        simDR_autopilot_airspeed_kts = 159, B747DR_airspeed_Vmax = 245})
+    step(env, 0.1)
+    for _ = 1, 20 do step(env, 0.1) end
+    -- the roll, no rotation recorded (the pitch stays below 2 deg): the target V2 + 10
+    env.simDR_ind_airspeed_kts_pilot = 150
+    step(env, 0.1)
+    env.simDR_touchGround, env.simDR_ind_airspeed_kts_pilot, env.simDR_AHARS_pitch_heading_deg_pilot = 0, 169, 14
+    env.simDR_TAS_mps, env.simDR_vvi_fpm_pilot, env.simDR_alpha_deg, env.simDR_pressureAlt1 = 89, 2000, 9, 300
+    step(env, 0.1)
+    local start, pitch = env.B747_afds_pitch_target_before_blend, nil
+    for _ = 1, 100 do pitch = step(env, 0.1) end
+    check(math.abs(pitch - start) <= 0.4, "heavy takeoff (V2 159, the add-on's Vmc 164.3): V2 + 10 = 169 held at 169 kt ("
         ..string.format("%.2f -> %.2f deg", start, pitch)..")")
 end
 
