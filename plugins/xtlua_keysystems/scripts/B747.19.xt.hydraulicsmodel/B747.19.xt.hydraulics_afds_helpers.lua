@@ -93,6 +93,29 @@ function afds_controls.climb_path_pitch_deg(alpha_deg, true_airspeed_mps, bank_d
     return path_deg + alpha_deg * math.cos(math.rad(tonumber(bank_deg) or 0))
 end
 
+-- [P37] G/S flies the beam's V/S (getGlideSlopeFPM) as a flight path angle by a PI law (ap_director_pitch): every
+-- 0.1 s the path angle the 747 is short of, at most GS_MAX_PATH_ERROR_DEG, moves an integrator by GS_PATH_KI of it
+-- a second, from the director's pitch when G/S began, and the director's pitch is the integrator plus GS_PATH_KP of
+-- it, less GS_PITCH_RATE_DAMPING (s) x the attitude's rate (deg/s). With the pitch loop as X-Plane flies it
+-- (approach_model's pitch_loop: the PID's integral and the two tenth-of-the-way filters) the law that stepped the
+-- pitch for the VSI's error hunted around the beam (p32-line1: +-0.6 deg at 13-16 s) and fell behind slowing down
+-- on it; the attitude plus the error (review 41) hunted by 5-6 deg. The damping keeps the PI law from hunting at a
+-- low frame rate (20 fps: 6-10 pitch reversals from 1,500 to 200 ft without it, 0-2 with it) and with 1.0 rather
+-- than 0.6 it holds 1.5 x the gains at 20 fps (review 43); the limit keeps a capture from level flight above the
+-- beam (EINN) to about 0.1 g (0.16 g without).
+afds_controls.GS_PATH_KP = 0.3
+afds_controls.GS_PATH_KI = 0.3
+afds_controls.GS_PITCH_RATE_DAMPING = 1.0
+afds_controls.GS_MAX_PATH_ERROR_DEG = 1.5
+-- The path angle (deg) the 747 is short of: the target V/S (fpm) at the ground speed (m/s, at least 30) against
+-- the vertical speed (m/s; the director's from the elevation's rate).
+function afds_controls.glide_slope_path_error_deg(target_fpm, vertical_speed_mps, ground_speed_mps)
+    local ground_speed = math.max(tonumber(ground_speed_mps) or 0, 30)
+    local target = math.atan2((tonumber(target_fpm) or 0) * 0.3048 / 60, ground_speed)
+    local actual = math.atan2(tonumber(vertical_speed_mps) or 0, ground_speed)
+    return math.deg(target - actual)
+end
+
 function afds_controls.limit_speed_pitch_target(requested_target_deg, previous_target_deg, vertical_direction,
         vertical_speed_fpm, actual_speed_kts, target_speed_kts, min_safe_speed_kts, max_safe_speed_kts,
         elapsed_sec, accelerating_to_target, climb_path_pitch_deg)

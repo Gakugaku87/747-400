@@ -143,8 +143,19 @@ The audit regressions load production Lua code with mocked simulator interfaces:
 - `afds_glideslope_test.lua`: the flight director's G/S law - the glide
   slope's V/S at the ground speed, corrected by 0.25 x the radio altitude fpm
   a dot (the deviation in feet), at least 75 near the ground, at most
-  1,000 fpm - and the director every 0.2 s in G/S (VNAV PTH as before, also
-  right after G/S).
+  1,000 fpm, not tripled beyond 2 dots - flown as a path angle by a PI law
+  (the path angle short of against the V/S from the elevation's rate, at most
+  GS_MAX_PATH_ERROR_DEG, GS_PATH_KP x it above an integrator moving
+  GS_PATH_KI x it a second from the director's pitch when G/S began, the
+  first update holding that pitch, again after a second without G/S, less
+  GS_PITCH_RATE_DAMPING x the attitude's rate, held within -10..+10 deg and,
+  with the servos off, within 2 deg of the attitude); VNAV PTH as before,
+  also right after G/S.
+- `approach_gs_pitch_loop_test.lua`: the G/S in the approach model with the
+  pitch loop at 20 and 34 fps - EHAM as flown, from 175 kt at AM622 (also with
+  local_vy tilted by 150 fpm), in a 15 kt tailwind, EINN 1,500 ft high: within
+  0.75 dot from 1,500 to 200 ft, no climb, the pitch reversing at most 3
+  times.
 - `afds_alt_capture_test.lua`: ALT capture and ALT hold in the production
   flight-director pitch code - a FLCH or V/S push outside the capture window
   surviving the update that still shows the old ALT FMA, an ALT HOLD push

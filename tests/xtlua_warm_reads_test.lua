@@ -78,6 +78,11 @@ local cases = {
     -- first sample in the 10-sample flight-director average was 0 deg.
     {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
         func="ap_pitch_assist", names={"B744DR_autolandPitch"}},
+    -- [P37] the hydraulics flight director reads the elevation, the ground speed and the G/S angle only in G/S
+    -- (getGlideSlopeFPM, glide_slope_path_error_deg): a 0 elevation would be a dive of the whole altitude, 0s for
+    -- the others a level path and a pitch down.
+    {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
+        func="ap_pitch_assist", names={"simDR_elevation", "simDR_groundspeed", "simDR_glideslope1"}},
     -- LNAV's fly-by turn anticipation (B747_getCurrentWayPoint_function)
     -- takes the wind from the ground track, the true heading, the TAS and the
     -- ground speed, and the bank from the bank limits: a 0 track on a first

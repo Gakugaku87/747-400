@@ -508,14 +508,13 @@ function getGlideSlopeFPM()
     end]]
     local speed_fpm=simDR_groundspeed*196.85
     thisTargetGlideslipeFPM=-math.tan(math.rad(simDR_glideslope1))*speed_fpm
-    local nextVdef=simDR_hsi_vdef_dots_pilot 
+    local nextVdef=simDR_hsi_vdef_dots_pilot
    -- local correction=(8*nextVdef*nextVdef*nextVdef)
-    if math.abs(nextVdef)>2.0 then
-        nextVdef=nextVdef*3
-    end
     -- the deviation in feet is about dots x 0.1 x the height (0.3 deg a dot on a 3 deg slope): 0.25 x the
     -- radio altitude fpm a dot takes it out in about 24 s at any height, 75 fpm a dot near the ground as
-    -- before, at most 1,000 fpm; 75 everywhere left a capture 0.75 dot above (190 ft at 8 nm) there to 500 ft
+    -- before, at most 1,000 fpm; 75 everywhere left a capture 0.75 dot above (190 ft at 8 nm) there to 500 ft.
+    -- [P37] Not tripled beyond 2 dots: 2.3 dots below at 447 ft on EHAM's ILS 18R (p32-line1, 2026-10-20) that
+    -- asked for +76 fpm, the 747 climbed at 430 ft to 2.5 dots above and went through 200 ft at -1,250 fpm
     local correction=nextVdef*math.max(75,0.25*simDR_radarAlt1)
     correction=math.max(-1000,math.min(1000,correction))
     local resultTargetGlideslipeFPM=thisTargetGlideslipeFPM-correction --was 75 last testing
@@ -534,10 +533,10 @@ local last_vvi_update=0
 local prev_vvi_update=0.5
 local fpmBias=0
 local lastFlapsFPM=0
-local fpmBiasRunStart=nil   -- first call of the current run of calls (the ALT, V/S, VNAV PTH or G/S branch)
+local fpmBiasRunStart=nil   -- first call of the current run of calls (the ALT, V/S or VNAV PTH branch)
 local lastFPMBiasTime=nil
 -- a longer gap between calls ends a run: the ALT branch calls every 0.1 s, the
--- V/S and VNAV PTH branch every 1.0 s (plus a frame) when on target, G/S every 0.2 s
+-- V/S and VNAV PTH branch every 1.0 s (plus a frame) when on target (G/S no longer calls it, P37)
 local FPM_BIAS_RUN_GAP_SEC=2.5
 -- The bias answers a flap handle move seen while this director runs above
 -- 3,000 ft RA. The reference follows the handle whenever a move cannot be
@@ -572,6 +571,13 @@ end
 -- lowest pitch target of V/S, VNAV PTH, G/S and ALT: the 747 flies level at about -2 deg with flaps 20
 -- at 210 kt, and the -3.5 deg it was left VNAV PTH at -300 to -850 fpm on EHAM's approach (2026-10-16)
 local AFDS_MIN_PITCH_DEG=-10
+-- [P37] G/S's PI law (B747_afds_controls.GS_PATH_KP, GS_PATH_KI, GS_PITCH_RATE_DAMPING): its integrator, from the
+-- director's pitch when G/S began (again after a second without a G/S update), and the attitude and the elevation
+-- at the last update
+local glideSlopePitchBase=0
+local lastGlideSlopeUpdate=-100
+local lastGlideSlopePitch=0
+local lastGlideSlopeElevation=0
 function ap_director_pitch(pitchMode)
     time=simDRTime-previous_pitchTime
     previous_pitchTime=simDRTime
@@ -768,8 +774,48 @@ function ap_director_pitch(pitchMode)
         retval=last_simDR_AHARS_pitch_heading_deg_pilot
         last_simDR_AHARS_pitch_heading_deg_pilot=retval
         return ap_director_pitch_retVal(pitchMode,retval)
-    
-    elseif pitchMode==4 or pitchMode==7 or pitchMode==6 or pitchMode==2 then --pitchMode==2 GLIDESLOPE
+
+    elseif pitchMode==2 then --GLIDESLOPE
+        -- [P37] the beam's V/S (getGlideSlopeFPM) as a flight path angle by a PI law: every 0.1 s the path angle
+        -- the 747 is short of (glide_slope_path_error_deg, against the V/S from the elevation's rate since the
+        -- last update, at most GS_MAX_PATH_ERROR_DEG) moves the integrator by GS_PATH_KI of it a second, and the
+        -- pitch is the integrator plus GS_PATH_KP of it, less GS_PITCH_RATE_DAMPING x the attitude's rate since
+        -- the last update; the first update holds the director's pitch. The pitch moved by steps for the VSI's
+        -- error as V/S does, and with the pitch loop as X-Plane flies it that hunted around the beam (p32-line1:
+        -- +-0.6 deg at 13-16 s) and came late slowing down on it: at idle from 167 to 139 kt below AM622 on EHAM's
+        -- ILS 18R, -1,300 fpm and 2.3 dots below by 450 ft. local_vy is in X-Plane's local frame, tilted by up to
+        -- 0.6 deg from the vertical away from its reference point (-17 fpm on EHAM's final, up to +-150 fpm
+        -- elsewhere; review 43), the VSI and vh_ind lag the elevation by about a second.
+        directorSampleRate=0.1
+        local dt=simDRTime-lastGlideSlopeUpdate
+        local pathError=0
+        local pitchRate=0
+        if dt>1 then
+            glideSlopePitchBase=last_simDR_AHARS_pitch_heading_deg_pilot
+        else
+            local limit=B747_afds_controls.GS_MAX_PATH_ERROR_DEG
+            pathError=B747_afds_controls.glide_slope_path_error_deg(getGlideSlopeFPM(),
+                (simDR_elevation-lastGlideSlopeElevation)/dt,simDR_groundspeed)
+            pathError=math.max(-limit,math.min(limit,pathError))
+            glideSlopePitchBase=glideSlopePitchBase+B747_afds_controls.GS_PATH_KI*pathError*math.min(dt,0.5)
+            pitchRate=(simDR_AHARS_pitch_heading_deg_pilot-lastGlideSlopePitch)/dt
+        end
+        glideSlopePitchBase=math.max(AFDS_MIN_PITCH_DEG,math.min(10,glideSlopePitchBase))
+        if simDR_autopilot_servos_on==0 then
+            -- the flight director alone: the integrator kept near the attitude the pilot flies
+            glideSlopePitchBase=math.max(simDR_AHARS_pitch_heading_deg_pilot-2,
+                math.min(simDR_AHARS_pitch_heading_deg_pilot+2,glideSlopePitchBase))
+        end
+        lastGlideSlopeUpdate=simDRTime
+        lastGlideSlopePitch=simDR_AHARS_pitch_heading_deg_pilot
+        lastGlideSlopeElevation=simDR_elevation
+        retval=glideSlopePitchBase+B747_afds_controls.GS_PATH_KP*pathError
+            -B747_afds_controls.GS_PITCH_RATE_DAMPING*pitchRate
+        retval=math.max(AFDS_MIN_PITCH_DEG,math.min(10,retval))
+        last_simDR_AHARS_pitch_heading_deg_pilot=retval
+        return ap_director_pitch_retVal(pitchMode,retval)
+
+    elseif pitchMode==4 or pitchMode==7 or pitchMode==6 then
         local pitchError=simDR_AHARS_pitch_heading_deg_pilot-last_simDR_AHARS_pitch_heading_deg_pilot
         
         if debug_flight_directors==1 then
@@ -786,13 +832,6 @@ function ap_director_pitch(pitchMode)
                 print("prev_vvi_update=2.0") --recover overshoots
             end
         end
-        if pitchMode==2 then --set FPM based on glideslope
-            targetFPM=getGlideSlopeFPM()
-        --    print("getGlideSlopeFPM="..targetFPM.." dots="..simDR_hsi_vdef_dots_pilot)
-             --minUpdateRate=B747_rescale(0,0.5,2.5,0.1,math.abs(simDR_hsi_vdef_dots_pilot)) -- be faster on glideslope
-        --else
-        --    print("standard FPM="..targetFPM.." dots="..simDR_hsi_vdef_dots_pilot)
-        end
         if debug_flight_directors==1 then
             print("autopilot FPM="..currentFPM.." target="..targetFPM)
         end
@@ -805,10 +844,6 @@ function ap_director_pitch(pitchMode)
         --if pitchError<1.3 then
         directorSampleRate=math.min(B747_rescale(0,1,500,0.2,math.abs(vviError)),minUpdateRate,prev_vvi_update)
         prev_vvi_update=directorSampleRate
-        -- G/S every 0.2 s: the pitch follows the beam as the 747 slows down on it (at 0.8 s it fell 1.8 dots
-        -- below by 500 ft slowing from 160 to 140 kt in the approach model); not kept in prev_vvi_update,
-        -- so the mode after G/S (V/S, VNAV PTH) runs at its own rate
-        if pitchMode==2 then directorSampleRate=math.min(directorSampleRate,0.2) end
         --end
        
         --local rog=0.001+0.00004*vviError/(time*30)
@@ -1055,11 +1090,16 @@ function ap_pitch_assist()
     local retval=B747DR_sim_pitch_ratio--B747_interpolate_value(B747DR_sim_pitch_ratio,0,-1,1,20)
     local refreshsimDR_electric_trim=simDR_electric_trim
     local refresh_trim=simDR_elevator_trim
-    -- read by get_FPM_bias only while the director runs ALT, V/S, VNAV PTH or G/S
+    -- read by get_FPM_bias only while the director runs ALT, V/S or VNAV PTH
     local refreshFlapRatio=B747DR_flap_ratio
     local refreshFlapDetent=B747DR_flap_lever_detent
     -- read by the director only once AUTOLAND engages; XTLua gives 0 for a dataref's first read
     local refreshAutolandPitch=B744DR_autolandPitch
+    -- [P37] read by the director only in G/S (getGlideSlopeFPM, glide_slope_path_error_deg): a 0 elevation would be
+    -- a dive of the whole altitude, 0s for the others a level path and a pitch down
+    local refreshElevation=simDR_elevation
+    local refreshGroundspeed=simDR_groundspeed
+    local refreshGlideslope=simDR_glideslope1
 
     B747DR_pidPitchP=B747_rescale(3000,B747DR_pidPitchPL,40000,B747DR_pidPitchPH,B747DR_autopilot_altitude_ft_pfd)
     if B747DR_ap_AFDS_mode_box_status_pilot==1 or B747DR_ap_AFDS_mode_box_status_copilot==1 then

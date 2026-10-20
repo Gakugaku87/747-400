@@ -42,6 +42,7 @@ local function new_director(values)
         simDR_pressureAlt1 = 3600, simDR_autopilot_altitude_ft = 2000, simDR_autopilot_hold_altitude_ft = 2000,
         simDR_autopilot_alt_hold_status = 0, simDR_autopilot_flch_status = 0, simDR_autopilot_vs_status = 2,
         simDR_groundspeed = 210 * 0.514444, simDR_glideslope1 = 3, simDR_hsi_vdef_dots_pilot = 0,
+        simDR_elevation = 3600 * 0.3048, simDR_autopilot_servos_on = 1,
         B747_afds_pitch_target_before_blend = 0, B747_afds_pitch_target_after_blend = 0, simDRTime = 3600}
     for name, value in pairs(values or {}) do env[name] = value end
     setmetatable(env, {__index = _G})
@@ -49,11 +50,14 @@ local function new_director(values)
     setfenv(assert(loadstring(director_source)), env)()
     return env
 end
--- updates every 0.1 s, the attitude following the target; returns the last raw target
-local function fly(env, pitch_mode, updates)
+-- updates every 0.1 s, the attitude following the target (held where it is with hold: G/S damps the attitude's rate,
+-- which an attitude jumping to the target each update would drive), the elevation going at the VSI's rate (G/S
+-- takes its V/S from the elevation); returns the last raw target
+local function fly(env, pitch_mode, updates, hold)
     for _ = 1, updates do
         env.simDRTime = env.simDRTime + 0.1
-        env.simDR_AHARS_pitch_heading_deg_pilot = env.B747_afds_pitch_target_before_blend
+        env.simDR_elevation = env.simDR_elevation + env.simDR_vvi_fpm_pilot * 0.00508 * 0.1
+        if not hold then env.simDR_AHARS_pitch_heading_deg_pilot = env.B747_afds_pitch_target_before_blend end
         env.ap_director_pitch(pitch_mode)
     end
     return env.B747_afds_pitch_target_before_blend
@@ -64,8 +68,9 @@ local pitch = fly(new_director(), 6, 600)
 check(math.abs(pitch + 10) < 1e-9, "VNAV PTH: down to -10 deg, got "..pitch)
 pitch = fly(new_director(), 7, 600)
 check(math.abs(pitch + 10) < 1e-9, "V/S: down to -10 deg, got "..pitch)
--- G/S 2.5 dots above at 210 kt
-pitch = fly(new_director({simDR_hsi_vdef_dots_pilot = 2.5}), 2, 600)
+-- G/S 2.5 dots above at 210 kt, the attitude held: its integrator down to -10 deg (P37; the VSI-step law it replaced
+-- stepped only while the attitude was within 0.5 deg of its target)
+pitch = fly(new_director({simDR_hsi_vdef_dots_pilot = 2.5}), 2, 600, true)
 check(math.abs(pitch + 10) < 1e-9, "G/S: down to -10 deg, got "..pitch)
 -- ALT 600 ft above the altitude held, level: down to -10 deg
 pitch = fly(new_director({simDR_vvi_fpm_pilot = 0, simDR_autopilot_alt_hold_status = 2,

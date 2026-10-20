@@ -201,6 +201,7 @@ B747DR_ap_FMA_active_roll_mode      	= find_dataref("laminar/B747/autopilot/FMA/
 simDR_vvi_fpm_pilot                 = find_dataref("sim/cockpit2/gauges/indicators/vvi_fpm_pilot")
 simDR_alpha_deg                     = find_dataref("sim/flightmodel/position/alpha")
 simDR_TAS_mps                       = find_dataref("sim/flightmodel/position/true_airspeed")
+simDR_elevation                     = find_dataref("sim/flightmodel/position/elevation")  -- [P37] m above MSL
 simDR_yaw_rate                      = find_dataref("sim/flightmodel/position/R")
 simDR_roll_rate                     = find_dataref("sim/flightmodel/position/P")
 simDR_autopilot_alt_hold_status     	= find_dataref("laminar/B747/autopilot/altitude_hold_status")

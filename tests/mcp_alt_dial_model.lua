@@ -140,6 +140,7 @@ function M.base(o)
         simDR_version = 120012, simDR_autopilot_autothrottle_enabled = 0, simDR_autopilot_autothrottle_on = 0,
         B747DR_display_N1 = {[0] = 90, 90, 90, 90}, B747DR_ap_lnav_state = 0, B747DR_ap_lnavHeading_mode = 0,
         B747DR_ap_approach_mode = 0, simDR_pressureAlt1 = o.alt, simDR_radarAlt1 = o.alt - 50,
+        simDR_elevation = o.alt * 0.3048,
         simDR_vvi_fpm_pilot = o.vs, simDR_ind_airspeed_kts_pilot = o.ias or 290,
         simDR_autopilot_airspeed_kts = o.ias or 290, simDR_airspeed_mach = o.mach or 0.78,
         simDR_autopilot_airspeed_kts_mach = o.ias or 290, B747DR_airspeed_Vmc = 150, B747DR_airspeed_Vmax = 365,
@@ -205,6 +206,7 @@ function M.run(scn)
         end
         if scn.each then scn.each(d, t, ap) end
         d.simDR_pressureAlt1, d.simDR_radarAlt1 = alt, alt - (o.elev or 50)
+        d.simDR_elevation = alt * 0.3048     -- m: the G/S director takes its V/S from the elevation's rate
         d.simDR_vvi_fpm_pilot = vs
         d.simDR_allThrottle = math.max(d.B747DR_throttle[0], d.B747DR_throttle[1], d.B747DR_throttle[2],
             d.B747DR_throttle[3])

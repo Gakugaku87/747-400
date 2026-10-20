@@ -23,7 +23,9 @@
 -- capture with landing flaps the MCP to an at or above speed ahead (AM622 +160) until its fix, then VREF + 5.
 -- The aircraft: a point mass, lift and drag by flap ratio and gear fitted to the kit's recordings
 -- (dev/cckit/p8/fit_aero.py, 5 flights), thrust per engine 7.9 kN + 154.8 kN x throttle with a 2.5 s spool lag,
--- the attitude following the flight director's pitch (1.5 s, at most 3 deg/s), the VSI 1 s behind, the flaps
+-- the attitude following the flight director's pitch (1.5 s, at most 3 deg/s), the VSI 1 s behind (the elevation
+-- without it; local_vy too, or tilted from the vertical by o.local_vy_bias_fpm as X-Plane's local frame is away from
+-- its reference point), the flaps
 -- 5 s per detent and the gear 10 s to travel; the route's legs flown as straight lines from fix to fix, with the
 -- wind's component along them (o.wind by altitude: TST744L's westerly for EINN, EHAM's flights were calm).
 -- The ILS G/S of gs_deg from 300 m past the threshold with its false lobes: the needle 0.30 deg per dot,
@@ -215,7 +217,8 @@ local function load_production(datarefs, stubs)
     end
 
     -- the hydraulics' flight director and pitch loop (B747_afds_controls is a local of the file; lastTrimmed is one
-    -- before the part loaded; flight_controls_override sets doCompute each frame, 1 at the model's 20 fps);
+    -- before the part loaded; doCompute is 1 every frame here, while flight_controls_override computes the PID every
+    -- frame up to 30 fps and every second frame above: the replay of p32-line1 is the same either way);
     -- MODEL_init_director sets the director's locals to an attitude, as if it had been flying it
     local hyd = namespace(datarefs, {print = noop, B747_afds_controls = controls, debug_flight_directors = 0,
         lastTrimmed = 0, doCompute = 1})
@@ -275,6 +278,8 @@ end
 function M.set_datarefs(d, o, throttle, dt)
     local values = {
         simDRTime = 1000, SIM_PERIOD = dt or 0.05,
+        -- the aircraft's elevation (m; M.fly moves it every frame: the G/S director takes its V/S from its rate)
+        simDR_elevation = (o.alt_ft or 0) * FT,
         -- the autopilot
         B747DR_ap_cmd_L_mode = 1, B747DR_ap_cmd_C_mode = 0, B747DR_ap_cmd_R_mode = 0,
         B747DR_toggle_switch_position = {[23] = 1, [24] = 1, [29] = 1},
@@ -483,6 +488,8 @@ function M.fly(o)
         d.simDR_pressureAlt1, d.simDR_radarAlt1 = state.h, agl
         d.simDR_ind_airspeed_kts_pilot, d.simDR_ias_pilot = ias, ias
         d.simDR_vvi_fpm_pilot = state.vsi
+        d.simDR_elevation = state.h * FT                       -- m above MSL, without the VSI's lag
+        d.simDR_local_vy = state.V * math.sin(state.gamma) + (o.local_vy_bias_fpm or 0) * FT / 60
         d.simDR_groundspeed = state.V * math.cos(state.gamma) + wind_ms
         d.simDR_TAS_mps, d.simDR_alpha_deg = state.V, alpha
         d.simDR_AHARS_pitch_heading_deg_pilot = state.theta
