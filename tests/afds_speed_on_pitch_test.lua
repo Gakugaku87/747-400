@@ -83,6 +83,11 @@ else
         "T/W: the four engines' thrust over the weight")
     check(tw_of({[0] = 100000, 100000, 100000, 100000}, 0) == nil, "T/W: no mass (XTLua's first read of 0)")
     check(tw_of(nil, 200000) == nil, "T/W: no thrust dataref")
+    -- the engines' shared thrust: one engine's loss (a failure, one lever) is not the A/T's (review 46's MAJOR-1)
+    near(tw_of({[0] = 100000, 100000, 100000, 0}, 200000), 400000 / (200000 * 9.80665), 1e-12,
+        "T/W: one engine failed, the shared thrust of the other three")
+    near(tw_of({[0] = 90000, 100000, 110000, 100000}, 200000), 400000 / (200000 * 9.80665), 1e-12,
+        "T/W: 4 x the mean of the two middle engines")
     local f, r = lead(nil, nil, 0.2, 0.1)
     check(f == 0.2 and r == 0, "lead: the filter starts from T/W, no rate")
     f, r = lead(0.2, 0.2, 0.21, 0.1)
@@ -358,6 +363,69 @@ for _, fps in ipairs({15, 20, 34}) do
         if step_t and not up_t and p.ias >= ias0 + 3 then up_t = p.t - step_t end
     end
     check(up_t and up_t <= 16, "flaps up: accelerating within 16 s of the step"..at..": "..tostring(up_t))
+end
+
+-- 4. [P45, review 46] The lead with the thrust going down. trim: the thrust an engine for a steady path (deg) at an IAS,
+-- altitude, weight and flaps; path_for: the path a thrust an engine holds.
+local AM = dofile("tests/approach_model.lua")
+local G, KT, S = 9.80665, 0.514444, 541.2
+local function trim(alt, ias, mass, gamma_deg, flaps)
+    local temp, _, rho = CM.isa(alt)
+    local V = ias * KT * math.sqrt(1.225 / rho)
+    local mach = V / math.sqrt(1.4 * 287.05 * temp)
+    local p = (flaps and flaps > 0) and AM.polar(flaps) or CM.clean_polar(mach)
+    local q = 0.5 * rho * V * V
+    local gamma = math.rad(gamma_deg or 0)
+    local cl = mass * G * math.cos(gamma) / (q * S)
+    return (q * S * (p[3] + p[4] * cl * cl) + mass * G * math.sin(gamma)) / 4, V
+end
+local function path_for(alt, ias, mass, flaps, thrust_engine)
+    local lo, hi = -10, 30
+    for _ = 1, 60 do
+        local mid = (lo + hi) / 2
+        if trim(alt, ias, mass, mid, flaps) > thrust_engine then hi = mid else lo = mid end
+    end
+    return (lo + hi) / 2
+end
+-- a steady climb at the target (V2 + 10, flaps 20) on thrust(t) (N an engine or the four engines'), in TO/GA from the
+-- takeoff state (a ground frame) or in VNAV SPD
+local function climb_on(mode, alt, mass, v2, thrust_engine, thrust, fps, at_mode)
+    local target = v2 + 10
+    local gamma = path_for(alt, target, mass, 0.667, thrust_engine)
+    local _, V = trim(alt, target, mass, gamma, 0.667)
+    return CM.fly({alt_ft = alt, ias_kt = target, vs_fpm = V * math.sin(math.rad(gamma)) / 0.3048 * 60, weight_kg = mass,
+        flaps = 0.667, pitch_mode = mode, target_kt = target, mcp_alt_ft = 37000, seconds = 60, dt = 1 / fps,
+        vmc_kt = v2 - 10, vmax_kt = 250, thrust = thrust, at_mode = at_mode,
+        setup = function(mm)
+            mm.d.B747DR_airspeed_V2, mm.d.B747DR_ap_ias_dial_value = v2, v2
+            if mode == 1 then mm.d.simDR_touchGround = 1 end
+        end,
+        frame = function(mm, t)
+            if mode == 1 then
+                if t > 0 then mm.d.simDR_touchGround = 0 else mm.d.simDR_AHARS_pitch_heading_deg_pilot = 0 end
+            end
+            mm.d.B747DR_ap_FMA_active_pitch_mode = mode
+            mm.target_kt = target
+        end})
+end
+for _, fps in ipairs({20, 34}) do
+    -- a. An engine failure at 20 s (its thrust down with a 1.5 s first order) at 397 t, V2 175, 800 ft, the takeoff
+    -- thrust such that three engines hold 400 fpm at V2 + 10. Fed the sum of the four, the lead took the director down
+    -- at the law's 0.1 g, the attitude past it, and the climb to -90 to -106 fpm in TO/GA and VNAV SPD for about 5 s
+    -- (P43 alone: about +200); the speed it keeps is the integrator's (review 46's MAJOR-1).
+    local mass, v2, alt = 397000, 175, 800
+    local _, V = trim(alt, v2 + 10, mass, 0, 0.667)
+    local T = trim(alt, v2 + 10, mass, math.deg(math.asin(400 * 0.3048 / 60 / V)), 0.667) * 4 / 3
+    for _, mode in ipairs({1, 4}) do
+        local m = climb_on(mode, alt, mass, v2, T, function(t)
+            local failed = t < 20 and T or T * math.exp(-(t - 20) / 1.5)
+            return {[0] = T, T, T, failed}
+        end, fps, mode == 1 and 1 or 5)
+        local vs_min = math.huge
+        for _, p in ipairs(m.track) do if p.t >= 20 then vs_min = math.min(vs_min, p.vs) end end
+        check(vs_min >= 100, string.format("engine failure at 397 t (400 fpm on three, %s, %d fps): still climbing, V/S "
+            .."at least %+.0f fpm", mode == 1 and "TO/GA" or "VNAV SPD", fps, vs_min))
+    end
 end
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))

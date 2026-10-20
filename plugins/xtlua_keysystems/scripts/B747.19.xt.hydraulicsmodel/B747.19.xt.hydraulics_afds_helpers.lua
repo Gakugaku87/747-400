@@ -513,15 +513,19 @@ function afds_controls.speed_pitch_thrust_lead(filtered_tw, previous_tw, tw, ela
     return next_tw, afds_controls.SPEED_PITCH_THRUST_FEED_FORWARD * math.deg(next_tw - filtered_tw) / elapsed_sec
 end
 
--- [P45] The engines' thrust over the weight: thrust_n the four engines' thrust (N, indexed 0-3:
+-- [P45] The engines' shared thrust over the weight: thrust_n the four engines' thrust (N, indexed 0-3:
 -- sim/flightmodel/engine/POINT_thrust), mass_kg the aircraft's mass (sim/flightmodel/weight/m_total); nil without a
--- mass a 747 can have (XTLua's first read gives 0).
+-- mass a 747 can have (XTLua's first read gives 0). The shared thrust is 4 x the mean of the two middle engines': the
+-- A/T moves the four levers together, and one engine's loss (a failure, one lever) is left to the integrator. Fed the
+-- sum, an engine failure at 397 t with 400 fpm on three engines took the director down at the law's 0.1 g and the
+-- climb to -100 fpm for about 5 s (review 46).
 function afds_controls.speed_pitch_thrust_weight(thrust_n, mass_kg)
     local mass = tonumber(mass_kg)
     if mass == nil or mass < 100000 or thrust_n == nil then return nil end
-    local total = 0
-    for i = 0, 3 do total = total + (tonumber(thrust_n[i]) or 0) end
-    return total / (mass * 9.80665)
+    local thrust = {}
+    for i = 0, 3 do thrust[i + 1] = tonumber(thrust_n[i]) or 0 end
+    table.sort(thrust)
+    return 2 * (thrust[2] + thrust[3]) / (mass * 9.80665)
 end
 
 -- [review 45] ALT (15 deg) and V/S and VNAV PTH (10 deg) taking over above their upper pitch limit: the pitch comes

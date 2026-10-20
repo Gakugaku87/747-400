@@ -158,8 +158,9 @@ end
 -- Fly. o = {
 --   alt_ft, ias_kt, vs_fpm (0), weight_kg, flaps (handle ratio, 0), pitch_mode (4 VNAV SPD, 8 FLCH, 1 TO/GA),
 --   target_kt (the AFDS speed), mcp_alt_ft (the MCP altitude, 37000), capture_window_ft (B747DR_alt_capture_window),
---   thrust = function(t, m) N an engine at time t (s from the start), or throttle = function(t, m) with
---   M.thrust_n after spool_s (2.5) of lag; dynamics (M.CLEAN_PITCH flaps up, AM.PITCH_DYNAMICS out);
+--   thrust = function(t, m) N an engine at time t (s from the start; or a table of the four engines', indexed 0-3), or
+--   throttle = function(t, m) with M.thrust_n after spool_s (2.5) of lag; at_mode (the A/T's FMA mode, 5 THR REF);
+--   dynamics (M.CLEAN_PITCH flaps up, AM.PITCH_DYNAMICS out);
 --   seconds (120), dt (1/34), patches (production text replacements for an experiment),
 --   setup = function(m) before the first frame, frame = function(m, t) each frame before the director (scenario
 --   changes: m.d's datarefs, m.target_kt ...)}.
@@ -209,7 +210,7 @@ function M.fly(o)
         B747DR_autopilot_TOGA_status = 0, B747DR_ap_flightPhase = 1, B747DR_ap_inVNAVdescent = 0,
         B747DR_airspeed_Vmc = o.vmc_kt or 150, B747DR_airspeed_Vmax = o.vmax_kt or 365,
         B747DR_flap_lever_detent = 0, simDR_glideslope1 = 3, simDR_hsi_vdef_dots_pilot = 0,
-        simDR_AHARS_roll_heading_deg_pilot = 0, simDR_touchGround = 0}
+        simDR_AHARS_roll_heading_deg_pilot = 0, simDR_touchGround = 0, B747DR_ap_FMA_autothrottle_mode = o.at_mode or 5}
     for key, value in pairs(values) do d[key] = value end
     local source = read_source(HYD.."B747.19.xt.hydraulicsmodel.lua")
     for _, key in ipairs({"PL", "PH", "D"}) do
@@ -249,16 +250,20 @@ function M.fly(o)
         if o.frame then o.frame(m, t) end
 
         -- the thrust an engine (sim/flightmodel/engine/POINT_thrust) and the mass, read by the speed law (P45)
-        local thrust
+        local thrust, engines
         if o.thrust then
             thrust = o.thrust(t, m)
+            if type(thrust) == "table" then
+                engines = thrust
+                thrust = (engines[0] + engines[1] + engines[2] + engines[3]) / 4
+            end
         else
             throttle = o.throttle(t, m)
             local want = M.thrust_n(throttle, state.h, mach)
             state.thrust = (state.thrust or want) + (want - (state.thrust or want)) * math.min(1, dt / (o.spool_s or 2.5))
             thrust = state.thrust
         end
-        d.simDR_engine_thrust_n = {[0] = thrust, thrust, thrust, thrust}
+        d.simDR_engine_thrust_n = engines or {[0] = thrust, thrust, thrust, thrust}
         d.simDR_acf_weight_total_kg = mass
 
         local ratio = hyd.ap_pitch_assist()
