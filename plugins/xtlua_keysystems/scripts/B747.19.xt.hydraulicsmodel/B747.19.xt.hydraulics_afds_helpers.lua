@@ -459,7 +459,9 @@ afds_controls.SPEED_PITCH_THRUST_DECREASE_SHARE = 0.5
 -- the levers on the takeoff (p35-line1), 0.4-1.6 deg/s of path unfiltered
 afds_controls.SPEED_PITCH_THRUST_FILTER_SEC = 2.0
 -- a T/W changing faster than this a second is not thrust (engines spool from idle to takeoff thrust's 0.25 in 6-8 s):
--- XTLua's first read of 0, a weight read; the filter starts again from it
+-- XTLua's first read of 0, a weight read; the filter starts again from it, and that change is not led. One engine's
+-- failure does not reach T/W (the shared thrust); a light go-around's spool-up comes near it (180 t, GA thrust in
+-- 2.5 s: 0.19 a second; in 4.5 s 0.11; review 46).
 afds_controls.SPEED_PITCH_THRUST_MAX_RATE = 0.2
 
 -- The IAS's rate (kt/s): the last one moved towards the IAS's change over elapsed_sec by a first order of
