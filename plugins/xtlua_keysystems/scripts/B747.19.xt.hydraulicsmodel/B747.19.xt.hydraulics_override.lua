@@ -724,6 +724,7 @@ function ap_director_pitch(pitchMode)
             holdAlt=simDR_autopilot_hold_altitude_ft
         end
         local fpmBias=get_FPM_bias()
+        local previousPitch=last_simDR_AHARS_pitch_heading_deg_pilot
         local altDiff=math.abs(simDR_pressureAlt1-holdAlt+fpmBias*40)
         --target alt in 30 secs, limited to 2000 fpm and slowed when the speed runs away
         local targetFPM=B747_afds_controls.altitude_hold_target_fpm(holdAlt,simDR_pressureAlt1,
@@ -753,11 +754,13 @@ function ap_director_pitch(pitchMode)
                 print("=last_altitude "..simDR_AHARS_pitch_heading_deg_pilot.." simDR_vvi_fpm_pilot "..currentFPM.." rog "..rog.." targetFPM "..targetFPM.. " pitchError "..pitchError)
             end
         end
+        local cap,floor=B747_afds_controls.pitch_cap_approach(15,previousPitch,time,simDR_TAS_mps)
         if last_simDR_AHARS_pitch_heading_deg_pilot<AFDS_MIN_PITCH_DEG then
             last_simDR_AHARS_pitch_heading_deg_pilot=AFDS_MIN_PITCH_DEG
-        elseif last_simDR_AHARS_pitch_heading_deg_pilot>15 then
-            last_simDR_AHARS_pitch_heading_deg_pilot=15
+        elseif last_simDR_AHARS_pitch_heading_deg_pilot>cap then
+            last_simDR_AHARS_pitch_heading_deg_pilot=cap
         end
+        if last_simDR_AHARS_pitch_heading_deg_pilot<floor then last_simDR_AHARS_pitch_heading_deg_pilot=floor end
         retval=last_simDR_AHARS_pitch_heading_deg_pilot
         last_simDR_AHARS_pitch_heading_deg_pilot=retval
         return ap_director_pitch_retVal(pitchMode,retval)
@@ -804,6 +807,7 @@ function ap_director_pitch(pitchMode)
 
     elseif pitchMode==4 or pitchMode==7 or pitchMode==6 then
         local pitchError=simDR_AHARS_pitch_heading_deg_pilot-last_simDR_AHARS_pitch_heading_deg_pilot
+        local previousPitch=last_simDR_AHARS_pitch_heading_deg_pilot
         
         if debug_flight_directors==1 then
             print("ap_director_pitch for VS pitchError="..pitchError)
@@ -877,11 +881,13 @@ function ap_director_pitch(pitchMode)
                 print("=simDR_vvi_fpm_pilot "..simDR_AHARS_pitch_heading_deg_pilot.." simDR_vvi_fpm_pilot "..currentFPM.." rog "..rog.." speed_delta "..speed_delta.." min_speedDelta "..min_speedDelta.." max_speedDelta "..max_speedDelta)
             end
        -- end
+        local cap,floor=B747_afds_controls.pitch_cap_approach(10,previousPitch,time,simDR_TAS_mps)
         if last_simDR_AHARS_pitch_heading_deg_pilot<AFDS_MIN_PITCH_DEG then
             last_simDR_AHARS_pitch_heading_deg_pilot=AFDS_MIN_PITCH_DEG
-        elseif last_simDR_AHARS_pitch_heading_deg_pilot>10 then
-            last_simDR_AHARS_pitch_heading_deg_pilot=10
+        elseif last_simDR_AHARS_pitch_heading_deg_pilot>cap then
+            last_simDR_AHARS_pitch_heading_deg_pilot=cap
         end
+        if last_simDR_AHARS_pitch_heading_deg_pilot<floor then last_simDR_AHARS_pitch_heading_deg_pilot=floor end
         retval=last_simDR_AHARS_pitch_heading_deg_pilot
         local blendedRetval=ap_director_pitch_retVal(pitchMode,retval)
         --

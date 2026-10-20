@@ -484,6 +484,20 @@ function afds_controls.speed_pitch_max_rate_deg(tas_mps)
     return math.deg(afds_controls.SPEED_PITCH_MAX_LOAD_FACTOR_G * 9.80665 / math.max(tonumber(tas_mps) or 0, 60))
 end
 
+-- [review 45] ALT (15 deg) and V/S and VNAV PTH (10 deg) taking over above their upper pitch limit: the pitch comes
+-- down to it from the previous one at the speed law's 0.1 g (speed_pitch_max_rate_deg at the TAS, m/s), whatever the
+-- branch's own law wants. Since P39 the speed modes go to 25 deg, and a capture or a V/S selection from a light
+-- takeoff's 16-20 deg climb took the director to the limit in one update, the V/S law its own steps on: in climb_model
+-- -0.36 to -0.39 g into ALT, -0.57 to -0.59 g into V/S. Returns the upper limit for this update and the lowest pitch
+-- (-math.huge at or below the limit).
+function afds_controls.pitch_cap_approach(cap_deg, previous_deg, elapsed_sec, tas_mps)
+    previous_deg = tonumber(previous_deg) or cap_deg
+    if previous_deg <= cap_deg then return cap_deg, -math.huge end
+    local next_deg = math.max(cap_deg, previous_deg
+        - afds_controls.speed_pitch_max_rate_deg(tas_mps) * clamp(tonumber(elapsed_sec) or 0, 0, 0.5))
+    return next_deg, next_deg
+end
+
 -- [P39] TO/GA's speed (FCOM vol 2, quoted by a BA 744 captain and confirmed by Aerowinx, topic 2796.20 reply 24;
 -- research_afds_climb.md 1): after takeoff the AFDS commands a pitch below the pitch limit indicator to hold the
 -- greater of V2 + 10 kt and the IAS when the pitch passed 2 deg on the takeoff roll (the rotation) + 10 kt; if the IAS

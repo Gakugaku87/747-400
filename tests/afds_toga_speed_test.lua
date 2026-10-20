@@ -9,7 +9,8 @@
 -- attitude went from 19.8 to 4.7 deg, the IAS to 175 kt for 154 (V2 + 10) and the climb from 3,700 to 970 fpm.
 -- 1. toga_target_speed; 2. the production director with mocked datarefs; 3. climb_model on p35-line1's climb-out
 -- (tests/data/p35-line1_takeoff.csv) with the A/P in TO/GA from 400 ft and VNAV SPD from 577 ft, at 15, 20 and
--- 34 fps; 4. go-arounds in climb_model with the MCP altitude above and below.
+-- 34 fps; 4. go-arounds in climb_model with the MCP altitude above and below; 5. a steep climb-out into ALT and
+-- V/S.
 local HYD = "plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/"
 local controls = dofile(HYD.."B747.19.xt.hydraulics_afds_helpers.lua")
 local CM = dofile("tests/climb_model.lua")
@@ -254,6 +255,57 @@ for _, fps in ipairs({20, 34}) do
             ..string.format(": %.0f ft, %+.0f fpm", last.alt, last.vs))
         check(high_ias <= 150 + 30, "go-around: the IAS within 30 kt of the window's 150"..at
             ..string.format(": %.1f", high_ias))
+    end
+end
+
+-- 5. A steep climb-out into an ALT capture and into V/S (review 45's M1): p35-line1's climb-out at 165 t (16-20 deg in
+-- VNAV SPD), the MCP at 3,000 ft (window 1,000), or V/S 1,500 fpm selected 10 s in. The speed modes go to 25 deg (P39)
+-- but ALT kept its 15 deg limit and V/S its 10 deg, taken in one update, and the V/S law its own steps on: -0.36 to
+-- -0.39 g into ALT, -0.57 to -0.59 g into V/S. Now the director comes down to the limit at 0.1 g; what is left is the
+-- pitch loop's lag and overshoot after the ramp (the attitude 2 deg behind it, then 2 deg past). With the MCP 1,000 ft
+-- above at 6,000 fpm the capture overshoots by 1,100 ft either way: the capture window's 1,000 ft (pre-existing).
+local function steep(mode_change, fps)
+    local t0 = 254.0
+    local first
+    for _, r in ipairs(P35) do if r.t >= t0 then first = r break end end
+    return CM.fly({alt_ft = first.alt, ias_kt = first.ias, vs_fpm = first.vs, weight_kg = 165000,
+        flaps = first.flap, pitch_mode = 1, target_kt = 154, mcp_alt_ft = mode_change == "alt" and 3000 or 37000,
+        capture_window_ft = 1000, seconds = 40, dt = 1 / fps, vmc_kt = 120, vmax_kt = 230,
+        thrust = function(t) return interp(P35, t0 + t, "thrust") end,
+        setup = function(mm)
+            mm.d.B747DR_airspeed_V2, mm.d.B747DR_ap_ias_dial_value = 144, 144
+            mm.d.simDR_touchGround = 1
+        end,
+        frame = function(mm, t)
+            if t > 0 then mm.d.simDR_touchGround = 0 else mm.d.simDR_AHARS_pitch_heading_deg_pilot = 0 end
+            mm.state.flap = interp(P35, t0 + t, "flap")
+            local mode = math.floor(interp(P35, t0 + t, "fma") + 0.5)
+            if mm.d.simDR_autopilot_alt_hold_status == 2 then mode = 9 end
+            if mode_change == "vs" and t > 10 then
+                mode = 7
+                mm.d.simDR_autopilot_vs_status, mm.d.simDR_autopilot_vs_fpm = 2, 1500
+            end
+            mm.d.B747DR_ap_FMA_active_pitch_mode = mode
+            mm.target_kt = mode == 1 and 144 or interp(P35, t0 + t, "tgt")
+        end})
+end
+for _, fps in ipairs({20, 34}) do
+    for _, change in ipairs({"alt", "vs"}) do
+        local m = steep(change, fps)
+        local lowest_nz, highest_pitch, worst_rate = math.huge, -math.huge, 0
+        for _, p in ipairs(m.track) do
+            lowest_nz = math.min(lowest_nz, p.nz)
+            highest_pitch = math.max(highest_pitch, p.theta)
+            worst_rate = math.max(worst_rate, -p.q)
+        end
+        local at = string.format(" (%s, %d fps)", change == "alt" and "ALT capture at 3,000 ft" or "V/S 1,500", fps)
+        local nz_floor = change == "alt" and -0.31 or -0.45
+        check(highest_pitch >= 15.5, "steep climb-out: the attitude above 15.5 deg before"..at
+            ..string.format(": %.1f", highest_pitch))
+        check(lowest_nz >= nz_floor, "steep climb-out: no snap, nz at least "..nz_floor.." g"..at
+            ..string.format(": %.3f", lowest_nz))
+        check(worst_rate <= 2.5, "steep climb-out: pitching down at most 2.5 deg/s"..at
+            ..string.format(": %.2f", worst_rate))
     end
 end
 
