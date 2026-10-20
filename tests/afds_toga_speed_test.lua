@@ -147,6 +147,18 @@ do
     check(pitch > 13.5 and pitch <= 14.3 + 1e-6, "airborne 20 kt fast: up past 12 deg ("..pitch..")")
 end
 
+-- On the takeoff roll with the MCP set inside the capture window above the field (300 ft at a 46 ft field): TO/GA is
+-- kept, nothing is captured until the aircraft is in the air. The ALT branch captured it on the roll within 0.2 s and
+-- cancelled TO/GA, and the A/T's monitor then also cleared the engines' TO/GA mode (review 45c's NIT-4).
+do
+    local env = new_director({simDR_pressureAlt1 = 46, simDR_autopilot_altitude_ft = 300,
+        simDR_autopilot_hold_altitude_ft = 300, B747DR_alt_capture_window = 300})
+    for _ = 1, 30 do step(env, 0.1) end
+    check(env.B747DR_autopilot_TOGA_status == 1 and env.simDR_autopilot_alt_hold_status ~= 2,
+        "takeoff roll with the MCP 254 ft above the field: TO/GA kept, nothing captured (TOGA "
+        ..tostring(env.B747DR_autopilot_TOGA_status)..", ALT hold "..tostring(env.simDR_autopilot_alt_hold_status)..")")
+end
+
 -- TO/GA pushed in a climb at M .84 (the window shows 84, the Mach's hundredths): the window is no speed then, TO/GA
 -- flies the IAS (it took 84 kt and pitched up toward 25 deg, review 45's m1); a go-around's window under the add-on's
 -- Vmc (fltInst02's minimum manoeuvring speed for the flaps) is that Vmc
