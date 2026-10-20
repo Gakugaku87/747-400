@@ -401,6 +401,25 @@ local function B747_set_vnav_speed_target(is_mach, dial_value)
         simDR_autopilot_airspeed_kts_mach = dial_value
     end
 end
+-- [review 17] The climb's limits at this altitude: the SPD REST below its altitude and the SPD TRANS below its (as
+-- clb_aptres and clb_spcres fly them, to 100 ft above); 999 above them.
+local function B747_climb_speed_limit_here()
+    local limit=999
+    local restAlt,restSpd=tonumber(getFMSData("clbrestalt")),tonumber(getFMSData("clbrestspd"))
+    if restAlt~=nil and restSpd~=nil and simDR_pressureAlt1<restAlt+100 then limit=math.min(limit,restSpd) end
+    local transAlt,transSpd=tonumber(getFMSData("spdtransalt")),tonumber(getFMSData("transpd"))
+    if transAlt~=nil and transSpd~=nil and simDR_pressureAlt1<transAlt+100 then limit=math.min(limit,transSpd) end
+    return limit
+end
+-- [P42] A climb state's IAS target: its speed, raised to IAS - 15 kt when that is higher (a cut of more than 15 kt
+-- comes down by steps, one a recalculation), but never above the climb's limits here: the SPD REST and SPD TRANS
+-- below their altitudes, the route's constraint speed and the flaps'. The floor went past them: the climb resumed
+-- from EIDW's 9,000 ft SID level-off with the IAS running to 270 kt and VNAV asked for 254.7-255.3 kt below 10,000 ft
+-- (p35-line1, 2026-10-20); a SPD REST of 210 kt asked for 245 at 260 kt. The FMC commands no more than its limits.
+local function B747_climb_ias_target(spdval)
+    local limit=B747_constraint_speed_cap(modFlapSpeed(B747_climb_speed_limit_here()))
+    return math.min(math.max(spdval,simDR_ind_airspeed_kts_pilot-15),limit)
+end
 function clb_src_setSpd()
     
     if B747DR_airspeed_V2<900 then
@@ -417,8 +436,7 @@ function clb_aptres_setSpd()
     -- Reached only with a SPD REST entered; fall back to SPD TRANS otherwise.
     local restSpd=vnav_afds_helpers.climb_speed_for_state("aptres", getFMSData)
         or tonumber(getFMSData("transpd")) or 250
-    local spdval=B747_constraint_speed_cap(modFlapSpeed(restSpd))
-    spdval=math.max(spdval,simDR_ind_airspeed_kts_pilot-15)
+    local spdval=B747_climb_ias_target(B747_constraint_speed_cap(modFlapSpeed(restSpd)))
     print("convert to clb clbrestspd ".. spdval)
     B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     B747DR_switchingIASMode=1
@@ -441,7 +459,7 @@ function clb_spcres_setSpd()
       elseif(B747DR_ap_ias_dial_value<spdval) and simDR_autopilot_airspeed_is_mach == 0 then
         spdval=math.min(B747DR_ap_ias_dial_value+5,spdval)
       end]]--
-      spdval=math.max(spdval,simDR_ind_airspeed_kts_pilot-15)
+      spdval=B747_climb_ias_target(spdval)
       print("convert to climb transition speed ".. spdval.. " at "..simDR_ind_airspeed_kts_pilot)
       B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     end
@@ -467,22 +485,12 @@ function clb_nores_setSpd()
      else
         simDR_autopilot_airspeed_is_mach = 0
      end
-      spdval=math.max(spdval,simDR_ind_airspeed_kts_pilot-15)
+      spdval=B747_climb_ias_target(spdval)
       print("convert to ECON climb speed ".. spdval)
       B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     end
     B747_schedule_updateIAS()
 
-end
--- [review 17] The climb's limits at this altitude: the SPD REST below its altitude and the SPD TRANS below its (as
--- clb_aptres and clb_spcres fly them, to 100 ft above); 999 above them.
-local function B747_climb_speed_limit_here()
-    local limit=999
-    local restAlt,restSpd=tonumber(getFMSData("clbrestalt")),tonumber(getFMSData("clbrestspd"))
-    if restAlt~=nil and restSpd~=nil and simDR_pressureAlt1<restAlt+100 then limit=math.min(limit,restSpd) end
-    local transAlt,transSpd=tonumber(getFMSData("spdtransalt")),tonumber(getFMSData("transpd"))
-    if transAlt~=nil and transSpd~=nil and simDR_pressureAlt1<transAlt+100 then limit=math.min(limit,transSpd) end
-    return limit
 end
 function clb_crz_setSpd()
     -- crzspd is the ECON cruise Mach the FMC keeps current from the shared
