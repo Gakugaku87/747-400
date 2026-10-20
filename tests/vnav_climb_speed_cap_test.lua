@@ -168,5 +168,20 @@ equal(state, "clb_spcres/IAS", "SPD TRANS state with a 240 kt climb speed")
 equal(target, 240, "a 240 kt climb speed below SPD TRANS 250/10000: 240 kt, not 250")
 fms.clbspd = "320"
 
+-- [P48] A route constraint caps the Mach climb too. Above the climb Mach (M.80 against .78 at FL300) the climb flew
+-- the climb Mach whatever the constraint: a 250 kt constraint gave M.78, about 288 kt (review 44, NIT-4). Its CAS is
+-- flown when it is the slower; a constraint above the climb Mach's CAS leaves the climb Mach.
+runtime.simDR_airspeed_mach = 0.80
+state, target = climb(30000, 290, 0, 250)
+equal(state, "clb_nores/IAS", "a 250 kt constraint at FL300 at M.80: IAS")
+equal(target, 250, "a 250 kt constraint at FL300 at M.80: 250 kt, not M.78")
+state, target = climb(30000, 290, 0, 300)
+equal(state, "clb_nores/MACH", "a 300 kt constraint at FL300 at M.80 (above M.78's 288 kt): Mach as before")
+equal(target, 78, "a 300 kt constraint at FL300 at M.80: M.78 as before")
+state, target = climb(30000, 290)
+equal(state, "clb_nores/MACH", "no constraint at FL300 at M.80: Mach as before")
+equal(target, 78, "no constraint at FL300 at M.80: M.78 as before")
+runtime.simDR_airspeed_mach = 0.5
+
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV climb speed cap tests passed: "..checks)

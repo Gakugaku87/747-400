@@ -431,6 +431,14 @@ local function B747_climb_restriction_speed(restriction)
     if restriction==nil or climbSpeed==nil then return restriction end
     return math.min(restriction,climbSpeed)
 end
+-- [P48] The current Mach climb_speed_uses_mach weighs (above the climb Mach it keeps the climb in Mach), except while a
+-- route constraint caps the CAS target (spdval below the speed it caps, base): then the constraint's CAS against the
+-- climb Mach alone decides, so the slower is flown. A 250 kt constraint at FL300 at M.80 gave M.78, about 288 kt
+-- (review 44, NIT-4).
+local function B747_climb_mach_weighed(spdval,base)
+    if spdval<base then return 0 end
+    return simDR_airspeed_mach
+end
 function clb_src_setSpd()
     
     if B747DR_airspeed_V2<900 then
@@ -455,13 +463,13 @@ function clb_aptres_setSpd()
 
 end
 function clb_spcres_setSpd()
-    local spdval=B747_constraint_speed_cap(modFlapSpeed(B747_climb_restriction_speed(
-        vnav_afds_helpers.climb_speed_for_state("spcres", getFMSData))))
+    local base=modFlapSpeed(B747_climb_restriction_speed(vnav_afds_helpers.climb_speed_for_state("spcres", getFMSData)))
+    local spdval=B747_constraint_speed_cap(base)
     B747DR_switchingIASMode=1
     local clbmachval=B747_climb_mach_thousandths()/10
     -- Mach once the CAS target at this altitude (or the current Mach) reaches the climb Mach
     if vnav_afds_helpers.climb_speed_uses_mach(spdval, clbmachval/100, simDR_pressureAlt1,
-        simDR_airspeed_mach, simDR_autopilot_airspeed_is_mach) then
+        B747_climb_mach_weighed(spdval,base), simDR_autopilot_airspeed_is_mach) then
       print("convert to climb Mach in clb ".. clbmachval)
       B747_set_vnav_speed_target(1, clbmachval)
     else
@@ -479,12 +487,13 @@ function clb_spcres_setSpd()
 
 end
 function clb_nores_setSpd()
-    local spdval=B747_constraint_speed_cap(modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("nores", getFMSData)))
+    local base=modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("nores", getFMSData))
+    local spdval=B747_constraint_speed_cap(base)
     B747DR_switchingIASMode=1
     local clbmachval=B747_climb_mach_thousandths()/10
     -- Mach once the CAS target at this altitude (or the current Mach) reaches the climb Mach
     if vnav_afds_helpers.climb_speed_uses_mach(spdval, clbmachval/100, simDR_pressureAlt1,
-        simDR_airspeed_mach, simDR_autopilot_airspeed_is_mach) then
+        B747_climb_mach_weighed(spdval,base), simDR_autopilot_airspeed_is_mach) then
       print("convert to climb Mach in clb".. clbmachval)
       B747_set_vnav_speed_target(1, clbmachval)
     else
