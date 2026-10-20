@@ -110,6 +110,13 @@ else
     check(apart == false, "T/W: together, 10 %: not apart")
     tw, apart = tw_of({[0] = 93000, 100000, 100000, 100000}, 200000, true)
     near(tw, 400000 / (200000 * 9.80665), 1e-12, "T/W: apart, 7 % is together again")
+    -- the rejoin's 2.5 kN floor at idle (review 48's NIT-5): a 3.5 kN spread is together from together, still apart from
+    -- apart; 2 kN is together again
+    tw = tw_of({[0] = -11500, -8000, -8000, -8000}, 200000, false)
+    near(tw, -32000 / (200000 * 9.80665), 1e-12, "T/W: idle, 3.5 kN apart from together: together")
+    check(tw_of({[0] = -11500, -8000, -8000, -8000}, 200000, true) == nil, "T/W: idle, 3.5 kN apart from apart: apart")
+    tw = tw_of({[0] = -10000, -8000, -8000, -8000}, 200000, true)
+    near(tw, -32000 / (200000 * 9.80665), 1e-12, "T/W: idle, 2 kN apart from apart: together again")
     local f, r = lead(nil, nil, 0.2, 0.1)
     check(f == 0.2 and r == 0, "lead: the filter starts from T/W, no rate")
     f, r = lead(0.2, 0.2, 0.21, 0.1)
