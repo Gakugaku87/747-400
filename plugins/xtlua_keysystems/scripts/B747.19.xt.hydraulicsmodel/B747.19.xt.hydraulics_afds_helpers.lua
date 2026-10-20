@@ -455,6 +455,11 @@ afds_controls.SPEED_PITCH_THRUST_FEED_FORWARD = 1.0
 -- the full rate took the director down at 0.7-1.0 deg/s and the A/P's attitude 1.9 deg below where it settled at -0.104 g
 -- (the pitch loop's overshoot after the ramp; P43 alone: 0.02 deg, but the IAS 6.3 kt low; review 46)
 afds_controls.SPEED_PITCH_THRUST_DECREASE_SHARE = 0.5
+-- only a real decrease: the filtered T/W this much below its peak, which decays by it in SPEED_PITCH_THRUST_PEAK_SEC.
+-- Applied to every falling update, the half share turned the thrust's jitter into a steady pitch-up and the IAS sat
+-- 1.0-1.4 kt low in the takeoff climb with 3 kN of jitter (review 46b); the jitter moves the filtered T/W 0.001-0.002.
+afds_controls.SPEED_PITCH_THRUST_DECREASE_MARGIN = 0.005
+afds_controls.SPEED_PITCH_THRUST_PEAK_SEC = 3.0
 -- T/W through a first order of this many seconds: X-Plane's thrust moves 1-4 kN an engine in 0.25 s as the A/T works
 -- the levers on the takeoff (p35-line1), 0.4-1.6 deg/s of path unfiltered
 afds_controls.SPEED_PITCH_THRUST_FILTER_SEC = 2.0
@@ -505,21 +510,25 @@ end
 
 -- [P45] The thrust's lead over elapsed_sec: T/W (tw, nil when unknown; previous_tw at the last update) through
 -- SPEED_PITCH_THRUST_FILTER_SEC's first order from filtered_tw, and the path's rate (deg/s) its change asks for,
--- SPEED_PITCH_THRUST_FEED_FORWARD of it (a decrease SPEED_PITCH_THRUST_DECREASE_SHARE of that). The filter starts from
--- tw with no rate after an unknown T/W or a change faster than SPEED_PITCH_THRUST_MAX_RATE. Returns the filtered T/W
--- (nil when unknown) and the rate.
-function afds_controls.speed_pitch_thrust_lead(filtered_tw, previous_tw, tw, elapsed_sec)
+-- SPEED_PITCH_THRUST_FEED_FORWARD of it; a decrease SPEED_PITCH_THRUST_DECREASE_SHARE of that once the filtered T/W is
+-- SPEED_PITCH_THRUST_DECREASE_MARGIN below peak_tw, its peak (decaying by the margin in SPEED_PITCH_THRUST_PEAK_SEC).
+-- The filter starts from tw with no rate after an unknown T/W or a change faster than SPEED_PITCH_THRUST_MAX_RATE.
+-- Returns the filtered T/W (nil when unknown), the rate and the peak.
+function afds_controls.speed_pitch_thrust_lead(filtered_tw, previous_tw, tw, elapsed_sec, peak_tw)
     elapsed_sec = tonumber(elapsed_sec) or 0
-    if tw == nil then return nil, 0 end
+    if tw == nil then return nil, 0, nil end
     if filtered_tw == nil or previous_tw == nil or elapsed_sec <= 0
         or math.abs(tw - previous_tw) > afds_controls.SPEED_PITCH_THRUST_MAX_RATE * elapsed_sec then
-        return tw, 0
+        return tw, 0, tw
     end
     local next_tw = filtered_tw
         + (tw - filtered_tw) * math.min(1, elapsed_sec / afds_controls.SPEED_PITCH_THRUST_FILTER_SEC)
+    local margin = afds_controls.SPEED_PITCH_THRUST_DECREASE_MARGIN
+    local peak = math.max(next_tw, (tonumber(peak_tw) or filtered_tw)
+        - margin / afds_controls.SPEED_PITCH_THRUST_PEAK_SEC * elapsed_sec)
     local rate = afds_controls.SPEED_PITCH_THRUST_FEED_FORWARD * math.deg(next_tw - filtered_tw) / elapsed_sec
-    if rate < 0 then rate = rate * afds_controls.SPEED_PITCH_THRUST_DECREASE_SHARE end
-    return next_tw, rate
+    if rate < 0 and next_tw < peak - margin then rate = rate * afds_controls.SPEED_PITCH_THRUST_DECREASE_SHARE end
+    return next_tw, rate, peak
 end
 
 -- [P45] The engines' shared thrust over the weight: thrust_n the four engines' thrust (N, indexed 0-3:

@@ -598,6 +598,7 @@ local speedPitchAccel=0
 local lastSpeedPitchAttitude=0
 local lastSpeedPitchThrustWeight=nil
 local speedPitchThrustWeight=nil
+local speedPitchThrustPeak=nil
 local function ap_director_speed_on_pitch(pitchMode,holdAlt,lastDirectorUpdate,targetSpeed)
     local C=B747_afds_controls
     directorSampleRate=0.1
@@ -615,6 +616,7 @@ local function ap_director_speed_on_pitch(pitchMode,holdAlt,lastDirectorUpdate,t
         if pitchMode==1 then speedPitchBase=simDR_AHARS_pitch_heading_deg_pilot end
         speedPitchAccel=0
         speedPitchThrustWeight=thrustWeight
+        speedPitchThrustPeak=thrustWeight
         dt=0
     else
         speedPitchAccel=C.speed_pitch_accel(speedPitchAccel,ias-lastSpeedPitchIAS,dt)
@@ -623,8 +625,8 @@ local function ap_director_speed_on_pitch(pitchMode,holdAlt,lastDirectorUpdate,t
         local errorDeg=C.speed_pitch_path_error_deg(speedPitchAccel,wanted,simDR_TAS_mps,ias)
         local maxRate=C.speed_pitch_max_rate_deg(simDR_TAS_mps)
         local thrustRate
-        speedPitchThrustWeight,thrustRate=C.speed_pitch_thrust_lead(speedPitchThrustWeight,lastSpeedPitchThrustWeight,
-            thrustWeight,dt)
+        speedPitchThrustWeight,thrustRate,speedPitchThrustPeak=C.speed_pitch_thrust_lead(speedPitchThrustWeight,
+            lastSpeedPitchThrustWeight,thrustWeight,dt,speedPitchThrustPeak)
         if B747DR_ap_FMA_autothrottle_mode==3 then thrustRate=0 end
         -- in IDLE the EEC's speed loop adds thrust below its minimum safe speed (spd_throttle): only decreases lead there
         if B747DR_ap_FMA_autothrottle_mode==2 then thrustRate=math.min(0,thrustRate) end

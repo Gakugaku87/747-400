@@ -98,9 +98,16 @@ else
     f, r = lead(0.2, 0.2, 0.21, 0.1)
     near(f, 0.2 + 0.01 * 0.1 / 2, 1e-12, "lead: T/W through a 2 s first order")
     near(r, math.deg(0.01 * 0.1 / 2) / 0.1, 1e-9, "lead: the path's rate from the filtered change")
-    -- a decrease leads at half the rate (review 46's MINOR-1)
-    f, r = lead(0.2, 0.2, 0.19, 0.1)
-    near(r, 0.5 * math.deg(-0.01 * 0.1 / 2) / 0.1, 1e-9, "lead: a decrease at half the rate")
+    -- a decrease leads at half the rate once the filtered T/W is 0.005 below its peak (review 46's MINOR-1), at the
+    -- full rate before, so that a jitter is led alike both ways (review 46b's MINOR-2)
+    local p
+    f, r, p = lead(0.2, 0.2, 0.19, 0.1, 0.2)
+    near(r, math.deg(-0.01 * 0.1 / 2) / 0.1, 1e-9, "lead: a dip near the peak at the full rate")
+    near(p, 0.2 - 0.005 / 3 * 0.1, 1e-12, "lead: the peak decays 0.005 in 3 s")
+    f, r, p = lead(0.194, 0.19, 0.19, 0.1, 0.2)
+    near(r, 0.5 * math.deg(-0.004 * 0.1 / 2) / 0.1, 1e-9, "lead: a decrease 0.006 below the peak at half the rate")
+    f, r, p = lead(0.2, 0.2, 0.21, 0.1, 0.2)
+    near(p, f, 1e-12, "lead: the peak follows a rise")
     f, r = lead(0.2, 0.0, 0.25, 0.1)
     check(f == 0.25 and r == 0, "lead: a first read of 0, then 0.25 in 0.1 s: the filter starts again, no rate")
     f, r = lead(0.2, 0.2, nil, 0.1)
@@ -460,6 +467,7 @@ for _, fps in ipairs({20, 34}) do
     -- b. The takeoff's thrust reduction at 10 s (190 kN an engine -> 82 % over a 1.5 s first order) at 233 t, V2 144,
     -- 1,200 ft, the four engines alike: the lead took the director down at 0.7-1.0 deg/s and the attitude went 1.9 deg
     -- below where it settled, -0.104 g (P43 alone: 0.02 deg, -0.055 g, but the IAS 6.3 kt low; review 46's MINOR-1).
+    -- At half the rate once it is a real decrease (0.005 below the peak): 0.8-1.04 deg, -0.084 to -0.089 g.
     for _, mode in ipairs({4, 1}) do
         local T0 = 190000
         local m = climb_on(mode, 1200, 233000, 144, T0, function(t)
@@ -471,10 +479,51 @@ for _, fps in ipairs({20, 34}) do
             if p.t >= 10 then low, nz = math.min(low, p.theta), math.min(nz, p.nz) end
         end
         local settled = CM.at(m, 50).theta
-        check(settled - low <= 1.0 and nz >= -0.09, string.format("thrust reduction at 233 t (%s, %d fps): the attitude "
-            .."at most 1 deg below where it settles, nz at least -0.09 g: %.2f deg, %+.3f g",
+        check(settled - low <= 1.1 and nz >= -0.095, string.format("thrust reduction at 233 t (%s, %d fps): the attitude "
+            .."at most 1.1 deg below where it settles, nz at least -0.095 g: %.2f deg, %+.3f g",
             mode == 1 and "TO/GA" or "VNAV SPD", fps, settled - low, nz))
     end
+end
+
+-- c. X-Plane's thrust jitters as the A/T works the levers (p35-line1's takeoff: 1.7 kN rms an engine per 0.25 s). A
+-- decrease led at half the rate and an increase at the full one turn a jitter into a steady pitch-up, and the
+-- integrator holds it with the IAS low: with 3 kN of jitter in the takeoff climb (TO/GA, 233 t, V2 144, 1,200 ft,
+-- 190 kN an engine) the mean IAS sat 1.4 kt lower than with P43 alone (review 46b's MINOR-2). The jitter: the four
+-- engines together, a sum of four sines of 0.7-3.7 Hz (about the recorded spectrum; the same in LuaJIT and Lua 5.1).
+local function jitter_climb(fps, lead)
+    local T0, sigma = 190000, 3000
+    local function jitter(t)
+        if t < 20 then return 0 end
+        return sigma * (math.sin(2 * math.pi * 0.7 * t + 3) + math.sin(2 * math.pi * 1.3 * t)
+            + math.sin(2 * math.pi * 2.1 * t + 1) + math.sin(2 * math.pi * 3.7 * t + 2)) / 2
+    end
+    local target = 154
+    local gamma = path_for(1200, target, 233000, 0.667, T0)
+    local _, V = trim(1200, target, 233000, gamma, 0.667)
+    local m = CM.fly({alt_ft = 1200, ias_kt = target, vs_fpm = V * math.sin(math.rad(gamma)) / 0.3048 * 60,
+        weight_kg = 233000, flaps = 0.667, pitch_mode = 1, target_kt = target, mcp_alt_ft = 37000, seconds = 120,
+        dt = 1 / fps, vmc_kt = 134, vmax_kt = 250, at_mode = 5,
+        thrust = function(t) return T0 + jitter(t) end,
+        setup = function(mm)
+            if not lead then mm.controls.SPEED_PITCH_THRUST_FEED_FORWARD = 0 end
+            mm.d.B747DR_airspeed_V2, mm.d.B747DR_ap_ias_dial_value = 144, 144
+            mm.d.simDR_touchGround = 1
+        end,
+        frame = function(mm, t)
+            if t > 0 then mm.d.simDR_touchGround = 0 else mm.d.simDR_AHARS_pitch_heading_deg_pilot = 0 end
+            mm.d.B747DR_ap_FMA_active_pitch_mode = 1
+            mm.target_kt = target
+        end})
+    local sum, n = 0, 0
+    for _, p in ipairs(m.track) do
+        if p.t >= 30 then sum, n = sum + (p.ias - target), n + 1 end
+    end
+    return sum / n
+end
+for _, fps in ipairs({20, 34}) do
+    local with_lead, without = jitter_climb(fps, true), jitter_climb(fps, false)
+    check(math.abs(with_lead - without) <= 0.3, string.format("thrust jitter in the takeoff climb (%d fps): the mean IAS "
+        .."within 0.3 kt of P43's: %+.2f against %+.2f kt", fps, with_lead, without))
 end
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
