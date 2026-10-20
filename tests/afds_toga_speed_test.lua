@@ -315,6 +315,70 @@ for _, fps in ipairs({20, 34}) do
     end
 end
 
+-- 4b. Go-arounds with the FMA as fma_PitchModes sets it (TO/GA while TOGA_status is 1, then ALT with the hold status
+-- 2 or the MCP altitude inside the window, else NONE) and the capture window by the VSI as autopilot.lua sets it (200 ft
+-- at 0 fpm to 1,000 ft at 3,000 fpm). o: alt (ft), path (deg), mcp (ft), fps, seconds, ias (kt), hold_status and
+-- hold_alt (ALT HOLD before TO/GA).
+local function rescale(in1, out1, in2, out2, x)
+    if x < in1 then return out1 end
+    if x > in2 then return out2 end
+    return out1 + (out2 - out1) * (x - in1) / (in2 - in1)
+end
+local function go_around_fma(o)
+    local G, KT, S = 9.80665, 0.514444, 541.2
+    local alt, weight, ias0 = o.alt, 250000, o.ias or 150
+    local gamma = math.rad(o.path or -3)
+    local rho = 1.225 * ((288.15 - 0.0019812 * alt) / 288.15) ^ 4.2559
+    local V = ias0 * KT * math.sqrt(1.225 / rho)
+    local p = AM.polar(1.0)
+    local q = 0.5 * rho * V * V
+    local cl = weight * G * math.cos(gamma) / (q * S)
+    local gear = 0.05 * q * S
+    local approach = (q * S * (p[3] + p[4] * cl * cl) + weight * G * math.sin(gamma)) / 4 + gear / 4
+    return CM.fly({alt_ft = alt, ias_kt = ias0, vs_fpm = V * math.sin(gamma) / 0.3048 * 60, weight_kg = weight,
+        flaps = 1.0, pitch_mode = 1, target_kt = ias0, mcp_alt_ft = o.mcp, seconds = o.seconds, dt = 1 / o.fps,
+        vmc_kt = 130, vmax_kt = 230, capture_window_ft = 200,
+        thrust = function(t)
+            local f = math.max(0, math.min(1, (t - 0.5) / 4.5))
+            local gear_drag = gear / 4 * (t < 8 and 1 or math.max(0, 1 - (t - 8) / 10))
+            return approach + (185000 - approach) * f - gear_drag
+        end,
+        setup = function(mm)
+            mm.d.B747DR_airspeed_V2, mm.d.B747DR_ap_ias_dial_value = 999, ias0
+            mm.d.simDR_touchGround = 0
+            mm.d.B747DR_autopilot_TOGA_status = 1
+            mm.d.simDR_autopilot_alt_hold_status = o.hold_status or 0
+            mm.d.simDR_autopilot_hold_altitude_ft = o.hold_alt or o.mcp
+        end,
+        frame = function(mm, t)
+            if t > 3 then mm.state.flap = 0.667 end
+            local d = mm.d
+            d.B747DR_alt_capture_window = rescale(0, 200, 3000, 1000, math.abs(d.simDR_vvi_fpm_pilot or 0))
+            local mode
+            if d.B747DR_autopilot_TOGA_status == 1 then mode = 1
+            elseif d.simDR_autopilot_alt_hold_status == 2
+                or math.abs((d.simDR_pressureAlt1 or alt) - d.simDR_autopilot_altitude_ft) < d.B747DR_alt_capture_window then
+                mode = 9
+            else mode = 0 end
+            d.B747DR_ap_FMA_active_pitch_mode = mode
+        end})
+end
+-- TO/GA pushed level in ALT HOLD at the MCP altitude (a go-around before the G/S capture with the MCP still at the
+-- intercept altitude, or at an MDA set in the MCP): it climbs whether the MCP is a few feet above or below. The ALT
+-- branch took TO/GA with the MCP above by any amount: 0.5 ft above captured it within 0.1 s and cancelled TO/GA, 0.5 ft
+-- below climbed away (review 45c's MINOR-1); now the MCP must be more than 50 ft above.
+for _, fps in ipairs({20, 34}) do
+    for _, off in ipairs({5, 0.5, 0, -0.5, -5}) do
+        local m = go_around_fma({alt = 3000, path = 0, mcp = 3000 + off, fps = fps, seconds = 40, ias = 160,
+            hold_status = 2, hold_alt = 3000 + off})
+        local last = m.track[#m.track]
+        local at = string.format(" (level at the MCP altitude %+.1f ft, %d fps)", off, fps)
+        check(m.d.B747DR_autopilot_TOGA_status == 1 and last.alt > 3500 and last.vs > 500,
+            "go-around at the MCP altitude: TO/GA climbs"..at..string.format(": TOGA %s, %.0f ft, %+.0f fpm",
+            tostring(m.d.B747DR_autopilot_TOGA_status), last.alt, last.vs))
+    end
+end
+
 -- 5. A steep climb-out into an ALT capture and into V/S (review 45's M1): p35-line1's climb-out at 165 t (16-20 deg in
 -- VNAV SPD), the MCP at 3,000 ft (window 1,000), or V/S 1,500 fpm selected 20 s in (after the flaps 20 -> 10 at 14 s,
 -- where climb_model switches the polar at once). The speed modes go to 25 deg (P39) but ALT kept its 15 deg limit and
