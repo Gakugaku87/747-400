@@ -1007,14 +1007,17 @@ local THR_LEVER_GAIN=0.005
 local THR_REF_FLIGHT_ADVANCE_PER_SEC=0.025
 local THR_REF_FLIGHT_ADVANCE_PITCH_MODES={[4]=true,[8]=true}
 -- [P46] The advance's rate comes up from THR_REF_FLIGHT_ONSET_SHARE of it over THR_REF_FLIGHT_ONSET_SEC from its start
--- (a new start after half a second without advancing): real 744s resuming the climb add excess thrust at about 0.004 W
+-- (a new start after half a second without advancing: the time of the frames here that do not advance or run in IDLE,
+-- where the levers go to idle whatever the reference, and the time spent outside this branch, but not one long frame of
+-- an advance; review 48): real 744s resuming the climb add excess thrust at about 0.004 W
 -- a second from the start, the V/S 580 / 1,150 / 1,980 / 2,500 fpm 5 / 10 / 15 / 20 s into it (ADS-B, median); at the
 -- steady rate p37-line1 (2026-10-21) went 703 / 1,457 / 2,469 / 3,476 fpm. The lever 0.07 up after 5 s (0.125 before),
 -- 0.175 after 10 s (0.25), climb thrust from level flight's after about 23 s.
 local THR_REF_FLIGHT_ONSET_SHARE=0.4
 local THR_REF_FLIGHT_ONSET_SEC=10
 local thrRefAdvanceStart=nil
-local thrRefAdvanceLast=-100
+local thrRefQuiet=0
+local thrRefLastFrame=-100
 -- [review 21] The A/T's levers in its thrust modes move towards their target at most over their range in `seconds`, and
 -- onto it when nearer: the same at any frame rate. B747_interpolate_value goes the last step by a tenth of the way a
 -- frame, and the A/T moves its target only with the levers within 0.02 of it, so in flight (the levers over their
@@ -1095,9 +1098,13 @@ function ecc_throttle()
 	local pitchMode=B747DR_ap_FMA_active_pitch_mode
 	if simDR_onGround==0 and (string.sub(reference,1,3)=="CLB" or reference=="CRZ")
 		and THR_REF_FLIGHT_ADVANCE_PITCH_MODES[pitchMode] then
-		if target> input+1 then
-			if thrRefAdvanceStart==nil or simDRTime-thrRefAdvanceLast>0.5 then thrRefAdvanceStart=simDRTime end
-			thrRefAdvanceLast=simDRTime
+		local outside=math.max(0,simDRTime-time-thrRefLastFrame)
+		thrRefLastFrame=simDRTime
+		if target> input+1 and B747DR_ap_FMA_autothrottle_mode~=2 then
+			if thrRefAdvanceStart==nil or thrRefQuiet+outside>0.5 then thrRefAdvanceStart=simDRTime end
+			thrRefQuiet=0
+		else
+			thrRefQuiet=thrRefQuiet+outside+time
 		end
 		local onset=1
 		if thrRefAdvanceStart~=nil then

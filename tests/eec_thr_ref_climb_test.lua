@@ -161,5 +161,88 @@ for _, fps in ipairs({20, 30, 60}) do
         .."(21-26)", fps, tostring(reached and string.format("%.1f", reached))))
 end
 
+-- A7 [review 48]: an advance's restarts. One runtime through a script of phases {seconds, A/T mode, the reference as a
+-- lever, frame time (1/30 s), levers set at the start}; spd_throttle (A/T SPD) stubbed: the levers stay. Returns the
+-- lever's travel from the start of phase k after s seconds.
+local function script_run(phases)
+    local runtime = {
+        print=function() end, SIM_PERIOD=1 / 30, simDRTime=100,
+        B747DR_ap_FMA_active_pitch_mode=4, B747DR_ap_flightPhase=1, B747DR_toderate=0, B747DR_clbderate=0,
+        simDR_flap_ratio=0, simDR_radarAlt1=9000, B747DR_airspeed_Vmc=150, simDR_autopilot_airspeed_kts=250,
+        B747DR_engineType=0, B747DR_ref_thr_limit_mode="CLB", B747DR_vnav_energy_active=0,
+        B747DR_vnav_energy_thrust_policy=0, B747DR_ap_FMA_autothrottle_mode=5, B747DR_ap_autoland=0, simDR_onGround=0,
+        simDR_ind_airspeed_kts_pilot=250, simDR_ias_pilot=250,
+        throttle_resolver_angle_GE=function() return 0 end,
+        B747DR_throttle_resolver_angle={[0]=0, 0, 0, 0}, simDR_N1_target_bug={[0]=95, 95, 95, 95},
+        simDR_EPR_target_bug={[0]=1, 1, 1, 1},
+        B747DR_display_EPR_max={[0]=EPR_MAX, EPR_MAX, EPR_MAX, EPR_MAX},
+    }
+    local from = phases[1].levers or 0.15
+    runtime.B747DR_throttle = {[0]=from, from, from, from}
+    runtime.simDR_engine_throttle_jet_all = from
+    setmetatable(runtime, {__index=_G})
+    load_in(EEC, runtime, "function B747_animate_value", "function B747_setMaxThrust")
+    load_in(EEC, runtime, "function B747_interpolate_value", "local previous_altitude = 0")
+    runtime.spd_throttle = function() end
+    local function refresh()
+        for i = 0, 3 do runtime.B747DR_throttle_resolver_angle[i] = pw_command(runtime.B747DR_throttle[i]) end
+    end
+    refresh()
+    runtime.ecc_throttle()
+    local starts, history, t = {}, {}, 0
+    for k, p in ipairs(phases) do
+        if p.levers then
+            for i = 0, 3 do runtime.B747DR_throttle[i] = p.levers end
+            runtime.simDR_engine_throttle_jet_all = p.levers
+            runtime.spd_target_throttle = p.levers
+        end
+        local ref = pw_command(p.ref)
+        for i = 0, 3 do runtime.simDR_EPR_target_bug[i] = ref end
+        runtime.B747DR_ap_FMA_autothrottle_mode = p.at
+        starts[k] = {t, runtime.B747DR_throttle[0]}
+        local stop = t + p.seconds
+        while t < stop - 1e-9 do
+            local dt = (p.long_at and t >= starts[k][1] + p.long_at and not p.long_done) and p.long or (1 / 30)
+            if dt == p.long then p.long_done = true end
+            t = t + dt
+            runtime.SIM_PERIOD = dt
+            runtime.simDRTime = runtime.simDRTime + dt
+            refresh()
+            runtime.ecc_throttle()
+            refresh()
+            history[#history + 1] = {t, runtime.B747DR_throttle[0], k}
+        end
+    end
+    return function(k, s)
+        for _, h in ipairs(history) do
+            if h[3] == k and h[1] >= starts[k][1] + s - 1e-9 then return h[2] - starts[k][2] end
+        end
+        return nil
+    end
+end
+-- a. A second advance after 2 s at the reference (a capture's level flight, then a new climb or a step climb): the
+-- onset again, the lever 0.06-0.08 up 5 s into it. (A gap test that never restarts passed every check.)
+local travel_of = script_run({
+    {seconds=30, at=5, ref=0.66, levers=0.15},
+    {seconds=2, at=5, ref=0.66},
+    {seconds=10, at=5, ref=0.96}})
+local second = travel_of(3, 5)
+check(second ~= nil and second >= 0.060 and second <= 0.080, string.format("a second advance after 2 s at the "
+    .."reference: the onset again, the lever %.3f up after 5 s (0.06-0.08)", second or -1))
+-- b. One long frame (0.7 s, a scenery-load stutter) 4 s into a climb resumption: no restart, the lever about 0.175 up
+-- after 10 s (a restart gave 0.131-0.134 and climb thrust 2.5 s later)
+travel_of = script_run({{seconds=12, at=5, ref=0.66, levers=0.15, long_at=4, long=0.7}})
+local at10 = travel_of(1, 10)
+check(at10 ~= nil and at10 >= 0.165 and at10 <= 0.19, string.format("one 0.7 s frame 4 s into the advance: no restart, "
+    .."the lever %.3f up after 10 s (0.165-0.19)", at10 or -1))
+-- c. 10 s in IDLE (FLCH descending, the CLB reference above the idle levers), then THR REF (the descent reversed into
+-- a climb): the onset, the lever 0.06-0.08 up after 5 s (IDLE's frames counted as advancing: 0.125)
+travel_of = script_run({
+    {seconds=10, at=2, ref=0.66, levers=0.0},
+    {seconds=10, at=5, ref=0.66}})
+local out_of_idle = travel_of(2, 5)
+check(out_of_idle ~= nil and out_of_idle >= 0.060 and out_of_idle <= 0.080, string.format("an advance out of IDLE: "
+    .."the onset, the lever %.3f up after 5 s (0.06-0.08)", out_of_idle or -1))
+
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("EEC THR REF climb tests passed: "..checks)
