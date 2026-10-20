@@ -120,6 +120,19 @@ equal(state, "clb_aptres/IAS", "SPD REST 260/12000 at 9,000 ft")
 equal(target, 250, "SPD REST 260/12000 below SPD TRANS 250/10000: 250 kt")
 state, target = climb(11000, 245)
 equal(target, 260, "SPD REST 260/12000 above 10,000 ft: 260 kt")
+-- a route constraint below the flaps' manoeuvre speed keeps the flaps' speed (B747_constraint_speed_cap), but never
+-- above the target without it (review 44): SPD REST 210 with a 200 kt constraint and Vf0 220 is 210, not 220
+fms.clbrestspd = "210"
+fms.clbrestalt = "8000"
+state, target = climb(3000, 205, 0, 200)
+equal(target, 210, "SPD REST 210 and a 200 kt constraint below Vf0 220: 210 kt, not 220")
+fms.clbrestspd = "---"
+fms.clbrestalt = "-----"
+-- heavy, Vf0 252 above SPD TRANS: a 240 kt constraint leaves 250 kt, not 252
+runtime.B747DR_airspeed_Vf0 = 252
+state, target = climb(6000, 245, 0, 240)
+equal(target, 250, "SPD TRANS 250 and a 240 kt constraint below Vf0 252: 250 kt, not 252")
+runtime.B747DR_airspeed_Vf0 = 220
 fms.clbrestspd = "---"
 fms.clbrestalt = "-----"
 

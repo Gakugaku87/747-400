@@ -378,11 +378,13 @@ local function B747_flap_manoeuvre_speed()
     return tonumber(speed) or 0
 end
 -- A CAS target capped by the route's speed constraint (laminar/B747/autopilot/vnav/constraint_speed, from
--- the CIFP), never below the manoeuvring speed of the flaps set: for a slow one the flaps stay out.
+-- the CIFP), never below the manoeuvring speed of the flaps set: for a slow one the flaps stay out. Never above the
+-- target itself either: a constraint below the manoeuvring speed raised a SPD REST of 210 kt to Vf0's 230 kt and SPD
+-- TRANS to 252 kt at a heavy weight (review 44).
 local function B747_constraint_speed_cap(spdval)
     local limit=tonumber(B747DR_vnav_constraint_speed) or 0
     if limit<=0 or spdval<=limit then return spdval end
-    return math.max(limit,B747_flap_manoeuvre_speed())
+    return math.min(spdval,math.max(limit,B747_flap_manoeuvre_speed()))
 end
 -- Write the speed mode and the MCP dial together with the X-Plane autopilot
 -- target (airspeed_dial_kts_mach) in the new unit. B747_ap_ias_mach_mode only
