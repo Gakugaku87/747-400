@@ -591,7 +591,22 @@ function engine_idle_control_PW(altitude_ft_in)
 
       B747DR_TO_throttle = takeoff_thrust_epr_throttle
     end
-  
+
+    -- [P38] The maximum rated EPR in flight: the GA rating (as the GA reference's bug below), the EICAS's amber
+    -- maximum line and the levers' full forward stop (throttle_resolver_angle_PW: 0.95 at idle up to the maximum) in
+    -- the CLB, CRZ and GA references alike. On the 747-400 the reference the FMC selects is the thrust limit, the
+    -- green cursor; the maximum thrust limit, sent to the EIUs and the EECs, does not follow it (Lufthansa B747-400
+    -- ATA 34-61, EICAS thrust display). The maximum was max climb in CRZ and the GA rating in GA, so when GA came on
+    -- in the approach (1,500 ft RA) the same levers gave more EPR: on EHAM's ILS 18R (p32-line1, 2026-10-20) N1 58 to
+    -- 68 % at 0.44 and 160 to 167 kt. In CLB it was the takeoff's maximum held, and in GA the last frame's bug: 0.9
+    -- with the A/T at idle in the descent, the levers' full forward stop at idle.
+    local EPR_rated_max = 0.000017 * altitude_ft_in + 1.5
+    if altitude_ft_in >= (-10.15 * simDR_TAT^2 + 57.654 * simDR_TAT + 9526.4) then
+      EPR_rated_max = -0.00669 * simDR_TAT + 1.74
+    end
+    EPR_rated_max = math.min(tonumber(string.format("%3.2f", EPR_rated_max + packs_adjustment_value
+      + engine_anti_ice_adjustment_value)), 1.71)
+
     if string.match(B747DR_ref_thr_limit_mode, "TO") or B747DR_ref_thr_limit_mode == "" then
       --Store original max engine output
       if orig_thrust_n == 0.0 or B747DR_newsimconfig_data == 1 then
@@ -633,10 +648,8 @@ function engine_idle_control_PW(altitude_ft_in)
       for i = 0, 3 do
         EPR_target_bug[i] = EPR_ref
         display_EPR_ref[i] = math.min(EPR_ref, 1.71)
-
-        if B747DR_display_EPR_max[i] < B747DR_display_EPR_ref[i] then
-          display_EPR_max[i] = B747DR_display_EPR_ref[i]
-        end
+        -- [P38] the maximum in flight, not below the reference
+        display_EPR_max[i] = math.max(EPR_rated_max, display_EPR_ref[i])
       end
     elseif string.match(B747DR_ref_thr_limit_mode, "CRZ") then
       EPR_actual, _, EPR_max_climb = in_flight_EPR_PW(altitude_ft_in, 0)
@@ -656,7 +669,7 @@ function engine_idle_control_PW(altitude_ft_in)
       for i = 0, 3 do
           EPR_target_bug[i] = string.format("%3.2f", EPR_max_cruise) + packs_adjustment_value + engine_anti_ice_adjustment_value
           display_EPR_ref[i] = string.format("%3.2f", EPR_max_cruise) + packs_adjustment_value + engine_anti_ice_adjustment_value
-          display_EPR_max[i] = EPR_max_climb  --simDR_EPR_target_bug[i]
+          display_EPR_max[i] = EPR_rated_max  -- [P38] the maximum in flight, not max climb
       end
 
       if B747DR_log_level >= 1 then
@@ -678,7 +691,7 @@ function engine_idle_control_PW(altitude_ft_in)
           EPR_target_bug[i] = string.format("%3.2f", -0.00669 * simDR_TAT + 1.74 + packs_adjustment_value + engine_anti_ice_adjustment_value)
         end
         display_EPR_ref[i] = math.min(simDR_EPR_target_bug[i], 1.71)
-        display_EPR_max[i] = math.min(simDR_EPR_target_bug[i], 1.71)
+        display_EPR_max[i] = EPR_rated_max  -- [P38] the maximum in flight, not the last frame's bug
       end
     end
 

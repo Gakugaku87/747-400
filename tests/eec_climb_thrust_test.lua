@@ -71,6 +71,8 @@ local function clb_target(engine, altitude, mach, derate, light, flaps, sat, max
         env["in_flight_EPR_"..engine] = function() return actual, 1.40, rating end
         env.EPR_target_bug, env.display_EPR_ref, env.display_EPR_max = {}, {}, {}
         env.B747DR_display_EPR_max, env.B747DR_display_EPR_ref = {[0] = 0, 0, 0, 0}, {[0] = 0, 0, 0, 0}
+        -- the PW's maximum in flight, worked out before the reference branches (eec_max_rated_thrust_test)
+        env.EPR_rated_max = 1.71
     end
     setfenv(assert(loadstring(clb_branch(engine))), env)()
     return tonumber(engine == "GE" and env.N1_target_bug[0] or env.EPR_target_bug[0])

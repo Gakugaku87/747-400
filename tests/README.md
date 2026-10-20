@@ -260,6 +260,18 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   (the table 1.52) and read 1.454 for 1.43 at 20,000 ft at ISA (8 of 97
   checks failed before). The modules run in XTLua's namespace (the
   plugin's init.lua), on the EEC's tables as XTLua holds them.
+- `eec_max_rated_thrust_test.lua`: the PW's maximum EPR in flight - the
+  EICAS's amber line and the levers' full forward stop - is the GA rating
+  in the CLB, CRZ and GA references alike: the FMC's maximum thrust is not
+  reduced by any mode or derate (Boeing 747-400 E & M ATA 34-61). It was
+  max climb in CRZ and the GA rating in GA, so GA's selection in the
+  approach at 1,500 ft RA put the same levers (0.44) from EPR 1.148 to
+  1.214 at 3,000 ft, TAT 10 C (p32-line1: N1 58 to 68 %, 160 to 167 kt);
+  CLB held the takeoff's maximum, and GA took the last frame's bug, 0.9
+  with the A/T at idle in the descent. The rating's 1.92 at FL370 is held
+  to the tape's 1.71, two packs off add their adjustment, and CLB's
+  maximum is not below its reference (7 of 8 checks failed before). The
+  branches run in XTLua's namespace.
 - `xtlua_warm_reads_test.lua`: XTLua gives 0 for the first read of a
   dataref in a script module, so the datarefs that a fix first reads at a
   critical moment are read every frame in the module's per-frame function
