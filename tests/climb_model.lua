@@ -304,26 +304,30 @@ function M.at(m, t)
     return best
 end
 
--- Summary of a track from t0 on: the IAS's peak above and below the target (kt), the pitch reversals of the F/D
--- (direction changes of more than 0.2 deg), the largest |nz| increment (g) and pitch rate (deg/s).
-function M.summary(m, t0)
+-- Summary of a track from t0 to t1 (the end when nil): the IAS's peak above and below the target (kt), the pitch
+-- reversals of the F/D (direction changes of more than 0.2 deg: the F/D 0.2 deg below its highest since it last turned
+-- up, or above its lowest since it last turned down; the first move of 0.2 deg sets the direction), the largest |nz|
+-- increment (g) and pitch rate (deg/s).
+function M.summary(m, t0, t1)
     local over, under, nz, rate = -math.huge, math.huge, 0, 0
-    local reversals, dir, extreme = 0, 0, nil
+    local reversals, dir, high, low = 0, 0, nil, nil
     for _, p in ipairs(m.track) do
-        if p.t >= (t0 or 0) then
+        if p.t >= (t0 or 0) and p.t <= (t1 or math.huge) then
             over = math.max(over, p.ias - p.target)
             under = math.min(under, p.ias - p.target)
             nz = math.max(nz, math.abs(p.nz))
             rate = math.max(rate, math.abs(p.q))
-            if extreme == nil then extreme = p.fd
-            elseif dir >= 0 and p.fd < extreme - 0.2 then
-                if dir > 0 then reversals = reversals + 1 end
-                dir, extreme = -1, p.fd
-            elseif dir <= 0 and p.fd > extreme + 0.2 then
-                if dir < 0 then reversals = reversals + 1 end
-                dir, extreme = 1, p.fd
-            elseif (dir >= 0 and p.fd > extreme) or (dir <= 0 and p.fd < extreme) then
-                extreme = p.fd
+            if high == nil then
+                high, low = p.fd, p.fd
+            else
+                high, low = math.max(high, p.fd), math.min(low, p.fd)
+                if dir >= 0 and p.fd < high - 0.2 then
+                    if dir > 0 then reversals = reversals + 1 end
+                    dir, low = -1, p.fd
+                elseif dir <= 0 and p.fd > low + 0.2 then
+                    if dir < 0 then reversals = reversals + 1 end
+                    dir, high = 1, p.fd
+                end
             end
         end
     end

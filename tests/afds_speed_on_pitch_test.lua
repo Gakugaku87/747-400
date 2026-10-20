@@ -198,6 +198,20 @@ local function interp(rows, t, key)
     local a, b = rows[lo], rows[hi]
     return a[key] + (b[key] - a[key]) * (t - a.t) / (b.t - a.t)
 end
+-- climb_model's summary counts the F/D's direction changes of more than 0.2 deg however slowly it moves: a 1 deg
+-- sine of 20 s over 60 s has 6 (the count let its extreme follow the F/D both ways until a move of 0.2 deg within a
+-- 0.25 s sample, and gave 0 here; p35-line1's flap steps with 4 counted 0)
+do
+    local track = {}
+    for k = 0, 239 do
+        local t = k * 0.25
+        track[#track + 1] = {t = t, fd = math.sin(2 * math.pi * t / 20), ias = 250, target = 250, nz = 0, q = 0}
+    end
+    local s = CM.summary({track = track}, 0)
+    check(s.reversals == 6, "summary: a slow 1 deg sine's 6 reversals: "..s.reversals)
+    s = CM.summary({track = track}, 0, 30)
+    check(s.reversals == 3, "summary: 3 of them in its first 30 s: "..s.reversals)
+end
 local P35 = load_csv("tests/data/p35-line1_speed_pitch.csv")
 local P34 = load_csv("tests/data/p34-L1_speed_pitch.csv")
 -- a recorded stretch from t0 for span s: the thrust an engine, the targets (at most cap_kt below cap_ft), the flaps,
@@ -231,7 +245,7 @@ for _, fps in ipairs({15, 20, 34}) do
     -- 114 kN an engine in 6 s), VNAV's 250 kt (P42 caps it there; it rose to 255 kt with the IAS). The old law: the
     -- attitude up 0.9 deg in the first 8 s, the IAS to 271.1 kt.
     local m = fly(P35, 505, 70, fps, 250, 10100)
-    local s = CM.summary(m, 0)
+    local s = CM.summary(m, 0, 50)
     near(m.hyd.MODEL_director_state().sample_rate, 0.1, 1e-9, "VNAV SPD: the director samples every 0.1 s"..at)
     local base, rise = CM.at(m, 0).theta, CM.at(m, 8).theta
     check(rise - base >= 1.5, "re-climb: the attitude up 1.5 deg within 8 s"..at..string.format(": %.2f", rise - base))
