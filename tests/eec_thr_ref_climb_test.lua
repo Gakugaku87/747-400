@@ -83,7 +83,14 @@ local function advance(mode, ref, from, dt, on_ground, opts)
         end
         if reached == nil and math.abs(pw_command(runtime.B747DR_throttle[0]) - ref) <= 0.005 then reached = t end
     end
-    return reached, fastest
+    return reached, fastest, history
+end
+-- the lever's travel t seconds into a run's history
+local function travel(history, t)
+    for _, h in ipairs(history) do
+        if h[1] >= t - 1e-9 then return h[2] - history[1][2] end
+    end
+    return nil
 end
 
 -- A1: the climb resumed in flight from level-flight thrust (lever 0.15, EPR 1.05) to CLB (EPR 1.38, lever 0.66): the
@@ -136,6 +143,22 @@ for _, pitch_mode in ipairs({4, 8}) do
     check(reached ~= nil and reached >= 18 and reached <= 26, string.format(
         "pitch mode %d, the reference CLB from flight phase 1: climb thrust after %s s (18-26)", pitch_mode,
         tostring(reached and string.format("%.1f", reached))))
+end
+
+-- A6 [P46]: the advance's onset. Real 744s resuming the climb (ADS-B, research_reclimb.md: the V/S 580 / 1,150 /
+-- 1,980 / 2,500 fpm 5 / 10 / 15 / 20 s after it starts to rise, median) add excess thrust at about 0.004 W a second
+-- from the start; at a steady 0.025 a second p37-line1 (candidate 26) went 703 / 1,457 / 2,469 / 3,476 fpm. The rate
+-- comes up from 40 % of it over the first 10 s: the lever about 0.07 up after 5 s (0.125 at the steady rate), 0.175
+-- after 10 s (0.25), climb thrust after about 23 s, the same at 20, 30 and 60 fps.
+for _, fps in ipairs({20, 30, 60}) do
+    local reached, _, history = advance("CLB", CLB_EPR, 0.15, 1 / fps, false)
+    local at5, at10 = travel(history, 5), travel(history, 10)
+    check(at5 ~= nil and at5 >= 0.060 and at5 <= 0.080, string.format("onset at %d fps: the lever %.3f up after 5 s "
+        .."(0.06-0.08)", fps, at5 or -1))
+    check(at10 ~= nil and at10 >= 0.160 and at10 <= 0.190, string.format("onset at %d fps: the lever %.3f up after 10 s "
+        .."(0.16-0.19)", fps, at10 or -1))
+    check(reached ~= nil and reached >= 21 and reached <= 26, string.format("onset at %d fps: climb thrust after %s s "
+        .."(21-26)", fps, tostring(reached and string.format("%.1f", reached))))
 end
 
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
