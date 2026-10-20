@@ -324,9 +324,10 @@ for _, fps in ipairs({15, 20, 34}) do
     check(s.over <= 17, "re-climb: the IAS at most 17 kt over 250"..at..string.format(": %+.1f kt", s.over))
     check(s.reversals <= 1 and s.rate <= 0.6 and s.nz <= 0.16, "re-climb: smooth"..at
         ..string.format(": %d F/D reversals, %.2f deg/s, %.3f g", s.reversals, s.rate, s.nz))
-    -- a2. [P45] the same with the A/T's thrust over 20 s (P44's) and 30 s: P43 alone 10.9-11.0 and 9.3-9.4 kt over.
-    -- The largest nz is the 10,000 ft acceleration's pitch-down at about 40 s (the target 290 kt from 29 s): 0.163 g at
-    -- 15 fps with the lead, 0.148 without it, 0.13 at 20 and 34 fps.
+    -- a2. [P45] the same with the recorded thrust rise stretched over 20 s (about the A/T's since P44, a lever ramp) and
+    -- 30 s: P43 alone 10.9-11.0 and 9.3-9.4 kt over. Over 50 s the largest nz is the 10,000 ft acceleration's pitch-down
+    -- at about 40 s (the target 290 kt from 29 s): 0.163 g at 15 fps with the lead, 0.148 without it, 0.13 at 20 and
+    -- 34 fps; the resumption's own (0-25 s) is 0.12-0.13 g (review 46).
     for _, case in ipairs({{20, 7.5}, {30, 5.0}}) do
         m = fly(P35, 505, 70, fps, 250, 10100, stretched(case[1]))
         s = CM.summary(m, 0, 50)
@@ -334,6 +335,9 @@ for _, fps in ipairs({15, 20, 34}) do
             case[1], case[2], at, s.over))
         check(s.reversals <= 1 and s.nz <= 0.17, string.format("re-climb, the thrust over %d s: smooth%s: %d F/D "
             .."reversals, %.3f g", case[1], at, s.reversals, s.nz))
+        s = CM.summary(m, 0, 25)
+        check(s.nz <= 0.15, string.format("re-climb, the thrust over %d s: the resumption's nz%s: %.3f g", case[1], at,
+            s.nz))
     end
     -- b. p34-L1 FLCH SPD from ALT at FL310 (MCP FL270), the A/T at idle from 2 s, M .84's speed rising 302 -> 310 kt
     -- as it descends, then 283 kt from 48 s. The old law: 25.5 kt below; P43 alone 7.9 (the A/T's retard now pitches
