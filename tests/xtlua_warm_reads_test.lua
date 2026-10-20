@@ -122,6 +122,16 @@ for _, case in ipairs(cases) do
     end
 end
 
+-- [review 46] The speed law's thrust lead takes the four engines' shared thrust: each engine's thrust is read.
+do
+    local body = function_body("plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/"
+        .."B747.19.xt.hydraulics_override.lua", "ap_pitch_assist")
+    for i = 0, 3 do
+        check(body:find("=simDR_engine_thrust_n["..i.."]", 1, true) ~= nil,
+            "ap_pitch_assist does not read simDR_engine_thrust_n["..i.."] every frame")
+    end
+end
+
 -- The helpers themselves.
 check(reads("  local refresh=simDR_x\n", "simDR_x"), "a refresh read is found")
 check(not reads("  local refresh=simDR_x_y\n", "simDR_x"), "a longer name is not taken for the dataref")
