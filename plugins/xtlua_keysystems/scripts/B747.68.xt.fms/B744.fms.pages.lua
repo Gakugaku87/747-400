@@ -1669,10 +1669,11 @@ function fmsFunctions.setdata(fmsO,value)
  	end
   elseif value == "vref1" then
 	-- [landing speeds] VREF in whole knots, rounded as APPROACH REF shows it (%3d cut 143.69 to 143)
-	fmsO["scratchpad"]=string.format("25/%3d", math.floor(B747DR_airspeed_Vf25 + 0.5))
+	-- [P36] for the landing airport's elevation (B747_landing_vref)
+	fmsO["scratchpad"]=string.format("25/%3d", math.floor(B747_landing_vref(B747DR_airspeed_Vf25) + 0.5))
 	return
   elseif value == "vref2" then
-	fmsO["scratchpad"]=string.format("30/%3d", math.floor(B747DR_airspeed_Vf30 + 0.5))
+	fmsO["scratchpad"]=string.format("30/%3d", math.floor(B747_landing_vref(B747DR_airspeed_Vf30) + 0.5))
 	return
   elseif value == "flapspeed" then
 	if fmsO["scratchpad"]=="" then 

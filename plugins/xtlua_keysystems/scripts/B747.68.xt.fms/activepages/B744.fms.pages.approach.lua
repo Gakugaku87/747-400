@@ -12,12 +12,13 @@ if simConfigData["data"].SIM.weight_display_units == "LBS" then
 end
 
 -- [landing speeds] VREF in whole knots, rounded as the FCOM's table gives them (%3d cut 143.69 to 143)
+-- [P36] for the landing airport's elevation (B747_landing_vref)
     return{
 "      APPROACH REF      ",
 "                        ",
-string.format("%4.1f              %3d", acf_weight/1000,math.floor(B747DR_airspeed_Vf25 + 0.5)),
+string.format("%4.1f              %3d", acf_weight/1000,math.floor(B747_landing_vref(B747DR_airspeed_Vf25) + 0.5)),
 "                        ",
-string.format("                   %3d", math.floor(B747DR_airspeed_Vf30 + 0.5)),
+string.format("                   %3d", math.floor(B747_landing_vref(B747DR_airspeed_Vf30) + 0.5)),
 "                        ",
 "                        ",
 "                        ",

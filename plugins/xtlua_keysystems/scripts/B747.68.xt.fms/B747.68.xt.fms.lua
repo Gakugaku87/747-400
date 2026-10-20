@@ -857,6 +857,34 @@ function B747_updateEconClimbSpeed()
 	end
 end
 
+-- [P36] The landing airport's elevation for APPROACH REF's VREFs: the destination's (RTE DEST) highest runway
+-- threshold in X-Plane's CIFP (Custom Data first, as the autopilot reads its constraints), looked up once for each
+-- destination; nil (sea level) without a destination or a file
+local CIFP_FOLDERS={"Custom Data/CIFP/","Resources/default data/CIFP/"}
+local landingAirport={ident=nil,elevation_ft=nil}
+function B747_destination_elevation_ft()
+	local ident=tostring(fmsModules["data"]["fltdst"] or "")
+	if string.match(ident,"^%w%w%w%w$")==nil then return nil end
+	if landingAirport.ident~=ident then
+		landingAirport.ident=ident
+		landingAirport.elevation_ft=nil
+		for _,folder in ipairs(CIFP_FOLDERS) do
+			local file=io.open(folder..ident..".dat","r")
+			if file~=nil then
+				landingAirport.elevation_ft=fmsPerformance.cifp_airport_elevation_ft(file:read("*a"))
+				file:close()
+				break
+			end
+		end
+	end
+	return landingAirport.elevation_ft
+end
+-- VREF at the landing airport: the instruments' VREF for the gross weight (sea level) with the FCOM's correction
+-- for the airport's elevation
+function B747_landing_vref(vref)
+	return vref+fmsPerformance.vref_elevation_correction_kts(B747_destination_elevation_ft())
+end
+
 function getFMSData(id)
   if hasChild(fmsModules["data"],id) then
     return fmsModules["data"][id]

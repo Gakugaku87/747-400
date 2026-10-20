@@ -120,7 +120,13 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   143/137; 3 of 4 checks failed before); the FLAP/SPD entry takes any
   VREF the page offers (25/185 and 30/183; 180 kt as its top rejected
   VREF25 from 356 t and VREF30 from 385 t; 2 of 8 checks failed before).
-  The page and handler run in XTLua's namespace.
+  Both VREFs are for the landing airport's elevation (FCOM PI.10.2: 1 kt
+  per 4,000 ft above sea level): the RTE's destination's highest runway
+  threshold in X-Plane's CIFP, Custom Data first (KDEN 5,434 ft 165/158
+  and MMMX 7,292 ft 166/159 for 164/157 at 300 t; EHAM, no destination
+  and no file as before), its files looked up once for each destination;
+  22 of 35 checks failed before. The page, handler and the FMC's
+  elevation lookup run in XTLua's namespace.
 - `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230KT CLB"),
   the ECON/SEL SPD label, the CAS/Mach speed pair, the blank SPD REST
   field, and the CRZ page titles ("ACT ECON CRZ" / "ACT M.801 CRZ") with the
