@@ -147,5 +147,26 @@ equal(target, 320, "300 kt above 10,000 ft: ECON 320 kt as before")
 state, target = climb(10200, 252)
 equal(target, 320, "past 10,100 ft: ECON 320 kt as before")
 
+-- [P47] SPD REST and SPD TRANS are limits, not targets: the FMC commands the lowest of the ECON (or selected) climb
+-- speed and the restrictions that apply here (review 44, NIT-4). A SPD REST above the ECON climb speed, or SPD TRANS
+-- above a selected climb speed, was flown as the target.
+fms.clbrestspd = "340"
+fms.clbrestalt = "12000"
+state, target = climb(11000, 320)
+equal(state, "clb_aptres/IAS", "SPD REST 340/12000 at 11,000 ft")
+equal(target, 320, "SPD REST 340/12000 above an ECON of 320 kt: 320 kt, not 340")
+state, target = climb(9000, 250)
+equal(target, 250, "SPD REST 340/12000 below SPD TRANS 250/10000: 250 kt as before")
+-- a selected climb speed of 240 kt: 240 below SPD REST 340/12000 and below SPD TRANS 250/10000
+fms.clbspd = "240"
+state, target = climb(11000, 240)
+equal(target, 240, "a 240 kt climb speed below SPD REST 340/12000: 240 kt, not 340")
+fms.clbrestspd = "---"
+fms.clbrestalt = "-----"
+state, target = climb(6000, 240)
+equal(state, "clb_spcres/IAS", "SPD TRANS state with a 240 kt climb speed")
+equal(target, 240, "a 240 kt climb speed below SPD TRANS 250/10000: 240 kt, not 250")
+fms.clbspd = "320"
+
 assert(#failures == 0, #failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"))
 print("VNAV climb speed cap tests passed: "..checks)

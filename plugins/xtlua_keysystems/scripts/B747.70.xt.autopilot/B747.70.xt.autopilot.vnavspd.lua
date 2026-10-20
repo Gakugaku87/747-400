@@ -423,6 +423,14 @@ local function B747_climb_ias_target(spdval)
     local limit=B747_constraint_speed_cap(modFlapSpeed(B747_climb_speed_limit_here()))
     return math.min(math.max(spdval,simDR_ind_airspeed_kts_pilot-15),limit)
 end
+-- [P47] A climb restriction's speed (SPD REST, SPD TRANS) is a limit, not a target: the FMC flies the ECON (or
+-- selected) climb speed when that is lower. A SPD REST of 340/12000 above an ECON of 320 kt was flown at 340, and SPD
+-- TRANS's 250 kt above a selected 240 (review 44, NIT-4).
+local function B747_climb_restriction_speed(restriction)
+    local climbSpeed=tonumber(getFMSData("clbspd"))
+    if restriction==nil or climbSpeed==nil then return restriction end
+    return math.min(restriction,climbSpeed)
+end
 function clb_src_setSpd()
     
     if B747DR_airspeed_V2<900 then
@@ -439,7 +447,7 @@ function clb_aptres_setSpd()
     -- Reached only with a SPD REST entered; fall back to SPD TRANS otherwise.
     local restSpd=vnav_afds_helpers.climb_speed_for_state("aptres", getFMSData)
         or tonumber(getFMSData("transpd")) or 250
-    local spdval=B747_climb_ias_target(B747_constraint_speed_cap(modFlapSpeed(restSpd)))
+    local spdval=B747_climb_ias_target(B747_constraint_speed_cap(modFlapSpeed(B747_climb_restriction_speed(restSpd))))
     print("convert to clb clbrestspd ".. spdval)
     B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     B747DR_switchingIASMode=1
@@ -447,7 +455,8 @@ function clb_aptres_setSpd()
 
 end
 function clb_spcres_setSpd()
-    local spdval=B747_constraint_speed_cap(modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("spcres", getFMSData)))
+    local spdval=B747_constraint_speed_cap(modFlapSpeed(B747_climb_restriction_speed(
+        vnav_afds_helpers.climb_speed_for_state("spcres", getFMSData))))
     B747DR_switchingIASMode=1
     local clbmachval=B747_climb_mach_thousandths()/10
     -- Mach once the CAS target at this altitude (or the current Mach) reaches the climb Mach
