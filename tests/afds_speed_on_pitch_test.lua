@@ -88,13 +88,16 @@ else
     -- Fed the sum an engine failure took the climb to -100 fpm (review 46's MAJOR-1); the two middle engines' mean read
     -- a second failure at twice its size (review 46b's MINOR-1); the second-highest engine's alone read the engines
     -- left at 4/3 after one failure and 2x after two (review 46b's NIT-1, review 46c's MINOR-1)
-    near(tw_of({[0] = 95000, 100000, 105000, 140000}, 200000), 420000 / (200000 * 9.80665), 1e-12,
-        "T/W: 4 x the second-highest engine (the sum would be 440 kN, the middle pair's 410)")
+    near(tw_of({[0] = 95000, 100000, 105000, 108000}, 200000), 420000 / (200000 * 9.80665), 1e-12,
+        "T/W: 4 x the second-highest engine (the sum would be 408 kN, the middle pair's 410)")
     near(tw_of({[0] = 3000, 5000, 6000, 6000}, 200000), 24000 / (200000 * 9.80665), 1e-12,
         "T/W: at idle the engines within 5 kN")
     check(tw_of({[0] = 100000, 100000, 100000, 0}, 200000) == nil, "T/W: one engine failed, none")
     check(tw_of({[0] = 80000, 100000, 100000, 100000}, 200000) == nil, "T/W: one engine 20 % apart, none")
     check(tw_of({[0] = 0, 100000, 0, 100000}, 200000) == nil, "T/W: two engines failed, none")
+    -- an engine apart above the others too (three levers pulled back, one left forward: the three read at 4/3; review
+    -- 47's NIT-1): the whole spread within it
+    check(tw_of({[0] = 100000, 100000, 100000, 120000}, 200000) == nil, "T/W: one engine 20 % above, none")
     local f, r = lead(nil, nil, 0.2, 0.1)
     check(f == 0.2 and r == 0, "lead: the filter starts from T/W, no rate")
     f, r = lead(0.2, 0.2, 0.21, 0.1)

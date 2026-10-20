@@ -534,8 +534,8 @@ end
 -- [P45] The engines' shared thrust over the weight: thrust_n the four engines' thrust (N, indexed 0-3:
 -- sim/flightmodel/engine/POINT_thrust), mass_kg the aircraft's mass (sim/flightmodel/weight/m_total); nil without a
 -- mass a 747 can have (XTLua's first read gives 0). The shared thrust is 4 x the second-highest engine's while the four
--- engines are together (the lowest within SPEED_PITCH_THRUST_TOGETHER_SHARE of it, at least
--- SPEED_PITCH_THRUST_TOGETHER_MIN_N), else nil: the A/T moves the four levers together, and with an engine apart (a
+-- engines are together (the highest less the lowest within SPEED_PITCH_THRUST_TOGETHER_SHARE of the second-highest, at
+-- least SPEED_PITCH_THRUST_TOGETHER_MIN_N), else nil: the A/T moves the four levers together, and with an engine apart (a
 -- failure, a lever) the law flies without the lead, as P43 alone. Fed the sum, an engine failure at 397 t with 400 fpm
 -- on three engines took the climb to -100 fpm for about 5 s (review 46); the two middle engines' mean read a second
 -- failure at twice its size (review 46b); the second-highest engine's alone read the engines left at 4/3 after one
@@ -549,9 +549,9 @@ function afds_controls.speed_pitch_thrust_weight(thrust_n, mass_kg)
     local thrust = {}
     for i = 0, 3 do thrust[i + 1] = tonumber(thrust_n[i]) or 0 end
     table.sort(thrust)
-    local apart = math.max(afds_controls.SPEED_PITCH_THRUST_TOGETHER_SHARE * thrust[3],
+    local apart = math.max(afds_controls.SPEED_PITCH_THRUST_TOGETHER_SHARE * math.abs(thrust[3]),
         afds_controls.SPEED_PITCH_THRUST_TOGETHER_MIN_N)
-    if thrust[1] < thrust[3] - apart then return nil end
+    if thrust[4] - thrust[1] > apart then return nil end
     return 4 * thrust[3] / (mass * 9.80665)
 end
 
