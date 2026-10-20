@@ -1135,6 +1135,8 @@ function ap_pitch_assist()
     local refreshV2=B747DR_airspeed_V2
     local refreshWindow=B747DR_ap_ias_dial_value
     local refreshWindowMach=simDR_autopilot_airspeed_is_mach
+    -- a go-around's floor, taken once as TO/GA comes on (review 46)
+    local refreshVmc=B747DR_airspeed_Vmc
     -- [P45] read by the speed law's thrust lead (its filter would start again from a first read's 0, then the value)
     if simDR_engine_thrust_n~=nil then
         local refreshThrust0=simDR_engine_thrust_n[0]

@@ -50,6 +50,9 @@ local cases = {
     {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
         func="ap_pitch_assist", names={"B747DR_airspeed_V2", "B747DR_ap_ias_dial_value",
             "simDR_autopilot_airspeed_is_mach"}},
+    -- [review 46] a go-around's floor, B747DR_airspeed_Vmc, taken once as TO/GA comes on (a 0 would be no floor)
+    {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
+        func="ap_pitch_assist", names={"B747DR_airspeed_Vmc"}},
     -- [P45] the speed law's thrust lead: the engines' thrust, the mass and the A/T's mode (a first read of 0 would
     -- start its filter again; a 0 A/T mode would let the lead act with the A/T in SPD)
     {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
