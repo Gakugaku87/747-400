@@ -402,13 +402,14 @@ local function B747_set_vnav_speed_target(is_mach, dial_value)
     end
 end
 -- [review 17] The climb's limits at this altitude: the SPD REST below its altitude and the SPD TRANS below its (as
--- clb_aptres and clb_spcres fly them, to 100 ft above); 999 above them.
+-- clb_aptres and clb_spcres fly them, to 100 ft above it, that altitude included: B747_vnav_setClimbspeed leaves a
+-- state above its next altitude); 999 above them.
 local function B747_climb_speed_limit_here()
     local limit=999
     local restAlt,restSpd=tonumber(getFMSData("clbrestalt")),tonumber(getFMSData("clbrestspd"))
-    if restAlt~=nil and restSpd~=nil and simDR_pressureAlt1<restAlt+100 then limit=math.min(limit,restSpd) end
+    if restAlt~=nil and restSpd~=nil and simDR_pressureAlt1<=restAlt+100 then limit=math.min(limit,restSpd) end
     local transAlt,transSpd=tonumber(getFMSData("spdtransalt")),tonumber(getFMSData("transpd"))
-    if transAlt~=nil and transSpd~=nil and simDR_pressureAlt1<transAlt+100 then limit=math.min(limit,transSpd) end
+    if transAlt~=nil and transSpd~=nil and simDR_pressureAlt1<=transAlt+100 then limit=math.min(limit,transSpd) end
     return limit
 end
 -- [P42] A climb state's IAS target: its speed, raised to IAS - 15 kt when that is higher (a cut of more than 15 kt

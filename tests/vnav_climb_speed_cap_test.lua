@@ -82,7 +82,8 @@ local function climb(altitude_ft, ias_kts, flap_ratio, constraint_kts)
     return runtime.B747_get_vnav_speed_diagnostics().state, runtime.B747DR_ap_ias_dial_value
 end
 
--- SPD TRANS 250/10000: p35-line1's 270 kt at 8,945 ft is asked for 250, not 255.
+-- SPD TRANS 250/10000: 270 kt below it (p35-line1's IAS after resuming the climb at 8,948 ft, 9,200-9,600 ft) is
+-- asked for 250, not 255.
 local state, target = climb(8945, 270)
 equal(state, "clb_spcres/IAS", "SPD TRANS state below 10,000 ft")
 equal(target, 250, "270 kt below 10,000 ft: SPD TRANS's 250 kt, not IAS - 15")
@@ -92,6 +93,10 @@ state, target = climb(8945, 262)
 equal(target, 250, "262 kt below 10,000 ft: 250 kt as before")
 state, target = climb(8945, 240)
 equal(target, 250, "240 kt below 10,000 ft: accelerates to 250 kt as before")
+-- the SPD TRANS state is flown to 100 ft above its altitude, 10,100 ft itself included (review 44)
+state, target = climb(10100, 270)
+equal(state, "clb_spcres/IAS", "SPD TRANS state at 10,100 ft")
+equal(target, 250, "270 kt at 10,100 ft: 250 kt")
 -- with flaps 5 (Vf1 + 15 = 215 kt) the flaps' limit, not IAS - 15 (245 kt)
 state, target = climb(4000, 260, 0.25)
 equal(target, 215, "flaps 5 at 260 kt: the flaps' 215 kt, not IAS - 15")

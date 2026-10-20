@@ -82,7 +82,7 @@ fms.clbrestalt = "8000"
 equal(runtime.clb_aptres_next(), runtime.simDR_pressureAlt1 + 500,
     "an entered SPD REST steps the boundary up in 500 ft increments")
 equal(climbState(), "clb_aptres/IAS", "an entered SPD REST selects the restriction state")
--- [P42] SPD REST itself at 260 kt, not IAS - 15 (245 kt): the floor stops at the climb's limits
+-- [P42] SPD REST's 210 kt at an IAS of 260 kt, not IAS - 15 (245 kt): the floor stops at the climb's limits
 equal(runtime.B747DR_ap_ias_dial_value, 210,
     "the restriction state commands SPD REST")
 runtime.simDR_ind_airspeed_kts_pilot = 215
