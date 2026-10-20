@@ -239,6 +239,23 @@ for _, at_mode in ipairs({5, 3, 2}) do
             ..": the thrust's lead stays out")
     end
 end
+-- [review 46b NIT-2] ... and in IDLE a falling thrust (the A/T's retard to idle) still leads, down: FLCH SPD descending
+-- to an MCP altitude below at -1,500 fpm, the thrust falling 0.0054 T/W a second for 5 s, the pitch down (half the
+-- rate once it is a real decrease)
+do
+    local thrust = {[0] = 150000, 150000, 150000, 150000}
+    local env = new_director({simDR_engine_thrust_n = thrust, simDR_acf_weight_total_kg = 233000,
+        B747DR_ap_FMA_autothrottle_mode = 2, simDR_vvi_fpm_pilot = -1500, simDR_autopilot_altitude_ft = 3000,
+        simDR_autopilot_hold_altitude_ft = 3000, simDR_autopilot_flch_status = 2})
+    step(env, 8, 0.1)
+    local before = env.B747_afds_pitch_target_before_blend
+    for _ = 1, 50 do
+        for i = 0, 3 do thrust[i] = thrust[i] - 0.0054 * 233000 * 9.80665 / 4 * 0.1 end
+        step(env, 8, 0.1, 0)
+    end
+    local drop = before - env.B747_afds_pitch_target_before_blend
+    check(drop >= 0.3 and drop <= 1.1, "A/T in IDLE, the thrust falling: the pitch down with it ("..drop.." deg in 5 s)")
+end
 -- the flight director alone (servos off): the law's pitch stays within 2 deg of the attitude
 do
     local env = new_director({simDR_autopilot_servos_on = 0, simDR_autopilot_airspeed_kts = 200})
