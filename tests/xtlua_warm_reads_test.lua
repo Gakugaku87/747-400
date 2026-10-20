@@ -45,6 +45,11 @@ local cases = {
     {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
         func="ap_pitch_assist", names={"simDR_ind_airspeed_kts_pilot", "simDR_TAS_mps", "simDR_vvi_fpm_pilot",
             "simDR_alpha_deg"}},
+    -- [P39] TO/GA's speed at a go-around: V2, the window's speed and whether it is a Mach (a 0 window would be a
+    -- target of 25 kt, a 0 Mach flag a Mach's hundredths taken as knots)
+    {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
+        func="ap_pitch_assist", names={"B747DR_airspeed_V2", "B747DR_ap_ias_dial_value",
+            "simDR_autopilot_airspeed_is_mach"}},
     -- [d] the CRZ ALT entry for the native FMS (B744.fms.step.lua
     -- native_cruise_altitude_entry) is formatted with the native transition
     -- altitude, read only at a CRZ ALT entry or change; a 0 fell back to

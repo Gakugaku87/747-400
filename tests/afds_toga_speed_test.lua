@@ -147,6 +147,32 @@ do
     check(pitch > 13.5 and pitch <= 14.3 + 1e-6, "airborne 20 kt fast: up past 12 deg ("..pitch..")")
 end
 
+-- TO/GA pushed in a climb at M .84 (the window shows 84, the Mach's hundredths): the window is no speed then, TO/GA
+-- flies the IAS (it took 84 kt and pitched up toward 25 deg, review 45's m1); a window under Vmc + 10 is Vmc + 10
+do
+    local env = new_director({simDR_touchGround = 0, simDR_ind_airspeed_kts_pilot = 290, simDR_TAS_mps = 250,
+        simDR_AHARS_pitch_heading_deg_pilot = 4, simDR_pressureAlt1 = 30000, simDR_autopilot_altitude_ft = 37000,
+        simDR_autopilot_hold_altitude_ft = 37000, simDR_vvi_fpm_pilot = 1500, simDR_alpha_deg = 2.5,
+        B747DR_airspeed_Vmc = 200, B747DR_airspeed_Vmax = 365, B747DR_ap_ias_dial_value = 84,
+        simDR_autopilot_airspeed_is_mach = 1, simDR_autopilot_servos_on = 1})
+    step(env, 0.1)
+    local start = env.B747_afds_pitch_target_before_blend
+    local pitch
+    for _ = 1, 60 do pitch = step(env, 0.1) end
+    check(pitch - start <= 0.5, "TO/GA in a Mach climb: the window's 84 is no speed, the IAS held ("
+        ..string.format("%.2f -> %.2f deg", start, pitch)..")")
+    env = new_director({simDR_touchGround = 0, simDR_ind_airspeed_kts_pilot = 160, simDR_TAS_mps = 85,
+        simDR_AHARS_pitch_heading_deg_pilot = 8, simDR_pressureAlt1 = 1500, simDR_autopilot_altitude_ft = 3000,
+        simDR_autopilot_hold_altitude_ft = 3000, simDR_vvi_fpm_pilot = 1000, simDR_alpha_deg = 6,
+        B747DR_airspeed_Vmc = 150, B747DR_ap_ias_dial_value = 130, simDR_autopilot_airspeed_is_mach = 0,
+        simDR_autopilot_servos_on = 1})
+    step(env, 0.1)
+    start = env.B747_afds_pitch_target_before_blend
+    for _ = 1, 60 do pitch = step(env, 0.1) end
+    check(pitch - start <= 0.5, "go-around with the window at 130 below Vmc + 10 (160): 160 held ("
+        ..string.format("%.2f -> %.2f deg", start, pitch)..")")
+end
+
 -- 3. p35-line1's climb-out with the A/P from 400 ft: TO/GA (the takeoff state from the ground: V2 144, no rotation
 -- recorded), VNAV SPD from 577 ft (154 kt, V2 + 10) as recorded, the recorded thrust
 local function load_csv(name)

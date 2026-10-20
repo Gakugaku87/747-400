@@ -172,6 +172,7 @@ simDR_touchGround = find_dataref("sim/flightmodel/failures/onground_any")
 -- [P39] TO/GA's speed: the FMC's V2 and the IAS/MACH window's speed
 B747DR_airspeed_V2 = find_dataref("laminar/B747/airspeed/V2")
 B747DR_ap_ias_dial_value = find_dataref("laminar/B747/autopilot/ias_dial_value")
+simDR_autopilot_airspeed_is_mach = find_dataref("sim/cockpit2/autopilot/airspeed_is_mach")
 simDR_autopilot_vs_fpm = find_dataref("sim/cockpit2/autopilot/vvi_dial_fpm")
 B747DR_l_elev_inner   = deferred_dataref("laminar/B747/flt_ctrls/l_elev_inner", "number")
 B747DR_r_elev_inner   = deferred_dataref("laminar/B747/flt_ctrls/r_elev_inner", "number")

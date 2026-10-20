@@ -903,10 +903,14 @@ function ap_director_pitch(pitchMode)
             print("ap_director_pitch for TOGA")
         end
         -- [P39] in the air speed on pitch to TO/GA's speed; on the ground parked at fltInst's TO/GA pitch (8 deg)
+        -- the window's speed only in knots (in Mach it shows the hundredths: 84 for M .84, review 45); the target at
+        -- least Vmc + 10
+        local window=B747DR_ap_ias_dial_value
+        if simDR_autopilot_airspeed_is_mach==1 then window=nil end
         local togaSpeed=B747_afds_controls.toga_target_speed(togaSpeedState,simDR_touchGround==1,
-            simDR_AHARS_pitch_heading_deg_pilot,simDR_ind_airspeed_kts_pilot,B747DR_airspeed_V2,B747DR_ap_ias_dial_value,
-            simDRTime)
+            simDR_AHARS_pitch_heading_deg_pilot,simDR_ind_airspeed_kts_pilot,B747DR_airspeed_V2,window,simDRTime)
         if togaSpeed~=nil then
+            togaSpeed=math.max(togaSpeed,B747DR_airspeed_Vmc+10)
             return ap_director_speed_on_pitch(pitchMode,holdAlt,simDRTime-time,togaSpeed)
         end
         directorSampleRate=0.1
@@ -1109,6 +1113,7 @@ function ap_pitch_assist()
     -- [P39] read by TO/GA's speed at a go-around (a 0 window's speed would be a target of 25 kt)
     local refreshV2=B747DR_airspeed_V2
     local refreshWindow=B747DR_ap_ias_dial_value
+    local refreshWindowMach=simDR_autopilot_airspeed_is_mach
 
     B747DR_pidPitchP=B747_rescale(3000,B747DR_pidPitchPL,40000,B747DR_pidPitchPH,B747DR_autopilot_altitude_ft_pfd)
     if B747DR_ap_AFDS_mode_box_status_pilot==1 or B747DR_ap_AFDS_mode_box_status_copilot==1 then
