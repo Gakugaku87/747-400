@@ -391,6 +391,19 @@ for _, fps in ipairs({20, 34}) do
     end
 end
 
+-- and the end of every go-around: from 1,000 ft the missed approach altitude above it (3,000 ft) captured inside the
+-- window, TO/GA cancelled, ALT on the FMA (review 45c's MINOR-2: a director that never let TO/GA capture passed every
+-- suite). The model keeps GA thrust (no A/T), so the level-off itself is not judged here.
+for _, fps in ipairs({20, 34}) do
+    local m = go_around_fma({alt = 1000, mcp = 3000, fps = fps, seconds = 60})
+    local at = string.format(" (MCP 3,000 ft, %d fps)", fps)
+    check(m.d.B747DR_autopilot_TOGA_status == 0 and m.d.simDR_autopilot_alt_hold_status == 2
+        and m.d.simDR_autopilot_hold_altitude_ft == 3000 and m.d.B747DR_ap_FMA_active_pitch_mode == 9,
+        "go-around: the missed approach altitude captured"..at..string.format(": TOGA %s, ALT hold %s at %s, FMA %s",
+        tostring(m.d.B747DR_autopilot_TOGA_status), tostring(m.d.simDR_autopilot_alt_hold_status),
+        tostring(m.d.simDR_autopilot_hold_altitude_ft), tostring(m.d.B747DR_ap_FMA_active_pitch_mode)))
+end
+
 -- 5. A steep climb-out into an ALT capture and into V/S (review 45's M1): p35-line1's climb-out at 165 t (16-20 deg in
 -- VNAV SPD), the MCP at 3,000 ft (window 1,000), or V/S 1,500 fpm selected 20 s in (after the flaps 20 -> 10 at 14 s,
 -- where climb_model switches the polar at once). The speed modes go to 25 deg (P39) but ALT kept its 15 deg limit and
