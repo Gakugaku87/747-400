@@ -173,6 +173,11 @@ equal(target, 240, "a 240 kt climb speed below SPD TRANS 250/10000: 240 kt, not 
 fms.clbspd = "130"
 state, target = climb(6000, 200)
 equal(target, 220, "a 130 kt climb speed below SPD TRANS with Vf0 220: 220 kt, not Vmc + 10")
+-- and the same above SPD TRANS: clb_nores floored it only at Vmc + 10, so the target dropped past 10,100 ft (217.7 to
+-- 204.3 kt at 233 t; review 52)
+state, target = climb(12000, 200)
+equal(state, "clb_nores/IAS", "ECON climb state with a 130 kt climb speed")
+equal(target, 220, "a 130 kt climb speed above SPD TRANS with Vf0 220: 220 kt, not Vmc + 10")
 fms.clbspd = "320"
 
 -- [P48] A route constraint caps the Mach climb too. Above the climb Mach (M.80 against .78 at FL300) the climb flew

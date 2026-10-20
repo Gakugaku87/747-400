@@ -423,14 +423,21 @@ local function B747_climb_ias_target(spdval)
     local limit=B747_constraint_speed_cap(modFlapSpeed(B747_climb_speed_limit_here()))
     return math.min(math.max(spdval,simDR_ind_airspeed_kts_pilot-15),limit)
 end
+-- The ECON (or selected) climb speed, no lower than the flaps' manoeuvre speed, as a constraint (CDU: 130-300 kt): a
+-- selected 130 kt left only modFlapSpeed's Vmc + 10 under it, below SPD TRANS (review 51) and above it, where the
+-- target then dropped 13 kt past 10,100 ft at 233 t (review 52). nil when unknown.
+local function B747_climb_speed_floored(climbSpeed)
+    climbSpeed=tonumber(climbSpeed)
+    if climbSpeed==nil then return nil end
+    return math.max(climbSpeed,B747_flap_manoeuvre_speed())
+end
 -- [P47] A climb restriction's speed (SPD REST, SPD TRANS) is a limit, not a target: the FMC flies the ECON (or
 -- selected) climb speed when that is lower. A SPD REST of 340/12000 above an ECON of 320 kt was flown at 340, and SPD
--- TRANS's 250 kt above a selected 240 (review 44, NIT-4). The climb speed counts no lower than the flaps' manoeuvre
--- speed, as a constraint does: a selected 130 kt left only modFlapSpeed's Vmc + 10 under it (review 51).
+-- TRANS's 250 kt above a selected 240 (review 44, NIT-4).
 local function B747_climb_restriction_speed(restriction)
-    local climbSpeed=tonumber(getFMSData("clbspd"))
+    local climbSpeed=B747_climb_speed_floored(getFMSData("clbspd"))
     if restriction==nil or climbSpeed==nil then return restriction end
-    return math.min(restriction,math.max(climbSpeed,B747_flap_manoeuvre_speed()))
+    return math.min(restriction,climbSpeed)
 end
 -- [P48] The current Mach climb_speed_uses_mach weighs (above the climb Mach it keeps the climb in Mach), except while a
 -- route constraint caps the CAS target (spdval below the speed it caps, base): then the constraint's CAS against the
@@ -488,7 +495,7 @@ function clb_spcres_setSpd()
 
 end
 function clb_nores_setSpd()
-    local base=modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("nores", getFMSData))
+    local base=modFlapSpeed(B747_climb_speed_floored(vnav_afds_helpers.climb_speed_for_state("nores", getFMSData)))
     local spdval=B747_constraint_speed_cap(base)
     B747DR_switchingIASMode=1
     local clbmachval=B747_climb_mach_thousandths()/10
