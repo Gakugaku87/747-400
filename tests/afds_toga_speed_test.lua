@@ -415,9 +415,10 @@ end
 -- where climb_model switches the polar at once). The speed modes go to 25 deg (P39) but ALT kept its 15 deg limit and
 -- V/S its 10 deg, taken in one update, and the V/S law its own steps on: -0.36 to -0.39 g into ALT, -0.40 to -0.43 g
 -- into V/S, from the mode change on (review 45b). Now the director comes down to the limit at 0.1 g; what is left is
--- the pitch loop's lag and overshoot after the ramp (the attitude up to 1.8 deg behind it, then about 1 deg past;
--- -0.18 to -0.20 g into ALT, -0.22 to -0.24 g into V/S). With the MCP 1,000 ft above at 6,000 fpm the capture
--- overshoots by 1,100-1,260 ft: the capture window's 1,000 ft (pre-existing).
+-- the pitch loop's lag and overshoot after the ramp (into ALT the attitude up to 1.8 deg behind it, then 0.7-0.9 deg
+-- past, -0.18 to -0.20 g; into V/S 2.7-3.0 deg behind, then 1.4-1.8 deg past, -0.22 to -0.24 g; review 45c). With the
+-- MCP 1,000 ft above at 6,000 fpm the capture overshoots by 1,100-1,260 ft: the capture window's 1,000 ft
+-- (pre-existing).
 local function steep(mode_change, fps)
     local t0 = 254.0
     local first
