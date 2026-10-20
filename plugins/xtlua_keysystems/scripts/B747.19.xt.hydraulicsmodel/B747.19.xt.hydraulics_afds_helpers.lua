@@ -11,7 +11,9 @@ afds_controls.VERTICAL_DIRECTION_CLIMB = 1
 -- Speed-on-pitch modes may trade vertical rate for airspeed, but should not
 -- reverse the selected vertical direction for an ordinary speed error.
 afds_controls.SPEED_PITCH_MIN_TARGET_DEG = -3.5
-afds_controls.SPEED_PITCH_MAX_TARGET_DEG = 15.0
+-- [P39] 25 deg (it was 15): the 744's AFDS has no fixed limit below the pitch limit indicator, and holding V2 + 10
+-- after a light takeoff takes 17-22 deg (p35-line1, 233 t: 19.8 deg hand-flown at V2 + 4)
+afds_controls.SPEED_PITCH_MAX_TARGET_DEG = 25.0
 afds_controls.SPEED_PITCH_CLIMB_MIN_TARGET_DEG = 0.0
 afds_controls.SPEED_PITCH_DESCENT_MAX_TARGET_DEG = 5.0
 afds_controls.SPEED_PITCH_DIRECTION_GUARD_FPM = 100.0
@@ -480,6 +482,70 @@ end
 -- The pitch rate (deg/s) that turns the flight path with SPEED_PITCH_MAX_LOAD_FACTOR_G at a TAS (m/s, at least 60).
 function afds_controls.speed_pitch_max_rate_deg(tas_mps)
     return math.deg(afds_controls.SPEED_PITCH_MAX_LOAD_FACTOR_G * 9.80665 / math.max(tonumber(tas_mps) or 0, 60))
+end
+
+-- [P39] TO/GA's speed (FCOM vol 2, quoted by a BA 744 captain and confirmed by Aerowinx, topic 2796.20 reply 24;
+-- research_afds_climb.md 1): after takeoff the AFDS commands a pitch below the pitch limit indicator to hold the
+-- greater of V2 + 10 kt and the IAS when the pitch passed 2 deg on the takeoff roll (the rotation) + 10 kt; if the IAS
+-- stays above it for 5 s the target becomes the IAS, at most V2 + 25 kt; the IAS/MACH window's speed when it is set
+-- above it. The AFDS takes the window's speed, set to V2 before the start, as V2: here the FMC's V2 when it has one.
+-- In a go-around the window's speed, and the same 5 s reset to the IAS, at most the window's + 25 kt (FCOM vol 2
+-- 4.20.16 as quoted on AVSIM: "the target airspeed is reset to current airspeed (to a maximum of the IAS/MACH window
+-- speed plus 25 knots)").
+afds_controls.TOGA_TARGET_ABOVE_V2_KTS = 10
+afds_controls.TOGA_TARGET_LIMIT_ABOVE_V2_KTS = 25
+afds_controls.TOGA_TARGET_RESET_SEC = 5
+afds_controls.TOGA_ROTATION_PITCH_DEG = 2
+afds_controls.TOGA_GO_AROUND_LIMIT_ABOVE_WINDOW_KTS = 25
+
+-- TO/GA's speed (kt) for state (a table the caller keeps; TO/GA again after more than a second without a call), or nil
+-- on the ground (the F/D is parked there). v2_kts: the FMC's V2 (none at 0 or 900+: the window's speed), window_kts:
+-- the IAS/MACH window's speed (none below 60 kt: the IAS), time_sec: the simulator's time. A takeoff when TO/GA was on
+-- on the ground, a go-around when it came on in the air.
+function afds_controls.toga_target_speed(state, on_ground, pitch_deg, ias_kts, v2_kts, window_kts, time_sec)
+    ias_kts = tonumber(ias_kts) or 0
+    time_sec = tonumber(time_sec) or 0
+    local window = tonumber(window_kts)
+    if window ~= nil and window < 60 then window = nil end
+    if state.time == nil or time_sec - state.time > 1 or time_sec < state.time then
+        state.v2, state.rotation_ias, state.target, state.limit, state.above_since, state.go_around =
+            nil, nil, nil, nil, nil, false
+    end
+    state.time = time_sec
+    if on_ground then
+        local v2 = tonumber(v2_kts)
+        if v2 == nil or v2 <= 0 or v2 >= 900 then v2 = window end
+        state.v2, state.target, state.above_since, state.go_around = v2, nil, nil, false
+        if ias_kts < 60 then
+            state.rotation_ias = nil
+        elseif state.rotation_ias == nil and (tonumber(pitch_deg) or 0) > afds_controls.TOGA_ROTATION_PITCH_DEG then
+            state.rotation_ias = ias_kts
+        end
+        return nil
+    end
+    if state.target == nil then
+        if state.v2 == nil then
+            -- a go-around: the window's speed (the IAS when it reads none), up to it + 25 kt
+            state.go_around = true
+            state.target = window or ias_kts
+            state.limit = state.target + afds_controls.TOGA_GO_AROUND_LIMIT_ABOVE_WINDOW_KTS
+        else
+            state.target = math.max(state.v2, state.rotation_ias or state.v2) + afds_controls.TOGA_TARGET_ABOVE_V2_KTS
+            state.limit = state.v2 + afds_controls.TOGA_TARGET_LIMIT_ABOVE_V2_KTS
+        end
+    end
+    -- above the target for 5 s: the IAS, at most the limit
+    if ias_kts > state.target and state.target < state.limit then
+        state.above_since = state.above_since or time_sec
+        if time_sec - state.above_since >= afds_controls.TOGA_TARGET_RESET_SEC then
+            state.target = math.min(ias_kts, state.limit)
+            state.above_since = time_sec
+        end
+    else
+        state.above_since = nil
+    end
+    if window ~= nil and window > state.target then return window end
+    return state.target
 end
 
 -- The flight path (deg) the aircraft has too much of (+: it accelerates more than wanted) or too little (-): 1 deg of

@@ -410,8 +410,11 @@ local function director_update(pitch_mode)
     director.ap_director_pitch(pitch_mode)
     return director.B747_afds_pitch_target_before_blend
 end
+-- TO/GA parked on the ground at its pitch (in the air it flies TO/GA's speed, P39)
+director.simDR_touchGround = 1
 director.ap_director_pitch(1) -- first update only resets the director
 director_update(1)              -- TO/GA sets the pitch target to 2.7 degrees
+director.simDR_touchGround = 0
 for _ = 1, 3 do director_update(4) end
 assert_near(director.B747_afds_pitch_target_before_blend, 2.7, 0.0001, "VNAV SPD on speed holds 2.7 degrees")
 director.simDR_autopilot_airspeed_kts = 326

@@ -106,11 +106,12 @@ assert(env.B747_afds_pitch_target_before_blend > 1.5,
 
 -- The held attitude is limited to the director's pitch range.
 near(controls.inactive_mode_pitch_target(1.66), 1.66, 1e-9, "attitude inside the range is held")
-equal(controls.inactive_mode_pitch_target(20), 15, "nose-up attitude is limited to 15 degrees")
+equal(controls.inactive_mode_pitch_target(20), 20, "nose-up attitude inside the range (to 25 degrees, P39) is held")
+equal(controls.inactive_mode_pitch_target(30), 25, "nose-up attitude is limited to 25 degrees")
 equal(controls.inactive_mode_pitch_target(-6), -3.5, "nose-down attitude is limited to -3.5 degrees")
 equal(controls.inactive_mode_pitch_target(nil), 0, "missing attitude gives level pitch")
-env = new_director({simDR_AHARS_pitch_heading_deg_pilot=18})
+env = new_director({simDR_AHARS_pitch_heading_deg_pilot=28})
 update(env, 100, 0)
-equal(update(env, 100.3, 0), 15, "no pitch mode at 18 degrees holds 15 degrees")
+equal(update(env, 100.3, 0), 25, "no pitch mode at 28 degrees holds 25 degrees")
 
 print("AFDS FMA NONE pitch memory tests passed: "..checks)
