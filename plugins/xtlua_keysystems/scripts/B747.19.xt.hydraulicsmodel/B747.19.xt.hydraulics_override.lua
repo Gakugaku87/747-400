@@ -590,7 +590,8 @@ local lastGlideSlopeElevation=0
 -- filtered), except with the A/T in SPD (3), where the thrust works on the speed too, for increases in IDLE (2), where
 -- the EEC adds thrust for the speed below its minimum safe speed (review 46), and while the engines are apart
 -- (speed_pitch_thrust_weight: a failure, a lever moved alone; reviews 46-47). The apart state (speedPitchThrustApart)
--- lasts across the law's restarts, as the engines do: a run that ends apart starts the next apart, to rejoin within 8 %.
+-- lasts across the law's restarts, as the engines do: a run that ends apart starts the next apart, to rejoin within 8 % (at
+-- least 2.5 kN).
 -- lastDirectorUpdate: the time of the director's update before this one; targetSpeed: the speed to fly (the AFDS's,
 -- simDR_autopilot_airspeed_kts, when nil; TO/GA's, P39).
 local speedPitchBase=0

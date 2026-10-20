@@ -545,7 +545,7 @@ end
 -- SPEED_PITCH_THRUST_REJOIN_MIN_N): with one hard edge an engine parked at it (a partial loss of power, a lever split by
 -- hand) turned the lead on and off with the others' jitter, every restart leaving a pitch-down, and the IAS sat 1-6 kt
 -- fast (review 47). was_apart: the last answer's apart. Returns T/W (nil when unknown or apart) and whether apart. The
--- shares are of the second-highest engine's thrust's size (math.abs: windmilling engines read below 0 at idle).
+-- shares are of the second-highest engine's thrust's size (math.abs: engines at idle read below 0).
 afds_controls.SPEED_PITCH_THRUST_TOGETHER_SHARE = 0.15
 afds_controls.SPEED_PITCH_THRUST_TOGETHER_MIN_N = 5000
 afds_controls.SPEED_PITCH_THRUST_REJOIN_SHARE = 0.08
