@@ -70,13 +70,13 @@ runtime.simDR_pressureAlt1 = 3000
 runtime.simDR_ind_airspeed_kts_pilot = 260
 runtime.B747_update_takeoff_profile()
 
--- The climb's state and IAS target at this altitude, IAS, flap handle and constraint speed.
-local function climb(altitude_ft, ias_kts, flap_ratio, constraint_kts)
+-- The climb's state and IAS target at this altitude, IAS, flap handle, constraint speed and (in_mach) the target in Mach.
+local function climb(altitude_ft, ias_kts, flap_ratio, constraint_kts, in_mach)
     runtime.simDR_pressureAlt1 = altitude_ft
     runtime.simDR_ind_airspeed_kts_pilot = ias_kts
     runtime.simDR_flap_ratio_control = flap_ratio or 0
     runtime.B747DR_vnav_constraint_speed = constraint_kts or 0
-    runtime.simDR_autopilot_airspeed_is_mach = 0
+    runtime.simDR_autopilot_airspeed_is_mach = in_mach or 0
     runtime.B747_invalidate_vnav_speed("test")
     runtime.B747_vnav_setClimbspeed()
     return runtime.B747_get_vnav_speed_diagnostics().state, runtime.B747DR_ap_ias_dial_value
@@ -150,17 +150,19 @@ equal(target, 320, "past 10,100 ft: ECON 320 kt as before")
 -- [P47] SPD REST and SPD TRANS are limits, not targets: the FMC commands the lowest of the ECON (or selected) climb
 -- speed and the restrictions that apply here (review 44, NIT-4). A SPD REST above the ECON climb speed, or SPD TRANS
 -- above a selected climb speed, was flown as the target.
-fms.clbrestspd = "340"
+-- (The CLB page takes speeds of 130-300 kt; review 51.)
+fms.clbrestspd = "300"
 fms.clbrestalt = "12000"
-state, target = climb(11000, 320)
-equal(state, "clb_aptres/IAS", "SPD REST 340/12000 at 11,000 ft")
-equal(target, 320, "SPD REST 340/12000 above an ECON of 320 kt: 320 kt, not 340")
+fms.clbspd = "290"
+state, target = climb(11000, 290)
+equal(state, "clb_aptres/IAS", "SPD REST 300/12000 at 11,000 ft")
+equal(target, 290, "SPD REST 300/12000 above an ECON of 290 kt: 290 kt, not 300")
 state, target = climb(9000, 250)
-equal(target, 250, "SPD REST 340/12000 below SPD TRANS 250/10000: 250 kt as before")
--- a selected climb speed of 240 kt: 240 below SPD REST 340/12000 and below SPD TRANS 250/10000
+equal(target, 250, "SPD REST 300/12000 below SPD TRANS 250/10000: 250 kt as before")
+-- a selected climb speed of 240 kt: 240 below SPD REST 300/12000 and below SPD TRANS 250/10000
 fms.clbspd = "240"
 state, target = climb(11000, 240)
-equal(target, 240, "a 240 kt climb speed below SPD REST 340/12000: 240 kt, not 340")
+equal(target, 240, "a 240 kt climb speed below SPD REST 300/12000: 240 kt, not 300")
 fms.clbrestspd = "---"
 fms.clbrestalt = "-----"
 state, target = climb(6000, 240)
@@ -174,15 +176,20 @@ equal(target, 220, "a 130 kt climb speed below SPD TRANS with Vf0 220: 220 kt, n
 fms.clbspd = "320"
 
 -- [P48] A route constraint caps the Mach climb too. Above the climb Mach (M.80 against .78 at FL300) the climb flew
--- the climb Mach whatever the constraint: a 250 kt constraint gave M.78, about 288 kt (review 44, NIT-4). Its CAS is
--- flown when it is the slower; a constraint above the climb Mach's CAS leaves the climb Mach.
+-- the climb Mach whatever the constraint: a 250 kt constraint gave M.78, 295.6 kt by the add-on's conversion (review
+-- 44, NIT-4; review 51). Its CAS is flown when it is the slower; a constraint above the climb Mach's CAS leaves the
+-- climb Mach.
 runtime.simDR_airspeed_mach = 0.80
 state, target = climb(30000, 290, 0, 250)
 equal(state, "clb_nores/IAS", "a 250 kt constraint at FL300 at M.80: IAS")
 equal(target, 250, "a 250 kt constraint at FL300 at M.80: 250 kt, not M.78")
-state, target = climb(30000, 290, 0, 300)
-equal(state, "clb_nores/MACH", "a 300 kt constraint at FL300 at M.80 (above M.78's 288 kt): Mach as before")
-equal(target, 78, "a 300 kt constraint at FL300 at M.80: M.78 as before")
+-- the same with the target already in Mach (review 51)
+state, target = climb(30000, 290, 0, 250, 1)
+equal(state, "clb_nores/IAS", "a 250 kt constraint at FL300 at M.80, the target in Mach: IAS")
+equal(target, 250, "a 250 kt constraint at FL300 at M.80, the target in Mach: 250 kt, not M.78")
+state, target = climb(30000, 290, 0, 310)
+equal(state, "clb_nores/MACH", "a 310 kt constraint at FL300 at M.80 (above M.78's 295.6 kt): Mach as before")
+equal(target, 78, "a 310 kt constraint at FL300 at M.80: M.78 as before")
 state, target = climb(30000, 290)
 equal(state, "clb_nores/MACH", "no constraint at FL300 at M.80: Mach as before")
 equal(target, 78, "no constraint at FL300 at M.80: M.78 as before")
