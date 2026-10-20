@@ -221,6 +221,19 @@ function afds_controls.adaptive_roll_filter(current_deg, target_deg, elapsed_sec
     return current_deg + requested_change_deg
 end
 
+-- [P40] The roll PID's gains at a true airspeed (m/s): 1 up to ROLL_GAIN_TAS_KT, then ROLL_GAIN_TAS_KT / TAS, at
+-- least ROLL_GAIN_MIN_SCALE (1 for a TAS that is not a number). The surfaces' roll power grows with the true
+-- airspeed while the roll ratio reaches their effect late (the output timing and pressure_output each go a tenth of
+-- the way a frame: more time at a low frame rate): light at FL300, M.81 (TAS 480 kt) the loop kept a roll
+-- oscillation that grew to +-30-38 deg of bank at about 4.8 s (p33-line1 and its re-fly, 18-27 fps).
+afds_controls.ROLL_GAIN_TAS_KT = 340
+afds_controls.ROLL_GAIN_MIN_SCALE = 0.7
+function afds_controls.roll_gain_scale(true_airspeed_mps)
+    local tas_kt = (tonumber(true_airspeed_mps) or 0) * 1.943844
+    if tas_kt ~= tas_kt or tas_kt <= afds_controls.ROLL_GAIN_TAS_KT then return 1 end
+    return math.max(afds_controls.ROLL_GAIN_MIN_SCALE, afds_controls.ROLL_GAIN_TAS_KT / tas_kt)
+end
+
 function afds_controls.roll_output_response_sec(bank_error_deg, current_output, target_output, approach_protected)
     if approach_protected then return afds_controls.ROLL_OUTPUT_APPROACH_RESPONSE_SEC end
     if type(current_output) == "number" and type(target_output) == "number"

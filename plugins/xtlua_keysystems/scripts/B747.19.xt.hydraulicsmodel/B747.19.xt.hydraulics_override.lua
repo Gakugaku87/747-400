@@ -1136,10 +1136,12 @@ end
 function ap_roll_assist()
     local retval=B747DR_sim_roll_ratio--B747_interpolate_value(B747DR_sim_roll_ratio,0,-1,1,20)
     local flight_director_roll=ap_director_roll_integral()
-    rollPid.kp=B747DR_pidRollP
-    rollPid.ki=B747DR_pidRollI
+    -- [P40] the gains fall as the true airspeed rises above 340 kt (roll_gain_scale)
+    local gainScale=B747_afds_controls.roll_gain_scale(simDR_TAS_mps)
+    rollPid.kp=B747DR_pidRollP*gainScale
+    rollPid.ki=B747DR_pidRollI*gainScale
     B747DR_pidRollD=B747_rescale(3000,B747DR_pidRollDL,30000,B747DR_pidRollDH,B747DR_autopilot_altitude_ft_pfd)
-    rollPid.kd=B747DR_pidRollD
+    rollPid.kd=B747DR_pidRollD*gainScale
     if simDR_autopilot_servos_on>0 and (B747DR_ap_FMA_active_roll_mode>0) then
         rollPid.input = simDR_AHARS_roll_heading_deg_pilot
         rollPid.target= flight_director_roll

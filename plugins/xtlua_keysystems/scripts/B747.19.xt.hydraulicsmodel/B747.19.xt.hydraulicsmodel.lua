@@ -543,7 +543,11 @@ function flight_start()
   B747DR_pidRollP = 0.05
   B747DR_pidRollI = 0.0003
   B747DR_pidRollDL = 0.05 --low 0.1 high 0.4
-  B747DR_pidRollDH = 0.1 --low 0.1 high 0.4
+  -- [P40] not raised with the MCP altitude (it was 0.1 from 30,000 ft, so ap_roll_assist's D schedule by the MCP
+  -- altitude is now flat): with the roll surfaces' effect about 20 frames behind the roll ratio (the output timing's
+  -- and pressure_output's tenth of the way a frame) the higher D kept a roll oscillation going at FL300
+  -- (tests/afds_roll_high_tas_test.lua)
+  B747DR_pidRollDH = 0.05 --low 0.1 high 0.4
 
   B747DR_pidPitchPL = 0.07 --low 0.15 high 0.05
   B747DR_pidPitchPH = 0.04 --low 0.15 high 0.05

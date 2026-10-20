@@ -499,6 +499,28 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   recordings (FL310 and 5,000 ft), flying heading changes of 5, 20 and 90 deg
   and a +/-60 deg reversal within 4.5 deg/s (1 s mean), 1 deg of heading
   overshoot and a time bound.
+- `afds_roll_high_tas_test.lua`: the roll channel at a high true airspeed in
+  the roll model - light at FL300, M.81 (TAS 480 kt) p33-line1 and its re-fly
+  kept a roll oscillation that grew to +-30-38 deg of bank at about 4.8 s
+  (18-27 fps): at 18, 20 and 25 fps over 96 aircraft each (surface power
+  40-100 deg/s, the spoilers' share 0-0.8, roll mode 0.3-1 s, the cables 1-2
+  frames behind) none keeps more than 1 deg of bank 45 s after a kick, nor
+  the 48 most powerful rolling out from 30 deg (the director's target
+  filtered down at 3 deg/s), none more than 5 deg after rolling at 28 deg/s
+  at wings level, surface power 60-100 deg/s (with the D gain doubled from a
+  30,000 ft MCP altitude and no airspeed schedule 39 kept a cycle of 10 deg
+  or more after a kick, 106 more than 1 deg, 68 of 108 more than 5 deg after
+  rolling; the margin ends near 120 deg/s at 18-20 fps); the 5 deg step at
+  TAS 270 kt with the MCP at 5,000 ft and at FL370 (4.5 deg within 3.5 s, at
+  most 5 % over), and the gains' scale (1 to 340 kt, 340 / TAS above, at
+  least 0.7, 1 for a NaN); 14 of 15 checks failed before.
+- `roll_model.lua` (not a suite): the production director filter, roll PID
+  and output timing (in the hydraulics script's namespace) with
+  hydraulicsmodel.lua's gains, the roll surfaces moved by pressure_output's
+  functions (the inboard ailerons by B747_interpolate_value a frame before
+  the flight model sees them, the roll spoilers by B747_animate_value) from
+  the roll ratio 1-2 frames before, against a roll-only aircraft (surface
+  power, the spoilers' share, roll mode, a disturbing roll acceleration).
 - `lnav_turn_anticipation_test.lua`: LNAV fly-by turns - the anticipation
   (the arc at the bank limit, half the 3 deg/s roll-in, and in wind where the
   drifting turn ends on the outbound leg; beyond 150 deg a 150 deg turn's,
