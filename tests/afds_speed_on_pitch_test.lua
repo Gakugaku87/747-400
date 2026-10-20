@@ -554,17 +554,30 @@ for _, fps in ipairs({20, 34}) do
     end
 end
 
--- c. X-Plane's thrust jitters as the A/T works the levers (p35-line1's takeoff: 1.7 kN rms an engine per 0.25 s). A
--- decrease led at half the rate and an increase at the full one turn a jitter into a steady pitch-up, and the
--- integrator holds it with the IAS low: with 3 kN of jitter in the takeoff climb (TO/GA, 233 t, V2 144, 1,200 ft,
--- 190 kN an engine) the mean IAS sat 1.4 kt lower than with P43 alone (review 46b's MINOR-2). The jitter: the four
--- engines together, a sum of four sines of 0.7-3.7 Hz (about the recorded spectrum; the same in LuaJIT and Lua 5.1).
+-- c. X-Plane's thrust jitters as the A/T works the levers (p35-line1's takeoff: 1.7 kN rms an engine per 0.25 s, most of
+-- it at 0.2-0.6 Hz). A decrease led at half the rate and an increase at the full one turn a jitter into a steady
+-- pitch-up, and the integrator holds it with the IAS low: in the takeoff climb (TO/GA, 233 t, V2 144, 1,200 ft,
+-- 190 kN an engine) with the recorded jitter at twice its size the mean IAS sat about 2 kt lower than with P43 alone
+-- (reviews 46b, 46c). The jitter: tests/data/p35-line1_takeoff.csv's thrust less its 4 s centred mean, looped, the
+-- four engines together.
+local TAKEOFF = load_csv("tests/data/p35-line1_takeoff.csv")
+local takeoff_jitter = {}
+for i, r in ipairs(TAKEOFF) do
+    local sum, n = 0, 0
+    for j = math.max(1, i - 8), math.min(#TAKEOFF, i + 8) do sum, n = sum + TAKEOFF[j].thrust, n + 1 end
+    takeoff_jitter[i] = r.thrust - sum / n
+end
+local function recorded_jitter(t)
+    local x = (t % (#takeoff_jitter * 0.25)) / 0.25 + 1
+    local i = math.floor(x)
+    local a, b = takeoff_jitter[i], takeoff_jitter[i % #takeoff_jitter + 1]
+    return a + (b - a) * (x - i)
+end
 local function jitter_climb(fps, lead)
-    local T0, sigma = 190000, 3000
+    local T0 = 190000
     local function jitter(t)
         if t < 20 then return 0 end
-        return sigma * (math.sin(2 * math.pi * 0.7 * t + 3) + math.sin(2 * math.pi * 1.3 * t)
-            + math.sin(2 * math.pi * 2.1 * t + 1) + math.sin(2 * math.pi * 3.7 * t + 2)) / 2
+        return 2 * recorded_jitter(t - 20)
     end
     local target = 154
     local gamma = path_for(1200, target, 233000, 0.667, T0)
