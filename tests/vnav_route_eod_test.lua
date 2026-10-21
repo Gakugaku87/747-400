@@ -340,6 +340,54 @@ case("normal route: IAF path", function()
     end
 end)
 
+-- [P49] The descent path starts at the T/D whatever the route entries before the T/D carry. The departure airport
+-- and runway keep their elevations in [9] (EIDW 242 ft, its runway 218 ft): the step down between them took the T/D,
+-- so the first descent constraint's path began at the route entry before it, below CRZ ALT at the T/D. EIDW-EHAM
+-- (every line flight, p5-line1 to p39-line1): 193 ft/nm from 55 nm out, 3,600 ft below CRZ ALT at the T/D, where the
+-- descent began with DRAG REQUIRED, the kit's speedbrake and 0.5 g.
+-- A third call: the T/D placed by the call before is there from the start of the route (the aircraft calls it every
+-- frame), where the departure's step down took it; two calls placed it only on its own leg, after the departure.
+case("normal route with the departure's elevations: the descent path starts at the T/D", function()
+    for _, route_alt in ipairs({0, 35000}) do
+        local route = normal(route_alt)
+        route[1][9], route[2][9] = 242, 218
+        local r = new_runtime(route, 1, 2, 3)
+        settle(r)
+        r.setDistances(r.route)
+        local label = "departure 242/218 ft, route [9]="..route_alt
+        local iaf = profile_point(r, 1, 5.75, 3000)
+        check(iaf ~= nil, label..": IAF in profile "..r.B747BR_vnavProfile)
+        near(iaf[5], 290, 0.5, label..": IAF gradient")
+        local from_tod = r.getDistance(r.B747BR_todLat, r.B747BR_todLong, 1, 5.75)
+        near(iaf[5] * from_tod + 3000, 35000, 5, label..": path altitude at the T/D")
+    end
+end)
+
+-- Only the first descent constraint after the T/D starts there: once it is passed, the next one's path is from it.
+-- (The T/D went to the first step down in the route's order with a lower point ahead, the passed constraint's next.)
+case("normal route past its first descent constraint: the next path starts at the passed constraint", function()
+    local route = normal(0)
+    table.insert(route, 4, fix("DES1", 1, 5, 12000))
+    local r = new_runtime(route, 1, 2, 3)
+    settle(r)
+    -- the T/D from DES1: 60 nm to the end, (35000 - 12000) / 290 more
+    local des1 = profile_point(r, 1, 5, 12000)
+    check(des1 ~= nil, "DES1 in profile "..r.B747BR_vnavProfile)
+    near(des1[5], 290, 0.5, "DES1 gradient from the T/D")
+    -- past DES1, the IAF active
+    r.simDR_longitude = 5.3
+    r.B747DR_fmscurrentIndex = 5
+    for i = 1, #route do route[i][10] = (i == 5) end
+    settle(r)
+    r.setDistances(r.route)
+    des1 = profile_point(r, 1, 5, 12000)
+    check(des1 ~= nil, "DES1 in profile past it "..r.B747BR_vnavProfile)
+    near(des1[5], 290, 0.5, "DES1 gradient from the T/D, passed")
+    local iaf = profile_point(r, 1, 5.75, 3000)
+    check(iaf ~= nil, "IAF in profile past DES1 "..r.B747BR_vnavProfile)
+    near(iaf[5], 9000 / r.getDistance(1, 5, 1, 5.75), 0.5, "IAF gradient from DES1")
+end)
+
 case("vnav_entry_slope", function()
     local slope, alt = afds.vnav_entry_slope(-9999, 3000, 165.1, false, 35000)
     equal(slope, 0, "no gradient from an unset previous altitude")
