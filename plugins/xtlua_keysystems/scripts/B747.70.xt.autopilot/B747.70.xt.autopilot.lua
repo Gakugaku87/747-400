@@ -2229,6 +2229,8 @@ function setDistances(fmsO)
 	local setTOD = false
 	local setTOC = false
 	local todDist = B747BR_totalDistance - B747BR_tod
+	-- [P49] each entry's distance to the destination as the T/D (B747BR_tod) is measured
+	local toEnd = B747_afds_helpers.route_distance_to_end(fmsO, eod, getDistance)
 	local vnavData={}
 	local vnavI=1
 	local lastVnavAlt=-9999
@@ -2241,8 +2243,6 @@ function setDistances(fmsO)
 			--print("end fms"..i.."=at alt "..fms[i][3])
 			break
 		end
-		-- true when the T/D lies on a leg before this entry (set by an earlier pass)
-		local todBeforePoint = setTOD
 		if i >= start then
 			iLat = fmsO[i][5]
 			iLong = fmsO[i][6]
@@ -2288,11 +2288,17 @@ function setDistances(fmsO)
 				if i>1 then
 					local distance=getDistance(fmsO[i-1][5],fmsO[i-1][6], fmsO[i][5],fmsO[i][6])
 					local fromToD=false
-					-- with no constraint before it (route entries without an altitude), the first constraint
-					-- below CRZ ALT ahead of the aircraft also starts at the T/D, when the T/D lies before it
-					-- on the route or the aircraft has already passed the T/D
-					local firstDescent=i>=start and lastVnavAlt<0 and pointAlt<B747BR_cruiseAlt and (todBeforePoint or todDist<=0)
-					if (pointAlt<lastVnavAlt or firstDescent) and not(usedToD) and B747BR_totalDistance > 0 and B747BR_todLat ~=0 and B747BR_todLong ~=0 then
+					-- [P49] the first point below CRZ ALT after the T/D on the route (nearer the destination
+					-- than the T/D), ahead of the aircraft or passed, starts at the T/D; the entries before the
+					-- T/D (the departure, the climb, an older CRZ ALT) never do. The first step down in the
+					-- route's order took it: the departure airport's and runway's elevations in [9] (EIDW 242,
+					-- 218 ft), so the descent's first path ran from the entry before its point, 3,600 ft below
+					-- CRZ ALT at EIDW-EHAM's T/D (DRAG REQUIRED, the kit's speedbrake, 0.5 g on every line
+					-- flight); with no route altitude at all before the first descent point, past that point the
+					-- next one's path ran from the T/D. An older CRZ ALT left in [9] after the T/D still takes it
+					-- as the active or held fix (in the profile then), as before (review 55)
+					local afterToD=B747BR_tod>0 and toEnd[i]~=nil and toEnd[i]<B747BR_tod
+					if afterToD and pointAlt<B747BR_cruiseAlt and not(usedToD) and B747BR_totalDistance > 0 and B747BR_todLat ~=0 and B747BR_todLong ~=0 then
 						distance=getDistance(B747BR_todLat,B747BR_todLong, fmsO[i][5],fmsO[i][6])
 						usedToD=true
 						fromToD=true

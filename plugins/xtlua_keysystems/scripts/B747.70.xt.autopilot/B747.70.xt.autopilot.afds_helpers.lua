@@ -1069,6 +1069,21 @@ end
 -- Planned descent gradient of the T/D (2.9 NM per 1,000 ft, as before).
 afds.VNAV_TOD_FT_PER_NM = 290
 
+-- [P49] The distance (NM) from each entry up to the end of descent along the route to it, then straight to the
+-- destination (the last entry), as the T/D (afds.route_tod_distance) and setDistances' remaining distance measure
+-- it: {[i] = NM} for i = 1 .. the end of descent's index (eod_index, the last entry when nil).
+function afds.route_distance_to_end(route, eod_index, distance_fn)
+    local count = #route
+    local to_end = {}
+    if count < 1 or type(distance_fn) ~= "function" then return to_end end
+    local eod = math.max(1, math.min(tonumber(eod_index) or count, count))
+    to_end[eod] = distance_fn(route[eod][5], route[eod][6], route[count][5], route[count][6])
+    for i = eod - 1, 1, -1 do
+        to_end[i] = to_end[i + 1] + distance_fn(route[i][5], route[i][6], route[i + 1][5], route[i + 1][6])
+    end
+    return to_end
+end
+
 -- Distance (NM) before the destination at which the descent from cruise_alt_ft
 -- starts, and the end of descent altitude. As in setDistances, the route runs
 -- to the end of descent (eod_index) and then straight to the destination (the
@@ -1093,12 +1108,7 @@ function afds.route_tod_distance(route, eod_index, cruise_alt_ft, distance_fn, c
     if eod_alt <= 0 then eod_alt = tonumber(route[count][9]) or 0 end
     local tod_nm = (cruise_alt - eod_alt) / afds.VNAV_TOD_FT_PER_NM
     if type(distance_fn) ~= "function" then return tod_nm, eod_alt end
-    -- distance from each entry along the route to the end of descent, then to the destination
-    local to_end = {}
-    to_end[eod] = distance_fn(route[eod][5], route[eod][6], route[count][5], route[count][6])
-    for i = eod - 1, 1, -1 do
-        to_end[i] = to_end[i + 1] + distance_fn(route[i][5], route[i][6], route[i + 1][5], route[i + 1][6])
-    end
+    local to_end = afds.route_distance_to_end(route, eod, distance_fn)
     for i = eod, 1, -1 do
         -- the route altitude of the end of descent applies there, even when CRZ ALT is
         -- so close to it that the T/D from the destination lies after that point
