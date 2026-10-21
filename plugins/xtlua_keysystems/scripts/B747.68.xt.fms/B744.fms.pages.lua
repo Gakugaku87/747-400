@@ -1525,9 +1525,14 @@ function fmsFunctions.setdata(fmsO,value)
 			else
 				fmsO["notify"]="INVALID CRZ ALT"
 			end
+		elseif del then
+			-- CRZ ALT is not deleted, as the FMC does (an entry replaces it): with CRZ ALT 0 in the climb VNAV
+			-- flew the cruise Mach .81 from FL205, 400 KCAS (a review)
+			fmsO["notify"]="INVALID DELETE"
 		else
-			fmsModules:setData("crzalt","")
-			B747BR_cruiseAlt=0
+			-- an empty press copies it to the scratchpad (nothing without one)
+			local crz=tostring(getFMSData("crzalt") or "")
+			if string.find(crz,"%d") then fmsO["scratchpad"]=string.gsub(crz,"%s","") end
 		end	
 	end
 	--[[if string.len(fmsO["scratchpad"])>0 then
@@ -1663,10 +1668,12 @@ function fmsFunctions.setdata(fmsO,value)
 		fmsO["notify"]="INVALID ENTRY"
  	end
   elseif value == "vref1" then
-	fmsO["scratchpad"]=string.format("25/%3d", B747DR_airspeed_Vf25)
+	-- [landing speeds] VREF in whole knots, rounded as APPROACH REF shows it (%3d cut 143.69 to 143)
+	-- [P36] for the landing airport's elevation (B747_landing_vref)
+	fmsO["scratchpad"]=string.format("25/%3d", math.floor(B747_landing_vref(B747DR_airspeed_Vf25) + 0.5))
 	return
   elseif value == "vref2" then
-	fmsO["scratchpad"]=string.format("30/%3d", B747DR_airspeed_Vf30)
+	fmsO["scratchpad"]=string.format("30/%3d", math.floor(B747_landing_vref(B747DR_airspeed_Vf30) + 0.5))
 	return
   elseif value == "flapspeed" then
 	if fmsO["scratchpad"]=="" then 
@@ -1675,7 +1682,8 @@ function fmsFunctions.setdata(fmsO,value)
 		return 
 	end
 	local vref=tonumber(string.sub(fmsO["scratchpad"],4))
-	if vref==nil or vref<110 or vref>180 then 
+	-- [landing speeds] any VREF APPROACH REF offers: VREF25 is over 180 kt from 356 t, 192 at 400 t
+	if vref==nil or vref<110 or vref>200 then 
 		fmsO["notify"]="INVALID ENTRY" 
 		return 
 	end
@@ -1721,7 +1729,8 @@ function fmsFunctions.setdata(fmsO,value)
 	setFMSData(value, grwt)
 	setFMSData("zfw", zfw)
 	calc_CGMAC()  --Recalc CG %MAC and TRIM units
-	if (B747DR_airspeed_V1 < 999 or B747DR_airspeed_Vr < 999 or B747DR_airspeed_V2 < 999) and simDR_onground == 1 then
+	-- [takeoff speeds] set speeds only: the instruments leave V1 at 998 (no speeds in the air) after a landing
+	if (B747DR_airspeed_V1 < 998 or B747DR_airspeed_Vr < 998 or B747DR_airspeed_V2 < 998) and simDR_onground == 1 then
 		B747DR_airspeed_flapsRef = 0
 		--B747DR_airspeed_V1 = 999
 		--B747DR_airspeed_Vr = 999
@@ -1749,7 +1758,8 @@ function fmsFunctions.setdata(fmsO,value)
 	setFMSData(value, zfw)
 	setFMSData("grwt", grwt)
 	calc_CGMAC()  --Recalc CG %MAC and TRIM units
-	if (B747DR_airspeed_V1 < 999 or B747DR_airspeed_Vr < 999 or B747DR_airspeed_V2 < 999) and simDR_onground == 1 then
+	-- [takeoff speeds] set speeds only: the instruments leave V1 at 998 (no speeds in the air) after a landing
+	if (B747DR_airspeed_V1 < 998 or B747DR_airspeed_Vr < 998 or B747DR_airspeed_V2 < 998) and simDR_onground == 1 then
 		B747DR_airspeed_flapsRef = 0
 		--B747DR_airspeed_V1 = 999
 		--B747DR_airspeed_Vr = 999
@@ -2863,9 +2873,21 @@ function fmsFunctions.setDref(fmsO,value)
 
 
  	
-  if value=="TO" then toderate=0 clbderate=0 return  end
-  if value=="TO1" then toderate=1 clbderate=1 return  end
-  if value=="TO2" then toderate=2 clbderate=2 return  end
+  if value=="TO" or value=="TO1" or value=="TO2" then
+    local rating = 0
+    if value=="TO1" then rating = 1 elseif value=="TO2" then rating = 2 end
+    -- [takeoff speeds] a takeoff thrust rating changed once the speeds are set deletes them with the flaps entry, as
+    -- a GR WT or ZFW entry above: entered again they are worked out for the new rating (TO 2's V1 108 stayed under
+    -- full thrust's VMCG 121; reviews 36 and 38). Set speeds only: V1 998 is the instruments' "none in the air",
+    -- kept after a landing (review 39)
+    if rating ~= toderate and (B747DR_airspeed_V1 < 998 or B747DR_airspeed_Vr < 998 or B747DR_airspeed_V2 < 998)
+        and simDR_onground == 1 then
+      B747DR_airspeed_flapsRef = 0
+      fmsO["notify"] = "TAKEOFF SPEEDS DELETED"
+    end
+    toderate=rating clbderate=rating
+    return
+  end
   if value=="CLB" then clbderate=0 return  end
   if value=="CLB1" then clbderate=1 return  end
   if value=="CLB2" then clbderate=2  return end

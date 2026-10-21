@@ -47,6 +47,9 @@ local function new_runtime(position, heading, altitude, index, on_ground)
     env.simDR_true_heading, env.simDR_pressureAlt1 = heading, altitude
     env.simDR_radarAlt1, env.simDR_vvi_fpm_pilot = altitude - FIELD_FT, 2500
     env.simDR_groundspeed, env.simDR_onGround = 90, on_ground and 1 or 0
+    -- no wind: the true airspeed is the ground speed, the track the heading
+    env.simDR_TAS_mps, env.simDR_ground_track_true = 90, heading
+    env.simDR_autopilot_bank_limit, env.simDR_autopilot_bank_angles = 4, {[0] = 5, 10, 15, 20, 25, 30}
     env.B747DR_fmscurrentIndex, env.B747DR_fms_setCurrent = index, index
     env.B747DR_ap_lnav_state, env.B747DR_ap_lnavHeading_mode = 2, index
     env.B747DR_ap_approach_mode, env.B747DR_ap_lnav_xtk_target, env.B747DR_ap_lnav_xtk_error = 0, 0, 0
@@ -142,6 +145,7 @@ local function fly_departure(behaviour, start, altitude, fpm, index, ends, after
         end
         for i = 1, #route do route[i][10] = (i == env.B747DR_fmscurrentIndex) end
         env.simDR_latitude, env.simDR_longitude, env.simDR_true_heading = lat, lon, heading
+        env.simDR_ground_track_true = heading
         env.simDR_pressureAlt1, env.simDR_radarAlt1, env.simDR_vvi_fpm_pilot = altitude, altitude - FIELD_FT, fpm
         local before = env.B747DR_fmscurrentIndex
         env.B747_getCurrentWayPoint_function(route)

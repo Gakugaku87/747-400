@@ -50,6 +50,8 @@ local function new_runtime(route, lat, lon, current_index)
         json = json,
         -- Production keeps this as a local at autopilot.lua:553, outside the slice.
         B747_afds_helpers = afds,
+        -- vnav.lua's approach path, for the path error only (vnav_approach_path_test.lua)
+        B747_vnav_approach_path = function() return nil end,
         B747BR_cruiseAlt = 35000, B747DR_ap_flightPhase = 2, simDR_pressureAlt1 = 35000,
         simDR_groundspeed = 0, B744_fpm = 0,
         B747BR_totalDistance = 0, B747BR_tod = 0, B747BR_toc = 0,
@@ -246,6 +248,14 @@ end
 case("route_eod_index: a missed approach's distant vectors point", function()
     equal(afds.route_eod_index(with_far_missed_approach(), distance_nm, 10), 5,
         "the EOD is the FAF, as without the missed approach")
+end)
+
+case("route_eod_index: a fix named RW... after the vectors point is no runway", function()
+    -- only a runway's name (RW27, RW18R) marks the arrival runway: a fix named RWNEW after the vectors point
+    -- would take the vectors point into the search and put the EOD after it
+    local route = with_far_missed_approach()
+    table.insert(route, #route, fix("RWNEW", 1, 6.05, 2000))
+    equal(afds.route_eod_index(route, distance_nm, 10), 5, "the EOD is the FAF")
 end)
 
 case("setDistances: a missed approach's distant vectors point", function()
@@ -560,6 +570,12 @@ case("route_tod_distance", function()
     local route = normal(0)
     table.insert(route, 4, fix("HIGH", 1, 5, 36000))
     near(afds.route_tod_distance(route, 6, 35000, distance_nm), NORMAL_TOD, 1e-9, "36000 ft fix")
+    -- [B-14] a point's altitude through its CIFP constraint, as the profile's: the IAF's 3000 above an at or below
+    -- 2500 needs the T/D 500 / 290 nm farther out (review 26 MINOR 6)
+    local ceiling = {[4] = {alt_desc = "-", ceiling = 2500, phase = "descent"}}
+    near(afds.route_tod_distance(normal(0), 5, 35000, distance_nm, ceiling), NORMAL_TOD + 500 / 290, 1e-9,
+        "the IAF's 3000 above its at or below 2500")
+    near(afds.route_tod_distance(normal(0), 5, 35000, distance_nm), NORMAL_TOD, 1e-9, "without constraints, as before")
     -- no CRZ ALT: no T/D before the destination, as before
     check(afds.route_tod_distance(normal(0), 5, 0, distance_nm) <= 0, "no CRZ ALT")
     check(afds.route_tod_distance(vor_route(2000, 0), 4, 0, distance_nm) <= 0,

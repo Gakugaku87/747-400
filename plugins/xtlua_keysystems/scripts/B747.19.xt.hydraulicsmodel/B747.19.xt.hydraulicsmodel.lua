@@ -169,6 +169,13 @@ B747DR_airspeed_Vmc = find_dataref("laminar/B747/airspeed/Vmc")
 simDR_autopilot_altitude_ft = find_dataref("laminar/B747/autopilot/altitude_dial_ft")
 simDR_pressureAlt1 = find_dataref("sim/cockpit2/gauges/indicators/altitude_ft_pilot")
 simDR_touchGround = find_dataref("sim/flightmodel/failures/onground_any")
+-- [P39] TO/GA's speed: the FMC's V2 and the IAS/MACH window's speed
+B747DR_airspeed_V2 = find_dataref("laminar/B747/airspeed/V2")
+B747DR_ap_ias_dial_value = find_dataref("laminar/B747/autopilot/ias_dial_value")
+simDR_autopilot_airspeed_is_mach = find_dataref("sim/cockpit2/autopilot/airspeed_is_mach")
+-- [P45] the speed law's thrust lead: the engines' thrust (N) and the aircraft's mass (kg)
+simDR_engine_thrust_n = find_dataref("sim/flightmodel/engine/POINT_thrust")
+simDR_acf_weight_total_kg = find_dataref("sim/flightmodel/weight/m_total")
 simDR_autopilot_vs_fpm = find_dataref("sim/cockpit2/autopilot/vvi_dial_fpm")
 B747DR_l_elev_inner   = deferred_dataref("laminar/B747/flt_ctrls/l_elev_inner", "number")
 B747DR_r_elev_inner   = deferred_dataref("laminar/B747/flt_ctrls/r_elev_inner", "number")
@@ -198,9 +205,14 @@ B747DR_flight_director_roll 		= deferred_dataref("laminar/B747/autopilot/flight_
 simDR_autopilot_servos_on           	= find_dataref("laminar/B747/autopilot/servos_on")
 B747DR_ap_FMA_active_pitch_mode     	= find_dataref("laminar/B747/autopilot/FMA/active_pitch_mode")
 B747DR_ap_FMA_active_roll_mode      	= find_dataref("laminar/B747/autopilot/FMA/active_roll_mode")
+-- [P45] the speed law's thrust lead stays out of the A/T's SPD
+B747DR_ap_FMA_autothrottle_mode     	= find_dataref("laminar/B747/autopilot/FMA/autothrottle_mode")
 simDR_vvi_fpm_pilot                 = find_dataref("sim/cockpit2/gauges/indicators/vvi_fpm_pilot")
 simDR_alpha_deg                     = find_dataref("sim/flightmodel/position/alpha")
 simDR_TAS_mps                       = find_dataref("sim/flightmodel/position/true_airspeed")
+simDR_elevation                     = find_dataref("sim/flightmodel/position/elevation")  -- [P37] m above MSL
+simDR_yaw_rate                      = find_dataref("sim/flightmodel/position/R")
+simDR_roll_rate                     = find_dataref("sim/flightmodel/position/P")
 simDR_autopilot_alt_hold_status     	= find_dataref("laminar/B747/autopilot/altitude_hold_status")
 --simCMD_autopilot_alt_hold_mode      = find_command("sim/autopilot/altitude_hold")
 B747_controls_left_outer_aileron           = deferred_dataref("laminar/B747/cablecontrols/left_outer_aileron", "number")
@@ -541,7 +553,11 @@ function flight_start()
   B747DR_pidRollP = 0.05
   B747DR_pidRollI = 0.0003
   B747DR_pidRollDL = 0.05 --low 0.1 high 0.4
-  B747DR_pidRollDH = 0.1 --low 0.1 high 0.4
+  -- [P40] not raised with the MCP altitude (it was 0.1 from 30,000 ft, so ap_roll_assist's D schedule by the MCP
+  -- altitude is now flat): with the roll surfaces' effect about 20 frames behind the roll ratio (the output timing's
+  -- and pressure_output's tenth of the way a frame) the higher D kept a roll oscillation going at FL300
+  -- (tests/afds_roll_high_tas_test.lua)
+  B747DR_pidRollDH = 0.05 --low 0.1 high 0.4
 
   B747DR_pidPitchPL = 0.07 --low 0.15 high 0.05
   B747DR_pidPitchPH = 0.04 --low 0.15 high 0.05
@@ -569,8 +585,10 @@ function flight_start()
     if initialiseControls then
 
       --YAW DAMPER
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3.5,"maxout":3.5,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_lwr","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3.5,"maxout":3.5,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_upr","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
+      -- [P25] each damper +-4 deg of rudder command (FAA NPRM FAA-2011-0571, 76 FR 36391: the damper's piston in each
+      -- rudder PCM), taken at any airspeed past the pedals' ratio changer; it was +-3.5 deg times the rudder ratio
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-4,"maxout":4,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_lwr","dstDref":"laminar/B747/cablecontrols/lower_rudder"}';
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-4,"maxout":4,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_upr","dstDref":"laminar/B747/cablecontrols/upper_rudder"}';
 
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-32,"maxout":32,"scale":1.0,"srcDref":"sim/cockpit2/controls/total_heading_ratio","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-32,"maxout":32,"scale":1.0,"srcDref":"sim/cockpit2/controls/total_heading_ratio","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';

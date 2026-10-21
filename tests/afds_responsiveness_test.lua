@@ -392,6 +392,7 @@ local director = setmetatable({
     simDR_autopilot_TOGA_pitch_deg = 2.7,
     B747DR_airspeed_Vmc = 215, B747DR_airspeed_Vmax = 365,
     simDR_ind_airspeed_kts_pilot = 250, simDR_autopilot_airspeed_kts = 250,
+    simDR_TAS_mps = 150, simDR_alpha_deg = 2.7, simDR_autopilot_servos_on = 1,
     simDR_vvi_fpm_pilot = 50, B747DR_alt_capture_window = 400,
     simDR_pressureAlt1 = 10100, simDR_autopilot_altitude_ft = 35000,
     simDR_autopilot_hold_altitude_ft = 35000, simDR_autopilot_alt_hold_status = 0,
@@ -409,8 +410,11 @@ local function director_update(pitch_mode)
     director.ap_director_pitch(pitch_mode)
     return director.B747_afds_pitch_target_before_blend
 end
+-- TO/GA parked on the ground at its pitch (in the air it flies TO/GA's speed, P39)
+director.simDR_touchGround = 1
 director.ap_director_pitch(1) -- first update only resets the director
 director_update(1)              -- TO/GA sets the pitch target to 2.7 degrees
+director.simDR_touchGround = 0
 for _ = 1, 3 do director_update(4) end
 assert_near(director.B747_afds_pitch_target_before_blend, 2.7, 0.0001, "VNAV SPD on speed holds 2.7 degrees")
 director.simDR_autopilot_airspeed_kts = 326
@@ -421,13 +425,13 @@ for _ = 1, 10 do
 end
 assert_near(lowest_pitch, 2.7, 0.0001, "250 to 326 kt target step at +50 fpm does not pitch down")
 -- The latch keeps only the descent guard: climbing the director still trades
--- climb rate for speed. Here the speed rises 0.1 kt in the 0.3 s (0.33 kt/s),
--- less than the 1 kt/s the climb speed law (g-6) wants 70 kt below the
--- target; at +600 fpm its climb floor allows 0.5 deg/s per 1,000 fpm above
--- +300 fpm, 0.15 deg/s, so 0.045 deg in the 0.3 s.
+-- climb rate for speed. At +600 fpm with the speed no longer rising, 70 kt
+-- below the target, the speed law (P43) wants to accelerate: down within 3 s.
 director.simDR_vvi_fpm_pilot = 600
-director.simDR_ind_airspeed_kts_pilot = director.simDR_ind_airspeed_kts_pilot + 0.1
 local before_trade = director.B747_afds_pitch_target_before_blend
-assert_near(director_update(4), before_trade - 0.045, 0.002, "latched acceleration at +600 fpm still pitches down")
+local traded = before_trade
+for _ = 1, 10 do traded = director_update(4) end
+tests_run = tests_run + 1
+assert(traded < before_trade - 0.1, "latched acceleration at +600 fpm still pitches down: "..before_trade.." -> "..traded)
 
 print("AFDS responsiveness tests passed: " .. tests_run)

@@ -150,6 +150,7 @@ simDR_acf_weight_total_kg           = find_dataref("sim/flightmodel/weight/m_tot
 simDR_wing_flap1_deg                = find_dataref("sim/flightmodel2/wing/flap1_deg")
 
 simDR_OAT_degC                      = find_dataref("sim/cockpit2/temperature/outside_air_temp_degc")
+B747DR_toderate                     = find_dataref("laminar/B747/engine/derate/TO")
 simDR_wind_heading_deg              = find_dataref("sim/cockpit2/gauges/indicators/wind_heading_deg_mag")
 simDR_wind_speed_kts                = find_dataref("sim/cockpit2/gauges/indicators/wind_speed_kts")
 simDR_position_mag_psi              = find_dataref("sim/flightmodel/position/mag_psi")
@@ -2640,6 +2641,16 @@ end
 -- V1 / Vr / V2 - TEMPERATURE/ALTITUDE REGIONS
 local regions = {}
 local tempAltRegion = 0
+-- [takeoff speeds] the pressure altitude (ft) the takeoff speed charts and the minimum control speeds are entered
+-- with: the captain's altimeter taken from its setting to 29.92 inHg by the standard atmosphere's altimeter relation
+-- (as B747.70.xt.autopilot.takeoff.lua's reference_altitude; at 1,000 ft per inHg QNH 28.92 read 6 % high), a setting
+-- read as 0 (XTLua's first read) leaving the altimeter's altitude. With the altimeter's own altitude VMCG/VRMIN were
+-- 1.5 kt high at a sea level airport on a 980 hPa day (review 36)
+local function B747_takeoff_pressure_altitude()
+    local setting = simDR_altimeter_baro_inHg
+    if setting <= 0 then return simDR_altitude_ft_pilot end
+    return 145442.16 - (145442.16 - simDR_altitude_ft_pilot) * (setting / 29.92126) ^ 0.190263
+end
 
 function B747_getTempAltRegions()
 
@@ -2727,14 +2738,21 @@ function B747_setTempAltRegion()
     B747_getTempAltRegions()
 
     local num_regions = #regions
+    -- [takeoff speeds] below the chart's bottom (-2,000 ft) or colder than its left edge (-60 C) the chart is entered
+    -- on that edge, and each region runs from its bottom and left edge to its top and right edge, so that a point on
+    -- the line between two is in the higher one; above region E's top (about 8,000 ft at 0 C) or hotter than its right
+    -- edge region E. Left at 0, the speeds' lookup failed on a nil index (review 36); with strict edges a point on a
+    -- line was in no region and taken as E, and -62 C at 9,000 ft as A (review 38)
+    local altitude = math.max(B747_takeoff_pressure_altitude(), regions[1].b)
+    local oat = math.max(simDR_OAT_degC, regions[1].l)
 
     for i=1, num_regions do
 
         local r = regions[i]
 
-        if (simDR_OAT_degC > r.l) and (simDR_OAT_degC < r.r) then
+        if (oat >= r.l) and (oat < r.r) then
 
-            if (simDR_altitude_ft_pilot > r.b) and (simDR_altitude_ft_pilot < r.t) then
+            if (altitude >= r.b) and (altitude < r.t) then
 
                 r.f()
 
@@ -2744,6 +2762,7 @@ function B747_setTempAltRegion()
         end -- TEMPERATURE TEST
     end -- LOOP ALL REGIONS
 
+    tempAltRegion = num_regions
     return false
 
 end
@@ -2753,12 +2772,21 @@ end
 
 -- V1 WIND ADJUSTMENT
 local B747_V1windAdj = 0
+-- one row of the wind table (a headwind of hw kt) at the gross weight, between its weights
+local function B747_V1_wind_row(hw, weight_min, weight_max)
+    return B747_rescale(weight_min, V1windAdj[hw][weight_min], weight_max, V1windAdj[hw][weight_max],
+        simDR_acf_weight_total_kg)
+end
 function B747_V1_wind_adjustment()
 
     local weight_max = math.min(420000, roundUpToIncrement(simDR_acf_weight_total_kg, 20000))
     local weight_min = math.max(200000, weight_max-20000)
     weight_max = math.max(200000,weight_max)
-    local HW = simDR_wind_speed_kts * math.cos(math.rad(recipAngle(simDR_wind_heading_deg))-math.rad(simDR_position_mag_psi))
+    -- [takeoff speeds] the headwind component (the wind comes from wind_heading_deg_mag), + ahead: the table's rows
+    -- are headwinds (+10..+40 kt) and tailwinds (-5..-15 kt), each row between its weights. Taken as the tailwind
+    -- component and interpolated on the wind speed (and diagonally across the weights), a 20 kt headwind took 3 kt
+    -- off V1 at 310 t and a 10 kt tailwind added 1 (review 36)
+    local HW = simDR_wind_speed_kts * math.cos(math.rad(simDR_wind_heading_deg - simDR_position_mag_psi))
     local HWmax = 0
     local HWmin = 0
 
@@ -2770,11 +2798,50 @@ function B747_V1_wind_adjustment()
         HWmin = math.max(0, HWmax - 10)
     end
 
-    B747_V1windAdj = B747_rescale(HWmin, V1windAdj[HWmin][weight_min], HWmax, V1windAdj[HWmax][weight_max], simDR_wind_speed_kts)
+    B747_V1windAdj = B747_rescale(HWmin, B747_V1_wind_row(HWmin, weight_min, weight_max), HWmax,
+        B747_V1_wind_row(HWmax, weight_min, weight_max), HW)
 
 end
 
 
+
+
+-- [takeoff speeds] The minimum control speeds (B747_VMCG_VRMIN) at a pressure altitude (ft) and OAT (C), for a takeoff
+-- derate (0, 1, 2): linear between the table's rows, each flat to its corner and 0.6 kt per C less above it
+local function B747_vmcg_vrmin_row(row, oat)
+    local hot = 0.6 * math.max(0, oat - row.corner)
+    return row.vmcg - hot, row.vrmin - hot
+end
+function B747_vmcg_vrmin(altitude, oat, derate)
+    local rows = B747_VMCG_VRMIN
+    local i = 1
+    while i < #rows - 1 and rows[i + 1].alt <= altitude do i = i + 1 end
+    local f = math.max(0, math.min(1, (altitude - rows[i].alt) / (rows[i + 1].alt - rows[i].alt)))
+    local vmcg1, vrmin1 = B747_vmcg_vrmin_row(rows[i], oat)
+    local vmcg2, vrmin2 = B747_vmcg_vrmin_row(rows[i + 1], oat)
+    local vmcg, vrmin = vmcg1 + (vmcg2 - vmcg1) * f, vrmin1 + (vrmin2 - vrmin1) * f
+    local share = B747_VMCG_VRMIN_DERATE[derate]
+    if share ~= nil then vmcg, vrmin = vmcg * share.vmcg, vrmin * share.vrmin end
+    return vmcg, vrmin
+end
+-- the V2 for a VR raised to VRMIN (B747_V2_FOR_VRMIN): between the table's weights (held at its ends), linear in VR
+-- through its VR 120 and 125 rows
+function B747_v2_for_vrmin(flaps, vr, weight)
+    local t = B747_V2_FOR_VRMIN[flaps]
+    if t == nil then return 0 end
+    local function at(row)
+        local lo, hi
+        for w, _ in pairs(row) do
+            if w <= weight and (lo == nil or w > lo) then lo = w end
+            if w >= weight and (hi == nil or w < hi) then hi = w end
+        end
+        lo, hi = lo or hi, hi or lo
+        if hi == lo then return row[lo] end
+        return row[lo] + (row[hi] - row[lo]) * (weight - lo) / (hi - lo)
+    end
+    local v120, v125 = at(t[120]), at(t[125])
+    return v120 + (v125 - v120) * (vr - 120) / 5
+end
 
 
 B747DR_airspeed_flapsRef                              = find_dataref("laminar/B747/airspeed/flapsRef")
@@ -2784,6 +2851,7 @@ function B747_setV1VrV2()
 
     local weight_max = math.min(420000, roundUpToIncrement(simDR_acf_weight_total_kg, 20000))
     local weight_min = math.max(200000, weight_max-20000)
+    local derate = B747DR_toderate  -- read every frame: XTLua gives 0 for a dataref's first read
     local flaps = roundToIncrement(B747DR_airspeed_flapsRef, 10)
     if B747DR_radio_altitude>1000 then
         B747DR_airspeed_flapsRef=0
@@ -2800,6 +2868,25 @@ function B747_setV1VrV2()
 
         -- V2
         B747DR_airspeed_V2 = B747_rescale(weight_min, B747_V2[flaps][tempAltRegion][weight_min], weight_max, B747_V2[flaps][tempAltRegion][weight_max], simDR_acf_weight_total_kg)
+
+        -- [takeoff speeds] the FCOM's minimums (PI.18.2): V1 not below VMCG; VR not below VRMIN nor VMCG, and V2 then
+        -- not below the V2 for that VR; V1 not above VR. The tables gave 101/114/139 at 233 t, flaps 20, sea level
+        -- (the FCOM's 121/124/144): the 747 rotated 10 kt early on the line flights
+        -- In whole knots, as the FMC shows and sets them: the tables' speeds rounded, the minimums up (the CDU's %3d
+        -- cut 120.6/123.6/143.7 to 120/123/143, below VMCG; review 36). The V2 for VRMIN is a table's speed for the VR
+        -- already rounded up, so it is rounded too (144.1 at 233 t: the FCOM's 144, not 145; review 38)
+        local vmcg, vrmin = B747_vmcg_vrmin(B747_takeoff_pressure_altitude(), simDR_OAT_degC, derate)
+        vmcg, vrmin = math.ceil(vmcg - 1e-6), math.ceil(vrmin - 1e-6)
+        local v1 = math.floor(B747DR_airspeed_V1 + 0.5)
+        local vr = math.floor(B747DR_airspeed_Vr + 0.5)
+        local v2 = math.floor(B747DR_airspeed_V2 + 0.5)
+        v1 = math.max(v1, vmcg)
+        local raised = math.max(vr, vrmin, vmcg)
+        if raised > vr then
+            vr = raised
+            v2 = math.max(v2, math.floor(B747_v2_for_vrmin(flaps, vr, simDR_acf_weight_total_kg) + 0.5))
+        end
+        B747DR_airspeed_V1, B747DR_airspeed_Vr, B747DR_airspeed_V2 = math.min(v1, vr), vr, v2
         lastFlaps=flaps
     elseif lastFlaps~=flaps then
         if simDR_all_wheels_on_ground==1 then
@@ -2837,19 +2924,20 @@ end
 
 
 -- Vref30
+-- [landing speeds] VREF for flaps (30, 25) at a gross weight (kg) from the FCOM's table (B747_VREF), as the FMC works it
+-- out by the gross weight alone (by the present altitude in steps it read 140.3 at FL370, where crews select it, for
+-- 137.7 at 233.4 t, and the flap speeds stepped down at 6,000 and 2,000 ft on the approach): between the table's
+-- weights that bracket it, carried on along its end rows' slope beyond 200-400 t (the CF6 table has 121 kt at 181 t;
+-- taken to the nearest 20 t, the lower row was held through the lower half of each 20 t, up to 3 kt low)
+function B747_vref(flaps, weight)
+    local speed = B747_VREF[flaps]
+    local weight_min = math.max(200000, math.min(380000, math.floor(weight / 20000) * 20000))
+    local weight_max = weight_min + 20000
+    return speed[weight_min] + (speed[weight_max] - speed[weight_min]) * (weight - weight_min) / 20000
+end
 function B747_setVref30()
 
-    local weight_max = math.min(400000, roundToIncrement(simDR_acf_weight_total_kg, 20000))
-    local weight_min = math.max(200000, weight_max-20000)
-
-    local speed = {}
-    if simDR_altitude_ft_pilot <= -2000 then speed = Vref30data.speedMinus2k
-        elseif simDR_altitude_ft_pilot <= 0 then speed = Vref30data.speed0k
-        elseif simDR_altitude_ft_pilot <= 2000 then speed = Vref30data.speed2k
-        elseif simDR_altitude_ft_pilot <= 6000 then speed = Vref30data.speed6k
-        else speed = Vref30data.speed10k
-    end
-    B747DR_airspeed_Vref30 = B747_rescale(weight_min, speed[weight_min], weight_max, speed[weight_max], simDR_acf_weight_total_kg)
+    B747DR_airspeed_Vref30 = B747_vref(30, simDR_acf_weight_total_kg)
 
 end
 
@@ -2885,7 +2973,9 @@ function B747_Vspeeds()
     B747DR_airspeed_Vf5 = B747DR_airspeed_Vref30+40
     B747DR_airspeed_Vf10 = B747DR_airspeed_Vref30+20
     B747DR_airspeed_Vf20 = B747DR_airspeed_Vref30+10
-    B747DR_airspeed_Vf25 = B747DR_airspeed_Vref30+5
+    -- [landing speeds] flaps 25: VREF25 from its own column of the FCOM's table, 5 kt over VREF30 at 200 t and 8 kt at
+    -- 400 t (VREF30 + 5 was up to 3 kt low from 300 t up; cckit research_vref.md)
+    B747DR_airspeed_Vf25 = B747_vref(25, simDR_acf_weight_total_kg)
     B747DR_airspeed_Vf30 = B747DR_airspeed_Vref30
     
     
@@ -3012,23 +3102,29 @@ end
 function B747_Vs()
 
     -- Vs (STALL SPEED OR MINIMUM STEADY FLIGHT SPEED FOR WHICH THE AIRCRAFT IS STILL CONTROLLABLE)
-    local weight_max = math.min(400000, roundToIncrement(simDR_acf_weight_total_kg, 20000))
-    local weight_min = math.max(200000, weight_max-20000)
+    -- [landing speeds] between the table's weights that bracket the gross weight, along its end rows' slope beyond
+    -- 200-400 t (to the nearest 20 t the lower row was held through the lower half of each 20 t: 225 t flaps up
+    -- 150.7 for 152.5)
+    local weight = simDR_acf_weight_total_kg
+    local weight_min = math.max(200000, math.min(380000, math.floor(weight / 20000) * 20000))
+    local weight_max = weight_min + 20000
 
+    -- the table's rows by altitude that bracket the altitude, held at 10,000 ft above (the tests ran from the lowest
+    -- band, so above sea level only 0-2,000 ft was taken: 240 t flaps up at FL370 158.6 for 161.7)
     local alt_min = -2000
     local alt_max = 0.0
-    if simDR_altitude_ft_pilot >= 0.0 then
-        alt_min = 0.0
-        alt_max = 2000.0
-    elseif simDR_altitude_ft_pilot >= 2000.0 then
-        alt_min = 2000.0
-        alt_max = 6000.0
+    if simDR_altitude_ft_pilot >= 10000.0 then
+        alt_min = 10000.0
+        alt_max = 10000.0
     elseif simDR_altitude_ft_pilot >= 6000.0 then
         alt_min = 6000.0
         alt_max = 10000.0
-    elseif simDR_altitude_ft_pilot >= 10000.0 then
-        alt_min = 10000.0
-        alt_max = 10000.0
+    elseif simDR_altitude_ft_pilot >= 2000.0 then
+        alt_min = 2000.0
+        alt_max = 6000.0
+    elseif simDR_altitude_ft_pilot >= 0.0 then
+        alt_min = 0.0
+        alt_max = 2000.0
     end
 
     local flap_min = 0
@@ -3073,11 +3169,14 @@ function B747_Vs()
 
     local weight_min_index          = weight_min*0.001
     local weight_max_index          = weight_max*0.001
-    local Vs_min_flap_min_alt_speed = B747_rescale(weight_min, VsData[flap_min][alt_min][weight_min_index], weight_max, VsData[flap_min][alt_min][weight_max_index], simDR_acf_weight_total_kg)
-    local Vs_min_flap_max_alt_speed = B747_rescale(weight_min, VsData[flap_min][alt_max][weight_min_index], weight_max, VsData[flap_min][alt_max][weight_max_index], simDR_acf_weight_total_kg)
+    local function by_weight(row)
+        return row[weight_min_index] + (row[weight_max_index] - row[weight_min_index]) * (weight - weight_min) / 20000
+    end
+    local Vs_min_flap_min_alt_speed = by_weight(VsData[flap_min][alt_min])
+    local Vs_min_flap_max_alt_speed = by_weight(VsData[flap_min][alt_max])
     local Vs_min_flap_alt_speed     = B747_rescale(alt_min, Vs_min_flap_min_alt_speed, alt_max, Vs_min_flap_max_alt_speed, simDR_altitude_ft_pilot)
-    local Vs_max_flap_min_alt_speed = B747_rescale(weight_min, VsData[flap_max][alt_min][weight_min_index], weight_max, VsData[flap_max][alt_min][weight_max_index], simDR_acf_weight_total_kg)
-    local Vs_max_flap_max_alt_speed = B747_rescale(weight_min, VsData[flap_max][alt_max][weight_min_index], weight_max, VsData[flap_max][alt_max][weight_max_index], simDR_acf_weight_total_kg)
+    local Vs_max_flap_min_alt_speed = by_weight(VsData[flap_max][alt_min])
+    local Vs_max_flap_max_alt_speed = by_weight(VsData[flap_max][alt_max])
     local Vs_max_flap_alt_speed     = B747_rescale(alt_min, Vs_max_flap_min_alt_speed, alt_max, Vs_max_flap_max_alt_speed, simDR_altitude_ft_pilot)
     local target_airspeed_Vs              = B747_rescale(flap_min, Vs_min_flap_alt_speed, flap_max, Vs_max_flap_alt_speed, simDR_wing_flap1_deg[0])
     if simDR_airspeed > target_airspeed_Vs then

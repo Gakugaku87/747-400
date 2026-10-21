@@ -167,4 +167,46 @@ equal(fma_at(r, 100.7), 1, "TO/GA roll on the ground after the landing")
 r.simDR_onGround = 0
 equal(fma_at(r, 100.8), 1, "TO/GA roll at the next liftoff")
 
+-- 9) LNAV armed in flight (LNAV ARM: it engages near the active leg only): the roll mode before it flies on and
+-- shows, with LNAV armed; HDG HOLD keeps an armed LNAV (it cleared it) and is not turned into HDG SEL. LNAV armed
+-- on the ground selects X-Plane's heading mode as before.
+r = new_aircraft()
+r.B747DR_autopilot_TOGA_status = 0
+r.simDR_autopilot_heading_status = 2
+r.B747DR_ap_lnav_state = 1
+equal(frame(r, 100.5), 6, "LNAV armed in flight in HDG SEL: HDG SEL shows")
+equal(r.B747DR_ap_FMA_armed_roll_mode, 2, "LNAV armed in flight in HDG SEL: LNAV shows armed")
+equal(r.B747DR_ap_lnav_state, 1, "LNAV armed in flight in HDG SEL: stays armed")
+r = new_aircraft()
+r.B747DR_autopilot_TOGA_status = 0
+r.simDR_autopilot_heading_hold_status = 2
+r.B747DR_ap_lnav_state = 1
+equal(frame(r, 100.5), 7, "LNAV armed in flight in HDG HOLD: HDG HOLD shows")
+equal(r.B747DR_ap_lnav_state, 1, "LNAV armed in flight in HDG HOLD: stays armed")
+equal(r.simDR_autopilot_heading_status, 0, "LNAV armed in flight in HDG HOLD: X-Plane's heading select left alone")
+r = new_aircraft()
+r.simDR_onGround = 1
+r.B747DR_ap_lnav_state = 1
+frame(r, 100.5)
+equal(r.simDR_autopilot_heading_status, 2, "LNAV armed on the ground: X-Plane's heading mode selected as before")
+
+-- 10) The heading knob with APP armed sets X-Plane's heading while LNAV is only armed (HDG SEL flies on), not while
+-- LNAV steers (its heading would fight the steering).
+do
+    local first = assert(source:find("function B747_ap_heading_up_CMDhandler", 1, true))
+    local last = assert(source:find("function B747_ap_bank_limit_up_CMDhandler", first, true))
+    local knob = source:sub(first, last - 1)
+    local function turn_knob(lnav_state)
+        local k = setmetatable({B747DR_ap_heading_deg = 90, simDR_autopilot_heading_deg = 90, B747DR_ap_approach_mode = 1,
+            simDR_autopilot_nav_status = 1, B747DR_ap_lnav_state = lnav_state}, {__index = _G})
+        setfenv(assert(loadstring(knob, "@"..AP.."B747.70.xt.autopilot.lua")), k)()
+        k.B747_ap_heading_up_CMDhandler(0, 0)
+        k.B747_ap_heading_down_CMDhandler(0, 0)
+        k.B747_ap_heading_down_CMDhandler(0, 0)
+        return k.simDR_autopilot_heading_deg
+    end
+    equal(turn_knob(1), 89, "APP armed, LNAV armed: the heading knob sets X-Plane's heading")
+    equal(turn_knob(2), 90, "APP armed, LNAV engaged: the heading knob leaves X-Plane's heading to LNAV")
+end
+
 print("AFDS TO/GA roll tests passed: "..checks)

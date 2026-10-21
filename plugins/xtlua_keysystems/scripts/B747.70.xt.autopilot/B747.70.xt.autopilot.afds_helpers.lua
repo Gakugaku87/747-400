@@ -11,6 +11,8 @@ afds.VNAV_ENERGY_PATH_ENTER_FT = 150
 afds.VNAV_ENERGY_PATH_EXIT_FT = 75
 afds.VNAV_ENERGY_SPEED_ENTER_KTS = 5
 afds.VNAV_ENERGY_SPEED_EXIT_KTS = 2
+-- [B-13] thrust for a slow speed on or below the path ends this far above the target (vnav_energy_guidance)
+afds.VNAV_ENERGY_THRUST_RELEASE_KTS = 2
 afds.VNAV_ENERGY_MAX_DESCENT_FPM = -3500
 afds.VNAV_ENERGY_MIN_DESCENT_FPM = 0
 afds.VNAV_ENERGY_DESCENT_RATE_LIMIT_FPM_PER_SEC = 400
@@ -69,6 +71,82 @@ function afds.turn_anticipation_nm(speed_kts, bank_angle_deg, turn_angle_deg, mi
     return afds.clamp(anticipation_nm, minimum_nm or 0, maximum_nm or anticipation_nm), radius_nm
 end
 
+-- LNAV fly-by turns. LNAV steers X-Plane's HDG SEL, which turns at its bank
+-- limit; the 747's flight director rolls into it at the roll rate limit of the
+-- hydraulics (ROLL_FILTER_MAX_SLEW_DEG_PER_SEC, 3 deg/s outside the approach).
+afds.LNAV_ROLL_RATE_DEG_PER_SEC = 3.0
+-- [P15] A fly-by turn starts no farther before its fix than a turn of LNAV_FLYBY_MAX_TURN_DEG: a larger course
+-- change starts there (afds.lnav_capped_turn); from LNAV_FLYBY_REVERSAL_DEG a reversal, no fly-by: the next leg once
+-- abeam the fix.
+afds.LNAV_FLYBY_MAX_TURN_DEG = 150
+afds.LNAV_FLYBY_REVERSAL_DEG = 175
+-- A wind estimate beyond this is no wind (XTLua gives 0 for a first read).
+afds.LNAV_MAX_WIND_KTS = 300
+-- [i-1b] LNAV's path guidance aims this long of ground speed along the path round its arcs, within these
+-- distances (a short look-ahead follows them: 40 s cut them by 0.5 to 0.9 nm in the closed-loop model), and
+-- on its legs this part of the turn radius (rolling out onto a leg takes room that grows with it).
+afds.LNAV_PATH_LOOKAHEAD_S = 12
+afds.LNAV_PATH_MIN_LOOKAHEAD_NM = 0.4
+afds.LNAV_PATH_MAX_LOOKAHEAD_NM = 6
+afds.LNAV_PATH_CAPTURE_RADII = 0.4
+
+-- Distance before a fly-by fix at which the turn onto the next leg starts:
+-- where a turn at the bank limit, rolled in at roll_rate_dps (half the roll-in
+-- before the turn proper) and drifting with the wind, ends on the outbound
+-- leg. Without wind that is R tan(turn / 2), R = TAS^2 / (g tan bank). Courses
+-- are true, the inbound one at the fix; the wind is the air's motion (kt east
+-- and north). 0 without a turn, a speed or a bank, and from
+-- LNAV_FLYBY_REVERSAL_DEG (sequenced abeam the fix, as over a fly-over fix:
+-- with no lead at all the fix stayed active once passed, and LNAV flew back to
+-- it); beyond LNAV_FLYBY_MAX_TURN_DEG that many degrees' (the turn starts
+-- there: afds.lnav_capped_turn).
+function afds.lnav_turn_anticipation_nm(tas_kts, wind_east_kts, wind_north_kts, bank_deg, course_in_deg,
+        course_out_deg, roll_rate_dps, ground_speed_kts)
+    if type(tas_kts) ~= "number" or tas_kts <= 0 or type(bank_deg) ~= "number" or bank_deg <= 0 or bank_deg >= 89
+        or type(course_in_deg) ~= "number" or type(course_out_deg) ~= "number" then
+        return 0
+    end
+    local course_change = (course_out_deg - course_in_deg + 540) % 360 - 180
+    if math.abs(course_change) < 1 then return 0 end
+    if math.abs(course_change) >= afds.LNAV_FLYBY_REVERSAL_DEG then return 0 end
+    local side = course_change > 0 and 1 or -1
+    if math.abs(course_change) > afds.LNAV_FLYBY_MAX_TURN_DEG then
+        course_out_deg = course_in_deg + side * afds.LNAV_FLYBY_MAX_TURN_DEG
+    end
+    local speed = tas_kts * KNOT_TO_MPS
+    local wind_east, wind_north = (tonumber(wind_east_kts) or 0) * KNOT_TO_MPS, (tonumber(wind_north_kts) or 0) * KNOT_TO_MPS
+    if math.sqrt(wind_east * wind_east + wind_north * wind_north) > afds.LNAV_MAX_WIND_KTS * KNOT_TO_MPS then
+        wind_east, wind_north = 0, 0
+    end
+    -- the heading that holds a course in this wind
+    local function heading_for(course_deg)
+        local course = math.rad(course_deg)
+        local cross = (wind_east * math.cos(course) - wind_north * math.sin(course)) / speed
+        return course_deg + math.deg(math.asin(afds.clamp(-cross, -0.9, 0.9)))
+    end
+    local heading_in = heading_for(course_in_deg)
+    local heading_change = (heading_for(course_out_deg) - heading_in + 540) % 360 - 180
+    if heading_change * side <= 0 then heading_change = heading_change + 360 * side end
+    -- the turn: an arc in the air, the wind's drift over its duration
+    local turn_rate = side * GRAVITY_MPS2 * math.tan(math.rad(bank_deg)) / speed
+    local duration = math.rad(heading_change) / turn_rate
+    local h1, h2 = math.rad(heading_in), math.rad(heading_in + heading_change)
+    local east = speed / turn_rate * (math.cos(h1) - math.cos(h2)) + wind_east * duration
+    local north = speed / turn_rate * (math.sin(h2) - math.sin(h1)) + wind_north * duration
+    -- that displacement is the distance before the fix along the inbound leg
+    -- plus the distance after it along the outbound one
+    local in_east, in_north = math.sin(math.rad(course_in_deg)), math.cos(math.rad(course_in_deg))
+    local out_east, out_north = math.sin(math.rad(course_out_deg)), math.cos(math.rad(course_out_deg))
+    local determinant = in_east * out_north - in_north * out_east
+    if math.abs(determinant) < 1e-6 then return 0 end
+    local before_m = (east * out_north - north * out_east) / determinant
+    local roll_in_nm = 0
+    if type(roll_rate_dps) == "number" and roll_rate_dps > 0 then
+        roll_in_nm = (tonumber(ground_speed_kts) or tas_kts) / 3600 * (bank_deg / roll_rate_dps) / 2
+    end
+    return math.max(0, before_m / METERS_PER_NM + roll_in_nm)
+end
+
 function afds.signed_cross_track_nm(leg_start_lat, leg_start_lon, leg_end_lat, leg_end_lon,
         aircraft_lat, aircraft_lon, distance_func, heading_func)
     if type(distance_func) ~= "function" or type(heading_func) ~= "function" then return nil end
@@ -91,6 +169,306 @@ function afds.signed_cross_track_nm(leg_start_lat, leg_start_lon, leg_end_lat, l
         * math.sin(math.rad(aircraft_heading - leg_heading))) * earth_radius_nm
     if cross_track ~= cross_track then return nil end
     return cross_track
+end
+
+-- Whether the aircraft, east_nm and north_nm from a fix, is past the bisector
+-- of the turn there from in_course_deg to out_course_deg (true courses): past
+-- it once its position along the mean of the two courses is not negative. For
+-- a straight fix that is abeam it; for a reversal (LNAV_FLYBY_REVERSAL_DEG or
+-- more), where the mean vanishes, it is abeam it on the inbound course. [P15]
+-- Judged by the mean's size (from 174.3 deg) a capped turn's path, which never
+-- passes abeam its fix, kept VNAV's held fix until 13 nm past it (a review).
+function afds.past_turn_bisector(east_nm, north_nm, in_course_deg, out_course_deg)
+    if type(east_nm) ~= "number" or type(north_nm) ~= "number"
+        or type(in_course_deg) ~= "number" or type(out_course_deg) ~= "number" then
+        return nil
+    end
+    local in_east, in_north = math.sin(math.rad(in_course_deg)), math.cos(math.rad(in_course_deg))
+    local mean_east = in_east + math.sin(math.rad(out_course_deg))
+    local mean_north = in_north + math.cos(math.rad(out_course_deg))
+    local turn = (out_course_deg - in_course_deg + 540) % 360 - 180
+    if math.abs(turn) >= afds.LNAV_FLYBY_REVERSAL_DEG then
+        mean_east, mean_north = in_east, in_north
+    end
+    return east_nm * mean_east + north_nm * mean_north >= 0
+end
+
+-- [i-1b] The ground speed a fly-by arc from course_in_deg to course_out_deg
+-- (true) is drawn for: the TAS plus the wind (the air's motion, kt east and
+-- north) along the track, the highest of the tracks across the turn, so that
+-- the 747 can follow the arc all round at the bank limit without making it
+-- bigger than that (with the wind's whole speed a crosswind turn cut far
+-- inside: BEDRA passed 5.9 nm from it, 3.0 before).
+function afds.lnav_turn_ground_speed_kts(tas_kts, wind_east_kts, wind_north_kts, course_in_deg, course_out_deg)
+    local turn = (course_out_deg - course_in_deg + 540) % 360 - 180
+    local function along(course_deg)
+        return wind_east_kts * math.sin(math.rad(course_deg)) + wind_north_kts * math.cos(math.rad(course_deg))
+    end
+    local best = math.max(along(course_in_deg), along(course_out_deg))
+    local speed = math.sqrt(wind_east_kts * wind_east_kts + wind_north_kts * wind_north_kts)
+    if speed > 0 then
+        -- the wind's own direction, if the turn sweeps through it
+        local toward = math.deg(math.atan2(wind_east_kts, wind_north_kts))
+        local swept = ((toward - course_in_deg) * (turn < 0 and -1 or 1)) % 360
+        if swept <= math.abs(turn) then best = speed end
+    end
+    return tas_kts + best
+end
+
+-- [P15] A fly-by turn of more than LNAV_FLYBY_MAX_TURN_DEG (and less than LNAV_FLYBY_REVERSAL_DEG) of turn_deg
+-- (+ right) at radius_nm: it starts where a turn of LNAV_FLYBY_MAX_TURN_DEG would, R tan(75) before the fix (its own
+-- tangent arc would start R tan(turn / 2) before it: 11.4 R for 170 deg, 110 nm at cruise). Round an arc of R from
+-- there the 747 reaches the outbound course outside the outbound leg by R (1 - cos turn) - R tan(75) sin turn
+-- (0.66 R for 160 deg, 1.34 R for 170), so the path turns on by up to LNAV_PATH_CAPPED_INTERCEPT_DEG, closes on the
+-- leg on a straight line at that angle and rolls out onto it, an arc of R the other way; just past
+-- LNAV_FLYBY_MAX_TURN_DEG, with less to make up, it turns on just enough and back at once. Returns before_nm (where
+-- the turn starts before the fix), outside_nm, beta_deg (how far on), straight_nm and after_nm (where the path joins
+-- the outbound leg after the fix); nil for other turns.
+afds.LNAV_PATH_CAPPED_INTERCEPT_DEG = 45
+function afds.lnav_capped_turn(turn_deg, radius_nm)
+    if type(turn_deg) ~= "number" or type(radius_nm) ~= "number" or radius_nm <= 0 then return nil end
+    local turn = math.abs(turn_deg)
+    if turn <= afds.LNAV_FLYBY_MAX_TURN_DEG or turn >= afds.LNAV_FLYBY_REVERSAL_DEG then return nil end
+    local th = math.rad(turn)
+    local before = radius_nm * math.tan(math.rad(afds.LNAV_FLYBY_MAX_TURN_DEG) / 2)
+    local outside = radius_nm * (1 - math.cos(th)) - before * math.sin(th)
+    local max_beta = math.rad(afds.LNAV_PATH_CAPPED_INTERCEPT_DEG)
+    local beta, straight = max_beta, 0
+    if outside >= 2 * radius_nm * (1 - math.cos(max_beta)) then
+        straight = (outside - 2 * radius_nm * (1 - math.cos(max_beta))) / math.sin(max_beta)
+    else
+        beta = math.acos(afds.clamp(1 - outside / (2 * radius_nm), -1, 1))
+    end
+    -- in the frame of an inbound course of 000 turning right: the first arc round (R, -before) to beta past the
+    -- outbound course, the straight line, the second arc's end on the outbound leg
+    local h1 = th + beta
+    local e1, n1 = radius_nm - radius_nm * math.cos(h1), -before + radius_nm * math.sin(h1)
+    local e2, n2 = e1 + straight * math.sin(h1), n1 + straight * math.cos(h1)
+    local c2e, c2n = e2 - radius_nm * math.cos(h1), n2 + radius_nm * math.sin(h1)
+    local e3, n3 = c2e + radius_nm * math.cos(th), c2n - radius_nm * math.sin(th)
+    return {before_nm = before, outside_nm = outside, beta_deg = math.deg(beta), straight_nm = straight,
+        after_nm = e3 * math.sin(th) + n3 * math.cos(th)}
+end
+
+-- How far before a fly-by fix LNAV's path leaves the inbound leg and how far after it it joins the outbound leg,
+-- for a turn of turn_deg (+ right) at radius_nm: R tan(turn / 2) both up to LNAV_FLYBY_MAX_TURN_DEG, beyond it
+-- afds.lnav_capped_turn's; 0, 0 from LNAV_FLYBY_REVERSAL_DEG (no fly-by).
+function afds.lnav_turn_extent_nm(turn_deg, radius_nm)
+    local turn = math.abs(turn_deg)
+    if turn >= afds.LNAV_FLYBY_REVERSAL_DEG then return 0, 0 end
+    local capped = afds.lnav_capped_turn(turn_deg, radius_nm)
+    if capped then return capped.before_nm, capped.after_nm end
+    local tangent = radius_nm * math.tan(math.rad(turn) / 2)
+    return tangent, tangent
+end
+
+-- The path of afds.lnav_capped_turn at a fix (east_nm, north_nm the aircraft's position from it): its elements,
+-- lines {e, n (start), h (course), len (nil: on and on), before (the inbound leg, up to its end)} and arcs {ce, cn
+-- (centre), side (+1 right), h0 (the course at its start), sweep (deg)}, as afds.lnav_path_at returns it. The
+-- aircraft is on the element nearest it of min_element (the caller's last) and the next, of all without one: near
+-- such a fix the inbound leg and the outbound side run close (2.3 nm apart 13 nm before a 170 deg fix at 250 kt), and
+-- the nearest of all took the one for the other. It is past the bisector once on the path as far as where the first arc
+-- crosses the turn's bisector line (bisector_along_nm): only (180 - turn) / 2 off the inbound leg (5 deg for 170),
+-- that line put the aircraft 0.9 nm inside the inbound leg 10 nm before the fix past it (a review).
+local function capped_path_at(east_nm, north_nm, course_in_deg, course_out_deg, radius_nm, lookahead_nm, capture_nm,
+        min_element)
+    local turn = (course_out_deg - course_in_deg + 540) % 360 - 180
+    local capped = afds.lnav_capped_turn(turn, radius_nm)
+    local side = turn < 0 and -1 or 1
+    local R = radius_nm
+    local function unit(h) return math.sin(math.rad(h)), math.cos(math.rad(h)) end
+    local function right(h) return math.cos(math.rad(h)), -math.sin(math.rad(h)) end
+    local in_east, in_north = unit(course_in_deg)
+    local se, sn = -capped.before_nm * in_east, -capped.before_nm * in_north
+    local re, rn = right(course_in_deg)
+    local c1e, c1n = se + side * R * re, sn + side * R * rn
+    local h1 = course_in_deg + side * (math.abs(turn) + capped.beta_deg)
+    local r1e, r1n = right(h1)
+    local e1e, e1n = c1e - side * R * r1e, c1n - side * R * r1n
+    local d1e, d1n = unit(h1)
+    local e2e, e2n = e1e + capped.straight_nm * d1e, e1n + capped.straight_nm * d1n
+    local c2e, c2n = e2e - side * R * r1e, e2n - side * R * r1n
+    local roe, ron = right(course_out_deg)
+    local e3e, e3n = c2e + side * R * roe, c2n + side * R * ron
+    local elements = {
+        {name = "in", e = se, n = sn, h = course_in_deg, before = true},
+        {name = "arc", ce = c1e, cn = c1n, side = side, h0 = course_in_deg, sweep = math.abs(turn) + capped.beta_deg},
+        {name = "straight", e = e1e, n = e1n, h = h1, len = capped.straight_nm},
+        {name = "arc", ce = c2e, cn = c2n, side = -side, h0 = h1, sweep = capped.beta_deg},
+        {name = "out", e = e3e, n = e3n, h = course_out_deg}}
+    local function length(el)
+        if el.ce then return R * math.rad(el.sweep) end
+        return el.len or math.huge
+    end
+    local function point(el, a)
+        if el.ce then
+            local h = math.rad(el.h0 + el.side * math.deg(a / R))
+            return el.ce - el.side * R * math.cos(h), el.cn + el.side * R * math.sin(h)
+        end
+        local ue, un = unit(el.h)
+        return el.e + a * ue, el.n + a * un
+    end
+    -- each element's view of the aircraft: the distance to it, where along it, the signed cross-track, the course
+    local function view(el)
+        if el.ce then
+            local de, dn = east_nm - el.ce, north_nm - el.cn
+            local course = math.deg(math.atan2(de, dn)) + el.side * 90
+            local angle = (el.side * (course - el.h0)) % 360
+            if angle > el.sweep then angle = (angle - el.sweep < 360 - angle) and el.sweep or 0 end
+            local pe, pn = point(el, R * math.rad(angle))
+            return math.sqrt((east_nm - pe) ^ 2 + (north_nm - pn) ^ 2), R * math.rad(angle),
+                el.side * (R - math.sqrt(de * de + dn * dn)), el.h0 + el.side * angle
+        end
+        local ue, un = unit(el.h)
+        local a = (east_nm - el.e) * ue + (north_nm - el.n) * un
+        local x = (east_nm - el.e) * un - (north_nm - el.n) * ue
+        local along = el.before and math.min(a, 0) or math.max(0, math.min(a, el.len or a))
+        local pe, pn = point(el, along)
+        return math.sqrt((east_nm - pe) ^ 2 + (north_nm - pn) ^ 2), along, x, el.h
+    end
+    local first, last = 1, #elements
+    if tonumber(min_element) then
+        first = math.max(1, math.min(#elements, math.floor(tonumber(min_element))))
+        last = first + 1
+    end
+    -- as near to two elements, the later: below about 159 deg the straight line has no length, and past the first
+    -- arc's end it and that end were as near; keeping the arc, the aim stood still and the 747 circled over it (a
+    -- review). As near within 1e-9 nm: the two distances are worked out two ways, and rounding kept the arc in head
+    -- and tail winds (595 deg of turning: a review)
+    local best, start, nearest = math.huge, 0, nil
+    for i, el in ipairs(elements) do
+        if i >= first and i <= last then
+            local d, a, x, course = view(el)
+            if d <= best + 1e-9 then
+                best, nearest = d, {i = i, along = (i == 1) and a or start + a, xtk = x, course = course}
+            end
+        end
+        if i > 1 then start = start + length(el) end
+    end
+    local function point_along(a)
+        if a <= 0 then return point(elements[1], a) end
+        local at = 0
+        for i = 2, #elements do
+            local el = elements[i]
+            if a <= at + length(el) or i == #elements then return point(el, a - at) end
+            at = at + length(el)
+        end
+    end
+    local off = math.abs(nearest.xtk)
+    local capture = math.max(lookahead_nm, tonumber(capture_nm) or lookahead_nm)
+    local aim_along = nearest.along + math.max(lookahead_nm, off)
+    if nearest.i == #elements then
+        aim_along = nearest.along + math.max(capture, off)
+    elseif nearest.i == 1 then
+        aim_along = math.max(aim_along, math.min(nearest.along + math.max(capture, off), 0))
+    end
+    local aim_east, aim_north = point_along(aim_along)
+    -- where the first arc crosses the turn's bisector line (through the fix, along the mean of the two courses)
+    local out_east, out_north = unit(course_out_deg)
+    local mean_east, mean_north = in_east + out_east, in_north + out_north
+    local function inbound_side(along)
+        local pe, pn = point(elements[2], along)
+        return pe * mean_east + pn * mean_north < 0
+    end
+    local lo, hi = 0, length(elements[2])
+    if inbound_side(hi) then
+        lo = hi
+    else
+        for _ = 1, 40 do
+            local mid = (lo + hi) / 2
+            if inbound_side(mid) then lo = mid else hi = mid end
+        end
+    end
+    local past = nearest.i > 2 or (nearest.i == 2 and nearest.along >= lo)
+    return {element = elements[nearest.i].name, element_index = nearest.i, xtk_nm = nearest.xtk,
+        course_deg = nearest.course % 360, along_nm = nearest.along, past_bisector = past, bisector_along_nm = lo,
+        arc_start_nm = capped.before_nm, aim_east_nm = aim_east, aim_north_nm = aim_north}
+end
+
+-- [i-1b] The lateral path at a fly-by fix: the inbound leg on course_in_deg,
+-- the arc of radius_nm tangent to it and to the outbound leg on course_out_deg
+-- (true courses), R tan(turn / 2) before and after the fix, and the outbound
+-- leg; east_nm and north_nm are the aircraft's position from the fix. Returns
+-- the element the aircraft is abeam ("in", "arc", "out"), whether it is past
+-- the turn's bisector (as afds.past_turn_bisector, where the FMC sequences the
+-- turn), its signed cross-track from the path (+ right of it; from the arc while abeam it), the
+-- path's course there, its distance along the path from the arc's start
+-- (negative on the inbound leg), the arc's start before the fix, and the point
+-- a look-ahead further along the path that a pure-pursuit guidance aims at,
+-- never nearer than the cross-track (on a leg at most 45 deg off its course).
+-- On the legs the aim is capture_nm along (rolling out onto a leg takes room
+-- that grows with the turn radius; the look-ahead without it), but on the
+-- inbound leg it waits at the arc's start until the look-ahead reaches it (a
+-- longer one starts the turn early). nil without a radius, a look-ahead or
+-- courses, and from LNAV_FLYBY_REVERSAL_DEG (no fly-by); beyond
+-- LNAV_FLYBY_MAX_TURN_DEG the path of afds.lnav_capped_turn (elements "in",
+-- "arc", "straight", "arc", "out"; its element_index, from min_element on).
+function afds.lnav_path_at(east_nm, north_nm, course_in_deg, course_out_deg, radius_nm, lookahead_nm, capture_nm,
+        min_element)
+    if type(east_nm) ~= "number" or type(north_nm) ~= "number" or type(course_in_deg) ~= "number"
+        or type(course_out_deg) ~= "number" or type(radius_nm) ~= "number" or radius_nm <= 0
+        or type(lookahead_nm) ~= "number" or lookahead_nm <= 0 then
+        return nil
+    end
+    local turn = (course_out_deg - course_in_deg + 540) % 360 - 180
+    if math.abs(turn) >= afds.LNAV_FLYBY_REVERSAL_DEG then return nil end
+    if math.abs(turn) > afds.LNAV_FLYBY_MAX_TURN_DEG then
+        return capped_path_at(east_nm, north_nm, course_in_deg, course_out_deg, radius_nm, lookahead_nm, capture_nm,
+            min_element)
+    end
+    local side = turn < 0 and -1 or 1
+    local in_east, in_north = math.sin(math.rad(course_in_deg)), math.cos(math.rad(course_in_deg))
+    local out_east, out_north = math.sin(math.rad(course_out_deg)), math.cos(math.rad(course_out_deg))
+    local tangent = radius_nm * math.tan(math.rad(math.abs(turn)) / 2)
+    local start_east, start_north = -tangent * in_east, -tangent * in_north
+    local end_east, end_north = tangent * out_east, tangent * out_north
+    -- the centre lies R to the turn's side of the inbound leg at the arc's start
+    local centre_east = start_east + side * radius_nm * in_north
+    local centre_north = start_north - side * radius_nm * in_east
+    local arc_nm = radius_nm * math.rad(math.abs(turn))
+    local start_bearing = math.atan2(start_east - centre_east, start_north - centre_north)
+    local function point_at(along_nm)
+        if along_nm <= 0 then
+            return start_east + along_nm * in_east, start_north + along_nm * in_north
+        end
+        if along_nm >= arc_nm then
+            return end_east + (along_nm - arc_nm) * out_east, end_north + (along_nm - arc_nm) * out_north
+        end
+        local bearing = start_bearing + side * along_nm / radius_nm
+        return centre_east + radius_nm * math.sin(bearing), centre_north + radius_nm * math.cos(bearing)
+    end
+    local before = (east_nm - start_east) * in_east + (north_nm - start_north) * in_north
+    local after = (east_nm - end_east) * out_east + (north_nm - end_north) * out_north
+    -- the turn's bisector (through the fix and the centre) parts the inbound leg's side from the outbound
+    -- leg's: past a turn of more than 90 deg the outbound leg also lies behind the arc's start
+    local inbound_side = east_nm * (in_east + out_east) + north_nm * (in_north + out_north) < 0
+    local element, along, xtk, course
+    if inbound_side and before <= 0 then
+        element, along, course = "in", before, course_in_deg
+        xtk = (east_nm - start_east) * in_north - (north_nm - start_north) * in_east
+    elseif not inbound_side and after >= 0 then
+        element, along, course = "out", arc_nm + after, course_out_deg
+        xtk = (east_nm - end_east) * out_north - (north_nm - end_north) * out_east
+    else
+        local d_east, d_north = east_nm - centre_east, north_nm - centre_north
+        local bearing = math.atan2(d_east, d_north)
+        local angle = (side * (bearing - start_bearing) + math.pi) % (2 * math.pi) - math.pi
+        element = "arc"
+        along = math.max(0, math.min(arc_nm, radius_nm * angle))
+        xtk = side * (radius_nm - math.sqrt(d_east * d_east + d_north * d_north))
+        course = math.deg(bearing) + side * 90
+    end
+    local off = math.abs(xtk)
+    local capture = math.max(lookahead_nm, tonumber(capture_nm) or lookahead_nm)
+    local aim_along = along + math.max(lookahead_nm, off)
+    if element == "out" then
+        aim_along = along + math.max(capture, off)
+    elseif element == "in" then
+        aim_along = math.max(aim_along, math.min(along + math.max(capture, off), 0))
+    end
+    local aim_east, aim_north = point_at(aim_along)
+    return {element = element, xtk_nm = xtk, course_deg = course % 360, along_nm = along, past_bisector = not inbound_side,
+        arc_start_nm = tangent, aim_east_nm = aim_east, aim_north_nm = aim_north}
 end
 
 function afds.flap_speed_bucket(flap_ratio)
@@ -301,6 +679,23 @@ function afds.vnav_energy_guidance(input)
         or (recovery_hold
             and previous_thrust_reason == afds.VNAV_ENERGY_THRUST_REASON_PATH_RECOVERY_LIMITED)
     local speedbrake_extended = afds.vnav_energy_speedbrake_extended(input.speedbrake_lever)
+    -- [B-13] Thrust allowed for a speed below the target on or below the path is kept while the aircraft is not
+    -- above the path and the speed is less than VNAV_ENERGY_THRUST_RELEASE_KTS above the target. Released as soon as
+    -- the speed was back within VNAV_ENERGY_SPEED_EXIT_KTS of the target, the A/T went to IDLE on a path it needed
+    -- thrust for, slowed again and went back to SPD every 15-35 s through the descents (p20-line1: about 40 times,
+    -- p20-L1: about 30); a real 747-400's A/T in SPD holds the speed with the thrust it needs. On a path steep enough
+    -- at idle the speed goes past the target and the thrust ends.
+    -- [B-13] Released 2 kt past the target only with the A/T's levers at idle (input.thrust_at_idle) and the speed not
+    -- falling: idle holds the speed on this path. After the A/T's speed loop overshot (3-4 kt) its levers came to idle
+    -- and the thrust ended on a path idle could not hold the speed on, which slowed it to SPD again (p21-line1: SPD,
+    -- IDLE, HOLD, SPD on the path). Without thrust_at_idle, released at 2 kt past the target, as before.
+    local at_idle = input.thrust_at_idle
+    local released = speed_error_kts >= afds.VNAV_ENERGY_THRUST_RELEASE_KTS
+        and (at_idle == nil or (at_idle == true and speed_trend_kts_per_sec >= 0))
+    local below_hold = tonumber(input.previous_thrust_policy) == afds.VNAV_ENERGY_THRUST_ALLOW
+        and (previous_thrust_reason == afds.VNAV_ENERGY_THRUST_REASON_ON_PATH_BELOW_SPEED
+            or previous_thrust_reason == afds.VNAV_ENERGY_THRUST_REASON_BELOW_PATH_BELOW_SPEED)
+        and path_axis <= 0 and not released
 
     local thrust_policy = afds.VNAV_ENERGY_THRUST_IDLE
     local thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_NONE
@@ -313,6 +708,9 @@ function afds.vnav_energy_guidance(input)
     elseif state == afds.VNAV_ENERGY_STATE_ON_PATH_BELOW then
         thrust_policy = afds.VNAV_ENERGY_THRUST_ALLOW
         thrust_reason = afds.VNAV_ENERGY_THRUST_REASON_ON_PATH_BELOW_SPEED
+    elseif below_hold then
+        thrust_policy = afds.VNAV_ENERGY_THRUST_ALLOW
+        thrust_reason = previous_thrust_reason
     elseif speedbrake_extended and recovery_hold
         and previous_thrust_reason == afds.VNAV_ENERGY_THRUST_REASON_UNDERSPEED_PROTECTION then
         -- With the speedbrake out the speed decays again as soon as the
@@ -398,6 +796,11 @@ function afds.altitude_leg_end_ft(entry)
 end
 
 -- [c] Route end of descent and VNAV descent path entry
+-- Whether a route entry is a runway (RW06, RW18R), by its name.
+local function is_runway_entry(entry)
+    return string.match(tostring(entry[8] or ""), "^RW%d%d[LRC]?$") ~= nil
+end
+
 -- Index of the end of descent in an xtlua/fms route: the first entry within
 -- radius_nm of the destination (the last entry) after the entry farthest from
 -- it. On an A to B route this is the first entry inside the radius, as before.
@@ -418,7 +821,7 @@ function afds.route_eod_index(route, distance_fn, radius_nm)
     end
     local last = count - 1
     for i = count - 1, 1, -1 do
-        if string.sub(tostring(route[i][8] or ""), 1, 2) == "RW" and distances[i] < radius_nm then
+        if is_runway_entry(route[i]) and distances[i] < radius_nm then
             for k = 1, i - 1 do
                 if distances[k] >= radius_nm then
                     last = i
@@ -454,6 +857,119 @@ function afds.vnav_entry_slope(previous_alt_ft, alt_ft, distance_nm, from_tod, c
         return 0, alt_ft
     end
     return (start_alt_ft - alt_ft) / distance_nm, alt_ft
+end
+
+-- [B-14] A route point's altitude on VNAV's descent path (setDistances' profile): the native FMS's ([9], 0 without
+-- one) inside the point's descent constraint from the CIFP (B747_route_constraints' entry: floor and/or ceiling, phase
+-- "descent"; nil without one): raised to the floor, lowered to the ceiling; without [9] the floor, else the ceiling;
+-- 0 without either. A real 747-400's FMC builds its descent path through the constraints, and its AFDS levels off at
+-- the MCP altitude only.
+function afds.vnav_path_alt(native_alt_ft, constraint)
+    local alt = tonumber(native_alt_ft) or 0
+    if type(constraint) ~= "table" or constraint.phase ~= "descent" then return alt end
+    local floor, ceiling = tonumber(constraint.floor), tonumber(constraint.ceiling)
+    if alt <= 0 then return floor or ceiling or 0 end
+    if floor ~= nil and alt < floor then alt = floor end
+    if ceiling ~= nil and alt > ceiling then alt = ceiling end
+    return alt
+end
+
+-- [B-14] The distance VNAV's descent path (setDescentVSpeed) takes to a point through a fly-by turn at the fix F:
+-- along the legs, as the profile's gradients are (fix to fix), and not straight to the point, with F's altitude the
+-- path's at the turn's bisector, where the FMC sequences F. east_nm, north_nm: the aircraft from F; the turn from
+-- in_course_deg to out_course_deg (true) starts lead_nm before F (B747_lnav_vnav_turn, as LNAV flies it), and F was
+-- held start_nm from it (nil: lead_nm); to_fix:
+-- the distance to F (held for its turn until the bisector), else to the next fix, leg_nm from F; direct_nm: the
+-- straight distance to that point, taken from 2 nm off the leg (vectored; 1 nm more than the arc's middle where that
+-- is farther) to all of it 2 nm farther. On the legs the
+-- along-track distance; the arc's middle lies cut_nm (lead (1 - cos(turn / 2))) short of F along the inbound leg and
+-- as far past it along the outbound one, which is taken off from where F was held to the bisector and given back
+-- from there to the turn's end, so the path is continuous at the bisector and at F's altitude there. The straight
+-- distance made the path about 200 ft high at NETOM's bisector (86 deg, 1 nm inside the fix) and, cutting the turn to
+-- the next fix, 300-380 ft lower once F was let go there. extra_nm (0 if nil) is added to the distance along the legs:
+-- what the turn before F, on a leg too short for it to end before F's begins, still gives back
+-- (afds.vnav_turn_give_back_nm).
+function afds.vnav_turn_distance_nm(east_nm, north_nm, in_course_deg, out_course_deg, lead_nm, start_nm, to_fix,
+        leg_nm, direct_nm, extra_nm)
+    local turn = math.abs(((out_course_deg - in_course_deg + 540) % 360) - 180)
+    local cut = lead_nm * (1 - math.cos(math.rad(turn / 2)))
+    local course = to_fix and in_course_deg or out_course_deg
+    local ue, un = math.sin(math.rad(course)), math.cos(math.rad(course))
+    local along = east_nm * ue + north_nm * un                  -- past F along the leg, negative before it
+    local cross = math.abs(east_nm * un - north_nm * ue)
+    local distance
+    if to_fix then
+        local before = -along
+        local from = start_nm or lead_nm
+        local w = 1
+        if from > cut then w = math.max(0, math.min(1, (from - before) / (from - cut))) end
+        distance = before - cut * w
+    else
+        distance = leg_nm - along + afds.vnav_turn_give_back_nm(east_nm, north_nm, in_course_deg, out_course_deg,
+            lead_nm)
+    end
+    distance = distance + (extra_nm or 0)
+    local inside = turn > 0.5 and cut / math.tan(math.rad(turn / 2)) or 0
+    local off = math.max(0, math.min(1, (cross - math.max(2, inside + 1)) / 2))
+    return distance + (direct_nm - distance) * off
+end
+
+-- [B-14] While LNAV does not fly the turns, a fly-by turn fades out of VNAV's path from VNAV_TURN_FADE_FROM_NM off its
+-- path over VNAV_TURN_FADE_NM more (B747_vnav_turn_distance), the fade moving by at most the distance flown over
+-- VNAV_TURN_FADE_RATE_NM, and LNAV ends it once it has (B747_lnav_update_vnav_hold)
+afds.VNAV_TURN_FADE_FROM_NM = 0.3
+afds.VNAV_TURN_FADE_NM = 1.0
+afds.VNAV_TURN_FADE_RATE_NM = 2.0
+
+-- [B-14] What a fly-by turn at F still gives back of its cut past the bisector (afds.vnav_turn_distance_nm), the
+-- aircraft east_nm, north_nm from F: all of it (cut_nm, lead (1 - cos(turn / 2))) up to cut_nm along the outbound
+-- course past F, none from the turn's end (lead_nm past it), in proportion between
+function afds.vnav_turn_give_back_nm(east_nm, north_nm, in_course_deg, out_course_deg, lead_nm)
+    local turn = math.abs(((out_course_deg - in_course_deg + 540) % 360) - 180)
+    local cut = lead_nm * (1 - math.cos(math.rad(turn / 2)))
+    local along = east_nm * math.sin(math.rad(out_course_deg)) + north_nm * math.cos(math.rad(out_course_deg))
+    local w = 1
+    if lead_nm > cut then w = math.max(0, math.min(1, (along - cut) / (lead_nm - cut))) end
+    return cut * (1 - w)
+end
+
+-- [B-14] A route point's altitude on VNAV's descent path, route[i] with its descent constraint from the CIFP
+-- (constraints[i], as B747_route_constraints): afds.vnav_path_alt for a point with the native FMS's altitude ([9]); for
+-- one without, the path's altitude there, interpolated along the route (distance_fn) between the nearest points with
+-- one on either side, kept inside the constraint (its floor or ceiling where the straight path would break it). It
+-- took the floor, else the ceiling, whatever the points around: a floor far under the straight path put a dive and a
+-- level-off into it, and a ceiling above the point before a level-off until the path came down to it (review 26
+-- MINOR 5). Without points on both sides, the floor or ceiling, as before. After a point in the cruise (its altitude
+-- within 100 ft of cruise_alt_ft, CRZ ALT; nil: none known) the path is level to the T/D and comes down at the T/D's
+-- VNAV_TOD_FT_PER_NM: the point takes that line back from the point after it (CRZ ALT at most), not the straight line
+-- from the cruise point, which put it thousands of feet off the path (review 27 MINOR 4).
+function afds.vnav_route_point_alt(route, i, constraints, distance_fn, cruise_alt_ft)
+    local entry = route[i]
+    if entry == nil then return 0 end
+    local constraint = constraints ~= nil and constraints[i] or nil
+    local native = tonumber(entry[9]) or 0
+    if native > 0 or type(constraint) ~= "table" or constraint.phase ~= "descent"
+        or type(distance_fn) ~= "function" then
+        return afds.vnav_path_alt(native, constraint)
+    end
+    local function nearest(step)
+        local k, along = i, 0
+        while route[k + step] ~= nil do
+            along = along + distance_fn(route[k][5], route[k][6], route[k + step][5], route[k + step][6])
+            k = k + step
+            local alt = tonumber(route[k][9]) or 0
+            if alt > 0 and route[k][2] ~= 1 then return alt, along end
+        end
+        return nil, nil
+    end
+    local before, before_nm = nearest(-1)
+    local after, after_nm = nearest(1)
+    if before == nil or after == nil or before_nm + after_nm <= 0 then return afds.vnav_path_alt(0, constraint) end
+    local cruise = tonumber(cruise_alt_ft)
+    if cruise ~= nil and cruise > 0 and before >= cruise - 100 then
+        return afds.vnav_path_alt(math.min(cruise, after + afds.VNAV_TOD_FT_PER_NM * after_nm), constraint)
+    end
+    return afds.vnav_path_alt(before + (after - before) * before_nm / (before_nm + after_nm), constraint)
 end
 
 -- [d] Cruise climb after the ALT selector push
@@ -568,7 +1084,7 @@ afds.VNAV_TOD_FT_PER_NM = 290
 -- route than to its end is climb (a SID constraint). Passed constraints count
 -- as well, so the T/D does not move while the aircraft passes them on the
 -- descent.
-function afds.route_tod_distance(route, eod_index, cruise_alt_ft, distance_fn)
+function afds.route_tod_distance(route, eod_index, cruise_alt_ft, distance_fn, constraints)
     local count = #route
     if count < 1 then return 0, 0 end
     local cruise_alt = tonumber(cruise_alt_ft) or 0
@@ -587,12 +1103,162 @@ function afds.route_tod_distance(route, eod_index, cruise_alt_ft, distance_fn)
         -- the route altitude of the end of descent applies there, even when CRZ ALT is
         -- so close to it that the T/D from the destination lies after that point
         if i < eod and (to_end[i] >= tod_nm or to_end[i] * 2 > to_end[1]) then break end
-        local alt = tonumber(route[i][9]) or 0
+        -- [B-14] the point's altitude on the descent path: [9] inside its CIFP constraint (constraints, as
+        -- B747_route_constraints; afds.vnav_route_point_alt), as setDistances' profile takes it
+        local alt = afds.vnav_route_point_alt(route, i, constraints, distance_fn, cruise_alt_ft)
         if alt > 0 and alt < cruise_alt then
             tod_nm = math.max(tod_nm, to_end[i] + (cruise_alt - alt) / afds.VNAV_TOD_FT_PER_NM)
         end
     end
     return tod_nm, eod_alt
+end
+
+-- [A-5] The approach's descent path to the runway
+-- In the approach VNAV PTH flies the FMC's descent path, built back from the
+-- end of descent at the runway: the runway entry's route altitude (the
+-- CIFP's threshold crossing altitude, RW18R 37 ft), up the final approach
+-- angle (the CIFP's, 3.0 deg without one) to where it meets the altitude of
+-- the fix before it (the glide slope intercept), then through the route
+-- altitudes ([9]) of the fixes before, each no lower than the one after it
+-- (a descent path does not climb: EINN's ASGON 3,046 ft after ELPOM's 3,000),
+-- and from the farthest of them up to CRZ ALT at the T/D's 290 ft/nm. Route
+-- altitudes at or above the transition altitude are cruise, as are those
+-- before them. The approach is within 25 NM of the runway along the route, and
+-- once in it, within 27 NM (radar vectors or a hold about 25 NM out).
+afds.VNAV_APPROACH_RANGE_NM = 25
+afds.VNAV_APPROACH_LEAVE_NM = 27
+afds.VNAV_APPROACH_GLIDE_DEG = 3.0
+-- V/S along the path: its gradient at the ground speed, and 1.5 fpm per ft of
+-- path error, at most 1,500 fpm, back to it
+afds.VNAV_PATH_GAIN_FPM_PER_FT = 1.5
+afds.VNAV_PATH_MAX_CORRECTION_FPM = 1500
+
+-- Index of the arrival runway in an xtlua/fms route: the last runway entry
+-- within radius_nm of the destination (the last entry) with an entry outside
+-- the radius before it (not the departure runway of a route back to the
+-- departure airport), or nil.
+function afds.route_runway_index(route, distance_fn, radius_nm)
+    local count = #route
+    if count < 3 or type(distance_fn) ~= "function" then return nil end
+    local destination = route[count]
+    local function inside(i)
+        return distance_fn(route[i][5], route[i][6], destination[5], destination[6]) < radius_nm
+    end
+    for i = count - 1, 2, -1 do
+        if is_runway_entry(route[i]) and inside(i) then
+            for k = 1, i - 1 do
+                if not inside(k) then return i end
+            end
+            return nil
+        end
+    end
+    return nil
+end
+
+-- The path from the runway (runway_index) back to the fix before first_index
+-- (the fix flown to, or one sequenced early for its turn): points {d = NM to
+-- the runway along the route, alt = ft, index = the route entry of a fix or
+-- the runway} from the runway out, and the distance
+-- along the route from each entry up to the runway to it. Only the fixes from
+-- the route's farthest point from the destination on: on a route back to the
+-- departure airport (a circuit) the way out is not the approach, and its
+-- fixes (the departure runway at 41 ft) are left out; before that point the
+-- path is the one beyond its far end. (After a DIRECT TO that left only the
+-- origin before it, the fix flown to is that farthest point.)
+function afds.vnav_approach_path(route, runway_index, first_index, distance_fn, transition_alt_ft,
+        cruise_alt_ft, glide_deg, constraints)
+    local destination = route[#route]
+    local far_index, far_nm = 1, -1
+    for i = 1, runway_index - 1 do
+        local nm = distance_fn(route[i][5], route[i][6], destination[5], destination[6])
+        if nm > far_nm then far_index, far_nm = i, nm end
+    end
+    local to_runway = {}
+    to_runway[runway_index] = 0
+    for i = runway_index - 1, 1, -1 do
+        to_runway[i] = to_runway[i + 1]
+            + distance_fn(route[i][5], route[i][6], route[i + 1][5], route[i + 1][6])
+    end
+    local transition_alt = tonumber(transition_alt_ft) or 18000
+    local fixes = {}
+    for i = math.max(1, first_index - 1, far_index), runway_index - 1 do
+        -- [B-14] inside its CIFP constraint (constraints, as B747_route_constraints; afds.vnav_route_point_alt), as the
+        -- descent profile's points: the path took [9] alone, and a point below its floor was kept above it only by the
+        -- AFDS's altitude at the floor, now the MCP's (review 26 MINOR 6)
+        local alt = afds.vnav_route_point_alt(route, i, constraints, distance_fn, cruise_alt_ft)
+        if route[i][2] ~= 1 and string.sub(tostring(route[i][8] or ""), 1, 1) ~= "(" and not is_runway_entry(route[i])
+            and alt > 0 then
+            if alt >= transition_alt then
+                fixes = {}
+            else
+                fixes[#fixes + 1] = {d = to_runway[i], alt = alt, index = i}
+            end
+        end
+    end
+    local lowest = math.huge
+    for k = 1, #fixes do
+        fixes[k].alt = math.min(fixes[k].alt, lowest)
+        lowest = fixes[k].alt
+    end
+    local end_alt = tonumber(route[runway_index][9]) or 0
+    if end_alt <= 0 then end_alt = (tonumber(route[#route][9]) or 0) + 50 end
+    end_alt = math.min(end_alt, lowest)
+    local points = {{d = 0, alt = end_alt, index = runway_index}}
+    if #fixes > 0 then
+        local final = fixes[#fixes]
+        local gradient = math.tan(math.rad(tonumber(glide_deg) or afds.VNAV_APPROACH_GLIDE_DEG)) * 6076.12
+        local intercept = (final.alt - end_alt) / gradient
+        if intercept < final.d - 0.01 then points[#points + 1] = {d = intercept, alt = final.alt} end
+    end
+    for k = #fixes, 1, -1 do points[#points + 1] = fixes[k] end
+    local far = points[#points]
+    local cruise_alt = tonumber(cruise_alt_ft) or 0
+    if cruise_alt > far.alt then
+        points[#points + 1] = {d = far.d + (cruise_alt - far.alt) / afds.VNAV_TOD_FT_PER_NM, alt = cruise_alt}
+    end
+    return points, to_runway
+end
+
+-- The path's altitude (ft) and gradient (ft/NM, positive descending to the
+-- runway) distance_nm before the runway; past its far end, level there.
+function afds.vnav_path_at(points, distance_nm)
+    if distance_nm <= points[1].d then
+        if #points < 2 then return points[1].alt, 0 end
+        return points[1].alt, (points[2].alt - points[1].alt) / math.max(points[2].d - points[1].d, 0.001)
+    end
+    for k = 1, #points - 1 do
+        local a, b = points[k], points[k + 1]
+        if distance_nm <= b.d then
+            local gradient = (b.alt - a.alt) / math.max(b.d - a.d, 0.001)
+            return a.alt + (distance_nm - a.d) * gradient, gradient
+        end
+    end
+    return points[#points].alt, 0
+end
+
+-- V/S along the path (fpm): its gradient at the ground speed, less the path
+-- error times VNAV_PATH_GAIN_FPM_PER_FT (at most VNAV_PATH_MAX_CORRECTION_FPM);
+-- never a climb, nor below VNAV_ENERGY_MAX_DESCENT_FPM. With speed_margin_kts
+-- (the speed limit less the IAS) the path keeps the speed within its limit, as
+-- VNAV PTH does, departing the path when it must: the correction down fades
+-- over the last VNAV_PATH_SPEED_FADE_KTS below the limit, and beyond it the
+-- descent shallows, level VNAV_PATH_SPEED_LEVEL_KTS over.
+afds.VNAV_PATH_SPEED_FADE_KTS = 5
+afds.VNAV_PATH_SPEED_LEVEL_KTS = 10
+function afds.vnav_path_vspeed(gradient_ft_per_nm, groundspeed_kts, path_error_ft, speed_margin_kts)
+    local nominal = -gradient_ft_per_nm * groundspeed_kts / 60
+    local correction = afds.clamp(path_error_ft * afds.VNAV_PATH_GAIN_FPM_PER_FT,
+        -afds.VNAV_PATH_MAX_CORRECTION_FPM, afds.VNAV_PATH_MAX_CORRECTION_FPM)
+    local margin = tonumber(speed_margin_kts)
+    if margin ~= nil then
+        if correction > 0 then
+            correction = correction * afds.clamp(margin / afds.VNAV_PATH_SPEED_FADE_KTS, 0, 1)
+        end
+        if margin < 0 then
+            nominal = nominal * afds.clamp(1 + margin / afds.VNAV_PATH_SPEED_LEVEL_KTS, 0, 1)
+        end
+    end
+    return afds.clamp(nominal - correction, afds.VNAV_ENERGY_MAX_DESCENT_FPM, 0)
 end
 
 -- [f] Autoland flare law, derotation and thrust retard height
@@ -702,6 +1368,15 @@ function afds.cas_to_mach(cas_kts, pressure_alt_ft)
     local impact_pressure_ratio = ((1.0 + 0.2 * cas_ratio * cas_ratio) ^ 3.5 - 1.0)
         / isa_pressure_ratio(pressure_alt_ft)
     return math.sqrt(5.0 * ((impact_pressure_ratio + 1.0) ^ (2.0 / 7.0) - 1.0))
+end
+
+-- Calibrated airspeed (kt) of a Mach number at a pressure altitude, as
+-- performance.mach_to_cas_kts. nil for a missing or non-positive Mach.
+function afds.mach_to_cas(mach, pressure_alt_ft)
+    local m = tonumber(mach)
+    if m == nil or m <= 0 then return nil end
+    local impact_pressure_ratio = isa_pressure_ratio(pressure_alt_ft) * ((1.0 + 0.2 * m * m) ^ 3.5 - 1.0)
+    return 340.294 * math.sqrt(5.0 * ((impact_pressure_ratio + 1.0) ^ (2.0 / 7.0) - 1.0)) * 1.94384449
 end
 
 afds.CLIMB_MACH_CROSSOVER_HYSTERESIS = 0.005

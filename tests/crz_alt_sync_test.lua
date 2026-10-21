@@ -312,6 +312,40 @@ case("CDU CRZ ALT entry reaches the native FMS as FL330", function()
     equal(cdu_runtime.pendingCrz, nil, "a CDU entry makes the native read-back authoritative")
 end)
 
+-- CRZ ALT is not deleted (as the FMC does: an entry replaces it): the DELETE key gives INVALID DELETE and keeps it,
+-- an empty press copies it to the scratchpad. Both deleted it, and with CRZ ALT 0 in the climb VNAV flew the cruise
+-- Mach .81 from FL205, 400 KCAS (a review).
+case("CRZ ALT is not deleted", function()
+    local data = {crzalt="FL330"}
+    local cdu_runtime = setmetatable({
+        print=function() end,
+        simDR_inReplay=0,
+        validAlt=r.validAlt,
+        getFMSData=function(name) return data[name] end,
+        fmsModules={setData=function(_, name, value) data[name] = value end},
+        B747BR_cruiseAlt=33000,
+        del=true
+    }, {__index=_G})
+    local crzalt_entry = load_branch(FMS.."B744.fms.pages.lua", cdu_runtime,
+        'elseif value=="crzalt" then', 'elseif value=="irspos" then')
+    -- setdata turns the DELETE key's scratchpad into "" with del set
+    local fmsO = {id="fmsL", scratchpad="", notify=""}
+    crzalt_entry(fmsO, "crzalt")
+    equal(cdu_runtime.B747BR_cruiseAlt, 33000, "DELETE keeps CRZ ALT")
+    equal(data.crzalt, "FL330", "DELETE keeps the CDU's CRZ ALT")
+    equal(fmsO.notify, "INVALID DELETE", "DELETE on CRZ ALT")
+    cdu_runtime.del = false
+    fmsO = {id="fmsL", scratchpad="", notify=""}
+    crzalt_entry(fmsO, "crzalt")
+    equal(cdu_runtime.B747BR_cruiseAlt, 33000, "an empty press keeps CRZ ALT")
+    equal(data.crzalt, "FL330", "an empty press keeps the CDU's CRZ ALT")
+    equal(fmsO.scratchpad, "FL330", "an empty press copies CRZ ALT to the scratchpad")
+    data.crzalt = "*****"
+    fmsO = {id="fmsL", scratchpad="", notify=""}
+    crzalt_entry(fmsO, "crzalt")
+    equal(fmsO.scratchpad, "", "an empty press without a CRZ ALT copies nothing")
+end)
+
 -- The cruise climb itself starts 2 s after the ALT selector push.
 local helpers = dofile(AP.."B747.70.xt.autopilot.afds_helpers.lua")
 local descent_calls = 0

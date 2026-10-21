@@ -32,13 +32,101 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   native entry and INVALID ENTRY cleared before typing, a refused value kept
   in the 747 with `laminar/B747/fms/crzalt_sync_fault` and a delayed CDU
   message instead of being put back, 31237 accepted as FL312 without
-  re-entry, the CDU CRZ ALT entry (33000, 330 or FL330) sent as FL330, and
+  re-entry, the CDU CRZ ALT entry (33000, 330 or FL330) sent as FL330, CRZ
+  ALT not deleted (DELETE gives INVALID DELETE, an empty press copies it to
+  the scratchpad), and
   the cruise climb 2 s after the ALT push skipped when CRZ ALT is back at the
   level flown or T/D is within 50 NM.
 - `takeoff_ref_thrust_reduction_test.lua`: the TAKEOFF REF THR REDUCTION
   field - the 1500 FT default from PERF FACTORS, flap entries ("FLAPS 5",
   "10", "F20"), height entries, rejected entries, blank-line-select recall,
   DELETE, and the FLAP/ACCEL HT field beside it.
+- `takeoff_speeds_test.lua`: the takeoff speeds (B747_setV1VrV2 on the
+  PMDG-derived tables) keep the FCOM's minimums - V1 not below VMCG, VR not
+  below VRMIN nor VMCG, V2 then not below the V2 for that VR, V1 not above
+  VR; the PW4056's VMCG/VRMIN by pressure altitude and actual OAT, lower
+  with TO 1 / TO 2: at 233 t, flaps 20, sea level 121/124/144 (the tables'
+  101/114/139), at 6,000 ft 10 C 113/116, at 40 C 117/120, and 310 t
+  unchanged at 126/141.5/159.5 (6 of the 19 checks failed before); the
+  V1 wind correction goes by the headwind component, between the table's
+  rows and weights (310 t: +2 for a 20 kt headwind, -2.5 for a 10 kt
+  tailwind; as the tailwind component on the wind speed -3 and +1), and
+  beyond the chart's regions the nearest is taken (9,000 ft at 0 C: region
+  E; no region at all failed on a nil index; below its bottom or colder than
+  its left edge on that edge, -62 C at 9,000 ft region E), a point on a
+  line between two regions in the higher one (0 C on region A's top: B; it
+  was in none and taken as E), all by pressure altitude from the standard
+  atmosphere's altimeter relation (a sea level airport with QNH 28.92:
+  939 ft, 119.6/122.6, not 121/124; at 1,000 ft per inHg 180 ft read as
+  region B; a setting read as 0 leaves the altimeter's altitude); after
+  the FMC deletes the speeds for a new takeoff rating
+  (fmc_takeoff_speeds_deleted_test) the flaps entered again give the new
+  rating's (TO 2's V1 108, then full thrust's 121). Cases
+  between the minimum tables' rows, on their hot-day slope and with V1
+  brought down to VR pin the interpolations and the clamp. The speeds are
+  whole knots as the FMC sets them, the tables' rounded, VMCG and VRMIN up
+  and the V2 for VRMIN to the nearest knot (233 t: 121/124/144; the CDU had
+  cut 120.6/123.6/143.7 to 120/123/143). The tables read as the PMDG AOM's
+  pages (flaps 10 region D VR 320-420 t 93-111 instead of 156-187, flaps 20
+  region D VR 220 t 97 instead of 114, flaps 20 region E V2 380 t 149
+  instead of 179, 15 wind cells 1 kt off), and above region E's top V2
+  stays above VR at 360-400 t. Cases for the changes review 38's mutants
+  got past: the regions by pressure altitude (360 t, 1,000 ft, QNH 28.92:
+  region B), colder than the chart region A, each wind row between its
+  weights (302 t, 10 kt tailwind: V1 122) and the minimums rounded up
+  (400 ft: 121/124/144). The speeds run in XTLua's own
+  namespace (the plugin's init.lua), where a global table without a
+  metatable reads a missing index by overflowing the stack and has no
+  length: the minimum tables have one (B747_VMCG_VRMIN_DERATE[0] stopped
+  the instruments, the FMC and the autopilot at the flaps entry in p32;
+  38 of 64 checks failed before).
+- `fmc_takeoff_speeds_deleted_test.lua`: THRUST LIM's TO, TO 1 and TO 2
+  keys (fmsFunctions.setDref) delete the takeoff speeds with the TAKEOFF
+  REF flaps entry and show TAKEOFF SPEEDS DELETED when the rating changes
+  on the ground after the speeds are set, as the GR WT and ZFW entries
+  (fmsFunctions.setdata) do (the instruments' script did it without a
+  message); not for the rating already selected, not in the air, and with
+  no speeds set nothing to delete - before the flaps entry, or after a
+  landing, where the instruments leave V1 at 998 (no speeds in the air):
+  that showed the message on a turnaround (3 of 12 checks failed before).
+  The handlers run in XTLua's namespace.
+- `landing_speeds_test.lua`: the landing reference speeds (B747_setVref30
+  and B747_Vspeeds): VREF30 from the FCOM's table (PI.10.2) by the gross
+  weight alone, as the FMC works it out (233.4 t: 137.7 at FL370, 6,000 ft
+  and sea level; by the present altitude in steps it read 140.3 at FL370,
+  where crews select it; 9 of 10 checks failed before), between the
+  table's weights that bracket the gross weight and along its end rows'
+  slope beyond 200-400 t (to the nearest 20 t the lower row was held
+  through the lower half of each 20 t, up to 3 kt low; 3 of 6 checks
+  failed before); VREF25 (Vf25: the flaps 25 manoeuvre speed and VREF)
+  from the table's own column, 5 kt over VREF30 at 200 t and 8 kt at
+  400 t (VREF30 + 5 was up to 3 kt low; 4 of 14 checks failed before).
+  The functions run in XTLua's namespace.
+- `stall_speeds_test.lua`: the stall speed (B747_Vs: the PFD's red
+  checker box, the stall warning and TO/GA's pitch below V2 + 10) between
+  the stall speed table's weights that bracket the gross weight and along
+  its end rows' slope beyond 200-400 t (to the nearest 20 t the lower row
+  was held through the lower half of each 20 t: 225 t flaps up 150.7 for
+  152.5; 2 of 5 checks failed before), and between its rows by altitude
+  that bracket the altitude, held at 10,000 ft above (the band tests ran
+  from the lowest, so above sea level only 0-2,000 ft was taken: 240 t at
+  FL370 158.6 for 161.7; 4 of 12 checks failed before); the table's
+  flaps 20 cells 200 t at 10,000 ft and 360 t at sea level as their
+  neighbours read (113.60 and 153.66 for 133.60 and 156.66; 2 of 14 checks
+  failed before). The function runs in XTLua's namespace.
+- `fmc_approach_ref_test.lua`: APPROACH REF shows VREF for flaps 25 and
+  30 in whole knots, rounded, and its 1R/2R keys bring them to the
+  scratchpad as 25/xxx and 30/xxx the same (%3d cut 143.69/137.69 to
+  143/137; 3 of 4 checks failed before); the FLAP/SPD entry takes any
+  VREF the page offers (25/185 and 30/183; 180 kt as its top rejected
+  VREF25 from 356 t and VREF30 from 385 t; 2 of 8 checks failed before).
+  Both VREFs are for the landing airport's elevation (FCOM PI.10.2: 1 kt
+  per 4,000 ft above sea level): the RTE's destination's highest runway
+  threshold in X-Plane's CIFP, Custom Data first (KDEN 5,434 ft 165/158
+  and MMMX 7,292 ft 166/159 for 164/157 at 300 t; EHAM, no destination
+  and no file as before), its files looked up once for each destination;
+  22 of 35 checks failed before. The page, handler and the FMC's
+  elevation lookup run in XTLua's namespace.
 - `vnav_clb_page_test.lua`: CLB page titles ("ACT ECON CLB" / "ACT 230KT CLB"),
   the ECON/SEL SPD label, the CAS/Mach speed pair, the blank SPD REST
   field, and the CRZ page titles ("ACT ECON CRZ" / "ACT M.801 CRZ") with the
@@ -49,6 +137,25 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   placard minus 5 kt limiting every descent target, the CDU pair entry,
   rejection and DELETE, and DELETE returning a selected climb CAS or cruise
   Mach to ECON.
+- `afds_pitch_limits_test.lua`: the flight director's pitch target limits -
+  down to -10 deg in VNAV PTH, V/S, G/S and ALT (it stopped at -3.5 deg,
+  where the 747 flies level with flaps 20 at 210 kt), up to +10 and +15 deg.
+- `afds_glideslope_test.lua`: the flight director's G/S law - the glide
+  slope's V/S at the ground speed, corrected by 0.25 x the radio altitude fpm
+  a dot (the deviation in feet), at least 75 near the ground, at most
+  1,000 fpm, not tripled beyond 2 dots - flown as a path angle by a PI law
+  (the path angle short of against the V/S from the elevation's rate, at most
+  GS_MAX_PATH_ERROR_DEG, GS_PATH_KP x it above an integrator moving
+  GS_PATH_KI x it a second from the director's pitch when G/S began, the
+  first update holding that pitch, again after a second without G/S, less
+  GS_PITCH_RATE_DAMPING x the attitude's rate, held within -10..+10 deg and,
+  with the servos off, within 2 deg of the attitude); VNAV PTH as before,
+  also right after G/S.
+- `approach_gs_pitch_loop_test.lua`: the G/S in the approach model with the
+  pitch loop at 20 and 34 fps - EHAM as flown, from 175 kt at AM622 (also with
+  local_vy tilted by 150 fpm), in a 15 kt tailwind, EINN 1,500 ft high: within
+  0.75 dot from 1,500 to 200 ft, no climb, the pitch reversing at most 3
+  times.
 - `afds_alt_capture_test.lua`: ALT capture and ALT hold in the production
   flight-director pitch code - a FLCH or V/S push outside the capture window
   surviving the update that still shows the old ALT FMA, an ALT HOLD push
@@ -106,7 +213,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   behind), and VNAV climb targets judged by the along-route distance so the
   arrival constraints are not climbed to. Ordinary routes keep their end of
   descent and climb targets. On every route the T/D reaches each descent
-  constraint and the end of descent altitude (its route altitude or the
+  constraint (its altitude through its CIFP constraint: an IAF's 3000 above
+  an at or below 2500 moves the T/D 1.7 nm out) and the end of descent
+  altitude (its route altitude or the
   destination elevation, not the navaid frequency in [3]) at 290 ft/nm, so
   the path into the IAF is 290 ft/nm; route altitudes before the T/D (an older
   CRZ ALT) and SID constraints nearer the departure are not descent
@@ -114,8 +223,9 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   remaining distance ends at the end of descent and then runs straight to the
   destination, without the leg after the end of descent, also with a missed
   approach whose vectors point X-Plane puts hundreds of NM away (left out
-  after the arrival runway). A SID's altitude-terminated leg end ("(650)")
-  is climbed through, not taken as the climb target.
+  after the arrival runway; the runway is known by its name, RW and two
+  digits, so a fix named RW... is no runway). A SID's altitude-terminated
+  leg end ("(650)") is climbed through, not taken as the climb target.
 - `lnav_altitude_leg_test.lua`: the production waypoint sequencing at the end
   of an altitude-terminated leg (CA, VA, FA: X-Plane's "(650)", which rides
   just ahead of the aircraft once its altitude is reached) - the next leg
@@ -136,9 +246,43 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   never in the LOC capture frame, APP leaving the MCP heading alone, and LNAV
   still steering (and reselecting the heading mode) while LOC is armed.
 - `eec_climb_thrust_test.lua`: the CLB thrust reference of the GE, PW and RR
-  EEC modules - the weight-based target for a light aircraft below
-  20,000 ft, max climb above it (as upstream gave the GE engines), and max
-  climb for a heavy aircraft.
+  EEC modules is the rated climb thrust at every altitude, weight and flap
+  setting, as on the 747-400 (the thrust for the EEC's design climb rate,
+  taken below 20,000 ft where it was less, left a light 747 at 1,560 fpm at
+  10,000 ft and 250 kt; 46 of the 62 checks failed before): the PW's max
+  climb EPR is raised below its 340 kt / M.84 schedule up to its value at
+  200 KIAS, linear in Mach - below 11,000 ft the FCOM's Initial Climb
+  table's (1.49 at 10,000 ft on the cold side, 1.43 at 20 C, 1.35 at
+  30 C; at 0.6 EPR per Mach warm days ran up to 0.15 over it), above
+  12,000 ft 0.6 EPR per Mach kept to the table's warm-day share at its
+  10,000 ft row for the same ISA deviation (15,000 ft, 250 KIAS: 1.453 at
+  ISA, 1.425 at ISA+20, max climb at ISA+40; 0.03-0.15 over before; the
+  lapse to the row stopped at the tropopause: FL410 ISA+15 M.75 1.404, not
+  1.375; blended at 11,500 ft), held
+  to 1.64 (M.81 at 35,000 ft gave 1.66), the table's 1.7 at
+  15 C and 8,000 ft read as 1.47 - and CLB 1 and CLB 2 take 10 and 20 % off
+  the climb thrust to 10,000 ft and give it back by 15,000 ft: the PW and
+  RR as their EPR above 1 (CLB 1 about 0.04 EPR less, as crews see it), the
+  GE as N1 to the 1/3.1 power of the thrust kept, the EEC's N1 model (to
+  the 0.4 power the thrust was 12-13 % less for CLB 1). The PW's max climb
+  EPR itself (in_flight_EPR_PW) is the FCOM's Max Climb EPR table by
+  pressure altitude and TAT, bilinear, a blank as the next cooler column:
+  two fitted surfaces jumped from 1.561 to 1.437 at TAT 10 C at 30,000 ft
+  (the table 1.52) and read 1.454 for 1.43 at 20,000 ft at ISA (8 of 97
+  checks failed before). The modules run in XTLua's namespace (the
+  plugin's init.lua), on the EEC's tables as XTLua holds them.
+- `eec_max_rated_thrust_test.lua`: the PW's maximum EPR in flight - the
+  EICAS's amber line and the levers' full forward stop - is the GA rating
+  in the CLB, CRZ and GA references alike: the FMC's maximum thrust is not
+  reduced by any mode or derate (Boeing 747-400 E & M ATA 34-61). It was
+  max climb in CRZ and the GA rating in GA, so GA's selection in the
+  approach at 1,500 ft RA put the same levers (0.44) from EPR 1.148 to
+  1.214 at 3,000 ft, TAT 10 C (p32-line1: N1 58 to 68 %, 160 to 167 kt);
+  CLB held the takeoff's maximum, and GA took the last frame's bug, 0.9
+  with the A/T at idle in the descent. The rating's 1.92 at FL370 is held
+  to the tape's 1.71, two packs off add their adjustment, and CLB's
+  maximum is not below its reference (7 of 8 checks failed before). The
+  branches run in XTLua's namespace.
 - `xtlua_warm_reads_test.lua`: XTLua gives 0 for the first read of a
   dataref in a script module, so the datarefs that a fix first reads at a
   critical moment are read every frame in the module's per-frame function
@@ -147,9 +291,13 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   glideslope signals, flags and deviations of the LOC and G/S capture gates in
   the autopilot monitor (B747_monitorAP), the flight-path vertical speed
   and pitch rate of the autoland flare law in preLand_measure (every frame
-  from 800 ft down to the flare height), and the flap handle of the flight
+  from 800 ft down to the flare height), the flap handle of the flight
   director's flap-change VS bias and the autoland pitch target in the
-  hydraulics ap_pitch_assist.
+  hydraulics ap_pitch_assist, and the ground track, true heading, TAS, ground
+  speed and bank limits of LNAV's fly-by turn anticipation in the autopilot
+  after_physics, and the ground flag and V1/VR/V2 that the takeoff speeds'
+  deletion reads at THRUST LIM's rating keys and the GR WT and ZFW entries
+  in the FMS after_physics.
 - `autoland_flare_test.lua`: the autoland flare law helpers (flare height,
   sink-rate command, pitch-target size and rate limits, pitch-rate damping,
   the approach pitch when no steady sample was taken, derotation at 1 deg/s
@@ -169,10 +317,28 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   point, no climb in the flare (20 fpm and 0.5 s more room for the other
   loops), no nose-down before main gear touchdown, a rate-limited
   derotation, and A/T IDLE no higher than 25 ft.
+- `mcp_alt_dial_test.lua`: the MCP altitude knob while it is dialled (item
+  B-12), the production knob, VNAV, FMA, approach modes and pitch director
+  in `mcp_alt_dial_model.lua`'s closed loop at the kit's 0.079 s a click -
+  the knob writes no lastCommand; a VNAV or FLCH climb dialled up does not
+  level at a passing altitude; T/D in a dial starts the descent at T/D;
+  VNAV PTH's V/S target keeps changing in a dial; G/S captures on time; a
+  V/S stop at 10,000 does not take the old 11,000; and guards: a stop climb
+  (VNAV and FLCH, three cadences) and a stop descent level at the final
+  value, ALT HOLD and VNAV ALT unchanged, T/D after a first click and a
+  pause still descends.
 - `eec_flare_retard_test.lua`: EEC IDLE in the autoland flare - no low-speed
   thrust recovery below 50 ft RA, the retard from approach thrust to idle
   over about 2 s, and the IDLE low-speed recovery kept outside the autoland
   flare.
+- `eec_takeoff_thrust_test.lua`: the A/T setting takeoff thrust (THR REF on
+  the takeoff roll) - PW from EPR 1.10 within 8 s at 20, 30 and 60 fps alike
+  and without overshoot, from idle within 12 s (before HOLD at 65 kt), GE
+  from 70% N1 within 8 s; from levers at 0.60, also after a landing that left
+  the A/T at idle, no step back before takeoff thrust (the A/T's target from
+  the levers when it takes them). A go-around in flight from approach thrust:
+  GA thrust within 6 s at 20, 30, 45 and 60 fps alike (11.0 / 8.5 / 5.3 /
+  5.4 s when the levers went the last step by a tenth of the way a frame).
 - `afds_responsiveness_test.lua`: the AFDS helper calculations (turn
   anticipation, VNAV speed change reasons, VNAV energy guidance, pitch blend
   and roll filters) and the speed-on-pitch limiter - the severe underspeed
@@ -189,10 +355,23 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   CAS/Mach crossover rule.
 - `vnav_climb_speed_semantics_test.lua`: the climb speed states (SPD REST,
   SPD TRANS, ECON CLB), the crossover to the climb Mach judged on the CAS
-  target at the current altitude (a step climb from FL310 flies M.815 instead
+  target at the current altitude (a climb through FL310 flies M.815 instead
   of a 326 kt target 26 kt above the speed, and does not flip between CAS
   and Mach as the Mach changes), and the cruise state flying the FMC cruise
-  Mach. Every climb and descent speed state, the MCP IAS/MACH button and the
+  Mach, also through a step climb from the cruise phase (FL310 to FL330 at
+  M.810, not the climb Mach .836) until the descent or the ground ends that
+  phase, and after a descent in FLCH in cruise from 500 ft below the level
+  the cruise was flown at (below it that Mach's CAS there: 301 kt for .810
+  at FL310, not .810 at 342 KCAS at FL250; the change-over a boundary of
+  VNAV's per-frame update; that CAS capped as the climb's own: 250 kt below
+  10,000 ft, 301 from 10,100 ft, 270 under a 270 kt constraint); but ended
+  even with VNAV off
+  on the approach, in TOGA and below the transition altitude (a go-around
+  climb in VNAV at 3,000 ft at 250 and 245 kt, not .81 or a stale 180 kt;
+  the G/S and TOGA each alone above a transition altitude of 3,000 ft),
+  and never entered with CRZ ALT deleted (326 kt at FL205 after deleting and
+  entering it again). Every climb and descent speed state, the MCP IAS/MACH
+  button and the
   automatic IAS/Mach changeover write the X-Plane autopilot target in the new
   unit together with the speed mode (a Mach target limited to Mmo - 0.01, a
   knots target converted to Mach at the current altitude by the button and
@@ -253,13 +432,506 @@ The audit regressions load production Lua code with mocked simulator interfaces:
   underspeed protection, whose thrust is then kept while the limit lasts;
   DRAG REQUIRED unchanged. Also runs the production `setDescentVSpeed`
   loaded through the XTLua `dofile`.
+- `vnav_descent_thrust_hold_test.lua`: VNAV PTH descent thrust for a slow
+  speed on or below the path kept until the speed is 2 kt past the target
+  or the aircraft is above the path - a path idle cannot hold the speed on
+  changes the A/T once (to SPD, 30 times in 300 s before) with the speed on
+  the target; on a path steep enough at idle the thrust ends.
+- `vnav_descent_thrust_hold_test.lua` D4: with the A/T's own speed loop, which
+  overshoots, the thrust for a slow speed is released only with the levers at
+  idle and the speed not falling (on a path idle cannot hold, SPD stays: at
+  most 1 change in 600 s, at least 3 released at +2 kt alone).
+- `vnav_descent_thrust_hold_test.lua` D5: the production vnav.lua with the
+  EEC's speed law and engines fitted to p23-line1's spool-down (N1 down with
+  a time constant of 35 s): the thrust for a slow speed is released only once
+  X-Plane's N1 has stopped falling at idle (on paths 0.15-0.55 kt/s slower
+  at idle, at most 1 change in 900 s: 14 and 3 with the levers at idle alone).
+  D6: after a short SPD burst, with the levers at idle, the speed rising and
+  X-Plane's N1 still falling, SPD stays though the EEC's display N1 sits flat
+  (read from the display, the thrust ended 5 s after idle); with X-Plane's N1
+  steady at idle the thrust ends.
+- `vnav_descent_path_test.lua`: VNAV PTH's descent between the route's points
+  follows the path (within 100 ft, mean within 40 ft, on the EHAM route from
+  15 nm before LAMSO: it sat 150-225 ft below it aiming 250 ft below each
+  point), and the vertical bearing is from the aircraft; approach_model.lua's
+  closed loop.
+- `vnav_descent_point_test.lua`: VNAV PTH's V/S in the last nm before a point
+  of the FMC's profile is the path's own (within 15 %, on the path at 400 kt:
+  it fell to -177 of -1,773 fpm at 0.1 nm) and steeper with the 747 100 ft
+  above the path; the production setDescentVSpeed and energy mode.
+- `vnav_descent_at_hold_test.lua`: the A/T's FMA in an idle VNAV PTH descent -
+  IDLE while the levers come back, HOLD once they are at idle (only after
+  IDLE), SPD when VNAV allows thrust; in that HOLD a pilot's lever movement
+  stays (HOLD while VNAV wants idle; a HOLD from before the descent with the
+  levers up goes IDLE first); the production `B747_ap_fma` through
+  approach_model.lua's loader.
 - `afds_toga_roll_test.lua`: the TO/GA roll annunciation - HDG SEL, HDG HOLD
   or LNAV in flight replacing TO/GA roll while TO/GA pitch stays, the roll
   FMA going straight from TO/GA to HDG SEL frame by frame, LOC capture,
   an airborne TO/GA press or TO/GA engaged again bringing TO/GA roll back
   (a press just before HDG SEL does not undo HDG SEL), and nothing being
   remembered on the ground: a HDG SEL press before liftoff, LNAV left
-  active from the last flight, or a selection that outlived the landing.
+  active from the last flight, or a selection that outlived the landing; and
+  LNAV armed in flight (LNAV ARM) under HDG SEL or HDG HOLD, which stays the
+  active roll mode with LNAV armed (X-Plane's heading select left alone in HDG
+  HOLD), as on the ground before, and the heading knob setting X-Plane's
+  heading with APP armed while LNAV is only armed, not while it steers.
+- `yaw_damper_test.lua`: the yaw dampers (item B-10) driven frame by frame
+  through the production flight_controls_override with a Dutch-roll-like
+  yaw motion wings level and at +-19 deg of bank (p9-L1's 5.1 s, yaw rate
+  +-2.4 deg/s), a roll-in through 5 deg of bank and a steady 20 deg turn
+  (the yaw rate X-Plane's body axes', g sin(bank) / TAS in a coordinated
+  turn): the output opposes the yaw rate both ways at every bank, does not
+  jump as the bank crosses 5 deg, puts no rudder into a coordinated roll-in
+  to 30 deg at 160 kt (within 0.03), also at an angle of attack of 6 deg
+  (the roll about the flight path, X-Plane's body axes yawing by its rate
+  times sin(alpha)), keeps none on the ground (taxi turns
+  of 1-5 deg/s at 15 kt, a heading correction on the takeoff roll at
+  120 kt), fades out in the steady turn, stays a number within +-1 through
+  a yaw rate that is NaN or infinite (either sign) for a frame and acts
+  again after it, moves the rudder alike at 45, 50 and 60 fps through
+  X-Plane's chain (the same output at 20 and 30 fps, where the chain leaves
+  the law no lag of its own) and stays within +-1, both dampers alike; and in a Dutch
+  roll model (5.1 s, bare damping 0.03, rudder effect 0.2-0.6 rad/s2 per
+  rad) three cycles take 2 deg of sideslip below 35 % with the dampers and
+  leave it above 70 % without. The 747's law (P25, NASA CR-2144 Fig IX-4):
+  1.37 deg of rudder per deg/s of yaw rate at 0.9 rad/s within 10 % of 1.23
+  flaps up at 180, 300 and 350 kt, twice that with the flaps out, and +-4 deg
+  of rudder command per damper not scaled by the rudder ratio. Through
+  X-Plane's chain to the rudder (the control override rows, pressure_input,
+  pressure_output's tenth of the way a frame: 11 frames) the rudder per deg/s
+  and its phase are CR-2144's law's (1.23, 8.5 deg ahead of the yaw rate)
+  within 5 % and 2 deg at 45, 50 and 60 fps, and 7 deg at 30 fps (review 23).
+- `afds_roll_rate_limit_test.lua`: the roll rate of HDG SEL and LNAV turns -
+  the filtered roll command moving at most 3 deg/s outside the approach at
+  20, 30 and 60 fps (a roll-in, a 6 deg change, a reversal and a roll-out),
+  the approach keeping its 8 deg/s; and X-Plane's HDG SEL with the production
+  filter and the bank response, both fitted to the kit's 2026-10-11
+  recordings (FL310 and 5,000 ft), flying heading changes of 5, 20 and 90 deg
+  and a +/-60 deg reversal within 4.5 deg/s (1 s mean), 1 deg of heading
+  overshoot and a time bound.
+- `afds_roll_high_tas_test.lua`: the roll channel at a high true airspeed in
+  the roll model - light at FL300, M.81 (TAS 480 kt) p33-line1 and its re-fly
+  kept a roll oscillation that grew to +-30-38 deg of bank at about 4.8 s
+  (18-27 fps): at 18, 20 and 25 fps over 96 aircraft each (surface power
+  40-100 deg/s, the spoilers' share 0-0.8, roll mode 0.3-1 s, the cables 1-2
+  frames behind) none keeps more than 1 deg of bank 45 s after a kick, nor
+  the 48 most powerful rolling out from 30 deg (the director's target
+  filtered down at 3 deg/s), none more than 5 deg after rolling at 28 deg/s
+  at wings level, surface power 60-100 deg/s (with the D gain doubled from a
+  30,000 ft MCP altitude and no airspeed schedule 39 kept a cycle of 10 deg
+  or more after a kick, 106 more than 1 deg, 68 of 108 more than 5 deg after
+  rolling; the margin ends near 120 deg/s at 18-20 fps); the 5 deg step at
+  TAS 270 kt with the MCP at 5,000 ft and at FL370 (4.5 deg within 3.5 s, at
+  most 5 % over), and the gains' scale (1 to 340 kt, 340 / TAS above, at
+  least 0.7, 1 for a NaN); 14 of 15 checks failed before.
+- `roll_model.lua` (not a suite): the production director filter, roll PID
+  and output timing (in the hydraulics script's namespace) with
+  hydraulicsmodel.lua's gains, the roll surfaces moved by pressure_output's
+  functions (the inboard ailerons by B747_interpolate_value a frame before
+  the flight model sees them, the roll spoilers by B747_animate_value) from
+  the roll ratio 1-2 frames before, against a roll-only aircraft (surface
+  power, the spoilers' share, roll mode, a disturbing roll acceleration).
+- `lnav_turn_anticipation_test.lua`: LNAV fly-by turns - the anticipation
+  (the arc at the bank limit, half the 3 deg/s roll-in, and in wind where the
+  drifting turn ends on the outbound leg; beyond 150 deg a 150 deg turn's,
+  nothing from 175 deg or with an implausible wind), and the production
+  sequencing, LNAV steering and roll
+  filter flying a lateral model fitted to the kit's 2026-10-11 recordings:
+  EIDW's DW129 (+90 deg), EHAM's NETOM to AM608, TST744L's BEDRA and BILTO in
+  a 96 kt wind and ELPOM, and 15-120 deg turns at 250 and 478 kt, each within
+  0.3-0.4 nm of the fly-by path (1 nm for BILTO's 137 deg downwind), the fixes
+  in order; and no anticipation from the origin airport, before a lat/lon point
+  or VECTORS, more than 2 nm off the leg or after a direct-to; a turn LNAV
+  flies by its path (item i-1b) sequenced at its bisector instead (one frame
+  before and past it; BILTO's 137 deg at FL350 in a 355/96 wind from 58 nm out
+  and 130 deg at 480 kt in a 040/90 wind, which the lead never sequenced), and
+  a fix listed twice in a row (one turn, in order, at 250 and 480 kt), no
+  bank below 400 ft after lift-off with a SID's turn 1.5 nm on, BEDRA in the
+  westerly passed within 4.5 nm, the 747's own DIRECT TO flown direct to its
+  fix (passed within 1 nm) after the steering's reset of the target, and the
+  turns at the end of legs LNAV steers as before (DW129 after "(650)", a fix's
+  turn after one flown direct from VECTORS) anticipated by the lead, within
+  0.4 nm; on a leg flown by the path LNAV's heading mode following the fix
+  flown to and UNABLE RNP set 1.5 nm off a leg near the destination (0.4 nm
+  with APP armed), from the path's cross-track (none on a fly-by arc 0.59 nm
+  inside the leg); and two turns the same way at the ends of a short leg
+  turned the right way round (their arcs sharing the leg), but a 120 deg turn
+  whose next fix, a short leg on, turns 2 deg keeping its arc (within 0.4 nm
+  of the leg after it at 250 kt, 1 nm at 480 kt); and a 90 deg turn 10-15 nm
+  after a turn-back entered rolling its way, no farther outside the leg after
+  it than before i-1b (170 deg with 10 nm on passed abeam, its fly-by path not
+  fitting before the 90 deg turn's arc, the leg between steered as before and
+  the 747 not on it: 0.6 nm; 165 deg with 15 nm flown by: 0.1 nm), while a 747
+  established on such a leg (from VECTORS)
+  flies the next fix's arc from the hand-over also 0.4 nm into it in 000/40,
+  0.5 nm off the leg the next leg's path, decided again when that fix is
+  sequenced again after the one before was flown to. Turns of more than
+  150 deg (item P15) flown by from where a 150 deg turn starts, on round the
+  arc by up to 45 deg past the outbound course and back onto the outbound
+  leg: 170 and -165 deg at 200 kt at most 0.4 nm farther outside the next leg
+  than the path (2.18 and 1.64 nm; passed abeam 3.22 and 3.21), a 178 deg
+  reversal passed abeam as before; 160, 170 and -170 deg at 480 kt and 165 deg
+  in 270/96 turning from the path's start (34 and 50 nm before the fix),
+  within 0.5 nm of the path, no farther outside the outbound leg than it
+  (6.2-13.3 nm; passed abeam 18.1-24.3) and on that leg after the path joins
+  it, the fixes in order; LNAV pushed 1 nm before a +165 deg fix at 250 kt
+  after HDG SEL flew on past the turn's start, the turn passed abeam as before
+  (at most 260 deg of turning and one bank reversal; round the path from there
+  514-595 deg). Such a turn decided once as the 747 comes to the path's start:
+  LNAV armed 1.5 nm inside the leg into +170 and +174 deg fixes 14 and 20 nm
+  before them sequenced where the path crosses the bisector (6-9 nm before
+  them), the path's fit at a TAS hunting 250 +-1.5 kt decided once (no bank
+  reversal beyond 10 deg but the path's), the turn after a leg steered as
+  before passed abeam (within 1 nm), and decided again once the 747 is back
+  on the leg before the start with LNAV (flown, sequenced 6-9 nm before the
+  fix); turns of 150 to about 159 deg, without a straight line between the
+  arcs (+150.5, +153 and -158 deg at 250 kt), flown round without circling,
+  also in head and tail winds (+153 and -151 deg at 250 kt with 80 kt behind,
+  +150.1 deg at 480 kt with 100 kt ahead);
+  a turn decided flown passed abeam once LNAV is let go past its start
+  and the 747 is more than 2 nm off the path (pushed again 3 nm before the
+  fix: 286 deg of turning, not 617; let go for 5 s 20 s into the path: on
+  round it, the fix sequenced 7.7 nm before it);
+  the decisions forgotten when the active fix moves back (put back 10 nm
+  before a fix flown by: sequenced at the bisector, not in that frame);
+  a capped turn's path sharing no leg with the arc before it until decided
+  flown (+90 then +170 deg 38 nm on at 480 kt: 20 deg of bank held through
+  the first turn, not down to -7.4);
+  VNAV's held fix let go with its sequencing also at +174.6 deg (within
+  5 s; kept until 13 nm past the fix while its bisector was taken abeam it).
+  LNAV's wind filtered (item P18): TST744L's BILTO at FL350 with the nose
+  swinging 0.3 deg off the air path at 3.5 s, the heading command within
+  0.5 deg of its 10 s mean and the bank within 0.6 (4.8 and 2.6 with the wind
+  taken frame by frame).
+  The wind taken along the air path (the nose less beta cos(bank) + alpha
+  sin(bank)): BILTO with an angle of attack of 2.65 deg 0.04 nm outside the
+  path and 70 s at the bank limit (0.37 nm and 125 s along the nose).
+  LNAV steering on through AP commands: BEDRA at FL310 with two commands
+  0.55 s apart in the arc flies as without them (the heading command and the
+  bank within 0.01 deg; 0.30 and 0.58 deg with the steering held 0.5 s after
+  each). With X-Plane's HDG SEL off for 2 s in the arc, HDG SEL is sent at
+  most once in 0.5 s and the heading command moves every frame.
+  A turn's radius fixed where its arc starts (item P21): BILTO at FL350 with
+  the TAS falling 11 kt through the turn at most 0.10 nm outside the path and
+  30 s at the bank limit (0.14 nm and 98 s with the radius drawn every frame).
+  BILTO listed twice, the same (2.44 nm and 118 s when the radius was let go
+  at the duplicate). A turn accelerating from 230 kt to the target 280: at most
+  0.10 nm outside and 25 s at the bank limit (0.39 nm and 59 s drawn for the
+  TAS at the arc's start). Two 90 deg turns 6 nm apart with the target stepping
+  from 250 to 325 kt in the first arc: at most 0.10 nm outside in it (0.32 nm
+  when the share of the leg followed the next arc).
+  LNAV's path guidance on the model: within 0.1 nm of the leg to DW124 90 and
+  120 s after DW129, and back on a leg from 1, 3 and 10 nm off within 60, 120
+  and 300 s at most 45 deg to it and not 0.2 nm through it. LNAV ARM: LNAV
+  pushed 20 nm off a leg on a parallel heading still armed after 10 min on that
+  heading; on 45 and 90 deg towards it engaged where the turn onto it begins
+  (2.7-3.3 and 9.4-10 nm off at 480 kt) and onto it within 0.2 nm; 1 nm off
+  engaged at once, also 1 nm off its line 10 nm before the leg's start; 85 deg
+  towards its line 1 nm before its start as 1 nm past it (8.9 nm off) and onto
+  it, 20 nm before its start also where the turn begins and onto the line;
+  45 deg towards it crossing it 6 nm before its start 3.0 nm off and onto it,
+  crossing it 1 nm past the active fix only 2.5 nm off (1 nm before it 3.0 nm
+  off); 1 nm past a fly-by fix flown through in HDG SEL at once and onto the
+  next leg, 12 nm off a leg 1 nm past its start at 90 deg towards it and 1 nm
+  beside the leg into its start (that fix sequenced while LNAV was not engaged)
+  onto the leg, not round that fix's arc, as also parallel to the leg into a
+  +30 deg fix 2.6 nm inside at 480 kt, engaging as that fix is sequenced
+  abeam (at most 0.1 nm through the leg after it, 45 deg of turning), and
+  5 nm before a fix (480 kt, 1.5 nm
+  off the leg to it, HDG SEL 000 or 345; not sequenced at its turn's lead, LNAV
+  not engaged) at the push, as LNAV engaging at once flies it, but with that
+  fix sequenced 10 nm past it on the line of the leg to it, flying away from
+  the next leg, and 10 and 20 nm before it on that leg flying away, still armed
+  (20 nm before it flying towards it engaged where the turn onto the next leg's
+  line begins, 9.7 nm before it); at a dogleg's FIX (+90 deg onto a 3 nm leg,
+  -90 deg at NEXT, 480 kt, NEXT not sequenced) engaged at the push and onto the
+  leg after NEXT; at once on a leg flown direct (from VECTORS) or after the
+  747's own DIRECT TO; armed on the runway, engaged above 50 ft, also 1 nm
+  before the leg's start (armed on the ground for the takeoff). While LNAV is
+  not engaged (off or armed) the active fix sequenced abeam it, past the
+  perpendicular to its leg at the fix, within 21 nm of the leg: along the leg
+  at the fix, 15 nm off abeam it and 25 nm off never (480 kt, +90 deg at the
+  fix, its lead 9.7 nm); a leg flown direct to its fix
+  (from VECTORS) from where the 747 was when the fix became active, so a fix
+  passed 1.2 nm off is sequenced abeam it (not only within 0.3 or 0.5 nm),
+  that start noted with the fix (again when a route edit puts another fix at
+  the active index) and not at 0/0 (XTLua's first read after a reload).
+- `lnav_xtk_error_test.lua`: LNAV's cross-track error every frame - the signed
+  distance from the active leg (+ right) mid-leg on both sides and near its
+  end, from the offset track while an offset is flown (not after a
+  direct-to), from the fix before an altitude leg's end, from PPOS on native
+  sequencing, 0 without a leg, and in a fly-by turn from its arc (the path
+  LNAV flies) on it and outside it, but with LNAV off or armed past the
+  turn's bisector before the fix is sequenced abeam from the leg to it (LNAV
+  engaged: the fix sequenced, from its arc; 3.1 nm inside the arc the fix
+  still active, from its arc); and PROGRESS page 2 showing L or R and the
+  distance.
+- `lnav_path_geometry_test.lua`: the lateral path at a fly-by fix for LNAV's
+  path guidance (item i-1b) - the arc tangent to both legs R tan(turn / 2)
+  from the fix, the element abeam the aircraft, the signed cross-track from
+  the legs and from the arc (the fix outside it, a point inside it), the
+  path's course, and the pure-pursuit aim point along the leg, round the arc
+  and onto the next leg, at most 45 deg off a leg; 90 deg turns both ways, no
+  turn, 150 deg, past turns of 120 and 150 deg the outbound leg (behind the
+  arc's start in the inbound leg's frame: the turn's bisector parts the two
+  legs' sides), whether the aircraft is past the bisector, the ground speed
+  an arc is drawn for (the highest the wind gives across the turn), a capture
+  look-ahead on the legs (the aim waiting at the arc's start until the
+  look-ahead reaches it), and no path without a radius, courses or a
+  look-ahead, or for a reversal (175 deg or more). Beyond 150 deg (item P15)
+  the turn starting R tan(75) before the fix, where a 150 deg turn starts:
+  for 170 deg R (1 - cos 170) - R tan(75) sin 170 outside the outbound leg on
+  its course, 45 deg on, the straight line closing on the leg and where the
+  path joins it, on the first arc, on the straight line and on the leg after
+  it (cross-track, course, along), the left turn mirrored, 151 deg turning on
+  just enough and back at once, and how far before and after the fix the
+  path leaves and joins the legs; the element moving on only from the
+  caller's last one (0.9 nm inside the inbound leg 10 nm before a 170 deg fix
+  the inbound leg and not past the bisector, 1 nm inside the straight line
+  not back to the inbound leg; just past the first arc's end of a 150.1 deg
+  turn, which has no straight line, on at any radius) and the bisector the
+  path's (where the first arc crosses the bisector line, 44 deg round it
+  for 170 deg).
+- `vnav_turn_hold_test.lua`: a fix LNAV sequences early for its turn keeping
+  its altitude as VNAV's descent floor until the aircraft is past the turn's
+  bisector - the bisector for straight fixes, 65-137 deg turns both ways and
+  a reversal; EHAM's NIRSI (at or above FL055, 5563 ft) in its 65 deg turn with
+  the production LNAV and VNAV_NEXT_ALT, its leg flown direct (from VECTORS):
+  held from the switch 1.6 nm before through the turn, AM607's 4272 past the
+  bisector; and no hold below the fix's altitude, in the climb, after a jump of
+  the active fix or one from afar, at a straight fix once abeam, when vectored
+  away, or for an altitude leg's end or the origin. Flown by its path (item
+  i-1b), NIRSI itself is sequenced at the bisector: its 5563 without a hold
+  until there.
+- `vnav_held_fix_path_test.lua`: a fix LNAV sequences early for its turn stays
+  the next point of VNAV's descent path (setDistances' profile) until its
+  bisector - 1 nm before NETOM with NIRSI active and NETOM held,
+  setDescentVSpeed aims at NETOM's 7849 on the path (it aimed at NIRSI's 5563,
+  180 ft above that path), and past the bisector at NIRSI's.
+- `vnav_profile_constraints_test.lua`: VNAV's descent path (setDistances'
+  profile) crosses each point inside its CIFP constraint - the native FMS's
+  altitude raised to the floor (NETOM's 6800 to FL070), lowered to the
+  ceiling (SUGOL's 15000 to its window's FL140, 9500 to FL100), and
+  setDescentVSpeed aims there; inside their constraints the points keep the
+  native FMS's. A point without an altitude takes the straight path's
+  between its neighbours inside its constraint (SUGOL about 11,830 in its
+  window, LAMSO about 21,450 under an at or below FL230, FL200 under an at
+  or below FL200, AM608 its floor 3400); it took the floor, else the
+  ceiling. After a point in the cruise it takes the T/D's 290 ft/nm line
+  back from the next point (LAMSO about 21,870 after DIBAL at FL370; the
+  straight line from DIBAL took the ceiling 23000).
+- `vnav_descent_points_test.lua`: VNAV PTH's descent through the route's
+  points below the transition altitude, the production autopilot, VNAV,
+  energy mode and A/T in approach_model.lua's closed loop on the EHAM route
+  from 12 nm before SUGOL, the MCP at 2000 ft: the AFDS's altitude stays the
+  MCP's, the energy mode stays on and the A/T's mode the same through SUGOL
+  and NETOM, SUGOL is crossed inside its FL100-FL140 window and NETOM at or
+  above FL070, each within 200 ft of its path, and the V/S stays at 500 fpm
+  or more within 30 s of each (each point's altitude was the AFDS's
+  level-off).
+- `vnav_turn_path_test.lua`: VNAV's descent path through a fly-by turn is
+  continuous and at the fix's altitude at the turn's bisector - the
+  production LNAV (the hold of NETOM for its 86 deg turn and its release at
+  the bisector), setDistances and setDescentVSpeed, the 747 flown along the
+  inbound leg, the arc LNAV draws (and a tighter one) and the outbound leg:
+  no step over 15 ft in 0.02 nm (the straight distance to the point dropped
+  the path 480 ft at the release), NETOM's 7849 at the bisector, and the
+  legs' paths as before away from the turn; so is the approach's path
+  (B747_vnav_approach_path) through NIRSI's 65 deg turn (it stepped 168 ft).
+  Both also with the turn sequenced at its bisector, as LNAV sequences a turn
+  it flies by its path (with the turn known only from that sequence NETOM's
+  path stepped 290 ft and NIRSI's was 59 ft high at the bisector).
+- `vnav_turn_latch_test.lua`: the fly-by turn LNAV hands VNAV's path is the
+  route's as it stands - the production LNAV (cross-track error, hold and
+  turn), setDescentVSpeed and setDistances in the production order, the 747
+  flown through the turns: after a route edit at the turn's fix or the next
+  one (NIRSI moved 2.5 nm before NETOM, its turn 40 deg instead of 86) the
+  turn goes out on the new course and the path is the new route's, with no
+  step over 15 ft (the old turn, latched by its index, stepped the path
+  +303 ft after the bisector); the turn is taken only while LNAV flies the
+  turns (none with LNAV armed, flown straight past NETOM) and ends once
+  the 747 is vectored 1 nm farther from the fix than where it was taken;
+  in HDG SEL or a direct-to it stays while the 747 turns on round its arc
+  (ended at the HDG SEL, the path stepped -740 to -820 ft where NETOM was
+  sequenced abeam) and fades out of the path as the 747 goes off it - with
+  LNAV's arc drawn for 324 kt and the 747 turning inside it, and flown
+  straight on before a 110 deg turn, no step over 15 ft (ended 0.5 nm off
+  LNAV's path it stepped +281 and +332 ft at once) - and has ended 2 nm
+  past NETOM's abeam point flown straight on; where it ends before its own
+  end (HDG SEL, the route edit) the
+  path carries on, the step taken out over 2 nm, also turned back from the
+  fix (the cut taken off was dropped at once: +77 ft);
+  and on a leg too short for one turn to end before the next begins
+  (AM607's 90 deg 2.0-4.0 nm after NIRSI's 64 deg, in 0.01 nm steps) the
+  approach's path has no step against its slope over 8 ft (the next turn,
+  taken only once the one before had ended, stepped it -375 ft with a
+  2.6 nm leg; below 2.4 nm the step at AM607's bisector, over the blend's
+  250 ft, was taken at once: +259 ft with 2.2 nm), also when the turn
+  carried on ends with a route edit of its fix (NIRSI nudged 1 m: -94 ft
+  at once); far from the
+  fix (40 nm, the cruise) LNAV works the turn out every 5 s at most, not
+  every frame. The turn's fade moves with the distance flown, so LNAV
+  engaged again about 1 nm off the path (NETOM, a 110 deg turn) and HDG
+  SEL with LNAV engaged 1 nm outside NETOM's turn leave no step over 15 ft
+  (-86, -269 and +101 ft at once with the fade set from the distance off
+  the path each frame); on a short leg the distance off the path is taken
+  from the turn carried on too (on NIRSI's arc 2.6 nm before AM607 the
+  747 is at most 0.05 nm off as LNAV takes it and the fade stays at most
+  0.1; from AM607's path alone up to 0.27 nm, and 0.5 nm with arcs LNAV
+  shares: faded 0.23); a change carries the step still being taken out
+  on (HDG SEL 0.8 nm before NETOM's arc, the 747 at 15 deg of bank: no
+  step against the path's slope over 15 ft; -503 ft at once at the turn's
+  end), and a
+  route edit's own step over 250 ft is taken at once (NETOM's 110 deg
+  turn edited to straight on 3 nm before it: the new route's path at
+  once; blended, 229 ft off it), the blend still being taken out with it
+  (AM608 moved 1 nm back 0.05-0.8 nm after AM607's bisector on a 2.0 nm
+  leg: the new route's path at once, as with the blend's state cleared at
+  the edit; carried on, -265 ft at once and up to 265 ft off it). The
+  turn carried on counts towards the
+  distance off the path only up to its own outbound leg: flown straight on
+  past AM607's arc in HDG SEL on the 2.6 nm leg, AM607's turn ends by
+  8.3 nm (8.80 measured from that leg too).
+- `vnav_mcp_push_test.lua`: after an ALT selector push in the descent (the
+  MCP dialled down from VNAV ALT) the AFDS's altitude is the new MCP
+  altitude at once (it was NETOM's 7849 above the cleared 7000 for 30 s),
+  and VNAV ALT is set as soon as X-Plane holds it, also within 30 s of the
+  push (VNAV_DES took the capture back every 0.2 s until the 30 s were up);
+  a push where the 747 is levelled at the MCP altitude leaves VNAV ALT. In
+  the climb too (VNAV_CLB_ALT on the EINN route): 25 s after a push the
+  AFDS's altitude is the MCP's 11000 below VNAV's target (it was 33000),
+  and VNAV ALT is set there at once.
+- `vnav_spd_level_off_test.lua`: VNAV SPD's descent (FLCH: the IAS window
+  open above SPD TRANS) still levels off at the STAR's constraints - SUGOL's
+  floor FL100 (not its predicted 11315) with the MCP at 2000, also where it
+  levelled off (X-Plane's ALT HOLD), the MCP where it is higher - while VNAV
+  PTH, also with the window open below SPD TRANS, takes the MCP altitude
+  alone (the production VNAV_DES_ALT).
+- `xtlua_vnav_tables_test.lua`: VNAV's new global tables in XTLua's namespace
+  (init.lua's create_namespace): LNAV's held turn (B747_lnav_vnav_turn) and
+  the MCP altitude's conflict (B747_vnav_mcp_conflict) read as plain tables,
+  a missing index nil (without a metatable XTLua copied them into a
+  namespace whose missing-index read overflowed the stack).
+- `vnav_mcp_above_test.lua`: the MCP altitude dialled above the 747 in a
+  VNAV PTH descent (9000 to 13,000 at 12,000 ft): it levels off where it is
+  and holds in VNAV ALT (FCOM 4.10.7), neither climbing nor going on
+  descending to the next point (mcp_alt_dial_model.lua's closed loop).
+- `vnav_spd_descent_test.lua`: VNAV SPD's descent in the closed loop
+  (mcp_alt_dial_model.lua): from FL250 it levels at an at or above FL150 and
+  holds it with one pitch-mode change until the fix (FLCH put back every
+  0.2 s made the FMA flip every 0.6 s), then descends to the MCP without
+  levelling at the next point's predicted altitude.
+- `vnav_cifp_constraints_test.lua`: the SID, STAR and approach constraints read
+  from X-Plane's CIFP (`B747.70.xt.autopilot.constraints.lua`) - records as
+  X-Plane writes them (a CA leg, windows, flight levels, the glide slope
+  kinds at the FACF and FAF, the final approach angle, the missed approach's
+  start), and on made-up
+  airports in that form the procedures found from the route's idents: the SID
+  for the runway against one differing only in its last fix, another
+  runway's, an enroute transition; the STAR and the approach transition at
+  the same fix (the transition's constraint stands, as the native FMS keeps
+  it), the ILS against an RNAV approach without its FAF, the final alone, a
+  route back to the departure airport, no file, Custom Data before the
+  default data; legs at one fix in a row (a hold after it), a SID's altitude
+  leg before its first fix, a join where the later procedure has none; the
+  files read a few lines a frame, kept for a new route to the same airports,
+  an airport read in part read again, the file closed when the route goes,
+  and the autopilot's per-frame update by route index.
+  With `XPLANE_ROOT` set to an X-Plane 12 folder it also checks the real
+  EIDW 28R ENDE3J, EHAM LAMS2A and ILS 18R via SUG1D, and EINN's ILS 06.
+- `vnav_climb_constraints_test.lua`: VNAV's climb with the SID's constraints
+  (EIDW 28R ENDE3J) - the target and the dial at the lowest ceiling of the
+  fixes not passed yet (DW124's FL090 from DW129 on), no resume while
+  levelled there, on to ENDEQ's FL230 once DW124 is passed and to CRZ ALT
+  past ENDEQ, DW124 held while LNAV has sequenced it early, no level-off at an
+  at or above, at an at's altitude and a window's top, a ceiling far below
+  the aircraft let go, the MCP below the ceiling standing, and nothing
+  without the constraints or in the descent.
+- `vnav_descent_floors_test.lua`: VNAV's descent with the STAR's and the
+  approach's constraints (EHAM LAMS2A, ILS 18R via SUG1D, and a made-up at or
+  above FL200 above the transition altitude) - the highest floor of the
+  fixes not passed yet as a level-off whatever its height, a fix held while
+  LNAV has sequenced it early included, the native FMS's path altitude
+  staying the target where it is higher (SUGOL's 11315, NIRSI's 5563), the
+  floor where [9] is missing, no level-off above an aircraft already below
+  the floor, and nothing without the constraints or in the climb.
+- `vnav_approach_path_test.lua`: VNAV PTH in the approach (within 25 nm of the
+  arrival runway along the route) on the path to the runway - the fixes'
+  altitudes through their CIFP constraints (AM608's 3300 below its floor at
+  3400), the arrival runway by its name (EHAM with its missed approach's far vectors leg, TST744L
+  with its departure runway, not the departure end of a route back to the
+  departure airport), only the fixes from the route's farthest point on (a
+  circuit's way out left out, level beyond; after a DIRECT TO), no runway or
+  pseudo fix, a runway without an altitude, the path
+  from the runway's threshold crossing altitude up the final approach angle
+  (3.0, 3.2 or 2.5 deg) to the glide slope intercept, through the route
+  altitudes never climbing (EINN's ASGON 3,046 ft after ELPOM's 3,000) and up
+  to CRZ ALT at 290 ft/nm, the V/S from its gradient and the path error (never
+  a climb, at most 1,500 fpm of correction, kept within the flaps' placard - 2
+  kt and Vmo - 11 kt by fading the correction and then shallowing); and the
+  production setDescentVSpeed and setDistances on EHAM ILS 18R and EINN ILS
+  06: the path error, V/S and V/B (to the next fix) on the path, above and
+  below it, within 600 ft above the AP altitude, by a fix LNAV sequenced
+  early, near the flaps 5 placard and Vmo, with EHAM's missed approach, with
+  VNAV off (the path error only), into the approach at 25 nm and out of it
+  beyond 27 nm (held by the runway's name and position, let go without a
+  route or past the runway), and nothing beyond 25 nm from farther out.
+- `vnav_approach_autothrottle_test.lua`: the A/T in the approach (EINN ILS 06,
+  the IAS window open at idle 15.6 nm out) - VNAV_DES keeps it on and turns
+  it back on, B747_ap_fma shows SPD at idle, and VNAV PTH stays with the
+  window open above SPD TRANS (VNAV SPD 30 nm out), also from ALT HOLD; 30 nm
+  out the descent's energy mode and IDLE as before, also near a level-off
+  with the A/T off (the window open) or on (the window shut). It loads the
+  production code with `approach_model.lua`.
+- `approach_model_test.lua`: EHAM ILS 18R via SUG1D and EINN ILS 06 flown in
+  the approach model from where the line flights of 2026-10-16 were, 300 ft
+  (EINN 500 ft) higher or lower, faster or slower, 30 nm out, with APP later
+  and the LOC sooner, 1,000 and 1,500 ft high (also with VNAV's speed at the
+  A/T's cap, and so in a tailwind), in a tailwind and a headwind (EINN in
+  TST744L's westerly): the real glide slope captured (below 4 deg, by 5 nm),
+  never over the flaps' placard, the A/T on, no climb, within 0.75 dot at
+  1,000 and 500 ft and 30 ft at 200 ft, VREF to VREF + 20 kt at 500 ft; and
+  EHAM 1,000 ft high at the A/T's flaps 1 cap in a tailwind growing to 70 kt
+  at most 0.5 kt over the placard with the A/T on (it ends on the false lobe,
+  without the speedbrake).
+- `approach_model.lua` (not a suite): a closed-loop longitudinal model of the
+  final descent and ILS approach - the production autopilot (VNAV, the FMA,
+  setDistances), AFDS pitch director and EEC throttle code, each script in
+  its own namespace with the datarefs shared as in XTLua, replicas of LNAV's
+  sequencing, the IAS window, the APP arming and G/S capture, the kit's
+  approach procedure, and a point-mass 747 (lift, drag and thrust fitted to
+  the kit's recordings), with EHAM ILS 18R and EINN ILS 06 as flown; its
+  loader runs the production code for the suites' own scenarios. The
+  attitude follows the FD's pitch by a 1.5 s lag, or with `pitch_loop` by
+  the production pitch loop (ap_pitch_assist's PID, its output's and
+  pressure_output's B747_interpolate_value, doTrim) against X-Plane's pitch
+  dynamics fitted to p32-line1's G/S (`PITCH_DYNAMICS`).
+- `approach_model_pitch_test.lua`: the approach model's pitch loop - p32-line1's
+  G/S (`data/p32-line1_gs_pitch.csv`, from the kit's session.csv) replayed:
+  the recorded FD through the pitch loop as flown (kp = ki = kd = 0.07) at
+  34 fps against `PITCH_DYNAMICS` gives the recorded attitude within 0.08 deg
+  rms and 0.3 deg, the elevator's ratio within 0.07 rms; EHAM flown to 200 ft
+  with the loop at 20 and 34 fps, the attitude within 1 deg of the FD.
+- `vnav_speed_constraints_test.lua`: VNAV's speed with the route's speed
+  constraints - in the climb (EIDW 28R ENDE3J) the speed allowed now
+  (laminar/B747/autopilot/vnav/constraint_speed: 210 kt from the runway to
+  DW129, DW129 held while LNAV has sequenced it early, 290 kt to ENDEQ, none
+  after it, none for an at or above), and the climb's targets capped by it
+  below and above 10,000 ft and where ECON would be the climb Mach, never
+  below the manoeuvring speed of the flaps set, recalculated when it changes;
+  in the descent (EHAM ILS 18R via SUG1D) NETOM's 250 and NIRSI's 220 from
+  where the deceleration to them begins (at 0.5 kt/s plus 1 nm) and on after
+  their fixes, NIRSI held, AM622's at or above 160 no limit, and the
+  descent's targets capped by it below and above 10,000 ft, the descent Mach
+  turned to the constraint's CAS, and the flaps' manoeuvring speed kept.
+- `xtlua_route_constraints_test.lua`: the route constraints' code as XTLua runs
+  it - every laminar/ dataref the xt autopilot binds created by an init
+  script of one of the aircraft's XTLua plugins (in the xt autopilot
+  deferred_dataref is find_dataref), and B747_update_route_constraints,
+  B747_update_constraint_speed and VNAV_NEXT_ALT run in init.lua's namespace,
+  where a global table without a metatable would be wrapped and its missing
+  index read would overflow the stack.
 - The remaining suites cover AFDS helpers, planned-step editing/EXEC/ERASE,
   ECON calculations (CAS, and the climb Mach as the ECON cruise Mach for the
   cruise altitude at top-of-climb weight), ND waypoint selection, and the

@@ -76,6 +76,72 @@ function B747_rescale(in1, out1, in2, out2, x)
     return out1 + (out2 - out1) * (x - in1) / (in2 - in1)
 end
 
+-- [climb thrust] The 747-400's CLB, CLB 1 and CLB 2 are rated thrusts: the FMC's reference EPR/N1 from pressure
+-- altitude and TAT, which the A/T holds in THR REF; the climb rate is the result (FCOM). CLB 1 and CLB 2 take 10 and
+-- 20 % off the climb thrust to 10,000 ft and give it back linearly by 15,000 ft (the common schedule; 744 FCOM via BA
+-- and Virgin). The share of the climb thrust kept, for a derate (0, 1 or 2) at an altitude (ft):
+function B747_clb_share(derate, altitude_ft)
+    if derate == 1 then return B747_rescale(10000.0, 0.9, 15000.0, 1.0, altitude_ft) end
+    if derate == 2 then return B747_rescale(10000.0, 0.8, 15000.0, 1.0, altitude_ft) end
+    return 1.0
+end
+-- the Mach of a calibrated airspeed (kt) at a pressure altitude (ft) in the standard atmosphere
+function B747_cas_to_mach(cas_kt, altitude_ft)
+    local delta = (1 - 6.8756e-6 * math.min(altitude_ft, 36089)) ^ 5.2559
+    if altitude_ft > 36089 then delta = delta * math.exp(-4.8063e-5 * (altitude_ft - 36089)) end
+    local qc = (1 + 0.2 * (cas_kt / 661.47) ^ 2) ^ 3.5 - 1
+    return math.sqrt(5 * ((qc / delta + 1) ^ (2 / 7) - 1))
+end
+-- The PW4056's Initial Climb EPR (FCOM; INITIAL_CLIMB_epr_PW4056: 200 KIAS 1,000 ft above the airport) at an airport
+-- altitude (ft) and OAT (C), bilinear between the table's columns (10 to 54 C; colder as 10 C) and rows (-2,000 to
+-- 10,000 ft); a blank (0.00: too hot for that altitude) takes the next cooler column's value.
+local INITIAL_CLIMB_OAT_C = {10, 15, 20, 25, 30, 35, 40, 45, 50, 54}
+local function B747_initial_climb_cell(column, altitude_ft)
+    for c = column, 1, -1 do
+        local value = INITIAL_CLIMB_epr_PW4056[INITIAL_CLIMB_OAT_C[c]][altitude_ft]
+        if value ~= nil and value > 0 then return value end
+    end
+    return 0
+end
+function B747_PW_initial_climb_EPR(airport_alt_ft, oat_c)
+    local alt = math.max(-2000, math.min(10000, airport_alt_ft))
+    local a1 = math.min(9000, math.floor(alt / 1000) * 1000)
+    local fa = (alt - a1) / 1000
+    local oat = math.max(10, math.min(54, oat_c))
+    local c1 = 1
+    while c1 < #INITIAL_CLIMB_OAT_C - 1 and INITIAL_CLIMB_OAT_C[c1 + 1] <= oat do c1 = c1 + 1 end
+    local fo = (oat - INITIAL_CLIMB_OAT_C[c1]) / (INITIAL_CLIMB_OAT_C[c1 + 1] - INITIAL_CLIMB_OAT_C[c1])
+    local cell = B747_initial_climb_cell
+    local low = cell(c1, a1) + (cell(c1, a1 + 1000) - cell(c1, a1)) * fa
+    local high = cell(c1 + 1, a1) + (cell(c1 + 1, a1 + 1000) - cell(c1 + 1, a1)) * fa
+    return low + (high - low) * fo
+end
+-- The PW4056's Max Climb EPR (FCOM; MAX_CLIMB_epr_PW4056: the 340 kt / M.84 schedule) at a pressure altitude (ft)
+-- and TAT (C), bilinear between the table's columns (-20 to 60 C; colder as -20 C) and rows (0 to 45,000 ft); a blank
+-- (0.00: too hot for that altitude) takes the next cooler column's value. Two fitted surfaces stood in for it and met
+-- nowhere at TAT 10 C at 30,000 ft (1.561 at 9.9 C, 1.437 at 10.1 C, the table 1.52; review 37).
+local MAX_CLIMB_TAT_C = {-20, -10, 0, 10, 20, 30, 40, 50, 60}
+local function B747_max_climb_cell(column, altitude_ft)
+    for c = column, 1, -1 do
+        local value = MAX_CLIMB_epr_PW4056[MAX_CLIMB_TAT_C[c]][altitude_ft]
+        if value ~= nil and value > 0 then return value end
+    end
+    return 0
+end
+function B747_PW_max_climb_EPR(altitude_ft, tat_c)
+    local alt = math.max(0, math.min(45000, altitude_ft))
+    local a1 = math.min(40000, math.floor(alt / 5000) * 5000)
+    local fa = (alt - a1) / 5000
+    local tat = math.max(-20, math.min(60, tat_c))
+    local c1 = 1
+    while c1 < #MAX_CLIMB_TAT_C - 1 and MAX_CLIMB_TAT_C[c1 + 1] <= tat do c1 = c1 + 1 end
+    local ft = (tat - MAX_CLIMB_TAT_C[c1]) / (MAX_CLIMB_TAT_C[c1 + 1] - MAX_CLIMB_TAT_C[c1])
+    local function at(c, a) return B747_max_climb_cell(c, a) end
+    local low = at(c1, a1) + (at(c1, a1 + 5000) - at(c1, a1)) * fa
+    local high = at(c1 + 1, a1) + (at(c1 + 1, a1 + 5000) - at(c1 + 1, a1)) * fa
+    return low + (high - low) * ft
+end
+
 function round_thrustcalc(x, input_type)
     --print("x IN = "..x)
 
@@ -928,6 +994,42 @@ function spd_throttle()
 	simDR_engine_throttle_jet_all = average_throttle / 4
 end
 local previous_throttleTime=0
+local THR_LEVER_RATE=0.003
+local THR_LEVER_GAIN=0.005
+-- [P44] In flight towards a climb or cruise reference (CLB, CLB 1, CLB 2, CRZ: a VNAV climb resumed from a level-off,
+-- a FLCH climb, a step climb) the levers advance at most this much of their range a second: climb thrust from level
+-- flight's (0.15 -> 0.66 at 250 kt) in about 20 s. They came in 4-6 s (p35-line1, 2026-10-20: resuming the climb at
+-- 8,948 ft, 0.16 -> 0.67 in 4 s and the IAS 251 -> 271 kt); real 744s pass 1,000 fpm about 9 s and 2,000 fpm about
+-- 15 s into a climb resumed in VNAV, the IAS 3 kt (0-6) over the target (ADS-B, research_reclimb.md): the climb thrust
+-- comes in over about 20-25 s. Only with the pitch on speed (VNAV SPD, FLCH SPD): a go-around's reference is CLB a
+-- quarter of a second after TO/GA when the MCP altitude is more than 1,000 ft above (flight phase 1), or CRZ above
+-- 1,500 ft RA (review 45), and its thrust keeps the faster rate above, as the takeoff's.
+local THR_REF_FLIGHT_ADVANCE_PER_SEC=0.025
+local THR_REF_FLIGHT_ADVANCE_PITCH_MODES={[4]=true,[8]=true}
+-- [P46] The advance's rate comes up from THR_REF_FLIGHT_ONSET_SHARE of it over THR_REF_FLIGHT_ONSET_SEC from its start
+-- (a new start after half a second without advancing: the time of the frames here that do not advance or run in IDLE,
+-- where the levers go to idle whatever the reference, and the time spent outside this branch, but not one long frame of
+-- an advance up to 1 s. A frame over 1 s goes through ecc_throttle's resync below and counts as outside; HOLD or the
+-- A/T not armed for up to 1 s makes the next frame that long, which counts only if that frame does not advance;
+-- reviews 48-50): real 744s resuming the climb add excess thrust at about 0.004 W a second from the start, the V/S
+-- 580 / 1,150 / 1,980 / 2,500 fpm 5 / 10 / 15 / 20 s into it (ADS-B, median); at the steady rate p37-line1 (2026-10-21)
+-- went 703 / 1,457 / 2,469 / 3,476 fpm. The lever 0.07 up after 5 s (0.125 before), 0.175 after 10 s (0.25), climb
+-- thrust from level flight's after about 23 s.
+local THR_REF_FLIGHT_ONSET_SHARE=0.4
+local THR_REF_FLIGHT_ONSET_SEC=10
+local thrRefAdvanceStart=nil
+local thrRefQuiet=0
+local thrRefLastFrame=-100
+-- [review 21] The A/T's levers in its thrust modes move towards their target at most over their range in `seconds`, and
+-- onto it when nearer: the same at any frame rate. B747_interpolate_value goes the last step by a tenth of the way a
+-- frame, and the A/T moves its target only with the levers within 0.02 of it, so in flight (the levers over their
+-- range in 1 s) GA thrust from approach thrust took 11.0 / 8.5 / 5.3 / 5.4 s at 20 / 30 / 45 / 60 fps.
+local function B747_thrust_lever_slew(current,target,seconds)
+	local step=SIM_PERIOD/seconds
+	if math.abs(target-current)<=step then return target end
+	if target>current then return current+step end
+	return current-step
+end
 function ecc_throttle()
 	--print("---ECC Throttle---")
 	    local input=1
@@ -945,7 +1047,14 @@ function ecc_throttle()
 
 		time=simDRTime-previous_throttleTime
 		previous_throttleTime=simDRTime
-		if time>1 or time==0 then
+		if time>1 then
+			-- [review 21] the A/T taking the levers again (its first frame after a second without them: TO/GA, SPD
+			-- after HOLD): its lever target from where they are. It kept its last (0.5 from load, idle after a landing)
+			-- and took the levers there first: from the FCTM's 70 % N1 start (about 0.6) back to 0.51 at TO/GA.
+			spd_target_throttle=(B747DR_throttle[0]+B747DR_throttle[1]+B747DR_throttle[2]+B747DR_throttle[3])/4
+			simDR_engine_throttle_jet_all=spd_target_throttle
+			return
+		elseif time==0 then
 			return
 		end
 		-- Autoland flare below 50 ft RA: IDLE is the landing retard. The speed
@@ -973,14 +1082,41 @@ function ecc_throttle()
 				--print("throttle target="..target.. " current "..input.." targetBug "..targetBug.." inputBug "..inputBug)
 			end
 		end
-	local rog=0.0001+(math.abs(input-target))*time*0.0005
+	-- [B-11] The lever target moves per second, whatever the frame rate: THR_LEVER_RATE plus THR_LEVER_GAIN of the
+	-- error (PW/RR: EPR x 200, GE: N1 x 5), a time constant of about 1.5 s on the PW levers. It moved 0.0001 a frame
+	-- plus 0.0005 of the error a second (about 15 s): takeoff thrust took 30-40 s from EPR 1.10 and HOLD at 65 kt
+	-- froze the levers short of it, at 0.846-0.856 on EIDW's runway as the frame rate went. A real 747-400's A/T sets
+	-- takeoff thrust within seconds of TO/GA. The levers still move at most as fast as below (5 s end to end on the
+	-- ground below 30 kt).
+	local rog=(THR_LEVER_RATE+math.abs(input-target)*THR_LEVER_GAIN)*time
 	
 	--print("rog"..rog.." B747DR_throttle_resolver_angle[0] "..B747DR_throttle_resolver_angle[0].." spd_target_throttle "..spd_target_throttle.. " simDR_N1_target_bug[0] "..simDR_N1_target_bug[0])
 	--[[if(rog>0.005) then
 		rog=0.005
 	end]]--
+	local advance=rog
+	local reference=B747DR_ref_thr_limit_mode or ""
+	-- read in every frame of the thrust modes, from the takeoff roll on (XTLua gives 0 for a module's first read)
+	local pitchMode=B747DR_ap_FMA_active_pitch_mode
+	if simDR_onGround==0 and (string.sub(reference,1,3)=="CLB" or reference=="CRZ")
+		and THR_REF_FLIGHT_ADVANCE_PITCH_MODES[pitchMode] then
+		local outside=math.max(0,simDRTime-time-thrRefLastFrame)
+		thrRefLastFrame=simDRTime
+		if target> input+1 and B747DR_ap_FMA_autothrottle_mode~=2 then
+			if thrRefAdvanceStart==nil or thrRefQuiet+outside>0.5 then thrRefAdvanceStart=simDRTime end
+			thrRefQuiet=0
+		else
+			thrRefQuiet=thrRefQuiet+outside+time
+		end
+		local onset=1
+		if thrRefAdvanceStart~=nil then
+			onset=math.min(1,THR_REF_FLIGHT_ONSET_SHARE
+				+(1-THR_REF_FLIGHT_ONSET_SHARE)*(simDRTime-thrRefAdvanceStart)/THR_REF_FLIGHT_ONSET_SEC)
+		end
+		advance=math.min(advance,THR_REF_FLIGHT_ADVANCE_PER_SEC*onset*time)
+	end
 	if (target> input+1) and math.abs(simDR_engine_throttle_jet_all-spd_target_throttle)<0.02 then
-		spd_target_throttle= (spd_target_throttle+rog)
+		spd_target_throttle= (spd_target_throttle+advance)
 	elseif target< input-1 and math.abs(simDR_engine_throttle_jet_all-spd_target_throttle)<0.02 then
 		spd_target_throttle= (spd_target_throttle-rog)
 	end
@@ -1002,7 +1138,7 @@ function ecc_throttle()
 		end	
 		for i = 0, 3 do
 			--simDR_engn_thro[i]=B747_interpolate_value(simDR_engn_thro[i],spd_target_throttle,0,1.00,2)
-			B747DR_throttle[i]=B747_interpolate_value(B747DR_throttle[i],spd_target_throttle,0,1.00,animTime)
+			B747DR_throttle[i]=B747_thrust_lever_slew(B747DR_throttle[i],spd_target_throttle,animTime)
 			average_throttle=average_throttle+B747DR_throttle[i]
 			--simDR_throttle_ratio[i]	= B747DR_throttle[i]
 		end

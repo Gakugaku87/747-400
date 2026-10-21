@@ -40,6 +40,15 @@ vnavSPD_state["recalcAfter"]=0
 vnavSPD_state["setBaro"]=false
 vnavSPD_state["lastInvalidationReason"]="initialization"
 vnavSPD_state["lastRecalculationReason"]="none"
+-- [B-8] The FMC's cruise phase: once VNAV's climb has reached the cruise state (within 500 ft of CRZ ALT) it stays in
+-- cruise until the descent or the ground. A climb from it to a new, higher CRZ ALT (a step climb) is a cruise climb,
+-- flown at the cruise speed (the ECON cruise Mach or the crew's, crzspd) with CLB thrust; the climb speed schedule
+-- and its climb Mach are for the climb from the departure (TST744L's BEDRA step from FL310 flew the climb Mach .836,
+-- 326 kt below the crossover, against a cruise Mach of about .82). It is entered only at a valid CRZ ALT, at or
+-- above the transition altitude, and it ends out of cruise even while VNAV is off (B747_update_cruise_phase).
+-- cruiseLevelFt: the lowest CRZ ALT the cruise has been flown at since then (clb_crz_setSpd)
+vnavSPD_state["cruisePhase"]=false
+vnavSPD_state["cruiseLevelFt"]=nil
 local lastVNAVSpeed=0
 local vnavSPD_observed=nil
 
@@ -71,7 +80,8 @@ local VNAV_SPEED_WATCHED_VALUES={
     {key="vnav_target_altitude_ft", reason="VNAV target altitude changed"},
     {key="mach_transition_ready", reason="IAS/Mach transition threshold crossed"},
     {key="descent_mach_transition_ready", reason="descent IAS/Mach transition threshold crossed"},
-    {key="cruise_transition_ready", reason="cruise IAS/Mach transition threshold crossed"}
+    {key="cruise_transition_ready", reason="cruise IAS/Mach transition threshold crossed"},
+    {key="constraint_speed_kts", reason="route speed constraint changed"}
 }
 
 -- ECON CLB is a CAS/Mach pair.  Climb uses the climb Mach at the crossover;
@@ -141,7 +151,8 @@ local function B747_vnav_speed_snapshot()
         vnav_target_altitude_ft=B747DR_ap_vnav_target_alt,
         mach_transition_ready=mach_transition_ready,
         descent_mach_transition_ready=descent_mach_transition_ready,
-        cruise_transition_ready=cruise_transition_ready
+        cruise_transition_ready=cruise_transition_ready,
+        constraint_speed_kts=tonumber(B747DR_vnav_constraint_speed) or 0
     }
 end
 
@@ -152,6 +163,7 @@ end
 
 function B747_reset_takeoff_profile()
     takeoff_state = takeoff_profile.new()
+    vnavSPD_state["cruisePhase"]=false
     B747_invalidate_vnav_speed("new flight takeoff reference")
 end
 
@@ -353,6 +365,27 @@ function flapPlacardSpeedLimit()
     if placard==nil then return 399.0 end
     return placard-5
 end
+-- The manoeuvring speed of the flaps set (flaps up Vf0, flaps 1 Vf1 ... flaps 25 and 30 Vf25).
+local function B747_flap_manoeuvre_speed()
+    local flap=simDR_flap_ratio_control
+    local speed=B747DR_airspeed_Vf25
+    if flap<=0 then speed=B747DR_airspeed_Vf0
+    elseif flap<=0.168 then speed=B747DR_airspeed_Vf1
+    elseif flap<=0.34 then speed=B747DR_airspeed_Vf5
+    elseif flap<=0.5 then speed=B747DR_airspeed_Vf10
+    elseif flap<=0.668 then speed=B747DR_airspeed_Vf20
+    end
+    return tonumber(speed) or 0
+end
+-- A CAS target capped by the route's speed constraint (laminar/B747/autopilot/vnav/constraint_speed, from
+-- the CIFP), never below the manoeuvring speed of the flaps set: for a slow one the flaps stay out. Never above the
+-- target itself either: a constraint below the manoeuvring speed raised a SPD REST of 210 kt to Vf0's 230 kt and SPD
+-- TRANS to 252 kt at a heavy weight (review 44).
+local function B747_constraint_speed_cap(spdval)
+    local limit=tonumber(B747DR_vnav_constraint_speed) or 0
+    if limit<=0 or spdval<=limit then return spdval end
+    return math.min(spdval,math.max(limit,B747_flap_manoeuvre_speed()))
+end
 -- Write the speed mode and the MCP dial together with the X-Plane autopilot
 -- target (airspeed_dial_kts_mach) in the new unit. B747_ap_ias_mach_mode only
 -- writes that target after the 0.25 s IAS update (B747_updateIAS), and until
@@ -370,6 +403,50 @@ local function B747_set_vnav_speed_target(is_mach, dial_value)
         simDR_autopilot_airspeed_kts_mach = dial_value
     end
 end
+-- [review 17] The climb's limits at this altitude: the SPD REST below its altitude and the SPD TRANS below its (as
+-- clb_aptres and clb_spcres fly them, to 100 ft above it, that altitude included: B747_vnav_setClimbspeed leaves a
+-- state above its next altitude); 999 above them.
+local function B747_climb_speed_limit_here()
+    local limit=999
+    local restAlt,restSpd=tonumber(getFMSData("clbrestalt")),tonumber(getFMSData("clbrestspd"))
+    if restAlt~=nil and restSpd~=nil and simDR_pressureAlt1<=restAlt+100 then limit=math.min(limit,restSpd) end
+    local transAlt,transSpd=tonumber(getFMSData("spdtransalt")),tonumber(getFMSData("transpd"))
+    if transAlt~=nil and transSpd~=nil and simDR_pressureAlt1<=transAlt+100 then limit=math.min(limit,transSpd) end
+    return limit
+end
+-- [P42] A climb state's IAS target: its speed, raised to IAS - 15 kt when that is higher (a cut of more than 15 kt
+-- comes down by steps, one a recalculation), but never above the climb's limits here: the SPD REST and SPD TRANS
+-- below their altitudes, the route's constraint speed and the flaps'. The floor went past them: the climb resumed
+-- from EIDW's 9,000 ft SID level-off with the IAS running to 270 kt and VNAV asked for 254.7-255.3 kt below 10,000 ft
+-- (p35-line1, 2026-10-20); a SPD REST of 210 kt asked for 245 at 260 kt. The FMC commands no more than its limits.
+local function B747_climb_ias_target(spdval)
+    local limit=B747_constraint_speed_cap(modFlapSpeed(B747_climb_speed_limit_here()))
+    return math.min(math.max(spdval,simDR_ind_airspeed_kts_pilot-15),limit)
+end
+-- The ECON (or selected) climb speed, no lower than the flaps' manoeuvre speed, as a constraint: a selected 130 kt
+-- (the CLB page takes 130-300 kt) left only modFlapSpeed's Vmc + 10 under it, below SPD TRANS (review 51) and above
+-- it, where the target then dropped 13.4 kt past 10,100 ft at 233 t (review 52). nil when unknown.
+local function B747_climb_speed_floored(climbSpeed)
+    climbSpeed=tonumber(climbSpeed)
+    if climbSpeed==nil then return nil end
+    return math.max(climbSpeed,B747_flap_manoeuvre_speed())
+end
+-- [P47] A climb restriction's speed (SPD REST, SPD TRANS) is a limit, not a target: the FMC flies the ECON (or
+-- selected) climb speed when that is lower. A SPD REST of 300/12000 above an ECON of 290 kt was flown at 300, and SPD
+-- TRANS's 250 kt above a selected 240 (review 44, NIT-4).
+local function B747_climb_restriction_speed(restriction)
+    local climbSpeed=B747_climb_speed_floored(getFMSData("clbspd"))
+    if restriction==nil or climbSpeed==nil then return restriction end
+    return math.min(restriction,climbSpeed)
+end
+-- [P48] The current Mach climb_speed_uses_mach weighs (above the climb Mach it keeps the climb in Mach), except while a
+-- route constraint caps the CAS target (spdval below the speed it caps, base): then the constraint's CAS against the
+-- climb Mach alone decides, so the slower is flown. A 250 kt constraint at FL300 at M.80 gave M.78, 295.6 kt by
+-- afds.mach_to_cas (review 44, NIT-4).
+local function B747_climb_mach_weighed(spdval,base)
+    if spdval<base then return 0 end
+    return simDR_airspeed_mach
+end
 function clb_src_setSpd()
     
     if B747DR_airspeed_V2<900 then
@@ -386,8 +463,7 @@ function clb_aptres_setSpd()
     -- Reached only with a SPD REST entered; fall back to SPD TRANS otherwise.
     local restSpd=vnav_afds_helpers.climb_speed_for_state("aptres", getFMSData)
         or tonumber(getFMSData("transpd")) or 250
-    local spdval=modFlapSpeed(restSpd)
-    spdval=math.max(spdval,simDR_ind_airspeed_kts_pilot-15)
+    local spdval=B747_climb_ias_target(B747_constraint_speed_cap(modFlapSpeed(B747_climb_restriction_speed(restSpd))))
     print("convert to clb clbrestspd ".. spdval)
     B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     B747DR_switchingIASMode=1
@@ -395,12 +471,13 @@ function clb_aptres_setSpd()
 
 end
 function clb_spcres_setSpd()
-    local spdval=modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("spcres", getFMSData))
+    local base=modFlapSpeed(B747_climb_restriction_speed(vnav_afds_helpers.climb_speed_for_state("spcres", getFMSData)))
+    local spdval=B747_constraint_speed_cap(base)
     B747DR_switchingIASMode=1
     local clbmachval=B747_climb_mach_thousandths()/10
     -- Mach once the CAS target at this altitude (or the current Mach) reaches the climb Mach
     if vnav_afds_helpers.climb_speed_uses_mach(spdval, clbmachval/100, simDR_pressureAlt1,
-        simDR_airspeed_mach, simDR_autopilot_airspeed_is_mach) then
+        B747_climb_mach_weighed(spdval,base), simDR_autopilot_airspeed_is_mach) then
       print("convert to climb Mach in clb ".. clbmachval)
       B747_set_vnav_speed_target(1, clbmachval)
     else
@@ -410,7 +487,7 @@ function clb_spcres_setSpd()
       elseif(B747DR_ap_ias_dial_value<spdval) and simDR_autopilot_airspeed_is_mach == 0 then
         spdval=math.min(B747DR_ap_ias_dial_value+5,spdval)
       end]]--
-      spdval=math.max(spdval,simDR_ind_airspeed_kts_pilot-15)
+      spdval=B747_climb_ias_target(spdval)
       print("convert to climb transition speed ".. spdval.. " at "..simDR_ind_airspeed_kts_pilot)
       B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     end
@@ -418,12 +495,13 @@ function clb_spcres_setSpd()
 
 end
 function clb_nores_setSpd()
-    local spdval=modFlapSpeed(vnav_afds_helpers.climb_speed_for_state("nores", getFMSData))
+    local base=modFlapSpeed(B747_climb_speed_floored(vnav_afds_helpers.climb_speed_for_state("nores", getFMSData)))
+    local spdval=B747_constraint_speed_cap(base)
     B747DR_switchingIASMode=1
     local clbmachval=B747_climb_mach_thousandths()/10
     -- Mach once the CAS target at this altitude (or the current Mach) reaches the climb Mach
     if vnav_afds_helpers.climb_speed_uses_mach(spdval, clbmachval/100, simDR_pressureAlt1,
-        simDR_airspeed_mach, simDR_autopilot_airspeed_is_mach) then
+        B747_climb_mach_weighed(spdval,base), simDR_autopilot_airspeed_is_mach) then
       print("convert to climb Mach in clb".. clbmachval)
       B747_set_vnav_speed_target(1, clbmachval)
     else
@@ -436,7 +514,7 @@ function clb_nores_setSpd()
      else
         simDR_autopilot_airspeed_is_mach = 0
      end
-      spdval=math.max(spdval,simDR_ind_airspeed_kts_pilot-15)
+      spdval=B747_climb_ias_target(spdval)
       print("convert to ECON climb speed ".. spdval)
       B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     end
@@ -452,6 +530,26 @@ function clb_crz_setSpd()
     spdval=spdval/10
     local transalt=tonumber(getFMSData("transalt"))
     local climbspdval=modFlapSpeed(tonumber(getFMSData("clbspd")))
+    -- [B-8] in the cruise phase more than 500 ft below the level the cruise was flown at (after a descent VNAV did
+    -- not fly, in FLCH or V/S above the transition altitude) the cruise Mach's CAS at that level, until the cruise
+    -- Mach is reached: the cruise Mach itself was 335-385 KCAS from FL260 down to FL190 (Vmo 365; a review). A step
+    -- climb starts at that level and flies the cruise Mach throughout.
+    local levelFt=tonumber(vnavSPD_state["cruiseLevelFt"])
+    if vnavSPD_state["cruisePhase"] and levelFt~=nil and simDR_pressureAlt1<levelFt-500 then
+        local levelCas=vnav_afds_helpers.mach_to_cas(spdval/100, levelFt)
+        if levelCas~=nil and not vnav_afds_helpers.climb_speed_uses_mach(levelCas, spdval/100, simDR_pressureAlt1,
+            simDR_airspeed_mach, simDR_autopilot_airspeed_is_mach) then
+            -- capped as the climb's own CAS: the SPD REST and SPD TRANS below their altitudes, the route's constraint
+            -- speed and the flaps' (with a transition altitude of 3,000 ft the climb back from 8,000 ft after a descent
+            -- in FLCH flew 301 kt below 10,000 ft, under a 270 kt constraint 301: a review)
+            levelCas=B747_constraint_speed_cap(modFlapSpeed(math.min(math.floor(levelCas+0.5),
+                B747_climb_speed_limit_here())))
+            print("cruise speed below the cruise level: its CAS ".. levelCas)
+            B747_set_vnav_speed_target(0, math.min(399.0, levelCas))
+            B747_schedule_updateIAS()
+            return
+        end
+    end
     if simDR_pressureAlt1>=transalt or simDR_ind_airspeed_kts_pilot>=climbspdval-1 then
         print("convert to cruise speed in clb_crz_setSpd ".. spdval)
         B747_set_vnav_speed_target(1, spdval)
@@ -463,7 +561,10 @@ function des_src_setSpd()
     local crzspdval=tonumber(getFMSData("desspdmach"))/10
     local spdval=tonumber(getFMSData("desspd"))
     local nextspdval=tonumber(getFMSData("destranspd"))
-    if simDR_airspeed_mach > (crzspdval/100) then
+    -- while a route speed constraint holds the descent flies its CAS, not the descent Mach (whether the IAS
+    -- is still above it at a recalculation or not)
+    local constraintSpeed=tonumber(B747DR_vnav_constraint_speed) or 0
+    if simDR_airspeed_mach > (crzspdval/100) and constraintSpeed<=0 then
       print("convert to mach descend speed in des".. crzspdval)
       B747_set_vnav_speed_target(1, crzspdval)
     else
@@ -477,7 +578,7 @@ function des_src_setSpd()
         local upperAlt=lowerAlt+1500
         spdval=B747_rescale(lowerAlt,nextspdval,upperAlt,spdval,simDR_pressureAlt1)
       end
-      spdval=math.min(spdval,flapPlacardSpeedLimit())
+      spdval=B747_constraint_speed_cap(math.min(spdval,flapPlacardSpeedLimit()))
       print("des_src_setSpd:convert to descend speed ".. spdval)
       B747_set_vnav_speed_target(0, math.min(399.0, spdval))
 
@@ -494,7 +595,7 @@ function des_aptres_setSpd()
     if lowerAlt~=nil and nextspdval~=nil then
         spdval=B747_rescale(lowerAlt+1000,nextspdval,lowerAlt+1500,spdval,simDR_pressureAlt1)
     end
-    spdval=math.min(spdval,flapPlacardSpeedLimit())
+    spdval=B747_constraint_speed_cap(math.min(spdval,flapPlacardSpeedLimit()))
     print("convert to destranspd speed ".. spdval)
     B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     B747_schedule_updateIAS()
@@ -510,7 +611,7 @@ function des_spcres_setSpd()
     -- Reached only with a SPD REST entered; fall back to SPD TRANS otherwise.
     local spdval=tonumber(getFMSData("desrestspd"))
         or tonumber(getFMSData("destranspd")) or 240
-    spdval=math.min(spdval,flapPlacardSpeedLimit())
+    spdval=B747_constraint_speed_cap(math.min(spdval,flapPlacardSpeedLimit()))
     print("convert to desrestspd speed ".. spdval)
     B747_set_vnav_speed_target(0, math.min(399.0, spdval))
     B747_schedule_updateIAS()
@@ -553,8 +654,27 @@ function B747_update_vnav_speed()
         B747_invalidate_vnav_speed("periodic fault-recovery refresh")
     end
 end
+-- [B-8] Whether the 747 can be in the cruise phase: in the air, with a CRZ ALT (none once it is deleted), at or
+-- above the transition altitude
+local function B747_cruise_phase_possible()
+    return simDR_onGround==0 and (tonumber(B747BR_cruiseAlt) or 0)>0
+        and simDR_pressureAlt1>=(tonumber(getFMSData("transalt")) or 18000)
+end
+-- The cruise phase ends out of cruise every frame, whatever VNAV does (B747_vnav_speed returns early while VNAV is
+-- off or the speed is the crew's): on the ground, with CRZ ALT deleted, below the transition altitude, on the
+-- approach (flight phase 4, the G/S) and in TOGA. A descent VNAV did not fly (FLCH, V/S, APP) left it set, and VNAV
+-- pushed in the go-around at 3,000 ft climbed at the cruise Mach .81 (520 KCAS) or kept a stale 180 kt; with CRZ ALT
+-- deleted in the climb the cruise state (500 ft below a CRZ ALT of 0) set it, and the rest of the climb flew .81 from
+-- FL205 (400 KCAS; a review). A descent in FLCH in cruise above the transition altitude keeps it (still the cruise).
+function B747_update_cruise_phase()
+    if vnavSPD_state["cruisePhase"] and (not B747_cruise_phase_possible()
+        or (tonumber(B747DR_ap_flightPhase) or 0)>=4 or B747DR_ap_FMA_active_pitch_mode==1) then
+        vnavSPD_state["cruisePhase"]=false
+    end
+end
 function B747_vnav_setClimbspeed()
     B747_update_takeoff_profile()
+    B747_update_cruise_phase()
     local lastAlt=-1
     local cState="src"
     local nextAlt=spd_states["clb"]["src"]["nextfunc"]()
@@ -567,6 +687,32 @@ function B747_vnav_setClimbspeed()
         end
         nextAlt=spd_states["clb"][cState]["nextfunc"]()
         print("B747_vnav_setClimbspeed "..lastAlt .. " cState ".. cState.. " nextAlt ".. nextAlt)
+    end
+    -- the cruise phase (vnavSPD_state["cruisePhase"]): a climb from it is a cruise climb at the cruise speed, all the
+    -- way to the new CRZ ALT (no lower boundary: what ends it is B747_update_cruise_phase's)
+    if cState=="crz" and B747_cruise_phase_possible() then
+        local crzAlt=tonumber(B747BR_cruiseAlt)
+        if not vnavSPD_state["cruisePhase"] or vnavSPD_state["cruiseLevelFt"]==nil then
+            vnavSPD_state["cruiseLevelFt"]=crzAlt
+        else
+            vnavSPD_state["cruiseLevelFt"]=math.min(vnavSPD_state["cruiseLevelFt"],crzAlt)
+        end
+        vnavSPD_state["cruisePhase"]=true
+    elseif vnavSPD_state["cruisePhase"] then
+        cState="crz"
+        lastAlt=-1000
+        nextAlt=spd_states["clb"]["crz"]["nextfunc"]()
+    end
+    -- [review 17] below the cruise level the change-over to the cruise Mach 500 ft below it (clb_crz_setSpd) is the
+    -- climb's upper boundary: it came at the next recalculation, often the 60 s refresh, up to 1,500 ft late (a review)
+    local levelFt=tonumber(vnavSPD_state["cruiseLevelFt"])
+    if vnavSPD_state["cruisePhase"] and levelFt~=nil and simDR_pressureAlt1<levelFt-500 then
+        nextAlt=math.min(nextAlt,levelFt-500)
+        -- so are the SPD REST and SPD TRANS altitudes below them (B747_climb_speed_limit_here)
+        local restAlt=tonumber(getFMSData("clbrestalt"))
+        if restAlt~=nil and simDR_pressureAlt1<restAlt+100 then nextAlt=math.min(nextAlt,restAlt+100) end
+        local transAlt=tonumber(getFMSData("spdtransalt"))
+        if transAlt~=nil and simDR_pressureAlt1<transAlt+100 then nextAlt=math.min(nextAlt,transAlt+100) end
     end
     local transalt=tonumber(getFMSData("transalt"))
     if vnavSPD_state["setBaro"]==false and nextAlt>transalt and simDR_pressureAlt1<=transalt then
@@ -604,6 +750,7 @@ function B747_vnav_setClimbspeed()
 end
 
 function B747_vnav_setDescendspeed()
+    vnavSPD_state["cruisePhase"]=false
     local lastAlt=simDR_pressureAlt1+1000
     local cState="src"
     local nextAlt=spd_states["des"]["src"]["nextfunc"]()
@@ -633,7 +780,7 @@ function B747_vnav_setDescendspeed()
     vnavSPD_state["lastRecalculationReason"]=vnavSPD_state["lastInvalidationReason"]
 end
 function B747_vnav_speed()
-    
+    B747_update_cruise_phase()
     if B747DR_ap_vnav_state==0 then return end
     if getFMSData("crzalt")==nil then
         print("B747_vnav_speed nil "..B747BR_cruiseAlt)

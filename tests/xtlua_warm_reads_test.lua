@@ -39,6 +39,25 @@ end
 local FMS = "plugins/xtlua_keysystems/scripts/B747.68.xt.fms/"
 local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/"
 local cases = {
+    -- [P43] the speed-on-pitch law (ap_director_speed_on_pitch) reads the IAS, the TAS, the VSI and the angle of
+    -- attack at its updates only, from the first of a FLCH SPD or VNAV SPD: a 0 IAS would be a jump of the IAS's rate,
+    -- a 0 TAS a level path
+    {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
+        func="ap_pitch_assist", names={"simDR_ind_airspeed_kts_pilot", "simDR_TAS_mps", "simDR_vvi_fpm_pilot",
+            "simDR_alpha_deg"}},
+    -- [P39] TO/GA's speed at a go-around: V2, the window's speed and whether it is a Mach (a 0 window would be a
+    -- target of 25 kt, a 0 Mach flag a Mach's hundredths taken as knots)
+    {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
+        func="ap_pitch_assist", names={"B747DR_airspeed_V2", "B747DR_ap_ias_dial_value",
+            "simDR_autopilot_airspeed_is_mach"}},
+    -- [review 46] a go-around's floor, B747DR_airspeed_Vmc, taken once as TO/GA comes on (a 0 would be no floor)
+    {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
+        func="ap_pitch_assist", names={"B747DR_airspeed_Vmc"}},
+    -- [P45] the speed law's thrust lead: the engines' thrust, the mass and the A/T's mode (a first read of 0 would
+    -- start its filter again; a 0 A/T mode would let the lead act with the A/T in SPD)
+    {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
+        func="ap_pitch_assist", names={"simDR_engine_thrust_n", "simDR_acf_weight_total_kg",
+            "B747DR_ap_FMA_autothrottle_mode"}},
     -- [d] the CRZ ALT entry for the native FMS (B744.fms.step.lua
     -- native_cruise_altitude_entry) is formatted with the native transition
     -- altitude, read only at a CRZ ALT entry or change; a 0 fell back to
@@ -46,6 +65,12 @@ local cases = {
     -- 0.5 s after its write, for the CDU message.
     {file=FMS.."B747.68.xt.fms.lua", func="after_physics",
         names={"simDR_fms_transition_alt", "B747DR_crzalt_sync_fault"}},
+    -- the takeoff speeds' deletion (THRUST LIM's TO, TO 1 and TO 2 keys, the GR WT and ZFW entries:
+    -- B744.fms.pages.lua) reads the ground flag and the speeds only at those keys: a 0 on the ground flag kept the
+    -- old rating's speeds at the first rating change of a session, and speeds of 0 would be taken as set (review
+    -- 39)
+    {file=FMS.."B747.68.xt.fms.lua", func="after_physics",
+        names={"simDR_onground", "B747DR_airspeed_V1", "B747DR_airspeed_Vr", "B747DR_airspeed_V2"}},
     -- [e] the LOC and G/S capture gates (B747_updateApproachHeading) read
     -- the localizer and glideslope signals, flags and deviations only once
     -- the approach is armed: LOC took a 0 as its first 1 s sample, and G/S
@@ -72,12 +97,38 @@ local cases = {
     -- first sample in the 10-sample flight-director average was 0 deg.
     {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
         func="ap_pitch_assist", names={"B744DR_autolandPitch"}},
+    -- [P37] the hydraulics flight director reads the elevation, the ground speed and the G/S angle only in G/S
+    -- (getGlideSlopeFPM, glide_slope_path_error_deg): a 0 elevation would be a dive of the whole altitude, 0s for
+    -- the others a level path and a pitch down.
+    {file="plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulics_override.lua",
+        func="ap_pitch_assist", names={"simDR_elevation", "simDR_groundspeed", "simDR_glideslope1"}},
+    -- LNAV's fly-by turn anticipation (B747_getCurrentWayPoint_function)
+    -- takes the wind from the ground track, the true heading, the TAS and the
+    -- ground speed, and the bank from the bank limits: a 0 track on a first
+    -- read would be a wind of the TAS and start a turn early.
+    {file=AP.."B747.70.xt.autopilot.lua", func="after_physics",
+        names={"simDR_ground_track_true", "simDR_true_heading", "simDR_TAS_mps", "simDR_groundspeed",
+            "simDR_autopilot_bank_angles", "simDR_autopilot_bank_limit"}},
+    -- [P44, review 45] the A/T's in-flight THR REF advance is slower only with the pitch in VNAV SPD or FLCH SPD: a
+    -- 0 pitch mode at the first climb resumption would give it the takeoff's rate
+    {file="plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.xt.EEC.lua", func="ecc_throttle",
+        names={"B747DR_ap_FMA_active_pitch_mode"}},
 }
 
 for _, case in ipairs(cases) do
     local body = function_body(case.file, case.func)
     for _, name in ipairs(case.names) do
         check(reads(body, name), case.func.." in "..case.file.." does not read "..name.." every frame")
+    end
+end
+
+-- [review 46] The speed law's thrust lead takes the four engines' shared thrust: each engine's thrust is read.
+do
+    local body = function_body("plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/"
+        .."B747.19.xt.hydraulics_override.lua", "ap_pitch_assist")
+    for i = 0, 3 do
+        check(body:find("=simDR_engine_thrust_n["..i.."]", 1, true) ~= nil,
+            "ap_pitch_assist does not read simDR_engine_thrust_n["..i.."] every frame")
     end
 end
 

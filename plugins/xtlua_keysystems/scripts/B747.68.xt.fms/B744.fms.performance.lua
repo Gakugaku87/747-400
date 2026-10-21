@@ -234,4 +234,30 @@ function performance.econ_climb_mach(input)
     return math.floor(mach * 1000 + 0.5) / 1000
 end
 
+-- VREF for the landing airport's elevation.  The FCOM's VREF table (PI.10.2)
+-- is for sea level: "Increase VREF 1 knot/4000 ft above sea level", with no
+-- decrease below it.
+function performance.vref_elevation_correction_kts(elevation_ft)
+    return math.max(0, tonumber(elevation_ft) or 0) / 4000
+end
+
+-- An airport's elevation from its CIFP file (X-Plane's ARINC 424 text, one
+-- record a line): the highest landing threshold of its RWY records, whose
+-- fourth field is the threshold's elevation ("RWY:RW18R,+0010,      ,-0013,"
+-- -13 ft), as the airport elevation is the highest point of its landing
+-- area.  nil without a runway.
+function performance.cifp_airport_elevation_ft(text)
+    local highest = nil
+    for line in string.gmatch(text or "", "[^\r\n]+") do
+        local rest = string.match(line, "^RWY:(.*)$")
+        if rest ~= nil then
+            local fields = {}
+            for field in string.gmatch(rest .. ",", "([^,]*),") do fields[#fields + 1] = field end
+            local elevation = tonumber((string.gsub(fields[4] or "", "%s", "")))
+            if elevation ~= nil and (highest == nil or elevation > highest) then highest = elevation end
+        end
+    end
+    return highest
+end
+
 return performance

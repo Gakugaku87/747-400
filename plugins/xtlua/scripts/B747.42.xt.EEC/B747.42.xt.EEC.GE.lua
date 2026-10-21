@@ -549,17 +549,19 @@ function GE(altitude_ft_in)
       orig_thrust_n = simDR_thrust_max
     end
   elseif string.match(B747DR_ref_thr_limit_mode, "CLB") then
-    _, N1_actual, _, _, N1_real_max_climb, _, _, _ = in_flight_N1_GE(altitude_ft_in, 0)
+    _, _, _, _, N1_real_max_climb, _, _, _ = in_flight_N1_GE(altitude_ft_in, 0)
+    -- [climb thrust] the rated max climb N1 at every altitude, weight and flap setting, not the thrust for the EEC's
+    -- design climb rate where that was less below 20,000 ft or with the flaps out (as the PW module). A derate
+    -- (B747_clb_share) as N1 to the power 1/3.1 of the thrust kept, as the A/T holds the N1 that N1_display_GE gives
+    -- for X-Plane's thrust (about N1^3.1): to the power 0.4 the thrust was 12-13 % less for CLB 1 (review 34)
+    local N1_climb = N1_real_max_climb * B747_clb_share(B747DR_clbderate, altitude_ft_in) ^ (1 / 3.1)
+    local N1_ref = string.format("%4.1f", N1_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value
+    N1_ref = math.min(N1_ref, 117.5)
 
 		--Set target bugs
 		for i = 0, 3 do
-      if N1_actual > N1_real_max_climb and simDR_flap_ratio == 0 or takeoff_TOGA_n1==0  or altitude_ft_in> 20000 then
-        N1_target_bug[i] = math.min(string.format("%4.1f", N1_real_max_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value, 117.5)
-        display_N1_ref[i] = math.min(string.format("%4.1f", N1_real_max_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value, 117.5)
-      else
-        N1_target_bug[i] = math.min(string.format("%4.1f", N1_actual) + packs_adjustment_value + engine_anti_ice_adjustment_value, takeoff_TOGA_n1)
-        display_N1_ref[i] = math.min(string.format("%4.1f", N1_actual) + packs_adjustment_value + engine_anti_ice_adjustment_value, takeoff_TOGA_n1)
-      end
+      N1_target_bug[i] = N1_ref
+      display_N1_ref[i] = N1_ref
       --pprint(i.." display_N1_ref="..display_N1_ref[i].. "N1_actual "..N1_actual.." N1_real_max_climb ".. N1_real_max_climb .." packs_adjustment_value ".. packs_adjustment_value .." engine_anti_ice_adjustment_value ".. engine_anti_ice_adjustment_value .." takeoff_TOGA_n1 "..takeoff_TOGA_n1)
       if B747DR_display_N1_max[i] < B747DR_display_N1_ref[i] then
         display_N1_max[i] = B747DR_display_N1_ref[i]

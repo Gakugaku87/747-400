@@ -857,6 +857,34 @@ function B747_updateEconClimbSpeed()
 	end
 end
 
+-- [P36] The landing airport's elevation for APPROACH REF's VREFs: the destination's (RTE DEST) highest runway
+-- threshold in X-Plane's CIFP (Custom Data first, as the autopilot reads its constraints), looked up once for each
+-- destination; nil (sea level) without a destination or a file
+local CIFP_FOLDERS={"Custom Data/CIFP/","Resources/default data/CIFP/"}
+local landingAirport={ident=nil,elevation_ft=nil}
+function B747_destination_elevation_ft()
+	local ident=tostring(fmsModules["data"]["fltdst"] or "")
+	if string.match(ident,"^%w%w%w%w$")==nil then return nil end
+	if landingAirport.ident~=ident then
+		landingAirport.ident=ident
+		landingAirport.elevation_ft=nil
+		for _,folder in ipairs(CIFP_FOLDERS) do
+			local file=io.open(folder..ident..".dat","r")
+			if file~=nil then
+				landingAirport.elevation_ft=fmsPerformance.cifp_airport_elevation_ft(file:read("*a"))
+				file:close()
+				break
+			end
+		end
+	end
+	return landingAirport.elevation_ft
+end
+-- VREF at the landing airport: the instruments' VREF for the gross weight (sea level) with the FCOM's correction
+-- for the airport's elevation
+function B747_landing_vref(vref)
+	return vref+fmsPerformance.vref_elevation_correction_kts(B747_destination_elevation_ft())
+end
+
 function getFMSData(id)
   if hasChild(fmsModules["data"],id) then
     return fmsModules["data"][id]
@@ -1479,6 +1507,11 @@ function after_physics()
   -- read at a CRZ ALT entry or change only: XTLua gives 0 for a dataref's first read
   local refreshTransitionAlt=simDR_fms_transition_alt
   local refreshSyncFault=B747DR_crzalt_sync_fault
+  -- read at THRUST LIM's takeoff rating keys and the GR WT and ZFW entries only (the takeoff speeds' deletion)
+  local refreshOnGround=simDR_onground
+  local refreshV1=B747DR_airspeed_V1
+  local refreshVr=B747DR_airspeed_Vr
+  local refreshV2=B747DR_airspeed_V2
   if didFlightInit==false and simDR_startup_running == 1 and simDR_onGround==0 then
 	print("activate AP stuff")
 	
