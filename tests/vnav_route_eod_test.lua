@@ -111,8 +111,9 @@ local function normal(route_alt)
     }
 end
 
--- setDistances places the T/D from the previous call's distance and T/D, so
--- the aircraft calls it every frame; two calls settle a fresh namespace.
+-- setDistances places the T/D from the previous call's distance and T/D (the
+-- aircraft calls it every 2 s, B747_fltmgmt_setILS); two calls settle a fresh
+-- namespace.
 local function settle(r)
     r.setDistances(r.route)
     r.setDistances(r.route)
@@ -346,7 +347,8 @@ end)
 -- (every line flight, p5-line1 to p39-line1): 193 ft/nm from 55 nm out, 3,600 ft below CRZ ALT at the T/D, where the
 -- descent began with DRAG REQUIRED, the kit's speedbrake and 0.5 g.
 -- A third call: the T/D placed by the call before is there from the start of the route (the aircraft calls it every
--- frame), where the departure's step down took it; two calls placed it only on its own leg, after the departure.
+-- 2 s, each call placing the T/D from the call before), where the departure's step down took it; two calls placed it
+-- only on its own leg, after the departure.
 case("normal route with the departure's elevations: the descent path starts at the T/D", function()
     for _, route_alt in ipairs({0, 35000}) do
         local route = normal(route_alt)

@@ -2294,7 +2294,9 @@ function setDistances(fmsO)
 					-- route's order took it: the departure airport's and runway's elevations in [9] (EIDW 242,
 					-- 218 ft), so the descent's first path ran from the entry before its point, 3,600 ft below
 					-- CRZ ALT at EIDW-EHAM's T/D (DRAG REQUIRED, the kit's speedbrake, 0.5 g on every line
-					-- flight); without them, past the first descent point the next one's path ran from the T/D
+					-- flight); with no route altitude at all before the first descent point, past that point the
+					-- next one's path ran from the T/D. An older CRZ ALT left in [9] after the T/D still takes it
+					-- as the active or held fix (in the profile then), as before (review 55)
 					local afterToD=B747BR_tod>0 and toEnd[i]~=nil and toEnd[i]<B747BR_tod
 					if afterToD and pointAlt<B747BR_cruiseAlt and not(usedToD) and B747BR_totalDistance > 0 and B747BR_todLat ~=0 and B747BR_todLong ~=0 then
 						distance=getDistance(B747BR_todLat,B747BR_todLong, fmsO[i][5],fmsO[i][6])
