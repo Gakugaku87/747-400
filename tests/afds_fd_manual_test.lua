@@ -36,6 +36,7 @@ local function run(pitch_mode, o)
         setup = function(m)
             m.d.simDR_autopilot_servos_on = 0
             if o.vs_fpm then m.d.simDR_autopilot_vs_fpm = o.vs_fpm; m.d.simDR_autopilot_vs_status = 2 end
+            if o.on_ground then m.d.simDR_touchGround = 1 end
             local assist = m.hyd.ap_pitch_assist
             m.hyd.ap_pitch_assist = function()
                 local r = assist()
@@ -45,6 +46,7 @@ local function run(pitch_mode, o)
             end
         end,
         frame = function(m, t)
+            if o.on_ground then m.d.simDR_touchGround = 1 end      -- the director's view only: nothing rotates
             if o.engage_at and t >= o.engage_at and m.d.simDR_autopilot_servos_on == 0 then
                 m.d.simDR_autopilot_servos_on = 1
                 m.d.B747DR_switching_servos_on = m.d.simDRTime
@@ -101,6 +103,15 @@ check(n >= 3 and first <= 0.2, string.format("the autopilot engaged in FLCH: its
     .."over its first 0.1 s, %d frames (at most 0.2, 3 frames or more)", first, n))
 check(after ~= nil and after >= 1.0, string.format("the autopilot engaged in FLCH: the director's command 0.7 s on (the "
     .."bar %s deg from the attitude, at least +1.0)", after and string.format("%+.2f", after) or "nil"))
+
+-- TO/GA on the ground with the servos off (the FD switch on before the takeoff roll): the bar goes to TO/GA's pitch at
+-- 2 deg/s, as when the director ran every frame by hand. It runs every 0.1 s now, and stepped a frame's worth an update
+-- the bar took four times as long at 30 fps (2.9 to 7.5 deg in 9.7 s frame by frame; review 56).
+m = run(1, {on_ground = true, seconds = 12})
+local t75
+for _, f in ipairs(m.frames) do if t75 == nil and f.fd >= 7.5 then t75 = f.t end end
+check(t75 ~= nil and t75 <= 4.0, string.format("TO/GA on the ground, the autopilot off: the bar from %.1f to 7.5 deg in "
+    .."%s s (at most 4: 2 deg/s)", m.frames[1].fd, t75 and string.format("%.1f", t75) or "more than 12"))
 
 if #failures > 0 then
     error(#failures.." of "..checks.." checks failed:\n"..table.concat(failures, "\n"), 0)

@@ -943,7 +943,13 @@ function ap_director_pitch(pitchMode)
             return ap_director_speed_on_pitch(pitchMode,holdAlt,simDRTime-time,togaSpeed)
         end
         directorSampleRate=0.1
-        retval=B747_interpolate_value(last_simDR_AHARS_pitch_heading_deg_pilot,simDR_autopilot_TOGA_pitch_deg,2,12,5)
+        -- [P50] 2 deg/s by the time since the last update: by hand too the director runs every 0.1 s now, not every
+        -- frame, and B747_interpolate_value moves a frame's worth (SIM_PERIOD) a call (2 deg/s from 2 deg to its last
+        -- step before the target; below 2 deg and in its tail 10 % of the rest a call). With the autopilot on this runs
+        -- only in a go-around that touches the runway with CMD engaged, which now parks as fast
+        local parkSpeed=5
+        if (SIM_PERIOD or 0)>0 then parkSpeed=5*SIM_PERIOD/time end
+        retval=B747_interpolate_value(last_simDR_AHARS_pitch_heading_deg_pilot,simDR_autopilot_TOGA_pitch_deg,2,12,parkSpeed)
         last_simDR_AHARS_pitch_heading_deg_pilot=retval
         ap_director_pitch_retVal(pitchMode,retval) --make sure pitch retval is fresh
         return retval--ap_director_pitch_retVal(pitchMode,retval)
