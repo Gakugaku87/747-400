@@ -1069,21 +1069,6 @@ end
 -- Planned descent gradient of the T/D (2.9 NM per 1,000 ft, as before).
 afds.VNAV_TOD_FT_PER_NM = 290
 
--- Distance (NM) before the destination at which the descent from cruise_alt_ft
--- starts, and the end of descent altitude. As in setDistances, the route runs
--- to the end of descent (eod_index) and then straight to the destination (the
--- last entry). The end of descent altitude is its route altitude ([9]), reached
--- at the end of descent, or the destination elevation when it has none ([3] is
--- a frequency on a navaid).
--- Each descent constraint up to the end of descent must also be reached at
--- 290 ft/nm from CRZ ALT, so the T/D is the earliest of these. Walking back
--- from the end of descent, the descent constraints are the route altitudes
--- that lie after the T/D found so far (one at or above CRZ ALT there cannot
--- move it). A route altitude before it is cruise (such as the older CRZ ALT
--- left in [9] after a step climb), and an entry closer to the start of the
--- route than to its end is climb (a SID constraint). Passed constraints count
--- as well, so the T/D does not move while the aircraft passes them on the
--- descent.
 -- [P49] The distance (NM) from each entry up to the end of descent along the route to it, then straight to the
 -- destination (the last entry), as the T/D (afds.route_tod_distance) and setDistances' remaining distance measure
 -- it: {[i] = NM} for i = 1 .. the end of descent's index (eod_index, the last entry when nil).
@@ -1099,6 +1084,21 @@ function afds.route_distance_to_end(route, eod_index, distance_fn)
     return to_end
 end
 
+-- Distance (NM) before the destination at which the descent from cruise_alt_ft
+-- starts, and the end of descent altitude. As in setDistances, the route runs
+-- to the end of descent (eod_index) and then straight to the destination (the
+-- last entry). The end of descent altitude is its route altitude ([9]), reached
+-- at the end of descent, or the destination elevation when it has none ([3] is
+-- a frequency on a navaid).
+-- Each descent constraint up to the end of descent must also be reached at
+-- 290 ft/nm from CRZ ALT, so the T/D is the earliest of these. Walking back
+-- from the end of descent, the descent constraints are the route altitudes
+-- that lie after the T/D found so far (one at or above CRZ ALT there cannot
+-- move it). A route altitude before it is cruise (such as the older CRZ ALT
+-- left in [9] after a step climb), and an entry closer to the start of the
+-- route than to its end is climb (a SID constraint). Passed constraints count
+-- as well, so the T/D does not move while the aircraft passes them on the
+-- descent.
 function afds.route_tod_distance(route, eod_index, cruise_alt_ft, distance_fn, constraints)
     local count = #route
     if count < 1 then return 0, 0 end
