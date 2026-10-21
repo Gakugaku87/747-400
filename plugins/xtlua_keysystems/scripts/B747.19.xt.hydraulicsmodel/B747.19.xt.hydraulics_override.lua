@@ -943,7 +943,13 @@ function ap_director_pitch(pitchMode)
             return ap_director_speed_on_pitch(pitchMode,holdAlt,simDRTime-time,togaSpeed)
         end
         directorSampleRate=0.1
-        retval=B747_interpolate_value(last_simDR_AHARS_pitch_heading_deg_pilot,simDR_autopilot_TOGA_pitch_deg,2,12,5)
+        -- [P50] 2 deg/s by the time since the last update: by hand too the director runs every 0.1 s now, not every
+        -- frame, and B747_interpolate_value moves a frame's worth (SIM_PERIOD) a call (2 deg/s from 2 deg to its last
+        -- step before the target; below 2 deg and in its tail 10 % of the rest a call). With the autopilot on this runs
+        -- only in a go-around that touches the runway with CMD engaged, which now parks as fast
+        local parkSpeed=5
+        if (SIM_PERIOD or 0)>0 then parkSpeed=5*SIM_PERIOD/time end
+        retval=B747_interpolate_value(last_simDR_AHARS_pitch_heading_deg_pilot,simDR_autopilot_TOGA_pitch_deg,2,12,parkSpeed)
         last_simDR_AHARS_pitch_heading_deg_pilot=retval
         ap_director_pitch_retVal(pitchMode,retval) --make sure pitch retval is fresh
         return retval--ap_director_pitch_retVal(pitchMode,retval)
@@ -1117,7 +1123,25 @@ pitchPid.target=0
 pitchPid.input = 0
 pitchPid:compute()
 
+-- [P50] whether the autopilot flew the pitch at the last frame. With the servos off the director goes on, so the flight
+-- director's bar shows its command to a pilot flying by hand, as a 747-400's does. It was reset every frame while the
+-- servos were off (B747_reset_pitch_transition, directorLastPitchMode 0): each frame began a mode's transition from the
+-- attitude, and in FLCH, VNAV SPD, V/S, VNAV PTH and ALT the bar sat on the attitude (TO/GA and G/S, kept out of the
+-- transition, showed theirs). Reset once as the servos come on, the autopilot's command still starts from the attitude.
+-- By hand the director now updates at its own rate (directorSampleRate), as with the autopilot, not every frame: the
+-- bar is the mean of its last 10 updates that the autopilot flies (about 1.3 s in the modes updated every 0.1 s, 2-9 s
+-- in V/S; TO/GA's and G/S's by hand were a mean of 10 frames), and what moves once an update (get_FPM_bias's decay,
+-- the V/S, VNAV PTH and ALT steps) moves that often.
+local pitchServosWereOn=false
 function ap_pitch_assist()
+    local servosOn=simDR_autopilot_servos_on>0 and (B747DR_ap_FMA_active_pitch_mode>0 or B747DR_ap_autoland == 1)
+    if servosOn and not pitchServosWereOn then
+        B747_reset_pitch_transition()
+        directorLastPitchMode=0
+        directorLastRawPitch=simDR_AHARS_pitch_heading_deg_pilot
+        director_lastPitchControlUpdate=simDRTime
+    end
+    pitchServosWereOn=servosOn
     local flight_director_pitch=ap_director_pitch_integral()
     local target=0
     local retval=B747DR_sim_pitch_ratio--B747_interpolate_value(B747DR_sim_pitch_ratio,0,-1,1,20)
@@ -1167,7 +1191,7 @@ function ap_pitch_assist()
     pitchPid.ki=B747DR_pidPitchI
     pitchPid.kd=B747DR_ap_autoland==1 and AUTOLAND_PITCH_KD or B747DR_pidPitchD
     
-    if simDR_autopilot_servos_on>0 and (B747DR_ap_FMA_active_pitch_mode>0 or B747DR_ap_autoland == 1) then
+    if servosOn then
         simDR_electric_trim=0
         pitchPid.input = simDR_AHARS_pitch_heading_deg_pilot
         pitchPid.target= flight_director_pitch
@@ -1195,10 +1219,6 @@ function ap_pitch_assist()
     else
         pitchPid:compute(true)
         simDR_electric_trim=1
-        B747_reset_pitch_transition()
-        directorLastPitchMode=0
-        directorLastRawPitch=simDR_AHARS_pitch_heading_deg_pilot
-        director_lastPitchControlUpdate=simDRTime
     end
     if retval==nil then return 0 end
     return retval
