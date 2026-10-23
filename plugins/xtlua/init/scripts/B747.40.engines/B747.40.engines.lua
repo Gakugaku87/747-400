@@ -83,6 +83,8 @@ B747DR_EPR_max_limit                = deferred_dataref("laminar/B747/engines/EPR
 B747DR_EGT_amber_inhibit            = deferred_dataref("laminar/B747/engines/EGT/amber_inhibit", "array[4)")
 B747DR_EGT_amber_on                 = deferred_dataref("laminar/B747/engines/EGT/amber_on", "array[4)")
 B747DR_EGT_white_on                 = deferred_dataref("laminar/B747/engines/EGT/white_on", "array[4)")
+B747DR_EGT_red_on                   = deferred_dataref("laminar/B747/engines/EGT/red_on", "array[4]")
+B747DR_EGT_start_limit_on           = deferred_dataref("laminar/B747/engines/EGT/start_limit_on", "array[4]")
 
 B747DR_init_engines_CD              = deferred_dataref("laminar/B747/engines/init_CD", "number")
 

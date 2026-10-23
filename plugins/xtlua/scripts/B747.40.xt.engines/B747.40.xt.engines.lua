@@ -544,11 +544,12 @@ function B747_engine_TOGA_power_CMDhandler(phase, duration)
     callEngineReverse[1]=0
     callEngineReverse[2]=0
     callEngineReverse[3]=0
-    simDR_prop_mode[0] = 1													
-    simDR_prop_mode[1] = 1													
-    simDR_prop_mode[2] = 1													
-    simDR_prop_mode[3] = 1		
+    simDR_prop_mode[0] = 1
+    simDR_prop_mode[1] = 1
+    simDR_prop_mode[2] = 1
+    simDR_prop_mode[3] = 1
 	if phase == 0 then
+        B747_engine_display_toga()  -- the EGT amber inhibit (FCOM p.872)
         if simDR_all_wheels_on_ground==0 then
             B747DR_ap_autoland=-2
             if B747DR_autopilot_TOGA_status == 0 										-- TOGA LATERAL MODE IS OFF 
@@ -834,342 +835,22 @@ end
 
 
 
------ EGT INIDICATOR --------------------------------------------------------------------
-local EGT_start_limit       = 535.0                                                     -- RED
-local EGT_continuous_limit  = 629.0                                                     -- AMBER
-local EGT_max_limit         = 654.0                                                     -- REDLINE
-local EGT_check_inhibit     = {1, 1, 1, 1}
-local EGT_amber_inhibit     = {0, 0, 0, 0}
-
-function B747_EGT01_5min_inhibit_canx()
-    EGT_amber_inhibit[1] = 0
-end
-function B747_EGT01_10min_inhibit_canx()
-    EGT_amber_inhibit[1] = 0
-end
-function B747_EGT02_5min_inhibit_canx()
-    EGT_amber_inhibit[2] = 0
-end
-function B747_EGT02_10min_inhibit_canx()
-    EGT_amber_inhibit[2] = 0
-end
-function B747_EGT03_5min_inhibit_canx()
-    EGT_amber_inhibit[3] = 0
-end
-function B747_EGT03_10min_inhibit_canx()
-    EGT_amber_inhibit[3] = 0
-end
-function B747_EGT04_5min_inhibit_canx()
-    EGT_amber_inhibit[4] = 0
-end
-function B747_EGT04_10min_inhibit_canx()
-    EGT_amber_inhibit[4] = 0
-end
-
-function B747_EGT_indicator()
-
-    -- GET NUMBER OF RUNNING ENGINES
+----- X-PLANE SPOOL TIME ----------------------------------------------------------------
+-- (the previous code, ENG-35): 5 s with all four engines running, 26 s with
+-- none, unchanged in between. The EGT colours and the start limit line are
+-- in B747.40.xt.engine_display.lua.
+function B747_engine_spool_time()
     local num_eng_running = 0
     for i = 0, 3 do
         if simDR_engine_running[i] == 1 then
             num_eng_running = num_eng_running + 1
         end
     end
-    if num_eng_running==4 then 
+    if num_eng_running==4 then
       simDR_thrust_spoolTime=5
     elseif num_eng_running==0 then
       simDR_thrust_spoolTime=26
     end
-    -- ----------------------------------------------------------------------------------
-    -- ENGINE #1
-    -- ----------------------------------------------------------------------------------
-    if B747DR_display_EGT[0] <= EGT_continuous_limit then
-        EGT_amber_inhibit[1] = 0
-        EGT_check_inhibit[1] = 1
-        if is_timer_scheduled(B747_EGT01_5min_inhibit_canx) == true then
-            stop_timer(B747_EGT01_5min_inhibit_canx)
-        end
-        if is_timer_scheduled(B747_EGT01_10min_inhibit_canx) == true then
-            stop_timer(B747_EGT01_10min_inhibit_canx)
-        end
-
-    elseif B747DR_display_EGT[0] > EGT_continuous_limit
-        and B747DR_display_EGT[0] <= EGT_max_limit
-        and EGT_check_inhibit[1] == 1
-    then
-        if B747DR_engine_TOGA_mode == 1 then
-            EGT_amber_inhibit[1] = 1                                                    -- INHIBIT DISPLAY OF AMBER INDICATORS
-            if num_eng_running > 3 then
-                if is_timer_scheduled(B747_EGT01_10min_inhibit_canx) == true then
-                    stop_timer(B747_EGT01_10min_inhibit_canx)
-                end
-                if is_timer_scheduled(B747_EGT01_5min_inhibit_canx) == false then
-                    run_after_time(B747_EGT01_5min_inhibit_canx, 300.0)
-                end
-            else
-                if is_timer_scheduled(B747_EGT01_5min_inhibit_canx) == true then
-                    stop_timer(B747_EGT01_5min_inhibit_canx)
-                end
-                if is_timer_scheduled(B747_EGT01_10min_inhibit_canx) == false then
-                    run_after_time(B747_EGT01_10min_inhibit_canx, 600.0)
-                end
-            end
-        else
-            EGT_amber_inhibit[1] = 0
-            if is_timer_scheduled(B747_EGT01_5min_inhibit_canx) == true then
-                stop_timer(B747_EGT01_5min_inhibit_canx)
-            end
-            if is_timer_scheduled(B747_EGT01_10min_inhibit_canx) == true then
-                stop_timer(B747_EGT01_10min_inhibit_canx)
-            end
-
-        end
-    end
-
-
-    -- SHOW/HIDE LIMIT MARKER
-    B747DR_EGT_amber_inhibit[0] = B747DR_engine_TOGA_mode
-
-
-    -- SET AMBER HIDE/SHOW
-    if B747DR_display_EGT[0] > EGT_continuous_limit
-        and B747DR_display_EGT[0] <= EGT_max_limit
-        and EGT_amber_inhibit[1] == 0
-    then
-        B747DR_EGT_amber_on[0] = 1
-    else
-        B747DR_EGT_amber_on[0] = 0
-    end
-
-
-    -- SET WHITE HIDE/SHOW
-    if (B747DR_display_EGT[0] <= EGT_continuous_limit)
-        or
-        ((B747DR_display_EGT[0] > EGT_continuous_limit) and (B747DR_display_EGT[0] <= EGT_max_limit) and (EGT_amber_inhibit[1] == 1))
-    then
-        B747DR_EGT_white_on[0] = 1
-    else
-        B747DR_EGT_white_on[0] = 0
-    end
-
-
-
-
-    -- ----------------------------------------------------------------------------------
-    -- ENGINE #2
-    -- ----------------------------------------------------------------------------------
-    if B747DR_display_EGT[1] <= EGT_continuous_limit then
-        EGT_amber_inhibit[2] = 0
-        EGT_check_inhibit[2] = 1
-        if is_timer_scheduled(B747_EGT02_5min_inhibit_canx) == true then
-            stop_timer(B747_EGT02_5min_inhibit_canx)
-        end
-        if is_timer_scheduled(B747_EGT02_10min_inhibit_canx) == true then
-            stop_timer(B747_EGT02_10min_inhibit_canx)
-        end
-
-    elseif B747DR_display_EGT[1] > EGT_continuous_limit
-        and B747DR_display_EGT[1] <= EGT_max_limit
-        and EGT_check_inhibit[2] == 1
-    then
-        if B747DR_engine_TOGA_mode == 1 then
-            EGT_amber_inhibit[2] = 1                                                    -- INHIBIT DISPLAY OF AMBER INDICATORS
-            if num_eng_running > 3 then
-                if is_timer_scheduled(B747_EGT02_10min_inhibit_canx) == true then
-                    stop_timer(B747_EGT02_10min_inhibit_canx)
-                end
-                if is_timer_scheduled(B747_EGT02_5min_inhibit_canx) == false then
-                    run_after_time(B747_EGT02_5min_inhibit_canx, 300.0)
-                end
-            else
-                if is_timer_scheduled(B747_EGT02_5min_inhibit_canx) == true then
-                    stop_timer(B747_EGT02_5min_inhibit_canx)
-                end
-                if is_timer_scheduled(B747_EGT02_10min_inhibit_canx) == false then
-                    run_after_time(B747_EGT02_10min_inhibit_canx, 600.0)
-                end
-            end
-        else
-            EGT_amber_inhibit[2] = 0
-            if is_timer_scheduled(B747_EGT02_5min_inhibit_canx) == true then
-                stop_timer(B747_EGT02_5min_inhibit_canx)
-            end
-            if is_timer_scheduled(B747_EGT02_10min_inhibit_canx) == true then
-                stop_timer(B747_EGT02_10min_inhibit_canx)
-            end
-
-        end
-    end
-
-
-    -- SHOW/HIDE LIMIT MARKER
-    B747DR_EGT_amber_inhibit[1] = B747DR_engine_TOGA_mode
-
-
-    -- SET AMBER HIDE/SHOW
-    if B747DR_display_EGT[1] > EGT_continuous_limit
-        and B747DR_display_EGT[1] <= EGT_max_limit
-        and EGT_amber_inhibit[2] == 0
-    then
-        B747DR_EGT_amber_on[1] = 1
-    else
-        B747DR_EGT_amber_on[1] = 0
-    end
-
-
-    -- SET WHITE HIDE/SHOW
-    if (B747DR_display_EGT[1] <= EGT_continuous_limit)
-        or ((B747DR_display_EGT[1] > EGT_continuous_limit) and (B747DR_display_EGT[1] <= EGT_max_limit) and (EGT_amber_inhibit[2] == 1))
-    then
-        B747DR_EGT_white_on[1] = 1
-    else
-        B747DR_EGT_white_on[1] = 0
-    end
-
-
-    -- ----------------------------------------------------------------------------------
-    -- ENGINE #3
-    -- ----------------------------------------------------------------------------------
-    if B747DR_display_EGT[2] <= EGT_continuous_limit then
-        EGT_amber_inhibit[3] = 0
-        EGT_check_inhibit[3] = 1
-        if is_timer_scheduled(B747_EGT03_5min_inhibit_canx) == true then
-            stop_timer(B747_EGT03_5min_inhibit_canx)
-        end
-        if is_timer_scheduled(B747_EGT03_10min_inhibit_canx) == true then
-            stop_timer(B747_EGT03_10min_inhibit_canx)
-        end
-
-    elseif B747DR_display_EGT[2] > EGT_continuous_limit
-        and B747DR_display_EGT[2] <= EGT_max_limit
-        and EGT_check_inhibit[3] == 1
-    then
-        if B747DR_engine_TOGA_mode == 1 then
-            EGT_amber_inhibit[3] = 1                                                    -- INHIBIT DISPLAY OF AMBER INDICATORS
-            if num_eng_running > 3 then
-                if is_timer_scheduled(B747_EGT03_10min_inhibit_canx) == true then
-                    stop_timer(B747_EGT03_10min_inhibit_canx)
-                end
-                if is_timer_scheduled(B747_EGT03_5min_inhibit_canx) == false then
-                    run_after_time(B747_EGT03_5min_inhibit_canx, 300.0)
-                end
-            else
-                if is_timer_scheduled(B747_EGT03_5min_inhibit_canx) == true then
-                    stop_timer(B747_EGT03_5min_inhibit_canx)
-                end
-                if is_timer_scheduled(B747_EGT03_10min_inhibit_canx) == false then
-                    run_after_time(B747_EGT03_10min_inhibit_canx, 600.0)
-                end
-            end
-        else
-            EGT_amber_inhibit[3] = 0
-            if is_timer_scheduled(B747_EGT03_5min_inhibit_canx) == true then
-                stop_timer(B747_EGT03_5min_inhibit_canx)
-            end
-            if is_timer_scheduled(B747_EGT03_10min_inhibit_canx) == true then
-                stop_timer(B747_EGT03_10min_inhibit_canx)
-            end
-
-        end
-    end
-
-
-    -- SHOW/HIDE LIMIT MARKER
-    B747DR_EGT_amber_inhibit[2] = B747DR_engine_TOGA_mode
-
-
-    -- SET AMBER HIDE/SHOW
-    if B747DR_display_EGT[2] > EGT_continuous_limit
-        and B747DR_display_EGT[2] <= EGT_max_limit
-        and EGT_amber_inhibit[3] == 0
-    then
-        B747DR_EGT_amber_on[2] = 1
-    else
-        B747DR_EGT_amber_on[2] = 0
-    end
-
-
-    -- SET WHITE HIDE/SHOW
-    if (B747DR_display_EGT[2] <= EGT_continuous_limit)
-        or ((B747DR_display_EGT[2] > EGT_continuous_limit) and (B747DR_display_EGT[2] <= EGT_max_limit) and (EGT_amber_inhibit[3] == 1))
-    then
-        B747DR_EGT_white_on[2] = 1
-    else
-        B747DR_EGT_white_on[2] = 0
-    end
-
-
-    -- ----------------------------------------------------------------------------------
-    -- ENGINE #4
-    -- ----------------------------------------------------------------------------------
-    if B747DR_display_EGT[3] <= EGT_continuous_limit then
-        EGT_amber_inhibit[4] = 0
-        EGT_check_inhibit[4] = 1
-        if is_timer_scheduled(B747_EGT04_5min_inhibit_canx) == true then
-            stop_timer(B747_EGT04_5min_inhibit_canx)
-        end
-        if is_timer_scheduled(B747_EGT04_10min_inhibit_canx) == true then
-            stop_timer(B747_EGT04_10min_inhibit_canx)
-        end
-    
-    elseif B747DR_display_EGT[3] > EGT_continuous_limit
-        and B747DR_display_EGT[3] <= EGT_max_limit
-        and EGT_check_inhibit[4] == 1
-    then
-        if B747DR_engine_TOGA_mode == 1 then
-            EGT_amber_inhibit[4] = 1                                                    -- INHIBIT DISPLAY OF AMBER INDICATORS
-            if num_eng_running > 3 then
-                if is_timer_scheduled(B747_EGT04_10min_inhibit_canx) == true then
-                    stop_timer(B747_EGT04_10min_inhibit_canx)
-                end
-                if is_timer_scheduled(B747_EGT04_5min_inhibit_canx) == false then
-                    run_after_time(B747_EGT04_5min_inhibit_canx, 300.0)
-                end
-            else
-                if is_timer_scheduled(B747_EGT04_5min_inhibit_canx) == true then
-                    stop_timer(B747_EGT04_5min_inhibit_canx)
-                end
-                if is_timer_scheduled(B747_EGT04_10min_inhibit_canx) == false then
-                    run_after_time(B747_EGT04_10min_inhibit_canx, 600.0)
-                end
-            end
-        else
-            EGT_amber_inhibit[4] = 0
-            if is_timer_scheduled(B747_EGT04_5min_inhibit_canx) == true then
-                stop_timer(B747_EGT04_5min_inhibit_canx)
-            end
-            if is_timer_scheduled(B747_EGT04_10min_inhibit_canx) == true then
-                stop_timer(B747_EGT04_10min_inhibit_canx)
-            end
-    
-        end
-    end
-
-
-    -- SHOW/HIDE LIMIT MARKER
-    B747DR_EGT_amber_inhibit[3] = B747DR_engine_TOGA_mode
-
-
-    -- SET AMBER HIDE/SHOW
-    if B747DR_display_EGT[3] > EGT_continuous_limit
-        and B747DR_display_EGT[3] <= EGT_max_limit
-        and EGT_amber_inhibit[4] == 0
-    then
-        B747DR_EGT_amber_on[3] = 1
-    else
-        B747DR_EGT_amber_on[3] = 0
-    end
-
-
-    -- SET WHITE HIDE/SHOW
-    if (B747DR_display_EGT[3] <= EGT_continuous_limit)
-        or ((B747DR_display_EGT[3] > EGT_continuous_limit) and (B747DR_display_EGT[3] <= EGT_max_limit) and (EGT_amber_inhibit[4] == 1))
-    then
-        B747DR_EGT_white_on[3] = 1
-    else
-        B747DR_EGT_white_on[3] = 0
-    end
-
 end
 
 
@@ -1550,14 +1231,16 @@ end
 --*************************************************************************************--
 
 dofile("B747.40.xt.engine_start.lua")
+dofile("B747.40.xt.engine_display.lua")
 
 function aircraft_load() end
 
 function aircraft_unload() end
 
-function flight_start() 
+function flight_start()
     simDR_autoReverse=0
     B747_flight_start_engines()
+    B747_engine_display_flight_start()
 
 end
 
@@ -1584,35 +1267,15 @@ function after_physics()
     if hasSimConfig()==false then return end
     if debug_engines>0 then return end
     local apModeRefresh=B747DR_ap_approach_mode
-    --Marauder28
-
-    if string.match(simConfigData["data"].PLANE.engines, "CF6") then
-        EGT_start_limit = 870
-        EGT_continuous_limit = 925
-        EGT_max_limit = 960
-    elseif string.match(simConfigData["data"].PLANE.engines, "PW") then
-        EGT_start_limit = 535
-        EGT_continuous_limit = 629
-        EGT_max_limit = 654
-    elseif string.match(simConfigData["data"].PLANE.engines, "RB") then
-        EGT_start_limit = 600
-        EGT_continuous_limit = 733
-        EGT_max_limit = 785
-    end
-     --End Marauder28
-    
-
-
-   
-
 
     B747_prop_mode()
-    
+
     B747_set_tq_levers_mnp_show()
 
     --B747_electronic_engine_control()
 
-    B747_EGT_indicator()
+    B747_engine_spool_time()
+    B747_engine_display()           -- EGT colours and start limit line (B747.40.xt.engine_display.lua)
 
     B747_engine_oil_qty()
     B747_engine_oil_temp()

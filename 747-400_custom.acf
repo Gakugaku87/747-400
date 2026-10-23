@@ -115888,7 +115888,7 @@ GROUP Upper EICAS
               POS 1748.500000 596.500000
               IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
               DATAREF laminar/B747/engines/display_EGT[3]
-              SHOW_GREATER 654.000000 laminar/B747/engines/display_EGT[3]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[3]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -115900,7 +115900,7 @@ GROUP Upper EICAS
               POS 1642.500000 596.500000
               IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
               DATAREF laminar/B747/engines/display_EGT[2]
-              SHOW_GREATER 654.000000 laminar/B747/engines/display_EGT[2]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[2]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -115912,7 +115912,7 @@ GROUP Upper EICAS
               POS 1536.500000 596.500000
               IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
               DATAREF laminar/B747/engines/display_EGT[1]
-              SHOW_GREATER 654.000000 laminar/B747/engines/display_EGT[1]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[1]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -115924,7 +115924,7 @@ GROUP Upper EICAS
               POS 1430.500000 596.500000
               IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
               DATAREF laminar/B747/engines/display_EGT[0]
-              SHOW_GREATER 654.000000 laminar/B747/engines/display_EGT[0]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[0]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -116137,7 +116137,7 @@ GROUP Upper EICAS
                 POS 1748.500000 626.000000
                 IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                 DATAREF 
-                SHOW_LESS 55.000000 sim/cockpit2/engine/indicators/N2_percent[3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[3]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -116158,7 +116158,7 @@ GROUP Upper EICAS
                 POS 1642.500000 626.000000
                 IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                 DATAREF 
-                SHOW_LESS 55.000000 sim/cockpit2/engine/indicators/N2_percent[2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[2]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -116179,7 +116179,7 @@ GROUP Upper EICAS
                 POS 1536.500000 626.000000
                 IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                 DATAREF 
-                SHOW_LESS 55.000000 sim/cockpit2/engine/indicators/N2_percent[1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[1]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -116200,7 +116200,7 @@ GROUP Upper EICAS
                 POS 1430.500000 626.000000
                 IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                 DATAREF 
-                SHOW_LESS 55.000000 sim/cockpit2/engine/indicators/N2_percent[0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[0]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -116307,7 +116307,7 @@ GROUP Upper EICAS
               POS 1748.500000 670.500000
               IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
               DATAREF laminar/B747/engines/display_GE_EGT[3]
-              SHOW_GREATER 960.000000 laminar/B747/engines/display_GE_EGT[3]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[3]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -116320,7 +116320,7 @@ GROUP Upper EICAS
               POS 1642.500000 670.500000
               IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
               DATAREF laminar/B747/engines/display_GE_EGT[2]
-              SHOW_GREATER 960.000000 laminar/B747/engines/display_GE_EGT[2]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[2]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -116333,7 +116333,7 @@ GROUP Upper EICAS
               POS 1536.500000 670.500000
               IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
               DATAREF laminar/B747/engines/display_GE_EGT[1]
-              SHOW_GREATER 960.000000 laminar/B747/engines/display_GE_EGT[1]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[1]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -116346,7 +116346,7 @@ GROUP Upper EICAS
               POS 1430.500000 670.500000
               IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
               DATAREF laminar/B747/engines/display_GE_EGT[0]
-              SHOW_GREATER 960.000000 laminar/B747/engines/display_GE_EGT[0]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[0]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -116359,8 +116359,7 @@ GROUP Upper EICAS
               POS 1748.500000 670.500000
               IMAGE CRT Displays/EICAS Upper/EGT_tapeA
               DATAREF laminar/B747/engines/display_GE_EGT[3]
-              SHOW_LESS 960.000000 laminar/B747/engines/display_GE_EGT[3]
-              SHOW_GREATER 925.000000 laminar/B747/engines/display_GE_EGT[3]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[3]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -116373,8 +116372,7 @@ GROUP Upper EICAS
               POS 1642.500000 670.500000
               IMAGE CRT Displays/EICAS Upper/EGT_tapeA
               DATAREF laminar/B747/engines/display_GE_EGT[2]
-              SHOW_LESS 960.000000 laminar/B747/engines/display_GE_EGT[2]
-              SHOW_GREATER 925.000000 laminar/B747/engines/display_GE_EGT[2]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[2]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -116387,8 +116385,7 @@ GROUP Upper EICAS
               POS 1536.500000 670.500000
               IMAGE CRT Displays/EICAS Upper/EGT_tapeA
               DATAREF laminar/B747/engines/display_GE_EGT[1]
-              SHOW_LESS 960.000000 laminar/B747/engines/display_GE_EGT[1]
-              SHOW_GREATER 925.000000 laminar/B747/engines/display_GE_EGT[1]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[1]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -116401,8 +116398,7 @@ GROUP Upper EICAS
               POS 1430.500000 670.500000
               IMAGE CRT Displays/EICAS Upper/EGT_tapeA
               DATAREF laminar/B747/engines/display_GE_EGT[0]
-              SHOW_LESS 960.000000 laminar/B747/engines/display_GE_EGT[0]
-              SHOW_GREATER 925.000000 laminar/B747/engines/display_GE_EGT[0]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[0]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -116415,7 +116411,7 @@ GROUP Upper EICAS
               POS 1748.500000 670.500000
               IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
               DATAREF laminar/B747/engines/display_GE_EGT[3]
-              SHOW_LESS 925.000000 laminar/B747/engines/display_GE_EGT[3]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[3]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -116428,7 +116424,7 @@ GROUP Upper EICAS
               POS 1642.500000 670.500000
               IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
               DATAREF laminar/B747/engines/display_GE_EGT[2]
-              SHOW_LESS 925.000000 laminar/B747/engines/display_GE_EGT[2]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[2]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -116441,7 +116437,7 @@ GROUP Upper EICAS
               POS 1536.500000 670.500000
               IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
               DATAREF laminar/B747/engines/display_GE_EGT[1]
-              SHOW_LESS 925.000000 laminar/B747/engines/display_GE_EGT[1]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[1]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -116454,7 +116450,7 @@ GROUP Upper EICAS
               POS 1430.500000 670.500000
               IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
               DATAREF laminar/B747/engines/display_GE_EGT[0]
-              SHOW_LESS 925.000000 laminar/B747/engines/display_GE_EGT[0]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[0]
               CLIP
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -116559,7 +116555,7 @@ GROUP Upper EICAS
                 POS 1748.500000 781.000000
                 IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                 DATAREF 
-                SHOW_LESS 55.000000 sim/cockpit2/engine/indicators/N2_percent[3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[3]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -116580,7 +116576,7 @@ GROUP Upper EICAS
                 POS 1642.500000 781.000000
                 IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                 DATAREF 
-                SHOW_LESS 55.000000 sim/cockpit2/engine/indicators/N2_percent[2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[2]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -116601,7 +116597,7 @@ GROUP Upper EICAS
                 POS 1536.500000 781.000000
                 IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                 DATAREF 
-                SHOW_LESS 55.000000 sim/cockpit2/engine/indicators/N2_percent[1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[1]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -116622,7 +116618,7 @@ GROUP Upper EICAS
                 POS 1430.500000 781.000000
                 IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                 DATAREF 
-                SHOW_LESS 55.000000 sim/cockpit2/engine/indicators/N2_percent[0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[0]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -116993,7 +116989,7 @@ GROUP Upper EICAS
               POS 1748.000000 674.000000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
               DATAREF laminar/B747/engines/display_EGT[3]
-              SHOW_GREATER 654.000000 laminar/B747/engines/display_EGT[3]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[3]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117009,7 +117005,7 @@ GROUP Upper EICAS
               POS 1642.000000 674.000000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
               DATAREF laminar/B747/engines/display_EGT[2]
-              SHOW_GREATER 654.000000 laminar/B747/engines/display_EGT[2]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[2]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117025,7 +117021,7 @@ GROUP Upper EICAS
               POS 1536.000000 674.000000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
               DATAREF laminar/B747/engines/display_EGT[1]
-              SHOW_GREATER 654.000000 laminar/B747/engines/display_EGT[1]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[1]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117041,7 +117037,7 @@ GROUP Upper EICAS
               POS 1430.000000 674.000000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
               DATAREF laminar/B747/engines/display_EGT[0]
-              SHOW_GREATER 654.000000 laminar/B747/engines/display_EGT[0]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[0]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117200,8 +117196,7 @@ GROUP Upper EICAS
               POS 1430.500000 752.500000
               IMAGE CRT Displays/EICAS Upper/EGT_box_amber
               DATAREF laminar/B747/engines/display_GE_EGT[0]
-              SHOW_LESS 960.000000 laminar/B747/engines/display_GE_EGT[0]
-              SHOW_GREATER 925.000000 laminar/B747/engines/display_GE_EGT[0]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[0]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117222,8 +117217,7 @@ GROUP Upper EICAS
               POS 1536.500000 752.500000
               IMAGE CRT Displays/EICAS Upper/EGT_box_amber
               DATAREF laminar/B747/engines/display_GE_EGT[1]
-              SHOW_LESS 960.000000 laminar/B747/engines/display_GE_EGT[1]
-              SHOW_GREATER 925.000000 laminar/B747/engines/display_GE_EGT[1]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[1]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117244,8 +117238,7 @@ GROUP Upper EICAS
               POS 1642.500000 752.500000
               IMAGE CRT Displays/EICAS Upper/EGT_box_amber
               DATAREF laminar/B747/engines/display_GE_EGT[2]
-              SHOW_LESS 960.000000 laminar/B747/engines/display_GE_EGT[2]
-              SHOW_GREATER 925.000000 laminar/B747/engines/display_GE_EGT[2]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[2]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117266,8 +117259,7 @@ GROUP Upper EICAS
               POS 1748.500000 752.500000
               IMAGE CRT Displays/EICAS Upper/EGT_box_amber
               DATAREF laminar/B747/engines/display_GE_EGT[3]
-              SHOW_LESS 960.000000 laminar/B747/engines/display_GE_EGT[3]
-              SHOW_GREATER 925.000000 laminar/B747/engines/display_GE_EGT[3]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[3]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117288,7 +117280,7 @@ GROUP Upper EICAS
               POS 1430.500000 752.500000
               IMAGE CRT Displays/EICAS Upper/EPR.EGT_box_red
               DATAREF laminar/B747/engines/display_GE_EGT[0]
-              SHOW_GREATER 960.000000 laminar/B747/engines/display_GE_EGT[0]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[0]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117309,7 +117301,7 @@ GROUP Upper EICAS
               POS 1536.500000 752.500000
               IMAGE CRT Displays/EICAS Upper/EPR.EGT_box_red
               DATAREF laminar/B747/engines/display_GE_EGT[1]
-              SHOW_GREATER 960.000000 laminar/B747/engines/display_GE_EGT[1]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[1]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117330,7 +117322,7 @@ GROUP Upper EICAS
               POS 1642.500000 752.500000
               IMAGE CRT Displays/EICAS Upper/EPR.EGT_box_red
               DATAREF laminar/B747/engines/display_GE_EGT[2]
-              SHOW_GREATER 960.000000 laminar/B747/engines/display_GE_EGT[2]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[2]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117351,7 +117343,7 @@ GROUP Upper EICAS
               POS 1748.500000 752.500000
               IMAGE CRT Displays/EICAS Upper/EPR.EGT_box_red
               DATAREF laminar/B747/engines/display_GE_EGT[3]
-              SHOW_GREATER 960.000000 laminar/B747/engines/display_GE_EGT[3]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[3]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117372,7 +117364,7 @@ GROUP Upper EICAS
               POS 1430.500000 752.500000
               IMAGE CRT Displays/EICAS Upper/EPR.EGT_box
               DATAREF laminar/B747/engines/display_GE_EGT[0]
-              SHOW_LESS 925.000000 laminar/B747/engines/display_GE_EGT[0]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[0]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117393,7 +117385,7 @@ GROUP Upper EICAS
               POS 1536.500000 752.500000
               IMAGE CRT Displays/EICAS Upper/EPR.EGT_box
               DATAREF laminar/B747/engines/display_GE_EGT[1]
-              SHOW_LESS 925.000000 laminar/B747/engines/display_GE_EGT[1]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[1]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117414,7 +117406,7 @@ GROUP Upper EICAS
               POS 1642.500000 752.500000
               IMAGE CRT Displays/EICAS Upper/EPR.EGT_box
               DATAREF laminar/B747/engines/display_GE_EGT[2]
-              SHOW_LESS 925.000000 laminar/B747/engines/display_GE_EGT[2]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[2]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117435,7 +117427,7 @@ GROUP Upper EICAS
               POS 1748.500000 752.500000
               IMAGE CRT Displays/EICAS Upper/EPR.EGT_box
               DATAREF laminar/B747/engines/display_GE_EGT[3]
-              SHOW_LESS 925.000000 laminar/B747/engines/display_GE_EGT[3]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[3]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117456,7 +117448,7 @@ GROUP Upper EICAS
               POS 1748.000000 752.500000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
               DATAREF laminar/B747/engines/display_GE_EGT[3]
-              SHOW_GREATER 960.000000 laminar/B747/engines/display_GE_EGT[3]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[3]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117472,7 +117464,7 @@ GROUP Upper EICAS
               POS 1642.000000 752.500000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
               DATAREF laminar/B747/engines/display_GE_EGT[2]
-              SHOW_GREATER 960.000000 laminar/B747/engines/display_GE_EGT[2]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[2]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117488,7 +117480,7 @@ GROUP Upper EICAS
               POS 1536.000000 752.500000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
               DATAREF laminar/B747/engines/display_GE_EGT[1]
-              SHOW_GREATER 960.000000 laminar/B747/engines/display_GE_EGT[1]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[1]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117504,7 +117496,7 @@ GROUP Upper EICAS
               POS 1430.000000 752.500000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
               DATAREF laminar/B747/engines/display_GE_EGT[0]
-              SHOW_GREATER 960.000000 laminar/B747/engines/display_GE_EGT[0]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[0]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117520,8 +117512,7 @@ GROUP Upper EICAS
               POS 1748.000000 752.500000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.amber
               DATAREF laminar/B747/engines/display_GE_EGT[3]
-              SHOW_LESS 960.000000 laminar/B747/engines/display_GE_EGT[3]
-              SHOW_GREATER 925.000000 laminar/B747/engines/display_GE_EGT[3]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[3]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117537,8 +117528,7 @@ GROUP Upper EICAS
               POS 1642.000000 752.500000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.amber
               DATAREF laminar/B747/engines/display_GE_EGT[2]
-              SHOW_LESS 960.000000 laminar/B747/engines/display_GE_EGT[2]
-              SHOW_GREATER 925.000000 laminar/B747/engines/display_GE_EGT[2]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[2]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117554,8 +117544,7 @@ GROUP Upper EICAS
               POS 1536.000000 752.500000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.amber
               DATAREF laminar/B747/engines/display_GE_EGT[1]
-              SHOW_LESS 960.000000 laminar/B747/engines/display_GE_EGT[1]
-              SHOW_GREATER 925.000000 laminar/B747/engines/display_GE_EGT[1]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[1]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117571,8 +117560,7 @@ GROUP Upper EICAS
               POS 1430.000000 752.500000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.amber
               DATAREF laminar/B747/engines/display_GE_EGT[0]
-              SHOW_LESS 960.000000 laminar/B747/engines/display_GE_EGT[0]
-              SHOW_GREATER 925.000000 laminar/B747/engines/display_GE_EGT[0]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[0]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -117588,7 +117576,7 @@ GROUP Upper EICAS
               POS 1748.000000 752.500000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
               DATAREF laminar/B747/engines/display_GE_EGT[3]
-              SHOW_LESS 925.000000 laminar/B747/engines/display_GE_EGT[3]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[3]
               SHOW_GREATER 0.030000 laminar/B747/engines/display_N1[3]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -117605,7 +117593,7 @@ GROUP Upper EICAS
               POS 1642.000000 752.500000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
               DATAREF laminar/B747/engines/display_GE_EGT[2]
-              SHOW_LESS 925.000000 laminar/B747/engines/display_GE_EGT[2]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[2]
               SHOW_GREATER 0.030000 laminar/B747/engines/display_N1[2]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -117622,7 +117610,7 @@ GROUP Upper EICAS
               POS 1536.000000 752.500000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
               DATAREF laminar/B747/engines/display_GE_EGT[1]
-              SHOW_LESS 925.000000 laminar/B747/engines/display_GE_EGT[1]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[1]
               SHOW_GREATER 0.030000 laminar/B747/engines/display_N1[1]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -117639,7 +117627,7 @@ GROUP Upper EICAS
               POS 1430.000000 752.500000
               IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
               DATAREF laminar/B747/engines/display_GE_EGT[0]
-              SHOW_LESS 925.000000 laminar/B747/engines/display_GE_EGT[0]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[0]
               SHOW_GREATER 0.030000 laminar/B747/engines/display_N1[0]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9

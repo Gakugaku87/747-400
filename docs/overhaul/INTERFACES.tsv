@@ -1156,6 +1156,8 @@ laminar/B747/engine/thrust_mnp_show_all	dataref	obj	B747.40.engines,B747.40.xt.e
 laminar/B747/engine/vibration_position	dataref	obj	B747.40.engines,B747.40.xt.engines
 laminar/B747/engines/EGT/amber_inhibit	dataref	panel	B747.40.engines,B747.40.xt.engines
 laminar/B747/engines/EGT/amber_on	dataref	panel	B747.40.engines,B747.40.xt.engines
+laminar/B747/engines/EGT/red_on	dataref	panel	B747.40.engines
+laminar/B747/engines/EGT/start_limit_on	dataref	panel	B747.40.engines
 laminar/B747/engines/EGT/white_on	dataref	panel	B747.40.engines,B747.40.xt.engines
 laminar/B747/engines/EICAS2_oil_press_status	dataref	panel	B747.40.engines,B747.40.xt.engines
 laminar/B747/engines/TRA	dataref	panel	B747.42.EEC,B747.42.xt.EEC,B747.68.xt.fms

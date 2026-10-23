@@ -56,6 +56,12 @@ function B747_engine_start_flight_start()
     start_settle_left = SETTLE_S
 end
 
+-- engine 0-3: the start phase (the model's: off, motor, light, accel, dry,
+-- aborted), for the EGT start limit line (B747.40.xt.engine_display.lua)
+function B747_engine_start_phase(engine)
+    return start_state.eng[engine + 1].phase
+end
+
 local function read_inputs(inp)
     local t = B747DR_engineType
     inp.type = (t == 1) and "GE" or "PW"            -- RR as PW (PLAN.md §5)

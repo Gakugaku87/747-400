@@ -276,6 +276,15 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - アイドル：エンジンごとに approach idle を選び（空中でそのエンジンの防氷、着陸フラップ、405・570 の CON、GE の逆推力。条件が終わって 5 秒・接地 5 秒後に minimum）、X-Plane のアイドル（`sim/aircraft2/engine/high_idle_ratio`、全エンジンで 1 つ）を、どれかが approach なら 2.625、ほかは外気温による minimum の値にする（前の値。変わったときだけ書く）。型式ごとの `engine_idle_control_*` は表示用の minimum idle の N1 を返すだけにした。ENG n LOW IDLE（advisory 309〜312、新設）と >IDLE DISAGREE（223）の判定もあるが、アイドルの故障が無いので出ない。
 - 読むもの：レバー（`laminar/B747/engine/throttle`）、`sim/flightmodel2/position/pressure_altitude`、TAT、IAS、パックのセレクタ、エンジン防氷弁（`antiice/nacelle/valve_pos`）、翼防氷弁（`antiice/wing/valve_pos`）、エンジン型式、PSEU（`gear/air_ground/pri_gnd`）、フラップレバー（`sim/cockpit2/controls/flap_ratio`、0・1・5・10・20・25・30 の等間隔）、CON（`button_switch/position[44]`）、貨物機（`freighter`）、逆推力の展開（`thrust_reverser_deploy_ratio`）、外気温、表示の N1・EPR（`display_N1`・`display_EPR`）と丸め前の N2。
 
+### 4.10 エンジンの表示（2-3 段 3）
+
+エンジンの表示のモデル（`plugins/xtlua/scripts/B747.40.xt.engines/B747.40.engine_display_model.lua`）を、グルー `B747.40.xt.engine_display.lua` がエンジンのモジュールの `after_physics` で毎フレーム回す（`B747_engine_display()`）。中身は notes/ATA-70-80.md §3.2・§4.11。
+
+- EGT の色：表示の EGT（GE は `display_GE_EGT`、P&W・RR は `display_EGT`。値は EEC のモジュールが作る）を型式ごとの限界（CF6 は ATA70_80 p.395 の 750・925・960 ℃、P&W・RR は前のコードの値）と比べ、`laminar/B747/engines/EGT/white_on`・`amber_on`・`red_on`（新設）を書く。パネル（カスタム acf）の帯・枠・数字はこの 3 つで色を出す（前は P&W の赤と GE の全色がパネルの固定の閾値だった）。
+- 琥珀の抑止：TO/GA スイッチ（エンジンのモジュールが置き換えている `sim/engines/TOGA_power`・`sim/autopilot/take_off_go_around`）を押してから 5 分は、琥珀の帯でも白（P&W・RR はエンジンが 1 基止まっていれば 10 分）。前は A/T の TOGA の保持（`TOGA_mode`）に連動し、帯の線も消していた。帯（`EGT/amber_inhibit`）はいつも出す。
+- 始動限界の線：FUEL CONTROL が CUTOFF か、始動の途中（始動モデルの phase が off でない：`B747_engine_start_phase(i)`、始動のグルーが出す）なら `EGT/start_limit_on`（新設）を 1 にし、その間は EGT が始動限界で赤。始動はアイドルで落ち着いて終わる（始動モデル）。前はパネルが X-Plane の N2 55 % 未満で出していた。
+- X-Plane のスプール時間（4 基運転で 5 秒、0 基で 26 秒）を書く処理は、前の EGT の関数から `B747_engine_spool_time()` に分けて残した（ENG-35）。
+
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 
 - 描画は、各 acf の末尾（`P` 行の後ろ）に埋め込まれた X-Plane の generic instrument で行う。数は 2850 個で、内訳は rotary 1164、text 709、pointer 293、needle 122、tape 85、rolling 24。
