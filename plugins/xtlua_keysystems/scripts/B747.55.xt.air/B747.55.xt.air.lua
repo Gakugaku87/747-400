@@ -121,8 +121,6 @@ simDR_startup_running               = find_dataref("sim/operation/prefs/startup_
 
 simDR_bleed_air_mode                = find_dataref("sim/cockpit2/pressurization/actuators/bleed_air_mode")
 
-simDR_elec_bus_volts                = find_dataref("sim/cockpit2/electrical/bus_volts")
-
 simDR_indicated_altitude_pilot      = find_dataref("sim/cockpit2/gauges/indicators/altitude_ft_pilot")
 simDR_indicated_vvi_fpm_pilot       = find_dataref("sim/cockpit2/gauges/indicators/vvi_fpm_pilot")
 
@@ -418,22 +416,11 @@ B747DR_engine04_fire_ext_switch_pos_arm     = deferred_dataref("laminar/B747/fir
 
 -- the bleed air: the model and its glue (notes/ATA-36.md), after the bindings
 dofile("B747.55.xt.bleed.lua")
--- the packs and the pressurization: the models and their glue
--- (notes/ATA-21.md), after the bleed glue
+-- the packs, the pressurization and the equipment cooling: the models and
+-- their glue (notes/ATA-21.md), after the bleed glue
 dofile("B747.55.xt.packs.lua")
 dofile("B747.55.xt.press.lua")
-
-
-
-
-
-function equipment_cooling()
-    if (simDR_elec_bus_volts[0] > 0.0) and B747DR_equip_cooling_sel_pos==1 then
-        B747DR_equip_cooling_state =1
-    else
-        B747DR_equip_cooling_state =0
-    end    
-end
+dofile("B747.55.xt.eqcool.lua")
 
 
 
@@ -494,11 +481,12 @@ end
 
 ----- SET STATE TO ENGINES RUNNING ------------------------------------------------------
 function B747_set_air_ER()
-	
+
     B747DR_pack_ctrl_sel_pos[0] = 1
     B747DR_pack_ctrl_sel_pos[1] = 1
     B747DR_pack_ctrl_sel_pos[2] = 1
-	
+    B747DR_equip_cooling_sel_pos = 1    -- NORM (FCOM p.107, NP.21.13)
+
 end
 
 
@@ -550,6 +538,7 @@ function flight_start()
     B747_bleed_flight_start()
     B747_packs_flight_start()
     B747_press_flight_start()
+    B747_eqcool_flight_start()
 
 end
 
@@ -563,7 +552,7 @@ function after_physics()
     B747_bleed()        -- with the packs' flow of the last frame
     B747_packs()
     B747_press()
-    equipment_cooling()
+    B747_eqcool()
 
     B747_air_monitor_AI()
 

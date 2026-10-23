@@ -32,14 +32,14 @@
 項目を終えるたびに、[DIFFERENCES.md](DIFFERENCES.md)（実機との違い、全分野。2026-10-23 に利用者の依頼で作った）の該当分野も直す。
 
 1. 承認済みのパネル（カスタム acf）の変更の残り：1-5 のダクト圧の表示条件（PNEU-09。空調 3-1 と一緒に）。済：`.snd` の警報音、1-3 の PG と 3〜10 ページ、1-3 の STATUS ページと cue、1-4 の HYD synoptic（HYD-19。記号の色と不作動項目の絵は 2026-10-23 夕方に新しい画像で）と RSVR PRESS（HYD-18）、1-1 の synoptic の ISLN・DRIVE の枠・UTILITY と GALLEY の色、STAT のバッテリーの値と CHG/DIS、1-5 のダクト圧の色（PNEU-10）。変更の一覧は ACF_DIFF.md §5、画像は `docs/overhaul/tools/make_synoptic_images.ps1` で作る。
-2. 3-1（空調・与圧・機器冷却）：作業中。段取りは下の「空調（3-1）の段取りと GAP の状態」。段 1 の (a) パックと与圧は済。次は段 1 の (b) 機器冷却・後方貨物室暖房・貨物室火災 ARM の残り・ER 開始のスイッチ（AIR-13・14・17・19）、その後に段 2（温度制御）と段 3（ECS synoptic のパネル。1-5 のダクト圧の表示条件 PNEU-09・11 も一緒に）。
+2. 3-1（空調・与圧・機器冷却）：作業中。段取りは下の「空調（3-1）の段取りと GAP の状態」。段 1（パックと与圧、機器冷却と ER 開始のスイッチ）は済。次は段 2（温度制御と貨物室の温度・暖房、AIR-10・14）、その後に段 3（ECS synoptic のパネル。1-5 のダクト圧の表示条件 PNEU-09・11 も一緒に）。
 3. 2-3（エンジン）の残り：段 1〜3 は済（下の「エンジン（2-3）の GAP の状態」）。後回し：表示値の作り方（ENG-33。EGT は X-Plane の EGT の比例では始動と離陸を両立できず、N1・N2 などから作り直す必要があるが、値は資料に無く推定になる。N1・EPR・N2 の式を変えると EEC の推力の制御の調整もやり直し）、始動の空気（ENG-38・PNEU-08。ダクト圧と starter の関係が資料に無い）、GE の油圧の目盛りと値（CF6 の値が資料に無い）、振動の high band。partial・compact 形式と exceedance cue（ENG-22）は 5-2 で。空中始動の範囲（ENG-24）は資料に値が無く作れない。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べるのも残り。A/T（6-4）との境界は、EEC がレバー → 指令・最大定格・推力の制御まで、FMC の推力基準と A/T のサーボ（レバーを動かす）は 6-4。
 4. 1-5（空圧）の残り：故障の入れ方（過熱、過圧、HPSOV・PRV の固着、ダクトリーク）、地上空気の操作、スターターがダクト圧で回ること（エンジン 2-3）。
 5. 1-4（油圧）の残り：脚・ブレーキ・ステアリング・逆推力・stab trim・ヨーダンパーの「油圧で動くか」（HYD-09・11・12）は、それぞれの作り直しで、モデルの負荷の表（`B747_hyd_model.LOADS`）を使って入れる。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
 6. 1-1（電源）の残り：電源の有無を `bus_volts` で見ている系統を、バスごとの dataref（ARCHITECTURE.md §4.1）に乗り換える。どれも後の作り直し（空圧 1-5、空調 3-1、燃料 2-2、IRS と無線、照明、操縦系統 4-1）と絡むので、1-2 と同じく各系統の作り直しのときに行う（2026-10-23 に決めた。利用者の確認待ち）。
    - 済：表示器（fltInst02。機長 PFD・ND は APU standby、upper EICAS は main standby、ほかは F/O transfer）、EICAS の計算（warning。EIU のどれかに電源）、時計の計時（fltInst03・04。main hot battery bus）、ELEC パネルの灯（lighting）。
    - 燃料のポンプと弁も 2-2 で乗り換えた（AC・utility・main battery・hot battery・DC・APU battery・ground service bus）。
-   - 残り：装備冷却（air：DC bus。抽気弁は 1-5 で乗り換えた）、IRS と NAV RAD（fms）、表示灯の輝度（lighting：`bus_volts[0]`・`[2]`）、客室灯（lighting）、ヨーダンパー（fltCtrls：`battery_array_on`）。STAT ページのバッテリーはカスタム acf だけ済（純正 acf は X-Plane の値のまま）。
+   - 残り：IRS と NAV RAD（fms）、表示灯の輝度（lighting：`bus_volts[0]`・`[2]`）、客室灯（lighting）、ヨーダンパー（fltCtrls：`battery_array_on`）。STAT ページのバッテリーはカスタム acf だけ済（純正 acf は X-Plane の値のまま）。
 7. 1-2（空地判定）の残り：`onground_any` を読んでいる 16 モジュール（autopilot、fms、fltInst02、antiice、fltCtrls、EEC、engines、fuel、hydraulicsmodel、gear の autobrake、manipulators、fdr、lighting など）を、PSEU の dataref（ARCHITECTURE.md §4.2）に乗り換える。どの信号（pri/alt の AIR・GND、前脚圧縮）を使うかは notes/ATA-32.md §4.1 の表。各系統の作り直しのときに行う。
 8. 1-3 の残り：他のメッセージによる抑止（notes/ATA-31-warning.md §4.4.1）と時間遅れは、各系統の作り直しで表に足す。音（`.snd`）とパネル（PG・3 ページ目以降・STATUS）は済。
 9. R-3 は、作り直しが先になる系統の害の大きい誤りだけ、合間に入れる。
@@ -208,6 +208,7 @@ PLAN.md §3 に書いた。要点：
   - パックの流量の単位：high flow のパック 1 台＝1（抽気のモデルの地上での推定に合わせた）。normal は 2/3（ATA21 p.86）。パックの弁の全行程 3 秒。スケジュールの切替の順はパック 1・2・3。HI FLOW・リリーフ・火災などで high にするときと、スイッチ OFF・故障でファンを止めるときは間を置かない（資料が間を置くと書くのはスケジュールの切替だけ）。HI FLOW でパック 3 台が high のとき止める 2 基は下のファン。再循環ファンは AC のどれかで回る。
   - X-Plane へ：ダクトの空気＝ダクト圧 ÷ 27.5（上限 1.5。上書き前の X-Plane 自身の値に合わせた）、エンジンの抽気の損失＝出す流量 × 1 ℃（3 パック・4 基 idle での X-Plane 自身の値 0.7〜0.8 ℃ に合わせた）、APU は × 15 ℃（始動中の X-Plane 自身の値に合わせた）。
   - PRESS RELIEF は FCOM の「全パック運転中」を「パックの選択器が 3 つとも OFF でない」と読んだ（リリーフでパック 2 は止まるため）。UPR・LWR PRESS RELIEF（status）は 2 つの弁が同時に開くとした。
+- 機器冷却（3-1 段 1。`B747.55.eqcool_model.lua` に「estimate」と書いてある）：OVRD の差圧スイッチ 1.0 psi（資料に値なし。地上では差圧が無いので OVRD で EQUIP COOLING が出る）、OVRD で客室から抜ける空気 0.25 kg/s（ΔP 8.8 psi のとき、差圧に比例）、ファンと弁のモーターはどれかの AC で動く（バスは資料に無い）、スキンの温度は外気温。ER 開始の EQUIP COOLING は NORM（FCOM の準備の手順の位置）。
 
 
 ## 電源（1-1）の GAP の状態
@@ -398,8 +399,8 @@ PLAN.md §3 に書いた。要点：
 段取り（2026-10-24 に決めた。notes/ATA-21.md §8 の案から）：
 - 段 1（パネルの変更なし）
   - (a) パックと与圧：済。パックのモデル `B747.55.pack_model.lua`・与圧のモデル `B747.55.press_model.lua` とグルー（ARCHITECTURE.md §4.11）。X-Plane の与圧は上書きした。
-  - (b) 機器冷却、後方貨物室暖房、貨物室火災 ARM の残り（機器冷却 OVRD・後方暖房）、ER 開始のスイッチの初期化：次。
-- 段 2：温度制御（ゾーン温度の簡易な熱のモデル、トリム空気、backup・ALTN、TRIM AIR OFF・TEMP ZONE、灯）。パックの過熱もここでつなぐ。
+  - (b) 機器冷却、貨物室火災 ARM の機器冷却 OVRD、ER 開始のスイッチの初期化：済。機器冷却のモデル `B747.55.eqcool_model.lua` とグルー `B747.55.xt.eqcool.lua`。後方貨物室暖房は温度が要るので段 2 に回した。
+- 段 2：温度制御（ゾーン温度の簡易な熱のモデル、トリム空気、backup・ALTN、TRIM AIR OFF・TEMP ZONE、灯）と後方・前方貨物室の温度と暖房。パックの過熱もここでつなぐ。
 - 段 3：カスタム acf の ECS synoptic（承認済み：ゾーン温度、外流弁の針、HI FLOW、EXT AIR、パックの OFF/A/B）と、1-5 のダクト圧の表示条件・流れ（PNEU-09・11）。data block の LDG ALT を消す条件（AIR-18）はパネルの変更で、承認の一覧に無いので確かめてから。
 
 | ID | 状態 |
@@ -416,13 +417,13 @@ PLAN.md §3 に書いた。要点：
 | AIR-10 温度制御 | 未（段 2） |
 | AIR-11 流量のスケジュールとファン | 済（cruise clamp と descent detect、パック 15 秒・ファン 5 秒の順、故障時の表）。ファンの故障の入れ方は無い |
 | AIR-12 パックの保護 | 一部（トリップ・PACK RST・SYS FAULT 灯・PACK n・PACK CONTROL・PTC の切替はモデルにある。過熱の入力は温度のモデル（段 2）で） |
-| AIR-13 機器冷却 | 未（段 1 (b)） |
-| AIR-14 後方貨物室暖房 | 未（段 1 (b)） |
+| AIR-13 機器冷却 | 済（NORM・STBY・OVRD の構成、地上は外気 45°F で機外か前方貨物室、各翼 1 基の運転で flight 構成、ファン故障の closed loop と OVRD 30 秒のリセット、OVRD の差圧不足 55 秒で EQUIP COOLING、OVRD の客室の空気の排出を与圧のモデルへ）。故障（過熱・低流量・煙・ファン）の入れ方は無い |
+| AIR-14 後方貨物室暖房 | 未（温度が要るので段 2） |
 | AIR-15 ECS synoptic | 未（段 3、パネル） |
 | AIR-16 EEC のパック数 | 済（運転中のパック数。新しい EEC のグルーと旧い型式別の計算の両方） |
-| AIR-17 貨物室火災 ARM | 一部（パック 3 停止・パック 1/2 high・ファン全停止は済。機器冷却 OVRD と後方暖房の停止は段 1 (b)） |
+| AIR-17 貨物室火災 ARM | 一部（パック 3 停止・パック 1/2 high・再循環ファン全停止・機器冷却の OVRD 構成は済。後方暖房の停止は段 2） |
 | AIR-18 data block | 一部（自動表示の条件は済。LDG ALT の消去と、客室高度の赤い数字の桁（カスタム acf の `DIGITS 4` で、10,000 ft 以上の先頭の桁が出ない。`s15` の写真）はパネルの変更で、承認の一覧に無い） |
-| AIR-19 初期状態 | 未（段 1 (b)。ER 開始で RECIRC が OFF のまま：X-Plane の `s14` で上のファンが止まっていた） |
+| AIR-19 初期状態 | 済（エンジン運転中の開始で TRIM AIR・UPR/LWR RECIRC ON、EQUIP COOLING NORM。manipulators は TRIM AIR の位置を [83] に書いていた）。`sim/cockpit2/Cooling/Packs_EXT`（誰も読まない）はそのまま |
 | AIR-20 X-Plane の与圧 | 済（override。X-Plane のダクトの空気と抽気の損失は抽気のグルーが書く） |
 | AIR-21 電源 | 一部（CPC・手動・PTC は済。外流弁の自動のモーター・パック弁の継電器・ファンのバスは資料に無い） |
 | AIR-22 status メッセージ | 一部（CABIN ALT AUTO A/B、OUTFLOW VLV L/R、UPR/LWR PRESS RELIEF、CPCS AIR/GND は済。パック・ファン・機器冷却の status は各段で） |
@@ -545,3 +546,4 @@ PLAN.md §3 に書いた。要点：
 - 2026-10-24 02:3x〜03:xx：エンジン（2-3）段 3 の続き、オイルと振動のパネル（ENG-25〜27・29 の残り）。グルーが GE の油圧の琥珀（`oil_press_amber`）、油量のマゼンタ（`oil_qty_magenta`）、振動の音源（`vib_source`：0 BB、1 N1、2 N2、3 FAN、4 LPT）を書き、カスタム acf のパネルを道具 `docs/overhaul/tools/panel_oil_vib.lua` で書き換えた（24 か所、計器を 28 個足した。ACF_DIFF.md §5）：油圧の赤い数字は状態だけで出す（前は 10 psi 未満のときだけで、赤線と 10 psi の間では数字が消えた）、GE の琥珀の数字と針、油温の数字の琥珀は 160 ℃ から（前は 150 ℃ からで白と重なった）、油量のマゼンタの数字、振動の音源の文字。音源の文字の絵（N1・N2・FAN・LPT）は、BB の絵（17 px、白い太字、縁が柔らかい）にそろえて `docs/overhaul/tools/make_vib_labels.ps1` で作った。試験：モジュール 46 件。X-Plane：`s13_oil` 20/20（P&W。振動の音源は 4 基とも N2、オイルポンプ 1 の故障で油圧 1 が赤い数字と赤い針。画像で確認。振動の音源の確認はこの回の後に足した）、`s13_oil_ge` 11/11（Saudia。音源は N2。画像で確認）。外観は chase 視点で変わらない。
 - 2026-10-24 04:2x：空地判定（1-2）のしきい値の修正。PSEU はトラックの傾きを X-Plane の `eagle_claw_angle_deg` が 1° を超えたかで見ていたが、この角度は地上では機体の機首下げの角度（駐機 0.85°、推力を出した滑走 1.1°、強いブレーキ 1.75°）で、滑走中とブレーキ中に AIR になっていた（空調の `s14` で、離陸の中止の後に与圧が climb モードになって見つけた。X-Plane で 50 kt からの急ブレーキを測った）。空中の角度は acf の 8°・58° なので、しきい値を 4° にした。試験：PSEU のモデル 20 件（強いブレーキと機首上げで地上のまま）・モジュール 12 件。X-Plane の `s14_press_ground` の離陸滑走と中止で、与圧のモードが takeoff → ground（空中扱いにならない）。
 - 2026-10-24 03:0x〜05:xx：空調（3-1）段 1 (a)、パックと与圧。X-Plane の与圧の上書き（override_pressurization）を Web API で試し（書いた客室高度・昇降率・ΔP がそのまま計器に映る、X-Plane は客室を積分しない、ダクトの空気と抽気の損失も更新しなくなり、エアスターターは書いた値で回る）、上書きにした。新しいモデル 2 つ（`B747.55.pack_model.lua`：弁・normal/high・スケジュール・再循環ファン・PTC A/B・トリップ・メッセージ、`B747.55.press_model.lua`：客室の質量収支・CPC A/B・モード・着陸高度（FMC の経路の出発地・目的地の標高を X-Plane の earth_aptmeta.dat から）・リミッタ・手動・リリーフ・減圧の故障・メッセージ）とグルー（`B747.55.xt.packs.lua`・`B747.55.xt.press.lua`）。抽気のグルーが X-Plane のダクトの空気（ダクト圧 ÷ 27.5：上書き前の X-Plane 自身の値を `s00` の写しで測って合わせた）と抽気の損失を書き、抽気のモデルはパックの流量を使う。EEC は運転中のパック数（AIR-16）。巡航の ΔP 8.8 は FCOM p.585 の表示例から（8.9 は琥珀）。外流弁は 10 秒では離陸の瞬間に客室が 50 ft 上がったので 6 秒にした。X-Plane の試験で、空地判定のしきい値の誤り（上の 04:2x）、フライト開始直後の空地判定の遅れ（最初の 3 秒は対地高度で初期化）、空中開始の落下（落ち着くまで初期化）を直した。試験：パックのモデル 55 件、与圧のモデル 99 件、モジュール 54 件、抽気のモデル 77 件、EEC のモジュール 61 件、全 30 本。X-Plane（カスタム acf）：`s14_press_ground`（新設）、`s15_press_cruise`（新設）、外流弁計の針が OP を指すこと、data block の表示（写真）。
+- 2026-10-24 05:1x：空調（3-1）段 1 (b)、機器冷却とエンジン運転中の開始のスイッチ。新しいモデル `B747.55.eqcool_model.lua` とグルー `B747.55.xt.eqcool.lua`：NORM・STBY・OVRD の構成（地上は外気 45°F で機外か前方貨物室、各翼 1 基の運転で flight 構成）、ファン故障の closed loop と OVRD 30 秒のリセット、OVRD の差圧不足 55 秒で EQUIP COOLING、OVRD で抜ける客室の空気を与圧のモデルへ、貨物室火災 ARM で OVRD の構成。前の `equipment_cooling()`（NORM で `equip_cooling/state` を 1 にするだけ）は外した。エンジン運転中の開始で TRIM AIR・RECIRC ON（manipulators は TRIM AIR の位置を [83] に書いていた）、EQUIP COOLING NORM（AIR-19）。後方貨物室暖房は温度が要るので段 2 に回した。試験：機器冷却のモデル 21 件、モジュール 59 件、全 31 本。X-Plane（カスタム acf）：`s14_press_ground` 66/66（開始の TRIM AIR・RECIRC・EQUIP COOLING と上のファン、地上の OVRD で 55 秒後に EQUIP COOLING、NORM で消える）。

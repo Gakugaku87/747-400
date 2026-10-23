@@ -2178,9 +2178,13 @@ function B747_set_manip_ER()
 	B747_button_switch_position_target[83] = 1
 	B747DR_button_switch_position[83] = 1
 
-     -- TEMPERATURE
+     -- TEMPERATURE: TRIM AIR, UPR and LWR RECIRC ON (FCOM p.107-108, NP.21.13-14)
  	B747_button_switch_position_target[37] = 1
-	B747DR_button_switch_position[83] = 1
+	B747DR_button_switch_position[37] = 1
+	B747_button_switch_position_target[38] = 1
+	B747DR_button_switch_position[38] = 1
+	B747_button_switch_position_target[39] = 1
+	B747DR_button_switch_position[39] = 1
 
     -- BLEED AIR
 	B747_button_switch_position_target[75] = 1

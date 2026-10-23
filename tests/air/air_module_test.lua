@@ -99,6 +99,22 @@ T.equal(get(AIR .. "pack/valve_pos", 2), 0, "FWD cargo fire ARM: pack 3 off (FCO
 rt:set(SW, 84, 0)
 frames(4)
 
+-- equipment cooling: NORM runs the fans (laminar/B747/air/equip_cooling/state);
+-- OVRD on the ground: no differential pressure, EQUIP COOLING after 55 s
+-- (FCOM p.558, p.619; ATA21 p.594-598)
+rt:set(AIR .. "equip_cooling/sel_dial_pos", 1)
+frames(1)
+T.equal(get(AIR .. "equip_cooling/state"), 1, "EQUIP COOLING NORM: fans running")
+rt:set(AIR .. "equip_cooling/sel_dial_pos", 2)
+frames(54)
+T.equal(get(AIR .. "equip_cooling/state"), 0, "EQUIP COOLING OVRD: fans off")
+T.equal(get("laminar/B747/CAS/caution_status", 27), 0, "OVRD on the ground 54 s: no EQUIP COOLING yet")
+frames(2)
+T.equal(get("laminar/B747/CAS/caution_status", 27), 1, "OVRD on the ground 56 s: EQUIP COOLING")
+rt:set(AIR .. "equip_cooling/sel_dial_pos", 1)
+frames(1)
+T.equal(get("laminar/B747/CAS/caution_status", 27), 0, "NORM again: no EQUIP COOLING")
+
 -- the landing altitude: no FMC route, 2,000 AUTO and LANDING ALT; the FMC's
 -- departure field (FCOM p.608, p.1400)
 T.equal(get(AIR .. "landing_altitude"), 2000, "no FMC route: 2,000 ft")

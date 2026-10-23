@@ -88,6 +88,7 @@ end
 
 local press_state = C.new()
 local press_inputs = C.inputs()
+B747_press_out = press_state.out    -- for the equipment cooling glue (ΔP)
 local fms_str, fms_dep, fms_dest = nil, nil, nil
 local knob_last = nil
 
@@ -111,6 +112,7 @@ end
 
 function B747_press_flight_start()
     press_state = C.new()
+    B747_press_out = press_state.out
     knob_last = nil
 end
 
@@ -175,6 +177,7 @@ function B747_press()
         if B747DR_pack_ctrl_sel_pos[p - 1] > 0.5 then selected = selected + 1 end
     end
     inp.pack_flow, inp.packs_selected = flow, selected
+    inp.extra_out_kg_s = B747_eqcool_overboard_kg_s or 0    -- equipment cooling OVRD (last frame)
     inp.depres_slow = simDR_press_depres_slow == 6
     inp.depres_fast = simDR_press_depres_fast == 6
 
