@@ -185,4 +185,24 @@ T.equal(get(AIR .. "packs_operating"), 3, "PACK 2 at A: three packs, not the sel
 T.equal(air.ns.B747_pack_out.packs_operating, 3, "B747_pack_out follows the pack model")
 T.equal(air.ns.B747_press_out.ldg_ft, get(AIR .. "landing_altitude"), "B747_press_out follows the pressurization model")
 
+-- the temperatures (B747.55.xt.temp.lua): TRIM AIR off with the packs
+-- running: >TRIM AIR OFF, the ZONE SYS FAULT light, no targets; on: the
+-- master trim air valve and the targets; a cold cabin heated by the packs
+-- (FCOM p.555, p.577, p.621; the model in temp_model_test.lua)
+T.equal(get(ADVISORY, 294), 1, "TRIM AIR off, packs running: >TRIM AIR OFF")
+T.equal(get(AIR .. "light/zone_sys_fault"), 1, "TRIM AIR off: the ZONE SYS FAULT light")
+T.equal(get(AIR .. "temp/target_shown"), 0, "TRIM AIR off: backup, no targets")
+rt:set(SW, 37, 1)
+frames(1)
+T.equal(get(ADVISORY, 294), 0, "TRIM AIR on: no >TRIM AIR OFF")
+T.equal(get(AIR .. "light/zone_sys_fault"), 0, "TRIM AIR on: no ZONE SYS FAULT light")
+T.equal(get(AIR .. "temp/trim_air_valve"), 1, "TRIM AIR on: the master trim air valve open")
+T.equal(get(AIR .. "temp/target_shown"), 1, "TRIM AIR on: the targets shown")
+T.near(get(AIR .. "temp/master"), (75 - 32) * 5 / 9, 0.01, "PASS TEMP in the middle: MASTER 75°F, in °C")
+T.near(get(AIR .. "temp/zone_target", 6), (75 - 32) * 5 / 9, 0.01, "zone E's target: MASTER")
+T.check(get(AIR .. "temp/pack_outlet") > get(AIR .. "temp/zone_actual", 2) + 10,
+    "a cabin started at 0 °C outside: the packs heat it")
+T.check(get(AIR .. "temp/zone_actual", 2) > 0.5, "the cabin warming: zone A above the outside's 0 °C")
+T.check(get(AIR .. "temp/cargo", 1) < 1, "the aft cargo near the outside's 0 °C")
+
 T.done()

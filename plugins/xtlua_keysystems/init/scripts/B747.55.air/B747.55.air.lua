@@ -129,6 +129,20 @@ B747DR_press_cpc                    = deferred_dataref("laminar/B747/air/press/c
 B747DR_press_relief_open            = deferred_dataref("laminar/B747/air/press/relief_open", "number")
 B747DR_press_cruise_clamp           = deferred_dataref("laminar/B747/air/press/cruise_clamp", "number")
 B747DR_press_valve_man              = deferred_dataref("laminar/B747/air/press/valve_man", "array[2]")
+-- the temperature model (B747.55.xt.temp.lua), °C: the zones F/D, U/D,
+-- A-E actual and target, the targets shown (1: a pack operating and no
+-- backup, FCOM p.577), MASTER (the PASS TEMP setting), the cargo FWD, AFT,
+-- the pack outlet, the master trim air valve open (1); the ZONE SYS FAULT
+-- and aft cargo TEMP lights (lighting)
+B747DR_temp_zone_actual             = deferred_dataref("laminar/B747/air/temp/zone_actual", "array[7]")
+B747DR_temp_zone_target             = deferred_dataref("laminar/B747/air/temp/zone_target", "array[7]")
+B747DR_temp_target_shown            = deferred_dataref("laminar/B747/air/temp/target_shown", "number")
+B747DR_temp_master                  = deferred_dataref("laminar/B747/air/temp/master", "number")
+B747DR_temp_cargo                   = deferred_dataref("laminar/B747/air/temp/cargo", "array[2]")
+B747DR_temp_pack_outlet             = deferred_dataref("laminar/B747/air/temp/pack_outlet", "number")
+B747DR_temp_trim_air_valve          = deferred_dataref("laminar/B747/air/temp/trim_air_valve", "number")
+B747DR_temp_light_zone_fault        = deferred_dataref("laminar/B747/air/light/zone_sys_fault", "number")
+B747DR_temp_light_aft_cargo         = deferred_dataref("laminar/B747/air/light/aft_cargo_temp", "number")
 
 -- the cabin pressure is the pressurization model's (notes/ATA-21.md §6):
 -- X-Plane's own is off while the aircraft is loaded

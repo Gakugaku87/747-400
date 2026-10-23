@@ -609,6 +609,7 @@ local B747_CASstatusMsg = {
     {DRindex = 33, name = "UPR PRESS RELIEF"},    -- ATA21 p.470
     {DRindex = 34, name = "LWR PRESS RELIEF"},
     {DRindex = 35, name = "CPCS AIR/GND"},        -- ATA21 p.454
+    {DRindex = 36, name = "ZONE TEMP"},           -- ATA21 p.350
 }
 
 

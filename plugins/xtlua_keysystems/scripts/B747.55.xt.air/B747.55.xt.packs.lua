@@ -1,7 +1,8 @@
 -- The pack model (B747.55.pack_model.lua) in the aircraft: reads the PACK
 -- selectors, the duct pressures, HI FLOW, TRIM AIR, the RECIRC switches,
--- PACK RST, cargo fire ARM, the air/ground relays, the buses and the
--- pressurization model's relief valves and cruise clamp; writes the pack
+-- PACK RST, cargo fire ARM, the air/ground relays, the buses, the
+-- pressurization model's relief valves and cruise clamp and the
+-- temperature model's cabin at its target; writes the pack
 -- valves, flows and controllers, the recirculation fans, the number of
 -- packs operating (the EEC reads it), the PACK RST SYS FAULT light, PACK
 -- 1-3, PACK CONTROL, the pack memos and PACKS HIGH FLOW. B747.55.xt.air.lua
@@ -29,9 +30,9 @@ local MEMO_HIGH_FLOW, MEMO_PACKS_OFF = 24, 25
 local pack_state = P.new()
 local pack_inputs = P.inputs()
 local rst_last = false
--- for the bleed and pressurization glue: with a metatable, XTLua's
--- namespace keeps the table itself (it copies a bare table, whose numbers
--- and flags would then not follow the model)
+-- for the bleed, pressurization and temperature glue: with a metatable,
+-- XTLua's namespace keeps the table itself (it copies a bare table, whose
+-- numbers and flags would then not follow the model)
 B747_pack_out = setmetatable(pack_state.out, {})
 B747_pack_relief_open = false           -- the pressurization glue's last frame
 B747_pack_cruise_clamp = false
@@ -66,6 +67,7 @@ function B747_packs()
         or B747DR_button_switch_position[SW_CARGO_ARM_AFT] > 0.5
     inp.relief_open = B747_pack_relief_open
     inp.cruise_clamp = B747_pack_cruise_clamp
+    inp.temp_settled = B747_temp_settled ~= false   -- the temperature glue's last frame
     inp.on_ground = B747DR_pack_pseu_pri_gnd == 1
     for i = 1, 4 do
         inp.dc[i] = B747DR_bleed_elec_dc[i - 1] > 0.5

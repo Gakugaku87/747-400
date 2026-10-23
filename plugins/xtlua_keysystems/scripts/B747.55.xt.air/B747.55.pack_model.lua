@@ -21,6 +21,8 @@ M.HIGH, M.NORMAL = 1.0, 2 / 3
 M.PACK_STEP_S = 15          -- the packs change flow one at a time, 15 s apart (ATA21 p.387, p.389)
 M.FAN_STEP_S = 5            -- the recirculation fans 5 s apart
 M.PTC_LOST_S = 30           -- PACK n: neither controller controls the pack for 30 s (ATA21 p.102)
+M.CLAMP_WAIT_S = 1200       -- the cruise clamp's normal flow waits for the cabin temperature at most
+                            -- 20 min (ATA21 p.386)
 M.INIT_S = 3                -- no touchdown in a new flight's first seconds (XTLua's first reads
                             -- are 0; the air/ground can be late)
 -- estimates (no value in the sources)
@@ -45,6 +47,7 @@ function M.inputs()
         cargo_fire_arm = false,         -- FWD or AFT cargo fire ARM
         relief_open = false,            -- a positive pressure relief valve open (the pressurization model)
         cruise_clamp = false,           -- the ECS card's cruise clamp (the pressurization model)
+        temp_settled = true,            -- the cabin within 1°C of its target (the temperature model)
         on_ground = true,
         dc = {true, true, true, true},  -- DC bus 1-4
         ac = {true, true, true, true},  -- AC bus 1-4
@@ -60,7 +63,7 @@ function M.new()
         valve = {0, 0, 0}, tripped = {false, false, false}, high = {true, true, true},
         want_high = {true, true, true}, forced_high = {false, false, false}, lost_t = {0, 0, 0},
         fan = {false, false, false, false}, want_fan = {false, false, false, false},
-        forced_off = {false, false, false, false},
+        forced_off = {false, false, false, false}, clamp_t = 0,
         pack_step_t = M.PACK_STEP_S, fan_step_t = M.FAN_STEP_S}
     s.out = {valve = {0, 0, 0}, flow = {0, 0, 0}, high = {false, false, false},
         operating = {false, false, false}, packs_operating = 0, ptc = {0, 0, 0},
@@ -124,6 +127,12 @@ function M.update(s, inp, dt)
         end
     end
 
+    -- the cruise clamp's normal flow and lower fans wait until the cabin
+    -- temperature is within 1°C of its target, at most 20 min (ATA21
+    -- p.386; estimate: the fans wait with the packs)
+    if inp.cruise_clamp then s.clamp_t = s.clamp_t + dt else s.clamp_t = 0 end
+    local clamp = inp.cruise_clamp and (inp.temp_settled or s.clamp_t >= M.CLAMP_WAIT_S)
+
     -- the flow each pack should have: high on the ground, in climb and in
     -- descent, with fewer than three packs, a failed fan, HI FLOW, a relief
     -- valve open (packs 1 and 3) or cargo fire ARM (packs 1 and 2); normal
@@ -136,7 +145,7 @@ function M.update(s, inp, dt)
             for f = 1, 4 do if inp.fan_failed[f] and M.FAN_PACK[f] == p then f_high = true end end
         end
         s.forced_high[p] = f_high
-        s.want_high[p] = f_high or not inp.cruise_clamp
+        s.want_high[p] = f_high or not clamp
     end
 
     -- the fans: the upper pair on the ground, in climb and in descent, all
@@ -144,7 +153,7 @@ function M.update(s, inp, dt)
     -- below it; all four with a pack off; none with cargo fire ARM; HI FLOW
     -- with three packs high stops two (the lower pair: estimate) (ATA21
     -- p.23, p.134, p.138-141, p.386-389; FCOM p.556)
-    local four = inp.cruise_clamp or operating < 3
+    local four = clamp or operating < 3
     if inp.hi_flow and operating == 3 then four = false end
     for f = 1, 4 do
         local on = f <= 2 or four or upper_failed >= 2

@@ -169,6 +169,8 @@ B747DR_light_bleed_isln_valve       = find_dataref("laminar/B747/air/light/isln_
 B747DR_light_bleed_apu_valve        = find_dataref("laminar/B747/air/light/apu_valve")
 -- the pack model's PACK RST SYS FAULT light (B747.55.xt.packs.lua)
 B747DR_light_pack_sys_fault         = find_dataref("laminar/B747/air/light/pack_sys_fault")
+B747DR_light_zone_sys_fault         = find_dataref("laminar/B747/air/light/zone_sys_fault")
+B747DR_light_aft_cargo_temp         = find_dataref("laminar/B747/air/light/aft_cargo_temp")
 
 simDR_gear_deploy_ratio             = find_dataref("sim/flightmodel2/gear/deploy_ratio")
 simDR_aircraft_altitude             = find_dataref("sim/cockpit2/gauges/indicators/altitude_ft_pilot")
@@ -1199,8 +1201,8 @@ function B747_annunciators()
     annun.b.yaw_damper_lower = B747_ternary((B747DR_yaw_damper_lwr_on == 0), 1, 0)
 
     -- TEMPERATURE
-    annun.b.temp_zone_reset = B747_ternary((B747DR_button_switch_position[37] < 0.05), 1, 0)
-    annun.b.temp_aft_cargo_heat = 0
+    annun.b.temp_zone_reset = B747DR_light_zone_sys_fault       -- TRIM AIR off, overheat, valve closed (FCOM p.555)
+    annun.b.temp_aft_cargo_heat = B747DR_light_aft_cargo_temp   -- aft cargo overheat, in the air (FCOM p.557)
     annun.b.temp_pack_reset = B747DR_light_pack_sys_fault     -- a pack tripped (FCOM p.560)
 
     -- BLEED AIR

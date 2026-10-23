@@ -94,6 +94,29 @@ do
     T.equal(count_high(out), 3, "two fans failed: all packs high")
 end
 
+-- the clamp's normal flow waits while the cabin is more than 1°C off its
+-- target, at most 20 min (ATA21 p.386); the lower fans with it (estimate)
+do
+    local s, inp = parked()
+    inp.on_ground = false
+    run(s, inp, 20)
+    inp.cruise_clamp, inp.temp_settled = true, false
+    local out = run(s, inp, 60)
+    T.equal(count_high(out), 3, "clamp, cabin off its target: packs stay high")
+    T.check(not out.fan[3] and not out.fan[4], "clamp, cabin off its target: lower fans stay off")
+    inp.temp_settled = true
+    out = run(s, inp, 31)
+    T.equal(count_high(out), 0, "cabin at its target: normal flow")
+    T.check(out.fan[3] and out.fan[4], "cabin at its target: four fans")
+    inp.cruise_clamp = false
+    run(s, inp, 40)
+    inp.cruise_clamp, inp.temp_settled = true, false
+    out = run(s, inp, 19 * 60)
+    T.equal(count_high(out), 3, "a new clamp, cabin off its target 19 min: still high")
+    out = run(s, inp, 61 + 30)
+    T.equal(count_high(out), 0, "after 20 min: normal flow anyway")
+end
+
 -- the relief valves shut pack 2 and set 1 and 3 high, PACK 2; back when
 -- they close (FCOM p.609, p.620; ATA21 p.94)
 do

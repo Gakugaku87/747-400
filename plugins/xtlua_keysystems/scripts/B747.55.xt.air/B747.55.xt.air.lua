@@ -416,11 +416,13 @@ B747DR_engine04_fire_ext_switch_pos_arm     = deferred_dataref("laminar/B747/fir
 
 -- the bleed air: the model and its glue (notes/ATA-36.md), after the bindings
 dofile("B747.55.xt.bleed.lua")
--- the packs, the pressurization and the equipment cooling: the models and
--- their glue (notes/ATA-21.md), after the bleed glue
+-- the packs, the pressurization, the equipment cooling and the
+-- temperatures: the models and their glue (notes/ATA-21.md), after the
+-- bleed glue
 dofile("B747.55.xt.packs.lua")
 dofile("B747.55.xt.press.lua")
 dofile("B747.55.xt.eqcool.lua")
+dofile("B747.55.xt.temp.lua")
 
 
 
@@ -539,6 +541,7 @@ function flight_start()
     B747_packs_flight_start()
     B747_press_flight_start()
     B747_eqcool_flight_start()
+    B747_temp_flight_start()
 
 end
 
@@ -553,6 +556,7 @@ function after_physics()
     B747_packs()
     B747_press()
     B747_eqcool()
+    B747_temp()
 
     B747_air_monitor_AI()
 

@@ -3,8 +3,10 @@
 -- running, the outside air (the skin temperature), cargo fire ARM, the
 -- cabin's differential pressure (the pressurization model) and the buses;
 -- writes laminar/B747/air/equip_cooling/state (1 with the fans running),
--- EQUIP COOLING, and the air OVRD takes overboard for the pressurization
--- model. B747.55.xt.air.lua loads it after the pressurization glue.
+-- EQUIP COOLING, the air OVRD takes overboard for the pressurization model,
+-- and the exhaust into the forward cargo for the temperature glue
+-- (B747_eqcool_out). B747.55.xt.air.lua loads it after the pressurization
+-- glue.
 dofile("B747.55.eqcool_model.lua")
 local Q = B747_eqcool_model
 
@@ -16,6 +18,7 @@ local CAUT_EQUIP_COOLING = 27       -- B747.87.xt.warning.lua
 local eqcool_state = Q.new()
 local eqcool_inputs = Q.inputs()
 B747_eqcool_overboard_kg_s = 0      -- for the pressurization glue (next frame)
+B747_eqcool_out = setmetatable(eqcool_state.out, {})  -- for the temperature glue (B747.55.xt.packs.lua)
 
 local function flag(v)
     if v then return 1 end
@@ -25,6 +28,7 @@ end
 function B747_eqcool_flight_start()
     eqcool_state = Q.new()
     B747_eqcool_overboard_kg_s = 0
+    B747_eqcool_out = setmetatable(eqcool_state.out, {})
 end
 
 function B747_eqcool()
