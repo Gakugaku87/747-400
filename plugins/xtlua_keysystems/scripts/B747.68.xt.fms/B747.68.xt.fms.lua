@@ -48,12 +48,6 @@ simDR_autopilot_airspeed_kts_mach   	= find_dataref("sim/cockpit2/autopilot/airs
 simDR_autopilot_airspeed_kts   		= find_dataref("sim/cockpit2/autopilot/airspeed_dial_kts")
 B747DR_elec_ext_pwr1_available      = find_dataref("laminar/B747/electrical/ext_pwr1_avail")
 simDR_xpdr_code         = find_dataref("sim/cockpit2/radios/actuators/transponder_code")
-simDR_fms_exec_light_pilot = find_dataref("sim/cockpit2/radios/indicators/fms_exec_light_pilot")
-simDR_fms_exec_light_copilot = find_dataref("sim/cockpit2/radios/indicators/fms_exec_light_copilot")
-B747DR_fms_exec_light = find_dataref("laminar/B747/fms/exec_light")
--- CRZ ALT hand-over to the native FMS (monitorCRZALT/updateCRZ)
-simDR_fms_transition_alt = find_dataref("sim/cockpit2/radios/indicators/fms_transition_alt")
-B747DR_crzalt_sync_fault = find_dataref("laminar/B747/fms/crzalt_sync_fault")
 --Workaround for stack overflow in init.lua namespace_read
 
 
@@ -91,6 +85,8 @@ function round(x)
 function cleanFMSLine(line)
     local retval=line:gsub("☐","*")
     retval=retval:gsub("°","`")
+	retval=retval:gsub("[%[%]]"," ")
+	--retval=retval:gsub("]"," ")
     return retval
 end 
 function getHeadingDifference(desireddirection,current_heading)
@@ -153,9 +149,6 @@ function deferred_dataref(name,nilType,callFunction)
     return find_dataref(name)
 end
 dofile("json/json.lua")
-local fmsPerformance = dofile("B744.fms.performance.lua")
-B747_fms_step = dofile("B744.fms.step.lua")
-local B747_nd_plan = dofile("B744.fms.nd.lua")
 hh=find_dataref("sim/cockpit2/clock_timer/zulu_time_hours")
 mm=find_dataref("sim/cockpit2/clock_timer/zulu_time_minutes")
 ss=find_dataref("sim/cockpit2/clock_timer/zulu_time_seconds")
@@ -189,7 +182,6 @@ simDR_fueL_tank_weight_total_kg     = find_dataref("sim/flightmodel/weight/m_fue
 navAidsJSON   = find_dataref("xtlua/navaids")
 fmsJSON = find_dataref("xtlua/fms")
 fmsFlightPlan = find_dataref("xtlua/fltpln")
-xpFMSDataJSON = find_dataref("xtlua/xpFMSData")
 
 B747DR_fms1_display_mode            = find_dataref("laminar/B747/fms1/display_mode")
 
@@ -318,8 +310,6 @@ B747DR_next_waypoint				= deferred_dataref("laminar/B747/nd/next_waypoint", "str
 --Waypoint info for ND DISPLAY
 B747DR_ND_waypoint_eta					= deferred_dataref("laminar/B747/nd/waypoint_eta", "string")
 B747DR_ND_current_waypoint				= deferred_dataref("laminar/B747/nd/current_waypoint", "string")
-B747DR_ND_current_waypoint_capt			= deferred_dataref("laminar/B747/nd/current_waypoint_capt", "string")
-B747DR_ND_current_waypoint_fo				= deferred_dataref("laminar/B747/nd/current_waypoint_fo", "string")
 B747DR_ND_waypoint_distance				= deferred_dataref("laminar/B747/nd/waypoint_distance", "string")
 
 --ND Range DISPLAY
@@ -618,47 +608,22 @@ function defaultFMSData()
   atc="****",
   grwt="***.*   ",
   crzalt=string.rep("*", 5),
-  accelht="1500",
-  -- FCOM PERF FACTORS defaults: THR RED 1500, ACCEL HT 1500.  thrredflap
-  -- holds the flap-based schedule ("FLAPS 5" on the TAKEOFF REF page) and is
-  -- blank while the height above is in use.
-  thrredht="1500",
-  thrredflap="  ",
   acarsMessage="",
-  -- clbspd is the unrestricted ECON target.  It is continuously calculated
-  -- once PERF INIT data is available; 340 is the Boeing data-unavailable
-  -- fallback for the 747-400.
-  clbspd="340",
-  -- ECON CLB is a CAS/Mach pair; 340/.84 is the data-unavailable fallback.
-  clbmach="840",
-  clbspdmode="ECON",
-  transpd="250",
+  clbspd="250",
+  transpd="272",
   spdtransalt="10000",
   transalt="18000",
-  -- SPD REST is blank until the crew enters one (FCOM CLB page shows
-  -- "---/-----"); the climb then holds SPD TRANS to the transition altitude.
-  clbrestspd="---",
+  clbrestspd="250",
   maxkts="420",
-  clbrestalt="-----",
+  clbrestalt="5000 ",
   stepalt="FL360",
-  stepto=string.rep("*", 5),
-  stepatwpt=string.rep(" ", 12),
-  plannedsteps="[]",
-  modplannedsteps="[]",
-  stepmodactive="0",
-  stepdistance="-1.000",
-  -- crzspd is the ECON cruise Mach the FMC keeps current (shared with the
-  -- CLB page Mach and the cruise speed state) until the crew selects one.
   crzspd="810",
-  crzspdmode="ECON",
   desspdmach="805",
   desspd="270",
   destranspd="240",
   desspdtransalt="10000",
-  -- SPD REST is blank on the DES page too; with none entered the descent
-  -- stays on SPD TRANS all the way down.
-  desrestspd="---",
-  desrestalt="-----",
+  desrestspd="180",
+  desrestalt="5000 ",
   fpa="*.*",
   vb="*.*",
   vs="****",
@@ -738,31 +703,18 @@ fmsModules["setData"]=function(self,id,value)
       end
     end
     len=string.len(self["data"][id])
-	if id~="acarsMessage" and id~="plannedsteps" and id~="modplannedsteps" then
-		self["data"][id]=B747_fms_step.fixed_width(value,len)
+    if len < string.len(value) and id~="acarsMessage" then 
+      value=string.sub(value,1,3)
+    end
+    --newVal=string.sub(value,1,len)
+	if id~="acarsMessage" then
+    	self["data"][id]=string.format("%s%"..(len-string.len(value)).."s",value,"")
 	else
 		self["data"][id]=value
 	end
 	B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
 end
 function setFMSData(id,value)
-	if id=="clbspd" then
-		-- A crew-entered value selects fixed-speed climb.  Deleting it restores
-		-- the continuously calculated ECON schedule.
-		if value=="" then
-			fmsModules["data"].clbspdmode="ECON"
-		else
-			fmsModules["data"].clbspdmode="SEL "
-		end
-	end
-	if id=="crzspd" then
-		-- Likewise a crew-entered cruise Mach; DELETE restores ECON.
-		if value=="" then
-			fmsModules["data"].crzspdmode="ECON"
-		else
-			fmsModules["data"].crzspdmode="SEL "
-		end
-	end
 	if not string.starts(id,"acars") then 
 		print("setting " .. id )
 		print(" to "..value)
@@ -770,121 +722,6 @@ function setFMSData(id,value)
 	end
    fmsModules:setData(id,value)
 end  
-
-local function totalEngineFuelFlowKgSec()
-	local total=0
-	for engine=0,3,1 do
-		total=total+(tonumber(simDR_eng_fuel_flow_kg_sec[engine]) or 0)
-	end
-	return total
-end
-
--- Headwind used by the ECON schedules, lagged against turns and gusts.
-local econHeadwind=nil
-local econHeadwindTime=nil
-
-function B747_updateEconClimbSpeed()
-	local climbMode=tostring(fmsModules["data"].clbspdmode or "ECON")
-	local cruiseMode=tostring(fmsModules["data"].crzspdmode or "ECON")
-
-	local cruiseAltitude=fmsPerformance.parse_cruise_altitude_ft(
-		fmsModules["data"].crzalt)
-	if cruiseAltitude==nil or cruiseAltitude<=0 then cruiseAltitude=35000 end
-
-	local predictedWeight=fmsPerformance.estimate_top_of_climb_weight_kg({
-		gross_weight_kg=simDR_GRWT,
-		current_altitude_ft=simDR_pressureAlt1,
-		cruise_altitude_ft=cruiseAltitude,
-		total_fuel_flow_kg_sec=totalEngineFuelFlowKgSec(),
-		distance_to_toc_nm=B747BR_toc,
-		ground_speed_kts=simDR_groundspeed*1.94384449
-	})
-
-	local headwind=0
-	if simDR_onGround==0 then
-		headwind=fmsPerformance.headwind_component_kts(
-			simDR_wind_degrees,simDR_wind_speed,simDR_aircraft_hdg)
-	end
-	local now=tonumber(simDRTime) or 0
-	local elapsed=nil
-	if econHeadwindTime~=nil then elapsed=now-econHeadwindTime end
-	econHeadwind=fmsPerformance.smoothed_headwind_kts(econHeadwind,headwind,elapsed)
-	econHeadwindTime=now
-	headwind=econHeadwind
-	local isaDeviation=simDR_air_temp
-		-fmsPerformance.isa_temperature_c(simDR_pressureAlt1)
-
-	-- The Mach half of the ECON CLB pair is the ECON cruise Mach at the
-	-- predicted top-of-climb weight and the entered cruise altitude (FCTM).
-	-- VNAV flies it from the CAS/Mach crossover to top of climb, and the
-	-- same value is the ECON cruise Mach shown on the CRZ page and flown in
-	-- cruise, where predictedWeight is the present weight.
-	local econMach=fmsPerformance.econ_climb_mach({
-		top_of_climb_weight_kg=predictedWeight,
-		cruise_altitude_ft=cruiseAltitude,
-		cost_index=fmsModules["data"].costindex,
-		headwind_kts=headwind
-	})
-	local formattedMach=string.format("%03d",math.floor(econMach*1000+0.5))
-	if fmsModules["data"].clbmach~=formattedMach then
-		fmsModules["data"].clbmach=formattedMach
-	end
-	local econCruiseMach=fmsPerformance.econ_cruise_mach_thousandths({
-		gross_weight_kg=predictedWeight,
-		altitude_ft=cruiseAltitude,
-		cost_index=fmsModules["data"].costindex,
-		headwind_kts=headwind
-	})
-	if string.sub(cruiseMode,1,3)~="SEL" and econCruiseMach~=nil then
-		local formattedCruiseMach=string.format("%03d",econCruiseMach)
-		if fmsModules["data"].crzspd~=formattedCruiseMach then
-			fmsModules["data"].crzspd=formattedCruiseMach
-		end
-	end
-
-	if string.sub(climbMode,1,3)=="SEL" then return end
-	local econSpeed=fmsPerformance.econ_climb_speed_kcas({
-		top_of_climb_weight_kg=predictedWeight,
-		cost_index=fmsModules["data"].costindex,
-		headwind_kts=headwind,
-		isa_deviation_c=isaDeviation,
-		cruise_altitude_ft=cruiseAltitude,
-		cruise_mach=econMach
-	})
-	local formattedSpeed=string.format("%3d",econSpeed)
-	if fmsModules["data"].clbspd~=formattedSpeed then
-		fmsModules["data"].clbspd=formattedSpeed
-	end
-end
-
--- [P36] The landing airport's elevation for APPROACH REF's VREFs: the destination's (RTE DEST) highest runway
--- threshold in X-Plane's CIFP (Custom Data first, as the autopilot reads its constraints), looked up once for each
--- destination; nil (sea level) without a destination or a file
-local CIFP_FOLDERS={"Custom Data/CIFP/","Resources/default data/CIFP/"}
-local landingAirport={ident=nil,elevation_ft=nil}
-function B747_destination_elevation_ft()
-	local ident=tostring(fmsModules["data"]["fltdst"] or "")
-	if string.match(ident,"^%w%w%w%w$")==nil then return nil end
-	if landingAirport.ident~=ident then
-		landingAirport.ident=ident
-		landingAirport.elevation_ft=nil
-		for _,folder in ipairs(CIFP_FOLDERS) do
-			local file=io.open(folder..ident..".dat","r")
-			if file~=nil then
-				landingAirport.elevation_ft=fmsPerformance.cifp_airport_elevation_ft(file:read("*a"))
-				file:close()
-				break
-			end
-		end
-	end
-	return landingAirport.elevation_ft
-end
--- VREF at the landing airport: the instruments' VREF for the gross weight (sea level) with the FCOM's correction
--- for the airport's elevation
-function B747_landing_vref(vref)
-	return vref+fmsPerformance.vref_elevation_correction_kts(B747_destination_elevation_ft())
-end
-
 function getFMSData(id)
   if hasChild(fmsModules["data"],id) then
     return fmsModules["data"][id]
@@ -896,123 +733,6 @@ function getFMSData(id)
   end
   return fmsModules["data"][id]
 end 
-
-local function decodePlannedSteps(rawSteps)
-  if type(rawSteps)=="table" then
-    return B747_fms_step.normalize_list(rawSteps)
-  end
-  if type(rawSteps)~="string" or string.len(rawSteps)<2 then return {} end
-
-  local decoded,steps=pcall(json.decode,rawSteps)
-  if not decoded or type(steps)~="table" then return {} end
-  return B747_fms_step.normalize_list(steps)
-end
-
-local function decodedPlannedStepFlightPlan()
-  local sources={tostring(fmsJSON or ""),tostring(fmsFlightPlan or "")}
-  for index=1,#sources,1 do
-    if string.len(sources[index])>2 then
-      local decoded,flightPlan=pcall(json.decode,sources[index])
-      if decoded and type(flightPlan)=="table" and #flightPlan>0 then
-        return flightPlan
-      end
-    end
-  end
-  return {}
-end
-
-local function publishFMSData()
-  B747DR_FMSdata=json.encode(fmsModules["data"]["values"])
-end
-
-local function refreshFmsExecLight()
-  if type(B747_updateFmsExecLight)=="function" then
-    B747_updateFmsExecLight()
-  end
-end
-
-function B747_getPlannedSteps()
-  return decodePlannedSteps(fmsModules["data"].plannedsteps)
-end
-
-function B747_setPlannedSteps(steps)
-  setFMSData("plannedsteps",json.encode(B747_fms_step.normalize_list(steps)))
-end
-
-function B747_hasPlannedStepModification()
-  return tostring(fmsModules["data"].stepmodactive or "0")=="1"
-end
-
-function B747_getModifiedPlannedSteps()
-  if not B747_hasPlannedStepModification() then return B747_getPlannedSteps() end
-  return decodePlannedSteps(fmsModules["data"].modplannedsteps)
-end
-
-function B747_getDisplayedPlannedSteps()
-  if B747_hasPlannedStepModification() then
-    return B747_getModifiedPlannedSteps()
-  end
-  return B747_getPlannedSteps()
-end
-
-function B747_discardPlannedStepModification()
-  if not B747_hasPlannedStepModification() then return false end
-  fmsModules["data"].modplannedsteps="[]"
-  fmsModules["data"].stepmodactive="0"
-  publishFMSData()
-  refreshFmsExecLight()
-  return true
-end
-
-function B747_setModifiedPlannedSteps(steps,flightPlan)
-  steps=B747_fms_step.normalize_list(steps)
-  flightPlan=flightPlan or decodedPlannedStepFlightPlan()
-  if B747_fms_step.lists_equal(steps,B747_getPlannedSteps(),flightPlan) then
-    B747_discardPlannedStepModification()
-    return false
-  end
-  fmsModules["data"].modplannedsteps=json.encode(steps)
-  fmsModules["data"].stepmodactive="1"
-  publishFMSData()
-  refreshFmsExecLight()
-  return true
-end
-
-function B747_syncActivePlannedStepFields(flightPlan)
-  flightPlan=flightPlan or decodedPlannedStepFlightPlan()
-  local currentIndex=B747_fms_step.current_route_index(flightPlan) or 1
-  local cruiseAltitude=tonumber(B747BR_cruiseAlt) or 0
-  local entry=B747_fms_step.next_entry(
-    B747_getPlannedSteps(),flightPlan,currentIndex,cruiseAltitude)
-  if entry~=nil then
-    fmsModules["data"].stepatwpt=B747_fms_step.fixed_width(entry.waypoint,12)
-    fmsModules["data"].stepto=B747_fms_step.fixed_width(entry.altitude,5)
-  else
-    fmsModules["data"].stepatwpt=string.rep(" ",12)
-    fmsModules["data"].stepto=string.rep("*",5)
-  end
-end
-
-function B747_executePlannedStepModification()
-  if not B747_hasPlannedStepModification() then return false end
-  local flightPlan=decodedPlannedStepFlightPlan()
-  local modifiedSteps=B747_getModifiedPlannedSteps()
-  fmsModules["data"].plannedsteps=json.encode(modifiedSteps)
-  fmsModules["data"].modplannedsteps="[]"
-  fmsModules["data"].stepmodactive="0"
-  B747_syncActivePlannedStepFields(flightPlan)
-  publishFMSData()
-  refreshFmsExecLight()
-  return true
-end
-
-function B747_updateFmsExecLight()
-  B747DR_fms_exec_light=B747_fms_step.exec_light_value(
-    simDR_fms_exec_light_pilot,
-    simDR_fms_exec_light_copilot,
-    B747_hasPlannedStepModification())
-end
-
 fmsModules["lastcmd"]=" "
 fmsModules["cmds"]={}
 fmsModules["cmdstrings"]={}
@@ -1194,15 +914,6 @@ function get_waypoint_estimate(latitude,longitude,fms_waypoint, fms_latitude, fm
   return fms_distance_to_waypoint,time_to_waypoint,hours,mins,secs
 end
 
-local function updateNDDisplayWaypoints(activeWaypoint,activeRoute)
-	-- Keep the side-specific aliases compatible with custom panels, while the
-	-- shipped ACF and panel exports use the common active-waypoint dataref.
-	B747DR_ND_current_waypoint_capt=B747_nd_plan.display_waypoint(
-	  activeWaypoint,activeRoute,nil,simDR_nd_mode_dial_capt)
-	B747DR_ND_current_waypoint_fo=B747_nd_plan.display_waypoint(
-	  activeWaypoint,activeRoute,nil,simDR_nd_mode_dial_fo)
-end
-
 
 function waypoint_eta_display()
 	local hours = 0
@@ -1262,7 +973,6 @@ function waypoint_eta_display()
 		B747DR_ND_waypoint_distance = string.format("%5.1f".."nm", fms_distance_to_waypoint)
 		B747DR_ND_waypoint_eta = string.format("%02d%02d.%d".."z", hours, mins, secs * 10)			
 	end
-	updateNDDisplayWaypoints(B747DR_ND_current_waypoint,fms)
 	if B747DR_last_waypoint=="" then
 	  B747DR_last_waypoint="-----"
 	  B747DR_waypoint_ata="------Z"
@@ -1490,7 +1200,6 @@ function throttleDataRefresh()
 end
 
 function after_physics()
-  B747_updateFmsExecLight()
   if debug_fms>0 then return end
 	
   if hasSimConfig()==false then return end
@@ -1504,14 +1213,6 @@ function after_physics()
   end
   if systemsWarmedUp==false then return end
   local refreshmins=B747DR_airspeed_Vmc
-  -- read at a CRZ ALT entry or change only: XTLua gives 0 for a dataref's first read
-  local refreshTransitionAlt=simDR_fms_transition_alt
-  local refreshSyncFault=B747DR_crzalt_sync_fault
-  -- read at THRUST LIM's takeoff rating keys and the GR WT and ZFW entries only (the takeoff speeds' deletion)
-  local refreshOnGround=simDR_onground
-  local refreshV1=B747DR_airspeed_V1
-  local refreshVr=B747DR_airspeed_Vr
-  local refreshV2=B747DR_airspeed_V2
   if didFlightInit==false and simDR_startup_running == 1 and simDR_onGround==0 then
 	print("activate AP stuff")
 	
@@ -1527,8 +1228,6 @@ function after_physics()
 	cM=mm
 	cM=ss
     setNotifications()
-    B747_updateEconClimbSpeed()
-    B747_getStepClimbAdvisory()
     B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
     --print(B747DR_FMSdata)
     fmsL:B747_fms_display()

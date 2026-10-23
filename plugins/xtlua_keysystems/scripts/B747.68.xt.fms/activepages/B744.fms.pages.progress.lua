@@ -172,15 +172,13 @@ fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
       latWind=string.format("%3d",math.sin(angle)*simDR_wind_speed)
       longWind=string.format("%3d",math.cos(angle)*simDR_wind_speed)
     end
-    local xtk_side="R "
-    if B747DR_ap_lnav_xtk_error<0 then xtk_side="L " end
-    xtk_error=string.format("%2.1f",math.abs(B747DR_ap_lnav_xtk_error))
+    xtk_error=string.format("%2.1f",B747DR_ap_lnav_xtk_error)
     lastPage[fmsID]= {
     "        PROGRESS        ",
     "                        ",
     longWind.."KT "..string.format("%10s",B747DR_ND_Wind_Line.."KT").."  "..windSide..latWind .."KT",
     "                        ",
-    xtk_side..xtk_error.."              +**FT",
+    "L "..xtk_error.."              +**FT",
     "                        ",
     string.format("%03.0f",B747DR_TAS_pilot).."                ".. string.format("%3d",simDR_air_temp) .."`C",
     "                        ",

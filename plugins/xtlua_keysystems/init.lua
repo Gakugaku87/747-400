@@ -444,8 +444,7 @@ function get_run_file_in_namespace(ns)
 			print("")
 		else
 			setfenv(chunk,ns)
-			-- Match Lua's standard dofile semantics so modules can return helper tables.
-			return chunk()
+			chunk()
 		end
 	end
 end

@@ -41,13 +41,6 @@ function keyDown(fmsModule,key)
     B747DR_fdr_log_json=fmsModule.. " do " .. key
   end
   lastKeyDown =  fmsModule.. " did " .. key
-  if key=="exec" and type(B747_executePlannedStepModification)=="function"
-    and B747_executePlannedStepModification() then
-    if simCMD_FMS_key[fmsModule]["exec"]~=nil then
-      simCMD_FMS_key[fmsModule]["exec"]:once()
-    end
-    return
-  end
   if key=="index" then
       fmsModules[fmsModule].targetCustomFMC=true
       fmsModules[fmsModule].targetPage="INITREF"
@@ -554,13 +547,13 @@ function fms:B747_fms_display()
 	      B747DR_fms_s[thisID][i]=fmsPagesmall[i]
       end
       if string.len(string.gsub(B747DR_srcfms[thisID][14],"[ %[%]]",""))>0 then 
-	B747DR_fms[thisID][14]=B747DR_srcfms[thisID][14]
-	self.notify=B747DR_srcfms[thisID][14]--string.gsub(B747DR_srcfms[thisID][14],"[ %[%]]","")
-	--print("notify["..self.notify.."]")
+        B747DR_fms[thisID][14]=B747DR_srcfms[thisID][14]
+        self.notify=B747DR_srcfms[thisID][14]--string.gsub(B747DR_srcfms[thisID][14],"[ %[%]]","")
+        print("notify["..self.notify.."]")
       elseif string.len(self.notify)>0 then 
-	B747DR_fms[thisID][14]=self.notify
+	      B747DR_fms[thisID][14]=self.notify
       else
-	B747DR_fms[thisID][14]=self.scratchpad;
+	      B747DR_fms[thisID][14]=self.scratchpad;
       end
     end
     

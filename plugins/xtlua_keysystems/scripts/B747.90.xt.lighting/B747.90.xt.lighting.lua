@@ -44,7 +44,7 @@ function deferred_dataref(name,nilType,callFunction)
 end
 NUM_SPILL_LIGHT_INDICES = 9
 NUM_LANDING_LIGHTS      = 4
-NUM_ANNUN_LIGHTS        = 271
+NUM_ANNUN_LIGHTS        = 270
 
 
 --*************************************************************************************--
@@ -145,10 +145,11 @@ simDR_generator_fail_01             = find_dataref("sim/operation/failures/rel_g
 simDR_generator_fail_02             = find_dataref("sim/operation/failures/rel_genera1")
 simDR_generator_fail_03             = find_dataref("sim/operation/failures/rel_genera2")
 simDR_generator_fail_04             = find_dataref("sim/operation/failures/rel_genera3")
-simDR_hyd_pump_fail_eng_01          = find_dataref("sim/operation/failures/rel_hydpmp")
-simDR_hyd_pump_fail_eng_02          = find_dataref("sim/operation/failures/rel_hydpmp2")
-simDR_hyd_pump_fail_eng_03          = find_dataref("sim/operation/failures/rel_hydpmp3")
-simDR_hyd_pump_fail_eng_04          = find_dataref("sim/operation/failures/rel_hydpmp4")
+-- the hydraulic model's P5 lights (B747.19.xt.hyd_power.lua)
+B747DR_light_hyd_eng_press          = find_dataref("laminar/B747/hydraulics/light/eng_press")
+B747DR_light_hyd_dem_press          = find_dataref("laminar/B747/hydraulics/light/dem_press")
+B747DR_light_hyd_sys_fault          = find_dataref("laminar/B747/hydraulics/light/sys_fault")
+B747DR_light_hyd_brake_source       = find_dataref("laminar/B747/hydraulics/light/brake_source")
 --simDR_nacelle_inlet_antiice_fail_01 = find_dataref("sim/operation/failures/rel_ice_inlet_heat")
 --simDR_nacelle_inlet_antiice_fail_02 = find_dataref("sim/operation/failures/rel_ice_inlet_heat2")
 --simDR_nacelle_inlet_antiice_fail_03 = find_dataref("sim/operation/failures/rel_ice_inlet_heat3")
@@ -162,7 +163,10 @@ simDR_window_heat_fail              = find_dataref("sim/operation/failures/rel_i
 --simDR_window_ice                    = find_dataref("sim/flightmodel/failures/window_ice")
 simDR_OAT=find_dataref("sim/weather/temperature_ambient_c")
 
-simDR_engine_bleed_air_fail         = find_dataref("sim/cockpit2/annunciators/bleed_air_fail")
+-- the bleed air model's P5 lights (B747.55.xt.bleed.lua)
+B747DR_light_bleed_sys_fault        = find_dataref("laminar/B747/air/light/sys_fault")
+B747DR_light_bleed_isln_valve       = find_dataref("laminar/B747/air/light/isln_valve")
+B747DR_light_bleed_apu_valve        = find_dataref("laminar/B747/air/light/apu_valve")
 
 simDR_gear_deploy_ratio             = find_dataref("sim/flightmodel2/gear/deploy_ratio")
 simDR_aircraft_altitude             = find_dataref("sim/cockpit2/gauges/indicators/altitude_ft_pilot")
@@ -226,6 +230,13 @@ B747DR_elec_ext_pwr_1_switch_mode   = find_dataref("laminar/B747/elec_ext_pwr_1/
 B747DR_elec_apu_pwr_1_switch_mode   = find_dataref("laminar/B747/apu_pwr_1/switch_mode")
 B747DR_elec_ext_pwr_2_switch_mode   = find_dataref("laminar/B747/elec_ext_pwr_2/switch_mode")
 B747DR_elec_apu_pwr_2_switch_mode   = find_dataref("laminar/B747/apu_pwr_2/switch_mode")
+-- P5 electrical panel lights, from the electrical model (B747.03.xt.elec_buses.lua)
+B747DR_elec_light_ext_avail         = find_dataref("laminar/B747/electrical/light/ext_avail")
+B747DR_elec_light_apu_avail         = find_dataref("laminar/B747/electrical/light/apu_avail")
+B747DR_elec_light_isln              = find_dataref("laminar/B747/electrical/light/isln")
+B747DR_elec_light_gen_off           = find_dataref("laminar/B747/electrical/light/gen_off")
+B747DR_elec_light_drive             = find_dataref("laminar/B747/electrical/light/drive")
+B747DR_elec_light_util_off          = find_dataref("laminar/B747/electrical/light/util_off")
 B747DR_gear_handle 					= find_dataref("laminar/B747/actuator/gear_handle")
 --B747DR_gear_handle_position         = find_dataref("laminar/B747/gear_handle/position")
 --B747DR_flap_lever                   = find_dataref("laminar/B747/flt_ctrls/flap_lever")
@@ -486,7 +497,6 @@ B747DR_init_lighting_CD                 = deferred_dataref("laminar/B747/lightin
 
 ----- ANNUNCIATORS ----------------------------------------------------------------------
 B747DR_annun_brightness_ratio           = deferred_dataref("laminar/B747/annunciator/brightness_ratio", "array[" .. tostring(NUM_ANNUN_LIGHTS) .. "]")
-B747DR_fms_exec_light                   = deferred_dataref("laminar/B747/fms/exec_light", "number")
 
 B747DR_ap_FMA_autothrottle_mode     	= deferred_dataref("laminar/B747/autopilot/FMA/autothrottle_mode", "number")
 
@@ -1074,56 +1084,46 @@ function B747_annunciators()
     annun.b.el_eng_ctrl_03 = B747_ternary((B747DR_button_switch_position[9] < 0.5), 1, 0)
     annun.b.el_eng_ctrl_04 = B747_ternary((B747DR_button_switch_position[10] < 0.5), 1, 0)
 
-    -- ELECTRIC UTILITY POWER
-    annun.b.util_power_L = B747_ternary((B747DR_button_switch_position[11] < 0.5), 1, 0)
-    annun.b.util_power_R = B747_ternary((B747DR_button_switch_position[12] < 0.5), 1, 0)
+    -- ELECTRICAL PANEL (P5): the electrical model computes the lights
+    -- (B747.03.xt.elec_buses.lua; FCOM p.781-786) and the EXT/APU ON states
+    annun.b.util_power_L = B747DR_elec_light_util_off[0]
+    annun.b.util_power_R = B747DR_elec_light_util_off[1]
 
     -- BATTERY
     annun.b.battery_off = B747_ternary((B747DR_button_switch_position[13] < 0.5), 1, 0)
 
     -- EXTERNAL POWER
-    annun.b.ext_pwr_avail_01 = B747_ternary(((B747DR_elec_ext_pwr1_available == 1) and B747DR_elec_ext_pwr_1_switch_mode == 0), 1, 0)
-    annun.b.ext_pwr_avail_02 = B747_ternary(((B747DR_elec_ext_pwr2_available == 1) and (B747DR_elec_ext_pwr_2_switch_mode == 0)), 1, 0)
-    B747DR_elec_ext_pwr1_on= B747_ternary((B747DR_elec_ext_pwr1_available == 1) and (B747DR_elec_ext_pwr_1_switch_mode == 1), 1, 0)
-    B747DR_elec_ext_pwr2_on= B747_ternary((B747DR_elec_ext_pwr2_available == 1) and (B747DR_elec_ext_pwr_2_switch_mode == 1), 1, 0)
+    annun.b.ext_pwr_avail_01 = B747DR_elec_light_ext_avail[0]
+    annun.b.ext_pwr_avail_02 = B747DR_elec_light_ext_avail[1]
 
     -- APU GENERATOR
-    annun.b.apu_gen_avail_01 = B747_ternary(((B747DR_elec_apu_pwr1_available ==1 and B747DR_elec_apu_pwr_1_switch_mode == 0)
-        and (simDR_aircraft_on_ground == 1)
-        and (simDR_apu_running == 1)
-        and (simDR_apu_N1_pct > 95.0)),
-        1, 0)
-    annun.b.apu_gen_avail_02 = B747_ternary(((B747DR_elec_apu_pwr2_available ==1 and B747DR_elec_apu_pwr_2_switch_mode == 0)
-        and (simDR_aircraft_on_ground == 1)
-        and (simDR_apu_running == 1)
-        and (simDR_apu_N1_pct > 95.0)),
-        1, 0)
-    B747DR_elec_apu_pwr1_on = B747_ternary(((simDR_apu_gen_on == 1) and B747DR_elec_apu_pwr_1_switch_mode == 1), 1, 0)
-    B747DR_elec_apu_pwr2_on = B747_ternary(((simDR_apu_gen_on == 1) and B747DR_elec_apu_pwr_2_switch_mode == 1), 1, 0)
+    annun.b.apu_gen_avail_01 = B747DR_elec_light_apu_avail[0]
+    annun.b.apu_gen_avail_02 = B747DR_elec_light_apu_avail[1]
 
-    -- BUS TIE
-    annun.b.bus_tie_01 = B747_ternary(((simDR_cross_tie == 0) or B747DR_button_switch_position[18]==0), 1, 0)
-    annun.b.bus_tie_02 = B747_ternary(((simDR_cross_tie == 0) or B747DR_button_switch_position[19]==0), 1, 0)
-    annun.b.bus_tie_03 = B747_ternary(((simDR_cross_tie == 0) or B747DR_button_switch_position[20]==0), 1, 0)
-    annun.b.bus_tie_04 = B747_ternary(((simDR_cross_tie == 0) or B747DR_button_switch_position[21]==0), 1, 0)
+    -- BUS TIE (ISLN)
+    annun.b.bus_tie_01 = B747DR_elec_light_isln[0]
+    annun.b.bus_tie_02 = B747DR_elec_light_isln[1]
+    annun.b.bus_tie_03 = B747DR_elec_light_isln[2]
+    annun.b.bus_tie_04 = B747DR_elec_light_isln[3]
 
-    -- GENERATOR CONTROL
-    annun.b.gen_ctrl_off_01 = B747_ternary((simDR_annun_generator_off[0] == 1), 1, 0)
-    annun.b.gen_ctrl_off_02 = B747_ternary((simDR_annun_generator_off[1] == 1), 1, 0)
-    annun.b.gen_ctrl_off_03 = B747_ternary((simDR_annun_generator_off[2] == 1), 1, 0)
-    annun.b.gen_ctrl_off_04 = B747_ternary((simDR_annun_generator_off[3] == 1), 1, 0)
+    -- GENERATOR CONTROL (OFF)
+    annun.b.gen_ctrl_off_01 = B747DR_elec_light_gen_off[0]
+    annun.b.gen_ctrl_off_02 = B747DR_elec_light_gen_off[1]
+    annun.b.gen_ctrl_off_03 = B747DR_elec_light_gen_off[2]
+    annun.b.gen_ctrl_off_04 = B747DR_elec_light_gen_off[3]
 
-    -- GENERATOR DRIVE DISC
-    annun.b.gen_drive_disc_01 = B747_ternary(((simDR_generator_fail_01 == 6) or (simDR_annun_generator_off[0] == 1)), 1, 0)
-    annun.b.gen_drive_disc_02 = B747_ternary(((simDR_generator_fail_02 == 6) or (simDR_annun_generator_off[1] == 1)), 1, 0)
-    annun.b.gen_drive_disc_03 = B747_ternary(((simDR_generator_fail_03 == 6) or (simDR_annun_generator_off[2] == 1)), 1, 0)
-    annun.b.gen_drive_disc_04 = B747_ternary(((simDR_generator_fail_04 == 6) or (simDR_annun_generator_off[3] == 1)), 1, 0)
+    -- GENERATOR DRIVE
+    annun.b.gen_drive_disc_01 = B747DR_elec_light_drive[0]
+    annun.b.gen_drive_disc_02 = B747DR_elec_light_drive[1]
+    annun.b.gen_drive_disc_03 = B747DR_elec_light_drive[2]
+    annun.b.gen_drive_disc_04 = B747DR_elec_light_drive[3]
 
     -- HYDRAULIC PUMP
-    annun.b.hyd_pump_01 = B747_ternary((simDR_engine_running[0] == 0) or (simDR_hyd_pump_fail_eng_01 == 6), 1, 0)
-    annun.b.hyd_pump_02 = B747_ternary((simDR_engine_running[1] == 0) or (simDR_hyd_pump_fail_eng_02 == 6), 1, 0)
-    annun.b.hyd_pump_03 = B747_ternary((simDR_engine_running[2] == 0) or (simDR_hyd_pump_fail_eng_03 == 6), 1, 0)
-    annun.b.hyd_pump_04 = B747_ternary((simDR_engine_running[3] == 0) or (simDR_hyd_pump_fail_eng_04 == 6), 1, 0)
+    -- ENGINE PRESS: the engine pump's pressure low for 2 s (FCOM p.1484)
+    annun.b.hyd_pump_01 = B747DR_light_hyd_eng_press[0]
+    annun.b.hyd_pump_02 = B747DR_light_hyd_eng_press[1]
+    annun.b.hyd_pump_03 = B747DR_light_hyd_eng_press[2]
+    annun.b.hyd_pump_04 = B747DR_light_hyd_eng_press[3]
 
     -- CARGO FIRE
     annun.b.cargo_fire_fwd = 0
@@ -1336,26 +1336,10 @@ function B747_annunciators()
     annun.b.temp_pack_reset = 0
 
     -- BLEED AIR
-    annun.b.bleed_air_isolation_L = 0.0
-    if (B747DR_button_switch_position[75] > 0.95 and B747DR_bleed_air_iso_vlv_L_pos < 1.0)
-        or (B747DR_button_switch_position[75] < 0.01 and B747DR_bleed_air_iso_vlv_L_pos > 0.0)
-    then
-        annun.b.bleed_air_isolation_L = 1.0
-    end
-
-    annun.b.bleed_air_isolation_R = 0.0
-    if (B747DR_button_switch_position[76] > 0.95 and B747DR_bleed_air_iso_vlv_R_pos < 1.0)
-        or (B747DR_button_switch_position[76] < 0.01 and B747DR_bleed_air_iso_vlv_R_pos > 0.0)
-    then
-        annun.b.bleed_air_isolation_R = 1.0
-    end
-
-    annun.b.apu_bleed_air = 0.0
-    if simDR_apu_running==1 and ((B747DR_button_switch_position[81] > 0.95 and B747DR_bleed_air_apu_vlv_pos < 1.0)
-        or (B747DR_button_switch_position[81] < 0.01 and B747DR_bleed_air_apu_vlv_pos > 0.0))
-    then
-        annun.b.apu_bleed_air = 1.0
-    end
+    -- VALVE lights: the valve moving or not where commanded (FCOM p.576)
+    annun.b.bleed_air_isolation_L = B747DR_light_bleed_isln_valve[0]
+    annun.b.bleed_air_isolation_R = B747DR_light_bleed_isln_valve[1]
+    annun.b.apu_bleed_air = B747DR_light_bleed_apu_valve
 
     annun.b.engine_bleed_air_01 = B747_ternary((B747DR_bleed_air_engine1_vlv_pos == 0.0), 1, 0)
     annun.b.engine_bleed_air_02 = B747_ternary((B747DR_bleed_air_engine2_vlv_pos == 0.0), 1, 0)
@@ -1374,7 +1358,7 @@ function B747_annunciators()
     ----- MAIN PANEL -----
 
     -- BRAKE SOURCE LOW PRESS           simDR_hyd_press_01
-    annun.a.brake_source = B747_ternary(((simDR_hyd_press_01 < 1000.0) and (simDR_hyd_press_02 < 1000.0)and (simDR_hyd_press_04 < 1000.0)), 1, 0)
+    annun.a.brake_source = B747DR_light_hyd_brake_source
 
 
     ----- OVERHEAD PANEL -----
@@ -1413,16 +1397,16 @@ function B747_annunciators()
     annun.a.irs_on_bat = 0
 
     -- HYDRAULIC SYSTEM FAULT
-    annun.a.hyd_sys_fault_01 = B747_ternary((simDR_hyd_press_01 < 1000.0) or (simDR_hyd_fluid_level_01 < 0.1), 1, 0)
-    annun.a.hyd_sys_fault_02 = B747_ternary((simDR_hyd_press_02 < 1000.0) or (simDR_hyd_fluid_level_02 < 0.1), 1, 0)
-    annun.a.hyd_sys_fault_03 = B747_ternary((simDR_hyd_press_03 < 1000.0) or (simDR_hyd_fluid_level_03 < 0.1), 1, 0)
-    annun.a.hyd_sys_fault_04 = B747_ternary((simDR_hyd_press_04 < 1000.0) or (simDR_hyd_fluid_level_04 < 0.1), 1, 0)
+    annun.a.hyd_sys_fault_01 = B747DR_light_hyd_sys_fault[0]
+    annun.a.hyd_sys_fault_02 = B747DR_light_hyd_sys_fault[1]
+    annun.a.hyd_sys_fault_03 = B747DR_light_hyd_sys_fault[2]
+    annun.a.hyd_sys_fault_04 = B747DR_light_hyd_sys_fault[3]
 
     -- HYDRAULIC DEMAND PUMP PRESS LOW              -- TODO:  ADD CONDITIONS:  DEMAND PUMP PRESS LOW / DEMAND PUMP FAIL
-    annun.a.demand_pump_press_01 = B747_ternary((B747DR_hyd_dmd_pmp_sel_pos[0] == 0), 1, 0)
-    annun.a.demand_pump_press_02 = B747_ternary((B747DR_hyd_dmd_pmp_sel_pos[1] == 0), 1, 0)
-    annun.a.demand_pump_press_03 = B747_ternary((B747DR_hyd_dmd_pmp_sel_pos[2] == 0), 1, 0)
-    annun.a.demand_pump_press_04 = B747_ternary((B747DR_hyd_dmd_pmp_sel_pos[3] == 0), 1, 0)
+    annun.a.demand_pump_press_01 = B747DR_light_hyd_dem_press[0]
+    annun.a.demand_pump_press_02 = B747DR_light_hyd_dem_press[1]
+    annun.a.demand_pump_press_03 = B747DR_light_hyd_dem_press[2]
+    annun.a.demand_pump_press_04 = B747DR_light_hyd_dem_press[3]
 
     -- FIRE EXTINGUISHER BOTTLE DISCHARGE
     annun.a.fire_bottle_0102A_disch = B747_ternary((B747DR_fire_ext_bottle_0102A_psi < 225.0), 1, 0)
@@ -1432,10 +1416,10 @@ function B747_annunciators()
     annun.a.fire_bottle_APU_disch = 0
 
     -- ENGINE BLEED AIR SYS FAULT
-    annun.a.eng_bleed_air_sys_fault_01 = B747_ternary((simDR_engine_bleed_air_fail[0] == 1), 1, 0)
-    annun.a.eng_bleed_air_sys_fault_02 = B747_ternary((simDR_engine_bleed_air_fail[1] == 1), 1, 0)
-    annun.a.eng_bleed_air_sys_fault_03 = B747_ternary((simDR_engine_bleed_air_fail[2] == 1), 1, 0)
-    annun.a.eng_bleed_air_sys_fault_04 = B747_ternary((simDR_engine_bleed_air_fail[3] == 1), 1, 0)
+    annun.a.eng_bleed_air_sys_fault_01 = B747DR_light_bleed_sys_fault[0]
+    annun.a.eng_bleed_air_sys_fault_02 = B747DR_light_bleed_sys_fault[1]
+    annun.a.eng_bleed_air_sys_fault_03 = B747DR_light_bleed_sys_fault[2]
+    annun.a.eng_bleed_air_sys_fault_04 = B747DR_light_bleed_sys_fault[3]
 
     -- START SWITCHES
     annun.a.start_vlv_open_01 = B747DR_bleed_air_engine1_start_valve_pos
@@ -2090,9 +2074,6 @@ function B747_ind_lights()
     B747DR_annun_brightness_ratio[267]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_CMD_L * brightness_level))
     B747DR_annun_brightness_ratio[268]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_CMD_C * brightness_level))
     B747DR_annun_brightness_ratio[269]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_CMD_R * brightness_level))
-
-    -- FMC EXEC
-    B747DR_annun_brightness_ratio[270]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (B747DR_fms_exec_light * brightness_level))
 
     --wxr panel
         --not XP12.3

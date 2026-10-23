@@ -11,7 +11,6 @@
 *
 *
 --]]
-local B747_afds_helpers = dofile("B747.70.xt.autopilot.afds_helpers.lua")
 
 --get the glideslope to an FMS entry
 function getSlope(fmsIndex)
@@ -33,10 +32,6 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
     local lowerAlt=tonumber(getFMSData("transalt"))
     --print("setVNAV "..B747BR_vnavProfile)
     local endI = table.getn(fms)
-    -- distance flown along the route to fms[i], compared with the route distance to the T/D;
-    -- the straight-line distance cannot be used, because on a route back to the departure
-    -- airport the arrival fixes are close to the aircraft while it is still climbing out
-    local alongDist=0
     --print("FMS ="..fmsJSON)
     for i=1,endI,1 do
       --print("i="..i.." began="..tostring(began))
@@ -44,7 +39,6 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
             began=true
             currentIndex=i
             local nextDistance=getDistance(simDR_latitude,simDR_longitude,fms[i][5],fms[i][6])
-            alongDist=nextDistance
             B747DR_fmstargetDistance=nextDistance
             if nextDistance>dist_to_TOD and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and B747BR_cruiseAlt>0 then
                 targetAlt=B747BR_cruiseAlt
@@ -53,83 +47,25 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
             end
             if dist_to_TOD<0 and fms[i][9]>0 and fms[i][9]<lowerAlt and fms[i][2] ~= 1 and numAPengaged>0 then targetAlt=fms[i][9] targetIndex=i break end
         elseif began==true then
+            local nextDistance=getDistance(simDR_latitude,simDR_longitude,fms[i][5],fms[i][6])
             local thisDistance=getDistance(fms[i-1][5],fms[i-1][6],fms[i][5],fms[i][6])
-            alongDist=alongDist+thisDistance
             B747DR_fmstargetDistance=B747DR_fmstargetDistance+thisDistance
-            if alongDist>dist_to_TOD and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and B747BR_cruiseAlt>0 then
+            if nextDistance>dist_to_TOD and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and B747BR_cruiseAlt>0 then
                 targetAlt=B747BR_cruiseAlt
                 targetIndex=i
                 break
                 end
-            if B747BR_totalDistance>0 and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and (alongDist)>dist_to_TOD then break end
+            if B747BR_totalDistance>0 and dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and (nextDistance)>dist_to_TOD then break end
             if dist_to_TOD<0 and fms[i][9]>0 and fms[i][9]<lowerAlt and fms[i][2] ~= 1 then targetAlt=fms[i][9] targetIndex=i break end
             local dtoAirport = getDistance(fms[i][5], fms[i][6], fms[endI][5], fms[endI][6])
 		--print("i=".. i .." B747DR_fmscurrentIndex="..B747DR_fmscurrentIndex .." speed="..simDR_groundspeed .. " distance="..totalDistance.." dtoAirport="..dtoAirport.. " ".. fmsO[i][5].." ".. fmsO[i][6].." ".. fmsO[i+1][5].." ".. fmsO[i+1][6])
-            -- in the climb the end of an altitude-terminated leg (CA/VA/FA, "(650)") is climbed
-            -- through, not levelled at, and an entry without an altitude (a departure fix near the
-            -- airport on a route back to it) is no target; nor is a fix with a SID constraint from the
-            -- CIFP, whose ceiling is taken below and whose at or above is no level-off
-            local climbConstraint=B747_route_constraints~=nil and B747_route_constraints[i] or nil
-            local noClimbTarget=dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0
-                and (B747_afds_helpers.altitude_leg_end_ft(fms[i])~=nil or fms[i][9]<=0
-                    or (climbConstraint~=nil and climbConstraint.phase=="climb"))
-            if (dtoAirport < 10 or fms[i][9]>0) and not noClimbTarget then
+            if dtoAirport < 10 or fms[i][9]>0 then
                 targetIndex = i
                 targetAlt=fms[i][9]
                 B747DR_fmstargetDistance=B747DR_fmstargetDistance+dtoAirport
                 --print("end fms"..i.."=at alt "..fms[i][9])
                 break
-            end
-        end
-    end
-    -- in the climb the lowest ceiling (at or below, at, a window's top) of the SID's constraints
-    -- (B747_route_constraints, from the CIFP) at the fixes not passed yet is the target: from the active
-    -- fix, or from a fix LNAV sequenced early for its turn until past the turn's bisector; one more than
-    -- 300 ft below the aircraft is let go (the climb does not descend to it)
-    if dist_to_TOD>0 and B747DR_ap_inVNAVdescent==0 and B747_route_constraints~=nil and currentIndex>0 then
-        local first=currentIndex
-        local held=B747DR_vnav_hold_index or 0
-        if held>0 and held<first then first=held end
-        local ceiling=targetAlt
-        if targetIndex==0 and B747BR_cruiseAlt>0 then ceiling=B747BR_cruiseAlt end
-        local ceilingIndex=0
-        for i=first,endI do
-            local c=B747_route_constraints[i]
-            if c~=nil and c.phase=="climb" and c.ceiling~=nil and c.ceiling<ceiling
-                and c.ceiling>simDR_pressureAlt1-300 then
-                ceiling=c.ceiling
-                ceilingIndex=i
-            end
-        end
-        if ceilingIndex>0 then
-            targetAlt=ceiling
-            targetIndex=ceilingIndex
-        end
-    end
-    -- in the descent a fix LNAV sequenced early for its turn keeps its altitude as the floor until the
-    -- aircraft is past the turn's bisector (B747_lnav_update_vnav_hold), while the aircraft is not below it
-    local hold=fms[B747DR_vnav_hold_index or 0]
-    if hold~=nil and dist_to_TOD<0 and numAPengaged>0 and hold[9]>0 and hold[9]<lowerAlt and hold[2]~=1
-        and hold[9]>targetAlt and simDR_pressureAlt1>hold[9]-100 then
-        targetAlt=hold[9]
-        targetIndex=B747DR_vnav_hold_index
-    end
-    -- in the descent the highest floor (at or above, at, a window's bottom, a FAF's glide slope altitude)
-    -- of the STAR's and the approach's constraints (B747_route_constraints, from the CIFP) at the fixes not
-    -- passed yet, a fix sequenced early for its turn included, is a level-off whatever its height ([9] is
-    -- taken only below the transition altitude), unless the aircraft is already below it; the native FMS's
-    -- path altitude ([9]) stays the target where it is higher
-    if dist_to_TOD<0 and numAPengaged>0 and B747_route_constraints~=nil and currentIndex>0 then
-        local first=currentIndex
-        local held=B747DR_vnav_hold_index or 0
-        if held>0 and held<first then first=held end
-        for i=first,endI do
-            local c=B747_route_constraints[i]
-            if c~=nil and c.phase=="descent" and c.floor~=nil and c.floor>targetAlt
-                and simDR_pressureAlt1>c.floor-100 then
-                targetAlt=c.floor
-                targetIndex=i
-            end
+            end    
         end
     end
     local dtoAirport = getDistance(simDR_latitude,simDR_longitude, fms[endI][5], fms[endI][6])
@@ -141,25 +77,18 @@ function VNAV_NEXT_ALT(numAPengaged,fms)
     return targetAlt
 end
 
--- [B-12] VNAV takes the MCP altitude as a level-off only once it has been still for MCP_ALT_SETTLE_SEC
--- (autopilot.lua's B747_mcp_alt_settled; nil where a test loads VNAV without the knob: settled, as before)
--- The MCP altitude below VNAV's target is the AFDS's, and VNAV ALT is set there, also within 30 s of an ALT selector
--- push (B747DR_mcp_hold_pressed), as a real 747-400's VNAV never climbs above the MCP altitude: within them the AFDS's
--- altitude was VNAV's next target (33000 for the MCP's 11000 at 10,500 ft), and the 747 could climb through the MCP
--- altitude before they were up (review 28 MINOR 3).
 function VNAV_CLB_ALT(numAPengaged,fms)
     local targetAlt=VNAV_NEXT_ALT(numAPengaged,fms)
     --print("VNAV_CLB_ALT ".. simDR_autopilot_altitude_ft .. " "  .. targetAlt .. " ")
     B747DR_ap_vnav_target_alt=targetAlt
-    if targetAlt>B747DR_autopilot_altitude_ft and simDR_pressureAlt1<B747DR_autopilot_altitude_ft+100
-        and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) then
+    local lastHold=simDRTime-B747DR_mcp_hold_pressed
+    if targetAlt>B747DR_autopilot_altitude_ft and simDR_pressureAlt1<B747DR_autopilot_altitude_ft+100 and lastHold>30 then
         targetAlt=B747DR_autopilot_altitude_ft
     end
     local mcpDiff=simDR_pressureAlt1-B747DR_autopilot_altitude_ft
     if B747DR_mcp_hold~=1 and simDR_autopilot_alt_hold_status==2 and targetAlt==B747DR_autopilot_altitude_ft
      and (mcpDiff<B747DR_alt_capture_window and mcpDiff>-B747DR_alt_capture_window)
-     and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled())
-     and B747BR_cruiseAlt>B747DR_autopilot_altitude_ft-B747DR_alt_capture_window
+     and lastHold>30 and B747BR_cruiseAlt>B747DR_autopilot_altitude_ft-B747DR_alt_capture_window
      and targetAlt~=B747BR_cruiseAlt then
         B747DR_mcp_hold=1
         simDR_autopilot_vs_status=0
@@ -184,18 +113,16 @@ function VNAV_CLB(numAPengaged,fmsO)
     if start == 0 then
 		start = 1
 	end
-    -- the climb resumes from ALT towards VNAV's target (VNAV_CLB_ALT), not the active fix's [9]: levelled at
-    -- a SID's ceiling before its fix ([9] 0, so the MCP's) it climbed on at once
-    local waypointAlt=B747DR_ap_vnav_target_alt
+    local waypointAlt=fmsO[start][9]
     if waypointAlt==0 or simDR_radarAlt1<3000 then waypointAlt=B747DR_autopilot_altitude_ft end
     local waypointDiff=waypointAlt-simDR_pressureAlt1
     local mcpDiff=simDR_pressureAlt1-B747DR_autopilot_altitude_ft
 
     --print("VNAV_CLB "..waypointDiff .. " " .. mcpDiff.. " " .. waypointAlt .. " " .. start.. " " .. fmsO[start][9].. " " .. simDR_pressureAlt1)
     if simDR_autopilot_alt_hold_status==2 and (waypointDiff>1000 and (mcpDiff>1000 or mcpDiff<-1000)) then
-		setVNAVState("vnavcalcwithTargetAlt",0)
+        setVNAVState("vnavcalcwithTargetAlt",0)
 		if getVNAVState("manualVNAVspd")==0 then
-		    B747_invalidate_vnav_speed("VNAV climb resumed toward new target altitude")
+		    setVNAVState("gotVNAVSpeed",false)
 		    B747_vnav_speed()
 		end
         B747DR_ap_vnav_state = 3 --resume
@@ -268,97 +195,23 @@ function VNAV_CRZ(numAPengaged,dist)
        -- print("VNAV_CRZ alt hold")
         B747DR_ap_vnav_state=2
     end
-    -- STEP TO is advisory only.  As on the airplane, the crew must set the
-    -- MCP altitude and push the altitude selector to initiate CRZ CLB.
     if simDR_autopilot_hold_altitude_ft>B747BR_cruiseAlt and simDR_autopilot_alt_hold_status > 0 and dist>0 then
         B747BR_cruiseAlt=simDR_autopilot_hold_altitude_ft
     end
 end
--- [B-14] In the descent the AFDS's altitude is the MCP's, as a real 747-400's: the route's points and the STAR's
--- constraints shape the path (setDistances' profile), which VNAV PTH flies through them (setDescentVSpeed), and it
--- levels off at the MCP altitude only (VNAV ALT). VNAV_NEXT_ALT's target - each point's altitude below the transition
--- altitude, the CIFP's floors, a held fix's - was the AFDS's level-off: the energy mode let go 600 ft above each point,
--- the A/T went from SPD to IDLE and HOLD (p27-line1: 13 of the descent's 16 A/T changes, at ETPOS, SUGOL and NETOM)
--- and alt_hold_status went 2, 0, 2 several times a second there. While the MCP altitude moves (B-12) the AFDS's stays
--- as it was below the aircraft; not below it (the cruise's at the T/D) VNAV_NEXT_ALT's target stays, as before, and
--- the descent starts at the T/D (P23). With the MCP set more than 100 ft above the aircraft it levels off where it is,
--- VNAV ALT, the A/T on the speed, as a real 747-400 (FCOM 4.10.7, 4.20.7: the VNAV profile and the MCP altitude in
--- conflict), neither climbing to the MCP altitude nor going on descending to VNAV_NEXT_ALT's target, as it did (review
--- 26 MINOR 4); a selector push does not make VNAV climb. Not on VNAV's approach path, where the MCP altitude is set to
--- the missed approach's and the descent goes on.
--- In VNAV SPD (VNAV_DES_IS_SPD: VNAV_DES' FLCH, the IAS window open above SPD TRANS) the idle descent, its pitch on the
--- speed, also levels off at the constraints' floors ahead (VNAV_DES_SPD_FLOOR), as a real 747-400's VNAV SPD (FCOM
--- 4.10.5: VNAV PTH once it meets an altitude constraint), not at the points' predicted altitudes: it took
--- VNAV_NEXT_ALT's target, every point's altitude below the transition altitude (review 26 MINOR 2). Right after an ALT
--- selector push the MCP altitude is the AFDS's too, the descent resuming to it, and VNAV ALT is set as soon as X-Plane
--- holds it, as a real 747-400's. Both waited 30 s after the push (B747DR_mcp_hold_pressed): until then the next point's
--- altitude was the AFDS's (review 26 MINOR 3), and a step down reached within them was held by X-Plane and taken back
--- by VNAV_DES every 0.2 s ("clear descent"), FMA VNAV PTH (review 27 MINOR 3).
 function VNAV_DES_ALT(numAPengaged,fms)
     local targetAlt=VNAV_NEXT_ALT(numAPengaged,fms)
+    local lastHold=simDRTime-B747DR_mcp_hold_pressed
 
-    local settled=B747_mcp_alt_settled==nil or B747_mcp_alt_settled()
-    local conflict=B747_vnav_mcp_conflict
-    if conflict~=nil and simDRTime-conflict.t>5 then conflict=nil end
-    B747_vnav_mcp_conflict=nil
-    local level=nil
-    if not settled then
-        if simDR_autopilot_altitude_ft<simDR_pressureAlt1-100 then level=simDR_autopilot_altitude_ft end
-    elseif B747DR_autopilot_altitude_ft<simDR_pressureAlt1+100 then
-        level=B747DR_autopilot_altitude_ft
-    elseif not B747_vnav_approach_active then
-        -- the MCP altitude above: level off where the conflict began (B747_vnav_mcp_conflict, with a metatable for
-        -- XTLua, as B747_route_constraints)
-        if conflict==nil then conflict=setmetatable({alt=simDR_pressureAlt1},{}) end
-        conflict.t=simDRTime
-        B747_vnav_mcp_conflict=conflict
-        targetAlt=conflict.alt
-        if simDR_autopilot_alt_hold_status==2 and math.abs(simDR_pressureAlt1-targetAlt)<B747DR_alt_capture_window then
-            B747DR_mcp_hold=1
-        end
-    end
-    if level~=nil then
-        if VNAV_DES_IS_SPD(VNAV_DES_SPD_LIMIT_ALT()) then level=VNAV_DES_SPD_FLOOR(fms,level) end
-        targetAlt=level
+    if targetAlt<B747DR_autopilot_altitude_ft and simDR_pressureAlt1>B747DR_autopilot_altitude_ft-100 and lastHold>30 then
+        targetAlt=B747DR_autopilot_altitude_ft
     end
     local mcpDiff=simDR_pressureAlt1-B747DR_autopilot_altitude_ft
-    if simDR_autopilot_alt_hold_status==2 and targetAlt==B747DR_autopilot_altitude_ft
-        and (mcpDiff<B747DR_alt_capture_window and mcpDiff>-B747DR_alt_capture_window)
-        and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled())
-        and B747BR_cruiseAlt>B747DR_autopilot_altitude_ft-B747DR_alt_capture_window then
+    if simDR_autopilot_alt_hold_status==2 and targetAlt==B747DR_autopilot_altitude_ft   and (mcpDiff<B747DR_alt_capture_window and mcpDiff>-B747DR_alt_capture_window) and lastHold>30 and B747BR_cruiseAlt>B747DR_autopilot_altitude_ft-B747DR_alt_capture_window then
         B747DR_mcp_hold=1
         --print("set B747DR_mcp_hold in VNAV_DES_ALT")
     end
     if B747DR_mcp_hold==0 then simDR_autopilot_altitude_ft=targetAlt end
-end
-
--- The descent's speed limit altitude: SPD TRANS's, or SPD REST's above it (SPD REST is blank until the crew enters
--- one, leaving SPD TRANS as the only descent speed boundary)
-function VNAV_DES_SPD_LIMIT_ALT()
-    local transitionAlt=tonumber(getFMSData("desspdtransalt"))
-    return math.max(transitionAlt,tonumber(getFMSData("desrestalt")) or transitionAlt)
-end
--- VNAV SPD in the descent (VNAV_DES' FLCH): the IAS window open above the speed limit altitude, the speed at least
--- Vmc + 15; in the approach (setDescentVSpeed) VNAV PTH stays, the A/T holding the window's speed
-function VNAV_DES_IS_SPD(upperAlt)
-    return B747DR_ap_ias_mach_window_open==1 and simDR_pressureAlt1>upperAlt
-        and simDR_ind_airspeed_kts_pilot>=B747DR_airspeed_Vmc+15 and not B747_vnav_approach_active
-end
--- VNAV SPD's level-off in the descent, level (the MCP's) raised to the highest floor (at or above, at, a window's
--- bottom, the FAF's) of the STAR's and the approach's constraints (B747_route_constraints, from the CIFP) at the fixes
--- not passed yet (a fix held for its turn included), but not to one the aircraft is already below
-function VNAV_DES_SPD_FLOOR(fms,level)
-    if B747_route_constraints==nil or fms==nil then return level end
-    local first=B747DR_fmscurrentIndex or 1
-    local held=B747DR_vnav_hold_index or 0
-    if held>0 and held<first then first=held end
-    for i=math.max(first,1),table.getn(fms) do
-        local c=B747_route_constraints[i]
-        if c~=nil and c.phase=="descent" and c.floor~=nil and c.floor>level and simDR_pressureAlt1>c.floor-100 then
-            level=c.floor
-        end
-    end
-    return level
 end
 
 B747DR_ap_VNAV_lastCommand=0
@@ -366,6 +219,7 @@ function VNAV_DES(numAPengaged,fms)
     VNAV_DES_ALT(numAPengaged,fms) --sets altitude target
     local diff2 = simDR_autopilot_altitude_ft - simDR_pressureAlt1
     local diff3 = B747DR_autopilot_altitude_ft- simDR_pressureAlt1
+    local lastHold=simDRTime-B747DR_mcp_hold_pressed
     local descentstatus=0
     local diff = simDRTime - B747DR_ap_VNAV_lastCommand
 
@@ -375,25 +229,16 @@ function VNAV_DES(numAPengaged,fms)
 
     setDescentVSpeed(fms)
     if B747DR_switchingIASMode==1 then return end
-    local upperAlt=VNAV_DES_SPD_LIMIT_ALT()
+    local upperAlt=math.max(tonumber(getFMSData("desspdtransalt")),tonumber(getFMSData("desrestalt")))
     --print("upperAlt "..upperAlt)
     if B747DR_ap_ias_mach_window_open == 1 then
-        -- the IAS window open: VNAV SPD (FLCH) above SPD TRANS, but in the approach (setDescentVSpeed)
-        -- VNAV PTH stays, the A/T holding the window's speed
-        if VNAV_DES_IS_SPD(upperAlt) then
+
+        if simDR_pressureAlt1>upperAlt and simDR_ind_airspeed_kts_pilot>=B747DR_airspeed_Vmc+15 then
             --descentstatus = simDR_autopilot_flch_status
-            local holding=tonumber(simDR_autopilot_hold_altitude_ft) or -1e9
-            if simDR_autopilot_alt_hold_status==2 and math.abs(holding-simDR_autopilot_altitude_ft)<100 then
-                -- [B-14] X-Plane holding VNAV SPD's level-off (a constraint's floor, the MCP altitude): it holds it,
-                -- FMA VNAV PTH or VNAV ALT, the A/T on the speed, until the level-off moves below (its fix passed);
-                -- FLCH put back every 0.2 s made the FMA go VNAV SPD, VNAV PTH every 0.6 s there (review 26 MINOR 2)
-                B747DR_ap_thrust_mode=0
-            else
-                simDR_autopilot_vs_status=0
-                simDR_autopilot_flch_status=2
-                simDR_autopilot_alt_hold_status=0
-                B747DR_ap_thrust_mode=2
-            end
+            simDR_autopilot_vs_status=0
+            simDR_autopilot_flch_status=2
+            simDR_autopilot_alt_hold_status=0
+            B747DR_ap_thrust_mode=2
             descentstatus = 2
         else
             --descentstatus = simDR_autopilot_vs_status
@@ -447,13 +292,9 @@ function VNAV_DES(numAPengaged,fms)
             simCMD_autopilot_vert_speed_mode:once()
             B747DR_ap_VNAV_lastCommand=simDRTime+2
             return
-        elseif (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) then
+        else
             B747DR_mcp_hold=2
             print("set B747DR_mcp_hold")
-            return
-        else
-            -- [B-12] the MCP altitude moving at T/D: no VNAV ALT on a passing value; the descent starts once it is
-            -- below (the value of the moment) or it settles
             return
         end
     end
@@ -463,8 +304,7 @@ function VNAV_DES(numAPengaged,fms)
         if B747DR_autopilot_gs_status < 1 then
             --if B747DR_ap_ias_mach_window_open == 0 or simDR_pressureAlt1<=upperAlt or simDR_ind_airspeed_kts_pilot<B747DR_airspeed_Vmc+15 then
 
-            if simDR_pressureAlt1>upperAlt and B747DR_ap_ias_mach_window_open == 1 and simDR_autopilot_flch_status == 0
-                and not B747_vnav_approach_active then
+            if simDR_pressureAlt1>upperAlt and B747DR_ap_ias_mach_window_open == 1 and simDR_autopilot_flch_status == 0 then
                 simCMD_autopilot_flch_mode:once()
                 simDR_autopilot_flch_status=2
                 simDR_autopilot_vs_status=0
@@ -494,16 +334,7 @@ function VNAV_DES(numAPengaged,fms)
     local forceOn=false
     if B747DR_ap_ias_dial_value<=spdval and simDR_autopilot_airspeed_is_mach==0 and B747DR_ap_ias_mach_window_open == 0 then forceOn=true end
     if B747BR_totalDistance-B747BR_tod<=0 and simDR_autopilot_airspeed_is_mach==0 and B747DR_ap_ias_mach_window_open == 0 and isManualSpeed==false then forceOn=true end
-    -- in the approach (setDescentVSpeed) the A/T holds the speed, the IAS window's too, idle included
-    if B747_vnav_approach_active then forceOn=true end
-    if B747DR_vnav_energy_active == 1 then
-        -- Keep the A/T engaged so the EEC can command a controlled idle or
-        -- protected SPD recovery according to the combined path/speed state.
-        if B747DR_autothrottle_active == 0 and isATEnabled() then
-            B747DR_autothrottle_active=1
-            B747DR_ap_VNAV_lastCommand=simDRTime
-        end
-    elseif B747DR_ap_inVNAVdescent >0 and B747DR_autothrottle_active == 1 and simDR_allThrottle<0.02 and forceOn==false then							-- AUTOTHROTTLE IS "ON"
+    if B747DR_ap_inVNAVdescent >0 and B747DR_autothrottle_active == 1 and simDR_allThrottle<0.02 and forceOn==false then							-- AUTOTHROTTLE IS "ON"
        -- simCMD_autopilot_autothrottle_off:once()									-- DEACTIVATE THE AUTOTHROTTLE
         B747DR_autothrottle_active=0
         B747DR_ap_VNAV_lastCommand=simDRTime
@@ -563,8 +394,7 @@ function B747_monitor_THR_REF_AT()
         ref_throttle=math.floor(20+B747_rescale(-10000,0,0,30,altDiff))
         B747DR_ap_flightPhase=3
         --print("THR REF descend at ref_throttle "..ref_throttle.." altDiff "..altDiff)
-    elseif not B747_takeoff_thrust_reduction_reached()
-      and B747DR_ap_thrust_mode<3 and B747DR_ap_flightPhase==0 then
+    elseif simDR_radarAlt1<1000 and B747DR_ap_thrust_mode<3 then --set acceleration height here
         if toderate==1 then ref_throttle=96
         elseif toderate==2 then ref_throttle=86
         end
@@ -666,11 +496,9 @@ function VNAV_modeSwitch(fmsO)
     local diff2=simDRTime-lastVNAVSwitch
     if diff<0.5 or diff2<0.1 then return end --mode switch at 0.1 second intervals
 
-    --check if we need to enter as VNAV ALT; not on the ground or below the VNAV
-    --engage height, where ALT HOLD would cancel TO/GA and the takeoff thrust
-    if B747DR_ap_vnav_state == 1 and B747_afds_helpers.vnav_engage_height_reached(simDR_onGround, simDR_radarAlt1) then
+    if B747DR_ap_vnav_state == 1 then --check if we need to enter as VNAV ALT
         local mcpDiff=simDR_pressureAlt1-B747DR_autopilot_altitude_ft
-        if math.abs(mcpDiff)<1000 and (B747_mcp_alt_settled==nil or B747_mcp_alt_settled()) then
+        if math.abs(mcpDiff)<1000 then
             B747DR_mcp_hold=1
             B747DR_ap_vnav_state=2
             simDR_autopilot_alt_hold_status = 2
@@ -887,10 +715,6 @@ function getWCAforHeading(theading)
       return hV
 end
 local onApproach=false
--- LOC deviation readings taken while LOC is armed: locArmLatest is the newest,
--- locArmSample the one before it (at least 1 s older), used for the closing rate
-local locArmSample=nil
-local locArmLatest=nil
 function B747_updateApproachHeading(fmsO)
 
    --[[print("simDR_hsi_ldef_dots_nav1 " .. simDR_hsi_ldef_dots_nav1 ..
@@ -904,34 +728,12 @@ function B747_updateApproachHeading(fmsO)
     " simDR_hsi_vdef_dots_pilot " .. simDR_hsi_vdef_dots_pilot.. "B747DR_ap_lastCommand "..B747DR_ap_lastCommand )]]--
     
     local diff = simDRTime - B747DR_ap_lastCommand
-    if simDR_autopilot_nav_status==1 and simDR_hsi_nav1_horizontal_signal==1 and simDR_hsi_nav2_horizontal_signal==1 then
-        if locArmLatest==nil or simDRTime-locArmLatest.time>=B747_afds_helpers.LOC_CAPTURE_SAMPLE_SEC then
-            locArmSample=locArmLatest
-            locArmLatest={time=simDRTime,dots=B747_afds_helpers.loc_deviation_dots(simDR_hsi_ldef_dots_nav1,simDR_hsi_ldef_dots_nav2)}
-        end
-    else
-        locArmSample=nil
-        locArmLatest=nil
-    end
-    -- capture LOC only inside the capture window (close to and closing on the localizer);
-    -- a LOC captured before (signal glitch or APP pressed again) recaptures at once
-    if simDR_autopilot_nav_status==1 and simDR_hsi_nav1_horizontal_signal==1 and simDR_hsi_nav2_horizontal_signal==1  and diff>0.5
-        and (B747DR_autopilot_nav_status==2 or B747_afds_helpers.loc_capture_ready({
-            nav1_signal=simDR_hsi_nav1_horizontal_signal,nav2_signal=simDR_hsi_nav2_horizontal_signal,
-            course_deg=simDR_radio_nav_obs_deg[0],heading_deg=simDR_AHARS_heading_deg_pilot,
-            nav1_dots=simDR_hsi_ldef_dots_nav1,nav2_dots=simDR_hsi_ldef_dots_nav2,
-            time=simDRTime,sample=locArmSample})) then
+    if simDR_autopilot_nav_status==1 and simDR_hsi_nav1_horizontal_signal==1 and simDR_hsi_nav2_horizontal_signal==1  and diff>0.5 then
         simDR_autopilot_nav_status=2
         B747DR_ap_lastCommand = simDRTime
     end
 
-    -- capture G/S only after LOC with both inside their windows, and not in the LOC capture frame
-    local gsDiff = simDRTime - B747DR_ap_lastCommand
-    if simDR_autopilot_gs_status==1 and gsDiff>0.5 and B747_afds_helpers.gs_capture_ready({
-            loc_captured=(simDR_autopilot_nav_status==2),
-            nav1_dots=simDR_hsi_ldef_dots_nav1,nav2_dots=simDR_hsi_ldef_dots_nav2,
-            gs_dots=simDR_hsi_vdef_dots_pilot,nav1_gs_flag=simDR_nav1_gs_flag,nav2_gs_flag=simDR_nav2_gs_flag,
-            nav1_vertical_signal=simDR_hsi_nav1_vertical_signal,nav2_vertical_signal=simDR_hsi_nav2_vertical_signal}) then
+    if simDR_autopilot_nav_status==2 and simDR_nav1_gs_flag ==0 and simDR_nav2_gs_flag ==0 and simDR_autopilot_gs_status==1 and math.abs(simDR_hsi_vdef_dots_pilot)<1.5 and simDR_hsi_nav1_vertical_signal==1 and simDR_hsi_nav2_vertical_signal ==1 and diff>0.5 then
         simDR_autopilot_gs_status=2
         B747DR_ap_lastCommand = simDRTime
     end
@@ -984,13 +786,8 @@ function B747_updateApproachHeading(fmsO)
         return
     end
 
-    -- LNAV keeps steering while LOC is only armed; armed itself, it does not steer (LNAV ARM: the roll mode before
-    -- it flies on until B747_lnav_engage_armed engages it)
-    -- [review 19] It writes the heading every frame: B747DR_ap_lastCommand's 0.5 s holds back only HDG SEL's command,
-    -- as on the localizer. It stopped LNAV's steering too, and a mode change in a turn froze the heading command
-    -- (p17-L1: BEDRA's step climb in the arc, CRZ ALT and VNAV SPD 0.55 s apart: held 0.98 s, then +0.70 deg).
-    if (B747DR_ap_approach_mode~=0 or B747DR_ap_lnavHeading_mode~=0) and simDR_autopilot_nav_status~=2 and B747DR_ap_lnav_state==2 then
-        if simDR_autopilot_heading_status == 0 and diff>0.5 then
+    if (B747DR_ap_approach_mode~=0 or B747DR_ap_lnavHeading_mode~=0) and simDR_autopilot_nav_status==0 and B747DR_ap_lnav_state>0 and diff>0.5 then
+        if simDR_autopilot_heading_status == 0 then
             print("simCMD_autopilot_heading_select in B747DR_ap_approach_mode~=0")
             simCMD_autopilot_heading_select:once()
             B747DR_ap_ATT = 0.0
@@ -1001,11 +798,7 @@ function B747_updateApproachHeading(fmsO)
         local targetLong=fmsO[start][6]
         local distanceToTarget=getDistance(simDR_latitude,simDR_longitude,targetLat,targetLong)
         --print("distanceToTarget "..distanceToTarget)
-        -- along the lateral path, the legs and the fly-by arcs between them (B747_lnav_path_track); else as before
-        local pathTrack=B747_lnav_path_track(fmsO,start)
-        if pathTrack~=nil then
-            -- steered by the path
-        elseif B747DR_ap_lnav_xtk_target==0 and start>1 then -- -100 direct to,
+        if B747DR_ap_lnav_xtk_target==0 and start>1 then -- -100 direct to, 
             --print("B747DR_ap_lnav_xtk_target "..B747DR_ap_lnav_xtk_target)
             --we are more than 10 miles away from the target, and we want 0 track error
             -- find a correction target to put us back on track
@@ -1062,7 +855,7 @@ function B747_updateApproachHeading(fmsO)
             print("B747DR_ap_lnav_xtk_target "..B747DR_ap_lnav_xtk_target)
         end
 
-        local ap2Heading=pathTrack or getHeading(simDR_latitude,simDR_longitude,targetLat,targetLong)
+        local ap2Heading=getHeading(simDR_latitude,simDR_longitude,targetLat,targetLong)
         --print("ap2Heading "..ap2Heading)
         local hV=getWCAforHeading(ap2Heading+simDR_variation)
         --print("B747_ set Heading hV="..hV.." wca="..wca.." wca_deg="..wca.." simDR_wind_speed_kts="..simDR_wind_speed_kts.." ap2Heading="..ap2Heading )
@@ -1075,17 +868,6 @@ function B747_monitorAP(fmsO)
     local autothrottlemode=B747DR_autothrottle_active
     local flch_status=simDR_autopilot_flch_status
     local vs_status=simDR_autopilot_vs_status
-    -- the LOC and G/S capture gates read these only once the approach is armed:
-    -- XTLua gives 0 for a dataref's first read, so keep them fresh every frame
-    local nav1Signal=simDR_hsi_nav1_horizontal_signal
-    local nav2Signal=simDR_hsi_nav2_horizontal_signal
-    local nav1Dots=simDR_hsi_ldef_dots_nav1
-    local nav2Dots=simDR_hsi_ldef_dots_nav2
-    local gsDots=simDR_hsi_vdef_dots_pilot
-    local nav1GsFlag=simDR_nav1_gs_flag
-    local nav2GsFlag=simDR_nav2_gs_flag
-    local nav1Vertical=simDR_hsi_nav1_vertical_signal
-    local nav2Vertical=simDR_hsi_nav2_vertical_signal
     --print("1 simDRTime " .. simDRTime .. "B747DR_ap_lastCommand " .. B747DR_ap_lastCommand )
     B747_monitorAT()
     --print("2 simDRTime " .. simDRTime .. "B747DR_ap_lastCommand " .. B747DR_ap_lastCommand )

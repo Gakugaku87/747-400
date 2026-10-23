@@ -792,16 +792,22 @@ function engine_idle_control_RR(altitude_ft_in)
         orig_thrust_n = simDR_thrust_max
       end
     elseif string.match(B747DR_ref_thr_limit_mode, "CLB") then
-      _, _, EPR_max_climb = in_flight_EPR_RR(altitude_ft_in, 0)
-      -- [climb thrust] the rated max climb EPR at every altitude and weight, not the thrust for the EEC's design climb
-      -- rate where that was less (as the PW module); a derate (B747_clb_share) as the EPR above 1, as the PW's
-      local EPR_climb = 1 + (EPR_max_climb - 1) * B747_clb_share(B747DR_clbderate, altitude_ft_in)
-      local EPR_ref = string.format("%3.2f", EPR_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value
-
+      EPR_actual, EPR_initial_climb, EPR_max_climb = in_flight_EPR_RR(altitude_ft_in, 0)
+  
         --Set target bugs
       for i = 0, 3 do
-        EPR_target_bug[i] = EPR_ref
-        display_EPR_ref[i] = math.min(EPR_ref, 1.90)
+        if EPR_actual > EPR_max_climb then
+          if EPR_initial_climb > EPR_max_climb then
+            EPR_target_bug[i] = string.format("%3.2f", EPR_initial_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value
+            display_EPR_ref[i] = math.min(string.format("%3.2f", EPR_initial_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value, 1.90)
+          else
+            EPR_target_bug[i] = string.format("%3.2f", EPR_max_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value
+            display_EPR_ref[i] = math.min(string.format("%3.2f", EPR_max_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value, 1.90)
+          end
+        else
+          EPR_target_bug[i] = string.format("%3.2f", EPR_actual) + packs_adjustment_value + engine_anti_ice_adjustment_value
+          display_EPR_ref[i] = math.min(string.format("%3.2f", EPR_actual) + packs_adjustment_value + engine_anti_ice_adjustment_value, 1.90)
+        end
 
         if B747DR_display_EPR_max[i] < B747DR_display_EPR_ref[i] then
           display_EPR_max[i] = B747DR_display_EPR_ref[i]

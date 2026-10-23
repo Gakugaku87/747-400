@@ -92,38 +92,6 @@ fmsFunctionsDefs["INDEX"]["R4"]={"setpage","GNDHNDL"}
 fmsFunctionsDefs["INDEX"]["R6"]={"setpage","MAINTSIMCONFIG"}
 --fmsFunctionsDefs["INDEX"]["R6"]={"setpage", "MAINTSIMCONFIG"}
 
-local function getRTEFieldValue(fmsID, label, fallbackLine, fallbackStart, fallbackEnd, maxLength)
-  local value=nil
-  for lineNo=2,11,2 do
-    local labelLine=cleanFMSLine(B747DR_srcfms[fmsID][lineNo])
-    local labelColumn=string.find(labelLine,label,1,true)
-    if labelColumn~=nil then
-      local dataLine=cleanFMSLine(B747DR_srcfms[fmsID][lineNo+1])
-      if labelColumn<=12 then
-        value=string.sub(dataLine,1,12)
-      else
-        value=string.sub(dataLine,13,24)
-      end
-      break
-    end
-  end
-  if value==nil then
-    value=string.sub(cleanFMSLine(B747DR_srcfms[fmsID][fallbackLine]),fallbackStart,fallbackEnd)
-  end
-  value=string.gsub(value,"^%s+","")
-  value=string.gsub(value,"%s+$","")
-  if string.len(value)>maxLength then value=string.sub(value,1,maxLength) end
-  return value
-end
-
-local function formatRTEFieldLine(leftValue,rightValue)
-  local left=tostring(leftValue or "")
-  local right=tostring(rightValue or "")
-  local available=24-string.len(left)
-  if string.len(right)>available then right=string.sub(right,1,available) end
-  return left..string.rep(" ",24-string.len(left)-string.len(right))..right
-end
-
 fmsPages["RTE1"]=createPage("RTE1")
 fmsPages["RTE1"].getPage=function(self,pgNo,fmsID)
   local l1=cleanFMSLine(B747DR_srcfms[fmsID][1])
@@ -188,16 +156,14 @@ fmsPages["RTE1"].getPage=function(self,pgNo,fmsID)
   fmsFunctionsDefs["RTE1"]["R2"]={"custom2fmc","R3"}
   fmsFunctionsDefs["RTE1"]["L4"]={"custom2fmc","L4"}
   fmsFunctionsDefs["RTE1"]["R3"]={"setpage","FMC"}
-  local fltNo=getRTEFieldValue(fmsID,"FLT NO",7,-8,-1,8)
-  local coRoute=getRTEFieldValue(fmsID,"CO ROUTE",5,1,10,10)
-  local line5=formatRTEFieldLine("",coRoute)
-  if acarsSystem.provider.online() then line5=formatRTEFieldLine(" <SEND",coRoute) end
+  local line5="                "..string.sub(cleanFMSLine(B747DR_srcfms[fmsID][5]),1,8)
+  if acarsSystem.provider.online() then line5=" <SEND          "..string.sub(cleanFMSLine(B747DR_srcfms[fmsID][5]),1,8) end
   local page={
   "      ACT RTE 1     " .. string.sub(cleanFMSLine(B747DR_srcfms[fmsID][1]),-4,-1) ,
   "                        ",
   cleanFMSLine(B747DR_srcfms[fmsID][3]),
   "                        ",
-  formatRTEFieldLine(fmsModules["data"]["runway"],fltNo),
+  fmsModules["data"]["runway"] .."            ".. string.sub(cleanFMSLine(B747DR_srcfms[fmsID][7]),-7,-1), 
   "                        ",
   line5,
   cleanFMSLine(B747DR_srcfms[fmsID][8]),
@@ -646,193 +612,43 @@ function fmsFunctions.key2fmc(fmsO,value)
   fmsO["scratchpad"]=""
   fmsO["notify"]=""
 end
-
-local function legStepFlightPlan()
-  local flightPlanText=tostring(fmsFlightPlan or "")
-  if string.len(flightPlanText)<=2 then return {} end
-  local decoded,flightPlan=pcall(json.decode,flightPlanText)
-  if not decoded or type(flightPlan)~="table" then return {} end
-  return flightPlan
-end
-
-function fmsFunctions.setlegstep(fmsO,value)
-  local waypoint,routeIndex,flightPlan=B747_getLegStepWaypoint(fmsO,value)
-  local scratchpad=fmsO["scratchpad"] or ""
-  flightPlan=flightPlan or legStepFlightPlan()
-  local plannedSteps=B747_getDisplayedPlannedSteps()
-  local programmedStep=B747_fms_step.entry_at_index(
-    plannedSteps,flightPlan,routeIndex)
-
-  if scratchpad=="DELETE" then
-    if waypoint~="" and programmedStep~=nil then
-      plannedSteps=B747_fms_step.remove(
-        plannedSteps,programmedStep.waypoint,programmedStep.routeIndex)
-      B747_setModifiedPlannedSteps(plannedSteps,flightPlan)
-      fmsO["scratchpad"]=""
-      fmsO["notify"]=""
-    else
-      fmsFunctions["key2fmc"](fmsO,value)
-    end
-    return
-  end
-
-  if string.len(scratchpad)==0 then
-    if waypoint~="" and programmedStep~=nil then
-      fmsO["scratchpad"]=programmedStep.altitude.."S"
-      return
-    end
-    fmsFunctions["key2fmc"](fmsO,value)
-    return
-  end
-
-  if string.sub(string.upper(B747_fms_step.trim(scratchpad)),-1)~="S" then
-    fmsFunctions["key2fmc"](fmsO,value)
-    return
-  end
-
-  local stepTo=validStepAltitude(B747_fms_step.altitude_token(scratchpad))
-  if stepTo==nil or waypoint=="" or routeIndex==nil then
-    fmsO["notify"]="INVALID ENTRY"
-    return
-  end
-
-  if programmedStep~=nil then
-    plannedSteps=B747_fms_step.remove(
-      plannedSteps,programmedStep.waypoint,programmedStep.routeIndex)
-  end
-  local updatedSteps=B747_fms_step.upsert(
-    plannedSteps,waypoint,stepTo,routeIndex)
-  local cruiseAltitude=B747_fms_step.altitude_feet(getFMSData("crzalt"))
-  if cruiseAltitude==nil or cruiseAltitude<=0 then
-    cruiseAltitude=tonumber(B747BR_cruiseAlt) or 0
-  end
-  local currentIndex=B747_fms_step.current_route_index(flightPlan) or 1
-  if not B747_fms_step.valid_climb_sequence(
-    updatedSteps,flightPlan,math.max(0,cruiseAltitude),currentIndex) then
-    fmsO["notify"]="INVALID ENTRY"
-    return
-  end
-
-  B747_setModifiedPlannedSteps(updatedSteps,flightPlan)
-  fmsO["scratchpad"]=""
-  fmsO["notify"]=""
-end
-
-function fmsFunctions.eraselegstepmod(fmsO,value)
-  if not B747_hasPlannedStepModification() then
-    fmsFunctions["key2fmc"](fmsO,value)
-    return
-  end
-
-  local sourceTitle=""
-  if B747DR_srcfms[fmsO.id]~=nil then
-    sourceTitle=cleanFMSLine(B747DR_srcfms[fmsO.id][1])
-  end
-  B747_discardPlannedStepModification()
-  if string.find(sourceTitle,"MOD",1,true)~=nil then
-    simCMD_FMS_key[fmsO.id][value]:once()
-  end
-  fmsO["scratchpad"]=""
-  fmsO["notify"]=""
-end
 local updateFrom="fmsL"
 local lastCrz=0
--- CRZ ALT the 747 itself sent to the native FMS (ALT selector, VNAV climb
--- intervention, VNAV monitor).  While it is set the 747 value stands and the
--- native read-back only confirms it.  nil means the native value is the CRZ
--- ALT (CDU entry).
-local pendingCrz=nil
-local crzSyncFaultMessage="CRZ ALT SYNC FAULT"
-
--- Empty the native scratchpad before typing into it.  A message such as
--- [INVALID ENTRY] hides the characters under it, so its length says nothing
--- about them: press CLR a fixed 25 times (the message and up to 24
--- characters), then DEL and CLR as custom2fmc does.
-local function clearNativeScratchpad(fmsO)
-  if string.len(string.gsub(B747DR_srcfms[fmsO.id][14],"[ %[%]]",""))>0 then
-    for i=1,25,1 do
-      simCMD_FMS_key[fmsO.id]["clear"]:once()
-    end
-  end
-  simCMD_FMS_key[fmsO.id]["del"]:once()
-  simCMD_FMS_key[fmsO.id]["clear"]:once()
-end
-
--- Shown only once the native scratchpad is clear: until then the native
--- message replaces the CDU message (createfms.lua).
-local function showCRZSyncFault()
-  if B747DR_crzalt_sync_fault~=1 then return end
-  fmsModules["fmsL"]["notify"]=crzSyncFaultMessage
-  fmsModules["fmsC"]["notify"]=crzSyncFaultMessage
-  fmsModules["fmsR"]["notify"]=crzSyncFaultMessage
-end
 
 function updateCRZ()
   local setVal=string.sub(B747DR_srcfms[updateFrom][3],20,24)
   print("from line".. updateFrom.." "..B747DR_srcfms[updateFrom][3])
   print("to:"..setVal)
-  local requested=pendingCrz
-  pendingCrz=nil
-  if requested==nil then
-    -- CDU entry: the native read-back is the CRZ ALT.
-    local alt=validAlt(setVal)
-    if alt~=nil then
-	B747BR_cruiseAlt=alt
+  local alt=validAlt(setVal)
+  if alt~=nil then 
+	B747BR_cruiseAlt=alt 
 	lastCrz=B747BR_cruiseAlt
-	fmsModules:setData("crzalt",setVal)
-	B747DR_crzalt_sync_fault=0
-    end
-    return
   end
-  local readBack=B747_fms_step.altitude_feet(setVal)
-  if readBack~=nil and math.abs(readBack-requested)<=50 then
-    fmsModules:setData("crzalt",setVal)
-    B747DR_crzalt_sync_fault=0
-    return
-  end
-  -- The native FMS refused the 747 CRZ ALT.  Keep the 747 value instead of
-  -- putting the old one back; the native T/D and waypoint predictions stay
-  -- on the old value meanwhile.
-  print("native FMS refused CRZ ALT "..requested..", it still has "..setVal)
-  fmsModules:setData("crzalt",
-    B747_fms_step.native_cruise_altitude_entry(requested,simDR_fms_transition_alt) or ""..requested)
-  B747DR_crzalt_sync_fault=1
-  clearNativeScratchpad(fmsModules[updateFrom])
-  run_after_time(showCRZSyncFault,0.5)
+  fmsModules:setData("crzalt",setVal)
 end
 
 function monitorCRZALT()
-	local thisCRZ=tonumber(B747BR_cruiseAlt) or 0
-	if thisCRZ~=(tonumber(lastCrz) or 0) then
+	local thisCRZ=B747BR_cruiseAlt
+	if not(thisCRZ==lastCrz) then
 		print("update because "..thisCRZ.."!="..lastCrz)
-		lastCrz=thisCRZ
-		local entry=B747_fms_step.native_cruise_altitude_entry(thisCRZ,simDR_fms_transition_alt)
-		if entry==nil then
-			-- Nothing the native FMS could take (CRZ ALT deleted): leave it
-			-- alone, and drop any read-back still to come.
-			if is_timer_scheduled(updateCRZ) == true then
-				stop_timer(updateCRZ)
-			end
-			pendingCrz=nil
-			B747DR_crzalt_sync_fault=0
-			return
-		end
 		local fmsO=fmsL
 		simCMD_FMS_key[fmsO.id]["fpln"]:once()--make sure we arent on the vnav page
 		simCMD_FMS_key[fmsO.id]["clb"]:once()--go to the vnav page
 		simCMD_FMS_key[fmsO.id]["next"]:once() --go to the vnav page 2
-		clearNativeScratchpad(fmsO)
-		for c in string.gmatch(entry,".") do
-			simCMD_FMS_key[fmsO["id"]][c]:once()
+		local newcrzalt=""..B747BR_cruiseAlt
+		for c in string.gmatch(newcrzalt,".") do
+			local v=c
+		  	if v=="/" then v="slash" end
+			simCMD_FMS_key[fmsO["id"]][v]:once()
 		end
 		simCMD_FMS_key[fmsO["id"]]["R1"]:once()
-		pendingCrz=thisCRZ
 		updateFrom=fmsO.id
 		local toGet=B747DR_srcfms[updateFrom][3] --make sure we update it
 		if is_timer_scheduled(updateCRZ) == true then
 			stop_timer(updateCRZ)                                -- KILL THE TIMER
 		end
 		run_after_time(updateCRZ,2.0)
+		lastCrz=B747BR_cruiseAlt
 	end
 	
 end
@@ -876,39 +692,6 @@ function validFL(value)
   if val<10000 or val>(maxA*1000) then return nil end
 
   return "FL".. (val/100)
-end
-function validAccelHeight(value)
-	if type(value)~="string" or string.match(value,"^%d+$")==nil then return nil end
-	local val=tonumber(value)
-	if val==nil or val%1~=0 or val<400 or val>9999 then return nil end
-	return string.format("%d",val)
-end
--- TAKEOFF REF THR REDUCTION also accepts a flap setting.  Heights are at
--- least 400 FT, so a bare flap number cannot be confused with one.
-function validThrustReductionFlap(value)
-	if type(value)~="string" then return nil end
-	local entry=string.upper(value)
-	entry=string.gsub(entry,"^%s+","")
-	entry=string.gsub(entry,"%s+$","")
-	local digits=string.match(entry,"^FLAPS?%s*(%d+)$")
-	if digits==nil then digits=string.match(entry,"^F(%d+)$") end
-	if digits==nil then digits=string.match(entry,"^(%d+)$") end
-	if digits==nil then return nil end
-	local flap=tonumber(digits)
-	if flap~=1 and flap~=5 and flap~=10 and flap~=20 then return nil end
-	return string.format("%d",flap)
-end
-function validStepAltitude(value)
-	if type(value)~="string" then return nil end
-	local val=nil
-	if string.match(value,"^FL%d+$")~=nil then
-		val=tonumber(string.sub(value,3))*100
-	elseif string.match(value,"^%d+$")~=nil then
-		val=tonumber(value)
-		if val~=nil and val<1000 then val=val*100 end
-	end
-	if val==nil or val%100~=0 or val<10000 or val>45100 then return nil end
-	return string.format("FL%03d",val/100)
 end
 function validateMachSpeed(value)
   local val=tonumber(value)
@@ -1214,79 +997,8 @@ function fmsFunctions.setdata(fmsO,value)
     --fmsModules["data"]["fltdst"]=dst
     setFMSData("fltdep",dep)
     setFMSData("fltdst",dst)
-  elseif value=="takeoffFlapAccel" then
-		if del==true then
-			setFMSData("accelht","1500")
-		elseif string.len(fmsO["scratchpad"])==0 then
-			fmsO["scratchpad"]="/"..string.format("%d",tonumber(getFMSData("accelht")) or 1500)
-			return
-		else
-			local entry=fmsO["scratchpad"]
-			local slash=string.find(entry,"/",1,true)
-			local flapValue=nil
-			local accelValue=nil
-
-			if slash~=nil then
-				if slash>1 then flapValue=tonumber(string.sub(entry,1,slash-1)) end
-				if slash<string.len(entry) then accelValue=validAccelHeight(string.sub(entry,slash+1)) end
-				if (slash>1 and flapValue==nil) or (slash<string.len(entry) and accelValue==nil) then
-					fmsO["notify"]="INVALID ENTRY"
-					return
-				end
-			else
-				local numericEntry=tonumber(entry)
-				if numericEntry==10 or numericEntry==20 then
-					flapValue=numericEntry
-				else
-					accelValue=validAccelHeight(entry)
-				end
-			end
-
-			if (flapValue~=nil and flapValue~=10 and flapValue~=20)
-			or (flapValue==nil and accelValue==nil) then
-				fmsO["notify"]="INVALID ENTRY"
-				return
-			end
-			if flapValue~=nil then B747DR_airspeed_flapsRef=flapValue end
-			if accelValue~=nil then setFMSData("accelht",accelValue) end
-		end
-  elseif value=="thrustReductionHeight" then
-		if del==true then
-			setFMSData("thrredht","1500")
-			setFMSData("thrredflap","")
-		elseif string.len(fmsO["scratchpad"])==0 then
-			local thrustReductionFlap=tonumber(getFMSData("thrredflap"))
-			if thrustReductionFlap~=nil and thrustReductionFlap>0 then
-				fmsO["scratchpad"]=string.format("FLAPS %d",thrustReductionFlap)
-			else
-				fmsO["scratchpad"]=string.format("%d",tonumber(getFMSData("thrredht")) or 1500)
-			end
-			return
-		else
-			local thrustReductionFlap=validThrustReductionFlap(fmsO["scratchpad"])
-			if thrustReductionFlap~=nil then
-				-- Climb thrust is set while retracting, so the schedule must
-				-- name a flap position below the takeoff flap setting.
-				local takeoffFlap=tonumber(B747DR_airspeed_flapsRef) or 0
-				if takeoffFlap>0 and tonumber(thrustReductionFlap)>=takeoffFlap then
-					fmsO["notify"]="INVALID ENTRY"
-					return
-				end
-				setFMSData("thrredflap",thrustReductionFlap)
-				return
-			end
-			local thrustReductionHeight=validAccelHeight(fmsO["scratchpad"])
-			if thrustReductionHeight==nil then
-				fmsO["notify"]="INVALID ENTRY"
-				return
-			end
-			setFMSData("thrredht",thrustReductionHeight)
-			setFMSData("thrredflap","")
-		end
   elseif value=="clbspd" then
-    if del==true then
-      setFMSData("clbspd","") -- back to the ECON schedule
-    elseif validateSpeed(fmsO["scratchpad"]) ==false then
+    if validateSpeed(fmsO["scratchpad"]) ==false then 
       fmsO["notify"]="INVALID ENTRY"
     else
       setFMSData("clbspd",fmsO["scratchpad"])
@@ -1309,52 +1021,28 @@ function fmsFunctions.setdata(fmsO,value)
       fmsO["notify"]="INVALID ENTRY"
     end
   elseif value=="clbrest" then
-    -- SPD REST is a speed/altitude pair: both halves are entered together,
-    -- and DELETE returns the field to "---/-----".
-    if del==true then
-      setFMSData("clbrestspd","")
-      setFMSData("clbrestalt","")
+    spd=string.sub(fmsO["scratchpad"],1,3)
+    alt=string.sub(fmsO["scratchpad"],5)
+    if validateSpeed(spd) ==false then 
+      fmsO["notify"]="INVALID ENTRY"
     else
-      spd=string.sub(fmsO["scratchpad"],1,3)
-      alt=validAlt(string.sub(fmsO["scratchpad"],5))
-      if validateSpeed(spd)==false or alt==nil then
-        fmsO["notify"]="INVALID ENTRY"
-      else
-        setFMSData("clbrestspd",spd)
-        setFMSData("clbrestalt",alt)
+      setFMSData("clbrestspd",spd)
+      if validAlt(alt) ~=nil then 
+	setFMSData("clbrestalt",validAlt(alt))
       end
     end
   elseif value=="crzspd" then
-    if del==true then
-      setFMSData("crzspd","") -- back to the ECON cruise Mach
-    elseif validateMachSpeed(fmsO["scratchpad"]) ==nil then
+    if validateMachSpeed(fmsO["scratchpad"]) ==nil then 
       fmsO["notify"]="INVALID ENTRY"
     else
       setFMSData("crzspd",validateMachSpeed(fmsO["scratchpad"]))
     end
-  elseif value=="stepto" then
-		if del==true then
-			setFMSData("stepto","*****")
-			setFMSData("stepatwpt","")
-		elseif string.len(fmsO["scratchpad"])==0 then
-			local stepTo=getFMSData("stepto")
-			if stepTo=="*****" then stepTo=getFMSData("stepalt") end
-			fmsO["scratchpad"]=stepTo
-			return
-		else
-			local stepTo=validStepAltitude(fmsO["scratchpad"])
-			if stepTo~=nil then
-				local stepToFeet=tonumber(string.sub(stepTo,3))*100
-				if B747BR_cruiseAlt>0 and stepToFeet<=B747BR_cruiseAlt then
-					fmsO["notify"]="INVALID ENTRY"
-					return
-				end
-				setFMSData("stepatwpt","")
-				setFMSData("stepto",stepTo)
-			else
-				fmsO["notify"]="INVALID ENTRY"
-			end
-		end
+  elseif value=="stepalt" then
+    if validFL(fmsO["scratchpad"]) ~=nil then 
+		setFMSData("stepalt",validFL(fmsO["scratchpad"]))
+    else
+      fmsO["notify"]="INVALID ENTRY"
+    end
   elseif value=="desspds" then
     div = string.find(fmsO["scratchpad"], "%/")
     spd=getFMSData("desspd")
@@ -1384,18 +1072,14 @@ function fmsFunctions.setdata(fmsO,value)
       end
     end 
    elseif value=="desrest" then
-    -- Same speed/altitude pair as the CLB page SPD REST.
-    if del==true then
-      setFMSData("desrestspd","")
-      setFMSData("desrestalt","")
+    spd=string.sub(fmsO["scratchpad"],1,3)
+    alt=string.sub(fmsO["scratchpad"],5)
+    if validateSpeed(spd) ==false then 
+      fmsO["notify"]="INVALID ENTRY"
     else
-      spd=string.sub(fmsO["scratchpad"],1,3)
-      alt=validAlt(string.sub(fmsO["scratchpad"],5))
-      if validateSpeed(spd)==false or alt==nil then
-        fmsO["notify"]="INVALID ENTRY"
-      else
-        setFMSData("desrestspd",spd)
-        setFMSData("desrestalt",alt)
+      setFMSData("desrestspd",spd)
+      if validAlt(alt) ~=nil then 
+	setFMSData("desrestalt",validAlt(alt))
       end
     end
   elseif value=="airportpos" then --and string.len(fmsO["scratchpad"])>3 then
@@ -1507,17 +1191,10 @@ function fmsFunctions.setdata(fmsO,value)
 		if string.len(fmsO["scratchpad"])>0 then
 			local alt=validAlt(fmsO["scratchpad"])
 			if alt~=nil then 
-				setFMSData("stepto","*****")
-				setFMSData("stepatwpt","")
 				simCMD_FMS_key[fmsO.id]["fpln"]:once()--make sure we arent on the vnav page
 				simCMD_FMS_key[fmsO.id]["clb"]:once()--go to the vnav page
 				simCMD_FMS_key[fmsO.id]["next"]:once() --go to the vnav page 2
 
-				-- The native FMS takes a flight level above its transition
-				-- altitude: 33000, 330 and FL330 are all sent as FL330.
-				fmsO["scratchpad"]=B747_fms_step.native_cruise_altitude_entry(
-					tonumber(alt),simDR_fms_transition_alt) or alt
-				pendingCrz=nil -- the native read-back is the CRZ ALT
 				fmsFunctions["custom2fmc"](fmsO,"R1")
 				updateFrom=fmsO.id
 				local toGet=B747DR_srcfms[updateFrom][3] --make sure we update it
@@ -1525,14 +1202,9 @@ function fmsFunctions.setdata(fmsO,value)
 			else
 				fmsO["notify"]="INVALID CRZ ALT"
 			end
-		elseif del then
-			-- CRZ ALT is not deleted, as the FMC does (an entry replaces it): with CRZ ALT 0 in the climb VNAV
-			-- flew the cruise Mach .81 from FL205, 400 KCAS (a review)
-			fmsO["notify"]="INVALID DELETE"
 		else
-			-- an empty press copies it to the scratchpad (nothing without one)
-			local crz=tostring(getFMSData("crzalt") or "")
-			if string.find(crz,"%d") then fmsO["scratchpad"]=string.gsub(crz,"%s","") end
+			fmsModules:setData("crzalt","")
+			B747BR_cruiseAlt=0
 		end	
 	end
 	--[[if string.len(fmsO["scratchpad"])>0 then
@@ -1668,12 +1340,10 @@ function fmsFunctions.setdata(fmsO,value)
 		fmsO["notify"]="INVALID ENTRY"
  	end
   elseif value == "vref1" then
-	-- [landing speeds] VREF in whole knots, rounded as APPROACH REF shows it (%3d cut 143.69 to 143)
-	-- [P36] for the landing airport's elevation (B747_landing_vref)
-	fmsO["scratchpad"]=string.format("25/%3d", math.floor(B747_landing_vref(B747DR_airspeed_Vf25) + 0.5))
+	fmsO["scratchpad"]=string.format("25/%3d", B747DR_airspeed_Vf25)
 	return
   elseif value == "vref2" then
-	fmsO["scratchpad"]=string.format("30/%3d", math.floor(B747_landing_vref(B747DR_airspeed_Vf30) + 0.5))
+	fmsO["scratchpad"]=string.format("30/%3d", B747DR_airspeed_Vf30)
 	return
   elseif value == "flapspeed" then
 	if fmsO["scratchpad"]=="" then 
@@ -1682,8 +1352,7 @@ function fmsFunctions.setdata(fmsO,value)
 		return 
 	end
 	local vref=tonumber(string.sub(fmsO["scratchpad"],4))
-	-- [landing speeds] any VREF APPROACH REF offers: VREF25 is over 180 kt from 356 t, 192 at 400 t
-	if vref==nil or vref<110 or vref>200 then 
+	if vref==nil or vref<110 or vref>180 then 
 		fmsO["notify"]="INVALID ENTRY" 
 		return 
 	end
@@ -1729,8 +1398,7 @@ function fmsFunctions.setdata(fmsO,value)
 	setFMSData(value, grwt)
 	setFMSData("zfw", zfw)
 	calc_CGMAC()  --Recalc CG %MAC and TRIM units
-	-- [takeoff speeds] set speeds only: the instruments leave V1 at 998 (no speeds in the air) after a landing
-	if (B747DR_airspeed_V1 < 998 or B747DR_airspeed_Vr < 998 or B747DR_airspeed_V2 < 998) and simDR_onground == 1 then
+	if (B747DR_airspeed_V1 < 999 or B747DR_airspeed_Vr < 999 or B747DR_airspeed_V2 < 999) and simDR_onground == 1 then
 		B747DR_airspeed_flapsRef = 0
 		--B747DR_airspeed_V1 = 999
 		--B747DR_airspeed_Vr = 999
@@ -1758,8 +1426,7 @@ function fmsFunctions.setdata(fmsO,value)
 	setFMSData(value, zfw)
 	setFMSData("grwt", grwt)
 	calc_CGMAC()  --Recalc CG %MAC and TRIM units
-	-- [takeoff speeds] set speeds only: the instruments leave V1 at 998 (no speeds in the air) after a landing
-	if (B747DR_airspeed_V1 < 998 or B747DR_airspeed_Vr < 998 or B747DR_airspeed_V2 < 998) and simDR_onground == 1 then
+	if (B747DR_airspeed_V1 < 999 or B747DR_airspeed_Vr < 999 or B747DR_airspeed_V2 < 999) and simDR_onground == 1 then
 		B747DR_airspeed_flapsRef = 0
 		--B747DR_airspeed_V1 = 999
 		--B747DR_airspeed_Vr = 999
@@ -2873,21 +2540,9 @@ function fmsFunctions.setDref(fmsO,value)
 
 
  	
-  if value=="TO" or value=="TO1" or value=="TO2" then
-    local rating = 0
-    if value=="TO1" then rating = 1 elseif value=="TO2" then rating = 2 end
-    -- [takeoff speeds] a takeoff thrust rating changed once the speeds are set deletes them with the flaps entry, as
-    -- a GR WT or ZFW entry above: entered again they are worked out for the new rating (TO 2's V1 108 stayed under
-    -- full thrust's VMCG 121; reviews 36 and 38). Set speeds only: V1 998 is the instruments' "none in the air",
-    -- kept after a landing (review 39)
-    if rating ~= toderate and (B747DR_airspeed_V1 < 998 or B747DR_airspeed_Vr < 998 or B747DR_airspeed_V2 < 998)
-        and simDR_onground == 1 then
-      B747DR_airspeed_flapsRef = 0
-      fmsO["notify"] = "TAKEOFF SPEEDS DELETED"
-    end
-    toderate=rating clbderate=rating
-    return
-  end
+  if value=="TO" then toderate=0 clbderate=0 return  end
+  if value=="TO1" then toderate=1 clbderate=1 return  end
+  if value=="TO2" then toderate=2 clbderate=2 return  end
   if value=="CLB" then clbderate=0 return  end
   if value=="CLB1" then clbderate=1 return  end
   if value=="CLB2" then clbderate=2  return end

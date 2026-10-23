@@ -62,10 +62,6 @@ function deferred_dataref(name,nilType,callFunction)
 end
 local B747_hold_rev_on_engine		= {0, 0, 0, 0}
 local B747_hold_rev_on_all			= 0
--- SET WHILE THE ALL-ENGINE REVERSE HOLD HAS DEPLOYED THE REVERSERS; RELEASING A HOLD OF
--- AT LEAST B747_REV_HOLD_TAP_SEC RETURNS TO REVERSE IDLE, A SHORTER TAP STAYS LATCHED
-local B747_rev_hold_commanded		= false
-local B747_REV_HOLD_TAP_SEC			= 0.5
 
 --local B747_igniter_status = {0, 0, 0, 0}
 local B747_ignition_startup_flag = {1, 1, 1, 1}
@@ -121,6 +117,9 @@ simDR_startup_running           = find_dataref("sim/operation/prefs/startup_runn
 simDR_radarAlt1           	= find_dataref("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
 simDR_all_wheels_on_ground      = find_dataref("sim/flightmodel/failures/onground_any")
 simDR_reallyall_wheels_on_ground      = find_dataref("sim/flightmodel/failures/onground_all")
+-- reversers: PSEU ground relays (TR 1/4 primary, TR 2/3 alternate, ATA29_32 p.299)
+B747DR_engines_pseu_pri_gnd     = find_dataref("laminar/B747/gear/air_ground/pri_gnd")
+B747DR_engines_pseu_alt_gnd     = find_dataref("laminar/B747/gear/air_ground/alt_gnd")
 simDR_thrust_rev_deploy_ratio   = find_dataref("sim/flightmodel2/engines/thrust_reverser_deploy_ratio")
 simDR_autoReverse=find_dataref("sim/cockpit2/switches/auto_reverse_on")
 B747DR_speedbrake_lever     	= find_dataref("laminar/B747/flt_ctrls/speedbrake_lever")
@@ -195,9 +194,6 @@ B747DR_engine02_fire_ext_switch_pos_disch   = find_dataref("laminar/B747/fire/en
 B747DR_engine03_fire_ext_switch_pos_disch   = find_dataref("laminar/B747/fire/engine03/ext_switch/pos_disch")
 B747DR_engine04_fire_ext_switch_pos_disch   = find_dataref("laminar/B747/fire/engine04/ext_switch/pos_disch")
 
-B747DR_engine_apu_oil_qty_ratio      	= find_dataref("laminar/B747/apu/oil")
-B747DR_engine_apu_n2      	        = find_dataref("laminar/B747/apu/n2")
-B747DR_elec_apu_inlet_door_pos      = find_dataref("laminar/B747/electrical/apu_inlet_door")
 
 B747DR_CAS_warning_status           = find_dataref("laminar/B747/CAS/warning_status")
 B747DR_CAS_caution_status                   = find_dataref("laminar/B747/CAS/caution_status")
@@ -506,7 +502,6 @@ function B747_thrust_rev_hold_max_all_CMDhandler(phase, duration)
 				simDR_prop_mode[3] = 3		
 				simDR_engine_throttle_jet_all = -1 --B747_animate_value(simDR_engine_throttle_jet_all,-1,-1,1,1)
 				B747_hold_rev_on_all = 1
-				B747_rev_hold_commanded = true
 		--else
 		--  simDR_engine_throttle_jet_all=B747_animate_value(simDR_engine_throttle_jet_all,0,0,1,1)
 		end
@@ -517,19 +512,20 @@ function B747_thrust_rev_hold_max_all_CMDhandler(phase, duration)
 		
 	end		
 	
-	-- COMMAND RELEASED: A TAP SHORTER THAN B747_REV_HOLD_TAP_SEC KEEPS FULL REVERSE LATCHED,
-	-- A LONGER HOLD RETURNS TO REVERSE IDLE. THE STOW TIMERS ARE NOT TOUCHED: BELOW 65 KTS
-	-- (OR FROM THE RELEASE WHEN ALREADY SLOWER) THE REVERSE MONITOR STILL SELECTS REVERSE
-	-- IDLE AFTER 5 SECONDS AND STOWS THE REVERSERS 3 SECONDS LATER
-	if phase == 2 then
-
-		if B747_rev_hold_commanded and duration >= B747_REV_HOLD_TAP_SEC then
+	--[[if phase == 2 then
+		
+		if B747_hold_rev_on_all == 1 then
+			--simDR_prop_mode[0] = 1													
+			--simDR_prop_mode[1] = 1													
+			--simDR_prop_mode[2] = 1													
+			--simDR_prop_mode[3] = 1	
+            --print("canx rev")	
 			simDR_engine_throttle_jet_all = -0.01
+            run_after_time(canx_revHold,5)
 		end
-		B747_rev_hold_commanded = false
-
-    end
-
+					
+    end]]--
+    
 end
 
 
@@ -754,7 +750,9 @@ function B747_prop_mode()
     end
     -- Mode 0 is feathered, 1 is normal, 2 is in beta, and reverse (prop or jet) is mode 3
     local refreshGroundstate=simDR_all_wheels_on_ground
-    if simDR_reallyall_wheels_on_ground==0 then
+    -- locked out until the PSEU says ground: both main gear sides down, not the
+    -- nose gear too (GEAR-01; ATA29_32 p.299, p.322)
+    if B747DR_engines_pseu_pri_gnd == 0 and B747DR_engines_pseu_alt_gnd == 0 then
         B747DR_reverser_lockout = 1
     else 
         B747DR_reverser_lockout = 0
@@ -1319,7 +1317,6 @@ end
 
 
 
-local initial_apu_oil = 0.75+(math.random()*0.25)
 ----- ENGINE OIL QUANTITY ---------------------------------------------------------------
 function B747_engine_oil_qty()
 
@@ -1327,7 +1324,6 @@ function B747_engine_oil_qty()
     B747DR_engine_oil_qty_liters[1] = math.max(0, (B747_eng2oilStart - (B747_eng2startupOilTxfr * B747_rescale(0.0, 0.0, 15.0, 1.0, B747DR_display_N1[1]))) * simDR_engine_oil_qty_ratio[0])
     B747DR_engine_oil_qty_liters[2] = math.max(0, (B747_eng3oilStart - (B747_eng3startupOilTxfr * B747_rescale(0.0, 0.0, 15.0, 1.0, B747DR_display_N1[2]))) * simDR_engine_oil_qty_ratio[0]) 
 	B747DR_engine_oil_qty_liters[3] = math.max(0, (B747_eng4oilStart - (B747_eng4startupOilTxfr * B747_rescale(0.0, 0.0, 15.0, 1.0, B747DR_display_N1[3]))) * simDR_engine_oil_qty_ratio[0]) 
-    B747DR_engine_apu_oil_qty_ratio=B747_animate_value(B747DR_engine_apu_oil_qty_ratio,initial_apu_oil - (B747DR_engine_apu_n2*0.003),0,1,20)
 end
 
 
@@ -1342,7 +1338,6 @@ function B747_EPR()
     for i = 0, 3 do
         B747DR_EPR_max_limit[i] = 2.0
     end
-    B747DR_engine_apu_n2 = 85.5 * B747DR_elec_apu_inlet_door_pos
 --[[
     -- TOGA
     if B747DR_engine_TOGA_mode == 1 then

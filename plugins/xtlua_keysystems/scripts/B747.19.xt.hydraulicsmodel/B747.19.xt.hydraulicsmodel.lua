@@ -29,9 +29,6 @@ simCMD_pause = find_command("sim/operation/pause_toggle")
 debug_flight_directors     = deferred_dataref("laminar/B747/debug/flight_directors", "number")
 simDR_autopilot_hold_altitude_ft = find_dataref("laminar/B747/autopilot/altitude_hold_ft")
 simDR_autopilot_alt_hold_status         = find_dataref("laminar/B747/autopilot/altitude_hold_status")
--- FLCH and V/S requests: read and cleared by the flight-director ALT capture
-simDR_autopilot_vs_status = find_dataref("laminar/B747/autopilot/vvi_status")
-simDR_autopilot_flch_status = find_dataref("laminar/B747/autopilot/speed_status")
 B747DR_autopilot_TOGA_status     	= deferred_dataref("laminar/B747/autopilot/TOGA_status","number")
 simDR_hsi_vdef_dots_pilot           = find_dataref("sim/cockpit2/radios/indicators/hsi_vdef_dots_pilot")
 B747DR_ap_flightPhase 				= deferred_dataref("laminar/B747/autopilot/flightPhase", "number")
@@ -169,13 +166,6 @@ B747DR_airspeed_Vmc = find_dataref("laminar/B747/airspeed/Vmc")
 simDR_autopilot_altitude_ft = find_dataref("laminar/B747/autopilot/altitude_dial_ft")
 simDR_pressureAlt1 = find_dataref("sim/cockpit2/gauges/indicators/altitude_ft_pilot")
 simDR_touchGround = find_dataref("sim/flightmodel/failures/onground_any")
--- [P39] TO/GA's speed: the FMC's V2 and the IAS/MACH window's speed
-B747DR_airspeed_V2 = find_dataref("laminar/B747/airspeed/V2")
-B747DR_ap_ias_dial_value = find_dataref("laminar/B747/autopilot/ias_dial_value")
-simDR_autopilot_airspeed_is_mach = find_dataref("sim/cockpit2/autopilot/airspeed_is_mach")
--- [P45] the speed law's thrust lead: the engines' thrust (N) and the aircraft's mass (kg)
-simDR_engine_thrust_n = find_dataref("sim/flightmodel/engine/POINT_thrust")
-simDR_acf_weight_total_kg = find_dataref("sim/flightmodel/weight/m_total")
 simDR_autopilot_vs_fpm = find_dataref("sim/cockpit2/autopilot/vvi_dial_fpm")
 B747DR_l_elev_inner   = deferred_dataref("laminar/B747/flt_ctrls/l_elev_inner", "number")
 B747DR_r_elev_inner   = deferred_dataref("laminar/B747/flt_ctrls/r_elev_inner", "number")
@@ -205,14 +195,7 @@ B747DR_flight_director_roll 		= deferred_dataref("laminar/B747/autopilot/flight_
 simDR_autopilot_servos_on           	= find_dataref("laminar/B747/autopilot/servos_on")
 B747DR_ap_FMA_active_pitch_mode     	= find_dataref("laminar/B747/autopilot/FMA/active_pitch_mode")
 B747DR_ap_FMA_active_roll_mode      	= find_dataref("laminar/B747/autopilot/FMA/active_roll_mode")
--- [P45] the speed law's thrust lead stays out of the A/T's SPD
-B747DR_ap_FMA_autothrottle_mode     	= find_dataref("laminar/B747/autopilot/FMA/autothrottle_mode")
 simDR_vvi_fpm_pilot                 = find_dataref("sim/cockpit2/gauges/indicators/vvi_fpm_pilot")
-simDR_alpha_deg                     = find_dataref("sim/flightmodel/position/alpha")
-simDR_TAS_mps                       = find_dataref("sim/flightmodel/position/true_airspeed")
-simDR_elevation                     = find_dataref("sim/flightmodel/position/elevation")  -- [P37] m above MSL
-simDR_yaw_rate                      = find_dataref("sim/flightmodel/position/R")
-simDR_roll_rate                     = find_dataref("sim/flightmodel/position/P")
 simDR_autopilot_alt_hold_status     	= find_dataref("laminar/B747/autopilot/altitude_hold_status")
 --simCMD_autopilot_alt_hold_mode      = find_command("sim/autopilot/altitude_hold")
 B747_controls_left_outer_aileron           = deferred_dataref("laminar/B747/cablecontrols/left_outer_aileron", "number")
@@ -357,128 +340,12 @@ function B747_rescale(in1, out1, in2, out2, x)
 
 end
 B747DR_switching_servos_on = deferred_dataref("laminar/B747/autopilot/ap_monitor/servos_on_time", "number")
+dofile("pid.lua")
 dofile("B747.19.xt.hydraulics_override.lua")
-function B747_engine_hyd_valves()
--- ENGINE #1
-    if B747DR_button_switch_position[30] > 0.95 then
-        B747DR_hyd_valve_1 = 1
-    elseif B747DR_button_switch_position[30] < 0.05 then
-        B747DR_hyd_valve_1  = 0
-    end
-
-
-    -- ENGINE #2
-    if B747DR_button_switch_position[31] > 0.95 then
-        B747DR_hyd_valve_2  = 1
-    elseif B747DR_button_switch_position[31] < 0.05 then
-        B747DR_hyd_valve_2  = 0
-    end
-
-
-    -- ENGINE #3
-    if B747DR_button_switch_position[32] > 0.95 then
-        B747DR_hyd_valve_3  = 1
-    elseif B747DR_button_switch_position[32] < 0.05 then
-        B747DR_hyd_valve_3  = 0
-    end
-
-
-    -- ENGINE #4
-    if B747DR_button_switch_position[33] > 0.95 then
-        B747DR_hyd_valve_4  = 1
-    elseif B747DR_button_switch_position[33] < 0.05 then
-        B747DR_hyd_valve_4  = 0
-    end
-end
-function B747_engine_dem_modes()
-  
-  B747DR_hyd_dem_mode_1=B747DR_hyd_dmd_pmp_sel_pos[0]
-  B747DR_hyd_dem_mode_2=B747DR_hyd_dmd_pmp_sel_pos[1]
-  B747DR_hyd_dem_mode_3=B747DR_hyd_dmd_pmp_sel_pos[2]
-  B747DR_hyd_dem_mode_4=B747DR_hyd_dmd_pmp_sel_pos[3]
-  
-end
-function B747_edp_pressures()
-    if B747DR_hyd_valve_1==1 then
-      B747DR_hyd_edp_pressure_1=40*B747DR_display_N1[0]
-    else
-      B747DR_hyd_edp_pressure_1=0;
-    end
-    
-    if B747DR_hyd_valve_2==1 then
-      B747DR_hyd_edp_pressure_2=40*B747DR_display_N1[1]
-    else
-      B747DR_hyd_edp_pressure_2=0;
-    end
-    
-    if B747DR_hyd_valve_3==1 then
-      B747DR_hyd_edp_pressure_3=40*B747DR_display_N1[2]
-    else
-      B747DR_hyd_edp_pressure_3=0;
-    end
-    
-    if B747DR_hyd_valve_4==1 then
-      B747DR_hyd_edp_pressure_4=40*B747DR_display_N1[3]
-    else
-      B747DR_hyd_edp_pressure_4=0;
-    end
-end
-
-function B747_dem_pressures()
-  if B747DR_hyd_dem_mode_1>0 then 
-    if B747DR_hyd_dem_mode_1==2 then
-      B747DR_hyd_dem_pressure_1=B747_duct_pressure_L*110
-    elseif B747DR_hyd_edp_pressure_1<2500 then
-      B747DR_hyd_dem_pressure_1=B747_duct_pressure_L*110
-    else
-      B747DR_hyd_dem_pressure_1=0
-    end
-  else
-     B747DR_hyd_dem_pressure_1=0  
-  end
-  
-  
-  if B747DR_hyd_dem_mode_2>0 then
-    if B747DR_hyd_dem_mode_2==2 then
-      B747DR_hyd_dem_pressure_2=3000
-    elseif B747DR_hyd_edp_pressure_2<2500 then
-      B747DR_hyd_dem_pressure_2=3000
-    else
-      B747DR_hyd_dem_pressure_2=0
-    end
-   else
-     B747DR_hyd_dem_pressure_2=0 
-  end
- 
-  if B747DR_hyd_dem_mode_3>0 then
-    if B747DR_hyd_dem_mode_3==2 then
-      B747DR_hyd_dem_pressure_3=3000
-    elseif B747DR_hyd_edp_pressure_3<2500 then
-      B747DR_hyd_dem_pressure_3=3000
-    else
-      B747DR_hyd_dem_pressure_3=0
-    end
-   else
-     B747DR_hyd_dem_pressure_3=0
-  end
-  
-  if B747DR_hyd_dem_mode_4>0 then
-    if B747DR_hyd_dem_mode_4==2 then
-      B747DR_hyd_dem_pressure_4=B747_duct_pressure_R*110
-    elseif B747DR_hyd_edp_pressure_4<2500 then
-      B747DR_hyd_dem_pressure_4=B747_duct_pressure_R*110
-    else
-      B747DR_hyd_dem_pressure_4=0
-    end
-    elseif B747DR_hyd_dem_mode_4<0 then
-     B747DR_hyd_aux_pressure=2950
-     B747DR_hyd_dem_pressure_4=0
-    else
-     B747DR_hyd_dem_pressure_4=0
-     B747DR_hyd_aux_pressure=0
-  end
-  
-end
+dofile("B747.19.xt.slats.lua")
+dofile("B747.19.xt.afds_control.lua")
+dofile("B747.19.xt.yaw_damper.lua")
+dofile("B747.19.xt.hyd_power.lua")
 local lastpressureUpdate=0
 function B747_show_system_pressures()
   local diff = simDRTime - lastpressureUpdate
@@ -492,38 +359,6 @@ function B747_show_system_pressures()
 
   lastpressureUpdate=simDRTime
 end
-function B747_system_pressures()
-  --B747_animate_value(B747DR_hyd_sys_pressure_1,math.max(B747DR_hyd_dem_pressure_1,B747DR_hyd_edp_pressure_1),0,3000,1)
-  B747DR_hyd_sys_pressure_use_1=B747_animate_value(B747DR_hyd_sys_pressure_use_1,((B747DR_hyd_dem_pressure_1+B747DR_hyd_edp_pressure_1)/10),0,45,1)--math.max(B747DR_hyd_dem_pressure_1,B747DR_hyd_edp_pressure_1)
-  B747DR_hyd_sys_pressure_use_2=B747_animate_value(B747DR_hyd_sys_pressure_use_2,((B747DR_hyd_dem_pressure_2+B747DR_hyd_edp_pressure_2)/10),0,45,1)--math.max(B747DR_hyd_dem_pressure_2,B747DR_hyd_edp_pressure_2)
-  B747DR_hyd_sys_pressure_use_3=B747_animate_value(B747DR_hyd_sys_pressure_use_3,((B747DR_hyd_dem_pressure_3+B747DR_hyd_edp_pressure_3)/10),0,45,1)--math.max(B747DR_hyd_dem_pressure_3,B747DR_hyd_edp_pressure_3)
-  B747DR_hyd_sys_pressure_use_4=B747_animate_value(B747DR_hyd_sys_pressure_use_4,((B747DR_hyd_dem_pressure_4+B747DR_hyd_edp_pressure_4+B747DR_hyd_aux_pressure)/10),0,45,1)--math.max(B747DR_hyd_dem_pressure_4,B747DR_hyd_edp_pressure_4,B747DR_hyd_aux_pressure)
-  
-  --sys_pressure_use now contains how much pressure we can put into the system
-  local s1Max=math.min(math.max(B747DR_hyd_dem_pressure_1,B747DR_hyd_edp_pressure_1,B747DR_hyd_sys_pressure_1),3300)
-  local s2Max=math.min(math.max(B747DR_hyd_dem_pressure_2,B747DR_hyd_edp_pressure_2,B747DR_hyd_sys_pressure_2),3300)
-  local s3Max=math.min(math.max(B747DR_hyd_dem_pressure_3,B747DR_hyd_edp_pressure_3,B747DR_hyd_sys_pressure_3),3300)
-  local s4Max=math.min(math.max(B747DR_hyd_dem_pressure_4,B747DR_hyd_edp_pressure_4,B747DR_hyd_aux_pressure,B747DR_hyd_sys_pressure_4),3300)
-  B747DR_hyd_sys_pressure_1=B747_animate_value(B747DR_hyd_sys_pressure_1,B747DR_hyd_sys_pressure_1+B747DR_hyd_sys_pressure_use_1,0,s1Max-math.random()*50,10)
-  B747DR_hyd_sys_pressure_2=B747_animate_value(B747DR_hyd_sys_pressure_2,B747DR_hyd_sys_pressure_2+B747DR_hyd_sys_pressure_use_2,0,s2Max-math.random()*50,10)
-  B747DR_hyd_sys_pressure_3=B747_animate_value(B747DR_hyd_sys_pressure_3,B747DR_hyd_sys_pressure_3+B747DR_hyd_sys_pressure_use_3,0,s3Max-math.random()*50,10)
-  B747DR_hyd_sys_pressure_4=B747_animate_value(B747DR_hyd_sys_pressure_4,B747DR_hyd_sys_pressure_4+B747DR_hyd_sys_pressure_use_4,0,s4Max-math.random()*50,10)
-  B747DR_hyd_sys_pressure_13=math.max(B747DR_hyd_sys_pressure_1,B747DR_hyd_sys_pressure_3) --12 remapped to 13
-  B747DR_hyd_sys_pressure_23=math.max(B747DR_hyd_sys_pressure_2,B747DR_hyd_sys_pressure_3)
-  B747DR_hyd_sys_pressure_24=math.max(B747DR_hyd_sys_pressure_2,B747DR_hyd_sys_pressure_4) 
-  B747DR_hyd_sys_pressure_234=math.max(B747DR_hyd_sys_pressure_2,B747DR_hyd_sys_pressure_3,B747DR_hyd_sys_pressure_4)
-  
-  B747DR_hyd_sys_res_1=B747DR_hyd_sys_restotal_1-(B747DR_hyd_sys_pressure_1/3000)*0.1
-  B747DR_hyd_sys_res_2=B747DR_hyd_sys_restotal_2-(B747DR_hyd_sys_pressure_2/3000)*0.1
-  B747DR_hyd_sys_res_3=B747DR_hyd_sys_restotal_3-(B747DR_hyd_sys_pressure_3/3000)*0.1
-  B747DR_hyd_sys_res_4=B747DR_hyd_sys_restotal_4-(B747DR_hyd_sys_pressure_4/3000)*0.1
-  simDR_hyd_press_1_2 = math.max(simDR_hyd_press_1_2,B747DR_hyd_sys_pressure_1,B747DR_hyd_sys_pressure_2,B747DR_hyd_sys_pressure_4)
-
-  B747DR_hyd_sys_temp_1=B747DR_hyd_temp+(1-B747DR_hyd_sys_res_1)*20
-  B747DR_hyd_sys_temp_2=B747DR_hyd_temp+(1-B747DR_hyd_sys_res_2)*20
-  B747DR_hyd_sys_temp_3=B747DR_hyd_temp+(1-B747DR_hyd_sys_res_3)*20
-  B747DR_hyd_sys_temp_4=B747DR_hyd_temp+(1-B747DR_hyd_sys_res_4)*20
-end
 --*************************************************************************************--
 --**                          EVENT CALLBACKS                        **--
 --*************************************************************************************--
@@ -531,17 +366,6 @@ end
 --function aircraft_load() end
 
 --function aircraft_unload() end
-function B747_set_hyd_model_ER()
-  B747DR_hyd_sys_pressure_use_1=3100
-  B747DR_hyd_sys_pressure_use_2=3100
-  B747DR_hyd_sys_pressure_use_3=3100
-  B747DR_hyd_sys_pressure_use_4=3100
-  B747DR_hyd_sys_pressure_1=3100
-  B747DR_hyd_sys_pressure_2=3100
-  B747DR_hyd_sys_pressure_3=3100
-  B747DR_hyd_sys_pressure_4=3100
-end  
-
 local initialiseControls=true
 function flight_start() 
   --initial pids
@@ -553,17 +377,12 @@ function flight_start()
   B747DR_pidRollP = 0.05
   B747DR_pidRollI = 0.0003
   B747DR_pidRollDL = 0.05 --low 0.1 high 0.4
-  -- [P40] not raised with the MCP altitude (it was 0.1 from 30,000 ft, so ap_roll_assist's D schedule by the MCP
-  -- altitude is now flat): with the roll surfaces' effect about 20 frames behind the roll ratio (the output timing's
-  -- and pressure_output's tenth of the way a frame) the higher D kept a roll oscillation going at FL300
-  -- (tests/afds_roll_high_tas_test.lua)
-  B747DR_pidRollDH = 0.05 --low 0.1 high 0.4
+  B747DR_pidRollDH = 0.1 --low 0.1 high 0.4
 
   B747DR_pidPitchPL = 0.07 --low 0.15 high 0.05
   B747DR_pidPitchPH = 0.04 --low 0.15 high 0.05
   B747DR_pidPitchI = 0.07 --0.07
-  -- damps the attitude's hunt around the flight director (the integral gain equals P)
-  B747DR_pidPitchD = 0.07
+  B747DR_pidPitchD = 0.0002
 
 
   B747DR_pidyawP = 1.0
@@ -585,10 +404,8 @@ function flight_start()
     if initialiseControls then
 
       --YAW DAMPER
-      -- [P25] each damper +-4 deg of rudder command (FAA NPRM FAA-2011-0571, 76 FR 36391: the damper's piston in each
-      -- rudder PCM), taken at any airspeed past the pedals' ratio changer; it was +-3.5 deg times the rudder ratio
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-4,"maxout":4,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_lwr","dstDref":"laminar/B747/cablecontrols/lower_rudder"}';
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-4,"maxout":4,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_upr","dstDref":"laminar/B747/cablecontrols/upper_rudder"}';
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3.5,"maxout":3.5,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_lwr","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3.5,"maxout":3.5,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_upr","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
 
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-32,"maxout":32,"scale":1.0,"srcDref":"sim/cockpit2/controls/total_heading_ratio","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-32,"maxout":32,"scale":1.0,"srcDref":"sim/cockpit2/controls/total_heading_ratio","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
@@ -727,24 +544,7 @@ function flight_start()
     else 
       print("not reinitialising controls!!!")
     end
-    B747DR_hyd_sys_restotal_1=math.random()*0.2+0.8
-    B747DR_hyd_sys_restotal_2=math.random()*0.2+0.8
-    B747DR_hyd_sys_restotal_3=math.random()*0.2+0.8
-    B747DR_hyd_sys_restotal_4=math.random()*0.2+0.8
-    B747DR_hyd_sys_res_1=B747DR_hyd_sys_restotal_1
-    B747DR_hyd_sys_res_2=B747DR_hyd_sys_restotal_2
-    B747DR_hyd_sys_res_3=B747DR_hyd_sys_restotal_3
-    B747DR_hyd_sys_res_4=B747DR_hyd_sys_restotal_4
-
-    B747DR_hyd_sys_temp_1=B747DR_hyd_temp
-    B747DR_hyd_sys_temp_2=B747DR_hyd_temp
-    B747DR_hyd_sys_temp_3=B747DR_hyd_temp
-    B747DR_hyd_sys_temp_4=B747DR_hyd_temp
-    if simDR_startup_running == 1 then
-
-		B747_set_hyd_model_ER() -- pressurise the system if engines start running
-
-    end
+    B747_hyd_power_flight_start()
 end
 
 --function flight_crash() end
@@ -754,11 +554,6 @@ debug_hydro     = deferred_dataref("laminar/B747/debug/hydro", "number")
 
 local lastStat=0
 local countFrame=0
-local hyd_failures={0,0,0,0}
-local hydfailed1=false
-local hydfailed2=false
-local hydfailed3=false
-local hasHydFailure=false
 function roundToIncrement(number, increment)
 
   local y = number / increment
@@ -768,73 +563,17 @@ function roundToIncrement(number, increment)
   return z
 
 end
-function hydraulic_failures()
-  if simDR_failhyd1 ==0 and simDR_failhyd2 == 0 and simDR_failhyd3 ==0 then
-    if hasHydFailure then
-      hyd_failures={0,0,0,0}
-      hydfailed1=false
-      hydfailed2=false
-      hydfailed3=false
-      B747DR_hyd_sys_restotal_1=math.random()*0.2+0.8
-      B747DR_hyd_sys_restotal_2=math.random()*0.2+0.8
-      B747DR_hyd_sys_restotal_3=math.random()*0.2+0.8
-      B747DR_hyd_sys_restotal_4=math.random()*0.2+0.8
-      hasHydFailure=false
-    end
-    return
-  end
-  hasHydFailure=true
-  if simDR_failhyd1 == 6 and not(hydfailed1) then
-    local failIndex=1+roundToIncrement(math.random(),1)
-
-    hyd_failures[failIndex] = 15+math.random()*15
-    hydfailed1=true
-  end
-  if simDR_failhyd2 == 6 and not(hydfailed2) then
-    local failIndex=2+roundToIncrement(math.random(),1)
-
-    hyd_failures[failIndex] = 15+math.random()*15
-    hydfailed2=true
-  end
-  if simDR_failhyd3 == 6 and not(hydfailed3) then
-    local failIndex=3+roundToIncrement(math.random(),1)
-    hyd_failures[failIndex] = 15+math.random()*15
-    hydfailed2=true
-  end
-  if hyd_failures[1] >0 then
-    B747DR_hyd_sys_restotal_1=B747_interpolate_value(B747DR_hyd_sys_restotal_1,0,0,1,hyd_failures[1])
-  end
-  if hyd_failures[2] >0 then
-    B747DR_hyd_sys_restotal_2=B747_interpolate_value(B747DR_hyd_sys_restotal_2,0,0,1,hyd_failures[2])
-  end
-  if hyd_failures[3] >0 then
-    B747DR_hyd_sys_restotal_3=B747_interpolate_value(B747DR_hyd_sys_restotal_3,0,0,1,hyd_failures[3])
-  end
-  if hyd_failures[4] >0 then
-    B747DR_hyd_sys_restotal_4=B747_interpolate_value(B747DR_hyd_sys_restotal_4,0,0,1,hyd_failures[4])
-  end
-  --print("hyd failure "..hyd_failures[1].." "..hyd_failures[2].." "..hyd_failures[3].." "..hyd_failures[4])
-
-end
 function after_physics()
   if debug_hydro>0 then return end
   
 
-   B747_engine_hyd_valves()
-   B747_engine_dem_modes()
-   B747_edp_pressures()
-   B747_dem_pressures()
-   B747_system_pressures()
-   B747_show_system_pressures()
+   B747_hyd_power()
    --consumers
    pressure_input()
-   brake_accumulator()
    flight_controls_consumption()
    pressure_output()
+   B747_show_system_pressures()
    flight_controls_override()
-   if simDR_version>=120012 then
-    hydraulic_failures()
-   end
    if debug_hydro<0 then
     local diff=simDRTime-lastStat
     countFrame=countFrame+1
