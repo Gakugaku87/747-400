@@ -586,6 +586,7 @@ laminar/B747/air/engine4/bleed_valve_pos	dataref	panel	B747.55.air,B747.55.xt.ai
 laminar/B747/air/equip_cooling/sel_dial_dn	command	obj	B747.55.air,B747.55.xt.air
 laminar/B747/air/equip_cooling/sel_dial_pos	dataref	obj,snd	B747.55.air,B747.55.xt.air
 laminar/B747/air/equip_cooling/sel_dial_up	command	obj	B747.55.air,B747.55.xt.air
+laminar/B747/air/ext_air	dataref	panel	B747.55.air
 laminar/B747/air/flt_deck_temp_ctrl/rheostat	dataref	obj	B747.55.air,B747.55.xt.air
 laminar/B747/air/isolation_valve_L_pos	dataref	panel	B747.55.air,B747.55.xt.air
 laminar/B747/air/isolation_valve_R_pos	dataref	panel	B747.55.air,B747.55.xt.air
@@ -595,6 +596,9 @@ laminar/B747/air/landing_alt/button_pos	dataref	obj,panel,snd	B747.55.air,B747.5
 laminar/B747/air/landing_altitude	dataref	panel	B747.55.air,B747.55.xt.air
 laminar/B747/air/outflow_valve_left/pos	dataref	obj	B747.55.air,B747.55.xt.air
 laminar/B747/air/outflow_valve_right/pos	dataref	obj	B747.55.air,B747.55.xt.air
+laminar/B747/air/pack/high_flow	dataref	panel	B747.55.air
+laminar/B747/air/pack/ptc	dataref	panel	B747.55.air
+laminar/B747/air/pack/valve_pos	dataref	panel	B747.55.air
 laminar/B747/air/pack_ctrl/sel_dial_pos	dataref	obj,panel,snd	B747.42.xt.EEC,B747.55.air,B747.55.xt.air
 laminar/B747/air/pack_ctrl_01/sel_dial_dn	command	obj	B747.55.air,B747.55.xt.air
 laminar/B747/air/pack_ctrl_01/sel_dial_up	command	obj	B747.55.air,B747.55.xt.air
@@ -603,7 +607,13 @@ laminar/B747/air/pack_ctrl_02/sel_dial_up	command	obj	B747.55.air,B747.55.xt.air
 laminar/B747/air/pack_ctrl_03/sel_dial_dn	command	obj	B747.55.air,B747.55.xt.air
 laminar/B747/air/pack_ctrl_03/sel_dial_up	command	obj	B747.55.air,B747.55.xt.air
 laminar/B747/air/pass_temp_ctrl/rheostat	dataref	obj	B747.55.air,B747.55.xt.air
+laminar/B747/air/press/valve_man	dataref	panel	B747.55.air
 laminar/B747/air/pressurization/EICAS1_display_status	dataref	panel	B747.55.air,B747.55.xt.air
+laminar/B747/air/temp/cargo	dataref	panel	B747.55.air
+laminar/B747/air/temp/master	dataref	panel	B747.55.air
+laminar/B747/air/temp/target_shown	dataref	panel	B747.55.air
+laminar/B747/air/temp/zone_actual	dataref	panel	B747.55.air
+laminar/B747/air/temp/zone_target	dataref	panel	B747.55.air
 laminar/B747/airspeed/V1	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02,B744.fms.pages,B744.fms.pages.takeoff
 laminar/B747/airspeed/Vf0	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/airspeed/Vf1	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02

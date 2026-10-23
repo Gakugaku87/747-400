@@ -42,6 +42,8 @@ M.WAI_FLOW, M.ADP_FLOW = 0.5, 0.3
 M.DROOP = 0.3                   -- the duct falls by 30 % from no flow to full flow
 M.DUCT_LAG_S = 1.0
 M.ISLN_TRAVEL_S, M.APU_TRAVEL_S = 2, 2    -- motor valves (no value in the sources)
+M.EXT_AIR_PSI = 5               -- EXT AIR: "ducts pressurized"
+M.EXT_AIR_HOLD_S = 5            -- and "momentarily" after the air goes (FCOM p.578)
 
 -- sections: 1 left (engines 1, 2, pack 1), 2 centre (APU, ground air,
 -- pack 2), 3 right (engines 3, 4, pack 3) (FCOM p.611-615)
@@ -75,7 +77,7 @@ function M.inputs()
 end
 
 function M.new()
-    local s = {t = 0, first = true, eng = {}, isln = {1, 1}, apu_pos = 0, apu_ready_t = 0,
+    local s = {t = 0, first = true, eng = {}, isln = {1, 1}, apu_pos = 0, apu_ready_t = 0, ext_t = 0,
         duct = {0, 0, 0}, isln_disagree_t = {0, 0}, apu_disagree_t = 0, demand = {0, 0, 0},
         target = {0, 0, 0},
         -- per section, its group (index) and the group's pressure, flow and use
@@ -83,7 +85,8 @@ function M.new()
         eng_cap = {0, 0, 0, 0}, asctu_t = {0, 0}}
     local out = {eng = {}, isln_pos = {1, 1}, apu_pos = 0, duct = {0, 0, 0},
         isln_alert = {false, false}, apu_alert = false, apu_valve_cmd = false,
-        isln_light = {false, false}, apu_light = false, asctu_alert = {false, false}, apu_flow = 0}
+        isln_light = {false, false}, apu_light = false, asctu_alert = {false, false}, apu_flow = 0,
+        ext_air = false}
     for n = 1, 4 do
         s.eng[n] = {ovht_t = 0, ovht_latch = false, last_on = true, start_closed_t = M.PRV_START_DELAY_S,
             start_open = false, hpsov_cmd = true, prv_cmd = true, prsov_cmd = true}
@@ -223,6 +226,17 @@ function M.update(s, inp, dt)
         else s.duct[i] = s.duct[i] + (target[i] - s.duct[i]) * math.min(1, dt / M.DUCT_LAG_S) end
         out.duct[i] = s.duct[i]
     end
+
+    -- EXT AIR on the ECS synoptic: a pack operating or the ducts
+    -- pressurized with the APU and the engines off, and for a moment after
+    -- (FCOM p.578). Off: the APU not turning, each engine below 50 % N2
+    -- (estimate). Without ground air (no control for it yet) it stays off
+    local air = out.duct[1] >= M.EXT_AIR_PSI or out.duct[2] >= M.EXT_AIR_PSI or out.duct[3] >= M.EXT_AIR_PSI
+    for p = 1, 3 do if inp.pack_flow[p] > 0 then air = true end end
+    local off = inp.apu_n1 <= 0
+    for n = 1, 4 do if inp.n2[n] >= M.N2_RUNNING then off = false end end
+    if air and off then s.ext_t = M.EXT_AIR_HOLD_S else s.ext_t = math.max(0, s.ext_t - dt) end
+    out.ext_air = s.ext_t > 0
 
     -- the engine valves (notes/ATA-36.md §4.1)
     for n = 1, 4 do

@@ -23,6 +23,7 @@ B747DR_bleed_light_apu_valve    = find_dataref("laminar/B747/air/light/apu_valve
 simDR_bleed_fail_apu_press      = find_dataref("sim/operation/failures/rel_APU_press")
 B747DR_bleed_CAS_status         = find_dataref("laminar/B747/CAS/status_status")
 B747DR_bleed_start_valve_cmd    = find_dataref("laminar/B747/engines/start_valve_cmd")
+B747DR_bleed_ext_air            = find_dataref("laminar/B747/air/ext_air")
 -- X-Plane's ducts (left, centre, right) and bleed loss, while the pressurization is taken over
 simDR_bleed_available_L         = find_dataref("sim/cockpit2/bleedair/indicators/bleed_available_left")
 simDR_bleed_available_C         = find_dataref("sim/cockpit2/bleedair/indicators/bleed_available_center")
@@ -119,6 +120,8 @@ local function write_outputs(out)
     B747DR_bleed_light_isln_valve[0] = flag(out.isln_light[1])
     B747DR_bleed_light_isln_valve[1] = flag(out.isln_light[2])
     B747DR_bleed_light_apu_valve = flag(out.apu_light)
+    local ext = flag(out.ext_air)     -- the ECS synoptic's EXT AIR (FCOM p.578)
+    if B747DR_bleed_ext_air ~= ext then B747DR_bleed_ext_air = ext end
     B747DR_CAS_advisory_status[ADV_ISLN] = flag(out.isln_alert[1])
     B747DR_CAS_advisory_status[ADV_ISLN + 1] = flag(out.isln_alert[2])
     B747DR_CAS_advisory_status[ADV_ISLN_APU] = flag(out.apu_alert)

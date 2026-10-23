@@ -152,3 +152,11 @@
 | 同（ENG-29） | 下の EICAS の振動の音源（`GROUP VIB` の `Source`） | BB の絵（`vib_BB_label`）だけ、`vibration[n]` > 0.01 で出す | BB は `SHOW_EQUAL 0.000000 vib_source[n]` を足した。N1・N2・FAN・LPT の絵（`vib_N1_label` など、新しい絵、`docs/overhaul/tools/make_vib_labels.ps1`）を `vib_source[n]` = 1〜4 で出す計器を足した | FCOM p.849-850 |
 
 上の 5 行は `docs/overhaul/tools/panel_oil_vib.lua` で書き換えた（24 か所、計器を 28 個足した）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261024_before_oil_vib`。
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-24・空調（AIR-15） | 下の EICAS の ECS synoptic（`GROUP ECS Synoptic`）の上半分 | 背景にゾーン・MASTER・FWD/AFT・外流弁の枠があるだけ（数字・針・MAN/AUTO・HI FLOW・EXT AIR なし） | 7 ゾーンの target（左、小さい `LED_2.18R.xx###0.white`、`SHOW_EQUAL 1 air/temp/target_shown`）と actual（右、`LED_3.26B.xxx#00.white`）、MASTER、FWD・AFT（`air/temp/zone_target`・`zone_actual`・`master`・`cargo`、℃）、TEMP の後ろに °C（`temp_c`）。外流弁の針（回転グループ、`air/outflow_valve_left|right/pos` の −1〜+1 を −64°〜+64°：CL と OP の目盛り。新しい絵 `outflow_pointer`）、弁ごとの MAN（琥珀、新しい絵 `press_mode_man_amber`）か AUTO（`air/press/valve_man[i]`）。パックの番号の上の HI FLOW（`air/pack/high_flow[i]`）、パック 2 の線の上の EXT AIR（`air/ext_air`） | FCOM p.576-578；ATA21 p.29・p.250（℃）、p.420（MAN は琥珀） |
+| 同 | パックの OFF・A・B（`gen_rotary pack n off`・`A`・`B`） | 選択器の位置：OFF は 0、A は 1 < 値 < 2（NORM でも A でも出なかった）、B は 3 | OFF は弁が閉（`SHOW_LESS 0.5 air/pack/valve_pos[i]`）、A・B は弁が開で使用中の PTC（`air/pack/ptc[i]` が 1・2） | FCOM p.578 |
+| 同（PNEU-11） | エンジンと APU からの流れ（`gen_rotary eng n`・`apu`） | エンジンの抽気圧が 11 psi 超（ENGINE BLEED OFF で弁が閉でも出た）、APU は中央ダクトの圧 | エンジンの抽気弁が開（`air/engineN/bleed_valve_pos` > 0.5）、APU 弁が開（`air/apu/bleed_valve_pos` > 0.5） | FCOM p.576（流れは弁・スイッチ・パックの状態から作る） |
+
+上の 3 行は `docs/overhaul/tools/panel_ecs.lua` で書き換えた（33 か所。計器を 26 個と、針の回転グループを 2 つ足した）。新しい絵は `docs/overhaul/tools/make_ecs_images.ps1`。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261024_before_ecs_synoptic`。LED の `LED_ROWS` はフォントの書式に合わせる（`xxx#00` は 3、`xx###0` は 4。合わないと次の字の一部が数字に重なる）。外から見た写真で機体の見た目が変わらないことを確かめた（`s17` の後）。

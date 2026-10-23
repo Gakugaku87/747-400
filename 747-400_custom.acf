@@ -131489,7 +131489,7 @@ GROUP LOWER EICAS POWER
           POS 1704.000000 108.000000
           IMAGE CRT Displays/EICAS Lower/ECS/airflow01
           DATAREF 
-          SHOW_GREATER 11.000000 laminar/B747/air/engine1/bleed_air_psi
+          SHOW_GREATER 0.500000 laminar/B747/air/engine1/bleed_valve_pos
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10
@@ -131511,7 +131511,7 @@ GROUP LOWER EICAS POWER
           POS 1704.000000 108.000000
           IMAGE CRT Displays/EICAS Lower/ECS/airflow02
           DATAREF 
-          SHOW_GREATER 11.000000 laminar/B747/air/engine2/bleed_air_psi
+          SHOW_GREATER 0.500000 laminar/B747/air/engine2/bleed_valve_pos
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10
@@ -131533,7 +131533,7 @@ GROUP LOWER EICAS POWER
           POS 1704.000000 108.000000
           IMAGE CRT Displays/EICAS Lower/ECS/airflow03
           DATAREF 
-          SHOW_GREATER 11.000000 laminar/B747/air/engine3/bleed_air_psi
+          SHOW_GREATER 0.500000 laminar/B747/air/engine3/bleed_valve_pos
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10
@@ -131555,7 +131555,7 @@ GROUP LOWER EICAS POWER
           POS 1704.000000 108.000000
           IMAGE CRT Displays/EICAS Lower/ECS/airflow04
           DATAREF 
-          SHOW_GREATER 11.000000 laminar/B747/air/engine4/bleed_air_psi
+          SHOW_GREATER 0.500000 laminar/B747/air/engine4/bleed_valve_pos
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10
@@ -131927,7 +131927,7 @@ GROUP LOWER EICAS POWER
           POS 1479.000000 86.000000
           IMAGE CRT Displays/EICAS Lower/ECS/flow_mode03
           DATAREF 
-          SHOW_EQUAL 0.000000 laminar/B747/air/pack_ctrl/sel_dial_pos[0]
+          SHOW_LESS 0.500000 laminar/B747/air/pack/valve_pos[0]
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10
@@ -131949,7 +131949,7 @@ GROUP LOWER EICAS POWER
           POS 1703.000000 86.000000
           IMAGE CRT Displays/EICAS Lower/ECS/flow_mode03
           DATAREF 
-          SHOW_EQUAL 0.000000 laminar/B747/air/pack_ctrl/sel_dial_pos[1]
+          SHOW_LESS 0.500000 laminar/B747/air/pack/valve_pos[1]
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10
@@ -131971,7 +131971,7 @@ GROUP LOWER EICAS POWER
           POS 1927.000000 86.000000
           IMAGE CRT Displays/EICAS Lower/ECS/flow_mode03
           DATAREF 
-          SHOW_EQUAL 0.000000 laminar/B747/air/pack_ctrl/sel_dial_pos[2]
+          SHOW_LESS 0.500000 laminar/B747/air/pack/valve_pos[2]
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10
@@ -131993,8 +131993,8 @@ GROUP LOWER EICAS POWER
           POS 1479.000000 86.000000
           IMAGE CRT Displays/EICAS Lower/ECS/flow_mode04
           DATAREF 
-          SHOW_LESS 2.000000 laminar/B747/air/pack_ctrl/sel_dial_pos[0]
-          SHOW_GREATER 1.000000 laminar/B747/air/pack_ctrl/sel_dial_pos[0]
+          SHOW_GREATER 0.500000 laminar/B747/air/pack/valve_pos[0]
+          SHOW_EQUAL 1.000000 laminar/B747/air/pack/ptc[0]
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10
@@ -132016,8 +132016,8 @@ GROUP LOWER EICAS POWER
           POS 1703.000000 86.000000
           IMAGE CRT Displays/EICAS Lower/ECS/flow_mode04
           DATAREF 
-          SHOW_LESS 2.000000 laminar/B747/air/pack_ctrl/sel_dial_pos[1]
-          SHOW_GREATER 1.000000 laminar/B747/air/pack_ctrl/sel_dial_pos[1]
+          SHOW_GREATER 0.500000 laminar/B747/air/pack/valve_pos[1]
+          SHOW_EQUAL 1.000000 laminar/B747/air/pack/ptc[1]
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10
@@ -132039,8 +132039,8 @@ GROUP LOWER EICAS POWER
           POS 1927.000000 86.000000
           IMAGE CRT Displays/EICAS Lower/ECS/flow_mode04
           DATAREF 
-          SHOW_LESS 2.000000 laminar/B747/air/pack_ctrl/sel_dial_pos[2]
-          SHOW_GREATER 1.000000 laminar/B747/air/pack_ctrl/sel_dial_pos[2]
+          SHOW_GREATER 0.500000 laminar/B747/air/pack/valve_pos[2]
+          SHOW_EQUAL 1.000000 laminar/B747/air/pack/ptc[2]
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10
@@ -132062,7 +132062,8 @@ GROUP LOWER EICAS POWER
           POS 1479.000000 86.000000
           IMAGE CRT Displays/EICAS Lower/ECS/flow_mode05
           DATAREF 
-          SHOW_EQUAL 3.000000 laminar/B747/air/pack_ctrl/sel_dial_pos[0]
+          SHOW_GREATER 0.500000 laminar/B747/air/pack/valve_pos[0]
+          SHOW_EQUAL 2.000000 laminar/B747/air/pack/ptc[0]
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10
@@ -132084,7 +132085,8 @@ GROUP LOWER EICAS POWER
           POS 1703.000000 86.000000
           IMAGE CRT Displays/EICAS Lower/ECS/flow_mode05
           DATAREF 
-          SHOW_EQUAL 3.000000 laminar/B747/air/pack_ctrl/sel_dial_pos[1]
+          SHOW_GREATER 0.500000 laminar/B747/air/pack/valve_pos[1]
+          SHOW_EQUAL 2.000000 laminar/B747/air/pack/ptc[1]
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10
@@ -132106,7 +132108,8 @@ GROUP LOWER EICAS POWER
           POS 1927.000000 86.000000
           IMAGE CRT Displays/EICAS Lower/ECS/flow_mode05
           DATAREF 
-          SHOW_EQUAL 3.000000 laminar/B747/air/pack_ctrl/sel_dial_pos[2]
+          SHOW_GREATER 0.500000 laminar/B747/air/pack/valve_pos[2]
+          SHOW_EQUAL 2.000000 laminar/B747/air/pack/ptc[2]
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10
@@ -132326,7 +132329,7 @@ GROUP LOWER EICAS POWER
           POS 1704.000000 108.000000
           IMAGE CRT Displays/EICAS Lower/ECS/airflow16
           DATAREF 
-          SHOW_GREATER 0.010000 laminar/B747/air/duct_pressure_C
+          SHOW_GREATER 0.500000 laminar/B747/air/apu/bleed_valve_pos
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10
@@ -132437,6 +132440,529 @@ GROUP LOWER EICAS POWER
             CLICK_DY 0
 
         END_GROUP
+
+        gen_LED Zone F/D Target
+          POS 1440.000000 335.000000
+          IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+          DATAREF laminar/B747/air/temp/zone_target[0]
+          SHOW_EQUAL 1.000000 laminar/B747/air/temp/target_shown
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 4
+          ROUNDING ROUND_ROUND
+
+        gen_LED Zone F/D Actual
+          POS 1470.000000 335.000000
+          IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
+          DATAREF laminar/B747/air/temp/zone_actual[0]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 3
+          ROUNDING ROUND_ROUND
+
+        gen_LED Zone U/D Target
+          POS 1505.000000 335.000000
+          IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+          DATAREF laminar/B747/air/temp/zone_target[1]
+          SHOW_EQUAL 1.000000 laminar/B747/air/temp/target_shown
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 4
+          ROUNDING ROUND_ROUND
+
+        gen_LED Zone U/D Actual
+          POS 1535.000000 335.000000
+          IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
+          DATAREF laminar/B747/air/temp/zone_actual[1]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 3
+          ROUNDING ROUND_ROUND
+
+        gen_LED Zone A Target
+          POS 1440.000000 286.000000
+          IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+          DATAREF laminar/B747/air/temp/zone_target[2]
+          SHOW_EQUAL 1.000000 laminar/B747/air/temp/target_shown
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 4
+          ROUNDING ROUND_ROUND
+
+        gen_LED Zone A Actual
+          POS 1470.000000 286.000000
+          IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
+          DATAREF laminar/B747/air/temp/zone_actual[2]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 3
+          ROUNDING ROUND_ROUND
+
+        gen_LED Zone B Target
+          POS 1503.500000 286.000000
+          IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+          DATAREF laminar/B747/air/temp/zone_target[3]
+          SHOW_EQUAL 1.000000 laminar/B747/air/temp/target_shown
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 4
+          ROUNDING ROUND_ROUND
+
+        gen_LED Zone B Actual
+          POS 1533.500000 286.000000
+          IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
+          DATAREF laminar/B747/air/temp/zone_actual[3]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 3
+          ROUNDING ROUND_ROUND
+
+        gen_LED Zone C Target
+          POS 1566.500000 286.000000
+          IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+          DATAREF laminar/B747/air/temp/zone_target[4]
+          SHOW_EQUAL 1.000000 laminar/B747/air/temp/target_shown
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 4
+          ROUNDING ROUND_ROUND
+
+        gen_LED Zone C Actual
+          POS 1596.500000 286.000000
+          IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
+          DATAREF laminar/B747/air/temp/zone_actual[4]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 3
+          ROUNDING ROUND_ROUND
+
+        gen_LED Zone D Target
+          POS 1630.000000 286.000000
+          IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+          DATAREF laminar/B747/air/temp/zone_target[5]
+          SHOW_EQUAL 1.000000 laminar/B747/air/temp/target_shown
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 4
+          ROUNDING ROUND_ROUND
+
+        gen_LED Zone D Actual
+          POS 1660.000000 286.000000
+          IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
+          DATAREF laminar/B747/air/temp/zone_actual[5]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 3
+          ROUNDING ROUND_ROUND
+
+        gen_LED Zone E Target
+          POS 1693.500000 286.000000
+          IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+          DATAREF laminar/B747/air/temp/zone_target[6]
+          SHOW_EQUAL 1.000000 laminar/B747/air/temp/target_shown
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 4
+          ROUNDING ROUND_ROUND
+
+        gen_LED Zone E Actual
+          POS 1723.500000 286.000000
+          IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
+          DATAREF laminar/B747/air/temp/zone_actual[6]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 3
+          ROUNDING ROUND_ROUND
+
+        gen_LED Master Temp
+          POS 1678.000000 340.000000
+          IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
+          DATAREF laminar/B747/air/temp/master
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 3
+          ROUNDING ROUND_ROUND
+
+        gen_LED Fwd Cargo Temp
+          POS 1490.500000 224.500000
+          IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
+          DATAREF laminar/B747/air/temp/cargo[0]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 3
+          ROUNDING ROUND_ROUND
+
+        gen_LED Aft Cargo Temp
+          POS 1681.500000 224.500000
+          IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
+          DATAREF laminar/B747/air/temp/cargo[1]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
+          DECIMALS 0
+          PERIOD_WIDTH 7
+          LED_ROWS 3
+          ROUNDING ROUND_ROUND
+
+        gen_rotary temp unit
+          POS 1669.000000 372.000000
+          IMAGE CRT Displays/EICAS Lower/ECS/temp_c
+          DATAREF 
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 10
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary outflow left man
+          POS 1863.000000 186.000000
+          IMAGE CRT Displays/EICAS Lower/ECS/press_mode_man_amber
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/air/press/valve_man[0]
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 10
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary outflow left auto
+          POS 1863.000000 186.000000
+          IMAGE CRT Displays/EICAS Lower/ECS/press_mode_auto
+          DATAREF 
+          SHOW_EQUAL 0.000000 laminar/B747/air/press/valve_man[0]
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 10
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary outflow right man
+          POS 1935.000000 186.000000
+          IMAGE CRT Displays/EICAS Lower/ECS/press_mode_man_amber
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/air/press/valve_man[1]
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 10
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary outflow right auto
+          POS 1935.000000 186.000000
+          IMAGE CRT Displays/EICAS Lower/ECS/press_mode_auto
+          DATAREF 
+          SHOW_EQUAL 0.000000 laminar/B747/air/press/valve_man[1]
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 10
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        GROUP outflow left pointer
+          GROUP_ANIMATE_MODE ROTATE
+          GROUP_WIDTH 0
+          GROUP_HEIGHT 0
+          DATAREF laminar/B747/air/outflow_valve_left/pos
+          POS 1880.000000 228.000000
+          KEY_FRAME -1.000000 -64.000000 1.000000
+          KEY_FRAME 1.000000 64.000000
+          ROTATE_OFFSET_X 0.000000
+          ROTATE_OFFSET_Y 0.000000
+          gen_rotary outflow left pointer
+            POS 1880.000000 228.000000
+            IMAGE CRT Displays/EICAS Lower/ECS/outflow_pointer
+            DATAREF 
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 10
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+        END_GROUP
+
+        GROUP outflow right pointer
+          GROUP_ANIMATE_MODE ROTATE
+          GROUP_WIDTH 0
+          GROUP_HEIGHT 0
+          DATAREF laminar/B747/air/outflow_valve_right/pos
+          POS 1952.000000 228.000000
+          KEY_FRAME -1.000000 -64.000000 1.000000
+          KEY_FRAME 1.000000 64.000000
+          ROTATE_OFFSET_X 0.000000
+          ROTATE_OFFSET_Y 0.000000
+          gen_rotary outflow right pointer
+            POS 1952.000000 228.000000
+            IMAGE CRT Displays/EICAS Lower/ECS/outflow_pointer
+            DATAREF 
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 10
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+        END_GROUP
+
+        gen_rotary pack 1 hi flow
+          POS 1479.000000 148.000000
+          IMAGE CRT Displays/EICAS Lower/ECS/hiflow
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/air/pack/high_flow[0]
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 10
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary pack 2 hi flow
+          POS 1704.000000 148.000000
+          IMAGE CRT Displays/EICAS Lower/ECS/hiflow
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/air/pack/high_flow[1]
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 10
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary pack 3 hi flow
+          POS 1928.000000 148.000000
+          IMAGE CRT Displays/EICAS Lower/ECS/hiflow
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/air/pack/high_flow[2]
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 10
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary ext air
+          POS 1704.000000 48.000000
+          IMAGE CRT Displays/EICAS Lower/ECS/ext_air
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/air/ext_air
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 10
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
       END_GROUP
       GROUP HYD Synoptic
         SHOW_EQUAL 6.000000 laminar/B747/dsp/synoptic_display

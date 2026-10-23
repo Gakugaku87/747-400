@@ -109,6 +109,8 @@ B747_duct_pressure_C                = deferred_dataref("laminar/B747/air/duct_pr
 B747DR_bleed_light_sys_fault        = deferred_dataref("laminar/B747/air/light/sys_fault", "array[4]")
 B747DR_bleed_light_isln_valve       = deferred_dataref("laminar/B747/air/light/isln_valve", "array[2]")
 B747DR_bleed_light_apu_valve        = deferred_dataref("laminar/B747/air/light/apu_valve", "number")
+-- the ECS synoptic's EXT AIR (1 = shown)
+B747DR_bleed_ext_air                = deferred_dataref("laminar/B747/air/ext_air", "number")
 
 -- the pack model (B747.55.xt.packs.lua): valve 0 closed .. 1 open, high
 -- flow 1, the controller in use 0 none, 1 A, 2 B, the packs operating (the

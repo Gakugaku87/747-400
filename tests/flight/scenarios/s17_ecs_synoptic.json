@@ -1,0 +1,72 @@
+{
+  "name": "s17_ecs_synoptic",
+  "description": "ECS synoptic の上半分（3-1 段 3、カスタム acf のパネル）の X-Plane での確認。エンジン運転中の RJAA 34L で開始し、下の EICAS に ECS synoptic を出して写真を撮る：ゾーン温度（左に小さい target、右に actual）、MASTER、FWD・AFT、TEMP °C、外流弁の針（地上は全開で OP）と AUTO、パック 3 基の A/B と HI FLOW（地上は high）。TRIM AIR を切ると target が消える（FCOM p.577）。MAN L で L の下が琥珀の MAN、CLOSE で L の針が CL の方へ。PACK 1 を OFF にすると OFF と HI FLOW が消える。ENGINE BLEED 1 を切ると 1 番の流れが消える。期待値は FCOM p.576-578。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 10 },
+    { "do": "set", "note": "下の EICAS に ECS synoptic", "dref": "laminar/B747/dsp/synoptic_display", "value": 5 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "snapshot", "note": "開始", "drefs": [
+      "sim/aircraft/view/acf_relative_path", "laminar/B747/air/temp/zone_actual[2]", "laminar/B747/air/temp/zone_target[2]",
+      "laminar/B747/air/temp/target_shown", "laminar/B747/air/temp/master", "laminar/B747/air/temp/cargo[0]", "laminar/B747/air/temp/cargo[1]",
+      "laminar/B747/air/outflow_valve_left/pos", "laminar/B747/air/press/valve_man[0]", "laminar/B747/air/pack/valve_pos[0]",
+      "laminar/B747/air/pack/ptc[0]", "laminar/B747/air/pack/ptc[1]", "laminar/B747/air/pack/high_flow[0]", "laminar/B747/air/ext_air",
+      "laminar/B747/air/engine1/bleed_valve_pos", "laminar/B747/air/apu/bleed_valve_pos" ] },
+    { "do": "check", "note": "ECS synoptic", "dref": "laminar/B747/dsp/synoptic_display", "op": "==", "value": 5 },
+    { "do": "check", "note": "target を出す", "dref": "laminar/B747/air/temp/target_shown", "op": "==", "value": 1 },
+    { "do": "check", "note": "地上は high flow", "dref": "laminar/B747/air/pack/high_flow[0]", "op": "==", "value": 1 },
+    { "do": "view", "the": -32, "psi": 33, "fov": 14 },
+    { "do": "shot", "name": "ecs_normal_wide" },
+    { "do": "view", "the": -30.5, "psi": 31.5, "fov": 9 },
+    { "do": "shot", "name": "ecs_normal_close" },
+
+    { "do": "mark", "note": "TRIM AIR OFF" },
+    { "do": "switch", "note": "TRIM AIR を切る", "dref": "laminar/B747/button_switch/position[37]", "value": 0, "cmd": "laminar/B747/button_switch/temp_trim_air" },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "backup：target を消す（FCOM p.577）", "dref": "laminar/B747/air/temp/target_shown", "op": "==", "value": 0 },
+    { "do": "view", "the": -30.5, "psi": 31.5, "fov": 9 },
+    { "do": "shot", "name": "ecs_trim_air_off" },
+    { "do": "switch", "note": "TRIM AIR を戻す", "dref": "laminar/B747/button_switch/position[37]", "value": 1, "cmd": "laminar/B747/button_switch/temp_trim_air" },
+
+    { "do": "mark", "note": "MAN L" },
+    { "do": "switch", "note": "MAN L", "dref": "laminar/B747/button_switch/position[34]", "value": 1, "cmd": "laminar/B747/button_switch/press_outflow_vlv_L" },
+    { "do": "cmd", "note": "CLOSE を 6 秒押す", "name": "laminar/B747/toggle_switch/outflow_valve_close", "duration": 6 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "snapshot", "note": "MAN L、CLOSE", "drefs": [ "laminar/B747/air/outflow_valve_left/pos", "laminar/B747/air/outflow_valve_right/pos", "laminar/B747/air/press/valve_man[0]" ] },
+    { "do": "check", "note": "L は手動", "dref": "laminar/B747/air/press/valve_man[0]", "op": "==", "value": 1 },
+    { "do": "view", "the": -30.5, "psi": 31.5, "fov": 9 },
+    { "do": "shot", "name": "ecs_man_l_closing" },
+    { "do": "switch", "note": "MAN L を戻す", "dref": "laminar/B747/button_switch/position[34]", "value": 0, "cmd": "laminar/B747/button_switch/press_outflow_vlv_L" },
+
+    { "do": "mark", "note": "PACK 1 OFF、ENGINE BLEED 1 OFF" },
+    { "do": "switch", "note": "PACK 1 OFF", "dref": "laminar/B747/air/pack_ctrl/sel_dial_pos[0]", "value": 0,
+      "cmd": "laminar/B747/air/pack_ctrl_01/sel_dial_up", "cmd_down": "laminar/B747/air/pack_ctrl_01/sel_dial_dn" },
+    { "do": "switch", "note": "ENGINE BLEED 1 OFF", "dref": "laminar/B747/button_switch/position[77]", "value": 0, "cmd": "laminar/B747/button_switch/bleed_air_vlv_engine_1" },
+    { "do": "sleep", "seconds": 5 },
+    { "do": "check", "note": "パック 1 の弁が閉", "dref": "laminar/B747/air/pack/valve_pos[0]", "op": "<", "value": 0.5 },
+    { "do": "check", "note": "1 番の抽気弁が閉", "dref": "laminar/B747/air/engine1/bleed_valve_pos", "op": "<", "value": 0.5 },
+    { "do": "view", "the": -30.5, "psi": 31.5, "fov": 9 },
+    { "do": "shot", "name": "ecs_pack1_bleed1_off" },
+    { "do": "view", "the": -32, "psi": 33, "fov": 14 },
+    { "do": "shot", "name": "ecs_pack1_bleed1_off_wide" },
+    { "do": "switch", "note": "ENGINE BLEED 1 ON", "dref": "laminar/B747/button_switch/position[77]", "value": 1, "cmd": "laminar/B747/button_switch/bleed_air_vlv_engine_1" },
+    { "do": "switch", "note": "PACK 1 NORM", "dref": "laminar/B747/air/pack_ctrl/sel_dial_pos[0]", "value": 1,
+      "cmd": "laminar/B747/air/pack_ctrl_01/sel_dial_up", "cmd_down": "laminar/B747/air/pack_ctrl_01/sel_dial_dn" },
+    { "do": "record_stop" }
+  ]
+}

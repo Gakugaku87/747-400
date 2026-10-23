@@ -263,4 +263,25 @@ do
     T.check(not out.asctu_alert[2], "ASCTU B gone with DC bus 3 back")
 end
 
+-- EXT AIR on the ECS synoptic: the ducts pressurized or a pack operating
+-- with the APU and the engines off, and a moment after (FCOM p.578)
+do
+    local s, inp = B.new(), B.inputs()
+    inp.ground_air_psi = 30
+    local out = run(s, inp, 2)
+    T.check(out.ext_air, "ground air, APU and engines off: EXT AIR")
+    inp.ground_air_psi = 0
+    out = run(s, inp, 2)
+    T.check(out.ext_air, "ground air gone: EXT AIR for a moment")
+    out = run(s, inp, 6)
+    T.check(not out.ext_air, "ground air gone 8 s (the ducts empty in 2 s, then 5 s): EXT AIR off")
+    s, inp = apu_air()
+    out = run(s, inp, 10)
+    T.check(out.duct[2] > 40 and not out.ext_air, "APU air: no EXT AIR")
+    inp.apu_selector, inp.apu_n1, inp.ground_air_psi = 0, 0, 30
+    engines_idle(inp)
+    out = run(s, inp, 2)
+    T.check(not out.ext_air, "engines running: no EXT AIR")
+end
+
 T.done()
