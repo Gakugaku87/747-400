@@ -108,14 +108,15 @@ B747DR_hyd_light_brake_source   = deferred_dataref("laminar/B747/hydraulics/ligh
 -- the HYD synoptic of the custom acf (B747.19.xt.hyd_power.lua): the engine
 -- and demand pump symbols of systems 1-4 and the AUX pump symbol (codes
 -- M.SYN_* in B747.19.hyd_model.lua), the supply shutoff valves (1 = open),
--- RSVR PRESS (1 = shown), and the words the panel writes with gen_text
+-- RSVR PRESS (1 = shown), the inoperative items of systems 1-4 (0 none,
+-- 1 the list, 2 the list with THRUST REV) and of the sets M.SYN_SETS (1 = shown)
 B747DR_hyd_syn_edp              = deferred_dataref("laminar/B747/hydraulics/synoptic/edp", "array[4]")
 B747DR_hyd_syn_dem              = deferred_dataref("laminar/B747/hydraulics/synoptic/dem", "array[4]")
 B747DR_hyd_syn_aux              = deferred_dataref("laminar/B747/hydraulics/synoptic/aux", "number")
 B747DR_hyd_syn_sov              = deferred_dataref("laminar/B747/hydraulics/synoptic/sov", "array[4]")
 B747DR_hyd_syn_rsvr_press       = deferred_dataref("laminar/B747/hydraulics/synoptic/rsvr_press", "array[4]")
-B747DR_hyd_syn_text_off         = deferred_dataref("laminar/B747/hydraulics/synoptic/text_off", "string")
-B747DR_hyd_syn_text_auto        = deferred_dataref("laminar/B747/hydraulics/synoptic/text_auto", "string")
+B747DR_hyd_syn_inop             = deferred_dataref("laminar/B747/hydraulics/synoptic/inop", "array[4]")
+B747DR_hyd_syn_inop_set         = deferred_dataref("laminar/B747/hydraulics/synoptic/inop_set", "array[6]")
 B747DR_rudder_ratio   = deferred_dataref("laminar/B747/flt_ctrls/rudder_ratio", "number")
 
 

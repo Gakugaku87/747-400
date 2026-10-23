@@ -38,8 +38,9 @@ B747DR_hyd_syn_dem              = find_dataref("laminar/B747/hydraulics/synoptic
 B747DR_hyd_syn_aux              = find_dataref("laminar/B747/hydraulics/synoptic/aux")
 B747DR_hyd_syn_sov              = find_dataref("laminar/B747/hydraulics/synoptic/sov")
 B747DR_hyd_syn_rsvr_press       = find_dataref("laminar/B747/hydraulics/synoptic/rsvr_press")
-B747DR_hyd_syn_text_off         = find_dataref("laminar/B747/hydraulics/synoptic/text_off")
-B747DR_hyd_syn_text_auto        = find_dataref("laminar/B747/hydraulics/synoptic/text_auto")
+B747DR_hyd_syn_inop             = find_dataref("laminar/B747/hydraulics/synoptic/inop")
+B747DR_hyd_syn_inop_set         = find_dataref("laminar/B747/hydraulics/synoptic/inop_set")
+B747DR_hyd_engine_type          = find_dataref("laminar/B747/engines/type")
 
 -- estimates: flow for the pressure the flight controls take (their old
 -- pressure budget, B747.19.xt.hydraulics_override.lua), and the brake
@@ -183,8 +184,15 @@ local function write_outputs(out)
         B747DR_hyd_syn_rsvr_press[n - 1] = flag(o.rsvr_low)
     end
     B747DR_hyd_syn_aux = out.syn_aux
-    if B747DR_hyd_syn_text_off ~= "OFF" then B747DR_hyd_syn_text_off = "OFF" end
-    if B747DR_hyd_syn_text_auto ~= "AUTO" then B747DR_hyd_syn_text_auto = "AUTO" end
+    -- the inoperative items: 1 the list without, 2 with THRUST REV (P&W
+    -- reversers are hydraulic, FCOM p.1490-1491; GE ones use bleed air, FCOM
+    -- p.893; RR: no source, as GE, estimate); the sets of M.SYN_SETS
+    local inop_list = 1
+    if B747DR_hyd_engine_type == 0 then inop_list = 2 end
+    for n = 1, 4 do
+        if sys[n].syn_inop then B747DR_hyd_syn_inop[n - 1] = inop_list else B747DR_hyd_syn_inop[n - 1] = 0 end
+    end
+    for k = 1, #H.SYN_SETS do B747DR_hyd_syn_inop_set[k - 1] = flag(out.syn_inop_set[k]) end
     B747DR_hyd_light_brake_source = flag(out.brake_source_alert)
     B747DR_hyd_CAS_caution[CAUTION_BRAKE_SOURCE] = flag(out.brake_source_alert)
 end

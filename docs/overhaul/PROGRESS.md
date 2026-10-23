@@ -2,7 +2,7 @@
 
 次のセッションは、ここと [PLAN.md](PLAN.md) を読んでから続きに入る。
 
-最終更新：2026-10-23 夕方（2-2 燃料の組み込み）
+最終更新：2026-10-23 夜（パネルの画像：HYD・ELEC・STAT）
 
 ## いまどこか
 
@@ -29,7 +29,7 @@
 
 項目を終えるたびに、[DIFFERENCES.md](DIFFERENCES.md)（実機との違い、全分野。2026-10-23 に利用者の依頼で作った）の該当分野も直す。
 
-1. 承認済みのパネル（カスタム acf）の変更の残り：1-5 のダクト圧の表示条件（PNEU-09。空調 3-1 と一緒に）。画像が要るもの（2026-10-23 夕方、違和感のない範囲で作ってよいと利用者の答え。2-3 の始動の次に行う）：1-4 の synoptic の色付きの空の記号と琥珀の AUTO の幅・複数系統の不作動項目の絵（HYD-19 の残り）、1-1 の synoptic の GALLEY の色と STAT の CHG/DIS（背景の固定の DIS）。済：`.snd` の警報音、1-3 の PG と 3〜10 ページ、1-3 の STATUS ページと cue、1-4 の HYD synoptic（HYD-19 の一部）と RSVR PRESS（HYD-18）、1-1 の synoptic の ISLN・DRIVE の枠と STAT のバッテリーの値、1-5 のダクト圧の色（PNEU-10）。変更の一覧は ACF_DIFF.md §5。
+1. 承認済みのパネル（カスタム acf）の変更の残り：1-5 のダクト圧の表示条件（PNEU-09。空調 3-1 と一緒に）。済：`.snd` の警報音、1-3 の PG と 3〜10 ページ、1-3 の STATUS ページと cue、1-4 の HYD synoptic（HYD-19。記号の色と不作動項目の絵は 2026-10-23 夕方に新しい画像で）と RSVR PRESS（HYD-18）、1-1 の synoptic の ISLN・DRIVE の枠・UTILITY と GALLEY の色、STAT のバッテリーの値と CHG/DIS、1-5 のダクト圧の色（PNEU-10）。変更の一覧は ACF_DIFF.md §5、画像は `docs/overhaul/tools/make_synoptic_images.ps1` で作る。
 2. 2-3（エンジン）の残り：段 2 の EEC（推力の決め方：rating・レバーと指令・max N1/EPR、idle の選択と 5 秒・LOW IDLE・IDLE DISAGREE、ALTN と A/T の切断、overspeed と RPM LIM、空中で N2 を 0 にする処理 ENG-19）。A/T（6-4）との境界を先に決める。段 3 は表示（EGT・オイル・振動の値と色、fuel-on の印）と逆推力。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べる。空中開始の試験は AFDS の動き（「気づいたこと」）に気をつける。段 1（始動・点火・燃料弁）は済（下の「エンジン（2-3）の GAP の状態」）。
 3. 1-5（空圧）の残り：故障の入れ方（過熱、過圧、HPSOV・PRV の固着、ダクトリーク）、地上空気の操作、スターターがダクト圧で回ること（エンジン 2-3）。
 4. 1-4（油圧）の残り：脚・ブレーキ・ステアリング・逆推力・stab trim・ヨーダンパーの「油圧で動くか」（HYD-09・11・12）は、それぞれの作り直しで、モデルの負荷の表（`B747_hyd_model.LOADS`）を使って入れる。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
@@ -136,7 +136,8 @@ PLAN.md §3 に書いた。要点：
   - STATUS ページのメッセージの文字は白（FCOM・LH24 の図は白黒で、色の記載が無い）。配置は LH24 p.65 の図（バッテリーの値の下、舵面の図の左）に合わせた。
   - 油圧の HYD PRESS DEM（status）は、そのエンジンの N2 が 50 % 以上のときだけ（資料は「エンジンが止まっている間は出さない」とだけ書く）。
   - 電源の DRIVE DISC n（status）は、IDG が切り離されている間だけ出す（実機の EIU は CMC で消すまで残す。CMC が無いので簡略化）。
-  - HYD synoptic の記号：ATA29_32 p.105-106 の「ON（白）」は、空の記号（文字なし）にした（FCOM p.1486 と ATA29_32 p.107 の図は、圧を出しているポンプを文字なしで描く）。ON（琥珀）なども文字なしの色付きの記号と読んだ（画像が無いので今は白のまま）。
+  - HYD synoptic の記号：ATA29_32 p.105-106 の「ON（白）」は、空の記号（文字なし）にした（FCOM p.1486 と ATA29_32 p.107 の図は、圧を出しているポンプを文字なしで描く）。ON（琥珀）なども文字なしの色付きの記号と読んだ（2026-10-23 夕方に色付きの画像を作った）。
+  - HYD synoptic の不作動項目：系統を「失った」とみなすのは系統圧低（HYD PRESS SYS と同じ、1,200 psi 未満が 2 秒。FCOM は「系統の故障」とだけ書く）。系統 1・4 の一覧の中身と順は純正の絵のまま（FCOM の図は系統 2・3 だけ）、THRUST REV は FCOM の図と同じく最後に置いた。組の項目は負荷の割り当てから出した（FCOM が例に描くのは 2+3 だけ）。ブレーキ（正規は系統 4、代替は 1、だめなら 2）は 3 系統の組 1+2+4 の「BRAKES」とした。RR の逆推力は資料が無いので GE と同じく THRUST REV を出さない。組の絵の置き場所（短い組を下、長い組を上）と、4 系統すべてを失ったときに交わる線の切れ目は自分で決めた。
   - HYD synoptic の圧の低（EDP の ON 琥珀、DEM の AUTO・ON 琥珀、AUX の状態）は、P5 の灯と同じく圧力スイッチが 2 秒続いてから（資料に記載なし）。EDP は資料どおりスイッチと圧だけで決めるので、エンジン停止中は ON 琥珀（空の記号）。
   - AUX の記号：資料は白と琥珀に同じ条件（AUX で EDP 圧低）を書いているので、AUX ポンプが動いていれば白、動けない（空中、ground handling bus なし）なら琥珀とした。系統 4 を AUX にしたとき、DEM の丸は OFF（琥珀）（FCOM p.1486 の図）。
   - RSVR PRESS の位置（各リザーバの右、上寄り）は FCOM p.1486 の図に合わせて目で決めた。
@@ -198,9 +199,9 @@ PLAN.md §3 に書いた。要点：
 | ELEC-13 GHB/GSB | 一部。ground service switch（客室のパネル）は無し |
 | ELEC-14 ELCU と load shed | 済（発電機の台数で決める簡略版） |
 | ELEC-15 DC とバッテリー母線 | 済 |
-| ELEC-16 バッテリーの表示 | 一部。APU バッテリーと BAT DISCH、カスタム acf の STAT の V-DC・A-DC（モデルの値。APU BATT の A-DC は前は APU 発電機の電流だった）は済。CHG/DIS は STAT の背景画像に固定の "DIS"（シアン）が描いてあり、消すには画像を直す必要がある（利用者に確認）。純正 acf の STAT は X-Plane の値のまま |
+| ELEC-16 バッテリーの表示 | 済（カスタム acf）。APU バッテリーと BAT DISCH、STAT の V-DC・A-DC（モデルの値。APU BATT の A-DC は前は APU 発電機の電流だった）、CHG/DIS（2026-10-23 夕方。背景の固定の "DIS" を消した画像に替え、白の CHG・DIS を電流の向きで出す。0 A のときは空白）。純正 acf の STAT は X-Plane の値のまま |
 | ELEC-17〜18、21〜22、24 | 未 |
-| ELEC synoptic の ISLN・GALLEY | ISLN は済（カスタム acf、BTB 開で。前はスイッチ位置）。GALLEY（109）は UTILITY と同じ画像に一緒に描いてあり、別の色にできない（画像が要る。利用者に確認）。今は両方 utility bus の色 |
+| ELEC synoptic の ISLN・GALLEY | 済（カスタム acf）。ISLN は BTB 開で（前はスイッチ位置）。UTILITY と GALLEY（109）は 2026-10-23 夕方に画像を分け、それぞれの母線の通電で緑・琥珀（前は 1 枚の画像で utility bus の色）。GALLEY には FCOM の図のように母線までの自分の線を描いた。freighter（570）の galley 無しは電源モデルにまだ無い |
 | ELEC-23 EICAS status | 一部。DRIVE DISC n は済（IDG が切り離されている間。実機は CMC で消すまで残る）。ELEC DRIVE、BAT CHARGER、ELEC TR UNIT、ELEC IDG VALVE は故障の仕組みが要る |
 | ELEC-19 air mode | 済 |
 | ELEC-20 故障 dataref の上書き | 済（書くのをやめた） |
@@ -245,7 +246,7 @@ PLAN.md §3 に書いた。要点：
 | HYD-16 作動油量 | 済（乱数をやめ 1.00 から。RF は地上だけ） |
 | HYD-17 油温 | 一部（ポンプ運転で上がる一次遅れ。燃料の冷却は無し） |
 | HYD-18 リザーバ与圧 | 済（モデル、STATUS の HYD RSVR PRESS、カスタム acf の synoptic の RSVR PRESS。与圧の源はモデルでは 1 つ（左右のダクトの高い方）なので、4 つとも一緒に出る） |
-| HYD-19 synoptic の表現 | 一部。カスタム acf：DEM の AUTO（シアン）・OFF（琥珀。系統 4 の AUX も）・AUTO（琥珀）、EDP の OFF をスイッチから、SOV を火災スイッチから、AUX の OFF（白）。残り：ON（琥珀）と AUX の待機（シアン）・琥珀は、色の付いた空の記号の画像が無いので白のまま。琥珀の AUTO は文字が丸より少し広い（`TXT.2.28` の 4 文字は 51 px、丸は 44 px）。複数系統の不作動項目の絵（fail12・13・24・234）は中身が負荷の組と合わない（画像の文字の問題）。いずれも新しい画像が要る（利用者に確認） |
+| HYD-19 synoptic の表現 | 済（カスタム acf）。DEM の AUTO（シアン）・AUTO（琥珀）・OFF（琥珀。系統 4 の AUX も）・ON（琥珀）、AUX の OFF（白）・待機（シアン）・琥珀、EDP の OFF・ON（琥珀）、SOV を火災スイッチから。2026-10-23 夕方に、丸ごと色を付けた記号の画像（丸は中の表示と同じ色、ATA29_32 p.105）と、不作動項目の絵を作り直した：各系統の一覧（P&W は THRUST REV つき）と、負荷の割り当てから出した 6 つの組（1+2、1+3、2+3、2+4、3+4、1+2+4 の BRAKES）。系統を失ったとは系統圧低（HYD PRESS SYS と同じ条件）。組に BRAKES を置くこと、RR の THRUST REV を GE と同じに扱うことは推定（下の「推定で作った部分」） |
 | HYD-20 STATUS メッセージ | 済（HYD PRESS ENG・HYD PRESS DEM・HYD OVHT SYS・HYD RSVR PRESS・HYDIM：ATA29_32 p.137） |
 | HYD-21 スタンドパイプ | 済 |
 | HYD-22 FLT CONTROL HYD POWER | 未 |
@@ -424,3 +425,4 @@ PLAN.md §3 に書いた。要点：
 - 2026-10-23 15:3x〜16:4x：燃料（2-2）の組み込み。燃料モジュールの前の論理を外してモデルで回し、頭上の灯は新しい `fuel/light/*` を照明モジュールが読む。モデルに APU の DC 燃料ポンプと APU FUEL、FUEL RES XFR の左右を足した。試験：モデル 124 件、モジュール 62 件、照明 37 件。X-Plane（カスタム acf）：`s06_fuel`（新シナリオ）42/42、空中で予備移送（4 弁）・安定板タンクの移送・ジェティソン（約 2,200 kg/min、残り時間 17.9 分）、synoptic と頭上の灯を画像で確認。`s00` は純正 acf・カスタム acf とも 69/69。Lua の誤りなし。利用者の依頼で、全分野の実機との違いを DIFFERENCES.md にまとめた。
 - 2026-10-23 16:4x〜17:1x：燃費（FUEL-05）。巡航の測定のシナリオ `s07_cruise_ff` を作った（FL350 で空中開始、空中開始で上がった高度から FLCH で 35,000 ft に戻して ALT と SPD。A/T は MCP の 294 kt に届かず、その手前で釣り合った）。前のカスタム acf は Mach 0.791 で 1 発 1,612 kg/h、純正 acf は Mach 0.756 で 2,167 kg/h（FCOM PI.11.2 の見込みに近い）だったので、カスタム acf の `_jet_SFC_*` 4 つを純正と同じにした（バックアップ `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261023_before_sfc`）。変更後は Mach 0.788 で 2,134 kg/h。外観は chase 視点で変わらない。ACF_DIFF.md の壊れていた 1 行（HYD synoptic の行の頭）も直した。
 - 2026-10-23 17:1x〜17:5x：エンジン（2-3）段 1。始動・点火・燃料弁をエンジンごとの状態機械のモデルとグルーで作り直し、前の始動・starter・igniter・燃料弁の処理と ENG FAIL・>ENG SHUTDOWN・STARTER CUTOUT の判定を外した。抽気のモデルは start valve の指令を `engines/start_valve_cmd` から受ける。advisory に >AUTOSTART OFF と ENG FUEL VLV を足した。試験：モデル 77 件、モジュール 18 件、抽気モジュールの試験も合わせた。X-Plane：`s08_autostart`（新シナリオ）38/38（1 回目は始動の点火が idle まで続いたので、FCOM p.879 どおり cutout で止めた）、`s00` は両 acf 69/69。Lua の誤りなし。利用者から、違和感のない範囲ならパネルの画像を作ったり直したりしてよいと答え（「決まったこと」）。
+- 2026-10-23 17:5x〜19:0x：パネルの画像（利用者が夕方に「違和感のない範囲なら作ってよい」と答えた分）。画像は `docs/overhaul/tools/make_synoptic_images.ps1` で純正の絵から作る（PowerShell と System.Drawing だけ）。HYD synoptic：記号を丸ごと色付きにした（DEM の AUTO シアン・AUTO 琥珀・OFF 琥珀・ON 琥珀、AUX の OFF 白・待機シアン・琥珀、EDP の ON 琥珀。背景の白い記号から切り出したので画素まで重なる。EDP OFF の位置のずれも直した）。不作動項目の絵を作り直した：各系統の一覧（P&W は THRUST REV つき）と、負荷の割り当てから出した組 6 つ（1+2・1+3・2+3・2+4・3+4・1+2+4）。油圧モデルが `synoptic/inop`・`inop_set` を出す（gen_text の `text_off`・`text_auto` は外した）。ELEC synoptic：UTILITY と GALLEY を母線ごとに別の画像にし、`bus/utility`・`bus/galley` で緑・琥珀。STAT：背景の固定の DIS を消し、白の CHG・DIS を `battery/amps` の向きで出す。試験：モデル 160 件、モジュール 136 件。X-Plane（カスタム acf）：通常（AUTO シアン、AUX OFF 白）、系統 1・3 を止めて系統 4 を AUX（OFF 琥珀、EDP OFF、AUX 待機シアン、一覧 1・3 と組 1+3）、4 系統すべて（全部の一覧と組、線の切れ目）、GEN CONT 1・2 OFF で galley の負荷制限（GALLEY 1・2・4 琥珀）、発電機を戻して CHG、APU 始動中に APU BATT の DIS。いずれも画像で位置と色を確かめた。外観は変わらない。Lua の誤りなし。

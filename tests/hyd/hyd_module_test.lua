@@ -58,8 +58,14 @@ for n = 1, 4 do
     T.equal(get(SYN .. "rsvr_press", n - 1), 0, "preflight: no RSVR PRESS " .. n .. " with APU bleed")
 end
 T.equal(get(SYN .. "aux"), 0, "preflight: synoptic AUX OFF")
-T.equal(get(SYN .. "text_off"), "OFF", "synoptic: the word OFF for gen_text")
-T.equal(get(SYN .. "text_auto"), "AUTO", "synoptic: the word AUTO for gen_text")
+-- all four lost: every list (with THRUST REV: engine type 0 is P&W) and set
+for n = 1, 4 do T.equal(get(SYN .. "inop", n - 1), 2, "preflight: inoperative items of system " .. n) end
+for k = 1, 6 do T.equal(get(SYN .. "inop_set", k - 1), 1, "preflight: inoperative set " .. k) end
+rt:set("laminar/B747/engines/type", 1)
+frames(0.1)
+T.equal(get(SYN .. "inop", 0), 1, "preflight, GE: the list without THRUST REV")
+rt:set("laminar/B747/engines/type", 0)
+frames(0.1)
 
 -- system 4 AUX first (FCOM p.119)
 rt:set(SEL, 3, -1)
@@ -69,6 +75,11 @@ T.check(get(HYD .. "pressure_4") > 2900, "AUX: system 4 pressure")
 T.equal(get(HYD .. "dem_mode_4"), -1, "AUX: synoptic selector")
 T.equal(get(SYN .. "aux"), 2, "AUX: synoptic AUX running")
 T.equal(get(SYN .. "dem", 3), 4, "AUX: synoptic DEM 4 OFF")
+T.equal(get(SYN .. "inop", 3), 0, "AUX: system 4 not lost")
+T.equal(get(SYN .. "inop", 2), 2, "AUX: system 3 still lost")
+T.equal(get(SYN .. "inop_set", 2), 1, "AUX: set 2+3 still lost")
+T.equal(get(SYN .. "inop_set", 3), 0, "AUX: no set 2+4")
+T.equal(get(SYN .. "inop_set", 5), 0, "AUX: no set 1+2+4 (system 4 gives the brakes)")
 T.equal(get(HYD .. "light/sys_fault", 3), 0, "AUX: SYS FAULT 4 out")
 T.equal(get(HYD .. "light/dem_press", 3), 1, "AUX: DEMAND PRESS 4 on")
 T.equal(get(ADVISORY, 209), 1, "AUX: HYD PRESS DEM 4")

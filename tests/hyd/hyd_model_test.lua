@@ -344,4 +344,26 @@ do
     T.check(out.sys[3].sov_open == false and out.sys[2].sov_open, "synoptic: only SOV 3 closed")
 end
 
+-- HYD synoptic inoperative items (FCOM p.1490): a lost system (pressure low,
+-- as HYD PRESS SYS) shows its items; a set while all its systems are lost
+do
+    local s, inp = parked()
+    power(inp)
+    local out = run(s, inp, 3)
+    for n = 1, 4 do T.check(out.sys[n].syn_inop, "inoperative: system " .. n .. " lost when parked") end
+    for k = 1, #H.SYN_SETS do T.check(out.syn_inop_set[k], "inoperative: set " .. k .. " with all four lost") end
+    engines_running(inp)
+    out = run(s, inp, 20)
+    for n = 1, 4 do T.check(not out.sys[n].syn_inop, "inoperative: system " .. n .. " with pressure") end
+    for k = 1, #H.SYN_SETS do T.check(not out.syn_inop_set[k], "inoperative: no set " .. k .. " with pressure") end
+    for _, n in ipairs({1, 3}) do inp.engine_pump[n], inp.demand_sel[n] = false, 0 end
+    out = run(s, inp, 20)
+    T.check(out.sys[1].syn_inop and out.sys[3].syn_inop, "inoperative: systems 1 and 3 lost with their pumps off")
+    T.check(not out.sys[2].syn_inop and not out.sys[4].syn_inop, "inoperative: systems 2 and 4 not")
+    for k, set in ipairs(H.SYN_SETS) do
+        local want = #set == 2 and set[1] == 1 and set[2] == 3
+        T.equal(out.syn_inop_set[k], want, "inoperative: set " .. table.concat(set, "+") .. (want and " shown" or " not shown"))
+    end
+end
+
 T.done()

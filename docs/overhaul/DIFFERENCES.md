@@ -1,6 +1,6 @@
 # 実機との違い（DIFFERENCES）
 
-Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこで違うかを、全分野についてまとめたもの。2026-10-23 時点（`overhaul` の 4a22c9e8）。
+Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこで違うかを、全分野についてまとめたもの。2026-10-23 夜の時点（`overhaul`、パネルの画像まで）。
 
 - 元の調査は [GAP_ANALYSIS.md](GAP_ANALYSIS.md)（作り直し前のコードと資料の読み比べ、550 件）。ここでは、その後の作り直しで直った点を反映し、残っている違いを分野ごとに短く書いた。各項目の括弧は GAP の ID で、詳しい内容と出典は GAP_ANALYSIS.md と `notes/` にある。
 - 基準の機体は FCOM の 109（旅客機、PW4056）。405（PW の改造貨物機）と 570（GE の貨物機）の違いは notes に書いてある。RR には資料が無い。
@@ -39,7 +39,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 
 ### 電源（ATA 24）：作り直し済み（1-1）
 
-実機に合わせた点：バス単位のモデル（AC 1〜4、同期バス、SSB、transfer bus、standby、ground service・ground handling、DC 1〜4、バッテリー母線）、電源の切替（LH24 の表と FCOM）、GCB・BTB の許可、standby 電源、ELEC GEN OFF・ELEC AC BUS・ELEC BUS ISLN、DRIVE 灯と DRIVE DISC、ELCU の load shed（簡略）、バッテリーの表示と BAT DISCH、air mode。P5 の灯、EICAS、表示器と CDU の電源もモデルから。カスタム acf の ELEC synoptic（ISLN・DRIVE の枠）と STAT のバッテリー値。
+実機に合わせた点：バス単位のモデル（AC 1〜4、同期バス、SSB、transfer bus、standby、ground service・ground handling、DC 1〜4、バッテリー母線）、電源の切替（LH24 の表と FCOM）、GCB・BTB の許可、standby 電源、ELEC GEN OFF・ELEC AC BUS・ELEC BUS ISLN、DRIVE 灯と DRIVE DISC、ELCU の load shed（簡略）、バッテリーの表示と BAT DISCH、air mode。P5 の灯、EICAS、表示器と CDU の電源もモデルから。カスタム acf の ELEC synoptic（ISLN・DRIVE の枠、UTILITY と GALLEY を母線ごとの色で）と STAT のバッテリー値・CHG/DIS。
 
 残っている違い：
 - 保護トリップ、3.5 秒の break power transfer、last source on が無い（ELEC-04）。故障の仕組みがまだ無い。
@@ -49,7 +49,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 故障で出る status（ELEC DRIVE、BAT CHARGER、ELEC TR UNIT、ELEC IDG VALVE）が無い（ELEC-23）。
 - 外部電源は XP12 では X-Plane の GPU 電圧に依る（ELEC-17）。
 - まだ X-Plane の bus 0 で電源を見る系統：機器冷却、IRS と無線、表示灯の輝度、客室灯、ヨーダンパー。
-- synoptic の GALLEY を別の色にできない、STAT の CHG/DIS は背景に固定の "DIS" がある（どちらも新しい画像が要る。利用者に確認中）。純正 acf の STAT は X-Plane の値のまま。
+- 純正 acf の ELEC synoptic と STAT は前のまま（GALLEY は UTILITY と同じ色、STAT は X-Plane の値と固定の "DIS"）。freighter の galley 無し（570）は電源モデルにまだ無い。
 - 推定：バッテリーの負荷電流と電圧の曲線、BAT DISCH までの 60 秒など。
 
 ### 空地判定（PSEU）：作り直し済み（1-2）
@@ -79,15 +79,15 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 
 ### 油圧（ATA 29）：作り直し済み（1-4）
 
-実機に合わせた点：EDP は圧力補償型、demand pump の AUTO（1400/1600 psi、タイマー、CUTOFF、系統 1・4 のフラップ）、ポンプの電源と抽気、AUX、火災スイッチ（SOV 閉・EDP 減圧・demand pump 起動）、舵面の系統の組の誤り 3 か所を修正、accumulator（系統 4 だけで充圧）、X-Plane の故障を書き換えない、P5 の灯、EICAS、作動油量（乱数をやめた）、リザーバの与圧と RSVR PRESS、STATUS、スタンドパイプ。カスタム acf の HYD synoptic のポンプ状態。
+実機に合わせた点：EDP は圧力補償型、demand pump の AUTO（1400/1600 psi、タイマー、CUTOFF、系統 1・4 のフラップ）、ポンプの電源と抽気、AUX、火災スイッチ（SOV 閉・EDP 減圧・demand pump 起動）、舵面の系統の組の誤り 3 か所を修正、accumulator（系統 4 だけで充圧）、X-Plane の故障を書き換えない、P5 の灯、EICAS、作動油量（乱数をやめた）、リザーバの与圧と RSVR PRESS、STATUS、スタンドパイプ。カスタム acf の HYD synoptic（ポンプの記号を状態の色で、各系統と系統の組の不作動項目。P&W は THRUST REV つき）。
 
 残っている違い：
 - 脚・逆推力・ステアリング・安定板トリム・ヨーダンパーが、4 系統の圧で止まらない（HYD-11・12。それぞれの作り直しで、モデルの負荷の表を使う）。
 - ブレーキの効きが油圧源で制限されない（源の選択と >BRAKE SOURCE は済。HYD-09 の残り、脚 4-2 で）。
 - 油温に燃料の熱交換が無い（HYD-17）。
-- synoptic の色付きの空の記号（ON 琥珀、AUX の待機）、琥珀の AUTO の幅、複数系統の不作動の絵（新しい画像が要る。HYD-19）。
+- 純正 acf の HYD synoptic は前のまま（色の付かない記号、組の中身が合わない不作動項目の絵）。
 - FLT CONTROL HYD POWER（系統ごとの遮断弁）が無い（HYD-22）。
-- 推定：舵面が動く圧 1000 psi、漏れ量、圧の立ち上がり、油温の上がり方など。
+- 推定：舵面が動く圧 1000 psi、漏れ量、圧の立ち上がり、油温の上がり方、synoptic の不作動項目の組（1+2+4 の BRAKES）と RR の THRUST REV など。
 
 ### 空圧（ATA 36）：作り直し済み（1-5）
 
@@ -292,8 +292,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 経路と ND の経路線は X-Plane 標準の FMS（FMC の作り直しまで）。
 - X-Plane 側の制約（試験で見つけたもの）：機体を読み直さずにフライトを始めると前のフライトの状態が残る系統がある。XP12 の外部電源は X-Plane の GPU 電圧に従う。X-Plane の抽気のモードと isolation valve は連動する。Web API の長さ 0 のコマンドは離す操作が届かない。
 
-## 4. 新しいパネル画像が要るもの（利用者に確認中）
+## 4. 新しいパネル画像が要るもの
 
-- 油圧の synoptic：色付きの空の記号（ON 琥珀、AUX の待機・琥珀）、琥珀の AUTO の幅、複数系統の不作動の絵。
-- 電源の synoptic の GALLEY の色、STAT の CHG/DIS。
+- 油圧・電源の synoptic と STAT の画像は 2026-10-23 夜に作った（利用者が「違和感のない範囲なら作ってよい」と答えた。作り方は `docs/overhaul/tools/make_synoptic_images.ps1`）。
 - ほかの分野の表示で画像が要るものは、各分野の作り直しのときに一覧にする（GAP_ANALYSIS.md §4）。

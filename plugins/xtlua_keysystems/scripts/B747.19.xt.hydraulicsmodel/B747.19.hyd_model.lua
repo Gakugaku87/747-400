@@ -42,6 +42,11 @@ M.ACC_PRECHARGE_PSI, M.ACC_GAS_IN3 = 750, 200        -- brake accumulator (ATA29
 -- (FCOM p.1486, ATA29_32 p.107). The engine pump uses ON, ON_AMBER and OFF.
 M.SYN_ON, M.SYN_ON_AMBER, M.SYN_AUTO_AMBER, M.SYN_AUTO, M.SYN_OFF = 0, 1, 2, 3, 4
 M.SYN_AUX_OFF, M.SYN_AUX_STANDBY, M.SYN_AUX_ON, M.SYN_AUX_AMBER = 0, 1, 2, 3
+-- HYD synoptic inoperative items (FCOM p.1490 (13.20.2)): what a lost system
+-- powers, and above it what a set of lost systems powers together: the
+-- loads of M.LOADS on two systems, and the brakes (system 4, then 1, then 2;
+-- a set of three, estimate: the FCOM shows only the set 2+3).
+M.SYN_SETS = {{1, 2}, {1, 3}, {2, 3}, {2, 4}, {3, 4}, {1, 2, 4}}
 
 -- flow at the rated pressure, gpm (ATA29_32 p.26, p.68, p.84)
 M.EDP_GPM, M.ADP_GPM, M.ACMP_GPM, M.AUX_GPM = 37.5, 32, 6, 5.7
@@ -100,7 +105,8 @@ function M.new()
     local s = {t = 0, first = true, acc_psi = M.ACC_PRECHARGE_PSI, rsvr_psi = 0, sys = {}}
     local out = {sys = {}, aux_psi = 0, aux_running = false, brake_source = 0, brake_psi = 0,
         acc_psi = M.ACC_PRECHARGE_PSI, brake_source_alert = false, normal_brakes = false,
-        syn_aux = M.SYN_AUX_OFF}
+        syn_aux = M.SYN_AUX_OFF, syn_inop_set = {}}
+    for k = 1, #M.SYN_SETS do out.syn_inop_set[k] = false end
     for n = 1, 4 do
         s.sys[n] = {
             psi = 0, qty = 1.0, temp = 15,
@@ -120,7 +126,7 @@ function M.new()
             control = false,
             status_eng = true, status_dem = false, status_ovht = false, status_rsvr = true,
             status_hydim = true,
-            syn_edp = M.SYN_ON_AMBER, syn_dem = M.SYN_OFF,
+            syn_edp = M.SYN_ON_AMBER, syn_dem = M.SYN_OFF, syn_inop = false,
         }
     end
     s.out = out
@@ -318,6 +324,14 @@ function M.update(s, inp, dt)
             elseif out.aux_running then out.syn_aux = M.SYN_AUX_ON
             else out.syn_aux = M.SYN_AUX_AMBER end
         end
+        -- a system is lost while its pressure is low, as for HYD PRESS SYS
+        -- (estimate: the FCOM says a system failure)
+        o.syn_inop = sys_low2
+    end
+    for k, set in ipairs(M.SYN_SETS) do
+        local lost = true
+        for _, n in ipairs(set) do lost = lost and out.sys[n].syn_inop end
+        out.syn_inop_set[k] = lost
     end
 
     -- brake source: system 4, then 1, then 2, then the accumulator, which
