@@ -45,7 +45,9 @@ T.check(amps > 0, "battery: the main battery discharges (+)")
 T.equal(get("laminar/B747/electrical/battery/stat_amps", 0), amps, "battery: STAT A-DC is the discharge current")
 T.check(get("laminar/B747/electrical/battery/volts", 0) > 20, "battery: STAT V-DC from the model")
 
--- APU running; APU GEN 1 pushed (the manipulator sets switch_mode 1)
+-- APU running (fuel in main tank 2: the APU model shuts it down without);
+-- APU GEN 1 pushed (the manipulator sets switch_mode 1)
+rt:set("sim/flightmodel/weight/m_fuel", 2, 30000)
 rt:set("sim/cockpit2/electrical/APU_N1_percent", 100)
 rt:set("sim/cockpit2/electrical/APU_running", 1)
 rt:set("laminar/B747/electrical/apu/sel_dial_pos", 1)

@@ -75,8 +75,6 @@ function deferred_dataref(name,nilType,callFunction)
     end
     return find_dataref(name)
 end
-local B747_apu_start = 0
-local B747_apu_inlet_door_target_pos = 0
 
 
 
@@ -181,6 +179,8 @@ B747DR__gear_chocked           = deferred_dataref("laminar/B747/gear/chocked", "
 
 -- buses, breakers, lights, EICAS: the electrical model and its glue
 dofile("B747.03.xt.elec_buses.lua")
+-- the APU sequence, its shutdowns and messages: the APU model and its glue
+dofile("B747.03.xt.apu.lua")
 --*************************************************************************************--
 --** 				       READ-WRITE CUSTOM DATAREF HANDLERS     	         	     **--
 --*************************************************************************************--
@@ -274,9 +274,8 @@ end
 function B747_elec_apu_sel_up_CMDhandler(phase, duration)
     if phase == 0 then
         B747DR_elec_apu_sel_pos = math.min(B747DR_elec_apu_sel_pos+1, 2)
-        if B747DR_elec_apu_sel_pos == 2
-			then B747_apu_start = 1
-		end
+        -- START latches the automatic start; it may go back to ON at once (FCOM p.867, p.896)
+        if B747DR_elec_apu_sel_pos == 2 then B747_apu_start_pushed = true end
     end
 
     if phase == 2 then
@@ -468,78 +467,7 @@ end
 
 
 
------ APU -------------------------------------------------------------------------------
-function B747_apu_shutdown()
-
-    simDR_apu_start_switch_mode = 0 -- literally starter switch omg
-    B747DR_elec_apu_pwr_1_switch_mode = 0
-    B747DR_elec_apu_pwr_2_switch_mode = 0
-    B747_apu_inlet_door_target_pos = 0.0
-
-end
-
-
-function B747_apu()
-
-    -- STARTER
-    if B747DR_elec_apu_sel_pos == 0 then
-        if simDR_apu_running == 1 then
-            if simDR_battery_on[0] == 0 then                    -- APU SHUTDOWN IMMEDIATELY IF BATTERY OFF
-            B747_apu_shutdown()
-            else                                                -- APU COOL DOWN BEFORE SHUT DOWN
-                if is_timer_scheduled(B747_apu_shutdown) == false then
-                    run_after_time(B747_apu_shutdown, 60.0)
-                end
-            end
-		elseif simDR_apu_running == 0 then			-- BASICALLY IF YOU TURN IT ON AND OFF BEFORE IT STARTS, IT SHOULD CLOSE THE INLET DOOR
-			B747_apu_shutdown()
-        end
-
-
-	elseif B747DR_elec_apu_sel_pos == 1 then
-		if simDR_battery_on[0] == 1 then		-- ONLY OPEN INLET DOOR IF BAT ON
-			B747_apu_inlet_door_target_pos = 1.0
-		end
-
-	elseif B747DR_elec_apu_sel_pos == 2 then
-        if simDR_apu_running == 0 then
-			if B747DR_elec_apu_inlet_door_pos > 0.13 then
-				B747_apu_start = 1
-				simDR_apu_start_switch_mode = 2                 -- START
-				run_after_time(B747_apu_selector_return_spring, 6.0)  				-- SHOULD RETURN THE APU SELECTOR SW TO RUN AFTER START, YMMV
-			end
-
-        elseif simDR_apu_running == 1 then
-            B747_apu_start = 0
-            simDR_apu_start_switch_mode = 1                     -- RUNNING
-        end
-
-    end
-
-
-    -- INLET DOOR ANIMATION
-    B747DR_elec_apu_inlet_door_pos = B747_set_animation_position(B747DR_elec_apu_inlet_door_pos, B747_apu_inlet_door_target_pos, 0.0, 1.0, 0.04)
-
-
-    -- APU GENERATOR
-    if B747DR_elec_apu_sel_pos == 1 and simDR_apu_N1_pct > 95.0 then
-      B747DR_elec_apu_pwr1_available      = 1
-      B747DR_elec_apu_pwr2_available      = 1
-    else
-      B747DR_elec_apu_pwr1_available      = 0
-      B747DR_elec_apu_pwr2_available      = 0
-    end
-
-end
-
-
-function B747_apu_selector_return_spring()
-
-	if B747DR_elec_apu_sel_pos == 2 then
-	    B747DR_elec_apu_sel_pos = 1
-	end
-
-end
+----- APU: the APU model and its glue (B747.03.xt.apu.lua) ----------------------------
 
 
 
@@ -549,34 +477,7 @@ end
 ----- ELECTRICAL EICAS MESSAGES ---------------------------------------------------------
 function B747_electrical_EICAS_msg()
 
-    -- APU
-    if (B747DR_elec_apu_sel_pos > 0.95 and simDR_apu_N1_pct < 0.1)
-        or
-        (B747DR_elec_apu_sel_pos < 0.05 and simDR_apu_N1_pct > 95.0 and is_timer_scheduled(B747_apu_shutdown) == false)
-    then
-        B747DR_CAS_advisory_status[13] = 1
-    else
-        B747DR_CAS_advisory_status[13] = 0
-    end
-
-    -- APU DOOR
-
-    if (B747DR_elec_apu_inlet_door_pos > 0.95 and simDR_apu_running == 0)
-        or
-        (B747DR_elec_apu_inlet_door_pos < 0.05 and simDR_apu_running == 1)
-    then
-        B747DR_CAS_advisory_status[14] = 1
-    else
-        B747DR_CAS_advisory_status[14] = 0
-    end
-
-    -- APU RUNNING
-
-    if simDR_apu_N1_pct > 95.0 then
-        B747DR_CAS_memo_status[1] = 1
-    else
-        B747DR_CAS_memo_status[1] = 0
-    end
+    -- APU, APU DOOR, APU RUNNING: B747.03.xt.apu.lua
 
     -- STBY IGNITION ON
 
@@ -653,6 +554,7 @@ function B747_flight_start_electric()
 
     -- ALL MODES ------------------------------------------------------------------------
     B747_set_elec_all_modes()
+    B747_apu_flight_start()
 
 
     -- COLD & DARK ----------------------------------------------------------------------

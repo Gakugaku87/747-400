@@ -194,9 +194,6 @@ B747DR_engine02_fire_ext_switch_pos_disch   = find_dataref("laminar/B747/fire/en
 B747DR_engine03_fire_ext_switch_pos_disch   = find_dataref("laminar/B747/fire/engine03/ext_switch/pos_disch")
 B747DR_engine04_fire_ext_switch_pos_disch   = find_dataref("laminar/B747/fire/engine04/ext_switch/pos_disch")
 
-B747DR_engine_apu_oil_qty_ratio      	= find_dataref("laminar/B747/apu/oil")
-B747DR_engine_apu_n2      	        = find_dataref("laminar/B747/apu/n2")
-B747DR_elec_apu_inlet_door_pos      = find_dataref("laminar/B747/electrical/apu_inlet_door")
 
 B747DR_CAS_warning_status           = find_dataref("laminar/B747/CAS/warning_status")
 B747DR_CAS_caution_status                   = find_dataref("laminar/B747/CAS/caution_status")
@@ -1320,7 +1317,6 @@ end
 
 
 
-local initial_apu_oil = 0.75+(math.random()*0.25)
 ----- ENGINE OIL QUANTITY ---------------------------------------------------------------
 function B747_engine_oil_qty()
 
@@ -1328,7 +1324,6 @@ function B747_engine_oil_qty()
     B747DR_engine_oil_qty_liters[1] = math.max(0, (B747_eng2oilStart - (B747_eng2startupOilTxfr * B747_rescale(0.0, 0.0, 15.0, 1.0, B747DR_display_N1[1]))) * simDR_engine_oil_qty_ratio[0])
     B747DR_engine_oil_qty_liters[2] = math.max(0, (B747_eng3oilStart - (B747_eng3startupOilTxfr * B747_rescale(0.0, 0.0, 15.0, 1.0, B747DR_display_N1[2]))) * simDR_engine_oil_qty_ratio[0]) 
 	B747DR_engine_oil_qty_liters[3] = math.max(0, (B747_eng4oilStart - (B747_eng4startupOilTxfr * B747_rescale(0.0, 0.0, 15.0, 1.0, B747DR_display_N1[3]))) * simDR_engine_oil_qty_ratio[0]) 
-    B747DR_engine_apu_oil_qty_ratio=B747_animate_value(B747DR_engine_apu_oil_qty_ratio,initial_apu_oil - (B747DR_engine_apu_n2*0.003),0,1,20)
 end
 
 
@@ -1343,7 +1338,6 @@ function B747_EPR()
     for i = 0, 3 do
         B747DR_EPR_max_limit[i] = 2.0
     end
-    B747DR_engine_apu_n2 = 85.5 * B747DR_elec_apu_inlet_door_pos
 --[[
     -- TOGA
     if B747DR_engine_TOGA_mode == 1 then

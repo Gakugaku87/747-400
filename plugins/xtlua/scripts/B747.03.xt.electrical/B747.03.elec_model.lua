@@ -71,6 +71,7 @@ function M.inputs()
         apu_request = {false, false},    -- APU GEN 1/2 close request (laminar/B747/apu_pwr_N/switch_mode)
         ext_available = {false, false},  -- external power plugged in and good
         apu_n1 = 0,
+        apu_gen_ok = true,               -- the APU runs with its selector ON (not in the cooldown)
         apu_start = false,               -- the APU starter runs
         n2 = {0, 0, 0, 0},
         on_ground = true,
@@ -249,7 +250,7 @@ function M.update(s, inp, dt)
         local gcr = inp.gen_cont[n] and s.idg_connected[n] and not inp.fire_handle[n]
         good[n] = gcr and speed[n]
     end
-    local apu_ready = inp.apu_n1 > M.APU_READY_N1 and inp.on_ground   -- ground only, FCOM p.895
+    local apu_ready = inp.apu_gen_ok and inp.apu_n1 > M.APU_READY_N1 and inp.on_ground   -- ground only, FCOM p.895
     local ext_ok = {inp.ext_available[1] and true or false, inp.ext_available[2] and true or false}
 
     -- breakers -------------------------------------------------------------

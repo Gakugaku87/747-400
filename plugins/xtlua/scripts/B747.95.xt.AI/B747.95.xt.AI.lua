@@ -789,8 +789,9 @@ function B747_auto_board()
             autoboard.phase[autoboard.step] = 2                                             -- INCREMENT THE PHASE
         end
 
-        -- PHASE 2: PRINT MONITOR STATUS AND START PHASE TIMER
-        B747_autoboard_phase_monitor(30.0)
+        -- PHASE 2: PRINT MONITOR STATUS AND START PHASE TIMER (the inlet door
+        -- opens first and X-Plane's APU takes about a minute to 95 %)
+        B747_autoboard_phase_monitor(120.0)
 
         -- PHASE 3: MONITOR THE SIM STATUS
         if autoboard.phase[autoboard.step] == 3 then

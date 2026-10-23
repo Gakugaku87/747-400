@@ -93,6 +93,7 @@ local function read_inputs(inp)
     inp.ext_available[1] = B747DR_elec_ext_pwr1_available == 1
     inp.ext_available[2] = B747DR_elec_ext_pwr2_available == 1
     inp.apu_n1 = simDR_apu_N1_pct
+    inp.apu_gen_ok = B747_apu_gen_ready()                   -- the APU model (B747.03.xt.apu.lua)
     inp.apu_start = simDR_apu_start_switch_mode == 2 and simDR_apu_N1_pct < E.APU_READY_N1
     inp.on_ground = B747DR_elec_pseu_air == 0               -- PSEU air relays, ATA29_32 p.299
 end

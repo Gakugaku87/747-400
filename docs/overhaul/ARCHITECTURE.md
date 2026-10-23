@@ -231,6 +231,16 @@ Lua が作る名前の数：dataref 1617 個、コマンド 628 個。静的に�
 - EICAS（advisory）：22〜25（BLD n OVHT/PRV）、34（>BLEED ISLN APU）、35・36（BLEED ISLN L・R）、39〜42（>BLEED n OFF）。
 - 流量は「パック 1 台＝1」の単位で数え、ダクト圧は源の圧から使う量に応じて下げる。値の多くは推定（PROGRESS.md「推定で作った部分」）。過熱の入力はモデルにあるが、つなぐ故障がまだ無い。
 
+### 4.6 APU（2-1）
+
+APU の制御のモデル（`plugins/xtlua/scripts/B747.03.xt.electrical/B747.49.apu_model.lua`）を、グルー `B747.03.xt.apu.lua` が電源モジュールの中で毎フレーム回す（`B747_apu()`、電源のグルーの前）。中身は notes/ATA-49.md §3〜§4。前の APU の処理（電源モジュールの `B747_apu`、EICAS の APU 3 つ、エンジンモジュールの APU N2・油量）は外した。回転と EGT は X-Plane の APU のまま。
+
+- 状態：OFF → STARTING（ドア全開で starter）→ RUNNING（N1 95 %）→ COOLDOWN（selector OFF から 60 秒、発電機と抽気なし）→ STOPPING → OFF。START に回すと始動を保持する（selector の up のハンドラが `B747_apu_start_pushed` を立てる）。
+- 読むもの：`electrical/apu/sel_dial_pos`、BATTERY スイッチ（`button_switch/position[13]`）、X-Plane の `APU_N1_percent`・`APU_running`、`rel_apu_fire`（6 で火災）、主タンク 2 の燃料（`m_fuel[2]`）、PSEU（`gear/air_ground/pri_air`）。
+- 書くもの（名前と意味は前と同じ）：X-Plane の `APU_starter_switch`（2 始動、1 運転、0 停止。読んで違うときだけ書く）、`electrical/apu_inlet_door`（3D のドア）、`electrical/apu_pwr1_avail`・`apu_pwr2_avail`（APU GEN スイッチが受け付ける。運転中で selector ON、地上）、`apu/n2`・`apu/oil`（STATUS ページ）、advisory 13（APU）・14（APU DOOR）、memo 1（APU RUNNING）。
+- 電源モデルの入力 `apu_gen_ok`（`B747_apu_gen_ready()`）：APU の発電機が使えるのは運転中で selector ON のときだけ（cooldown は無負荷）。電源モデルの AVAIL と APB はこれも見る。
+- quick start（B747.95.xt.AI）の APU の手順は、待ちを 30 秒から 120 秒にした（ドアが先に開き、X-Plane の APU は 95 % まで約 1 分）。
+
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 
 - 描画は、各 acf の末尾（`P` 行の後ろ）に埋め込まれた X-Plane の generic instrument で行う。数は 2850 個で、内訳は rotary 1164、text 709、pointer 293、needle 122、tape 85、rolling 24。

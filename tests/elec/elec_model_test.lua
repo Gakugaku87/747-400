@@ -389,4 +389,19 @@ do
     T.check(out.xp.ac_power and not out.xp.generator_on[1], "X-Plane: AC power, engine generators off")
 end
 
+-- the APU model says the generators may not connect (APU selector OFF and
+-- the unloaded cooldown, B747.49.apu_model.lua): no AVAIL, the APB opens
+do
+    local s, inp = powered_up()
+    apu_running(inp)
+    inp.apu_request[1] = true
+    local out = run(s, inp, 1)
+    T.check(out.ac[1], "APU gen ok: AC bus 1 on the APU generator")
+    inp.apu_gen_ok = false
+    out = run(s, inp, 1)
+    T.check(not out.lights.apu_avail[1] and not out.lights.apu_on[1], "APU gen not ok: no AVAIL, no ON")
+    T.check(not out.ac[1], "APU gen not ok: the APB opens, AC bus 1 off")
+    T.check(not inp.apu_request[1], "APU gen not ok: the switch request dropped")
+end
+
 T.done()
