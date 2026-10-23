@@ -88,7 +88,9 @@ end
 
 local press_state = C.new()
 local press_inputs = C.inputs()
-B747_press_out = press_state.out    -- for the equipment cooling glue (ΔP)
+-- for the equipment cooling glue (ΔP): kept as the table itself (a
+-- metatable; B747.55.xt.packs.lua)
+B747_press_out = setmetatable(press_state.out, {})
 local fms_str, fms_dep, fms_dest = nil, nil, nil
 local knob_last = nil
 
@@ -112,7 +114,7 @@ end
 
 function B747_press_flight_start()
     press_state = C.new()
-    B747_press_out = press_state.out
+    B747_press_out = setmetatable(press_state.out, {})
     knob_last = nil
 end
 

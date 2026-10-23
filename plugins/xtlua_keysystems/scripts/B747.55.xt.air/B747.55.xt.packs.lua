@@ -29,7 +29,10 @@ local MEMO_HIGH_FLOW, MEMO_PACKS_OFF = 24, 25
 local pack_state = P.new()
 local pack_inputs = P.inputs()
 local rst_last = false
-B747_pack_out = pack_state.out          -- for the bleed and pressurization glue
+-- for the bleed and pressurization glue: with a metatable, XTLua's
+-- namespace keeps the table itself (it copies a bare table, whose numbers
+-- and flags would then not follow the model)
+B747_pack_out = setmetatable(pack_state.out, {})
 B747_pack_relief_open = false           -- the pressurization glue's last frame
 B747_pack_cruise_clamp = false
 
@@ -44,7 +47,7 @@ end
 
 function B747_packs_flight_start()
     pack_state = P.new()
-    B747_pack_out = pack_state.out
+    B747_pack_out = setmetatable(pack_state.out, {})
     rst_last = false
 end
 

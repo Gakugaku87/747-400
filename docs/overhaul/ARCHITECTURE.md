@@ -366,6 +366,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
   - そのため、あとで元の表を書き換えても反映されない。コピーの側で無いキーを読むと、`parent` を探す処理が自分を呼び続けてスタックが溢れる（旧フォークで計器・FMC・AP が止まった原因）。
   - コピーの側の `#`・`ipairs`・`pairs` は `__len` などのメタメソッドに頼る。手元の LuaJIT 2.1（回帰試験）はこれを無視して 0 件になる。XTLua の LuaJIT 2.1.0-beta3 がどうかは確かめていない。どちらでも同じに動くよう、新しいコードはコピーされた表を数えたり回したりしない。
   - ファイルの `local` の表を、`dofile` した別のチャンク（グルー）に渡すときは、メタテーブル付きの表に入れてグローバルに置く（例：`B747_alert_messages`）。
+  - モデルの出力の表（`s.out`）をグルーどうしで渡すときも同じで、メタテーブルを付けてから置く（`B747_pack_out = setmetatable(pack_state.out, {})`）。コピーされると、数と真偽の項目は代入した時点の値で止まる（中の表は同じものを指すので、そちらは動く）。3-1 段 1 の機器冷却は、与圧のモデルの ΔP をこのコピーから読んで 0 のままだった（2026-10-24 に直した。`tests/air/air_module_test.lua` が名前空間の表を確かめる）。
 - **dataref**：
   - 新しい公開 dataref は init スクリプト（`init/scripts/<モジュール>/`）で作る。xt スクリプトの `deferred_dataref` は探すだけで、作らない。`tests/static/xt_bindings_created_test.lua` がこれを検査する。
   - 名前は既存の名前空間（`laminar/B747/<系統>/…`）に置く。INTERFACES.tsv の名前と意味は変えない（`tests/static/interfaces_test.lua`）。

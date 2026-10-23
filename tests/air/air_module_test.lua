@@ -15,7 +15,7 @@ local xtlua = dofile("tests/lib/xtlua.lua")
 B747_AIR_APTMETA = {"tests/air/data/aptmeta_test.dat"}
 
 local rt = xtlua.new()
-rt:load("plugins/xtlua_keysystems/scripts/B747.55.xt.air/B747.55.xt.air.lua")
+local air = rt:load("plugins/xtlua_keysystems/scripts/B747.55.xt.air/B747.55.xt.air.lua")
 rt:set("sim/operation/prefs/startup_running", 0)
 rt:callout("flight_start")
 
@@ -178,5 +178,11 @@ rt:set("laminar/B747/gear/air_ground/alt_gnd", 1)
 rt:set(PACK, 1, 2)          -- PACK 2 at A: still one pack
 frames(10)
 T.equal(get(AIR .. "packs_operating"), 3, "PACK 2 at A: three packs, not the selectors' sum")
+
+-- the models' output tables shared between the glue files stay the models'
+-- own: XTLua's namespace copies a bare table, whose numbers then stop
+-- (the equipment cooling read the cabin's ΔP from such a copy)
+T.equal(air.ns.B747_pack_out.packs_operating, 3, "B747_pack_out follows the pack model")
+T.equal(air.ns.B747_press_out.ldg_ft, get(AIR .. "landing_altitude"), "B747_press_out follows the pressurization model")
 
 T.done()
