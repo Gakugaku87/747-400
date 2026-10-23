@@ -262,6 +262,16 @@ APU の制御のモデル（`plugins/xtlua/scripts/B747.03.xt.electrical/B747.49
 - EICAS：warning 28〜31（ENG FAIL、caution の段階）、caution 19〜22（ENG AUTOSTART）・23〜26（>ENG SHUTDOWN）・61〜64（STARTER CUTOUT）、advisory 109（ENG IGNITION）・138〜141（ENG START VLV）・304（>AUTOSTART OFF、新設）・305〜308（ENG FUEL VLV、新設）、memo 8（CON IGNITION ON）。STBY IGNITION ON（memo 34）は電源モジュールのまま。
 - フライトの開始から 2 秒は、FUEL CONTROL どおりに燃料弁を置き、燃えているエンジンには燃料を出し続け、メッセージは出さない（燃料のグルーと同じ）。
 
+### 4.9 EEC（2-3 段 2）
+
+EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`）を、グルー `B747.42.xt.eec_thrust.lua` が EEC モジュール（`B747.42.xt.EEC.lua`）の `after_physics` で毎フレーム回す（`B747_eec_update()`。型式ごとの `GE()`・`PW()` の前）。中身は notes/ATA-70-80.md §4.1。
+
+- 最大定格（Max N1・Max EPR）：FCOM PI の表（PW4056 は着陸復行 EPR と最大上昇 EPR、CF6-80C2B1F は着陸復行 %N1 と最大上昇 %N1）を TAT と気圧高度で引き、パックとエンジン・翼の防氷で補正する。全開のときの定格は、17,000 ft と 300 kt より下で離陸、上は最大上昇（間は混ぜる。ATA70_80 p.208 の CF6 の論理。P&W は同じとした）。
+- レバーの指令：アイドル端（GE は N1 25 %、P&W は EPR 0.95。前の値）から最大定格まで、レバー角に比例。離陸の定格は 48°、25,000 ft より上の最大上昇は 35° で頭打ち（ATA70_80 p.146-151、p.208）。
+- 書くもの：`laminar/B747/engines/TRA`（指令。`ecc_spd` の PID の目標で、A/T もこれで目標に合わせる）、`display_N1_max`（GE）・`display_EPR_max`（P&W）（上の EICAS の最大線。前は FMC の推力基準だった）。FMC の推力基準（`display_*_ref`、target bug）と A/T のサーボは前のまま（PLAN.md の 6-4）。
+- RR は資料が無いので、前の推力の論理のまま。
+- 読むもの：レバー（`laminar/B747/engine/throttle`）、`sim/flightmodel2/position/pressure_altitude`、TAT、IAS、パックのセレクタ、エンジン防氷弁（`antiice/nacelle/valve_pos`）、翼防氷弁（`antiice/wing/valve_pos`）、エンジン型式。
+
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 
 - 描画は、各 acf の末尾（`P` 行の後ろ）に埋め込まれた X-Plane の generic instrument で行う。数は 2850 個で、内訳は rotary 1164、text 709、pointer 293、needle 122、tape 85、rolling 24。

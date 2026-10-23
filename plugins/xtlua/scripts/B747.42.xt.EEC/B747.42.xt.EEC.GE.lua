@@ -14,19 +14,9 @@
 ]]
 
 --This function calculates the target position of the throttle target on the Upper EICAS
+--(the EEC's command for the lever, B747.42.xt.eec_thrust.lua)
 function throttle_resolver_angle_GE(engine_in)
-  local throttle_angle = 0.0
-  local thrust_ratio_factor = 1.0
-
-  thrust_ratio_factor = B747DR_display_N1_max[engine_in] / 116.0  --117.5
-
-  local N1_target=B747_rescale(0.0, 25.0, 1.0, 116.0, B747DR_throttle[engine_in])
-  if B747DR_log_level == -1 then
-    print("Thrust Factor = ", thrust_ratio_factor)
-    print("TRA = ", throttle_angle)
-    print("N1_target = ", N1_target)
-  end
-  return N1_target
+  return B747_eec_command(engine_in)
 end
 
 function engine_idle_control_GE(altitude_ft_in)
@@ -598,8 +588,8 @@ function GE(altitude_ft_in)
     --Boost engine output as necessary
     if math.max(simDR_engn_thro_use[0], simDR_engn_thro_use[1], simDR_engn_thro_use[2], simDR_engn_thro_use[3]) == 1
       and math.max(simDR_N1[0], simDR_N1[1], simDR_N1[2], simDR_N1[3]) > 99.99
-      and (B747DR_display_N1[0] < simDR_N1_target_bug[0] or B747DR_display_N1[1] < simDR_N1_target_bug[1]
-          or B747DR_display_N1[2] < simDR_N1_target_bug[2] or B747DR_display_N1[3] < simDR_N1_target_bug[3]) then
+      and (B747DR_display_N1[0] < B747DR_throttle_resolver_angle[0] or B747DR_display_N1[1] < B747DR_throttle_resolver_angle[1]
+          or B747DR_display_N1[2] < B747DR_throttle_resolver_angle[2] or B747DR_display_N1[3] < B747DR_throttle_resolver_angle[3]) then
             B747_setMaxThrust(simDR_thrust_max + 200)
     elseif simDR_thrust_max > orig_thrust_n and simDR_onGround == 0 and B747DR_radio_altitude > 1500 then  --slowly reset max engine thrust to normal
       if simDR_thrust_max > orig_thrust_n + 10 then
@@ -622,7 +612,7 @@ function GE(altitude_ft_in)
       simDR_N1_target_bug[i] = N1_target_bug[i]
     end
     B747DR_display_N1_ref[i] = display_N1_ref[i]
-    B747DR_display_N1_max[i] = display_N1_max[i]
+    B747DR_display_N1_max[i] = B747_eec_max(i)  --the EEC's maximum rated N1, not the FMC's reference
   end
 	for i = 0, 3 do
     --takeoff_TOGA_n1 (max TO) is used as a factor to compute N1 for TO based on the simDR_N1 to prevent N1 display loss during TO -- in flight it is calculated based on Newtons

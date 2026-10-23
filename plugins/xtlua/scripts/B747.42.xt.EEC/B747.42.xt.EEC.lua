@@ -562,8 +562,9 @@ function egt_thermal_profile(tempIn,engineid,current_value)
 		div=1050
 	end
 
-	--freeze engine
-	if simDR_N2[engineid]<22 and simDR_engine_starter_status[engineid]<0.5 and simDR_heating[engineid]<0.5 then
+	--freeze a stopped engine on the ground; in the air it windmills (ENG-19,
+	--FCOM p.879 and p.881: windmill starts and the N2 shown for them)
+	if simDR_onGround == 1 and simDR_N2[engineid]<22 and simDR_engine_starter_status[engineid]<0.5 and simDR_heating[engineid]<0.5 then
 	 simDR_N2[engineid]=0
 	end
 
@@ -1142,6 +1143,7 @@ end
 dofile("B747.42.xt.EEC.GE.lua")
 dofile("B747.42.xt.EEC.PW.lua")
 dofile("B747.42.xt.EEC.RR.lua")
+dofile("B747.42.xt.eec_thrust.lua")
 
 function set_engines()
 	--Engine Thrust Parameters based on selected engine
@@ -1201,6 +1203,7 @@ function after_physics()
     flight_coefficients(simDR_acf_weight_total_kg, simDR_tas_pilot)
 
 	--fmsModules["data"] = json.decode(B747DR_FMSdata)
+	B747_eec_update()  --the EEC's rating and lever commands (B747.42.xt.eec_thrust.lua)
 	set_engines()
 
 	--[[if string.len(B747DR_simconfig_data) > 1 then
