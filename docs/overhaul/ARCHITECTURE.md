@@ -253,6 +253,15 @@ APU の制御のモデル（`plugins/xtlua/scripts/B747.03.xt.electrical/B747.49
 - EICAS：caution 31（FUEL JETT SYS）、32〜35（FUEL PRESS ENG）、36（FUEL QTY LOW）、37（FUEL STAB XFR）、67・68（FUEL PRES STB L・R、advisory）、69・70（FUEL PRESS CTR）。advisory 15（APU FUEL）、114〜117（ENG n FUEL FILT：X-Plane のフィルター故障）、148〜150（IMBALANCE、IMBAL 1-4・2-3）、153・154（>FUEL OVD CTR）、155〜158（FUEL OVRD）、159・160（>FUEL PMP STB）、161〜168（FUEL PUMP）、169・170（FUEL RES XFR 2・3）、171（>FUEL TANK/ENG）、172（FUEL TEMP LOW）、175〜178（FUEL X FEED）、179（>FUEL XFER 1+4）、235〜239（>JETT NOZ ON・L・R、>JETT NOZZLE L・R）、299（>X FEED CONFIG）、302・303（>FUEL LOW CTR）。
 - 消費は X-Plane の燃料流量（acf の SFC で決まる）を、モデルが決めた供給タンクから引く。始動中に負になる流量は 0 として扱う。
 
+### 4.8 エンジンの始動・点火・燃料弁（2-3 段 1）
+
+始動のモデル（`plugins/xtlua/scripts/B747.40.xt.engines/B747.40.engine_start_model.lua`）を、グルー `B747.40.xt.engine_start.lua` がエンジンモジュール（`B747.40.xt.engines.lua`）の中で毎フレーム回す（`before_physics` の `B747_engine_start()`）。中身は notes/ATA-70-80.md §3〜§4。前の始動・starter・igniter・燃料弁の処理と、X-Plane の auto-ignite で起動時に点火していた処理、ENG FAIL・>ENG SHUTDOWN・STARTER CUTOUT・CON IGNITION ON の判定は外した。
+
+- 読むもの：START（`toggle_switch/position` [16]〜[19]）、FUEL CONTROL（`toggle_sw_pos`）、火災スイッチ（`pos_arm`）、AUTOSTART（`button_switch/position[45]`）、CON（[44]）、`electrical/auto_ignit/sel_dial_pos`（0 = 1、1 = BOTH、2 = 2）・`stby_ignit/sel_dial_pos`（0 = 1、1 = NORM、2 = 2）、バス（`electrical/bus/ac`[0]・[2]、`stby_main`、`bat_main`、`bat_apu`）、PSEU（`pri_gnd`）、フラップレバー、X-Plane のエンジン別の nacelle heat、X-Plane の N2（`ENGN_N2_`）と `engine_is_burning_fuel`、表示の EGT（`engines/display_EGT`）、start valve（抽気の `air/engineN/bleed_start_valve_pos`）、spar valve（燃料の `fuel/spar_vlvN_pos`）、エンジン型式（`engines/type`）と貨物機（`freighter`）。
+- 書くもの：`laminar/B747/engines/start_valve_cmd`（新設 [0]〜[3]、1 = 開の指令。抽気のグルーが読み、ダクト圧が足りれば start valve を開ける）、X-Plane の starter（`sim/starters/engage_starter_n` を start valve が開いている間だけ保持）、`igniter_on`、`auto_ignite_on`（常に 0）、`mixture_ratio`（読んで違うときだけ書く）、`engines/fuel_valve_pos`（エンジン燃料弁と EEC の計量の両方が開いているとき 1。燃料のグルーが読む）、START switch の release（`toggle_switch/engine_startN_off`）。
+- EICAS：warning 28〜31（ENG FAIL、caution の段階）、caution 19〜22（ENG AUTOSTART）・23〜26（>ENG SHUTDOWN）・61〜64（STARTER CUTOUT）、advisory 109（ENG IGNITION）・138〜141（ENG START VLV）・304（>AUTOSTART OFF、新設）・305〜308（ENG FUEL VLV、新設）、memo 8（CON IGNITION ON）。STBY IGNITION ON（memo 34）は電源モジュールのまま。
+- フライトの開始から 2 秒は、FUEL CONTROL どおりに燃料弁を置き、燃えているエンジンには燃料を出し続け、メッセージは出さない（燃料のグルーと同じ）。
+
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 
 - 描画は、各 acf の末尾（`P` 行の後ろ）に埋め込まれた X-Plane の generic instrument で行う。数は 2850 個で、内訳は rotary 1164、text 709、pointer 293、needle 122、tape 85、rolling 24。

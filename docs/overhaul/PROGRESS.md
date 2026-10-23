@@ -22,14 +22,15 @@
   - 1-5（空圧）：モデルと、空調モジュールへの組み込みまで（エンジン 4 基の HPSOV・PRV・PRSOV・始動弁、3 区画のダクトと ISLN、APU 弁、需要に応じたダクト圧、P5 の SYS FAULT・VALVE 灯、EICAS）。前の抽気のコードは外した。試験はモデル 71 件・モジュール 19 件、X-Plane の `s05_bleed`（カスタム acf）。残りは下の「空圧（1-5）の GAP の状態」。
 - **段階 2**：
   - 2-1（APU）：制御を 1 つのモデル（状態機械）にまとめ、電源モジュールの中のグルーで回す（ARCHITECTURE.md §4.6）。FCOM の START→ON で始動、ドア全開で starter、60 秒の無負荷 cooldown、自動停止（火災、主タンク 2 の燃料切れ、始動の失敗）と fault の保持、APU・APU DOOR・APU RUNNING、STATUS の N2・油量。試験はモデル 46 件・モジュール 28 件、X-Plane の `s00`（両 acf 69/69）。残りは下の「APU（2-1）の GAP の状態」。
+  - 2-3（エンジン）：段 1（始動・点火・燃料弁）を、エンジンごとの状態機械のモデル（`plugins/xtlua/scripts/B747.40.xt.engines/B747.40.engine_start_model.lua`）とグルー `B747.40.xt.engine_start.lua` で作り直した（ARCHITECTURE.md §4.8）：手動始動と autostart（燃料投入、light-off・hot・hung の検出、地上の再試行と中止、空中は中止せず）、50 % N2 の cutout、点火の条件（START、CON、フラップ、NAI、flameout）と AUTO・STBY IGNITION・電源、エンジン燃料弁（RUN と火災スイッチ、main battery bus）、START VLV・STARTER CUTOUT・FUEL VLV・ENG AUTOSTART・>AUTOSTART OFF・ENG IGNITION・ENG FAIL・>ENG SHUTDOWN。start valve の指令は抽気のグルーが `engines/start_valve_cmd` から読む。試験はモデル 77 件・モジュール 18 件、X-Plane の `s08_autostart`（カスタム acf 38/38。igniter の故障で 2 回目に中止）、`s00`（両 acf 69/69、手動始動）。段 2（EEC）と段 3（表示・逆推力）はこれから。
   - 2-2（燃料）：モデルまで（`plugins/xtlua/scripts/B747.25.xt.fuel/B747.28.fuel_model.lua`。タンク・ポンプ・弁の表、FSMC（クロスフィード 2・3、O/J 2・3、予備・スカベンジ・水平安定板タンクの移送）、FJCC（ジェティソン）、マニフォールド（圧力の順位、クロスフィード、吸引供給、shared flow）、量、EICAS、頭上灯）。試験 117 件。燃料モジュールへの組み込みも済（`B747_fuel_system()`。ARCHITECTURE.md §4.7）：前のポンプ・弁・供給源・タンク量・EICAS の処理を外し、頭上の灯は照明モジュールがモデルの出力を読む。APU の DC 燃料ポンプと APU FUEL（APU-11）も。試験はモデル 124 件・モジュール 62 件・照明 37 件、X-Plane の `s06_fuel`（カスタム acf 42/42）、空中の予備・安定板タンクの移送とジェティソン、`s00`（両 acf 69/69）。カスタム acf の燃費（SFC）は、巡航の燃料流量を測って（`s07_cruise_ff`）純正と同じ値にした（前の値では約 25 % 少なかった。ACF_DIFF.md §5）。残りは下の「燃料（2-2）の GAP の状態」。
 
 ## 次にやること
 
 項目を終えるたびに、[DIFFERENCES.md](DIFFERENCES.md)（実機との違い、全分野。2026-10-23 に利用者の依頼で作った）の該当分野も直す。
 
-1. 承認済みのパネル（カスタム acf）の変更の残り：1-5 のダクト圧の表示条件（PNEU-09。空調 3-1 と一緒に）。画像が要るもの（新しい画像を作るか直してよいか利用者に確認）：1-4 の synoptic の色付きの空の記号と琥珀の AUTO の幅・複数系統の不作動項目の絵（HYD-19 の残り）、1-1 の synoptic の GALLEY の色と STAT の CHG/DIS（背景の固定の DIS）。済：`.snd` の警報音、1-3 の PG と 3〜10 ページ、1-3 の STATUS ページと cue、1-4 の HYD synoptic（HYD-19 の一部）と RSVR PRESS（HYD-18）、1-1 の synoptic の ISLN・DRIVE の枠と STAT のバッテリーの値、1-5 のダクト圧の色（PNEU-10）。変更の一覧は ACF_DIFF.md §5。
-2. 2-3（エンジン）：notes/ATA-70-80.md と GAP の ENG（38 件）。推力の決め方（EEC、rating、ALTN）、autostart、点火、超過の表示、逆推力の条件、スターターとダクト圧（PNEU-08）。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べる。空中開始の試験は AFDS の動き（PROGRESS の「気づいたこと」）に気をつける。
+1. 承認済みのパネル（カスタム acf）の変更の残り：1-5 のダクト圧の表示条件（PNEU-09。空調 3-1 と一緒に）。画像が要るもの（2026-10-23 夕方、違和感のない範囲で作ってよいと利用者の答え。2-3 の始動の次に行う）：1-4 の synoptic の色付きの空の記号と琥珀の AUTO の幅・複数系統の不作動項目の絵（HYD-19 の残り）、1-1 の synoptic の GALLEY の色と STAT の CHG/DIS（背景の固定の DIS）。済：`.snd` の警報音、1-3 の PG と 3〜10 ページ、1-3 の STATUS ページと cue、1-4 の HYD synoptic（HYD-19 の一部）と RSVR PRESS（HYD-18）、1-1 の synoptic の ISLN・DRIVE の枠と STAT のバッテリーの値、1-5 のダクト圧の色（PNEU-10）。変更の一覧は ACF_DIFF.md §5。
+2. 2-3（エンジン）の残り：段 2 の EEC（推力の決め方：rating・レバーと指令・max N1/EPR、idle の選択と 5 秒・LOW IDLE・IDLE DISAGREE、ALTN と A/T の切断、overspeed と RPM LIM、空中で N2 を 0 にする処理 ENG-19）。A/T（6-4）との境界を先に決める。段 3 は表示（EGT・オイル・振動の値と色、fuel-on の印）と逆推力。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べる。空中開始の試験は AFDS の動き（「気づいたこと」）に気をつける。段 1（始動・点火・燃料弁）は済（下の「エンジン（2-3）の GAP の状態」）。
 3. 1-5（空圧）の残り：故障の入れ方（過熱、過圧、HPSOV・PRV の固着、ダクトリーク）、地上空気の操作、スターターがダクト圧で回ること（エンジン 2-3）。
 4. 1-4（油圧）の残り：脚・ブレーキ・ステアリング・逆推力・stab trim・ヨーダンパーの「油圧で動くか」（HYD-09・11・12）は、それぞれの作り直しで、モデルの負荷の表（`B747_hyd_model.LOADS`）を使って入れる。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
 5. 1-1（電源）の残り：電源の有無を `bus_volts` で見ている系統を、バスごとの dataref（ARCHITECTURE.md §4.1）に乗り換える。どれも後の作り直し（空圧 1-5、空調 3-1、燃料 2-2、IRS と無線、照明、操縦系統 4-1）と絡むので、1-2 と同じく各系統の作り直しのときに行う（2026-10-23 に決めた。利用者の確認待ち）。
@@ -106,6 +107,7 @@ PLAN.md §3 に書いた。要点：
 - upstream（本家 mSparks43）には push しない。push は origin（Gakugaku87/747-400）だけ（利用者、2026-10-23 昼）。upstream の push 先は `no_push` にした（戻すときは `git remote set-url --push upstream https://github.com/mSparks43/747-400.git`）。
 - push は origin の `overhaul` と `master`。`master` は `overhaul` と同じ中身にした（旧フォークの履歴を親に残すマージ。強制 push はしない）。本家に PR は作らない（利用者、2026-10-23 午後。CLAUDE.md）。
 - PLAN の次の項目（フェーズ）に移るときは、承認を求めずに進める。区切りごとの結果の報告は続ける（利用者、2026-10-23 昼）。
+- パネルの画像は、違和感のない範囲なら新しく作ったり直したりしてよい（利用者、2026-10-23 夕方。油圧・電源の synoptic の分を聞いたときの答え）。
 
 ## 推定で作った部分
 
@@ -170,6 +172,12 @@ PLAN.md §3 に書いた。要点：
   - 地上でスイッチ OFF のときも FUEL PUMP のメッセージを出す（低圧なので。資料に記載が無い）。
   - synoptic のエンジンへの流れは spar valve が閉なら出さない。安定板タンクの移送弁（モデルに無い）はポンプが回っているとき開と表示。
   - 外から変わったとみなすタンクの量 20 kg、フライト開始後に落ち着かせる 2 秒。
+- エンジンの始動（2-3 段 1。`B747.40.engine_start_model.lua` に「estimate」と書いてある）：
+  - PW の値：autostart の燃料投入 20 % N2、EGT の start limit 535 ℃・takeoff limit 654 ℃（前のコードの値。資料に無い）、ENG FAIL の 52 % N2・STARTER CUTOUT（54 % N2、5 秒）・START VLV（8 秒）・FUEL VLV（5 秒）は CF6 の値を PW にも使う。
+  - hot start は EGT が start limit の 25 ℃ 手前、hung start は N2 の上がり方が 0.15 %/s 未満で 15 秒（CF6 の空中始動の値を地上にも）、始動の終わりは N2 55 % 以上で上がり方 0.15 %/s 未満が 5 秒。
+  - 109 の AUTO IGNITION 1・2 は autostart ON のとき始動ごとに交代（FCOM は「交代」とだけ書く）。シムの AUTOSTART スイッチは 1 個で、全エンジンに効く（109 は 4 個）。405（PW の貨物機）には autostart が無いとした。
+  - >ENG SHUTDOWN は地上では出さない。master CAUTION の灯を点けない扱い（FCOM）はまだ（警報モデルに属性が要る）。
+  - X-Plane の starter は N2 60 % を超えたら放す（空気がまだ回していても）。
 
 ## 電源（1-1）の GAP の状態
 
@@ -308,6 +316,27 @@ PLAN.md §3 に書いた。要点：
 | FUEL-24 synoptic の制約 | 未（パネル。ポンプの琥珀・主タンクの琥珀の条件、FTR の単位） |
 | FUEL-25 EICAS の文言 | 済（1-3 で）。>FUEL WING ISOL はこの FCOM に無いので出さない |
 
+## エンジン（2-3）の GAP の状態
+
+段 1（始動・点火・燃料弁）の分。ほかは段 2・3 で。
+
+| ID | 状態 |
+|---|---|
+| ENG-08 ENG FAIL | 済（caution の段階は 1-3。条件を空中・RUN・N2 52 % 未満にした。前は表示 N2 15 % 未満） |
+| ENG-09 >ENG SHUTDOWN | 一部（火災スイッチを引いたか CUTOFF で、空中だけ。master CAUTION を点けない扱いは未） |
+| ENG-10 STARTER CUTOUT | 済（start valve が開いたまま N2 54 % 超が 5 秒） |
+| ENG-11 starter の cutout | 済（X-Plane の N2 50 %。starter はコマンドを放すだけで、燃料を切る shut_down は使わない） |
+| ENG-12 autostart | 済（燃料投入、light-off・hot・hung、GE 3 回・109 2 回の再試行、30 秒 motoring、中止、空中は燃料を切って入れ直すだけ、auto-relight、ENG AUTOSTART、>AUTOSTART OFF。405 は無し） |
+| ENG-13 AUTOSTART で燃料弁 | 済（エンジン燃料弁は RUN と火災スイッチだけで開閉。autostart の燃料は EEC の計量） |
+| ENG-14 火災スイッチ | 済（エンジン燃料弁を閉じる。spar valve は燃料系 2-2 で） |
+| ENG-15 ENG FUEL VLV | 済（エンジン燃料弁か spar valve の不一致 5 秒。advisory 305〜308 を足した） |
+| ENG-16 igniter の状態 | 済（モデルの点火を X-Plane の igniter に書く。auto-ignite は切る） |
+| ENG-17 AUTO・STBY IGNITION | 済（条件、交代、igniter 1 は AC bus 1・2 は AC bus 3、standby の切替。X-Plane の igniter は 1 本なので、どちらかが点けば点火） |
+| ENG-18 ENG IGNITION | 済（CON、PW はフラップも、で点火していないとき） |
+| ENG-37 fuel-on の印 | 未（段 3） |
+| ENG-38 始動の空気 | 一部（start valve は抽気のモデルがダクト圧で開ける。スターターの回り方がダクト圧に依らないのは残り） |
+| ENG-01〜07、19〜36 | 未（段 2・3） |
+
 ## 気づいたこと（作業の途中で）
 
 - **同じ機体のまま新しいフライトを始めると、表示器と CDU が真っ暗になっていた**（2026-10-23、両 acf で再現。作り直し前からの不具合）：照明モジュールは、表示器と CDU の輝度に掛ける「電源」として X-Plane の汎用ライト 63（`sim/cockpit2/switches/generic_lights_switch[63]`）を `flight_start` で 1 にするが、機体を読み直さずにフライトを始めると、その後で X-Plane が 0 に戻す（機体を読み込むフライトでは 1 のまま）。電源のバスは生きていて、Web API で 1 を書くと 6 面と CDU が点いた。照明モジュールが毎フレーム読んで、0 なら 1 に戻すようにした（`B747_keep_light_power`、試験 `tests/lighting/`）。X-Plane で、読み直さない新しいフライトでも点灯することを確かめた。
@@ -394,3 +423,4 @@ PLAN.md §3 に書いた。要点：
 - 2026-10-23 15:2x：利用者の質問（表示器が真っ暗）で調べ、同じ機体のまま新しいフライトを始めると X-Plane が汎用ライト 63 を 0 に戻し、表示器と CDU が消えることが分かった（両 acf）。照明モジュールが毎フレーム戻すようにした。
 - 2026-10-23 15:3x〜16:4x：燃料（2-2）の組み込み。燃料モジュールの前の論理を外してモデルで回し、頭上の灯は新しい `fuel/light/*` を照明モジュールが読む。モデルに APU の DC 燃料ポンプと APU FUEL、FUEL RES XFR の左右を足した。試験：モデル 124 件、モジュール 62 件、照明 37 件。X-Plane（カスタム acf）：`s06_fuel`（新シナリオ）42/42、空中で予備移送（4 弁）・安定板タンクの移送・ジェティソン（約 2,200 kg/min、残り時間 17.9 分）、synoptic と頭上の灯を画像で確認。`s00` は純正 acf・カスタム acf とも 69/69。Lua の誤りなし。利用者の依頼で、全分野の実機との違いを DIFFERENCES.md にまとめた。
 - 2026-10-23 16:4x〜17:1x：燃費（FUEL-05）。巡航の測定のシナリオ `s07_cruise_ff` を作った（FL350 で空中開始、空中開始で上がった高度から FLCH で 35,000 ft に戻して ALT と SPD。A/T は MCP の 294 kt に届かず、その手前で釣り合った）。前のカスタム acf は Mach 0.791 で 1 発 1,612 kg/h、純正 acf は Mach 0.756 で 2,167 kg/h（FCOM PI.11.2 の見込みに近い）だったので、カスタム acf の `_jet_SFC_*` 4 つを純正と同じにした（バックアップ `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261023_before_sfc`）。変更後は Mach 0.788 で 2,134 kg/h。外観は chase 視点で変わらない。ACF_DIFF.md の壊れていた 1 行（HYD synoptic の行の頭）も直した。
+- 2026-10-23 17:1x〜17:5x：エンジン（2-3）段 1。始動・点火・燃料弁をエンジンごとの状態機械のモデルとグルーで作り直し、前の始動・starter・igniter・燃料弁の処理と ENG FAIL・>ENG SHUTDOWN・STARTER CUTOUT の判定を外した。抽気のモデルは start valve の指令を `engines/start_valve_cmd` から受ける。advisory に >AUTOSTART OFF と ENG FUEL VLV を足した。試験：モデル 77 件、モジュール 18 件、抽気モジュールの試験も合わせた。X-Plane：`s08_autostart`（新シナリオ）38/38（1 回目は始動の点火が idle まで続いたので、FCOM p.879 どおり cutout で止めた）、`s00` は両 acf 69/69。Lua の誤りなし。利用者から、違和感のない範囲ならパネルの画像を作ったり直したりしてよいと答え（「決まったこと」）。

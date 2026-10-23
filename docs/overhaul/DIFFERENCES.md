@@ -18,7 +18,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 空圧（ATA 36） | 作り直し済み（1-5） | 故障（過熱・過圧・ダクトリーク）がつながっていない、地上空気の操作が無い |
 | APU（ATA 49） | 作り直し済み（2-1） | 始動電源と回数の制限、空中の運用範囲 |
 | 燃料（ATA 28） | 作り直し済み（2-2） | FMC の燃料の計算、ポンプ・弁の故障、燃料温度、給油の配分 |
-| エンジン（ATA 71〜80） | 未着手（2-3） | 推力の決め方、ALTN、autostart、点火、超過表示 |
+| エンジン（ATA 71〜80） | 一部（2-3 段 1：始動・点火・燃料弁） | 推力の決め方（EEC）、idle、ALTN、超過表示、逆推力 |
 | 空調・与圧・機器冷却（ATA 21） | 未着手 | パック弁、与圧スケジュール、温度制御、CPC A/B |
 | 防氷・防雨（ATA 30） | 未着手 | 主翼防氷の左右、>ANTI-ICE、弁のメッセージ、プローブ加熱 |
 | 酸素（ATA 35） | 未着手 | 乗客酸素と酸素圧が無い |
@@ -136,13 +136,16 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 地上でポンプのスイッチが OFF のときに FUEL PUMP のメッセージを出すかは、資料に記載が無い（今は低圧なので出す）。
 - 推定：重力移送・安定板タンクのポンプ・ジェティソンの流量、APU の消費 150 kg/h、ポンプの AC バスの割り当て、フラップの離陸範囲の換算、安定板ポンプが低圧で止まるまで 30 秒。
 
-### エンジン（ATA 71〜80）：未着手（2-3）
+### エンジン（ATA 71〜80）：一部（2-3 段 1）
+
+実機に合わせた点（段 1）：エンジンごとの始動の状態機械（手動始動、autostart の燃料投入・light-off・hot・hung の検出・地上の再試行と中止・空中は中止しない）、50 % N2 の cutout、点火の条件（START、CON、フラップ、NAI、flameout）と AUTO・STBY IGNITION と電源、エンジン燃料弁（RUN と火災スイッチ）、START VLV・STARTER CUTOUT・FUEL VLV・ENG AUTOSTART・>AUTOSTART OFF・ENG IGNITION・ENG FAIL（caution）・>ENG SHUTDOWN。
+
+残っている違い：
 
 - レバーと推力指令の関係が EEC と違う（GE は N1 にレバーを直線で、PW/RR は EPR を比例で。外気・高度・rating に依らない。ENG-01）。
 - 最大 N1/EPR の琥珀線が EEC の max rated thrust でなく FMC の基準値（ENG-02）。推力の上限を acf の最大推力から作り、毎フレーム足している（ENG-03）。
 - ALTN モード（制御量の切替、ALTN 灯、ENG EEC MODE など）が無い（ENG-05）。
-- ENG FAIL が warning（FCOM は caution）（ENG-08）。
-- autostart が無い（監視、no light-off・hot・hung の検出、再試行。ENG-12）。点火の AUTO・STBY が効かない（ENG-16・17）。
+- >ENG SHUTDOWN で master CAUTION の灯を点けない扱いがまだ（ENG-09）。シムの AUTOSTART スイッチは 1 個（109 は 4 個）。PW の始動の値（燃料投入の N2、EGT の限界）は資料に無く推定。
 - approach idle の解除、LOW IDLE・IDLE DISAGREE が無い（ENG-06・07）。
 - 超過の red box と cue、partial・compact 形式、空中始動の範囲（X-BLD）が無い（ENG-21・22・24）。
 - 油圧・油温の限界が型式に依らない、油量と振動は作った値（ENG-25〜29）。

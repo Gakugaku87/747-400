@@ -64,7 +64,6 @@ local B747_hold_rev_on_engine		= {0, 0, 0, 0}
 local B747_hold_rev_on_all			= 0
 
 --local B747_igniter_status = {0, 0, 0, 0}
-local B747_ignition_startup_flag = {1, 1, 1, 1}
 
 math.randomseed(os.time())
 local B747_eng1oilStart = math.random(28, 31) * 1.18
@@ -1367,154 +1366,12 @@ end
 
 
 
------ STARTUP IGNITION ------------------------------------------------------------------
-function B747_startup_ignition()
-
-    -- IGNITION IS REQUIRED FOR STARTUP WITH ENGINES RUNNING
-    -- IF USER SHUTS DOWN AN ENGINE THEY WILL NEED TO MANUALLY RE-START OR RE-LOAD THE SIM
-    for i = 0, 3 do
-        if B747DR_display_N2[i] < 45.0                                            -- N2 is less than 55.0 %
-            and B747_ignition_startup_flag[i+1] == 1                                -- ALLOWS ONLY ONE (1)) AUTO-IGNITE AT SIM LOAD
-        then
-            simDR_engine_auto_ignite_on[i] = 1                                      -- TURN ON AUTO-IGNITE
-        else                                                                        -- ENGINE HAS STARTED
-            if simDR_engine_auto_ignite_on[i] == 1 then
-                simDR_engine_auto_ignite_on[i] = 0                                  -- TURN AUTO-IGNITE OFF
-                B747_ignition_startup_flag[i+1] = 0                                 -- SET FLAG TO PREVENT FUTURE AUTO-IGNITE
-            end
-        end
-    end
-
-end
-
-
-
-
-
 ----- EICAS MESSAGES --------------------------------------------------------------------
+-- (ENG FAIL, >ENG SHUTDOWN, STARTER CUTOUT and CON IGNITION ON come from the
+-- engine start glue, B747.40.xt.engine_start.lua)
 function B747_engines_EICAS_msg()
 
     
-
-    -- ENG 1 FAIL
-    
-    if (B747DR_display_N1[0]<15.0) and simDR_all_wheels_on_ground == 0
-    then
-        B747DR_CAS_warning_status[28] = 1
-    else
-        B747DR_CAS_warning_status[28] = 0
-    end
-
-    -- ENG 1 SHUTDOWN
-    
-    if (B747DR_engine01_fire_ext_switch_pos_disch > 0.95
-        or B747DR_fuel_control_toggle_switch_pos[0] < 0.05) and simDR_all_wheels_on_ground == 0
-    then
-        B747DR_CAS_caution_status[23] = 1
-    else
-        B747DR_CAS_caution_status[23] = 0
-    end
-
-    -- ENG 1 FAIL
-    
-    if (B747DR_display_N2[0]<15.0 and  B747DR_CAS_caution_status[23] == 0) and simDR_all_wheels_on_ground == 0
-    then
-        B747DR_CAS_warning_status[28] = 1
-    else
-        B747DR_CAS_warning_status[28] = 0
-    end
-
-    -- ENG 2 SHUTDOWN
-    
-    if (B747DR_engine02_fire_ext_switch_pos_disch > 0.95
-        or B747DR_fuel_control_toggle_switch_pos[1] < 0.05) and simDR_all_wheels_on_ground == 0 
-    then
-        B747DR_CAS_caution_status[24] = 1
-    else
-      B747DR_CAS_caution_status[24] = 0
-    end
-
-    -- ENG 2 FAIL
-    
-    if (B747DR_display_N2[1]<15.0 and  B747DR_CAS_caution_status[24] == 0) and simDR_all_wheels_on_ground == 0
-    then
-        B747DR_CAS_warning_status[29] = 1
-    else
-        B747DR_CAS_warning_status[29] = 0
-    end
-    -- ENG 3 SHUTDOWN
-    
-    if (B747DR_engine03_fire_ext_switch_pos_disch > 0.95
-        or B747DR_fuel_control_toggle_switch_pos[2] < 0.05) and simDR_all_wheels_on_ground == 0
-    then
-        B747DR_CAS_caution_status[25] = 1
-    else
-      B747DR_CAS_caution_status[25] = 0
-    end
-    -- ENG 3 FAIL
-    
-    if (B747DR_display_N2[2]<15.0 and  B747DR_CAS_caution_status[25] == 0) and simDR_all_wheels_on_ground == 0
-    then
-        B747DR_CAS_warning_status[30] = 1
-    else
-        B747DR_CAS_warning_status[30] = 0
-    end
-    -- ENG 4 SHUTDOWN
-    
-    if (B747DR_engine04_fire_ext_switch_pos_disch > 0.95
-        or B747DR_fuel_control_toggle_switch_pos[3] < 0.05) and simDR_all_wheels_on_ground == 0
-    then
-        B747DR_CAS_caution_status[26] = 1
-    else
-      B747DR_CAS_caution_status[26] = 0
-    end
-    -- ENG 3 FAIL
-    
-    if (B747DR_display_N2[3]<15.0 and  B747DR_CAS_caution_status[26] == 0) and simDR_all_wheels_on_ground == 0
-    then
-        B747DR_CAS_warning_status[31] = 1
-    else
-        B747DR_CAS_warning_status[31] = 0
-    end
-    -- STARTER CUTOUT 1
-    
-    if B747DR_bleedAir_engine1_start_valve_pos > 0.05
-        and B747DR_display_N2[0] > 45.0
-    then
-        B747DR_CAS_caution_status[61] = 1
-    else
-      B747DR_CAS_caution_status[61] = 0
-    end
-
-    -- STARTER CUTOUT 2
-    
-    if B747DR_bleedAir_engine2_start_valve_pos > 0.05
-        and B747DR_display_N2[1] > 45.0
-    then
-        B747DR_CAS_caution_status[62] = 1
-    else
-      B747DR_CAS_caution_status[62] = 0
-    end
-
-    -- STARTER CUTOUT 3
-    
-    if B747DR_bleedAir_engine3_start_valve_pos > 0.05
-        and B747DR_display_N2[2] > 45.0
-    then
-        B747DR_CAS_caution_status[63] = 1
-    else
-      B747DR_CAS_caution_status[63] = 0
-    end
-
-    -- STARTER CUTOUT 4
-    
-    if B747DR_bleedAir_engine4_start_valve_pos > 0.05
-        and B747DR_display_N2[3] > 45.0
-    then
-        B747DR_CAS_caution_status[64] = 1
-    else
-      B747DR_CAS_caution_status[64] = 0
-    end
 
     -- ENG 1 OIL TEMP
     
@@ -1602,13 +1459,6 @@ function B747_engines_EICAS_msg()
         if B747DR_display_N1[3] >= 111.51 then B747DR_CAS_advisory_status[137] = 1 else B747DR_CAS_advisory_status[137] = 0 end
     end
 
-    -- CON IGNITION ON
-    
-    if B747DR_CAS_advisory_status[109] == 0 then
-        if B747DR_button_switch_position[44] > 0.95 then B747DR_CAS_memo_status[8] = 1 else B747DR_CAS_memo_status[8] = 0 end
-    else
-      B747DR_CAS_memo_status[8] = 0
-    end
 
     
 end
@@ -1662,11 +1512,6 @@ end
 ----- SET STATE TO COLD & DARK ----------------------------------------------------------
 function B747_set_engines_CD()
 
-    B747DR_engine_fuel_valve_pos[0] = 0
-    B747DR_engine_fuel_valve_pos[1] = 0
-    B747DR_engine_fuel_valve_pos[2] = 0
-    B747DR_engine_fuel_valve_pos[3] = 0
-
 
 end
 
@@ -1677,12 +1522,7 @@ end
 ----- SET STATE TO ENGINES RUNNING ------------------------------------------------------
 function B747_set_engines_ER()
 	
-    B747DR_engine_fuel_valve_pos[0] = 1
-    B747DR_engine_fuel_valve_pos[1] = 1
-    B747DR_engine_fuel_valve_pos[2] = 1
-    B747DR_engine_fuel_valve_pos[3] = 1  
     simDR_thrust_spoolTime=5
-    B747_startup_ignition()
 	
 end
 
@@ -1719,421 +1559,14 @@ function B747_flight_start_engines()
 
     -- ALL MODES POST PROCESS -----------------------------------------------------------
     B747_set_engines_all_modes2()
+    B747_engine_start_flight_start()
 
 end
-local B747_igniter_status = {0, 0, 0, 0}
-local B747_starter_status = {0, 0, 0, 0}
--- ENGINE START SWITCH OFF
-function B747_engine_start_sw_off(engine)
-
-        if engine == 0 then
-            if B747DR_toggle_switch_position[16] > 0 then B747CMD_engine_start_switch1_off:once() end
-        end
-        if engine == 1 then
-            if B747DR_toggle_switch_position[17] > 0 then B747CMD_engine_start_switch2_off:once() end
-        end
-        if engine == 2 then
-            if B747DR_toggle_switch_position[18] > 0 then B747CMD_engine_start_switch3_off:once() end
-        end
-        if engine == 3 then
-            if B747DR_toggle_switch_position[19] > 0 then B747CMD_engine_start_switch4_off:once() end
-        end
-
-    end
-    -- ENGINE STARTERS ON
-    function B747_engine_starter_on(engine)
-
---         if engine == 0 then
---             if simDR_engine_starter_status[0] < 4 and B747_starter_status[1]==0 then simCMD_starter_on_1:start() B747_starter_status[1]=1 end
---         end
---         if engine == 1 then
---             if simDR_engine_starter_status[1] < 4 and B747_starter_status[2]==0 then simCMD_starter_on_2:start() B747_starter_status[2]=1 end
---         end
---         if engine == 2 then
---             if simDR_engine_starter_status[2] < 4 and B747_starter_status[3]==0 then simCMD_starter_on_3:start() B747_starter_status[3]=1 end
---         end
---         if engine == 3 then
---             if simDR_engine_starter_status[3] < 4 and B747_starter_status[4]==0 then simCMD_starter_on_4:start() B747_starter_status[4]=1 end
---         end
-	if engine == 0 then
-            if simDR_engine_starter_status[0] < 4 and B747_starter_status[1]==0 then simCMD_starter_on_1:start() simDR_engine_igniter_on[0]=1 B747_starter_status[1]=1 end
-        end
-        if engine == 1 then
-            if simDR_engine_starter_status[1] < 4 and B747_starter_status[2]==0 then simCMD_starter_on_2:start() simDR_engine_igniter_on[1]=1 B747_starter_status[2]=1 end
-        end
-        if engine == 2 then
-            if simDR_engine_starter_status[2] < 4 and B747_starter_status[3]==0 then simCMD_starter_on_3:start() simDR_engine_igniter_on[2]=1 B747_starter_status[3]=1 end
-        end
-        if engine == 3 then
-            if simDR_engine_starter_status[3] < 4 and B747_starter_status[4]==0 then simCMD_starter_on_4:start() simDR_engine_igniter_on[3]=1 B747_starter_status[4]=1 end
-        end
-    end
-    -- ENGINE STARTERS OFF
-    function B747_engine_starter_off(engine)
-
---         if engine == 0 then
---             if simDR_engine_starter_status[0] > 3 and B747_starter_status[1]==1 then simCMD_starter_on_1:stop() simCMD_starter_off_1:once() B747_starter_status[1]=0 end
---         end
---         if engine == 1 then
---             if simDR_engine_starter_status[1] > 3 and B747_starter_status[2]==1 then simCMD_starter_on_2:stop() simCMD_starter_off_2:once() B747_starter_status[2]=0 end
---         end
---         if engine == 2 then
---             if simDR_engine_starter_status[2] > 3 and B747_starter_status[3]==1 then simCMD_starter_on_3:stop() simCMD_starter_off_3:once() B747_starter_status[3]=0 end
---         end
---         if engine == 3 then
---             if simDR_engine_starter_status[3] > 3 and B747_starter_status[4]==1 then simCMD_starter_on_4:stop() simCMD_starter_off_4:once() B747_starter_status[4]=0 end
---         end
-	if engine == 0 then
-            if simDR_engine_starter_status[0] > 3 and B747_starter_status[1]==1 then simCMD_starter_on_1:stop() simCMD_starter_off_1:once() simDR_engine_igniter_on[0]=0 B747_starter_status[1]=0 end
-        end
-        if engine == 1 then
-            if simDR_engine_starter_status[1] > 3 and B747_starter_status[2]==1 then simCMD_starter_on_2:stop() simCMD_starter_off_2:once() simDR_engine_igniter_on[0]=0 B747_starter_status[2]=0 end
-        end
-        if engine == 2 then
-            if simDR_engine_starter_status[2] > 3 and B747_starter_status[3]==1 then simCMD_starter_on_3:stop() simCMD_starter_off_3:once() simDR_engine_igniter_on[0]=0 B747_starter_status[3]=0 end
-        end
-        if engine == 3 then
-            if simDR_engine_starter_status[3] > 3 and B747_starter_status[4]==1 then simCMD_starter_on_4:stop() simCMD_starter_off_4:once() simDR_engine_igniter_on[0]=0 B747_starter_status[4]=0 end
-        end
-    end
-
+-- the fire switches (the engine start glue reads them)
     B747DR_engine01_fire_ext_switch_pos_arm     = deferred_dataref("laminar/B747/fire/engine01/ext_switch/pos_arm", "number")
     B747DR_engine02_fire_ext_switch_pos_arm     = deferred_dataref("laminar/B747/fire/engine02/ext_switch/pos_arm", "number")
     B747DR_engine03_fire_ext_switch_pos_arm     = deferred_dataref("laminar/B747/fire/engine03/ext_switch/pos_arm", "number")
     B747DR_engine04_fire_ext_switch_pos_arm     = deferred_dataref("laminar/B747/fire/engine04/ext_switch/pos_arm", "number")    
-function B747_electronic_engine_control()
-
-
-    -------------------------------------------------------------------------------------
-    -----                         E N G I N E   S T A R T                           -----
-    -------------------------------------------------------------------------------------
-
-
-
-    --============================== ENGINE #1 ====================================--
-    if B747DR_display_N2[0] < 45.0 then
-
-        if B747DR_bleedAir_engine1_start_valve_pos > 0.95 then                      -- START VALVE IS OPENED (START SWITCH PULLED) AND SUPPLYING BLEED AIR
-            B747_engine_starter_on(0)                                               -- ENGAGE STARTER MOTOR
-        else                                                                        -- START VALVE IS CLOSED - TERMNINATE MOTORING
-            B747_engine_starter_off(0)                                              -- DISENGAGE STARTER MOTOR	-- TODO:  not needed??  starter is off automagically when not ON !!!!
-        end
-
-    -- STARTER CUTOUT @ N2 = 50.0%
-    else
-        B747_engine_start_sw_off(0)                                                 -- RESET START SWITCH
-        B747_engine_starter_off(0)                                                  -- DISENGAGE STARTER MOTOR
-
-    end
-
-
-    --============================== ENGINE #2 ====================================--
-    if B747DR_display_N2[1] < 45.0 then
-
-        if B747DR_bleedAir_engine2_start_valve_pos > 0.95 then                      -- START VALVE IS OPENED (START SWITCH PULLED) AND SUPPLYING BLEED AIR
-            B747_engine_starter_on(1)                                               -- ENGAGE STARTER MOTOR
-        else                                                                        -- START VALVE IS CLOSED - TERMNINATE MOTORING
-            B747_engine_starter_off(1)                                              -- DISENGAGE STARTER MOTOR
-        end
-
-    -- STARTER CUTOUT @ N2 = 50.0%
-    else
-        B747_engine_start_sw_off(1)                                                 -- RESET START SWITCH
-        B747_engine_starter_off(1)                                                  -- DISENGAGE STARTER MOTOR
-
-    end
-
-
-    --============================== ENGINE #3 ====================================--
-    if B747DR_display_N2[2] < 45.0 then
-
-        if B747DR_bleedAir_engine3_start_valve_pos > 0.95 then                      -- START VALVE IS OPENED (START SWITCH PULLED) AND SUPPLYING BLEED AIR
-            B747_engine_starter_on(2)                                               -- ENGAGE STARTER MOTOR
-        else                                                                        -- START VALVE IS CLOSED - TERMNINATE MOTORING
-            B747_engine_starter_off(2)                                              -- DISENGAGE STARTER MOTOR
-        end
-
-    -- STARTER CUTOUT @ N2 = 50.0%
-    else
-        B747_engine_start_sw_off(2)                                                 -- RESET START SWITCH
-        B747_engine_starter_off(2)                                                  -- DISENGAGE STARTER MOTOR
-
-    end
-
-
-    --============================== ENGINE #4 ====================================--
-    if B747DR_display_N2[3] < 45.0 then
-
-        if B747DR_bleedAir_engine4_start_valve_pos > 0.95 then                      -- START VALVE IS OPENED (START SWITCH PULLED) AND SUPPLYING BLEED AIR
-            B747_engine_starter_on(3)                                               -- ENGAGE STARTER MOTOR
-        else                                                                        -- START VALVE IS CLOSED - TERMNINATE MOTORING
-            B747_engine_starter_off(3)                                              -- DISENGAGE STARTER MOTOR
-        end
-
-    -- STARTER CUTOUT @ N2 = 50.0%
-    else
-        B747_engine_start_sw_off(3)                                                 -- RESET START SWITCH
-        B747_engine_starter_off(3)                                                  -- DISENGAGE STARTER MOTOR
-
-    end
-
-
-
-
-
-
-
-
-    -------------------------------------------------------------------------------------
-    -----                             I G N I T E R S                               -----
-    -------------------------------------------------------------------------------------
-
-    ----- ENGINE #1 IGNITER STATUS ------------------------------------------------------
-    if B747DR_button_switch_position[44] > 0.95                                         -- CONTINUOUS IGNITION SELECTED
-        or simDR_flap_deploy_ratio > 0.0                                                -- FLAPS OUT OF "UP" POSITION
-        or simDR_engine_nacelle_heat_on[0] == 1                                         -- ENGINE NACELLE HEAT IS ON
-
-        -- MANUAL START
-        or (B747DR_button_switch_position[45] < 0.05                                    -- AUTOSTART BUTTON SWITCH IS NOT DEPRESSED
-            and B747DR_toggle_switch_position[16] == 1.0                                -- START SWITCH "PULLED"
-            and B747DR_fuel_control_toggle_switch_pos[0] == 1.0)                        -- FUEL CONTROL SWITCH SET TO "RUN"
-
-        -- AUTOSTART
-        or (B747DR_button_switch_position[45] > 0.95                                    -- AUTOSTART BUTTON DEPRESSED
-            and B747DR_toggle_switch_position[16] > 0.95                                -- ENGINE START SWITCH "PULLED"
-            and B747DR_fuel_control_toggle_switch_pos[0] > 0.95                         -- FUEL CUTOFF SWITCH IS IN THE "RUN" POSITION
-            and B747DR_engine_fuel_valve_pos[0] == 1)                                   -- SEQUENCE IGNITER AFTER FUEL INTRO
-
-    then
-        B747_igniter_status[1] = 1
-    else
-        B747_igniter_status[1] = 0
-    end
-
-    ----- ENGINE #2 IGNITER STATUS ------------------------------------------------------
-    if B747DR_button_switch_position[44] > 0.95                                         -- CONTINUOUS IGNITION SELECTED
-        or simDR_flap_deploy_ratio > 0.0                                                -- FLAPS OUT OF "UP" POSITION
-        or simDR_engine_nacelle_heat_on[1] == 1                                         -- ENGINE NACELLE HEAT IS ON
-
-        -- MANUAL START
-        or (B747DR_button_switch_position[45] < 0.05                                    -- AUTOSTART BUTTON SWITCH IS NOT DEPRESSED
-            and B747DR_toggle_switch_position[17] == 1.0                                -- START SWITCH "PULLED"
-            and B747DR_fuel_control_toggle_switch_pos[1] == 1.0)                        -- FUEL CONTROL SWITCH SET TO "RUN"
-
-        -- AUTOSTART
-        or (B747DR_button_switch_position[45] > 0.95                                    -- AUTOSTART BUTTON DEPRESSED
-            and B747DR_toggle_switch_position[17] > 0.95                                -- ENGINE START SWITCH "PULLED"
-            and B747DR_fuel_control_toggle_switch_pos[1] > 0.95                         -- FUEL CUTOFF SWITCH IS IN THE "RUN" POSITION
-            and B747DR_engine_fuel_valve_pos[1] == 1)                                   -- SEQUENCE IGNITER AFTER FUEL INTRO
-
-
-    then
-        B747_igniter_status[2] = 1
-    else
-        B747_igniter_status[2] = 0
-    end
-
-    ----- ENGINE #3 IGNITER STATUS ------------------------------------------------------
-    if B747DR_button_switch_position[44] > 0.95                                         -- CONTINUOUS IGNITION SELECTED
-        or simDR_flap_deploy_ratio > 0.0                                                -- FLAPS OUT OF "UP" POSITION
-        or simDR_engine_nacelle_heat_on[2] == 1                                         -- ENGINE NACELLE HEAT IS ON
-
-        -- MANUAL START
-        or (B747DR_button_switch_position[45] < 0.05                                    -- AUTOSTART BUTTON SWITCH IS NOT DEPRESSED
-            and B747DR_toggle_switch_position[18] == 1.0                                -- START SWITCH "PULLED"
-            and B747DR_fuel_control_toggle_switch_pos[2] == 1.0)                        -- FUEL CONTROL SWITCH SET TO "RUN"
-
-        -- AUTOSTART
-        or (B747DR_button_switch_position[45] > 0.95                                    -- AUTOSTART BUTTON DEPRESSED
-            and B747DR_toggle_switch_position[18] > 0.95                                -- ENGINE START SWITCH "PULLED"
-            and B747DR_fuel_control_toggle_switch_pos[2] > 0.95                         -- FUEL CUTOFF SWITCH IS IN THE "RUN" POSITION
-            and B747DR_engine_fuel_valve_pos[2] == 1)                                   -- SEQUENCE IGNITER AFTER FUEL INTRO
-
-
-    then
-        B747_igniter_status[3] = 1
-    else
-        B747_igniter_status[3] = 0
-    end
-
-    ----- ENGINE #4 IGNITER STATUS ------------------------------------------------------
-    if B747DR_button_switch_position[44] > 0.95                                         -- CONTINUOUS IGNITION SELECTED
-        or simDR_flap_deploy_ratio > 0.0                                                -- FLAPS OUT OF "UP" POSITION
-        or simDR_engine_nacelle_heat_on[3] == 1                                         -- ENGINE NACELLE HEAT IS ON
-
-        -- MANUAL START
-        or (B747DR_button_switch_position[45] < 0.05                                    -- AUTOSTART BUTTON SWITCH IS NOT DEPRESSED
-            and B747DR_toggle_switch_position[19] == 1.0                                -- START SWITCH "PULLED"
-            and B747DR_fuel_control_toggle_switch_pos[3] == 1.0)                        -- FUEL CONTROL SWITCH SET TO "RUN"
-
-        -- AUTOSTART
-        or (B747DR_button_switch_position[45] > 0.95                                    -- AUTOSTART BUTTON DEPRESSED
-            and B747DR_toggle_switch_position[19] > 0.95                                -- ENGINE START SWITCH "PULLED"
-            and B747DR_fuel_control_toggle_switch_pos[3] > 0.95                         -- FUEL CUTOFF SWITCH IS IN THE "RUN" POSITION
-            and B747DR_engine_fuel_valve_pos[3] == 1)                                   -- SEQUENCE IGNITER AFTER FUEL INTRO
-
-
-    then
-        B747_igniter_status[4] = 1
-    else
-        B747_igniter_status[4] = 0
-    end
-
-
-
-
-    ----- SET X-PLANE IGNITER STATE -----------------------------------------------------
--- ENGINE 1
-    --print(B747_igniter_status[1] .. " " .. B747_starter_status[1].. " " .. simDR_engine_igniter_on[1])
-    --if B747_igniter_status[1] == 0 and B747_starter_status[1]==1 then simCMD_starter_on_1:stop() B747_starter_status[1]=0 end
-    --[[if B747_igniter_status[1] == 0 and simDR_engine_igniter_on[0] == 1 then
-        simCMD_igniter_off_1:once()
-    end
-    --[[
-    -- ENGINE 2
-    if B747_igniter_status[2] == 0 and B747_starter_status[2]==1 then simCMD_starter_on_2:stop() B747_starter_status[2]==0 end
-    if B747_igniter_status[2] == 0 and simDR_engine_igniter_on[1] == 1 then
-        simCMD_igniter_off_2:once()
-    end
-
-    -- ENGINE 3
-    if B747_igniter_status[3] == 0 and B747_starter_status[3]==1 then simCMD_starter_on_2:stop() B747_starter_status[3]==0 end
-    if B747_igniter_status[3] == 0 and simDR_engine_igniter_on[2] == 1 then
-        simCMD_igniter_off_3:once()
-    end
-
-    -- ENGINE 4
-    if B747_igniter_status[4] == 0 and B747_starter_status[4]==1 then simCMD_starter_on_2:stop() B747_starter_status[4]==0 end
-    if B747_igniter_status[4] == 0 and simDR_engine_igniter_on[3] == 1 then
-        simCMD_igniter_off_4:once()
-    end
-    --[[
-    -- ENGINE 1
-    if B747_igniter_status[1] == 1 and simDR_engine_igniter_on[0] == 0 then
-        simCMD_igniter_on_1:once()
-    elseif B747_igniter_status[1] == 0 and simDR_engine_igniter_on[0] == 1 then
-        simCMD_igniter_off_1:once()
-    end
-
-    -- ENGINE 2
-    if B747_igniter_status[2] == 1 and simDR_engine_igniter_on[1] == 0 then
-        simCMD_igniter_on_2:once()
-    elseif B747_igniter_status[2] == 0 and simDR_engine_igniter_on[1] == 1 then
-        simCMD_igniter_off_2:once()
-    end
-
-    -- ENGINE 3
-    if B747_igniter_status[3] == 1 and simDR_engine_igniter_on[2] == 0 then
-        simCMD_igniter_on_3:once()
-    elseif B747_igniter_status[3] == 0 and simDR_engine_igniter_on[2] == 1 then
-        simCMD_igniter_off_3:once()
-    end
-
-    -- ENGINE 4
-    if B747_igniter_status[4] == 1 and simDR_engine_igniter_on[3] == 0 then
-        simCMD_igniter_on_4:once()
-    elseif B747_igniter_status[4] == 0 and simDR_engine_igniter_on[3] == 1 then
-        simCMD_igniter_off_4:once()
-    end]]
-
-
-
-
-    -------------------------------------------------------------------------------------
-    -----                  E N G I N E   F U E L   V A L V E S                      -----   TODO:  ADD POWER REQUIREMENT FOR VALVE ACTUATION ?
-    -------------------------------------------------------------------------------------
-
-    ----- ENGINE #1 ---------------------------------------------------------------------
-    
-
-    -- MANUAL START
-    if B747DR_engine01_fire_ext_switch_pos_arm==1 then
-        B747DR_engine_fuel_valve_pos[0] = 0 
-    elseif B747DR_button_switch_position[45] < 0.5                                              -- AUTOSTART BUTTON NOT DEPRESSED
-        and B747DR_fuel_control_toggle_switch_pos[0] == 1.0                                 -- FUEL CONTROL SWITCH SET TO "RUN"
-    then
-        B747DR_engine_fuel_valve_pos[0] = 1                                                 -- OPEN THE VALVE
-
-    -- AUTOSTART
-    elseif B747DR_button_switch_position[45] > 0.5                                          -- AUTOSTART BUTTON DEPRESSED
-        and B747DR_display_N2[0] > 15.0
-    then
-        B747DR_engine_fuel_valve_pos[0] = 1                                                 -- OPEN THE VALVE
-    else
-	    B747DR_engine_fuel_valve_pos[0] = 0                                                     -- VALVE IS NORMALLY CLOSED
-    end
-    simDR_engine_fuel_mix_ratio[0] =  B747DR_engine_fuel_valve_pos[0]                       -- SET SIM MIXTURE RATIO
-
-
-
-    ----- ENGINE #2 ---------------------------------------------------------------------
-    
-
-    -- MANUAL START
-    if B747DR_engine02_fire_ext_switch_pos_arm==1 then
-        B747DR_engine_fuel_valve_pos[1] = 0 
-    elseif B747DR_button_switch_position[45] < 0.5                                              -- AUTOSTART BUTTON NOT DEPRESSED
-        and B747DR_fuel_control_toggle_switch_pos[1] == 1.0                                 -- FUEL CONTROL SWITCH SET TO "RUN"
-    then
-        B747DR_engine_fuel_valve_pos[1] = 1                                                 -- OPEN THE VALVE
-
-    -- AUTOSTART
-    elseif B747DR_button_switch_position[45] > 0.5                                          -- AUTOSTART BUTTON DEPRESSED
-        and B747DR_display_N2[1] > 15.0
-    then
-        B747DR_engine_fuel_valve_pos[1] = 1                                                 -- OPEN THE VALVE
-    else
-      B747DR_engine_fuel_valve_pos[1] = 0                                                     -- VALVE IS NORMALLY CLOSED
-    end
-    simDR_engine_fuel_mix_ratio[1] =  B747DR_engine_fuel_valve_pos[1]                       -- SET SIM MIXTURE RATIO
-
-
-
-    ----- ENGINE #3 ---------------------------------------------------------------------
-    
-
-    -- MANUAL START
-    if B747DR_engine03_fire_ext_switch_pos_arm==1 then
-        B747DR_engine_fuel_valve_pos[2] = 0 
-    elseif B747DR_button_switch_position[45] < 0.5                                              -- AUTOSTART BUTTON NOT DEPRESSED
-        and B747DR_fuel_control_toggle_switch_pos[2] == 1.0                                 -- FUEL CONTROL SWITCH SET TO "RUN"
-    then
-        B747DR_engine_fuel_valve_pos[2] = 1                                                 -- OPEN THE VALVE
-
-    -- AUTOSTART
-    elseif B747DR_button_switch_position[45] > 0.5                                          -- AUTOSTART BUTTON DEPRESSED
-        and B747DR_display_N2[2] > 15.0
-    then
-        B747DR_engine_fuel_valve_pos[2] = 1                                                 -- OPEN THE VALVE
-    else
-      B747DR_engine_fuel_valve_pos[2] = 0                                                     -- VALVE IS NORMALLY CLOSED
-    end
-    simDR_engine_fuel_mix_ratio[2] =  B747DR_engine_fuel_valve_pos[2]                       -- SET SIM MIXTURE RATIO
-
-
-
-    ----- ENGINE #4 ---------------------------------------------------------------------
-    
-
-    -- MANUAL START
-    if B747DR_engine04_fire_ext_switch_pos_arm==1 then
-        B747DR_engine_fuel_valve_pos[3] = 0 
-    elseif B747DR_button_switch_position[45] < 0.5                                              -- AUTOSTART BUTTON NOT DEPRESSED
-        and B747DR_fuel_control_toggle_switch_pos[3] == 1.0                                 -- FUEL CONTROL SWITCH SET TO "RUN"
-    then
-        B747DR_engine_fuel_valve_pos[3] = 1                                                 -- OPEN THE VALVE
-
-    -- AUTOSTART
-    elseif B747DR_button_switch_position[45] > 0.5                                          -- AUTOSTART BUTTON DEPRESSED
-        and B747DR_display_N2[3] > 15.0
-    then
-        B747DR_engine_fuel_valve_pos[3] = 1                                                 -- OPEN THE VALVE
-    else
-      B747DR_engine_fuel_valve_pos[3] = 0                                                     -- VALVE IS NORMALLY CLOSED
-    end
-    simDR_engine_fuel_mix_ratio[3] =  B747DR_engine_fuel_valve_pos[3]                       -- SET SIM MIXTURE RATIO
-
-end
 
 
 
@@ -2150,6 +1583,8 @@ end
 --** 				                  EVENT CALLBACKS           	    			 **--
 --*************************************************************************************--
 
+dofile("B747.40.xt.engine_start.lua")
+
 function aircraft_load() end
 
 function aircraft_unload() end
@@ -2164,7 +1599,7 @@ end
 debug_engines     = deferred_dataref("laminar/B747/debug/engines", "number")
 function before_physics()
     if debug_engines>0 then return end
-    B747_electronic_engine_control()
+    B747_engine_start()
 
 end
 local setSimConfig=false
@@ -2204,7 +1639,6 @@ function after_physics()
 
    
 
-    B747_startup_ignition()
 
     B747_prop_mode()
     

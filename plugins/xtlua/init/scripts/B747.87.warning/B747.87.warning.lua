@@ -418,7 +418,12 @@ B747_CASadvisoryMsg   = {
     {DRindex = 300, name = ">YAW DAMPER LWR", status = 0},      --
     {DRindex = 301, name = ">YAW DAMPER UPR", status = 0},      --
     {DRindex = 302, name = ">FUEL LOW CTR L", status = 0},      --
-    {DRindex = 303, name = ">FUEL LOW CTR R", status = 0} 
+    {DRindex = 303, name = ">FUEL LOW CTR R", status = 0},
+    {DRindex = 304, name = ">AUTOSTART OFF", status = 0},
+    {DRindex = 305, name = "ENG 1 FUEL VLV", status = 0},
+    {DRindex = 306, name = "ENG 2 FUEL VLV", status = 0},
+    {DRindex = 307, name = "ENG 3 FUEL VLV", status = 0},
+    {DRindex = 308, name = "ENG 4 FUEL VLV", status = 0}
 }
 
 B747_CASmemoMsg   = {

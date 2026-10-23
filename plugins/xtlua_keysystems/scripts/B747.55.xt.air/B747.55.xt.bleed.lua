@@ -20,6 +20,7 @@ B747DR_bleed_light_isln_valve   = find_dataref("laminar/B747/air/light/isln_valv
 B747DR_bleed_light_apu_valve    = find_dataref("laminar/B747/air/light/apu_valve")
 simDR_bleed_fail_apu_press      = find_dataref("sim/operation/failures/rel_APU_press")
 B747DR_bleed_CAS_status         = find_dataref("laminar/B747/CAS/status_status")
+B747DR_bleed_start_valve_cmd    = find_dataref("laminar/B747/engines/start_valve_cmd")
 
 local BLEED_SWITCH = 77         -- button_switch/position[77-80]: ENGINE BLEED 1-4
 local NAI_SWITCH = 68           -- button_switch/position[68-71]: NAI 1-4
@@ -39,6 +40,7 @@ local STATUS_ISLN_APU = 24      -- BLEED ISLN APU
 
 local bleed_state = B.new()
 local bleed_inputs = B.inputs()
+bleed_inputs.start_cmd = {false, false, false, false}     -- from laminar/B747/engines/start_valve_cmd
 
 local function flag(v)
     if v then return 1 end
@@ -65,6 +67,7 @@ local function read_inputs(inp)
         inp.nai_on[n] = B747DR_button_switch_position[NAI_SWITCH + n - 1] > 0.95
         inp.start_pulled[n] = B747DR_toggle_switch_position[START_SWITCH + n - 1] > 0.95
         inp.fuel_run[n] = B747DR_fuel_control_toggle_switch_pos[n - 1] > 0.95
+        inp.start_cmd[n] = B747DR_bleed_start_valve_cmd[n - 1] > 0.5   -- the engine start model (manual or autostart)
         inp.fire_out[n] = fire_out(n)
         inp.n2[n] = B747DR_display_N2[n - 1]
         inp.dc[n] = B747DR_bleed_elec_dc[n - 1] > 0.5

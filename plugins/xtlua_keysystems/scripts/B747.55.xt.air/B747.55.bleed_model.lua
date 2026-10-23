@@ -55,6 +55,7 @@ function M.inputs()
         start_pulled = {false, false, false, false},
         autostart = true,                          -- AUTOSTART switch
         fuel_run = {false, false, false, false},   -- FUEL CONTROL RUN
+        start_cmd = nil,                           -- the start valve commands from the engine start model (2-3), if given
         overheat = {false, false, false, false},   -- failure: bleed overheat
         isln_on = {true, true},                    -- L, R isolation switches
         apu_bleed_on = true,
@@ -153,7 +154,8 @@ function M.update(s, inp, dt)
     for n = 1, 4 do
         local se, oe = s.eng[n], out.eng[n]
         local sect = M.ENGINE_SECTION[n]
-        oe.start_cmd = inp.start_pulled[n] and (not inp.autostart or inp.fuel_run[n])
+        if inp.start_cmd then oe.start_cmd = inp.start_cmd[n]
+        else oe.start_cmd = inp.start_pulled[n] and (not inp.autostart or inp.fuel_run[n]) end
         se.reverse = inp.bleed_on[n] and not inp.fire_out[n] and inp.start_pulled[n] and inp.dc[n]
             and prev[sect] >= M.PRSOV_MIN_PSI
     end

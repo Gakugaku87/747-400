@@ -67,6 +67,8 @@ B747DR_reverse_mnp_show				= deferred_dataref("laminar/B747/engine/rev_mnp_show"
 B747DR_reverse_mnp_show_all			= deferred_dataref("laminar/B747/engine/rev_mnp_show_all", "number")
 
 B747DR_engine_fuel_valve_pos        = deferred_dataref("laminar/B747/engines/fuel_valve_pos", "array[4)")
+-- the start valve commands from the engine start model (1 open), read by the bleed glue
+B747DR_engine_start_valve_cmd       = deferred_dataref("laminar/B747/engines/start_valve_cmd", "array[4]")
 B747DR_EICAS2_fuel_on_ind_status    = deferred_dataref("laminar/B747/engines/fuel_on_indicator_status", "array[4)")
 B747DR_EICAS2_oil_press_status      = deferred_dataref("laminar/B747/engines/EICAS2_oil_press_status", "array[4)")
 B747DR_EICAS2_engine_vibration      = deferred_dataref("laminar/B747/engines/vibration", "array[4)")
