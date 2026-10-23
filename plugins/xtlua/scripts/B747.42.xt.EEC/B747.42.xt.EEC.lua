@@ -757,9 +757,10 @@ function ecc_spd()
 			simDR_override_throttles = 1
 		end
 		local diffSpeed=2
+		local eec_control = {} --GE and PW: the EEC's thrust control (B747.42.xt.eec_thrust.lua)
 		--print("ecc spd")
 		for i = 0, 3 do
-
+			eec_control[i] = false
 			if B747DR_display_N2[i]<60 and simDR_onGround == 1 then
 				eccPid[i].kp=0.06
 				eccPid[i].ki=0
@@ -767,13 +768,9 @@ function ecc_spd()
 				eccPid[i].input = 100
 				eccPid[i].target = 1
 				--print("cull fuel")
-			elseif B747DR_engineType==1 then --GE, n1 target
-				eccPid[i].kp=B747DR_pideccP
-				eccPid[i].ki=B747DR_pideccI
-				eccPid[i].kd=B747DR_pideccD
-				eccPid[i].input = B747DR_display_N1[i]
-				eccPid[i].target = B747DR_throttle_resolver_angle[i]
-			else --PW or RR, EPR target
+			elseif B747DR_engineType~=2 then --GE (N1) or PW (EPR)
+				eec_control[i] = true
+			else --RR, EPR target
 				if B747DR_display_N1[i]>110.1 then
 					eccPid[i].input = 50.0*B747DR_display_EPR[i]
 					eccPid[i].target = 1.5 --cull fuel if exceeding N1 limit
@@ -802,9 +799,13 @@ function ecc_spd()
 			if eccPid[i].output~=nil then
 				local tValue=round(eccPid[i].output*100)/100
 				if simDR_engine_running[i] ==1 then
-					if simDR_prop_mode[i]==1 then
+					if simDR_prop_mode[i]==1 and eec_control[i] then
+						simDR_engn_thro_use[i]=B747_eec_throttle(i)
+					elseif simDR_prop_mode[i]==1 then
+						B747_eec_reset_throttle(i)
 						simDR_engn_thro_use[i]=B747_interpolate_value(simDR_engn_thro_use[i],eccPid[i].output,0,1.1,diffSpeed)
 					else
+						B747_eec_reset_throttle(i)
 						if simDR_reverser_deploy_ratio[i] >0.98 then
 							simDR_engn_thro_use[i]=B747DR_throttle_reversor[i]*-1
 						else
@@ -812,6 +813,7 @@ function ecc_spd()
 						end
 					end
 				else
+					B747_eec_reset_throttle(i)
 					simDR_engn_thro_use[i]=0
 				end
 				--print(i.." throttle target="..eccPid[i].target.. " current "..eccPid[i].input.." AT retval "..eccPid[i].output .. " t="..simDR_engn_thro_use[i].. " diffSpeed="..diffSpeed)

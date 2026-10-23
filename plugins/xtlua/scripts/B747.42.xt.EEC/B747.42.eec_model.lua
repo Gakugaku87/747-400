@@ -2,11 +2,12 @@
 -- the conditions (Max N1 for the CF6-80C2, Max EPR for the PW4056), the
 -- command the thrust lever asks for between idle and that maximum, so that
 -- full forward gives the maximum rated thrust in any phase (FCOM p.876),
--- the alternate mode and the idle selection. Logic and sources:
+-- the alternate mode, the overspeed protection and the idle selection.
+-- Logic and sources:
 -- docs/overhaul/notes/ATA-70-80.md §4.1, §4.2 and §4.4 (FCOM 7.20
 -- p.873-878; ATA70_80 p.146-151 and p.202-211 for the CF6; FCOM PI for the
 -- ratings).
--- B747.42.xt.eec_thrust.lua feeds it and gives the command to the engines'
+-- B747.42.xt.eec_thrust.lua feeds it and gives the target to the engines'
 -- thrust control.
 --
 --   local E = B747_eec_model
@@ -53,6 +54,48 @@ M.LANDING_FLAPS_DEG = 23            -- trailing edge flaps past 23° (ATA70_80 p
 -- >ENG n LIM PROT (FCOM p.900): GE when the command passes the maximum
 -- rating, P&W when it comes near it (within LIM_PROT_EPR, estimate).
 M.LIM_PROT_EPR = 0.01
+
+-- overspeed protection (FCOM p.878; ATA70_80 p.205): above idle the EEC
+-- keeps N1 and N2 from passing their operating limits (the red lines)
+-- whatever the lever asks. A rotor's limit loop works once the rotor is
+-- within RPM_BAND of its red line less RPM_MARGIN: it allows the controlled
+-- value (N1 for GE, EPR for P&W) the present one plus RPM_GAIN for each
+-- percent the rotor is short of that (less when past it). The thrust
+-- control aims at the lowest of the command and the limits (target), so the
+-- rotor settles RPM_MARGIN below its red line. The GE controls N1 itself:
+-- its N1 limit caps the command. >ENG n RPM LIM while a limit holds the
+-- engine (allows it no more than RPM_LIM_SHOW above its present value) more
+-- than RPM_LIM_SHOW below the command (FCOM p.901: GE on N2, P&W on N1 or
+-- N2). Red lines: CF6 ATA70_80 p.205; P&W those the displays turn red at
+-- (no source). Margin, band, gains and threshold: estimates.
+M.REDLINE = {GE = {n1 = 117.5, n2 = 112.5}, PW = {n1 = 111.4, n2 = 111.4}}
+M.RPM_MARGIN = 0.5                          -- %
+M.RPM_BAND = 2                              -- %
+M.RPM_GAIN = {GE = 0.6, PW = 0.01}          -- N1 % or EPR for each % of the rotor
+M.RPM_LIM_SHOW = {GE = 0.2, PW = 0.005}     -- N1 % or EPR
+
+-- the thrust control (FCOM p.875-876): the EEC adjusts fuel flow until the
+-- controlled value (N1 for GE, EPR for P&W) equals the target. In the sim
+-- the fuel metering is X-Plane's throttle (0 to 1) and X-Plane's engine
+-- gives the spool-up and spool-down. The value the control follows (ref)
+-- closes on the target with a time constant of lag seconds and at no more
+-- than up or down each second (the EEC's acceleration and deceleration
+-- schedules; slower down, as X-Plane's engine is slow to turn from spooling
+-- down to spooling up). The throttle moves by ki times the error each
+-- second and kp times the error's change, both divided by the controlled
+-- value's slope against the throttle at its present value (the displayed
+-- EPR steepens fourfold towards full thrust), so that the loop answers
+-- alike at any thrust. With the lever at its idle end the throttle is 0
+-- (the EEC's idle). Gains, rates and slopes: estimates, the slopes measured
+-- in X-Plane (8,000-13,500 ft, M.42-.49; near idle the displays hardly move).
+M.THRUST = {
+    PW = {ki = 2.0, kp = 3.0, lag = 1.5, up = 0.15, down = 0.15,       -- EPR each second
+        at = {0.97, 1.03, 1.1, 1.23, 1.34, 1.46, 1.57, 1.64, 1.71},
+        slope = {0.3, 0.6, 0.9, 1.35, 1.86, 2.5, 2.9, 3.7, 4.2}},     -- EPR for each unit of throttle
+    GE = {ki = 2.0, kp = 3.0, lag = 1.5, up = 15, down = 5,            -- N1 % each second
+        at = {35, 45, 60, 75, 90, 100},
+        slope = {20, 100, 112, 100, 80, 77}},                          -- N1 % for each unit of throttle
+}
 
 -- FCOM PI tables, 3 packs on, anti-ice off. Rows by TAT (°C, warm to cold),
 -- columns by pressure altitude (ft); false where the table is blank (too
@@ -260,12 +303,69 @@ function M.inputs()
         reverser = {false, false, false, false},   -- the engine's reverser not stowed
         at_approach = nil,                   -- {n} engine at approach idle; nil: as selected
         altn = {false, false, false, false}, -- EEC MODE switch at ALTN
+        n1 = {0, 0, 0, 0},                   -- the engines' N1 and N2, %
+        n2 = {0, 0, 0, 0},
+        actual = {0, 0, 0, 0},               -- the controlled value now: N1 (GE) or EPR (P&W)
     }
+end
+
+-- the overspeed protection: the target of each engine's thrust control and
+-- whether a rotor limit holds it back (>ENG n RPM LIM)
+local function overspeed(inp, out)
+    local key = inp.type == "GE" and "GE" or "PW"
+    local red, gain, show = M.REDLINE[key], M.RPM_GAIN[key], M.RPM_LIM_SHOW[key]
+    -- a rotor's limit loop: the controlled value it allows (nil while the
+    -- rotor is short of its band)
+    local function limit(rpm, redline, actual)
+        local short = redline - M.RPM_MARGIN - rpm
+        if short > M.RPM_BAND then return nil end
+        return actual + gain * short
+    end
+    out.target, out.rpm_lim = {}, {}
+    for n = 1, 4 do
+        local actual, command = inp.actual[n], out.command[n]
+        local lim = limit(inp.n2[n], red.n2, actual)
+        if key == "GE" then
+            command = math.min(command, red.n1 - M.RPM_MARGIN)
+        else
+            local lim1 = limit(inp.n1[n], red.n1, actual)
+            if lim1 and (lim == nil or lim1 < lim) then lim = lim1 end
+        end
+        local target = command
+        if lim and lim < target then target = lim end
+        out.target[n] = target
+        out.rpm_lim[n] = lim ~= nil and lim < command - show and lim <= actual + show
+    end
 end
 
 function M.new()
     return {approach = {false, false, false, false}, hold = {0, 0, 0, 0},
-        altn = {false, false, false, false}}
+        altn = {false, false, false, false}, throttle = {}, err = {}, ref = {}}
+end
+
+-- engine n's throttle for its target (key "GE" or "PW"; current: X-Plane's
+-- throttle now, where the control starts from; idle: the lever's idle end
+-- command)
+function M.thrust_control(s, key, n, target, actual, current, idle, dt)
+    local g = M.THRUST[key]
+    if target <= idle then
+        s.throttle[n], s.err[n], s.ref[n] = 0, nil, actual
+        return 0
+    end
+    local ref = s.ref[n] or actual
+    ref = ref + clamp((target - ref) * math.min(1, dt / g.lag), -g.down * dt, g.up * dt)
+    local th = s.throttle[n] or clamp(current, 0, 1)
+    local err = ref - actual
+    local slope = interp(g.at, g.slope, actual)
+    th = clamp(th + (g.ki * err * dt + g.kp * (err - (s.err[n] or err))) / slope, 0, 1)
+    s.throttle[n], s.err[n], s.ref[n] = th, err, ref
+    return th
+end
+
+-- the control starts again from X-Plane's throttle (engine stopped,
+-- starting or in reverse)
+function M.reset_thrust_control(s, n)
+    s.throttle[n], s.err[n], s.ref[n] = nil, nil, nil
 end
 
 -- approach idle of each engine, and the idle messages: ENG n LOW IDLE
@@ -340,6 +440,7 @@ function M.update(s, inp, dt)
     -- mode, P&W with all four back in the normal mode (FCOM p.877)
     if inp.type == "GE" then out.at_inhibit = altn_count > 0 and altn_count < 4
     else out.at_inhibit = altn_count > 0 end
+    overspeed(inp, out)
     idle_selection(s, inp, dt, out)
     return out
 end

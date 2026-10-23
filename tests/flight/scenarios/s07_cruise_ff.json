@@ -30,6 +30,7 @@
     { "do": "wait", "note": "35,000 ft で ALT（FMA のピッチ 9）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9, "timeout": 360 },
     { "do": "wait", "note": "高度 35,000 ft 付近", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [34800, 35200], "timeout": 60 },
     { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "wait", "note": "294 kt に近づくまで待つ（FLCH の降下が遅いと 170 kt 付近から最大上昇推力で加速する）", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 286, "timeout": 600, "level": "warn" },
     { "do": "sleep", "seconds": 3 },
     { "do": "snapshot", "note": "モード", "drefs": [
       "sim/aircraft/view/acf_relative_path", "laminar/B747/engines/type",

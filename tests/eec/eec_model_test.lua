@@ -227,4 +227,140 @@ do
     T.check(not o.at_inhibit and not o.lim_prot[1], "P&W: back in the normal mode")
 end
 
+-- overspeed protection (FCOM p.878, p.901; ATA70_80 p.205): the target is the
+-- command until a rotor comes within the band of its red line less the
+-- margin; then each limit loop allows the present value plus the gain for
+-- each percent short (less when past), so the rotor settles at the red line
+-- less the margin. RPM LIM: GE on N2, P&W on N1 or N2, while a limit holds
+-- the engine below the command
+do
+    local st, i = E.new(), E.inputs()
+    local M_, B = E.RPM_MARGIN, E.RPM_BAND
+    i.type, i.alt, i.tat, i.kias = "GE", 0, 15, 0
+    i.idle = {25, 25, 25, 25}
+    i.lever = {1, 1, 1, 1}
+    i.n1, i.n2, i.actual = {100, 100, 100, 100}, {100, 100, 100, 100}, {100, 100, 100, 100}
+    local o = E.update(st, i, DT)
+    local red, g, show = E.REDLINE.GE, E.RPM_GAIN.GE, E.RPM_LIM_SHOW.GE
+    T.near(red.n1, 117.5, 1e-9, "CF6 N1 limit 117.5 % (ATA70_80 p.205)")
+    T.near(red.n2, 112.5, 1e-9, "CF6 N2 limit 112.5 % (ATA70_80 p.205)")
+    for n = 1, 4 do T.near(o.target[n], o.command[n], 1e-9, "GE: rotors far from their limits: target " .. n .. " is the command") end
+    T.check(all(o.rpm_lim, false), "GE: no RPM LIM far from the limits")
+    -- in the band: the loop allows more than the present N1, less than the command
+    i.n2[2], i.actual[2] = red.n2 - M_ - 1, 100
+    o = E.update(st, i, DT)
+    T.near(o.target[2], 100 + g, 1e-9, "GE: N2 1 % short of the limit less the margin: target the present N1 plus the gain")
+    T.check(not o.rpm_lim[2], "GE: no RPM LIM while the engine still accelerates")
+    -- just short of the band: no limit
+    i.n2[2] = red.n2 - M_ - B - 0.01
+    o = E.update(st, i, DT)
+    T.near(o.target[2], o.command[2], 1e-9, "GE: N2 short of the band: target the command")
+    -- at the limit less the margin: the loop holds the present N1
+    i.n2[2] = red.n2 - M_
+    o = E.update(st, i, DT)
+    T.near(o.target[2], 100, 1e-9, "GE: N2 at the limit less the margin: target the present N1")
+    T.check(o.rpm_lim[2] and not o.rpm_lim[1], ">ENG 2 RPM LIM: GE thrust limited by N2")
+    -- past it: the target falls below the present N1
+    i.n2[2] = red.n2 - M_ + 1
+    o = E.update(st, i, DT)
+    T.near(o.target[2], 100 - g, 1e-9, "GE: N2 1 % past: target the present N1 less the gain")
+    -- holding by less than the threshold below the command: no message
+    i.actual[2] = o.command[2] - show / 2
+    i.n2[2] = red.n2 - M_
+    o = E.update(st, i, DT)
+    T.near(o.target[2], o.command[2] - show / 2, 1e-9, "GE: the target still follows the N2 loop")
+    T.check(not o.rpm_lim[2], "GE: no RPM LIM when the hold-back is below the threshold")
+    -- the GE's own N1 past its limit: the command is capped there, no message
+    -- (the GE shows N2 limiting only); the red line lowered to reach it
+    i.n2[2], i.actual[2] = 100, 100
+    local saved = red.n1
+    red.n1 = 100
+    o = E.update(st, i, DT)
+    T.near(o.target[1], 100 - M_, 1e-9, "GE: the N1 limit caps the command at the limit less the margin")
+    T.check(not o.rpm_lim[1], "GE: no RPM LIM for N1")
+    red.n1 = saved
+
+    -- P&W: limited by N1 or N2, both with messages
+    i.type, i.idle = "PW", {0.95, 0.95, 0.95, 0.95}
+    i.n1, i.n2, i.actual = {100, 100, 100, 100}, {100, 100, 100, 100}, {1.40, 1.40, 1.40, 1.40}
+    o = E.update(st, i, DT)
+    red, g, show = E.REDLINE.PW, E.RPM_GAIN.PW, E.RPM_LIM_SHOW.PW
+    for n = 1, 4 do T.near(o.target[n], o.command[n], 1e-9, "P&W: rotors far from their limits: target " .. n .. " is the command") end
+    T.check(all(o.rpm_lim, false), "P&W: no RPM LIM far from the limits")
+    i.n1[1] = red.n1 - M_ + 2
+    o = E.update(st, i, DT)
+    T.near(o.target[1], 1.40 - 2 * g, 1e-9, "P&W: N1 2 % past the limit less the margin: target the present EPR less twice the gain")
+    T.check(o.rpm_lim[1], ">ENG 1 RPM LIM: P&W thrust limited by N1")
+    i.n2[4] = red.n2 - M_ + 1
+    o = E.update(st, i, DT)
+    T.near(o.target[4], 1.40 - g, 1e-9, "P&W: N2 1 % past: target the present EPR less the gain")
+    T.check(o.rpm_lim[4] and not o.rpm_lim[2], ">ENG 4 RPM LIM: P&W thrust limited by N2")
+    i.n1[4] = red.n1 - M_ + 3
+    o = E.update(st, i, DT)
+    T.near(o.target[4], 1.40 - 3 * g, 1e-9, "P&W: both rotors past: the lower limit wins")
+    -- the lever at idle: the command is below any limit, no message
+    i.lever = {0, 0, 0, 0}
+    o = E.update(st, i, DT)
+    T.near(o.target[1], o.command[1], 1e-9, "P&W: idle lever: the target is the command (below the limit)")
+    T.check(all(o.rpm_lim, false), "P&W: no RPM LIM at idle")
+end
+
+-- the thrust control (FCOM p.875-876): X-Plane's throttle that brings the
+-- controlled value to the target. Tried here on a stand-in engine: the
+-- displayed value follows the throttle through the X-Plane maps (the slope
+-- tables), with a one-second lag.
+local function engine_map(g, th)
+    -- the controlled value at a throttle: the slope table integrated from its first point
+    local y, t = g.at[1], 0
+    for k = 2, #g.at do
+        local dth = (g.at[k] - g.at[k - 1]) / ((g.slope[k] + g.slope[k - 1]) / 2)
+        if th <= t + dth then return y + (th - t) * (g.at[k] - g.at[k - 1]) / dth end
+        y, t = g.at[k], t + dth
+    end
+    return y + (th - t) * g.slope[#g.slope]
+end
+local function fly(key, target, seconds, s, y0)
+    local g = E.THRUST[key]
+    s = s or E.new()
+    local th, eff = 0, nil
+    local y = y0 or g.at[1]
+    local peak, low = y, y
+    for _ = 1, math.floor(seconds * 30 + 0.5) do
+        th = E.thrust_control(s, key, 1, target, y, th, key == "GE" and 25 or 0.95, DT)
+        eff = eff or th
+        eff = eff + (th - eff) * DT / 1.0
+        y = engine_map(g, eff)
+        peak, low = math.max(peak, y), math.min(low, y)
+    end
+    return y, th, peak, low, s
+end
+do
+    local y, th, peak = fly("PW", 1.50, 30)
+    T.near(y, 1.50, 0.005, "thrust control: P&W reaches the target EPR from idle")
+    T.check(peak < 1.50 + 0.02, "thrust control: P&W does not overshoot (peak " .. string.format("%.3f", peak) .. ")")
+    local s
+    y, th, peak, _, s = fly("GE", 95, 30, nil, 40)
+    T.near(y, 95, 0.3, "thrust control: GE reaches the target N1")
+    T.check(peak < 95 + 1, "thrust control: GE does not overshoot (peak " .. string.format("%.1f", peak) .. ")")
+    local low
+    y, th, _, low = fly("GE", 60, 30, s, y)
+    T.near(y, 60, 0.3, "thrust control: GE comes down to the target N1")
+    T.check(low > 60 - 1, "thrust control: GE does not undershoot (low " .. string.format("%.1f", low) .. ")")
+    -- the value followed moves no faster than the schedules: one frame after
+    -- a big step the throttle has hardly moved
+    s = E.new()
+    local th0 = E.thrust_control(s, "PW", 1, 1.20, 1.20, 0.7, 0.95, DT)
+    local th1 = E.thrust_control(s, "PW", 1, 1.60, 1.20, 0.7, 0.95, DT)
+    T.check(th1 - th0 < 0.05, "thrust control: a lever slam moves the throttle gradually")
+    T.near(th0, 0.7, 1e-9, "thrust control: it starts from X-Plane's throttle")
+    -- the lever at its idle end: the EEC's idle
+    T.equal(E.thrust_control(s, "PW", 1, 0.95, 1.40, 0.9, 0.95, DT), 0, "thrust control: idle lever, throttle 0")
+    -- it never asks for more than full throttle
+    s = E.new()
+    for _ = 1, 300 do th = E.thrust_control(s, "PW", 1, 1.60, 1.00, 1.0, 0.95, DT) end
+    T.equal(th, 1, "thrust control: an engine short of its target stays at full throttle")
+    E.reset_thrust_control(s, 1)
+    T.near(E.thrust_control(s, "PW", 1, 1.60, 1.00, 0.4, 0.95, DT), 0.4, 0.05, "thrust control: after a reset it starts from X-Plane's throttle")
+end
+
 T.done()

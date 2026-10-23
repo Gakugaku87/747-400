@@ -621,11 +621,8 @@ function engine_idle_control_PW(altitude_ft_in)
     end
 
     --Handle minor engine thrust differences where calculated (requested) thrust is less than the defined XP engine model can produce
-    --Boost engine output as necessary
-    if math.max(simDR_engn_thro_use[0], simDR_engn_thro_use[1], simDR_engn_thro_use[2], simDR_engn_thro_use[3]) == 1
-      and math.max(simDR_N1[0], simDR_N1[1], simDR_N1[2], simDR_N1[3]) > 99.99
-      and (B747DR_display_EPR[0] < B747DR_throttle_resolver_angle[0] or B747DR_display_EPR[1] < B747DR_throttle_resolver_angle[1]
-          or B747DR_display_EPR[2] < B747DR_throttle_resolver_angle[2] or B747DR_display_EPR[3] < B747DR_throttle_resolver_angle[3]) then
+    --Boost engine output as necessary: an engine at full throttle still short of the EEC's target
+    if B747_eec_thrust_short() then
             B747_setMaxThrust(simDR_thrust_max + 200)
     elseif simDR_thrust_max > orig_thrust_n and simDR_onGround == 0 and B747DR_radio_altitude > 1500 then  --slowly reset max engine thrust to normal
       if simDR_thrust_max > orig_thrust_n + 10 then
@@ -661,7 +658,9 @@ function engine_idle_control_PW(altitude_ft_in)
       N1_display[i] = string.format("%4.1f", math.min(N1_display_PW(altitude_ft_in, simDR_thrust_n[i], i), 111.5))
       B747DR_display_N1[i] = math.max(N1_display[i], 0.0)
 
-      N2_display[i] = string.format("%3.0f", math.min(N2_display_PW(B747DR_display_N1[i], i), 111.5))
+      local n2 = N2_display_PW(B747DR_display_N1[i], i)
+      B747_eec_set_n2(i, n2)  --the EEC's overspeed protection, before the display's rounding
+      N2_display[i] = string.format("%3.0f", math.min(n2, 111.5))
       B747DR_display_N2[i] = math.max(N2_display[i], 0.0)
 
       EGT_display[i] = EGT_display_PW(i)

@@ -1,15 +1,16 @@
 -- Run from the repository root with LuaJIT: luajit tests/eec/eec_module_test.lua
 -- The EEC module as XTLua runs it (tests/lib/xtlua.lua): the EEC model
 -- through its glue (B747.42.xt.eec_thrust.lua) in B747.42.xt.EEC.lua. The
--- levers, air data, packs and anti-ice in; the lever command (TRA) and the
--- max line out, for P&W and GE. The model's numbers themselves are tested
--- in eec_model_test.lua; this checks the wiring.
+-- levers, air data, packs, anti-ice and rotor speeds in; the lever command
+-- (TRA), the thrust control's target, the max line and the EEC messages
+-- out, for P&W and GE. The model's numbers themselves are tested in
+-- eec_model_test.lua; this checks the wiring.
 local T = dofile("tests/lib/check.lua")("eec_module")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
 math.randomseed(1)
 local rt = xtlua.new()
-rt:load("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.xt.EEC.lua")
+local ns = rt:load("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.xt.EEC.lua").ns
 rt:set("laminar/B747/simconfig", '{"PLANE":{"engines":"PW4056"}}')
 rt:set("laminar/B747/newsimconfig", 1)
 rt:callout("flight_start")
@@ -120,6 +121,44 @@ T.equal(get(ADV, 314), 0, "ALTN: back in the normal mode")
 T.equal(get(CAUTION, 76), 0, "no LIM PROT in the normal mode")
 T.equal(get("laminar/B747/engines/autothrottle_fail"), 0, "the A/T can be armed again with all EECs normal")
 
+-- overspeed protection: the thrust control aims at the command until a rotor
+-- nears its red line; >ENG n RPM LIM from the EEC. N2 is set for one frame
+-- (the display code gives the EEC its N2 again every frame)
+local RPM_LIM = 134
+for i = 0, 3 do
+    T.near(ns.B747_eec_target(i), get(ENG .. "TRA", i), 1e-9, "overspeed: target " .. (i + 1) .. " is the command far from the limits")
+    T.equal(get(ADV, RPM_LIM + i), 0, "no >ENG " .. (i + 1) .. " RPM LIM")
+end
+ns.B747_eec_set_n2(0, 111.4)
+rt:frame(1 / 30)
+T.check(ns.B747_eec_target(0) < get(ENG .. "TRA", 0) - 0.005, "overspeed: P&W N2 at its red line holds the target below the command")
+T.equal(get(ADV, RPM_LIM), 1, ">ENG 1 RPM LIM: P&W from the EEC")
+T.equal(get(ADV, RPM_LIM + 1), 0, "no >ENG 2 RPM LIM")
+rt:frame(1 / 30)
+T.equal(get(ADV, RPM_LIM), 0, "RPM LIM goes with N2 back below its limit")
+
+-- the thrust control drives X-Plane's throttle (ecc_spd): engines running,
+-- forward thrust, in the air; the stand-in engine gives no thrust, so the
+-- EPR stays low and full forward opens the throttle fully, idle closes it
+local THRO = "sim/flightmodel/engine/ENGN_thro_use"
+rt:set("sim/flightmodel/failures/onground_any", 0)
+for i = 0, 3 do
+    rt:set("sim/flightmodel/engine/ENGN_running", i, 1)
+    rt:set("sim/cockpit2/engine/actuators/prop_mode", i, 1)
+end
+for i = 0, 3 do rt:set(USER, i, 1.0) end
+frames(3)
+T.near(get(THRO, 0), 1, 1e-6, "thrust control: full forward, EPR short of the command: full throttle")
+T.equal(get("sim/operation/override/override_throttles"), 1, "thrust control: X-Plane's throttles are overridden")
+for i = 0, 3 do rt:set(USER, i, 0.0) end
+frames(3)                                                   -- the levers come back
+T.equal(get(THRO, 0), 0, "thrust control: idle lever: throttle 0")
+rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 3)       -- engine 2 in reverse
+frames(0.2)
+T.equal(get(THRO, 1), 0, "thrust control: reverser not deployed: no thrust")
+rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 1)
+rt:set("sim/flightmodel/failures/onground_any", 1)
+
 -- GE at sea level, 15 °C
 rt:set("laminar/B747/simconfig", '{"PLANE":{"engines":"CF6-80C2B1F"}}')
 rt:set("laminar/B747/newsimconfig", 1)
@@ -132,5 +171,19 @@ for i = 0, 3 do rt:set(USER, i, 1.0) end
 frames(3)
 T.near(get(ENG .. "display_N1_max", 0), 103.8, 0.05, "GE: max N1 line is the EEC's rating (go-around N1, sea level, 15 °C)")
 T.near(get(ENG .. "TRA", 0), 103.8, 0.05, "GE: full forward commands the max N1")
+T.near(ns.B747_eec_target(0), get(ENG .. "TRA", 0), 1e-9, "GE: the target is the command far from the limits")
+ns.B747_eec_set_n2(2, 112.5)
+rt:frame(1 / 30)
+T.check(ns.B747_eec_target(2) < get(ENG .. "TRA", 2) - 0.2, "overspeed: GE N2 at its red line holds the target below the command")
+T.equal(get(ADV, RPM_LIM + 2), 1, ">ENG 3 RPM LIM: GE from the EEC")
+rt:frame(1 / 30)
+T.equal(get(ADV, RPM_LIM + 2), 0, "GE: RPM LIM goes with N2 back below its limit")
+
+-- RR: no source, its RPM LIM stays with B747.40.xt.engines.lua
+rt:set("laminar/B747/engines/type", 2)
+rt:set(ADV, RPM_LIM, 1)
+ns.B747_eec_set_n2(0, 50)
+rt:frame(1 / 30)
+T.equal(get(ADV, RPM_LIM), 1, "RR: the EEC leaves RPM LIM alone")
 
 T.done()

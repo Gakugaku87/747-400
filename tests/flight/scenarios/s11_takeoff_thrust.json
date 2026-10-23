@@ -1,0 +1,64 @@
+{
+  "name": "s11_takeoff_thrust",
+  "description": "EEC の推力制御（2-3 段 2）の離陸での確認。RJAA 34L でエンジン運転中に始め、フラップ 10 でスラスト・レバーを最前方にして離陸滑走し、EPR が最大定格（離陸の範囲）まで行き過ぎずに上がって保たれること（FCOM p.875-876：EEC は燃料流量を調整して実際の値を指令に合わせる）、RPM LIM が出ないことを見る。80 kt を超えたら離陸中止（レバー idle とブレーキ）。低いマッハ数での推力制御の確かめ。機体を読み直す。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 10 },
+    { "do": "set", "note": "フラップ 10", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.5 },
+    { "do": "set", "note": "パーキング・ブレーキを外す", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 0 },
+    { "do": "sleep", "seconds": 8 },
+    { "do": "snapshot", "note": "開始", "drefs": [
+      "sim/aircraft/view/acf_relative_path", "laminar/B747/engines/type",
+      "sim/cockpit2/temperature/outside_air_temp_degc", "laminar/B747/engines/ref_thr_limit_mode",
+      "laminar/B747/autopilot/FMA/autothrottle_mode", "sim/cockpit2/controls/flap_handle_deploy_ratio",
+      "laminar/B747/engines/display_EPR_max[0]", "laminar/B747/engines/display_EPR[0]", "laminar/B747/engines/TRA[0]",
+      "laminar/B747/engines/display_N1[0]", "laminar/B747/engines/display_N2[0]" ] },
+
+    { "do": "mark", "note": "離陸推力" },
+    { "do": "set", "note": "スラスト・レバー 4 本を最前方", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 1 },
+    { "do": "wait", "note": "レバー 1 が最前方", "dref": "laminar/B747/engine/throttle[0]", "op": ">", "value": 0.98, "timeout": 5 },
+    { "do": "sleep", "seconds": 6 },
+    { "do": "snapshot", "note": "6 秒後", "drefs": [
+      "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "laminar/B747/engines/display_EPR_max[0]",
+      "laminar/B747/engines/display_EPR[0]", "laminar/B747/engines/display_EPR[3]", "laminar/B747/engines/TRA[0]",
+      "laminar/B747/engines/display_N1[0]", "laminar/B747/engines/display_N2[0]",
+      "sim/flightmodel/engine/ENGN_thro_use[0]", "sim/cockpit2/engine/indicators/thrust_dry_n[0]" ] },
+    { "do": "wait", "note": "40 kt", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 40, "timeout": 40 },
+    { "do": "snapshot", "note": "40 kt", "drefs": [
+      "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "laminar/B747/engines/display_EPR_max[0]",
+      "laminar/B747/engines/display_EPR[0]", "laminar/B747/engines/display_EPR[3]", "laminar/B747/engines/TRA[0]",
+      "laminar/B747/engines/display_N1[0]", "laminar/B747/engines/display_N2[0]",
+      "sim/flightmodel/engine/ENGN_thro_use[0]", "sim/cockpit2/engine/indicators/thrust_dry_n[0]" ] },
+    { "do": "check", "note": "EPR は離陸の最大定格の付近（RJAA、P&W、パック ON で 1.5 前後）", "dref": "laminar/B747/engines/display_EPR[0]", "op": "between", "value": [1.45, 1.56] },
+    { "do": "wait", "note": "80 kt", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 80, "timeout": 40 },
+    { "do": "snapshot", "note": "80 kt", "drefs": [
+      "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "laminar/B747/engines/display_EPR_max[0]",
+      "laminar/B747/engines/display_EPR[0]", "laminar/B747/engines/display_EPR[3]", "laminar/B747/engines/TRA[0]",
+      "laminar/B747/engines/display_N1[0]", "laminar/B747/engines/display_N2[0]",
+      "sim/flightmodel/engine/ENGN_thro_use[0]", "sim/cockpit2/engine/indicators/thrust_dry_n[0]" ] },
+    { "do": "check", "note": "RPM LIM は出ない", "dref": "laminar/B747/CAS/advisory_status[134]", "op": "==", "value": 0 },
+    { "do": "check", "note": "N2 は赤線（P&W 111.4 %）の下", "dref": "laminar/B747/engines/display_N2[0]", "op": "<", "value": 111.4 },
+
+    { "do": "mark", "note": "離陸中止" },
+    { "do": "set", "note": "スラスト・レバーを idle", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
+    { "do": "set", "note": "ブレーキ", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 1 },
+    { "do": "wait", "note": "止まる", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "<", "value": 20, "timeout": 60 },
+    { "do": "cas", "note": "終わり" },
+    { "do": "record_stop" }
+  ]
+}

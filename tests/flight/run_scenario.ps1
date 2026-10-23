@@ -12,8 +12,9 @@
 # Output goes to tests\flight\runs\<time>_<scenario>_<acf>\.
 #
 # Scenario file (JSON): { "name", "description", "flight": {init without
-# "aircraft"}, ["reload": true], "steps": [ ... ] }. "reload" asks for -Reload
-# (the scenario needs the aircraft's systems fresh). Step types ("do"):
+# "aircraft"}, ["reload": true], ["livery": "<folder>"], "steps": [ ... ] }.
+# "reload" asks for -Reload (the scenario needs the aircraft's systems
+# fresh); "livery" picks a livery, and with it the engine type. Step types ("do"):
 #   record_start | record_stop | mark            the FlyWithLua recorder
 #   cmd     {name, [duration]}                   run a command
 #   set     {dref, value}                        write a dataref
@@ -122,7 +123,10 @@ $logStart = if (Test-Path $logPath) { (Get-Content $logPath).Count } else { 0 }
 $freshLoad = $false
 if (-not $NoFlight) {
     $init = $spec.flight | ConvertTo-Json -Depth 30 | ConvertFrom-Json
-    $init | Add-Member -NotePropertyName aircraft -NotePropertyValue @{ path = $acfPath } -Force
+    $aircraft = @{ path = $acfPath }
+    # a livery (its folder name under liveries/) picks the engine type: B747-400_simconfig.dat
+    if ($spec.livery) { $aircraft.livery = $spec.livery }
+    $init | Add-Member -NotePropertyName aircraft -NotePropertyValue $aircraft -Force
     Write-Host "starting flight: $acfPath"
     $loadsBefore = Get-XPAircraftLoads
     $t = Start-XPFlight $init
