@@ -199,7 +199,6 @@ simDR_esys3              = find_dataref("sim/operation/failures/rel_esys4")
 simDR_cockpit2_no_smoking_switch    = find_dataref("sim/cockpit2/switches/no_smoking")
 simDR_cockpit2_seat_belt_switch     = find_dataref("sim/cockpit2/switches/fasten_seat_belts")
 
-simDR_fuel_tank_weight_kg           = find_dataref("sim/flightmodel/weight/m_fuel")
 
 simDR_autoboard_in_progress         = find_dataref("sim/flightmodel2/misc/auto_board_in_progress")
 simDR_autostart_in_progress         = find_dataref("sim/flightmodel2/misc/auto_start_in_progress")
@@ -392,29 +391,10 @@ B747DR_fire_ext_bottle_0102B_psi    = find_dataref("laminar/B747/fire/engine01_0
 B747DR_fire_ext_bottle_0304A_psi    = find_dataref("laminar/B747/fire/engine03_04A/ext_bottle/psi")
 B747DR_fire_ext_bottle_0304B_psi    = find_dataref("laminar/B747/fire/engine03_04B/ext_bottle/psi")
 
-B747DR_fuel_engine1_xfeed_vlv_pos   = find_dataref("laminar/B747/fuel/engine1/xfeed_vlv_pos")
-B747DR_fuel_engine4_xfeed_vlv_pos   = find_dataref("laminar/B747/fuel/engine4/xfeed_vlv_pos")
-
-B747_fuel_main1_tank_main_pump_fwd_on = find_dataref("laminar/B747/fuel/main1_tank/main_pump_fwd_on")
-B747_fuel_main1_tank_main_pump_aft_on = find_dataref("laminar/B747/fuel/main1_tank/main_pump_aft_on")
-B747_fuel_main2_tank_main_pump_fwd_on = find_dataref("laminar/B747/fuel/main2_tank/main_pump_fwd_on")
-B747_fuel_main2_tank_main_pump_aft_on = find_dataref("laminar/B747/fuel/main2_tank/main_pump_aft_on")
-B747_fuel_main3_tank_main_pump_fwd_on = find_dataref("laminar/B747/fuel/main3_tank/main_pump_fwd_on")
-B747_fuel_main3_tank_main_pump_aft_on = find_dataref("laminar/B747/fuel/main3_tank/main_pump_aft_on")
-B747_fuel_main4_tank_main_pump_fwd_on = find_dataref("laminar/B747/fuel/main4_tank/main_pump_fwd_on")
-B747_fuel_main4_tank_main_pump_aft_on = find_dataref("laminar/B747/fuel/main4_tank/main_pump_aft_on")
-
-B747_fuel_center_tank_ovrd_jett_pump_L_on = find_dataref("laminar/B747/fuel/center_tank/ovrd_jett_pump_L_on")
-B747_fuel_center_tank_ovrd_jett_pump_R_on = find_dataref("laminar/B747/fuel/center_tank/ovrd_jett_pump_R_on")
-
-B747_fuel_stab_tank_xfr_jett_pump_L_on = find_dataref("laminar/B747/fuel/stab_tank/xfr_jett_pump_L_on")
-B747_fuel_stab_tank_xfr_jett_pump_R_on = find_dataref("laminar/B747/fuel/stab_tank/xfr_jett_pump_R_on")
-
-B747_fuel_main2_tank_ovrd_jett_pump_fwd_on = find_dataref("laminar/B747/fuel/main2_tank/ovrd_jett_pump_fwd_on")
-B747_fuel_main2_tank_ovrd_jett_pump_aft_on = find_dataref("laminar/B747/fuel/main2_tank/ovrd_jett_pump_aft_on")
-
-B747_fuel_main3_tank_ovrd_jett_pump_fwd_on = find_dataref("laminar/B747/fuel/main3_tank/ovrd_jett_pump_fwd_on")
-B747_fuel_main3_tank_ovrd_jett_pump_aft_on = find_dataref("laminar/B747/fuel/main3_tank/ovrd_jett_pump_aft_on")
+-- the fuel system's overhead lights (fuel module; created by the B747.25.fuel init)
+B747DR_fuel_light_pump_press        = find_dataref("laminar/B747/fuel/light/pump_press")
+B747DR_fuel_light_xfeed_valve       = find_dataref("laminar/B747/fuel/light/xfeed_valve")
+B747DR_fuel_light_nozzle_valve      = find_dataref("laminar/B747/fuel/light/nozzle_valve")
 
 B747DR_bleed_air_iso_vlv_L_pos      = find_dataref("laminar/B747/air/isolation_valve_L_pos")
 B747DR_bleed_air_iso_vlv_R_pos      = find_dataref("laminar/B747/air/isolation_valve_R_pos")
@@ -1130,147 +1110,33 @@ function B747_annunciators()
     annun.b.cargo_fire_aft = 0
     annun.b.cargo_fire_disch = 0
 
+    -- FUEL SYSTEM: the lights come from the fuel model (fuel module,
+    -- laminar/B747/fuel/light/*; FCOM p.1439-1441, ATA26_28 p.414)
     -- FUEL JETTISON NOZZLE VALVE
-    annun.b.fuel_jett_valve_L = 0
-    annun.b.fuel_jett_valve_R = 0
-
-    -- FUEL SYSTEM
-    annun.b.fuel_xfeed_01 = B747_ternary((B747DR_fuel_engine1_xfeed_vlv_pos ~= B747DR_button_switch_position[48]), 1, 0)
-    annun.b.fuel_xfeed_02 = 0
-    annun.b.fuel_xfeed_03 = 0
-    annun.b.fuel_xfeed_04 = B747_ternary((B747DR_fuel_engine4_xfeed_vlv_pos ~= B747DR_button_switch_position[51]), 1, 0)
-
-    
-    if B747DR_button_switch_position[52] > 0.95
-        and B747_fuel_center_tank_ovrd_jett_pump_L_on > 0 and simDR_fuel_tank_weight_kg[0] <= 900.0
-    then
-        annun.b.fuel_pump_center_L = 1
-    else
-        annun.b.fuel_pump_center_L = 0
-    end
-
-    
-    if B747DR_button_switch_position[53] > 0.95
-        and B747_fuel_center_tank_ovrd_jett_pump_R_on > 0 and simDR_fuel_tank_weight_kg[0] <= 900.0
-    then
-        annun.b.fuel_pump_center_R = 1
-    else
-        annun.b.fuel_pump_center_R = 0
-    end
-
-    
-    if B747_fuel_stab_tank_xfr_jett_pump_L_on > 0 and simDR_fuel_tank_weight_kg[7] <= 10.0 then
-        annun.b.fuel_pump_stab_L = 1
-    else
-        annun.b.fuel_pump_stab_L = 0
-    end
-
-    
-    if B747_fuel_stab_tank_xfr_jett_pump_R_on > 0 and simDR_fuel_tank_weight_kg[7] <= 10.0 then
-        annun.b.fuel_pump_stab_R = 1
-    else
-        annun.b.fuel_pump_stab_R = 0
-    end
-
-    
-    if (B747_fuel_main1_tank_main_pump_fwd_on == 0 and simDR_engine_running[0] == 0)
-        or (B747_fuel_main1_tank_main_pump_fwd_on > 0 and simDR_fuel_tank_weight_kg[1] <= 10.0)
-    then
-        annun.b.fuel_pump_main_fwd_01 = 1
-    else
-        annun.b.fuel_pump_main_fwd_01 = 0
-    end
-
-    
-    if (B747_fuel_main2_tank_main_pump_fwd_on == 0 and simDR_engine_running[1] == 0)
-        or (B747_fuel_main2_tank_main_pump_fwd_on > 0 and simDR_fuel_tank_weight_kg[2] <= 10.0)
-    then
-        annun.b.fuel_pump_main_fwd_02 = 1
-    else
-        annun.b.fuel_pump_main_fwd_02 = 0
-    end
-
-    
-    if (B747_fuel_main3_tank_main_pump_fwd_on == 0 and simDR_engine_running[2] == 0)
-        or (B747_fuel_main3_tank_main_pump_fwd_on > 0 and simDR_fuel_tank_weight_kg[3] <= 10.0)
-    then
-        annun.b.fuel_pump_main_fwd_03 = 1
-    else
-        annun.b.fuel_pump_main_fwd_03 = 0
-    end
-
-    
-    if (B747_fuel_main4_tank_main_pump_fwd_on == 0 and simDR_engine_running[3] == 0)
-        or (B747_fuel_main4_tank_main_pump_fwd_on > 0 and simDR_fuel_tank_weight_kg[4] <= 10.0)
-    then
-        annun.b.fuel_pump_main_fwd_04 = 1
-    else
-        annun.b.fuel_pump_main_fwd_04 = 0
-    end
-
-    
-    if (B747_fuel_main1_tank_main_pump_aft_on == 0 and simDR_engine_running[0] == 0)
-        or (B747_fuel_main1_tank_main_pump_aft_on > 0 and simDR_fuel_tank_weight_kg[1] <= 10.0)
-    then
-        annun.b.fuel_pump_main_aft_01 = 1
-    else
-        annun.b.fuel_pump_main_aft_01 = 0
-    end
-
-    
-    if (B747_fuel_main2_tank_main_pump_aft_on == 0 and simDR_engine_running[1] == 0)
-        or (B747_fuel_main2_tank_main_pump_aft_on > 0 and simDR_fuel_tank_weight_kg[2] <= 10.0)
-    then
-        annun.b.fuel_pump_main_aft_02 = 1
-    else
-        annun.b.fuel_pump_main_aft_02 = 0
-    end
-
-    
-    if (B747_fuel_main3_tank_main_pump_aft_on == 0 and simDR_engine_running[2] == 0)
-        or (B747_fuel_main3_tank_main_pump_aft_on > 0 and simDR_fuel_tank_weight_kg[3] <= 10.0)
-    then
-        annun.b.fuel_pump_main_aft_03 = 1
-    else
-        annun.b.fuel_pump_main_aft_03 = 0
-    end
-
-    
-    if (B747_fuel_main4_tank_main_pump_aft_on == 0 and simDR_engine_running[3] == 0)
-        or (B747_fuel_main4_tank_main_pump_aft_on > 0 and simDR_fuel_tank_weight_kg[4] <= 10.0)
-    then
-        annun.b.fuel_pump_main_aft_04 = 1
-    else
-        annun.b.fuel_pump_main_aft_04 = 0
-    end
-
-    
-    if B747_fuel_main2_tank_ovrd_jett_pump_fwd_on > 0 and simDR_fuel_tank_weight_kg[2] <= 3200.0 then
-        annun.b.fuel_pump_main_ovrd_fwd_02 = 1
-    else
-        annun.b.fuel_pump_main_ovrd_fwd_02 = 0
-    end
-    
-    
-    if B747_fuel_main3_tank_ovrd_jett_pump_fwd_on > 0 and simDR_fuel_tank_weight_kg[3] <= 3200.0 then
-        annun.b.fuel_pump_main_ovrd_fwd_03 = 1
-    else
-        annun.b.fuel_pump_main_ovrd_fwd_03 = 0
-    end
-
-   
-    if B747_fuel_main2_tank_ovrd_jett_pump_aft_on > 0 and simDR_fuel_tank_weight_kg[2] <= 3200.0 then
-        annun.b.fuel_pump_main_ovrd_aft_02 = 1
-    else
-        annun.b.fuel_pump_main_ovrd_aft_02 = 0
-    end
-
-    
-    if B747_fuel_main3_tank_ovrd_jett_pump_aft_on > 0 and simDR_fuel_tank_weight_kg[3] <= 3200.0 then
-        annun.b.fuel_pump_main_ovrd_aft_03 = 1
-    else
-        annun.b.fuel_pump_main_ovrd_aft_03 = 0
-    end
+    annun.b.fuel_jett_valve_L = B747DR_fuel_light_nozzle_valve[0]
+    annun.b.fuel_jett_valve_R = B747DR_fuel_light_nozzle_valve[1]
+    -- X FEED VALVE
+    annun.b.fuel_xfeed_01 = B747DR_fuel_light_xfeed_valve[0]
+    annun.b.fuel_xfeed_02 = B747DR_fuel_light_xfeed_valve[1]
+    annun.b.fuel_xfeed_03 = B747DR_fuel_light_xfeed_valve[2]
+    annun.b.fuel_xfeed_04 = B747DR_fuel_light_xfeed_valve[3]
+    -- PUMP PRESS, in the order of B747_fuel_model.PUMPS
+    annun.b.fuel_pump_main_fwd_01 = B747DR_fuel_light_pump_press[0]
+    annun.b.fuel_pump_main_aft_01 = B747DR_fuel_light_pump_press[1]
+    annun.b.fuel_pump_main_fwd_02 = B747DR_fuel_light_pump_press[2]
+    annun.b.fuel_pump_main_aft_02 = B747DR_fuel_light_pump_press[3]
+    annun.b.fuel_pump_main_fwd_03 = B747DR_fuel_light_pump_press[4]
+    annun.b.fuel_pump_main_aft_03 = B747DR_fuel_light_pump_press[5]
+    annun.b.fuel_pump_main_fwd_04 = B747DR_fuel_light_pump_press[6]
+    annun.b.fuel_pump_main_aft_04 = B747DR_fuel_light_pump_press[7]
+    annun.b.fuel_pump_main_ovrd_fwd_02 = B747DR_fuel_light_pump_press[8]
+    annun.b.fuel_pump_main_ovrd_aft_02 = B747DR_fuel_light_pump_press[9]
+    annun.b.fuel_pump_main_ovrd_fwd_03 = B747DR_fuel_light_pump_press[10]
+    annun.b.fuel_pump_main_ovrd_aft_03 = B747DR_fuel_light_pump_press[11]
+    annun.b.fuel_pump_center_L = B747DR_fuel_light_pump_press[12]
+    annun.b.fuel_pump_center_R = B747DR_fuel_light_pump_press[13]
+    annun.b.fuel_pump_stab_L = B747DR_fuel_light_pump_press[14]
+    annun.b.fuel_pump_stab_R = B747DR_fuel_light_pump_press[15]
 
     -- ANTI-ICE
     

@@ -241,6 +241,18 @@ APU の制御のモデル（`plugins/xtlua/scripts/B747.03.xt.electrical/B747.49
 - 電源モデルの入力 `apu_gen_ok`（`B747_apu_gen_ready()`）：APU の発電機が使えるのは運転中で selector ON のときだけ（cooldown は無負荷）。電源モデルの AVAIL と APB はこれも見る。
 - quick start（B747.95.xt.AI）の APU の手順は、待ちを 30 秒から 120 秒にした（ドアが先に開き、X-Plane の APU は 95 % まで約 1 分）。
 
+### 4.7 燃料（2-2）
+
+燃料のモデル（`plugins/xtlua/scripts/B747.25.xt.fuel/B747.28.fuel_model.lua`）を、燃料モジュール（`B747.25.xt.fuel.lua`）の `B747_fuel_system()` が毎フレーム回す（`after_physics` の最初）。中身は notes/ATA-28.md §2〜§4。前のポンプ・弁・供給源・流量・タンク量・EICAS の処理は外した。synoptic の状態コード（`B747_fuel_*_synoptic`）、燃料温度、給油、表示単位、tank helper は前のまま（給油はモデルの量を書く）。
+
+- 読むもの：ポンプのスイッチ（`button_switch/position` の [52]〜[67]）、X FEED（[48]〜[51]）、FUEL XFER MAIN 1 & 4（[43]）、NOZZLE（[46]・[47]）、ジェティソン選択器、FTR、FUEL CONTROL（`toggle_sw_pos`）、火災スイッチ（`pos_arm`）、バス（`electrical/bus/ac`・`utility`・`dc`・`bat_main`・`hot_bat_main`・`gnd_svc`・`bat_apu`）、PSEU（`pri_air`）、フラップレバー（`flap_ratio`）、ピッチ、X-Plane のエンジンの燃料流量と運転状態、APU の starter（`APU_starter_switch` が 1 以上で APU が燃料を使う）、燃料温度、タンク容量（acf の `acf_tank_rat`×`acf_m_fuel_tot`）、貨物機の設定（`laminar/B747/freighter`。1 なら水平安定板タンクの論理を止める：FCOM p.1453）。
+- タンクの量はモデルが持つ。X-Plane の `m_fuel` には毎フレーム書き、前のフレームに書いた値から 20 kg を超えて変わったタンクは外からの変更（重量の画面、リプレイ）として取り込む。給油（`B747_refueling`）と地上で 100 t を超えるときの前の配分（`initial_load`）は、モデルの量を直接変える（`fuel_qty`）。
+- フライトの開始から 2 秒は「落ち着かせる」時間：X-Plane の量を取り込み（XTLua の最初の読みは 0 のことがある）、弁を指令の位置に置き、運転中のエンジンには燃料を出し続け、メッセージは出さない。
+- 書く dataref（名前と意味は前と同じ）：ポンプの `*_on`（モーターが回っていれば 1。スカベンジの `scvg_pump_*` はジェットポンプに流れがあるとき）、弁の `*_pos` と xfeed の `target_pos`、`engine1〜4_status`（1 自タンク、2 マニフォールド、0 なし。spar valve が閉なら 0）、`jett_vlv_status`、`jettison_time`、`stab_pump_L/R/pressure_low`、`totaliser`（[4] はエンジン 4 発の流量だけ）、X-Plane の `m_fuel` と `has_fuel_flow_before_mixture`（モデルの供給とエンジン燃料弁。読んで違うときだけ書く）。
+- 新設（2-2、init スクリプト `B747.25.fuel`）：`laminar/B747/fuel/light/pump_press`（[0]〜[15]、`B747_fuel_model.PUMPS` の順）、`light/xfeed_valve`（[0]〜[3]）、`light/nozzle_valve`（[0] L、[1] R）。照明モジュールが頭上の PRESS・VALVE 灯に使う（`brightness_ratio` の [38]〜[59]）。
+- EICAS：caution 31（FUEL JETT SYS）、32〜35（FUEL PRESS ENG）、36（FUEL QTY LOW）、37（FUEL STAB XFR）、67・68（FUEL PRES STB L・R、advisory）、69・70（FUEL PRESS CTR）。advisory 15（APU FUEL）、114〜117（ENG n FUEL FILT：X-Plane のフィルター故障）、148〜150（IMBALANCE、IMBAL 1-4・2-3）、153・154（>FUEL OVD CTR）、155〜158（FUEL OVRD）、159・160（>FUEL PMP STB）、161〜168（FUEL PUMP）、169・170（FUEL RES XFR 2・3）、171（>FUEL TANK/ENG）、172（FUEL TEMP LOW）、175〜178（FUEL X FEED）、179（>FUEL XFER 1+4）、235〜239（>JETT NOZ ON・L・R、>JETT NOZZLE L・R）、299（>X FEED CONFIG）、302・303（>FUEL LOW CTR）。
+- 消費は X-Plane の燃料流量（acf の SFC で決まる）を、モデルが決めた供給タンクから引く。始動中に負になる流量は 0 として扱う。
+
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 
 - 描画は、各 acf の末尾（`P` 行の後ろ）に埋め込まれた X-Plane の generic instrument で行う。数は 2850 個で、内訳は rotary 1164、text 709、pointer 293、needle 122、tape 85、rolling 24。

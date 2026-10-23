@@ -288,6 +288,14 @@ B747DR_fuel_control_toggle_switch_pos   = deferred_dataref("laminar/B747/fuel/fu
 B747DR_stab_fuel_pump_press_low_L       = deferred_dataref("laminar/B747/fuel/stab_pump_L/pressure_low", "number")
 B747DR_stab_fuel_pump_press_low_R       = deferred_dataref("laminar/B747/fuel/stab_pump_R/pressure_low", "number")
 
+-- overhead panel lights from the fuel model (1 on), read by the lighting
+-- module: PRESS in the order of B747_fuel_model.PUMPS (MAIN 1 FWD, 1 AFT,
+-- 2 FWD, 2 AFT, 3 FWD, 3 AFT, 4 FWD, 4 AFT, OVRD 2 FWD, 2 AFT, 3 FWD, 3 AFT,
+-- CTR L, CTR R, STAB L, STAB R); X FEED 1-4 VALVE; NOZZLE L, R VALVE
+B747DR_fuel_light_pump_press            = deferred_dataref("laminar/B747/fuel/light/pump_press", "array[16]")
+B747DR_fuel_light_xfeed_valve           = deferred_dataref("laminar/B747/fuel/light/xfeed_valve", "array[4]")
+B747DR_fuel_light_nozzle_valve          = deferred_dataref("laminar/B747/fuel/light/nozzle_valve", "array[2]")
+
 B747DR_stab_xfr_status                  = deferred_dataref("laminar/B747/fuel/stab_xfr_status", "number")
 B747DR_res2_xfr_status                  = deferred_dataref("laminar/B747/fuel/res2_xfr_status", "number")
 B747DR_res3_xfr_status                  = deferred_dataref("laminar/B747/fuel/res3_xfr_status", "number")
@@ -390,17 +398,5 @@ end
 function aircraft_unload()
     
     simDR_override_fuel_system = 0
-
-end
-
-engineHasFuelProcessing = 0
-function startFuelProcessing()
-    engineHasFuelProcessing = 1
-end
-
-
-function flight_start() 
-    engineHasFuelProcessing = 0
-    run_after_time(startFuelProcessing, 10.0)                                        -- DELAYED FUEL PROCESSING
 
 end

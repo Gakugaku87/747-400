@@ -189,11 +189,11 @@ do
     T.check(out.res_open and out.valve.res3a == 1, "reserve: all four valves open at 18,200 kg in main 2")
     out = run(s, inp, 60)
     T.check(s.qty.r3 < 4000 and s.qty.r2 < 4000, "reserve: both reserve tanks drain into mains 2 and 3")
-    T.check(not out.cas.res_xfr, "reserve: no FUEL RES XFR")
+    T.check(not out.cas.res_xfr2 and not out.cas.res_xfr3, "reserve: no FUEL RES XFR")
     inp.dc[1] = false                                     -- the valves' bus lost on the ground: they cannot close
     inp.on_ground = true
     out = run(s, inp, 15)
-    T.check(out.cas.res_xfr, "reserve: FUEL RES XFR when the valves cannot close (10 s, ATA26_28 p.498)")
+    T.check(out.cas.res_xfr2 and out.cas.res_xfr3, "reserve: FUEL RES XFR 2 and 3 when the valves cannot close (10 s, ATA26_28 p.498)")
 end
 
 -- scavenge (FCOM p.1454, ATA26_28 p.512): below 27,200 kg in main 2 and with
@@ -319,8 +319,37 @@ do
     local out = run(s, inp, 6)
     T.check(out.pump.m2_aft and out.pump.m3_aft and not out.pump.m2_fwd, "APU: main 2 and 3 AFT run")
     T.check(out.valve.apu == 1, "APU: fuel valve open")
+    T.check(not out.pump.apu_dc and not out.cas.apu_fuel, "APU: no DC pump while main 2 AFT gives pressure, no APU FUEL")
     run(s, inp, 3600)
     T.near(s.qty.m2, 36000 - 150, 1, "APU: 150 kg in an hour from main 2 (estimate)")
+end
+
+-- the APU on the battery (no ground service bus): the DC pump in main 2
+-- feeds it from the APU battery bus (ATA26_28 p.478-480); APU FUEL when it
+-- cannot give pressure or the valve does not open (FCOM p.902)
+do
+    local s, inp = aircraft(FULL)
+    for n = 1, 4 do inp.ac[n], inp.util[n] = false, false end
+    inp.gs_bus, inp.apu_bat = false, true
+    inp.apu_fuel = true
+    local out = run(s, inp, 6)
+    T.check(out.pump.apu_dc and not out.pump.m2_aft, "APU on the battery: the DC pump runs, main 2 AFT does not")
+    T.check(not out.cas.apu_fuel, "APU on the battery: no APU FUEL")
+    inp.gs_bus = true                                     -- ground service bus: main 2 AFT takes over
+    inp.ac[2] = true
+    out = run(s, inp, 1)
+    T.check(out.pump.m2_aft and not out.pump.apu_dc, "ground service bus: main 2 AFT runs, the DC pump stops")
+    inp.gs_bus, inp.ac[2] = false, false
+    inp.apu_bat = false                                   -- the DC pump has no power
+    out = run(s, inp, 1)
+    T.check(out.cas.apu_fuel, "APU FUEL: the DC pump commanded without pressure")
+    local s2, inp2 = aircraft(FULL)
+    inp2.hot_bat = false                                  -- the valve cannot open
+    inp2.apu_fuel = true
+    out = run(s2, inp2, 6)
+    T.check(not out.cas.apu_fuel, "APU fuel valve: no APU FUEL before 10 s")
+    out = run(s2, inp2, 6)
+    T.check(out.cas.apu_fuel, "APU FUEL: the valve not open after 10 s")
 end
 
 T.done()

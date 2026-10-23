@@ -134,8 +134,10 @@ function Runtime:type_of(name)
     return "unknown"
 end
 
+-- the size of "array[n]"; like XTLua (init.lua cuts the last character off),
+-- "array[4)" as the engines' init script spells some is an array of 4
 local function array_size(t)
-    return tonumber(t:match("%[(%d+)%]$"))
+    return tonumber(t:match("^array%[(%d+)[%])]$"))
 end
 
 -- the stored value, created with the dataref's zero on first use

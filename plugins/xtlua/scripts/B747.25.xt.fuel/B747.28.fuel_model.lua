@@ -111,6 +111,7 @@ function M.inputs()
         ac = {false, false, false, false}, util = {false, false, false, false},
         dc = {false, false, false, false},
         main_bat = false, hot_bat = false, gs_bus = false,
+        apu_bat = false,                       -- APU battery bus (the APU DC fuel pump)
         on_ground = true, flap_lever = 0, pitch = 0,
         ff = {0, 0, 0, 0},                     -- engine fuel flow, kg/s
         running = {false, false, false, false},  -- engine running
@@ -250,6 +251,12 @@ function M.update(s, inp, dt)
             else s.stab_low_t[id] = 0 end
         end
     end
+    -- the APU DC fuel pump in main 2: from the APU start until main 2 AFT
+    -- gives pressure (about 7 psi), on the APU battery bus (ATA26_28 p.478-480,
+    -- FCOM p.820)
+    s.cmd.apu_dc = inp.apu_fuel and low.m2_aft
+    pump.apu_dc = (s.cmd.apu_dc and inp.apu_bat) or false
+    low.apu_dc = not (pump.apu_dc and q.m2 > 0)
 
     -- ======== valves
     for n = 1, 4 do
@@ -429,8 +436,11 @@ function M.update(s, inp, dt)
     c.imbalance = s.tank_eng_reached and imbal("inout", math.abs((q.m2 + q.m3) - (q.m1 + q.m4)), M.IMBAL23)
     -- valves not where they were sent
     for n = 1, 4 do c["xfeed" .. n] = s.disagree_t["x" .. n] >= M.DISAGREE_S end
-    c.res_xfr = s.disagree_t.res2a >= M.DISAGREE_S or s.disagree_t.res2b >= M.DISAGREE_S
-        or s.disagree_t.res3a >= M.DISAGREE_S or s.disagree_t.res3b >= M.DISAGREE_S
+    c.res_xfr2 = s.disagree_t.res2a >= M.DISAGREE_S or s.disagree_t.res2b >= M.DISAGREE_S
+    c.res_xfr3 = s.disagree_t.res3a >= M.DISAGREE_S or s.disagree_t.res3b >= M.DISAGREE_S
+    -- APU FUEL: the DC pump low while commanded, or the APU fuel valve not
+    -- where it was sent (FCOM p.902; the 10 s of the crossfeed valves: estimate)
+    c.apu_fuel = (s.cmd.apu_dc and low.apu_dc) or s.disagree_t.apu >= M.DISAGREE_S
     c.xfer14 = inp.xfer_main14 and (inp.on_ground or (q.m2 + q.m3) > (q.m1 + q.m4))
     c.xfeed_config = ((not s.cmd.x1 or not s.cmd.x4) and not tank_eng_q)
         or ((not s.cmd.x2 or not s.cmd.x3) and not flaps_to)
