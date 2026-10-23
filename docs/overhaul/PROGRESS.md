@@ -2,7 +2,7 @@
 
 次のセッションは、ここと [PLAN.md](PLAN.md) を読んでから続きに入る。
 
-最終更新：2026-10-24 朝（空調 3-1 段 3：ECS synoptic のパネル。段 2：温度制御と貨物室の温度・暖房）
+最終更新：2026-10-24 朝（防氷・防雨 3-2。空調 3-1 段 3：ECS synoptic のパネル）
 
 ## いまどこか
 
@@ -26,23 +26,25 @@
   - 2-2（燃料）：モデルまで（`plugins/xtlua/scripts/B747.25.xt.fuel/B747.28.fuel_model.lua`。タンク・ポンプ・弁の表、FSMC（クロスフィード 2・3、O/J 2・3、予備・スカベンジ・水平安定板タンクの移送）、FJCC（ジェティソン）、マニフォールド（圧力の順位、クロスフィード、吸引供給、shared flow）、量、EICAS、頭上灯）。試験 117 件。燃料モジュールへの組み込みも済（`B747_fuel_system()`。ARCHITECTURE.md §4.7）：前のポンプ・弁・供給源・タンク量・EICAS の処理を外し、頭上の灯は照明モジュールがモデルの出力を読む。APU の DC 燃料ポンプと APU FUEL（APU-11）も。試験はモデル 124 件・モジュール 62 件・照明 37 件、X-Plane の `s06_fuel`（カスタム acf 42/42）、空中の予備・安定板タンクの移送とジェティソン、`s00`（両 acf 69/69）。カスタム acf の燃費（SFC）は、巡航の燃料流量を測って（`s07_cruise_ff`）純正と同じ値にした（前の値では約 25 % 少なかった。ACF_DIFF.md §5）。残りは下の「燃料（2-2）の GAP の状態」。
 - **段階 3**：
   - 3-1（空調・与圧・機器冷却）：段 1〜3 まで（`B747.55.pack_model.lua`・`B747.55.press_model.lua`・`B747.55.eqcool_model.lua`・`B747.55.temp_model.lua` とグルー、ARCHITECTURE.md §4.11）。X-Plane の与圧を上書きし、客室はパックの空気と外流弁・漏れ・リリーフ弁の収支で計算する。CPC A/B とモード、FMC の経路からの着陸高度、リミッタ、手動、リリーフ、機器冷却、メッセージ。段 2 で 7 ゾーンの温度制御（トリム空気、backup、ダクト過熱と ZONE RST、comfort correction）と貨物室の温度・暖房。段 3 でカスタム acf の ECS synoptic（ゾーン温度、MASTER、貨物室、外流弁の針と MAN/AUTO、HI FLOW、EXT AIR、パックの OFF/A/B、流れの線）。試験はパックのモデル 61 件・与圧のモデル 99 件・機器冷却のモデル 21 件・温度のモデル 75 件・モジュール 73 件、X-Plane の `s14_press_ground`・`s15_press_cruise`・`s16_temp_ground`・`s17_ecs_synoptic`。段取りと残りは下の「空調（3-1）の段取りと GAP の状態」。
+  - 3-2（防氷・防雨）：モデル `plugins/xtlua/scripts/B747.50.xt.antiice/B747.50.antiice_model.lua` とグルー `B747.50.xt.antiice.lua` で作り直した（ARCHITECTURE.md §4.12）。NAI 弁（PRV の下流の抽気で開く、28V DC、過熱のラッチ）、WAI 弁（空中でスイッチ ON、AC bus 2 のモーター、指令と比べる VALVE 灯）、窓の加熱（電源が無ければ INOP、故障のラッチと 10 秒の入れ直し）、プローブの加熱（エンジン運転中、TAT は空中）、氷検知（空中、AC bus 1・3）、ワイパー（28V DC）と、その P5 の灯・EICAS・STATUS。X-Plane の熱・氷検知・ワイパーへは左右別々に、変わったときだけ書く。試験はモデル 47 件・モジュール 174 件・照明 50 件、X-Plane の `s18_antiice_ground`・`s19_antiice_air`。残りは下の「防氷・防雨（3-2）の GAP の状態」。
 
 ## 次にやること
 
 項目を終えるたびに、[DIFFERENCES.md](DIFFERENCES.md)（実機との違い、全分野。2026-10-23 に利用者の依頼で作った）の該当分野も直す。
 
 1. 承認済みのパネル（カスタム acf）の変更：全部済。3-1 の ECS synoptic の上半分と流れの線（AIR-15、PNEU-11）が最後。PNEU-09（主 EICAS のダクト圧の表示条件）は 3-1 段 1 の data block の条件（FCOM p.585 と ATA21 p.451）で済。承認の一覧に無い 2 件（客室高度の赤い数字の桁、data block の LDG ALT の消去。AIR-18）は利用者に確認中。済：`.snd` の警報音、1-3 の PG と 3〜10 ページ、1-3 の STATUS ページと cue、1-4 の HYD synoptic（HYD-19。記号の色と不作動項目の絵は 2026-10-23 夕方に新しい画像で）と RSVR PRESS（HYD-18）、1-1 の synoptic の ISLN・DRIVE の枠・UTILITY と GALLEY の色、STAT のバッテリーの値と CHG/DIS、1-5 のダクト圧の色（PNEU-10）。変更の一覧は ACF_DIFF.md §5、画像は `docs/overhaul/tools/make_synoptic_images.ps1` で作る。
-2. 3-1（空調・与圧・機器冷却）：作業中。段取りは下の「空調（3-1）の段取りと GAP の状態」。段 1（パックと与圧、機器冷却と ER 開始のスイッチ）、段 2（温度制御と貨物室の温度・暖房）、段 3（ECS synoptic のパネル）は済。残りは故障の入れ方（パック・ファン・CPC・機器冷却・温度制御。X-Plane に相当する故障が無い）と、承認待ちのパネルの 2 件（AIR-18）。
-3. 2-3（エンジン）の残り：段 1〜3 は済（下の「エンジン（2-3）の GAP の状態」）。後回し：表示値の作り方（ENG-33。EGT は X-Plane の EGT の比例では始動と離陸を両立できず、N1・N2 などから作り直す必要があるが、値は資料に無く推定になる。N1・EPR・N2 の式を変えると EEC の推力の制御の調整もやり直し）、始動の空気（ENG-38・PNEU-08。ダクト圧と starter の関係が資料に無い）、GE の油圧の目盛りと値（CF6 の値が資料に無い）、振動の high band。partial・compact 形式と exceedance cue（ENG-22）は 5-2 で。空中始動の範囲（ENG-24）は資料に値が無く作れない。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べるのも残り。A/T（6-4）との境界は、EEC がレバー → 指令・最大定格・推力の制御まで、FMC の推力基準と A/T のサーボ（レバーを動かす）は 6-4。
-4. 1-5（空圧）の残り：故障の入れ方（過熱、過圧、HPSOV・PRV の固着、ダクトリーク）、地上空気の操作、スターターがダクト圧で回ること（エンジン 2-3）。
-5. 1-4（油圧）の残り：脚・ブレーキ・ステアリング・逆推力・stab trim・ヨーダンパーの「油圧で動くか」（HYD-09・11・12）は、それぞれの作り直しで、モデルの負荷の表（`B747_hyd_model.LOADS`）を使って入れる。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
-6. 1-1（電源）の残り：電源の有無を `bus_volts` で見ている系統を、バスごとの dataref（ARCHITECTURE.md §4.1）に乗り換える。どれも後の作り直し（空圧 1-5、空調 3-1、燃料 2-2、IRS と無線、照明、操縦系統 4-1）と絡むので、1-2 と同じく各系統の作り直しのときに行う（2026-10-23 に決めた。利用者の確認待ち）。
+2. 3-1（空調・与圧・機器冷却）：段 1（パックと与圧、機器冷却と ER 開始のスイッチ）、段 2（温度制御と貨物室の温度・暖房）、段 3（ECS synoptic のパネル）は済。残りは故障の入れ方（パック・ファン・CPC・機器冷却・温度制御。X-Plane に相当する故障が無い）と、承認待ちのパネルの 2 件（AIR-18）。
+3. 3-2（防氷・防雨）：済（下の「防氷・防雨（3-2）の GAP の状態」）。残りは防氷の推力補正（ICE-11。EEC の補正表の作り直しで PNEU-13 と一緒に）、逆推力中の NAI 弁の閉（ICE-05）、ウォッシャー・防雨剤・WSHLD AIR（ICE-10。3D の操作子が要る）。PLAN.md の次は 3-3。
+4. 2-3（エンジン）の残り：段 1〜3 は済（下の「エンジン（2-3）の GAP の状態」）。後回し：表示値の作り方（ENG-33。EGT は X-Plane の EGT の比例では始動と離陸を両立できず、N1・N2 などから作り直す必要があるが、値は資料に無く推定になる。N1・EPR・N2 の式を変えると EEC の推力の制御の調整もやり直し）、始動の空気（ENG-38・PNEU-08。ダクト圧と starter の関係が資料に無い）、GE の油圧の目盛りと値（CF6 の値が資料に無い）、振動の high band。partial・compact 形式と exceedance cue（ENG-22）は 5-2 で。空中始動の範囲（ENG-24）は資料に値が無く作れない。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べるのも残り。A/T（6-4）との境界は、EEC がレバー → 指令・最大定格・推力の制御まで、FMC の推力基準と A/T のサーボ（レバーを動かす）は 6-4。
+5. 1-5（空圧）の残り：故障の入れ方（過熱、過圧、HPSOV・PRV の固着、ダクトリーク）、地上空気の操作、スターターがダクト圧で回ること（エンジン 2-3）。
+6. 1-4（油圧）の残り：脚・ブレーキ・ステアリング・逆推力・stab trim・ヨーダンパーの「油圧で動くか」（HYD-09・11・12）は、それぞれの作り直しで、モデルの負荷の表（`B747_hyd_model.LOADS`）を使って入れる。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
+7. 1-1（電源）の残り：電源の有無を `bus_volts` で見ている系統を、バスごとの dataref（ARCHITECTURE.md §4.1）に乗り換える。どれも後の作り直し（空圧 1-5、空調 3-1、燃料 2-2、IRS と無線、照明、操縦系統 4-1）と絡むので、1-2 と同じく各系統の作り直しのときに行う（2026-10-23 に決めた。利用者の確認待ち）。
    - 済：表示器（fltInst02。機長 PFD・ND は APU standby、upper EICAS は main standby、ほかは F/O transfer）、EICAS の計算（warning。EIU のどれかに電源）、時計の計時（fltInst03・04。main hot battery bus）、ELEC パネルの灯（lighting）。
    - 燃料のポンプと弁も 2-2 で乗り換えた（AC・utility・main battery・hot battery・DC・APU battery・ground service bus）。
    - 残り：IRS と NAV RAD（fms）、表示灯の輝度（lighting：`bus_volts[0]`・`[2]`）、客室灯（lighting）、ヨーダンパー（fltCtrls：`battery_array_on`）。STAT ページのバッテリーはカスタム acf だけ済（純正 acf は X-Plane の値のまま）。
-7. 1-2（空地判定）の残り：`onground_any` を読んでいる 16 モジュール（autopilot、fms、fltInst02、antiice、fltCtrls、EEC、engines、fuel、hydraulicsmodel、gear の autobrake、manipulators、fdr、lighting など）を、PSEU の dataref（ARCHITECTURE.md §4.2）に乗り換える。どの信号（pri/alt の AIR・GND、前脚圧縮）を使うかは notes/ATA-32.md §4.1 の表。各系統の作り直しのときに行う。
-8. 1-3 の残り：他のメッセージによる抑止（notes/ATA-31-warning.md §4.4.1）と時間遅れは、各系統の作り直しで表に足す。音（`.snd`）とパネル（PG・3 ページ目以降・STATUS）は済。
-9. R-3 は、作り直しが先になる系統の害の大きい誤りだけ、合間に入れる。
+8. 1-2（空地判定）の残り：`onground_any` を読んでいるモジュール（autopilot、fms、fltInst02、fltCtrls、EEC、engines、fuel、hydraulicsmodel、gear の autobrake、manipulators、fdr、lighting など）を、PSEU の dataref（ARCHITECTURE.md §4.2）に乗り換える。どの信号（pri/alt の AIR・GND、前脚圧縮）を使うかは notes/ATA-32.md §4.1 の表。各系統の作り直しのときに行う。防氷（3-2）は乗り換えた（`pri_gnd`）。
+9. 1-3 の残り：他のメッセージによる抑止（notes/ATA-31-warning.md §4.4.1）と時間遅れは、各系統の作り直しで表に足す。音（`.snd`）とパネル（PG・3 ページ目以降・STATUS）は済。
+10. R-3 は、作り直しが先になる系統の害の大きい誤りだけ、合間に入れる。
 
 ## 段階 T の状態
 
@@ -216,6 +218,13 @@ PLAN.md §3 に書いた。要点：
   - 始め：エンジン停止の開始は客室・貨物室とも外気温（TAT）、エンジン運転中か空中（対地 50 ft 超）の開始は target と、貨物室はつり合いの温度。最初の 3 秒は置き直す（XTLua の最初の読み取りが 0 で、バスと機器冷却の排気が読めない）。X-Plane の空中開始は速度ほぼ 0（TAT が外気温に近い）から始まるので、貨物室は巡航のつり合いより冷たく始まり、30〜50 分で近づく。
   - comfort correction：働いている間に PASS TEMP を回すと 0 にして、その便ではもう使わない（資料は「選び直すと上書き」）。cruise clamp の normal flow を待つ「客室の温度」は U/D・A〜E のそれぞれ（backup は平均）。下の再循環ファンもパックと一緒に待つ。
   - 貨物室：熱容量 2,000 kJ/K、客室へ 0.4 kW/K、スキンへ 0.3 kW/K、機器冷却の排気 0.5 kg/s（客室より 15 ℃ 暖かい）、前方のヒーター 2 本で 3 kW、後方暖房 10 kW、後方の選択温度 40°F（スイッチは bulk 貨物室の中）、後方のサーモスタットと過熱スイッチの幅 1°F。後方暖房の「エンジン運転中」はどれか 1 基。
+- 防氷・防雨（3-2。`B747.50.antiice_model.lua`・`B747.50.xt.antiice.lua` に「estimate」と書いてある）：
+  - NAI 弁：開くのに要る抽気 12 psi（前のコードの値）、全行程 1 秒、ソレノイドはそのエンジンの DC バス。NAI ダクトの過熱は X-Plane の inlet heat の故障で受け、スイッチを切るまで閉じたまま（資料は「スイッチを一度切る」）。
+  - WAI 弁：モーターの全行程 2.5 秒（資料は 3 秒未満）。地上でスイッチ ON のとき VALVE 灯は点かない（回路が指令と比べるため）。X-Plane の surface heat の故障で弁がその位置で止まる。
+  - プローブ：左のプローブは AC bus 1、右は AC bus 2。X-Plane に AUX のプローブが無いので、L AUX を X-Plane の予備のピトー、R AUX を予備の静圧孔に当てた。地上の減電力（資料にある）は作っていない（X-Plane に違いが出ない）。
+  - 窓：風防 L・R の 115V AC と 28V DC は bus 1・2。側窓は AC のどれかで加熱。
+  - 氷検知：>NO ICING は、空中で氷を検知したあと検知しなくなり、防氷が入っている間、着陸まで（FCOM は「氷を検知しなくなった」とだけ書く）。X-Plane の氷検知の故障は 2 個とも。
+  - ワイパー：28V DC は bus 1（L）・2（R）。速さは X-Plane の 50・100 %（acf の最大が毎秒 2 回なので、実機の LO 160・HI 250 回/分より遅い。acf は変えていない）。
 
 
 ## 電源（1-1）の GAP の状態
@@ -435,6 +444,28 @@ PLAN.md §3 に書いた。要点：
 | AIR-21 電源 | 一部（CPC・手動・PTC は済。外流弁の自動のモーター・パック弁の継電器・ファンのバスは資料に無い） |
 | AIR-22 status メッセージ | 一部（CABIN ALT AUTO A/B、OUTFLOW VLV L/R、UPR/LWR PRESS RELIEF、CPCS AIR/GND、ZONE TEMP は済。パック・ファン・機器冷却の status は故障の入れ方と一緒に） |
 
+## 防氷・防雨（3-2）の GAP の状態
+
+パネル（acf）の変更なし。P5 の灯は照明のモジュールがモデルの出力（`antiice/light/*`）を読む。主 EICAS の NAI・WAI と ECS synoptic の流れは、今までどおり X-Plane の ice の dataref と `antiice/nacelle|wing/valve_pos` で出る。
+
+| ID | 状態 |
+|---|---|
+| ICE-01 主翼防氷の X-Plane への渡し方 | 済（左右の dataref に別々に、変わったときだけ書く） |
+| ICE-02 WAI 弁 | 済（空中でスイッチ ON と DC bus 2 の指令、AC bus 2 のモーターで 2.5 秒（推定）、ダクト圧は見ない。VALVE 灯は指令と比べる。WAI VALVE LEFT・RIGHT は 5 秒） |
+| ICE-03 >ANTI-ICE | 済（防氷 ON、TAT 12°C 超、氷を検知していない） |
+| ICE-04 NAI VALVE・WAI VALVE | 済（エンジン運転中に 3.5 秒、5 秒） |
+| ICE-05 NAI 弁の条件 | 一部（PRV の下流の抽気（抽気のモデル：過熱ラッチ、始動弁閉の 15 秒後、火災スイッチ、ENGINE BLEED off でも NAI で PRV が開く）、28V DC、過熱のラッチ（X-Plane の inlet heat の故障で受ける）。逆推力中の閉（E&M）と NAI ダクトのリークは無い） |
+| ICE-06 プローブの加熱 | 済（ピトー静圧・AOA はエンジン運転中、TAT は空中。X-Plane の AOA・TAT の加熱も書く。HEAT P/S CAPT・F/O・L AUX・R AUX、L/R AOA、L/R TAT（15 秒）。X-Plane の故障で受ける。NAV-09 もこれで済） |
+| ICE-07 窓の加熱 | 済（L・R を別々に、電源が無い・スイッチ OFF・故障で INOP と HEAT WINDOW、故障は 10 秒切って入れ直すまで保持、側窓は AC で加熱）。STATUS の WINDOW HEAT 1L/1R/2L/2R は無い |
+| ICE-08 氷検知 | 済（空中だけ、AC bus 1・3、>ICING・>NO ICING・>ICE DETECTORS（2 秒）・STATUS ICE DETECTOR L/R（12 秒））。氷の検知は X-Plane の ice の表示灯を使う |
+| ICE-09 ワイパー | 済（LO・HI を X-Plane の 50・100 %、28V DC） |
+| ICE-10 ウォッシャー・防雨剤・WSHLD AIR | 未（3D の操作子が無い） |
+| ICE-11 防氷の推力補正 | 未（EEC の補正表の作り直しで PNEU-13 と一緒に） |
+| ICE-12 init の型の括弧 | 済 |
+| ICE-13 電源 | 済（バスの割り当ての一部は推定：上の「推定で作った部分」） |
+
+ほかに：エンジン始動のモデルが点火の条件に使う NAI を、X-Plane の inlet heat からスイッチの位置に変えた（FCOM p.625、p.631）。ER 開始で WINDOW HEAT L・R を ON にした（FCOM p.106 (NP.21.12)）。
+
 ## 気づいたこと（作業の途中で）
 
 - **全開にすると EPR が最大定格を一時超える**（2026-10-23、EEC 段 2 の試験）：地上で全開にすると、EPR はカスタム acf で 1.57、純正 acf で 1.58 まで上がってから最大定格（1.51〜1.53）に戻る。EEC の PID（`ecc_spd`、前からのもの）の応答で、実機は最大定格で止まる。→ 推力の制御の作り直し（2026-10-23 夜）で直った。前の PID は D 項が大きくスロットルが 0.9〜1.05 を往復し、積分が出力の上限 1.2 まで溜まって、空中の全開でも EPR が最大定格を 0.02 超えたままだった（ALTN の全開では N2 が赤線を超えた）。
@@ -459,7 +490,7 @@ PLAN.md §3 に書いた。要点：
 - **XTLua は X-Plane の dataref への書き込みをキャッシュと比べる**：読むと次のフレームでキャッシュを X-Plane から読み直し、書くとキャッシュと違うときだけ次のフレームで 1 回 X-Plane に渡す（XTLua のソース xpmtdatarefs.cpp）。読まずに同じ値を書き続けると、X-Plane が値を変えた後は直らない（Web API で cross tie を 0 にすると、毎フレーム 1 を書いている電源のグルーが戻さなかった）→ X-Plane の dataref は毎フレーム読んで、違うときだけ書く（ARCHITECTURE.md §9a、TESTING.md §1.2）。電源のグルー（X-Plane の cross tie・バッテリー・GPU・APU 発電機・発電機）も同じに直した（Web API で cross tie を 0 にしても、すぐ 1 に戻る）。
 - `s00` の始動は AUTOSTART OFF のままの手動始動（START を引き、N2 20 % で FUEL CONTROL を RUN）。AUTOSTART ON のときは、START を引くと始動弁は準備だけで、FUEL CONTROL を RUN にすると EEC が開く（FCOM p.879）。新しい空圧のモデルはこれに従う。AI の自動始動（B747.95.xt.AI）は AUTOSTART ON・パック OFF で「START → すぐ RUN」なので、この順で動く。
 - **advisory なのに beeper が鳴るメッセージ**：FCOM p.619（2.50.1）の表では、BLEED ISLN L・R と BLEED HP ENG 1〜4 は「Advisory、Beeper」（改訂で足された行）。警報モデルは beeper を caution にしか鳴らさなかったので、advisory の beeper を足した（master CAUTION は点けない）。テキスト化した FCOM では、ほかにも「Advisory Beeper」に見える行（>CREW OXY LOW、ENG EEC MODE、ENG START VLV、IRS MOTION、UNABLE RNP）があるが、原本のページ（p.545、p.899、p.902、p.1430）では列のずれで、beeper は無い。
-- **ピトー加熱がエンジンの抽気圧を見ている**：防氷モジュールは、どれかのエンジンの `bleed_air_psi` が 12 psi を超えることを「エンジン運転中」の代わりに使っている。新しい空圧では PRV が閉じると 0 になるので、4 基とも ENGINE BLEED が OFF（NAI も OFF）だとピトー加熱が切れる。始動のときも、始動弁が閉じてから PRV が開くまでの 15 秒だけ遅れる。防氷（3-2）で「エンジン運転中」に直す。
+- **ピトー加熱がエンジンの抽気圧を見ている**：防氷モジュールは、どれかのエンジンの `bleed_air_psi` が 12 psi を超えることを「エンジン運転中」の代わりに使っている。新しい空圧では PRV が閉じると 0 になるので、4 基とも ENGINE BLEED が OFF（NAI も OFF）だとピトー加熱が切れる。始動のときも、始動弁が閉じてから PRV が開くまでの 15 秒だけ遅れる。防氷（3-2）で「エンジン運転中」に直した。
 - **外部電源（試験のとき）**：XP12（12.0.12 以降）では、電源モジュールが X-Plane の GPU の電圧（`GPU_generator_volts`）が 24 V 未満のとき毎フレーム `electrical/ext_pwr1_avail`・`ext_pwr2_avail` を 0 にする（`B747.03.xt.electrical.lua` の `B747_external_power`）。Web API で 1 を書いても戻る。CDU の GROUND POWER の行も XP12 では出ない。`electrical/connect_power` のハンドラは phase を見ないので、押すと離すで 2 回切り替わる（XP11 向けの古いコマンド。今は害が無いので直していない）。試験で AC が要るときは APU 発電機を使う。
 - P5 の抽気パネルは機長の目の位置から遠く、斜めにしか見えない。試験キットの視点に視野角を足し、`bleed`（pitch 19、heading 70、視野角 25°）で灯が読めるようにした。視野角は次の視点とシナリオの終わりで元に戻す。
 
@@ -558,3 +589,4 @@ PLAN.md §3 に書いた。要点：
 - 2026-10-24 05:5x：空調（3-1）、グルーどうしで渡す出力の表の修正。パックと与圧のグルーが出力の表をメタテーブル無しでグローバルに置いていたため、XTLua の名前空間がコピーし、数と真偽の項目が止まっていた（機器冷却が客室の ΔP を 0 と読み、飛行中の OVRD で差圧があっても EQUIP COOLING が出た）。`setmetatable` を付けて同じ表を渡すようにし、空調モジュールの試験に名前空間の表の確認を足した（直す前の版で 2 件落ちることを確かめた）。段 2 の温度のグルーを結線したときに、パックの運転数が 0 のままで見つけた。
 - 2026-10-24 05:2x〜06:3x：空調（3-1）段 2、温度制御と貨物室の温度・暖房。新しいモデル `B747.55.temp_model.lua` とグルー `B747.55.xt.temp.lua`：7 ゾーンの target と温度、最も冷たい空気が要るゾーンでパックの出口（35°F・28°F〜135°F）、トリム空気と master trim air valve（TRIM AIR ON・パック運転・中央ダクト）、backup（ゾーン弁 10 %、客室の平均を PASS TEMP の値に、ZTC の故障では最後の値、F/D は 85°F まで）、ダクト 185°F・10 秒のラッチと ZONE RST、165°F・30 秒の TEMP ZONE、comfort correction、>TRIM AIR OFF・TEMP ZONE・STATUS ZONE TEMP（新設）・ZONE SYS FAULT 灯、後方貨物室暖房（選択温度 40°F：推定、90°F で閉じて TEMP 灯と TEMP CARGO HEAT、AFT の火災 ARM）、前方貨物室（機器冷却の排気と 40/50°F のヒーター）。パックのモデルは cruise clamp の normal flow を客室の温度で待つ（最長 20 分）。熱のつり合いの値は資料に無く推定。試験：温度のモデル 75 件（新設）、パックのモデル 61 件、モジュール 73 件、32 本すべて通る。X-Plane（カスタム acf）：`s16_temp_ground`（新設）36/36、`s15_press_cruise` 41/41（巡航の温度と EQUIP COOLING OVRD を足した）、`s14_press_ground` 66/66。純正 acf の `s00` 69/69。最初の `s15` で前方貨物室が −6 ℃ だった（フライト開始の最初のフレームでバスと機器冷却の排気が 0 に読め、排気なしの初期値になった）ので、与圧のモデルと同じく最初の 3 秒は初期値を置き直すようにした。最初の `s16` は PASS TEMP を 0.5 に戻す書き込みが Web API に拒まれた（XTLua の double の dataref に小数を書けない。TESTING.md に既にある癖を 12.4.4 で確かめた）ので、W と C の両端で確かめる形にした。Log.txt に Lua の誤りは無い。
 - 2026-10-24 06:3x〜07:0x：空調（3-1）段 3、ECS synoptic のパネル（AIR-15、PNEU-11）。道具 `docs/overhaul/tools/panel_ecs.lua` でカスタム acf の ECS synoptic に、7 ゾーンの target（小さく、`temp/target_shown`）と actual、MASTER、FWD・AFT、TEMP °C、外流弁の針（−1〜+1 を CL・OP の目盛りの ±64°）と弁ごとの MAN（琥珀）・AUTO、パックごとの HI FLOW、EXT AIR を足し、パックの OFF/A/B を弁と使用中の PTC で、エンジンと APU の流れを弁で出すようにした。抽気のモデルに EXT AIR（`air/ext_air`）を足した。新しい絵は `make_ecs_images.ps1`（針、琥珀の MAN）。INTERFACES.tsv にパネルが読む dataref を 10 個足した。最初の版は LED の `LED_ROWS` をダクト圧の計器（書式 `xxx#00`、3）から写したので、書式 `xx###0`（4）の字で次の字の一部が数字に重なった。針は最初 ±90° にしたが、全開・全閉で計器の縦の線と重なって見えないので、目盛りに合わせた。PNEU-09 は段 1 の data block の条件で済とした。試験：抽気のモデル 82 件、32 本すべて通る。X-Plane：`s17_ecs_synoptic`（新設）15/15（写真で数字・針・AUTO・HI FLOW・A、TRIM AIR OFF で target が消える、MAN L で琥珀の MAN と L の針、PACK 1 OFF、ENGINE BLEED 1 OFF の流れの線）、外から見た機体は変わらない、純正 acf の `s00` 69/69。Log.txt に Lua の誤りは無い。客室高度の赤い数字の桁と data block の LDG ALT の消去（AIR-18）は承認の一覧に無いので利用者に確認中。
+- 2026-10-24 07:0x〜07:5x：防氷・防雨（3-2）。新しいモデル `B747.50.antiice_model.lua` と、防氷のモジュール `B747.50.xt.antiice.lua` をそのグルーに書き直した：NAI 弁（PRV の下流の抽気、28V DC、過熱のラッチ、VALVE 灯、NAI VALVE n）、WAI 弁（空中でスイッチ ON、モーター、指令と比べる VALVE 灯、WAI VALVE LEFT・RIGHT）、窓の加熱（INOP・HEAT WINDOW、10 秒の入れ直し）、プローブの加熱（HEAT …、X-Plane の AOA・TAT の加熱）、氷検知（>ICING・>NO ICING・>ICE DETECTORS・STATUS ICE DETECTOR L/R）、>ANTI-ICE、ワイパー（50・100 %、28V DC）。X-Plane へは左右別々に、変わったときだけ書く（前は左右共通のコマンドで、片側が違うと毎フレーム ON と OFF が入れ替わった：ICE-01）。照明のモジュールの P5 の灯はモデルの出力を読む。エンジン始動の点火の NAI はスイッチから、ER 開始で WINDOW HEAT ON。init の型の括弧の誤りも直した。試験：モデル 47 件、モジュール 174 件（モジュールが書く X-Plane の dataref がすべて書き込み可かも見る）、照明 50 件。X-Plane（カスタム acf）：新シナリオ `s18_antiice_ground` 91/91（NAI の灯と EICAS の NAI、inlet heat の故障で NAI VALVE 2、地上の WAI、窓の INOP とリセット、HEAT P/S CAPT、>ICE DETECTORS と STATUS、ワイパー）、`s19_antiice_air` 25/25（空中の TAT の加熱、WAI 弁が 2.7 秒で開き EICAS に WAI、HEAT R TAT）、`s05_bleed` 64/64。純正 acf の `s00` 69/69。Lua の誤りなし。P5 の VALVE・INOP 灯の位置はスクリーンショットで確かめた。

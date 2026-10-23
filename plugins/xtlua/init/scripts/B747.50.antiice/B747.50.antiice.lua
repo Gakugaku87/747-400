@@ -62,8 +62,13 @@ end
 B747DR_windshield_wiper_sel_L_pos   = deferred_dataref("laminar/B747/antiice/wndshlsd_wiper_L/sel_dial_pos", "number")
 B747DR_windshield_wiper_sel_R_pos   = deferred_dataref("laminar/B747/antiice/wndshlsd_wiper_R/sel_dial_pos", "number")
 
-B747DR_nacelle_ai_valve_pos         = deferred_dataref("laminar/B747/antiice/nacelle/valve_pos", "array[4)")
-B747DR_wing_ai_valve_pos            = deferred_dataref("laminar/B747/antiice/wing/valve_pos", "array[2)")
+B747DR_nacelle_ai_valve_pos         = deferred_dataref("laminar/B747/antiice/nacelle/valve_pos", "array[4]")
+B747DR_wing_ai_valve_pos            = deferred_dataref("laminar/B747/antiice/wing/valve_pos", "array[2]")
+-- the anti-ice model's P5 lights (B747.50.xt.antiice.lua; the lighting
+-- module reads them): NAI VALVE 1-4, WAI VALVE, WINDOW HEAT INOP L, R (1 = on)
+B747DR_antiice_light_nai_valve      = deferred_dataref("laminar/B747/antiice/light/nai_valve", "array[4]")
+B747DR_antiice_light_wai_valve      = deferred_dataref("laminar/B747/antiice/light/wai_valve", "number")
+B747DR_antiice_light_window_inop    = deferred_dataref("laminar/B747/antiice/light/window_inop", "array[2]")
 
 B747DR_init_ice_CD                  = deferred_dataref("laminar/B747/ice/init_CD", "number")
 

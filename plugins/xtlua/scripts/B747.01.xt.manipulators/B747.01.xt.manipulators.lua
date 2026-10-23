@@ -2186,6 +2186,12 @@ function B747_set_manip_ER()
 	B747_button_switch_position_target[39] = 1
 	B747DR_button_switch_position[39] = 1
 
+    -- WINDOW HEAT L and R ON (FCOM p.106, NP.21.12)
+	B747_button_switch_position_target[73] = 1
+	B747DR_button_switch_position[73] = 1
+	B747_button_switch_position_target[74] = 1
+	B747DR_button_switch_position[74] = 1
+
     -- BLEED AIR
 	B747_button_switch_position_target[75] = 1
 	B747DR_button_switch_position[75] = 1

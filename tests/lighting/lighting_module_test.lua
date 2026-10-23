@@ -42,4 +42,27 @@ only("laminar/B747/fuel/light/nozzle_valve", 1)
 T.near(rt:get(ANNUN, 39), 0.8, 0.01, "NOZZLE R VALVE light -> annunciator 39")
 T.near(rt:get(ANNUN, 38), 0, 0.01, "NOZZLE L VALVE light off")
 
+-- the anti-ice lights come from the anti-ice model (laminar/B747/antiice/light/*)
+local ICE = "laminar/B747/antiice/light/"
+local function ice_only(name, i)
+    for k = 0, 3 do rt:set(ICE .. "nai_valve", k, 0) end
+    rt:set(ICE .. "wai_valve", 0)
+    for k = 0, 1 do rt:set(ICE .. "window_inop", k, 0) end
+    if i then rt:set(ICE .. name, i, 1) else rt:set(ICE .. name, 1) end
+    rt:frame(1 / 30)
+end
+for i = 0, 3 do
+    ice_only("nai_valve", i)
+    T.near(rt:get(ANNUN, 60 + i), 0.8, 0.01, "NAI " .. (i + 1) .. " VALVE light -> annunciator " .. (60 + i))
+    T.near(rt:get(ANNUN, 64), 0, 0.01, "NAI " .. (i + 1) .. " VALVE light: WAI VALVE off")
+end
+ice_only("wai_valve")
+T.near(rt:get(ANNUN, 64), 0.8, 0.01, "WAI VALVE light -> annunciator 64")
+ice_only("window_inop", 0)
+T.near(rt:get(ANNUN, 65), 0.8, 0.01, "WINDOW HEAT INOP L -> annunciator 65")
+T.near(rt:get(ANNUN, 66), 0, 0.01, "WINDOW HEAT INOP R off")
+ice_only("window_inop", 1)
+T.near(rt:get(ANNUN, 66), 0.8, 0.01, "WINDOW HEAT INOP R -> annunciator 66")
+T.near(rt:get(ANNUN, 60), 0, 0.01, "WINDOW HEAT INOP R: NAI 1 VALVE off")
+
 T.done()

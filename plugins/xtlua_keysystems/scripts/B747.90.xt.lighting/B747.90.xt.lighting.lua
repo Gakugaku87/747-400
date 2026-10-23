@@ -156,7 +156,6 @@ B747DR_light_hyd_brake_source       = find_dataref("laminar/B747/hydraulics/ligh
 --simDR_nacelle_inlet_antiice_fail_04 = find_dataref("sim/operation/failures/rel_ice_inlet_heat4")
 --simDR_wing_anti_ice_fail_01         = find_dataref("sim/operation/failures/rel_ice_surf_heat")
 --simDR_wing_anti_ice_fail_02         = find_dataref("sim/operation/failures/rel_ice_surf_heat2")
-simDR_window_heat_fail              = find_dataref("sim/operation/failures/rel_ice_window_heat")
 --simDR_bleed_air_fail_L              = find_dataref("sim/operation/failures/rel_bleed_air_lft")
 --simDR_bleed_air_fail_R              = find_dataref("sim/operation/failures/rel_bleed_air_rgt")
 
@@ -171,6 +170,9 @@ B747DR_light_bleed_apu_valve        = find_dataref("laminar/B747/air/light/apu_v
 B747DR_light_pack_sys_fault         = find_dataref("laminar/B747/air/light/pack_sys_fault")
 B747DR_light_zone_sys_fault         = find_dataref("laminar/B747/air/light/zone_sys_fault")
 B747DR_light_aft_cargo_temp         = find_dataref("laminar/B747/air/light/aft_cargo_temp")
+B747DR_antiice_light_nai_valve      = find_dataref("laminar/B747/antiice/light/nai_valve")
+B747DR_antiice_light_wai_valve      = find_dataref("laminar/B747/antiice/light/wai_valve")
+B747DR_antiice_light_window_inop    = find_dataref("laminar/B747/antiice/light/window_inop")
 
 simDR_gear_deploy_ratio             = find_dataref("sim/flightmodel2/gear/deploy_ratio")
 simDR_aircraft_altitude             = find_dataref("sim/cockpit2/gauges/indicators/altitude_ft_pilot")
@@ -414,9 +416,6 @@ B747DR_bleed_air_engine1_start_valve_pos = find_dataref("laminar/B747/air/engine
 B747DR_bleed_air_engine2_start_valve_pos = find_dataref("laminar/B747/air/engine2/bleed_start_valve_pos")
 B747DR_bleed_air_engine3_start_valve_pos = find_dataref("laminar/B747/air/engine3/bleed_start_valve_pos")
 B747DR_bleed_air_engine4_start_valve_pos = find_dataref("laminar/B747/air/engine4/bleed_start_valve_pos")
-
-B747DR_nacelle_ai_valve_pos         = find_dataref("laminar/B747/antiice/nacelle/valve_pos")
-B747DR_wing_ai_valve_pos            = find_dataref("laminar/B747/antiice/wing/valve_pos")
 
 B747DR_autopilot_cmd_L_status       = find_dataref("laminar/B747/autopilot/cmd_L_mode/status")
 B747DR_autopilot_cmd_C_status       = find_dataref("laminar/B747/autopilot/cmd_C_mode/status")
@@ -1142,59 +1141,16 @@ function B747_annunciators()
     annun.b.fuel_pump_stab_L = B747DR_fuel_light_pump_press[14]
     annun.b.fuel_pump_stab_R = B747DR_fuel_light_pump_press[15]
 
-    -- ANTI-ICE
-    
-    if (B747DR_button_switch_position[68] > 0.95) and (B747DR_nacelle_ai_valve_pos[0] < 1.0)
-        or (B747DR_button_switch_position[68]< 0.05) and (B747DR_nacelle_ai_valve_pos[0] > 0.0)
-    then
-        annun.b.anti_ice_nacelle_heat_01 = 1
-    else
-        annun.b.anti_ice_nacelle_heat_01 = 0
-    end
-
-    
-    if (B747DR_button_switch_position[69] > 0.95) and (B747DR_nacelle_ai_valve_pos[1] < 1.0)
-        or (B747DR_button_switch_position[69]< 0.05) and (B747DR_nacelle_ai_valve_pos[1] > 0.0)
-    then
-        annun.b.anti_ice_nacelle_heat_02 = 1
-    else
-        annun.b.anti_ice_nacelle_heat_02 = 0
-    end
-
-    
-    if (B747DR_button_switch_position[70] > 0.95) and (B747DR_nacelle_ai_valve_pos[2] < 1.0)
-        or (B747DR_button_switch_position[70]< 0.05) and (B747DR_nacelle_ai_valve_pos[2] > 0.0)
-    then
-        annun.b.anti_ice_nacelle_heat_03 = 1
-    else
-        annun.b.anti_ice_nacelle_heat_03 = 0
-    end
-
-    
-    if (B747DR_button_switch_position[71] > 0.95) and (B747DR_nacelle_ai_valve_pos[3] < 1.0)
-        or (B747DR_button_switch_position[71]< 0.05) and (B747DR_nacelle_ai_valve_pos[3] > 0.0)
-    then
-        annun.b.anti_ice_nacelle_heat_04 = 1
-    else
-        annun.b.anti_ice_nacelle_heat_04 = 0
-    end
-
-    
-    if (B747DR_button_switch_position[72] > 0.95
-        and
-        (B747DR_wing_ai_valve_pos[0] < 1.0 or B747DR_wing_ai_valve_pos[1] < 1.0))
-        or
-        (B747DR_button_switch_position[72] < 0.05
-        and
-        (B747DR_wing_ai_valve_pos[0] > 0.0 or B747DR_wing_ai_valve_pos[1] > 0.0))
-    then
-        annun.b.anti_ice_wing_heat = 1
-    else
-        annun.b.anti_ice_wing_heat = 0
-    end
-
-    annun.b.anti_ice_window_heat_L = B747_ternary(((B747DR_button_switch_position[73] > 0.95) and (simDR_window_heat_fail == 6)), 1, 0)
-    annun.b.anti_ice_window_heat_R = B747_ternary(((B747DR_button_switch_position[74] > 0.95) and (simDR_window_heat_fail == 6)), 1, 0)
+    -- ANTI-ICE: the anti-ice model's lights (B747.50.xt.antiice.lua): the
+    -- valves not where commanded, the windshields without heat (FCOM
+    -- p.625-628)
+    annun.b.anti_ice_nacelle_heat_01 = B747DR_antiice_light_nai_valve[0]
+    annun.b.anti_ice_nacelle_heat_02 = B747DR_antiice_light_nai_valve[1]
+    annun.b.anti_ice_nacelle_heat_03 = B747DR_antiice_light_nai_valve[2]
+    annun.b.anti_ice_nacelle_heat_04 = B747DR_antiice_light_nai_valve[3]
+    annun.b.anti_ice_wing_heat = B747DR_antiice_light_wai_valve
+    annun.b.anti_ice_window_heat_L = B747DR_antiice_light_window_inop[0]
+    annun.b.anti_ice_window_heat_R = B747DR_antiice_light_window_inop[1]
 
     -- YAW DAMPER
     annun.b.yaw_damper_upper = B747_ternary((B747DR_yaw_damper_upr_on == 0), 1, 0)

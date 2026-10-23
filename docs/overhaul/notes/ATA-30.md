@@ -246,3 +246,20 @@ ACF_DIFF.md との関係: 防氷に関わる acf 値（`_bleed_draw_dice_engn`�
 - >ICE DETECTORS が片方の故障で出るか、両方で出るか（E&M と LH36 が食い違う）。
 - PW 機で逆推力中に NAI 弁が閉じるか（E&M の記述だけ）。NAI の圧力スイッチ（>30 psig）が出す EICAS メッセージ名。
 - HEAT L/R AOA が FCOM 3.30 の表に無い理由（機体構成の違いか、表の省略か）。
+
+## 10. 実装（3-2、2026-10-24）
+
+- モデル `plugins/xtlua/scripts/B747.50.xt.antiice/B747.50.antiice_model.lua`（X-Plane なし）とグルー `B747.50.xt.antiice.lua`（前の防氷モジュールを書き直した）。構成は ARCHITECTURE.md §4.12、状態は PROGRESS.md の「防氷・防雨（3-2）の GAP の状態」、推定の値は PROGRESS.md の「推定で作った部分」。
+- 入力：P5 のスイッチ（`button_switch/position` [68–71] NAI、[72] WAI、[73–74] WINDOW HEAT）、ワイパーの選択器、各エンジンの `air/engineN/bleed_air_psi`（抽気のモデルの PRV の下流。PRV の条件は抽気のモデルが持つ：§4.1 の供給）、エンジン運転、PSEU の `pri_gnd`（最初の 3 秒は対地高度）、TAT（`temperature_leadingedge_deg_c`）、X-Plane の ice の表示灯と故障、バス。
+- 出力：`antiice/nacelle/valve_pos`・`wing/valve_pos`（EEC、抽気、ECS synoptic が読む）、P5 の灯 `antiice/light/nai_valve[4]`・`wai_valve`・`window_inop[2]`（照明のモジュールが annunciator 60〜66 に出す）、X-Plane の `ice_inlet_heat_on_per_engine`・`ice_surfce_heat_left_on/right_on`（主 EICAS の NAI・WAI）・`ice_window_heat_on_window[4]`・プローブの加熱・`ice_detect_on`・`wiper_speed_switch[2]`（XP11 は `wiper_speed`）、EICAS（caution 45、advisory 7・186〜195・222・242〜245・247・296〜297、status 37・38）。
+- §9 の未確認事項の扱い：
+  - 主翼は電熱式の `ice_surfce_heat_left_on/right_on` を左右別々に書く（acf の WAI 表示が見ている）。X-Plane の除氷が左右別々に効くかは、X-Plane で着氷させていないので未確認のまま。
+  - `"array[4)"` は `"array[4]"` に直した。
+  - ワイパー：acf の最大は毎秒 2 回。LO を X-Plane の 2（50 %）、HI を 3（100 %）にした。
+  - 地上で WAI ON：VALVE 灯は点けない（指令と比べる回路と読んだ。推定）。WINDOW HEAT off：INOP と HEAT WINDOW を出す（FCOM p.633 の「電力が切れている」）。
+  - >ICING は検知している間、>NO ICING は空中で検知したあと検知しなくなって防氷が入っている間、着陸まで（推定）。
+  - >ICE DETECTORS はどちらか 1 個の故障か電源なしで 2 秒（ATA30_32_35_36 p.164）。
+  - 逆推力中の NAI 弁の閉は作っていない。NAI ダクトのリークと圧力スイッチのメッセージも無い。
+  - HEAT L/R AOA は警報の表にあるので残した（ATA30_32_35_36 p.216–232 の電流センサー）。
+- X-Plane の故障の受け方：`rel_ice_inlet_heat`〜`4` → NAI の過熱（閉、スイッチを切るまでラッチ）、`rel_ice_surf_heat`・`2` → WAI 弁の固着、`rel_ice_window_heat`・`_cop` → 風防 L・R の制御器の故障、`rel_ice_pitot_heat1`・`rel_ice_static_heat` → P/S CAPT、`…2` → P/S F/O、`rel_ice_pitot_heat_stby` → P/S L AUX、`rel_ice_static_heat_stby` → P/S R AUX（推定の割り当て）、`rel_ice_AOA_heat`・`2`、`rel_ice_TAT_heat`・`2`、`rel_ice_detect` → 検知器 2 個とも。
+- 試験：`tests/antiice/antiice_model_test.lua`（47 件）、`tests/antiice/antiice_module_test.lua`（174 件）、`tests/lighting/lighting_module_test.lua`（防氷の灯）、X-Plane の `s18_antiice_ground`・`s19_antiice_air`。X-Plane で着氷させる試験（>ICING を X-Plane の着氷で出す）はしていない。

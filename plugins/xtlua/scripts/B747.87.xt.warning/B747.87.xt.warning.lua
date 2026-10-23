@@ -610,6 +610,8 @@ local B747_CASstatusMsg = {
     {DRindex = 34, name = "LWR PRESS RELIEF"},
     {DRindex = 35, name = "CPCS AIR/GND"},        -- ATA21 p.454
     {DRindex = 36, name = "ZONE TEMP"},           -- ATA21 p.350
+    {DRindex = 37, name = "ICE DETECTOR L"},      -- ATA30_32_35_36 p.164
+    {DRindex = 38, name = "ICE DETECTOR R"},
 }
 
 

@@ -28,6 +28,7 @@ B747DR_engine_start_valve_cmd   = find_dataref("laminar/B747/engines/start_valve
 
 local START_SWITCH = 16                     -- toggle_switch/position[16-19]
 local CON_SWITCH, AUTOSTART_SWITCH = 44, 45 -- button_switch/position
+local NAI_SWITCH = 68                       -- button_switch/position[68-71]: NACELLE ANTI-ICE 1-4
 -- EICAS slots (laminar/B747/CAS/*_status, B747.87.xt.warning.lua). ENG FAIL
 -- is in the warning list with the caution level (FCOM p.899).
 local WARN_ENG_FAIL = 28
@@ -92,7 +93,8 @@ local function read_inputs(inp)
         inp.burning[n] = simDR_engine_burning[n - 1] == 1
         inp.start_valve[n] = start_valve[n] > 0.5
         inp.spar_valve[n] = spar[n]
-        inp.nai[n] = simDR_engine_nacelle_heat_on[n - 1] == 1
+        -- the NACELLE ANTI-ICE switch selects the igniters (FCOM p.625, p.631)
+        inp.nai[n] = B747DR_button_switch_position[NAI_SWITCH + n - 1] > 0.95
     end
 end
 
