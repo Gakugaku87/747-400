@@ -40,6 +40,7 @@
     { "do": "check", "note": "油量は 0 でない", "dref": "laminar/B747/engines/oil_qty_liters[0]", "op": ">", "value": 10 },
     { "do": "check", "note": "振動が出る", "dref": "laminar/B747/engines/vibration[0]", "op": ">", "value": 0 },
     { "do": "check", "note": "振動はアイドルで小さい（100 % で 0.2〜1.2、回転の 2 乗。推定）", "dref": "laminar/B747/engines/vibration[0]", "op": "<", "value": 1.2 },
+    { "do": "check", "note": "振動の音源の文字は N1 か N2（1 N1、2 N2。FCOM p.850）", "dref": "laminar/B747/engines/vib_source[0]", "op": "between", "value": [1, 2] },
     { "do": "view", "the": -31.5, "psi": 33, "fov": 30 },
     { "do": "shot", "name": "lower_eicas_idle" },
 

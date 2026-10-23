@@ -1181,12 +1181,15 @@ laminar/B747/engines/display_N2	dataref	panel	B747.42.EEC,B747.42.xt.EEC,B747.19
 laminar/B747/engines/display_N3	dataref	panel	B747.42.EEC,B747.42.xt.EEC
 laminar/B747/engines/display_ref_line_magenta	dataref	panel	B747.42.EEC,B747.42.xt.EEC
 laminar/B747/engines/fuel_on_indicator_status	dataref	panel	B747.40.engines,B747.40.xt.engines
+laminar/B747/engines/oil_press_amber	dataref	panel	B747.40.engines
 laminar/B747/engines/oil_press_psi	dataref	panel	B747.40.engines,B747.40.xt.engines
 laminar/B747/engines/oil_qty_liters	dataref	panel	B747.40.engines,B747.40.xt.engines
+laminar/B747/engines/oil_qty_magenta	dataref	panel	B747.40.engines
 laminar/B747/engines/oil_temp_degC	dataref	panel	B747.40.engines,B747.40.xt.engines
 laminar/B747/engines/ref_thr_limit_mode	dataref	panel	B747.40.engines,B747.40.xt.engines,B747.42.xt.EEC,B747.70.xt.autopilot
 laminar/B747/engines/thrust_ref	dataref	panel	B747.05.simconfig,B747.05.xt.simconfig
 laminar/B747/engines/type	dataref	obj,panel	B747.05.simconfig,B747.05.xt.simconfig,B747.40.xt.engines,B747.42.xt.EEC
+laminar/B747/engines/vib_source	dataref	panel	B747.40.engines
 laminar/B747/engines/vibration	dataref	panel	B747.40.engines,B747.40.xt.engines
 laminar/B747/fire/button/fire_ovht_test	command	obj	B747.35.fire,B747.35.xt.fire
 laminar/B747/fire/engine01/ext_switch/pos_arm	dataref	obj,snd	B747.35.fire,B747.35.xt.fire,B747.40.xt.engines,B747.55.xt.air

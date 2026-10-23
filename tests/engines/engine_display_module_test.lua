@@ -145,4 +145,26 @@ rt:callout("flight_start")
 frames(0.2)
 T.equal(rt:get(ENG .. "N1/box_red", 0), 0, "a new flight: white box")
 
+-- the panel's oil colours and vibration label: the CF6's oil pressure
+-- amber band, the oil quantity magenta, the source label code (0 BB, 1 N1,
+-- 2 N2, 3 FAN, 4 LPT)
+local v = rt:get(ENG .. "vib_source", 0)
+T.check(v == 1 or v == 2, "P&W: vibration label N1 or N2 (" .. v .. ")")
+rt:set("laminar/B747/engines/type", 1)
+rt:callout("flight_start")
+for i = 0, 3 do
+    rt:set(ENG .. "display_N1", i, 90)
+    rt:set(ENG .. "display_N2", i, 65)
+    rt:set(FUEL_CONTROL, i, 1)
+end
+rt:set(OIL .. "oil_pressure_psi", 0, 12)        -- 12.65-15.9 psi with the spread: in the amber band at 65 % N2
+rt:set(OIL .. "oil_quantity_ratio", 1, 0.1)     -- 3-4 L: below the CF6's 4 qt
+frames(0.5)
+T.equal(rt:get(ENG .. "oil_press_amber", 0), 1, "CF6: oil pressure in the amber band")
+T.equal(rt:get(ENG .. "EICAS2_oil_press_status", 0), 0, "CF6: not red")
+T.equal(rt:get(ENG .. "oil_qty_magenta", 1), 1, "CF6: low oil quantity magenta")
+T.equal(rt:get(ENG .. "oil_qty_magenta", 2), 0, "CF6: engine 3 white")
+v = rt:get(ENG .. "vib_source", 0)
+T.check(v >= 2 and v <= 4, "CF6: vibration label FAN, LPT or N2 (" .. v .. ")")
+
 T.done()

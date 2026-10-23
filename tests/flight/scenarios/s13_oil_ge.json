@@ -30,6 +30,7 @@
       "laminar/B747/engines/vibration[0]", "laminar/B747/engines/vibration[1]" ] },
     { "do": "check", "note": "油圧は白", "dref": "laminar/B747/engines/EICAS2_oil_press_status[0]", "op": "==", "value": 0 },
     { "do": "check", "note": "ENG 1 OIL PRESS なし（低圧スイッチ開）", "dref": "laminar/B747/CAS/advisory_status[317]", "op": "==", "value": 0 },
+    { "do": "check", "note": "振動の音源の文字は FAN・LPT・N2 のどれか（2 N2、3 FAN、4 LPT。FCOM p.850）", "dref": "laminar/B747/engines/vib_source[0]", "op": "between", "value": [2, 4] },
 
     { "do": "mark", "note": "オイルポンプ 1 の故障" },
     { "do": "set", "note": "X-Plane の故障：oil pump 1（6 = 故障中）", "dref": "sim/operation/failures/rel_oilpmp0", "value": 6 },

@@ -94,6 +94,10 @@ B747DR_N2_box_red                   = deferred_dataref("laminar/B747/engines/N2/
 B747DR_N3_red_on                    = deferred_dataref("laminar/B747/engines/N3/red_on", "array[4]")
 B747DR_N3_box_red                   = deferred_dataref("laminar/B747/engines/N3/box_red", "array[4]")
 B747DR_EPR_red_on                   = deferred_dataref("laminar/B747/engines/EPR/red_on", "array[4]")
+-- the secondary EICAS's oil and vibration colours and labels (2-3 step 3)
+B747DR_oil_press_amber              = deferred_dataref("laminar/B747/engines/oil_press_amber", "array[4]")
+B747DR_oil_qty_magenta              = deferred_dataref("laminar/B747/engines/oil_qty_magenta", "array[4]")
+B747DR_vib_source                   = deferred_dataref("laminar/B747/engines/vib_source", "array[4]")
 
 B747DR_init_engines_CD              = deferred_dataref("laminar/B747/engines/init_CD", "number")
 

@@ -145,3 +145,10 @@
 | 同 | 下の EICAS の N2・N3（`GROUP N2`・`N2 GE`・`N2 N3 RR`）の帯・数字・枠 | `display_N2[n]` > 111.4（GE 112.5、RR 109.5）。RR の N3 は帯が 101.5、数字と枠が 111.4 | 帯と数字は `N2/red_on[n]`・`N3/red_on[n]`、枠は `N2/box_red[n]`・`N3/box_red[n]` | FCOM p.843-844、p.873、ATA70_80 p.345 |
 
 上の 4 行は `docs/overhaul/tools/panel_limit_flags.lua`（変更した条件を全部表示する）で書き換えた。192 か所。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261024_before_limit_flags`。
+| 2026-10-24・エンジン（ENG-25） | 下の EICAS の油圧の数字（`GROUP Oil Pressure` の `LED`） | 赤は `SHOW_LESS 10.000000 [n]` かつ `EICAS2_oil_press_status[n]` = 1（赤線と 10 psi の間では数字が消えた）。白は status = 0 かつ `SHOW_GREATER 9.990000 [n]` | 赤は status = 1 だけ。白は status = 0 かつ `SHOW_EQUAL 0.000000 laminar/B747/engines/oil_press_amber[n]`。琥珀の数字（`gen_LED Engine n Amber`、`LED_3.26B.xx###0.amber`、status = 0 かつ amber = 1）を足した | FCOM p.846-847 |
+| 同 | 下の EICAS の油圧の針（`GROUP Oil Pressure` の `Tape` の `Pointer > Normal`） | 白の針は status = 0 だけ | 白の針に `SHOW_EQUAL 0.000000 oil_press_amber[n]`、琥珀の針（`ptr_right_amber`・`ptr_left_amber`）を足した | FCOM p.846-847 |
+| 同（ENG-26） | 下の EICAS の油温の数字（`GROUP Oil Temp` の `LED > Amber Hi`） | `SHOW_GREATER 150.009995`（150〜160 ℃ で白の数字と重なった） | `SHOW_GREATER 160.009995` | FCOM p.847-848、ATA70_80 p.524 |
+| 同（ENG-27） | 下の EICAS の油量の数字（`GROUP Oil Qty` の `LED`） | 白だけ（条件なし） | 白に `SHOW_EQUAL 0.000000 oil_qty_magenta[n]`、マゼンタの数字（`LED_3.26B.xx###0.magenta`、`oil_qty_magenta[n]` = 1）を足した | FCOM p.849、p.890 |
+| 同（ENG-29） | 下の EICAS の振動の音源（`GROUP VIB` の `Source`） | BB の絵（`vib_BB_label`）だけ、`vibration[n]` > 0.01 で出す | BB は `SHOW_EQUAL 0.000000 vib_source[n]` を足した。N1・N2・FAN・LPT の絵（`vib_N1_label` など、新しい絵、`docs/overhaul/tools/make_vib_labels.ps1`）を `vib_source[n]` = 1〜4 で出す計器を足した | FCOM p.849-850 |
+
+上の 5 行は `docs/overhaul/tools/panel_oil_vib.lua` で書き換えた（24 か所、計器を 28 個足した）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261024_before_oil_vib`。

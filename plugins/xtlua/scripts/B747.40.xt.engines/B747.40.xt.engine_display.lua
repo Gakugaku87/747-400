@@ -8,7 +8,10 @@
 -- from the exceedance model, B747.40.exceedance_model.lua, with the EICAS
 -- CANC and RCL switches), the secondary EICAS's oil and vibration
 -- (oil_press_psi and EICAS2_oil_press_status, oil_temp_degC, oil_qty_liters
--- (US quarts for the CF6), vibration) and ENG n OIL PRESS, ENG n OIL TEMP.
+-- (US quarts for the CF6), vibration; the GE oil pressure amber band, the
+-- oil quantity magenta and the vibration source label for the panel:
+-- oil_press_amber, oil_qty_magenta, vib_source) and ENG n OIL PRESS, ENG n
+-- OIL TEMP.
 -- B747.40.xt.engines.lua loads it after the start glue and calls
 -- B747_engine_display() every frame (after_physics) and
 -- B747_engine_display_toga() from its TO/GA command.
@@ -33,6 +36,11 @@ B747DR_N2_box_red               = find_dataref("laminar/B747/engines/N2/box_red"
 B747DR_N3_red_on                = find_dataref("laminar/B747/engines/N3/red_on")
 B747DR_N3_box_red               = find_dataref("laminar/B747/engines/N3/box_red")
 B747DR_EPR_red_on               = find_dataref("laminar/B747/engines/EPR/red_on")
+B747DR_oil_press_amber          = find_dataref("laminar/B747/engines/oil_press_amber")
+B747DR_oil_qty_magenta          = find_dataref("laminar/B747/engines/oil_qty_magenta")
+B747DR_vib_source               = find_dataref("laminar/B747/engines/vib_source")
+-- the panel's vibration source labels: 0 BB, 1 N1, 2 N2, 3 FAN, 4 LPT
+local VIB_LABEL = {N1 = 1, N2 = 2, FAN = 3, LPT = 4}
 
 local ADV_OIL_TEMP = 118            -- ENG 1-4 OIL TEMP: 118-121
 local ADV_OIL_PRESS = 317           -- ENG 1-4 OIL PRESS: 317-320
@@ -125,7 +133,13 @@ function B747_engine_display()
         put(B747DR_EICAS2_oil_press_status, i, flag(out.oil_red[n]))
         B747DR_engine_oil_temp_degC[i] = out.oil_degc[n]
         B747DR_engine_oil_qty_liters[i] = out.oil_qty[n]
+        put(B747DR_oil_press_amber, i, flag(out.oil_amber[n]))
+        put(B747DR_oil_qty_magenta, i, flag(out.oil_qty_magenta[n]))
         B747DR_EICAS2_engine_vibration[i] = out.vib[n]
+        local sources = D.VIB_SOURCES[inp.type] or D.VIB_SOURCES.PW
+        local label = 0
+        if out.vib_source[n] > 0 then label = VIB_LABEL[sources[out.vib_source[n]]] end
+        put(B747DR_vib_source, i, label)
         put(B747DR_CAS_advisory_status, ADV_OIL_TEMP + i, flag(out.oil_temp_msg[n]))
         put(B747DR_CAS_advisory_status, ADV_OIL_PRESS + i, flag(out.oil_press_msg[n]))
     end

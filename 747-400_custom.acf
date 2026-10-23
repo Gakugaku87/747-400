@@ -121996,7 +121996,6 @@ GROUP LOWER EICAS POWER
                 POS 1751.000000 75.000000
                 IMAGE CRT Displays/LED/LED_3.26B.xx###0.red
                 DATAREF laminar/B747/engines/oil_press_psi[3]
-                SHOW_LESS 10.000000 [3]
                 SHOW_EQUAL 1.000000 laminar/B747/engines/EICAS2_oil_press_status[3]
                 HIDE
                 LIGHT_MODE GLASS_AUTO
@@ -122014,7 +122013,6 @@ GROUP LOWER EICAS POWER
                 POS 1636.000000 75.000000
                 IMAGE CRT Displays/LED/LED_3.26B.xx###0.red
                 DATAREF laminar/B747/engines/oil_press_psi[2]
-                SHOW_LESS 10.000000 [2]
                 SHOW_EQUAL 1.000000 laminar/B747/engines/EICAS2_oil_press_status[2]
                 HIDE
                 LIGHT_MODE GLASS_AUTO
@@ -122032,7 +122030,6 @@ GROUP LOWER EICAS POWER
                 POS 1541.000000 75.000000
                 IMAGE CRT Displays/LED/LED_3.26B.xx###0.red
                 DATAREF laminar/B747/engines/oil_press_psi[1]
-                SHOW_LESS 10.000000 [1]
                 SHOW_EQUAL 1.000000 laminar/B747/engines/EICAS2_oil_press_status[1]
                 HIDE
                 LIGHT_MODE GLASS_AUTO
@@ -122050,7 +122047,6 @@ GROUP LOWER EICAS POWER
                 POS 1426.000000 75.000000
                 IMAGE CRT Displays/LED/LED_3.26B.xx###0.red
                 DATAREF laminar/B747/engines/oil_press_psi[0]
-                SHOW_LESS 10.000000 [0]
                 SHOW_EQUAL 1.000000 laminar/B747/engines/EICAS2_oil_press_status[0]
                 HIDE
                 LIGHT_MODE GLASS_AUTO
@@ -122072,7 +122068,25 @@ GROUP LOWER EICAS POWER
                 IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
                 DATAREF laminar/B747/engines/oil_press_psi[3]
                 SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[3]
-                SHOW_GREATER 9.990000 [3]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/oil_press_amber[3]
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 10
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 0
+                LED_ROWS 4
+                ROUNDING ROUND_ROUND
+
+              gen_LED Engine 4 Amber
+                POS 1751.000000 75.000000
+                IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                DATAREF laminar/B747/engines/oil_press_psi[3]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/oil_press_amber[3]
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
@@ -122090,7 +122104,25 @@ GROUP LOWER EICAS POWER
                 IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
                 DATAREF laminar/B747/engines/oil_press_psi[2]
                 SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[2]
-                SHOW_GREATER 9.990000 [2]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/oil_press_amber[2]
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 10
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 0
+                LED_ROWS 4
+                ROUNDING ROUND_ROUND
+
+              gen_LED Engine 3 Amber
+                POS 1636.000000 75.000000
+                IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                DATAREF laminar/B747/engines/oil_press_psi[2]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/oil_press_amber[2]
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
@@ -122108,7 +122140,25 @@ GROUP LOWER EICAS POWER
                 IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
                 DATAREF laminar/B747/engines/oil_press_psi[1]
                 SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[1]
-                SHOW_GREATER 9.990000 [1]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/oil_press_amber[1]
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 10
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 0
+                LED_ROWS 4
+                ROUNDING ROUND_ROUND
+
+              gen_LED Engine 2 Amber
+                POS 1541.000000 75.000000
+                IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                DATAREF laminar/B747/engines/oil_press_psi[1]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/oil_press_amber[1]
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
@@ -122126,7 +122176,25 @@ GROUP LOWER EICAS POWER
                 IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
                 DATAREF laminar/B747/engines/oil_press_psi[0]
                 SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[0]
-                SHOW_GREATER 9.990000 [0]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/oil_press_amber[0]
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 10
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 0
+                LED_ROWS 4
+                ROUNDING ROUND_ROUND
+
+              gen_LED Engine 1 Amber
+                POS 1426.000000 75.000000
+                IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                DATAREF laminar/B747/engines/oil_press_psi[0]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/oil_press_amber[0]
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
@@ -122212,6 +122280,25 @@ GROUP LOWER EICAS POWER
                     IMAGE CRT Displays/EICAS Lower/ptr_right
                     DATAREF laminar/B747/engines/oil_press_psi[0]
                     SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[0]
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/oil_press_amber[0]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 10
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 -39.000000 1.000000
+                    KEY_FRAME 70.000000 -39.000000 1.000000
+                    KEY_FRAME 300.000000 39.000000 1.000000
+                    KEY_FRAME 999.000000 39.000000
+                    IS_DRAGGABLE 0
+                    IS_VERTICAL 1
+                    OFFSET 0.000000
+
+                  gen_pointer Engine 1 Amber
+                    POS 1466.500000 75.500000
+                    IMAGE CRT Displays/EICAS Lower/ptr_right_amber
+                    DATAREF laminar/B747/engines/oil_press_psi[0]
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[0]
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/oil_press_amber[0]
                     HIDE
                     LIGHT_MODE GLASS_AUTO
                     LIGHT_RHEOSTAT 10
@@ -122229,6 +122316,25 @@ GROUP LOWER EICAS POWER
                     IMAGE CRT Displays/EICAS Lower/ptr_left
                     DATAREF laminar/B747/engines/oil_press_psi[1]
                     SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[1]
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/oil_press_amber[1]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 10
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 -39.000000 1.000000
+                    KEY_FRAME 70.000000 -39.000000 1.000000
+                    KEY_FRAME 300.000000 39.000000 1.000000
+                    KEY_FRAME 999.000000 39.000000
+                    IS_DRAGGABLE 0
+                    IS_VERTICAL 1
+                    OFFSET 0.000000
+
+                  gen_pointer Engine 2 Amber
+                    POS 1502.500000 75.500000
+                    IMAGE CRT Displays/EICAS Lower/ptr_left_amber
+                    DATAREF laminar/B747/engines/oil_press_psi[1]
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[1]
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/oil_press_amber[1]
                     HIDE
                     LIGHT_MODE GLASS_AUTO
                     LIGHT_RHEOSTAT 10
@@ -122313,6 +122419,25 @@ GROUP LOWER EICAS POWER
                     IMAGE CRT Displays/EICAS Lower/ptr_right
                     DATAREF laminar/B747/engines/oil_press_psi[2]
                     SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[2]
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/oil_press_amber[2]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 10
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 -39.000000 1.000000
+                    KEY_FRAME 70.000000 -39.000000 1.000000
+                    KEY_FRAME 300.000000 39.000000 1.000000
+                    KEY_FRAME 999.000000 39.000000
+                    IS_DRAGGABLE 0
+                    IS_VERTICAL 1
+                    OFFSET 0.000000
+
+                  gen_pointer Engine 3 Amber
+                    POS 1676.500000 75.500000
+                    IMAGE CRT Displays/EICAS Lower/ptr_right_amber
+                    DATAREF laminar/B747/engines/oil_press_psi[2]
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[2]
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/oil_press_amber[2]
                     HIDE
                     LIGHT_MODE GLASS_AUTO
                     LIGHT_RHEOSTAT 10
@@ -122330,6 +122455,25 @@ GROUP LOWER EICAS POWER
                     IMAGE CRT Displays/EICAS Lower/ptr_left
                     DATAREF laminar/B747/engines/oil_press_psi[3]
                     SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[3]
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/oil_press_amber[3]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 10
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 -39.000000 1.000000
+                    KEY_FRAME 70.000000 -39.000000 1.000000
+                    KEY_FRAME 300.000000 39.000000 1.000000
+                    KEY_FRAME 999.000000 39.000000
+                    IS_DRAGGABLE 0
+                    IS_VERTICAL 1
+                    OFFSET 0.000000
+
+                  gen_pointer Engine 4 Amber
+                    POS 1712.500000 75.500000
+                    IMAGE CRT Displays/EICAS Lower/ptr_left_amber
+                    DATAREF laminar/B747/engines/oil_press_psi[3]
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[3]
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/oil_press_amber[3]
                     HIDE
                     LIGHT_MODE GLASS_AUTO
                     LIGHT_RHEOSTAT 10
@@ -122450,7 +122594,7 @@ GROUP LOWER EICAS POWER
                 IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
                 DATAREF laminar/B747/engines/oil_temp_degC[3]
                 SHOW_LESS 174.990005 laminar/B747/engines/oil_temp_degC[3]
-                SHOW_GREATER 150.009995 laminar/B747/engines/oil_temp_degC[3]
+                SHOW_GREATER 160.009995 laminar/B747/engines/oil_temp_degC[3]
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
@@ -122468,7 +122612,7 @@ GROUP LOWER EICAS POWER
                 IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
                 DATAREF laminar/B747/engines/oil_temp_degC[2]
                 SHOW_LESS 174.990005 laminar/B747/engines/oil_temp_degC[2]
-                SHOW_GREATER 150.009995 laminar/B747/engines/oil_temp_degC[2]
+                SHOW_GREATER 160.009995 laminar/B747/engines/oil_temp_degC[2]
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
@@ -122486,7 +122630,7 @@ GROUP LOWER EICAS POWER
                 IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
                 DATAREF laminar/B747/engines/oil_temp_degC[1]
                 SHOW_LESS 174.990005 laminar/B747/engines/oil_temp_degC[1]
-                SHOW_GREATER 150.009995 laminar/B747/engines/oil_temp_degC[1]
+                SHOW_GREATER 160.009995 laminar/B747/engines/oil_temp_degC[1]
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
@@ -122504,7 +122648,7 @@ GROUP LOWER EICAS POWER
                 IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
                 DATAREF laminar/B747/engines/oil_temp_degC[0]
                 SHOW_LESS 174.990005 laminar/B747/engines/oil_temp_degC[0]
-                SHOW_GREATER 150.009995 laminar/B747/engines/oil_temp_degC[0]
+                SHOW_GREATER 160.009995 laminar/B747/engines/oil_temp_degC[0]
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
@@ -123046,6 +123190,24 @@ GROUP LOWER EICAS POWER
               POS 1738.000000 -94.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/engines/oil_qty_liters[3]
+              SHOW_EQUAL 0.000000 laminar/B747/engines/oil_qty_magenta[3]
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 2
+              DECIMALS 0
+              PERIOD_WIDTH 0
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_LED Engine 4 Magenta
+              POS 1738.000000 -94.000000
+              IMAGE CRT Displays/LED/LED_3.26B.xx###0.magenta
+              DATAREF laminar/B747/engines/oil_qty_liters[3]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/oil_qty_magenta[3]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
@@ -123062,6 +123224,24 @@ GROUP LOWER EICAS POWER
               POS 1650.000000 -94.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/engines/oil_qty_liters[2]
+              SHOW_EQUAL 0.000000 laminar/B747/engines/oil_qty_magenta[2]
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 2
+              DECIMALS 0
+              PERIOD_WIDTH 0
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_LED Engine 3 Magenta
+              POS 1650.000000 -94.000000
+              IMAGE CRT Displays/LED/LED_3.26B.xx###0.magenta
+              DATAREF laminar/B747/engines/oil_qty_liters[2]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/oil_qty_magenta[2]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
@@ -123078,6 +123258,24 @@ GROUP LOWER EICAS POWER
               POS 1529.000000 -94.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/engines/oil_qty_liters[1]
+              SHOW_EQUAL 0.000000 laminar/B747/engines/oil_qty_magenta[1]
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 2
+              DECIMALS 0
+              PERIOD_WIDTH 0
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_LED Engine 2 Magenta
+              POS 1529.000000 -94.000000
+              IMAGE CRT Displays/LED/LED_3.26B.xx###0.magenta
+              DATAREF laminar/B747/engines/oil_qty_liters[1]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/oil_qty_magenta[1]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
@@ -123094,6 +123292,24 @@ GROUP LOWER EICAS POWER
               POS 1440.000000 -94.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/engines/oil_qty_liters[0]
+              SHOW_EQUAL 0.000000 laminar/B747/engines/oil_qty_magenta[0]
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 2
+              DECIMALS 0
+              PERIOD_WIDTH 0
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_LED Engine 1 Magenta
+              POS 1440.000000 -94.000000
+              IMAGE CRT Displays/LED/LED_3.26B.xx###0.magenta
+              DATAREF laminar/B747/engines/oil_qty_liters[0]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/oil_qty_magenta[0]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
@@ -123117,6 +123333,103 @@ GROUP LOWER EICAS POWER
               IMAGE CRT Displays/EICAS Lower/vib_BB_label
               DATAREF 
               SHOW_GREATER 0.010000 laminar/B747/engines/vibration[3]
+              SHOW_EQUAL 0.000000 laminar/B747/engines/vib_source[3]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary N1-4
+              POS 1741.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_N1_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[3]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/vib_source[3]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary N2-4
+              POS 1741.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_N2_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[3]
+              SHOW_EQUAL 2.000000 laminar/B747/engines/vib_source[3]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary FAN-4
+              POS 1741.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_FAN_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[3]
+              SHOW_EQUAL 3.000000 laminar/B747/engines/vib_source[3]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary LPT-4
+              POS 1741.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_LPT_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[3]
+              SHOW_EQUAL 4.000000 laminar/B747/engines/vib_source[3]
               SIZE 1.200000
               HIDE
               LIGHT_MODE GLASS_AUTO
@@ -123140,6 +123453,103 @@ GROUP LOWER EICAS POWER
               IMAGE CRT Displays/EICAS Lower/vib_BB_label
               DATAREF 
               SHOW_GREATER 0.010000 laminar/B747/engines/vibration[2]
+              SHOW_EQUAL 0.000000 laminar/B747/engines/vib_source[2]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary N1-3
+              POS 1650.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_N1_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[2]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/vib_source[2]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary N2-3
+              POS 1650.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_N2_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[2]
+              SHOW_EQUAL 2.000000 laminar/B747/engines/vib_source[2]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary FAN-3
+              POS 1650.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_FAN_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[2]
+              SHOW_EQUAL 3.000000 laminar/B747/engines/vib_source[2]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary LPT-3
+              POS 1650.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_LPT_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[2]
+              SHOW_EQUAL 4.000000 laminar/B747/engines/vib_source[2]
               SIZE 1.200000
               HIDE
               LIGHT_MODE GLASS_AUTO
@@ -123163,6 +123573,103 @@ GROUP LOWER EICAS POWER
               IMAGE CRT Displays/EICAS Lower/vib_BB_label
               DATAREF 
               SHOW_GREATER 0.010000 laminar/B747/engines/vibration[1]
+              SHOW_EQUAL 0.000000 laminar/B747/engines/vib_source[1]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary N1-2
+              POS 1532.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_N1_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[1]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/vib_source[1]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary N2-2
+              POS 1532.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_N2_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[1]
+              SHOW_EQUAL 2.000000 laminar/B747/engines/vib_source[1]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary FAN-2
+              POS 1532.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_FAN_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[1]
+              SHOW_EQUAL 3.000000 laminar/B747/engines/vib_source[1]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary LPT-2
+              POS 1532.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_LPT_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[1]
+              SHOW_EQUAL 4.000000 laminar/B747/engines/vib_source[1]
               SIZE 1.200000
               HIDE
               LIGHT_MODE GLASS_AUTO
@@ -123186,6 +123693,103 @@ GROUP LOWER EICAS POWER
               IMAGE CRT Displays/EICAS Lower/vib_BB_label
               DATAREF 
               SHOW_GREATER 0.010000 laminar/B747/engines/vibration[0]
+              SHOW_EQUAL 0.000000 laminar/B747/engines/vib_source[0]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary N1-1
+              POS 1440.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_N1_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[0]
+              SHOW_EQUAL 1.000000 laminar/B747/engines/vib_source[0]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary N2-1
+              POS 1440.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_N2_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[0]
+              SHOW_EQUAL 2.000000 laminar/B747/engines/vib_source[0]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary FAN-1
+              POS 1440.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_FAN_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[0]
+              SHOW_EQUAL 3.000000 laminar/B747/engines/vib_source[0]
+              SIZE 1.200000
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary LPT-1
+              POS 1440.500000 -136.500000
+              IMAGE CRT Displays/EICAS Lower/vib_LPT_label
+              DATAREF 
+              SHOW_GREATER 0.010000 laminar/B747/engines/vibration[0]
+              SHOW_EQUAL 4.000000 laminar/B747/engines/vib_source[0]
               SIZE 1.200000
               HIDE
               LIGHT_MODE GLASS_AUTO
