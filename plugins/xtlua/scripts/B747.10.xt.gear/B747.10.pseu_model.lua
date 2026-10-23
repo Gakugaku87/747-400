@@ -15,7 +15,11 @@ B747_pseu_model = M
 -- Main gears in the order of the formula: left wing, left body, right body,
 -- right wing.
 M.LWG, M.LBG, M.RBG, M.RWG = 1, 2, 3, 4
-M.TILT_DEG = 1.0           -- estimate: a truck tilted more than this is "tilted"
+M.TILT_DEG = 4.0           -- estimate: a truck tilted more than this is "tilted". X-Plane's
+                           -- truck angle (eagle_claw_angle_deg) is against the fuselage: in
+                           -- the air the acf's 8 deg (body) and 58 deg (wing); on the ground
+                           -- the airplane's nose-down pitch, 0.85 deg parked and 1.75 deg in
+                           -- hard braking (measured 2026-10-24), negative nose up
 M.HYD_HIGH_PSI = 1500      -- estimate: HYDIM 1/4 pressure high (no figure in the sources)
 M.DOWN_LOCKED = 0.99       -- gear extension ratio taken as down and locked
 

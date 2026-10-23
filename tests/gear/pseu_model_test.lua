@@ -27,6 +27,12 @@ T.check(out.ng_compressed, "parked: NG COMPRESSED")
 -- parked, hydraulics on: ground from the level trucks
 out = P.update(state(LEVEL, true, 3000))
 T.check(out.pri_gnd and not out.pri_air, "parked, hydraulics on: ground")
+-- X-Plane's truck angle follows the airplane's pitch on the ground: nose
+-- down 1.75 deg in hard braking, nose up at rotation (measured 2026-10-24)
+out = P.update(state({1.75, 1.75, 1.75, 1.75}, true, 3000))
+T.check(out.pri_gnd and not out.pri_air, "hard braking, nose down 1.75 deg: still ground")
+out = P.update(state({-10, -10, -10, -10}, false, 3000))
+T.check(out.pri_gnd and not out.pri_air, "rotation, nose up 10 deg, nose gear off: still ground")
 
 -- in flight: all trucks tilted, nose gear extended
 out = P.update(state(IN_AIR, false, 3000))
