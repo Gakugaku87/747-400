@@ -173,6 +173,8 @@ B747DR_light_aft_cargo_temp         = find_dataref("laminar/B747/air/light/aft_c
 B747DR_antiice_light_nai_valve      = find_dataref("laminar/B747/antiice/light/nai_valve")
 B747DR_antiice_light_wai_valve      = find_dataref("laminar/B747/antiice/light/wai_valve")
 B747DR_antiice_light_window_inop    = find_dataref("laminar/B747/antiice/light/window_inop")
+-- the passenger oxygen actuated (B747.36.xt.oxygen.lua)
+B747DR_oxy_pass_on                  = find_dataref("laminar/B747/oxygen/pass_oxy_on")
 
 simDR_gear_deploy_ratio             = find_dataref("sim/flightmodel2/gear/deploy_ratio")
 simDR_aircraft_altitude             = find_dataref("sim/cockpit2/gauges/indicators/altitude_ft_pilot")
@@ -1424,7 +1426,9 @@ function B747_annunciators()
         (simDR_gear_deploy_ratio[3] > 0) or                 --|
         (simDR_gear_deploy_ratio[4] > 0) or                 --|
         (simDR_cabin_altitude > 10000.0)                    -- CABIN ALTITUDE IS GREATER THAN 10,000 FEET
-        )                                                   -- TODO: PASSENGER OXY IS ON
+        )
+            or
+        (B747DR_oxy_pass_on == 1)                           -- PASSENGER OXYGEN ON, ANY POSITION (FCOM p.437, p.502)
 
         ), 1, 0)
     simDR_cockpit2_no_smoking_switch  = B747_ternary((annun.a.no_smoking == 1), 1, 0)       -- SET THE SIM ANNUNCIATOR
@@ -1452,6 +1456,8 @@ function B747_annunciators()
         (simDR_cabin_altitude > 10000.0) or                 -- CABIN ALTITUDE IS GREATER THAN 10,000 FEET
         (simDR_flap_ratio_control > 0)                      -- FLAP LEVER IS NOT UP
         )
+            or
+        (B747DR_oxy_pass_on == 1)                           -- PASSENGER OXYGEN ON, ANY POSITION (FCOM p.437, p.502)
 
         ), 1, 0)
     simDR_cockpit2_seat_belt_switch = B747_ternary((annun.a.seat_belts == 1), 1, 0)         -- SET THE SIM ANNUNCIATOR

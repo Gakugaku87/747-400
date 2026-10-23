@@ -124496,7 +124496,7 @@ GROUP LOWER EICAS POWER
           gen_LED Pressure: Crew
             POS 1637.000000 228.000000
             IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
-            DATAREF [0]
+            DATAREF laminar/B747/oxygen/crew_press_psi
             SHOW_LESS 1.900000 [0]
             SHOW_GREATER 2.190000 [3]
             HIDE
@@ -124505,7 +124505,7 @@ GROUP LOWER EICAS POWER
             BUS_SRC 2
             KEY_FRAME 0.000000 0.000000 1.000000
             KEY_FRAME 1.000000 1.000000
-            DIGITS 3
+            DIGITS 4
             DECIMALS 0
             PERIOD_WIDTH 0
             LED_ROWS 4
@@ -124514,7 +124514,7 @@ GROUP LOWER EICAS POWER
           gen_LED Pressure: Psgr
             POS 1790.000000 228.000000
             IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
-            DATAREF [0]
+            DATAREF laminar/B747/oxygen/pass_press_psi
             SHOW_LESS 1.900000 [0]
             SHOW_GREATER 2.190000 [3]
             HIDE
@@ -124523,7 +124523,7 @@ GROUP LOWER EICAS POWER
             BUS_SRC 2
             KEY_FRAME 0.000000 0.000000 1.000000
             KEY_FRAME 1.000000 1.000000
-            DIGITS 3
+            DIGITS 4
             DECIMALS 0
             PERIOD_WIDTH 0
             LED_ROWS 4

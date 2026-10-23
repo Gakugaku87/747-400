@@ -59,6 +59,7 @@
 | xtlua | B747.15.com | 565 / 3862 | 無線。ACP（`ap_L/C/R`）、RTP（`rtp_L/C/R`）、VHF/HF、call panel など | |
 | xtlua | B747.25.fuel | 405 / 3720 | 燃料系統（タンク、ポンプ、クロスフィード、移送、ジェティソン、搭載量） | fuel_system |
 | xtlua | B747.35.fire | 99 / 653 | 火災探知と消火（エンジン、APU、貨物室） | |
+| xtlua | B747.36.oxygen | 56 / 327 | 酸素（乗員・乗客・治療用、酸素圧、X-Plane の低酸素）。3-3 で新設（§4.13） | oxygen_system |
 | xtlua | B747.40.engines | 106 / 2247 | エンジン始動・点火・燃料制御・逆推力・APU | |
 | xtlua | B747.42.EEC | 67 / 4376 | EEC と推力制御。型式別の `EEC.PW` / `EEC.GE` / `EEC.RR`、表（`EEC.tbls`）、`pid.lua` | throttles |
 | xtlua | B747.45.fltCtrls | 187 / 1370 | 操縦系統（フラップ、スポイラー・スピードブレーキ、トリム、代替フラップ） | |
@@ -312,6 +313,15 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 書くもの：`antiice/nacelle/valve_pos[0-3]`・`wing/valve_pos[0-1]`（EEC・抽気・ECS synoptic が読む）、新設の P5 の灯（init `B747.50.antiice`）`antiice/light/nai_valve[0-3]`・`light/wai_valve`・`light/window_inop[0-1]`（1 で点灯。照明が annunciator 60〜66 に出す）。X-Plane には、読んで違うときだけ書く：`sim/cockpit2/ice/ice_inlet_heat_on_per_engine`（NAI 弁が半分以上開）、`ice_surfce_heat_left_on`・`right_on`（WAI 弁。主 EICAS の NAI・WAI はこの 2 つを acf が見る）、`ice_window_heat_on_window[0-3]`（風防 L・R、側窓 L・R）、ピトー・静圧・AOA・TAT の加熱、`ice_detect_on`、`sim/cockpit2/switches/wiper_speed_switch[0-1]`（XP11 は `wiper_speed`）。前は `sim/ice/*` のコマンドで切り替えていた（主翼は左右共通で、片側だけ違うと毎フレーム入れ替わった：ICE-01）。
 - EICAS：>ICING（caution 45）、>ANTI-ICE（advisory 7）、HEAT L AOA・L TAT・P/S CAPT・P/S F/O・P/S L AUX・P/S R AUX・R AOA・R TAT・WINDOW L・WINDOW R（186〜195）、>ICE DETECTORS（222）、NAI VALVE 1〜4（242〜245）、>NO ICING（247）、WAI VALVE LEFT・RIGHT（296・297）、STATUS ICE DETECTOR L・R（37・38、新設）。遅れ（3.5 秒、5 秒、15 秒、2 秒、12 秒）はモデルが持つ。
 - ほかのモジュールの変更：エンジン始動のグルーは点火の条件の NAI を X-Plane の inlet heat からスイッチの位置に変えた（§4.8）。manipulators は ER 開始で WINDOW HEAT L・R を ON にする。
+
+### 4.13 酸素（3-3）
+
+新しいモジュール `B747.36.xt.oxygen`（`plugins/xtlua`）。init `B747.36.oxygen` が dataref とコマンドを作り、`aircraft_load` で X-Plane の `sim/operation/override/override_oxygen_system` を 1、`aircraft_unload` で 0 にする（グルーも毎フレーム 1 を保つ）。グルー `B747.36.xt.oxygen.lua` が酸素のモデル（`B747.36.oxygen_model.lua`）を `after_physics` で毎フレーム回す（`B747_oxygen()`）。中身は notes/ATA-35.md §4・§10。前は酸素の処理が何も無かった。
+
+- 読むもの：客室高度（`sim/cockpit2/pressurization/indicators/cabin_altitude_ft`。与圧のモデルが X-Plane に書く値：§4.11）、前方貨物室の温度（`air/temp/cargo[0]`。ボンベの温度）、DC bus 1〜4、X-Plane の `sim/operation/failures/rel_pass_o2_on`（作動として受ける）、自分のスイッチとマスクの dataref。
+- 書くもの（新設、init `B747.36.oxygen`）：`oxygen/crew_press_psi`・`pass_press_psi`（整数の psi。カスタム acf の STATUS ページが出す）、`oxygen/pass_oxy_on`・`therap_oxy_on`（照明のモジュールがサインに使う）。EICAS：>CREW OXY LOW（advisory 53）、PASS OXYGEN ON（256）、STATUS PASS OXYGEN ON（39、新設）、THERAP OXYGEN ON（memo 36）。X-Plane には、読んで違うときだけ `sim/cockpit2/oxygen/indicators/pilot_felt_altitude_ft`（低酸素の効果。マスクなしは客室高度、乗員マスクで 10,000 ft まで）、`o2_bottle_pressure_psi`、`sim/cockpit2/oxygen/actuators/o2_valve_on` を書く。
+- 操作（3D に操作子が無いのでコマンド）：`oxygen/pass_oxy_sw_on`・`pass_oxy_sw_reset`（押している間、`pass_oxy_sw_pos` が 1・−1。ばねで 0 に戻る）、`therap_oxy_sw_up`・`therap_oxy_sw_dn`（`therap_oxy_sw_pos`：ON は保持、RESET は押している間）、`crew_masks_toggle`（`crew_mask_on`）。ばね戻りの位置は、コマンドの最後のイベントから 0.3 秒で 0 に戻す（XTLua は一瞬のコマンドの終わりを渡さないことがある：TESTING.md §4.6）。一瞬の押しでもモデルには 1 フレーム届く。
+- ほかのモジュールの変更：照明のモジュールのサイン（NO SMOKING・FASTEN SEAT BELTS）に「乗客酸素が作動中なら選択器にかかわらず点灯」を足した（FCOM p.437、p.502）。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 

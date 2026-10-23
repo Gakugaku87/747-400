@@ -2434,6 +2434,8 @@ laminar/B747/nd/wxr/capt/switch	command	obj	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/nd/wxr/capt/switch_pos	dataref	obj,snd	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/nd/wxr/fo/switch	command	obj	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/nd/wxr/fo/switch_pos	dataref	obj,snd	B747.60.fltInst,B747.60.xt.fltInst02
+laminar/B747/oxygen/crew_press_psi	dataref	panel	B747.36.oxygen,B747.36.xt.oxygen
+laminar/B747/oxygen/pass_press_psi	dataref	panel	B747.36.oxygen,B747.36.xt.oxygen
 laminar/B747/pfd/capt/irs	dataref	panel	B747.60.fltInst
 laminar/B747/pfd/fo/irs	dataref	panel	B747.60.fltInst
 laminar/B747/pfd/show_mins	dataref	panel	B747.60.fltInst

@@ -160,3 +160,9 @@
 | 同（PNEU-11） | エンジンと APU からの流れ（`gen_rotary eng n`・`apu`） | エンジンの抽気圧が 11 psi 超（ENGINE BLEED OFF で弁が閉でも出た）、APU は中央ダクトの圧 | エンジンの抽気弁が開（`air/engineN/bleed_valve_pos` > 0.5）、APU 弁が開（`air/apu/bleed_valve_pos` > 0.5） | FCOM p.576（流れは弁・スイッチ・パックの状態から作る） |
 
 上の 3 行は `docs/overhaul/tools/panel_ecs.lua` で書き換えた（33 か所。計器を 26 個と、針の回転グループを 2 つ足した）。新しい絵は `docs/overhaul/tools/make_ecs_images.ps1`。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261024_before_ecs_synoptic`。LED の `LED_ROWS` はフォントの書式に合わせる（`xxx#00` は 3、`xx###0` は 4。合わないと次の字の一部が数字に重なる）。外から見た写真で機体の見た目が変わらないことを確かめた（`s17` の後）。
+
+| 日付・系統 | 項目 | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-24・酸素（OXY-03） | STAT ページの OXY PR（`GROUP Oxygen` の `gen_LED Pressure: Crew`・`Pressure: Psgr`） | `DATAREF [0]`（空で何も出ない）、`DIGITS 3`（1850 が出せない） | `DATAREF laminar/B747/oxygen/crew_press_psi`・`pass_press_psi`（酸素のモジュールの圧）、`DIGITS 4` | FCOM p.455 (1.30.21)、ATA30_32_35_36 p.338・p.374 |
+
+変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261024_before_oxygen`。X-Plane のスクリーンショットで、CRW と PASS の 4 桁がほかの値と同じ右端にそろって出ることを確かめた（`s20_oxygen`）。純正 acf は変えていないので、STAT ページの酸素圧は出ないまま。外から見た写真で機体の見た目が変わらないことを確かめた（RJAA 34L、追従視点）。

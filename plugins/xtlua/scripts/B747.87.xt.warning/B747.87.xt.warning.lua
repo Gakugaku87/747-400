@@ -612,6 +612,7 @@ local B747_CASstatusMsg = {
     {DRindex = 36, name = "ZONE TEMP"},           -- ATA21 p.350
     {DRindex = 37, name = "ICE DETECTOR L"},      -- ATA30_32_35_36 p.164
     {DRindex = 38, name = "ICE DETECTOR R"},
+    {DRindex = 39, name = "PASS OXYGEN ON"},      -- ATA30_32_35_36 p.376
 }
 
 

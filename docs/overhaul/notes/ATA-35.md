@@ -155,3 +155,15 @@ ACF_DIFF.md との関係: 酸素に関わる acf の差分は無い（STAT ペ�
 - 3D コクピットに PASS OXYGEN スイッチの形だけはあるか（操作子は無い）。
 - 乗客酸素の制御回路の電源バス（資料に記載なし）。
 - CREW RST OXY ON・>PASS OXY LOW（警報モジュールの表にあるが FCOM に無い）が別構成のメッセージか。
+
+## 10. 実装（3-3、2026-10-24）
+
+- 新しいモジュール：モデル `plugins/xtlua/scripts/B747.36.xt.oxygen/B747.36.oxygen_model.lua`（X-Plane なし）、グルー `B747.36.xt.oxygen.lua`、init `plugins/xtlua/init/scripts/B747.36.oxygen/B747.36.oxygen.lua`（dataref・コマンドの作成と X-Plane の酸素系統の上書き）。構成は ARCHITECTURE.md §4.13、状態は PROGRESS.md の「酸素（3-3）の GAP の状態」、推定の値は PROGRESS.md の「推定で作った部分」。
+- §6 の名前の案から決めたもの：dataref `laminar/B747/oxygen/crew_press_psi`・`pass_press_psi`（STATUS ページ）、`pass_oxy_sw_pos`・`therap_oxy_sw_pos`（−1 RESET、0 NORM、1 ON）、`crew_mask_on`、`pass_oxy_on`・`therap_oxy_on`。コマンド `laminar/B747/oxygen/pass_oxy_sw_on`・`pass_oxy_sw_reset`（押している間。ばねで NORM へ）、`therap_oxy_sw_up`・`therap_oxy_sw_dn`（RESET は押している間）、`crew_masks_toggle`（マスクを出す／しまって RESET/TEST）。3D の操作子は無いので、キーの割り当てで使う。
+- 乗客酸素：約 14,000 ft で自動、ON（ソレノイド）で作動。RESET は客室 12,000 ft 未満だけ。X-Plane の `rel_pass_o2_on` の故障も作動として受ける。作動中は PASS OXYGEN ON（advisory 256）、60 秒で STATUS PASS OXYGEN ON（status 39、新設）。照明のモジュールが NO SMOKING・FASTEN SEAT BELTS を選択器にかかわらず点ける（§3.6）。客室灯とチャイム（E&M p.368）は作っていない。
+- 圧力の表示（PASS OXYGEN ON）は §4.1 の「作動」の状態で出す（E&M の圧力スイッチ 7 psig は、FCOM と E&M のメッセージの論理が「作動」と書くので使わない）。
+- 治療用酸素：ON（位置で保持）、乗客酸素の自動作動と一緒、RESET は 12,000 ft 未満。THERAP OXYGEN ON（memo 36）。
+- 圧力：ボンベの中身を 70°F の圧（満充填 1850 psig）で持ち、前方貨物室の温度で補正して出す（気体の法則）。CREW RST OXY ON（54）と >PASS OXY LOW（255）は FCOM に無いので使わない。
+- §6 の低酸素：X-Plane の `override_oxygen_system` を 1 にし、`pilot_felt_altitude_ft` を書く（マスクなしは客室高度、乗員マスクを出していれば 10,000 ft を上限（推定））。X-Plane で上書きが効き、マスクで 10,000 ft になることを確かめた（`s20_oxygen`）。カスタム acf の `_o2_bottle_liter` は 0 なので、上書きしないと X-Plane の乗員酸素は使えない。
+- STATUS ページ：カスタム acf の 2 つの LED を新しい dataref と 4 桁にした（ACF_DIFF.md §5。GAP_ANALYSIS.md §4 の承認済みの項目）。
+- 試験：`tests/oxygen/oxygen_model_test.lua`（47 件）、`tests/oxygen/oxygen_module_test.lua`（照明のモジュールと一緒に読み込む）、X-Plane の `s20_oxygen`。
