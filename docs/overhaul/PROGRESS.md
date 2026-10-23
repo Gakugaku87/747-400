@@ -100,6 +100,7 @@ PLAN.md §3 に書いた。要点：
 - カスタム acf と `747-400_custom.snd` は git に入れた（936222b0）。`overhaul` は origin に push してよい。
 - FlyWithLua の `please read the manual.lua` は利用者が消した。
 - upstream（本家 mSparks43）には push しない。push は origin（Gakugaku87/747-400）だけ（利用者、2026-10-23 昼）。upstream の push 先は `no_push` にした（戻すときは `git remote set-url --push upstream https://github.com/mSparks43/747-400.git`）。
+- push は origin の `overhaul` と `master`。`master` は `overhaul` と同じ中身にした（旧フォークの履歴を親に残すマージ。強制 push はしない）。本家に PR は作らない（利用者、2026-10-23 午後。CLAUDE.md）。
 - PLAN の次の項目（フェーズ）に移るときは、承認を求めずに進める。区切りごとの結果の報告は続ける（利用者、2026-10-23 昼）。
 
 ## 推定で作った部分

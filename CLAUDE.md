@@ -9,7 +9,8 @@ Boeing 747-400（Sparky744）のシステムとアビオニクスを、実機に
 - ブランチ：
   - `overhaul`：作り直しの作業ブランチ。本家 master `041c9ffa` から作った。
   - `archive/old-master`：旧フォークの最終状態。参照専用。
-  - `master`：旧フォーク。
+  - `master`：2026-10-23 から `overhaul` と同じ中身（旧フォークの履歴は、マージコミットの親と `archive/old-master` に残る）。
+  - `overhaul-base`：`overhaul` の土台（本家の `041c9ffa`）。動かさない。作り直しの差分は `overhaul-base...overhaul` で見る。
 - 3D モデル・テクスチャ・サウンドは対象外。
 - 進み具合：`docs/overhaul/PROGRESS.md`。計画：`docs/overhaul/PLAN.md`。
 
@@ -98,7 +99,9 @@ Boeing 747-400（Sparky744）のシステムとアビオニクスを、実機に
 
 - コミットは自分が変更したファイルだけを指定して行う。`git add -A` などで未追跡ファイルをまとめて入れない。
 - `_ref/` は絶対にコミットしない。
-- push は `archive/old-master` 以外、利用者が指示するまでしない。
+- push してよいのは origin（`Gakugaku87/747-400`）の `overhaul` と `master`（2026-10-23 利用者）。`master` は `overhaul` と同じコミットにそろえて push する（fast-forward）。ほかのブランチは、利用者が指示するまで push しない。
+- 本家（upstream、`mSparks43/747-400`）には push しない。PR も作らない。
+  - fork の PR を作るときは、宛先（base repository）を `Gakugaku87/747-400` にする。GitHub の「Compare & pull request」は宛先が本家になる（2026-10-23、それで本家に PR #956 ができた）。
 - この PC には git の `user.name` と `user.email` が設定されていない。設定は変えず、旧フォークと同じ作者をコミットごとに渡す（`git -c user.name=... -c user.email=... commit`。値は `git log -1 --format='%an <%ae>' archive/old-master` で確かめる）。
 
 ## この PC の環境
