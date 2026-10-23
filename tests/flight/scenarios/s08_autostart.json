@@ -1,6 +1,6 @@
 {
   "name": "s08_autostart",
-  "description": "エンジンの autostart（2-3）の X-Plane での確認。エンジン運転中の地上で開始し、パックを OFF にしてエンジン 4 を CUTOFF で止め、AUTOSTART ON で START 4 → RUN（クロスブリードの空気）。START だけでは start valve が開かないこと、RUN で motoring、所定の N2 で燃料と点火、50 % N2 で START が戻ること、idle まで。次に X-Plane の igniter の故障で同じ始動をし、light-off しないので 30 秒 motoring して両 igniter で再試行、2 回目で中止して ENG 4 AUTOSTART（caution）が出ることを見る（PW、109）。期待値は FCOM 7.13・7.20（p.859-882）、notes/ATA-70-80.md §4.6。",
+  "description": "エンジンの autostart（2-3）の X-Plane での確認。エンジン運転中の地上で開始し、パックを OFF にしてエンジン 4 を CUTOFF で止め、AUTOSTART ON で START 4 → RUN（クロスブリードの空気）。START だけでは start valve が開かないこと、RUN で motoring、所定の N2 で燃料と点火、50 % N2 で START が戻ること、idle まで。次に X-Plane の igniter の故障で同じ始動をし、light-off しないので 30 秒 motoring して両 igniter で再試行、2 回目で中止して ENG 4 AUTOSTART（caution）が出ることを見る（PW、109）。あわせて、CUTOFF と始動中の油圧の白を見る。期待値は FCOM 7.13・7.20（p.859-882）、notes/ATA-70-80.md §4.6。",
   "reload": true,
   "flight": {
     "runway_start": { "airport_id": "RJAA", "runway": "34L" },
@@ -42,6 +42,8 @@
     { "do": "wait", "note": "エンジン 4 の N2 が 10 % 未満", "dref": "sim/flightmodel/engine/ENGN_N2_[3]", "op": "<", "value": 10, "timeout": 180 },
     { "do": "check", "note": "CUTOFF で EGT の始動限界の線（FCOM p.838、p.879）", "dref": "laminar/B747/engines/EGT/start_limit_on[3]", "op": "==", "value": 1 },
     { "do": "check", "note": "ほかのエンジンは線なし", "dref": "laminar/B747/engines/EGT/start_limit_on[2]", "op": "==", "value": 0 },
+    { "do": "check", "note": "CUTOFF では油圧が低くても白（FCOM p.846）", "dref": "laminar/B747/engines/EICAS2_oil_press_status[3]", "op": "==", "value": 0 },
+    { "do": "check", "note": "（このとき油圧は赤線 70 psi の下）", "dref": "laminar/B747/engines/oil_press_psi[3]", "op": "<", "value": 70 },
     { "do": "view", "name": "eicas" },
     { "do": "shot", "name": "eicas_eng4_cutoff" },
 
@@ -56,9 +58,10 @@
     { "do": "check", "note": "燃料と同時に点火", "dref": "sim/cockpit2/engine/actuators/igniter_on[3]", "op": "==", "value": 1 },
     { "do": "wait", "note": "light-off", "dref": "sim/flightmodel2/engines/engine_is_burning_fuel[3]", "op": "==", "value": 1, "timeout": 20 },
     { "do": "check", "note": "RUN でも始動の間は始動限界の線が残る", "dref": "laminar/B747/engines/EGT/start_limit_on[3]", "op": "==", "value": 1 },
+    { "do": "check", "note": "始動中は油圧が低くても白（FCOM p.846）", "dref": "laminar/B747/engines/EICAS2_oil_press_status[3]", "op": "==", "value": 0 },
     { "do": "snapshot", "note": "始動中の EGT", "drefs": [
       "laminar/B747/engines/display_EGT[3]", "laminar/B747/engines/EGT/white_on[3]", "laminar/B747/engines/EGT/red_on[3]",
-      "sim/flightmodel/engine/ENGN_N2_[3]" ] },
+      "sim/flightmodel/engine/ENGN_N2_[3]", "laminar/B747/engines/oil_press_psi[3]" ] },
     { "do": "wait", "note": "50 % N2 で START 4 が戻る（FCOM p.879）", "dref": "laminar/B747/toggle_switch/position[19]", "op": "==", "value": 0, "timeout": 90 },
     { "do": "wait", "note": "start valve が閉じる", "dref": "laminar/B747/air/engine4/bleed_start_valve_pos", "op": "<", "value": 0.1, "timeout": 5 },
     { "do": "wait", "note": "idle（N2 60 % 以上）", "dref": "sim/flightmodel/engine/ENGN_N2_[3]", "op": ">=", "value": 60, "timeout": 120 },

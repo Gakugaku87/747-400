@@ -66,25 +66,9 @@ local B747_rev_held_all             = false    -- the all-engine reverse command
 
 --local B747_igniter_status = {0, 0, 0, 0}
 
+-- each engine's oil and vibration spread is drawn by the indication model
+-- (B747.40.engine_display_model.lua) when a flight starts
 math.randomseed(os.time())
-local B747_eng1oilStart = math.random(28, 31) * 1.18
-local B747_eng2oilStart = math.random(28, 31) * 1.18
-local B747_eng3oilStart = math.random(28, 31) * 1.18
-local B747_eng4oilStart = math.random(28, 31) * 1.18
-local B747_eng1startupOilTxfr = math.random(7, 11) + (math.random()*0.10)
-local B747_eng2startupOilTxfr = math.random(7, 11) + (math.random()*0.10)
-local B747_eng3startupOilTxfr = math.random(7, 11) + (math.random()*0.10)
-local B747_eng4startupOilTxfr = math.random(7, 11) + (math.random()*0.10)
-
-local B747_eng1oilPressVariance = math.random(1, 6) + (math.random()*0.10)
-local B747_eng2oilPressVariance = math.random(1, 6) + (math.random()*0.10)
-local B747_eng3oilPressVariance = math.random(1, 6) + (math.random()*0.10)
-local B747_eng4oilPressVariance = math.random(1, 6) + (math.random()*0.10)
-
-local B747_eng1oilTempVariance = math.random(1, 10) + (math.random()*0.10)
-local B747_eng2oilTempVariance = math.random(1, 10) + (math.random()*0.10)
-local B747_eng3oilTempVariance = math.random(1, 10) + (math.random()*0.10)
-local B747_eng4oilTempVariance = math.random(1, 10) + (math.random()*0.10)
 
 local B747_ref_thr_limit_mode = "NONE"
 local B747_ref_thr_limit = {
@@ -890,62 +874,20 @@ end
 
 
 
------ ENGINE OIL PRESSURE SECONDARY EICAS DISPLAY ---------------------------------------
-function B747_secondary_EICAS2_oil_press_status()
+----- ENGINE OIL AND VIBRATION SECONDARY EICAS DISPLAY ----------------------------------
+-- the oil pressure, temperature and quantity and the vibration come from the
+-- indication model (B747_engine_display(), B747.40.xt.engine_display.lua);
+-- the engines' 3D shake below follows the displayed vibration
 
-    B747DR_engine_oil_press_psi[0] = simDR_engine_oil_pressure[0] + B747_rescale(0.0, 0.0, 100.0, B747_eng1oilPressVariance, B747DR_display_N1[0])
-    B747DR_engine_oil_press_psi[1] = simDR_engine_oil_pressure[1] + B747_rescale(0.0, 0.0, 100.0, B747_eng2oilPressVariance, B747DR_display_N1[1])
-    B747DR_engine_oil_press_psi[2] = simDR_engine_oil_pressure[2] + B747_rescale(0.0, 0.0, 100.0, B747_eng3oilPressVariance, B747DR_display_N1[2])
-    B747DR_engine_oil_press_psi[3] = simDR_engine_oil_pressure[3] + B747_rescale(0.0, 0.0, 100.0, B747_eng4oilPressVariance, B747DR_display_N1[3])
-
-    for i = 0, 3 do
-        
-        if B747DR_engine_oil_press_psi[i] < 70.0                                            -- PRESURE IS BELOW MINIMUM
-            and (simDR_engine_starter_status[i] == 0                                        -- ENGINE STARTER IS NOT ENGAGED
-                or B747DR_fuel_control_toggle_switch_pos[i] > 0.95)                         -- ENGINE IS NOT SHUTDOWN
-        then
-            B747DR_EICAS2_oil_press_status[i] = 1                                           -- SHOW REDLINE OBJECTS
-	else
-	  B747DR_EICAS2_oil_press_status[i] = 0
-        end
-    end
-
-end
-
-
-
-
-
-
----- ENGINE OIL TEMPERATURE -------------------------------------------------------------
-function B747_engine_oil_temp()
-
-    B747DR_engine_oil_temp_degC[0] = simDR_engine_oil_temp[0] + B747_rescale(0.0, 0.0, 100.0, B747_eng1oilTempVariance, B747DR_display_N1[0])
-    B747DR_engine_oil_temp_degC[1] = simDR_engine_oil_temp[1] + B747_rescale(0.0, 0.0, 100.0, B747_eng2oilTempVariance, B747DR_display_N1[1])
-    B747DR_engine_oil_temp_degC[2] = simDR_engine_oil_temp[2] + B747_rescale(0.0, 0.0, 100.0, B747_eng3oilTempVariance, B747DR_display_N1[2])
-    B747DR_engine_oil_temp_degC[3] = simDR_engine_oil_temp[3] + B747_rescale(0.0, 0.0, 100.0, B747_eng4oilTempVariance, B747DR_display_N1[3])
-
-end
-
-
-
-
-
------ ENGINE VIBRATION ------------------------------------------------------------------
+----- ENGINE VIBRATION (3D) -------------------------------------------------------------
 local int, frac = math.modf(os.clock())
 local seed = math.random(1, frac*1000.0)
 math.randomseed(seed)
---local B747_engine1_maxVib = math.min(1.3, math.random(0, 1) + math.random())
---local B747_engine2_maxVib = math.min(1.5, math.random(0, 3) + math.random())
---local B747_engine3_maxVib = math.min(1.4, math.random(0, 2) + math.random())
---local B747_engine4_maxVib = math.min(1.6, math.random(0, 3) + math.random())
-local B747_engine_maxVib = {}
 local B747_engine_vibPhase = {}
 local B747_engine_lastClock = {}
 local B747_engine_lastPos = {}
 local lastWingFlex=0
 for i = 0, 3 do
-  B747_engine_maxVib[i]= math.min(1.3, math.random(0, 1) + math.random())
   B747_engine_vibPhase[i] =  math.random(0, 6)
   B747_engine_lastClock[i] = os.clock()
   B747_engine_lastPos[i]=0
@@ -972,7 +914,6 @@ function B747_animate_value(current_value, target, min, max, speed)
     end
 
 end
-local wasFire=false
 function B747_secondary_EICAS2_engine_vibration()
     --local vibrationRate=0
     local timeNow=0
@@ -992,12 +933,6 @@ function B747_secondary_EICAS2_engine_vibration()
     lastWingFlex=B747_animate_value(lastWingFlex,wingFlex,-30,30,20)
     local airspeedReduction=(400-simDR_ind_airspeed_kts_pilot)/400
     for i = 0, 3 do
-        if simDR_engine_fire[i] > 0 then
-            B747_engine_maxVib[i]= math.random(2, 3)
-        --else
-         --   B747_engine_maxVib[i]= math.min(1.3, math.random(0, 1) + math.random())
-        end
-    B747DR_EICAS2_engine_vibration[i] = B747_rescale(0.0, 0.0, 100.0, B747_engine_maxVib[i], B747DR_display_N2[i])
     timeNow=B747_engine_lastClock[i]+(os.clock()-B747_engine_lastClock[i])
     thrust=math.max((B747DR_display_N2[i]-60)/10,0)
     phaseNow=(timeNow*thrust)-(B747_engine_lastClock[i]*thrust)
@@ -1011,18 +946,6 @@ function B747_secondary_EICAS2_engine_vibration()
 end
 
 
-
-
-
-
------ ENGINE OIL QUANTITY ---------------------------------------------------------------
-function B747_engine_oil_qty()
-
-    B747DR_engine_oil_qty_liters[0] = math.max(0, (B747_eng1oilStart - (B747_eng1startupOilTxfr * B747_rescale(0.0, 0.0, 15.0, 1.0, B747DR_display_N1[0]))) * simDR_engine_oil_qty_ratio[0])
-    B747DR_engine_oil_qty_liters[1] = math.max(0, (B747_eng2oilStart - (B747_eng2startupOilTxfr * B747_rescale(0.0, 0.0, 15.0, 1.0, B747DR_display_N1[1]))) * simDR_engine_oil_qty_ratio[0])
-    B747DR_engine_oil_qty_liters[2] = math.max(0, (B747_eng3oilStart - (B747_eng3startupOilTxfr * B747_rescale(0.0, 0.0, 15.0, 1.0, B747DR_display_N1[2]))) * simDR_engine_oil_qty_ratio[0]) 
-	B747DR_engine_oil_qty_liters[3] = math.max(0, (B747_eng4oilStart - (B747_eng4startupOilTxfr * B747_rescale(0.0, 0.0, 15.0, 1.0, B747DR_display_N1[3]))) * simDR_engine_oil_qty_ratio[0]) 
-end
 
 
 
@@ -1072,21 +995,7 @@ function B747_engines_EICAS_msg()
 
     
 
-    -- ENG 1 OIL TEMP
-    
-    if B747DR_engine_oil_temp_degC[0] > 160.0 then B747DR_CAS_advisory_status[118] = 1 else B747DR_CAS_advisory_status[118] = 0 end
-
-    -- ENG 2 OIL TEMP
-    
-    if B747DR_engine_oil_temp_degC[1] > 160.0 then B747DR_CAS_advisory_status[119] = 1 else B747DR_CAS_advisory_status[119] = 0 end
-
-    -- ENG 3 OIL TEMP
-    
-    if B747DR_engine_oil_temp_degC[2] > 160.0 then B747DR_CAS_advisory_status[120] = 1 else B747DR_CAS_advisory_status[120] = 0 end
-
-    -- ENG 4 OIL TEMP
-    
-    if B747DR_engine_oil_temp_degC[3] > 160.0 then B747DR_CAS_advisory_status[121] = 1 else B747DR_CAS_advisory_status[121] = 0 end
+    -- ENG n OIL TEMP and ENG n OIL PRESS: from the indication model (B747.40.xt.engine_display.lua)
 
     -- ENG n REVERSER: from the reverser model (B747.40.xt.reverser.lua)
 
@@ -1282,12 +1191,9 @@ function after_physics()
     --B747_electronic_engine_control()
 
     B747_engine_spool_time()
-    B747_engine_display()           -- EGT colours and start limit line (B747.40.xt.engine_display.lua)
+    B747_engine_display()           -- EGT colours and start limit line, oil, vibration (B747.40.xt.engine_display.lua)
 
-    B747_engine_oil_qty()
-    B747_engine_oil_temp()
     B747_secondary_EICAS2_fuel_on_status()
-    B747_secondary_EICAS2_oil_press_status()
     B747_secondary_EICAS2_engine_vibration()
 
     B747_EPR() 

@@ -1,0 +1,49 @@
+{
+  "name": "s13_oil_ge",
+  "description": "エンジンのオイル（2-3 段 3）の X-Plane での確認、GE（Saudia、CF6-80C2B1F）。RJAA 34L でエンジン運転中に、アイドルの油圧が白で ENG OIL PRESS が無いことを見る。X-Plane の故障でオイルポンプ 1 を止め、油圧 1 が赤線（N2 で 10〜35 psi、ATA70_80 p.395）を切って赤、低圧スイッチが 10 psid で閉じて ENG 1 OIL PRESS が出ること（ATA70_80 p.522、FCOM p.901）、故障を戻して 15 psid を超えると消えることを見る。機体を読み直す。",
+  "reload": true,
+  "livery": "Saudia",
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 10 },
+    { "do": "set", "note": "パーキング・ブレーキ", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 1 },
+    { "do": "check", "note": "GE", "dref": "laminar/B747/engines/type", "op": "==", "value": 1 },
+    { "do": "snapshot", "note": "アイドルのオイルと振動（油量は US qt）", "drefs": [
+      "laminar/B747/engines/display_N1[0]", "laminar/B747/engines/display_N2[0]",
+      "sim/cockpit2/engine/indicators/oil_pressure_psi[0]", "sim/cockpit2/engine/indicators/oil_quantity_ratio[0]",
+      "laminar/B747/engines/oil_press_psi[0]", "laminar/B747/engines/oil_temp_degC[0]",
+      "laminar/B747/engines/oil_qty_liters[0]", "laminar/B747/engines/oil_qty_liters[1]",
+      "laminar/B747/engines/vibration[0]", "laminar/B747/engines/vibration[1]" ] },
+    { "do": "check", "note": "油圧は白", "dref": "laminar/B747/engines/EICAS2_oil_press_status[0]", "op": "==", "value": 0 },
+    { "do": "check", "note": "ENG 1 OIL PRESS なし（低圧スイッチ開）", "dref": "laminar/B747/CAS/advisory_status[317]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "オイルポンプ 1 の故障" },
+    { "do": "set", "note": "X-Plane の故障：oil pump 1（6 = 故障中）", "dref": "sim/operation/failures/rel_oilpmp0", "value": 6 },
+    { "do": "wait", "note": "油圧 1 が赤（アイドルの赤線は約 12 psi）", "dref": "laminar/B747/engines/EICAS2_oil_press_status[0]", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "wait", "note": "低圧スイッチが 10 psid で閉じて ENG 1 OIL PRESS", "dref": "laminar/B747/CAS/advisory_status[317]", "op": "==", "value": 1, "timeout": 5 },
+    { "do": "check", "note": "このとき油圧 1 は 10 psid 以下", "dref": "laminar/B747/engines/oil_press_psi[0]", "op": "<=", "value": 10 },
+    { "do": "check", "note": "ENG 2 OIL PRESS なし", "dref": "laminar/B747/CAS/advisory_status[318]", "op": "==", "value": 0 },
+    { "do": "cas", "note": "oil pump 1 の故障（GE）" },
+    { "do": "view", "the": -31.5, "psi": 33, "fov": 30 },
+    { "do": "shot", "name": "lower_eicas_ge_oil_pump_1_failed" },
+    { "do": "set", "note": "故障を戻す", "dref": "sim/operation/failures/rel_oilpmp0", "value": 0 },
+    { "do": "wait", "note": "15 psid を超えるとスイッチが開いて消える", "dref": "laminar/B747/CAS/advisory_status[317]", "op": "==", "value": 0, "timeout": 15 },
+    { "do": "check", "note": "このとき油圧 1 は 15 psid 以上", "dref": "laminar/B747/engines/oil_press_psi[0]", "op": ">=", "value": 15 },
+    { "do": "wait", "note": "油圧 1 は白に戻る", "dref": "laminar/B747/engines/EICAS2_oil_press_status[0]", "op": "==", "value": 0, "timeout": 5 },
+    { "do": "record_stop" }
+  ]
+}

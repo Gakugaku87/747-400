@@ -435,7 +435,11 @@ B747_CASadvisoryMsg   = {
     {DRindex = 313, name = "ENG 1 EEC MODE", status = 0},
     {DRindex = 314, name = "ENG 2 EEC MODE", status = 0},
     {DRindex = 315, name = "ENG 3 EEC MODE", status = 0},
-    {DRindex = 316, name = "ENG 4 EEC MODE", status = 0}
+    {DRindex = 316, name = "ENG 4 EEC MODE", status = 0},
+    {DRindex = 317, name = "ENG 1 OIL PRESS", status = 0},
+    {DRindex = 318, name = "ENG 2 OIL PRESS", status = 0},
+    {DRindex = 319, name = "ENG 3 OIL PRESS", status = 0},
+    {DRindex = 320, name = "ENG 4 OIL PRESS", status = 0}
 }
 
 B747_CASmemoMsg   = {
