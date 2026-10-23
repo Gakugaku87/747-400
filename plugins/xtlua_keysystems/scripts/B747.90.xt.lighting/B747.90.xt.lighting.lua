@@ -2358,10 +2358,20 @@ end
 
 --function before_physics() end
 debug_lighting     = deferred_dataref("laminar/B747/debug/lighting", "number")
+-- The generic light 63 is the "power source" of the display and panel
+-- brightness (B747_cabin_lights). X-Plane sets it back to 0 when a new flight
+-- starts without reloading the aircraft, after flight_start has set it, and
+-- the displays and CDUs stay dark (2026-10-23, both acfs). Read every frame,
+-- written only when it changed (ARCHITECTURE.md §9a).
+function B747_keep_light_power()
+    if simDR_generic_brightness_switch[63] ~= 1.0 then simDR_generic_brightness_switch[63] = 1.0 end
+end
+
 function after_physics()
     collectgarbage("collect")
   if debug_lighting>0 then return end
-  
+
+    B747_keep_light_power()
     B747_landing_light_brightness()
     B747_turnoff_lights()
     B747_taxi_lights()
