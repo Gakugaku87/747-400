@@ -60,6 +60,35 @@ T.near(get(ENG .. "display_EPR_max", 0), 1.53, 0.005, "P&W: engine 1's anti-ice 
 T.near(get(ENG .. "TRA", 1), 1.57, 0.005, "P&W: 35° TLA commands the climb rating above 25,000 ft")
 rt:set("laminar/B747/antiice/nacelle/valve_pos", 0, 0)
 
+-- idle: X-Plane's one idle setting is approach idle while any engine selects
+-- it (in the air: anti-ice, landing flaps), minimum idle by the outside air
+-- temperature otherwise, 5 s after the conditions end
+local IDLE = "sim/aircraft2/engine/high_idle_ratio"
+local ADV = "laminar/B747/CAS/advisory_status"
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+rt:set("sim/cockpit2/temperature/outside_air_temp_degc", -20)
+frames(6)
+T.near(get(IDLE), 1.00 + 0.07 * 55 / 89.99, 0.001, "idle: minimum idle in the air (-20 °C)")
+rt:set("sim/cockpit2/controls/flap_ratio", 5 / 6)          -- flaps 25
+frames(0.5)
+T.near(get(IDLE), 2.625, 0.001, "idle: approach idle with landing flaps")
+rt:set("sim/cockpit2/controls/flap_ratio", 4 / 6)          -- flaps 20
+frames(4.5)
+T.near(get(IDLE), 2.625, 0.001, "idle: approach idle kept 5 s")
+frames(1)
+T.near(get(IDLE), 1.00 + 0.07 * 55 / 89.99, 0.001, "idle: minimum idle after 5 s")
+rt:set("laminar/B747/antiice/nacelle/valve_pos", 2, 1)
+frames(0.5)
+T.near(get(IDLE), 2.625, 0.001, "idle: engine 3's anti-ice selects approach idle (X-Plane has one setting)")
+rt:set("laminar/B747/antiice/nacelle/valve_pos", 2, 0)
+for n = 0, 3 do T.equal(get(ADV, 309 + n), 0, "idle: no ENG " .. (n + 1) .. " LOW IDLE") end
+T.equal(get(ADV, 223), 0, "idle: no >IDLE DISAGREE")
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
+rt:set("sim/cockpit2/controls/flap_ratio", 0)
+frames(6)
+T.near(get(IDLE), 1.071, 0.001, "idle: minimum idle on the ground (15 °C), 5 s after touchdown")
+
 -- GE at sea level, 15 °C
 rt:set("laminar/B747/simconfig", '{"PLANE":{"engines":"CF6-80C2B1F"}}')
 rt:set("laminar/B747/newsimconfig", 1)

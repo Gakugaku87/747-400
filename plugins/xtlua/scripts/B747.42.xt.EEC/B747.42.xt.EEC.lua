@@ -1192,6 +1192,7 @@ function flight_start()
 	B747DR_pidepr_eccI = 0.01
 	B747DR_pidepr_eccD = 0.01
 	B747DR_pidepr_eccP = 0.001
+	B747_eec_flight_start()
 end
 function after_physics()
 	collectgarbage("collect")

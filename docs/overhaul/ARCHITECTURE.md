@@ -270,7 +270,8 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - レバーの指令：アイドル端（GE は N1 25 %、P&W は EPR 0.95。前の値）から最大定格まで、レバー角に比例。離陸の定格は 48°、25,000 ft より上の最大上昇は 35° で頭打ち（ATA70_80 p.146-151、p.208）。
 - 書くもの：`laminar/B747/engines/TRA`（指令。`ecc_spd` の PID の目標で、A/T もこれで目標に合わせる）、`display_N1_max`（GE）・`display_EPR_max`（P&W）（上の EICAS の最大線。前は FMC の推力基準だった）。FMC の推力基準（`display_*_ref`、target bug）と A/T のサーボは前のまま（PLAN.md の 6-4）。
 - RR は資料が無いので、前の推力の論理のまま。
-- 読むもの：レバー（`laminar/B747/engine/throttle`）、`sim/flightmodel2/position/pressure_altitude`、TAT、IAS、パックのセレクタ、エンジン防氷弁（`antiice/nacelle/valve_pos`）、翼防氷弁（`antiice/wing/valve_pos`）、エンジン型式。
+- アイドル：エンジンごとに approach idle を選び（空中でそのエンジンの防氷、着陸フラップ、405・570 の CON、GE の逆推力。条件が終わって 5 秒・接地 5 秒後に minimum）、X-Plane のアイドル（`sim/aircraft2/engine/high_idle_ratio`、全エンジンで 1 つ）を、どれかが approach なら 2.625、ほかは外気温による minimum の値にする（前の値。変わったときだけ書く）。型式ごとの `engine_idle_control_*` は表示用の minimum idle の N1 を返すだけにした。ENG n LOW IDLE（advisory 309〜312、新設）と >IDLE DISAGREE（223）の判定もあるが、アイドルの故障が無いので出ない。
+- 読むもの：レバー（`laminar/B747/engine/throttle`）、`sim/flightmodel2/position/pressure_altitude`、TAT、IAS、パックのセレクタ、エンジン防氷弁（`antiice/nacelle/valve_pos`）、翼防氷弁（`antiice/wing/valve_pos`）、エンジン型式、PSEU（`gear/air_ground/pri_gnd`）、フラップレバー（`sim/cockpit2/controls/flap_ratio`、0・1・5・10・20・25・30 の等間隔）、CON（`button_switch/position[44]`）、貨物機（`freighter`）、逆推力の展開（`thrust_reverser_deploy_ratio`）、外気温。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 

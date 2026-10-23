@@ -1,0 +1,62 @@
+{
+  "name": "s09_eec",
+  "description": "EEC（2-3 段 2）の X-Plane での確認。10,000 ft・250 kt 付近で空中から始め、A/P の ALT HOLD で保ったまま、NAI 1 を ON にして approach idle（X-Plane の high_idle_ratio が 2.625）、OFF にして 5 秒後に minimum idle に戻ることを見る（FCOM p.877-878、ATA70_80 p.211）。CON は 109（P&W 旅客機）では approach idle にしない。EEC の最大定格（TO の範囲）と TRA も記録する。機体を読み直す。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 3048, "heading_true": 340, "speed_in_meters_per_second": 128 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 20, "note": "空中開始の揺れが収まるのを待つ" },
+    { "do": "set", "note": "MCP 速度 250 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 250 },
+    { "do": "set", "note": "MCP 高度 10,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 10000 },
+    { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "note": "A/P のサーボが入る", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "cmd", "note": "ALT HOLD", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "sleep", "seconds": 10 },
+    { "do": "snapshot", "note": "開始", "drefs": [
+      "sim/aircraft/view/acf_relative_path", "laminar/B747/engines/type", "laminar/B747/freighter",
+      "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot",
+      "sim/cockpit2/temperature/outside_air_temp_degc", "sim/cockpit2/temperature/outside_air_LE_temp_degc",
+      "laminar/B747/gear/air_ground/pri_gnd", "laminar/B747/autopilot/FMA/autothrottle_mode",
+      "laminar/B747/engines/display_EPR_max[0]", "laminar/B747/engines/display_EPR[0]", "laminar/B747/engines/TRA[0]",
+      "laminar/B747/engine/throttle[0]", "sim/aircraft2/engine/high_idle_ratio" ] },
+    { "do": "check", "note": "空中（PSEU）", "dref": "laminar/B747/gear/air_ground/pri_gnd", "op": "==", "value": 0 },
+    { "do": "check", "note": "minimum idle（approach idle の 2.625 ではない）", "dref": "sim/aircraft2/engine/high_idle_ratio", "op": "<", "value": 1.5 },
+    { "do": "check", "note": "最大 EPR は離陸の範囲の定格（10,000 ft、250 kt。着陸復行の表、推定で 1.5〜1.7）", "dref": "laminar/B747/engines/display_EPR_max[0]", "op": "between", "value": [1.5, 1.7] },
+
+    { "do": "mark", "note": "NAI 1 ON" },
+    { "do": "switch", "note": "NAI 1 ON", "dref": "laminar/B747/button_switch/position[68]", "value": 1, "cmd": "laminar/B747/button_switch/anti_ice_nacelle_1" },
+    { "do": "wait", "note": "ナセル防氷弁 1 が開く", "dref": "laminar/B747/antiice/nacelle/valve_pos[0]", "op": ">", "value": 0.9, "timeout": 15 },
+    { "do": "wait", "note": "approach idle（FCOM p.877）", "dref": "sim/aircraft2/engine/high_idle_ratio", "op": ">", "value": 2.6, "timeout": 2 },
+    { "do": "check", "note": "最大 EPR はエンジン 1 だけ防氷の補正で下がる（着陸復行の表に P&W の防氷の補正は無い。TO の範囲では変わらない）", "dref": "laminar/B747/engines/display_EPR_max[0]", "op": "between", "value": [1.5, 1.7] },
+    { "do": "switch", "note": "NAI 1 OFF", "dref": "laminar/B747/button_switch/position[68]", "value": 0, "cmd": "laminar/B747/button_switch/anti_ice_nacelle_1" },
+    { "do": "wait", "note": "ナセル防氷弁 1 が閉じる", "dref": "laminar/B747/antiice/nacelle/valve_pos[0]", "op": "<", "value": 0.1, "timeout": 15 },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "check", "note": "閉じてから 5 秒は approach idle のまま（ATA70_80 p.211、推定）", "dref": "sim/aircraft2/engine/high_idle_ratio", "op": ">", "value": 2.6 },
+    { "do": "wait", "note": "そのあと minimum idle", "dref": "sim/aircraft2/engine/high_idle_ratio", "op": "<", "value": 1.5, "timeout": 5 },
+
+    { "do": "mark", "note": "CON ON" },
+    { "do": "cmd", "note": "CON IGNITION ON", "name": "laminar/B747/button_switch/start_ign_cont" },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "CON は 109（P&W 旅客機）では approach idle にしない（FCOM p.878：570 と 405 だけ）", "dref": "sim/aircraft2/engine/high_idle_ratio", "op": "<", "value": 1.5 },
+    { "do": "cmd", "note": "CON IGNITION OFF", "name": "laminar/B747/button_switch/start_ign_cont" },
+    { "do": "check", "note": "ENG 1 LOW IDLE は出ない（idle の故障は無い）", "dref": "laminar/B747/CAS/advisory_status[309]", "op": "==", "value": 0 },
+    { "do": "check", "note": ">IDLE DISAGREE は出ない", "dref": "laminar/B747/CAS/advisory_status[223]", "op": "==", "value": 0 },
+    { "do": "cas", "note": "終わり" },
+    { "do": "record_stop" }
+  ]
+}

@@ -1,15 +1,17 @@
 -- 747-400 EEC without X-Plane: for each engine the maximum rated thrust for
--- the conditions (Max N1 for the CF6-80C2, Max EPR for the PW4056) and the
+-- the conditions (Max N1 for the CF6-80C2, Max EPR for the PW4056), the
 -- command the thrust lever asks for between idle and that maximum, so that
--- full forward gives the maximum rated thrust in any phase (FCOM p.876).
--- Logic and sources: docs/overhaul/notes/ATA-70-80.md §4.1 (FCOM 7.20
--- p.873-878; ATA70_80 p.146-151 and p.208-209 for the CF6; FCOM PI for the
--- ratings). B747.42.xt.eec.lua feeds it and gives the command to the
--- engines' thrust control.
+-- full forward gives the maximum rated thrust in any phase (FCOM p.876),
+-- and the idle selection. Logic and sources: docs/overhaul/notes/
+-- ATA-70-80.md §4.1 and §4.4 (FCOM 7.20 p.873-878; ATA70_80 p.146-151 and
+-- p.208-211 for the CF6; FCOM PI for the ratings).
+-- B747.42.xt.eec_thrust.lua feeds it and gives the command to the engines'
+-- thrust control.
 --
 --   local E = B747_eec_model
+--   local s = E.new()
 --   local inp = E.inputs()                 -- fill it every frame
---   local out = E.update(inp)              -- a new table
+--   local out = E.update(s, inp, dt)       -- a new table
 
 -- a table with a metatable: XTLua keeps it as it is when it goes in a global
 local M = setmetatable({}, {})
@@ -27,6 +29,15 @@ M.MCT_ALT_TOP, M.CLB_ALT = 22000, 25000
 -- takeoff rating is reached at 48°, the forward stop is 50°; the climb
 -- rating at 35° (ATA70_80 p.208)
 M.TLA_STOP, M.TLA_TO, M.TLA_CLB = 50, 48, 35
+
+-- idle (FCOM p.877-878): approach idle in the air while the engine's
+-- nacelle anti-ice is on, the flaps are in a landing position or (570 and
+-- 405, not 109) the CON IGNITION switch is ON; the CF6 (570) also while its
+-- reverser works. It stays until 5 s after touchdown; 5 s also after the
+-- conditions end in the air (the CF6's idle select circuit, ATA70_80 p.211,
+-- estimate). Minimum idle otherwise.
+M.APPROACH_HOLD_S = 5
+M.LANDING_FLAPS_DEG = 23            -- trailing edge flaps past 23° (ATA70_80 p.211)
 
 -- FCOM PI tables, 3 packs on, anti-ice off. Rows by TAT (°C, warm to cold),
 -- columns by pressure altitude (ft); false where the table is blank (too
@@ -205,7 +216,41 @@ function M.inputs()
         wai = false,                         -- wing anti-ice valve open
         lever = {0, 0, 0, 0},                -- forward thrust lever, 0 idle to 1 forward stop
         idle = {0, 0, 0, 0},                 -- the engine's idle N1 (GE) or EPR (P&W)
+        air = false,                         -- air/ground: in the air
+        flaps_deg = 0,                       -- trailing edge flaps
+        con = false,                         -- CON IGNITION switch ON
+        freighter = false,                   -- 405 or 570 (CON selects approach idle there)
+        reverser = {false, false, false, false},   -- the engine's reverser not stowed
+        at_approach = nil,                   -- {n} engine at approach idle; nil: as selected
     }
+end
+
+function M.new()
+    return {approach = {false, false, false, false}, hold = {0, 0, 0, 0}}
+end
+
+-- approach idle of each engine, and the idle messages: ENG n LOW IDLE
+-- (approach idle selected, not reached) and >IDLE DISAGREE (an engine at
+-- approach idle with minimum idle selected) (FCOM p.900, p.902; ATA70_80
+-- p.230). The sim has no idle faults: without at_approach they stay off.
+local function idle_selection(s, inp, dt, out)
+    local con = inp.con and (inp.type == "GE" or inp.freighter)
+    local landing = inp.air and (inp.flaps_deg > M.LANDING_FLAPS_DEG or con)
+    out.approach, out.low_idle, out.idle_disagree = {}, {}, false
+    for n = 1, 4 do
+        local want = landing or (inp.air and inp.nai[n]) or (inp.type == "GE" and inp.reverser[n])
+        if want then
+            s.approach[n], s.hold[n] = true, M.APPROACH_HOLD_S
+        elseif s.approach[n] then
+            s.hold[n] = s.hold[n] - dt
+            if s.hold[n] <= 0 then s.approach[n], s.hold[n] = false, 0 end
+        end
+        local at = s.approach[n]
+        if inp.at_approach then at = inp.at_approach[n] end
+        out.approach[n] = s.approach[n]
+        out.low_idle[n] = s.approach[n] and not at
+        out.idle_disagree = out.idle_disagree or (at and not s.approach[n])
+    end
 end
 
 -- the share of the takeoff rating in the full-forward rating (1 takeoff,
@@ -218,7 +263,7 @@ function M.rating_mix(alt, kias)
     return by_alt * by_speed, tla_full
 end
 
-function M.update(inp)
+function M.update(s, inp, dt)
     local tables = M.TABLE[inp.type] or M.TABLE.PW
     local to_share, tla_full = M.rating_mix(inp.alt, inp.kias)
     -- the go-around tables stop at 10,000 ft: held above (estimate)
@@ -235,6 +280,7 @@ function M.update(inp)
         out.max[n] = max
         out.command[n] = idle + (max - idle) * clamp(tla / tla_full, 0, 1)
     end
+    idle_selection(s, inp, dt, out)
     return out
 end
 

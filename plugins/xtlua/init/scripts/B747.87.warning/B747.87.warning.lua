@@ -111,7 +111,11 @@ B747_CAScautionMsg   = {
     {DRindex = 71, name = "ELEC GEN OFF 1", status = 0},
     {DRindex = 72, name = "ELEC GEN OFF 2", status = 0},
     {DRindex = 73, name = "ELEC GEN OFF 3", status = 0},
-    {DRindex = 74, name = "ELEC GEN OFF 4", status = 0}
+    {DRindex = 74, name = "ELEC GEN OFF 4", status = 0},
+    {DRindex = 75, name = ">ENG 1 LIM PROT", status = 0},
+    {DRindex = 76, name = ">ENG 2 LIM PROT", status = 0},
+    {DRindex = 77, name = ">ENG 3 LIM PROT", status = 0},
+    {DRindex = 78, name = ">ENG 4 LIM PROT", status = 0}
 }
 
 B747_CASadvisoryMsg   = {
@@ -423,7 +427,15 @@ B747_CASadvisoryMsg   = {
     {DRindex = 305, name = "ENG 1 FUEL VLV", status = 0},
     {DRindex = 306, name = "ENG 2 FUEL VLV", status = 0},
     {DRindex = 307, name = "ENG 3 FUEL VLV", status = 0},
-    {DRindex = 308, name = "ENG 4 FUEL VLV", status = 0}
+    {DRindex = 308, name = "ENG 4 FUEL VLV", status = 0},
+    {DRindex = 309, name = "ENG 1 LOW IDLE", status = 0},
+    {DRindex = 310, name = "ENG 2 LOW IDLE", status = 0},
+    {DRindex = 311, name = "ENG 3 LOW IDLE", status = 0},
+    {DRindex = 312, name = "ENG 4 LOW IDLE", status = 0},
+    {DRindex = 313, name = "ENG 1 EEC MODE", status = 0},
+    {DRindex = 314, name = "ENG 2 EEC MODE", status = 0},
+    {DRindex = 315, name = "ENG 3 EEC MODE", status = 0},
+    {DRindex = 316, name = "ENG 4 EEC MODE", status = 0}
 }
 
 B747_CASmemoMsg   = {

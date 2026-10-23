@@ -19,57 +19,11 @@ function throttle_resolver_angle_PW(engine_in)
   return B747_eec_command(engine_in)
 end
 
+  --The N1 the display shows at minimum idle. The idle selection (minimum or
+  --approach idle) and X-Plane's idle setting are B747.42.xt.eec_thrust.lua's
+  --(FCOM p.877-878).
 function engine_idle_control_PW(altitude_ft_in)
-    local N1_low_idle = 0.0
-    local N1_high_idle_ratio = 2.625  --target ~42% N1 at SL / 15c
-  
-    --Information from FCOM
-      --Chapter 7 - Engines, APU
-      --Section 20 - Engine System Description
-      --Sub-Section - Electronic Engine Control (EEC) / EEC Idle Selection
-  
-    --N1 Idle Display (Currently only high idle is implemented for use in the 747 in XP so manipulate the high idle dataref for low idle)
-  
-    --------------------
-    --MINIMUM (LOW) Idle
-    --------------------
-    --When on ground and flaps not in landing configuration, low idle fluctuates based on temperature
-    if simDR_onGround == 1 then
-      if simDR_temperature < 15.0 then
-        simDR_engine_high_idle_ratio = B747_rescale(-75.0, 1.00, 14.99, 1.07, simDR_temperature)
-      else
-        simDR_engine_high_idle_ratio = B747_rescale(15.0, 1.071, 75.0, 1.14, simDR_temperature)
-      end
-    end
-  
-    --Calc engine LOW Idle
-    --N1_low_idle = -1.03E-08 * altitude_ft_in^2 + 8.85E-04 * altitude_ft_in + 2.52E+01
-    N1_low_idle = -1.45E-08 * altitude_ft_in^2 + 0.00121 * altitude_ft_in + 25.9
-  
-    ----------------------
-    --APPROACH (HIGH) Idle
-    ----------------------
-    --Conditions:
-      --Landing Flaps Selected (25 or 30)
-      --CON-tinuous Ignition Selected
-      --Engine Anti-Ice Selected
-      --Reversers deployed
-  
-    if (simDR_onGround == 0 and simDR_flap_ratio > 0.667)
-      or (simDR_onGround == 0 and B747DR_button_switch_position[44] == 1)  --CONTinuous Ignition
-      or (simDR_onGround == 0 and math.max(B747DR_nacelle_ai_valve_pos[0], B747DR_nacelle_ai_valve_pos[1], B747DR_nacelle_ai_valve_pos[2], B747DR_nacelle_ai_valve_pos[3]) == 1)  --Engine A/I
-      or (simDR_onGround == 1 and math.max(simDR_reverser_on[0], simDR_reverser_on[1], simDR_reverser_on[2], simDR_reverser_on[3]) == 1) then  --Reversers deployed
-        simDR_engine_high_idle_ratio = N1_high_idle_ratio
-        
-        --Reset to LOW Idle 5 seconds after touchdown (TBD)
-    end
-    
-    if B747DR_log_level >= 1 then
-      print("XP High Idle Ratio = ", simDR_engine_high_idle_ratio)
-      print("N1 Low Idle - Flight = ", N1_low_idle)
-    end
-  
-    return N1_low_idle
+    return -1.45E-08 * altitude_ft_in^2 + 0.00121 * altitude_ft_in + 25.9
   end
   
   
