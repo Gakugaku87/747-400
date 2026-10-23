@@ -22,7 +22,7 @@
   - 1-5（空圧）：モデルと、空調モジュールへの組み込みまで（エンジン 4 基の HPSOV・PRV・PRSOV・始動弁、3 区画のダクトと ISLN、APU 弁、需要に応じたダクト圧、P5 の SYS FAULT・VALVE 灯、EICAS）。前の抽気のコードは外した。試験はモデル 71 件・モジュール 19 件、X-Plane の `s05_bleed`（カスタム acf）。残りは下の「空圧（1-5）の GAP の状態」。
 - **段階 2**：
   - 2-1（APU）：制御を 1 つのモデル（状態機械）にまとめ、電源モジュールの中のグルーで回す（ARCHITECTURE.md §4.6）。FCOM の START→ON で始動、ドア全開で starter、60 秒の無負荷 cooldown、自動停止（火災、主タンク 2 の燃料切れ、始動の失敗）と fault の保持、APU・APU DOOR・APU RUNNING、STATUS の N2・油量。試験はモデル 46 件・モジュール 28 件、X-Plane の `s00`（両 acf 69/69）。残りは下の「APU（2-1）の GAP の状態」。
-  - 2-3（エンジン）：段 1（始動・点火・燃料弁）を、エンジンごとの状態機械のモデル（`plugins/xtlua/scripts/B747.40.xt.engines/B747.40.engine_start_model.lua`）とグルー `B747.40.xt.engine_start.lua` で作り直した（ARCHITECTURE.md §4.8）：手動始動と autostart（燃料投入、light-off・hot・hung の検出、地上の再試行と中止、空中は中止せず）、50 % N2 の cutout、点火の条件（START、CON、フラップ、NAI、flameout）と AUTO・STBY IGNITION・電源、エンジン燃料弁（RUN と火災スイッチ、main battery bus）、START VLV・STARTER CUTOUT・FUEL VLV・ENG AUTOSTART・>AUTOSTART OFF・ENG IGNITION・ENG FAIL・>ENG SHUTDOWN。start valve の指令は抽気のグルーが `engines/start_valve_cmd` から読む。試験はモデル 77 件・モジュール 18 件、X-Plane の `s08_autostart`（カスタム acf 38/38。igniter の故障で 2 回目に中止）、`s00`（両 acf 69/69、手動始動）。段 2（EEC）は済（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua` とグルー `B747.42.xt.eec_thrust.lua`、ARCHITECTURE.md §4.9）：定格・レバーの指令・max N1/EPR の線、アイドルの選択、ALTN と A/T、推力の制御（実際の N1・EPR を指令に合わせる。前の PID を GE・P&W で置き換えた）、オーバースピード保護と >ENG RPM LIM、ENG-19。試験はモデル 122 件・モジュール 59 件、X-Plane の `s09_eec`・`s10_overspeed`・`s11_takeoff_thrust`（新設）と `s07_cruise_ff`、GE のリバリー（Saudia）でのレバーの段の応答。段 3（表示・逆推力）は EGT の色・抑止・始動限界の線、逆推力の電源・地上・ENG REVERSER、オイルと振動の値・赤・メッセージ、小さな誤り（ENG-23・30・35・37）、超過の赤い枠と色（ENG-21）まで（`B747.40.engine_display_model.lua`・`B747.40.exceedance_model.lua`・`B747.40.reverser_model.lua` とそのグルー、ARCHITECTURE.md §4.10。試験は表示のモデル 82 件・モジュール 40 件、赤い枠のモデル 16 件、逆推力のモデル 22 件・モジュール 21 件、X-Plane の `s08_autostart`・`s11_takeoff_thrust`・`s12_reverser`・`s13_oil`・`s13_oil_ge`）。
+  - 2-3（エンジン）：段 1（始動・点火・燃料弁）を、エンジンごとの状態機械のモデル（`plugins/xtlua/scripts/B747.40.xt.engines/B747.40.engine_start_model.lua`）とグルー `B747.40.xt.engine_start.lua` で作り直した（ARCHITECTURE.md §4.8）：手動始動と autostart（燃料投入、light-off・hot・hung の検出、地上の再試行と中止、空中は中止せず）、50 % N2 の cutout、点火の条件（START、CON、フラップ、NAI、flameout）と AUTO・STBY IGNITION・電源、エンジン燃料弁（RUN と火災スイッチ、main battery bus）、START VLV・STARTER CUTOUT・FUEL VLV・ENG AUTOSTART・>AUTOSTART OFF・ENG IGNITION・ENG FAIL・>ENG SHUTDOWN。start valve の指令は抽気のグルーが `engines/start_valve_cmd` から読む。試験はモデル 77 件・モジュール 18 件、X-Plane の `s08_autostart`（カスタム acf 38/38。igniter の故障で 2 回目に中止）、`s00`（両 acf 69/69、手動始動）。段 2（EEC）は済（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua` とグルー `B747.42.xt.eec_thrust.lua`、ARCHITECTURE.md §4.9）：定格・レバーの指令・max N1/EPR の線、アイドルの選択、ALTN と A/T、推力の制御（実際の N1・EPR を指令に合わせる。前の PID を GE・P&W で置き換えた）、オーバースピード保護と >ENG RPM LIM、ENG-19。試験はモデル 122 件・モジュール 59 件、X-Plane の `s09_eec`・`s10_overspeed`・`s11_takeoff_thrust`（新設）と `s07_cruise_ff`、GE のリバリー（Saudia）でのレバーの段の応答。段 3（表示・逆推力）は済：EGT の色・抑止・始動限界の線、逆推力の電源・地上・ENG REVERSER、オイルと振動の値・赤・メッセージとパネル、小さな誤り（ENG-23・30・35・37）、超過の赤い枠と色（ENG-21）。表示値の作り方（ENG-33）と始動の空気（ENG-38）は推定が主になるので後回し（`B747.40.engine_display_model.lua`・`B747.40.exceedance_model.lua`・`B747.40.reverser_model.lua` とそのグルー、ARCHITECTURE.md §4.10。試験は表示のモデル 82 件・モジュール 46 件、赤い枠のモデル 16 件、逆推力のモデル 22 件・モジュール 21 件、X-Plane の `s08_autostart`・`s11_takeoff_thrust`・`s12_reverser`・`s13_oil`・`s13_oil_ge`）。
   - 2-2（燃料）：モデルまで（`plugins/xtlua/scripts/B747.25.xt.fuel/B747.28.fuel_model.lua`。タンク・ポンプ・弁の表、FSMC（クロスフィード 2・3、O/J 2・3、予備・スカベンジ・水平安定板タンクの移送）、FJCC（ジェティソン）、マニフォールド（圧力の順位、クロスフィード、吸引供給、shared flow）、量、EICAS、頭上灯）。試験 117 件。燃料モジュールへの組み込みも済（`B747_fuel_system()`。ARCHITECTURE.md §4.7）：前のポンプ・弁・供給源・タンク量・EICAS の処理を外し、頭上の灯は照明モジュールがモデルの出力を読む。APU の DC 燃料ポンプと APU FUEL（APU-11）も。試験はモデル 124 件・モジュール 62 件・照明 37 件、X-Plane の `s06_fuel`（カスタム acf 42/42）、空中の予備・安定板タンクの移送とジェティソン、`s00`（両 acf 69/69）。カスタム acf の燃費（SFC）は、巡航の燃料流量を測って（`s07_cruise_ff`）純正と同じ値にした（前の値では約 25 % 少なかった。ACF_DIFF.md §5）。残りは下の「燃料（2-2）の GAP の状態」。
 
 ## 次にやること
@@ -30,16 +30,17 @@
 項目を終えるたびに、[DIFFERENCES.md](DIFFERENCES.md)（実機との違い、全分野。2026-10-23 に利用者の依頼で作った）の該当分野も直す。
 
 1. 承認済みのパネル（カスタム acf）の変更の残り：1-5 のダクト圧の表示条件（PNEU-09。空調 3-1 と一緒に）。済：`.snd` の警報音、1-3 の PG と 3〜10 ページ、1-3 の STATUS ページと cue、1-4 の HYD synoptic（HYD-19。記号の色と不作動項目の絵は 2026-10-23 夕方に新しい画像で）と RSVR PRESS（HYD-18）、1-1 の synoptic の ISLN・DRIVE の枠・UTILITY と GALLEY の色、STAT のバッテリーの値と CHG/DIS、1-5 のダクト圧の色（PNEU-10）。変更の一覧は ACF_DIFF.md §5、画像は `docs/overhaul/tools/make_synoptic_images.ps1` で作る。
-2. 2-3（エンジン）の残り：段 3。EGT の色・抑止・始動限界の線（ENG-20）と逆推力の電源・地上・ENG REVERSER（ENG-31 の一部・32）、オイルと振動の値・赤・メッセージ（ENG-25〜27・29 の Lua の部分）、小さな誤り（ENG-23・30・35・37）、超過の赤い枠と色（ENG-21）は済。オイル・振動のパネル（油圧・油温の数字の色、GE の油圧の琥珀、油量のマゼンタ、振動の音源の文字）は済。残りは次の順で：表示値の作り方（ENG-33。EGT が低い、N1・EPR・N2 の式の癖：下の「気づいたこと」）。partial・compact 形式と exceedance cue（ENG-22）は 5-2 で、空中始動の範囲（ENG-24）は資料に値が無く作れない。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べる。空中開始の試験は AFDS の動き（「気づいたこと」）に気をつける。段 1（始動・点火・燃料弁）と段 2（EEC）は済（下の「エンジン（2-3）の GAP の状態」）。A/T（6-4）との境界は、EEC がレバー → 指令・最大定格・推力の制御まで、FMC の推力基準と A/T のサーボ（レバーを動かす）は 6-4。
-3. 1-5（空圧）の残り：故障の入れ方（過熱、過圧、HPSOV・PRV の固着、ダクトリーク）、地上空気の操作、スターターがダクト圧で回ること（エンジン 2-3）。
-4. 1-4（油圧）の残り：脚・ブレーキ・ステアリング・逆推力・stab trim・ヨーダンパーの「油圧で動くか」（HYD-09・11・12）は、それぞれの作り直しで、モデルの負荷の表（`B747_hyd_model.LOADS`）を使って入れる。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
-5. 1-1（電源）の残り：電源の有無を `bus_volts` で見ている系統を、バスごとの dataref（ARCHITECTURE.md §4.1）に乗り換える。どれも後の作り直し（空圧 1-5、空調 3-1、燃料 2-2、IRS と無線、照明、操縦系統 4-1）と絡むので、1-2 と同じく各系統の作り直しのときに行う（2026-10-23 に決めた。利用者の確認待ち）。
+2. 3-1（空調・与圧・機器冷却）：次の項目。PLAN.md の順で、エンジン（2-3）の次。1-5 のダクト圧の表示条件（PNEU-09・11）も一緒に。
+3. 2-3（エンジン）の残り：段 1〜3 は済（下の「エンジン（2-3）の GAP の状態」）。後回し：表示値の作り方（ENG-33。EGT は X-Plane の EGT の比例では始動と離陸を両立できず、N1・N2 などから作り直す必要があるが、値は資料に無く推定になる。N1・EPR・N2 の式を変えると EEC の推力の制御の調整もやり直し）、始動の空気（ENG-38・PNEU-08。ダクト圧と starter の関係が資料に無い）、GE の油圧の目盛りと値（CF6 の値が資料に無い）、振動の high band。partial・compact 形式と exceedance cue（ENG-22）は 5-2 で。空中始動の範囲（ENG-24）は資料に値が無く作れない。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べるのも残り。A/T（6-4）との境界は、EEC がレバー → 指令・最大定格・推力の制御まで、FMC の推力基準と A/T のサーボ（レバーを動かす）は 6-4。
+4. 1-5（空圧）の残り：故障の入れ方（過熱、過圧、HPSOV・PRV の固着、ダクトリーク）、地上空気の操作、スターターがダクト圧で回ること（エンジン 2-3）。
+5. 1-4（油圧）の残り：脚・ブレーキ・ステアリング・逆推力・stab trim・ヨーダンパーの「油圧で動くか」（HYD-09・11・12）は、それぞれの作り直しで、モデルの負荷の表（`B747_hyd_model.LOADS`）を使って入れる。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
+6. 1-1（電源）の残り：電源の有無を `bus_volts` で見ている系統を、バスごとの dataref（ARCHITECTURE.md §4.1）に乗り換える。どれも後の作り直し（空圧 1-5、空調 3-1、燃料 2-2、IRS と無線、照明、操縦系統 4-1）と絡むので、1-2 と同じく各系統の作り直しのときに行う（2026-10-23 に決めた。利用者の確認待ち）。
    - 済：表示器（fltInst02。機長 PFD・ND は APU standby、upper EICAS は main standby、ほかは F/O transfer）、EICAS の計算（warning。EIU のどれかに電源）、時計の計時（fltInst03・04。main hot battery bus）、ELEC パネルの灯（lighting）。
    - 燃料のポンプと弁も 2-2 で乗り換えた（AC・utility・main battery・hot battery・DC・APU battery・ground service bus）。
    - 残り：装備冷却（air：DC bus。抽気弁は 1-5 で乗り換えた）、IRS と NAV RAD（fms）、表示灯の輝度（lighting：`bus_volts[0]`・`[2]`）、客室灯（lighting）、ヨーダンパー（fltCtrls：`battery_array_on`）。STAT ページのバッテリーはカスタム acf だけ済（純正 acf は X-Plane の値のまま）。
-6. 1-2（空地判定）の残り：`onground_any` を読んでいる 16 モジュール（autopilot、fms、fltInst02、antiice、fltCtrls、EEC、engines、fuel、hydraulicsmodel、gear の autobrake、manipulators、fdr、lighting など）を、PSEU の dataref（ARCHITECTURE.md §4.2）に乗り換える。どの信号（pri/alt の AIR・GND、前脚圧縮）を使うかは notes/ATA-32.md §4.1 の表。各系統の作り直しのときに行う。
-7. 1-3 の残り：他のメッセージによる抑止（notes/ATA-31-warning.md §4.4.1）と時間遅れは、各系統の作り直しで表に足す。音（`.snd`）とパネル（PG・3 ページ目以降・STATUS）は済。
-8. R-3 は、作り直しが先になる系統の害の大きい誤りだけ、合間に入れる。
+7. 1-2（空地判定）の残り：`onground_any` を読んでいる 16 モジュール（autopilot、fms、fltInst02、antiice、fltCtrls、EEC、engines、fuel、hydraulicsmodel、gear の autobrake、manipulators、fdr、lighting など）を、PSEU の dataref（ARCHITECTURE.md §4.2）に乗り換える。どの信号（pri/alt の AIR・GND、前脚圧縮）を使うかは notes/ATA-32.md §4.1 の表。各系統の作り直しのときに行う。
+8. 1-3 の残り：他のメッセージによる抑止（notes/ATA-31-warning.md §4.4.1）と時間遅れは、各系統の作り直しで表に足す。音（`.snd`）とパネル（PG・3 ページ目以降・STATUS）は済。
+9. R-3 は、作り直しが先になる系統の害の大きい誤りだけ、合間に入れる。
 
 ## 段階 T の状態
 
@@ -350,7 +351,7 @@ PLAN.md §3 に書いた。要点：
 | ENG-17 AUTO・STBY IGNITION | 済（条件、交代、igniter 1 は AC bus 1・2 は AC bus 3、standby の切替。X-Plane の igniter は 1 本なので、どちらかが点けば点火） |
 | ENG-18 ENG IGNITION | 済（CON、PW はフラップも、で点火していないとき） |
 | ENG-37 fuel-on の印 | 未（段 3） |
-| ENG-38 始動の空気 | 一部（start valve は抽気のモデルがダクト圧で開ける。スターターの回り方がダクト圧に依らないのは残り） |
+| ENG-38 始動の空気 | 一部（start valve は抽気のモデルがダクト圧で開ける。スターターの回り方がダクト圧に依らないのは残り。資料にあるのは APU で 40〜50 psi、地上の空気は 30 psi が目安（最大 45 psi）、クロスブリードで 35〜47 psi まで（ATA70_80 p.549-550、FCOM SP.7.1）で、ダクト圧と starter の回り方の関係は無く、作るとほぼ推定なので後回し（PNEU-08 と一緒に）） |
 | ENG-01 レバーと推力の指令 | 済（GE・P&W。アイドル端から EEC の最大定格までレバー角に比例し、離陸は 48°、25,000 ft より上の最大上昇は 35° で頭打ち。上昇中にレバーを止めれば指令の N1・EPR は変わらない。RR は前のまま） |
 | ENG-02 Max N1・EPR の線 | 済（EEC の最大定格。前は FMC の推力基準） |
 | ENG-03 推力の上限 | 済（上限は定格。推力の制御を作り直し、実際の N1・EPR が指令に ±0.002 EPR・±0.2 % N1 で合う。前の PID は最大定格を 0.02 超えたままだった。オーバースピード保護で N1・N2 を赤線の手前で止める。指令に届かないときに X-Plane の最大推力を足す前の仕組みは、条件を直して残した） |
@@ -375,7 +376,8 @@ PLAN.md §3 に書いた。要点：
 | ENG-24 空中始動の範囲と X-BLD | 作れない（範囲の表は QRH の ENGINE IN-FLIGHT START にあり、手元の資料に無い。FCOM は表示の条件だけ（p.840、p.851、p.879）） |
 | ENG-22 partial・compact 形式、exceedance cue | 未（表示の形式なので 5-2（EICAS の形式）で作る） |
 | ENG-21 超過の赤い枠と色 | 済（N1・EGT・N2・N3 の数字の枠は、限界に達すると赤になり、戻っても赤のまま。EICAS の CANC で白（数字が白のときだけ）、RCL で記録した超過がまた赤（FCOM p.873、ATA70_80 p.345-346・p.356）。新しいフライトで消える。CF6 の N2 は赤線の上が 20 秒を超えると赤のまま（ATA70_80 p.345）。N1・N2・N3 の数字と帯の赤は表示のモデルの赤線（GE は ATA70_80 p.395、P&W・RR はパネルの前の値）。P&W の EPR は数字は白のまま、帯が最大 EPR で赤（FCOM p.833-834・p.873）。前はパネルの固定の値（EPR 1.9、P&W の N1 の枠は X-Plane の N1、P&W の EGT の枠は X-Plane の EGT）。新しいモデル `B747.40.exceedance_model.lua`） |
-| ENG-33、36 | 未（段 3） |
+| ENG-33 表示値の作り方 | 後回し（推定が主になる。X-Plane の EGT は始動のピーク（約 479 ℃）が離陸（約 430 ℃）より高く、acf の最大 EGT 460 ℃ を超えるので、X-Plane の EGT を 1 本の比例で換算しても、始動限界（P&W 535 ℃）を始動で超えないことと、離陸で 600 ℃ くらいになることを両立できない。EGT は N1・N2・外気温などから作り直す必要があり、典型的な値は資料に無い。N1・EPR・N2 の式を変えると EEC の推力の制御（段 2）の調整もやり直しになる。気づいたことの「表示の式の癖」） |
+| ENG-36 >ENG CONTROL・EEC MAINT POWER | 未（EEC の故障のモデルが無い） |
 
 ## 気づいたこと（作業の途中で）
 
