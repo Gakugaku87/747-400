@@ -1,0 +1,57 @@
+{
+  "name": "s21_sign_memos",
+  "description": "サインの memo（LIGHT-02）の X-Plane での確認、地上。エンジン運転中の RJAA 34L で開始し、NO SMOKING・SEAT BELTS の選択器が AUTO のときは脚が下りていてサインが点いても memo が出ないこと、NO SMOKING だけ ON で NO SMOKING ON、両方 ON で PASS SIGNS ON（ほかの 2 つは出ない）、SEAT BELTS だけ ON で SEATBELTS ON を見る（FCOM p.502、p.547、ATA33 p.211：memo は手で ON にしたことを示す）。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 5 },
+    { "do": "snapshot", "note": "開始", "drefs": [
+      "sim/aircraft/view/acf_relative_path", "laminar/B747/safety/no_smoking/sel_dial_pos", "laminar/B747/safety/seat_belts/sel_dial_pos",
+      "sim/cockpit2/switches/no_smoking", "sim/cockpit2/switches/fasten_seat_belts",
+      "laminar/B747/CAS/memo_status[17]", "laminar/B747/CAS/memo_status[27]", "laminar/B747/CAS/memo_status[33]" ] },
+    { "do": "cas", "note": "開始" },
+    { "do": "switch", "note": "NO SMOKING を AUTO", "dref": "laminar/B747/safety/no_smoking/sel_dial_pos", "value": 1, "cmd": "laminar/B747/safety/no_smoking/sel_dial_up", "cmd_down": "laminar/B747/safety/no_smoking/sel_dial_dn" },
+    { "do": "switch", "note": "SEAT BELTS を AUTO", "dref": "laminar/B747/safety/seat_belts/sel_dial_pos", "value": 1, "cmd": "laminar/B747/safety/seat_belts/sel_dial_up", "cmd_down": "laminar/B747/safety/seat_belts/sel_dial_dn" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "AUTO、脚が下り：NO SMOKING のサインは点く（FCOM p.502）", "dref": "sim/cockpit2/switches/no_smoking", "op": "==", "value": 1 },
+    { "do": "check", "note": "AUTO：FASTEN SEAT BELTS のサインも点く", "dref": "sim/cockpit2/switches/fasten_seat_belts", "op": "==", "value": 1 },
+    { "do": "check", "note": "AUTO：PASS SIGNS ON は出ない（手で ON にしていない）", "dref": "laminar/B747/CAS/memo_status[27]", "op": "==", "value": 0 },
+    { "do": "check", "note": "AUTO：NO SMOKING ON は出ない", "dref": "laminar/B747/CAS/memo_status[17]", "op": "==", "value": 0 },
+    { "do": "check", "note": "AUTO：SEATBELTS ON は出ない", "dref": "laminar/B747/CAS/memo_status[33]", "op": "==", "value": 0 },
+    { "do": "cas", "note": "両方 AUTO" },
+    { "do": "switch", "note": "NO SMOKING を ON", "dref": "laminar/B747/safety/no_smoking/sel_dial_pos", "value": 2, "cmd": "laminar/B747/safety/no_smoking/sel_dial_up", "cmd_down": "laminar/B747/safety/no_smoking/sel_dial_dn" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "NO SMOKING だけ ON：NO SMOKING ON", "dref": "laminar/B747/CAS/memo_status[17]", "op": "==", "value": 1 },
+    { "do": "check", "note": "PASS SIGNS ON は出ない", "dref": "laminar/B747/CAS/memo_status[27]", "op": "==", "value": 0 },
+    { "do": "switch", "note": "SEAT BELTS を ON", "dref": "laminar/B747/safety/seat_belts/sel_dial_pos", "value": 2, "cmd": "laminar/B747/safety/seat_belts/sel_dial_up", "cmd_down": "laminar/B747/safety/seat_belts/sel_dial_dn" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "両方 ON：PASS SIGNS ON", "dref": "laminar/B747/CAS/memo_status[27]", "op": "==", "value": 1 },
+    { "do": "check", "note": "両方 ON：NO SMOKING ON は抑止", "dref": "laminar/B747/CAS/memo_status[17]", "op": "==", "value": 0 },
+    { "do": "check", "note": "両方 ON：SEATBELTS ON は抑止", "dref": "laminar/B747/CAS/memo_status[33]", "op": "==", "value": 0 },
+    { "do": "cas", "note": "両方 ON" },
+    { "do": "switch", "note": "NO SMOKING を AUTO に戻す", "dref": "laminar/B747/safety/no_smoking/sel_dial_pos", "value": 1, "cmd": "laminar/B747/safety/no_smoking/sel_dial_up", "cmd_down": "laminar/B747/safety/no_smoking/sel_dial_dn" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "SEAT BELTS だけ ON：SEATBELTS ON", "dref": "laminar/B747/CAS/memo_status[33]", "op": "==", "value": 1 },
+    { "do": "check", "note": "PASS SIGNS ON は消える", "dref": "laminar/B747/CAS/memo_status[27]", "op": "==", "value": 0 },
+    { "do": "view", "name": "eicas" },
+    { "do": "shot", "name": "eicas_seatbelts_on" },
+    { "do": "switch", "note": "SEAT BELTS を AUTO に戻す", "dref": "laminar/B747/safety/seat_belts/sel_dial_pos", "value": 1, "cmd": "laminar/B747/safety/seat_belts/sel_dial_up", "cmd_down": "laminar/B747/safety/seat_belts/sel_dial_dn" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "AUTO に戻すと memo は消える", "dref": "laminar/B747/CAS/memo_status[33]", "op": "==", "value": 0 },
+    { "do": "view", "name": "forward" },
+    { "do": "cas", "note": "終了" }
+  ]
+}

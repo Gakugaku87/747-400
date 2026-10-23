@@ -230,29 +230,30 @@ function B747_safety_EICAS_msg()
         B747DR_CAS_advisory_status[76] = 0
     end
 
+    -- THE SIGN MEMOS: THE SELECTORS MANUALLY ON, NOT THE SIGNS (AUTO, OXYGEN)
+    -- (FCOM p.502, p.547; ATA33 p.211)
+    local no_smoking_on = B747DR_sfty_no_smoke_sel_dial_pos == 2
+    local seat_belts_on = B747DR_sfty_seat_belts_sel_dial_pos == 2
+
     -- NO SMOKING ON
-    
-    if simDR_cockpit2_no_smoking_switch == 1
-        and simDR_cockpit2_seat_belt_switch == 0
-    then
+
+    if no_smoking_on and not seat_belts_on then
         B747DR_CAS_memo_status[17] = 1
     else
         B747DR_CAS_memo_status[17] = 0
     end
 
     -- PASS SIGNS ON
-   
-    if simDR_cockpit2_no_smoking_switch == 1 and simDR_cockpit2_seat_belt_switch == 1 then
+
+    if no_smoking_on and seat_belts_on then
         B747DR_CAS_memo_status[27] = 1
     else
         B747DR_CAS_memo_status[27] = 0
     end
 
     -- SEATBELTS ON
-    
-    if simDR_cockpit2_seat_belt_switch == 1
-        and simDR_cockpit2_no_smoking_switch == 0
-    then
+
+    if seat_belts_on and not no_smoking_on then
         B747DR_CAS_memo_status[33] = 1
     else
         B747DR_CAS_memo_status[33] = 0
