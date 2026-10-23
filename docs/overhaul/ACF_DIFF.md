@@ -41,7 +41,7 @@
 |---|---|---|---|
 | `_engn/0,3/_part_y`・`_part_z`（外側） | -7.0 / 123.70 | -4.0 / 125.80 | 外側エンジンは前へ 2.1 ft、下へ 3 ft。`_blad`、ナセルの body 21・24 も同じだけ動いている |
 | `_engn/1,2/_part_y`・`_part_z`（内側） | -11.2 / 96.48 | -10.2 / 102.88 | 内側エンジンは前へ 6.4 ft、下へ 1 ft。body 22・23 も同じ |
-| `acf/_jet_SFC_takeoff` / `_climb` / `_locrz` / `_hicrz` | 0.55 / 0.25 / 0.25 / 0.38 | 0.323 / 0.323 / 0.313 / 0.571 | 燃費。カスタムは離陸で多く、巡航で少ない。燃料の消費と FMC の予測に効く可能性あり（§4） |
+| `acf/_jet_SFC_takeoff` / `_climb` / `_locrz` / `_hicrz` | 0.323 / 0.323 / 0.313 / 0.571（2026-10-23 に純正と同じにした。前は 0.55 / 0.25 / 0.25 / 0.38） | 0.323 / 0.323 / 0.313 / 0.571 | 燃費。前のカスタムの値では巡航の燃料流量が約 25 % 少なかった（§5） |
 | `acf/_n1_rated_thrust` | 95 | 100 | |
 | `acf/_fadec_parameter` | 1 | 0 | |
 | `acf/_inlet_max_KEAS` / `_face_jet` / `_exhaust_rat` | 950 / 37 / 0.3 | 750 / 47 / 0.5 | |
@@ -110,7 +110,13 @@
 
 ## 5. 作り直しの中でカスタム acf に入れた変更（2026-10-23 承認：PLAN.md §3）
 
-パネル計器だけを変える。純正 acf は変えない。変更前の acf は `D:\747-400-local-assets\acf_backup\` と git の履歴にある。
+パネル計器と、カスタム acf で変えてよい分類（重量・エンジン・空力・システム）の値だけを変える。純正 acf は変えない。変更前の acf は `D:\747-400-local-assets\acf_backup\` と git の履歴にある。
+
+| 日付・系統 | 項目 | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-23・燃料（FUEL-05） | エンジンの燃費 `acf/_jet_SFC_takeoff`・`_climb`・`_locrz`・`_hicrz` | 0.550000012・0.250000000・0.250000000・0.379999995 | 0.323000014・0.323000014・0.312999994・0.570999980（純正 acf と同じ） | 巡航の測定（`s07_cruise_ff`、FL350、269 t、ISA −1 ℃）：前のカスタムは Mach 0.791 で 1 発 1,612 kg/h、純正は Mach 0.756 で 2,167 kg/h、変更後のカスタムは Mach 0.788 で 2,134 kg/h。FCOM PI.11.2（PW4056、LRC）は 260 t・Mach .842 で 2,211、280 t・.854 で 2,378 kg/h。前の値は約 25 % 少なかった。離陸と上昇の値は資料と比べていない（エンジン 2-3 で上昇の燃料の表 PI.11 と比べる）。外観は変わらない（chase 視点で確認） |
+
+パネル計器の変更：
 
 | 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
 |---|---|---|---|---|
@@ -120,7 +126,7 @@
 | 同 | ECS synoptic のダクト圧 | 琥珀・白とも 12.000000 で切り替え（12.0 ちょうどでは出ない） | 11.5 で切り替え | FCOM p.578 |
 | 2026-10-23・警報（WARN-17） | STATUS ページ（`GROUP STAT Synoptic` の中に `GROUP Status Messages` を追加） | メッセージの行もページ番号も無い（油圧・APU・酸素・バッテリーの値と舵面の図だけ） | 1〜10 ページのグループ（`SHOW_EQUAL p laminar/B747/STAT/msg_page`）に 11 行ずつの文字（`TXT.2.28.white`、x 1570、y 97 から 24 ずつ下、`CAS/gen_status_msg_NNN`）。2 ページ以上で PG とページ番号（`SHOW_GREATER 1.000000 laminar/B747/STAT/num_msg_pages`）。1,380 行ほどの追加 | FCOM p.1527-1528、LH24 p.65（配置） |
 | 同 | 主 EICAS の `GROUP CAS Messages` | STATUS cue が無い | cyan の "STATUS"（`TXT.8.27.blue`、`CAS/status_cue_text`、`SHOW_EQUAL 1.000000 laminar/B747/CAS/status_cue`、POS 1977, 826.5：メッセージ 11 行目の下、PG の行） | FCOM p.1545、p.1549 |
-�� | AUTO（シアンの画像）は `dem_mode_n` = 1、OFF（白の画像）は `dem_mode_n` = 0（系統 4 は AUX（-1）で OFF、OFF（0）では何も出ない） | AUTO（シアンの画像）は `synoptic/dem[n-1]` = 3（AUTO で動いていない）。白の OFF の画像 4 個を外し、琥珀の gen_text "OFF"（`TXT.2.28.amber`、`synoptic/text_off`、`dem` = 4：セレクタ OFF、系統 4 の AUX）と "AUTO"（`text_auto`、`dem` = 2：AUTO で指令中に圧低）を丸の中心に。系統 4 の AUX の丸に白の OFF の画像（`synoptic/aux` = 0）。全体で約 130 行の追加 | ATA29_32 p.105-106、FCOM p.1486-1488 |
+| 2026-10-23・油圧（HYD-19） | HYD synoptic の demand pump（`GROUP dem indicator`） | AUTO（シアンの画像）は `dem_mode_n` = 1、OFF（白の画像）は `dem_mode_n` = 0（系統 4 は AUX（-1）で OFF、OFF（0）では何も出ない） | AUTO（シアンの画像）は `synoptic/dem[n-1]` = 3（AUTO で動いていない）。白の OFF の画像 4 個を外し、琥珀の gen_text "OFF"（`TXT.2.28.amber`、`synoptic/text_off`、`dem` = 4：セレクタ OFF、系統 4 の AUX）と "AUTO"（`text_auto`、`dem` = 2：AUTO で指令中に圧低）を丸の中心に。系統 4 の AUX の丸に白の OFF の画像（`synoptic/aux` = 0）。全体で約 130 行の追加 | ATA29_32 p.105-106、FCOM p.1486-1488 |
 | 同 | HYD synoptic の EDP・SOV（`GROUP edp indication`） | SOV の開閉と EDP の OFF が同じ `valve_n`（供給遮断弁が開で ENGINE pump が ON のとき 1）で出し入れ | SOV の開は `synoptic/sov[n-1]` = 1、閉は = 0（火災スイッチ）。EDP OFF（琥珀の箱の画像）は `synoptic/edp[n-1]` = 4（ENGINE pump スイッチ OFF） | ATA29_32 p.105、FCOM p.1487、p.1490 |
 | 2026-10-23・油圧（HYD-18） | HYD synoptic（`GROUP rsvr press` を追加） | RSVR PRESS の画像はあるが計器が無い | 各リザーバの右に RSVR PRESS の画像（`rsvr_press`、POS x = リザーバ + 58、y −72、`synoptic/rsvr_press[n-1]` = 1） | FCOM p.1488、p.1489、ATA29_32 p.38 |
 | 2026-10-23・電源（ELEC-11 ほか） | ELEC synoptic の ISLN の枠（`isln1`〜`4`） | BUS TIE スイッチの位置（`button_switch/position[18]`〜`[21]` < 0.95）で出す | `electrical/breaker/btb[n-1]` = 0（BTB 開）で出す。自動で開いたときも出る | FCOM p.791 |

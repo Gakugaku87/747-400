@@ -1,0 +1,65 @@
+{
+  "name": "s07_cruise_ff",
+  "description": "巡航の燃料流量の測定（燃料 2-2、FUEL-05）。FL350 で空中から始め、A/P の ALT HOLD・HDG SEL と A/T の SPD で、FCOM PI.11.2（PW4056、LRC）の 280〜300 t の KIAS 293〜295 に合わせて IAS 294 kt を保ち、1 発あたりの燃料流量・Mach・総重量・外気温を記録する。比べる値：280 t は Mach .854・FF/ENG 2,378 kg/h、300 t は .861・2,554 kg/h（ISA）。判定はゆるく、主に記録のため。機体はフライトの開始で読み込まれるときがよい（空中開始の AFDS の動きが安定する：PROGRESS.md）。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 10668, "heading_true": 340, "speed_in_meters_per_second": 254 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 20, "note": "空中開始の揺れが収まるのを待つ（空中開始では A/P が機首を上げて高度が上がることがある）" },
+    { "do": "set", "note": "MCP 速度 294 kt（PI.11.2 の 280〜300 t、FL350 の LRC）", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 294 },
+    { "do": "set", "note": "MCP 高度 35,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 35000 },
+    { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "note": "A/P のサーボが入る", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "set", "note": "MCP 方位 347（空中開始の磁方位）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 347 },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "cmd", "note": "FLCH（空中開始で上がった高度から 35,000 ft へ。ALT で捕捉する）", "name": "laminar/B747/autopilot/button_switch/flch_mode" },
+    { "do": "wait", "note": "35,000 ft で ALT（FMA のピッチ 9）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9, "timeout": 360 },
+    { "do": "wait", "note": "高度 35,000 ft 付近", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [34800, 35200], "timeout": 60 },
+    { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "snapshot", "note": "モード", "drefs": [
+      "sim/aircraft/view/acf_relative_path", "laminar/B747/engines/type",
+      "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/active_roll_mode",
+      "laminar/B747/autopilot/FMA/autothrottle_mode", "laminar/B747/autopilot/servos_on" ] },
+    { "do": "sleep", "seconds": 120, "note": "速度と推力が落ち着くのを待つ" },
+    { "do": "snapshot", "note": "巡航 1", "drefs": [
+      "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot",
+      "sim/flightmodel/misc/machno", "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "sim/flightmodel/weight/m_total",
+      "sim/weather/aircraft/temperature_ambient_deg_c", "sim/flightmodel/engine/ENGN_EPR[0]", "sim/flightmodel/engine/ENGN_N1_[0]",
+      "sim/cockpit2/engine/indicators/fuel_flow_kg_sec[0]", "sim/cockpit2/engine/indicators/fuel_flow_kg_sec[1]",
+      "sim/cockpit2/engine/indicators/fuel_flow_kg_sec[2]", "sim/cockpit2/engine/indicators/fuel_flow_kg_sec[3]",
+      "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode" ] },
+    { "do": "sleep", "seconds": 60 },
+    { "do": "snapshot", "note": "巡航 2", "drefs": [
+      "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot",
+      "sim/flightmodel/misc/machno", "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "sim/flightmodel/weight/m_total",
+      "sim/weather/aircraft/temperature_ambient_deg_c", "sim/flightmodel/engine/ENGN_EPR[0]", "sim/flightmodel/engine/ENGN_N1_[0]",
+      "sim/cockpit2/engine/indicators/fuel_flow_kg_sec[0]", "sim/cockpit2/engine/indicators/fuel_flow_kg_sec[1]",
+      "sim/cockpit2/engine/indicators/fuel_flow_kg_sec[2]", "sim/cockpit2/engine/indicators/fuel_flow_kg_sec[3]" ] },
+    { "do": "sleep", "seconds": 60 },
+    { "do": "snapshot", "note": "巡航 3", "drefs": [
+      "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot",
+      "sim/flightmodel/misc/machno", "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "sim/flightmodel/weight/m_total",
+      "sim/weather/aircraft/temperature_ambient_deg_c", "sim/flightmodel/engine/ENGN_EPR[0]", "sim/flightmodel/engine/ENGN_N1_[0]",
+      "sim/cockpit2/engine/indicators/fuel_flow_kg_sec[0]", "sim/cockpit2/engine/indicators/fuel_flow_kg_sec[1]",
+      "sim/cockpit2/engine/indicators/fuel_flow_kg_sec[2]", "sim/cockpit2/engine/indicators/fuel_flow_kg_sec[3]" ] },
+    { "do": "check", "note": "高度を保つ（±300 ft、推定）", "level": "warn",
+      "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [34700, 35300] },
+    { "do": "check", "note": "速度を保つ（±10 kt、推定）", "level": "warn",
+      "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [284, 304] }
+  ]
+}
