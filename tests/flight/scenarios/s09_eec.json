@@ -1,6 +1,6 @@
 {
   "name": "s09_eec",
-  "description": "EEC（2-3 段 2）の X-Plane での確認。10,000 ft・250 kt 付近で空中から始め、A/P の ALT HOLD と A/T の SPD で保ったまま、NAI 1 を ON にして approach idle（X-Plane の high_idle_ratio が 2.625）、OFF にして 5 秒後に minimum idle に戻ることを見る（FCOM p.877-878、ATA70_80 p.211）。CON は 109（P&W 旅客機）では approach idle にしない。EEC の最大定格（TO の範囲）と TRA も記録する。最後に EEC MODE 2 を ALTN にして ENG 2 EEC MODE と A/T の切断（P&W は ALTN の間は A/T を使えない）、NORM に戻して A/T をまた使えることを見る（FCOM p.877、p.899）。機体を読み直す。",
+  "description": "EEC（2-3 段 2）の X-Plane での確認。10,000 ft・250 kt 付近で空中から始め、A/P の ALT HOLD と A/T の SPD で保ったまま、NAI 1 を ON にして approach idle（X-Plane の high_idle_ratio が 2.625）、OFF にして 5 秒後に minimum idle に戻ることを見る（FCOM p.877-878、ATA70_80 p.211）。CON は 109（P&W 旅客機）では approach idle にしない。EEC の最大定格（TO の範囲）と TRA も記録する。最後に EEC MODE 2 を ALTN にして ENG 2 EEC MODE と A/T の切断（P&W は ALTN の間は A/T を使えない）、NORM に戻して A/T をまた使えることを見る（FCOM p.877、p.899）。最後に空中で FUEL CONTROL 4 を CUTOFF にして二次エンジン表示が出ることを見る（FCOM p.843）。機体を読み直す。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 3048, "heading_true": 340, "speed_in_meters_per_second": 128 },
@@ -81,6 +81,11 @@
     { "do": "sleep", "seconds": 1 },
     { "do": "check", "note": "全部 NORM なら A/T をまた使える", "dref": "laminar/B747/engines/autothrottle_fail", "op": "==", "value": 0 },
     { "do": "cas", "note": "終わり" },
+    { "do": "mark", "note": "空中で FUEL CONTROL 4 を CUTOFF（二次エンジン表示）" },
+    { "do": "set", "note": "下の EICAS の二次エンジン表示を消しておく", "dref": "laminar/B747/dsp/synoptic_display", "value": 0 },
+    { "do": "switch", "note": "FUEL CONTROL 4 CUTOFF（空中）", "dref": "laminar/B747/fuel/fuel_control/toggle_sw_pos[3]", "value": 0, "cmd": "laminar/B747/fuel/fuel_control_4/toggle_switch" },
+    { "do": "wait", "note": "空中で CUTOFF にすると二次エンジン表示が出る（FCOM p.843、p.872）", "dref": "laminar/B747/dsp/synoptic_display", "op": "==", "value": 1, "timeout": 2 },
+    { "do": "cas", "note": "空中の CUTOFF" },
     { "do": "record_stop" }
   ]
 }

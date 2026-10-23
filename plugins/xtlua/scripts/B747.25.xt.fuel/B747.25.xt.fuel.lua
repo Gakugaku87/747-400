@@ -511,32 +511,31 @@ end
 -- TQ FUEL CONTROL SWITCHES
 B747DR_dsp_synoptic_display                     = find_dataref("laminar/B747/dsp/synoptic_display")
 
-function B747_fuel_control_switch1_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747_fuel_control_toggle_sw_pos_target[0] = 1.0 - B747_fuel_control_toggle_sw_pos_target[0]
+-- a FUEL CONTROL switch moved; to CUTOFF in flight it brings up the
+-- secondary engine display (FCOM p.843, p.872; it used to come up at every
+-- move, RUN or CUTOFF, on the ground too: ENG-23)
+local function B747_fuel_control_toggle(i)
+    local target = 1.0 - B747_fuel_control_toggle_sw_pos_target[i]
+    B747_fuel_control_toggle_sw_pos_target[i] = target
+    if target < 0.5 and B747DR_pseu_pri_air == 1 then
         B747DR_dsp_synoptic_display = 1
     end
+end
+
+function B747_fuel_control_switch1_CMDhandler(phase, duration)
+    if phase == 0 then B747_fuel_control_toggle(0) end
 end
 
 function B747_fuel_control_switch2_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747_fuel_control_toggle_sw_pos_target[1] = 1.0 - B747_fuel_control_toggle_sw_pos_target[1]
-        B747DR_dsp_synoptic_display = 1
-    end
+    if phase == 0 then B747_fuel_control_toggle(1) end
 end
 
 function B747_fuel_control_switch3_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747_fuel_control_toggle_sw_pos_target[2] = 1.0 - B747_fuel_control_toggle_sw_pos_target[2]
-        B747DR_dsp_synoptic_display = 1
-    end
+    if phase == 0 then B747_fuel_control_toggle(2) end
 end
 
 function B747_fuel_control_switch4_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747_fuel_control_toggle_sw_pos_target[3] = 1.0 - B747_fuel_control_toggle_sw_pos_target[3]
-        B747DR_dsp_synoptic_display = 1
-    end
+    if phase == 0 then B747_fuel_control_toggle(3) end
 end
 
 

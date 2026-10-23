@@ -179,6 +179,14 @@ T.equal(get(ADV, RPM_LIM + 2), 1, ">ENG 3 RPM LIM: GE from the EEC")
 rt:frame(1 / 30)
 T.equal(get(ADV, RPM_LIM + 2), 0, "GE: RPM LIM goes with N2 back below its limit")
 
+-- the engine type strings: CF6-80C2-B1F1 is not taken for the B1F (ENG-30)
+rt:set("laminar/B747/simconfig", '{"PLANE":{"engines":"CF6-80C2-B1F1"}}')
+frames(0.2)
+T.equal(ns.engine_max_thrust_n, 276000, "CF6-80C2-B1F1: its own max thrust (it used to match B1F first)")
+rt:set("laminar/B747/simconfig", '{"PLANE":{"engines":"CF6-80C2-B1F"}}')
+frames(0.2)
+T.equal(ns.engine_max_thrust_n, 258000, "CF6-80C2-B1F: 258,000 N")
+
 -- RR: no source, its RPM LIM stays with B747.40.xt.engines.lua
 rt:set("laminar/B747/engines/type", 2)
 rt:set(ADV, RPM_LIM, 1)

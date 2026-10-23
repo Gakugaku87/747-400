@@ -178,4 +178,26 @@ do
     T.equal(rt2:get("laminar/B747/fuel/fuel_control/toggle_sw_pos", 0), 1, "air start: FUEL CONTROL RUN")
 end
 
+-- the FUEL CONTROL switches bring up the secondary engine display only when
+-- moved to CUTOFF in flight (FCOM p.843, p.872; ENG-23)
+do
+    local rt3 = aircraft({20000, 9000, 20000, 20000, 9000, 3000, 3000, 0}, 1)
+    local SYN = "laminar/B747/dsp/synoptic_display"
+    local CONTROL = "laminar/B747/fuel/fuel_control_1/toggle_switch"
+    frames(rt3, 0.5)
+    rt3:set(SYN, 0)
+    rt3:set("laminar/B747/gear/air_ground/pri_air", 0)
+    rt3:command(CONTROL)                                    -- RUN to CUTOFF on the ground
+    frames(rt3, 0.5)
+    T.equal(rt3:get("laminar/B747/fuel/switch_target", 0), 0, "FUEL CONTROL 1 to CUTOFF")
+    T.equal(rt3:get(SYN), 0, "on the ground: no secondary engine display")
+    rt3:set("laminar/B747/gear/air_ground/pri_air", 1)
+    rt3:command(CONTROL)                                    -- CUTOFF to RUN in flight
+    frames(rt3, 0.5)
+    T.equal(rt3:get(SYN), 0, "in flight, to RUN: no secondary engine display")
+    rt3:command(CONTROL)                                    -- RUN to CUTOFF in flight
+    frames(rt3, 0.5)
+    T.equal(rt3:get(SYN), 1, "in flight, to CUTOFF: the secondary engine display")
+end
+
 T.done()

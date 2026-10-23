@@ -596,7 +596,7 @@ function take_off_thrust_corrected(altitude_ft_in, temperature_K_in)
 	--  RR RB211-524G = 56870 lbf (Engine Max = 58000 lbf / 258000 Newtons)
 	--  RR RB211-524H = 59450 lbf (Engine Max = 60600 lbf / 269600 Newtons)
 
-	if string.match(simConfigData["data"].PLANE.engines, "B1F")  then
+	if string.match(simConfigData["data"].PLANE.engines, "B1F") and not string.match(simConfigData["data"].PLANE.engines, "B1F1") then  -- B1F1 below (ENG-30)
 		approximate_max_TO_thrust_lbf = 57160
 	elseif string.match(simConfigData["data"].PLANE.engines, "B5F")  then
 		approximate_max_TO_thrust_lbf = 60030

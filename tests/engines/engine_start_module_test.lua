@@ -13,6 +13,10 @@ local xtlua = dofile("tests/lib/xtlua.lua")
 local rt = xtlua.new()
 rt:load("plugins/xtlua/scripts/B747.40.xt.engines/B747.40.xt.engines.lua")
 rt:set("sim/operation/prefs/startup_running", 0)
+-- the aircraft configuration lets after_physics run (spool time, fuel-on indicator)
+rt:set("laminar/B747/simconfig", '{"PLANE":{"engines":"PW4056"}}')
+rt:set("laminar/B747/newsimconfig", 1)
+rt:set("laminar/B747/engines/type", 0)
 rt:callout("flight_start")
 
 local N2 = "sim/flightmodel/engine/ENGN_N2_"
@@ -58,6 +62,15 @@ end
 seconds(3)
 T.equal(rt:get("sim/cockpit2/engine/actuators/auto_ignite_on", 0), 0, "X-Plane's auto-ignite off: the model decides")
 T.equal(rt:get("laminar/B747/CAS/advisory_status", 304), 1, "AUTOSTART OFF at the start: >AUTOSTART OFF")
+local SPOOL = "sim/aircraft/engine/acf_spooltime_turbine"
+T.equal(rt:get(SPOOL), 5, "no start: X-Plane spool time 5 s (the EEC thrust control's)")
+-- the fuel-on indicator: CUTOFF, not with the fire switch pulled (ATA70_80 p.346)
+local FUEL_ON = "laminar/B747/engines/fuel_on_indicator_status"
+rt:set("laminar/B747/fire/engine02/ext_switch/pos_arm", 1)
+seconds(0.2)
+T.equal(rt:get(FUEL_ON, 0), 1, "CUTOFF: fuel-on indicator")
+T.equal(rt:get(FUEL_ON, 1), 0, "CUTOFF with fire switch 2 pulled: no fuel-on indicator")
+rt:set("laminar/B747/fire/engine02/ext_switch/pos_arm", 0)
 
 -- autostart: AUTOSTART ON, START 1, FUEL CONTROL 1 RUN
 rt:set("laminar/B747/button_switch/position", 45, 1)
@@ -69,6 +82,7 @@ rt:set("laminar/B747/fuel/fuel_control/toggle_sw_pos", 0, 1)   -- (the fuel modu
 seconds(2)
 T.equal(rt:get(CMD, 0), 1, "autostart: RUN opens the start valve")
 T.check(starter_held(), "autostart: X-Plane's starter held")
+T.equal(rt:get(SPOOL), 26, "starting on the ground: X-Plane spool time 26 s (ENG-35)")
 T.equal(rt:get("sim/cockpit2/engine/actuators/mixture_ratio", 0), 0, "autostart: no fuel while motoring")
 seconds(25)                                           -- past 20 % N2 (PW: engines/type 0)
 T.equal(rt:get("sim/cockpit2/engine/actuators/mixture_ratio", 0), 1, "autostart: fuel on")
@@ -80,6 +94,19 @@ T.check(not starter_held(), "autostart: starter let go after the cutout")
 seconds(40)                                           -- the start ends at a settled idle
 T.equal(rt:get("laminar/B747/CAS/caution_status", 61), 0, "no STARTER CUTOUT 1")
 T.equal(rt:get("laminar/B747/CAS/caution_status", 19), 0, "no ENG 1 AUTOSTART")
+T.equal(rt:get(SPOOL), 5, "start over: spool time back to 5 s")
+T.equal(rt:get(FUEL_ON, 0), 0, "RUN: no fuel-on indicator")
+
+-- a manual start motors at CUTOFF: spool time 26 s from the START switch (ENG-35)
+rt:set("laminar/B747/button_switch/position", 45, 0)        -- AUTOSTART OFF
+rt:set("laminar/B747/toggle_switch/position", 17, 1)         -- START 2
+seconds(0.2)
+T.equal(rt:get(CMD, 1), 1, "manual start: START 2 opens start valve 2")
+T.equal(rt:get(SPOOL), 26, "manual motoring at CUTOFF: spool time 26 s")
+rt:set("laminar/B747/toggle_switch/position", 17, 0)
+seconds(0.2)
+T.equal(rt:get(SPOOL), 5, "START 2 in again: spool time 5 s")
+rt:set("laminar/B747/button_switch/position", 45, 1)
 
 -- CON IGNITION ON: igniters and the memo
 rt:set("laminar/B747/button_switch/position", 44, 1)

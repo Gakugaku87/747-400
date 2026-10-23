@@ -166,7 +166,7 @@ function engine_idle_control_RR(altitude_ft_in)
         elseif simDR_altitude <= 50000 then
           climb_rate_fpm = 2250
         end
-      elseif string.match(simConfigData["data"].PLANE.engines, "524H") then
+      elseif string.match(simConfigData["data"].PLANE.engines, "524H") and not string.match(simConfigData["data"].PLANE.engines, "524H8T") then  -- 524H8T below (ENG-30)
         --V/S mode / use what the pilot has input on the MCP for V/S
         if B747DR_ap_FMA_active_pitch_mode == 7 then
           if B747DR_ap_vvi_fpm > 0 then
@@ -653,7 +653,7 @@ function engine_idle_control_RR(altitude_ft_in)
         simDR_reverser_max = 0.75
       end
       simDR_compressor_area = 3.54136  --(86.3-inch fan -- 38.12 sq. ft)
-    elseif string.match(simConfigData["data"].PLANE.engines, "524H") then
+    elseif string.match(simConfigData["data"].PLANE.engines, "524H") and not string.match(simConfigData["data"].PLANE.engines, "524H8T") then  -- 524H8T below (ENG-30)
       engine_max_thrust_n = 270000
       simDR_throttle_max = 1.0
       if orig_thrust_n == 0.0 or B747DR_newsimconfig_data == 1 then

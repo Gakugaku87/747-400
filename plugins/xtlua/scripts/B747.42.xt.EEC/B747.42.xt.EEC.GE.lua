@@ -128,7 +128,7 @@ function in_flight_N1_GE(altitude_ft_in, delta_t_isa_K_in)
     --  >> 0 - 10000 ft = 2200fpm
     --  >> 10000 - 20000ft = 2100fpm
     --  >> 20000 - 30000ft = 1700fpm
-    if string.match(simConfigData["data"].PLANE.engines, "B1F") then
+    if string.match(simConfigData["data"].PLANE.engines, "B1F") and not string.match(simConfigData["data"].PLANE.engines, "B1F1") then  -- B1F1 below (ENG-30)
       if simDR_altitude < 10000 then
         climb_rate_fpm = 2750
       elseif simDR_altitude <= 20000 then
@@ -410,7 +410,7 @@ function GE(altitude_ft_in)
   local N1_real_max_cruise = 0.0
 
   --Setup engine factors based on engine type
-	if string.match(simConfigData["data"].PLANE.engines, "B1F")  then
+	if string.match(simConfigData["data"].PLANE.engines, "B1F") and not string.match(simConfigData["data"].PLANE.engines, "B1F1") then  -- B1F1 below (ENG-30)
     engine_max_thrust_n = 258000
     simDR_throttle_max = 1.0
     if orig_thrust_n == 0.0 or B747DR_newsimconfig_data == 1 then

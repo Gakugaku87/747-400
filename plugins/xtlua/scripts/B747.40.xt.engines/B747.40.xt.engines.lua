@@ -838,21 +838,25 @@ end
 
 
 ----- X-PLANE SPOOL TIME ----------------------------------------------------------------
--- (the previous code, ENG-35): 5 s with all four engines running, 26 s with
--- none, unchanged in between. The EGT colours and the start limit line are
--- in B747.40.xt.engine_display.lua.
+-- X-Plane has one spool time for all engines. 26 s while an engine is
+-- starting on the ground (its start valve open, or the start model between
+-- the fuel and idle): a start then takes about a minute to idle from any
+-- state; 5 s otherwise, which the EEC's thrust control is tuned for (both
+-- the previous code's values). The previous code chose by the engines
+-- running (5 s with all four, 26 s with none, unchanged in between), so a
+-- start ran three times faster with other engines running (ENG-35).
+local SPOOL_START_S, SPOOL_S = 26, 5
 function B747_engine_spool_time()
-    local num_eng_running = 0
-    for i = 0, 3 do
-        if simDR_engine_running[i] == 1 then
-            num_eng_running = num_eng_running + 1
+    local spool = SPOOL_S
+    if B747DR_engines_pseu_pri_gnd == 1 then
+        for i = 0, 3 do
+            local phase = B747_engine_start_phase(i)
+            if B747DR_engine_start_valve_cmd[i] == 1 or (phase ~= "off" and phase ~= "aborted") then
+                spool = SPOOL_START_S
+            end
         end
     end
-    if num_eng_running==4 then
-      simDR_thrust_spoolTime=5
-    elseif num_eng_running==0 then
-      simDR_thrust_spoolTime=26
-    end
+    if simDR_thrust_spoolTime ~= spool then simDR_thrust_spoolTime = spool end
 end
 
 
@@ -862,13 +866,16 @@ end
 
 
 ----- N2 FUEL-ON INDICATOR --------------------------------------------------------------
+-- the fuel-on indicator: FUEL CONTROL at CUTOFF (FCOM p.844, p.851) and the
+-- engine fire switch not pulled (the CF6's EIU, ATA70_80 p.346; the same for
+-- P&W and RR, an estimate)
 function B747_secondary_EICAS2_fuel_on_status()
 
-    B747DR_EICAS2_fuel_on_ind_status[0] = B747_ternary((B747DR_fuel_control_toggle_switch_pos[0] < 0.05), 1, 0)
-    B747DR_EICAS2_fuel_on_ind_status[1] = B747_ternary((B747DR_fuel_control_toggle_switch_pos[1] < 0.05), 1, 0)
-    B747DR_EICAS2_fuel_on_ind_status[2] = B747_ternary((B747DR_fuel_control_toggle_switch_pos[2] < 0.05), 1, 0)
-    B747DR_EICAS2_fuel_on_ind_status[3] = B747_ternary((B747DR_fuel_control_toggle_switch_pos[3] < 0.05), 1, 0)
-    
+    B747DR_EICAS2_fuel_on_ind_status[0] = B747_ternary((B747DR_fuel_control_toggle_switch_pos[0] < 0.05 and B747DR_engine01_fire_ext_switch_pos_arm <= 0.5), 1, 0)
+    B747DR_EICAS2_fuel_on_ind_status[1] = B747_ternary((B747DR_fuel_control_toggle_switch_pos[1] < 0.05 and B747DR_engine02_fire_ext_switch_pos_arm <= 0.5), 1, 0)
+    B747DR_EICAS2_fuel_on_ind_status[2] = B747_ternary((B747DR_fuel_control_toggle_switch_pos[2] < 0.05 and B747DR_engine03_fire_ext_switch_pos_arm <= 0.5), 1, 0)
+    B747DR_EICAS2_fuel_on_ind_status[3] = B747_ternary((B747DR_fuel_control_toggle_switch_pos[3] < 0.05 and B747DR_engine04_fire_ext_switch_pos_arm <= 0.5), 1, 0)
+
 end
 
 
@@ -1122,7 +1129,7 @@ function B747_flight_start_engines()
     B747_engine_start_flight_start()
 
 end
--- the fire switches (the engine start glue reads them)
+-- the fire switches (the engine start glue and the fuel-on indicator read them)
     B747DR_engine01_fire_ext_switch_pos_arm     = deferred_dataref("laminar/B747/fire/engine01/ext_switch/pos_arm", "number")
     B747DR_engine02_fire_ext_switch_pos_arm     = deferred_dataref("laminar/B747/fire/engine02/ext_switch/pos_arm", "number")
     B747DR_engine03_fire_ext_switch_pos_arm     = deferred_dataref("laminar/B747/fire/engine03/ext_switch/pos_arm", "number")

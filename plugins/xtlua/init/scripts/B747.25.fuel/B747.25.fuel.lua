@@ -377,9 +377,20 @@ B747CMD_fuel_control_switch2 	= deferred_command("laminar/B747/fuel/fuel_control
 B747CMD_fuel_control_switch3 	= deferred_command("laminar/B747/fuel/fuel_control_3/toggle_switch", "Fuel Control Switch 3", B747_fuel_control_switch3_CMDhandler)
 B747CMD_fuel_control_switch4 	= deferred_command("laminar/B747/fuel/fuel_control_4/toggle_switch", "Fuel Control Switch 4", B747_fuel_control_switch4_CMDhandler)
 B747DR_dsp_synoptic_display                     = find_dataref("laminar/B747/dsp/synoptic_display")
+B747DR_fuelswitch_pseu_pri_air                  = find_dataref("laminar/B747/gear/air_ground/pri_air")
 
+-- a FUEL CONTROL target written (by the command handlers or anyone else):
+-- a switch moved to CUTOFF in flight brings up the secondary engine display
+-- (FCOM p.843, p.872); it used to come up at every write (ENG-23)
+local fuelswitch_last = {1, 1, 1, 1}
 function B747_fuelswitch_DRhandler()
-    B747DR_dsp_synoptic_display = 1
+    for i = 0, 3 do
+        local now = B747_fuel_control_toggle_sw_pos_target[i]
+        if now < 0.5 and fuelswitch_last[i + 1] >= 0.5 and B747DR_fuelswitch_pseu_pri_air == 1 then
+            B747DR_dsp_synoptic_display = 1
+        end
+        fuelswitch_last[i + 1] = now
+    end
 end
 B747_fuel_control_toggle_sw_pos_target = deferred_dataref("laminar/B747/fuel/switch_target", "array[4]", B747_fuelswitch_DRhandler)--{}
 B747DR_engine_fuel_valve_pos        = find_dataref("laminar/B747/engines/fuel_valve_pos")
