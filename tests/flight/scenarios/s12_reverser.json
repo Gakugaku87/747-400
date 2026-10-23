@@ -1,0 +1,62 @@
+{
+  "name": "s12_reverser",
+  "description": "逆推力（2-3 段 3）の X-Plane での確認。RJAA 34L でエンジン運転中（P&W、109）、パーキング・ブレーキをかけて始め、逆推力のコマンド（全エンジン）を引いて 4 基とも展開し REV が緑、逆推力のスロットルが出ること、放して格納すること。次に油圧系統 1 を落とし（ENGINE pump 1 と DEMAND 1 を OFF）、もう一度引くと逆推力 1 だけ動かず ENG 1 REVERSER が出ること（FCOM p.893：P&W は関係する油圧系統の圧で動く、p.901）、放すと消えることを見る。機体を読み直す。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 10 },
+    { "do": "set", "note": "パーキング・ブレーキ", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 1 },
+    { "do": "check", "note": "地上（PSEU primary）", "dref": "laminar/B747/gear/air_ground/pri_gnd", "op": "==", "value": 1 },
+    { "do": "check", "note": "地上（PSEU alternate）", "dref": "laminar/B747/gear/air_ground/alt_gnd", "op": "==", "value": 1 },
+    { "do": "check", "note": "格納", "dref": "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]", "op": "<", "value": 0.01 },
+
+    { "do": "mark", "note": "逆推力（全部動く）" },
+    { "do": "cmd", "note": "逆推力を引く（全エンジン、8 秒）", "name": "sim/engines/thrust_reverse_hold", "duration": 8 },
+    { "do": "wait", "note": "逆推力 1 が展開（REV 緑）", "dref": "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]", "op": ">", "value": 0.98, "timeout": 7 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "snapshot", "note": "展開", "drefs": [
+      "sim/cockpit2/engine/actuators/prop_mode[0]", "sim/cockpit2/engine/actuators/prop_mode[3]",
+      "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]", "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]",
+      "sim/flightmodel/engine/ENGN_thro_use[0]", "sim/flightmodel/engine/ENGN_N1_[0]", "laminar/B747/engines/display_EPR[0]" ] },
+    { "do": "check", "note": "逆推力 4 も展開", "dref": "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]", "op": ">", "value": 0.98 },
+    { "do": "check", "note": "ENG 1 REVERSER なし", "dref": "laminar/B747/CAS/advisory_status[126]", "op": "==", "value": 0 },
+    { "do": "view", "name": "eicas" },
+    { "do": "shot", "name": "eicas_reverse_all" },
+    { "do": "wait", "note": "放して格納（REV が消える）", "dref": "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]", "op": "<", "value": 0.01, "timeout": 20 },
+    { "do": "wait", "note": "逆推力 4 も格納", "dref": "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]", "op": "<", "value": 0.01, "timeout": 10 },
+    { "do": "sleep", "seconds": 5 },
+
+    { "do": "mark", "note": "油圧系統 1 を落とす" },
+    { "do": "switch", "note": "ENGINE pump 1 OFF", "dref": "laminar/B747/button_switch/position[30]", "value": 0, "cmd": "laminar/B747/button_switch/hyd_pump_1" },
+    { "do": "switch", "note": "DEMAND 1 OFF", "dref": "laminar/B747/hydraulics/dmd_pump/sel_dial_pos[0]", "value": 0, "cmd": "laminar/B747/hydraulics/sel_dial/dmd_pump_01_dn" },
+    { "do": "wait", "note": "系統 1 の圧が 1,000 psi を切る", "dref": "laminar/B747/hydraulics/pressure_1", "op": "<", "value": 1000, "timeout": 90 },
+    { "do": "cmd", "note": "逆推力を引く（全エンジン、8 秒）", "name": "sim/engines/thrust_reverse_hold", "duration": 8 },
+    { "do": "wait", "note": "逆推力 2 は展開", "dref": "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]", "op": ">", "value": 0.98, "timeout": 7 },
+    { "do": "check", "note": "逆推力 1 は動かない（FCOM p.893）", "dref": "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]", "op": "<", "value": 0.01 },
+    { "do": "wait", "note": "ENG 1 REVERSER（FCOM p.901）", "dref": "laminar/B747/CAS/advisory_status[126]", "op": "==", "value": 1, "timeout": 3 },
+    { "do": "check", "note": "ENG 2 REVERSER なし", "dref": "laminar/B747/CAS/advisory_status[127]", "op": "==", "value": 0 },
+    { "do": "shot", "name": "eicas_reverse_sys1_low" },
+    { "do": "cas", "note": "系統 1 なしで逆推力" },
+    { "do": "wait", "note": "放すと ENG 1 REVERSER が消える", "dref": "laminar/B747/CAS/advisory_status[126]", "op": "==", "value": 0, "timeout": 20 },
+    { "do": "wait", "note": "逆推力 2 も格納", "dref": "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]", "op": "<", "value": 0.01, "timeout": 10 },
+
+    { "do": "mark", "note": "戻す" },
+    { "do": "switch", "note": "DEMAND 1 AUTO", "dref": "laminar/B747/hydraulics/dmd_pump/sel_dial_pos[0]", "value": 1, "cmd": "laminar/B747/hydraulics/sel_dial/dmd_pump_01_up" },
+    { "do": "switch", "note": "ENGINE pump 1 ON", "dref": "laminar/B747/button_switch/position[30]", "value": 1, "cmd": "laminar/B747/button_switch/hyd_pump_1" },
+    { "do": "record_stop" }
+  ]
+}

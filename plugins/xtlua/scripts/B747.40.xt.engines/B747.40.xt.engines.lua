@@ -62,6 +62,7 @@ function deferred_dataref(name,nilType,callFunction)
 end
 local B747_hold_rev_on_engine		= {0, 0, 0, 0}
 local B747_hold_rev_on_all			= 0
+local B747_rev_held_all             = false    -- the all-engine reverse command asks, until cancelled (B747_reverse_asked)
 
 --local B747_igniter_status = {0, 0, 0, 0}
 
@@ -349,8 +350,8 @@ function B747_thrust_rev_hold_max_1_CMDhandler(phase, duration)
 
 		if B747DR_reverser_lockout == 0 and simDR_engine_throttle_jet[0] < 0.05 then											-- AIRCRAFT IS ON THE GRUOND
 
-				simDR_prop_mode[0] = 3														
-				simDR_engine_throttle_jet[0] = B747_animate_value(simDR_engine_throttle_jet[0],-1,-1,1,1)
+				if B747_reverser_can_deploy(0) then simDR_prop_mode[0] = 3 end  -- power and ground (B747.40.xt.reverser.lua)
+				if B747_reverser_can_deploy(0) then simDR_engine_throttle_jet[0] = B747_animate_value(simDR_engine_throttle_jet[0],-1,-1,1,1) end
 				B747_hold_rev_on_engine[0] = 1
 		else 
             simDR_engine_throttle_jet[0]=B747_animate_value(simDR_engine_throttle_jet[0],0,0,1,1)	
@@ -379,8 +380,8 @@ function B747_thrust_rev_hold_max_2_CMDhandler(phase, duration)
 		-- PREVENTS "REVERSE" MODE WHEN ENGINE 2 THROTTLE LEVER IS NOT AT IDLE
 
 		if B747DR_reverser_lockout == 0 and simDR_engine_throttle_jet[1] < 0.05 then											-- AIRCRAFT IS ON THE GRUOND
-				simDR_prop_mode[1] = 3														
-				simDR_engine_throttle_jet[1] = B747_animate_value(simDR_engine_throttle_jet[1],-1,-1,1,1)
+				if B747_reverser_can_deploy(1) then simDR_prop_mode[1] = 3 end
+				if B747_reverser_can_deploy(1) then simDR_engine_throttle_jet[1] = B747_animate_value(simDR_engine_throttle_jet[1],-1,-1,1,1) end
 				B747_hold_rev_on_engine[1] = 1
 		else 
             simDR_engine_throttle_jet[1]=B747_animate_value(simDR_engine_throttle_jet[1],0,0,1,1)	
@@ -408,8 +409,8 @@ function B747_thrust_rev_hold_max_3_CMDhandler(phase, duration)
 		-- PREVENTS "REVERSE" MODE WHEN ENGINE 3 THROTTLE LEVER IS NOT AT IDLE
 
 		if B747DR_reverser_lockout == 0 and simDR_engine_throttle_jet[2] < 0.05 then											-- AIRCRAFT IS ON THE GRUOND
-				simDR_prop_mode[2] = 3														
-				simDR_engine_throttle_jet[2] = B747_animate_value(simDR_engine_throttle_jet[2],-1,-1,1,1)
+				if B747_reverser_can_deploy(2) then simDR_prop_mode[2] = 3 end
+				if B747_reverser_can_deploy(2) then simDR_engine_throttle_jet[2] = B747_animate_value(simDR_engine_throttle_jet[2],-1,-1,1,1) end
 				B747_hold_rev_on_engine[2] = 1
 		else 
             simDR_engine_throttle_jet[2]=B747_animate_value(simDR_engine_throttle_jet[2],0,0,1,1)		
@@ -439,8 +440,8 @@ function B747_thrust_rev_hold_max_4_CMDhandler(phase, duration)
 		-- PREVENTS "REVERSE" MODE WHEN ENGINE 4 THROTTLE LEVER IS NOT AT IDLE
 
 		if B747DR_reverser_lockout == 0 and simDR_engine_throttle_jet[3] < 0.05 then											-- AIRCRAFT IS ON THE GRUOND
-				simDR_prop_mode[3] = 3														
-				simDR_engine_throttle_jet[3] = B747_animate_value(simDR_engine_throttle_jet[3],-1,-1,1,1)
+				if B747_reverser_can_deploy(3) then simDR_prop_mode[3] = 3 end
+				if B747_reverser_can_deploy(3) then simDR_engine_throttle_jet[3] = B747_animate_value(simDR_engine_throttle_jet[3],-1,-1,1,1) end
 				B747_hold_rev_on_engine[3] = 1
 		else 
             simDR_engine_throttle_jet[3]=B747_animate_value(simDR_engine_throttle_jet[3],0,0,1,1)		
@@ -463,19 +464,31 @@ function canx_rev()
      simDR_engine_throttle_jet_all = 0.0
 
      B747_hold_rev_on_all = 0
-     
+     B747_rev_held_all = false
+
  end
 function canx_revHold()
    -- simDR_engine_throttle_jet_all = 0.0
     simDR_engine_throttle_jet_all = -0.01
     B747_hold_rev_on_all = 0
+    B747_rev_held_all = false
     if is_timer_scheduled(canx_rev) then
         stop_timer(canx_rev)
     end
     run_after_time(canx_rev, 3.0)
 end
 
+-- engine 0-3: the levers or commands ask for reverse (the toggle's latch, a
+-- held reverse command), for ENG n REVERSER in the reverser model
+-- (B747.40.xt.reverser.lua) even while it keeps an unpowered reverser in
+function B747_reverse_asked(i)
+    return callEngineReverse[i] == 1 or B747_hold_rev_on_engine[i] == 1 or B747_rev_held_all
+end
+
 function B747_thrust_rev_hold_max_all_CMDhandler(phase, duration)
+    -- asked until the reverse is cancelled (canx_rev*, or the levers forward
+    -- in B747_prop_mode), as the reversers stay out after the command ends
+    if phase < 2 then B747_rev_held_all = true end
 	callEngineReverse[0]=-1
     callEngineReverse[1]=-1
     callEngineReverse[2]=-1
@@ -495,11 +508,13 @@ function B747_thrust_rev_hold_max_all_CMDhandler(phase, duration)
 		-- PREVENTS "REVERSE" MODE WHEN ANY THROTTLE LEVER IS NOT AT IDLE
 
 		if B747DR_reverser_lockout == 0 and simDR_engine_throttle_jet_all <= 0.0 then											-- AIRCRAFT IS ON THE GRUOND
-				simDR_prop_mode[0] = 3													
-				simDR_prop_mode[1] = 3													
-				simDR_prop_mode[2] = 3													
-				simDR_prop_mode[3] = 3		
-				simDR_engine_throttle_jet_all = -1 --B747_animate_value(simDR_engine_throttle_jet_all,-1,-1,1,1)
+				if B747_reverser_can_deploy(0) then simDR_prop_mode[0] = 3 end  -- power and ground (B747.40.xt.reverser.lua)
+				if B747_reverser_can_deploy(1) then simDR_prop_mode[1] = 3 end
+				if B747_reverser_can_deploy(2) then simDR_prop_mode[2] = 3 end
+				if B747_reverser_can_deploy(3) then simDR_prop_mode[3] = 3 end
+				for e = 0, 3 do  -- not the engines whose reverser cannot deploy (was throttle_jet_rev_ratio_all = -1)
+					if B747_reverser_can_deploy(e) then simDR_engine_throttle_jet[e] = -1 end
+				end
 				B747_hold_rev_on_all = 1
 		--else
 		--  simDR_engine_throttle_jet_all=B747_animate_value(simDR_engine_throttle_jet_all,0,0,1,1)
@@ -757,12 +772,15 @@ function B747_prop_mode()
     else 
         B747DR_reverser_lockout = 0
     end
-    if simDR_prop_mode[i] == 3 and simDR_engine_throttle_jet_all<0 or
+    -- any engine in reverse (ENG-32: this used an undefined i, so the term was never true)
+    local anyReverse = simDR_prop_mode[0] == 3 or simDR_prop_mode[1] == 3 or simDR_prop_mode[2] == 3 or simDR_prop_mode[3] == 3
+    if anyReverse and simDR_engine_throttle_jet_all<0 or
         (simDR_thrust_rev_deploy_ratio[0]<0.01 and simDR_thrust_rev_deploy_ratio[1]<0.01 and simDR_thrust_rev_deploy_ratio[2]<0.01 and simDR_thrust_rev_deploy_ratio[3]<0.01)
         then
         clearingReverse=false
     elseif simDR_engine_throttle_jet_all>-0.0001 and simDR_engine_throttle_jet_all>lastThrottleAll then
         clearingReverse=true
+        B747_rev_held_all = false
     end
     lastThrottleAll=simDR_engine_throttle_jet_all
     for i = 0, 3 do
@@ -1070,21 +1088,7 @@ function B747_engines_EICAS_msg()
     
     if B747DR_engine_oil_temp_degC[3] > 160.0 then B747DR_CAS_advisory_status[121] = 1 else B747DR_CAS_advisory_status[121] = 0 end
 
-    -- ENG 1 REVERSER
-    
-    if simDR_thrust_rev_fail_01 == 6 then B747DR_CAS_advisory_status[126] = 1 else B747DR_CAS_advisory_status[126] = 0 end
-
-    -- ENG 2 REVERSER
-   
-    if simDR_thrust_rev_fail_02 == 6 then B747DR_CAS_advisory_status[127] = 1 else B747DR_CAS_advisory_status[127] = 0 end
-
-    -- ENG 3 REVERSER
-    
-    if simDR_thrust_rev_fail_03 == 6 then B747DR_CAS_advisory_status[128] = 1 else B747DR_CAS_advisory_status[128] = 0 end
-
-    -- ENG 4 REVERSER
-    
-    if simDR_thrust_rev_fail_04 == 6 then B747DR_CAS_advisory_status[129] = 1 else B747DR_CAS_advisory_status[129] = 0 end
+    -- ENG n REVERSER: from the reverser model (B747.40.xt.reverser.lua)
 
     -- >ENG n RPM LIM: P&W and GE from the EEC's overspeed protection (B747.42.xt.eec_thrust.lua)
 
@@ -1232,6 +1236,7 @@ end
 
 dofile("B747.40.xt.engine_start.lua")
 dofile("B747.40.xt.engine_display.lua")
+dofile("B747.40.xt.reverser.lua")
 
 function aircraft_load() end
 
@@ -1241,6 +1246,7 @@ function flight_start()
     simDR_autoReverse=0
     B747_flight_start_engines()
     B747_engine_display_flight_start()
+    B747_reverser_flight_start()
 
 end
 
@@ -1269,6 +1275,7 @@ function after_physics()
     local apModeRefresh=B747DR_ap_approach_mode
 
     B747_prop_mode()
+    B747_reverser()                 -- power and ground, ENG n REVERSER (B747.40.xt.reverser.lua)
 
     B747_set_tq_levers_mnp_show()
 

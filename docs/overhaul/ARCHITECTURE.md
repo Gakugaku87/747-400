@@ -284,6 +284,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 琥珀の抑止：TO/GA スイッチ（エンジンのモジュールが置き換えている `sim/engines/TOGA_power`・`sim/autopilot/take_off_go_around`）を押してから 5 分は、琥珀の帯でも白（P&W・RR はエンジンが 1 基止まっていれば 10 分）。前は A/T の TOGA の保持（`TOGA_mode`）に連動し、帯の線も消していた。帯（`EGT/amber_inhibit`）はいつも出す。
 - 始動限界の線：FUEL CONTROL が CUTOFF か、始動の途中（始動モデルの phase が off でない：`B747_engine_start_phase(i)`、始動のグルーが出す）なら `EGT/start_limit_on`（新設）を 1 にし、その間は EGT が始動限界で赤。始動はアイドルで落ち着いて終わる（始動モデル）。前はパネルが X-Plane の N2 55 % 未満で出していた。
 - X-Plane のスプール時間（4 基運転で 5 秒、0 基で 26 秒）を書く処理は、前の EGT の関数から `B747_engine_spool_time()` に分けて残した（ENG-35）。
+- 逆推力：逆推力のモデル（`B747.40.reverser_model.lua`）を、グルー `B747.40.xt.reverser.lua` が `B747_prop_mode()`（前からのレバーとコマンドの処理。X-Plane の prop mode 3 で展開、1 で格納）の直後に毎フレーム回す（`B747_reverser()`）。逆推力が動けるのは、P&W・RR は関係する油圧系統（エンジン n は系統 n、`hydraulics/pressure_n` が 1,000 psi 以上。RR は資料なし）、GE はそのエンジンが運転中（抽気）で、地上のとき（逆推力 1・4 は PSEU の primary、2・3 は alternate の継電器）。動けない逆推力は今の位置に保つ（格納なら prop mode 1 のまま、展開なら 3 のまま）。逆推力のコマンドは、`B747_reverser_can_deploy(i)` が真のエンジンにだけ prop mode 3 と逆推力スロットルを書く（X-Plane はフレームの間に書かれた値でも逆推力を動かし始めるため。全エンジンの保持は `throttle_jet_rev_ratio_all` でなくエンジンごとに書く）。ENG n REVERSER（advisory 126〜129）は、乗員が逆推力を求めている（`B747_reverse_asked(i)`：トグルのラッチ、保持中、全エンジンの保持は取り消しまで）のに格納のまま、または逆推力でないのに展開のままが 2 秒続くか、X-Plane の故障。前は X-Plane の故障だけだった。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 
