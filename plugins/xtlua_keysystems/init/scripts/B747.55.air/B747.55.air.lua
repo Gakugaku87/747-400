@@ -110,6 +110,36 @@ B747DR_bleed_light_sys_fault        = deferred_dataref("laminar/B747/air/light/s
 B747DR_bleed_light_isln_valve       = deferred_dataref("laminar/B747/air/light/isln_valve", "array[2]")
 B747DR_bleed_light_apu_valve        = deferred_dataref("laminar/B747/air/light/apu_valve", "number")
 
+-- the pack model (B747.55.xt.packs.lua): valve 0 closed .. 1 open, high
+-- flow 1, the controller in use 0 none, 1 A, 2 B, the packs operating (the
+-- EEC reads it), the recirculation fans (upper R, upper L, lower L, lower
+-- R; 1 = running), the PACK RST SYS FAULT light (lighting)
+B747DR_pack_valve_pos               = deferred_dataref("laminar/B747/air/pack/valve_pos", "array[3]")
+B747DR_pack_high_flow               = deferred_dataref("laminar/B747/air/pack/high_flow", "array[3]")
+B747DR_pack_ptc                     = deferred_dataref("laminar/B747/air/pack/ptc", "array[3]")
+B747DR_packs_operating              = deferred_dataref("laminar/B747/air/packs_operating", "number")
+B747DR_recirc_fan                   = deferred_dataref("laminar/B747/air/recirc_fan", "array[4]")
+B747DR_pack_light_sys_fault         = deferred_dataref("laminar/B747/air/light/pack_sys_fault", "number")
+-- the pressurization model (B747.55.xt.press.lua): mode 0 ground, 1
+-- takeoff, 2 climb, 3 cruise, 4 descent, 5 after landing; the controller
+-- in use 0 none, 1 A, 2 B; a positive relief valve open; the ECS card's
+-- cruise clamp; the outflow valves L, R in MAN (1)
+B747DR_press_mode                   = deferred_dataref("laminar/B747/air/press/mode", "number")
+B747DR_press_cpc                    = deferred_dataref("laminar/B747/air/press/cpc", "number")
+B747DR_press_relief_open            = deferred_dataref("laminar/B747/air/press/relief_open", "number")
+B747DR_press_cruise_clamp           = deferred_dataref("laminar/B747/air/press/cruise_clamp", "number")
+B747DR_press_valve_man              = deferred_dataref("laminar/B747/air/press/valve_man", "array[2]")
+
+-- the cabin pressure is the pressurization model's (notes/ATA-21.md §6):
+-- X-Plane's own is off while the aircraft is loaded
+simDR_override_pressurization       = find_dataref("sim/operation/override/override_pressurization")
+function aircraft_load()
+    simDR_override_pressurization = 1
+end
+function aircraft_unload()
+    simDR_override_pressurization = 0
+end
+
 
 B747DR_pressure_EICAS1_display_status = deferred_dataref("laminar/B747/air/pressurization/EICAS1_display_status", "number")
 

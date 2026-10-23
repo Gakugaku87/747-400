@@ -109,8 +109,6 @@ simDR_isolation_valve_R              = deferred_dataref("sim/cockpit2/bleedair/a
 --** 					            LOCAL VARIABLES                 				 **--
 --*************************************************************************************--
 
-local B747_outflow_valve_pos_L_target   = 0
-local B747_outflow_valve_pos_R_target   = 0
 
 
 
@@ -127,15 +125,6 @@ simDR_elec_bus_volts                = find_dataref("sim/cockpit2/electrical/bus_
 
 simDR_indicated_altitude_pilot      = find_dataref("sim/cockpit2/gauges/indicators/altitude_ft_pilot")
 simDR_indicated_vvi_fpm_pilot       = find_dataref("sim/cockpit2/gauges/indicators/vvi_fpm_pilot")
-
---simDR_press_act_dump_all_on         = find_dataref("sim/cockpit2/pressurization/actuators/dump_all_on")
---simDR_press_act_dump_to_alt_on      = find_dataref("sim/cockpit2/pressurization/actuators/dump_to_altitude_on")
-simDR_press_act_cabin_alt_ft        = find_dataref("sim/cockpit2/pressurization/actuators/cabin_altitude_ft")
-simDR_press_act_cabin_vvi_fpm       = find_dataref("sim/cockpit2/pressurization/actuators/cabin_vvi_fpm")
-simDR_press_act_max_cabin_alt_ft    = find_dataref("sim/cockpit2/pressurization/actuators/max_allowable_altitude_ft")
-simDR_press_cabin_alt_ft            = find_dataref("sim/cockpit2/pressurization/indicators/cabin_altitude_ft")
-simDR_press_cabin_vvi_fpm           = find_dataref("sim/cockpit2/pressurization/indicators/cabin_vvi_fpm")
-simDR_press_diff_psi                = find_dataref("sim/cockpit2/pressurization/indicators/pressure_diffential_psi")
 
 --simDR_apu_running                   = find_dataref("sim/cockpit2/electrical/APU_running")
 simDR_apu_N1_pct                    = find_dataref("sim/cockpit2/electrical/APU_N1_percent")
@@ -429,6 +418,10 @@ B747DR_engine04_fire_ext_switch_pos_arm     = deferred_dataref("laminar/B747/fir
 
 -- the bleed air: the model and its glue (notes/ATA-36.md), after the bindings
 dofile("B747.55.xt.bleed.lua")
+-- the packs and the pressurization: the models and their glue
+-- (notes/ATA-21.md), after the bleed glue
+dofile("B747.55.xt.packs.lua")
+dofile("B747.55.xt.press.lua")
 
 
 
@@ -440,243 +433,6 @@ function equipment_cooling()
     else
         B747DR_equip_cooling_state =0
     end    
-end
-
-
-
-
-
------ PRESSURIZATION --------------------------------------------------------------------
-function B747_pressurization()
-
-    simDR_press_act_cabin_alt_ft = math.min(simDR_press_act_max_cabin_alt_ft, simDR_indicated_altitude_pilot)
-
-    -- OUTFLOW VALVE MANUAL MODE
-    if B747DR_button_switch_position[34] > 0.95 or B747DR_button_switch_position[35] > 0.95 then
-
-        -- DECREASE VALVE POSITION
-        if B747DR_toggle_switch_position[22] < -0.95 then
-
-            if B747DR_button_switch_position[34] > 0.95 then
-                B747_outflow_valve_pos_L_target = math.max(B747_outflow_valve_pos_L_target - 0.005, -1.0)
-            end
-
-            if B747DR_button_switch_position[35] > 0.95 then
-                B747_outflow_valve_pos_R_target = math.max(B747_outflow_valve_pos_R_target - 0.005, -1.0)
-            end
-
-
-        -- INCREASE VALVE POSITION
-        elseif B747DR_toggle_switch_position[22] > 0.95 then
-
-            if B747DR_button_switch_position[34] > 0.95 then
-                B747_outflow_valve_pos_L_target = math.min(B747_outflow_valve_pos_L_target + 0.005, 1.0)
-            end
-
-            if B747DR_button_switch_position[35] > 0.95 then
-                B747_outflow_valve_pos_R_target = math.min(B747_outflow_valve_pos_R_target + 0.005, 1.0)
-            end
-
-        end
-
-        simDR_press_act_max_cabin_alt_ft = simDR_indicated_altitude_pilot
-        simDR_press_act_cabin_vvi_fpm = B747_rescale(-1.0, 2000.0, 1.0, -2000.0, math.max(math.abs(B747DR_outflow_valve_pos_L), math.abs(B747DR_outflow_valve_pos_R)))
-
-    -- OUTFLOW VALVE AUTO MODE
-    else
-
-        simDR_press_act_max_cabin_alt_ft = 8000.0
-        simDR_press_act_cabin_vvi_fpm = math.min(2000.0, math.max(500, simDR_indicated_vvi_fpm_pilot))
-        B747_outflow_valve_pos_L_target = B747_rescale(-2000.0, 1.0, 2000.0, -1.0, simDR_press_cabin_vvi_fpm)
-        B747_outflow_valve_pos_R_target = B747_outflow_valve_pos_L_target
-
-    end
-
-
-
-    -- LIMITER
-    if simDR_press_cabin_alt_ft > 11000.0 then
-        simDR_press_act_max_cabin_alt_ft = 11000.00
-        B747_outflow_valve_pos_L_target = -1.0
-        B747_outflow_valve_pos_R_target = -1.0
-        simDR_press_act_cabin_vvi_fpm = 2000.0
-    end
-
-
-    -- SET VALVE POSITION
-    B747DR_outflow_valve_pos_L = B747_set_anim_value(B747DR_outflow_valve_pos_L, B747_outflow_valve_pos_L_target, -1.0, 1.0, 10.0)
-    B747DR_outflow_valve_pos_R = B747_set_anim_value(B747DR_outflow_valve_pos_R, B747_outflow_valve_pos_R_target, -1.0, 1.0, 10.0)
-
-end
-
-
-
-
-
------ LANDING ALTITUDE -------------------------------------------------------------------
-function B747_landing_alt()
-
-    -- MANUAL
-    if B747DR_landing_alt_button_pos < 0.5 then
-        B747DR_landing_altitude = B747DR_landing_alt_sel_rheo
-
-    -- AUTO
-    else
-        B747DR_landing_altitude = 2000 -- DEFAULT WHEN NO ALTITUDE AVAIL FROM FMC   TODO:  ADD FMC VALUE WHEN AVAILABLE
-
-    end
-
-end
-
-
-
-
-
------ PRIMARY EICAS PRESSURIZATION DISPLAY -----------------------------------------------
-function B747_primary_EICAS_ECS_display()
-
-    if B747DR_dsp_synoptic_display == 5 or B747DR_dsp_synoptic_display == 1
-        -- or CAUTION MESSAGE: BLD DUCT LEAK L  (NOT MODEELED)
-        -- or CAUTION MESSAGE: BLD DUCT LEAK R  (NOT MODELED)
-        or
-        -- CAUTION MESSAGE: CABIN ALT AUTO
-        B747DR_CAS_caution_status[10] == 1
-        or
-        -- ADVISORY MESSAGE: OUTFLOW VLV (L/R)
-        B747DR_CAS_advisory_status[249] == 1 or B747DR_CAS_advisory_status[250] == 1
-        or
-        -- LANDING ALT CONTROL IS "MAN"
-        B747DR_landing_alt_button_pos == 0
-        or
-        -- DUCT PRESSURE IS LOW
-        B747_duct_pressure_L < 11 or B747_duct_pressure_R < 11
-        or
-        -- CABIN ALTITUDE LIMIT
-        simDR_press_cabin_alt_ft >= 8500.00
-        or
-        -- CABIN DIFF PRESS LIMIT
-        simDR_press_diff_psi >= 8.9
-        or
-        -- RATE OF CHANGE LIMIT
-        simDR_press_cabin_vvi_fpm < -500.0 or simDR_press_cabin_vvi_fpm > 700.0
-    then
-        B747DR_pressure_EICAS1_display_status = 1
-    else
-        B747DR_pressure_EICAS1_display_status = 0
-    end
-    if B747DR_button_switch_position[41] == 1 then
-        B747DR_CAS_memo_status[24] = 1
-    else
-        B747DR_CAS_memo_status[24] = 0
-    end
-end    -- PACKS HIGH FLOW
-
-    
-
-
-
-
-
-
-
------ EICAS MESSAGS ---------------------------------------------------------------------
-function B747_air_EICAS_msg()
-
-    -- CABIN ALTITUDE
-    
-    if simDR_press_cabin_alt_ft > 10000.0 then B747DR_CAS_warning_status[1] = 1 else B747DR_CAS_warning_status[1] = 0 end
-
-    -- CABIN ALT AUTO
-    
-    if B747DR_button_switch_position[34] > 0.95
-        or B747DR_button_switch_position[35] > 0.95
-    then
-        B747DR_CAS_caution_status[10] = 1
-    else
-        B747DR_CAS_caution_status[10] = 0
-    end
-
-    -- >BLEED n OFF, BLEED ISLN and BLD OVHT/PRV come from the bleed air model
-    -- (B747.55.xt.bleed.lua)
-
-    -- OUTFLOW VLV L
-    
-    if B747DR_button_switch_position[34] > 0.95 then B747DR_CAS_advisory_status[249] = 1 else B747DR_CAS_advisory_status[249] = 0 end
-
-    -- OUTFLOW VLV R
-    
-    if B747DR_button_switch_position[35] > 0.95 then B747DR_CAS_advisory_status[250] = 1 else B747DR_CAS_advisory_status[250] = 0 end
-
-    -- PACKS OFF
-    
-    if B747DR_pack_ctrl_sel_pos[0] == 0 and B747DR_pack_ctrl_sel_pos[1] == 0 and B747DR_pack_ctrl_sel_pos[2] == 0 then 
-        B747DR_CAS_memo_status[25] = 1 
-    else 
-        B747DR_CAS_memo_status[25] = 0
-        
-    end
-
-    -- PACKS 1 + 2 OFF
-    
-    if B747DR_CAS_memo_status[25] == 0 and B747DR_pack_ctrl_sel_pos[0] == 0 and B747DR_pack_ctrl_sel_pos[1] == 0 then
-        B747DR_CAS_memo_status[21] = 1
-    else 
-        B747DR_CAS_memo_status[21] = 0 
-    end
-
-    -- PACKS 1 + 3 OFF
-    
-    if B747DR_CAS_memo_status[25] == 0 and B747DR_pack_ctrl_sel_pos[0] == 0 and B747DR_pack_ctrl_sel_pos[2] == 0 then 
-        B747DR_CAS_memo_status[22] = 1 
-    else 
-        B747DR_CAS_memo_status[22] = 0 
-    end
-
-    -- PACKS 2 + 3 OFF
-    
-    if B747DR_CAS_memo_status[25] == 0 and B747DR_pack_ctrl_sel_pos[1] == 0 and B747DR_pack_ctrl_sel_pos[2] == 0 then 
-        B747DR_CAS_memo_status[23] = 1 
-    else 
-        B747DR_CAS_memo_status[23] = 0 
-    end
-
-    -- PACK 1 OFF
-    
-    if B747DR_pack_ctrl_sel_pos[0] == 0 and B747DR_CAS_memo_status[25] == 0 and B747DR_CAS_memo_status[21] == 0 and B747DR_CAS_memo_status[22] == 0 and B747DR_CAS_memo_status[23] == 0 then 
-        B747DR_CAS_memo_status[18] = 1 
-    else 
-        B747DR_CAS_memo_status[18] = 0 
-    end
-
-    -- PACK 2 OFF
-    
-    if B747DR_pack_ctrl_sel_pos[1] == 0 and B747DR_CAS_memo_status[25] == 0 and B747DR_CAS_memo_status[21] == 0 and B747DR_CAS_memo_status[22] == 0 and B747DR_CAS_memo_status[23] == 0 then 
-        B747DR_CAS_memo_status[19] = 1 
-    else 
-        B747DR_CAS_memo_status[19] = 0 
-    end
-
-    -- PACK 3 OFF
-    
-    if B747DR_pack_ctrl_sel_pos[2] == 0 and B747DR_CAS_memo_status[25] == 0 and B747DR_CAS_memo_status[21] == 0 and B747DR_CAS_memo_status[22] == 0 and B747DR_CAS_memo_status[23] == 0 then 
-        B747DR_CAS_memo_status[20] = 1 
-    else 
-        B747DR_CAS_memo_status[20] = 0 
-    end
-
-    -- PACKS HIGH FLOW
-
-    if B747DR_button_switch_position[41] == 1 then
-        B747DR_CAS_memo_status[24] = 1
-    else
-        B747DR_CAS_memo_status[24] = 0
-    end
-
-
-    
-
-    
-
 end
 
 
@@ -792,6 +548,8 @@ function flight_start()
 
     B747_flight_start_air()
     B747_bleed_flight_start()
+    B747_packs_flight_start()
+    B747_press_flight_start()
 
 end
 
@@ -802,13 +560,10 @@ debug_air     = deferred_dataref("laminar/B747/debug/air", "number")
 function after_physics()
   if debug_air>0 then return end
 
-    B747_bleed()
+    B747_bleed()        -- with the packs' flow of the last frame
+    B747_packs()
+    B747_press()
     equipment_cooling()
-    B747_pressurization()
-    B747_landing_alt()
-    B747_primary_EICAS_ECS_display()
-
-    B747_air_EICAS_msg()
 
     B747_air_monitor_AI()
 

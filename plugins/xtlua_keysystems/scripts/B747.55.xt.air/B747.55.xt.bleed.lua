@@ -3,9 +3,11 @@
 -- N2, the APU, the buses, the packs, wing anti-ice and the demand pumps;
 -- runs the model every frame and writes the valve positions, the engine and
 -- duct pressures under their old names (notes/ATA-36.md §6), the P5 lights,
--- the EICAS messages, and X-Plane's bleed air mode. B747.55.xt.air.lua loads
--- it after its bindings and uses them (binding a number dataref again under
--- the same name would write 0 to it).
+-- the EICAS messages, X-Plane's bleed air mode and, as X-Plane's
+-- pressurization is taken over, its ducts' air and bleed loss. The packs'
+-- flow comes from the pack glue. B747.55.xt.air.lua loads it after its
+-- bindings and uses them (binding a number dataref again under the same name
+-- would write 0 to it).
 dofile("B747.55.bleed_model.lua")
 local B = B747_bleed_model
 
@@ -21,6 +23,14 @@ B747DR_bleed_light_apu_valve    = find_dataref("laminar/B747/air/light/apu_valve
 simDR_bleed_fail_apu_press      = find_dataref("sim/operation/failures/rel_APU_press")
 B747DR_bleed_CAS_status         = find_dataref("laminar/B747/CAS/status_status")
 B747DR_bleed_start_valve_cmd    = find_dataref("laminar/B747/engines/start_valve_cmd")
+-- X-Plane's ducts (left, centre, right) and bleed loss, while the pressurization is taken over
+simDR_bleed_available_L         = find_dataref("sim/cockpit2/bleedair/indicators/bleed_available_left")
+simDR_bleed_available_C         = find_dataref("sim/cockpit2/bleedair/indicators/bleed_available_center")
+simDR_bleed_available_R         = find_dataref("sim/cockpit2/bleedair/indicators/bleed_available_right")
+simDR_engine_bleed_loss         = find_dataref("sim/cockpit2/bleedair/indicators/engine_loss_from_bleed_air_ratio")
+simDR_apu_bleed_loss            = find_dataref("sim/cockpit2/bleedair/indicators/APU_loss_from_bleed_air_ratio")
+local BLEED_PSI, BLEED_MAX = 27.5, 1.5  -- X-Plane's duct air: psi for 1.0, most
+local ENGINE_LOSS, APU_LOSS = 1, 15     -- degC per pack of flow
 
 local BLEED_SWITCH = 77         -- button_switch/position[77-80]: ENGINE BLEED 1-4
 local NAI_SWITCH = 68           -- button_switch/position[68-71]: NAI 1-4
@@ -80,7 +90,7 @@ local function read_inputs(inp)
     inp.apu_selector = B747DR_bleed_apu_sel_pos
     inp.apu_n1 = simDR_apu_N1_pct
     inp.apu_air_failed = simDR_bleed_fail_apu_press == 6     -- X-Plane failure: inoperative
-    for p = 1, 3 do inp.packs[p] = B747DR_pack_ctrl_sel_pos[p - 1] > 0.5 end
+    for p = 1, 3 do inp.pack_flow[p] = B747_pack_out.flow[p] end      -- the pack model, last frame
     inp.wai[1] = B747DR_bleed_wing_ai_valve_pos[0] > 0.5
     inp.wai[2] = B747DR_bleed_wing_ai_valve_pos[1] > 0.5
     inp.adp[1] = B747DR_bleed_adp_1_psi > 0
@@ -130,6 +140,27 @@ local function write_outputs(out)
     local mode = 0
     if out.duct[1] + out.duct[2] + out.duct[3] > 0.5 then mode = 5 end
     if simDR_bleed_air_mode ~= mode then simDR_bleed_air_mode = mode end
+
+    -- With the pressurization taken over (override_pressurization, the air
+    -- init script) X-Plane stops working out its ducts and the bleed loss
+    -- of the engines and the APU; its air starters still turn with the
+    -- ducts' air. The air in each duct is its pressure over 27.5 psi, at
+    -- most 1.5: X-Plane's own values in the same starts (estimate measured
+    -- in X-Plane, 2026-10-24, so the starts take the same time). The loss is
+    -- an inlet temperature rise: 1 degC per pack of flow an engine gives, 15
+    -- for the APU (estimate: X-Plane's own with three packs on four engines
+    -- at idle, and with the APU turning a starter).
+    local al, ac, ar = math.min(BLEED_MAX, out.duct[1] / BLEED_PSI), math.min(BLEED_MAX, out.duct[2] / BLEED_PSI),
+        math.min(BLEED_MAX, out.duct[3] / BLEED_PSI)
+    if simDR_bleed_available_L ~= al then simDR_bleed_available_L = al end
+    if simDR_bleed_available_C ~= ac then simDR_bleed_available_C = ac end
+    if simDR_bleed_available_R ~= ar then simDR_bleed_available_R = ar end
+    for n = 1, 4 do
+        local loss = ENGINE_LOSS * out.eng[n].flow
+        if simDR_engine_bleed_loss[n - 1] ~= loss then simDR_engine_bleed_loss[n - 1] = loss end
+    end
+    local apu_loss = APU_LOSS * out.apu_flow
+    if simDR_apu_bleed_loss ~= apu_loss then simDR_apu_bleed_loss = apu_loss end
 end
 
 -- a new flight

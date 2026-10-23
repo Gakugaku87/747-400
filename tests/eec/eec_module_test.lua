@@ -22,7 +22,7 @@ local function get(name, i) return rt:get(name, i) end
 local ENG = "laminar/B747/engines/"
 local USER = "sim/cockpit2/engine/actuators/throttle_ratio"
 
--- P&W at sea level, 15 °C, three packs on, on the ground, the EEC MODE
+-- P&W at sea level, 15 °C, three packs operating, on the ground, the EEC MODE
 -- switches at NORM
 for i = 7, 10 do rt:set("laminar/B747/button_switch/position", i, 1) end
 rt:set("laminar/B747/engines/type", 0)
@@ -30,7 +30,7 @@ rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("sim/flightmodel2/position/pressure_altitude", 0)
 rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 15)
 rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
-for i = 0, 2 do rt:set("laminar/B747/air/pack_ctrl/sel_dial_pos", i, 1) end
+rt:set("laminar/B747/air/packs_operating", 3)    -- the pack model (B747.55.xt.packs.lua)
 -- the user's throttle moves the levers (manipulate_throttle_axis)
 local LEVERS = {1.0, 0.48, 0.0, 0.96}
 for i = 0, 3 do rt:set(USER, i, LEVERS[i + 1]) end
@@ -45,10 +45,10 @@ T.near(get(ENG .. "TRA", 1), 0.95 + (1.51 - 0.95) * 0.5, 0.01, "P&W: 24° TLA co
 T.near(get(ENG .. "TRA", 2), 0.95, 0.005, "P&W: idle lever commands the idle end")
 
 -- packs off and engine anti-ice on engine 1
-for i = 0, 2 do rt:set("laminar/B747/air/pack_ctrl/sel_dial_pos", i, 0) end
+rt:set("laminar/B747/air/packs_operating", 0)
 frames(0.2)
 T.near(get(ENG .. "display_EPR_max", 0), 1.53, 0.005, "P&W: 3 packs off raise the max EPR by 0.02")
-for i = 0, 2 do rt:set("laminar/B747/air/pack_ctrl/sel_dial_pos", i, 1) end
+rt:set("laminar/B747/air/packs_operating", 3)    -- the pack model (B747.55.xt.packs.lua)
 
 -- in the climb above 25,000 ft the lever reaches the climb rating at 35°
 rt:set("sim/flightmodel/failures/onground_any", 0)

@@ -287,9 +287,9 @@ CAS 番号は `B747.87.xt.warning.lua` の表による（行 74, 118, 135, 273, 
 - 警報：10,000 ft で CABIN ALTITUDE。siren、master WARNING、CAB ALT が赤。master WARNING/CAUTION reset で消音（FCOM p.1532 (15.10.6), p.1551; ATA21 p.474–480）。
 - 限界：離着陸時の最大 ΔP は 0.11 psi（FCOM p.79）。
 - 巡航時の客室高度
-  - 最大運用 ΔP は 8.9 psid。45,000 ft なら客室は 7,300 ft（ATA21 p.424, p.425 図）。
+  - 最大運用 ΔP は 8.9 psid。45,000 ft なら外気 2.14 psia、客室 11.04 psia で、本文は「客室 7,300 ft」と書く（ATA21 p.424, p.425 図）。標準大気では 11.04 psia は約 7,700 ft（本文の値と合わない）。
   - 巡航中、客室は「できるだけ低く」保つ。FMC の巡航高度から決まった ΔP スケジュールで客室高度を決める（ATA21 p.424, 435）。
-  - 推定（ATA21 p.424 の例と p.425 の図から）：巡航時の客室高度は、FMC 巡航高度で ΔP 8.9 psi になる高度（上限 8,000 ft）。実機のスケジュール表は資料に記載なし。
+  - 推定（3-1 段 1 で決めた）：巡航時の客室高度は、FMC 巡航高度で ΔP 8.8 psi になる高度（上限 8,000 ft、下限は出発地と着陸地の場の高度の低い方）。FCOM p.585 の表示例「CAB ALT 6250、ΔP 8.8」は、標準大気で FL390 を ΔP 8.8 にしたときの客室高度にちょうど一致する。ΔP 8.9 は表示が琥珀になる（3.3）ので、通常の巡航の値ではないと読んだ。実機のスケジュール表は資料に記載なし。
 - 前方 overboard valve（ATA21 p.158）
   - 閉：takeoff、25,000 ft 未満の climb、descent detect、客室 11,000 ft、前方貨物室火災。
   - 開：cruise、降下中の高度保持、ground、25,000 ft 超の climb。
@@ -456,10 +456,11 @@ CAS 番号は `B747.87.xt.warning.lua` の表による（行 74, 118, 135, 273, 
 ## 9. 未確認事項
 
 - X-Plane（Web API で確かめる）
+  - 2026-10-24 に確かめた（3-1 段 1）：`override_pressurization` を 1 にすると、`sim/cockpit/pressure/cabin_altitude_actual_ft`・`cabin_vvi_actual_fpm`・`cabin_pressure_differential_psi`・`outflow_valve` に書いた値がそのまま残り、`indicators/cabin_altitude_ft`・`cabin_vvi_fpm`・`pressure_diffential_psi` に映る（ΔP は書かないと 0 のまま）。X-Plane は客室を積分しない。上書き中は `bleedair/indicators/bleed_available_*` と `engine_loss_from_bleed_air_ratio`・`APU_loss_from_bleed_air_ratio` も更新しなくなり、X-Plane のエアスターター（`_starter_is_air_driven 1`）は書いた `bleed_available` で回る（0 で回らない、0.5 で遅い）。上書きなしの X-Plane 自身の値は、こちらのダクト圧のほぼ 1/27.5（上限 1.5）だった（APU だけで 41.5 psi のとき 1.49、始動中 34.9 psi のとき 1.29）。以下の 1〜5 は上書きにしたので不要になった。
   1. `_auto_pressurization 1` のとき、`actuators/cabin_altitude_ft`・`cabin_vvi_fpm`・`max_allowable_altitude_ft` への書込みを X-Plane が上書きするか。
   2. 現状、進入中に ΔP が負になるか、data block が上昇中に毎回出るか（AIR-02 の推定）。
   3. 全パック OFF で与圧が止まるか。`_has_full_bleed_air 0` で legacy の bleed_air_mode が効いているか。`pack_*` の既定値は何か。
-  4. `override_pressurization` 中に、`indicators/cabin_altitude_ft`・`cabin_vvi_fpm`・`pressure_diffential_psi` が `sim/cockpit/pressure/*_actual*` を映すか。
+  4. `override_pressurization` 中に、`indicators/cabin_altitude_ft`・`cabin_vvi_fpm`・`pressure_diffential_psi` が `sim/cockpit/pressure/*_actual*` を映すか。（映す。上を参照）
   5. `_dump_press_below_1k` の働き。
 - パネル
   6. generic instrument の SHOW_LESS / SHOW_GREATER が等号を含むか。含まなければパックの A が出ない（AIR-15）。

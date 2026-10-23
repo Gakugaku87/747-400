@@ -77,11 +77,7 @@ function B747_eec_update()
     inp.alt = simDR_eec_pressure_alt
     inp.tat = simDR_TAT
     inp.kias = simDR_ias_pilot
-    local packs = 0
-    for i = 0, 2 do
-        if B747DR_pack_ctrl_sel_pos[i] > 0 then packs = packs + 1 end
-    end
-    inp.packs_on = packs
+    inp.packs_on = B747DR_packs_operating     -- the packs with their valves open (the pack model)
     inp.wai = B747DR_eec_wing_ai_valve[0] > 0.5 or B747DR_eec_wing_ai_valve[1] > 0.5
     inp.air = B747DR_eec_pseu_pri_gnd == 0
     inp.flaps_deg = flap_degrees(simDR_eec_flap_handle)

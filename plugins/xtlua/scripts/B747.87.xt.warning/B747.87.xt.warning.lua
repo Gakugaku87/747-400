@@ -602,6 +602,13 @@ local B747_CASstatusMsg = {
     {DRindex = 26, name = "DRIVE DISC 2"},
     {DRindex = 27, name = "DRIVE DISC 3"},
     {DRindex = 28, name = "DRIVE DISC 4"},
+    {DRindex = 29, name = "CABIN ALT AUTO A"},    -- ATA21 p.454
+    {DRindex = 30, name = "CABIN ALT AUTO B"},
+    {DRindex = 31, name = "OUTFLOW VLV L"},       -- ATA21 p.444
+    {DRindex = 32, name = "OUTFLOW VLV R"},
+    {DRindex = 33, name = "UPR PRESS RELIEF"},    -- ATA21 p.470
+    {DRindex = 34, name = "LWR PRESS RELIEF"},
+    {DRindex = 35, name = "CPCS AIR/GND"},        -- ATA21 p.454
 }
 
 

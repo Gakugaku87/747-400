@@ -27,7 +27,8 @@ M.START_SL_PSI, M.START_PER_KFT = 25, 1   -- start air needed: estimate from FCO
                                 -- of ground air at sea level, 1 psi less per 1,000 ft)
 
 -- estimates: the sources give no numbers for these (notes/ATA-36.md §6).
--- Flow is in "packs": one pack at normal flow is 1.0.
+-- Flow is in "packs": one pack at high flow, as the packs run on the
+-- ground, is 1.0 (normal flow is 2/3: the pack model).
 M.ENG_PSI_N2 = {25, 65}         -- engine bleed (PRV side) from 0 at 25 % N2 to full at 65 %
 M.ENG_FULL_PSI = 60
 M.ENG_CAP_N2 = {50, 90}         -- engine flow: 0 at 50 % N2, M.ENG_CAP_MAX at 90 %
@@ -66,7 +67,7 @@ function M.inputs()
         ground_air_psi = 0,                        -- a connected air cart
         dc = {true, true, true, true},             -- DC bus 1-4 (ASCTU, APU valve control)
         ac = {true, true, true, true},             -- AC bus 1-4 (ISLN, APU valve motors)
-        packs = {false, false, false},             -- packs 1-3 taking air
+        pack_flow = {0, 0, 0},                     -- the air packs 1-3 take (the pack model)
         wai = {false, false},                      -- wing anti-ice valves L, R
         adp = {false, false},                      -- demand pumps 1 (left) and 4 (right)
         altitude = 0,                              -- ft
@@ -79,16 +80,16 @@ function M.new()
         target = {0, 0, 0},
         -- per section, its group (index) and the group's pressure, flow and use
         grp = {1, 1, 1}, grp_psi = {0, 0, 0}, grp_cap = {0, 0, 0}, grp_use = {0, 0, 0},
-        asctu_t = {0, 0}}
+        eng_cap = {0, 0, 0, 0}, asctu_t = {0, 0}}
     local out = {eng = {}, isln_pos = {1, 1}, apu_pos = 0, duct = {0, 0, 0},
         isln_alert = {false, false}, apu_alert = false, apu_valve_cmd = false,
-        isln_light = {false, false}, apu_light = false, asctu_alert = {false, false}}
+        isln_light = {false, false}, apu_light = false, asctu_alert = {false, false}, apu_flow = 0}
     for n = 1, 4 do
         s.eng[n] = {ovht_t = 0, ovht_latch = false, last_on = true, start_closed_t = M.PRV_START_DELAY_S,
             start_open = false, hpsov_cmd = true, prv_cmd = true, prsov_cmd = true}
         out.eng[n] = {psi = 0, prsov_open = false, prv_open = false, hpsov_open = false,
             start_valve_open = false, start_cmd = false, off_alert = false, sys_fault = false,
-            ovht_alert = false, forward = false}
+            ovht_alert = false, forward = false, flow = 0}
     end
     s.out = out
     return s
@@ -164,7 +165,7 @@ function M.update(s, inp, dt)
     -- falling as the users take what the sources give; an open start valve
     -- takes the starter's flow (estimate, notes/ATA-36.md §6)
     local demand = s.demand
-    for p = 1, 3 do demand[p] = inp.packs[p] and 1 or 0 end
+    for p = 1, 3 do demand[p] = inp.pack_flow[p] end
     if inp.wai[1] then demand[1] = demand[1] + M.WAI_FLOW end
     if inp.wai[2] then demand[3] = demand[3] + M.WAI_FLOW end
     if inp.adp[1] then demand[1] = demand[1] + M.ADP_FLOW end
@@ -175,20 +176,27 @@ function M.update(s, inp, dt)
         end
     end
     local target = s.target
+    local eng_cap = s.eng_cap
+    local apu_cap = 0
     for gi, g in ipairs(GROUPS[s.isln[1] > 0.5][s.isln[2] > 0.5]) do
         local cap, psi, use = 0, 0, 0
         for _, sect in ipairs(g) do
             use = use + demand[sect]
             for n = 1, 4 do
                 local oe = out.eng[n]
-                if M.ENGINE_SECTION[n] == sect and oe.forward then   -- last frame's valve
-                    cap = cap + M.ENG_CAP_MAX * ramp(inp.n2[n], M.ENG_CAP_N2[1], M.ENG_CAP_N2[2])
-                    psi = math.max(psi, math.min(M.PRSOV_REG_PSI, oe.psi))
+                if M.ENGINE_SECTION[n] == sect then
+                    eng_cap[n] = 0
+                    if oe.forward then   -- last frame's valve
+                        eng_cap[n] = M.ENG_CAP_MAX * ramp(inp.n2[n], M.ENG_CAP_N2[1], M.ENG_CAP_N2[2])
+                        cap = cap + eng_cap[n]
+                        psi = math.max(psi, math.min(M.PRSOV_REG_PSI, oe.psi))
+                    end
                 end
             end
             if sect == 2 then
                 if s.apu_pos > 0.5 and inp.apu_n1 > 0 and not inp.apu_air_failed then
-                    cap = cap + M.APU_CAP * s.apu_pos
+                    apu_cap = M.APU_CAP * s.apu_pos
+                    cap = cap + apu_cap
                     psi = math.max(psi, M.APU_PSI)
                 end
                 if inp.ground_air_psi > 0 then
@@ -197,9 +205,17 @@ function M.update(s, inp, dt)
                 end
             end
         end
+        -- each source gives its share of what the group takes (X-Plane's
+        -- bleed loss on the engines and the APU)
+        local share = 0
+        if cap > 0 then share = math.min(use, cap) / cap end
         for _, sect in ipairs(g) do
             target[sect] = duct_psi(psi, cap, use)
             s.grp[sect], s.grp_psi[sect], s.grp_cap[sect], s.grp_use[sect] = gi, psi, cap, use
+            for n = 1, 4 do
+                if M.ENGINE_SECTION[n] == sect then out.eng[n].flow = eng_cap[n] * share end
+            end
+            if sect == 2 then out.apu_flow = apu_cap * share end
         end
     end
     for i = 1, 3 do

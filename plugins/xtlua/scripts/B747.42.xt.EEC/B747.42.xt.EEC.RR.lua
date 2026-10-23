@@ -683,7 +683,7 @@ function engine_idle_control_RR(altitude_ft_in)
     altitude = round_thrustcalc(altitude_ft_in, "ALT")
   
       --Packs Adjustment
-    nbr_packs_on = B747DR_pack_ctrl_sel_pos[0] + B747DR_pack_ctrl_sel_pos[1] + B747DR_pack_ctrl_sel_pos[2]
+    nbr_packs_on = B747DR_packs_operating     -- the packs with their valves open (AIR-16)
   
     if nbr_packs_on == 0 then
         packs_adjustment_value = 0.01

@@ -40,7 +40,7 @@ do
     T.check(not out.apu_light, "APU: valve open, VALVE light out")
     T.equal(out.apu_pos, 1, "APU: valve open")
     T.check(out.duct[1] > 40 and out.duct[2] > 40 and out.duct[3] > 40, "APU: all ducts pressurised, no packs")
-    inp.packs = {true, true, true}
+    inp.pack_flow = {1, 1, 1}
     out = run(s, inp, 5)
     T.check(out.duct[2] > 28, "APU: three packs keep about 30 psi (FCOM p.895)")
     -- X-Plane's APU air failure: the valve stays open, no air
@@ -73,13 +73,13 @@ end
 -- (LH36 p.48)
 do
     local s, inp = apu_air()
-    inp.packs = {true, true, true}
+    inp.pack_flow = {1, 1, 1}
     run(s, inp, 10)
     inp.start_pulled[4], inp.fuel_run[4] = true, true
     local out = run(s, inp, 5)
     T.check(not out.eng[4].start_valve_open, "start with three packs on: not enough air")
     T.check(out.eng[4].prsov_open, "start: the PRSOV opens backwards")
-    inp.packs = {true, false, false}
+    inp.pack_flow = {1, 0, 0}
     out = run(s, inp, 5)
     T.check(out.eng[4].start_valve_open, "start with one pack: the start valve opens")
     T.check(out.duct[3] >= 25, "start with one pack: duct holds the start pressure")
@@ -95,6 +95,11 @@ do
     T.check(out.eng[4].prv_open and out.eng[4].prsov_open, "after the start: PRV and PRSOV open at 16 s")
     T.check(out.eng[4].psi > 50, "after the start: engine bleed air")
     T.check(not out.eng[4].off_alert, "after the start: no >BLEED 4 OFF")
+    -- what each source gives (X-Plane's bleed loss): the group's flow by
+    -- their capacity (engine 4 at idle 1.5, the APU 3.2, pack 1 takes 1.0)
+    T.near(out.eng[4].flow + out.apu_flow, 1.0, 1e-6, "the sources give what pack 1 takes")
+    T.near(out.eng[4].flow / out.apu_flow, 1.5 / 3.2, 0.01, "engine 4 and the APU share it by capacity")
+    T.equal(out.eng[1].flow, 0, "engine 1 not running: gives nothing")
 end
 
 -- three START switches pulled on APU air (manual start): one start valve

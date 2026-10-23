@@ -167,6 +167,8 @@ simDR_OAT=find_dataref("sim/weather/temperature_ambient_c")
 B747DR_light_bleed_sys_fault        = find_dataref("laminar/B747/air/light/sys_fault")
 B747DR_light_bleed_isln_valve       = find_dataref("laminar/B747/air/light/isln_valve")
 B747DR_light_bleed_apu_valve        = find_dataref("laminar/B747/air/light/apu_valve")
+-- the pack model's PACK RST SYS FAULT light (B747.55.xt.packs.lua)
+B747DR_light_pack_sys_fault         = find_dataref("laminar/B747/air/light/pack_sys_fault")
 
 simDR_gear_deploy_ratio             = find_dataref("sim/flightmodel2/gear/deploy_ratio")
 simDR_aircraft_altitude             = find_dataref("sim/cockpit2/gauges/indicators/altitude_ft_pilot")
@@ -1199,7 +1201,7 @@ function B747_annunciators()
     -- TEMPERATURE
     annun.b.temp_zone_reset = B747_ternary((B747DR_button_switch_position[37] < 0.05), 1, 0)
     annun.b.temp_aft_cargo_heat = 0
-    annun.b.temp_pack_reset = 0
+    annun.b.temp_pack_reset = B747DR_light_pack_sys_fault     -- a pack tripped (FCOM p.560)
 
     -- BLEED AIR
     -- VALVE lights: the valve moving or not where commanded (FCOM p.576)

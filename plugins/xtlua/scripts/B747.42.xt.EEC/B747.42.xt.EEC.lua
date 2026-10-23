@@ -257,6 +257,7 @@ B747DR_button_switch_position	= deferred_dataref("laminar/B747/button_switch/pos
 ]]
 --array positions 7,8,9,10
 B747DR_pack_ctrl_sel_pos		= deferred_dataref("laminar/B747/air/pack_ctrl/sel_dial_pos", "array[3]")
+B747DR_packs_operating			= find_dataref("laminar/B747/air/packs_operating")  -- the pack model (AIR-16)
 B747DR_nacelle_ai_valve_pos     = deferred_dataref("laminar/B747/antiice/nacelle/valve_pos", "array[4)")
 B747DR_TO_throttle				= deferred_dataref("laminar/B747/engines/thrustref_throttle", "number")
 B747DR_ap_FMA_autothrottle_mode	= deferred_dataref("laminar/B747/autopilot/FMA/autothrottle_mode", "number")

@@ -291,7 +291,7 @@ function M.inputs()
         alt = 0,                             -- pressure altitude, ft
         tat = 15,                            -- °C
         kias = 0,
-        packs_on = 3,                        -- packs whose selector is not OFF
+        packs_on = 3,                        -- packs operating (their valves open)
         nai = {false, false, false, false},  -- engine anti-ice valve open
         wai = false,                         -- wing anti-ice valve open
         lever = {0, 0, 0, 0},                -- forward thrust lever, 0 idle to 1 forward stop
