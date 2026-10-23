@@ -182,4 +182,49 @@ do
     T.check(all(o.approach, false), "idle: the P&W reverser does not")
 end
 
+-- alternate mode (FCOM p.876-877, p.900; ATA70_80 p.205-207): the corner
+-- point schedule without bleed adjustments, no limit at the maximum, LIM
+-- PROT, and the A/T rules
+T.near(E.lookup_max(PW.ga, 0), 1.51, 1e-9, "PW go-around EPR's corner point at sea level")
+T.near(E.lookup_max(PW.clb, 30000), 1.57, 1e-9, "PW climb EPR's corner point at 30,000 ft")
+T.near(E.lookup_max(GE.ga, 0), 107.3, 1e-9, "GE go-around N1's corner point at sea level (TAT 35)")
+do
+    local st, i = E.new(), E.inputs()
+    i.type, i.alt, i.tat, i.kias = "GE", 0, -10, 150
+    i.idle = {25, 25, 25, 25}
+    i.lever = {1, 1, 0.96 * 0.5, 0}
+    local o = E.update(st, i, DT)
+    local max = E.lookup(GE.ga, -10, 0)
+    T.near(o.max[1], max, 1e-9, "GE normal mode: max N1 at TAT -10")
+    T.near(o.command[1], max, 1e-9, "GE normal mode: full forward is the max N1")
+    T.check(not o.at_disconnect and not o.at_inhibit, "normal mode: no A/T disconnect")
+    i.altn = {true, false, false, false}
+    o = E.update(st, i, DT)
+    T.check(o.altn[1] and not o.altn[2], "ALTN: engine 1 in the alternate mode")
+    T.near(o.command[1], 107.3, 1e-9, "ALTN: full forward gives the corner point N1, above the max (overboost)")
+    T.near(o.max[1], max, 1e-9, "ALTN: the max N1 is still worked out")
+    T.check(o.lim_prot[1] and not o.lim_prot[2], ">ENG 1 LIM PROT: GE command above the max N1")
+    T.check(o.at_disconnect, "ALTN: the A/T disconnects when an EEC goes to the alternate mode")
+    T.check(o.at_inhibit, "ALTN: GE with some EECs in the alternate mode: no A/T")
+    o = E.update(st, i, DT)
+    T.check(not o.at_disconnect, "ALTN: the disconnect is the change only")
+    i.lever[1] = 0.96 * 0.5
+    o = E.update(st, i, DT)
+    T.check(o.command[1] > o.command[3], "ALTN: the same lever gives more than the normal mode")
+    T.check(not o.lim_prot[1], "no LIM PROT below the max")
+    i.altn = {true, true, true, true}
+    o = E.update(st, i, DT)
+    T.check(not o.at_inhibit, "ALTN: GE with all four EECs in the alternate mode can use the A/T again")
+    -- P&W: LIM PROT near the max, A/T only with all four in the normal mode
+    i.type, i.tat = "PW", 15
+    i.idle = {0.95, 0.95, 0.95, 0.95}
+    i.lever = {1, 1, 1, 1}
+    o = E.update(st, i, DT)
+    T.check(o.at_inhibit, "ALTN: P&W with any EEC in the alternate mode: no A/T")
+    T.check(o.lim_prot[1], ">ENG 1 LIM PROT: P&W command near the max EPR (corner day: at the max)")
+    i.altn = {false, false, false, false}
+    o = E.update(st, i, DT)
+    T.check(not o.at_inhibit and not o.lim_prot[1], "P&W: back in the normal mode")
+end
+
 T.done()

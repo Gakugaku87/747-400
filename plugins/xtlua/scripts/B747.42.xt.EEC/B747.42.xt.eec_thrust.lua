@@ -16,6 +16,7 @@ B747DR_eec_pseu_pri_gnd         = find_dataref("laminar/B747/gear/air_ground/pri
 simDR_eec_flap_handle           = find_dataref("sim/cockpit2/controls/flap_ratio")
 B747DR_eec_freighter            = find_dataref("laminar/B747/freighter")
 B747DR_eec_CAS_advisory         = find_dataref("laminar/B747/CAS/advisory_status")
+B747DR_eec_CAS_caution          = find_dataref("laminar/B747/CAS/caution_status")
 
 -- the lever's idle end commands less than any idle, so that the thrust
 -- control always comes back to X-Plane's idle there (the previous mapping's
@@ -36,9 +37,11 @@ local function minimum_idle_ratio(t)
     if t < 15 then return B747_rescale(-75.0, 1.00, 14.99, 1.07, t) end
     return B747_rescale(15.0, 1.071, 75.0, 1.14, t)
 end
--- EICAS advisory slots (laminar/B747/CAS/advisory_status)
+-- EICAS slots (laminar/B747/CAS/advisory_status, caution_status)
 local ADV_IDLE_DISAGREE = 223
 local ADV_LOW_IDLE = 309            -- ENG 1-4 LOW IDLE: 309-312
+local ADV_EEC_MODE = 313            -- ENG 1-4 EEC MODE: 313-316
+local CAUTION_LIM_PROT = 75         -- >ENG 1-4 LIM PROT: 75-78
 
 local eec_state = E.new()
 local eec_inputs = E.inputs()
@@ -84,6 +87,7 @@ function B747_eec_update()
         inp.lever[n] = B747DR_throttle[n - 1]
         inp.idle[n] = IDLE_COMMAND[inp.type]
         inp.reverser[n] = simDR_reverser_deploy_ratio[n - 1] > 0.01
+        inp.altn[n] = B747DR_button_switch_position[6 + n] < 0.5    -- EEC MODE switches: [7]-[10]
     end
     eec_out = E.update(eec_state, inp, dt)
 
@@ -91,8 +95,17 @@ function B747_eec_update()
     for n = 1, 4 do
         approach = approach or eec_out.approach[n]
         B747DR_eec_CAS_advisory[ADV_LOW_IDLE + n - 1] = flag(eec_out.low_idle[n])
+        B747DR_eec_CAS_advisory[ADV_EEC_MODE + n - 1] = flag(eec_out.altn[n])
+        B747DR_eec_CAS_caution[CAUTION_LIM_PROT + n - 1] = flag(eec_out.lim_prot[n])
     end
     B747DR_eec_CAS_advisory[ADV_IDLE_DISAGREE] = flag(eec_out.idle_disagree)
+    -- the A/T: off when an EEC goes to the alternate mode and while it may
+    -- not be used; EEC_status gates the A/T modes in throttle_management
+    if eec_out.at_disconnect or eec_out.at_inhibit then
+        if B747DR_autothrottle_fail == 0 then B747DR_autothrottle_fail = 1 end
+        if B747DR_autothrottle_active == 1 then B747DR_autothrottle_active = 0 end
+    end
+    if eec_out.at_inhibit then EEC_status = 1 else EEC_status = 0 end
     local ratio = APPROACH_IDLE_RATIO
     if not approach then ratio = minimum_idle_ratio(simDR_temperature) end
     if math.abs(simDR_engine_high_idle_ratio - ratio) > 0.0001 then simDR_engine_high_idle_ratio = ratio end

@@ -1021,14 +1021,8 @@ function throttle_management()
 		--fms_data["data"].crzalt = B747DR_altitude_dial
 	end]]--
 
-	--Disconnect A/T if any of the EEC buttons move from NORMAL to ALTERNATE
-	if (B747DR_button_switch_position[7] == 0 or B747DR_button_switch_position[8] == 0 or B747DR_button_switch_position[9] == 0 or B747DR_button_switch_position[10] == 0) and EEC_status == 0 then
-		B747DR_autothrottle_fail = 1
-		EEC_status = 1
-		B747DR_autothrottle_active = 0
-	elseif (B747DR_button_switch_position[7] == 1 and B747DR_button_switch_position[8] == 1 and B747DR_button_switch_position[9] == 1 and B747DR_button_switch_position[10] == 1) then
-		EEC_status = 0
-	end
+	--The A/T disconnect for the EEC alternate mode and EEC_status are
+	--B747.42.xt.eec_thrust.lua's (FCOM p.877)
 
 
 

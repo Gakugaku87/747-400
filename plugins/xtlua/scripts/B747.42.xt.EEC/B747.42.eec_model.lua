@@ -2,9 +2,10 @@
 -- the conditions (Max N1 for the CF6-80C2, Max EPR for the PW4056), the
 -- command the thrust lever asks for between idle and that maximum, so that
 -- full forward gives the maximum rated thrust in any phase (FCOM p.876),
--- and the idle selection. Logic and sources: docs/overhaul/notes/
--- ATA-70-80.md §4.1 and §4.4 (FCOM 7.20 p.873-878; ATA70_80 p.146-151 and
--- p.208-211 for the CF6; FCOM PI for the ratings).
+-- the alternate mode and the idle selection. Logic and sources:
+-- docs/overhaul/notes/ATA-70-80.md §4.1, §4.2 and §4.4 (FCOM 7.20
+-- p.873-878; ATA70_80 p.146-151 and p.202-211 for the CF6; FCOM PI for the
+-- ratings).
 -- B747.42.xt.eec_thrust.lua feeds it and gives the command to the engines'
 -- thrust control.
 --
@@ -38,6 +39,20 @@ M.TLA_STOP, M.TLA_TO, M.TLA_CLB = 50, 48, 35
 -- estimate). Minimum idle otherwise.
 M.APPROACH_HOLD_S = 5
 M.LANDING_FLAPS_DEG = 23            -- trailing edge flaps past 23° (ATA70_80 p.211)
+
+-- alternate mode (FCOM p.876-877; ATA70_80 p.202-207), selected with the
+-- EEC MODE switch (the sim has no EEC faults, so no automatic reversion).
+-- It does not limit thrust at the maximum: the command is a fixed schedule
+-- of lever angle and pressure altitude, as the CF6's hard reversionary mode
+-- that uses its corner point temperature and corrects for pressure only
+-- (ATA70_80 p.205, p.207): the rating at the TAT that gives the most thrust
+-- at that altitude, without the bleed adjustments. The same lever then
+-- gives at least normal-mode thrust, the maximum comes before full forward
+-- and full forward can overboost (FCOM p.877). P&W: no source, as the CF6;
+-- it keeps controlling EPR (the real one changes to N1; estimate).
+-- >ENG n LIM PROT (FCOM p.900): GE when the command passes the maximum
+-- rating, P&W when it comes near it (within LIM_PROT_EPR, estimate).
+M.LIM_PROT_EPR = 0.01
 
 -- FCOM PI tables, 3 packs on, anti-ice off. Rows by TAT (°C, warm to cold),
 -- columns by pressure altitude (ft); false where the table is blank (too
@@ -178,6 +193,28 @@ local function column(t, j, tat)
     return interp(xs, ys, tat)
 end
 
+-- the largest value of a table at a pressure altitude, whatever the TAT
+-- (the corner point of the flat rating)
+function M.lookup_max(t, alt)
+    local a = t.alt
+    local function col(j)
+        local m = nil
+        for i = 1, #t.tat do
+            local v = t.v[i][j]
+            if v and (m == nil or v > m) then m = v end
+        end
+        return m
+    end
+    if alt <= a[1] then return col(1) end
+    if alt >= a[#a] then return col(#a) end
+    for j = 2, #a do
+        if alt <= a[j] then
+            local v0, v1 = col(j - 1), col(j)
+            return v0 + (v1 - v0) * (alt - a[j - 1]) / (a[j] - a[j - 1])
+        end
+    end
+end
+
 -- a table's value at a TAT and pressure altitude (held at the ends)
 function M.lookup(t, tat, alt)
     local a = t.alt
@@ -222,11 +259,13 @@ function M.inputs()
         freighter = false,                   -- 405 or 570 (CON selects approach idle there)
         reverser = {false, false, false, false},   -- the engine's reverser not stowed
         at_approach = nil,                   -- {n} engine at approach idle; nil: as selected
+        altn = {false, false, false, false}, -- EEC MODE switch at ALTN
     }
 end
 
 function M.new()
-    return {approach = {false, false, false, false}, hold = {0, 0, 0, 0}}
+    return {approach = {false, false, false, false}, hold = {0, 0, 0, 0},
+        altn = {false, false, false, false}}
 end
 
 -- approach idle of each engine, and the idle messages: ENG n LOW IDLE
@@ -270,16 +309,37 @@ function M.update(s, inp, dt)
     local ga_alt = math.min(inp.alt, tables.ga.alt[#tables.ga.alt])
     local ga = M.lookup(tables.ga, inp.tat, ga_alt)
     local clb = M.lookup(tables.clb, inp.tat, inp.alt)
-    local out = {max = {}, command = {}, to_share = to_share, tla_full = tla_full}
+    -- the alternate mode's schedule: the corner point rating, no bleed adjustments
+    local altn_max = to_share * M.lookup_max(tables.ga, ga_alt) + (1 - to_share) * M.lookup_max(tables.clb, inp.alt)
+    local out = {max = {}, command = {}, altn = {}, lim_prot = {}, to_share = to_share, tla_full = tla_full,
+        at_disconnect = false}
+    local altn_count = 0
     for n = 1, 4 do
         local nai = inp.nai[n]
         local max = to_share * (ga + adjustment(tables.ga, inp, ga_alt, nai))
             + (1 - to_share) * (clb + adjustment(tables.clb, inp, inp.alt, nai))
         local tla = clamp(inp.lever[n], 0, 1) * M.TLA_STOP
+        local altn = inp.altn[n]
+        local top = max
+        if altn then top = math.max(altn_max, max) end
         local idle = math.min(inp.idle[n], max)
         out.max[n] = max
-        out.command[n] = idle + (max - idle) * clamp(tla / tla_full, 0, 1)
+        out.command[n] = idle + (top - idle) * clamp(tla / tla_full, 0, 1)
+        out.altn[n] = altn
+        if inp.type == "GE" then
+            out.lim_prot[n] = altn and out.command[n] > max
+        else
+            out.lim_prot[n] = altn and out.command[n] > max - M.LIM_PROT_EPR
+        end
+        -- the A/T disconnects when an EEC goes to the alternate mode (FCOM p.877)
+        if altn and not s.altn[n] then out.at_disconnect = true end
+        s.altn[n] = altn
+        if altn then altn_count = altn_count + 1 end
     end
+    -- the A/T can be used again: GE with all four EECs in the alternate
+    -- mode, P&W with all four back in the normal mode (FCOM p.877)
+    if inp.type == "GE" then out.at_inhibit = altn_count > 0 and altn_count < 4
+    else out.at_inhibit = altn_count > 0 end
     idle_selection(s, inp, dt, out)
     return out
 end

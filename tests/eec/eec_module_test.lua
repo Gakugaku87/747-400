@@ -21,7 +21,9 @@ local function get(name, i) return rt:get(name, i) end
 local ENG = "laminar/B747/engines/"
 local USER = "sim/cockpit2/engine/actuators/throttle_ratio"
 
--- P&W at sea level, 15 °C, three packs on, on the ground
+-- P&W at sea level, 15 °C, three packs on, on the ground, the EEC MODE
+-- switches at NORM
+for i = 7, 10 do rt:set("laminar/B747/button_switch/position", i, 1) end
 rt:set("laminar/B747/engines/type", 0)
 rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("sim/flightmodel2/position/pressure_altitude", 0)
@@ -88,6 +90,35 @@ rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
 rt:set("sim/cockpit2/controls/flap_ratio", 0)
 frames(6)
 T.near(get(IDLE), 1.071, 0.001, "idle: minimum idle on the ground (15 °C), 5 s after touchdown")
+
+-- alternate mode: EEC MODE 2 to ALTN with the A/T on
+local CAUTION = "laminar/B747/CAS/caution_status"
+rt:set("sim/flightmodel2/position/pressure_altitude", 0)
+rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 15)
+for i = 0, 3 do rt:set(USER, i, 1.0) end
+frames(3)
+rt:set("laminar/B747/engines/autothrottle_active", 1)
+rt:set("laminar/B747/engines/autothrottle_fail", 0)
+frames(0.2)
+T.equal(get(ADV, 314), 0, "ALTN: no ENG 2 EEC MODE in the normal mode")
+T.equal(get("laminar/B747/engines/autothrottle_fail"), 0, "ALTN: the A/T is not touched in the normal mode")
+rt:set("laminar/B747/button_switch/position", 8, 0)
+frames(0.2)
+T.equal(get(ADV, 314), 1, "ALTN: ENG 2 EEC MODE")
+T.equal(get(ADV, 313), 0, "ALTN: no ENG 1 EEC MODE")
+T.equal(get("laminar/B747/engines/autothrottle_fail"), 1, "ALTN: the A/T disconnects")
+T.equal(get("laminar/B747/engines/autothrottle_active"), 0, "ALTN: the A/T is off")
+T.equal(get(CAUTION, 76), 1, ">ENG 2 LIM PROT: P&W full forward in the alternate mode")
+T.equal(get(CAUTION, 75), 0, "no >ENG 1 LIM PROT in the normal mode")
+rt:set("laminar/B747/engines/autothrottle_fail", 0)       -- the crew re-arms the A/T
+frames(0.2)
+T.equal(get("laminar/B747/engines/autothrottle_fail"), 1, "ALTN: P&W A/T not usable while an EEC is in the alternate mode")
+rt:set("laminar/B747/button_switch/position", 8, 1)
+rt:set("laminar/B747/engines/autothrottle_fail", 0)
+frames(0.2)
+T.equal(get(ADV, 314), 0, "ALTN: back in the normal mode")
+T.equal(get(CAUTION, 76), 0, "no LIM PROT in the normal mode")
+T.equal(get("laminar/B747/engines/autothrottle_fail"), 0, "the A/T can be armed again with all EECs normal")
 
 -- GE at sea level, 15 °C
 rt:set("laminar/B747/simconfig", '{"PLANE":{"engines":"CF6-80C2B1F"}}')
