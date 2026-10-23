@@ -1,10 +1,12 @@
 -- 747-400 engine indications without X-Plane: the colour of each engine's
 -- EGT indication (white, amber, red), the amber inhibit after a TO/GA push
--- and the EGT start limit line; the oil pressure, temperature and quantity
+-- and the EGT start limit line; N1, N2 and N3 red at their red lines and the
+-- P&W EPR tape red at max EPR; the oil pressure, temperature and quantity
 -- with their colours and messages; the vibration and its source. Logic and
 -- sources: docs/overhaul/notes/ATA-70-80.md §3.2, §3.4, §4.9-§4.11 (FCOM
--- 7.10, 7.11, 7.20 p.837-838, p.846-850, p.872, p.879, p.890, p.901;
--- ATA70_80 p.356-357, p.395, p.522, p.524 for the CF6).
+-- 7.10, 7.11, 7.20 p.833-838, p.843-850, p.872-873, p.879, p.890, p.901;
+-- ATA70_80 p.356-357, p.395, p.522, p.524 for the CF6). The red boxes are
+-- B747.40.exceedance_model.lua.
 -- B747.40.xt.engine_display.lua feeds it and writes the panel's datarefs.
 --
 --   local D = B747_engine_display_model
@@ -68,6 +70,20 @@ M.OIL_QTY_L = {33, 37}
 M.OIL_GULP_L = {7, 11}
 M.OIL_GULP_N1 = 15
 M.QUARTS_PER_LITRE = 1 / 0.946353
+-- Operating limits (red lines) of N1, N2 and N3, % (FCOM p.833-836,
+-- p.843-844, p.873): the readout and the tape turn red there. CF6-80C2:
+-- ATA70_80 p.395. PW4056 and RB211: no source, the panel's previous values
+-- (the RB211's N3 tape 101.5 %; its readout used 111.4 %, P&W's).
+M.RPM_RED = {
+    GE = {n1 = 117.5, n2 = 112.5},
+    PW = {n1 = 111.4, n2 = 111.4},
+    RR = {n1 = 111.4, n2 = 109.5, n3 = 101.5},
+}
+-- The P&W EPR tape turns red when max EPR is reached (FCOM p.834, p.873);
+-- the readout stays white (p.833). The EEC holds EPR within 0.002 of max EPR
+-- at the forward stop, so red from 0.003 below it and white again 0.01
+-- below (estimate). RR as P&W (no source).
+M.EPR_RED_BELOW, M.EPR_WHITE_BELOW = 0.003, 0.01
 -- Vibration (FCOM p.849-850): the source with the highest vibration and its
 -- level; BB, the average, when the source is unknown (nothing here makes it
 -- unknown). P&W: N1, N2; CF6: FAN, LPT, N2 (RR as P&W, no source). Estimate:
@@ -96,8 +112,11 @@ function M.inputs()
         starting = four(false),             -- a start under way (the start model's phase is not off)
         running = four(false),              -- the engine runs (for the P&W ten minutes)
         toga = false,                       -- the TO/GA switch was pushed this frame
-        n1 = four(0),                       -- the displayed N1 and N2, %
+        n1 = four(0),                       -- the displayed N1, N2 and N3 (RB211), %
         n2 = four(0),
+        n3 = four(0),
+        epr = four(1),                      -- the displayed EPR and the EEC's max EPR (0: none)
+        epr_max = four(0),
         oil_psi = four(0),                  -- X-Plane's oil pressure, psi
         oil_degc = four(15),                -- X-Plane's oil temperature, °C
         oil_ratio = four(1),                -- X-Plane's oil quantity ratio
@@ -113,6 +132,7 @@ function M.new(random)
     s.press_spread, s.temp_spread, s.qty_l, s.gulp_l = {}, {}, {}, {}
     s.vib_units = {}                        -- [n][source name]: level at 100 % of the rotor
     s.switch = four(true)                   -- the CF6's low oil pressure switch closed
+    s.epr_red = four(false)
     for n = 1, 4 do
         s.press_spread[n] = draw(M.OIL_PRESS_SPREAD, random)
         s.temp_spread[n] = draw(M.OIL_TEMP_SPREAD, random)
@@ -126,8 +146,24 @@ function M.new(random)
         oil_psi = four(0), oil_red = four(false), oil_amber = four(false), oil_press_msg = four(false),
         oil_degc = four(15), oil_temp_msg = four(false),
         oil_qty = four(0), oil_qty_magenta = four(false),
-        vib = four(0), vib_source = four(0)}
+        vib = four(0), vib_source = four(0),
+        n1_red = four(false), n2_red = four(false), n3_red = four(false), epr_red = four(false)}
     return s
+end
+
+-- N1, N2 and N3 at their red lines; the P&W EPR tape at max EPR
+local function rpm(s, inp, out)
+    local lim = M.RPM_RED[inp.type] or M.RPM_RED.PW
+    for n = 1, 4 do
+        out.n1_red[n] = inp.n1[n] >= lim.n1
+        out.n2_red[n] = inp.n2[n] >= lim.n2
+        out.n3_red[n] = lim.n3 ~= nil and inp.n3[n] >= lim.n3
+        local max = inp.epr_max[n]
+        if inp.type == "GE" or max <= 0 then s.epr_red[n] = false
+        elseif inp.epr[n] >= max - M.EPR_RED_BELOW then s.epr_red[n] = true
+        elseif inp.epr[n] < max - M.EPR_WHITE_BELOW then s.epr_red[n] = false end
+        out.epr_red[n] = s.epr_red[n]
+    end
 end
 
 -- oil pressure, temperature and quantity (FCOM p.846-849, p.890, p.901)
@@ -207,6 +243,7 @@ function M.update(s, inp, dt)
     end
     oil(s, inp, out)
     vibration(s, inp, out)
+    rpm(s, inp, out)
     return out
 end
 

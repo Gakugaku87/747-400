@@ -243,4 +243,54 @@ do
     T.equal(D.VIB_SOURCES.GE[o.vib_source[1]], "FAN", "CF6: source FAN")
 end
 
+-- N1, N2 and N3 red at their operating limits (FCOM p.833-836, p.843-844;
+-- CF6: ATA70_80 p.395 N1 117.5 %, N2 112.5 %)
+T.equal(D.RPM_RED.GE.n1, 117.5, "CF6 N1 red line 117.5 %")
+T.equal(D.RPM_RED.GE.n2, 112.5, "CF6 N2 red line 112.5 %")
+do
+    local s, inp = D.new(fixed(0)), D.inputs()
+    inp.type = "GE"
+    inp.n1 = {117.4, 117.5, 100, 100}
+    inp.n2 = {100, 100, 112.5, 112.4}
+    local o = D.update(s, inp, DT)
+    T.check(not o.n1_red[1] and o.n1_red[2], "CF6: N1 red from 117.5 %")
+    T.check(o.n2_red[3] and not o.n2_red[4], "CF6: N2 red from 112.5 %")
+    T.check(not o.n3_red[1], "CF6: no N3")
+    inp.type = "PW"
+    inp.n1 = {111.4, 111.3, 100, 100}
+    inp.n2 = {100, 100, 111.4, 111.3}
+    o = D.update(s, inp, DT)
+    T.check(o.n1_red[1] and not o.n1_red[2], "P&W: N1 red from 111.4 % (the panel's previous value)")
+    T.check(o.n2_red[3] and not o.n2_red[4], "P&W: N2 red from 111.4 %")
+    inp.type = "RR"
+    inp.n2 = {109.5, 100, 100, 100}
+    inp.n3 = {100, 101.5, 101.4, 100}
+    o = D.update(s, inp, DT)
+    T.check(o.n2_red[1], "RB211: N2 red from 109.5 %")
+    T.check(o.n3_red[2] and not o.n3_red[3], "RB211: N3 red from 101.5 %")
+end
+
+-- the P&W EPR tape red when max EPR is reached (FCOM p.834, p.873), with the
+-- EEC holding EPR within 0.002 of it; no max EPR (0): never red
+do
+    local s, inp = D.new(fixed(0)), D.inputs()
+    inp.epr_max = {1.50, 1.50, 1.50, 0}
+    inp.epr = {1.40, 1.498, 1.51, 1.60}
+    local o = D.update(s, inp, DT)
+    T.check(not o.epr_red[1], "EPR 1.40 below max 1.50: white")
+    T.check(o.epr_red[2], "EPR 1.498 at max (within the EEC's band): red")
+    T.check(o.epr_red[3], "EPR above max (alternate mode): red")
+    T.check(not o.epr_red[4], "no max EPR: not red")
+    inp.epr[2] = 1.494
+    o = D.update(s, inp, DT)
+    T.check(o.epr_red[2], "1.494: still red (white again only 0.01 below)")
+    inp.epr[2] = 1.489
+    o = D.update(s, inp, DT)
+    T.check(not o.epr_red[2], "1.489: white")
+    inp.type = "GE"
+    inp.epr = {1.6, 1.6, 1.6, 1.6}
+    o = D.update(s, inp, DT)
+    T.check(not o.epr_red[1], "CF6: no EPR")
+end
+
 T.done()

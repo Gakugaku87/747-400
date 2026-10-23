@@ -1,6 +1,6 @@
 {
   "name": "s11_takeoff_thrust",
-  "description": "EEC の推力制御（2-3 段 2）の離陸での確認。RJAA 34L でエンジン運転中に始め、フラップ 10 でスラスト・レバーを最前方にして離陸滑走し、EPR が最大定格（離陸の範囲）まで行き過ぎずに上がって保たれること（FCOM p.875-876：EEC は燃料流量を調整して実際の値を指令に合わせる）、RPM LIM が出ないことを見る。80 kt を超えたら離陸中止（レバー idle とブレーキ）。低いマッハ数での推力制御の確かめ。機体を読み直す。",
+  "description": "EEC の推力制御（2-3 段 2）の離陸での確認。RJAA 34L でエンジン運転中に始め、フラップ 10 でスラスト・レバーを最前方にして離陸滑走し、EPR が最大定格（離陸の範囲）まで行き過ぎずに上がって保たれること（FCOM p.875-876：EEC は燃料流量を調整して実際の値を指令に合わせる）、RPM LIM が出ないことを見る。80 kt を超えたら離陸中止（レバー idle とブレーキ）。低いマッハ数での推力制御の確かめ。全開で最大 EPR に届くと EPR の帯が赤になり、アイドルで白に戻ること（FCOM p.873）も見る。機体を読み直す。",
   "reload": true,
   "flight": {
     "runway_start": { "airport_id": "RJAA", "runway": "34L" },
@@ -59,6 +59,8 @@
     { "do": "check", "note": "N2 は赤線（P&W 111.4 %）の下", "dref": "laminar/B747/engines/display_N2[0]", "op": "<", "value": 111.4 },
     { "do": "check", "note": "EGT は離陸限界（赤）に届かない", "dref": "laminar/B747/engines/EGT/red_on[0]", "op": "==", "value": 0 },
     { "do": "check", "note": "TO/GA を押して 5 分の間は琥珀にならない（FCOM p.872）", "dref": "laminar/B747/engines/EGT/amber_on[0]", "op": "==", "value": 0 },
+    { "do": "wait", "note": "全開で最大 EPR に届くと EPR の帯が赤（FCOM p.834、p.873）", "dref": "laminar/B747/engines/EPR/red_on[0]", "op": "==", "value": 1, "timeout": 5 },
+    { "do": "check", "note": "N1 は赤線の下で白、枠も白", "dref": "laminar/B747/engines/N1/box_red[0]", "op": "==", "value": 0 },
     { "do": "view", "name": "eicas" },
     { "do": "shot", "name": "eicas_takeoff_80kt" },
 
@@ -66,6 +68,7 @@
     { "do": "set", "note": "スラスト・レバーを idle", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
     { "do": "set", "note": "ブレーキ", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 1 },
     { "do": "wait", "note": "止まる", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "<", "value": 20, "timeout": 60 },
+    { "do": "wait", "note": "アイドルで EPR の帯は白に戻る（最大 EPR の 0.01 下より下）", "dref": "laminar/B747/engines/EPR/red_on[0]", "op": "==", "value": 0, "timeout": 10 },
     { "do": "cas", "note": "終わり" },
     { "do": "record_stop" }
   ]

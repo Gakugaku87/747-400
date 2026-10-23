@@ -3,26 +3,55 @@
 -- temperature and quantity, FUEL CONTROL, the start phases and the TO/GA
 -- switch, and writes the flags the upper EICAS draws the EGT with
 -- (laminar/B747/engines/EGT/white_on, amber_on, red_on, start_limit_on),
--- the secondary EICAS's oil and vibration (oil_press_psi and
--- EICAS2_oil_press_status, oil_temp_degC, oil_qty_liters (US quarts for the
--- CF6), vibration) and ENG n OIL PRESS, ENG n OIL TEMP.
+-- the red readouts, tapes and boxes of N1, EGT, N2, N3 and the P&W EPR tape
+-- (N1/red_on, N1/box_red, EGT/box_red, N2/..., N3/..., EPR/red_on; the boxes
+-- from the exceedance model, B747.40.exceedance_model.lua, with the EICAS
+-- CANC and RCL switches), the secondary EICAS's oil and vibration
+-- (oil_press_psi and EICAS2_oil_press_status, oil_temp_degC, oil_qty_liters
+-- (US quarts for the CF6), vibration) and ENG n OIL PRESS, ENG n OIL TEMP.
 -- B747.40.xt.engines.lua loads it after the start glue and calls
 -- B747_engine_display() every frame (after_physics) and
 -- B747_engine_display_toga() from its TO/GA command.
 dofile("B747.40.engine_display_model.lua")
+dofile("B747.40.exceedance_model.lua")
 local D = B747_engine_display_model
+local X = B747_exceedance_model
 
 B747DR_engines_display_GE_EGT   = find_dataref("laminar/B747/engines/display_GE_EGT")
+B747DR_engines_display_N3       = find_dataref("laminar/B747/engines/display_N3")
+B747DR_engines_display_EPR      = find_dataref("laminar/B747/engines/display_EPR")
+B747DR_engines_display_EPR_max  = find_dataref("laminar/B747/engines/display_EPR_max")
+B747DR_engines_canc_count       = find_dataref("laminar/B747/CAS/canc_count")
+B747DR_engines_rcl_count        = find_dataref("laminar/B747/CAS/rcl_count")
 B747DR_EGT_red_on               = find_dataref("laminar/B747/engines/EGT/red_on")
 B747DR_EGT_start_limit_on       = find_dataref("laminar/B747/engines/EGT/start_limit_on")
+B747DR_EGT_box_red              = find_dataref("laminar/B747/engines/EGT/box_red")
+B747DR_N1_red_on                = find_dataref("laminar/B747/engines/N1/red_on")
+B747DR_N1_box_red               = find_dataref("laminar/B747/engines/N1/box_red")
+B747DR_N2_red_on                = find_dataref("laminar/B747/engines/N2/red_on")
+B747DR_N2_box_red               = find_dataref("laminar/B747/engines/N2/box_red")
+B747DR_N3_red_on                = find_dataref("laminar/B747/engines/N3/red_on")
+B747DR_N3_box_red               = find_dataref("laminar/B747/engines/N3/box_red")
+B747DR_EPR_red_on               = find_dataref("laminar/B747/engines/EPR/red_on")
 
 local ADV_OIL_TEMP = 118            -- ENG 1-4 OIL TEMP: 118-121
 local ADV_OIL_PRESS = 317           -- ENG 1-4 OIL PRESS: 317-320
 
 local display_state = D.new()
 local display_inputs = D.inputs()
+local exceed_state = X.new()
+local exceed_inputs = X.inputs()
 local toga_pushed = false
+local counts = {}                   -- the CANC and RCL push counters as last seen
 local TYPES = {[0] = "PW", [1] = "GE", [2] = "RR"}
+
+-- pushes of a counter since the last frame (none at the first look)
+local function pushes(key, value)
+    local last = counts[key]
+    counts[key] = value
+    if last == nil or value <= last then return 0 end
+    return value - last
+end
 
 local function flag(v)
     if v then return 1 end
@@ -36,6 +65,7 @@ end
 
 function B747_engine_display_flight_start()
     display_state = D.new()
+    exceed_state = X.new()          -- a new flight: no stored exceedances
     toga_pushed = false
 end
 
@@ -56,6 +86,9 @@ function B747_engine_display()
         inp.running[n] = simDR_engine_running[i] == 1
         inp.n1[n] = B747DR_display_N1[i]
         inp.n2[n] = B747DR_display_N2[i]
+        inp.n3[n] = B747DR_engines_display_N3[i]
+        inp.epr[n] = B747DR_engines_display_EPR[i]
+        inp.epr_max[n] = B747DR_engines_display_EPR_max[i]
         inp.oil_psi[n] = simDR_engine_oil_pressure[i]
         inp.oil_degc[n] = simDR_engine_oil_temp[i]
         inp.oil_ratio[n] = simDR_engine_oil_qty_ratio[i]
@@ -64,12 +97,28 @@ function B747_engine_display()
     inp.toga = toga_pushed
     toga_pushed = false
     local out = D.update(display_state, inp, SIM_PERIOD)
+    local x = exceed_inputs
+    x.type = inp.type
+    x.cancel = pushes("cancel", B747DR_engines_canc_count)
+    x.recall = pushes("recall", B747DR_engines_rcl_count)
+    for n = 1, 4 do
+        x.red.n1[n], x.red.egt[n], x.red.n2[n], x.red.n3[n] = out.n1_red[n], out.red[n], out.n2_red[n], out.n3_red[n]
+    end
+    local xo = X.update(exceed_state, x, SIM_PERIOD)
     for n = 1, 4 do
         local i = n - 1
         put(B747DR_EGT_white_on, i, flag(out.white[n]))
         put(B747DR_EGT_amber_on, i, flag(out.amber[n]))
         put(B747DR_EGT_red_on, i, flag(out.red[n]))
         put(B747DR_EGT_start_limit_on, i, flag(out.start_limit[n]))
+        put(B747DR_EGT_box_red, i, flag(xo.box_red.egt[n]))
+        put(B747DR_N1_red_on, i, flag(xo.red.n1[n]))
+        put(B747DR_N1_box_red, i, flag(xo.box_red.n1[n]))
+        put(B747DR_N2_red_on, i, flag(xo.red.n2[n]))       -- with the CF6's 20 s hold
+        put(B747DR_N2_box_red, i, flag(xo.box_red.n2[n]))
+        put(B747DR_N3_red_on, i, flag(xo.red.n3[n]))
+        put(B747DR_N3_box_red, i, flag(xo.box_red.n3[n]))
+        put(B747DR_EPR_red_on, i, flag(out.epr_red[n]))
         -- the amber band (the continuous limit) is always shown (FCOM p.838)
         put(B747DR_EGT_amber_inhibit, i, 0)
         B747DR_engine_oil_press_psi[i] = out.oil_psi[n]

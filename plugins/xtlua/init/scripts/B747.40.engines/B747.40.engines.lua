@@ -85,6 +85,15 @@ B747DR_EGT_amber_on                 = deferred_dataref("laminar/B747/engines/EGT
 B747DR_EGT_white_on                 = deferred_dataref("laminar/B747/engines/EGT/white_on", "array[4)")
 B747DR_EGT_red_on                   = deferred_dataref("laminar/B747/engines/EGT/red_on", "array[4]")
 B747DR_EGT_start_limit_on           = deferred_dataref("laminar/B747/engines/EGT/start_limit_on", "array[4]")
+-- the red readouts and tapes and the red boxes (2-3 step 3, B747.40.xt.engine_display.lua)
+B747DR_EGT_box_red                  = deferred_dataref("laminar/B747/engines/EGT/box_red", "array[4]")
+B747DR_N1_red_on                    = deferred_dataref("laminar/B747/engines/N1/red_on", "array[4]")
+B747DR_N1_box_red                   = deferred_dataref("laminar/B747/engines/N1/box_red", "array[4]")
+B747DR_N2_red_on                    = deferred_dataref("laminar/B747/engines/N2/red_on", "array[4]")
+B747DR_N2_box_red                   = deferred_dataref("laminar/B747/engines/N2/box_red", "array[4]")
+B747DR_N3_red_on                    = deferred_dataref("laminar/B747/engines/N3/red_on", "array[4]")
+B747DR_N3_box_red                   = deferred_dataref("laminar/B747/engines/N3/box_red", "array[4]")
+B747DR_EPR_red_on                   = deferred_dataref("laminar/B747/engines/EPR/red_on", "array[4]")
 
 B747DR_init_engines_CD              = deferred_dataref("laminar/B747/engines/init_CD", "number")
 
