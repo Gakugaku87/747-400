@@ -63,6 +63,10 @@ end
 local B747_hold_rev_on_engine		= {0, 0, 0, 0}
 local B747_hold_rev_on_all			= 0
 local B747_rev_held_all             = false    -- the all-engine reverse command asks, until cancelled (B747_reverse_asked)
+-- an engine's reverse command let go: its reverse lever at reverse idle, the
+-- reverser out, until the thrust levers come forward (B747_prop_mode)
+local B747_rev_idle_engine          = {[0] = false, false, false, false}
+local REV_IDLE                      = -0.01    -- X-Plane's throttle_jet_rev_ratio at reverse idle (as canx_revHold)
 
 --local B747_igniter_status = {0, 0, 0, 0}
 
@@ -347,8 +351,9 @@ function B747_thrust_rev_hold_max_1_CMDhandler(phase, duration)
 		
 		if B747_hold_rev_on_engine[0] == 1 then
 			--simDR_prop_mode[0] = 1														
-			simDR_engine_throttle_jet[0] = 0.0
+			simDR_engine_throttle_jet[0] = REV_IDLE
 			B747_hold_rev_on_engine[0] = 0
+			B747_rev_idle_engine[0] = true
 		end
 					
     end
@@ -377,8 +382,9 @@ function B747_thrust_rev_hold_max_2_CMDhandler(phase, duration)
 		
 		if B747_hold_rev_on_engine[1] == 1 then
 			--simDR_prop_mode[1] = 1														
-			simDR_engine_throttle_jet[1] = 0.0
+			simDR_engine_throttle_jet[1] = REV_IDLE
 			B747_hold_rev_on_engine[1] = 0
+			B747_rev_idle_engine[1] = true
 		end
 					
     end
@@ -406,8 +412,9 @@ function B747_thrust_rev_hold_max_3_CMDhandler(phase, duration)
 		
 		if B747_hold_rev_on_engine[2] == 1 then
 			--simDR_prop_mode[2] = 1														
-			simDR_engine_throttle_jet[2] = 0.0
+			simDR_engine_throttle_jet[2] = REV_IDLE
 			B747_hold_rev_on_engine[2] = 0
+			B747_rev_idle_engine[2] = true
 		end
 					
     end
@@ -437,8 +444,9 @@ function B747_thrust_rev_hold_max_4_CMDhandler(phase, duration)
 		
 		if B747_hold_rev_on_engine[3] == 1 then
 			--simDR_prop_mode[3] = 1														
-			simDR_engine_throttle_jet[3] = 0.0
+			simDR_engine_throttle_jet[3] = REV_IDLE
 			B747_hold_rev_on_engine[3] = 0
+			B747_rev_idle_engine[3] = true
 		end
 					
     end
@@ -446,6 +454,7 @@ function B747_thrust_rev_hold_max_4_CMDhandler(phase, duration)
 end
 function canx_rev()
      simDR_engine_throttle_jet_all = 0.0
+     for e = 0, 3 do B747_rev_idle_engine[e] = false end
 
      B747_hold_rev_on_all = 0
      B747_rev_held_all = false
@@ -466,7 +475,7 @@ end
 -- held reverse command), for ENG n REVERSER in the reverser model
 -- (B747.40.xt.reverser.lua) even while it keeps an unpowered reverser in
 function B747_reverse_asked(i)
-    return callEngineReverse[i] == 1 or B747_hold_rev_on_engine[i] == 1 or B747_rev_held_all
+    return callEngineReverse[i] == 1 or B747_hold_rev_on_engine[i] == 1 or B747_rev_held_all or B747_rev_idle_engine[i]
 end
 
 function B747_thrust_rev_hold_max_all_CMDhandler(phase, duration)
@@ -510,19 +519,18 @@ function B747_thrust_rev_hold_max_all_CMDhandler(phase, duration)
 		
 	end		
 	
-	--[[if phase == 2 then
-		
-		if B747_hold_rev_on_all == 1 then
-			--simDR_prop_mode[0] = 1													
-			--simDR_prop_mode[1] = 1													
-			--simDR_prop_mode[2] = 1													
-			--simDR_prop_mode[3] = 1	
-            --print("canx rev")	
-			simDR_engine_throttle_jet_all = -0.01
-            run_after_time(canx_revHold,5)
+	-- let go: the reverse levers back to reverse idle (2026-10-25 the user;
+	-- upstream left full reverse on until 65 kt), the reversers out until the
+	-- thrust levers come forward (B747_prop_mode); as above, not on an engine
+	-- whose reverser cannot deploy (X-Plane would start moving it)
+	if phase == 2 and B747_rev_held_all then
+		for e = 0, 3 do
+			if B747_reverser_can_deploy(e) then simDR_engine_throttle_jet[e] = REV_IDLE end
 		end
-					
-    end]]--
+		B747_hold_rev_on_all = 0
+		if is_timer_scheduled(canx_revHold) then stop_timer(canx_revHold) end
+		if is_timer_scheduled(canx_rev) then stop_timer(canx_rev) end
+	end
     
 end
 
@@ -772,6 +780,7 @@ function B747_prop_mode()
        if clearingReverse then
         simDR_prop_mode[i] = 1
         callEngineReverse[i]=0
+        B747_rev_idle_engine[i] = false
       -- elseif callEngineReverse[i]==0 then 
         --    simDR_prop_mode[i] = 1
          --   print("do clear prop mode "..i.." with "..B747DR_display_N1[i])
@@ -1137,13 +1146,6 @@ end
 
 
 
-function B747_engines_monitor_reverse()
-    --print("B747_engines_monitor_reverse"..simDR_ind_airspeed_kts_pilot.." "..B747_hold_rev_on_all)
-    if simDR_ind_airspeed_kts_pilot<65 and B747_hold_rev_on_all==1 then
-        run_after_time(canx_revHold, 5.0) --this timer gets cancelled while B747_hold_rev_on_all is being set to 1 
-        B747_hold_rev_on_all=0
-    end
-end
 
 
 --*************************************************************************************--
@@ -1209,8 +1211,6 @@ function after_physics()
     B747_engines_EICAS_msg()
 
     B747_engines_monitor_AI()
-    
-    B747_engines_monitor_reverse()
 end
 
 --function after_replay() end
