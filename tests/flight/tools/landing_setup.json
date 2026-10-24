@@ -1,0 +1,35 @@
+{
+  "name": "landing_rjaa34l",
+  "description": "tests/flight/tools/landing.sh の始め。RJAA 34L の延長線上、滑走路端の 22 NM 手前で 3,000 ft・190 kt の空中開始（機体を読み直す）。A/P CMD L、ALT HOLD、HDG SEL 337、A/T の SPD 190 kt。続きの進入・着陸は landing.sh が行う。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.427007, "longitude": 140.618716, "elevation_in_meters": 914.4, "heading_true": 329.6, "speed_in_meters_per_second": 97.7 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 15, "note": "空中開始の揺れが収まるのを待つ" },
+    { "do": "set", "note": "MCP 高度 3,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 3000 },
+    { "do": "set", "note": "MCP 方位 337（34L の LOC の磁方位）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 337 },
+    { "do": "set", "note": "MCP 速度 190 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 190 },
+    { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "note": "A/P のサーボが入る", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "cmd", "note": "ALT HOLD", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "snapshot", "note": "開始", "drefs": [ "sim/aircraft/view/acf_relative_path", "laminar/B747/engines/type",
+      "sim/flightmodel/weight/m_total", "laminar/B747/gauges/indicators/airspeed_kts_pilot",
+      "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", "laminar/B747/autopilot/servos_on",
+      "laminar/B747/flt_ctrls/speedbrake_lever", "sim/flightmodel/position/magnetic_variation" ] },
+    { "do": "cas", "note": "開始" }
+  ]
+}
