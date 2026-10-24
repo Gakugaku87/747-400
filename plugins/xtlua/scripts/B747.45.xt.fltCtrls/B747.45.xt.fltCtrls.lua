@@ -89,7 +89,7 @@ B747DR_ELEC_BATT                = find_dataref("sim/cockpit/electrical/battery_a
 -- the yaw dampers (B747_yaw_damper): the FCE power supplies' buses, the IRUs, the failures
 B747DR_yd_bus_stby              = find_dataref("laminar/B747/electrical/bus/stby_main")
 B747DR_yd_bus_bat               = find_dataref("laminar/B747/electrical/bus/bat_main")
-B747DR_yd_iru_status            = find_dataref("laminar/B747/flt_mgmt/iru/status")
+B747DR_yd_iru_att               = find_dataref("laminar/B747/irs/att_valid")
 B747DR_yd_fail                  = find_dataref("laminar/B747/flt_ctrls/fail/yaw_damper")
 -- crazytimtimtim end
 --*************************************************************************************--
@@ -644,8 +644,10 @@ end
 -- hydraulics: the hydraulics module (no INOP for those, ATA27 p.40). 4-1
 -- step 4
 local function yd_iru_valid()
+    -- an IRU's attitude: NAV, or ATT after its 30 s (the navigation sensors
+    -- module, B747.34.xt.irs.lua)
     for i = 0, 2 do
-        if B747DR_yd_iru_status[i] == 2 and B747DR_IRS_dial_pos[i] >= 2 then return true end
+        if B747DR_yd_iru_att[i] > 0.5 then return true end
     end
     return false
 end

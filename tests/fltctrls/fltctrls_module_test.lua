@@ -403,30 +403,24 @@ T.near(get(LEVER), 0.333, 0.001, "2 s later: snapped to flaps 5")
 -- aligned in NAV or ATT, no fault; otherwise INOP and >YAW DAMPER UPR, LWR
 -- (FCOM p.931, p.958)
 local YD_SW = "laminar/B747/button_switch/position"
-local IRU = "laminar/B747/flt_mgmt/iru/status"
-local IRU_SEL = "laminar/B747/flt_mgmt/iru/mode_sel_dial_pos"
+-- (the IRUs' attitude: the navigation sensors module, laminar/B747/irs/att_valid)
+local IRU_ATT = "laminar/B747/irs/att_valid"
 local UPR, LWR = "laminar/B747/flt_ctrls/yaw_damper_upr_on", "laminar/B747/flt_ctrls/yaw_damper_lwr_on"
 local YD_FAIL = "laminar/B747/flt_ctrls/fail/yaw_damper"
 rt:set(YD_SW, 82, 1)
 rt:set(YD_SW, 83, 1)
 rt:set("laminar/B747/electrical/bus/stby_main", 1)
 rt:set("laminar/B747/electrical/bus/bat_main", 1)
-for i = 0, 2 do
-    rt:set(IRU, i, 1)
-    rt:set(IRU_SEL, i, 2)
-end
+for i = 0, 2 do rt:set(IRU_ATT, i, 0) end
 frames(0.2)
 T.equal(get(UPR), 0, "IRUs aligning: upper yaw damper inoperative")
 T.equal(get(ADVISORY, 301), 1, ">YAW DAMPER UPR")
 T.equal(get(ADVISORY, 300), 1, ">YAW DAMPER LWR")
-rt:set(IRU, 1, 2)
+rt:set(IRU_ATT, 1, 1)
 frames(0.2)
-T.equal(get(UPR), 1, "an IRU aligned in NAV: upper on")
+T.equal(get(UPR), 1, "an IRU's attitude (NAV, or ATT after its 30 s): upper on")
 T.equal(get(LWR), 1, "lower on")
 T.equal(get(ADVISORY, 301), 0, "no >YAW DAMPER UPR")
-rt:set(IRU_SEL, 1, 3)
-frames(0.2)
-T.equal(get(UPR), 1, "that IRU at ATT: still on")
 rt:set("laminar/B747/electrical/bus/stby_main", 0)
 frames(0.2)
 T.equal(get(UPR), 0, "AC standby bus lost: upper inoperative (left FCE power supplies)")

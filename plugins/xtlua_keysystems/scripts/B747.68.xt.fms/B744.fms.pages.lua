@@ -656,7 +656,9 @@ end
 function fmsFunctions.getdata(fmsO,value) 
   local data=""
   if value=="gpspos" then
-    data=irsSystem.getLat("gpsL") .." " .. irsSystem.getLon("gpsL")
+    -- GPS L, or R; nothing without a navigating GPS
+    local g=irsSystem.gpsSource()
+    if g~=nil then data=irsSystem.getLat(g) .." " .. irsSystem.getLon(g) end
   elseif value=="lastpos" then
     data=irsSystem.calcLatA() .." "..irsSystem.calcLonA()
   else
@@ -719,7 +721,8 @@ end
 -- VALIDATE ENTRY OF SETHDG
 function validate_sethdg(value)
 	--print(value)
-	if tonumber(value) >= 0 and tonumber(value) <= 360 then
+	local hdg = tonumber(value)
+	if hdg ~= nil and hdg >= 0 and hdg <= 360 then
 		return true
 	else
 		return false
@@ -1229,14 +1232,18 @@ function fmsFunctions.setdata(fmsO,value)
 		--fmsModules["data"]["fltdst"]=dst
 		print(getFMSData("irsLat").." "..lat)
 		print(getFMSData("irsLon").." "..lon)
-		setFMSData("irsLat",lat)
-		setFMSData("irsLon",lon)
-		irsSystem["irsLat"]=lat
-		irsSystem["irsLon"]=lon
-		irsSystem["setPos"]=true
-		fmsModules["data"]["initIRSLat"]=lat
-		fmsModules["data"]["initIRSLon"]=lon
-		B747DR_fmc_notifications[12]=0
+		-- to the IRUs, which check it (ENTER IRS POSITION: the navigation
+		-- sensors module)
+		if irsSystem.aligning() and irsSystem.enterPos(lat,lon) then
+			setFMSData("irsLat",lat)
+			setFMSData("irsLon",lon)
+			irsSystem["irsLat"]=lat
+			irsSystem["irsLon"]=lon
+			fmsModules["data"]["initIRSLat"]=lat
+			fmsModules["data"]["initIRSLon"]=lon
+		else
+			fmsO["notify"]="INVALID ENTRY"
+		end
 	else
 		fmsO["notify"]="INVALID ENTRY"
 	end
@@ -1297,12 +1304,17 @@ function fmsFunctions.setdata(fmsO,value)
 	if validate_sethdg(fmsO["scratchpad"]) == false then
 		fmsO["notify"]="INVALID ENTRY"
 	else
-		if fmsModules["data"] ~= "---`" then
+		-- only while an IRU is in ATT (the dashes: FCOM p.1286); the heading
+		-- to the IRUs in ATT
+		if B747DR_nav_irs_set_hdg_shown == 1 then
 			if (fmsO["scratchpad"] == "0" or fmsO["scratchpad"] == "00" or fmsO["scratchpad"] == "000") then
-				fmsO["scratchpad"] = "360`"
+				fmsO["scratchpad"] = "360"
 			end
+			irsSystem.enterHdg(tonumber(fmsO["scratchpad"]) % 360)
 			setFMSData(value, fmsO["scratchpad"].."`")
 			timer_start = simDRTime
+		else
+			fmsO["notify"]="INVALID ENTRY"
 		end
 	end
   elseif value == "fltdep" then

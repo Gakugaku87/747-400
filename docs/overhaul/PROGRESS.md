@@ -33,7 +33,7 @@
   - 4-1（操縦系統）：段 1〜4 は済（下の「操縦系統（4-1）の GAP の状態」）。
   - 4-2（脚・ブレーキ・ステアリング）：段 1（脚の作動・代替下げ・位置監視・EICAS の表示）、段 2（ブレーキ：源の圧、パーキングブレーキの弁、ANTISKID・ANTISKID OFF・BRAKE LIMITER）、段 3（オートブレーキ：減速の制御、arm・適用・disarm、RTO、memo と AUTOBRAKES）、段 4（ステアリング：tiller 70°・ペダル 7°、系統 1 の脚 DOWN 圧、胴体脚、CONFIG GEAR CTR、>BODY GEAR STRG と STATUS）、段 5（ブレーキ温度とタイヤ圧：FCOM PI.12.8 に合わせた熱の収支、BRAKE TEMP、>TIRE PRESSURE、GEAR synoptic のドアの箱）は済。モデル `plugins/xtlua/scripts/B747.10.xt.gear/B747.10.gear_model.lua`・`B747.10.brake_model.lua`・`B747.10.autobrake_model.lua`・`B747.10.steering_model.lua`・`B747.10.btms_model.lua`・`B747.10.tpis_model.lua` とグルー `B747.10.xt.gear_act.lua`・`B747.10.xt.brakes.lua`・`B747.10.xt.steering.lua`・`B747.10.xt.wheels.lua`（ARCHITECTURE.md §4.16、notes/ATA-32.md §10〜§14）。試験はモデル 71・34・33・44・20・11 件、モジュール 29・38・28・18 件、X-Plane の `s35_gear`・`s36_gear_lock`・`s37_brakes`・`s38_rto`・`s39_steering`・`s40_wheels` と `landing.sh` のオートブレーキ。残りは下の「脚（4-2）の GAP の状態」。
 - **段階 5**：
-  - 5-1（航法センサーと無線）：段 1（エアデータ：ADC 3 台と電源・故障、AIR DATA の選択と PFD の速度、OVERSPEED、IAS・ALT DISAGREE、>SOURCE SEL ADC、ALTITUDE ALERT、>AOA RIGHT の向き、BARO STD の戻り）と段 1b（カスタム acf の PFD：高度と Mach を選んだ ADC から、SPD・ALT の旗、高度の白枠・琥珀枠。ACF_DIFF.md §5）は済。新しいモジュール `B747.34.xt.nav`（モデル `B747.34.airdata_model.lua` とグルー `B747.34.xt.airdata.lua`。ARCHITECTURE.md §4.17、notes/ATA-34.md §10・§11）。試験はモデル 50 件、モジュール 29 件、BARO STD 8 件、X-Plane の `s41_airdata`（PFD の写真つき）。
+  - 5-1（航法センサーと無線）：段 1（エアデータ：ADC 3 台と電源・故障、AIR DATA の選択と PFD の速度、OVERSPEED、IAS・ALT DISAGREE、>SOURCE SEL ADC、ALTITUDE ALERT、>AOA RIGHT の向き、BARO STD の戻り）と段 1b（カスタム acf の PFD：高度と Mach を選んだ ADC から、SPD・ALT の旗、高度の白枠・琥珀枠。ACF_DIFF.md §5）は済。新しいモジュール `B747.34.xt.nav`（モデル `B747.34.airdata_model.lua` とグルー `B747.34.xt.airdata.lua`。ARCHITECTURE.md §4.17、notes/ATA-34.md §10・§11）。試験はモデル 50 件、モジュール 29 件、BARO STD 8 件、X-Plane の `s41_airdata`（PFD の写真つき）。段 2（IRS：MSU とフル・fast アライン、位置の入力と検査、動き、ATT と SET HDG、電源と ON BAT、メッセージ、FMC の IRS をモジュールの読み手に）も済。モデル `B747.34.irs_model.lua` とグルー `B747.34.xt.irs.lua`（notes/ATA-34.md §12）。GPS（電源、75 秒の初回測位、故障、>GPS・>GPS LEFT/RIGHT、POS INIT の GPS POS）も、モデル `B747.34.gps_model.lua` とグルー `B747.34.xt.gps.lua` で。試験は IRS のモデル 77 件、GPS のモデル 10 件、モジュール 43 件、X-Plane の `s42_irs`。
 
 ## 次にやること
 
@@ -45,7 +45,7 @@
 4. 3-4（火災防護）：段 1・2 は済。残りは M869（脚格納部の APU 火災パネル）と APU のホーンの音、クルーレストの煙での空調の停止、ダクトリークの抽気への影響（PNEU-03）、貨物機の主デッキ（FIRE-19）。
 5. 4-1（操縦系統）：小さな修正（FCTL-04・14・19・23）、段 1（フラップの FCU：`B747.45.fcu_model.lua`）、段 2a（SRM のうち外側エルロンのロックアウトとラダー比変換器：`B747.45.srm_model.lua`）、段 2b（SRM の安定板トリム：手動・ALTN・オートトリム・cutout と自動遮断・制限・速さ・column cutout・AP との関係・メッセージ。AP が外れても AP の昇降舵の指令が残る誤りも）、段 2c（speed trim と STAB SPEED TRIM、グリーンバンドの 3 帯と CONFIG STAB の帯：`B747.45.greenband_model.lua`）、段 3（スピードブレーキ：自動展開と格納、SPEEDBRAKE AUTO、>SPEEDBRAKES EXT、空中の CONFIG SPOILERS を貨物機だけに、CONFIG GEAR の着陸フラップ：`B747.45.speedbrake_model.lua`）は済。段 4（横操縦：エルロンのプログラマ、スポイラーの横操縦とミキサー、スピードブレーキの段、スポイラー 6・7 と主翼 2 の X-Plane の面、エルロントリムの権限：`B747.19.lateral_model.lua`。後半で FLT CONTROL HYD POWER とヨーダンパーの INOP）も済。4-1 の残りは、承認が要るフラップの拡大・代替の表示のパネル（FCTL-12）、空力の項目で扱う昇降舵の舵角（FCTL-18）、acf の値の確認（FCTL-22）、資料に値が無い >STAB GREENBAND（FCTL-10 の残り）。次は PLAN の 4-2（脚・ブレーキ・ステアリング）。着陸の試験は `tests/flight/tools/landing.sh`（RJAA 34L、TESTING.md §4.2）で回せる。舵面への書き出し（controlObject）は残す。下の「操縦系統（4-1）の GAP の状態」。
 5a. 4-2（脚・ブレーキ・ステアリング）：段 1〜5 は済。tiller の軸が無い利用者のための「ペダルを tiller に」はそのまま、逆推力の hold コマンドは離したら reverse idle（利用者、2026-10-25）。残りは AIR/GND SYSTEM と脚の残りの STATUS（GEAR MONITOR・A/G DISAGREE・PARK BRK VALVE：GEAR-22 の残り）、CONFIG GEAR のラッチと GND PROX GEAR OVRD（GEAR-17 の残り）、ドアの箱の空箱。段階 4 の区切りの全シナリオは合格（2026-10-25：日誌）。
-5b. 5-1（航法センサーと無線）：段 1（エアデータ）は済。次は段 2（IRS・GPS）、段 3（無線）、段 4（電波高度計・GPWS。音声は 405 の組）、段 5（トランスポンダ・TCAS Ver 7.0・WXR）の順（notes/ATA-34.md §10）。PFD の昇降率の源（IRS）は段 2 で。
+5b. 5-1（航法センサーと無線）：段 1（エアデータ）と段 2（IRS・GPS）は済。次は段 3（無線）、段 4（電波高度計・GPWS。音声は 405 の組）、段 5（トランスポンダ・TCAS Ver 7.0・WXR）の順（notes/ATA-34.md §10）。PFD の昇降率の源（IRS）と ATT・HDG の別々の旗はパネルの変更（承認済みの DSP-02・04）で、表示の作り直しのときに。
 6. 2-3（エンジン）の残り：段 1〜3 は済（下の「エンジン（2-3）の GAP の状態」）。後回し：表示値の作り方（ENG-33。EGT は X-Plane の EGT の比例では始動と離陸を両立できず、N1・N2 などから作り直す必要があるが、値は資料に無く推定になる。N1・EPR・N2 の式を変えると EEC の推力の制御の調整もやり直し）、始動の空気（ENG-38・PNEU-08。ダクト圧と starter の関係が資料に無い）、GE の油圧の目盛りと値（CF6 の値が資料に無い）、振動の high band。partial・compact 形式と exceedance cue（ENG-22）は 5-2 で。空中始動の範囲（ENG-24）は資料に値が無く作れない。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べるのも残り。A/T（6-4）との境界は、EEC がレバー → 指令・最大定格・推力の制御まで、FMC の推力基準と A/T のサーボ（レバーを動かす）は 6-4。
 7. 1-5（空圧）の残り：故障の入れ方（過熱、過圧、HPSOV・PRV の固着、ダクトリーク）、地上空気の操作、スターターがダクト圧で回ること（エンジン 2-3）。
 8. 1-4（油圧）の残り：脚・ブレーキ・ステアリング（4-2 段 1・2・4）、逆推力（2-3 段 3）、stab trim・ヨーダンパー（4-1 段 2b・4）の「油圧で動くか」（HYD-09・11・12）は済。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
@@ -135,6 +135,8 @@ PLAN.md §3 に書いた。要点：
 
 ## 推定で作った部分
 
+- GPS（5-1 段 2、`B747.34.gps_model.lua` に「estimate」と書いてある）：初回測位をいつも電源から 75 秒としたこと（GPS 自身の最後の位置も初期化になるとして。位置が無いと「最大 10 分」の場合は作らない）。
+- IRS（5-1 段 2、`B747.34.irs_model.lua`・`B747.34.xt.irs.lua` に「estimate」と書いてある）：アラインの終わりの緯度の比較の許容差 1°（資料は「緯度で変わる」とだけ書く）、アラインを止める動きを X-Plane の対地速度 0.5 m/s（約 1 kt）超としたこと、ATT の方位にドリフトを入れないこと。
 - エアデータ（5-1 段 1、`B747.34.airdata_model.lua`・`B747.34.xt.airdata.lua` に「estimate」と書いてある）：C ADC を X-Plane の standby の pitot-static とし、その Mach を速度と気圧高度から、昇降率を高度の変化から計算すること。3D の AIR DATA ノブの 2 位置を 0 L・1 R としたこと（刻印が分からない）。選択高度が変わってから 1 秒は高度警報を判定しないこと（rate detector の時間）。
 - 脚の作動（4-2 段 1、`B747.10.gear_model.lua` に「estimate」と書いてある）：脚の動く時間（acf の 12・9・7 秒。代替下げの前脚・胴体脚の自由落下も同じとした）、脚の作動に要る圧 1,000 psi、GEAR TILT を抑止する圧（PSEU の HYDIM 高 1,500 psi）、翼脚のアップロックが外れるドアの 45°（行程の半分）、レバー OFF と圧の喪失で動いている途中の脚が止まること、重さのかかった脚は上がらないこと、代替下げをした脚をそのフライトの間は通常の系統で動かさないこと、電源の無いレバーのロックはかかったままのこと。
 - ブレーキ（4-2 段 2、`B747.10.brake_model.lua`・`B747.10.xt.brakes.lua` に「estimate」と書いてある）：ブレーキの効きが圧に比例し 3000 psi で全部、パーキングブレーキの弁の動く時間 1 秒、閉じ込めた圧に漏れと熱逃がしが無いこと、X-Plane の regular のブレーキを両ペダル 0.5、ペダルを 0.25 秒で踏み込むこと、パーキングブレーキをペダルを踏まずに入れられること、X-Plane の toe brake の軸の番号（6・7）。
@@ -641,10 +643,22 @@ PLAN.md §3 に書いた。要点：
 | NAV-05 PFD の旗と Mach | 済（段 1b。カスタム acf の PFD の SPD・ALT の旗と選んだ ADC の Mach。MACH の旗は出さない：SPD の旗が抑止し、ADC は丸ごと故障する） |
 | NAV-06 BARO STD | 済（段 1） |
 | NAV-07 >AOA RIGHT | 済（段 1） |
-| NAV-13 >SOURCE SEL など | 一部（段 1 で >SOURCE SEL ADC。EIU・F/D・IRS・NAV、>SNGL SOURCE RA、>EIU LEFT、ALT ALERT SYS は後の段） |
+| NAV-13 >SOURCE SEL など | 一部（段 1 で >SOURCE SEL ADC、段 2 で >SOURCE SEL IRS。EIU・F/D・NAV、>SNGL SOURCE RA、>EIU LEFT、ALT ALERT SYS は後の段） |
+| NAV-16 MSU の遷移 | 一部（段 2。ALIGN でもアラインが進む、NAV→ALIGN の fast alignment、アライン済みで ALIGN に待つ。高緯度の 17 分のアライン（FCOM p.194）は無い：アラインの時間は緯度によらない） |
+| NAV-17 位置の検査 | 済（段 2。最後の位置との 1°、同じ値の再入力、アラインの終わりの緯度の比較と 2 回で故障、fast alignment の 1/2°・1° と CYCLE IRS OFF-NAV） |
+| NAV-18 setPos が戻らない | 済（段 2。位置の入力はアラインごとに求める） |
+| NAV-19 ATT | 済（段 2。30 秒の align mode、OFF までのラッチ、SET HDG と方位、位置と対地速度は無効。ATT と HDG の別々の旗はパネル） |
+| NAV-20 電源 | 済（段 2。AC 3・1・2、hot battery bus、両方喪失でアライン喪失、C の 5 分、>IRS AC・DC、ON BAT。地上員呼び出しのホーンは無い） |
+| NAV-21 メッセージ | 一部（段 2 で IRS L/C/R、>IRS AC・DC、ENTER IRS POSITION、CYCLE IRS OFF-NAV。>ATTITUDE・>HEADING・>TRACK・>GPS は後の段） |
+| NAV-22 動きの判定 | 済（段 2。IRU ごと、止まって 30 秒で IRS MOTION が消え、自動で再開） |
+| NAV-23 toDMS | 済（段 2） |
+| NAV-24 他系統の IRS | 一部（段 2 でヨーダンパーを IRU の姿勢に。AFDS・失速警報・GPWS は各系統の作り直しで） |
+| NAV-25 GPS | 一部（段 2。電源、初回測位、故障、>GPS・>GPS LEFT/RIGHT、POS INIT の GPS POS。RAIM・HIL、FMC の位置の GPS 更新、GPS NAV INHIBIT と PURGE は FMC の作り直しで） |
+| NAV-30 SET HDG の検査 | 済（段 2） |
 
 ## 気づいたこと（作業の途中で）
 
+- **XTLua の時間は X-Plane の時間加速を含まない**（2026-10-25、IRS の試験）：`sim/time/sim_speed` を 4 にすると X-Plane の時計は約 3.5 倍で進むが、XTLua の `SIM_PERIOD` は実時間のままで、IRS のアラインは実時間で 10 分かかった。この機体の系統のタイマーはどれも `SIM_PERIOD` で進むので同じ。飛行試験では時間加速で短くできない。
 - **全開にすると EPR が最大定格を一時超える**（2026-10-23、EEC 段 2 の試験）：地上で全開にすると、EPR はカスタム acf で 1.57、純正 acf で 1.58 まで上がってから最大定格（1.51〜1.53）に戻る。EEC の PID（`ecc_spd`、前からのもの）の応答で、実機は最大定格で止まる。→ 推力の制御の作り直し（2026-10-23 夜）で直った。前の PID は D 項が大きくスロットルが 0.9〜1.05 を往復し、積分が出力の上限 1.2 まで溜まって、空中の全開でも EPR が最大定格を 0.02 超えたままだった（ALTN の全開では N2 が赤線を超えた）。
 - **表示の式の癖**（2026-10-23 夜、推力の制御の試験。段 3 の表示で見る）：
   - GE の N1 表示は推力から求める。空中でレバーをアイドルから出すと、アイドルの固定（`engine_idle_control_GE`）から推力の式に切り替わり、45.7 % → 20.5 % と一瞬下がる（空中のアイドルでは正味の推力がほぼ 0 のため）。離陸の基準（TO）では X-Plane の N1 に TO の係数を掛けた値で、式が違う。

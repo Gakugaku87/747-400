@@ -1,65 +1,68 @@
 
+-- The FMC's side of the IRS (5-1 step 2): the IRUs are in the navigation
+-- sensors module (plugins/xtlua/scripts/B747.34.xt.nav/B747.34.xt.irs.lua),
+-- which writes laminar/B747/irs/... and the IRU modes, the PFDs' IRS
+-- validity and the IRS messages. This reads them for the CDU (POS INIT,
+-- POS REF, IRS MONITOR) and the ND (TIME TO ALIGN, the position update
+-- line), and hands the present position and SET HDG entries to the IRUs
+-- (laminar/B747/irs/pos_entry_*, set_hdg_*). GPS L and R: X-Plane's position
+-- while the module has them navigating (laminar/B747/gps/valid).
 simDR_groundspeed=find_dataref("sim/flightmodel/position/groundspeed")
 B747DR_iru_mode_sel_pos         = find_dataref("laminar/B747/flt_mgmt/iru/mode_sel_dial_pos")
-local timeToAlign=600
-irs_A_status=find_dataref("laminar/B747/irs/line1") 
-irs_L_status=find_dataref("laminar/B747/irs/line2") 
-irs_C_status=find_dataref("laminar/B747/irs/line3") 
-irs_R_status=find_dataref("laminar/B747/irs/line4") 
-local allIRSOff=true
-
-local startLat=0
-local startLon=0
+irs_A_status=find_dataref("laminar/B747/irs/line1")
+irs_L_status=find_dataref("laminar/B747/irs/line2")
+irs_C_status=find_dataref("laminar/B747/irs/line3")
+irs_R_status=find_dataref("laminar/B747/irs/line4")
+B747DR_nav_irs_mode             = find_dataref("laminar/B747/irs/mode")
+B747DR_nav_irs_time_left        = find_dataref("laminar/B747/irs/time_left")
+B747DR_nav_irs_nav_valid        = find_dataref("laminar/B747/irs/nav_valid")
+B747DR_nav_irs_lat              = find_dataref("laminar/B747/irs/lat")
+B747DR_nav_irs_lon              = find_dataref("laminar/B747/irs/lon")
+B747DR_nav_irs_gs               = find_dataref("laminar/B747/irs/gs")
+B747DR_nav_irs_motion           = find_dataref("laminar/B747/irs/motion")
+B747DR_nav_irs_set_pos          = find_dataref("laminar/B747/irs/set_pos")
+B747DR_nav_irs_aligning         = find_dataref("laminar/B747/irs/aligning")
+B747DR_nav_irs_set_hdg_shown    = find_dataref("laminar/B747/irs/set_hdg_shown")
+B747DR_nav_irs_pos_seq          = find_dataref("laminar/B747/irs/pos_entry_seq")
+B747DR_nav_irs_pos_lat          = find_dataref("laminar/B747/irs/pos_entry_lat")
+B747DR_nav_irs_pos_lon          = find_dataref("laminar/B747/irs/pos_entry_lon")
+B747DR_nav_irs_hdg_seq          = find_dataref("laminar/B747/irs/set_hdg_seq")
+B747DR_nav_irs_hdg              = find_dataref("laminar/B747/irs/set_hdg")
+B747CMD_nav_irs_align_now       = find_command("laminar/B747/irs/align_now")
+B747DR_nav_gps_valid            = find_dataref("laminar/B747/gps/valid")
 
 --IRS ND DISPLAY
 B747DR_ND_IRS_Line	= deferred_dataref("laminar/B747/irs/irs_display_line", "string")
 
+-- the navigation sensors module's IRU modes (laminar/B747/irs/mode)
+local MODE_OFF, MODE_ALIGN, MODE_NAV, MODE_ATT, MODE_FAIL = 0, 1, 2, 3, 4
 
 irs={
   index=0,
-  failed=false,
   aligned=false,
-  latitude=0,
-  longitude=0,
-  gs=0,
-  vs=0,
-  heading=0,
-  track=0,
-  alignStarted=0,
   getLat=function(self)
-   if self["aligned"] then return toDMS(simDR_latitude+self["latitude"],true)
+   if self["aligned"] then return toDMS(self:getLatD(),true)
    else return "***`**.*" end
   end,
   getLon=function(self)
-   if self["aligned"] then return toDMS(simDR_longitude+self["longitude"],false) 
+   if self["aligned"] then return toDMS(self:getLonD(),false)
    else return "****`**.*" end
   end,
+  -- an IRU's position (the module's); the GPS: X-Plane's
   getLatD=function(self)
-   if self["aligned"] then return simDR_latitude+self["latitude"]
-   else return 0 end
+   if not self["aligned"] then return 0 end
+   if self["gps"] then return simDR_latitude end
+   return B747DR_nav_irs_lat[self["index"]]
   end,
   getLonD=function(self)
-   if self["aligned"] then return simDR_longitude+self["longitude"] 
-   else return 0 end
+   if not self["aligned"] then return 0 end
+   if self["gps"] then return simDR_longitude end
+   return B747DR_nav_irs_lon[self["index"]]
   end,
   getGS=function(self)
-   if self["aligned"] then return string.format("%02d",simDR_groundspeed/0.514444)
-   else return "**" end
-  end,
-  align=function(self)
-   self["latitude"]=(math.random()-0.5)/500
-   print(self["latitude"])
-   self["longitude"]=(math.random()-0.5)/500
-   difLat=simDR_latitude-startLat
-   difLon=simDR_longitude-startLon
-   if difLat<0.0001 and difLat>-0.0001 and difLon<0.0001 and difLon>-0.0001 then
-   self["aligned"]=true
-   print("aligned an irs")
-     return true
-   else
-     irsSystem["motion"][self["id"]]=true
-     return false
-   end
+   if not self["aligned"] then return "**" end
+   if self["gps"] then return string.format("%02d",simDR_groundspeed/0.514444) end
+   return string.format("%02d",B747DR_nav_irs_gs[self["index"]])
   end
 }
 
@@ -78,9 +81,11 @@ irsR["index"]=2
 gpsL = {}
 setmetatable(gpsL, {__index = irs})
 gpsL["aligned"]=true
+gpsL["gps"]=true
 gpsR = {}
 setmetatable(gpsR, {__index = irs})
 gpsR["aligned"]=true
+gpsR["gps"]=true
 
 irsSystem={}
 irsSystem["motion"]={irsL=false,irsC=false,irsR=false}
@@ -99,81 +104,84 @@ function irsFromNum(num)
   return "irsR"
 end
 
-function irs_notify()
---   fmsModules["fmsL"].notify="ENTER IRS POSITION"
---   fmsModules["fmsC"].notify="ENTER IRS POSITION"
---   fmsModules["fmsR"].notify="ENTER IRS POSITION"
-  B747DR_fmc_notifications[12]=1
-end
-doIRSAlign={}
-doIRSAlign["irsL"]=function()
-  if irsSystem["irsL"].align(irsSystem["irsL"])==true then B747DR_iru_status[0]=2 end
-  if irsSystem["setPos"]==false and irsSystem["irsL"]["aligned"]==true and irsSystem["irsC"]["aligned"]==true and irsSystem["irsR"]["aligned"]==true then 
-    irs_notify()
-  end 
-end
-doIRSAlign["irsC"]=function()
-  if irsSystem["irsC"].align(irsSystem["irsC"])==true then B747DR_iru_status[1]=2 end
-  if irsSystem["setPos"]==false and irsSystem["irsL"]["aligned"]==true and irsSystem["irsC"]["aligned"]==true and irsSystem["irsR"]["aligned"]==true then 
-     irs_notify()
-  end 
-end
-doIRSAlign["irsR"]=function()
-  if irsSystem["irsR"].align(irsSystem["irsR"])==true then B747DR_iru_status[2]=2 end
-  if irsSystem["setPos"]==false and irsSystem["irsL"]["aligned"]==true and irsSystem["irsC"]["aligned"]==true and irsSystem["irsR"]["aligned"]==true then 
-     irs_notify()
-  end 
-end
-function cancelAlign(func)
-  if is_timer_scheduled(func) == true then
-    stop_timer(func)
+-- degrees from a CDU latitude or longitude: N35`45.9 or N3545.9 (minutes
+-- with tenths), E140`23.2 or E14023.2; nil if it is not one
+function irs_deg(str,isLat)
+  local h,d,m
+  if isLat then
+    h,d,m=string.match(str,"^%s*([NS])(%d%d)`?(%d%d%.?%d*)%s*$")
+  else
+    h,d,m=string.match(str,"^%s*([EW])(%d%d%d)`?(%d%d%.?%d*)%s*$")
   end
+  if h==nil then return nil end
+  d,m=tonumber(d),tonumber(m)
+  if m>=60 or (isLat and d>90) or (not isLat and d>180) then return nil end
+  local v=d+m/60
+  if h=="S" or h=="W" then v=-v end
+  return v
 end
-irsSystem.setStatus=function()
-  local L_status=irsSystem.getStatus("irsL")
-  local C_status=irsSystem.getStatus("irsC")
-  local R_status=irsSystem.getStatus("irsR")
 
-  if string.sub(L_status,-3)=="OFF" and string.sub(C_status,-3)=="OFF"  and string.sub(R_status,-3)=="OFF" then
+-- the present position entered on POS INIT (CDU strings) for the IRUs:
+-- false if it is not a position
+irsSystem.enterPos=function(lat,lon)
+  local la=irs_deg(lat,true)
+  local lo=irs_deg(lon,false)
+  if la==nil or lo==nil then return false end
+  B747DR_nav_irs_pos_lat=la
+  B747DR_nav_irs_pos_lon=lo
+  B747DR_nav_irs_pos_seq=B747DR_nav_irs_pos_seq+1
+  return true
+end
+-- SET HDG (magnetic, 0-360) for the IRUs in ATT
+irsSystem.enterHdg=function(hdg)
+  B747DR_nav_irs_hdg=hdg
+  B747DR_nav_irs_hdg_seq=B747DR_nav_irs_hdg_seq+1
+end
+-- an IRU aligning: the SET IRS POS line is in use
+irsSystem.aligning=function()
+  return B747DR_nav_irs_aligning==1
+end
+-- the GPS for POS INIT's GPS POS: L, or R if L is not navigating; nil if
+-- neither is (the line blank: FCOM p.1286)
+irsSystem.gpsSource=function()
+  if gpsL["aligned"] then return "gpsL" end
+  if gpsR["aligned"] then return "gpsR" end
+  return nil
+end
+irsSystem.gpsPos=function()
+  local g=irsSystem.gpsSource()
+  if g==nil then return "                  " end
+  return irsSystem.getLat(g).." "..irsSystem.getLon(g)
+end
+
+-- the ND's TIME TO ALIGN while an IRU is in align mode
+irsSystem.setStatus=function()
+  if irsSystem.aligning() then
+    irs_A_status="TIME TO ALIGN"
+    irs_L_status=irsSystem.getStatus("irsL")
+    irs_C_status=irsSystem.getStatus("irsC")
+    irs_R_status=irsSystem.getStatus("irsR")
+  else
     irs_A_status=" "
     irs_L_status=" "
     irs_C_status=" "
     irs_R_status=" "
-  else
-    irs_A_status="TIME TO ALIGN"
-    irs_L_status=L_status
-    irs_C_status=C_status
-    irs_R_status=R_status
   end
 end
 
 irsSystem.off=function()
-  irsSystem.setStatus()
-    
-    irsSystem["irsL"]["aligned"] = false
-    irsSystem["irsC"]["aligned"] = false
-    irsSystem["irsR"]["aligned"] = false
 end
 
 irsSystem.update=function()
-  
-  
-  if B747DR_iru_status[0]==0 then 
-    irsSystem["irsL"]["aligned"] = false 
-  elseif B747DR_iru_status[0]==2 and irsSystem["motion"]["irsL"]==false and irsSystem["setPos"]==true and irsSystem["irsL"]["aligned"]==false then
-    --irsSystem["irsL"]["aligned"] = true
-    irsL.align(irsL)
+  for _,id in ipairs({"irsL","irsC","irsR"}) do
+    local i=irsSystem[id]["index"]
+    irsSystem[id]["aligned"]=B747DR_nav_irs_nav_valid[i]==1
+    irsSystem["motion"][id]=B747DR_nav_irs_motion==1 and B747DR_nav_irs_mode[i]==MODE_ALIGN
   end
-  if B747DR_iru_status[1]==0 then 
-    irsSystem["irsC"]["aligned"] = false 
-  elseif B747DR_iru_status[1]==2 and irsSystem["motion"]["irsC"]==false and irsSystem["setPos"]==true and irsSystem["irsC"]["aligned"]==false then
-    irsC.align(irsC)
-  end
-  if B747DR_iru_status[2]==0 then 
-    irsSystem["irsR"]["aligned"] = false 
-  elseif B747DR_iru_status[2]==2 and irsSystem["motion"]["irsR"]==false and irsSystem["setPos"]==true and irsSystem["irsR"]["aligned"]==false then
-    irsR.align(irsR)
-  end
+  irsSystem["setPos"]=B747DR_nav_irs_set_pos==0
+  gpsL["aligned"]=B747DR_nav_gps_valid[0]==1
+  gpsR["aligned"]=B747DR_nav_gps_valid[1]==1
+  irsSystem.setStatus()
 
   --Marauder28
   --GPS/IRS DISPLAY
@@ -189,13 +197,14 @@ irsSystem.update=function()
     B747DR_ND_GPS_Line = "GPS"
   end
 
-  --Update Set Hdg on FMC
-  if (B747DR_iru_mode_sel_pos[0] == 3 or B747DR_iru_mode_sel_pos[1] == 3 or B747DR_iru_mode_sel_pos[2] == 3) then
+  --Update Set Hdg on FMC: dashes while an IRU is in ATT (FCOM p.1286),
+  --an entry shown for 2 seconds
+  if B747DR_nav_irs_set_hdg_shown==1 then
 	if tonumber(string.sub(fmsModules["data"].sethdg,1,3)) ~= nil then
 		local diff = simDRTime - timer_start
 		if diff < 2 then  --Display for 2 seconds
 			return
-		end	
+		end
 		timer_start = simDRTime
 	end
 	fmsModules["data"].sethdg = "---`"
@@ -203,74 +212,24 @@ irsSystem.update=function()
 	fmsModules["data"].sethdg = defaultFMSData().sethdg
   end
   --Marauder28
-  
-  
-  
-    if irsSystem["setPos"]==true and irsSystem[irsFromNum(B747DR_irs_src_capt)]["aligned"]==true then B747DR_pfd_mode_capt=1 else B747DR_pfd_mode_capt=0 end
-    if irsSystem["setPos"]==true and irsSystem[irsFromNum(B747DR_irs_src_fo)]["aligned"]==true then B747DR_pfd_mode_fo=1 else B747DR_pfd_mode_fo=0 end
-    
-    if irsSystem[irsFromNum(B747DR_irs_src_capt)]["aligned"]==false or irsSystem[irsFromNum(B747DR_irs_src_fo)]["aligned"]==false or irsSystem["setPos"]==false then
-      irsSystem.setStatus()
-    end
-    if B747DR_iru_mode_sel_pos[0]==0 then B747DR_iru_status[0]=0 cancelAlign(doIRSAlign["irsL"])
-    elseif B747DR_iru_status[0]==1 and B747DR_iru_mode_sel_pos[0]==2 then B747DR_iru_status[0]=4 irsSystem.align("irsL",false)
-    elseif B747DR_iru_status[0]==1 then
-      irsSystem["irsL"]["aligned"]=false
-      cancelAlign(doIRSAlign["irsL"])
-    end
-    if B747DR_iru_mode_sel_pos[1]==0 then B747DR_iru_status[1]=0 cancelAlign(doIRSAlign["irsC"])
-    elseif B747DR_iru_status[1]==1 and B747DR_iru_mode_sel_pos[1]==2 then B747DR_iru_status[1]=4 irsSystem.align("irsC",false) 
-    elseif B747DR_iru_status[1]==1 then
-      irsSystem["irsC"]["aligned"]=false
-      cancelAlign(doIRSAlign["irsC"])
-    end
-    if B747DR_iru_mode_sel_pos[2]==0 then B747DR_iru_status[2]=0 cancelAlign(doIRSAlign["irsR"])
-    elseif B747DR_iru_status[2]==1 and B747DR_iru_mode_sel_pos[2]==2 then B747DR_iru_status[2]=4 irsSystem.align("irsR",false) 
-    elseif B747DR_iru_status[2]==1 then
-      irsSystem["irsR"]["aligned"]=false
-      cancelAlign(doIRSAlign["irsR"])
-    end
-  if  B747DR_iru_status[0]==4 then B747DR_CAS_memo_status[14]=1 else B747DR_CAS_memo_status[14]=0 end
-  if  B747DR_iru_status[1]==4 then B747DR_CAS_memo_status[15]=1 else B747DR_CAS_memo_status[15]=0 end
-  if  B747DR_iru_status[2]==4 then B747DR_CAS_memo_status[16]=1 else B747DR_CAS_memo_status[16]=0 end 
-  
-  if irsSystem["irsL"]["aligned"]==true and 
-      irsSystem["irsC"]["aligned"]==true and 
-      irsSystem["irsR"]["aligned"]==true then 
-        return 
-  end
-  
-  if irsSystem["motion"]["irsL"]==true or irsSystem["motion"]["irsC"]==true or irsSystem["motion"]["irsR"]==true then 
-    B747DR_CAS_advisory_status[233] = 1   
-  else
-    B747DR_CAS_advisory_status[233] = 0
-  end
-    
-  
-  difLat=simDR_latitude-startLat
-  difLon=simDR_longitude-startLon
-  if irsSystem["irsL"]["aligned"]==false and B747DR_iru_mode_sel_pos[0]==2 and (difLat>0.0001 or difLat<-0.0001 or difLon>0.0001 or difLon<-0.0001) then
-    irsSystem["motion"]["irsL"]=true
-  end 
-  if irsSystem["irsC"]["aligned"]==false and B747DR_iru_mode_sel_pos[1]==2 and (difLat>0.0001 or difLat<-0.0001 or difLon>0.0001 or difLon<-0.0001) then
-    irsSystem["motion"]["irsC"]=true
-  end  
-  if irsSystem["irsR"]["aligned"]==false and B747DR_iru_mode_sel_pos[2]==2 and (difLat>0.0001 or difLat<-0.0001 or difLon>0.0001 or difLon<-0.0001) then
-    irsSystem["motion"]["irsR"]=true
-  end  
 end
-function timeToAlignString(time)
-  local min=(timeToAlign/60)-((simDRTime-time)/60)
-  if min>7 then return " 7+" end 
-  
+function timeToAlignString(left)
+  local min=left/60
+  if min>7 then return " 7+" end
+
   return string.format(" %1d",min+1)
 end
 irsSystem.getStatus=function(systemID)
-  if irsSystem["motion"][systemID]==true then return systemID:sub(4, 4).." MOTION" end
-  if B747DR_iru_status[irsSystem[systemID]["index"]]==0 then return systemID:sub(4, 4).." OFF" end
-  if B747DR_iru_status[irsSystem[systemID]["index"]]==1 then return systemID:sub(4, 4).." ALIGN" end
-  if B747DR_iru_status[irsSystem[systemID]["index"]]==2 then return systemID:sub(4, 4).." ALIGNED" end
-  if B747DR_iru_status[irsSystem[systemID]["index"]]==4 then return systemID:sub(4, 4).. timeToAlignString(irsSystem[systemID]["alignStarted"]) .. " MIN" end
+  local i=irsSystem[systemID]["index"]
+  local l=systemID:sub(4, 4)
+  local mode=B747DR_nav_irs_mode[i]
+  if irsSystem["motion"][systemID]==true then return l.." MOTION" end
+  if mode==MODE_OFF then return l.." OFF" end
+  if mode==MODE_FAIL then return l.." FAIL" end
+  if mode==MODE_ATT then return l.." ATT" end
+  if mode==MODE_NAV then return l.." ALIGNED" end
+  if B747DR_nav_irs_time_left[i]<=0 then return l.." ALIGN" end
+  return l..timeToAlignString(B747DR_nav_irs_time_left[i]).." MIN"
 end
 irsSystem.getPos=function()
  return toDMS(simDR_latitude,true).." "..toDMS(simDR_longitude,false).. " "..string.format("%02d",simDR_groundspeed).."KT"
@@ -281,17 +240,17 @@ end
 irsSystem.getLon=function(systemID)
  return irsSystem[systemID].getLon(irsSystem[systemID])
 end
+-- SET IRS POS: boxes while the IRUs want a position, then the entered one
+-- while they align; blank when none is aligning (FCOM p.1286-1287)
 irsSystem.getInitLatPos=function()
- if B747DR_iru_status[0]==4 or B747DR_iru_status[1]==4 or B747DR_iru_status[2]==4 or irsSystem["setPos"]==false then
-  return fmsModules["data"]["initIRSLat"]
- end
- return "         " 
+ if B747DR_nav_irs_set_pos==1 then return defaultFMSData().initIRSLat end
+ if irsSystem.aligning() then return fmsModules["data"]["initIRSLat"] end
+ return "         "
 end
 irsSystem.getInitLonPos=function()
- if B747DR_iru_status[0]==4 or B747DR_iru_status[1]==4 or B747DR_iru_status[2]==4 or irsSystem["setPos"]==false then
-  return fmsModules["data"]["initIRSLon"]
- end
- return "         " 
+ if B747DR_nav_irs_set_pos==1 then return defaultFMSData().initIRSLon end
+ if irsSystem.aligning() then return fmsModules["data"]["initIRSLon"] end
+ return "         "
 end
 irsSystem.getLatD=function(systemID)
  return irsSystem[systemID].getLatD(irsSystem[systemID])
@@ -306,7 +265,7 @@ irsSystem.calcLatA=function()
  if irsSystem["irsL"]["aligned"]==true then alignedIRS=alignedIRS+1 calcLat=calcLat+irsSystem.getLatD("irsL") end
  if irsSystem["irsC"]["aligned"]==true then alignedIRS=alignedIRS+1 calcLat=calcLat+irsSystem.getLatD("irsC") end
  if irsSystem["irsR"]["aligned"]==true then alignedIRS=alignedIRS+1 calcLat=calcLat+irsSystem.getLatD("irsR") end
- if alignedIRS>1 and irsSystem["setPos"]==true then return toDMS((calcLat/alignedIRS),true) else return fmsModules["data"]["irsLat"] end
+ if alignedIRS>1 then return toDMS((calcLat/alignedIRS),true) else return fmsModules["data"]["irsLat"] end
 end
 irsSystem.calcLonA=function()
  local alignedIRS=0
@@ -314,7 +273,7 @@ irsSystem.calcLonA=function()
  if irsSystem["irsL"]["aligned"]==true then alignedIRS=alignedIRS+1 calcLon=calcLon+irsSystem.getLonD("irsL") end
  if irsSystem["irsC"]["aligned"]==true then alignedIRS=alignedIRS+1 calcLon=calcLon+irsSystem.getLonD("irsC") end
  if irsSystem["irsR"]["aligned"]==true then alignedIRS=alignedIRS+1 calcLon=calcLon+irsSystem.getLonD("irsR") end
- if alignedIRS>1 and irsSystem["setPos"]==true then return toDMS((calcLon/alignedIRS),false) else return fmsModules["data"]["irsLon"] end
+ if alignedIRS>1 then return toDMS((calcLon/alignedIRS),false) else return fmsModules["data"]["irsLon"] end
 end
 irsSystem.calcLatD=function()
  --should use the closest two, but meh
@@ -342,24 +301,7 @@ irsSystem.getLine=function(systemID)
  return irsSystem.getLat(systemID).." ".. irsSystem.getLon(systemID).. " "..irsSystem.getGS(systemID).."KT"
 end
 
+-- a quick start (instant): the module aligns every IRU at NAV at once
 irsSystem.align=function(systemID,instant)
-	--Simulator Config Options
-  if hasSimConfig()==true then 
-	  timeToAlign=simConfigData["data"].SIM.irs_align_time
-  end
-  startLat=simDR_latitude
-  startLon=simDR_longitude
-  irsSystem[systemID]["aligned"]=false
-  if instant==false and is_timer_scheduled(doIRSAlign[systemID]) == false then
-        print("aligning "..systemID)
-	    irsSystem["motion"][systemID]=false
-	    irsSystem[systemID]["alignStarted"]=simDRTime
-        run_after_time(doIRSAlign[systemID], timeToAlign)
-  elseif instant==false then
-        irsSystem["motion"][systemID]=false
-  elseif instant==true then
-    irsSystem["motion"][systemID]=false  
-    doIRSAlign[systemID]() 
-    
-  end
+  if instant==true then B747CMD_nav_irs_align_now:once() end
 end

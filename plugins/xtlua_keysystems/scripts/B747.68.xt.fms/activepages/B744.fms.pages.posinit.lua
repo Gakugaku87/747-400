@@ -10,7 +10,7 @@ fmsPages["POSINIT"].getPage=function(self,pgNo,fmsID)
     fmsFunctionsDefs["POSINIT"]["R1"]={"getdata","lastpos"}
     
     fmsFunctionsDefs["POSINIT"]["R4"]={"getdata","gpspos"}
-    if irsSystem["setPos"]==false or irsSystem["irsL"]["aligned"]==false or irsSystem["irsC"]["aligned"]==false or irsSystem["irsR"]["aligned"]==false then 
+    if irsSystem.aligning() then
       fmsFunctionsDefs["POSINIT"]["R5"]={"setdata","irspos"}
       fmsFunctionsDefs["POSINIT"]["L2"]={"setdata","airportpos"}
       fmsFunctionsDefs["POSINIT"]["L3"]={"setdata","airportgate"}
@@ -34,7 +34,7 @@ fmsPages["POSINIT"].getPage=function(self,pgNo,fmsID)
     "                        ",
     fmsModules["data"]["airportgate"].."                  ",
     "                        ",
-    string.format("%02d%02dz ",hh,mm).. irsSystem.getLat("gpsL") .." " .. irsSystem.getLon("gpsL"),
+    string.format("%02d%02dz ",hh,mm).. irsSystem.gpsPos(),
     "                        ",
     fmsModules["data"].sethdg.." ".. irsSystem.getInitLatPos().." ".. irsSystem.getInitLonPos(), 
     "                         ",
@@ -105,10 +105,8 @@ fmsPages["POSINIT"].getPage=function(self,pgNo,fmsID)
 end
 fmsPages["POSINIT"].getSmallPage=function(self,pgNo,fmsID)
   if pgNo==1 then
-    local setIRS="                        "
-    if B747DR_iru_status[0]==4 or B747DR_iru_status[1]==4 or B747DR_iru_status[2]==4 or irsSystem["setPos"]==false then
-      setIRS="SET HDG      SET IRS POS"
-    end
+    -- SET HDG with an IRU in ATT, SET IRS POS with an IRU aligning (FCOM p.1286)
+    local setIRS=(B747DR_nav_irs_set_hdg_shown==1 and "SET HDG" or "       ").."      "..(irsSystem.aligning() and "SET IRS POS" or "           ")
     return {
     "                        ",
     "                LAST POS",
