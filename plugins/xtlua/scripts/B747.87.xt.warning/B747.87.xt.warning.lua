@@ -674,6 +674,8 @@ local B747_CASstatusMsg = {
     {DRindex = 92, name = "STAB AUTO TRIM"},
     {DRindex = 93, name = "STAB SPEED TRIM"},     -- ATA27 p.486, p.523 (4-1 step 2c)
     {DRindex = 94, name = "SPEEDBRAKE AUTO"},     -- ATA27 p.184, p.205 (4-1 step 3)
+    {DRindex = 95, name = "BODY GR STRG SYS"},    -- ATA29_32 p.626, p.630 (4-2 step 4)
+    {DRindex = 96, name = "PEDAL STEERING"},      -- ATA29_32 p.600
 }
 
 

@@ -364,6 +364,9 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
   - 読むもの：セレクター（`gear/autobrakes/sel_dial_pos`：0 RTO、1 OFF、2 DISARM、3〜6 で 1〜4、7 MAX AUTO）、推力レバー（`engine/throttle[4]`）、機長側の IRS（`flt_mgmt/iru/status[0]` が 2 で、`mode_sel_dial_pos[0]` が NAV 以上）、対地速度（`sim/flightmodel/position/groundspeed`）、スピードブレーキのレバー（`flt_ctrls/speedbrake_lever`）、PSEU の air と ground（pri・alt）、ブレーキの源（系統 4 なら正規）、正規の antiskid（故障と ANTISKID OFF）、故障（新設 `gear/fail/autobrake`）。
   - 書くもの：セレクター（DISARM・OFF に戻す）、memo 2〜6 AUTOBRAKES 1〜4・MAX と 7 AUTOBRAKES RTO、advisory 17 AUTOBRAKES、X-Plane の `auto_brake_level`（常に 1 の OFF）。X-Plane のオートブレーキのコマンド（`brakes_off_auto`・`rto_auto`・`1_auto`〜`3_auto`・`max_auto`・`up_auto`・`dn_auto`・`toggle_auto`）はセレクターを動かす。
   - 外した前の処理：脚のモジュールの RTO の線（スロットル軸 > 0.8）、セレクターのコマンドでの `auto_brake_level` の書き込み、`autobrake_check`、memo と advisory、fltCtrls の 30 kt での DISARM とその時計。セレクターを書くのはブレーキのグルー（モデルの戻りと X-Plane のコマンド）と、脚のモジュールのセレクターのコマンド（`sel_dial_up`・`dn`）とフライトの開始（OFF）だけになった。
+- 段 4（ステアリング）：ステアリングのモデル（`B747.10.steering_model.lua`）を、グルー `B747.10.xt.steering.lua`（ブレーキのグルーの次に読み、`B747_steering()`）が回す。中身は notes/ATA-32.md §13。ステアリングは脚のモジュールだけが持つ（前は油圧のモジュール `B747.19.xt.hydraulics_override.lua` が IAS 20 kt で X-Plane と切り替えていた）。
+  - 読むもの：X-Plane の tiller の軸（`joy_mapped_axis_avail`・`value` の 37：推定）か新設 `gear/steering/tiller`（-1〜1）、ペダルとラダートリム（`flt_ctrls/rudder_input`、油圧のモジュールが書く）、系統 1（`hydraulics/pressure_1`）と脚レバー（DN のとき）、PSEU の前脚圧縮・pri と alt の air と ground、対地速度、新設 `gear/steering/pedal_tiller`（実機ではない手当て：1 で、tiller の軸が無いときペダルを tiller に。機体の読み込み `aircraft_load` で 1）、故障（新設 `gear/fail/pedal_steering`・`body_steering`）。
+  - 書くもの：X-Plane の `override_wheel_steer`（常に 1）・`tire_steer_command_deg`（0 前輪、1 右胴体、2 左胴体、3・4 翼脚は 0）、新設 `gear/steering/body_unlocked`（胴体脚のロックスイッチ。fltCtrls の CONFIG GEAR CTR と PSEU のグルーが読む）、advisory 43 >BODY GEAR STRG、STATUS 95 BODY GR STRG SYS・96 PEDAL STEERING。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 

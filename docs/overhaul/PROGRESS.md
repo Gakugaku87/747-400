@@ -2,7 +2,7 @@
 
 次のセッションは、ここと [PLAN.md](PLAN.md) を読んでから続きに入る。
 
-最終更新：2026-10-25 未明（脚 4-2 段 3：オートブレーキ。段 2：ブレーキの源とパーキングブレーキ・アンチスキッドのメッセージ。段 1：脚の作動・代替下げ・位置監視・EICAS の展開形。開発・試験はカスタム acf だけにする方針。全行程の飛行試験と配布用フォルダーの確認、着陸の道具 `tests/flight/tools/landing.sh`。冷えた状態からの開始で出ていた FLAPS DRIVE：autopilot のフラップの目標。操縦系統 4-1 段 4：横操縦、遮断弁、ヨーダンパーの INOP。段 3：スピードブレーキ。段 2c：speed trim とグリーンバンド。段 2b：安定板トリム。警報 WARN-24。段 2a：外側エルロンのロックアウトとラダー比変換器。段 1：フラップの FCU。data block の客室高度の赤い数字の桁と LDG ALT の消去 AIR-18。操縦系統 4-1 の小さな修正。火災防護 3-4。酸素 3-3。防氷・防雨 3-2）
+最終更新：2026-10-25 未明（脚 4-2 段 4：ステアリング。段 3：オートブレーキ。段 2：ブレーキの源とパーキングブレーキ・アンチスキッドのメッセージ。段 1：脚の作動・代替下げ・位置監視・EICAS の展開形。開発・試験はカスタム acf だけにする方針。全行程の飛行試験と配布用フォルダーの確認、着陸の道具 `tests/flight/tools/landing.sh`。冷えた状態からの開始で出ていた FLAPS DRIVE：autopilot のフラップの目標。操縦系統 4-1 段 4：横操縦、遮断弁、ヨーダンパーの INOP。段 3：スピードブレーキ。段 2c：speed trim とグリーンバンド。段 2b：安定板トリム。警報 WARN-24。段 2a：外側エルロンのロックアウトとラダー比変換器。段 1：フラップの FCU。data block の客室高度の赤い数字の桁と LDG ALT の消去 AIR-18。操縦系統 4-1 の小さな修正。火災防護 3-4。酸素 3-3。防氷・防雨 3-2）
 
 ## いまどこか
 
@@ -31,7 +31,7 @@
   - 3-4（火災防護）：段 1（エンジンと APU）と段 2（貨物室・車輪格納部・ダクトリーク・煙・スクイブ試験）。モデル `B747.35.fire_model.lua` と、火災のモジュールを書き直したグルー（ARCHITECTURE.md §4.14）：双ループの検知（AND と単ループへの組替え、APU は OR、>DET、loop の status、FIRE/OVHT SYS）、エンジンの過熱、消火スイッチのロック（火災・CUTOFF・試験・override）、翼ごとの共用ボトルと squib、X-Plane の消火器、APU の停止と地上の自動放出、APU の消火スイッチ（コマンド）、FIRE/OVHT TEST（TEST IN PROG から 5 秒で PASS/FAIL）、メッセージと灯。段 2：下部貨物室の煙検知（電源投入と試験のときだけの組替え、venturi の吸引）と 2 段の放出（A・B 即時、C・D は 30 分後か接地）、DISCH の灯と >CGO BTL DISCH・>CARGO DET AIR、車輪格納部の火災、BLD DUCT LEAK、化粧室・クルーレストの煙、スクイブ試験。試験はモデル 122 件・モジュール 87 件、X-Plane の `s22_fire_engine_apu`・`s23_fire_cargo`。残りは下の「火災防護（3-4）の段取りと GAP の状態」。
 - **段階 4**：
   - 4-1（操縦系統）：段 1〜4 は済（下の「操縦系統（4-1）の GAP の状態」）。
-  - 4-2（脚・ブレーキ・ステアリング）：段 1（脚の作動・代替下げ・位置監視・EICAS の表示）、段 2（ブレーキ：源の圧、パーキングブレーキの弁、ANTISKID・ANTISKID OFF・BRAKE LIMITER）、段 3（オートブレーキ：減速の制御、arm・適用・disarm、RTO、memo と AUTOBRAKES）は済。モデル `plugins/xtlua/scripts/B747.10.xt.gear/B747.10.gear_model.lua`・`B747.10.brake_model.lua`・`B747.10.autobrake_model.lua` とグルー `B747.10.xt.gear_act.lua`・`B747.10.xt.brakes.lua`（ARCHITECTURE.md §4.16、notes/ATA-32.md §10〜§12）。試験はモデル 71・34・33 件、モジュール 29・32 件、X-Plane の `s35_gear`・`s36_gear_lock`・`s37_brakes`・`s38_rto` と `landing.sh` のオートブレーキ。残りは下の「脚（4-2）の GAP の状態」。
+  - 4-2（脚・ブレーキ・ステアリング）：段 1（脚の作動・代替下げ・位置監視・EICAS の表示）、段 2（ブレーキ：源の圧、パーキングブレーキの弁、ANTISKID・ANTISKID OFF・BRAKE LIMITER）、段 3（オートブレーキ：減速の制御、arm・適用・disarm、RTO、memo と AUTOBRAKES）、段 4（ステアリング：tiller 70°・ペダル 7°、系統 1 の脚 DOWN 圧、胴体脚、CONFIG GEAR CTR、>BODY GEAR STRG と STATUS）は済。モデル `plugins/xtlua/scripts/B747.10.xt.gear/B747.10.gear_model.lua`・`B747.10.brake_model.lua`・`B747.10.autobrake_model.lua`・`B747.10.steering_model.lua` とグルー `B747.10.xt.gear_act.lua`・`B747.10.xt.brakes.lua`・`B747.10.xt.steering.lua`（ARCHITECTURE.md §4.16、notes/ATA-32.md §10〜§13）。試験はモデル 71・34・33・44 件、モジュール 29・32・28 件、X-Plane の `s35_gear`・`s36_gear_lock`・`s37_brakes`・`s38_rto`・`s39_steering` と `landing.sh` のオートブレーキ。残りは下の「脚（4-2）の GAP の状態」。
 
 ## 次にやること
 
@@ -42,10 +42,10 @@
 3. 3-2（防氷・防雨）：済（下の「防氷・防雨（3-2）の GAP の状態」）。残りは防氷の推力補正（ICE-11。EEC の補正表の作り直しで PNEU-13 と一緒に）、逆推力中の NAI 弁の閉（ICE-05）、ウォッシャー・防雨剤・WSHLD AIR（ICE-10。3D の操作子が要る）。3-3（酸素）：済（下の「酸素（3-3）の GAP の状態」）。
 4. 3-4（火災防護）：段 1・2 は済。残りは M869（脚格納部の APU 火災パネル）と APU のホーンの音、クルーレストの煙での空調の停止、ダクトリークの抽気への影響（PNEU-03）、貨物機の主デッキ（FIRE-19）。
 5. 4-1（操縦系統）：小さな修正（FCTL-04・14・19・23）、段 1（フラップの FCU：`B747.45.fcu_model.lua`）、段 2a（SRM のうち外側エルロンのロックアウトとラダー比変換器：`B747.45.srm_model.lua`）、段 2b（SRM の安定板トリム：手動・ALTN・オートトリム・cutout と自動遮断・制限・速さ・column cutout・AP との関係・メッセージ。AP が外れても AP の昇降舵の指令が残る誤りも）、段 2c（speed trim と STAB SPEED TRIM、グリーンバンドの 3 帯と CONFIG STAB の帯：`B747.45.greenband_model.lua`）、段 3（スピードブレーキ：自動展開と格納、SPEEDBRAKE AUTO、>SPEEDBRAKES EXT、空中の CONFIG SPOILERS を貨物機だけに、CONFIG GEAR の着陸フラップ：`B747.45.speedbrake_model.lua`）は済。段 4（横操縦：エルロンのプログラマ、スポイラーの横操縦とミキサー、スピードブレーキの段、スポイラー 6・7 と主翼 2 の X-Plane の面、エルロントリムの権限：`B747.19.lateral_model.lua`。後半で FLT CONTROL HYD POWER とヨーダンパーの INOP）も済。4-1 の残りは、承認が要るフラップの拡大・代替の表示のパネル（FCTL-12）、空力の項目で扱う昇降舵の舵角（FCTL-18）、acf の値の確認（FCTL-22）、資料に値が無い >STAB GREENBAND（FCTL-10 の残り）。次は PLAN の 4-2（脚・ブレーキ・ステアリング）。着陸の試験は `tests/flight/tools/landing.sh`（RJAA 34L、TESTING.md §4.2）で回せる。舵面への書き出し（controlObject）は残す。下の「操縦系統（4-1）の GAP の状態」。
-5a. 4-2（脚・ブレーキ・ステアリング）：段 1〜3 は済。次は段 4（ステアリング：GEAR-06・07。tiller の軸の無い利用者の地上走行をどうするかは利用者に聞く）、段 5（BTMS・TPIS と GEAR synoptic のパネル：GEAR-13・14・18）。CONFIG GEAR CTR（GEAR-17 の残り）、AIR/GND SYSTEM（GEAR-22）も。
+5a. 4-2（脚・ブレーキ・ステアリング）：段 1〜4 は済。tiller の軸が無い利用者のための「ペダルを tiller に」（実機ではない、`gear/steering/pedal_tiller`、既定で入）は、利用者の確認待ち。次は段 5（BTMS・TPIS と GEAR synoptic のパネル：GEAR-13・14・18）。AIR/GND SYSTEM と脚の残りの STATUS（GEAR-22 の残り）、CONFIG GEAR のラッチと GND PROX GEAR OVRD（GEAR-17 の残り）も。
 6. 2-3（エンジン）の残り：段 1〜3 は済（下の「エンジン（2-3）の GAP の状態」）。後回し：表示値の作り方（ENG-33。EGT は X-Plane の EGT の比例では始動と離陸を両立できず、N1・N2 などから作り直す必要があるが、値は資料に無く推定になる。N1・EPR・N2 の式を変えると EEC の推力の制御の調整もやり直し）、始動の空気（ENG-38・PNEU-08。ダクト圧と starter の関係が資料に無い）、GE の油圧の目盛りと値（CF6 の値が資料に無い）、振動の high band。partial・compact 形式と exceedance cue（ENG-22）は 5-2 で。空中始動の範囲（ENG-24）は資料に値が無く作れない。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べるのも残り。A/T（6-4）との境界は、EEC がレバー → 指令・最大定格・推力の制御まで、FMC の推力基準と A/T のサーボ（レバーを動かす）は 6-4。
 7. 1-5（空圧）の残り：故障の入れ方（過熱、過圧、HPSOV・PRV の固着、ダクトリーク）、地上空気の操作、スターターがダクト圧で回ること（エンジン 2-3）。
-8. 1-4（油圧）の残り：脚・ブレーキ・ステアリング・逆推力・stab trim・ヨーダンパーの「油圧で動くか」（HYD-09・11・12）は、それぞれの作り直しで、モデルの負荷の表（`B747_hyd_model.LOADS`）を使って入れる。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
+8. 1-4（油圧）の残り：脚・ブレーキ・ステアリング（4-2 段 1・2・4）、逆推力（2-3 段 3）、stab trim・ヨーダンパー（4-1 段 2b・4）の「油圧で動くか」（HYD-09・11・12）は済。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
 9. 1-1（電源）の残り：電源の有無を `bus_volts` で見ている系統を、バスごとの dataref（ARCHITECTURE.md §4.1）に乗り換える。どれも後の作り直し（空圧 1-5、空調 3-1、燃料 2-2、IRS と無線、照明、操縦系統 4-1）と絡むので、1-2 と同じく各系統の作り直しのときに行う（2026-10-23 に決めた。利用者の確認待ち）。
    - 済：表示器（fltInst02。機長 PFD・ND は APU standby、upper EICAS は main standby、ほかは F/O transfer）、EICAS の計算（warning。EIU のどれかに電源）、時計の計時（fltInst03・04。main hot battery bus）、ELEC パネルの灯（lighting）。
    - 燃料のポンプと弁も 2-2 で乗り換えた（AC・utility・main battery・hot battery・DC・APU battery・ground service bus）。
@@ -127,6 +127,7 @@ PLAN.md §3 に書いた。要点：
 
 - 脚の作動（4-2 段 1、`B747.10.gear_model.lua` に「estimate」と書いてある）：脚の動く時間（acf の 12・9・7 秒。代替下げの前脚・胴体脚の自由落下も同じとした）、脚の作動に要る圧 1,000 psi、GEAR TILT を抑止する圧（PSEU の HYDIM 高 1,500 psi）、翼脚のアップロックが外れるドアの 45°（行程の半分）、レバー OFF と圧の喪失で動いている途中の脚が止まること、重さのかかった脚は上がらないこと、代替下げをした脚をそのフライトの間は通常の系統で動かさないこと、電源の無いレバーのロックはかかったままのこと。
 - ブレーキ（4-2 段 2、`B747.10.brake_model.lua`・`B747.10.xt.brakes.lua` に「estimate」と書いてある）：ブレーキの効きが圧に比例し 3000 psi で全部、パーキングブレーキの弁の動く時間 1 秒、閉じ込めた圧に漏れと熱逃がしが無いこと、X-Plane の regular のブレーキを両ペダル 0.5、ペダルを 0.25 秒で踏み込むこと、パーキングブレーキをペダルを踏まずに入れられること。
+- ステアリング（4-2 段 4、`B747.10.steering_model.lua`・`B747.10.xt.steering.lua` に「estimate」と書いてある）：ステアリングに要る圧（1,000 psi）、前輪の速さ 20°/s と胴体脚の 5°/s、胴体脚の角度が前輪 20°〜70° で比例すること、圧が無いと前輪と胴体脚がその場にとどまること、指令なしでロックが外れて >BODY GEAR STRG を出すまでの 5 秒、車輪速を対地速度で代えること、X-Plane の tiller の軸の番号（37）。実機ではないもの：tiller の軸が無いときにペダルを tiller にする手当て（10 kt まで 70°、30 kt で 7°）。
 - オートブレーキ（4-2 段 3、`B747.10.autobrake_model.lua` に「estimate」と書いてある）：推力レバーのアイドル（0.05）と前進（0.1）、車輪のスピンアップと RTO の 85 kt を IRS の対地速度で見ること、disarm の後に圧が 2 秒で抜けること、減速の制御（IRS の対地速度の変化を 0.5 秒でならし、PI のゲイン KP 0.02・KI 0.12 をカスタム acf に合わせた）、RTO のペダル 12°（17° のうち）をペダルの比で見ること。
 - 試験の許容幅（`s00`・`s01` の数値の幅）は推定。シナリオに「推定」と書いてある。
 - 電源モデル（1-1。`B747.03.elec_model.lua` に「estimate」と書いてある）：
@@ -141,7 +142,7 @@ PLAN.md §3 に書いた。要点：
   - トラックの「傾き」：X-Plane の `eagle_claw_angle_deg` が 4° を超えたら傾き（X-Plane には傾きセンサーが無い）。この角度は胴体に対するトラックの角度で、空中は acf の 8°（胴体脚）・58°（翼脚）、地上は機体の機首下げの角度（駐機 0.85°、強いブレーキで 1.75°、機首上げで負。2026-10-24 に測った）。前の 1° では、滑走中の機首下げで AIR になっていた（「気づいたこと」）。
   - 前脚圧縮：前輪の接地（`on_ground[0]`）。実機は strut が 8 in を超えて縮んだとき。
   - HYDIM 1・4 の「高圧」：1,500 psi 以上（資料に値が無い）。
-  - 胴体脚ステアリングの「ロック」：胴体脚の車輪の角度が 0。
+  - 胴体脚ステアリングの「ロック」：ステアリングのモデルの胴体脚が中立から 0.1° 以内（4-2 段 4 から。前は X-Plane の胴体脚の角度が 0）。
 - 乗員への警報（1-3。`B747.87.alert_model.lua`・`B747.87.xt.alerts.lua` に「estimate」と書いてある）：
   - モデルを回す周期 0.1 秒（資料に値が無い。前は約 2 秒ごと）。EIU が電源投入から 4 秒で動き出すのは前の値のまま。
   - 始動中の抑止の終わりの「アイドル到達」：N2 60 %（CF6 の min idle は 61.6 %：ATA70_80 p.206。PW の値は資料に無い）。
@@ -335,10 +336,10 @@ PLAN.md §3 に書いた。要点：
 | HYD-05 fire switch | 済（SOV 閉、EDP 減圧、demand pump 起動） |
 | HYD-06・07 舵面の系統の組 | 済（upper rudder 1+3、L INBD AIL 1+3、R OUTBD AIL 3+4、spoiler 8） |
 | HYD-08 漏れ故障の取り違え | 済（故障ごとに系統を 1 回だけ選ぶ） |
-| HYD-09 ブレーキ源 | 一部。源の選択・accumulator・>BRAKE SOURCE は済。ブレーキの効きを源で制限するのは脚・ブレーキ（4-2）で |
+| HYD-09 ブレーキ源 | 済（源の選択・accumulator・>BRAKE SOURCE。ブレーキの効きを源の圧で制限するのは 4-2 段 2） |
 | HYD-10 accumulator | 済（系統 4 だけが充圧、予圧 750 psi） |
-| HYD-11 舵面以外の負荷 | 一部（P&W の逆推力は 2-3 段 3 で系統 n の圧 1,000 psi 以上のときだけ動く。脚・stab trim などは各系統の作り直しで、負荷の表を使う） |
-| HYD-12 ステアリング | 未（脚・ブレーキで） |
+| HYD-11 舵面以外の負荷 | 済（P&W の逆推力は 2-3 段 3 で系統 n の圧 1,000 psi 以上のときだけ動く。脚は 4-2 段 1、安定板トリムは 4-1 段 2b、ヨーダンパーは 4-1 段 4、ステアリングは 4-2 段 4。作動油の消費は脚・ブレーキだけ） |
+| HYD-12 ステアリング | 済（4-2 段 4。前輪と胴体脚は系統 1 の脚 DOWN 圧（レバー DN）で動き、圧が無いとその場にとどまる） |
 | HYD-13 X-Plane の油圧への干渉 | 済（故障を書かない） |
 | HYD-14 P5 の灯 | 済 |
 | HYD-15 EICAS | 済（抑止を含む） |
@@ -608,8 +609,12 @@ PLAN.md §3 に書いた。要点：
 | GEAR-03 オートブレーキの中身 | 済（段 3。レベルごとの減速と最大圧、IRS の対地速度の変化の PI 制御、arm・適用・disarm の条件、正規のブレーキだけ、セレクターのばね、AUTOBRAKES） |
 | GEAR-04 RTO | 済（段 3。地上で armed と memo、85 kt のラッチ、ペダル 12°・推力レバー・故障・スピードブレーキで止めてセレクターは RTO のまま、air mode で OFF） |
 | GEAR-05 30 kt での DISARM | 済（段 3。fltCtrls の処理を外した。止まるまで効き、地上でもアイドルで arm できる） |
+| GEAR-06 ステアリング | 済（段 4。tiller 70°・ペダル 7°（tiller が優先、ペダルは前脚圧縮で engage）、系統 1 の脚 DOWN 圧、空中はカムで中立、胴体脚の arm（地上 10 秒、15/20 kt、IRU 40 kt）と 20° からの逆向き 13°。`override_wheel_steer` は脚のモジュールが常に入れ、油圧のモジュールの処理は外した。tiller は X-Plane の tiller の軸（37：推定）か `gear/steering/tiller`。tiller の軸が無いときはペダルを tiller に（実機ではない、`gear/steering/pedal_tiller`）） |
+| GEAR-07 acf の操向角 | 済（段 4。上書きを常に入れるので、acf の `_steerdeg_*`（カスタム 75/35）と胴体脚 15° は効かない。acf は変えていない） |
+| GEAR-17 configuration warning の脚 | 一部（CONFIG GEAR の着陸フラップとレバーは 4-1 段 3、PARK BRK のエンジン 2 か 3 は段 2、CTR は段 4 で胴体脚のロックスイッチとエンジン 2 か 3。CONFIG GEAR のラッチ・GND PROX GEAR OVRD・脚の判定は未） |
+| GEAR-22 脚の advisory と STATUS | 一部（段 4 で >BODY GEAR STRG、BODY GR STRG SYS、PEDAL STEERING。AIR/GND SYSTEM、GEAR MONITOR などは未） |
 | GEAR-20 誤 disarm | 済（段 3。推力レバーはアイドル（0.05）にした後に 0.1 を超えたとき。故障は `gear/fail/autobrake`） |
-| ほか（GEAR-06・07、13・14・17・18・22） | 未（段 4・5） |
+| ほか（GEAR-13・14・18） | 未（段 5） |
 
 ## 気づいたこと（作業の途中で）
 
@@ -696,6 +701,7 @@ PLAN.md §3 に書いた。要点：
   - 着陸の減速が強い：重さ 270 t、接地 146〜147 kt から、逆推力 8 秒とブレーキ 0.5（`left/right_brake_ratio`）で約 600 m で止まった（平均 0.5〜0.6 G くらい）。4-2（ブレーキ）で FCOM の値と比べる。
 
 - 4-2 の調べ（2026-10-25。今のコードの流れは Explore のエージェントに任せた）で X-Plane で確かめたこと：`override_gearbrake` を入れても、X-Plane は脚を 1 本のハンドルの向きへ動かし続ける（`acf_gear_deploy` に書いた値はそこから動き出す）。書き続ければ脚ごとに止められる。X-Plane の `rel_lagearN` は脚 N−1（`rel_lagear2` で右胴体脚が上のまま）。`override_toe_brakes` を入れると `left/right_brake_ratio` がプラグインの値のまま保たれ、左は脚 2・4、右は脚 1・3 の `tire_part_brake` に効く（前脚 0 にはブレーキなし）。`l_brake_add` は `left_brake_ratio` と同じもの。`override_gearbrake` を入れてもブレーキの値は効く。パーキングブレーキ（`parking_brake_ratio`）は `wheel_brake_ratio` を 1 にし、4 つの主脚の `tire_part_brake` が 1。着陸の後の `brake_absorbed_J` は脚ごとに 67〜95 MJ（RJAA 34L、270 t、逆推力とブレーキ 0.5）。利用者のジョイスティックの割り当ては roll・pitch・throttle だけで、toe brake・ラダー・tiller の軸は無い（このときは未接続）。脚が上がっていても X-Plane のトラックの角度は 8°・58° のままで、PSEU は AIR のまま。
+- 4-2 段 4 の試験（2026-10-25）で見つけたこと：(1) 逆推力の hold コマンド（`sim/engines/thrust_reverse_hold`）は、離しても最大逆推力のまま残る。本家からの動き（`B747.40.xt.engines.lua` の離したときの処理がコメントアウトされていて、推力レバーを前に出すまで続く）。着陸の試験の減速の測り方に効いていた。実機の逆推力レバーは乗員が戻すので、離したら reverse idle にするかは、逆推力の動き（2-3 の残り）として利用者に確かめる。(2) 逆推力の最大で P&W の EPR の表示が赤くなる。EPR の表示は X-Plane の推力（逆推力でも正）から計算し、フラップが出ていると最大 EPR で頭打ちにするため。実機は逆推力の間 EEC が N1 の代替モードで制御し（FCOM p.877）、最大 EPR には届かない。表示値の作り方（ENG-33）で直す。(3) X-Plane のブレーキがとても強い。オートブレーキ 2 の 5 ft/s² がブレーキの比 0.09（約 270 psi 相当）で出る。ブレーキの効きを圧に比例させた推定（段 2）のもとでは、実機の圧とはずれる（実機は数百〜千 psi 台）。オートブレーキの減速と RTO の止まり方は合うので、カスタム acf のブレーキの係数を変えるかは、FCOM の制動距離の表と比べてから提案する。
 
 ## 日誌
 
@@ -783,3 +789,4 @@ PLAN.md §3 に書いた。要点：
 - 2026-10-25 00:0x〜01:0x：脚・ブレーキ・ステアリング（4-2）段 1、脚の作動・代替下げ・位置監視・EICAS の表示（GEAR-08・09・10・11・23、GEAR-19 の非常下げ）。途中で利用者の方針の変更（開発・試験はカスタム acf だけ、使用量を抑える）を CLAUDE.md などに入れてコミットした（93905868）。今のコードの流れの調べは Explore のエージェントに任せ、その間に X-Plane で脚とブレーキの上書きを試した（上の「気づいたこと」）。新しいモデル `B747.10.gear_model.lua` とグルー `B747.10.xt.gear_act.lua`（notes/ATA-32.md §10、ARCHITECTURE.md §4.16）。前のレバーのハンドラー（xt 側の死んだ写し）と EICAS の脚の表示の関数は外した。カスタム acf のパネルに展開形と空の箱を足した（`panel_gear.lua`、絵は `make_gear_images.ps1`。ACF_DIFF.md §5。バックアップ `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_gear_expanded`）。新しい絵を読むには機体を絵ごと読み直す（`reload_aircraft`、TESTING.md §4.6）。キットの `cmd` の手順に `async`（押したまま次の手順へ）を足した（`s36` の LOCK OVRD）。試験：モデル 71 件、モジュール 29 件、全 48 本。X-Plane（カスタム acf）：`s35_gear` 29/29（空中開始でレバー UP、DN でドアが先・前脚が 2 + 12 秒で DOWN、UP と 10 秒後の消灯、系統 4 なしで翼脚が上のまま 31 秒で GEAR DISAGREE と展開形、ALTN WING で約 20 秒・ドアは開いたまま・GEAR DOOR なし。展開形の写真で前脚・胴体脚 DN、翼脚 UP の配置を確かめた）、`s36_gear_lock` 11/11（地上のロックで UP のコマンドでも OFF、LOCK OVRD で UP まで行くが重さのかかった脚は上がらない）。Lua の誤りなし。
 - 2026-10-25 01:0x〜01:3x：脚・ブレーキ・ステアリング（4-2）段 2、ブレーキ（GEAR-12・15・16・21、GEAR-19 のブレーキの部分。notes/ATA-32.md §11）。利用者から「ステップを進めるのに承認を要求しなくていい」（段の切り替えでも聞かない）。X-Plane で、`brakes_regular`・`max` は上書きの外で X-Plane のパーキングブレーキの比を上げ、`left_brake`・`right_brake` は toe brake を 1 にすることを確かめた。新しいモデル `B747.10.brake_model.lua` とグルー `B747.10.xt.brakes.lua`：ブレーキは脚のモジュールだけが持ち、`override_toe_brakes` を常に入れる。油圧のグルーが源と圧を出し（新設 `hydraulics/brake_source`・`brake_psi`）、ペダルの増えた分も accumulator の作動油に数える。fltCtrls のパーキングブレーキの同期と古い油圧のモジュールの PARK BRAKE SET は外し、CONFIG PARK BRK はレバーとエンジン 2 か 3 にした。試験の道具 `landing.sh` は、ブレーキを X-Plane のトグルのコマンドに、駐機をレバーに変えた（段 3 で回す）。試験：モデル 31 件、モジュール 24 件、全 50 本。X-Plane（カスタム acf、機体を読み直して）：`s37_brakes` 23/23。Lua の誤りなし。
 - 2026-10-25 01:3x〜02:0x：脚・ブレーキ・ステアリング（4-2）段 3、オートブレーキ（GEAR-02・03・04・05・20、GEAR-19 のオートブレーキの部分。notes/ATA-32.md §12）。新しいモデル `B747.10.autobrake_model.lua`：セレクターのばねと保持、arm・適用（60 kt を 3 秒のスピンアップ）・disarm、レベルごとの減速と最大圧の PI 制御、RTO（85 kt のラッチ、air mode で OFF）、memo と AUTOBRAKES。ブレーキのグルーが、ブレーキのモデルの前に回して指令の圧を渡す。X-Plane のオートブレーキは常に OFF、そのコマンドはセレクターに。脚のモジュールの RTO の線・`autobrake_check`・memo と、fltCtrls の 30 kt での DISARM を外した。脚のモジュールが X-Plane のパーキングブレーキを持つようになったので（段 2）、前からのシナリオ 9 本の `set` の手順をパーキングブレーキのレバーに変えた。試験：モデル 33 件、ブレーキのモデル 34 件、モジュール 32 件、全 51 本。X-Plane（カスタム acf）：新シナリオ `s38_rto` 12/12（95 kt でアイドルにしてブレーキ 1 で止まり、セレクターは RTO のまま、70 kt では働かない）。`landing.sh` に `AUTOBRAKE` を足した。オートブレーキ 4 は 8/9：memo と 100〜60 kt の減速 7.92 ft/s²（指令 7.5）は通り、落ちたのは接地点 1,717 m（道具の基準 1,500 m 以内）。MCP の高度 100 ft を A/P が滑走路の手前から捕捉し始め、フレアの前に降下率が約 190 fpm まで落ちて浮いた（道具の誤り）。道具を 0 ft にして MAX で 9/9（接地 627 m、減速 10.08 ft/s²、指令 11.0）。Lua の誤りなし。X-Plane の tiller と toe brake の軸は、X-Plane の開発者のページの軸の割り当ての番号（tiller 37、左右の toe brake 6・7）で `joy_mapped_axis_value` を読めそうと分かった（推定。利用者のジョイスティックは今は外れていて、割り当ては roll・pitch・throttle だけ）。
+- 2026-10-25 02:0x〜02:3x：脚・ブレーキ・ステアリング（4-2）段 4、ステアリング（GEAR-06・07、HYD-12、GEAR-17 の CTR の部分、GEAR-22 の一部。notes/ATA-32.md §13）。資料は ATA29_32 の 32-50（p.565–633）と FCOM p.1513・1521、FCTM p.78 を読んだ。新しいモデル `B747.10.steering_model.lua` とグルー `B747.10.xt.steering.lua`：ステアリングは脚のモジュールだけが持ち、`override_wheel_steer` を常に入れる。油圧のモジュールのステアリングの処理（IAS 20 kt で X-Plane と切り替え）は外した。tiller の軸を持たない利用者（今の利用者も）がペダル 7° だけでは地上走行できないので、tiller の軸が無いときはペダルを低速で tiller にする手当て（実機ではない。`gear/steering/pedal_tiller`、既定で入）を入れ、利用者に確かめることにした。胴体脚のロックスイッチを `gear/steering/body_unlocked` に出し、CONFIG GEAR CTR（エンジン 2 か 3 に直した）と PSEU が読む。STATUS に BODY GR STRG SYS（95）と PEDAL STEERING（96）を足した。試験：モデル 44 件、モジュール 28 件、操縦系統のモジュールに CONFIG GEAR CTR（129 件）、全 53 本。X-Plane（カスタム acf、機体を読み直して）：新シナリオ `s39_steering` 23/23（tiller 左いっぱいで前輪 70°・胴体脚が右へ 13°、少しの推力で 12.9 秒で左へ 30°、ペダル tiller で 70°・切って 7°、CONFIG GEAR CTR、故障のメッセージ）。`landing.sh` のオートブレーキ 2 は 8/9：接地 559 m・中心線から 1.8 m で停止（滑走中のペダルの操向も働いた）、落ちたのは 100〜60 kt の減速 7.98 ft/s²（指令 5.0）。診断で、逆推力なしならオートブレーキ 2 は 116→14.5 kt を平均 4.74 ft/s²（ブレーキの比は約 0.09）、逆推力ありでは逆推力の間ブレーキ 0 で減速 7.3 ft/s²、収納後は約 4.9 ft/s² と分かった。原因は逆推力の hold コマンドで、離しても最大逆推力のまま残り（本家から：離したときの処理がコメントアウトされている）、25 kt 近くまで続いていた。オートブレーキ 4 の 7.92 ft/s² もこの逆推力が主だった。道具は次のコミットで直す。Lua の誤りなし。途中で利用者から「LDG ALT が 2000 ft なのは正常か」と聞かれ、FMC に目的地が無いときの FCOM p.608 の動き（LANDING ALT と 2,000 ft の仮定）で正常と答えた。

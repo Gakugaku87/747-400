@@ -129,6 +129,17 @@ B747DR_gear_fail_limiter       = deferred_dataref("laminar/B747/gear/fail/brake_
 B747DR_gear_fail_park_valve    = deferred_dataref("laminar/B747/gear/fail/park_valve", "number")
 -- the autobrakes (4-2 step 3, B747.10.autobrake_model.lua): failed
 B747DR_gear_fail_autobrake     = deferred_dataref("laminar/B747/gear/fail/autobrake", "number")
+-- the steering (4-2 step 4, B747.10.steering_model.lua): the tillers (-1 .. 1,
+-- + right) for users and tools without X-Plane's tiller axis; the pedals as
+-- the tiller without a tiller axis (1 on: not the aircraft, on at the
+-- aircraft's load); a body gear truck unlocked (1); failures (no X-Plane
+-- equivalents): a pedal steering interconnect actuator, a body gear
+-- steering actuator unlocked.
+B747DR_gear_steering_tiller    = deferred_dataref("laminar/B747/gear/steering/tiller", "number")
+B747DR_gear_pedal_tiller       = deferred_dataref("laminar/B747/gear/steering/pedal_tiller", "number")
+B747DR_gear_body_unlocked      = deferred_dataref("laminar/B747/gear/steering/body_unlocked", "number")
+B747DR_gear_fail_pedal_strg    = deferred_dataref("laminar/B747/gear/fail/pedal_steering", "number")
+B747DR_gear_fail_body_strg     = deferred_dataref("laminar/B747/gear/fail/body_steering", "number")
 B747DR_parking_brake_ratio = find_dataref("laminar/B747/flt_ctrls/parking_brake_ratio")
 simDR_parking_brake_ratio       = find_dataref("sim/cockpit2/controls/parking_brake_ratio")
 ----- GEAR HANDLE DATAREF HANDLER -------------------------------------------------------

@@ -137,7 +137,8 @@ B747DR_display_N1				= find_dataref("laminar/B747/engines/display_N1")
 B747DR_display_N2				= find_dataref("laminar/B747/engines/display_N2")
 simDR_radio_alt_height_capt     = find_dataref("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
 
-simDR_tire_steer_deg        = find_dataref("sim/flightmodel2/gear/tire_steer_actual_deg")
+-- a body gear steering actuator unlocked: its lock switches (the gear module's steering, 4-2 step 4)
+B747DR_body_steering_unlocked = find_dataref("laminar/B747/gear/steering/body_unlocked")
 simDR_parking_brake_ratio       = find_dataref("sim/cockpit2/controls/parking_brake_ratio")
 simDR_elevator_trim             = find_dataref("sim/flightmodel2/controls/elevator_trim")
 simDR_acf_weight_total_kg       = find_dataref("sim/flightmodel/weight/m_total")
@@ -844,13 +845,14 @@ function B747_fltCtrols_EICAS_msg()
 	B747DR_CAS_warning_status[2] = 0
     end
 
-    -- >CONFIG GEAR CTR
-    if (math.abs(simDR_tire_steer_deg[1])>0.5 or math.abs(simDR_tire_steer_deg[2])>0.5)
+    -- >CONFIG GEAR CTR: the body gear not centred (the actuators' lock
+    -- switches), engine 2 or 3 in the takeoff range (FCOM p.1603)
+    if B747DR_body_steering_unlocked == 1
         and simDR_all_wheels_on_ground == 1
         and simDR_ind_airspeed_kts_pilot < B747DR_airspeed_V1
         and num_fuel_ctrl_sw_on >= 3
         and simDR_engine_throttle_jet_all >= 0
-        and B747DR_display_N1[1] > thRef and B747DR_display_N1[2] > thRef
+        and (B747DR_display_N1[1] > thRef or B747DR_display_N1[2] > thRef)
     then
         B747DR_CAS_warning_status[4] = 1
     else

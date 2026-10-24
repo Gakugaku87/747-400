@@ -390,21 +390,9 @@ function flight_controls_override()
     
 
     
-    if B747_pressureDRs[1]>1000 then
+    --the nose wheel and body gear steering: the gear module
+    --(B747.10.xt.steering.lua, 4-2 step 4)
 
-        if simDR_ias_pilot<20 then
-            simDR_override_steering=0
-        else
-            simDR_override_steering=1
-            simDR_steering[0]=B747_rescale(-1,-7,1,7,simDR_total_heading_ratio)
-            simDR_steering[1]=B747_interpolate_value(simDR_steering[1],0,-77,77,0.3)
-            simDR_steering[2]=B747_interpolate_value(simDR_steering[2],0,-77,77,0.3)
-        end
-    else
-
-        simDR_override_steering=1
-    end
-    
 
     --the rudder ratio changers and the outboard aileron lockout: the SRMs
     --(B747.45.xt.srm.lua). The pedals and the rudder trim (80 % of the full
