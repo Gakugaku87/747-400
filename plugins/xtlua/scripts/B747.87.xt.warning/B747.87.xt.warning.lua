@@ -667,6 +667,8 @@ local B747_CASstatusMsg = {
     {DRindex = 85, name = "FLAP CONTROL C"},
     {DRindex = 86, name = "FLAP CONTROL R"},
     {DRindex = 87, name = "FLAP LOAD RELIEF"},
+    {DRindex = 88, name = "AILERON LOCKOUT"},     -- ATA27 p.133 (4-1 step 2a)
+    {DRindex = 89, name = "RUDDER RATIO"},        -- ATA27 p.685
 }
 
 

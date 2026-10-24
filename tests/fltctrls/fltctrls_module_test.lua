@@ -3,11 +3,15 @@
 -- the flap control units (B747.45.xt.fcu.lua, 4-1): the lever, the
 -- hydraulic systems 1 and 4, the ducts, the buses and the airspeed in; the
 -- surfaces for the hydraulics module, the FCUs' command, the indication,
--- the EICAS slots out; and the flap lever snapping to the nearest detent.
--- The FCU's behaviour is tested in fcu_model_test.lua; this checks the
--- wiring and the names (docs/overhaul/notes/ATA-27.md §4.3-§4.4).
+-- the EICAS slots out; the SRMs (B747.45.xt.srm.lua, step 2a): the
+-- outboard aileron lockout and the rudder ratios; and the flap lever
+-- snapping to the nearest detent. The models' behaviour is tested in
+-- fcu_model_test.lua and srm_model_test.lua; this checks the wiring and the
+-- names (docs/overhaul/notes/ATA-27.md §4.1, §4.3-§4.4, §4.8).
 local T = dofile("tests/lib/check.lua")("fltctrls_module")
 local xtlua = dofile("tests/lib/xtlua.lua")
+-- the ratio changer's schedule, from the model itself
+B747_srm_model_test_rrc = dofile("plugins/xtlua/scripts/B747.45.xt.fltCtrls/B747.45.srm_model.lua").rrc_in
 
 local rt = xtlua.new()
 rt:load("plugins/xtlua/scripts/B747.45.xt.fltCtrls/B747.45.xt.fltCtrls.lua")
@@ -146,6 +150,44 @@ rt:set("laminar/B747/flt_ctrls/alt_flaps/sel_dial_pos", 0)
 rt:set("laminar/B747/button_switch/position", 0, 0)
 frames(1)
 T.equal(get(CAUTION, 28), 0, "disarmed: no FLAPS CONTROL")
+
+-- the SRMs (B747.45.xt.srm.lua, 4-1 step 2a): the outboard aileron
+-- lockout and the rudder ratio changers from the airspeed, Mach and the
+-- FCU's group A; RUD RATIO SNGL; the air data computer failure
+local SRM_FAIL = "laminar/B747/flt_ctrls/fail/"
+local function fly(kt, mach, seconds)
+    rt:set(IAS, kt)
+    rt:set("laminar/B747/gauges/indicators/airspeed_kts_copilot", kt)
+    rt:set("sim/cockpit2/gauges/indicators/mach_pilot", mach)
+    rt:set("sim/cockpit2/gauges/indicators/mach_copilot", mach)
+    frames(seconds)
+end
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+rt:set(LEVER, 0)
+fly(150, 0.25, 40)
+T.equal(get(FCU .. "slat", 0), 0, "flaps up")
+T.equal(get("laminar/B747/flt_ctrls/left_outer_aileron_lockout"), 1, "150 kt: outboard ailerons unlocked")
+T.equal(get("laminar/B747/flt_ctrls/rudder_ratio_upr"), 1, "150 kt: full rudder (upper)")
+T.equal(get("laminar/B747/flt_ctrls/rudder_ratio_lwr"), 1, "full rudder (lower)")
+fly(300, 0.5, 6)
+T.equal(get("laminar/B747/flt_ctrls/left_outer_aileron_lockout"), 0, "300 kt clean: locked")
+T.equal(get("laminar/B747/flt_ctrls/right_outer_aileron_lockout"), 0, "right too (its scale is negative)")
+local r300 = (32 - 27 * B747_srm_model_test_rrc(300)) / 32
+T.near(get("laminar/B747/flt_ctrls/rudder_ratio_upr"), r300, 1e-6, "300 kt: the ratio changer's schedule")
+T.near(get("laminar/B747/flt_ctrls/rudder_ratio"), r300, 1e-6, "rudder_ratio is the lower's")
+rt:set(SRM_FAIL .. "rrc", 0, 1)
+fly(200, 0.35, 4)
+T.equal(get(ADVISORY, 262), 1, "upper ratio changer stuck: RUD RATIO SNGL")
+T.equal(get(STATUS, 89), 1, "STATUS RUDDER RATIO")
+T.near(get("laminar/B747/flt_ctrls/rudder_ratio_upr"), r300, 1e-6, "upper stays where it stuck")
+rt:set(SRM_FAIL .. "rrc", 0, 0)
+rt:set("sim/operation/failures/rel_adc_comp", 6)
+fly(200, 0.35, 8)
+T.near(get("laminar/B747/flt_ctrls/rudder_ratio_lwr"), (32 - 27 * B747_srm_model_test_rrc(209)) / 32, 1e-6,
+    "air data computer failed: lower at the 209 kt position")
+rt:set("sim/operation/failures/rel_adc_comp", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+fly(0, 0, 1)
 
 -- the lever between detents snaps to the nearest one 2 s after it stops
 rt:set(LEVER, 0.31)

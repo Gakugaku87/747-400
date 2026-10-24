@@ -189,6 +189,12 @@ B747DR_fcu_fail_te_secondary    = deferred_dataref("laminar/B747/flt_ctrls/fail/
 B747DR_fcu_fail_te_stuck        = deferred_dataref("laminar/B747/flt_ctrls/fail/te_stuck", "array[2]")
 B747DR_fcu_fail_le_primary      = deferred_dataref("laminar/B747/flt_ctrls/fail/le_primary", "array[3]")
 B747DR_fcu_fail_le_secondary    = deferred_dataref("laminar/B747/flt_ctrls/fail/le_secondary", "array[3]")
+-- the SRMs (B747.45.xt.srm.lua; 4-1 step 2a): failures X-Plane does not
+-- have (1 failed): SRM L, R; the outboard aileron lockout actuator stuck;
+-- the upper, lower rudder ratio changer actuators stuck
+B747DR_srm_fail_srm             = deferred_dataref("laminar/B747/flt_ctrls/fail/srm", "array[2]")
+B747DR_srm_fail_lockout         = deferred_dataref("laminar/B747/flt_ctrls/fail/lockout_actuator", "number")
+B747DR_srm_fail_rrc             = deferred_dataref("laminar/B747/flt_ctrls/fail/rrc", "array[2]")
 
 -- ALTERNATE FLAPS
 B747CMD_alt_flaps_sel_dial_up           = deferred_command("laminar/B747/flt_ctrls/flaps/alt_flaps/sel_dial_up", "Alternate Flaps Selector Dial Up", B747_alt_flaps_sel_dial_up_CMDhandler)

@@ -144,6 +144,11 @@ B747DR_rudder_upr_pos   = deferred_dataref("laminar/B747/flt_ctrls/rudder_upr_po
 B747DR_rudder_ratio   = deferred_dataref("laminar/B747/flt_ctrls/rudder_ratio", "number")
 simDR_steering = find_dataref("sim/flightmodel2/gear/tire_steer_command_deg")
 simDR_total_heading_ratio   = deferred_dataref("sim/cockpit2/controls/total_heading_ratio", "number")
+-- the pilots' pedals alone: X-Plane's total_heading_ratio adds 0.3 of the
+-- rudder trim in the air (the acf's trim authority; checked 2026-10-24)
+simDR_yoke_heading_ratio    = find_dataref("sim/cockpit2/controls/yoke_heading_ratio")
+simDR_rudder_trim_ratio     = find_dataref("sim/cockpit2/controls/rudder_trim")
+B747DR_rudder_input         = find_dataref("laminar/B747/flt_ctrls/rudder_input")
 
 B747DR_elevator_ratio   = deferred_dataref("laminar/B747/flt_ctrls/elevator_ratio", "number")
 B747_controls_lower_rudder           = deferred_dataref("laminar/B747/cablecontrols/lower_rudder", "number")
@@ -406,19 +411,19 @@ function flight_start()
     B747DR_elevator_ratio   = 1.0
     if initialiseControls then
 
-      --YAW DAMPER
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3.5,"maxout":3.5,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_lwr","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3.5,"maxout":3.5,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_upr","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
+      --YAW DAMPER, scaled by each rudder's ratio changer (the SRMs,
+      --B747.45.xt.srm.lua; before, both by one ratio)
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3.5,"maxout":3.5,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_lwr","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio_lwr"}';
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3.5,"maxout":3.5,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_upr","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio_upr"}';
 
-      --RUDDER TRIM: moves the pedals' neutral, up to 80 % of the full travel,
-      --through the ratio changers (ATA27 p.612-614). X-Plane's total_heading_ratio
-      --does not hold it (2026-10-24). Before the pedals: the outputs to one
-      --dstDref add up, each clamped to its own range
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-25.6,"maxout":25.6,"scale":1.0,"srcDref":"sim/cockpit2/controls/rudder_trim","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-25.6,"maxout":25.6,"scale":1.0,"srcDref":"sim/cockpit2/controls/rudder_trim","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
-
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-32,"maxout":32,"scale":1.0,"srcDref":"sim/cockpit2/controls/total_heading_ratio","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-32,"maxout":32,"scale":1.0,"srcDref":"sim/cockpit2/controls/total_heading_ratio","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
+      --PEDALS AND RUDDER TRIM together (the trim moves the pedals' neutral,
+      --up to 80 % of the full travel: hydraulics_override.lua), through the
+      --ratio changers, so 32 degrees at low speed and 5 at 450 kt for both
+      --together (ATA27 p.596, p.612-614, p.634; before, each was scaled on
+      --its own and their sum not limited). The outputs to one dstDref add
+      --up, each clamped to its own range
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-32,"maxout":32,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/rudder_input","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio_lwr"}';
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-32,"maxout":32,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/rudder_input","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio_upr"}';
 
       B747DR_controlOverrides = '{"minin":-32,"maxin":32,"minout":-32,"maxout":32,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/rudder_lwr_pos","dstDref":"sim/flightmodel/controls/vstab2_rud1def"}';
       B747DR_controlOverrides = '{"minin":-32,"maxin":32,"minout":-32,"maxout":32,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/rudder_upr_pos","dstDref":"sim/flightmodel/controls/vstab2_rud2def"}';
