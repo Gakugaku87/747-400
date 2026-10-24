@@ -2,7 +2,7 @@
 
 次のセッションは、ここと [PLAN.md](PLAN.md) を読んでから続きに入る。
 
-最終更新：2026-10-24 朝（火災防護 3-4 段 1。酸素 3-3。防氷・防雨 3-2）
+最終更新：2026-10-24 朝（火災防護 3-4 段 1・2。酸素 3-3。防氷・防雨 3-2）
 
 ## いまどこか
 
@@ -28,7 +28,7 @@
   - 3-1（空調・与圧・機器冷却）：段 1〜3 まで（`B747.55.pack_model.lua`・`B747.55.press_model.lua`・`B747.55.eqcool_model.lua`・`B747.55.temp_model.lua` とグルー、ARCHITECTURE.md §4.11）。X-Plane の与圧を上書きし、客室はパックの空気と外流弁・漏れ・リリーフ弁の収支で計算する。CPC A/B とモード、FMC の経路からの着陸高度、リミッタ、手動、リリーフ、機器冷却、メッセージ。段 2 で 7 ゾーンの温度制御（トリム空気、backup、ダクト過熱と ZONE RST、comfort correction）と貨物室の温度・暖房。段 3 でカスタム acf の ECS synoptic（ゾーン温度、MASTER、貨物室、外流弁の針と MAN/AUTO、HI FLOW、EXT AIR、パックの OFF/A/B、流れの線）。試験はパックのモデル 61 件・与圧のモデル 99 件・機器冷却のモデル 21 件・温度のモデル 75 件・モジュール 73 件、X-Plane の `s14_press_ground`・`s15_press_cruise`・`s16_temp_ground`・`s17_ecs_synoptic`。段取りと残りは下の「空調（3-1）の段取りと GAP の状態」。
   - 3-2（防氷・防雨）：モデル `plugins/xtlua/scripts/B747.50.xt.antiice/B747.50.antiice_model.lua` とグルー `B747.50.xt.antiice.lua` で作り直した（ARCHITECTURE.md §4.12）。NAI 弁（PRV の下流の抽気で開く、28V DC、過熱のラッチ）、WAI 弁（空中でスイッチ ON、AC bus 2 のモーター、指令と比べる VALVE 灯）、窓の加熱（電源が無ければ INOP、故障のラッチと 10 秒の入れ直し）、プローブの加熱（エンジン運転中、TAT は空中）、氷検知（空中、AC bus 1・3）、ワイパー（28V DC）と、その P5 の灯・EICAS・STATUS。X-Plane の熱・氷検知・ワイパーへは左右別々に、変わったときだけ書く。試験はモデル 47 件・モジュール 174 件・照明 50 件、X-Plane の `s18_antiice_ground`・`s19_antiice_air`。残りは下の「防氷・防雨（3-2）の GAP の状態」。
   - 3-3（酸素）：新しいモジュール `B747.36.xt.oxygen`（モデル `B747.36.oxygen_model.lua` とグルー、ARCHITECTURE.md §4.13）。乗客酸素（約 14,000 ft の自動作動、ON、12,000 ft 未満の RESET、PASS OXYGEN ON と 60 秒の STATUS、サインの強制点灯）、治療用酸素（THERAP OXYGEN ON）、乗員・乗客の酸素圧（前方貨物室の温度で補正、>CREW OXY LOW）、乗員マスク。3D に操作子が無いのでコマンドで操作する。X-Plane の酸素系統を上書きし、乗員マスクで低酸素の効果を抑える。カスタム acf の STATUS ページに酸素圧を出した。試験はモデル 47 件・モジュール 63 件、X-Plane の `s20_oxygen`。残りは下の「酸素（3-3）の GAP の状態」。
-  - 3-4（火災防護）：段 1（エンジンと APU）まで。モデル `B747.35.fire_model.lua` と、火災のモジュールを書き直したグルー（ARCHITECTURE.md §4.14）：双ループの検知（AND と単ループへの組替え、APU は OR、>DET、loop の status、FIRE/OVHT SYS）、エンジンの過熱、消火スイッチのロック（火災・CUTOFF・試験・override）、翼ごとの共用ボトルと squib、X-Plane の消火器、APU の停止と地上の自動放出、APU の消火スイッチ（コマンド）、FIRE/OVHT TEST（TEST IN PROG から 5 秒で PASS/FAIL）、メッセージと灯。試験はモデル 70 件・モジュール 62 件、X-Plane の `s22_fire_engine_apu`。段 2（貨物室・車輪格納部・ダクトリーク・煙・スクイブ試験）と残りは下の「火災防護（3-4）の段取りと GAP の状態」。
+  - 3-4（火災防護）：段 1（エンジンと APU）と段 2（貨物室・車輪格納部・ダクトリーク・煙・スクイブ試験）。モデル `B747.35.fire_model.lua` と、火災のモジュールを書き直したグルー（ARCHITECTURE.md §4.14）：双ループの検知（AND と単ループへの組替え、APU は OR、>DET、loop の status、FIRE/OVHT SYS）、エンジンの過熱、消火スイッチのロック（火災・CUTOFF・試験・override）、翼ごとの共用ボトルと squib、X-Plane の消火器、APU の停止と地上の自動放出、APU の消火スイッチ（コマンド）、FIRE/OVHT TEST（TEST IN PROG から 5 秒で PASS/FAIL）、メッセージと灯。段 2：下部貨物室の煙検知（電源投入と試験のときだけの組替え、venturi の吸引）と 2 段の放出（A・B 即時、C・D は 30 分後か接地）、DISCH の灯と >CGO BTL DISCH・>CARGO DET AIR、車輪格納部の火災、BLD DUCT LEAK、化粧室・クルーレストの煙、スクイブ試験。試験はモデル 122 件・モジュール 87 件、X-Plane の `s22_fire_engine_apu`・`s23_fire_cargo`。残りは下の「火災防護（3-4）の段取りと GAP の状態」。
 
 ## 次にやること
 
@@ -37,7 +37,7 @@
 1. 承認済みのパネル（カスタム acf）の変更：全部済。3-1 の ECS synoptic の上半分と流れの線（AIR-15、PNEU-11）が最後。PNEU-09（主 EICAS のダクト圧の表示条件）は 3-1 段 1 の data block の条件（FCOM p.585 と ATA21 p.451）で済。承認の一覧に無い 2 件（客室高度の赤い数字の桁、data block の LDG ALT の消去。AIR-18）は利用者に確認中。済：`.snd` の警報音、1-3 の PG と 3〜10 ページ、1-3 の STATUS ページと cue、1-4 の HYD synoptic（HYD-19。記号の色と不作動項目の絵は 2026-10-23 夕方に新しい画像で）と RSVR PRESS（HYD-18）、1-1 の synoptic の ISLN・DRIVE の枠・UTILITY と GALLEY の色、STAT のバッテリーの値と CHG/DIS、1-5 のダクト圧の色（PNEU-10）。変更の一覧は ACF_DIFF.md §5、画像は `docs/overhaul/tools/make_synoptic_images.ps1` で作る。
 2. 3-1（空調・与圧・機器冷却）：段 1（パックと与圧、機器冷却と ER 開始のスイッチ）、段 2（温度制御と貨物室の温度・暖房）、段 3（ECS synoptic のパネル）は済。残りは故障の入れ方（パック・ファン・CPC・機器冷却・温度制御。X-Plane に相当する故障が無い）と、承認待ちのパネルの 2 件（AIR-18）。
 3. 3-2（防氷・防雨）：済（下の「防氷・防雨（3-2）の GAP の状態」）。残りは防氷の推力補正（ICE-11。EEC の補正表の作り直しで PNEU-13 と一緒に）、逆推力中の NAI 弁の閉（ICE-05）、ウォッシャー・防雨剤・WSHLD AIR（ICE-10。3D の操作子が要る）。3-3（酸素）：済（下の「酸素（3-3）の GAP の状態」）。
-4. 3-4（火災防護）：段 1（エンジンと APU）は済。次は段 2：下部貨物室（煙検知、ARM・DISCH、ボトル A–D と 30 分／接地の 2 段放出、DISCH 灯、>CGO BTL DISCH・>CARGO DET AIR）、車輪格納部の火災、主翼前縁・ストラットの過熱（BLD DUCT LEAK。抽気の PNEU-03 と一緒に）、化粧室・クルーレストの煙、スクイブ試験。
+4. 3-4（火災防護）：段 1・2 は済。残りは M869（脚格納部の APU 火災パネル）と APU のホーンの音、クルーレストの煙での空調の停止、ダクトリークの抽気への影響（PNEU-03）、貨物機の主デッキ（FIRE-19）。PLAN.md の次は 4-1（操縦系統）。
 5. 2-3（エンジン）の残り：段 1〜3 は済（下の「エンジン（2-3）の GAP の状態」）。後回し：表示値の作り方（ENG-33。EGT は X-Plane の EGT の比例では始動と離陸を両立できず、N1・N2 などから作り直す必要があるが、値は資料に無く推定になる。N1・EPR・N2 の式を変えると EEC の推力の制御の調整もやり直し）、始動の空気（ENG-38・PNEU-08。ダクト圧と starter の関係が資料に無い）、GE の油圧の目盛りと値（CF6 の値が資料に無い）、振動の high band。partial・compact 形式と exceedance cue（ENG-22）は 5-2 で。空中始動の範囲（ENG-24）は資料に値が無く作れない。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べるのも残り。A/T（6-4）との境界は、EEC がレバー → 指令・最大定格・推力の制御まで、FMC の推力基準と A/T のサーボ（レバーを動かす）は 6-4。
 6. 1-5（空圧）の残り：故障の入れ方（過熱、過圧、HPSOV・PRV の固着、ダクトリーク）、地上空気の操作、スターターがダクト圧で回ること（エンジン 2-3）。
 7. 1-4（油圧）の残り：脚・ブレーキ・ステアリング・逆推力・stab trim・ヨーダンパーの「油圧で動くか」（HYD-09・11・12）は、それぞれの作り直しで、モデルの負荷の表（`B747_hyd_model.LOADS`）を使って入れる。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
@@ -240,6 +240,7 @@ PLAN.md §3 に書いた。要点：
   - X-Plane に APU の消火の dataref が無いので、APU ボトルの放出で X-Plane の APU 火災（`rel_apu_fire`）を 0 に戻す。
   - FIRE/OVHT TEST の PASS は全部のループが応えたとき（片方のループの故障でも FAIL）。loop の status は、そのループが火災・過熱（試験は含めない）か故障のとき。
   - Fire Override のコマンドは「override を押してスイッチを引く」までを 1 つで行う（3D に override が無い）。APU の消火スイッチを引いたときの APU の停止は、火災の自動停止と同じ入力で APU のモデルへ渡す（APU の advisory が出ることがある）。
+  - 貨物室（段 2）：煙は venturi の吸引が無いと検知器に届かない。吸引は中央ダクトの圧が 5 psi を超えるとき（資料は venturi の水柱 7/11 in）。貨物の検知の電源は APU battery bus（資料に記載なし）。2 区画とも ARM して DISCH したときは C・D を出さない（回路図からの読み）。剤が出た区画の煙の失敗を 0 に戻す。
 
 
 ## 電源（1-1）の GAP の状態
@@ -495,28 +496,28 @@ PLAN.md §3 に書いた。要点：
 
 ## 火災防護（3-4）の段取りと GAP の状態
 
-段取り（2026-10-24 に決めた）：段 1 はエンジンと APU（検知、消火スイッチ、エンジンと APU のボトル、FIRE/OVHT TEST、メッセージ）。済。段 2 は下部貨物室、車輪格納部、主翼前縁・ストラットの過熱（BLD DUCT LEAK）、化粧室・クルーレストの煙、スクイブ試験。
+段取り（2026-10-24 に決めた）：段 1 はエンジンと APU（検知、消火スイッチ、エンジンと APU のボトル、FIRE/OVHT TEST、メッセージ）。段 2 は下部貨物室、車輪格納部、主翼前縁・ストラットの過熱（BLD DUCT LEAK）、化粧室・クルーレストの煙、スクイブ試験。どちらも済。
 
 | ID | 状態 |
 |---|---|
-| FIRE-01 検知のモデル | 一部（エンジンの火災・過熱と APU は済。貨物は段 2） |
+| FIRE-01 検知のモデル | 済（エンジンの火災・過熱、APU、貨物室。貨物は電源投入と試験のときだけ組み替える） |
 | FIRE-02 エンジンの過熱 | 済（OVHT ENG n NAC。過熱は失敗の dataref で起こす） |
 | FIRE-03 APU 火災 | 済（FIRE APU、自動停止、地上の自動放出、APU ボトル、APU BTL DISCH、>BOTTLE LOW APU、APU の消火スイッチ（コマンド）、試験中は止めない）。M869 とホーンの音は無い |
 | FIRE-04 APU の故障の enum | 済（6 で判定） |
-| FIRE-05 下部貨物室 | 未（段 2） |
+| FIRE-05 下部貨物室 | 済（煙検知、FIRE CARGO FWD/AFT と灯、ARM・DISCH、A・B 即時と C・D の 30 分／接地、DISCH の灯、>CGO BTL DISCH、>CARGO DET AIR、status。ARM の空調への作用は 3-1 の AIR-17） |
 | FIRE-06 火災ベル | 済（1-3 の警報のモデルと `.snd` の結線。FIRE メッセージを立てるようになって、エンジン・APU の火災で鳴り、master WARNING のリセットで止まる） |
 | FIRE-07 離陸中の抑止 | 済（1-3 の警報のモデル） |
-| FIRE-08 FIRE/OVHT TEST | 一部（TEST IN PROG → PASS/FAIL、離すと消える、灯、解錠、地上のホーン、APU を止めない。貨物・車輪格納部・ダクトリークの試験は段 2。FUEL CONTROL の赤灯は 3D の結線のため試験では点かない） |
+| FIRE-08 FIRE/OVHT TEST | 済（TEST IN PROG → PASS/FAIL、離すと消える、エンジン・APU・貨物の灯、解錠、地上のホーン、APU を止めない、貨物・車輪格納部・ダクトの検知器も含む）。FUEL CONTROL の赤灯は 3D の結線のため試験では点かない |
 | FIRE-09 消火スイッチのロック | 済（火災・CUTOFF・試験・override、main hot battery bus） |
 | FIRE-10 消火とボトル | 済（squib 1 回、共用ボトル、空のボトルでは消えない、X-Plane の消火器は剤が出ている間だけ） |
 | FIRE-11 ボトル低圧のメッセージ | 済（>BTL LO L/R ENG A/B、>BOTTLE LOW APU、status） |
 | FIRE-12 >ENG n SHUTDOWN | 済（2-3 のエンジン始動のモデル） |
 | FIRE-13 引いたときの作用 | 済（燃料弁・spar valve・抽気弁・油圧・発電機の GCR は各系統が読む。電源のグルーが GCR トリップの入力を渡していなかったのを結線し、GCR をラッチ式にした：LH24 p.108） |
-| FIRE-14 車輪格納部 | 未（段 2） |
-| FIRE-15 ダクトリーク | 未（段 2） |
-| FIRE-16 化粧室・クルーレストの煙 | 未（段 2） |
-| FIRE-17 スクイブ試験 | 未（段 2） |
-| FIRE-18 電源 | 一部（検知は APU battery bus、解錠と squib は main hot battery bus、FIRE/OVHT SYS。車輪格納部・ダクトリークは段 2） |
+| FIRE-14 車輪格納部 | 済（単ループ、AC bus 2、FIRE WHEEL WELL。原因は失敗の dataref） |
+| FIRE-15 ダクトリーク | 一部（BLD DUCT LEAK L/C/R と status、試験。抽気の系統への影響は PNEU-03 の残り） |
+| FIRE-16 化粧室・クルーレストの煙 | 一部（>SMOKE LAVATORY、SMOKE DR 5 REST。クルーレストの給気弁とファンの停止は無い） |
+| FIRE-17 スクイブ試験 | 済（コマンドの TEST 1・2、発火済みの squib は点かない、ARM で貨物 A・B を抑止） |
+| FIRE-18 電源 | 済（検知は APU battery bus、解錠と squib は main hot battery bus、車輪格納部は AC bus 2、ダクトは DC bus 2 か main battery bus、FIRE/OVHT SYS。貨物の検知の電源は資料に無く APU battery bus とした：推定） |
 | FIRE-19 貨物機の主デッキ | 未（3D に操作部が無い） |
 | FIRE-20 CAS の更新の遅れ | 済（1-3 の警報のモデルは毎フレーム） |
 
@@ -650,3 +651,4 @@ PLAN.md §3 に書いた。要点：
 - 2026-10-24 08:0x〜08:3x：酸素（3-3）。新しいモジュール `B747.36.xt.oxygen`：モデル `B747.36.oxygen_model.lua`（乗客酸素の約 14,000 ft の自動作動・ON・12,000 ft 未満の RESET、治療用酸素、ボンベの圧を前方貨物室の温度で補正、>CREW OXY LOW、PASS OXYGEN ON と 60 秒の STATUS、THERAP OXYGEN ON、乗員マスクの低酸素の高度）、グルー、init（dataref・コマンド、X-Plane の酸素系統の上書き）。3D に操作子が無いので、スイッチとマスクはコマンド。照明のモジュールのサインに乗客酸素の条件、警報の表に STATUS PASS OXYGEN ON（39）。カスタム acf の STATUS ページの酸素圧（承認済みのパネル変更。ACF_DIFF.md §5）。Web API から長さ 0 で ON を送るとスイッチが ON のまま残った（XTLua が離したことを渡さない：TESTING.md §4.6）ので、ばね戻りはコマンドの最後のイベントから 0.3 秒で戻すようにした。試験：モデル 47 件、モジュール 63 件。X-Plane（カスタム acf）：新シナリオ `s20_oxygen` 38/38（STATUS ページの 1828・1828、PASS OXYGEN ON とサイン、60 秒の STATUS、RESET、THERAP OXYGEN ON、急減圧で自動作動と 12,000 ft より上の RESET 不可、乗員マスクで X-Plane の `pilot_felt_altitude_ft` が 10,000 ft）。純正 acf の `s00` 69/69。Lua の誤りなし。
 - 2026-10-24 08:2x〜08:3x：R-3 の小修正、LIGHT-02（害の大きい誤り）。安全のモジュールのサインの memo（NO SMOKING ON・PASS SIGNS ON・SEATBELTS ON）を、サインの点灯ではなく選択器を手で ON にしたときに出すようにした（FCOM p.502、p.547、ATA33 p.211）。前は AUTO で脚が下りているとき（地上ではほぼ常に）と、3-3 で入れた乗客酸素の作動のときにも PASS SIGNS ON が出ていた。試験：新しい `tests/safety/safety_module_test.lua`（照明・酸素のモジュールと一緒に、10 件）。X-Plane（カスタム acf）：新シナリオ `s21_sign_memos` 19/19。Lua の誤りなし。
 - 2026-10-24 08:3x〜09:0x：火災防護（3-4）段 1、エンジンと APU。新しいモデル `B747.35.fire_model.lua` と、火災のモジュール `B747.35.xt.fire.lua` をそのグルーに書き直した：双ループの検知（エンジンは AND と単ループへの組替え、APU は OR、APU battery bus、>DET FIRE/OHT n・>DET FIRE APU、loop の status と FIRE/OVHT SYS）、エンジンの過熱（OVHT ENG n NAC、失敗の dataref）、消火スイッチのロック（火災・CUTOFF・試験・Fire Override のコマンド、main hot battery bus）、翼ごとの共用ボトルと 1 回だけの squib、剤が出ている間だけ X-Plane の消火器、BTL DISCH と >BTL LO L/R ENG A/B、APU の停止（APU のグルーが `fire/apu_shutdown` を読む）と地上の自動放出（10 秒、95 % 未満）、APU の消火スイッチ（コマンド）と APU BTL DISCH・>BOTTLE LOW APU、FIRE/OVHT TEST（TEST IN PROG から 5 秒で PASS/FAIL）。STATUS の配列を 128 に広げた。電源のグルーが消火スイッチを GCR トリップに渡していなかったのを結線し、GCR をラッチ式にした（LH24 p.108）。X-Plane で、`fire_extinguisher_on` が 1 秒以内に火を消し `rel_engfir` も 0 に戻ることと、旧い火災表示灯の dataref は書いても X-Plane が上書きすること（FUEL CONTROL の赤灯は自前の検知に合わせられない）を確かめた。試験：モデル 70 件、モジュール 62 件、電源のモデル・モジュールに GCR の 7 件、APU のモジュールは火災のモジュールも読み込む。X-Plane（カスタム acf）：新シナリオ `s22_fire_engine_apu` 45/45。純正 acf の `s00` 69/69。Lua の誤りなし。P5 の BTL A DISCHARGE・APU BTL DISCHARGE の灯をスクリーンショットで確かめた。
+- 2026-10-24 09:0x〜09:2x：火災防護（3-4）段 2。モデルに貨物室の 4 ゾーンとボトル A–D を足した：煙検知（電源投入と手動試験の完了時だけの組替え、venturi の吸引は中央ダクトの圧で推定）、FIRE CARGO FWD・AFT と灯、ARM・DISCH（マニピュレータのスイッチ位置）で A・B 即時、ARM が 1 区画なら C・D を 30 分後・接地・地上は即時（約 2 時間かけて調圧）、DISCH の灯、>CGO BTL DISCH、>CARGO DET AIR、剤で煙の失敗を消す（推定）。車輪格納部の火災（AC bus 2）、BLD DUCT LEAK L/C/R、>SMOKE LAVATORY・SMOKE DR 5 REST、FIRE/OVHT TEST に貨物・車輪格納部・ダクトを含めた、スクイブ試験（TEST 1・2 のコマンド、発火済みは暗い、ARM で貨物 A・B を抑止）。X-Plane に無い原因は新しい失敗の dataref。STATUS 64–80。試験：モデル 122 件、モジュール 87 件。X-Plane（カスタム acf）：新シナリオ `s23_fire_cargo` 27/27（FL350 で貨物の試験の灯と PASS、FIRE CARGO AFT とベル、ARM で pack 3 停止、DISCH で A・B 即時と C は待つ、空中の >CGO BTL DISCH、剤で煙が消える、FIRE WHEEL WELL、BLD DUCT LEAK L、煙）。純正 acf の `s00` 69/69。Lua の誤りなし。これで段階 3（3-1〜3-4）が済んだ。

@@ -1,9 +1,10 @@
 -- Run from the repository root with LuaJIT: luajit tests/fire/fire_model_test.lua
--- The fire protection model, step 1 (plugins/xtlua/scripts/B747.35.xt.fire/B747.35.fire_model.lua)
--- against FCOM 8.10-8.30 and ATA26_28 26-11, 26-15, 26-21, 26-22: the dual
--- loop detectors and their single loop operation, the fire switches' lock,
--- the shared engine bottles, the APU shutdown and automatic discharge, and
--- the FIRE/OVHT TEST.
+-- The fire protection model (plugins/xtlua/scripts/B747.35.xt.fire/B747.35.fire_model.lua)
+-- against FCOM 8.10-8.30 and ATA26_28 26-11 to 26-27: the dual loop
+-- detectors and their single loop operation, the fire switches' lock, the
+-- shared engine bottles, the APU shutdown and automatic discharge, the
+-- FIRE/OVHT TEST, the cargo smoke detection and discharge sequence, the
+-- wheel well, duct leak and smoke detectors, and the squib test.
 local T = dofile("tests/lib/check.lua")("fire_model")
 local M = dofile("plugins/xtlua/scripts/B747.35.xt.fire/B747.35.fire_model.lua")
 
@@ -25,7 +26,8 @@ do
     local s, inp = M.new(), M.inputs()
     local out = run(s, inp, 1)
     T.check(not out.alarm[FIRE1] and not out.eng_light[1] and not out.apu_light, "no fire: no alarm, no light")
-    for b = 1, M.BOTTLES do T.equal(out.btl_psi[b], 600, "bottle " .. b .. ": 600 psi (ATA26_28 p.60)") end
+    for b = 1, M.APU_BTL do T.equal(out.btl_psi[b], 600, "bottle " .. b .. ": 600 psi (ATA26_28 p.60)") end
+    for b = M.CGO_A, M.CGO_A + 3 do T.equal(out.btl_psi[b], 360, "cargo bottle " .. b .. ": 360 psi (ATA26_28 p.170)") end
     T.check(not out.unlocked[1], "no fire, RUN: fire switch 1 locked (FCOM p.905)")
     inp.eng_toggle[1] = true
     out = run(s, inp, 0.1)
@@ -239,6 +241,173 @@ do
         return out.btl_psi[3]
     end
     T.near(after(1 / 20), after(1 / 60), 25, "20 and 60 fps: the same bottle pressure after 0.8 s")
+end
+
+-- the lower cargo compartments (FCOM p.908, p.914, p.917, p.921; ATA26_28
+-- p.140-198): smoke in a zone with both detectors; FIRE CARGO FWD, the
+-- light; armed and DISCH, A and B at once and C and D 30 min later in
+-- flight; the DISCH light; >CGO BTL DISCH in flight with A and B
+-- discharged
+do
+    local s, inp = M.new(), M.inputs()
+    inp.on_ground = false
+    run(s, inp, 0.1)
+    inp.cargo_smoke[2] = true
+    local out = run(s, inp, 0.1)
+    T.check(out.cargo_fire[1] and out.cargo_light[1], "smoke in zone 2: FIRE CARGO FWD and the FWD light")
+    T.check(not out.cargo_fire[2], "no FIRE CARGO AFT")
+    -- no airflow through the detectors: the smoke is not drawn in (estimate)
+    inp.cargo_airflow = false
+    out = run(s, inp, 0.1)
+    T.check(not out.cargo_fire[1], "no venturi airflow: the smoke is not detected")
+    T.check(out.cargo_det_air, "two engines running, no airflow: >CARGO DET AIR (ATA26_28 p.144)")
+    inp.engines_running = 1
+    out = run(s, inp, 0.1)
+    T.check(not out.cargo_det_air, "one engine running: >CARGO DET AIR inhibited")
+    inp.cargo_airflow, inp.engines_running = true, 4
+    -- DISCH without ARM: nothing
+    inp.cargo_disch = true
+    run(s, inp, 0.1)
+    inp.cargo_disch = false
+    out = run(s, inp, 0.1)
+    T.check(out.btl_psi[M.CGO_A] == 360, "DISCH without ARM: no bottle")
+    -- ARM FWD, DISCH: A and B into the forward compartment
+    inp.cargo_arm[1] = true
+    inp.cargo_disch = true
+    out = run(s, inp, 0.1)
+    T.check(out.cargo_agent[1] and not out.cargo_agent[2], "ARM FWD, DISCH: agent into the forward compartment")
+    inp.cargo_disch = false
+    out = run(s, inp, 2)
+    T.check(out.btl_low[M.CGO_A] and out.btl_low[M.CGO_A + 1], "A and B discharged at once")
+    T.check(not out.btl_low[M.CGO_A + 2] and not out.btl_low[M.CGO_A + 3], "C and D not yet")
+    T.check(out.cargo_disch_light, "CARGO FIRE DISCH light (FCOM p.908)")
+    T.check(out.cgo_btl_disch, "in flight, A and B discharged: >CGO BTL DISCH (FCOM p.921)")
+    out = run(s, inp, 1795)
+    T.check(out.btl_psi[M.CGO_A + 2] == 360, "29 min 57 s: C not yet")
+    out = run(s, inp, 10)
+    T.check(out.btl_psi[M.CGO_A + 2] < 360, "30 min: C and D metering into the forward compartment")
+    out = run(s, inp, 1200)
+    T.check(out.btl_psi[M.CGO_A + 3] > 0 and out.btl_psi[M.CGO_A + 3] < 300, "20 min later: D low, still metering (2 h)")
+end
+-- landing before 30 min: C and D at touchdown; on the ground all four at once
+do
+    local s, inp = M.new(), M.inputs()
+    inp.on_ground = false
+    inp.cargo_arm[2], inp.cargo_disch = true, true
+    run(s, inp, 0.1)
+    inp.cargo_disch = false
+    local out = run(s, inp, 600)
+    T.check(out.btl_psi[M.CGO_A + 2] == 360, "10 min in flight: C not yet")
+    inp.on_ground = true
+    out = run(s, inp, 0.5)
+    T.check(out.btl_psi[M.CGO_A + 2] < 360, "touchdown: C and D discharge")
+    local s2, inp2 = M.new(), M.inputs()
+    inp2.cargo_arm[1], inp2.cargo_disch = true, true
+    out = run(s2, inp2, 0.5)
+    T.check(out.btl_psi[M.CGO_A] < 360 and out.btl_psi[M.CGO_A + 2] < 360, "on the ground: A, B, C, D at once")
+    out = run(s2, inp2, 2)
+    T.check(out.cgo_btl_disch, "on the ground: >CGO BTL DISCH with a bottle low")
+    -- both compartments armed: A and B into both, no lock-in (estimate)
+    local s3, inp3 = M.new(), M.inputs()
+    inp3.on_ground = false
+    inp3.cargo_arm[1], inp3.cargo_arm[2], inp3.cargo_disch = true, true, true
+    out = run(s3, inp3, 0.1)
+    T.check(out.cargo_agent[1] and out.cargo_agent[2], "both armed: agent into both compartments")
+    inp3.cargo_disch = false
+    out = run(s3, inp3, 2000)
+    T.check(out.btl_psi[M.CGO_A + 2] == 360, "both armed: C and D not released")
+    -- a second DISCH with the bottles empty: no agent
+    inp3.cargo_disch = true
+    out = run(s3, inp3, 0.1)
+    T.check(not out.cargo_agent[1], "A and B empty: a second DISCH gives no agent")
+end
+-- the cargo detectors reconfigure only at power-up and after a test
+-- (ATA26_28 p.154, p.162): a loop failing in flight leaves the zone in dual
+-- operation (no detection) until a test
+do
+    local s, inp = M.new(), M.inputs()
+    run(s, inp, 0.1)
+    local z = M.CARGO + 3
+    inp.loop_failed_a[z] = true
+    inp.cargo_smoke[3] = true
+    local out = run(s, inp, 0.1)
+    T.check(not out.cargo_fire[2], "loop A of zone 3 failed after power-up: still dual, no detection")
+    inp.test = true
+    out = run(s, inp, 5.2)
+    T.check(out.test_fail, "the test finds it: FIRE TEST FAIL")
+    inp.test = false
+    out = run(s, inp, 0.1)
+    T.check(out.cargo_fire[2], "after the test: single loop B, FIRE CARGO AFT")
+    T.check(not out.cargo_det_status[2], "one loop: no CARGO DET AFT")
+    inp.loop_failed_b[z] = true
+    out = run(s, inp, 21)
+    T.check(out.cargo_det_status[2], "both loops of zone 3: STATUS CARGO DET AFT after 20 s")
+    -- power cycled: configured again
+    local s2, inp2 = M.new(), M.inputs()
+    inp2.det_power = false
+    run(s2, inp2, 0.1)
+    inp2.loop_failed_b[M.CARGO + 1] = true
+    inp2.det_power = true
+    inp2.cargo_smoke[1] = true
+    out = run(s2, inp2, 0.1)
+    T.check(out.cargo_fire[1], "power-up with loop B failed: single loop A detects")
+end
+-- the wheel well loop (AC bus 2), the duct leak switches, the lavatory and
+-- crew rest smoke (FCOM p.613, p.619, p.922-923; ATA26_28 p.270-320)
+do
+    local s, inp = M.new(), M.inputs()
+    inp.wheel_well_heat = true
+    local out = run(s, inp, 0.1)
+    T.check(out.wheel_well_fire, "FIRE WHEEL WELL")
+    inp.wheel_well_power = false
+    out = run(s, inp, 0.1)
+    T.check(not out.wheel_well_fire, "no AC bus 2: no detection")
+    inp.wheel_well_heat, inp.wheel_well_power = false, true
+    inp.duct_leak[1] = true
+    out = run(s, inp, 0.1)
+    T.check(out.duct_leak[1] and not out.duct_leak[3], "BLD DUCT LEAK L")
+    out = run(s, inp, 60)
+    T.check(out.duct_leak_status[1] and not out.duct_leak_status[2], "STATUS BLD DUCT LEAK L after 60 s (ATA26_28 p.286)")
+    inp.lav_smoke, inp.rest_smoke = true, true
+    out = run(s, inp, 0.1)
+    T.check(out.lav_smoke and out.rest_smoke, ">SMOKE LAVATORY, SMOKE DR 5 REST")
+    -- the test without AC bus 2: FAIL
+    inp.wheel_well_power, inp.test = false, true
+    out = run(s, inp, 5.2)
+    T.check(out.test_fail, "wheel well card without power: FIRE TEST FAIL")
+    inp.wheel_well_power = true
+    inp.test = false
+    run(s, inp, 0.1)
+    inp.test = true
+    out = run(s, inp, 0.1)
+    T.check(out.cargo_light[1] and out.cargo_light[2], "test: the cargo FWD and AFT lights")
+    T.check(not out.wheel_well_fire and not out.cargo_fire[1], "test: no FIRE WHEEL WELL, no FIRE CARGO")
+end
+-- the squib test (FCOM p.187-188; ATA26_28 p.80-82, p.132-134, p.196-198)
+do
+    local s, inp = M.new(), M.inputs()
+    inp.squib_test[1] = true
+    local out = run(s, inp, 0.1)
+    for i = 1, 9 do T.check(out.squib_light[i], "TEST 1: squib light " .. i) end
+    -- engine 1's bottle A squib fired: its light stays dark on TEST 1
+    inp.squib_test[1] = false
+    inp.eng_override[1] = true
+    run(s, inp, 0.1)
+    inp.eng_rotate[1] = -1
+    run(s, inp, 0.1)
+    inp.squib_test[1] = true
+    out = run(s, inp, 0.1)
+    T.check(not out.squib_light[1] and out.squib_light[2], "squib L A for engine 1 fired: light 1 dark, light 2 lit")
+    inp.squib_test[1], inp.squib_test[2] = false, true
+    out = run(s, inp, 0.1)
+    T.check(out.squib_light[1], "TEST 2: engine 1's bottle B squib lit")
+    -- cargo armed: A and B not tested
+    inp.cargo_arm[1] = true
+    out = run(s, inp, 0.1)
+    T.check(not out.squib_light[6] and not out.squib_light[7] and out.squib_light[8], "cargo armed: A, B not tested, C tested")
+    inp.hot_bat = false
+    out = run(s, inp, 0.1)
+    T.check(not out.squib_light[3], "no main hot battery bus: no squib light")
 end
 
 T.done()

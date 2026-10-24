@@ -69,6 +69,20 @@ B747DR_fire_light_btl_disch                 = deferred_dataref("laminar/B747/fir
 B747DR_fire_fail_loop_a                     = deferred_dataref("laminar/B747/fire/fail/loop_a", "array[13]")
 B747DR_fire_fail_loop_b                     = deferred_dataref("laminar/B747/fire/fail/loop_b", "array[13]")
 B747DR_fire_fail_eng_ovht                   = deferred_dataref("laminar/B747/fire/fail/eng_ovht", "array[4]")
+-- smoke in cargo zone 1-4 (forward 1, 2; aft 3, bulk 4), a fire in a main
+-- wheel well, a bleed duct leak L, C, R, smoke in a lavatory, in the door 5
+-- crew rest (1 = failed)
+B747DR_fire_fail_cargo_smoke                = deferred_dataref("laminar/B747/fire/fail/cargo_smoke", "array[4]")
+B747DR_fire_fail_wheel_well                 = deferred_dataref("laminar/B747/fire/fail/wheel_well", "number")
+B747DR_fire_fail_duct_leak                  = deferred_dataref("laminar/B747/fire/fail/duct_leak", "array[3]")
+B747DR_fire_fail_lav_smoke                  = deferred_dataref("laminar/B747/fire/fail/lav_smoke", "number")
+B747DR_fire_fail_rest_smoke                 = deferred_dataref("laminar/B747/fire/fail/rest_smoke", "number")
+-- the cargo bottles A-D, the CARGO FIRE FWD, AFT and DISCH lights, the squib
+-- test lights (engines 1-4, APU, cargo A-D) and buttons 1, 2
+B747DR_fire_cargo_ext_bottle_psi            = deferred_dataref("laminar/B747/fire/cargo/ext_bottle/psi", "array[4]")
+B747DR_fire_light_cargo                     = deferred_dataref("laminar/B747/fire/light/cargo", "array[3]")
+B747DR_fire_light_squib                     = deferred_dataref("laminar/B747/fire/light/squib", "array[9]")
+B747DR_fire_squib_test_pos                  = deferred_dataref("laminar/B747/fire/squib_test/button_pos", "array[2]")
 
 B747DR_init_fire_CD                         = deferred_dataref("laminar/B747/fire/init_CD", "number")
 simDR_press_diff_psi        = find_dataref("sim/cockpit2/pressurization/indicators/pressure_diffential_psi")
@@ -114,6 +128,8 @@ B747CMD_apu_fire_ext_switch_arm      = deferred_command("laminar/B747/fire/apu/e
 B747CMD_apu_fire_ext_switch_rotate_L = deferred_command("laminar/B747/fire/apu/ext_switch_rotate_L", "APU Fire Switch Rotate Left", B747_apu_fire_ext_switch_rotate_L_CMDhandler)
 B747CMD_apu_fire_ext_switch_rotate_R = deferred_command("laminar/B747/fire/apu/ext_switch_rotate_R", "APU Fire Switch Rotate Right", B747_apu_fire_ext_switch_rotate_R_CMDhandler)
 B747CMD_apu_fire_ext_switch_override = deferred_command("laminar/B747/fire/apu/ext_switch_override", "APU Fire Override (unlocks and pulls the fire switch)", B747_apu_fire_ext_switch_override_CMDhandler)
+B747CMD_fire_squib_test_1          = deferred_command("laminar/B747/fire/squib_test_1", "Squib Test 1 (hold)", B747_fire_squib_test_1_CMDhandler)
+B747CMD_fire_squib_test_2          = deferred_command("laminar/B747/fire/squib_test_2", "Squib Test 2 (hold)", B747_fire_squib_test_2_CMDhandler)
 
 
 -- AI

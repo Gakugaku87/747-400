@@ -32,6 +32,10 @@ local ANNUN = "laminar/B747/annunciator/brightness_ratio"
 -- power (APU battery bus, main hot battery bus), on the ground, engines in RUN
 rt:set("laminar/B747/electrical/bus/bat_apu", 1)
 rt:set("laminar/B747/electrical/bus/hot_bat_main", 1)
+rt:set("laminar/B747/electrical/bus/ac", 1, 1)          -- the wheel well card: AC bus 2
+rt:set("laminar/B747/electrical/bus/dc", 1, 1)          -- the leading edge loops: DC bus 2
+rt:set("laminar/B747/air/duct_pressure_C", 30)          -- the cargo detectors' venturi
+for i = 0, 3 do rt:set("sim/flightmodel/engine/ENGN_running", i, 1) end
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 for i = 0, 3 do rt:set("laminar/B747/fuel/fuel_control/toggle_sw_pos", i, 1) end
 rt:set("sim/flightmodel2/lights/generic_lights_brightness_ratio", 63, 1)
@@ -170,6 +174,67 @@ rt:set("laminar/B747/electrical/bus/bat_apu", 0)
 frames(21)
 T.equal(get(STATUS, 58), 1, "no APU battery bus: STATUS FIRE/OVHT SYS (ATA26_28 p.34)")
 rt:set("laminar/B747/electrical/bus/bat_apu", 1)
+
+-- the lower cargo compartments: smoke in zone 1, FIRE CARGO FWD and the
+-- FWD light; ARM FWD and DISCH in flight: A and B, the DISCH light,
+-- >CGO BTL DISCH, the smoke out (estimate)
+local SW = "laminar/B747/button_switch/position"
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+rt:set(FIRE .. "fail/cargo_smoke", 0, 1)
+frames(0.2)
+T.equal(get(WARNING, 10), 1, "smoke in cargo zone 1: FIRE CARGO FWD (FCOM p.921)")
+T.near(get(ANNUN, 35), 0.8, 0.01, "CARGO FIRE FWD light (annunciator 35)")
+T.equal(get(WARNING, 9), 0, "no FIRE CARGO AFT")
+rt:set(SW, 84, 1)               -- ARM FWD (the manipulators' switch position)
+rt:set(SW, 86, 1)               -- DISCH held
+frames(0.2)
+rt:set(SW, 86, 0)
+frames(2)
+T.equal(get(FIRE .. "cargo/ext_bottle/psi", 0), 0, "ARM FWD, DISCH: cargo bottle A empty")
+T.equal(get(FIRE .. "cargo/ext_bottle/psi", 2), 360, "in flight: cargo bottle C waits 30 min")
+T.near(get(ANNUN, 37), 0.8, 0.01, "CARGO FIRE DISCH light (annunciator 37)")
+T.equal(get(ADVISORY, 51), 1, "in flight, A and B discharged: >CGO BTL DISCH")
+T.equal(get(STATUS, 75), 1, "STATUS BTL LOW CARGO A")
+T.equal(get(FIRE .. "fail/cargo_smoke", 0), 0, "the agent put the smoke out (estimate)")
+T.equal(get(WARNING, 10), 0, "FIRE CARGO FWD cleared")
+rt:set(SW, 84, 0)
+-- no venturi airflow with the engines running: >CARGO DET AIR
+rt:set("laminar/B747/air/duct_pressure_C", 0)
+frames(0.2)
+T.equal(get(ADVISORY, 49), 1, "no centre duct pressure: >CARGO DET AIR (ATA26_28 p.144)")
+rt:set("laminar/B747/air/duct_pressure_C", 30)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+-- the wheel well, a duct leak, the smoke detectors
+rt:set(FIRE .. "fail/wheel_well", 1)
+rt:set(FIRE .. "fail/duct_leak", 2, 1)
+rt:set(FIRE .. "fail/lav_smoke", 1)
+rt:set(FIRE .. "fail/rest_smoke", 1)
+frames(0.2)
+T.equal(get(WARNING, 21), 1, "FIRE WHEEL WELL (FCOM p.922)")
+T.equal(get(CAUTION, 8), 1, "duct leak R: BLD DUCT LEAK R (ATA26_28 p.286)")
+T.equal(get(CAUTION, 7), 0, "no BLD DUCT LEAK L")
+T.equal(get(ADVISORY, 264), 1, ">SMOKE LAVATORY (FCOM p.923)")
+T.equal(get(CAUTION, 52), 1, "SMOKE DR 5 REST")
+frames(60)
+T.equal(get(STATUS, 80), 1, "STATUS BLD DUCT LEAK R after 60 s")
+rt:set(FIRE .. "fail/wheel_well", 0)
+rt:set(FIRE .. "fail/duct_leak", 2, 0)
+rt:set(FIRE .. "fail/lav_smoke", 0)
+rt:set(FIRE .. "fail/rest_smoke", 0)
+frames(0.2)
+T.equal(get(WARNING, 21), 0, "FIRE WHEEL WELL cleared")
+-- the squib test: engine 1's bottle A squib was fired above
+rt:command(FIRE .. "squib_test_1", 0.3)
+T.near(get(ANNUN, 95), 0, 0.01, "SQUIB TEST 1: engine 1's bottle A squib fired, light dark")
+T.near(get(ANNUN, 96), 0.8, 0.01, "SQUIB TEST 1: engine 2's squib light (annunciator 96)")
+T.near(get(ANNUN, 102), 0, 0.01, "SQUIB TEST 1: cargo C forward squib fired at touchdown, light dark")
+T.near(get(ANNUN, 100), 0, 0.01, "SQUIB TEST 1: cargo A forward squib fired, light dark")
+frames(0.5)
+T.near(get(ANNUN, 96), 0, 0.01, "released: the squib lights out")
+rt:command(FIRE .. "squib_test_2", 0.3)
+T.near(get(ANNUN, 102), 0.8, 0.01, "SQUIB TEST 2: cargo C aft squib intact (annunciator 102)")
+T.near(get(ANNUN, 99), 0, 0.01, "SQUIB TEST 2: the APU squib fired by the automatic discharge, light dark")
+frames(0.5)
 
 -- the AI's cold & dark: full bottles, switches in
 rt:set(FIRE .. "init_CD", 1)

@@ -643,6 +643,23 @@ local B747_CASstatusMsg = {
     {DRindex = 61, name = "BTL LOW R ENG A"},
     {DRindex = 62, name = "BTL LOW R ENG B"},
     {DRindex = 63, name = "BOTTLE LOW APU"},      -- ATA26_28 p.130
+    {DRindex = 64, name = "FWD CARGO 1 LP A"},    -- ATA26_28 p.164 (3-4 step 2)
+    {DRindex = 65, name = "FWD CARGO 1 LP B"},
+    {DRindex = 66, name = "FWD CARGO 2 LP A"},
+    {DRindex = 67, name = "FWD CARGO 2 LP B"},
+    {DRindex = 68, name = "AFT CARGO 3 LP A"},
+    {DRindex = 69, name = "AFT CARGO 3 LP B"},
+    {DRindex = 70, name = "AFT CARGO 4 LP A"},
+    {DRindex = 71, name = "AFT CARGO 4 LP B"},
+    {DRindex = 72, name = "CARGO DET FWD"},
+    {DRindex = 73, name = "CARGO DET AFT"},
+    {DRindex = 74, name = "CARGO DET AIR"},
+    {DRindex = 75, name = "BTL LOW CARGO A"},     -- ATA26_28 p.194
+    {DRindex = 76, name = "BTL LOW CARGO B"},
+    {DRindex = 77, name = "BTL LOW CARGO C"},
+    {DRindex = 78, name = "BTL LOW CARGO D"},
+    {DRindex = 79, name = "BLD DUCT LEAK L"},     -- ATA26_28 p.286
+    {DRindex = 80, name = "BLD DUCT LEAK R"},
 }
 
 

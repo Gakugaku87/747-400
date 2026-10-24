@@ -396,6 +396,9 @@ B747DR_sfty_seat_belts_sel_dial_pos = find_dataref("laminar/B747/safety/seat_bel
 
 -- the fire protection model's BTL DISCH lights: L ENG A, B, R ENG A, B, APU (B747.35.xt.fire.lua)
 B747DR_fire_light_btl_disch         = find_dataref("laminar/B747/fire/light/btl_disch")
+-- CARGO FIRE FWD, AFT, DISCH and the squib test lights (engines 1-4, APU, cargo A-D)
+B747DR_fire_light_cargo             = find_dataref("laminar/B747/fire/light/cargo")
+B747DR_fire_light_squib             = find_dataref("laminar/B747/fire/light/squib")
 
 -- the fuel system's overhead lights (fuel module; created by the B747.25.fuel init)
 B747DR_fuel_light_pump_press        = find_dataref("laminar/B747/fuel/light/pump_press")
@@ -1109,9 +1112,9 @@ function B747_annunciators()
     annun.b.hyd_pump_04 = B747DR_light_hyd_eng_press[3]
 
     -- CARGO FIRE
-    annun.b.cargo_fire_fwd = 0
-    annun.b.cargo_fire_aft = 0
-    annun.b.cargo_fire_disch = 0
+    annun.b.cargo_fire_fwd = B747DR_fire_light_cargo[0]      -- fire or test (FCOM p.908)
+    annun.b.cargo_fire_aft = B747DR_fire_light_cargo[1]
+    annun.b.cargo_fire_disch = B747DR_fire_light_cargo[2]    -- bottles discharged
 
     -- FUEL SYSTEM: the lights come from the fuel model (fuel module,
     -- laminar/B747/fuel/light/*; FCOM p.1439-1441, ATA26_28 p.414)
@@ -1209,15 +1212,15 @@ function B747_annunciators()
     annun.a.split_sys_breaker = 0
 
     -- SQUIB TEST
-    annun.a.squib_test_eng_01 = 0
-    annun.a.squib_test_eng_02 = 0
-    annun.a.squib_test_eng_03 = 0
-    annun.a.squib_test_eng_04 = 0
-    annun.a.squib_test_apu = 0
-    annun.a.squib_test_cargo_A = 0
-    annun.a.squib_test_cargo_B = 0
-    annun.a.squib_test_cargo_C = 0
-    annun.a.squib_test_cargo_D = 0
+    annun.a.squib_test_eng_01 = B747DR_fire_light_squib[0]   -- SQUIB TEST 1, 2 (FCOM p.187-188)
+    annun.a.squib_test_eng_02 = B747DR_fire_light_squib[1]
+    annun.a.squib_test_eng_03 = B747DR_fire_light_squib[2]
+    annun.a.squib_test_eng_04 = B747DR_fire_light_squib[3]
+    annun.a.squib_test_apu = B747DR_fire_light_squib[4]
+    annun.a.squib_test_cargo_A = B747DR_fire_light_squib[5]
+    annun.a.squib_test_cargo_B = B747DR_fire_light_squib[6]
+    annun.a.squib_test_cargo_C = B747DR_fire_light_squib[7]
+    annun.a.squib_test_cargo_D = B747DR_fire_light_squib[8]
 
     -- IRS
     annun.a.irs_on_bat = 0
