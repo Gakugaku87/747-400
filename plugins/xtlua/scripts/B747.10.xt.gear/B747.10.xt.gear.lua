@@ -78,7 +78,6 @@ local B747_gear_handle_lock = 0
 simDR_startup_running       = find_dataref("sim/operation/prefs/startup_running")
 simDR_aircraft_on_ground    = find_dataref("sim/flightmodel/failures/onground_any")
 simDR_gear_deploy_ratio     = find_dataref("sim/flightmodel2/gear/deploy_ratio")
-simDR_tire_steer_deg        = find_dataref("sim/flightmodel2/gear/tire_steer_actual_deg")
 simDR_gear_claw_angle       = find_dataref("sim/flightmodel2/gear/eagle_claw_angle_deg")
 simDR_gear_handle_down      = find_dataref("sim/cockpit2/controls/gear_handle_down")
 simDR_autobrakes_switch     = find_dataref("sim/cockpit2/switches/auto_brake_level")
@@ -103,6 +102,8 @@ dofile("B747.10.xt.pseu.lua")
 dofile("B747.10.xt.gear_act.lua")
 -- the wheel brakes: the brake source, the parking brake, the antiskid
 dofile("B747.10.xt.brakes.lua")
+-- the nose wheel and body gear steering
+dofile("B747.10.xt.steering.lua")
 B747DR_gear_lever_lock          = find_dataref("laminar/B747/gear/lever_lock")
 
 --Marauder28
@@ -775,6 +776,7 @@ function B747_flight_start_gear()
     runningGear = 0
     B747_gear_act_flight_start()
     B747_brakes_flight_start()
+    B747_steering_flight_start()
 
 end
 
@@ -788,7 +790,9 @@ end
 --** 				                  EVENT CALLBACKS           	    			 **--
 --*************************************************************************************--
 
---function aircraft_load() end
+function aircraft_load()
+    B747_steering_aircraft_load()
+end
 
 --function aircraft_unload() end
 
@@ -816,6 +820,7 @@ function after_physics()
     B747_set_gear_handle_lock()
     B747_gear_act()
     B747_brakes()
+    B747_steering()
 
     B747_gear_EICAS_msg()
 

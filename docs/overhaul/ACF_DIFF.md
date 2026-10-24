@@ -100,7 +100,7 @@
 
 ここでは候補を挙げるだけにする。資料との照合と、コードが acf の値を使っているかの確認は GAP_ANALYSIS.md で行う。
 
-1. 前輪ステアリング：カスタムはペダル 35°。ただし `override_wheel_steer` が使われているので、acf の値が効くかどうかを確認する。
+1. 前輪ステアリング：カスタムはペダル 35°。ただし `override_wheel_steer` が使われているので、acf の値が効くかどうかを確認する。→ 4-2 段 4（2026-10-25）で、脚のモジュールが `override_wheel_steer` を常に入れて前輪と胴体脚を書くようにしたので、どちらの acf でも `_steerdeg_*` と胴体脚の 15° は効かない（acf は変えていない）。
 2. `_fdir_needed_to_engage_servo` などの X-Plane AP 設定が acf で違い、AFDS の動きが acf によって変わる恐れ。
 3. `_flap_extend_protect`・`_gear_extend_protect`：実機に無い保護。プラグインが動かすフラップと脚を X-Plane が止める恐れ。
 4. 燃費（SFC）と `_n1_rated_thrust`・`_fadec_parameter`：燃料系統が `override_fuel_system` で X-Plane の燃料流量を使う場合、燃料の消費と FMC の予測がずれる。EEC の表が純正 acf の設定を前提に調整されているかも確認する。

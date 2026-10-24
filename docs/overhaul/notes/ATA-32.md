@@ -349,3 +349,14 @@ GAP ID の接頭辞：`GEAR`。2026-10-23 作成。コードは `overhaul` ブ�
 - 外した前の処理：脚のモジュールの RTO の線、セレクターのコマンドでの `auto_brake_level` の書き込み、`autobrake_check`、memo と advisory、fltCtrls の 30 kt での DISARM とその時計。
 - 作らなかったもの：AUTOBRAKES のうち「セレクター OFF なのに遮断弁の下流が高圧」と「RTO の開始で故障・手動の override」（弁と圧のモデルが無い）、前側 8 輪の車輪速（IRS の対地速度で代える）、セレクターが arm するときのラッチコイルの電源。
 - X-Plane で確かめたこと（カスタム acf、2026-10-25）：RTO（`s38_rto`）は、95 kt を超えてからアイドルにすると左右のブレーキが 1 になり、約 11 秒で止まる（平均 15 ft/s² 前後）。セレクターは RTO のまま。70 kt で中止したときは働かない。着陸（`landing.sh`）の 100〜60 kt の減速は、4 で 7.92 ft/s²（指令 7.5）、MAX で 10.08 ft/s²（指令 11.0）で、逆推力の 8 秒も含む。乾いた滑走路では MAX AUTO よりペダルいっぱいの方が強い（FCOM p.1515）ことと合う。
+
+## 13. 実装（4-2 段 4、2026-10-25：ステアリング）
+
+- 新しいモデル `plugins/xtlua/scripts/B747.10.xt.gear/B747.10.steering_model.lua`（試験 `tests/gear/steering_model_test.lua`）とグルー `B747.10.xt.steering.lua`（脚のモジュールがブレーキのグルーの次に読み、毎フレーム `B747_steering()`。試験 `tests/gear/steering_module_test.lua`）。§4.9 をそのまま作った。ステアリングは脚のモジュールだけが持つ：X-Plane の `override_wheel_steer` を常に入れ、前輪と胴体脚の角度（`tire_steer_command_deg`）をここで書く。前は油圧のモジュールが、IAS 20 kt 未満では X-Plane 任せ（acf の 75°/35°）、それより上は総ヨー入力 ×7° を書いていた（GEAR-06・07）。acf の `_steerdeg_*` はもう使わない。
+- 前輪：系統 1 の脚 DOWN 圧（レバー DN のときの系統 1 の圧。1000 psi 以上：推定）で動く（ATA29_32 p.566、p.595）。tiller は 70°、ペダルは 7°（FCOM p.1513）。tiller を中立から動かすとペダルより優先（p.578）。ペダルは前脚が 8 in 縮んだとき（PSEU の前脚圧縮）だけ効き、ラダートリムで動いたペダル（`flt_ctrls/rudder_input`）も含む。前脚が伸びるとカムで中立（p.570、p.574）。圧が無いと、前輪はその場にとどまる（metering valve が閉じ、bypass 弁は牽引の力でだけ開く：p.596–598 から推定）。前輪の速さは 20°/s（推定）。
+- tiller の入力：X-Plane の「Nosewheel tiller」の軸（軸の割り当ての番号 37。`joy_mapped_axis_avail`・`value` をこの番号で読む：X-Plane の開発者のページの割り当ての表からの推定で、軸を持たないので試していない）。軸が無ければ `laminar/B747/gear/steering/tiller`（-1〜1、試験や外部の道具用）。
+- 実機ではない手当て：tiller の軸が無いときは、ペダルを tiller の代わりにする（10 kt まで 70°、30 kt で 7° まで減らす。FCTM p.78 の「tiller は低速の地上走行で」から）。`laminar/B747/gear/steering/pedal_tiller`（1 で入、機体の読み込みで入）。tiller の軸がある利用者には効かない。
+- 胴体脚：両方の air/ground が ground を 10 秒、翼脚の車輪速 15 kt 未満、IRU の対地速度 40 kt 未満で arm、車輪速 20 kt 超・IRU 40 kt 超・air mode で disarm（p.622。車輪速は対地速度で代える：推定）。arm して前輪が 20° を超えると、前輪と逆向きに、70° で 13° まで比例（p.604・606・608）。disarm か 20° 未満で、圧があれば中立に戻ってロック。動く速さは 5°/s（推定）。
+- ロック：胴体脚のアクチュエーターのロックスイッチ（中立から 0.1° 以内）を `laminar/B747/gear/steering/body_unlocked` に出し、CONFIG GEAR CTR（fltCtrls。エンジン 2 か 3 に直した：FCOM p.1603）と PSEU の LG LVR UNLK（脚レバーのロック）が読む。前は X-Plane の胴体脚の角度で見ていた（GEAR-17 の CTR の部分）。
+- メッセージ：>BODY GEAR STRG と STATUS の BODY GR STRG SYS は、指令が無いのにアクチュエーターのロックが外れているとき（中立に戻る間を除くため 5 秒：推定）（FCOM p.1521、ATA29_32 p.626・630）。STATUS の PEDAL STEERING は interconnect actuator の故障（p.580・600。もう片方で engage するのでペダルは効く）。故障は `gear/fail/pedal_steering`・`body_steering`。
+- 作らなかったもの：モジュールの圧力スイッチ（指令なしの加圧）、arm A と B の不一致、shimmy damper と牽引、STATUS の不揮発の保持、ステアリングの作動油の消費（油圧のモデルの負荷の表の `steering` は使っていない）。

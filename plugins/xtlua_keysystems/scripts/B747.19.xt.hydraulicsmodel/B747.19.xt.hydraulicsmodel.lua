@@ -142,8 +142,6 @@ simDR_parking_brake_ratio       = find_dataref("sim/cockpit2/controls/parking_br
 B747DR_rudder_lwr_pos   = deferred_dataref("laminar/B747/flt_ctrls/rudder_lwr_pos", "number")
 B747DR_rudder_upr_pos   = deferred_dataref("laminar/B747/flt_ctrls/rudder_upr_pos", "number")
 B747DR_rudder_ratio   = deferred_dataref("laminar/B747/flt_ctrls/rudder_ratio", "number")
-simDR_steering = find_dataref("sim/flightmodel2/gear/tire_steer_command_deg")
-simDR_total_heading_ratio   = deferred_dataref("sim/cockpit2/controls/total_heading_ratio", "number")
 -- the pilots' pedals alone: X-Plane's total_heading_ratio adds 0.3 of the
 -- rudder trim in the air (the acf's trim authority; checked 2026-10-24)
 simDR_yoke_heading_ratio    = find_dataref("sim/cockpit2/controls/yoke_heading_ratio")
@@ -273,7 +271,6 @@ simDR_failhyd3  = find_dataref("sim/operation/failures/rel_hydleak3")
 
 
 simDR_override_control_surfaces       = find_dataref("sim/operation/override/override_control_surfaces")
-simDR_override_steering               = find_dataref("sim/operation/override/override_wheel_steer")
 --simDR_hyd_press_2               = find_dataref("sim/cockpit2/hydraulics/indicators/hydraulic_pressure_2")
 B747DR_hyd_dmd_pmp_sel_pos      = deferred_dataref("laminar/B747/hydraulics/dmd_pump/sel_dial_pos", "array[4]")
 

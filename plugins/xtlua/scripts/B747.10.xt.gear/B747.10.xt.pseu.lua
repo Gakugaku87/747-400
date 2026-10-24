@@ -2,7 +2,7 @@
 -- reads X-Plane's gear, runs the model every frame and writes
 -- laminar/B747/gear/air_ground/*. B747.10.xt.gear.lua loads it after binding
 -- its datarefs and uses its bindings (simDR_gear_claw_angle,
--- simDR_gear_deploy_ratio, simDR_tire_steer_deg).
+-- simDR_gear_deploy_ratio).
 dofile("B747.10.pseu_model.lua")
 local P = B747_pseu_model
 
@@ -17,6 +17,7 @@ B747DR_pseu_ng_compressed       = find_dataref("laminar/B747/gear/air_ground/ng_
 B747DR_pseu_all_gear_down       = find_dataref("laminar/B747/gear/air_ground/all_gear_down")
 B747DR_pseu_nose_not_down       = find_dataref("laminar/B747/gear/air_ground/nose_not_down")
 B747DR_pseu_lever_unlock        = find_dataref("laminar/B747/gear/air_ground/lever_unlock")
+B747DR_pseu_body_unlocked       = find_dataref("laminar/B747/gear/steering/body_unlocked")
 
 -- X-Plane gear index of LWG, LBG, RBG, RWG (acf: 0 nose, 1 right body,
 -- 2 left body, 3 right wing, 4 left wing)
@@ -38,8 +39,8 @@ function B747_pseu()
     inp.nose_on_ground = simDR_pseu_gear_on_ground[0] == 1
     inp.hyd_psi[1] = B747DR_pseu_hyd_pressure_1
     inp.hyd_psi[4] = B747DR_pseu_hyd_pressure_4
-    -- body gear steering locked: estimate, the body gear wheels centred
-    inp.body_steering_locked = simDR_tire_steer_deg[1] == 0 and simDR_tire_steer_deg[2] == 0
+    -- the body gear steering actuators' lock switches (the steering, 4-2 step 4)
+    inp.body_steering_locked = B747DR_pseu_body_unlocked == 0
     local out = P.update(inp)
     B747DR_pseu_pri_air = flag(out.pri_air)
     B747DR_pseu_pri_gnd = flag(out.pri_gnd)
