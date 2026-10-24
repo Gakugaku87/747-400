@@ -118,6 +118,14 @@ B747DR_hyd_syn_rsvr_press       = deferred_dataref("laminar/B747/hydraulics/syno
 B747DR_hyd_syn_inop             = deferred_dataref("laminar/B747/hydraulics/synoptic/inop", "array[4]")
 B747DR_hyd_syn_inop_set         = deferred_dataref("laminar/B747/hydraulics/synoptic/inop_set", "array[6]")
 B747DR_rudder_ratio   = deferred_dataref("laminar/B747/flt_ctrls/rudder_ratio", "number")
+-- the SRMs' rudder ratio changers (B747.45.xt.srm.lua, 4-1 step 2a): the
+-- upper and lower rudders' authority (1 = 32 degrees); rudder_ratio is the
+-- lower's. The pedals and the rudder trim together, -1..1 of the full
+-- travel (B747.19.xt.hydraulics_override.lua): the ratio changers limit
+-- them together (ATA27 p.596, p.634)
+B747DR_rudder_ratio_upr = deferred_dataref("laminar/B747/flt_ctrls/rudder_ratio_upr", "number")
+B747DR_rudder_ratio_lwr = deferred_dataref("laminar/B747/flt_ctrls/rudder_ratio_lwr", "number")
+B747DR_rudder_input   = deferred_dataref("laminar/B747/flt_ctrls/rudder_input", "number")
 
 
 B747DR_yaw_damper_lwr   = deferred_dataref("laminar/B747/flt_ctrls/yaw_damper_lwr", "number")

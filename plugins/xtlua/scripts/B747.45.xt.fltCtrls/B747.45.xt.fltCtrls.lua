@@ -1229,8 +1229,9 @@ end
 
 
 
--- the flap control units (4-1)
+-- the flap control units and the SRMs (4-1)
 dofile("B747.45.xt.fcu.lua")
+dofile("B747.45.xt.srm.lua")
 
 --*************************************************************************************--
 --** 				                  EVENT CALLBACKS           	    			 **--
@@ -1244,6 +1245,7 @@ local flightInit=false
 function flight_start()
     flightInit=false
     B747_fcu_flight_start()
+    B747_srm_flight_start()
 end
 function do_flight_start()
 
@@ -1273,6 +1275,7 @@ function after_physics()
 
     B747_flap_transition_status()
     B747_fcu()
+    B747_srm()
 
     B747_fltCtrols_EICAS_msg()
 
