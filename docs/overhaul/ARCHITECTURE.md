@@ -380,7 +380,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
   - 読むもの：X-Plane の機長側・standby・副操縦士側の速度・Mach・高度・昇降率・気圧設定（ADC L・C・R。C は standby の pitot-static で、Mach と昇降率は計算：推定）、ADC の故障（X-Plane の `rel_adc_comp`・`_2`、新設 `airdata/fail/adc[3]`）、電源（`electrical/bus/stby_main`・`xfr_capt`・`xfr_fo`）、AIR DATA の選択器（`flt_inst/air_data_src/capt`・`fo/sel_dial_pos`。0 L・1 R：推定）。高度警報のために MCP の高度（`autopilot/heading/altitude_dial_ft`）、A/P の CMD の灯、GS の捕捉（`autopilot/FMA/active_pitch_mode` が 2）、フラップレバー、PSEU の全脚 down と地上、パーキングブレーキのレバー。
   - 書くもの：各 PFD の速度 `gauges/indicators/airspeed_kts_pilot`・`_copilot`（選んだ ADC。30 kt が下限。EEC・SRM なども読む）。新設（init `B747.34.nav`）の `airdata/src_capt`・`src_fo`（1 L、2 C、3 R）・`valid[3]`（ADC ごと）・`valid_capt`・`valid_fo`（PFD の旗のため）・`alt_advise`（白枠）・`alt_alert`（琥珀枠）。EICAS：warning 22 OVERSPEED、caution 1 ALT DISAGREE・2 >ALTITUDE ALERT・44 IAS DISAGREE、advisory 267 >SOURCE SEL ADC・12 >AOA RIGHT。
   - 外した前の処理：fltInst02 の OVERSPEED（placard を含む Vmax）と >AOA RIGHT（左の AOA を見ていた）、各側の速度の書き込み（`fltInstsetASIs`）。fltInst02 の BARO の STD は、押す前の値を preselect に残すようにした（NAV-06）。
-  - PFD の高度・昇降率・Mach と旗・高度の枠は、パネルが X-Plane の dataref を直接読むので、まだ選択と故障に従わない（パネル変更が要る）。
+  - 段 1b：カスタム acf の PFD は、高度と Mach を新設の `airdata/alt_capt`・`alt_fo`（選んだ ADC、その席の気圧設定）・`mach_capt`・`mach_fo` から読み、`valid_capt`・`valid_fo` が 0 なら速度と高度の表示を消して SPD・ALT の旗、`alt_advise`・`alt_alert` で高度の白枠・琥珀枠を出す（ACF_DIFF.md §5）。グルーは最初の 3 秒（モデルの前）は X-Plane の各側の値と有効を書く。PFD の昇降率はまだ X-Plane の値。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 
@@ -395,6 +395,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
   - EICAS メッセージは `B747.87.xt.warning`。表示行は `CAS/gen_*_msg_NNN` に文字列で出す。
   - ND は `xtlua_nd`（地図）と `fltInst02`（モード・レンジ）。
   - CDU は `B747.68.xt.fms` が `laminar/B747/fms1〜3/*` に行の文字列を出す。
+- パネルの表示条件（`SHOW_EQUAL`・`SHOW_LESS`・`SHOW_GREATER`）は、計器かグループごとに 1 つの dataref だけが効く（同じ dataref の LESS と GREATER で範囲。違う dataref を 2 行書くと後ろの行だけが効く：2026-10-25、カスタム acf の PFD で確かめた）。条件を重ねるときはグループを入れ子にする。純正の計器にも違う dataref を 2 行持つものがある（例：PFD の NO V SPD は V1 の行だけが効く）。
 - **制約**：表示の定義は acf の中にある。純正 acf は変えないので、表示を直すときは dataref の値で直すのが基本になる。計器の追加や変更はカスタム acf にしかできず、見た目に関わるので承認が要る。カスタム acf と純正 acf のパネル定義は、ADF の方位針 2 個の参照 index を除いて同じ。
 
 ## 6. FMC

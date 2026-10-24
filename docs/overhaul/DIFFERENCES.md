@@ -287,11 +287,11 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 
 ### 航法センサーと無線（ATA 34）：作り直し中（5-1 段 1：エアデータは済）
 
-実機に合わせた点（段 1、エアデータ）：ADC を 3 台にした（L は X-Plane の機長側、R は副操縦士側、C は standby の pitot-static：推定）。電源（L は standby bus、C は機長の transfer bus、R は副操縦士の transfer bus）と故障で無効になる。各席の AIR DATA 選択器で PFD の速度の ADC が変わり、両席が同じ ADC なら >SOURCE SEL ADC（NAV-01）。IAS DISAGREE（5 kt 以上）・ALT DISAGREE（未補正で 200 ft 超）は 5 秒続いたとき（NAV-04）。OVERSPEED は Vmo 365 kt と Mmo 0.92 だけ（前はフラップ・脚の placard を含み、28,620 ft 以下は M0.88：NAV-02）。>ALTITUDE ALERT は、選択高度の 300 ft を超えて離れたとき（EICAS・master caution・beeper）で、GS の捕捉、着陸フラップで脚 down のときは抑止、選択高度を変えると消える（NAV-03）。>AOA RIGHT は右の AOA の故障で出る（前は左：NAV-07）。BARO の STD をもう一度押すと STD の前の値に戻る（前は 29.92 のまま：NAV-06）。
+実機に合わせた点（段 1、エアデータ）：ADC を 3 台にした（L は X-Plane の機長側、R は副操縦士側、C は standby の pitot-static：推定）。電源（L は standby bus、C は機長の transfer bus、R は副操縦士の transfer bus）と故障で無効になる。各席の AIR DATA 選択器で PFD の速度の ADC が変わり、両席が同じ ADC なら >SOURCE SEL ADC（NAV-01）。IAS DISAGREE（5 kt 以上）・ALT DISAGREE（未補正で 200 ft 超）は 5 秒続いたとき（NAV-04）。OVERSPEED は Vmo 365 kt と Mmo 0.92 だけ（前はフラップ・脚の placard を含み、28,620 ft 以下は M0.88：NAV-02）。>ALTITUDE ALERT は、選択高度の 300 ft を超えて離れたとき（EICAS・master caution・beeper）で、GS の捕捉、着陸フラップで脚 down のときは抑止、選択高度を変えると消える（NAV-03）。>AOA RIGHT は右の AOA の故障で出る（前は左：NAV-07）。BARO の STD をもう一度押すと STD の前の値に戻る（前は 29.92 のまま：NAV-06）。カスタム acf の PFD の高度と Mach も選んだ ADC の値で、その席のエアデータが無効なら速度と高度のテープが消えて琥珀の SPD・ALT の旗が出る（NAV-05）。高度警報の枠：選択高度の 900〜300 ft 手前で選択高度と現在高度に白の強調の枠、離れると現在高度に琥珀の枠（NAV-03）。
 
 残っている違い：
 
-- PFD の高度・昇降率・Mach、速度・高度の旗、高度の白枠・琥珀枠は、パネルが X-Plane の値を直接読むので、AIR DATA の選択と ADC の故障に従わない（パネル変更が要る。枠と旗のための dataref は出している）。3D の AIR DATA ノブは 2 位置（570 型の L/R。位置の意味は推定）で、C を選べない。他の系統（EEC・SRM など）は各席の PFD の速度を読むので、表示の選択に従う（実機は各系統のリレーの側の ADC）。
+- PFD の昇降率は X-Plane の値のまま（実機は IRS）。3D の AIR DATA ノブは 2 位置（570 型の L/R。位置の意味は推定）で、C を選べない。他の系統（EEC・SRM など）は各席の PFD の速度を読むので、表示の選択に従う（実機は各系統のリレーの側の ADC）。
 - IRS：ALIGN で何も進まず NAV にしてから 600 秒、fast realignment が無い、位置入力を検査しない、ATT モードと電源のモデルが無い、メッセージが少ない（NAV-16〜21）。
 - 無線：VOR の音声の経路、NAV RADIO の RADIAL が 180° 違う、自動同調が単純、ILS の自動同調を経路の形から推定（NAV-32〜39）。
 - 電波高度計が 1 系統（NAV-51）。MINS RST が minimums を書き換える（NAV-52）。

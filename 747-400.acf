@@ -75078,6 +75078,7 @@ GROUP Captain PFD
 
       END_GROUP
       GROUP Airspeed Display
+        SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_capt
         HIDE
         gen_rotary Tape Bkgnd
           POS 79.500000 767.000000
@@ -75571,7 +75572,7 @@ GROUP Captain PFD
           SHOW_GREATER 10.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot
           HIDE
           GROUP Spd Ofst Kts
-            SHOW_LESS 20000.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            SHOW_LESS 20000.000000 laminar/B747/airdata/alt_capt
             HIDE
             GROUP_ANIMATE_MODE TRANSLATE
             GROUP_WIDTH 43
@@ -75703,12 +75704,12 @@ GROUP Captain PFD
           END_GROUP
         END_GROUP
         GROUP Mach Speed
-          SHOW_GREATER 0.400000 sim/flightmodel/misc/machno
+          SHOW_GREATER 0.400000 laminar/B747/airdata/mach_capt
           HIDE
           gen_LED Mach Speed LED
             POS 78.000000 487.500000
             IMAGE CRT Displays/LED/LED_2.36R.xxxxx0.white
-            DATAREF sim/flightmodel/misc/machno
+            DATAREF laminar/B747/airdata/mach_capt
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 2
@@ -76885,6 +76886,7 @@ GROUP Captain PFD
           POS 549.500000 767.000000
           IMAGE CRT Displays/PFD/ASI_ALTbgnd
           DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_capt
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 2
@@ -76903,12 +76905,13 @@ GROUP Captain PFD
           CLICK_DY 0
 
         GROUP Tapes
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_capt
           HIDE
           gen_pointer Tape -1000-2000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape01
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 2500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 2500.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -76925,9 +76928,9 @@ GROUP Captain PFD
           gen_pointer Tape 2100-5000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape02
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 5500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 1600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 5500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 1600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -76942,9 +76945,9 @@ GROUP Captain PFD
           gen_pointer Tape 5100-8000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape03
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 8500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 4600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 8500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 4600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -76959,9 +76962,9 @@ GROUP Captain PFD
           gen_pointer Tape 8100-11000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape04
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 11500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 7600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 11500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 7600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -76976,9 +76979,9 @@ GROUP Captain PFD
           gen_pointer Tape 11100-14000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape05
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 14500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 10600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 14500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 10600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -76993,9 +76996,9 @@ GROUP Captain PFD
           gen_pointer Tape 14100-17000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape06
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 17500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 13600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 17500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 13600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -77010,9 +77013,9 @@ GROUP Captain PFD
           gen_pointer Tape 17100-20000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape07
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 20500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 16600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 20500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 16600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -77027,9 +77030,9 @@ GROUP Captain PFD
           gen_pointer Tape 20100-23000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape08
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 23500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 19600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 23500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 19600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -77044,9 +77047,9 @@ GROUP Captain PFD
           gen_pointer Tape 23100-26000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape09
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 26500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 22600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 26500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 22600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -77061,9 +77064,9 @@ GROUP Captain PFD
           gen_pointer Tape 26100-29000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape10
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 29500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 25600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 29500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 25600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -77078,9 +77081,9 @@ GROUP Captain PFD
           gen_pointer Tape 29100-32000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape11
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 32500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 28600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 32500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 28600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -77095,9 +77098,9 @@ GROUP Captain PFD
           gen_pointer Tape 32100-35000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape12
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 35500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 31600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 35500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 31600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -77112,9 +77115,9 @@ GROUP Captain PFD
           gen_pointer Tape 35100-38000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape13
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 38500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 34600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 38500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 34600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -77129,9 +77132,9 @@ GROUP Captain PFD
           gen_pointer Tape 38100-41000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape14
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 41500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 37600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 41500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 37600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -77146,9 +77149,9 @@ GROUP Captain PFD
           gen_pointer Tape 44100-47000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape16
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 99999.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 43600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 99999.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 43600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -77164,9 +77167,9 @@ GROUP Captain PFD
           gen_pointer Tape 41100-44000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape15
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 44500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 40600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 44500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 40600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -77180,11 +77183,12 @@ GROUP Captain PFD
 
         END_GROUP
         GROUP Altitude Offset
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_capt
           HIDE
           GROUP_ANIMATE_MODE TRANSLATE
           GROUP_WIDTH 106
           GROUP_HEIGHT 480
-          DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
+          DATAREF laminar/B747/airdata/alt_capt
           POS 540.000000 767.000000
           CLIP
           KEY_FRAME 0.000000 0.000000 1.000000
@@ -77321,7 +77325,30 @@ GROUP Captain PFD
 
           END_GROUP
         END_GROUP
+        gen_rotary Sel Alt Box White
+          POS 549.500000 1035.000000
+          IMAGE CRT Displays/PFD/Altimeter/SelAltBoxHiW
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/alt_advise
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 2
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
         GROUP Rolling Display
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_capt
           HIDE
           GROUP Meters
             SHOW_EQUAL 1.000000 laminar/B747/efis/meters/capt/selected
@@ -77350,7 +77377,7 @@ GROUP Captain PFD
             gen_LED Meters
               POS 576.000000 813.500000
               IMAGE CRT Displays/LED/LED_2.30R.x####0.white
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
+              DATAREF laminar/B747/airdata/alt_capt
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -77390,7 +77417,7 @@ GROUP Captain PFD
             gen_pointer 20's
               POS 611.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntTensOnes
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
+              DATAREF laminar/B747/airdata/alt_capt
               HIDE
               KF_WRAP_BOTTOM
               KF_WRAP_TOP
@@ -77407,7 +77434,7 @@ GROUP Captain PFD
             gen_rolling Hundreds
               POS 602.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntHndrds
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
+              DATAREF laminar/B747/airdata/alt_capt
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -77419,7 +77446,7 @@ GROUP Captain PFD
             gen_rolling Thousands
               POS 595.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntThousands
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
+              DATAREF laminar/B747/airdata/alt_capt
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -77431,7 +77458,7 @@ GROUP Captain PFD
             gen_rolling TenThousand
               POS 584.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntTenThsnd
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
+              DATAREF laminar/B747/airdata/alt_capt
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -77441,6 +77468,53 @@ GROUP Captain PFD
               DIGITS 5
 
           END_GROUP
+        END_GROUP
+        GROUP Crnt Alt Boxes
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_capt
+          gen_rotary Crnt Alt Box White
+            POS 575.500000 767.000000
+            IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntWndwHiW
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/airdata/alt_advise
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary Crnt Alt Box Amber
+            POS 575.500000 767.000000
+            IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntWndwHiA
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/airdata/alt_alert
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
         END_GROUP
       END_GROUP
       GROUP Approach Course
@@ -77873,6 +77947,51 @@ GROUP Captain PFD
       gen_rotary ATT X CAPT PFD
         POS 315.000000 820.500000
         IMAGE CRT Displays/PFD/Failure Flags/attX
+        DATAREF 
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 2
+        BUS_SRC 3
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+    END_GROUP
+    GROUP CAPT AIR DATA FLAGS
+      SHOW_EQUAL 0.000000 laminar/B747/airdata/valid_capt
+      gen_rotary SPD X CAPT PFD
+        POS 79.500000 767.000000
+        IMAGE CRT Displays/PFD/Failure Flags/spdX
+        DATAREF 
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 2
+        BUS_SRC 3
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary ALT X CAPT PFD
+        POS 549.500000 767.000000
+        IMAGE CRT Displays/PFD/Failure Flags/altX
         DATAREF 
         HIDE
         LIGHT_MODE GLASS_AUTO
@@ -78667,6 +78786,7 @@ GROUP Captain PFD
 
       END_GROUP
       GROUP Airspeed Display
+        SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_capt
         HIDE
         gen_rotary Tape Bkgnd
           POS 79.500000 767.000000
@@ -79160,7 +79280,7 @@ GROUP Captain PFD
           SHOW_GREATER 10.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot
           HIDE
           GROUP Spd Ofst Kts
-            SHOW_LESS 20000.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            SHOW_LESS 20000.000000 laminar/B747/airdata/alt_capt
             HIDE
             GROUP_ANIMATE_MODE TRANSLATE
             GROUP_WIDTH 43
@@ -79292,12 +79412,12 @@ GROUP Captain PFD
           END_GROUP
         END_GROUP
         GROUP Mach Speed
-          SHOW_GREATER 0.400000 sim/flightmodel/misc/machno
+          SHOW_GREATER 0.400000 laminar/B747/airdata/mach_capt
           HIDE
           gen_LED Mach Speed LED
             POS 78.000000 487.500000
             IMAGE CRT Displays/LED/LED_2.36R.xxxxx0.white
-            DATAREF sim/flightmodel/misc/machno
+            DATAREF laminar/B747/airdata/mach_capt
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 2
@@ -80474,6 +80594,7 @@ GROUP Captain PFD
           POS 549.500000 767.000000
           IMAGE CRT Displays/PFD/ASI_ALTbgnd
           DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_capt
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 2
@@ -80492,12 +80613,13 @@ GROUP Captain PFD
           CLICK_DY 0
 
         GROUP Tapes
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_capt
           HIDE
           gen_pointer Tape -1000-2000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape01
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 2500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 2500.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80514,9 +80636,9 @@ GROUP Captain PFD
           gen_pointer Tape 2100-5000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape02
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 5500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 1600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 5500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 1600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80531,9 +80653,9 @@ GROUP Captain PFD
           gen_pointer Tape 5100-8000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape03
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 8500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 4600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 8500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 4600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80548,9 +80670,9 @@ GROUP Captain PFD
           gen_pointer Tape 8100-11000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape04
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 11500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 7600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 11500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 7600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80565,9 +80687,9 @@ GROUP Captain PFD
           gen_pointer Tape 11100-14000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape05
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 14500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 10600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 14500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 10600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80582,9 +80704,9 @@ GROUP Captain PFD
           gen_pointer Tape 14100-17000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape06
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 17500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 13600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 17500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 13600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80599,9 +80721,9 @@ GROUP Captain PFD
           gen_pointer Tape 17100-20000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape07
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 20500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 16600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 20500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 16600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80616,9 +80738,9 @@ GROUP Captain PFD
           gen_pointer Tape 20100-23000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape08
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 23500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 19600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 23500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 19600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80633,9 +80755,9 @@ GROUP Captain PFD
           gen_pointer Tape 23100-26000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape09
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 26500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 22600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 26500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 22600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80650,9 +80772,9 @@ GROUP Captain PFD
           gen_pointer Tape 26100-29000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape10
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 29500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 25600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 29500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 25600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80667,9 +80789,9 @@ GROUP Captain PFD
           gen_pointer Tape 29100-32000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape11
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 32500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 28600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 32500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 28600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80684,9 +80806,9 @@ GROUP Captain PFD
           gen_pointer Tape 32100-35000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape12
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 35500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 31600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 35500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 31600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80701,9 +80823,9 @@ GROUP Captain PFD
           gen_pointer Tape 35100-38000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape13
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 38500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 34600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 38500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 34600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80718,9 +80840,9 @@ GROUP Captain PFD
           gen_pointer Tape 38100-41000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape14
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 41500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 37600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 41500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 37600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80735,9 +80857,9 @@ GROUP Captain PFD
           gen_pointer Tape 44100-47000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape16
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 99999.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 43600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 99999.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 43600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80753,9 +80875,9 @@ GROUP Captain PFD
           gen_pointer Tape 41100-44000
             POS 549.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape15
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_LESS 44500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
-            SHOW_GREATER 40600.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_capt
+            SHOW_LESS 44500.000000 laminar/B747/airdata/alt_capt
+            SHOW_GREATER 40600.000000 laminar/B747/airdata/alt_capt
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -80769,11 +80891,12 @@ GROUP Captain PFD
 
         END_GROUP
         GROUP Altitude Offset
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_capt
           HIDE
           GROUP_ANIMATE_MODE TRANSLATE
           GROUP_WIDTH 106
           GROUP_HEIGHT 480
-          DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
+          DATAREF laminar/B747/airdata/alt_capt
           POS 540.000000 767.000000
           CLIP
           KEY_FRAME 0.000000 0.000000 1.000000
@@ -80910,7 +81033,30 @@ GROUP Captain PFD
 
           END_GROUP
         END_GROUP
+        gen_rotary Sel Alt Box White
+          POS 549.500000 1035.000000
+          IMAGE CRT Displays/PFD/Altimeter/SelAltBoxHiW
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/alt_advise
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 2
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
         GROUP Rolling Display
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_capt
           HIDE
           GROUP Meters
             SHOW_EQUAL 1.000000 laminar/B747/efis/meters/capt/selected
@@ -80939,7 +81085,7 @@ GROUP Captain PFD
             gen_LED Meters
               POS 576.000000 813.500000
               IMAGE CRT Displays/LED/LED_2.30R.x####0.white
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
+              DATAREF laminar/B747/airdata/alt_capt
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -80979,7 +81125,7 @@ GROUP Captain PFD
             gen_pointer 20's
               POS 611.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntTensOnes
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
+              DATAREF laminar/B747/airdata/alt_capt
               HIDE
               KF_WRAP_BOTTOM
               KF_WRAP_TOP
@@ -80996,7 +81142,7 @@ GROUP Captain PFD
             gen_rolling Hundreds
               POS 602.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntHndrds
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
+              DATAREF laminar/B747/airdata/alt_capt
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -81008,7 +81154,7 @@ GROUP Captain PFD
             gen_rolling Thousands
               POS 595.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntThousands
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
+              DATAREF laminar/B747/airdata/alt_capt
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -81020,7 +81166,7 @@ GROUP Captain PFD
             gen_rolling TenThousand
               POS 584.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntTenThsnd
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_pilot
+              DATAREF laminar/B747/airdata/alt_capt
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -81030,6 +81176,53 @@ GROUP Captain PFD
               DIGITS 5
 
           END_GROUP
+        END_GROUP
+        GROUP Crnt Alt Boxes
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_capt
+          gen_rotary Crnt Alt Box White
+            POS 575.500000 767.000000
+            IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntWndwHiW
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/airdata/alt_advise
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary Crnt Alt Box Amber
+            POS 575.500000 767.000000
+            IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntWndwHiA
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/airdata/alt_alert
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
         END_GROUP
       END_GROUP
       GROUP Approach Course
@@ -81471,6 +81664,51 @@ GROUP Captain PFD
       gen_rotary ATT X CAPT PFD
         POS 315.000000 820.500000
         IMAGE CRT Displays/PFD/Failure Flags/attX
+        DATAREF 
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 2
+        BUS_SRC 3
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+    END_GROUP
+    GROUP CAPT AIR DATA FLAGS
+      SHOW_EQUAL 0.000000 laminar/B747/airdata/valid_capt
+      gen_rotary SPD X CAPT PFD
+        POS 79.500000 767.000000
+        IMAGE CRT Displays/PFD/Failure Flags/spdX
+        DATAREF 
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 2
+        BUS_SRC 3
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary ALT X CAPT PFD
+        POS 549.500000 767.000000
+        IMAGE CRT Displays/PFD/Failure Flags/altX
         DATAREF 
         HIDE
         LIGHT_MODE GLASS_AUTO
@@ -83001,6 +83239,7 @@ GROUP First Officer PFD
 
       END_GROUP
       GROUP Airspeed Display 2
+        SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_fo
         HIDE
         gen_rotary Tape Bkgnd 2
           POS 758.500000 767.000000
@@ -83477,7 +83716,7 @@ GROUP First Officer PFD
           SHOW_GREATER 10.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_copilot
           HIDE
           GROUP Spd Ofst Kts 2
-            SHOW_LESS 20000.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            SHOW_LESS 20000.000000 laminar/B747/airdata/alt_fo
             HIDE
             GROUP_ANIMATE_MODE TRANSLATE
             GROUP_WIDTH 43
@@ -83609,12 +83848,12 @@ GROUP First Officer PFD
           END_GROUP
         END_GROUP
         GROUP Mach Speed 2
-          SHOW_GREATER 0.400000 sim/flightmodel/misc/machno
+          SHOW_GREATER 0.400000 laminar/B747/airdata/mach_fo
           HIDE
           gen_LED Mach Speed LED 2
             POS 757.000000 487.500000
             IMAGE CRT Displays/LED/LED_2.36R.xxxxx0.white
-            DATAREF sim/flightmodel/misc/machno
+            DATAREF laminar/B747/airdata/mach_fo
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 5
@@ -84052,6 +84291,7 @@ GROUP First Officer PFD
           POS 1228.500000 767.000000
           IMAGE CRT Displays/PFD/ASI_ALTbgnd
           DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_fo
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 5
@@ -84149,13 +84389,36 @@ GROUP First Officer PFD
 
           END_GROUP
         END_GROUP
+        gen_rotary Sel Alt Box White 2
+          POS 1228.500000 1035.000000
+          IMAGE CRT Displays/PFD/Altimeter/SelAltBoxHiW
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/alt_advise
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 5
+          BUS_SRC 4
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
         GROUP Tapes 2
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_fo
           HIDE
           gen_pointer Tape -1000-2000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape01
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 2500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 2500.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84172,9 +84435,9 @@ GROUP First Officer PFD
           gen_pointer Tape 2100-5000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape02
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 5500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 1600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 5500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 1600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84189,9 +84452,9 @@ GROUP First Officer PFD
           gen_pointer Tape 5100-8000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape03
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 8500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 4600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 8500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 4600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84206,9 +84469,9 @@ GROUP First Officer PFD
           gen_pointer Tape 8100-11000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape04
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 11500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 7600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 11500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 7600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84223,9 +84486,9 @@ GROUP First Officer PFD
           gen_pointer Tape 11100-14000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape05
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 14500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 10600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 14500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 10600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84240,9 +84503,9 @@ GROUP First Officer PFD
           gen_pointer Tape 14100-17000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape06
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 17500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 13600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 17500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 13600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84257,9 +84520,9 @@ GROUP First Officer PFD
           gen_pointer Tape 17100-20000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape07
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 20500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 16600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 20500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 16600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84274,9 +84537,9 @@ GROUP First Officer PFD
           gen_pointer Tape 20100-23000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape08
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 23500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 19600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 23500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 19600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84291,9 +84554,9 @@ GROUP First Officer PFD
           gen_pointer Tape 23100-26000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape09
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 26500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 22600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 26500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 22600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84308,9 +84571,9 @@ GROUP First Officer PFD
           gen_pointer Tape 26100-29000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape10
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 29500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 25600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 29500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 25600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84325,9 +84588,9 @@ GROUP First Officer PFD
           gen_pointer Tape 29100-32000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape11
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 32500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 28600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 32500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 28600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84342,9 +84605,9 @@ GROUP First Officer PFD
           gen_pointer Tape 32100-35000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape12
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 35500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 31600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 35500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 31600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84359,9 +84622,9 @@ GROUP First Officer PFD
           gen_pointer Tape 35100-38000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape13
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 38500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 34600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 38500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 34600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84376,9 +84639,9 @@ GROUP First Officer PFD
           gen_pointer Tape 38100-41000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape14
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 41500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 37600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 41500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 37600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84393,9 +84656,9 @@ GROUP First Officer PFD
           gen_pointer Tape 44100-47000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape16
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 99999.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 43600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 99999.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 43600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84411,9 +84674,9 @@ GROUP First Officer PFD
           gen_pointer Tape 41100-44000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape15
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 44500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 40600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 44500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 40600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -84427,11 +84690,12 @@ GROUP First Officer PFD
 
         END_GROUP
         GROUP Altitude Offset 2
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_fo
           HIDE
           GROUP_ANIMATE_MODE TRANSLATE
           GROUP_WIDTH 106
           GROUP_HEIGHT 480
-          DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
+          DATAREF laminar/B747/airdata/alt_fo
           POS 1219.000000 767.000000
           CLIP
           KEY_FRAME 0.000000 0.000000 1.000000
@@ -84468,6 +84732,7 @@ GROUP First Officer PFD
 
         END_GROUP
         GROUP Rolling Display 2
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_fo
           HIDE
           GROUP Meters 2
             SHOW_EQUAL 1.000000 laminar/B747/efis/meters/fo/selected
@@ -84496,7 +84761,7 @@ GROUP First Officer PFD
             gen_LED Meters 2
               POS 1255.000000 813.500000
               IMAGE CRT Displays/LED/LED_2.30R.x####0.white
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
+              DATAREF laminar/B747/airdata/alt_fo
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -84536,7 +84801,7 @@ GROUP First Officer PFD
             gen_pointer 20's 2
               POS 1290.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntTensOnes
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
+              DATAREF laminar/B747/airdata/alt_fo
               HIDE
               KF_WRAP_BOTTOM
               KF_WRAP_TOP
@@ -84553,7 +84818,7 @@ GROUP First Officer PFD
             gen_rolling Hundreds 2
               POS 1281.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntHndrds
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
+              DATAREF laminar/B747/airdata/alt_fo
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -84565,7 +84830,7 @@ GROUP First Officer PFD
             gen_rolling Thousands 2
               POS 1274.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntThousands
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
+              DATAREF laminar/B747/airdata/alt_fo
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -84577,7 +84842,7 @@ GROUP First Officer PFD
             gen_rolling TenThousand 2
               POS 1263.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntTenThsnd
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
+              DATAREF laminar/B747/airdata/alt_fo
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -84587,6 +84852,53 @@ GROUP First Officer PFD
               DIGITS 5
 
           END_GROUP
+        END_GROUP
+        GROUP Crnt Alt Boxes 2
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_fo
+          gen_rotary Crnt Alt Box White 2
+            POS 1254.500000 767.000000
+            IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntWndwHiW
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/airdata/alt_advise
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary Crnt Alt Box Amber 2
+            POS 1254.500000 767.000000
+            IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntWndwHiA
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/airdata/alt_alert
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
         END_GROUP
       END_GROUP
       GROUP Approach Course 2
@@ -85021,6 +85333,51 @@ GROUP First Officer PFD
       gen_rotary ATT X FO PFD
         POS 994.000000 820.500000
         IMAGE CRT Displays/PFD/Failure Flags/attX
+        DATAREF 
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 5
+        BUS_SRC 4
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+    END_GROUP
+    GROUP FO AIR DATA FLAGS
+      SHOW_EQUAL 0.000000 laminar/B747/airdata/valid_fo
+      gen_rotary SPD X FO PFD
+        POS 758.500000 767.000000
+        IMAGE CRT Displays/PFD/Failure Flags/spdX
+        DATAREF 
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 5
+        BUS_SRC 4
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary ALT X FO PFD
+        POS 1228.500000 767.000000
+        IMAGE CRT Displays/PFD/Failure Flags/altX
         DATAREF 
         HIDE
         LIGHT_MODE GLASS_AUTO
@@ -86569,6 +86926,7 @@ GROUP First Officer PFD
 
       END_GROUP
       GROUP Airspeed Display 2
+        SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_fo
         HIDE
         gen_rotary Tape Bkgnd 2
           POS 758.500000 767.000000
@@ -87045,7 +87403,7 @@ GROUP First Officer PFD
           SHOW_GREATER 10.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_copilot
           HIDE
           GROUP Spd Ofst Kts 2
-            SHOW_LESS 20000.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            SHOW_LESS 20000.000000 laminar/B747/airdata/alt_fo
             HIDE
             GROUP_ANIMATE_MODE TRANSLATE
             GROUP_WIDTH 43
@@ -87177,12 +87535,12 @@ GROUP First Officer PFD
           END_GROUP
         END_GROUP
         GROUP Mach Speed 2
-          SHOW_GREATER 0.400000 sim/flightmodel/misc/machno
+          SHOW_GREATER 0.400000 laminar/B747/airdata/mach_fo
           HIDE
           gen_LED Mach Speed LED 2
             POS 757.000000 487.500000
             IMAGE CRT Displays/LED/LED_2.36R.xxxxx0.white
-            DATAREF sim/flightmodel/misc/machno
+            DATAREF laminar/B747/airdata/mach_fo
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 5
@@ -87620,6 +87978,7 @@ GROUP First Officer PFD
           POS 1228.500000 767.000000
           IMAGE CRT Displays/PFD/ASI_ALTbgnd
           DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_fo
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 5
@@ -87717,13 +88076,36 @@ GROUP First Officer PFD
 
           END_GROUP
         END_GROUP
+        gen_rotary Sel Alt Box White 2
+          POS 1228.500000 1035.000000
+          IMAGE CRT Displays/PFD/Altimeter/SelAltBoxHiW
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/alt_advise
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 5
+          BUS_SRC 4
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
         GROUP Tapes 2
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_fo
           HIDE
           gen_pointer Tape -1000-2000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape01
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 2500.000000 sim/cockpit2/gauges/indicators/altitude_ft_pilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 2500.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87740,9 +88122,9 @@ GROUP First Officer PFD
           gen_pointer Tape 2100-5000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape02
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 5500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 1600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 5500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 1600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87757,9 +88139,9 @@ GROUP First Officer PFD
           gen_pointer Tape 5100-8000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape03
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 8500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 4600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 8500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 4600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87774,9 +88156,9 @@ GROUP First Officer PFD
           gen_pointer Tape 8100-11000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape04
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 11500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 7600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 11500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 7600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87791,9 +88173,9 @@ GROUP First Officer PFD
           gen_pointer Tape 11100-14000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape05
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 14500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 10600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 14500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 10600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87808,9 +88190,9 @@ GROUP First Officer PFD
           gen_pointer Tape 14100-17000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape06
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 17500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 13600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 17500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 13600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87825,9 +88207,9 @@ GROUP First Officer PFD
           gen_pointer Tape 17100-20000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape07
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 20500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 16600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 20500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 16600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87842,9 +88224,9 @@ GROUP First Officer PFD
           gen_pointer Tape 20100-23000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape08
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 23500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 19600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 23500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 19600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87859,9 +88241,9 @@ GROUP First Officer PFD
           gen_pointer Tape 23100-26000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape09
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 26500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 22600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 26500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 22600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87876,9 +88258,9 @@ GROUP First Officer PFD
           gen_pointer Tape 26100-29000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape10
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 29500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 25600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 29500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 25600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87893,9 +88275,9 @@ GROUP First Officer PFD
           gen_pointer Tape 29100-32000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape11
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 32500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 28600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 32500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 28600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87910,9 +88292,9 @@ GROUP First Officer PFD
           gen_pointer Tape 32100-35000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape12
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 35500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 31600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 35500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 31600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87927,9 +88309,9 @@ GROUP First Officer PFD
           gen_pointer Tape 35100-38000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape13
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 38500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 34600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 38500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 34600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87944,9 +88326,9 @@ GROUP First Officer PFD
           gen_pointer Tape 38100-41000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape14
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 41500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 37600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 41500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 37600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87961,9 +88343,9 @@ GROUP First Officer PFD
           gen_pointer Tape 44100-47000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape16
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 99999.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 43600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 99999.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 43600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87979,9 +88361,9 @@ GROUP First Officer PFD
           gen_pointer Tape 41100-44000 2
             POS 1228.500000 767.000000
             IMAGE CRT Displays/PFD/Altimeter/ALTtapes/ALTtape15
-            DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_LESS 44500.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
-            SHOW_GREATER 40600.000000 sim/cockpit2/gauges/indicators/altitude_ft_copilot
+            DATAREF laminar/B747/airdata/alt_fo
+            SHOW_LESS 44500.000000 laminar/B747/airdata/alt_fo
+            SHOW_GREATER 40600.000000 laminar/B747/airdata/alt_fo
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -87995,11 +88377,12 @@ GROUP First Officer PFD
 
         END_GROUP
         GROUP Altitude Offset 2
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_fo
           HIDE
           GROUP_ANIMATE_MODE TRANSLATE
           GROUP_WIDTH 106
           GROUP_HEIGHT 480
-          DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
+          DATAREF laminar/B747/airdata/alt_fo
           POS 1219.000000 767.000000
           CLIP
           KEY_FRAME 0.000000 0.000000 1.000000
@@ -88036,6 +88419,7 @@ GROUP First Officer PFD
 
         END_GROUP
         GROUP Rolling Display 2
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_fo
           HIDE
           GROUP Meters 2
             SHOW_EQUAL 1.000000 laminar/B747/efis/meters/fo/selected
@@ -88064,7 +88448,7 @@ GROUP First Officer PFD
             gen_LED Meters 2
               POS 1255.000000 813.500000
               IMAGE CRT Displays/LED/LED_2.30R.x####0.white
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
+              DATAREF laminar/B747/airdata/alt_fo
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -88104,7 +88488,7 @@ GROUP First Officer PFD
             gen_pointer 20's 2
               POS 1290.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntTensOnes
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
+              DATAREF laminar/B747/airdata/alt_fo
               HIDE
               KF_WRAP_BOTTOM
               KF_WRAP_TOP
@@ -88121,7 +88505,7 @@ GROUP First Officer PFD
             gen_rolling Hundreds 2
               POS 1281.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntHndrds
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
+              DATAREF laminar/B747/airdata/alt_fo
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -88133,7 +88517,7 @@ GROUP First Officer PFD
             gen_rolling Thousands 2
               POS 1274.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntThousands
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
+              DATAREF laminar/B747/airdata/alt_fo
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -88145,7 +88529,7 @@ GROUP First Officer PFD
             gen_rolling TenThousand 2
               POS 1263.500000 767.000000
               IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntTenThsnd
-              DATAREF sim/cockpit2/gauges/indicators/altitude_ft_copilot
+              DATAREF laminar/B747/airdata/alt_fo
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -88155,6 +88539,53 @@ GROUP First Officer PFD
               DIGITS 5
 
           END_GROUP
+        END_GROUP
+        GROUP Crnt Alt Boxes 2
+          SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_fo
+          gen_rotary Crnt Alt Box White 2
+            POS 1254.500000 767.000000
+            IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntWndwHiW
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/airdata/alt_advise
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary Crnt Alt Box Amber 2
+            POS 1254.500000 767.000000
+            IMAGE CRT Displays/PFD/Altimeter/ALTrollingDigits/ALTcrntWndwHiA
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/airdata/alt_alert
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
         END_GROUP
       END_GROUP
       GROUP Approach Course 2
@@ -88589,6 +89020,51 @@ GROUP First Officer PFD
       gen_rotary ATT X FO PFD
         POS 994.000000 820.500000
         IMAGE CRT Displays/PFD/Failure Flags/attX
+        DATAREF 
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 5
+        BUS_SRC 4
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+    END_GROUP
+    GROUP FO AIR DATA FLAGS
+      SHOW_EQUAL 0.000000 laminar/B747/airdata/valid_fo
+      gen_rotary SPD X FO PFD
+        POS 758.500000 767.000000
+        IMAGE CRT Displays/PFD/Failure Flags/spdX
+        DATAREF 
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 5
+        BUS_SRC 4
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary ALT X FO PFD
+        POS 1228.500000 767.000000
+        IMAGE CRT Displays/PFD/Failure Flags/altX
         DATAREF 
         HIDE
         LIGHT_MODE GLASS_AUTO

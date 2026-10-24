@@ -201,3 +201,13 @@
 | 2026-10-25・脚（4-2 段 5） | GEAR synoptic のブレーキ温度の数字（ブレーキ 16 個の白と琥珀、前脚のグループの琥珀 1 個） | 白は `SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[n]`、琥珀は `SHOW_GREATER 484.100006 …brake_temp[n]`（表示 5 になる 482 °C から 484 °C までは白） | 白は `SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[n]`、琥珀は `SHOW_GREATER 4.500000 …brake_temp_ind[n]`（表示 5 から琥珀） | ATA29_32 p.428（表示 5 で数字の色が変わる）、FCOM p.1521 |
 
 上の行は `docs/overhaul/tools/panel_brake_temp.lua` で書き換えた（33 か所）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_brake_temp`。
+
+航法センサー（5-1 段 1b、2026-10-25。GAP_ANALYSIS.md §4 の承認済みの DSP-02・04・12）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-25・エアデータ（NAV-01・05） | PFD の高度（テープ・現在高度・バグの群）と Mach（機長と副操縦士、外側と内側の 4 組） | `sim/cockpit2/gauges/indicators/altitude_ft_pilot`・`_copilot`（X-Plane の各側）、`sim/flightmodel/misc/machno`（真の Mach）。副操縦士の最初の高度テープの表示条件は機長の `altitude_ft_pilot` | `laminar/B747/airdata/alt_capt`・`alt_fo`（選んだ ADC、その席の気圧設定）、`mach_capt`・`mach_fo` | FCOM p.992（選んだ ADC の気圧高度）、ATA34_1 p.126–130 |
+| 同（NAV-05、DSP-04） | PFD の速度表示（`GROUP Airspeed Display`）、高度テープの背景・`GROUP Tapes`・`Altitude Offset`・`Rolling Display` | 表示条件なし | `SHOW_EQUAL 1.000000 laminar/B747/airdata/valid_capt`（`valid_fo`）。新しい `GROUP CAPT AIR DATA FLAGS`（`FO …`）：速度テープと高度テープの中心に琥珀の SPD・ALT の旗（`Failure Flags/spdX`・`altX`）、`valid_*` が 0 のとき | FCOM p.1000 |
+| 同（NAV-03、DSP-12） | PFD の現在高度の窓と選択高度 | なし | 現在高度の窓に白の強調の枠（`ALTrollingDigits/ALTcrntWndwHiW`、`alt_advise`）と琥珀の枠（`ALTcrntWndwHiA`、`alt_alert`）。2 つは新しい `GROUP Crnt Alt Boxes`（`valid_*` が 1）の中、選択高度に白の強調の枠（`Altimeter/SelAltBoxHiW`、`alt_advise`。高度テープの中心から上へ 268） | FCOM p.992、p.1559 |
+
+上の 3 行は `docs/overhaul/tools/panel_pfd_airdata.lua` で書き換えた（各 PFD に 8 か所の挿入と、高度 54・Mach 2 の置き換え）。X-Plane は計器ごとに表示条件を 1 つ（1 つの dataref）しか見ないので、条件を重ねるところはグループに分けた（ARCHITECTURE.md §5）。旗と枠の絵は `docs/overhaul/tools/make_pfd_airdata_images.ps1` で作った（旗の字は純正の VERT の大きさと間隔に合わせ、Windows の Bahnschrift SemiBold SemiCondensed で描いた。枠は純正の現在高度の窓の 3 ピクセルの縁を外へ 3 ピクセル広げた形）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_pfd_airdata`。
