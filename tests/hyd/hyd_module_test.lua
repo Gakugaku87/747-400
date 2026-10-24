@@ -172,4 +172,18 @@ rt:set("laminar/B747/air/duct_pressure_R", 0)
 frames(900)
 T.equal(get(SYN .. "rsvr_press", 0), 1, "no bleed: synoptic RSVR PRESS 1")
 
+-- the AFDS (B747.19.xt.afds_control.lua, 4-1 step 2b): with the A/P off
+-- its elevator and aileron commands go back to neutral at 1 per second
+-- (they stayed before), and there is no autotrim command
+rt:set("laminar/B747/autopilot/servos_on", 0)
+rt:set("laminar/B747/flt_ctrls/sim_pitch_ratio", 0.4)
+rt:set("laminar/B747/flt_ctrls/sim_roll_ratio", -0.3)
+frames(0.1)
+T.near(get("laminar/B747/flt_ctrls/sim_pitch_ratio"), 0.3, 1e-6, "A/P off: the elevator command going back")
+T.near(get("laminar/B747/flt_ctrls/sim_roll_ratio"), -0.2, 1e-6, "and the aileron command")
+frames(0.5)
+T.equal(get("laminar/B747/flt_ctrls/sim_pitch_ratio"), 0, "elevator command at neutral")
+T.equal(get("laminar/B747/flt_ctrls/sim_roll_ratio"), 0, "aileron command at neutral")
+T.equal(get("laminar/B747/flt_ctrls/stab_trim/autotrim_cmd"), 0, "no autotrim command")
+
 T.done()

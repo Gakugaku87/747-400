@@ -186,6 +186,96 @@ fly(200, 0.35, 8)
 T.near(get("laminar/B747/flt_ctrls/rudder_ratio_lwr"), (32 - 27 * B747_srm_model_test_rrc(209)) / 32, 1e-6,
     "air data computer failed: lower at the 209 kt position")
 rt:set("sim/operation/failures/rel_adc_comp", 0)
+
+-- the stabilizer trim (B747.45.xt.srm.lua, step 2b): X-Plane's trim (0-15
+-- units on -1..1) followed when set from outside; the wheel switches'
+-- commands (the captain's also hold X-Plane's pitch trim command, for the
+-- click sound), X-Plane's pitch trim commands (the captain's), the
+-- alternate and cutout commands; autotrim from the FCCs; the A/P
+-- disengagement; >STAB TRIM, STAB TRIM UNSCHD and their STATUS
+local TRIM = "sim/flightmodel2/controls/elevator_trim"
+local STAB = "laminar/B747/flt_ctrls/stab_trim/"
+local function units() return get(STAB .. "units") end
+local function logged(name, phase)
+    for _, e in ipairs(rt.command_log) do
+        if e.name == name and e.phase == phase then return true end
+    end
+    return false
+end
+rt:set("laminar/B747/hydraulics/pressure_2", 3000)
+rt:set("laminar/B747/hydraulics/pressure_3", 3000)
+rt:set("laminar/B747/electrical/bus/bat_main", 1)
+rt:set("laminar/B747/electrical/bus/stby_main", 1)
+fly(200, 0.3, 1)
+rt:set(TRIM, -1 / 3)
+frames(0.2)
+T.near(units(), 5, 1e-6, "X-Plane's trim set from outside: the stabilizer follows (5 units)")
+rt:command("laminar/B747/flt_ctrls/stab_trim_up_capt", 2)
+frames(0.1)
+T.check(units() > 5.9 and units() < 6.1, "captain's switches 2 s at 200 kt: about 1 unit")
+T.near(get(TRIM), units() / 7.5 - 1, 1e-6, "X-Plane's trim written")
+T.check(logged("sim/flight_controls/pitch_trim_up", "start") and logged("sim/flight_controls/pitch_trim_up", "stop"),
+    "the captain's switches hold X-Plane's pitch trim command (the click sound)")
+local u = units()
+rt:command("sim/flight_controls/pitch_trim_down", 1)
+frames(0.1)
+T.check(units() < u - 0.4, "X-Plane's pitch trim down (a joystick): the captain's switches")
+u = units()
+rt:command("laminar/B747/flt_ctrls/stab_trim_up_fo", 1)
+frames(0.1)
+T.check(units() > u + 0.4, "F/O's switches")
+u = units()
+rt:command("laminar/B747/flt_ctrls/altn_stab_trim_dn", 1)
+frames(0.1)
+T.check(units() < u - 0.4, "the alternate switches' command")
+T.equal(get(STAB .. "altn_sw"), 0, "released: the alternate switches back to 0")
+rt:command("laminar/B747/flt_ctrls/stab_trim/cutout_2_dn", 0)
+frames(0.2)
+T.equal(get(STAB .. "cutout_sw", 0), -1, "cutout switch 2: CUTOUT")
+T.equal(get(ADVISORY, 274), 1, ">STAB TRIM 2")
+T.equal(get(STATUS, 90), 1, "STATUS STAB TRIM")
+rt:command("laminar/B747/flt_ctrls/stab_trim/cutout_2_up", 0)
+frames(5.2)
+T.equal(get(STAB .. "cutout_sw", 0), 0, "back to AUTO")
+T.equal(get(ADVISORY, 274), 0, "5 s at AUTO: >STAB TRIM 2 gone")
+-- autotrim: the L A/P engaged, the FCCs' command nose up
+rt:set("laminar/B747/autopilot/cmd_L_mode/status", 1)
+rt:set(STAB .. "autotrim_cmd", 1)
+u = units()
+frames(3)
+T.near(units(), u, 1e-9, "autotrim, 3 s: waits")
+frames(2)
+T.check(units() > u + 0.2 and units() < u + 0.5, "then 0.25 units/s at 200 kt")
+rt:set(STAB .. "autotrim_cmd", 0)
+rt:command("laminar/B747/flt_ctrls/stab_trim_dn_capt", 0.2)
+T.check(logged("laminar/B747/autopilot/trim_disengage", "once"), "one A/P and the wheel switches: disengage")
+rt:set("laminar/B747/autopilot/cmd_L_mode/status", 0)
+frames(0.2)
+-- system 3's module running away: the automatic cutout
+rt:set(SRM_FAIL .. "stab_runaway", 1, 1)
+frames(1)
+T.equal(get(ADVISORY, 275), 1, "system 3's module running away: cut out, >STAB TRIM 3")
+T.equal(get(CAUTION, 60), 0, "no STAB TRIM UNSCHD")
+rt:set(SRM_FAIL .. "stab_runaway", 1, -1)
+rt:set(STAB .. "cutout_sw", 1, 1)
+frames(1)
+T.equal(get(CAUTION, 60), 1, "at ON nothing cuts it out: STAB TRIM UNSCHD")
+T.equal(get(STATUS, 91), 1, "STATUS STAB TRIM UNSCHD")
+rt:set(SRM_FAIL .. "stab_runaway", 1, 0)
+rt:set(STAB .. "cutout_sw", 1, 0)
+-- X-Plane's elevator trim runaway: system 3's module runs nose up (cut out
+-- at AUTO); X-Plane's own moves of the trim are put back
+frames(1)
+rt:set("sim/operation/failures/rel_elv_trim_run", 6)
+u = units()
+frames(1)
+T.check(units() > u and units() < u + 0.2, "X-Plane's runaway: moves, then cut out")
+T.equal(get(ADVISORY, 275), 1, ">STAB TRIM 3")
+u = units()
+rt:set(TRIM, 0.9)
+frames(0.1)
+T.near(get(TRIM), u / 7.5 - 1, 1e-6, "during X-Plane's runaway its own trim moves are put back")
+rt:set("sim/operation/failures/rel_elv_trim_run", 0)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 fly(0, 0, 1)
 

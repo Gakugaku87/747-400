@@ -195,6 +195,23 @@ B747DR_fcu_fail_le_secondary    = deferred_dataref("laminar/B747/flt_ctrls/fail/
 B747DR_srm_fail_srm             = deferred_dataref("laminar/B747/flt_ctrls/fail/srm", "array[2]")
 B747DR_srm_fail_lockout         = deferred_dataref("laminar/B747/flt_ctrls/fail/lockout_actuator", "number")
 B747DR_srm_fail_rrc             = deferred_dataref("laminar/B747/flt_ctrls/fail/rrc", "array[2]")
+-- the stabilizer trim (B747.45.xt.srm.lua; step 2b): the position in trim
+-- units (0-15); the cutout switches 2, 3 (-1 CUTOUT, 0 AUTO, 1 ON) and the
+-- alternate switches (-1 nose down, 0, 1 nose up), which the 3D does not
+-- have; failures X-Plane does not have: the trim control module of
+-- hydraulic system 2, 3 does not drive (1), or drives by itself (-1 nose
+-- down, 1 nose up)
+B747DR_srm_stab_units           = deferred_dataref("laminar/B747/flt_ctrls/stab_trim/units", "number")
+B747DR_srm_cutout_sw            = deferred_dataref("laminar/B747/flt_ctrls/stab_trim/cutout_sw", "array[2]")
+B747DR_srm_altn_sw              = deferred_dataref("laminar/B747/flt_ctrls/stab_trim/altn_sw", "number")
+B747DR_srm_fail_stab_actuator   = deferred_dataref("laminar/B747/flt_ctrls/fail/stab_actuator", "array[2]")
+B747DR_srm_fail_stab_runaway    = deferred_dataref("laminar/B747/flt_ctrls/fail/stab_runaway", "array[2]")
+B747CMD_altn_stab_trim_up       = deferred_command("laminar/B747/flt_ctrls/altn_stab_trim_up", "Alternate Stabilizer Trim Nose Up", B747_altn_stab_trim_up_CMDhandler)
+B747CMD_altn_stab_trim_dn       = deferred_command("laminar/B747/flt_ctrls/altn_stab_trim_dn", "Alternate Stabilizer Trim Nose Down", B747_altn_stab_trim_dn_CMDhandler)
+B747CMD_stab_cutout_2_up        = deferred_command("laminar/B747/flt_ctrls/stab_trim/cutout_2_up", "Stab Trim Cutout 2 toward ON", B747_stab_cutout_2_up_CMDhandler)
+B747CMD_stab_cutout_2_dn        = deferred_command("laminar/B747/flt_ctrls/stab_trim/cutout_2_dn", "Stab Trim Cutout 2 toward CUTOUT", B747_stab_cutout_2_dn_CMDhandler)
+B747CMD_stab_cutout_3_up        = deferred_command("laminar/B747/flt_ctrls/stab_trim/cutout_3_up", "Stab Trim Cutout 3 toward ON", B747_stab_cutout_3_up_CMDhandler)
+B747CMD_stab_cutout_3_dn        = deferred_command("laminar/B747/flt_ctrls/stab_trim/cutout_3_dn", "Stab Trim Cutout 3 toward CUTOUT", B747_stab_cutout_3_dn_CMDhandler)
 
 -- ALTERNATE FLAPS
 B747CMD_alt_flaps_sel_dial_up           = deferred_command("laminar/B747/flt_ctrls/flaps/alt_flaps/sel_dial_up", "Alternate Flaps Selector Dial Up", B747_alt_flaps_sel_dial_up_CMDhandler)

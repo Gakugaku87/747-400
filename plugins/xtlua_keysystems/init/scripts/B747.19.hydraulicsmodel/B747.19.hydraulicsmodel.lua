@@ -126,6 +126,11 @@ B747DR_rudder_ratio   = deferred_dataref("laminar/B747/flt_ctrls/rudder_ratio", 
 B747DR_rudder_ratio_upr = deferred_dataref("laminar/B747/flt_ctrls/rudder_ratio_upr", "number")
 B747DR_rudder_ratio_lwr = deferred_dataref("laminar/B747/flt_ctrls/rudder_ratio_lwr", "number")
 B747DR_rudder_input   = deferred_dataref("laminar/B747/flt_ctrls/rudder_input", "number")
+-- the FCCs' autotrim to the SRMs (B747.19.xt.afds_control.lua to
+-- B747.45.xt.srm.lua, 4-1 step 2b): the trim command (-1 nose down, 0, 1
+-- nose up) and full-rate autotrim (1)
+B747DR_autotrim_cmd   = deferred_dataref("laminar/B747/flt_ctrls/stab_trim/autotrim_cmd", "number")
+B747DR_autotrim_frat  = deferred_dataref("laminar/B747/flt_ctrls/stab_trim/frat", "number")
 
 
 B747DR_yaw_damper_lwr   = deferred_dataref("laminar/B747/flt_ctrls/yaw_damper_lwr", "number")

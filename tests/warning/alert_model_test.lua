@@ -125,6 +125,35 @@ do
     T.equal(texts(out.pages[1])[2], "NEW CAUTION", "after RCL: the newest caution heads page 1")
 end
 
+-- a new advisory goes under the cautions, at the top of the advisories; a
+-- new caution above all of them (FCOM p.1548). Before, a new advisory went
+-- to the top of the page, above older cautions (seen in s28_stab_trim)
+do
+    local s, inp = flying()
+    alerts(inp, {{"STAB TRIM UNSCHD", "caution"}, {">FUEL LOW CTR L", "advisory"}})
+    run(s, inp, 1)
+    add(inp, ">STAB TRIM 2", "advisory")
+    local out = run(s, inp, 1)
+    local t = texts(out.pages[1])
+    T.equal(t[1], "STAB TRIM UNSCHD", "new advisory: the older caution stays on top")
+    T.equal(t[2], ">STAB TRIM 2", "the new advisory heads the advisories")
+    T.equal(t[3], ">FUEL LOW CTR L", "the older advisory under it")
+    add(inp, "FUEL PRESS CTR L", "caution")
+    out = run(s, inp, 1)
+    t = texts(out.pages[1])
+    T.equal(t[1], "FUEL PRESS CTR L", "a new caution on top")
+    T.equal(t[3], ">STAB TRIM 2", "the advisories stay under the cautions")
+    -- a caution and an advisory together: the caution on top, the advisory
+    -- first under the cautions
+    add(inp, ">FUEL LOW CTR R", "advisory")
+    add(inp, "FUEL PRESS CTR R", "caution")
+    out = run(s, inp, 1)
+    t = texts(out.pages[1])
+    T.equal(t[1], "FUEL PRESS CTR R", "together: the caution on top")
+    T.equal(t[4], ">FUEL LOW CTR R", "together: the advisory under the three cautions")
+    T.equal(t[5], ">STAB TRIM 2", "then the older advisories")
+end
+
 -- master lights (FCOM p.1532, p.902)
 do
     local s, inp = flying()

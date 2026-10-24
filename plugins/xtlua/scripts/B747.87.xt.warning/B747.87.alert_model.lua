@@ -363,8 +363,10 @@ function M.update(s, inp, dt)
     end)
     local per_page = M.LINES - math.min(#warnings, M.LINES)
 
-    -- cautions and advisories keep their place between frames; new ones go
-    -- to the top of the page being looked at (FCOM p.1549)
+    -- cautions and advisories keep their place between frames; a new one
+    -- goes on the page being looked at, at the top of its priority group:
+    -- a caution at the top of the page, an advisory under the cautions
+    -- (FCOM p.1548-1549. Before, an advisory could go above older cautions)
     local list = {}
     local listed = {}
     for _, name in ipairs(s.order) do
@@ -383,9 +385,15 @@ function M.update(s, inp, dt)
     end
     table.sort(fresh, alert_order(s))
     if #fresh > 0 then
-        local at = #list + 1
-        if per_page > 0 then at = math.min(at, (s.page - 1) * per_page + 1) end
-        for i = #fresh, 1, -1 do table.insert(list, at, fresh[i]) end
+        local top = #list + 1
+        if per_page > 0 then top = math.min(top, (s.page - 1) * per_page + 1) end
+        for i = #fresh, 1, -1 do        -- from the oldest: the newest ends up first
+            local at = top
+            if s.seen[fresh[i]].level == "advisory" then
+                while at <= #list and s.seen[list[at]].level == "caution" do at = at + 1 end
+            end
+            table.insert(list, at, fresh[i])
+        end
     end
 
     local function entries(names)

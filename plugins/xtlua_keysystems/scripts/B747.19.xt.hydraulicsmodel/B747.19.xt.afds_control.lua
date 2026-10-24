@@ -1,11 +1,12 @@
 -- AFDS control laws: the flight director pitch and roll commands, the
--- autopilot's pitch and roll servo commands and its stabilizer trim.
+-- autopilot's pitch and roll servo commands and its autotrim command.
 -- Moved unchanged out of B747.19.xt.hydraulics_override.lua (docs/overhaul/PLAN.md R-1).
 -- B747.19.xt.hydraulicsmodel.lua loads it after pid.lua; flight_controls_override()
 -- calls ap_pitch_assist(doCompute) and ap_roll_assist(doCompute) every frame.
+-- The autotrim command goes to the SRMs, which move the stabilizer
+-- (B747.45.xt.srm.lua, 4-1 step 2b; before, doTrim wrote X-Plane's trim).
 B747DR_ap_AFDS_mode_box_status_pilot = find_dataref("laminar/B747/autopilot/AFDS/mode_box_status_pilot")
 B747DR_ap_AFDS_mode_box_status_copilot =find_dataref("laminar/B747/autopilot/AFDS/mode_box_status_copilot")
- local lastTrimmed=0
  local lastUp=0
  local lastDown=0
 local pitchRecord={}
@@ -482,38 +483,47 @@ function ap_director_pitch_integral()
     return retval
 end
 
-local trimrate=25
+-- the A/P not controlling: its elevator and aileron commands go back to
+-- neutral at this rate, per second of the full travel (estimate; before,
+-- they stayed at their last values and offset the pilots' controls)
+local AP_RELEASE_PER_S = 1
+local function ap_release(v)
+    local step = AP_RELEASE_PER_S * SIM_PERIOD
+    if v > step then return v - step elseif v < -step then return v + step end
+    return 0
+end
+
+-- autotrim (ATA22 p.147): the FCC commands nose up or down trim while its
+-- elevator servo command is out of neutral; the SRM trims after 3.5 s, at
+-- its rate and limits (B747.45.xt.srm.lua). The neutral band by mode is the
+-- old tuning. No trim command below 500 ft RA, as before (the old flare
+-- tuning): the sources trim down to touchdown, with full-rate autotrim
+-- below 120 ft in LAND 2 and a nose-up bias (ATA22 p.147), which waits for
+-- the AFDS's rebuild. The full-rate request goes out by its own condition
+function setAutotrim(cmd)
+    if B747DR_autotrim_cmd ~= cmd then B747DR_autotrim_cmd = cmd end
+    local frat = 0
+    if cmd ~= 0 and B747DR_ap_autoland == 1 and simDR_radarAlt1 < 120 then frat = 1 end
+    if B747DR_autotrim_frat ~= frat then B747DR_autotrim_frat = frat end
+end
 function doTrim()
-
-    if simDRTime-lastTrimmed<0.2 or simDR_radarAlt1<500 then return end
-    lastTrimmed=simDRTime
-    local ratioWindow=0.05
-    if simDR_autopilot_alt_hold_status==2 then
-        ratioWindow=0.005
-    elseif B747DR_ap_FMA_active_pitch_mode==2 then
-        ratioWindow=0.01 --quick trim on glideslope and alt hold
-    elseif B747DR_ap_FMA_active_pitch_mode==4 or B747DR_ap_FMA_active_pitch_mode==8 or (B747DR_ap_FMA_active_pitch_mode==6 and B747DR_ap_inVNAVdescent>0) then
-        ratioWindow=0.2 --limit trim activity when pitching for speed
+    local cmd = 0
+    if simDR_radarAlt1 >= 500 then
+        local ratioWindow=0.05
+        if simDR_autopilot_alt_hold_status==2 then
+            ratioWindow=0.005
+        elseif B747DR_ap_FMA_active_pitch_mode==2 then
+            ratioWindow=0.01 --quick trim on glideslope and alt hold
+        elseif B747DR_ap_FMA_active_pitch_mode==4 or B747DR_ap_FMA_active_pitch_mode==8 or (B747DR_ap_FMA_active_pitch_mode==6 and B747DR_ap_inVNAVdescent>0) then
+            ratioWindow=0.2 --limit trim activity when pitching for speed
+        end
+        if B747DR_sim_pitch_ratio>ratioWindow then
+            cmd = 1
+        elseif B747DR_sim_pitch_ratio<-ratioWindow then
+            cmd = -1
+        end
     end
-
-    
-    if simDR_ind_airspeed_kts_pilot>230 then
-        trimrate=60
-    elseif simDR_ind_airspeed_kts_pilot<220 then
-        trimrate=30
-    end
-    if B747DR_custom_pitch_ratio>ratioWindow then
-        simDR_elevator_trim=B747_interpolate_value(simDR_elevator_trim,1.0,-1,1,trimrate)
-        lastTrimmed=simDRTime+1 
-        --print("up trim "..ratioWindow)
-    elseif B747DR_custom_pitch_ratio<-ratioWindow then
-        simDR_elevator_trim=B747_interpolate_value(simDR_elevator_trim,-1.0,-1,1,trimrate) 
-        lastTrimmed=simDRTime+1 
-        --print("down trim "..ratioWindow)
-   -- else
-   --     print("no trim "..ratioWindow.." "..B747DR_sim_pitch_ratio)
-    end
-
+    setAutotrim(cmd)
 end
 local previous_simDR_AHARS_pitch_heading_deg_pilot=0
 
@@ -562,6 +572,8 @@ function ap_pitch_assist(doCompute)
     else
         pitchPid:compute(true)
         simDR_electric_trim=1
+        setAutotrim(0)
+        retval=ap_release(B747DR_sim_pitch_ratio)
     end
     if retval==nil then return 0 end
     return retval
@@ -591,10 +603,11 @@ function ap_roll_assist(doCompute)
         end
         local speed=B747_rescale(0.1,3,10,5,math.abs(flight_director_roll-simDR_AHARS_roll_heading_deg_pilot))
         if rollPid.output==nil then return 0 end
-        retval=B747_interpolate_value(B747DR_sim_roll_ratio,rollPid.output,-1,1,speed) 
+        retval=B747_interpolate_value(B747DR_sim_roll_ratio,rollPid.output,-1,1,speed)
         --print("flight_director_roll "..flight_director_roll.." speed "..speed .." simDR_AHARS_roll_heading_deg_pilot "..simDR_AHARS_roll_heading_deg_pilot .." retval "..retval)
     else
         rollPid:compute(true)
+        retval=ap_release(B747DR_sim_roll_ratio)
     end
     return retval
 end

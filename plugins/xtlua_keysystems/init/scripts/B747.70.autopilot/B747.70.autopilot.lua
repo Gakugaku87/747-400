@@ -244,6 +244,8 @@ B747CMD_autopilot_appr_mode					= deferred_command("laminar/B747/autopilot/appro
 B747CMD_ap_switch_disengage_bar			= deferred_command("laminar/B747/autopilot/slide_switch/disengage_bar", "A/P Disenage Bar", B747_ap_switch_disengage_bar_CMDhandler)
 B747CMD_ap_switch_yoke_disengage_capt	= deferred_command("laminar/B747/autopilot/button_switch/yoke_disengage_capt", "A/P Capt Yoke Disengage Switch", B747_ap_switch_yoke_disengage_capt_CMDhandler)
 B747CMD_ap_switch_yoke_disengage_fo		= deferred_command("laminar/B747/autopilot/button_switch/yoke_disengage_fo", "A/P F/O Yoke Disengage Switch", B747_ap_switch_yoke_disengage_fo_CMDhandler)
+-- the SRMs (B747.45.xt.srm.lua, 4-1 step 2b): the control wheel stab trim switches with a single A/P engaged
+B747CMD_ap_trim_disengage				= deferred_command("laminar/B747/autopilot/trim_disengage", "A/P Disengage by the Stab Trim Switches", B747_ap_trim_disengage_CMDhandler)
 B747CMD_ap_switch_autothrottle_disco_L	= deferred_command("laminar/B747/autopilot/button_switch/autothrottle_disco_L", "A/P Autothrottle Disco Left", B747_ap_switch_autothrottle_disco_L_CMDhandler)
 B747CMD_ap_switch_autothrottle_disco_R	= deferred_command("laminar/B747/autopilot/button_switch/autothrottle_disco_R", "A/P Autothrottle Disco Right", B747_ap_switch_autothrottle_disco_R_CMDhandler)
 

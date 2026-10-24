@@ -966,6 +966,26 @@ function B747_ap_switch_yoke_disengage_fo_CMDhandler(phase, duration)
 	end
 end
 
+-- the control wheel stab trim switches with a single A/P engaged (the SRMs,
+-- B747.45.xt.srm.lua, 4-1 step 2b): the A/P disengages (FCOM p.945; ATA22
+-- p.142), an automatic disengagement, so AUTOPILOT DISC shows (FCOM 4.20)
+function B747_ap_trim_disengage_CMDhandler(phase, duration)
+	if phase == 0 then
+		local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
+		if numAPengaged == 0 then return end
+		B747CMD_fdr_log_apdisconnect:once()
+		B747DR_CAS_warning_status[0] = 1
+		if B747DR_autothrottle_active == 1 then
+			run_after_time(autothrottle_reengage,0.5)
+		end
+		B747CMD_ap_reset:once()
+		simCMD_autopilot_servos_off:once()
+		simDR_autopilot_servos_on=0
+		B747_ap_all_cmd_modes_off()
+		B747DR_ap_lastCommand=simDRTime
+	end
+end
+
 function B747_ap_switch_autothrottle_disco_L_CMDhandler(phase, duration)
 	if phase == 0 then
 		if B747DR_autothrottle_fail == 0 then
@@ -1173,6 +1193,12 @@ B747CMD_ap_switch_yoke_disengage_fo =
 	"laminar/B747/autopilot/button_switch/yoke_disengage_fo",
 	"A/P F/O Yoke Disengage Switch",
 	B747_ap_switch_yoke_disengage_fo_CMDhandler
+)
+B747CMD_ap_trim_disengage =
+	deferred_command(
+	"laminar/B747/autopilot/trim_disengage",
+	"A/P Disengage by the Stab Trim Switches",
+	B747_ap_trim_disengage_CMDhandler
 )
 B747CMD_ap_switch_autothrottle_disco_L =
 	deferred_command(
