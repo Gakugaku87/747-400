@@ -10,7 +10,8 @@ local T = dofile("tests/lib/check.lua")("hyd_module")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
 math.randomseed(1)
-local rt = xtlua.new()
+-- the speedbrake lever is the flight controls module's (another plugin)
+local rt = xtlua.new{types = {["laminar/B747/flt_ctrls/speedbrake_lever"] = "number"}}
 rt:load("plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulicsmodel.lua")
 rt:load("plugins/xtlua_keysystems/scripts/B747.20.xt.hydraulics/B747.20.xt.hydraulics.lua")
 rt:set("sim/operation/prefs/startup_running", 0)
@@ -185,5 +186,65 @@ frames(0.5)
 T.equal(get("laminar/B747/flt_ctrls/sim_pitch_ratio"), 0, "elevator command at neutral")
 T.equal(get("laminar/B747/flt_ctrls/sim_roll_ratio"), 0, "aileron command at neutral")
 T.equal(get("laminar/B747/flt_ctrls/stab_trim/autotrim_cmd"), 0, "no autotrim command")
+
+-- lateral control (B747.19.lateral_model.lua, 4-1 step 4): the controlObject
+-- rows make the control wheel's angle from the pilots', the A/P's and the
+-- aileron trim's inputs (run here as XTLua runs them); the hydraulics
+-- module makes the aileron programmers' and the spoiler mixers' commands
+-- through its pressure gates, and X-Plane's surfaces
+local function co_frames(seconds)
+    for _ = 1, math.floor(seconds * 30 + 0.5) do
+        rt:apply_control_objects()
+        rt:frame(1 / 30)
+    end
+end
+local FC = "laminar/B747/flt_ctrls/"
+local WHEEL = "laminar/B747/cablecontrols/wheel"
+local share45 = (45 - 11) / (90 - 11)       -- the spoilers' share of roll at 45 degrees of wheel
+rt:set(FC .. "left_outer_aileron_lockout", 1)
+rt:set(FC .. "right_outer_aileron_lockout", -1)
+rt:set("sim/cockpit2/controls/yoke_roll_ratio", 0.5)
+co_frames(2)
+T.near(get(WHEEL), 45, 1e-3, "half the wheel's travel: 45 degrees")
+T.near(get(FC .. "l_aileron_inner"), 20, 0.05, "45 degrees of wheel: left inboard aileron full down (in proportion before: 10)")
+T.near(get(FC .. "r_aileron_inner"), -20, 0.05, "right inboard aileron full up")
+T.near(get(FC .. "l_aileron_outer"), 15, 0.05, "left outboard aileron 15 down")
+T.near(get(FC .. "r_aileron_outer"), -24.65, 0.05, "right outboard aileron 24.65 up (25 at 47 degrees)")
+T.near(get("sim/flightmodel/controls/wing2l_ail1def"), 20, 0.05, "X-Plane's left inboard aileron")
+T.near(get("sim/flightmodel/controls/wing4r_ail2def"), -24.65, 0.05, "X-Plane's right outboard aileron")
+T.near(get(FC .. "spoilers", 12), 45 * share45, 0.05, "roll right: right spoiler 12 up past the pickup")
+T.near(get(FC .. "spoilers", 8), 20 * share45, 0.05, "right spoiler 8 (20 at most)")
+T.near(get(FC .. "spoilers", 1), 0, 1e-3, "left spoiler 1 stays down")
+T.near(get("sim/flightmodel/controls/wing2r_spo1def"), 45 * share45, 0.05, "X-Plane's wing 2 spoiler (spoiler 9: nothing moved it before)")
+rt:set(FC .. "left_outer_aileron_lockout", 0)
+co_frames(2)
+T.near(get(FC .. "l_aileron_outer"), 0, 0.05, "outboard ailerons locked out: neutral")
+rt:set(FC .. "left_outer_aileron_lockout", 1)
+-- the aileron trim: 6 units (X-Plane's full trim) are 47 degrees of wheel
+rt:set("sim/cockpit2/controls/yoke_roll_ratio", 0)
+rt:set("sim/cockpit2/controls/aileron_trim", 1)
+co_frames(2)
+T.near(get(WHEEL), 47, 0.01, "full aileron trim: the wheel's neutral 47 degrees over (ATA27 p.76; a full wheel before)")
+T.near(get(FC .. "l_aileron_inner"), 20, 0.05, "full trim: the inboard aileron at 20")
+rt:set("sim/cockpit2/controls/aileron_trim", 0)
+-- the speedbrakes at the flight detent with roll: the left wing's spoilers
+-- go down from their speedbrake positions; spoilers 6 and 7 on X-Plane's
+-- speedbrake 1 (no surface before)
+rt:set("laminar/B747/flt_ctrls/speedbrake_lever", 0.53)
+rt:set("sim/cockpit2/controls/yoke_roll_ratio", 0.5)
+co_frames(2)
+T.near(get(FC .. "spoilers", 3), 45 - 45 * share45, 0.05, "flight detent, roll right: left spoiler 3 lowered from 45")
+T.near(get(FC .. "spoilers", 10), 45, 0.05, "right spoiler 10 at 45")
+T.near(get(FC .. "spoilers", 5), 20 - 20 * share45, 0.05, "left spoiler 5 lowered from 20")
+T.near(get(FC .. "spoilers", 6), 20, 0.05, "spoiler 6 at 20")
+T.near(get("sim/flightmodel2/wing/speedbrake1_deg", 0), 20, 0.05, "X-Plane's speedbrake 1, left: spoiler 6")
+T.near(get("sim/flightmodel2/wing/speedbrake1_deg", 1), 20, 0.05, "X-Plane's speedbrake 1, right: spoiler 7")
+T.near(get("sim/flightmodel/controls/wing2l_spo1def"), 45 - 45 * share45, 0.05, "X-Plane's wing 2 spoiler, left: spoiler 4")
+T.near(get("sim/flightmodel/controls/wing3l_spo2def"), 45 - 45 * share45, 0.05, "X-Plane's wing 3 spoiler 2, left: spoiler 3")
+rt:set("sim/cockpit2/controls/yoke_roll_ratio", 0)
+rt:set("laminar/B747/flt_ctrls/speedbrake_lever", 0)
+-- (the spoilers follow by a tenth of the way each frame: 4 s for the last 0.05)
+co_frames(4)
+for n = 1, 12 do T.near(get(FC .. "spoilers", n), 0, 0.05, "lever DN, wheel centred: spoiler " .. n .. " down") end
 
 T.done()

@@ -31,12 +31,14 @@ end
 -- 4 r elev inner
 -- 5 l elev outer
 -- 6 r elev outer
--- 7 l ail inner sim/flightmodel/controls/wing2l_ail1def[0]
--- 8 r ail inner sim/flightmodel/controls/wing4r_ail1def[0]
--- 9 l ail outer sim/flightmodel/controls/wing4l_ail2def[0]
--- 10 r ail outer sim/flightmodel/controls/wing2r_ail2def[0]
+-- 7 l ail inner sim/flightmodel/controls/wing2l_ail1def
+-- 8 r ail inner sim/flightmodel/controls/wing2r_ail1def
+-- 9 l ail outer sim/flightmodel/controls/wing4l_ail2def
+-- 10 r ail outer sim/flightmodel/controls/wing4r_ail2def
+-- 11-22 spoilers 1-12
 local B747_pressureDRs={}
 local controlRatios={}
+local spoiler_command={}
 controlRatios[0]=0
 B747_pressureDRs[0]=0
 local computeRate=0.0333 -- handle low FPS
@@ -57,26 +59,23 @@ function pressure_input()
     controlRatios[5]=B747_controls_left_outer_elevator-- -simDR_elevator[0]
     controlRatios[6]=B747_controls_right_outer_elevator-- -simDR_elevator[0]
 
-    controlRatios[7]=B747_controls_left_inner_aileron--simDR_left_aileron_inner
-    controlRatios[8]=B747_controls_right_inner_aileron--simDR_right_aileron_inner
-    controlRatios[9]=B747_controls_left_outer_aileron--simDR_left_aileron_outer
-    controlRatios[10]=B747_controls_right_outer_aileron--simDR_right_aileron_outer
+    -- the ailerons and spoilers from the control wheel's angle (the
+    -- controlObject's): the aileron programmers, the outboard ailerons
+    -- through the lockout (the SRMs write left lock, right -lock), the spoiler
+    -- mixers with the speedbrake program (B747.19.lateral_model.lua, 4-1
+    -- step 4; before, each was in proportion to the wheel and the spoilers
+    -- only rose on the wing going up)
+    local wheel=B747_controls_wheel
+    controlRatios[7]=B747_lateral_model.inner(wheel)
+    controlRatios[8]=B747_lateral_model.inner(-wheel)
+    controlRatios[9]=B747_lateral_model.outer(wheel)*B747DR_l_aileron_outer_lockout
+    controlRatios[10]=B747_lateral_model.outer(-wheel)*-B747DR_r_aileron_outer_lockout
 
-    --left wing
-    controlRatios[11]=B747DR_spoiler1
-    controlRatios[12]=B747DR_spoiler2
-    controlRatios[13]=B747DR_spoiler3
-    controlRatios[14]=B747DR_spoiler4
-    controlRatios[15]=B747DR_spoiler5--simDR_spoiler5
-    controlRatios[16]=B747DR_speedbrake3--simDR_spoiler67[0]
-
-    --right wing
-    controlRatios[17]=B747DR_speedbrake3--simDR_spoiler67[1]
-    controlRatios[18]=B747DR_spoiler8--simDR_spoiler8
-    controlRatios[19]=B747DR_spoiler9--simDR_spoiler910
-    controlRatios[20]=B747DR_spoiler10--simDR_spoiler910
-    controlRatios[21]=B747DR_spoiler11--simDR_spoiler1112
-    controlRatios[22]=B747DR_spoiler12--simDR_spoiler1112
+    -- the spoilers, left wing 1-6 and right wing 7-12
+    B747_lateral_model.spoilers(wheel,B747DR_speedbrake_lever,spoiler_command)
+    for n=1,12,1 do
+        controlRatios[n+10]=spoiler_command[n]
+    end
 
     --flaps left outer to right outer: where the flap control units have
     --them (B747.45.xt.fcu.lua; they check the systems' pressure themselves)
@@ -124,12 +123,16 @@ function pressure_output()
     for i=1,12,1 do
         B747DR_spoilers[i]=B747_animate_value(B747DR_spoilers[i],controlRatios[i+10],-100,100,10)
     end
+    -- X-Plane's spoilers (the acf's wing elements: B747.19.xt.hydraulicsmodel.lua)
     simDR_spoiler12=(B747DR_spoilers[1]+B747DR_spoilers[2])/2
-    simDR_spoiler34=(B747DR_spoilers[3]+B747DR_spoilers[4])/2
-    simDR_spoiler5=(B747DR_spoilers[5])
-
-    simDR_spoiler8=(B747DR_spoilers[8])
-    simDR_spoiler910=(B747DR_spoilers[9]+B747DR_spoilers[10])/2
+    simDR_spoiler3=B747DR_spoilers[3]
+    simDR_spoiler4=B747DR_spoilers[4]
+    simDR_spoiler5=B747DR_spoilers[5]
+    simDR_spoiler67[0]=B747DR_spoilers[6]
+    simDR_spoiler67[1]=B747DR_spoilers[7]
+    simDR_spoiler8=B747DR_spoilers[8]
+    simDR_spoiler9=B747DR_spoilers[9]
+    simDR_spoiler10=B747DR_spoilers[10]
     simDR_spoiler1112=(B747DR_spoilers[11]+B747DR_spoilers[12])/2
     --spoiler stat: the position transmitters on spoilers 4 and 12 (ATA27 p.200;
     --the in-flight speedbrake shows on the left wing only, FCOM p.939)
