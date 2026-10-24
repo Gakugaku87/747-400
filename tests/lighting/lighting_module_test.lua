@@ -65,4 +65,26 @@ ice_only("window_inop", 1)
 T.near(rt:get(ANNUN, 66), 0.8, 0.01, "WINDOW HEAT INOP R -> annunciator 66")
 T.near(rt:get(ANNUN, 60), 0, 0.01, "WINDOW HEAT INOP R: NAI 1 VALVE off")
 
+
+-- the flight control shutoff valves' VALVE CLOSED lights (4-1 step 4): lit
+-- while the valve is not fully open (the hydraulics module moves them);
+-- WING 1-4 -> annunciators 80-83, TAIL 1-4 -> 84-87 (always out before)
+local HP = "laminar/B747/flt_ctrls/hyd_power/"
+local function valve_only(group, i, travel)
+    for k = 0, 3 do
+        rt:set(HP .. "wing_valve_shut", k, 0)
+        rt:set(HP .. "tail_valve_shut", k, 0)
+    end
+    if group then rt:set(HP .. group .. "_valve_shut", i, travel) end
+    rt:frame(1 / 30)
+end
+valve_only()
+for i = 80, 87 do T.near(rt:get(ANNUN, i), 0, 0.01, "valves open: VALVE CLOSED light " .. i .. " out") end
+valve_only("wing", 0, 0.3)
+T.near(rt:get(ANNUN, 80), 0.8, 0.01, "WING 1 valve on its way: VALVE CLOSED (not fully open)")
+T.near(rt:get(ANNUN, 81), 0, 0.01, "WING 2 open: out")
+valve_only("tail", 3, 1)
+T.near(rt:get(ANNUN, 87), 0.8, 0.01, "TAIL 4 valve shut -> annunciator 87")
+T.near(rt:get(ANNUN, 83), 0, 0.01, "WING 4 open: out")
+valve_only()
 T.done()

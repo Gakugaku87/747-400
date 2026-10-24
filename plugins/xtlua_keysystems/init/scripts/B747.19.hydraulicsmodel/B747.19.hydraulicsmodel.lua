@@ -37,6 +37,20 @@ B747_controls_right_inner_elevator          = deferred_dataref("laminar/B747/cab
 -- 4-1 step 4; before, a cable value for each aileron and spoiler)
 B747_controls_wheel                  = deferred_dataref("laminar/B747/cablecontrols/wheel", "number")
 
+-- FLT CONTROL HYD POWER (the overhead maintenance panel, FCOM p.940;
+-- ATA27 p.10-14): the wing (ailerons, spoilers) and tail (elevators,
+-- rudders) shutoff switches of systems 1-4, 1 = SHUT OFF (0 = NORM), and
+-- their valves' travel toward shut, 0 = fully open. The 3D has no switches:
+-- commands toggle them (4-1 step 4)
+B747DR_fcsov_wing_shut          = deferred_dataref("laminar/B747/flt_ctrls/hyd_power/wing_shut", "array[4]")
+B747DR_fcsov_tail_shut          = deferred_dataref("laminar/B747/flt_ctrls/hyd_power/tail_shut", "array[4]")
+B747DR_fcsov_wing_valve         = deferred_dataref("laminar/B747/flt_ctrls/hyd_power/wing_valve_shut", "array[4]")
+B747DR_fcsov_tail_valve         = deferred_dataref("laminar/B747/flt_ctrls/hyd_power/tail_valve_shut", "array[4]")
+for n = 1, 4 do
+	deferred_command("laminar/B747/flt_ctrls/hyd_power/wing_" .. n, "Flight Control Hyd Power Wing " .. n .. " NORM/SHUT OFF", null_command)
+	deferred_command("laminar/B747/flt_ctrls/hyd_power/tail_" .. n, "Flight Control Hyd Power Tail " .. n .. " NORM/SHUT OFF", null_command)
+end
+
 B747_duct_pressure_L           = deferred_dataref("laminar/B747/air/duct_pressure_L", "number")
 B747_duct_pressure_R           = deferred_dataref("laminar/B747/air/duct_pressure_R", "number")
 

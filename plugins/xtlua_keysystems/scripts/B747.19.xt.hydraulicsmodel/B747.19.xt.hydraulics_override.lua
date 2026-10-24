@@ -44,9 +44,84 @@ B747_pressureDRs[0]=0
 local computeRate=0.0333 -- handle low FPS
 local lastCompute=0
 local doCompute=0
+
+-- FLT CONTROL HYD POWER: the flight control shutoff valves (ATA27 p.10-14).
+-- A 28V DC motor (the system's DC bus: estimate) drives each valve to its
+-- switch's position in VALVE_S (estimate); the surfaces get the system's
+-- pressure while its valve is less than half shut (estimate). VALVE CLOSED
+-- (the lighting module) and >FLT CONT VLVS while a valve is not fully open
+-- (FCOM p.940, p.957). The wing valves feed the ailerons and spoilers, the
+-- tail valves the elevators and rudders (and the yaw dampers in the rudder
+-- modules); the stabilizer trim and the elevator feel do not go through
+-- them (ATA27 p.432, p.532). 4-1 step 4
+local VALVE_S = 2
+local ADV_FLT_CONT_VLVS = 143
+local wing_ok, tail_ok = {1, 1, 1, 1}, {1, 1, 1, 1}
+-- each surface's systems, and the same through the valves (the pressure gates)
+local FCSOV_SRC = {
+    rud_lwr = {0,1,0,1}, rud_upr = {1,0,1,0},
+    elev_l_in = {1,1,0,0}, elev_r_in = {0,0,1,1}, elev_l_out = {1,0,0,0}, elev_r_out = {0,0,0,1},
+    ail_l_in = {1,0,1,0}, ail_r_in = {0,1,0,1}, ail_l_out = {1,1,0,0}, ail_r_out = {0,0,1,1},
+    spl_2 = {0,1,0,0}, spl_3 = {0,0,1,0}, spl_4 = {0,0,0,1},
+}
+local FCSOV_TAIL = {rud_lwr = true, rud_upr = true, elev_l_in = true, elev_r_in = true, elev_l_out = true, elev_r_out = true}
+local fcsov_src = {}
+for name, src in pairs(FCSOV_SRC) do fcsov_src[name] = {src[1], src[2], src[3], src[4]} end
+
+local function fcsov_move(shut, valve, n)
+    local target, pos = shut[n - 1], valve[n - 1]
+    if pos ~= target and B747DR_hyd_elec_dc[n - 1] > 0.5 then
+        local step = SIM_PERIOD / VALVE_S
+        if target > pos then pos = math.min(target, pos + step) else pos = math.max(target, pos - step) end
+        valve[n - 1] = pos
+    end
+    return pos
+end
+
+function B747_fcsov()
+    local any = 0
+    for n = 1, 4 do
+        local w = fcsov_move(B747DR_fcsov_wing_shut, B747DR_fcsov_wing_valve, n)
+        local t = fcsov_move(B747DR_fcsov_tail_shut, B747DR_fcsov_tail_valve, n)
+        if w < 0.5 then wing_ok[n] = 1 else wing_ok[n] = 0 end
+        if t < 0.5 then tail_ok[n] = 1 else tail_ok[n] = 0 end
+        if w > 0 or t > 0 then any = 1 end
+    end
+    for name, src in pairs(FCSOV_SRC) do
+        local ok = FCSOV_TAIL[name] and tail_ok or wing_ok
+        local m = fcsov_src[name]
+        for i = 1, 4 do m[i] = src[i] * ok[i] end
+    end
+    if B747DR_hyd_CAS_advisory[ADV_FLT_CONT_VLVS] ~= any then B747DR_hyd_CAS_advisory[ADV_FLT_CONT_VLVS] = any end
+end
+
+-- the switches (commands: the 3D has none), NORM <-> SHUT OFF
+function B747_fcsov_toggle(group, n)
+    return function(phase, duration)
+        if phase == 0 then
+            local sw = B747DR_fcsov_wing_shut
+            if group == "tail" then sw = B747DR_fcsov_tail_shut end
+            sw[n - 1] = 1 - sw[n - 1]
+        end
+    end
+end
+
+-- a yaw damper's hydraulics: its system through the tail valve (the upper
+-- damper on system 3, the lower on 2: FCOM p.949)
+function B747_fcsov_yaw_damper_hyd(n)
+    return tail_ok[n] == 1 and B747_hyd_power_psi(n) >= B747_hyd_model.POWERED_PSI
+end
+
+function B747_fcsov_flight_start()
+    for i = 0, 3 do
+        B747DR_fcsov_wing_shut[i], B747DR_fcsov_tail_shut[i] = 0, 0
+        B747DR_fcsov_wing_valve[i], B747DR_fcsov_tail_valve[i] = 0, 0
+    end
+end
 -- the hydraulic model's pressures (B747.19.xt.hyd_power.lua); each move of
 -- a surface takes some, and a surface stops when its systems have no more
 function pressure_input()
+    B747_fcsov()
     for n=1,4,1 do
         B747_pressureDRs[n]=B747_hyd_power_psi(n)
     end
@@ -184,43 +259,43 @@ function flap_consumption(controlDiff)
 end
 function spoiler_consumption(controlDiff)
     --system 2, spoilers 2,3,10,11
-    if hydraulics_consumer({0,1,0,0},controlDiff[12]/3)==0 then
+    if hydraulics_consumer(fcsov_src.spl_2,controlDiff[12]/3)==0 then
         controlRatios[12]=B747_animate_value(lastControlValue[12],0,-100,100,1)
     end
-    if hydraulics_consumer({0,1,0,0},controlDiff[13]/3)==0 then
+    if hydraulics_consumer(fcsov_src.spl_2,controlDiff[13]/3)==0 then
         controlRatios[13]=B747_animate_value(lastControlValue[13],0,-100,100,1)
     end
-    if hydraulics_consumer({0,1,0,0},controlDiff[20]/3)==0 then
+    if hydraulics_consumer(fcsov_src.spl_2,controlDiff[20]/3)==0 then
         controlRatios[20]=B747_animate_value(lastControlValue[20],0,-100,100,1)
     end
-    if hydraulics_consumer({0,1,0,0},controlDiff[21]/3)==0 then
+    if hydraulics_consumer(fcsov_src.spl_2,controlDiff[21]/3)==0 then
         controlRatios[21]=B747_animate_value(lastControlValue[21],0,-100,100,1)
     end
     --system 3, spoilers 1,4,9,12
-    if hydraulics_consumer({0,0,1,0},controlDiff[11]/3)==0 then
+    if hydraulics_consumer(fcsov_src.spl_3,controlDiff[11]/3)==0 then
         controlRatios[11]=B747_animate_value(lastControlValue[11],0,-100,100,1)
     end
-    if hydraulics_consumer({0,0,1,0},controlDiff[14]/3)==0 then
+    if hydraulics_consumer(fcsov_src.spl_3,controlDiff[14]/3)==0 then
         controlRatios[14]=B747_animate_value(lastControlValue[14],0,-100,100,1)
     end
-    if hydraulics_consumer({0,0,1,0},controlDiff[19]/3)==0 then
+    if hydraulics_consumer(fcsov_src.spl_3,controlDiff[19]/3)==0 then
         controlRatios[19]=B747_animate_value(lastControlValue[19],0,-100,100,1)
     end
-    if hydraulics_consumer({0,0,1,0},controlDiff[22]/3)==0 then
+    if hydraulics_consumer(fcsov_src.spl_3,controlDiff[22]/3)==0 then
         controlRatios[22]=B747_animate_value(lastControlValue[22],0,-100,100,1)
     end
 
     --system 4, spoilers 5,6,7,8
-    if hydraulics_consumer({0,0,0,1},controlDiff[15]/3)==0 then
+    if hydraulics_consumer(fcsov_src.spl_4,controlDiff[15]/3)==0 then
         controlRatios[15]=B747_animate_value(lastControlValue[15],0,-100,100,1)
     end
-    if hydraulics_consumer({0,0,0,1},controlDiff[16]/3)==0 then
+    if hydraulics_consumer(fcsov_src.spl_4,controlDiff[16]/3)==0 then
         controlRatios[16]=B747_animate_value(lastControlValue[16],0,-100,100,1)
     end
-    if hydraulics_consumer({0,0,0,1},controlDiff[17]/3)==0 then
+    if hydraulics_consumer(fcsov_src.spl_4,controlDiff[17]/3)==0 then
         controlRatios[17]=B747_animate_value(lastControlValue[17],0,-100,100,1)
     end
-    if hydraulics_consumer({0,0,0,1},controlDiff[18]/3)==0 then
+    if hydraulics_consumer(fcsov_src.spl_4,controlDiff[18]/3)==0 then
         controlRatios[18]=B747_animate_value(lastControlValue[18],0,-100,100,1)
     end
 end
@@ -242,50 +317,50 @@ function flight_controls_consumption()
     -- steering 
     hydraulics_consumer({1,0,0,0},controlDiff[1]*5)
     --rudder lower 
-    if hydraulics_consumer({0,1,0,1},controlDiff[1]*3)==0 then
+    if hydraulics_consumer(fcsov_src.rud_lwr,controlDiff[1]*3)==0 then
         controlRatios[1]=B747_animate_value(lastControlValue[1],0,-100,100,10)
     end
 
-    --[[if hydraulics_consumer({0,1,0,1},controlDiff[1]*3)==0 then
+    --[[if hydraulics_consumer(fcsov_src.rud_lwr,controlDiff[1]*3)==0 then
         controlRatios[1]=B747_animate_value(lastControlValue[1],0,-100,100,1)
     end]]
     -- rudder upper 1,3
-    if hydraulics_consumer({1,0,1,0},controlDiff[2]*3)==0 then
+    if hydraulics_consumer(fcsov_src.rud_upr,controlDiff[2]*3)==0 then
         controlRatios[2]=B747_animate_value(lastControlValue[2],0,-100,100,10)
     end
     
     --1,2 L inboard elev
-    if hydraulics_consumer({1,1,0,0},controlDiff[3]*3)==0 then
+    if hydraulics_consumer(fcsov_src.elev_l_in,controlDiff[3]*3)==0 then
         controlRatios[3]=B747_animate_value(lastControlValue[3],0,-100,100,20)
     end
     --3,4 R inboard elev
-    if hydraulics_consumer({0,0,1,1},controlDiff[4]*3)==0 then
+    if hydraulics_consumer(fcsov_src.elev_r_in,controlDiff[4]*3)==0 then
         controlRatios[4]=B747_animate_value(lastControlValue[4],0,-100,100,20)
     end
     --1 L outboard elev
-    if hydraulics_consumer({1,0,0,0},controlDiff[5]*3)==0 then
+    if hydraulics_consumer(fcsov_src.elev_l_out,controlDiff[5]*3)==0 then
         controlRatios[5]=B747_animate_value(lastControlValue[5],0,-100,100,20)
     end
     --4 R outboard elev
-    if hydraulics_consumer({0,0,0,1},controlDiff[6]*3)==0 then
+    if hydraulics_consumer(fcsov_src.elev_r_out,controlDiff[6]*3)==0 then
         controlRatios[6]=B747_animate_value(lastControlValue[6],0,-100,100,20)
     end
 
 
     --1,3 L inboard aileron
-    if hydraulics_consumer({1,0,1,0},controlDiff[7]*3)==0 then
+    if hydraulics_consumer(fcsov_src.ail_l_in,controlDiff[7]*3)==0 then
         controlRatios[7]=B747_animate_value(lastControlValue[7],0,-100,100,1)
     end
     --2,4 R inboard aileron
-    if hydraulics_consumer({0,1,0,1},controlDiff[8]*3)==0 then
+    if hydraulics_consumer(fcsov_src.ail_r_in,controlDiff[8]*3)==0 then
         controlRatios[8]=B747_animate_value(lastControlValue[8],0,-100,100,1)
     end
     --1,2 L outboard aileron
-    if hydraulics_consumer({1,1,0,0},controlDiff[9]*3)==0 then
+    if hydraulics_consumer(fcsov_src.ail_l_out,controlDiff[9]*3)==0 then
         controlRatios[9]=B747_animate_value(lastControlValue[9],0,-100,100,1)
     end
     --3,4 R outboard aileron
-    if hydraulics_consumer({0,0,1,1},controlDiff[10]*3)==0 then
+    if hydraulics_consumer(fcsov_src.ail_r_out,controlDiff[10]*3)==0 then
         controlRatios[10]=B747_animate_value(lastControlValue[10],0,-100,100,1)
     end
 
