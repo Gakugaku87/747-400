@@ -338,7 +338,13 @@ function flight_controls_override()
     if B747DR_rudder_input~=rudder_input then B747DR_rudder_input=rudder_input end
     B747DR_elevator_ratio=1.0--(1.0-B747_rescale(150,0,350,0.84375,simDR_ias_pilot))*-1
     B747_slats()
-    if((simDRTime - B747DR_switching_servos_on)<2) then
+    if simDR_autopilot_servos_on == 0 then
+        -- the A/P off: its commands go back to neutral (before, the 2 s
+        -- window below never ended with the A/P off, the autopilot module
+        -- restarting it every frame, and the last commands stayed)
+        B747DR_sim_pitch_ratio=ap_pitch_assist(doCompute)
+        B747DR_sim_roll_ratio=ap_roll_assist(doCompute)
+    elseif((simDRTime - B747DR_switching_servos_on)<2) then
         ap_pitch_assist(doCompute)
         ap_roll_assist(doCompute)
     else

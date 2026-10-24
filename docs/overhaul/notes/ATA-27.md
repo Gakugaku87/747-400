@@ -226,6 +226,7 @@ ALTERNATE：EXPANDED と同じ。ただしレバーの線と数字は出さず�
 指令源：ALTN スイッチ（両 STCM のソレノイドへ直接）、操縦輪スイッチ（SRM の auto/manual transfer relay 経由）、
        autotrim（FCC→SRM）、speed trim（SRM）                                    -- ATA27 p.430・483・490
 STCM：MOV（常時開）→ arm/control ソレノイド対 → ブレーキ解除 → 油圧モーター。片方だけなら半速（p.462・470）
+位置：units と安定板の角度は 1 unit = 1°（0 units = 前縁上げ 3°、15 units = 前縁下げ 12°）  -- ATA22 p.132 の表
 速度（rate solenoid：Vc ≤ 220 kt で ON、≥ 230 kt で OFF）                       -- p.452
   manual・ALTN・full-rate autotrim（2 モーター）：0.5°/s（低速）、0.2°/s（高速）
   autotrim・speed trim（1 モーター）：0.25°/s、0.1°/s。両 SRM の rate 制御故障 → 低速側の値
@@ -399,3 +400,14 @@ STAB TRIM UNSCHD = (autotrim/speed trim/default mode で有効な指令なしに
 
 - SRM のうち外側エルロンのロックアウトとラダー比変換器：モデル `plugins/xtlua/scripts/B747.45.xt.fltCtrls/B747.45.srm_model.lua`、グルー `B747.45.xt.srm.lua`（ARCHITECTURE.md §4.15）。§4.1・§4.8 のうち、ロックアウトの位置信号の同時 40 秒の監視、RRC の 2 秒系の監視（電圧）・mode/command/output coincidence、50 kt 未満 20 秒の stall current limit は作っていない。SRM の選び方はランダムでなく L から。ヨーダンパーの舵角に比をかけるのは前のまま。
 - 前の作り（2026-10-24 の調べ）：ロックアウトは機長の IAS で 232→238 kt の直線（`hydraulics_override.lua`）、比は 150→450 kt の直線で上下共通、controlObject はペダル・トリム・ヨーダンパーをそれぞれ比で縮めて足すので和は比で制限されなかった。§7 の行番号の更新：FCTL-03 の autotrim は `B747.19.xt.afds_control.lua:485-517`、安定板の角度は `hydraulicsmodel.lua:447`（`stabilizer_deflection_degrees` = −15 × トリム）、FCTL-05・06 は段 2a で書き直した、FCTL-10 は `B747.45.xt.fltCtrls.lua` のグリーンバンドと CONFIG STAB、FCTL-17 は `hydraulicsmodel.lua:453`、FCTL-18 は `hydraulicsmodel.lua:431-446`、FCTL-21 の CAS は `B747.87.xt.warning.lua` の 177（STAB TRIM UNSCHD）・206（AILERON LOCKOUT）・464–465（RUD RATIO）・476–478（>STAB GREENBAND・>STAB TRIM 2・3）。§6.2 に足すこと：外の安定板の 3D は `sim/cockpit2/controls/elevator_trim` で動く（`flightmodel2` と同じ値）。ATA-22 の AFDS-19 の「約 0.5/0.25 unit/s」は狙いの値で、実際は約 0.008/0.004 units/s。
+
+## 12. 実装（4-1 段 2b、2026-10-24）
+
+- 安定板トリム：SRM のモデルとグルーに足した（ARCHITECTURE.md §4.15）。§4.5 のうち、手動（機長・F/O、反対向きで無効、AP 1 台で解除・複数で無効）、ALTN（電池バス、0.25–14.75、column cutout なし、AP に優先し外さない）、オートトリム（engage した FCC の SRM：L→L、R→R、C→L 優先。その SRM の STCM で半速、3.5 秒の遅れ、autoland は遅れなし、FRAT は両 SRM で全速・機首上げ 13.5、dead trim で 1 回だけ他方の SRM へ）、制限（1.8／脚 down か前縁が出ていると 0.8、11.6）、速さ（rate solenoid は L から、エアデータか SRM が無ければ遅い方）、column cutout、cutout スイッチと MOV（CUTOUT で閉、ON で開き自動遮断を無効、AUTO に 5 秒で開。自動遮断の後は ON か CUTOUT を経るまで閉）、unscheduled trim monitor と自動遮断（ブレーキが解除されていて AUTO の STCM だけ閉じる）、>STAB TRIM 2・3（半速・自動遮断・CUTOUT、ラッチと解除）、STAB TRIM UNSCHD（停止後 30 秒、STATUS はラッチ。A/P engage 中の ALTN でも）、STATUS の STAB TRIM・STAB TRIM UNSCHD・STAB AUTO TRIM。電源は手動が DC 3、ALTN が電池バス、SRM L が standby AC か電池バスと DC 3、SRM R が DC 2（ATA22 p.116–118）。
+- 作っていないもの：speed trim（段 2c で、ゲインが資料に無い）、MOV の故障と STATUS STAB AUTO CUTOUT、スイッチの一致の監視（片方だけ押す）、AP の SRM 喪失時の切断・caution（ATA22 p.150）、FRAT の発生と LAND 2 の trim bias（AFDS 側。500 ft 未満でトリム指令を出さないのは前のまま）。
+- 決めたこと：>STAB TRIM の番号は STCM の系統（左 STCM = 系統 3 で STAB TRIM 3：p.462・FCOM p.946・p.958 の「respective actuator」）。p.455 の例（左が解除されず右が解除で STAB TRIM 2）とは合わないが、FCOM に従った。自動遮断は p.450 の条件どおりブレーキが解除されている STCM だけ閉じる（p.455 の「両方 AUTO なら両方の message」は両方が動いていた場合と読んだ）。ALTN は AP engage 中に UNSCHD を出すが自動遮断はしない（p.490 の監視の抑止と FCOM p.945 の「AP に優先」を両立させる読み）。
+- 推定：STCM のブレーキが解除される圧 1000 psi、監視が見つける動き 0.1 units、dead trim の 2 秒、column cutout を操縦桿の行程の 35 %（4.5° を、行程 6.55/6.63 in と柱の長さ約 30 in で換算。柱の長さは資料に無い）、X-Plane のトリムの暴走（`rel_elv_trim_run`）を系統 3 の STCM の機首上げの暴走として受けること、STAB AUTO TRIM を A/P が全部外れるまで残すこと。
+- 操作：3D の操縦輪のスイッチ（`stab_trim_up/dn_capt`・`_fo`。機長側は X-Plane の `pitch_trim_up/down` も押し続け、`.snd` のクリック音はそれで鳴る）。X-Plane の `pitch_trim_up/down` は置き換えて機長のスイッチとして受ける（ジョイスティックのボタン）。ALTN と cutout は 3D に操作子が無いので、コマンド（`altn_stab_trim_up/dn`、`stab_trim/cutout_2_up/dn`・`cutout_3_up/dn`）と dataref（`stab_trim/altn_sw`、`stab_trim/cutout_sw[2]`）。
+- X-Plane のトリム（`elevator_trim`、−1..1 が 0–15 units）はグルーが書く。前は X-Plane のコマンド（acf の 25 秒）と AFDS の直接の書き込みだった。フライトの開始から 3 秒と、グルーが書いた値でない変化（トリムの軸、試験の書き込み）は、モデルの位置を X-Plane に合わせる（XTLua の 1 フレームの遅れを見込み、直前 2 回の書き込みと比べる）。
+- AFDS：`B747.19.xt.afds_control.lua` はトリム指令（−1/0/1）を `flt_ctrls/stab_trim/autotrim_cmd` に出すだけにした。中立の幅は前のまま、昇降舵の指令は A/P の `sim_pitch_ratio`（前は操縦桿を含む `custom_pitch_ratio`）。A/P が外れたら A/P の昇降舵・補助翼の指令を毎秒 1 で 0 に戻す（推定）。前は 2 秒の窓が A/P の off の間ずっと続いて、最後の値が残っていた。
+- 気づいたこと：プラグインの安定板の角度（`stabilizer_deflection_degrees` = −15 × トリム、0 units で +15°、15 units で −15°、1 unit 2°）は ATA22 p.132 の表（+3°〜−12°、1 unit 1°）と違う。X-Plane の空力はこの角度で調整されているので、今は変えない（同じ飛行状態での units が実機と違う可能性。PROGRESS の「気づいたこと」）。

@@ -229,63 +229,35 @@ end
 
 
 
--- STABLIZER TRIM
+-- STABLIZER TRIM: the control wheel switch pairs go to the SRMs
+-- (B747.45.xt.srm.lua, 4-1 step 2b) while held. The captain's also hold
+-- X-Plane's pitch trim command, which the sound plays its click on; that
+-- command is replaced below and counts as the captain's switches (a
+-- joystick's trim buttons)
 function B747_stablizer_trim_up_capt_CMDhandler(phase, duration)
-    simCMD_stablizer_trim_up:once()
-    simDR_electric_trim=1
-    --[[if phase == 0 then
-        simCMD_stablizer_trim_up:once()
-    end
-    if phase == 1 then
-        simCMD_stablizer_trim_up:start()
-    end
-    if phase == 2 then
-        simCMD_stablizer_trim_up:stop()
-    end]]--
+    B747_srm_trim_switch("capt", 1, phase)
+    if phase == 0 then simCMD_stablizer_trim_up:start() elseif phase == 2 then simCMD_stablizer_trim_up:stop() end
 end
 
 function B747_stablizer_trim_dn_capt_CMDhandler(phase, duration)
-    simCMD_stablizer_trim_dn:once()
-    simDR_electric_trim=1
-    --[[if phase == 0 then
-        simCMD_stablizer_trim_dn:once()
-    end
-    if phase == 1 then
-        simCMD_stablizer_trim_dn:start()
-    end
-    if phase == 2 then
-        simCMD_stablizer_trim_dn:stop()
-    end]]--
+    B747_srm_trim_switch("capt", -1, phase)
+    if phase == 0 then simCMD_stablizer_trim_dn:start() elseif phase == 2 then simCMD_stablizer_trim_dn:stop() end
 end
 
-
-
 function B747_stablizer_trim_up_fo_CMDhandler(phase, duration)
-    simCMD_stablizer_trim_up:once()
-    simDR_electric_trim=1
-   --[[ if phase == 0 then
-        simCMD_stablizer_trim_up:once()
-    end
-    if phase == 1 then
-        simCMD_stablizer_trim_up:start()
-    end
-    if phase == 2 then
-        simCMD_stablizer_trim_up:stop()
-    end]]--
+    B747_srm_trim_switch("fo", 1, phase)
 end
 
 function B747_stablizer_trim_dn_fo_CMDhandler(phase, duration)
-    simCMD_stablizer_trim_dn:once()
-    simDR_electric_trim=1
-  --[[  if phase == 0 then
-        simCMD_stablizer_trim_dn:once()
-    end
-    if phase == 1 then
-        simCMD_stablizer_trim_dn:start()
-    end
-    if phase == 2 then
-        simCMD_stablizer_trim_dn:stop()
-    end]]--
+    B747_srm_trim_switch("fo", -1, phase)
+end
+
+function B747_pitch_trim_up_CMDhandler(phase, duration)
+    B747_srm_trim_switch("xp", 1, phase)
+end
+
+function B747_pitch_trim_dn_CMDhandler(phase, duration)
+    B747_srm_trim_switch("xp", -1, phase)
 end
 
 
@@ -483,8 +455,8 @@ simCMD_aileron_trim_right       = wrap_command("sim/flight_controls/aileron_trim
 
 
 -- STABILIZER TRIM
-simCMD_stablizer_trim_up        = find_command("sim/flight_controls/pitch_trim_up")
-simCMD_stablizer_trim_dn        = find_command("sim/flight_controls/pitch_trim_down")
+simCMD_stablizer_trim_up        = replace_command("sim/flight_controls/pitch_trim_up", B747_pitch_trim_up_CMDhandler)
+simCMD_stablizer_trim_dn        = replace_command("sim/flight_controls/pitch_trim_down", B747_pitch_trim_dn_CMDhandler)
 
 
 

@@ -23,6 +23,8 @@
 #                                                equals value (up to 6 presses)
 #   wait    {dref, op, value, timeout}           wait for a condition
 #   check   {dref, op, value, [cite], [level]}   record pass/fail (level fail|warn)
+#   remember {dref, as}                          keep a value: a wait or check with
+#                                                "rel": "<as>" adds it to its value(s)
 #   sleep   {seconds}
 #   snapshot {drefs: [...]}                      log values
 #   cas                                          log the EICAS message lines
@@ -85,6 +87,15 @@ function Test-Op($actual, [string]$op, $expected) {
         'contains' { return ([string]$actual).Contains([string]$expected) }
         default   { throw "unknown op $op" }
     }
+}
+# a step's expected value(s); with "rel", offsets from a remembered value
+$script:mem = @{}
+function Get-Expected($step) {
+    if (-not $step.rel) { return $step.value }
+    $base = $script:mem[$step.rel]
+    if ($null -eq $base) { throw "nothing remembered as $($step.rel)" }
+    if ($step.value -is [array]) { return @(($base + $step.value[0]), ($base + $step.value[1])) }
+    return $base + $step.value
 }
 # X-Plane can hang with the Web API still answering: the sim clock stops.
 # Test-XPStuck says so once the clock has not moved for 30 s of wall time.
@@ -194,22 +205,29 @@ foreach ($step in $spec.steps) {
             }
             'wait' {
                 $timeout = if ($step.timeout) { [double]$step.timeout } else { 60 }
+                $want = Get-Expected $step
                 $last = $null
                 $script:stuck = $false
                 $sec = Wait-XP {
                     if (Test-XPStuck) { $script:stuck = $true; return $true }
-                    $script:lastValue = Get-XPDataref $step.dref; Test-Op $script:lastValue $step.op $step.value
+                    $script:lastValue = Get-XPDataref $step.dref; Test-Op $script:lastValue $step.op $want
                 } $timeout 500
                 if ($script:stuck) { throw 'stuck' }
                 $last = $script:lastValue
-                if ($null -ne $sec) { Add-Result $step 'pass' ("{0} {1} {2} after {3:N1} s" -f $step.dref, $step.op, ($step.value -join '..'), $sec) $last }
-                else { Add-Result $step $(if ($step.level -eq 'warn') { 'warn' } else { 'fail' }) ("{0} {1} {2} not reached in {3} s (last {4})" -f $step.dref, $step.op, ($step.value -join '..'), $timeout, $last) $last }
+                if ($null -ne $sec) { Add-Result $step 'pass' ("{0} {1} {2} after {3:N1} s" -f $step.dref, $step.op, ($want -join '..'), $sec) $last }
+                else { Add-Result $step $(if ($step.level -eq 'warn') { 'warn' } else { 'fail' }) ("{0} {1} {2} not reached in {3} s (last {4})" -f $step.dref, $step.op, ($want -join '..'), $timeout, $last) $last }
             }
             'check' {
+                $want = Get-Expected $step
                 $v = Get-XPDataref $step.dref
-                $ok = Test-Op $v $step.op $step.value
+                $ok = Test-Op $v $step.op $want
                 $status = if ($ok) { 'pass' } elseif ($step.level -eq 'warn') { 'warn' } else { 'fail' }
-                Add-Result $step $status ("{0} = {1} (want {2} {3})" -f $step.dref, $v, $step.op, ($step.value -join '..')) $v
+                Add-Result $step $status ("{0} = {1} (want {2} {3})" -f $step.dref, $v, $step.op, ($want -join '..')) $v
+            }
+            'remember' {
+                $v = Get-XPDataref $step.dref
+                $script:mem[$step.as] = $v
+                Add-Result $step 'info' ("{0} = {1} = {2}" -f $step.as, $step.dref, $v) $v
             }
             'sleep' { Start-Sleep -Milliseconds ([int]([double]$step.seconds * 1000)); Add-Result $step 'info' "slept $($step.seconds) s" }
             'snapshot' {

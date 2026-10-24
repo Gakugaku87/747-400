@@ -149,6 +149,9 @@ simDR_total_heading_ratio   = deferred_dataref("sim/cockpit2/controls/total_head
 simDR_yoke_heading_ratio    = find_dataref("sim/cockpit2/controls/yoke_heading_ratio")
 simDR_rudder_trim_ratio     = find_dataref("sim/cockpit2/controls/rudder_trim")
 B747DR_rudder_input         = find_dataref("laminar/B747/flt_ctrls/rudder_input")
+-- the FCCs' autotrim to the SRMs (B747.19.xt.afds_control.lua, 4-1 step 2b)
+B747DR_autotrim_cmd         = find_dataref("laminar/B747/flt_ctrls/stab_trim/autotrim_cmd")
+B747DR_autotrim_frat        = find_dataref("laminar/B747/flt_ctrls/stab_trim/frat")
 
 B747DR_elevator_ratio   = deferred_dataref("laminar/B747/flt_ctrls/elevator_ratio", "number")
 B747_controls_lower_rudder           = deferred_dataref("laminar/B747/cablecontrols/lower_rudder", "number")
