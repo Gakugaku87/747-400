@@ -579,4 +579,5 @@
 - ALTITUDE ALERT：§4.2 のとおり（左右のバスの選び方、900 ft の接近、300 ft の捕捉、逸脱、リセット、GS 捕捉と着陸フラップ・脚 down の抑止、地上でパーキングブレーキなら抑止しない）。選択高度が変わってから 1 秒は判定しない（rate detector の時間：推定）。EICAS の >ALTITUDE ALERT と master caution・beeper は警報の仕組みから。PFD の白枠・琥珀枠のために `laminar/B747/airdata/alt_advise`・`alt_alert` を出す（パネルは未対応）。
 - >AOA RIGHT は X-Plane の右の AOA の故障（`rel_cop_AOA`）で（前は左の `rel_AOA`：NAV-07）。
 - BARO の STD：STD を押すときの値を preselect に残し、もう一度押すとそこへ戻す（FCOM p.1037。前は preselect を 29.92 で上書きしていた：NAV-06。試験 `tests/nav/baro_std_test.lua`）。
-- 作らなかったもの：PFD の高度・昇降率・Mach の源の切り替えと旗・高度の枠（パネル変更が要る）、P/S XFR VLV、C ADC のリレーの組み替えの細部（3D から選べない）、AOA・TAT の ADC ごとの値。
+- 段 1b（カスタム acf のパネル、2026-10-25。承認済みの DSP-02・04・12）：PFD（機長と副操縦士、外側と内側の 2 組ずつ）の高度と Mach を、選んだ ADC の値（新設 `airdata/alt_capt`・`alt_fo`：その席の気圧設定で、`mach_capt`・`mach_fo`）に替えた。前は X-Plane の各側の高度と真の Mach（`machno`）で、副操縦士の最初の高度テープは機長の高度で表示されていた。その席のエアデータが無効（`valid_capt`・`valid_fo` が 0）なら、速度表示（テープ・バグ・V 速度・Mach）、高度テープと背景・バグ・現在高度を消し、琥珀の SPD・ALT の旗を出す（FCOM p.1000。MACH の旗は SPD の旗が抑止し、ADC は丸ごと故障するので出さない）。高度警報の枠：選択高度の 900〜300 ft 手前で選択高度と現在高度に白の強調の枠、離れると現在高度に琥珀の枠（FCOM p.992、p.1559）。道具は `docs/overhaul/tools/panel_pfd_airdata.lua` と、旗・枠の画像の `make_pfd_airdata_images.ps1`（ACF_DIFF.md §5）。
+- 作らなかったもの：PFD の昇降率の源（実機は IRS：段 2）、P/S XFR VLV、C ADC のリレーの組み替えの細部（3D から選べない）、AOA・TAT の ADC ごとの値。

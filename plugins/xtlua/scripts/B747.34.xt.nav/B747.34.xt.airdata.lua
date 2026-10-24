@@ -6,8 +6,8 @@
 -- A/P CMD lights, the glideslope capture, the flap lever, the PSEU and the
 -- parking brake lever; writes each pilot's airspeed for the PFD
 -- (laminar/B747/gauges/indicators/airspeed_kts_pilot, _copilot: the
--- selected ADC, 30 kt at the bottom), the sources and validity
--- (laminar/B747/airdata/...), OVERSPEED, ALT DISAGREE, >ALTITUDE ALERT,
+-- selected ADC, 30 kt at the bottom) and its altitude and Mach, the sources
+-- and validity (laminar/B747/airdata/...), OVERSPEED, ALT DISAGREE, >ALTITUDE ALERT,
 -- IAS DISAGREE, >SOURCE SEL ADC and >AOA RIGHT. B747.34.xt.nav.lua loads it.
 -- The 3D AIR DATA knobs have two positions (the 570's L / R: FCOM p.1043);
 -- 0 is taken as L and 1 as R (estimate: their markings are not known).
@@ -66,6 +66,10 @@ B747DR_ad_valid_capt            = find_dataref("laminar/B747/airdata/valid_capt"
 B747DR_ad_valid_fo              = find_dataref("laminar/B747/airdata/valid_fo")
 B747DR_ad_alt_advise            = find_dataref("laminar/B747/airdata/alt_advise")
 B747DR_ad_alt_alert             = find_dataref("laminar/B747/airdata/alt_alert")
+B747DR_ad_alt_capt              = find_dataref("laminar/B747/airdata/alt_capt")
+B747DR_ad_alt_fo                = find_dataref("laminar/B747/airdata/alt_fo")
+B747DR_ad_mach_capt             = find_dataref("laminar/B747/airdata/mach_capt")
+B747DR_ad_mach_fo               = find_dataref("laminar/B747/airdata/mach_fo")
 B747DR_ad_fail                  = find_dataref("laminar/B747/airdata/fail/adc")
 B747DR_CAS_warning_status       = find_dataref("laminar/B747/CAS/warning_status")
 B747DR_CAS_caution_status       = find_dataref("laminar/B747/CAS/caution_status")
@@ -99,11 +103,17 @@ function B747_airdata()
     local now = simDR_ad_time
     if ad_t0 == nil then ad_t0 = now end
     if now - ad_t0 < INIT_S then
-        -- until the model starts, each PFD's airspeed from its own side as
-        -- before (the autopilot, FMC, EEC and SRM read it)
+        -- until the model starts, each PFD's air data from its own side and
+        -- valid, as before (the autopilot, FMC, EEC and SRM read the airspeed)
         local c, f = math.max(simDR_ad_ias_pilot, MIN_IAS), math.max(simDR_ad_ias_copilot, MIN_IAS)
         if B747DR_ad_ias_capt ~= c then B747DR_ad_ias_capt = c end
         if B747DR_ad_ias_fo ~= f then B747DR_ad_ias_fo = f end
+        if B747DR_ad_alt_capt ~= simDR_ad_alt_pilot then B747DR_ad_alt_capt = simDR_ad_alt_pilot end
+        if B747DR_ad_alt_fo ~= simDR_ad_alt_copilot then B747DR_ad_alt_fo = simDR_ad_alt_copilot end
+        if B747DR_ad_mach_capt ~= simDR_ad_mach_pilot then B747DR_ad_mach_capt = simDR_ad_mach_pilot end
+        if B747DR_ad_mach_fo ~= simDR_ad_mach_copilot then B747DR_ad_mach_fo = simDR_ad_mach_copilot end
+        if B747DR_ad_valid_capt ~= 1 then B747DR_ad_valid_capt = 1 end
+        if B747DR_ad_valid_fo ~= 1 then B747DR_ad_valid_fo = 1 end
         return
     end
 
@@ -145,6 +155,11 @@ function B747_airdata()
     local ias_f = math.max(out.fo.cas, MIN_IAS)
     if B747DR_ad_ias_capt ~= ias_c then B747DR_ad_ias_capt = ias_c end
     if B747DR_ad_ias_fo ~= ias_f then B747DR_ad_ias_fo = ias_f end
+    -- and its altitude (the pilot's baro setting) and Mach (the custom acf's PFD)
+    if B747DR_ad_alt_capt ~= out.capt.alt then B747DR_ad_alt_capt = out.capt.alt end
+    if B747DR_ad_alt_fo ~= out.fo.alt then B747DR_ad_alt_fo = out.fo.alt end
+    if B747DR_ad_mach_capt ~= out.capt.mach then B747DR_ad_mach_capt = out.capt.mach end
+    if B747DR_ad_mach_fo ~= out.fo.mach then B747DR_ad_mach_fo = out.fo.mach end
     if B747DR_ad_src_capt ~= out.capt.src then B747DR_ad_src_capt = out.capt.src end
     if B747DR_ad_src_fo ~= out.fo.src then B747DR_ad_src_fo = out.fo.src end
     for i = 1, 3 do B747_nav_put(B747DR_ad_valid, i - 1, B747_nav_flag(out.valid[i])) end
