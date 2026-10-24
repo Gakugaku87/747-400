@@ -209,6 +209,11 @@ simDR_autopilot_alt_hold_status     	= find_dataref("laminar/B747/autopilot/alti
 -- the control wheel angle, degrees, right wing down positive (the
 -- controlObject's), for the ailerons and spoilers: B747.19.lateral_model.lua
 B747_controls_wheel                  = deferred_dataref("laminar/B747/cablecontrols/wheel", "number")
+-- FLT CONTROL HYD POWER (the init script's; B747.19.xt.hydraulics_override.lua)
+B747DR_fcsov_wing_shut          = deferred_dataref("laminar/B747/flt_ctrls/hyd_power/wing_shut", "array[4]")
+B747DR_fcsov_tail_shut          = deferred_dataref("laminar/B747/flt_ctrls/hyd_power/tail_shut", "array[4]")
+B747DR_fcsov_wing_valve         = deferred_dataref("laminar/B747/flt_ctrls/hyd_power/wing_valve_shut", "array[4]")
+B747DR_fcsov_tail_valve         = deferred_dataref("laminar/B747/flt_ctrls/hyd_power/tail_valve_shut", "array[4]")
 
 
 simDR_left_aileron_inner = find_dataref("sim/flightmodel/controls/wing2l_ail1def")
@@ -339,6 +344,11 @@ B747DR_switching_servos_on = deferred_dataref("laminar/B747/autopilot/ap_monitor
 dofile("pid.lua")
 dofile("B747.19.lateral_model.lua")
 dofile("B747.19.xt.hydraulics_override.lua")
+-- the flight control shutoff switches (commands; the 3D has none)
+for n = 1, 4 do
+    deferred_command("laminar/B747/flt_ctrls/hyd_power/wing_" .. n, "Flight Control Hyd Power Wing " .. n, B747_fcsov_toggle("wing", n))
+    deferred_command("laminar/B747/flt_ctrls/hyd_power/tail_" .. n, "Flight Control Hyd Power Tail " .. n, B747_fcsov_toggle("tail", n))
+end
 dofile("B747.19.xt.slats.lua")
 dofile("B747.19.xt.afds_control.lua")
 dofile("B747.19.xt.yaw_damper.lua")
@@ -466,6 +476,7 @@ function flight_start()
       print("not reinitialising controls!!!")
     end
     B747_hyd_power_flight_start()
+    B747_fcsov_flight_start()
 end
 
 --function flight_crash() end

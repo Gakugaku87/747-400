@@ -10,8 +10,7 @@ local T = dofile("tests/lib/check.lua")("hyd_module")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
 math.randomseed(1)
--- the speedbrake lever is the flight controls module's (another plugin)
-local rt = xtlua.new{types = {["laminar/B747/flt_ctrls/speedbrake_lever"] = "number"}}
+local rt = xtlua.new()
 rt:load("plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.xt.hydraulicsmodel.lua")
 rt:load("plugins/xtlua_keysystems/scripts/B747.20.xt.hydraulics/B747.20.xt.hydraulics.lua")
 rt:set("sim/operation/prefs/startup_running", 0)
@@ -246,5 +245,40 @@ rt:set("laminar/B747/flt_ctrls/speedbrake_lever", 0)
 -- (the spoilers follow by a tenth of the way each frame: 4 s for the last 0.05)
 co_frames(4)
 for n = 1, 12 do T.near(get(FC .. "spoilers", n), 0, 0.05, "lever DN, wheel centred: spoiler " .. n .. " down") end
+
+-- FLT CONTROL HYD POWER (4-1 step 4): the switches by command (the 3D has
+-- none), a valve's travel 2 s (estimate), >FLT CONT VLVS while one is not
+-- fully open (FCOM p.940, p.957); the wing valves take their systems from
+-- the ailerons and spoilers, the tail valves from the elevators, rudders
+-- and yaw dampers
+local HP = "laminar/B747/flt_ctrls/hyd_power/"
+local hyd_ns = rt.modules[1].ns
+rt:command(HP .. "wing_1")
+co_frames(1)
+T.equal(get(HP .. "wing_shut", 0), 1, "WING 1 switch at SHUT OFF")
+T.near(get(HP .. "wing_valve_shut", 0), 0.5, 0.05, "its valve halfway after 1 s")
+T.equal(get(ADVISORY, 143), 1, ">FLT CONT VLVS while a valve is not fully open")
+co_frames(1.5)
+T.equal(get(HP .. "wing_valve_shut", 0), 1, "the valve shut after 2 s")
+rt:command(HP .. "wing_3")
+co_frames(2.5)
+rt:set("sim/cockpit2/controls/yoke_roll_ratio", 0.5)
+co_frames(2)
+T.near(get(FC .. "l_aileron_inner"), 0, 0.5, "WING 1 and 3 shut: the left inboard aileron (systems 1, 3) does not move")
+T.near(get(FC .. "r_aileron_inner"), -20, 0.05, "the right inboard aileron (systems 2, 4) does")
+rt:set("sim/cockpit2/controls/yoke_roll_ratio", 0)
+rt:command(HP .. "wing_1")
+rt:command(HP .. "wing_3")
+co_frames(3)
+T.equal(get(HP .. "wing_valve_shut", 0), 0, "WING 1 open again")
+T.equal(get(ADVISORY, 143), 0, "all open: no >FLT CONT VLVS")
+T.equal(hyd_ns.B747_fcsov_yaw_damper_hyd(3), true, "the upper yaw damper: system 3 through tail valve 3")
+rt:command(HP .. "tail_3")
+co_frames(2.5)
+T.equal(hyd_ns.B747_fcsov_yaw_damper_hyd(3), false, "TAIL 3 shut: no hydraulics for the upper yaw damper")
+T.equal(hyd_ns.B747_fcsov_yaw_damper_hyd(2), true, "the lower one keeps system 2")
+rt:command(HP .. "tail_3")
+co_frames(2.5)
+T.equal(get(HP .. "tail_valve_shut", 2), 0, "TAIL 3 open again")
 
 T.done()

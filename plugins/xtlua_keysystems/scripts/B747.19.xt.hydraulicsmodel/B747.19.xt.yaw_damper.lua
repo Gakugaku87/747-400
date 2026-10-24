@@ -129,7 +129,11 @@ function yaw_damper_system(doCompute)
         yawPid:compute()
     end
     --print(B747DR_yaw_damper_lwr.." "..get_damper_value())
-    if B747DR_yaw_damper_upr_on ==1 then
+    -- the dampers' actuators need their hydraulic system through the tail
+    -- shutoff valve (upper 3, lower 2: FCOM p.949). Without it they stop and
+    -- no INOP shows (the modules inhibit the faults a lack of hydraulic power
+    -- causes: ATA27 p.40). 4-1 step 4
+    if B747DR_yaw_damper_upr_on ==1 and B747_fcsov_yaw_damper_hyd(3) then
         
          B747DR_yaw_damper_upr=B747_interpolate_value(B747DR_yaw_damper_upr,get_damper_value(B747DR_yaw_damper_upr),-1,1,0.3)
     else
@@ -137,7 +141,7 @@ function yaw_damper_system(doCompute)
         B747DR_yaw_damper_upr=B747_interpolate_value(B747DR_yaw_damper_upr,0,-1,1,0.3)
     end
 
-    if B747DR_yaw_damper_lwr_on ==1 then
+    if B747DR_yaw_damper_lwr_on ==1 and B747_fcsov_yaw_damper_hyd(2) then
         B747DR_yaw_damper_lwr=B747_interpolate_value(B747DR_yaw_damper_lwr,get_damper_value(B747DR_yaw_damper_lwr),-1,1,0.3)
     else
         B747DR_yaw_damper_lwr=B747_interpolate_value(B747DR_yaw_damper_lwr,0,-1,1,0.3)

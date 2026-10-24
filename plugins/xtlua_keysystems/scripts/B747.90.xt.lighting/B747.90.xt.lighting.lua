@@ -137,6 +137,9 @@ simDR_annun_generator_off           = find_dataref("sim/cockpit2/annunciators/ge
 simDR_yaw_damper_annun              = find_dataref("sim/cockpit2/annunciators/yaw_damper")
 B747DR_yaw_damper_upr_on             = deferred_dataref("laminar/B747/flt_ctrls/yaw_damper_upr_on", "number")
 B747DR_yaw_damper_lwr_on             = deferred_dataref("laminar/B747/flt_ctrls/yaw_damper_lwr_on", "number")
+-- the flight control shutoff valves' travel toward shut (the hydraulics module)
+B747DR_lt_fcsov_wing_valve      = find_dataref("laminar/B747/flt_ctrls/hyd_power/wing_valve_shut")
+B747DR_lt_fcsov_tail_valve      = find_dataref("laminar/B747/flt_ctrls/hyd_power/tail_valve_shut")
 --simDR_bleed_air_off                 = find_dataref("sim/cockpit2/annunciators/bleed_air_off")
 --simDR_bleed_air_mode                = find_dataref("sim/cockpit2/pressurization/actuators/bleed_air_mode")
 simDR_annun_GPWS                    = find_dataref("sim/cockpit2/annunciators/GPWS")
@@ -1192,15 +1195,17 @@ function B747_annunciators()
 
     ----- OVERHEAD PANEL -----
 
-    -- FLIGHT CONTROL HYDRAULIC POWER VALVES
-    annun.a.flt_ctl_hyd_vlv_wing_01 = 0
-    annun.a.flt_ctl_hyd_vlv_wing_02 = 0
-    annun.a.flt_ctl_hyd_vlv_wing_03 = 0
-    annun.a.flt_ctl_hyd_vlv_wing_04 = 0
-    annun.a.flt_ctl_hyd_vlv_tail_01 = 0
-    annun.a.flt_ctl_hyd_vlv_tail_02 = 0
-    annun.a.flt_ctl_hyd_vlv_tail_03 = 0
-    annun.a.flt_ctl_hyd_vlv_tail_04 = 0
+    -- FLIGHT CONTROL HYDRAULIC POWER VALVES: VALVE CLOSED while the valve is
+    -- not fully open (FCOM p.940; the hydraulics module moves them. Before,
+    -- always out: 4-1 step 4)
+    annun.a.flt_ctl_hyd_vlv_wing_01 = B747_ternary((B747DR_lt_fcsov_wing_valve[0] > 0), 1, 0)
+    annun.a.flt_ctl_hyd_vlv_wing_02 = B747_ternary((B747DR_lt_fcsov_wing_valve[1] > 0), 1, 0)
+    annun.a.flt_ctl_hyd_vlv_wing_03 = B747_ternary((B747DR_lt_fcsov_wing_valve[2] > 0), 1, 0)
+    annun.a.flt_ctl_hyd_vlv_wing_04 = B747_ternary((B747DR_lt_fcsov_wing_valve[3] > 0), 1, 0)
+    annun.a.flt_ctl_hyd_vlv_tail_01 = B747_ternary((B747DR_lt_fcsov_tail_valve[0] > 0), 1, 0)
+    annun.a.flt_ctl_hyd_vlv_tail_02 = B747_ternary((B747DR_lt_fcsov_tail_valve[1] > 0), 1, 0)
+    annun.a.flt_ctl_hyd_vlv_tail_03 = B747_ternary((B747DR_lt_fcsov_tail_valve[2] > 0), 1, 0)
+    annun.a.flt_ctl_hyd_vlv_tail_04 = B747_ternary((B747DR_lt_fcsov_tail_valve[3] > 0), 1, 0)
 
     -- GEN FIELD
     annun.a.eng_gen_field_01 = 0
