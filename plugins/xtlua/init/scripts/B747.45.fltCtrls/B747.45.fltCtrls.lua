@@ -165,6 +165,31 @@ B747DR_speedbrake_lever_detent  = deferred_dataref("laminar/B747/flt_ctrls/speed
 function B747_flap_lever_detent_DRhandler() end
 B747DR_flap_lever_detent		= deferred_dataref("laminar/B747/flt_ctrls/flap_lever_detent", "number", B747_flap_lever_detent_DRhandler)
 
+-- the flap control units (B747.45.xt.fcu.lua; 4-1): the trailing edge
+-- panels L OB, L IB, R IB, R OB in degrees and the leading edge groups A
+-- (inboard and midspan) and B (outboard) as X-Plane's slat ratios, which
+-- the hydraulics module puts on the surfaces; each LE group on each wing
+-- (inboard L, R, midspan L, R, outboard L, R); the drives' modes (0
+-- primary, 1 secondary, 2 stopped) of the TE groups IB, OB and the LE
+-- groups; the TE moving and out (to the demand pumps)
+B747DR_fcu_te_deg               = deferred_dataref("laminar/B747/flt_ctrls/fcu/te_deg", "array[4]")
+B747DR_fcu_slat                 = deferred_dataref("laminar/B747/flt_ctrls/fcu/slat", "array[2]")
+B747DR_fcu_le                   = deferred_dataref("laminar/B747/flt_ctrls/fcu/le", "array[6]")
+B747DR_fcu_te_mode              = deferred_dataref("laminar/B747/flt_ctrls/fcu/te_mode", "array[2]")
+B747DR_fcu_le_mode              = deferred_dataref("laminar/B747/flt_ctrls/fcu/le_mode", "array[3]")
+B747DR_fcu_te_moving            = deferred_dataref("laminar/B747/flt_ctrls/fcu/te_moving", "number")
+B747DR_fcu_te_down              = deferred_dataref("laminar/B747/flt_ctrls/fcu/te_down", "number")
+-- failures X-Plane does not have (1 failed): the FCUs L, C, R; the TE
+-- groups' (IB, OB) hydraulic and electric drives and a broken drive shaft
+-- (the left side stuck: asymmetry); the LE groups' (inboard, midspan,
+-- outboard) pneumatic and electric drives
+B747DR_fcu_fail_fcu             = deferred_dataref("laminar/B747/flt_ctrls/fail/fcu", "array[3]")
+B747DR_fcu_fail_te_primary      = deferred_dataref("laminar/B747/flt_ctrls/fail/te_primary", "array[2]")
+B747DR_fcu_fail_te_secondary    = deferred_dataref("laminar/B747/flt_ctrls/fail/te_secondary", "array[2]")
+B747DR_fcu_fail_te_stuck        = deferred_dataref("laminar/B747/flt_ctrls/fail/te_stuck", "array[2]")
+B747DR_fcu_fail_le_primary      = deferred_dataref("laminar/B747/flt_ctrls/fail/le_primary", "array[3]")
+B747DR_fcu_fail_le_secondary    = deferred_dataref("laminar/B747/flt_ctrls/fail/le_secondary", "array[3]")
+
 -- ALTERNATE FLAPS
 B747CMD_alt_flaps_sel_dial_up           = deferred_command("laminar/B747/flt_ctrls/flaps/alt_flaps/sel_dial_up", "Alternate Flaps Selector Dial Up", B747_alt_flaps_sel_dial_up_CMDhandler)
 B747CMD_alt_flaps_sel_dial_dn           = deferred_command("laminar/B747/flt_ctrls/flaps/alt_flaps/sel_dial_dn", "Alternate Flaps Selector Dial Down", B747_alt_flaps_sel_dial_dn_CMDhandler)

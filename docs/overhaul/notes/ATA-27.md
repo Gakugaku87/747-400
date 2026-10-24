@@ -387,3 +387,10 @@ STAB TRIM UNSCHD = (autotrim/speed trim/default mode で有効な指令なしに
 - 資料に無いもの（`推定` で決めて試験する）：TE の primary/secondary の所要時間、lockout アクチュエータの移動時間、RRC の延長量と舵角の関係、greenband の選択表、前脚オレオ圧スイッチの設定圧、TRA 40° と X-Plane のスロットル比の対応、LE の midspan 箱と PDU 2・3 の対応、CLCP の油圧系統の組。
 - 資料の食い違い：エレベーターの可動範囲（E&M 25/15、コード・acf 22/17）、>SPEEDBRAKES EXT の脚条件（ATA27 p.205 だけにある）。
 - 3D：操作子（`ATTR_manip`）を持つ obj は `747-400_cockpit.obj` だけで、STAB TRIM cutout・ALTN STAB TRIM・FLT CONTROL HYD POWER は無い（全 obj を検索）。スイッチの外形が 3D にあるか（操作子だけ足せるか）は未確認。
+
+## 10. 実装（4-1 段 1、2026-10-24）
+
+- フラップの FCU：モデル `plugins/xtlua/scripts/B747.45.xt.fltCtrls/B747.45.fcu_model.lua`、グルー `B747.45.xt.fcu.lua`（ARCHITECTURE.md §4.15）。§4.3・§4.4 のうち、逸走（uncommanded motion）と moving away の保護、レバーの RVDT の故障、standby bus だけのときの amber X（パネル）、逆推力で group A を格納中に PDU が故障したときの 15 秒（ATA27 p.382）は作っていない。前縁の空気圧の不一致は FCOM の 20–45 秒から 30 秒にした。
+- 推定：後縁の主系統の速さ（前のコードと同じ 30° を 45 秒）、副系統と代替の速さ（その 1/10。前縁の 9 秒と 90 秒の比から）、前縁を動かすダクト圧（10 psi）、前縁の制御と電動の電源（AC 1・3・4 のどれか）、電動の前縁が動かないと止まるまでの時間（25 秒、後縁と同じ）、油圧が落ちたときの副系統への切り替えは群に指令があるときだけ（資料は動かす場面を書いている）。
+- 前の流れ（2026-10-24 の調べ）：レバー → fltCtrls の荷重軽減 → `cablecontrols/flap_ratio` → controlObject で `cablecontrols/flap1–4`（度）→ 油圧のモジュールが 900 psi を超えるときだけ指令を受け付けて 0.667°/s で動かす。前縁は `normal_slats` がレバーに 8.5 秒で従い、電源も空気圧も見ない。表示 `flap_deployed_ratio1–4` も controlObject だった。§6.1 の行番号は古い（`hydraulics_override.lua:1119` は今 :318、controlObject は `hydraulicsmodel.lua` の 404–549、フラップの行は段 1 で外した）。controlObject は、同じ宛先の最初の行は切り詰めず、`min`・`max` は足し合わせるときだけ効き、配列の要素には書けない（XTLua の `xpmtdatarefs.cpp`）。
+- §5 の現状：防氷はもうフラップを読まない。飛行計器は `flap1_deg[0]` と slat1（Vmax）を読み、EEC はレバーを読む。

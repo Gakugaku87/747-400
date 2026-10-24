@@ -78,11 +78,12 @@ function pressure_input()
     controlRatios[21]=B747DR_spoiler11--simDR_spoiler1112
     controlRatios[22]=B747DR_spoiler12--simDR_spoiler1112
 
-    --flaps left outer to right outer
-    controlRatios[23]=B747DR_flap1--simDR_flap1
-    controlRatios[24]=B747DR_flap2--simDR_flap2
-    controlRatios[25]=B747DR_flap3--simDR_flap3
-    controlRatios[26]=B747DR_flap4--simDR_flap4
+    --flaps left outer to right outer: where the flap control units have
+    --them (B747.45.xt.fcu.lua; they check the systems' pressure themselves)
+    controlRatios[23]=B747DR_fcu_te_deg[0]
+    controlRatios[24]=B747DR_fcu_te_deg[1]
+    controlRatios[25]=B747DR_fcu_te_deg[2]
+    controlRatios[26]=B747DR_fcu_te_deg[3]
     
 end
 
@@ -135,20 +136,17 @@ function pressure_output()
     B747DR_outer_spoilers[0]=B747_animate_value(B747DR_outer_spoilers[0],B747DR_spoilers[4],-100,100,10)
     B747DR_outer_spoilers[1]=B747_animate_value(B747DR_outer_spoilers[1],B747DR_spoilers[12],-100,100,10)
 
-    --flaps
-    --[[B747DR_flaps[1]=B747_animate_value(B747DR_flaps[1],controlRatios[23],-100,100,0.08)
-    B747DR_flaps[2]=B747_animate_value(B747DR_flaps[2],controlRatios[24],-100,100,0.08)
-    B747DR_flaps[3]=B747_animate_value(B747DR_flaps[3],controlRatios[25],-100,100,0.08)
-    B747DR_flaps[4]=B747_animate_value(B747DR_flaps[4],controlRatios[26],-100,100,0.08)]]
-
-    B747DR_flaps[1]=B747_interpolate_value(B747DR_flaps[1],controlRatios[23],0,30,45)
-    B747DR_flaps[2]=B747_interpolate_value(B747DR_flaps[2],controlRatios[24],0,30,45)
-    B747DR_flaps[3]=B747_interpolate_value(B747DR_flaps[3],controlRatios[25],0,30,45)
-    B747DR_flaps[4]=B747_interpolate_value(B747DR_flaps[4],controlRatios[26],0,30,45)
+    --flaps: where the flap control units drive them; the outboard flaps
+    --are on the acf's wings 2 and 3 (flap set 2), the inboard on wing 1
+    for i=1,4,1 do
+        B747DR_flaps[i]=controlRatios[22+i]
+    end
     simDR_flap1=B747DR_flaps[1]
     simDR_flap2=B747DR_flaps[2]
     simDR_flap3=B747DR_flaps[3]
     simDR_flap4=B747DR_flaps[4]
+    simDR_flap1_wing2=B747DR_flaps[1]
+    simDR_flap4_wing2=B747DR_flaps[4]
 end
 
 
@@ -172,19 +170,14 @@ function hydraulics_consumer(src,consumption)
     end
 end
 
+-- the flaps take their share while they move (systems 4 outboard, 1
+-- inboard); whether they can move is the flap control units' business
+-- (1400, 1600, 2000 psi: B747.45.fcu_model.lua)
 function flap_consumption(controlDiff)
-    if hydraulics_consumer({0,0,0,1},controlDiff[23]*10)==0 then
-        controlRatios[23]=lastControlValue[23]
-    end
-    if hydraulics_consumer({1,0,0,0},controlDiff[24]*10)==0 then
-        controlRatios[24]=lastControlValue[24]
-    end
-    if hydraulics_consumer({1,0,0,0},controlDiff[25]*10)==0 then
-        controlRatios[25]=lastControlValue[25]
-    end
-    if hydraulics_consumer({0,0,0,1},controlDiff[26]*10)==0 then
-        controlRatios[26]=lastControlValue[26]
-    end
+    hydraulics_consumer({0,0,0,1},controlDiff[23]*10)
+    hydraulics_consumer({1,0,0,0},controlDiff[24]*10)
+    hydraulics_consumer({1,0,0,0},controlDiff[25]*10)
+    hydraulics_consumer({0,0,0,1},controlDiff[26]*10)
 end
 function spoiler_consumption(controlDiff)
     --system 2, spoilers 2,3,10,11

@@ -798,11 +798,9 @@ function FlapinSlot()
     return false
 end
 local last_flap_handle=-1
-local flap_relief=0
--- flap load relief: the lever position the flaps are relieved to (nil: none)
-local FLAPS_20, FLAPS_25 = 0.667, 0.833
-local flap_relief_to=nil
------ FLAP INDICATOR STATUS -------------------------------------------------------------
+----- FLAP LEVER ------------------------------------------------------------------------
+-- the flaps themselves, their load relief and indication: the flap control
+-- units (B747.45.xt.fcu.lua)
 function B747_flap_transition_status()
     if last_flap_handle~=simDR_flap_ratio_control then
       -- the lever moved: snap it to the nearest detent 2 s after it stops
@@ -819,34 +817,6 @@ function B747_flap_transition_status()
       --print("flap in slot")
        B747DR_flap_lever_detent = 0.0
     end
-    B747DR_flap_deployed_ratio=math.max(B747DR_flap_deployed_ratio1,B747DR_flap_deployed_ratio2,B747DR_flap_deployed_ratio3,B747DR_flap_deployed_ratio4)
-    if math.abs(simDR_flap_ratio_control - B747DR_flap_deployed_ratio) > 0.02 then --simDR_flap_ratio_control
-        B747DR_flap_trans_status = 1
-	
-    else
-	
-        B747DR_flap_trans_status = 0
-    end
-    -- flap load relief (FCOM p.954; ATA27 p.288-289): lever 30: 30 to 25 at
-    -- 178 kt, 25 to 20 at 203 kt, back 20 to 25 at 195 kt, 25 to 30 at 170 kt;
-    -- lever 25: 25 to 20 at 203 kt, back at 195 kt. The lever does not move
-    local ias = simDR_ind_airspeed_kts_pilot
-    local lever = simDR_flap_ratio_control
-    if lever <= FLAPS_20 + 0.001 then
-        flap_relief_to = nil
-    elseif lever <= FLAPS_25 + 0.001 then                   -- lever 25
-        if flap_relief_to ~= FLAPS_20 and ias > 203 then flap_relief_to = FLAPS_20
-        elseif flap_relief_to == FLAPS_20 and ias < 195 then flap_relief_to = nil
-        elseif flap_relief_to == FLAPS_25 then flap_relief_to = nil end
-    else                                                    -- lever 30
-        if flap_relief_to == nil and ias > 178 then flap_relief_to = FLAPS_25 end
-        if flap_relief_to == FLAPS_25 and ias > 203 then flap_relief_to = FLAPS_20 end
-        if flap_relief_to == FLAPS_20 and ias < 195 then flap_relief_to = FLAPS_25 end
-        if flap_relief_to == FLAPS_25 and ias < 170 then flap_relief_to = nil end
-    end
-    if flap_relief_to then flap_relief = 1 else flap_relief = 0 end
-    B747DR_flap_ratio = flap_relief_to or lever
-    
 end
 local poppedSpeedbrake=false
 function clearOnreverse()
@@ -878,37 +848,7 @@ end
 
 
 ----- PRIMARY EICAS FLAP DISPLAY STATUS -------------------------------------------------
-function B747_flap_display_shutoff()
-    B747DR_EICAS1_flap_display_status = 0
-end
-
-function B747_primary_EICAS_flap_display()
-    local lastStatus=B747DR_EICAS1_flap_display_status
-    local tStatus=1
-    
-    if math.abs(((B747DR_flap_deployed_ratio1+B747DR_flap_deployed_ratio2+B747DR_flap_deployed_ratio3+B747DR_flap_deployed_ratio4)/4)
-         - B747DR_flap_deployed_ratio) > 0.01 then
-            tStatus=2  
-    end
-    if simDR_flap_deploy_ratio == 0.0 then
-        if B747DR_EICAS1_flap_display_status == 1 and B747DR_flap_trans_status == 0 then
-            if is_timer_scheduled(B747_flap_display_shutoff) == false then
-                run_after_time(B747_flap_display_shutoff, 10.0)
-            end
-        elseif B747DR_flap_trans_status == 1 then  
-            B747DR_EICAS1_flap_display_status = tStatus
-        end
-
-    else
-        B747DR_EICAS1_flap_display_status = tStatus
-        --print("tStatus "..tStatus)
-        if is_timer_scheduled(B747_flap_display_shutoff) == true then
-            stop_timer(B747_flap_display_shutoff)
-        end
-        
-    end
-
-end
+-- the flap control units' (B747.45.xt.fcu.lua)
 
 
 
@@ -1147,15 +1087,8 @@ function B747_fltCtrols_EICAS_msg()
        B747DR_CAS_warning_status[7] = 0
     end
 
-    -- FLAPS CONTROL
-    
-    if simDR_flap_control_fail == 6
-        or B747DR_button_switch_position[0] > 0.95
-    then
-        B747DR_CAS_caution_status[28] = 1
-    else
-       B747DR_CAS_caution_status[28] = 0
-    end
+    -- FLAPS CONTROL, FLAPS DRIVE, FLAPS PRIMARY, >FLAP RELIEF: the flap
+    -- control units (B747.45.xt.fcu.lua)
 
     -- >SPEEDBRAKES EXT
     
@@ -1181,18 +1114,11 @@ function B747_fltCtrols_EICAS_msg()
     end
 
     -- >YAW DAMPER UPR
-    
-    if B747DR_yaw_damper_upr_on==0 then 
-      B747DR_CAS_advisory_status[301] = 1 
+
+    if B747DR_yaw_damper_upr_on==0 then
+      B747DR_CAS_advisory_status[301] = 1
     else
       B747DR_CAS_advisory_status[301] = 0
-    end
-
-    -- >FLAP RELIEF
-    if flap_relief == 1 then
-      B747DR_CAS_advisory_status[142] = 1 
-    else
-      B747DR_CAS_advisory_status[142] = 0
     end
 end
 
@@ -1303,6 +1229,9 @@ end
 
 
 
+-- the flap control units (4-1)
+dofile("B747.45.xt.fcu.lua")
+
 --*************************************************************************************--
 --** 				                  EVENT CALLBACKS           	    			 **--
 --*************************************************************************************--
@@ -1314,6 +1243,7 @@ end
 local flightInit=false
 function flight_start()
     flightInit=false
+    B747_fcu_flight_start()
 end
 function do_flight_start()
 
@@ -1342,7 +1272,7 @@ function after_physics()
     B747_yaw_damper()
 
     B747_flap_transition_status()
-    B747_primary_EICAS_flap_display()
+    B747_fcu()
 
     B747_fltCtrols_EICAS_msg()
 
