@@ -1,0 +1,40 @@
+{
+  "name": "s36_gear_lock",
+  "description": "脚レバーのロック（4-2 段 1、FCOM p.1512）の X-Plane での確認。RJAA 34L でエンジン運転中に、トラックが水平なのでロックがかかり（gear/lever_lock 1）、UP のコマンドでもレバーは OFF で止まる（init スクリプトのレバーのハンドラーがロックの dataref に従う。試験のモックはこのハンドラーを動かさない）。DN に戻し、LOCK OVRD を押したまま UP にするとレバーは UP まで行くが、重さのかかった脚は上がらない。",
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 8, "note": "開始の 3 秒を過ぎるのを待つ" },
+    { "do": "check", "note": "地上：レバーは DN", "dref": "laminar/B747/actuator/gear_handle", "op": "==", "value": 0 },
+    { "do": "check", "note": "トラックが水平：ロック", "dref": "laminar/B747/gear/lever_lock", "op": "==", "value": 1 },
+    { "do": "check", "note": "DOWN", "dref": "laminar/B747/gear/gear_position/annun_status", "op": "==", "value": 1 },
+    { "do": "cmd", "note": "レバー UP（ロックで OFF に止まる）", "name": "sim/flight_controls/landing_gear_up" },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "check", "note": "レバーは OFF で止まる", "dref": "laminar/B747/actuator/gear_handle", "op": "==", "value": 1 },
+    { "do": "check", "note": "脚は下りたまま", "dref": "sim/flightmodel2/gear/deploy_ratio[3]", "op": "==", "value": 1 },
+    { "do": "cmd", "note": "レバー DN", "name": "sim/flight_controls/landing_gear_down" },
+    { "do": "wait", "note": "レバーが DN", "dref": "laminar/B747/actuator/gear_handle", "op": "==", "value": 0, "timeout": 5 },
+    { "do": "cmd", "note": "LOCK OVRD を押したまま（8 秒、押している間に次の手順へ）", "name": "laminar/B747/gear_lock/override", "duration": 8, "async": true },
+    { "do": "sleep", "seconds": 0.5 },
+    { "do": "check", "note": "LOCK OVRD：ロックが外れる", "dref": "laminar/B747/gear/lever_lock", "op": "==", "value": 0 },
+    { "do": "cmd", "note": "レバー UP", "name": "sim/flight_controls/landing_gear_up" },
+    { "do": "wait", "note": "レバーが UP まで行く", "dref": "laminar/B747/actuator/gear_handle", "op": "==", "value": 2, "timeout": 5 },
+    { "do": "sleep", "seconds": 15 },
+    { "do": "check", "note": "重さのかかった脚は上がらない（推定）", "dref": "sim/flightmodel2/gear/deploy_ratio[3]", "op": "==", "value": 1 },
+    { "do": "check", "note": "機体は地上のまま", "dref": "laminar/B747/gear/air_ground/pri_gnd", "op": "==", "value": 1 },
+    { "do": "cmd", "note": "レバー DN に戻す", "name": "sim/flight_controls/landing_gear_down" },
+    { "do": "wait", "note": "レバーが DN", "dref": "laminar/B747/actuator/gear_handle", "op": "==", "value": 0, "timeout": 5 }
+  ]
+}

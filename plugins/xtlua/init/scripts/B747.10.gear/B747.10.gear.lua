@@ -103,35 +103,49 @@ B747DR_pseu_ng_compressed      = deferred_dataref("laminar/B747/gear/air_ground/
 B747DR_pseu_all_gear_down      = deferred_dataref("laminar/B747/gear/air_ground/all_gear_down", "number")
 B747DR_pseu_nose_not_down      = deferred_dataref("laminar/B747/gear/air_ground/nose_not_down", "number")
 B747DR_pseu_lever_unlock       = deferred_dataref("laminar/B747/gear/air_ground/lever_unlock", "number")
+
+-- The gear's actuation (4-2 step 1, B747.10.gear_model.lua; ARCHITECTURE.md):
+-- each gear's position (0 up and locked .. 1 down and locked) and its door
+-- (0 closed .. 1 open), each gear's box of the expanded EICAS indication
+-- (0 UP, 1 DN, 2 in transit, 3 amber X), all in the order nose, left body,
+-- right body, left wing, right wing; the lever lock (1 locked: the lever
+-- stops at OFF); failures (no X-Plane equivalents): the gear does not move,
+-- its door does not move, its position indication lost, its truck not tilted.
+B747DR_gear_lever_lock         = deferred_dataref("laminar/B747/gear/lever_lock", "number")
+B747DR_gear_position           = deferred_dataref("laminar/B747/gear/position", "array[5]")
+B747DR_gear_door               = deferred_dataref("laminar/B747/gear/door", "array[5]")
+B747DR_gear_annun_gear         = deferred_dataref("laminar/B747/gear/gear_position/annun_gear", "array[5]")
+B747DR_gear_fail_actuator      = deferred_dataref("laminar/B747/gear/fail/actuator", "array[5]")
+B747DR_gear_fail_door          = deferred_dataref("laminar/B747/gear/fail/door", "array[5]")
+B747DR_gear_fail_indication    = deferred_dataref("laminar/B747/gear/fail/indication", "array[5]")
+B747DR_gear_fail_truck_tilt    = deferred_dataref("laminar/B747/gear/fail/truck_tilt", "array[5]")
 B747DR_parking_brake_ratio = find_dataref("laminar/B747/flt_ctrls/parking_brake_ratio")
 simDR_parking_brake_ratio       = find_dataref("sim/cockpit2/controls/parking_brake_ratio")
 ----- GEAR HANDLE DATAREF HANDLER -------------------------------------------------------
 
-local B747_gear_handle_lock_override = 0
-local B747_gear_handle_lock = 0
-simDR_gear_handle_down      = find_dataref("sim/cockpit2/controls/gear_handle_down")
+-- the detents; the lever lock (laminar/B747/gear/lever_lock, from the gear
+-- module: the PSEU, LOCK OVRD, DC bus 2) stops the lever at OFF on its way to
+-- UP (FCOM p.1512). X-Plane's handle follows the gear model
+-- (B747.10.xt.gear_act.lua).
 function B747DR_gear_handle_DRhandler()
-    
+
     -- GEAR HANDLE LOCK IS DISENGAGED
-    if B747_gear_handle_lock == 0 then
+    if B747DR_gear_lever_lock == 0 then
 
         if B747DR_gear_handle <= 0.1 then
             B747DR_gear_handle = 0.0   -- DETENT (GEAR HANDLE "DOWN")
-            simDR_gear_handle_down = 1
         elseif B747DR_gear_handle >= 0.9 and B747DR_gear_handle <= 1.1 then
             B747DR_gear_handle = 1.0   -- DETENT (GEAR HANDLE "OFF")
         elseif B747DR_gear_handle >= 1.9 then
             B747DR_gear_handle = 2.0   -- DETENT (GEAR HANDLE "UP")
-            simDR_gear_handle_down = 0
         end
-        
-        
+
+
     -- GEAR HANDLE LOCK IS ENGAGED
     else
 
         if B747DR_gear_handle <= 0.1 then
             B747DR_gear_handle = 0.0   -- DETENT (GEAR HANDLE "DOWN")
-            simDR_gear_handle_down = 1
         elseif B747DR_gear_handle >= 0.9 then
             B747DR_gear_handle = 1.0
         end
