@@ -297,13 +297,7 @@ function B747_hyd_EICAS_msg()
     -- >BRAKE SOURCE, HYD PRESS SYS, >HYD QTY LOW and the STATUS RF/LO come from
     -- the hydraulic model (B747.19.xt.hyd_power.lua)
 
-    -- PARK BRAKE SET
-    
-    if simDR_parking_brake_ratio > 0.9 and B747DR_parking_brake_ratio> 0.9 then 
-      B747DR_CAS_memo_status[26] = 1 
-    else
-      B747DR_CAS_memo_status[26] = 0
-    end
+    -- PARK BRAKE SET: the gear module's brakes (B747.10.xt.brakes.lua, 4-2 step 2)
 
 end
 

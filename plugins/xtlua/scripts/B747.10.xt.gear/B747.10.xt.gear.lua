@@ -101,6 +101,8 @@ simDR_right_brake_fail     = find_dataref("sim/operation/failures/rel_rbrakes")-
 dofile("B747.10.xt.pseu.lua")
 -- the gear's actuation, alternate extension, monitoring and EICAS indication
 dofile("B747.10.xt.gear_act.lua")
+-- the wheel brakes: the brake source, the parking brake, the antiskid
+dofile("B747.10.xt.brakes.lua")
 B747DR_gear_lever_lock          = find_dataref("laminar/B747/gear/lever_lock")
 
 --Marauder28
@@ -631,15 +633,6 @@ end
 
 local excessiveBrakeTemp=0
 
-local lastWingsweep=0
-function B747_brakes_from_wingsweep()
-
-    if simDR_brake_sweep==lastWingsweep then return end
-    simDR_brake_override=1
-    lastWingsweep=simDR_brake_sweep
-    simDR_left_brake_ratio  = simDR_brake_sweep
-    simDR_right_brake_ratio = simDR_brake_sweep
-end
 
 function B747_brake_temp()
 
@@ -657,9 +650,6 @@ function B747_brake_temp()
     if simDR_inReplay==1 and simDR_aircraft_on_ground==0 then
         for i = 0, 17 do
             B747DR_brake_temp[i]=simDR_OAT_degC
-        end
-        if simDR_parking_brake_ratio>0 then
-            simDR_parking_brake_ratio=0
         end
         return
     end
@@ -908,6 +898,7 @@ function B747_flight_start_gear()
     -- has put the gear once its first 3 s are over (it raised an air start's gear before)
     runningGear = 0
     B747_gear_act_flight_start()
+    B747_brakes_flight_start()
 
 end
 
@@ -948,11 +939,11 @@ function after_physics()
     B747_pseu()
     B747_set_gear_handle_lock()
     B747_gear_act()
+    B747_brakes()
 
     B747_gear_EICAS_msg()
 
     B747_brake_temp()
-    B747_brakes_from_wingsweep()
     B747_tire_pressures()
     runGear()
     B747_gear_monitor_AI()

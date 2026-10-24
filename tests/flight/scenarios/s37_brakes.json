@@ -1,0 +1,70 @@
+{
+  "name": "s37_brakes",
+  "description": "ブレーキ（4-2 段 2）の X-Plane での確認。RJAA 34L でエンジン運転中（開始でパーキングブレーキのレバーが入る）に、toe brake の上書き、弁が閉じて PARK BRAKE SET と X-Plane のパーキングブレーキ、レバー OFF で弁が開く。X-Plane のブレーキのコマンド（max を押したまま）が左右のブレーキになり、X-Plane の実際の制動（tire_part_brake）に出る。ENGINE pump 4 と DEMAND 4 を OFF にするとブレーキの源が系統 1 になり、ブレーキは効く。正規のアンチスキッドの故障で ANTISKID と X-Plane のアンチスキッドの停止。パーキングブレーキの弁を止めてレバーを OFF にすると 2 秒で BRAKE LIMITER と ANTISKID OFF。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 8, "note": "開始の 3 秒を過ぎるのを待つ" },
+    { "do": "check", "note": "toe brake はプラグインが持つ", "dref": "sim/operation/override/override_toe_brakes", "op": "==", "value": 1 },
+    { "do": "check", "note": "ブレーキの源は系統 4（正規）", "dref": "laminar/B747/hydraulics/brake_source", "op": "==", "value": 4 },
+    { "do": "check", "note": "開始でレバーが入っている", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "op": ">", "value": 0.9 },
+    { "do": "check", "note": "弁は閉（ATA29_32 p.420）", "dref": "laminar/B747/gear/brakes/park_valve", "op": "==", "value": 1 },
+    { "do": "check", "note": "PARK BRAKE SET", "dref": "laminar/B747/CAS/memo_status[26]", "op": "==", "value": 1 },
+    { "do": "check", "note": "X-Plane のパーキングブレーキ：閉じ込めた圧で保持", "dref": "sim/cockpit2/controls/parking_brake_ratio", "op": ">", "value": 0.9 },
+
+    { "do": "mark", "note": "pedals" },
+    { "do": "cmd", "note": "ブレーキ max を押したまま（4 秒、押している間に次へ）", "name": "sim/flight_controls/brakes_max", "duration": 4, "async": true },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "左のブレーキ 1", "dref": "sim/cockpit2/controls/left_brake_ratio", "op": ">", "value": 0.95 },
+    { "do": "check", "note": "X-Plane の実際の制動（左胴体脚）", "dref": "sim/flightmodel2/gear/tire_part_brake[2]", "op": ">", "value": 0.95 },
+    { "do": "check", "note": "両ペダルでレバーが外れる（FCOM p.1516）", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "op": "<", "value": 0.1 },
+    { "do": "sleep", "seconds": 4 },
+    { "do": "check", "note": "離すと 0", "dref": "sim/cockpit2/controls/left_brake_ratio", "op": "==", "value": 0 },
+    { "do": "check", "note": "弁が開いた", "dref": "laminar/B747/gear/brakes/park_valve", "op": "==", "value": 0 },
+    { "do": "check", "note": "PARK BRAKE SET が消える", "dref": "laminar/B747/CAS/memo_status[26]", "op": "==", "value": 0 },
+    { "do": "cmd", "note": "X-Plane のパーキングブレーキのコマンド（レバーに）", "name": "sim/flight_controls/park_brake_set" },
+    { "do": "wait", "note": "弁が閉じる", "dref": "laminar/B747/gear/brakes/park_valve", "op": "==", "value": 1, "timeout": 5 },
+
+    { "do": "mark", "note": "system 4 off" },
+    { "do": "switch", "note": "ENGINE pump 4 OFF", "dref": "laminar/B747/button_switch/position[33]", "value": 0, "cmd": "laminar/B747/button_switch/hyd_pump_4" },
+    { "do": "switch", "note": "DEMAND 4 OFF", "dref": "laminar/B747/hydraulics/dmd_pump/sel_dial_pos[3]", "value": 0, "cmd": "laminar/B747/hydraulics/sel_dial/dmd_pump_04_dn" },
+    { "do": "wait", "note": "ブレーキの源が系統 1（代替：ATA29_32 p.390）", "dref": "laminar/B747/hydraulics/brake_source", "op": "==", "value": 1, "timeout": 30 },
+    { "do": "cmd", "note": "右のブレーキを押したまま（3 秒、押している間に次へ）", "name": "sim/flight_controls/right_brake", "duration": 3, "async": true },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "代替のブレーキで効く", "dref": "sim/cockpit2/controls/right_brake_ratio", "op": ">", "value": 0.9 },
+    { "do": "sleep", "seconds": 3 },
+
+    { "do": "mark", "note": "antiskid" },
+    { "do": "set", "note": "代替のアンチスキッドの故障（系統 1 のブレーキで使う）", "dref": "laminar/B747/gear/fail/antiskid[1]", "value": 1 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "ANTISKID", "dref": "laminar/B747/CAS/advisory_status[10]", "op": "==", "value": 1 },
+    { "do": "check", "note": "X-Plane のアンチスキッドを切る", "dref": "sim/aircraft/gear/acf_has_abs", "op": "==", "value": 0 },
+    { "do": "set", "note": "故障を戻す", "dref": "laminar/B747/gear/fail/antiskid[1]", "value": 0 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "ANTISKID が消える", "dref": "laminar/B747/CAS/advisory_status[10]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "park valve" },
+    { "do": "set", "note": "パーキングブレーキの弁を止める（閉のまま）", "dref": "laminar/B747/gear/fail/park_valve", "value": 1 },
+    { "do": "cmd", "note": "レバー OFF", "name": "laminar/B747/flt_ctrls/parking_brake_off" },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "check", "note": "2 秒で BRAKE LIMITER（p.420）", "dref": "laminar/B747/CAS/advisory_status[45]", "op": "==", "value": 1 },
+    { "do": "check", "note": "ANTISKID OFF", "dref": "laminar/B747/CAS/advisory_status[11]", "op": "==", "value": 1 },
+    { "do": "set", "note": "故障を戻す", "dref": "laminar/B747/gear/fail/park_valve", "value": 0 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "弁が開いて BRAKE LIMITER が消える", "dref": "laminar/B747/CAS/advisory_status[45]", "op": "==", "value": 0 },
+    { "do": "cas", "note": "終わり" }
+  ]
+}
