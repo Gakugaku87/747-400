@@ -62,7 +62,7 @@
 | xtlua | B747.36.oxygen | 56 / 327 | 酸素（乗員・乗客・治療用、酸素圧、X-Plane の低酸素）。3-3 で新設（§4.13） | oxygen_system |
 | xtlua | B747.40.engines | 106 / 2247 | エンジン始動・点火・燃料制御・逆推力・APU | |
 | xtlua | B747.42.EEC | 67 / 4376 | EEC と推力制御。型式別の `EEC.PW` / `EEC.GE` / `EEC.RR`、表（`EEC.tbls`）、`pid.lua` | throttles |
-| xtlua | B747.45.fltCtrls | 187 / 1370 | 操縦系統（フラップ、スポイラー・スピードブレーキ、トリム、代替フラップ） | |
+| xtlua | B747.45.fltCtrls | 187 / 1370 | 操縦系統（フラップ、スポイラー・スピードブレーキ、トリム、代替フラップ）。4-1 段 1 でフラップの FCU のモデル（§4.15） | |
 | xtlua | B747.50.antiice | 86 / 663 | 防氷・防雨（主翼・ナセル防氷、ウインドウ・プローブ加熱、ワイパー） | |
 | xtlua | B747.85.safety | 79 / 378 | サイン類（No Smoking、Seat Belts）、チェックリストの印 | |
 | xtlua | B747.87.warning | 649 / 1163 | EICAS メッセージ（`laminar/B747/CAS/gen_{warning,caution,advisory,memo}_msg_NNN`）、master warning/caution、警報音 | |
@@ -332,6 +332,14 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 操作：3D の消火スイッチは前と同じコマンド（`ext_switch_arm` で引く・押し戻す、`ext_switch_A`・`_B` で回す）。新しいコマンド（3D に操作子が無い）：`fire/engine0N/ext_switch_override`（Fire Override を押して引く）、`fire/apu/ext_switch_arm`・`ext_switch_rotate_L`・`ext_switch_rotate_R`・`ext_switch_override`。コマンドは 1 フレームの入力としてモデルへ渡す。
 - 段 2 で読むもの：失敗の dataref `fire/fail/cargo_smoke[4]`・`fail/wheel_well`・`fail/duct_leak[3]`・`fail/lav_smoke`・`fail/rest_smoke`（init `B747.35.fire`）、CARGO FIRE ARM FWD・AFT・DISCH（`button_switch/position[84–86]`。空調も ARM を読む：§4.11）、中央ダクトの圧（`air/duct_pressure_C`。貨物の検知器の venturi）、エンジンの運転、AC bus 2・DC bus 2・main battery bus、スクイブ試験のボタン（新しいコマンド `fire/squib_test_1`・`_2` と `fire/squib_test/button_pos[2]`）。書くもの：`fire/light/cargo[3]`（FWD、AFT、DISCH。照明が annunciator 35–37 に）、`fire/light/squib[9]`（照明が annunciator 95–103 に）、`fire/cargo/ext_bottle/psi[4]`、剤が出た区画の `fail/cargo_smoke` を 0。EICAS：FIRE CARGO AFT・FWD（warning 9・10）、FIRE WHEEL WELL（21）、BLD DUCT LEAK C・L・R（caution 6–8）、SMOKE DR 5 REST（52）、>CARGO DET AIR（advisory 49）、>CGO BTL DISCH（51）、>SMOKE LAVATORY（264）、STATUS 64–80。
 - 引いた消火スイッチの他系統への作用は、各系統のモジュールが `pos_arm` > 0.5 で読む（エンジン始動のモデル、燃料、抽気、油圧、電源のグルー `B747.03.xt.elec_buses.lua`。電源のモデルの GCR はラッチ式で、GEN CONT の OFF→ON で戻る）。
+
+### 4.15 操縦系統（4-1）
+
+段 1：フラップの FCU のモデル（`plugins/xtlua/scripts/B747.45.xt.fltCtrls/B747.45.fcu_model.lua`）を、グルー `B747.45.xt.fcu.lua`（`B747.45.xt.fltCtrls.lua` が読み、`after_physics` で `B747_fcu()`）が毎フレーム回す。中身は notes/ATA-27.md §4.3・§4.4・§10。後縁の位置は度（フラップ 25 は 22°。前と同じで、3D の `flt_ctrls/flaps` もこの角度）。
+
+- 読むもの：フラップレバー（`sim/cockpit2/controls/flap_ratio`。スナップは前のまま fltCtrls）、油圧系統 1・4（`hydraulics/pressure_1`・`_4`）、ダクト圧 L・R、AC・DC の bus、機長の対気速度、ALTN FLAPS ARM（`button_switch/position[0]`）と選択器（`flt_ctrls/alt_flaps/sel_dial_pos`：−1 RET、0 OFF、+1 EXT）、PSEU の primary の空地、X-Plane の `prop_mode`（3 で逆推力）、脚の動作（`deploy_ratio`）、故障（新設、init `B747.45.fltCtrls`）`flt_ctrls/fail/fcu[3]`・`fail/te_primary[2]`・`te_secondary[2]`・`te_stuck[2]`・`le_primary[3]`・`le_secondary[3]` と X-Plane の `rel_flap_act`（後縁の油圧駆動）。開始から 3 秒はフラップをレバーの位置に置き直す（滑走路からの開始はレバー 10）。
+- 書くもの（新設、init `B747.45.fltCtrls`）：`flt_ctrls/fcu/te_deg[4]`（L OB、L IB、R IB、R OB）・`fcu/slat[2]`（group A、B）・`fcu/le[6]`（各群の左右）・`fcu/te_mode[2]`・`fcu/le_mode[3]`（0 主、1 副、2 停止）・`fcu/te_moving`・`fcu/te_down`。前からの名前：`cablecontrols/flap_ratio`（FCU の指令。レバーの detent か荷重軽減の detent を 1/6 刻みで。エンジン・燃料・AFDS・FDR が読む）、`gauges/indicators/flap_deployed_ratio`・`1–4`、`flt_ctrls/flap/transition_status`、`flaps/EICAS1_display_status`（0 なし、1 通常、2 拡大）。EICAS：FLAPS CONTROL（caution 28）、FLAPS DRIVE（29）、FLAPS PRIMARY（30）、>FLAP RELIEF（advisory 142）、STATUS の TE FLAPS（81）、LE SINGLE DRIVE（82）、LE MULT DRIVE（83）、FLAP CONTROL L/C/R（84–86）、FLAP LOAD RELIEF（87）。
+- 油圧のモジュール（keysystems）は `fcu/te_deg` を `flt_ctrls/flaps[1–4]` と X-Plane の舵面（`wing1l/r_fla1def`、`wing3l/r_fla2def`、それに外側フラップの wing 2 の部分 `wing2l/r_fla2def`）に、`fcu/slat` を `slat1/2_deploy_ratio` に書くだけ。前の controlObject のフラップと表示の 36 行、900 psi の門と 0.667°/s の動き、`normal_slats` は外した。デマンドポンプは `fcu/te_moving`・`te_down` を読む（§4.4）。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 

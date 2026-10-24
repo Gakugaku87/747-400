@@ -47,7 +47,6 @@ B747DR_hyd_engine_type          = find_dataref("laminar/B747/engines/type")
 -- accumulator fluid one full parking brake application takes
 local GPM_PER_PSI_S = 0.03
 local BRAKE_APPLY_IN3 = 20
-local FLAP_MOVING_DEG, FLAP_DOWN_DEG = 0.2, 0.5   -- flap position against its command (estimate)
 
 -- EICAS message slots (laminar/B747/CAS/*_status, B747.87.xt.warning.lua)
 local CAUTION_BRAKE_SOURCE = 9
@@ -118,11 +117,9 @@ local function read_inputs(inp, dt)
     inp.duct_psi[1] = B747_duct_pressure_L
     inp.duct_psi[2] = B747_duct_pressure_R
     inp.on_ground = B747DR_hyd_pseu_alt_air == 0   -- the alternate air/ground relay (ATA29_32 p.63)
-    -- the trailing edge flaps against their command (the FCU signals)
-    local p1, p2, p3, p4 = B747DR_flaps[1], B747DR_flaps[2], B747DR_flaps[3], B747DR_flaps[4]
-    inp.flaps_moving = math.abs(p1 - B747DR_flap1) > FLAP_MOVING_DEG or math.abs(p2 - B747DR_flap2) > FLAP_MOVING_DEG
-        or math.abs(p3 - B747DR_flap3) > FLAP_MOVING_DEG or math.abs(p4 - B747DR_flap4) > FLAP_MOVING_DEG
-    inp.flaps_down = math.max(p1, p2, p3, p4) > FLAP_DOWN_DEG
+    -- the trailing edge flaps moving and out: the FCU signals (B747.45.xt.fcu.lua)
+    inp.flaps_moving = B747DR_fcu_te_moving > 0.5
+    inp.flaps_down = B747DR_fcu_te_down > 0.5
     inp.oat = B747DR_hyd_temp
     -- fluid the parking brake takes as it is set
     local pb = simDR_parking_brake_ratio

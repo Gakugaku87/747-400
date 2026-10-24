@@ -660,6 +660,13 @@ local B747_CASstatusMsg = {
     {DRindex = 78, name = "BTL LOW CARGO D"},
     {DRindex = 79, name = "BLD DUCT LEAK L"},     -- ATA26_28 p.286
     {DRindex = 80, name = "BLD DUCT LEAK R"},
+    {DRindex = 81, name = "TE FLAPS"},            -- ATA27 p.284, p.337 (4-1)
+    {DRindex = 82, name = "LE SINGLE DRIVE"},     -- ATA27 p.411
+    {DRindex = 83, name = "LE MULT DRIVE"},
+    {DRindex = 84, name = "FLAP CONTROL L"},      -- ATA27 p.337
+    {DRindex = 85, name = "FLAP CONTROL C"},
+    {DRindex = 86, name = "FLAP CONTROL R"},
+    {DRindex = 87, name = "FLAP LOAD RELIEF"},
 }
 
 
