@@ -1,0 +1,47 @@
+{
+  "name": "s40_wheels",
+  "description": "ブレーキ温度・タイヤ圧と GEAR synoptic（4-2 段 5）の X-Plane での確認。RJAA 34L でエンジン運転中に、下の EICAS に GEAR synoptic を出し、地上で脚が下りていてもドアは CLOSED（前は脚の位置で斜線。ドアが開いた斜線は空中の s35 で撮る）。X-Plane のブレーキの吸収エネルギーを左胴体脚に入れて、温度の表示が 5 以上で琥珀・BRAKE TEMP（FCOM p.1521、ATA29_32 p.428）。X-Plane の左胴体脚のタイヤ故障で 4 本の圧が下がり >TIRE PRESSURE（ATA29_32 p.376）。カスタム acf のパネルの確かめ。機体を読み直す。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 8, "note": "開始の 3 秒を過ぎるのを待つ" },
+    { "do": "set", "note": "下の EICAS に GEAR synoptic", "dref": "laminar/B747/dsp/synoptic_display", "value": 8 },
+    { "do": "check", "note": "前脚のドアは閉", "dref": "laminar/B747/gear/door[0]", "op": "==", "value": 0 },
+    { "do": "check", "note": "左翼脚のドアも", "dref": "laminar/B747/gear/door[3]", "op": "==", "value": 0 },
+    { "do": "check", "note": "ブレーキは外気温（表示 0）", "dref": "laminar/B747/gear/brake_temp_ind[4]", "op": "==", "value": 0 },
+    { "do": "check", "note": "タイヤ圧：荷重込みで 208〜220 psi（推定）", "dref": "laminar/B747/gear/tire_pressure[5]", "op": "between", "value": [207, 221] },
+    { "do": "view", "the": -34, "psi": 31.5, "fov": 13 },
+    { "do": "shot", "name": "gear_synoptic_ground" },
+
+    { "do": "mark", "note": "brake temperature" },
+    { "do": "set", "note": "左胴体脚（X-Plane の脚 2）にブレーキ 1 個あたり 60 MJ のエネルギー", "dref": "sim/flightmodel2/gear/brake_absorbed_J[2]", "value": 240000000 },
+    { "do": "wait", "note": "温度の表示が 5 以上（熱電対の遅れで数分）", "dref": "laminar/B747/gear/brake_temp_ind[4]", "op": ">=", "value": 5, "timeout": 400 },
+    { "do": "check", "note": "BRAKE TEMP（FCOM p.1521）", "dref": "laminar/B747/CAS/advisory_status[46]", "op": "==", "value": 1 },
+    { "do": "check", "note": "右胴体脚は冷たい", "dref": "laminar/B747/gear/brake_temp_ind[8]", "op": "==", "value": 0 },
+    { "do": "wait", "note": "パネルの琥珀は 484.1 °C から（5 は 482 °C から：その間は白い 5）", "dref": "laminar/B747/gear/brake_temp[4]", "op": ">", "value": 490, "timeout": 60 },
+    { "do": "view", "the": -34, "psi": 31.5, "fov": 13 },
+    { "do": "shot", "name": "gear_synoptic_brake_temp" },
+
+    { "do": "mark", "note": "tire pressure" },
+    { "do": "set", "note": "X-Plane の左胴体脚のタイヤ故障（rel_tire3）", "dref": "sim/operation/failures/rel_tire3", "value": 6 },
+    { "do": "wait", "note": "圧が下がる", "dref": "laminar/B747/gear/tire_pressure[5]", "op": "<", "value": 10, "timeout": 15 },
+    { "do": "wait", "note": ">TIRE PRESSURE（ATA29_32 p.376）", "dref": "laminar/B747/CAS/advisory_status[290]", "op": "==", "value": 1, "timeout": 5 },
+    { "do": "view", "the": -34, "psi": 31.5, "fov": 13 },
+    { "do": "shot", "name": "gear_synoptic_tire_flat" },
+    { "do": "set", "dref": "sim/operation/failures/rel_tire3", "value": 0 },
+    { "do": "cas", "note": "終わり" }
+  ]
+}

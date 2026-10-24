@@ -184,3 +184,12 @@
 | 同 | 展開形（新しい `GROUP Gear Expanded`、`gear/EICAS1_display_status` 2） | なし | GEAR の字（1916, 739）と、脚ごとの箱（前脚 1916, 782、左胴体 1865, 695、右胴体 1967, 695、左翼 1843, 739、右翼 1989, 739）。箱は `gear_position/annun_gear[0]`〜`[4]`（前脚、左胴体、右胴体、左翼、右翼）で DN（緑）1、斜線（白）2、UP（白）0、琥珀の X 3。配置は FCOM の図を DOWN の箱の幅で縮め、胴体脚の箱がフラップの帯（上端 673）にかからないように上げた | FCOM p.1505–1506、ATA29_32 p.660 |
 
 上の 2 行は `docs/overhaul/tools/panel_gear.lua` で書き換えた（計器を 22 個とグループを 1 つ足した）。新しい絵（`gear_box_dn`・`up`・`transit`・`x`、`gear_annun_box`）は `docs/overhaul/tools/make_gear_images.ps1` で純正の DOWN・UP・斜線の箱から字と縞を切り出して作った。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_gear_expanded`。
+
+脚（4-2 段 5、2026-10-25。GAP_ANALYSIS.md §4 の承認済みの「synoptic のドアの箱、タイヤ圧の LED 3 個」）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-25・脚（GEAR-18、4-2 段 5） | GEAR synoptic のドアの箱（5 脚の CLOSED と斜線） | CLOSED は `SHOW_LESS 0.000000 sim/flightmodel2/gear/deploy_ratio[n]`、斜線は `SHOW_GREATER 0.010000 …deploy_ratio[n]`（X-Plane の脚 0〜4：前脚、右胴体、左胴体、右翼、左翼） | CLOSED は `SHOW_LESS 0.001000 laminar/B747/gear/door[m]`、斜線は `SHOW_GREATER 0.001000 …door[m]`（脚のモデルのドア：0 前脚、1 左胴体、2 右胴体、3 左翼、4 右翼。同じ箱が同じ脚を見る）。10 行 | FCOM p.1508 |
+| 同 | GEAR synoptic のタイヤ圧（左胴体のタイヤ 7・8、右翼のタイヤ 16） | タイヤ 7（`tire_pressure[6]`）の琥珀（低）が `SHOW_LESS 100.000000 …tire_pressure[9]`。タイヤ 8（`[7]`）と 16（`[15]`）の白に表示条件が無い（琥珀と重なる） | 琥珀の条件を `[6]` に。白の 2 つに `SHOW_LESS 239.990005` と `SHOW_GREATER 100.010002`（ほかのタイヤと同じ）。3 か所（4 行の追加） | notes/ATA-32.md §6.5 |
+
+上の 2 行は `docs/overhaul/tools/panel_gear_synoptic.lua` で書き換えた（15 の変更）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_gear_synoptic`。
