@@ -20,7 +20,8 @@
 #                                                held that long and the step waits,
 #                                                unless async (then the next steps run
 #                                                while it is held)
-#   set     {dref, value}                        write a dataref
+#   set     {dref, value, [rel]}                 write a dataref (with "rel": "<as>",
+#                                                the remembered value plus value)
 #   switch  {dref, value, cmd, [cmd_down]}       press cmd (or cmd_down when the
 #                                                value must go down) until dref
 #                                                equals value (up to 6 presses)
@@ -192,7 +193,7 @@ foreach ($step in $spec.steps) {
                 if ($d -gt 0 -and -not $step.async) { Start-Sleep -Milliseconds ([int]($d * 1000) + 200) }
                 Add-Result $step 'info' $step.name
             }
-            'set' { Set-XPDataref $step.dref $step.value; Add-Result $step 'info' "$($step.dref) = $($step.value)" }
+            'set' { $v = Get-Expected $step; Set-XPDataref $step.dref $v; Add-Result $step 'info' "$($step.dref) = $v" }
             'switch' {
                 $v = Get-XPDataref $step.dref
                 $n = 0

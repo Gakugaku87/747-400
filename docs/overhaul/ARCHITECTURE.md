@@ -58,6 +58,7 @@
 | xtlua | B747.10.gear | 165 / 1061 | 脚の上げ下げ、ブレーキ、オートブレーキ | toe_brakes |
 | xtlua | B747.15.com | 565 / 3862 | 無線。ACP（`ap_L/C/R`）、RTP（`rtp_L/C/R`）、VHF/HF、call panel など | |
 | xtlua | B747.25.fuel | 405 / 3720 | 燃料系統（タンク、ポンプ、クロスフィード、移送、ジェティソン、搭載量） | fuel_system |
+| xtlua | B747.34.nav | 29 / 375 | 航法センサー。5-1 で新設（§4.17）。段 1 はエアデータ（ADC 3 台、AIR DATA の選択、OVERSPEED・DISAGREE・高度警報） | |
 | xtlua | B747.35.fire | 99 / 653 | 火災探知と消火（エンジン、APU、貨物室） | |
 | xtlua | B747.36.oxygen | 56 / 327 | 酸素（乗員・乗客・治療用、酸素圧、X-Plane の低酸素）。3-3 で新設（§4.13） | oxygen_system |
 | xtlua | B747.40.engines | 106 / 2247 | エンジン始動・点火・燃料制御・逆推力・APU | |
@@ -370,6 +371,16 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 段 5（ブレーキ温度・タイヤ圧）：ブレーキ温度のモデル（`B747.10.btms_model.lua`）とタイヤ圧のモデル（`B747.10.tpis_model.lua`）を、グルー `B747.10.xt.wheels.lua`（ステアリングのグルーの次に読み、`B747_wheels()`）が回す。中身は notes/ATA-32.md §14。
   - 読むもの：X-Plane の `brake_absorbed_J`（主脚トラックごと。増えた分を 4 個のブレーキで分ける）、外気温、PSEU の air と脚の位置（`gear/position`：脚下げの空中は風で冷える）、各脚の接地（`on_ground`）、X-Plane のタイヤ故障 `rel_tire1`〜`5`（脚 0〜4）、推力レバー（`engine/throttle`）、故障（新設 `gear/fail/btms`・`tpis`）。
   - 書くもの：`gear/brake_temp[18]`（°C。3D のブレーキの光と synoptic の色）・`brake_temp_ind[18]`（0〜9）・`tire_pressure[18]`（psi）、advisory 46 BRAKE TEMP・290 >TIRE PRESSURE、STATUS 97 BRAKE TEMP SYS・98 TIRE PRESS SYS。カスタム acf の GEAR synoptic のドアの箱は `gear/door` を読む。
+
+### 4.17 航法センサー（5-1）
+
+新しいモジュール `B747.34.xt.nav`（`plugins/xtlua`）。脚のモジュールと同じく、本体 `B747.34.xt.nav.lua` が系統ごとのグルーを読み、`after_physics` で回す。init `B747.34.nav` が dataref を作る。中身は notes/ATA-34.md §3・§4・§10・§11。
+
+- 段 1（エアデータ）：エアデータのモデル（`B747.34.airdata_model.lua`）を、グルー `B747.34.xt.airdata.lua` が毎フレーム回す（`B747_airdata()`）。
+  - 読むもの：X-Plane の機長側・standby・副操縦士側の速度・Mach・高度・昇降率・気圧設定（ADC L・C・R。C は standby の pitot-static で、Mach と昇降率は計算：推定）、ADC の故障（X-Plane の `rel_adc_comp`・`_2`、新設 `airdata/fail/adc[3]`）、電源（`electrical/bus/stby_main`・`xfr_capt`・`xfr_fo`）、AIR DATA の選択器（`flt_inst/air_data_src/capt`・`fo/sel_dial_pos`。0 L・1 R：推定）。高度警報のために MCP の高度（`autopilot/heading/altitude_dial_ft`）、A/P の CMD の灯、GS の捕捉（`autopilot/FMA/active_pitch_mode` が 2）、フラップレバー、PSEU の全脚 down と地上、パーキングブレーキのレバー。
+  - 書くもの：各 PFD の速度 `gauges/indicators/airspeed_kts_pilot`・`_copilot`（選んだ ADC。30 kt が下限。EEC・SRM なども読む）。新設（init `B747.34.nav`）の `airdata/src_capt`・`src_fo`（1 L、2 C、3 R）・`valid[3]`（ADC ごと）・`valid_capt`・`valid_fo`（PFD の旗のため）・`alt_advise`（白枠）・`alt_alert`（琥珀枠）。EICAS：warning 22 OVERSPEED、caution 1 ALT DISAGREE・2 >ALTITUDE ALERT・44 IAS DISAGREE、advisory 267 >SOURCE SEL ADC・12 >AOA RIGHT。
+  - 外した前の処理：fltInst02 の OVERSPEED（placard を含む Vmax）と >AOA RIGHT（左の AOA を見ていた）、各側の速度の書き込み（`fltInstsetASIs`）。fltInst02 の BARO の STD は、押す前の値を preselect に残すようにした（NAV-06）。
+  - PFD の高度・昇降率・Mach と旗・高度の枠は、パネルが X-Plane の dataref を直接読むので、まだ選択と故障に従わない（パネル変更が要る）。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 
