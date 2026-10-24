@@ -118866,8 +118866,8 @@ GROUP Upper EICAS
             ROUNDING ROUND_ROUND
 
           gen_LED LED Red
-            POS 1568.000000 491.000000
-            IMAGE CRT Displays/LED/LED_3.26B.xx###0.red
+            POS 1560.000000 491.000000
+            IMAGE CRT Displays/LED/LED_3.26B.x####0.red
             DATAREF sim/cockpit2/pressurization/indicators/cabin_altitude_ft
             SHOW_GREATER 10000.000000 sim/cockpit2/pressurization/indicators/cabin_altitude_ft
             LIGHT_MODE GLASS_AUTO
@@ -118875,10 +118875,10 @@ GROUP Upper EICAS
             BUS_SRC 2
             KEY_FRAME 0.000000 0.000000 1.000000
             KEY_FRAME 1.000000 1.000000
-            DIGITS 4
+            DIGITS 5
             DECIMALS 0
             PERIOD_WIDTH 0
-            LED_ROWS 4
+            LED_ROWS 5
             ROUNDING ROUND_ROUND
 
         END_GROUP
@@ -118887,6 +118887,7 @@ GROUP Upper EICAS
             POS 1560.000000 467.000000
             IMAGE CRT Displays/LED/LED_3.26B.x####0.white
             DATAREF laminar/B747/air/landing_altitude
+            SHOW_EQUAL 1.000000 laminar/B747/air/press/ldg_alt_shown
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -118903,6 +118904,7 @@ GROUP Upper EICAS
             IMAGE CRT Displays/EICAS Upper/TAT_negSign
             DATAREF 
             SHOW_LESS -0.010000 laminar/B747/air/landing_altitude
+            SHOW_EQUAL 1.000000 laminar/B747/air/press/ldg_alt_shown
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2

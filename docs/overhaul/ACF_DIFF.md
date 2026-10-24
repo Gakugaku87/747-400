@@ -166,3 +166,12 @@
 | 2026-10-24・酸素（OXY-03） | STAT ページの OXY PR（`GROUP Oxygen` の `gen_LED Pressure: Crew`・`Pressure: Psgr`） | `DATAREF [0]`（空で何も出ない）、`DIGITS 3`（1850 が出せない） | `DATAREF laminar/B747/oxygen/crew_press_psi`・`pass_press_psi`（酸素のモジュールの圧）、`DIGITS 4` | FCOM p.455 (1.30.21)、ATA30_32_35_36 p.338・p.374 |
 
 変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261024_before_oxygen`。X-Plane のスクリーンショットで、CRW と PASS の 4 桁がほかの値と同じ右端にそろって出ることを確かめた（`s20_oxygen`）。純正 acf は変えていないので、STAT ページの酸素圧は出ないまま。外から見た写真で機体の見た目が変わらないことを確かめた（RJAA 34L、追従視点）。
+
+承認の一覧（PLAN.md §3）に無いパネルの変更（2026-10-24、利用者の承認「2件とも入れて」）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-24・空調（AIR-18） | 主 EICAS の data block の客室高度の赤（`GROUP Pressure` の `GROUP Cabin Alt` の `gen_LED LED Red`、10,000 ft 以上で出る） | `POS 1568 491`、`LED_3.26B.xx###0.red`、`DIGITS 4`、`LED_ROWS 4`（先頭の桁が欠け、28,575 ft が「8575」） | `POS 1560 491`（1 桁ぶん左、右端は同じ）、`LED_3.26B.x####0.red`（新しい 5 桁のフォント）、`DIGITS 5`、`LED_ROWS 5`（下の LDG ALT と同じ 5 桁）。白（8,500 ft 未満）と琥珀（10,000 ft 未満）は 4 桁のまま | ATA21 p.451（赤は 10,000 ft 以上） |
+| 同 | data block の LDG ALT（`GROUP Landing Alt`：`gen_LED LED` と `gen_rotary NEG Sign`） | 条件なし（数字）、`SHOW_LESS -0.01 landing_altitude`（負号） | どちらにも `SHOW_EQUAL 1.000000 laminar/B747/air/press/ldg_alt_shown` を足した（両 CPC 故障か両方 MAN で消える）。AUTO・MAN の字（`GROUP Mode Annun`）はそのまま | FCOM p.586 (2.10.34) |
+
+上の 2 行は `docs/overhaul/tools/panel_data_block.lua` で書き換えた（6 か所）。赤の 5 桁のフォント（`cockpit_3d/generic/CRT Displays/LED/LED_3.26B.x####0.red-4.png` と透明の `.png`）は純正に無いので、`docs/overhaul/tools/make_led_fonts.ps1` で純正の 4 桁の赤のフォントから作った（字は純正のまま。行を 23 画素から 26 画素にして字の上に空きを足し、次の行の字の上端が数字の下ににじまないようにした）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261024_before_air18`。X-Plane のスクリーンショットで、赤の 5 桁が LDG ALT と同じ右端にそろい、LDG ALT の数字が両方 MAN と両 CPC 故障で消えることを確かめた（`s25_data_block`）。外から見た写真で機体の見た目が変わらないことを確かめた。純正 acf は変えていない。

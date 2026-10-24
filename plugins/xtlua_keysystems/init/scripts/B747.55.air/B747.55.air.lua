@@ -125,12 +125,18 @@ B747DR_pack_light_sys_fault         = deferred_dataref("laminar/B747/air/light/p
 -- the pressurization model (B747.55.xt.press.lua): mode 0 ground, 1
 -- takeoff, 2 climb, 3 cruise, 4 descent, 5 after landing; the controller
 -- in use 0 none, 1 A, 2 B; a positive relief valve open; the ECS card's
--- cruise clamp; the outflow valves L, R in MAN (1)
+-- cruise clamp; the outflow valves L, R in MAN (1); the data block's
+-- landing altitude shown (1; blank with both controllers failed or both
+-- valves in MAN, FCOM p.586)
 B747DR_press_mode                   = deferred_dataref("laminar/B747/air/press/mode", "number")
 B747DR_press_cpc                    = deferred_dataref("laminar/B747/air/press/cpc", "number")
 B747DR_press_relief_open            = deferred_dataref("laminar/B747/air/press/relief_open", "number")
 B747DR_press_cruise_clamp           = deferred_dataref("laminar/B747/air/press/cruise_clamp", "number")
 B747DR_press_valve_man              = deferred_dataref("laminar/B747/air/press/valve_man", "array[2]")
+B747DR_press_ldg_alt_shown          = deferred_dataref("laminar/B747/air/press/ldg_alt_shown", "number")
+-- failures X-Plane does not have (1 failed): the cabin pressure
+-- controllers A, B
+B747DR_air_fail_cpc                 = deferred_dataref("laminar/B747/air/fail/cpc", "array[2]")
 -- the temperature model (B747.55.xt.temp.lua), °C: the zones F/D, U/D,
 -- A-E actual and target, the targets shown (1: a pack operating and no
 -- backup, FCOM p.577), MASTER (the PASS TEMP setting), the cargo FWD, AFT,

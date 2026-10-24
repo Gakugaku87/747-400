@@ -110,7 +110,7 @@ GAP ID：`AIR-nn`。2026-10-23 調査。コードと acf は変更していな�
   - ΔP：白 −0.4〜+8.8、amber +8.9〜+9.0 と −0.5〜−0.9、red +9.1 以上と −1.0〜−2.0。
   - DUCT PRESS：白 12 psi 以上、amber 11 psi 以下。
 - LDG ALT：両 controller 故障か、両外流弁 MAN のときは表示しない（FCOM p.586 (2.10.34)）。AUTO は白、MAN は amber。
-- パネル定義：`747-400.acf:124702-125054`。上の色分けは実装済み。
+- パネル定義：`747-400.acf:124702-125054`。上の色分けは実装済み。カスタム acf では、LDG ALT の数字を両 CPC 故障・両方 MAN で消し（与圧のモデルの `air/press/ldg_alt_shown`）、客室高度の赤い数字を 5 桁で出す（AIR-18、2026-10-24。ACF_DIFF.md §5）。純正 acf は 4 桁のままで、LDG ALT も消えない。
 
 ### 3.4 ECS synoptic（下 EICAS）
 - 要素（109）（FCOM p.576–578 (2.10.24–26)）

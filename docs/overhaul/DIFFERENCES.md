@@ -166,7 +166,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 与圧：X-Plane の与圧を止め、客室の圧をパックの空気と外流弁・漏れ・リリーフ弁の流れの収支で計算する。CPC A/B（NORM は着陸ごとに交代、電源投入で A、2 秒の電源断・機体が水平で 2,000 fpm・ΔP 9.07 psi で他方が引き継ぐ）。モード：ground（外流弁全開）、65 kt で takeoff（場の高度 −50 ft）、climb（FMC あり 600 sea-level fpm 以下・なし 1,000 fpm 以下で巡航の客室高度へ）、cruise（FMC 巡航高度の 100 ft 以内か 45 秒の水平。客室を保つ）、descent（1,000 ft 降下。FMC ありは機体の降下に合わせて、なしは 300 fpm で着陸高度の 50 ft 下へ）、降下中の 2 分の水平、着陸後の減圧（500 fpm、1 分後 2,000 fpm）。
 - 着陸高度：AUTO は FMC の出発地の標高、出発地から 400 NM・経路の半分・巡航・降下で目的地の標高（X-Plane の空港の一覧から）。FMC に無ければ 2,000 ft と LANDING ALT。MAN はノブで 50 ft 刻み、−1,000〜14,000 ft。機長の高度計の規正値で補正する。
 - 客室高度リミッタ（自動のときだけ、11,000 ft で全閉、750 ft 下で解除）、手動の弁（片側ずつ、DC モーター、OPEN/CLOSE を押している間）、正圧リリーフ 9.25 psid（パック 2 停止、PRESS RELIEF）、負圧リリーフ、X-Plane の減圧の故障。
-- メッセージ：CABIN ALTITUDE、CABIN ALT AUTO（両 CPC 故障か両方 MAN）、OUTFLOW VLV L・R、LANDING ALT、PRESS RELIEF、STATUS の CABIN ALT AUTO A・B、OUTFLOW VLV L・R、UPR・LWR PRESS RELIEF、CPCS AIR/GND。data block の表示条件に負の ΔP と LANDING ALT などを足した。外流弁の計器は弁の位置（前は客室の昇降率から作っていた）。
+- メッセージ：CABIN ALTITUDE、CABIN ALT AUTO（両 CPC 故障か両方 MAN）、OUTFLOW VLV L・R、LANDING ALT、PRESS RELIEF、STATUS の CABIN ALT AUTO A・B、OUTFLOW VLV L・R、UPR・LWR PRESS RELIEF、CPCS AIR/GND。data block の表示条件に負の ΔP と LANDING ALT などを足した。カスタム acf の data block は、LDG ALT の数字を両 CPC 故障か両方 MAN で消し（AUTO・MAN の字は残る）、客室高度の赤い数字を 5 桁で出す（前は 4 桁で、10,000 ft 以上の先頭の桁が欠けた）。外流弁の計器は弁の位置（前は客室の昇降率から作っていた）。
 - 機器冷却：NORM・STBY・OVRD の構成（地上は外気 45°F で機外か前方貨物室へ、各翼 1 基の運転で flight 構成、STBY は ground exhaust を閉）、ファン故障の closed loop と OVRD 30 秒のリセット、OVRD は差圧で客室の空気を機外へ（与圧に効く）、差圧が無いまま 55 秒で EQUIP COOLING（地上の OVRD でも出る）、貨物室火災 ARM で OVRD の構成。エンジン運転中の開始で TRIM AIR・RECIRC ON、EQUIP COOLING NORM。
 - 温度制御：7 ゾーン（F/D、U/D、A〜E）の target（PASS TEMP・FLT DECK TEMP で 65〜85°F）と温度、パックの出口は最も冷たい空気が要るゾーンに合わせ（35°F、25,000 ft 超は 28°F 〜 135°F）、ほかのゾーンにトリム空気を足す。master trim air valve は TRIM AIR ON でパックが 1 基以上運転のとき開き、中央ダクトが無ければトリム空気は無い。backup（TRIM AIR off、ダクト過熱、ZTC の故障、中央ダクトなし）はゾーン弁 10 %、パックの出口で客室の平均を PASS TEMP の値（ZTC の故障では最後の値）に、F/D は 85°F まで。ダクト 185°F が 10 秒で master trim air valve をラッチで閉じ、ZONE RST で戻す（過熱が消えていれば）。comfort correction（cruise clamp と 25,000 ft 超で 2°F/h、2 時間で +4°F、85°F まで、descent detect で 5 分で戻し、その便ではもう使わない）。パックの cruise clamp の normal flow は客室が target の 1 ℃ 以内になるまで待つ（最長 20 分）。メッセージ：>TRIM AIR OFF（全パック OFF では出さない）、TEMP ZONE、ZONE SYS FAULT 灯（TRIM AIR off、過熱、ZTC、パックの空気があるのに弁が閉）、STATUS ZONE TEMP（70 秒）。
 - ECS synoptic：7 ゾーンの target（左、小さく。パック運転中で backup でないとき）と actual、MASTER、FWD・AFT、外流弁の針と弁ごとの MAN（琥珀）・AUTO、パックごとの HI FLOW、EXT AIR を足した。パックの OFF は弁が閉、A・B は使用中の controller（前は選択器の位置）。エンジンと APU からの流れの線はその弁が開のとき（前はエンジンの抽気圧で、ENGINE BLEED OFF でも出ていた）。
@@ -176,10 +176,10 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 3D の PASS TEMP・FLT DECK TEMP のノブは C〜W の範囲しか回らず、客室乗務員の温度パネル（door 2R）は 3D に無いので、PASS TEMP の ALTN（ゾーン A の専用 controller、125°F の過熱スイッチ）、FLT DECK の MAN、ゾーンごとの ±10°F は作っていない。温度の表示は ℃（ATA21 の会社の表示。FCOM 109 の図は °F）。EXT AIR は地上空気をつなぐ操作が無いので出ない（PNEU-07）。
 - 推定：ゾーンと貨物室の熱のつり合い（熱の負荷 70 kW、スキン、熱容量、ゾーンごとの配分、トリム空気の強さ、ZTC の効き、パックの出口の遅れ）、エンジン停止で始めたときは外気温・エンジン運転中か空中で始めたときは target から始めること、後方貨物室の選択温度（40°F。選択スイッチは bulk 貨物室の中）とサーモスタットの幅、PASS TEMP を回すと comfort correction をその便では止めること、中央ダクトが無いときのメッセージ（出さない）、ZTC・トリム空気の弁の電源。backup で APU に最大流量を求めること（ATA21 p.368）は作っていない。
 - 機器冷却と温度制御の故障（機器冷却の過熱・低流量・煙・ファン、ZTC、トリム空気の弁、ダクト過熱）を入れる手段が無い（モデルには入力がある）。clean mode と後方の lav/galley fan は無い。
-- data block の LDG ALT を両 CPC 故障・両方 MAN で消す条件はパネルに無い（AIR-18）。data block の客室高度の赤い数字（10,000 ft 以上）が 4 桁で、10,182 ft が「0182」と出る（カスタム acf の `DIGITS 4`。パネルの変更が要る）。
+- 純正 acf の data block は、客室高度の赤い数字が 4 桁（10,000 ft 以上で先頭の桁が欠ける）で、LDG ALT も両 CPC 故障・両方 MAN で消えない（直したのはカスタム acf のパネルだけ：AIR-18）。
 - FMC の T/C・T/D・上昇時間を使わない（FMC にその出力が無い）。上昇は機体の上昇に比例、降下は降下に比例させた。進入を選んだときの滑走路の標高も使わない（FMC に到着ページが無い）。
 - 推定：巡航の客室高度（ΔP 8.8。FCOM の表示例から）、客室の容積・パックの流量・弁の面積・漏れ・リリーフ弁の開き方、弁の速さ（自動 6 秒、手動 20 秒）、FMC なしで空中で始めたときの客室。
-- パックの過熱は、温度のモデルの出口が 135°F 以下なので原因が無く、故障の入力のまま。再循環ファンと CPC の故障の入れ方が無い（X-Plane に相当する故障が無い）。
+- パックの過熱は、温度のモデルの出口が 135°F 以下なので原因が無く、故障の入力のまま。再循環ファンの故障の入れ方が無い（X-Plane に相当する故障が無い）。CPC の故障は `laminar/B747/air/fail/cpc[0-1]` で入れる。
 - 外流弁の自動のモーター、パック弁の継電器、再循環ファンの電源のバスは資料に無い（どれかの AC で動くとした）。
 
 ### 防氷・防雨（ATA 30）：作り直し済み（3-2）

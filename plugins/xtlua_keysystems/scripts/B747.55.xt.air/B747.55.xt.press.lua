@@ -3,10 +3,12 @@
 -- speeds, the air/ground relays, the captain's altimeter setting, the FMC's
 -- cruise altitude and route (the field elevations from X-Plane's
 -- earth_aptmeta.dat), the CABIN ALTITUDE panel, the buses, the packs' air
--- and X-Plane's decompression failures; writes X-Plane's cabin altitude,
+-- X-Plane's decompression failures and the controllers' failures
+-- (air/fail/cpc: X-Plane has none); writes X-Plane's cabin altitude,
 -- rate, differential pressure and outflow valve (the init script takes
 -- over X-Plane's pressurization: override_pressurization), the outflow
--- valve gauges, the landing altitude, the ECS data block's display, CABIN
+-- valve gauges, the landing altitude and whether the data block shows it,
+-- the ECS data block's display, CABIN
 -- ALTITUDE, CABIN ALT AUTO, OUTFLOW VLV L/R, LANDING ALT, PRESS RELIEF and
 -- the STATUS CABIN ALT AUTO A/B. B747.55.xt.air.lua loads it after the
 -- pack glue.
@@ -36,6 +38,8 @@ B747DR_press_cpc                = find_dataref("laminar/B747/air/press/cpc")
 B747DR_press_relief_open        = find_dataref("laminar/B747/air/press/relief_open")
 B747DR_press_cruise_clamp       = find_dataref("laminar/B747/air/press/cruise_clamp")
 B747DR_press_valve_man          = find_dataref("laminar/B747/air/press/valve_man")
+B747DR_press_ldg_alt_shown      = find_dataref("laminar/B747/air/press/ldg_alt_shown")
+B747DR_air_fail_cpc             = find_dataref("laminar/B747/air/fail/cpc")
 B747DR_press_status             = find_dataref("laminar/B747/CAS/status_status")
 B747DR_press_pseu_alt_gnd       = find_dataref("laminar/B747/gear/air_ground/alt_gnd")
 
@@ -182,6 +186,8 @@ function B747_press()
     inp.extra_out_kg_s = B747_eqcool_overboard_kg_s or 0    -- equipment cooling OVRD (last frame)
     inp.depres_slow = simDR_press_depres_slow == 6
     inp.depres_fast = simDR_press_depres_fast == 6
+    inp.cpc_failed[1] = B747DR_air_fail_cpc[0] > 0.5        -- X-Plane has no such failure
+    inp.cpc_failed[2] = B747DR_air_fail_cpc[1] > 0.5
 
     local out = C.update(press_state, inp, SIM_PERIOD)
     B747_pack_relief_open = out.relief_open
@@ -198,8 +204,9 @@ function B747_press()
     -- the gauges: -1 closed, +1 open
     B747DR_outflow_valve_pos_L = 2 * out.valve[1] - 1
     B747DR_outflow_valve_pos_R = 2 * out.valve[2] - 1
-    local ldg = out.ldg_ft
+    local ldg, ldg_shown = out.ldg_ft, flag(out.ldg_shown)
     if B747DR_landing_altitude ~= ldg then B747DR_landing_altitude = ldg end
+    if B747DR_press_ldg_alt_shown ~= ldg_shown then B747DR_press_ldg_alt_shown = ldg_shown end
     local mode, cpc = out.mode, out.active
     if B747DR_press_mode ~= mode then B747DR_press_mode = mode end
     if B747DR_press_cpc ~= cpc then B747DR_press_cpc = cpc end

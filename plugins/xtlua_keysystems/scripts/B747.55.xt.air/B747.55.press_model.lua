@@ -172,7 +172,7 @@ function M.new()
         limiter = false, clamp = false, ldg_man = M.LDG_DEFAULT_FT, was_auto = true, last_gs = 0,
         air_start = false}
     s.out = {p_cab = P0, cabin_ft = 0, rate_fpm = 0, dp = 0, valve = {1, 1}, mode = M.GROUND,
-        active = 1, ldg_ft = M.LDG_DEFAULT_FT, ldg_fmc = false, relief_open = false,
+        active = 1, ldg_ft = M.LDG_DEFAULT_FT, ldg_fmc = false, ldg_shown = true, relief_open = false,
         neg_relief_open = false, cruise_clamp = false, limiter = false,
         cabin_alert = false, auto_alert = false, outflow_alert = {false, false},
         ldg_alert = false, relief_alert = false, cpc_alert = {false, false}}
@@ -479,6 +479,9 @@ function M.update(s, inp, dt)
         s.rate_fault_t = 0
     end
     out.active = s.active
+    -- the data block's landing altitude: blank with both controllers failed
+    -- or both outflow valves in MAN (FCOM p.586)
+    out.ldg_shown = s.active > 0 and not both_man
 
     -- ======== messages (FCOM p.619-620; ATA21 p.444, p.451, p.454, p.470)
     out.cabin_alert = new_ft > M.CABIN_WARN_FT                       -- CABIN ALTITUDE

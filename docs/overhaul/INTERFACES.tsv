@@ -607,6 +607,7 @@ laminar/B747/air/pack_ctrl_02/sel_dial_up	command	obj	B747.55.air,B747.55.xt.air
 laminar/B747/air/pack_ctrl_03/sel_dial_dn	command	obj	B747.55.air,B747.55.xt.air
 laminar/B747/air/pack_ctrl_03/sel_dial_up	command	obj	B747.55.air,B747.55.xt.air
 laminar/B747/air/pass_temp_ctrl/rheostat	dataref	obj	B747.55.air,B747.55.xt.air
+laminar/B747/air/press/ldg_alt_shown	dataref	panel	B747.55.air
 laminar/B747/air/press/valve_man	dataref	panel	B747.55.air
 laminar/B747/air/pressurization/EICAS1_display_status	dataref	panel	B747.55.air,B747.55.xt.air
 laminar/B747/air/temp/cargo	dataref	panel	B747.55.air

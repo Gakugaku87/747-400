@@ -2,7 +2,7 @@
 
 次のセッションは、ここと [PLAN.md](PLAN.md) を読んでから続きに入る。
 
-最終更新：2026-10-24 朝（操縦系統 4-1 の小さな修正。火災防護 3-4。酸素 3-3。防氷・防雨 3-2）
+最終更新：2026-10-24 昼（data block の客室高度の赤い数字の桁と LDG ALT の消去 AIR-18。操縦系統 4-1 の小さな修正。火災防護 3-4。酸素 3-3。防氷・防雨 3-2）
 
 ## いまどこか
 
@@ -34,8 +34,8 @@
 
 項目を終えるたびに、[DIFFERENCES.md](DIFFERENCES.md)（実機との違い、全分野。2026-10-23 に利用者の依頼で作った）の該当分野も直す。
 
-1. 承認済みのパネル（カスタム acf）の変更：全部済。3-1 の ECS synoptic の上半分と流れの線（AIR-15、PNEU-11）が最後。PNEU-09（主 EICAS のダクト圧の表示条件）は 3-1 段 1 の data block の条件（FCOM p.585 と ATA21 p.451）で済。承認の一覧に無い 2 件（客室高度の赤い数字の桁、data block の LDG ALT の消去。AIR-18）は利用者に確認中。済：`.snd` の警報音、1-3 の PG と 3〜10 ページ、1-3 の STATUS ページと cue、1-4 の HYD synoptic（HYD-19。記号の色と不作動項目の絵は 2026-10-23 夕方に新しい画像で）と RSVR PRESS（HYD-18）、1-1 の synoptic の ISLN・DRIVE の枠・UTILITY と GALLEY の色、STAT のバッテリーの値と CHG/DIS、1-5 のダクト圧の色（PNEU-10）。変更の一覧は ACF_DIFF.md §5、画像は `docs/overhaul/tools/make_synoptic_images.ps1` で作る。
-2. 3-1（空調・与圧・機器冷却）：段 1（パックと与圧、機器冷却と ER 開始のスイッチ）、段 2（温度制御と貨物室の温度・暖房）、段 3（ECS synoptic のパネル）は済。残りは故障の入れ方（パック・ファン・CPC・機器冷却・温度制御。X-Plane に相当する故障が無い）と、承認待ちのパネルの 2 件（AIR-18）。
+1. 承認済みのパネル（カスタム acf）の変更：全部済。3-1 の ECS synoptic の上半分と流れの線（AIR-15、PNEU-11）が最後。PNEU-09（主 EICAS のダクト圧の表示条件）は 3-1 段 1 の data block の条件（FCOM p.585 と ATA21 p.451）で済。承認の一覧に無い 2 件（客室高度の赤い数字の桁、data block の LDG ALT の消去。AIR-18）も、2026-10-24 に利用者の承認を得て入れた。済：`.snd` の警報音、1-3 の PG と 3〜10 ページ、1-3 の STATUS ページと cue、1-4 の HYD synoptic（HYD-19。記号の色と不作動項目の絵は 2026-10-23 夕方に新しい画像で）と RSVR PRESS（HYD-18）、1-1 の synoptic の ISLN・DRIVE の枠・UTILITY と GALLEY の色、STAT のバッテリーの値と CHG/DIS、1-5 のダクト圧の色（PNEU-10）。変更の一覧は ACF_DIFF.md §5、画像は `docs/overhaul/tools/make_synoptic_images.ps1` で作る。
+2. 3-1（空調・与圧・機器冷却）：段 1（パックと与圧、機器冷却と ER 開始のスイッチ）、段 2（温度制御と貨物室の温度・暖房）、段 3（ECS synoptic のパネル）は済。残りは故障の入れ方（パック・ファン・機器冷却・温度制御。X-Plane に相当する故障が無い。CPC は `air/fail/cpc` を足した）。AIR-18 のパネルの 2 件も済。
 3. 3-2（防氷・防雨）：済（下の「防氷・防雨（3-2）の GAP の状態」）。残りは防氷の推力補正（ICE-11。EEC の補正表の作り直しで PNEU-13 と一緒に）、逆推力中の NAI 弁の閉（ICE-05）、ウォッシャー・防雨剤・WSHLD AIR（ICE-10。3D の操作子が要る）。3-3（酸素）：済（下の「酸素（3-3）の GAP の状態」）。
 4. 3-4（火災防護）：段 1・2 は済。残りは M869（脚格納部の APU 火災パネル）と APU のホーンの音、クルーレストの煙での空調の停止、ダクトリークの抽気への影響（PNEU-03）、貨物機の主デッキ（FIRE-19）。
 5. 4-1（操縦系統）：小さな修正（FCTL-04・14・19・23）は済。次は、資料のノート §8 の案のとおり、ロジック（FCU のフラップ、SRM の安定板トリム・ロックアウト・RRC、スピードブレーキ）を新しいモデルに作り直す。舵面への書き出し（controlObject）は残す。下の「操縦系統（4-1）の GAP の状態」。
@@ -434,7 +434,7 @@ PLAN.md §3 に書いた。要点：
   - (a) パックと与圧：済。パックのモデル `B747.55.pack_model.lua`・与圧のモデル `B747.55.press_model.lua` とグルー（ARCHITECTURE.md §4.11）。X-Plane の与圧は上書きした。
   - (b) 機器冷却、貨物室火災 ARM の機器冷却 OVRD、ER 開始のスイッチの初期化：済。機器冷却のモデル `B747.55.eqcool_model.lua` とグルー `B747.55.xt.eqcool.lua`。後方貨物室暖房は温度が要るので段 2 に回した。
 - 段 2：温度制御と後方・前方貨物室の温度と暖房：済。温度のモデル `B747.55.temp_model.lua` とグルー `B747.55.xt.temp.lua`（ゾーンと貨物室の熱のつり合い、パックの出口、トリム空気、backup、ダクト過熱と ZONE RST、comfort correction、TRIM AIR OFF・TEMP ZONE・TEMP CARGO HEAT・ZONE TEMP、ZONE SYS FAULT・TEMP の灯）。パックのモデルは cruise clamp の normal flow を客室の温度で待つ。ALTN・FLT DECK の MAN（3D のノブがその位置まで回らない）と客室乗務員の温度パネル（3D に無い）は作らない。パックの過熱は、温度のモデルの出口が 135°F 以下で原因が無いので、故障の入力のまま。グルーどうしで渡す出力の表がコピーになっていたのを、この段の試験で見つけて直した（別のコミット）。
-- 段 3：カスタム acf の ECS synoptic：済。道具 `docs/overhaul/tools/panel_ecs.lua`（ACF_DIFF.md §5）で、7 ゾーンの target（小さく、`temp/target_shown`）と actual、MASTER、FWD・AFT、TEMP °C、外流弁の針（−1〜+1 を CL・OP の目盛りの ±64°）と弁ごとの MAN（琥珀）・AUTO、パックごとの HI FLOW、EXT AIR（抽気のモデルに `air/ext_air`）を足し、パックの OFF/A/B を弁と使用中の PTC で、エンジンと APU の流れを弁で出すようにした（PNEU-11）。新しい絵は `make_ecs_images.ps1`（針、琥珀の MAN）。data block の LDG ALT を消す条件と客室高度の赤い数字の桁（AIR-18）は承認の一覧に無いので、利用者に確認中。
+- 段 3：カスタム acf の ECS synoptic：済。道具 `docs/overhaul/tools/panel_ecs.lua`（ACF_DIFF.md §5）で、7 ゾーンの target（小さく、`temp/target_shown`）と actual、MASTER、FWD・AFT、TEMP °C、外流弁の針（−1〜+1 を CL・OP の目盛りの ±64°）と弁ごとの MAN（琥珀）・AUTO、パックごとの HI FLOW、EXT AIR（抽気のモデルに `air/ext_air`）を足し、パックの OFF/A/B を弁と使用中の PTC で、エンジンと APU の流れを弁で出すようにした（PNEU-11）。新しい絵は `make_ecs_images.ps1`（針、琥珀の MAN）。data block の LDG ALT を消す条件と客室高度の赤い数字の桁（AIR-18）は、承認の一覧に無いので利用者に確かめ、2026-10-24 に承認を得て入れた（下の表）。
 
 | ID | 状態 |
 |---|---|
@@ -455,7 +455,7 @@ PLAN.md §3 に書いた。要点：
 | AIR-15 ECS synoptic | 済（ゾーン温度の target と actual、MASTER、FWD・AFT、TEMP °C、外流弁の針と MAN/AUTO、HI FLOW、EXT AIR、パックの OFF/A/B は弁と PTC。カスタム acf。EXT AIR は地上空気の操作が無いので出ない） |
 | AIR-16 EEC のパック数 | 済（運転中のパック数。新しい EEC のグルーと旧い型式別の計算の両方） |
 | AIR-17 貨物室火災 ARM | 済（パック 3 停止・パック 1/2 high・再循環ファン全停止・機器冷却の OVRD 構成（前方貨物室への排気と暖房も止まる）・AFT で後方暖房の停止） |
-| AIR-18 data block | 一部（自動表示の条件は済。LDG ALT の消去と、客室高度の赤い数字の桁（カスタム acf の `DIGITS 4` で、10,000 ft 以上の先頭の桁が出ない。`s15` の写真）はパネルの変更で、承認の一覧に無い） |
+| AIR-18 data block | 済（自動表示の条件。LDG ALT の数字と負号は、両 CPC 故障か両方 MAN で消す：与圧のモデルの `air/press/ldg_alt_shown` とパネルの条件、FCOM p.586。AUTO・MAN の字は残す（FCOM が消すのは高度だけ）。客室高度の赤い数字（10,000 ft 以上）は 5 桁で、先頭の桁が欠けない（新しい赤の 5 桁のフォント）。白（8,500 ft 未満）と琥珀（10,000 ft 未満）は 4 桁で足りるので変えていない。どちらもカスタム acf のパネルの変更で、2026-10-24 に利用者の承認。右ダクト圧の白の条件は PNEU-10 で済） |
 | AIR-19 初期状態 | 済（エンジン運転中の開始で TRIM AIR・UPR/LWR RECIRC ON、EQUIP COOLING NORM。manipulators は TRIM AIR の位置を [83] に書いていた）。`sim/cockpit2/Cooling/Packs_EXT`（誰も読まない）はそのまま |
 | AIR-20 X-Plane の与圧 | 済（override。X-Plane のダクトの空気と抽気の損失は抽気のグルーが書く） |
 | AIR-21 電源 | 一部（CPC・手動・PTC は済。外流弁の自動のモーター・パック弁の継電器・ファンのバスは資料に無い） |
@@ -593,6 +593,9 @@ PLAN.md §3 に書いた。要点：
 
 - **FUEL CONTROL の赤灯は自前の検知に合わせられない**（2026-10-24、火災防護の段 1）：3D（`Cockpit_TQ.obj`）が X-Plane の読み取り専用の `sim/cockpit2/annunciators/engine_fires` に付いている。書き込める旧い `sim/cockpit/warnings/annunciators/engine_fires` に書いても X-Plane が毎フレーム上書きした。X-Plane のエンジン火災では点くが、FIRE/OVHT TEST やループの故障・単ループ運用には合わない。直すには OBJ の付け替え（3D は対象外）。
 
+- data block の ΔP の数字の前に、値が正でも小さな「_」が出る（ΔP +0.02 で「_0.0」、巡航で「_8.8」。`s25` の写真）。純正 acf と同じ定義（`GROUP Diff Press`：`LED_3.26B.xxx#00`、`DIGITS 3`・`DECIMALS 1`・`LED_ROWS 3`）。フォントの 12 番目の字（負号か）らしいが、原因は調べていない。客室高度の数字には負号の計器が無い（白の範囲は −2,000 ft から：ATA21 p.451）。どちらも純正の定義のまま。
+- 純正の LED のフォントは、1 行 23 画素（字 22・空き 1）で、行の上端から字が始まる。これを使う数字は、置き場所によって、次の行の字の上端が数字の下に薄い線としてにじむ（`s25` の 1 回目：客室高度の白を純正の 5 桁のフォント `x####0.white` にしたら「5095」の 5 と 9 の下に出た。同じフォントの LDG ALT には出ない）。純正のままの琥珀の客室高度（4 桁の `xx###0.amber`）にも出る（`s25` の 2 回目、「8608」の 6 の下。純正 acf も同じ定義）。新しいフォントは字の上に空きを足して作る（`make_led_fonts.ps1`）。琥珀を直すなら同じ作り方の 4 桁のフォントにするパネルの変更になる（承認の一覧に無い）。
+
 ## 日誌
 
 - 2026-10-22 23:27〜23:44：利用者が、別の 3D 一式（git に無い）とカスタム acf を作業ツリーに上書きコピー。
@@ -664,3 +667,4 @@ PLAN.md §3 に書いた。要点：
 - 2026-10-24 08:3x〜09:0x：火災防護（3-4）段 1、エンジンと APU。新しいモデル `B747.35.fire_model.lua` と、火災のモジュール `B747.35.xt.fire.lua` をそのグルーに書き直した：双ループの検知（エンジンは AND と単ループへの組替え、APU は OR、APU battery bus、>DET FIRE/OHT n・>DET FIRE APU、loop の status と FIRE/OVHT SYS）、エンジンの過熱（OVHT ENG n NAC、失敗の dataref）、消火スイッチのロック（火災・CUTOFF・試験・Fire Override のコマンド、main hot battery bus）、翼ごとの共用ボトルと 1 回だけの squib、剤が出ている間だけ X-Plane の消火器、BTL DISCH と >BTL LO L/R ENG A/B、APU の停止（APU のグルーが `fire/apu_shutdown` を読む）と地上の自動放出（10 秒、95 % 未満）、APU の消火スイッチ（コマンド）と APU BTL DISCH・>BOTTLE LOW APU、FIRE/OVHT TEST（TEST IN PROG から 5 秒で PASS/FAIL）。STATUS の配列を 128 に広げた。電源のグルーが消火スイッチを GCR トリップに渡していなかったのを結線し、GCR をラッチ式にした（LH24 p.108）。X-Plane で、`fire_extinguisher_on` が 1 秒以内に火を消し `rel_engfir` も 0 に戻ることと、旧い火災表示灯の dataref は書いても X-Plane が上書きすること（FUEL CONTROL の赤灯は自前の検知に合わせられない）を確かめた。試験：モデル 70 件、モジュール 62 件、電源のモデル・モジュールに GCR の 7 件、APU のモジュールは火災のモジュールも読み込む。X-Plane（カスタム acf）：新シナリオ `s22_fire_engine_apu` 45/45。純正 acf の `s00` 69/69。Lua の誤りなし。P5 の BTL A DISCHARGE・APU BTL DISCHARGE の灯をスクリーンショットで確かめた。
 - 2026-10-24 09:0x〜09:2x：火災防護（3-4）段 2。モデルに貨物室の 4 ゾーンとボトル A–D を足した：煙検知（電源投入と手動試験の完了時だけの組替え、venturi の吸引は中央ダクトの圧で推定）、FIRE CARGO FWD・AFT と灯、ARM・DISCH（マニピュレータのスイッチ位置）で A・B 即時、ARM が 1 区画なら C・D を 30 分後・接地・地上は即時（約 2 時間かけて調圧）、DISCH の灯、>CGO BTL DISCH、>CARGO DET AIR、剤で煙の失敗を消す（推定）。車輪格納部の火災（AC bus 2）、BLD DUCT LEAK L/C/R、>SMOKE LAVATORY・SMOKE DR 5 REST、FIRE/OVHT TEST に貨物・車輪格納部・ダクトを含めた、スクイブ試験（TEST 1・2 のコマンド、発火済みは暗い、ARM で貨物 A・B を抑止）。X-Plane に無い原因は新しい失敗の dataref。STATUS 64–80。試験：モデル 122 件、モジュール 87 件。X-Plane（カスタム acf）：新シナリオ `s23_fire_cargo` 27/27（FL350 で貨物の試験の灯と PASS、FIRE CARGO AFT とベル、ARM で pack 3 停止、DISCH で A・B 即時と C は待つ、空中の >CGO BTL DISCH、剤で煙が消える、FIRE WHEEL WELL、BLD DUCT LEAK L、煙）。純正 acf の `s00` 69/69。Lua の誤りなし。これで段階 3（3-1〜3-4）が済んだ。
 - 2026-10-24 09:2x〜09:3x：操縦系統（4-1）の小さな修正。ラダートリムが舵面に入っていなかった（X-Plane の `total_heading_ratio` にトリムは入らないことを確かめた）ので、controlObject にトリムの対応（全行程の 80 %、比率変換器を通る：ATA27 p.612–614）をペダルの前に足した（FCTL-04）。フラップの荷重軽減を状態で持つようにした（レバー 30 で 20 に下がったあと 195 kt を待たずに 25 に戻っていた：FCTL-14）。舵面位置のスポイラーをスポイラー 4・12 にした（前は 1–5・8–12 の平均：FCTL-19）。フラップレバーのスナップのタイマーの条件の逆を直した（FCTL-23）。試験：新しい `tests/fltctrls/fltctrls_module_test.lua`（17 件）。X-Plane（カスタム acf）：新シナリオ `s24_fltctrls_fixes` 8/8（トリム最大で上下ラダー 25.6°、スポイラー 4・12 の表示、レバーのスナップ）。Lua の誤りなし。
+- 2026-10-24 10:0x〜13:xx：data block（AIR-18）。承認の一覧に無いパネルの 2 件を、利用者の承認（「2件とも入れて」）で入れた。客室高度の赤い数字（10,000 ft 以上）を 5 桁にした（フォント `x####0.red`、`LED_ROWS 5`、1 桁ぶん左の x 1560 で右端は同じ）。赤の 5 桁のフォントは純正に無いので、`docs/overhaul/tools/make_led_fonts.ps1` で純正の 4 桁の赤のフォントから作った（字は純正のまま、行の間に空きを足した）。1 回目は白と琥珀も 5 桁にしたが、白の純正の 5 桁のフォントでは数字の下に次の行の字の上端がにじんだので、4 桁で足りる白と琥珀は元に戻した（承認も「赤い数字」だった）。LDG ALT の数字と負号は、与圧のモデルの新しい出力 `air/press/ldg_alt_shown`（controller があり、両方 MAN でないとき 1：FCOM p.586）が 1 のときだけ出す。パネルの書き換えは `docs/overhaul/tools/panel_data_block.lua`（6 か所）。CPC の故障は X-Plane に無いので `air/fail/cpc[0-1]` を足した。試験：与圧のモデル 109 件・空調のモジュール 83 件、40 本すべて通る。X-Plane（カスタム acf）：新シナリオ `s25_data_block` 30/30（写真で、両方 MAN と両 CPC 故障で LDG ALT の数字だけ消えて AUTO は残る、10,000 ft 超の赤と急減圧の 2 万 ft 台の赤が 5 桁で右端がそろい、にじみの線が無い）。外から見た機体は変わらない。Lua の誤りなし。

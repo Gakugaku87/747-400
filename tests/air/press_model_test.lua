@@ -190,16 +190,35 @@ T.equal(out.active, 1, "DC bus 1 off under 2 s: A still")
 out = f:run(0.3, 0, true)
 T.equal(out.active, 2, "DC bus 1 off 2 s: B takes over")
 T.check(out.cpc_alert[1] and not out.auto_alert, "B in control: STATUS CABIN ALT AUTO A, no caution")
+T.check(out.ldg_shown, "B in control: the data block shows LDG ALT")
 f.inp.dc[2] = false
 out = f:run(2.5, 0, true)
 T.equal(out.active, 0, "both off: no controller")
 T.check(out.auto_alert and out.outflow_alert[1] and out.outflow_alert[2], "both off: CABIN ALT AUTO, OUTFLOW VLV L and R")
+T.check(not out.ldg_shown, "both controllers lost: LDG ALT blank (FCOM p.586)")
 f.inp.dc[1], f.inp.dc[2] = true, true
 out = f:run(0.1, 0, true)
 T.equal(out.active, 1, "power back: A")
+T.check(out.ldg_shown, "power back: LDG ALT again")
 f.inp.auto_select = 2
 out = f:run(0.1, 0, true)
 T.equal(out.active, 2, "AUTO SELECT B: B")
+
+-- the controllers' failures (air/fail/cpc): the other takes over; both
+-- failed: CABIN ALT AUTO and no LDG ALT (FCOM p.586, p.619)
+f = flight(0)
+f:run(1, 0, true)
+f.inp.cpc_failed[1] = true
+out = f:run(0.1, 0, true)
+T.equal(out.active, 2, "CPC A failed: B")
+T.check(out.cpc_alert[1] and not out.auto_alert and out.ldg_shown, "CPC A failed: STATUS CABIN ALT AUTO A, LDG ALT shown")
+f.inp.cpc_failed[2] = true
+out = f:run(0.1, 0, true)
+T.equal(out.active, 0, "both failed: no controller")
+T.check(out.auto_alert and not out.ldg_shown, "both failed: CABIN ALT AUTO, LDG ALT blank")
+f.inp.cpc_failed[1], f.inp.cpc_failed[2] = false, false
+out = f:run(0.1, 0, true)
+T.check(out.active > 0 and out.ldg_shown, "failures cleared: a controller and LDG ALT again")
 
 -- ======== manual: MAN L moves the left valve on its DC motor, the right one
 -- stays automatic; both MAN: CABIN ALT AUTO (FCOM p.574, p.608, p.619)
@@ -216,6 +235,7 @@ f.inp.man[1] = true
 out = f:run(1, 0, false)
 T.check(out.outflow_alert[1] and not out.outflow_alert[2], "MAN L: OUTFLOW VLV L")
 T.check(not out.auto_alert, "MAN L only: no CABIN ALT AUTO")
+T.check(out.ldg_shown, "MAN L only: LDG ALT shown")
 f.inp.man_cmd = 1
 out = f:run(0.3, 0, false)
 f.inp.man_cmd = 0
@@ -234,6 +254,7 @@ f.inp.man_cmd = 0
 f.inp.man[2] = true
 out = f:run(1, 0, false)
 T.check(out.auto_alert, "both MAN: CABIN ALT AUTO (FCOM p.619)")
+T.check(not out.ldg_shown, "both MAN: LDG ALT blank (FCOM p.586)")
 T.check(not out.cpc_alert[1] and not out.cpc_alert[2], "both MAN: no STATUS CABIN ALT AUTO A/B (ATA21 p.454)")
 
 -- ======== the relief valves: 9.25 psi; the most ΔP stays under FCOM's 9.4
