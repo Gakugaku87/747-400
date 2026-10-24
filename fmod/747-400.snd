@@ -22,11 +22,11 @@ REQUIRES_BANK ambience.bank
 REQUIRES_BANK apu.bank
 REQUIRES_BANK cabin.bank
 REQUIRES_BANK cockpit.bank
+REQUIRES_BANK engine_other.bank
 REQUIRES_BANK engineGE.bank
 REQUIRES_BANK enginePW.bank
 REQUIRES_BANK engineRR.bank
 REQUIRES_BANK warnings.bank
-REQUIRES_BANK engine_other.bank
 
 DISABLE_LEGACY_ALERT_SOUNDS
 
@@ -5795,48 +5795,48 @@ END_SOUND_ATTACHMENT
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/master-warning
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND laminar/B747/warning/master_warning > 0.5
-    EVENT_END_COND laminar/B747/warning/master_warning < 0.5
+    EVENT_START_COND laminar/B747/warning/warning_siren > 0.5
+    EVENT_END_COND laminar/B747/warning/warning_siren < 0.5
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/master-warning_old
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND laminar/B747/warning/master_warning > 0.5
-    EVENT_END_COND laminar/B747/warning/master_warning < 0.5
+    EVENT_START_COND laminar/B747/warning/warning_siren > 0.5
+    EVENT_END_COND laminar/B747/warning/warning_siren < 0.5
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/autopilot
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit/warnings/annunciators/autopilot_disconnect == 1
+    EVENT_START_COND laminar/B747/warning/warning_wailer > 0.5
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/autopilot_new
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit/warnings/annunciators/autopilot_disconnect == 1
+    EVENT_START_COND laminar/B747/warning/warning_wailer > 0.5
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/autopilot_old
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit/warnings/annunciators/autopilot_disconnect == 1
-    EVENT_END_COND sim/cockpit/warnings/annunciators/autopilot_disconnect == 0
+    EVENT_START_COND laminar/B747/warning/warning_wailer > 0.5
+    EVENT_END_COND laminar/B747/warning/warning_wailer < 0.5
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/fire bell
     VEH_XYZ 0 4.8 -26.5
-        EVENT_START_COND sim/cockpit/warnings/annunciators/engine_fire != 0
-    EVENT_END_COND sim/cockpit/warnings/annunciators/engine_fire == 0
+        EVENT_START_COND laminar/B747/warning/warning_bell > 0.5
+    EVENT_END_COND laminar/B747/warning/warning_bell < 0.5
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/fire bell_old
     VEH_XYZ 0 4.8 -26.5
-        EVENT_START_COND sim/cockpit/warnings/annunciators/engine_fire != 0
-    EVENT_END_COND sim/cockpit/warnings/annunciators/engine_fire == 0
+        EVENT_START_COND laminar/B747/warning/warning_bell > 0.5
+    EVENT_END_COND laminar/B747/warning/warning_bell < 0.5
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
@@ -6298,13 +6298,6 @@ END_SOUND_ATTACHMENT
 ##################
 #CABIN
 ##################
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Cabin/Passenger/morshu
-    VEH_XYZ 0 5.1 -25.5
-        EVENT_START_COND sim/operation/sound/inside_ratio[5] > 0.1
-        EVENT_END_COND sim/operation/sound/inside_ratio[5] < 0.1
-END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Cabin/Passenger/packsL
@@ -7483,46 +7476,6 @@ BEGIN_SOUND_ATTACHMENT
         EVENT_START_COND sim/flightmodel2/misc/wiper_angle_deg[0] < 5
 END_SOUND_ATTACHMENT
 
-#############
-#PA
-#############
-
-BEGIN_SOUND_ATTACHMENT
-        EVENT_NAME /Boeing/747/-400/Cabin/Music/song1
-        VEH_XYZ 0 0 0
-        EVENT_START_COND laminar/B747/flt_mgmt/iru/mode_sel_dial_pos[0] == 2
-        EVENT_START_COND laminar/B747/flt_mgmt/iru/mode_sel_dial_pos[1] == 2
-        EVENT_START_COND laminar/B747/flt_mgmt/iru/mode_sel_dial_pos[2] == 2
-    EVENT_START_COND laminar/B747/toggle_switch/position[8] == 0
-    EVENT_AUTO_END_FROM_START_COND
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-        EVENT_NAME /Boeing/747/-400/Cabin/PA/PAcaptain
-        VEH_XYZ -0.9 -5.5 -22.4
-    EVENT_START_COND laminar/B747/toggle_switch/position[8] != 0
-    EVENT_END_COND laminar/B747/toggle_switch/position[8] == 0
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-        EVENT_NAME /Boeing/747/-400/Cabin/PA/PAdoorsclose
-        VEH_XYZ 0 0 0
-    EVENT_START_COND laminar/B747/toggle_switch/position[8] != 0
-    EVENT_END_COND laminar/B747/toggle_switch/position[8] == 0
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-        EVENT_NAME /Boeing/747/-400/Cabin/PA/PAsafety
-        VEH_XYZ 0 0 0
-    EVENT_START_COND laminar/B747/toggle_switch/position[8] != 0
-    EVENT_END_COND laminar/B747/toggle_switch/position[8] == 0
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-        EVENT_NAME /Boeing/747/-400/Cabin/PA/PAseatbelt
-        VEH_XYZ 0 0 0
-    EVENT_START_COND laminar/B747/safety/seat_belts/sel_dial_pos == 2
-END_SOUND_ATTACHMENT
 
 ##################
 #WEATHER
@@ -7531,63 +7484,6 @@ END_SOUND_ATTACHMENT
 BEGIN_SOUND_ATTACHMENT
         EVENT_NAME /Boeing/747/-400/Ambience/Weather/rain
         VEH_XYZ 0 0 0
-	EVENT_START_COND sim/weather/aircraft/precipitation_on_aircraft_ratio > 0
-	EVENT_END_COND sim/weather/aircraft/precipitation_on_aircraft_ratio == 0
-END_SOUND_ATTACHMENT
-
-####################
-#PM CALLOUTS
-####################
-
-BEGIN_SOUND_ATTACHMENT
-        EVENT_NAME /Boeing/747/-400/PM Callouts/10000
-        VEH_XYZ 0.5 5.2 -26
-	EVENT_START_COND sim/cockpit2/gauges/indicators/altitude_ft_copilot > 10000
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-        EVENT_NAME /Boeing/747/-400/PM Callouts/10000
-        VEH_XYZ 0.5 5.2 -26
-	EVENT_START_COND sim/cockpit2/gauges/indicators/altitude_ft_copilot < 10000
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-        EVENT_NAME /Boeing/747/-400/PM Callouts/80
-        VEH_XYZ 0.5 5.2 -26
-	EVENT_START_COND laminar/B747/gauges/indicators/airspeed_kts_copilot > 80
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-        EVENT_NAME /Boeing/747/-400/PM Callouts/80
-        VEH_XYZ 0.5 5.2 -26
-	EVENT_START_COND laminar/B747/gauges/indicators/airspeed_kts_copilot < 80
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-        EVENT_NAME /Boeing/747/-400/PM Callouts/POS
-        VEH_XYZ 0.5 5.2 -26
-	EVENT_START_COND laminar/B747/vsi/fpm > 150
-	EVENT_START_COND laminar/B747/actuator/gear_handle == 0
-    EVENT_START_COND sim/flightmodel/failures/onground_any == 0
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-        EVENT_NAME /Boeing/747/-400/PM Callouts/REV_NORM
-        VEH_XYZ 0.5 5.2 -26
-    EVENT_START_COND sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0] > 0.98
-    EVENT_START_COND sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1] > 0.98
-    EVENT_START_COND sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2] > 0.98
-    EVENT_START_COND sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3] > 0.98
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-        EVENT_NAME /Boeing/747/-400/PM Callouts/SPEEDBRAKE
-        VEH_XYZ 0.5 5.2 -26
-	EVENT_START_COND laminar/B747/flt_ctrls/speedbrake_lever == 1
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-        EVENT_NAME /Boeing/747/-400/PM Callouts/V1
-        VEH_XYZ 0.5 5.2 -26
-    EVENT_START_COND laminar/B747/fmod/callouts/v1 == 1
+	EVENT_START_COND sim/weather/precipitation_on_aircraft_ratio > 0
+	EVENT_START_END sim/weather/precipitation_on_aircraft_ratio == 0
 END_SOUND_ATTACHMENT
