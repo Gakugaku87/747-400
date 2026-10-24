@@ -3462,6 +3462,9 @@ function B747_set_ap_all_modes()
 	simDR_autopilot_vs_fpm = 0.0
 	simDR_autopilot_altitude_ft = 10000.0
 	B747DR_autopilot_altitude_ft = 10000.0
+	-- no flap target: the dataref is made at 0, flaps UP to B747_ap_target_flaps,
+	-- which took the handle of a flight starting with flaps out to UP
+	B747DR_ap_target_flaps = -1
 end
 
 ----- SET STATE TO COLD & DARK ----------------------------------------------------------
