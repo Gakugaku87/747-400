@@ -1,0 +1,54 @@
+{
+  "name": "s38_rto",
+  "description": "オートブレーキの RTO（4-2 段 3）の X-Plane での確認。RJAA 34L でエンジン運転中に、X-Plane のオートブレーキは OFF のまま、RTO を選ぶと AUTOBRAKES RTO の memo。離陸推力で 95 kt を超えてから推力レバーをアイドルにすると最大圧（ブレーキの比 1）で止まり、セレクターは RTO のまま（ATA29_32 p.527-528、FCOM p.1515）。RTO を選び直し、70 kt でアイドルにすると RTO は働かない（85 kt 未満）。機体を読み直す。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 8, "note": "開始の 3 秒を過ぎるのを待つ" },
+    { "do": "check", "note": "X-Plane のオートブレーキは OFF", "dref": "sim/cockpit2/switches/auto_brake_level", "op": "==", "value": 1 },
+    { "do": "check", "note": "機長側の IRS が整列（RTO の arm の条件）", "dref": "laminar/B747/flt_mgmt/iru/status[0]", "op": "==", "value": 2 },
+    { "do": "cmd", "note": "RTO（X-Plane のコマンドでセレクターに）", "name": "sim/flight_controls/brakes_rto_auto" },
+    { "do": "wait", "note": "セレクター RTO", "dref": "laminar/B747/gear/autobrakes/sel_dial_pos", "op": "==", "value": 0, "timeout": 5 },
+    { "do": "wait", "note": "AUTOBRAKES RTO（p.530）", "dref": "laminar/B747/CAS/memo_status[7]", "op": "==", "value": 1, "timeout": 5 },
+    { "do": "set", "note": "パーキングブレーキのレバーを外す", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 0 },
+
+    { "do": "mark", "note": "RTO at 95 kt" },
+    { "do": "set", "note": "推力レバー 4 本を最前方", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 1 },
+    { "do": "wait", "note": "95 kt を超える", "dref": "sim/flightmodel/position/groundspeed", "op": ">", "value": 48.9, "timeout": 90 },
+    { "do": "set", "note": "推力レバーをアイドル", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "RTO：最大圧（ブレーキの比 1）", "dref": "sim/cockpit2/controls/left_brake_ratio", "op": ">", "value": 0.98 },
+    { "do": "check", "note": "右も", "dref": "sim/cockpit2/controls/right_brake_ratio", "op": ">", "value": 0.98 },
+    { "do": "wait", "note": "止まる", "dref": "sim/flightmodel/position/groundspeed", "op": "<", "value": 1, "timeout": 60 },
+    { "do": "check", "note": "セレクターは RTO のまま（p.528）", "dref": "laminar/B747/gear/autobrakes/sel_dial_pos", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "rejected at 70 kt" },
+    { "do": "cmd", "note": "OFF にして", "name": "sim/flight_controls/brakes_off_auto" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "cmd", "note": "RTO を選び直す", "name": "sim/flight_controls/brakes_rto_auto" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "set", "note": "推力レバー 4 本を最前方", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 1 },
+    { "do": "wait", "note": "70 kt を超える", "dref": "sim/flightmodel/position/groundspeed", "op": ">", "value": 36.0, "timeout": 60 },
+    { "do": "set", "note": "推力レバーをアイドル", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "85 kt 未満：RTO は働かない（p.527、FCOM p.1515）", "dref": "sim/cockpit2/controls/left_brake_ratio", "op": "==", "value": 0 },
+    { "do": "cmd", "note": "手でブレーキ max（10 秒、押している間に次へ）", "name": "sim/flight_controls/brakes_max", "duration": 10, "async": true },
+    { "do": "wait", "note": "止まる", "dref": "sim/flightmodel/position/groundspeed", "op": "<", "value": 1, "timeout": 30 },
+    { "do": "set", "note": "パーキングブレーキのレバー", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
+    { "do": "cmd", "note": "オートブレーキ OFF", "name": "sim/flight_controls/brakes_off_auto" },
+    { "do": "cas", "note": "終わり" }
+  ]
+}

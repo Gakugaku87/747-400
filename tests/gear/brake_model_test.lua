@@ -27,6 +27,15 @@ do
     inp.source, inp.psi = 0, 0
     out = run(s, inp, 0.1)
     T.equal(out.brake[1], 0, "no source, the accumulator empty: no brakes")
+    -- the autobrakes' pressure: the larger of it and the pedals, within the source's
+    inp.source, inp.psi, inp.pedal = 4, 3000, {0.2, 0}
+    inp.auto = 0.4
+    out = run(s, inp, 0.1)
+    T.near(out.brake[1], 0.4, 1e-9, "autobrake 0.4 over the pedal 0.2")
+    T.near(out.brake[2], 0.4, 1e-9, "on both sides")
+    inp.psi = 900
+    out = run(s, inp, 0.1)
+    T.near(out.brake[2], 0.3, 1e-9, "not more than the source's 900 psi")
 end
 
 -- the parking brake: the valve closes on the battery bus and traps the

@@ -34,6 +34,8 @@ end
 function M.inputs()
     return {
         pedal = {0, 0},             -- the pilots' brake pedals, left and right (0..1)
+        auto = 0,                   -- the autobrakes' pressure (0..1 of 3000 psi; the
+                                    -- autobrake model applies it on the normal brakes only)
         lever = 0,                  -- the parking brake lever (0..1)
         source = 4, psi = 3000,     -- the brake source (0 accumulator, 1, 2, 4) and its pressure
         bat_bus = true,             -- 28V DC battery bus: the parking brake valve's motor (ATA29_32 p.416-421)
@@ -82,7 +84,7 @@ function M.update(s, inp, dt)
         s.trapped = nil
     end
     local avail = clamp(inp.psi / M.FULL_PSI, 0, 1)
-    for i = 1, 2 do out.brake[i] = clamp(inp.pedal[i], 0, 1) * avail end
+    for i = 1, 2 do out.brake[i] = math.max(clamp(inp.pedal[i], 0, 1) * avail, math.min(inp.auto, avail)) end
     out.park = s.trapped and clamp(s.trapped / M.FULL_PSI, 0, 1) or 0
     if inp.chocked then out.park = 1 end
     out.valve = s.valve

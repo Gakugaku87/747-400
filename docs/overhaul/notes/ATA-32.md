@@ -335,3 +335,17 @@ GAP ID の接頭辞：`GEAR`。2026-10-23 作成。コードは `overhaul` ブ�
 - 乗員のブレーキ：X-Plane のブレーキのコマンドを置き換えた。`brakes_regular`（押している間、両ペダル 0.5：推定）、`brakes_max`（1）、`left_brake`・`right_brake`（その側 1）、`brakes_toggle_regular`・`_max`。ペダルは 0.25 秒で踏み込む（推定）。上流の「1 本のブレーキの軸を wing sweep に割り当てる」使い方は両ペダルとして残した。X-Plane の toe brake の軸は読まない（`joy_mapped_axis_value` の添字が分からない。利用者の機器には無い）。X-Plane の `park_brake_set`・`release`・`toggle` は 747 のレバーを動かす。X-Plane の `brakes_regular`・`max` は、上書きの外で X-Plane のパーキングブレーキの比を上げていた（2026-10-25 に確かめた）。
 - 外した前の処理：fltCtrls のレバーと X-Plane のパーキングブレーキの同期（輪止め、accumulator が 1000 psi 未満で抜く、レバーを戻す）、脚レバーを DN から動かすとパーキングブレーキを外す（GEAR-16）、wing sweep の軸で `override_toe_brakes` を入れる（GEAR-21）、古い油圧のモジュールの PARK BRAKE SET。CONFIG PARK BRK はレバーで見て、エンジン 2 か 3（FCOM p.1557。前は 2 と 3 の両方）。
 - 作らなかったもの：de-spin（§6.6 の簡略化）、2 輪ずつの代替の antiskid（X-Plane の ABS は 1 つ）、torque limiter の働き（メッセージだけ）。
+
+## 12. 実装（4-2 段 3、2026-10-25：オートブレーキ）
+
+- 新しいモデル `plugins/xtlua/scripts/B747.10.xt.gear/B747.10.autobrake_model.lua`（試験 `tests/gear/autobrake_model_test.lua`）。ブレーキのグルー `B747.10.xt.brakes.lua` が、ブレーキのモデルの前に毎フレーム回し、指令の圧をブレーキのモデルに渡す（ペダルとの大きい方を源の圧で制限：§11）。§4.8 をそのまま作った。X-Plane のオートブレーキ（`auto_brake_level`）は常に OFF にし、X-Plane のオートブレーキのコマンドは 747 のセレクターを動かす（GEAR-19 のオートブレーキの部分）。
+- セレクターの保持：1〜MAX を選ぶと、air mode か推力レバー 4 本のアイドル、機長側の IRS、ペダルが 750 psi 未満、故障なし、正規の antiskid、ブレーキの源が系統 4 で armed。そろわなければばねで DISARM に戻る（p.502・519）。arm した後に系統 4 を失っても外れない（p.518）。前は地上・低速で 1 秒後に DISARM にしていた（GEAR-05）。
+- 適用：armed で、推力レバー 4 本がアイドル、ground mode、車輪のスピンアップ（60 kt を 3 秒。車輪の速さは IRS の対地速度で代える：推定）。そのあとは止まるまで、または disarm まで（FCOM p.1515）。
+- 減速：IRS の対地速度の変化（0.5 秒でならす：推定）を、選んだレベルの減速（4.0・5.0・6.0・7.5・11.0 ft/s²、p.503）に合わせる PI 制御で、圧はレベルの最大圧（1,300〜3,000 psi）まで。逆推力とスピードブレーキが効く分だけ圧が下がる（FCOM p.1515）のは、この制御でそのまま起こる。ゲインはカスタム acf に合わせた（推定）。前は X-Plane の 4 段のオートブレーキ（4 と MAX が同じ 0.4 g）だった（GEAR-03）。
+- disarm（p.522–523、FCOM p.1515–1516）：ペダル（どちらかが 750 psi）、地上でアイドルにした後の推力レバーの前進、地上で出したスピードブレーキを DOWN、故障（オートブレーキ、正規の antiskid、機長側の IRS）、適用中に系統 4 を失って減速が 1 ft/s² 以上足りない。セレクターが DISARM に戻り AUTOBRAKES。圧は 2 秒で抜ける（p.512 のオリフィス。時間は推定）。前は推力の少しの増加でも disarm した（GEAR-20）。
+- RTO：地上（pri と alt の両方が ground）で armed、対地速度が 85 kt を超えるとラッチ（p.527）、推力レバーがアイドルで最大圧。ペダル 12°（17° のうち）、推力レバーの前進、故障、スピードブレーキの展開と収納で止めるが、セレクターは RTO のまま（p.528）。air mode でセレクターが OFF へ戻る（p.502・528）。前は推力の軸が 0.8 を超えたときに X-Plane の RTO を入れ、それまで memo も出なかった（GEAR-04）。離陸すると X-Plane の RTO が残った（GEAR-02）。
+- 表示（p.530–531）：memo AUTOBRAKES 1〜4・MAX・RTO（armed のときレベルつき）、AUTOBRAKES（DISARM の位置、armed なのに系統 4 が無い）。
+- 推力レバーのアイドルと前進は、レバー 0.05 と 0.1（推定。資料にスイッチの角度が無い）。
+- 外した前の処理：脚のモジュールの RTO の線、セレクターのコマンドでの `auto_brake_level` の書き込み、`autobrake_check`、memo と advisory、fltCtrls の 30 kt での DISARM とその時計。
+- 作らなかったもの：AUTOBRAKES のうち「セレクター OFF なのに遮断弁の下流が高圧」と「RTO の開始で故障・手動の override」（弁と圧のモデルが無い）、前側 8 輪の車輪速（IRS の対地速度で代える）、セレクターが arm するときのラッチコイルの電源。
+- X-Plane で確かめたこと（カスタム acf、2026-10-25）：RTO（`s38_rto`）は、95 kt を超えてからアイドルにすると左右のブレーキが 1 になり、約 11 秒で止まる（平均 15 ft/s² 前後）。セレクターは RTO のまま。70 kt で中止したときは働かない。着陸（`landing.sh`）の 100〜60 kt の減速は、4 で 7.92 ft/s²（指令 7.5）、MAX で 10.08 ft/s²（指令 11.0）で、逆推力の 8 秒も含む。乾いた滑走路では MAX AUTO よりペダルいっぱいの方が強い（FCOM p.1515）ことと合う。

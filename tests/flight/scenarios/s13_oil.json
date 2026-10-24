@@ -19,7 +19,7 @@
   "steps": [
     { "do": "record_start" },
     { "do": "sleep", "seconds": 10 },
-    { "do": "set", "note": "パーキング・ブレーキ", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 1 },
+    { "do": "set", "note": "パーキング・ブレーキ", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
     { "do": "snapshot", "note": "アイドルのオイルと振動", "drefs": [
       "laminar/B747/engines/type", "laminar/B747/engines/display_N1[0]", "laminar/B747/engines/display_N2[0]",
       "sim/cockpit2/engine/indicators/oil_pressure_psi[0]", "sim/cockpit2/engine/indicators/oil_temperature_deg_C[0]",

@@ -127,6 +127,8 @@ B747DR_gear_park_valve         = deferred_dataref("laminar/B747/gear/brakes/park
 B747DR_gear_fail_antiskid      = deferred_dataref("laminar/B747/gear/fail/antiskid", "array[2]")
 B747DR_gear_fail_limiter       = deferred_dataref("laminar/B747/gear/fail/brake_limiter", "number")
 B747DR_gear_fail_park_valve    = deferred_dataref("laminar/B747/gear/fail/park_valve", "number")
+-- the autobrakes (4-2 step 3, B747.10.autobrake_model.lua): failed
+B747DR_gear_fail_autobrake     = deferred_dataref("laminar/B747/gear/fail/autobrake", "number")
 B747DR_parking_brake_ratio = find_dataref("laminar/B747/flt_ctrls/parking_brake_ratio")
 simDR_parking_brake_ratio       = find_dataref("sim/cockpit2/controls/parking_brake_ratio")
 ----- GEAR HANDLE DATAREF HANDLER -------------------------------------------------------

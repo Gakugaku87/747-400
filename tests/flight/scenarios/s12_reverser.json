@@ -19,7 +19,7 @@
   "steps": [
     { "do": "record_start" },
     { "do": "sleep", "seconds": 10 },
-    { "do": "set", "note": "パーキング・ブレーキ", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 1 },
+    { "do": "set", "note": "パーキング・ブレーキ", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
     { "do": "check", "note": "地上（PSEU primary）", "dref": "laminar/B747/gear/air_ground/pri_gnd", "op": "==", "value": 1 },
     { "do": "check", "note": "地上（PSEU alternate）", "dref": "laminar/B747/gear/air_ground/alt_gnd", "op": "==", "value": 1 },
     { "do": "check", "note": "格納", "dref": "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]", "op": "<", "value": 0.01 },

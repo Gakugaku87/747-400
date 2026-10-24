@@ -163,7 +163,7 @@
     { "do": "check", "note": "NORM で EQUIP COOLING は消える", "dref": "laminar/B747/CAS/caution_status[27]", "op": "==", "value": 0 },
 
     { "do": "mark", "note": "離陸滑走" },
-    { "do": "set", "note": "パーキング・ブレーキを外す", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 0 },
+    { "do": "set", "note": "パーキング・ブレーキを外す", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 0 },
     { "do": "set", "note": "スラスト・レバー 4 本を最前方", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 1 },
     { "do": "wait", "note": "対地速度 65 kt（33.4 m/s）", "dref": "sim/flightmodel/position/groundspeed", "op": ">", "value": 33.5, "timeout": 60 },
     { "do": "sleep", "seconds": 1 },
@@ -176,7 +176,7 @@
     { "do": "check", "note": "客室は場の高度の 50 ft 下（ΔP 約 0.027 psi、ATA21 p.428）", "dref": "sim/cockpit2/pressurization/indicators/pressure_diffential_psi", "op": "between", "value": [0.02, 0.04] },
     { "do": "check", "note": "弁は少し閉（ATA21 p.429 図）", "dref": "laminar/B747/air/outflow_valve_left/pos", "op": "between", "value": [0.0, 0.99] },
     { "do": "set", "note": "スラスト・レバーを idle", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
-    { "do": "set", "note": "ブレーキ", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 1 },
+    { "do": "set", "note": "ブレーキ", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
     { "do": "wait", "note": "65 kt 未満", "dref": "sim/flightmodel/position/groundspeed", "op": "<", "value": 33, "timeout": 60 },
     { "do": "sleep", "seconds": 1 },
     { "do": "check", "note": "65 kt 未満で地上モード（ATA21 p.412）", "dref": "laminar/B747/air/press/mode", "op": "==", "value": 0 },
