@@ -119,6 +119,14 @@ B747DR_gear_fail_actuator      = deferred_dataref("laminar/B747/gear/fail/actuat
 B747DR_gear_fail_door          = deferred_dataref("laminar/B747/gear/fail/door", "array[5]")
 B747DR_gear_fail_indication    = deferred_dataref("laminar/B747/gear/fail/indication", "array[5]")
 B747DR_gear_fail_truck_tilt    = deferred_dataref("laminar/B747/gear/fail/truck_tilt", "array[5]")
+-- The wheel brakes (4-2 step 2, B747.10.brake_model.lua): the parking brake
+-- valve (0 open .. 1 closed); failures (no X-Plane equivalents): the normal
+-- and the alternate antiskid, the torque limiters, the parking brake valve
+-- stuck.
+B747DR_gear_park_valve         = deferred_dataref("laminar/B747/gear/brakes/park_valve", "number")
+B747DR_gear_fail_antiskid      = deferred_dataref("laminar/B747/gear/fail/antiskid", "array[2]")
+B747DR_gear_fail_limiter       = deferred_dataref("laminar/B747/gear/fail/brake_limiter", "number")
+B747DR_gear_fail_park_valve    = deferred_dataref("laminar/B747/gear/fail/park_valve", "number")
 B747DR_parking_brake_ratio = find_dataref("laminar/B747/flt_ctrls/parking_brake_ratio")
 simDR_parking_brake_ratio       = find_dataref("sim/cockpit2/controls/parking_brake_ratio")
 ----- GEAR HANDLE DATAREF HANDLER -------------------------------------------------------
@@ -151,12 +159,7 @@ function B747DR_gear_handle_DRhandler()
         end
 
     end
-    --print("gear handler")
-    if B747DR_gear_handle>0 then 
-        --print("parking brake 0")
-        B747DR_parking_brake_ratio=0
-    end
-end    
+end
 
 
 

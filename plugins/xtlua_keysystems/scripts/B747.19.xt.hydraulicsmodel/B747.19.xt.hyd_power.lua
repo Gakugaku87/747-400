@@ -28,6 +28,10 @@ B747DR_hyd_light_eng_press      = find_dataref("laminar/B747/hydraulics/light/en
 B747DR_hyd_light_dem_press      = find_dataref("laminar/B747/hydraulics/light/dem_press")
 B747DR_hyd_light_sys_fault      = find_dataref("laminar/B747/hydraulics/light/sys_fault")
 B747DR_hyd_light_brake_source   = find_dataref("laminar/B747/hydraulics/light/brake_source")
+B747DR_hyd_brake_source         = find_dataref("laminar/B747/hydraulics/brake_source")
+B747DR_hyd_brake_psi            = find_dataref("laminar/B747/hydraulics/brake_psi")
+simDR_hyd_left_brake            = find_dataref("sim/cockpit2/controls/left_brake_ratio")
+simDR_hyd_right_brake           = find_dataref("sim/cockpit2/controls/right_brake_ratio")
 B747DR_hyd_CAS_caution          = find_dataref("laminar/B747/CAS/caution_status")
 B747DR_hyd_CAS_advisory         = find_dataref("laminar/B747/CAS/advisory_status")
 B747DR_hyd_CAS_status           = find_dataref("laminar/B747/CAS/status_status")
@@ -68,6 +72,7 @@ local hyd_state = H.new()
 local hyd_inputs = H.inputs()
 local took_psi = {0, 0, 0, 0}       -- what the flight controls took last frame
 local last_parking_brake = nil
+local last_pedal_l, last_pedal_r = 0, 0
 -- X-Plane's hydraulic leak failures: the system each one drains, and how
 -- many seconds it takes (as before; the system is picked once, HYD-08)
 local leak_s = {0, 0, 0, 0}
@@ -121,11 +126,14 @@ local function read_inputs(inp, dt)
     inp.flaps_moving = B747DR_fcu_te_moving > 0.5
     inp.flaps_down = B747DR_fcu_te_down > 0.5
     inp.oat = B747DR_hyd_temp
-    -- fluid the parking brake takes as it is set
-    local pb = simDR_parking_brake_ratio
-    if last_parking_brake == nil then last_parking_brake = pb end
-    inp.brake_use_in3 = math.max(0, pb - last_parking_brake) * BRAKE_APPLY_IN3
-    last_parking_brake = pb
+    -- fluid the brakes take as they are applied: the parking brake as it is
+    -- set and the pedals (the gear module's brakes write X-Plane's ratios);
+    -- the model counts it only on the accumulator
+    local pb, l, r = simDR_parking_brake_ratio, simDR_hyd_left_brake, simDR_hyd_right_brake
+    if last_parking_brake == nil then last_parking_brake, last_pedal_l, last_pedal_r = pb, l, r end
+    inp.brake_use_in3 = (math.max(0, pb - last_parking_brake)
+        + 0.5 * (math.max(0, l - last_pedal_l) + math.max(0, r - last_pedal_r))) * BRAKE_APPLY_IN3
+    last_parking_brake, last_pedal_l, last_pedal_r = pb, l, r
 end
 
 local function write_outputs(out)
@@ -155,6 +163,10 @@ local function write_outputs(out)
     B747DR_hyd_sys_res_3, B747DR_hyd_sys_restotal_3, B747DR_hyd_sys_temp_3 = sys[3].qty, sys[3].qty, sys[3].temp
     B747DR_hyd_sys_res_4, B747DR_hyd_sys_restotal_4, B747DR_hyd_sys_temp_4 = sys[4].qty, sys[4].qty, sys[4].temp
     simDR_hyd_press_1_2 = out.acc_psi            -- BRAKE ACCUMULATOR PRESSURE gauge
+    -- the brake source (0 accumulator, 1, 2, 4) and its pressure, for the
+    -- gear module's brakes (B747.10.xt.brakes.lua)
+    if B747DR_hyd_brake_source ~= out.brake_source then B747DR_hyd_brake_source = out.brake_source end
+    if math.abs(B747DR_hyd_brake_psi - out.brake_psi) > 1 then B747DR_hyd_brake_psi = out.brake_psi end
 
     for n = 1, 4 do
         local o = sys[n]

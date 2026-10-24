@@ -802,8 +802,6 @@ function setNumClimb()
     B747DR_engines_numLeverClimb = n
 end
 
-local last_simDR_Brake=simDR_parking_brake_ratio
-local last_B747DR_Brake=B747DR_parking_brake_ratio
 
 
 
@@ -878,45 +876,20 @@ function B747_fltCtrols_EICAS_msg()
 	B747DR_CAS_warning_status[3] = 0
     end
 
-    -- >CONFIG PARK BRK
-    local sBrake = simDR_parking_brake_ratio  
-    local lBrake = B747DR_parking_brake_ratio -- because async
-    if B747DR__gear_chocked==1 then
-      simDR_parking_brake_ratio = 1.0
-      last_B747DR_Brake = 1.0
-    elseif simDR_hyd_press_1_2 < 1000 and simDR_parking_brake_ratio > 0 then
-      simDR_parking_brake_ratio = B747_animate_value(simDR_parking_brake_ratio,0,0,1,1)
-    else
-      
-      if B747DR_parking_brake_ratio~=last_B747DR_Brake and (B747DR_parking_brake_ratio>0.01) then --manually changed
-	    if B747DR_parking_brake_ratio>0.9 then
-            simDR_parking_brake_ratio = 1
-        else
-            simDR_parking_brake_ratio = 0
-        end
-        sBrake = simDR_parking_brake_ratio
-      end
-      last_simDR_Brake=sBrake
-      last_B747DR_Brake=lBrake
-    end
-    if simDR_parking_brake_ratio==0 and B747DR_parking_brake_ratio>0 then
-        B747DR_parking_brake_ratio=B747_animate_value(B747DR_parking_brake_ratio,0,0,1,30)
-        lBrake = B747DR_parking_brake_ratio
-        last_simDR_Brake=sBrake
-        last_B747DR_Brake=lBrake
-    end
-    
-    if simDR_parking_brake_ratio > 0.99
+    -- >CONFIG PARK BRK: the parking brake lever set (the parking brake
+    -- itself is the gear module's: B747.10.xt.brakes.lua) on the ground below
+    -- V1 with three fuel control switches at RUN and engine 2 or 3 in the
+    -- takeoff range (FCOM p.1557, p.1603; N1 above 90 % as before: estimate)
+    if B747DR_parking_brake_ratio > 0.9
         and simDR_ind_airspeed_kts_pilot < B747DR_airspeed_V1
         and num_fuel_ctrl_sw_on >= 3
-        and B747DR_display_N1[1] > 90.0
-        and B747DR_display_N1[2] > 90.0
+        and (B747DR_display_N1[1] > 90.0 or B747DR_display_N1[2] > 90.0)
         and simDR_engine_throttle_jet_all >= 0
-	    and simDR_all_wheels_on_ground == 1
+        and simDR_all_wheels_on_ground == 1
     then
         B747DR_CAS_warning_status[5] = 1
     else
-	    B747DR_CAS_warning_status[5] = 0
+        B747DR_CAS_warning_status[5] = 0
     end
 
     -- >CONFIG SPOILERS: the takeoff configuration warning (the conditions as

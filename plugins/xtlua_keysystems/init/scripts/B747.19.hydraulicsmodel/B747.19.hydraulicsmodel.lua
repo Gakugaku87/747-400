@@ -119,6 +119,11 @@ B747DR_hyd_light_eng_press      = deferred_dataref("laminar/B747/hydraulics/ligh
 B747DR_hyd_light_dem_press      = deferred_dataref("laminar/B747/hydraulics/light/dem_press", "array[4]")
 B747DR_hyd_light_sys_fault      = deferred_dataref("laminar/B747/hydraulics/light/sys_fault", "array[4]")
 B747DR_hyd_light_brake_source   = deferred_dataref("laminar/B747/hydraulics/light/brake_source", "number")
+-- the brake source the model chooses (0 accumulator, 1, 2, 4: system 4, then
+-- 1, then 2) and its pressure (the accumulator's for 0), psi; the gear
+-- module's brakes read them (4-2 step 2)
+B747DR_hyd_brake_source         = deferred_dataref("laminar/B747/hydraulics/brake_source", "number")
+B747DR_hyd_brake_psi            = deferred_dataref("laminar/B747/hydraulics/brake_psi", "number")
 -- the HYD synoptic of the custom acf (B747.19.xt.hyd_power.lua): the engine
 -- and demand pump symbols of systems 1-4 and the AUX pump symbol (codes
 -- M.SYN_* in B747.19.hyd_model.lua), the supply shutoff valves (1 = open),

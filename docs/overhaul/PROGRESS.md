@@ -2,7 +2,7 @@
 
 次のセッションは、ここと [PLAN.md](PLAN.md) を読んでから続きに入る。
 
-最終更新：2026-10-25 未明（脚 4-2 段 1：脚の作動・代替下げ・位置監視・EICAS の展開形。開発・試験はカスタム acf だけにする方針。全行程の飛行試験と配布用フォルダーの確認、着陸の道具 `tests/flight/tools/landing.sh`。冷えた状態からの開始で出ていた FLAPS DRIVE：autopilot のフラップの目標。操縦系統 4-1 段 4：横操縦、遮断弁、ヨーダンパーの INOP。段 3：スピードブレーキ。段 2c：speed trim とグリーンバンド。段 2b：安定板トリム。警報 WARN-24。段 2a：外側エルロンのロックアウトとラダー比変換器。段 1：フラップの FCU。data block の客室高度の赤い数字の桁と LDG ALT の消去 AIR-18。操縦系統 4-1 の小さな修正。火災防護 3-4。酸素 3-3。防氷・防雨 3-2）
+最終更新：2026-10-25 未明（脚 4-2 段 2：ブレーキの源とパーキングブレーキ・アンチスキッドのメッセージ。段 1：脚の作動・代替下げ・位置監視・EICAS の展開形。開発・試験はカスタム acf だけにする方針。全行程の飛行試験と配布用フォルダーの確認、着陸の道具 `tests/flight/tools/landing.sh`。冷えた状態からの開始で出ていた FLAPS DRIVE：autopilot のフラップの目標。操縦系統 4-1 段 4：横操縦、遮断弁、ヨーダンパーの INOP。段 3：スピードブレーキ。段 2c：speed trim とグリーンバンド。段 2b：安定板トリム。警報 WARN-24。段 2a：外側エルロンのロックアウトとラダー比変換器。段 1：フラップの FCU。data block の客室高度の赤い数字の桁と LDG ALT の消去 AIR-18。操縦系統 4-1 の小さな修正。火災防護 3-4。酸素 3-3。防氷・防雨 3-2）
 
 ## いまどこか
 
@@ -31,7 +31,7 @@
   - 3-4（火災防護）：段 1（エンジンと APU）と段 2（貨物室・車輪格納部・ダクトリーク・煙・スクイブ試験）。モデル `B747.35.fire_model.lua` と、火災のモジュールを書き直したグルー（ARCHITECTURE.md §4.14）：双ループの検知（AND と単ループへの組替え、APU は OR、>DET、loop の status、FIRE/OVHT SYS）、エンジンの過熱、消火スイッチのロック（火災・CUTOFF・試験・override）、翼ごとの共用ボトルと squib、X-Plane の消火器、APU の停止と地上の自動放出、APU の消火スイッチ（コマンド）、FIRE/OVHT TEST（TEST IN PROG から 5 秒で PASS/FAIL）、メッセージと灯。段 2：下部貨物室の煙検知（電源投入と試験のときだけの組替え、venturi の吸引）と 2 段の放出（A・B 即時、C・D は 30 分後か接地）、DISCH の灯と >CGO BTL DISCH・>CARGO DET AIR、車輪格納部の火災、BLD DUCT LEAK、化粧室・クルーレストの煙、スクイブ試験。試験はモデル 122 件・モジュール 87 件、X-Plane の `s22_fire_engine_apu`・`s23_fire_cargo`。残りは下の「火災防護（3-4）の段取りと GAP の状態」。
 - **段階 4**：
   - 4-1（操縦系統）：段 1〜4 は済（下の「操縦系統（4-1）の GAP の状態」）。
-  - 4-2（脚・ブレーキ・ステアリング）：段 1（脚の作動・代替下げ・位置監視・EICAS の表示）は済。モデル `plugins/xtlua/scripts/B747.10.xt.gear/B747.10.gear_model.lua` とグルー `B747.10.xt.gear_act.lua`（ARCHITECTURE.md §4.16、notes/ATA-32.md §10）。試験はモデル 71 件・モジュール 29 件、X-Plane の `s35_gear`・`s36_gear_lock`。残りは下の「脚（4-2）の GAP の状態」。
+  - 4-2（脚・ブレーキ・ステアリング）：段 1（脚の作動・代替下げ・位置監視・EICAS の表示）と段 2（ブレーキ：源の圧、パーキングブレーキの弁、ANTISKID・ANTISKID OFF・BRAKE LIMITER）は済。モデル `plugins/xtlua/scripts/B747.10.xt.gear/B747.10.gear_model.lua`・`B747.10.brake_model.lua` とグルー `B747.10.xt.gear_act.lua`・`B747.10.xt.brakes.lua`（ARCHITECTURE.md §4.16、notes/ATA-32.md §10・§11）。試験はモデル 71・31 件、モジュール 29・24 件、X-Plane の `s35_gear`・`s36_gear_lock`・`s37_brakes`。残りは下の「脚（4-2）の GAP の状態」。
 
 ## 次にやること
 
@@ -42,7 +42,7 @@
 3. 3-2（防氷・防雨）：済（下の「防氷・防雨（3-2）の GAP の状態」）。残りは防氷の推力補正（ICE-11。EEC の補正表の作り直しで PNEU-13 と一緒に）、逆推力中の NAI 弁の閉（ICE-05）、ウォッシャー・防雨剤・WSHLD AIR（ICE-10。3D の操作子が要る）。3-3（酸素）：済（下の「酸素（3-3）の GAP の状態」）。
 4. 3-4（火災防護）：段 1・2 は済。残りは M869（脚格納部の APU 火災パネル）と APU のホーンの音、クルーレストの煙での空調の停止、ダクトリークの抽気への影響（PNEU-03）、貨物機の主デッキ（FIRE-19）。
 5. 4-1（操縦系統）：小さな修正（FCTL-04・14・19・23）、段 1（フラップの FCU：`B747.45.fcu_model.lua`）、段 2a（SRM のうち外側エルロンのロックアウトとラダー比変換器：`B747.45.srm_model.lua`）、段 2b（SRM の安定板トリム：手動・ALTN・オートトリム・cutout と自動遮断・制限・速さ・column cutout・AP との関係・メッセージ。AP が外れても AP の昇降舵の指令が残る誤りも）、段 2c（speed trim と STAB SPEED TRIM、グリーンバンドの 3 帯と CONFIG STAB の帯：`B747.45.greenband_model.lua`）、段 3（スピードブレーキ：自動展開と格納、SPEEDBRAKE AUTO、>SPEEDBRAKES EXT、空中の CONFIG SPOILERS を貨物機だけに、CONFIG GEAR の着陸フラップ：`B747.45.speedbrake_model.lua`）は済。段 4（横操縦：エルロンのプログラマ、スポイラーの横操縦とミキサー、スピードブレーキの段、スポイラー 6・7 と主翼 2 の X-Plane の面、エルロントリムの権限：`B747.19.lateral_model.lua`。後半で FLT CONTROL HYD POWER とヨーダンパーの INOP）も済。4-1 の残りは、承認が要るフラップの拡大・代替の表示のパネル（FCTL-12）、空力の項目で扱う昇降舵の舵角（FCTL-18）、acf の値の確認（FCTL-22）、資料に値が無い >STAB GREENBAND（FCTL-10 の残り）。次は PLAN の 4-2（脚・ブレーキ・ステアリング）。着陸の試験は `tests/flight/tools/landing.sh`（RJAA 34L、TESTING.md §4.2）で回せる。舵面への書き出し（controlObject）は残す。下の「操縦系統（4-1）の GAP の状態」。
-5a. 4-2（脚・ブレーキ・ステアリング）：段 1 は済。次は段 2（ブレーキ：源と accumulator、パーキングブレーキの弁、ペダルの入力（`override_toe_brakes` と X-Plane のブレーキのコマンド。利用者の機器には toe brake の軸が無い）、アンチスキッドと ANTISKID・ANTISKID OFF・BRAKE LIMITER、GEAR-16・21）、段 3（オートブレーキ：GEAR-02〜05・20、着陸は `tests/flight/tools/landing.sh` で）、段 4（ステアリング：GEAR-06・07。tiller の軸の無い利用者の地上走行をどうするかは利用者に聞く）、段 5（BTMS・TPIS と GEAR synoptic のパネル：GEAR-13・14・18）。CONFIG GEAR CTR・PARK BRK（GEAR-17 の残り）、AIR/GND SYSTEM（GEAR-22）も。
+5a. 4-2（脚・ブレーキ・ステアリング）：段 1・2 は済。次は段 3（オートブレーキ：GEAR-02〜05・20。ブレーキのグルーの max() に指令を足し、X-Plane のオートブレーキは使わない。着陸は `tests/flight/tools/landing.sh` で。段 2 でブレーキのコマンドに変えたので、そこで初めて回す）、段 4（ステアリング：GEAR-06・07。tiller の軸の無い利用者の地上走行をどうするかは利用者に聞く）、段 5（BTMS・TPIS と GEAR synoptic のパネル：GEAR-13・14・18）。CONFIG GEAR CTR（GEAR-17 の残り）、AIR/GND SYSTEM（GEAR-22）も。
 6. 2-3（エンジン）の残り：段 1〜3 は済（下の「エンジン（2-3）の GAP の状態」）。後回し：表示値の作り方（ENG-33。EGT は X-Plane の EGT の比例では始動と離陸を両立できず、N1・N2 などから作り直す必要があるが、値は資料に無く推定になる。N1・EPR・N2 の式を変えると EEC の推力の制御の調整もやり直し）、始動の空気（ENG-38・PNEU-08。ダクト圧と starter の関係が資料に無い）、GE の油圧の目盛りと値（CF6 の値が資料に無い）、振動の high band。partial・compact 形式と exceedance cue（ENG-22）は 5-2 で。空中始動の範囲（ENG-24）は資料に値が無く作れない。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べるのも残り。A/T（6-4）との境界は、EEC がレバー → 指令・最大定格・推力の制御まで、FMC の推力基準と A/T のサーボ（レバーを動かす）は 6-4。
 7. 1-5（空圧）の残り：故障の入れ方（過熱、過圧、HPSOV・PRV の固着、ダクトリーク）、地上空気の操作、スターターがダクト圧で回ること（エンジン 2-3）。
 8. 1-4（油圧）の残り：脚・ブレーキ・ステアリング・逆推力・stab trim・ヨーダンパーの「油圧で動くか」（HYD-09・11・12）は、それぞれの作り直しで、モデルの負荷の表（`B747_hyd_model.LOADS`）を使って入れる。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
@@ -126,6 +126,7 @@ PLAN.md §3 に書いた。要点：
 ## 推定で作った部分
 
 - 脚の作動（4-2 段 1、`B747.10.gear_model.lua` に「estimate」と書いてある）：脚の動く時間（acf の 12・9・7 秒。代替下げの前脚・胴体脚の自由落下も同じとした）、脚の作動に要る圧 1,000 psi、GEAR TILT を抑止する圧（PSEU の HYDIM 高 1,500 psi）、翼脚のアップロックが外れるドアの 45°（行程の半分）、レバー OFF と圧の喪失で動いている途中の脚が止まること、重さのかかった脚は上がらないこと、代替下げをした脚をそのフライトの間は通常の系統で動かさないこと、電源の無いレバーのロックはかかったままのこと。
+- ブレーキ（4-2 段 2、`B747.10.brake_model.lua`・`B747.10.xt.brakes.lua` に「estimate」と書いてある）：ブレーキの効きが圧に比例し 3000 psi で全部、パーキングブレーキの弁の動く時間 1 秒、閉じ込めた圧に漏れと熱逃がしが無いこと、X-Plane の regular のブレーキを両ペダル 0.5、ペダルを 0.25 秒で踏み込むこと、パーキングブレーキをペダルを踏まずに入れられること。
 - 試験の許容幅（`s00`・`s01` の数値の幅）は推定。シナリオに「推定」と書いてある。
 - 電源モデル（1-1。`B747.03.elec_model.lua` に「estimate」と書いてある）：
   - バッテリーの負荷電流（main battery bus 12 A、main inverter 28 A、APU battery bus 8 A、APU inverter 15 A、APU starter 250 A など）。資料に値が無いので、バッテリー 1 個で standby bus を約 1 時間保つように決めた（FCOM p.804 は「最低 30 分」）。
@@ -598,7 +599,11 @@ PLAN.md §3 に書いた。要点：
 | GEAR-11 位置監視と表示 | 済（段 1。GEAR DISAGREE 30 秒、GEAR DOOR 30 秒、GEAR TILT 15 秒、展開形と空の箱をカスタム acf のパネルに） |
 | GEAR-19 X-Plane のコマンド | 一部（段 1。非常下げ `landing_gear_emer_on` を ALTN の 2 つのスイッチに。ブレーキとオートブレーキのコマンドは段 2・3） |
 | GEAR-23 空中開始のレバー | 済（段 1。最初の 3 秒は X-Plane の脚に合わせ、そのあとレバーを脚の位置に） |
-| ほか（GEAR-02〜07、12〜18、20〜22） | 未（段 2〜5） |
+| GEAR-12 ブレーキの源 | 済（段 2。油圧のモデルの源と圧を `hydraulics/brake_source`・`brake_psi` に出し、ブレーキの効きを圧に比例させる。accumulator は踏むたびに作動油を使う） |
+| GEAR-15 アンチスキッドのメッセージ | 済（段 2。ANTISKID・ANTISKID OFF・BRAKE LIMITER、弁の不一致 2 秒、空中で弁が閉。働かないとき X-Plane の `acf_has_abs` を 0。2 輪ずつの代替の antiskid は無い） |
+| GEAR-16 パーキングブレーキの副作用 | 済（段 2。脚レバーでパーキングブレーキを外さない。リプレイの分岐の書き込みも外した。X-Plane のパーキングブレーキのコマンドはレバーに） |
+| GEAR-21 wing sweep の軸 | 済（段 2。`override_toe_brakes` はブレーキのグルーが常に入れる。wing sweep の軸は両ペダルとして読む） |
+| ほか（GEAR-02〜07、13・14・17・18・20・22） | 未（段 3〜5） |
 
 ## 気づいたこと（作業の途中で）
 
@@ -770,3 +775,4 @@ PLAN.md §3 に書いた。要点：
 - 2026-10-24 22:5x〜23:4x：冷えた状態からの開始で FLAPS DRIVE が出ていた件。配布用フォルダーの確認（下の全行程の試験の項）の `s00` で気づき、過去の記録を見ると、フラップの FCU（4-1 段 1）の作業の 13:32 から両 acf の `s00` で APU の始動の後に出ていた。原因は本家の autopilot モジュールのフラップの目標（`laminar/B747/autopilot/flaps/target`、`B747_ap_target_flaps`。外部の道具が書くとレバーをそこへ動かし、-1 に戻す）。dataref が 0 で作られ、0 はフラップ UP なので、simconfig が届いた後（読み込みから 2〜3 秒）に、フラップを出して始まるフライト（X-Plane の滑走路の開始は 10）のレバーを約 4 秒で UP へ動かしていた（`s00` の記録で 2.6 秒から 6.7 秒にかけて 0.5 → 0）。FCU は始めの 3 秒でフラップをレバーの位置に置いた後なので、エンジン停止・AC なしではフラップを格納できず、副系統に移って止まり FLAPS DRIVE になった（電源なしでレバーを動かしたときの表示としては正しい：FCTM p.283）。FCU の前は、フラップがそのままレバーに付いて上がっていた。autopilot のフライト開始（`B747_set_ap_all_modes`）で目標を -1 にした。外部の道具（INTERFACES.tsv では AutoATC）が目標を書けば、これまでどおり動く。試験：新しい `tests/autopilot/flap_target_test.lua`（6 件。フライト開始の後もレバーが 10 のまま、目標 20 でレバーが動く。直す前の版では 10 秒でレバーが 0.5 → 0.008 と X-Plane と同じに動き、落ちる）、46 本すべて通る。autopilot のモジュールの `after_physics` は simconfig を待つので、試験は `laminar/B747/simconfig`・`newsimconfig` と `xtlua/fms` を入れて回す（静的検査の 60 フレームは simconfig が無く、このモジュールの本体を通っていなかった）。X-Plane：カスタム acf と純正 acf の `s00` 69/69（どちらもレバーは 0.5 のまま、FLAPS DRIVE なし）。Lua の誤りなし。
 - 2026-10-24 21:2x〜23:5x：全行程の飛行試験と配布用フォルダーの確認（利用者の問い「カスタム acf とその obj8 に差し替えるだけで飛ばせるか」に、差し替えには custom ブランチ全体と 190 ファイルが要ると答え、利用者が案 1「ここで離陸から着陸まで飛ばし、別のフォルダーに組み立てて確かめる」を選んだ）。結果と見つけたことは上の「気づいたこと」の全行程の飛行試験の項。途中で、利用者に滑走路を飛び越えそうなことと V/S の窓が 000 のままなことを指摘された（どちらも私のスクリプトの誤り）。配布用フォルダーの `s00` で冷えた状態からの FLAPS DRIVE に気づき、直した（上の項）。着陸の制御を試験キットの道具にした：`tests/flight/tools/landing.sh`（`landing_setup.json` で 22 NM 手前の空中開始、`landing_step.awk` で 1 歩の計算。TESTING.md §4.2）。読み書きを並べて送り、計算を 1 回の awk にまとめて、1 歩を約 2 秒から約 0.45 秒にした。X-Plane（カスタム acf、FLAPS DRIVE の修正の後）：`landing.sh` 7/7（-206 fpm で接地、端から 1,268 m、中心線の 11.6 m 右。2 秒でスピードブレーキが UP、1,831 m で停止、中心線から 5.4 m）。Lua の誤りなし。配布用フォルダー `Aircraft/_overhaul_check`（5.2 GB）は、利用者の返事（「消そう」）でごみ箱に移した。
 - 2026-10-25 00:0x〜01:0x：脚・ブレーキ・ステアリング（4-2）段 1、脚の作動・代替下げ・位置監視・EICAS の表示（GEAR-08・09・10・11・23、GEAR-19 の非常下げ）。途中で利用者の方針の変更（開発・試験はカスタム acf だけ、使用量を抑える）を CLAUDE.md などに入れてコミットした（93905868）。今のコードの流れの調べは Explore のエージェントに任せ、その間に X-Plane で脚とブレーキの上書きを試した（上の「気づいたこと」）。新しいモデル `B747.10.gear_model.lua` とグルー `B747.10.xt.gear_act.lua`（notes/ATA-32.md §10、ARCHITECTURE.md §4.16）。前のレバーのハンドラー（xt 側の死んだ写し）と EICAS の脚の表示の関数は外した。カスタム acf のパネルに展開形と空の箱を足した（`panel_gear.lua`、絵は `make_gear_images.ps1`。ACF_DIFF.md §5。バックアップ `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_gear_expanded`）。新しい絵を読むには機体を絵ごと読み直す（`reload_aircraft`、TESTING.md §4.6）。キットの `cmd` の手順に `async`（押したまま次の手順へ）を足した（`s36` の LOCK OVRD）。試験：モデル 71 件、モジュール 29 件、全 48 本。X-Plane（カスタム acf）：`s35_gear` 29/29（空中開始でレバー UP、DN でドアが先・前脚が 2 + 12 秒で DOWN、UP と 10 秒後の消灯、系統 4 なしで翼脚が上のまま 31 秒で GEAR DISAGREE と展開形、ALTN WING で約 20 秒・ドアは開いたまま・GEAR DOOR なし。展開形の写真で前脚・胴体脚 DN、翼脚 UP の配置を確かめた）、`s36_gear_lock` 11/11（地上のロックで UP のコマンドでも OFF、LOCK OVRD で UP まで行くが重さのかかった脚は上がらない）。Lua の誤りなし。
+- 2026-10-25 01:0x〜01:3x：脚・ブレーキ・ステアリング（4-2）段 2、ブレーキ（GEAR-12・15・16・21、GEAR-19 のブレーキの部分。notes/ATA-32.md §11）。利用者から「ステップを進めるのに承認を要求しなくていい」（段の切り替えでも聞かない）。X-Plane で、`brakes_regular`・`max` は上書きの外で X-Plane のパーキングブレーキの比を上げ、`left_brake`・`right_brake` は toe brake を 1 にすることを確かめた。新しいモデル `B747.10.brake_model.lua` とグルー `B747.10.xt.brakes.lua`：ブレーキは脚のモジュールだけが持ち、`override_toe_brakes` を常に入れる。油圧のグルーが源と圧を出し（新設 `hydraulics/brake_source`・`brake_psi`）、ペダルの増えた分も accumulator の作動油に数える。fltCtrls のパーキングブレーキの同期と古い油圧のモジュールの PARK BRAKE SET は外し、CONFIG PARK BRK はレバーとエンジン 2 か 3 にした。試験の道具 `landing.sh` は、ブレーキを X-Plane のトグルのコマンドに、駐機をレバーに変えた（段 3 で回す）。試験：モデル 31 件、モジュール 24 件、全 50 本。X-Plane（カスタム acf、機体を読み直して）：`s37_brakes` 23/23。Lua の誤りなし。

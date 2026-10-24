@@ -325,3 +325,13 @@ GAP ID の接頭辞：`GEAR`。2026-10-23 作成。コードは `overhaul` ブ�
 - レバーのロック：PSEU の LG LVR UNLK と DC bus 2 でソレノイドが外れ、LOCK OVRD で手で外す（FCOM p.1512、ATA29_32 p.224–225。電源が無いとロック：推定）。グルーではなく脚のモジュールが `gear/lever_lock` に書き、init スクリプトのレバーのハンドラーが UP の手前の OFF で止める。前はハンドラーのロックが常に 0 で効いていなかった（GEAR-08）。レバーを動かすコマンド（`overrideUp`、`landing_gear_up`・`toggle`）もロック中は OFF まで。
 - 開始：最初の 3 秒は X-Plane の脚に合わせ（XTLua の最初の読み取りは 0）、そのあとレバーを脚の位置に合わせる（全部上なら UP、ほかは DN）。前は空中開始でレバーを UP へ動かして脚を上げていた（GEAR-23）。
 - X-Plane の非常下げのコマンド（`landing_gear_emer_on`）は、ALTN GEAR EXTEND の 2 つのスイッチを押す（GEAR-19 の脚の部分）。
+
+## 11. 実装（4-2 段 2、2026-10-25：ブレーキ）
+
+- 新しいモデル `plugins/xtlua/scripts/B747.10.xt.gear/B747.10.brake_model.lua`（試験 `tests/gear/brake_model_test.lua`）とグルー `B747.10.xt.brakes.lua`（脚のモジュールが作動のグルーの次に読み、毎フレーム `B747_brakes()`。試験 `tests/gear/brakes_module_test.lua`）。ブレーキは脚のモジュールだけが持つ：X-Plane の `override_toe_brakes` を常に入れ、左右のブレーキ（`left/right_brake_ratio`）とパーキングブレーキ（`parking_brake_ratio`）をここで書く。
+- 源：油圧のモデルが選ぶ源（系統 4、次に 1、次に 2、最後に accumulator：§4.6）とその圧を、油圧のグルーが `hydraulics/brake_source`・`brake_psi` に出す（新設）。ブレーキの効きは圧に比例し、3000 psi で全部（推定）。accumulator だけなら、その圧のぶんしか効かず、ペダルを踏むたびに作動油を使う（油圧のグルーが X-Plane のブレーキの比の増えた分から引く）。
+- パーキングブレーキ：レバー（3D の `flt_ctrls/parking_brake_ratio`）で、電池バスのモーターの弁が約 1 秒で閉じ（推定。p.420 では 2 秒以内に開く）、閉じたときの圧を閉じ込めて保持する（漏れと熱逃がしは作らない：推定）。X-Plane のパーキングブレーキは、閉じ込めた圧の割合。PARK BRAKE SET はレバーが入りで弁が閉（p.420。前は X-Plane の比とレバー）。両ペダルを踏むとレバーが外れる（FCOM p.1516）。レバーを入れるのにペダルは要らない（実機は両ペダルを踏んで引く。推定で省いた）。輪止めは前どおり保持にする（地上作業の扱い）。
+- 監視：レバーを OFF にして 2 秒弁が開かない、または air mode で弁が閉なら、BRAKE LIMITER と ANTISKID OFF（p.420）。ANTISKID OFF は antiskid の wheel card の電源（DC 1〜4）がすべて無いか、BSCU（BITE の DC 4 と 2）の電源が無いとき。ANTISKID は使っている antiskid（系統 4 では正規、1・2 と accumulator では代替）の故障（ANTISKID OFF で抑止）。BRAKE LIMITER は torque limiter の故障か BSCU の電源。antiskid が働かないとき X-Plane の `acf_has_abs` を 0 にする（効きは確かめていない）。故障は `gear/fail/antiskid`（[0] 正規、[1] 代替）・`fail/brake_limiter`・`fail/park_valve`。
+- 乗員のブレーキ：X-Plane のブレーキのコマンドを置き換えた。`brakes_regular`（押している間、両ペダル 0.5：推定）、`brakes_max`（1）、`left_brake`・`right_brake`（その側 1）、`brakes_toggle_regular`・`_max`。ペダルは 0.25 秒で踏み込む（推定）。上流の「1 本のブレーキの軸を wing sweep に割り当てる」使い方は両ペダルとして残した。X-Plane の toe brake の軸は読まない（`joy_mapped_axis_value` の添字が分からない。利用者の機器には無い）。X-Plane の `park_brake_set`・`release`・`toggle` は 747 のレバーを動かす。X-Plane の `brakes_regular`・`max` は、上書きの外で X-Plane のパーキングブレーキの比を上げていた（2026-10-25 に確かめた）。
+- 外した前の処理：fltCtrls のレバーと X-Plane のパーキングブレーキの同期（輪止め、accumulator が 1000 psi 未満で抜く、レバーを戻す）、脚レバーを DN から動かすとパーキングブレーキを外す（GEAR-16）、wing sweep の軸で `override_toe_brakes` を入れる（GEAR-21）、古い油圧のモジュールの PARK BRAKE SET。CONFIG PARK BRK はレバーで見て、エンジン 2 か 3（FCOM p.1557。前は 2 と 3 の両方）。
+- 作らなかったもの：de-spin（§6.6 の簡略化）、2 輪ずつの代替の antiskid（X-Plane の ABS は 1 つ）、torque limiter の働き（メッセージだけ）。

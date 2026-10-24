@@ -356,6 +356,10 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 書くもの（新設、init `B747.10.gear`。配列は前脚、左胴体、右胴体、左翼、右翼の順）：`gear/position[5]`（0 UP でロック〜1 DN でロック）・`gear/door[5]`（0 閉〜1 開）・`gear/gear_position/annun_gear[5]`（展開形の箱：0 UP、1 DN、2 斜線、3 琥珀の X）・`gear/lever_lock`（1 でロック。脚のモジュールが書き、init のレバーのハンドラーが OFF で止める）、故障 `gear/fail/actuator`・`door`・`indication`・`truck_tilt`（[5]）。前からのもの：`gear_position/annun_status`（3 の空の箱を足した）、`EICAS1_display_status`（2 の展開形を足した）、caution 38 GEAR DISAGREE・39 GEAR TILT、advisory 180 GEAR DOOR。
 - X-Plane へ：脚ごとの位置を `sim/aircraft/parts/acf_gear_deploy`（X-Plane の順：0 前脚、1 右胴体、2 左胴体、3 右翼、4 左翼）に毎フレーム書く（X-Plane は 1 本のハンドルの向きへ脚を動かし続ける）。X-Plane のハンドル `gear_handle_down` はグルーだけが書く（init のレバーのハンドラーは書かなくなった）。他の系統が読む `deploy_ratio` はこれに従う。
 - 開始：グルーは最初の 3 秒は X-Plane の脚に合わせ、そのあとレバーを脚の位置に合わせる。脚のモジュールのフライト開始はレバーを動かさなくなった。
+- 段 2（ブレーキ）：ブレーキのモデル（`B747.10.brake_model.lua`）を、グルー `B747.10.xt.brakes.lua`（作動のグルーの次に読み、`B747_brakes()`）が回す。中身は notes/ATA-32.md §11。ブレーキは脚のモジュールだけが持つ。
+  - 読むもの：X-Plane のブレーキのコマンド（置き換え）と `wingsweep_ratio`（乗員のペダル）、パーキングブレーキのレバー（`flt_ctrls/parking_brake_ratio`）、油圧のグルーが出す源と圧（新設 `hydraulics/brake_source`：0 accumulator・1・2・4、`hydraulics/brake_psi`）、電池バス（`electrical/bus/bat_main`）、DC bus 1〜4、PSEU の `pri_air`、輪止め（`gear/chocked`）、故障（新設 `gear/fail/antiskid[2]`・`brake_limiter`・`park_valve`）。
+  - 書くもの：X-Plane の `override_toe_brakes`（常に 1）・`left/right_brake_ratio`・`parking_brake_ratio`（閉じ込めた圧の保持）・`acf_has_abs`、新設 `gear/brakes/park_valve`（0 開〜1 閉）、memo 26 PARK BRAKE SET、advisory 10 ANTISKID・11 ANTISKID OFF・45 BRAKE LIMITER。X-Plane の `park_brake_set`・`release`・`toggle` はレバーを動かす。
+  - 油圧のグルーは、X-Plane のパーキングブレーキとブレーキの比の増えた分を accumulator の作動油の使用にする（源が accumulator のとき）。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 

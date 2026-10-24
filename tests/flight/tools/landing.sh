@@ -5,7 +5,8 @@
 # Web API: HDG SEL on the cross-track from the runway centerline (apt.dat),
 # V/S on the 3-degree glideslope (earth_nav.dat), flaps, gear and speedbrake
 # ARM on the way, a hand flare from 40 ft RA (A/P and A/T off, thrust levers
-# to idle), then reverse thrust for 8 s, brakes 0.5 and rudder on the
+# to idle), then reverse thrust for 8 s, regular brakes (X-Plane's toggle
+# command: the gear module owns the brake ratios) and rudder on the
 # centerline until the airplane stops. It starts the flight itself with
 # landing_setup.json (run_scenario.ps1: 22 NM out at 3,000 ft and 190 kt,
 # A/P CMD L) and writes landing.log and landing_result.txt into that run's
@@ -50,11 +51,11 @@ for v in IAS:laminar/B747/gauges/indicators/airspeed_kts_pilot RA:sim/cockpit2/g
  WARN:laminar/B747/CAS/warning_status HSEL:laminar/B747/autopilot/heading/degrees VSEL:sim/cockpit2/autopilot/vvi_dial_fpm \
  VSEL2:laminar/B747/cockpit2/autopilot/vvi_dial_fpm ALTD:laminar/B747/autopilot/heading/altitude_dial_ft IASD:laminar/B747/autopilot/ias_dial_value \
  FLAP:sim/cockpit2/controls/flap_ratio YP:sim/cockpit2/controls/yoke_pitch_ratio YH:sim/cockpit2/controls/yoke_heading_ratio \
- THR:sim/cockpit2/engine/actuators/throttle_ratio_all BL:sim/cockpit2/controls/left_brake_ratio BR:sim/cockpit2/controls/right_brake_ratio \
- PARK:sim/cockpit2/controls/parking_brake_ratio; do eval "ID_${v%%:*}=$(did ${v#*:})"; done
+ THR:sim/cockpit2/engine/actuators/throttle_ratio_all PARK:laminar/B747/flt_ctrls/parking_brake_ratio; do eval "ID_${v%%:*}=$(did ${v#*:})"; done
 for v in YD:laminar/B747/autopilot/button_switch/yoke_disengage_capt ATD:laminar/B747/authrottle_disarm \
  VSM:laminar/B747/autopilot/button_switch/vs_mode GEAR:sim/flight_controls/landing_gear_down \
- SBD1:sim/flight_controls/speed_brakes_down_one REV:sim/engines/thrust_reverse_hold; do eval "C_${v%%:*}=$(cid ${v#*:})"; done
+ SBD1:sim/flight_controls/speed_brakes_down_one REV:sim/engines/thrust_reverse_hold \
+ BRK:sim/flight_controls/brakes_toggle_regular; do eval "C_${v%%:*}=$(cid ${v#*:})"; done
 # the reads in parallel (X-Plane answers about one request per frame on a
 # connection), each to its own file
 mkdir -p "$RUN/rd"; RDA=(); k=0
@@ -95,9 +96,9 @@ while [ $SECONDS -lt 1200 ]; do
     pw $ID_YH $yh
     if [ "$t_up" = - ] && awk -v s=$sb 'BEGIN{exit !(s >= 0.99)}'; then t_up=$((SECONDS - ttd)); log "speedbrake lever UP $t_up s after touchdown"; fi
     if [ $state = touchdown ] && [ $SECONDS -ge $((ttd + 2)) ]; then
-      ci $C_REV 8; pw $ID_BL 0.5 $ID_BR 0.5; state=rollout; log "-> reverse 8 s and brakes 0.5"; fi
+      ci $C_REV 8; ci $C_BRK; state=rollout; log "-> reverse 8 s and regular brakes"; fi
     if [ $state = rollout ] && [ $fst = 1 ]; then
-      pw $ID_PARK 1 $ID_YH 0 $ID_BL 0 $ID_BR 0; am_stop=$am; xm_stop=$xm
+      ci $C_BRK; pw $ID_PARK 1 $ID_YH 0; am_stop=$am; xm_stop=$xm
       log "stopped: speedbrake lever $sb, $am m past the threshold, $xm m from the centerline"; break; fi;;
   esac
   sleep 0.1
