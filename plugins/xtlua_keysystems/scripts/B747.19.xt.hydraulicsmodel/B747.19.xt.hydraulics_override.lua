@@ -130,17 +130,10 @@ function pressure_output()
     simDR_spoiler8=(B747DR_spoilers[8])
     simDR_spoiler910=(B747DR_spoilers[9]+B747DR_spoilers[10])/2
     simDR_spoiler1112=(B747DR_spoilers[11]+B747DR_spoilers[12])/2
-    --spoiler stat
-    outleft_spoilers=0
-    for i=1,5,1 do
-        outleft_spoilers=outleft_spoilers+B747DR_spoilers[i]
-    end
-    outright_spoilers=0
-    for i=8,12,1 do
-        outright_spoilers=outright_spoilers+B747DR_spoilers[i]
-    end
-    B747DR_outer_spoilers[0]=B747_animate_value(B747DR_outer_spoilers[0],outleft_spoilers/5,-100,100,10)
-    B747DR_outer_spoilers[1]=B747_animate_value(B747DR_outer_spoilers[1],outright_spoilers/5,-100,100,10)
+    --spoiler stat: the position transmitters on spoilers 4 and 12 (ATA27 p.200;
+    --the in-flight speedbrake shows on the left wing only, FCOM p.939)
+    B747DR_outer_spoilers[0]=B747_animate_value(B747DR_outer_spoilers[0],B747DR_spoilers[4],-100,100,10)
+    B747DR_outer_spoilers[1]=B747_animate_value(B747DR_outer_spoilers[1],B747DR_spoilers[12],-100,100,10)
 
     --flaps
     --[[B747DR_flaps[1]=B747_animate_value(B747DR_flaps[1],controlRatios[23],-100,100,0.08)

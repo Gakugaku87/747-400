@@ -2,7 +2,7 @@
 
 次のセッションは、ここと [PLAN.md](PLAN.md) を読んでから続きに入る。
 
-最終更新：2026-10-24 朝（火災防護 3-4 段 1・2。酸素 3-3。防氷・防雨 3-2）
+最終更新：2026-10-24 朝（操縦系統 4-1 の小さな修正。火災防護 3-4。酸素 3-3。防氷・防雨 3-2）
 
 ## いまどこか
 
@@ -37,17 +37,18 @@
 1. 承認済みのパネル（カスタム acf）の変更：全部済。3-1 の ECS synoptic の上半分と流れの線（AIR-15、PNEU-11）が最後。PNEU-09（主 EICAS のダクト圧の表示条件）は 3-1 段 1 の data block の条件（FCOM p.585 と ATA21 p.451）で済。承認の一覧に無い 2 件（客室高度の赤い数字の桁、data block の LDG ALT の消去。AIR-18）は利用者に確認中。済：`.snd` の警報音、1-3 の PG と 3〜10 ページ、1-3 の STATUS ページと cue、1-4 の HYD synoptic（HYD-19。記号の色と不作動項目の絵は 2026-10-23 夕方に新しい画像で）と RSVR PRESS（HYD-18）、1-1 の synoptic の ISLN・DRIVE の枠・UTILITY と GALLEY の色、STAT のバッテリーの値と CHG/DIS、1-5 のダクト圧の色（PNEU-10）。変更の一覧は ACF_DIFF.md §5、画像は `docs/overhaul/tools/make_synoptic_images.ps1` で作る。
 2. 3-1（空調・与圧・機器冷却）：段 1（パックと与圧、機器冷却と ER 開始のスイッチ）、段 2（温度制御と貨物室の温度・暖房）、段 3（ECS synoptic のパネル）は済。残りは故障の入れ方（パック・ファン・CPC・機器冷却・温度制御。X-Plane に相当する故障が無い）と、承認待ちのパネルの 2 件（AIR-18）。
 3. 3-2（防氷・防雨）：済（下の「防氷・防雨（3-2）の GAP の状態」）。残りは防氷の推力補正（ICE-11。EEC の補正表の作り直しで PNEU-13 と一緒に）、逆推力中の NAI 弁の閉（ICE-05）、ウォッシャー・防雨剤・WSHLD AIR（ICE-10。3D の操作子が要る）。3-3（酸素）：済（下の「酸素（3-3）の GAP の状態」）。
-4. 3-4（火災防護）：段 1・2 は済。残りは M869（脚格納部の APU 火災パネル）と APU のホーンの音、クルーレストの煙での空調の停止、ダクトリークの抽気への影響（PNEU-03）、貨物機の主デッキ（FIRE-19）。PLAN.md の次は 4-1（操縦系統）。
-5. 2-3（エンジン）の残り：段 1〜3 は済（下の「エンジン（2-3）の GAP の状態」）。後回し：表示値の作り方（ENG-33。EGT は X-Plane の EGT の比例では始動と離陸を両立できず、N1・N2 などから作り直す必要があるが、値は資料に無く推定になる。N1・EPR・N2 の式を変えると EEC の推力の制御の調整もやり直し）、始動の空気（ENG-38・PNEU-08。ダクト圧と starter の関係が資料に無い）、GE の油圧の目盛りと値（CF6 の値が資料に無い）、振動の high band。partial・compact 形式と exceedance cue（ENG-22）は 5-2 で。空中始動の範囲（ENG-24）は資料に値が無く作れない。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べるのも残り。A/T（6-4）との境界は、EEC がレバー → 指令・最大定格・推力の制御まで、FMC の推力基準と A/T のサーボ（レバーを動かす）は 6-4。
-6. 1-5（空圧）の残り：故障の入れ方（過熱、過圧、HPSOV・PRV の固着、ダクトリーク）、地上空気の操作、スターターがダクト圧で回ること（エンジン 2-3）。
-7. 1-4（油圧）の残り：脚・ブレーキ・ステアリング・逆推力・stab trim・ヨーダンパーの「油圧で動くか」（HYD-09・11・12）は、それぞれの作り直しで、モデルの負荷の表（`B747_hyd_model.LOADS`）を使って入れる。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
-8. 1-1（電源）の残り：電源の有無を `bus_volts` で見ている系統を、バスごとの dataref（ARCHITECTURE.md §4.1）に乗り換える。どれも後の作り直し（空圧 1-5、空調 3-1、燃料 2-2、IRS と無線、照明、操縦系統 4-1）と絡むので、1-2 と同じく各系統の作り直しのときに行う（2026-10-23 に決めた。利用者の確認待ち）。
+4. 3-4（火災防護）：段 1・2 は済。残りは M869（脚格納部の APU 火災パネル）と APU のホーンの音、クルーレストの煙での空調の停止、ダクトリークの抽気への影響（PNEU-03）、貨物機の主デッキ（FIRE-19）。
+5. 4-1（操縦系統）：小さな修正（FCTL-04・14・19・23）は済。次は、資料のノート §8 の案のとおり、ロジック（FCU のフラップ、SRM の安定板トリム・ロックアウト・RRC、スピードブレーキ）を新しいモデルに作り直す。舵面への書き出し（controlObject）は残す。下の「操縦系統（4-1）の GAP の状態」。
+6. 2-3（エンジン）の残り：段 1〜3 は済（下の「エンジン（2-3）の GAP の状態」）。後回し：表示値の作り方（ENG-33。EGT は X-Plane の EGT の比例では始動と離陸を両立できず、N1・N2 などから作り直す必要があるが、値は資料に無く推定になる。N1・EPR・N2 の式を変えると EEC の推力の制御の調整もやり直し）、始動の空気（ENG-38・PNEU-08。ダクト圧と starter の関係が資料に無い）、GE の油圧の目盛りと値（CF6 の値が資料に無い）、振動の high band。partial・compact 形式と exceedance cue（ENG-22）は 5-2 で。空中始動の範囲（ENG-24）は資料に値が無く作れない。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べるのも残り。A/T（6-4）との境界は、EEC がレバー → 指令・最大定格・推力の制御まで、FMC の推力基準と A/T のサーボ（レバーを動かす）は 6-4。
+7. 1-5（空圧）の残り：故障の入れ方（過熱、過圧、HPSOV・PRV の固着、ダクトリーク）、地上空気の操作、スターターがダクト圧で回ること（エンジン 2-3）。
+8. 1-4（油圧）の残り：脚・ブレーキ・ステアリング・逆推力・stab trim・ヨーダンパーの「油圧で動くか」（HYD-09・11・12）は、それぞれの作り直しで、モデルの負荷の表（`B747_hyd_model.LOADS`）を使って入れる。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
+9. 1-1（電源）の残り：電源の有無を `bus_volts` で見ている系統を、バスごとの dataref（ARCHITECTURE.md §4.1）に乗り換える。どれも後の作り直し（空圧 1-5、空調 3-1、燃料 2-2、IRS と無線、照明、操縦系統 4-1）と絡むので、1-2 と同じく各系統の作り直しのときに行う（2026-10-23 に決めた。利用者の確認待ち）。
    - 済：表示器（fltInst02。機長 PFD・ND は APU standby、upper EICAS は main standby、ほかは F/O transfer）、EICAS の計算（warning。EIU のどれかに電源）、時計の計時（fltInst03・04。main hot battery bus）、ELEC パネルの灯（lighting）。
    - 燃料のポンプと弁も 2-2 で乗り換えた（AC・utility・main battery・hot battery・DC・APU battery・ground service bus）。
    - 残り：IRS と NAV RAD（fms）、表示灯の輝度（lighting：`bus_volts[0]`・`[2]`）、客室灯（lighting）、ヨーダンパー（fltCtrls：`battery_array_on`）。STAT ページのバッテリーはカスタム acf だけ済（純正 acf は X-Plane の値のまま）。
-9. 1-2（空地判定）の残り：`onground_any` を読んでいるモジュール（autopilot、fms、fltInst02、fltCtrls、EEC、engines、fuel、hydraulicsmodel、gear の autobrake、manipulators、fdr、lighting など）を、PSEU の dataref（ARCHITECTURE.md §4.2）に乗り換える。どの信号（pri/alt の AIR・GND、前脚圧縮）を使うかは notes/ATA-32.md §4.1 の表。各系統の作り直しのときに行う。防氷（3-2）は乗り換えた（`pri_gnd`）。
-10. 1-3 の残り：他のメッセージによる抑止（notes/ATA-31-warning.md §4.4.1）と時間遅れは、各系統の作り直しで表に足す。音（`.snd`）とパネル（PG・3 ページ目以降・STATUS）は済。
-11. R-3 は、作り直しが先になる系統の害の大きい誤りだけ、合間に入れる。
+10. 1-2（空地判定）の残り：`onground_any` を読んでいるモジュール（autopilot、fms、fltInst02、fltCtrls、EEC、engines、fuel、hydraulicsmodel、gear の autobrake、manipulators、fdr、lighting など）を、PSEU の dataref（ARCHITECTURE.md §4.2）に乗り換える。どの信号（pri/alt の AIR・GND、前脚圧縮）を使うかは notes/ATA-32.md §4.1 の表。各系統の作り直しのときに行う。防氷（3-2）は乗り換えた（`pri_gnd`）。
+11. 1-3 の残り：他のメッセージによる抑止（notes/ATA-31-warning.md §4.4.1）と時間遅れは、各系統の作り直しで表に足す。音（`.snd`）とパネル（PG・3 ページ目以降・STATUS）は済。
+12. R-3 は、作り直しが先になる系統の害の大きい誤りだけ、合間に入れる。
 
 ## 段階 T の状態
 
@@ -521,6 +522,16 @@ PLAN.md §3 に書いた。要点：
 | FIRE-19 貨物機の主デッキ | 未（3D に操作部が無い） |
 | FIRE-20 CAS の更新の遅れ | 済（1-3 の警報のモデルは毎フレーム） |
 
+## 操縦系統（4-1）の GAP の状態
+
+| ID | 状態 |
+|---|---|
+| FCTL-04 ラダートリム | 済（controlObject にトリムの対応を足した：全行程の 80 %、比率変換器を通る。ATA27 p.612–614。X-Plane の `total_heading_ratio` にトリムが入らないことを確かめた） |
+| FCTL-14 荷重軽減の速度 | 済（ヒステリシスを状態で持つ：レバー 30 で 178/203 kt、戻りは 195/170 kt。油圧モードのときだけ、は FCU の作り直しで） |
+| FCTL-19 舵面位置のスポイラー | 済（スポイラー 4 と 12 の位置：ATA27 p.200、FCOM p.939） |
+| FCTL-23 フラップのスナップのタイマー | 済（止める条件が逆だった。detent の名前のコメントも直した） |
+| ほか（FCTL-01〜03、05〜13、15〜18、20〜22、24、25） | 未（作り直しで） |
+
 ## 気づいたこと（作業の途中で）
 
 - **全開にすると EPR が最大定格を一時超える**（2026-10-23、EEC 段 2 の試験）：地上で全開にすると、EPR はカスタム acf で 1.57、純正 acf で 1.58 まで上がってから最大定格（1.51〜1.53）に戻る。EEC の PID（`ecc_spd`、前からのもの）の応答で、実機は最大定格で止まる。→ 推力の制御の作り直し（2026-10-23 夜）で直った。前の PID は D 項が大きくスロットルが 0.9〜1.05 を往復し、積分が出力の上限 1.2 まで溜まって、空中の全開でも EPR が最大定格を 0.02 超えたままだった（ALTN の全開では N2 が赤線を超えた）。
@@ -652,3 +663,4 @@ PLAN.md §3 に書いた。要点：
 - 2026-10-24 08:2x〜08:3x：R-3 の小修正、LIGHT-02（害の大きい誤り）。安全のモジュールのサインの memo（NO SMOKING ON・PASS SIGNS ON・SEATBELTS ON）を、サインの点灯ではなく選択器を手で ON にしたときに出すようにした（FCOM p.502、p.547、ATA33 p.211）。前は AUTO で脚が下りているとき（地上ではほぼ常に）と、3-3 で入れた乗客酸素の作動のときにも PASS SIGNS ON が出ていた。試験：新しい `tests/safety/safety_module_test.lua`（照明・酸素のモジュールと一緒に、10 件）。X-Plane（カスタム acf）：新シナリオ `s21_sign_memos` 19/19。Lua の誤りなし。
 - 2026-10-24 08:3x〜09:0x：火災防護（3-4）段 1、エンジンと APU。新しいモデル `B747.35.fire_model.lua` と、火災のモジュール `B747.35.xt.fire.lua` をそのグルーに書き直した：双ループの検知（エンジンは AND と単ループへの組替え、APU は OR、APU battery bus、>DET FIRE/OHT n・>DET FIRE APU、loop の status と FIRE/OVHT SYS）、エンジンの過熱（OVHT ENG n NAC、失敗の dataref）、消火スイッチのロック（火災・CUTOFF・試験・Fire Override のコマンド、main hot battery bus）、翼ごとの共用ボトルと 1 回だけの squib、剤が出ている間だけ X-Plane の消火器、BTL DISCH と >BTL LO L/R ENG A/B、APU の停止（APU のグルーが `fire/apu_shutdown` を読む）と地上の自動放出（10 秒、95 % 未満）、APU の消火スイッチ（コマンド）と APU BTL DISCH・>BOTTLE LOW APU、FIRE/OVHT TEST（TEST IN PROG から 5 秒で PASS/FAIL）。STATUS の配列を 128 に広げた。電源のグルーが消火スイッチを GCR トリップに渡していなかったのを結線し、GCR をラッチ式にした（LH24 p.108）。X-Plane で、`fire_extinguisher_on` が 1 秒以内に火を消し `rel_engfir` も 0 に戻ることと、旧い火災表示灯の dataref は書いても X-Plane が上書きすること（FUEL CONTROL の赤灯は自前の検知に合わせられない）を確かめた。試験：モデル 70 件、モジュール 62 件、電源のモデル・モジュールに GCR の 7 件、APU のモジュールは火災のモジュールも読み込む。X-Plane（カスタム acf）：新シナリオ `s22_fire_engine_apu` 45/45。純正 acf の `s00` 69/69。Lua の誤りなし。P5 の BTL A DISCHARGE・APU BTL DISCHARGE の灯をスクリーンショットで確かめた。
 - 2026-10-24 09:0x〜09:2x：火災防護（3-4）段 2。モデルに貨物室の 4 ゾーンとボトル A–D を足した：煙検知（電源投入と手動試験の完了時だけの組替え、venturi の吸引は中央ダクトの圧で推定）、FIRE CARGO FWD・AFT と灯、ARM・DISCH（マニピュレータのスイッチ位置）で A・B 即時、ARM が 1 区画なら C・D を 30 分後・接地・地上は即時（約 2 時間かけて調圧）、DISCH の灯、>CGO BTL DISCH、>CARGO DET AIR、剤で煙の失敗を消す（推定）。車輪格納部の火災（AC bus 2）、BLD DUCT LEAK L/C/R、>SMOKE LAVATORY・SMOKE DR 5 REST、FIRE/OVHT TEST に貨物・車輪格納部・ダクトを含めた、スクイブ試験（TEST 1・2 のコマンド、発火済みは暗い、ARM で貨物 A・B を抑止）。X-Plane に無い原因は新しい失敗の dataref。STATUS 64–80。試験：モデル 122 件、モジュール 87 件。X-Plane（カスタム acf）：新シナリオ `s23_fire_cargo` 27/27（FL350 で貨物の試験の灯と PASS、FIRE CARGO AFT とベル、ARM で pack 3 停止、DISCH で A・B 即時と C は待つ、空中の >CGO BTL DISCH、剤で煙が消える、FIRE WHEEL WELL、BLD DUCT LEAK L、煙）。純正 acf の `s00` 69/69。Lua の誤りなし。これで段階 3（3-1〜3-4）が済んだ。
+- 2026-10-24 09:2x〜09:3x：操縦系統（4-1）の小さな修正。ラダートリムが舵面に入っていなかった（X-Plane の `total_heading_ratio` にトリムは入らないことを確かめた）ので、controlObject にトリムの対応（全行程の 80 %、比率変換器を通る：ATA27 p.612–614）をペダルの前に足した（FCTL-04）。フラップの荷重軽減を状態で持つようにした（レバー 30 で 20 に下がったあと 195 kt を待たずに 25 に戻っていた：FCTL-14）。舵面位置のスポイラーをスポイラー 4・12 にした（前は 1–5・8–12 の平均：FCTL-19）。フラップレバーのスナップのタイマーの条件の逆を直した（FCTL-23）。試験：新しい `tests/fltctrls/fltctrls_module_test.lua`（17 件）。X-Plane（カスタム acf）：新シナリオ `s24_fltctrls_fixes` 8/8（トリム最大で上下ラダー 25.6°、スポイラー 4・12 の表示、レバーのスナップ）。Lua の誤りなし。

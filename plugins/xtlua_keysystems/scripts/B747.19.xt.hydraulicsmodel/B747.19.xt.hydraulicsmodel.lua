@@ -407,6 +407,13 @@ function flight_start()
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3.5,"maxout":3.5,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_lwr","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3.5,"maxout":3.5,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_upr","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
 
+      --RUDDER TRIM: moves the pedals' neutral, up to 80 % of the full travel,
+      --through the ratio changers (ATA27 p.612-614). X-Plane's total_heading_ratio
+      --does not hold it (2026-10-24). Before the pedals: the outputs to one
+      --dstDref add up, each clamped to its own range
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-25.6,"maxout":25.6,"scale":1.0,"srcDref":"sim/cockpit2/controls/rudder_trim","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-25.6,"maxout":25.6,"scale":1.0,"srcDref":"sim/cockpit2/controls/rudder_trim","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
+
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-32,"maxout":32,"scale":1.0,"srcDref":"sim/cockpit2/controls/total_heading_ratio","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-32,"maxout":32,"scale":1.0,"srcDref":"sim/cockpit2/controls/total_heading_ratio","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio"}';
 

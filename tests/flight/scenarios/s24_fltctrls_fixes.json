@@ -1,0 +1,63 @@
+{
+  "name": "s24_fltctrls_fixes",
+  "description": "操縦系統（4-1）の小さな修正の X-Plane での確認、地上。エンジン運転中の RJAA 34L で開始し、ラダートリムでラダー舵面が動くこと（全行程の 80 %、比率変換器を通る：ATA27 p.612-614。前は X-Plane の total_heading_ratio にトリムが入らず動かなかった：FCTL-04）、スピードブレーキを上げると舵面位置のスポイラーの表示がスポイラー 4 と 12 を示すこと（ATA27 p.200、FCOM p.939：FCTL-19）、フラップレバーを detent の間に置くと 2 秒後に近い detent に入ること（FCTL-23）。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 8 },
+    { "do": "snapshot", "note": "開始", "drefs": [
+      "sim/aircraft/view/acf_relative_path", "sim/cockpit2/controls/rudder_trim", "laminar/B747/flt_ctrls/rudder_ratio",
+      "laminar/B747/cablecontrols/upper_rudder", "laminar/B747/flt_ctrls/rudder_upr_pos", "laminar/B747/flt_ctrls/rudder_lwr_pos",
+      "laminar/B747/flt_ctrls/speedbrake_lever", "sim/cockpit2/controls/flap_ratio" ] },
+    { "do": "check", "note": "トリムなし：上ラダー 0", "dref": "laminar/B747/flt_ctrls/rudder_upr_pos", "op": "between", "value": [-0.5, 0.5] },
+
+    { "do": "mark", "note": "ラダートリム" },
+    { "do": "set", "note": "ラダートリムを右いっぱい（10 units）", "dref": "sim/cockpit2/controls/rudder_trim", "value": 1 },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "snapshot", "note": "トリム右いっぱい", "drefs": [ "laminar/B747/flt_ctrls/rudder_ratio", "laminar/B747/cablecontrols/upper_rudder",
+      "laminar/B747/cablecontrols/lower_rudder", "laminar/B747/flt_ctrls/rudder_upr_pos", "laminar/B747/flt_ctrls/rudder_lwr_pos" ] },
+    { "do": "check", "note": "地上（比率 1）：上ラダーは全行程 32° の 80 %、約 25.6°（ATA27 p.614）", "dref": "laminar/B747/flt_ctrls/rudder_upr_pos", "op": "between", "value": [24, 27] },
+    { "do": "check", "note": "下ラダーも", "dref": "laminar/B747/flt_ctrls/rudder_lwr_pos", "op": "between", "value": [24, 27] },
+    { "do": "view", "name": "eicas" },
+    { "do": "set", "note": "下の EICAS に STATUS ページ（舵面位置）", "dref": "laminar/B747/dsp/synoptic_display", "value": 2 },
+    { "do": "view", "the": -32, "psi": 33, "fov": 14 },
+    { "do": "shot", "name": "stat_rudder_trim" },
+    { "do": "set", "note": "ラダートリムを戻す", "dref": "sim/cockpit2/controls/rudder_trim", "value": 0 },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "check", "note": "トリム 0：上ラダー 0 に戻る", "dref": "laminar/B747/flt_ctrls/rudder_upr_pos", "op": "between", "value": [-0.5, 0.5] },
+
+    { "do": "mark", "note": "スポイラーの表示" },
+    { "do": "set", "note": "スピードブレーキレバーを UP", "dref": "sim/cockpit2/controls/speedbrake_ratio", "value": 1 },
+    { "do": "sleep", "seconds": 4 },
+    { "do": "snapshot", "note": "スピードブレーキ UP", "drefs": [ "laminar/B747/flt_ctrls/speedbrake_lever", "sim/cockpit2/controls/speedbrake_ratio",
+      "laminar/B747/flt_ctrls/spoilers[4]", "laminar/B747/flt_ctrls/spoilers[12]", "laminar/B747/flt_ctrls/spoilers[1]",
+      "laminar/B747/flt_ctrls/outer_spoilers[0]", "laminar/B747/flt_ctrls/outer_spoilers[1]" ] },
+    { "do": "check", "note": "地上でスポイラー 4 が立つ", "dref": "laminar/B747/flt_ctrls/spoilers[4]", "op": ">", "value": 20 },
+    { "do": "check", "note": "表示の左はスポイラー 4（ATA27 p.200）", "dref": "laminar/B747/flt_ctrls/outer_spoilers[0]", "op": ">", "value": 20 },
+    { "do": "shot", "name": "stat_speedbrake_up" },
+    { "do": "set", "note": "スピードブレーキレバーを DN", "dref": "sim/cockpit2/controls/speedbrake_ratio", "value": 0 },
+    { "do": "sleep", "seconds": 4 },
+    { "do": "check", "note": "スポイラーの表示が 0 に戻る", "dref": "laminar/B747/flt_ctrls/outer_spoilers[0]", "op": "<", "value": 2 },
+
+    { "do": "mark", "note": "フラップレバーのスナップ" },
+    { "do": "set", "note": "フラップレバーを detent の間（5 の手前）", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.31 },
+    { "do": "sleep", "seconds": 4 },
+    { "do": "check", "note": "2 秒後に近い detent（5）に入る（FCTL-23）", "dref": "sim/cockpit2/controls/flap_ratio", "op": "between", "value": [0.332, 0.334] },
+    { "do": "set", "note": "フラップレバーを UP に戻す", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "view", "name": "forward" }
+  ]
+}

@@ -747,19 +747,19 @@ end
 function B747_flap_move_to_slot()
     
     
-    if simDR_flap_ratio_control<=0.0835 then --flaps 0
+    if simDR_flap_ratio_control<=0.0835 then --flaps up
 	    simDR_flap_ratio_control=0
-    elseif simDR_flap_ratio_control<=0.25 then --flaps 5 
+    elseif simDR_flap_ratio_control<=0.25 then --flaps 1
 	    simDR_flap_ratio_control= 0.167
-    elseif simDR_flap_ratio_control<=0.4165 then --flaps 10
+    elseif simDR_flap_ratio_control<=0.4165 then --flaps 5
 	    simDR_flap_ratio_control= 0.333
-    elseif simDR_flap_ratio_control<=0.5835 then --flaps 20
+    elseif simDR_flap_ratio_control<=0.5835 then --flaps 10
 	    simDR_flap_ratio_control= 0.5
-    elseif simDR_flap_ratio_control<=0.7505 then --flaps 25
+    elseif simDR_flap_ratio_control<=0.7505 then --flaps 20
 	    simDR_flap_ratio_control= 0.667
-    elseif simDR_flap_ratio_control<=0.9165 then --flaps 30
+    elseif simDR_flap_ratio_control<=0.9165 then --flaps 25
 	    simDR_flap_ratio_control= 0.833
-    else
+    else --flaps 30
 	    simDR_flap_ratio_control = 1.0
     end
 
@@ -799,11 +799,15 @@ function FlapinSlot()
 end
 local last_flap_handle=-1
 local flap_relief=0
+-- flap load relief: the lever position the flaps are relieved to (nil: none)
+local FLAPS_20, FLAPS_25 = 0.667, 0.833
+local flap_relief_to=nil
 ----- FLAP INDICATOR STATUS -------------------------------------------------------------
 function B747_flap_transition_status()
     if last_flap_handle~=simDR_flap_ratio_control then
-      if is_timer_scheduled(B747_flap_move_to_slot) == false then
-	      stop_timer(B747_flap_move_to_slot)    
+      -- the lever moved: snap it to the nearest detent 2 s after it stops
+      if is_timer_scheduled(B747_flap_move_to_slot) then
+	      stop_timer(B747_flap_move_to_slot)
       end
       run_after_time(B747_flap_move_to_slot, 2.0)
     end
@@ -823,24 +827,25 @@ function B747_flap_transition_status()
 	
         B747DR_flap_trans_status = 0
     end
-    if simDR_flap_ratio_control<=0.667 then
-        flap_relief=0
-        B747DR_flap_ratio=simDR_flap_ratio_control
-    elseif simDR_flap_ratio_control>0.667 and simDR_ind_airspeed_kts_pilot>203 then
-        flap_relief=1
-        B747DR_flap_ratio=0.667
-    elseif simDR_flap_ratio_control>0.834 and simDR_ind_airspeed_kts_pilot>178 then
-        flap_relief=1
-        B747DR_flap_ratio=0.833
-    elseif flap_relief==1 and simDR_flap_ratio_control>0.834 and simDR_ind_airspeed_kts_pilot<170 then
-        flap_relief=0
-        B747DR_flap_ratio=simDR_flap_ratio_control
-    elseif flap_relief==1 and simDR_flap_ratio_control>0.668 and simDR_flap_ratio_control<=0.833 and simDR_ind_airspeed_kts_pilot<195 then
-        flap_relief=0
-        B747DR_flap_ratio=simDR_flap_ratio_control
-    elseif flap_relief==0 then
-        B747DR_flap_ratio=simDR_flap_ratio_control
-    end    
+    -- flap load relief (FCOM p.954; ATA27 p.288-289): lever 30: 30 to 25 at
+    -- 178 kt, 25 to 20 at 203 kt, back 20 to 25 at 195 kt, 25 to 30 at 170 kt;
+    -- lever 25: 25 to 20 at 203 kt, back at 195 kt. The lever does not move
+    local ias = simDR_ind_airspeed_kts_pilot
+    local lever = simDR_flap_ratio_control
+    if lever <= FLAPS_20 + 0.001 then
+        flap_relief_to = nil
+    elseif lever <= FLAPS_25 + 0.001 then                   -- lever 25
+        if flap_relief_to ~= FLAPS_20 and ias > 203 then flap_relief_to = FLAPS_20
+        elseif flap_relief_to == FLAPS_20 and ias < 195 then flap_relief_to = nil
+        elseif flap_relief_to == FLAPS_25 then flap_relief_to = nil end
+    else                                                    -- lever 30
+        if flap_relief_to == nil and ias > 178 then flap_relief_to = FLAPS_25 end
+        if flap_relief_to == FLAPS_25 and ias > 203 then flap_relief_to = FLAPS_20 end
+        if flap_relief_to == FLAPS_20 and ias < 195 then flap_relief_to = FLAPS_25 end
+        if flap_relief_to == FLAPS_25 and ias < 170 then flap_relief_to = nil end
+    end
+    if flap_relief_to then flap_relief = 1 else flap_relief = 0 end
+    B747DR_flap_ratio = flap_relief_to or lever
     
 end
 local poppedSpeedbrake=false
