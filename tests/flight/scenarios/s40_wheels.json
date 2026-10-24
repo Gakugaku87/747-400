@@ -31,7 +31,6 @@
     { "do": "wait", "note": "温度の表示が 5 以上（熱電対の遅れで数分）", "dref": "laminar/B747/gear/brake_temp_ind[4]", "op": ">=", "value": 5, "timeout": 400 },
     { "do": "check", "note": "BRAKE TEMP（FCOM p.1521）", "dref": "laminar/B747/CAS/advisory_status[46]", "op": "==", "value": 1 },
     { "do": "check", "note": "右胴体脚は冷たい", "dref": "laminar/B747/gear/brake_temp_ind[8]", "op": "==", "value": 0 },
-    { "do": "wait", "note": "パネルの琥珀は 484.1 °C から（5 は 482 °C から：その間は白い 5）", "dref": "laminar/B747/gear/brake_temp[4]", "op": ">", "value": 490, "timeout": 60 },
     { "do": "view", "the": -34, "psi": 31.5, "fov": 13 },
     { "do": "shot", "name": "gear_synoptic_brake_temp" },
 

@@ -19,10 +19,24 @@ rt:callout("flight_start")
 local MODE = "sim/cockpit2/engine/actuators/prop_mode"
 local DEPLOY = "sim/flightmodel2/engines/thrust_reverser_deploy_ratio"
 local ADV = "laminar/B747/CAS/advisory_status"
+local JET, JET_ALL = "sim/cockpit2/engine/actuators/throttle_jet_rev_ratio", "sim/cockpit2/engine/actuators/throttle_jet_rev_ratio_all"
+-- X-Plane's throttle_jet_rev_ratio_all: a write sets every engine, a read
+-- gives their average (tried in X-Plane, 2026-10-25)
+local last_all = 0
+local function sync_all()
+    local a = rt:get(JET_ALL)
+    if a ~= last_all then for i = 0, 3 do rt:set(JET, i, a) end end
+    local s = 0
+    for i = 0, 3 do s = s + rt:get(JET, i) end
+    last_all = s / 4
+    rt:set(JET_ALL, last_all)
+end
 local function frames(seconds)
     for _ = 1, math.floor(seconds * 30 + 0.5) do
+        sync_all()
         rt:frame(1 / 30)
         for i = 0, 3 do rt:set(DEPLOY, i, rt:get(MODE, i) == 3 and 1 or 0) end
+        sync_all()
     end
 end
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
@@ -57,6 +71,60 @@ T.equal(rt:get(ADV, 127), 0, "no ENG 2 REVERSER")
 rt:command("sim/engines/thrust_reverse_toggle")
 frames(5)
 T.equal(rt:get(ADV, 126), 0, "levers down: ENG 1 REVERSER goes")
+
+-- the hold commands (the user, 2026-10-25): full reverse while held; let go,
+-- the reverse levers at reverse idle with the reversers out (still asked: no
+-- ENG REVERSER) until the thrust levers come forward
+rt:set("laminar/B747/hydraulics/pressure_1", 3000)
+frames(1)
+local function hold(name, seconds)
+    local h = rt.commands[name].handler
+    h(0, 0)
+    for k = 1, math.floor(seconds * 30) do frames(1 / 30); h(1, k / 30) end
+    return function() h(2, seconds) end
+end
+local let_go = hold("sim/engines/thrust_reverse_hold", 2)
+for i = 0, 3 do T.equal(rt:get(JET, i), -1, "held: engine " .. (i + 1) .. " at full reverse") end
+T.equal(rt:get(MODE, 2), 3, "held: in reverse")
+let_go()
+frames(5)
+for i = 0, 3 do T.near(rt:get(JET, i), -0.01, 1e-9, "let go: engine " .. (i + 1) .. "'s reverse lever at reverse idle") end
+for i = 0, 3 do T.equal(rt:get(MODE, i), 3, "let go: engine " .. (i + 1) .. " still in reverse") end
+for i = 0, 3 do T.equal(rt:get(ADV, 126 + i), 0, "reverse idle: no ENG " .. (i + 1) .. " REVERSER") end
+frames(30)
+T.equal(rt:get(MODE, 0), 3, "30 s later: still at reverse idle (no automatic stow)")
+rt:set(JET_ALL, 0)
+frames(3)
+for i = 0, 3 do T.equal(rt:get(MODE, i), 1, "thrust levers forward: engine " .. (i + 1) .. " stowed") end
+T.equal(rt:get(ADV, 126), 0, "stowed: no ENG 1 REVERSER")
+-- one engine's hold command
+let_go = hold("sim/engines/thrust_reverse_hold_2", 4)
+T.check(rt:get(JET, 1) < -0.9, "engine 2 held: towards full reverse (" .. rt:get(JET, 1) .. ")")
+let_go()
+frames(5)
+T.near(rt:get(JET, 1), -0.01, 1e-9, "let go: engine 2 at reverse idle")
+T.equal(rt:get(MODE, 1), 3, "engine 2 still in reverse")
+T.equal(rt:get(ADV, 127), 0, "no ENG 2 REVERSER")
+rt:set(JET_ALL, 0.05)
+frames(3)
+T.equal(rt:get(MODE, 1), 1, "thrust levers forward: engine 2 stowed")
+T.equal(rt:get(ADV, 127), 0, "no ENG 2 REVERSER")
+rt:set(JET_ALL, 0)
+frames(1)
+-- system 1 low: let go of the all-engine hold, engine 1 gets no reverse idle
+-- either (X-Plane would start its reverser between frames: s12_reverser)
+rt:set("laminar/B747/hydraulics/pressure_1", 0)
+frames(1)
+let_go = hold("sim/engines/thrust_reverse_hold", 2)
+T.equal(rt:get(JET, 0), 0, "system 1 low, held: engine 1 no reverse")
+let_go()
+T.equal(rt:get(JET, 0), 0, "let go: engine 1 no reverse idle")
+T.near(rt:get(JET, 1), -0.01, 1e-9, "engine 2 at reverse idle")
+frames(3)
+T.equal(rt:get(MODE, 0), 1, "engine 1 kept stowed")
+rt:set(JET_ALL, 0)
+rt:set("laminar/B747/hydraulics/pressure_1", 3000)
+frames(3)
 
 -- GE: engine 4 stopped, its reverser does not move; hydraulics do not matter
 rt:set("laminar/B747/engines/type", 1)

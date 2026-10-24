@@ -5,9 +5,9 @@
 # Web API: HDG SEL on the cross-track from the runway centerline (apt.dat),
 # V/S on the 3-degree glideslope (earth_nav.dat), flaps, gear and speedbrake
 # ARM on the way, a hand flare from 40 ft RA (A/P and A/T off, thrust levers
-# to idle), then reverse thrust for 8 s (X-Plane's reverse hold; the
-# reverse levers back to forward idle 10 s after it began: the 747's reverse
-# command keeps full reverse after its release, upstream's), regular brakes
+# to idle), then reverse thrust for 8 s (X-Plane's reverse hold; let go,
+# the 747's reverse levers stay at reverse idle, and the script puts them to
+# forward idle 10 s after the reverse began, which stows them), regular brakes
 # (X-Plane's toggle command: the gear module owns the brake ratios) and
 # rudder on the centerline until the airplane stops. It starts the flight
 # itself with landing_setup.json (run_scenario.ps1: 22 NM out at 3,000 ft and
