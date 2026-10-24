@@ -596,3 +596,20 @@
 - ほかのモジュール：fltMgmt は MSU の位置だけを書く（IRU の状態を書かない）。ヨーダンパーは IRU の姿勢（`irs/att_valid`：NAV か ATT の 30 秒後）で（前は status 2 と MSU）。照明の ON BAT 灯（前は常に消灯）。FMC：SET IRS POS の箱は IRU が位置を待つとき、入力の後はアライン中だけ入力値、NAV でも OFF でも空白（FCOM p.1286–1287）。SET HDG は ATT のときだけ受け付ける（前は表と文字列を比べて常に真：NAV-30）。数字でない SET HDG で Lua の誤りになっていたのを直した（NAV-30）。toDMS の西経・南緯の分の誤りを直した（NAV-23）。
 - GPS：モデル `B747.34.gps_model.lua` とグルー `B747.34.xt.gps.lua`（試験 `tests/nav/gps_model_test.lua`）。L は AC standby bus、R は AC bus 2（ATA34_2 p.379）。電源から 75 秒で初回測位（IRU の位置で初期化した場合：p.378。GPS 自身の最後の位置も初期化になるとして、10 分かかる場合は作らない：推定）。X-Plane の `rel_gps`・`rel_gps2` と新設 `gps/fail[2]` で故障。>GPS LEFT・RIGHT（片方が無効：電源か故障）、>GPS（両方）。新設 `gps/valid[2]`。FMC の GPS の行はこれを読み、POS INIT の GPS POS は L、無ければ R、どちらも無ければ空白（FCOM p.1286）。エンジン運転中・空中の開始では最初から測位済み。
 - 作らなかったもの：GPS の RAIM・HIL と FMC の位置への GPS の更新・POS REF の GPS NAV INHIBIT（FMC の作り直しで）、IRU の位置のドリフト（NAV-26。今までどおり整列ごとに 0.001° 以内の小さな誤差）、HDG REF の TRU（NAV-28）、ATT と HDG の別々の旗（パネル）、PFD の昇降率を IRS から（パネル）、NAV デテント（3D は上下のコマンドだけ）、地上員呼び出しのホーン、他系統の IRS の有効の確認（AFDS・失速警報・GPWS：NAV-24 の残り）。
+
+## 13. 段取りの変更と段 4 の計画（2026-10-25 朝）
+
+- 段 3（無線の同調）は後へ回す。自動同調の判断（どの VOR・ILS を、いつ）は FMC の経路と進入の選択によって決まり、NAV RADIO ページも FMC の航法データと結びついている。PLAN では自動同調は 6-1（FMC の中核）、ページは 6-2（CDU）にあるので、その作り直しと一緒に行う。受信機だけで直せる誤り（ACP の音声 NAV-32、RADIAL の 180° NAV-34 など）もそのときに直す。先に、航法センサーのモジュールで完結する段 4・段 5 を進める。
+- 段 4 の作り方：
+  - 4a 電波高度計：L/C/R。L は X-Plane の機長側の RA、R は副操縦士側。C は機長側を使う（推定：X-Plane の RA は 2 つ）。電源（§2.1）と故障で無効。PFD の RA の源は、EIU の選択で決まる優先順位で選ぶ（§4.8）。GPWC の RA は 500 ft の比較で選ぶ。`laminar/B747/efis/radio_altitude`（PFD の RA、パネルが読む）は名前と意味をそのままにし、源を選んだ RA に替える。
+  - 4b GPWS：
+    - mode 1〜5 は §4.9 の境界で作る。資料に数値の無い曲線は、示された点の間を直線で結ぶ（推定）。
+    - mode 6 は 405 の組：2500・1000・500・100・50・40・30・20・10、APPROACHING MINIMUMS（minimums + 80 ft）、MINIMUMS、BANK ANGLE（35/40/45°、低高度は E&M の式）。
+    - mode 7 は X-Plane の windshear を入力にする。1,500 ft 未満、離陸と進入、最低 5 s、他の警報の禁止は推定。
+    - 空地判定は §4.9 のとおり。
+    - GND PROX パネル：G/S INHB のラッチ、FLAP OVRD、GEAR OVRD、TERR OVRD。
+    - 灯と警報：GND PROX 灯、PFD の PULL UP、master WARNING。
+    - 声の優先は windshear > PULL UP > そのほかで、一度に 1 つだけ鳴らす。
+    - 音は、.snd の GPWS の音を、モデルの出す dataref で鳴らすよう結線し直す（承認済みの警報音の結線。`747-400.snd` と `747-400_custom.snd` を同じにする）。CDU の GPWS の音の設定（`fmod/options/gpws`）は、コールアウトを鳴らすかどうかとして尊重する。
+    - look-ahead と TCF は作らない（前方の地形を XTLua から取れない）。
+  - 4c minimums（405 の RADIO/BARO）：RST は点滅のリセットだけ（NAV-52）、各席で判定する（NAV-53）、点滅は 3 s、arm は DH + 75 ft（NAV-54）。表示の作り直し（5-2）と重なる部分は最小限にする。
