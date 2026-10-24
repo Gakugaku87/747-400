@@ -239,6 +239,8 @@ column cutout：操縦桿がトリム方向と逆に約 4.5° → 電気トリ�
 - AP との関係（FCOM p.945 (9.20.5)、ATA27 p.483・488）：AP 1 台 engage 中に操縦輪スイッチ → AP 解除＋トリム。複数 engage 中は操縦輪スイッチ無効（autoland の autotrim 中は FCC が手動入力を無視して engage を保つ）。ALTN は AP の指令に優先し AP を外さない（autotrim 中の使用で STAB TRIM UNSCHD）。
 - autotrim：左 SRM は L/C FCC、右 SRM は C/R FCC。エレベーター偏位に基づく指令が 3.5 s 続いたら作動（autoland 中は遅延なし）。FRAT は LAND 2・RA < 120 ft・両 SRM 有効（ATA27 p.488）。指令の計算は ATA 22。
 - speed trim（ATA27 p.486、FCOM p.945）：1 台の SRM（ランダム）が半速で行う。空中 20 s 後、Vc ≤ 220 kt、手動/ALTN の入力なし、autotrim でないとき engage。速度増 → ANU、速度減 → AND（engage 時の速度と安定板位置に同期）。手動/ALTN 入力、FCC の engage/解除、column cutout で解除。両 SRM で失うと STATUS の STAB SPEED TRIM。
+  - 制御則（ATA22 p.159 の図）：安定板の変化は 120 kt で 0、220 kt で機首上げ 2.55°（最大の権限）まで直線（1 unit = 1° なので 0.0255 units/kt）。engage のときの速度と位置に同期する。
+  - 選び方（ATA22 p.155–157）：左 SRM は機長側の ADC が主・F/O 側が副、右は逆。副は他方の SRM が無効のときだけ使い、他方が有効なら主を失ったときに他方へ移る。2 つの ADC が 10 kt 違うと air data 無効（comparison fault）。select は air data・安定板位置・空地が有効で、他方の SRM が select していないとき。engage は select かつ「地上・手動・ALTN・左右の SRM の FCC autotrim」のどれでもないとき（p.157 の図）、空中 20 秒後（p.156）。
 - cutout と自動遮断（ATA27 p.450、FCOM p.945）：CUTOUT＝MOV 閉。AUTO＝両 SRM が両 STCM の MOV を制御（AUTO に 5 s で開指令、開閉指令は 10 s パルス）。STCM のブレーキ解除圧スイッチが「圧あり」で unscheduled monitor が動きを検出 → 両 SRM が閉。ON は自動遮断を無効にして開。自動遮断後に開くには ON（FCOM）か、ON/CUTOUT から AUTO に戻す（E&M）。閉じない MOV は STATUS の STAB AUTO CUTOUT。
 
 ```
@@ -253,7 +255,7 @@ STAB TRIM UNSCHD = (autotrim/speed trim/default mode で有効な指令なしに
 
 - 帯（units）：mid 3.35–8.15、nose up 帯（前方 CG）3.35–10.15、nose down 帯（後方 CG）1.35–8.15（ATA27 p.521 図）。FCOM は「mid、mid＋AND 側、mid＋ANU 側の 3 種」（FCOM p.944 (9.20.4)）。
 - 選択：MAWEA が FMC の CG・GW・thrust から表で選び、takeoff enable 中に点灯、V1（takeoff inhibit）を超えたら消灯（ATA27 p.514）。表の中身は `資料に記載なし`。TAKEOFF REF で CG を入れると FMC が離陸トリム（0.1 unit 刻み）を出し、指示器の greenband を更新する（109, 570）。405 では trim が greenband 内のときだけ小文字で出る（FCOM p.1320 (11.40.44)）。
-- 実装案（`推定`）：FMC の離陸トリムが 8.15 を超えたら nose up 帯、3.35 未満なら nose down 帯、それ以外は mid 帯を選ぶ。3D は帯 1 本の平行移動しかできないので、選んだ帯の中心に置く（幅の違いは出せない）。
+- 実装案（`推定`）：FMC の離陸トリムが 8.15 を超えたら nose up 帯、3.35 未満なら nose down 帯、それ以外は mid 帯を選ぶ。3D は帯 1 本の平行移動しかできないので、選んだ帯の中心に置く（幅の違いは出せない）。→ 段 2c で実装（§13）。3D の帯は obj から測ると長さ 4.63 units、指示 0〜1 で中心 3.81〜8.12 units だったので、mid は中央、nose up は上端を 10.15、nose down は下端（3D の下限 1.49）に合わせる。
 - 前脚オレオ圧スイッチ：圧高（前方 CG）で接地＝FWD、開＝AFT。mid 帯なら比較しない。選択帯と不一致 → >STAB GREENBAND（地上のみ、CG 入力無効でも出る）。設定圧は `資料に記載なし`（ATA27 p.508–510、p.523 図）。
 - CONFIG STAB：離陸推力で安定板が選択帯の外（MAWEA、左 FCU の安定板位置を優先）（ATA27 p.496・729–730）。crew alerting 担当。
 - 指示器：電源喪失で全体が暗く OFF フラグ、信号喪失は暗くなるだけ（ATA27 p.502・512）。
@@ -411,3 +413,9 @@ STAB TRIM UNSCHD = (autotrim/speed trim/default mode で有効な指令なしに
 - X-Plane のトリム（`elevator_trim`、−1..1 が 0–15 units）はグルーが書く。前は X-Plane のコマンド（acf の 25 秒）と AFDS の直接の書き込みだった。フライトの開始から 3 秒と、グルーが書いた値でない変化（トリムの軸、試験の書き込み）は、モデルの位置を X-Plane に合わせる（XTLua の 1 フレームの遅れを見込み、直前 2 回の書き込みと比べる）。
 - AFDS：`B747.19.xt.afds_control.lua` はトリム指令（−1/0/1）を `flt_ctrls/stab_trim/autotrim_cmd` に出すだけにした。中立の幅は前のまま、昇降舵の指令は A/P の `sim_pitch_ratio`（前は操縦桿を含む `custom_pitch_ratio`）。A/P が外れたら A/P の昇降舵・補助翼の指令を毎秒 1 で 0 に戻す（推定）。前は 2 秒の窓が A/P の off の間ずっと続いて、最後の値が残っていた。
 - 気づいたこと：プラグインの安定板の角度（`stabilizer_deflection_degrees` = −15 × トリム、0 units で +15°、15 units で −15°、1 unit 2°）は ATA22 p.132 の表（+3°〜−12°、1 unit 1°）と違う。X-Plane の空力はこの角度で調整されているので、今は変えない（同じ飛行状態での units が実機と違う可能性。PROGRESS の「気づいたこと」）。
+
+## 13. 実装（4-1 段 2c、2026-10-24）
+
+- speed trim：SRM のモデルに足した（§4.5）。選び方（主・副の ADC、10 kt の comparison fault、選んだ SRM が続けて持ち、できなくなれば他方）、engage（空中 20 秒後、220 kt 以下、手動・ALTN・autotrim でない、操縦桿が cutout スイッチの手前）、制御則（120〜220 kt で 2.55 units、engage の速度と位置に同期）、選んだ SRM の STCM で半速、機首下げの制限 0.8、STATUS STAB SPEED TRIM（両 SRM で失う）、`flt_ctrls/stab_trim/speed_trim`（状態）。外からのトリムの変化（X-Plane のトリムの軸・試験の書き込み）では同期し直す。推定：指令と位置の差が 0.05 units を超えたら動かし、着いたら止める。作っていないもの：p.155 の control loop の監視（指令と動きの比較による SRM の切替）。
+- グリーンバンド：新しいモデル `B747.45.greenband_model.lua`（fltCtrls のモジュールが読む）。帯は 3 つ（§4.6）、選び方は FMC の離陸トリムから（推定。MAWEA の表は資料に無い。CG を入れる前は mid 帯）、地上で V1 未満なら選んだ帯の灯、それ以外は塗装の mid 帯（3D の帯の位置）。CONFIG STAB は選んだ帯の外で出す（前は FMC トリム ±2.25 の帯）。推力などの条件（エンジン 2 と 3 の両方の N1 > 90 など）は前のまま（WARN-11）。
+- 作っていないもの：>STAB GREENBAND（前脚の圧力スイッチの設定値が資料に無い。FMC は自分の重量重心の CG で X-Plane の重心を動かし、入れた CG は離陸トリムの計算にだけ使うので、比べるなら「入れた CG」と「実際の CG」になる）、V1 の takeoff inhibit 以外の takeoff enable の条件。
