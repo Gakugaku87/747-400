@@ -135366,7 +135366,7 @@ GROUP LOWER EICAS POWER
             POS 1726.000000 346.000000
             IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
             DATAREF laminar/B747/gear/brake_temp_ind[17]
-            SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[17]
+            SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[17]
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10
@@ -135536,7 +135536,7 @@ GROUP LOWER EICAS POWER
               POS 1498.000000 136.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[0]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[0]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[0]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -135553,7 +135553,7 @@ GROUP LOWER EICAS POWER
               POS 1541.000000 136.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[1]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[1]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[1]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -135570,7 +135570,7 @@ GROUP LOWER EICAS POWER
               POS 1498.000000 136.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[0]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[0]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[0]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -135587,7 +135587,7 @@ GROUP LOWER EICAS POWER
               POS 1541.000000 136.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[1]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[1]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[1]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -135607,7 +135607,7 @@ GROUP LOWER EICAS POWER
               POS 1498.000000 73.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[2]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[2]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[2]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -135624,7 +135624,7 @@ GROUP LOWER EICAS POWER
               POS 1541.000000 73.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[3]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[3]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[3]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -135641,7 +135641,7 @@ GROUP LOWER EICAS POWER
               POS 1498.000000 73.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[2]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[2]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[2]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -135658,7 +135658,7 @@ GROUP LOWER EICAS POWER
               POS 1541.000000 73.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[3]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[3]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[3]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -135939,7 +135939,7 @@ GROUP LOWER EICAS POWER
               POS 1553.000000 -68.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[4]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[4]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[4]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -135956,7 +135956,7 @@ GROUP LOWER EICAS POWER
               POS 1596.000000 -68.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[5]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[5]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[5]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -135973,7 +135973,7 @@ GROUP LOWER EICAS POWER
               POS 1553.000000 -68.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[4]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[4]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[4]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -135990,7 +135990,7 @@ GROUP LOWER EICAS POWER
               POS 1596.000000 -68.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[5]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[5]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[5]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136010,7 +136010,7 @@ GROUP LOWER EICAS POWER
               POS 1553.000000 -131.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[6]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[6]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[6]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136027,7 +136027,7 @@ GROUP LOWER EICAS POWER
               POS 1596.000000 -131.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[7]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[7]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[7]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136044,7 +136044,7 @@ GROUP LOWER EICAS POWER
               POS 1553.000000 -131.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[6]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[6]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[6]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136061,7 +136061,7 @@ GROUP LOWER EICAS POWER
               POS 1596.000000 -131.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[7]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[7]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[7]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136342,7 +136342,7 @@ GROUP LOWER EICAS POWER
               POS 1869.000000 136.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[12]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[12]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[12]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136359,7 +136359,7 @@ GROUP LOWER EICAS POWER
               POS 1912.000000 136.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[13]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[13]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[13]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136376,7 +136376,7 @@ GROUP LOWER EICAS POWER
               POS 1869.000000 136.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[12]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[12]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[12]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136393,7 +136393,7 @@ GROUP LOWER EICAS POWER
               POS 1912.000000 136.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[13]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[13]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[13]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136413,7 +136413,7 @@ GROUP LOWER EICAS POWER
               POS 1869.000000 73.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[14]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[14]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[14]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136430,7 +136430,7 @@ GROUP LOWER EICAS POWER
               POS 1912.000000 73.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[15]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[15]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[15]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136447,7 +136447,7 @@ GROUP LOWER EICAS POWER
               POS 1869.000000 73.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[14]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[14]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[14]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136464,7 +136464,7 @@ GROUP LOWER EICAS POWER
               POS 1912.000000 73.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[15]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[15]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[15]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136745,7 +136745,7 @@ GROUP LOWER EICAS POWER
               POS 1814.000000 -68.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[8]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[8]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[8]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136762,7 +136762,7 @@ GROUP LOWER EICAS POWER
               POS 1857.000000 -68.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[9]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[9]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[9]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136779,7 +136779,7 @@ GROUP LOWER EICAS POWER
               POS 1814.000000 -68.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[8]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[8]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[8]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136796,7 +136796,7 @@ GROUP LOWER EICAS POWER
               POS 1857.000000 -68.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[9]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[9]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[9]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136816,7 +136816,7 @@ GROUP LOWER EICAS POWER
               POS 1814.000000 -131.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[10]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[10]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[10]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136833,7 +136833,7 @@ GROUP LOWER EICAS POWER
               POS 1857.000000 -131.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/brake_temp_ind[11]
-              SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[11]
+              SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[11]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136850,7 +136850,7 @@ GROUP LOWER EICAS POWER
               POS 1814.000000 -131.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[10]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[10]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[10]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
@@ -136867,7 +136867,7 @@ GROUP LOWER EICAS POWER
               POS 1857.000000 -131.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/brake_temp_ind[11]
-              SHOW_GREATER 484.100006 laminar/B747/gear/brake_temp[11]
+              SHOW_GREATER 4.500000 laminar/B747/gear/brake_temp_ind[11]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9

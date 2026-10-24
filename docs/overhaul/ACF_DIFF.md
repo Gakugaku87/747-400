@@ -193,3 +193,11 @@
 | 同 | GEAR synoptic のタイヤ圧（左胴体のタイヤ 7・8、右翼のタイヤ 16） | タイヤ 7（`tire_pressure[6]`）の琥珀（低）が `SHOW_LESS 100.000000 …tire_pressure[9]`。タイヤ 8（`[7]`）と 16（`[15]`）の白に表示条件が無い（琥珀と重なる） | 琥珀の条件を `[6]` に。白の 2 つに `SHOW_LESS 239.990005` と `SHOW_GREATER 100.010002`（ほかのタイヤと同じ）。3 か所（4 行の追加） | notes/ATA-32.md §6.5 |
 
 上の 2 行は `docs/overhaul/tools/panel_gear_synoptic.lua` で書き換えた（15 の変更）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_gear_synoptic`。
+
+脚の GEAR synoptic のブレーキ温度の色（4-2 段 5 の続き、2026-10-25。承認の一覧に無い変更で、利用者の承認「変えてよい」）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-25・脚（4-2 段 5） | GEAR synoptic のブレーキ温度の数字（ブレーキ 16 個の白と琥珀、前脚のグループの琥珀 1 個） | 白は `SHOW_LESS 484.000000 laminar/B747/gear/brake_temp[n]`、琥珀は `SHOW_GREATER 484.100006 …brake_temp[n]`（表示 5 になる 482 °C から 484 °C までは白） | 白は `SHOW_LESS 4.500000 laminar/B747/gear/brake_temp_ind[n]`、琥珀は `SHOW_GREATER 4.500000 …brake_temp_ind[n]`（表示 5 から琥珀） | ATA29_32 p.428（表示 5 で数字の色が変わる）、FCOM p.1521 |
+
+上の行は `docs/overhaul/tools/panel_brake_temp.lua` で書き換えた（33 か所）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_brake_temp`。
