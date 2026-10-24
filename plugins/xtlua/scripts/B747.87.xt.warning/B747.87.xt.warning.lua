@@ -676,6 +676,8 @@ local B747_CASstatusMsg = {
     {DRindex = 94, name = "SPEEDBRAKE AUTO"},     -- ATA27 p.184, p.205 (4-1 step 3)
     {DRindex = 95, name = "BODY GR STRG SYS"},    -- ATA29_32 p.626, p.630 (4-2 step 4)
     {DRindex = 96, name = "PEDAL STEERING"},      -- ATA29_32 p.600
+    {DRindex = 97, name = "BRAKE TEMP SYS"},      -- ATA29_32 p.428 (4-2 step 5)
+    {DRindex = 98, name = "TIRE PRESS SYS"},      -- ATA29_32 p.376
 }
 
 

@@ -135487,7 +135487,7 @@ GROUP LOWER EICAS POWER
             POS 1704.000000 297.500000
             IMAGE CRT Displays/EICAS Lower/GEAR/status_closed
             DATAREF 
-            SHOW_LESS 0.000000 sim/flightmodel2/gear/deploy_ratio[0]
+            SHOW_LESS 0.001000 laminar/B747/gear/door[0]
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10
@@ -135509,7 +135509,7 @@ GROUP LOWER EICAS POWER
             POS 1704.000000 297.500000
             IMAGE CRT Displays/EICAS Lower/GEAR/status_open
             DATAREF 
-            SHOW_GREATER 0.010000 sim/flightmodel2/gear/deploy_ratio[0]
+            SHOW_GREATER 0.001000 laminar/B747/gear/door[0]
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10
@@ -135890,7 +135890,7 @@ GROUP LOWER EICAS POWER
             POS 1519.000000 24.500000
             IMAGE CRT Displays/EICAS Lower/GEAR/status_closed
             DATAREF 
-            SHOW_LESS 0.000000 sim/flightmodel2/gear/deploy_ratio[4]
+            SHOW_LESS 0.001000 laminar/B747/gear/door[3]
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10
@@ -135912,7 +135912,7 @@ GROUP LOWER EICAS POWER
             POS 1519.000000 24.500000
             IMAGE CRT Displays/EICAS Lower/GEAR/status_open
             DATAREF 
-            SHOW_GREATER 0.010000 sim/flightmodel2/gear/deploy_ratio[4]
+            SHOW_GREATER 0.001000 laminar/B747/gear/door[3]
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10
@@ -136188,7 +136188,7 @@ GROUP LOWER EICAS POWER
               POS 1508.000000 -131.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
               DATAREF laminar/B747/gear/tire_pressure[6]
-              SHOW_LESS 100.000000 laminar/B747/gear/tire_pressure[9]
+              SHOW_LESS 100.000000 laminar/B747/gear/tire_pressure[6]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
@@ -136240,6 +136240,8 @@ GROUP LOWER EICAS POWER
               POS 1639.000000 -131.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/tire_pressure[7]
+              SHOW_LESS 239.990005 laminar/B747/gear/tire_pressure[7]
+              SHOW_GREATER 100.010002 laminar/B747/gear/tire_pressure[7]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
@@ -136291,7 +136293,7 @@ GROUP LOWER EICAS POWER
             POS 1574.000000 -178.500000
             IMAGE CRT Displays/EICAS Lower/GEAR/status_closed
             DATAREF 
-            SHOW_LESS 0.000000 sim/flightmodel2/gear/deploy_ratio[2]
+            SHOW_LESS 0.001000 laminar/B747/gear/door[1]
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10
@@ -136313,7 +136315,7 @@ GROUP LOWER EICAS POWER
             POS 1574.000000 -178.500000
             IMAGE CRT Displays/EICAS Lower/GEAR/status_open
             DATAREF 
-            SHOW_GREATER 0.010000 sim/flightmodel2/gear/deploy_ratio[2]
+            SHOW_GREATER 0.001000 laminar/B747/gear/door[1]
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10
@@ -136641,6 +136643,8 @@ GROUP LOWER EICAS POWER
               POS 1956.000000 73.000000
               IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
               DATAREF laminar/B747/gear/tire_pressure[15]
+              SHOW_LESS 239.990005 laminar/B747/gear/tire_pressure[15]
+              SHOW_GREATER 100.010002 laminar/B747/gear/tire_pressure[15]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
@@ -136691,7 +136695,7 @@ GROUP LOWER EICAS POWER
               POS 1890.000000 24.500000
               IMAGE CRT Displays/EICAS Lower/GEAR/status_closed
               DATAREF 
-              SHOW_LESS 0.000000 sim/flightmodel2/gear/deploy_ratio[3]
+              SHOW_LESS 0.001000 laminar/B747/gear/door[4]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
@@ -136713,7 +136717,7 @@ GROUP LOWER EICAS POWER
               POS 1890.000000 24.500000
               IMAGE CRT Displays/EICAS Lower/GEAR/status_open
               DATAREF 
-              SHOW_GREATER 0.010000 sim/flightmodel2/gear/deploy_ratio[3]
+              SHOW_GREATER 0.001000 laminar/B747/gear/door[4]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
@@ -137095,7 +137099,7 @@ GROUP LOWER EICAS POWER
             POS 1835.000000 -178.500000
             IMAGE CRT Displays/EICAS Lower/GEAR/status_closed
             DATAREF 
-            SHOW_LESS 0.000000 sim/flightmodel2/gear/deploy_ratio[1]
+            SHOW_LESS 0.001000 laminar/B747/gear/door[2]
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10
@@ -137117,7 +137121,7 @@ GROUP LOWER EICAS POWER
             POS 1835.000000 -178.500000
             IMAGE CRT Displays/EICAS Lower/GEAR/status_open
             DATAREF 
-            SHOW_GREATER 0.010000 sim/flightmodel2/gear/deploy_ratio[1]
+            SHOW_GREATER 0.001000 laminar/B747/gear/door[2]
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10

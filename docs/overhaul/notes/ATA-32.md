@@ -360,3 +360,13 @@ GAP ID の接頭辞：`GEAR`。2026-10-23 作成。コードは `overhaul` ブ�
 - ロック：胴体脚のアクチュエーターのロックスイッチ（中立から 0.1° 以内）を `laminar/B747/gear/steering/body_unlocked` に出し、CONFIG GEAR CTR（fltCtrls。エンジン 2 か 3 に直した：FCOM p.1603）と PSEU の LG LVR UNLK（脚レバーのロック）が読む。前は X-Plane の胴体脚の角度で見ていた（GEAR-17 の CTR の部分）。
 - メッセージ：>BODY GEAR STRG と STATUS の BODY GR STRG SYS は、指令が無いのにアクチュエーターのロックが外れているとき（中立に戻る間を除くため 5 秒：推定）（FCOM p.1521、ATA29_32 p.626・630）。STATUS の PEDAL STEERING は interconnect actuator の故障（p.580・600。もう片方で engage するのでペダルは効く）。故障は `gear/fail/pedal_steering`・`body_steering`。
 - 作らなかったもの：モジュールの圧力スイッチ（指令なしの加圧）、arm A と B の不一致、shimmy damper と牽引、STATUS の不揮発の保持、ステアリングの作動油の消費（油圧のモデルの負荷の表の `steering` は使っていない）。
+
+## 14. 実装（4-2 段 5、2026-10-25：ブレーキ温度・タイヤ圧・GEAR synoptic）
+
+- 新しいモデル `plugins/xtlua/scripts/B747.10.xt.gear/B747.10.btms_model.lua`（試験 `tests/gear/btms_model_test.lua`）と `B747.10.tpis_model.lua`（試験 `tests/gear/tpis_model_test.lua`）、グルー `B747.10.xt.wheels.lua`（脚のモジュールがステアリングのグルーの次に読み、毎フレーム `B747_wheels()`。試験 `tests/gear/wheels_module_test.lua`）。前の脚のモジュールのタイヤ圧・ブレーキ温度・BRAKE TEMP の処理と、500 °C で 25〜45 秒後にタイヤを壊す処理は外した（GEAR-13）。
+- ブレーキ温度：熱は X-Plane のブレーキの吸収エネルギー（`brake_absorbed_J` の増えた分。X-Plane が自分で冷ます減りは数えない）を、各主脚トラックの 4 個で分ける。ブレーキ 1 個のヒートシンクを外気に向けて冷まし（地上と脚上げは時定数 90 分、空中で脚下げは 10 分）、熱電対がそれに 3 分遅れて付いていく。熱容量 87 kJ/°C は、FCOM PI.12.8 の表（停止 10〜15 分後の BTMS：31 百万 ft-lb で 4、34 で 5）に合わせた。表は比例でないので、20・27 百万 ft-lb は 1 段高く出る。冷却の時間は表（地上で 31→15 百万 ft-lb が約 62 分、脚下げの空中で約 7 分）と合う（すべて推定）。表示 0〜9 は温度に比例し、5 が 482 °C（ATA29_32 p.428。0 °C からの比例は推定）。BRAKE TEMP は 5 以上（FCOM p.1521）。故障 `gear/fail/btms` で BRAKE TEMP SYS（p.428）。`gear/brake_temp`（°C）と `brake_temp_ind` の名前と意味は前のまま（3D のブレーキの光も `brake_temp` を読む）。
+- タイヤ圧：整備したときの圧（198〜210 psi の乱数、前のまま）、荷重がかかると 10 psi 増し、X-Plane のタイヤ故障（`rel_tire1`〜`5` は脚 0〜4）でその脚の 4 本（前脚は 2 本）が数秒で 5 psi（推定）。>TIRE PRESSURE は §4.11 のとおり（100 psi 未満、主脚の平均から ±18 %、同じ車軸の 2 本の差が低い方の 25 % 超、前脚の 2 本の差 12 % 超。故障チャンネルは平均に入れない）。離陸推力（地上で推力レバー 0.7 以上：推定）では出さない。advisory は警報の表の advisory 290（caution の 65 にも同じ名前があるが使わない）。故障 `gear/fail/tpis` で全チャンネルが無効になり TIRE PRESS SYS（p.376）。
+- GEAR synoptic（カスタム acf、ACF_DIFF.md §5）：ドアの箱を脚の位置（X-Plane の `deploy_ratio`）からドアの状態（`gear/door`）に替えた。前は脚が下りていると斜線（開）だった。タイヤ圧の表示の 3 か所の誤り（§6.5）を直した。
+- パネルの数字の琥珀は `brake_temp` > 484.1 °C（前のまま）で、表示の 5（482 °C）と 2 °C ずれる。482〜484 °C の間は白い 5 になる。色の条件を `brake_temp_ind` ≥ 5 に替えるのは承認済みのパネル変更の外なので、提案に回す。
+- 作らなかったもの：ヒューズプラグの溶融（溶ける温度と時間が資料に無い。前の 500 °C・25〜45 秒の故障は外した）、タイヤ圧の温度による変化、ドアの箱の空箱（位置指示の故障）、405 の TILT・ANTISKID・LIMITER の表示、BTMS の mini 形式。
+- X-Plane で確かめたこと（カスタム acf、2026-10-25）：地上で脚が下りていてドアは CLOSED、空中の DN の途中で 5 つとも斜線。左胴体脚に 1 個 60 MJ を入れると 3.7 分で表示 5（琥珀）と BRAKE TEMP、右は 0 のまま。左胴体脚のタイヤ故障で 4 本が 5 psi（琥珀）と >TIRE PRESSURE。

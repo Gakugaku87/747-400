@@ -140,6 +140,10 @@ B747DR_gear_pedal_tiller       = deferred_dataref("laminar/B747/gear/steering/pe
 B747DR_gear_body_unlocked      = deferred_dataref("laminar/B747/gear/steering/body_unlocked", "number")
 B747DR_gear_fail_pedal_strg    = deferred_dataref("laminar/B747/gear/fail/pedal_steering", "number")
 B747DR_gear_fail_body_strg     = deferred_dataref("laminar/B747/gear/fail/body_steering", "number")
+-- the brake temperature monitoring and the tire pressure indication (4-2
+-- step 5): failed (no X-Plane equivalents)
+B747DR_gear_fail_btms          = deferred_dataref("laminar/B747/gear/fail/btms", "number")
+B747DR_gear_fail_tpis          = deferred_dataref("laminar/B747/gear/fail/tpis", "number")
 B747DR_parking_brake_ratio = find_dataref("laminar/B747/flt_ctrls/parking_brake_ratio")
 simDR_parking_brake_ratio       = find_dataref("sim/cockpit2/controls/parking_brake_ratio")
 ----- GEAR HANDLE DATAREF HANDLER -------------------------------------------------------

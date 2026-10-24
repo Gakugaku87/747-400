@@ -367,6 +367,9 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 段 4（ステアリング）：ステアリングのモデル（`B747.10.steering_model.lua`）を、グルー `B747.10.xt.steering.lua`（ブレーキのグルーの次に読み、`B747_steering()`）が回す。中身は notes/ATA-32.md §13。ステアリングは脚のモジュールだけが持つ（前は油圧のモジュール `B747.19.xt.hydraulics_override.lua` が IAS 20 kt で X-Plane と切り替えていた）。
   - 読むもの：X-Plane の tiller の軸（`joy_mapped_axis_avail`・`value` の 37：推定）か新設 `gear/steering/tiller`（-1〜1）、ペダルとラダートリム（`flt_ctrls/rudder_input`、油圧のモジュールが書く）、系統 1（`hydraulics/pressure_1`）と脚レバー（DN のとき）、PSEU の前脚圧縮・pri と alt の air と ground、対地速度、新設 `gear/steering/pedal_tiller`（実機ではない手当て：1 で、tiller の軸が無いときペダルを tiller に。機体の読み込み `aircraft_load` で 1）、故障（新設 `gear/fail/pedal_steering`・`body_steering`）。
   - 書くもの：X-Plane の `override_wheel_steer`（常に 1）・`tire_steer_command_deg`（0 前輪、1 右胴体、2 左胴体、3・4 翼脚は 0）、新設 `gear/steering/body_unlocked`（胴体脚のロックスイッチ。fltCtrls の CONFIG GEAR CTR と PSEU のグルーが読む）、advisory 43 >BODY GEAR STRG、STATUS 95 BODY GR STRG SYS・96 PEDAL STEERING。
+- 段 5（ブレーキ温度・タイヤ圧）：ブレーキ温度のモデル（`B747.10.btms_model.lua`）とタイヤ圧のモデル（`B747.10.tpis_model.lua`）を、グルー `B747.10.xt.wheels.lua`（ステアリングのグルーの次に読み、`B747_wheels()`）が回す。中身は notes/ATA-32.md §14。
+  - 読むもの：X-Plane の `brake_absorbed_J`（主脚トラックごと。増えた分を 4 個のブレーキで分ける）、外気温、PSEU の air と脚の位置（`gear/position`：脚下げの空中は風で冷える）、各脚の接地（`on_ground`）、X-Plane のタイヤ故障 `rel_tire1`〜`5`（脚 0〜4）、推力レバー（`engine/throttle`）、故障（新設 `gear/fail/btms`・`tpis`）。
+  - 書くもの：`gear/brake_temp[18]`（°C。3D のブレーキの光と synoptic の色）・`brake_temp_ind[18]`（0〜9）・`tire_pressure[18]`（psi）、advisory 46 BRAKE TEMP・290 >TIRE PRESSURE、STATUS 97 BRAKE TEMP SYS・98 TIRE PRESS SYS。カスタム acf の GEAR synoptic のドアの箱は `gear/door` を読む。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 

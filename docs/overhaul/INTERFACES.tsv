@@ -1758,6 +1758,7 @@ laminar/B747/gear/autobrakes/sel_dial_up	command	obj	B747.10.gear,B747.10.xt.gea
 laminar/B747/gear/brake_temp	dataref	obj,panel	B747.10.gear,B747.10.xt.gear
 laminar/B747/gear/brake_temp_ind	dataref	panel	B747.10.gear,B747.10.xt.gear
 laminar/B747/gear/chocked	dataref	obj	B747.10.gear,B747.03.xt.electrical,B747.10.xt.gear,B747.45.xt.fltCtrls
+laminar/B747/gear/door	dataref	panel	B747.10.gear,B747.10.xt.gear
 laminar/B747/gear/gear_position/annun_gear	dataref	panel	B747.10.gear,B747.10.xt.gear
 laminar/B747/gear/gear_position/annun_status	dataref	panel	B747.10.gear,B747.10.xt.gear
 laminar/B747/gear/overrideDown	command	autoatc	B747.10.gear,B747.10.xt.gear
