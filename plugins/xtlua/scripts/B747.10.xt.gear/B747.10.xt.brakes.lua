@@ -1,8 +1,9 @@
 -- The wheel brake model (B747.10.brake_model.lua) in the aircraft (4-2 step
--- 2): reads the pilots' brakes (X-Plane's brake commands, replaced here, and
--- the wing sweep axis that upstream used for a single brake axis), the
--- parking brake lever (laminar/B747/flt_ctrls/parking_brake_ratio, the 3D
--- lever), the hydraulic model's brake source and pressure
+-- 2): reads the pilots' brakes (X-Plane's toe brake axes, its brake commands,
+-- replaced here, and the wing sweep axis that upstream used for a single
+-- brake axis), the parking brake lever
+-- (laminar/B747/flt_ctrls/parking_brake_ratio, the 3D lever), the
+-- hydraulic model's brake source and pressure
 -- (laminar/B747/hydraulics/brake_source, brake_psi), the battery bus, the DC
 -- buses, the PSEU's air mode, the chocks and the failures; writes X-Plane's
 -- brakes (left/right_brake_ratio with override_toe_brakes always on, the
@@ -10,9 +11,10 @@
 -- valve (gear/brakes/park_valve), PARK BRAKE SET, ANTISKID, ANTISKID OFF and
 -- BRAKE LIMITER. B747.10.xt.gear.lua loads it after the actuation's glue and
 -- uses its bindings (the buses, the PSEU).
--- X-Plane's toe brake axes are not read: their index in
--- joy_mapped_axis_value is not documented here (the user's joystick has
--- none); while override_toe_brakes is on, X-Plane does not apply them.
+-- X-Plane does not apply its toe brake axes while override_toe_brakes is on:
+-- they are read here from joy_mapped_axis_avail/value, indexed by the axis
+-- assignment (6 left, 7 right toe brake: developer.x-plane.com, "joystick
+-- datarefs"; estimate, not tried: the user's joystick has no toe brakes).
 -- The autobrakes (B747.10.autobrake_model.lua, 4-2 step 3) run here before
 -- the brakes: the selector (gear/autobrakes/sel_dial_pos), the thrust levers
 -- (laminar/B747/engine/throttle), the captain's IRS (status and selector) and
@@ -31,6 +33,8 @@ simDR_brk_right                 = find_dataref("sim/cockpit2/controls/right_brak
 simDR_brk_park                  = find_dataref("sim/cockpit2/controls/parking_brake_ratio")
 simDR_brk_abs                   = find_dataref("sim/aircraft/gear/acf_has_abs")
 simDR_brk_sweep                 = find_dataref("sim/cockpit2/controls/wingsweep_ratio")
+simDR_brk_axis_avail            = find_dataref("sim/joystick/joy_mapped_axis_avail")
+simDR_brk_axis_value            = find_dataref("sim/joystick/joy_mapped_axis_value")
 B747DR_brk_lever                = find_dataref("laminar/B747/flt_ctrls/parking_brake_ratio")
 B747DR_brk_source               = find_dataref("laminar/B747/hydraulics/brake_source")
 B747DR_brk_psi                  = find_dataref("laminar/B747/hydraulics/brake_psi")
@@ -55,6 +59,7 @@ local ADV_AUTOBRAKES = 17
 local MEMO_AUTOBRAKES = {{3, 2}, {4, 3}, {5, 4}, {6, 5}, {7, 6}, {0, 7}}    -- {selector, memo}: 1-4, MAX, RTO
 local REGULAR = 0.5                 -- X-Plane's "regular" brakes on both pedals (estimate; "max" is 1)
 local PEDAL_RATE = 4                -- the pedals pushed or let go in 0.25 s (estimate)
+local AXIS_TOE = {6, 7}             -- X-Plane's axis assignments: left and right toe brake
 local INIT_S = 3                    -- the first reads of other modules' values are 0:
                                     -- the valve follows the lever meanwhile
 
@@ -67,7 +72,8 @@ local brk_t0 = nil
 -- the toggles
 local hold = {regular = false, max = false, left = false, right = false}
 local toggled = 0                   -- 0, REGULAR or 1
-local pedal = {0, 0}
+local cmd_pedal = {0, 0}            -- the pedals from the commands (pushed in 0.25 s)
+local pedal = {0, 0}                -- and with the toe brake axes
 
 local function flag(v)
     if v then return 1 end
@@ -125,6 +131,7 @@ function B747_brakes_flight_start()
     brk_t0 = nil
     hold.regular, hold.max, hold.left, hold.right = false, false, false, false
     toggled = 0
+    cmd_pedal[1], cmd_pedal[2] = 0, 0
     pedal[1], pedal[2] = 0, 0
 end
 
@@ -143,8 +150,13 @@ function B747_brakes()
     local both = math.max(hold.regular and REGULAR or 0, hold.max and 1 or 0, toggled, simDR_brk_sweep)
     local want_l = math.max(both, hold.left and 1 or 0)
     local want_r = math.max(both, hold.right and 1 or 0)
-    pedal[1] = toward(pedal[1], want_l, PEDAL_RATE * SIM_PERIOD)
-    pedal[2] = toward(pedal[2], want_r, PEDAL_RATE * SIM_PERIOD)
+    cmd_pedal[1] = toward(cmd_pedal[1], want_l, PEDAL_RATE * SIM_PERIOD)
+    cmd_pedal[2] = toward(cmd_pedal[2], want_r, PEDAL_RATE * SIM_PERIOD)
+    for i = 1, 2 do
+        local toe = 0
+        if simDR_brk_axis_avail[AXIS_TOE[i]] == 1 then toe = math.min(math.max(simDR_brk_axis_value[AXIS_TOE[i]], 0), 1) end
+        pedal[i] = math.max(cmd_pedal[i], toe)
+    end
 
     -- the autobrakes (not in the first seconds: other modules' first reads are 0)
     local ab = nil

@@ -5,18 +5,21 @@
 # Web API: HDG SEL on the cross-track from the runway centerline (apt.dat),
 # V/S on the 3-degree glideslope (earth_nav.dat), flaps, gear and speedbrake
 # ARM on the way, a hand flare from 40 ft RA (A/P and A/T off, thrust levers
-# to idle), then reverse thrust for 8 s, regular brakes (X-Plane's toggle
-# command: the gear module owns the brake ratios) and rudder on the
-# centerline until the airplane stops. It starts the flight itself with
-# landing_setup.json (run_scenario.ps1: 22 NM out at 3,000 ft and 190 kt,
-# A/P CMD L) and writes landing.log and landing_result.txt into that run's
-# folder.
+# to idle), then reverse thrust for 8 s (X-Plane's reverse hold; the
+# reverse levers back to forward idle 10 s after it began: the 747's reverse
+# command keeps full reverse after its release, upstream's), regular brakes
+# (X-Plane's toggle command: the gear module owns the brake ratios) and
+# rudder on the centerline until the airplane stops. It starts the flight
+# itself with landing_setup.json (run_scenario.ps1: 22 NM out at 3,000 ft and
+# 190 kt, A/P CMD L) and writes landing.log and landing_result.txt into that
+# run's folder.
 #
 #   bash tests/flight/tools/landing.sh [custom|stock|<acf path from the X-Plane folder>]
 #   AUTOBRAKE=4 bash tests/flight/tools/landing.sh      (1-4 or MAX: the
 #       autobrakes set on the approach, no manual brakes on the rollout; the
-#       deceleration from 100 to 60 kt, after the reverse, is checked against
-#       the level's: ATA29_32 p.503)
+#       deceleration from 60 to 30 kt, with the reversers stowed, is checked
+#       against the level's: ATA29_32 p.503. With reverse thrust the
+#       deceleration is more than levels 1-2 ask for: FCOM p.1515)
 #
 # The checks at the end: no >SPEEDBRAKES EXT (FCOM p.958) or CONFIG GEAR
 # (FCOM p.1603) at the flare, the speedbrake lever to UP after touchdown
@@ -60,6 +63,7 @@ for v in IAS:laminar/B747/gauges/indicators/airspeed_kts_pilot RA:sim/cockpit2/g
  VSEL2:laminar/B747/cockpit2/autopilot/vvi_dial_fpm ALTD:laminar/B747/autopilot/heading/altitude_dial_ft IASD:laminar/B747/autopilot/ias_dial_value \
  FLAP:sim/cockpit2/controls/flap_ratio YP:sim/cockpit2/controls/yoke_pitch_ratio YH:sim/cockpit2/controls/yoke_heading_ratio \
  THR:sim/cockpit2/engine/actuators/throttle_ratio_all PARK:laminar/B747/flt_ctrls/parking_brake_ratio \
+ TJR:sim/cockpit2/engine/actuators/throttle_jet_rev_ratio_all \
  ABS:laminar/B747/gear/autobrakes/sel_dial_pos MEMO:laminar/B747/CAS/memo_status; do eval "ID_${v%%:*}=$(did ${v#*:})"; done
 for v in YD:laminar/B747/autopilot/button_switch/yoke_disengage_capt ATD:laminar/B747/authrottle_disarm \
  VSM:laminar/B747/autopilot/button_switch/vs_mode GEAR:sim/flight_controls/landing_gear_down \
@@ -73,7 +77,7 @@ rd() { local k x; curl -s -m 2 -Z --parallel-max 16 "${RDA[@]}"; V=()
     for k in 0 1 2 3 4 5 6 7 8 9 10; do x=$(<"$RUN/rd/$k"); x=${x#\{\"data\":}; V+=("${x%\}}"); done; }
 
 SECONDS=0; state=lateral; last=-5; cfg=0; ttd=-1; integ=0; th0=0; tprev=$EPOCHREALTIME
-servo=$(g $ID_SERVO); sbext=-; cfggear=-; vs_td=-; am_td=-; xm_td=-; t_up=-; am_stop=-; xm_stop=-; ab_memo=-; t100=; ab_decel=-
+servo=$(g $ID_SERVO); sbext=-; cfggear=-; vs_td=-; am_td=-; xm_td=-; t_up=-; am_stop=-; xm_stop=-; ab_memo=-; t_rev=; t60=; ab_decel=-
 mv=$(awk -v a="$(g $ID_PSI)" -v b="$(g $ID_MPSI)" 'BEGIN{d=a-b; if (d > 180) d -= 360; if (d < -180) d += 360; print d}')
 log "start: A/P servos $servo, true - magnetic $mv"
 pw $ID_FLAP 0.5 $ID_IASD 180; log "-> flaps 10, 180 kt"
@@ -111,11 +115,14 @@ while [ $SECONDS -lt 1200 ]; do
     if [ $state = touchdown ] && [ $SECONDS -ge $((ttd + 2)) ]; then
       if [ -n "$AB" ]; then ci $C_REV 8; log "-> reverse 8 s, the autobrakes"
       else ci $C_REV 8; ci $C_BRK; log "-> reverse 8 s and regular brakes"; fi
-      state=rollout; fi
-    # the deceleration from 100 to 60 kt
-    if [ $state = rollout ] && [ -z "$t100" ] && awk -v g=$gskt 'BEGIN{exit !(g <= 100)}'; then t100=$tn; fi
-    if [ $state = rollout ] && [ -n "$t100" ] && [ "$ab_decel" = - ] && awk -v g=$gskt 'BEGIN{exit !(g <= 60)}'; then
-      ab_decel=$(awk -v a=$t100 -v b=$tn 'BEGIN{printf "%.2f", 40 * 1.68781 / (b - a)}'); log "deceleration 100-60 kt: $ab_decel ft/s²"; fi
+      t_rev=$SECONDS; state=rollout; fi
+    # the reverse levers to forward idle: the reversers stow
+    if [ $state = rollout ] && [ -n "$t_rev" ] && [ $SECONDS -ge $((t_rev + 10)) ]; then
+      pw $ID_TJR 0; t_rev=; log "-> reverse levers to forward idle at ${gskt} kt"; fi
+    # the deceleration from 60 to 30 kt, the reversers stowed
+    if [ $state = rollout ] && [ -z "$t_rev" ] && [ -z "$t60" ] && awk -v g=$gskt 'BEGIN{exit !(g <= 60)}'; then t60=$tn; fi
+    if [ $state = rollout ] && [ -n "$t60" ] && [ "$ab_decel" = - ] && awk -v g=$gskt 'BEGIN{exit !(g <= 30)}'; then
+      ab_decel=$(awk -v a=$t60 -v b=$tn 'BEGIN{printf "%.2f", 30 * 1.68781 / (b - a)}'); log "deceleration 60-30 kt: $ab_decel ft/s²"; fi
     if [ $state = rollout ] && [ $fst = 1 ]; then
       if [ -n "$AB" ]; then pw $ID_ABS 1 $ID_PARK 1 $ID_YH 0; else ci $C_BRK; pw $ID_PARK 1 $ID_YH 0; fi
       am_stop=$am; xm_stop=$xm
@@ -140,7 +147,7 @@ check() { if awk "BEGIN{exit !($2)}" 2>/dev/null; then echo "PASS $1"; pass=$((p
     "\"$am_stop\" != \"-\" && $am_stop + 0 < $RWY_LEN && ($xm_stop + 0 <= $RWY_HALF && $xm_stop + 0 >= -$RWY_HALF)"
   if [ -n "$AB" ]; then
     check "autobrakes $AB armed at the flare: the memo (ATA29_32 p.530) ($ab_memo)" "\"$ab_memo\" == \"1.0\" || \"$ab_memo\" == \"1\""
-    check "the deceleration from 100 to 60 kt within 1.5 ft/s² of $AB_DECEL (ATA29_32 p.503; the margin an estimate) ($ab_decel)" \
+    check "the deceleration from 60 to 30 kt, reversers stowed, within 1.5 ft/s² of $AB_DECEL (ATA29_32 p.503; the margin an estimate) ($ab_decel)" \
       "\"$ab_decel\" != \"-\" && $ab_decel + 0 >= $AB_DECEL - 1.5 && $ab_decel + 0 <= $AB_DECEL + 1.5"
   fi
   echo "landing: pass $pass, fail $fail"
