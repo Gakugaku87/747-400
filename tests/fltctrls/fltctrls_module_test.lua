@@ -310,6 +310,86 @@ rt:set("laminar/B747/airspeed/V1", 0)
 rt:set("laminar/B747/fmc/elevator_trim", 0)
 fly(0, 0, 0.2)
 
+-- the speedbrakes (B747.45.xt.speedbrake.lua, step 3): armed on the ground
+-- with thrust levers 1 and 3 idle, the auto speedbrake drives the lever to
+-- UP and X-Plane's ratio follows (never -0.5: X-Plane's own auto speedbrake
+-- stays out); thrust lever 1 advanced drives it to DN; >SPEEDBRAKES EXT;
+-- SPEEDBRAKE AUTO; X-Plane's ratio moved by an axis moves the lever
+local SB = "laminar/B747/flt_ctrls/speedbrake_lever"
+local XSB = "sim/cockpit2/controls/speedbrake_ratio"
+local MEMO = "laminar/B747/CAS/memo_status"
+-- in the air: ARM, an axis, >SPEEDBRAKES EXT below 800 ft RA
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+rt:set("laminar/B747/gear/air_ground/alt_gnd", 0)
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 5000)
+rt:set(SB, 0.125)
+frames(0.2)
+T.equal(get(MEMO, 45), 1, "lever at ARM: SPEEDBRAKE ARMED")
+T.equal(get(XSB), 0, "X-Plane's ratio at ARM: 0, not armed (-0.5)")
+T.equal(get(SB), 0.125, "in the air: stays at ARM")
+rt:set(XSB, 0.5)
+frames(0.2)
+T.near(get(SB), 0.15 + 0.5 * (0.53 - 0.15), 1e-6, "X-Plane's ratio moved from outside (an axis): the lever follows (in-flight travel)")
+rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 500)
+frames(0.2)
+T.equal(get(CAUTION, 59), 1, "speedbrake out at 500 ft RA: >SPEEDBRAKES EXT")
+rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 5000)
+frames(0.2)
+T.equal(get(CAUTION, 59), 0, "5000 ft, idle, flaps up: none")
+-- two thrust levers at climb thrust (35 of 50 degrees) with the speedbrake
+-- out: >SPEEDBRAKES EXT; CONFIG SPOILERS in flight on the 405 and 570 only
+-- (FCOM p.1558)
+local WARNING = "laminar/B747/CAS/warning_status"
+local THRUST = "laminar/B747/engine/throttle"
+rt:set(THRUST, 0, 0.8)
+rt:set(THRUST, 1, 0.8)
+frames(0.2)
+T.equal(get(CAUTION, 59), 1, "two thrust levers above the speedbrake power level: >SPEEDBRAKES EXT")
+T.equal(get(WARNING, 6), 0, "the 109: no CONFIG SPOILERS in flight")
+rt:set("laminar/B747/freighter", 1)
+frames(0.2)
+T.equal(get(WARNING, 6), 1, "the 405 and 570: CONFIG SPOILERS in flight")
+rt:set(THRUST, 1, 0.6)
+frames(0.2)
+T.equal(get(WARNING, 6), 0, "three levers below climb thrust: none")
+rt:set("laminar/B747/freighter", 0)
+rt:set(THRUST, 0, 0)
+rt:set(THRUST, 1, 0)
+frames(0.2)
+rt:set(SB, 0.125)
+frames(0.2)
+-- touchdown armed with thrust levers 1 and 3 idle: the auto speedbrake
+-- drives the lever to UP; thrust lever 1 advanced drives it to DN
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+rt:set("laminar/B747/gear/air_ground/alt_gnd", 1)
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 0)
+frames(2.5)
+T.equal(get(SB), 1, "touchdown, thrust levers idle: driven to UP")
+T.near(get(XSB), 1, 1e-6, "X-Plane's ratio 1")
+T.equal(get(MEMO, 45), 0, "no SPEEDBRAKE ARMED at UP")
+rt:set("sim/cockpit2/engine/actuators/throttle_ratio", 0, 0.5)
+frames(1)
+T.equal(get(SB), 1, "X-Plane's throttle ratio is the input, not the lever (the EEC writes the levers' average there with the A/T on): stays UP")
+rt:set("sim/cockpit2/engine/actuators/throttle_ratio", 0, 0)
+rt:set(THRUST, 0, 0.5)
+frames(2.5)
+T.equal(get(SB), 0, "thrust lever 1 advanced: driven to DN")
+T.equal(get(XSB), 0, "X-Plane's ratio 0")
+rt:set(XSB, 1e-6)
+frames(0.1)
+T.equal(get(XSB), 0, "a residue near 0 (the lever passing the arm detent between frames): cleared")
+rt:set(THRUST, 0, 0)
+-- on the ground with the alternate sensing in the air: SPEEDBRAKE AUTO
+rt:set("laminar/B747/gear/air_ground/alt_gnd", 0)
+frames(3.5)
+T.equal(get(ADVISORY, 272), 1, "primary and alternate ground sensing disagreeing: SPEEDBRAKE AUTO")
+T.equal(get(STATUS, 94), 1, "STATUS SPEEDBRAKE AUTO")
+rt:set("laminar/B747/gear/air_ground/alt_gnd", 1)
+frames(3.5)
+T.equal(get(ADVISORY, 272), 0, "agreeing: no SPEEDBRAKE AUTO")
+
 -- the lever between detents snaps to the nearest one 2 s after it stops
 rt:set(LEVER, 0.31)
 frames(1)

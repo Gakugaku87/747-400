@@ -94,24 +94,22 @@ B747DR_speedbrake_auto_ext      = deferred_dataref("B747DR/speedbrake/auto_exten
 B747_speedbrake_stop = deferred_dataref("laminar/B747/flt_ctrls/speedbrake_stop", "number")
 simDR_speedbrake_ratio_control  = find_dataref("sim/cockpit2/controls/speedbrake_ratio")
 
+-- the pilot's moves of the speedbrake lever snap into the DN and ARM
+-- detents and stop at the flight detent in the air; X-Plane's speedbrake
+-- ratio and SPEEDBRAKE ARMED: the speedbrake model (B747.45.xt.speedbrake.lua,
+-- 4-1 step 3; before, ARM wrote X-Plane's -0.5, its own auto speedbrake)
 function B747_speedbrake_manip_timeout()
 	if B747DR_speedbrake_lever < 0.01 then
 		B747DR_speedbrake_lever = 0.0
-		simDR_speedbrake_ratio_control = 0.0
-		B747DR_CAS_memo_status[45] = 0
 	-- ARMED DETENT
 	elseif B747DR_speedbrake_lever < 0.30 and
 		B747DR_speedbrake_lever > 0.07
 	then
 
 		B747DR_speedbrake_lever = 0.125 
-		simDR_speedbrake_ratio_control = -0.5
-		B747DR_CAS_memo_status[45] = 1
 	-- ALL OTHER POSITIONS    
 	else
 		B747DR_speedbrake_lever = math.min(1.0 - (B747_speedbrake_stop * 0.47), B747DR_speedbrake_lever)
-		simDR_speedbrake_ratio_control = B747_rescale(0.15, 0.0, 1.0 - (B747_speedbrake_stop * 0.47), 1.0, B747DR_speedbrake_lever) 	       
-		B747DR_CAS_memo_status[45] = 0
 	end	
 	B747_sb_manip_changed = 0 
 end
@@ -128,21 +126,15 @@ function B747_speedbrake_lever_DRhandler()
 		-- DOWN DETENT
 		if B747DR_speedbrake_lever < 0.01 then
 			B747DR_speedbrake_lever = 0.0
-			simDR_speedbrake_ratio_control = 0.0
-			B747DR_CAS_memo_status[45] = 0
 		-- ARMED DETENT
 		elseif B747DR_speedbrake_lever < 0.30 and
 			B747DR_speedbrake_lever > 0.07
 		then
 
 			B747DR_speedbrake_lever = 0.125 
-			simDR_speedbrake_ratio_control = -0.5
-			B747DR_CAS_memo_status[45] = 1
 		-- ALL OTHER POSITIONS    
 		else
 			B747DR_speedbrake_lever = math.min(1.0 - (B747_speedbrake_stop * 0.47), B747DR_speedbrake_lever)
-			simDR_speedbrake_ratio_control = B747_rescale(0.15, 0.0, 1.0 - (B747_speedbrake_stop * 0.47), 1.0, B747DR_speedbrake_lever) 	       
-			B747DR_CAS_memo_status[45] = 0
 		end	   
 		
 		
@@ -207,6 +199,9 @@ B747DR_srm_cutout_sw            = deferred_dataref("laminar/B747/flt_ctrls/stab_
 B747DR_srm_altn_sw              = deferred_dataref("laminar/B747/flt_ctrls/stab_trim/altn_sw", "number")
 B747DR_srm_fail_stab_actuator   = deferred_dataref("laminar/B747/flt_ctrls/fail/stab_actuator", "array[2]")
 B747DR_srm_fail_stab_runaway    = deferred_dataref("laminar/B747/flt_ctrls/fail/stab_runaway", "array[2]")
+-- the speedbrakes (B747.45.xt.speedbrake.lua; step 3): the auto speedbrake
+-- actuator does not move (1)
+B747DR_sb_fail                  = deferred_dataref("laminar/B747/flt_ctrls/fail/auto_speedbrake", "number")
 B747CMD_altn_stab_trim_up       = deferred_command("laminar/B747/flt_ctrls/altn_stab_trim_up", "Alternate Stabilizer Trim Nose Up", B747_altn_stab_trim_up_CMDhandler)
 B747CMD_altn_stab_trim_dn       = deferred_command("laminar/B747/flt_ctrls/altn_stab_trim_dn", "Alternate Stabilizer Trim Nose Down", B747_altn_stab_trim_dn_CMDhandler)
 B747CMD_stab_cutout_2_up        = deferred_command("laminar/B747/flt_ctrls/stab_trim/cutout_2_up", "Stab Trim Cutout 2 toward ON", B747_stab_cutout_2_up_CMDhandler)

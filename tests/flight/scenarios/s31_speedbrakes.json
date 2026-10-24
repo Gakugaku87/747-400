@@ -1,0 +1,70 @@
+{
+  "name": "s31_speedbrakes",
+  "description": "自動スピードブレーキ（4-1 段 3：FCOM p.951–952、ATA27 p.170–184）の X-Plane での確認、地上。RJAA 34L でエンジン運転中に、推力レバーがアイドルのままレバーを ARM にすると自動で UP まで動き（地上・系統 1/4 の圧・推力レバー 1 と 3 がアイドル）、X-Plane の speedbrake の比は 1（ARM でも -0.5 にしない：X-Plane 本体の自動展開は使わない）。推力レバー 1 を進めると DN へ戻る（go-around の保護）。レバー DN で逆推力を引くと UP へ（RTO）。自動のアクチュエータの故障（laminar/B747/flt_ctrls/fail/auto_speedbrake）で出たまま止まり、レバーを DN にすると 3 秒で SPEEDBRAKE AUTO（3 秒は推定）。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10 },
+    { "do": "set", "note": "パーキング・ブレーキ（推力レバー 1 を進めても動かない）", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 1 },
+    { "do": "snapshot", "note": "開始", "drefs": [
+      "sim/aircraft/view/acf_relative_path", "laminar/B747/flt_ctrls/speedbrake_lever", "sim/cockpit2/controls/speedbrake_ratio",
+      "laminar/B747/hydraulics/pressure_1", "laminar/B747/hydraulics/pressure_4", "laminar/B747/gear/air_ground/pri_gnd",
+      "laminar/B747/gear/air_ground/alt_gnd", "sim/cockpit2/engine/actuators/throttle_ratio[0]" ] },
+    { "do": "check", "note": "レバーは DN", "dref": "laminar/B747/flt_ctrls/speedbrake_lever", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "地上で ARM" },
+    { "do": "cmd", "note": "レバーを 1 段（DN → ARM）", "name": "sim/flight_controls/speed_brakes_down_one" },
+    { "do": "wait", "note": "地上・アイドルなので自動で UP まで（FCOM p.951）", "dref": "laminar/B747/flt_ctrls/speedbrake_lever", "op": "==", "value": 1, "timeout": 6 },
+    { "do": "check", "note": "X-Plane の比は 1", "dref": "sim/cockpit2/controls/speedbrake_ratio", "op": ">=", "value": 0.99 },
+    { "do": "wait", "note": "スポイラーが出る（X-Plane の実際の比）", "dref": "sim/flightmodel2/controls/speedbrake_ratio", "op": ">=", "value": 0.95, "timeout": 5 },
+
+    { "do": "mark", "note": "推力レバー 1 で DN" },
+    { "do": "set", "note": "推力レバー 1 を進める", "dref": "sim/cockpit2/engine/actuators/throttle_ratio[0]", "value": 0.5 },
+    { "do": "wait", "note": "プラグインの推力レバー 1（3D・EEC）が従う", "dref": "laminar/B747/engine/throttle[0]", "op": ">", "value": 0.3, "timeout": 5 },
+    { "do": "wait", "note": "go-around の保護：DN へ（FCOM p.951）", "dref": "laminar/B747/flt_ctrls/speedbrake_lever", "op": "==", "value": 0, "timeout": 6 },
+    { "do": "check", "note": "X-Plane の比は 0", "dref": "sim/cockpit2/controls/speedbrake_ratio", "op": "==", "value": 0 },
+    { "do": "set", "note": "推力レバー 1 を戻す", "dref": "sim/cockpit2/engine/actuators/throttle_ratio[0]", "value": 0 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "DN のままでアイドル：出ない", "dref": "laminar/B747/flt_ctrls/speedbrake_lever", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "RTO：逆推力" },
+    { "do": "cmd", "note": "逆推力を引く（全エンジン、6 秒：放すまで次へ進まない）", "name": "sim/engines/thrust_reverse_hold", "duration": 6 },
+    { "do": "wait", "note": "逆推力レバー 2・4 と推力レバー 1・3 のアイドルで UP（FCOM p.951）。放した後も ARM 以上なので UP のまま", "dref": "laminar/B747/flt_ctrls/speedbrake_lever", "op": "==", "value": 1, "timeout": 8 },
+    { "do": "snapshot", "note": "逆推力を放した直後", "drefs": [ "laminar/B747/engine/throttle[0]", "laminar/B747/engine/throttle[2]", "sim/cockpit2/engine/actuators/throttle_ratio[0]",
+      "sim/cockpit2/engine/actuators/prop_mode[1]", "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]", "sim/cockpit2/controls/speedbrake_ratio" ] },
+    { "do": "sleep", "seconds": 8, "note": "逆推力が格納されるのを待つ" },
+    { "do": "check", "note": "逆推力を放しても推力レバー 1・3 はアイドル：UP のまま（逆推力の間の X-Plane の比 1.0 で DN へ戻さない）", "dref": "laminar/B747/flt_ctrls/speedbrake_lever", "op": "==", "value": 1 },
+    { "do": "snapshot", "note": "逆推力の格納後", "drefs": [ "laminar/B747/engine/throttle[0]", "laminar/B747/engine/throttle[2]", "sim/cockpit2/engine/actuators/throttle_ratio[0]",
+      "sim/cockpit2/engine/actuators/prop_mode[1]", "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]" ] },
+    { "do": "cmd", "note": "レバーを DN（手で）", "name": "sim/flight_controls/speed_brakes_up_all" },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "check", "note": "DN", "dref": "laminar/B747/flt_ctrls/speedbrake_lever", "op": "==", "value": 0 },
+    { "do": "check", "note": "手で DN にしてアクチュエータが戻る：SPEEDBRAKE AUTO は出ない", "dref": "laminar/B747/CAS/advisory_status[272]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "アクチュエータの故障" },
+    { "do": "cmd", "note": "レバーを 1 段（DN → ARM）", "name": "sim/flight_controls/speed_brakes_down_one" },
+    { "do": "wait", "note": "自動で UP", "dref": "laminar/B747/flt_ctrls/speedbrake_lever", "op": "==", "value": 1, "timeout": 6 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "set", "note": "自動のアクチュエータが出たまま動かない", "dref": "laminar/B747/flt_ctrls/fail/auto_speedbrake", "value": 1 },
+    { "do": "cmd", "note": "レバーを DN（手で）", "name": "sim/flight_controls/speed_brakes_up_all" },
+    { "do": "wait", "note": "S217 が非 ARM でアクチュエータが出たまま、3 秒で SPEEDBRAKE AUTO（ATA27 p.184）", "dref": "laminar/B747/CAS/advisory_status[272]", "op": "==", "value": 1, "timeout": 6 },
+    { "do": "check", "note": "STATUS SPEEDBRAKE AUTO", "dref": "laminar/B747/CAS/status_status[94]", "op": "==", "value": 1 },
+    { "do": "cas", "note": "SPEEDBRAKE AUTO" },
+    { "do": "set", "note": "故障を戻す", "dref": "laminar/B747/flt_ctrls/fail/auto_speedbrake", "value": 0 },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "check", "note": "アクチュエータが戻って消える", "dref": "laminar/B747/CAS/advisory_status[272]", "op": "==", "value": 0 }
+  ]
+}
