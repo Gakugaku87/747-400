@@ -99,6 +99,9 @@ simDR_right_brake_fail     = find_dataref("sim/operation/failures/rel_rbrakes")-
 
 -- air/ground sensing (PSEU): the model and its glue
 dofile("B747.10.xt.pseu.lua")
+-- the gear's actuation, alternate extension, monitoring and EICAS indication
+dofile("B747.10.xt.gear_act.lua")
+B747DR_gear_lever_lock          = find_dataref("laminar/B747/gear/lever_lock")
 
 --Marauder28
 --Autobrake OFF/DISARM logic
@@ -146,40 +149,7 @@ B747DR__gear_chocked           = deferred_dataref("laminar/B747/gear/chocked", "
 --*************************************************************************************--
 
 ----- GEAR HANDLE DATAREF HANDLER -------------------------------------------------------
-function B747DR_gear_handle_DRhandler()
-    print("gear DR handler")
-    -- GEAR HANDLE LOCK IS DISENGAGED
-    if B747_gear_handle_lock == 0 then
-
-        if B747DR_gear_handle <= 0.1 then
-            B747DR_gear_handle = 0.0   -- DETENT (GEAR HANDLE "DOWN")
-            simDR_gear_handle_down = 1
-        elseif B747DR_gear_handle >= 0.9 and B747DR_gear_handle <= 1.1 then
-            B747DR_gear_handle = 1.0   -- DETENT (GEAR HANDLE "OFF")
-        elseif B747DR_gear_handle >= 1.9 then
-            B747DR_gear_handle = 2.0   -- DETENT (GEAR HANDLE "UP")
-            simDR_gear_handle_down = 0
-        end
-
-
-    -- GEAR HANDLE LOCK IS ENGAGED
-    else
-
-        if B747DR_gear_handle <= 0.1 then
-            B747DR_gear_handle = 0.0   -- DETENT (GEAR HANDLE "DOWN")
-            simDR_gear_handle_down = 1
-        elseif B747DR_gear_handle >= 0.9 then
-            B747DR_gear_handle = 1.0
-        end
-
-    end
-
-end
-
-
-
-function B747DR_gear_handle_detent_DRhandler() end
-
+-- in the init script (B747.10.gear.lua): the detents and the lever lock
 
 
 
@@ -190,8 +160,8 @@ function B747DR_gear_handle_detent_DRhandler() end
 --*************************************************************************************--
 
 ----- LANDING GEAR HANDLE ---------------------------------------------------------------
-B747DR_gear_handle 			= deferred_dataref("laminar/B747/actuator/gear_handle", "number", B747DR_gear_handle_DRhandler)
-B747DR_gear_handle_detent 	= deferred_dataref("laminar/B747/actuator/gear_handle_detent", "number", B747DR_gear_handle_detent_DRhandler)
+B747DR_gear_handle 			= deferred_dataref("laminar/B747/actuator/gear_handle", "number")
+B747DR_gear_handle_detent 	= deferred_dataref("laminar/B747/actuator/gear_handle_detent", "number")
 
 
 local runningGear=0
@@ -241,7 +211,9 @@ function runGear()
   if runningGear ==0 then return end
   if B747DR_gear_handle_detent < 0.037 then B747DR_gear_handle_detent=B747_animate_value(B747DR_gear_handle_detent,0.037,0,0.037,10) return end
   if runningGear ==2 and (B747DR_gear_handle<1 or B747DR_gear_handle>1) then B747DR_gear_handle=B747_animate_value(B747DR_gear_handle,1,0,2,10) return end
-  if runningGear ==1 and B747DR_gear_handle<2 then B747DR_gear_handle=B747_animate_value(B747DR_gear_handle,2,0,2,10) return end
+  -- the lever lock stops the lever at OFF on its way to UP (FCOM p.1512)
+  if runningGear ==1 and B747_gear_handle_lock == 1 and (B747DR_gear_handle<1 or B747DR_gear_handle>1) then B747DR_gear_handle=B747_animate_value(B747DR_gear_handle,1,0,2,10) return end
+  if runningGear ==1 and B747_gear_handle_lock == 0 and B747DR_gear_handle<2 then B747DR_gear_handle=B747_animate_value(B747DR_gear_handle,2,0,2,10) return end
   if runningGear ==-1 and B747DR_gear_handle>0 then B747DR_gear_handle=B747_animate_value(B747DR_gear_handle,0,0,2,10) return end
 
   B747DR_gear_handle_detent=0
@@ -258,26 +230,6 @@ B747CMD_gear_off      = deferred_command("laminar/B747/gear/overrideOff", "Gear 
 
 
 
-
-function sim_landing_gear_up_CMDhandler(phase, duration)
-    if phase == 0 then
-        -- GEAR HANDLE LOCK IS DISENGAGED
-        if B747_gear_handle_lock == 0 then
-            B747DR_gear_handle = 2.0
-            simDR_gear_handle_down = 0
-        -- GEAR HANDLE LOCK IS ENGAGED
-        else
-            B747DR_gear_handle = 1.0            -- PREVENT MOVEMENT OF GEAR HANDLE TO 'UP' POSITION
-        end
-    end
-end
-
-function sim_landing_gear_down_CMDhandler(phase, duration)
-     if phase == 0 then
-		B747DR_gear_handle = 0.0
- 	    simDR_gear_handle_down = 1
-     end
-end
 
 function sim_landing_gear_toggle_CMDhandler(phase, duration)
     if phase == 0 then
@@ -341,6 +293,18 @@ simCMD_landing_gear_up = replace_command("sim/flight_controls/landing_gear_up", 
 simCMD_landing_gear_down = replace_command("sim/flight_controls/landing_gear_down", B747CMD_gear_down_full_CMDhandler)
 simCMD_landing_gear_down = replace_command("sim/flight_controls/landing_gear_off", B747CMD_gear_off_CMDhandler)
 simCMD_landing_gear_toggle = replace_command("sim/flight_controls/landing_gear_toggle", sim_landing_gear_toggle_CMDhandler)
+
+-- X-Plane's emergency gear extension: both ALTN GEAR EXTEND switches (the
+-- manipulators' commands toggle them, so only those not pushed yet)
+B747CMD_altn_nose_gear_extend = find_command("laminar/B747/button_switch/altn_nose_gear_extend")
+B747CMD_altn_wing_gear_extend = find_command("laminar/B747/button_switch/altn_wing_gear_extend")
+function sim_landing_gear_emer_on_CMDhandler(phase, duration)
+    if phase == 0 then
+        if B747DR_gact_button[1] < 0.5 then B747CMD_altn_nose_gear_extend:once() end
+        if B747DR_gact_button[2] < 0.5 then B747CMD_altn_wing_gear_extend:once() end
+    end
+end
+simCMD_landing_gear_emer_on = replace_command("sim/flight_controls/landing_gear_emer_on", sim_landing_gear_emer_on_CMDhandler)
 
 --B747CMD_gear_up_full      = deferred_command("laminar/B747/gear/overrideUp", "Gear Full Up", B747CMD_gear_up_full_CMDhandler)
 --B747CMD_gear_down_full    = deferred_command("laminar/B747/gear/overrideDown", "Gear Full Down", B747CMD_gear_down_full_CMDhandler)
@@ -528,19 +492,22 @@ end
 
 
 ----- SET GEAR HANDLE LOCK VALUE --------------------------------------------------------
+-- The lock solenoid (28V DC bus 2) releases the lever when the PSEU's LG LVR
+-- UNLK energises it (all four trucks tilted and the body gear steering
+-- locked); LOCK OVRD releases it by hand (FCOM p.1512; ATA29_32 p.224-225;
+-- locked without power: estimate). Published for the lever's handler in the
+-- init script, which stops the lever at OFF.
 function B747_set_gear_handle_lock()
 
     -- OVERRIDE LOCK BUTTON IS PRESSED
     if B747_gear_handle_lock_override == 1 then
         B747_gear_handle_lock = 0
-
-    -- OVERRIDE LOCK BUTTON IS NOT PRESSED: the PSEU releases the lock with
-    -- all four trucks tilted and the body gear steering locked (FCOM p.1512)
-    elseif B747DR_pseu_lever_unlock == 1 then
+    elseif B747DR_pseu_lever_unlock == 1 and B747DR_gact_bus_dc[1] > 0.5 then
         B747_gear_handle_lock = 0
     else
         B747_gear_handle_lock = 1
     end
+    if B747DR_gear_lever_lock ~= B747_gear_handle_lock then B747DR_gear_lever_lock = B747_gear_handle_lock end
 
 end
 
@@ -548,59 +515,6 @@ end
 
 
 
-
-
-
------ PRIMARY EICAS GEAR STATUS DISPLAY -------------------------------------------------
-function B747_primary_EICAS_gear_status()
-
-    if simDR_gear_deploy_ratio[0] < 0.01
-        and simDR_gear_deploy_ratio[1] < 0.01
-        and simDR_gear_deploy_ratio[2] < 0.01
-        and simDR_gear_deploy_ratio[3] < 0.01
-        and simDR_gear_deploy_ratio[4] < 0.01
-    then
-        B747DR_gear_annun_status = 0                                                    -- GEAR RETRACTED
-
-    elseif simDR_gear_deploy_ratio[0] > 0.99
-        and simDR_gear_deploy_ratio[1] > 0.99
-        and simDR_gear_deploy_ratio[2] > 0.99
-        and simDR_gear_deploy_ratio[3] > 0.99
-        and simDR_gear_deploy_ratio[4] > 0.99
-    then
-        B747DR_gear_annun_status = 1                                                    -- GEAR EXTENDED
-    else
-        B747DR_gear_annun_status = 2                                                    -- GEAR IN TRANSITION
-    end
-
-end
-
-
-
-
-
-
------ PRIMARY EICAS GEAR DISPLAY STATUS -------------------------------------------------
-function B747_gear_display_shutoff()
-    B747DR_EICAS1_gear_display_status = 0
-end
-
-function B747_primary_EICAS_gear_display()
-
-    if B747DR_gear_annun_status == 0 then
-        if B747DR_EICAS1_gear_display_status == 1 then
-            if is_timer_scheduled(B747_gear_display_shutoff) == false then
-                run_after_time(B747_gear_display_shutoff, 10.0)
-            end
-        end
-    else
-         if is_timer_scheduled(B747_gear_display_shutoff) == true then
-            stop_timer(B747_gear_display_shutoff)
-        end
-        B747DR_EICAS1_gear_display_status = 1
-    end
-
-end
 
 
 
@@ -940,8 +854,6 @@ function B747_set_gear_all_modes()
     simDR_autobrakes_switch = 1
     B747_tire_pressure()
     B747_brake_temp_init()
-    B747DR_gear_handle = 0.0
-    B747DR_gear_handle_DRhandler()
 
 end
 
@@ -963,8 +875,6 @@ end
 ----- SET STATE TO ENGINES RUNNING ------------------------------------------------------
 function B747_set_gear_ER()
 
-	simDR_gear_handle_down=1
-	B747DR_gear_handle = 0.0
 	--B747DR__gear_chocked=0.0
 
 end
@@ -994,8 +904,10 @@ function B747_flight_start_gear()
 
     end
 
-  if simDR_aircraft_on_ground==0 then runningGear=1 else runningGear=-1 end
-
+    -- the lever and the gear: the actuation's glue puts the lever where X-Plane
+    -- has put the gear once its first 3 s are over (it raised an air start's gear before)
+    runningGear = 0
+    B747_gear_act_flight_start()
 
 end
 
@@ -1035,9 +947,7 @@ function after_physics()
     flightInit=true
     B747_pseu()
     B747_set_gear_handle_lock()
-
-    B747_primary_EICAS_gear_status()
-    B747_primary_EICAS_gear_display()
+    B747_gear_act()
 
     B747_gear_EICAS_msg()
 

@@ -175,3 +175,12 @@
 | 同 | data block の LDG ALT（`GROUP Landing Alt`：`gen_LED LED` と `gen_rotary NEG Sign`） | 条件なし（数字）、`SHOW_LESS -0.01 landing_altitude`（負号） | どちらにも `SHOW_EQUAL 1.000000 laminar/B747/air/press/ldg_alt_shown` を足した（両 CPC 故障か両方 MAN で消える）。AUTO・MAN の字（`GROUP Mode Annun`）はそのまま | FCOM p.586 (2.10.34) |
 
 上の 2 行は `docs/overhaul/tools/panel_data_block.lua` で書き換えた（6 か所）。赤の 5 桁のフォント（`cockpit_3d/generic/CRT Displays/LED/LED_3.26B.x####0.red-4.png` と透明の `.png`）は純正に無いので、`docs/overhaul/tools/make_led_fonts.ps1` で純正の 4 桁の赤のフォントから作った（字は純正のまま。行を 23 画素から 26 画素にして字の上に空きを足し、次の行の字の上端が数字の下ににじまないようにした）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261024_before_air18`。X-Plane のスクリーンショットで、赤の 5 桁が LDG ALT と同じ右端にそろい、LDG ALT の数字が両方 MAN と両 CPC 故障で消えることを確かめた（`s25_data_block`）。外から見た写真で機体の見た目が変わらないことを確かめた。純正 acf は変えていない。
+
+脚（4-2 段 1、2026-10-25。GAP_ANALYSIS.md §4 の承認済みの「展開形の表示」）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-25・脚（GEAR-11） | 主 EICAS の脚の表示（`GROUP Gear`） | DOWN・斜線・UP の 3 つ（`gear_position/annun_status` 1・2・0） | 空の箱（全位置指示の故障、`annun_status` 3、`gear_annun_box`）を足した | FCOM p.1505 |
+| 同 | 展開形（新しい `GROUP Gear Expanded`、`gear/EICAS1_display_status` 2） | なし | GEAR の字（1916, 739）と、脚ごとの箱（前脚 1916, 782、左胴体 1865, 695、右胴体 1967, 695、左翼 1843, 739、右翼 1989, 739）。箱は `gear_position/annun_gear[0]`〜`[4]`（前脚、左胴体、右胴体、左翼、右翼）で DN（緑）1、斜線（白）2、UP（白）0、琥珀の X 3。配置は FCOM の図を DOWN の箱の幅で縮め、胴体脚の箱がフラップの帯（上端 673）にかからないように上げた | FCOM p.1505–1506、ATA29_32 p.660 |
+
+上の 2 行は `docs/overhaul/tools/panel_gear.lua` で書き換えた（計器を 22 個とグループを 1 つ足した）。新しい絵（`gear_box_dn`・`up`・`transit`・`x`、`gear_annun_box`）は `docs/overhaul/tools/make_gear_images.ps1` で純正の DOWN・UP・斜線の箱から字と縞を切り出して作った。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_gear_expanded`。

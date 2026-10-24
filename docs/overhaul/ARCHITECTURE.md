@@ -348,6 +348,15 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - AFDS（`B747.19.xt.afds_control.lua`）はオートトリムの指令を出すだけにした（前は X-Plane のトリムを直接、1.2 秒に 1 フレーム分書いていた）。A/P が外れているときは A/P の昇降舵・補助翼の指令（`flt_ctrls/sim_pitch_ratio`・`sim_roll_ratio`）を毎秒 1 で 0 に戻す（`B747.19.xt.hydraulics_override.lua` が A/P の off の間も書く）。
 - 油圧のモジュール（keysystems）は `fcu/te_deg` を `flt_ctrls/flaps[1–4]` と X-Plane の舵面（`wing1l/r_fla1def`、`wing3l/r_fla2def`、それに外側フラップの wing 2 の部分 `wing2l/r_fla2def`）に、`fcu/slat` を `slat1/2_deploy_ratio` に書くだけ。前の controlObject のフラップと表示の 36 行、900 psi の門と 0.667°/s の動き、`normal_slats` は外した。デマンドポンプは `fcu/te_moving`・`te_down` を読む（§4.4）。
 
+### 4.16 脚（4-2）
+
+段 1：脚の作動のモデル（`plugins/xtlua/scripts/B747.10.xt.gear/B747.10.gear_model.lua`）を、グルー `B747.10.xt.gear_act.lua`（脚のモジュール `B747.10.xt.gear.lua` が PSEU のグルーの次に読み、`after_physics` で PSEU とレバーのロックの次に `B747_gear_act()`）が回す。中身は notes/ATA-32.md §10。
+
+- 読むもの：レバー（`actuator/gear_handle`、0 DN・1 OFF・2 UP の近い方）、系統 1・4（`hydraulics/pressure_1`・`_4`）、AC・DC bus 1〜4、ALTN GEAR EXTEND（`button_switch/position` [1] NOSE/BODY、[2] WING）、PSEU の air mode（`pri_air`・`alt_air`）、各脚の接地（`sim/flightmodel2/gear/on_ground`）とトラックの角度、故障（`gear/fail/*`、X-Plane の `rel_lagear1`〜`5`・`rel_gear_act`・`rel_gear_ind`）。
+- 書くもの（新設、init `B747.10.gear`。配列は前脚、左胴体、右胴体、左翼、右翼の順）：`gear/position[5]`（0 UP でロック〜1 DN でロック）・`gear/door[5]`（0 閉〜1 開）・`gear/gear_position/annun_gear[5]`（展開形の箱：0 UP、1 DN、2 斜線、3 琥珀の X）・`gear/lever_lock`（1 でロック。脚のモジュールが書き、init のレバーのハンドラーが OFF で止める）、故障 `gear/fail/actuator`・`door`・`indication`・`truck_tilt`（[5]）。前からのもの：`gear_position/annun_status`（3 の空の箱を足した）、`EICAS1_display_status`（2 の展開形を足した）、caution 38 GEAR DISAGREE・39 GEAR TILT、advisory 180 GEAR DOOR。
+- X-Plane へ：脚ごとの位置を `sim/aircraft/parts/acf_gear_deploy`（X-Plane の順：0 前脚、1 右胴体、2 左胴体、3 右翼、4 左翼）に毎フレーム書く（X-Plane は 1 本のハンドルの向きへ脚を動かし続ける）。X-Plane のハンドル `gear_handle_down` はグルーだけが書く（init のレバーのハンドラーは書かなくなった）。他の系統が読む `deploy_ratio` はこれに従う。
+- 開始：グルーは最初の 3 秒は X-Plane の脚に合わせ、そのあとレバーを脚の位置に合わせる。脚のモジュールのフライト開始はレバーを動かさなくなった。
+
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 
 - 描画は、各 acf の末尾（`P` 行の後ろ）に埋め込まれた X-Plane の generic instrument で行う。数は 2850 個で、内訳は rotary 1164、text 709、pointer 293、needle 122、tape 85、rolling 24。

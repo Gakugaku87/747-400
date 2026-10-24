@@ -117926,6 +117926,470 @@ GROUP Upper EICAS
           CLICK_DX 0
           CLICK_DY 0
 
+
+        gen_rotary annun_gear_box
+          POS 1915.500000 752.500000
+          IMAGE CRT Displays/EICAS Upper/gear_annun_box
+          DATAREF 
+          SHOW_EQUAL 3.000000 laminar/B747/gear/gear_position/annun_status
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+      END_GROUP
+      GROUP Gear Expanded
+        SHOW_EQUAL 2.000000 laminar/B747/gear/EICAS1_display_status
+        gen_rotary Gear Expanded Label
+          POS 1916.000000 739.000000
+          IMAGE CRT Displays/EICAS Upper/EICAS_gear_bgnd
+          DATAREF 
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear nose up
+          POS 1916.000000 782.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_up
+          DATAREF 
+          SHOW_EQUAL 0.000000 laminar/B747/gear/gear_position/annun_gear[0]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear nose dn
+          POS 1916.000000 782.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_dn
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/gear/gear_position/annun_gear[0]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear nose transit
+          POS 1916.000000 782.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_transit
+          DATAREF 
+          SHOW_EQUAL 2.000000 laminar/B747/gear/gear_position/annun_gear[0]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear nose x
+          POS 1916.000000 782.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_x
+          DATAREF 
+          SHOW_EQUAL 3.000000 laminar/B747/gear/gear_position/annun_gear[0]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear left body up
+          POS 1865.000000 695.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_up
+          DATAREF 
+          SHOW_EQUAL 0.000000 laminar/B747/gear/gear_position/annun_gear[1]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear left body dn
+          POS 1865.000000 695.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_dn
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/gear/gear_position/annun_gear[1]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear left body transit
+          POS 1865.000000 695.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_transit
+          DATAREF 
+          SHOW_EQUAL 2.000000 laminar/B747/gear/gear_position/annun_gear[1]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear left body x
+          POS 1865.000000 695.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_x
+          DATAREF 
+          SHOW_EQUAL 3.000000 laminar/B747/gear/gear_position/annun_gear[1]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear right body up
+          POS 1967.000000 695.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_up
+          DATAREF 
+          SHOW_EQUAL 0.000000 laminar/B747/gear/gear_position/annun_gear[2]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear right body dn
+          POS 1967.000000 695.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_dn
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/gear/gear_position/annun_gear[2]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear right body transit
+          POS 1967.000000 695.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_transit
+          DATAREF 
+          SHOW_EQUAL 2.000000 laminar/B747/gear/gear_position/annun_gear[2]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear right body x
+          POS 1967.000000 695.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_x
+          DATAREF 
+          SHOW_EQUAL 3.000000 laminar/B747/gear/gear_position/annun_gear[2]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear left wing up
+          POS 1843.000000 739.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_up
+          DATAREF 
+          SHOW_EQUAL 0.000000 laminar/B747/gear/gear_position/annun_gear[3]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear left wing dn
+          POS 1843.000000 739.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_dn
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/gear/gear_position/annun_gear[3]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear left wing transit
+          POS 1843.000000 739.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_transit
+          DATAREF 
+          SHOW_EQUAL 2.000000 laminar/B747/gear/gear_position/annun_gear[3]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear left wing x
+          POS 1843.000000 739.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_x
+          DATAREF 
+          SHOW_EQUAL 3.000000 laminar/B747/gear/gear_position/annun_gear[3]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear right wing up
+          POS 1989.000000 739.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_up
+          DATAREF 
+          SHOW_EQUAL 0.000000 laminar/B747/gear/gear_position/annun_gear[4]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear right wing dn
+          POS 1989.000000 739.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_dn
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/gear/gear_position/annun_gear[4]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear right wing transit
+          POS 1989.000000 739.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_transit
+          DATAREF 
+          SHOW_EQUAL 2.000000 laminar/B747/gear/gear_position/annun_gear[4]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary gear right wing x
+          POS 1989.000000 739.000000
+          IMAGE CRT Displays/EICAS Upper/gear_box_x
+          DATAREF 
+          SHOW_EQUAL 3.000000 laminar/B747/gear/gear_position/annun_gear[4]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
       END_GROUP
       GROUP Flaps Disagree
         SHOW_EQUAL 2.000000 laminar/B747/flt_ctrls/flaps/EICAS1_display_status

@@ -16,7 +16,10 @@
 # "reload" asks for -Reload (the scenario needs the aircraft's systems
 # fresh); "livery" picks a livery, and with it the engine type. Step types ("do"):
 #   record_start | record_stop | mark            the FlyWithLua recorder
-#   cmd     {name, [duration]}                   run a command
+#   cmd     {name, [duration], [async]}          run a command; with a duration it is
+#                                                held that long and the step waits,
+#                                                unless async (then the next steps run
+#                                                while it is held)
 #   set     {dref, value}                        write a dataref
 #   switch  {dref, value, cmd, [cmd_down]}       press cmd (or cmd_down when the
 #                                                value must go down) until dref
@@ -186,7 +189,7 @@ foreach ($step in $spec.steps) {
             'cmd' {
                 $d = if ($step.duration) { [double]$step.duration } else { 0 }
                 Invoke-XPCommand $step.name $d
-                if ($d -gt 0) { Start-Sleep -Milliseconds ([int]($d * 1000) + 200) }
+                if ($d -gt 0 -and -not $step.async) { Start-Sleep -Milliseconds ([int]($d * 1000) + 200) }
                 Add-Result $step 'info' $step.name
             }
             'set' { Set-XPDataref $step.dref $step.value; Add-Result $step 'info' "$($step.dref) = $($step.value)" }
