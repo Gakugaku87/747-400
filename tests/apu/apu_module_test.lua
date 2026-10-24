@@ -10,6 +10,8 @@ local xtlua = dofile("tests/lib/xtlua.lua")
 
 local rt = xtlua.new()
 rt:load("plugins/xtlua/scripts/B747.03.xt.electrical/B747.03.xt.electrical.lua")
+-- the fire protection detects the APU fire and commands the shutdown
+rt:load("plugins/xtlua/scripts/B747.35.xt.fire/B747.35.xt.fire.lua")
 rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("sim/operation/prefs/startup_running", 0)
 rt:set("sim/flightmodel/weight/m_fuel", 2, 30000)
@@ -100,7 +102,8 @@ frames(80)
 T.equal(get(STARTER), 1, "APU_start command: running")
 T.equal(get(SEL), 1, "APU_start command: selector at ON")
 
--- X-Plane's APU fire: shut down at once, the APU advisory
+-- X-Plane's APU fire, detected by the fire protection (B747.35.xt.fire.lua):
+-- shut down at once, the APU advisory
 rt:set("sim/operation/failures/rel_apu_fire", 6)
 frames(0.2)
 T.equal(get(STARTER), 0, "fire: X-Plane's APU shut down")

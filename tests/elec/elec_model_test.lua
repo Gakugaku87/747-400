@@ -278,6 +278,25 @@ for _, fps in ipairs({20, 30, 45}) do
     T.check(not s.xfr.capt.alt and out.xfr.capt, fps .. " fps: CAPT XFR back on AC 3 after 1.2 s")
 end
 
+-- the engine fire switch trips the GCR, a latching relay: GEN CONT OFF and
+-- ON closes it again (FCOM p.905; LH24 p.108)
+do
+    local s, inp = powered_up()
+    engines(inp, 69)
+    run(s, inp, 1)
+    inp.fire_handle[2] = true
+    local out = run(s, inp, 1)
+    T.check(not out.gcb[2] and out.gcb[1], "fire switch 2 out: GCB 2 open, GCB 1 closed")
+    inp.fire_handle[2] = false
+    out = run(s, inp, 1)
+    T.check(not out.gcb[2], "fire switch 2 pushed in: the GCR stays tripped")
+    inp.gen_cont[2] = false
+    run(s, inp, 1)
+    inp.gen_cont[2] = true
+    out = run(s, inp, 1)
+    T.check(out.gcb[2], "GEN CONT 2 OFF and ON: GCB 2 closed again")
+end
+
 -- DRIVE DISC (FCOM p.785-786, p.821): at idle it disconnects the IDG, opens
 -- the GCB, lights DRIVE and shows >DRIVE DISC; the bus stays on through the
 -- BTB. Pushed with the engine stopped it does nothing here (estimate).

@@ -1,6 +1,6 @@
 -- The APU model (B747.49.apu_model.lua) in the aircraft: reads the APU
--- selector, the BATTERY switch, X-Plane's APU (N1, running), the APU fire
--- failure and main tank 2; runs the model every frame and writes X-Plane's
+-- selector, the BATTERY switch, X-Plane's APU (N1, running), the fire
+-- protection's APU shutdown (B747.35.xt.fire.lua) and main tank 2; runs the model every frame and writes X-Plane's
 -- APU starter switch, the inlet door, the generators' availability (the APU
 -- GEN switches and the electrical model), the STATUS page N2 and oil, and the
 -- EICAS messages APU, APU DOOR and APU RUNNING (docs/overhaul/notes/ATA-49.md).
@@ -10,7 +10,8 @@
 dofile("B747.49.apu_model.lua")
 local A = B747_apu_model
 
-simDR_apu_fire_failure          = find_dataref("sim/operation/failures/rel_apu_fire")
+-- an APU fire detected, or the APU fire switch out (B747.35.xt.fire.lua)
+B747DR_apu_fire_shutdown        = find_dataref("laminar/B747/fire/apu_shutdown")
 simDR_apu_fuel_tank_kg          = find_dataref("sim/flightmodel/weight/m_fuel")
 B747DR_apu_n2_display           = find_dataref("laminar/B747/apu/n2")
 B747DR_apu_oil_display          = find_dataref("laminar/B747/apu/oil")
@@ -50,7 +51,7 @@ function B747_apu()
     inp.battery = B747DR_button_switch_position[BATTERY_SWITCH] > 0.5
     inp.n1 = simDR_apu_N1_pct
     inp.running = simDR_apu_running == 1
-    inp.fire = simDR_apu_fire_failure == 6
+    inp.fire = B747DR_apu_fire_shutdown > 0.5
     inp.fuel = simDR_apu_fuel_tank_kg[MAIN2_TANK] > 0
     local out = A.update(apu_state, inp, SIM_PERIOD)
 

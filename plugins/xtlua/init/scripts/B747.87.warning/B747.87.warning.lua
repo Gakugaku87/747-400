@@ -115,7 +115,11 @@ B747_CAScautionMsg   = {
     {DRindex = 75, name = ">ENG 1 LIM PROT", status = 0},
     {DRindex = 76, name = ">ENG 2 LIM PROT", status = 0},
     {DRindex = 77, name = ">ENG 3 LIM PROT", status = 0},
-    {DRindex = 78, name = ">ENG 4 LIM PROT", status = 0}
+    {DRindex = 78, name = ">ENG 4 LIM PROT", status = 0},
+    {DRindex = 79, name = "OVHT ENG 1 NAC", status = 0},     -- FCOM p.922 (3-4)
+    {DRindex = 80, name = "OVHT ENG 2 NAC", status = 0},
+    {DRindex = 81, name = "OVHT ENG 3 NAC", status = 0},
+    {DRindex = 82, name = "OVHT ENG 4 NAC", status = 0}
 }
 
 B747_CASadvisoryMsg   = {
@@ -166,8 +170,8 @@ B747_CASadvisoryMsg   = {
     {DRindex = 44, name = ">BOTTLE LOW APU", status = 0},
     {DRindex = 45, name = "BRAKE LIMITER", status = 0},
     {DRindex = 46, name = "BRAKE TEMP", status = 0},
-    {DRindex = 47, name = ">BTL LOW APU A", status = 0},
-    {DRindex = 48, name = ">BTL LOW APU B", status = 0},
+    {DRindex = 47, name = ">BTL LO L ENG A", status = 0},     -- ATA26_28 p.78 (3-4)
+    {DRindex = 48, name = ">BTL LO L ENG B", status = 0},
     {DRindex = 49, name = ">CARGO DET AIR", status = 0},
     {DRindex = 50, name = ">CDU MENU", status = 0},
     {DRindex = 51, name = ">CGO BTL DISCH", status = 0},
@@ -439,7 +443,9 @@ B747_CASadvisoryMsg   = {
     {DRindex = 317, name = "ENG 1 OIL PRESS", status = 0},
     {DRindex = 318, name = "ENG 2 OIL PRESS", status = 0},
     {DRindex = 319, name = "ENG 3 OIL PRESS", status = 0},
-    {DRindex = 320, name = "ENG 4 OIL PRESS", status = 0}
+    {DRindex = 320, name = "ENG 4 OIL PRESS", status = 0},
+    {DRindex = 321, name = ">BTL LO R ENG A", status = 0},     -- ATA26_28 p.78 (3-4)
+    {DRindex = 322, name = ">BTL LO R ENG B", status = 0}
 }
 
 B747_CASmemoMsg   = {

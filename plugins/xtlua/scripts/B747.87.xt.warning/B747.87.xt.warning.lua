@@ -192,7 +192,11 @@ B747_CAScautionMsg   = {
     {DRindex = 75, name = ">ENG 1 LIM PROT", status = 0},     -- FCOM p.900 (2-3)
     {DRindex = 76, name = ">ENG 2 LIM PROT", status = 0},
     {DRindex = 77, name = ">ENG 3 LIM PROT", status = 0},
-    {DRindex = 78, name = ">ENG 4 LIM PROT", status = 0}
+    {DRindex = 78, name = ">ENG 4 LIM PROT", status = 0},
+    {DRindex = 79, name = "OVHT ENG 1 NAC", status = 0},     -- FCOM p.922 (3-4)
+    {DRindex = 80, name = "OVHT ENG 2 NAC", status = 0},
+    {DRindex = 81, name = "OVHT ENG 3 NAC", status = 0},
+    {DRindex = 82, name = "OVHT ENG 4 NAC", status = 0}
 }
 
 B747_CASadvisoryMsg   = {
@@ -243,8 +247,8 @@ B747_CASadvisoryMsg   = {
     {DRindex = 44, name = ">BOTTLE LOW APU", status = 0},
     {DRindex = 45, name = "BRAKE LIMITER", status = 0},
     {DRindex = 46, name = "BRAKE TEMP", status = 0},
-    {DRindex = 47, name = ">BTL LOW APU A", status = 0},
-    {DRindex = 48, name = ">BTL LOW APU B", status = 0},
+    {DRindex = 47, name = ">BTL LO L ENG A", status = 0},     -- ATA26_28 p.78 (3-4)
+    {DRindex = 48, name = ">BTL LO L ENG B", status = 0},
     {DRindex = 49, name = ">CARGO DET AIR", status = 0},
     {DRindex = 50, name = ">CDU MENU", status = 0},
     {DRindex = 51, name = ">CGO BTL DISCH", status = 0},
@@ -516,7 +520,9 @@ B747_CASadvisoryMsg   = {
     {DRindex = 317, name = "ENG 1 OIL PRESS", status = 0},      -- FCOM p.901 (2-3)
     {DRindex = 318, name = "ENG 2 OIL PRESS", status = 0},
     {DRindex = 319, name = "ENG 3 OIL PRESS", status = 0},
-    {DRindex = 320, name = "ENG 4 OIL PRESS", status = 0}
+    {DRindex = 320, name = "ENG 4 OIL PRESS", status = 0},
+    {DRindex = 321, name = ">BTL LO R ENG A", status = 0},     -- ATA26_28 p.78 (3-4)
+    {DRindex = 322, name = ">BTL LO R ENG B", status = 0}
 }
 
 B747_CASmemoMsg   = {
@@ -613,6 +619,30 @@ local B747_CASstatusMsg = {
     {DRindex = 37, name = "ICE DETECTOR L"},      -- ATA30_32_35_36 p.164
     {DRindex = 38, name = "ICE DETECTOR R"},
     {DRindex = 39, name = "PASS OXYGEN ON"},      -- ATA30_32_35_36 p.376
+    {DRindex = 40, name = "ENG 1 FIRE LP A"},     -- ATA26_28 p.46 (3-4)
+    {DRindex = 41, name = "ENG 1 FIRE LP B"},
+    {DRindex = 42, name = "ENG 2 FIRE LP A"},
+    {DRindex = 43, name = "ENG 2 FIRE LP B"},
+    {DRindex = 44, name = "ENG 3 FIRE LP A"},
+    {DRindex = 45, name = "ENG 3 FIRE LP B"},
+    {DRindex = 46, name = "ENG 4 FIRE LP A"},
+    {DRindex = 47, name = "ENG 4 FIRE LP B"},
+    {DRindex = 48, name = "ENG 1 OVHT LP A"},     -- ATA26_28 p.34
+    {DRindex = 49, name = "ENG 1 OVHT LP B"},
+    {DRindex = 50, name = "ENG 2 OVHT LP A"},
+    {DRindex = 51, name = "ENG 2 OVHT LP B"},
+    {DRindex = 52, name = "ENG 3 OVHT LP A"},
+    {DRindex = 53, name = "ENG 3 OVHT LP B"},
+    {DRindex = 54, name = "ENG 4 OVHT LP A"},
+    {DRindex = 55, name = "ENG 4 OVHT LP B"},
+    {DRindex = 56, name = "APU FIRE LOOP A"},     -- ATA26_28 p.102
+    {DRindex = 57, name = "APU FIRE LOOP B"},
+    {DRindex = 58, name = "FIRE/OVHT SYS"},       -- ATA26_28 p.34
+    {DRindex = 59, name = "BTL LOW L ENG A"},     -- ATA26_28 p.78
+    {DRindex = 60, name = "BTL LOW L ENG B"},
+    {DRindex = 61, name = "BTL LOW R ENG A"},
+    {DRindex = 62, name = "BTL LOW R ENG B"},
+    {DRindex = 63, name = "BOTTLE LOW APU"},      -- ATA26_28 p.130
 }
 
 
@@ -687,7 +717,7 @@ for i = 0, NUM_ALERT_MESSAGES do
 end
 
 
-B747DR_CAS_status_status        = deferred_dataref("laminar/B747/CAS/status_status", "array[64]")
+B747DR_CAS_status_status        = deferred_dataref("laminar/B747/CAS/status_status", "array[128]")
 B747DR_CAS_gen_status_msg = {}
 for i = 0, NUM_ALERT_MESSAGES do
     B747DR_CAS_gen_status_msg[i] = deferred_dataref(string.format("laminar/B747/CAS/gen_status_msg_%03d", i), "string")

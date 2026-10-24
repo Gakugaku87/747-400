@@ -87,6 +87,7 @@ function M.new()
         permit = flags(4, true),         -- GCB close permission latch, LH24 p.102
         gen_cont_prev = flags(4, false),
         idg_connected = flags(4, true),
+        gcr_trip = flags(4, false),      -- the GCR tripped by the fire switch (a latching relay)
         drive_disc_prev = flags(4, false),
         ext_request_prev = {false, false}, apu_request_prev = {false, false},
         xfr = {capt = {alt = false, t = 0}, fo = {alt = false, t = 0}},
@@ -243,11 +244,14 @@ function M.update(s, inp, dt)
     out.drive_disc_flag = {}
     for n = 1, 4 do out.drive_disc_flag[n] = not s.idg_connected[n] end
 
-    -- GCR closes with GEN CONT ON; DRIVE DISC and the fire switch open it
-    -- (LH24 p.108). Good power: GCR closed and no underspeed (LH24 p.66, p.102).
+    -- GCR closes with GEN CONT ON; DRIVE DISC and the fire switch open it.
+    -- It is a latching relay: after the fire switch, GEN CONT OFF and ON
+    -- closes it again (LH24 p.108). Good power: GCR closed and no underspeed
+    -- (LH24 p.66, p.102).
     local good = {}
     for n = 1, 4 do
-        local gcr = inp.gen_cont[n] and s.idg_connected[n] and not inp.fire_handle[n]
+        if inp.fire_handle[n] then s.gcr_trip[n] = true elseif not inp.gen_cont[n] then s.gcr_trip[n] = false end
+        local gcr = inp.gen_cont[n] and s.idg_connected[n] and not s.gcr_trip[n]
         good[n] = gcr and speed[n]
     end
     local apu_ready = inp.apu_gen_ok and inp.apu_n1 > M.APU_READY_N1 and inp.on_ground   -- ground only, FCOM p.895

@@ -394,10 +394,8 @@ B747DR_sfty_no_smoke_sel_dial_pos   = find_dataref("laminar/B747/safety/no_smoki
 B747DR_sfty_seat_belts_sel_dial_pos = find_dataref("laminar/B747/safety/seat_belts/sel_dial_pos")
 
 
-B747DR_fire_ext_bottle_0102A_psi    = find_dataref("laminar/B747/fire/engine01_02A/ext_bottle/psi")
-B747DR_fire_ext_bottle_0102B_psi    = find_dataref("laminar/B747/fire/engine01_02B/ext_bottle/psi")
-B747DR_fire_ext_bottle_0304A_psi    = find_dataref("laminar/B747/fire/engine03_04A/ext_bottle/psi")
-B747DR_fire_ext_bottle_0304B_psi    = find_dataref("laminar/B747/fire/engine03_04B/ext_bottle/psi")
+-- the fire protection model's BTL DISCH lights: L ENG A, B, R ENG A, B, APU (B747.35.xt.fire.lua)
+B747DR_fire_light_btl_disch         = find_dataref("laminar/B747/fire/light/btl_disch")
 
 -- the fuel system's overhead lights (fuel module; created by the B747.25.fuel init)
 B747DR_fuel_light_pump_press        = find_dataref("laminar/B747/fuel/light/pump_press")
@@ -1237,11 +1235,11 @@ function B747_annunciators()
     annun.a.demand_pump_press_04 = B747DR_light_hyd_dem_press[3]
 
     -- FIRE EXTINGUISHER BOTTLE DISCHARGE
-    annun.a.fire_bottle_0102A_disch = B747_ternary((B747DR_fire_ext_bottle_0102A_psi < 225.0), 1, 0)
-    annun.a.fire_bottle_0102B_disch = B747_ternary((B747DR_fire_ext_bottle_0102B_psi < 225.0), 1, 0)
-    annun.a.fire_bottle_0304A_disch = B747_ternary((B747DR_fire_ext_bottle_0304A_psi < 225.0), 1, 0)
-    annun.a.fire_bottle_0304B_disch = B747_ternary((B747DR_fire_ext_bottle_0304B_psi < 225.0), 1, 0)
-    annun.a.fire_bottle_APU_disch = 0
+    annun.a.fire_bottle_0102A_disch = B747DR_fire_light_btl_disch[0]     -- discharged or low (FCOM p.905, p.907)
+    annun.a.fire_bottle_0102B_disch = B747DR_fire_light_btl_disch[1]
+    annun.a.fire_bottle_0304A_disch = B747DR_fire_light_btl_disch[2]
+    annun.a.fire_bottle_0304B_disch = B747DR_fire_light_btl_disch[3]
+    annun.a.fire_bottle_APU_disch = B747DR_fire_light_btl_disch[4]
 
     -- ENGINE BLEED AIR SYS FAULT
     annun.a.eng_bleed_air_sys_fault_01 = B747DR_light_bleed_sys_fault[0]

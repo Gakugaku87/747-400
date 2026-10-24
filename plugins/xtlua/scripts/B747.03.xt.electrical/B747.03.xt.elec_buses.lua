@@ -51,6 +51,11 @@ B747DR_elec_light_isln          = find_dataref("laminar/B747/electrical/light/is
 B747DR_elec_light_gen_off       = find_dataref("laminar/B747/electrical/light/gen_off")
 B747DR_elec_light_drive         = find_dataref("laminar/B747/electrical/light/drive")
 B747DR_elec_light_util_off      = find_dataref("laminar/B747/electrical/light/util_off")
+-- the engine fire switches (B747.35.xt.fire.lua): pulled out, the GCR trips (LH24 p.108)
+B747DR_elec_fire_switch_1       = find_dataref("laminar/B747/fire/engine01/ext_switch/pos_arm")
+B747DR_elec_fire_switch_2       = find_dataref("laminar/B747/fire/engine02/ext_switch/pos_arm")
+B747DR_elec_fire_switch_3       = find_dataref("laminar/B747/fire/engine03/ext_switch/pos_arm")
+B747DR_elec_fire_switch_4       = find_dataref("laminar/B747/fire/engine04/ext_switch/pos_arm")
 
 local elec_state = E.new()
 local elec_inputs = E.inputs()
@@ -92,6 +97,10 @@ local function read_inputs(inp)
     inp.apu_request[2] = B747DR_elec_apu_pwr_2_switch_mode == 1
     inp.ext_available[1] = B747DR_elec_ext_pwr1_available == 1
     inp.ext_available[2] = B747DR_elec_ext_pwr2_available == 1
+    inp.fire_handle[1] = B747DR_elec_fire_switch_1 > 0.5
+    inp.fire_handle[2] = B747DR_elec_fire_switch_2 > 0.5
+    inp.fire_handle[3] = B747DR_elec_fire_switch_3 > 0.5
+    inp.fire_handle[4] = B747DR_elec_fire_switch_4 > 0.5
     inp.apu_n1 = simDR_apu_N1_pct
     inp.apu_gen_ok = B747_apu_gen_ready()                   -- the APU model (B747.03.xt.apu.lua)
     inp.apu_start = simDR_apu_start_switch_mode == 2 and simDR_apu_N1_pct < E.APU_READY_N1

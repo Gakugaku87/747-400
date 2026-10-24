@@ -348,3 +348,16 @@ bell の断続: 2 s 鳴る / 3 s 休む（570 は 1 s / 10 s）
 13. エンジン型式（PW・CF6・RR）による検知器の配置や温度の違い（資料に記載なし）。
 14. `acf/_warn_fire_EQ 1` と `_ann_wav_file/61–68 Firebell.wav`（ファイルは無い）で、XP12 が FMOD とは別に何か鳴らすか。
 15. 貨物機（`laminar/B747/freighter` = 1）を選んだとき、主デッキの火災をどこまで作るか（3D の操作部が無い）。
+
+## 10. 実装（3-4 段 1、2026-10-24）
+
+- モデル `plugins/xtlua/scripts/B747.35.xt.fire/B747.35.fire_model.lua`（X-Plane なし）とグルー `B747.35.xt.fire.lua`（前の火災モジュールを書き直した）。構成は ARCHITECTURE.md §4.14、状態は PROGRESS.md の「火災防護（3-4）の段取りと GAP の状態」、推定の値は PROGRESS.md の「推定で作った部分」。段 1 はエンジンと APU。貨物室・車輪格納部・ダクトリーク・化粧室とクルーレスト・スクイブ試験は段 2。
+- 検知（§4.1）：ゾーンは ENG 1–4 FIRE、ENG 1–4 OVHT、APU（段 2 で CARGO 1–4 を足す）。エンジンは 2 ループの AND、片方のループが故障ならもう一方だけ（エンジンのループは常時監視なので、故障したらすぐ組み替える）、APU は OR。電源は APU battery bus。両ループ故障で >DET FIRE/OHT n・>DET FIRE APU。status：ENG n FIRE LP A/B、ENG n OVHT LP A/B、APU FIRE LOOP A/B（そのループが火災・過熱か故障で 20 秒）、FIRE/OVHT SYS（電源なし 20 秒）。
+- 火の元：エンジンは X-Plane の `sim/flightmodel2/engines/is_on_fire`（火災のループだけが感じる。過熱のループには伝えない：推定）、APU は `rel_apu_fire` が 6。X-Plane に無いもの（ナセルの過熱、ループの故障）は新しい失敗の dataref `laminar/B747/fire/fail/eng_ovht[4]`・`fail/loop_a[13]`・`fail/loop_b[13]`（ゾーンの順）。
+- 消火スイッチ（§4.2）：火災警報（試験を含む）か FUEL CONTROL の CUTOFF で解錠（main hot battery bus）。Fire Override は新しいコマンド `fire/engine0N/ext_switch_override`（override を押して引く、までを 1 つで）。回した向きのボトル（エンジン 1・3 は反時計回りで A）の squib が 1 回だけ発火し、ボトルが残っていれば 1.5 秒（推定）で空になる。その間 X-Plane の `fire_extinguisher_on` を 1 にする。2026-10-24 に X-Plane 12.4.4 で確かめた：`fire_extinguisher_on` を入れると 1 秒以内に `is_on_fire` が 0、`rel_engfir` も 0 に戻り、エンジンは止まり、再燃しない（§9 の 1）。
+- 引いたときの他系統への作用は、各系統が `fire/engine0N/ext_switch/pos_arm` > 0.5 で読む（燃料弁と >ENG SHUTDOWN はエンジン始動のモデル、spar valve は燃料、抽気弁は抽気、油圧は油圧のモデル、発電機の GCR トリップは電源のモデル）。電源のモデルには GCR トリップの入力があったがグルーが渡していなかったので結線し、GCR をラッチ式のリレーにした（スイッチを戻しても GEN CONT を OFF→ON にするまでトリップのまま：LH24 p.108）。
+- APU（§4.4）：検知で `laminar/B747/fire/apu_shutdown` を 1 にし、APU のグルーがそれで APU を止める（試験では止めない）。APU の消火スイッチを引いても同じ（FCOM p.907「自動停止しなかったときは止める」）。地上で APU が 95 % 未満のまま火災が 10 秒続くとボトルを自動で放出し、X-Plane の `rel_apu_fire` を 0 に戻す（X-Plane に APU の消火の dataref が無い：推定）。ホーンは `laminar/B747/fire/apu_horn`（音はまだ結線していない）。APU の消火スイッチと override は 3D に操作子が無いのでコマンド（`fire/apu/ext_switch_arm`・`ext_switch_rotate_L`・`_R`・`ext_switch_override`）。M869 は作っていない。
+- FIRE/OVHT TEST（§4.7）：押している間、全ゾーンの検知器が警報（消火スイッチ・APU の灯、スイッチの解錠、地上の APU ホーン）を出す。FIRE メッセージは出さない。>TEST IN PROG から 5 秒で、全部のループが応えれば >FIRE TEST PASS、1 本でも故障・電源なしなら FAIL（ATA26_28 p.34 の「試験の信号が全部出た」）。ベルは `.snd` の試験ボタンの結線、master WARNING は警報のモデルが出す。
+- 表示：消火スイッチと APU の灯は `laminar/B747/annunciators/engine_fires[0-4]`、BTL DISCH は新しい `laminar/B747/fire/light/btl_disch[5]`（照明のモジュールが annunciator 113–117 に出す）。FUEL CONTROL の赤灯は 3D が X-Plane の読み取り専用の `sim/cockpit2/annunciators/engine_fires` に付いているので、X-Plane のエンジン火災では点くが、自前の検知の結果や試験では点けられない（書き込める旧い `sim/cockpit/warnings/annunciators/engine_fires` は X-Plane が毎フレーム上書きする。2026-10-24 に確かめた：§9 の 4）。
+- 警報の表に足したもの：OVHT ENG 1–4 NAC（caution 79–82）、>BTL LO R ENG A・B（advisory 321・322）、advisory 47・48 の名前を >BTL LO L ENG A・B に直した（前は FCOM に無い >BTL LOW APU A/B）。STATUS 40–63（上の status）。STATUS の配列を 64 から 128 に広げた（段 2 の分）。ベルとリセット、離陸中の抑止は 1-3 の警報のモデルにある（FIRE-06・07）。
+- 試験：`tests/fire/fire_model_test.lua`（70 件）、`tests/fire/fire_module_test.lua`（照明のモジュールと一緒に、62 件）、`tests/apu/apu_module_test.lua`（火災のモジュールも読み込み、X-Plane の APU 火災 → 検知 → APU 停止の流れ）、X-Plane の `s22_fire_engine_apu`。
