@@ -58,7 +58,7 @@
 | xtlua | B747.10.gear | 165 / 1061 | 脚の上げ下げ、ブレーキ、オートブレーキ | toe_brakes |
 | xtlua | B747.15.com | 565 / 3862 | 無線。ACP（`ap_L/C/R`）、RTP（`rtp_L/C/R`）、VHF/HF、call panel など | |
 | xtlua | B747.25.fuel | 405 / 3720 | 燃料系統（タンク、ポンプ、クロスフィード、移送、ジェティソン、搭載量） | fuel_system |
-| xtlua | B747.34.nav | 29 / 375 | 航法センサー。5-1 で新設（§4.17）。段 1 はエアデータ（ADC 3 台、AIR DATA の選択、OVERSPEED・DISAGREE・高度警報） | |
+| xtlua | B747.34.nav | 72 / 921 | 航法センサー。5-1 で新設（§4.17）。段 1 はエアデータ（ADC 3 台、AIR DATA の選択、OVERSPEED・DISAGREE・高度警報）、段 2 は IRS（アライン、位置の入力、ATT、電源、メッセージ） | |
 | xtlua | B747.35.fire | 99 / 653 | 火災探知と消火（エンジン、APU、貨物室） | |
 | xtlua | B747.36.oxygen | 56 / 327 | 酸素（乗員・乗客・治療用、酸素圧、X-Plane の低酸素）。3-3 で新設（§4.13） | oxygen_system |
 | xtlua | B747.40.engines | 106 / 2247 | エンジン始動・点火・燃料制御・逆推力・APU | |
@@ -381,6 +381,11 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
   - 書くもの：各 PFD の速度 `gauges/indicators/airspeed_kts_pilot`・`_copilot`（選んだ ADC。30 kt が下限。EEC・SRM なども読む）。新設（init `B747.34.nav`）の `airdata/src_capt`・`src_fo`（1 L、2 C、3 R）・`valid[3]`（ADC ごと）・`valid_capt`・`valid_fo`（PFD の旗のため）・`alt_advise`（白枠）・`alt_alert`（琥珀枠）。EICAS：warning 22 OVERSPEED、caution 1 ALT DISAGREE・2 >ALTITUDE ALERT・44 IAS DISAGREE、advisory 267 >SOURCE SEL ADC・12 >AOA RIGHT。
   - 外した前の処理：fltInst02 の OVERSPEED（placard を含む Vmax）と >AOA RIGHT（左の AOA を見ていた）、各側の速度の書き込み（`fltInstsetASIs`）。fltInst02 の BARO の STD は、押す前の値を preselect に残すようにした（NAV-06）。
   - 段 1b：カスタム acf の PFD は、高度と Mach を新設の `airdata/alt_capt`・`alt_fo`（選んだ ADC、その席の気圧設定）・`mach_capt`・`mach_fo` から読み、`valid_capt`・`valid_fo` が 0 なら速度と高度の表示を消して SPD・ALT の旗、`alt_advise`・`alt_alert` で高度の白枠・琥珀枠を出す（ACF_DIFF.md §5）。グルーは最初の 3 秒（モデルの前）は X-Plane の各側の値と有効を書く。PFD の昇降率はまだ X-Plane の値。
+- 段 2（IRS）：IRS のモデル（`B747.34.irs_model.lua`）を、グルー `B747.34.xt.irs.lua` が毎フレーム回す（`B747_irs()`）。中身は notes/ATA-34.md §12。
+  - 読むもの：MSU（`flt_mgmt/iru/mode_sel_dial_pos`：0 OFF、1 ALIGN、2 NAV、3 ATT）、AC bus 3・1・2（IRU L・C・R）、APU hot battery bus、DC bus 3、ground service bus、PSEU の地上、X-Plane の位置・対地速度・磁方位、故障（X-Plane の `rel_lrn1`・`rel_lrn2`、新設 `irs/fail/iru[3]`）、FMC の入力（新設 `irs/pos_entry_seq`・`_lat`・`_lon`、`set_hdg_seq`・`set_hdg`：入力ごとに seq が一つ増える）、IRS 選択器（`flt_inst/irs_src/capt`・`fo/sel_dial_pos`：0 L、1 C、2 R）、simconfig の `irs_align_time`。
+  - 書くもの：`flt_mgmt/iru/status`（0 OFF、1 アライン済みで ALIGN、2 NAV、3 ATT、4 アライン中、5 故障）、新設（init `B747.34.nav`）の `irs/mode`・`time_left`・`att_valid`・`hdg_valid`・`nav_valid`・`lat`・`lon`・`gs`・`hdg`（IRU ごと）、`irs/motion`・`set_pos`・`aligning`・`set_hdg_shown`・`on_bat`、`pfd/capt/irs`・`fo/irs`（その席の IRS 選択器の IRU の姿勢と方位）、memo 14〜16 IRS ALIGN MODE L/C/R、advisory 233 IRS MOTION・225〜227 >IRS AC・229〜231 >IRS DC・228/232/234 IRS C/L/R・270 >SOURCE SEL IRS、`fms/notification` の 12 ENTER IRS POSITION・5 CYCLE IRS OFF-NAV。コマンド `irs/align_now`（クイックスタート）。
+  - GPS：GPS のモデル（`B747.34.gps_model.lua`）を、グルー `B747.34.xt.gps.lua` が IRS の次に回す（`B747_gps()`）。読むもの：AC standby bus（L）、AC bus 2（R）、X-Plane の `rel_gps`・`rel_gps2`、新設 `gps/fail[2]`。書くもの：新設 `gps/valid[2]`、advisory 182 >GPS・183 >GPS LEFT・184 >GPS RIGHT。
+  - FMC（keysystems の `irs/irs_system.lua`）はモジュールの値を読み、POS INIT・POS REF・IRS MONITOR と ND の TIME TO ALIGN（`irs/line1`〜`4`）・更新の行（`irs_display_line`）を作り、位置と SET HDG の入力を渡す。fltMgmt は MSU だけ、ヨーダンパー（fltCtrls）は `irs/att_valid`、照明は `irs/on_bat` を読む。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 

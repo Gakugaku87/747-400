@@ -431,8 +431,10 @@ B747DR_master_warning               = find_dataref("laminar/B747/warning/master_
 B747DR_master_caution               = find_dataref("laminar/B747/warning/master_caution")
 
 B747DR_CAS_memo_status              = find_dataref("laminar/B747/CAS/memo_status")
+-- the IRS ON BAT light (the navigation sensors module, B747.34.xt.irs.lua)
+B747DR_irs_on_bat                   = find_dataref("laminar/B747/irs/on_bat")
 
-B747DR_simDR_captain_display              = deferred_dataref("laminar/B747/electrical/capt_display_power", "number")
+B747DR_simDR_captain_display             = deferred_dataref("laminar/B747/electrical/capt_display_power", "number")
 B747DR_simDR_fo_display             = deferred_dataref("laminar/B747/electrical/fo_display_power", "number")
 B747DR_elec_display_power               = find_dataref("laminar/B747/electrical/display_has_power")
 
@@ -1227,8 +1229,8 @@ function B747_annunciators()
     annun.a.squib_test_cargo_C = B747DR_fire_light_squib[7]
     annun.a.squib_test_cargo_D = B747DR_fire_light_squib[8]
 
-    -- IRS
-    annun.a.irs_on_bat = 0
+    -- IRS: an IRU on DC on the ground without the ground service bus (FCOM p.1217)
+    annun.a.irs_on_bat = B747DR_irs_on_bat
 
     -- HYDRAULIC SYSTEM FAULT
     annun.a.hyd_sys_fault_01 = B747DR_light_hyd_sys_fault[0]
