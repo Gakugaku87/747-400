@@ -559,3 +559,24 @@
 - X-Plane のレーダーの PWS 既定値、640 nm 時の探知距離、IDENT の持続時間（実機 18 秒）。オンライン接続で mode 2 と 3 がどう扱われるか。
 - GND PROX の OVRD 灯が 3D にあるか（747-400_cockpit.obj は押し込みのアニメーションだけ。22077-22079、23299-23351）。
 - 資料の食い違い（本文で FCOM に従ったもの）：ILS autotune の時期（E&M p.460 と p.540・FCOM）、LOC アンテナスイッチの電源（図と本文）、MM の色、塗りつぶしの閾値（PFD 2 1/3 dot、ND 2 1/2 dot）、乱気流の表示レンジ（50 nm と 40 nm）、TCAS の抑止高度（E&M と FCOM）、GPWS mode 3・4 の aural、ON BAT の点灯条件（FCOM は条件を書かない）。
+## 10. 段取り（5-1、2026-10-25）
+
+利用者の判断（2026-10-25）：GPWS の音声は 405 の組（2500〜10、APPROACHING MINIMUMS、BANK ANGLE。§3.8 の表）、TCAS は 3D の年式に合う版。3D の構成（TERR OVRD、RADIO/BARO MINS、570 型の WXR パネル）と FMOD の音声素材（7.0 の文言）から Ver 7.0 とする。
+
+1. エアデータ：ADC L/C/R（電源、X-Plane の ADC の故障）、AIR DATA の選択とリレー、各席の速度、OVERSPEED を Vmo/Mmo に（NAV-02）、IAS・ALT DISAGREE（NAV-04）、>SOURCE SEL ADC、ALTITUDE ALERT（NAV-03）、>AOA RIGHT（NAV-07）、BARO の STD（NAV-06）。PFD の高度・昇降率・Mach の源と SPD/ALT/MACH の旗・高度の枠は、パネルが X-Plane の値を直接読むのでパネル変更（承認）が要る。
+2. IRS と GPS：MSU（OFF/ALIGN/NAV/ATT）、アライン、電源と ON BAT、C IRU の 5 分、位置の入力、ATT の方位、故障とメッセージ（NAV-16〜22 など）。
+3. 無線の同調：VOR・ILS・ADF・DME の同調を 1 つのモジュールに（A/M/P/R/PARK、自動同調の禁止、10 分のタイマー、最後の有効周波数：NAV-33〜39・45・48）。
+4. 電波高度計 L/C/R と minimums（405 型の RADIO/BARO）、GPWS（mode 1〜7、405 の音声、BANK ANGLE、TERR OVRD）、windshear、GND PROX パネルのスイッチ（NAV-56 など）。
+5. トランスポンダ（モード、故障のメッセージ）、TCAS（Ver 7.0：X-Plane の TCAS を核に、TA・RA の表示と音声、抑止）、WXR（570 型パネルの論理）。
+
+## 11. 実装（5-1 段 1、2026-10-25：エアデータ）
+
+- 新しいモジュール `B747.34.xt.nav`（航法センサー。`plugins/xtlua/scripts/B747.34.xt.nav/`。脚のモジュールと同じく、系統ごとのグルーを本体が読み込む。init `B747.34.nav`）。エアデータはグルー `B747.34.xt.airdata.lua` とモデル `B747.34.airdata_model.lua`、試験 `tests/nav/airdata_model_test.lua`・`airdata_module_test.lua`。段 2 以降の IRS・無線なども同じモジュールにグルーを足す。§3.1〜§3.3・§4.1〜§4.3 をそのまま作った。
+- ADC：L は X-Plane の機長側（pitot 1・static 1・ADC 1）、R は副操縦士側（pitot 2・static 2・ADC 2）、C は X-Plane の standby の pitot-static（Mach は速度と気圧高度から、昇降率は高度の変化から計算：推定）。電源は L が standby bus、C が機長の transfer bus、R が副操縦士の transfer bus（FCOM p.800・803）。有効は電源と、X-Plane の ADC の故障（`rel_adc_comp`・`_2`）か `laminar/B747/airdata/fail/adc[3]`。pitot・static の詰まりでは旗を出さず値がずれる（実機どおり DISAGREE で分かる）。
+- 選択：3D の AIR DATA ノブは 2 位置（570 の L/R）なので、0 を L、1 を R とした（推定：刻印が分からない）。各席の表示（EIU）は選んだ ADC。リレー（L と C の切り替え、C は先に選んだ側だけ）はモデルにあるが、3D からは C を選べない。各 PFD の速度（`laminar/B747/gauges/indicators/airspeed_kts_pilot`・`_copilot`）は選んだ ADC の値（30 kt が下限）。前は X-Plane の各側をそのまま書いていた（fltInst02）。この速度は EEC・SRM・fltCtrls なども読むので、それらも表示の選択に従う（実機はリレーの側の ADC。各系統を作り直すときに `laminar/B747/airdata` の値へ乗り換える）。
+- OVERSPEED：選んだ 2 つの ADC のどちらかが 365 kt か M0.92 を超えたとき（ATA34_1 p.140–143、FCOM p.1557）。前はフラップ・脚の placard を含む Vmax と、28,620 ft 以下の M0.88 で出していた（NAV-02）。PFD の最大速度の帯（placard を含む）は前のまま。
+- IAS DISAGREE（両席の速度が 5 kt 以上）・ALT DISAGREE（未補正の高度が 200 ft 超）は 5 秒続いたとき（FCOM p.1197–1198）。>SOURCE SEL ADC は両席が同じ ADC（FCOM p.1197。§4.3 の推定より FCOM を採った）。
+- ALTITUDE ALERT：§4.2 のとおり（左右のバスの選び方、900 ft の接近、300 ft の捕捉、逸脱、リセット、GS 捕捉と着陸フラップ・脚 down の抑止、地上でパーキングブレーキなら抑止しない）。選択高度が変わってから 1 秒は判定しない（rate detector の時間：推定）。EICAS の >ALTITUDE ALERT と master caution・beeper は警報の仕組みから。PFD の白枠・琥珀枠のために `laminar/B747/airdata/alt_advise`・`alt_alert` を出す（パネルは未対応）。
+- >AOA RIGHT は X-Plane の右の AOA の故障（`rel_cop_AOA`）で（前は左の `rel_AOA`：NAV-07）。
+- BARO の STD：STD を押すときの値を preselect に残し、もう一度押すとそこへ戻す（FCOM p.1037。前は preselect を 29.92 で上書きしていた：NAV-06。試験 `tests/nav/baro_std_test.lua`）。
+- 作らなかったもの：PFD の高度・昇降率・Mach の源の切り替えと旗・高度の枠（パネル変更が要る）、P/S XFR VLV、C ADC のリレーの組み替えの細部（3D から選べない）、AOA・TAT の ADC ごとの値。

@@ -867,8 +867,8 @@ function B747_efis_baro_std_capt_switch_CMDhandler(phase, duration)
             simDR_altimeter_baro_inHg = B747DR_efis_baro_capt_preselect
             B747DR_efis_baro_std_capt_show_preselect = 0
         elseif B747DR_efis_baro_std_capt_switch_pos == 1 then
+            B747DR_efis_baro_capt_preselect = simDR_altimeter_baro_inHg   -- the setting before STD comes back on the next push (FCOM p.1037; NAV-06)
             simDR_altimeter_baro_inHg = 29.92
-            B747DR_efis_baro_capt_preselect = 29.92
             B747DR_efis_baro_std_capt_show_preselect = 0
         end
     end
@@ -1038,8 +1038,8 @@ function B747_efis_baro_std_fo_switch_CMDhandler(phase, duration)
             simDR_altimeter_baro_inHg_fo = B747DR_efis_baro_fo_preselect
             B747DR_efis_baro_std_fo_show_preselect = 0
         elseif B747DR_efis_baro_std_fo_switch_pos == 1 then
+            B747DR_efis_baro_fo_preselect = simDR_altimeter_baro_inHg_fo   -- the setting before STD (NAV-06)
             simDR_altimeter_baro_inHg_fo = 29.92
-            B747DR_efis_baro_fo_preselect = 29.92
             B747DR_efis_baro_std_fo_show_preselect = 0
         end
     end
@@ -3149,15 +3149,9 @@ end
 
 function B747_fltInst_EICAS_msg()
 
-    -- OVERSPEED
-    
-    if simDR_airspeed > B747DR_airspeed_Vmax
-        or simDR_airspeed_mach > B747DR_airspeed_Mmo
-    then
-        B747DR_CAS_warning_status[22] = 1
-    else
-        B747DR_CAS_warning_status[22] = 0
-    end
+    -- OVERSPEED, >AOA RIGHT: the air data glue of the navigation sensors
+    -- module (B747.34.xt.nav, 5-1 step 1; OVERSPEED was the placard speeds'
+    -- Vmax, NAV-02)
 
     -- >AIRSPEED LOW
     
@@ -3169,13 +3163,6 @@ function B747_fltInst_EICAS_msg()
         B747DR_CAS_caution_status[0] = 0
     end
 
-    -- >AOA RIGHT
-    
-    if simDR_AOA_fail == 6 then 
-        B747DR_CAS_advisory_status[12] = 1 
-    else
-        B747DR_CAS_advisory_status[12] = 0
-    end
 
     -- >BARO DISAGREE
     --if math.abs(B747DR_efis_baro_capt_set_dial_pos - B747DR_efis_baro_fo_set_dial_pos) > 0.01 then
@@ -3195,18 +3182,6 @@ function B747_fltInst_EICAS_msg()
 
 end
 
-function fltInstsetASIs()
-    if simDR_airspeed_pilot>=30 then
-        simDR_airspeed=simDR_airspeed_pilot
-    else
-        simDR_airspeed=30
-    end
-    if simDR_airspeed_copilot>=30 then
-        simDR_airspeed2=simDR_airspeed_copilot
-    else
-        simDR_airspeed2=30
-    end   
-end
 
 function fltInstsetCRTs()
   
@@ -3646,7 +3621,7 @@ function after_physics()
 
     B747_inst_monitor_AI()
     fltInstsetCRTs()
-    fltInstsetASIs()
+    -- each PFD's airspeed: the air data module (the selected ADC)
     update_heading_bug()
 
     B747_10000_callout()

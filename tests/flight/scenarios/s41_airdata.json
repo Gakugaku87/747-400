@@ -1,0 +1,78 @@
+{
+  "name": "s41_airdata",
+  "description": "エアデータ（5-1 段 1）の X-Plane での確認、空中。10,000 ft の空中で A/P（ALT HOLD）と A/T（SPD 250 kt）。機長の AIR DATA を R（2 つ目の位置）にすると機長の PFD の速度が ADC R になり >SOURCE SEL ADC（FCOM p.1197）、L に戻す。X-Plane の pitot 2 の詰まりで速度を変えると 5 秒後に IAS DISAGREE（FCOM p.1198）。static 2 の詰まりのまま X-Plane の機体を 200 m 下へ移すと（この AFDS は V/S で選択高度から離れない：6-3）、300 ft を超えて離れて >ALTITUDE ALERT（FCOM p.1559）、未補正の高度が 200 ft を超えて 5 秒で ALT DISAGREE（p.1197）。新しい MCP 高度で ALTITUDE ALERT が消える。X-Plane の ADC 1 の故障で機長のエアデータが無効、X-Plane の右の AOA の故障で >AOA RIGHT（前は左で出た）。BARO の STD を 2 回押すと STD の前の値に戻る（FCOM p.1037）。機体を読み直す。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 3048, "heading_true": 340, "speed_in_meters_per_second": 130 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 20, "note": "空中開始の揺れが収まるのを待つ" },
+    { "do": "set", "note": "MCP 速度 250 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 250 },
+    { "do": "set", "note": "MCP 高度 10,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 10000 },
+    { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "note": "A/P のサーボが入る", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "cmd", "note": "ALT HOLD", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "sleep", "seconds": 20 },
+    { "do": "check", "note": "機長は ADC L", "dref": "laminar/B747/airdata/src_capt", "op": "==", "value": 1 },
+    { "do": "check", "note": "副操縦士は ADC R", "dref": "laminar/B747/airdata/src_fo", "op": "==", "value": 3 },
+    { "do": "check", "note": "機長のエアデータは有効", "dref": "laminar/B747/airdata/valid_capt", "op": "==", "value": 1 },
+    { "do": "check", "note": ">SOURCE SEL ADC なし", "dref": "laminar/B747/CAS/advisory_status[267]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "AIR DATA" },
+    { "do": "cmd", "note": "機長の AIR DATA を 2 つ目の位置（R）へ", "name": "laminar/B747/flt_inst/air_data_src/capt/sel_dial_up" },
+    { "do": "wait", "note": "機長の PFD は ADC R", "dref": "laminar/B747/airdata/src_capt", "op": "==", "value": 3, "timeout": 3 },
+    { "do": "check", "note": "両席が同じ ADC：>SOURCE SEL ADC", "dref": "laminar/B747/CAS/advisory_status[267]", "op": "==", "value": 1 },
+    { "do": "cmd", "note": "L に戻す", "name": "laminar/B747/flt_inst/air_data_src/capt/sel_dial_dn" },
+    { "do": "wait", "note": "消える", "dref": "laminar/B747/CAS/advisory_status[267]", "op": "==", "value": 0, "timeout": 3 },
+
+    { "do": "mark", "note": "IAS DISAGREE" },
+    { "do": "set", "note": "X-Plane の pitot 2（副操縦士側）の詰まり", "dref": "sim/operation/failures/rel_pitot2", "value": 6 },
+    { "do": "set", "note": "MCP 速度 280 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 280 },
+    { "do": "wait", "note": "IAS DISAGREE（5 kt 以上が 5 秒）", "dref": "laminar/B747/CAS/caution_status[44]", "op": "==", "value": 1, "timeout": 90 },
+    { "do": "snapshot", "note": "速度", "drefs": [ "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/gauges/indicators/airspeed_kts_copilot" ] },
+    { "do": "set", "dref": "sim/operation/failures/rel_pitot2", "value": 0 },
+    { "do": "set", "note": "MCP 速度 250 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 250 },
+    { "do": "wait", "note": "そろうと消える", "dref": "laminar/B747/CAS/caution_status[44]", "op": "==", "value": 0, "timeout": 90 },
+
+    { "do": "mark", "note": "ALTITUDE ALERT, ALT DISAGREE" },
+    { "do": "set", "note": "X-Plane の static 2（副操縦士側）の詰まり", "dref": "sim/operation/failures/rel_static2", "value": 6 },
+    { "do": "remember", "dref": "sim/flightmodel/position/local_y", "as": "y0" },
+    { "do": "set", "note": "X-Plane の機体を 200 m（約 660 ft）下へ（この AFDS は V/S で選択高度から離れない：6-3）", "dref": "sim/flightmodel/position/local_y", "rel": "y0", "value": -200 },
+    { "do": "wait", "note": "300 ft を超えて離れて >ALTITUDE ALERT", "dref": "laminar/B747/CAS/caution_status[2]", "op": "==", "value": 1, "timeout": 5 },
+    { "do": "check", "note": "高度の琥珀の枠（のための dataref）", "dref": "laminar/B747/airdata/alt_alert", "op": "==", "value": 1 },
+    { "do": "wait", "note": "ALT DISAGREE（未補正で 200 ft 超が 5 秒）", "dref": "laminar/B747/CAS/caution_status[1]", "op": "==", "value": 1, "timeout": 30 },
+    { "do": "cas", "note": "ALTITUDE ALERT と ALT DISAGREE" },
+    { "do": "set", "note": "新しい MCP 高度", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 9000 },
+    { "do": "wait", "note": "ALTITUDE ALERT が消える", "dref": "laminar/B747/CAS/caution_status[2]", "op": "==", "value": 0, "timeout": 5 },
+    { "do": "set", "dref": "sim/operation/failures/rel_static2", "value": 0 },
+
+    { "do": "mark", "note": "failures" },
+    { "do": "set", "note": "X-Plane の ADC 1 の故障", "dref": "sim/operation/failures/rel_adc_comp", "value": 6 },
+    { "do": "wait", "note": "機長のエアデータが無効（PFD の旗のための dataref）", "dref": "laminar/B747/airdata/valid_capt", "op": "==", "value": 0, "timeout": 3 },
+    { "do": "snapshot", "note": "ADC 1 の故障の X-Plane の値", "drefs": [ "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/cockpit2/gauges/indicators/mach_pilot", "sim/cockpit2/gauges/indicators/vvi_fpm_pilot" ] },
+    { "do": "set", "dref": "sim/operation/failures/rel_adc_comp", "value": 0 },
+    { "do": "set", "note": "X-Plane の右の AOA の故障", "dref": "sim/operation/failures/rel_cop_AOA", "value": 6 },
+    { "do": "wait", "note": ">AOA RIGHT", "dref": "laminar/B747/CAS/advisory_status[12]", "op": "==", "value": 1, "timeout": 3 },
+    { "do": "set", "dref": "sim/operation/failures/rel_cop_AOA", "value": 0 },
+
+    { "do": "mark", "note": "BARO STD" },
+    { "do": "set", "note": "機長の気圧 29.50", "dref": "sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot", "value": 29.5 },
+    { "do": "cmd", "note": "STD", "name": "laminar/B747/efis/baro_std/capt/switch" },
+    { "do": "wait", "note": "29.92", "dref": "sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot", "op": "between", "value": [29.915, 29.925], "timeout": 3 },
+    { "do": "cmd", "note": "STD をもう一度", "name": "laminar/B747/efis/baro_std/capt/switch" },
+    { "do": "wait", "note": "STD の前の 29.50 に戻る（NAV-06）", "dref": "sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot", "op": "between", "value": [29.495, 29.505], "timeout": 3 },
+    { "do": "cas", "note": "終わり" }
+  ]
+}
