@@ -87,6 +87,33 @@ T.equal(rt:get("sim/aircraft/gear/acf_has_abs"), 0, "X-Plane's antiskid off")
 rt:set("laminar/B747/gear/fail/antiskid", 0, 0)
 run(0.1)
 T.equal(rt:get("sim/aircraft/gear/acf_has_abs"), 1, "back on")
+-- the autobrakes (4-2 step 3): X-Plane's own stay off; its commands move the
+-- selector; armed on the ground at idle with the captain's IRS; applied on the
+-- ground over 60 kt for 3 s; the pedals disarm
+T.equal(rt:get("sim/cockpit2/switches/auto_brake_level"), 1, "X-Plane's autobrakes off")
+rt:set("laminar/B747/flt_mgmt/iru/status", 0, 2)
+rt:set("laminar/B747/flt_mgmt/iru/mode_sel_dial_pos", 0, 2)
+rt:set("laminar/B747/hydraulics/pressure_1", 3000)
+rt:set("laminar/B747/hydraulics/pressure_4", 3000)
+for i = 0, 4 do rt:set("sim/flightmodel2/gear/on_ground", i, 1) end
+for i = 1, 4 do rt:set("sim/flightmodel2/gear/eagle_claw_angle_deg", i, 0.9) end
+rt.commands["sim/flight_controls/brakes_3_auto"].handler(0, 0)
+run(0.2)
+T.equal(rt:get("laminar/B747/gear/autobrakes/sel_dial_pos"), 5, "brakes_3_auto: AUTOBRAKES 3")
+T.equal(rt:get("laminar/B747/CAS/memo_status", 4), 1, "armed: the memo AUTOBRAKES 3")
+rt:set("sim/flightmodel/position/groundspeed", 40)            -- 78 kt, not slowing
+run(2.5)
+T.equal(rt:get(L), 0, "2.5 s over 60 kt: not spun up yet")
+run(4)
+local l = rt:get(L)
+T.check(l > 0.3 and l <= 1750 / 3000 + 1e-6, "applying, within its 1750 psi (" .. l .. ")")
+cmd("brakes_max", 0)
+run(0.3)
+T.equal(rt:get("laminar/B747/gear/autobrakes/sel_dial_pos"), 2, "the pedals: DISARM")
+T.equal(rt:get("laminar/B747/CAS/advisory_status", 17), 1, "AUTOBRAKES")
+T.equal(rt:get("laminar/B747/CAS/memo_status", 4), 0, "no memo")
+cmd("brakes_max", 2)
+
 -- the chocks hold
 rt:set("laminar/B747/gear/chocked", 1)
 run(0.1)

@@ -18,7 +18,7 @@
   },
   "steps": [
     { "do": "sleep", "seconds": 10 },
-    { "do": "set", "note": "パーキング・ブレーキ", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 1 },
+    { "do": "set", "note": "パーキング・ブレーキ", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
     { "do": "snapshot", "note": "開始", "drefs": [
       "sim/aircraft/view/acf_relative_path", "laminar/B747/hydraulics/pressure_1", "laminar/B747/hydraulics/pressure_2",
       "laminar/B747/hydraulics/pressure_3", "laminar/B747/hydraulics/pressure_4", "laminar/B747/flt_ctrls/left_outer_aileron_lockout",

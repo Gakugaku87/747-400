@@ -18,7 +18,7 @@
   },
   "steps": [
     { "do": "sleep", "seconds": 10 },
-    { "do": "set", "note": "パーキング・ブレーキ", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 1 },
+    { "do": "set", "note": "パーキング・ブレーキ", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
     { "do": "set", "note": "レバー 10（開始のレバーは 0 か 10）", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.5 },
     { "do": "sleep", "seconds": 20 },
     { "do": "snapshot", "note": "レバー 10", "drefs": [

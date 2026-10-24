@@ -951,10 +951,6 @@ function B747_fltCtrols_EICAS_msg()
     end
 end
 
--- crazytimmtimtim
-function B747_autobrake_resetOnGround() -- reset autobrakes if armed while on ground
-     B747DR_autobrakes_sel_dial_pos = 2 -- disarm
-end
 
 
 
@@ -1117,16 +1113,7 @@ function after_physics()
     --Marauder28
     B747_elevator_trim()  --constantly update the safe stab trim position based on CG   
 	
-    -- crazytimtimtim
-    if B747DR_autobrakes_sel_dial_pos > 2 -- Autobrakes armed
-       and simDR_all_wheels_on_ground == 1
-       and simDR_engine_throttle_jet_all >= 0 -- reversers aren't deployed, indicating a landing
-       and simDR_speedbrake_ratio_control < 0.3 -- spoilers aren't deployed, indicating a landing
-       and simDR_ind_airspeed_kts_pilot <= 30 
-       and is_timer_scheduled(B747_autobrake_resetOnGround) == false
-       then
-       run_after_time(B747_autobrake_resetOnGround, 1.0)
-    end
+    -- the autobrakes, DISARM on the ground included, are the gear module's (B747.10.xt.brakes.lua)
 	
     setNumClimb()
 	

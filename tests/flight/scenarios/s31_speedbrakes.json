@@ -18,7 +18,7 @@
   },
   "steps": [
     { "do": "sleep", "seconds": 10 },
-    { "do": "set", "note": "パーキング・ブレーキ（推力レバー 1 を進めても動かない）", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 1 },
+    { "do": "set", "note": "パーキング・ブレーキ（推力レバー 1 を進めても動かない）", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
     { "do": "snapshot", "note": "開始", "drefs": [
       "sim/aircraft/view/acf_relative_path", "laminar/B747/flt_ctrls/speedbrake_lever", "sim/cockpit2/controls/speedbrake_ratio",
       "laminar/B747/hydraulics/pressure_1", "laminar/B747/hydraulics/pressure_4", "laminar/B747/gear/air_ground/pri_gnd",

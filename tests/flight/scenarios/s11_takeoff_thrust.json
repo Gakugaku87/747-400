@@ -20,7 +20,7 @@
     { "do": "record_start" },
     { "do": "sleep", "seconds": 10 },
     { "do": "set", "note": "フラップ 10", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.5 },
-    { "do": "set", "note": "パーキング・ブレーキを外す", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 0 },
+    { "do": "set", "note": "パーキング・ブレーキを外す", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 0 },
     { "do": "sleep", "seconds": 8 },
     { "do": "snapshot", "note": "開始", "drefs": [
       "sim/aircraft/view/acf_relative_path", "laminar/B747/engines/type",
@@ -66,7 +66,7 @@
 
     { "do": "mark", "note": "離陸中止" },
     { "do": "set", "note": "スラスト・レバーを idle", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
-    { "do": "set", "note": "ブレーキ", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 1 },
+    { "do": "set", "note": "ブレーキ", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
     { "do": "wait", "note": "止まる", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "<", "value": 20, "timeout": 60 },
     { "do": "wait", "note": "アイドルで EPR の帯は白に戻る（最大 EPR の 0.01 下より下）", "dref": "laminar/B747/engines/EPR/red_on[0]", "op": "==", "value": 0, "timeout": 10 },
     { "do": "cas", "note": "終わり" },

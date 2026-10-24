@@ -18,7 +18,7 @@
   },
   "steps": [
     { "do": "sleep", "seconds": 10 },
-    { "do": "set", "note": "パーキング・ブレーキ", "dref": "sim/cockpit2/controls/parking_brake_ratio", "value": 1 },
+    { "do": "set", "note": "パーキング・ブレーキ", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
     { "do": "snapshot", "note": "開始", "drefs": [
       "sim/aircraft/view/acf_relative_path", "laminar/B747/flt_ctrls/yaw_damper_upr_on", "laminar/B747/flt_ctrls/yaw_damper_lwr_on",
       "laminar/B747/flt_mgmt/iru/status", "laminar/B747/electrical/bus/stby_main", "laminar/B747/flt_ctrls/hyd_power/wing_valve_shut" ] },

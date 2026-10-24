@@ -360,6 +360,10 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
   - 読むもの：X-Plane のブレーキのコマンド（置き換え）と `wingsweep_ratio`（乗員のペダル）、パーキングブレーキのレバー（`flt_ctrls/parking_brake_ratio`）、油圧のグルーが出す源と圧（新設 `hydraulics/brake_source`：0 accumulator・1・2・4、`hydraulics/brake_psi`）、電池バス（`electrical/bus/bat_main`）、DC bus 1〜4、PSEU の `pri_air`、輪止め（`gear/chocked`）、故障（新設 `gear/fail/antiskid[2]`・`brake_limiter`・`park_valve`）。
   - 書くもの：X-Plane の `override_toe_brakes`（常に 1）・`left/right_brake_ratio`・`parking_brake_ratio`（閉じ込めた圧の保持）・`acf_has_abs`、新設 `gear/brakes/park_valve`（0 開〜1 閉）、memo 26 PARK BRAKE SET、advisory 10 ANTISKID・11 ANTISKID OFF・45 BRAKE LIMITER。X-Plane の `park_brake_set`・`release`・`toggle` はレバーを動かす。
   - 油圧のグルーは、X-Plane のパーキングブレーキとブレーキの比の増えた分を accumulator の作動油の使用にする（源が accumulator のとき）。
+- 段 3（オートブレーキ）：オートブレーキのモデル（`B747.10.autobrake_model.lua`）を、ブレーキのグルーがブレーキのモデルの前に回し、その指令の圧（X-Plane のブレーキの比で 0〜1）をブレーキのモデルの `auto` に渡す（ペダルとの大きい方を、源の圧で制限）。中身は notes/ATA-32.md §12。開始の 3 秒は回さない。
+  - 読むもの：セレクター（`gear/autobrakes/sel_dial_pos`：0 RTO、1 OFF、2 DISARM、3〜6 で 1〜4、7 MAX AUTO）、推力レバー（`engine/throttle[4]`）、機長側の IRS（`flt_mgmt/iru/status[0]` が 2 で、`mode_sel_dial_pos[0]` が NAV 以上）、対地速度（`sim/flightmodel/position/groundspeed`）、スピードブレーキのレバー（`flt_ctrls/speedbrake_lever`）、PSEU の air と ground（pri・alt）、ブレーキの源（系統 4 なら正規）、正規の antiskid（故障と ANTISKID OFF）、故障（新設 `gear/fail/autobrake`）。
+  - 書くもの：セレクター（DISARM・OFF に戻す）、memo 2〜6 AUTOBRAKES 1〜4・MAX と 7 AUTOBRAKES RTO、advisory 17 AUTOBRAKES、X-Plane の `auto_brake_level`（常に 1 の OFF）。X-Plane のオートブレーキのコマンド（`brakes_off_auto`・`rto_auto`・`1_auto`〜`3_auto`・`max_auto`・`up_auto`・`dn_auto`・`toggle_auto`）はセレクターを動かす。
+  - 外した前の処理：脚のモジュールの RTO の線（スロットル軸 > 0.8）、セレクターのコマンドでの `auto_brake_level` の書き込み、`autobrake_check`、memo と advisory、fltCtrls の 30 kt での DISARM とその時計。セレクターを書くのはブレーキのグルー（モデルの戻りと X-Plane のコマンド）と、脚のモジュールのセレクターのコマンド（`sel_dial_up`・`dn`）とフライトの開始（OFF）だけになった。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 

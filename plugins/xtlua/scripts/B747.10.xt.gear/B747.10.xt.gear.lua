@@ -205,10 +205,6 @@ function B747_animate_value(current_value, target, min, max, speed)
 
 end
 function runGear()
-  if (simDR_joy_axis[4]>0.8 or simDR_joy_axis[4]==0.0) and simDR_aircraft_on_ground == 1 and B747DR_autobrakes_sel_dial_pos==0 and  simDR_autobrakes_switch>0 then
-	  simDR_autobrakes_switch = 0
-	  print("ARM RTO")
-  end
   --print("simDR_gear_handle_down "..simDR_gear_handle_down)
   if runningGear ==0 then return end
   if B747DR_gear_handle_detent < 0.037 then B747DR_gear_handle_detent=B747_animate_value(B747DR_gear_handle_detent,0.037,0,0.037,10) return end
@@ -333,83 +329,18 @@ end
 
 
 
-local stopSimBraking=0
--- AUTOBRAKES SELECTOR DIAL
+-- AUTOBRAKES SELECTOR DIAL: the knob only; the autobrakes are the brakes'
+-- glue (B747.10.xt.brakes.lua: the latch may move it back to DISARM or OFF)
 function B747_autobrakes_sel_dial_up_CMDhandler(phase, duration)
     if phase == 0 then
         B747DR_autobrakes_sel_dial_pos = math.min(B747DR_autobrakes_sel_dial_pos+1, 7)
-        local simSwPos = 1
-        if B747DR_autobrakes_sel_dial_pos == 0 then
-            simSwPos = 0
-
-        elseif B747DR_autobrakes_sel_dial_pos >= 3 then
-            simSwPos = math.min(5, B747DR_autobrakes_sel_dial_pos - 1)
-        end
-	if B747DR_autobrakes_sel_dial_pos>0 or seenTakeoffThrust==true then
-	  simDR_autobrakes_switch = simSwPos
-	end
     end
 end
 function B747_autobrakes_sel_dial_dn_CMDhandler(phase, duration)
     if phase == 0 then
-
-
         B747DR_autobrakes_sel_dial_pos = math.max(B747DR_autobrakes_sel_dial_pos-1, 0)
-
-        local simSwPos = 1
-        if B747DR_autobrakes_sel_dial_pos == 0 then
-            simSwPos = 0
-        elseif B747DR_autobrakes_sel_dial_pos >= 3 then
-            simSwPos = math.min(5, B747DR_autobrakes_sel_dial_pos - 1)
-        end
-	if B747DR_autobrakes_sel_dial_pos>0 or seenTakeoffThrust==true then
-	  simDR_autobrakes_switch = simSwPos
-	end
-
     end
 end
-local lastThrottle=0.0
---Marauder28
-function autobrake_check()
-
-	--TAKEOFF
-	if simDR_aircraft_on_ground == 0 and B747DR_autobrakes_sel_dial_pos == 0 then
-		print("TAKEOFF - Autobrakes OFF")
-		B747DR_autobrakes_sel_dial_pos = 1  --OFF
-	end
-
-	--LANDING
-    if simDR_aircraft_on_ground == 1 and B747DR_autobrakes_sel_dial_pos > 2 then
---        print("simDR_autobrakes_switch is " .. simDR_autobrakes_switch .. "B747DR_autobrakes_sel_dial_pos is " ..B747DR_autobrakes_sel_dial_pos)
-		--Braking
-		if (simDR_left_brake_add > 0 or simDR_right_brake_add > 0)  then
-			print("LANDING - Autobrakes DISARM - BRAKING")
-			print("Manual Brakes = "..simDR_left_brake_add.." / "..simDR_right_brake_add)
-			B747DR_autobrakes_sel_dial_pos = 2  --DISARM
-		--Thrust Advance
-		elseif (math.max(simDR_throttle_ratio_all,simDR_joy_axis[4]) > lastThrottle and (simDR_prop_mode[0] ~= 3 and simDR_prop_mode[1] ~= 3 and simDR_prop_mode[2] ~= 3 and simDR_prop_mode[3] ~= 3)) then
-			print("LANDING - Autobrakes DISARM - THROTTLE")
-			print("Manual Throttle = "..simDR_throttle_ratio_all.." / ".. simDR_reverser_deployed)
-			B747DR_autobrakes_sel_dial_pos = 2  --DISARM
-		--Speedbrake DOWN
-		elseif (B747DR_speedbrake_lever_changed == 1 and simDR_speedbrake_lever == 0) then
-			print("LANDING - Autobrakes DISARM - SPEEDBRAKE")
-			print("Manual Speedbrake = "..B747DR_speedbrake_lever_changed.." / "..simDR_speedbrake_lever)
-			B747DR_autobrakes_sel_dial_pos = 2  --DISARM
-		--Brake Failure
-		elseif (simDR_left_brake_fail > 0 or simDR_right_brake_fail > 0) then
-			print("LANDING - Autobrakes DISARM - BRAKE FAILURE")
-			print("Brake Failure = "..simDR_left_brake_fail.." / "..simDR_right_brake_fail)
-			B747DR_autobrakes_sel_dial_pos = 2  --DISARM
-		end
-    end
-    lastThrottle=math.max(simDR_throttle_ratio_all,simDR_joy_axis[4])
-
-    if B747DR_autobrakes_sel_dial_pos == 2 then
-        B747DR_CAS_advisory_status[17] = 1
-    end
-end
---Marauder28
 
 -- AI
 function B747_ai_gear_quick_start_CMDhandler(phase, duration)
@@ -752,69 +683,14 @@ end
 
 
 ----- EICAS MESSAGES --------------------------------------------------------------------
+-- BRAKE TEMP (the autobrakes' memo and AUTOBRAKES are the brakes' glue,
+-- B747.10.xt.brakes.lua)
 function B747_gear_EICAS_msg()
-
-    -- AUTOBRAKES 1
-    if B747DR_autobrakes_sel_dial_pos == 2 then
-        B747DR_CAS_advisory_status[17] = 1
-    else
-        B747DR_CAS_advisory_status[17] = 0
-    end
-
-    --BRAKE TEMP
     if excessiveBrakeTemp == 1 then
         B747DR_CAS_advisory_status[46] = 1
     else
         B747DR_CAS_advisory_status[46] = 0
     end
-
-    if B747DR_autobrakes_sel_dial_pos == 3 then
-        B747DR_CAS_memo_status[2] = 1
-    else
-        B747DR_CAS_memo_status[2] = 0
-    end
-
-    -- AUTOBRAKES 2
-
-    if B747DR_autobrakes_sel_dial_pos == 4 then
-        B747DR_CAS_memo_status[3] = 1
-    else
-        B747DR_CAS_memo_status[3] = 0
-    end
-
-    -- AUTOBRAKES 3
-
-    if B747DR_autobrakes_sel_dial_pos == 5 then
-        B747DR_CAS_memo_status[4] = 1
-    else
-        B747DR_CAS_memo_status[4] = 0
-    end
-
-    -- AUTOBRAKES 4
-
-    if B747DR_autobrakes_sel_dial_pos == 6 then
-        B747DR_CAS_memo_status[5] = 1
-    else
-        B747DR_CAS_memo_status[5] = 0
-    end
-
-    -- AUTOBRAKES MAX
-
-    if B747DR_autobrakes_sel_dial_pos == 7 then
-        B747DR_CAS_memo_status[6] = 1
-    else
-        B747DR_CAS_memo_status[6] = 0
-    end
-
-    -- AUTOBRAKES RTO
-
-    if B747DR_autobrakes_sel_dial_pos == 0 and simDR_autobrakes_switch==0 then 
-        B747DR_CAS_memo_status[7] = 1
-    else
-        B747DR_CAS_memo_status[7] = 0
-    end
-
-
 end
 
 
@@ -948,9 +824,6 @@ function after_physics()
     runGear()
     B747_gear_monitor_AI()
 
-	--Marauder28
-	--Set Autobrake status after takeoff & landing
-	autobrake_check()
 
 end
 
