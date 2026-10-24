@@ -207,6 +207,15 @@ rt:set("laminar/B747/hydraulics/pressure_3", 3000)
 rt:set("laminar/B747/electrical/bus/bat_main", 1)
 rt:set("laminar/B747/electrical/bus/stby_main", 1)
 fly(200, 0.3, 1)
+-- speed trim (step 2c): in the air for a minute at 200 kt, no autopilot
+T.equal(get(STAB .. "speed_trim"), 1, "speed trim engaged")
+rt:set("laminar/B747/gauges/indicators/airspeed_kts_copilot", 215)
+frames(0.2)
+T.equal(get(STATUS, 93), 1, "the air data sides 15 kt apart: STATUS STAB SPEED TRIM")
+T.equal(get(STAB .. "speed_trim"), 0, "and no speed trim")
+rt:set("laminar/B747/gauges/indicators/airspeed_kts_copilot", 200)
+frames(0.2)
+T.equal(get(STATUS, 93), 0, "agreeing: no STATUS STAB SPEED TRIM")
 rt:set(TRIM, -1 / 3)
 frames(0.2)
 T.near(units(), 5, 1e-6, "X-Plane's trim set from outside: the stabilizer follows (5 units)")
@@ -278,6 +287,28 @@ T.near(get(TRIM), u / 7.5 - 1, 1e-6, "during X-Plane's runaway its own trim move
 rt:set("sim/operation/failures/rel_elv_trim_run", 0)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 fly(0, 0, 1)
+
+-- the takeoff greenband (B747.45.greenband_model.lua, step 2c): the FMC's
+-- takeoff trim selects the band; the indicator shows it on the ground
+-- below V1, otherwise the painted mid band
+local G = dofile("plugins/xtlua/scripts/B747.45.xt.fltCtrls/B747.45.greenband_model.lua")
+local IND = "laminar/B747/flt_ctrls/elevator_trim/mid/indicator"
+rt:set("laminar/B747/fmc/elevator_trim", 9.2)
+frames(0.2)
+T.near(get(IND), G.indicator(G.NOSE_UP, true), 1e-6, "FMC trim 9.2: the nose up band")
+rt:set("laminar/B747/fmc/elevator_trim", 2.6)
+frames(0.2)
+T.near(get(IND), G.indicator(G.NOSE_DOWN, true), 1e-6, "FMC trim 2.6: the nose down band")
+rt:set("laminar/B747/fmc/elevator_trim", 6.0)
+frames(0.2)
+T.near(get(IND), G.indicator(G.MID, true), 1e-6, "FMC trim 6.0: the mid band")
+rt:set("laminar/B747/fmc/elevator_trim", 9.2)
+rt:set("laminar/B747/airspeed/V1", 140)
+fly(150, 0.22, 0.2)
+T.near(get(IND), G.indicator(G.MID, true), 1e-6, "above V1: the lights out, the painted mid band")
+rt:set("laminar/B747/airspeed/V1", 0)
+rt:set("laminar/B747/fmc/elevator_trim", 0)
+fly(0, 0, 0.2)
 
 -- the lever between detents snaps to the nearest one 2 s after it stops
 rt:set(LEVER, 0.31)

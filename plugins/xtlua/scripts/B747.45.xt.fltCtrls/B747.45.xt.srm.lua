@@ -16,7 +16,8 @@
 -- -1..1; the stabilizer's angle comes from it in the hydraulics module),
 -- STAB TRIM UNSCHD, >STAB TRIM 2 and 3, their STATUS and the autopilot's
 -- disengagement out. X-Plane's own changes to the trim (the flight's
--- start, a trim axis, a test) move the model's stabilizer.
+-- start, a trim axis, a test) move the model's stabilizer. Speed trim
+-- (step 2c): its state and STATUS STAB SPEED TRIM.
 dofile("B747.45.srm_model.lua")
 local S = B747_srm_model
 
@@ -50,6 +51,7 @@ B747DR_srm_ap_R                 = find_dataref("laminar/B747/autopilot/cmd_R_mod
 B747DR_srm_autotrim_cmd         = find_dataref("laminar/B747/flt_ctrls/stab_trim/autotrim_cmd")
 B747DR_srm_frat                 = find_dataref("laminar/B747/flt_ctrls/stab_trim/frat")
 B747DR_srm_stab_units           = find_dataref("laminar/B747/flt_ctrls/stab_trim/units")
+B747DR_srm_speed_trim           = find_dataref("laminar/B747/flt_ctrls/stab_trim/speed_trim")
 B747DR_srm_cutout_sw            = find_dataref("laminar/B747/flt_ctrls/stab_trim/cutout_sw")
 B747DR_srm_altn_sw              = find_dataref("laminar/B747/flt_ctrls/stab_trim/altn_sw")
 B747DR_srm_fail_stab_actuator   = find_dataref("laminar/B747/flt_ctrls/fail/stab_actuator")
@@ -63,6 +65,7 @@ local STATUS_AILERON_LOCKOUT, STATUS_RUDDER_RATIO = 88, 89
 local CAUTION_STAB_TRIM_UNSCHD = 60
 local ADV_STAB_TRIM = {274, 275}    -- >STAB TRIM 2, 3
 local STATUS_STAB_TRIM, STATUS_STAB_TRIM_UNSCHD, STATUS_STAB_AUTO_TRIM = 90, 91, 92
+local STATUS_STAB_SPEED_TRIM = 93
 local LE_A_IN = 0.01        -- a group A panel counts as in below this (the FCU's position)
 local STAB_INIT_S = 3       -- from the flight's start, the stabilizer follows X-Plane's trim
 local TRIM_SAME = 1e-4      -- X-Plane's trim this close to what was written is ours
@@ -213,6 +216,8 @@ function B747_srm()
     if math.abs(xp - trim) > 1e-6 then simDR_srm_elevator_trim = trim end
     trim_w2, trim_w1 = trim_w1, trim
     if B747DR_srm_stab_units ~= out.stab_units then B747DR_srm_stab_units = out.stab_units end
+    local sp = flag(out.speed_trim)
+    if B747DR_srm_speed_trim ~= sp then B747DR_srm_speed_trim = sp end
     if out.ap_disengage then B747CMD_srm_ap_trim_disengage:once() end
 
     -- the controlObject rows' scales (the right outboard aileron's is negative)
@@ -237,4 +242,5 @@ function B747_srm()
     put(B747DR_fcu_status, STATUS_STAB_TRIM, flag(out.st_stab_trim))
     put(B747DR_fcu_status, STATUS_STAB_TRIM_UNSCHD, flag(out.st_unschd))
     put(B747DR_fcu_status, STATUS_STAB_AUTO_TRIM, flag(out.st_auto_trim))
+    put(B747DR_fcu_status, STATUS_STAB_SPEED_TRIM, flag(out.st_speed_trim))
 end

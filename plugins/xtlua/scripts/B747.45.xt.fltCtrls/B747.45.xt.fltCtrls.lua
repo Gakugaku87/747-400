@@ -826,15 +826,19 @@ end
 
 
 ----- ELEVATOR TRIM ---------------------------------------------------------------------
+-- the takeoff greenband (B747.45.greenband_model.lua, 4-1 step 2c): the band
+-- the MAWEA selects (from the FMC's takeoff trim), lit on the ground until
+-- V1, otherwise the painted mid band; CONFIG STAB compares with the selected
+-- band. Before, one band of FMC trim +-2.25 units slid with the trim
+B747_greenband_sel = 1
 function B747_elevator_trim()
-	--B747DR_elevator_trim_mid_ind = B747_rescale(200000, 0.0, 400000, 1.0, simDR_acf_weight_total_kg)
-	
-	--Marauder28
-	--Use the calculated Stab Trim (adjusted) in the FMC to determine the Green Band range
-	B747DR_elevator_trim_mid_ind = B747_rescale(0.0, 0.0, 4.5, 1.0, B747DR_elevator_trim - 3.75)
-	--print("Stab Trim = "..B747DR_elevator_trim)
-	--print("Trim Mid Ind = "..B747DR_elevator_trim_mid_ind)
-	--Marauder28
+    local G = B747_greenband_model
+    local band = G.select(tonumber(B747DR_elevator_trim) or 0)
+    B747_greenband_sel = band
+    local lit = B747DR_fcu_pri_gnd == 1
+        and (B747DR_airspeed_V1 <= 0 or simDR_ind_airspeed_kts_pilot < B747DR_airspeed_V1)
+    local ind = G.indicator(band, lit)
+    if B747DR_elevator_trim_mid_ind ~= ind then B747DR_elevator_trim_mid_ind = ind end
 end
 
 
@@ -1027,26 +1031,10 @@ function B747_fltCtrols_EICAS_msg()
         B747DR_CAS_warning_status[6] = 0
     end
 
-    -- >CONFIG STAB
-    --local midIndTop = B747_rescale(0.0, 1.5, 1.0, 6.0, B747DR_elevator_trim_mid_ind)
-    --local midIndBtm = midIndTop + 4.5
-	
-	--Marauder28
-	--Make the top & bottom of the band a range of 4.5 units from the Stab Trim calculation
-	local midIndTop = B747DR_elevator_trim - 2.25
-	local midIndBtm = B747DR_elevator_trim + 2.25
-	if midIndTop < 0 then
-		midIndTop = 0
-		midIndBtm = 4.5
-	end
-	--Marauder28
-	
-    --local curTrim   = B747_rescale(-1.0, 15, 1.0, 0.0, simDR_elevator_trim)
-	local curTrim   = B747_rescale(-1.0, 0.0, 1.0, 15.0, simDR_elevator_trim)  --Swapped top and bottom of range for better comparisons
-	--print("midIndTop = "..midIndTop)
-	--print("midIndBtm = "..midIndBtm)
-	--print("curTrim = "..curTrim)
-    if (curTrim < midIndTop or curTrim > midIndBtm)              -- TODO:  VERIFY RANGE VALUES
+    -- >CONFIG STAB: the stabilizer out of the selected greenband (ATA27
+    -- p.729-730; the thrust and other conditions as before, WARN-11)
+    local curTrim   = B747_rescale(-1.0, 0.0, 1.0, 15.0, simDR_elevator_trim)
+    if not B747_greenband_model.within(B747_greenband_sel, curTrim)
         and simDR_all_wheels_on_ground == 1
         and simDR_ind_airspeed_kts_pilot < B747DR_airspeed_V1
         and num_fuel_ctrl_sw_on >= 3
@@ -1201,9 +1189,10 @@ end
 
 
 
--- the flap control units and the SRMs (4-1)
+-- the flap control units, the SRMs and the takeoff greenband (4-1)
 dofile("B747.45.xt.fcu.lua")
 dofile("B747.45.xt.srm.lua")
+dofile("B747.45.greenband_model.lua")
 
 --*************************************************************************************--
 --** 				                  EVENT CALLBACKS           	    			 **--

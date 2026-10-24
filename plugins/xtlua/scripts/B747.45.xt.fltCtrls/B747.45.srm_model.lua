@@ -61,6 +61,16 @@ M.RATE_FAST_KT, M.RATE_SLOW_KT = 220, 230
 M.LIM_ND, M.LIM_ND_EXT = 1.8, 0.8
 M.LIM_NU, M.LIM_NU_FRAT = 11.6, 13.5
 M.ALTN_ND, M.ALTN_NU = 0.25, 14.75
+-- speed trim (step 2c; ATA27 p.486; ATA22 p.155-159): one SRM, half rate,
+-- 20 s after liftoff, at or below 220 kt, out of manual, alternate and
+-- autotrim; it moves the stabilizer nose up as the speed rises, 2.55 units
+-- from 120 to 220 kt (the p.159 control law), from the speed and position
+-- it synchronized to when it engaged. The two air data sources more than
+-- 10 kt apart: not valid (p.155)
+M.SPEED_TRIM_KT = {120, 220}
+M.SPEED_TRIM_UNITS = 2.55
+M.SPEED_TRIM_AIR_S = 20
+M.ADC_COMPARE_KT = 10
 M.AUTOTRIM_DELAY_S = 3.5        -- an FCC command held this long before the SRM trims (ATA27 p.488)
 M.AUTO_OPEN_S = 5               -- a cutout switch at AUTO this long opens its valve (ATA27 p.450)
 M.UNSCHD_HOLD_S = 30            -- STAB TRIM UNSCHD after the stabilizer stops (ATA27 p.458)
@@ -68,6 +78,7 @@ M.UNSCHD_HOLD_S = 30            -- STAB TRIM UNSCHD after the stabilizer stops (
 M.STCM_MIN_PSI = 1000           -- the pressure that releases a module's brake
 M.UNSCHD_UNITS = 0.1            -- uncommanded movement the unscheduled trim monitor detects
 M.DEAD_TRIM_S = 2               -- an autotrim command with the stabilizer still: dead trim (ATA22 p.148)
+M.SPEED_TRIM_START = 0.05       -- speed trim drives once the stabilizer is this far from its command
 -- the column cutout: 4.5 degrees of the column (ATA27 p.476) as a part of
 -- its travel (6.55 in forward, 6.63 in aft: p.536; the column's length is
 -- not in the sources)
@@ -133,6 +144,11 @@ function M.new()
         unschd_on = false, unschd_t = 0,
         st_stab_trim = false, st_unschd = false, st_auto_trim = false,
         disc_sent = false,
+        air_t = 0,                      -- time in the air
+        sp_srm = nil,                   -- the SRM selected for speed trim
+        sp_on = false,                  -- speed trim engaged
+        sp_stab, sp_vc = 0, 0,          -- the position and speed it synchronized to
+        sp_dir = 0,                     -- driving: -1, 0, 1
     }
     s.out = {
         lockout = 1,                    -- the outboard ailerons' authority: 1 unlocked .. 0 locked
@@ -150,15 +166,19 @@ function M.new()
         unschd = false,                 -- caution STAB TRIM UNSCHD
         st_unschd = false,              -- STATUS STAB TRIM UNSCHD
         st_auto_trim = false,           -- STATUS STAB AUTO TRIM
+        speed_trim = false,             -- speed trim engaged
+        st_speed_trim = false,          -- STATUS STAB SPEED TRIM
         ap_disengage = false,           -- this frame: disengage the single autopilot
     }
     return s
 end
 
 -- put the stabilizer where X-Plane has it (the flight's start, a trim
--- axis, a test): not a movement the monitor sees
+-- axis, a test): not a movement the monitor sees, and speed trim
+-- synchronizes to it again
 function M.stab_set(s, units)
     if units < M.STAB_MIN then units = M.STAB_MIN elseif units > M.STAB_MAX then units = M.STAB_MAX end
+    if units ~= s.stab then s.sp_on, s.sp_dir = false, 0 end
     s.stab = units
     s.out.stab_units = units
 end
@@ -284,9 +304,44 @@ local function stab_update(s, inp, dt, out)
     s.at_dir = acmd
     local at_go = acmd ~= 0 and (frat or inp.autoland or s.at_t >= M.AUTOTRIM_DELAY_S)
 
+    -- speed trim (ATA22 p.155-159; ATA27 p.486). An SRM may have it with its
+    -- own side's air data, or the other side's when the other SRM is not
+    -- valid; the sides more than 10 kt apart: neither. The selected SRM
+    -- keeps it while it can, then the other takes it. Manual or alternate
+    -- trim, autotrim, the column cutout switches (the column past them
+    -- either way) and the ground disengage it; it synchronizes again when it
+    -- engages
+    if inp.on_ground then s.air_t = 0 else s.air_t = s.air_t + dt end
+    local compare_ok = not (inp.air_valid[1] and inp.air_valid[2]) or math.abs(inp.vc[1] - inp.vc[2]) <= M.ADC_COMPARE_KT
+    local function sp_vc(i)
+        if not sv[i] or not compare_ok then return nil end
+        if inp.air_valid[i] then return inp.vc[i] end
+        if inp.air_valid[3 - i] and not sv[3 - i] then return inp.vc[3 - i] end
+        return nil
+    end
+    if not (s.sp_srm and sp_vc(s.sp_srm)) then s.sp_srm = (sp_vc(1) and 1) or (sp_vc(2) and 2) or nil end
+    local spv = s.sp_srm and sp_vc(s.sp_srm)
+    if spv and not inp.on_ground and s.air_t >= M.SPEED_TRIM_AIR_S and not manual and a == 0
+            and not (s.at_srm or frat) and spv <= M.SPEED_TRIM_KT[2] and math.abs(inp.column) < M.COLUMN_CUTOUT then
+        if not s.sp_on then s.sp_on, s.sp_stab, s.sp_vc, s.sp_dir = true, s.stab, spv, 0 end
+        local function gain(v)      -- the p.159 control law: units nose up
+            local lo, hi = M.SPEED_TRIM_KT[1], M.SPEED_TRIM_KT[2]
+            if v <= lo then return 0 elseif v >= hi then return M.SPEED_TRIM_UNITS end
+            return M.SPEED_TRIM_UNITS * (v - lo) / (hi - lo)
+        end
+        local err = s.sp_stab + gain(spv) - gain(s.sp_vc) - s.stab
+        if s.sp_dir ~= 0 then
+            if err * s.sp_dir <= 0 then s.sp_dir = 0 end
+        elseif math.abs(err) > M.SPEED_TRIM_START then
+            s.sp_dir = sign(err)
+        end
+    else
+        s.sp_on, s.sp_dir = false, 0
+    end
+
     -- the commands to the modules, within the mode's limits; the column
     -- against an electric command cuts it out (ATA27 p.476, p.483)
-    local nd = (inp.gear_down or not inp.le_up) and M.LIM_ND_EXT or M.LIM_ND
+    local nd = (inp.gear_down or not inp.le_up or s.sp_on) and M.LIM_ND_EXT or M.LIM_ND
     local nu = frat and M.LIM_NU_FRAT or M.LIM_NU
     local function free(dir, lo, hi)
         return (dir > 0 and s.stab < hi) or (dir < 0 and s.stab > lo)
@@ -309,6 +364,9 @@ local function stab_update(s, inp, dt, out)
         if free(acmd, lo, hi) and not cut(acmd) then
             if frat then cmd[1], cmd[2] = acmd, acmd else cmd[M.SRM_STCM[s.at_srm]] = acmd end
         end
+    elseif s.sp_dir ~= 0 then
+        lo, hi, want = nd, nu, s.sp_dir      -- speed trim: the selected SRM's module, half rate
+        if free(s.sp_dir, lo, hi) and not cut(s.sp_dir) then cmd[M.SRM_STCM[s.sp_srm]] = s.sp_dir end
     end
 
     -- the modules: a brake released (valve open, pressure, a command or a
@@ -392,6 +450,8 @@ local function stab_update(s, inp, dt, out)
     out.st_stab_trim = s.st_stab_trim or out.stab_trim[1] or out.stab_trim[2]
     out.unschd, out.st_unschd = s.unschd_on, s.st_unschd
     out.st_auto_trim = s.st_auto_trim
+    out.speed_trim = s.sp_on
+    out.st_speed_trim = not sp_vc(1) and not sp_vc(2)     -- lost in both SRMs (ATA27 p.486, p.523)
     out.stab_units = s.stab
     out.stab_rate = dt > 0 and mv / dt or 0
 end

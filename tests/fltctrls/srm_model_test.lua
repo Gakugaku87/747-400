@@ -479,4 +479,71 @@ do
     T.equal(s.stab, 15, "clamped to 15")
 end
 
+-- speed trim (step 2c; ATA22 p.155-159; ATA27 p.486): 20 s after liftoff,
+-- at or below 220 kt, with nothing else trimming, the stabilizer follows the
+-- speed, 2.55 units nose up from 120 to 220 kt, from where it engaged; one
+-- module at half rate. Manual trim, the column cutout and an autopilot
+-- disengage it and it synchronizes again; above 220 kt it is inhibited; the
+-- air data sides 10 kt apart lose it in both SRMs
+do
+    local s, inp = stab_setup(160, 6)
+    local out = run(s, inp, 19)
+    T.check(not out.speed_trim, "19 s after liftoff: not yet")
+    out = run(s, inp, 1.5)
+    T.check(out.speed_trim, "20 s: speed trim engaged")
+    T.near(out.stab_units, 6, 1e-9, "synchronized: no movement at the same speed")
+    out = fly(s, inp, 180, 0.3, 1)
+    T.near(out.stab_units, 6.25, 0.03, "+20 kt: nose up at half rate (0.25 units/s)")
+    out = run(s, inp, 9)
+    T.near(out.stab_units, 6 + 20 * 2.55 / 100, 0.03, "+20 kt: 0.51 units nose up (the p.159 law)")
+    out = fly(s, inp, 160, 0.3, 10)
+    T.near(out.stab_units, 6, 0.03, "back to 160 kt: back to where it engaged")
+    out = fly(s, inp, 100, 0.2, 10)
+    T.near(out.stab_units, 6 - 40 * 2.55 / 100, 0.03, "below 120 kt: no more than the 120 kt position")
+    out = fly(s, inp, 160, 0.3, 10)
+    -- manual trim disengages it; it synchronizes again where the pilot left it
+    inp.trim_capt = 1
+    out = run(s, inp, 1)
+    T.check(not out.speed_trim, "manual trim: disengaged")
+    inp.trim_capt = 0
+    local at = M.update(s, inp, DT).stab_units
+    out = run(s, inp, 5)
+    T.check(out.speed_trim, "engaged again")
+    T.near(out.stab_units, at, 1e-9, "synchronized to the new position: holds it")
+    inp.column = -0.5
+    out = run(s, inp, 0.2)
+    T.check(not out.speed_trim, "the column past the cutout switches: disengaged")
+    inp.column = 0
+    inp.ap_l = true
+    out = run(s, inp, 0.2)
+    T.check(not out.speed_trim, "an autopilot (autotrim): no speed trim")
+    inp.ap_l = false
+    out = fly(s, inp, 230, 0.4, 1)
+    T.check(not out.speed_trim, "230 kt: inhibited")
+    inp.vc[1], inp.vc[2] = 200, 215
+    out = run(s, inp, 0.2)
+    T.check(not out.speed_trim and out.st_speed_trim, "the air data sides 15 kt apart: lost in both, STATUS STAB SPEED TRIM")
+    inp.vc[2] = 200
+    out = run(s, inp, 0.2)
+    T.check(out.speed_trim and not out.st_speed_trim, "agreeing again: back")
+    -- SRM L failed: SRM R takes it, through system 2's module
+    inp.srm_fail[1] = true
+    out = run(s, inp, 0.2)
+    T.check(out.speed_trim and not out.st_speed_trim, "SRM L failed: SRM R has speed trim")
+    inp.hyd_psi[S3] = 0
+    at = out.stab_units
+    out = fly(s, inp, 220, 0.35, 4)
+    T.near(out.stab_units, at + 20 * 2.55 / 100, 0.03, "SRM R drives system 2's module (system 3 out): +0.51 units")
+    inp.srm_fail[1], inp.hyd_psi[S3] = false, 3000
+    -- the nose down limit in speed trim is 0.8 (p.483)
+    s, inp = stab_setup(200, 1.3)
+    run(s, inp, 21)
+    out = fly(s, inp, 150, 0.25, 10)
+    T.near(out.stab_units, 0.8, 1e-9, "speed trim nose down: stops at 0.8, not 1.8")
+    -- on the ground: none
+    inp.on_ground = true
+    out = run(s, inp, 1)
+    T.check(not out.speed_trim, "on the ground: no speed trim")
+end
+
 T.done()

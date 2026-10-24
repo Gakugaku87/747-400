@@ -672,6 +672,7 @@ local B747_CASstatusMsg = {
     {DRindex = 90, name = "STAB TRIM"},           -- ATA27 p.523 (4-1 step 2b)
     {DRindex = 91, name = "STAB TRIM UNSCHD"},
     {DRindex = 92, name = "STAB AUTO TRIM"},
+    {DRindex = 93, name = "STAB SPEED TRIM"},     -- ATA27 p.486, p.523 (4-1 step 2c)
 }
 
 
