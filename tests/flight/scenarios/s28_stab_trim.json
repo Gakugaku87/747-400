@@ -71,6 +71,7 @@
     { "do": "check", "note": "cutout 2：CUTOUT", "dref": "laminar/B747/flt_ctrls/stab_trim/cutout_sw[0]", "op": "==", "value": -1 },
     { "do": "check", "note": ">STAB TRIM 2（FCOM p.958）", "dref": "laminar/B747/CAS/advisory_status[274]", "op": "==", "value": 1 },
     { "do": "check", "note": "STATUS STAB TRIM", "dref": "laminar/B747/CAS/status_status[90]", "op": "==", "value": 1 },
+    { "do": "check", "note": "新しい advisory は caution（FUEL PRESS CTR など）の下で、1 行目に来ない（FCOM p.1548）", "dref": "laminar/B747/CAS/gen_advisory_msg_000", "op": "!=", "value": ">STAB TRIM 2" },
     { "do": "remember", "dref": "laminar/B747/flt_ctrls/stab_trim/units", "as": "u_half" },
     { "do": "cmd", "note": "ALTN STAB TRIM 機首上げ 2 秒", "name": "laminar/B747/flt_ctrls/altn_stab_trim_up", "duration": 2 },
     { "do": "check", "note": "系統 3 の STCM だけ：半分の 0.1 units/s で約 0.2 units", "dref": "laminar/B747/flt_ctrls/stab_trim/units", "op": "between", "value": [0.12, 0.3], "rel": "u_half" },

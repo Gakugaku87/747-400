@@ -54,7 +54,11 @@
     { "do": "check", "note": "メッセージは残る", "dref": "laminar/B747/CAS/gen_caution_msg_000", "op": "==", "value": "ELEC AC BUS 2" },
 
     { "do": "mark", "note": "CANC" },
-    { "do": "cmd", "note": "CANC（1 ページなので caution と advisory が消える。FCOM p.1530）", "name": "laminar/B747/dsp/canc_switch", "duration": 0.2 },
+    { "do": "check", "note": "AC bus 2 を失うと燃料・防氷などのメッセージも出て 2 ページ（2026-10-24。前は 1 ページだった）", "dref": "laminar/B747/CAS/num_msg_pages", "op": "==", "value": 2 },
+    { "do": "cmd", "note": "CANC（最後のページでないので次のページへ。FCOM p.1549）", "name": "laminar/B747/dsp/canc_switch", "duration": 0.2 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "2 ページ目", "dref": "laminar/B747/CAS/msg_page", "op": "==", "value": 2 },
+    { "do": "cmd", "note": "CANC（最後のページなので caution と advisory が消える。FCOM p.1530）", "name": "laminar/B747/dsp/canc_switch", "duration": 0.2 },
     { "do": "sleep", "seconds": 1 },
     { "do": "check", "note": "CANC を数えた", "dref": "laminar/B747/CAS/canc_count", "op": ">=", "value": 1 },
     { "do": "check", "note": "caution が消える", "dref": "laminar/B747/CAS/gen_caution_msg_000", "op": "!=", "value": "ELEC AC BUS 2" },
