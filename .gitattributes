@@ -1,4 +1,4 @@
 # bash cannot run scripts with CRLF line ends: keep the test and tool
 # scripts LF on every checkout, whatever core.autocrlf says
-tests/*.sh text eol=lf
+tests/**/*.sh text eol=lf
 docs/overhaul/tools/*.sh text eol=lf
