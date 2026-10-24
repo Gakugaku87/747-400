@@ -69,7 +69,7 @@ B747DR_alt_capture_window        = deferred_dataref("laminar/B747/autopilot/ap_m
 simDR_AHARS_heading_deg_pilot = find_dataref("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot")
 simDR_autopilot_TOGA_pitch_deg      	= find_dataref("sim/cockpit2/autopilot/TOGA_pitch_deg")
 B747DR_controlOverrides   = find_dataref("xtlua/controlObject")
-B747DR_speedbrake_lever     	= deferred_dataref("laminar/B747/flt_ctrls/speedbrake_lever", "number")
+B747DR_speedbrake_lever     	= find_dataref("laminar/B747/flt_ctrls/speedbrake_lever")   -- the flight controls module's
 simDR_prop_mode                 = find_dataref("sim/cockpit2/engine/actuators/prop_mode")
 B747DR_button_switch_position   = find_dataref("laminar/B747/button_switch/position")
 --simDR_ias_pilot				= find_dataref("laminar/B747/gauges/indicators/airspeed_kts_pilot")
@@ -206,10 +206,9 @@ B747DR_ap_FMA_active_roll_mode      	= find_dataref("laminar/B747/autopilot/FMA/
 simDR_vvi_fpm_pilot                 = find_dataref("sim/cockpit2/gauges/indicators/vvi_fpm_pilot")
 simDR_autopilot_alt_hold_status     	= find_dataref("laminar/B747/autopilot/altitude_hold_status")
 --simCMD_autopilot_alt_hold_mode      = find_command("sim/autopilot/altitude_hold")
-B747_controls_left_outer_aileron           = deferred_dataref("laminar/B747/cablecontrols/left_outer_aileron", "number")
-B747_controls_right_outer_aileron            = deferred_dataref("laminar/B747/cablecontrols/right_outer_aileron", "number")
-B747_controls_left_inner_aileron           = deferred_dataref("laminar/B747/cablecontrols/left_inner_aileron", "number")
-B747_controls_right_inner_aileron          = deferred_dataref("laminar/B747/cablecontrols/right_inner_aileron", "number")
+-- the control wheel angle, degrees, right wing down positive (the
+-- controlObject's), for the ailerons and spoilers: B747.19.lateral_model.lua
+B747_controls_wheel                  = deferred_dataref("laminar/B747/cablecontrols/wheel", "number")
 
 
 simDR_left_aileron_inner = find_dataref("sim/flightmodel/controls/wing2l_ail1def")
@@ -228,32 +227,18 @@ B747DR_spoilers      = deferred_dataref("laminar/B747/flt_ctrls/spoilers", "arra
 B747DR_outer_spoilers      = deferred_dataref("laminar/B747/flt_ctrls/outer_spoilers", "array[2]") --for stat display
 B747DR_flaps      = deferred_dataref("laminar/B747/flt_ctrls/flaps", "array[5]") --0 unuse
 
-B747DR_spoiler1 = deferred_dataref("laminar/B747/cablecontrols/spoiler1", "number")
-B747DR_spoiler2 = deferred_dataref("laminar/B747/cablecontrols/spoiler2", "number")
-B747DR_spoiler3 = deferred_dataref("laminar/B747/cablecontrols/spoiler3", "number")
-B747DR_spoiler4 = deferred_dataref("laminar/B747/cablecontrols/spoiler4", "number")
-B747DR_spoiler5 = deferred_dataref("laminar/B747/cablecontrols/spoiler5", "number")
-
-B747DR_spoiler6 = deferred_dataref("laminar/B747/cablecontrols/spoiler6", "number")
-B747DR_spoiler7 = deferred_dataref("laminar/B747/cablecontrols/spoiler7", "number")
-
-B747DR_spoiler8 = deferred_dataref("laminar/B747/cablecontrols/spoiler8", "number")
-B747DR_spoiler9 = deferred_dataref("laminar/B747/cablecontrols/spoiler9", "number")
-B747DR_spoiler10 = deferred_dataref("laminar/B747/cablecontrols/spoiler10", "number")
-B747DR_spoiler11 = deferred_dataref("laminar/B747/cablecontrols/spoiler11", "number")
-B747DR_spoiler12 = deferred_dataref("laminar/B747/cablecontrols/spoiler12", "number")
-
-B747DR_speedbrake1 = deferred_dataref("laminar/B747/cablecontrols/speedbrake34", "number")
-B747DR_speedbrake2 = deferred_dataref("laminar/B747/cablecontrols/speedbrake58", "number")
-B747DR_speedbrake3 = deferred_dataref("laminar/B747/cablecontrols/speedbrake67", "number")
-B747DR_speedbrake4 = deferred_dataref("laminar/B747/cablecontrols/speedbrake12", "number")
-
+-- X-Plane's spoilers, from the inboard end (the acf's wing elements): wing 1
+-- speedbrake 1 = spoilers 6 and 7, wing 1 spoiler 1 = 5 and 8, wing 2
+-- spoiler 1 = 4 and 9, wing 3 spoiler 2 = 3 and 10, wing 3 spoiler 1 = 1, 2
+-- and 11, 12 (before, nothing moved wing 2's nor speedbrake 1: 4-1 step 4)
 simDR_spoiler12  = find_dataref("sim/flightmodel/controls/wing3l_spo1def")
-simDR_spoiler34  = find_dataref("sim/flightmodel/controls/wing3l_spo2def")
+simDR_spoiler3  = find_dataref("sim/flightmodel/controls/wing3l_spo2def")
+simDR_spoiler4  = find_dataref("sim/flightmodel/controls/wing2l_spo1def")
 simDR_spoiler5  = find_dataref("sim/flightmodel/controls/wing1l_spo1def")
 simDR_spoiler67  = find_dataref("sim/flightmodel2/wing/speedbrake1_deg") -- array [0] left, [1] right
 simDR_spoiler8  = find_dataref("sim/flightmodel/controls/wing1r_spo1def")
-simDR_spoiler910  = find_dataref("sim/flightmodel/controls/wing3r_spo2def")
+simDR_spoiler9  = find_dataref("sim/flightmodel/controls/wing2r_spo1def")
+simDR_spoiler10  = find_dataref("sim/flightmodel/controls/wing3r_spo2def")
 simDR_spoiler1112  = find_dataref("sim/flightmodel/controls/wing3r_spo1def")
 
 -- the flaps from the flap control units (B747.45.xt.fcu.lua, 4-1): the
@@ -352,6 +337,7 @@ function B747_rescale(in1, out1, in2, out2, x)
 end
 B747DR_switching_servos_on = deferred_dataref("laminar/B747/autopilot/ap_monitor/servos_on_time", "number")
 dofile("pid.lua")
+dofile("B747.19.lateral_model.lua")
 dofile("B747.19.xt.hydraulics_override.lua")
 dofile("B747.19.xt.slats.lua")
 dofile("B747.19.xt.afds_control.lua")
@@ -455,62 +441,26 @@ function flight_start()
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-15,"maxout":15,"scale":-1.0,"srcDref":"sim/flightmodel2/controls/elevator_trim","dstDref":"sim/flightmodel2/controls/stabilizer_deflection_degrees"}'; --trim
       
       
-      --ailerons
+      --ailerons: the control wheel's angle (the pilots', the A/P's and the
+      --aileron trim, whose 6 units move the wheel's neutral 47 degrees of the
+      --90 to the stop: ATA27 p.59, p.76; before, full trim was a full wheel)
+      --for the hydraulics module, whose aileron programmers and spoiler mixers
+      --(B747.19.lateral_model.lua, 4-1 step 4) make the surfaces' commands
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-1,"maxout":1,"scale":1.0,"srcDref":"sim/cockpit2/controls/yoke_roll_ratio","dstDref":"laminar/B747/flt_ctrls/custom_roll_ratio"}';
       B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-1,"maxout":1,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/sim_roll_ratio","dstDref":"laminar/B747/flt_ctrls/custom_roll_ratio"}';
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-1,"maxout":1,"scale":1.0,"srcDref":"sim/cockpit2/controls/aileron_trim","dstDref":"laminar/B747/flt_ctrls/custom_roll_ratio"}';
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-1,"maxout":1,"scale":0.5222,"srcDref":"sim/cockpit2/controls/aileron_trim","dstDref":"laminar/B747/flt_ctrls/custom_roll_ratio"}';
       
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-20,"maxout":20,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/left_inner_aileron"}';
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-20,"maxout":20,"scale":-1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/right_inner_aileron"}';
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-90,"maxout":90,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/wheel"}';
 
-      B747DR_controlOverrides = '{"minin":-1,"maxin":0,"minout":-25,"maxout":0,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/left_outer_aileron","scaledref":"laminar/B747/flt_ctrls/left_outer_aileron_lockout"}';
-      B747DR_controlOverrides = '{"minin":0,"maxin":1,"minout":0,"maxout":15,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/left_outer_aileron","scaledref":"laminar/B747/flt_ctrls/left_outer_aileron_lockout"}';
-
-      B747DR_controlOverrides = '{"minin":-1,"maxin":0,"minout":-15,"maxout":0,"scale":-1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/right_outer_aileron","scaledref":"laminar/B747/flt_ctrls/right_outer_aileron_lockout"}';  
-      B747DR_controlOverrides = '{"minin":0,"maxin":1,"minout":0,"maxout":25,"scale":-1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/right_outer_aileron","scaledref":"laminar/B747/flt_ctrls/right_outer_aileron_lockout"}'; 
-      
       B747DR_controlOverrides = '{"minin":-20,"maxin":20,"minout":-20,"maxout":20,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/l_aileron_inner","dstDref":"sim/flightmodel/controls/wing2l_ail1def"}';
       B747DR_controlOverrides = '{"minin":-20,"maxin":20,"minout":-20,"maxout":20,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/r_aileron_inner","dstDref":"sim/flightmodel/controls/wing2r_ail1def"}';
       B747DR_controlOverrides = '{"minin":-25,"maxin":15,"minout":-25,"maxout":15,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/l_aileron_outer","dstDref":"sim/flightmodel/controls/wing4l_ail2def"}';
       B747DR_controlOverrides = '{"minin":-25,"maxin":15,"minout":-25,"maxout":15,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/r_aileron_outer","dstDref":"sim/flightmodel/controls/wing4r_ail2def"}';  
-      
-      --spoilers
-      B747DR_controlOverrides = '{"minin":-1,"maxin":0,"minout":-45,"maxout":0,"scale":-1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/spoiler1"}';
-      B747DR_controlOverrides = '{"minin":-1,"maxin":0,"minout":-45,"maxout":0,"scale":-1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/spoiler2"}';
-      B747DR_controlOverrides = '{"minin":-1,"maxin":0,"minout":-45,"maxout":0,"scale":-1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/spoiler3"}';
-      B747DR_controlOverrides = '{"minin":-1,"maxin":0,"minout":-45,"maxout":0,"scale":-1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/spoiler4"}';  
-      B747DR_controlOverrides = '{"minin":-1,"maxin":0,"minout":-20,"maxout":0,"scale":-1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/spoiler5"}';
-    
-      B747DR_controlOverrides = '{"minin":0,"maxin":1,"minout":0,"maxout":20,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/spoiler8"}';
-      B747DR_controlOverrides = '{"minin":0,"maxin":1,"minout":0,"maxout":45,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/spoiler9"}';
-      B747DR_controlOverrides = '{"minin":0,"maxin":1,"minout":0,"maxout":45,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/spoiler10"}';
-      B747DR_controlOverrides = '{"minin":0,"maxin":1,"minout":0,"maxout":45,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/spoiler11"}';
-      B747DR_controlOverrides = '{"minin":0,"maxin":1,"minout":0,"maxout":45,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/custom_roll_ratio","dstDref":"laminar/B747/cablecontrols/spoiler12"}';  
-      
-    
+
       --flaps and their indication: the flap control units (B747.45.xt.fcu.lua)
 
-      --speedbrakes
-      B747DR_controlOverrides = '{"minin":0.125,"maxin":0.53,"minout":0,"maxout":45,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/speedbrake_lever","dstDref":"laminar/B747/cablecontrols/speedbrake34"}';
-      B747DR_controlOverrides = '{"minin":0.125,"maxin":0.53,"minout":0,"maxout":20,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/speedbrake_lever","dstDref":"laminar/B747/cablecontrols/speedbrake58"}';
-      B747DR_controlOverrides = '{"minin":0.40,"maxin":0.41,"minout":0,"maxout":20,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/speedbrake_lever","dstDref":"laminar/B747/cablecontrols/speedbrake67"}';
-      B747DR_controlOverrides = '{"minin":0.65,"maxin":0.66,"minout":0,"maxout":50,"scale":0.5,"srcDref":"laminar/B747/flt_ctrls/speedbrake_lever","dstDref":"laminar/B747/cablecontrols/speedbrake67"}';
-      B747DR_controlOverrides = '{"minin":0.6,"maxin":0.90,"minout":0,"maxout":45,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/speedbrake_lever","dstDref":"laminar/B747/cablecontrols/speedbrake12"}';
-      
-      B747DR_controlOverrides = '{"minin":0,"maxin":45,"minout":0,"maxout":45,"scale":1.0,"srcDref":"laminar/B747/cablecontrols/speedbrake12","dstDref":"laminar/B747/cablecontrols/spoiler1"}';
-      B747DR_controlOverrides = '{"minin":0,"maxin":45,"minout":0,"maxout":45,"scale":1.0,"srcDref":"laminar/B747/cablecontrols/speedbrake12","dstDref":"laminar/B747/cablecontrols/spoiler2"}';
-      B747DR_controlOverrides = '{"minin":0,"maxin":45,"minout":0,"maxout":45,"scale":1.0,"srcDref":"laminar/B747/cablecontrols/speedbrake34","dstDref":"laminar/B747/cablecontrols/spoiler3"}';
-      B747DR_controlOverrides = '{"minin":0,"maxin":45,"minout":0,"maxout":45,"scale":1.0,"srcDref":"laminar/B747/cablecontrols/speedbrake34","dstDref":"laminar/B747/cablecontrols/spoiler4"}';  
-      B747DR_controlOverrides = '{"minin":0,"maxin":20,"minout":0,"maxout":20,"scale":1.0,"srcDref":"laminar/B747/cablecontrols/speedbrake58","dstDref":"laminar/B747/cablecontrols/spoiler5"}';
-    
-      B747DR_controlOverrides = '{"minin":0,"maxin":20,"minout":0,"maxout":20,"scale":1.0,"srcDref":"laminar/B747/cablecontrols/speedbrake58","dstDref":"laminar/B747/cablecontrols/spoiler8"}';
-      B747DR_controlOverrides = '{"minin":0,"maxin":45,"minout":0,"maxout":45,"scale":1.0,"srcDref":"laminar/B747/cablecontrols/speedbrake34","dstDref":"laminar/B747/cablecontrols/spoiler9"}';
-      B747DR_controlOverrides = '{"minin":0,"maxin":45,"minout":0,"maxout":45,"scale":1.0,"srcDref":"laminar/B747/cablecontrols/speedbrake34","dstDref":"laminar/B747/cablecontrols/spoiler10"}';
-      B747DR_controlOverrides = '{"minin":0,"maxin":45,"minout":0,"maxout":45,"scale":1.0,"srcDref":"laminar/B747/cablecontrols/speedbrake12","dstDref":"laminar/B747/cablecontrols/spoiler11"}';
-      B747DR_controlOverrides = '{"minin":0,"maxin":45,"minout":0,"maxout":45,"scale":1.0,"srcDref":"laminar/B747/cablecontrols/speedbrake12","dstDref":"laminar/B747/cablecontrols/spoiler12"}';  
-
-      B747DR_controlOverrides = '{"minin":20,"maxin":45,"minout":0,"maxout":50,"scale":0.5,"srcDref":"laminar/B747/cablecontrols/speedbrake67","dstDref":"laminar/B747/cablecontrols/spoiler5"}';
-      B747DR_controlOverrides = '{"minin":20,"maxin":45,"minout":0,"maxout":50,"scale":0.5,"srcDref":"laminar/B747/cablecontrols/speedbrake67","dstDref":"laminar/B747/cablecontrols/spoiler8"}';
+      --spoilers and speedbrakes: the hydraulics module from the wheel and the
+      --speedbrake lever (the speedbrake program, ATA27 p.165)
       initialiseControls=false
     else 
       print("not reinitialising controls!!!")

@@ -120,6 +120,7 @@ function M.new(opts)
         commands = {},    -- name -> {handler, before, after} from replace/wrap
         command_log = {}, -- {name, phase} for every start/stop/once from a module
         log = {},         -- print() output
+        control_rows = {}, -- the rows written to xtlua/controlObject (apply_control_objects)
         time = 0,
     }, Runtime)
     for name, t in pairs(dataref_types()) do rt.types[name] = t end
@@ -228,6 +229,7 @@ local function c_functions(rt, module)
         if rt:type_of(name) ~= "string" then return end
         -- a table (a module binding the same global twice) writes nothing
         if type(v) ~= "string" and type(v) ~= "number" then return end
+        if name == "xtlua/controlObject" then rt.control_rows[#rt.control_rows + 1] = tostring(v) end
         rt.values[name] = tostring(v)
         rt.written[name] = true
     end
@@ -336,6 +338,54 @@ function Runtime:frame(dt)
     end
     self:callout("before_physics")
     self:callout("after_physics")
+end
+
+-- XTLua's controlObject (xtlua/controlObject): the mock keeps every row a
+-- module writes; apply_control_objects() runs them once as XTLua does each
+-- frame (XTLua/src/xpmtdatarefs.cpp, updateCommands): the source held to
+-- [minin, maxin] and mapped to [minout, maxout] times the scale, which a
+-- scaledref replaces; the first row for a destination as it comes, each
+-- next one added and the sum held to that row's output range (turned over
+-- for a negative scale) widened to the sum so far, or to its "min"/"max".
+-- Only the tests that call it run the rows.
+local function parse_control_row(s)
+    local row = {}
+    for k, v in s:gmatch('"(%w+)"%s*:%s*("?[^,"}]*"?)') do
+        if v:sub(1, 1) == '"' then row[k] = v:sub(2, -2) else row[k] = tonumber(v) end
+    end
+    return row
+end
+
+function Runtime:apply_control_objects()
+    local new, order = {}, {}
+    for _, s in ipairs(self.control_rows) do
+        local c = parse_control_row(s)
+        local x = tonumber(self:get(c.srcDref)) or 0
+        local scale = c.scale or 1
+        if c.scaledref then scale = tonumber(self:get(c.scaledref)) or 0 end
+        local v
+        if x < c.minin then v = c.minout * scale
+        elseif x > c.maxin then v = c.maxout * scale
+        else v = (c.minout + (c.maxout - c.minout) * (x - c.minin) / (c.maxin - c.minin)) * scale end
+        local old = new[c.dstDref]
+        if old == nil then
+            order[#order + 1] = c.dstDref
+        else
+            local lo, hi = c.minout, c.maxout
+            if scale < 0 then lo, hi = -c.maxout, -c.minout end
+            if old < lo then lo = old end
+            if old > hi then hi = old end
+            if c.min then lo = c.min end
+            if c.max then hi = c.max end
+            v = v + old
+            if v > hi then v = hi end
+            if v < lo then v = lo end
+        end
+        new[c.dstDref] = v
+    end
+    for _, name in ipairs(order) do
+        if type(self:raw(name)) == "number" then self.values[name] = new[name] end
+    end
 end
 
 -- Run a command the way X-Plane calls a replaced command: phase 0 (begin),
