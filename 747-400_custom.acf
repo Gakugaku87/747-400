@@ -74372,7 +74372,7 @@ GROUP Captain PFD
           DEFLECT_PIX 613.000000
 
         GROUP Rsng Rwy Offset
-          SHOW_LESS 2500.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot
+          SHOW_EQUAL 1.000000 laminar/B747/ra/capt/show
           SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
           HIDE
           GROUP_ANIMATE_MODE TRANSLATE
@@ -74390,7 +74390,7 @@ GROUP Captain PFD
           gen_pointer Symbol
             POS 315.500000 671.000000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznRisingRunway
-            DATAREF sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot
+            DATAREF laminar/B747/ra/capt/value
             SHOW_EQUAL 1.000000 sim/cockpit2/radios/indicators/hsi_display_horizontal_pilot
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -76552,7 +76552,7 @@ GROUP Captain PFD
       END_GROUP
       GROUP Decision Height
         SHOW_LESS 999.000000 sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_pilot
-        SHOW_GREATER 0.000000 sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_pilot
+        SHOW_GREATER -0.500000 sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_pilot
         HIDE
         gen_rotary DH Annun
           POS 437.000000 1025.500000
@@ -76622,7 +76622,7 @@ GROUP Captain PFD
         END_GROUP
       END_GROUP
       GROUP Radio Altitude
-        SHOW_LESS 2500.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot
+        SHOW_EQUAL 1.000000 laminar/B747/ra/capt/show
         HIDE
         GROUP <= DH
           SHOW_LESS 0.000000 laminar/B747/radio_alt/display_status
@@ -76667,6 +76667,30 @@ GROUP Captain PFD
             ROUNDING ROUND_ROUND
 
         END_GROUP
+      END_GROUP
+      GROUP CAPT RA FLAG
+        SHOW_EQUAL 1.000000 laminar/B747/ra/capt/flag
+        gen_rotary RA X CAPT PFD
+          POS 431.000000 993.500000
+          IMAGE CRT Displays/PFD/Failure Flags/raX
+          DATAREF 
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 2
+          BUS_SRC 3
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
       END_GROUP
       GROUP VSI Display
         SHOW_GREATER 0.100000 laminar/B747/pfd/capt/irs
@@ -76842,7 +76866,7 @@ GROUP Captain PFD
         POS 315.000000 586.500000
         IMAGE CRT Displays/PFD/Warning/pull_up
         DATAREF 
-        SHOW_EQUAL 1.000000 sim/cockpit/warnings/annunciators/GPWS
+        SHOW_EQUAL 1.000000 laminar/B747/gpws/pull_up
         LIGHT_MODE GLASS_AUTO
         LIGHT_RHEOSTAT 2
         BUS_SRC 3
@@ -76863,7 +76887,7 @@ GROUP Captain PFD
         POS 317.000031 588.500000
         IMAGE CRT Displays/PFD/Warning/windshear
         DATAREF 
-        SHOW_EQUAL 1.000000 sim/cockpit2/annunciators/windshear_warning
+        SHOW_EQUAL 1.000000 laminar/B747/gpws/windshear
         LIGHT_MODE GLASS_AUTO
         LIGHT_RHEOSTAT 2
         BUS_SRC 3
@@ -78080,7 +78104,7 @@ GROUP Captain PFD
           DEFLECT_PIX 613.000000
 
         GROUP Rsng Rwy Offset
-          SHOW_LESS 2500.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot
+          SHOW_EQUAL 1.000000 laminar/B747/ra/capt/show
           SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
           HIDE
           GROUP_ANIMATE_MODE TRANSLATE
@@ -78098,7 +78122,7 @@ GROUP Captain PFD
           gen_pointer Symbol
             POS 315.500000 671.000000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznRisingRunway
-            DATAREF sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot
+            DATAREF laminar/B747/ra/capt/value
             SHOW_EQUAL 1.000000 sim/cockpit2/radios/indicators/hsi_display_horizontal_pilot
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -80260,7 +80284,7 @@ GROUP Captain PFD
       END_GROUP
       GROUP Decision Height
         SHOW_LESS 999.000000 sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_pilot
-        SHOW_GREATER 0.000000 sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_pilot
+        SHOW_GREATER -0.500000 sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_pilot
         HIDE
         gen_rotary DH Annun
           POS 437.000000 1025.500000
@@ -80330,7 +80354,7 @@ GROUP Captain PFD
         END_GROUP
       END_GROUP
       GROUP Radio Altitude
-        SHOW_LESS 2500.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot
+        SHOW_EQUAL 1.000000 laminar/B747/ra/capt/show
         HIDE
         GROUP <= DH
           SHOW_LESS 0.000000 laminar/B747/radio_alt/display_status
@@ -80375,6 +80399,30 @@ GROUP Captain PFD
             ROUNDING ROUND_ROUND
 
         END_GROUP
+      END_GROUP
+      GROUP CAPT RA FLAG
+        SHOW_EQUAL 1.000000 laminar/B747/ra/capt/flag
+        gen_rotary RA X CAPT PFD
+          POS 431.000000 993.500000
+          IMAGE CRT Displays/PFD/Failure Flags/raX
+          DATAREF 
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 2
+          BUS_SRC 3
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
       END_GROUP
       GROUP VSI Display
         SHOW_GREATER 0.100000 laminar/B747/pfd/capt/irs
@@ -80550,7 +80598,7 @@ GROUP Captain PFD
         POS 315.000000 586.500000
         IMAGE CRT Displays/PFD/Warning/pull_up
         DATAREF 
-        SHOW_EQUAL 1.000000 sim/cockpit/warnings/annunciators/GPWS
+        SHOW_EQUAL 1.000000 laminar/B747/gpws/pull_up
         LIGHT_MODE GLASS_AUTO
         LIGHT_RHEOSTAT 2
         BUS_SRC 3
@@ -80571,7 +80619,7 @@ GROUP Captain PFD
         POS 317.000031 588.500000
         IMAGE CRT Displays/PFD/Warning/windshear
         DATAREF 
-        SHOW_EQUAL 1.000000 sim/cockpit2/annunciators/windshear_warning
+        SHOW_EQUAL 1.000000 laminar/B747/gpws/windshear
         LIGHT_MODE GLASS_AUTO
         LIGHT_RHEOSTAT 2
         BUS_SRC 3
@@ -81778,7 +81826,7 @@ GROUP First Officer PFD
           DEFLECT_PIX 613.000000
 
         GROUP Rsng Rwy Offset 2
-          SHOW_LESS 2500.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_copilot
+          SHOW_EQUAL 1.000000 laminar/B747/ra/fo/show
           SHOW_GREATER 0.100000 laminar/B747/pfd/fo/irs
           HIDE
           GROUP_ANIMATE_MODE TRANSLATE
@@ -81796,7 +81844,7 @@ GROUP First Officer PFD
           gen_pointer Symbol 2
             POS 994.500000 671.000000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznRisingRunway
-            DATAREF sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_copilot
+            DATAREF laminar/B747/ra/fo/value
             SHOW_EQUAL 1.000000 sim/cockpit2/radios/indicators/hsi_display_horizontal_copilot
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -83957,13 +84005,13 @@ GROUP First Officer PFD
       END_GROUP
       GROUP Decision Height 2
         SHOW_LESS 999.000000 sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_copilot
-        SHOW_GREATER 0.000000 sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_copilot
+        SHOW_GREATER -0.500000 sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_copilot
         HIDE
         gen_rotary DH Annun 2
           POS 1116.000000 1025.500000
           IMAGE CRT Displays/PFD/Decision Height/DH_Label2
           DATAREF 
-          SHOW_EQUAL 1.000000 laminar/B747/dec_height/display_status
+          SHOW_EQUAL 1.000000 laminar/B747/dec_height/display_status_fo
           SHOW_GREATER 0.100000 laminar/B747/pfd/fo/irs
           HIDE
           LIGHT_MODE GLASS_AUTO
@@ -83983,7 +84031,7 @@ GROUP First Officer PFD
           CLICK_DY 0
 
         GROUP DH Green 2
-          SHOW_LESS 0.000000 laminar/B747/dec_height/display_status
+          SHOW_LESS 0.000000 laminar/B747/dec_height/display_status_fo
           HIDE
           gen_rotary DH Label 2
             POS 1073.000000 1023.500000
@@ -84027,16 +84075,16 @@ GROUP First Officer PFD
         END_GROUP
       END_GROUP
       GROUP Radio Altitude 2
-        SHOW_LESS 2500.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_copilot
+        SHOW_EQUAL 1.000000 laminar/B747/ra/fo/show
         HIDE
         GROUP <= DH 2
-          SHOW_LESS 0.000000 laminar/B747/radio_alt/display_status
-          SHOW_GREATER 1.000000 laminar/B747/radio_alt/display_status
+          SHOW_LESS 0.000000 laminar/B747/radio_alt/display_status_fo
+          SHOW_GREATER 1.000000 laminar/B747/radio_alt/display_status_fo
           HIDE
           gen_LED LED 2
             POS 1108.000000 996.500000
             IMAGE CRT Displays/LED/LED_2.30R.x####0.yellow
-            DATAREF laminar/B747/efis/radio_altitude
+            DATAREF laminar/B747/efis/radio_altitude_fo
             SHOW_GREATER 0.100000 laminar/B747/pfd/fo/irs
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -84052,12 +84100,12 @@ GROUP First Officer PFD
 
         END_GROUP
         GROUP > DH 2
-          SHOW_LESS 0.000000 laminar/B747/radio_alt/display_status
+          SHOW_LESS 0.000000 laminar/B747/radio_alt/display_status_fo
           HIDE
           gen_LED LED 2
             POS 1108.000000 996.500000
             IMAGE CRT Displays/LED/LED_2.30R.x####0.white
-            DATAREF laminar/B747/efis/radio_altitude
+            DATAREF laminar/B747/efis/radio_altitude_fo
             SHOW_GREATER 0.100000 laminar/B747/pfd/fo/irs
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -84072,6 +84120,30 @@ GROUP First Officer PFD
             ROUNDING ROUND_ROUND
 
         END_GROUP
+      END_GROUP
+      GROUP FO RA FLAG 2
+        SHOW_EQUAL 1.000000 laminar/B747/ra/fo/flag
+        gen_rotary RA X FO PFD
+          POS 1110.000000 993.500000
+          IMAGE CRT Displays/PFD/Failure Flags/raX
+          DATAREF 
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 5
+          BUS_SRC 4
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
       END_GROUP
       GROUP VSI Display 2
         SHOW_GREATER 0.100000 laminar/B747/pfd/fo/irs
@@ -84247,7 +84319,7 @@ GROUP First Officer PFD
         POS 994.000000 587.500000
         IMAGE CRT Displays/PFD/Warning/pull_up
         DATAREF 
-        SHOW_EQUAL 1.000000 sim/cockpit/warnings/annunciators/GPWS
+        SHOW_EQUAL 1.000000 laminar/B747/gpws/pull_up
         LIGHT_MODE GLASS_AUTO
         LIGHT_RHEOSTAT 5
         BUS_SRC 4
@@ -84268,7 +84340,7 @@ GROUP First Officer PFD
         POS 994.000000 587.500000
         IMAGE CRT Displays/PFD/Warning/windshear
         DATAREF 
-        SHOW_EQUAL 1.000000 sim/cockpit2/annunciators/windshear_warning
+        SHOW_EQUAL 1.000000 laminar/B747/gpws/windshear
         LIGHT_MODE GLASS_AUTO
         LIGHT_RHEOSTAT 5
         BUS_SRC 4
@@ -85465,7 +85537,7 @@ GROUP First Officer PFD
           DEFLECT_PIX 613.000000
 
         GROUP Rsng Rwy Offset 2
-          SHOW_LESS 2500.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_copilot
+          SHOW_EQUAL 1.000000 laminar/B747/ra/fo/show
           SHOW_GREATER 0.100000 laminar/B747/pfd/fo/irs
           HIDE
           GROUP_ANIMATE_MODE TRANSLATE
@@ -85483,7 +85555,7 @@ GROUP First Officer PFD
           gen_pointer Symbol 2
             POS 994.500000 671.000000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznRisingRunway
-            DATAREF sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_copilot
+            DATAREF laminar/B747/ra/fo/value
             SHOW_EQUAL 1.000000 sim/cockpit2/radios/indicators/hsi_display_horizontal_copilot
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -87644,13 +87716,13 @@ GROUP First Officer PFD
       END_GROUP
       GROUP Decision Height 2
         SHOW_LESS 999.000000 sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_copilot
-        SHOW_GREATER 0.000000 sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_copilot
+        SHOW_GREATER -0.500000 sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_copilot
         HIDE
         gen_rotary DH Annun 2
           POS 1116.000000 1025.500000
           IMAGE CRT Displays/PFD/Decision Height/DH_Label2
           DATAREF 
-          SHOW_EQUAL 1.000000 laminar/B747/dec_height/display_status
+          SHOW_EQUAL 1.000000 laminar/B747/dec_height/display_status_fo
           SHOW_GREATER 0.100000 laminar/B747/pfd/fo/irs
           HIDE
           LIGHT_MODE GLASS_AUTO
@@ -87670,7 +87742,7 @@ GROUP First Officer PFD
           CLICK_DY 0
 
         GROUP DH Green 2
-          SHOW_LESS 0.000000 laminar/B747/dec_height/display_status
+          SHOW_LESS 0.000000 laminar/B747/dec_height/display_status_fo
           HIDE
           gen_rotary DH Label 2
             POS 1073.000000 1023.500000
@@ -87714,16 +87786,16 @@ GROUP First Officer PFD
         END_GROUP
       END_GROUP
       GROUP Radio Altitude 2
-        SHOW_LESS 2500.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_copilot
+        SHOW_EQUAL 1.000000 laminar/B747/ra/fo/show
         HIDE
         GROUP <= DH 2
-          SHOW_LESS 0.000000 laminar/B747/radio_alt/display_status
-          SHOW_GREATER 1.000000 laminar/B747/radio_alt/display_status
+          SHOW_LESS 0.000000 laminar/B747/radio_alt/display_status_fo
+          SHOW_GREATER 1.000000 laminar/B747/radio_alt/display_status_fo
           HIDE
           gen_LED LED 2
             POS 1108.000000 996.500000
             IMAGE CRT Displays/LED/LED_2.30R.x####0.yellow
-            DATAREF laminar/B747/efis/radio_altitude
+            DATAREF laminar/B747/efis/radio_altitude_fo
             SHOW_GREATER 0.100000 laminar/B747/pfd/fo/irs
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -87739,12 +87811,12 @@ GROUP First Officer PFD
 
         END_GROUP
         GROUP > DH 2
-          SHOW_LESS 0.000000 laminar/B747/radio_alt/display_status
+          SHOW_LESS 0.000000 laminar/B747/radio_alt/display_status_fo
           HIDE
           gen_LED LED 2
             POS 1108.000000 996.500000
             IMAGE CRT Displays/LED/LED_2.30R.x####0.white
-            DATAREF laminar/B747/efis/radio_altitude
+            DATAREF laminar/B747/efis/radio_altitude_fo
             SHOW_GREATER 0.100000 laminar/B747/pfd/fo/irs
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -87759,6 +87831,30 @@ GROUP First Officer PFD
             ROUNDING ROUND_ROUND
 
         END_GROUP
+      END_GROUP
+      GROUP FO RA FLAG 2
+        SHOW_EQUAL 1.000000 laminar/B747/ra/fo/flag
+        gen_rotary RA X FO PFD
+          POS 1110.000000 993.500000
+          IMAGE CRT Displays/PFD/Failure Flags/raX
+          DATAREF 
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 5
+          BUS_SRC 4
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
       END_GROUP
       GROUP VSI Display 2
         SHOW_GREATER 0.100000 laminar/B747/pfd/fo/irs
@@ -87934,7 +88030,7 @@ GROUP First Officer PFD
         POS 994.000000 587.500000
         IMAGE CRT Displays/PFD/Warning/pull_up
         DATAREF 
-        SHOW_EQUAL 1.000000 sim/cockpit/warnings/annunciators/GPWS
+        SHOW_EQUAL 1.000000 laminar/B747/gpws/pull_up
         LIGHT_MODE GLASS_AUTO
         LIGHT_RHEOSTAT 5
         BUS_SRC 4
@@ -87955,7 +88051,7 @@ GROUP First Officer PFD
         POS 994.000000 587.500000
         IMAGE CRT Displays/PFD/Warning/windshear
         DATAREF 
-        SHOW_EQUAL 1.000000 sim/cockpit2/annunciators/windshear_warning
+        SHOW_EQUAL 1.000000 laminar/B747/gpws/windshear
         LIGHT_MODE GLASS_AUTO
         LIGHT_RHEOSTAT 5
         BUS_SRC 4

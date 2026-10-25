@@ -211,3 +211,15 @@
 | 同（NAV-03、DSP-12） | PFD の現在高度の窓と選択高度 | なし | 現在高度の窓に白の強調の枠（`ALTrollingDigits/ALTcrntWndwHiW`、`alt_advise`）と琥珀の枠（`ALTcrntWndwHiA`、`alt_alert`）。2 つは新しい `GROUP Crnt Alt Boxes`（`valid_*` が 1）の中、選択高度に白の強調の枠（`Altimeter/SelAltBoxHiW`、`alt_advise`。高度テープの中心から上へ 268） | FCOM p.992、p.1559 |
 
 上の 3 行は `docs/overhaul/tools/panel_pfd_airdata.lua` で書き換えた（各 PFD に 8 か所の挿入と、高度 54・Mach 2 の置き換え）。X-Plane は計器ごとに表示条件を 1 つ（1 つの dataref）しか見ないので、条件を重ねるところはグループに分けた（ARCHITECTURE.md §5）。旗と枠の絵は `docs/overhaul/tools/make_pfd_airdata_images.ps1` で作った（旗の字は純正の VERT の大きさと間隔に合わせ、Windows の Bahnschrift SemiBold SemiCondensed で描いた。枠は純正の現在高度の窓の 3 ピクセルの縁を外へ 3 ピクセル広げた形）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_pfd_airdata`。
+
+航法センサー（5-1 段 4、2026-10-25。GAP_ANALYSIS.md §4 の承認済みの DSP-02・04・10）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-25・電波高度計（NAV-51・53） | PFD の RA の数字（`GROUP Radio Altitude`）と立ち上がる滑走路（`GROUP Rsng Rwy Offset`、機長と副操縦士、外側と内側の 4 組） | 表示条件 `SHOW_LESS 2500.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot`（副操縦士は `_copilot`）、滑走路の位置も X-Plane の RA | `SHOW_EQUAL 1.000000 laminar/B747/ra/capt/show`（`fo/show`：その席の RA が使えて 2,500 ft 以下）、滑走路の位置は `ra/capt/value`（`fo/value`） | ATA34_2 p.88–89、p.96 |
+| 同（NAV-51、DSP-04） | RA 旗（新しい `GROUP CAPT RA FLAG`・`FO RA FLAG 2`、RA の数字のグループの後） | なし | 琥珀の RA 旗（`Failure Flags/raX`）を RA の数字の位置に、`ra/capt/flag`（`fo/flag`）が 1 のとき | ATA34_2 p.96 |
+| 同（NAV-53、DSP-10） | 副操縦士の PFD の RA の数字と DH の警報 | `laminar/B747/efis/radio_altitude`、`dec_height/display_status`、`radio_alt/display_status`（機長の値） | `efis/radio_altitude_fo`、`dec_height/display_status_fo`、`radio_alt/display_status_fo` | FCOM p.981–982 |
+| 同（NAV-54） | PFD の DH（`GROUP Decision Height`） | `SHOW_GREATER 0.000000 …radio_altimeter_bug_ft_pilot`（DH 0 で消える） | `SHOW_GREATER -0.500000`（0 ft は表示、0 未満で消える） | FCOM p.981 |
+| 同（NAV-64） | PFD の PULL UP と WINDSHEAR | `SHOW_EQUAL 1.000000 sim/cockpit/warnings/annunciators/GPWS`、`sim/cockpit2/annunciators/windshear_warning` | `laminar/B747/gpws/pull_up`、`laminar/B747/gpws/windshear` | FCOM p.1531、ATA34_2 p.142 |
+
+上の 5 行は `docs/overhaul/tools/panel_ra_gpws.lua` で書き換えた（22 の変更、各 PFD に RA 旗のグループ 1 つ）。条件が 2 行以上ある計器・グループの数は 371 のまま。RA 旗の絵は `docs/overhaul/tools/make_pfd_ra_images.ps1` で作った（純正の ATT 旗と同じ高さ 30・3 ピクセルの縁・字の大きさ、Windows の Bahnschrift SemiBold SemiCondensed）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_ra_gpws`。X-Plane のスクリーンショット（`s43_gpws`、`gpws_dive.ps1`）で、RA の数字が 2,500 ft 以下で出て RA 旗がその位置に出ること、DH の警報中も RA の数字が白で出ること、PULL UP が GPWS で出ることを確かめた。外から見た写真で機体の見た目が変わらないことを確かめた。純正 acf は変えていない。
