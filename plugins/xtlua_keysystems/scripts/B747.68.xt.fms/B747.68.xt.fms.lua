@@ -941,6 +941,40 @@ function get_waypoint_estimate(latitude,longitude,fms_waypoint, fms_latitude, fm
 end
 
 
+-- each route entry's ETA for the ND's route data (5-2 step 5c: the DATA
+-- switch shows the FMC's ETA at each waypoint, FCOM p.1040, p.1148): from
+-- the active waypoint on, the distance along the route by
+-- get_ETA_for_Distance, as the active and next waypoints' ETAs (the FMC's
+-- predictions come with its rebuild: FMC-20, FMC-21); the zulu time of day
+-- in minutes for each entry of xtlua/fms, -1 before the active waypoint, on
+-- the ground and for an entry without a position; a JSON array
+-- (laminar/B747/fms/route_eta) written when it changes, once a second
+B747DR_fms_route_eta = find_dataref("laminar/B747/fms/route_eta")
+local route_eta_t = -1
+function B747_route_eta(fms, airborne)
+	if simDRTime - route_eta_t < 1 and simDRTime >= route_eta_t then return end
+	route_eta_t = simDRTime
+	local out = {}
+	local active = nil
+	for i = 1, table.getn(fms) do
+		if active == nil and fms[i][10] == true then active = i end
+	end
+	local dist, lat, lon = 0, simDR_latitude, simDR_longitude
+	for i = 1, table.getn(fms) do
+		local v = -1
+		local wlat, wlon = fms[i][5], fms[i][6]
+		if airborne and active ~= nil and i >= active and not (wlat == 0 and wlon == 0) then
+			dist = dist + getDistance(lat, lon, wlat, wlon)
+			lat, lon = wlat, wlon
+			local _, h, m = get_ETA_for_Distance(dist, 0)
+			v = h * 60 + m
+		end
+		out[i] = v
+	end
+	local s = "[" .. table.concat(out, ",") .. "]"
+	if B747DR_fms_route_eta ~= s then B747DR_fms_route_eta = s end
+end
+
 function waypoint_eta_display()
 	local hours = 0
 	local mins = 0
@@ -976,8 +1010,10 @@ function waypoint_eta_display()
 		--print(string.match(fms_current_waypoint, "%("))
 		fms_distance_to_next_waypoint,time_to_waypoint,nhours,nmins,nsecs = get_waypoint_estimate(fms_latitude, fms_longitude,fms_next_waypoint, fms_next_latitude, fms_next_longitude,time_to_waypoint)
 		end
+		B747_route_eta(fms, simDR_onGround ~= 1)
 	else
 		B747DR_destination="----"	
+		if B747DR_fms_route_eta ~= "[]" then B747DR_fms_route_eta = "[]" end
 	end
 	
 	if fms_current_waypoint == "" or string.match(fms_current_waypoint, "%(") then

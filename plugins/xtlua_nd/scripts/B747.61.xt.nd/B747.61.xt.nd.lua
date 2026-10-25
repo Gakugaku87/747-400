@@ -74,6 +74,26 @@ for n=0,59,1 do
   iconTextDataFO[n].greentext=find_dataref("laminar/B747/nd/fo/text/greentext"..n)
 end
 
+-- the route data (5-2 step 5c, B747.61.nd_data.lua): each side's DATA
+-- switch, the first slots' colour and two lines, the FMC's ETA for each route
+-- entry and its transition altitude
+dofile("B747.61.nd_data.lua")
+local ND_DATA = B747_nd_data
+B747DR_nd_capt_data_sel = find_dataref("laminar/B747/nd/data/capt/data")
+B747DR_nd_fo_data_sel = find_dataref("laminar/B747/nd/data/fo/data")
+B747DR_nd_fms_route_eta = find_dataref("laminar/B747/fms/route_eta")
+B747DR_nd_fms_data = find_dataref("laminar/B747/fms/data")
+iconTextDataCapt.rdata=find_dataref("laminar/B747/nd/capt/text/rdata_color")
+iconTextDataFO.rdata=find_dataref("laminar/B747/nd/fo/text/rdata_color")
+for n=0,ND_DATA.SLOTS-1,1 do
+  iconTextDataCapt[n].rdata1=find_dataref("laminar/B747/nd/capt/text/rdata1_"..n)
+  iconTextDataCapt[n].rdata2=find_dataref("laminar/B747/nd/capt/text/rdata2_"..n)
+  iconTextDataFO[n].rdata1=find_dataref("laminar/B747/nd/fo/text/rdata1_"..n)
+  iconTextDataFO[n].rdata2=find_dataref("laminar/B747/nd/fo/text/rdata2_"..n)
+end
+local routeEta={}
+local transAlt=ND_DATA.TRANS_ALT_FT
+
 -- TCAS traffic (5-1 step 5b): each ND's 30 TCAS slots (B747.61.nd init),
 -- filled from the TCAS model's symbols (laminar/B747/tcas/sym,
 -- plugins/xtlua/scripts/B747.34.xt.nav/B747.34.xt.tcas.lua) and X-Plane's
@@ -193,7 +213,11 @@ function decodeFlightPlan()
   if string.len(fmsJSON) >0 then
       fmsTable=json.decode(fmsJSON)
   end
-  
+  -- the FMC's ETA for each route entry and its transition altitude (step 5c)
+  local e=B747DR_nd_fms_route_eta
+  if type(e)=="string" and string.len(e)>1 then routeEta=json.decode(e) else routeEta={} end
+  local d=B747DR_nd_fms_data
+  transAlt=(type(d)=="string" and tonumber(d:match('"transalt"%s*:%s*"?(%d+)'))) or ND_DATA.TRANS_ALT_FT
 end
 function getHeading(lat1,lon1,lat2,lon2)
   b10=math.rad(lat1)
@@ -231,7 +255,7 @@ function getDistance(lat1,lon1,lat2,lon2)
   --print("Distance = "..retVal) 
   return retVal
 end
-function makeIcon(iconTextData,navtype,text,latitude,longitude,distance)
+function makeIcon(iconTextData,navtype,text,latitude,longitude,distance,routeIndex)
   if text~=nil and string.lower(text)~="latlong" and iconTextData==iconTextDataCapt and usedNaviadsTableCapt[text]~=nil then return end
   if text~=nil and string.lower(text)~="latlong" and iconTextData==iconTextDataFO and usedNaviadsTableFO[text]~=nil then return end
   if text~=nil and string.lower(text)=="latlong" then text=" " end
@@ -356,6 +380,23 @@ function makeIcon(iconTextData,navtype,text,latitude,longitude,distance)
   end
   iconTextData[lastNavaid].latitude=latitude
   iconTextData[lastNavaid].longitude=longitude
+  -- the first slots' route data lines (step 5c): a route waypoint's (its
+  -- index in the route) with that side's DATA switch on
+  if lastNavaid < ND_DATA.SLOTS then
+    local sel=B747DR_nd_capt_data_sel
+    if iconTextData~=iconTextDataCapt then sel=B747DR_nd_fo_data_sel end
+    local on=routeIndex~=nil and sel>0.5
+    local alt, eta
+    if on then
+      alt=ND_DATA.alt_text(fmsTable[routeIndex][9], transAlt)
+      eta=ND_DATA.eta_text(routeEta[routeIndex])
+    end
+    local c, l1, l2=ND_DATA.lines(on, navtype==3003, alt, eta)
+    if iconTextData.rdata[lastNavaid]~=c then iconTextData.rdata[lastNavaid]=c end
+    local s=iconTextData[lastNavaid]
+    if s.rdata1~=l1 then s.rdata1=l1 end
+    if s.rdata2~=l2 then s.rdata2=l2 end
+  end
   if iconTextData==iconTextDataCapt then
     B747DR_text_capt_show[lastNavaid]=1
     B747DR_text_capt_heading[lastNavaid]=heading_diff
@@ -610,9 +651,9 @@ function newIcons()
     if distance < ranges[simDR_range_dial_capt + 1] and (simDR_map_mode==2 or simDR_map_mode==4) then 
 
       if fmsTable[n][10]==true then
-	      makeIcon(iconTextDataCapt,3003,fmsTable[n][8],fmsTable[n][5],fmsTable[n][6],distance)
+	      makeIcon(iconTextDataCapt,3003,fmsTable[n][8],fmsTable[n][5],fmsTable[n][6],distance,n)
       else
-	      makeIcon(iconTextDataCapt,3005,fmsTable[n][8],fmsTable[n][5],fmsTable[n][6],distance)
+	      makeIcon(iconTextDataCapt,3005,fmsTable[n][8],fmsTable[n][5],fmsTable[n][6],distance,n)
       end
     end
     --FO flightplan
@@ -620,9 +661,9 @@ function newIcons()
     if distance < ranges[simDR_range_dial_fo + 1] and (backport_map_mode_copilot==2 or backport_map_mode_copilot==4) then 
 
       if fmsTable[n][10]==true then
-	      makeIcon(iconTextDataFO,3003,fmsTable[n][8],fmsTable[n][5],fmsTable[n][6],distance)
+	      makeIcon(iconTextDataFO,3003,fmsTable[n][8],fmsTable[n][5],fmsTable[n][6],distance,n)
       else
-	      makeIcon(iconTextDataFO,3005,fmsTable[n][8],fmsTable[n][5],fmsTable[n][6],distance)
+	      makeIcon(iconTextDataFO,3005,fmsTable[n][8],fmsTable[n][5],fmsTable[n][6],distance,n)
       end
     end
   end

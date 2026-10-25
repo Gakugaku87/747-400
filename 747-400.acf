@@ -93314,6 +93314,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T0 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[0]
+                gen_text T0 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_0
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T0 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_0
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T0 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[0]
+                gen_text T0 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_0
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T0 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_0
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -93417,6 +93471,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T1 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[1]
+                gen_text T1 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_1
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T1 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_1
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T1 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[1]
+                gen_text T1 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_1
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T1 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_1
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -93520,6 +93628,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T2 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[2]
+                gen_text T2 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_2
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T2 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_2
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T2 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[2]
+                gen_text T2 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_2
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T2 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_2
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -93623,6 +93785,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T3 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[3]
+                gen_text T3 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_3
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T3 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_3
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T3 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[3]
+                gen_text T3 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_3
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T3 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_3
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -93726,6 +93942,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T4 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[4]
+                gen_text T4 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_4
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T4 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_4
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T4 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[4]
+                gen_text T4 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_4
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T4 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_4
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -93829,6 +94099,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T5 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[5]
+                gen_text T5 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_5
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T5 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_5
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T5 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[5]
+                gen_text T5 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_5
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T5 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_5
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -93932,6 +94256,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T6 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[6]
+                gen_text T6 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_6
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T6 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_6
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T6 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[6]
+                gen_text T6 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_6
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T6 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_6
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -94035,6 +94413,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T7 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[7]
+                gen_text T7 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_7
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T7 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_7
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T7 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[7]
+                gen_text T7 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_7
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T7 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_7
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -94138,6 +94570,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T8 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[8]
+                gen_text T8 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_8
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T8 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_8
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T8 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[8]
+                gen_text T8 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_8
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T8 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_8
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -94241,6 +94727,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T9 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[9]
+                gen_text T9 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_9
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T9 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_9
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T9 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[9]
+                gen_text T9 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_9
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T9 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_9
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -94344,6 +94884,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T10 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[10]
+                gen_text T10 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_10
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T10 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_10
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T10 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[10]
+                gen_text T10 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_10
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T10 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_10
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -94447,6 +95041,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T11 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[11]
+                gen_text T11 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_11
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T11 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_11
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T11 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[11]
+                gen_text T11 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_11
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T11 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_11
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -94550,6 +95198,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T12 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[12]
+                gen_text T12 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_12
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T12 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_12
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T12 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[12]
+                gen_text T12 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_12
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T12 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_12
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -94653,6 +95355,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T13 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[13]
+                gen_text T13 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_13
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T13 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_13
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T13 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[13]
+                gen_text T13 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_13
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T13 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_13
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -94756,6 +95512,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T14 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[14]
+                gen_text T14 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_14
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T14 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_14
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T14 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[14]
+                gen_text T14 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_14
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T14 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_14
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -94859,6 +95669,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T15 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[15]
+                gen_text T15 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_15
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T15 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_15
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T15 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[15]
+                gen_text T15 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_15
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T15 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_15
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -94962,6 +95826,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T16 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[16]
+                gen_text T16 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_16
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T16 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_16
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T16 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[16]
+                gen_text T16 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_16
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T16 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_16
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -95065,6 +95983,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T17 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[17]
+                gen_text T17 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_17
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T17 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_17
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T17 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[17]
+                gen_text T17 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_17
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T17 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_17
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -95168,6 +96140,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T18 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[18]
+                gen_text T18 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_18
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T18 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_18
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T18 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[18]
+                gen_text T18 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_18
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T18 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_18
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -95271,6 +96297,60 @@ GROUP First Officer ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T19 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/rdata_color[19]
+                gen_text T19 Data1 White
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata1_19
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T19 Data2 White
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/fo/text/rdata2_19
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T19 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/rdata_color[19]
+                gen_text T19 Data1 Magenta
+                  POS 1032.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata1_19
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T19 Data2 Magenta
+                  POS 1032.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/fo/text/rdata2_19
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -106255,6 +107335,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T0 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[0]
+                gen_text T0 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_0
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T0 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_0
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T0 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[0]
+                gen_text T0 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_0
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T0 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_0
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -106358,6 +107492,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T1 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[1]
+                gen_text T1 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_1
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T1 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_1
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T1 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[1]
+                gen_text T1 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_1
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T1 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_1
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -106461,6 +107649,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T2 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[2]
+                gen_text T2 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_2
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T2 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_2
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T2 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[2]
+                gen_text T2 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_2
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T2 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_2
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -106564,6 +107806,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T3 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[3]
+                gen_text T3 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_3
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T3 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_3
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T3 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[3]
+                gen_text T3 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_3
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T3 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_3
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -106667,6 +107963,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T4 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[4]
+                gen_text T4 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_4
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T4 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_4
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T4 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[4]
+                gen_text T4 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_4
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T4 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_4
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -106770,6 +108120,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T5 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[5]
+                gen_text T5 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_5
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T5 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_5
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T5 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[5]
+                gen_text T5 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_5
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T5 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_5
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -106873,6 +108277,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T6 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[6]
+                gen_text T6 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_6
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T6 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_6
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T6 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[6]
+                gen_text T6 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_6
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T6 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_6
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -106976,6 +108434,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T7 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[7]
+                gen_text T7 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_7
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T7 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_7
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T7 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[7]
+                gen_text T7 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_7
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T7 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_7
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -107079,6 +108591,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T8 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[8]
+                gen_text T8 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_8
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T8 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_8
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T8 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[8]
+                gen_text T8 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_8
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T8 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_8
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -107182,6 +108748,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T9 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[9]
+                gen_text T9 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_9
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T9 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_9
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T9 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[9]
+                gen_text T9 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_9
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T9 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_9
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -107285,6 +108905,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T10 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[10]
+                gen_text T10 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_10
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T10 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_10
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T10 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[10]
+                gen_text T10 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_10
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T10 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_10
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -107388,6 +109062,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T11 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[11]
+                gen_text T11 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_11
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T11 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_11
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T11 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[11]
+                gen_text T11 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_11
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T11 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_11
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -107491,6 +109219,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T12 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[12]
+                gen_text T12 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_12
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T12 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_12
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T12 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[12]
+                gen_text T12 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_12
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T12 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_12
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -107594,6 +109376,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T13 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[13]
+                gen_text T13 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_13
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T13 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_13
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T13 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[13]
+                gen_text T13 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_13
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T13 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_13
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -107697,6 +109533,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T14 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[14]
+                gen_text T14 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_14
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T14 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_14
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T14 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[14]
+                gen_text T14 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_14
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T14 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_14
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -107800,6 +109690,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T15 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[15]
+                gen_text T15 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_15
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T15 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_15
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T15 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[15]
+                gen_text T15 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_15
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T15 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_15
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -107903,6 +109847,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T16 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[16]
+                gen_text T16 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_16
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T16 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_16
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T16 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[16]
+                gen_text T16 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_16
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T16 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_16
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -108006,6 +110004,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T17 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[17]
+                gen_text T17 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_17
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T17 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_17
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T17 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[17]
+                gen_text T17 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_17
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T17 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_17
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -108109,6 +110161,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T18 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[18]
+                gen_text T18 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_18
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T18 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_18
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T18 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[18]
+                gen_text T18 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_18
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T18 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_18
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP
@@ -108212,6 +110318,60 @@ GROUP Captain ND
                 OFFSET_X 0
                 OFFSET_Y 0.000000
 
+              GROUP T19 Data White
+                SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/rdata_color[19]
+                gen_text T19 Data1 White
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata1_19
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T19 Data2 White
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.white
+                  DATAREF laminar/B747/nd/capt/text/rdata2_19
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
+              GROUP T19 Data Magenta
+                SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/rdata_color[19]
+                gen_text T19 Data1 Magenta
+                  POS 345.000000 -146.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata1_19
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+                gen_text T19 Data2 Magenta
+                  POS 345.000000 -172.000000
+                  IMAGE CRT Displays/TEXT/ND/TXT.2.28.red
+                  DATAREF laminar/B747/nd/capt/text/rdata2_19
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 0
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  OFFSET_X 0
+                  OFFSET_Y 0.000000
+
+              END_GROUP
             END_GROUP
           END_GROUP
         END_GROUP

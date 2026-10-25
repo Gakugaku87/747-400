@@ -409,3 +409,11 @@
 | 同 | APP と VOR の基準受信機の欄の DME の旗（`gen_rotary DME Flag`） | 純正の囲みの「DME」（段 5b-1b・5b-2a） | 機長は `dmeLX`、副操縦士は `dmeRX`（FCOM p.1034 の DMEL・DMER）、DME の行の上（ラベルの中心から右 25） | FCOM p.1034 |
 
 上の 5 行は `docs/overhaul/tools/panel_nd_brg.lua` で書き換えた（2 面で 106 か所）。画像は `docs/overhaul/tools/make_nd_vor_images.ps1`。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_brg`。
+
+表示（5-2 段 5c-2a、2026-10-26：ND の DATA）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・ND の経路データ（DSP-16） | 機長・副操縦士の ND の `GROUP ND Text Center` の先頭 20 枠（`GROUP ND Text Icons0`〜`19` の `ND Text<n> backrotat`：経路の点が先頭の枠に入る） | 記号と識別子の 4 色の文字だけ | 識別子の下に 2 行（26 px 間隔）：`GROUP T<n> Data White`（新設 `nd/<席>/text/rdata_color[n]` が 1、白の字）と `GROUP T<n> Data Magenta`（2、現用点の字 `TXT.2.28.red`）、中は `gen_text T<n> Data1`・`Data2`（新設 `nd/<席>/text/rdata1_<n>`・`rdata2_<n>`：高度と ETA、高度が無ければ ETA を 1 行目に） | FCOM p.1040、p.1148、FMSPG p.50 |
+
+上の 1 行は `docs/overhaul/tools/panel_nd_data.lua` で書き換えた（2 面で 40 枠、160 の文字。パネルの名前は 19 文字で切られるので新しい名前は短くした）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_data`。
