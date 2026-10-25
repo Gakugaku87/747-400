@@ -103,6 +103,9 @@ fmsFunctionsDefs["PASSENGERSOUNDCONFIG"]["L6"]={"setpage","MAINTSIMCONFIG_5"}
 
 
 fmsPages["GPWSSOUNDCONFIG"]=createPage("GPWSSOUNDCONFIG")
+-- the option of each line (MINIMUMS, APP. MINIMUMS, 2500 ... 5) in
+-- laminar/B747/fmod/options/gpws, which is in the sound bank's order
+local GPWS_OPTION = {14, 15, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}
 fmsPages["GPWSSOUNDCONFIG"].getPage=function(self,pgNo,fmsID)
 
 	local lineA = ""
@@ -133,7 +136,7 @@ fmsPages["GPWSSOUNDCONFIG"].getPage=function(self,pgNo,fmsID)
 		lineE = "<500          "
 
 		for i = 1, 5 do
-			if B747DR_SNDoptions_gpws[i] == 0 then
+			if B747DR_SNDoptions_gpws[GPWS_OPTION[i]] == 0 then
 				line[i] = "ON/   "
 			else
 				line[i] = "  /OFF"
@@ -161,7 +164,7 @@ fmsPages["GPWSSOUNDCONFIG"].getPage=function(self,pgNo,fmsID)
 		lineE = "<50           "
 
 		for i = 6, 10 do
-			if B747DR_SNDoptions_gpws[i] == 0 then
+			if B747DR_SNDoptions_gpws[GPWS_OPTION[i]] == 0 then
 				line[i] = "ON/   "
 			else
 				line[i] = "  /OFF"
@@ -189,7 +192,7 @@ fmsPages["GPWSSOUNDCONFIG"].getPage=function(self,pgNo,fmsID)
 		lineE = "<5            "
 
 		for i = 11, 15 do
-			if B747DR_SNDoptions_gpws[i] == 0 then
+			if B747DR_SNDoptions_gpws[GPWS_OPTION[i]] == 0 then
 				line[i] = "ON/   "
 			else
 				line[i] = "  /OFF"
@@ -234,7 +237,7 @@ fmsPages["GPWSSOUNDCONFIG"].getSmallPage=function(self,pgNo,fmsID)
 	if pgNo == 1 then
 
 		for i = 1, 5 do
-			if B747DR_SNDoptions_gpws[i] == 0 then
+			if B747DR_SNDoptions_gpws[GPWS_OPTION[i]] == 0 then
 				line[i] = "   OFF"
 			else
 				line[i] = "ON    "
@@ -250,7 +253,7 @@ fmsPages["GPWSSOUNDCONFIG"].getSmallPage=function(self,pgNo,fmsID)
 	elseif pgNo == 2 then
 
 		for i = 6, 10 do
-			if B747DR_SNDoptions_gpws[i] == 0 then
+			if B747DR_SNDoptions_gpws[GPWS_OPTION[i]] == 0 then
 				line[i] = "   OFF"
 			else
 				line[i] = "ON    "
@@ -266,7 +269,7 @@ fmsPages["GPWSSOUNDCONFIG"].getSmallPage=function(self,pgNo,fmsID)
 	elseif pgNo == 3 then
 
 		for i = 11, 15 do
-			if B747DR_SNDoptions_gpws[i] == 0 then
+			if B747DR_SNDoptions_gpws[GPWS_OPTION[i]] == 0 then
 				line[i] = "   OFF"
 			else
 				line[i] = "ON    "

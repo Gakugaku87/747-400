@@ -101,6 +101,8 @@ B747DR_autopilot_TOGA_status     	= deferred_dataref("laminar/B747/autopilot/TOG
 B747DR_autothrottle_active	= find_dataref("laminar/B747/engines/autothrottle_active")
 
 B747DR_autothrottle_fail            	= find_dataref("laminar/B747/engines/autothrottle_fail")
+-- the GPWS counts the G/S INHB pushes (B747.34.xt.gpws.lua)
+B747DR_gpws_gs_inhb_pushes          	= find_dataref("laminar/B747/gpws/gs_inhb_pushes")
 --*************************************************************************************--
 --** 				              FIND CUSTOM DATAREFS             			    	 **--
 --*************************************************************************************--
@@ -570,8 +572,15 @@ function B747_altn_wing_gear_extend_CMDhandler(phase, duration)
     if phase == 0 then B747_button_switch_position_target[2] = 1.0 - B747_button_switch_position_target[2] end
 end
 
+-- GND PROX G/S INHB: a push button (FCOM p.1537, ATA34_2 p.139); the GPWS
+-- latches the inhibit
 function B747_gnd_prox_gs_inhibit_CMDhandler(phase, duration)
-    if phase == 0 then B747_button_switch_position_target[3] = 1.0 - B747_button_switch_position_target[3] end
+    if phase == 0 then
+        B747_button_switch_position_target[3] = 1.0
+        B747DR_gpws_gs_inhb_pushes = B747DR_gpws_gs_inhb_pushes + 1
+    elseif phase == 2 then
+        B747_button_switch_position_target[3] = 0.0
+    end
 end
 
 function B747_gnd_prox_flap_ovrd_CMDhandler(phase, duration)
@@ -1948,6 +1957,7 @@ function B747_button_switch_animation()
             or i == 15                      -- EXTERNAL POWER 2
             or i == 16                      -- APU GEN 1
             or i == 17                      -- APU GEN 2
+            or i == 3                       -- GND PROX G/S INHB
             or i == 26                      -- DRIVE DISC 1
             or i == 27                      -- DRIVE DISC 2
             or i == 28                      -- DRIVE DISC 3

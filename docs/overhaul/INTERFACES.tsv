@@ -615,6 +615,14 @@ laminar/B747/air/temp/master	dataref	panel	B747.55.air
 laminar/B747/air/temp/target_shown	dataref	panel	B747.55.air
 laminar/B747/air/temp/zone_actual	dataref	panel	B747.55.air
 laminar/B747/air/temp/zone_target	dataref	panel	B747.55.air
+laminar/B747/airdata/alt_advise	dataref	panel	B747.34.nav
+laminar/B747/airdata/alt_alert	dataref	panel	B747.34.nav
+laminar/B747/airdata/alt_capt	dataref	panel	B747.34.nav
+laminar/B747/airdata/alt_fo	dataref	panel	B747.34.nav
+laminar/B747/airdata/mach_capt	dataref	panel	B747.34.nav
+laminar/B747/airdata/mach_fo	dataref	panel	B747.34.nav
+laminar/B747/airdata/valid_capt	dataref	panel	B747.34.nav
+laminar/B747/airdata/valid_fo	dataref	panel	B747.34.nav
 laminar/B747/airspeed/V1	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02,B744.fms.pages,B744.fms.pages.takeoff
 laminar/B747/airspeed/Vf0	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/airspeed/Vf1	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
@@ -1052,6 +1060,7 @@ laminar/B747/comm/rtp_R/freq_khz/sel_dial_pos	dataref	obj,snd	B747.15.com,B747.1
 laminar/B747/comm/rtp_R/hf_sens_ctrl/rheostat	dataref	obj	B747.15.com,B747.15.xt.com
 laminar/B747/comm/rtp_R/lcd_to_display	dataref	panel	B747.15.com,B747.15.xt.com
 laminar/B747/dec_height/display_status	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
+laminar/B747/dec_height/display_status_fo	dataref	panel	B747.60.fltInst
 laminar/B747/dsp/canc/switch_pos	dataref	obj,snd	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/dsp/canc_switch	command	obj	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/dsp/drs/switch_pos	dataref	obj,snd	B747.60.fltInst,B747.60.xt.fltInst02
@@ -1114,6 +1123,7 @@ laminar/B747/efis/min_ref_alt/fo/sel_dial_dn	command	obj	B747.60.fltInst,B747.60
 laminar/B747/efis/min_ref_alt/fo/sel_dial_pos	dataref	obj,snd	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/efis/min_ref_alt/fo/sel_dial_up	command	obj	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/efis/radio_altitude	dataref	panel	B747.42.xt.EEC,B747.60.fltInst,B747.30.xt.fltMgmt,B747.60.xt.fltInst02
+laminar/B747/efis/radio_altitude_fo	dataref	panel	B747.34.nav
 laminar/B747/efis/ref_alt/capt/set_dial_dn	command	obj	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/efis/ref_alt/capt/set_dial_pos	dataref	obj,snd	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/efis/ref_alt/capt/set_dial_up	command	obj	B747.60.fltInst,B747.60.xt.fltInst02
@@ -1769,6 +1779,10 @@ laminar/B747/gear_lock/override	command	obj	B747.10.gear,B747.10.xt.gear
 laminar/B747/gear_lock_ovrd/position	dataref	obj,snd	B747.10.gear,B747.10.xt.gear
 laminar/B747/glareshiled/captain/chrono_switch_pos	dataref	obj	B747.60.xt.fltInst02
 laminar/B747/glareshiled/fo/chrono_switch_pos	dataref	obj	B747.60.xt.fltInst02
+laminar/B747/gpws/callout	dataref	snd	B747.34.nav
+laminar/B747/gpws/pull_up	dataref	panel	B747.34.nav
+laminar/B747/gpws/voice	dataref	snd	B747.34.nav
+laminar/B747/gpws/windshear	dataref	panel	B747.34.nav
 laminar/B747/hydraulics/aux_pressure	dataref	panel	B747.19.hydraulicsmodel,B747.19.xt.hydraulicsmodel
 laminar/B747/hydraulics/dem_mode_1	dataref	panel	B747.19.hydraulicsmodel,B747.19.xt.hydraulicsmodel
 laminar/B747/hydraulics/dem_mode_2	dataref	panel	B747.19.hydraulicsmodel,B747.19.xt.hydraulicsmodel
@@ -2443,7 +2457,14 @@ laminar/B747/pfd/capt/irs	dataref	panel	B747.60.fltInst
 laminar/B747/pfd/fo/irs	dataref	panel	B747.60.fltInst
 laminar/B747/pfd/show_mins	dataref	panel	B747.60.fltInst
 laminar/B747/pfd/style	dataref	panel	B747.05.simconfig,B747.05.xt.simconfig
+laminar/B747/ra/capt/flag	dataref	panel	B747.34.nav
+laminar/B747/ra/capt/show	dataref	panel	B747.34.nav
+laminar/B747/ra/capt/value	dataref	panel	B747.34.nav
+laminar/B747/ra/fo/flag	dataref	panel	B747.34.nav
+laminar/B747/ra/fo/show	dataref	panel	B747.34.nav
+laminar/B747/ra/fo/value	dataref	panel	B747.34.nav
 laminar/B747/radio_alt/display_status	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
+laminar/B747/radio_alt/display_status_fo	dataref	panel	B747.60.fltInst
 laminar/B747/rel_esys	dataref	panel	B747.03.electrical
 laminar/B747/rel_esys2	dataref	panel	B747.03.electrical
 laminar/B747/rel_esys3	dataref	panel	B747.03.electrical

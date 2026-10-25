@@ -5944,355 +5944,284 @@ END_SOUND_ATTACHMENT
 ##################
 #GPWS
 ##################
+# The GPWS's voices come from the GPWS model (plugins/xtlua/scripts/
+# B747.34.xt.nav, docs/overhaul/notes/ATA-34.md section 14):
+#   laminar/B747/gpws/voice: one at a time, each event repeating while it lasts:
+#     1 SINK RATE, 2 PULL UP, 3 TERRAIN, 4 DON'T SINK, 5 TOO LOW GEAR,
+#     6 TOO LOW FLAPS, 7 TOO LOW TERRAIN, 8 GLIDE SLOPE, 9 BANK ANGLE, 10 WINDSHEAR
+#   laminar/B747/gpws/callout: each callout once: the radio altitude of the
+#     405 (2500, 1000, 500, 100, 50, 40, 30, 20, 10), 1 APPROACHING MINIMUMS,
+#     2 MINIMUMS; 0 between
+# The bank mutes some events itself (fmod/warnings.bank): each callout with its
+# laminar/B747/fmod/options/gpws[n] (the CDU's options); sinkrate unless the
+# pilot's VSI reads 2,500 fpm down or more; too_low_flaps above flap lever 0.6
+# (flaps 20 and up), below 140 kt, above 1,000 ft RA, below 100 fpm down; terrain
+# with TERR OVRD. DON'T SINK (voice 4) has no event: fmod/GUIDs.txt has its line
+# commented out, so X-Plane cannot find it (an alert at load). The new and OLD
+# voices as before (the snapshot old_vs_new_alarms picks one).
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/GPWS/2500
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 2510
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 2400
+    EVENT_START_COND laminar/B747/gpws/callout == 2500
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/GPWS/1000
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 1010
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 900
+    EVENT_START_COND laminar/B747/gpws/callout == 1000
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/GPWS/500
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 510
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 450
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/400
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 410
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 350
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/300
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 310
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 250
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/200
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 210
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 150
+    EVENT_START_COND laminar/B747/gpws/callout == 500
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/GPWS/100
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 110
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 60
+    EVENT_START_COND laminar/B747/gpws/callout == 100
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/GPWS/50
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 55
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 45
+    EVENT_START_COND laminar/B747/gpws/callout == 50
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/GPWS/40
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 41
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 35
+    EVENT_START_COND laminar/B747/gpws/callout == 40
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/GPWS/30
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 31
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 25
+    EVENT_START_COND laminar/B747/gpws/callout == 30
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/GPWS/20
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 21
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 15
+    EVENT_START_COND laminar/B747/gpws/callout == 20
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/GPWS/10
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 11
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 6
+    EVENT_START_COND laminar/B747/gpws/callout == 10
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/bankangle
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/approaching_minimums
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/roll_electric_deg_pilot > 35
-    EVENT_START_COND sim/cockpit2/electrical/bus_volts[0] == 28
-    EVENT_END_COND sim/cockpit2/gauges/indicators/roll_electric_deg_pilot < 32
+    EVENT_START_COND laminar/B747/gpws/callout == 1
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/bankangle
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/minimums
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/roll_electric_deg_pilot < -35
-    EVENT_END_COND sim/cockpit2/gauges/indicators/roll_electric_deg_pilot > -32
-END_SOUND_ATTACHMENT
-
-#BEGIN_SOUND_ATTACHMENT
-#    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/dontsink
-#    VEH_XYZ 0 4.2 -26.8
-#    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 5000
-#    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot > 5000
-#END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/glideslope
-    VEH_XYZ 0 4.2 -26.8
-      EVENT_START_COND sim/cockpit/warnings/annunciators/glideslope == 1
-      EVENT_END_COND sim/cockpit/warnings/annunciators/glideslope == 0
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/pull_up
-    VEH_XYZ 0 4.2 -26.8
-      EVENT_START_COND sim/cockpit/warnings/annunciators/GPWS == 1
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 2450
-      EVENT_END_COND sim/cockpit/warnings/annunciators/GPWS == 0
+    EVENT_START_COND laminar/B747/gpws/callout == 2
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/GPWS/sinkrate
     VEH_XYZ 0 4.2 -26.8
-      EVENT_START_COND sim/cockpit2/gauges/indicators/vvi_fpm_pilot < -2500
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 2500
-    EVENT_AUTO_END_FROM_START_COND
+    EVENT_START_COND laminar/B747/gpws/voice == 1
+    EVENT_END_COND laminar/B747/gpws/voice != 1
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/too_low_flaps
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/pull_up
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/controls/flap_ratio == 0
-    EVENT_END_COND sim/cockpit2/controls/flap_ratio =! 0
+    EVENT_START_COND laminar/B747/gpws/voice == 2
+    EVENT_END_COND laminar/B747/gpws/voice != 2
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/terrain
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/voice == 3
+    EVENT_END_COND laminar/B747/gpws/voice != 3
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/GPWS/too_low_gear
     VEH_XYZ 0 4.2 -26.8
-      EVENT_START_COND sim/cockpit2/annunciators/gear_warning_aural == 1
-    EVENT_END_COND sim/cockpit2/annunciators/gear_warning_aural != 1
+    EVENT_START_COND laminar/B747/gpws/voice == 5
+    EVENT_END_COND laminar/B747/gpws/voice != 5
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/too_low_flaps
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/voice == 6
+    EVENT_END_COND laminar/B747/gpws/voice != 6
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/GPWS/too_low_terrain
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/vvi_fpm_pilot < -200
-    EVENT_START_COND sim/flightmodel2/gear/deploy_ratio == 1
-    EVENT_START_COND sim/flightmodel/position/indicated_airspeed < 180
-    EVENT_END_COND sim/cockpit2/gauges/indicators/vvi_fpm_pilot > -200
+    EVENT_START_COND laminar/B747/gpws/voice == 7
+    EVENT_END_COND laminar/B747/gpws/voice != 7
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/glideslope
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/voice == 8
+    EVENT_END_COND laminar/B747/gpws/voice != 8
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/bankangle
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/voice == 9
+    EVENT_END_COND laminar/B747/gpws/voice != 9
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/GPWS/windshear
     VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/annunciators/windshear_warning == 1
-    EVENT_START_COND sim/cockpit2/electrical/bus_volts[0] > 1
-    EVENT_END_COND sim/cockpit2/electrical/bus_volts[0] < 1
+    EVENT_START_COND laminar/B747/gpws/voice == 10
+    EVENT_END_COND laminar/B747/gpws/voice != 10
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/2500
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/callout == 2500
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/1000
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/callout == 1000
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/500
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/callout == 500
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/100
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/callout == 100
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/50
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/callout == 50
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/40
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/callout == 40
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/30
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/callout == 30
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/20
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/callout == 20
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/10
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/callout == 10
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/approaching_minimums
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/callout == 1
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/minimums
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/callout == 2
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/sinkrate
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/voice == 1
+    EVENT_END_COND laminar/B747/gpws/voice != 1
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/pull_up
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/voice == 2
+    EVENT_END_COND laminar/B747/gpws/voice != 2
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/terrain
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/voice == 3
+    EVENT_END_COND laminar/B747/gpws/voice != 3
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/too_low_gear
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/voice == 5
+    EVENT_END_COND laminar/B747/gpws/voice != 5
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/too_low_flaps
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/voice == 6
+    EVENT_END_COND laminar/B747/gpws/voice != 6
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/too_low_terrain
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/voice == 7
+    EVENT_END_COND laminar/B747/gpws/voice != 7
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/glideslope
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/voice == 8
+    EVENT_END_COND laminar/B747/gpws/voice != 8
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/bankangle
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/voice == 9
+    EVENT_END_COND laminar/B747/gpws/voice != 9
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/windshear
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/gpws/voice == 10
+    EVENT_END_COND laminar/B747/gpws/voice != 10
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/GPWS/v1
     VEH_XYZ 0 4.2 -26.8
     EVENT_START_COND laminar/B747/fmod/callouts/v1 == 1
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/minimums
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND laminar/B747/altimeter/ft_adjusted == 1
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/approaching_minimums
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND laminar/B747/fmod/callouts/appDH == 1
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/minimums
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND laminar/B747/altimeter/ft_adjusted == 1
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/approaching_minimums
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND laminar/B747/fmod/callouts/appDH == 1
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/2500
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 2510
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 2400
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/1000
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 1010
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 900
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/500
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 510
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 450
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/400
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 410
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 350
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/300
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 310
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 250
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/200
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 210
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 150
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/100
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 110
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 60
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/50
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 55
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 45
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/40
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 41
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 35
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/30
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 31
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 25
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/20
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 21
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 15
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/10
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot <= 11
-    EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 6
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/bankangle
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/roll_electric_deg_pilot > 35
-    EVENT_START_COND sim/cockpit2/electrical/bus_volts[0] == 28
-    EVENT_END_COND sim/cockpit2/gauges/indicators/roll_electric_deg_pilot < 32
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/bankangle
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/roll_electric_deg_pilot < -35
-    EVENT_END_COND sim/cockpit2/gauges/indicators/roll_electric_deg_pilot > -32
-END_SOUND_ATTACHMENT
-
-#BEGIN_SOUND_ATTACHMENT
-#    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/dontsink
-#    VEH_XYZ 0 4.2 -26.8
-#    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 5000
-#   EVENT_END_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot > 5000
-#END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/glideslope
-    VEH_XYZ 0 4.2 -26.8
-      EVENT_START_COND sim/cockpit/warnings/annunciators/glideslope == 1
-      EVENT_END_COND sim/cockpit/warnings/annunciators/glideslope == 0
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/pull_up
-    VEH_XYZ 0 4.2 -26.8
-      EVENT_START_COND sim/cockpit/warnings/annunciators/GPWS == 1
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 2450
-      EVENT_END_COND sim/cockpit/warnings/annunciators/GPWS == 0
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/sinkrate
-    VEH_XYZ 0 4.2 -26.8
-      EVENT_START_COND sim/cockpit2/gauges/indicators/vvi_fpm_pilot < -2500
-    EVENT_START_COND sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot < 2500
-    EVENT_AUTO_END_FROM_START_COND
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/too_low_flaps
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/controls/flap_ratio == 0
-    EVENT_END_COND sim/cockpit2/controls/flap_ratio =! 0
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/too_low_gear
-    VEH_XYZ 0 4.2 -26.8
-      EVENT_START_COND sim/cockpit2/annunciators/gear_warning_aural == 1
-    EVENT_END_COND sim/cockpit2/annunciators/gear_warning_aural != 1
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/too_low_terrain
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/gauges/indicators/vvi_fpm_pilot < -200
-    EVENT_START_COND sim/flightmodel2/gear/deploy_ratio == 1
-    EVENT_START_COND sim/flightmodel/position/indicated_airspeed < 180
-    EVENT_END_COND sim/cockpit2/gauges/indicators/vvi_fpm_pilot > -200
-END_SOUND_ATTACHMENT
-
-BEGIN_SOUND_ATTACHMENT
-    EVENT_NAME /Boeing/747/-400/Warnings/GPWS/OLD/windshear
-    VEH_XYZ 0 4.2 -26.8
-    EVENT_START_COND sim/cockpit2/annunciators/windshear_warning == 1
-    EVENT_START_COND sim/cockpit2/electrical/bus_volts[0] > 1
-    EVENT_END_COND sim/cockpit2/electrical/bus_volts[0] < 1
 END_SOUND_ATTACHMENT
 
 ##################

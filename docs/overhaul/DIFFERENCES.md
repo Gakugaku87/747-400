@@ -13,7 +13,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 |---|---|---|
 | 電源（ATA 24） | 作り直し済み（1-1） | 保護トリップと故障、autoland のバス分離、いくつかの系統がまだ X-Plane の bus 0 で電源を見る |
 | 空地判定（PSEU） | 作り直し済み（1-2） | 15 モジュールがまだ X-Plane の「どれか 1 輪接地」を読む（各系統の作り直しで乗り換え） |
-| 乗員への警報 | 枠組みは作り直し済み（1-3） | 形態警報・失速警報・GPWS の master WARNING など、各系統の警報の中身 |
+| 乗員への警報 | 枠組みは作り直し済み（1-3） | 形態警報・失速警報など、各系統の警報の中身 |
 | 油圧（ATA 29） | 作り直し済み（1-4） | 油温に燃料の熱交換が無い（系統の圧による制限は、脚・ブレーキ・ステアリングは 4-2、安定板トリムとヨーダンパーは 4-1、逆推力は 2-3 で済） |
 | 空圧（ATA 36） | 作り直し済み（1-5） | 故障（過熱・過圧・ダクトリーク）がつながっていない、地上空気の操作が無い |
 | APU（ATA 49） | 作り直し済み（2-1） | 始動電源と回数の制限、空中の運用範囲 |
@@ -25,8 +25,8 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 火災防護（ATA 26） | 作り直し済み（3-4：エンジン・APU・貨物室の検知と消火、車輪格納部、ダクトリーク、煙、試験、スクイブ試験） | FUEL CONTROL の赤灯（3D）、M869 とホーンの音、火の元は失敗の dataref（X-Plane に無いもの） |
 | 操縦系統（ATA 27） | 作り直し中（4-1 段 1：フラップの FCU、段 2：SRM の外側エルロンのロックアウト・ラダー比変換器・安定板トリム・speed trim、グリーンバンド、段 3：スピードブレーキ、段 4：横操縦・遮断弁・ヨーダンパーの INOP） | フラップの拡大・代替の表示のパネル、>STAB GREENBAND、昇降舵の舵角、ヨーダンパーの制御則（AFDS） |
 | 脚・ブレーキ・ステアリング（ATA 32） | 作り直し済み（4-2 段 1〜5：脚の作動・代替下げ・位置監視・表示、ブレーキ、オートブレーキ、ステアリング、ブレーキ温度とタイヤ圧） | AIR/GND SYSTEM と脚の STATUS の一部、tiller の軸が無いときのペダル（実機ではない手当て） |
-| 表示（PFD・ND・EICAS） | 未着手（電源と点灯の修正だけ） | ソース選択、速度テープの帯、DH、ND の DATA/POS・TCAS |
-| 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障） | FMC の位置への GPS の更新、PFD の昇降率の源、GPWS、TCAS、無線の自動同調 |
+| 表示（PFD・ND・EICAS） | 未着手（電源と点灯の修正だけ） | ソース選択、速度テープの帯、405 型の RADIO/BARO の minimums、ND の DATA/POS・TCAS |
+| 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING） | FMC の位置への GPS の更新、PFD の昇降率の源、GPWS の地形の look-ahead、TCAS、無線の自動同調 |
 | FMC | 未着手 | 経路モデル、ホールド、LNAV・VNAV、予測 |
 | CDU | 未着手 | 3 台が 1 つを共有、MOD/EXEC、入力の検査、データリンク |
 | 自動操縦・FD | 未着手 | ロールが X-Plane の AP 頼み、LOC・TO/GA・autoland の則 |
@@ -67,12 +67,12 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 残っている違い：
 - 他のメッセージによる抑止と時間遅れは、系統ごとにまだ（各系統の作り直しで足す）。
 - FCOM にあって表に無いメッセージが約 30 件（WARN-08。各系統で）。
-- 離陸形態警報が「エンジン 2 と 3 の両方」を要求する（FCOM は 2 か 3）。着陸形態警報（CONFIG GEAR）は、着陸フラップ（フラップ 25 を含める）と「どれか 1 本のレバーが閉」（プラグインのレバーを 1 本ずつ）を操縦系統 4-1 段 3 で直したが、リセットの可否・GND PROX GEAR OVRD・脚上げ後の抑止などは無い（WARN-11・12）。
+- 離陸形態警報が「エンジン 2 と 3 の両方」を要求する（FCOM は 2 か 3）。着陸形態警報（CONFIG GEAR）は、着陸フラップ（フラップ 25 を含める）と「どれか 1 本のレバーが閉」（プラグインのレバーを 1 本ずつ）を操縦系統 4-1 段 3 で直したが、リセットの可否・脚上げ後の抑止などは無い（WARN-11・12。GND PROX GEAR OVRD での抑止は 5-1 段 4 で）。
 - SPEEDBRAKES EXT の条件式（WARN-13）は操縦系統 4-1 段 3 で直した（空中の CONFIG SPOILERS も貨物機だけに）。>STAB GREENBAND が無い（WARN-14 の残り。グリーンバンドの 3 帯と CONFIG STAB の帯は操縦系統 4-1 段 2c で）。
 - OVERSPEED を Vmo/Mmo でなくフラップ・脚の制限込みの Vmax で出す（WARN-15）。
 - ALTITUDE ALERT が無い（WARN-16）。
 - 失速警報が AOA でなく速度の表で出る（WARN-18）。
-- GPWS の PULL UP・WINDSHEAR で master WARNING が点かない（WARN-19）。
+- GPWS の PULL UP・WINDSHEAR の master WARNING は 5-1 段 4 で作った（WARN-19）。
 - PILOT RESPONSE、チャイムの論理、MAWEA の電源が無い（WARN-20〜22）。
 - APU・貨物室・車輪格納部の火災のベルは、火災（3-4）で。
 - 純正 acf のパネルは 2 ページまでしか描けない（PG も無い）。
@@ -279,13 +279,13 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - PFD の方位目盛りが ND の向きで回る（DSP-01）。
 - ソースの選択（FLT DIR、NAV、EIU、AIR DATA、IRS）が無い（DSP-02・03）。PFD の故障旗が少ない（DSP-04）。
 - 速度テープの帯（最大・最小機動速度）が違う、OVERSPEED を Vmax で出す、Vs の表の高度区分の誤りと誤記（DSP-05〜08）。
-- DH RST が minimums を書き換える、DH の警報が機長側だけ（DSP-09・10）。STD と preselect（DSP-11）。FPV・PLI など PFD の記号が無い（DSP-12）。
+- DH は 109 型の表示（緑の DH と数字、大きな琥珀の DH）のまま。405 の RADIO/BARO の表示は 5-2 で。DH RST と各席の DH の警報は 5-1 段 4 で直した（DSP-09・10）。STD と preselect（DSP-11）。FPV・PLI など PFD の記号が無い（DSP-12）。
 - ND の DATA・POS が効かない（DSP-16）、TCAS の記号（DSP-18）、TERR は外部のプラグイン頼み（DSP-19）、HDG REF（DSP-20）。
 - EICAS の compact・部分表示・二次エンジンの逸脱（DSP-24）、表示器と EIU の故障と自動切替（DSP-27）、表示選択の組み合わせ（DSP-28）。
 - 時計の CHR の表示（DSP-33）。
 - 直した点：表示器と CDU の電源（1-1）。同じ機体のまま新しいフライトを始めると表示器と CDU が真っ暗になる不具合（作り直し前から）を直した（2026-10-23）。
 
-### 航法センサーと無線（ATA 34）：作り直し中（5-1 段 1：エアデータ、段 2：IRS は済）
+### 航法センサーと無線（ATA 34）：作り直し中（5-1 段 1：エアデータ、段 2：IRS、段 4：電波高度計・GPWS は済）
 
 実機に合わせた点（段 1、エアデータ）：ADC を 3 台にした（L は X-Plane の機長側、R は副操縦士側、C は standby の pitot-static：推定）。電源（L は standby bus、C は機長の transfer bus、R は副操縦士の transfer bus）と故障で無効になる。各席の AIR DATA 選択器で PFD の速度の ADC が変わり、両席が同じ ADC なら >SOURCE SEL ADC（NAV-01）。IAS DISAGREE（5 kt 以上）・ALT DISAGREE（未補正で 200 ft 超）は 5 秒続いたとき（NAV-04）。OVERSPEED は Vmo 365 kt と Mmo 0.92 だけ（前はフラップ・脚の placard を含み、28,620 ft 以下は M0.88：NAV-02）。>ALTITUDE ALERT は、選択高度の 300 ft を超えて離れたとき（EICAS・master caution・beeper）で、GS の捕捉、着陸フラップで脚 down のときは抑止、選択高度を変えると消える（NAV-03）。>AOA RIGHT は右の AOA の故障で出る（前は左：NAV-07）。BARO の STD をもう一度押すと STD の前の値に戻る（前は 29.92 のまま：NAV-06）。カスタム acf の PFD の高度と Mach も選んだ ADC の値で、その席のエアデータが無効なら速度と高度のテープが消えて琥珀の SPD・ALT の旗が出る（NAV-05）。高度警報の枠：選択高度の 900〜300 ft 手前で選択高度と現在高度に白の強調の枠、離れると現在高度に琥珀の枠（NAV-03）。
 
@@ -294,8 +294,11 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - PFD の昇降率は X-Plane の値のまま（実機は IRS）。3D の AIR DATA ノブは 2 位置（570 型の L/R。位置の意味は推定）で、C を選べない。他の系統（EEC・SRM など）は各席の PFD の速度を読むので、表示の選択に従う（実機は各系統のリレーの側の ADC）。
 - IRS（段 2 で実機に合わせた点）：ALIGN でも NAV でもアラインが進み約 10 分（simconfig の時間）、位置の入力の検査（覚えている位置と 1°、アラインの終わりの緯度、2 回で故障）、動くと止まり止まってから約 10 分、NAV→ALIGN の fast alignment（約 30 秒）、ATT（30 秒、OFF までラッチ、SET HDG の方位）、電源（AC と hot battery bus、C の 5 分、ON BAT）、IRS L/C/R・>IRS AC・>IRS DC・>SOURCE SEL IRS（NAV-16〜22・30）。残っている違い：PFD の ATT と HDG の旗は一緒にしか出ない（ATT で方位が無いときも両方：パネル）。IRU の位置にドリフトが無い（NAV-26）。HDG REF の TRU と高緯度の 17 分のアラインが無い（NAV-16・28）。GPS は電源・初回測位（75 秒）・故障とメッセージまで（段 2）。RAIM・HIL、FMC の位置への GPS の更新、GPS NAV INHIBIT が無い（NAV-25 の残り）。地上員呼び出しのホーンが無い。
 - 無線：VOR の音声の経路、NAV RADIO の RADIAL が 180° 違う、自動同調が単純、ILS の自動同調を経路の形から推定（NAV-32〜39）。
-- 電波高度計が 1 系統（NAV-51）。MINS RST が minimums を書き換える（NAV-52）。
-- GPWS の mode 1〜5 の判定が無い、GND PROX のスイッチが効かない、灯が点かない、windshear は X-Plane のまま、callout の条件（NAV-55〜61）。地形の look-ahead が無い（NAV-62）。
+- 実機に合わせた点（段 4、電波高度計と GPWS）：電波高度計を 3 台にした（L は X-Plane の機長側、R は副操縦士側、C は機長側：推定）。電源（AC bus 3・1・2）と故障で無効、各席の PFD は EIU 選択器の順で使える RA を表示し、どれも使えなければ琥珀の RA 旗、2,500 ft 超は空白（NAV-51）。DH の警報は各席の RA と DH で、DH + 75 ft の上昇で arm、最初の 3 秒点滅、MINS RST は点滅のリセットだけ（前は両席の DH を 350 ft に書き換えた：NAV-52〜54）。GPWS の mode 1〜7 を GPWC のモデルで作った（SINK RATE・PULL UP、TERRAIN・PULL UP と高度回復、DON'T SINK、TOO LOW GEAR・FLAPS・TERRAIN、GLIDE SLOPE と G/S INHB の押しボタン、405 のコールアウトと APPROACHING MINIMUMS・MINIMUMS、BANK ANGLE の 35・40・45°、windshear の最低 5 秒）。GND PROX 灯、PFD の PULL UP・WINDSHEAR、master WARNING、FLAP OVRD・GEAR OVRD（CONFIG GEAR も止める）、>ALT CALLOUTS・GND PROX SYS・>TERR OVRD・TERR POS・WINDSHEAR SYS（NAV-55〜61・63・64）。声は一度に 1 つ、windshear と警報が上（NAV-65 の GPWS の側）。CDU の GPWS の音の設定の添字が音のバンクとずれていた（MINIMUMS を切ると 2500 が消えた）のを直した。 残っている違い：
+  - 音のバンクが自分で音量を絞るので、SINK RATE は昇降計が 2,500 fpm 以上の降下でないと聞こえず、TOO LOW FLAPS はフラップ 20 以上・140 kt 未満などで聞こえない。DON'T SINK の音は使えない（音声パックの GUIDs.txt で外されている）。GLIDE SLOPE の音量と繰り返しの速さは変わらない。音は対象外なので直していない。
+  - mode 1 の PULL UP の線、mode 2 の一部の点と速度の間、mode 3 の閾値の細部、各声の再 arm などは推定（資料に数値が無い）。mode 3B は無い。
+  - 地形の look-ahead と TCF が無い（NAV-62。TERR OVRD は >TERR OVRD だけ）。GPWC の自己試験、envelope modulation が無い。windshear は X-Plane の検出をそのまま使う。
+  - DH の表示は 109 型（緑の DH と数字、大きな琥珀の DH）のまま。405 の RADIO/BARO の表示は表示の作り直し（5-2）で。EIU の故障と AUTO の切替が無い。
 - TCAS の TA/RA の判定、ND の記号、PFD の RA の表示、音声が無い（NAV-69〜72）。トランスポンダのモードの対応（NAV-66）。気象レーダーの論理（NAV-79）。
 
 ### FMC（航法・性能・誘導）：未着手

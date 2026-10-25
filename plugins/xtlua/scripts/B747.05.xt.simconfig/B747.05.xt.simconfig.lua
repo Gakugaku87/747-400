@@ -259,21 +259,23 @@ function setSoundOption(key,value)
 	end
 	if key == "V1Option" then B747DR_SNDoptions[5] = value return end
 
-	if key == "GPWSminimums" then B747DR_SNDoptions_gpws[1] = value return end
-	if key == "GPWSapproachingMinimums" then B747DR_SNDoptions_gpws[2] = value return end
-	if key == "GPWS2500" then B747DR_SNDoptions_gpws[3] = value return end
-	if key == "GPWS1000" then B747DR_SNDoptions_gpws[4] = value return end
-	if key == "GPWS500" then B747DR_SNDoptions_gpws[5] = value return end
-	if key == "GPWS400" then B747DR_SNDoptions_gpws[6] = value return end
-	if key == "GPWS300" then B747DR_SNDoptions_gpws[7] = value return end
-	if key == "GPWS200" then B747DR_SNDoptions_gpws[8] = value return end
-	if key == "GPWS100" then B747DR_SNDoptions_gpws[9] = value return end
-	if key == "GPWS50" then B747DR_SNDoptions_gpws[10] = value return end
-	if key == "GPWS40" then B747DR_SNDoptions_gpws[11] = value return end
-	if key == "GPWS30" then B747DR_SNDoptions_gpws[12] = value return end
-	if key == "GPWS20" then B747DR_SNDoptions_gpws[13] = value return end
-	if key == "GPWS10" then B747DR_SNDoptions_gpws[14] = value return end
-	if key == "GPWS5" then B747DR_SNDoptions_gpws[15] = value return end
+	-- the GPWS options in the sound bank's order (1-13 the radio altitudes 2500
+	-- down to 5, 14 MINIMUMS, 15 APPROACHING MINIMUMS: fmod/warnings.bank)
+	if key == "GPWSminimums" then B747DR_SNDoptions_gpws[14] = value return end
+	if key == "GPWSapproachingMinimums" then B747DR_SNDoptions_gpws[15] = value return end
+	if key == "GPWS2500" then B747DR_SNDoptions_gpws[1] = value return end
+	if key == "GPWS1000" then B747DR_SNDoptions_gpws[2] = value return end
+	if key == "GPWS500" then B747DR_SNDoptions_gpws[3] = value return end
+	if key == "GPWS400" then B747DR_SNDoptions_gpws[4] = value return end
+	if key == "GPWS300" then B747DR_SNDoptions_gpws[5] = value return end
+	if key == "GPWS200" then B747DR_SNDoptions_gpws[6] = value return end
+	if key == "GPWS100" then B747DR_SNDoptions_gpws[7] = value return end
+	if key == "GPWS50" then B747DR_SNDoptions_gpws[8] = value return end
+	if key == "GPWS40" then B747DR_SNDoptions_gpws[9] = value return end
+	if key == "GPWS30" then B747DR_SNDoptions_gpws[10] = value return end
+	if key == "GPWS20" then B747DR_SNDoptions_gpws[11] = value return end
+	if key == "GPWS10" then B747DR_SNDoptions_gpws[12] = value return end
+	if key == "GPWS5" then B747DR_SNDoptions_gpws[13] = value return end
 
 end
 function set_loaded_configs()

@@ -31,6 +31,7 @@ B747DR_alert_afds_status        = find_dataref("laminar/B747/autopilot/AFDS/stat
 simDR_alert_engine_N2           = find_dataref("sim/flightmodel/engine/ENGN_N2_")
 simDR_alert_pitch               = find_dataref("sim/flightmodel/position/theta")
 simDR_alert_radio_alt           = find_dataref("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
+B747DR_alert_gpws_warning       = find_dataref("laminar/B747/gpws/warning")
 -- the STATUS page: shown on the secondary EICAS, paged by the STAT switch
 -- (fltInst02, in the other plugin)
 B747DR_alert_synoptic_display   = find_dataref("laminar/B747/dsp/synoptic_display")
@@ -150,6 +151,7 @@ local function read_inputs(inp, t)
     if v1 > 0 and v1 < 900 then inp.v1 = v1 else inp.v1 = 0 end   -- 998/999: no V1 (fltInst02)
     inp.pitch = simDR_alert_pitch
     inp.radio_alt = simDR_alert_radio_alt
+    inp.gpws_warning = B747DR_alert_gpws_warning == 1
     local afds = B747DR_alert_afds_status
     inp.land_2_3 = afds == 3 or afds == 4          -- LAND 2, LAND 3 (autopilot init script)
     inp.recall_held = B747DR_alert_rcl_switch_pos > 0.5

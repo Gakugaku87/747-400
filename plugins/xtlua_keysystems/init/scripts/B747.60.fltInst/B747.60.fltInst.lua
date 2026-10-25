@@ -177,6 +177,9 @@ B747DR_altimter_ft_adjusted                     = deferred_dataref("laminar/B747
 
 B747DR_dec_ht_display_status                    = deferred_dataref("laminar/B747/dec_height/display_status", "number")
 B747DR_radio_alt_display_status                 = deferred_dataref("laminar/B747/radio_alt/display_status", "number")
+-- the F/O's DH alert (the Captain's is display_status): 0 green, 1 amber, 2 the flash's dark half
+B747DR_dec_ht_display_status_fo                 = deferred_dataref("laminar/B747/dec_height/display_status_fo", "number")
+B747DR_radio_alt_display_status_fo              = deferred_dataref("laminar/B747/radio_alt/display_status_fo", "number")
 
 B747DR_radio_altitude                           = deferred_dataref("laminar/B747/efis/radio_altitude", "number")
 

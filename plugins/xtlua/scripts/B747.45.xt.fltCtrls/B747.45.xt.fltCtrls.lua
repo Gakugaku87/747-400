@@ -861,8 +861,9 @@ function B747_fltCtrols_EICAS_msg()
 	    B747DR_CAS_warning_status[4] = 0
     end
 
-    -- >CONFIG GEAR
-    if ((simDR_gear_deploy_ratio[0] < 0.99
+    -- >CONFIG GEAR; the GND PROX CONFIG GR OVRD switch inhibits it (FCOM
+    -- p.1538, ATA34_2 p.207)
+    if B747DR_button_switch_position[5] < 0.5 and ((simDR_gear_deploy_ratio[0] < 0.99
         or simDR_gear_deploy_ratio[1] < 0.99
         or simDR_gear_deploy_ratio[2] < 0.99
         or simDR_gear_deploy_ratio[3] < 0.99
