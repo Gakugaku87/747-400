@@ -2,7 +2,9 @@
 # cockpit_3d/generic:
 #  - CRT Displays/ND/vorLX and vorRX: the VOR flags (FCOM p.1034 (10.10.72):
 #    "VORL", "VORR"), boxed like the PFD's LOC flag (70 x 30, a 3-pixel amber
-#    border, four letters 12 x 21 from y 4: make_pfd_ils_images.ps1);
+#    border, four letters 12 x 21 from y 4: make_pfd_ils_images.ps1); alike
+#    adfLX, adfRX ("ADFL", "ADFR": the lower corners' ADF flags) and dmeLX,
+#    dmeRX ("DMEL", "DMER": the DME flags, top right and lower corners);
 #  - CRT Displays/ND/Ref Rcvr/to_lbl and from_lbl: the TO/FROM indication's
 #    words (FCOM p.1145, white), letters 6 x 11 spaced 7 like the stock CRS
 #    label (crs_bkgnd: its ink 20 x 11 from x 4, y 3);
@@ -84,7 +86,7 @@ function Add-Letters([System.Drawing.Bitmap]$b, [string]$text, [int]$lw, [int]$l
 }
 
 # the VOR flags: boxed, four letters
-foreach ($f in @(@('vorLX', 'VORL'), @('vorRX', 'VORR'))) {
+foreach ($f in @(@('vorLX', 'VORL'), @('vorRX', 'VORR'), @('adfLX', 'ADFL'), @('adfRX', 'ADFR'), @('dmeLX', 'DMEL'), @('dmeRX', 'DMER'))) {
     $b = New-Object System.Drawing.Bitmap 70, 30
     for ($x = 0; $x -lt 70; $x++) { for ($y = 0; $y -lt 3; $y++) { $b.SetPixel($x, $y, $AMBER); $b.SetPixel($x, 29 - $y, $AMBER) } }
     for ($y = 0; $y -lt 30; $y++) { for ($x = 0; $x -lt 3; $x++) { $b.SetPixel($x, $y, $AMBER); $b.SetPixel(69 - $x, $y, $AMBER) } }

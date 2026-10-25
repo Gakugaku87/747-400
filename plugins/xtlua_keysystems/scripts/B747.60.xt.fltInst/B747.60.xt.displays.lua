@@ -36,7 +36,10 @@
 -- receiver (nd/capt|fo/loc_scale, loc_ptr, loc_flag, gs_scale, gs_ptr,
 -- gs_flag, crs, crs_deg, dme, dme_nm, ils_ref; nd/dashes) out; the VOR
 -- mode's reference VOR (nd/capt|fo/vor_rx, vor_flag, vor_dev, vor_crs,
--- vor_crs_deg, to_from, vor_dme, vor_dme_nm, vor_ref) out.
+-- vor_crs_deg, to_from, vor_dme, vor_dme_nm, vor_ref) out; the VOR and
+-- ADF bearing pointers and the lower corner blocks (nd/capt|fo/ptr_l,
+-- ptr_r, brg_l, brg_r, rad_l, rad_r, rad_l_flag, rad_r_flag, rad_l_dme,
+-- rad_r_dme; nd/vor_l_ref, vor_r_ref, adf_l_ref, adf_r_ref) out.
 -- dofile'd from B747.60.xt.fltInst.lua after B747.60.xt.fltInst02.lua.
 
 dofile("B747.60.display_model.lua")
@@ -162,6 +165,43 @@ simDR_dsp_nav_dme_nm            = find_dataref("sim/cockpit2/radios/indicators/n
 simDR_dsp_nav3_id               = find_dataref("sim/cockpit2/radios/indicators/nav3_nav_id")
 simDR_dsp_nav4_id               = find_dataref("sim/cockpit2/radios/indicators/nav4_nav_id")
 B747DR_dsp_radio_modes          = find_dataref("laminar/B747/radio/tuningmodes")
+simDR_dsp_efis_sw_l_capt        = find_dataref("sim/cockpit2/EFIS/EFIS_1_selection_pilot")
+simDR_dsp_efis_sw_r_capt        = find_dataref("sim/cockpit2/EFIS/EFIS_2_selection_pilot")
+simDR_dsp_efis_sw_l_fo          = find_dataref("sim/cockpit2/EFIS/EFIS_1_selection_copilot")
+simDR_dsp_efis_sw_r_fo          = find_dataref("sim/cockpit2/EFIS/EFIS_2_selection_copilot")
+simDR_dsp_nav_rel               = find_dataref("sim/cockpit2/radios/indicators/nav_relative_bearing_deg")
+simDR_dsp_adf1_rel              = find_dataref("sim/cockpit2/radios/indicators/adf1_relative_bearing_deg")
+simDR_dsp_adf2_rel              = find_dataref("sim/cockpit2/radios/indicators/adf2_relative_bearing_deg")
+simDR_dsp_adf1_id               = find_dataref("sim/cockpit2/radios/indicators/adf1_nav_id")
+simDR_dsp_adf2_id               = find_dataref("sim/cockpit2/radios/indicators/adf2_nav_id")
+simDR_dsp_adf1_freq             = find_dataref("sim/cockpit2/radios/actuators/adf1_frequency_hz")
+simDR_dsp_adf2_freq             = find_dataref("sim/cockpit2/radios/actuators/adf2_frequency_hz")
+simDR_dsp_adf1_fail             = find_dataref("sim/operation/failures/rel_adf1")
+simDR_dsp_adf2_fail             = find_dataref("sim/operation/failures/rel_adf2")
+B747DR_dsp_nd_ptr_l_capt        = find_dataref("laminar/B747/nd/capt/ptr_l")
+B747DR_dsp_nd_ptr_r_capt        = find_dataref("laminar/B747/nd/capt/ptr_r")
+B747DR_dsp_nd_brg_l_capt        = find_dataref("laminar/B747/nd/capt/brg_l")
+B747DR_dsp_nd_brg_r_capt        = find_dataref("laminar/B747/nd/capt/brg_r")
+B747DR_dsp_nd_rad_l_capt        = find_dataref("laminar/B747/nd/capt/rad_l")
+B747DR_dsp_nd_rad_r_capt        = find_dataref("laminar/B747/nd/capt/rad_r")
+B747DR_dsp_nd_rad_l_flag_capt   = find_dataref("laminar/B747/nd/capt/rad_l_flag")
+B747DR_dsp_nd_rad_r_flag_capt   = find_dataref("laminar/B747/nd/capt/rad_r_flag")
+B747DR_dsp_nd_rad_l_dme_capt    = find_dataref("laminar/B747/nd/capt/rad_l_dme")
+B747DR_dsp_nd_rad_r_dme_capt    = find_dataref("laminar/B747/nd/capt/rad_r_dme")
+B747DR_dsp_nd_ptr_l_fo          = find_dataref("laminar/B747/nd/fo/ptr_l")
+B747DR_dsp_nd_ptr_r_fo          = find_dataref("laminar/B747/nd/fo/ptr_r")
+B747DR_dsp_nd_brg_l_fo          = find_dataref("laminar/B747/nd/fo/brg_l")
+B747DR_dsp_nd_brg_r_fo          = find_dataref("laminar/B747/nd/fo/brg_r")
+B747DR_dsp_nd_rad_l_fo          = find_dataref("laminar/B747/nd/fo/rad_l")
+B747DR_dsp_nd_rad_r_fo          = find_dataref("laminar/B747/nd/fo/rad_r")
+B747DR_dsp_nd_rad_l_flag_fo     = find_dataref("laminar/B747/nd/fo/rad_l_flag")
+B747DR_dsp_nd_rad_r_flag_fo     = find_dataref("laminar/B747/nd/fo/rad_r_flag")
+B747DR_dsp_nd_rad_l_dme_fo      = find_dataref("laminar/B747/nd/fo/rad_l_dme")
+B747DR_dsp_nd_rad_r_dme_fo      = find_dataref("laminar/B747/nd/fo/rad_r_dme")
+B747DR_dsp_nd_vor_l_ref         = find_dataref("laminar/B747/nd/vor_l_ref")
+B747DR_dsp_nd_vor_r_ref         = find_dataref("laminar/B747/nd/vor_r_ref")
+B747DR_dsp_nd_adf_l_ref         = find_dataref("laminar/B747/nd/adf_l_ref")
+B747DR_dsp_nd_adf_r_ref         = find_dataref("laminar/B747/nd/adf_r_ref")
 B747DR_dsp_nd_vor_rx_capt       = find_dataref("laminar/B747/nd/capt/vor_rx")
 B747DR_dsp_nd_vor_flag_capt     = find_dataref("laminar/B747/nd/capt/vor_flag")
 B747DR_dsp_nd_vor_dev_capt      = find_dataref("laminar/B747/nd/capt/vor_dev")
@@ -321,6 +361,12 @@ local function id_or_freq(k, id, hz)
     if ref_freq[k] ~= hz then ref_freq[k], ref_text[k] = hz, string.format("%.2f", hz / 100) end
     return ref_text[k]
 end
+local function adf_ref(k, id, khz)
+    local b = string.byte(id)
+    if b and b > 32 then return id end
+    if ref_freq[k] ~= khz then ref_freq[k], ref_text[k] = khz, string.format("%d", khz) end
+    return ref_text[k]
+end
 local function ils_ref(k, nav2)
     if nav2 then return id_or_freq(k, simDR_dsp_nav2_id, simDR_dsp_nav2_freq) end
     return id_or_freq(k, simDR_dsp_nav1_id, simDR_dsp_nav1_freq)
@@ -453,6 +499,10 @@ end
 -- selected receiver"); autotuned unless the CDU's NAV RADIO tuned it
 -- (laminar/B747/radio/tuningmodes, its 2nd and 3rd letters)
 local VOR_IDX = {2, 3}
+local EFIS_SW = {[0] = NM.SW_ADF, NM.SW_OFF, NM.SW_VOR}
+local function efis_sw(v)
+    return EFIS_SW[math.max(0, math.min(2, math.floor(v + 0.5)))]
+end
 local function nd_side(i, mode, hdg, trk, hdg_valid, trk_valid, ias, center, wxr, tfc, vor, modes)
     i.mode = math.floor(mode + 0.5)
     i.hdg, i.trk, i.hdg_valid, i.trk_valid, i.ias = hdg, trk, hdg_valid, trk_valid, ias
@@ -473,6 +523,27 @@ local function nd_sources(c, f, nav_valid)
         B747DR_dsp_ias_capt, B747DR_dsp_nd_center_capt, simDR_dsp_wxr_on, B747DR_dsp_nd_tfc_capt, 1, modes)
     nd_side(inp.side[NM.FO], B747DR_dsp_nd_mode_fo, simDR_dsp_hdg_copilot, simDR_dsp_trk_copilot, f.hdg, f.trk,
         B747DR_dsp_ias_fo, B747DR_dsp_nd_center_fo, simDR_dsp_wxr_on_copilot, B747DR_dsp_nd_tfc_fo, 2, modes)
+    -- the bearing pointers (step 5b): each side's VOR/ADF switches; VOR L
+    -- and R (NAV3 and NAV4: the AC standby bus, AC bus 2), ADF L and R (the
+    -- ADFs 1 and 2: AC bus 3, AC bus 2, notes/ATA-34.md §2.1); an ADF's
+    -- station counts as received with its identifier (X-Plane has no ADF
+    -- signal flag)
+    local sc, sf = inp.side[NM.CAPT].sw, inp.side[NM.FO].sw
+    sc[1], sc[2] = efis_sw(simDR_dsp_efis_sw_l_capt), efis_sw(simDR_dsp_efis_sw_r_capt)
+    sf[1], sf[2] = efis_sw(simDR_dsp_efis_sw_l_fo), efis_sw(simDR_dsp_efis_sw_r_fo)
+    inp.vor_ok[1], inp.vor_ok[2] = B747DR_dsp_bus_stby_main > 0.5, B747DR_dsp_bus_ac[1] > 0.5
+    inp.adf_ok[1] = B747DR_dsp_bus_ac[2] > 0.5 and simDR_dsp_adf1_fail ~= 6
+    inp.adf_ok[2] = B747DR_dsp_bus_ac[1] > 0.5 and simDR_dsp_adf2_fail ~= 6
+    local id1, id2 = simDR_dsp_adf1_id, simDR_dsp_adf2_id
+    local b1, b2 = string.byte(id1), string.byte(id2)
+    inp.adf_brg_rx[1], inp.adf_brg_rx[2] = (b1 and b1 > 32) and true or false, (b2 and b2 > 32) and true or false
+    for k = 1, 2 do
+        local x = VOR_IDX[k]
+        inp.vor_brg_rx[k] = simDR_dsp_nav_rx[x] > 0.5
+        inp.vor_rel[k] = simDR_dsp_nav_rel[x]
+        inp.vor_dme_rx[k] = simDR_dsp_nav_has_dme[x] > 0.5
+    end
+    inp.adf_rel[1], inp.adf_rel[2] = simDR_dsp_adf1_rel, simDR_dsp_adf2_rel
     inp.map_valid = nav_valid[1] or nav_valid[2] or nav_valid[3]
     inp.wind_from = simDR_dsp_wind_from
     inp.hdg_sel = B747DR_dsp_hdg_sel
@@ -560,6 +631,42 @@ local function nd_sources(c, f, nav_valid)
     if B747DR_dsp_nd_vor_dme_nm_fo ~= v then B747DR_dsp_nd_vor_dme_nm_fo = v end
     s = of.vor_ref == 2 and id_or_freq(4, simDR_dsp_nav4_id, simDR_dsp_nav_freq[3]) or ""
     if nd_ref_shown[4] ~= s then nd_ref_shown[4] = s; B747DR_dsp_nd_vor_ref_fo = s end
+
+    -- the bearing pointers and the lower corner blocks
+    if B747DR_dsp_nd_ptr_l_capt ~= oc.ptr[1] then B747DR_dsp_nd_ptr_l_capt = oc.ptr[1] end
+    if B747DR_dsp_nd_ptr_r_capt ~= oc.ptr[2] then B747DR_dsp_nd_ptr_r_capt = oc.ptr[2] end
+    if B747DR_dsp_nd_brg_l_capt ~= oc.brg[1] then B747DR_dsp_nd_brg_l_capt = oc.brg[1] end
+    if B747DR_dsp_nd_brg_r_capt ~= oc.brg[2] then B747DR_dsp_nd_brg_r_capt = oc.brg[2] end
+    if B747DR_dsp_nd_rad_l_capt ~= oc.rad[1] then B747DR_dsp_nd_rad_l_capt = oc.rad[1] end
+    if B747DR_dsp_nd_rad_r_capt ~= oc.rad[2] then B747DR_dsp_nd_rad_r_capt = oc.rad[2] end
+    v = oc.rad_flag[1] and 1 or 0
+    if B747DR_dsp_nd_rad_l_flag_capt ~= v then B747DR_dsp_nd_rad_l_flag_capt = v end
+    v = oc.rad_flag[2] and 1 or 0
+    if B747DR_dsp_nd_rad_r_flag_capt ~= v then B747DR_dsp_nd_rad_r_flag_capt = v end
+    if B747DR_dsp_nd_rad_l_dme_capt ~= oc.rad_dme[1] then B747DR_dsp_nd_rad_l_dme_capt = oc.rad_dme[1] end
+    if B747DR_dsp_nd_rad_r_dme_capt ~= oc.rad_dme[2] then B747DR_dsp_nd_rad_r_dme_capt = oc.rad_dme[2] end
+    if B747DR_dsp_nd_ptr_l_fo ~= of.ptr[1] then B747DR_dsp_nd_ptr_l_fo = of.ptr[1] end
+    if B747DR_dsp_nd_ptr_r_fo ~= of.ptr[2] then B747DR_dsp_nd_ptr_r_fo = of.ptr[2] end
+    if B747DR_dsp_nd_brg_l_fo ~= of.brg[1] then B747DR_dsp_nd_brg_l_fo = of.brg[1] end
+    if B747DR_dsp_nd_brg_r_fo ~= of.brg[2] then B747DR_dsp_nd_brg_r_fo = of.brg[2] end
+    if B747DR_dsp_nd_rad_l_fo ~= of.rad[1] then B747DR_dsp_nd_rad_l_fo = of.rad[1] end
+    if B747DR_dsp_nd_rad_r_fo ~= of.rad[2] then B747DR_dsp_nd_rad_r_fo = of.rad[2] end
+    v = of.rad_flag[1] and 1 or 0
+    if B747DR_dsp_nd_rad_l_flag_fo ~= v then B747DR_dsp_nd_rad_l_flag_fo = v end
+    v = of.rad_flag[2] and 1 or 0
+    if B747DR_dsp_nd_rad_r_flag_fo ~= v then B747DR_dsp_nd_rad_r_flag_fo = v end
+    if B747DR_dsp_nd_rad_l_dme_fo ~= of.rad_dme[1] then B747DR_dsp_nd_rad_l_dme_fo = of.rad_dme[1] end
+    if B747DR_dsp_nd_rad_r_dme_fo ~= of.rad_dme[2] then B747DR_dsp_nd_rad_r_dme_fo = of.rad_dme[2] end
+    -- the receivers' frequency or identifier, both sides' blocks (removed
+    -- when the receiver failed: its flag shows)
+    s = inp.vor_ok[1] and id_or_freq(5, simDR_dsp_nav3_id, simDR_dsp_nav_freq[2]) or ""
+    if nd_ref_shown[5] ~= s then nd_ref_shown[5] = s; B747DR_dsp_nd_vor_l_ref = s end
+    s = inp.vor_ok[2] and id_or_freq(6, simDR_dsp_nav4_id, simDR_dsp_nav_freq[3]) or ""
+    if nd_ref_shown[6] ~= s then nd_ref_shown[6] = s; B747DR_dsp_nd_vor_r_ref = s end
+    s = inp.adf_ok[1] and adf_ref(7, id1, simDR_dsp_adf1_freq) or ""
+    if nd_ref_shown[7] ~= s then nd_ref_shown[7] = s; B747DR_dsp_nd_adf_l_ref = s end
+    s = inp.adf_ok[2] and adf_ref(8, id2, simDR_dsp_adf2_freq) or ""
+    if nd_ref_shown[8] ~= s then nd_ref_shown[8] = s; B747DR_dsp_nd_adf_r_ref = s end
 end
 
 -- each PFD's sources (step 4a)

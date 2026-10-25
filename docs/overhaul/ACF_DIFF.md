@@ -397,3 +397,15 @@
 | 同 | 基準受信機の欄（`GROUP Sel Rec VOR`）の `GROUP VOR L`・`VOR R` | NAV の源の選択器で 2 組を切り替え。ID と周波数は ILS と同じ誤りの条件（ID も周波数も出ない）、DME は白 | 2 組を消して組み直した：`VOR L`・`VOR R` の見出しを `vor_rx`、ID か周波数の文字を新設の文字列 `nd/<席>/vor_ref`、コースを新設 `nd/<席>/vor_crs_deg` か「---」（`vor_crs`）、DME は緑の新設 `nd/<席>/vor_dme_nm`・「DME ---」・旗（新設 `vor_dme`）、右下に TO・FROM の文字（新しい `Ref Rcvr/to_lbl`・`from_lbl`、`to_from` の 1・2） | FCOM p.1024、p.1144–1146、ATA34_1 p.357、p.365 |
 
 上の 5 行は `docs/overhaul/tools/panel_nd_vor.lua` で書き換えた（2 面で 56 か所）。画像は `docs/overhaul/tools/make_nd_vor_images.ps1`（旗は PFD の LOC の旗の作り、TO・FROM は純正の CRS の文字の大きさ、三角は 20×16 の白い線）。位置は推定（全周の旗は記号の上 62 px：ATA34_1 p.361 の比、TO・FROM は CRS の見出しから左 90・下 542：FCOM p.1024 の比）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_vor`。
+
+表示（5-2 段 5b-2b、2026-10-26：ND の VOR・ADF の針と左右下の欄）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・ND の方位の針（DSP-35） | 機長・副操縦士の ND の全周と拡大の `GROUP Bearing Pointers`（機長は ` 2`）の `GROUP VOR L`・`ADF L`・`VOR R`・`ADF R` | X-Plane の EFIS のスイッチの位置（`EFIS_1/2_selection_pilot`・`copilot` が 2 VOR、0 ADF）だけ（局が無くても受信機が壊れても針が残る） | 新設 `laminar/B747/nd/<席>/ptr_l`・`ptr_r` が 1（VOR）・2（ADF） | FCOM p.1040、p.1144 |
+| 同 | その中の針（`gen_needle pointer`）の `DATAREF` | X-Plane の相対方位（全周の VOR は `nav_relative_bearing_deg[3]`・`[4]` で NAV4・NAV5 を、ADF は `adf1_relative_bearing_deg[10]`）：MAP（航跡が上）では偏流角だけずれる | 新設 `nd/<席>/brg_l`・`brg_r`（表示の上からの向き） | FCOM p.1144 |
+| 同 | 全周の `GROUP Bearing Pointers` | APP と VOR だけ（`nd/mode` が 1 以下） | APP・VOR・MAP（2.5 以下：PLN 以外） | FCOM p.1040 |
+| 2026-10-26・左右下の欄 | `GROUP APP/VOR/MAP Mode` の `GROUP VOR L`・`ADF L`・`VOR R`・`ADF R` | EFIS のスイッチの位置。ID と周波数は 2 つの部品に 3 行の条件（ID も周波数も出ない） | 組は新設 `nd/<席>/rad_l`・`rad_r` の 1・2。名前は新設 `rad_l_flag`・`rad_r_flag` が 0、1 で受信機の旗（新しい `CRT Displays/ND/vorLX`・`vorRX`・`adfLX`・`adfRX`）。ID か周波数の文字は新設の文字列 `nd/vor_l_ref`・`vor_r_ref`・`adf_l_ref`・`adf_r_ref`（周波数の部品 `gen_LED Freq LED` は消した）。VOR の DME は新設 `rad_l_dme`・`rad_r_dme` で距離・「DME ---」・DME の旗（新しい `dmeLX`・`dmeRX`） | FCOM p.1034、p.1145–1146、p.1228・p.1230 |
+| 同 | APP と VOR の基準受信機の欄の DME の旗（`gen_rotary DME Flag`） | 純正の囲みの「DME」（段 5b-1b・5b-2a） | 機長は `dmeLX`、副操縦士は `dmeRX`（FCOM p.1034 の DMEL・DMER）、DME の行の上（ラベルの中心から右 25） | FCOM p.1034 |
+
+上の 5 行は `docs/overhaul/tools/panel_nd_brg.lua` で書き換えた（2 面で 106 か所）。画像は `docs/overhaul/tools/make_nd_vor_images.ps1`。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_brg`。

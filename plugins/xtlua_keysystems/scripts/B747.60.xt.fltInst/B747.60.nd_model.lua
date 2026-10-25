@@ -7,7 +7,9 @@
 -- and the wind arrow. Logic and sources: docs/overhaul/notes/ATA-31.md §22
 -- (FCOM p.1109-1110, p.1141-1143, p.1033-1034). Step 5b: the VOR mode's
 -- reference VOR (§25: ATA34_1 p.356-369, FCOM p.1144-1146): its flag,
--- deviation, course, TO/FROM, frequency or identifier and DME.
+-- deviation, course, TO/FROM, frequency or identifier and DME; the VOR and
+-- ADF bearing pointers and the lower corner blocks (§26: FCOM p.1038-1040,
+-- p.1144-1146, p.1034).
 --
 --   local N = B747_nd_model                -- in XTLua, after dofile
 --   local N = dofile(".../B747.60.nd_model.lua")   -- in the tests
@@ -30,6 +32,9 @@ M.XP_APP, M.XP_MAP, M.XP_PLN = 0, 2, 4
 M.HDG_LINE_S = 10
 -- the wind arrow from 100 kt (the stock's IAS threshold, kept: estimate)
 M.WIND_KT = 100
+-- the EFIS control panel's VOR/ADF switches, left (VOR L, ADF L) and right
+-- (VOR R, ADF R)
+M.SW_OFF, M.SW_VOR, M.SW_ADF = 0, 1, 2
 
 local function side_in()
     return {
@@ -49,12 +54,21 @@ local function side_in()
         vor_to_from = 0,    -- X-Plane's indication: 0 none, 1 TO, 2 FROM
         vor_dme_rx = false, -- its DME distance received
         dme_fail = false,   -- the DME failed
+        sw = {M.SW_OFF, M.SW_OFF}, -- that side's VOR/ADF switches, left and right
     }
 end
 
 function M.inputs()
     return {
         side = {side_in(), side_in()},
+        -- the bearing receivers, left and right (VOR L and R, ADF L and R)
+        vor_ok = {true, true},          -- powered (X-Plane has no NAV3/4 failure)
+        adf_ok = {true, true},          -- powered and not failed
+        vor_brg_rx = {false, false},    -- the bearing received
+        adf_brg_rx = {false, false},    -- the station received (its identifier)
+        vor_rel = {0, 0},               -- relative bearings, degrees (X-Plane's)
+        adf_rel = {0, 0},
+        vor_dme_rx = {false, false},    -- the VORs' DME distance received
         map_valid = true,   -- the FMC's position (an IRU in NAV: estimate)
         wind_from = 0,      -- the wind direction, magnetic
         hdg_sel = 0,        -- the MCP selected heading
@@ -85,6 +99,12 @@ local function side_out()
         vor_ref = 0,        -- 0 none, 2 the frequency or identifier
         to_from = 0,        -- 0 none, 1 TO, 2 FROM
         vor_dme = 0,        -- 0 dashes, 1 the distance, 2 the DME flag
+        -- the bearing pointers and the lower corner blocks, left and right
+        ptr = {0, 0},       -- the pointer: 0 none, 1 VOR, 2 ADF
+        brg = {0, 0},       -- its direction on the display, degrees
+        rad = {0, 0},       -- the block: 0 none, 1 VOR, 2 ADF
+        rad_flag = {false, false}, -- the receiver's flag instead of its name
+        rad_dme = {0, 0},   -- the VOR block's DME: 0 dashes, 1 the distance, 2 the DME flag
     }
 end
 
@@ -157,6 +177,27 @@ function M.update(s, inp, dt)
         o.to_from = o.vor_dev and i.vor_to_from or 0
         -- the DME as in APP (FCOM p.1033-1034)
         o.vor_dme = i.dme_fail and 2 or (i.vor_dme_rx and 1 or 0)
+
+        -- the VOR/ADF switches (FCOM p.1040): VOR shows the VOR pointer,
+        -- frequency or identifier and DME, ADF the ADF pointer and
+        -- frequency or identifier, in all modes except PLAN (FCOM p.1144
+        -- lists PLAN for the pointers and omits APP: p.1040 and p.1145, the
+        -- blocks, followed); a failed receiver's flag in its block (FCOM
+        -- p.1034), the pointer only with the bearing (ATA34_1 p.358) and
+        -- the heading it is drawn from
+        local shown = mode ~= M.PLN
+        for k = 1, 2 do
+            local sw = shown and i.sw[k] or M.SW_OFF
+            local vor, adf = sw == M.SW_VOR, sw == M.SW_ADF
+            local ok = (vor and inp.vor_ok[k]) or (adf and inp.adf_ok[k])
+            local rx = (vor and inp.vor_brg_rx[k]) or (adf and inp.adf_brg_rx[k])
+            o.rad[k] = sw
+            o.rad_flag[k] = sw ~= M.SW_OFF and not ok
+            o.rad_dme[k] = vor and (i.dme_fail and 2 or (inp.vor_dme_rx[k] and 1 or 0)) or 0
+            o.ptr[k] = (ok and rx and o.rose and i.hdg_valid) and sw or M.SW_OFF
+            -- the bearing from the side's heading, on the display's top
+            o.brg[k] = wrap((adf and inp.adf_rel[k] or inp.vor_rel[k]) + i.hdg - o.up)
+        end
     end
     return s.out
 end

@@ -474,4 +474,36 @@ rt:set(BUS .. "ac", 1, 1)
 frames(0.1)
 T.equal(rt:get(NDP .. "fo/vor_flag"), 0, "powered again: no flag")
 
+-- the bearing pointers (step 5b): X-Plane's EFIS switches (0 ADF, 1 OFF,
+-- 2 VOR), the Captain's MAP
+rt:set(NDP .. "mode/capt/sel_dial_pos", 2)                         -- MAP
+rt:set("sim/cockpit2/EFIS/EFIS_1_selection_pilot", 2)              -- VOR L
+rt:set("sim/cockpit2/EFIS/EFIS_2_selection_pilot", 0)              -- ADF R
+rt:set("sim/cockpit2/EFIS/EFIS_1_selection_copilot", 1)            -- OFF
+rt:set("sim/cockpit2/EFIS/EFIS_2_selection_copilot", 1)
+rt:set(RAD .. "indicators/nav_relative_bearing_deg", 2, 30)
+rt:set(RAD .. "indicators/adf2_relative_bearing_deg", -50)
+rt:set(RAD .. "indicators/adf2_nav_id", "TY")
+rt:set(RAD .. "actuators/adf1_frequency_hz", 334)
+rt:set("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot", 100)
+rt:set("sim/cockpit2/gauges/indicators/ground_track_mag_pilot", 110)
+rt:set(BUS .. "ac", 2, 1)
+frames(0.1)
+T.equal(rt:get(NDP .. "capt/ptr_l"), 1, "the Captain's left pointer: VOR L")
+T.equal(rt:get(NDP .. "capt/ptr_r"), 2, "the right: ADF R")
+T.near(rt:get(NDP .. "capt/brg_l"), 20, 1e-4, "on the track-up map (110): 30 from heading 100 is 20 right")
+T.near(rt:get(NDP .. "capt/brg_r"), -60, 1e-4, "ADF R 60 left")
+T.equal(rt:get(NDP .. "capt/rad_l"), 1, "the lower left block: VOR")
+T.equal(rt:get(NDP .. "capt/rad_r"), 2, "the lower right: ADF")
+T.equal(rt:get(NDP .. "fo/rad_l"), 0, "the F/O's switches OFF: nothing")
+T.equal(rt:get(ND .. "vor_l_ref"), "NRE", "VOR L's identifier")
+T.equal(rt:get(ND .. "adf_r_ref"), "TY", "ADF R's identifier")
+T.equal(rt:get(ND .. "adf_l_ref"), "334", "ADF L without identification: its frequency in kHz")
+rt:set("sim/operation/failures/rel_adf2", 6)
+frames(0.1)
+T.equal(rt:get(NDP .. "capt/ptr_r"), 0, "ADF R failed: no pointer")
+T.equal(rt:get(NDP .. "capt/rad_r_flag"), 1, "its flag")
+T.equal(rt:get(ND .. "adf_r_ref"), "", "no frequency")
+rt:set("sim/operation/failures/rel_adf2", 0)
+
 T.done()
