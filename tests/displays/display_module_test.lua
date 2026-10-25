@@ -56,7 +56,7 @@ rt:set("laminar/B747/displays/fail", 2, 0)
 
 -- the selectors, the F/O's mirrored (INBD PFD NORM EICAS, LWR ND NORM EICAS PRI)
 selectors(0, 1, 1, 1)
-T.equal(rt:get(D .. "eicas_pos"), 2, "the Captain's INBD EICAS: the secondary on his inboard unit")
+T.equal(rt:get(D .. "eicas_pos"), 2, "the Captain's INBD EICAS: the secondary on the Captain's inboard unit")
 T.equal(rt:get(POWER, 3), 0, "the Captain's ND off")
 selectors(1, 1, 2, 1)
 T.equal(rt:get(D .. "eicas_pos"), 1, "the F/O's INBD at EICAS (position 2): the secondary on the F/O's inboard unit")
@@ -305,5 +305,40 @@ frames(0.1)
 T.equal(rt:get(P .. "capt/ils_show"), 0, "roll 55 degrees: the ILS removed")
 T.check(rt:get(P .. "capt/loc_scale") == 0 and rt:get(P .. "capt/gs_scale") == 0 and rt:get(P .. "capt/rwy_show") == 0,
     "the scales and the rising runway too")
+rt:set("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot", 0)
+
+-- the ND (step 5a): each ND from its own side and mode
+local NDP = "laminar/B747/nd/"
+rt:set(IRS .. "hdg_valid", 0, 1)                                   -- IRU L's heading back
+rt:set(NDP .. "mode/capt/sel_dial_pos", 2)                         -- MAP
+rt:set(NDP .. "mode/fo/sel_dial_pos", 1)                           -- VOR
+rt:set("sim/cockpit2/EFIS/map_mode_copilot", 2)                   -- the stock's VOR (X-Plane's MAP)
+rt:set("laminar/B747/gauges/indicators/airspeed_kts_pilot", 250)
+rt:set("sim/cockpit2/gauges/indicators/wind_heading_deg_mag", 350)
+frames(0.1)
+T.equal(rt:get("sim/cockpit2/EFIS/map_mode"), 2, "the Captain's MAP: X-Plane's map mode 2 (track up)")
+T.equal(rt:get("sim/cockpit2/EFIS/map_mode_copilot"), 0, "the F/O's VOR: X-Plane's heading-up mode 0")
+T.equal(rt:get(NDP .. "capt/rose"), 1, "the Captain's rose (track valid)")
+T.equal(rt:get(NDP .. "capt/hdg_ptr"), 1, "the current heading pointer")
+T.equal(rt:get(NDP .. "capt/hdg_bug"), 1, "the selected heading bug")
+T.equal(rt:get(NDP .. "capt/wind"), 1, "the wind arrow at 250 kt")
+T.equal(rt:get(NDP .. "capt/trk_line"), 1, "MAP expanded: the track line")
+T.equal(rt:get(NDP .. "fo/trk_line"), 0, "the F/O's VOR without WXR or TFC: none")
+rt:set("sim/cockpit2/gauges/indicators/ground_track_mag_pilot", 100)
+frames(0.1)
+T.near(rt:get(NDP .. "capt/wind_deg"), 70, 1e-6, "wind from 350 on a track-up display (track 100): 70 right")
+for i = 0, 2 do rt:set(IRS .. "nav_valid", i, 0) end
+frames(0.1)
+T.equal(rt:get(NDP .. "capt/map_flag"), 1, "no IRU in NAV: the MAP flag (estimate)")
+T.equal(rt:get(NDP .. "capt/vtk_flag"), 1, "and VTK")
+T.equal(rt:get(NDP .. "capt/trk_flag"), 1, "no track either: TRK")
+T.equal(rt:get(NDP .. "capt/rose"), 0, "no rose")
+T.equal(rt:get(NDP .. "fo/hdg_flag"), 0, "the F/O's VOR: the heading still good (IRU R in ATT)")
+for i = 0, 2 do rt:set(IRS .. "nav_valid", i, 1) end
+rt:set(NDP .. "mode/capt/sel_dial_pos", 3)                         -- PLN
+frames(0.1)
+T.equal(rt:get("sim/cockpit2/EFIS/map_mode"), 4, "PLN: X-Plane's 4")
+T.equal(rt:get(NDP .. "capt/hdg_ptr_pln"), 1, "PLN's heading pointer")
+T.equal(rt:get(NDP .. "capt/hdg_bug"), 0, "no selected heading in PLN")
 
 T.done()

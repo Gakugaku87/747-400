@@ -111,6 +111,11 @@ simDR_true_heading			= find_dataref("sim/flightmodel/position/psi")
 simDR_mag_heading			= find_dataref("sim/cockpit/gyros/psi_ind_ahars_pilot_degm")
 simDR_ground_track			= find_dataref("sim/cockpit2/gauges/indicators/ground_track_mag_pilot")
 simDR_heading_track			= find_dataref("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot")
+-- each ND from its own side and mode (5-2 step 5a)
+simDR_heading_copilot			= find_dataref("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_copilot")
+simDR_ground_track_copilot		= find_dataref("sim/cockpit2/gauges/indicators/ground_track_mag_copilot")
+B747DR_nd_mode_capt			= find_dataref("laminar/B747/nd/mode/capt/sel_dial_pos")
+B747DR_nd_mode_fo			= find_dataref("laminar/B747/nd/mode/fo/sel_dial_pos")
 B747DR_nd_terr_weather_capt                  		= find_dataref("laminar/B747/nd/terr_weather/capt")
 B747DR_nd_terr_weather_fo                  		= find_dataref("laminar/B747/nd/terr_weather/fo")
 B747DR_nd_capt_terr                          = find_dataref("laminar/B747/nd/data/capt/terr")
@@ -205,6 +210,15 @@ function getHeadingDifference(desireddirection,current_heading)
 	return error
 end
 
+-- each ND's top (5-2 step 5a; the rule of B747.60.nd_model.lua's
+-- orientation, FCOM p.1109-1110 for the 109): MAP that side's track, VOR
+-- and APP its heading, PLN north
+function nd_up(mode,hdg,trk)
+  if mode==2 then return trk end
+  if mode==3 then return 0 end
+  return hdg
+end
+
 function getDistance(lat1,lon1,lat2,lon2)
   alat=math.rad(lat1)
   alon=math.rad(lon1)
@@ -231,24 +245,20 @@ function makeIcon(iconTextData,navtype,text,latitude,longitude,distance)
 
   local abs_heading=getHeading(cLat,cLon,latitude,longitude)
   local heading_diff=0
-  if iconTextData==iconTextDataCapt then
-    if simDR_map_mode==2 then
-      mag_diff=getHeadingDifference(simDR_true_heading,simDR_mag_heading)
-      heading_diff=getHeadingDifference(simDR_ground_track-mag_diff,abs_heading)
-    elseif simDR_map_mode==4 then  
-      heading_diff=abs_heading+simDR_variation
-    else
-      heading_diff=getHeadingDifference(simDR_true_heading,abs_heading)
-    end
+  -- the symbol's bearing from the display's top, as nd_up orients it (step
+  -- 5a): that side's track (MAP) or heading (VOR, APP) made true with the
+  -- variation; PLN north up as before
+  local mode, trk, hdg = B747DR_nd_mode_capt, simDR_ground_track, simDR_heading_track
+  if iconTextData~=iconTextDataCapt then
+    mode, trk, hdg = B747DR_nd_mode_fo, simDR_ground_track_copilot, simDR_heading_copilot
+  end
+  local mag_diff=getHeadingDifference(simDR_true_heading,simDR_mag_heading)
+  if mode==2 then
+    heading_diff=getHeadingDifference(trk-mag_diff,abs_heading)
+  elseif mode==3 then
+    heading_diff=abs_heading+simDR_variation
   else
-    if backport_map_mode_copilot==2 then
-      mag_diff=getHeadingDifference(simDR_true_heading,simDR_mag_heading)
-      heading_diff=getHeadingDifference(simDR_ground_track-mag_diff,abs_heading)
-    elseif backport_map_mode_copilot==4 then  
-      heading_diff=abs_heading+simDR_variation  
-    else
-      heading_diff=getHeadingDifference(simDR_true_heading,abs_heading)
-    end
+    heading_diff=getHeadingDifference(hdg-mag_diff,abs_heading)
   end
   
   local lastNavaid=0
@@ -832,16 +842,11 @@ function after_physics()
   
   if debug_nd>0 then return end
   local diff=simDRTime-lastUpdate
+  -- each ND's top from its own mode and side (step 5a)
+  B747DR_nd_capt_up = nd_up(B747DR_nd_mode_capt, simDR_heading_track, simDR_ground_track)
+  B747DR_nd_fo_up = nd_up(B747DR_nd_mode_fo, simDR_heading_copilot, simDR_ground_track_copilot)
   if simDR_version>=120012 then
     backport_map_mode_copilot=simDR_map_mode_copilot
-  --print("simDR_ground_track="..simDR_ground_track)
-    if simDR_map_mode_copilot ==2 then
-      B747DR_nd_fo_up = simDR_ground_track
-    elseif simDR_map_mode_copilot ==4 then
-      B747DR_nd_fo_up = 0  
-    else
-      B747DR_nd_fo_up = simDR_heading_track
-    end
     if B747DR_nd_capt_terr>0 or simDR_EFIS_wxr_on>0 then
       B747DR_nd_terr_weather_capt=1
     else
@@ -852,24 +857,7 @@ function after_physics()
     else
       B747DR_nd_terr_weather_fo=0
     end
-    if simDR_map_mode ==2 then
-      B747DR_nd_capt_up = simDR_ground_track
-    elseif simDR_map_mode ==4 then
-      B747DR_nd_capt_up = 0  
-    else
-      B747DR_nd_capt_up = simDR_heading_track
-    end
   else
-    if simDR_map_mode ==2 then
-      B747DR_nd_capt_up = simDR_ground_track
-      B747DR_nd_fo_up = simDR_ground_track
-    elseif simDR_map_mode ==4 then
-      B747DR_nd_capt_up = 0
-      B747DR_nd_fo_up = 0  
-    else
-      B747DR_nd_capt_up = simDR_heading_track
-      B747DR_nd_fo_up = simDR_heading_track
-    end
     backport_map_range_copilot=simDR_map_range
     backport_map_mode_copilot=simDR_map_mode
   end
@@ -887,7 +875,7 @@ function after_physics()
   compute_and_show_alt_range_arc()
   if debug_nd<-2 then return end
   local diff2=simDRTime-lastUpdateIcon
-  if diff>0.2 then 
+  if diff2>0.2 then
     newIcons()
     lastUpdateIcon=simDRTime
   end

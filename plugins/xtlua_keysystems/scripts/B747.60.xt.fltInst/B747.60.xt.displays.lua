@@ -24,14 +24,21 @@
 -- and glideslope scales, pointers and flags and the rising runway
 -- (pfd/capt|fo/ils_show, loc_scale, loc_ptr, loc_flag, gs_scale, gs_ptr,
 -- gs_flag, rwy_show) out.
+-- Step 5a: the ND model (B747.60.nd_model.lua) with each ND's mode, that
+-- side's heading, track and airspeed, the PFD model's heading and track,
+-- the IRUs in NAV, the wind, the MCP heading and the AFDS roll mode in;
+-- X-Plane's map mode for each side and each ND's rose, flags, heading
+-- pointer, selected heading bug and line and wind arrow (nd/capt|fo/*) out.
 -- dofile'd from B747.60.xt.fltInst.lua after B747.60.xt.fltInst02.lua.
 
 dofile("B747.60.display_model.lua")
 dofile("B747.60.pfd_model.lua")
 dofile("B747.60.pfd_ils_model.lua")
+dofile("B747.60.nd_model.lua")
 local DM = B747_display_model
 local PM = B747_pfd_model
 local IM = B747_pfd_ils_model
+local NM = B747_nd_model
 
 B747DR_dsp_bus_stby_apu         = find_dataref("laminar/B747/electrical/bus/stby_apu")
 B747DR_dsp_bus_stby_main        = find_dataref("laminar/B747/electrical/bus/stby_main")
@@ -131,6 +138,48 @@ B747DR_dsp_gs_scale_fo          = find_dataref("laminar/B747/pfd/fo/gs_scale")
 B747DR_dsp_gs_ptr_fo            = find_dataref("laminar/B747/pfd/fo/gs_ptr")
 B747DR_dsp_gs_flag_fo           = find_dataref("laminar/B747/pfd/fo/gs_flag")
 B747DR_dsp_rwy_show_fo          = find_dataref("laminar/B747/pfd/fo/rwy_show")
+B747DR_dsp_nd_mode_capt         = find_dataref("laminar/B747/nd/mode/capt/sel_dial_pos")
+B747DR_dsp_nd_mode_fo           = find_dataref("laminar/B747/nd/mode/fo/sel_dial_pos")
+simDR_dsp_hdg_pilot             = find_dataref("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot")
+simDR_dsp_hdg_copilot           = find_dataref("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_copilot")
+simDR_dsp_trk_pilot             = find_dataref("sim/cockpit2/gauges/indicators/ground_track_mag_pilot")
+simDR_dsp_trk_copilot           = find_dataref("sim/cockpit2/gauges/indicators/ground_track_mag_copilot")
+simDR_dsp_wind_from             = find_dataref("sim/cockpit2/gauges/indicators/wind_heading_deg_mag")
+simDR_dsp_map_mode              = find_dataref("sim/cockpit2/EFIS/map_mode")
+simDR_dsp_map_mode_copilot      = find_dataref("sim/cockpit2/EFIS/map_mode_copilot")
+B747DR_dsp_ias_capt             = find_dataref("laminar/B747/gauges/indicators/airspeed_kts_pilot")
+B747DR_dsp_ias_fo               = find_dataref("laminar/B747/gauges/indicators/airspeed_kts_copilot")
+B747DR_dsp_hdg_sel              = find_dataref("laminar/B747/autopilot/heading/degrees")
+B747DR_dsp_nd_rose_capt         = find_dataref("laminar/B747/nd/capt/rose")
+B747DR_dsp_nd_trk_flag_capt     = find_dataref("laminar/B747/nd/capt/trk_flag")
+B747DR_dsp_nd_hdg_flag_capt     = find_dataref("laminar/B747/nd/capt/hdg_flag")
+B747DR_dsp_nd_map_flag_capt     = find_dataref("laminar/B747/nd/capt/map_flag")
+B747DR_dsp_nd_vtk_flag_capt     = find_dataref("laminar/B747/nd/capt/vtk_flag")
+B747DR_dsp_nd_hdg_ptr_capt      = find_dataref("laminar/B747/nd/capt/hdg_ptr")
+B747DR_dsp_nd_hdg_ptr_pln_capt  = find_dataref("laminar/B747/nd/capt/hdg_ptr_pln")
+B747DR_dsp_nd_hdg_bug_capt      = find_dataref("laminar/B747/nd/capt/hdg_bug")
+B747DR_dsp_nd_hdg_line_capt     = find_dataref("laminar/B747/nd/capt/hdg_line")
+B747DR_dsp_nd_wind_capt         = find_dataref("laminar/B747/nd/capt/wind")
+B747DR_dsp_nd_wind_deg_capt     = find_dataref("laminar/B747/nd/capt/wind_deg")
+B747DR_dsp_nd_rose_fo           = find_dataref("laminar/B747/nd/fo/rose")
+B747DR_dsp_nd_trk_flag_fo       = find_dataref("laminar/B747/nd/fo/trk_flag")
+B747DR_dsp_nd_hdg_flag_fo       = find_dataref("laminar/B747/nd/fo/hdg_flag")
+B747DR_dsp_nd_map_flag_fo       = find_dataref("laminar/B747/nd/fo/map_flag")
+B747DR_dsp_nd_vtk_flag_fo       = find_dataref("laminar/B747/nd/fo/vtk_flag")
+B747DR_dsp_nd_hdg_ptr_fo        = find_dataref("laminar/B747/nd/fo/hdg_ptr")
+B747DR_dsp_nd_hdg_ptr_pln_fo    = find_dataref("laminar/B747/nd/fo/hdg_ptr_pln")
+B747DR_dsp_nd_hdg_bug_fo        = find_dataref("laminar/B747/nd/fo/hdg_bug")
+B747DR_dsp_nd_hdg_line_fo       = find_dataref("laminar/B747/nd/fo/hdg_line")
+B747DR_dsp_nd_wind_fo           = find_dataref("laminar/B747/nd/fo/wind")
+B747DR_dsp_nd_wind_deg_fo       = find_dataref("laminar/B747/nd/fo/wind_deg")
+B747DR_dsp_nd_trk_line_capt     = find_dataref("laminar/B747/nd/capt/trk_line")
+B747DR_dsp_nd_trk_line_fo       = find_dataref("laminar/B747/nd/fo/trk_line")
+B747DR_dsp_nd_center_capt       = find_dataref("laminar/B747/nd/map_center/capt")
+B747DR_dsp_nd_center_fo         = find_dataref("laminar/B747/nd/map_center/fo")
+simDR_dsp_wxr_on                = find_dataref("sim/cockpit2/EFIS/EFIS_weather_on")
+simDR_dsp_wxr_on_copilot        = find_dataref("sim/cockpit2/EFIS/EFIS_weather_on_copilot")
+B747DR_dsp_nd_tfc_capt          = find_dataref("laminar/B747/nd/capt/tfc")
+B747DR_dsp_nd_tfc_fo            = find_dataref("laminar/B747/nd/fo/tfc")
 
 -- the EIU selectors' positions: Captain and centre L, AUTO, C, R; F/O L, C, AUTO, R
 local EIU_CAPT = {[0] = DM.EIU_L, DM.SEL_AUTO, DM.EIU_C, DM.EIU_R}
@@ -149,6 +198,8 @@ local pfd_state = PM.new()
 local pfd_inputs = PM.inputs()
 local ils_state = IM.new()
 local ils_inputs = IM.inputs()
+local nd_state = NM.new()
+local nd_inputs = NM.inputs()
 
 local function msg(i, on)
     local v = on and 1 or 0
@@ -219,6 +270,79 @@ local function pfd_ils(trk_capt, trk_fo)
     if B747DR_dsp_gs_flag_fo ~= v then B747DR_dsp_gs_flag_fo = v end
     v = f.rwy and 1 or 0
     if B747DR_dsp_rwy_show_fo ~= v then B747DR_dsp_rwy_show_fo = v end
+end
+
+-- each ND's orientation, flags and pointers (step 5a): from its own side
+-- (the Captain's pilot AHRS, the F/O's copilot one) and the PFD model's
+-- heading and track; the FMC's position as an IRU in NAV (estimate)
+local function nd_side(i, mode, hdg, trk, hdg_valid, trk_valid, ias, center, wxr, tfc)
+    i.mode = math.floor(mode + 0.5)
+    i.hdg, i.trk, i.hdg_valid, i.trk_valid, i.ias = hdg, trk, hdg_valid, trk_valid, ias
+    i.center, i.wxr, i.tfc = center > 0.5, wxr > 0.5, tfc > 0.5
+end
+
+local function nd_sources(c, f, nav_valid)
+    local inp = nd_inputs
+    nd_side(inp.side[NM.CAPT], B747DR_dsp_nd_mode_capt, simDR_dsp_hdg_pilot, simDR_dsp_trk_pilot, c.hdg, c.trk,
+        B747DR_dsp_ias_capt, B747DR_dsp_nd_center_capt, simDR_dsp_wxr_on, B747DR_dsp_nd_tfc_capt)
+    nd_side(inp.side[NM.FO], B747DR_dsp_nd_mode_fo, simDR_dsp_hdg_copilot, simDR_dsp_trk_copilot, f.hdg, f.trk,
+        B747DR_dsp_ias_fo, B747DR_dsp_nd_center_fo, simDR_dsp_wxr_on_copilot, B747DR_dsp_nd_tfc_fo)
+    inp.map_valid = nav_valid[1] or nav_valid[2] or nav_valid[3]
+    inp.wind_from = simDR_dsp_wind_from
+    inp.hdg_sel = B747DR_dsp_hdg_sel
+    inp.roll_mode = B747DR_dsp_fma_roll
+    local out = NM.update(nd_state, inp, SIM_PERIOD)
+    local oc, of = out[NM.CAPT], out[NM.FO]
+    -- X-Plane's own map layer turns with its map mode: read it, write when
+    -- it differs (TESTING.md §1.2)
+    if simDR_dsp_map_mode ~= oc.xp_mode then simDR_dsp_map_mode = oc.xp_mode end
+    if simDR_dsp_map_mode_copilot ~= of.xp_mode then simDR_dsp_map_mode_copilot = of.xp_mode end
+    local v = oc.rose and 1 or 0
+    if B747DR_dsp_nd_rose_capt ~= v then B747DR_dsp_nd_rose_capt = v end
+    v = oc.trk_flag and 1 or 0
+    if B747DR_dsp_nd_trk_flag_capt ~= v then B747DR_dsp_nd_trk_flag_capt = v end
+    v = oc.hdg_flag and 1 or 0
+    if B747DR_dsp_nd_hdg_flag_capt ~= v then B747DR_dsp_nd_hdg_flag_capt = v end
+    v = oc.map_flag and 1 or 0
+    if B747DR_dsp_nd_map_flag_capt ~= v then B747DR_dsp_nd_map_flag_capt = v end
+    v = oc.vtk_flag and 1 or 0
+    if B747DR_dsp_nd_vtk_flag_capt ~= v then B747DR_dsp_nd_vtk_flag_capt = v end
+    v = oc.hdg_ptr and 1 or 0
+    if B747DR_dsp_nd_hdg_ptr_capt ~= v then B747DR_dsp_nd_hdg_ptr_capt = v end
+    v = oc.hdg_ptr_pln and 1 or 0
+    if B747DR_dsp_nd_hdg_ptr_pln_capt ~= v then B747DR_dsp_nd_hdg_ptr_pln_capt = v end
+    v = oc.hdg_bug and 1 or 0
+    if B747DR_dsp_nd_hdg_bug_capt ~= v then B747DR_dsp_nd_hdg_bug_capt = v end
+    v = oc.hdg_line and 1 or 0
+    if B747DR_dsp_nd_hdg_line_capt ~= v then B747DR_dsp_nd_hdg_line_capt = v end
+    v = oc.wind and 1 or 0
+    if B747DR_dsp_nd_wind_capt ~= v then B747DR_dsp_nd_wind_capt = v end
+    if B747DR_dsp_nd_wind_deg_capt ~= oc.wind_deg then B747DR_dsp_nd_wind_deg_capt = oc.wind_deg end
+    v = of.rose and 1 or 0
+    if B747DR_dsp_nd_rose_fo ~= v then B747DR_dsp_nd_rose_fo = v end
+    v = of.trk_flag and 1 or 0
+    if B747DR_dsp_nd_trk_flag_fo ~= v then B747DR_dsp_nd_trk_flag_fo = v end
+    v = of.hdg_flag and 1 or 0
+    if B747DR_dsp_nd_hdg_flag_fo ~= v then B747DR_dsp_nd_hdg_flag_fo = v end
+    v = of.map_flag and 1 or 0
+    if B747DR_dsp_nd_map_flag_fo ~= v then B747DR_dsp_nd_map_flag_fo = v end
+    v = of.vtk_flag and 1 or 0
+    if B747DR_dsp_nd_vtk_flag_fo ~= v then B747DR_dsp_nd_vtk_flag_fo = v end
+    v = of.hdg_ptr and 1 or 0
+    if B747DR_dsp_nd_hdg_ptr_fo ~= v then B747DR_dsp_nd_hdg_ptr_fo = v end
+    v = of.hdg_ptr_pln and 1 or 0
+    if B747DR_dsp_nd_hdg_ptr_pln_fo ~= v then B747DR_dsp_nd_hdg_ptr_pln_fo = v end
+    v = of.hdg_bug and 1 or 0
+    if B747DR_dsp_nd_hdg_bug_fo ~= v then B747DR_dsp_nd_hdg_bug_fo = v end
+    v = of.hdg_line and 1 or 0
+    if B747DR_dsp_nd_hdg_line_fo ~= v then B747DR_dsp_nd_hdg_line_fo = v end
+    v = of.wind and 1 or 0
+    if B747DR_dsp_nd_wind_fo ~= v then B747DR_dsp_nd_wind_fo = v end
+    if B747DR_dsp_nd_wind_deg_fo ~= of.wind_deg then B747DR_dsp_nd_wind_deg_fo = of.wind_deg end
+    v = oc.trk_line and 1 or 0
+    if B747DR_dsp_nd_trk_line_capt ~= v then B747DR_dsp_nd_trk_line_capt = v end
+    v = of.trk_line and 1 or 0
+    if B747DR_dsp_nd_trk_line_fo ~= v then B747DR_dsp_nd_trk_line_fo = v end
 end
 
 -- each PFD's sources (step 4a)
@@ -292,6 +416,7 @@ local function pfd_sources(fmc)
     if B747DR_dsp_roll_flag ~= v then B747DR_dsp_roll_flag = v end
 
     pfd_ils(c.trk, f.trk)
+    nd_sources(c, f, pin.nav_valid)
 end
 
 -- the barometric setting's amber box at the transition (step 4b): the FMC's
