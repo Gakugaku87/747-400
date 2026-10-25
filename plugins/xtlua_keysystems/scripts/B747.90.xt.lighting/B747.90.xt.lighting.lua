@@ -457,10 +457,16 @@ B747DR_wxr_test            = deferred_dataref("laminar/B747/wxr/test", "number")
 B747DR_wxr_RR            = deferred_dataref("laminar/B747/wxr/RR", "number")
 B747DR_wxr_LR            = deferred_dataref("laminar/B747/wxr/LR", "number")
 
-simDR_wxrMode_cpt = find_dataref("sim/cockpit2/EFIS/EFIS_weather_mode")
-simDR_wxrMode_fo = find_dataref("sim/cockpit2/EFIS/EFIS_weather_mode_copilot")
-simDR_wxrgcs_cpt = find_dataref("sim/cockpit2/EFIS/EFIS_weather_gcs")
-simDR_wxrgcs_fo = find_dataref("sim/cockpit2/EFIS/EFIS_weather_gcs_copilot")
+-- the weather radar control's lamps (B747.34.xt.wxr.lua): each side's lit mode
+-- switch (1 WX, 2 WX+T, 3 MAP, 4 TFR) and GCS, TEST, the lit R/T (1 L, 2 R)
+B747DR_wxr_lamp_sel             = find_dataref("laminar/B747/wxr/lamp/sel")
+B747DR_wxr_lamp_gcs             = find_dataref("laminar/B747/wxr/lamp/gcs")
+B747DR_wxr_lamp_test            = find_dataref("laminar/B747/wxr/lamp/test")
+B747DR_wxr_lamp_rt              = find_dataref("laminar/B747/wxr/lamp/rt")
+local function wxr_lamp(light_test, on, level)
+    if light_test or on then return level end
+    return 0
+end
 --*************************************************************************************--
 --** 				        CREATE READ-ONLY CUSTOM DATAREFS               	         **--
 --*************************************************************************************--
@@ -1917,41 +1923,22 @@ function B747_ind_lights()
     B747DR_annun_brightness_ratio[268]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_CMD_C * brightness_level))
     B747DR_annun_brightness_ratio[269]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_CMD_R * brightness_level))
 
-    --wxr panel
-        --not XP12.3
-    if simDR_version<123004 then
-        B747DR_wxr_left_GCS             = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, 0)
-        B747DR_wxr_left_TFR             = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, 0)
-        B747DR_wxr_left_WX             = B747_ternary((B747DR_toggle_switch_position[13] == 1 or true), brightness_level, 0)
-        B747DR_wxr_left_WX_T            = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, 0)
-        B747DR_wxr_left_MAP            = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, 0)
-
-        B747DR_wxr_right_GCS             = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, 0)
-        B747DR_wxr_right_TFR             = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, 0)
-        B747DR_wxr_right_WX             = B747_ternary((B747DR_toggle_switch_position[13] == 1 or true), brightness_level, 0)
-        B747DR_wxr_right_WX_T            = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, 0)
-        B747DR_wxr_right_MAP            = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, 0)
-
-        B747DR_wxr_test            = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, 0)
-        B747DR_wxr_RR            = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, 0)
-        B747DR_wxr_LR            = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, 0)
-    else 
-        B747DR_wxr_left_GCS             = B747_ternary((B747DR_toggle_switch_position[13] == 1 or simDR_wxrgcs_cpt==1), brightness_level, 0)
-        B747DR_wxr_left_TFR             = B747_ternary((B747DR_toggle_switch_position[13] == 1 or (simDR_wxrMode_cpt==0 and simDR_wxrMode_fo==0)), brightness_level, 0)
-        B747DR_wxr_left_WX             = B747_ternary((B747DR_toggle_switch_position[13] == 1 or simDR_wxrMode_cpt==2), brightness_level, 0)
-        B747DR_wxr_left_WX_T            = B747_ternary((B747DR_toggle_switch_position[13] == 1 or simDR_wxrMode_cpt==3), brightness_level, 0)
-        B747DR_wxr_left_MAP            = B747_ternary((B747DR_toggle_switch_position[13] == 1 or simDR_wxrMode_cpt==4), brightness_level, 0)
-
-        B747DR_wxr_right_GCS             = B747_ternary((B747DR_toggle_switch_position[13] == 1 or simDR_wxrgcs_fo==1), brightness_level, 0)
-        B747DR_wxr_right_TFR             = B747_ternary((B747DR_toggle_switch_position[13] == 1 or (simDR_wxrMode_cpt==0 and simDR_wxrMode_fo==0)), brightness_level, 0)
-        B747DR_wxr_right_WX             = B747_ternary((B747DR_toggle_switch_position[13] == 1 or simDR_wxrMode_fo==2), brightness_level, 0)
-        B747DR_wxr_right_WX_T            = B747_ternary((B747DR_toggle_switch_position[13] == 1 or simDR_wxrMode_fo==3), brightness_level, 0)
-        B747DR_wxr_right_MAP            = B747_ternary((B747DR_toggle_switch_position[13] == 1 or simDR_wxrMode_fo==4), brightness_level, 0)
-
-        B747DR_wxr_test            = B747_ternary((B747DR_toggle_switch_position[13] == 1 or simDR_wxrMode_cpt==1 or simDR_wxrMode_fo==1), brightness_level, 0)
-        B747DR_wxr_RR            = B747_ternary((B747DR_toggle_switch_position[13] == 1 ), brightness_level, 0)
-        B747DR_wxr_LR            = B747_ternary((B747DR_toggle_switch_position[13] == 1 or true), brightness_level, 0) 
-    end
+    --wxr panel: the lamps of the weather radar control (B747.34.xt.wxr.lua);
+    -- before, they followed X-Plane's radar modes and LR/T was always lit
+    local wxr_lt = (B747DR_toggle_switch_position[13] == 1)
+    B747DR_wxr_left_GCS             = wxr_lamp(wxr_lt, B747DR_wxr_lamp_gcs[0] > 0.5, brightness_level)
+    B747DR_wxr_left_TFR             = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[0] == 4, brightness_level)
+    B747DR_wxr_left_WX              = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[0] == 1, brightness_level)
+    B747DR_wxr_left_WX_T            = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[0] == 2, brightness_level)
+    B747DR_wxr_left_MAP             = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[0] == 3, brightness_level)
+    B747DR_wxr_right_GCS            = wxr_lamp(wxr_lt, B747DR_wxr_lamp_gcs[1] > 0.5, brightness_level)
+    B747DR_wxr_right_TFR            = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[1] == 4, brightness_level)
+    B747DR_wxr_right_WX             = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[1] == 1, brightness_level)
+    B747DR_wxr_right_WX_T           = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[1] == 2, brightness_level)
+    B747DR_wxr_right_MAP            = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[1] == 3, brightness_level)
+    B747DR_wxr_test                 = wxr_lamp(wxr_lt, B747DR_wxr_lamp_test > 0.5, brightness_level)
+    B747DR_wxr_LR                   = wxr_lamp(wxr_lt, B747DR_wxr_lamp_rt == 1, brightness_level)
+    B747DR_wxr_RR                   = wxr_lamp(wxr_lt, B747DR_wxr_lamp_rt == 2, brightness_level)
     --wxr lighting
     
 

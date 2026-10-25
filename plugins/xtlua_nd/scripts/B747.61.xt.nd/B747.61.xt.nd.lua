@@ -382,38 +382,29 @@ function updateIcon(iconData,n,isCaptain)
 
   end
 end
+-- the weather radar's annunciations (FCOM p.1155, 5-1 step 5c): the mode
+-- (nothing while the radar is off; "RT" is the R/T failure annunciation)
+-- and the tilt in whole degrees ("+5": FCOM p.1013-1018), shown in MAP, MAP
+-- CTR and VOR and APP not centred (ATA34_1 p.244); in TEST the tilt field is
+-- left for the fault source (FCOM p.1224)
+local WXR_MODE_TEXT = {[1] = "TEST", [2] = "WXR", [3] = "WX+T", [4] = "MAP"}
+local function wxrTexts(mode, tilt, ndMode, center)
+  if not (ndMode == 2 or (ndMode < 2 and center < 0.5)) then return " ", " " end
+  local text = WXR_MODE_TEXT[mode]
+  if text == nil then return " ", " " end
+  if mode == 1 then return text, " " end
+  local t = math.floor(tilt + 0.5)
+  if t > 0 then return text, "+" .. t end
+  return text, tostring(t)
+end
+
 function updateIcons()
-  if simDR_version>123000 then
-    if simDR_wxrMode_cpt== 0 then
-      B747DR_text_capt_wxrtext			= "RT"
-    elseif simDR_wxrMode_cpt== 1 then
-      B747DR_text_capt_wxrtext			= "TEST"
-    elseif simDR_wxrMode_cpt== 2 then
-      B747DR_text_capt_wxrtext			= "WXR"
-    elseif simDR_wxrMode_cpt== 3 then
-      B747DR_text_capt_wxrtext			= "WX+T"
-    elseif simDR_wxrMode_cpt== 4 then
-      B747DR_text_capt_wxrtext			= "MAP"
-    end
-    
-    if simDR_wxrMode_fo== 0 then
-      B747DR_text_fo_wxrtext			= "RT"
-    elseif simDR_wxrMode_fo== 1 then
-      B747DR_text_fo_wxrtext			= "TEST"
-    elseif simDR_wxrMode_fo== 2 then
-      B747DR_text_fo_wxrtext			= "WXR"
-    elseif simDR_wxrMode_fo== 3 then
-      B747DR_text_fo_wxrtext			= "WX+T"
-    elseif simDR_wxrMode_fo== 4 then
-      B747DR_text_fo_wxrtext			= "MAP"
-    end
-    local p=""
-    local p_fo=""
-    if simDR_wxrTilt_cpt>0 then p="+" end
-    if simDR_wxrTilt_fo>0 then p_fo="+" end
-    B747DR_text_capt_wxrtilt			= p..string.format("%2.1f", simDR_wxrTilt_cpt)
-    B747DR_text_fo_wxrtilt			= p_fo..string.format("%2.1f", simDR_wxrTilt_fo)
-  end
+  local text, tilt = wxrTexts(simDR_wxrMode_cpt, simDR_wxrTilt_cpt, B747DR_nd_mode_capt_sel_dial_pos, B747_nd_map_center_capt)
+  if B747DR_text_capt_wxrtext ~= text then B747DR_text_capt_wxrtext = text end
+  if B747DR_text_capt_wxrtilt ~= tilt then B747DR_text_capt_wxrtilt = tilt end
+  text, tilt = wxrTexts(simDR_wxrMode_fo, simDR_wxrTilt_fo, B747DR_nd_mode_fo_sel_dial_pos, B747_nd_map_center_fo)
+  if B747DR_text_fo_wxrtext ~= text then B747DR_text_fo_wxrtext = text end
+  if B747DR_text_fo_wxrtilt ~= tilt then B747DR_text_fo_wxrtilt = tilt end
 
   for n=0,lastCaptNavaid,1 do
     if B747DR_text_capt_show[n]==0 then break end

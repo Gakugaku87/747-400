@@ -683,3 +683,28 @@
 - 試験の道具：`tests/flight/fwl/B747_traffic.lua`（FlyWithLua。X-Plane の AI 機を借りて `override_TCAS` で相手機を飛ばす。消すときは書くのをやめ、X-Plane に落とさせる）、シナリオの手順 `traffic`・`traffic_stop`（`run_scenario.ps1`）。TESTING.md。
 - 作らなかったもの：TCAS の試験（570 のパネルに TEST が無い。CMC の地上試験は無い）、no-bearing の表示（X-Plane の相手は必ず方位がある）、ABOVE/BELOW の窓（570 に無い）、48,000 ft で CLIMB 系を出さないこと（X-Plane の判定）、EFIS パネルの故障での自動表示、TCAS RA の PFD のパネル、R を選んだときのトランスポンダのコード表示（INOP の絵：承認の一覧の外）。
 - X-Plane での確認（カスタム acf）：`s44_tcas`。X-Plane を起動し直した後の 11 回目（69/70）で、TA（琥珀の丸、下の相手のデータタグは記号の下、両 ND に TFC が自動で、琥珀の TRAFFIC、TRAFFIC, TRAFFIC）、RA（X-Plane の CLIMB, CROSSING CLIMB に、相手が下なので CLIMB, CLIMB の声、赤の四角と赤のタグ、赤の TRAFFIC、PFD の RA の値：赤は 1,500 fpm 未満）、CLEAR OF CONFLICT、TA ONLY で RA にならない、XPDR で TCAS OFF（ND と EICAS）、TFC スイッチの入切、トランスポンダ L の故障（>TRANSPONDER L、>TCAS SYSTEM、ND の TCAS FAIL）と R への切替、TCAS の故障（>TCAS SYSTEM、X-Plane のモード 3）、1,050 ft の RA（X-Plane の LEVEL OFF に ADJUST VERTICAL SPEED）、900 ft で TA ONLY を確かめた。不合格の 1 つは OFFSCALE で、RA の上昇の後に ALT HOLD を押すと FMA のピッチモードが空になって降下し、相手機が上を通った（AFDS。シナリオは水平を待つようにした）。同じセッションの 12 回目（63/71、注意 2）は、X-Plane が TA・RA の区間で advisory を出さず RA の確認が通らなかったが、OFFSCALE（MAP CTR 10 nm の右上）と 1,048 ft の RA（CLIMB, CROSSING CLIMB）は通った。Log.txt に Lua の誤りなし。
+
+## 17. 段 5c の計画（2026-10-25：気象レーダー）
+
+- 3D のパネルは 570 型（FCOM p.1223–1224 (11.10.17–18)）：左右別の TILT（外側のつまみ）と MAP GAIN（内側、右いっぱいで較正値）、左右別のモードスイッチ TFR・WX・WX+T・MAP と GCS、真ん中に TEST・LR/T・RR/T。3D の操作子は TILT・GAIN・GCS・WX・WX+T・MAP が X-Plane のコマンド（`sim/instruments/EFIS_wxr_*`）、TFR・TEST・LR/T・RR/T がこの機体のコマンド（`laminar/B747/wxr/buttons/*`。いまはハンドラが空）。
+- 作り方：新しいモデル `B747.34.wxr_model.lua` とグルー `B747.34.xt.wxr.lua`。パネルの状態（左右のモード・チルト・ゲイン・GCS、R/T の選択、TEST）はモデルが持ち、X-Plane のコマンドは `replace_command` でモデルへ回す。X-Plane のレーダー（左右別の `EFIS_weather_mode`・`_tilt`・`_gain`・`_gcs`・`_stab`）は、各 ND に出す内容としてグルーが書く。描画は X-Plane のまま。
+  - R/T：LR/T・RR/T で選ぶ（電源の無いときの導波管スイッチは L：ATA34_1 p.256）。EFIS パネルのどちらかの WXR で選んだ R/T が入る（FCOM p.1040、ATA34_1 p.253）。R/T の電源は各自の遮断器の 115V AC で、バスは資料に無い（ATA34_1 p.210）：L は AC bus 1、R は AC bus 2 とする（推定）。X-Plane の `rel_wxr_radar` の故障でレーダーなし。
+  - 安定化：L の R/T は機長の IRS 選択が L なら IRU L、ほかは C。R は副操縦士の選択が R なら IRU R、ほかは C（ATA34_1 p.242）。その IRU の姿勢が無効なら X-Plane の安定化を切る。
+  - モード：WX・WX+T はゲイン自動（較正値）、MAP は MAP GAIN のつまみ（右いっぱいが較正値。FCOM p.1223）。WX+T で、その側の ND のレンジが 40 nm より大きいと WX に変わる（FCOM p.1224）。TFR はその側の ND に反対側の表示（モード・チルト・ゲイン・GCS）を出し、両側とも TFR だと TEST（試験の絵）。TEST スイッチは両 ND を TEST にし、その側のモードスイッチを押すか、その側の EFIS の WXR を切ると戻る（FCOM p.1224）。
+  - ND の注記（B747.61.xt.nd.lua）：モード（WXR・WX+T・MAP・TEST。レーダーが止まっていれば無し。前は「RT」＝R/T の故障の表示）、チルトを整数で（+5 の形。FCOM p.1013–1018、p.1155。前は +5.0）。TEST の間はチルトの欄を空けて（故障の原因を出す欄：FCOM p.1224）。WXR を出すモード（MAP、MAP CTR、VOR と APP の CTR でないもの：FCOM p.1155、ATA34_1 p.244）の外では出さない。
+  - パネルの灯（照明のモジュールの `wxr/left|right/*`・`wxr/test`・`wxr/LR`・`RR`）をモデルの状態に（前は X-Plane のモードで、LR/T は常に点灯）。3D の物体にこれらを読むものは見つからなかった。
+  - X-Plane のアンテナの走査を ±90° に（ATA34_1 p.231。X-Plane の初期値は ±50°）。
+- 作らないもの：PWS（予測ウインドシア）と TEST の 12 秒の PWS 試験（警報と声の系統が無い）、ND の WXR FAIL と原因（ANT・ATT・WEAK・CONT・RT）、VAR（可変ゲイン）、WXR RANGE DISAGREE、RSTR INOP（パネルの文字が要り、承認の一覧の外）、ND ごとの交互の更新（ATA34_1 p.244）。
+
+## 18. 実装（5-1 段 5c、2026-10-25：気象レーダー）
+
+- 航法センサーのモジュールに、気象レーダーの操作のモデル `B747.34.wxr_model.lua` とグルー `B747.34.xt.wxr.lua` を足した（試験 `tests/nav/wxr_model_test.lua`・`wxr_module_test.lua`、X-Plane の `s45_wxr`）。§17 の計画のとおり。描画は X-Plane のレーダーのまま。
+- パネル（570 型：FCOM p.1223–1224）の状態はモデルが持つ。3D の TILT・MAP GAIN・WX・WX+T・MAP・GCS が使う X-Plane のコマンド（`sim/instruments/EFIS_wxr_*`、両席）は `replace_command` でモデルへ。TFR・TEST・LR/T・RR/T のコマンドは通信のモジュールから航法センサーのモジュールへ移した（前はハンドラが空で、TEST は両側を X-Plane の TEST に固定するだけ、ゲインの 2 を 1 に戻すだけだった：NAV-79）。グルーは各 ND の内容を X-Plane の `EFIS_weather_mode`・`_tilt`・`_gain`・`_gcs`・`_stab`（左右）に書く。機体を読んだ直後は、X-Plane のレーダーに残っていたモード・チルト・ゲイン・GCS をパネルの初めの状態にする。
+- R/T：EFIS パネルのどちらかの WXR で、LR/T・RR/T で選んだ R/T が入る（電源の無いときは L）。電源は L が AC bus 1、R が AC bus 2（推定）、X-Plane の `rel_wxr_radar` の故障でレーダーなし。安定化は、L の R/T なら機長の IRS 選択が L のとき IRU L、ほかは C、R の R/T なら副操縦士の選択が R のとき IRU R、ほかは C の姿勢（ATA34_1 p.242）。無効なら X-Plane の安定化を切る。
+- モード：WX・WX+T・TEST はゲインが較正値、MAP は MAP GAIN のつまみ（右いっぱいが較正値、0 まで：つまみの幅は推定）。WX+T は、その側の ND のレンジが 40 nm より大きいと WX に変わる（戻しても WX のまま）。TFR はその側の ND に反対側のモード・チルト・ゲイン・GCS を出し、両側とも TFR だと TEST。TEST スイッチは R/T が動いていれば両 ND を TEST にし、その側のモードスイッチか EFIS の WXR を切ると戻る（側ごと：推定）。チルト・ゲインの 1 目盛りは X-Plane のコマンドと同じ 0.1（推定）。
+- X-Plane のアンテナの走査を左右 90° に（`EFIS_weather_sector_width`・`antenna_limit`。X-Plane の初期値は 50°）。
+- ND の注記（B747.61.xt.nd.lua）：WXR・WX+T・MAP・TEST、レーダーが止まっていれば無し（前は「RT」）、チルトは整数で +・−（前は +5.0）、TEST の間はチルトの欄を空ける。MAP・MAP CTR・VOR と APP の CTR でないものだけ（PLN と CTR の VOR・APP では出さない）。
+- パネルの灯（照明のモジュールの `wxr/left|right/GCS・TFR・WX・WX_T・MAP`、`wxr/test`・`LR`・`RR`）を、モデルの新設 `wxr/lamp/sel[2]`・`gcs[2]`・`test`・`rt` から（R/T が動いているときだけ：パネルは R/T から給電、ATA34_1 p.210）。前は X-Plane のモードからで、LR/T は常に点灯の扱い。これらの灯を読む 3D の物体は見つからなかった。
+- 合わせて、ND の航跡線の判定（fltInst02）を、CTR の押しボタンの位置（押している間だけ 1）から CTR の状態に、副操縦士の側を副操縦士の WXR に（DSP-21 の一部）。
+- 作らなかったもの：§17 のとおり（PWS と TEST の PWS 試験、ND の WXR FAIL と原因・VAR・RANGE DISAGREE・RSTR INOP、ND ごとの交互の更新）。
+- X-Plane での確認（カスタム acf）：`s45_wxr` 49/49。EFIS の WXR で R/T が入り（両方切ると X-Plane のレーダーとパネルの灯が止まる）、WX（ゲイン 1.0、安定化、ND に WXR と +3）、チルト 10 目盛りで 1°（ND は整数の +4）、WX+T（40 nm）と 80 nm で WX、MAP と MAP GAIN 0.7（ND に MAP）、WX でゲインが戻る、GCS と灯、副操縦士の MAP を機長の TFR で、両側の TFR で TEST（X-Plane の試験の絵、ND に TEST、チルトの欄は空き）、TEST スイッチで両 ND、機長のモードでその側だけ戻る、RR/T、R の R/T の姿勢（IRS 選択 C で IRU C の故障なら安定化なし、R で戻る）、X-Plane の故障でレーダーなし（ND の注記なし）、PLN で注記なし。WX・MAP・TEST の ND を撮った。Log.txt に Lua の誤りなし。

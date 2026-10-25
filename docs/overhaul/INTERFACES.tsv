@@ -2639,8 +2639,8 @@ laminar/B747/window_shade/up_down_front/front_capt	command	obj	B747.01.manipulat
 laminar/B747/window_shade/up_down_front/front_fo	command	obj	B747.01.manipulators,B747.01.xt.manipulators
 laminar/B747/window_shade/up_down_rear/capt	command	obj	B747.01.manipulators,B747.01.xt.manipulators
 laminar/B747/window_shade/up_down_rear/fo	command	obj	B747.01.manipulators,B747.01.xt.manipulators
-laminar/B747/wxr/buttons/cpt_ftr	command	obj	B747.15.com,B747.15.xt.com
-laminar/B747/wxr/buttons/fo_ftr	command	obj	B747.15.com,B747.15.xt.com
-laminar/B747/wxr/buttons/lr	command	obj	B747.15.com,B747.15.xt.com
-laminar/B747/wxr/buttons/rr	command	obj	B747.15.com,B747.15.xt.com
-laminar/B747/wxr/buttons/test	command	obj	B747.15.com,B747.15.xt.com
+laminar/B747/wxr/buttons/cpt_ftr	command	obj	B747.34.nav
+laminar/B747/wxr/buttons/fo_ftr	command	obj	B747.34.nav
+laminar/B747/wxr/buttons/lr	command	obj	B747.34.nav
+laminar/B747/wxr/buttons/rr	command	obj	B747.34.nav
+laminar/B747/wxr/buttons/test	command	obj	B747.34.nav

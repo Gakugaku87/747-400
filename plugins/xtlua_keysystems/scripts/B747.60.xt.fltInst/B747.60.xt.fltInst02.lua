@@ -129,6 +129,7 @@ simDR_EFIS_2_sel_fo                 = find_dataref("sim/cockpit2/EFIS/EFIS_2_sel
 simDR_vvi_fpm_pilot                 = find_dataref("sim/cockpit2/gauges/indicators/vvi_fpm_pilot")
 
 simDR_EFIS_wxr_on                   = find_dataref("sim/cockpit2/EFIS/EFIS_weather_on")
+simDR_EFIS_wxr_on_fo                = find_dataref("sim/cockpit2/EFIS/EFIS_weather_on_copilot")
 simDR_EFIS_tcas_on                  = find_dataref("sim/cockpit2/EFIS/EFIS_tcas_on")
 simDR_EFIS_terr_on_capt                  = find_dataref("sim/cockpit2/EFIS/EFIS_terrain_on")
 simDR_EFIS_terr_on_fo                  = find_dataref("sim/cockpit2/EFIS/EFIS_terrain_on_copilot")
@@ -2481,17 +2482,18 @@ function B747_nd_track_line()
 
     
 
-    if (B747DR_nd_mode_capt_sel_dial_pos <= 1 and B747DR_nd_center_capt_switch_pos == 0 and (simDR_EFIS_wxr_on > 0.5 or B747DR_nd_capt_tfc > 0.5))
+    -- not centred: the CTR state, not the CTR switch (pressed only while held)
+    if (B747DR_nd_mode_capt_sel_dial_pos <= 1 and B747_nd_map_center_capt < 0.5 and (simDR_EFIS_wxr_on > 0.5 or B747DR_nd_capt_tfc > 0.5))
         or
-        (B747DR_nd_mode_capt_sel_dial_pos == 2 and B747DR_nd_center_capt_switch_pos == 0)
+        (B747DR_nd_mode_capt_sel_dial_pos == 2 and B747_nd_map_center_capt < 0.5)
     then
         B747_exp_capt_nd_track_line_on = 1
     else
       B747_exp_capt_nd_track_line_on = 0
     end
-    if (B747DR_nd_mode_fo_sel_dial_pos <= 1 and B747DR_nd_center_fo_switch_pos == 0 and (simDR_EFIS_wxr_on > 0.5 or B747DR_nd_fo_tfc > 0.5))
+    if (B747DR_nd_mode_fo_sel_dial_pos <= 1 and B747_nd_map_center_fo < 0.5 and (simDR_EFIS_wxr_on_fo > 0.5 or B747DR_nd_fo_tfc > 0.5))
         or
-        (B747DR_nd_mode_fo_sel_dial_pos == 2 and B747DR_nd_center_fo_switch_pos == 0)
+        (B747DR_nd_mode_fo_sel_dial_pos == 2 and B747_nd_map_center_fo < 0.5)
     then
         B747_exp_fo_nd_track_line_on = 1
     else
