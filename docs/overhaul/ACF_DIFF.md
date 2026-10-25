@@ -417,3 +417,12 @@
 | 2026-10-26・ND の経路データ（DSP-16） | 機長・副操縦士の ND の `GROUP ND Text Center` の先頭 20 枠（`GROUP ND Text Icons0`〜`19` の `ND Text<n> backrotat`：経路の点が先頭の枠に入る） | 記号と識別子の 4 色の文字だけ | 識別子の下に 2 行（26 px 間隔）：`GROUP T<n> Data White`（新設 `nd/<席>/text/rdata_color[n]` が 1、白の字）と `GROUP T<n> Data Magenta`（2、現用点の字 `TXT.2.28.red`）、中は `gen_text T<n> Data1`・`Data2`（新設 `nd/<席>/text/rdata1_<n>`・`rdata2_<n>`：高度と ETA、高度が無ければ ETA を 1 行目に） | FCOM p.1040、p.1148、FMSPG p.50 |
 
 上の 1 行は `docs/overhaul/tools/panel_nd_data.lua` で書き換えた（2 面で 40 枠、160 の文字。パネルの名前は 19 文字で切られるので新しい名前は短くした）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_data`。
+
+表示（5-2 段 5c-2b、2026-10-26：ND の POS）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・ND の POS（DSP-16） | 機長・副操縦士の ND の `GROUP ND Text Center`（地図の記号：CTR で動く）の最後 | なし | 新しい `GROUP POS Symbols`：IRU の位置の星 3 つ `gen_rotary POS IRU L`・`C`・`R`（新しい `CRT Displays/ND/pos_iru`、新設 `nd/<席>/pos_iru[0..2]`）と GPS の位置 `gen_rotary POS GPS`（`pos_gps`、新設 `pos_gps`）を機体の位置（高度の到達の弧と同じ点：機長 335.25, −95、副操縦士 1022.25, −95）に | FCOM p.1040、p.1150 |
+| 同 | 同じグループの最後 | なし | 新しい `GROUP POS Rad L`・`POS Rad R`（新設 `pos_rad_l`・`_r`）：機体の位置を中心に `pos_rad_l_brg` で回す `GROUP POS Rad L Turn` の中に、24 px の線分 `gen_rotary RL Seg0`〜`Seg19`（新しい `pos_seg`、`pos_rad_l_len` が 24 px ごとの長さを超えたら）、最後の線分（`GROUP RL End` で `pos_rad_l_end` だけ進める）、DME の印（`GROUP RL Tick`：`pos_rad_l_tick`、`pos_rad_l_len` だけ進める、新しい `pos_tick`）。文字は `GROUP RL Label 1`・`2`（`pos_rad_l_tside`）を `pos_rad_l_tbrg` で回し、機体から 50 px の所に `gen_text RL Text 1`・`2`（緑の字、`pos_rad_l_text`） | FCOM p.1145 |
+
+上の 2 行は `docs/overhaul/tools/panel_nd_pos.lua` で書き換えた（2 面で 2,380 行）。画像は `docs/overhaul/tools/make_nd_pos_images.ps1`（星は 5 本腕、GPS は円と左右の二股：FCOM p.1150 の図）。DME の無い radial の「画面の端」と文字の位置は推定。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_pos`。

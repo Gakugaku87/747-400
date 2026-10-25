@@ -35,6 +35,16 @@ M.WIND_KT = 100
 -- the EFIS control panel's VOR/ADF switches, left (VOR L, ADF L) and right
 -- (VOR R, ADF R)
 M.SW_OFF, M.SW_VOR, M.SW_ADF = 0, 1, 2
+-- the POS switch's VOR radials (step 5c) on the map's scale: the selected
+-- range is 465 pixels (the map symbols': B747.61.xt.nd.lua's 640 units);
+-- where no DME distance, to the display's edge (estimate: the expanded
+-- map's range arc ahead, within the display's sides from the airplane
+-- symbol, nothing behind it, as the map's symbols; the centred map's
+-- symbols' 250 units)
+M.PX_PER_RANGE = 465
+M.RAD_ARC_PX = 465
+M.RAD_LEFT_PX, M.RAD_RIGHT_PX = 329, 348
+M.RAD_CTR_PX = 250 / 640 * 465
 
 local function side_in()
     return {
@@ -55,6 +65,8 @@ local function side_in()
         vor_dme_rx = false, -- its DME distance received
         dme_fail = false,   -- the DME failed
         sw = {M.SW_OFF, M.SW_OFF}, -- that side's VOR/ADF switches, left and right
+        pos = false,        -- POS selected on that side's EFIS control panel
+        range_nm = 40,      -- that side's selected range
     }
 end
 
@@ -69,6 +81,9 @@ function M.inputs()
         vor_rel = {0, 0},               -- relative bearings, degrees (X-Plane's)
         adf_rel = {0, 0},
         vor_dme_rx = {false, false},    -- the VORs' DME distance received
+        vor_dme_nm = {0, 0},            -- their DME distances
+        iru_nav = {false, false, false}, -- the IRUs L, C, R in NAV (a position)
+        gps_ok = false,                 -- a GPS position
         map_valid = true,   -- the FMC's position (an IRU in NAV: estimate)
         wind_from = 0,      -- the wind direction, magnetic
         hdg_sel = 0,        -- the MCP selected heading
@@ -105,6 +120,14 @@ local function side_out()
         rad = {0, 0},       -- the block: 0 none, 1 VOR, 2 ADF
         rad_flag = {false, false}, -- the receiver's flag instead of its name
         rad_dme = {0, 0},   -- the VOR block's DME: 0 dashes, 1 the distance, 2 the DME flag
+        -- the POS switch
+        pos_iru = {false, false, false}, -- the IRUs' positions
+        pos_gps = false,    -- the GPS position
+        pos_rad = {false, false}, -- the VOR L and R radials
+        pos_rad_brg = {0, 0}, -- their direction on the display, degrees
+        pos_rad_len = {0, 0}, -- their length, pixels
+        pos_rad_tick = {false, false}, -- the tick mark at the DME distance (the end)
+        pos_rad_radial = {0, 0}, -- the radial, 1 to 360
     }
 end
 
@@ -113,6 +136,18 @@ function M.new()
 end
 
 local function wrap(a) return (a + 180) % 360 - 180 end
+
+-- a radial's length to the display's edge in its direction (degrees from
+-- the display's top), centred or expanded
+function M.edge_px(dir, center)
+    if center then return M.RAD_CTR_PX end
+    local d = wrap(dir)
+    if math.abs(d) > 90 then return 0 end
+    local s = math.abs(math.sin(math.rad(d)))
+    local side = d < 0 and M.RAD_LEFT_PX or M.RAD_RIGHT_PX
+    if s * M.RAD_ARC_PX > side then return side / s end
+    return M.RAD_ARC_PX
+end
 
 -- the display's top (FCOM p.1109-1110, 109): MAP track up, VOR and APP
 -- heading up, PLN north up (FCOM: true north; the stock map and symbols
@@ -197,6 +232,30 @@ function M.update(s, inp, dt)
             o.ptr[k] = (ok and rx and o.rose and i.hdg_valid) and sw or M.SW_OFF
             -- the bearing from the side's heading, on the display's top
             o.brg[k] = wrap((adf and inp.adf_rel[k] or inp.vor_rel[k]) + i.hdg - o.up)
+        end
+
+        -- the POS switch (FCOM p.1040, p.1145, p.1150), in MAP and MAP CTR:
+        -- the IRU positions (each IRU in NAV) and the GPS position, drawn
+        -- relative to the FMC's position (here all three are X-Plane's
+        -- position: at the airplane symbol); the VOR raw data radials from
+        -- the airplane to the CDU-tuned VORs (VOR L and R, the bearing
+        -- received, drawn from that side's heading) with the radial, to the
+        -- DME distance and its tick mark, else to the display's edge
+        local pos = i.pos and mode == M.MAP
+        for k = 1, 3 do o.pos_iru[k] = pos and inp.iru_nav[k] end
+        o.pos_gps = pos and inp.gps_ok
+        for k = 1, 2 do
+            local on = pos and inp.vor_ok[k] and inp.vor_brg_rx[k] and o.rose and i.hdg_valid
+            local brg = inp.vor_rel[k] + i.hdg
+            o.pos_rad_brg[k] = wrap(brg - o.up)
+            local radial = math.floor((brg + 180) % 360 + 0.5)
+            o.pos_rad_radial[k] = radial == 0 and 360 or radial
+            local edge = M.edge_px(o.pos_rad_brg[k], i.center)
+            local dme = inp.vor_dme_rx[k] and not i.dme_fail
+            local dme_px = dme and inp.vor_dme_nm[k] * M.PX_PER_RANGE / i.range_nm or math.huge
+            o.pos_rad[k] = on and edge > 0
+            o.pos_rad_len[k] = o.pos_rad[k] and math.min(dme_px, edge) or 0
+            o.pos_rad_tick[k] = o.pos_rad[k] and dme and dme_px <= edge
         end
     end
     return s.out

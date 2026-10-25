@@ -103624,6 +103624,1196 @@ GROUP First Officer ND
             END_GROUP
           END_GROUP
         END_GROUP
+        GROUP POS Symbols
+          gen_rotary POS IRU L
+            POS 1022.250000 -95.000000
+            IMAGE CRT Displays/ND/pos_iru
+            DATAREF 
+            SHOW_GREATER 0.500000 laminar/B747/nd/fo/pos_iru[0]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 3
+            BUS_SRC 3
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 1.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary POS IRU C
+            POS 1022.250000 -95.000000
+            IMAGE CRT Displays/ND/pos_iru
+            DATAREF 
+            SHOW_GREATER 0.500000 laminar/B747/nd/fo/pos_iru[1]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 3
+            BUS_SRC 3
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 1.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary POS IRU R
+            POS 1022.250000 -95.000000
+            IMAGE CRT Displays/ND/pos_iru
+            DATAREF 
+            SHOW_GREATER 0.500000 laminar/B747/nd/fo/pos_iru[2]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 3
+            BUS_SRC 3
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 1.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary POS GPS
+            POS 1022.250000 -95.000000
+            IMAGE CRT Displays/ND/pos_gps
+            DATAREF 
+            SHOW_GREATER 0.500000 laminar/B747/nd/fo/pos_gps
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 3
+            BUS_SRC 3
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 1.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+        END_GROUP
+        GROUP POS Rad L
+          SHOW_GREATER 0.500000 laminar/B747/nd/fo/pos_rad_l
+          GROUP POS Rad L Turn
+            GROUP_ANIMATE_MODE ROTATE
+            GROUP_WIDTH 0
+            GROUP_HEIGHT 0
+            DATAREF laminar/B747/nd/fo/pos_rad_l_brg
+            POS 1022.250000 -95.000000
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 45.000000 45.000000
+            ROTATE_OFFSET_X 0.000000
+            ROTATE_OFFSET_Y 0.000000
+            gen_rotary RL Seg0
+              POS 1022.250000 -83.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 23.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg1
+              POS 1022.250000 -59.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 47.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg2
+              POS 1022.250000 -35.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 71.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg3
+              POS 1022.250000 -11.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 95.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg4
+              POS 1022.250000 13.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 119.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg5
+              POS 1022.250000 37.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 143.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg6
+              POS 1022.250000 61.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 167.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg7
+              POS 1022.250000 85.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 191.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg8
+              POS 1022.250000 109.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 215.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg9
+              POS 1022.250000 133.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 239.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg10
+              POS 1022.250000 157.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 263.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg11
+              POS 1022.250000 181.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 287.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg12
+              POS 1022.250000 205.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 311.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg13
+              POS 1022.250000 229.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 335.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg14
+              POS 1022.250000 253.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 359.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg15
+              POS 1022.250000 277.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 383.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg16
+              POS 1022.250000 301.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 407.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg17
+              POS 1022.250000 325.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 431.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg18
+              POS 1022.250000 349.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 455.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg19
+              POS 1022.250000 373.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 479.500000 laminar/B747/nd/fo/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            GROUP RL End
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/pos_rad_l_end
+              POS 0.000000 0.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 1
+              OFFSET 0.000000
+              gen_rotary RL SegE
+                POS 1022.250000 -83.000000
+                IMAGE CRT Displays/ND/pos_seg
+                DATAREF 
+                SHOW_GREATER 23.500000 laminar/B747/nd/fo/pos_rad_l_len
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 3
+                BUS_SRC 3
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+            END_GROUP
+            GROUP RL Tick
+              SHOW_GREATER 0.500000 laminar/B747/nd/fo/pos_rad_l_tick
+              GROUP RL Tick Slide
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/fo/pos_rad_l_len
+                POS 0.000000 0.000000
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                gen_rotary RL Tick
+                  POS 1022.250000 -95.000000
+                  IMAGE CRT Displays/ND/pos_tick
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP RL Label 1
+            SHOW_EQUAL 1.000000 laminar/B747/nd/fo/pos_rad_l_tside
+            GROUP RL Label 1 Turn
+              GROUP_ANIMATE_MODE ROTATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/pos_rad_l_tbrg
+              POS 1022.250000 -95.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 45.000000 45.000000
+              ROTATE_OFFSET_X 0.000000
+              ROTATE_OFFSET_Y 0.000000
+              gen_text RL Text 1
+                POS 1072.250000 -91.000000
+                IMAGE CRT Displays/TEXT/ND/TXT.2.28.green
+                DATAREF laminar/B747/nd/fo/pos_rad_l_text
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 3
+                BUS_SRC 3
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                OFFSET_X 0
+                OFFSET_Y 0.000000
+
+            END_GROUP
+          END_GROUP
+          GROUP RL Label 2
+            SHOW_EQUAL 2.000000 laminar/B747/nd/fo/pos_rad_l_tside
+            GROUP RL Label 2 Turn
+              GROUP_ANIMATE_MODE ROTATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/pos_rad_l_tbrg
+              POS 1022.250000 -95.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 45.000000 45.000000
+              ROTATE_OFFSET_X 0.000000
+              ROTATE_OFFSET_Y 0.000000
+              gen_text RL Text 2
+                POS 902.250000 -91.000000
+                IMAGE CRT Displays/TEXT/ND/TXT.2.28.green
+                DATAREF laminar/B747/nd/fo/pos_rad_l_text
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 3
+                BUS_SRC 3
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                OFFSET_X 0
+                OFFSET_Y 0.000000
+
+            END_GROUP
+          END_GROUP
+        END_GROUP
+        GROUP POS Rad R
+          SHOW_GREATER 0.500000 laminar/B747/nd/fo/pos_rad_r
+          GROUP POS Rad R Turn
+            GROUP_ANIMATE_MODE ROTATE
+            GROUP_WIDTH 0
+            GROUP_HEIGHT 0
+            DATAREF laminar/B747/nd/fo/pos_rad_r_brg
+            POS 1022.250000 -95.000000
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 45.000000 45.000000
+            ROTATE_OFFSET_X 0.000000
+            ROTATE_OFFSET_Y 0.000000
+            gen_rotary RR Seg0
+              POS 1022.250000 -83.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 23.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg1
+              POS 1022.250000 -59.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 47.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg2
+              POS 1022.250000 -35.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 71.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg3
+              POS 1022.250000 -11.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 95.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg4
+              POS 1022.250000 13.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 119.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg5
+              POS 1022.250000 37.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 143.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg6
+              POS 1022.250000 61.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 167.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg7
+              POS 1022.250000 85.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 191.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg8
+              POS 1022.250000 109.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 215.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg9
+              POS 1022.250000 133.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 239.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg10
+              POS 1022.250000 157.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 263.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg11
+              POS 1022.250000 181.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 287.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg12
+              POS 1022.250000 205.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 311.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg13
+              POS 1022.250000 229.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 335.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg14
+              POS 1022.250000 253.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 359.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg15
+              POS 1022.250000 277.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 383.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg16
+              POS 1022.250000 301.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 407.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg17
+              POS 1022.250000 325.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 431.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg18
+              POS 1022.250000 349.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 455.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg19
+              POS 1022.250000 373.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 479.500000 laminar/B747/nd/fo/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            GROUP RR End
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/pos_rad_r_end
+              POS 0.000000 0.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 1
+              OFFSET 0.000000
+              gen_rotary RR SegE
+                POS 1022.250000 -83.000000
+                IMAGE CRT Displays/ND/pos_seg
+                DATAREF 
+                SHOW_GREATER 23.500000 laminar/B747/nd/fo/pos_rad_r_len
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 3
+                BUS_SRC 3
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+            END_GROUP
+            GROUP RR Tick
+              SHOW_GREATER 0.500000 laminar/B747/nd/fo/pos_rad_r_tick
+              GROUP RR Tick Slide
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/fo/pos_rad_r_len
+                POS 0.000000 0.000000
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                gen_rotary RR Tick
+                  POS 1022.250000 -95.000000
+                  IMAGE CRT Displays/ND/pos_tick
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP RR Label 1
+            SHOW_EQUAL 1.000000 laminar/B747/nd/fo/pos_rad_r_tside
+            GROUP RR Label 1 Turn
+              GROUP_ANIMATE_MODE ROTATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/pos_rad_r_tbrg
+              POS 1022.250000 -95.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 45.000000 45.000000
+              ROTATE_OFFSET_X 0.000000
+              ROTATE_OFFSET_Y 0.000000
+              gen_text RR Text 1
+                POS 1072.250000 -91.000000
+                IMAGE CRT Displays/TEXT/ND/TXT.2.28.green
+                DATAREF laminar/B747/nd/fo/pos_rad_r_text
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 3
+                BUS_SRC 3
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                OFFSET_X 0
+                OFFSET_Y 0.000000
+
+            END_GROUP
+          END_GROUP
+          GROUP RR Label 2
+            SHOW_EQUAL 2.000000 laminar/B747/nd/fo/pos_rad_r_tside
+            GROUP RR Label 2 Turn
+              GROUP_ANIMATE_MODE ROTATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/pos_rad_r_tbrg
+              POS 1022.250000 -95.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 45.000000 45.000000
+              ROTATE_OFFSET_X 0.000000
+              ROTATE_OFFSET_Y 0.000000
+              gen_text RR Text 2
+                POS 902.250000 -91.000000
+                IMAGE CRT Displays/TEXT/ND/TXT.2.28.green
+                DATAREF laminar/B747/nd/fo/pos_rad_r_text
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 3
+                BUS_SRC 3
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                OFFSET_X 0
+                OFFSET_Y 0.000000
+
+            END_GROUP
+          END_GROUP
+        END_GROUP
       END_GROUP
       GROUP EFIS Data Annun
         SHOW_GREATER 0.100000 laminar/B747/pfd/fo/irs
@@ -117642,6 +118832,1196 @@ GROUP Captain ND
                   OFFSET_Y 0.000000
 
               END_GROUP
+            END_GROUP
+          END_GROUP
+        END_GROUP
+        GROUP POS Symbols
+          gen_rotary POS IRU L
+            POS 335.250000 -95.000000
+            IMAGE CRT Displays/ND/pos_iru
+            DATAREF 
+            SHOW_GREATER 0.500000 laminar/B747/nd/capt/pos_iru[0]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 3
+            BUS_SRC 3
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 1.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary POS IRU C
+            POS 335.250000 -95.000000
+            IMAGE CRT Displays/ND/pos_iru
+            DATAREF 
+            SHOW_GREATER 0.500000 laminar/B747/nd/capt/pos_iru[1]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 3
+            BUS_SRC 3
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 1.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary POS IRU R
+            POS 335.250000 -95.000000
+            IMAGE CRT Displays/ND/pos_iru
+            DATAREF 
+            SHOW_GREATER 0.500000 laminar/B747/nd/capt/pos_iru[2]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 3
+            BUS_SRC 3
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 1.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary POS GPS
+            POS 335.250000 -95.000000
+            IMAGE CRT Displays/ND/pos_gps
+            DATAREF 
+            SHOW_GREATER 0.500000 laminar/B747/nd/capt/pos_gps
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 3
+            BUS_SRC 3
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 1.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+        END_GROUP
+        GROUP POS Rad L
+          SHOW_GREATER 0.500000 laminar/B747/nd/capt/pos_rad_l
+          GROUP POS Rad L Turn
+            GROUP_ANIMATE_MODE ROTATE
+            GROUP_WIDTH 0
+            GROUP_HEIGHT 0
+            DATAREF laminar/B747/nd/capt/pos_rad_l_brg
+            POS 335.250000 -95.000000
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 45.000000 45.000000
+            ROTATE_OFFSET_X 0.000000
+            ROTATE_OFFSET_Y 0.000000
+            gen_rotary RL Seg0
+              POS 335.250000 -83.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 23.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg1
+              POS 335.250000 -59.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 47.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg2
+              POS 335.250000 -35.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 71.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg3
+              POS 335.250000 -11.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 95.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg4
+              POS 335.250000 13.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 119.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg5
+              POS 335.250000 37.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 143.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg6
+              POS 335.250000 61.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 167.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg7
+              POS 335.250000 85.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 191.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg8
+              POS 335.250000 109.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 215.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg9
+              POS 335.250000 133.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 239.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg10
+              POS 335.250000 157.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 263.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg11
+              POS 335.250000 181.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 287.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg12
+              POS 335.250000 205.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 311.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg13
+              POS 335.250000 229.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 335.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg14
+              POS 335.250000 253.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 359.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg15
+              POS 335.250000 277.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 383.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg16
+              POS 335.250000 301.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 407.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg17
+              POS 335.250000 325.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 431.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg18
+              POS 335.250000 349.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 455.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RL Seg19
+              POS 335.250000 373.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 479.500000 laminar/B747/nd/capt/pos_rad_l_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            GROUP RL End
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/pos_rad_l_end
+              POS 0.000000 0.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 1
+              OFFSET 0.000000
+              gen_rotary RL SegE
+                POS 335.250000 -83.000000
+                IMAGE CRT Displays/ND/pos_seg
+                DATAREF 
+                SHOW_GREATER 23.500000 laminar/B747/nd/capt/pos_rad_l_len
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 3
+                BUS_SRC 3
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+            END_GROUP
+            GROUP RL Tick
+              SHOW_GREATER 0.500000 laminar/B747/nd/capt/pos_rad_l_tick
+              GROUP RL Tick Slide
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/capt/pos_rad_l_len
+                POS 0.000000 0.000000
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                gen_rotary RL Tick
+                  POS 335.250000 -95.000000
+                  IMAGE CRT Displays/ND/pos_tick
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP RL Label 1
+            SHOW_EQUAL 1.000000 laminar/B747/nd/capt/pos_rad_l_tside
+            GROUP RL Label 1 Turn
+              GROUP_ANIMATE_MODE ROTATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/pos_rad_l_tbrg
+              POS 335.250000 -95.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 45.000000 45.000000
+              ROTATE_OFFSET_X 0.000000
+              ROTATE_OFFSET_Y 0.000000
+              gen_text RL Text 1
+                POS 385.250000 -91.000000
+                IMAGE CRT Displays/TEXT/ND/TXT.2.28.green
+                DATAREF laminar/B747/nd/capt/pos_rad_l_text
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 0
+                BUS_SRC 3
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                OFFSET_X 0
+                OFFSET_Y 0.000000
+
+            END_GROUP
+          END_GROUP
+          GROUP RL Label 2
+            SHOW_EQUAL 2.000000 laminar/B747/nd/capt/pos_rad_l_tside
+            GROUP RL Label 2 Turn
+              GROUP_ANIMATE_MODE ROTATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/pos_rad_l_tbrg
+              POS 335.250000 -95.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 45.000000 45.000000
+              ROTATE_OFFSET_X 0.000000
+              ROTATE_OFFSET_Y 0.000000
+              gen_text RL Text 2
+                POS 215.250000 -91.000000
+                IMAGE CRT Displays/TEXT/ND/TXT.2.28.green
+                DATAREF laminar/B747/nd/capt/pos_rad_l_text
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 0
+                BUS_SRC 3
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                OFFSET_X 0
+                OFFSET_Y 0.000000
+
+            END_GROUP
+          END_GROUP
+        END_GROUP
+        GROUP POS Rad R
+          SHOW_GREATER 0.500000 laminar/B747/nd/capt/pos_rad_r
+          GROUP POS Rad R Turn
+            GROUP_ANIMATE_MODE ROTATE
+            GROUP_WIDTH 0
+            GROUP_HEIGHT 0
+            DATAREF laminar/B747/nd/capt/pos_rad_r_brg
+            POS 335.250000 -95.000000
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 45.000000 45.000000
+            ROTATE_OFFSET_X 0.000000
+            ROTATE_OFFSET_Y 0.000000
+            gen_rotary RR Seg0
+              POS 335.250000 -83.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 23.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg1
+              POS 335.250000 -59.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 47.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg2
+              POS 335.250000 -35.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 71.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg3
+              POS 335.250000 -11.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 95.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg4
+              POS 335.250000 13.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 119.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg5
+              POS 335.250000 37.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 143.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg6
+              POS 335.250000 61.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 167.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg7
+              POS 335.250000 85.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 191.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg8
+              POS 335.250000 109.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 215.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg9
+              POS 335.250000 133.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 239.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg10
+              POS 335.250000 157.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 263.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg11
+              POS 335.250000 181.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 287.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg12
+              POS 335.250000 205.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 311.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg13
+              POS 335.250000 229.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 335.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg14
+              POS 335.250000 253.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 359.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg15
+              POS 335.250000 277.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 383.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg16
+              POS 335.250000 301.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 407.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg17
+              POS 335.250000 325.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 431.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg18
+              POS 335.250000 349.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 455.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary RR Seg19
+              POS 335.250000 373.000000
+              IMAGE CRT Displays/ND/pos_seg
+              DATAREF 
+              SHOW_GREATER 479.500000 laminar/B747/nd/capt/pos_rad_r_len
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 3
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            GROUP RR End
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/pos_rad_r_end
+              POS 0.000000 0.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 1
+              OFFSET 0.000000
+              gen_rotary RR SegE
+                POS 335.250000 -83.000000
+                IMAGE CRT Displays/ND/pos_seg
+                DATAREF 
+                SHOW_GREATER 23.500000 laminar/B747/nd/capt/pos_rad_r_len
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 3
+                BUS_SRC 3
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+            END_GROUP
+            GROUP RR Tick
+              SHOW_GREATER 0.500000 laminar/B747/nd/capt/pos_rad_r_tick
+              GROUP RR Tick Slide
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/capt/pos_rad_r_len
+                POS 0.000000 0.000000
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                gen_rotary RR Tick
+                  POS 335.250000 -95.000000
+                  IMAGE CRT Displays/ND/pos_tick
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 3
+                  BUS_SRC 3
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP RR Label 1
+            SHOW_EQUAL 1.000000 laminar/B747/nd/capt/pos_rad_r_tside
+            GROUP RR Label 1 Turn
+              GROUP_ANIMATE_MODE ROTATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/pos_rad_r_tbrg
+              POS 335.250000 -95.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 45.000000 45.000000
+              ROTATE_OFFSET_X 0.000000
+              ROTATE_OFFSET_Y 0.000000
+              gen_text RR Text 1
+                POS 385.250000 -91.000000
+                IMAGE CRT Displays/TEXT/ND/TXT.2.28.green
+                DATAREF laminar/B747/nd/capt/pos_rad_r_text
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 0
+                BUS_SRC 3
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                OFFSET_X 0
+                OFFSET_Y 0.000000
+
+            END_GROUP
+          END_GROUP
+          GROUP RR Label 2
+            SHOW_EQUAL 2.000000 laminar/B747/nd/capt/pos_rad_r_tside
+            GROUP RR Label 2 Turn
+              GROUP_ANIMATE_MODE ROTATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/pos_rad_r_tbrg
+              POS 335.250000 -95.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 45.000000 45.000000
+              ROTATE_OFFSET_X 0.000000
+              ROTATE_OFFSET_Y 0.000000
+              gen_text RR Text 2
+                POS 215.250000 -91.000000
+                IMAGE CRT Displays/TEXT/ND/TXT.2.28.green
+                DATAREF laminar/B747/nd/capt/pos_rad_r_text
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 0
+                BUS_SRC 3
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
+                OFFSET_X 0
+                OFFSET_Y 0.000000
+
             END_GROUP
           END_GROUP
         END_GROUP

@@ -571,4 +571,34 @@ T.equal(rt:get(SEL .. "1_selection_pilot"), 1, "and its left VOR/ADF switch: OFF
 rt:set(SEL .. "1_selection_pilot", 1)
 rt:set(SEL .. "2_selection_copilot", 1)
 
+-- step 5c: the POS switch's symbols (FCOM p.1040, p.1145, p.1150): the
+-- Captain's MAP 40 NM, VOR L's bearing 30 right of heading 100 at 20 NM DME
+rt:set(ND .. "mode/capt/sel_dial_pos", 2)
+rt:set(ND .. "range/capt/sel_dial_pos", 2)
+rt:set(ND .. "map_center/capt", 0)
+rt:set(ND .. "data/capt/pos", 1)
+for i = 0, 2 do rt:set(IRS .. "nav_valid", i, 1) end
+rt:set("laminar/B747/gps/valid", 0, 1)
+rt:set(RAD .. "indicators/nav_display_horizontal", 2, 1)
+rt:set(RAD .. "indicators/nav_relative_bearing_deg", 2, 30)
+rt:set(RAD .. "indicators/nav_has_dme", 2, 1)
+rt:set(RAD .. "indicators/nav_dme_distance_nm", 2, 20)
+rt:set("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot", 100)
+rt:set("sim/cockpit2/gauges/indicators/ground_track_mag_pilot", 110)
+frames(0.1)
+local PC = ND .. "capt/"
+T.check(rt:get(PC .. "pos_iru", 0) == 1 and rt:get(PC .. "pos_iru", 2) == 1, "POS: the IRU positions")
+T.equal(rt:get(PC .. "pos_gps"), 1, "the GPS position (GPS L)")
+T.equal(rt:get(PC .. "pos_rad_l"), 1, "VOR L's radial")
+T.near(rt:get(PC .. "pos_rad_l_brg"), 20, 1e-4, "at 130 magnetic: 20 right of the track-up top")
+T.near(rt:get(PC .. "pos_rad_l_len"), 232.5, 1e-4, "to the DME distance: 232.5 pixels")
+T.near(rt:get(PC .. "pos_rad_l_end"), 232.5 - 24, 1e-4, "the last segment ending there")
+T.equal(rt:get(PC .. "pos_rad_l_tick"), 1, "the tick mark")
+T.check(rt:get(PC .. "pos_rad_l_tside") == 1 and math.abs(rt:get(PC .. "pos_rad_l_tbrg") - (-70)) < 1e-4,
+    "the label along the line, to its right")
+T.equal(rt:get(PC .. "pos_rad_l_text"), "R-310", "R-310")
+rt:set(ND .. "data/capt/pos", 0)
+frames(0.1)
+T.check(rt:get(PC .. "pos_rad_l") == 0 and rt:get(PC .. "pos_gps") == 0, "POS off: none")
+
 T.done()
