@@ -1,4 +1,3 @@
-registerFMCCommand("laminar/B747/efis/dh/capt/reset_switch","")
 fmsPages["EFISCTL152"]=createPage("EFISCTL152")
 fmsPages["EFISCTL152"].getPage=function(self,pgNo,fmsID)
 
@@ -87,7 +86,7 @@ fmsPages["EFISCTL152"].getSmallPage=function(self,pgNo,fmsID)
 fmsFunctionsDefs["EFISCTL152"]={}
 fmsFunctionsDefs["EFISCTL152"]["L1"]={"setdata","BARO"}
 fmsFunctionsDefs["EFISCTL152"]["L2"]={"setdata","DH"}
-fmsFunctionsDefs["EFISCTL152"]["L3"]={"doCMD","laminar/B747/efis/dh/capt/reset_switch"}
+fmsFunctionsDefs["EFISCTL152"]["L3"]={"setdata","DHRESET"}
 fmsFunctionsDefs["EFISCTL152"]["L4"]={"setdata","MDA"}
 fmsFunctionsDefs["EFISCTL152"]["L5"]={"setdata","RANGEINC"}
 fmsFunctionsDefs["EFISCTL152"]["L6"]={"setdata","RANGEDEC"}
@@ -100,65 +99,45 @@ fmsFunctionsDefs["EFISCTL152"]["R6"]={"setpage","EFISOPTIONS152"}
 
 
 registerFMCCommand("sim/instruments/EFIS_wxr","")
+registerFMCCommand("sim/instruments/EFIS_copilot_wxr","")
 registerFMCCommand("sim/instruments/EFIS_tcas","")
 
 
 fmsPages["EFISOPTIONS152"]=createPage("EFISOPTIONS152")
+-- the 109's CDU-152 (FCOM p.1065): WXR, POS, MTRS, FPV, WPT, STA, ARPT, DATA,
+-- VOR and ADF for that CDU's side (5-2 step 5c: before, TERR and TFC as the
+-- 405's and CDU-161's, WXR the Captain's, POS and DATA dead)
 fmsPages["EFISOPTIONS152"].getPage=function(self,pgNo,fmsID)
-    local wxrSelected="     "
-    local posSelected="     "
-    local terrSelected="     "
-    local tfcSelected="     "
-    local vorSelected="     "
-    local wptSelected="     "
-    local staSelected="     "
-    local arptSelected="     "
-    local dataSelected="     "
-    local adfSelected="     "
-    
-    if B747DR_nd_wxr==1 then wxrSelected="<SEL>" end
-    if fmsID=="fmsR" then 
-        if B747DR_nd_fo_ftc==1 then tfcSelected="<SEL>" end
-        if B747DR_nd_fo_vor_ndb==1 then staSelected="<SEL>" end
-        if B747DR_nd_fo_terr==1 then terrSelected="<SEL>" end
-        if B747DR_nd_fo_wpt==1 then wptSelected="<SEL>" end
-        if B747DR_nd_fo_apt==1 then arptSelected="<SEL>" end
-        if simDR_EFIS_1_sel_fo==2 and simDR_EFIS_2_sel_fo==2 then vorSelected="<SEL>" end
-        if simDR_EFIS_1_sel_fo==0 and simDR_EFIS_2_sel_fo==0 then adfSelected="<SEL>" end
-    else
-        if B747DR_nd_capt_ftc==1 then tfcSelected="<SEL>" end
-        if B747DR_nd_capt_vor_ndb==1 then staSelected="<SEL>" end
-        if B747DR_nd_capt_terr==1 then terrSelected="<SEL>" end
-        if B747DR_nd_capt_wpt==1 then wptSelected="<SEL>" end
-        if B747DR_nd_capt_apt==1 then arptSelected="<SEL>" end
-        if simDR_EFIS_1_sel_pilot==2 and simDR_EFIS_2_sel_pilot==2 then vorSelected="<SEL>" end
-        if simDR_EFIS_1_sel_pilot==0 and simDR_EFIS_2_sel_pilot==0 then adfSelected="<SEL>" end
-    end
+    local fo=fmsID=="fmsR"
+    local function sel(on) return on and "<SEL>" or "     " end
+    local function pick(capt, f) if fo then return f==1 end return capt==1 end
+    local s1=fo and simDR_EFIS_1_sel_fo or simDR_EFIS_1_sel_pilot
+    local s2=fo and simDR_EFIS_2_sel_fo or simDR_EFIS_2_sel_pilot
     return {
-
-        "       EFIS OPTIONS     ",
+        "      EFIS OPTIONS      ",
         "                        ",
-        "<WXR  ".. wxrSelected .."  ".. wptSelected .."  WPT>",
+        "<WXR  "..sel(pick(B747DR_nd_wxr, simDR_EFIS_wxr_copilot)).."  "..sel(pick(B747DR_nd_capt_wpt, B747DR_nd_fo_wpt)).."  WPT>",
         "                        ",
-        "<POS  ".. posSelected .."  ".. staSelected .."  STA>",
+        "<POS  "..sel(pick(B747DR_nd_capt_pos, B747DR_nd_fo_pos)).."  "..sel(pick(B747DR_nd_capt_vor_ndb, B747DR_nd_fo_vor_ndb)).."  STA>",
         "                        ",
-        "<TERR ".. terrSelected .."  ".. arptSelected .." ARPT>",
+        "<MTRS "..sel(pick(B747DR_efis_meters_capt_selected, B747DR_efis_meters_fo_selected)).."  "..sel(pick(B747DR_nd_capt_apt, B747DR_nd_fo_apt)).." ARPT>",
         "                        ",
-        "<TFC  ".. tfcSelected .."  ".. dataSelected .." DATA>", 
+        "<FPV  "..sel(pick(B747DR_efis_fpv_capt_selected, B747DR_efis_fpv_fo_selected)).."  "..sel(pick(B747DR_nd_capt_data, B747DR_nd_fo_data)).." DATA>",
         "                        ",
-        "<VOR  ".. vorSelected .."  ".. adfSelected .."  ADF>",
+        "<VOR  "..sel(s1==2 and s2==2).."  "..sel(s1==0 and s2==0).."  ADF>",
         "------------------------",
         "                CONTROL>"
         }
 end
+fmsFunctionsDefs["EFISOPTIONS152"]={}
 fmsFunctionsDefs["EFISOPTIONS152"]["L1"]={"setdata","WXR"}
---fmsFunctionsDefs["EFISOPTIONS152"]["L2"]={"setdata","POS"}
-fmsFunctionsDefs["EFISOPTIONS152"]["L3"]={"setdata","TERR"}
-fmsFunctionsDefs["EFISOPTIONS152"]["L4"]={"setdata","TFC"}
+fmsFunctionsDefs["EFISOPTIONS152"]["L2"]={"setdata","POS"}
+fmsFunctionsDefs["EFISOPTIONS152"]["L3"]={"setdata","MTRS"}
+fmsFunctionsDefs["EFISOPTIONS152"]["L4"]={"setdata","FPV"}
 fmsFunctionsDefs["EFISOPTIONS152"]["L5"]={"setdata","VORDISP"}
 fmsFunctionsDefs["EFISOPTIONS152"]["R1"]={"setdata","WPT"}
 fmsFunctionsDefs["EFISOPTIONS152"]["R2"]={"setdata","STA"}
 fmsFunctionsDefs["EFISOPTIONS152"]["R3"]={"setdata","ARPT"}
---fmsFunctionsDefs["EFISOPTIONS152"]["R4"]={"setdata","DATA"}
+fmsFunctionsDefs["EFISOPTIONS152"]["R4"]={"setdata","DATA"}
 fmsFunctionsDefs["EFISOPTIONS152"]["R5"]={"setdata","ADFDISP"}
 fmsFunctionsDefs["EFISOPTIONS152"]["R6"]={"setpage","EFISCTL152"}

@@ -26,10 +26,30 @@ B747DR_acars = find_dataref("laminar/B747/comm/acars")
 fmsFunctions={}
 dofile("acars/acars.lua")
 
+-- the EFIS control panel a CDU stands in for: the left CDU the Captain's (0),
+-- the right one the F/O's (1), the centre one none (5-2 step 5c; FCOM
+-- p.1060: CDU-152; estimate: FCOM gives no CDU for each side)
+function B744_cdu_efis_side(fmsID)
+  if fmsID=="fmsL" then return 0 elseif fmsID=="fmsR" then return 1 end
+  return nil
+end
+-- EFIS CP SELECT and EICAS CP SELECT only with that control panel failed
+-- (FCOM p.1061: "available if EFIS control panel fails"; before, always);
+-- otherwise the prompt blank under its title, as CDU-161's (estimate)
+function B744_cdu_efis_cp_available(fmsID)
+  local side=B744_cdu_efis_side(fmsID)
+  return side~=nil and B747DR_fms_efis_fail[side]>0.5
+end
+function B744_cdu_eicas_cp_available()
+  return B747DR_fms_dsp_fail>0.5
+end
+
 fmsPages["INDEX"]=createPage("INDEX")
 fmsPages["INDEX"].getPage=function(self,pgNo,fmsID)
   local acarsS="             "
   local gs1="                        "
+  local efisS=B744_cdu_efis_cp_available(fmsID) and "SELECT>" or "       "
+  local eicasS=B744_cdu_eicas_cp_available() and "SELECT>" or "       "
 
   if simDR_onGround ==1 then
     gs1="                 SELECT>"
@@ -45,9 +65,9 @@ return {
 
 "          MENU          ",
 "                        ",
-"<FMC    <ACT>    SELECT>",
+"<FMC    <ACT>    "..efisS,
 "                        ",
-acarsS.."    SELECT>",
+acarsS.."    "..eicasS,
 "                        ",
 "<SAT                    ",
 "                        ",
@@ -71,7 +91,7 @@ fmsPages["INDEX"].getSmallPage=function(self,pgNo,fmsID)
       "                        ",
       "                EICAS CP",
       "                        ",
-      "                 CTL PNL",
+      "                        ",
       "                        ",
       gs2,
       "                        ",
@@ -86,8 +106,8 @@ fmsFunctionsDefs["INDEX"]["L1"]={"setpage","IDENT"}
 
 fmsFunctionsDefs["INDEX"]["L5"]={"setpage","ACMS"}
 fmsFunctionsDefs["INDEX"]["L6"]={"setpage","CMC"}
-fmsFunctionsDefs["INDEX"]["R1"]={"setpage","EFISCTL152"}
-fmsFunctionsDefs["INDEX"]["R2"]={"setpage","EICASMODES"}
+fmsFunctionsDefs["INDEX"]["R1"]={"efiscp","EFISCTL152"}
+fmsFunctionsDefs["INDEX"]["R2"]={"eicascp","EICASMODES"}
 fmsFunctionsDefs["INDEX"]["R4"]={"setpage","GNDHNDL"}
 fmsFunctionsDefs["INDEX"]["R6"]={"setpage","MAINTSIMCONFIG"}
 --fmsFunctionsDefs["INDEX"]["R6"]={"setpage", "MAINTSIMCONFIG"}
@@ -568,6 +588,12 @@ function fmsFunctions.setpage_no(fmsO,valueA)
   print("setpage " .. value)
   run_after_time(switchCustomMode, 0.5)
 end
+function fmsFunctions.efiscp(fmsO,value)
+  if B744_cdu_efis_cp_available(fmsO.id) then fmsFunctions.setpage(fmsO,value) end
+end
+function fmsFunctions.eicascp(fmsO,value)
+  if B744_cdu_eicas_cp_available() then fmsFunctions.setpage(fmsO,value) end
+end
 function fmsFunctions.setpage(fmsO,value)
   value=value.."_1"
   fmsFunctions["setpage_no"](fmsO,value)
@@ -853,9 +879,28 @@ timer_start = 0
 function fmsFunctions.setdata(fmsO,value)
   local del=false  
   if fmsO["scratchpad"]=="DELETE" then fmsO["scratchpad"]="" del=true end
+  local fo=fmsO.id=="fmsR"
   if value=="WXR" then
-		fmsModules["cmds"]["sim/instruments/EFIS_wxr"]:once()  
+	-- that CDU's side (5-2 step 5c: always the Captain's before)
+	if fo then
+		fmsModules["cmds"]["sim/instruments/EFIS_copilot_wxr"]:once()
+	else
+		fmsModules["cmds"]["sim/instruments/EFIS_wxr"]:once()
+	end
   elseif value=="POS" then
+	if fo then B747DR_nd_fo_pos=1-B747DR_nd_fo_pos else B747DR_nd_capt_pos=1-B747DR_nd_capt_pos end
+  elseif value=="MTRS" then
+	if fo then
+		B747DR_efis_meters_fo_selected=1-B747DR_efis_meters_fo_selected
+	else
+		B747DR_efis_meters_capt_selected=1-B747DR_efis_meters_capt_selected
+	end
+  elseif value=="FPV" then
+	if fo then
+		B747DR_efis_fpv_fo_selected=1-B747DR_efis_fpv_fo_selected
+	else
+		B747DR_efis_fpv_capt_selected=1-B747DR_efis_fpv_capt_selected
+	end
   elseif value=="TERR" then
 	if fmsO.id=="fmsR" then 
 		B747DR_nd_fo_terr = 1-B747DR_nd_fo_terr
@@ -897,6 +942,7 @@ function fmsFunctions.setdata(fmsO,value)
 		B747DR_nd_capt_apt=1-B747DR_nd_capt_apt
 	end
   elseif value=="DATA" then
+	if fo then B747DR_nd_fo_data=1-B747DR_nd_fo_data else B747DR_nd_capt_data=1-B747DR_nd_capt_data end
   elseif value=="ADFDISP" then
 	if fmsO.id=="fmsR" then 
 		simDR_EFIS_1_sel_fo =0
@@ -905,6 +951,10 @@ function fmsFunctions.setdata(fmsO,value)
 		simDR_EFIS_1_sel_pilot=0
 		simDR_EFIS_2_sel_pilot=0
 	end
+  elseif value=="DHRESET" then
+	-- that CDU's side, also with the panel failed (5-2 step 5c: both CDUs
+	-- pushed the Captain's switch before)
+	if fo then B747CMD_fms_dh_reset_fo:once() else B747CMD_fms_dh_reset_capt:once() end
   elseif value=="DH" then
 	if tonumber(fmsO["scratchpad"]) ==nil then 
 		fmsO["notify"]="INVALID ENTRY"
@@ -952,11 +1002,12 @@ function fmsFunctions.setdata(fmsO,value)
 			simDR_nd_mode_dial_capt= 1
 		end	
   elseif value=="EFISCTR" then
-		if fmsO.id=="fmsR" then 
-			simDR_nd_center_dial_fo= 1-simDR_nd_center_dial_fo
-		else
-			simDR_nd_center_dial_capt= 1-simDR_nd_center_dial_capt
-		end	
+	-- as the CTR switch: APP, VOR and MAP (FCOM p.1063; 5-2 step 5c)
+	if fo then
+		if simDR_nd_mode_dial_fo<3 then simDR_nd_center_dial_fo=1-simDR_nd_center_dial_fo end
+	elseif simDR_nd_mode_dial_capt<3 then
+		simDR_nd_center_dial_capt=1-simDR_nd_center_dial_capt
+	end
 	elseif value=="BARO" then
 		-- this CDU's side only, with the entries of FCOM p.1064 (5-2 step 4b,
 		-- B744.fms.baro.lua; both sides were set before, and a number was
@@ -989,14 +1040,20 @@ function fmsFunctions.setdata(fmsO,value)
 			B747DR_efis_baro_std_capt_switch_pos=0
 			B747DR_efis_baro_std_capt_show_preselect=0
 		end
-  elseif value=="RANGEINC" then
-	simDR_range_dial_fo=math.min(simDR_range_dial_fo+1, 6)
-	simDR_range_dial_capt=simDR_range_dial_fo
-	simDR_EFIS_map_range=simDR_range_dial_fo
-  elseif value=="RANGEDEC" then	
-	simDR_range_dial_fo=math.max(simDR_range_dial_fo-1, 0)
-	simDR_range_dial_capt=simDR_range_dial_fo
-	simDR_EFIS_map_range=simDR_range_dial_fo
+  elseif value=="RANGEINC" or value=="RANGEDEC" then
+	-- that CDU's side (5-2 step 5c: both before), as the range selector does;
+	-- both written from the new value (a dataref read back in the same frame
+	-- can still give the old one)
+	local step=value=="RANGEINC" and 1 or -1
+	if fo then
+		local r=math.max(0, math.min(6, simDR_range_dial_fo+step))
+		simDR_range_dial_fo=r
+		simDR_EFIS_map_range_copilot=r
+	else
+		local r=math.max(0, math.min(6, simDR_range_dial_capt+step))
+		simDR_range_dial_capt=r
+		simDR_EFIS_map_range=r
+	end
   elseif value=="depdst" and string.len(fmsO["scratchpad"])>3  then
     dep=string.sub(fmsO["scratchpad"],1,4)
     dst=string.sub(fmsO["scratchpad"],-4)

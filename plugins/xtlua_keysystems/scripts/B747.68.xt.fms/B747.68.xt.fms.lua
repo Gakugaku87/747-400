@@ -228,8 +228,12 @@ B747DR_efis_baro_alt_ref_fo                     = find_dataref("laminar/B747/efi
 -- the CDU's BARO SET entry (5-2 step 4b): STD as the EFIS control panel's push
 B747DR_efis_baro_std_capt_show_preselect        = find_dataref("laminar/B747/efis/baro_std/capt/show_preselect")
 B747DR_efis_baro_std_fo_show_preselect          = find_dataref("laminar/B747/efis/baro_std/fo/show_preselect")
-B747CMD_fms_baro_std_capt                       = find_command("laminar/B747/efis/baro_std/capt/switch")
-B747CMD_fms_baro_std_fo                         = find_command("laminar/B747/efis/baro_std/fo/switch")
+-- the CDU's own entries to the STD push and MINS RST: they work with the
+-- EFIS control panel failed (5-2 step 5c)
+B747CMD_fms_baro_std_capt                       = find_command("laminar/B747/efis/baro_std/capt/cdu")
+B747CMD_fms_baro_std_fo                         = find_command("laminar/B747/efis/baro_std/fo/cdu")
+B747CMD_fms_dh_reset_capt                       = find_command("laminar/B747/efis/dh/capt/cdu_reset")
+B747CMD_fms_dh_reset_fo                         = find_command("laminar/B747/efis/dh/fo/cdu_reset")
 
 
 simDR_EFIS_1_sel_pilot              = find_dataref("sim/cockpit2/EFIS/EFIS_1_selection_pilot")
@@ -249,6 +253,20 @@ B747DR_nd_capt_ftc	                        = find_dataref("laminar/B747/nd/capt/
 B747DR_nd_capt_traffic_Selected                 = find_dataref("laminar/B747/nd/traffic/capt/selected")
 B747DR_nd_fo_traffic_Selected                   = find_dataref("laminar/B747/nd/traffic/fo/selected")
 B747DR_nd_wxr	                        = find_dataref("sim/cockpit2/EFIS/EFIS_weather_on")
+-- 5-2 step 5c: the CDU's EFIS CONTROL and OPTIONS on that CDU's side, with
+-- the EFIS control panel failed (FCOM p.1060-1065)
+B747DR_fms_efis_fail                            = find_dataref("laminar/B747/efis/fail")
+B747DR_fms_dsp_fail                             = find_dataref("laminar/B747/dsp/fail")
+B747DR_nd_capt_data                             = find_dataref("laminar/B747/nd/data/capt/data")
+B747DR_nd_fo_data                               = find_dataref("laminar/B747/nd/data/fo/data")
+B747DR_nd_capt_pos                              = find_dataref("laminar/B747/nd/data/capt/pos")
+B747DR_nd_fo_pos                                = find_dataref("laminar/B747/nd/data/fo/pos")
+B747DR_efis_fpv_capt_selected                   = find_dataref("laminar/B747/efis/fpv/capt/selected")
+B747DR_efis_fpv_fo_selected                     = find_dataref("laminar/B747/efis/fpv/fo/selected")
+B747DR_efis_meters_capt_selected                = find_dataref("laminar/B747/efis/meters/capt/selected")
+B747DR_efis_meters_fo_selected                  = find_dataref("laminar/B747/efis/meters/fo/selected")
+simDR_EFIS_wxr_copilot                          = find_dataref("sim/cockpit2/EFIS/EFIS_weather_on_copilot")
+simDR_EFIS_map_range_copilot                    = find_dataref("sim/cockpit2/EFIS/map_range_copilot")
 simDR_radio_alt_DH_capt             = find_dataref("sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_pilot")
 simDR_radio_alt_DH_fo               = find_dataref("sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_copilot")
 

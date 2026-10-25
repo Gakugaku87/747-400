@@ -122,8 +122,8 @@ simDR_EFIS_map_range_copilot               = find_dataref("sim/cockpit2/EFIS/map
 simDR_EFIS_map_is_center            = find_dataref("sim/cockpit2/EFIS/map_mode_is_HSI")
 
 simDR_EFIS_1_sel_pilot              = find_dataref("sim/cockpit2/EFIS/EFIS_1_selection_pilot")
-simDR_EFIS_2_sel_pilot              = find_dataref("sim/cockpit2/EFIS/EFIS_1_selection_copilot")
-simDR_EFIS_1_sel_fo                 = find_dataref("sim/cockpit2/EFIS/EFIS_2_selection_pilot")
+simDR_EFIS_2_sel_pilot              = find_dataref("sim/cockpit2/EFIS/EFIS_2_selection_pilot")
+simDR_EFIS_1_sel_fo                 = find_dataref("sim/cockpit2/EFIS/EFIS_1_selection_copilot")
 simDR_EFIS_2_sel_fo                 = find_dataref("sim/cockpit2/EFIS/EFIS_2_selection_copilot")
 
 simDR_vvi_fpm_pilot                 = find_dataref("sim/cockpit2/gauges/indicators/vvi_fpm_pilot")
@@ -290,6 +290,18 @@ B747DR_nd_capt_wpt                          = deferred_dataref("laminar/B747/nd/
 B747DR_nd_fo_wpt                         	= deferred_dataref("laminar/B747/nd/data/fo/wpt", "number")
 B747DR_nd_capt_apt	                        = deferred_dataref("laminar/B747/nd/data/capt/apt", "number")
 B747DR_nd_fo_apt	                        = deferred_dataref("laminar/B747/nd/data/fo/apt", "number")
+B747DR_nd_capt_data                             = find_dataref("laminar/B747/nd/data/capt/data")
+B747DR_nd_fo_data                               = find_dataref("laminar/B747/nd/data/fo/data")
+B747DR_nd_capt_pos                              = find_dataref("laminar/B747/nd/data/capt/pos")
+B747DR_nd_fo_pos                                = find_dataref("laminar/B747/nd/data/fo/pos")
+B747DR_efis_panel_fail                          = find_dataref("laminar/B747/efis/fail")
+
+-- an EFIS control panel takes no input while it is failed (5-2 step 5c:
+-- >EFIS CONTROL L, R, FCOM p.1198; its functions on the CDU instead, FCOM
+-- p.1060); 0 the Captain's, 1 the F/O's
+local function efis_panel_ok(i)
+    return B747DR_efis_panel_fail[i] < 0.5
+end
 
 B747_nd_vorL_ID_flag_capt                       = deferred_dataref("laminar/B747/nd/vorL_id_flag/capt", "number")
 B747_nd_vorR_ID_flag_capt                       = deferred_dataref("laminar/B747/nd/vorR_id_flag/capt", "number")
@@ -738,12 +750,14 @@ end
 
 -- EFIS CONTROLS (CAPTAIN)
 function B747_efis_min_ref_alt_capt_sel_dial_up_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_efis_min_ref_alt_capt_sel_dial_pos = math.min(B747DR_efis_min_ref_alt_capt_sel_dial_pos + 1, 1)
     end
 end
 
 function B747_efis_min_ref_alt_capt_sel_dial_dn_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_efis_min_ref_alt_capt_sel_dial_pos = math.max(B747DR_efis_min_ref_alt_capt_sel_dial_pos - 1, 0)
     end
@@ -751,6 +765,7 @@ end
 
 
 function B747_efis_ref_alt_capt_set_dial_up_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_efis_ref_alt_capt_set_dial_pos = B747DR_efis_ref_alt_capt_set_dial_pos + 0.1
         if B747DR_efis_min_ref_alt_capt_sel_dial_pos == 0 then                                          -- RADIO ALT
@@ -769,6 +784,7 @@ function B747_efis_ref_alt_capt_set_dial_up_CMDhandler(phase, duration)
 end
 
 function B747_efis_ref_alt_capt_set_dial_dn_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_efis_ref_alt_capt_set_dial_pos = B747DR_efis_ref_alt_capt_set_dial_pos - 0.1
         if B747DR_efis_min_ref_alt_capt_sel_dial_pos == 0 then                                          -- RADIO ALT
@@ -790,6 +806,7 @@ end
 -- MINS RST resets the flashing minimums alert of its own side only (FCOM
 -- p.982, p.1036)
 function B747_efis_dh_capt_reset_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_efis_dh_reset_capt_switch_pos = 1
         B747_dh_rst_capt = true
@@ -797,20 +814,29 @@ function B747_efis_dh_capt_reset_switch_CMDhandler(phase, duration)
         B747DR_efis_dh_reset_capt_switch_pos = 0
     end
 end
+-- the CDU's DH RESET (EFIS CONTROL page, FCOM p.1062): its own side, also
+-- with the panel failed (5-2 step 5c; before, both CDUs pushed the
+-- Captain's switch)
+function B747_cdu_dh_reset_capt_CMDhandler(phase, duration)
+    if phase == 0 then B747_dh_rst_capt = true end
+end
 
 function B747_efis_baro_ref_capt_sel_dial_up_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_efis_baro_ref_capt_sel_dial_pos = math.min(B747DR_efis_baro_ref_capt_sel_dial_pos + 1, 1)
     end
 end
 
 function B747_efis_baro_ref_capt_sel_dial_dn_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_efis_baro_ref_capt_sel_dial_pos = math.max(B747DR_efis_baro_ref_capt_sel_dial_pos - 1, 0)
     end
 end
 
 function B747_efis_baro_set_capt_sel_dial_up_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_efis_baro_capt_set_dial_pos = B747DR_efis_baro_capt_set_dial_pos + 0.01
         -- NORMAL BARO ADJUST
@@ -837,6 +863,7 @@ function B747_efis_baro_set_capt_sel_dial_up_CMDhandler(phase, duration)
 end
 
 function B747_efis_baro_set_capt_sel_dial_dn_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_efis_baro_capt_set_dial_pos = B747DR_efis_baro_capt_set_dial_pos - 0.01
         -- NORMAL BARO ADJUST
@@ -863,7 +890,7 @@ function B747_efis_baro_set_capt_sel_dial_dn_CMDhandler(phase, duration)
 end
 
 
-function B747_efis_baro_std_capt_switch_CMDhandler(phase, duration)
+local function B747_baro_std_capt(phase)
     if phase == 0 then
         B747DR_efis_baro_std_capt_switch_pos = 1.0 -  B747DR_efis_baro_std_capt_switch_pos
         if B747DR_efis_baro_std_capt_switch_pos == 0 then
@@ -876,12 +903,22 @@ function B747_efis_baro_std_capt_switch_CMDhandler(phase, duration)
         end
     end
 end
+function B747_efis_baro_std_capt_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
+    B747_baro_std_capt(phase)
+end
+-- the CDU's STD entry (EFIS CONTROL page BARO SET, FCOM p.1062): the same
+-- push, also with the panel failed (5-2 step 5c)
+function B747_cdu_baro_std_capt_CMDhandler(phase, duration)
+    B747_baro_std_capt(phase)
+end
 
 
 
 -- the FPV switch: each push shows or removes the PFD's flight path vector
 -- (FCOM p.1037; 5-2 step 4d: it did not latch)
 function B747_efis_fpv_capt_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_efis_fpv_capt_switch_pos = 1
         B747DR_efis_fpv_capt_selected = 1 - B747DR_efis_fpv_capt_selected
@@ -892,6 +929,7 @@ end
 
 
 function B747_efis_meters_capt_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_efis_meters_capt_switch_pos = 1
         B747DR_efis_meters_capt_selected = 1.0 - B747DR_efis_meters_capt_selected
@@ -907,12 +945,14 @@ end
 
 -- EFIS CONTROLS (FIRST OFFICER)
 function B747_efis_min_ref_alt_fo_sel_dial_up_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_efis_min_ref_alt_fo_sel_dial_pos = math.min(B747DR_efis_min_ref_alt_fo_sel_dial_pos+1, 1)
     end
 end
 
 function B747_efis_min_ref_alt_fo_sel_dial_dn_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_efis_min_ref_alt_fo_sel_dial_pos = math.max(B747DR_efis_min_ref_alt_fo_sel_dial_pos-1, 0)
     end
@@ -920,6 +960,7 @@ end
 
 
 function B747_efis_ref_alt_fo_set_dial_up_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_efis_ref_alt_fo_set_dial_pos = B747DR_efis_ref_alt_fo_set_dial_pos + 0.1
         if B747DR_efis_min_ref_alt_fo_sel_dial_pos == 0 then                                          -- RADIO ALT
@@ -938,6 +979,7 @@ function B747_efis_ref_alt_fo_set_dial_up_CMDhandler(phase, duration)
 end
 
 function B747_efis_ref_alt_fo_set_dial_dn_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_efis_ref_alt_fo_set_dial_pos = B747DR_efis_ref_alt_fo_set_dial_pos - 0.1
         if B747DR_efis_min_ref_alt_fo_sel_dial_pos == 0 then                                          -- RADIO ALT
@@ -957,6 +999,7 @@ end
 
 
 function B747_efis_dh_fo_reset_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_efis_dh_reset_fo_switch_pos = 1
         B747_dh_rst_fo = true
@@ -964,20 +1007,26 @@ function B747_efis_dh_fo_reset_switch_CMDhandler(phase, duration)
         B747DR_efis_dh_reset_fo_switch_pos = 0
     end
 end
+function B747_cdu_dh_reset_fo_CMDhandler(phase, duration)
+    if phase == 0 then B747_dh_rst_fo = true end
+end
 
 function B747_efis_baro_ref_fo_sel_dial_up_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_efis_baro_ref_fo_sel_dial_pos = math.min(B747DR_efis_baro_ref_fo_sel_dial_pos + 1, 1)
     end
 end
 
 function B747_efis_baro_ref_fo_sel_dial_dn_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_efis_baro_ref_fo_sel_dial_pos = math.max(B747DR_efis_baro_ref_fo_sel_dial_pos - 1, 0)
     end
 end
 
 function B747_efis_baro_set_fo_sel_dial_up_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_efis_baro_fo_set_dial_pos = B747DR_efis_baro_fo_set_dial_pos + 0.01
         -- NORMAL BARO ADJUST
@@ -1004,6 +1053,7 @@ function B747_efis_baro_set_fo_sel_dial_up_CMDhandler(phase, duration)
 end
 
 function B747_efis_baro_set_fo_sel_dial_dn_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_efis_baro_fo_set_dial_pos = B747DR_efis_baro_fo_set_dial_pos - 0.01
         -- NORMAL BARO ADJUST
@@ -1030,7 +1080,7 @@ function B747_efis_baro_set_fo_sel_dial_dn_CMDhandler(phase, duration)
 end
 
 
-function B747_efis_baro_std_fo_switch_CMDhandler(phase, duration)
+local function B747_baro_std_fo(phase)
     if phase == 0 then
         B747DR_efis_baro_std_fo_switch_pos = 1.0 -  B747DR_efis_baro_std_fo_switch_pos
         if B747DR_efis_baro_std_fo_switch_pos == 0 then
@@ -1043,10 +1093,18 @@ function B747_efis_baro_std_fo_switch_CMDhandler(phase, duration)
         end
     end
 end
+function B747_efis_baro_std_fo_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
+    B747_baro_std_fo(phase)
+end
+function B747_cdu_baro_std_fo_CMDhandler(phase, duration)
+    B747_baro_std_fo(phase)
+end
 
 
 
 function B747_efis_fpv_fo_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_efis_fpv_fo_switch_pos = 1
         B747DR_efis_fpv_fo_selected = 1 - B747DR_efis_fpv_fo_selected
@@ -1057,6 +1115,7 @@ end
 
 
 function B747_efis_meters_fo_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_efis_meters_fo_switch_pos = 1
         B747DR_efis_meters_fo_selected = 1.0 - B747DR_efis_meters_fo_selected
@@ -1075,6 +1134,7 @@ local B747_center_status_old_fo = 0
 -- 744 Map Mode. 0=APP,1=VOR,2=Map,3=Plan
 -- XP Map mode. 0=approach, 1=vor,2=map,3=nav,4=plan
 function B747_nd_mode_capt_sel_dial_up_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747_center_status_old_cpt = B747_nd_map_center_capt
         B747DR_nd_mode_capt_sel_dial_pos = math.min(B747DR_nd_mode_capt_sel_dial_pos+1, 3)
@@ -1094,6 +1154,7 @@ function B747_nd_mode_capt_sel_dial_up_CMDhandler(phase, duration)
 end
 
 function B747_nd_mode_capt_sel_dial_dn_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747_center_status_old_cpt = B747_nd_map_center_capt
         B747DR_nd_mode_capt_sel_dial_pos = math.max(B747DR_nd_mode_capt_sel_dial_pos-1, 0)
@@ -1115,6 +1176,7 @@ end
 
 
 function B747_nd_range_capt_sel_dial_up_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_nd_range_capt_sel_dial_pos = math.min(B747DR_nd_range_capt_sel_dial_pos+1, 6)
         simDR_EFIS_map_range = B747DR_nd_range_capt_sel_dial_pos
@@ -1123,6 +1185,7 @@ function B747_nd_range_capt_sel_dial_up_CMDhandler(phase, duration)
 end
 
 function B747_nd_range_capt_sel_dial_dn_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_nd_range_capt_sel_dial_pos = math.max(B747DR_nd_range_capt_sel_dial_pos-1, 0)
         simDR_EFIS_map_range = B747DR_nd_range_capt_sel_dial_pos
@@ -1132,6 +1195,7 @@ end
 
 
 function B747_nd_center_capt_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_nd_center_capt_switch_pos = 1
         if B747DR_nd_mode_capt_sel_dial_pos < 3 then
@@ -1145,6 +1209,7 @@ end
 
 
 function B747_nd_traffic_capt_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_nd_traffic_capt_switch_pos = 1
         B747DR_nd_capt_tfc_pushes = B747DR_nd_capt_tfc_pushes + 1
@@ -1157,6 +1222,7 @@ end
 
 
 function B747_nd_wxr_capt_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_nd_wxr_capt_switch_pos = 1
         simCMD_EFIS_wxr:once()
@@ -1166,6 +1232,7 @@ function B747_nd_wxr_capt_switch_CMDhandler(phase, duration)
 end
 
 function B747_nd_sta_capt_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_nd_sta_capt_switch_pos = 1
         --simCMD_EFIS_vor:once()
@@ -1177,6 +1244,7 @@ function B747_nd_sta_capt_switch_CMDhandler(phase, duration)
 end
 
 function B747_nd_wpt_capt_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_nd_wpt_capt_switch_pos = 1
         B747DR_nd_capt_wpt = 1.0 - B747DR_nd_capt_wpt
@@ -1186,6 +1254,7 @@ function B747_nd_wpt_capt_switch_CMDhandler(phase, duration)
 end
 
 function B747_nd_arpt_capt_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_nd_arpt_capt_switch_pos = 1
         --simCMD_EFIS_apt:once()
@@ -1196,22 +1265,27 @@ function B747_nd_arpt_capt_switch_CMDhandler(phase, duration)
 end
 
 function B747_nd_data_capt_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_nd_data_capt_switch_pos = 1
+        B747DR_nd_capt_data = 1.0 - B747DR_nd_capt_data
     elseif phase == 2 then
         B747DR_nd_data_capt_switch_pos = 0
     end
 end
 
 function B747_nd_pos_capt_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_nd_pos_capt_switch_pos = 1
+        B747DR_nd_capt_pos = 1.0 - B747DR_nd_capt_pos
     elseif phase == 2 then
         B747DR_nd_pos_capt_switch_pos = 0
     end
 end
 
 function B747_nd_terr_capt_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_nd_terr_capt_switch_pos = 1
         B747DR_nd_capt_terr=1.0-B747DR_nd_capt_terr
@@ -1227,6 +1301,7 @@ end
 
 
 function B747_nd_mode_fo_sel_dial_up_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         --B747_center_status_old = B747_nd_map_center_capt
 	B747_center_status_old_fo = B747_nd_map_center_fo
@@ -1247,6 +1322,7 @@ function B747_nd_mode_fo_sel_dial_up_CMDhandler(phase, duration)
 end
 
 function B747_nd_mode_fo_sel_dial_dn_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
 	B747_center_status_old_fo = B747_nd_map_center_fo
         B747DR_nd_mode_fo_sel_dial_pos = math.max(B747DR_nd_mode_fo_sel_dial_pos-1, 0)
@@ -1268,6 +1344,7 @@ end
 
 
 function B747_nd_range_fo_sel_dial_up_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_nd_range_fo_sel_dial_pos = math.min(B747DR_nd_range_fo_sel_dial_pos+1, 6)
         simDR_EFIS_map_range_copilot = B747DR_nd_range_fo_sel_dial_pos
@@ -1276,6 +1353,7 @@ function B747_nd_range_fo_sel_dial_up_CMDhandler(phase, duration)
 end
 
 function B747_nd_range_fo_sel_dial_dn_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_nd_range_fo_sel_dial_pos = math.max(B747DR_nd_range_fo_sel_dial_pos-1, 0)
         simDR_EFIS_map_range_copilot = B747DR_nd_range_fo_sel_dial_pos
@@ -1286,6 +1364,7 @@ end
 
 
 function B747_nd_center_fo_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_nd_center_fo_switch_pos = 1
         if B747DR_nd_mode_fo_sel_dial_pos < 3 then
@@ -1298,6 +1377,7 @@ function B747_nd_center_fo_switch_CMDhandler(phase, duration)
 end
 
 function B747_nd_traffic_fo_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_nd_traffic_fo_switch_pos = 1
         B747DR_nd_fo_tfc_pushes = B747DR_nd_fo_tfc_pushes + 1
@@ -1309,6 +1389,7 @@ end
 
 
 function B747_nd_wxr_fo_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_nd_wxr_fo_switch_pos = 1
         if simDR_version>=120012 then
@@ -1323,6 +1404,7 @@ function B747_nd_wxr_fo_switch_CMDhandler(phase, duration)
 end
 
 function B747_nd_sta_fo_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_nd_sta_fo_switch_pos = 1
         --simCMD_EFIS_vor:once()
@@ -1335,6 +1417,7 @@ function B747_nd_sta_fo_switch_CMDhandler(phase, duration)
 end
 
 function B747_nd_wpt_fo_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_nd_wpt_fo_switch_pos = 1
         B747DR_nd_fo_wpt = 1.0 - B747DR_nd_fo_wpt
@@ -1344,6 +1427,7 @@ function B747_nd_wpt_fo_switch_CMDhandler(phase, duration)
 end
 
 function B747_nd_arpt_fo_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_nd_arpt_fo_switch_pos = 1
         --simCMD_EFIS_apt:once()
@@ -1354,22 +1438,27 @@ function B747_nd_arpt_fo_switch_CMDhandler(phase, duration)
 end
 
 function B747_nd_data_fo_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_nd_data_fo_switch_pos = 1
+        B747DR_nd_fo_data = 1.0 - B747DR_nd_fo_data
     elseif phase == 2 then
         B747DR_nd_data_fo_switch_pos = 0
     end
 end
 
 function B747_nd_pos_fo_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_nd_pos_fo_switch_pos = 1
+        B747DR_nd_fo_pos = 1.0 - B747DR_nd_fo_pos
     elseif phase == 2 then
         B747DR_nd_pos_fo_switch_pos = 0
     end
 end
 
 function B747_nd_terr_fo_switch_CMDhandler(phase, duration)
+    if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_nd_terr_fo_switch_pos = 1
         B747DR_nd_fo_terr=1.0-B747DR_nd_fo_terr
@@ -1765,6 +1854,8 @@ B747CMD_efis_baro_ref_capt_sel_dial_dn      = deferred_command("laminar/B747/efi
 B747CMD_efis_baro_set_capt_sel_dial_up      = deferred_command("laminar/B747/efis/baro_set/capt/sel_dial_up", "EFIS BARO Set Selector Up", B747_efis_baro_set_capt_sel_dial_up_CMDhandler)
 B747CMD_efis_baro_set_capt_sel_dial_dn      = deferred_command("laminar/B747/efis/baro_set/capt/sel_dial_dn", "EFIS BARO Set Selector Down", B747_efis_baro_set_capt_sel_dial_dn_CMDhandler)
 B747CMD_efis_baro_std_capt_switch           = deferred_command("laminar/B747/efis/baro_std/capt/switch", "EFIS BARO STD Switch", B747_efis_baro_std_capt_switch_CMDhandler)
+B747CMD_cdu_baro_std_capt                   = deferred_command("laminar/B747/efis/baro_std/capt/cdu", "CDU EFIS CONTROL BARO STD", B747_cdu_baro_std_capt_CMDhandler)
+B747CMD_cdu_dh_reset_capt                   = deferred_command("laminar/B747/efis/dh/capt/cdu_reset", "CDU EFIS CONTROL DH RESET", B747_cdu_dh_reset_capt_CMDhandler)
 
 B747CMD_efis_fpv_capt_switch                = deferred_command("laminar/B747/efis/fpv/capt/switch", "EFIS FPV Switch", B747_efis_fpv_capt_switch_CMDhandler)
 B747CMD_efis_meters_capt_switch             = deferred_command("laminar/B747/efis/meters/capt/switch", "EFIS Meters Switch", B747_efis_meters_capt_switch_CMDhandler)
@@ -1786,10 +1877,48 @@ B747CMD_efis_baro_ref_fo_sel_dial_dn        = deferred_command("laminar/B747/efi
 B747CMD_efis_baro_set_fo_sel_dial_up        = deferred_command("laminar/B747/efis/baro_set/fo/sel_dial_up", "EFIS BARO Set Selector Up", B747_efis_baro_set_fo_sel_dial_up_CMDhandler)
 B747CMD_efis_baro_set_fo_sel_dial_dn        = deferred_command("laminar/B747/efis/baro_set/fo/sel_dial_dn", "EFIS BARO Set Selector Down", B747_efis_baro_set_fo_sel_dial_dn_CMDhandler)
 B747CMD_efis_baro_std_fo_switch             = deferred_command("laminar/B747/efis/baro_std/fo/switch", "EFIS BARO STD Switch", B747_efis_baro_std_fo_switch_CMDhandler)
+B747CMD_cdu_baro_std_fo                     = deferred_command("laminar/B747/efis/baro_std/fo/cdu", "CDU EFIS CONTROL BARO STD", B747_cdu_baro_std_fo_CMDhandler)
+B747CMD_cdu_dh_reset_fo                     = deferred_command("laminar/B747/efis/dh/fo/cdu_reset", "CDU EFIS CONTROL DH RESET", B747_cdu_dh_reset_fo_CMDhandler)
 
 B747CMD_efis_fpv_fo_switch                  = deferred_command("laminar/B747/efis/fpv/fo/switch", "EFIS FPV Switch", B747_efis_fpv_fo_switch_CMDhandler)
 B747CMD_efis_meters_fo_switch               = deferred_command("laminar/B747/efis/meters/fo/switch", "EFIS Meters Switch", B747_efis_meters_fo_switch_CMDhandler)
 
+
+-- the VOR/ADF switches: X-Plane's selector commands in the 3D cockpit (up
+-- towards VOR 2, down towards ADF 0, as X-Plane's own), taken over so that a
+-- failed EFIS control panel takes no input (5-2 step 5c)
+function B747_efis_vor_adf_l_capt_up_CMDhandler(phase, duration)
+    if phase == 0 and efis_panel_ok(0) then simDR_EFIS_1_sel_pilot = math.min(simDR_EFIS_1_sel_pilot + 1, 2) end
+end
+function B747_efis_vor_adf_l_capt_dn_CMDhandler(phase, duration)
+    if phase == 0 and efis_panel_ok(0) then simDR_EFIS_1_sel_pilot = math.max(simDR_EFIS_1_sel_pilot - 1, 0) end
+end
+function B747_efis_vor_adf_r_capt_up_CMDhandler(phase, duration)
+    if phase == 0 and efis_panel_ok(0) then simDR_EFIS_2_sel_pilot = math.min(simDR_EFIS_2_sel_pilot + 1, 2) end
+end
+function B747_efis_vor_adf_r_capt_dn_CMDhandler(phase, duration)
+    if phase == 0 and efis_panel_ok(0) then simDR_EFIS_2_sel_pilot = math.max(simDR_EFIS_2_sel_pilot - 1, 0) end
+end
+function B747_efis_vor_adf_l_fo_up_CMDhandler(phase, duration)
+    if phase == 0 and efis_panel_ok(1) then simDR_EFIS_1_sel_fo = math.min(simDR_EFIS_1_sel_fo + 1, 2) end
+end
+function B747_efis_vor_adf_l_fo_dn_CMDhandler(phase, duration)
+    if phase == 0 and efis_panel_ok(1) then simDR_EFIS_1_sel_fo = math.max(simDR_EFIS_1_sel_fo - 1, 0) end
+end
+function B747_efis_vor_adf_r_fo_up_CMDhandler(phase, duration)
+    if phase == 0 and efis_panel_ok(1) then simDR_EFIS_2_sel_fo = math.min(simDR_EFIS_2_sel_fo + 1, 2) end
+end
+function B747_efis_vor_adf_r_fo_dn_CMDhandler(phase, duration)
+    if phase == 0 and efis_panel_ok(1) then simDR_EFIS_2_sel_fo = math.max(simDR_EFIS_2_sel_fo - 1, 0) end
+end
+simCMD_EFIS_1_pilot_sel_up          = replace_command("sim/instruments/EFIS_1_pilot_sel_up", B747_efis_vor_adf_l_capt_up_CMDhandler)
+simCMD_EFIS_1_pilot_sel_dn          = replace_command("sim/instruments/EFIS_1_pilot_sel_dn", B747_efis_vor_adf_l_capt_dn_CMDhandler)
+simCMD_EFIS_2_pilot_sel_up          = replace_command("sim/instruments/EFIS_2_pilot_sel_up", B747_efis_vor_adf_r_capt_up_CMDhandler)
+simCMD_EFIS_2_pilot_sel_dn          = replace_command("sim/instruments/EFIS_2_pilot_sel_dn", B747_efis_vor_adf_r_capt_dn_CMDhandler)
+simCMD_EFIS_1_copilot_sel_up        = replace_command("sim/instruments/EFIS_1_copilot_sel_up", B747_efis_vor_adf_l_fo_up_CMDhandler)
+simCMD_EFIS_1_copilot_sel_dn        = replace_command("sim/instruments/EFIS_1_copilot_sel_dn", B747_efis_vor_adf_l_fo_dn_CMDhandler)
+simCMD_EFIS_2_copilot_sel_up        = replace_command("sim/instruments/EFIS_2_copilot_sel_up", B747_efis_vor_adf_r_fo_up_CMDhandler)
+simCMD_EFIS_2_copilot_sel_dn        = replace_command("sim/instruments/EFIS_2_copilot_sel_dn", B747_efis_vor_adf_r_fo_dn_CMDhandler)
 
 
 
