@@ -76,7 +76,7 @@ function M.inputs()
         nd_range_nm = pair(40),
         tfc_pushes = pair(0),       -- each TFC switch's push count
         own_vs = 0,                 -- fpm
-        pitch = 0, tas_kt = 0,      -- for the PFD's RA pitch regions
+        tas_kt = 0,                 -- for the PFD's RA pitch regions
         -- X-Plane's TCAS: targets 1..n
         n = 0, threat = {}, ssr = {}, dist_nm = {}, rel_alt_ft = {},
         adv = 0, msg = 0,
@@ -102,12 +102,18 @@ function M.new()
             voice = M.V_NONE,
             pfd_ra = false,             -- RA guidance on the PFDs
             vs_lo = nil, vs_hi = nil,   -- fpm: below vs_lo and above vs_hi is red (nil: no region)
-            pitch_lo = nil, pitch_hi = nil, -- deg: the RA pitch regions' edges
+            pitch_lo = nil, pitch_hi = nil, -- deg from the airplane symbol: the RA pitch regions' edges
+            vs_red = false,             -- the vertical speed pointer is red
             nd = {nd_side(), nd_side()},
             msg_tcas_off = false, msg_tcas_system = false, msg_ra = pair(false),
         },
     }
     return s
+end
+
+-- the flight path angle (deg) of a vertical speed at a true airspeed (fpm)
+local function path_angle(vs, tas_fpm)
+    return math.deg(math.asin(math.max(-1, math.min(1, vs / tas_fpm))))
 end
 
 -- the voice of X-Plane's message, with CROSSING from the RA's sense and where
@@ -285,17 +291,23 @@ function M.update(s, inp, dt)
     end
 
     -- the PFDs' RA guidance (FCOM p.1536-1537, p.1562): red outside X-Plane's
-    -- bands; the pitch regions' edges from the vertical speed limits at the
-    -- present speed (estimate: ATA34_2 p.46 says only "a function of the RA data")
+    -- bands; the pitch regions' edges from the airplane symbol (deg, up +):
+    -- the change of flight path that brings the vertical speed to the limit
+    -- at the present speed (estimate: ATA34_2 p.46 says only "a function of
+    -- the RA data"); the vertical speed pointer red while the vertical speed
+    -- is in a red region (FCOM p.1537)
     out.pfd_ra = ra_on
     out.vs_lo, out.vs_hi, out.pitch_lo, out.pitch_hi = nil, nil, nil, nil
+    out.vs_red = false
     if ra_on then
         local b = inp.bands
         if b[2] > b[1] and b[2] < M.NO_BAND then out.vs_lo = b[2] end
         if b[6] > b[5] and b[5] > -M.NO_BAND then out.vs_hi = b[5] end
         local tas_fpm = math.max(inp.tas_kt, 60) * 6076.12 / 60
-        if out.vs_lo then out.pitch_lo = inp.pitch + math.deg((out.vs_lo - inp.own_vs) / tas_fpm) end
-        if out.vs_hi then out.pitch_hi = inp.pitch + math.deg((out.vs_hi - inp.own_vs) / tas_fpm) end
+        local own = path_angle(inp.own_vs, tas_fpm)
+        if out.vs_lo then out.pitch_lo = path_angle(out.vs_lo, tas_fpm) - own end
+        if out.vs_hi then out.pitch_hi = path_angle(out.vs_hi, tas_fpm) - own end
+        out.vs_red = (out.vs_lo ~= nil and inp.own_vs < out.vs_lo) or (out.vs_hi ~= nil and inp.own_vs > out.vs_hi)
     end
 
     -- the NDs (FCOM p.1534-1535, p.1560-1563, p.1584; p.1042 for the switch)

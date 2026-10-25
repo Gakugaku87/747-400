@@ -22,7 +22,6 @@ simDR_tcas_advisory             = find_dataref("sim/cockpit2/tcas/indicators/tca
 simDR_tcas_message              = find_dataref("sim/cockpit2/tcas/indicators/tcas_message")
 simDR_tcas_bands                = find_dataref("sim/cockpit2/tcas/indicators/tcas_vs_bands")
 simDR_tcas_vs                   = find_dataref("sim/flightmodel/position/vh_ind_fpm")
-simDR_tcas_pitch                = find_dataref("sim/flightmodel/position/theta")
 simDR_tcas_tas                  = find_dataref("sim/flightmodel/position/true_airspeed")
 B747DR_tcas_mode_sel            = find_dataref("laminar/B747/flt_mgmt/txpdr/mode_sel_pos")
 B747DR_tcas_xpdr_sel            = find_dataref("laminar/B747/flt_mgmt/transponder/sel_dial_pos")
@@ -58,6 +57,7 @@ B747DR_tcas_pfd_vs_lo_out       = find_dataref("laminar/B747/tcas/pfd/vs_lo")
 B747DR_tcas_pfd_vs_hi_out       = find_dataref("laminar/B747/tcas/pfd/vs_hi")
 B747DR_tcas_pfd_pitch_lo_out    = find_dataref("laminar/B747/tcas/pfd/pitch_lo")
 B747DR_tcas_pfd_pitch_hi_out    = find_dataref("laminar/B747/tcas/pfd/pitch_hi")
+B747DR_tcas_pfd_vs_red_out      = find_dataref("laminar/B747/tcas/pfd/vs_red")
 -- each ND (Captain, F/O): TFC and TCAS OFF are the panel's (xtlua_keysystems).
 -- XTLua makes each of these tables a namespace: t[i] reads and writes the
 -- dataref itself.
@@ -129,7 +129,6 @@ function B747_tcas()
     inp.tfc_pushes[1] = B747DR_tcas_tfc_pushes_capt
     inp.tfc_pushes[2] = B747DR_tcas_tfc_pushes_fo
     inp.own_vs = simDR_tcas_vs
-    inp.pitch = simDR_tcas_pitch
     inp.tas_kt = simDR_tcas_tas * MS_TO_KT
     for j = 1, TARGETS do
         inp.threat[j] = simDR_tcas_threat[j]
@@ -156,7 +155,8 @@ function B747_tcas()
     if B747DR_tcas_ra_mode_out ~= v then B747DR_tcas_ra_mode_out = v end
     v = out.ra and 2 or (out.ta and 1 or 0)
     if B747DR_tcas_traffic_out ~= v then B747DR_tcas_traffic_out = v end
-    -- the PFDs' RA guidance (values only: the panel has none yet)
+    -- the PFDs' RA guidance: the panel's red pitch regions, VSI regions and
+    -- vertical speed pointer
     v = B747_nav_flag(out.pfd_ra)
     if B747DR_tcas_pfd_ra_out ~= v then B747DR_tcas_pfd_ra_out = v end
     v = B747_nav_flag(out.vs_lo ~= nil)
@@ -167,6 +167,8 @@ function B747_tcas()
     if out.vs_hi and B747DR_tcas_pfd_vs_hi_out ~= out.vs_hi then B747DR_tcas_pfd_vs_hi_out = out.vs_hi end
     if out.pitch_lo and B747DR_tcas_pfd_pitch_lo_out ~= out.pitch_lo then B747DR_tcas_pfd_pitch_lo_out = out.pitch_lo end
     if out.pitch_hi and B747DR_tcas_pfd_pitch_hi_out ~= out.pitch_hi then B747DR_tcas_pfd_pitch_hi_out = out.pitch_hi end
+    v = B747_nav_flag(out.vs_red)
+    if B747DR_tcas_pfd_vs_red_out ~= v then B747DR_tcas_pfd_vs_red_out = v end
     -- the NDs
     for i = 1, 2 do
         local nd = out.nd[i]

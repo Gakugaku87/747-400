@@ -74446,6 +74446,53 @@ GROUP Captain PFD
           CLICK_DX 0
           CLICK_DY 0
 
+        GROUP TCAS RA Pitch
+          GROUP_ANIMATE_MODE ROTATE
+          GROUP_WIDTH 0
+          GROUP_HEIGHT 0
+          DATAREF sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot
+          POS 315.000000 767.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 45.000000 -45.000000
+          ROTATE_OFFSET_X 0.000000
+          ROTATE_OFFSET_Y 0.000000
+          gen_pointer TCAS RA Pitch Up
+            POS 315.000000 767.000000
+            IMAGE CRT Displays/PFD/Artificial Horizon/tcas_ra_up
+            DATAREF laminar/B747/tcas/pfd/pitch_hi
+            SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/hi_on
+            HIDE
+            CLIP
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME -999.000000 -232.000000 1.000000
+            KEY_FRAME -34.061990 -232.000000 1.000000
+            KEY_FRAME 34.061990 232.000000 1.000000
+            KEY_FRAME 999.000000 232.000000
+            IS_DRAGGABLE 0
+            IS_VERTICAL 1
+            OFFSET 0.000000
+
+          gen_pointer TCAS RA Pitch Down
+            POS 315.000000 767.000000
+            IMAGE CRT Displays/PFD/Artificial Horizon/tcas_ra_down
+            DATAREF laminar/B747/tcas/pfd/pitch_lo
+            SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/lo_on
+            HIDE
+            CLIP
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME -999.000000 -232.000000 1.000000
+            KEY_FRAME -34.061990 -232.000000 1.000000
+            KEY_FRAME 34.061990 232.000000 1.000000
+            KEY_FRAME 999.000000 232.000000
+            IS_DRAGGABLE 0
+            IS_VERTICAL 1
+            OFFSET 0.000000
+
+        END_GROUP
         gen_needle Bank Pointer
           POS 315.500000 767.500000
           IMAGE CRT Displays/PFD/Artificial Horizon/HrznBankPtr
@@ -76759,6 +76806,29 @@ GROUP Captain PFD
           OFFSET 0.000000
           NEEDLE_OFFSET_X 50.000000
 
+        gen_needle TCAS RA Needle
+          POS 652.000000 767.000000
+          IMAGE CRT Displays/PFD/VSI/VSIspdPtrR
+          DATAREF sim/cockpit2/gauges/indicators/vvi_fpm_pilot
+          SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/vs_red
+          HIDE
+          CLIP
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 2
+          BUS_SRC 2
+          KEY_FRAME 99999.000000 66.000000 1.000000
+          KEY_FRAME 6666.000000 66.000000 1.000000
+          KEY_FRAME 2000.000000 61.599998 1.000000
+          KEY_FRAME 1000.000000 46.500000 1.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME -1000.000000 -46.500000 1.000000
+          KEY_FRAME -2000.000000 -61.599998 1.000000
+          KEY_FRAME -6000.000000 -66.000000 1.000000
+          KEY_FRAME -99999.000000 -66.000000
+          IS_DRAGGABLE 0
+          OFFSET 0.000000
+          NEEDLE_OFFSET_X 50.000000
+
         gen_pointer Selected VSI Ptr
           POS 643.000000 767.000000
           IMAGE CRT Displays/PFD/VSI/VSIselSpdPtr
@@ -76801,6 +76871,64 @@ GROUP Captain PFD
           CURSOR DEFAULT
           CLICK_DX 0
           CLICK_DY 0
+
+        gen_pointer TCAS RA VS Up
+          POS 625.500000 766.000000
+          IMAGE CRT Displays/PFD/VSI/tcas_ra_vs_up
+          DATAREF laminar/B747/tcas/pfd/vs_hi
+          SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/hi_on
+          HIDE
+          CLIP
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 2
+          BUS_SRC 2
+          KEY_FRAME -99999.000000 -147.000000 1.000000
+          KEY_FRAME -6000.000000 -147.000000 1.000000
+          KEY_FRAME -4000.000000 -133.500000 1.000000
+          KEY_FRAME -2000.000000 -121.000000 1.000000
+          KEY_FRAME -1500.000000 -94.500000 1.000000
+          KEY_FRAME -1000.000000 -69.000000 1.000000
+          KEY_FRAME -500.000000 -38.500000 1.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 500.000000 38.500000 1.000000
+          KEY_FRAME 1000.000000 69.000000 1.000000
+          KEY_FRAME 1500.000000 94.500000 1.000000
+          KEY_FRAME 2000.000000 121.000000 1.000000
+          KEY_FRAME 4000.000000 133.500000 1.000000
+          KEY_FRAME 6000.000000 147.000000 1.000000
+          KEY_FRAME 99999.000000 147.000000
+          IS_DRAGGABLE 0
+          IS_VERTICAL 1
+          OFFSET 0.000000
+
+        gen_pointer TCAS RA VS Down
+          POS 625.500000 766.000000
+          IMAGE CRT Displays/PFD/VSI/tcas_ra_vs_down
+          DATAREF laminar/B747/tcas/pfd/vs_lo
+          SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/lo_on
+          HIDE
+          CLIP
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 2
+          BUS_SRC 2
+          KEY_FRAME -99999.000000 -147.000000 1.000000
+          KEY_FRAME -6000.000000 -147.000000 1.000000
+          KEY_FRAME -4000.000000 -133.500000 1.000000
+          KEY_FRAME -2000.000000 -121.000000 1.000000
+          KEY_FRAME -1500.000000 -94.500000 1.000000
+          KEY_FRAME -1000.000000 -69.000000 1.000000
+          KEY_FRAME -500.000000 -38.500000 1.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 500.000000 38.500000 1.000000
+          KEY_FRAME 1000.000000 69.000000 1.000000
+          KEY_FRAME 1500.000000 94.500000 1.000000
+          KEY_FRAME 2000.000000 121.000000 1.000000
+          KEY_FRAME 4000.000000 133.500000 1.000000
+          KEY_FRAME 6000.000000 147.000000 1.000000
+          KEY_FRAME 99999.000000 147.000000
+          IS_DRAGGABLE 0
+          IS_VERTICAL 1
+          OFFSET 0.000000
 
         GROUP LED
           HIDE
@@ -78178,6 +78306,53 @@ GROUP Captain PFD
           CLICK_DX 0
           CLICK_DY 0
 
+        GROUP TCAS RA Pitch
+          GROUP_ANIMATE_MODE ROTATE
+          GROUP_WIDTH 0
+          GROUP_HEIGHT 0
+          DATAREF sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot
+          POS 315.000000 767.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 45.000000 -45.000000
+          ROTATE_OFFSET_X 0.000000
+          ROTATE_OFFSET_Y 0.000000
+          gen_pointer TCAS RA Pitch Up
+            POS 315.000000 767.000000
+            IMAGE CRT Displays/PFD/Artificial Horizon/tcas_ra_up
+            DATAREF laminar/B747/tcas/pfd/pitch_hi
+            SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/hi_on
+            HIDE
+            CLIP
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME -999.000000 -232.000000 1.000000
+            KEY_FRAME -34.061990 -232.000000 1.000000
+            KEY_FRAME 34.061990 232.000000 1.000000
+            KEY_FRAME 999.000000 232.000000
+            IS_DRAGGABLE 0
+            IS_VERTICAL 1
+            OFFSET 0.000000
+
+          gen_pointer TCAS RA Pitch Down
+            POS 315.000000 767.000000
+            IMAGE CRT Displays/PFD/Artificial Horizon/tcas_ra_down
+            DATAREF laminar/B747/tcas/pfd/pitch_lo
+            SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/lo_on
+            HIDE
+            CLIP
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME -999.000000 -232.000000 1.000000
+            KEY_FRAME -34.061990 -232.000000 1.000000
+            KEY_FRAME 34.061990 232.000000 1.000000
+            KEY_FRAME 999.000000 232.000000
+            IS_DRAGGABLE 0
+            IS_VERTICAL 1
+            OFFSET 0.000000
+
+        END_GROUP
         gen_needle Bank Pointer
           POS 315.500000 767.500000
           IMAGE CRT Displays/PFD/Artificial Horizon/HrznBankPtr
@@ -80491,6 +80666,29 @@ GROUP Captain PFD
           OFFSET 0.000000
           NEEDLE_OFFSET_X 50.000000
 
+        gen_needle TCAS RA Needle
+          POS 652.000000 767.000000
+          IMAGE CRT Displays/PFD/VSI/VSIspdPtrR
+          DATAREF sim/cockpit2/gauges/indicators/vvi_fpm_pilot
+          SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/vs_red
+          HIDE
+          CLIP
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 2
+          BUS_SRC 2
+          KEY_FRAME 99999.000000 66.000000 1.000000
+          KEY_FRAME 6666.000000 66.000000 1.000000
+          KEY_FRAME 2000.000000 61.599998 1.000000
+          KEY_FRAME 1000.000000 46.500000 1.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME -1000.000000 -46.500000 1.000000
+          KEY_FRAME -2000.000000 -61.599998 1.000000
+          KEY_FRAME -6000.000000 -66.000000 1.000000
+          KEY_FRAME -99999.000000 -66.000000
+          IS_DRAGGABLE 0
+          OFFSET 0.000000
+          NEEDLE_OFFSET_X 50.000000
+
         gen_pointer Selected VSI Ptr
           POS 643.000000 767.000000
           IMAGE CRT Displays/PFD/VSI/VSIselSpdPtr
@@ -80533,6 +80731,64 @@ GROUP Captain PFD
           CURSOR DEFAULT
           CLICK_DX 0
           CLICK_DY 0
+
+        gen_pointer TCAS RA VS Up
+          POS 625.500000 766.000000
+          IMAGE CRT Displays/PFD/VSI/tcas_ra_vs_up
+          DATAREF laminar/B747/tcas/pfd/vs_hi
+          SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/hi_on
+          HIDE
+          CLIP
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 2
+          BUS_SRC 2
+          KEY_FRAME -99999.000000 -147.000000 1.000000
+          KEY_FRAME -6000.000000 -147.000000 1.000000
+          KEY_FRAME -4000.000000 -133.500000 1.000000
+          KEY_FRAME -2000.000000 -121.000000 1.000000
+          KEY_FRAME -1500.000000 -94.500000 1.000000
+          KEY_FRAME -1000.000000 -69.000000 1.000000
+          KEY_FRAME -500.000000 -38.500000 1.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 500.000000 38.500000 1.000000
+          KEY_FRAME 1000.000000 69.000000 1.000000
+          KEY_FRAME 1500.000000 94.500000 1.000000
+          KEY_FRAME 2000.000000 121.000000 1.000000
+          KEY_FRAME 4000.000000 133.500000 1.000000
+          KEY_FRAME 6000.000000 147.000000 1.000000
+          KEY_FRAME 99999.000000 147.000000
+          IS_DRAGGABLE 0
+          IS_VERTICAL 1
+          OFFSET 0.000000
+
+        gen_pointer TCAS RA VS Down
+          POS 625.500000 766.000000
+          IMAGE CRT Displays/PFD/VSI/tcas_ra_vs_down
+          DATAREF laminar/B747/tcas/pfd/vs_lo
+          SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/lo_on
+          HIDE
+          CLIP
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 2
+          BUS_SRC 2
+          KEY_FRAME -99999.000000 -147.000000 1.000000
+          KEY_FRAME -6000.000000 -147.000000 1.000000
+          KEY_FRAME -4000.000000 -133.500000 1.000000
+          KEY_FRAME -2000.000000 -121.000000 1.000000
+          KEY_FRAME -1500.000000 -94.500000 1.000000
+          KEY_FRAME -1000.000000 -69.000000 1.000000
+          KEY_FRAME -500.000000 -38.500000 1.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 500.000000 38.500000 1.000000
+          KEY_FRAME 1000.000000 69.000000 1.000000
+          KEY_FRAME 1500.000000 94.500000 1.000000
+          KEY_FRAME 2000.000000 121.000000 1.000000
+          KEY_FRAME 4000.000000 133.500000 1.000000
+          KEY_FRAME 6000.000000 147.000000 1.000000
+          KEY_FRAME 99999.000000 147.000000
+          IS_DRAGGABLE 0
+          IS_VERTICAL 1
+          OFFSET 0.000000
 
         GROUP LED
           HIDE
@@ -81900,6 +82156,53 @@ GROUP First Officer PFD
           CLICK_DX 0
           CLICK_DY 0
 
+        GROUP TCAS RA Pitch 2
+          GROUP_ANIMATE_MODE ROTATE
+          GROUP_WIDTH 0
+          GROUP_HEIGHT 0
+          DATAREF sim/cockpit2/gauges/indicators/roll_AHARS_deg_copilot
+          POS 994.000000 767.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 45.000000 -45.000000
+          ROTATE_OFFSET_X 0.000000
+          ROTATE_OFFSET_Y 0.000000
+          gen_pointer TCAS RA Pitch Up 2
+            POS 994.000000 767.000000
+            IMAGE CRT Displays/PFD/Artificial Horizon/tcas_ra_up
+            DATAREF laminar/B747/tcas/pfd/pitch_hi
+            SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/hi_on
+            HIDE
+            CLIP
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME -999.000000 -232.000000 1.000000
+            KEY_FRAME -34.061990 -232.000000 1.000000
+            KEY_FRAME 34.061990 232.000000 1.000000
+            KEY_FRAME 999.000000 232.000000
+            IS_DRAGGABLE 0
+            IS_VERTICAL 1
+            OFFSET 0.000000
+
+          gen_pointer TCAS RA Pitch Down 2
+            POS 994.000000 767.000000
+            IMAGE CRT Displays/PFD/Artificial Horizon/tcas_ra_down
+            DATAREF laminar/B747/tcas/pfd/pitch_lo
+            SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/lo_on
+            HIDE
+            CLIP
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME -999.000000 -232.000000 1.000000
+            KEY_FRAME -34.061990 -232.000000 1.000000
+            KEY_FRAME 34.061990 232.000000 1.000000
+            KEY_FRAME 999.000000 232.000000
+            IS_DRAGGABLE 0
+            IS_VERTICAL 1
+            OFFSET 0.000000
+
+        END_GROUP
         gen_needle Bank Pointer 2
           POS 994.500000 767.500000
           IMAGE CRT Displays/PFD/Artificial Horizon/HrznBankPtr
@@ -84212,6 +84515,29 @@ GROUP First Officer PFD
           OFFSET 0.000000
           NEEDLE_OFFSET_X 50.000000
 
+        gen_needle TCAS RA Needle 2
+          POS 1331.000000 767.000000
+          IMAGE CRT Displays/PFD/VSI/VSIspdPtrR
+          DATAREF sim/cockpit2/gauges/indicators/vvi_fpm_copilot
+          SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/vs_red
+          HIDE
+          CLIP
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 5
+          BUS_SRC 4
+          KEY_FRAME 99999.000000 66.000000 1.000000
+          KEY_FRAME 6666.000000 66.000000 1.000000
+          KEY_FRAME 2000.000000 61.599998 1.000000
+          KEY_FRAME 1000.000000 46.500000 1.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME -1000.000000 -46.500000 1.000000
+          KEY_FRAME -2000.000000 -61.599998 1.000000
+          KEY_FRAME -6000.000000 -66.000000 1.000000
+          KEY_FRAME -99999.000000 -66.000000
+          IS_DRAGGABLE 0
+          OFFSET 0.000000
+          NEEDLE_OFFSET_X 50.000000
+
         gen_pointer Selected VSI Ptr 2
           POS 1322.000000 767.000000
           IMAGE CRT Displays/PFD/VSI/VSIselSpdPtr
@@ -84254,6 +84580,64 @@ GROUP First Officer PFD
           CURSOR DEFAULT
           CLICK_DX 0
           CLICK_DY 0
+
+        gen_pointer TCAS RA VS Up 2
+          POS 1304.500000 766.000000
+          IMAGE CRT Displays/PFD/VSI/tcas_ra_vs_up
+          DATAREF laminar/B747/tcas/pfd/vs_hi
+          SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/hi_on
+          HIDE
+          CLIP
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 5
+          BUS_SRC 4
+          KEY_FRAME -99999.000000 -147.000000 1.000000
+          KEY_FRAME -6000.000000 -147.000000 1.000000
+          KEY_FRAME -4000.000000 -133.500000 1.000000
+          KEY_FRAME -2000.000000 -121.000000 1.000000
+          KEY_FRAME -1500.000000 -94.500000 1.000000
+          KEY_FRAME -1000.000000 -69.000000 1.000000
+          KEY_FRAME -500.000000 -38.500000 1.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 500.000000 38.500000 1.000000
+          KEY_FRAME 1000.000000 69.000000 1.000000
+          KEY_FRAME 1500.000000 94.500000 1.000000
+          KEY_FRAME 2000.000000 121.000000 1.000000
+          KEY_FRAME 4000.000000 133.500000 1.000000
+          KEY_FRAME 6000.000000 147.000000 1.000000
+          KEY_FRAME 99999.000000 147.000000
+          IS_DRAGGABLE 0
+          IS_VERTICAL 1
+          OFFSET 0.000000
+
+        gen_pointer TCAS RA VS Down 2
+          POS 1304.500000 766.000000
+          IMAGE CRT Displays/PFD/VSI/tcas_ra_vs_down
+          DATAREF laminar/B747/tcas/pfd/vs_lo
+          SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/lo_on
+          HIDE
+          CLIP
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 5
+          BUS_SRC 4
+          KEY_FRAME -99999.000000 -147.000000 1.000000
+          KEY_FRAME -6000.000000 -147.000000 1.000000
+          KEY_FRAME -4000.000000 -133.500000 1.000000
+          KEY_FRAME -2000.000000 -121.000000 1.000000
+          KEY_FRAME -1500.000000 -94.500000 1.000000
+          KEY_FRAME -1000.000000 -69.000000 1.000000
+          KEY_FRAME -500.000000 -38.500000 1.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 500.000000 38.500000 1.000000
+          KEY_FRAME 1000.000000 69.000000 1.000000
+          KEY_FRAME 1500.000000 94.500000 1.000000
+          KEY_FRAME 2000.000000 121.000000 1.000000
+          KEY_FRAME 4000.000000 133.500000 1.000000
+          KEY_FRAME 6000.000000 147.000000 1.000000
+          KEY_FRAME 99999.000000 147.000000
+          IS_DRAGGABLE 0
+          IS_VERTICAL 1
+          OFFSET 0.000000
 
         GROUP LED 2
           HIDE
@@ -85611,6 +85995,53 @@ GROUP First Officer PFD
           CLICK_DX 0
           CLICK_DY 0
 
+        GROUP TCAS RA Pitch 2
+          GROUP_ANIMATE_MODE ROTATE
+          GROUP_WIDTH 0
+          GROUP_HEIGHT 0
+          DATAREF sim/cockpit2/gauges/indicators/roll_AHARS_deg_copilot
+          POS 994.000000 767.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 45.000000 -45.000000
+          ROTATE_OFFSET_X 0.000000
+          ROTATE_OFFSET_Y 0.000000
+          gen_pointer TCAS RA Pitch Up 2
+            POS 994.000000 767.000000
+            IMAGE CRT Displays/PFD/Artificial Horizon/tcas_ra_up
+            DATAREF laminar/B747/tcas/pfd/pitch_hi
+            SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/hi_on
+            HIDE
+            CLIP
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME -999.000000 -232.000000 1.000000
+            KEY_FRAME -34.061990 -232.000000 1.000000
+            KEY_FRAME 34.061990 232.000000 1.000000
+            KEY_FRAME 999.000000 232.000000
+            IS_DRAGGABLE 0
+            IS_VERTICAL 1
+            OFFSET 0.000000
+
+          gen_pointer TCAS RA Pitch Down 2
+            POS 994.000000 767.000000
+            IMAGE CRT Displays/PFD/Artificial Horizon/tcas_ra_down
+            DATAREF laminar/B747/tcas/pfd/pitch_lo
+            SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/lo_on
+            HIDE
+            CLIP
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME -999.000000 -232.000000 1.000000
+            KEY_FRAME -34.061990 -232.000000 1.000000
+            KEY_FRAME 34.061990 232.000000 1.000000
+            KEY_FRAME 999.000000 232.000000
+            IS_DRAGGABLE 0
+            IS_VERTICAL 1
+            OFFSET 0.000000
+
+        END_GROUP
         gen_needle Bank Pointer 2
           POS 994.500000 767.500000
           IMAGE CRT Displays/PFD/Artificial Horizon/HrznBankPtr
@@ -87923,6 +88354,29 @@ GROUP First Officer PFD
           OFFSET 0.000000
           NEEDLE_OFFSET_X 50.000000
 
+        gen_needle TCAS RA Needle 2
+          POS 1331.000000 767.000000
+          IMAGE CRT Displays/PFD/VSI/VSIspdPtrR
+          DATAREF sim/cockpit2/gauges/indicators/vvi_fpm_copilot
+          SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/vs_red
+          HIDE
+          CLIP
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 5
+          BUS_SRC 4
+          KEY_FRAME 99999.000000 66.000000 1.000000
+          KEY_FRAME 6666.000000 66.000000 1.000000
+          KEY_FRAME 2000.000000 61.599998 1.000000
+          KEY_FRAME 1000.000000 46.500000 1.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME -1000.000000 -46.500000 1.000000
+          KEY_FRAME -2000.000000 -61.599998 1.000000
+          KEY_FRAME -6000.000000 -66.000000 1.000000
+          KEY_FRAME -99999.000000 -66.000000
+          IS_DRAGGABLE 0
+          OFFSET 0.000000
+          NEEDLE_OFFSET_X 50.000000
+
         gen_pointer Selected VSI Ptr 2
           POS 1322.000000 767.000000
           IMAGE CRT Displays/PFD/VSI/VSIselSpdPtr
@@ -87965,6 +88419,64 @@ GROUP First Officer PFD
           CURSOR DEFAULT
           CLICK_DX 0
           CLICK_DY 0
+
+        gen_pointer TCAS RA VS Up 2
+          POS 1304.500000 766.000000
+          IMAGE CRT Displays/PFD/VSI/tcas_ra_vs_up
+          DATAREF laminar/B747/tcas/pfd/vs_hi
+          SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/hi_on
+          HIDE
+          CLIP
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 5
+          BUS_SRC 4
+          KEY_FRAME -99999.000000 -147.000000 1.000000
+          KEY_FRAME -6000.000000 -147.000000 1.000000
+          KEY_FRAME -4000.000000 -133.500000 1.000000
+          KEY_FRAME -2000.000000 -121.000000 1.000000
+          KEY_FRAME -1500.000000 -94.500000 1.000000
+          KEY_FRAME -1000.000000 -69.000000 1.000000
+          KEY_FRAME -500.000000 -38.500000 1.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 500.000000 38.500000 1.000000
+          KEY_FRAME 1000.000000 69.000000 1.000000
+          KEY_FRAME 1500.000000 94.500000 1.000000
+          KEY_FRAME 2000.000000 121.000000 1.000000
+          KEY_FRAME 4000.000000 133.500000 1.000000
+          KEY_FRAME 6000.000000 147.000000 1.000000
+          KEY_FRAME 99999.000000 147.000000
+          IS_DRAGGABLE 0
+          IS_VERTICAL 1
+          OFFSET 0.000000
+
+        gen_pointer TCAS RA VS Down 2
+          POS 1304.500000 766.000000
+          IMAGE CRT Displays/PFD/VSI/tcas_ra_vs_down
+          DATAREF laminar/B747/tcas/pfd/vs_lo
+          SHOW_EQUAL 1.000000 laminar/B747/tcas/pfd/lo_on
+          HIDE
+          CLIP
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 5
+          BUS_SRC 4
+          KEY_FRAME -99999.000000 -147.000000 1.000000
+          KEY_FRAME -6000.000000 -147.000000 1.000000
+          KEY_FRAME -4000.000000 -133.500000 1.000000
+          KEY_FRAME -2000.000000 -121.000000 1.000000
+          KEY_FRAME -1500.000000 -94.500000 1.000000
+          KEY_FRAME -1000.000000 -69.000000 1.000000
+          KEY_FRAME -500.000000 -38.500000 1.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 500.000000 38.500000 1.000000
+          KEY_FRAME 1000.000000 69.000000 1.000000
+          KEY_FRAME 1500.000000 94.500000 1.000000
+          KEY_FRAME 2000.000000 121.000000 1.000000
+          KEY_FRAME 4000.000000 133.500000 1.000000
+          KEY_FRAME 6000.000000 147.000000 1.000000
+          KEY_FRAME 99999.000000 147.000000
+          IS_DRAGGABLE 0
+          IS_VERTICAL 1
+          OFFSET 0.000000
 
         GROUP LED 2
           HIDE
