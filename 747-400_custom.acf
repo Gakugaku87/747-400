@@ -106329,6 +106329,27 @@ GROUP First Officer ND
         OFFSET_X 3
         OFFSET_Y 0.000000
 
+      gen_rotary EXCESS DATA
+        POS 848.625000 267.546000
+        IMAGE CRT Displays/ND/excess_data
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/nd/fo/excess_data
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 3
+        BUS_SRC 3
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 1.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
     END_GROUP
     gen_rotary TCAS X FO
       POS 741.500000 -112.500000
@@ -121539,6 +121560,27 @@ GROUP Captain ND
         KEY_FRAME 1.000000 1.000000
         OFFSET_X 3
         OFFSET_Y 0.000000
+
+      gen_rotary EXCESS DATA
+        POS 170.625000 267.546000
+        IMAGE CRT Displays/ND/excess_data
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/nd/capt/excess_data
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 3
+        BUS_SRC 3
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 1.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
 
     END_GROUP
     gen_rotary TCAS X CAPT

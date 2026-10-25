@@ -93,6 +93,36 @@ for n=0,ND_DATA.SLOTS-1,1 do
 end
 local routeEta={}
 local transAlt=ND_DATA.TRANS_ALT_FT
+-- EXCESS DATA (step 5c, FCOM p.1111): more symbols than the 60 slots
+B747DR_nd_capt_excess_data = find_dataref("laminar/B747/nd/capt/excess_data")
+B747DR_nd_fo_excess_data = find_dataref("laminar/B747/nd/fo/excess_data")
+local excessCapt, excessFO = false, false
+-- the navaids' altitude class for STA (step 5c, FCOM p.1040): read once,
+-- a chunk a frame, from the navigation data X-Plane uses (Custom Data
+-- first; B747.61.nd_data.lua's nav_line)
+local navHigh={}
+local navFile, navDone=nil, false
+function read_navclass()
+  if navDone then return end
+  if navFile==nil then
+    navFile=io.open("Custom Data/earth_nav.dat", "r") or io.open("Resources/default data/earth_nav.dat", "r")
+    if navFile==nil then navDone=true return end
+  end
+  for n=1,ND_DATA.NAV_LINES do
+    local line=navFile:read("*line")
+    if line==nil then navFile:close() navFile=nil navDone=true return end
+    local id, lat, lon=ND_DATA.nav_line(line)
+    if id then
+      local l=navHigh[id]
+      if l==nil then l={} navHigh[id]=l end
+      l[#l+1]=lat
+      l[#l+1]=lon
+    end
+  end
+end
+local function nav_high(id, lat, lon)
+  return ND_DATA.nav_near(navHigh[id], lat, lon)
+end
 
 -- TCAS traffic (5-1 step 5b): each ND's 30 TCAS slots (B747.61.nd init),
 -- filled from the TCAS model's symbols (laminar/B747/tcas/sym,
@@ -321,63 +351,47 @@ function makeIcon(iconTextData,navtype,text,latitude,longitude,distance,routeInd
     wpt=B747DR_nd_fo_wpt
   end
   
-  if lastNavaid > 59 then return end
-  
-  if navtype==1 and apt>0 then --airport
-    iconTextData.icons[lastNavaid]=2
-    iconTextData[lastNavaid].bluetext=text
-    iconTextData[lastNavaid].whitetext=" "
-    iconTextData[lastNavaid].redtext=" "
-    iconTextData[lastNavaid].greentext=" "
-  elseif navtype==3003 then --current FMS waypoint
-    iconTextData.icons[lastNavaid]=4
-    iconTextData[lastNavaid].whitetext=" "
-    iconTextData[lastNavaid].bluetext=" "
-    iconTextData[lastNavaid].redtext=text
-    iconTextData[lastNavaid].greentext=" "
-  elseif navtype==3005 then --non current FMS waypoint
-    iconTextData.icons[lastNavaid]=5
-    iconTextData[lastNavaid].whitetext=text
-    iconTextData[lastNavaid].bluetext=" "
-    iconTextData[lastNavaid].redtext=" "
-    iconTextData[lastNavaid].greentext=" "
-  elseif (navtype==3007) then --FIX
-    if range>40 or wpt==0 then return end
-    iconTextData.icons[lastNavaid]=13
-    iconTextData[lastNavaid].bluetext=text
-    iconTextData[lastNavaid].whitetext=" "
-    iconTextData[lastNavaid].redtext=" "
-    iconTextData[lastNavaid].greentext=" " 
-  elseif (navtype==3008) then --TOD
-    iconTextData.icons[lastNavaid]=8
-    iconTextData[lastNavaid].bluetext=" "
-    iconTextData[lastNavaid].whitetext=" " 
-    iconTextData[lastNavaid].redtext=" "
-    iconTextData[lastNavaid].greentext=text 
-  elseif bit_and(navtype,4)>0 and vor_ndb>0 then
-    iconTextData.icons[lastNavaid]=11
-    if text==simDR_radio_nav03_ID or text==simDR_radio_nav04_ID then
-      iconTextData.icons[lastNavaid]=10
-      iconTextData[lastNavaid].bluetext=" "
-      iconTextData[lastNavaid].greentext=text
-    else
-      iconTextData.icons[lastNavaid]=11
-      iconTextData[lastNavaid].bluetext=text
-      iconTextData[lastNavaid].greentext=" "
+  -- the symbol and its text's colour on that side's ND (none: not shown).
+  -- STA, WPT and ARPT in MAP and MAP CTR (FCOM p.1040; step 5c: before, in
+  -- every mode): the airports on all ranges, the waypoints at 40 NM and
+  -- less; the tuned VORs always, in green (FCOM p.1145: before, only with
+  -- STA), the other navaids with STA: high and low altitude ones at 40 NM
+  -- and less, high altitude ones beyond (before, all on all ranges)
+  local icon, color
+  local map=mode==2
+  if navtype==1 then
+    if apt>0 and map then icon, color=2, "blue" end
+  elseif navtype==3003 then
+    icon, color=4, "red"
+  elseif navtype==3005 then
+    icon, color=5, "white"
+  elseif navtype==3007 then
+    if wpt>0 and map and range<=40 then icon, color=13, "blue" end
+  elseif navtype==3008 then
+    icon, color=8, "green"
+  elseif bit_and(navtype,4)>0 then
+    if map and (text==simDR_radio_nav03_ID or text==simDR_radio_nav04_ID) then
+      icon, color=10, "green"
+    elseif map and vor_ndb>0 and (range<=40 or nav_high(text,latitude,longitude)) then
+      icon, color=11, "blue"
     end
-    
-    iconTextData[lastNavaid].whitetext=" "
-    iconTextData[lastNavaid].redtext=" "
-    
-  elseif navtype==2 and vor_ndb>0 then
-    iconTextData.icons[lastNavaid]=0
-    iconTextData[lastNavaid].bluetext=text
-    iconTextData[lastNavaid].whitetext=" "
-    iconTextData[lastNavaid].redtext=" "
-    iconTextData[lastNavaid].greentext=" " 
-  else
+  elseif navtype==2 then
+    if map and vor_ndb>0 and (range<=40 or nav_high(text,latitude,longitude)) then icon, color=0, "blue" end
+  end
+  if icon==nil then return end
+  -- the panel's 60 slots full: EXCESS DATA (FCOM p.1111)
+  if lastNavaid > 59 then
+    if iconTextData==iconTextDataCapt then excessCapt=true else excessFO=true end
     return
   end
+  iconTextData.icons[lastNavaid]=icon
+  local w, b, r, g=" ", " ", " ", " "
+  if color=="white" then w=text elseif color=="blue" then b=text elseif color=="red" then r=text else g=text end
+  local slot=iconTextData[lastNavaid]
+  slot.whitetext=w
+  slot.bluetext=b
+  slot.redtext=r
+  slot.greentext=g
   iconTextData[lastNavaid].latitude=latitude
   iconTextData[lastNavaid].longitude=longitude
   -- the first slots' route data lines (step 5c): a route waypoint's (its
@@ -611,6 +625,7 @@ end
 function newIcons()
   lastCaptNavaid=0
   lastFONavaid=0
+  excessCapt, excessFO=false, false
   if B747DR_pfd_mode_capt>0 or simDR_map_mode==4 then
     B747DR_nd_pln_capt=1
     captIRS=1
@@ -728,6 +743,10 @@ function newIcons()
   for n=lastFONavaid,59,1 do
     B747DR_text_fo_show[n]=0
   end
+  local v=excessCapt and 1 or 0
+  if B747DR_nd_capt_excess_data~=v then B747DR_nd_capt_excess_data=v end
+  v=excessFO and 1 or 0
+  if B747DR_nd_fo_excess_data~=v then B747DR_nd_fo_excess_data=v end
   --print(lastCaptNavaid.." ".. lastFONavaid)
 end
 
@@ -921,6 +940,7 @@ function after_physics()
     lastUpdateIcon=simDRTime
   end
   if debug_nd<-1 then return end
+  read_navclass()
   diff2=simDRTime-lastUpdateFixes
   if diff2>10 then 
     read_fixes()

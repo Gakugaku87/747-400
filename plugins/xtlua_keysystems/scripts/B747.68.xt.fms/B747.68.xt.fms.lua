@@ -1091,9 +1091,11 @@ function nd_speed_wind_display()
 		B747DR_ND_GS_TAS_Line_CoPilot = string.format("%d", groundspeed)
 		B747DR_ND_Wind_Line = ""
 	else
-		B747DR_ND_GS_TAS_Line = "GS     TAS"
-		B747DR_ND_GS_TAS_Line_Pilot = string.format("%3.0f    %3.0f", groundspeed, TAS_pilot)
-		B747DR_ND_GS_TAS_Line_CoPilot = string.format("%3.0f    %3.0f", groundspeed, TAS_copilot)
+		-- the groundspeed only: the 109 has no TAS on the ND (FCOM p.1141:
+		-- 405, 570; 5-2 step 5c)
+		B747DR_ND_GS_TAS_Line = "GS"
+		B747DR_ND_GS_TAS_Line_Pilot = string.format("%3.0f", groundspeed)
+		B747DR_ND_GS_TAS_Line_CoPilot = string.format("%3.0f", groundspeed)
 		B747DR_ND_Wind_Line = wind_line_tmp:gsub("°", "`")
 		if wind_bearing < 0 then
 			B747DR_ND_Wind_Bearing = wind_bearing + 180
