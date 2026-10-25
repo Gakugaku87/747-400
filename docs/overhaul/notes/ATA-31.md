@@ -442,7 +442,7 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 
 - 資料：ATA34_1 p.466–468（PFD の ILS の表示の条件、偏位の警告）、p.470（無効のデータ：目盛とポインターが旗に置き換わる、周波数とコースの欄は空白）、ATA31 p.13（PFD の NCD・invalid の表：G/S・LOC は invalid で目盛とポインターを消して黄色の旗、NCD はポインターだけ消す）、FCOM p.987（2 1/3 ドットの内で塗り。低い電波高度で A/P か F/D が入っていると目盛が琥珀・ポインターが点滅。LNAV で LOC を arm して捕まえないときも）、p.988（拡大 LOC 目盛：中心線の近く、四角 1 つが 1/2 ドット）、p.989（立ち上がる滑走路：2,500 ft より下で LOC のポインターがあるとき）、p.999（旗の位置）。
 - 新しいモデル `B747.60.pfd_ils_model.lua`（表示器と EIU のグルーで回す）：
-  - 受信機：機長は ILS L（X-Plane の NAV1、pilot の HSI。AC standby bus）、副操縦士は ILS R（NAV2、copilot の HSI。AC bus 2：notes/ATA-34.md §2.1）。PFD の ILS の源を切り替える論理は資料に無い（ND の源は表示器がアンテナと偏位の状態と EIU の選択から決める、とだけ：ATA34_1 p.474）ので固定。ILS C は X-Plane に無い。
+  - 受信機：機長は ILS L（X-Plane の NAV1、pilot の HSI。AC standby bus）、副操縦士は ILS R（NAV2、copilot の HSI。AC bus 2：notes/ATA-34.md §2.1）。PFD の ILS の源を切り替える論理は資料に無い（ND の源は表示器がアンテナと偏位の状態と EIU の選択から決める、とだけ：ATA34_1 p.474）ので固定。（訂正、段 5a のとき：FCOM p.1044 に、EIU の選択器が各席の PFD と ND の LOC・G/S の受信機を決める、とあった。段 5b で EIU に合わせる。）ILS C は X-Plane に無い。
   - 同調：純正の `autopilot/ils_dots`（目的地の 50 NM 以内でしか 1 にならない：DSP-14。5-1 段 3 で作り直す）を「周波数が同調されている」に使う。
   - 何も出さない（旗も）：同調していないか、その席の IRU のロールが 53° を超える。53° 超で旗も消すのは推定（資料は目盛とポインターを消す、とだけ）。
   - invalid（旗）：受信機の故障（X-Plane の NAV1・NAV2 の故障か電源なし）で LOC と G/S の両方の旗、周波数とコースは空白。X-Plane の localizer の故障で LOC だけ、glide slope の故障で G/S だけ。
@@ -454,3 +454,36 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - パネル（道具 `docs/overhaul/tools/panel_pfd_ils.lua`、画像 `make_pfd_ils_images.ps1`、ACF_DIFF.md §5）：4 面の PFD の ILS の部品を、純正の `ils_dots` と偏位の値から上の dataref に付け替えた（計器は最後の SHOW しか見ない）。純正の誤り：中抜きのポインターは片側だけ、拡大 LOC 目盛は中心線の右では普通の目盛と重なって出ていた、G/S のポインターは 2.5 ドットで 2 ドットの印（振れが目盛の 8 割。X-Plane の dots は、Laminar の 737 の PFD と同じく 2 ドットが目盛の外の点）。G/S のポインターの振れを目盛の点と同じ 48.5 px/ドットにし、土台の画像（高さ 209）で切られないように CLIP を外した。琥珀の目盛は純正の目盛の色を替えたもの。G/S・LOC の旗は、ATA34_1 p.470 のとおり置き換わる目盛の場所に（FCOM p.999 の図とも合う）、純正の ALT・ATT の旗の作りで。
 - 残り：周波数・ID の欄は純正のまま X-Plane の局の ID だけを出すので、ID が受からない（X-Plane の localizer の故障など）と空白（実機は ID を受けるまで周波数：ATA34_1 p.466）。周波数・コースの不一致の琥珀の線（FCOM p.986）。どちらも同調の作り直し（5-1 段 3）で。
 - 試験：ILS のモデル 47 件、表示器のモジュール 22 件（計 107）。X-Plane の新しいシナリオ `s59_pfd_ils`（12 NM の進入路で表示・ポインター・旗・ロール 53°：34 件合格）、`s60_pfd_ils_alert`（立ち上がる滑走路、G/S と LOC の偏位過大：15 件合格）。s60 は中心線の上から入ると AFDS が LOC も捕まえた（LAND 3）ので、LOC の偏位過大も X-Plane で確かめた。LOC の捕捉失敗（LNAV で LOC を arm）は FMC の経路が要るので回帰試験だけ。ILS の同調は、CDU の NAV RAD で手動にしてから `ils_dots` を書く（純正の自動の同調は経路の目的地まで 50 NM 以内でないと 2 秒ごとに 0 に戻す。Web API で書いた同調の文字列 `radio/tuningmodes` は XTLua のモジュールに届かない）。
+
+## 21. 段 5 の計画（2026-10-26 未明：ND）
+
+- 今の ND（調べた結果。行番号は 747-400_custom.acf と fltInst02・nd.lua）：
+  - パネルの ND は各席 1 面（副操縦士 91197–103945、機長 103946–116693）。CENTER（全周）と EXPANDED の 2 組。
+  - 向きは nd.lua の `nd/up/<席>`：X-Plane の `map_mode` が 2 なら航跡、4 なら北、ほかは方位。VOR モードでも `map_mode` を 2 にしているので、VOR の EXPANDED は航跡が上（FCOM は VOR・APP は方位が上：p.1110）。両席とも機長（pilot）の方位と航跡。副操縦士の CENTER の目盛は DATAREF が空で回らない。
+  - 機長の ND が副操縦士のモード・方位・G/S を、副操縦士の ND が機長のモード・方位・LOC を読む所がある（DSP-15）。風の矢印は方位基準のまま航跡が上の地図に描く。EXPANDED に方位の印が無い。
+  - 電波航法：NAV の源の選択器（FMC L・R、CDU）を ND の基準受信機の選択に流用（DSP-03）。VOR モードでは基準受信機が出ない。TO/FROM が無い。VOR の針の添字は機長の CENTER だけ [3]/[4]（DSP-35）。
+  - 旗：IRS が無効のとき HDG（APP・VOR）、MAP・VTK・TRK（MAP）が一斉に出るだけ。LOC・G/S・VOR・DME の旗は無い。
+  - EFIS 操作パネル：DATA・POS は動きだけ。CDU の EFIS CONTROL は範囲が両席、WXR は機長だけ、MODE が X-Plane の `map_mode` を変えない（DSP-31）。HDG REF は動きだけ（DSP-20）。
+- 資料：FCOM p.1109–1158（ND。109 の MAP は航跡が上、VOR・APP は方位が上、PLN は真北）、p.1030–1034（ND の旗と表示：109 は TRK（MAP）・HDG（VOR・APP）・MAP・VTK・LOC/VOR・G/S・VOR/ADF L・R・DME L・R）、p.1038–1040（EFIS 操作パネルの ND）、p.1043–1044（NAV の源は FMC、EIU の選択器が各席の PFD・ND の LOC・G/S の受信機を決める）、p.1046（HDG REF）、p.1110（方位は選んだ IRU、航跡は FMC、代替航法では IRU）、ATA31 p.18–23（ND のモード、APP の旗：NCD は消すだけ、invalid は旗）、ATA34_1 p.356–368（VOR の表示：有効、方位の NCD・invalid、コースと周波数の NCD・invalid、自動同調中は偏位・コースを消す）、p.470–476（ND の ILS）。
+- 段の分け方：
+  - 5a：ND の方位・航跡の源と向き、TRK・HDG・MAP の旗（DSP-15 の向きの分、DSP-21・22）。各席の ND を自席の源で（段 4a の `pfd/<席>/hdg`・`trk` と同じ考え）。109 の向き（MAP・MAP CTR は航跡が上、VOR・APP は方位が上、PLN は真北）。MAP の方位の印、VOR・APP の航跡の印、MAP で LNAV・LOC・ROLLOUT のときは選択方位の破線だけを消す（バグは残す：FCOM p.1142）。風の矢印を表示の向きに。109 は TAS を出さない（FCOM p.1141）。
+  - 5b：VOR・APP の電波航法（DSP-03・35、DSP-15 の残り）。基準受信機（APP は EIU の ILS L・C・R、VOR は機長 VOR L・副操縦士 VOR R：推定）、周波数か ID・DME・コース・偏位（ND は 2 1/2 ドットの内で塗り：FCOM p.1144）・G/S・TO/FROM、LOC・G/S・VOR・DME の旗（invalid は旗、NCD は消すだけ）、VOR・ADF の針（表示の向きに合わせる）。PFD の ILS の源も EIU に合わせる（段 4e の固定を直す）。
+  - 5c：EFIS 操作パネルと CDU の EFIS CONTROL（DSP-16・17・31）：STA の高・低高度、ARPT、DATA・POS、EXCESS DATA、CDU の範囲・WXR・MODE を席ごとに。
+  - 5d：HDG REF（DSP-20）：TRUE・NORM、高緯度の自動の真方位、TRU の枠（降下中は琥珀で点滅）、TRU から MAG に戻したときの 10 秒の枠、HDG SEL での切替で HDG HOLD。PFD と ND の両方。
+  - 5e：FMC の記号（DSP-23）：トレンドベクトルなど IRS から作れるものだけ。S/C・E/D・減速点・待機・エネルギー円は FMC の作り直し（6-x）で。
+
+## 22. 段 5a の実装（2026-10-26 未明：ND の向き、方位・航跡、旗）
+
+- 新しいモデル `B747.60.nd_model.lua`（表示器と EIU のグルーで回す）。各席の ND を自席の源で：機長は X-Plane の pilot の AHRS（方位）と pilot の航跡、副操縦士は copilot（段 4a の PFD と同じく IRU の代わり）。有効かどうかは段 4a の PFD のモデルの方位（`hdg`）と航跡（`trk`）。
+  - 向き（FCOM p.1109–1110、109）：MAP は航跡が上、VOR と APP は方位が上、PLN は北が上。前は X-Plane の `map_mode` を見ていて、VOR も `map_mode` 2 だったので航跡が上だった。両席とも機長の方位と航跡だった。PLN の北は純正どおり磁北（記号も X-Plane の地図の層も磁北で描いている。FCOM は真北：段 5d で）。
+  - X-Plane の `map_mode`（X-Plane の地図の層、気象レーダーの映像などがこの向きで描かれる）を、ND のモードから毎フレーム書く：APP・VOR は 0（方位が上）、MAP は 2、PLN は 4（違うときだけ書く）。CDU の EFIS CONTROL でモードを変えたときもこれで合う。
+  - 旗（FCOM p.1034、109）：TRK（MAP・PLN で航跡が無い）、HDG（VOR・APP で方位が無い）、MAP（MAP・PLN で FMC の位置が無い）、VTK（MAP で同じ）。FMC の位置は「どれかの IRU が NAV」とした（推定：FCOM p.1240 は FMC の位置に IRS が最低 1 台要る、とだけ）。前は IRS が未整列のときに 4 つが一斉に出るだけだった（IRS が無効のグループの中にあった）。
+  - コンパスローズと上の数字（`rose`）：MAP は航跡、VOR・APP は方位があるとき。PLN は固定の目盛なので常に。
+  - 方位の印 ▽（FCOM p.1142：MAP、MAP CTR、PLAN。VOR・APP では方位の箱の下：p.1024 の図）：方位があるとき。拡大表示には無かったので足した（全周の画像を拡大の半径 457 に置く：推定）。全周の印は他席の方位と、0 に 2 つある KEY_FRAME で動いていなかった。
+  - 選択方位（FCOM p.1142）：PLAN 以外で。破線は、MAP で LNAV・LOC・ROLLOUT が入っているとき、選択方位を動かしてから 10 秒で消える（ロールモードが変わったときも 10 秒出す：純正のまま）。前はバグと破線が一緒に消えていた。
+  - 風の矢印（FCOM p.1142）：表示の向きに対して（風の吹いていく向き − 上）。前は方位に対してで、航跡が上の地図では偏流角だけずれていた。その席の速度 100 kt から（純正の閾値：推定）。
+  - 拡大の航跡の線（`trk_line`、FCOM p.1143）：MAP、VOR・APP は WXR か TFC が入っているとき（純正の規則）、航跡があるとき。前は航跡が無くても残った。針のグループ（全周と拡大）も `rose` が無いときは消す（前は条件が無く、旗のときも航跡の線などが残った）。
+- nd.lua（`plugins/xtlua_nd`）：`nd/up/<席>` を自席のモードと源で（同じ規則の `nd_up`）。地図の記号の角度も同じ向きに（自席の方位・航跡）。記号の作り直しが 0.2 秒ごとのつもりで 2 秒の時計を見ていて、ほぼ毎フレーム全部作り直していた（DSP-21 の残り）のを直した。
+- パネル（道具 `docs/overhaul/tools/panel_nd_orientation.lua`、ACF_DIFF.md §5）：2 面の ND の目盛（全周の APP・VOR と MAP、拡大）、上の数字（PLN も航跡：109 は FCOM p.1141 で MAP・MAP CTR・PLAN が TRK）、全周の針のグループ（`nd/up` で回す）、方位の印（全周・拡大・PLN）、選択方位と破線、航跡の線（副操縦士の航跡）、旗、風の矢印。副操縦士の全周の目盛は DATAREF が空で回っていなかった。全周の目盛の KEY_FRAME は拡大と同じ −1°/°に（機長は 1° ずれ、副操縦士は逆向きだった）。PLN の上の数字は、PLN の箱の位置にある元の HDG の部品を TRK（自席の航跡）に替えた（MAP の TRK の部品は位置が違う）。
+- 残り：全周表示の選択方位と航跡の線（パネルに無い）、航跡の印（VOR・APP の線に横線：FCOM p.1142。WXR・TFC が入っていないときの拡大の VOR・APP）、109 で TAS を出さないこと、VOR・ADF の針を航跡が上の表示の向きに合わせること（段 5b）、PLN の真北（段 5d）。
+- 試験：ND のモデル 39 件、表示器のモジュール 17 件（計 124）、nd.lua の向き 5 件（新しい `tests/displays/nd_orientation_test.lua`）。X-Plane の新しいシナリオ `s61_nd_orientation`（31 件合格。西風 50 kt で方位 007・航跡 019：MAP は航跡が上で ▽ が左に、VOR・APP は方位が上、副操縦士の VOR は副操縦士の方位、PLN は PLN の箱に TRK と北が上の ▽、旗）。最初の試験で、PLN の TRK が MAP の位置に出たのと、旗のときに航跡の線が残ったのを直した。

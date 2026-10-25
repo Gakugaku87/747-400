@@ -344,3 +344,21 @@
 | 同（DSP-04） | 各 PFD の ATT・HDG の旗のグループ（`GROUP CAPT IRS OFF PFD`・`FO IRS OFF PFD`） | ATT・HDG・FPV・PITCH・ROLL の旗と固定の飛行機の記号 | G/S の旗 `gen_rotary GS X`（新しい `Failure Flags/gsX`、`pfd/<席>/gs_flag`）を G/S の目盛の場所に、LOC の旗 `gen_rotary LOC X`（新しい `locX`、`loc_flag`）を LOC の目盛の場所に足した | ATA31 p.13、ATA34_1 p.470、FCOM p.999 |
 
 上の 7 行は `docs/overhaul/tools/panel_pfd_ils.lua` で書き換えた（4 組で、表示条件 68 行、G/S のポインターの振れと CLIP 8 本、目盛の追加 8・付け替え 4、旗 8）。画像は `docs/overhaul/tools/make_pfd_ils_images.ps1`（琥珀の目盛は純正の白い目盛の色を明るさのまま琥珀に、G/S の旗は純正の ALT の旗、LOC の旗は ATT の旗の作り）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_pfd_ils`。
+
+表示（5-2 段 5a、2026-10-26）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・ND の向き（DSP-15） | 機長・副操縦士の ND の全周の目盛（`gen_needle Rose`・`Rose:MAP`、機長は名前に ` 2`） | 機長の APP・VOR の目盛は機長の方位、副操縦士の 2 つは DATAREF が空（回らない）。KEY_FRAME は機長が 1° ずれた −1°/°、副操縦士は +1°/° | どちらも `laminar/B747/nd/up/<席>`（nd.lua：MAP は航跡、VOR・APP は方位、PLN は 0）、KEY_FRAME は拡大と同じ 0→0・90→−90 | FCOM p.1109–1110 |
+| 同 | 全周の針のグループ（`GROUP Hdg Ofst:APP/VOR/MA`）と中の方位の印（`gen_needle Hdg Ptr:APP/VOR/MAP`） | グループは機長の方位で回る（MAP CTR の航跡が上を無視）。印は他席の方位で、KEY_FRAME が 0 に 2 つ | グループは `nd/up/<席>`、印は自席の方位で 0→0・90→90、新設 `nd/<席>/hdg_ptr` のとき | FCOM p.1142 |
+| 同 | PLN の方位の印（`gen_needle Hdg Ptr:PLN`） | PLN のとき | 自席の方位、新設 `nd/<席>/hdg_ptr_pln` のとき | 同 |
+| 同 | 目盛と上の数字のグループ（全周と拡大の `GROUP Map/Rose`・`GROUP Digital HDG/TRK`） | 全周の目盛は `nd/pln/<席>`、ほかは `pfd/<席>/irs` | 新設 `nd/<席>/rose`（MAP は航跡、VOR・APP は方位があるとき、PLN は常に） | FCOM p.1034 |
+| 同 | 上の数字（`GROUP TRACK`・`GROUP HDG` の `APP/VOR`・`PLN`/`PLAN`） | 機長の拡大は副操縦士のモードを、副操縦士の拡大の方位は機長の方位を読む。全周の航跡の数字は X-Plane の `map_mode` が 2 のとき（副操縦士は機長の `map_mode`）。PLN は HDG | 自席のモードと方位・航跡。TRK は MAP、PLN は PLN の箱の位置の元の HDG の部品を TRK（`EFIS/Maps/label_TRK` と自席の航跡）に替えた（109：FCOM p.1141）。拡大の PLAN の HDG は出さない（PLN は全周だけ） | FCOM p.1141 |
+| 同 | 拡大の航跡の線（`gen_needle Track Line`） | 副操縦士も機長の航跡、条件は `nd/<席>/track_line_on` | 自席の航跡、新設 `nd/<席>/trk_line`（航跡が無いと消える） | FCOM p.1143 |
+| 同 | 全周と拡大の針のグループ（`GROUP Hdg Ofst:APP/VOR/MA`・`GROUP Heading Offset`） | 条件なし | `nd/<席>/rose`（旗のときは航跡の線・選択方位・方位の印なども消える） | FCOM p.1034 |
+| 同（DSP-22） | 拡大の選択方位（`GROUP ND Heading Bug` と `gen_needle Heading Bug`・`Heading Bug Line`） | グループは `nd/mode/<席>/show_heading_bug`（バグと破線が一緒に消える）、針は `pfd/<席>/irs` | グループとバグは新設 `nd/<席>/hdg_bug`（PLAN 以外）、破線は新設 `nd/<席>/hdg_line`（MAP で LNAV・LOC・ROLLOUT のときは動かしてから 10 秒で消える） | FCOM p.1142 |
+| 同 | 拡大の `GROUP Heading Offset` の中、`GROUP ND Heading Bug` の後 | なし | 方位の印 `gen_needle Hdg Ptr Exp`（全周の印の画像 `EFIS/Maps/hdg_ptr` を拡大の目盛の半径 457 に。推定）、自席の方位、`nd/<席>/hdg_ptr` のとき | FCOM p.1142 |
+| 同（DSP-04） | ND の旗 `gen_rotary MAP X`・`VTK X`・`TRK X`・`HDG X`（機長は名前に ` CAPT ND`、副操縦士は ` FO`） | IRS が無効のグループ（`GROUP CAPT IRS OFF`・`FO IRS OFF`）の中で、モードだけの条件（IRS が未整列のときだけ出る） | そのグループの外（後）へ移し、新設 `nd/<席>/map_flag`・`vtk_flag`・`trk_flag`・`hdg_flag` | FCOM p.1034 |
+| 同 | 風の矢印（`gen_needle wind_pilot`・`wind_copilot`） | 両席とも `nd/wind_bearing`（方位に対する向き）、条件は 2 行で最後（速度）だけが効く | 新設 `nd/<席>/wind_deg`（表示の向きに対する、風の吹いていく向き）、新設 `nd/<席>/wind` | FCOM p.1142 |
+
+上の 11 行は `docs/overhaul/tools/panel_nd_orientation.lua` で書き換えた（2 面で 74 か所）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_orientation`。
