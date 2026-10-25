@@ -1,7 +1,7 @@
 -- 747-400 PFD ILS indications (5-2 step 4e): what each pilot's PFD shows of
--- its ILS receiver (the Captain's ILS L, the F/O's ILS R: X-Plane's NAV1 and
--- NAV2; fixed, as the documents give the PFD no switching: estimate): the
--- approach reference and course, the localizer and glideslope
+-- its ILS receiver (the receiver of the EIU in use, chosen by the display
+-- glue: FCOM p.1044, step 5b): the approach reference and course, the
+-- localizer and glideslope
 -- scales and pointers, the LOC and G/S flags, the deviation warnings (the
 -- scale amber, the pointer flashing at 4 Hz) and the rising runway.
 -- Logic and sources: docs/overhaul/notes/ATA-31.md §20 (ATA34_1 p.466-470,

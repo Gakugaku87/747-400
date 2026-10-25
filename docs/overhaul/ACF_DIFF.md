@@ -362,3 +362,14 @@
 | 同 | 風の矢印（`gen_needle wind_pilot`・`wind_copilot`） | 両席とも `nd/wind_bearing`（方位に対する向き）、条件は 2 行で最後（速度）だけが効く | 新設 `nd/<席>/wind_deg`（表示の向きに対する、風の吹いていく向き）、新設 `nd/<席>/wind` | FCOM p.1142 |
 
 上の 11 行は `docs/overhaul/tools/panel_nd_orientation.lua` で書き換えた（2 面で 74 か所）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_orientation`。
+
+表示（5-2 段 5b、2026-10-26：PFD の ILS の受信機）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・PFD の ILS の受信機（DSP-15） | 各 PFD（4 組）の LOC のポインター 3 本（`gen_pointer Ptr >= 2.34`・`Ptr <= 2.33 \| > 0.5`・`Ptr <= 0.5`）と立ち上がる滑走路（`GROUP Rsng Rwy Offset`）の `DATAREF` | X-Plane の HSI の偏位 `sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot`（副操縦士は `_copilot`）：EIU に関係なく機長は NAV1、副操縦士は NAV2 | 新設 `laminar/B747/pfd/<席>/loc_dots`（使用中の EIU の受信機の偏位） | FCOM p.1044 |
+| 同 | G/S のポインター 2 本（`GROUP Pointer VDEF > 2.3`・`<= 2.3` の `gen_pointer Pointer`）の `DATAREF` | `hsi_vdef_dots_pilot`（`_copilot`） | 新設 `pfd/<席>/gs_dots` | 同 |
+| 同 | 進入の基準の ID（機長は `gen_text ILS Label`、副操縦士は `gen_text ILS L`・`ILS R`） | どちらも NAV1 の局の ID `nav1_nav_id[0]`（受からないと空白）。副操縦士の 2 つは中央の FMC master 選択器で切り替え（ILS R も NAV1 を読んでいた） | 機長の 1 つと副操縦士の `ILS L` を新設の文字列 `pfd/<席>/ils_ref[0]`（受信機の ID、受けるまでは周波数）にして条件を外し、副操縦士の `ILS R` は消した | ATA34_1 p.466、FCOM p.986 |
+| 同 | 進入の基準の DME（`gen_LED ILS L DME LED`・`ILS R DME LED`）と進入コース（`gen_LED LED ILS L`・`LED ILS R`） | 中央の FMC master 選択器（`flt_inst/fmc_master_src/ctr_pnl/sel_dial_pos`）が 0 なら NAV1、1 なら NAV2 | 新設 `pfd/<席>/ils_rx`（1 L、2 C、3 R）が 2.5 以下なら NAV1、より大なら NAV2 | FCOM p.986、p.1044 |
+
+上の 4 行は `docs/overhaul/tools/panel_pfd_ils_rx.lua` で書き換えた（4 組で 48 か所：`DATAREF` 24、表示条件 16、ID の付け替え 4、条件の削除 2、削除 2）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_pfd_ils_rx`。

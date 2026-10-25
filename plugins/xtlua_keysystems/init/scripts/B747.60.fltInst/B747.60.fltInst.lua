@@ -158,6 +158,17 @@ B747DR_pfd_gs_scale_fo                          = deferred_dataref("laminar/B747
 B747DR_pfd_gs_ptr_fo                            = deferred_dataref("laminar/B747/pfd/fo/gs_ptr", "number")
 B747DR_pfd_gs_flag_fo                           = deferred_dataref("laminar/B747/pfd/fo/gs_flag", "number")
 B747DR_pfd_rwy_show_fo                          = deferred_dataref("laminar/B747/pfd/fo/rwy_show", "number")
+-- step 5b: the ILS receiver each PFD and ND uses (1 L, 2 C, 3 R: the EIU
+-- in use), its localizer and glideslope deviations (dots), the approach
+-- reference's identifier, or the frequency until the identification
+B747DR_pfd_ils_rx_capt                          = deferred_dataref("laminar/B747/pfd/capt/ils_rx", "number")
+B747DR_pfd_loc_dots_capt                        = deferred_dataref("laminar/B747/pfd/capt/loc_dots", "number")
+B747DR_pfd_gs_dots_capt                         = deferred_dataref("laminar/B747/pfd/capt/gs_dots", "number")
+B747DR_pfd_ils_ref_capt                         = deferred_dataref("laminar/B747/pfd/capt/ils_ref", "string")
+B747DR_pfd_ils_rx_fo                            = deferred_dataref("laminar/B747/pfd/fo/ils_rx", "number")
+B747DR_pfd_loc_dots_fo                          = deferred_dataref("laminar/B747/pfd/fo/loc_dots", "number")
+B747DR_pfd_gs_dots_fo                           = deferred_dataref("laminar/B747/pfd/fo/gs_dots", "number")
+B747DR_pfd_ils_ref_fo                           = deferred_dataref("laminar/B747/pfd/fo/ils_ref", "string")
 -- the ND (5-2 step 5a, B747.60.nd_model.lua): the compass rose and the
 -- digital heading or track shown; the TRK, HDG, MAP and VTK flags; the
 -- current heading pointer (APP, VOR, MAP; PLN); the selected heading bug and
