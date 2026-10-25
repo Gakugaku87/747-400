@@ -170,6 +170,32 @@ local function high_mach(req)
 end
 M.high_mach = high_mach
 
+-- the pitch limit indication (PLI, 5-2 step 4c; FCOM p.975, p.977: the
+-- stick shaker activation point; ATA27 p.701: from the SWMC's pitch limit
+-- parameters): the angle of attack still to go to the shaker. The lift
+-- limit becomes an angle of attack with the custom acf's lift curve,
+-- fitted on the stall tests below the stall break (tests/flight/measure/
+-- stall_*.json, about 270 t): per trailing edge flap angle, the zero-lift
+-- angle of attack and the degrees of angle of attack per kg of B (CL/B
+-- over the lift slope). In the air the margin is that angle times
+-- (1 - lift needed / limit), so it is 0 exactly at the shaker; on the
+-- ground (the gear carries the weight) the limit's angle minus the present
+-- angle of attack. All estimates
+local PLI_CURVE = {{0, -4.84, 4.411e-6}, {10, -8.29, 3.916e-6}, {20, -12.53, 3.815e-6}, {30, -13.99, 3.884e-6}}
+M.PLI_MIN_KT = 60           -- shown above this airspeed (the angle of attack vanes: estimate)
+M.PLI_MAX_DEG = 30          -- not shown further away (off the attitude display)
+function M.pli_curve(flap_deg)
+    local t = PLI_CURVE
+    if flap_deg <= t[1][1] then return t[1][2], t[1][3] end
+    for i = 2, #t do
+        if flap_deg <= t[i][1] then
+            local f = (flap_deg - t[i - 1][1]) / (t[i][1] - t[i - 1][1])
+            return t[i - 1][2] + (t[i][2] - t[i - 1][2]) * f, t[i - 1][3] + (t[i][3] - t[i - 1][3]) * f
+        end
+    end
+    return t[#t][2], t[#t][3]
+end
+
 function M.inputs()
     return {
         weight_kg = 0,
@@ -184,6 +210,7 @@ function M.inputs()
         air = false,            -- the PSEU's air mode
         air_data = true,        -- mach and cas valid
         show_mins = false,      -- the minimum maneuvering speed band shown (the speed tape model)
+        alpha_deg = 0,          -- the angle of attack (for the PLI on the ground)
     }
 end
 
@@ -199,6 +226,8 @@ function M.new()
             show_vmax_man = false,
             shaker = false,
             airspeed_low = false,   -- AIRSPEED LOW and the amber box
+            pli_deg = 0,        -- the PLI: degrees above the airplane symbol
+            show_pli = false,
         },
     }
 end
@@ -250,6 +279,19 @@ function M.update(s, inp, dt)
     -- (FCOM p.1556, p.1605); only with its band shown (from the first flap
     -- retraction after takeoff) and above 100 ft RA (estimate)
     out.airspeed_low = inp.air and inp.air_data and inp.show_mins and inp.ra_ft > 100 and inp.cas < vmm
+
+    -- the PLI (109: when the flaps are not up; FCOM p.975, p.977). The lift
+    -- needed with the speed tape's load factor (steadier than the shaker's)
+    local a0, per_kg = M.pli_curve(inp.flap_deg)
+    local span = per_kg * M.boundary(inp.flap_deg, m)       -- zero lift to the shaker
+    local margin
+    if inp.air then
+        margin = span * (1 - s.nz_disp * w / d / limit)
+    else
+        margin = a0 + span - inp.alpha_deg
+    end
+    out.pli_deg = margin
+    out.show_pli = not flaps_up and inp.air_data and inp.cas > M.PLI_MIN_KT and math.abs(margin) <= M.PLI_MAX_DEG
     return out
 end
 
