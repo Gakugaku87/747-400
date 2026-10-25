@@ -292,3 +292,15 @@
 | 同 | 同じグループの帯 4 本（`gen_pointer Min Speed`・`Min Maneuver`・`Max Maneuver`・`Max Speed`）の参照と `KEY_FRAME` | `laminar/B747/airspeed/Vs`・`Vmc`（前の最小機動速度の式）・`Vmaxm`・`Vmax`、その速度の枠 | 新設 `laminar/B747/airspeed/tape_capt[0]`〜`[3]`（副操縦士の組は `tape_fo`：帯の速度からその席の速度を引いた値。最小機動速度は最小速度のモデルの値、`Vmc` は AFDS・A/T・VNAV の速度の下限のために前の式のまま）、−500〜500 kt を 4 px/kt で、前の位置（帯の速度＝今の速度のとき）を通る線 | 同 |
 
 上の 2 行は `docs/overhaul/tools/panel_speed_bands.lua` で書き換えた（グループ 8 つ、帯 16 本）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_speed_bands`（空力のコミットの後の acf）。
+
+表示（5-2 段 4a、2026-10-25）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-25・PFD の方位（DSP-01） | 各 PFD（4 組）の方位目盛（`gen_needle Compass Rose`）と航跡・選択方位を載せたグループ（`GROUP Rose Offset`、副操縦士は名前に ` 2`）の `DATAREF` | `laminar/B747/nd/up/capt`・`fo`（ND の上の向き：MAP なら航跡、PLN なら真北） | その席の X-Plane の AHRS の方位 `sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot`・`_copilot`（>HEADING が比べる値） | FCOM p.997 |
+| 同（DSP-04） | 各 PFD の姿勢（`GROUP Attitude Indicator`・`Artificial Horizon`・`Pitch Scale`・`Bank Scale`・`Bank Pointer`・`GROUP Slip/Skid Offset`、副操縦士の組は `GROUP Rsng Rwy Offset 2` も）、方位（`GROUP Hdg/Track Display`・`Heading Bug`）、昇降率（`GROUP VSI Display`）の表示条件 | どれも `laminar/B747/pfd/capt/irs`（`fo/irs`：選んだ IRU の姿勢と方位がともに有効） | 新設 `laminar/B747/pfd/capt/att`・`hdg`・`vsi`（`fo` も） | FCOM p.999、ATA31 p.15–16 |
+| 同（DSP-04） | 各 PFD の旗（`gen_rotary VERT X CAPT PFD`・`VERT X FO PFD`）と `GROUP CAPT IRS OFF PFD`・`FO IRS OFF PFD`（固定の飛行機の記号、HDG と ATT の旗） | VERT は `pfd/<席>/irs` が 0、グループも同じ（3 つが一緒に出る） | VERT は新設 `pfd/<席>/vert` が 1。グループの条件を外し、飛行機の記号と ATT は `pfd/<席>/att` が 0、HDG は `pfd/<席>/hdg` が 0 | 同 |
+| 同（DSP-04） | 各 PFD の航跡の印（`gen_needle Track Indicator`） | 条件なし（方位の目盛と一緒） | 新設 `pfd/<席>/trk` が 1（FMC か選んだ IRU が NAV） | FCOM p.997 |
+| 同 | 各 PFD の DH・MDA・電波高度の数字（`DH Annun`・`DH Label`・`DH LED`・`MDA Label`・`MDA LED`・`GROUP <= DH` と `> DH` の `LED`）と `GROUP AFDS Status Annun` | 2 行目の条件 `pfd/<席>/irs`（計器は最後の条件だけを見るので、DH の点滅の条件などが効いていなかった） | その行を外して元の条件に戻す | FCOM p.981–982、p.993 |
+
+上の 5 行は `docs/overhaul/tools/panel_pfd_sources.lua` で書き換えた（4 組で、表示条件の置き換え 42、条件の追加 16、目盛の参照 8、条件の削除 36。グライドスロープの目盛の `pfd/<席>/irs` は段 4e、ND は段 5 に残す）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_pfd_sources`。

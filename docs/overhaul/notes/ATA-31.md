@@ -373,3 +373,39 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - 段 3a のモデル：フラップのバグを約 20,000 ft（指示高度）より上で出さない（FCOM p.972）。
 - 段 3a のモデル：最小機動速度の帯の判定で地上とみなすのは、PSEU の地上かつ 100 kt 未満が 5 秒続いたときだけ（どちらの値も推定）。空中開始や空中での機体の読み直しの直後に、空地判定が一瞬地上になり（読み直しでは X-Plane の指示対気速度も 0 から立ち上がる）、帯（とそれに付く AIRSPEED LOW）が出ないままになったため（X-Plane の試験で見つけた。着陸では 100 kt を切ってから 5 秒で消える）。
 - 試験：モデル 43 件（最小速度）・32 件（段 3a の速度テープ）、モジュール 31 件。X-Plane の新しいシナリオ `s52_min_speeds`（10,000 ft・フラップ 20：帯の上端が FCTM のシェーカー速度、琥珀の帯がシェーカーまで 1.3 g、最大機動速度は出さない、アイドルで減速して最小機動速度を切ると AIRSPEED LOW と琥珀の枠、帯の上端を切るとシェーカー）と `s53_min_speeds_cruise`（35,000 ft・280 kt：琥珀の帯が低速バフェットまで 1.3 g で約 249 kt、最小速度が約 211 kt、最大機動速度は出さない、バグを出さない）。PFD を撮って帯の位置を確かめた。帯の上端は荷重倍数で動く（この A/P は高度を保つ間に 0.9〜1.1 g 揺れる）。
+
+## 15. 段 4 の計画（2026-10-25 深夜：気圧と PFD の記号・旗・方位）
+
+- 段 4 は量が多いので 5 つに分ける（どれもパネルの変更を含む。パネルは全範囲で承認なしでよい：2026-10-25）。
+  - 4a：姿勢・方位・昇降率の源と旗（DSP-01、DSP-04 の IRS の分）。
+  - 4b：気圧（DSP-11 の残り）：遷移高度・遷移レベルの琥珀の枠、CDU の EFIS CONTROL ページの BARO を自分の側だけに。
+  - 4c：速度テープの記号と旗（DSP-04・12 の速度の分）：VR の「R」、範囲外の V1・VREF の数字、離陸で V1・VR を消す、MACH・SPD LIM の旗。
+  - 4d：姿勢の記号（DSP-12）：PLI、バンク 35° 以上の琥珀、横滑りの琥珀、FPV（スイッチのラッチと記号）、PITCH・ROLL の旗。
+  - 4e：ILS（DSP-12・04 の ILS の分）：偏位過大の琥珀と点滅、ロール 53° 超での消去、G/S・LOC の旗。
+- 資料（どれも段 4 で読んだもの）：
+  - 旗：FCOM p.999 (10.10.37)、ATA31 p.15–17（NCD/invalid の表。invalid は消して琥珀の旗、NCD は旗なしで消す）。ATT は姿勢が invalid、HDG は IRU の方位が invalid、VERT は慣性の昇降率が invalid（NCD か ADC の故障は旗なしで消す）、MACH は ADC の Mach が invalid（NCD か CAS invalid は旗なしで消す）、SPD LIM は SWC の Vmax と ADC の最大運用速度がともに invalid（最大速度の帯）か SWC の Vmin が invalid（シェーカー速度の帯）、NO V SPD は FMC の V1・VR が invalid。
+  - 方位：FCOM p.997 (10.10.35)（方位ポインターは IRS の方位、航跡は FMC、FMC が無効なら選んだ IRU）、p.998（MAG・TRU。TRU は枠）、p.1046 (10.10.84)（HDG REF：NORM は磁方位、高緯度では真方位。TRUE は真方位。PFD・ND・AFDS・FMC に効く）、p.1228（PFD と ND の方位は NAV の IRU から。NAV の源に動いている FMC を選んでいれば IRS 選択器によらない）。
+  - 昇降率：FCOM p.996 (10.10.34)（ADC の昇降率を IRS でならしたもの）。
+  - 気圧：FCOM p.995 (10.10.33)（気圧設定で MCP 高度が遷移高度より上のとき遷移高度を 300 ft 上回る、または STD で MCP 高度が遷移レベルより下のとき遷移レベルを 300 ft 下回ると、枠で琥珀）、p.1037（BARO STD）、p.1062–1064（CDU の EFIS CONTROL：BARO SET の入力 22.00〜32.00・2200〜3200 は inHg、745〜1084 は hPa、I・H で単位、S・STD で STD）、p.1329・p.1396（TRANS ALT は航法データベース、無ければ 18,000 ft。TRANS LVL は到着の手順、無ければ FL180）。
+  - 速度テープ：FCOM p.972–973（109：VR が V1 から 4 kt 以内なら R、範囲外の V1 は上に、VREF は下に数字、V1・VR は離陸で消える）。
+  - 姿勢：FCOM p.975 (10.10.13)（バンク 35° 以上でバンクポインターが琥珀、横滑りの枠も琥珀。PLI はシェーカーの点、109 はフラップが上がっていないとき。PITCH・ROLL は両席の差）、ATA27 p.701（PLI は SWMC のピッチの余裕から：EIU 経由）。
+  - ILS：ATA34_1 p.466–468（偏位過大：G/S は APP が動いていて RA 100〜500 ft で約 5/8 ドット超、LOC は RA 0〜500 ft で約 1/4 ドット超が 1 秒以上。LNAV で LOC を arm して RA 950 ft 以下で捕まえていなければ LOC の捕捉失敗、1,050 ft か捕捉で戻る。目盛は黄色、ポインターは 4 Hz で点滅。ロール 53° 超・周波数 NCD で目盛ごと消す）、FCOM p.986–987。
+- 4a の作り方：
+  - 新しいモデル `B747.60.pfd_model.lua`。表示器と EIU のグルー（`B747.60.xt.displays.lua`、NAV の源の選択器をすでに読んでいる）で回す。IRS の配列（`irs/att_valid`・`hdg_valid`・`nav_valid`）、IRS と NAV の選択器、各席のエアデータの有効を読み、席ごとに新しい dataref を書く：`pfd/<席>/att`（姿勢）、`hdg`（方位の目盛とバグ）、`trk`（航跡）、`vsi`（昇降率）、`vert`（VERT の旗）。
+  - 値は今までどおり X-Plane の pilot・copilot の AHRS（機長と副操縦士の選んだ IRU の代わり。>ATTITUDE・>HEADING の比べ方と同じ：5-1 段 2）。モデルは見せるかどうかだけを決める。
+  - 方位の源：NAV の源が FMC で NAV の IRU があれば、その IRU（機長は L・C・R、副操縦士は R・C・L の順：推定）。そうでなければ IRS 選択器の IRU（ATT で SET HDG を入れたものを含む）。航跡は FMC の IRU か、選んだ IRU が NAV のとき。
+  - 昇降率：選んだ IRU が NAV（慣性の昇降率：ATT では出ない。推定）。慣性が無効なら VERT の旗、エアデータが無効なら旗なしで消す。
+  - パネル（道具 `docs/overhaul/tools/panel_pfd_sources.lua`）：方位目盛（`Compass Rose`・`GROUP Rose Offset`）を `nd/up` からその席の AHRS の方位へ（DSP-01）。姿勢・方位・昇降率の表示条件を、それぞれの新しい dataref へ。ATT・HDG・VERT の旗と、姿勢が消えたときの固定の飛行機の記号を別々に。航跡の印は `trk` で。前は IRS の有効で消えていた DH・MDA・RA の数字と AFDS の状態表示は、その行を外して元の条件に戻す（計器は最後の条件しか見ない）。グライドスロープの目盛は段 4e、ND は段 5。`pfd/capt/irs`・`fo/irs` は FMS・ND が読むので IRS のグルーが書き続ける。
+  - HDG REF の TRUE と高緯度の真方位は、ND（段 5）と AFDS（6-3）と一緒に。4a の PFD は磁方位で、MAG の表示のまま。
+
+## 16. 段 4a の実装（2026-10-25 深夜：PFD の姿勢・方位・昇降率の源と旗）
+
+- モデル `plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/B747.60.pfd_model.lua`（新設）：席ごとに、姿勢（選んだ IRU の姿勢の有効）、方位（NAV の源が FMC なら NAV の IRU を機長は L・C・R、副操縦士は R・C・L の順で。無ければ IRS 選択器の IRU の方位の有効：ATT で SET HDG を入れたものを含む）、航跡（方位の IRU か選んだ IRU が NAV）、昇降率（選んだ IRU が NAV で、エアデータが有効）、VERT の旗（選んだ IRU が NAV でない）を決める。FMC の IRU の順と、ATT に慣性の昇降率が無いことは推定。
+- グルー：表示器と EIU のグルー `B747.60.xt.displays.lua` の終わりで回す（NAV の源は表示器のモデルの入力と同じ）。読むもの：`irs/att_valid`・`hdg_valid`・`nav_valid`、`flt_inst/irs_src/capt|fo/sel_dial_pos`、`airdata/valid_capt`・`valid_fo`。書くもの：新設 `pfd/capt/att`・`hdg`・`trk`・`vsi`・`vert`（`fo` も。init スクリプトで作る）。
+- 値は今までどおり X-Plane の pilot・copilot の AHRS（姿勢・方位・昇降率）。5-1 段 2 の >ATTITUDE・>HEADING と同じく、各席の選んだ IRU の代わりとみなす。IRS 選択器を変えても値の出どころは変わらず、有効かどうかだけが変わる。
+- パネル（道具 `docs/overhaul/tools/panel_pfd_sources.lua`、ACF_DIFF.md §5）：
+  - 方位目盛（`Compass Rose`・`GROUP Rose Offset`）の参照を `nd/up/<席>` から `heading_AHARS_deg_mag_pilot`・`_copilot` へ（DSP-01：前は MAP で航跡、PLN で真北が上になった）。航跡の印と選択方位のバグは `Rose Offset` の中なので一緒に直る。
+  - 姿勢の 6〜7 項目は `att`、方位の目盛とバグは `hdg`、昇降率は `vsi`、VERT の旗は `vert`、航跡の印は `trk`（前は条件なし）。
+  - `GROUP CAPT IRS OFF PFD`・`FO IRS OFF PFD` の条件を外し、中の固定の飛行機の記号と ATT の旗は `att` が 0、HDG の旗は `hdg` が 0 で出す（前は 3 つが一緒）。
+  - IRS の有効が 2 行目の条件として付いていた DH・MDA・RA の数字と AFDS の状態表示は、その行を外した（計器は最後の条件しか見ないので、DH の点滅の条件などが効いていなかった）。グライドスロープの目盛（段 4e）と ND（段 5）の `pfd/<席>/irs` は残す。
+- 試験：モデル 17 件（`tests/displays/pfd_model_test.lua`）、表示器のモジュールに 17 件（50 から 67 件）（`display_module_test.lua`）。X-Plane の新しいシナリオ `s54_pfd_sources`（24/24）：ND を PLN にしても PFD の方位目盛は機首方位のまま、IRS 選択器 C、IRU L の ATT（ATT と VERT の旗、方位は FMC L が IRU C から）、NAV の源を CDU L（HDG の旗）、ADC 1 の故障（昇降率が旗なしで消える）。PFD を撮って旗と消える項目を確かめた（姿勢が無効でもバンクの目盛は残る：ATA31 p.15 の消す項目に無い）。

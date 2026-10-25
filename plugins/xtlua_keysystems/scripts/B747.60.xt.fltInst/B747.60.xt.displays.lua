@@ -7,10 +7,16 @@
 -- old table of selector combinations (fltInstsetCRTs). Step 2: the FLT DIR
 -- and NAV source selectors and the EFIS and EICAS control panels in, the
 -- messages >SOURCE SEL EIU, F/D, NAV, >EFIS CONTROL L, R, >EFIS/EICAS C/P out.
+-- Step 4a: the PFD sources model (B747.60.pfd_model.lua) with the IRUs, the
+-- IRS selectors, the NAV source and each pilot's air data in; each PFD's
+-- attitude, heading scale, track and vertical speed shown and the VERT flag
+-- (laminar/B747/pfd/capt/*, fo/*) out for the panel.
 -- dofile'd from B747.60.xt.fltInst.lua after B747.60.xt.fltInst02.lua.
 
 dofile("B747.60.display_model.lua")
+dofile("B747.60.pfd_model.lua")
 local DM = B747_display_model
+local PM = B747_pfd_model
 
 B747DR_dsp_bus_stby_apu         = find_dataref("laminar/B747/electrical/bus/stby_apu")
 B747DR_dsp_bus_stby_main        = find_dataref("laminar/B747/electrical/bus/stby_main")
@@ -25,6 +31,23 @@ B747DR_dsp_content_unit         = find_dataref("laminar/B747/displays/content_un
 B747DR_dsp_display_power        = find_dataref("laminar/B747/electrical/display_has_power")
 B747DR_dsp_efis_fail            = find_dataref("laminar/B747/efis/fail")
 B747DR_dsp_dsp_fail             = find_dataref("laminar/B747/dsp/fail")
+B747DR_dsp_irs_att_valid        = find_dataref("laminar/B747/irs/att_valid")
+B747DR_dsp_irs_hdg_valid        = find_dataref("laminar/B747/irs/hdg_valid")
+B747DR_dsp_irs_nav_valid        = find_dataref("laminar/B747/irs/nav_valid")
+B747DR_dsp_irs_src_capt         = find_dataref("laminar/B747/flt_inst/irs_src/capt/sel_dial_pos")
+B747DR_dsp_irs_src_fo           = find_dataref("laminar/B747/flt_inst/irs_src/fo/sel_dial_pos")
+B747DR_dsp_air_valid_capt       = find_dataref("laminar/B747/airdata/valid_capt")
+B747DR_dsp_air_valid_fo         = find_dataref("laminar/B747/airdata/valid_fo")
+B747DR_dsp_pfd_att_capt         = find_dataref("laminar/B747/pfd/capt/att")
+B747DR_dsp_pfd_hdg_capt         = find_dataref("laminar/B747/pfd/capt/hdg")
+B747DR_dsp_pfd_trk_capt         = find_dataref("laminar/B747/pfd/capt/trk")
+B747DR_dsp_pfd_vsi_capt         = find_dataref("laminar/B747/pfd/capt/vsi")
+B747DR_dsp_pfd_vert_capt        = find_dataref("laminar/B747/pfd/capt/vert")
+B747DR_dsp_pfd_att_fo           = find_dataref("laminar/B747/pfd/fo/att")
+B747DR_dsp_pfd_hdg_fo           = find_dataref("laminar/B747/pfd/fo/hdg")
+B747DR_dsp_pfd_trk_fo           = find_dataref("laminar/B747/pfd/fo/trk")
+B747DR_dsp_pfd_vsi_fo           = find_dataref("laminar/B747/pfd/fo/vsi")
+B747DR_dsp_pfd_vert_fo          = find_dataref("laminar/B747/pfd/fo/vert")
 
 -- the EIU selectors' positions: Captain and centre L, AUTO, C, R; F/O L, C, AUTO, R
 local EIU_CAPT = {[0] = DM.EIU_L, DM.SEL_AUTO, DM.EIU_C, DM.EIU_R}
@@ -39,6 +62,8 @@ local NAV_FO = {[0] = 0, 0, 1, 2}
 
 local dsp_state = DM.new()
 local dsp_inputs = DM.inputs()
+local pfd_state = PM.new()
+local pfd_inputs = PM.inputs()
 
 local function msg(i, on)
     local v = on and 1 or 0
@@ -47,6 +72,47 @@ end
 
 local function knob(v, map)
     return map[math.max(0, math.min(3, math.floor(v + 0.5)))]
+end
+
+-- an IRS source selector (0 L, 1 C, 2 R) as the IRU
+local function iru(v)
+    return math.max(1, math.min(3, math.floor(v + 0.5) + 1))
+end
+
+-- each PFD's sources (step 4a)
+local function pfd_sources(fmc)
+    local pin = pfd_inputs
+    for i = 1, 3 do
+        pin.att_valid[i] = B747DR_dsp_irs_att_valid[i - 1] > 0.5
+        pin.hdg_valid[i] = B747DR_dsp_irs_hdg_valid[i - 1] > 0.5
+        pin.nav_valid[i] = B747DR_dsp_irs_nav_valid[i - 1] > 0.5
+    end
+    pin.irs[1], pin.irs[2] = iru(B747DR_dsp_irs_src_capt), iru(B747DR_dsp_irs_src_fo)
+    pin.fmc[1], pin.fmc[2] = fmc[1], fmc[2]
+    pin.air_data[1] = B747DR_dsp_air_valid_capt > 0.5
+    pin.air_data[2] = B747DR_dsp_air_valid_fo > 0.5
+    local po = PM.update(pfd_state, pin)
+    local c, f = po[PM.CAPT], po[PM.FO]
+    local v = c.att and 1 or 0
+    if B747DR_dsp_pfd_att_capt ~= v then B747DR_dsp_pfd_att_capt = v end
+    v = c.hdg and 1 or 0
+    if B747DR_dsp_pfd_hdg_capt ~= v then B747DR_dsp_pfd_hdg_capt = v end
+    v = c.trk and 1 or 0
+    if B747DR_dsp_pfd_trk_capt ~= v then B747DR_dsp_pfd_trk_capt = v end
+    v = c.vsi and 1 or 0
+    if B747DR_dsp_pfd_vsi_capt ~= v then B747DR_dsp_pfd_vsi_capt = v end
+    v = c.vert and 1 or 0
+    if B747DR_dsp_pfd_vert_capt ~= v then B747DR_dsp_pfd_vert_capt = v end
+    v = f.att and 1 or 0
+    if B747DR_dsp_pfd_att_fo ~= v then B747DR_dsp_pfd_att_fo = v end
+    v = f.hdg and 1 or 0
+    if B747DR_dsp_pfd_hdg_fo ~= v then B747DR_dsp_pfd_hdg_fo = v end
+    v = f.trk and 1 or 0
+    if B747DR_dsp_pfd_trk_fo ~= v then B747DR_dsp_pfd_trk_fo = v end
+    v = f.vsi and 1 or 0
+    if B747DR_dsp_pfd_vsi_fo ~= v then B747DR_dsp_pfd_vsi_fo = v end
+    v = f.vert and 1 or 0
+    if B747DR_dsp_pfd_vert_fo ~= v then B747DR_dsp_pfd_vert_fo = v end
 end
 
 function B747_displays()
@@ -104,4 +170,5 @@ function B747_displays()
     msg(ADV_EFIS_CONTROL[1], out.msg_efis_control[1])
     msg(ADV_EFIS_CONTROL[2], out.msg_efis_control[2])
     msg(ADV_EFIS_EICAS_CP, out.msg_efis_eicas_cp)
+    pfd_sources(inp.fmc)
 end

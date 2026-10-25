@@ -101,6 +101,18 @@ B747DR_efis_meters_fo_selected                  = deferred_dataref("laminar/B747
 B747DR_pfd_mode_capt		                	= deferred_dataref("laminar/B747/pfd/capt/irs", "number")
 B747DR_pfd_mode_fo		                		= deferred_dataref("laminar/B747/pfd/fo/irs", "number")
 B747DR_pfd_mode_show_mins          				= deferred_dataref("laminar/B747/pfd/show_mins", "number")
+-- each PFD's attitude, heading scale, track, vertical speed shown and the
+-- VERT flag (5-2 step 4a: the PFD sources model in B747.60.xt.displays.lua)
+B747DR_pfd_att_capt                             = deferred_dataref("laminar/B747/pfd/capt/att", "number")
+B747DR_pfd_hdg_capt                             = deferred_dataref("laminar/B747/pfd/capt/hdg", "number")
+B747DR_pfd_trk_capt                             = deferred_dataref("laminar/B747/pfd/capt/trk", "number")
+B747DR_pfd_vsi_capt                             = deferred_dataref("laminar/B747/pfd/capt/vsi", "number")
+B747DR_pfd_vert_capt                            = deferred_dataref("laminar/B747/pfd/capt/vert", "number")
+B747DR_pfd_att_fo                               = deferred_dataref("laminar/B747/pfd/fo/att", "number")
+B747DR_pfd_hdg_fo                               = deferred_dataref("laminar/B747/pfd/fo/hdg", "number")
+B747DR_pfd_trk_fo                               = deferred_dataref("laminar/B747/pfd/fo/trk", "number")
+B747DR_pfd_vsi_fo                               = deferred_dataref("laminar/B747/pfd/fo/vsi", "number")
+B747DR_pfd_vert_fo                              = deferred_dataref("laminar/B747/pfd/fo/vert", "number")
 B747DR_nd_fo_heading_bug            			= deferred_dataref("laminar/B747/nd/mode/fo/show_heading_bug", "number")
 B747DR_nd_capt_heading_bug          			= deferred_dataref("laminar/B747/nd/mode/capt/show_heading_bug", "number")
 

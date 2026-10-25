@@ -5,7 +5,8 @@
 -- the buses, the unit and EIU failures and the EIU selectors in; each
 -- display's position and power for the panel, the unit showing it, the EIU
 -- in use and >EIU LEFT out. Then the lighting module's brightness from the
--- unit's knob (DSP-30). The model is tested in display_model_test.lua.
+-- unit's knob (DSP-30), and each PFD's sources and flags (step 4a). The
+-- models are tested in display_model_test.lua and pfd_model_test.lua.
 local T = dofile("tests/lib/check.lua")("display_module")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
@@ -148,5 +149,37 @@ selectors(1, 1, 1, 1)
 frames(20)
 T.near(rt:get("sim/cockpit2/switches/instrument_brightness_ratio", 2), 0.9, 0.02,
     "back on the outboard unit: the outboard knob")
+
+-- the PFD sources (step 4a, the PFD sources model): the IRUs, the IRS
+-- selectors, the NAV source and the air data in; what each PFD shows out
+local IRS, P = "laminar/B747/irs/", "laminar/B747/pfd/"
+for i = 0, 2 do
+    rt:set(IRS .. "att_valid", i, 1)
+    rt:set(IRS .. "hdg_valid", i, 1)
+    rt:set(IRS .. "nav_valid", i, 1)
+end
+rt:set("laminar/B747/airdata/valid_capt", 1)
+rt:set("laminar/B747/airdata/valid_fo", 1)
+rt:set(FI .. "irs_src/fo/sel_dial_pos", 2)                         -- the F/O's IRS R
+frames(0.1)
+for _, s in ipairs({"capt", "fo"}) do
+    for _, n in ipairs({"att", "hdg", "trk", "vsi"}) do T.equal(rt:get(P .. s .. "/" .. n), 1, s .. ": " .. n .. " shown") end
+    T.equal(rt:get(P .. s .. "/vert"), 0, s .. ": no VERT flag")
+end
+rt:set(IRS .. "nav_valid", 0, 0)                                    -- IRU L in ATT, a heading set
+frames(0.1)
+T.equal(rt:get(P .. "capt/vert"), 1, "IRU L in ATT: the Captain's VERT flag")
+T.equal(rt:get(P .. "capt/hdg"), 1, "the heading through FMC L from IRU C (FCOM p.1228)")
+rt:set(FI .. "nav_src/capt/sel_dial_pos", 2)                       -- the Captain's NAV CDU L
+rt:set(IRS .. "hdg_valid", 0, 0)
+frames(0.1)
+T.equal(rt:get(P .. "capt/hdg"), 0, "NAV on CDU L, IRU L in ATT without a heading: the HDG flag")
+T.equal(rt:get(P .. "fo/hdg"), 1, "the F/O's heading (IRU R) unaffected")
+rt:set(FI .. "irs_src/capt/sel_dial_pos", 1)                       -- the Captain's IRS C
+rt:set("laminar/B747/airdata/valid_capt", 0)
+frames(0.1)
+T.equal(rt:get(P .. "capt/hdg"), 1, "IRS C: the heading from IRU C")
+T.equal(rt:get(P .. "capt/vsi"), 0, "the Captain's air data invalid: no vertical speed")
+T.equal(rt:get(P .. "capt/vert"), 0, "and no VERT flag (ATA31 p.16)")
 
 T.done()
