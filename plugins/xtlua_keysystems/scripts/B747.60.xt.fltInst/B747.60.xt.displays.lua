@@ -34,7 +34,9 @@
 -- gs_dots), the approach reference's identifier or frequency (pfd/capt|fo/
 -- ils_ref) and >SNGL SOURCE ILS out; each ND's APP mode on the same
 -- receiver (nd/capt|fo/loc_scale, loc_ptr, loc_flag, gs_scale, gs_ptr,
--- gs_flag, crs, crs_deg, dme, dme_nm, ils_ref; nd/dashes) out.
+-- gs_flag, crs, crs_deg, dme, dme_nm, ils_ref; nd/dashes) out; the VOR
+-- mode's reference VOR (nd/capt|fo/vor_rx, vor_flag, vor_dev, vor_crs,
+-- vor_crs_deg, to_from, vor_dme, vor_dme_nm, vor_ref) out.
 -- dofile'd from B747.60.xt.fltInst.lua after B747.60.xt.fltInst02.lua.
 
 dofile("B747.60.display_model.lua")
@@ -152,6 +154,32 @@ B747DR_dsp_nd_dme_fo            = find_dataref("laminar/B747/nd/fo/dme")
 B747DR_dsp_nd_dme_nm_fo         = find_dataref("laminar/B747/nd/fo/dme_nm")
 B747DR_dsp_nd_ils_ref_fo        = find_dataref("laminar/B747/nd/fo/ils_ref")
 B747DR_dsp_nd_dashes            = find_dataref("laminar/B747/nd/dashes")
+simDR_dsp_nav_rx                = find_dataref("sim/cockpit2/radios/indicators/nav_display_horizontal")
+simDR_dsp_nav_freq              = find_dataref("sim/cockpit2/radios/actuators/nav_frequency_hz")
+simDR_dsp_nav_to_from           = find_dataref("sim/cockpit2/radios/indicators/nav_flag_from_to_pilot")
+simDR_dsp_nav_has_dme           = find_dataref("sim/cockpit2/radios/indicators/nav_has_dme")
+simDR_dsp_nav_dme_nm            = find_dataref("sim/cockpit2/radios/indicators/nav_dme_distance_nm")
+simDR_dsp_nav3_id               = find_dataref("sim/cockpit2/radios/indicators/nav3_nav_id")
+simDR_dsp_nav4_id               = find_dataref("sim/cockpit2/radios/indicators/nav4_nav_id")
+B747DR_dsp_radio_modes          = find_dataref("laminar/B747/radio/tuningmodes")
+B747DR_dsp_nd_vor_rx_capt       = find_dataref("laminar/B747/nd/capt/vor_rx")
+B747DR_dsp_nd_vor_flag_capt     = find_dataref("laminar/B747/nd/capt/vor_flag")
+B747DR_dsp_nd_vor_dev_capt      = find_dataref("laminar/B747/nd/capt/vor_dev")
+B747DR_dsp_nd_vor_crs_capt      = find_dataref("laminar/B747/nd/capt/vor_crs")
+B747DR_dsp_nd_vor_crs_deg_capt  = find_dataref("laminar/B747/nd/capt/vor_crs_deg")
+B747DR_dsp_nd_to_from_capt      = find_dataref("laminar/B747/nd/capt/to_from")
+B747DR_dsp_nd_vor_dme_capt      = find_dataref("laminar/B747/nd/capt/vor_dme")
+B747DR_dsp_nd_vor_dme_nm_capt   = find_dataref("laminar/B747/nd/capt/vor_dme_nm")
+B747DR_dsp_nd_vor_ref_capt      = find_dataref("laminar/B747/nd/capt/vor_ref")
+B747DR_dsp_nd_vor_rx_fo         = find_dataref("laminar/B747/nd/fo/vor_rx")
+B747DR_dsp_nd_vor_flag_fo       = find_dataref("laminar/B747/nd/fo/vor_flag")
+B747DR_dsp_nd_vor_dev_fo        = find_dataref("laminar/B747/nd/fo/vor_dev")
+B747DR_dsp_nd_vor_crs_fo        = find_dataref("laminar/B747/nd/fo/vor_crs")
+B747DR_dsp_nd_vor_crs_deg_fo    = find_dataref("laminar/B747/nd/fo/vor_crs_deg")
+B747DR_dsp_nd_to_from_fo        = find_dataref("laminar/B747/nd/fo/to_from")
+B747DR_dsp_nd_vor_dme_fo        = find_dataref("laminar/B747/nd/fo/vor_dme")
+B747DR_dsp_nd_vor_dme_nm_fo     = find_dataref("laminar/B747/nd/fo/vor_dme_nm")
+B747DR_dsp_nd_vor_ref_fo        = find_dataref("laminar/B747/nd/fo/vor_ref")
 B747DR_dsp_ils_rx_capt          = find_dataref("laminar/B747/pfd/capt/ils_rx")
 B747DR_dsp_ils_rx_fo            = find_dataref("laminar/B747/pfd/fo/ils_rx")
 B747DR_dsp_loc_dots_capt        = find_dataref("laminar/B747/pfd/capt/loc_dots")
@@ -287,13 +315,15 @@ end
 -- nav_id stays empty until the station is received)
 local ref_freq, ref_text, ref_shown, nd_ref_shown = {}, {}, {}, {}
 local dashes_written = false
-local function ils_ref(k, nav2)
-    local id = nav2 and simDR_dsp_nav2_id or simDR_dsp_nav1_id
+local function id_or_freq(k, id, hz)
     local b = string.byte(id)
     if b and b > 32 then return id end
-    local hz = nav2 and simDR_dsp_nav2_freq or simDR_dsp_nav1_freq
     if ref_freq[k] ~= hz then ref_freq[k], ref_text[k] = hz, string.format("%.2f", hz / 100) end
     return ref_text[k]
+end
+local function ils_ref(k, nav2)
+    if nav2 then return id_or_freq(k, simDR_dsp_nav2_id, simDR_dsp_nav2_freq) end
+    return id_or_freq(k, simDR_dsp_nav1_id, simDR_dsp_nav1_freq)
 end
 
 local function ils_side(i, rx, tuned, roll, trk, ra, ra_flag, ra_show, fd)
@@ -417,18 +447,32 @@ end
 -- each ND's orientation, flags and pointers (step 5a): from its own side
 -- (the Captain's pilot AHRS, the F/O's copilot one) and the PFD model's
 -- heading and track; the FMC's position as an IRU in NAV (estimate)
-local function nd_side(i, mode, hdg, trk, hdg_valid, trk_valid, ias, center, wxr, tfc)
+-- each ND's reference VOR in VOR mode (step 5b): that side's, the
+-- Captain's VOR L (X-Plane's NAV3, the AC standby bus), the F/O's VOR R
+-- (NAV4, AC bus 2: notes/ATA-34.md §2.1) (estimate: FCOM p.1144 says "the
+-- selected receiver"); autotuned unless the CDU's NAV RADIO tuned it
+-- (laminar/B747/radio/tuningmodes, its 2nd and 3rd letters)
+local VOR_IDX = {2, 3}
+local function nd_side(i, mode, hdg, trk, hdg_valid, trk_valid, ias, center, wxr, tfc, vor, modes)
     i.mode = math.floor(mode + 0.5)
     i.hdg, i.trk, i.hdg_valid, i.trk_valid, i.ias = hdg, trk, hdg_valid, trk_valid, ias
     i.center, i.wxr, i.tfc = center > 0.5, wxr > 0.5, tfc > 0.5
+    local x = VOR_IDX[vor]
+    i.vor_fail = (vor == 1 and B747DR_dsp_bus_stby_main or B747DR_dsp_bus_ac[1]) < 0.5
+    i.vor_auto = modes:sub(vor + 1, vor + 1) ~= "M"
+    i.vor_rx = simDR_dsp_nav_rx[x] > 0.5
+    i.vor_to_from = math.floor(simDR_dsp_nav_to_from[x] + 0.5)
+    i.vor_dme_rx = simDR_dsp_nav_has_dme[x] > 0.5
+    i.dme_fail = simDR_dsp_dme_fail == 6
 end
 
 local function nd_sources(c, f, nav_valid)
     local inp = nd_inputs
+    local modes = B747DR_dsp_radio_modes
     nd_side(inp.side[NM.CAPT], B747DR_dsp_nd_mode_capt, simDR_dsp_hdg_pilot, simDR_dsp_trk_pilot, c.hdg, c.trk,
-        B747DR_dsp_ias_capt, B747DR_dsp_nd_center_capt, simDR_dsp_wxr_on, B747DR_dsp_nd_tfc_capt)
+        B747DR_dsp_ias_capt, B747DR_dsp_nd_center_capt, simDR_dsp_wxr_on, B747DR_dsp_nd_tfc_capt, 1, modes)
     nd_side(inp.side[NM.FO], B747DR_dsp_nd_mode_fo, simDR_dsp_hdg_copilot, simDR_dsp_trk_copilot, f.hdg, f.trk,
-        B747DR_dsp_ias_fo, B747DR_dsp_nd_center_fo, simDR_dsp_wxr_on_copilot, B747DR_dsp_nd_tfc_fo)
+        B747DR_dsp_ias_fo, B747DR_dsp_nd_center_fo, simDR_dsp_wxr_on_copilot, B747DR_dsp_nd_tfc_fo, 2, modes)
     inp.map_valid = nav_valid[1] or nav_valid[2] or nav_valid[3]
     inp.wind_from = simDR_dsp_wind_from
     inp.hdg_sel = B747DR_dsp_hdg_sel
@@ -485,6 +529,37 @@ local function nd_sources(c, f, nav_valid)
     if B747DR_dsp_nd_trk_line_capt ~= v then B747DR_dsp_nd_trk_line_capt = v end
     v = of.trk_line and 1 or 0
     if B747DR_dsp_nd_trk_line_fo ~= v then B747DR_dsp_nd_trk_line_fo = v end
+
+    -- the VOR mode: the Captain's VOR L, the F/O's VOR R (the flag 1 VOR L,
+    -- 2 VOR R)
+    if B747DR_dsp_nd_vor_rx_capt ~= 1 then B747DR_dsp_nd_vor_rx_capt = 1 end
+    v = oc.vor_flag and 1 or 0
+    if B747DR_dsp_nd_vor_flag_capt ~= v then B747DR_dsp_nd_vor_flag_capt = v end
+    v = oc.vor_dev and 1 or 0
+    if B747DR_dsp_nd_vor_dev_capt ~= v then B747DR_dsp_nd_vor_dev_capt = v end
+    if B747DR_dsp_nd_vor_crs_capt ~= oc.vor_crs then B747DR_dsp_nd_vor_crs_capt = oc.vor_crs end
+    v = simDR_dsp_nav_obs[2]
+    if B747DR_dsp_nd_vor_crs_deg_capt ~= v then B747DR_dsp_nd_vor_crs_deg_capt = v end
+    if B747DR_dsp_nd_to_from_capt ~= oc.to_from then B747DR_dsp_nd_to_from_capt = oc.to_from end
+    if B747DR_dsp_nd_vor_dme_capt ~= oc.vor_dme then B747DR_dsp_nd_vor_dme_capt = oc.vor_dme end
+    v = simDR_dsp_nav_dme_nm[2]
+    if B747DR_dsp_nd_vor_dme_nm_capt ~= v then B747DR_dsp_nd_vor_dme_nm_capt = v end
+    local s = oc.vor_ref == 2 and id_or_freq(3, simDR_dsp_nav3_id, simDR_dsp_nav_freq[2]) or ""
+    if nd_ref_shown[3] ~= s then nd_ref_shown[3] = s; B747DR_dsp_nd_vor_ref_capt = s end
+    if B747DR_dsp_nd_vor_rx_fo ~= 2 then B747DR_dsp_nd_vor_rx_fo = 2 end
+    v = of.vor_flag and 2 or 0
+    if B747DR_dsp_nd_vor_flag_fo ~= v then B747DR_dsp_nd_vor_flag_fo = v end
+    v = of.vor_dev and 1 or 0
+    if B747DR_dsp_nd_vor_dev_fo ~= v then B747DR_dsp_nd_vor_dev_fo = v end
+    if B747DR_dsp_nd_vor_crs_fo ~= of.vor_crs then B747DR_dsp_nd_vor_crs_fo = of.vor_crs end
+    v = simDR_dsp_nav_obs[3]
+    if B747DR_dsp_nd_vor_crs_deg_fo ~= v then B747DR_dsp_nd_vor_crs_deg_fo = v end
+    if B747DR_dsp_nd_to_from_fo ~= of.to_from then B747DR_dsp_nd_to_from_fo = of.to_from end
+    if B747DR_dsp_nd_vor_dme_fo ~= of.vor_dme then B747DR_dsp_nd_vor_dme_fo = of.vor_dme end
+    v = simDR_dsp_nav_dme_nm[3]
+    if B747DR_dsp_nd_vor_dme_nm_fo ~= v then B747DR_dsp_nd_vor_dme_nm_fo = v end
+    s = of.vor_ref == 2 and id_or_freq(4, simDR_dsp_nav4_id, simDR_dsp_nav_freq[3]) or ""
+    if nd_ref_shown[4] ~= s then nd_ref_shown[4] = s; B747DR_dsp_nd_vor_ref_fo = s end
 end
 
 -- each PFD's sources (step 4a)

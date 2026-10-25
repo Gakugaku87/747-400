@@ -197,6 +197,29 @@ B747DR_nd_dme_fo                                = deferred_dataref("laminar/B747
 B747DR_nd_dme_nm_fo                             = deferred_dataref("laminar/B747/nd/fo/dme_nm", "number")
 B747DR_nd_ils_ref_fo                            = deferred_dataref("laminar/B747/nd/fo/ils_ref", "string")
 B747DR_nd_dashes                                = deferred_dataref("laminar/B747/nd/dashes", "string")
+-- step 5b: each ND's reference VOR in VOR mode (1 VOR L, 2 VOR R), its flag
+-- (0 none, 1 VOR L, 2 VOR R), deviation bar and scale (0, 1), course (0 none,
+-- 1 dashes, 2 shown) and its degrees, TO/FROM (0 none, 1 TO, 2 FROM), DME
+-- (0 dashes, 1 the distance, 2 the flag) and its distance, the frequency or
+-- identifier
+B747DR_nd_vor_rx_capt                           = deferred_dataref("laminar/B747/nd/capt/vor_rx", "number")
+B747DR_nd_vor_flag_capt                         = deferred_dataref("laminar/B747/nd/capt/vor_flag", "number")
+B747DR_nd_vor_dev_capt                          = deferred_dataref("laminar/B747/nd/capt/vor_dev", "number")
+B747DR_nd_vor_crs_capt                          = deferred_dataref("laminar/B747/nd/capt/vor_crs", "number")
+B747DR_nd_vor_crs_deg_capt                      = deferred_dataref("laminar/B747/nd/capt/vor_crs_deg", "number")
+B747DR_nd_to_from_capt                          = deferred_dataref("laminar/B747/nd/capt/to_from", "number")
+B747DR_nd_vor_dme_capt                          = deferred_dataref("laminar/B747/nd/capt/vor_dme", "number")
+B747DR_nd_vor_dme_nm_capt                       = deferred_dataref("laminar/B747/nd/capt/vor_dme_nm", "number")
+B747DR_nd_vor_ref_capt                          = deferred_dataref("laminar/B747/nd/capt/vor_ref", "string")
+B747DR_nd_vor_rx_fo                             = deferred_dataref("laminar/B747/nd/fo/vor_rx", "number")
+B747DR_nd_vor_flag_fo                           = deferred_dataref("laminar/B747/nd/fo/vor_flag", "number")
+B747DR_nd_vor_dev_fo                            = deferred_dataref("laminar/B747/nd/fo/vor_dev", "number")
+B747DR_nd_vor_crs_fo                            = deferred_dataref("laminar/B747/nd/fo/vor_crs", "number")
+B747DR_nd_vor_crs_deg_fo                        = deferred_dataref("laminar/B747/nd/fo/vor_crs_deg", "number")
+B747DR_nd_to_from_fo                            = deferred_dataref("laminar/B747/nd/fo/to_from", "number")
+B747DR_nd_vor_dme_fo                            = deferred_dataref("laminar/B747/nd/fo/vor_dme", "number")
+B747DR_nd_vor_dme_nm_fo                         = deferred_dataref("laminar/B747/nd/fo/vor_dme_nm", "number")
+B747DR_nd_vor_ref_fo                            = deferred_dataref("laminar/B747/nd/fo/vor_ref", "string")
 -- the ND (5-2 step 5a, B747.60.nd_model.lua): the compass rose and the
 -- digital heading or track shown; the TRK, HDG, MAP and VTK flags; the
 -- current heading pointer (APP, VOR, MAP; PLN); the selected heading bug and

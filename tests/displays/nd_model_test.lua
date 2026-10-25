@@ -3,7 +3,8 @@
 -- B747.60.nd_model.lua, 5-2 step 5a) without X-Plane: each ND's orientation
 -- by mode from its own side, X-Plane's map mode, the TRK, HDG, MAP and VTK
 -- flags, the heading pointer, the selected heading bug and line and the
--- wind arrow (FCOM p.1109-1110, p.1141-1143, p.1033-1034).
+-- wind arrow (FCOM p.1109-1110, p.1141-1143, p.1033-1034); the VOR mode's
+-- reference VOR (step 5b: ATA34_1 p.356-369).
 local T = dofile("tests/lib/check.lua")("nd_model")
 local M = dofile("plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/B747.60.nd_model.lua")
 
@@ -123,5 +124,44 @@ T.check(oc.rose, "the rose")
 c.trk_valid, c.center = true, true
 run()
 T.check(not oc.trk_line, "centred: not this one")
+
+-- the VOR mode (step 5b): autotuned, received
+s, inp = M.new(), M.inputs()
+c = inp.side[M.CAPT]
+c.mode, c.vor_auto, c.vor_rx, c.vor_to_from, c.vor_dme_rx = M.VOR, true, true, 1, true
+run()
+oc = out[M.CAPT]
+T.equal(oc.vor_crs, 1, "autotuned: the course dashes (ATA34_1 p.369)")
+T.check(not oc.vor_dev, "no deviation (p.368)")
+T.equal(oc.to_from, 0, "no TO/FROM")
+T.equal(oc.vor_ref, 2, "the frequency or identifier")
+T.equal(oc.vor_dme, 1, "the DME")
+T.check(not oc.vor_flag, "no flag")
+c.vor_auto = false
+run()
+T.equal(oc.vor_crs, 2, "manual: the course and its pointer")
+T.check(oc.vor_dev, "the deviation bar and scale")
+T.equal(oc.to_from, 1, "TO")
+c.vor_to_from = 2
+run()
+T.equal(oc.to_from, 2, "FROM")
+c.vor_rx = false
+run()
+T.check(not oc.vor_dev and oc.to_from == 0, "no bearing (NCD): no deviation, no TO/FROM (p.358)")
+T.check(oc.vor_crs == 2 and not oc.vor_flag, "the course stays, no flag")
+c.vor_rx = true
+c.vor_fail = true
+run()
+T.check(oc.vor_flag, "the receiver failed: the VOR flag (p.360)")
+T.check(not oc.vor_dev and oc.to_from == 0, "no deviation, no TO/FROM")
+T.check(oc.vor_crs == 0 and oc.vor_ref == 0, "the course and the frequency removed (p.366)")
+T.equal(oc.vor_dme, 1, "the DME is its own")
+c.vor_fail = false
+c.dme_fail = true
+run()
+T.equal(oc.vor_dme, 2, "the DME failed: its flag")
+c.dme_fail, c.vor_dme_rx = false, false
+run()
+T.equal(oc.vor_dme, 0, "no DME: dashes")
 
 T.done()
