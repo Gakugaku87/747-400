@@ -223,3 +223,13 @@
 | 同（NAV-64） | PFD の PULL UP と WINDSHEAR | `SHOW_EQUAL 1.000000 sim/cockpit/warnings/annunciators/GPWS`、`sim/cockpit2/annunciators/windshear_warning` | `laminar/B747/gpws/pull_up`、`laminar/B747/gpws/windshear` | FCOM p.1531、ATA34_2 p.142 |
 
 上の 5 行は `docs/overhaul/tools/panel_ra_gpws.lua` で書き換えた（22 の変更、各 PFD に RA 旗のグループ 1 つ）。条件が 2 行以上ある計器・グループの数は 371 のまま。RA 旗の絵は `docs/overhaul/tools/make_pfd_ra_images.ps1` で作った（純正の ATT 旗と同じ高さ 30・3 ピクセルの縁・字の大きさ、Windows の Bahnschrift SemiBold SemiCondensed）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_ra_gpws`。X-Plane のスクリーンショット（`s43_gpws`、`gpws_dive.ps1`）で、RA の数字が 2,500 ft 以下で出て RA 旗がその位置に出ること、DH の警報中も RA の数字が白で出ること、PULL UP が GPWS で出ることを確かめた。外から見た写真で機体の見た目が変わらないことを確かめた。純正 acf は変えていない。
+
+航法センサー（5-1 段 5b、2026-10-25。GAP_ANALYSIS.md §4 の承認済みの DSP-18）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-25・TCAS（NAV-70、DSP-18） | 各 ND の `GROUP ND Text Center` の終わり | なし（TCAS の機影はアイコンの白い菱形 1 種、`nd/*/text/icon` の 22） | 新しい `GROUP ND TCAS0`〜`29`（アイコンと同じ回転・移動：`nd/capt/tcas/heading[n]`・`distance[n]`、`show[n]`）。中に記号（`tcas_symbols` 13 コマ、`tcas/sym[n]`）とデータタグ（`tcas/tag_dy[n]` で上下に動くグループの中の白・琥珀・赤の文字、`tcas/tag<n>`、`tag_color[n]` が 1・2・3）。副操縦士の ND は `fo` | FCOM p.1534、p.1152、ATA34_2 p.44 |
+| 同（NAV-70、DSP-18） | 各 ND の `ND Text Center` の後（新しい `GROUP TCAS Messages`） | なし | 青の TA ONLY（`tcas_taonly`、`nd/capt/ta_only` が 1、TFC の上）。`map_center` で上へ動く `GROUP TCAS Alerts` の中に TRAFFIC と OFFSCALE（`tcas_traffic`・`tcas_offscale`、0 なし・1 琥珀・2 赤、`nd/capt/traffic`・`offscale`、右の中ほど） | FCOM p.1534–1535、p.1153、ATA34_2 p.44 |
+| 同（NAV-78、DSP-18） | 各 ND の TCAS OFF（`TCAS X CAPT`・`TCAS X FO`）の後 | なし | 琥珀の TCAS FAIL（`tcas_fail`、`nd/capt/tcas_fail` が 1、TCAS OFF の文字の位置） | FCOM p.1153、p.1563 |
+
+上の 3 行は `docs/overhaul/tools/panel_nd_tcas.lua` で足した（既存の行は変えていない。各 ND にスロット 30、メッセージのグループ 1、TCAS FAIL 1）。絵は `docs/overhaul/tools/make_nd_tcas_images.ps1`（記号は透明の地に、文字は純正の TFC の大きさ。色は純正の ND の琥珀・青、nd_icons の赤）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_nd_tcas`。

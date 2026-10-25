@@ -272,7 +272,7 @@
 | TERR POS (405, 570) | advisory | GPS 故障でルックアヘッド地形警報・表示不可 | — | p.1605 (15.30.3) | no：a288 L474 | GPWS (34) |
 | WINDSHEAR SYS | advisory | ウインドシア警報が出ない可能性 | — | p.1605 (15.30.3) | no：a298 L484（文言に余分な `>`） | GPWS (34) |
 | >TCAS OFF | advisory | トランスポンダで TA または TA/RA が選ばれていない（離陸時 400 ft まで抑止） | — | p.1605 (15.30.3) | yes：a279 L465 ← fltMgmt:423 | TCAS (34) |
-| >TCAS RA CAPTAIN, F/O | advisory | 当該 PFD に RA ガイダンスを出せない | — | p.1605 (15.30.3) | no：a280–281 L466–467（文言 `>TCAS RA CAPT`、設定行 fltMgmt:427–433 はブロックコメント） | TCAS (34) |
+| >TCAS RA CAPTAIN, F/O | advisory | 当該 PFD に RA ガイダンスを出せない | — | p.1605 (15.30.3) | yes（2026-10-25、5-1 段 5：TCAS のモデル。文言を `>TCAS RA CAPTAIN` に） | TCAS (34) |
 | >TCAS SYSTEM | advisory | TCAS 故障 | — | p.1605 (15.30.3) | no：a282 L468 | TCAS (34) |
 | >AIRSPEED LOW | caution | 速度が最小機動速度（amber 帯の上端）未満 | beeper | p.1605 (15.30.3)、p.1556 (15.20.10)、p.973 (10.10.11) | partly：c0 L108 ← fltInst02:3171（Vmc/Vs と比較。WARN-15） | 警報 (31)／計器 (34) |
 | >ALTITUDE ALERT | caution | MCP 選択高度から 300 ft 超逸脱 | beeper | p.1605 (15.30.3)、p.1559 (15.20.13) | no：c2 L110（WARN-16） | 高度警報 (34-16) |

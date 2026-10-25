@@ -114,3 +114,48 @@ B747DR_gpws_alert               = deferred_dataref("laminar/B747/gpws/alert", "n
 B747DR_gpws_gs_inhibited        = deferred_dataref("laminar/B747/gpws/gs_inhibited", "number")
 B747DR_gpws_gs_inhb_pushes      = deferred_dataref("laminar/B747/gpws/gs_inhb_pushes", "number")
 B747DR_gpws_fail                = deferred_dataref("laminar/B747/gpws/fail", "number")
+
+-- The transponders and the TCAS (B747.34.tcas_model.lua): failures for the
+-- tests (L, R; the TCAS computer); the voice the .snd plays (0 none, 1
+-- TRAFFIC TRAFFIC, 2 CLIMB CLIMB, 3 CLIMB CROSSING CLIMB, 4 INCREASE CLIMB,
+-- 5 CLIMB CLIMB NOW, 6 DESCEND DESCEND, 7 DESCEND CROSSING DESCEND, 8
+-- INCREASE DESCENT, 9 DESCEND DESCEND NOW, 10 MONITOR VERTICAL SPEED, 11
+-- MAINTAIN VERTICAL SPEED MAINTAIN, 12 MAINTAIN VERTICAL SPEED CROSSING
+-- MAINTAIN, 13 ADJUST VERTICAL SPEED ADJUST, 14 CLEAR OF CONFLICT; held 0.5 s)
+-- and the last one (held until the next, for the tests); each X-Plane TCAS
+-- target's ND symbol (0 none, 1 other, 2 proximate, 3 TA, 4 RA); the TCAS's
+-- state (working, failed, RAs available, TRAFFIC 0/1 amber/2 red); the PFDs'
+-- RA guidance (shown; the red vertical speed regions below vs_lo and above
+-- vs_hi, fpm, and the RA pitch regions' edges, deg, each with an on flag);
+-- each ND's TCAS messages (TCAS FAIL, TRAFFIC and OFFSCALE 0/1 amber/2 red,
+-- TA ONLY) and whether it draws traffic; the TFC switches' pushes (the
+-- switches add one for each). laminar/B747/nd/capt|fo/tfc and tcas_off are
+-- the panel's, created by xtlua_keysystems.
+B747DR_xpdr_fail                = deferred_dataref("laminar/B747/xpdr/fail", "array[2]")
+B747DR_tcas_fail                = deferred_dataref("laminar/B747/tcas/fail", "number")
+B747DR_tcas_voice               = deferred_dataref("laminar/B747/tcas/voice", "number")
+B747DR_tcas_last_voice          = deferred_dataref("laminar/B747/tcas/last_voice", "number")
+B747DR_tcas_sym                 = deferred_dataref("laminar/B747/tcas/sym", "array[64]")
+B747DR_tcas_operating           = deferred_dataref("laminar/B747/tcas/operating", "number")
+B747DR_tcas_failed              = deferred_dataref("laminar/B747/tcas/failed", "number")
+B747DR_tcas_ra_mode             = deferred_dataref("laminar/B747/tcas/ra_mode", "number")
+B747DR_tcas_traffic             = deferred_dataref("laminar/B747/tcas/traffic", "number")
+B747DR_tcas_pfd_ra              = deferred_dataref("laminar/B747/tcas/pfd/ra", "number")
+B747DR_tcas_pfd_lo_on           = deferred_dataref("laminar/B747/tcas/pfd/lo_on", "number")
+B747DR_tcas_pfd_hi_on           = deferred_dataref("laminar/B747/tcas/pfd/hi_on", "number")
+B747DR_tcas_pfd_vs_lo           = deferred_dataref("laminar/B747/tcas/pfd/vs_lo", "number")
+B747DR_tcas_pfd_vs_hi           = deferred_dataref("laminar/B747/tcas/pfd/vs_hi", "number")
+B747DR_tcas_pfd_pitch_lo        = deferred_dataref("laminar/B747/tcas/pfd/pitch_lo", "number")
+B747DR_tcas_pfd_pitch_hi        = deferred_dataref("laminar/B747/tcas/pfd/pitch_hi", "number")
+B747DR_nd_capt_tcas_fail        = deferred_dataref("laminar/B747/nd/capt/tcas_fail", "number")
+B747DR_nd_fo_tcas_fail          = deferred_dataref("laminar/B747/nd/fo/tcas_fail", "number")
+B747DR_nd_capt_traffic          = deferred_dataref("laminar/B747/nd/capt/traffic", "number")
+B747DR_nd_fo_traffic            = deferred_dataref("laminar/B747/nd/fo/traffic", "number")
+B747DR_nd_capt_offscale         = deferred_dataref("laminar/B747/nd/capt/offscale", "number")
+B747DR_nd_fo_offscale           = deferred_dataref("laminar/B747/nd/fo/offscale", "number")
+B747DR_nd_capt_ta_only          = deferred_dataref("laminar/B747/nd/capt/ta_only", "number")
+B747DR_nd_fo_ta_only            = deferred_dataref("laminar/B747/nd/fo/ta_only", "number")
+B747DR_nd_capt_tcas_show        = deferred_dataref("laminar/B747/nd/capt/tcas_show", "number")
+B747DR_nd_fo_tcas_show          = deferred_dataref("laminar/B747/nd/fo/tcas_show", "number")
+B747DR_nd_capt_tfc_pushes       = deferred_dataref("laminar/B747/nd/traffic/capt/pushes", "number")
+B747DR_nd_fo_tfc_pushes         = deferred_dataref("laminar/B747/nd/traffic/fo/pushes", "number")

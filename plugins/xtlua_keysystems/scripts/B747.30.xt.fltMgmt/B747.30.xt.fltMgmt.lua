@@ -61,8 +61,7 @@ function deferred_dataref(name,nilType,callFunction)
     return find_dataref(name)
 end
 simDR_startup_running   = find_dataref("sim/operation/prefs/startup_running")
-simDR_xpdr_mode         = find_dataref("sim/cockpit2/radios/actuators/transponder_mode")    -- 0=OFF, 1=STANDBY, 2=ON, 3=ALT, 4=TEST, 5=GROUND
-simDR_airspeed                      = find_dataref("laminar/B747/gauges/indicators/airspeed_kts_pilot")
+simDR_fltmgmt_on_ground = find_dataref("sim/flightmodel/failures/onground_any")
 --simDR_xpdr_code         = find_dataref("sim/cockpit2/radios/actuators/transponder_code")
 
 --*************************************************************************************--
@@ -85,8 +84,6 @@ B747DR_xpdr_code_12_dial_pos    = deferred_dataref("laminar/B747/flt_mgmt/transp
 B747DR_xpdr_code_34_dial_pos    = deferred_dataref("laminar/B747/flt_mgmt/transponder_code/digts_34_dial_pos", "number")
 
 B747DR_init_fltmgmt_CD          = deferred_dataref("laminar/B747/fltmgmt/init_CD", "number")
-B747DR_CAS_advisory_status      = find_dataref("laminar/B747/CAS/advisory_status")
-B747DR_radio_altitude           = deferred_dataref("laminar/B747/efis/radio_altitude", "number")
 --simDR_flightID                  =find_dataref("sim/cockpit2/tcas/targets/modeS_id")
 --*************************************************************************************--
 --** 				       READ-WRITE CUSTOM DATAREF HANDLERS     	        	     **--
@@ -205,19 +202,17 @@ end
 
 
 
--- TRANSPONDER (0=OFF, 1=STANDBY, 2=ON, 3=ALT, 4=TEST, 5=GROUND)
+-- TRANSPONDER MODE SELECTOR (the 570 panel, FCOM p.1218): 0 STBY, 1 ALT RPTG
+-- OFF, 2 XPDR, 3 TA ONLY, 4 TA/RA. X-Plane's transponder mode comes from the
+-- transponder and TCAS model (B747.34.xt.tcas.lua).
 function B747_flt_xpdr_mode_sel_dial_up_CMDhandler(phase, duration)
     if phase == 0 then
         B747DR_xpdrMode_sel_pos = math.min(B747DR_xpdrMode_sel_pos+1, 4)
-	--if B747DR_xpdrMode_sel_pos<=2 then simDR_EFIS_tcas_on =0 B747DR_nd_capt_tfc = 0 end
-        simDR_xpdr_mode = math.min(B747DR_xpdrMode_sel_pos+1,2)
     end
 end
 function B747_flt_xpdr_mode_sel_dial_dn_CMDhandler(phase, duration)
     if phase == 0 then
         B747DR_xpdrMode_sel_pos = math.max(B747DR_xpdrMode_sel_pos-1, 0)
-	--if B747DR_xpdrMode_sel_pos<=2 then simDR_EFIS_tcas_on =0 B747DR_nd_capt_tfc = 0 end
-        simDR_xpdr_mode = math.min(B747DR_xpdrMode_sel_pos+1,2)
     end
 end
 
@@ -323,7 +318,6 @@ function B747_set_fltmgmt_all_modes()
 
 	B747DR_init_fltmgmt_CD = 0
     B747DR_xpdrMode_sel_pos = 0
-    simDR_xpdr_mode = 1
 
 end
 
@@ -352,6 +346,9 @@ function B747_set_fltmgmt_ER()
     B747DR_iru_mode_sel_pos[2] = 2
     -- the IRUs aligned at once (the navigation sensors module)
     B747CMD_fltmgmt_irs_align_now:once()
+    -- started in the air: the transponder at TA/RA (estimate: in flight it is
+    -- normally TA/RA, FCOM p.1570)
+    if simDR_fltmgmt_on_ground == 0 then B747DR_xpdrMode_sel_pos = 4 end
 end
 
 
@@ -407,20 +404,8 @@ end
 --function flight_crash() end
 
 --function before_physics() end
-function B747_fltmgmt_EICAS_msg()
-  if (B747DR_radio_altitude>400 or simDR_airspeed<30) and B747DR_xpdrMode_sel_pos<=2 then
-    B747DR_CAS_advisory_status[279] = 1
-  else
-    B747DR_CAS_advisory_status[279] = 0
-  end
-  --[[if B747DR_radio_altitude>400 and B747DR_xpdrMode_sel_pos==3 then
-    B747DR_CAS_advisory_status[280] = 1
-    B747DR_CAS_advisory_status[281] = 1
-  else
-    B747DR_CAS_advisory_status[280] = 0
-    B747DR_CAS_advisory_status[281] = 0
-  end]]
-end
+-- >TCAS OFF and the other TCAS messages come from the TCAS model
+-- (B747.34.xt.tcas.lua)
 debug_fltmgmt     = deferred_dataref("laminar/B747/debug/fltmgmt", "number")
 function after_physics()
     if debug_fltmgmt>0 then return end
@@ -430,7 +415,6 @@ function after_physics()
     flightInit=true
     --print("navaids="..navAids)
     --print("fms="..fms)
-    B747_fltmgmt_EICAS_msg()
     B747_fltmgmt_monitor_AI()
     --B747_fltmgmt_setILS() 
 end
