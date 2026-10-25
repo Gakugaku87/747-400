@@ -413,6 +413,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 段 2（ソース選択の比較）：同じグルーが FLT DIR・NAV の選択器と新設の故障 `efis/fail[2]`・`dsp/fail` を読み、>SOURCE SEL EIU・F/D・NAV、>EFIS CONTROL L・R、>EFIS/EICAS C/P を書く。>ATTITUDE・>HEADING は航法センサーの IRS のグルー（X-Plane の両側の AHRS の差）、>SNGL SOURCE RA は電波高度計のグルー。
 - 段 4a（PFD の姿勢・方位・昇降率の源と旗）：表示器と EIU のグルー（`B747.60.xt.displays.lua`）が `B747.60.pfd_model.lua` も回す。読むものは IRU の `irs/att_valid`・`hdg_valid`・`nav_valid`（航法センサーのモジュール）、各席の IRS 選択器、NAV の源（表示器のモデルと同じ）、`airdata/valid_capt`・`valid_fo`。書くものは新設 `pfd/capt/att`・`hdg`・`trk`・`vsi`・`vert`（`fo` も）。値は今までどおり X-Plane の pilot・copilot の AHRS（各席の選んだ IRU の代わり）で、パネルの方位目盛もその席の AHRS の方位で回す（前は ND の上の向き `nd/up/*`）。`pfd/capt/irs`・`fo/irs`（選んだ IRU の姿勢と方位がともに有効）は IRS のグルーが書き続ける（FMS・ND が読む）。
 - 段 4b（気圧設定の琥珀の枠）：同じグルーが、各席の BARO STD（fltInst02 の `efis/baro_std/capt|fo/switch_pos`）、`airdata/alt_capt`・`alt_fo`、MCP 高度、FMC のデータ `fms/data`（JSON の文字列）の `transalt` を 2 秒ごとに読み、新設 `pfd/capt/baro_alert`・`fo/baro_alert` を書く（判定は `B747.60.pfd_model.lua` の `baro_alert`。遷移レベルは FMC にまだ無いので既定の FL180）。CDU の EFIS CONTROL の BARO SET の入力は FMS のモジュールの `B744.fms.baro.lua` が解き、ページの処理がその CDU の側（右の CDU は副操縦士、ほかは機長）だけに書く。STD は EFIS 操作パネルの STD のコマンドを使う（STD の前の値を覚える）。
+- 段 4c（PLI と VR の R）：速度テープのグルーが最小速度のモデルに迎角（`sim/flightmodel/position/alpha`）も渡し、新設 `pfd/pli`（シェーカーまでの迎角の余裕：飛行機の記号から上へ何度）・`pfd/pli_show` と、V1・VR から新設 `airspeed/vr_r`（VR が V1 から 4 kt 以内）を書く。パネルの PLI はバンクで回るグループの中のポインター（RA のピッチの限界と同じ作り）。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 
@@ -428,7 +429,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
   - ND は `xtlua_nd`（地図）と `fltInst02`（モード・レンジ）。
   - CDU は `B747.68.xt.fms` が `laminar/B747/fms1〜3/*` に行の文字列を出す。
 - パネルの表示条件（`SHOW_EQUAL`・`SHOW_LESS`・`SHOW_GREATER`）は、計器かグループごとに 1 つの dataref だけが効く（同じ dataref の LESS と GREATER で範囲。違う dataref を 2 行書くと後ろの行だけが効く：2026-10-25、カスタム acf の PFD で確かめた）。条件を重ねるときはグループを入れ子にする。純正の計器にも違う dataref を 2 行持つものがある（例：PFD の NO V SPD は V1 の行だけが効く）。
-- 計器の画像は `名前.png`（土台。大きさが計器の枠）と `名前-1.png`（動く絵や絵のコマ。tape は `-1` が塗り、`-2` が枠）の組。`CLIP` のある pointer・needle は、動く絵を土台の大きさの矩形（POS が中心）で切る。矩形は計器の座標なので、グループの回転・移動と一緒に動く（回転したグループの中では回った矩形で切る：2026-10-25、PFD の RA の赤枠を窓のマスクを外して確かめた）。純正の PFD の姿勢表示の上の空色は Bank Scale の絵（弧形の穴の空いた空色の帯）で、それより前に描いたものは上の方が隠れる。
+- 計器の画像は `名前.png`（土台。大きさが計器の枠）と `名前-1.png`（動く絵や絵のコマ。tape は `-1` が塗り、`-2` が枠）の組。`CLIP` のある pointer・needle は、動く絵を土台の大きさの矩形（POS が中心）で切る。矩形は計器の座標なので、グループの回転・移動と一緒に動く（回転したグループの中では回った矩形で切る：2026-10-25、PFD の RA の赤枠を窓のマスクを外して確かめた）。動かす絵は動く範囲を含む大きさにする（PLI の最初の高さ 40 の絵は、9° 上に動かすと切られて出なかった。高さ 480 にした：段 4c）。純正の PFD の姿勢表示の上の空色は Bank Scale の絵（弧形の穴の空いた空色の帯）で、それより前に描いたものは上の方が隠れる。
 - `KEY_FRAME` の範囲の外では、X-Plane は端の区間の線を延ばす（速度テープのバグのグループは 0〜60 kt の枠でどの速度でも動き、260〜380 kt の枠の最大速度の帯も 230 kt に出た）。`CLIP` のある `GROUP_ANIMATE_MODE TRANSLATE` のグループは、切り抜きの窓もグループと一緒に動く：純正の速度テープの帯のグループは速度で上下し、最小の側は 160 kt 付近でしか窓が重ならず、巡航の約 250 kt の最小機動速度は出なかった（2026-10-25）。グループを止め、帯の位置は「帯の速度−今の速度」の dataref（`airspeed/tape_capt`・`tape_fo`）で決めるようにした（`panel_speed_bands.lua`）。
 - **制約**：表示の定義は acf の中にある。純正 acf は変えないので、表示を直すときは dataref の値で直すのが基本になる。計器の追加や変更はカスタム acf にしかできず、見た目に関わるので承認が要る。カスタム acf と純正 acf のパネル定義は、ADF の方位針 2 個の参照 index を除いて同じ。
 

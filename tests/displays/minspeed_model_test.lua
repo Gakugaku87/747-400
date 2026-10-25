@@ -121,4 +121,41 @@ T.check(not M.update(s, inp, 1).airspeed_low, "the band not shown yet (before th
 inp.show_mins, inp.ra_ft = true, 50
 T.check(not M.update(s, inp, 1).airspeed_low, "below 100 ft RA: none")
 
+-- the pitch limit indication (step 4c; FCOM p.975: the stick shaker point,
+-- 109 with the flaps not up): degrees of angle of attack to the shaker
+local d10 = M.delta(10000)
+out, s, inp = run({flap_deg = 20})
+local vss20 = out.vss
+inp.cas = vss20 * 1.3
+inp.mach = M.cas_to_mach(inp.cas, d10)
+out = M.update(s, inp, 10)
+T.check(out.show_pli, "flaps 20 at 1.3 Vss: the PLI shown")
+T.check(out.pli_deg > 7 and out.pli_deg < 12, "1.3 Vss: about 7 to 12 degrees above the airplane symbol (" .. out.pli_deg .. ")")
+inp.cas = vss20
+inp.mach = M.cas_to_mach(inp.cas, d10)
+out = M.update(s, inp, 10)
+T.near(out.pli_deg, 0, 0.3, "at the shaker speed: at the airplane symbol (the shaker's point)")
+inp.cas = vss20 * 0.97
+inp.mach = M.cas_to_mach(inp.cas, d10)
+out = M.update(s, inp, 10)
+T.check(out.pli_deg < 0 and M.update(s, inp, 0.1).shaker, "below it: under the airplane symbol, the shaker on")
+inp.nz, inp.cas = 1.3, vss20 * math.sqrt(1.3)
+inp.mach = M.cas_to_mach(inp.cas, d10)
+out = M.update(s, inp, 10)
+T.near(out.pli_deg, 0, 0.5, "1.3 g at sqrt(1.3) Vss: at the airplane symbol (the load factor counts)")
+out, s, inp = run({flap_deg = 0})
+inp.cas = out.vss * 1.3
+inp.mach = M.cas_to_mach(inp.cas, d10)
+T.check(not M.update(s, inp, 10).show_pli, "flaps up: no PLI (109)")
+out, s, inp = run({flap_deg = 20, air = false, alt_ft = 0, alpha_deg = 0})
+inp.cas = 120
+inp.mach = M.cas_to_mach(120, M.delta(0))
+out = M.update(s, inp, 1)
+T.check(out.show_pli and out.pli_deg > 8 and out.pli_deg < 16, "on the ground at 120 kt: the shaker's angle of attack above (" .. out.pli_deg .. ")")
+inp.cas = 40
+inp.mach = M.cas_to_mach(40, M.delta(0))
+T.check(not M.update(s, inp, 1).show_pli, "at 40 kt: not shown")
+inp.cas, inp.air_data = 120, false
+T.check(not M.update(s, inp, 1).show_pli, "no valid air data: not shown")
+
 T.done()

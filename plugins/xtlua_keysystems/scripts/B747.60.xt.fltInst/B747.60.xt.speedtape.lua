@@ -16,6 +16,9 @@
 --   the amber box (airspeed_window/min), and for the panel's band pointers
 --   the four bands minus each PFD's airspeed (new airspeed/tape_capt[4] and
 --   tape_fo[4]: the band groups no longer move with the airspeed).
+--   Step 4c: with the angle of attack, the pitch limit indication (new
+--   pfd/pli: degrees above the airplane symbol, pfd/pli_show).
+-- Step 4c also: VR's "R" within 4 kt of V1 (new airspeed/vr_r).
 -- dofile'd from B747.60.xt.fltInst.lua after fltInst02.
 
 dofile("B747.60.speedtape_model.lua")
@@ -35,6 +38,13 @@ simDR_spd_nz                    = find_dataref("sim/flightmodel/forces/g_nrml")
 B747DR_airspeed_Vminm           = find_dataref("laminar/B747/airspeed/Vminm")
 B747DR_spd_tape_capt            = find_dataref("laminar/B747/airspeed/tape_capt")
 B747DR_spd_tape_fo              = find_dataref("laminar/B747/airspeed/tape_fo")
+-- step 4c: the PLI and VR's "R"
+simDR_spd_alpha                 = find_dataref("sim/flightmodel/position/alpha")
+B747DR_spd_pli                  = find_dataref("laminar/B747/pfd/pli")
+B747DR_spd_pli_show             = find_dataref("laminar/B747/pfd/pli_show")
+B747DR_spd_vr_r                 = find_dataref("laminar/B747/airspeed/vr_r")
+-- VR shows "R" within 4 kt of V1 (FCOM p.972)
+local VR_R_KT = 4
 
 local spd_state = SP.new()
 local spd_inputs = SP.inputs()
@@ -100,6 +110,7 @@ function B747_speedtape()
     mi.ra_ft = simDR_radio_alt_height_capt
     mi.air = inp.air
     mi.show_mins = out.show_mins
+    mi.alpha_deg = simDR_spd_alpha
     local ms = MS.update(ms_state, mi, SIM_PERIOD)
     if B747DR_airspeed_Vs ~= ms.vss then B747DR_airspeed_Vs = ms.vss end
     if B747DR_airspeed_Vminm ~= ms.vmin_man then B747DR_airspeed_Vminm = ms.vmin_man end
@@ -112,6 +123,14 @@ function B747_speedtape()
     v = flag(ms.airspeed_low)
     if B747DR_CAS_caution_status[0] ~= v then B747DR_CAS_caution_status[0] = v end
     if B747DR_airspeed_window_min ~= v then B747DR_airspeed_window_min = v end
+    -- the PLI (step 4c): degrees above the airplane symbol, both PFDs
+    if B747DR_spd_pli ~= ms.pli_deg then B747DR_spd_pli = ms.pli_deg end
+    v = flag(ms.show_pli)
+    if B747DR_spd_pli_show ~= v then B747DR_spd_pli_show = v end
+    -- VR's "R" (step 4c): both selected (999 not), within 4 kt
+    local v1, vr = B747DR_airspeed_V1, B747DR_airspeed_Vr
+    v = flag(v1 < 900 and vr < 900 and math.abs(vr - v1) <= VR_R_KT)
+    if B747DR_spd_vr_r ~= v then B747DR_spd_vr_r = v end
 end
 
 function B747_speedtape_flight_start()

@@ -116,6 +116,11 @@ B747DR_pfd_vert_fo                              = deferred_dataref("laminar/B747
 -- each PFD's barometric setting boxed in amber at the transition (step 4b)
 B747DR_pfd_baro_alert_capt                      = deferred_dataref("laminar/B747/pfd/capt/baro_alert", "number")
 B747DR_pfd_baro_alert_fo                        = deferred_dataref("laminar/B747/pfd/fo/baro_alert", "number")
+-- the pitch limit indication (step 4c): degrees above the airplane symbol,
+-- shown; VR's "R" within 4 kt of V1
+B747DR_pfd_pli                                  = deferred_dataref("laminar/B747/pfd/pli", "number")
+B747DR_pfd_pli_show                             = deferred_dataref("laminar/B747/pfd/pli_show", "number")
+B747DR_airspeed_vr_r                            = deferred_dataref("laminar/B747/airspeed/vr_r", "number")
 B747DR_nd_fo_heading_bug            			= deferred_dataref("laminar/B747/nd/mode/fo/show_heading_bug", "number")
 B747DR_nd_capt_heading_bug          			= deferred_dataref("laminar/B747/nd/mode/capt/show_heading_bug", "number")
 

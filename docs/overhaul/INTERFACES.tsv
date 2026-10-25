@@ -643,6 +643,7 @@ laminar/B747/airspeed/showVf30	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst0
 laminar/B747/airspeed/show_vf	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/airspeed/tape_capt	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/airspeed/tape_fo	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/airspeed/vr_r	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/airspeed_window/min	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/altimeter/baro_hectopascal	dataref	obj	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/altimeter/ft_adjusted	dataref	snd	B747.60.fltInst,B747.60.xt.fltInst02
@@ -2554,6 +2555,8 @@ laminar/B747/pfd/fo/hdg	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/pfd/fo/trk	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/pfd/fo/vert	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/pfd/fo/vsi	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/pfd/pli	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/pfd/pli_show	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/pfd/show_mins	dataref	panel	B747.60.fltInst
 laminar/B747/pfd/style	dataref	panel	B747.05.simconfig,B747.05.xt.simconfig
 laminar/B747/ra/capt/flag	dataref	panel	B747.34.nav

@@ -1,0 +1,35 @@
+{
+  "name": "s57_pfd_vr",
+  "description": "PFD の VR のバグの R（5-2 段 4c、パネルの変更）の X-Plane での確認。RJAA 34L でエンジン運転中に始める（機体を読み直す）。VR が V1 から 4 kt 以内なら VR のバグの文字は R だけ（FCOM p.972）。速度テープの見える所に来るよう V1・VR を低い値で直接書く（fltInst02 はフラップの選択が変わったときだけ書く）。機長の PFD を撮る（撮る間は操縦輪を隠す）。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 5 },
+    { "do": "set", "note": "V1 70 kt（見える所に）", "dref": "laminar/B747/airspeed/V1", "value": 70 },
+    { "do": "set", "note": "VR 73 kt（V1 から 3 kt）", "dref": "laminar/B747/airspeed/Vr", "value": 73 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "VR が V1 から 4 kt 以内：R", "dref": "laminar/B747/airspeed/vr_r", "op": "==", "value": 1 },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "view", "note": "機長の PFD", "the": -24, "psi": -1, "fov": 24 },
+    { "do": "shot", "name": "pfd_r" },
+    { "do": "set", "note": "VR 82 kt（V1 から 12 kt）", "dref": "laminar/B747/airspeed/Vr", "value": 82 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "VR", "dref": "laminar/B747/airspeed/vr_r", "op": "==", "value": 0 },
+    { "do": "shot", "name": "pfd_vr" },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" }
+  ]
+}

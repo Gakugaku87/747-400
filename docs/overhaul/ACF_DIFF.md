@@ -312,3 +312,12 @@
 | 2026-10-25・PFD の気圧設定（DSP-11） | 各 PFD（4 組）の `GROUP Baro`（副操縦士は `Baro 2`） | 緑の STD（`gen_rotary STD Label`）と、気圧設定の数字と IN./HPA（`GROUP Active: Non-STD`）、白の preselect（`GROUP Pre-Select`） | STD と気圧設定を新しい `GROUP Baro Normal`（新設 `laminar/B747/pfd/capt/baro_alert`・`fo/baro_alert` が 0）に入れ、同じものを琥珀にした `GROUP Baro Alert`（それが 1）を足した：琥珀の STD（`Baro/STDlabelA`）と枠（`Baro/BaroBoxStdA`、STD のとき）、琥珀の数字（純正の `LED_2.18R.xx###0.amber`）・IN./HPA（`Annunciators/BAROrefA`）と枠（`Baro/BaroBoxA`、気圧設定のとき）。preselect はそのまま | FCOM p.995 |
 
 上の 1 行は `docs/overhaul/tools/panel_pfd_baro.lua` で書き換えた（グループ 4 つ）。画像は `docs/overhaul/tools/make_pfd_baro_images.ps1`（STD と IN./HPA は純正の緑の画像の色を琥珀に塗り替え、枠は 2 ピクセル。枠の大きさと位置は機長の outboard の PFD のスクリーンショットで測った：数字と IN. はパネル座標で x 512〜602・y 493〜510、STD は x 535〜569・y 496〜514）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_pfd_baro`。
+
+表示（5-2 段 4c、2026-10-26）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・PLI（DSP-12） | 各 PFD（4 組）の `GROUP TCAS RA Pitch` の後 | なし | 新しい `GROUP PLI`（同じくバンクで回る）に `gen_pointer PLI`：画像 `Artificial Horizon/HrznPLI`（琥珀の括弧 2 つ）、新設 `laminar/B747/pfd/pli` で上へ 6.81 px/°（30° で止める）、新設 `pfd/pli_show` が 1 のとき | FCOM p.974–975、p.977 |
+| 同（DSP-12） | 各 PFD の VR のバグ（`gen_pointer Vr`、副操縦士は `Vr 2`） | RA 10 ft 未満で出す | 新しい `GROUP Vr Bugs` に RA の条件を移し、中に VR（新設 `laminar/B747/airspeed/vr_r` が 0）と同じ形の R（`Vspeeds/VrR`、1）の 2 本 | FCOM p.972 |
+
+上の 2 行は `docs/overhaul/tools/panel_pfd_pli_vr.lua` で書き換えた（4 組）。画像は `docs/overhaul/tools/make_pfd_pli_vr_images.ps1`（PLI は FCOM p.974 の図の比で描き、R は純正の VR の画像から V を消して R を寄せた）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_pfd_pli_vr`。

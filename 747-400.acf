@@ -74493,6 +74493,35 @@ GROUP Captain PFD
             OFFSET 0.000000
 
         END_GROUP
+        GROUP PLI
+          GROUP_ANIMATE_MODE ROTATE
+          GROUP_WIDTH 0
+          GROUP_HEIGHT 0
+          DATAREF sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot
+          POS 315.000000 767.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 45.000000 -45.000000
+          ROTATE_OFFSET_X 0.000000
+          ROTATE_OFFSET_Y 0.000000
+          gen_pointer PLI
+            POS 315.000000 767.000000
+            IMAGE CRT Displays/PFD/Artificial Horizon/HrznPLI
+            DATAREF laminar/B747/pfd/pli
+            SHOW_GREATER 0.500000 laminar/B747/pfd/pli_show
+            HIDE
+            CLIP
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME -999.000000 -204.333335 1.000000
+            KEY_FRAME -30.000000 -204.333335 1.000000
+            KEY_FRAME 30.000000 204.333335 1.000000
+            KEY_FRAME 999.000000 204.333335
+            IS_DRAGGABLE 0
+            IS_VERTICAL 1
+            OFFSET 0.000000
+
+        END_GROUP
         gen_needle Bank Pointer
           POS 315.500000 767.500000
           IMAGE CRT Displays/PFD/Artificial Horizon/HrznBankPtr
@@ -75528,22 +75557,41 @@ GROUP Captain PFD
                 OFFSET 0.000000
 
             END_GROUP
-            gen_pointer Vr
-              POS 126.000000 767.500000
-              IMAGE CRT Displays/PFD/Vspeeds/Vr
-              DATAREF laminar/B747/airspeed/Vr
+            GROUP Vr Bugs
               SHOW_LESS 10.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot
-              HIDE
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 2
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 30.000000 0.000000 1.000000
-              KEY_FRAME 60.000000 120.000000
-              IS_DRAGGABLE 0
-              IS_VERTICAL 1
-              OFFSET 0.000000
+              gen_pointer Vr
+                POS 126.000000 767.500000
+                IMAGE CRT Displays/PFD/Vspeeds/Vr
+                DATAREF laminar/B747/airspeed/Vr
+                SHOW_LESS 0.500000 laminar/B747/airspeed/vr_r
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 2
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 30.000000 0.000000 1.000000
+                KEY_FRAME 60.000000 120.000000
+                IS_DRAGGABLE 0
+                IS_VERTICAL 1
+                OFFSET 0.000000
 
+              gen_pointer Vr R
+                POS 126.000000 767.500000
+                IMAGE CRT Displays/PFD/Vspeeds/VrR
+                DATAREF laminar/B747/airspeed/Vr
+                SHOW_GREATER 0.500000 laminar/B747/airspeed/vr_r
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 2
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 30.000000 0.000000 1.000000
+                KEY_FRAME 60.000000 120.000000
+                IS_DRAGGABLE 0
+                IS_VERTICAL 1
+                OFFSET 0.000000
+
+            END_GROUP
             gen_pointer V1
               POS 126.000000 767.500000
               IMAGE CRT Displays/PFD/Vspeeds/V1
@@ -78474,6 +78522,35 @@ GROUP Captain PFD
             OFFSET 0.000000
 
         END_GROUP
+        GROUP PLI
+          GROUP_ANIMATE_MODE ROTATE
+          GROUP_WIDTH 0
+          GROUP_HEIGHT 0
+          DATAREF sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot
+          POS 315.000000 767.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 45.000000 -45.000000
+          ROTATE_OFFSET_X 0.000000
+          ROTATE_OFFSET_Y 0.000000
+          gen_pointer PLI
+            POS 315.000000 767.000000
+            IMAGE CRT Displays/PFD/Artificial Horizon/HrznPLI
+            DATAREF laminar/B747/pfd/pli
+            SHOW_GREATER 0.500000 laminar/B747/pfd/pli_show
+            HIDE
+            CLIP
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME -999.000000 -204.333335 1.000000
+            KEY_FRAME -30.000000 -204.333335 1.000000
+            KEY_FRAME 30.000000 204.333335 1.000000
+            KEY_FRAME 999.000000 204.333335
+            IS_DRAGGABLE 0
+            IS_VERTICAL 1
+            OFFSET 0.000000
+
+        END_GROUP
         gen_needle Bank Pointer
           POS 315.500000 767.500000
           IMAGE CRT Displays/PFD/Artificial Horizon/HrznBankPtr
@@ -79509,22 +79586,41 @@ GROUP Captain PFD
                 OFFSET 0.000000
 
             END_GROUP
-            gen_pointer Vr
-              POS 126.000000 767.500000
-              IMAGE CRT Displays/PFD/Vspeeds/Vr
-              DATAREF laminar/B747/airspeed/Vr
+            GROUP Vr Bugs
               SHOW_LESS 10.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot
-              HIDE
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 2
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 30.000000 0.000000 1.000000
-              KEY_FRAME 60.000000 120.000000
-              IS_DRAGGABLE 0
-              IS_VERTICAL 1
-              OFFSET 0.000000
+              gen_pointer Vr
+                POS 126.000000 767.500000
+                IMAGE CRT Displays/PFD/Vspeeds/Vr
+                DATAREF laminar/B747/airspeed/Vr
+                SHOW_LESS 0.500000 laminar/B747/airspeed/vr_r
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 2
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 30.000000 0.000000 1.000000
+                KEY_FRAME 60.000000 120.000000
+                IS_DRAGGABLE 0
+                IS_VERTICAL 1
+                OFFSET 0.000000
 
+              gen_pointer Vr R
+                POS 126.000000 767.500000
+                IMAGE CRT Displays/PFD/Vspeeds/VrR
+                DATAREF laminar/B747/airspeed/Vr
+                SHOW_GREATER 0.500000 laminar/B747/airspeed/vr_r
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 2
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 30.000000 0.000000 1.000000
+                KEY_FRAME 60.000000 120.000000
+                IS_DRAGGABLE 0
+                IS_VERTICAL 1
+                OFFSET 0.000000
+
+            END_GROUP
             gen_pointer V1
               POS 126.000000 767.500000
               IMAGE CRT Displays/PFD/Vspeeds/V1
@@ -82445,6 +82541,35 @@ GROUP First Officer PFD
             OFFSET 0.000000
 
         END_GROUP
+        GROUP PLI 2
+          GROUP_ANIMATE_MODE ROTATE
+          GROUP_WIDTH 0
+          GROUP_HEIGHT 0
+          DATAREF sim/cockpit2/gauges/indicators/roll_AHARS_deg_copilot
+          POS 994.000000 767.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 45.000000 -45.000000
+          ROTATE_OFFSET_X 0.000000
+          ROTATE_OFFSET_Y 0.000000
+          gen_pointer PLI 2
+            POS 994.000000 767.000000
+            IMAGE CRT Displays/PFD/Artificial Horizon/HrznPLI
+            DATAREF laminar/B747/pfd/pli
+            SHOW_GREATER 0.500000 laminar/B747/pfd/pli_show
+            HIDE
+            CLIP
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME -999.000000 -204.333335 1.000000
+            KEY_FRAME -30.000000 -204.333335 1.000000
+            KEY_FRAME 30.000000 204.333335 1.000000
+            KEY_FRAME 999.000000 204.333335
+            IS_DRAGGABLE 0
+            IS_VERTICAL 1
+            OFFSET 0.000000
+
+        END_GROUP
         gen_needle Bank Pointer 2
           POS 994.500000 767.500000
           IMAGE CRT Displays/PFD/Artificial Horizon/HrznBankPtr
@@ -84218,22 +84343,41 @@ GROUP First Officer PFD
                 OFFSET 0.000000
 
             END_GROUP
-            gen_pointer Vr 2
-              POS 805.000000 767.500000
-              IMAGE CRT Displays/PFD/Vspeeds/Vr
-              DATAREF laminar/B747/airspeed/Vr
+            GROUP Vr Bugs 2
               SHOW_LESS 10.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_copilot
-              HIDE
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 5
-              BUS_SRC 4
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 30.000000 0.000000 1.000000
-              KEY_FRAME 60.000000 120.000000
-              IS_DRAGGABLE 0
-              IS_VERTICAL 1
-              OFFSET 0.000000
+              gen_pointer Vr 2
+                POS 805.000000 767.500000
+                IMAGE CRT Displays/PFD/Vspeeds/Vr
+                DATAREF laminar/B747/airspeed/Vr
+                SHOW_LESS 0.500000 laminar/B747/airspeed/vr_r
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 5
+                BUS_SRC 4
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 30.000000 0.000000 1.000000
+                KEY_FRAME 60.000000 120.000000
+                IS_DRAGGABLE 0
+                IS_VERTICAL 1
+                OFFSET 0.000000
 
+              gen_pointer Vr R 2
+                POS 805.000000 767.500000
+                IMAGE CRT Displays/PFD/Vspeeds/VrR
+                DATAREF laminar/B747/airspeed/Vr
+                SHOW_GREATER 0.500000 laminar/B747/airspeed/vr_r
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 5
+                BUS_SRC 4
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 30.000000 0.000000 1.000000
+                KEY_FRAME 60.000000 120.000000
+                IS_DRAGGABLE 0
+                IS_VERTICAL 1
+                OFFSET 0.000000
+
+            END_GROUP
             gen_pointer V1 2
               POS 805.000000 767.500000
               IMAGE CRT Displays/PFD/Vspeeds/V1
@@ -86405,6 +86549,35 @@ GROUP First Officer PFD
             OFFSET 0.000000
 
         END_GROUP
+        GROUP PLI 2
+          GROUP_ANIMATE_MODE ROTATE
+          GROUP_WIDTH 0
+          GROUP_HEIGHT 0
+          DATAREF sim/cockpit2/gauges/indicators/roll_AHARS_deg_copilot
+          POS 994.000000 767.000000
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 45.000000 -45.000000
+          ROTATE_OFFSET_X 0.000000
+          ROTATE_OFFSET_Y 0.000000
+          gen_pointer PLI 2
+            POS 994.000000 767.000000
+            IMAGE CRT Displays/PFD/Artificial Horizon/HrznPLI
+            DATAREF laminar/B747/pfd/pli
+            SHOW_GREATER 0.500000 laminar/B747/pfd/pli_show
+            HIDE
+            CLIP
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME -999.000000 -204.333335 1.000000
+            KEY_FRAME -30.000000 -204.333335 1.000000
+            KEY_FRAME 30.000000 204.333335 1.000000
+            KEY_FRAME 999.000000 204.333335
+            IS_DRAGGABLE 0
+            IS_VERTICAL 1
+            OFFSET 0.000000
+
+        END_GROUP
         gen_needle Bank Pointer 2
           POS 994.500000 767.500000
           IMAGE CRT Displays/PFD/Artificial Horizon/HrznBankPtr
@@ -88178,22 +88351,41 @@ GROUP First Officer PFD
                 OFFSET 0.000000
 
             END_GROUP
-            gen_pointer Vr 2
-              POS 805.000000 767.500000
-              IMAGE CRT Displays/PFD/Vspeeds/Vr
-              DATAREF laminar/B747/airspeed/Vr
+            GROUP Vr Bugs 2
               SHOW_LESS 10.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_copilot
-              HIDE
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 5
-              BUS_SRC 4
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 30.000000 0.000000 1.000000
-              KEY_FRAME 60.000000 120.000000
-              IS_DRAGGABLE 0
-              IS_VERTICAL 1
-              OFFSET 0.000000
+              gen_pointer Vr 2
+                POS 805.000000 767.500000
+                IMAGE CRT Displays/PFD/Vspeeds/Vr
+                DATAREF laminar/B747/airspeed/Vr
+                SHOW_LESS 0.500000 laminar/B747/airspeed/vr_r
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 5
+                BUS_SRC 4
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 30.000000 0.000000 1.000000
+                KEY_FRAME 60.000000 120.000000
+                IS_DRAGGABLE 0
+                IS_VERTICAL 1
+                OFFSET 0.000000
 
+              gen_pointer Vr R 2
+                POS 805.000000 767.500000
+                IMAGE CRT Displays/PFD/Vspeeds/VrR
+                DATAREF laminar/B747/airspeed/Vr
+                SHOW_GREATER 0.500000 laminar/B747/airspeed/vr_r
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 5
+                BUS_SRC 4
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 30.000000 0.000000 1.000000
+                KEY_FRAME 60.000000 120.000000
+                IS_DRAGGABLE 0
+                IS_VERTICAL 1
+                OFFSET 0.000000
+
+            END_GROUP
             gen_pointer V1 2
               POS 805.000000 767.500000
               IMAGE CRT Displays/PFD/Vspeeds/V1
