@@ -321,3 +321,12 @@
 | 同（DSP-12） | 各 PFD の VR のバグ（`gen_pointer Vr`、副操縦士は `Vr 2`） | RA 10 ft 未満で出す | 新しい `GROUP Vr Bugs` に RA の条件を移し、中に VR（新設 `laminar/B747/airspeed/vr_r` が 0）と同じ形の R（`Vspeeds/VrR`、1）の 2 本 | FCOM p.972 |
 
 上の 2 行は `docs/overhaul/tools/panel_pfd_pli_vr.lua` で書き換えた（4 組）。画像は `docs/overhaul/tools/make_pfd_pli_vr_images.ps1`（PLI は FCOM p.974 の図の比で描き、R は純正の VR の画像から V を消して R を寄せた）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_pfd_pli_vr`。
+
+表示（5-2 段 4d、2026-10-26）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・FPV（DSP-12） | 各 PFD（4 組）の `GROUP PLI` の後 | なし（FPV のスイッチは押す動きだけ） | 新しい `GROUP FPV`（新設 `laminar/B747/pfd/<席>/fpv_show`）：`GROUP FPV X`（`fpv_x` で左右、ピクセル）の中の `GROUP FPV Y`（`fpv_y` で上下）に、本体 `gen_needle FPV Body`（画像 `Artificial Horizon/HrznFPVbody`、その席のロールで地平線と同じように回る）と足 `gen_rotary FPV Feet`（`HrznFPVfeet`、回らない） | FCOM p.979–980、p.1037 |
+| 同（DSP-04） | 各 PFD の ATT・HDG の旗のグループ（`GROUP CAPT IRS OFF PFD`・`FO IRS OFF PFD`） | ATT・HDG の旗と固定の飛行機の記号 | FPV の旗 `gen_rotary FPV X`（新しい `Failure Flags/fpvX`、`pfd/<席>/fpv_flag`）、PITCH・ROLL の旗 `gen_rotary PITCH X`・`ROLL X`（純正の `Failure Flags/pitch`・`roll`、`pfd/pitch_flag`・`roll_flag`）を足した | FCOM p.975、p.999 |
+
+上の 2 行は `docs/overhaul/tools/panel_pfd_fpv.lua` で書き換えた（4 組、追加だけ）。画像は `docs/overhaul/tools/make_pfd_fpv_images.ps1`。旗の位置は FCOM の図から比で取った（推定：FPV は姿勢表示の中心から左 99・上 71、PITCH は左 108・下 125、ROLL は右 113・下 125）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_pfd_fpv`。

@@ -246,10 +246,12 @@ B747DR_efis_baro_fo_preselect                   = deferred_dataref("laminar/B747
 B747DR_efis_baro_alt_ref_fo                     = deferred_dataref("laminar/B747/efis/baro_ref/fo", "number")
 
 B747DR_efis_fpv_capt_switch_pos                 = deferred_dataref("laminar/B747/efis/fpv/capt/switch_pos", "number")
+B747DR_efis_fpv_capt_selected                   = deferred_dataref("laminar/B747/efis/fpv/capt/selected", "number")
 B747DR_efis_meters_capt_switch_pos              = deferred_dataref("laminar/B747/efis/meters/capt/switch_pos", "number")
 B747DR_efis_meters_capt_selected                = deferred_dataref("laminar/B747/efis/meters/capt/selected", "number")
 
 B747DR_efis_fpv_fo_switch_pos                   = deferred_dataref("laminar/B747/efis/fpv/fo/switch_pos", "number")
+B747DR_efis_fpv_fo_selected                     = deferred_dataref("laminar/B747/efis/fpv/fo/selected", "number")
 B747DR_efis_meters_fo_switch_pos                = deferred_dataref("laminar/B747/efis/meters/fo/switch_pos", "number")
 B747DR_efis_meters_fo_selected                  = deferred_dataref("laminar/B747/efis/meters/fo/selected", "number")
 
@@ -877,9 +879,12 @@ end
 
 
 
+-- the FPV switch: each push shows or removes the PFD's flight path vector
+-- (FCOM p.1037; 5-2 step 4d: it did not latch)
 function B747_efis_fpv_capt_switch_CMDhandler(phase, duration)
     if phase == 0 then
         B747DR_efis_fpv_capt_switch_pos = 1
+        B747DR_efis_fpv_capt_selected = 1 - B747DR_efis_fpv_capt_selected
     elseif phase == 2 then
         B747DR_efis_fpv_capt_switch_pos = 0
     end
@@ -1044,6 +1049,7 @@ end
 function B747_efis_fpv_fo_switch_CMDhandler(phase, duration)
     if phase == 0 then
         B747DR_efis_fpv_fo_switch_pos = 1
+        B747DR_efis_fpv_fo_selected = 1 - B747DR_efis_fpv_fo_selected
     elseif phase == 2 then
         B747DR_efis_fpv_fo_switch_pos = 0
     end

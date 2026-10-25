@@ -91,10 +91,12 @@ B747DR_efis_baro_fo_preselect                   = deferred_dataref("laminar/B747
 B747DR_efis_baro_alt_ref_fo                     = deferred_dataref("laminar/B747/efis/baro_ref/fo", "number")
 
 B747DR_efis_fpv_capt_switch_pos                 = deferred_dataref("laminar/B747/efis/fpv/capt/switch_pos", "number")
+B747DR_efis_fpv_capt_selected                   = deferred_dataref("laminar/B747/efis/fpv/capt/selected", "number")
 B747DR_efis_meters_capt_switch_pos              = deferred_dataref("laminar/B747/efis/meters/capt/switch_pos", "number")
 B747DR_efis_meters_capt_selected                = deferred_dataref("laminar/B747/efis/meters/capt/selected", "number")
 
 B747DR_efis_fpv_fo_switch_pos                   = deferred_dataref("laminar/B747/efis/fpv/fo/switch_pos", "number")
+B747DR_efis_fpv_fo_selected                     = deferred_dataref("laminar/B747/efis/fpv/fo/selected", "number")
 B747DR_efis_meters_fo_switch_pos                = deferred_dataref("laminar/B747/efis/meters/fo/switch_pos", "number")
 B747DR_efis_meters_fo_selected                  = deferred_dataref("laminar/B747/efis/meters/fo/selected", "number")
 
@@ -121,6 +123,19 @@ B747DR_pfd_baro_alert_fo                        = deferred_dataref("laminar/B747
 B747DR_pfd_pli                                  = deferred_dataref("laminar/B747/pfd/pli", "number")
 B747DR_pfd_pli_show                             = deferred_dataref("laminar/B747/pfd/pli_show", "number")
 B747DR_airspeed_vr_r                            = deferred_dataref("laminar/B747/airspeed/vr_r", "number")
+-- the flight path vector (step 4d): shown, the FPV flag, its place on the
+-- PFD (pixels from the attitude display's centre: x right, y up); the
+-- PITCH and ROLL disagree flags (both PFDs)
+B747DR_pfd_fpv_show_capt                        = deferred_dataref("laminar/B747/pfd/capt/fpv_show", "number")
+B747DR_pfd_fpv_flag_capt                        = deferred_dataref("laminar/B747/pfd/capt/fpv_flag", "number")
+B747DR_pfd_fpv_x_capt                           = deferred_dataref("laminar/B747/pfd/capt/fpv_x", "number")
+B747DR_pfd_fpv_y_capt                           = deferred_dataref("laminar/B747/pfd/capt/fpv_y", "number")
+B747DR_pfd_fpv_show_fo                          = deferred_dataref("laminar/B747/pfd/fo/fpv_show", "number")
+B747DR_pfd_fpv_flag_fo                          = deferred_dataref("laminar/B747/pfd/fo/fpv_flag", "number")
+B747DR_pfd_fpv_x_fo                             = deferred_dataref("laminar/B747/pfd/fo/fpv_x", "number")
+B747DR_pfd_fpv_y_fo                             = deferred_dataref("laminar/B747/pfd/fo/fpv_y", "number")
+B747DR_pfd_pitch_flag                           = deferred_dataref("laminar/B747/pfd/pitch_flag", "number")
+B747DR_pfd_roll_flag                            = deferred_dataref("laminar/B747/pfd/roll_flag", "number")
 B747DR_nd_fo_heading_bug            			= deferred_dataref("laminar/B747/nd/mode/fo/show_heading_bug", "number")
 B747DR_nd_capt_heading_bug          			= deferred_dataref("laminar/B747/nd/mode/capt/show_heading_bug", "number")
 

@@ -74522,6 +74522,66 @@ GROUP Captain PFD
             OFFSET 0.000000
 
         END_GROUP
+        GROUP FPV
+          SHOW_GREATER 0.500000 laminar/B747/pfd/capt/fpv_show
+          GROUP FPV X
+            GROUP_ANIMATE_MODE TRANSLATE
+            GROUP_WIDTH 100
+            GROUP_HEIGHT 100
+            DATAREF laminar/B747/pfd/capt/fpv_x
+            POS 315.000000 767.000000
+            KEY_FRAME -300.000000 -300.000000 1.000000
+            KEY_FRAME 300.000000 300.000000
+            IS_VERTICAL 0
+            OFFSET 0.000000
+            GROUP FPV Y
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 100
+              GROUP_HEIGHT 100
+              DATAREF laminar/B747/pfd/capt/fpv_y
+              POS 315.000000 767.000000
+              KEY_FRAME -300.000000 -300.000000 1.000000
+              KEY_FRAME 300.000000 300.000000
+              IS_VERTICAL 1
+              OFFSET 0.000000
+              gen_needle FPV Body
+                POS 315.000000 767.000000
+                IMAGE CRT Displays/PFD/Artificial Horizon/HrznFPVbody
+                DATAREF sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot
+                HIDE
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 2
+                BUS_SRC 2
+                KEY_FRAME 0.000000 90.000000 1.000000
+                KEY_FRAME 45.000000 45.000000
+                IS_DRAGGABLE 0
+                OFFSET 0.000000
+
+              gen_rotary FPV Feet
+                POS 315.000000 767.000000
+                IMAGE CRT Displays/PFD/Artificial Horizon/HrznFPVfeet
+                DATAREF 
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 2
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+            END_GROUP
+          END_GROUP
+        END_GROUP
         gen_needle Bank Pointer
           POS 315.500000 767.500000
           IMAGE CRT Displays/PFD/Artificial Horizon/HrznBankPtr
@@ -78220,6 +78280,72 @@ GROUP Captain PFD
     END_GROUP
     GROUP CAPT IRS OFF PFD
       HIDE
+      gen_rotary FPV X
+        POS 216.000000 838.000000
+        IMAGE CRT Displays/PFD/Failure Flags/fpvX
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/capt/fpv_flag
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 2
+        BUS_SRC 2
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary PITCH X
+        POS 207.000000 642.000000
+        IMAGE CRT Displays/PFD/Failure Flags/pitch
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/pitch_flag
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 2
+        BUS_SRC 2
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary ROLL X
+        POS 428.000000 642.000000
+        IMAGE CRT Displays/PFD/Failure Flags/roll
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/roll_flag
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 2
+        BUS_SRC 2
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
       gen_rotary Airplane Symbol
         POS 315.500000 755.500000
         IMAGE CRT Displays/PFD/Artificial Horizon/HrznArplnSymbol
@@ -78551,6 +78677,66 @@ GROUP Captain PFD
             OFFSET 0.000000
 
         END_GROUP
+        GROUP FPV
+          SHOW_GREATER 0.500000 laminar/B747/pfd/capt/fpv_show
+          GROUP FPV X
+            GROUP_ANIMATE_MODE TRANSLATE
+            GROUP_WIDTH 100
+            GROUP_HEIGHT 100
+            DATAREF laminar/B747/pfd/capt/fpv_x
+            POS 315.000000 767.000000
+            KEY_FRAME -300.000000 -300.000000 1.000000
+            KEY_FRAME 300.000000 300.000000
+            IS_VERTICAL 0
+            OFFSET 0.000000
+            GROUP FPV Y
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 100
+              GROUP_HEIGHT 100
+              DATAREF laminar/B747/pfd/capt/fpv_y
+              POS 315.000000 767.000000
+              KEY_FRAME -300.000000 -300.000000 1.000000
+              KEY_FRAME 300.000000 300.000000
+              IS_VERTICAL 1
+              OFFSET 0.000000
+              gen_needle FPV Body
+                POS 315.000000 767.000000
+                IMAGE CRT Displays/PFD/Artificial Horizon/HrznFPVbody
+                DATAREF sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot
+                HIDE
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 2
+                BUS_SRC 2
+                KEY_FRAME 0.000000 90.000000 1.000000
+                KEY_FRAME 45.000000 45.000000
+                IS_DRAGGABLE 0
+                OFFSET 0.000000
+
+              gen_rotary FPV Feet
+                POS 315.000000 767.000000
+                IMAGE CRT Displays/PFD/Artificial Horizon/HrznFPVfeet
+                DATAREF 
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 2
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+            END_GROUP
+          END_GROUP
+        END_GROUP
         gen_needle Bank Pointer
           POS 315.500000 767.500000
           IMAGE CRT Displays/PFD/Artificial Horizon/HrznBankPtr
@@ -82258,6 +82444,72 @@ GROUP Captain PFD
       KEY_FRAME 1.000000 -683.000000
       IS_VERTICAL 1
       OFFSET 0.000000
+      gen_rotary FPV X
+        POS 216.000000 838.000000
+        IMAGE CRT Displays/PFD/Failure Flags/fpvX
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/capt/fpv_flag
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 2
+        BUS_SRC 2
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary PITCH X
+        POS 207.000000 642.000000
+        IMAGE CRT Displays/PFD/Failure Flags/pitch
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/pitch_flag
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 2
+        BUS_SRC 2
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary ROLL X
+        POS 428.000000 642.000000
+        IMAGE CRT Displays/PFD/Failure Flags/roll
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/roll_flag
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 2
+        BUS_SRC 2
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
       gen_rotary Airplane Symbol
         POS 315.500000 755.500000
         IMAGE CRT Displays/PFD/Artificial Horizon/HrznArplnSymbol
@@ -82569,6 +82821,65 @@ GROUP First Officer PFD
             IS_VERTICAL 1
             OFFSET 0.000000
 
+        END_GROUP
+        GROUP FPV 2
+          SHOW_GREATER 0.500000 laminar/B747/pfd/fo/fpv_show
+          GROUP FPV X 2
+            GROUP_ANIMATE_MODE TRANSLATE
+            GROUP_WIDTH 100
+            GROUP_HEIGHT 100
+            DATAREF laminar/B747/pfd/fo/fpv_x
+            POS 994.000000 767.000000
+            KEY_FRAME -300.000000 -300.000000 1.000000
+            KEY_FRAME 300.000000 300.000000
+            IS_VERTICAL 0
+            OFFSET 0.000000
+            GROUP FPV Y 2
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 100
+              GROUP_HEIGHT 100
+              DATAREF laminar/B747/pfd/fo/fpv_y
+              POS 994.000000 767.000000
+              KEY_FRAME -300.000000 -300.000000 1.000000
+              KEY_FRAME 300.000000 300.000000
+              IS_VERTICAL 1
+              OFFSET 0.000000
+              gen_needle FPV Body 2
+                POS 994.000000 767.000000
+                IMAGE CRT Displays/PFD/Artificial Horizon/HrznFPVbody
+                DATAREF sim/cockpit2/gauges/indicators/roll_AHARS_deg_copilot
+                HIDE
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 5
+                BUS_SRC 4
+                KEY_FRAME 0.000000 90.000000 1.000000
+                KEY_FRAME 45.000000 45.000000
+                IS_DRAGGABLE 0
+                OFFSET 0.000000
+
+              gen_rotary FPV Feet 2
+                POS 994.000000 767.000000
+                IMAGE CRT Displays/PFD/Artificial Horizon/HrznFPVfeet
+                DATAREF 
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 5
+                BUS_SRC 4
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+            END_GROUP
+          END_GROUP
         END_GROUP
         gen_needle Bank Pointer 2
           POS 994.500000 767.500000
@@ -86249,6 +86560,69 @@ GROUP First Officer PFD
     END_GROUP
     GROUP FO IRS OFF PFD
       HIDE
+      gen_rotary FPV X 2
+        POS 895.000000 838.000000
+        IMAGE CRT Displays/PFD/Failure Flags/fpvX
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/fo/fpv_flag
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 5
+        BUS_SRC 4
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary PITCH X 2
+        POS 886.000000 642.000000
+        IMAGE CRT Displays/PFD/Failure Flags/pitch
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/pitch_flag
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 5
+        BUS_SRC 4
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary ROLL X 2
+        POS 1107.000000 642.000000
+        IMAGE CRT Displays/PFD/Failure Flags/roll
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/roll_flag
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 5
+        BUS_SRC 4
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
       gen_rotary Airplane Symbol 2
         POS 994.500000 755.500000
         IMAGE CRT Displays/PFD/Artificial Horizon/HrznArplnSymbol
@@ -86578,6 +86952,65 @@ GROUP First Officer PFD
             OFFSET 0.000000
 
         END_GROUP
+        GROUP FPV 2
+          SHOW_GREATER 0.500000 laminar/B747/pfd/fo/fpv_show
+          GROUP FPV X 2
+            GROUP_ANIMATE_MODE TRANSLATE
+            GROUP_WIDTH 100
+            GROUP_HEIGHT 100
+            DATAREF laminar/B747/pfd/fo/fpv_x
+            POS 994.000000 767.000000
+            KEY_FRAME -300.000000 -300.000000 1.000000
+            KEY_FRAME 300.000000 300.000000
+            IS_VERTICAL 0
+            OFFSET 0.000000
+            GROUP FPV Y 2
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 100
+              GROUP_HEIGHT 100
+              DATAREF laminar/B747/pfd/fo/fpv_y
+              POS 994.000000 767.000000
+              KEY_FRAME -300.000000 -300.000000 1.000000
+              KEY_FRAME 300.000000 300.000000
+              IS_VERTICAL 1
+              OFFSET 0.000000
+              gen_needle FPV Body 2
+                POS 994.000000 767.000000
+                IMAGE CRT Displays/PFD/Artificial Horizon/HrznFPVbody
+                DATAREF sim/cockpit2/gauges/indicators/roll_AHARS_deg_copilot
+                HIDE
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 5
+                BUS_SRC 4
+                KEY_FRAME 0.000000 90.000000 1.000000
+                KEY_FRAME 45.000000 45.000000
+                IS_DRAGGABLE 0
+                OFFSET 0.000000
+
+              gen_rotary FPV Feet 2
+                POS 994.000000 767.000000
+                IMAGE CRT Displays/PFD/Artificial Horizon/HrznFPVfeet
+                DATAREF 
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 5
+                BUS_SRC 4
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+            END_GROUP
+          END_GROUP
+        END_GROUP
         gen_needle Bank Pointer 2
           POS 994.500000 767.500000
           IMAGE CRT Displays/PFD/Artificial Horizon/HrznBankPtr
@@ -90257,6 +90690,69 @@ GROUP First Officer PFD
     END_GROUP
     GROUP FO IRS OFF PFD
       HIDE
+      gen_rotary FPV X 2
+        POS 895.000000 838.000000
+        IMAGE CRT Displays/PFD/Failure Flags/fpvX
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/fo/fpv_flag
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 5
+        BUS_SRC 4
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary PITCH X 2
+        POS 886.000000 642.000000
+        IMAGE CRT Displays/PFD/Failure Flags/pitch
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/pitch_flag
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 5
+        BUS_SRC 4
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary ROLL X 2
+        POS 1107.000000 642.000000
+        IMAGE CRT Displays/PFD/Failure Flags/roll
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/roll_flag
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 5
+        BUS_SRC 4
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
       gen_rotary Airplane Symbol 2
         POS 994.500000 755.500000
         IMAGE CRT Displays/PFD/Artificial Horizon/HrznArplnSymbol
