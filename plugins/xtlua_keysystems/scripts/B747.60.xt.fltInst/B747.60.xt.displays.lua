@@ -13,6 +13,10 @@
 -- (laminar/B747/pfd/capt/*, fo/*) out for the panel. Step 4b: each side's
 -- barometric setting, altitude and the MCP altitude, and the FMC's
 -- transition altitude in; the amber box (pfd/capt|fo/baro_alert) out.
+-- Step 4d: the FPV switches' selection, X-Plane's flight path, track and
+-- each side's attitude in; the flight path vector (pfd/capt|fo/fpv_show,
+-- fpv_flag, fpv_x, fpv_y) and the PITCH and ROLL flags (pfd/pitch_flag,
+-- roll_flag) out.
 -- dofile'd from B747.60.xt.fltInst.lua after B747.60.xt.fltInst02.lua.
 
 dofile("B747.60.display_model.lua")
@@ -56,6 +60,25 @@ B747DR_dsp_mcp_alt              = find_dataref("laminar/B747/autopilot/heading/a
 B747DR_dsp_fms_data             = find_dataref("laminar/B747/fms/data")
 B747DR_dsp_pfd_baro_alert_capt  = find_dataref("laminar/B747/pfd/capt/baro_alert")
 B747DR_dsp_pfd_baro_alert_fo    = find_dataref("laminar/B747/pfd/fo/baro_alert")
+simDR_dsp_vpath                 = find_dataref("sim/flightmodel/position/vpath")
+simDR_dsp_hpath                 = find_dataref("sim/flightmodel/position/hpath")
+simDR_dsp_psi                   = find_dataref("sim/flightmodel/position/psi")
+simDR_dsp_pitch_pilot           = find_dataref("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot")
+simDR_dsp_pitch_copilot         = find_dataref("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_copilot")
+simDR_dsp_roll_pilot            = find_dataref("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot")
+simDR_dsp_roll_copilot          = find_dataref("sim/cockpit2/gauges/indicators/roll_AHARS_deg_copilot")
+B747DR_dsp_fpv_sel_capt         = find_dataref("laminar/B747/efis/fpv/capt/selected")
+B747DR_dsp_fpv_sel_fo           = find_dataref("laminar/B747/efis/fpv/fo/selected")
+B747DR_dsp_fpv_show_capt        = find_dataref("laminar/B747/pfd/capt/fpv_show")
+B747DR_dsp_fpv_flag_capt        = find_dataref("laminar/B747/pfd/capt/fpv_flag")
+B747DR_dsp_fpv_x_capt           = find_dataref("laminar/B747/pfd/capt/fpv_x")
+B747DR_dsp_fpv_y_capt           = find_dataref("laminar/B747/pfd/capt/fpv_y")
+B747DR_dsp_fpv_show_fo          = find_dataref("laminar/B747/pfd/fo/fpv_show")
+B747DR_dsp_fpv_flag_fo          = find_dataref("laminar/B747/pfd/fo/fpv_flag")
+B747DR_dsp_fpv_x_fo             = find_dataref("laminar/B747/pfd/fo/fpv_x")
+B747DR_dsp_fpv_y_fo             = find_dataref("laminar/B747/pfd/fo/fpv_y")
+B747DR_dsp_pitch_flag           = find_dataref("laminar/B747/pfd/pitch_flag")
+B747DR_dsp_roll_flag            = find_dataref("laminar/B747/pfd/roll_flag")
 
 -- the EIU selectors' positions: Captain and centre L, AUTO, C, R; F/O L, C, AUTO, R
 local EIU_CAPT = {[0] = DM.EIU_L, DM.SEL_AUTO, DM.EIU_C, DM.EIU_R}
@@ -121,6 +144,41 @@ local function pfd_sources(fmc)
     if B747DR_dsp_pfd_vsi_fo ~= v then B747DR_dsp_pfd_vsi_fo = v end
     v = f.vert and 1 or 0
     if B747DR_dsp_pfd_vert_fo ~= v then B747DR_dsp_pfd_vert_fo = v end
+
+    -- the flight path vector (step 4d): selected with the FPV switch; from
+    -- the selected IRU's inertial data (NAV), else the FPV flag. X-Plane's
+    -- flight path and track stand for the IRU's, each PFD's attitude for
+    -- the frame
+    local drift = (simDR_dsp_hpath - simDR_dsp_psi + 180) % 360 - 180
+    local sel = B747DR_dsp_fpv_sel_capt > 0.5
+    local ok = pin.nav_valid[pin.irs[1]]
+    v = (sel and ok) and 1 or 0
+    if B747DR_dsp_fpv_show_capt ~= v then B747DR_dsp_fpv_show_capt = v end
+    v = (sel and not ok) and 1 or 0
+    if B747DR_dsp_fpv_flag_capt ~= v then B747DR_dsp_fpv_flag_capt = v end
+    local x, y = PM.fpv_place(simDR_dsp_pitch_pilot, simDR_dsp_roll_pilot, simDR_dsp_vpath, drift)
+    if B747DR_dsp_fpv_x_capt ~= x then B747DR_dsp_fpv_x_capt = x end
+    if B747DR_dsp_fpv_y_capt ~= y then B747DR_dsp_fpv_y_capt = y end
+    sel = B747DR_dsp_fpv_sel_fo > 0.5
+    ok = pin.nav_valid[pin.irs[2]]
+    v = (sel and ok) and 1 or 0
+    if B747DR_dsp_fpv_show_fo ~= v then B747DR_dsp_fpv_show_fo = v end
+    v = (sel and not ok) and 1 or 0
+    if B747DR_dsp_fpv_flag_fo ~= v then B747DR_dsp_fpv_flag_fo = v end
+    x, y = PM.fpv_place(simDR_dsp_pitch_copilot, simDR_dsp_roll_copilot, simDR_dsp_vpath, drift)
+    if B747DR_dsp_fpv_x_fo ~= x then B747DR_dsp_fpv_x_fo = x end
+    if B747DR_dsp_fpv_y_fo ~= y then B747DR_dsp_fpv_y_fo = y end
+
+    -- the PITCH and ROLL flags (step 4d): both attitudes shown and apart
+    local dp, dr = false, false
+    if c.att and f.att then
+        dp, dr = PM.attitude_disagree(simDR_dsp_pitch_pilot, simDR_dsp_roll_pilot,
+            simDR_dsp_pitch_copilot, simDR_dsp_roll_copilot)
+    end
+    v = dp and 1 or 0
+    if B747DR_dsp_pitch_flag ~= v then B747DR_dsp_pitch_flag = v end
+    v = dr and 1 or 0
+    if B747DR_dsp_roll_flag ~= v then B747DR_dsp_roll_flag = v end
 end
 
 -- the barometric setting's amber box at the transition (step 4b): the FMC's

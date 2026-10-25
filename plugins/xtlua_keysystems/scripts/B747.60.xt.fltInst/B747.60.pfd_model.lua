@@ -4,6 +4,8 @@
 -- flags. The values themselves are X-Plane's pilot and copilot AHRS (they
 -- stand for each pilot's IRU, as for >ATTITUDE and >HEADING). Step 4b: the
 -- barometric setting's amber box at the transition altitude (baro_alert).
+-- Step 4d: the flight path vector's place (fpv_place) and the PITCH and
+-- ROLL flags (attitude_disagree).
 -- Logic and sources: docs/overhaul/notes/ATA-31.md §15-§17 (FCOM p.995-999,
 -- p.1044, p.1228; ATA31 p.15-17).
 --
@@ -96,6 +98,35 @@ function M.baro_alert(std, alt_ft, mcp_ft, trans_alt_ft, trans_lvl_ft)
         return mcp_ft < trans_alt_ft and alt_ft < trans_lvl_ft - M.BARO_MARGIN_FT
     end
     return mcp_ft > trans_alt_ft and alt_ft > trans_alt_ft + M.BARO_MARGIN_FT
+end
+
+-- the flight path vector's place (step 4d; FCOM p.980 (10.10.18)): the
+-- flight path angle above the horizon and the drift angle across the pitch
+-- scale's centreline, both in the attitude display's frame, which turns
+-- with the bank (right bank: the frame turns anticlockwise). Returned as
+-- panel pixels from the display's centre (x right, y up), 6.81 a degree as
+-- the pitch scale (the RA's pitch limits, panel_pfd_tcas.lua), held inside
+-- the attitude display (estimate)
+M.PX_PER_DEG = 232 / 34.06199
+M.FPV_MAX_X, M.FPV_MAX_Y = 110, 140
+function M.fpv_place(pitch, roll, fpa, drift)
+    local v = (fpa - pitch) * M.PX_PER_DEG
+    local h = drift * M.PX_PER_DEG
+    local r = math.rad(roll)
+    local c, s = math.cos(r), math.sin(r)
+    local x = math.max(-M.FPV_MAX_X, math.min(M.FPV_MAX_X, h * c - v * s))
+    local y = math.max(-M.FPV_MAX_Y, math.min(M.FPV_MAX_Y, h * s + v * c))
+    return x, y
+end
+
+-- the PITCH and ROLL flags (FCOM p.975, p.977): the Captain's and the F/O's
+-- attitudes apart by the >ATTITUDE comparison's 3 degrees (FCOM p.1197;
+-- the flags' own threshold is not given: estimate)
+M.ATT_DISAGREE_DEG = 3
+function M.attitude_disagree(pitch1, roll1, pitch2, roll2)
+    local dp = math.abs(pitch1 - pitch2)
+    local dr = math.abs((roll1 - roll2 + 180) % 360 - 180)
+    return dp >= M.ATT_DISAGREE_DEG, dr >= M.ATT_DISAGREE_DEG
 end
 
 return M

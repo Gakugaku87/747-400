@@ -427,3 +427,13 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - グルー：速度テープのグルーが迎角（`sim/flightmodel/position/alpha`）を渡し、新設 `pfd/pli`（飛行機の記号から上へ何度）・`pfd/pli_show`・`airspeed/vr_r` を書く。PLI は両席同じ値。
 - パネル（道具 `docs/overhaul/tools/panel_pfd_pli_vr.lua`、画像 `make_pfd_pli_vr_images.ps1`、ACF_DIFF.md §5）：各 PFD の `GROUP TCAS RA Pitch`（バンクで回る）の後に同じ作りの `GROUP PLI`（ポインター 1 本、RA のピッチの限界と同じ 6.81 px/°、30° で止める）。VR のバグは `GROUP Vr Bugs`（RA の条件をグループへ）に入れ、`vr_r` で VR と R の画像を切り替える。PLI の画像は飛行機の記号と同じ幅で、翼の内側 38 % の上に、棒・3 本の斜めの刻み・内側の端の下向きの脚（FCOM p.974 の図の比）。高さは 480（CLIP のポインターは画像の場所の中しか描かないので、動く範囲を含める。最初の高さ 40 の絵は出なかった）。
 - 試験：最小速度のモデル 9 件（計 52）、速度テープのモジュール 6 件（計 37）。X-Plane の新しいシナリオ `s56_pfd_pli`・`s57_pfd_vr`。
+
+## 19. 段 4d の実装（2026-10-26 未明：FPV と FPV・PITCH・ROLL の旗）
+
+- FPV のスイッチ（FCOM p.1037：押すと PFD の飛行経路ベクトル）：前は押している間だけ `efis/fpv/<席>/switch_pos` が 1 になるだけで、FPV は無かった。押すたびに新設 `efis/fpv/<席>/selected` を入れ切りする（fltInst02 のコマンドの処理）。
+- FPV（FCOM p.980 (10.10.18)）：飛行経路角だけ地平線から上、偏流角だけピッチの目盛の中心線から横。どちらも姿勢表示の枠（バンクで回る）の中で測る。`B747.60.pfd_model.lua` の `fpv_place` が、その席の姿勢（X-Plane の AHRS）と、X-Plane の飛行経路角（`vpath`）・偏流（航跡 `hpath` − 方位 `psi`）から、姿勢表示の中心からのパネルのピクセル（x 右、y 上：ピッチの目盛と同じ 6.81 px/°）を出し、姿勢表示の中に止める（推定）。選んだ IRU が NAV（慣性のデータ）なら出し、そうでなければ FPV の旗（FCOM p.999）。
+- 109・405 の CRT の形（FCOM p.979 の図）：丸と左右の腕、丸の下から斜めに下りて水平になる足。「腕は地平線と平行、足は飛行機の記号と平行（CRT）」なので、腕のある本体はバンクで回し（地平線と同じ針）、足は回さない。
+- PITCH・ROLL の旗（FCOM p.975・p.977：両席の PFD の姿勢が食い違う）：両席の姿勢が出ていて、ピッチかロールが 3° 以上離れたとき（>ATTITUDE の比べ方と同じ値：旗の値は資料に無いので推定）。両 PFD に出す。画像は純正にあった琥珀の `Failure Flags/pitch`・`roll`（パネルで使われていなかった）。
+- グルー：表示器と EIU のグルー。書くもの：新設 `pfd/<席>/fpv_show`・`fpv_flag`・`fpv_x`・`fpv_y`、`pfd/pitch_flag`・`roll_flag`。
+- パネル（道具 `docs/overhaul/tools/panel_pfd_fpv.lua`、画像 `make_pfd_fpv_images.ps1`、ACF_DIFF.md §5）：各 PFD の `GROUP PLI` の後に `GROUP FPV`（`fpv_show`）。中は左右へ動く `GROUP FPV X`（`fpv_x`）の中に上下へ動く `GROUP FPV Y`（`fpv_y`）、その中に本体（地平線の針の写しで、ピッチの動き `DEFLECT_*` は外した）と足。ATT・HDG の旗のグループに、FPV の旗（ATT の旗と同じ形の新しい画像）と PITCH・ROLL の旗。旗の位置は FCOM p.999・p.974 の図から、ATT の旗と飛行機の記号の大きさで比を取った（推定）。
+- 試験：PFD のモデル 9 件（計 37）、表示器のモジュール 13 件（計 85）。X-Plane の新しいシナリオ `s58_pfd_fpv`。
