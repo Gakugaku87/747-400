@@ -91,6 +91,11 @@ T.check(not out.failed and out.xpdr_msg[1], "TCAS works, >TRANSPONDER L stays")
 inp.xpdr_power[2] = false
 run()
 T.check(out.xpdr_msg[2] and out.xp_mode == M.XP_OFF, "R without power: >TRANSPONDER R, no transponder (estimate)")
+T.check(out.panel_on, "the panel's code display on the AC standby bus (ATA34_1 p.584)")
+inp.xpdr_power[1] = false
+run()
+T.check(not out.panel_on, "neither bus: the code display is dark")
+inp.xpdr_power[1] = true
 inp.xpdr_fail[1], inp.xpdr_power[2], inp.xpdr_r = false, true, false
 run()
 T.check(not out.failed and not out.xpdr_msg[1] and not out.xpdr_msg[2], "both back")

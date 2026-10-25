@@ -96,6 +96,7 @@ function M.new()
         out = {
             xp_mode = M.XP_STBY,
             xpdr_msg = pair(false),     -- >TRANSPONDER L, R
+            panel_on = true,            -- the transponder panel's code display has power
             failed = false, operating = false, ra_mode = false,
             sym = {}, n = 0,            -- each target's ND symbol
             ta = false, ra = false,     -- a TA / an RA is shown (the ND's TRAFFIC)
@@ -154,10 +155,12 @@ end
 function M.update(s, inp, dt)
     local out = s.out
 
-    -- the transponders (FCOM p.1218, p.1231)
+    -- the transponders (FCOM p.1218, p.1231); the ATC/TCAS panel and its code
+    -- display on the AC standby bus and AC bus 2 (ATA34_1 p.584)
     local xpdr_ok1 = inp.xpdr_power[1] and not inp.xpdr_fail[1]
     local xpdr_ok2 = inp.xpdr_power[2] and not inp.xpdr_fail[2]
     out.xpdr_msg[1], out.xpdr_msg[2] = not xpdr_ok1, not xpdr_ok2
+    out.panel_on = inp.xpdr_power[1] or inp.xpdr_power[2]
     local xpdr_ok = xpdr_ok1
     if inp.xpdr_r then xpdr_ok = xpdr_ok2 end
 

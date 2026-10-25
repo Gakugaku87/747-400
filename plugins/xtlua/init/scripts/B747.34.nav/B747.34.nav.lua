@@ -132,6 +132,7 @@ B747DR_gpws_fail                = deferred_dataref("laminar/B747/gpws/fail", "nu
 -- switches add one for each). laminar/B747/nd/capt|fo/tfc and tcas_off are
 -- the panel's, created by xtlua_keysystems.
 B747DR_xpdr_fail                = deferred_dataref("laminar/B747/xpdr/fail", "array[2]")
+B747DR_xpdr_panel_on            = deferred_dataref("laminar/B747/xpdr/panel_on", "number")
 B747DR_tcas_fail                = deferred_dataref("laminar/B747/tcas/fail", "number")
 B747DR_tcas_voice               = deferred_dataref("laminar/B747/tcas/voice", "number")
 B747DR_tcas_last_voice          = deferred_dataref("laminar/B747/tcas/last_voice", "number")

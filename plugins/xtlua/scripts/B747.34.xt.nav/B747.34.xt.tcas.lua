@@ -42,6 +42,7 @@ B747DR_tcas_tfc_pushes_capt     = find_dataref("laminar/B747/nd/traffic/capt/pus
 B747DR_tcas_tfc_pushes_fo       = find_dataref("laminar/B747/nd/traffic/fo/pushes")
 B747DR_tcas_CAS_advisory        = find_dataref("laminar/B747/CAS/advisory_status")
 B747DR_tcas_xpdr_fail           = find_dataref("laminar/B747/xpdr/fail")
+B747DR_tcas_xpdr_panel_on_out   = find_dataref("laminar/B747/xpdr/panel_on")
 B747DR_tcas_fail_in             = find_dataref("laminar/B747/tcas/fail")
 B747DR_tcas_voice_out           = find_dataref("laminar/B747/tcas/voice")
 B747DR_tcas_last_voice_out      = find_dataref("laminar/B747/tcas/last_voice")
@@ -142,12 +143,14 @@ function B747_tcas()
 
     local out = TC.update(tcas_state, inp, SIM_PERIOD)
     if simDR_tcas_xpdr_mode ~= out.xp_mode then simDR_tcas_xpdr_mode = out.xp_mode end
+    local v = B747_nav_flag(out.panel_on)
+    if B747DR_tcas_xpdr_panel_on_out ~= v then B747DR_tcas_xpdr_panel_on_out = v end
     if B747DR_tcas_voice_out ~= out.voice then
         B747DR_tcas_voice_out = out.voice
         if out.voice ~= TC.V_NONE then B747DR_tcas_last_voice_out = out.voice end
     end
     for j = 1, TARGETS do B747_nav_put(B747DR_tcas_sym_out, j, out.sym[j] or TC.SYM_NONE) end
-    local v = B747_nav_flag(out.operating)
+    v = B747_nav_flag(out.operating)
     if B747DR_tcas_operating_out ~= v then B747DR_tcas_operating_out = v end
     v = B747_nav_flag(out.failed)
     if B747DR_tcas_failed_out ~= v then B747DR_tcas_failed_out = v end

@@ -2651,3 +2651,4 @@ laminar/B747/wxr/buttons/fo_ftr	command	obj	B747.34.nav
 laminar/B747/wxr/buttons/lr	command	obj	B747.34.nav
 laminar/B747/wxr/buttons/rr	command	obj	B747.34.nav
 laminar/B747/wxr/buttons/test	command	obj	B747.34.nav
+laminar/B747/xpdr/panel_on	dataref	panel	B747.34.nav
