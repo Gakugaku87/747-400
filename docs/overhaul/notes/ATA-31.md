@@ -524,3 +524,13 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - パネル（道具 `docs/overhaul/tools/panel_nd_vor.lua`、画像 `make_nd_vor_images.ps1`、ACF_DIFF.md §5）：2 面の ND の全周と拡大の VOR の組を `vor_rx` で、コースの指針・バー・目盛を上の dataref で（バーの振れは APP と同じ 121.25）。全周に TO/FROM の三角（コースの向きの 65 px 先、FROM は逆向き：FCOM p.1024 の比）、VOR モードの旗の組（全周は記号の上 62 px、拡大は記号の下：ATA34_1 p.361）。基準受信機の欄は APP と同じ形に組み直し、右下に TO・FROM の文字（CRS の見出しから左 90・下 542 px：FCOM p.1024 の比）。
 - 残り：VOR・ADF の針と左右下の欄（段 5b-2b）、VOR の周波数の NCD、DME だけの局の小さな文字（FCOM p.1144）。
 - 試験：ND のモデル 57 件（18 件増）、表示器のモジュール 186 件（19 件増）。X-Plane の新しいシナリオ `s64_nd_vor`（31 件合格：機長の ND は VOR、副操縦士は VOR CTR。自動同調（このとき既に NRE）の「CRS ---」、CDU で VOR L・R に NRE 117.90 とコース 330 を入れて手動にし、ID・コース・緑の DME・中抜きのバー（1.7 ドット）・TO の文字と全周の三角、コース 150 で FROM、BUS TIE 2 と GEN CONT 2 を切って AC bus 2 を落とし、副操縦士の ND に VORR の旗と周波数・コースの消去（DME は残る。副操縦士の表示器は F/O transfer bus が AC bus 1 に移って動いたまま））。
+
+## 26. 段 5b-2b の実装（2026-10-26 早朝：ND の VOR・ADF の針と左右下の欄）
+
+- 資料：FCOM p.1038–1040（EFIS 操作パネルの VOR/ADF スイッチ：VOR は VOR の針・周波数か ID・DME、ADF は ADF の針・周波数か ID を、PLAN 以外のすべてのモードで。OFF で消す）、p.1144（針：左は 1 本線、右は 2 本線、頭が局へ、尾が局から。モードは MAP・MAP CTR・VOR・VOR CTR・PLAN）、p.1145–1146（左右下の欄：VOR は緑、ADF は青、周波数は ID を解読するまで。モードは MAP・MAP CTR・VOR・VOR CTR・APP・APP CTR）、p.1034（左右下の旗：VOR か ADF の旗、DME の旗（MAP・VOR・APP））、p.1228・p.1230（ADF は青、VOR は緑）、ATA34_1 p.362（針と欄は自動同調でも手動でも出す）。
+- モード：p.1144 は針に PLAN を入れて APP を入れず、p.1040（スイッチの説明）と p.1145（欄）は PLAN 以外。p.1040 に合わせて、針と欄を PLAN 以外のすべてのモードで出す。
+- モデル（`B747.60.nd_model.lua`）：各席の左右のスイッチ（0 OFF、1 VOR、2 ADF）。欄はスイッチのとおり（PLAN は消す）、受信機が壊れていれば名前の代わりに旗、VOR の欄の DME は距離・「DME ---」・旗。針は受信機が動いていて、局の方位を受けていて（VOR は方位の信号、ADF は局の ID：X-Plane に ADF の受信の旗が無い）、ローズと方位があるとき。向きは「相対方位 + 自席の方位 − 表示の上」（MAP の航跡が上でもずれない）。受信機：VOR L・R は電源だけ（X-Plane に NAV3・4 の故障が無い）、ADF L・R は電源（AC bus 3・AC bus 2）と X-Plane の ADF の故障。
+- グルー：新設 `nd/<席>/ptr_l`・`ptr_r`・`brg_l`・`brg_r`・`rad_l`・`rad_r`・`rad_l_flag`・`rad_r_flag`・`rad_l_dme`・`rad_r_dme`、両席共通の文字列 `nd/vor_l_ref`・`vor_r_ref`・`adf_l_ref`・`adf_r_ref`（ADF の周波数は整数 kHz）。
+- パネル（道具 `docs/overhaul/tools/panel_nd_brg.lua`、ACF_DIFF.md §5）：針の組を `ptr_l`・`ptr_r` で、針の向きを `brg_l`・`brg_r` に（前は X-Plane の相対方位で MAP ではずれ、全周の VOR の針は NAV4・NAV5 を、ADF は `[10]` を読んでいた：DSP-35）。全周の針の組は前は APP と VOR だけ。左右下の欄は `rad_*` で、名前と旗、ID か周波数の文字 1 つ（周波数の部品は消した）、DME。APP・VOR の右上の DME の旗も DMEL・DMER に（段 5b-1b・5b-2a では純正の「DME」）。
+- 残り：DME だけの局の小さな文字（FCOM p.1144）、ADF の ANT・BFO（純正に無い）、POS の VOR の radial（段 5c）。
+- 試験：ND のモデル 76 件（19 件増）、表示器のモジュール 199 件（13 件増）。X-Plane の新しいシナリオ `s65_nd_brg`（23 件合格：フランクフルトの NDB FR の南で開始（東京の近くには NDB が無い）、CDU で VOR L・R に FKS・TAU、ADF L・R に 297。機長の ND は MAP で左に VOR L の針（FKS は後ろ）、右に ADF R の青い 2 本線の針（FR は正面）、左下に VOR L・FKS・DME、右下に ADF R・FR。副操縦士の VOR CTR は左 ADF・右 VOR。ADF 1 の故障で副操縦士の左の針が消えて左下に ADFL の旗、DME の故障で DMEL・DMER の旗（右上と左右下）、PLN で針と欄が消える）。

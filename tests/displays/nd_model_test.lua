@@ -4,7 +4,8 @@
 -- by mode from its own side, X-Plane's map mode, the TRK, HDG, MAP and VTK
 -- flags, the heading pointer, the selected heading bug and line and the
 -- wind arrow (FCOM p.1109-1110, p.1141-1143, p.1033-1034); the VOR mode's
--- reference VOR (step 5b: ATA34_1 p.356-369).
+-- reference VOR (step 5b: ATA34_1 p.356-369); the bearing pointers and the
+-- lower corner blocks (step 5b: FCOM p.1034, p.1038-1040, p.1144-1146).
 local T = dofile("tests/lib/check.lua")("nd_model")
 local M = dofile("plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/B747.60.nd_model.lua")
 
@@ -163,5 +164,56 @@ T.equal(oc.vor_dme, 2, "the DME failed: its flag")
 c.dme_fail, c.vor_dme_rx = false, false
 run()
 T.equal(oc.vor_dme, 0, "no DME: dashes")
+
+-- the bearing pointers (step 5b): VOR L on the left switch, ADF R on the right
+s, inp = M.new(), M.inputs()
+c = inp.side[M.CAPT]
+c.mode, c.hdg, c.trk = M.MAP, 100, 110
+c.sw[1], c.sw[2] = M.SW_VOR, M.SW_ADF
+inp.vor_brg_rx[1], inp.adf_brg_rx[2] = true, true
+inp.vor_rel[1], inp.adf_rel[2] = 30, -50
+inp.vor_dme_rx[1] = true
+run()
+oc = out[M.CAPT]
+T.equal(oc.ptr[1], M.SW_VOR, "the left pointer: VOR L")
+T.equal(oc.ptr[2], M.SW_ADF, "the right pointer: ADF R")
+T.near(oc.brg[1], 20, 1e-9, "MAP (track up, 110): relative 30 from heading 100, 20 right of the top")
+T.near(oc.brg[2], -60, 1e-9, "ADF R relative -50: 60 left")
+T.check(oc.rad[1] == M.SW_VOR and oc.rad[2] == M.SW_ADF, "the corner blocks follow the switches")
+T.equal(oc.rad_dme[1], 1, "VOR L's DME")
+T.equal(oc.rad_dme[2], 0, "no DME line in an ADF block")
+c.mode = M.VOR
+run()
+T.near(oc.brg[1], 30, 1e-9, "VOR (heading up): the relative bearing itself")
+c.mode = M.APP
+run()
+T.equal(oc.ptr[1], M.SW_VOR, "APP too (FCOM p.1040: all modes except PLAN)")
+c.mode = M.PLN
+run()
+T.check(oc.ptr[1] == 0 and oc.ptr[2] == 0, "PLN: no pointers")
+T.check(oc.rad[1] == 0 and oc.rad[2] == 0, "nor blocks")
+c.mode = M.MAP
+inp.vor_brg_rx[1] = false
+run()
+T.equal(oc.ptr[1], 0, "no VOR bearing: no pointer")
+T.equal(oc.rad[1], M.SW_VOR, "the block stays")
+T.check(not oc.rad_flag[1], "no flag")
+inp.vor_brg_rx[1] = true
+inp.adf_ok[2] = false
+run()
+T.equal(oc.ptr[2], 0, "ADF R failed: no pointer")
+T.check(oc.rad_flag[2], "its flag in the block (FCOM p.1034)")
+inp.adf_ok[2] = true
+c.dme_fail = true
+run()
+T.equal(oc.rad_dme[1], 2, "the DME failed: the DME flag")
+c.dme_fail = false
+c.hdg_valid = false
+run()
+T.equal(oc.ptr[1], 0, "no heading: no pointer (drawn from the heading)")
+c.hdg_valid = true
+c.sw[1] = M.SW_OFF
+run()
+T.check(oc.ptr[1] == 0 and oc.rad[1] == 0, "the switch OFF: nothing on the left")
 
 T.done()
