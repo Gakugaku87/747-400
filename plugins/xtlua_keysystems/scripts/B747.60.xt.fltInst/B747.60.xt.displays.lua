@@ -47,6 +47,9 @@
 -- it (pfd/capt|fo/hdg_deg, trk_deg) out, for the panel's heading scales,
 -- roses, pointers and digits, the ND module's display orientation and the
 -- ND model (the wind too).
+-- Step 5e: the ground speed and each side's bank angle to the ND model; each
+-- ND's position trend vector's pieces (nd/capt|fo/tv_show, tv_x, tv_y,
+-- tv_rot, tv_frame) out.
 -- dofile'd from B747.60.xt.fltInst.lua after B747.60.xt.fltInst02.lua.
 
 dofile("B747.60.display_model.lua")
@@ -364,6 +367,18 @@ B747DR_dsp_hdg_deg_capt         = find_dataref("laminar/B747/pfd/capt/hdg_deg")
 B747DR_dsp_trk_deg_capt         = find_dataref("laminar/B747/pfd/capt/trk_deg")
 B747DR_dsp_hdg_deg_fo           = find_dataref("laminar/B747/pfd/fo/hdg_deg")
 B747DR_dsp_trk_deg_fo           = find_dataref("laminar/B747/pfd/fo/trk_deg")
+-- the position trend vector (step 5e)
+simDR_dsp_gs                    = find_dataref("sim/flightmodel2/position/groundspeed")
+B747DR_dsp_tv_show_capt         = find_dataref("laminar/B747/nd/capt/tv_show")
+B747DR_dsp_tv_x_capt            = find_dataref("laminar/B747/nd/capt/tv_x")
+B747DR_dsp_tv_y_capt            = find_dataref("laminar/B747/nd/capt/tv_y")
+B747DR_dsp_tv_rot_capt          = find_dataref("laminar/B747/nd/capt/tv_rot")
+B747DR_dsp_tv_frame_capt        = find_dataref("laminar/B747/nd/capt/tv_frame")
+B747DR_dsp_tv_show_fo           = find_dataref("laminar/B747/nd/fo/tv_show")
+B747DR_dsp_tv_x_fo              = find_dataref("laminar/B747/nd/fo/tv_x")
+B747DR_dsp_tv_y_fo              = find_dataref("laminar/B747/nd/fo/tv_y")
+B747DR_dsp_tv_rot_fo            = find_dataref("laminar/B747/nd/fo/tv_rot")
+B747DR_dsp_tv_frame_fo          = find_dataref("laminar/B747/nd/fo/tv_frame")
 
 -- the EIU selectors' positions: Captain and centre L, AUTO, C, R; F/O L, C, AUTO, R
 local EIU_CAPT = {[0] = DM.EIU_L, DM.SEL_AUTO, DM.EIU_C, DM.EIU_R}
@@ -669,6 +684,9 @@ local function nd_sources(c, f, nav_valid)
     inp.wind_from = HR.heading(simDR_dsp_wind_from, hr_mag_diff, hr_ref)
     inp.hdg_sel = B747DR_dsp_hdg_sel
     inp.roll_mode = B747DR_dsp_fma_roll
+    -- the trend vector (step 5e): the ground speed and each side's bank
+    inp.gs_kt = simDR_dsp_gs * 3600 / 1852
+    inp.side[NM.CAPT].roll_deg, inp.side[NM.FO].roll_deg = simDR_dsp_roll_pilot, simDR_dsp_roll_copilot
     local out = NM.update(nd_state, inp, SIM_PERIOD)
     local oc, of = out[NM.CAPT], out[NM.FO]
     -- X-Plane's own map layer turns with its map mode: read it, write when
@@ -717,6 +735,22 @@ local function nd_sources(c, f, nav_valid)
     v = of.wind and 1 or 0
     if B747DR_dsp_nd_wind_fo ~= v then B747DR_dsp_nd_wind_fo = v end
     if B747DR_dsp_nd_wind_deg_fo ~= of.wind_deg then B747DR_dsp_nd_wind_deg_fo = of.wind_deg end
+    -- the position trend vectors (step 5e)
+    for k = 1, NM.TV_N do
+        local n = k - 1
+        v = oc.tv_show[k] and 1 or 0
+        if B747DR_dsp_tv_show_capt[n] ~= v then B747DR_dsp_tv_show_capt[n] = v end
+        if v == 1 then
+            B747DR_dsp_tv_x_capt[n], B747DR_dsp_tv_y_capt[n] = oc.tv_x[k], oc.tv_y[k]
+            B747DR_dsp_tv_rot_capt[n], B747DR_dsp_tv_frame_capt[n] = oc.tv_rot[k], oc.tv_frame[k]
+        end
+        v = of.tv_show[k] and 1 or 0
+        if B747DR_dsp_tv_show_fo[n] ~= v then B747DR_dsp_tv_show_fo[n] = v end
+        if v == 1 then
+            B747DR_dsp_tv_x_fo[n], B747DR_dsp_tv_y_fo[n] = of.tv_x[k], of.tv_y[k]
+            B747DR_dsp_tv_rot_fo[n], B747DR_dsp_tv_frame_fo[n] = of.tv_rot[k], of.tv_frame[k]
+        end
+    end
     v = oc.trk_line and 1 or 0
     if B747DR_dsp_nd_trk_line_capt ~= v then B747DR_dsp_nd_trk_line_capt = v end
     v = of.trk_line and 1 or 0

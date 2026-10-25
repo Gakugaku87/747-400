@@ -111830,6 +111830,512 @@ GROUP First Officer ND
             END_GROUP
           END_GROUP
         END_GROUP
+        GROUP ND Trend
+          GROUP TV0
+            SHOW_GREATER 0.500000 laminar/B747/nd/fo/tv_show[0]
+            GROUP TV0 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/tv_x[0]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV0 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/fo/tv_y[0]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV0 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/fo/tv_rot[0]
+                  POS 1022.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV0 Piece
+                    POS 1022.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/fo/tv_frame[0]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 3
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV1
+            SHOW_GREATER 0.500000 laminar/B747/nd/fo/tv_show[1]
+            GROUP TV1 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/tv_x[1]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV1 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/fo/tv_y[1]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV1 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/fo/tv_rot[1]
+                  POS 1022.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV1 Piece
+                    POS 1022.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/fo/tv_frame[1]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 3
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV2
+            SHOW_GREATER 0.500000 laminar/B747/nd/fo/tv_show[2]
+            GROUP TV2 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/tv_x[2]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV2 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/fo/tv_y[2]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV2 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/fo/tv_rot[2]
+                  POS 1022.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV2 Piece
+                    POS 1022.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/fo/tv_frame[2]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 3
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV3
+            SHOW_GREATER 0.500000 laminar/B747/nd/fo/tv_show[3]
+            GROUP TV3 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/tv_x[3]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV3 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/fo/tv_y[3]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV3 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/fo/tv_rot[3]
+                  POS 1022.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV3 Piece
+                    POS 1022.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/fo/tv_frame[3]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 3
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV4
+            SHOW_GREATER 0.500000 laminar/B747/nd/fo/tv_show[4]
+            GROUP TV4 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/tv_x[4]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV4 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/fo/tv_y[4]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV4 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/fo/tv_rot[4]
+                  POS 1022.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV4 Piece
+                    POS 1022.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/fo/tv_frame[4]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 3
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV5
+            SHOW_GREATER 0.500000 laminar/B747/nd/fo/tv_show[5]
+            GROUP TV5 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/tv_x[5]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV5 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/fo/tv_y[5]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV5 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/fo/tv_rot[5]
+                  POS 1022.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV5 Piece
+                    POS 1022.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/fo/tv_frame[5]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 3
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV6
+            SHOW_GREATER 0.500000 laminar/B747/nd/fo/tv_show[6]
+            GROUP TV6 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/tv_x[6]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV6 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/fo/tv_y[6]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV6 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/fo/tv_rot[6]
+                  POS 1022.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV6 Piece
+                    POS 1022.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/fo/tv_frame[6]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 3
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV7
+            SHOW_GREATER 0.500000 laminar/B747/nd/fo/tv_show[7]
+            GROUP TV7 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/tv_x[7]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV7 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/fo/tv_y[7]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV7 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/fo/tv_rot[7]
+                  POS 1022.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV7 Piece
+                    POS 1022.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/fo/tv_frame[7]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 3
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV8
+            SHOW_GREATER 0.500000 laminar/B747/nd/fo/tv_show[8]
+            GROUP TV8 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/fo/tv_x[8]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV8 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/fo/tv_y[8]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV8 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/fo/tv_rot[8]
+                  POS 1022.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV8 Piece
+                    POS 1022.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/fo/tv_frame[8]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 3
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+        END_GROUP
       END_GROUP
       GROUP EFIS Data Annun
         SHOW_GREATER 0.100000 laminar/B747/pfd/fo/irs
@@ -134073,6 +134579,512 @@ GROUP Captain ND
                       END_GROUP
                     END_GROUP
                   END_GROUP
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+        END_GROUP
+        GROUP ND Trend
+          GROUP TV0
+            SHOW_GREATER 0.500000 laminar/B747/nd/capt/tv_show[0]
+            GROUP TV0 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/tv_x[0]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV0 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/capt/tv_y[0]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV0 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/capt/tv_rot[0]
+                  POS 335.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV0 Piece
+                    POS 335.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/capt/tv_frame[0]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 2
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV1
+            SHOW_GREATER 0.500000 laminar/B747/nd/capt/tv_show[1]
+            GROUP TV1 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/tv_x[1]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV1 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/capt/tv_y[1]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV1 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/capt/tv_rot[1]
+                  POS 335.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV1 Piece
+                    POS 335.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/capt/tv_frame[1]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 2
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV2
+            SHOW_GREATER 0.500000 laminar/B747/nd/capt/tv_show[2]
+            GROUP TV2 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/tv_x[2]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV2 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/capt/tv_y[2]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV2 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/capt/tv_rot[2]
+                  POS 335.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV2 Piece
+                    POS 335.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/capt/tv_frame[2]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 2
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV3
+            SHOW_GREATER 0.500000 laminar/B747/nd/capt/tv_show[3]
+            GROUP TV3 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/tv_x[3]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV3 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/capt/tv_y[3]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV3 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/capt/tv_rot[3]
+                  POS 335.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV3 Piece
+                    POS 335.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/capt/tv_frame[3]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 2
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV4
+            SHOW_GREATER 0.500000 laminar/B747/nd/capt/tv_show[4]
+            GROUP TV4 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/tv_x[4]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV4 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/capt/tv_y[4]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV4 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/capt/tv_rot[4]
+                  POS 335.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV4 Piece
+                    POS 335.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/capt/tv_frame[4]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 2
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV5
+            SHOW_GREATER 0.500000 laminar/B747/nd/capt/tv_show[5]
+            GROUP TV5 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/tv_x[5]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV5 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/capt/tv_y[5]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV5 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/capt/tv_rot[5]
+                  POS 335.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV5 Piece
+                    POS 335.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/capt/tv_frame[5]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 2
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV6
+            SHOW_GREATER 0.500000 laminar/B747/nd/capt/tv_show[6]
+            GROUP TV6 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/tv_x[6]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV6 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/capt/tv_y[6]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV6 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/capt/tv_rot[6]
+                  POS 335.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV6 Piece
+                    POS 335.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/capt/tv_frame[6]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 2
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV7
+            SHOW_GREATER 0.500000 laminar/B747/nd/capt/tv_show[7]
+            GROUP TV7 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/tv_x[7]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV7 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/capt/tv_y[7]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV7 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/capt/tv_rot[7]
+                  POS 335.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV7 Piece
+                    POS 335.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/capt/tv_frame[7]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 2
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+          END_GROUP
+          GROUP TV8
+            SHOW_GREATER 0.500000 laminar/B747/nd/capt/tv_show[8]
+            GROUP TV8 X
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/nd/capt/tv_x[8]
+              POS 0.000000 0.000000
+              KEY_FRAME -1000.000000 -1000.000000 1.000000
+              KEY_FRAME 1000.000000 1000.000000
+              IS_VERTICAL 0
+              OFFSET 0.000000
+              GROUP TV8 Y
+                GROUP_ANIMATE_MODE TRANSLATE
+                GROUP_WIDTH 0
+                GROUP_HEIGHT 0
+                DATAREF laminar/B747/nd/capt/tv_y[8]
+                POS 0.000000 0.000000
+                KEY_FRAME -1000.000000 -1000.000000 1.000000
+                KEY_FRAME 1000.000000 1000.000000
+                IS_VERTICAL 1
+                OFFSET 0.000000
+                GROUP TV8 Rot
+                  GROUP_ANIMATE_MODE ROTATE
+                  GROUP_WIDTH 0
+                  GROUP_HEIGHT 0
+                  DATAREF laminar/B747/nd/capt/tv_rot[8]
+                  POS 335.250000 -95.000000
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 45.000000 45.000000
+                  ROTATE_OFFSET_X 0.000000
+                  ROTATE_OFFSET_Y 0.000000
+                  gen_rotary TV8 Piece
+                    POS 335.250000 -95.000000
+                    IMAGE CRT Displays/ND/tv_piece
+                    DATAREF laminar/B747/nd/capt/tv_frame[8]
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 2
+                    BUS_SRC 3
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 40
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
                 END_GROUP
               END_GROUP
             END_GROUP

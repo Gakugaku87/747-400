@@ -459,3 +459,11 @@
 | 同 | PFD（各 2 組）の `MAG Label`、ND の `MAG Label`（APP/VOR/MAP、PLN、数字の HDG/TRK） | `CRT Displays/PFD/Heading Track/HdgTrackMagLabel`・`EFIS/Maps/label_MAG`（MAG だけ） | PFD は `CRT Displays/PFD/Heading Track/hdg_ref_pfd`（2 コマ：MAG、枠つきの TRU）を新設 `efis/hdg_ref/pfd_label` で、ND は `EFIS/Maps/hdg_ref_nd`（5 コマ：MAG、白枠の TRU、琥珀の枠の TRU、枠の消えた TRU、白枠の MAG）を `nd_label`（PLN は `nd_plan_label`：枠なし）で | FCOM p.998、p.1110、p.1141–1142 |
 
 上の 2 行は `docs/overhaul/tools/panel_hdg_ref.lua` で書き換えた（44 か所、行は増減なし）。画像は `docs/overhaul/tools/make_hdg_ref_images.ps1`（字は純正のラベルと同じ大きさで描き直した。字体・枠の線は推定）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_hdg_ref`。
+
+表示（5-2 段 5e、2026-10-26：ND の位置のトレンドベクトル）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・ND のトレンドベクトル（DSP-23） | 機長・副操縦士の ND の `GROUP ND Text Center`（地図の記号：CTR で動く）の最後 | なし | 新しい `GROUP ND Trend`：9 片それぞれ `GROUP TV<k>`（新設 `nd/<席>/tv_show[k]`）の中で `tv_x[k]` だけ右、`tv_y[k]` だけ上に動かし、`tv_rot[k]` で回した `gen_rotary TV<k> Piece`（新しい `CRT Displays/ND/tv_piece`、40 コマ、`tv_frame[k]`） | FCOM p.1147 |
+
+上の 1 行は `docs/overhaul/tools/panel_nd_tv.lua` で書き換えた（2 面で 1,012 行）。画像は `docs/overhaul/tools/make_nd_tv_image.ps1`。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_tv`。

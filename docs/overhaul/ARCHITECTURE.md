@@ -428,6 +428,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 段 5c-3b（ND の出発・到着空港と滑走路）：ND のモジュールが、2 秒ごとに読み直す X-Plane の FMS の経路（`xtlua/fms`）の両端の空港と、その近くの RW の項目（`B747.61.nd_data.lua` の `route_ends`）から、出発・到着空港と選んだ滑走路を決め、反対側の端を空港の CIFP ファイル（`Custom Data/CIFP` か `Resources/default data/CIFP`、1 フレーム 500 行）から読む。毎フレーム、席ごとに新設 `nd/<席>/apt/*`（init `B747.61.nd`）に、空港の記号か滑走路の位置・向き・長さ・破線を書く。地図の記号の向きはモジュールの `nd_bearing` 1 つ（0.2 秒ごとの `makeIcon` と毎フレームの `updateIcon`、空港）。
 - 段 5c-3c（ND のコースの線）：ND のモジュールが毎フレーム、`laminar/B747/radio/tuningmodes` で手動同調の VOR L・R の局（航法施設の一覧から 1 秒ごと）と CRS（NAV3・4 の OBS）から、新設 `nd/<席>/crs/*`（init `B747.61.nd`）に、線の機体に一番近い点・向き・破線のずらしと見える破線、局の位置とコース・反対の数字を書く（`B747.61.nd_data.lua` の `crs_line`）。
 - 段 5d（HDG REF）：表示のグルー（`B747.60.xt.displays.lua`）が純粋なモデル `B747.60.hdg_ref_model.lua` で基準を決め、新設 `efis/hdg_ref/*`（`true`・`pfd_label`・`nd_label`・`nd_plan_label`）と両席の基準の方位・航跡 `pfd/<席>/hdg_deg`・`trk_deg`（init `B747.60.fltInst`）を毎フレーム書く。パネルの方位の計器、ND のモジュールのローズ（`nd/up`）、ND のモデル、FMC の風の数字、AFDS（`ap_hdg_target`・`ap_hdg_ref_hold`）がそれを読む。
+- 段 5e（ND のトレンドベクトル）：ND のモデル（`B747.60.nd_model.lua` の `trend`）が対地速度と各席の傾きから 9 片の位置・向き・長さを出し、表示のグルーが新設 `nd/<席>/tv_*`（init `B747.60.fltInst`）に書く。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 
