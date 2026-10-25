@@ -313,6 +313,11 @@ B747DR_nd_capt_wpt                          = deferred_dataref("laminar/B747/nd/
 B747DR_nd_fo_wpt                         	= deferred_dataref("laminar/B747/nd/data/fo/wpt", "number")
 B747DR_nd_capt_apt	                        = deferred_dataref("laminar/B747/nd/data/capt/apt", "number")
 B747DR_nd_fo_apt	                        = deferred_dataref("laminar/B747/nd/data/fo/apt", "number")
+-- 5-2 step 5c: the EFIS control panels' DATA and POS selections (FCOM p.1040)
+B747DR_nd_capt_data                             = deferred_dataref("laminar/B747/nd/data/capt/data", "number")
+B747DR_nd_fo_data                               = deferred_dataref("laminar/B747/nd/data/fo/data", "number")
+B747DR_nd_capt_pos                              = deferred_dataref("laminar/B747/nd/data/capt/pos", "number")
+B747DR_nd_fo_pos                                = deferred_dataref("laminar/B747/nd/data/fo/pos", "number")
 B747DR_nd_capt_tfc	                        = deferred_dataref("laminar/B747/nd/capt/tfc", "number")
 B747DR_nd_fo_tfc	                        = deferred_dataref("laminar/B747/nd/fo/tfc", "number")
 
@@ -524,6 +529,9 @@ B747CMD_efis_baro_ref_capt_sel_dial_dn      = deferred_command("laminar/B747/efi
 B747CMD_efis_baro_set_capt_sel_dial_up      = deferred_command("laminar/B747/efis/baro_set/capt/sel_dial_up", "EFIS BARO Set Selector Up", B747_efis_baro_set_capt_sel_dial_up_CMDhandler)
 B747CMD_efis_baro_set_capt_sel_dial_dn      = deferred_command("laminar/B747/efis/baro_set/capt/sel_dial_dn", "EFIS BARO Set Selector Down", B747_efis_baro_set_capt_sel_dial_dn_CMDhandler)
 B747CMD_efis_baro_std_capt_switch           = deferred_command("laminar/B747/efis/baro_std/capt/switch", "EFIS BARO STD Switch", B747_efis_baro_std_capt_switch_CMDhandler)
+-- 5-2 step 5c: the CDU's STD and DH RESET (EFIS CONTROL page, FCOM p.1062)
+B747CMD_cdu_baro_std_capt                   = deferred_command("laminar/B747/efis/baro_std/capt/cdu", "CDU EFIS CONTROL BARO STD", B747_cdu_baro_std_capt_CMDhandler)
+B747CMD_cdu_dh_reset_capt                   = deferred_command("laminar/B747/efis/dh/capt/cdu_reset", "CDU EFIS CONTROL DH RESET", B747_cdu_dh_reset_capt_CMDhandler)
 
 B747CMD_efis_fpv_capt_switch                = deferred_command("laminar/B747/efis/fpv/capt/switch", "EFIS FPV Switch", B747_efis_fpv_capt_switch_CMDhandler)
 B747CMD_efis_meters_capt_switch             = deferred_command("laminar/B747/efis/meters/capt/switch", "EFIS Meters Switch", B747_efis_meters_capt_switch_CMDhandler)
@@ -545,6 +553,8 @@ B747CMD_efis_baro_ref_fo_sel_dial_dn        = deferred_command("laminar/B747/efi
 B747CMD_efis_baro_set_fo_sel_dial_up        = deferred_command("laminar/B747/efis/baro_set/fo/sel_dial_up", "EFIS BARO Set Selector Up", B747_efis_baro_set_fo_sel_dial_up_CMDhandler)
 B747CMD_efis_baro_set_fo_sel_dial_dn        = deferred_command("laminar/B747/efis/baro_set/fo/sel_dial_dn", "EFIS BARO Set Selector Down", B747_efis_baro_set_fo_sel_dial_dn_CMDhandler)
 B747CMD_efis_baro_std_fo_switch             = deferred_command("laminar/B747/efis/baro_std/fo/switch", "EFIS BARO STD Switch", B747_efis_baro_std_fo_switch_CMDhandler)
+B747CMD_cdu_baro_std_fo                     = deferred_command("laminar/B747/efis/baro_std/fo/cdu", "CDU EFIS CONTROL BARO STD", B747_cdu_baro_std_fo_CMDhandler)
+B747CMD_cdu_dh_reset_fo                     = deferred_command("laminar/B747/efis/dh/fo/cdu_reset", "CDU EFIS CONTROL DH RESET", B747_cdu_dh_reset_fo_CMDhandler)
 
 B747CMD_efis_fpv_fo_switch                  = deferred_command("laminar/B747/efis/fpv/fo/switch", "EFIS FPV Switch", B747_efis_fpv_fo_switch_CMDhandler)
 B747CMD_efis_meters_fo_switch               = deferred_command("laminar/B747/efis/meters/fo/switch", "EFIS Meters Switch", B747_efis_meters_fo_switch_CMDhandler)
