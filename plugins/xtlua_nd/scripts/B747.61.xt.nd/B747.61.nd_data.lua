@@ -215,4 +215,52 @@ function M.dashes(x, y, dir, len_px, px_per_nm, view, out, base)
     end
 end
 
+-- The manually tuned VORs' course lines (step 5c, FCOM p.1145: "When a
+-- navaid is manually tuned, the selected course and reciprocal display"),
+-- in MAP and MAP CTR: a dashed line through the station along the NAV
+-- RADIO page's course, both ways to the map's edge, the course and the
+-- reciprocal along it on each side, in green (estimate: the tuned navaid's
+-- colour; the dashes as the runways', the numbers 50 pixels from the
+-- station as the POS radials' text). The panel draws CRS_DASHES dashes
+-- each side of the line's point nearest the airplane, their pattern fixed
+-- to the station (a dash's middle at (m + 1/2) dash periods from it).
+M.CRS_DASHES = 42               -- 924 pixels each side: the display's diagonal
+M.CRS_LABEL_PX = 50
+
+-- a course's text, 001 to 360
+function M.crs_text(deg)
+    local d = math.floor(deg + 0.5) % 360
+    if d == 0 then d = 360 end
+    return string.format("%03d", d)
+end
+
+-- a line's label along it and readable: turned to the line's right (side 1)
+-- for directions 0 to 180, else to its left (side 2), as the POS radials'
+function M.crs_label(dir)
+    local d = (dir + 180) % 360 - 180
+    if d >= 0 then return d - 90, 1 end
+    return d + 90, 2
+end
+
+-- the course line of a station at sx, sy (pixels from the airplane symbol,
+-- up the display's top) along dir (degrees clockwise from the top): its
+-- point nearest the airplane, the dashes' shift along the line from it,
+-- and out[base + j + CRS_DASHES] 1 for dash j (-CRS_DASHES to CRS_DASHES)
+-- on the map's visible part; whether any is
+function M.crs_line(sx, sy, dir, view, out, base)
+    local ux, uy = math.sin(math.rad(dir)), math.cos(math.rad(dir))
+    local s = -(sx * ux + sy * uy)          -- the nearest point from the station
+    local fx, fy = sx + s * ux, sy + s * uy
+    local p = M.DASH_PX + M.DASH_GAP_PX
+    local phase = p / 2 - (s - math.floor(s / p) * p)
+    local any = false
+    for j = -M.CRS_DASHES, M.CRS_DASHES do
+        local c = phase + j * p
+        local v = 0
+        if M.inside(fx + c * ux, fy + c * uy, view) then v = 1 any = true end
+        out[base + j + M.CRS_DASHES] = v
+    end
+    return fx, fy, phase, any
+end
+
 return M

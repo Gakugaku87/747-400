@@ -840,6 +840,146 @@ function updateAirports()
   aptSide(false, aptDataFO, dashLast[2])
 end
 
+-- The manually tuned VORs' course lines (step 5c, FCOM p.1145;
+-- B747.61.nd_data.lua): VOR L and R (X-Plane's NAV3 and NAV4) tuned on the
+-- CDU's NAV RADIO page (laminar/B747/radio/tuningmodes, its 2nd and 3rd
+-- letters M), the station from the navaids list (the tuned one nearest the
+-- airplane), the page's course (the receiver's OBS, made true with the
+-- airplane's variation: estimate, the station's own may differ); on each ND
+-- in MAP and MAP CTR, a green dashed line through the station both ways to
+-- the map's edge, the course and the reciprocal 50 pixels from the station
+-- on each side.
+crsDataCapt={}
+crsDataFO={}
+crsDataCapt.show=find_dataref("laminar/B747/nd/capt/crs/show")
+crsDataCapt.heading=find_dataref("laminar/B747/nd/capt/crs/heading")
+crsDataCapt.distance=find_dataref("laminar/B747/nd/capt/crs/distance")
+crsDataCapt.dir=find_dataref("laminar/B747/nd/capt/crs/dir")
+crsDataCapt.phase=find_dataref("laminar/B747/nd/capt/crs/phase")
+crsDataCapt.dash=find_dataref("laminar/B747/nd/capt/crs/dash")
+crsDataCapt.lbl_heading=find_dataref("laminar/B747/nd/capt/crs/lbl_heading")
+crsDataCapt.lbl_distance=find_dataref("laminar/B747/nd/capt/crs/lbl_distance")
+crsDataCapt.lbl_show=find_dataref("laminar/B747/nd/capt/crs/lbl_show")
+crsDataCapt.tbrg=find_dataref("laminar/B747/nd/capt/crs/tbrg")
+crsDataCapt.tside=find_dataref("laminar/B747/nd/capt/crs/tside")
+crsDataCapt.text0=find_dataref("laminar/B747/nd/capt/crs/text0")
+crsDataCapt.text1=find_dataref("laminar/B747/nd/capt/crs/text1")
+crsDataCapt.text2=find_dataref("laminar/B747/nd/capt/crs/text2")
+crsDataCapt.text3=find_dataref("laminar/B747/nd/capt/crs/text3")
+crsDataFO.show=find_dataref("laminar/B747/nd/fo/crs/show")
+crsDataFO.heading=find_dataref("laminar/B747/nd/fo/crs/heading")
+crsDataFO.distance=find_dataref("laminar/B747/nd/fo/crs/distance")
+crsDataFO.dir=find_dataref("laminar/B747/nd/fo/crs/dir")
+crsDataFO.phase=find_dataref("laminar/B747/nd/fo/crs/phase")
+crsDataFO.dash=find_dataref("laminar/B747/nd/fo/crs/dash")
+crsDataFO.lbl_heading=find_dataref("laminar/B747/nd/fo/crs/lbl_heading")
+crsDataFO.lbl_distance=find_dataref("laminar/B747/nd/fo/crs/lbl_distance")
+crsDataFO.lbl_show=find_dataref("laminar/B747/nd/fo/crs/lbl_show")
+crsDataFO.tbrg=find_dataref("laminar/B747/nd/fo/crs/tbrg")
+crsDataFO.tside=find_dataref("laminar/B747/nd/fo/crs/tside")
+crsDataFO.text0=find_dataref("laminar/B747/nd/fo/crs/text0")
+crsDataFO.text1=find_dataref("laminar/B747/nd/fo/crs/text1")
+crsDataFO.text2=find_dataref("laminar/B747/nd/fo/crs/text2")
+crsDataFO.text3=find_dataref("laminar/B747/nd/fo/crs/text3")
+B747DR_nd_radio_modes = find_dataref("laminar/B747/radio/tuningmodes")
+simDR_nav_obs = find_dataref("sim/cockpit2/radios/actuators/nav_obs_deg_mag_pilot")
+local CRS_N=2*ND_DATA.CRS_DASHES+1
+local crsBuf={}
+local crsLast={{}, {}}
+for j=0,2*CRS_N-1 do crsBuf[j]=0 crsLast[1][j]=-1 crsLast[2][j]=-1 end
+local crsStation={false, false}
+local crsStationId={"", ""}
+local crsStationTime=-10
+-- the tuned stations, once a second or when a receiver's identifier changes
+local function crsStations()
+  local ids={simDR_radio_nav03_ID, simDR_radio_nav04_ID}
+  if ids[1]==crsStationId[1] and ids[2]==crsStationId[2] and simDRTime-crsStationTime<1 then return end
+  crsStationTime=simDRTime
+  for k=1,2 do
+    crsStationId[k]=ids[k]
+    local best, bestD=false, 1e9
+    if ids[k]~="" then
+      for n=1,table.getn(currentNaviadsTable) do
+        local e=currentNaviadsTable[n]
+        if e[8]==ids[k] and bit_and(e[2],4)>0 then
+          local d=getDistance(simDR_latitude,simDR_longitude,e[5],e[6])
+          if d<bestD then best, bestD={e[5], e[6]}, d end
+        end
+      end
+    end
+    crsStation[k]=best
+  end
+end
+local function crsSide(isCapt, t, last)
+  local mode=isCapt and B747DR_nd_mode_capt or B747DR_nd_mode_fo
+  local irs=isCapt and captIRS or foIRS
+  local dial=isCapt and simDR_range_dial_capt or simDR_range_dial_fo
+  local center=(isCapt and B747_nd_map_center_capt or B747_nd_map_center_fo)>0
+  local view=center and ND_DATA.CENTRED or ND_DATA.EXPANDED
+  local range=ranges[dial+1] or 40
+  local units, ppn=640/range, ND_DATA.PX_PER_RANGE/range
+  local cLat, cLon=display_latitude_cpt, display_longitude_cpt
+  if not isCapt then cLat, cLon=display_latitude_fo, display_longitude_fo end
+  local modes=B747DR_nd_radio_modes
+  if type(modes)~="string" then modes="" end
+  local mag_diff=getHeadingDifference(simDR_true_heading,simDR_mag_heading)
+  for k=0,1 do
+    local st=crsStation[k+1]
+    local show, l0, l1=0, 0, 0
+    local base=k*CRS_N
+    if irs>0 and mode==2 and st and modes:sub(k+2,k+2)=="M" then
+      local crs=simDR_nav_obs[k+2]
+      local dir=nd_bearing(isCapt,crs-mag_diff)
+      local d=getDistance(cLat,cLon,st[1],st[2])
+      local h=nd_bearing(isCapt,getHeading(cLat,cLon,st[1],st[2]))
+      local sx, sy=d*ppn*math.sin(math.rad(h)), d*ppn*math.cos(math.rad(h))
+      local fx, fy, phase, any=ND_DATA.crs_line(sx, sy, dir, view, crsBuf, base)
+      if any then
+        show=1
+        t.heading[k]=math.deg(math.atan2(fx, fy))
+        t.distance[k]=math.sqrt(fx*fx+fy*fy)/ppn*units
+        t.dir[k]=dir
+        t.phase[k]=phase
+        t.lbl_heading[k]=h
+        t.lbl_distance[k]=d*units
+        local ux, uy, L=math.sin(math.rad(dir)), math.cos(math.rad(dir)), ND_DATA.CRS_LABEL_PX
+        if ND_DATA.inside(sx+L*ux, sy+L*uy, view) then l0=1 end
+        if ND_DATA.inside(sx-L*ux, sy-L*uy, view) then l1=1 end
+        local tb, ts=ND_DATA.crs_label(dir)
+        t.tbrg[k*2]=tb
+        if t.tside[k*2]~=ts then t.tside[k*2]=ts end
+        tb, ts=ND_DATA.crs_label(dir+180)
+        t.tbrg[k*2+1]=tb
+        if t.tside[k*2+1]~=ts then t.tside[k*2+1]=ts end
+        local c0, c1=ND_DATA.crs_text(crs), ND_DATA.crs_text(crs+180)
+        if k==0 then
+          if t.text0~=c0 then t.text0=c0 end
+          if t.text1~=c1 then t.text1=c1 end
+        else
+          if t.text2~=c0 then t.text2=c0 end
+          if t.text3~=c1 then t.text3=c1 end
+        end
+      end
+    end
+    if show==0 then for j=base,base+CRS_N-1 do crsBuf[j]=0 end end
+    if t.show[k]~=show then t.show[k]=show end
+    if t.lbl_show[k*2]~=l0 then t.lbl_show[k*2]=l0 end
+    if t.lbl_show[k*2+1]~=l1 then t.lbl_show[k*2+1]=l1 end
+  end
+  for j=0,2*CRS_N-1 do
+    if last[j]~=crsBuf[j] then
+      t.dash[j]=crsBuf[j]
+      last[j]=crsBuf[j]
+    end
+  end
+end
+-- every frame
+function updateCourses()
+  crsStations()
+  crsSide(true, crsDataCapt, crsLast[1])
+  crsSide(false, crsDataFO, crsLast[2])
+end
+
 function newIcons()
   lastCaptNavaid=0
   lastFONavaid=0
@@ -1154,6 +1294,7 @@ function after_physics()
 
   updateIcons()
   updateAirports()
+  updateCourses()
   updateTCAS()
   compute_and_show_alt_range_arc()
   if debug_nd<-2 then return end
