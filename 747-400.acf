@@ -97207,7 +97207,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag0
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[0]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97220,7 +97220,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag0
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[0]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97233,7 +97233,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag0
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[0]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97312,7 +97312,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag1
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[1]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97325,7 +97325,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag1
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[1]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97338,7 +97338,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag1
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[1]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97417,7 +97417,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag2
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[2]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97430,7 +97430,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag2
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[2]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97443,7 +97443,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag2
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[2]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97522,7 +97522,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag3
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[3]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97535,7 +97535,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag3
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[3]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97548,7 +97548,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag3
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[3]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97627,7 +97627,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag4
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[4]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97640,7 +97640,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag4
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[4]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97653,7 +97653,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag4
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[4]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97732,7 +97732,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag5
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[5]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97745,7 +97745,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag5
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[5]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97758,7 +97758,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag5
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[5]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97837,7 +97837,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag6
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[6]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97850,7 +97850,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag6
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[6]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97863,7 +97863,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag6
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[6]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97942,7 +97942,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag7
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[7]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97955,7 +97955,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag7
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[7]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -97968,7 +97968,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag7
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[7]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98047,7 +98047,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag8
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[8]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98060,7 +98060,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag8
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[8]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98073,7 +98073,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag8
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[8]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98152,7 +98152,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag9
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[9]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98165,7 +98165,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag9
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[9]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98178,7 +98178,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag9
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[9]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98257,7 +98257,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag10
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[10]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98270,7 +98270,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag10
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[10]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98283,7 +98283,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag10
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[10]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98362,7 +98362,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag11
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[11]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98375,7 +98375,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag11
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[11]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98388,7 +98388,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag11
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[11]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98467,7 +98467,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag12
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[12]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98480,7 +98480,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag12
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[12]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98493,7 +98493,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag12
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[12]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98572,7 +98572,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag13
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[13]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98585,7 +98585,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag13
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[13]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98598,7 +98598,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag13
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[13]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98677,7 +98677,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag14
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[14]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98690,7 +98690,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag14
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[14]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98703,7 +98703,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag14
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[14]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98782,7 +98782,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag15
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[15]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98795,7 +98795,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag15
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[15]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98808,7 +98808,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag15
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[15]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98887,7 +98887,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag16
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[16]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98900,7 +98900,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag16
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[16]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98913,7 +98913,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag16
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[16]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -98992,7 +98992,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag17
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[17]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99005,7 +99005,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag17
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[17]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99018,7 +99018,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag17
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[17]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99097,7 +99097,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag18
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[18]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99110,7 +99110,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag18
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[18]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99123,7 +99123,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag18
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[18]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99202,7 +99202,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag19
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[19]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99215,7 +99215,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag19
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[19]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99228,7 +99228,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag19
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[19]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99307,7 +99307,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag20
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[20]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99320,7 +99320,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag20
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[20]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99333,7 +99333,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag20
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[20]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99412,7 +99412,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag21
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[21]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99425,7 +99425,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag21
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[21]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99438,7 +99438,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag21
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[21]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99517,7 +99517,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag22
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[22]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99530,7 +99530,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag22
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[22]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99543,7 +99543,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag22
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[22]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99622,7 +99622,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag23
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[23]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99635,7 +99635,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag23
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[23]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99648,7 +99648,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag23
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[23]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99727,7 +99727,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag24
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[24]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99740,7 +99740,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag24
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[24]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99753,7 +99753,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag24
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[24]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99832,7 +99832,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag25
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[25]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99845,7 +99845,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag25
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[25]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99858,7 +99858,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag25
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[25]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99937,7 +99937,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag26
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[26]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99950,7 +99950,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag26
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[26]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -99963,7 +99963,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag26
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[26]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -100042,7 +100042,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag27
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[27]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -100055,7 +100055,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag27
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[27]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -100068,7 +100068,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag27
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[27]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -100147,7 +100147,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag28
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[28]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -100160,7 +100160,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag28
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[28]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -100173,7 +100173,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag28
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[28]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -100252,7 +100252,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag29
                   SHOW_EQUAL 1.000000 laminar/B747/nd/fo/tcas/tag_color[29]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -100265,7 +100265,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag29
                   SHOW_EQUAL 2.000000 laminar/B747/nd/fo/tcas/tag_color[29]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -100278,7 +100278,7 @@ GROUP First Officer ND
                   DATAREF laminar/B747/nd/fo/tcas/tag29
                   SHOW_EQUAL 3.000000 laminar/B747/nd/fo/tcas/tag_color[29]
                   LIGHT_MODE GLASS_AUTO
-                  LIGHT_RHEOSTAT 0
+                  LIGHT_RHEOSTAT 3
                   BUS_SRC 3
                   KEY_FRAME 0.000000 0.000000 1.000000
                   KEY_FRAME 1.000000 1.000000
@@ -109872,7 +109872,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[0]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -109977,7 +109977,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[1]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -110082,7 +110082,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[2]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -110187,7 +110187,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[3]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -110292,7 +110292,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[4]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -110397,7 +110397,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[5]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -110502,7 +110502,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[6]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -110607,7 +110607,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[7]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -110712,7 +110712,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[8]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -110817,7 +110817,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[9]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -110922,7 +110922,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[10]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -111027,7 +111027,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[11]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -111132,7 +111132,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[12]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -111237,7 +111237,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[13]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -111342,7 +111342,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[14]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -111447,7 +111447,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[15]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -111552,7 +111552,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[16]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -111657,7 +111657,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[17]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -111762,7 +111762,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[18]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -111867,7 +111867,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[19]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -111972,7 +111972,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[20]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -112077,7 +112077,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[21]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -112182,7 +112182,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[22]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -112287,7 +112287,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[23]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -112392,7 +112392,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[24]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -112497,7 +112497,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[25]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -112602,7 +112602,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[26]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -112707,7 +112707,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[27]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -112812,7 +112812,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[28]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000
@@ -112917,7 +112917,7 @@ GROUP Captain ND
                 IMAGE CRT Displays/ND/tcas_symbols
                 DATAREF laminar/B747/nd/capt/tcas/sym[29]
                 LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 2
+                LIGHT_RHEOSTAT 0
                 BUS_SRC 3
                 KEY_FRAME 0.000000 0.000000 1.000000
                 KEY_FRAME 1.000000 1.000000

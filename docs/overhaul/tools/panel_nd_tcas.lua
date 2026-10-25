@@ -111,14 +111,14 @@ local function shown(out, indent, name, x, y, image, dref, rheostat, bus)
     out[#out + 1] = sub .. "HIDE"
     rotary_tail(out, sub, rheostat, bus, "6.000000", 1)
 end
-local function gtext(out, indent, name, x, y, image, dref, cond, bus)
+local function gtext(out, indent, name, x, y, image, dref, cond, rheostat, bus)
     local sub = indent .. "  "
     out[#out + 1] = indent .. "gen_text " .. name
     out[#out + 1] = sub .. "POS " .. f6(x) .. " " .. f6(y)
     out[#out + 1] = sub .. "IMAGE " .. image
     out[#out + 1] = sub .. "DATAREF " .. dref
     out[#out + 1] = sub .. cond
-    for _, l in ipairs({"LIGHT_MODE GLASS_AUTO", "LIGHT_RHEOSTAT 0", "BUS_SRC " .. bus,
+    for _, l in ipairs({"LIGHT_MODE GLASS_AUTO", "LIGHT_RHEOSTAT " .. rheostat, "BUS_SRC " .. bus,
             "KEY_FRAME 0.000000 0.000000 1.000000", "KEY_FRAME 1.000000 1.000000", "OFFSET_X 0", "OFFSET_Y 0.000000"}) do
         out[#out + 1] = sub .. l
     end
@@ -148,8 +148,8 @@ local function insert(at, block)
 end
 
 local SIDES = {
-    {side = "capt", nd = "GROUP Captain ND", tfc = "gen_rotary TFC 2", tcasx = "gen_rotary TCAS X CAPT"},
-    {side = "fo", nd = "GROUP First Officer ND", tfc = "gen_rotary TFC", tcasx = "gen_rotary TCAS X FO"},
+    {side = "capt", nd = "GROUP Captain ND", tfc = "gen_rotary TFC 2", tcasx = "gen_rotary TCAS X CAPT", rheostat = "0"},
+    {side = "fo", nd = "GROUP First Officer ND", tfc = "gen_rotary TFC", tcasx = "gen_rotary TCAS X FO", rheostat = "3"},
 }
 for _, sd in ipairs(SIDES) do
     local ND = "laminar/B747/nd/" .. sd.side .. "/"
@@ -161,7 +161,7 @@ for _, sd in ipairs(SIDES) do
     local tce = group_end(tc)
     local icon = find(tc, tce, "^%s*gen_rotary Text0 Icon$", "Text0 Icon")
     local ix, iy = pos_of(icon)
-    local irheo, ibus = field(icon, "LIGHT_RHEOSTAT"), field(icon, "BUS_SRC")
+    local ibus = field(icon, "BUS_SRC")
     local wtext = find(icon, tce, "^%s*gen_text Text0 White$", "Text0 White")
     local tbus = field(wtext, "BUS_SRC")
     local slot_ind = ind(find(tc, tce, "^%s*GROUP ND Text Icons0 ?$", "Text Icons0"))
@@ -213,16 +213,16 @@ for _, sd in ipairs(SIDES) do
         group_head(out, i2, "ND TCAS" .. k .. " backrotate", "ROTATE", T .. "heading" .. idx,
             {"KEY_FRAME 0.000000 0.000000 1.000000", "KEY_FRAME 45.000000 -45.000000"}, false)
         framed(out, i3, "TCAS" .. k .. " Symbol", ix, iy, "CRT Displays/ND/tcas_symbols", T .. "sym" .. idx,
-            irheo, ibus, 13)
+            sd.rheostat, ibus, 13)
         group_head(out, i3, "ND TCAS" .. k .. " Tag", "TRANSLATE", T .. "tag_dy" .. idx,
             {"KEY_FRAME -100.000000 -100.000000 1.000000", "KEY_FRAME 100.000000 100.000000"}, true)
         local i4 = i3 .. "  "
         gtext(out, i4, "TCAS" .. k .. " White", ix + TAG_DX, iy + TAG_DY, "CRT Displays/TEXT/ND/TXT.2.28.white",
-            T .. "tag" .. k, "SHOW_EQUAL 1.000000 " .. T .. "tag_color" .. idx, tbus)
+            T .. "tag" .. k, "SHOW_EQUAL 1.000000 " .. T .. "tag_color" .. idx, sd.rheostat, tbus)
         gtext(out, i4, "TCAS" .. k .. " Amber", ix + TAG_DX, iy + TAG_DY, "CRT Displays/TEXT/TXT.2.28.amber",
-            T .. "tag" .. k, "SHOW_EQUAL 2.000000 " .. T .. "tag_color" .. idx, tbus)
+            T .. "tag" .. k, "SHOW_EQUAL 2.000000 " .. T .. "tag_color" .. idx, sd.rheostat, tbus)
         gtext(out, i4, "TCAS" .. k .. " Red", ix + TAG_DX, iy + TAG_DY, "CRT Displays/TEXT/TXT.2.28.red",
-            T .. "tag" .. k, "SHOW_EQUAL 3.000000 " .. T .. "tag_color" .. idx, tbus)
+            T .. "tag" .. k, "SHOW_EQUAL 3.000000 " .. T .. "tag_color" .. idx, sd.rheostat, tbus)
         out[#out + 1] = i3 .. "END_GROUP"
         out[#out + 1] = i2 .. "END_GROUP"
         out[#out + 1] = i1 .. "END_GROUP"

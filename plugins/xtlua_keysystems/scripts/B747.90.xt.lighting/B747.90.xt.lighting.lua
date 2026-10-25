@@ -895,6 +895,16 @@ for i = 0, 32 do
 	brightnessRate[i]=0.5+math.random()
 	brightnessPower[i]=1
 end
+-- a display takes the brightness knob of the unit it is on (5-2 step 1,
+-- DSP-30; FCOM p.1071): each display's rheostat in the panel (as
+-- display_has_power: Captain PFD, F/O PFD, F/O ND, Captain ND, primary
+-- EICAS, secondary EICAS) and each unit's knob (instrument_brightness_ratio:
+-- Captain outboard, Captain inboard, upper, lower, F/O inboard, F/O outboard)
+B747DR_light_content_unit       = find_dataref("laminar/B747/displays/content_unit")
+local DISPLAY_RHEOSTAT = {2, 5, 3, 0, 9, 10}
+local UNIT_KNOB = {2, 0, 9, 10, 3, 5}
+local knob_of = {}
+for i = 0, 32 do knob_of[i] = i end
 ----- CABIN LIGHTS ----------------------------------------------------------------------
 function B747_cabin_lights()
     --B747DR_elec_display_power
@@ -923,9 +933,13 @@ function B747_cabin_lights()
      end
      
 
+     for c = 1, 6 do
+         local u = B747DR_light_content_unit[c - 1]
+         knob_of[DISPLAY_RHEOSTAT[c]] = UNIT_KNOB[u] or DISPLAY_RHEOSTAT[c]
+     end
      for i = 0, 32 do
 -- 	--print(i)
-         simDR_instrument_brightness_switch[i] = B747_animate_value(simDR_instrument_brightness_switch[i],B747DR_instrument_brightness_ratio[i]* simDR_generic_brightness_ratio[63]*brightnessPower[i],0,1,brightnessRate[i])
+         simDR_instrument_brightness_switch[i] = B747_animate_value(simDR_instrument_brightness_switch[i],B747DR_instrument_brightness_ratio[knob_of[i]]* simDR_generic_brightness_ratio[63]*brightnessPower[i],0,1,brightnessRate[i])
      end
     local power = B747_ternary(
         (simDR_apu_gen_on == 1                                                          -- APU IS RUNNING
