@@ -75636,8 +75636,7 @@ GROUP Captain PFD
               POS 143.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps00
               DATAREF laminar/B747/airspeed/Vf0
-              SHOW_LESS 0.170000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.000000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[0]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -75653,8 +75652,7 @@ GROUP Captain PFD
               POS 143.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps01
               DATAREF laminar/B747/airspeed/Vf1
-              SHOW_LESS 0.336000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.167000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[1]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -75670,8 +75668,7 @@ GROUP Captain PFD
               POS 143.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps05
               DATAREF laminar/B747/airspeed/Vf5
-              SHOW_LESS 0.500000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.333000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[2]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -75687,8 +75684,7 @@ GROUP Captain PFD
               POS 143.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps10
               DATAREF laminar/B747/airspeed/Vf10
-              SHOW_LESS 0.667000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.500000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[3]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -75704,7 +75700,7 @@ GROUP Captain PFD
               POS 143.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps20
               DATAREF laminar/B747/airspeed/Vf20
-              SHOW_GREATER 0.667000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[4]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -75720,7 +75716,7 @@ GROUP Captain PFD
               POS 143.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps25
               DATAREF laminar/B747/airspeed/Vf25
-              SHOW_GREATER 0.500000 laminar/B747/airspeed/showVf25
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[5]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -75736,7 +75732,7 @@ GROUP Captain PFD
               POS 143.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps30
               DATAREF laminar/B747/airspeed/Vf30
-              SHOW_GREATER 0.500000 laminar/B747/airspeed/showVf30
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[6]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -79496,8 +79492,7 @@ GROUP Captain PFD
               POS 143.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps00
               DATAREF laminar/B747/airspeed/Vf0
-              SHOW_LESS 0.170000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.000000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[0]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -79513,8 +79508,7 @@ GROUP Captain PFD
               POS 143.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps01
               DATAREF laminar/B747/airspeed/Vf1
-              SHOW_LESS 0.336000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.167000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[1]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -79530,8 +79524,7 @@ GROUP Captain PFD
               POS 143.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps05
               DATAREF laminar/B747/airspeed/Vf5
-              SHOW_LESS 0.500000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.333000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[2]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -79547,8 +79540,7 @@ GROUP Captain PFD
               POS 143.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps10
               DATAREF laminar/B747/airspeed/Vf10
-              SHOW_LESS 0.667000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.500000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[3]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -79564,7 +79556,7 @@ GROUP Captain PFD
               POS 143.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps20
               DATAREF laminar/B747/airspeed/Vf20
-              SHOW_GREATER 0.667000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[4]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -79580,7 +79572,7 @@ GROUP Captain PFD
               POS 143.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps25
               DATAREF laminar/B747/airspeed/Vf25
-              SHOW_GREATER 0.500000 laminar/B747/airspeed/showVf25
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[5]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -79596,7 +79588,7 @@ GROUP Captain PFD
               POS 143.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps30
               DATAREF laminar/B747/airspeed/Vf30
-              SHOW_GREATER 0.500000 laminar/B747/airspeed/showVf30
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[6]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -84084,8 +84076,7 @@ GROUP First Officer PFD
               POS 822.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps00
               DATAREF laminar/B747/airspeed/Vf0
-              SHOW_LESS 0.170000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.000000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[0]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -84101,8 +84092,7 @@ GROUP First Officer PFD
               POS 822.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps01
               DATAREF laminar/B747/airspeed/Vf1
-              SHOW_LESS 0.336000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.167000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[1]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -84118,8 +84108,7 @@ GROUP First Officer PFD
               POS 822.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps05
               DATAREF laminar/B747/airspeed/Vf5
-              SHOW_LESS 0.500000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.333000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[2]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -84135,8 +84124,7 @@ GROUP First Officer PFD
               POS 822.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps10
               DATAREF laminar/B747/airspeed/Vf10
-              SHOW_LESS 0.667000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.500000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[3]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -84152,7 +84140,7 @@ GROUP First Officer PFD
               POS 822.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps20
               DATAREF laminar/B747/airspeed/Vf20
-              SHOW_GREATER 0.667000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[4]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -84168,7 +84156,7 @@ GROUP First Officer PFD
               POS 822.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps25
               DATAREF laminar/B747/airspeed/Vf25
-              SHOW_GREATER 0.500000 laminar/B747/airspeed/showVf25
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[5]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -84184,7 +84172,7 @@ GROUP First Officer PFD
               POS 822.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps30
               DATAREF laminar/B747/airspeed/Vf30
-              SHOW_GREATER 0.500000 laminar/B747/airspeed/showVf30
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[6]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -87923,8 +87911,7 @@ GROUP First Officer PFD
               POS 822.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps00
               DATAREF laminar/B747/airspeed/Vf0
-              SHOW_LESS 0.170000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.000000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[0]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -87940,8 +87927,7 @@ GROUP First Officer PFD
               POS 822.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps01
               DATAREF laminar/B747/airspeed/Vf1
-              SHOW_LESS 0.336000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.167000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[1]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -87957,8 +87943,7 @@ GROUP First Officer PFD
               POS 822.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps05
               DATAREF laminar/B747/airspeed/Vf5
-              SHOW_LESS 0.500000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.333000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[2]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -87974,8 +87959,7 @@ GROUP First Officer PFD
               POS 822.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps10
               DATAREF laminar/B747/airspeed/Vf10
-              SHOW_LESS 0.667000 sim/cockpit2/controls/flap_ratio
-              SHOW_GREATER 0.500000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[3]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -87991,7 +87975,7 @@ GROUP First Officer PFD
               POS 822.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps20
               DATAREF laminar/B747/airspeed/Vf20
-              SHOW_GREATER 0.667000 sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[4]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -88007,7 +87991,7 @@ GROUP First Officer PFD
               POS 822.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps25
               DATAREF laminar/B747/airspeed/Vf25
-              SHOW_GREATER 0.500000 laminar/B747/airspeed/showVf25
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[5]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -88023,7 +88007,7 @@ GROUP First Officer PFD
               POS 822.000000 767.500000
               IMAGE CRT Displays/PFD/Flap Speeds/flaps30
               DATAREF laminar/B747/airspeed/Vf30
-              SHOW_GREATER 0.500000 laminar/B747/airspeed/showVf30
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[6]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5

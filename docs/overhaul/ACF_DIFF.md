@@ -262,3 +262,11 @@
 | 同（NAV-80・81） | 各 ND の注記の 2 行の後 | なし | 同じ位置の琥珀の写し 2 つ（`CRT Displays/TEXT/TXT.2.28.amber`、`wxr_color[0]`・`[1]` が 2：WXR FAIL、TEST の故障の源）と、チルトの 20 px 下（y −98.5）の 3 行目の青と琥珀（`text/wxr3`、`wxr_color[2]` が 1・2：CAL・VAR、WEAK・ATT） | FCOM p.1155、p.1224、ATA34_1 p.244–246 |
 
 上の 2 行は `docs/overhaul/tools/panel_nd_wxr.lua` で書き換えた（各 ND に条件 2 行の置き換えと文字 4 つ）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_nd_wxr`。X-Plane のスクリーンショット（`s50_wxr_faults`）で、3 行が左に揃い、青と琥珀が出し分けられることを確かめた。外から見た写真で機体の見た目が変わらないことを確かめた。純正 acf は変えていない。
+
+表示（5-2 段 3a、2026-10-25。パネルの変更は全範囲で承認なしでよい）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-25・速度テープ（DSP-13） | 各 PFD（4 組）の `GROUP Flap Speeds` のバグ 7 本（`gen_pointer UP`・`1`・`5`・`10`・`20`・`25`・`30`、副操縦士は名前に ` 2`） | レバーの位置の範囲（`SHOW_LESS`・`SHOW_GREATER sim/cockpit2/controls/flap_ratio` の 2 行か 1 行）、25・30 は `showVf25`・`showVf30` | `SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[k]`（k は 0 UP〜6 30：今と次の小さいフラップ） | FCOM p.972、PI.10.3 |
+
+上の 1 行は `docs/overhaul/tools/panel_flap_bugs.lua` で書き換えた（28 本、条件 44 行を 28 行に）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_flap_bugs`。X-Plane のスクリーンショット（`s51_speed_tape`）で、フラップごとに 2 本のバグが出ることを確かめた。外から見た写真で機体の見た目が変わらないことを確かめた。純正 acf は変えていない。
