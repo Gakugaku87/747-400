@@ -92,6 +92,7 @@ for n=0,ND_DATA.SLOTS-1,1 do
   iconTextDataFO[n].rdata2=find_dataref("laminar/B747/nd/fo/text/rdata2_"..n)
 end
 local routeEta={}
+local fmsVersion=0
 local transAlt=ND_DATA.TRANS_ALT_FT
 -- EXCESS DATA (step 5c, FCOM p.1111): more symbols than the 60 slots
 B747DR_nd_capt_excess_data = find_dataref("laminar/B747/nd/capt/excess_data")
@@ -243,6 +244,7 @@ function decodeFlightPlan()
   if string.len(fmsJSON) >0 then
       fmsTable=json.decode(fmsJSON)
   end
+  fmsVersion=fmsVersion+1
   -- the FMC's ETA for each route entry and its transition altitude (step 5c)
   local e=B747DR_nd_fms_route_eta
   if type(e)=="string" and string.len(e)>1 then routeEta=json.decode(e) else routeEta={} end
@@ -262,6 +264,23 @@ function getHeadingDifference(desireddirection,current_heading)
 	if (error >  180) then error =error- 360 end
 	if (error < -180) then error =error+ 360 end
 	return error
+end
+
+-- a true bearing on that side's ND, from the display's top as nd_up orients
+-- it (step 5a): that side's track (MAP) or heading (VOR, APP) made true with
+-- the variation; PLN north up as before. The map symbols every 0.2 s
+-- (makeIcon) and every frame (updateIcon: before, the Captain's track in
+-- MAP for both sides and the true heading in the other modes) and the
+-- airports (step 5c)
+local function nd_bearing(isCapt,abs_heading)
+  local mode, trk, hdg = B747DR_nd_mode_capt, simDR_ground_track, simDR_heading_track
+  if not isCapt then
+    mode, trk, hdg = B747DR_nd_mode_fo, simDR_ground_track_copilot, simDR_heading_copilot
+  end
+  local mag_diff=getHeadingDifference(simDR_true_heading,simDR_mag_heading)
+  if mode==2 then return getHeadingDifference(trk-mag_diff,abs_heading) end
+  if mode==3 then return abs_heading+simDR_variation end
+  return getHeadingDifference(hdg-mag_diff,abs_heading)
 end
 
 -- each ND's top (5-2 step 5a; the rule of B747.60.nd_model.lua's
@@ -298,22 +317,9 @@ function makeIcon(iconTextData,navtype,text,latitude,longitude,distance,routeInd
   end
 
   local abs_heading=getHeading(cLat,cLon,latitude,longitude)
-  local heading_diff=0
-  -- the symbol's bearing from the display's top, as nd_up orients it (step
-  -- 5a): that side's track (MAP) or heading (VOR, APP) made true with the
-  -- variation; PLN north up as before
-  local mode, trk, hdg = B747DR_nd_mode_capt, simDR_ground_track, simDR_heading_track
-  if iconTextData~=iconTextDataCapt then
-    mode, trk, hdg = B747DR_nd_mode_fo, simDR_ground_track_copilot, simDR_heading_copilot
-  end
-  local mag_diff=getHeadingDifference(simDR_true_heading,simDR_mag_heading)
-  if mode==2 then
-    heading_diff=getHeadingDifference(trk-mag_diff,abs_heading)
-  elseif mode==3 then
-    heading_diff=abs_heading+simDR_variation
-  else
-    heading_diff=getHeadingDifference(hdg-mag_diff,abs_heading)
-  end
+  local isCapt=iconTextData==iconTextDataCapt
+  local mode=isCapt and B747DR_nd_mode_capt or B747DR_nd_mode_fo
+  local heading_diff=nd_bearing(isCapt,abs_heading)
   
   local lastNavaid=0
   local vor_ndb=0
@@ -356,15 +362,17 @@ function makeIcon(iconTextData,navtype,text,latitude,longitude,distance,routeInd
   -- every mode): the airports on all ranges, the waypoints at 40 NM and
   -- less; the tuned VORs always, in green (FCOM p.1145: before, only with
   -- STA), the other navaids with STA: high and low altitude ones at 40 NM
-  -- and less, high altitude ones beyond (before, all on all ranges)
+  -- and less, high altitude ones beyond (before, all on all ranges). The
+  -- route's waypoints in MAP, MAP CTR and PLAN (FCOM p.1148: before, also in
+  -- VOR, where X-Plane's map mode is MAP)
   local icon, color
   local map=mode==2
   if navtype==1 then
     if apt>0 and map then icon, color=2, "blue" end
   elseif navtype==3003 then
-    icon, color=4, "red"
+    if map or mode==3 then icon, color=4, "red" end
   elseif navtype==3005 then
-    icon, color=5, "white"
+    if map or mode==3 then icon, color=5, "white" end
   elseif navtype==3007 then
     if wpt>0 and map and range<=40 then icon, color=13, "blue" end
   elseif navtype==3008 then
@@ -436,15 +444,7 @@ function updateIcon(iconData,n,isCaptain)
   end
    local distance = getDistance(cLat,cLon,iconData[n].latitude,iconData[n].longitude)
   local abs_heading=getHeading(cLat,cLon,iconData[n].latitude,iconData[n].longitude)
-  local heading_diff=0
-  if (simDR_map_mode==2 and isCaptain==1) or (backport_map_mode_copilot==2 and isCaptain==0) then
-    mag_diff=getHeadingDifference(simDR_true_heading,simDR_mag_heading)
-    heading_diff=getHeadingDifference(simDR_ground_track-mag_diff,abs_heading)
-  elseif (simDR_map_mode==4 and isCaptain==1) or (backport_map_mode_copilot==4 and isCaptain==0) then
-    heading_diff=abs_heading+simDR_variation
-  else
-    heading_diff=getHeadingDifference(simDR_true_heading,abs_heading)
-  end
+  local heading_diff=nd_bearing(isCaptain==1,abs_heading)
   if isCaptain==1 then
     displayDistance=distance*(640/ranges[simDR_range_dial_capt + 1])
     B747DR_text_capt_heading[n]=heading_diff
@@ -622,6 +622,224 @@ function updateTCAS()
   tcasSide(tcasFO, false)
 end
 
+-- The origin and destination airports and their runways (step 5c, FCOM
+-- p.1149; B747.61.nd_data.lua): from the route's ends in X-Plane's FMS, the
+-- runways' other ends from the airport's CIFP file (read a chunk a frame
+-- after loading); each ND's two airports, 0 the origin and 1 the
+-- destination, in MAP, MAP CTR and PLAN whatever the ARPT switch, in white:
+-- on 80 NM and more the airport symbol and identifier with the selected
+-- runway's under it and a line along the runway, from the airport toward
+-- the selected threshold's end (estimate: FCOM's figure); on 10 to 40 NM
+-- the runway to scale with its dashed centrelines and its identifier at the
+-- threshold, the airport symbol when the runway is not known (estimate):
+-- the dashes on the map's visible part, the runway when its middle is, the
+-- identifier when the threshold is.
+-- The route's waypoints and the ARPT symbols for them give way to these
+-- (estimate: before, the route's waypoints).
+aptDataCapt={}
+aptDataFO={}
+aptDataCapt.sym=find_dataref("laminar/B747/nd/capt/apt/sym")
+aptDataCapt.heading=find_dataref("laminar/B747/nd/capt/apt/heading")
+aptDataCapt.distance=find_dataref("laminar/B747/nd/capt/apt/distance")
+aptDataCapt.line=find_dataref("laminar/B747/nd/capt/apt/line")
+aptDataCapt.dir=find_dataref("laminar/B747/nd/capt/apt/dir")
+aptDataCapt.rwy_show=find_dataref("laminar/B747/nd/capt/apt/rwy_show")
+aptDataCapt.rwy_heading=find_dataref("laminar/B747/nd/capt/apt/rwy_heading")
+aptDataCapt.rwy_distance=find_dataref("laminar/B747/nd/capt/apt/rwy_distance")
+aptDataCapt.rwy_len=find_dataref("laminar/B747/nd/capt/apt/rwy_len")
+aptDataCapt.rwy_frame=find_dataref("laminar/B747/nd/capt/apt/rwy_frame")
+aptDataCapt.thr_heading=find_dataref("laminar/B747/nd/capt/apt/thr_heading")
+aptDataCapt.thr_distance=find_dataref("laminar/B747/nd/capt/apt/thr_distance")
+aptDataCapt.thr_show=find_dataref("laminar/B747/nd/capt/apt/thr_show")
+aptDataCapt.dash=find_dataref("laminar/B747/nd/capt/apt/dash")
+aptDataCapt.id0=find_dataref("laminar/B747/nd/capt/apt/id0")
+aptDataCapt.id1=find_dataref("laminar/B747/nd/capt/apt/id1")
+aptDataCapt.rwy0=find_dataref("laminar/B747/nd/capt/apt/rwy0")
+aptDataCapt.rwy1=find_dataref("laminar/B747/nd/capt/apt/rwy1")
+aptDataFO.sym=find_dataref("laminar/B747/nd/fo/apt/sym")
+aptDataFO.heading=find_dataref("laminar/B747/nd/fo/apt/heading")
+aptDataFO.distance=find_dataref("laminar/B747/nd/fo/apt/distance")
+aptDataFO.line=find_dataref("laminar/B747/nd/fo/apt/line")
+aptDataFO.dir=find_dataref("laminar/B747/nd/fo/apt/dir")
+aptDataFO.rwy_show=find_dataref("laminar/B747/nd/fo/apt/rwy_show")
+aptDataFO.rwy_heading=find_dataref("laminar/B747/nd/fo/apt/rwy_heading")
+aptDataFO.rwy_distance=find_dataref("laminar/B747/nd/fo/apt/rwy_distance")
+aptDataFO.rwy_len=find_dataref("laminar/B747/nd/fo/apt/rwy_len")
+aptDataFO.rwy_frame=find_dataref("laminar/B747/nd/fo/apt/rwy_frame")
+aptDataFO.thr_heading=find_dataref("laminar/B747/nd/fo/apt/thr_heading")
+aptDataFO.thr_distance=find_dataref("laminar/B747/nd/fo/apt/thr_distance")
+aptDataFO.thr_show=find_dataref("laminar/B747/nd/fo/apt/thr_show")
+aptDataFO.dash=find_dataref("laminar/B747/nd/fo/apt/dash")
+aptDataFO.id0=find_dataref("laminar/B747/nd/fo/apt/id0")
+aptDataFO.id1=find_dataref("laminar/B747/nd/fo/apt/id1")
+aptDataFO.rwy0=find_dataref("laminar/B747/nd/fo/apt/rwy0")
+aptDataFO.rwy1=find_dataref("laminar/B747/nd/fo/apt/rwy1")
+local aptO, aptOR, aptD, aptDR=nil, nil, nil, nil
+local aptVersion=-1
+local cifp={}                   -- by airport: its thresholds by runway, false without a file
+local cifpFile, cifpApt, cifpRwys=nil, nil, nil
+local rwyGeo={}                 -- by airport and runway: {lat, lon, length NM, bearing}, false if unknown
+local dashBuf={}
+local dashLast={{}, {}}
+local DASH_N=2*2*ND_DATA.DASHES
+for j=0,DASH_N-1 do dashBuf[j]=0 dashLast[1][j]=-1 dashLast[2][j]=-1 end
+
+-- the route's ends when it changed
+local function aptRoute()
+  if aptVersion==fmsVersion then return end
+  aptVersion=fmsVersion
+  aptO, aptOR, aptD, aptDR=ND_DATA.route_ends(fmsTable)
+end
+-- the airports and their runways as used (makeIcon leaves them)
+local function aptUsed(used)
+  for _, i in ipairs({aptO or 0, aptOR or 0, aptD or 0, aptDR or 0}) do
+    local e=fmsTable[i]
+    if e and e[8] then used[e[8]]=true end
+  end
+end
+-- the airport's CIFP file in the navigation data X-Plane uses
+function cifp_open(apt)
+  return io.open("Custom Data/CIFP/"..apt..".dat", "r") or io.open("Resources/default data/CIFP/"..apt..".dat", "r")
+end
+-- the CIFP file of an airport with a selected runway, a chunk a frame
+function read_cifp()
+  if cifpFile==nil then
+    local want=nil
+    for _, p in ipairs({{aptO or 0, aptOR}, {aptD or 0, aptDR}}) do
+      local e=fmsTable[p[1]]
+      if e and p[2] and cifp[e[8]]==nil then want=e[8] break end
+    end
+    if want==nil then return end
+    cifpFile=cifp_open(want)
+    if cifpFile==nil then cifp[want]=false return end
+    cifpApt, cifpRwys=want, {}
+  end
+  for n=1,ND_DATA.NAV_LINES do
+    local line=cifpFile:read("*line")
+    if line==nil then
+      cifpFile:close()
+      cifpFile=nil
+      cifp[cifpApt]=cifpRwys
+      cifpApt, cifpRwys=nil, nil
+      return
+    end
+    local id, lat, lon, disp=ND_DATA.cifp_rwy(line)
+    if id then cifpRwys[id]={lat, lon, disp} end
+  end
+end
+-- a selected runway's middle, length and bearing to its threshold's end
+-- (the route's threshold, the other end's from the CIFP file), or nil
+local function rwy_geo(ai, ri)
+  local a, r=fmsTable[ai or 0], fmsTable[ri or 0]
+  if a==nil or r==nil then return nil end
+  local key=a[8].." "..r[8]
+  local g=rwyGeo[key]
+  if g~=nil then return g or nil end
+  local c=cifp[a[8]]
+  if c==nil then return nil end
+  local o=c and c[ND_DATA.rwy_opposite(r[8])]
+  if not o then rwyGeo[key]=false return nil end
+  local s=c[r[8]]
+  local lat, lon, len, brg=ND_DATA.runway(r[5], r[6], s and s[3] or 0, o[1], o[2], o[3])
+  if lat==nil then rwyGeo[key]=false return nil end
+  g={lat, lon, len, brg}
+  rwyGeo[key]=g
+  return g
+end
+-- a position's bearing and distance on that side's ND, and whether it is
+-- on the map's visible part
+local function aptPlace(isCapt, cLat, cLon, lat, lon, ppn, view)
+  local d=getDistance(cLat,cLon,lat,lon)
+  local h=nd_bearing(isCapt,getHeading(cLat,cLon,lat,lon))
+  local x, y=d*ppn*math.sin(math.rad(h)), d*ppn*math.cos(math.rad(h))
+  return h, d, x, y, ND_DATA.inside(x, y, view)
+end
+local function aptSide(isCapt, t, last)
+  local mode=isCapt and B747DR_nd_mode_capt or B747DR_nd_mode_fo
+  local irs=isCapt and captIRS or foIRS
+  local dial=isCapt and simDR_range_dial_capt or simDR_range_dial_fo
+  local center=(isCapt and B747_nd_map_center_capt or B747_nd_map_center_fo)>0
+  local view=ND_DATA.EXPANDED
+  if mode==3 then view=ND_DATA.PLAN elseif center then view=ND_DATA.CENTRED end
+  local range=ranges[dial+1] or 40
+  local units, ppn=640/range, ND_DATA.PX_PER_RANGE/range
+  local cLat, cLon=display_latitude_cpt, display_longitude_cpt
+  if not isCapt then cLat, cLon=display_latitude_fo, display_longitude_fo end
+  local on=irs>0 and (mode==2 or mode==3)
+  for k=0,1 do
+    local ai, ri=aptO, aptOR
+    if k==1 then ai, ri=aptD, aptDR end
+    local a=on and fmsTable[ai or 0] or nil
+    local sym, line, rwy, frame, thr=0, 0, 0, -1, 0
+    local id, rid=" ", " "
+    local base=k*2*ND_DATA.DASHES
+    if a then
+      local r=fmsTable[ri or 0]
+      local geo=rwy_geo(ai, ri)
+      id=a[8]
+      rid=r and ND_DATA.rwy_id(r[8]) or " "
+      if range<ND_DATA.APT_RANGE_NM and geo then
+        local h, d, x, y, inside=aptPlace(isCapt, cLat, cLon, geo[1], geo[2], ppn, view)
+        local th, td, _, _, thrIn=aptPlace(isCapt, cLat, cLon, r[5], r[6], ppn, view)
+        local dir=nd_bearing(isCapt,geo[4])
+        local len=geo[3]*ppn
+        ND_DATA.dashes(x, y, dir, len, ppn, view, dashBuf, base)
+        local dashes=false
+        for j=base,base+2*ND_DATA.DASHES-1 do
+          if dashBuf[j]>0 then dashes=true break end
+        end
+        if inside or thrIn or dashes then
+          rwy=1
+          t.rwy_heading[k]=h
+          t.rwy_distance[k]=d*units
+          t.dir[k]=dir
+          t.rwy_len[k]=len
+          t.thr_heading[k]=th
+          t.thr_distance[k]=td*units
+          if inside then frame=ND_DATA.rwy_frame(len) end
+          if thrIn then thr=1 end
+        end
+      else
+        local h, d, x, y, inside=aptPlace(isCapt, cLat, cLon, a[5], a[6], ppn, view)
+        if inside then
+          sym=1
+          t.heading[k]=h
+          t.distance[k]=d*units
+          if geo then
+            line=1
+            t.dir[k]=nd_bearing(isCapt,geo[4])
+          end
+        end
+      end
+    end
+    if rwy==0 then for j=base,base+2*ND_DATA.DASHES-1 do dashBuf[j]=0 end end
+    if t.sym[k]~=sym then t.sym[k]=sym end
+    if t.line[k]~=line then t.line[k]=line end
+    if t.rwy_show[k]~=rwy then t.rwy_show[k]=rwy end
+    if t.rwy_frame[k]~=frame then t.rwy_frame[k]=frame end
+    if t.thr_show[k]~=thr then t.thr_show[k]=thr end
+    if k==0 then
+      if t.id0~=id then t.id0=id end
+      if t.rwy0~=rid then t.rwy0=rid end
+    else
+      if t.id1~=id then t.id1=id end
+      if t.rwy1~=rid then t.rwy1=rid end
+    end
+  end
+  for j=0,DASH_N-1 do
+    if last[j]~=dashBuf[j] then
+      t.dash[j]=dashBuf[j]
+      last[j]=dashBuf[j]
+    end
+  end
+end
+-- every frame
+function updateAirports()
+  aptRoute()
+  aptSide(true, aptDataCapt, dashLast[1])
+  aptSide(false, aptDataFO, dashLast[2])
+end
+
 function newIcons()
   lastCaptNavaid=0
   lastFONavaid=0
@@ -656,6 +874,10 @@ function newIcons()
   end
   usedNaviadsTableCapt={}
   usedNaviadsTableFO={}
+  -- the origin and destination and their runways have their own symbols
+  aptRoute()
+  aptUsed(usedNaviadsTableCapt)
+  aptUsed(usedNaviadsTableFO)
   --flightplan
   local start=B747DR_fmscurrentIndex-1
   if start<1 then start=1 end
@@ -931,6 +1153,7 @@ function after_physics()
   end
 
   updateIcons()
+  updateAirports()
   updateTCAS()
   compute_and_show_alt_range_arc()
   if debug_nd<-2 then return end
@@ -941,6 +1164,7 @@ function after_physics()
   end
   if debug_nd<-1 then return end
   read_navclass()
+  read_cifp()
   diff2=simDRTime-lastUpdateFixes
   if diff2>10 then 
     read_fixes()
