@@ -702,3 +702,6 @@ B747DR_nd_fo_rdata1_18 = deferred_dataref("laminar/B747/nd/fo/text/rdata1_18", "
 B747DR_nd_fo_rdata2_18 = deferred_dataref("laminar/B747/nd/fo/text/rdata2_18", "string")
 B747DR_nd_fo_rdata1_19 = deferred_dataref("laminar/B747/nd/fo/text/rdata1_19", "string")
 B747DR_nd_fo_rdata2_19 = deferred_dataref("laminar/B747/nd/fo/text/rdata2_19", "string")
+-- EXCESS DATA (5-2 step 5c, FCOM p.1111): more map symbols than the ND's 60 slots
+B747DR_nd_capt_excess_data = deferred_dataref("laminar/B747/nd/capt/excess_data", "number")
+B747DR_nd_fo_excess_data = deferred_dataref("laminar/B747/nd/fo/excess_data", "number")

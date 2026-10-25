@@ -568,3 +568,14 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - パネル（道具 `docs/overhaul/tools/panel_nd_pos.lua`、画像 `make_nd_pos_images.ps1`、ACF_DIFF.md §5）：地図の記号のグループ（`ND Text Center`：CTR で動く）の最後に、星 3 つと GPS の記号を機体の位置（高度の到達の弧と同じ点：画像は POS を中心に置くので地図の記号の距離 0 の点）に、radial は機体の位置を中心に回すグループの中に 24 px の線分 20 本（長さを超えた分だけ）と、長さの所で終わる最後の線分、DME の印、機体から 50 px の所の文字。X-Plane で、FKS への radial の印が FKS の記号の上に来ること（回転の中心と縮尺が地図の記号と一致）を写真で確かめた。
 - 気づいたこと：MAP CTR の地図の記号（局、経路の点）は拡大と同じ 465 px/範囲で、250 単位（182 px）までしか描かれず、全周のローズ（約 230 px）と縮尺が合っていないように見える。地図の記号を扱う段 5c-3 で確かめる。
 - 試験：ND のモデル 97 件（21 件増：IRU・GPS、向き、radial、DME の長さと印、画面の端（弧・左右・後ろ・全周）、DME の故障、VOR モードでは無し、R-360）、表示器のモジュール 227 件（10 件増）。X-Plane のシナリオ `s68_nd_pos`（18 件合格：FKS の 11 NM 南、20 NM の MAP。IRU の星、GPS の記号（初回測位の後）、FKS への radial は DME の距離まで印つき（R-176）、範囲の外の TAU へは範囲の弧まで印なし（R-155）、MAP CTR、POS を切ると消える。1 回目は VOR R が TAU に替わった直後で X-Plane の方位の針がまだ回っていて 2 件落ちた（試験の待ちを足した））。
+
+## 30. 段 5c-3a の実装（2026-10-26 朝：ND の地図の記号、EXCESS DATA、GS）
+
+- 段 5c-3 は 2 つに分けた：5c-3a（STA の高・低高度、同調中の局、STA・WPT・ARPT は MAP だけ、EXCESS DATA、109 の GS）、5c-3b（出発・到着空港と滑走路、手動同調の局のコースの線、MAP CTR の縮尺）。
+- 資料：FCOM p.1040（STA：MAP・MAP CTR で、10・20・40 NM は高・低高度の局、80 NM 以上は高高度の局だけ。WPT：40 NM 以下。ARPT：すべての範囲）、p.1145（同調中の VHF の局はスイッチに関わらず緑）、p.1111・p.1030–1031（EXCESS DATA：表示できる量より多いとき。STA・WPT・ARPT・DATA などを切ると消える。図では画面の左上）、p.1141（TAS は 405・570 だけ。109 の図は GS だけ）。
+- ND のモジュール（`B747.61.xt.nd.lua`）：記号の決め方を「何を出すか決める → 枠が空いているか → 書く」の順に組み直した。空港・fix・局は MAP（全周・拡大）だけ（前はどのモードでも出た）。VOR は、VOR L・R（X-Plane の NAV3・NAV4）が同調している局ならスイッチに関わらず緑（前は STA のときだけ）、ほかは STA で、40 NM 以下は全部、80 NM 以上は高高度の局だけ（前は全部）。NDB も同じ。
+- 高・低高度：X-Plane が使う航法データ（Navigraph の Custom Data、無ければ default data）の earth_nav.dat の受信範囲で、100 NM 以上を高高度とした（推定：VOR は 125・130・150 が高高度、40 が低高度、25 がターミナルの値。NDB は 75 以下で、いつも低高度）。起動後に 1 フレーム 500 行ずつ読む（約 80 フレーム）。読み終わるまでは高高度の局が無いものとして扱う。行の読み方と照合は純粋なモジュール `B747.61.nd_data.lua` の `nav_line`・`nav_near`（同じ ID で 0.1° 以内）。
+- EXCESS DATA：パネルの 60 枠が埋まって出せない記号があれば、新設 `nd/<席>/excess_data`。パネルは画面の左上に琥珀（推定：資料の図は灰色。ND の故障の文字の色）の文字（道具 `panel_nd_excess.lua`、画像 `make_nd_excess_image.ps1`）。
+- GS：FMC のモジュールが ND の GS の行に「GS     TAS」と TAS を書いていたのを、GS だけに（109）。
+- 気づいたこと：XTLua の航法施設の一覧（`xtlua/navaids`）は機体の近くのものだけらしく、640 NM の範囲で ARPT を入れると空港が機体の周りに集まる。遠くの空港・局を出すには一覧の作り方を変える必要がある（5c-3b 以降）。
+- 試験：新しい `tests/displays/nd_symbols_test.lua`（25 件：行の読み方、照合、STA なしの同調中の VOR、STA の NDB と VOR、ARPT、80 NM での低高度の局、VOR モードで記号なし、70 の NDB で EXCESS DATA と STA を切って消えること）。X-Plane のシナリオ `s69_nd_sta`（15 件合格：フランクフルトの南、4,000 ft、MAP。CDU で VOR L に FKS。STA なしで FKS と VOR R の自動同調の局（RID）が緑の記号、STA で局が増える、160 NM では高高度の VOR（DOR、BAM、GMH、NVO、COL、FUL、WRB）と同調中の RID だけ（NDB と低高度の VOR は消える）、VOR モードで記号なし、640 NM で ARPT を入れると左上に EXCESS DATA、切ると消える、GS の行は GS だけ。ND を撮った。1 回目は STA なしで「2 枠目は空」と期待したのが誤りで（VOR R の自動同調の局も同調中なので緑で出る）、試験を直した）。

@@ -426,3 +426,11 @@
 | 同 | 同じグループの最後 | なし | 新しい `GROUP POS Rad L`・`POS Rad R`（新設 `pos_rad_l`・`_r`）：機体の位置を中心に `pos_rad_l_brg` で回す `GROUP POS Rad L Turn` の中に、24 px の線分 `gen_rotary RL Seg0`〜`Seg19`（新しい `pos_seg`、`pos_rad_l_len` が 24 px ごとの長さを超えたら）、最後の線分（`GROUP RL End` で `pos_rad_l_end` だけ進める）、DME の印（`GROUP RL Tick`：`pos_rad_l_tick`、`pos_rad_l_len` だけ進める、新しい `pos_tick`）。文字は `GROUP RL Label 1`・`2`（`pos_rad_l_tside`）を `pos_rad_l_tbrg` で回し、機体から 50 px の所に `gen_text RL Text 1`・`2`（緑の字、`pos_rad_l_text`） | FCOM p.1145 |
 
 上の 2 行は `docs/overhaul/tools/panel_nd_pos.lua` で書き換えた（2 面で 2,380 行）。画像は `docs/overhaul/tools/make_nd_pos_images.ps1`（星は 5 本腕、GPS は円と左右の二股：FCOM p.1150 の図）。DME の無い radial の「画面の端」と文字の位置は推定。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_pos`。
+
+表示（5-2 段 5c-3a、2026-10-26：ND の EXCESS DATA）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・ND の EXCESS DATA（DSP-17） | 機長・副操縦士の ND の `GROUP Lower EICAS Vertica`（ND が出ている表示器に付いて動く）の最後 | なし（60 枠を超えた記号は黙って捨てた） | `gen_rotary EXCESS DATA`（新しい `CRT Displays/ND/excess_data`、琥珀：推定）を新設 `nd/<席>/excess_data` で、画面の左上（左から 1/8、上から 1/4：FCOM p.1030 の図。機長 170.6, 267.5、副操縦士 848.6, 267.5） | FCOM p.1030–1031、p.1111 |
+
+上の 1 行は `docs/overhaul/tools/panel_nd_excess.lua` で書き換えた（2 面で 1 つずつ）。画像は `docs/overhaul/tools/make_nd_excess_image.ps1`。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_excess`。
