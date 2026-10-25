@@ -5,7 +5,9 @@
 -- turns with it), the compass rose shown, the TRK, HDG, MAP and VTK flags,
 -- the current heading pointer, the selected heading bug and its dashed line
 -- and the wind arrow. Logic and sources: docs/overhaul/notes/ATA-31.md §22
--- (FCOM p.1109-1110, p.1141-1143, p.1033-1034).
+-- (FCOM p.1109-1110, p.1141-1143, p.1033-1034). Step 5b: the VOR mode's
+-- reference VOR (§25: ATA34_1 p.356-369, FCOM p.1144-1146): its flag,
+-- deviation, course, TO/FROM, frequency or identifier and DME.
 --
 --   local N = B747_nd_model                -- in XTLua, after dofile
 --   local N = dofile(".../B747.60.nd_model.lua")   -- in the tests
@@ -40,6 +42,13 @@ local function side_in()
         center = false,     -- the CTR (centred) display
         wxr = false,        -- WXR selected on that side's EFIS control panel
         tfc = false,        -- TFC selected
+        -- the reference VOR (that side's: the glue picks it)
+        vor_fail = false,   -- failed or unpowered: its bearing, frequency and course invalid
+        vor_auto = false,   -- autotuned by the FMC (else manually tuned, with a course)
+        vor_rx = false,     -- its bearing received (else no computed data)
+        vor_to_from = 0,    -- X-Plane's indication: 0 none, 1 TO, 2 FROM
+        vor_dme_rx = false, -- its DME distance received
+        dme_fail = false,   -- the DME failed
     }
 end
 
@@ -69,6 +78,13 @@ local function side_out()
         trk_line = false,   -- the expanded track line
         wind = false,       -- the wind arrow
         wind_deg = 0,       -- the wind arrow's direction on the display
+        -- the VOR mode
+        vor_flag = false,   -- the VOR flag
+        vor_dev = false,    -- the deviation bar and scale
+        vor_crs = 0,        -- 0 none, 1 dashes, 2 the course and its pointer
+        vor_ref = 0,        -- 0 none, 2 the frequency or identifier
+        to_from = 0,        -- 0 none, 1 TO, 2 FROM
+        vor_dme = 0,        -- 0 dashes, 1 the distance, 2 the DME flag
     }
 end
 
@@ -126,6 +142,21 @@ function M.update(s, inp, dt)
         -- p.1142): where the wind blows to
         o.wind = i.ias >= M.WIND_KT and o.rose
         o.wind_deg = wrap(inp.wind_from + 180 - o.up)
+
+        -- the VOR mode (ATA34_1 p.356-369): a failed receiver (invalid
+        -- bearing, frequency and course) shows the VOR flag and removes the
+        -- deviation, the TO/FROM, the course and the frequency (p.360,
+        -- p.366); autotuned, the course is dashed and its pointer, the
+        -- deviation and the TO/FROM go (p.368-369); without the bearing (out
+        -- of range: no computed data) the deviation and the TO/FROM go
+        -- (p.358)
+        o.vor_flag = i.vor_fail
+        o.vor_crs = i.vor_fail and 0 or (i.vor_auto and 1 or 2)
+        o.vor_ref = i.vor_fail and 0 or 2
+        o.vor_dev = not i.vor_fail and not i.vor_auto and i.vor_rx
+        o.to_from = o.vor_dev and i.vor_to_from or 0
+        -- the DME as in APP (FCOM p.1033-1034)
+        o.vor_dme = i.dme_fail and 2 or (i.vor_dme_rx and 1 or 0)
     end
     return s.out
 end

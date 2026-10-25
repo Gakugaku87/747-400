@@ -385,3 +385,15 @@
 | 同 | 基準受信機の欄（`GROUP Sel Rec ILS`）の `GROUP ILS L`・`ILS R` | NAV の源の選択器で 2 組を切り替え。ID と周波数は 3 行の条件（最後の `[0]` だけが効き、ID も周波数も出なかった）で、ILS R の周波数は VOR L（`nav3_frequency_hz`）、コースは X-Plane の LOC の向き、DME は白 | 2 組を消して欄の直下に組み直した：`ILS L`・`ILS C`（新設、`Ref Rcvr/ils_C_bkgnd`）・`ILS R` の見出しを `ils_rx` の 1・2・3 で、ID か周波数の文字 1 つを新設の文字列 `nd/<席>/ils_ref`（同調前は「---」）、コースを新設 `nd/<席>/crs_deg`（CDU のコース）で `crs` が 2 のとき、「---」（新設の文字列 `nd/dashes`、白の文字）を `crs` が 1 のとき、`CRS` の見出しは `crs` が 1 以上。DME は緑（`ND/dme_bkgnd`、`LED_8.21R.xxx#00.green`）の新設 `nd/<席>/dme_nm` を `dme` が 1、「DME ---」を 0、DME の旗（`ND/dmeX_bkgnd`）を 2 のとき | FCOM p.1033–1034、p.1144、ATA34_1 p.473 |
 
 上の 5 行は `docs/overhaul/tools/panel_nd_app.lua` で書き換えた（2 面で 100 か所）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_app`。
+
+表示（5-2 段 5b-2a、2026-10-26：ND の VOR）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・ND の VOR（DSP-03・15） | 機長・副操縦士の ND の全周（`GROUP VOR Pointers`）と拡大（`GROUP VOR Pointer`）の `GROUP VOR L`・`VOR R`（機長は名前に ` 2`） | NAV の源の選択器の CDU の位置（機長は 2・3、副操縦士は 1・0） | 新設 `laminar/B747/nd/<席>/vor_rx`（基準 VOR：機長 1 = VOR L、副操縦士 2 = VOR R）が 1・2 | FCOM p.1144（推定：「選んだ受信機」） |
+| 同 | その中のコースの指針（`gen_needle Course Ptr 2`・`Course Pointer 2`）、偏位のバー（`CDI:hollow 2`）、目盛（`Scale 2`） | 指針と目盛は条件なし、バーは VOR L が dataref の無い条件（`[2]`）、VOR R は条件なし。振れ 115 | 指針は新設 `nd/<席>/vor_crs` が 2（自動同調では消える）、バーと目盛は新設 `nd/<席>/vor_dev`（手動の同調で方位を受けている）。振れ 121.25 | ATA34_1 p.358、p.368–369、FCOM p.1144 |
+| 同 | 全周の `GROUP VOR L`・`VOR R` の目盛の後 | なし | TO/FROM の三角 `gen_needle TO Ptr`・`FROM Ptr`（新しい `EFIS/Maps/Centered/to_from_ptr`、コースの向きとその逆向き）を新設 `nd/<席>/to_from` の 1・2 で | FCOM p.1144、p.1024 |
+| 同 | 全周と拡大の地図の `GROUP Glideslope` の後 | なし | 新しい `GROUP VOR Flags`（VOR モード）に VOR L・R の旗 `gen_rotary VORL X ND`・`VORR X ND`（新しい `CRT Displays/ND/vorLX`・`vorRX`）を、全周は飛行機の記号の上、拡大は記号の下に。新設 `nd/<席>/vor_flag` の 1・2 | FCOM p.1034、ATA34_1 p.360–361 |
+| 同 | 基準受信機の欄（`GROUP Sel Rec VOR`）の `GROUP VOR L`・`VOR R` | NAV の源の選択器で 2 組を切り替え。ID と周波数は ILS と同じ誤りの条件（ID も周波数も出ない）、DME は白 | 2 組を消して組み直した：`VOR L`・`VOR R` の見出しを `vor_rx`、ID か周波数の文字を新設の文字列 `nd/<席>/vor_ref`、コースを新設 `nd/<席>/vor_crs_deg` か「---」（`vor_crs`）、DME は緑の新設 `nd/<席>/vor_dme_nm`・「DME ---」・旗（新設 `vor_dme`）、右下に TO・FROM の文字（新しい `Ref Rcvr/to_lbl`・`from_lbl`、`to_from` の 1・2） | FCOM p.1024、p.1144–1146、ATA34_1 p.357、p.365 |
+
+上の 5 行は `docs/overhaul/tools/panel_nd_vor.lua` で書き換えた（2 面で 56 か所）。画像は `docs/overhaul/tools/make_nd_vor_images.ps1`（旗は PFD の LOC の旗の作り、TO・FROM は純正の CRS の文字の大きさ、三角は 20×16 の白い線）。位置は推定（全周の旗は記号の上 62 px：ATA34_1 p.361 の比、TO・FROM は CRS の見出しから左 90・下 542：FCOM p.1024 の比）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_vor`。
