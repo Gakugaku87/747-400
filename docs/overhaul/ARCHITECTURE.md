@@ -401,7 +401,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
   - X-Plane の TCAS が advisory を出さない相手（threat は TA・RA）は TA として出す（RA の値・声は無い）。X-Plane が advisory を出さなくなることがある（PROGRESS.md「気づいたこと」）。
 - 段 5c（気象レーダー）：気象レーダーの操作のモデル（`B747.34.wxr_model.lua`）を、グルー `B747.34.xt.wxr.lua` が TCAS の次に回す（`B747_wxr()`）。中身は notes/ATA-34.md §17・§18。描画は X-Plane のレーダー。
   - 読むもの：570 のパネル（TFR・TEST・LR/T・RR/T はこのモジュールのコマンド `wxr/buttons/*`。TILT・MAP GAIN・WX・WX+T・MAP・GCS は X-Plane の `sim/instruments/EFIS_wxr_*` を `replace_command` で受ける）、X-Plane の `EFIS_weather_on`（各 EFIS の WXR）、各 ND のレンジ、AC bus 1・2（R/T：推定）、`rel_wxr_radar`、`irs/att_valid` と各席の IRS 選択。
-  - 書くもの：X-Plane の `EFIS_weather_mode`・`_tilt`・`_gain`・`_gcs`・`_stab`（左右）と `sector_width`・`antenna_limit`、新設 `wxr/lamp/sel[2]`・`gcs[2]`・`test`・`rt`（照明のモジュールがパネルの灯に）。ND の注記は ND のモジュールが X-Plane の左右の値から作る。
+  - 書くもの：X-Plane の `EFIS_weather_mode`・`_tilt`・`_gain`・`_gcs`・`_stab`（左右）と `sector_width`・`antenna_limit`、新設 `wxr/lamp/sel[2]`・`gcs[2]`・`test`・`rt`（照明のモジュールがパネルの灯に）、`wxr/nd_fail[2]`・`nd_fault[2]`・`nd_msg[2]`・`nd_gain[2]`（段 5d：各 ND の WXR FAIL、TEST の故障の源、WEAK・ATT、CAL・VAR）。読むものに新設の故障 `wxr/fail[3]`（アンテナ、操作盤、校正）。ND の注記は ND のモジュールが X-Plane の左右の値とこれらから 3 行と色（`nd/capt|fo/text/wxr`・`tilt`・`wxr3`、`wxr_color[3]`）に作る。
 
 ### 4.18 表示（5-2）
 

@@ -706,7 +706,7 @@
 - ND の注記（B747.61.xt.nd.lua）：WXR・WX+T・MAP・TEST、レーダーが止まっていれば無し（前は「RT」）、チルトは整数で +・−（前は +5.0）、TEST の間はチルトの欄を空ける。MAP・MAP CTR・VOR と APP の CTR でないものだけ（PLN と CTR の VOR・APP では出さない）。
 - パネルの灯（照明のモジュールの `wxr/left|right/GCS・TFR・WX・WX_T・MAP`、`wxr/test`・`LR`・`RR`）を、モデルの新設 `wxr/lamp/sel[2]`・`gcs[2]`・`test`・`rt` から（R/T が動いているときだけ：パネルは R/T から給電、ATA34_1 p.210）。前は X-Plane のモードからで、LR/T は常に点灯の扱い。これらの灯を読む 3D の物体は見つからなかった。
 - 合わせて、ND の航跡線の判定（fltInst02）を、CTR の押しボタンの位置（押している間だけ 1）から CTR の状態に、副操縦士の側を副操縦士の WXR に（DSP-21 の一部）。
-- 作らなかったもの：§17 のとおり（PWS と TEST の PWS 試験、ND の WXR FAIL と原因・VAR・RANGE DISAGREE・RSTR INOP、ND ごとの交互の更新）。
+- 作らなかったもの：§17 のとおり（PWS と TEST の PWS 試験、ND の WXR FAIL と原因・VAR・RANGE DISAGREE・RSTR INOP、ND ごとの交互の更新）。WXR FAIL と原因・ゲインの注記は段 5d で作った（§21）。
 - X-Plane での確認（カスタム acf）：`s45_wxr` 49/49。EFIS の WXR で R/T が入り（両方切ると X-Plane のレーダーとパネルの灯が止まる）、WX（ゲイン 1.0、安定化、ND に WXR と +3）、チルト 10 目盛りで 1°（ND は整数の +4）、WX+T（40 nm）と 80 nm で WX、MAP と MAP GAIN 0.7（ND に MAP）、WX でゲインが戻る、GCS と灯、副操縦士の MAP を機長の TFR で、両側の TFR で TEST（X-Plane の試験の絵、ND に TEST、チルトの欄は空き）、TEST スイッチで両 ND、機長のモードでその側だけ戻る、RR/T、R の R/T の姿勢（IRS 選択 C で IRU C の故障なら安定化なし、R で戻る）、X-Plane の故障でレーダーなし（ND の注記なし）、PLN で注記なし。WX・MAP・TEST の ND を撮った。Log.txt に Lua の誤りなし。
 
 ## 19. 実装（5-1 段 5d、2026-10-25：PFD の TCAS RA の表示）
@@ -726,3 +726,12 @@
 - モデル（`B747.34.tcas_model.lua`）：操作盤とコード表示の電源 `panel_on`（AC standby bus か AC bus 2：ATA34_1 p.584）。グルーが新設 `laminar/B747/xpdr/panel_on` に書く。
 - パネル（道具 `docs/overhaul/tools/panel_xpdr.lua`、絵 `make_xpdr_images.ps1`。ACF_DIFF.md §5）：コードは L・R どちらでも、`panel_on` が 1 のとき出す。INOP の絵の計器を、窓の左上の ATC L・ATC R（`Radios/atc_lr` の 2 コマ、XPDR スイッチで選ぶ。字は純正の無線の表示の橙）に替えた。窓とコードの位置は X-Plane のスクリーンショットで測った。
 - 試験：モデル 125 件（電源の 2 本）、モジュール 65 件。X-Plane の新しいシナリオ `s49_xpdr_display`（6/6）：L・R の両方でコードが出て、窓の左上に ATC L・ATC R、R でもトランスポンダが働く（X-Plane のモード 7）。頭を中央の台の上へ動かして表示窓を真上から撮った。外から見た写真で機体の見た目が変わらないことを確かめた。
+
+## 21. 実装（5-1 段 5d の続き、2026-10-25：ND の気象レーダーの故障とゲインの注記）
+
+- 故障（ATA34_1 p.246、FCOM p.1155・p.1224）：モデル（`B747.34.wxr_model.lua`）が、R/T（選んだ R/T の電源なしと X-Plane の `rel_wxr_radar`：推定）、新設の故障 `wxr/fail[3]`（[0] アンテナ、[1] 操作盤、[2] 受信機の校正＝AGC）、安定化の IRU の姿勢から、故障の源を 1 つ選ぶ（RT、ANT、CONT、WEAK、ATT の順：推定）。R/T・アンテナ・操作盤は反射を出さず（X-Plane のモード 0）、その側の WXR が入っていれば ND に WXR FAIL。WEAK・ATT は反射を残す（WEAK が ATT より先）。TEST は R/T が動けば走り、チルトの欄に故障の源を出す（FCOM p.1224）。
+- ゲイン（推定）：MAP で、MAP GAIN のつまみが較正の止まりなら CAL（FCOM p.1155 の記号）、それより下なら VAR（ATA34_1 p.244。ただし別の操作盤の型の記述）。WX・WX+T（自動のゲイン）では出さない（FCOM p.1013 の図は WXR とチルトだけ）。
+- グルーは各 ND の注記の状態を新設 `wxr/nd_fail[2]`・`nd_fault[2]`・`nd_msg[2]`・`nd_gain[2]` に書き、ND のモジュール（`B747.61.xt.nd.lua`）が 3 行と色を作る：1 行目はモード（青）か WXR（琥珀）、2 行目はチルト（青）、FAIL（琥珀）、TEST の故障の源（琥珀）、3 行目は WEAK・ATT（琥珀）か CAL・VAR（青）。新設 `nd/capt|fo/text/wxr3`（3 行目）と `text/wxr_color[3]`（0 なし、1 青、2 琥珀）。その側の EFIS の WXR が切れていれば何も出さない（WXR FAIL も消える：FCOM p.1040）。
+- パネル（道具 `docs/overhaul/tools/panel_nd_wxr.lua`。ACF_DIFF.md §5）：各 ND の 2 行の青の文字の表示条件を `wxr_color[0]`・`[1]` が 1 に、同じ位置に琥珀の写し（`wxr_color` が 2）、チルトの 20 px 下に 3 行目（青と琥珀）。
+- 試験：モデル 80 件（故障の源と WXR FAIL、TEST、WEAK と ATT、CAL と VAR）、モジュール 67 件。X-Plane の新しいシナリオ `s50_wxr_faults`（30/30）：WX のモードとチルトの青、MAP の CAL と VAR、アンテナの故障で WXR FAIL（琥珀、反射なし：故障を入れた直後は前の走査の画が少し残る）と TEST の ANT、操作盤の故障で WXR FAIL、ゲイン制御の故障で WEAK、IRU L の故障で ATT（WEAK が先）、X-Plane のレーダーの故障で WXR FAIL とパネルの灯の消灯。ND を撮った。外から見た写真で機体の見た目が変わらないことを確かめた。Log.txt に Lua の誤りなし。
+- 残り：WXR RANGE DISAGREE・MAP/WXR RANGE DISAGREE・RSTR INOP（§3.11）、PWS、ND ごとの交互の更新。

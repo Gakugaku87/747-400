@@ -176,3 +176,12 @@ B747DR_wxr_lamp_sel             = deferred_dataref("laminar/B747/wxr/lamp/sel", 
 B747DR_wxr_lamp_gcs             = deferred_dataref("laminar/B747/wxr/lamp/gcs", "array[2]")
 B747DR_wxr_lamp_test            = deferred_dataref("laminar/B747/wxr/lamp/test", "number")
 B747DR_wxr_lamp_rt              = deferred_dataref("laminar/B747/wxr/lamp/rt", "number")
+-- the radar's new failures ([0] antenna, [1] control panel, [2] calibration,
+-- AGC) and each ND's annunciations (5-1 step 5d): WXR FAIL, the fault source
+-- in TEST and WEAK or ATT (1 ANT, 2 ATT, 3 WEAK, 4 CONT, 5 RT), the gain in
+-- MAP (1 CAL, 2 VAR)
+B747DR_wxr_fail                 = deferred_dataref("laminar/B747/wxr/fail", "array[3]")
+B747DR_wxr_nd_fail              = deferred_dataref("laminar/B747/wxr/nd_fail", "array[2]")
+B747DR_wxr_nd_fault             = deferred_dataref("laminar/B747/wxr/nd_fault", "array[2]")
+B747DR_wxr_nd_msg               = deferred_dataref("laminar/B747/wxr/nd_msg", "array[2]")
+B747DR_wxr_nd_gain              = deferred_dataref("laminar/B747/wxr/nd_gain", "array[2]")

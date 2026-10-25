@@ -26,7 +26,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 操縦系統（ATA 27） | 作り直し中（4-1 段 1：フラップの FCU、段 2：SRM の外側エルロンのロックアウト・ラダー比変換器・安定板トリム・speed trim、グリーンバンド、段 3：スピードブレーキ、段 4：横操縦・遮断弁・ヨーダンパーの INOP） | フラップの拡大・代替の表示のパネル、>STAB GREENBAND、昇降舵の舵角、ヨーダンパーの制御則（AFDS） |
 | 脚・ブレーキ・ステアリング（ATA 32） | 作り直し済み（4-2 段 1〜5：脚の作動・代替下げ・位置監視・表示、ブレーキ、オートブレーキ、ステアリング、ブレーキ温度とタイヤ圧） | AIR/GND SYSTEM と脚の STATUS の一部、tiller の軸が無いときのペダル（実機ではない手当て） |
 | 表示（PFD・ND・EICAS） | 作り直し中（5-2 段 1：表示器と EIU、選択器と自動切替、内容ごとの輝度。ND の TCAS は 5-1 段 5 で） | ソース選択、速度テープの帯、405 型の RADIO/BARO の minimums、ND の DATA/POS、compact EICAS |
-| 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記） | FMC の位置への GPS の更新、PFD の昇降率の源、GPWS の地形の look-ahead、ND の WXR FAIL・VAR の表示、PWS、無線の自動同調 |
+| 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記） | FMC の位置への GPS の更新、PFD の昇降率の源、GPWS の地形の look-ahead、PWS、無線の自動同調 |
 | FMC | 未着手 | 経路モデル、ホールド、LNAV・VNAV、予測 |
 | CDU | 未着手 | 3 台が 1 つを共有、MOD/EXEC、入力の検査、データリンク |
 | 自動操縦・FD | 未着手 | ロールが X-Plane の AP 頼み、LOC・TO/GA・autoland の則 |
@@ -311,7 +311,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - RA の中身（上昇か降下か、強める・弱める・反転）は X-Plane の TCAS の判定。X-Plane が advisory を出さない RA の相手は、TA（琥珀と TRAFFIC, TRAFFIC）だけになる（X-Plane は advisory を出さないことがある）。X-Plane は 7.1 の LEVEL OFF を出すので 7.0 の ADJUST VERTICAL SPEED の声にしている。CROSSING を付けるかはこちらで決めている（推定。X-Plane の区別は形と合わない）。DESCEND RA を低高度で X-Plane が出したときは、別の RA を選ばずに TA として出す（推定）。48,000 ft で CLIMB 系を出さないことは X-Plane に任せている。
   - TCAS の試験（570 のパネルに TEST が無い。実機は CMC の地上試験）、no-bearing の表示（X-Plane の相手は必ず方位がある）、EFIS パネルの故障での自動表示は無い。
 - 実機に合わせた点（段 5c、気象レーダー）：3D の 570 型のパネルを働かせた。LR/T・RR/T で R/T を選び（EFIS のどちらかの WXR で入る）、各席の WX・WX+T はゲインが自動、MAP は MAP GAIN のつまみ（右いっぱいが較正値）、WX+T はその席の ND のレンジが 40 nm より大きいと WX に変わる、TFR はその席の ND に反対側の表示を出し、両側とも TFR だと試験の絵、TEST スイッチで両 ND に試験の絵（その席のモードを選ぶと戻る）、GCS は席ごと。R/T の電源（推定）と X-Plane の故障でレーダーが止まり、アンテナの安定化は選んだ R/T の側の IRU（IRS 選択が反対側なら C）の姿勢で、無効なら安定化なし。アンテナの走査は左右 90°。ND の注記は WXR・WX+T・MAP・TEST と整数のチルト（前はレーダーが止まると R/T 故障の「RT」、チルトは +5.0 の形）で、PLN と中心の VOR・APP では出さない（NAV-79〜81）。
-  - ND の WXR FAIL と原因（ANT・ATT・WEAK・CONT・RT）、可変ゲインの VAR、WXR RANGE DISAGREE、RSTR INOP は出ない（パネルの文字が要り、承認の一覧の外）。PWS（予測ウインドシア）と TEST の 12 秒の PWS 試験は無い。両 ND の交互の更新は無い（X-Plane の描画のまま）。
+  - ND の故障とゲインの注記（段 5d、パネル）：R/T・アンテナ・操作盤の故障で琥珀の WXR FAIL（反射は出さない）、TEST でチルトの欄に故障の源（ANT・CONT・WEAK・ATT）、校正の故障で WEAK、安定化の姿勢が無ければ ATT（反射は残る。WEAK が先）、MAP のゲインは CAL か VAR（推定：FCOM は CAL を挙げるだけ）。前は R/T が止まると何も出なかった（NAV-80・81）。アンテナ・操作盤・校正の故障は新設（X-Plane に無い）。WXR RANGE DISAGREE、RSTR INOP は出ない。PWS（予測ウインドシア）と TEST の 12 秒の PWS 試験は無い。両 ND の交互の更新は無い（X-Plane の描画のまま）。
   - 推定：R/T の電源のバス、TFR の両押しを両側の TFR とみなすこと、TEST の戻り方を席ごとにしたこと、MAP GAIN のつまみの幅。
 
 ### FMC（航法・性能・誘導）：未着手

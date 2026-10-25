@@ -2165,6 +2165,8 @@ laminar/B747/nd/capt/text/whitetext7	dataref	panel	B747.61.nd
 laminar/B747/nd/capt/text/whitetext8	dataref	panel	B747.61.nd
 laminar/B747/nd/capt/text/whitetext9	dataref	panel	B747.61.nd
 laminar/B747/nd/capt/text/wxr	dataref	panel	B747.61.nd
+laminar/B747/nd/capt/text/wxr3	dataref	panel	B747.61.nd
+laminar/B747/nd/capt/text/wxr_color	dataref	panel	B747.61.nd
 laminar/B747/nd/capt/tfc	dataref	panel	B747.60.fltInst
 laminar/B747/nd/capt/track_line_on	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/nd/capt/traffic	dataref	panel	B747.34.nav
@@ -2469,6 +2471,8 @@ laminar/B747/nd/fo/text/whitetext7	dataref	panel	B747.61.nd
 laminar/B747/nd/fo/text/whitetext8	dataref	panel	B747.61.nd
 laminar/B747/nd/fo/text/whitetext9	dataref	panel	B747.61.nd
 laminar/B747/nd/fo/text/wxr	dataref	panel	B747.61.nd
+laminar/B747/nd/fo/text/wxr3	dataref	panel	B747.61.nd
+laminar/B747/nd/fo/text/wxr_color	dataref	panel	B747.61.nd
 laminar/B747/nd/fo/tfc	dataref	panel	B747.60.fltInst
 laminar/B747/nd/fo/track_line_on	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/nd/fo/traffic	dataref	panel	B747.34.nav
