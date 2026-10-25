@@ -450,3 +450,12 @@
 | 2026-10-26・ND のコースの線（DSP-17） | 機長・副操縦士の ND の `GROUP ND Text Center`（地図の記号：CTR で動く）の最後 | なし | 新しい `GROUP ND Courses`：VOR L・R（k＝0・1）ごとに、`GROUP Crs<k>`（新設 `nd/<席>/crs/show[k]`：機体の点から `heading[k]` で回し `distance[k]` だけ出して戻した、線の機体に一番近い点で `dir[k]` に回し、`phase[k]` だけずらした緑の破線 `gen_rotary Crs<k> D<j>`（新しい `CRT Displays/ND/crs_dash`、`dash[k×85＋j＋42]`、j＝−42〜42、22 px おき））、`GROUP CrsLbl<k>`（`show[k]`：局の所（`lbl_heading[k]`・`lbl_distance[k]`）で、コースと反対（`lbl_show`・`tbrg`・`tside`・`text<k×2>`・`text<k×2＋1>`）を局から 50 px の所に線に沿って） | FCOM p.1145 |
 
 上の 1 行は `docs/overhaul/tools/panel_nd_crs.lua` で書き換えた（2 面で 7,968 行）。画像は `docs/overhaul/tools/make_nd_crs_image.ps1`（色・破線の長さと間・数字の位置は推定）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_crs`。
+
+表示（5-2 段 5d、2026-10-26：HDG REF）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・HDG REF（DSP-20） | 機長・副操縦士の PFD（各 2 組）の `Compass Rose`・方位の回転グループ・`Track Indicator`、ND の `LED Hdg`・`LED Track MAP`・`Hdg Ptr`（3 種）・`Track Line`・方位の回転グループの DATAREF（44 か所） | X-Plane の `heading_AHARS_deg_mag_pilot`・`copilot`、`ground_track_mag_pilot`・`copilot` | 新設 `laminar/B747/pfd/capt|fo/hdg_deg`・`trk_deg`（基準の方位・航跡：磁方位、TRU では真方位） | FCOM p.1046、p.1110 |
+| 同 | PFD（各 2 組）の `MAG Label`、ND の `MAG Label`（APP/VOR/MAP、PLN、数字の HDG/TRK） | `CRT Displays/PFD/Heading Track/HdgTrackMagLabel`・`EFIS/Maps/label_MAG`（MAG だけ） | PFD は `CRT Displays/PFD/Heading Track/hdg_ref_pfd`（2 コマ：MAG、枠つきの TRU）を新設 `efis/hdg_ref/pfd_label` で、ND は `EFIS/Maps/hdg_ref_nd`（5 コマ：MAG、白枠の TRU、琥珀の枠の TRU、枠の消えた TRU、白枠の MAG）を `nd_label`（PLN は `nd_plan_label`：枠なし）で | FCOM p.998、p.1110、p.1141–1142 |
+
+上の 2 行は `docs/overhaul/tools/panel_hdg_ref.lua` で書き換えた（44 か所、行は増減なし）。画像は `docs/overhaul/tools/make_hdg_ref_images.ps1`（字は純正のラベルと同じ大きさで描き直した。字体・枠の線は推定）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_hdg_ref`。

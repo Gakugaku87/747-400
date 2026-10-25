@@ -154,6 +154,11 @@ B747DR_switching_servos_on = deferred_dataref("laminar/B747/autopilot/ap_monitor
 B747DR_display_N1 = find_dataref("laminar/B747/engines/display_N1")
 B747DR_display_N2 = find_dataref("laminar/B747/engines/display_N2")
 simDR_true_heading			= find_dataref("sim/flightmodel/position/psi")
+-- the heading reference (5-2 step 5d): the display glue's (1 true north),
+-- the HDG REF switch (the toggle switches' 31st, 1 TRUE)
+B747DR_ap_hdg_ref_true			= find_dataref("laminar/B747/efis/hdg_ref/true")
+B747DR_ap_toggle_sw			= find_dataref("laminar/B747/toggle_switch/position")
+simDR_ap_mag_psi			= find_dataref("sim/flightmodel/position/mag_psi")
 B747DR_fmc_notifications = find_dataref("laminar/B747/fms/notification")
 B747BR_distance_to_dest  = deferred_dataref("laminar/B747/autopilot/dist/distance_to_dest", "number")
 B747BR_toc				= deferred_dataref("laminar/B747/autopilot/dist/distance_to_toc", "number")
@@ -1343,14 +1348,14 @@ function B747_ap_heading_up_CMDhandler(phase, duration)
 		--simDR_autopilot_heading_deg =	math.floor(math.fmod((simDR_autopilot_heading_deg + 1), 360.0)	)
 		B747DR_ap_heading_deg = math.floor(math.fmod((B747DR_ap_heading_deg + 1), 360.0))
 		if not (B747DR_ap_approach_mode ~= 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state > 0) then
-			simDR_autopilot_heading_deg = B747DR_ap_heading_deg
+			simDR_autopilot_heading_deg = ap_hdg_target(B747DR_ap_heading_deg)
 		end
 	elseif phase == 1 then
 		if duration > 0.5 then
 			--simDR_autopilot_heading_deg =	math.floor(math.fmod((simDR_autopilot_heading_deg + 1), 360.0)	)
 			B747DR_ap_heading_deg = math.floor(math.fmod((B747DR_ap_heading_deg + 1), 360.0))
 			if not (B747DR_ap_approach_mode ~= 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state > 0) then
-				simDR_autopilot_heading_deg = B747DR_ap_heading_deg
+				simDR_autopilot_heading_deg = ap_hdg_target(B747DR_ap_heading_deg)
 			end
 		--if B747DR_ap_hdg_sel_mode == 1 then simDR_autopilot_heading_deg = B747DR_ap_heading_deg end
 		end
@@ -1367,7 +1372,7 @@ function B747_ap_heading_down_CMDhandler(phase, duration)
 			B747DR_ap_heading_deg = B747DR_ap_heading_deg + 360.0
 		end
 		if not (B747DR_ap_approach_mode ~= 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state > 0) then
-			simDR_autopilot_heading_deg = B747DR_ap_heading_deg
+			simDR_autopilot_heading_deg = ap_hdg_target(B747DR_ap_heading_deg)
 		end
 	elseif phase == 1 then
 		if duration > 0.5 then
@@ -1378,7 +1383,7 @@ function B747_ap_heading_down_CMDhandler(phase, duration)
 				B747DR_ap_heading_deg = B747DR_ap_heading_deg + 360.0
 			end
 			if not (B747DR_ap_approach_mode ~= 0 and simDR_autopilot_nav_status ~= 2 and B747DR_ap_lnav_state > 0) then
-				simDR_autopilot_heading_deg = B747DR_ap_heading_deg
+				simDR_autopilot_heading_deg = ap_hdg_target(B747DR_ap_heading_deg)
 			end
 		--if B747DR_ap_hdg_sel_mode == 1 then simDR_autopilot_heading_deg = B747DR_ap_heading_deg end
 		end
@@ -1531,6 +1536,25 @@ simCMD_ap_altitude_down = replace_command("sim/autopilot/altitude_down", B747_ap
 --*************************************************************************************--
 --** 				          WRAP X-PLANE COMMAND HANDLERS               	    	 **--
 --*************************************************************************************-
+
+-- the MCP's heading for X-Plane's heading mode (magnetic): the MCP heading
+-- is in the heading reference (5-2 step 5d; FCOM p.1046, ATA22 p.358: the
+-- heading modes on the airplane's magnetic or true heading), so true north
+-- makes it magnetic with the variation
+function ap_hdg_target(sel)
+	if B747DR_ap_hdg_ref_true < 0.5 then return sel end
+	return (sel + ((simDR_ap_mag_psi - simDR_true_heading + 180) % 360 - 180)) % 360
+end
+-- the HDG REF switch moved while in HDG SEL: HDG HOLD (FCOM p.1046, ATA22
+-- p.352)
+local lastHdgRefSwitch=nil
+function ap_hdg_ref_hold()
+	local sw=B747DR_ap_toggle_sw[30] > 0.5
+	if lastHdgRefSwitch~=nil and sw~=lastHdgRefSwitch and simDR_autopilot_heading_status == 2 and B747DR_ap_lnav_state == 0 then
+		simCMD_autopilot_heading_hold_mode:once()
+	end
+	lastHdgRefSwitch=sw
+end
 
 ----- ROUND TO INCREMENT ----------------------------------------------------------------
 function roundToIncrement(numberToRound, increment)
@@ -2660,7 +2684,7 @@ function fma_rollModes()
 		B747DR_ap_FMA_active_roll_mode = 2 -- (LNAV) --
 	elseif simDR_autopilot_heading_status == 2 and B747DR_ap_lnav_state == 0 then
 		-- (HDG SEL) --
-		simDR_autopilot_heading_deg = B747DR_ap_heading_deg
+		simDR_autopilot_heading_deg = ap_hdg_target(B747DR_ap_heading_deg)
 		B747DR_ap_FMA_active_roll_mode = 6 -- (HDG SEL) --
 	elseif simDR_autopilot_heading_hold_status == 2 then
 		B747DR_ap_FMA_active_roll_mode = 7 -- (HDG HLD) --
@@ -3366,7 +3390,7 @@ function B474_ap_target_heading()
 		end
 		--simDR_autopilot_heading_status=0
 		B747DR_ap_ATT = 0.0
-		simDR_autopilot_heading_deg = B747DR_ap_heading_deg
+		simDR_autopilot_heading_deg = ap_hdg_target(B747DR_ap_heading_deg)
 		B747DR_ap_lnav_state = 0
 		B747DR_ap_lastCommand=simDRTime
 		B747DR_ap_activate_target_heading_deg=0
@@ -3535,6 +3559,7 @@ function after_physics()
 		return
 	end
 	simDR_allThrottle=math.max(B747DR_throttle[0],B747DR_throttle[1],B747DR_throttle[2],B747DR_throttle[3])
+	ap_hdg_ref_hold()
 	local cHeading = simDR_AHARS_heading_deg_pilot --constant refresh of data
 	local tHeading = simDR_autopilot_heading_deg --constant refresh of data
 	local headingStatus = simDR_autopilot_heading_hold_status --constant refresh of data

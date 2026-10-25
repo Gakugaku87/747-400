@@ -296,6 +296,10 @@ simDR_mach_copilot			= find_dataref("sim/cockpit2/gauges/indicators/mach_copilot
 simDR_total_air_temp		= find_dataref("sim/cockpit2/temperature/outside_air_LE_temp_degc")
 simDR_air_temp		= find_dataref("sim/cockpit2/temperature/outside_air_temp_degc")
 simDR_aircraft_hdg		 	= find_dataref("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot")
+-- the heading reference for the ND's wind (5-2 step 5d)
+B747DR_fms_hdg_ref_true			= find_dataref("laminar/B747/efis/hdg_ref/true")
+simDR_fms_true_psi			= find_dataref("sim/flightmodel/position/psi")
+simDR_fms_mag_psi			= find_dataref("sim/flightmodel/position/mag_psi")
 
 --WB CG Info
 simDR_cgZ_ref_point			= find_dataref("sim/aircraft/weight/acf_cgZ_original")
@@ -1079,7 +1083,13 @@ function nd_speed_wind_display()
 	local TAS_copilot = round(a0 * M_copilot * math.sqrt(T_copilot/T0))
 	
 	local groundspeed = simDR_groundspeed * meters_per_second_to_kts
-	local wind_hdg = round(simDR_wind_degrees)
+	-- the wind's direction in the heading reference (5-2 step 5d: FCOM
+	-- p.1142), true with TRU
+	local wind_dir = simDR_wind_degrees
+	if B747DR_fms_hdg_ref_true > 0.5 then
+		wind_dir = (wind_dir - ((simDR_fms_mag_psi - simDR_fms_true_psi + 180) % 360 - 180)) % 360
+	end
+	local wind_hdg = round(wind_dir)
 	local wind_hdg_deviation = 360 - wind_hdg + simDR_aircraft_hdg
 	local wind_bearing = 360 - wind_hdg_deviation
 	local wind_spd = tostring(round(simDR_wind_speed))

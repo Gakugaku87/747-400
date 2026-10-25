@@ -78223,7 +78223,7 @@ GROUP Captain PFD
         gen_needle Compass Rose
           POS 315.000000 507.000000
           IMAGE CRT Displays/PFD/Heading Track/HdgTrackRose
-          DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot
+          DATAREF laminar/B747/pfd/capt/hdg_deg
           HIDE
           CLIP
           LIGHT_MODE GLASS_AUTO
@@ -78253,15 +78253,15 @@ GROUP Captain PFD
 
         gen_rotary MAG Label
           POS 372.500000 478.000000
-          IMAGE CRT Displays/PFD/Heading Track/HdgTrackMagLabel
-          DATAREF 
+          IMAGE CRT Displays/PFD/Heading Track/hdg_ref_pfd
+          DATAREF laminar/B747/efis/hdg_ref/pfd_label
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 2
           BUS_SRC 2
           KEY_FRAME 0.000000 0.000000 1.000000
-          KEY_FRAME 1.000000 6.000000
-          DIGITS 1
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
           ROTARY_TYPE NO_CLICK
           CLICK_RADIUS 0.000000
           CLICK_RADIUS_DY 0.000000
@@ -78277,7 +78277,7 @@ GROUP Captain PFD
           GROUP_ANIMATE_MODE ROTATE
           GROUP_WIDTH 344
           GROUP_HEIGHT 86
-          DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot
+          DATAREF laminar/B747/pfd/capt/hdg_deg
           POS 315.000000 507.000000
           CLIP
           KEY_FRAME 90.000000 -90.000000 1.000000
@@ -78287,7 +78287,7 @@ GROUP Captain PFD
           gen_needle Track Indicator
             POS 316.000000 507.000000
             IMAGE CRT Displays/PFD/Heading Track/HdgTrackTrackInd
-            DATAREF sim/cockpit2/gauges/indicators/ground_track_mag_pilot
+            DATAREF laminar/B747/pfd/capt/trk_deg
             SHOW_GREATER 0.500000 laminar/B747/pfd/capt/trk
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -82461,7 +82461,7 @@ GROUP Captain PFD
         gen_needle Compass Rose
           POS 315.000000 507.000000
           IMAGE CRT Displays/PFD/Heading Track/HdgTrackRose
-          DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot
+          DATAREF laminar/B747/pfd/capt/hdg_deg
           HIDE
           CLIP
           LIGHT_MODE GLASS_AUTO
@@ -82491,15 +82491,15 @@ GROUP Captain PFD
 
         gen_rotary MAG Label
           POS 372.500000 478.000000
-          IMAGE CRT Displays/PFD/Heading Track/HdgTrackMagLabel
-          DATAREF 
+          IMAGE CRT Displays/PFD/Heading Track/hdg_ref_pfd
+          DATAREF laminar/B747/efis/hdg_ref/pfd_label
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 2
           BUS_SRC 2
           KEY_FRAME 0.000000 0.000000 1.000000
-          KEY_FRAME 1.000000 6.000000
-          DIGITS 1
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
           ROTARY_TYPE NO_CLICK
           CLICK_RADIUS 0.000000
           CLICK_RADIUS_DY 0.000000
@@ -82515,7 +82515,7 @@ GROUP Captain PFD
           GROUP_ANIMATE_MODE ROTATE
           GROUP_WIDTH 344
           GROUP_HEIGHT 86
-          DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot
+          DATAREF laminar/B747/pfd/capt/hdg_deg
           POS 315.000000 507.000000
           CLIP
           KEY_FRAME 90.000000 -90.000000 1.000000
@@ -82525,7 +82525,7 @@ GROUP Captain PFD
           gen_needle Track Indicator
             POS 316.000000 507.000000
             IMAGE CRT Displays/PFD/Heading Track/HdgTrackTrackInd
-            DATAREF sim/cockpit2/gauges/indicators/ground_track_mag_pilot
+            DATAREF laminar/B747/pfd/capt/trk_deg
             SHOW_GREATER 0.500000 laminar/B747/pfd/capt/trk
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -86652,7 +86652,7 @@ GROUP First Officer PFD
         gen_needle Compass Rose 2
           POS 994.000000 507.000000
           IMAGE CRT Displays/PFD/Heading Track/HdgTrackRose
-          DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_copilot
+          DATAREF laminar/B747/pfd/fo/hdg_deg
           HIDE
           CLIP
           LIGHT_MODE GLASS_AUTO
@@ -86682,15 +86682,15 @@ GROUP First Officer PFD
 
         gen_rotary MAG Label 2
           POS 1051.500000 478.000000
-          IMAGE CRT Displays/PFD/Heading Track/HdgTrackMagLabel
-          DATAREF 
+          IMAGE CRT Displays/PFD/Heading Track/hdg_ref_pfd
+          DATAREF laminar/B747/efis/hdg_ref/pfd_label
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 5
           BUS_SRC 4
           KEY_FRAME 0.000000 0.000000 1.000000
-          KEY_FRAME 1.000000 6.000000
-          DIGITS 1
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
           ROTARY_TYPE NO_CLICK
           CLICK_RADIUS 0.000000
           CLICK_RADIUS_DY 0.000000
@@ -86706,7 +86706,7 @@ GROUP First Officer PFD
           GROUP_ANIMATE_MODE ROTATE
           GROUP_WIDTH 344
           GROUP_HEIGHT 86
-          DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_copilot
+          DATAREF laminar/B747/pfd/fo/hdg_deg
           POS 994.000000 507.000000
           CLIP
           KEY_FRAME 90.000000 -90.000000 1.000000
@@ -86716,7 +86716,7 @@ GROUP First Officer PFD
           gen_needle Track Indicator 2
             POS 995.000000 507.000000
             IMAGE CRT Displays/PFD/Heading Track/HdgTrackTrackInd
-            DATAREF sim/cockpit2/gauges/indicators/ground_track_mag_copilot
+            DATAREF laminar/B747/pfd/fo/trk_deg
             SHOW_GREATER 0.500000 laminar/B747/pfd/fo/trk
             HIDE
             CLIP
@@ -90848,7 +90848,7 @@ GROUP First Officer PFD
         gen_needle Compass Rose 2
           POS 994.000000 507.000000
           IMAGE CRT Displays/PFD/Heading Track/HdgTrackRose
-          DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_copilot
+          DATAREF laminar/B747/pfd/fo/hdg_deg
           HIDE
           CLIP
           LIGHT_MODE GLASS_AUTO
@@ -90878,15 +90878,15 @@ GROUP First Officer PFD
 
         gen_rotary MAG Label 2
           POS 1051.500000 478.000000
-          IMAGE CRT Displays/PFD/Heading Track/HdgTrackMagLabel
-          DATAREF 
+          IMAGE CRT Displays/PFD/Heading Track/hdg_ref_pfd
+          DATAREF laminar/B747/efis/hdg_ref/pfd_label
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 5
           BUS_SRC 4
           KEY_FRAME 0.000000 0.000000 1.000000
-          KEY_FRAME 1.000000 6.000000
-          DIGITS 1
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 2
           ROTARY_TYPE NO_CLICK
           CLICK_RADIUS 0.000000
           CLICK_RADIUS_DY 0.000000
@@ -90902,7 +90902,7 @@ GROUP First Officer PFD
           GROUP_ANIMATE_MODE ROTATE
           GROUP_WIDTH 344
           GROUP_HEIGHT 86
-          DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_copilot
+          DATAREF laminar/B747/pfd/fo/hdg_deg
           POS 994.000000 507.000000
           CLIP
           KEY_FRAME 90.000000 -90.000000 1.000000
@@ -90912,7 +90912,7 @@ GROUP First Officer PFD
           gen_needle Track Indicator 2
             POS 995.000000 507.000000
             IMAGE CRT Displays/PFD/Heading Track/HdgTrackTrackInd
-            DATAREF sim/cockpit2/gauges/indicators/ground_track_mag_copilot
+            DATAREF laminar/B747/pfd/fo/trk_deg
             SHOW_GREATER 0.500000 laminar/B747/pfd/fo/trk
             HIDE
             CLIP
@@ -91375,15 +91375,15 @@ GROUP First Officer ND
 
             gen_rotary MAG Label
               POS 1079.500000 337.500000
-              IMAGE EFIS/Maps/label_MAG
-              DATAREF 
+              IMAGE EFIS/Maps/hdg_ref_nd
+              DATAREF laminar/B747/efis/hdg_ref/nd_label
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 3
               BUS_SRC 4
               KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 5
               ROTARY_TYPE NO_CLICK
               CLICK_RADIUS 0.000000
               CLICK_RADIUS_DY 0.000000
@@ -91421,15 +91421,15 @@ GROUP First Officer ND
 
             gen_rotary MAG Label
               POS 1079.500000 396.500000
-              IMAGE EFIS/Maps/label_MAG
-              DATAREF 
+              IMAGE EFIS/Maps/hdg_ref_nd
+              DATAREF laminar/B747/efis/hdg_ref/nd_plan_label
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 3
               BUS_SRC 4
               KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 5
               ROTARY_TYPE NO_CLICK
               CLICK_RADIUS 0.000000
               CLICK_RADIUS_DY 0.000000
@@ -91468,7 +91468,7 @@ GROUP First Officer ND
             gen_LED LED Track MAP
               POS 1022.000000 339.000000
               IMAGE CRT Displays/LED/LED_3.30B.xxx000.white
-              DATAREF sim/cockpit2/gauges/indicators/ground_track_mag_copilot
+              DATAREF laminar/B747/pfd/fo/trk_deg
               SHOW_EQUAL 2.000000 laminar/B747/nd/mode/fo/sel_dial_pos
               HIDE
               LIGHT_MODE GLASS_AUTO
@@ -91512,7 +91512,7 @@ GROUP First Officer ND
               gen_LED LED Hdg
                 POS 1022.000000 339.000000
                 IMAGE CRT Displays/LED/LED_3.30B.xxx000.white
-                DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_copilot
+                DATAREF laminar/B747/pfd/fo/hdg_deg
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 3
@@ -91553,7 +91553,7 @@ GROUP First Officer ND
               gen_LED LED Hdg 2
                 POS 1022.000000 397.000000
                 IMAGE CRT Displays/LED/LED_3.30B.xxx000.white
-                DATAREF sim/cockpit2/gauges/indicators/ground_track_mag_copilot
+                DATAREF laminar/B747/pfd/fo/trk_deg
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 3
@@ -91873,7 +91873,7 @@ GROUP First Officer ND
           gen_needle Hdg Ptr:APP/VOR/MAP
             POS 1022.000000 309.000000
             IMAGE EFIS/Maps/hdg_ptr
-            DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_copilot
+            DATAREF laminar/B747/pfd/fo/hdg_deg
             SHOW_GREATER 0.500000 laminar/B747/nd/fo/hdg_ptr
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -91891,7 +91891,7 @@ GROUP First Officer ND
           GROUP_ANIMATE_MODE ROTATE
           GROUP_WIDTH 677
           GROUP_HEIGHT 602
-          DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_copilot
+          DATAREF laminar/B747/pfd/fo/hdg_deg
           POS 1022.000000 55.000000
           CLIP
           KEY_FRAME 0.000000 0.000000 1.000000
@@ -91901,7 +91901,7 @@ GROUP First Officer ND
           gen_needle Hdg Ptr:PLN
             POS 1022.000000 367.000000
             IMAGE EFIS/Maps/hdg_ptr
-            DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_copilot
+            DATAREF laminar/B747/pfd/fo/hdg_deg
             SHOW_GREATER 0.500000 laminar/B747/nd/fo/hdg_ptr_pln
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -92383,15 +92383,15 @@ GROUP First Officer ND
 
           gen_rotary MAG Label
             POS 1079.500000 396.500000
-            IMAGE EFIS/Maps/label_MAG
-            DATAREF 
+            IMAGE EFIS/Maps/hdg_ref_nd
+            DATAREF laminar/B747/efis/hdg_ref/nd_label
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 3
             BUS_SRC 4
             KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 1.000000 6.000000
-            DIGITS 1
+            KEY_FRAME 1.000000 1.000000
+            DIGITS 5
             ROTARY_TYPE NO_CLICK
             CLICK_RADIUS 0.000000
             CLICK_RADIUS_DY 0.000000
@@ -92429,7 +92429,7 @@ GROUP First Officer ND
             gen_LED LED Track MAP
               POS 1022.000000 398.000000
               IMAGE CRT Displays/LED/LED_3.30B.xxx000.white
-              DATAREF sim/cockpit2/gauges/indicators/ground_track_mag_copilot
+              DATAREF laminar/B747/pfd/fo/trk_deg
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 3
@@ -92472,7 +92472,7 @@ GROUP First Officer ND
               gen_LED LED Hdg
                 POS 1022.000000 398.000000
                 IMAGE CRT Displays/LED/LED_3.30B.xxx000.white
-                DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_copilot
+                DATAREF laminar/B747/pfd/fo/hdg_deg
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 3
@@ -92513,7 +92513,7 @@ GROUP First Officer ND
               gen_LED LED Hdg
                 POS 1022.000000 398.000000
                 IMAGE CRT Displays/LED/LED_3.30B.xxx000.white
-                DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_copilot
+                DATAREF laminar/B747/pfd/fo/hdg_deg
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 3
@@ -92545,7 +92545,7 @@ GROUP First Officer ND
           gen_needle Track Line
             POS 1022.000000 137.000000
             IMAGE EFIS/Maps/Expanded/track_line
-            DATAREF sim/cockpit2/gauges/indicators/ground_track_mag_copilot
+            DATAREF laminar/B747/pfd/fo/trk_deg
             SHOW_GREATER 0.500000 laminar/B747/nd/fo/trk_line
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -92825,7 +92825,7 @@ GROUP First Officer ND
           gen_needle Hdg Ptr Exp
             POS 1022.000000 362.000000
             IMAGE EFIS/Maps/hdg_ptr
-            DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_copilot
+            DATAREF laminar/B747/pfd/fo/hdg_deg
             SHOW_GREATER 0.500000 laminar/B747/nd/fo/hdg_ptr
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -113623,15 +113623,15 @@ GROUP Captain ND
 
             gen_rotary MAG Label 2
               POS 392.500000 337.500000
-              IMAGE EFIS/Maps/label_MAG
-              DATAREF 
+              IMAGE EFIS/Maps/hdg_ref_nd
+              DATAREF laminar/B747/efis/hdg_ref/nd_label
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 0
               BUS_SRC 2
               KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 5
               ROTARY_TYPE NO_CLICK
               CLICK_RADIUS 0.000000
               CLICK_RADIUS_DY 0.000000
@@ -113669,15 +113669,15 @@ GROUP Captain ND
 
             gen_rotary MAG Label 2
               POS 392.500000 396.500000
-              IMAGE EFIS/Maps/label_MAG
-              DATAREF 
+              IMAGE EFIS/Maps/hdg_ref_nd
+              DATAREF laminar/B747/efis/hdg_ref/nd_plan_label
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 0
               BUS_SRC 2
               KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 5
               ROTARY_TYPE NO_CLICK
               CLICK_RADIUS 0.000000
               CLICK_RADIUS_DY 0.000000
@@ -113716,7 +113716,7 @@ GROUP Captain ND
             gen_LED LED Track MAP 2
               POS 335.000000 339.000000
               IMAGE CRT Displays/LED/LED_3.30B.xxx000.white
-              DATAREF sim/cockpit2/gauges/indicators/ground_track_mag_pilot
+              DATAREF laminar/B747/pfd/capt/trk_deg
               SHOW_EQUAL 2.000000 laminar/B747/nd/mode/capt/sel_dial_pos
               HIDE
               LIGHT_MODE GLASS_AUTO
@@ -113760,7 +113760,7 @@ GROUP Captain ND
               gen_LED LED Hdg 2
                 POS 335.000000 339.000000
                 IMAGE CRT Displays/LED/LED_3.30B.xxx000.white
-                DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot
+                DATAREF laminar/B747/pfd/capt/hdg_deg
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 0
@@ -113801,7 +113801,7 @@ GROUP Captain ND
               gen_LED LED Hdg 2 2
                 POS 335.000000 397.000000
                 IMAGE CRT Displays/LED/LED_3.30B.xxx000.white
-                DATAREF sim/cockpit2/gauges/indicators/ground_track_mag_pilot
+                DATAREF laminar/B747/pfd/capt/trk_deg
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 0
@@ -114121,7 +114121,7 @@ GROUP Captain ND
           gen_needle Hdg Ptr:APP/VOR/MAP
             POS 335.000000 309.000000
             IMAGE EFIS/Maps/hdg_ptr
-            DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot
+            DATAREF laminar/B747/pfd/capt/hdg_deg
             SHOW_GREATER 0.500000 laminar/B747/nd/capt/hdg_ptr
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -114139,7 +114139,7 @@ GROUP Captain ND
           GROUP_ANIMATE_MODE ROTATE
           GROUP_WIDTH 677
           GROUP_HEIGHT 602
-          DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot
+          DATAREF laminar/B747/pfd/capt/hdg_deg
           POS 335.000000 55.000000
           CLIP
           KEY_FRAME 0.000000 0.000000 1.000000
@@ -114149,7 +114149,7 @@ GROUP Captain ND
           gen_needle Hdg Ptr:PLN 2
             POS 335.000000 367.000000
             IMAGE EFIS/Maps/hdg_ptr
-            DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot
+            DATAREF laminar/B747/pfd/capt/hdg_deg
             SHOW_GREATER 0.500000 laminar/B747/nd/capt/hdg_ptr_pln
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -114630,15 +114630,15 @@ GROUP Captain ND
 
           gen_rotary MAG Label 2
             POS 392.500000 396.500000
-            IMAGE EFIS/Maps/label_MAG
-            DATAREF 
+            IMAGE EFIS/Maps/hdg_ref_nd
+            DATAREF laminar/B747/efis/hdg_ref/nd_label
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 0
             BUS_SRC 2
             KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 1.000000 6.000000
-            DIGITS 1
+            KEY_FRAME 1.000000 1.000000
+            DIGITS 5
             ROTARY_TYPE NO_CLICK
             CLICK_RADIUS 0.000000
             CLICK_RADIUS_DY 0.000000
@@ -114676,7 +114676,7 @@ GROUP Captain ND
             gen_LED LED Track MAP 2
               POS 335.000000 398.000000
               IMAGE CRT Displays/LED/LED_3.30B.xxx000.white
-              DATAREF sim/cockpit2/gauges/indicators/ground_track_mag_pilot
+              DATAREF laminar/B747/pfd/capt/trk_deg
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 0
@@ -114719,7 +114719,7 @@ GROUP Captain ND
               gen_LED LED Hdg 2
                 POS 335.000000 398.000000
                 IMAGE CRT Displays/LED/LED_3.30B.xxx000.white
-                DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot
+                DATAREF laminar/B747/pfd/capt/hdg_deg
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 0
@@ -114760,7 +114760,7 @@ GROUP Captain ND
               gen_LED LED Hdg 2
                 POS 335.000000 398.000000
                 IMAGE CRT Displays/LED/LED_3.30B.xxx000.white
-                DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot
+                DATAREF laminar/B747/pfd/capt/hdg_deg
                 HIDE
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 0
@@ -114793,7 +114793,7 @@ GROUP Captain ND
           gen_needle Track Line 2
             POS 335.000000 137.000000
             IMAGE EFIS/Maps/Expanded/track_line
-            DATAREF sim/cockpit2/gauges/indicators/ground_track_mag_pilot
+            DATAREF laminar/B747/pfd/capt/trk_deg
             SHOW_GREATER 0.500000 laminar/B747/nd/capt/trk_line
             HIDE
             LIGHT_MODE GLASS_AUTO
@@ -115073,7 +115073,7 @@ GROUP Captain ND
           gen_needle Hdg Ptr Exp 2
             POS 335.000000 362.000000
             IMAGE EFIS/Maps/hdg_ptr
-            DATAREF sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot
+            DATAREF laminar/B747/pfd/capt/hdg_deg
             SHOW_GREATER 0.500000 laminar/B747/nd/capt/hdg_ptr
             HIDE
             LIGHT_MODE GLASS_AUTO

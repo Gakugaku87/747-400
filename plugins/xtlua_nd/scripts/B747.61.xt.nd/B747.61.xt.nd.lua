@@ -175,6 +175,12 @@ simDR_EFIS_wxr_on                   = find_dataref("sim/cockpit2/EFIS/EFIS_weath
 simDR_EFIS_wxr_on_copilot           = find_dataref("sim/cockpit2/EFIS/EFIS_weather_on_copilot")
 B747DR_nd_capt_up                  		= find_dataref("laminar/B747/nd/up/capt")
 B747DR_nd_fo_up                  		= find_dataref("laminar/B747/nd/up/fo")
+-- each side's heading and track in the heading reference (5-2 step 5d: the
+-- display glue's, magnetic or true)
+B747DR_nd_hdg_deg_capt                  = find_dataref("laminar/B747/pfd/capt/hdg_deg")
+B747DR_nd_trk_deg_capt                  = find_dataref("laminar/B747/pfd/capt/trk_deg")
+B747DR_nd_hdg_deg_fo                    = find_dataref("laminar/B747/pfd/fo/hdg_deg")
+B747DR_nd_trk_deg_fo                    = find_dataref("laminar/B747/pfd/fo/trk_deg")
 
 simDR_map_range				= find_dataref("sim/cockpit2/EFIS/map_range")
 simDR_map_mode				= find_dataref("sim/cockpit2/EFIS/map_mode")
@@ -1264,9 +1270,11 @@ function after_physics()
   
   if debug_nd>0 then return end
   local diff=simDRTime-lastUpdate
-  -- each ND's top from its own mode and side (step 5a)
-  B747DR_nd_capt_up = nd_up(B747DR_nd_mode_capt, simDR_heading_track, simDR_ground_track)
-  B747DR_nd_fo_up = nd_up(B747DR_nd_mode_fo, simDR_heading_copilot, simDR_ground_track_copilot)
+  -- each ND's top from its own mode and side (step 5a), in the heading
+  -- reference (step 5d: the rose's numbers magnetic or true; the map
+  -- symbols' bearings stay true, nd_bearing)
+  B747DR_nd_capt_up = nd_up(B747DR_nd_mode_capt, B747DR_nd_hdg_deg_capt, B747DR_nd_trk_deg_capt)
+  B747DR_nd_fo_up = nd_up(B747DR_nd_mode_fo, B747DR_nd_hdg_deg_fo, B747DR_nd_trk_deg_fo)
   if simDR_version>=120012 then
     backport_map_mode_copilot=simDR_map_mode_copilot
     if B747DR_nd_capt_terr>0 or simDR_EFIS_wxr_on>0 then
