@@ -681,7 +681,7 @@
 - 音（`.snd`、承認済みの警報音の結線。`747-400_custom.snd` と手元の `747-400.snd` を同じに）：バンクの TCAS の 14 のイベント（traffic_traffic、climb、crossing_climb、increase_climb、climb_now、descend、crossing_descend、increase_descend、descend now、monitor_vs、maintain_vs、maintain_vs_crossing、adjust_vs、clear_of_conflict）を `tcas/voice` の値で 1 回ずつ。バンクの側の音量は距離だけで変わる（GPWS のような dataref の絞りは無い）。X-Plane 自身の TCAS の音は、機体の無音の wav（`sounds/alert/tcas.wav`・`te_climb.wav`・`te_descend.wav`）のまま。
 - カスタム acf のパネル（承認済みの DSP-18）：各 ND の `ND Text Center` の終わりに TCAS のスロット 30、その後に `TCAS Messages`（TA ONLY と、MAP CTR で上へ動く TRAFFIC・OFFSCALE）、TCAS OFF の隣に TCAS FAIL（ACF_DIFF.md §5、道具 `docs/overhaul/tools/panel_nd_tcas.lua`、絵 `make_nd_tcas_images.ps1`）。
 - 試験の道具：`tests/flight/fwl/B747_traffic.lua`（FlyWithLua。X-Plane の AI 機を借りて `override_TCAS` で相手機を飛ばす。消すときは書くのをやめ、X-Plane に落とさせる）、シナリオの手順 `traffic`・`traffic_stop`（`run_scenario.ps1`）。TESTING.md。
-- 作らなかったもの：TCAS の試験（570 のパネルに TEST が無い。CMC の地上試験は無い）、no-bearing の表示（X-Plane の相手は必ず方位がある）、ABOVE/BELOW の窓（570 に無い）、48,000 ft で CLIMB 系を出さないこと（X-Plane の判定）、EFIS パネルの故障での自動表示、TCAS RA の PFD のパネル（段 5d で作った：§19）、R を選んだときのトランスポンダのコード表示（INOP の絵：承認の一覧の外）。
+- 作らなかったもの：TCAS の試験（570 のパネルに TEST が無い。CMC の地上試験は無い）、no-bearing の表示（X-Plane の相手は必ず方位がある）、ABOVE/BELOW の窓（570 に無い）、48,000 ft で CLIMB 系を出さないこと（X-Plane の判定）、EFIS パネルの故障での自動表示、TCAS RA の PFD のパネル（段 5d で作った：§19）、R を選んだときのトランスポンダのコード表示（INOP の絵：承認の一覧の外。段 5d で直した：§20）。
 - X-Plane での確認（カスタム acf）：`s44_tcas`。X-Plane を起動し直した後の 11 回目（69/70）で、TA（琥珀の丸、下の相手のデータタグは記号の下、両 ND に TFC が自動で、琥珀の TRAFFIC、TRAFFIC, TRAFFIC）、RA（X-Plane の CLIMB, CROSSING CLIMB に、相手が下なので CLIMB, CLIMB の声、赤の四角と赤のタグ、赤の TRAFFIC、PFD の RA の値：赤は 1,500 fpm 未満）、CLEAR OF CONFLICT、TA ONLY で RA にならない、XPDR で TCAS OFF（ND と EICAS）、TFC スイッチの入切、トランスポンダ L の故障（>TRANSPONDER L、>TCAS SYSTEM、ND の TCAS FAIL）と R への切替、TCAS の故障（>TCAS SYSTEM、X-Plane のモード 3）、1,050 ft の RA（X-Plane の LEVEL OFF に ADJUST VERTICAL SPEED）、900 ft で TA ONLY を確かめた。不合格の 1 つは OFFSCALE で、RA の上昇の後に ALT HOLD を押すと FMA のピッチモードが空になって降下し、相手機が上を通った（AFDS。シナリオは水平を待つようにした）。同じセッションの 12 回目（63/71、注意 2）は、X-Plane が TA・RA の区間で advisory を出さず RA の確認が通らなかったが、OFFSCALE（MAP CTR 10 nm の右上）と 1,048 ft の RA（CLIMB, CROSSING CLIMB）は通った。Log.txt に Lua の誤りなし。
 
 ## 17. 段 5c の計画（2026-10-25：気象レーダー）
@@ -719,3 +719,10 @@
   - VS ポインタ：同じ形の赤のポインタを、`vs_red` が 1 のとき白の上に描く。
 - 試験：モデル 123 件（相対の境、上下の領域、VS ポインタの赤と白）、モジュール 62 件。X-Plane の新しいシナリオ `s48_pfd_ra`（TESTING.md）。
 - X-Plane での確認（カスタム acf）：`s48_pfd_ra`。X-Plane を起動し直した後の 3 回目（24/24、注意 2）で、上昇中の RA（X-Plane の CLIMB 系：赤は 1,500 fpm 未満）に下の赤枠（境は機体シンボルの少し上）、VSI の下の赤の範囲、赤い VS ポインタを機長と副操縦士の PFD で、水平の RA（X-Plane の MONITOR VERTICAL SPEED、DON'T CLIMB の予防 RA：赤は 0 fpm より上）に上の赤枠と上の赤の範囲、降下中の白い VS ポインタを撮った。このとき上の赤枠の上の方が Bank Scale の空色の帯に隠れたので、赤枠を Bank Scale の後に描くようにした。4 回目（18/19、注意 5）は上昇の区間で X-Plane が advisory を出さなかった（不合格の 1 つ）が、水平の RA で上の赤枠が姿勢表示の上端まで届くこと、上昇すると VS ポインタが赤になること、X-Plane が CLIMB に反転すると下の赤枠と下の赤の範囲に替わり、2,650 fpm で VS ポインタが白に戻ることを撮った。窓のマスクを外して赤枠を常に出した試験用の acf で、旋回中（バンク 20〜25°）に赤枠が姿勢と一緒に回ることと、切り抜きが赤枠の座標で ±232 px（PFD の外へ出ない）ことを確かめた。外から見た写真で機体の見た目が変わらないことを確かめた。Log.txt に Lua の誤りなし。
+
+## 20. 実装（5-1 段 5d の続き、2026-10-25：トランスポンダのコード表示）
+
+- 570 の操作盤のコード表示は、選んだトランスポンダ（ATC L・ATC R）とコードを出す（FCOM p.1218）。前のパネルは R を選ぶとコードの代わりに INOP の絵を出していた（NAV-67）。
+- モデル（`B747.34.tcas_model.lua`）：操作盤とコード表示の電源 `panel_on`（AC standby bus か AC bus 2：ATA34_1 p.584）。グルーが新設 `laminar/B747/xpdr/panel_on` に書く。
+- パネル（道具 `docs/overhaul/tools/panel_xpdr.lua`、絵 `make_xpdr_images.ps1`。ACF_DIFF.md §5）：コードは L・R どちらでも、`panel_on` が 1 のとき出す。INOP の絵の計器を、窓の左上の ATC L・ATC R（`Radios/atc_lr` の 2 コマ、XPDR スイッチで選ぶ。字は純正の無線の表示の橙）に替えた。窓とコードの位置は X-Plane のスクリーンショットで測った。
+- 試験：モデル 125 件（電源の 2 本）、モジュール 65 件。X-Plane の新しいシナリオ `s49_xpdr_display`（6/6）：L・R の両方でコードが出て、窓の左上に ATC L・ATC R、R でもトランスポンダが働く（X-Plane のモード 7）。頭を中央の台の上へ動かして表示窓を真上から撮った。外から見た写真で機体の見た目が変わらないことを確かめた。

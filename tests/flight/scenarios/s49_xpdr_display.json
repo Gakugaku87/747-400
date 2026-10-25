@@ -1,0 +1,51 @@
+{
+  "name": "s49_xpdr_display",
+  "description": "トランスポンダのコード表示（5-1 段 5d、パネルの変更、NAV-67）の X-Plane での確認、空中。銚子沖の海上 7,000 ft・250 kt で開始（機体を読み直す）。XPDR スイッチの L・R の両方でコードが出て、窓の左上に ATC L・ATC R（FCOM p.1218）。R でもトランスポンダが働く（X-Plane のモード 7）。操作盤の電源（AC standby bus か AC bus 2：ATA34_1 p.584）の値。頭を中央の台の上に動かして表示窓を真上から撮り、終わったら戻す。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 2133.6, "heading_true": 0, "speed_in_meters_per_second": 128.6 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 5, "note": "空中開始の揺れ" },
+    { "do": "remember", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "as": "alt0" },
+    { "do": "set", "note": "MCP 高度は今の高度", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 0, "rel": "alt0", "round": 100 },
+    { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "cmd", "note": "ALT HOLD", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "sleep", "seconds": 5 },
+    { "do": "check", "note": "操作盤に電源（AC standby bus か AC bus 2）", "dref": "laminar/B747/xpdr/panel_on", "op": "==", "value": 1 },
+    { "do": "check", "note": "XPDR は L", "dref": "laminar/B747/flt_mgmt/transponder/sel_dial_pos", "op": "==", "value": 0 },
+    { "do": "snapshot", "drefs": [ "sim/cockpit2/radios/actuators/transponder_code", "sim/cockpit2/radios/actuators/transponder_mode", "laminar/B747/electrical/bus/stby_main", "laminar/B747/electrical/bus/ac" ] },
+    { "do": "remember", "dref": "sim/graphics/view/pilots_head_x", "as": "hx" },
+    { "do": "remember", "dref": "sim/graphics/view/pilots_head_y", "as": "hy" },
+    { "do": "remember", "dref": "sim/graphics/view/pilots_head_z", "as": "hz" },
+    { "do": "set", "note": "頭を中央の台の上へ", "dref": "sim/graphics/view/pilots_head_x", "value": 0.22 },
+    { "do": "set", "dref": "sim/graphics/view/pilots_head_y", "value": 4.75 },
+    { "do": "set", "dref": "sim/graphics/view/pilots_head_z", "value": -25.98 },
+    { "do": "view", "note": "真下のトランスポンダの表示", "the": -89, "psi": 0, "fov": 30 },
+    { "do": "shot", "name": "xpdr_l" },
+    { "do": "cmd", "note": "XPDR を R に", "name": "laminar/B747/flt_mgmt/transponder/sel_dial" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "XPDR は R", "dref": "laminar/B747/flt_mgmt/transponder/sel_dial_pos", "op": "==", "value": 1 },
+    { "do": "check", "note": "R でもコードを出す", "dref": "laminar/B747/xpdr/panel_on", "op": "==", "value": 1 },
+    { "do": "check", "note": "R のトランスポンダが働く：TA/RA", "dref": "sim/cockpit2/radios/actuators/transponder_mode", "op": "==", "value": 7 },
+    { "do": "shot", "name": "xpdr_r" },
+    { "do": "cmd", "note": "XPDR を L に", "name": "laminar/B747/flt_mgmt/transponder/sel_dial" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "XPDR は L", "dref": "laminar/B747/flt_mgmt/transponder/sel_dial_pos", "op": "==", "value": 0 },
+    { "do": "set", "note": "頭を戻す", "dref": "sim/graphics/view/pilots_head_x", "value": 0, "rel": "hx" },
+    { "do": "set", "dref": "sim/graphics/view/pilots_head_y", "value": 0, "rel": "hy" },
+    { "do": "set", "dref": "sim/graphics/view/pilots_head_z", "value": 0, "rel": "hz" },
+    { "do": "view", "name": "forward" }
+  ]
+}

@@ -146317,7 +146317,7 @@ GROUP Transponder
     POS 1962.500000 1177.500000
     IMAGE Radios/FreqLCD
     DATAREF sim/cockpit2/radios/actuators/transponder_code
-    SHOW_EQUAL 0.000000 laminar/B747/flt_mgmt/transponder/sel_dial_pos
+    SHOW_EQUAL 1.000000 laminar/B747/xpdr/panel_on
     SIZE 1.250000
     LIGHT_MODE GLASS_AUTO
     LIGHT_RHEOSTAT 15
@@ -146330,18 +146330,17 @@ GROUP Transponder
     LED_ROWS 1
     ROUNDING ROUND_ROUND
 
-  gen_rotary Freq LCD R (INOP)
-    POS 1948.000000 1178.500000
-    IMAGE Radios/FreqLCD_INOP
-    DATAREF 
-    SHOW_EQUAL 1.000000 laminar/B747/flt_mgmt/transponder/sel_dial_pos
-    SIZE 1.250000
+  gen_rotary ATC L R
+    POS 1870.000000 1221.000000
+    IMAGE Radios/atc_lr
+    DATAREF laminar/B747/flt_mgmt/transponder/sel_dial_pos
+    SHOW_EQUAL 1.000000 laminar/B747/xpdr/panel_on
     LIGHT_MODE GLASS_AUTO
     LIGHT_RHEOSTAT 15
     BUS_SRC 4
     KEY_FRAME 0.000000 0.000000 1.000000
-    KEY_FRAME 1.000000 6.000000
-    DIGITS 1
+    KEY_FRAME 1.000000 1.000000
+    DIGITS 2
     ROTARY_TYPE NO_CLICK
     CLICK_RADIUS 0.000000
     CLICK_RADIUS_DY 0.000000

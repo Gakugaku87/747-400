@@ -244,3 +244,12 @@
 | 同（NAV-71） | 各 PFD の VS ポインタ（`gen_needle Needle`・`Needle 2`）の後 | 白だけ | 同じ形・同じ動きの赤のポインタ（`VSI/VSIspdPtrR`、`tcas/pfd/vs_red` が 1 のとき白の上に描く） | FCOM p.1537 |
 
 上の 3 行は `docs/overhaul/tools/panel_pfd_tcas.lua` で足した（既存の行は変えていない。各 PFD に 128 行）。絵は `docs/overhaul/tools/make_pfd_tcas_images.ps1`（赤は純正の PULL UP・WINDSHEAR の 255, 0, 0。赤枠の形は FCOM p.1536 の図を純正のピッチ目盛（10° = 68 px）に縮め、線は 3 px。土台の透明の絵の大きさが切り抜きの四角）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_pfd_tcas`。最初は赤枠をピッチ目盛の後に置いたが、純正の Bank Scale の絵（姿勢表示の上を覆う空色の帯）に上の方が隠れたので、Bank Scale の後に置き直した（同じ変更前の acf から道具を流し直した）。X-Plane のスクリーンショット（`s48_pfd_ra`）で、上下の赤枠・赤の範囲・VS ポインタの赤と白、副操縦士の PFD を確かめ、窓のマスクを外した試験用の acf で旋回中の回転と切り抜きを確かめた。外から見た写真で機体の見た目が変わらないことを確かめた。純正 acf は変えていない。
+
+トランスポンダ（5-1 段 5d の続き、2026-10-25。パネルの変更は全範囲で承認なしでよい）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-25・トランスポンダ（NAV-67） | `GROUP Transponder` の `gen_LED Freq LCD L`（コード） | `SHOW_EQUAL 0.000000 laminar/B747/flt_mgmt/transponder/sel_dial_pos`（L を選んだときだけ） | `SHOW_EQUAL 1.000000 laminar/B747/xpdr/panel_on`（操作盤に電源があれば L・R どちらでも） | FCOM p.1218、ATA34_1 p.584 |
+| 同（NAV-67） | `GROUP Transponder` の `gen_rotary Freq LCD R (INOP)` | INOP の絵（`Radios/FreqLCD_INOP`、POS 1948, 1178.5、SIZE 1.25、R を選んだとき） | `gen_rotary ATC L R`：窓の左上の ATC L・ATC R（`Radios/atc_lr` の 2 コマ、POS 1870, 1221、SIZE なし、XPDR スイッチ `sel_dial_pos` でコマを選ぶ、`xpdr/panel_on` が 1 のとき） | FCOM p.1218 |
+
+上の 2 行は `docs/overhaul/tools/panel_xpdr.lua` で書き換えた（9 行）。絵は `docs/overhaul/tools/make_xpdr_images.ps1`（Bahnschrift SemiBold SemiCondensed、字の高さ 13 px、純正の無線の表示の橙 255, 108, 0）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_xpdr`。X-Plane のスクリーンショット（`s49_xpdr_display`、表示窓を真上から）で、L・R の両方でコードと ATC L・ATC R が窓の中に出ることを確かめた。外から見た写真で機体の見た目が変わらないことを確かめた。純正 acf は変えていない。
