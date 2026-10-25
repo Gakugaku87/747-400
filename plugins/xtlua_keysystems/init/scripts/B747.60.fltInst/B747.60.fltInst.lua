@@ -239,6 +239,14 @@ B747DR_airspeed_show_vf                             = deferred_dataref("laminar/
 B747DR_airspeed_Vmax                            = deferred_dataref("laminar/B747/airspeed/Vmax", "number")
 B747DR_airspeed_Vmaxm                           = deferred_dataref("laminar/B747/airspeed/Vmaxm", "number")
 B747DR_airspeed_Vs                              = deferred_dataref("laminar/B747/airspeed/Vs", "number")
+-- the minimum maneuvering speed (5-2 step 3b; Vmc keeps the old formula for
+-- the AFDS, A/T and VNAV speed floors until their rebuild)
+B747DR_airspeed_Vminm                           = deferred_dataref("laminar/B747/airspeed/Vminm", "number")
+-- the speed tape's bands minus each PFD's airspeed, kt (5-2 step 3b): [0]
+-- the minimum speed, [1] the minimum maneuvering speed, [2] the maximum
+-- maneuvering speed, [3] the maximum speed; the panel's band groups stay put
+B747DR_airspeed_tape_capt                       = deferred_dataref("laminar/B747/airspeed/tape_capt", "array[4]")
+B747DR_airspeed_tape_fo                         = deferred_dataref("laminar/B747/airspeed/tape_fo", "array[4]")
 
 B747DR_airspeed_window_min                      = deferred_dataref("laminar/B747/airspeed_window/min", "number")
 

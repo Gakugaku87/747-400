@@ -408,7 +408,8 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 段 1（表示器と EIU）：モデル `B747.60.display_model.lua` を、グルー `B747.60.xt.displays.lua`（計器のモジュールに dofile）が毎フレーム回す（`B747_displays()`。前の `fltInstsetCRTs()` の代わり）。中身は notes/ATA-31.md §10・§11。
   - 読むもの：INBD・LWR の選択器（副操縦士は逆向き）、APU standby・main standby・captain transfer・F/O transfer bus と `any_ac`、新設の故障 `displays/fail[6]`（機長 outboard・機長 inboard・upper・lower・副操縦士 inboard・副操縦士 outboard）・`eiu/fail[3]`、各席と中央の EIU 選択器、PSEU の空地。
   - 書くもの：パネルとの約束の `flt_inst/display/*_pos`（内容の位置）と `electrical/display_has_power[0..5]`（内容の電源。6 か 0）、新設 `displays/content_unit[6]`（内容ごとの表示器：照明のモジュールが輝度のつまみに使う）・`eiu/used[3]`（機長・副操縦士・EICAS が使う EIU）、>EIU LEFT（advisory 91）。
-- 段 3a（速度テープ）：同じモジュールの `B747.60.speedtape_model.lua` とグルー `B747.60.xt.speedtape.lua`（fltInst02 の後に dofile）が、フラップの機動速度 `airspeed/Vf0`〜`Vf30`（Vf25 は VREF25：CDU の APPROACH REF も読む）、新設 `airspeed/show_vf[7]`（パネルのバグ）、`pfd/show_mins` を書く。最小速度・機動速度・失速警報はまだ fltInst02。
+- 段 3a（速度テープ）：同じモジュールの `B747.60.speedtape_model.lua` とグルー `B747.60.xt.speedtape.lua`（fltInst02 の後に dofile）が、フラップの機動速度 `airspeed/Vf0`〜`Vf30`（Vf25 は VREF25：CDU の APPROACH REF も読む）、新設 `airspeed/show_vf[7]`（パネルのバグ。約 20,000 ft より上は出さない）、`pfd/show_mins` を書く。
+- 段 3b（最小速度）：同じグルーが `B747.60.minspeed_model.lua` も回し、`airspeed/Vs`（赤と黒の帯の上端：シェーカーか低速バフェットの速度）、新設 `airspeed/Vminm`（最小機動速度）、`airspeed/Vmaxm`（最大機動速度、出さないときは最大速度）、`sim/flightmodel/failures/stallwarning`（シェーカー）、AIRSPEED LOW（`CAS/caution_status[0]`）、`airspeed_window/min`、新設 `airspeed/tape_capt[4]`・`tape_fo[4]`（PFD の帯 4 本が読む「帯の速度−その席の速度」）を書く。入力は気圧高度（`sim/flightmodel2/position/pressure_altitude`）、エアデータ（機長側、無効なら副操縦士側）、荷重倍数（`g_nrml`）など。`airspeed/Vmc` は前の一次式のまま fltInst02 が書く（AFDS・A/T・VNAV・EEC・FMS の速度の下限用：6-3・6-4 まで）。fltInst02 の `B747_Vs` は X-Plane の TO/GA のピッチのために失速速度の表を引くだけ。
 - 段 2（ソース選択の比較）：同じグルーが FLT DIR・NAV の選択器と新設の故障 `efis/fail[2]`・`dsp/fail` を読み、>SOURCE SEL EIU・F/D・NAV、>EFIS CONTROL L・R、>EFIS/EICAS C/P を書く。>ATTITUDE・>HEADING は航法センサーの IRS のグルー（X-Plane の両側の AHRS の差）、>SNGL SOURCE RA は電波高度計のグルー。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
@@ -426,6 +427,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
   - CDU は `B747.68.xt.fms` が `laminar/B747/fms1〜3/*` に行の文字列を出す。
 - パネルの表示条件（`SHOW_EQUAL`・`SHOW_LESS`・`SHOW_GREATER`）は、計器かグループごとに 1 つの dataref だけが効く（同じ dataref の LESS と GREATER で範囲。違う dataref を 2 行書くと後ろの行だけが効く：2026-10-25、カスタム acf の PFD で確かめた）。条件を重ねるときはグループを入れ子にする。純正の計器にも違う dataref を 2 行持つものがある（例：PFD の NO V SPD は V1 の行だけが効く）。
 - 計器の画像は `名前.png`（土台。大きさが計器の枠）と `名前-1.png`（動く絵や絵のコマ。tape は `-1` が塗り、`-2` が枠）の組。`CLIP` のある pointer・needle は、動く絵を土台の大きさの矩形（POS が中心）で切る。矩形は計器の座標なので、グループの回転・移動と一緒に動く（回転したグループの中では回った矩形で切る：2026-10-25、PFD の RA の赤枠を窓のマスクを外して確かめた）。純正の PFD の姿勢表示の上の空色は Bank Scale の絵（弧形の穴の空いた空色の帯）で、それより前に描いたものは上の方が隠れる。
+- `KEY_FRAME` の範囲の外では、X-Plane は端の区間の線を延ばす（速度テープのバグのグループは 0〜60 kt の枠でどの速度でも動き、260〜380 kt の枠の最大速度の帯も 230 kt に出た）。`CLIP` のある `GROUP_ANIMATE_MODE TRANSLATE` のグループは、切り抜きの窓もグループと一緒に動く：純正の速度テープの帯のグループは速度で上下し、最小の側は 160 kt 付近でしか窓が重ならず、巡航の約 250 kt の最小機動速度は出なかった（2026-10-25）。グループを止め、帯の位置は「帯の速度−今の速度」の dataref（`airspeed/tape_capt`・`tape_fo`）で決めるようにした（`panel_speed_bands.lua`）。
 - **制約**：表示の定義は acf の中にある。純正 acf は変えないので、表示を直すときは dataref の値で直すのが基本になる。計器の追加や変更はカスタム acf にしかできず、見た目に関わるので承認が要る。カスタム acf と純正 acf のパネル定義は、ADF の方位針 2 個の参照 index を除いて同じ。
 
 ## 6. FMC

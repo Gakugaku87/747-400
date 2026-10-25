@@ -56,7 +56,7 @@
     { "do": "check", "note": "フラップ 20：20 と 10", "dref": "laminar/B747/airspeed/show_vf[4]", "op": "==", "value": 1 },
     { "do": "check", "note": "10 も", "dref": "laminar/B747/airspeed/show_vf[3]", "op": "==", "value": 1 },
     { "do": "check", "note": "5 は消える", "dref": "laminar/B747/airspeed/show_vf[2]", "op": "==", "value": 0 },
-    { "do": "wait", "note": "フラップが 20 に近づく", "dref": "sim/flightmodel/controls/flaprat", "op": ">", "value": 0.6, "timeout": 90, "level": "warn" },
+    { "do": "wait", "note": "フラップが 20 に近づく（前は sim/flightmodel/controls/flaprat を待ったが、XP12 では 0 のまま）", "dref": "sim/flightmodel2/wing/flap1_deg[0]", "op": ">", "value": 15, "timeout": 90, "level": "warn" },
     { "do": "shot", "name": "spd_f20" },
     { "do": "set", "note": "MCP 速度 170 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 170 },
     { "do": "wait", "note": "減速", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "<", "value": 178, "timeout": 120, "level": "warn" },

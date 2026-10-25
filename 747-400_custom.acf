@@ -75303,22 +75303,22 @@ GROUP Captain PFD
             DATAREF laminar/B747/gauges/indicators/airspeed_kts_pilot
             POS 127.500000 767.000000
             CLIP
-            KEY_FRAME 220.000000 400.000000 1.000000
-            KEY_FRAME 320.000000 0.000000 1.000000
-            KEY_FRAME 420.000000 -400.000000
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 250.000000 0.000000 1.000000
+            KEY_FRAME 500.000000 0.000000
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer Max Maneuver
               POS 127.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASImaxMnvrTape
-              DATAREF laminar/B747/airspeed/Vmaxm
+              DATAREF laminar/B747/airspeed/tape_capt[2]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
               BUS_SRC 2
-              KEY_FRAME 260.000000 0.500000 1.000000
-              KEY_FRAME 320.000000 240.500000 1.000000
-              KEY_FRAME 380.000000 480.500000
+              KEY_FRAME -500.000000 -1759.500000 1.000000
+              KEY_FRAME 0.000000 240.500000 1.000000
+              KEY_FRAME 500.000000 2240.500000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -75326,14 +75326,14 @@ GROUP Captain PFD
             gen_pointer Max Speed
               POS 127.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASIminMaxTape
-              DATAREF laminar/B747/airspeed/Vmax
+              DATAREF laminar/B747/airspeed/tape_capt[3]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
               BUS_SRC 2
-              KEY_FRAME 260.000000 395.000000 1.000000
-              KEY_FRAME 320.000000 635.000000 1.000000
-              KEY_FRAME 380.000000 875.000000
+              KEY_FRAME -500.000000 -1365.000000 1.000000
+              KEY_FRAME 0.000000 635.000000 1.000000
+              KEY_FRAME 500.000000 2635.000000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -75349,22 +75349,22 @@ GROUP Captain PFD
             DATAREF laminar/B747/gauges/indicators/airspeed_kts_pilot
             POS 127.500000 767.000000
             CLIP
-            KEY_FRAME 100.000000 240.000000 1.000000
-            KEY_FRAME 160.000000 0.000000 1.000000
-            KEY_FRAME 220.000000 -240.000000
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 250.000000 0.000000 1.000000
+            KEY_FRAME 500.000000 0.000000
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer Min Maneuver
               POS 127.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASIminMnvrTape
-              DATAREF laminar/B747/airspeed/Vmc
+              DATAREF laminar/B747/airspeed/tape_capt[1]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
               BUS_SRC 2
-              KEY_FRAME 100.000000 -480.500000 1.000000
-              KEY_FRAME 160.000000 -240.500000 1.000000
-              KEY_FRAME 220.000000 0.500000
+              KEY_FRAME -500.000000 -2240.500000 1.000000
+              KEY_FRAME 0.000000 -240.500000 1.000000
+              KEY_FRAME 500.000000 1759.500000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -75372,14 +75372,14 @@ GROUP Captain PFD
             gen_pointer Min Speed
               POS 127.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASIminMaxTape
-              DATAREF laminar/B747/airspeed/Vs
+              DATAREF laminar/B747/airspeed/tape_capt[0]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
               BUS_SRC 2
-              KEY_FRAME 100.000000 -875.500000 1.000000
-              KEY_FRAME 160.000000 -635.500000 1.000000
-              KEY_FRAME 220.000000 -395.500000
+              KEY_FRAME -500.000000 -2635.500000 1.000000
+              KEY_FRAME 0.000000 -635.500000 1.000000
+              KEY_FRAME 500.000000 1364.500000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -79159,22 +79159,22 @@ GROUP Captain PFD
             DATAREF laminar/B747/gauges/indicators/airspeed_kts_pilot
             POS 127.500000 767.000000
             CLIP
-            KEY_FRAME 220.000000 400.000000 1.000000
-            KEY_FRAME 320.000000 0.000000 1.000000
-            KEY_FRAME 420.000000 -400.000000
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 250.000000 0.000000 1.000000
+            KEY_FRAME 500.000000 0.000000
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer Max Maneuver
               POS 127.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASImaxMnvrTape
-              DATAREF laminar/B747/airspeed/Vmaxm
+              DATAREF laminar/B747/airspeed/tape_capt[2]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
               BUS_SRC 2
-              KEY_FRAME 260.000000 0.500000 1.000000
-              KEY_FRAME 320.000000 240.500000 1.000000
-              KEY_FRAME 380.000000 480.500000
+              KEY_FRAME -500.000000 -1759.500000 1.000000
+              KEY_FRAME 0.000000 240.500000 1.000000
+              KEY_FRAME 500.000000 2240.500000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -79182,14 +79182,14 @@ GROUP Captain PFD
             gen_pointer Max Speed
               POS 127.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASIminMaxTape
-              DATAREF laminar/B747/airspeed/Vmax
+              DATAREF laminar/B747/airspeed/tape_capt[3]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
               BUS_SRC 2
-              KEY_FRAME 260.000000 395.000000 1.000000
-              KEY_FRAME 320.000000 635.000000 1.000000
-              KEY_FRAME 380.000000 875.000000
+              KEY_FRAME -500.000000 -1365.000000 1.000000
+              KEY_FRAME 0.000000 635.000000 1.000000
+              KEY_FRAME 500.000000 2635.000000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -79205,22 +79205,22 @@ GROUP Captain PFD
             DATAREF laminar/B747/gauges/indicators/airspeed_kts_pilot
             POS 127.500000 767.000000
             CLIP
-            KEY_FRAME 100.000000 240.000000 1.000000
-            KEY_FRAME 160.000000 0.000000 1.000000
-            KEY_FRAME 220.000000 -240.000000
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 250.000000 0.000000 1.000000
+            KEY_FRAME 500.000000 0.000000
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer Min Maneuver
               POS 127.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASIminMnvrTape
-              DATAREF laminar/B747/airspeed/Vmc
+              DATAREF laminar/B747/airspeed/tape_capt[1]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
               BUS_SRC 2
-              KEY_FRAME 100.000000 -480.500000 1.000000
-              KEY_FRAME 160.000000 -240.500000 1.000000
-              KEY_FRAME 220.000000 0.500000
+              KEY_FRAME -500.000000 -2240.500000 1.000000
+              KEY_FRAME 0.000000 -240.500000 1.000000
+              KEY_FRAME 500.000000 1759.500000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -79228,14 +79228,14 @@ GROUP Captain PFD
             gen_pointer Min Speed
               POS 127.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASIminMaxTape
-              DATAREF laminar/B747/airspeed/Vs
+              DATAREF laminar/B747/airspeed/tape_capt[0]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
               BUS_SRC 2
-              KEY_FRAME 100.000000 -875.500000 1.000000
-              KEY_FRAME 160.000000 -635.500000 1.000000
-              KEY_FRAME 220.000000 -395.500000
+              KEY_FRAME -500.000000 -2635.500000 1.000000
+              KEY_FRAME 0.000000 -635.500000 1.000000
+              KEY_FRAME 500.000000 1364.500000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -83761,22 +83761,22 @@ GROUP First Officer PFD
             DATAREF laminar/B747/gauges/indicators/airspeed_kts_copilot
             POS 806.500000 767.000000
             CLIP
-            KEY_FRAME 220.000000 400.000000 1.000000
-            KEY_FRAME 320.000000 0.000000 1.000000
-            KEY_FRAME 420.000000 -400.000000
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 250.000000 0.000000 1.000000
+            KEY_FRAME 500.000000 0.000000
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer Max Maneuver 2
               POS 806.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASImaxMnvrTape
-              DATAREF laminar/B747/airspeed/Vmaxm
+              DATAREF laminar/B747/airspeed/tape_fo[2]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
               BUS_SRC 4
-              KEY_FRAME 260.000000 0.500000 1.000000
-              KEY_FRAME 320.000000 240.500000 1.000000
-              KEY_FRAME 380.000000 480.500000
+              KEY_FRAME -500.000000 -1759.500000 1.000000
+              KEY_FRAME 0.000000 240.500000 1.000000
+              KEY_FRAME 500.000000 2240.500000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -83784,14 +83784,14 @@ GROUP First Officer PFD
             gen_pointer Max Speed 2
               POS 806.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASIminMaxTape
-              DATAREF laminar/B747/airspeed/Vmax
+              DATAREF laminar/B747/airspeed/tape_fo[3]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
               BUS_SRC 4
-              KEY_FRAME 260.000000 395.000000 1.000000
-              KEY_FRAME 320.000000 635.000000 1.000000
-              KEY_FRAME 380.000000 875.000000
+              KEY_FRAME -500.000000 -1365.000000 1.000000
+              KEY_FRAME 0.000000 635.000000 1.000000
+              KEY_FRAME 500.000000 2635.000000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -83809,22 +83809,22 @@ GROUP First Officer PFD
             DATAREF laminar/B747/gauges/indicators/airspeed_kts_copilot
             POS 806.500000 767.000000
             CLIP
-            KEY_FRAME 100.000000 240.000000 1.000000
-            KEY_FRAME 160.000000 0.000000 1.000000
-            KEY_FRAME 220.000000 -240.000000
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 250.000000 0.000000 1.000000
+            KEY_FRAME 500.000000 0.000000
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer Min Maneuver 2
               POS 806.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASIminMnvrTape
-              DATAREF laminar/B747/airspeed/Vmc
+              DATAREF laminar/B747/airspeed/tape_fo[1]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
               BUS_SRC 4
-              KEY_FRAME 100.000000 -480.500000 1.000000
-              KEY_FRAME 160.000000 -240.500000 1.000000
-              KEY_FRAME 220.000000 0.500000
+              KEY_FRAME -500.000000 -2240.500000 1.000000
+              KEY_FRAME 0.000000 -240.500000 1.000000
+              KEY_FRAME 500.000000 1759.500000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -83832,14 +83832,14 @@ GROUP First Officer PFD
             gen_pointer Min Speed 2
               POS 806.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASIminMaxTape
-              DATAREF laminar/B747/airspeed/Vs
+              DATAREF laminar/B747/airspeed/tape_fo[0]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
               BUS_SRC 4
-              KEY_FRAME 100.000000 -875.500000 1.000000
-              KEY_FRAME 160.000000 -635.500000 1.000000
-              KEY_FRAME 220.000000 -395.500000
+              KEY_FRAME -500.000000 -2635.500000 1.000000
+              KEY_FRAME 0.000000 -635.500000 1.000000
+              KEY_FRAME 500.000000 1364.500000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -87596,22 +87596,22 @@ GROUP First Officer PFD
             DATAREF laminar/B747/gauges/indicators/airspeed_kts_copilot
             POS 806.500000 767.000000
             CLIP
-            KEY_FRAME 220.000000 400.000000 1.000000
-            KEY_FRAME 320.000000 0.000000 1.000000
-            KEY_FRAME 420.000000 -400.000000
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 250.000000 0.000000 1.000000
+            KEY_FRAME 500.000000 0.000000
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer Max Maneuver 2
               POS 806.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASImaxMnvrTape
-              DATAREF laminar/B747/airspeed/Vmaxm
+              DATAREF laminar/B747/airspeed/tape_fo[2]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
               BUS_SRC 4
-              KEY_FRAME 260.000000 0.500000 1.000000
-              KEY_FRAME 320.000000 240.500000 1.000000
-              KEY_FRAME 380.000000 480.500000
+              KEY_FRAME -500.000000 -1759.500000 1.000000
+              KEY_FRAME 0.000000 240.500000 1.000000
+              KEY_FRAME 500.000000 2240.500000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -87619,14 +87619,14 @@ GROUP First Officer PFD
             gen_pointer Max Speed 2
               POS 806.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASIminMaxTape
-              DATAREF laminar/B747/airspeed/Vmax
+              DATAREF laminar/B747/airspeed/tape_fo[3]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
               BUS_SRC 4
-              KEY_FRAME 260.000000 395.000000 1.000000
-              KEY_FRAME 320.000000 635.000000 1.000000
-              KEY_FRAME 380.000000 875.000000
+              KEY_FRAME -500.000000 -1365.000000 1.000000
+              KEY_FRAME 0.000000 635.000000 1.000000
+              KEY_FRAME 500.000000 2635.000000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -87644,22 +87644,22 @@ GROUP First Officer PFD
             DATAREF laminar/B747/gauges/indicators/airspeed_kts_copilot
             POS 806.500000 767.000000
             CLIP
-            KEY_FRAME 100.000000 240.000000 1.000000
-            KEY_FRAME 160.000000 0.000000 1.000000
-            KEY_FRAME 220.000000 -240.000000
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 250.000000 0.000000 1.000000
+            KEY_FRAME 500.000000 0.000000
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer Min Maneuver 2
               POS 806.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASIminMnvrTape
-              DATAREF laminar/B747/airspeed/Vmc
+              DATAREF laminar/B747/airspeed/tape_fo[1]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
               BUS_SRC 4
-              KEY_FRAME 100.000000 -480.500000 1.000000
-              KEY_FRAME 160.000000 -240.500000 1.000000
-              KEY_FRAME 220.000000 0.500000
+              KEY_FRAME -500.000000 -2240.500000 1.000000
+              KEY_FRAME 0.000000 -240.500000 1.000000
+              KEY_FRAME 500.000000 1759.500000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -87667,14 +87667,14 @@ GROUP First Officer PFD
             gen_pointer Min Speed 2
               POS 806.500000 767.000000
               IMAGE CRT Displays/PFD/ASI/ASIminMaxTape
-              DATAREF laminar/B747/airspeed/Vs
+              DATAREF laminar/B747/airspeed/tape_fo[0]
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
               BUS_SRC 4
-              KEY_FRAME 100.000000 -875.500000 1.000000
-              KEY_FRAME 160.000000 -635.500000 1.000000
-              KEY_FRAME 220.000000 -395.500000
+              KEY_FRAME -500.000000 -2635.500000 1.000000
+              KEY_FRAME 0.000000 -635.500000 1.000000
+              KEY_FRAME 500.000000 1364.500000
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000

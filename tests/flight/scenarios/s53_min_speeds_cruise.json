@@ -1,0 +1,51 @@
+{
+  "name": "s53_min_speeds_cruise",
+  "description": "PFD の速度テープの巡航中の最小速度と機動速度（5-2 段 3b）の X-Plane での確認、空中。FL350 で開始（機体を読み直す。X-Plane の空中開始は約 41,700 ft から落ちて 35,000〜38,000 ft で水平になり、そのままでは遅すぎる）。s07 と同じく FLCH で 35,000 ft に合わせ、A/T の SPD で 280 kt（約 270 t の LRC 付近）にして落ち着かせ、最小機動速度が低速バフェットまで 1.3 g（約 270 t・FL350 で約 249 kt。FCOM p.973、PI.11.1 の最大運用高度から）、最小速度（1 g の低速バフェット、約 211 kt）、最大機動速度は出さない（1.3 g の高速バフェットが最大速度より上：FCOM p.969、推定）、20,000 ft より上でフラップのバグを出さない（FCOM p.972）。PFD を撮る（撮る間は操縦輪を隠す）。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 10668, "heading_true": 340, "speed_in_meters_per_second": 254 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 60, "note": "空中開始の揺れ：機首が上がって約 40,000 ft・160 kt 付近まで上がってから戻るか、約 38,000 ft・210 kt 付近で水平になる（2026-10-25 夜。揺れの途中でシェーカーが鳴る間に A/P を入れると FLCH が入らないことがあった）" },
+    { "do": "wait", "note": "シェーカーが止まっている（遅いまま水平になったときはバフェットの境界で鳴ったり止まったりする）", "dref": "sim/flightmodel/failures/stallwarning", "op": "==", "value": 0, "timeout": 120 },
+    { "do": "set", "note": "MCP 速度 280 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 280 },
+    { "do": "set", "note": "MCP 高度 35,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 35000 },
+    { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "note": "A/P のサーボ", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "set", "note": "MCP 方位 347（空中開始の磁方位）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 347 },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "cmd", "note": "FLCH（空中開始で上がった高度から 35,000 ft へ。ALT で捕捉する）", "name": "laminar/B747/autopilot/button_switch/flch_mode" },
+    { "do": "wait", "note": "35,000 ft で ALT（FMA のピッチ 9）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9, "timeout": 360 },
+    { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "wait", "note": "270 kt を超える", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 270, "timeout": 600, "level": "warn" },
+    { "do": "sleep", "seconds": 30, "note": "速度と高度が落ち着くのを待つ" },
+    { "do": "snapshot", "note": "巡航の速度テープの値", "drefs": [ "sim/flightmodel/weight/m_total", "sim/flightmodel2/position/pressure_altitude",
+      "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "laminar/B747/airdata/mach_capt", "sim/flightmodel/forces/g_nrml", "laminar/B747/airspeed/Vs", "laminar/B747/airspeed/Vminm",
+      "laminar/B747/airspeed/Vmaxm", "laminar/B747/airspeed/Vmax", "laminar/B747/airspeed/Vmc", "laminar/B747/airspeed/show_vf", "laminar/B747/pfd/show_mins" ] },
+    { "do": "check", "note": "空中開始：最小機動速度の帯を出す（推定。空中開始の直後に空地判定が一瞬地上になっても）", "dref": "laminar/B747/pfd/show_mins", "op": "==", "value": 1 },
+    { "do": "check", "note": "20,000 ft より上：UP のバグを出さない（FCOM p.972）", "dref": "laminar/B747/airspeed/show_vf[0]", "op": "==", "value": 0 },
+    { "do": "check", "note": "最小機動速度：低速バフェットまで 1.3 g（約 270 t・35,000 ft で約 249 kt）", "dref": "laminar/B747/airspeed/Vminm", "op": "between", "value": [240, 258] },
+    { "do": "check", "note": "最小速度：低速バフェット（約 270 t・1 g で約 211 kt。今の荷重倍数で上下する：A/P が高度を保つ間は 0.9〜1.1 g）", "dref": "laminar/B747/airspeed/Vs", "op": "between", "value": [198, 222] },
+    { "do": "remember", "dref": "laminar/B747/airspeed/Vmax", "as": "vmax" },
+    { "do": "check", "note": "最大機動速度は出さない（最大速度と同じ。推定の高速バフェット）", "dref": "laminar/B747/airspeed/Vmaxm", "op": "between", "value": [-0.5, 0.5], "rel": "vmax", "level": "warn" },
+    { "do": "check", "note": "シェーカーなし", "dref": "sim/flightmodel/failures/stallwarning", "op": "==", "value": 0 },
+    { "do": "check", "note": "AIRSPEED LOW なし", "dref": "laminar/B747/CAS/caution_status[0]", "op": "==", "value": 0 },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "view", "note": "機長の PFD", "the": -24, "psi": -1, "fov": 24 },
+    { "do": "shot", "name": "pfd_cruise" },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" }
+  ]
+}

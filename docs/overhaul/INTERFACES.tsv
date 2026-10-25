@@ -641,6 +641,8 @@ laminar/B747/airspeed/Vs	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/airspeed/showVf25	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/airspeed/showVf30	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/airspeed/show_vf	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/airspeed/tape_capt	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/airspeed/tape_fo	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/airspeed_window/min	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/altimeter/baro_hectopascal	dataref	obj	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/altimeter/ft_adjusted	dataref	snd	B747.60.fltInst,B747.60.xt.fltInst02

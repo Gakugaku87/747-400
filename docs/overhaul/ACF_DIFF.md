@@ -283,3 +283,12 @@
 | 2026-10-25・速度テープ（DSP-13） | 各 PFD（4 組）の `GROUP Flap Speeds` のバグ 7 本（`gen_pointer UP`・`1`・`5`・`10`・`20`・`25`・`30`、副操縦士は名前に ` 2`） | レバーの位置の範囲（`SHOW_LESS`・`SHOW_GREATER sim/cockpit2/controls/flap_ratio` の 2 行か 1 行）、25・30 は `showVf25`・`showVf30` | `SHOW_EQUAL 1.000000 laminar/B747/airspeed/show_vf[k]`（k は 0 UP〜6 30：今と次の小さいフラップ） | FCOM p.972、PI.10.3 |
 
 上の 1 行は `docs/overhaul/tools/panel_flap_bugs.lua` で書き換えた（28 本、条件 44 行を 28 行に）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_flap_bugs`。X-Plane のスクリーンショット（`s51_speed_tape`）で、フラップごとに 2 本のバグが出ることを確かめた。外から見た写真で機体の見た目が変わらないことを確かめた。純正 acf は変えていない。
+
+表示（5-2 段 3b、2026-10-25）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-25・速度テープ（DSP-05） | 各 PFD（4 組）の速度テープの帯の 2 つのグループ（`GROUP Max Speed`・`Min Speed` の中の `GROUP Spd Ofst Kts`、副操縦士は名前に ` 2`）の `KEY_FRAME` | その席の速度で上下に動く（最大の側は 320 kt、最小の側は 160 kt が真ん中）。切り抜きの窓も一緒に動くので、最大の側は 320 kt 付近、最小の側は 160 kt 付近でしか見えず、巡航の最小機動速度（約 250 kt）は出なかった | どの速度でも動かない（0） | FCOM p.969、p.973 |
+| 同 | 同じグループの帯 4 本（`gen_pointer Min Speed`・`Min Maneuver`・`Max Maneuver`・`Max Speed`）の参照と `KEY_FRAME` | `laminar/B747/airspeed/Vs`・`Vmc`（前の最小機動速度の式）・`Vmaxm`・`Vmax`、その速度の枠 | 新設 `laminar/B747/airspeed/tape_capt[0]`〜`[3]`（副操縦士の組は `tape_fo`：帯の速度からその席の速度を引いた値。最小機動速度は最小速度のモデルの値、`Vmc` は AFDS・A/T・VNAV の速度の下限のために前の式のまま）、−500〜500 kt を 4 px/kt で、前の位置（帯の速度＝今の速度のとき）を通る線 | 同 |
+
+上の 2 行は `docs/overhaul/tools/panel_speed_bands.lua` で書き換えた（グループ 8 つ、帯 16 本）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_speed_bands`（空力のコミットの後の acf）。
