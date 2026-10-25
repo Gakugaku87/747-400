@@ -8,7 +8,9 @@ local T = dofile("tests/lib/check.lua")("speedtape_model")
 local M = dofile("plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/B747.60.speedtape_model.lua")
 
 local s, inp, out
-local function run() out = M.update(s, inp) end
+local DT = 0.25                         -- exact in binary: the ground time adds up exactly
+local function run() out = M.update(s, inp, DT) end
+local function hold(seconds) for _ = 1, seconds / DT do run() end end
 local function lever(detent) inp.flap_ratio = detent / 6 end
 local function shown()
     local t = {}
@@ -50,6 +52,11 @@ inp.land_flap = M.LAND_25
 lever(M.F25); run()
 T.equal(shown(), "4", "flaps 25 with landing flaps 25: 20 (25 is the REF bug)")
 inp.land_flap = M.LAND_NONE
+lever(M.UP); inp.alt_ft = 21000; run()
+T.equal(shown(), "", "above about 20,000 ft: no bugs (FCOM p.972)")
+inp.alt_ft = 19000; run()
+T.equal(shown(), "0", "below: the UP bug again")
+inp.alt_ft = 0
 
 -- the minimum maneuvering speed band (FCOM p.973)
 s, inp = M.new(), M.inputs()
@@ -57,6 +64,7 @@ inp.vref30 = 150
 lever(M.F20)
 run()
 T.check(not out.show_mins, "on the ground: not shown")
+hold(M.GROUND_S)
 inp.air = true
 run()
 T.check(not out.show_mins, "after lift-off at flaps 20: not yet")
@@ -66,10 +74,36 @@ lever(M.F20); run()
 T.check(out.show_mins, "stays with flaps extended again")
 inp.air = false
 run()
+T.check(out.show_mins, "touchdown: still shown")
+hold(M.GROUND_S)
 T.check(not out.show_mins, "landed: cleared")
 s, inp = M.new(), M.inputs()
 inp.air = true
 run()
 T.check(out.show_mins, "a flight started in the air: shown (estimate)")
+-- an air start that reads ground for a moment at 200 kt
+s, inp = M.new(), M.inputs()
+inp.air, inp.ias = false, 200
+run()
+inp.air = true
+lever(M.F20); run()
+T.check(out.show_mins, "air start with a moment of ground at 200 kt: still shown")
+-- the aircraft reloaded in the air: ground and 0 kt for a moment
+s, inp = M.new(), M.inputs()
+inp.air, inp.ias = false, 0
+hold(2)
+T.check(not out.show_mins, "reloaded in the air, the first 2 s read ground at 0 kt: not yet")
+inp.air, inp.ias = true, 170
+run()
+T.check(out.show_mins, "then air: shown")
+-- the landing rollout: cleared after GROUND_S below 100 kt
+inp.air, inp.ias = false, 130
+hold(M.GROUND_S + 1)
+T.check(out.show_mins, "rolling out at 130 kt: still shown")
+inp.ias = 90
+hold(M.GROUND_S - 1)
+T.check(out.show_mins, "4 s below 100 kt: still shown")
+hold(1)
+T.check(not out.show_mins, "5 s below 100 kt on the ground: cleared")
 
 T.done()

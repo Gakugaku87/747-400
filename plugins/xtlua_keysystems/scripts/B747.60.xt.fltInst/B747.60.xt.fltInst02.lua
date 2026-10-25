@@ -2708,11 +2708,19 @@ end
 
 
 
+-- the table's weights that bracket the gross weight (rounding to the nearest
+-- 20 t took the lower weight's value in the first half of each step: VREF30
+-- up to 3 kt low, the stall speed up to 4 kt; 5-2 step 3b)
+local function bracket_weights()
+    local w = math.max(200000, math.min(400000, simDR_acf_weight_total_kg))
+    local weight_min = math.min(380000, math.floor(w / 20000) * 20000)
+    return weight_min, weight_min + 20000
+end
+
 -- Vref30
 function B747_setVref30()
 
-    local weight_max = math.min(400000, roundToIncrement(simDR_acf_weight_total_kg, 20000))
-    local weight_min = math.max(200000, weight_max-20000)
+    local weight_min, weight_max = bracket_weights()
 
     local speed = {}
     if simDR_altitude_ft_pilot <= -2000 then speed = Vref30data.speedMinus2k
@@ -2739,7 +2747,10 @@ function setVmc(weight,flaps)
       flap_Vmc      =B747_rescale(10.0, 137, 30.0, 118, flaps) + weight_factor --0.95/1
     end
     B747DR_airspeed_Vmc = flap_Vmc
-    -- when the band shows (pfd/show_mins): the speed tape model (5-2 step 3a)
+    -- Vmc is the old approximation of the minimum maneuvering speed, kept for
+    -- the AFDS, A/T and VNAV speed floors (their Vmc + 10 and flap offsets
+    -- are tuned to it) until their rebuild (6-3, 6-4); the PFDs show Vminm
+    -- from the minimum speed model (5-2 step 3b)
     --print(" " ..weight/1000 .. "t, " .. flaps .. "=" .. math.floor(B747DR_airspeed_Vmc) .." ")
 end
 
@@ -2780,15 +2791,10 @@ function B747_Vspeeds()
     B747DR_airspeed_Mle = 0.820
 
 
-    -- Vmc (MINIMIMUM OPERATING (CONTROL) MANEUVERING SPEED) (AMBER RANGE)
+    -- Vmc: the old minimum maneuvering approximation for the AFDS and A/T
+    -- floors; the PFD's band (Vminm) and its amber box: the minimum speed
+    -- model (B747.60.xt.speedtape.lua, 5-2 step 3b)
     setVmc(simDR_acf_weight_total_kg,simDR_wing_flap1_deg[0])
-    
-    
-    if simDR_airspeed < B747DR_airspeed_Vmc then 
-        B747DR_airspeed_window_min = 1 
-    else 
-        B747DR_airspeed_window_min = 0
-    end
 
 
     -- Vmo / Mmo (MAXIMUM OPERATING LIMIT SPEED)
@@ -2830,8 +2836,8 @@ function B747_Vspeeds()
 
     B747DR_airspeed_Vmax = math.min(B747DR_airspeed_Vmo, flapSpeed, gearSpeed)
 
-    -- Vmaxm (MAXIMUM MANEUVERING SPEED)  (AMBER RANGE)
-    B747DR_airspeed_Vmaxm = B747DR_airspeed_Vmax - 10.0
+    -- Vmaxm (the maximum maneuvering speed, 1.3 g to high speed buffet; it
+    -- was Vmax - 10): the minimum speed model (5-2 step 3b)
 
 end
 
@@ -2856,12 +2862,14 @@ function B747_animate_value(current_value, target, min, max, speed)
 
 end
 
--- LOW SPEED RED CHECKER BOX ON ASI
+-- The stall speed table (Laminar's; the FCTM's stall speeds: notes/FCTM.md
+-- §1.14) for X-Plane's TOGA pitch below, which the AFDS uses (6-3). The
+-- speed tape's red and black band and the stick shaker are the minimum speed
+-- model's (B747.60.xt.speedtape.lua, 5-2 step 3b): the band is the stick
+-- shaker speed (FCOM p.973), not the stall speed.
 function B747_Vs()
 
-    -- Vs (STALL SPEED OR MINIMUM STEADY FLIGHT SPEED FOR WHICH THE AIRCRAFT IS STILL CONTROLLABLE)
-    local weight_max = math.min(400000, roundToIncrement(simDR_acf_weight_total_kg, 20000))
-    local weight_min = math.max(200000, weight_max-20000)
+    local weight_min, weight_max = bracket_weights()
 
     -- the table's altitude bands, highest first (DSP-07: the 0 ft band
     -- caught every altitude above it)
@@ -2937,11 +2945,8 @@ function B747_Vs()
                 numStalled=numStalled+1
             end
         end
-        local vSAOA=0
         if numStalled > 0 then
-            vSAOA=(target_airspeed_Vs-simDR_airspeed)*(0-numStalled)/10
-            vSAOA=math.min(vSAOA,simDR_airspeed+12-target_airspeed_Vs)
-           if simDR_all_wheels_on_ground==0 then 
+           if simDR_all_wheels_on_ground==0 then
                 simDR_autopilot_TOGA_pitch_deg=math.min(12-(17*numStalled/10),3)
                 --print("simDR_autopilot_TOGA_pitch_deg1="..simDR_autopilot_TOGA_pitch_deg)
            else --on ground, pitch for 8
@@ -2955,21 +2960,12 @@ function B747_Vs()
             if B747DR_airspeed_V2<900 then
                 tSpeed=B747DR_airspeed_V2+10
             end
-            simDR_autopilot_TOGA_pitch_deg=B747_rescale(target_airspeed_Vs,2,tSpeed,12,simDR_airspeed) 
-            --print("simDR_autopilot_TOGA_pitch_deg2="..simDR_autopilot_TOGA_pitch_deg) 
+            simDR_autopilot_TOGA_pitch_deg=B747_rescale(target_airspeed_Vs,2,tSpeed,12,simDR_airspeed)
+            --print("simDR_autopilot_TOGA_pitch_deg2="..simDR_autopilot_TOGA_pitch_deg)
         end
-        B747DR_airspeed_Vs=B747_animate_value(B747DR_airspeed_Vs,target_airspeed_Vs+vSAOA,0,450,1)
-        --print(vSAOA)
     else
-        B747DR_airspeed_Vs=B747_animate_value(B747DR_airspeed_Vs,target_airspeed_Vs,0,450,1)
         simDR_autopilot_TOGA_pitch_deg=8
         --print("simDR_autopilot_TOGA_pitch_deg3="..simDR_autopilot_TOGA_pitch_deg)
-    end
-    --simDR_stall_warning=0 -- always set
-    if simDR_airspeed<B747DR_airspeed_Vs and simDR_all_wheels_on_ground==0 then
-        simDR_stall_warning=1
-    else
-        simDR_stall_warning=0
     end
 end
 
@@ -3005,15 +3001,9 @@ function B747_fltInst_EICAS_msg()
     -- module (B747.34.xt.nav, 5-1 step 1; OVERSPEED was the placard speeds'
     -- Vmax, NAV-02)
 
-    -- >AIRSPEED LOW
-    
-    if (simDR_airspeed < B747DR_airspeed_Vmc or simDR_airspeed < B747DR_airspeed_Vs)
-        and simDR_radio_alt_height_capt > 100.0
-    then
-        B747DR_CAS_caution_status[0] = 1
-    else
-        B747DR_CAS_caution_status[0] = 0
-    end
+    -- >AIRSPEED LOW: the minimum speed model (B747.60.xt.speedtape.lua, 5-2
+    -- step 3b): below the minimum maneuvering speed (FCOM p.1556); it was
+    -- below the old Vmc or the stall speed
 
 
     -- >BARO DISAGREE
