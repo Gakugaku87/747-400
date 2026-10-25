@@ -225,6 +225,11 @@ B747DR_efis_baro_std_fo_switch_pos              = find_dataref("laminar/B747/efi
 B747DR_efis_baro_fo_set_dial_pos                = find_dataref("laminar/B747/efis/baro/fo/set_dial_pos")
 B747DR_efis_baro_fo_preselect                   = find_dataref("laminar/B747/efis/baro/fo/preselect")
 B747DR_efis_baro_alt_ref_fo                     = find_dataref("laminar/B747/efis/baro_ref/fo")
+-- the CDU's BARO SET entry (5-2 step 4b): STD as the EFIS control panel's push
+B747DR_efis_baro_std_capt_show_preselect        = find_dataref("laminar/B747/efis/baro_std/capt/show_preselect")
+B747DR_efis_baro_std_fo_show_preselect          = find_dataref("laminar/B747/efis/baro_std/fo/show_preselect")
+B747CMD_fms_baro_std_capt                       = find_command("laminar/B747/efis/baro_std/capt/switch")
+B747CMD_fms_baro_std_fo                         = find_command("laminar/B747/efis/baro_std/fo/switch")
 
 
 simDR_EFIS_1_sel_pilot              = find_dataref("sim/cockpit2/EFIS/EFIS_1_selection_pilot")
@@ -799,6 +804,7 @@ function createPage(page)
 end
 dofile("B744.notifications.lua")
 dofile("irs/irs_system.lua")
+dofile("B744.fms.baro.lua")
 dofile("B744.fms.pages.lua")
 
 dofile("irs/rnav_system.lua")

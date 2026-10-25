@@ -77761,28 +77761,217 @@ GROUP Captain PFD
       END_GROUP
       GROUP Baro
         HIDE
-        gen_rotary STD Label
-          POS 552.000000 504.500000
-          IMAGE CRT Displays/PFD/Baro/STDlabel
-          DATAREF 
-          SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/capt/switch_pos
-          HIDE
-          LIGHT_MODE GLASS_AUTO
-          LIGHT_RHEOSTAT 2
-          BUS_SRC 2
-          KEY_FRAME 0.000000 0.000000 1.000000
-          KEY_FRAME 1.000000 6.000000
-          DIGITS 1
-          ROTARY_TYPE NO_CLICK
-          CLICK_RADIUS 0.000000
-          CLICK_RADIUS_DY 0.000000
-          OFFSET 0.000000
-          STEP1 1.000000
-          STEP2 1.000000
-          CURSOR DEFAULT
-          CLICK_DX 0
-          CLICK_DY 0
+        GROUP Baro Normal
+          SHOW_LESS 0.500000 laminar/B747/pfd/capt/baro_alert
+          gen_rotary STD Label
+            POS 552.000000 504.500000
+            IMAGE CRT Displays/PFD/Baro/STDlabel
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/capt/switch_pos
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
 
+          GROUP Active: Non-STD
+            SHOW_EQUAL 0.000000 laminar/B747/efis/baro_std/capt/switch_pos
+            HIDE
+            gen_LED LED in/Hg
+              POS 537.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot
+              SHOW_EQUAL 0.000000 laminar/B747/efis/baro_ref/capt/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 30.000000
+              DIGITS 4
+              DECIMALS 2
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_LED LED hpa
+              POS 537.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot
+              SHOW_EQUAL 1.000000 laminar/B747/efis/baro_ref/capt/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 33.863892
+              DIGITS 4
+              DECIMALS 0
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_rotary Annun IN/HPA
+              POS 595.000000 502.500000
+              IMAGE CRT Displays/PFD/Annunciators/BAROref
+              DATAREF laminar/B747/efis/baro_ref/capt/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 2
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
+        END_GROUP
+        GROUP Baro Alert
+          SHOW_GREATER 0.500000 laminar/B747/pfd/capt/baro_alert
+          gen_rotary STD Label A
+            POS 552.000000 504.500000
+            IMAGE CRT Displays/PFD/Baro/STDlabelA
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/capt/switch_pos
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary STD Box A
+            POS 552.000000 505.000000
+            IMAGE CRT Displays/PFD/Baro/BaroBoxStdA
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/capt/switch_pos
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          GROUP Active: Non-STD A
+            SHOW_EQUAL 0.000000 laminar/B747/efis/baro_std/capt/switch_pos
+            HIDE
+            gen_LED LED in/Hg
+              POS 537.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.amber
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot
+              SHOW_EQUAL 0.000000 laminar/B747/efis/baro_ref/capt/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 30.000000
+              DIGITS 4
+              DECIMALS 2
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_LED LED hpa
+              POS 537.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.amber
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot
+              SHOW_EQUAL 1.000000 laminar/B747/efis/baro_ref/capt/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 33.863892
+              DIGITS 4
+              DECIMALS 0
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_rotary Annun IN/HPA
+              POS 595.000000 502.500000
+              IMAGE CRT Displays/PFD/Annunciators/BAROrefA
+              DATAREF laminar/B747/efis/baro_ref/capt/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 2
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Baro Box A
+              POS 560.000000 501.500000
+              IMAGE CRT Displays/PFD/Baro/BaroBoxA
+              DATAREF 
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
+        END_GROUP
         GROUP Pre-Select
           SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/capt/show_preselect
           gen_LED LED in/Hg
@@ -77821,65 +78010,6 @@ GROUP Captain PFD
             POS 581.000000 482.000000
             IMAGE CRT Displays/PFD/Annunciators/BAROref2
             DATAREF laminar/B747/efis/baro_ref/capt/sel_dial_pos
-            LIGHT_MODE GLASS_AUTO
-            LIGHT_RHEOSTAT 2
-            BUS_SRC 2
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 1.000000 1.000000
-            DIGITS 2
-            ROTARY_TYPE NO_CLICK
-            CLICK_RADIUS 0.000000
-            CLICK_RADIUS_DY 0.000000
-            OFFSET 0.000000
-            STEP1 1.000000
-            STEP2 1.000000
-            CURSOR DEFAULT
-            CLICK_DX 0
-            CLICK_DY 0
-
-        END_GROUP
-        GROUP Active: Non-STD
-          SHOW_EQUAL 0.000000 laminar/B747/efis/baro_std/capt/switch_pos
-          HIDE
-          gen_LED LED in/Hg
-            POS 537.000000 502.500000
-            IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
-            DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot
-            SHOW_EQUAL 0.000000 laminar/B747/efis/baro_ref/capt/sel_dial_pos
-            HIDE
-            LIGHT_MODE GLASS_AUTO
-            LIGHT_RHEOSTAT 2
-            BUS_SRC 2
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 30.000000 30.000000
-            DIGITS 4
-            DECIMALS 2
-            PERIOD_WIDTH 5
-            LED_ROWS 4
-            ROUNDING ROUND_ROUND
-
-          gen_LED LED hpa
-            POS 537.000000 502.500000
-            IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
-            DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot
-            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_ref/capt/sel_dial_pos
-            HIDE
-            LIGHT_MODE GLASS_AUTO
-            LIGHT_RHEOSTAT 2
-            BUS_SRC 2
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 1.000000 33.863892
-            DIGITS 4
-            DECIMALS 0
-            PERIOD_WIDTH 5
-            LED_ROWS 4
-            ROUNDING ROUND_ROUND
-
-          gen_rotary Annun IN/HPA
-            POS 595.000000 502.500000
-            IMAGE CRT Displays/PFD/Annunciators/BAROref
-            DATAREF laminar/B747/efis/baro_ref/capt/sel_dial_pos
-            HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 2
             BUS_SRC 2
@@ -81612,28 +81742,217 @@ GROUP Captain PFD
       END_GROUP
       GROUP Baro
         HIDE
-        gen_rotary STD Label
-          POS 552.000000 504.500000
-          IMAGE CRT Displays/PFD/Baro/STDlabel
-          DATAREF 
-          SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/capt/switch_pos
-          HIDE
-          LIGHT_MODE GLASS_AUTO
-          LIGHT_RHEOSTAT 2
-          BUS_SRC 2
-          KEY_FRAME 0.000000 0.000000 1.000000
-          KEY_FRAME 1.000000 6.000000
-          DIGITS 1
-          ROTARY_TYPE NO_CLICK
-          CLICK_RADIUS 0.000000
-          CLICK_RADIUS_DY 0.000000
-          OFFSET 0.000000
-          STEP1 1.000000
-          STEP2 1.000000
-          CURSOR DEFAULT
-          CLICK_DX 0
-          CLICK_DY 0
+        GROUP Baro Normal
+          SHOW_LESS 0.500000 laminar/B747/pfd/capt/baro_alert
+          gen_rotary STD Label
+            POS 552.000000 504.500000
+            IMAGE CRT Displays/PFD/Baro/STDlabel
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/capt/switch_pos
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
 
+          GROUP Active: Non-STD
+            SHOW_EQUAL 0.000000 laminar/B747/efis/baro_std/capt/switch_pos
+            HIDE
+            gen_LED LED in/Hg
+              POS 537.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot
+              SHOW_EQUAL 0.000000 laminar/B747/efis/baro_ref/capt/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 30.000000
+              DIGITS 4
+              DECIMALS 2
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_LED LED hpa
+              POS 537.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot
+              SHOW_EQUAL 1.000000 laminar/B747/efis/baro_ref/capt/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 33.863892
+              DIGITS 4
+              DECIMALS 0
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_rotary Annun IN/HPA
+              POS 595.000000 502.500000
+              IMAGE CRT Displays/PFD/Annunciators/BAROref
+              DATAREF laminar/B747/efis/baro_ref/capt/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 2
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
+        END_GROUP
+        GROUP Baro Alert
+          SHOW_GREATER 0.500000 laminar/B747/pfd/capt/baro_alert
+          gen_rotary STD Label A
+            POS 552.000000 504.500000
+            IMAGE CRT Displays/PFD/Baro/STDlabelA
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/capt/switch_pos
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary STD Box A
+            POS 552.000000 505.000000
+            IMAGE CRT Displays/PFD/Baro/BaroBoxStdA
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/capt/switch_pos
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          GROUP Active: Non-STD A
+            SHOW_EQUAL 0.000000 laminar/B747/efis/baro_std/capt/switch_pos
+            HIDE
+            gen_LED LED in/Hg
+              POS 537.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.amber
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot
+              SHOW_EQUAL 0.000000 laminar/B747/efis/baro_ref/capt/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 30.000000
+              DIGITS 4
+              DECIMALS 2
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_LED LED hpa
+              POS 537.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.amber
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot
+              SHOW_EQUAL 1.000000 laminar/B747/efis/baro_ref/capt/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 33.863892
+              DIGITS 4
+              DECIMALS 0
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_rotary Annun IN/HPA
+              POS 595.000000 502.500000
+              IMAGE CRT Displays/PFD/Annunciators/BAROrefA
+              DATAREF laminar/B747/efis/baro_ref/capt/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 2
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Baro Box A
+              POS 560.000000 501.500000
+              IMAGE CRT Displays/PFD/Baro/BaroBoxA
+              DATAREF 
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
+        END_GROUP
         GROUP Pre-Select
           SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/capt/show_preselect
           gen_LED LED in/Hg
@@ -81672,65 +81991,6 @@ GROUP Captain PFD
             POS 581.000000 482.000000
             IMAGE CRT Displays/PFD/Annunciators/BAROref2
             DATAREF laminar/B747/efis/baro_ref/capt/sel_dial_pos
-            LIGHT_MODE GLASS_AUTO
-            LIGHT_RHEOSTAT 2
-            BUS_SRC 2
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 1.000000 1.000000
-            DIGITS 2
-            ROTARY_TYPE NO_CLICK
-            CLICK_RADIUS 0.000000
-            CLICK_RADIUS_DY 0.000000
-            OFFSET 0.000000
-            STEP1 1.000000
-            STEP2 1.000000
-            CURSOR DEFAULT
-            CLICK_DX 0
-            CLICK_DY 0
-
-        END_GROUP
-        GROUP Active: Non-STD
-          SHOW_EQUAL 0.000000 laminar/B747/efis/baro_std/capt/switch_pos
-          HIDE
-          gen_LED LED in/Hg
-            POS 537.000000 502.500000
-            IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
-            DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot
-            SHOW_EQUAL 0.000000 laminar/B747/efis/baro_ref/capt/sel_dial_pos
-            HIDE
-            LIGHT_MODE GLASS_AUTO
-            LIGHT_RHEOSTAT 2
-            BUS_SRC 2
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 30.000000 30.000000
-            DIGITS 4
-            DECIMALS 2
-            PERIOD_WIDTH 5
-            LED_ROWS 4
-            ROUNDING ROUND_ROUND
-
-          gen_LED LED hpa
-            POS 537.000000 502.500000
-            IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
-            DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot
-            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_ref/capt/sel_dial_pos
-            HIDE
-            LIGHT_MODE GLASS_AUTO
-            LIGHT_RHEOSTAT 2
-            BUS_SRC 2
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 1.000000 33.863892
-            DIGITS 4
-            DECIMALS 0
-            PERIOD_WIDTH 5
-            LED_ROWS 4
-            ROUNDING ROUND_ROUND
-
-          gen_rotary Annun IN/HPA
-            POS 595.000000 502.500000
-            IMAGE CRT Displays/PFD/Annunciators/BAROref
-            DATAREF laminar/B747/efis/baro_ref/capt/sel_dial_pos
-            HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 2
             BUS_SRC 2
@@ -85431,28 +85691,217 @@ GROUP First Officer PFD
       END_GROUP
       GROUP Baro 2
         HIDE
-        gen_rotary STD Label 2
-          POS 1231.000000 504.500000
-          IMAGE CRT Displays/PFD/Baro/STDlabel
-          DATAREF 
-          SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/fo/switch_pos
-          HIDE
-          LIGHT_MODE GLASS_AUTO
-          LIGHT_RHEOSTAT 5
-          BUS_SRC 4
-          KEY_FRAME 0.000000 0.000000 1.000000
-          KEY_FRAME 1.000000 6.000000
-          DIGITS 1
-          ROTARY_TYPE NO_CLICK
-          CLICK_RADIUS 0.000000
-          CLICK_RADIUS_DY 0.000000
-          OFFSET 0.000000
-          STEP1 1.000000
-          STEP2 1.000000
-          CURSOR DEFAULT
-          CLICK_DX 0
-          CLICK_DY 0
+        GROUP Baro Normal 2
+          SHOW_LESS 0.500000 laminar/B747/pfd/fo/baro_alert
+          gen_rotary STD Label 2
+            POS 1231.000000 504.500000
+            IMAGE CRT Displays/PFD/Baro/STDlabel
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/fo/switch_pos
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
 
+          GROUP Active: Non-STD 2
+            SHOW_EQUAL 0.000000 laminar/B747/efis/baro_std/fo/switch_pos
+            HIDE
+            gen_LED LED in/Hg 2
+              POS 1216.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_copilot
+              SHOW_EQUAL 0.000000 laminar/B747/efis/baro_ref/fo/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 30.000000
+              DIGITS 4
+              DECIMALS 2
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_LED LED hpa 2
+              POS 1216.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_copilot
+              SHOW_EQUAL 1.000000 laminar/B747/efis/baro_ref/fo/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 33.863892
+              DIGITS 4
+              DECIMALS 0
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_rotary Annun IN/HPA 2
+              POS 1274.000000 502.500000
+              IMAGE CRT Displays/PFD/Annunciators/BAROref
+              DATAREF laminar/B747/efis/baro_ref/fo/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 2
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
+        END_GROUP
+        GROUP Baro Alert 2
+          SHOW_GREATER 0.500000 laminar/B747/pfd/fo/baro_alert
+          gen_rotary STD Label 2 A
+            POS 1231.000000 504.500000
+            IMAGE CRT Displays/PFD/Baro/STDlabelA
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/fo/switch_pos
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary STD Box A 2
+            POS 1231.000000 505.000000
+            IMAGE CRT Displays/PFD/Baro/BaroBoxStdA
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/fo/switch_pos
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          GROUP Active: Non-STD 2 A
+            SHOW_EQUAL 0.000000 laminar/B747/efis/baro_std/fo/switch_pos
+            HIDE
+            gen_LED LED in/Hg 2
+              POS 1216.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.amber
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_copilot
+              SHOW_EQUAL 0.000000 laminar/B747/efis/baro_ref/fo/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 30.000000
+              DIGITS 4
+              DECIMALS 2
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_LED LED hpa 2
+              POS 1216.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.amber
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_copilot
+              SHOW_EQUAL 1.000000 laminar/B747/efis/baro_ref/fo/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 33.863892
+              DIGITS 4
+              DECIMALS 0
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_rotary Annun IN/HPA 2
+              POS 1274.000000 502.500000
+              IMAGE CRT Displays/PFD/Annunciators/BAROrefA
+              DATAREF laminar/B747/efis/baro_ref/fo/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 2
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Baro Box A 2
+              POS 1239.000000 501.500000
+              IMAGE CRT Displays/PFD/Baro/BaroBoxA
+              DATAREF 
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
+        END_GROUP
         GROUP Pre-Select 2
           SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/fo/show_preselect
           gen_LED LED in/Hg 2
@@ -85492,65 +85941,6 @@ GROUP First Officer PFD
             POS 1260.000000 482.000000
             IMAGE CRT Displays/PFD/Annunciators/BAROref2
             DATAREF laminar/B747/efis/baro_ref/fo/sel_dial_pos
-            LIGHT_MODE GLASS_AUTO
-            LIGHT_RHEOSTAT 5
-            BUS_SRC 4
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 1.000000 1.000000
-            DIGITS 2
-            ROTARY_TYPE NO_CLICK
-            CLICK_RADIUS 0.000000
-            CLICK_RADIUS_DY 0.000000
-            OFFSET 0.000000
-            STEP1 1.000000
-            STEP2 1.000000
-            CURSOR DEFAULT
-            CLICK_DX 0
-            CLICK_DY 0
-
-        END_GROUP
-        GROUP Active: Non-STD 2
-          SHOW_EQUAL 0.000000 laminar/B747/efis/baro_std/fo/switch_pos
-          HIDE
-          gen_LED LED in/Hg 2
-            POS 1216.000000 502.500000
-            IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
-            DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_copilot
-            SHOW_EQUAL 0.000000 laminar/B747/efis/baro_ref/fo/sel_dial_pos
-            HIDE
-            LIGHT_MODE GLASS_AUTO
-            LIGHT_RHEOSTAT 5
-            BUS_SRC 4
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 30.000000 30.000000
-            DIGITS 4
-            DECIMALS 2
-            PERIOD_WIDTH 5
-            LED_ROWS 4
-            ROUNDING ROUND_ROUND
-
-          gen_LED LED hpa 2
-            POS 1216.000000 502.500000
-            IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
-            DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_copilot
-            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_ref/fo/sel_dial_pos
-            HIDE
-            LIGHT_MODE GLASS_AUTO
-            LIGHT_RHEOSTAT 5
-            BUS_SRC 4
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 1.000000 33.863892
-            DIGITS 4
-            DECIMALS 0
-            PERIOD_WIDTH 5
-            LED_ROWS 4
-            ROUNDING ROUND_ROUND
-
-          gen_rotary Annun IN/HPA 2
-            POS 1274.000000 502.500000
-            IMAGE CRT Displays/PFD/Annunciators/BAROref
-            DATAREF laminar/B747/efis/baro_ref/fo/sel_dial_pos
-            HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 5
             BUS_SRC 4
@@ -89261,28 +89651,217 @@ GROUP First Officer PFD
       END_GROUP
       GROUP Baro 2
         HIDE
-        gen_rotary STD Label 2
-          POS 1231.000000 504.500000
-          IMAGE CRT Displays/PFD/Baro/STDlabel
-          DATAREF 
-          SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/fo/switch_pos
-          HIDE
-          LIGHT_MODE GLASS_AUTO
-          LIGHT_RHEOSTAT 5
-          BUS_SRC 4
-          KEY_FRAME 0.000000 0.000000 1.000000
-          KEY_FRAME 1.000000 6.000000
-          DIGITS 1
-          ROTARY_TYPE NO_CLICK
-          CLICK_RADIUS 0.000000
-          CLICK_RADIUS_DY 0.000000
-          OFFSET 0.000000
-          STEP1 1.000000
-          STEP2 1.000000
-          CURSOR DEFAULT
-          CLICK_DX 0
-          CLICK_DY 0
+        GROUP Baro Normal 2
+          SHOW_LESS 0.500000 laminar/B747/pfd/fo/baro_alert
+          gen_rotary STD Label 2
+            POS 1231.000000 504.500000
+            IMAGE CRT Displays/PFD/Baro/STDlabel
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/fo/switch_pos
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
 
+          GROUP Active: Non-STD 2
+            SHOW_EQUAL 0.000000 laminar/B747/efis/baro_std/fo/switch_pos
+            HIDE
+            gen_LED LED in/Hg 2
+              POS 1216.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_copilot
+              SHOW_EQUAL 0.000000 laminar/B747/efis/baro_ref/fo/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 30.000000
+              DIGITS 4
+              DECIMALS 2
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_LED LED hpa 2
+              POS 1216.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_copilot
+              SHOW_EQUAL 1.000000 laminar/B747/efis/baro_ref/fo/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 33.863892
+              DIGITS 4
+              DECIMALS 0
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_rotary Annun IN/HPA 2
+              POS 1274.000000 502.500000
+              IMAGE CRT Displays/PFD/Annunciators/BAROref
+              DATAREF laminar/B747/efis/baro_ref/fo/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 2
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
+        END_GROUP
+        GROUP Baro Alert 2
+          SHOW_GREATER 0.500000 laminar/B747/pfd/fo/baro_alert
+          gen_rotary STD Label 2 A
+            POS 1231.000000 504.500000
+            IMAGE CRT Displays/PFD/Baro/STDlabelA
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/fo/switch_pos
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary STD Box A 2
+            POS 1231.000000 505.000000
+            IMAGE CRT Displays/PFD/Baro/BaroBoxStdA
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/fo/switch_pos
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          GROUP Active: Non-STD 2 A
+            SHOW_EQUAL 0.000000 laminar/B747/efis/baro_std/fo/switch_pos
+            HIDE
+            gen_LED LED in/Hg 2
+              POS 1216.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.amber
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_copilot
+              SHOW_EQUAL 0.000000 laminar/B747/efis/baro_ref/fo/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 30.000000
+              DIGITS 4
+              DECIMALS 2
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_LED LED hpa 2
+              POS 1216.000000 502.500000
+              IMAGE CRT Displays/LED/LED_2.18R.xx###0.amber
+              DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_copilot
+              SHOW_EQUAL 1.000000 laminar/B747/efis/baro_ref/fo/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 33.863892
+              DIGITS 4
+              DECIMALS 0
+              PERIOD_WIDTH 5
+              LED_ROWS 4
+              ROUNDING ROUND_ROUND
+
+            gen_rotary Annun IN/HPA 2
+              POS 1274.000000 502.500000
+              IMAGE CRT Displays/PFD/Annunciators/BAROrefA
+              DATAREF laminar/B747/efis/baro_ref/fo/sel_dial_pos
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+              DIGITS 2
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Baro Box A 2
+              POS 1239.000000 501.500000
+              IMAGE CRT Displays/PFD/Baro/BaroBoxA
+              DATAREF 
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
+        END_GROUP
         GROUP Pre-Select 2
           SHOW_EQUAL 1.000000 laminar/B747/efis/baro_std/fo/show_preselect
           gen_LED LED in/Hg 2
@@ -89322,65 +89901,6 @@ GROUP First Officer PFD
             POS 1260.000000 482.000000
             IMAGE CRT Displays/PFD/Annunciators/BAROref2
             DATAREF laminar/B747/efis/baro_ref/fo/sel_dial_pos
-            LIGHT_MODE GLASS_AUTO
-            LIGHT_RHEOSTAT 5
-            BUS_SRC 4
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 1.000000 1.000000
-            DIGITS 2
-            ROTARY_TYPE NO_CLICK
-            CLICK_RADIUS 0.000000
-            CLICK_RADIUS_DY 0.000000
-            OFFSET 0.000000
-            STEP1 1.000000
-            STEP2 1.000000
-            CURSOR DEFAULT
-            CLICK_DX 0
-            CLICK_DY 0
-
-        END_GROUP
-        GROUP Active: Non-STD 2
-          SHOW_EQUAL 0.000000 laminar/B747/efis/baro_std/fo/switch_pos
-          HIDE
-          gen_LED LED in/Hg 2
-            POS 1216.000000 502.500000
-            IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
-            DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_copilot
-            SHOW_EQUAL 0.000000 laminar/B747/efis/baro_ref/fo/sel_dial_pos
-            HIDE
-            LIGHT_MODE GLASS_AUTO
-            LIGHT_RHEOSTAT 5
-            BUS_SRC 4
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 30.000000 30.000000
-            DIGITS 4
-            DECIMALS 2
-            PERIOD_WIDTH 5
-            LED_ROWS 4
-            ROUNDING ROUND_ROUND
-
-          gen_LED LED hpa 2
-            POS 1216.000000 502.500000
-            IMAGE CRT Displays/LED/LED_2.18R.xx###0.green
-            DATAREF sim/cockpit2/gauges/actuators/barometer_setting_in_hg_copilot
-            SHOW_EQUAL 1.000000 laminar/B747/efis/baro_ref/fo/sel_dial_pos
-            HIDE
-            LIGHT_MODE GLASS_AUTO
-            LIGHT_RHEOSTAT 5
-            BUS_SRC 4
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 1.000000 33.863892
-            DIGITS 4
-            DECIMALS 0
-            PERIOD_WIDTH 5
-            LED_ROWS 4
-            ROUNDING ROUND_ROUND
-
-          gen_rotary Annun IN/HPA 2
-            POS 1274.000000 502.500000
-            IMAGE CRT Displays/PFD/Annunciators/BAROref
-            DATAREF laminar/B747/efis/baro_ref/fo/sel_dial_pos
-            HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 5
             BUS_SRC 4

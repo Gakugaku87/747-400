@@ -958,33 +958,37 @@ function fmsFunctions.setdata(fmsO,value)
 			simDR_nd_center_dial_capt= 1-simDR_nd_center_dial_capt
 		end	
 	elseif value=="BARO" then
-		if fmsO["scratchpad"]=="S" or fmsO["scratchpad"]=="STD" then
-			simDR_altimeter_baro_inHg_fo=29.92
-			simDR_altimeter_baro_inHg=29.92
-			B747DR_efis_baro_std_capt_switch_pos=1
-			B747DR_efis_baro_std_fo_switch_pos=1
-			return
-		end
-		if tonumber(fmsO["scratchpad"]) ==nil then 
+		-- this CDU's side only, with the entries of FCOM p.1064 (5-2 step 4b,
+		-- B744.fms.baro.lua; both sides were set before, and a number was
+		-- taken in the units the knob showed)
+		local fo = fmsO.id=="fmsR"
+		local kind, inhg, hpa = B744_cdu_baro_entry(fmsO["scratchpad"])
+		if kind==nil then
 			fmsO["notify"]="INVALID ENTRY"
 			return
 		end
-		local baro=tonumber(fmsO["scratchpad"])
-		if fmsO.id=="fmsR" then 
-			if B747DR_efis_baro_ref_fo_sel_dial_pos==1 then 
-				baro=baro/33.863892
+		if kind=="std" then
+			-- as the EFIS control panel's STD push: the setting before STD
+			-- comes back on the next push (FCOM p.1037)
+			if fo then
+				if B747DR_efis_baro_std_fo_switch_pos==0 then B747CMD_fms_baro_std_fo:once() end
+			elseif B747DR_efis_baro_std_capt_switch_pos==0 then
+				B747CMD_fms_baro_std_capt:once()
 			end
-			
+			return
+		end
+		local units = hpa and 1 or 0
+		if fo then B747DR_efis_baro_ref_fo_sel_dial_pos=units else B747DR_efis_baro_ref_capt_sel_dial_pos=units end
+		if kind=="units" then return end
+		if fo then
+			simDR_altimeter_baro_inHg_fo=inhg
+			B747DR_efis_baro_std_fo_switch_pos=0
+			B747DR_efis_baro_std_fo_show_preselect=0
 		else
-			if B747DR_efis_baro_ref_capt_sel_dial_pos==1 then 
-				baro=baro/33.863892
-			end
-			
-		end	
-		simDR_altimeter_baro_inHg_fo=baro
-		simDR_altimeter_baro_inHg=baro
-		B747DR_efis_baro_std_capt_switch_pos=0
-		B747DR_efis_baro_std_fo_switch_pos=0
+			simDR_altimeter_baro_inHg=inhg
+			B747DR_efis_baro_std_capt_switch_pos=0
+			B747DR_efis_baro_std_capt_show_preselect=0
+		end
   elseif value=="RANGEINC" then
 	simDR_range_dial_fo=math.min(simDR_range_dial_fo+1, 6)
 	simDR_range_dial_capt=simDR_range_dial_fo

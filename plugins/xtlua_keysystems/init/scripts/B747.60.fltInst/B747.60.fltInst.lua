@@ -113,6 +113,9 @@ B747DR_pfd_hdg_fo                               = deferred_dataref("laminar/B747
 B747DR_pfd_trk_fo                               = deferred_dataref("laminar/B747/pfd/fo/trk", "number")
 B747DR_pfd_vsi_fo                               = deferred_dataref("laminar/B747/pfd/fo/vsi", "number")
 B747DR_pfd_vert_fo                              = deferred_dataref("laminar/B747/pfd/fo/vert", "number")
+-- each PFD's barometric setting boxed in amber at the transition (step 4b)
+B747DR_pfd_baro_alert_capt                      = deferred_dataref("laminar/B747/pfd/capt/baro_alert", "number")
+B747DR_pfd_baro_alert_fo                        = deferred_dataref("laminar/B747/pfd/fo/baro_alert", "number")
 B747DR_nd_fo_heading_bug            			= deferred_dataref("laminar/B747/nd/mode/fo/show_heading_bug", "number")
 B747DR_nd_capt_heading_bug          			= deferred_dataref("laminar/B747/nd/mode/capt/show_heading_bug", "number")
 

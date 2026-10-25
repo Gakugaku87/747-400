@@ -54,4 +54,18 @@ c, f = out[M.CAPT], out[M.FO]
 T.check(not c.vsi and not c.vert, "the Captain's air data invalid: no vertical speed, no VERT flag")
 T.check(f.vsi, "the F/O's unaffected")
 
+-- the barometric setting's amber box (step 4b, FCOM p.995)
+local A = function(std, alt, mcp) return M.baro_alert(std, alt, mcp, 18000, 18000) end
+T.check(not A(false, 18200, 35000), "QNH, climbing to FL350: not yet at 18,200 ft")
+T.check(A(false, 18400, 35000), "QNH, 18,400 ft (300 ft above the transition altitude): boxed amber")
+T.check(not A(true, 18400, 35000), "STD set: cleared")
+T.check(not A(false, 18400, 17000), "QNH above it but the MCP altitude below it (descending): no box")
+T.check(not A(true, 17800, 11000), "STD, descending to 11,000 ft: not yet at 17,800 ft")
+T.check(A(true, 17600, 11000), "STD, 17,600 ft (300 ft below the transition level): boxed amber")
+T.check(not A(false, 17600, 11000), "QNH set: cleared")
+T.check(not A(true, 17600, 19000), "STD below it with the MCP altitude above it (climbing): no box")
+T.check(not M.baro_alert(true, 14800, 9000, 14000, 15000), "TA 14,000 ft, TL FL150: STD at 14,800 ft (less than 300 ft below FL150): no box")
+T.check(M.baro_alert(true, 14600, 9000, 14000, 15000), "STD at 14,600 ft (more than 300 ft below FL150): boxed amber")
+T.check(M.baro_alert(false, 14400, 35000, 14000, 15000), "QNH climbing through 14,400 ft (300 ft above the TA, below the TL): boxed amber")
+
 T.done()

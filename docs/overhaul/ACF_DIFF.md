@@ -304,3 +304,11 @@
 | 同 | 各 PFD の DH・MDA・電波高度の数字（`DH Annun`・`DH Label`・`DH LED`・`MDA Label`・`MDA LED`・`GROUP <= DH` と `> DH` の `LED`）と `GROUP AFDS Status Annun` | 2 行目の条件 `pfd/<席>/irs`（計器は最後の条件だけを見るので、DH の点滅の条件などが効いていなかった） | その行を外して元の条件に戻す | FCOM p.981–982、p.993 |
 
 上の 5 行は `docs/overhaul/tools/panel_pfd_sources.lua` で書き換えた（4 組で、表示条件の置き換え 42、条件の追加 16、目盛の参照 8、条件の削除 36。グライドスロープの目盛の `pfd/<席>/irs` は段 4e、ND は段 5 に残す）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_pfd_sources`。
+
+表示（5-2 段 4b、2026-10-25）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-25・PFD の気圧設定（DSP-11） | 各 PFD（4 組）の `GROUP Baro`（副操縦士は `Baro 2`） | 緑の STD（`gen_rotary STD Label`）と、気圧設定の数字と IN./HPA（`GROUP Active: Non-STD`）、白の preselect（`GROUP Pre-Select`） | STD と気圧設定を新しい `GROUP Baro Normal`（新設 `laminar/B747/pfd/capt/baro_alert`・`fo/baro_alert` が 0）に入れ、同じものを琥珀にした `GROUP Baro Alert`（それが 1）を足した：琥珀の STD（`Baro/STDlabelA`）と枠（`Baro/BaroBoxStdA`、STD のとき）、琥珀の数字（純正の `LED_2.18R.xx###0.amber`）・IN./HPA（`Annunciators/BAROrefA`）と枠（`Baro/BaroBoxA`、気圧設定のとき）。preselect はそのまま | FCOM p.995 |
+
+上の 1 行は `docs/overhaul/tools/panel_pfd_baro.lua` で書き換えた（グループ 4 つ）。画像は `docs/overhaul/tools/make_pfd_baro_images.ps1`（STD と IN./HPA は純正の緑の画像の色を琥珀に塗り替え、枠は 2 ピクセル。枠の大きさと位置は機長の outboard の PFD のスクリーンショットで測った：数字と IN. はパネル座標で x 512〜602・y 493〜510、STD は x 535〜569・y 496〜514）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_pfd_baro`。

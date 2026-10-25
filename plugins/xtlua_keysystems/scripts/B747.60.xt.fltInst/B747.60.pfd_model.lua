@@ -2,9 +2,10 @@
 -- IRS and the air data, as the EIU picks the sources: the attitude, the
 -- heading, the track and the vertical speed, and the ATT, HDG and VERT
 -- flags. The values themselves are X-Plane's pilot and copilot AHRS (they
--- stand for each pilot's IRU, as for >ATTITUDE and >HEADING). Logic and
--- sources: docs/overhaul/notes/ATA-31.md §15 (FCOM p.996-999, p.1044,
--- p.1228; ATA31 p.15-17).
+-- stand for each pilot's IRU, as for >ATTITUDE and >HEADING). Step 4b: the
+-- barometric setting's amber box at the transition altitude (baro_alert).
+-- Logic and sources: docs/overhaul/notes/ATA-31.md §15-§17 (FCOM p.995-999,
+-- p.1044, p.1228; ATA31 p.15-17).
 --
 --   local P = B747_pfd_model                -- in XTLua, after dofile
 --   local P = dofile(".../B747.60.pfd_model.lua")   -- in the tests
@@ -79,6 +80,22 @@ function M.update(s, inp)
         o.vsi = not o.vert and inp.air_data[p]
     end
     return s.out
+end
+
+-- the barometric setting boxed in amber (step 4b; FCOM p.995 (10.10.33)): a
+-- setting set (not STD), the MCP altitude above the transition altitude and
+-- the airplane 300 ft above it; or STD, the MCP altitude below the
+-- transition altitude and the airplane 300 ft below the transition level
+-- (the FCOM's words: "MCP altitude below transition altitude ... below
+-- transition flight level"). alt_ft is that side's barometric altitude.
+-- The FMC's defaults: transition altitude 18,000 ft (FCOM p.1329), level
+-- FL180 (FCOM p.1396)
+M.TRANS_ALT_FT, M.TRANS_LVL_FT, M.BARO_MARGIN_FT = 18000, 18000, 300
+function M.baro_alert(std, alt_ft, mcp_ft, trans_alt_ft, trans_lvl_ft)
+    if std then
+        return mcp_ft < trans_alt_ft and alt_ft < trans_lvl_ft - M.BARO_MARGIN_FT
+    end
+    return mcp_ft > trans_alt_ft and alt_ft > trans_alt_ft + M.BARO_MARGIN_FT
 end
 
 return M

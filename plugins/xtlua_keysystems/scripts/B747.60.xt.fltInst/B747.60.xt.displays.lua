@@ -10,7 +10,9 @@
 -- Step 4a: the PFD sources model (B747.60.pfd_model.lua) with the IRUs, the
 -- IRS selectors, the NAV source and each pilot's air data in; each PFD's
 -- attitude, heading scale, track and vertical speed shown and the VERT flag
--- (laminar/B747/pfd/capt/*, fo/*) out for the panel.
+-- (laminar/B747/pfd/capt/*, fo/*) out for the panel. Step 4b: each side's
+-- barometric setting, altitude and the MCP altitude, and the FMC's
+-- transition altitude in; the amber box (pfd/capt|fo/baro_alert) out.
 -- dofile'd from B747.60.xt.fltInst.lua after B747.60.xt.fltInst02.lua.
 
 dofile("B747.60.display_model.lua")
@@ -48,6 +50,12 @@ B747DR_dsp_pfd_hdg_fo           = find_dataref("laminar/B747/pfd/fo/hdg")
 B747DR_dsp_pfd_trk_fo           = find_dataref("laminar/B747/pfd/fo/trk")
 B747DR_dsp_pfd_vsi_fo           = find_dataref("laminar/B747/pfd/fo/vsi")
 B747DR_dsp_pfd_vert_fo          = find_dataref("laminar/B747/pfd/fo/vert")
+B747DR_dsp_alt_capt             = find_dataref("laminar/B747/airdata/alt_capt")
+B747DR_dsp_alt_fo               = find_dataref("laminar/B747/airdata/alt_fo")
+B747DR_dsp_mcp_alt              = find_dataref("laminar/B747/autopilot/heading/altitude_dial_ft")
+B747DR_dsp_fms_data             = find_dataref("laminar/B747/fms/data")
+B747DR_dsp_pfd_baro_alert_capt  = find_dataref("laminar/B747/pfd/capt/baro_alert")
+B747DR_dsp_pfd_baro_alert_fo    = find_dataref("laminar/B747/pfd/fo/baro_alert")
 
 -- the EIU selectors' positions: Captain and centre L, AUTO, C, R; F/O L, C, AUTO, R
 local EIU_CAPT = {[0] = DM.EIU_L, DM.SEL_AUTO, DM.EIU_C, DM.EIU_R}
@@ -115,6 +123,27 @@ local function pfd_sources(fmc)
     if B747DR_dsp_pfd_vert_fo ~= v then B747DR_dsp_pfd_vert_fo = v end
 end
 
+-- the barometric setting's amber box at the transition (step 4b): the FMC's
+-- transition altitude read from its data every 2 s (TRANS ALT on the CLB
+-- page; the FMC has no TRANS LVL yet: its default FL180)
+local trans_alt_ft, trans_t = PM.TRANS_ALT_FT, nil
+local function pfd_baro()
+    trans_t = (trans_t or 2) + SIM_PERIOD
+    if trans_t >= 2 then
+        trans_t = 0
+        local d = B747DR_dsp_fms_data
+        local v = type(d) == "string" and tonumber(d:match('"transalt"%s*:%s*"?(%d+)'))
+        trans_alt_ft = v or PM.TRANS_ALT_FT
+    end
+    local mcp = B747DR_dsp_mcp_alt
+    local v = PM.baro_alert(B747DR_efis_baro_std_capt_switch_pos > 0.5, B747DR_dsp_alt_capt, mcp,
+        trans_alt_ft, PM.TRANS_LVL_FT) and 1 or 0
+    if B747DR_dsp_pfd_baro_alert_capt ~= v then B747DR_dsp_pfd_baro_alert_capt = v end
+    v = PM.baro_alert(B747DR_efis_baro_std_fo_switch_pos > 0.5, B747DR_dsp_alt_fo, mcp,
+        trans_alt_ft, PM.TRANS_LVL_FT) and 1 or 0
+    if B747DR_dsp_pfd_baro_alert_fo ~= v then B747DR_dsp_pfd_baro_alert_fo = v end
+end
+
 function B747_displays()
     local inp = dsp_inputs
     -- the Captain's knobs as the model's positions; the F/O's are mirrored
@@ -171,4 +200,5 @@ function B747_displays()
     msg(ADV_EFIS_CONTROL[2], out.msg_efis_control[2])
     msg(ADV_EFIS_EICAS_CP, out.msg_efis_eicas_cp)
     pfd_sources(inp.fmc)
+    pfd_baro()
 end

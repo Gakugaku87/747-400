@@ -409,3 +409,12 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
   - `GROUP CAPT IRS OFF PFD`・`FO IRS OFF PFD` の条件を外し、中の固定の飛行機の記号と ATT の旗は `att` が 0、HDG の旗は `hdg` が 0 で出す（前は 3 つが一緒）。
   - IRS の有効が 2 行目の条件として付いていた DH・MDA・RA の数字と AFDS の状態表示は、その行を外した（計器は最後の条件しか見ないので、DH の点滅の条件などが効いていなかった）。グライドスロープの目盛（段 4e）と ND（段 5）の `pfd/<席>/irs` は残す。
 - 試験：モデル 17 件（`tests/displays/pfd_model_test.lua`）、表示器のモジュールに 17 件（50 から 67 件）（`display_module_test.lua`）。X-Plane の新しいシナリオ `s54_pfd_sources`（24/24）：ND を PLN にしても PFD の方位目盛は機首方位のまま、IRS 選択器 C、IRU L の ATT（ATT と VERT の旗、方位は FMC L が IRU C から）、NAV の源を CDU L（HDG の旗）、ADC 1 の故障（昇降率が旗なしで消える）。PFD を撮って旗と消える項目を確かめた（姿勢が無効でもバンクの目盛は残る：ATA31 p.15 の消す項目に無い）。
+
+## 17. 段 4b の実装（2026-10-25 深夜：気圧設定の琥珀の枠、CDU の BARO SET）
+
+- 判定（`B747.60.pfd_model.lua` の `baro_alert`、FCOM p.995 (10.10.33)）：気圧設定（STD でない）で MCP 高度が遷移高度より上、機体が遷移高度より 300 ft 上なら、気圧設定が枠で琥珀。STD で MCP 高度が遷移高度より下、機体が遷移レベルより 300 ft 下なら、STD が枠で琥珀。FCOM の文は STD の側も「MCP altitude below transition altitude」と遷移高度で比べるので、そのとおりにした。機体の高度はその席の気圧高度（`airdata/alt_capt`・`alt_fo`：その席の気圧設定）。
+- 遷移高度は FMC の CLB ページの TRANS ALT（`fms/data` の `transalt`、既定 18,000 ft：FCOM p.1329）を 2 秒ごとに読む。遷移レベル（FCOM p.1396：DESCENT FORECAST ページ、既定 FL180）は今の FMS に無いので既定の FL180（FMC の作り直しで）。
+- グルー：表示器と EIU のグルーの `pfd_baro()`。書くもの：新設 `pfd/capt/baro_alert`・`fo/baro_alert`。
+- パネル（道具 `docs/overhaul/tools/panel_pfd_baro.lua`、画像 `make_pfd_baro_images.ps1`、ACF_DIFF.md §5）：各 PFD の `GROUP Baro` の STD と気圧設定を `GROUP Baro Normal`（`baro_alert` が 0）に入れ、琥珀の同じもの（純正の琥珀の数字のフォント、色を塗り替えた STD と IN./HPA）と 2 ピクセルの枠を `GROUP Baro Alert`（1）に足した。枠の位置と大きさはスクリーンショットで測った（数字と IN. はパネル座標で x 512〜602・y 493〜510、STD は x 535〜569・y 496〜514。各組では STD の位置と数字の位置からの相対で置く）。preselect（白）はそのまま。
+- CDU の EFIS CONTROL ページ（FCOM p.1062–1064）の BARO SET：前は入力が両席に効き、数字はつまみの単位のまま受けていた。新しい `B744.fms.baro.lua` で入力を解き（S・STD、I・H で単位、22.00〜32.00 と 2200〜3200 は inHg、745〜1084 は hPa、ほかは INVALID ENTRY）、その CDU の側（右の CDU は副操縦士、ほかは機長：ページのほかの項目と同じ）だけに書く。数字の入力は単位もそれに合わせ、STD を外す。STD は EFIS 操作パネルの STD のコマンドで（STD の前の値を覚える：NAV-06）。RANGE INCR・DECR が両席に効くことなど、ページのほかの項目は CDU の作り直し（6-2）か ND（段 5）で。
+- 試験：モデル 11 件（`pfd_model_test.lua` で計 28）、表示器のモジュール 5 件（計 72）、CDU の入力 18 件（`tests/displays/cdu_baro_entry_test.lua`）。X-Plane の新しいシナリオ `s55_pfd_baro`。
