@@ -253,3 +253,12 @@
 | 同（NAV-67） | `GROUP Transponder` の `gen_rotary Freq LCD R (INOP)` | INOP の絵（`Radios/FreqLCD_INOP`、POS 1948, 1178.5、SIZE 1.25、R を選んだとき） | `gen_rotary ATC L R`：窓の左上の ATC L・ATC R（`Radios/atc_lr` の 2 コマ、POS 1870, 1221、SIZE なし、XPDR スイッチ `sel_dial_pos` でコマを選ぶ、`xpdr/panel_on` が 1 のとき） | FCOM p.1218 |
 
 上の 2 行は `docs/overhaul/tools/panel_xpdr.lua` で書き換えた（9 行）。絵は `docs/overhaul/tools/make_xpdr_images.ps1`（Bahnschrift SemiBold SemiCondensed、字の高さ 13 px、純正の無線の表示の橙 255, 108, 0）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_xpdr`。X-Plane のスクリーンショット（`s49_xpdr_display`、表示窓を真上から）で、L・R の両方でコードと ATC L・ATC R が窓の中に出ることを確かめた。外から見た写真で機体の見た目が変わらないことを確かめた。純正 acf は変えていない。
+
+気象レーダー（5-1 段 5d の続き、2026-10-25。パネルの変更は全範囲で承認なしでよい）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-25・気象レーダー（NAV-81） | 各 ND の WXR の注記の 2 行（`gen_text Text WXR`・`Text WXR TILT`、機長は名前に ` 2`） | 表示条件 `SHOW_EQUAL 1.000000 sim/cockpit2/EFIS/EFIS_weather_on`（副操縦士は `_copilot`） | `SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/wxr_color[0]`・`[1]`（副操縦士は `fo`：ND のモジュールが青のとき 1） | FCOM p.1155 |
+| 同（NAV-80・81） | 各 ND の注記の 2 行の後 | なし | 同じ位置の琥珀の写し 2 つ（`CRT Displays/TEXT/TXT.2.28.amber`、`wxr_color[0]`・`[1]` が 2：WXR FAIL、TEST の故障の源）と、チルトの 20 px 下（y −98.5）の 3 行目の青と琥珀（`text/wxr3`、`wxr_color[2]` が 1・2：CAL・VAR、WEAK・ATT） | FCOM p.1155、p.1224、ATA34_1 p.244–246 |
+
+上の 2 行は `docs/overhaul/tools/panel_nd_wxr.lua` で書き換えた（各 ND に条件 2 行の置き換えと文字 4 つ）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_nd_wxr`。X-Plane のスクリーンショット（`s50_wxr_faults`）で、3 行が左に揃い、青と琥珀が出し分けられることを確かめた。外から見た写真で機体の見た目が変わらないことを確かめた。純正 acf は変えていない。

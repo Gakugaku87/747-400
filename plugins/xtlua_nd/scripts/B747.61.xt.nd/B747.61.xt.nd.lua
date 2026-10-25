@@ -41,6 +41,15 @@ B747DR_text_capt_wxrtext			= find_dataref("laminar/B747/nd/capt/text/wxr")
 B747DR_text_fo_wxrtext			= find_dataref("laminar/B747/nd/fo/text/wxr")
 B747DR_text_capt_wxrtilt			= find_dataref("laminar/B747/nd/capt/text/tilt")
 B747DR_text_fo_wxrtilt			= find_dataref("laminar/B747/nd/fo/text/tilt")
+B747DR_text_capt_wxr3			= find_dataref("laminar/B747/nd/capt/text/wxr3")
+B747DR_text_fo_wxr3			= find_dataref("laminar/B747/nd/fo/text/wxr3")
+B747DR_text_capt_wxr_color		= find_dataref("laminar/B747/nd/capt/text/wxr_color")
+B747DR_text_fo_wxr_color		= find_dataref("laminar/B747/nd/fo/text/wxr_color")
+-- the weather radar model's annunciations for each ND (B747.34.xt.wxr.lua)
+B747DR_wxr_nd_fail				= find_dataref("laminar/B747/wxr/nd_fail")
+B747DR_wxr_nd_fault				= find_dataref("laminar/B747/wxr/nd_fault")
+B747DR_wxr_nd_msg				= find_dataref("laminar/B747/wxr/nd_msg")
+B747DR_wxr_nd_gain				= find_dataref("laminar/B747/wxr/nd_gain")
 simDR_wxrMode_cpt = find_dataref("sim/cockpit2/EFIS/EFIS_weather_mode")
 simDR_wxrMode_fo = find_dataref("sim/cockpit2/EFIS/EFIS_weather_mode_copilot")
 simDR_wxrTilt_cpt = find_dataref("sim/cockpit2/EFIS/EFIS_weather_tilt")
@@ -382,29 +391,63 @@ function updateIcon(iconData,n,isCaptain)
 
   end
 end
--- the weather radar's annunciations (FCOM p.1155, 5-1 step 5c): the mode
--- (nothing while the radar is off; "RT" is the R/T failure annunciation)
--- and the tilt in whole degrees ("+5": FCOM p.1013-1018), shown in MAP, MAP
--- CTR and VOR and APP not centred (ATA34_1 p.244); in TEST the tilt field is
--- left for the fault source (FCOM p.1224)
+-- the weather radar's annunciations (FCOM p.1155; 5-1 steps 5c, 5d), shown
+-- with this side's WXR in MAP, MAP CTR and VOR and APP not centred (ATA34_1
+-- p.244), three lines in cyan or amber:
+--  - WXR FAIL in amber (the R/T, the antenna or the control panel: no
+--    returns, ATA34_1 p.246);
+--  - the mode, then the tilt in whole degrees ("+5": FCOM p.1013-1018);
+--    in TEST the tilt field shows the fault source in amber (FCOM p.1224);
+--  - the third line: WEAK or ATT in amber (the returns stay: ATA34_1
+--    p.246), or the gain in MAP, CAL or VAR (the radar model's estimate)
 local WXR_MODE_TEXT = {[1] = "TEST", [2] = "WXR", [3] = "WX+T", [4] = "MAP"}
-local function wxrTexts(mode, tilt, ndMode, center)
-  if not (ndMode == 2 or (ndMode < 2 and center < 0.5)) then return " ", " " end
+local WXR_FAULT_TEXT = {[1] = "ANT", [2] = "ATT", [3] = "WEAK", [4] = "CONT", [5] = "RT"}
+local WXR_GAIN_TEXT = {[1] = "CAL", [2] = "VAR"}
+local WXR_CYAN, WXR_AMBER = 1, 2
+local wxrLine = {" ", " ", " "}
+local wxrColor = {0, 0, 0}
+local function wxrTexts(on, mode, tilt, ndMode, center, fail, fault, msg, gain)
+  local t, c = wxrLine, wxrColor
+  t[1], t[2], t[3], c[1], c[2], c[3] = " ", " ", " ", 0, 0, 0
+  if on < 0.5 or not (ndMode == 2 or (ndMode < 2 and center < 0.5)) then return end
+  if fail > 0.5 then
+    t[1], t[2], c[1], c[2] = "WXR", "FAIL", WXR_AMBER, WXR_AMBER
+    return
+  end
   local text = WXR_MODE_TEXT[mode]
-  if text == nil then return " ", " " end
-  if mode == 1 then return text, " " end
-  local t = math.floor(tilt + 0.5)
-  if t > 0 then return text, "+" .. t end
-  return text, tostring(t)
+  if text == nil then return end
+  t[1], c[1] = text, WXR_CYAN
+  if mode == 1 then
+    local f = WXR_FAULT_TEXT[fault]
+    if f then t[2], c[2] = f, WXR_AMBER end
+    return
+  end
+  local d = math.floor(tilt + 0.5)
+  t[2], c[2] = (d > 0) and ("+" .. d) or tostring(d), WXR_CYAN
+  local m = WXR_FAULT_TEXT[msg]
+  if m then
+    t[3], c[3] = m, WXR_AMBER
+  elseif WXR_GAIN_TEXT[gain] then
+    t[3], c[3] = WXR_GAIN_TEXT[gain], WXR_CYAN
+  end
 end
-
 function updateIcons()
-  local text, tilt = wxrTexts(simDR_wxrMode_cpt, simDR_wxrTilt_cpt, B747DR_nd_mode_capt_sel_dial_pos, B747_nd_map_center_capt)
-  if B747DR_text_capt_wxrtext ~= text then B747DR_text_capt_wxrtext = text end
-  if B747DR_text_capt_wxrtilt ~= tilt then B747DR_text_capt_wxrtilt = tilt end
-  text, tilt = wxrTexts(simDR_wxrMode_fo, simDR_wxrTilt_fo, B747DR_nd_mode_fo_sel_dial_pos, B747_nd_map_center_fo)
-  if B747DR_text_fo_wxrtext ~= text then B747DR_text_fo_wxrtext = text end
-  if B747DR_text_fo_wxrtilt ~= tilt then B747DR_text_fo_wxrtilt = tilt end
+  wxrTexts(simDR_EFIS_wxr_on, simDR_wxrMode_cpt, simDR_wxrTilt_cpt, B747DR_nd_mode_capt_sel_dial_pos, B747_nd_map_center_capt,
+    B747DR_wxr_nd_fail[0], B747DR_wxr_nd_fault[0], B747DR_wxr_nd_msg[0], B747DR_wxr_nd_gain[0])
+  if B747DR_text_capt_wxrtext ~= wxrLine[1] then B747DR_text_capt_wxrtext = wxrLine[1] end
+  if B747DR_text_capt_wxrtilt ~= wxrLine[2] then B747DR_text_capt_wxrtilt = wxrLine[2] end
+  if B747DR_text_capt_wxr3 ~= wxrLine[3] then B747DR_text_capt_wxr3 = wxrLine[3] end
+  for k = 1, 3 do
+    if B747DR_text_capt_wxr_color[k - 1] ~= wxrColor[k] then B747DR_text_capt_wxr_color[k - 1] = wxrColor[k] end
+  end
+  wxrTexts(simDR_EFIS_wxr_on_copilot, simDR_wxrMode_fo, simDR_wxrTilt_fo, B747DR_nd_mode_fo_sel_dial_pos, B747_nd_map_center_fo,
+    B747DR_wxr_nd_fail[1], B747DR_wxr_nd_fault[1], B747DR_wxr_nd_msg[1], B747DR_wxr_nd_gain[1])
+  if B747DR_text_fo_wxrtext ~= wxrLine[1] then B747DR_text_fo_wxrtext = wxrLine[1] end
+  if B747DR_text_fo_wxrtilt ~= wxrLine[2] then B747DR_text_fo_wxrtilt = wxrLine[2] end
+  if B747DR_text_fo_wxr3 ~= wxrLine[3] then B747DR_text_fo_wxr3 = wxrLine[3] end
+  for k = 1, 3 do
+    if B747DR_text_fo_wxr_color[k - 1] ~= wxrColor[k] then B747DR_text_fo_wxr_color[k - 1] = wxrColor[k] end
+  end
 
   for n=0,lastCaptNavaid,1 do
     if B747DR_text_capt_show[n]==0 then break end

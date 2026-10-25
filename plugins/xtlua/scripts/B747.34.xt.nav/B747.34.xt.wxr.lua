@@ -22,6 +22,15 @@ B747DR_wxr_nd_range             = {find_dataref("laminar/B747/nd/range/capt/sel_
 B747DR_wxr_bus_ac               = find_dataref("laminar/B747/electrical/bus/ac")
 B747DR_wxr_att_valid            = find_dataref("laminar/B747/irs/att_valid")
 B747DR_wxr_irs_src              = {find_dataref("laminar/B747/flt_inst/irs_src/capt/sel_dial_pos"), find_dataref("laminar/B747/flt_inst/irs_src/fo/sel_dial_pos")}
+-- the new failures: [0] the antenna, [1] the control panel, [2] the
+-- receiver's calibration (AGC)
+B747DR_wxr_fail                 = find_dataref("laminar/B747/wxr/fail")
+-- each ND's annunciations for the ND module (B747.61.xt.nd.lua): WXR FAIL,
+-- the fault source in TEST, WEAK or ATT, CAL or VAR (wxr_model's codes)
+B747DR_wxr_nd_fail              = find_dataref("laminar/B747/wxr/nd_fail")
+B747DR_wxr_nd_fault             = find_dataref("laminar/B747/wxr/nd_fault")
+B747DR_wxr_nd_msg               = find_dataref("laminar/B747/wxr/nd_msg")
+B747DR_wxr_nd_gain              = find_dataref("laminar/B747/wxr/nd_gain")
 -- the panel's lamps for the lighting module (B747.90.xt.lighting.lua)
 B747DR_wxr_lamp_sel             = find_dataref("laminar/B747/wxr/lamp/sel")
 B747DR_wxr_lamp_gcs             = find_dataref("laminar/B747/wxr/lamp/gcs")
@@ -113,6 +122,9 @@ function B747_wxr()
     inp.power[1] = B747DR_wxr_bus_ac[0] > 0.5
     inp.power[2] = B747DR_wxr_bus_ac[1] > 0.5
     inp.failed = simDR_wxr_failure == XP_FAILED
+    inp.fail_ant = B747DR_wxr_fail[0] > 0.5
+    inp.fail_cont = B747DR_wxr_fail[1] > 0.5
+    inp.fail_weak = B747DR_wxr_fail[2] > 0.5
     for k = 1, 3 do inp.att_valid[k] = B747DR_wxr_att_valid[k - 1] > 0.5 end
 
     local out = WX.update(wxr_state, inp)
@@ -126,6 +138,10 @@ function B747_wxr()
         if simDR_wxr_stab[i] ~= stab then simDR_wxr_stab[i] = stab end
         B747_nav_put(B747DR_wxr_lamp_sel, i - 1, out.lamp_sel[i])
         B747_nav_put(B747DR_wxr_lamp_gcs, i - 1, B747_nav_flag(out.lamp_gcs[i]))
+        B747_nav_put(B747DR_wxr_nd_fail, i - 1, B747_nav_flag(out.nd_fail[i]))
+        B747_nav_put(B747DR_wxr_nd_fault, i - 1, out.nd_fault[i])
+        B747_nav_put(B747DR_wxr_nd_msg, i - 1, out.nd_msg[i])
+        B747_nav_put(B747DR_wxr_nd_gain, i - 1, out.nd_gain[i])
     end
     if simDR_wxr_sector ~= SCAN_DEG then simDR_wxr_sector = SCAN_DEG end
     if simDR_wxr_antenna_limit ~= SCAN_DEG then simDR_wxr_antenna_limit = SCAN_DEG end

@@ -49,6 +49,12 @@ B747DR_text_capt_wxrtext			= deferred_dataref("laminar/B747/nd/capt/text/wxr","s
 B747DR_text_fo_wxrtext			= deferred_dataref("laminar/B747/nd/fo/text/wxr","string")
 B747DR_text_capt_wxrtilt			= deferred_dataref("laminar/B747/nd/capt/text/tilt","string")
 B747DR_text_fo_wxrtilt			= deferred_dataref("laminar/B747/nd/fo/text/tilt","string")
+-- the weather radar's third line (WEAK, ATT, CAL, VAR) and the three lines'
+-- colours: 0 none, 1 cyan, 2 amber (5-1 step 5d)
+B747DR_text_capt_wxr3			= deferred_dataref("laminar/B747/nd/capt/text/wxr3","string")
+B747DR_text_fo_wxr3			= deferred_dataref("laminar/B747/nd/fo/text/wxr3","string")
+B747DR_text_capt_wxr_color		= deferred_dataref("laminar/B747/nd/capt/text/wxr_color","array[3]")
+B747DR_text_fo_wxr_color		= deferred_dataref("laminar/B747/nd/fo/text/wxr_color","array[3]")
 
 B747DR_text_capt_whitetext0			= deferred_dataref("laminar/B747/nd/capt/text/whitetext0","string")
 B747DR_text_capt_bluetext0			= deferred_dataref("laminar/B747/nd/capt/text/bluetext0","string")

@@ -100897,7 +100897,7 @@ GROUP First Officer ND
           POS 698.500000 -58.500000
           IMAGE CRT Displays/TEXT/ND/TXT.2.28.blue
           DATAREF laminar/B747/nd/fo/text/wxr
-          SHOW_EQUAL 1.000000 sim/cockpit2/EFIS/EFIS_weather_on_copilot
+          SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/wxr_color[0]
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 3
           BUS_SRC 4
@@ -100910,7 +100910,59 @@ GROUP First Officer ND
           POS 698.500000 -78.500000
           IMAGE CRT Displays/TEXT/ND/TXT.2.28.blue
           DATAREF laminar/B747/nd/fo/text/tilt
-          SHOW_EQUAL 1.000000 sim/cockpit2/EFIS/EFIS_weather_on_copilot
+          SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/wxr_color[1]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 3
+          BUS_SRC 4
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          OFFSET_X 0
+          OFFSET_Y 0.000000
+
+        gen_text Text WXR Amber
+          POS 698.500000 -58.500000
+          IMAGE CRT Displays/TEXT/TXT.2.28.amber
+          DATAREF laminar/B747/nd/fo/text/wxr
+          SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/wxr_color[0]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 3
+          BUS_SRC 4
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          OFFSET_X 0
+          OFFSET_Y 0.000000
+
+        gen_text Text WXR TILT Amber
+          POS 698.500000 -78.500000
+          IMAGE CRT Displays/TEXT/TXT.2.28.amber
+          DATAREF laminar/B747/nd/fo/text/tilt
+          SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/wxr_color[1]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 3
+          BUS_SRC 4
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          OFFSET_X 0
+          OFFSET_Y 0.000000
+
+        gen_text Text WXR 3
+          POS 698.500000 -98.500000
+          IMAGE CRT Displays/TEXT/ND/TXT.2.28.blue
+          DATAREF laminar/B747/nd/fo/text/wxr3
+          SHOW_EQUAL 1.000000 laminar/B747/nd/fo/text/wxr_color[2]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 3
+          BUS_SRC 4
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          OFFSET_X 0
+          OFFSET_Y 0.000000
+
+        gen_text Text WXR 3 Amber
+          POS 698.500000 -98.500000
+          IMAGE CRT Displays/TEXT/TXT.2.28.amber
+          DATAREF laminar/B747/nd/fo/text/wxr3
+          SHOW_EQUAL 2.000000 laminar/B747/nd/fo/text/wxr_color[2]
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 3
           BUS_SRC 4
@@ -113593,7 +113645,7 @@ GROUP Captain ND
           POS 20.500000 -58.500000
           IMAGE CRT Displays/TEXT/ND/TXT.2.28.blue
           DATAREF laminar/B747/nd/capt/text/wxr
-          SHOW_EQUAL 1.000000 sim/cockpit2/EFIS/EFIS_weather_on
+          SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/wxr_color[0]
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 0
           BUS_SRC 2
@@ -113606,7 +113658,59 @@ GROUP Captain ND
           POS 20.500000 -78.500000
           IMAGE CRT Displays/TEXT/ND/TXT.2.28.blue
           DATAREF laminar/B747/nd/capt/text/tilt
-          SHOW_EQUAL 1.000000 sim/cockpit2/EFIS/EFIS_weather_on
+          SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/wxr_color[1]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 0
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          OFFSET_X 0
+          OFFSET_Y 0.000000
+
+        gen_text Text WXR 2 Amber
+          POS 20.500000 -58.500000
+          IMAGE CRT Displays/TEXT/TXT.2.28.amber
+          DATAREF laminar/B747/nd/capt/text/wxr
+          SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/wxr_color[0]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 0
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          OFFSET_X 0
+          OFFSET_Y 0.000000
+
+        gen_text Text WXR 2 TILT Amber
+          POS 20.500000 -78.500000
+          IMAGE CRT Displays/TEXT/TXT.2.28.amber
+          DATAREF laminar/B747/nd/capt/text/tilt
+          SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/wxr_color[1]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 0
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          OFFSET_X 0
+          OFFSET_Y 0.000000
+
+        gen_text Text WXR 2 3
+          POS 20.500000 -98.500000
+          IMAGE CRT Displays/TEXT/ND/TXT.2.28.blue
+          DATAREF laminar/B747/nd/capt/text/wxr3
+          SHOW_EQUAL 1.000000 laminar/B747/nd/capt/text/wxr_color[2]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 0
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          OFFSET_X 0
+          OFFSET_Y 0.000000
+
+        gen_text Text WXR 2 3 Amber
+          POS 20.500000 -98.500000
+          IMAGE CRT Displays/TEXT/TXT.2.28.amber
+          DATAREF laminar/B747/nd/capt/text/wxr3
+          SHOW_EQUAL 2.000000 laminar/B747/nd/capt/text/wxr_color[2]
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 0
           BUS_SRC 2

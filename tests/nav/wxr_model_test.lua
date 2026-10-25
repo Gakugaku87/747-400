@@ -168,4 +168,62 @@ inp.irs_src[2] = 0
 run()
 T.equal(out.stab, false, "the F/O's selector at L: IRU C")
 
+-- the ND's fault annunciations (FCOM p.1155, p.1224; ATA34_1 p.246)
+fresh()
+T.check(not out.nd_fail[1] and out.nd_msg[1] == M.FAULT_NONE and out.fault == M.FAULT_NONE, "no faults")
+inp.fail_ant = true
+run()
+T.equal(out.fault, M.FAULT_ANT, "the antenna")
+T.check(out.nd_fail[1] and out.nd_fail[2], "WXR FAIL on both NDs")
+T.equal(out.xp_mode[1], M.XP_OFF, "no returns")
+T.equal(out.operating, true, "the R/T still runs (the panel lit)")
+M.test(s)
+run()
+T.equal(out.xp_mode[1], M.XP_TEST, "TEST runs on the R/T")
+T.check(not out.nd_fail[1], "in TEST no WXR FAIL")
+T.equal(out.nd_fault[1], M.FAULT_ANT, "the fault source in the tilt field (FCOM p.1224)")
+M.mode(s, 1, M.SEL_WX)
+M.mode(s, 2, M.SEL_WX)
+inp.fail_ant, inp.fail_cont = false, true
+run()
+T.check(out.nd_fail[1] and out.fault == M.FAULT_CONT, "the control panel: WXR FAIL")
+inp.fail_cont = false
+inp.on[2] = false
+inp.failed = true
+run()
+T.equal(out.fault, M.FAULT_RT, "X-Plane's radar failure: the R/T")
+T.check(out.nd_fail[1], "WXR FAIL on the Captain's ND")
+T.check(not out.nd_fail[2], "not on the F/O's: its WXR is off")
+inp.failed = false
+inp.on[2] = true
+inp.power[1] = false
+run()
+T.check(out.nd_fail[1] and out.fault == M.FAULT_RT, "the selected R/T unpowered: WXR FAIL (estimate)")
+inp.power[1] = true
+inp.fail_weak = true
+inp.att_valid = {false, false, false}
+run()
+T.check(not out.nd_fail[1] and out.xp_mode[1] == M.XP_WX, "WEAK: the returns stay")
+T.equal(out.nd_msg[1], M.FAULT_WEAK, "WEAK before ATT (ATA34_1 p.246)")
+inp.fail_weak = false
+run()
+T.equal(out.nd_msg[1], M.FAULT_ATT, "the stabilization IRU without attitude: ATT")
+inp.att_valid = {true, true, true}
+run()
+T.equal(out.nd_msg[1], M.FAULT_NONE, "attitude back")
+
+-- the gain annunciation in MAP (estimate: FCOM p.1155 CAL, ATA34_1 p.244 VAR)
+fresh()
+T.equal(out.nd_gain[1], M.GAIN_NONE, "WX: the automatic gain, nothing shown")
+M.mode(s, 1, M.SEL_MAP)
+run()
+T.equal(out.nd_gain[1], M.GAIN_SHOW_CAL, "MAP with the knob at its calibrated stop: CAL")
+M.gain(s, 1, -1)
+run()
+T.equal(out.nd_gain[1], M.GAIN_SHOW_VAR, "below the stop: VAR")
+T.equal(out.nd_gain[2], M.GAIN_NONE, "the F/O in WX: nothing")
+M.mode(s, 2, M.SEL_TFR)
+run()
+T.equal(out.nd_gain[2], M.GAIN_SHOW_VAR, "the F/O's TFR shows the Captain's MAP and gain")
+
 T.done()

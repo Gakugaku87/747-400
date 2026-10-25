@@ -33,6 +33,14 @@ M.TILT_STEP, M.GAIN_STEP = 0.1, 0.1
 -- turns it down to 0 (estimate: the manual gives no range)
 M.GAIN_CAL = 1
 M.WXT_MAX_NM = 40           -- turbulence up to 40 nm, beyond it WX (FCOM p.1224)
+-- the ND's fault annunciations (FCOM p.1155, amber): the fault source, shown
+-- in TEST in the tilt field (FCOM p.1224); ATT and WEAK also outside TEST
+M.FAULT_NONE, M.FAULT_ANT, M.FAULT_ATT, M.FAULT_WEAK, M.FAULT_CONT, M.FAULT_RT = 0, 1, 2, 3, 4, 5
+-- the ND's gain annunciation in MAP: CAL at the MAP GAIN knob's calibrated
+-- stop (FCOM p.1155), VAR below it (ATA34_1 p.244); none with the automatic
+-- gain of WX and WX+T (FCOM p.1013 shows WXR and the tilt only). Estimate:
+-- FCOM lists CAL without saying when, ATA34_1 describes VAR for another panel.
+M.GAIN_NONE, M.GAIN_SHOW_CAL, M.GAIN_SHOW_VAR = 0, 1, 2
 
 local function pair(v) return {v, v} end
 local function other(i) return 3 - i end
@@ -42,7 +50,10 @@ function M.inputs()
         on = pair(false),           -- each EFIS control panel's WXR (X-Plane's weather on)
         range_nm = pair(40),        -- each EFIS control panel's range
         power = pair(true),         -- R/T L and R
-        failed = false,             -- X-Plane's radar failure
+        failed = false,             -- X-Plane's radar failure (taken as the R/T's)
+        fail_ant = false,           -- the antenna (wxr/fail[0])
+        fail_cont = false,          -- the control panel (wxr/fail[1])
+        fail_weak = false,          -- the receiver's calibration, AGC (wxr/fail[2])
         att_valid = {true, true, true},     -- IRU L, C, R
         irs_src = {0, 2},           -- each pilot's IRS selector
     }
@@ -65,6 +76,11 @@ function M.new()
             lamp_gcs = pair(false),
             lamp_test = false,
             lamp_rt = 0,            -- RT_L or RT_R, 0 none
+            fault = M.FAULT_NONE,   -- the radar's fault, the first of RT, ANT, CONT, WEAK, ATT
+            nd_fail = pair(false),  -- WXR FAIL on this side's ND
+            nd_fault = pair(M.FAULT_NONE),  -- the fault source in TEST
+            nd_msg = pair(M.FAULT_NONE),    -- WEAK or ATT outside TEST
+            nd_gain = pair(M.GAIN_NONE),    -- CAL or VAR in MAP
         },
     }
 end
@@ -110,8 +126,21 @@ local XP_OF_SEL = {[M.SEL_WX] = M.XP_WX, [M.SEL_WXT] = M.XP_WXT, [M.SEL_MAP] = M
 function M.update(s, inp)
     local out = s.out
     -- either EFIS panel's WXR turns on the selected R/T (FCOM p.1040, ATA34_1 p.253)
-    out.operating = (inp.on[1] or inp.on[2]) and inp.power[s.rt] and not inp.failed
+    local rt_ok = inp.power[s.rt] and not inp.failed
+    out.operating = (inp.on[1] or inp.on[2]) and rt_ok
     out.stab = inp.att_valid[stab_iru(s.rt, inp.irs_src)]
+    -- the faults (ATA34_1 p.246): the R/T (the selected one unpowered or
+    -- failed: estimate), the antenna or the control panel stop the returns
+    -- (WXR FAIL); the calibration (WEAK) and the stabilization attitude (ATT)
+    -- leave them, WEAK before ATT
+    local fault = M.FAULT_NONE
+    if not rt_ok then fault = M.FAULT_RT
+    elseif inp.fail_ant then fault = M.FAULT_ANT
+    elseif inp.fail_cont then fault = M.FAULT_CONT
+    elseif inp.fail_weak then fault = M.FAULT_WEAK
+    elseif not out.stab then fault = M.FAULT_ATT end
+    out.fault = fault
+    local no_returns = fault == M.FAULT_RT or fault == M.FAULT_ANT or fault == M.FAULT_CONT
     for i = 1, 2 do
         -- WX+T beyond 40 nm becomes WX (FCOM p.1224)
         if s.sel[i] == M.SEL_WXT and inp.range_nm[i] > M.WXT_MAX_NM then s.sel[i] = M.SEL_WX end
@@ -129,6 +158,8 @@ function M.update(s, inp)
             mode = M.XP_OFF
         elseif s.test[i] or both_tfr then
             mode = M.XP_TEST
+        elseif no_returns then
+            mode = M.XP_OFF
         else
             mode = XP_OF_SEL[s.sel[src]]
         end
@@ -136,6 +167,17 @@ function M.update(s, inp)
         out.tilt[i] = s.tilt[src]
         -- the gain is automatic but in MAP (FCOM p.1223, ATA34_1 p.260)
         out.gain[i] = (mode == M.XP_MAP) and s.gain[src] or M.GAIN_CAL
+        -- the ND's annunciations (with this side's WXR selected)
+        out.nd_fail[i] = inp.on[i] and no_returns and mode ~= M.XP_TEST
+        out.nd_fault[i] = (mode == M.XP_TEST) and fault or M.FAULT_NONE
+        out.nd_msg[i] = M.FAULT_NONE
+        if mode == M.XP_WX or mode == M.XP_WXT or mode == M.XP_MAP then
+            if fault == M.FAULT_WEAK or fault == M.FAULT_ATT then out.nd_msg[i] = fault end
+        end
+        out.nd_gain[i] = M.GAIN_NONE
+        if mode == M.XP_MAP then
+            out.nd_gain[i] = (out.gain[i] >= M.GAIN_CAL - 1e-6) and M.GAIN_SHOW_CAL or M.GAIN_SHOW_VAR
+        end
         out.gcs[i] = s.gcs[src]
         -- the panel is powered by the operating R/T (ATA34_1 p.210)
         out.lamp_sel[i] = out.operating and s.sel[i] or 0
