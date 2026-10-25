@@ -136,6 +136,28 @@ B747DR_pfd_fpv_x_fo                             = deferred_dataref("laminar/B747
 B747DR_pfd_fpv_y_fo                             = deferred_dataref("laminar/B747/pfd/fo/fpv_y", "number")
 B747DR_pfd_pitch_flag                           = deferred_dataref("laminar/B747/pfd/pitch_flag", "number")
 B747DR_pfd_roll_flag                            = deferred_dataref("laminar/B747/pfd/roll_flag", "number")
+-- the ILS (step 4e, B747.60.pfd_ils_model.lua): the approach reference and
+-- course shown; the localizer scale (0 none, 1, 2 amber, 3 expanded, 4
+-- expanded amber) and pointer (0 none or the flash's dark half, 1 filled,
+-- 2 hollow, 3 on the expanded scale), the glideslope scale (0, 1, 2 amber)
+-- and pointer (0, 1 filled, 2 hollow), the LOC and G/S flags, the rising
+-- runway
+B747DR_pfd_ils_show_capt                        = deferred_dataref("laminar/B747/pfd/capt/ils_show", "number")
+B747DR_pfd_loc_scale_capt                       = deferred_dataref("laminar/B747/pfd/capt/loc_scale", "number")
+B747DR_pfd_loc_ptr_capt                         = deferred_dataref("laminar/B747/pfd/capt/loc_ptr", "number")
+B747DR_pfd_loc_flag_capt                        = deferred_dataref("laminar/B747/pfd/capt/loc_flag", "number")
+B747DR_pfd_gs_scale_capt                        = deferred_dataref("laminar/B747/pfd/capt/gs_scale", "number")
+B747DR_pfd_gs_ptr_capt                          = deferred_dataref("laminar/B747/pfd/capt/gs_ptr", "number")
+B747DR_pfd_gs_flag_capt                         = deferred_dataref("laminar/B747/pfd/capt/gs_flag", "number")
+B747DR_pfd_rwy_show_capt                        = deferred_dataref("laminar/B747/pfd/capt/rwy_show", "number")
+B747DR_pfd_ils_show_fo                          = deferred_dataref("laminar/B747/pfd/fo/ils_show", "number")
+B747DR_pfd_loc_scale_fo                         = deferred_dataref("laminar/B747/pfd/fo/loc_scale", "number")
+B747DR_pfd_loc_ptr_fo                           = deferred_dataref("laminar/B747/pfd/fo/loc_ptr", "number")
+B747DR_pfd_loc_flag_fo                          = deferred_dataref("laminar/B747/pfd/fo/loc_flag", "number")
+B747DR_pfd_gs_scale_fo                          = deferred_dataref("laminar/B747/pfd/fo/gs_scale", "number")
+B747DR_pfd_gs_ptr_fo                            = deferred_dataref("laminar/B747/pfd/fo/gs_ptr", "number")
+B747DR_pfd_gs_flag_fo                           = deferred_dataref("laminar/B747/pfd/fo/gs_flag", "number")
+B747DR_pfd_rwy_show_fo                          = deferred_dataref("laminar/B747/pfd/fo/rwy_show", "number")
 B747DR_nd_fo_heading_bug            			= deferred_dataref("laminar/B747/nd/mode/fo/show_heading_bug", "number")
 B747DR_nd_capt_heading_bug          			= deferred_dataref("laminar/B747/nd/mode/capt/show_heading_bug", "number")
 

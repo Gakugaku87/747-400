@@ -330,3 +330,17 @@
 | 同（DSP-04） | 各 PFD の ATT・HDG の旗のグループ（`GROUP CAPT IRS OFF PFD`・`FO IRS OFF PFD`） | ATT・HDG の旗と固定の飛行機の記号 | FPV の旗 `gen_rotary FPV X`（新しい `Failure Flags/fpvX`、`pfd/<席>/fpv_flag`）、PITCH・ROLL の旗 `gen_rotary PITCH X`・`ROLL X`（純正の `Failure Flags/pitch`・`roll`、`pfd/pitch_flag`・`roll_flag`）を足した | FCOM p.975、p.999 |
 
 上の 2 行は `docs/overhaul/tools/panel_pfd_fpv.lua` で書き換えた（4 組、追加だけ）。画像は `docs/overhaul/tools/make_pfd_fpv_images.ps1`。旗の位置は FCOM の図から比で取った（推定：FPV は姿勢表示の中心から左 99・上 71、PITCH は左 108・下 125、ROLL は右 113・下 125）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_pfd_fpv`。
+
+表示（5-2 段 4e、2026-10-26）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・ILS（DSP-12・14） | 各 PFD（4 組）の `GROUP Approach Ref`・`Approach Course`・`Glideslope`・`Localizer`（副操縦士は名前に ` 2`） | `laminar/B747/autopilot/ils_dots` が 0.1 より大 | 新設 `laminar/B747/pfd/<席>/ils_show`（同調、受信機が動く、ロール 53° 以内） | ATA34_1 p.466–467、p.470 |
+| 同（DSP-12） | G/S のポインター（`GROUP Pointer` と中の `GROUP Pointer VDEF > 2.3`・`<= 2.3` の `gen_pointer Pointer`） | X-Plane の信号の有無、`hsi_vdef_dots` が 2.34 より大（中抜き）・2.333 より小（塗り：下側の外れでも塗り）。2.5 ドットで 97 px、`CLIP` | `pfd/<席>/gs_ptr` が 0 より大、2（中抜き）、1（塗り）。2.5 ドットで 121.25 px（目盛の点と同じ 48.5 px/ドット）、`CLIP` なし（土台の画像の高さ 209 で切られる） | FCOM p.987 |
+| 同（DSP-12） | G/S の目盛（`gen_rotary Scale`） | `pfd/<席>/irs` が 0.1 より大 | `pfd/<席>/gs_scale` が 1。同じ形の琥珀の `gen_rotary Scale Amber`（新しい `Artificial Horizon/HrznGSscaleAmb`、`gs_scale` が 2）を足した | ATA34_1 p.468 |
+| 同（DSP-12） | LOC のポインター（`GROUP Localizer Pointer` と `gen_pointer Ptr >= 2.34`・`Ptr <= 2.33 \| > 0.5`・`Ptr <= 0.5`） | X-Plane の信号の有無と `hsi_hdef_dots` の値（2 行の条件は最後の行だけが効き、左側の外れで拡大の目盛のポインターが端に止まっていた） | `pfd/<席>/loc_ptr` が 0 より大、2（中抜き）、1（塗り）、3（拡大の目盛の上） | FCOM p.987–988 |
+| 同（DSP-12） | LOC の目盛（`GROUP Localizer Scale` の `gen_rotary Scale >= 0.51` 2 つと `Scale Exp <= 0.5`） | `hsi_hdef_dots` の値（拡大の目盛は 2 行目だけが効き、中心線の右では普通の目盛と重なって出ていた） | 1 つ目は `pfd/<席>/loc_scale` が 1、2 つ目を琥珀の目盛 `gen_rotary Scale Amber`（新しい `HrznLOCscaleAmb`）にして 2、拡大の目盛は 3、同じ形の琥珀の `gen_rotary Scale Exp Amber`（新しい `HrznLOCscaleExAmb`）を足して 4 | ATA34_1 p.468、FCOM p.988 |
+| 同（DSP-12） | 立ち上がる滑走路（`GROUP Rsng Rwy Offset` と `gen_pointer Symbol`） | グループは `ra/<席>/show` と `ils_dots`（副操縦士は `pfd/fo/att`）の 2 行で最後だけが効く、記号は X-Plane の LOC の信号 | どちらも新設 `pfd/<席>/rwy_show`（LOC のポインターがあり、電波高度が 2,500 ft より下） | FCOM p.989 |
+| 同（DSP-04） | 各 PFD の ATT・HDG の旗のグループ（`GROUP CAPT IRS OFF PFD`・`FO IRS OFF PFD`） | ATT・HDG・FPV・PITCH・ROLL の旗と固定の飛行機の記号 | G/S の旗 `gen_rotary GS X`（新しい `Failure Flags/gsX`、`pfd/<席>/gs_flag`）を G/S の目盛の場所に、LOC の旗 `gen_rotary LOC X`（新しい `locX`、`loc_flag`）を LOC の目盛の場所に足した | ATA31 p.13、ATA34_1 p.470、FCOM p.999 |
+
+上の 7 行は `docs/overhaul/tools/panel_pfd_ils.lua` で書き換えた（4 組で、表示条件 68 行、G/S のポインターの振れと CLIP 8 本、目盛の追加 8・付け替え 4、旗 8）。画像は `docs/overhaul/tools/make_pfd_ils_images.ps1`（琥珀の目盛は純正の白い目盛の色を明るさのまま琥珀に、G/S の旗は純正の ALT の旗、LOC の旗は ATT の旗の作り）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_pfd_ils`。

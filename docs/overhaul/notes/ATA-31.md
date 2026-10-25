@@ -437,3 +437,20 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - グルー：表示器と EIU のグルー。書くもの：新設 `pfd/<席>/fpv_show`・`fpv_flag`・`fpv_x`・`fpv_y`、`pfd/pitch_flag`・`roll_flag`。
 - パネル（道具 `docs/overhaul/tools/panel_pfd_fpv.lua`、画像 `make_pfd_fpv_images.ps1`、ACF_DIFF.md §5）：各 PFD の `GROUP PLI` の後に `GROUP FPV`（`fpv_show`）。中は左右へ動く `GROUP FPV X`（`fpv_x`）の中に上下へ動く `GROUP FPV Y`（`fpv_y`）、その中に本体（地平線の針の写しで、ピッチの動き `DEFLECT_*` は外した）と足。ATT・HDG の旗のグループに、FPV の旗（ATT の旗と同じ形の新しい画像）と PITCH・ROLL の旗。旗の位置は FCOM p.999・p.974 の図から、ATT の旗と飛行機の記号の大きさで比を取った（推定）。
 - 試験：PFD のモデル 9 件（計 37）、表示器のモジュール 13 件（計 85）。X-Plane の新しいシナリオ `s58_pfd_fpv`。
+
+## 20. 段 4e の実装（2026-10-26 未明：ILS の表示、偏位過大の警告、G/S・LOC の旗）
+
+- 資料：ATA34_1 p.466–468（PFD の ILS の表示の条件、偏位の警告）、p.470（無効のデータ：目盛とポインターが旗に置き換わる、周波数とコースの欄は空白）、ATA31 p.13（PFD の NCD・invalid の表：G/S・LOC は invalid で目盛とポインターを消して黄色の旗、NCD はポインターだけ消す）、FCOM p.987（2 1/3 ドットの内で塗り。低い電波高度で A/P か F/D が入っていると目盛が琥珀・ポインターが点滅。LNAV で LOC を arm して捕まえないときも）、p.988（拡大 LOC 目盛：中心線の近く、四角 1 つが 1/2 ドット）、p.989（立ち上がる滑走路：2,500 ft より下で LOC のポインターがあるとき）、p.999（旗の位置）。
+- 新しいモデル `B747.60.pfd_ils_model.lua`（表示器と EIU のグルーで回す）：
+  - 受信機：機長は ILS L（X-Plane の NAV1、pilot の HSI。AC standby bus）、副操縦士は ILS R（NAV2、copilot の HSI。AC bus 2：notes/ATA-34.md §2.1）。PFD の ILS の源を切り替える論理は資料に無い（ND の源は表示器がアンテナと偏位の状態と EIU の選択から決める、とだけ：ATA34_1 p.474）ので固定。ILS C は X-Plane に無い。
+  - 同調：純正の `autopilot/ils_dots`（目的地の 50 NM 以内でしか 1 にならない：DSP-14。5-1 段 3 で作り直す）を「周波数が同調されている」に使う。
+  - 何も出さない（旗も）：同調していないか、その席の IRU のロールが 53° を超える。53° 超で旗も消すのは推定（資料は目盛とポインターを消す、とだけ）。
+  - invalid（旗）：受信機の故障（X-Plane の NAV1・NAV2 の故障か電源なし）で LOC と G/S の両方の旗、周波数とコースは空白。X-Plane の localizer の故障で LOC だけ、glide slope の故障で G/S だけ。
+  - NCD（ポインターだけ消す）：信号なし（X-Plane の `hsi_display_horizontal`・`vertical`）。LOC はその席の航跡（段 4a の `trk`）が無いときも（ATA34_1 p.467。滑走路方位の無効は同調の作り直しで）。
+  - ポインター：2 1/3 ドットの内で塗り、外で中抜き（どちらの側でも）。LOC は 1/2 ドットの内で拡大の目盛とその上のポインター（「中心線の近く」を純正の 1/2 ドットのまま：推定）。
+  - 偏位過大（目盛を琥珀、ポインターを 4 Hz で点滅：周期 0.25 秒の半分ずつ消える）：G/S は G/S が engage、A/P かその席の F/D、電波高度 100〜500 ft、5/8 ドット超。LOC は LOC（か ROLLOUT）が engage、A/P か F/D、500 ft 以下、1/4 ドット超が 1 秒以上。LOC の捕捉失敗：LNAV が engage で LOC が arm、950 ft 以下で捕まえていない（1,050 ft か捕捉で戻る）。ATA34_1 の「approach mode operational」を、それぞれの AFDS のモードが engage と読んだ（推定）。
+  - 立ち上がる滑走路：LOC のポインターがあり、その席の電波高度の数字が出ている（2,500 ft より下）。
+- グルー：書くもの：新設 `pfd/<席>/ils_show`、`loc_scale`（0 なし、1、2 琥珀、3 拡大、4 拡大の琥珀）、`loc_ptr`（0 なしか点滅の消えた半分、1 塗り、2 中抜き、3 拡大の目盛の上）、`loc_flag`、`gs_scale`（0、1、2 琥珀）、`gs_ptr`（0、1 塗り、2 中抜き）、`gs_flag`、`rwy_show`。純正の `B747_loc_gs_vis_flags`（`localizer_ptr/visibility_flag_*` など）はパネルも 3D も使っていないが、そのまま残した。
+- パネル（道具 `docs/overhaul/tools/panel_pfd_ils.lua`、画像 `make_pfd_ils_images.ps1`、ACF_DIFF.md §5）：4 面の PFD の ILS の部品を、純正の `ils_dots` と偏位の値から上の dataref に付け替えた（計器は最後の SHOW しか見ない）。純正の誤り：中抜きのポインターは片側だけ、拡大 LOC 目盛は中心線の右では普通の目盛と重なって出ていた、G/S のポインターは 2.5 ドットで 2 ドットの印（振れが目盛の 8 割。X-Plane の dots は、Laminar の 737 の PFD と同じく 2 ドットが目盛の外の点）。G/S のポインターの振れを目盛の点と同じ 48.5 px/ドットにし、土台の画像（高さ 209）で切られないように CLIP を外した。琥珀の目盛は純正の目盛の色を替えたもの。G/S・LOC の旗は、ATA34_1 p.470 のとおり置き換わる目盛の場所に（FCOM p.999 の図とも合う）、純正の ALT・ATT の旗の作りで。
+- 残り：周波数・ID の欄は純正のまま X-Plane の局の ID だけを出すので、ID が受からない（X-Plane の localizer の故障など）と空白（実機は ID を受けるまで周波数：ATA34_1 p.466）。周波数・コースの不一致の琥珀の線（FCOM p.986）。どちらも同調の作り直し（5-1 段 3）で。
+- 試験：ILS のモデル 47 件、表示器のモジュール 22 件（計 107）。X-Plane の新しいシナリオ `s59_pfd_ils`（12 NM の進入路で表示・ポインター・旗・ロール 53°：34 件合格）、`s60_pfd_ils_alert`（立ち上がる滑走路、G/S と LOC の偏位過大：15 件合格）。s60 は中心線の上から入ると AFDS が LOC も捕まえた（LAND 3）ので、LOC の偏位過大も X-Plane で確かめた。LOC の捕捉失敗（LNAV で LOC を arm）は FMC の経路が要るので回帰試験だけ。ILS の同調は、CDU の NAV RAD で手動にしてから `ils_dots` を書く（純正の自動の同調は経路の目的地まで 50 NM 以内でないと 2 秒ごとに 0 に戻す。Web API で書いた同調の文字列 `radio/tuningmodes` は XTLua のモジュールに届かない）。
