@@ -2542,12 +2542,14 @@ laminar/B747/oxygen/crew_press_psi	dataref	panel	B747.36.oxygen,B747.36.xt.oxyge
 laminar/B747/oxygen/pass_press_psi	dataref	panel	B747.36.oxygen,B747.36.xt.oxygen
 laminar/B747/pfd/capt/irs	dataref	panel	B747.60.fltInst
 laminar/B747/pfd/capt/att	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/pfd/capt/baro_alert	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/pfd/capt/hdg	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/pfd/capt/trk	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/pfd/capt/vert	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/pfd/capt/vsi	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/pfd/fo/irs	dataref	panel	B747.60.fltInst
 laminar/B747/pfd/fo/att	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/pfd/fo/baro_alert	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/pfd/fo/hdg	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/pfd/fo/trk	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/pfd/fo/vert	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
