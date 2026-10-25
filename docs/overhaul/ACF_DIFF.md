@@ -234,3 +234,13 @@
 | 2026-10-25・TCAS の明るさ（DSP-18 の直し） | 上の TCAS のスロットの `LIGHT_RHEOSTAT` | 機長の ND の記号 30 は 2（PFD のつまみ。アイコンの写し）、副操縦士の ND のデータタグ 90 は 0（機長の ND のつまみ） | どちらもその ND のつまみ（機長 0、副操縦士 3：ほかの ND の要素と照明のモジュールと同じ）。120 行の値だけ | — |
 
 上の 3 行（と明るさの直し）は `docs/overhaul/tools/panel_nd_tcas.lua` で足した（既存の行は変えていない。各 ND にスロット 30、メッセージのグループ 1、TCAS FAIL 1）。絵は `docs/overhaul/tools/make_nd_tcas_images.ps1`（記号は透明の地に、文字は純正の TFC の大きさ。色は純正の ND の琥珀・青、nd_icons の赤）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_nd_tcas`（明るさの直しの前は `…20261025_before_tag_rheostat`。直しも同じ変更前の acf から道具を流し直した）。
+
+航法センサー（5-1 段 5d、2026-10-25。パネルの変更は全範囲で承認なしでよい：利用者、2026-10-25）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-25・TCAS の PFD の RA（NAV-71） | 各 PFD（機長と副操縦士、外側と内側の 4 組）の `GROUP Attitude Indicator` の `Bank Scale` の後 | なし（RA の値 `tcas/pfd/*` はあるが描かない） | 新しい `GROUP TCAS RA Pitch`（その PFD のロール `roll_AHARS_deg_pilot`・`_copilot` で姿勢と一緒に回る。中心は姿勢の POS）。中に赤枠の RA のピッチ領域 2 つの pointer（`Artificial Horizon/tcas_ra_up`・`tcas_ra_down`。`tcas/pfd/pitch_hi`・`pitch_lo` を 613 px / 90° で上下に、±232 px で止める。`hi_on`・`lo_on` が 1 のとき。CLIP で 464 px 四方に切る） | FCOM p.1536–1537、p.1562 |
+| 同（NAV-71） | 各 PFD の `GROUP VSI Display` の `Sel VSI Ptr Mask` の後 | なし | 赤の RA の昇降率の範囲 2 つの pointer（`VSI/tcas_ra_vs_up`・`tcas_ra_vs_down`。目盛の刻みの列（幅 7 px、目盛の POS の 6.5 px 左）に、`tcas/pfd/vs_hi`・`vs_lo` を目盛の刻みの位置（0・500・1,000・1,500・2,000・4,000・6,000 fpm に 0・38.5・69・94.5・121・133.5・147 px）で。`hi_on`・`lo_on` が 1 のとき。CLIP で目盛の ±147 px に切る） | FCOM p.1536–1537 |
+| 同（NAV-71） | 各 PFD の VS ポインタ（`gen_needle Needle`・`Needle 2`）の後 | 白だけ | 同じ形・同じ動きの赤のポインタ（`VSI/VSIspdPtrR`、`tcas/pfd/vs_red` が 1 のとき白の上に描く） | FCOM p.1537 |
+
+上の 3 行は `docs/overhaul/tools/panel_pfd_tcas.lua` で足した（既存の行は変えていない。各 PFD に 128 行）。絵は `docs/overhaul/tools/make_pfd_tcas_images.ps1`（赤は純正の PULL UP・WINDSHEAR の 255, 0, 0。赤枠の形は FCOM p.1536 の図を純正のピッチ目盛（10° = 68 px）に縮め、線は 3 px。土台の透明の絵の大きさが切り抜きの四角）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261025_before_pfd_tcas`。最初は赤枠をピッチ目盛の後に置いたが、純正の Bank Scale の絵（姿勢表示の上を覆う空色の帯）に上の方が隠れたので、Bank Scale の後に置き直した（同じ変更前の acf から道具を流し直した）。X-Plane のスクリーンショット（`s48_pfd_ra`）で、上下の赤枠・赤の範囲・VS ポインタの赤と白、副操縦士の PFD を確かめ、窓のマスクを外した試験用の acf で旋回中の回転と切り抜きを確かめた。外から見た写真で機体の見た目が変わらないことを確かめた。純正 acf は変えていない。

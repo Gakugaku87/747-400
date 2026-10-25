@@ -2596,6 +2596,13 @@ laminar/B747/safety/seat_belts/sel_dial_dn	command	obj	B747.85.safety,B747.85.xt
 laminar/B747/safety/seat_belts/sel_dial_pos	dataref	obj,snd	B747.85.safety,B747.85.xt.safety
 laminar/B747/safety/seat_belts/sel_dial_up	command	obj	B747.85.safety,B747.85.xt.safety
 laminar/B747/switches/instrument_brightness_ratio	dataref	obj	B747.90.lighting
+laminar/B747/tcas/pfd/hi_on	dataref	panel	B747.34.nav
+laminar/B747/tcas/pfd/lo_on	dataref	panel	B747.34.nav
+laminar/B747/tcas/pfd/pitch_hi	dataref	panel	B747.34.nav
+laminar/B747/tcas/pfd/pitch_lo	dataref	panel	B747.34.nav
+laminar/B747/tcas/pfd/vs_hi	dataref	panel	B747.34.nav
+laminar/B747/tcas/pfd/vs_lo	dataref	panel	B747.34.nav
+laminar/B747/tcas/pfd/vs_red	dataref	panel	B747.34.nav
 laminar/B747/tcas/voice	dataref	snd	B747.34.nav
 laminar/B747/toggle_sun_visor/up_down/capt	command	obj	B747.01.manipulators,B747.01.xt.manipulators
 laminar/B747/toggle_sun_visor/up_down/fo	command	obj	B747.01.manipulators,B747.01.xt.manipulators

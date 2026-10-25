@@ -147,6 +147,7 @@ B747DR_tcas_pfd_vs_lo           = deferred_dataref("laminar/B747/tcas/pfd/vs_lo"
 B747DR_tcas_pfd_vs_hi           = deferred_dataref("laminar/B747/tcas/pfd/vs_hi", "number")
 B747DR_tcas_pfd_pitch_lo        = deferred_dataref("laminar/B747/tcas/pfd/pitch_lo", "number")
 B747DR_tcas_pfd_pitch_hi        = deferred_dataref("laminar/B747/tcas/pfd/pitch_hi", "number")
+B747DR_tcas_pfd_vs_red          = deferred_dataref("laminar/B747/tcas/pfd/vs_red", "number")
 B747DR_nd_capt_tcas_fail        = deferred_dataref("laminar/B747/nd/capt/tcas_fail", "number")
 B747DR_nd_fo_tcas_fail          = deferred_dataref("laminar/B747/nd/fo/tcas_fail", "number")
 B747DR_nd_capt_traffic          = deferred_dataref("laminar/B747/nd/capt/traffic", "number")

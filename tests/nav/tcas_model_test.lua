@@ -20,7 +20,7 @@ local function fresh()
     inp.on_ground, inp.ra, inp.sel = false, 9700, M.SEL_TA_RA
     inp.n = 3
     for j = 1, 3 do inp.threat[j], inp.ssr[j], inp.dist_nm[j], inp.rel_alt_ft[j] = -1, 3, 20, 0 end
-    inp.tas_kt, inp.pitch = 320, 2
+    inp.tas_kt = 320
     run()
 end
 -- one target
@@ -198,7 +198,17 @@ T.equal(out.nd[1].traffic, 2, "red TRAFFIC")
 T.check(out.pfd_ra, "RA guidance on the PFDs")
 T.equal(out.vs_lo, 1500, "red below 1,500 fpm")
 T.check(out.vs_hi == nil, "no red above")
-T.near(out.pitch_lo, 2 + math.deg(1500 / (320 * 6076.12 / 60)), 0.01, "the pitch region's edge: 1,500 fpm at 320 kt over the present pitch")
+local TAS_FPM = 320 * 6076.12 / 60
+T.near(out.pitch_lo, math.deg(math.asin(1500 / TAS_FPM)), 0.01,
+    "the pitch region's edge from the airplane symbol: level, the path of 1,500 fpm at 320 kt")
+T.check(out.vs_red, "the vertical speed pointer is red: level is in the red region (FCOM p.1537)")
+inp.own_vs = 1800
+run()
+T.near(out.pitch_lo, math.deg(math.asin(1500 / TAS_FPM) - math.asin(1800 / TAS_FPM)), 0.01,
+    "climbing at 1,800 fpm: the edge is below the airplane symbol")
+T.check(out.pitch_lo < 0, "below")
+T.check(not out.vs_red, "the vertical speed pointer is white: 1,800 fpm avoids the traffic")
+inp.own_vs = 0
 run(1)
 T.equal(out.voice, M.V_NONE, "no repeat while the RA stays")
 inp.msg = M.XM_INC_CLIMB
@@ -236,6 +246,25 @@ T.equal(ra(M.XM_MONITOR, 480), M.V_MONITOR, "MONITOR VERTICAL SPEED")
 T.equal(ra(M.XM_MAINTAIN, -500, 1500), M.V_MAINTAIN, "maintain a climb away from traffic below")
 T.equal(ra(M.XM_MAINTAIN, 500, 1500), M.V_MAINTAIN_CROSS, "maintain a climb through traffic above: CROSSING")
 T.equal(ra(M.XM_LEVEL_OFF, 480), M.V_ADJUST, "LEVEL OFF (7.1) is ADJUST VERTICAL SPEED, ADJUST (7.0)")
+
+-- the upper regions: a descend RA while climbing
+fresh()
+target(1, 4, 3, 480)
+inp.own_vs = 500
+inp.adv, inp.msg = 2, M.XM_DESCEND
+descend_band()
+run()
+T.check(out.vs_lo == nil and out.vs_hi == -1500, "red above -1,500 fpm only")
+T.near(out.pitch_hi, math.deg(math.asin(-1500 / (320 * 6076.12 / 60)) - math.asin(500 / (320 * 6076.12 / 60))), 0.01,
+    "the upper region's edge from the airplane symbol")
+T.check(out.pitch_hi < 0 and out.vs_red, "the airplane symbol and the vertical speed are in the red regions")
+inp.own_vs = -1700
+run()
+T.check(out.pitch_hi > 0 and not out.vs_red, "descending at 1,700 fpm: below the region, the pointer white")
+inp.adv = 0
+no_band()
+run()
+T.check(not out.pfd_ra and not out.vs_red and out.pitch_hi == nil, "the RA ends: no guidance")
 
 -- the inhibits by height (FCOM p.1593, p.1600-1601)
 fresh()

@@ -103,6 +103,15 @@ T.equal(rt:get(TC .. "pfd/ra"), 1, "RA guidance")
 T.equal(rt:get(TC .. "pfd/hi_on"), 1, "a red region above")
 T.equal(rt:get(TC .. "pfd/lo_on"), 0, "none below")
 T.near(rt:get(TC .. "pfd/vs_hi"), -1500, 0.01, "red above -1,500 fpm")
+local tas_fpm = 165 * 1.943844 * 6076.12 / 60
+T.near(rt:get(TC .. "pfd/pitch_hi"), math.deg(math.asin(-1500 / tas_fpm)), 0.01,
+    "level: the upper region's edge below the airplane symbol (the path of -1,500 fpm)")
+T.equal(rt:get(TC .. "pfd/vs_red"), 1, "level is in the red region: the pointer red")
+rt:set("sim/flightmodel/position/vh_ind_fpm", -1800)
+frames(0.1)
+T.equal(rt:get(TC .. "pfd/vs_red"), 0, "descending at 1,800 fpm: white")
+T.check(rt:get(TC .. "pfd/pitch_hi") > 0, "the region above the airplane symbol")
+rt:set("sim/flightmodel/position/vh_ind_fpm", 0)
 rt:set("laminar/B747/nd/range/capt/sel_dial_pos", 0)             -- 10 nm
 rt:set(TI .. "relative_distance_mtrs", 1, 12 * 1852)
 frames(0.1)
