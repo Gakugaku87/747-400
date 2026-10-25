@@ -710,3 +710,14 @@ B747DR_DH_alert                                 = deferred_dataref("laminar/B747
 B747DR_10000_callout                            = deferred_dataref("laminar/B747/fmod/callouts/10000", "number")
 B747DR_fltInst_capt_clock_ET_seconds            = deferred_dataref("laminar/B747/fltInst/capt/clock_et_seconds", "number")
 B747DR_fltInst_fo_clock_ET_seconds              = deferred_dataref("laminar/B747/fltInst/fo/clock_et_seconds", "number")
+-- the heading reference (5-2 step 5d, B747.60.xt.displays.lua): 1 true north;
+-- the PFDs' and NDs' labels (B747.60.hdg_ref_model.lua); each side's heading
+-- and track in the reference
+B747DR_hdg_ref_true = deferred_dataref("laminar/B747/efis/hdg_ref/true", "number")
+B747DR_hdg_ref_nd_label = deferred_dataref("laminar/B747/efis/hdg_ref/nd_label", "number")
+B747DR_hdg_ref_pfd_label = deferred_dataref("laminar/B747/efis/hdg_ref/pfd_label", "number")
+B747DR_hdg_ref_nd_plan_label = deferred_dataref("laminar/B747/efis/hdg_ref/nd_plan_label", "number")
+B747DR_pfd_hdg_deg_capt = deferred_dataref("laminar/B747/pfd/capt/hdg_deg", "number")
+B747DR_pfd_trk_deg_capt = deferred_dataref("laminar/B747/pfd/capt/trk_deg", "number")
+B747DR_pfd_hdg_deg_fo = deferred_dataref("laminar/B747/pfd/fo/hdg_deg", "number")
+B747DR_pfd_trk_deg_fo = deferred_dataref("laminar/B747/pfd/fo/trk_deg", "number")

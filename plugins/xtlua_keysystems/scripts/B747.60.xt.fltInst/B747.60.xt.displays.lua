@@ -40,16 +40,25 @@
 -- ADF bearing pointers and the lower corner blocks (nd/capt|fo/ptr_l,
 -- ptr_r, brg_l, brg_r, rad_l, rad_r, rad_l_flag, rad_r_flag, rad_l_dme,
 -- rad_r_dme; nd/vor_l_ref, vor_r_ref, adf_l_ref, adf_r_ref) out.
+-- Step 5d: the heading reference model (B747.60.hdg_ref_model.lua) with the
+-- HDG REF switch, the position, the Captain's altitude and vertical speed
+-- in; the reference (efis/hdg_ref/true), the PFDs' and NDs' labels
+-- (efis/hdg_ref/pfd_label, nd_label, nd_plan_label) and each side's heading and track in
+-- it (pfd/capt|fo/hdg_deg, trk_deg) out, for the panel's heading scales,
+-- roses, pointers and digits, the ND module's display orientation and the
+-- ND model (the wind too).
 -- dofile'd from B747.60.xt.fltInst.lua after B747.60.xt.fltInst02.lua.
 
 dofile("B747.60.display_model.lua")
 dofile("B747.60.pfd_model.lua")
 dofile("B747.60.pfd_ils_model.lua")
 dofile("B747.60.nd_model.lua")
+dofile("B747.60.hdg_ref_model.lua")
 local DM = B747_display_model
 local PM = B747_pfd_model
 local IM = B747_pfd_ils_model
 local NM = B747_nd_model
+local HR = B747_hdg_ref_model
 
 B747DR_dsp_bus_stby_apu         = find_dataref("laminar/B747/electrical/bus/stby_apu")
 B747DR_dsp_bus_stby_main        = find_dataref("laminar/B747/electrical/bus/stby_main")
@@ -340,6 +349,21 @@ simDR_dsp_wxr_on                = find_dataref("sim/cockpit2/EFIS/EFIS_weather_o
 simDR_dsp_wxr_on_copilot        = find_dataref("sim/cockpit2/EFIS/EFIS_weather_on_copilot")
 B747DR_dsp_nd_tfc_capt          = find_dataref("laminar/B747/nd/capt/tfc")
 B747DR_dsp_nd_tfc_fo            = find_dataref("laminar/B747/nd/fo/tfc")
+-- the heading reference (step 5d)
+B747DR_dsp_toggle_sw            = find_dataref("laminar/B747/toggle_switch/position")
+simDR_dsp_lat                   = find_dataref("sim/flightmodel/position/latitude")
+simDR_dsp_lon                   = find_dataref("sim/flightmodel/position/longitude")
+simDR_dsp_true_psi              = find_dataref("sim/flightmodel/position/psi")
+simDR_dsp_mag_psi               = find_dataref("sim/flightmodel/position/mag_psi")
+simDR_dsp_vvi_pilot             = find_dataref("sim/cockpit2/gauges/indicators/vvi_fpm_pilot")
+B747DR_dsp_hdg_ref_true         = find_dataref("laminar/B747/efis/hdg_ref/true")
+B747DR_dsp_hdg_ref_nd           = find_dataref("laminar/B747/efis/hdg_ref/nd_label")
+B747DR_dsp_hdg_ref_pfd          = find_dataref("laminar/B747/efis/hdg_ref/pfd_label")
+B747DR_dsp_hdg_ref_plan         = find_dataref("laminar/B747/efis/hdg_ref/nd_plan_label")
+B747DR_dsp_hdg_deg_capt         = find_dataref("laminar/B747/pfd/capt/hdg_deg")
+B747DR_dsp_trk_deg_capt         = find_dataref("laminar/B747/pfd/capt/trk_deg")
+B747DR_dsp_hdg_deg_fo           = find_dataref("laminar/B747/pfd/fo/hdg_deg")
+B747DR_dsp_trk_deg_fo           = find_dataref("laminar/B747/pfd/fo/trk_deg")
 
 -- the EIU selectors' positions: Captain and centre L, AUTO, C, R; F/O L, C, AUTO, R
 local EIU_CAPT = {[0] = DM.EIU_L, DM.SEL_AUTO, DM.EIU_C, DM.EIU_R}
@@ -560,6 +584,37 @@ local function rad_label(brg)
     return brg + 90, 2
 end
 local pos_text = {}
+-- the heading reference (step 5d): the HDG REF switch is the toggle
+-- switches' 31st (1 TRUE); each side's AHRS heading and track made true
+-- with the variation (the flight model's true and magnetic headings) in
+-- TRUE
+local hr_state = HR.new()
+local hr_inputs = {switch_true = false, lat = 0, lon = 0, alt_ft = 0, vs_fpm = 0}
+local hr_ref, hr_mag_diff = false, 0
+local hr_hdg, hr_trk = {0, 0}, {0, 0}
+local function hdg_ref()
+    local i = hr_inputs
+    i.switch_true = B747DR_dsp_toggle_sw[30] > 0.5
+    i.lat, i.lon = simDR_dsp_lat, simDR_dsp_lon
+    i.alt_ft, i.vs_fpm = B747DR_dsp_alt_capt, simDR_dsp_vvi_pilot
+    local o = HR.update(hr_state, i, SIM_PERIOD)
+    hr_ref = o.true_ref
+    local v = hr_ref and 1 or 0
+    if B747DR_dsp_hdg_ref_true ~= v then B747DR_dsp_hdg_ref_true = v end
+    if B747DR_dsp_hdg_ref_nd ~= o.nd then B747DR_dsp_hdg_ref_nd = o.nd end
+    if B747DR_dsp_hdg_ref_pfd ~= o.pfd then B747DR_dsp_hdg_ref_pfd = o.pfd end
+    -- PLN: MAG or TRU without the boxes (FCOM p.1142: the box all modes
+    -- but PLAN)
+    v = hr_ref and HR.ND_TRU_OFF or HR.ND_MAG
+    if B747DR_dsp_hdg_ref_plan ~= v then B747DR_dsp_hdg_ref_plan = v end
+    hr_mag_diff = (simDR_dsp_mag_psi - simDR_dsp_true_psi + 180) % 360 - 180
+    hr_hdg[1] = HR.heading(simDR_dsp_hdg_pilot, hr_mag_diff, hr_ref)
+    hr_trk[1] = HR.heading(simDR_dsp_trk_pilot, hr_mag_diff, hr_ref)
+    hr_hdg[2] = HR.heading(simDR_dsp_hdg_copilot, hr_mag_diff, hr_ref)
+    hr_trk[2] = HR.heading(simDR_dsp_trk_copilot, hr_mag_diff, hr_ref)
+    B747DR_dsp_hdg_deg_capt, B747DR_dsp_trk_deg_capt = hr_hdg[1], hr_trk[1]
+    B747DR_dsp_hdg_deg_fo, B747DR_dsp_trk_deg_fo = hr_hdg[2], hr_trk[2]
+end
 local function nd_side(i, mode, hdg, trk, hdg_valid, trk_valid, ias, center, wxr, tfc, vor, modes)
     i.mode = math.floor(mode + 0.5)
     i.hdg, i.trk, i.hdg_valid, i.trk_valid, i.ias = hdg, trk, hdg_valid, trk_valid, ias
@@ -576,9 +631,10 @@ end
 local function nd_sources(c, f, nav_valid)
     local inp = nd_inputs
     local modes = B747DR_dsp_radio_modes
-    nd_side(inp.side[NM.CAPT], B747DR_dsp_nd_mode_capt, simDR_dsp_hdg_pilot, simDR_dsp_trk_pilot, c.hdg, c.trk,
+    -- the heading and track in the heading reference (step 5d)
+    nd_side(inp.side[NM.CAPT], B747DR_dsp_nd_mode_capt, hr_hdg[1], hr_trk[1], c.hdg, c.trk,
         B747DR_dsp_ias_capt, B747DR_dsp_nd_center_capt, simDR_dsp_wxr_on, B747DR_dsp_nd_tfc_capt, 1, modes)
-    nd_side(inp.side[NM.FO], B747DR_dsp_nd_mode_fo, simDR_dsp_hdg_copilot, simDR_dsp_trk_copilot, f.hdg, f.trk,
+    nd_side(inp.side[NM.FO], B747DR_dsp_nd_mode_fo, hr_hdg[2], hr_trk[2], f.hdg, f.trk,
         B747DR_dsp_ias_fo, B747DR_dsp_nd_center_fo, simDR_dsp_wxr_on_copilot, B747DR_dsp_nd_tfc_fo, 2, modes)
     -- the bearing pointers (step 5b): each side's VOR/ADF switches; VOR L
     -- and R (NAV3 and NAV4: the AC standby bus, AC bus 2), ADF L and R (the
@@ -610,7 +666,7 @@ local function nd_sources(c, f, nav_valid)
     inp.gps_ok = B747DR_dsp_gps_valid[0] > 0.5 or B747DR_dsp_gps_valid[1] > 0.5
     inp.vor_dme_nm[1], inp.vor_dme_nm[2] = simDR_dsp_nav_dme_nm[VOR_IDX[1]], simDR_dsp_nav_dme_nm[VOR_IDX[2]]
     inp.map_valid = nav_valid[1] or nav_valid[2] or nav_valid[3]
-    inp.wind_from = simDR_dsp_wind_from
+    inp.wind_from = HR.heading(simDR_dsp_wind_from, hr_mag_diff, hr_ref)
     inp.hdg_sel = B747DR_dsp_hdg_sel
     inp.roll_mode = B747DR_dsp_fma_roll
     local out = NM.update(nd_state, inp, SIM_PERIOD)
@@ -818,6 +874,7 @@ end
 
 -- each PFD's sources (step 4a)
 local function pfd_sources(fmc)
+    hdg_ref()
     local pin = pfd_inputs
     for i = 1, 3 do
         pin.att_valid[i] = B747DR_dsp_irs_att_valid[i - 1] > 0.5

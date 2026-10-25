@@ -274,13 +274,15 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - オートブレーキの推定：車輪のスピンアップと RTO の 85 kt は IRS の対地速度で見る（前側 8 輪の車輪速の代わり）、減速の制御のゲイン（カスタム acf に合わせた）、disarm の後に圧が抜ける時間（2 秒）、推力レバーのアイドルと前進の角度。AUTOBRAKES のうち、セレクター OFF なのに遮断弁の下流が高圧のときと、RTO の開始での故障・手動の override は無い。
 - 残り：AIR/GND SYSTEM、GEAR MONITOR・A/G DISAGREE・PARK BRK VALVE の STATUS（GEAR-22 の残り）、CONFIG GEAR のラッチと GND PROX GEAR OVRD（GEAR-17 の残り）、ドアの箱の空箱。
 
-### 表示（PFD・ND・EICAS）：作り直し中（5-2 段 1：表示器と EIU、段 2：ソース選択の比較、段 3：速度テープ、段 4a：PFD の姿勢・方位・昇降率の旗、段 4b：気圧、段 4c：PLI と VR の R、段 4d：FPV と旗、段 4e：ILS の表示、段 5a：ND の向きと旗、段 5b-1a：PFD の ILS の受信機、段 5b-1b：ND の APP、段 5b-2a：ND の VOR、段 5b-2b：VOR・ADF の針、段 5c-1：CDU の EFIS 操作とパネルの故障、段 5c-2a：ND の DATA、段 5c-2b：ND の POS、段 5c-3a：ND の地図の記号、段 5c-3b：ND の出発・到着空港と滑走路、段 5c-3c：手動同調の VOR のコースの線は済）
+### 表示（PFD・ND・EICAS）：作り直し中（5-2 段 1：表示器と EIU、段 2：ソース選択の比較、段 3：速度テープ、段 4a：PFD の姿勢・方位・昇降率の旗、段 4b：気圧、段 4c：PLI と VR の R、段 4d：FPV と旗、段 4e：ILS の表示、段 5a：ND の向きと旗、段 5b-1a：PFD の ILS の受信機、段 5b-1b：ND の APP、段 5b-2a：ND の VOR、段 5b-2b：VOR・ADF の針、段 5c-1：CDU の EFIS 操作とパネルの故障、段 5c-2a：ND の DATA、段 5c-2b：ND の POS、段 5c-3a：ND の地図の記号、段 5c-3b：ND の出発・到着空港と滑走路、段 5c-3c：手動同調の VOR のコースの線、段 5d：HDG REF は済）
 - 実機に合わせた点（段 5c-3a、ND の地図の記号）：局・fix・空港は MAP と MAP CTR でだけ出る（前はどのモードでも）。VOR L・R が同調している局は STA に関わらず緑で出る（FCOM p.1145。前は STA のときだけ）。STA は 10・20・40 NM で高・低高度の局、80 NM 以上で高高度の局だけ（FCOM p.1040。前は全部）。記号が表示できる数（60）を超えると EXCESS DATA が出る（FCOM p.1111。前は黙って捨てた）。109 の ND は GS だけで TAS を出さない（FCOM p.1141）。
   - 残り（推定）：高高度の局は X-Plane の受信範囲（100 NM 以上）で見分ける。EXCESS DATA の色。遠くの空港・局は XTLua の一覧に無いので出ない。
 - 実機に合わせた点（段 5c-3b、ND の出発・到着空港と滑走路）：出発・到着空港は ARPT に関わらず MAP・MAP CTR・PLAN でいつも白で出る（FCOM p.1149。前は経路の点の星）。80 NM 以上は空港の記号と ID、選んだ滑走路の番号と滑走路に沿う線、40 NM 以下は選んだ滑走路を縮尺どおりと両端から 14.2 NM の破線、閾値に番号。経路の点は MAP・MAP CTR・PLAN だけ（FCOM p.1148。前は VOR でも出た）。
   - 残り（推定）：滑走路は X-Plane の FMS の経路の RW の項目（DEP ARR で選んだもの）と CIFP の閾値から作る。RTE の RUNWAY の欄は経路に入らない（FMC の作り直しで）。記号の大きさ、線の向き、破線の長さと間。MAP CTR の縮尺は利用者に確認中。
 - 実機に合わせた点（段 5c-3c、ND のコースの線）：CDU の NAV RADIO で手動同調した VOR は、MAP と MAP CTR で局を通る選んだコースの線と、コース・反対の数字が出る（FCOM p.1145。前は無し）。
   - 残り（推定）：線の色（緑）、破線、地図の端までの長さ、数字の位置。コースは機体の磁気偏差で真方位にする。NAV RADIO の CRS は手動同調の後も「---」にならない（FMC の作り直しで）。
+- 実機に合わせた点（段 5d、HDG REF）：HDG REF の TRUE（と NORM の極地域）で PFD・ND の方位・航跡・ローズ・風が真方位になり、PFD は枠つきの TRU、ND は白枠の TRU（真北のまま 800 fpm を超えて 2,000 ft 降りると琥珀で 10 秒点滅）、TRU から MAG に戻すと MAG に 10 秒の枠（FCOM p.998、p.1046、p.1110、p.1142。前はスイッチが動くだけ）。AFDS は MCP の方位を真方位として扱い、HDG SEL のときに切り替えると HDG HOLD になる。
+  - 残り：NORM の極地域で HDG SEL・HDG HOLD・LOC が働かなくなること（AFDS の作り直しで）。FMC の経路のコースは磁方位のまま（FMC の作り直しで）。降下の判定の細部、点滅の速さ、ラベルの字体は推定。
 - 実機に合わせた点（段 5c-2b、ND の POS）：EFIS 操作パネルの POS を入れると、MAP・MAP CTR で IRU の位置（星）と GPS の位置が出て、CDU で同調した VOR L・R への radial（緑の線と R-xxx。DME があればその距離まで印つき、無ければ画面の端まで）が出る（FCOM p.1040・p.1145・p.1150。前は何も出なかった）。
   - 残り（推定）：IRU と GPS の位置は X-Plane の位置そのもので FMC の位置と同じなので、記号はいつも飛行機の記号に重なる（IRU のずれは作らない）。radial の「画面の端」と文字の位置は推定。
 - 実機に合わせた点（段 5c-2a、ND の DATA）：EFIS 操作パネルの DATA を入れると、PLAN・MAP・MAP CTR で経路の各点の下に、その点の高度と FMC の ETA が出る（現用点はマゼンタ、ほかは白。FCOM p.1040・p.1148。前は何も出なかった）。ETA は FMC が各点について出し、ND の右上の現用点の ETA と一致する。

@@ -5,7 +5,9 @@
 -- its own side's heading and track (FCOM p.1109-1110, 109: MAP track up,
 -- VOR and APP heading up, PLN north up). Before, both NDs used the
 -- Captain's heading and track and X-Plane's map mode, which made VOR track
--- up.
+-- up. Step 5d: the heading and track in the heading reference, from the
+-- display glue (laminar/B747/pfd/capt|fo/hdg_deg, trk_deg: magnetic, or
+-- true with TRU).
 local T = dofile("tests/lib/check.lua")("nd_orientation")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
@@ -15,12 +17,12 @@ rt:set("laminar/B747/debug/nd", -3)     -- stop before the navigation data files
 local function frames(seconds)
     for _ = 1, math.floor(seconds * 30 + 0.5) do rt:frame(1 / 30) end
 end
-local I = "sim/cockpit2/gauges/indicators/"
+local P = "laminar/B747/pfd/"
 local ND = "laminar/B747/nd/"
-rt:set(I .. "heading_AHARS_deg_mag_pilot", 100)
-rt:set(I .. "ground_track_mag_pilot", 106)
-rt:set(I .. "heading_AHARS_deg_mag_copilot", 101)
-rt:set(I .. "ground_track_mag_copilot", 107)
+rt:set(P .. "capt/hdg_deg", 100)
+rt:set(P .. "capt/trk_deg", 106)
+rt:set(P .. "fo/hdg_deg", 101)
+rt:set(P .. "fo/trk_deg", 107)
 rt:set(ND .. "mode/capt/sel_dial_pos", 2)                          -- MAP
 rt:set(ND .. "mode/fo/sel_dial_pos", 1)                            -- VOR
 rt:callout("flight_start")
@@ -35,5 +37,9 @@ T.equal(rt:get(ND .. "up/fo"), 107, "the F/O's MAP: the copilot track")
 rt:set(ND .. "mode/capt/sel_dial_pos", 3)                          -- PLN
 frames(0.1)
 T.equal(rt:get(ND .. "up/capt"), 0, "PLN: north up")
+rt:set(ND .. "mode/capt/sel_dial_pos", 2)                          -- MAP
+rt:set(P .. "capt/trk_deg", 110)                                   -- TRU: the track true
+frames(0.1)
+T.equal(rt:get(ND .. "up/capt"), 110, "MAP in TRU: the true track up (step 5d)")
 
 T.done()
