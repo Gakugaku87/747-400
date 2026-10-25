@@ -303,3 +303,29 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 10. 最小機動速度帯と最小速度帯を離陸滑走中・浮揚直後にどう出すか（「最初のフラップ上げで表示」は最小機動速度だけの記述）。
 11. Terrain Radar プラグインを使う前提を残すか（カスタム acf 用の descriptor を作るか）。
 12. APU 始動中に機長表示を消す処理（fltInst02.lua:3247-3250）が実機の挙動か。
+
+## 10. 5-2 の段取りと段 1 の計画（2026-10-25）
+
+- 5-2 は段に分ける（§8 の作り直しの分け方に沿う）：
+  - 段 1：表示器と EIU（DSP-27・28・29・30）。表示器 6 台の電源と故障、INBD・LWR の選択器と自動切替、EIU 3 台の電源・故障・選択（各席の ISS と中央の EIU SEL）、内容ごとの輝度。
+  - 段 2：ソース選択の残りと比較（DSP-02・14・32）。FLT DIR・NAV・EIU（ILS 受信機）、SOURCE SEL・SNGL SOURCE、ATTITUDE・HEADING・TRACK。
+  - 段 3：速度テープ（DSP-05〜08・13・34）。
+  - 段 4：気圧と PFD の記号・旗・方位（DSP-01・04・11・12。承認済みのパネル）。
+  - 段 5：ND（DSP-03・15・16・17・20・21 の残り・22・23・31・35）。
+  - 段 6：EICAS の形式（DSP-24・25・26）と時計（DSP-33）。
+- 段 1 の作り方：新しいモデル `B747.60.display_model.lua` とグルー `B747.60.xt.displays.lua`（計器のモジュール `B747.60.xt.fltInst`）。前の `fltInstsetCRTs()`（選択器の 81 通りのうち 11 通りの手書きの表、資料に無い入れ替え）を置き換える。パネルとの約束（内容ごとの位置 `flt_inst/display/*_pos` と電源 `electrical/display_has_power[0..5]`）は変えない。
+  - 表示器：機長の outboard・inboard は APU standby bus、upper は main standby bus、副操縦士の 2 台と lower は F/O transfer bus（FCOM p.800、p.804。いまの電源の割り当てのまま）。故障は新設 `displays/fail[6]`。
+  - 選択器（FCOM p.1045）：INBD の EICAS は inboard に secondary EICAS（primary をほかに出せないときは primary）、NORM は ND（outboard が使えなければ PFD）、PFD は inboard に PFD。LWR の EICAS PRI は lower に primary、NORM は DSP の選択（upper が使えなければ primary）、ND はその席の ND。upper が使えなければ primary は lower へ（LWR が NORM のとき。FCOM p.1072）。
+  - パネルは同じ内容を 2 か所に出せない。資料に無い組み合わせ（故障の無いときの INBD PFD・EICAS、LWR EICAS PRI・ND で空いた表示器、両席の選択器のぶつかり）は、選んだ表示器に内容を出し、空いた表示器は消す（推定）。両席の LWR がぶつかるときは EICAS PRI、機長の ND、副操縦士の ND の順（推定）。
+  - EIU（FCOM p.1044、p.1529）：L は main standby bus、C は captain transfer bus、R は F/O transfer bus（FCOM p.800、p.804）、故障は新設 `eiu/fail[3]`。各席の ISS の EIU（AUTO は機長 L→C→R、副操縦士 R→C→L）が使えなければ、その席の PFD・ND は消える。EICAS は中央の EIU SEL（AUTO は L→C→R）。手で選んだ EIU が壊れても自動で切り替えない。standby の電源（AC が無い）で L の EIU が壊れると全部の表示器が消える。>EIU LEFT（L の故障。空中は出さない：FCOM p.1199）。
+  - 輝度：内容の輝度を、出している表示器のつまみで（いまは内容に付いたつまみ：DSP-30）。照明のモジュールが、新設の `displays/content_unit[6]` を読む。
+
+## 11. 実装（5-2 段 1、2026-10-25：表示器と EIU）
+
+- 計器のモジュール（`B747.60.xt.fltInst`）に、表示器と EIU のモデル `B747.60.display_model.lua` とグルー `B747.60.xt.displays.lua` を足した（試験 `tests/displays/display_model_test.lua`・`display_module_test.lua`、X-Plane の `s46_displays`）。§10 の計画のとおり。前の `fltInstsetCRTs()`（81 通りのうち 11 通りの表と資料に無い入れ替え：DSP-28）は外した。
+- 選択器の向き：機長の INBD は 0 EICAS・1 NORM・2 PFD、LWR は 0 EICAS PRI・1 NORM・2 ND。副操縦士のつまみは逆向き（INBD 0 PFD・2 EICAS、LWR 0 ND・2 EICAS PRI）。EIU の選択器は機長と中央が 0 L・1 AUTO・2 C・3 R、副操縦士が 0 L・1 C・2 AUTO・3 R（3D の回転から）。
+- 内容の位置（パネルとの約束のまま）：機長の PFD は outboard 0・inboard 1、ND は inboard 0・lower 1、primary EICAS は upper 0・lower 1・機長の inboard 2・副操縦士の inboard 3、secondary EICAS は lower 0・副操縦士の inboard 1・機長の inboard 2（outboard・upper の値もある）。出ない内容は `display_has_power` を 0 に。
+- 表示器の故障（新設 `displays/fail[6]`：機長 outboard・機長 inboard・upper・lower・副操縦士 inboard・副操縦士 outboard）で自動切替：outboard が使えなければ INBD NORM で PFD が inboard へ、upper が使えなければ LWR NORM で primary EICAS が lower へ（FCOM p.1045、p.1072）。INBD EICAS は、primary をほかに出せないとき primary、ほかは secondary（FCOM p.1045、p.1073 の図と同じ）。
+- EIU（新設 `eiu/fail[3]`、使っている EIU は新設 `eiu/used[3]`：機長・副操縦士・EICAS、1 L・2 C・3 R・0 なし）：電源は L が main standby bus、C が captain transfer bus、R が F/O transfer bus。AUTO は機長 L→C→R、副操縦士 R→C→L、EICAS L→C→R。手で選んだ EIU が使えなければ、その席の PFD・ND（EICAS なら両 EICAS）は消える。AC が無い（standby の電源）で L が使えなければ全部が消える。>EIU LEFT（advisory 91。地上だけ）。
+- 輝度：照明のモジュールが新設 `displays/content_unit[6]`（内容ごとの表示器）を読み、内容の rheostat に、出している表示器のつまみの値を使う（DSP-30。機長 outboard のつまみは 2、inboard は 0、upper 9、lower 10、副操縦士 inboard 3、outboard 5）。
+- X-Plane での確認（カスタム acf）：`s46_displays` 26/26。通常の配置、機長の outboard と upper の故障で PFD が inboard・primary EICAS が lower（写真）、機長の INBD EICAS で inboard に secondary EICAS（写真）、副操縦士の LWR ND で lower に副操縦士の ND（写真）、副操縦士の INBD PFD、L の EIU の故障で AUTO は C（空中で >EIU LEFT なし）、機長の EIU を L にすると機長の PFD・ND が消え（写真）、戻すと戻る。Log.txt に Lua とパネルの誤りなし。

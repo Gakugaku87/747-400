@@ -53,6 +53,16 @@ B747DR_flt_inst_capt_nd_pos      		= deferred_dataref("laminar/B747/flt_inst/dis
 B747DR_flt_inst_fo_nd_pos      			= deferred_dataref("laminar/B747/flt_inst/display/fo/nd_pos", "number")
 B747DR_flt_inst_eicas_pos      			= deferred_dataref("laminar/B747/flt_inst/display/eicas_pos", "number")
 B747DR_flt_inst_pri_eicas_pos      		= deferred_dataref("laminar/B747/flt_inst/display/pri_eicas_pos", "number")
+-- the display units and EIUs (B747.60.display_model.lua, 5-2 step 1): failures
+-- of the six units (Captain outboard, Captain inboard, upper, lower, F/O
+-- inboard, F/O outboard) and of the EIUs (L, C, R); the EIU each of Captain,
+-- F/O and EICAS uses (1 L, 2 C, 3 R, 0 none); the unit (as above, 1-6, 0 not
+-- shown) showing each display (as display_has_power: Captain PFD, F/O PFD,
+-- F/O ND, Captain ND, primary EICAS, secondary EICAS)
+B747DR_dsp_unit_fail            = deferred_dataref("laminar/B747/displays/fail", "array[6]")
+B747DR_dsp_eiu_fail             = deferred_dataref("laminar/B747/eiu/fail", "array[3]")
+B747DR_dsp_eiu_used             = deferred_dataref("laminar/B747/eiu/used", "array[3]")
+B747DR_dsp_content_unit         = deferred_dataref("laminar/B747/displays/content_unit", "array[6]")
 
 B747DR_flt_inst_inbd_disp_fo_sel_dial_pos       = deferred_dataref("laminar/B747/flt_inst/fo_inbd_display/sel_dial_pos", "number")
 B747DR_flt_inst_lwr_disp_fo_sel_dial_pos        = deferred_dataref("laminar/B747/flt_inst/fo_lwr_display/sel_dial_pos", "number")

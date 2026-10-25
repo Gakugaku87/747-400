@@ -293,5 +293,7 @@ VsData = {
 }
 
 dofile("B747.60.xt.fltInst02.lua")
+-- the display units and EIUs (5-2 step 1)
+dofile("B747.60.xt.displays.lua")
 dofile("B747.60.xt.fltInst03.lua")
 dofile("B747.60.xt.fltInst04.lua")

@@ -25,7 +25,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 火災防護（ATA 26） | 作り直し済み（3-4：エンジン・APU・貨物室の検知と消火、車輪格納部、ダクトリーク、煙、試験、スクイブ試験） | FUEL CONTROL の赤灯（3D）、M869 とホーンの音、火の元は失敗の dataref（X-Plane に無いもの） |
 | 操縦系統（ATA 27） | 作り直し中（4-1 段 1：フラップの FCU、段 2：SRM の外側エルロンのロックアウト・ラダー比変換器・安定板トリム・speed trim、グリーンバンド、段 3：スピードブレーキ、段 4：横操縦・遮断弁・ヨーダンパーの INOP） | フラップの拡大・代替の表示のパネル、>STAB GREENBAND、昇降舵の舵角、ヨーダンパーの制御則（AFDS） |
 | 脚・ブレーキ・ステアリング（ATA 32） | 作り直し済み（4-2 段 1〜5：脚の作動・代替下げ・位置監視・表示、ブレーキ、オートブレーキ、ステアリング、ブレーキ温度とタイヤ圧） | AIR/GND SYSTEM と脚の STATUS の一部、tiller の軸が無いときのペダル（実機ではない手当て） |
-| 表示（PFD・ND・EICAS） | 未着手（電源と点灯の修正だけ。ND の TCAS は 5-1 段 5 で） | ソース選択、速度テープの帯、405 型の RADIO/BARO の minimums、ND の DATA/POS |
+| 表示（PFD・ND・EICAS） | 作り直し中（5-2 段 1：表示器と EIU、選択器と自動切替、内容ごとの輝度。ND の TCAS は 5-1 段 5 で） | ソース選択、速度テープの帯、405 型の RADIO/BARO の minimums、ND の DATA/POS、compact EICAS |
 | 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記） | FMC の位置への GPS の更新、PFD の昇降率の源、GPWS の地形の look-ahead、PFD の TCAS の RA の表示、ND の WXR FAIL・VAR の表示、PWS、無線の自動同調 |
 | FMC | 未着手 | 経路モデル、ホールド、LNAV・VNAV、予測 |
 | CDU | 未着手 | 3 台が 1 つを共有、MOD/EXEC、入力の検査、データリンク |
@@ -274,7 +274,10 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - オートブレーキの推定：車輪のスピンアップと RTO の 85 kt は IRS の対地速度で見る（前側 8 輪の車輪速の代わり）、減速の制御のゲイン（カスタム acf に合わせた）、disarm の後に圧が抜ける時間（2 秒）、推力レバーのアイドルと前進の角度。AUTOBRAKES のうち、セレクター OFF なのに遮断弁の下流が高圧のときと、RTO の開始での故障・手動の override は無い。
 - 残り：AIR/GND SYSTEM、GEAR MONITOR・A/G DISAGREE・PARK BRK VALVE の STATUS（GEAR-22 の残り）、CONFIG GEAR のラッチと GND PROX GEAR OVRD（GEAR-17 の残り）、ドアの箱の空箱。
 
-### 表示（PFD・ND・EICAS）：未着手（電源と点灯の修正だけ）
+### 表示（PFD・ND・EICAS）：作り直し中（5-2 段 1：表示器と EIU は済）
+
+- 実機に合わせた点（段 1、表示器と EIU）：INBD・LWR の選択器を FCOM の規則どおりにした（前は 81 通りのうち 11 通りだけを表で持ち、資料に無い入れ替えもした）。表示器 6 台の故障で、outboard が使えなければ PFD が inboard に、upper が使えなければ primary EICAS が lower に自動で移る。EIU 3 台（電源と故障）を作り、各席の EIU 選択器の AUTO（機長 L→C→R、副操縦士 R→C→L）と中央の EIU SEL（EICAS）、手で選んだ EIU が壊れると切り替えずにその表示が消えること、standby の電源で L の EIU が壊れると全部の表示が消えること、>EIU LEFT（地上だけ）。内容の明るさは、出している表示器のつまみで変わる（DSP-27〜30）。
+  - 故障の無いときに選択器で内容を別の表示器に出すと、もとの表示器は消える（実機は同じ内容を 2 面に出せるが、パネルが 1 か所にしか描けない：推定）。compact EICAS（表示器 1 台のとき）は段 6 で。
 
 - PFD の方位目盛りが ND の向きで回る（DSP-01）。
 - ソースの選択（FLT DIR、NAV、EIU、AIR DATA、IRS）が無い（DSP-02・03）。PFD の故障旗が少ない（DSP-04）。

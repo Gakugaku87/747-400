@@ -74,7 +74,7 @@
 | xtlua_keysystems | B747.20.hydraulics | 92 / 555 | 油圧パネルと表示 | |
 | xtlua_keysystems | B747.30.fltMgmt | 112 / 452 | IRU のモードセレクタ、トランスポンダのパネル | |
 | xtlua_keysystems | B747.55.air | 170 / 1220 | 空調パック、抽気、与圧、温度 | |
-| xtlua_keysystems | B747.60.fltInst | 459 / 4716 | 飛行計器。`fltInst02` が PFD・EICAS・ND 補助・表示切替（`dsp`）、`03`・`04` が時計 | |
+| xtlua_keysystems | B747.60.fltInst | 459 / 4716 | 飛行計器。`fltInst02` が PFD・EICAS・ND 補助、`03`・`04` が時計。表示器と EIU は 5-2 段 1 で `B747.60.display_model.lua`・`B747.60.xt.displays.lua`（§4.18） | |
 | xtlua_keysystems | B747.68.fms | 199 / 13196 | FMC/CDU（3 台、詳細は §6） | |
 | xtlua_keysystems | B747.70.autopilot | 274 / 5449 | AFDS（MCP、FMA、LNAV/VNAV）、autothrottle、autoland（`B747.autoland`）、監視（`monitor`） | throttles、fms_advance |
 | xtlua_keysystems | B747.90.lighting | 215 / 2403 | 照明（計器、フラッド、外部灯）、気象レーダーの表示操作（`wxr`） | |
@@ -402,6 +402,12 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 段 5c（気象レーダー）：気象レーダーの操作のモデル（`B747.34.wxr_model.lua`）を、グルー `B747.34.xt.wxr.lua` が TCAS の次に回す（`B747_wxr()`）。中身は notes/ATA-34.md §17・§18。描画は X-Plane のレーダー。
   - 読むもの：570 のパネル（TFR・TEST・LR/T・RR/T はこのモジュールのコマンド `wxr/buttons/*`。TILT・MAP GAIN・WX・WX+T・MAP・GCS は X-Plane の `sim/instruments/EFIS_wxr_*` を `replace_command` で受ける）、X-Plane の `EFIS_weather_on`（各 EFIS の WXR）、各 ND のレンジ、AC bus 1・2（R/T：推定）、`rel_wxr_radar`、`irs/att_valid` と各席の IRS 選択。
   - 書くもの：X-Plane の `EFIS_weather_mode`・`_tilt`・`_gain`・`_gcs`・`_stab`（左右）と `sector_width`・`antenna_limit`、新設 `wxr/lamp/sel[2]`・`gcs[2]`・`test`・`rt`（照明のモジュールがパネルの灯に）。ND の注記は ND のモジュールが X-Plane の左右の値から作る。
+
+### 4.18 表示（5-2）
+
+- 段 1（表示器と EIU）：モデル `B747.60.display_model.lua` を、グルー `B747.60.xt.displays.lua`（計器のモジュールに dofile）が毎フレーム回す（`B747_displays()`。前の `fltInstsetCRTs()` の代わり）。中身は notes/ATA-31.md §10・§11。
+  - 読むもの：INBD・LWR の選択器（副操縦士は逆向き）、APU standby・main standby・captain transfer・F/O transfer bus と `any_ac`、新設の故障 `displays/fail[6]`（機長 outboard・機長 inboard・upper・lower・副操縦士 inboard・副操縦士 outboard）・`eiu/fail[3]`、各席と中央の EIU 選択器、PSEU の空地。
+  - 書くもの：パネルとの約束の `flt_inst/display/*_pos`（内容の位置）と `electrical/display_has_power[0..5]`（内容の電源。6 か 0）、新設 `displays/content_unit[6]`（内容ごとの表示器：照明のモジュールが輝度のつまみに使う）・`eiu/used[3]`（機長・副操縦士・EICAS が使う EIU）、>EIU LEFT（advisory 91）。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 
