@@ -31,6 +31,8 @@ B747DR_ra_fo_flag               = find_dataref("laminar/B747/ra/fo/flag")
 B747DR_ra_fo_value              = find_dataref("laminar/B747/ra/fo/value")
 B747DR_ra_gpwc                  = find_dataref("laminar/B747/ra/gpwc")
 B747DR_ra_gpwc_valid            = find_dataref("laminar/B747/ra/gpwc_valid")
+B747DR_ra_CAS_advisory          = find_dataref("laminar/B747/CAS/advisory_status")
+local ADV_SNGL_SOURCE_RA = 266                  -- >SNGL SOURCE RA
 
 -- X-Plane's radio altimeters read about 8 ft with the wheels on the ground;
 -- the PFD has shown them less 8 ft (estimate: kept as the calibration)
@@ -120,6 +122,8 @@ function B747_ra()
     if g.valid and B747DR_ra_gpwc ~= g.value then B747DR_ra_gpwc = g.value end
     v = B747_nav_flag(g.valid)
     if B747DR_ra_gpwc_valid ~= v then B747DR_ra_gpwc_valid = v end
+    -- >SNGL SOURCE RA: both PFDs on one radio altimeter (FCOM p.1197)
+    B747_nav_put(B747DR_ra_CAS_advisory, ADV_SNGL_SOURCE_RA, B747_nav_flag(c.src ~= nil and c.src == f.src))
 end
 
 function B747_ra_flight_start()

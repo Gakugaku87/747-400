@@ -63,6 +63,9 @@ B747DR_dsp_unit_fail            = deferred_dataref("laminar/B747/displays/fail",
 B747DR_dsp_eiu_fail             = deferred_dataref("laminar/B747/eiu/fail", "array[3]")
 B747DR_dsp_eiu_used             = deferred_dataref("laminar/B747/eiu/used", "array[3]")
 B747DR_dsp_content_unit         = deferred_dataref("laminar/B747/displays/content_unit", "array[6]")
+-- failures of the EFIS control panels (L, R) and the EICAS display select panel (5-2 step 2)
+B747DR_dsp_efis_fail            = deferred_dataref("laminar/B747/efis/fail", "array[2]")
+B747DR_dsp_dsp_fail             = deferred_dataref("laminar/B747/dsp/fail", "number")
 
 B747DR_flt_inst_inbd_disp_fo_sel_dial_pos       = deferred_dataref("laminar/B747/flt_inst/fo_inbd_display/sel_dial_pos", "number")
 B747DR_flt_inst_lwr_disp_fo_sel_dial_pos        = deferred_dataref("laminar/B747/flt_inst/fo_lwr_display/sel_dial_pos", "number")

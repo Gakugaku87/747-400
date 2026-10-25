@@ -1,9 +1,11 @@
 -- 747-400 display units and EIUs (5-2 step 1): the six display units' power
 -- and failures, the INBD and LWR display selectors with the automatic
 -- switching, the three EIUs (power, failures, each pilot's EIU source
--- selector and the centre EIU SEL), and which unit shows each display.
--- Logic and sources: docs/overhaul/notes/ATA-31.md §2.2, §3.2, §4.1, §10
--- (FCOM p.800, p.804, p.1044-1045, p.1071-1073, p.1199, p.1529).
+-- selector and the centre EIU SEL), and which unit shows each display. With
+-- step 2, the source selections both pilots share (>SOURCE SEL EIU, F/D,
+-- NAV) and the EFIS and EICAS control panels' messages.
+-- Logic and sources: docs/overhaul/notes/ATA-31.md §2.2, §3.2, §4.1, §10, §12
+-- (FCOM p.800, p.804, p.1043-1045, p.1071-1073, p.1197-1199, p.1529).
 --
 --   local D = B747_display_model            -- in XTLua, after dofile
 --   local D = dofile(".../B747.60.display_model.lua")  -- in the tests
@@ -55,6 +57,12 @@ function M.inputs()
         eiu_sel = {M.SEL_AUTO, M.SEL_AUTO, M.SEL_AUTO},     -- Captain, F/O, EICAS (centre)
         standby_power = false,      -- no AC: the airplane on standby power
         on_ground = true,
+        fd = {1, 3},                -- each pilot's FLT DIR: the FCC (1 L, 2 C, 3 R)
+        fmc = {1, 2},               -- each pilot's NAV: the FMC (1 L, 2 R), 0 a CDU
+        efis_power = {true, true},  -- EFIS control panel L: main standby bus,
+                                    -- R: F/O transfer bus (FCOM p.800, p.804)
+        efis_fail = {false, false},
+        dsp_fail = false,           -- the EICAS display select panel
     }
 end
 
@@ -68,6 +76,10 @@ function M.new()
             pos = six(0),           -- flt_inst/display/*_pos
             power = six(0),         -- electrical/display_has_power[0..5]
             msg_eiu_left = false,
+            msg_source_sel_eiu = false, msg_source_sel_fd = false, msg_source_sel_nav = false,
+            efis_ok = {true, true},
+            msg_efis_control = {false, false},
+            msg_efis_eicas_cp = false,
         },
     }
 end
@@ -153,6 +165,16 @@ function M.update(s, inp)
     end
     -- >EIU LEFT, inhibited in flight (FCOM p.1199)
     out.msg_eiu_left = (not out.eiu_ok[M.EIU_L]) and inp.on_ground
+    -- both pilots' displays on one EIU, one FCC, one FMC (FCOM p.1197)
+    out.msg_source_sel_eiu = out.eiu[1] ~= 0 and out.eiu[1] == out.eiu[2]
+    out.msg_source_sel_fd = inp.fd[1] == inp.fd[2]
+    out.msg_source_sel_nav = inp.fmc[1] ~= 0 and inp.fmc[1] == inp.fmc[2]
+    -- >EFIS CONTROL L, R: that EFIS control panel inoperative; >EFIS/EICAS C/P:
+    -- both of them and the display select panel (FCOM p.1198-1199), which
+    -- then stands for the two (estimate)
+    for i = 1, 2 do out.efis_ok[i] = inp.efis_power[i] and not inp.efis_fail[i] end
+    out.msg_efis_eicas_cp = not out.efis_ok[1] and not out.efis_ok[2] and inp.dsp_fail
+    for i = 1, 2 do out.msg_efis_control[i] = not out.efis_ok[i] and not out.msg_efis_eicas_cp end
     return out
 end
 

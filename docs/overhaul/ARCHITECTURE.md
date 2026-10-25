@@ -408,6 +408,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 段 1（表示器と EIU）：モデル `B747.60.display_model.lua` を、グルー `B747.60.xt.displays.lua`（計器のモジュールに dofile）が毎フレーム回す（`B747_displays()`。前の `fltInstsetCRTs()` の代わり）。中身は notes/ATA-31.md §10・§11。
   - 読むもの：INBD・LWR の選択器（副操縦士は逆向き）、APU standby・main standby・captain transfer・F/O transfer bus と `any_ac`、新設の故障 `displays/fail[6]`（機長 outboard・機長 inboard・upper・lower・副操縦士 inboard・副操縦士 outboard）・`eiu/fail[3]`、各席と中央の EIU 選択器、PSEU の空地。
   - 書くもの：パネルとの約束の `flt_inst/display/*_pos`（内容の位置）と `electrical/display_has_power[0..5]`（内容の電源。6 か 0）、新設 `displays/content_unit[6]`（内容ごとの表示器：照明のモジュールが輝度のつまみに使う）・`eiu/used[3]`（機長・副操縦士・EICAS が使う EIU）、>EIU LEFT（advisory 91）。
+- 段 2（ソース選択の比較）：同じグルーが FLT DIR・NAV の選択器と新設の故障 `efis/fail[2]`・`dsp/fail` を読み、>SOURCE SEL EIU・F/D・NAV、>EFIS CONTROL L・R、>EFIS/EICAS C/P を書く。>ATTITUDE・>HEADING は航法センサーの IRS のグルー（X-Plane の両側の AHRS の差）、>SNGL SOURCE RA は電波高度計のグルー。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 
