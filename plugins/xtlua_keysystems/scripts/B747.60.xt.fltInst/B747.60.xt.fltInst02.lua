@@ -134,8 +134,6 @@ simDR_EFIS_terr_on_capt                  = find_dataref("sim/cockpit2/EFIS/EFIS_
 simDR_EFIS_terr_on_fo                  = find_dataref("sim/cockpit2/EFIS/EFIS_terrain_on_copilot")
 B747DR_nd_capt_tfc	                = find_dataref("laminar/B747/nd/capt/tfc")
 B747DR_nd_fo_tfc	                = find_dataref("laminar/B747/nd/fo/tfc")
-B747DR_nd_capt_tcas_off             = find_dataref("laminar/B747/nd/capt/tcas_off")
-B747DR_nd_fo_tcas_off         	    = find_dataref("laminar/B747/nd/fo/tcas_off")
 B747DR_pfd_mode_capt		        = find_dataref("laminar/B747/pfd/capt/irs")
 B747DR_pfd_mode_fo                  = find_dataref("laminar/B747/pfd/fo/irs")
 B747DR_pfd_mode_show_mins          	= find_dataref("laminar/B747/pfd/show_mins")
@@ -143,7 +141,6 @@ B747DR_ref_thr_limit_mode           = find_dataref("laminar/B747/engines/ref_thr
 B747DR_nd_fo_heading_bug            = find_dataref("laminar/B747/nd/mode/fo/show_heading_bug")
 B747DR_nd_capt_heading_bug          = find_dataref("laminar/B747/nd/mode/capt/show_heading_bug")
 B747DR_ap_heading_deg               = deferred_dataref("laminar/B747/autopilot/heading/degrees", "number")
-B747DR_xpdr_sel_pos                 = find_dataref("laminar/B747/flt_mgmt/txpdr/mode_sel_pos")
 --simDR_acf_weight_payload_kg         = find_dataref("sim/flightmodel/weight/m_fixed")
 simDR_acf_weight_total_kg           = find_dataref("sim/flightmodel/weight/m_total")
 simDR_wing_flap1_deg                = find_dataref("sim/flightmodel2/wing/flap1_deg")
@@ -278,8 +275,10 @@ B747DR_nd_arpt_capt_switch_pos                  = deferred_dataref("laminar/B747
 B747DR_nd_data_capt_switch_pos                  = deferred_dataref("laminar/B747/nd/data/capt/switch_pos", "number")
 B747DR_nd_pos_capt_switch_pos                   = deferred_dataref("laminar/B747/nd/pos/capt/switch_pos", "number")
 B747DR_nd_terr_capt_switch_pos                  = deferred_dataref("laminar/B747/nd/terr/capt/switch_pos", "number")
-B747DR_nd_capt_traffic_Selected                 = deferred_dataref("laminar/B747/nd/traffic/capt/selected", "number")
-B747DR_nd_fo_traffic_Selected                   = deferred_dataref("laminar/B747/nd/traffic/fo/selected", "number")
+-- the TFC switches' pushes, for the TCAS model (B747.34.xt.tcas.lua), which
+-- keeps each ND's traffic display and writes nd/capt|fo/tfc
+B747DR_nd_capt_tfc_pushes                       = find_dataref("laminar/B747/nd/traffic/capt/pushes")
+B747DR_nd_fo_tfc_pushes                         = find_dataref("laminar/B747/nd/traffic/fo/pushes")
 B747DR_nd_capt_terr                          = deferred_dataref("laminar/B747/nd/data/capt/terr", "number")
 B747DR_nd_fo_terr                          	= deferred_dataref("laminar/B747/nd/data/fo/terr", "number")
 B747DR_nd_capt_vor_ndb                          = deferred_dataref("laminar/B747/nd/data/capt/vor_ndb", "number")
@@ -1141,9 +1140,7 @@ end
 function B747_nd_traffic_capt_switch_CMDhandler(phase, duration)
     if phase == 0 then
         B747DR_nd_traffic_capt_switch_pos = 1
-        --simCMD_EFIS_tcas:once()
-        B747DR_nd_capt_traffic_Selected=1-B747DR_nd_capt_traffic_Selected
-	
+        B747DR_nd_capt_tfc_pushes = B747DR_nd_capt_tfc_pushes + 1
     elseif phase == 2 then
         B747DR_nd_traffic_capt_switch_pos = 0
     end
@@ -1296,10 +1293,7 @@ end
 function B747_nd_traffic_fo_switch_CMDhandler(phase, duration)
     if phase == 0 then
         B747DR_nd_traffic_fo_switch_pos = 1
-        --simCMD_EFIS_tcas:once()
-	
-        B747DR_nd_fo_traffic_Selected=1-B747DR_nd_fo_traffic_Selected
-	
+        B747DR_nd_fo_tfc_pushes = B747DR_nd_fo_tfc_pushes + 1
     elseif phase == 2 then
         B747DR_nd_traffic_fo_switch_pos = 0
     end
@@ -2470,43 +2464,12 @@ end
 
 
 ----- ND MODES --------------------------------------------------------------------------
-local seenRASet=0
+-- TFC, TCAS OFF and the ND's traffic come from the TCAS model
+-- (B747.34.xt.tcas.lua) and B747.61.xt.nd.lua; X-Plane's map draws no traffic
 function B747_nd_EFIS_map_modes()
 
     local mapCenter=simDR_EFIS_map_is_center--force read state
-    local capttfc=0
-    local fotfc=0
-    local capttcas_off=0
-    local fotcas_off=0
-    if seenRASet==0 and B747DR_xpdr_sel_pos==4 then
-      seenRASet=1
-    end
-    if seenRASet==0 and B747DR_pfd_mode_capt==1 then --TA/RA never selected, ND IRS aligned, TCAS OFF ND Messages
-      capttcas_off=1
-    elseif B747DR_xpdr_sel_pos<=2 and B747DR_pfd_mode_capt==1 and B747DR_nd_capt_traffic_Selected==1 then
-      capttcas_off=1
-    elseif B747DR_xpdr_sel_pos>2 and B747DR_pfd_mode_capt==1 and B747DR_nd_capt_traffic_Selected==1 then
-      capttfc=1
-    end
-    
-    if seenRASet==0 and B747DR_pfd_mode_fo==1 then --TA/RA never selected, ND IRS aligned, TCAS OFF ND Messages
-      fotcas_off=1
-    elseif B747DR_xpdr_sel_pos<=2 and B747DR_pfd_mode_fo==1 and B747DR_nd_fo_traffic_Selected==1 then
-      fotcas_off=1
-    elseif B747DR_xpdr_sel_pos>2 and B747DR_pfd_mode_fo==1 and B747DR_nd_fo_traffic_Selected==1 then
-      fotfc=1
-    end
-    
-    if capttfc==1 or fotfc==1 then
-      simDR_EFIS_tcas_on=1
-    else
-      simDR_EFIS_tcas_on=0
-    end
-    
-    B747DR_nd_capt_tfc=capttfc
-    B747DR_nd_fo_tfc=fotfc
-    B747DR_nd_capt_tcas_off=capttcas_off
-    B747DR_nd_fo_tcas_off=fotcas_off
+    if simDR_EFIS_tcas_on ~= 0 then simDR_EFIS_tcas_on = 0 end
 end
 
 
@@ -2518,7 +2481,7 @@ function B747_nd_track_line()
 
     
 
-    if (B747DR_nd_mode_capt_sel_dial_pos <= 1 and B747DR_nd_center_capt_switch_pos == 0 and (simDR_EFIS_wxr_on > 0.5 or simDR_EFIS_tcas_on > 0.5))
+    if (B747DR_nd_mode_capt_sel_dial_pos <= 1 and B747DR_nd_center_capt_switch_pos == 0 and (simDR_EFIS_wxr_on > 0.5 or B747DR_nd_capt_tfc > 0.5))
         or
         (B747DR_nd_mode_capt_sel_dial_pos == 2 and B747DR_nd_center_capt_switch_pos == 0)
     then
@@ -2526,7 +2489,7 @@ function B747_nd_track_line()
     else
       B747_exp_capt_nd_track_line_on = 0
     end
-    if (B747DR_nd_mode_fo_sel_dial_pos <= 1 and B747DR_nd_center_fo_switch_pos == 0 and (simDR_EFIS_wxr_on > 0.5 or simDR_EFIS_tcas_on > 0.5))
+    if (B747DR_nd_mode_fo_sel_dial_pos <= 1 and B747DR_nd_center_fo_switch_pos == 0 and (simDR_EFIS_wxr_on > 0.5 or B747DR_nd_fo_tfc > 0.5))
         or
         (B747DR_nd_mode_fo_sel_dial_pos == 2 and B747DR_nd_center_fo_switch_pos == 0)
     then
@@ -3356,7 +3319,6 @@ end
 ----- SET STATE TO COLD & DARK ----------------------------------------------------------
 function B747_set_inst_CD()
   simDR_EFIS_tcas_on=0
-  B747DR_nd_capt_tfc=0
     simDR_EFIS_terr_on_fo=0
     simDR_EFIS_terr_on_capt=0
 
@@ -3371,7 +3333,6 @@ function B747_set_inst_ER()
     simDR_EFIS_tcas_on=0
     simDR_EFIS_terr_on_fo=0
     simDR_EFIS_terr_on_capt=0
-    B747DR_nd_capt_tfc=0
 
 	
 end

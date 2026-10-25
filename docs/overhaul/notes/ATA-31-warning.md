@@ -393,7 +393,7 @@ GAP ID 接頭辞：`WARN`。2026-10-23 調査。コード・acf・snd は変更�
 5. X-Plane 本体の高度警報（`_warn_alt_dep_100`）がいつ `baro_altimeter_alert_lit_pilot` を点け、FMOD の altitude イベントがどの場面で鳴るか（WARN-16）。
 6. ATA27 の離陸推力判定値（N1 66.5／66.7／75.0）の単位と意味（N1 % か、別の量か）。資料に単位の記載が無い。
 7. TLRA（度）とレバー位置 `laminar/B747/engine/throttle`（0〜1）の対応。55°（着陸形態）、43°/40°（スピードブレーキ警報）の位置。資料に記載なし。
-8. `>TCAS RA CAPTAIN, F/O` の実際の表示文言（`CAPT` 表記か）。EICAS の 1 行の最大文字数は資料に記載なし。
+8. `>TCAS RA CAPTAIN, F/O` の実際の表示文言（`CAPT` 表記か）。EICAS の 1 行の最大文字数は資料に記載なし。→ 2026-10-25（5-1 段 5）に FCOM の `>TCAS RA CAPTAIN` にした（16 文字。表の最長の名前と同じ）。
 9. memo が 1 ページに入りきらないときの扱い（memo だけのページを作るか）。FCOM に明記なし。
 10. 着陸時の CONFIG GEAR が GND PROX GEAR OVRD で消えるか（FCOM は消える、ATA31 は残る）。FCOM を採ったが、実機の版の違いの可能性がある。
 11. 失速警報の地上での扱い、過回転シェーカーの条件（資料に記載なし）。

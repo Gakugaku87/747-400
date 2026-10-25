@@ -480,7 +480,7 @@ B747_CASadvisoryMsg   = {
     {DRindex = 277, name = ">STBY BUS MAIN", status = 0},
     {DRindex = 278, name = ">STBY POWER OFF", status = 0},
     {DRindex = 279, name = ">TCAS OFF", status = 0},
-    {DRindex = 280, name = ">TCAS RA CAPT", status = 0},
+    {DRindex = 280, name = ">TCAS RA CAPTAIN", status = 0},
     {DRindex = 281, name = ">TCAS RA F/O", status = 0},
     {DRindex = 282, name = ">TCAS SYSTEM", status = 0},
     {DRindex = 283, name = ">TEMP CARGO A/C", status = 0},

@@ -58,7 +58,7 @@
 | xtlua | B747.10.gear | 165 / 1061 | 脚の上げ下げ、ブレーキ、オートブレーキ | toe_brakes |
 | xtlua | B747.15.com | 565 / 3862 | 無線。ACP（`ap_L/C/R`）、RTP（`rtp_L/C/R`）、VHF/HF、call panel など | |
 | xtlua | B747.25.fuel | 405 / 3720 | 燃料系統（タンク、ポンプ、クロスフィード、移送、ジェティソン、搭載量） | fuel_system |
-| xtlua | B747.34.nav | 72 / 921 | 航法センサー。5-1 で新設（§4.17）。段 1 はエアデータ（ADC 3 台、AIR DATA の選択、OVERSPEED・DISAGREE・高度警報）、段 2 は IRS（アライン、位置の入力、ATT、電源、メッセージ） | |
+| xtlua | B747.34.nav | 72 / 921 | 航法センサー。5-1 で新設（§4.17）。段 1 はエアデータ（ADC 3 台、AIR DATA の選択、OVERSPEED・DISAGREE・高度警報）、段 2 は IRS（アライン、位置の入力、ATT、電源、メッセージ）、段 4 は電波高度計と GPWS、段 5 はトランスポンダと TCAS | |
 | xtlua | B747.35.fire | 99 / 653 | 火災探知と消火（エンジン、APU、貨物室） | |
 | xtlua | B747.36.oxygen | 56 / 327 | 酸素（乗員・乗客・治療用、酸素圧、X-Plane の低酸素）。3-3 で新設（§4.13） | oxygen_system |
 | xtlua | B747.40.engines | 106 / 2247 | エンジン始動・点火・燃料制御・逆推力・APU | |
@@ -392,6 +392,13 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
   - GPWS が読むもの：GPWC の RA、L IRU の慣性昇降率と高度（`irs/nav_valid[0]`、無ければ L ADC）、ADC の CAS（`airdata/valid`）、NAV 1 の LOC・GS の偏位と表示（L ILS、AC standby bus）、NAV 1 の針路と磁気の航跡（back course）、L IRU の roll（`irs/att_valid[0]`）、脚レバー、FCU のフラップ（`flt_ctrls/fcu/te_deg` の最小が 21° 以上で 25 か 30）、PSEU の空中、GND PROX パネル（`button_switch/position[4]`〜`[6]`、G/S INHB は押した回数 `gpws/gs_inhb_pushes`：マニピュレーターが足す）、X-Plane の reactive windshear（`windshear_warning_systems` が 5）、機長の minimums（RADIO/BARO、`radio_altimeter_bug_ft_pilot`・`efis/baro_ref/capt`）、CDU の GPWS の音の設定（`fmod/options/gpws`：音のバンクの順）、GPS の有効、AC bus 3（GPWC）と新設 `gpws/fail`。
   - GPWS が書くもの（新設）：`gpws/voice`（繰り返す声、1 つずつ）・`callout`（1 回の声、0.3 秒）・`last_callout`（試験用）、`gnd_prox_light`（照明モジュールの灯 2 番）、`pull_up`・`windshear`（カスタム acf の PFD）、`warning`（警報モデルの master WARNING、TCAS へ）、`alert`、`gs_inhibited`。EICAS：advisory 6 >ALT CALLOUTS、181 GND PROX SYS、288 TERR POS、289 >TERR OVRD、298 WINDSHEAR SYS。`.snd`（`fmod/747-400_custom.snd` と手元の `747-400.snd`）の GPWS の音は `voice` と `callout` で鳴る。
   - minimums の表示（fltInst02 の `B747_minimums()`）：各席の RA と DH で、`dec_height/display_status`（機長、前のまま）と新設の `dec_height/display_status_fo`、`radio_alt/display_status`・新設 `_fo`。MINS RST は点滅のリセットだけ。前の `B747_radio_altitude()`（機長の RA − 8 ft を全員に）と、DH を 350 ft・BARO を 1,000 ft に書き換える RST、機長だけの DH と minimums の声は外した。
+
+- 段 5（トランスポンダと TCAS）：トランスポンダと TCAS のモデル（`B747.34.tcas_model.lua`）を、グルー `B747.34.xt.tcas.lua` が GPWS の次に回す（`B747_tcas()`）。中身は notes/ATA-34.md §15・§16。X-Plane の TCAS が TA・RA を判定し（`sim/cockpit2/tcas/targets/threat`、`indicators/tcas_active_advisory`・`tcas_message`・`tcas_vs_bands`）、モデルが 747 の層を足す。
+  - 読むもの：570 のパネル（`flt_mgmt/txpdr/mode_sel_pos`：0 STBY、1 ALT RPTG OFF、2 XPDR、3 TA ONLY、4 TA/RA。`flt_mgmt/transponder/sel_dial_pos`：0 L、1 R）、AC standby bus（L）・AC bus 2（R）・AC bus 3（TCAS）、故障（新設 `xpdr/fail[2]`・`tcas/fail`、X-Plane の `rel_xpndr` は L）、PSEU の地上、TCAS の RA（`B747_ra_tcas()`：L、無ければ R）、GPWS の `gpws/warning`・`windshear`・`voice`、表示器の電源（`display_has_power[0..3]`）、各 ND のモード・中心・レンジ、TFC スイッチの押した回数（新設 `nd/traffic/capt|fo/pushes`。fltInst02 のスイッチが数える）、X-Plane の TCAS の相手（63 機：threat、ssr_mode、距離、相対高度）、自機の昇降率・ピッチ・真対気速度。
+  - 書くもの：X-Plane の `transponder_mode`（前は fltMgmt のノブが書いた）、新設 `tcas/voice`（`.snd`）・`last_voice`、`tcas/sym[64]`（相手ごとの ND の機影の種類：ND のモジュールが読む）、`tcas/operating`・`failed`・`ra_mode`・`traffic`、PFD の RA の値 `tcas/pfd/ra`・`lo_on`・`hi_on`・`vs_lo`・`vs_hi`・`pitch_lo`・`pitch_hi`、各 ND の `nd/capt|fo/tfc`・`tcas_off`（パネル。前は fltInst02 が書いた）と新設 `tcas_fail`・`traffic`・`offscale`・`ta_only`・`tcas_show`。EICAS：advisory 279 >TCAS OFF、280 >TCAS RA CAPTAIN、281 >TCAS RA F/O、282 >TCAS SYSTEM、292 >TRANSPONDER L、293 >TRANSPONDER R（前は fltMgmt が 279 だけ書いた）。
+  - ND の機影（`plugins/xtlua_nd` の `B747.61.xt.nd.lua`、段 5b）：`tcas/sym` と X-Plane の相手の位置（lat・lon・ele・vertical_speed・ssr_mode）から、各 ND の 30 のスロット（init `B747.61.nd` の `nd/capt|fo/tcas/show`・`heading`・`distance`・`sym`・`tag_color`・`tag_dy`・`tag0`〜`29`）を毎フレーム埋める。置き方はアイコンの `makeIcon` と同じ。前の TCAS のアイコン（白い菱形 1 種）は外した。カスタム acf の ND のスロットとメッセージは ACF_DIFF.md §5。
+  - X-Plane の EFIS の地図の TCAS（`EFIS_tcas_on`）は使わない（fltInst02 が 0 に保つ。地図は `override_TCAS` の相手を描かなかった）。
+  - X-Plane の TCAS が advisory を出さない相手（threat は TA・RA）は TA として出す（RA の値・声は無い）。X-Plane が advisory を出さなくなることがある（PROGRESS.md「気づいたこと」）。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 

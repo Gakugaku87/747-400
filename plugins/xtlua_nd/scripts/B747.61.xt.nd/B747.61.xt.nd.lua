@@ -65,6 +65,33 @@ for n=0,59,1 do
   iconTextDataFO[n].greentext=find_dataref("laminar/B747/nd/fo/text/greentext"..n)
 end
 
+-- TCAS traffic (5-1 step 5b): each ND's 30 TCAS slots (B747.61.nd init),
+-- filled from the TCAS model's symbols (laminar/B747/tcas/sym,
+-- plugins/xtlua/scripts/B747.34.xt.nav/B747.34.xt.tcas.lua) and X-Plane's
+-- TCAS targets while that ND draws traffic (nd/capt|fo/tcas_show)
+simDR_tcas_ssr                = find_dataref("sim/cockpit2/tcas/targets/ssr_mode")
+B747DR_tcas_sym               = find_dataref("laminar/B747/tcas/sym")
+B747DR_nd_capt_tcas_on        = find_dataref("laminar/B747/nd/capt/tcas_show")
+B747DR_nd_fo_tcas_on          = find_dataref("laminar/B747/nd/fo/tcas_show")
+tcasCapt={}
+tcasCapt.show=find_dataref("laminar/B747/nd/capt/tcas/show")
+tcasCapt.heading=find_dataref("laminar/B747/nd/capt/tcas/heading")
+tcasCapt.distance=find_dataref("laminar/B747/nd/capt/tcas/distance")
+tcasCapt.sym=find_dataref("laminar/B747/nd/capt/tcas/sym")
+tcasCapt.color=find_dataref("laminar/B747/nd/capt/tcas/tag_color")
+tcasCapt.dy=find_dataref("laminar/B747/nd/capt/tcas/tag_dy")
+tcasCapt.tags={}
+for n=0,29,1 do tcasCapt.tags[n]=find_dataref("laminar/B747/nd/capt/tcas/tag"..n) end
+tcasFO={}
+tcasFO.show=find_dataref("laminar/B747/nd/fo/tcas/show")
+tcasFO.heading=find_dataref("laminar/B747/nd/fo/tcas/heading")
+tcasFO.distance=find_dataref("laminar/B747/nd/fo/tcas/distance")
+tcasFO.sym=find_dataref("laminar/B747/nd/fo/tcas/sym")
+tcasFO.color=find_dataref("laminar/B747/nd/fo/tcas/tag_color")
+tcasFO.dy=find_dataref("laminar/B747/nd/fo/tcas/tag_dy")
+tcasFO.tags={}
+for n=0,29,1 do tcasFO.tags[n]=find_dataref("laminar/B747/nd/fo/tcas/tag"..n) end
+
 navAidsJSON   = find_dataref("xtlua/navaids")
 fmsJSON = find_dataref("xtlua/fms")
 xpFMSDataJSON = find_dataref("xtlua/xpFMSData")
@@ -271,12 +298,6 @@ function makeIcon(iconTextData,navtype,text,latitude,longitude,distance)
     iconTextData[lastNavaid].bluetext=" "
     iconTextData[lastNavaid].redtext=" "
     iconTextData[lastNavaid].greentext=" "
-  elseif navtype==3006 then --white tcas no vspeed
-    iconTextData.icons[lastNavaid]=22
-    iconTextData[lastNavaid].whitetext=" "
-    iconTextData[lastNavaid].bluetext=" "
-    iconTextData[lastNavaid].redtext=" "
-    iconTextData[lastNavaid].greentext=" " 
   elseif (navtype==3007) then --FIX
     if range>40 or wpt==0 then return end
     iconTextData.icons[lastNavaid]=13
@@ -404,6 +425,104 @@ function updateIcons()
   end
 end
 
+-- TCAS traffic in each ND's 30 slots, every frame: RAs and TAs first, then
+-- the nearest (the TCAS model has already kept the 30 nearest), placed as
+-- the icons are (makeIcon's bearing, distance and limits); the symbol with
+-- its arrow (climbing or descending at 500 fpm or more), the relative
+-- altitude in hundreds of feet above the symbol for traffic above and below
+-- it for traffic below, none when the altitude is unknown, in the symbol's
+-- colour (FCOM p.1534, p.1152; ATA34_2 p.44)
+local TCAS_SLOTS = 30
+local TCAS_FRAME = {[1] = 1, [2] = 4, [3] = 7, [4] = 10}   -- other, proximate, TA, RA
+local TCAS_COLOR = {[1] = 1, [2] = 1, [3] = 2, [4] = 3}    -- white, white, amber, red
+local TCAS_TAG_UP, TCAS_TAG_DOWN = 12, -28                  -- panel pixels
+local tcasCand = {}
+local function byTcas(a, b)
+  if a.sym ~= b.sym then return a.sym > b.sym end
+  return a.distance < b.distance
+end
+local function tcasSide(slots, isCaptain)
+  local on, irs, cLat, cLon, mapMode, center, range
+  if isCaptain then
+    on, irs = B747DR_nd_capt_tcas_on, captIRS
+    cLat, cLon, mapMode, center = display_latitude_cpt, display_longitude_cpt, simDR_map_mode, B747_nd_map_center_capt
+    range = ranges[simDR_range_dial_capt + 1]
+  else
+    on, irs = B747DR_nd_fo_tcas_on, foIRS
+    cLat, cLon, mapMode, center = display_latitude_fo, display_longitude_fo, backport_map_mode_copilot, B747_nd_map_center_fo
+    range = ranges[simDR_range_dial_fo + 1]
+  end
+  local k = 0
+  if on > 0.5 and irs > 0 and range ~= nil then
+    local nc = 0
+    for j = 1, 63 do
+      local sym = B747DR_tcas_sym[j]
+      if sym > 0 then
+        local distance = getDistance(cLat, cLon, simDR_tcas_lat[j], simDR_tcas_lon[j])
+        if distance < range then
+          nc = nc + 1
+          local c = tcasCand[nc]
+          if c == nil then c = {}; tcasCand[nc] = c end
+          c.j, c.sym, c.distance = j, sym, distance
+        end
+      end
+    end
+    for n = nc + 1, #tcasCand do tcasCand[n] = nil end
+    table.sort(tcasCand, byTcas)
+    for n = 1, nc do
+      if k >= TCAS_SLOTS then break end
+      local c = tcasCand[n]
+      local j = c.j
+      local abs_heading = getHeading(cLat, cLon, simDR_tcas_lat[j], simDR_tcas_lon[j])
+      local heading_diff
+      if mapMode == 2 then
+        local mag_diff = getHeadingDifference(simDR_true_heading, simDR_mag_heading)
+        heading_diff = getHeadingDifference(simDR_ground_track - mag_diff, abs_heading)
+      else
+        heading_diff = getHeadingDifference(simDR_true_heading, abs_heading)
+      end
+      local displayDistance = c.distance * (640 / range)
+      local visible = true
+      if center < 1 then
+        if heading_diff < -90 or heading_diff > 90 then visible = false end
+        if (heading_diff < -45 or heading_diff > 45) and displayDistance > 480 then visible = false end
+        if (heading_diff < -55 or heading_diff > 55) and displayDistance > 400 then visible = false end
+      elseif displayDistance > 320 then
+        -- centred: the compass rose's radius is half the range (seen in X-Plane)
+        visible = false
+      end
+      if visible then
+        local rel = (simDR_tcas_alt[j] - simDR_tcas_alt[0]) * 3.28084
+        local arrow = 0
+        if simDR_tcas_vs[j] >= 500 then arrow = 1 elseif simDR_tcas_vs[j] <= -500 then arrow = 2 end
+        local tag = " "
+        if simDR_tcas_ssr[j] >= 3 then
+          local h = math.min(99, math.floor(math.abs(rel) / 100 + 0.5))
+          tag = string.format("%s%02d", rel >= 0 and "+" or "-", h)
+        end
+        local frame = TCAS_FRAME[c.sym] + arrow
+        local color = TCAS_COLOR[c.sym]
+        local dy = rel >= 0 and TCAS_TAG_UP or TCAS_TAG_DOWN
+        if slots.sym[k] ~= frame then slots.sym[k] = frame end
+        if slots.color[k] ~= color then slots.color[k] = color end
+        if slots.dy[k] ~= dy then slots.dy[k] = dy end
+        if slots.tags[k] ~= tag then slots.tags[k] = tag end
+        slots.heading[k] = heading_diff
+        slots.distance[k] = displayDistance
+        if slots.show[k] ~= 1 then slots.show[k] = 1 end
+        k = k + 1
+      end
+    end
+  end
+  for n = k, TCAS_SLOTS - 1 do
+    if slots.show[n] ~= 0 then slots.show[n] = 0 end
+  end
+end
+function updateTCAS()
+  tcasSide(tcasCapt, true)
+  tcasSide(tcasFO, false)
+end
+
 function newIcons()
   lastCaptNavaid=0
   lastFONavaid=0
@@ -493,20 +612,7 @@ function newIcons()
       end
     end
   end
-  --TCAS
-  for n=1,64,1 do
-    local thisELE=math.abs(simDR_tcas_alt[0]-simDR_tcas_alt[n])
-    if thisELE < 2000 then
-      local distance = getDistance(display_latitude_cpt,display_longitude_cpt,simDR_tcas_lat[n],simDR_tcas_lon[n])
-      if B747DR_nd_capt_tfc>0 and distance < ranges[simDR_range_dial_capt + 1] then 
-        makeIcon(iconTextDataCapt,3006,nil,simDR_tcas_lat[n],simDR_tcas_lon[n],distance)
-      end
-      distance = getDistance(display_latitude_fo,display_longitude_fo,simDR_tcas_lat[n],simDR_tcas_lon[n])
-      if B747DR_nd_fo_tfc>0 and distance < ranges[simDR_range_dial_fo + 1] then 
-        makeIcon(iconTextDataFO,3006,nil,simDR_tcas_lat[n],simDR_tcas_lon[n],distance)
-      end
-    end
-  end  
+  -- TCAS traffic has its own slots (updateTCAS)
 
   --NAVAIDS
   for n=table.getn(currentNaviadsTable),1,-1 do
@@ -743,6 +849,7 @@ function after_physics()
   end
 
   updateIcons()
+  updateTCAS()
   compute_and_show_alt_range_arc()
   if debug_nd<-2 then return end
   local diff2=simDRTime-lastUpdateIcon

@@ -25,8 +25,8 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 火災防護（ATA 26） | 作り直し済み（3-4：エンジン・APU・貨物室の検知と消火、車輪格納部、ダクトリーク、煙、試験、スクイブ試験） | FUEL CONTROL の赤灯（3D）、M869 とホーンの音、火の元は失敗の dataref（X-Plane に無いもの） |
 | 操縦系統（ATA 27） | 作り直し中（4-1 段 1：フラップの FCU、段 2：SRM の外側エルロンのロックアウト・ラダー比変換器・安定板トリム・speed trim、グリーンバンド、段 3：スピードブレーキ、段 4：横操縦・遮断弁・ヨーダンパーの INOP） | フラップの拡大・代替の表示のパネル、>STAB GREENBAND、昇降舵の舵角、ヨーダンパーの制御則（AFDS） |
 | 脚・ブレーキ・ステアリング（ATA 32） | 作り直し済み（4-2 段 1〜5：脚の作動・代替下げ・位置監視・表示、ブレーキ、オートブレーキ、ステアリング、ブレーキ温度とタイヤ圧） | AIR/GND SYSTEM と脚の STATUS の一部、tiller の軸が無いときのペダル（実機ではない手当て） |
-| 表示（PFD・ND・EICAS） | 未着手（電源と点灯の修正だけ） | ソース選択、速度テープの帯、405 型の RADIO/BARO の minimums、ND の DATA/POS・TCAS |
-| 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING） | FMC の位置への GPS の更新、PFD の昇降率の源、GPWS の地形の look-ahead、TCAS、無線の自動同調 |
+| 表示（PFD・ND・EICAS） | 未着手（電源と点灯の修正だけ。ND の TCAS は 5-1 段 5 で） | ソース選択、速度テープの帯、405 型の RADIO/BARO の minimums、ND の DATA/POS |
+| 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示） | FMC の位置への GPS の更新、PFD の昇降率の源、GPWS の地形の look-ahead、PFD の TCAS の RA の表示、気象レーダー、無線の自動同調 |
 | FMC | 未着手 | 経路モデル、ホールド、LNAV・VNAV、予測 |
 | CDU | 未着手 | 3 台が 1 つを共有、MOD/EXEC、入力の検査、データリンク |
 | 自動操縦・FD | 未着手 | ロールが X-Plane の AP 頼み、LOC・TO/GA・autoland の則 |
@@ -280,12 +280,12 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - ソースの選択（FLT DIR、NAV、EIU、AIR DATA、IRS）が無い（DSP-02・03）。PFD の故障旗が少ない（DSP-04）。
 - 速度テープの帯（最大・最小機動速度）が違う、OVERSPEED を Vmax で出す、Vs の表の高度区分の誤りと誤記（DSP-05〜08）。
 - DH は 109 型の表示（緑の DH と数字、大きな琥珀の DH）のまま。405 の RADIO/BARO の表示は 5-2 で。DH RST と各席の DH の警報は 5-1 段 4 で直した（DSP-09・10）。STD と preselect（DSP-11）。FPV・PLI など PFD の記号が無い（DSP-12）。
-- ND の DATA・POS が効かない（DSP-16）、TCAS の記号（DSP-18）、TERR は外部のプラグイン頼み（DSP-19）、HDG REF（DSP-20）。
+- ND の DATA・POS が効かない（DSP-16）、TERR は外部のプラグイン頼み（DSP-19）、HDG REF（DSP-20）。ND の TCAS の記号とメッセージは 5-1 段 5 で直した（DSP-18）。
 - EICAS の compact・部分表示・二次エンジンの逸脱（DSP-24）、表示器と EIU の故障と自動切替（DSP-27）、表示選択の組み合わせ（DSP-28）。
 - 時計の CHR の表示（DSP-33）。
 - 直した点：表示器と CDU の電源（1-1）。同じ機体のまま新しいフライトを始めると表示器と CDU が真っ暗になる不具合（作り直し前から）を直した（2026-10-23）。
 
-### 航法センサーと無線（ATA 34）：作り直し中（5-1 段 1：エアデータ、段 2：IRS、段 4：電波高度計・GPWS は済）
+### 航法センサーと無線（ATA 34）：作り直し中（5-1 段 1：エアデータ、段 2：IRS、段 4：電波高度計・GPWS、段 5：トランスポンダ・TCAS は済）
 
 実機に合わせた点（段 1、エアデータ）：ADC を 3 台にした（L は X-Plane の機長側、R は副操縦士側、C は standby の pitot-static：推定）。電源（L は standby bus、C は機長の transfer bus、R は副操縦士の transfer bus）と故障で無効になる。各席の AIR DATA 選択器で PFD の速度の ADC が変わり、両席が同じ ADC なら >SOURCE SEL ADC（NAV-01）。IAS DISAGREE（5 kt 以上）・ALT DISAGREE（未補正で 200 ft 超）は 5 秒続いたとき（NAV-04）。OVERSPEED は Vmo 365 kt と Mmo 0.92 だけ（前はフラップ・脚の placard を含み、28,620 ft 以下は M0.88：NAV-02）。>ALTITUDE ALERT は、選択高度の 300 ft を超えて離れたとき（EICAS・master caution・beeper）で、GS の捕捉、着陸フラップで脚 down のときは抑止、選択高度を変えると消える（NAV-03）。>AOA RIGHT は右の AOA の故障で出る（前は左：NAV-07）。BARO の STD をもう一度押すと STD の前の値に戻る（前は 29.92 のまま：NAV-06）。カスタム acf の PFD の高度と Mach も選んだ ADC の値で、その席のエアデータが無効なら速度と高度のテープが消えて琥珀の SPD・ALT の旗が出る（NAV-05）。高度警報の枠：選択高度の 900〜300 ft 手前で選択高度と現在高度に白の強調の枠、離れると現在高度に琥珀の枠（NAV-03）。
 
@@ -299,7 +299,11 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - mode 1 の PULL UP の線、mode 2 の一部の点と速度の間、mode 3 の閾値の細部、各声の再 arm などは推定（資料に数値が無い）。mode 3B は無い。
   - 地形の look-ahead と TCF が無い（NAV-62。TERR OVRD は >TERR OVRD だけ）。GPWC の自己試験、envelope modulation が無い。windshear は X-Plane の検出をそのまま使う。
   - DH の表示は 109 型（緑の DH と数字、大きな琥珀の DH）のまま。405 の RADIO/BARO の表示は表示の作り直し（5-2）で。EIU の故障と AUTO の切替が無い。
-- TCAS の TA/RA の判定、ND の記号、PFD の RA の表示、音声が無い（NAV-69〜72）。トランスポンダのモードの対応（NAV-66）。気象レーダーの論理（NAV-79）。
+- 実機に合わせた点（段 5、トランスポンダと TCAS Ver 7.0）：トランスポンダのパネルを 3D の 570 型として、STBY・ALT RPTG OFF・XPDR・TA ONLY・TA/RA を X-Plane のトランスポンダのモードにつないだ（前は STBY 以外がすべて高度なしの mode A で、X-Plane の TCAS も動いていなかった：NAV-66）。L・R とも働き、電源（L は AC standby bus、R は AC bus 2）と故障で止まる（>TRANSPONDER L・R）。TCAS は X-Plane の TCAS の判定（TA・RA、反転、複数機）を使い、747 の層を足した：TA ONLY・TA/RA でだけ動く、RA 1,000 ft 未満と地上・GPWS の警報・windshear で TA ONLY（ND に TA ONLY）、DESCEND・INCREASE DESCENT の低高度の抑止、TA の声は 500 ft 未満で出さない、windshear で TCAS の声と自動表示なし。ND に機影 4 種（RA の赤の四角、TA の琥珀の丸、近接の白塗りの菱形、その他の白抜きの菱形）と上下の矢印、100 ft 単位の相対高度（上なら記号の上に +、下なら下に −）、TRAFFIC（琥珀・赤）、OFFSCALE、TA ONLY、TCAS FAIL、TCAS OFF。新しい TA・RA で両 ND に TFC が自動で出る（出せないモードの ND は arm）。声は Ver 7.0 の 14 種（TRAFFIC, TRAFFIC、CLIMB, CLIMB、… ADJUST VERTICAL SPEED, ADJUST、CLEAR OF CONFLICT）。EICAS の >TCAS OFF（地上と 400 ft 未満は出さない）・>TCAS SYSTEM・>TCAS RA CAPTAIN・F/O（NAV-66・69・70・72〜78）。
+  - PFD の RA の表示（赤枠の RA のピッチの領域、570 の VSI の赤帯）はまだ描かない（値は作ってある。パネルの変更が承認の一覧の外）。R を選んだときのトランスポンダのコード表示は INOP の絵のまま（同じ理由）。
+  - RA の中身（上昇か降下か、強める・弱める・反転）は X-Plane の TCAS の判定。X-Plane が advisory を出さない RA の相手は、TA（琥珀と TRAFFIC, TRAFFIC）だけになる（X-Plane は advisory を出さないことがある）。X-Plane は 7.1 の LEVEL OFF を出すので 7.0 の ADJUST VERTICAL SPEED の声にしている。CROSSING を付けるかはこちらで決めている（推定。X-Plane の区別は形と合わない）。DESCEND RA を低高度で X-Plane が出したときは、別の RA を選ばずに TA として出す（推定）。48,000 ft で CLIMB 系を出さないことは X-Plane に任せている。
+  - TCAS の試験（570 のパネルに TEST が無い。実機は CMC の地上試験）、no-bearing の表示（X-Plane の相手は必ず方位がある）、EFIS パネルの故障での自動表示は無い。
+- 気象レーダーの論理（NAV-79〜81）は段 5c で。
 
 ### FMC（航法・性能・誘導）：未着手
 

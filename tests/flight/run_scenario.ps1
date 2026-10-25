@@ -16,6 +16,9 @@
 # "reload" asks for -Reload (the scenario needs the aircraft's systems
 # fresh); "livery" picks a livery, and with it the engine type. Step types ("do"):
 #   record_start | record_stop | mark            the FlyWithLua recorder
+#   traffic {targets: [...]} | traffic_stop      TCAS test traffic (FlyWithLua
+#                                                B747_traffic.lua): each target a
+#                                                "key=value" line of traffic.txt
 #   cmd     {name, [duration], [async]}          run a command; with a duration it is
 #                                                held that long and the step waits,
 #                                                unless async (then the next steps run
@@ -90,6 +93,7 @@ function Test-Op($actual, [string]$op, $expected) {
         '<='      { return $actual -le $expected }
         'between' { return ($actual -ge $expected[0]) -and ($actual -le $expected[1]) }
         'contains' { return ([string]$actual).Contains([string]$expected) }
+        'in'      { return @($expected) -contains $actual }
         default   { throw "unknown op $op" }
     }
 }
@@ -188,6 +192,12 @@ foreach ($step in $spec.steps) {
             'record_start' { Invoke-XPCommand 'FlyWithLua/B747_flighttest/start'; Add-Result $step 'info' 'recorder started' }
             'record_stop'  { Invoke-XPCommand 'FlyWithLua/B747_flighttest/stop'; Start-Sleep -Seconds 2; Add-Result $step 'info' 'recorder stopped' }
             'mark'         { Invoke-XPCommand 'FlyWithLua/B747_flighttest/mark'; Add-Result $step 'info' 'mark' }
+            'traffic' {
+                @($step.targets) -join "`n" | Out-File -Encoding ascii (Join-Path $recDir 'traffic.txt')
+                Invoke-XPCommand 'FlyWithLua/B747_traffic/start'
+                Add-Result $step 'info' ("traffic: " + (@($step.targets) -join ' | '))
+            }
+            'traffic_stop' { Invoke-XPCommand 'FlyWithLua/B747_traffic/stop'; Add-Result $step 'info' 'traffic stopped' }
             'cmd' {
                 $d = if ($step.duration) { [double]$step.duration } else { 0 }
                 Invoke-XPCommand $step.name $d

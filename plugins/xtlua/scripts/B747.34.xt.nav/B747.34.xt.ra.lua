@@ -51,6 +51,14 @@ function B747_ra_gpwc()
     local g = ra_state.out.gpwc
     return g.value, g.valid
 end
+-- the TCAS's radio altitude: the L radio altimeter, else the R (ATA34_2
+-- p.17: it takes both; one is enough); value (ft), working, no computed data
+function B747_ra_tcas()
+    local o = ra_state.out
+    local i = RA.L
+    if not o.valid[i] then i = RA.R end
+    return o.value[i], o.valid[i], o.ncd[i]
+end
 
 -- the PFD's increments: 2 ft below 100 ft, 10 ft below 500 ft, 20 ft above
 -- (ATA34_2 p.95, FCOM p.981)

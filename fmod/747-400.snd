@@ -6225,6 +6225,105 @@ BEGIN_SOUND_ATTACHMENT
 END_SOUND_ATTACHMENT
 
 ##################
+#TCAS
+##################
+# The TCAS's voices come from the transponder and TCAS model (plugins/xtlua/
+# scripts/B747.34.xt.nav, docs/overhaul/notes/ATA-34.md section 15), Ver 7.0
+# (FCOM p.1553). Each sounds once when laminar/B747/tcas/voice takes its code
+# (held 0.5 s, then 0): 1 TRAFFIC TRAFFIC, 2 CLIMB CLIMB, 3 CLIMB CROSSING
+# CLIMB, 4 INCREASE CLIMB, 5 CLIMB CLIMB NOW, 6 DESCEND DESCEND, 7 DESCEND
+# CROSSING DESCEND, 8 INCREASE DESCENT, 9 DESCEND DESCEND NOW, 10 MONITOR
+# VERTICAL SPEED, 11 MAINTAIN VERTICAL SPEED MAINTAIN, 12 MAINTAIN VERTICAL
+# SPEED CROSSING MAINTAIN, 13 ADJUST VERTICAL SPEED ADJUST, 14 CLEAR OF
+# CONFLICT. The bank changes these events' volume only with distance
+# (fmod/warnings.bank). X-Plane's own TCAS sounds stay silent
+# (sounds/alert/tcas.wav, te_climb.wav, te_descend.wav).
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/TCAS/traffic_traffic
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/tcas/voice == 1
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/TCAS/climb
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/tcas/voice == 2
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/TCAS/crossing_climb
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/tcas/voice == 3
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/TCAS/increase_climb
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/tcas/voice == 4
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/TCAS/climb_now
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/tcas/voice == 5
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/TCAS/descend
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/tcas/voice == 6
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/TCAS/crossing_descend
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/tcas/voice == 7
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/TCAS/increase_descend
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/tcas/voice == 8
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/TCAS/descend now
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/tcas/voice == 9
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/TCAS/monitor_vs
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/tcas/voice == 10
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/TCAS/maintain_vs
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/tcas/voice == 11
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/TCAS/maintain_vs_crossing
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/tcas/voice == 12
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/TCAS/adjust_vs
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/tcas/voice == 13
+END_SOUND_ATTACHMENT
+
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/TCAS/clear_of_conflict
+    VEH_XYZ 0 4.2 -26.8
+    EVENT_START_COND laminar/B747/tcas/voice == 14
+END_SOUND_ATTACHMENT
+
+##################
 #CABIN
 ##################
 
