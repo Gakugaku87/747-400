@@ -216,4 +216,60 @@ c.sw[1] = M.SW_OFF
 run()
 T.check(oc.ptr[1] == 0 and oc.rad[1] == 0, "the switch OFF: nothing on the left")
 
+-- the POS switch (step 5c: FCOM p.1040, p.1145, p.1150): the Captain's MAP
+-- (track 106 up, heading 100), 40 NM; VOR L 20 NM at 10 degrees right of
+-- the heading with its DME, VOR R 30 degrees left without a DME
+T.check(not oc.pos_iru[1] and not oc.pos_gps and not oc.pos_rad[1], "POS off: none")
+c.hdg, c.trk, c.trk_valid, c.center = 100, 106, true, false
+c.pos, c.range_nm = true, 40
+inp.iru_nav = {true, false, true}
+inp.gps_ok = true
+inp.vor_ok = {true, true}
+inp.vor_brg_rx = {true, true}
+inp.vor_rel = {10, -30}
+inp.vor_dme_rx = {true, false}
+inp.vor_dme_nm = {20, 0}
+run()
+T.check(oc.pos_iru[1] and not oc.pos_iru[2] and oc.pos_iru[3], "the IRU L and R positions (in NAV), not C")
+T.check(oc.pos_gps, "the GPS position")
+T.check(oc.pos_rad[1] and oc.pos_rad[2], "both VOR radials")
+T.near(oc.pos_rad_brg[1], 4, 1e-6, "VOR L at 110 magnetic: 4 degrees right of the track-up top")
+T.equal(oc.pos_rad_radial[1], 290, "the airplane on its radial 290")
+T.near(oc.pos_rad_len[1], 20 * 465 / 40, 1e-6, "20 NM DME at 40 NM: 232.5 pixels")
+T.check(oc.pos_rad_tick[1], "its tick mark at the DME distance")
+T.near(oc.pos_rad_brg[2], -36, 1e-6, "VOR R at 070: 36 degrees left")
+T.near(oc.pos_rad_len[2], 465, 1e-6, "no DME: to the edge (the range arc)")
+T.check(not oc.pos_rad_tick[2], "no tick mark")
+inp.vor_rel[2] = -75
+run()
+T.near(oc.pos_rad_len[2], 329 / math.sin(math.rad(81)), 1e-6, "81 degrees left: to the display's left side")
+inp.vor_rel[2] = -130
+run()
+T.check(not oc.pos_rad[2], "behind the airplane on the expanded map: none (as the map's symbols)")
+c.center = true
+run()
+T.near(oc.pos_rad_len[2], 250 / 640 * 465, 1e-6, "the centred map: the map symbols' radius")
+c.center = false
+inp.vor_dme_nm[1] = 60
+run()
+T.near(oc.pos_rad_len[1], 465, 1e-6, "DME 60 NM beyond 40 NM: to the edge")
+T.check(not oc.pos_rad_tick[1], "no tick mark")
+c.dme_fail = true
+inp.vor_dme_nm[1] = 20
+run()
+T.check(not oc.pos_rad_tick[1], "the DME failed: no tick mark")
+c.dme_fail = false
+inp.vor_brg_rx[1] = false
+run()
+T.check(not oc.pos_rad[1], "VOR L's bearing not received: no radial")
+inp.vor_brg_rx[1] = true
+c.mode = M.VOR
+run()
+T.check(not oc.pos_iru[1] and not oc.pos_gps and not oc.pos_rad[1], "VOR mode: none (MAP and MAP CTR only)")
+c.mode = M.MAP
+inp.vor_rel[1] = 80
+run()
+T.equal(oc.pos_rad_radial[1], 360, "the radial 360, not 0")
+T.check(not of.pos_iru[1] and not of.pos_rad[1], "the F/O's POS off: none")
+
 T.done()

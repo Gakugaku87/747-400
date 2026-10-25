@@ -25,7 +25,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 火災防護（ATA 26） | 作り直し済み（3-4：エンジン・APU・貨物室の検知と消火、車輪格納部、ダクトリーク、煙、試験、スクイブ試験） | FUEL CONTROL の赤灯（3D）、M869 とホーンの音、火の元は失敗の dataref（X-Plane に無いもの） |
 | 操縦系統（ATA 27） | 作り直し中（4-1 段 1：フラップの FCU、段 2：SRM の外側エルロンのロックアウト・ラダー比変換器・安定板トリム・speed trim、グリーンバンド、段 3：スピードブレーキ、段 4：横操縦・遮断弁・ヨーダンパーの INOP） | フラップの拡大・代替の表示のパネル、>STAB GREENBAND、昇降舵の舵角、ヨーダンパーの制御則（AFDS） |
 | 脚・ブレーキ・ステアリング（ATA 32） | 作り直し済み（4-2 段 1〜5：脚の作動・代替下げ・位置監視・表示、ブレーキ、オートブレーキ、ステアリング、ブレーキ温度とタイヤ圧） | AIR/GND SYSTEM と脚の STATUS の一部、tiller の軸が無いときのペダル（実機ではない手当て） |
-| 表示（PFD・ND・EICAS） | 作り直し中（5-2 段 1：表示器と EIU、選択器と自動切替、内容ごとの輝度。ND の TCAS は 5-1 段 5 で） | ソース選択、速度テープの帯、405 型の RADIO/BARO の minimums、ND の POS、compact EICAS |
+| 表示（PFD・ND・EICAS） | 作り直し中（5-2 段 1：表示器と EIU、選択器と自動切替、内容ごとの輝度。ND の TCAS は 5-1 段 5 で） | ソース選択、速度テープの帯、405 型の RADIO/BARO の minimums、compact EICAS |
 | 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記） | FMC の位置への GPS の更新、PFD の昇降率の源、GPWS の地形の look-ahead、PWS、無線の自動同調 |
 | FMC | 未着手 | 経路モデル、ホールド、LNAV・VNAV、予測 |
 | CDU | 未着手 | 3 台が 1 つを共有、MOD/EXEC、入力の検査、データリンク |
@@ -274,7 +274,9 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - オートブレーキの推定：車輪のスピンアップと RTO の 85 kt は IRS の対地速度で見る（前側 8 輪の車輪速の代わり）、減速の制御のゲイン（カスタム acf に合わせた）、disarm の後に圧が抜ける時間（2 秒）、推力レバーのアイドルと前進の角度。AUTOBRAKES のうち、セレクター OFF なのに遮断弁の下流が高圧のときと、RTO の開始での故障・手動の override は無い。
 - 残り：AIR/GND SYSTEM、GEAR MONITOR・A/G DISAGREE・PARK BRK VALVE の STATUS（GEAR-22 の残り）、CONFIG GEAR のラッチと GND PROX GEAR OVRD（GEAR-17 の残り）、ドアの箱の空箱。
 
-### 表示（PFD・ND・EICAS）：作り直し中（5-2 段 1：表示器と EIU、段 2：ソース選択の比較、段 3：速度テープ、段 4a：PFD の姿勢・方位・昇降率の旗、段 4b：気圧、段 4c：PLI と VR の R、段 4d：FPV と旗、段 4e：ILS の表示、段 5a：ND の向きと旗、段 5b-1a：PFD の ILS の受信機、段 5b-1b：ND の APP、段 5b-2a：ND の VOR、段 5b-2b：VOR・ADF の針、段 5c-1：CDU の EFIS 操作とパネルの故障、段 5c-2a：ND の DATA は済）
+### 表示（PFD・ND・EICAS）：作り直し中（5-2 段 1：表示器と EIU、段 2：ソース選択の比較、段 3：速度テープ、段 4a：PFD の姿勢・方位・昇降率の旗、段 4b：気圧、段 4c：PLI と VR の R、段 4d：FPV と旗、段 4e：ILS の表示、段 5a：ND の向きと旗、段 5b-1a：PFD の ILS の受信機、段 5b-1b：ND の APP、段 5b-2a：ND の VOR、段 5b-2b：VOR・ADF の針、段 5c-1：CDU の EFIS 操作とパネルの故障、段 5c-2a：ND の DATA、段 5c-2b：ND の POS は済）
+- 実機に合わせた点（段 5c-2b、ND の POS）：EFIS 操作パネルの POS を入れると、MAP・MAP CTR で IRU の位置（星）と GPS の位置が出て、CDU で同調した VOR L・R への radial（緑の線と R-xxx。DME があればその距離まで印つき、無ければ画面の端まで）が出る（FCOM p.1040・p.1145・p.1150。前は何も出なかった）。
+  - 残り（推定）：IRU と GPS の位置は X-Plane の位置そのもので FMC の位置と同じなので、記号はいつも飛行機の記号に重なる（IRU のずれは作らない）。radial の「画面の端」と文字の位置は推定。
 - 実機に合わせた点（段 5c-2a、ND の DATA）：EFIS 操作パネルの DATA を入れると、PLAN・MAP・MAP CTR で経路の各点の下に、その点の高度と FMC の ETA が出る（現用点はマゼンタ、ほかは白。FCOM p.1040・p.1148。前は何も出なかった）。ETA は FMC が各点について出し、ND の右上の現用点の ETA と一致する。
   - 残り（推定）：遷移高度以上を FL で書くこと、高度の無い点は ETA を 1 行目に上げること。ETA は FMC の予測の作り直し（6-1）まで今の簡単な式（距離 ÷ 速度）。POS は段 5c-2b。
 - 実機に合わせた点（段 5c-1、CDU の EFIS 操作とパネルの故障）：CDU の MENU の EFIS CP・EICAS CP の SELECT は、そのパネル（EFIS 操作パネル、表示選択パネル）が故障したときだけ出る（FCOM p.1060–1061。前はいつも）。EFIS 操作パネルが故障するとパネルの操作（VOR/ADF スイッチも）は効かない（前は効いた）。左の CDU は機長の、右は副操縦士のパネルの代わりで、EFIS CONTROL の RANGE（前は両席）・DH RESET（前は両方の CDU が機長の）・STD・CTR（PLN では効かない）と、EFIS OPTIONS の WXR（前はいつも機長の）・POS・DATA（前は効かなかった）・MTRS・FPV はその側に効く。OPTIONS の並びは 109 の CDU-152（WXR・POS・MTRS・FPV・WPT・STA・ARPT・DATA・VOR・ADF。前は 405 の CDU-161 の TERR・TFC）。EFIS 操作パネルの DATA・POS の押しボタンは押すたびに入り切りする。

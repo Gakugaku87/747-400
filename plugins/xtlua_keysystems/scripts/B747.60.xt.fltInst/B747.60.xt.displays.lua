@@ -202,6 +202,49 @@ B747DR_dsp_nd_vor_l_ref         = find_dataref("laminar/B747/nd/vor_l_ref")
 B747DR_dsp_nd_vor_r_ref         = find_dataref("laminar/B747/nd/vor_r_ref")
 B747DR_dsp_nd_adf_l_ref         = find_dataref("laminar/B747/nd/adf_l_ref")
 B747DR_dsp_nd_adf_r_ref         = find_dataref("laminar/B747/nd/adf_r_ref")
+-- the POS switch (step 5c): each side's POS and range, the GPS positions;
+-- the symbols out
+B747DR_dsp_nd_pos_sel_capt      = find_dataref("laminar/B747/nd/data/capt/pos")
+B747DR_dsp_nd_pos_sel_fo        = find_dataref("laminar/B747/nd/data/fo/pos")
+B747DR_dsp_nd_range_capt        = find_dataref("laminar/B747/nd/range/capt/sel_dial_pos")
+B747DR_dsp_nd_range_fo          = find_dataref("laminar/B747/nd/range/fo/sel_dial_pos")
+B747DR_dsp_gps_valid            = find_dataref("laminar/B747/gps/valid")
+B747DR_dsp_nd_pos_iru_capt      = find_dataref("laminar/B747/nd/capt/pos_iru")
+B747DR_dsp_nd_pos_gps_capt      = find_dataref("laminar/B747/nd/capt/pos_gps")
+B747DR_dsp_nd_pos_rad_l_capt    = find_dataref("laminar/B747/nd/capt/pos_rad_l")
+B747DR_dsp_nd_pos_rad_l_brg_capt = find_dataref("laminar/B747/nd/capt/pos_rad_l_brg")
+B747DR_dsp_nd_pos_rad_l_len_capt = find_dataref("laminar/B747/nd/capt/pos_rad_l_len")
+B747DR_dsp_nd_pos_rad_l_end_capt = find_dataref("laminar/B747/nd/capt/pos_rad_l_end")
+B747DR_dsp_nd_pos_rad_l_tick_capt = find_dataref("laminar/B747/nd/capt/pos_rad_l_tick")
+B747DR_dsp_nd_pos_rad_l_tbrg_capt = find_dataref("laminar/B747/nd/capt/pos_rad_l_tbrg")
+B747DR_dsp_nd_pos_rad_l_tside_capt = find_dataref("laminar/B747/nd/capt/pos_rad_l_tside")
+B747DR_dsp_nd_pos_rad_l_text_capt = find_dataref("laminar/B747/nd/capt/pos_rad_l_text")
+B747DR_dsp_nd_pos_rad_r_capt    = find_dataref("laminar/B747/nd/capt/pos_rad_r")
+B747DR_dsp_nd_pos_rad_r_brg_capt = find_dataref("laminar/B747/nd/capt/pos_rad_r_brg")
+B747DR_dsp_nd_pos_rad_r_len_capt = find_dataref("laminar/B747/nd/capt/pos_rad_r_len")
+B747DR_dsp_nd_pos_rad_r_end_capt = find_dataref("laminar/B747/nd/capt/pos_rad_r_end")
+B747DR_dsp_nd_pos_rad_r_tick_capt = find_dataref("laminar/B747/nd/capt/pos_rad_r_tick")
+B747DR_dsp_nd_pos_rad_r_tbrg_capt = find_dataref("laminar/B747/nd/capt/pos_rad_r_tbrg")
+B747DR_dsp_nd_pos_rad_r_tside_capt = find_dataref("laminar/B747/nd/capt/pos_rad_r_tside")
+B747DR_dsp_nd_pos_rad_r_text_capt = find_dataref("laminar/B747/nd/capt/pos_rad_r_text")
+B747DR_dsp_nd_pos_iru_fo        = find_dataref("laminar/B747/nd/fo/pos_iru")
+B747DR_dsp_nd_pos_gps_fo        = find_dataref("laminar/B747/nd/fo/pos_gps")
+B747DR_dsp_nd_pos_rad_l_fo      = find_dataref("laminar/B747/nd/fo/pos_rad_l")
+B747DR_dsp_nd_pos_rad_l_brg_fo  = find_dataref("laminar/B747/nd/fo/pos_rad_l_brg")
+B747DR_dsp_nd_pos_rad_l_len_fo  = find_dataref("laminar/B747/nd/fo/pos_rad_l_len")
+B747DR_dsp_nd_pos_rad_l_end_fo  = find_dataref("laminar/B747/nd/fo/pos_rad_l_end")
+B747DR_dsp_nd_pos_rad_l_tick_fo = find_dataref("laminar/B747/nd/fo/pos_rad_l_tick")
+B747DR_dsp_nd_pos_rad_l_tbrg_fo = find_dataref("laminar/B747/nd/fo/pos_rad_l_tbrg")
+B747DR_dsp_nd_pos_rad_l_tside_fo = find_dataref("laminar/B747/nd/fo/pos_rad_l_tside")
+B747DR_dsp_nd_pos_rad_l_text_fo = find_dataref("laminar/B747/nd/fo/pos_rad_l_text")
+B747DR_dsp_nd_pos_rad_r_fo      = find_dataref("laminar/B747/nd/fo/pos_rad_r")
+B747DR_dsp_nd_pos_rad_r_brg_fo  = find_dataref("laminar/B747/nd/fo/pos_rad_r_brg")
+B747DR_dsp_nd_pos_rad_r_len_fo  = find_dataref("laminar/B747/nd/fo/pos_rad_r_len")
+B747DR_dsp_nd_pos_rad_r_end_fo  = find_dataref("laminar/B747/nd/fo/pos_rad_r_end")
+B747DR_dsp_nd_pos_rad_r_tick_fo = find_dataref("laminar/B747/nd/fo/pos_rad_r_tick")
+B747DR_dsp_nd_pos_rad_r_tbrg_fo = find_dataref("laminar/B747/nd/fo/pos_rad_r_tbrg")
+B747DR_dsp_nd_pos_rad_r_tside_fo = find_dataref("laminar/B747/nd/fo/pos_rad_r_tside")
+B747DR_dsp_nd_pos_rad_r_text_fo = find_dataref("laminar/B747/nd/fo/pos_rad_r_text")
 B747DR_dsp_nd_vor_rx_capt       = find_dataref("laminar/B747/nd/capt/vor_rx")
 B747DR_dsp_nd_vor_flag_capt     = find_dataref("laminar/B747/nd/capt/vor_flag")
 B747DR_dsp_nd_vor_dev_capt      = find_dataref("laminar/B747/nd/capt/vor_dev")
@@ -503,6 +546,20 @@ local EFIS_SW = {[0] = NM.SW_ADF, NM.SW_OFF, NM.SW_VOR}
 local function efis_sw(v)
     return EFIS_SW[math.max(0, math.min(2, math.floor(v + 0.5)))]
 end
+-- the POS switch's radials (step 5c): the range selector's ranges; a
+-- radial's label along its line and readable, turned to the line's right
+-- (side 1) for directions 0 to 180, else to its left (side 2); its last
+-- segment (the panel's 24-pixel segments) ending at the line's end
+local ND_RANGES = {10, 20, 40, 80, 160, 320, 640}
+local ND_RAD_SEG_PX = 24
+local function nd_range(dial)
+    return ND_RANGES[math.max(0, math.min(6, math.floor(dial + 0.5))) + 1]
+end
+local function rad_label(brg)
+    if brg >= 0 then return brg - 90, 1 end
+    return brg + 90, 2
+end
+local pos_text = {}
 local function nd_side(i, mode, hdg, trk, hdg_valid, trk_valid, ias, center, wxr, tfc, vor, modes)
     i.mode = math.floor(mode + 0.5)
     i.hdg, i.trk, i.hdg_valid, i.trk_valid, i.ias = hdg, trk, hdg_valid, trk_valid, ias
@@ -544,6 +601,14 @@ local function nd_sources(c, f, nav_valid)
         inp.vor_dme_rx[k] = simDR_dsp_nav_has_dme[x] > 0.5
     end
     inp.adf_rel[1], inp.adf_rel[2] = simDR_dsp_adf1_rel, simDR_dsp_adf2_rel
+    -- the POS switch (step 5c): each side's POS and range; the IRUs in NAV,
+    -- a GPS position (either GPS), the VORs' DME distances
+    local pc, pf = inp.side[NM.CAPT], inp.side[NM.FO]
+    pc.pos, pf.pos = B747DR_dsp_nd_pos_sel_capt > 0.5, B747DR_dsp_nd_pos_sel_fo > 0.5
+    pc.range_nm, pf.range_nm = nd_range(B747DR_dsp_nd_range_capt), nd_range(B747DR_dsp_nd_range_fo)
+    for k = 1, 3 do inp.iru_nav[k] = nav_valid[k] end
+    inp.gps_ok = B747DR_dsp_gps_valid[0] > 0.5 or B747DR_dsp_gps_valid[1] > 0.5
+    inp.vor_dme_nm[1], inp.vor_dme_nm[2] = simDR_dsp_nav_dme_nm[VOR_IDX[1]], simDR_dsp_nav_dme_nm[VOR_IDX[2]]
     inp.map_valid = nav_valid[1] or nav_valid[2] or nav_valid[3]
     inp.wind_from = simDR_dsp_wind_from
     inp.hdg_sel = B747DR_dsp_hdg_sel
@@ -667,6 +732,88 @@ local function nd_sources(c, f, nav_valid)
     if nd_ref_shown[7] ~= s then nd_ref_shown[7] = s; B747DR_dsp_nd_adf_l_ref = s end
     s = inp.adf_ok[2] and adf_ref(8, id2, simDR_dsp_adf2_freq) or ""
     if nd_ref_shown[8] ~= s then nd_ref_shown[8] = s; B747DR_dsp_nd_adf_r_ref = s end
+
+    -- the POS switch's symbols (step 5c)
+    for k = 1, 3 do
+        v = oc.pos_iru[k] and 1 or 0
+        if B747DR_dsp_nd_pos_iru_capt[k - 1] ~= v then B747DR_dsp_nd_pos_iru_capt[k - 1] = v end
+    end
+    v = oc.pos_gps and 1 or 0
+    if B747DR_dsp_nd_pos_gps_capt ~= v then B747DR_dsp_nd_pos_gps_capt = v end
+    v = oc.pos_rad[1] and 1 or 0
+    if B747DR_dsp_nd_pos_rad_l_capt ~= v then B747DR_dsp_nd_pos_rad_l_capt = v end
+    v = oc.pos_rad_brg[1]
+    if B747DR_dsp_nd_pos_rad_l_brg_capt ~= v then B747DR_dsp_nd_pos_rad_l_brg_capt = v end
+    v = oc.pos_rad_len[1]
+    if B747DR_dsp_nd_pos_rad_l_len_capt ~= v then B747DR_dsp_nd_pos_rad_l_len_capt = v end
+    v = math.max(0, oc.pos_rad_len[1] - ND_RAD_SEG_PX)
+    if B747DR_dsp_nd_pos_rad_l_end_capt ~= v then B747DR_dsp_nd_pos_rad_l_end_capt = v end
+    v = oc.pos_rad_tick[1] and 1 or 0
+    if B747DR_dsp_nd_pos_rad_l_tick_capt ~= v then B747DR_dsp_nd_pos_rad_l_tick_capt = v end
+    local turn, side = rad_label(oc.pos_rad_brg[1])
+    v = turn
+    if B747DR_dsp_nd_pos_rad_l_tbrg_capt ~= v then B747DR_dsp_nd_pos_rad_l_tbrg_capt = v end
+    v = side
+    if B747DR_dsp_nd_pos_rad_l_tside_capt ~= v then B747DR_dsp_nd_pos_rad_l_tside_capt = v end
+    s = string.format("R-%03d", oc.pos_rad_radial[1])
+    if pos_text[1] ~= s then pos_text[1] = s; B747DR_dsp_nd_pos_rad_l_text_capt = s end
+    v = oc.pos_rad[2] and 1 or 0
+    if B747DR_dsp_nd_pos_rad_r_capt ~= v then B747DR_dsp_nd_pos_rad_r_capt = v end
+    v = oc.pos_rad_brg[2]
+    if B747DR_dsp_nd_pos_rad_r_brg_capt ~= v then B747DR_dsp_nd_pos_rad_r_brg_capt = v end
+    v = oc.pos_rad_len[2]
+    if B747DR_dsp_nd_pos_rad_r_len_capt ~= v then B747DR_dsp_nd_pos_rad_r_len_capt = v end
+    v = math.max(0, oc.pos_rad_len[2] - ND_RAD_SEG_PX)
+    if B747DR_dsp_nd_pos_rad_r_end_capt ~= v then B747DR_dsp_nd_pos_rad_r_end_capt = v end
+    v = oc.pos_rad_tick[2] and 1 or 0
+    if B747DR_dsp_nd_pos_rad_r_tick_capt ~= v then B747DR_dsp_nd_pos_rad_r_tick_capt = v end
+    local turn, side = rad_label(oc.pos_rad_brg[2])
+    v = turn
+    if B747DR_dsp_nd_pos_rad_r_tbrg_capt ~= v then B747DR_dsp_nd_pos_rad_r_tbrg_capt = v end
+    v = side
+    if B747DR_dsp_nd_pos_rad_r_tside_capt ~= v then B747DR_dsp_nd_pos_rad_r_tside_capt = v end
+    s = string.format("R-%03d", oc.pos_rad_radial[2])
+    if pos_text[2] ~= s then pos_text[2] = s; B747DR_dsp_nd_pos_rad_r_text_capt = s end
+    for k = 1, 3 do
+        v = of.pos_iru[k] and 1 or 0
+        if B747DR_dsp_nd_pos_iru_fo[k - 1] ~= v then B747DR_dsp_nd_pos_iru_fo[k - 1] = v end
+    end
+    v = of.pos_gps and 1 or 0
+    if B747DR_dsp_nd_pos_gps_fo ~= v then B747DR_dsp_nd_pos_gps_fo = v end
+    v = of.pos_rad[1] and 1 or 0
+    if B747DR_dsp_nd_pos_rad_l_fo ~= v then B747DR_dsp_nd_pos_rad_l_fo = v end
+    v = of.pos_rad_brg[1]
+    if B747DR_dsp_nd_pos_rad_l_brg_fo ~= v then B747DR_dsp_nd_pos_rad_l_brg_fo = v end
+    v = of.pos_rad_len[1]
+    if B747DR_dsp_nd_pos_rad_l_len_fo ~= v then B747DR_dsp_nd_pos_rad_l_len_fo = v end
+    v = math.max(0, of.pos_rad_len[1] - ND_RAD_SEG_PX)
+    if B747DR_dsp_nd_pos_rad_l_end_fo ~= v then B747DR_dsp_nd_pos_rad_l_end_fo = v end
+    v = of.pos_rad_tick[1] and 1 or 0
+    if B747DR_dsp_nd_pos_rad_l_tick_fo ~= v then B747DR_dsp_nd_pos_rad_l_tick_fo = v end
+    local turn, side = rad_label(of.pos_rad_brg[1])
+    v = turn
+    if B747DR_dsp_nd_pos_rad_l_tbrg_fo ~= v then B747DR_dsp_nd_pos_rad_l_tbrg_fo = v end
+    v = side
+    if B747DR_dsp_nd_pos_rad_l_tside_fo ~= v then B747DR_dsp_nd_pos_rad_l_tside_fo = v end
+    s = string.format("R-%03d", of.pos_rad_radial[1])
+    if pos_text[3] ~= s then pos_text[3] = s; B747DR_dsp_nd_pos_rad_l_text_fo = s end
+    v = of.pos_rad[2] and 1 or 0
+    if B747DR_dsp_nd_pos_rad_r_fo ~= v then B747DR_dsp_nd_pos_rad_r_fo = v end
+    v = of.pos_rad_brg[2]
+    if B747DR_dsp_nd_pos_rad_r_brg_fo ~= v then B747DR_dsp_nd_pos_rad_r_brg_fo = v end
+    v = of.pos_rad_len[2]
+    if B747DR_dsp_nd_pos_rad_r_len_fo ~= v then B747DR_dsp_nd_pos_rad_r_len_fo = v end
+    v = math.max(0, of.pos_rad_len[2] - ND_RAD_SEG_PX)
+    if B747DR_dsp_nd_pos_rad_r_end_fo ~= v then B747DR_dsp_nd_pos_rad_r_end_fo = v end
+    v = of.pos_rad_tick[2] and 1 or 0
+    if B747DR_dsp_nd_pos_rad_r_tick_fo ~= v then B747DR_dsp_nd_pos_rad_r_tick_fo = v end
+    local turn, side = rad_label(of.pos_rad_brg[2])
+    v = turn
+    if B747DR_dsp_nd_pos_rad_r_tbrg_fo ~= v then B747DR_dsp_nd_pos_rad_r_tbrg_fo = v end
+    v = side
+    if B747DR_dsp_nd_pos_rad_r_tside_fo ~= v then B747DR_dsp_nd_pos_rad_r_tside_fo = v end
+    s = string.format("R-%03d", of.pos_rad_radial[2])
+    if pos_text[4] ~= s then pos_text[4] = s; B747DR_dsp_nd_pos_rad_r_text_fo = s end
 end
 
 -- each PFD's sources (step 4a)
