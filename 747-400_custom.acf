@@ -31134,9 +31134,9 @@ P _strut_t1 0.128906250
 P _strut_t2 0.252929688
 P _wing/0/_Croot 54.099998474
 P _wing/0/_Ctip 32.409999847
-P _wing/0/_afl_file_1 Boeing Root (high subsonic).afl
-P _wing/0/_afl_file_2 Boeing Root (high subsonic).afl
-P _wing/0/_afl_file_3 Boeing Mid (high subsonic).afl
+P _wing/0/_afl_file_1 B744_root_custom.afl
+P _wing/0/_afl_file_2 B744_root_custom.afl
+P _wing/0/_afl_file_3 B744_mid_custom.afl
 P _wing/0/_ailn1/0 0
 P _wing/0/_ailn1/1 0
 P _wing/0/_ailn1/2 0
@@ -32937,9 +32937,9 @@ P _wing/0/_yawbr/count 10
 P _wing/0/_yawbr_hyd0123 0
 P _wing/1/_Croot 54.099998474
 P _wing/1/_Ctip 32.409999847
-P _wing/1/_afl_file_1 Boeing Root (high subsonic).afl
-P _wing/1/_afl_file_2 Boeing Root (high subsonic).afl
-P _wing/1/_afl_file_3 Boeing Mid (high subsonic).afl
+P _wing/1/_afl_file_1 B744_root_custom.afl
+P _wing/1/_afl_file_2 B744_root_custom.afl
+P _wing/1/_afl_file_3 B744_mid_custom.afl
 P _wing/1/_ailn1/0 0
 P _wing/1/_ailn1/1 0
 P _wing/1/_ailn1/2 0
@@ -49164,9 +49164,9 @@ P _wing/19/_yawbr/count 10
 P _wing/19/_yawbr_hyd0123 0
 P _wing/2/_Croot 32.409999847
 P _wing/2/_Ctip 28.899999619
-P _wing/2/_afl_file_1 Boeing Mid (high subsonic).afl
-P _wing/2/_afl_file_2 Boeing Mid (high subsonic).afl
-P _wing/2/_afl_file_3 Boeing Mid (high subsonic).afl
+P _wing/2/_afl_file_1 B744_mid_custom.afl
+P _wing/2/_afl_file_2 B744_mid_custom.afl
+P _wing/2/_afl_file_3 B744_mid_custom.afl
 P _wing/2/_ailn1/0 1
 P _wing/2/_ailn1/1 1
 P _wing/2/_ailn1/2 1
@@ -50967,9 +50967,9 @@ P _wing/2/_yawbr/count 10
 P _wing/2/_yawbr_hyd0123 0
 P _wing/3/_Croot 32.409999847
 P _wing/3/_Ctip 28.899999619
-P _wing/3/_afl_file_1 Boeing Mid (high subsonic).afl
-P _wing/3/_afl_file_2 Boeing Mid (high subsonic).afl
-P _wing/3/_afl_file_3 Boeing Mid (high subsonic).afl
+P _wing/3/_afl_file_1 B744_mid_custom.afl
+P _wing/3/_afl_file_2 B744_mid_custom.afl
+P _wing/3/_afl_file_3 B744_mid_custom.afl
 P _wing/3/_ailn1/0 1
 P _wing/3/_ailn1/1 1
 P _wing/3/_ailn1/2 1
@@ -59982,9 +59982,9 @@ P _wing/35/_yawbr/count 10
 P _wing/35/_yawbr_hyd0123 0
 P _wing/4/_Croot 28.899999619
 P _wing/4/_Ctip 21.389999390
-P _wing/4/_afl_file_1 Boeing Mid (high subsonic).afl
-P _wing/4/_afl_file_2 Boeing Mid (high subsonic).afl
-P _wing/4/_afl_file_3 Boeing Mid (high subsonic).afl
+P _wing/4/_afl_file_1 B744_mid_custom.afl
+P _wing/4/_afl_file_2 B744_mid_custom.afl
+P _wing/4/_afl_file_3 B744_mid_custom.afl
 P _wing/4/_ailn1/0 0
 P _wing/4/_ailn1/1 0
 P _wing/4/_ailn1/2 0
@@ -61785,9 +61785,9 @@ P _wing/4/_yawbr/count 10
 P _wing/4/_yawbr_hyd0123 0
 P _wing/5/_Croot 28.899999619
 P _wing/5/_Ctip 21.389999390
-P _wing/5/_afl_file_1 Boeing Mid (high subsonic).afl
-P _wing/5/_afl_file_2 Boeing Mid (high subsonic).afl
-P _wing/5/_afl_file_3 Boeing Mid (high subsonic).afl
+P _wing/5/_afl_file_1 B744_mid_custom.afl
+P _wing/5/_afl_file_2 B744_mid_custom.afl
+P _wing/5/_afl_file_3 B744_mid_custom.afl
 P _wing/5/_ailn1/0 0
 P _wing/5/_ailn1/1 0
 P _wing/5/_ailn1/2 0
@@ -63588,9 +63588,9 @@ P _wing/5/_yawbr/count 10
 P _wing/5/_yawbr_hyd0123 0
 P _wing/6/_Croot 21.389999390
 P _wing/6/_Ctip 14.390000343
-P _wing/6/_afl_file_1 Boeing Mid (high subsonic).afl
-P _wing/6/_afl_file_2 Boeing Mid (high subsonic).afl
-P _wing/6/_afl_file_3 Boeing Tip (high subsonic).afl
+P _wing/6/_afl_file_1 B744_mid_custom.afl
+P _wing/6/_afl_file_2 B744_mid_custom.afl
+P _wing/6/_afl_file_3 B744_tip_custom.afl
 P _wing/6/_ailn1/0 0
 P _wing/6/_ailn1/1 0
 P _wing/6/_ailn1/2 0
@@ -65391,9 +65391,9 @@ P _wing/6/_yawbr/count 10
 P _wing/6/_yawbr_hyd0123 0
 P _wing/7/_Croot 21.389999390
 P _wing/7/_Ctip 14.390000343
-P _wing/7/_afl_file_1 Boeing Mid (high subsonic).afl
-P _wing/7/_afl_file_2 Boeing Mid (high subsonic).afl
-P _wing/7/_afl_file_3 Boeing Tip (high subsonic).afl
+P _wing/7/_afl_file_1 B744_mid_custom.afl
+P _wing/7/_afl_file_2 B744_mid_custom.afl
+P _wing/7/_afl_file_3 B744_tip_custom.afl
 P _wing/7/_ailn1/0 0
 P _wing/7/_ailn1/1 0
 P _wing/7/_ailn1/2 0
@@ -73836,7 +73836,7 @@ P acf/_slat1_dn/8 0.000000000
 P acf/_slat1_dn/9 0.000000000
 P acf/_slat1_dn/count 12
 P acf/_slat1_dn_max_deg 10.000000000
-P acf/_slat1_inc 8.000000000
+P acf/_slat1_inc 4.800000000
 P acf/_slat1_type 0
 P acf/_slat2_cd 0.000000000
 P acf/_slat2_dn/0 0.000000000
@@ -73853,7 +73853,7 @@ P acf/_slat2_dn/8 0.000000000
 P acf/_slat2_dn/9 0.000000000
 P acf/_slat2_dn/count 12
 P acf/_slat2_dn_max_deg 10.000000000
-P acf/_slat2_inc 6.000000000
+P acf/_slat2_inc 3.600000000
 P acf/_slat2_type 0
 P acf/_slat_EQ 1
 P acf/_slat_ext1_time 0.100000001

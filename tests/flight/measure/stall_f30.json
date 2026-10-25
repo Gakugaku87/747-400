@@ -1,6 +1,6 @@
 {
   "name": "stall_f30",
-  "description": "測定（合否なし、全シナリオの実行に入れない）：カスタム acf の 1 g 失速速度、フラップ 30・脚下げ。銚子沖の海上 10,000 ft・200 kt で開始（機体を読み直す）。A/P の ALT HOLD と A/T の SPD でフラップ 20、172 kt でフラップ 30 と脚下げにしてから、A/T を切ってアイドルで減速し、毎分 4,000 ft の沈下まで記録する。記録は `luajit tests/flight/tools/stall_speed.lua <session.csv>` で読む（揚力係数の最大から 1 g の失速速度、FCTM p.262 (7.14) の 10,000 ft・アイドルの失速速度とシェーカー速度：notes/FCTM.md §1.14）。",
+  "description": "測定（合否なし、全シナリオの実行に入れない）：カスタム acf の 1 g 失速速度、フラップ 30・脚下げ。銚子沖の海上 10,000 ft・200 kt で開始（機体を読み直す）。A/P の ALT HOLD と A/T の SPD でフラップ 20、172 kt でフラップ 30 と脚下げにしてから、A/T を切ってアイドルで減速し、毎分 4,000 ft の沈下まで（届かなければ 150 秒）記録する。記録は `luajit tests/flight/tools/stall_speed.lua <session.csv>` で読む（揚力係数の最大から 1 g の失速速度、FCTM p.262 (7.14) の 10,000 ft・アイドルの失速速度とシェーカー速度：notes/FCTM.md §1.14）。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 3048.0, "heading_true": 0, "speed_in_meters_per_second": 102.9 },
@@ -41,7 +41,7 @@
     { "do": "set", "note": "アイドル", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
     { "do": "record_start" },
     { "do": "snapshot", "drefs": [ "sim/flightmodel/weight/m_total", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/position/alpha", "laminar/B747/airspeed/Vs", "sim/flightmodel2/wing/flap1_deg[0]", "sim/flightmodel2/gear/deploy_ratio[0]" ] },
-    { "do": "wait", "note": "失速して沈む", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "<", "value": -4000, "timeout": 300, "level": "warn" },
+    { "do": "wait", "note": "失速して沈む", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "<", "value": -4000, "timeout": 150, "level": "warn" },
     { "do": "record_stop" },
     { "do": "set", "note": "回復：推力", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 1 },
     { "do": "sleep", "seconds": 3 }

@@ -50,25 +50,49 @@ assert(#rows > 30, "too few rows")
 -- n swings with the A/P's pitch control, so average n and IAS^2 over HALF
 -- seconds each side (by time: the recording runs at the frame rate). Only
 -- the flight above 1,000 ft RA counts (a descent that never stalls ends on
--- the water).
+-- the water), and only up to the stall break: the first time past 8 deg AOA
+-- that n, averaged the same way, falls below 0.88 (after the break the
+-- post-stall lift can rise again with the AOA).
 local HALF = 1.0
 local cut = #rows
 for r = 1, #rows do
     if rows[r][col.ra] and rows[r][col.ra] < 1000 then cut = r - 1; break end
 end
-local best, besti, marked = -1, nil, nil
-local a, b, sn, sv = 1, 0, 0, 0
+local smooth_k, smooth_n = {}, {}
+do
+    local a, b, sn, sv, cnt = 1, 0, 0, 0, 0
+    for r = 1, cut do
+        local t = rows[r][col.t]
+        while b < cut and rows[b + 1][col.t] <= t + HALF do
+            b = b + 1; sn = sn + rows[b][col.gload]; sv = sv + rows[b][col.ias] ^ 2; cnt = cnt + 1
+        end
+        while rows[a][col.t] < t - HALF do
+            sn = sn - rows[a][col.gload]; sv = sv - rows[a][col.ias] ^ 2; cnt = cnt - 1; a = a + 1
+        end
+        smooth_k[r], smooth_n[r] = sn / sv, sn / cnt
+    end
+end
+local brk
 for r = 1, cut do
-    local t = rows[r][col.t]
-    while b < cut and rows[b + 1][col.t] <= t + HALF do
-        b = b + 1; sn = sn + rows[b][col.gload]; sv = sv + rows[b][col.ias] ^ 2
-    end
-    while rows[a][col.t] < t - HALF do
-        sn = sn - rows[a][col.gload]; sv = sv - rows[a][col.ias] ^ 2; a = a + 1
-    end
-    local s = sn / sv
-    if s > best and rows[r][col.ias] > 60 then best, besti = s, r end
+    if rows[r][col.alpha] > 8 and smooth_n[r] < 0.88 then brk = r; break end
+end
+local last = brk or cut
+local best, besti, marked = -1, nil, nil
+for r = 1, last do
+    if smooth_k[r] > best and rows[r][col.ias] > 60 then best, besti = smooth_k[r], r end
     if not marked and rows[r][col.alpha] >= alpha_mark then marked = r end
+end
+-- the same up to the break by AOA: n / IAS^2 averaged in 1 deg bins
+local bins = {}
+for r = 1, last do
+    local k = math.floor(rows[r][col.alpha] + 0.5)
+    local c = bins[k] or {0, 0}
+    c[1], c[2] = c[1] + rows[r][col.gload] / rows[r][col.ias] ^ 2, c[2] + 1
+    bins[k] = c
+end
+local bin_best, bin_alpha = -1, nil
+for k, c in pairs(bins) do
+    if c[2] >= 30 and c[1] / c[2] > bin_best then bin_best, bin_alpha = c[1] / c[2], k end
 end
 local v = rows[besti]
 local tons = v[col.weight] / 1000
@@ -77,10 +101,13 @@ local flap_deg = lever < 0.01 and 0 or math.abs(lever - 0.5) < 0.01 and 10 or ma
     or lever > 0.99 and 30 or nil
 print(string.format("%d rows, %.1f s; weight %.0f kg; flap lever %.3f", #rows, rows[#rows][col.t] - rows[1][col.t],
     v[col.weight], lever))
+print(brk and string.format("stall break at t %.1f s: IAS %.1f kt, alpha %.1f deg", rows[brk][col.t], rows[brk][col.ias],
+    rows[brk][col.alpha]) or "no stall break (n stayed above 0.88)")
 print(string.format("CL max at t %.1f s: IAS %.1f kt, n %.3f, alpha %.1f deg, %.0f ft, %.0f fpm%s", v[col.t], v[col.ias],
     v[col.gload], v[col.alpha], v[col.alt], v[col.vs],
-    v[col.t] > rows[cut][col.t] - HALF - 0.5 and "  (the end of the recording: not stalled yet)" or ""))
-print(string.format("1 g stall speed: %.1f kt (n and IAS^2 averaged over %.0f s)", 1 / math.sqrt(best), 2 * HALF))
+    (not brk and v[col.t] > rows[cut][col.t] - HALF - 0.5) and "  (the end of the recording: not stalled yet)" or ""))
+print(string.format("1 g stall speed: %.1f kt (n and IAS^2 averaged over %.0f s); by AOA bins %.1f kt at %d deg",
+    1 / math.sqrt(best), 2 * HALF, bin_alpha and 1 / math.sqrt(bin_best) or 0, bin_alpha or 0))
 if col.elevator_ratio then
     print(string.format("elevator at CL max: %.2f (1 is full nose up: there, the elevator limits the AOA, not the stall)",
         v[col.elevator_ratio]))

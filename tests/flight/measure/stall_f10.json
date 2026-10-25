@@ -1,0 +1,44 @@
+{
+  "name": "stall_f10",
+  "description": "測定（合否なし、全シナリオの実行に入れない）：カスタム acf の 1 g 失速速度、フラップ 10・脚上げ。銚子沖の海上 10,000 ft・200 kt で開始（機体を読み直す）。A/P の ALT HOLD と A/T の SPD でフラップ 10 にしてから、A/T を切ってアイドルで減速し、毎分 4,000 ft の沈下まで（届かなければ 150 秒）記録する。記録は `luajit tests/flight/tools/stall_speed.lua <session.csv>` で読む（揚力係数の最大から 1 g の失速速度、FCTM p.261 (7.13) の 10,000 ft・アイドルの失速速度とシェーカー速度：notes/FCTM.md §1.14）。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 3048.0, "heading_true": 0, "speed_in_meters_per_second": 102.9 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 5, "note": "空中開始の揺れ" },
+    { "do": "remember", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "as": "alt0" },
+    { "do": "set", "note": "MCP 高度は今の高度", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 0, "rel": "alt0", "round": 100 },
+    { "do": "set", "note": "MCP 方位 007", "dref": "laminar/B747/autopilot/heading/degrees", "value": 7 },
+    { "do": "set", "note": "MCP 速度 200 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 200 },
+    { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "note": "A/P のサーボ", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "cmd", "note": "ALT HOLD", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "cmd", "note": "SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "set", "note": "レバー 10", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.5 },
+    { "do": "wait", "note": "水平飛行に落ち着く（空中開始の直後は沈下している）", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "between", "value": [-300, 300], "timeout": 90 },
+    { "do": "sleep", "seconds": 50, "note": "フラップが出る" },
+    { "do": "wait", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "between", "value": [-300, 300], "timeout": 60 },
+    { "do": "cmd", "note": "A/T OFF", "name": "laminar/B747/authrottle_disarm" },
+    { "do": "set", "note": "アイドル", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
+    { "do": "record_start" },
+    { "do": "snapshot", "drefs": [ "sim/flightmodel/weight/m_total", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/position/alpha", "laminar/B747/airspeed/Vs", "sim/flightmodel2/wing/flap1_deg[0]", "sim/flightmodel2/gear/deploy_ratio[0]" ] },
+    { "do": "wait", "note": "失速して沈む", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "<", "value": -4000, "timeout": 150, "level": "warn" },
+    { "do": "record_stop" },
+    { "do": "set", "note": "回復：推力", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 1 },
+    { "do": "sleep", "seconds": 3 }
+  ]
+}
