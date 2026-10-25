@@ -274,7 +274,10 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - オートブレーキの推定：車輪のスピンアップと RTO の 85 kt は IRS の対地速度で見る（前側 8 輪の車輪速の代わり）、減速の制御のゲイン（カスタム acf に合わせた）、disarm の後に圧が抜ける時間（2 秒）、推力レバーのアイドルと前進の角度。AUTOBRAKES のうち、セレクター OFF なのに遮断弁の下流が高圧のときと、RTO の開始での故障・手動の override は無い。
 - 残り：AIR/GND SYSTEM、GEAR MONITOR・A/G DISAGREE・PARK BRK VALVE の STATUS（GEAR-22 の残り）、CONFIG GEAR のラッチと GND PROX GEAR OVRD（GEAR-17 の残り）、ドアの箱の空箱。
 
-### 表示（PFD・ND・EICAS）：作り直し中（5-2 段 1：表示器と EIU は済）
+### 表示（PFD・ND・EICAS）：作り直し中（5-2 段 1：表示器と EIU、段 2：ソース選択の比較は済）
+
+- 実機に合わせた点（段 2、ソース選択の比較）：両席が同じ EIU・FCC・FMC を使うと >SOURCE SEL EIU・F/D・NAV、両 PFD が同じ電波高度計なら >SNGL SOURCE RA、両 PFD の姿勢が 3° 以上離れると >ATTITUDE（caution）、方位が 4° 以上離れると >HEADING、EFIS 操作パネルの故障で >EFIS CONTROL L・R、両パネルと表示選択パネルで >EFIS/EICAS C/P（FCOM p.1197–1199）。
+  - FLT DIR・NAV の選択で FD の指示や地図の源は変わらない（FCC・FMC が 1 つずつ）。>TRACK、>SNGL SOURCE ILS は無い。EFIS 操作パネルが壊れても操作は効く（CDU の代替と一緒に段 5 で）。
 
 - 実機に合わせた点（段 1、表示器と EIU）：INBD・LWR の選択器を FCOM の規則どおりにした（前は 81 通りのうち 11 通りだけを表で持ち、資料に無い入れ替えもした）。表示器 6 台の故障で、outboard が使えなければ PFD が inboard に、upper が使えなければ primary EICAS が lower に自動で移る。EIU 3 台（電源と故障）を作り、各席の EIU 選択器の AUTO（機長 L→C→R、副操縦士 R→C→L）と中央の EIU SEL（EICAS）、手で選んだ EIU が壊れると切り替えずにその表示が消えること、standby の電源で L の EIU が壊れると全部の表示が消えること、>EIU LEFT（地上だけ）。内容の明るさは、出している表示器のつまみで変わる（DSP-27〜30）。
   - 故障の無いときに選択器で内容を別の表示器に出すと、もとの表示器は消える（実機は同じ内容を 2 面に出せるが、パネルが 1 か所にしか描けない：推定）。compact EICAS（表示器 1 台のとき）は段 6 で。

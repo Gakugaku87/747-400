@@ -329,3 +329,11 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - EIU（新設 `eiu/fail[3]`、使っている EIU は新設 `eiu/used[3]`：機長・副操縦士・EICAS、1 L・2 C・3 R・0 なし）：電源は L が main standby bus、C が captain transfer bus、R が F/O transfer bus。AUTO は機長 L→C→R、副操縦士 R→C→L、EICAS L→C→R。手で選んだ EIU が使えなければ、その席の PFD・ND（EICAS なら両 EICAS）は消える。AC が無い（standby の電源）で L が使えなければ全部が消える。>EIU LEFT（advisory 91。地上だけ）。
 - 輝度：照明のモジュールが新設 `displays/content_unit[6]`（内容ごとの表示器）を読み、内容の rheostat に、出している表示器のつまみの値を使う（DSP-30。機長 outboard のつまみは 2、inboard は 0、upper 9、lower 10、副操縦士 inboard 3、outboard 5）。
 - X-Plane での確認（カスタム acf）：`s46_displays` 26/26。通常の配置、機長の outboard と upper の故障で PFD が inboard・primary EICAS が lower（写真）、機長の INBD EICAS で inboard に secondary EICAS（写真）、副操縦士の LWR ND で lower に副操縦士の ND（写真）、副操縦士の INBD PFD、L の EIU の故障で AUTO は C（空中で >EIU LEFT なし）、機長の EIU を L にすると機長の PFD・ND が消え（写真）、戻すと戻る。Log.txt に Lua とパネルの誤りなし。
+
+## 12. 実装（5-2 段 2、2026-10-25：ソース選択の比較）
+
+- 表示器と EIU のモデル・グルーに、両席のソース選択の比較を足した：>SOURCE SEL EIU（両席が同じ EIU を使う）、>SOURCE SEL F/D（同じ FCC）、>SOURCE SEL NAV（同じ FMC。CDU の位置は FMC ではないので出さない）（FCOM p.1197）。選択器の向き（FCOM p.1043 の図と 3D の回転）：FLT DIR は両席とも 0 L・1 C・2 R、NAV は機長 0 FMC L・1 FMC R・2 CDU L・3 CDU C、副操縦士は逆向きで 0 CDU C・1 CDU R・2 FMC L・3 FMC R。
+- EFIS 操作パネルと表示選択パネル：新設の故障 `efis/fail[2]`（L・R）・`dsp/fail`。電源は L が main standby bus、R が F/O transfer bus（FCOM p.800、p.804）。>EFIS CONTROL L・R（そのパネルが働かない）、>EFIS/EICAS C/P（両パネルと表示選択パネルが働かない。このときは L・R の代わりに：推定）（FCOM p.1198–1199）。パネルが働かないときに操作が効かなくなることと CDU の代替（DSP-31）は段 5 で。
+- 航法センサーのモジュール：>ATTITUDE（caution、beeper：選んだ IRU の姿勢の差 3° 以上）と >HEADING（表示の方位の差 4° 以上）を IRS のグルーに（FCOM p.1197–1198）。PFD は X-Plane の機長側・副操縦士側の AHRS を表示するので、その差を見る（両席が同じ IRU なら姿勢は比べない：推定）。>SNGL SOURCE RA（両 PFD が同じ電波高度計）を電波高度計のグルーに（FCOM p.1197）。
+- 後に回したもの：>TRACK（席ごとの航跡の源が無い）、>SNGL SOURCE ILS と PFD の ILS の目盛の出し方（DSP-14。どちらも ILS 受信機と自動同調に絡むので、無線の同調（5-1 段 3、FMC と一緒）で）。FLT DIR・NAV の選択で FD の指示や地図の源が変わること（FCC・FMC が 1 つずつしか無い。AFDS・FMC の作り直しで）。
+- X-Plane での確認（カスタム acf）：`s47_sources` 21/21。両席が FCC L で >SOURCE SEL F/D、FMC R で >SOURCE SEL NAV、EIU L で >SOURCE SEL EIU（このとき副操縦士の電波高度計の順も L からになり >SNGL SOURCE RA も出た）、電波高度計 R・C の故障で >SNGL SOURCE RA、左 EFIS 操作パネルの故障で >EFIS CONTROL L、両パネルと表示選択パネルで >EFIS/EICAS C/P だけ、X-Plane の副操縦士側の姿勢計と方位の故障と右旋回で >ATTITUDE（機長のバンク 16.9°、副操縦士 0°）と >HEADING、故障を戻すと消える。EICAS の行を記録した。Log.txt に Lua の誤りなし。

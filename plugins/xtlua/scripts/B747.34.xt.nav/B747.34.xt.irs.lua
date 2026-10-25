@@ -70,6 +70,14 @@ B747DR_irs_pfd_fo               = find_dataref("laminar/B747/pfd/fo/irs")
 B747DR_irs_fmc_notify           = find_dataref("laminar/B747/fms/notification")
 B747DR_irs_CAS_memo             = find_dataref("laminar/B747/CAS/memo_status")
 B747DR_irs_CAS_advisory         = find_dataref("laminar/B747/CAS/advisory_status")
+B747DR_irs_CAS_caution          = find_dataref("laminar/B747/CAS/caution_status")
+-- what the PFDs show (the panel reads X-Plane's AHRS of each side)
+simDR_irs_pitch_pilot           = find_dataref("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot")
+simDR_irs_pitch_copilot         = find_dataref("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_copilot")
+simDR_irs_roll_pilot            = find_dataref("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot")
+simDR_irs_roll_copilot          = find_dataref("sim/cockpit2/gauges/indicators/roll_AHARS_deg_copilot")
+simDR_irs_hdg_pilot             = find_dataref("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot")
+simDR_irs_hdg_copilot           = find_dataref("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_copilot")
 
 -- EICAS slots (B747.87.xt.warning.lua), in the order L, C, R
 local MEMO_ALIGN = {14, 15, 16}                 -- IRS ALIGN MODE L, C, R
@@ -78,6 +86,8 @@ local ADV_DC = {230, 229, 231}                  -- >IRS DC LEFT, CENTER, RIGHT
 local ADV_FAIL = {232, 228, 234}                -- IRS LEFT, CENTER, RIGHT
 local ADV_MOTION = 233                          -- IRS MOTION
 local ADV_SOURCE_SEL_IRS = 270                  -- >SOURCE SEL IRS
+local CAU_ATTITUDE, ADV_HEADING = 3, 185        -- >ATTITUDE, >HEADING
+local ATT_DISAGREE_DEG, HDG_DISAGREE_DEG = 3, 4 -- FCOM p.1197-1198
 -- the FMC's messages (laminar/B747/fms/notification: B744.notifications.lua + 1)
 local FMC_CYCLE_IRS, FMC_ENTER_IRS_POS = 5, 12
 local AC_BUS = {2, 0, 1}                        -- L: AC 3, C: AC 1, R: AC 2 (ATA34_2 p.272-275)
@@ -206,6 +216,21 @@ function B747_irs()
     if B747DR_irs_pfd_capt ~= pc then B747DR_irs_pfd_capt = pc end
     if B747DR_irs_pfd_fo ~= pf then B747DR_irs_pfd_fo = pf end
     B747_nav_put(B747DR_irs_CAS_advisory, ADV_SOURCE_SEL_IRS, B747_nav_flag(sc == sf))
+    -- >ATTITUDE (caution, beeper): the two selected IRUs' attitude 3 deg
+    -- apart or more; >HEADING: the displayed headings 4 deg apart or more
+    -- (FCOM p.1197-1198). The PFDs show X-Plane's pilot and copilot AHRS,
+    -- which stand for the two selected IRUs (estimate): on one IRU the
+    -- attitudes cannot disagree
+    local att, hdg = false, false
+    if sc ~= sf and out.iru[sc].att_valid and out.iru[sf].att_valid then
+        att = math.abs(simDR_irs_pitch_pilot - simDR_irs_pitch_copilot) >= ATT_DISAGREE_DEG
+            or math.abs((simDR_irs_roll_pilot - simDR_irs_roll_copilot + 180) % 360 - 180) >= ATT_DISAGREE_DEG
+    end
+    if out.iru[sc].hdg_valid and out.iru[sf].hdg_valid then
+        hdg = math.abs((simDR_irs_hdg_pilot - simDR_irs_hdg_copilot + 180) % 360 - 180) >= HDG_DISAGREE_DEG
+    end
+    B747_nav_put(B747DR_irs_CAS_caution, CAU_ATTITUDE, B747_nav_flag(att))
+    B747_nav_put(B747DR_irs_CAS_advisory, ADV_HEADING, B747_nav_flag(hdg))
 end
 
 function B747_irs_flight_start()

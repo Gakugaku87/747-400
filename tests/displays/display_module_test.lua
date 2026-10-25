@@ -92,6 +92,45 @@ T.equal(rt:get(POWER, 0) + rt:get(POWER, 3), 0, "no APU standby bus: the Captain
 rt:set(BUS .. "stby_apu", 1)
 frames(0.1)
 
+-- the source selectors and the control panels (FCOM p.1043, p.1197-1199; step 2)
+local ADV = "laminar/B747/CAS/advisory_status"
+rt:set(FI .. "flt_dir_src/capt/sel_dial_pos", 0)                  -- L
+rt:set(FI .. "flt_dir_src/fo/sel_dial_pos", 2)                    -- R
+rt:set(FI .. "nav_src/capt/sel_dial_pos", 0)                      -- FMC L
+rt:set(FI .. "nav_src/fo/sel_dial_pos", 3)                        -- FMC R
+frames(0.1)
+T.equal(rt:get(ADV, 268) + rt:get(ADV, 269) + rt:get(ADV, 271), 0, "normal positions: no >SOURCE SEL EIU, F/D, NAV")
+rt:set(FI .. "flt_dir_src/fo/sel_dial_pos", 0)
+frames(0.1)
+T.equal(rt:get(ADV, 269), 1, "both FLT DIR at L: >SOURCE SEL F/D")
+rt:set(FI .. "flt_dir_src/fo/sel_dial_pos", 2)
+rt:set(FI .. "nav_src/capt/sel_dial_pos", 1)                      -- FMC R
+frames(0.1)
+T.equal(rt:get(ADV, 269), 0, "F/D apart")
+T.equal(rt:get(ADV, 271), 1, "both NAV on FMC R: >SOURCE SEL NAV")
+rt:set(FI .. "nav_src/capt/sel_dial_pos", 2)                      -- CDU L
+rt:set(FI .. "nav_src/fo/sel_dial_pos", 0)                        -- CDU C
+frames(0.1)
+T.equal(rt:get(ADV, 271), 0, "both on CDUs: no >SOURCE SEL NAV")
+rt:set(FI .. "nav_src/capt/sel_dial_pos", 0)
+rt:set(FI .. "nav_src/fo/sel_dial_pos", 3)
+rt:set(FI .. "eiu_src/fo/sel_dial_pos", 0)                        -- L
+frames(0.1)
+T.equal(rt:get(ADV, 268), 1, "both on EIU L: >SOURCE SEL EIU")
+rt:set(FI .. "eiu_src/fo/sel_dial_pos", 2)
+rt:set("laminar/B747/efis/fail", 0, 1)
+frames(0.1)
+T.equal(rt:get(ADV, 88), 1, "left EFIS control panel failed: >EFIS CONTROL L")
+rt:set("laminar/B747/efis/fail", 1, 1)
+rt:set("laminar/B747/dsp/fail", 1)
+frames(0.1)
+T.equal(rt:get(ADV, 90), 1, "both panels and the display select panel: >EFIS/EICAS C/P")
+rt:set("laminar/B747/efis/fail", 0, 0)
+rt:set("laminar/B747/efis/fail", 1, 0)
+rt:set("laminar/B747/dsp/fail", 0)
+frames(0.1)
+T.equal(rt:get(ADV, 88) + rt:get(ADV, 89) + rt:get(ADV, 90), 0, "messages clear")
+
 -- the lighting module: a display takes the knob of the unit it is on (DSP-30)
 rt:load("plugins/xtlua_keysystems/scripts/B747.90.xt.lighting/B747.90.xt.lighting.lua")
 rt:callout("flight_start")

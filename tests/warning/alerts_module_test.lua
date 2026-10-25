@@ -34,8 +34,10 @@ local function slot_of(level, text)
 end
 
 -- on the ground, every FUEL CONTROL CUTOFF, the EIUs powered from the main
--- standby bus: they start after 4 s
+-- standby bus: they start after 4 s. The F/O transfer bus too, for the right
+-- EFIS control panel (without it >EFIS CONTROL R shows: 5-2 step 2)
 rt:set("laminar/B747/electrical/bus/stby_main", 1)
+rt:set("laminar/B747/electrical/bus/xfr_fo", 1)
 frames(5)
 rt:set(CAUTION, 40, 1)              -- HYD PRESS SYS 1
 rt:set(ADVISORY, 100, 1)            -- ELEC GEN OFF 1
@@ -139,6 +141,7 @@ T.equal(get("laminar/B747/CAS/recall_ind"), 0, "RCL: RECALL gone 1 s after relea
 
 -- the EIUs lose power: blank lines, lights out
 rt:set("laminar/B747/electrical/bus/stby_main", 0)
+rt:set("laminar/B747/electrical/bus/xfr_fo", 0)
 frames(0.5)
 T.equal(line("warning", 0), " ", "no power: lines blank")
 T.equal(get("laminar/B747/warning/master_warning"), 0, "no power: master WARNING out")
@@ -147,6 +150,7 @@ T.equal(get("laminar/B747/warning/warning_siren"), 0, "no power: no siren")
 -- a CANC pushed without power does nothing when the power comes back
 rt:command("laminar/B747/dsp/canc_switch", 0.1)
 rt:set("laminar/B747/electrical/bus/stby_main", 1)
+rt:set("laminar/B747/electrical/bus/xfr_fo", 1)
 frames(5)
 T.equal(get("laminar/B747/CAS/caut_adv_display"), 1, "power back: the CANC pushed without power did nothing")
 T.equal(line("warning", 0), "CABIN ALTITUDE", "power back: the messages are back")

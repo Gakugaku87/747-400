@@ -137,4 +137,38 @@ inp.eiu_fail[M.EIU_L] = true
 run()
 for c = 1, 6 do T.check(not on(c), "standby power, left EIU failed: display " .. c .. " off") end
 
+-- the source selections both pilots share (FCOM p.1197; step 2)
+fresh()
+T.equal(out.msg_source_sel_eiu or out.msg_source_sel_fd or out.msg_source_sel_nav, false,
+    "normal selections: no >SOURCE SEL")
+inp.eiu_sel[2] = M.EIU_L
+run()
+T.equal(out.msg_source_sel_eiu, true, "both on EIU L: >SOURCE SEL EIU")
+inp.eiu_sel[2] = M.SEL_AUTO
+inp.fd[2] = 1
+run()
+T.equal(out.msg_source_sel_eiu, false, "EIUs apart again")
+T.equal(out.msg_source_sel_fd, true, "both on FCC L: >SOURCE SEL F/D")
+inp.fd[2] = 3
+inp.fmc[1] = 2
+run()
+T.equal(out.msg_source_sel_nav, true, "both on FMC R: >SOURCE SEL NAV")
+inp.fmc[1], inp.fmc[2] = 0, 0
+run()
+T.equal(out.msg_source_sel_nav, false, "both on CDUs: not on an FMC")
+
+-- the EFIS and EICAS control panels (FCOM p.1198-1199)
+fresh()
+inp.efis_fail[1] = true
+run()
+T.equal(out.msg_efis_control[1], true, "left EFIS control panel failed: >EFIS CONTROL L")
+T.equal(out.msg_efis_control[2], false, "not R")
+inp.efis_power[2] = false
+run()
+T.equal(out.msg_efis_control[2], true, "right panel unpowered: >EFIS CONTROL R")
+inp.dsp_fail = true
+run()
+T.equal(out.msg_efis_eicas_cp, true, "both EFIS panels and the display select panel: >EFIS/EICAS C/P")
+T.equal(out.msg_efis_control[1] or out.msg_efis_control[2], false, "standing for the two (estimate)")
+
 T.done()
