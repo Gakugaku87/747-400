@@ -3,7 +3,8 @@
 -- B747.60.pfd_ils_model.lua, 5-2 step 4e) without X-Plane: the approach
 -- reference, the localizer and glideslope scales and pointers, the LOC and
 -- G/S flags, the deviation warnings and the rising runway (ATA34_1
--- p.466-470, ATA31 p.13, FCOM p.987-989).
+-- p.466-470, ATA31 p.13, FCOM p.987-989); the same side's ND in APP mode
+-- (step 5b: ATA34_1 p.473-476, ATA31 p.20-21, FCOM p.1033-1034, p.1144).
 local T = dofile("tests/lib/check.lua")("pfd_ils_model")
 local M = dofile("plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/B747.60.pfd_ils_model.lua")
 
@@ -169,5 +170,67 @@ f.tuned, f.loc_rx, f.gs_rx, f.loc_dots, f.gs_dots = true, true, true, 1, 1
 run()
 T.check(out[M.FO].ils and out[M.FO].loc_ptr == 1 and out[M.FO].gs_ptr == 1, "the F/O's ILS R: shown")
 T.equal(out[M.FO].gs_scale, 1, "the F/O's radio altitude not valid: no warning on that side")
+
+-- the ND in APP mode (step 5b)
+s, inp = M.new(), M.inputs()
+c = inp.side[M.CAPT]
+run()
+o = out[M.CAPT]
+T.check(not o.nd_loc_scale and not o.nd_gs_scale, "parked: no computed data, no ND scales (ATA34_1 p.358, p.473)")
+T.check(o.nd_loc_ptr == 0 and o.nd_gs_ptr == 0, "no pointers")
+T.check(not o.nd_loc_flag and not o.nd_gs_flag, "no flags")
+T.equal(o.nd_crs, 1, "no runway course: the course dashes (ATA34_1 p.473)")
+T.equal(o.nd_ref, 1, "and the frequency dashes")
+T.equal(o.nd_dme, 0, "the DME dashes")
+c.loc_rx, c.gs_rx, c.dme_rx = true, true, true
+c.loc_dots, c.gs_dots = 1.5, -1
+run()
+T.check(o.nd_loc_ptr == 0 and o.nd_gs_ptr == 0, "signals while parked: still no pointers")
+T.check(not o.nd_loc_scale and not o.nd_gs_scale, "nor scales")
+c.tuned = true
+run()
+T.equal(o.nd_crs, 2, "tuned: the course")
+T.equal(o.nd_ref, 2, "the frequency or identifier")
+T.equal(o.nd_dme, 1, "the DME distance")
+T.equal(o.nd_loc_ptr, 1, "localizer 1.5 dots: filled")
+T.equal(o.nd_gs_ptr, 1, "glideslope -1 dot: filled")
+T.check(o.nd_loc_scale and o.nd_gs_scale, "and the scales")
+c.loc_dots, c.gs_dots = 2.4, -2.45
+run()
+T.equal(o.nd_loc_ptr, 1, "2.4 dots: still filled on the ND (within 2 1/2 dots: FCOM p.1144)")
+T.equal(o.nd_gs_ptr, 1, "the glideslope too")
+T.equal(o.loc_ptr, 2, "the PFD's hollow beyond 2 1/3")
+c.loc_dots, c.gs_dots = -2.5, 2.5
+run()
+T.equal(o.nd_loc_ptr, 2, "at the stop (2.5 dots): hollow")
+T.equal(o.nd_gs_ptr, 2, "the glideslope too")
+c.gs_rx = false
+run()
+T.equal(o.nd_gs_ptr, 0, "no glideslope signal: no pointer (NCD)")
+T.check(not o.nd_gs_scale and not o.nd_gs_flag, "no scale either, no flag")
+T.check(o.gs_scale == 1, "the PFD keeps its scale (ATA31 p.13)")
+c.gs_rx = true
+c.roll = 60
+run()
+T.equal(o.nd_loc_ptr, 2, "the PFD's 53-degree limit is not the ND's")
+c.roll = 0
+c.gs_fail = true
+run()
+T.check(o.nd_gs_flag and not o.nd_gs_scale and o.nd_gs_ptr == 0, "glideslope invalid: the G/S flag instead")
+T.check(o.nd_loc_scale and not o.nd_loc_flag, "the localizer unaffected")
+c.gs_fail = false
+c.dme_fail = true
+run()
+T.equal(o.nd_dme, 2, "the DME failed: its flag (FCOM p.1034)")
+c.dme_fail, c.dme_rx = false, false
+run()
+T.equal(o.nd_dme, 0, "no DME received: dashes (FCOM p.1033)")
+c.rx_fail = true
+run()
+T.check(o.nd_loc_flag and o.nd_gs_flag, "the receiver failed: both flags")
+T.check(o.nd_crs == 0 and o.nd_ref == 0, "the course and the frequency removed (ATA34_1 p.476)")
+c.tuned = false
+run()
+T.check(o.nd_loc_flag and o.nd_gs_flag, "parked and failed: the flags still")
 
 T.done()

@@ -373,3 +373,15 @@
 | 同 | 進入の基準の DME（`gen_LED ILS L DME LED`・`ILS R DME LED`）と進入コース（`gen_LED LED ILS L`・`LED ILS R`） | 中央の FMC master 選択器（`flt_inst/fmc_master_src/ctr_pnl/sel_dial_pos`）が 0 なら NAV1、1 なら NAV2 | 新設 `pfd/<席>/ils_rx`（1 L、2 C、3 R）が 2.5 以下なら NAV1、より大なら NAV2 | FCOM p.986、p.1044 |
 
 上の 4 行は `docs/overhaul/tools/panel_pfd_ils_rx.lua` で書き換えた（4 組で 48 か所：`DATAREF` 24、表示条件 16、ID の付け替え 4、条件の削除 2、削除 2）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_pfd_ils_rx`。
+
+表示（5-2 段 5b-1b、2026-10-26：ND の APP）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・ND の APP（DSP-03・15） | 機長・副操縦士の ND の全周（`GROUP ILS Pointers`）と拡大（`GROUP ILS Pointer`）の `GROUP ILS L`・`ILS R`（機長は名前に ` 2`） | NAV の源の選択器（`flt_inst/nav_src/<席>/sel_dial_pos`）の FMC L・FMC R の位置 | 新設 `laminar/B747/pfd/<席>/ils_rx`（使用中の EIU の受信機）が 2.5 以下なら NAV1 の組、より大なら NAV2 の組 | FCOM p.1044 |
+| 同 | その中のコースの指針（`gen_needle Course Ptr`・`Course Pointer`）、偏位のバー（`CDI:hollow`・`CDI:filled`・`CDI_filled`）、目盛（`Scale`） | 指針と目盛は条件なし、バーは X-Plane の `navN_hdef_dots` が 2.31 より大（中抜き）・2.30 より小（塗り）。バーの振れ（`DEFLECT_PIX`）115 | 指針は新設 `laminar/B747/nd/<席>/crs` が 2（同調前は消える）、バーは `nd/<席>/loc_ptr` が 2（中抜き）・1（塗り：2 1/2 ドットの内）、目盛は `nd/<席>/loc_scale`。振れは 121.25（X-Plane の 2.5 ドットで目盛の点 48.5 px/ドットに合う） | FCOM p.1144、ATA34_1 p.473–476 |
+| 同 | 全周と拡大の `GROUP Glideslope`（機長は ` 2`）の `GROUP Pointer`・`Pointer VDEF > 2.3`・`<= 2.3` と中の `gen_pointer Pointer`、`gen_rotary Scale` | X-Plane の HSI の信号と偏位（機長の拡大は副操縦士の `hsi_vdef_dots_copilot`）、2.5 ドットで 97 px（2 ドットの印）、`CLIP`。目盛は条件なし | 新設 `nd/<席>/gs_ptr`（0 より大、2 中抜き、1 塗り）、偏位は `pfd/<席>/gs_dots`、2.5 ドットで 121.25 px、`CLIP` なし。目盛は新設 `nd/<席>/gs_scale` | FCOM p.1144 |
+| 同 | 同じ `GROUP Glideslope` の目盛の後 | なし | G/S の旗 `gen_rotary GS X ND`（PFD の `Failure Flags/gsX`）を目盛の位置に、LOC の旗 `gen_rotary LOC X ND`（`Failure Flags/locX`）を全周は飛行機の記号の左、拡大は記号の下（推定）に。新設 `nd/<席>/gs_flag`・`loc_flag` | ATA31 p.21、ATA34_1 p.477、FCOM p.1034 |
+| 同 | 基準受信機の欄（`GROUP Sel Rec ILS`）の `GROUP ILS L`・`ILS R` | NAV の源の選択器で 2 組を切り替え。ID と周波数は 3 行の条件（最後の `[0]` だけが効き、ID も周波数も出なかった）で、ILS R の周波数は VOR L（`nav3_frequency_hz`）、コースは X-Plane の LOC の向き、DME は白 | 2 組を消して欄の直下に組み直した：`ILS L`・`ILS C`（新設、`Ref Rcvr/ils_C_bkgnd`）・`ILS R` の見出しを `ils_rx` の 1・2・3 で、ID か周波数の文字 1 つを新設の文字列 `nd/<席>/ils_ref`（同調前は「---」）、コースを新設 `nd/<席>/crs_deg`（CDU のコース）で `crs` が 2 のとき、「---」（新設の文字列 `nd/dashes`、白の文字）を `crs` が 1 のとき、`CRS` の見出しは `crs` が 1 以上。DME は緑（`ND/dme_bkgnd`、`LED_8.21R.xxx#00.green`）の新設 `nd/<席>/dme_nm` を `dme` が 1、「DME ---」を 0、DME の旗（`ND/dmeX_bkgnd`）を 2 のとき | FCOM p.1033–1034、p.1144、ATA34_1 p.473 |
+
+上の 5 行は `docs/overhaul/tools/panel_nd_app.lua` で書き換えた（2 面で 100 か所）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_app`。

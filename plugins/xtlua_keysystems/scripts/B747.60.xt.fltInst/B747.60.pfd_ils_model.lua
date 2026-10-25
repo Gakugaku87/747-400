@@ -3,7 +3,10 @@
 -- glue: FCOM p.1044, step 5b): the approach reference and course, the
 -- localizer and glideslope
 -- scales and pointers, the LOC and G/S flags, the deviation warnings (the
--- scale amber, the pointer flashing at 4 Hz) and the rising runway.
+-- scale amber, the pointer flashing at 4 Hz) and the rising runway; and
+-- what the same side's ND shows of it in APP mode (step 5b: FCOM p.1044,
+-- the EIU selector picks both): the deviation bars and scales, the LOC and
+-- G/S flags, the course, the frequency or identifier and the DME.
 -- Logic and sources: docs/overhaul/notes/ATA-31.md §20 (ATA34_1 p.466-470,
 -- ATA31 p.13, FCOM p.987-989, p.999).
 --
@@ -35,6 +38,9 @@ M.LOC_ALERT_FT = 500
 M.LOC_ALERT_S = 1
 M.CAPTURE_FAIL_FT, M.CAPTURE_FAIL_RESET_FT = 950, 1050
 M.FLASH_HZ = 4
+-- the ND's deviation pointers filled within 2 1/2 dots (FCOM p.1144);
+-- X-Plane holds its deviations at 2.5 dots beyond, so "within" is below 2.49
+M.ND_FILLED_DOTS = 2.49
 
 local function side_in()
     return {
@@ -52,6 +58,8 @@ local function side_in()
         ra_valid = false,
         ra_show = false,    -- its digits shown (valid and below 2,500 ft)
         guidance = false,   -- an autopilot engaged or that side's flight director on
+        dme_rx = false,     -- the receiver's DME distance received
+        dme_fail = false,   -- the DME failed
     }
 end
 
@@ -77,6 +85,16 @@ local function side_out()
         rwy = false,        -- the rising runway (FCOM p.989)
         loc_alert = false,
         gs_alert = false,
+        -- the ND in APP mode
+        nd_loc_scale = false,
+        nd_loc_ptr = 0,     -- 0 none, 1 filled, 2 hollow
+        nd_loc_flag = false,
+        nd_gs_scale = false,
+        nd_gs_ptr = 0,
+        nd_gs_flag = false,
+        nd_crs = 0,         -- 0 none (the course data failed), 1 dashes (no runway course), 2 the course
+        nd_ref = 0,         -- 0 none (the frequency data failed), 1 dashes, 2 the frequency or identifier
+        nd_dme = 0,         -- 0 dashes (no distance), 1 the distance, 2 the DME flag
     }
 end
 
@@ -135,6 +153,25 @@ function M.update(s, inp, dt)
         end
         -- the rising runway: below 2,500 ft with the localizer pointer in view
         o.rwy = loc_seen and i.ra_show and true or false
+
+        -- the ND in APP mode (ATA34_1 p.473-476, ATA31 p.20-21): the scale
+        -- and pointer only with valid data; invalid data shows the flag
+        -- instead, no computed data (no signal, or the receiver parked)
+        -- removes both, as the ND's VOR displays do (ATA34_1 p.358; the
+        -- PFD keeps its scale: ATA31 p.13); without a runway course (parked)
+        -- the course and the frequency are dashes and the course pointer
+        -- goes; a failed receiver removes them
+        o.nd_loc_flag, o.nd_gs_flag = loc_bad, gs_bad
+        local nd_loc = not loc_bad and i.tuned and i.loc_rx
+        local nd_gs = not gs_bad and i.tuned and i.gs_rx
+        o.nd_loc_scale, o.nd_gs_scale = nd_loc, nd_gs
+        o.nd_loc_ptr = nd_loc and (loc_abs < M.ND_FILLED_DOTS and 1 or 2) or 0
+        o.nd_gs_ptr = nd_gs and (gs_abs < M.ND_FILLED_DOTS and 1 or 2) or 0
+        local course = i.rx_fail and 0 or (i.tuned and 2 or 1)
+        o.nd_crs, o.nd_ref = course, course
+        -- the DME: its flag when failed (FCOM p.1034), dashes without a
+        -- distance (FCOM p.1033) or with the receiver parked
+        o.nd_dme = i.dme_fail and 2 or ((i.tuned and i.dme_rx) and 1 or 0)
     end
     return s.out
 end
