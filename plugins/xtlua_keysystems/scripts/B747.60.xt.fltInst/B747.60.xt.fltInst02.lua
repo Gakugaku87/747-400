@@ -2738,40 +2738,16 @@ function setVmc(weight,flaps)
     else
       flap_Vmc      =B747_rescale(10.0, 137, 30.0, 118, flaps) + weight_factor --0.95/1
     end
-    B747DR_airspeed_Vmc = flap_Vmc 
-    if string.match(B747DR_ref_thr_limit_mode, "TO")==nil and B747DR_radio_altitude>10 then 
-        B747DR_pfd_mode_show_mins = 1
-    else
-        B747DR_pfd_mode_show_mins = 0
-    end
+    B747DR_airspeed_Vmc = flap_Vmc
+    -- when the band shows (pfd/show_mins): the speed tape model (5-2 step 3a)
     --print(" " ..weight/1000 .. "t, " .. flaps .. "=" .. math.floor(B747DR_airspeed_Vmc) .." ")
 end
 
 -- MISC V-SPEEDS
 function B747_Vspeeds()
 
-    -- Vf (FLAP DESIGN SPEED)
-    B747DR_airspeed_Vf0 = B747DR_airspeed_Vref30+80                     --
-   -- if simDR_acf_weight_total_kg > 309000.0 then B747DR_airspeed_Vf0 = B747DR_airspeed_Vref30+100 end
-    B747DR_airspeed_Vf1 = B747DR_airspeed_Vref30+60
-    B747DR_airspeed_Vf5 = B747DR_airspeed_Vref30+40
-    B747DR_airspeed_Vf10 = B747DR_airspeed_Vref30+20
-    B747DR_airspeed_Vf20 = B747DR_airspeed_Vref30+10
-    B747DR_airspeed_Vf25 = B747DR_airspeed_Vref30+5
-    B747DR_airspeed_Vf30 = B747DR_airspeed_Vref30
-    
-    
-    if simDR_flap_ratio_control <1.0 and simDR_flap_ratio_control>0.66 and (B747DR_airspeed_VrefFlap~=1) then
-        B747DR_airspeed_showVf25=1
-    else
-        B747DR_airspeed_showVf25=0
-    end
-
-    if simDR_flap_ratio_control >=0.83 and B747DR_airspeed_VrefFlap==0 then
-        B747DR_airspeed_showVf30=1
-    else
-        B747DR_airspeed_showVf30=0
-    end
+    -- Vf (the flap maneuver speeds) and their bugs: the speed tape model
+    -- (B747.60.xt.speedtape.lua, 5-2 step 3a)
 
     if simDR_radio_alt_height_capt< 5.0 then
         B747DR_airspeed_VrefFlap=0
@@ -2887,20 +2863,22 @@ function B747_Vs()
     local weight_max = math.min(400000, roundToIncrement(simDR_acf_weight_total_kg, 20000))
     local weight_min = math.max(200000, weight_max-20000)
 
+    -- the table's altitude bands, highest first (DSP-07: the 0 ft band
+    -- caught every altitude above it)
     local alt_min = -2000
     local alt_max = 0.0
-    if simDR_altitude_ft_pilot >= 0.0 then
-        alt_min = 0.0
-        alt_max = 2000.0
-    elseif simDR_altitude_ft_pilot >= 2000.0 then
-        alt_min = 2000.0
-        alt_max = 6000.0
+    if simDR_altitude_ft_pilot >= 10000.0 then
+        alt_min = 10000.0
+        alt_max = 10000.0
     elseif simDR_altitude_ft_pilot >= 6000.0 then
         alt_min = 6000.0
         alt_max = 10000.0
-    elseif simDR_altitude_ft_pilot >= 10000.0 then
-        alt_min = 10000.0
-        alt_max = 10000.0
+    elseif simDR_altitude_ft_pilot >= 2000.0 then
+        alt_min = 2000.0
+        alt_max = 6000.0
+    elseif simDR_altitude_ft_pilot >= 0.0 then
+        alt_min = 0.0
+        alt_max = 2000.0
     end
 
     local flap_min = 0
@@ -3228,6 +3206,7 @@ function flight_start()
     simDR_has_stall_warning=0
     simDR_autopilot_TOGA_pitch_deg      = 8.0
     B747_flight_start_fltInst()
+    B747_speedtape_flight_start()
 
 end
 local lastHeading=0
@@ -3309,6 +3288,7 @@ function after_physics()
 
     B747_setVref30()
     B747_Vspeeds()
+    B747_speedtape()
     B747_Vs()
 
     B747_setTempAltRegion()

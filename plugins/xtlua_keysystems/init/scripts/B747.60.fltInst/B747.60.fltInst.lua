@@ -233,6 +233,8 @@ B747DR_airspeed_Vref                          = deferred_dataref("laminar/B747/a
 B747DR_airspeed_VrefFlap                          = deferred_dataref("laminar/B747/airspeed/VrefFlap", "number")
 B747DR_airspeed_showVf25                            = deferred_dataref("laminar/B747/airspeed/showVf25", "number")
 B747DR_airspeed_showVf30                            = deferred_dataref("laminar/B747/airspeed/showVf30", "number")
+-- which flap maneuver speed bugs show: [0] UP, 1, 5, 10, 20, 25, [6] 30 (5-2 step 3a)
+B747DR_airspeed_show_vf                             = deferred_dataref("laminar/B747/airspeed/show_vf", "array[7]")
 
 B747DR_airspeed_Vmax                            = deferred_dataref("laminar/B747/airspeed/Vmax", "number")
 B747DR_airspeed_Vmaxm                           = deferred_dataref("laminar/B747/airspeed/Vmaxm", "number")

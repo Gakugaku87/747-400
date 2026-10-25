@@ -274,7 +274,10 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - オートブレーキの推定：車輪のスピンアップと RTO の 85 kt は IRS の対地速度で見る（前側 8 輪の車輪速の代わり）、減速の制御のゲイン（カスタム acf に合わせた）、disarm の後に圧が抜ける時間（2 秒）、推力レバーのアイドルと前進の角度。AUTOBRAKES のうち、セレクター OFF なのに遮断弁の下流が高圧のときと、RTO の開始での故障・手動の override は無い。
 - 残り：AIR/GND SYSTEM、GEAR MONITOR・A/G DISAGREE・PARK BRK VALVE の STATUS（GEAR-22 の残り）、CONFIG GEAR のラッチと GND PROX GEAR OVRD（GEAR-17 の残り）、ドアの箱の空箱。
 
-### 表示（PFD・ND・EICAS）：作り直し中（5-2 段 1：表示器と EIU、段 2：ソース選択の比較は済）
+### 表示（PFD・ND・EICAS）：作り直し中（5-2 段 1：表示器と EIU、段 2：ソース選択の比較、段 3a：フラップの機動速度は済）
+
+- 実機に合わせた点（段 3a、速度テープ）：フラップの機動速度のバグは FCOM PI.10.3 の値（25 は VREF25。前は VREF30+5）で、今のフラップと次の小さいフラップの 2 つ（前はフラップ 30 で 20 のバグが残った）。CDU の APPROACH REF の 25 の VREF も FCOM の VREF25 に。最小機動速度の帯は離陸後の最初のフラップ上げから（前は推力基準が TO でなくなったとき）。
+  - 最小速度（シェーカー速度）と最小・最大機動速度の値、失速警報は前のまま（表の Vs、最大機動速度は最大速度の 10 kt 下）。段 3b で。
 
 - 実機に合わせた点（段 2、ソース選択の比較）：両席が同じ EIU・FCC・FMC を使うと >SOURCE SEL EIU・F/D・NAV、両 PFD が同じ電波高度計なら >SNGL SOURCE RA、両 PFD の姿勢が 3° 以上離れると >ATTITUDE（caution）、方位が 4° 以上離れると >HEADING、EFIS 操作パネルの故障で >EFIS CONTROL L・R、両パネルと表示選択パネルで >EFIS/EICAS C/P（FCOM p.1197–1199）。
   - FLT DIR・NAV の選択で FD の指示や地図の源は変わらない（FCC・FMC が 1 つずつ）。>TRACK、>SNGL SOURCE ILS は無い。EFIS 操作パネルが壊れても操作は効く（CDU の代替と一緒に段 5 で）。
