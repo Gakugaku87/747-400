@@ -159,3 +159,18 @@ B747DR_nd_capt_tcas_show        = deferred_dataref("laminar/B747/nd/capt/tcas_sh
 B747DR_nd_fo_tcas_show          = deferred_dataref("laminar/B747/nd/fo/tcas_show", "number")
 B747DR_nd_capt_tfc_pushes       = deferred_dataref("laminar/B747/nd/traffic/capt/pushes", "number")
 B747DR_nd_fo_tfc_pushes         = deferred_dataref("laminar/B747/nd/traffic/fo/pushes", "number")
+
+-- The weather radar control (B747.34.wxr_model.lua, 5-1 step 5c): the 570
+-- panel's TFR, TEST, LR/T and RR/T switches (TILT, MAP GAIN, WX, WX+T, MAP and
+-- GCS are X-Plane's commands, replaced in B747.34.xt.wxr.lua); the panel's
+-- lamps for the lighting module: each side's lit mode switch (1 WX, 2 WX+T,
+-- 3 MAP, 4 TFR, 0 none) and GCS, TEST, the lit R/T switch (1 L, 2 R, 0 none).
+B747CMD_wxr_test                = deferred_command("laminar/B747/wxr/buttons/test", "WXR Test", null_command)
+B747CMD_wxr_rr                  = deferred_command("laminar/B747/wxr/buttons/rr", "WXR RR", null_command)
+B747CMD_wxr_lr                  = deferred_command("laminar/B747/wxr/buttons/lr", "WXR LR", null_command)
+B747CMD_wxr_cpt_tfr             = deferred_command("laminar/B747/wxr/buttons/cpt_ftr", "WXR CPT TFR", null_command)
+B747CMD_wxr_fo_tfr              = deferred_command("laminar/B747/wxr/buttons/fo_ftr", "WXR FO TFR", null_command)
+B747DR_wxr_lamp_sel             = deferred_dataref("laminar/B747/wxr/lamp/sel", "array[2]")
+B747DR_wxr_lamp_gcs             = deferred_dataref("laminar/B747/wxr/lamp/gcs", "array[2]")
+B747DR_wxr_lamp_test            = deferred_dataref("laminar/B747/wxr/lamp/test", "number")
+B747DR_wxr_lamp_rt              = deferred_dataref("laminar/B747/wxr/lamp/rt", "number")

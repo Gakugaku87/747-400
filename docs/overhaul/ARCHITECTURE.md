@@ -58,7 +58,7 @@
 | xtlua | B747.10.gear | 165 / 1061 | 脚の上げ下げ、ブレーキ、オートブレーキ | toe_brakes |
 | xtlua | B747.15.com | 565 / 3862 | 無線。ACP（`ap_L/C/R`）、RTP（`rtp_L/C/R`）、VHF/HF、call panel など | |
 | xtlua | B747.25.fuel | 405 / 3720 | 燃料系統（タンク、ポンプ、クロスフィード、移送、ジェティソン、搭載量） | fuel_system |
-| xtlua | B747.34.nav | 72 / 921 | 航法センサー。5-1 で新設（§4.17）。段 1 はエアデータ（ADC 3 台、AIR DATA の選択、OVERSPEED・DISAGREE・高度警報）、段 2 は IRS（アライン、位置の入力、ATT、電源、メッセージ）、段 4 は電波高度計と GPWS、段 5 はトランスポンダと TCAS | |
+| xtlua | B747.34.nav | 72 / 921 | 航法センサー。5-1 で新設（§4.17）。段 1 はエアデータ（ADC 3 台、AIR DATA の選択、OVERSPEED・DISAGREE・高度警報）、段 2 は IRS（アライン、位置の入力、ATT、電源、メッセージ）、段 4 は電波高度計と GPWS、段 5 はトランスポンダと TCAS、段 5c は気象レーダーの操作 | |
 | xtlua | B747.35.fire | 99 / 653 | 火災探知と消火（エンジン、APU、貨物室） | |
 | xtlua | B747.36.oxygen | 56 / 327 | 酸素（乗員・乗客・治療用、酸素圧、X-Plane の低酸素）。3-3 で新設（§4.13） | oxygen_system |
 | xtlua | B747.40.engines | 106 / 2247 | エンジン始動・点火・燃料制御・逆推力・APU | |
@@ -399,6 +399,9 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
   - ND の機影（`plugins/xtlua_nd` の `B747.61.xt.nd.lua`、段 5b）：`tcas/sym` と X-Plane の相手の位置（lat・lon・ele・vertical_speed・ssr_mode）から、各 ND の 30 のスロット（init `B747.61.nd` の `nd/capt|fo/tcas/show`・`heading`・`distance`・`sym`・`tag_color`・`tag_dy`・`tag0`〜`29`）を毎フレーム埋める。置き方はアイコンの `makeIcon` と同じ。前の TCAS のアイコン（白い菱形 1 種）は外した。カスタム acf の ND のスロットとメッセージは ACF_DIFF.md §5。
   - X-Plane の EFIS の地図の TCAS（`EFIS_tcas_on`）は使わない（fltInst02 が 0 に保つ。地図は `override_TCAS` の相手を描かなかった）。
   - X-Plane の TCAS が advisory を出さない相手（threat は TA・RA）は TA として出す（RA の値・声は無い）。X-Plane が advisory を出さなくなることがある（PROGRESS.md「気づいたこと」）。
+- 段 5c（気象レーダー）：気象レーダーの操作のモデル（`B747.34.wxr_model.lua`）を、グルー `B747.34.xt.wxr.lua` が TCAS の次に回す（`B747_wxr()`）。中身は notes/ATA-34.md §17・§18。描画は X-Plane のレーダー。
+  - 読むもの：570 のパネル（TFR・TEST・LR/T・RR/T はこのモジュールのコマンド `wxr/buttons/*`。TILT・MAP GAIN・WX・WX+T・MAP・GCS は X-Plane の `sim/instruments/EFIS_wxr_*` を `replace_command` で受ける）、X-Plane の `EFIS_weather_on`（各 EFIS の WXR）、各 ND のレンジ、AC bus 1・2（R/T：推定）、`rel_wxr_radar`、`irs/att_valid` と各席の IRS 選択。
+  - 書くもの：X-Plane の `EFIS_weather_mode`・`_tilt`・`_gain`・`_gcs`・`_stab`（左右）と `sector_width`・`antenna_limit`、新設 `wxr/lamp/sel[2]`・`gcs[2]`・`test`・`rt`（照明のモジュールがパネルの灯に）。ND の注記は ND のモジュールが X-Plane の左右の値から作る。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 

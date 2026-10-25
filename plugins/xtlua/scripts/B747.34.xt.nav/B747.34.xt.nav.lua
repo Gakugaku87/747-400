@@ -13,7 +13,8 @@
 -- (B747.34.xt.airdata.lua, step 1), the IRS and the GPS (B747.34.xt.irs.lua,
 -- B747.34.xt.gps.lua, step 2), the radio altimeters and the GPWS
 -- (B747.34.xt.ra.lua, B747.34.xt.gpws.lua, step 4), the transponders and
--- the TCAS (B747.34.xt.tcas.lua, step 5).
+-- the TCAS (B747.34.xt.tcas.lua, step 5), the weather radar control
+-- (B747.34.xt.wxr.lua, step 5c).
 -- Each glue runs its model every frame.
 
 function deferred_command(name,desc,realFunc)
@@ -51,6 +52,8 @@ dofile("B747.34.xt.gpws.lua")
 -- the transponders and the TCAS: X-Plane's transponder, TA/RA, the ND's
 -- traffic and messages, the voices, messages
 dofile("B747.34.xt.tcas.lua")
+-- the weather radar control: the 570 panel, the R/T, X-Plane's radar for each ND
+dofile("B747.34.xt.wxr.lua")
 
 
 --*************************************************************************************--
@@ -64,6 +67,7 @@ function flight_start()
     B747_ra_flight_start()
     B747_gpws_flight_start()
     B747_tcas_flight_start()
+    B747_wxr_flight_start()
 end
 
 function after_physics()
@@ -73,4 +77,5 @@ function after_physics()
     B747_ra()
     B747_gpws()
     B747_tcas()
+    B747_wxr()
 end
