@@ -19,6 +19,10 @@
 #   traffic {targets: [...]} | traffic_stop      TCAS test traffic (FlyWithLua
 #                                                B747_traffic.lua): each target a
 #                                                "key=value" line of traffic.txt
+#   route {entries: [...]} | route_clear        a flight plan in X-Plane's FMS
+#                                                (FlyWithLua B747_route.lua): each
+#                                                entry an "IDENT LAT LON ALT [ACTIVE]"
+#                                                line of route.txt
 #   cmd     {name, [duration], [async]}          run a command; with a duration it is
 #                                                held that long and the step waits,
 #                                                unless async (then the next steps run
@@ -199,6 +203,12 @@ foreach ($step in $spec.steps) {
                 Add-Result $step 'info' ("traffic: " + (@($step.targets) -join ' | '))
             }
             'traffic_stop' { Invoke-XPCommand 'FlyWithLua/B747_traffic/stop'; Add-Result $step 'info' 'traffic stopped' }
+            'route' {
+                @($step.entries) -join "`n" | Out-File -Encoding ascii (Join-Path $recDir 'route.txt')
+                Invoke-XPCommand 'FlyWithLua/B747_route/load'
+                Add-Result $step 'info' ("route: " + (@($step.entries) -join ' | '))
+            }
+            'route_clear' { Invoke-XPCommand 'FlyWithLua/B747_route/clear'; Add-Result $step 'info' 'route cleared' }
             'cmd' {
                 $d = if ($step.duration) { [double]$step.duration } else { 0 }
                 Invoke-XPCommand $step.name $d

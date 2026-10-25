@@ -20,6 +20,8 @@ radioModes=deferred_dataref("laminar/B747/radio/tuningmodes", "string")
 B747DR_TAS_pilot=deferred_dataref("laminar/B747/nd/TAS_pilot", "number")
 radioModes="AAAMM" --ils,vor l/r,adf l/r (ADF is manual only
 B747DR_FMSdata=deferred_dataref("laminar/B747/fms/data", "string")
+-- 5-2 step 5c: each route entry's ETA for the ND's route data (B747.68.xt.fms.lua)
+B747DR_fms_route_eta=deferred_dataref("laminar/B747/fms/route_eta", "string")
 B747DR_FMSdata="{}"
 irs_line1=deferred_dataref("laminar/B747/irs/line1", "string")
 irs_line2=deferred_dataref("laminar/B747/irs/line2", "string") 
