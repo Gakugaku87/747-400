@@ -32,7 +32,9 @@
 -- Step 5b: each PFD's ILS from the receiver of the EIU in use (X-Plane's
 -- NAV1 and NAV2 directly), its deviations (pfd/capt|fo/ils_rx, loc_dots,
 -- gs_dots), the approach reference's identifier or frequency (pfd/capt|fo/
--- ils_ref) and >SNGL SOURCE ILS out.
+-- ils_ref) and >SNGL SOURCE ILS out; each ND's APP mode on the same
+-- receiver (nd/capt|fo/loc_scale, loc_ptr, loc_flag, gs_scale, gs_ptr,
+-- gs_flag, crs, crs_deg, dme, dme_nm, ils_ref; nd/dashes) out.
 -- dofile'd from B747.60.xt.fltInst.lua after B747.60.xt.fltInst02.lua.
 
 dofile("B747.60.display_model.lua")
@@ -121,6 +123,35 @@ simDR_dsp_nav1_freq             = find_dataref("sim/cockpit2/radios/actuators/na
 simDR_dsp_nav2_freq             = find_dataref("sim/cockpit2/radios/actuators/nav2_frequency_hz")
 B747DR_dsp_ils_ref_capt         = find_dataref("laminar/B747/pfd/capt/ils_ref")
 B747DR_dsp_ils_ref_fo           = find_dataref("laminar/B747/pfd/fo/ils_ref")
+simDR_dsp_nav1_has_dme          = find_dataref("sim/cockpit2/radios/indicators/nav1_has_dme")
+simDR_dsp_nav2_has_dme          = find_dataref("sim/cockpit2/radios/indicators/nav2_has_dme")
+simDR_dsp_nav1_dme_nm           = find_dataref("sim/cockpit2/radios/indicators/nav1_dme_distance_nm")
+simDR_dsp_nav2_dme_nm           = find_dataref("sim/cockpit2/radios/indicators/nav2_dme_distance_nm")
+simDR_dsp_dme_fail              = find_dataref("sim/operation/failures/rel_dme")
+simDR_dsp_nav_obs               = find_dataref("sim/cockpit2/radios/actuators/nav_obs_deg_mag_pilot")
+B747DR_dsp_nd_loc_scale_capt    = find_dataref("laminar/B747/nd/capt/loc_scale")
+B747DR_dsp_nd_loc_ptr_capt      = find_dataref("laminar/B747/nd/capt/loc_ptr")
+B747DR_dsp_nd_loc_flag_capt     = find_dataref("laminar/B747/nd/capt/loc_flag")
+B747DR_dsp_nd_gs_scale_capt     = find_dataref("laminar/B747/nd/capt/gs_scale")
+B747DR_dsp_nd_gs_ptr_capt       = find_dataref("laminar/B747/nd/capt/gs_ptr")
+B747DR_dsp_nd_gs_flag_capt      = find_dataref("laminar/B747/nd/capt/gs_flag")
+B747DR_dsp_nd_crs_capt          = find_dataref("laminar/B747/nd/capt/crs")
+B747DR_dsp_nd_crs_deg_capt      = find_dataref("laminar/B747/nd/capt/crs_deg")
+B747DR_dsp_nd_dme_capt          = find_dataref("laminar/B747/nd/capt/dme")
+B747DR_dsp_nd_dme_nm_capt       = find_dataref("laminar/B747/nd/capt/dme_nm")
+B747DR_dsp_nd_ils_ref_capt      = find_dataref("laminar/B747/nd/capt/ils_ref")
+B747DR_dsp_nd_loc_scale_fo      = find_dataref("laminar/B747/nd/fo/loc_scale")
+B747DR_dsp_nd_loc_ptr_fo        = find_dataref("laminar/B747/nd/fo/loc_ptr")
+B747DR_dsp_nd_loc_flag_fo       = find_dataref("laminar/B747/nd/fo/loc_flag")
+B747DR_dsp_nd_gs_scale_fo       = find_dataref("laminar/B747/nd/fo/gs_scale")
+B747DR_dsp_nd_gs_ptr_fo         = find_dataref("laminar/B747/nd/fo/gs_ptr")
+B747DR_dsp_nd_gs_flag_fo        = find_dataref("laminar/B747/nd/fo/gs_flag")
+B747DR_dsp_nd_crs_fo            = find_dataref("laminar/B747/nd/fo/crs")
+B747DR_dsp_nd_crs_deg_fo        = find_dataref("laminar/B747/nd/fo/crs_deg")
+B747DR_dsp_nd_dme_fo            = find_dataref("laminar/B747/nd/fo/dme")
+B747DR_dsp_nd_dme_nm_fo         = find_dataref("laminar/B747/nd/fo/dme_nm")
+B747DR_dsp_nd_ils_ref_fo        = find_dataref("laminar/B747/nd/fo/ils_ref")
+B747DR_dsp_nd_dashes            = find_dataref("laminar/B747/nd/dashes")
 B747DR_dsp_ils_rx_capt          = find_dataref("laminar/B747/pfd/capt/ils_rx")
 B747DR_dsp_ils_rx_fo            = find_dataref("laminar/B747/pfd/fo/ils_rx")
 B747DR_dsp_loc_dots_capt        = find_dataref("laminar/B747/pfd/capt/loc_dots")
@@ -254,7 +285,8 @@ end
 -- the approach reference's identifier, or the frequency until the
 -- receiver has the station's identification (ATA34_1 p.466; X-Plane's
 -- nav_id stays empty until the station is received)
-local ref_freq, ref_text, ref_shown = {}, {}, {}
+local ref_freq, ref_text, ref_shown, nd_ref_shown = {}, {}, {}, {}
+local dashes_written = false
 local function ils_ref(k, nav2)
     local id = nav2 and simDR_dsp_nav2_id or simDR_dsp_nav1_id
     local b = string.byte(id)
@@ -280,6 +312,8 @@ local function ils_side(i, rx, tuned, roll, trk, ra, ra_flag, ra_show, fd)
     i.gs_dots = nav2 and simDR_dsp_nav2_vdef or simDR_dsp_nav1_vdef
     i.roll, i.trk = roll, trk
     i.ra, i.ra_valid, i.ra_show = ra, ra_flag < 0.5, ra_show > 0.5
+    i.dme_rx = (nav2 and simDR_dsp_nav2_has_dme or simDR_dsp_nav1_has_dme) > 0.5
+    i.dme_fail = simDR_dsp_dme_fail == 6
     i.guidance = B747DR_dsp_ap_cmd_L + B747DR_dsp_ap_cmd_C + B747DR_dsp_ap_cmd_R > 0.5 or fd > 0.5
 end
 
@@ -298,10 +332,9 @@ local function pfd_ils(trk_capt, trk_fo)
     if B747DR_dsp_loc_dots_fo ~= fi.loc_dots then B747DR_dsp_loc_dots_fo = fi.loc_dots end
     if B747DR_dsp_gs_dots_capt ~= ci.gs_dots then B747DR_dsp_gs_dots_capt = ci.gs_dots end
     if B747DR_dsp_gs_dots_fo ~= fi.gs_dots then B747DR_dsp_gs_dots_fo = fi.gs_dots end
-    local s = ils_ref(1, rx_c == 3)
-    if ref_shown[1] ~= s then ref_shown[1] = s; B747DR_dsp_ils_ref_capt = s end
-    s = ils_ref(2, rx_f == 3)
-    if ref_shown[2] ~= s then ref_shown[2] = s; B747DR_dsp_ils_ref_fo = s end
+    local ref_c, ref_f = ils_ref(1, rx_c == 3), ils_ref(2, rx_f == 3)
+    if ref_shown[1] ~= ref_c then ref_shown[1] = ref_c; B747DR_dsp_ils_ref_capt = ref_c end
+    if ref_shown[2] ~= ref_f then ref_shown[2] = ref_f; B747DR_dsp_ils_ref_fo = ref_f end
     -- >SNGL SOURCE ILS: both pilots' displays on one localizer and
     -- glideslope receiver (FCOM p.1430, ATA34_1 p.478), here both on one EIU
     local e = B747DR_dsp_eiu_used[0]
@@ -338,6 +371,47 @@ local function pfd_ils(trk_capt, trk_fo)
     if B747DR_dsp_gs_flag_fo ~= v then B747DR_dsp_gs_flag_fo = v end
     v = f.rwy and 1 or 0
     if B747DR_dsp_rwy_show_fo ~= v then B747DR_dsp_rwy_show_fo = v end
+
+    -- each ND in APP mode (step 5b), on the same receiver: the deviation
+    -- bars and scales, the flags, the course (the CDU's: FCOM p.1146), the
+    -- DME, the frequency or identifier ("---" without a runway course)
+    if not dashes_written then B747DR_dsp_nd_dashes = "---"; dashes_written = true end
+    v = c.nd_loc_scale and 1 or 0
+    if B747DR_dsp_nd_loc_scale_capt ~= v then B747DR_dsp_nd_loc_scale_capt = v end
+    if B747DR_dsp_nd_loc_ptr_capt ~= c.nd_loc_ptr then B747DR_dsp_nd_loc_ptr_capt = c.nd_loc_ptr end
+    v = c.nd_loc_flag and 1 or 0
+    if B747DR_dsp_nd_loc_flag_capt ~= v then B747DR_dsp_nd_loc_flag_capt = v end
+    v = c.nd_gs_scale and 1 or 0
+    if B747DR_dsp_nd_gs_scale_capt ~= v then B747DR_dsp_nd_gs_scale_capt = v end
+    if B747DR_dsp_nd_gs_ptr_capt ~= c.nd_gs_ptr then B747DR_dsp_nd_gs_ptr_capt = c.nd_gs_ptr end
+    v = c.nd_gs_flag and 1 or 0
+    if B747DR_dsp_nd_gs_flag_capt ~= v then B747DR_dsp_nd_gs_flag_capt = v end
+    if B747DR_dsp_nd_crs_capt ~= c.nd_crs then B747DR_dsp_nd_crs_capt = c.nd_crs end
+    v = simDR_dsp_nav_obs[rx_c == 3 and 1 or 0]
+    if B747DR_dsp_nd_crs_deg_capt ~= v then B747DR_dsp_nd_crs_deg_capt = v end
+    if B747DR_dsp_nd_dme_capt ~= c.nd_dme then B747DR_dsp_nd_dme_capt = c.nd_dme end
+    v = rx_c == 3 and simDR_dsp_nav2_dme_nm or simDR_dsp_nav1_dme_nm
+    if B747DR_dsp_nd_dme_nm_capt ~= v then B747DR_dsp_nd_dme_nm_capt = v end
+    local s = c.nd_ref == 2 and ref_c or (c.nd_ref == 1 and "---" or "")
+    if nd_ref_shown[1] ~= s then nd_ref_shown[1] = s; B747DR_dsp_nd_ils_ref_capt = s end
+    v = f.nd_loc_scale and 1 or 0
+    if B747DR_dsp_nd_loc_scale_fo ~= v then B747DR_dsp_nd_loc_scale_fo = v end
+    if B747DR_dsp_nd_loc_ptr_fo ~= f.nd_loc_ptr then B747DR_dsp_nd_loc_ptr_fo = f.nd_loc_ptr end
+    v = f.nd_loc_flag and 1 or 0
+    if B747DR_dsp_nd_loc_flag_fo ~= v then B747DR_dsp_nd_loc_flag_fo = v end
+    v = f.nd_gs_scale and 1 or 0
+    if B747DR_dsp_nd_gs_scale_fo ~= v then B747DR_dsp_nd_gs_scale_fo = v end
+    if B747DR_dsp_nd_gs_ptr_fo ~= f.nd_gs_ptr then B747DR_dsp_nd_gs_ptr_fo = f.nd_gs_ptr end
+    v = f.nd_gs_flag and 1 or 0
+    if B747DR_dsp_nd_gs_flag_fo ~= v then B747DR_dsp_nd_gs_flag_fo = v end
+    if B747DR_dsp_nd_crs_fo ~= f.nd_crs then B747DR_dsp_nd_crs_fo = f.nd_crs end
+    v = simDR_dsp_nav_obs[rx_f == 3 and 1 or 0]
+    if B747DR_dsp_nd_crs_deg_fo ~= v then B747DR_dsp_nd_crs_deg_fo = v end
+    if B747DR_dsp_nd_dme_fo ~= f.nd_dme then B747DR_dsp_nd_dme_fo = f.nd_dme end
+    v = rx_f == 3 and simDR_dsp_nav2_dme_nm or simDR_dsp_nav1_dme_nm
+    if B747DR_dsp_nd_dme_nm_fo ~= v then B747DR_dsp_nd_dme_nm_fo = v end
+    s = f.nd_ref == 2 and ref_f or (f.nd_ref == 1 and "---" or "")
+    if nd_ref_shown[2] ~= s then nd_ref_shown[2] = s; B747DR_dsp_nd_ils_ref_fo = s end
 end
 
 -- each ND's orientation, flags and pointers (step 5a): from its own side

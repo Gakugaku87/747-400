@@ -169,6 +169,34 @@ B747DR_pfd_ils_rx_fo                            = deferred_dataref("laminar/B747
 B747DR_pfd_loc_dots_fo                          = deferred_dataref("laminar/B747/pfd/fo/loc_dots", "number")
 B747DR_pfd_gs_dots_fo                           = deferred_dataref("laminar/B747/pfd/fo/gs_dots", "number")
 B747DR_pfd_ils_ref_fo                           = deferred_dataref("laminar/B747/pfd/fo/ils_ref", "string")
+-- step 5b: each ND in APP mode on the same receiver: the localizer and
+-- glideslope scales (0, 1), pointers (0 none, 1 filled, 2 hollow) and
+-- flags, the course (0 none, 1 dashes, 2 shown) and its degrees, the DME
+-- (0 dashes, 1 the distance, 2 the flag) and its distance, the frequency or
+-- identifier ("---" without a runway course); dashes for the panel
+B747DR_nd_loc_scale_capt                        = deferred_dataref("laminar/B747/nd/capt/loc_scale", "number")
+B747DR_nd_loc_ptr_capt                          = deferred_dataref("laminar/B747/nd/capt/loc_ptr", "number")
+B747DR_nd_loc_flag_capt                         = deferred_dataref("laminar/B747/nd/capt/loc_flag", "number")
+B747DR_nd_gs_scale_capt                         = deferred_dataref("laminar/B747/nd/capt/gs_scale", "number")
+B747DR_nd_gs_ptr_capt                           = deferred_dataref("laminar/B747/nd/capt/gs_ptr", "number")
+B747DR_nd_gs_flag_capt                          = deferred_dataref("laminar/B747/nd/capt/gs_flag", "number")
+B747DR_nd_crs_capt                              = deferred_dataref("laminar/B747/nd/capt/crs", "number")
+B747DR_nd_crs_deg_capt                          = deferred_dataref("laminar/B747/nd/capt/crs_deg", "number")
+B747DR_nd_dme_capt                              = deferred_dataref("laminar/B747/nd/capt/dme", "number")
+B747DR_nd_dme_nm_capt                           = deferred_dataref("laminar/B747/nd/capt/dme_nm", "number")
+B747DR_nd_ils_ref_capt                          = deferred_dataref("laminar/B747/nd/capt/ils_ref", "string")
+B747DR_nd_loc_scale_fo                          = deferred_dataref("laminar/B747/nd/fo/loc_scale", "number")
+B747DR_nd_loc_ptr_fo                            = deferred_dataref("laminar/B747/nd/fo/loc_ptr", "number")
+B747DR_nd_loc_flag_fo                           = deferred_dataref("laminar/B747/nd/fo/loc_flag", "number")
+B747DR_nd_gs_scale_fo                           = deferred_dataref("laminar/B747/nd/fo/gs_scale", "number")
+B747DR_nd_gs_ptr_fo                             = deferred_dataref("laminar/B747/nd/fo/gs_ptr", "number")
+B747DR_nd_gs_flag_fo                            = deferred_dataref("laminar/B747/nd/fo/gs_flag", "number")
+B747DR_nd_crs_fo                                = deferred_dataref("laminar/B747/nd/fo/crs", "number")
+B747DR_nd_crs_deg_fo                            = deferred_dataref("laminar/B747/nd/fo/crs_deg", "number")
+B747DR_nd_dme_fo                                = deferred_dataref("laminar/B747/nd/fo/dme", "number")
+B747DR_nd_dme_nm_fo                             = deferred_dataref("laminar/B747/nd/fo/dme_nm", "number")
+B747DR_nd_ils_ref_fo                            = deferred_dataref("laminar/B747/nd/fo/ils_ref", "string")
+B747DR_nd_dashes                                = deferred_dataref("laminar/B747/nd/dashes", "string")
 -- the ND (5-2 step 5a, B747.60.nd_model.lua): the compass rose and the
 -- digital heading or track shown; the TRK, HDG, MAP and VTK flags; the
 -- current heading pointer (APP, VOR, MAP; PLN); the selected heading bug and

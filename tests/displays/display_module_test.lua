@@ -5,8 +5,11 @@
 -- the buses, the unit and EIU failures and the EIU selectors in; each
 -- display's position and power for the panel, the unit showing it, the EIU
 -- in use and >EIU LEFT out. Then the lighting module's brightness from the
--- unit's knob (DSP-30), and each PFD's sources and flags (step 4a). The
--- models are tested in display_model_test.lua and pfd_model_test.lua.
+-- unit's knob (DSP-30), and each PFD's sources and flags (step 4a), the ILS
+-- (step 4e) on the receiver of the EIU in use and each ND's APP mode (step
+-- 5b), the ND's orientation (step 5a). The models are tested in
+-- display_model_test.lua, pfd_model_test.lua, pfd_ils_model_test.lua and
+-- nd_model_test.lua.
 local T = dofile("tests/lib/check.lua")("display_module")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
@@ -310,6 +313,42 @@ rt:set(NAV .. "2_display_horizontal", 0)
 frames(0.1)
 T.equal(rt:get(P .. "capt/ils_rx"), 1, "AUTO: EIU L, ILS L")
 T.equal(rt:get(P .. "capt/loc_flag"), 0, "no LOC flag")
+-- each ND in APP mode on the same receiver (step 5b)
+local ND = "laminar/B747/nd/"
+rt:set("sim/cockpit2/radios/actuators/nav_obs_deg_mag_pilot", 0, 337.4)
+rt:set("sim/cockpit2/radios/actuators/nav_obs_deg_mag_pilot", 1, 151)
+rt:set(NAV .. "1_has_dme", 1)
+rt:set(NAV .. "1_dme_distance_nm", 10.3)
+frames(0.1)
+T.equal(rt:get(ND .. "dashes"), "---", "nd/dashes for the panel")
+T.equal(rt:get(ND .. "capt/loc_scale"), 1, "the Captain's ND: the localizer scale")
+T.equal(rt:get(ND .. "capt/loc_ptr"), 1, "1.5 dots: filled")
+T.equal(rt:get(ND .. "capt/gs_ptr"), 2, "glideslope 2.5 dots: hollow")
+T.equal(rt:get(ND .. "capt/crs"), 2, "the course")
+T.near(rt:get(ND .. "capt/crs_deg"), 337.4, 1e-4, "NAV1's course from the CDU")
+T.equal(rt:get(ND .. "capt/dme"), 1, "the DME distance")
+T.near(rt:get(ND .. "capt/dme_nm"), 10.3, 1e-4, "NAV1's")
+T.equal(rt:get(ND .. "capt/ils_ref"), "IYQ", "the identifier")
+T.equal(rt:get(ND .. "fo/ils_ref"), "109.70", "the F/O's ND: NAV2's frequency")
+T.near(rt:get(ND .. "fo/crs_deg"), 151, 1e-4, "and NAV2's course")
+T.equal(rt:get(ND .. "fo/dme"), 0, "no NAV2 DME: dashes")
+T.equal(rt:get(ND .. "fo/loc_ptr"), 0, "no NAV2 signal: no bar")
+rt:set("sim/operation/failures/rel_dme", 6)
+rt:set("sim/operation/failures/rel_loc", 6)
+frames(0.1)
+T.equal(rt:get(ND .. "capt/dme"), 2, "X-Plane's DME failure: the DME flag")
+T.equal(rt:get(ND .. "capt/loc_flag"), 1, "X-Plane's localizer failure: the ND's LOC flag")
+T.equal(rt:get(ND .. "capt/loc_scale"), 0, "instead of the scale")
+rt:set("sim/operation/failures/rel_dme", 0)
+rt:set("sim/operation/failures/rel_loc", 0)
+rt:set("laminar/B747/autopilot/ils_dots", 0)
+frames(0.1)
+T.equal(rt:get(ND .. "capt/ils_ref"), "---", "parked: the frequency dashes")
+T.equal(rt:get(ND .. "capt/crs"), 1, "the course dashes")
+T.equal(rt:get(ND .. "capt/loc_ptr"), 0, "no bar")
+rt:set("laminar/B747/autopilot/ils_dots", 1)
+frames(0.1)
+T.equal(rt:get(ND .. "capt/ils_ref"), "IYQ", "tuned again: the identifier")
 rt:set("sim/operation/failures/rel_gls", 6)
 frames(0.1)
 T.equal(rt:get(P .. "capt/gs_flag"), 1, "X-Plane's glide slope failure: the G/S flag")
