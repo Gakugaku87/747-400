@@ -442,3 +442,11 @@
 | 2026-10-26・ND の出発・到着空港と滑走路（DSP-17） | 機長・副操縦士の ND の `GROUP ND Text Center`（地図の記号：CTR で動く）の最後 | なし（出発・到着空港は経路の点の星、滑走路は無し） | 新しい `GROUP ND Airports`：空港ごと（0 出発、1 到着）に、`GROUP Apt<k>`（新設 `nd/<席>/apt/sym[k]`：機体の点から `heading[k]` で回し `distance[k]` だけ出して戻した所に、白の円 `gen_rotary Apt<k> Circle`（新しい `CRT Displays/ND/apt_w`）、ID `gen_text Apt<k> Id`（`id<k>`）、その下の滑走路の番号 `gen_text Apt<k> Rwy`（`rwy<k>`）、`line[k]` で `dir[k]` に回す線 `gen_rotary Apt<k> Rline`（`apt_line`））、`GROUP Rwy<k>`（`rwy_show[k]`：`rwy_heading[k]`・`rwy_distance[k]`（2,560 単位まで）の所で `dir[k]` に回し、40 コマの輪郭 `gen_rotary Rwy<k> Outline`（`rwy_outline`、`rwy_frame[k]`、−1 で消す）と、`rwy_len[k]` の半分だけ上下に出した破線 `gen_rotary Rwy<k> D0 <j>`・`D1 <j>`（`rwy_dash`、`dash[k×60＋j]`・`dash[k×60＋30＋j]`、各 30 本））、`GROUP Thr<k>`（`thr_show[k]`：閾値の所に番号 `gen_text Thr<k> Rwy`） | FCOM p.1149 |
 
 上の 1 行は `docs/overhaul/tools/panel_nd_airports.lua` で書き換えた（2 面で 6,064 行）。画像は `docs/overhaul/tools/make_nd_apt_images.ps1`（大きさ、線の向き、破線の長さと間は推定：FCOM p.1149 の図）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_airports`。
+
+表示（5-2 段 5c-3c、2026-10-26：ND の手動同調の VOR のコースの線）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・ND のコースの線（DSP-17） | 機長・副操縦士の ND の `GROUP ND Text Center`（地図の記号：CTR で動く）の最後 | なし | 新しい `GROUP ND Courses`：VOR L・R（k＝0・1）ごとに、`GROUP Crs<k>`（新設 `nd/<席>/crs/show[k]`：機体の点から `heading[k]` で回し `distance[k]` だけ出して戻した、線の機体に一番近い点で `dir[k]` に回し、`phase[k]` だけずらした緑の破線 `gen_rotary Crs<k> D<j>`（新しい `CRT Displays/ND/crs_dash`、`dash[k×85＋j＋42]`、j＝−42〜42、22 px おき））、`GROUP CrsLbl<k>`（`show[k]`：局の所（`lbl_heading[k]`・`lbl_distance[k]`）で、コースと反対（`lbl_show`・`tbrg`・`tside`・`text<k×2>`・`text<k×2＋1>`）を局から 50 px の所に線に沿って） | FCOM p.1145 |
+
+上の 1 行は `docs/overhaul/tools/panel_nd_crs.lua` で書き換えた（2 面で 7,968 行）。画像は `docs/overhaul/tools/make_nd_crs_image.ps1`（色・破線の長さと間・数字の位置は推定）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_crs`。
