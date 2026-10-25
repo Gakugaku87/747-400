@@ -58,7 +58,6 @@ B747_CHRONO = 1
 --** 					            LOCAL VARIABLES                 				 **--
 --*************************************************************************************--
 
-local B747_flt_mode = 0                                                               -- ON THE GROUND
 function deferred_command(name,desc,realFunc)
 	return replace_command(name,realFunc)
 end
@@ -403,6 +402,13 @@ B747DR_altimter_ft_adjusted                     = deferred_dataref("laminar/B747
 
 B747DR_dec_ht_display_status                    = deferred_dataref("laminar/B747/dec_height/display_status", "number")
 B747DR_radio_alt_display_status                 = deferred_dataref("laminar/B747/radio_alt/display_status", "number")
+B747DR_dec_ht_display_status_fo                 = deferred_dataref("laminar/B747/dec_height/display_status_fo", "number")
+B747DR_radio_alt_display_status_fo              = deferred_dataref("laminar/B747/radio_alt/display_status_fo", "number")
+-- each PFD's radio altitude (the nav module's: B747.34.xt.ra.lua)
+B747DR_ra_capt_value                            = find_dataref("laminar/B747/ra/capt/value")
+B747DR_ra_capt_flag                             = find_dataref("laminar/B747/ra/capt/flag")
+B747DR_ra_fo_value                              = find_dataref("laminar/B747/ra/fo/value")
+B747DR_ra_fo_flag                               = find_dataref("laminar/B747/ra/fo/flag")
 
 B747DR_radio_altitude                           = deferred_dataref("laminar/B747/efis/radio_altitude", "number")
 
@@ -779,17 +785,12 @@ function B747_efis_ref_alt_capt_set_dial_dn_CMDhandler(phase, duration)
 end
 
 
+-- MINS RST resets the flashing minimums alert of its own side only (FCOM
+-- p.982, p.1036)
 function B747_efis_dh_capt_reset_switch_CMDhandler(phase, duration)
     if phase == 0 then
         B747DR_efis_dh_reset_capt_switch_pos = 1
-        if B747DR_efis_min_ref_alt_capt_sel_dial_pos == 0 then
-            simDR_radio_alt_DH_capt=350
-            simDR_radio_alt_DH_fo=350
-        else
-            B747DR_efis_baro_alt_ref_capt=1000
-            B747DR_efis_baro_alt_ref_fo=1000
-        end
-   
+        B747_dh_rst_capt = true
     elseif phase == 2 then
         B747DR_efis_dh_reset_capt_switch_pos = 0
     end
@@ -953,14 +954,7 @@ end
 function B747_efis_dh_fo_reset_switch_CMDhandler(phase, duration)
     if phase == 0 then
         B747DR_efis_dh_reset_fo_switch_pos = 1
-        B747DR_efis_dh_reset_capt_switch_pos = 1
-        if B747DR_efis_min_ref_alt_fo_sel_dial_pos == 0 then
-            simDR_radio_alt_DH_capt=350
-            simDR_radio_alt_DH_fo=350
-        else
-            B747DR_efis_baro_alt_ref_capt=1000
-            B747DR_efis_baro_alt_ref_fo=1000
-        end
+        B747_dh_rst_fo = true
     elseif phase == 2 then
         B747DR_efis_dh_reset_fo_switch_pos = 0
     end
@@ -2235,118 +2229,52 @@ end
 
 
 
------ DECISION HEIGHT -------------------------------------------------------------------
-function B747_on_ground()
-    if simDR_all_wheels_on_ground > 0 then                                              -- VERIFY WHEELS STILL ON GROUND
-        B747_flt_mode = 0                                                               -- MODE = GROUND
+----- MINIMUMS (DH) ---------------------------------------------------------------------
+-- Each PFD's DH alert from its own radio altitude (laminar/B747/ra/capt|fo,
+-- the nav module's B747.34.xt.ra.lua) and its own DH: armed by climbing
+-- above DH + 75 ft, set by descending to DH, the amber DH flashing the first
+-- 3 s; reset by that side's MINS RST, on landing and by climbing above
+-- DH + 75 ft (ATA34_2 p.95, FCOM p.981-982). The panel shows the amber DH at
+-- display_status 1 and the green DH and setting at 0 (2: the flash's dark
+-- half). The radio altitude stays shown in white (FCOM p.981):
+-- radio_alt/display_status (and _fo) stays 0, since at 1 the panel showed
+-- neither the white nor the amber radio altitude (the digits went during the
+-- alert). The minimums voices are the GPWS's (B747.34.xt.gpws.lua).
+local DH_ARM_FT = 75
+local DH_FLASH_S = 3
+local DH_FLASH_HALF_S = 0.5
+B747_dh_rst_capt, B747_dh_rst_fo = false, false
+-- each side's alert (the MINS RST handlers above set B747_dh_rst_capt and
+-- _fo: XTLua turns a global table into a namespace)
+local B747_dh_capt = {armed = false, since = false}
+local B747_dh_fo = {armed = false, since = false}
+
+local function B747_dh_status(st, rst, ra, ra_valid, dh, on_ground, now)
+    if on_ground or rst then st.since = false end
+    if on_ground then st.armed = false end
+    if ra_valid and dh >= 0 and not on_ground then
+        if ra > dh + DH_ARM_FT then
+            st.armed, st.since = true, false
+        elseif st.armed and ra <= dh then
+            st.armed, st.since = false, now
+        end
     end
+    if not st.since then return 0 end
+    local e = now - st.since
+    if e < DH_FLASH_S and math.floor(e / DH_FLASH_HALF_S) % 2 == 1 then return 2 end
+    return 1
 end
 
-local B747_DH_flash_counter = 0
-function B747_DH_flash()
-    if B747DR_dec_ht_display_status == 1 then
-        B747DR_dec_ht_display_status = 2
-    elseif B747DR_dec_ht_display_status == 2 then
-        B747DR_dec_ht_display_status = 1
-    end
-
-    B747_DH_flash_counter = B747_DH_flash_counter + 1
-
-    if B747_DH_flash_counter == 10 then
-        B747_DH_flash_counter = 0
-        stop_timer(B747_DH_flash)
-    end
-end
-
-local B747_DH_alert_mode = 0
-function B747_decision_height_capt()
-
-
-    -- SET FLIGHT MODE
-    if simDR_all_wheels_on_ground > 0                                                   -- WHEELS NOT ON GROUND
-        and simDR_radio_alt_height_capt > 75.0                                          -- 75' ABOVE GROUND
-        and B747_flt_mode == 0                                                          -- GROUND
-    then
-        B747_flt_mode = 1                                                               -- MODE = IN FLIGHT
-        if is_timer_scheduled(B747_on_ground) == true then
-            stop_timer(B747_on_ground)
-        end
-
-    elseif simDR_all_wheels_on_ground > 0                                               -- WHEELS ON GROUND
-        and B747_flt_mode == 1                                                          -- IN FLIGHT
-    then
-        B747_flt_mode = 2                                                               -- MODE = TOUCHDOWN
-        if is_timer_scheduled(B747_on_ground) == false then
-            run_after_time(B747_on_ground, 10.0)
-        end
-    end
-
-
-    -- TRIGGER THE DH ALERT
-    if B747_flt_mode == 1                                                               -- IN FLIGHT
-        and simDR_radio_alt_height_capt < simDR_radio_alt_DH_capt                       -- AIRCRAFT BELOW DH
-        and B747_DH_alert_mode == 0                                                     -- DH ALERT HAS NOT STARTED
-    then
-        B747DR_dec_ht_display_status = 1                                                -- TURN ON DH ALERT
-        B747DR_radio_alt_display_status = 1                                             -- TURN ON RADIO ALT ALERT
-        if is_timer_scheduled(B747_DH_flash) == false then
-            run_at_interval(B747_DH_flash, 0.5)                                         -- FLASH THE DH ALERT
-        end
-        B747_DH_alert_mode = 1                                                          -- DH ALERT HAS STARTED
-    end
-
-
-    -- RESET THE DH ALERT
-    if B747_DH_alert_mode == 1 then
-        if B747DR_efis_dh_reset_capt_switch_pos == 1
-            or B747_flt_mode == 2
-            or simDR_radio_alt_height_capt > (simDR_radio_alt_DH_capt + 75.0)
-        then
-            B747DR_dec_ht_display_status = 0
-            B747DR_radio_alt_display_status = 0
-            B747_DH_alert_mode = 0
-        end
-    end
-	
-    -- "Approaching Minimums" and "Minimums" Callouts (crazytimtimtim + Matt726)
-    if B747DR_vertical_speed_fpm < 0
-    and simDR_all_wheels_on_ground == 0 then
-
-        if  B747DR_efis_min_ref_alt_capt_sel_dial_pos == 0                  -- RADIO mode
-        and simDR_radio_alt_DH_capt ~= 0 then
-
-            if simDR_radio_alt_height_capt <= simDR_radio_alt_DH_capt + 80 and simDR_radio_alt_height_capt > simDR_radio_alt_DH_capt then
-                B747DR_appDH_alert = 1
-            elseif simDR_radio_alt_height_capt <= simDR_radio_alt_DH_capt then
-                B747DR_DH_alert = 1
-                B747DR_appDH_alert = 0
-            else
-                B747DR_DH_alert = 0
-                B747DR_appDH_alert = 0
-            end
-
-        elseif B747DR_efis_min_ref_alt_capt_sel_dial_pos == 1               -- BARO mode
-        and B747DR_efis_baro_alt_ref_capt ~= 0 then
-
-            if simDR_altitude_ft_pilot <= B747DR_efis_baro_alt_ref_capt + 80 and simDR_altitude_ft_pilot > B747DR_efis_baro_alt_ref_capt then
-                B747DR_appDH_alert = 1
-            elseif simDR_altitude_ft_pilot <= B747DR_efis_baro_alt_ref_capt then
-                B747DR_DH_alert = 1
-                B747DR_appDH_alert = 0
-            else
-                B747DR_DH_alert = 0
-                B747DR_appDH_alert = 0
-            end
-
-        else
-            B747DR_DH_alert = 0
-            B747DR_appDH_alert = 0
-        end
-
-    else
-        B747DR_DH_alert = 0
-        B747DR_appDH_alert = 0
-    end
+function B747_minimums()
+    local now = simDR_time_now
+    local on_ground = simDR_all_wheels_on_ground > 0
+    local c = B747_dh_status(B747_dh_capt, B747_dh_rst_capt, B747DR_ra_capt_value, B747DR_ra_capt_flag == 0,
+        simDR_radio_alt_DH_capt, on_ground, now)
+    local f = B747_dh_status(B747_dh_fo, B747_dh_rst_fo, B747DR_ra_fo_value, B747DR_ra_fo_flag == 0,
+        simDR_radio_alt_DH_fo, on_ground, now)
+    B747_dh_rst_capt, B747_dh_rst_fo = false, false
+    if B747DR_dec_ht_display_status ~= c then B747DR_dec_ht_display_status = c end
+    if B747DR_dec_ht_display_status_fo ~= f then B747DR_dec_ht_display_status_fo = f end
 end
 
 -- PM 10,000ft Callout (crazytimtimtim + Matt726)
@@ -2361,27 +2289,8 @@ end
 
 
 ----- RADIO ALTITUDE --------------------------------------------------------------------
-function B747_radio_altitude()
-
-    if simDR_radio_alt_height_capt < 100.0 then                                             -- TWO FOOT INCREMENTS
-        B747DR_radio_altitude = roundToIncrement(simDR_radio_alt_height_capt-8, 2)
-
-    elseif simDR_radio_alt_height_capt < 500.0 then                                         -- TEN FOOT INCREMENTS
-        B747DR_radio_altitude = roundToIncrement(simDR_radio_alt_height_capt-8, 10)
-
-    else                                                                                    -- TWENTY FOOT INCREMENTS
-        B747DR_radio_altitude = roundToIncrement(simDR_radio_alt_height_capt-8, 20)
-
-    end
-
-end
-
-
-
-
-
-
-
+-- laminar/B747/efis/radio_altitude (the Captain's PFD) is written by the nav
+-- module (B747.34.xt.ra.lua: the radio altimeters, 5-1 step 4)
 
 ----- ALTIMETER -------------------------------------------------------------------------
 function B747_altimteter()
@@ -3598,8 +3507,7 @@ function after_physics()
     
     B747_rmi()
     B747_altimteter()
-    B747_decision_height_capt()
-    B747_radio_altitude()
+    B747_minimums()
     B747_ND_nav_rad_ID()
     B747_vsi()
 

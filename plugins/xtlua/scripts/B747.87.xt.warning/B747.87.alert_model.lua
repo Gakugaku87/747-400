@@ -85,6 +85,7 @@ function M.inputs()
         land_2_3 = false,                        -- LAND 2 or LAND 3 on the PFD
         status_active = {},                      -- the STATUS messages raised now (names)
         status_page_shown = false,               -- the STATUS page on the secondary EICAS
+        gpws_warning = false,                    -- PULL UP or WINDSHEAR on the PFDs (the GPWS)
     }
 end
 
@@ -99,6 +100,7 @@ function M.new()
         page = 1,
         recall_s = 0,
         master_warning = false, master_caution = false,
+        gpws_warning = false,
         wailer_until = 0,
         takeoff_armed = false,   -- slow on the ground since the last flight
         to_caution = false, to_rotated_at = nil,
@@ -320,6 +322,10 @@ function M.update(s, inp, dt)
             end
         end
     end
+    -- PULL UP and WINDSHEAR light master WARNING too, until reset or gone
+    -- (FCOM p.1532, p.1555; not an EICAS message, so without its inhibits)
+    if inp.gpws_warning and not s.gpws_warning then s.master_warning = true end
+    s.gpws_warning = inp.gpws_warning
     if inp.master_reset then
         s.master_warning, s.master_caution = false, false
         for _, rec in pairs(s.seen) do
@@ -327,7 +333,7 @@ function M.update(s, inp, dt)
             if rec.announced then rec.silenced = true end
         end
     end
-    local any_warning, any_caution = false, false
+    local any_warning, any_caution = inp.gpws_warning, false
     for _, rec in pairs(s.seen) do
         if not rec.hidden and rec.level == "warning" then any_warning = true end
         if not rec.hidden and rec.level == "caution" then any_caution = true end

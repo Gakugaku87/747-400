@@ -75,3 +75,42 @@ B747CMD_irs_align_now           = deferred_command("laminar/B747/irs/align_now",
 -- failures (also from X-Plane's GPS failures).
 B747DR_gps_valid                = deferred_dataref("laminar/B747/gps/valid", "array[2]")
 B747DR_gps_fail                 = deferred_dataref("laminar/B747/gps/fail", "array[2]")
+
+-- The radio altimeters (B747.34.ra_model.lua): each one working (L, C, R);
+-- each PFD's radio altitude: digits shown (working, below 2,500 ft), the RA
+-- flag (none working), the radio altitude (ft, not rounded; the rounded
+-- Captain's is laminar/B747/efis/radio_altitude, fltInst's) and the F/O's
+-- rounded one; the GPWC's radio altitude and its validity. Failures: each
+-- radio altimeter (L and R also from X-Plane's).
+B747DR_ra_valid                 = deferred_dataref("laminar/B747/ra/valid", "array[3]")
+B747DR_ra_capt_show             = deferred_dataref("laminar/B747/ra/capt/show", "number")
+B747DR_ra_capt_flag             = deferred_dataref("laminar/B747/ra/capt/flag", "number")
+B747DR_ra_capt_value            = deferred_dataref("laminar/B747/ra/capt/value", "number")
+B747DR_ra_fo_show               = deferred_dataref("laminar/B747/ra/fo/show", "number")
+B747DR_ra_fo_flag               = deferred_dataref("laminar/B747/ra/fo/flag", "number")
+B747DR_ra_fo_value              = deferred_dataref("laminar/B747/ra/fo/value", "number")
+B747DR_ra_efis_fo               = deferred_dataref("laminar/B747/efis/radio_altitude_fo", "number")
+B747DR_ra_gpwc                  = deferred_dataref("laminar/B747/ra/gpwc", "number")
+B747DR_ra_gpwc_valid            = deferred_dataref("laminar/B747/ra/gpwc_valid", "number")
+B747DR_ra_fail                  = deferred_dataref("laminar/B747/ra/fail", "array[3]")
+
+-- The GPWS (B747.34.gpws_model.lua): the voice (0 none, 1 SINK RATE, 2 PULL
+-- UP, 3 TERRAIN, 4 DON'T SINK, 5 TOO LOW GEAR, 6 TOO LOW FLAPS, 7 TOO LOW
+-- TERRAIN, 8 GLIDE SLOPE, 9 BANK ANGLE, 10 WINDSHEAR) and the callout (the
+-- radio altitude called, 1 APPROACHING MINIMUMS, 2 MINIMUMS; 0 between) the
+-- .snd plays; the GND PROX light, PULL UP and WINDSHEAR on the PFDs, the
+-- warning (PULL UP or WINDSHEAR: master WARNING), any alert (to TCAS), the
+-- glide slope alert inhibited; the G/S INHB pushes (the manipulators add one
+-- for each); a GPWC failure.
+B747DR_gpws_voice               = deferred_dataref("laminar/B747/gpws/voice", "number")
+B747DR_gpws_callout             = deferred_dataref("laminar/B747/gpws/callout", "number")
+-- the last callout, held until the next (for the tests: the callout itself lasts 0.3 s)
+B747DR_gpws_last_callout        = deferred_dataref("laminar/B747/gpws/last_callout", "number")
+B747DR_gpws_gnd_prox_light      = deferred_dataref("laminar/B747/gpws/gnd_prox_light", "number")
+B747DR_gpws_pull_up             = deferred_dataref("laminar/B747/gpws/pull_up", "number")
+B747DR_gpws_windshear           = deferred_dataref("laminar/B747/gpws/windshear", "number")
+B747DR_gpws_warning             = deferred_dataref("laminar/B747/gpws/warning", "number")
+B747DR_gpws_alert               = deferred_dataref("laminar/B747/gpws/alert", "number")
+B747DR_gpws_gs_inhibited        = deferred_dataref("laminar/B747/gpws/gs_inhibited", "number")
+B747DR_gpws_gs_inhb_pushes      = deferred_dataref("laminar/B747/gpws/gs_inhb_pushes", "number")
+B747DR_gpws_fail                = deferred_dataref("laminar/B747/gpws/fail", "number")

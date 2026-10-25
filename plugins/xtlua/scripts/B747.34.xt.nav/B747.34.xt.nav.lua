@@ -11,7 +11,8 @@
 
 -- The navigation sensors (PLAN 5-1; notes/ATA-34.md §10): the air data
 -- (B747.34.xt.airdata.lua, step 1), the IRS and the GPS (B747.34.xt.irs.lua,
--- B747.34.xt.gps.lua, step 2).
+-- B747.34.xt.gps.lua, step 2), the radio altimeters and the GPWS
+-- (B747.34.xt.ra.lua, B747.34.xt.gpws.lua, step 4).
 -- Each glue runs its model every frame.
 
 function deferred_command(name,desc,realFunc)
@@ -42,6 +43,10 @@ dofile("B747.34.xt.airdata.lua")
 dofile("B747.34.xt.irs.lua")
 -- the GPS: power, the first fix, failures, messages
 dofile("B747.34.xt.gps.lua")
+-- the radio altimeters: power, failures, each PFD's source, the GPWC's
+dofile("B747.34.xt.ra.lua")
+-- the GPWS: modes 1-7, the callouts, the GND PROX panel, lights, messages
+dofile("B747.34.xt.gpws.lua")
 
 
 --*************************************************************************************--
@@ -52,10 +57,14 @@ function flight_start()
     B747_airdata_flight_start()
     B747_irs_flight_start()
     B747_gps_flight_start()
+    B747_ra_flight_start()
+    B747_gpws_flight_start()
 end
 
 function after_physics()
     B747_airdata()
     B747_irs()
     B747_gps()
+    B747_ra()
+    B747_gpws()
 end

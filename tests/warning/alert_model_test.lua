@@ -529,4 +529,28 @@ do
     T.check(out.status_cue, "STATUS cue: below 75 kt")
 end
 
+-- the GPWS's PULL UP and WINDSHEAR light master WARNING; the master reset
+-- puts it out (FCOM p.1532, p.1555)
+do
+    local s, inp = flying()
+    local out = run(s, inp, 0.2)
+    T.check(not out.master_warning, "GPWS: no warning, no master WARNING")
+    inp.gpws_warning = true
+    out = run(s, inp, 0.2)
+    T.check(out.master_warning, "GPWS warning: master WARNING")
+    T.check(out.num_pages <= 1 and #(out.pages[1] or {}) == 0, "and no EICAS message")
+    T.check(not out.aural.siren and not out.aural.bell, "and no EICAS aural")
+    out = push(s, inp, "master_reset")
+    out = run(s, inp, 0.2)
+    T.check(not out.master_warning, "master reset: out while PULL UP lasts")
+    inp.gpws_warning = false
+    out = run(s, inp, 0.2)
+    inp.gpws_warning = true
+    out = run(s, inp, 0.2)
+    T.check(out.master_warning, "a new GPWS warning: lit again")
+    inp.gpws_warning = false
+    out = run(s, inp, 0.2)
+    T.check(not out.master_warning, "the warning gone: out")
+end
+
 T.done()

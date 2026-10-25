@@ -143,6 +143,8 @@ B747DR_lt_fcsov_tail_valve      = find_dataref("laminar/B747/flt_ctrls/hyd_power
 --simDR_bleed_air_off                 = find_dataref("sim/cockpit2/annunciators/bleed_air_off")
 --simDR_bleed_air_mode                = find_dataref("sim/cockpit2/pressurization/actuators/bleed_air_mode")
 simDR_annun_GPWS                    = find_dataref("sim/cockpit2/annunciators/GPWS")
+-- the GND PROX light (the GPWS, B747.34.xt.gpws.lua)
+B747DR_lt_gpws_gnd_prox             = find_dataref("laminar/B747/gpws/gnd_prox_light")
 
 simDR_generator_fail_01             = find_dataref("sim/operation/failures/rel_genera0")
 simDR_generator_fail_02             = find_dataref("sim/operation/failures/rel_genera1")
@@ -1058,12 +1060,12 @@ function B747_annunciators()
 
     ----- MAIN PANEL -----
 
-    -- GROUND PROXIMITY         simDR_annun_GPWS
+    -- GROUND PROXIMITY: the GPWS's alerts (FCOM p.1538)
+    annun.b.gpws = B747DR_lt_gpws_gnd_prox
 
-    annun.b.gpws =  0 -- B747_ternary((B747DR_GPWS GS INHIBIT) and (simDR_annun_GPWS == 1), 1, 0)         --  TODO:: create GPWS dataref for monitoring of button press to inhibit
-
-    -- GLIDESLOPE INHIBIT
-    annun.b.gs_inhibit = 0          -- TODO:  NEED DR  (see above)
+    -- GLIDESLOPE INHIBIT: the 109's light; the 405's G/S INHB switch has none
+    -- (FCOM p.1537-1539)
+    annun.b.gs_inhibit = 0
 
 
 
