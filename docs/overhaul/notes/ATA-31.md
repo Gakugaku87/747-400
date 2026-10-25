@@ -609,3 +609,11 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - AFDS（`B747.70.xt.autopilot.lua`）：MCP の方位は基準の方位なので、TRU では X-Plane の方位のモード（磁方位）へ偏差の分を直して渡す（`ap_hdg_target`：つまみ、HDG SEL の開始、毎フレームの同期の 6 か所）。HDG SEL のときにスイッチが動いたら X-Plane の HDG HOLD（`ap_hdg_ref_hold`）。
 - 残り：NORM の極地域で HDG SEL・HDG HOLD・LOC を働かなくすること（AFDS の作り直し 6-3）、FMC の真方位（経路のコース。FMC は 73°N と 60°S で切り替える：ATA34_2 p.577。6-1）、TRU での VOR のコースの指針（磁方位のコースのまま）、LOC を捕まえたときに MCP の方位を LOC のコースにする所（磁方位のまま）。
 - 試験：新しい `tests/displays/hdg_ref_test.lua`（31 件：極地域、基準の方位、白・琥珀・点滅・MAG の枠、表示のグルーの方位・航跡・ラベル・PLN・風の矢印、AFDS の目標と HDG HOLD）、ND の向きの試験（`nd_orientation_test.lua`）を基準の値の入力に直した。X-Plane のシナリオ `s72_hdg_ref`（19 �����i�F�t�����N�t���g�̓� 10,000 ft�ANORM �� MAG�i�\���̕��ʁ������ʁj�ATRUE �ŕ\���̕��ʂ������ʂ�� 4.0�� �傫���AND �̔��g�� TRU�EPFD �̘g���� TRU�AHDG SEL ���� HDG HOLD�ATRU �� HDG SEL �� X-Plane �̖ڕW�� MCP �� 087 ��� 4.0�� ������ 083�AV/S ?1,500 fpm �� 2,000 ft �����߂̓_�Łi64 �b��j�Ƃ��̌�����߁ANORM �ɖ߂��� MAG �� 10 �b�̘g�� HDG HOLD�BPFD �� ND ���B����）。
+
+## 34. 段 5e の実装（2026-10-26 朝：ND の位置のトレンドベクトル）
+
+- 資料：FCOM p.1147（位置のトレンドベクトル（白、破線）：MAP・MAP CTR。30・60・90 秒の終わりの位置の予測で、1 区間が 30 秒、傾きと対地速度から。範囲が 20 NM より大きいと 3 区間、20 NM は 2、10 NM は 1。図は機体の記号の頂点から曲がる 3 本の破線）。
+- ND のモデル（`B747.60.nd_model.lua` の `trend`）：機体の記号の頂点から航跡の向きに、対地速度で 30 秒ずつの、傾きによる旋回（半径＝対地速度²÷（g・tan 傾き）：推定。資料は「傾きと対地速度から」だけ）の弧。各区間の 7 割を破線にし（推定：図の破線と隙間）、3 本の直線の小片で近似する。傾き 0.5° 未満は直線。MAP と MAP CTR で航跡が有効なとき。各席の傾き（AHRS）と X-Plane の対地速度。
+- 表示のグルー：新設 `nd/<席>/tv_show`・`tv_x`・`tv_y`・`tv_rot`・`tv_frame`（各 9 片、init `B747.60.fltInst`）。パネル（道具 `docs/overhaul/tools/panel_nd_tv.lua`、画像 `make_nd_tv_image.ps1`、ACF_DIFF.md §5）：地図の記号のグループの最後に、小片ごとに表示、左右と上下の移動、回転、長さのコマ（1.5 px ごと 40）。
+- FMC の記号のうち S/C・E/D・減速点、待機・PT、エネルギー円、FIX の基準点は FMC の作り直し（6-x）で（GAP DSP-23 の残り）。
+- 試験：新しい `tests/displays/nd_trend_test.lua`（17 件：直進の位置と長さ、区間と隙間、範囲ごとの区間の数、右・左の旋回の弧と向き、MAP 以外・航跡なし・停止で無し、モデルとグルー）。X-Plane のシナリオ `s73_nd_trend`（15 �����i�F�t�����N�t���g�̓� 4,000 ft�E220 kt�A40 NM �� 9 �ЁA���i�͐^��������i3 ��Ԗڂ̏I��� 54 px�j�A�E����i�X�� 25���j�ōŌ�̕Ђ��E�� 41 px�E���� 131���A20 NM �� 2 ��ԁA10 NM �� 1 ��ԁAVOR �ł͏o���Ȃ��BND ���B����）。

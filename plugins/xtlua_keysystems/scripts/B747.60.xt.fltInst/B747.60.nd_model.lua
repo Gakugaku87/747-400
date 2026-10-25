@@ -45,6 +45,21 @@ M.PX_PER_RANGE = 465
 M.RAD_ARC_PX = 465
 M.RAD_LEFT_PX, M.RAD_RIGHT_PX = 329, 348
 M.RAD_CTR_PX = 250 / 640 * 465
+-- the position trend vector (step 5e, FCOM p.1147): MAP and MAP CTR, from
+-- the airplane symbol along the track, the positions at the end of 30, 60
+-- and 90 s at the ground speed and the turn of the bank angle (a radius of
+-- the ground speed squared over g tan bank), one 30 s segment for 10 NM,
+-- two for 20, three beyond; each segment a dash over 70 % of it (estimate:
+-- FCOM's figure), drawn as 3 straight pieces (the panel image's frames:
+-- 1.5 pixels a step, 40)
+M.TV_SEG_S = 30
+M.TV_SEGS = 3
+M.TV_DASH = 0.7
+M.TV_PIECES = 3
+M.TV_FRAME_PX, M.TV_FRAMES = 1.5, 40
+M.TV_N = M.TV_SEGS * M.TV_PIECES
+local G = 9.80665
+local KT_MS = 1852 / 3600
 
 local function side_in()
     return {
@@ -67,6 +82,7 @@ local function side_in()
         sw = {M.SW_OFF, M.SW_OFF}, -- that side's VOR/ADF switches, left and right
         pos = false,        -- POS selected on that side's EFIS control panel
         range_nm = 40,      -- that side's selected range
+        roll_deg = 0,       -- that side's bank angle, right wing down positive
     }
 end
 
@@ -88,6 +104,7 @@ function M.inputs()
         wind_from = 0,      -- the wind direction, magnetic
         hdg_sel = 0,        -- the MCP selected heading
         roll_mode = 0,      -- the AFDS's roll mode (FMA: 2 LNAV, 3 LOC, 4 ROLLOUT)
+        gs_kt = 0,          -- the ground speed
     }
 end
 
@@ -128,7 +145,42 @@ local function side_out()
         pos_rad_len = {0, 0}, -- their length, pixels
         pos_rad_tick = {false, false}, -- the tick mark at the DME distance (the end)
         pos_rad_radial = {0, 0}, -- the radial, 1 to 360
+        -- the position trend vector's pieces: shown, middle (pixels from the
+        -- airplane symbol, up the display's top), direction (degrees from
+        -- the top) and the image's frame
+        tv_show = {}, tv_x = {}, tv_y = {}, tv_rot = {}, tv_frame = {},
     }
+end
+
+-- the trend vector's pieces into o (tv_*): along an arc from the airplane
+-- symbol, or straight below half a degree of bank
+local function arc_point(a, r, sign)
+    if r == nil then return 0, a end
+    return sign * r * (1 - math.cos(a / r)), r * math.sin(a / r)
+end
+function M.trend(o, on, gs_kt, roll_deg, range_nm)
+    local segs = (range_nm <= 10 and 1) or (range_nm <= 20 and 2) or M.TV_SEGS
+    local gs = math.max(0, gs_kt) * KT_MS
+    local r, sign = nil, roll_deg < 0 and -1 or 1
+    if math.abs(roll_deg) >= 0.5 and gs > 0 then r = gs * gs / (G * math.tan(math.rad(math.abs(roll_deg)))) end
+    local seg = gs * M.TV_SEG_S                     -- metres a segment
+    local px_m = M.PX_PER_RANGE / (range_nm * 1852)
+    local n = 0
+    for k = 0, M.TV_SEGS - 1 do
+        local a0 = k * seg
+        local step = seg * M.TV_DASH / M.TV_PIECES
+        for j = 0, M.TV_PIECES - 1 do
+            n = n + 1
+            local x1, y1 = arc_point(a0 + j * step, r, sign)
+            local x2, y2 = arc_point(a0 + (j + 1) * step, r, sign)
+            local dx, dy = (x2 - x1) * px_m, (y2 - y1) * px_m
+            local len = math.sqrt(dx * dx + dy * dy)
+            o.tv_show[n] = on and k < segs and len >= M.TV_FRAME_PX / 2
+            o.tv_x[n], o.tv_y[n] = (x1 + x2) / 2 * px_m, (y1 + y2) / 2 * px_m
+            o.tv_rot[n] = math.deg(math.atan2(dx, dy))
+            o.tv_frame[n] = math.max(0, math.min(M.TV_FRAMES - 1, math.floor(len / M.TV_FRAME_PX + 0.5) - 1))
+        end
+    end
 end
 
 function M.new()
@@ -257,6 +309,8 @@ function M.update(s, inp, dt)
             o.pos_rad_len[k] = o.pos_rad[k] and math.min(dme_px, edge) or 0
             o.pos_rad_tick[k] = o.pos_rad[k] and dme and dme_px <= edge
         end
+        -- the position trend vector (step 5e)
+        M.trend(o, mode == M.MAP and o.rose and i.trk_valid, inp.gs_kt, i.roll_deg, i.range_nm)
     end
     return s.out
 end
