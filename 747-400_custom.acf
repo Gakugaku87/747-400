@@ -74372,8 +74372,7 @@ GROUP Captain PFD
           DEFLECT_PIX 613.000000
 
         GROUP Rsng Rwy Offset
-          SHOW_EQUAL 1.000000 laminar/B747/ra/capt/show
-          SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+          SHOW_GREATER 0.500000 laminar/B747/pfd/capt/rwy_show
           HIDE
           GROUP_ANIMATE_MODE TRANSLATE
           GROUP_WIDTH 320
@@ -74391,7 +74390,7 @@ GROUP Captain PFD
             POS 315.500000 671.000000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznRisingRunway
             DATAREF laminar/B747/ra/capt/value
-            SHOW_EQUAL 1.000000 sim/cockpit2/radios/indicators/hsi_display_horizontal_pilot
+            SHOW_GREATER 0.500000 laminar/B747/pfd/capt/rwy_show
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 2
@@ -74751,50 +74750,48 @@ GROUP Captain PFD
           END_GROUP
         END_GROUP
         GROUP Glideslope
-          SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+          SHOW_GREATER 0.500000 laminar/B747/pfd/capt/ils_show
           HIDE
           GROUP Pointer
-            SHOW_GREATER 1.000000 sim/cockpit2/radios/indicators/hsi_display_vertical_pilot
+            SHOW_GREATER 0.500000 laminar/B747/pfd/capt/gs_ptr
             HIDE
             GROUP Pointer VDEF > 2.3
-              SHOW_GREATER 2.340000 sim/cockpit2/radios/indicators/hsi_vdef_dots_pilot
+              SHOW_EQUAL 2.000000 laminar/B747/pfd/capt/gs_ptr
               HIDE
               gen_pointer Pointer
                 POS 465.500000 767.500000
                 IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSpointer
                 DATAREF sim/cockpit2/radios/indicators/hsi_vdef_dots_pilot
                 HIDE
-                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 2
                 BUS_SRC 2
-                KEY_FRAME -999.000000 97.000000 1.000000
-                KEY_FRAME -2.500000 97.000000 1.000000
+                KEY_FRAME -999.000000 121.250000 1.000000
+                KEY_FRAME -2.500000 121.250000 1.000000
                 KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 2.500000 -97.000000 1.000000
-                KEY_FRAME 999.000000 -97.000000
+                KEY_FRAME 2.500000 -121.250000 1.000000
+                KEY_FRAME 999.000000 -121.250000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
 
             END_GROUP
             GROUP Pointer VDEF <= 2.3
-              SHOW_LESS 2.333333 sim/cockpit2/radios/indicators/hsi_vdef_dots_pilot
+              SHOW_EQUAL 1.000000 laminar/B747/pfd/capt/gs_ptr
               HIDE
               gen_pointer Pointer
                 POS 465.500000 767.500000
                 IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSpointer2
                 DATAREF sim/cockpit2/radios/indicators/hsi_vdef_dots_pilot
                 HIDE
-                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 2
                 BUS_SRC 2
-                KEY_FRAME -999.000000 97.000000 1.000000
-                KEY_FRAME -2.500000 97.000000 1.000000
+                KEY_FRAME -999.000000 121.250000 1.000000
+                KEY_FRAME -2.500000 121.250000 1.000000
                 KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 2.500000 -97.000000 1.000000
-                KEY_FRAME 999.000000 -97.000000
+                KEY_FRAME 2.500000 -121.250000 1.000000
+                KEY_FRAME 999.000000 -121.250000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -74805,7 +74802,29 @@ GROUP Captain PFD
             POS 465.500000 767.500000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSscale
             DATAREF 
-            SHOW_GREATER 0.100000 laminar/B747/pfd/capt/irs
+            SHOW_EQUAL 1.000000 laminar/B747/pfd/capt/gs_scale
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary Scale Amber
+            POS 465.500000 767.500000
+            IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSscaleAmb
+            DATAREF 
+            SHOW_EQUAL 2.000000 laminar/B747/pfd/capt/gs_scale
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 2
@@ -74825,7 +74844,7 @@ GROUP Captain PFD
 
         END_GROUP
         GROUP Localizer
-          SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+          SHOW_GREATER 0.500000 laminar/B747/pfd/capt/ils_show
           HIDE
           GROUP Localizer Mask
             HIDE
@@ -74852,13 +74871,13 @@ GROUP Captain PFD
 
           END_GROUP
           GROUP Localizer Pointer
-            SHOW_GREATER 1.000000 sim/cockpit2/radios/indicators/hsi_display_horizontal_pilot
+            SHOW_GREATER 0.500000 laminar/B747/pfd/capt/loc_ptr
             HIDE
             gen_pointer Ptr >= 2.34
               POS 315.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCpointer
               DATAREF sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
-              SHOW_GREATER 2.340000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
+              SHOW_EQUAL 2.000000 laminar/B747/pfd/capt/loc_ptr
               HIDE
               CLIP
               LIGHT_MODE GLASS_AUTO
@@ -74877,8 +74896,7 @@ GROUP Captain PFD
               POS 315.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCpointer2
               DATAREF sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
-              SHOW_LESS 2.330000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
-              SHOW_GREATER 0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
+              SHOW_EQUAL 1.000000 laminar/B747/pfd/capt/loc_ptr
               HIDE
               CLIP
               LIGHT_MODE GLASS_AUTO
@@ -74897,7 +74915,7 @@ GROUP Captain PFD
               POS 315.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCpointer2
               DATAREF sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
-              SHOW_LESS 0.500000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
+              SHOW_EQUAL 3.000000 laminar/B747/pfd/capt/loc_ptr
               HIDE
               CLIP
               LIGHT_MODE GLASS_AUTO
@@ -74919,7 +74937,7 @@ GROUP Captain PFD
               POS 315.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscale
               DATAREF 
-              SHOW_GREATER 0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
+              SHOW_EQUAL 1.000000 laminar/B747/pfd/capt/loc_scale
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -74937,11 +74955,11 @@ GROUP Captain PFD
               CLICK_DX 0
               CLICK_DY 0
 
-            gen_rotary Scale >= 0.51
+            gen_rotary Scale Amber
               POS 315.500000 618.500000
-              IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscale
+              IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscaleAmb
               DATAREF 
-              SHOW_LESS -0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
+              SHOW_EQUAL 2.000000 laminar/B747/pfd/capt/loc_scale
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -74963,8 +74981,29 @@ GROUP Captain PFD
               POS 315.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscaleEx
               DATAREF 
-              SHOW_LESS 0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
-              SHOW_GREATER -0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
+              SHOW_EQUAL 3.000000 laminar/B747/pfd/capt/loc_scale
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Scale Exp Amber
+              POS 315.500000 618.500000
+              IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscaleExAmb
+              DATAREF 
+              SHOW_EQUAL 4.000000 laminar/B747/pfd/capt/loc_scale
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -76629,7 +76668,7 @@ GROUP Captain PFD
         END_GROUP
       END_GROUP
       GROUP Approach Ref
-        SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+        SHOW_GREATER 0.500000 laminar/B747/pfd/capt/ils_show
         HIDE
         gen_text ILS Label
           POS 200.000000 1013.500000
@@ -77768,7 +77807,7 @@ GROUP Captain PFD
         END_GROUP
       END_GROUP
       GROUP Approach Course
-        SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+        SHOW_GREATER 0.500000 laminar/B747/pfd/capt/ils_show
         HIDE
         gen_rotary CRS Label
           POS 164.500000 576.000000
@@ -78280,6 +78319,50 @@ GROUP Captain PFD
     END_GROUP
     GROUP CAPT IRS OFF PFD
       HIDE
+      gen_rotary GS X
+        POS 465.500000 767.500000
+        IMAGE CRT Displays/PFD/Failure Flags/gsX
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/capt/gs_flag
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 2
+        BUS_SRC 2
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary LOC X
+        POS 315.500000 618.500000
+        IMAGE CRT Displays/PFD/Failure Flags/locX
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/capt/loc_flag
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 2
+        BUS_SRC 2
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
       gen_rotary FPV X
         POS 216.000000 838.000000
         IMAGE CRT Displays/PFD/Failure Flags/fpvX
@@ -78527,8 +78610,7 @@ GROUP Captain PFD
           DEFLECT_PIX 613.000000
 
         GROUP Rsng Rwy Offset
-          SHOW_EQUAL 1.000000 laminar/B747/ra/capt/show
-          SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+          SHOW_GREATER 0.500000 laminar/B747/pfd/capt/rwy_show
           HIDE
           GROUP_ANIMATE_MODE TRANSLATE
           GROUP_WIDTH 320
@@ -78546,7 +78628,7 @@ GROUP Captain PFD
             POS 315.500000 671.000000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznRisingRunway
             DATAREF laminar/B747/ra/capt/value
-            SHOW_EQUAL 1.000000 sim/cockpit2/radios/indicators/hsi_display_horizontal_pilot
+            SHOW_GREATER 0.500000 laminar/B747/pfd/capt/rwy_show
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 2
@@ -78906,50 +78988,48 @@ GROUP Captain PFD
           END_GROUP
         END_GROUP
         GROUP Glideslope
-          SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+          SHOW_GREATER 0.500000 laminar/B747/pfd/capt/ils_show
           HIDE
           GROUP Pointer
-            SHOW_GREATER 1.000000 sim/cockpit2/radios/indicators/hsi_display_vertical_pilot
+            SHOW_GREATER 0.500000 laminar/B747/pfd/capt/gs_ptr
             HIDE
             GROUP Pointer VDEF > 2.3
-              SHOW_GREATER 2.340000 sim/cockpit2/radios/indicators/hsi_vdef_dots_pilot
+              SHOW_EQUAL 2.000000 laminar/B747/pfd/capt/gs_ptr
               HIDE
               gen_pointer Pointer
                 POS 465.500000 767.500000
                 IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSpointer
                 DATAREF sim/cockpit2/radios/indicators/hsi_vdef_dots_pilot
                 HIDE
-                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 2
                 BUS_SRC 2
-                KEY_FRAME -999.000000 97.000000 1.000000
-                KEY_FRAME -2.500000 97.000000 1.000000
+                KEY_FRAME -999.000000 121.250000 1.000000
+                KEY_FRAME -2.500000 121.250000 1.000000
                 KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 2.500000 -97.000000 1.000000
-                KEY_FRAME 999.000000 -97.000000
+                KEY_FRAME 2.500000 -121.250000 1.000000
+                KEY_FRAME 999.000000 -121.250000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
 
             END_GROUP
             GROUP Pointer VDEF <= 2.3
-              SHOW_LESS 2.333333 sim/cockpit2/radios/indicators/hsi_vdef_dots_pilot
+              SHOW_EQUAL 1.000000 laminar/B747/pfd/capt/gs_ptr
               HIDE
               gen_pointer Pointer
                 POS 465.500000 767.500000
                 IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSpointer2
                 DATAREF sim/cockpit2/radios/indicators/hsi_vdef_dots_pilot
                 HIDE
-                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 2
                 BUS_SRC 2
-                KEY_FRAME -999.000000 97.000000 1.000000
-                KEY_FRAME -2.500000 97.000000 1.000000
+                KEY_FRAME -999.000000 121.250000 1.000000
+                KEY_FRAME -2.500000 121.250000 1.000000
                 KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 2.500000 -97.000000 1.000000
-                KEY_FRAME 999.000000 -97.000000
+                KEY_FRAME 2.500000 -121.250000 1.000000
+                KEY_FRAME 999.000000 -121.250000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -78960,7 +79040,29 @@ GROUP Captain PFD
             POS 465.500000 767.500000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSscale
             DATAREF 
-            SHOW_GREATER 0.100000 laminar/B747/pfd/capt/irs
+            SHOW_EQUAL 1.000000 laminar/B747/pfd/capt/gs_scale
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 2
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary Scale Amber
+            POS 465.500000 767.500000
+            IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSscaleAmb
+            DATAREF 
+            SHOW_EQUAL 2.000000 laminar/B747/pfd/capt/gs_scale
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 2
@@ -78980,7 +79082,7 @@ GROUP Captain PFD
 
         END_GROUP
         GROUP Localizer
-          SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+          SHOW_GREATER 0.500000 laminar/B747/pfd/capt/ils_show
           HIDE
           GROUP Localizer Mask
             HIDE
@@ -79007,13 +79109,13 @@ GROUP Captain PFD
 
           END_GROUP
           GROUP Localizer Pointer
-            SHOW_GREATER 1.000000 sim/cockpit2/radios/indicators/hsi_display_horizontal_pilot
+            SHOW_GREATER 0.500000 laminar/B747/pfd/capt/loc_ptr
             HIDE
             gen_pointer Ptr >= 2.34
               POS 315.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCpointer
               DATAREF sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
-              SHOW_GREATER 2.340000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
+              SHOW_EQUAL 2.000000 laminar/B747/pfd/capt/loc_ptr
               HIDE
               CLIP
               LIGHT_MODE GLASS_AUTO
@@ -79032,8 +79134,7 @@ GROUP Captain PFD
               POS 315.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCpointer2
               DATAREF sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
-              SHOW_LESS 2.330000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
-              SHOW_GREATER 0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
+              SHOW_EQUAL 1.000000 laminar/B747/pfd/capt/loc_ptr
               HIDE
               CLIP
               LIGHT_MODE GLASS_AUTO
@@ -79052,7 +79153,7 @@ GROUP Captain PFD
               POS 315.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCpointer2
               DATAREF sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
-              SHOW_LESS 0.500000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
+              SHOW_EQUAL 3.000000 laminar/B747/pfd/capt/loc_ptr
               HIDE
               CLIP
               LIGHT_MODE GLASS_AUTO
@@ -79074,7 +79175,7 @@ GROUP Captain PFD
               POS 315.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscale
               DATAREF 
-              SHOW_GREATER 0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
+              SHOW_EQUAL 1.000000 laminar/B747/pfd/capt/loc_scale
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -79092,11 +79193,11 @@ GROUP Captain PFD
               CLICK_DX 0
               CLICK_DY 0
 
-            gen_rotary Scale >= 0.51
+            gen_rotary Scale Amber
               POS 315.500000 618.500000
-              IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscale
+              IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscaleAmb
               DATAREF 
-              SHOW_LESS -0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
+              SHOW_EQUAL 2.000000 laminar/B747/pfd/capt/loc_scale
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -79118,8 +79219,29 @@ GROUP Captain PFD
               POS 315.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscaleEx
               DATAREF 
-              SHOW_LESS 0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
-              SHOW_GREATER -0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot
+              SHOW_EQUAL 3.000000 laminar/B747/pfd/capt/loc_scale
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Scale Exp Amber
+              POS 315.500000 618.500000
+              IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscaleExAmb
+              DATAREF 
+              SHOW_EQUAL 4.000000 laminar/B747/pfd/capt/loc_scale
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -80784,7 +80906,7 @@ GROUP Captain PFD
         END_GROUP
       END_GROUP
       GROUP Approach Ref
-        SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+        SHOW_GREATER 0.500000 laminar/B747/pfd/capt/ils_show
         HIDE
         gen_text ILS Label
           POS 200.000000 1013.500000
@@ -81923,7 +82045,7 @@ GROUP Captain PFD
         END_GROUP
       END_GROUP
       GROUP Approach Course
-        SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+        SHOW_GREATER 0.500000 laminar/B747/pfd/capt/ils_show
         HIDE
         gen_rotary CRS Label
           POS 164.500000 576.000000
@@ -82444,6 +82566,50 @@ GROUP Captain PFD
       KEY_FRAME 1.000000 -683.000000
       IS_VERTICAL 1
       OFFSET 0.000000
+      gen_rotary GS X
+        POS 465.500000 767.500000
+        IMAGE CRT Displays/PFD/Failure Flags/gsX
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/capt/gs_flag
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 2
+        BUS_SRC 2
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary LOC X
+        POS 315.500000 618.500000
+        IMAGE CRT Displays/PFD/Failure Flags/locX
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/capt/loc_flag
+        HIDE
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 2
+        BUS_SRC 2
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
       gen_rotary FPV X
         POS 216.000000 838.000000
         IMAGE CRT Displays/PFD/Failure Flags/fpvX
@@ -82672,8 +82838,7 @@ GROUP First Officer PFD
           DEFLECT_PIX 613.000000
 
         GROUP Rsng Rwy Offset 2
-          SHOW_EQUAL 1.000000 laminar/B747/ra/fo/show
-          SHOW_GREATER 0.500000 laminar/B747/pfd/fo/att
+          SHOW_GREATER 0.500000 laminar/B747/pfd/fo/rwy_show
           HIDE
           GROUP_ANIMATE_MODE TRANSLATE
           GROUP_WIDTH 320
@@ -82691,7 +82856,7 @@ GROUP First Officer PFD
             POS 994.500000 671.000000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznRisingRunway
             DATAREF laminar/B747/ra/fo/value
-            SHOW_EQUAL 1.000000 sim/cockpit2/radios/indicators/hsi_display_horizontal_copilot
+            SHOW_GREATER 0.500000 laminar/B747/pfd/fo/rwy_show
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 5
@@ -83050,50 +83215,48 @@ GROUP First Officer PFD
           END_GROUP
         END_GROUP
         GROUP Glideslope 2
-          SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+          SHOW_GREATER 0.500000 laminar/B747/pfd/fo/ils_show
           HIDE
           GROUP Pointer 2
-            SHOW_GREATER 1.000000 sim/cockpit2/radios/indicators/hsi_display_vertical_copilot
+            SHOW_GREATER 0.500000 laminar/B747/pfd/fo/gs_ptr
             HIDE
             GROUP Pointer VDEF > 2.3
-              SHOW_GREATER 2.340000 sim/cockpit2/radios/indicators/hsi_vdef_dots_copilot
+              SHOW_EQUAL 2.000000 laminar/B747/pfd/fo/gs_ptr
               HIDE
               gen_pointer Pointer 2
                 POS 1144.500000 767.500000
                 IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSpointer
                 DATAREF sim/cockpit2/radios/indicators/hsi_vdef_dots_copilot
                 HIDE
-                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 5
                 BUS_SRC 4
-                KEY_FRAME -999.000000 97.000000 1.000000
-                KEY_FRAME -2.500000 97.000000 1.000000
+                KEY_FRAME -999.000000 121.250000 1.000000
+                KEY_FRAME -2.500000 121.250000 1.000000
                 KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 2.500000 -97.000000 1.000000
-                KEY_FRAME 999.000000 -97.000000
+                KEY_FRAME 2.500000 -121.250000 1.000000
+                KEY_FRAME 999.000000 -121.250000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
 
             END_GROUP
             GROUP Pointer VDEF <= 2.3
-              SHOW_LESS 2.333333 sim/cockpit2/radios/indicators/hsi_vdef_dots_copilot
+              SHOW_EQUAL 1.000000 laminar/B747/pfd/fo/gs_ptr
               HIDE
               gen_pointer Pointer 2
                 POS 1144.500000 767.500000
                 IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSpointer2
                 DATAREF sim/cockpit2/radios/indicators/hsi_vdef_dots_copilot
                 HIDE
-                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 5
                 BUS_SRC 4
-                KEY_FRAME -999.000000 97.000000 1.000000
-                KEY_FRAME -2.500000 97.000000 1.000000
+                KEY_FRAME -999.000000 121.250000 1.000000
+                KEY_FRAME -2.500000 121.250000 1.000000
                 KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 2.500000 -97.000000 1.000000
-                KEY_FRAME 999.000000 -97.000000
+                KEY_FRAME 2.500000 -121.250000 1.000000
+                KEY_FRAME 999.000000 -121.250000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -83104,7 +83267,29 @@ GROUP First Officer PFD
             POS 1144.500000 767.500000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSscale
             DATAREF 
-            SHOW_GREATER 0.100000 laminar/B747/pfd/fo/irs
+            SHOW_EQUAL 1.000000 laminar/B747/pfd/fo/gs_scale
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary Scale Amber 2
+            POS 1144.500000 767.500000
+            IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSscaleAmb
+            DATAREF 
+            SHOW_EQUAL 2.000000 laminar/B747/pfd/fo/gs_scale
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 5
@@ -83124,7 +83309,7 @@ GROUP First Officer PFD
 
         END_GROUP
         GROUP Localizer 2
-          SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+          SHOW_GREATER 0.500000 laminar/B747/pfd/fo/ils_show
           HIDE
           GROUP Localizer Mask 2
             HIDE
@@ -83151,13 +83336,13 @@ GROUP First Officer PFD
 
           END_GROUP
           GROUP Localizer Pointer 2
-            SHOW_GREATER 1.000000 sim/cockpit2/radios/indicators/hsi_display_horizontal_copilot
+            SHOW_GREATER 0.500000 laminar/B747/pfd/fo/loc_ptr
             HIDE
             gen_pointer Ptr >= 2.34 2
               POS 994.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCpointer
               DATAREF sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
-              SHOW_GREATER 2.340000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
+              SHOW_EQUAL 2.000000 laminar/B747/pfd/fo/loc_ptr
               HIDE
               CLIP
               LIGHT_MODE GLASS_AUTO
@@ -83176,8 +83361,7 @@ GROUP First Officer PFD
               POS 994.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCpointer2
               DATAREF sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
-              SHOW_LESS 2.330000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
-              SHOW_GREATER 0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
+              SHOW_EQUAL 1.000000 laminar/B747/pfd/fo/loc_ptr
               HIDE
               CLIP
               LIGHT_MODE GLASS_AUTO
@@ -83196,7 +83380,7 @@ GROUP First Officer PFD
               POS 994.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCpointer2
               DATAREF sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
-              SHOW_LESS 0.500000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
+              SHOW_EQUAL 3.000000 laminar/B747/pfd/fo/loc_ptr
               HIDE
               CLIP
               LIGHT_MODE GLASS_AUTO
@@ -83218,7 +83402,7 @@ GROUP First Officer PFD
               POS 994.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscale
               DATAREF 
-              SHOW_GREATER 0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
+              SHOW_EQUAL 1.000000 laminar/B747/pfd/fo/loc_scale
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -83236,11 +83420,11 @@ GROUP First Officer PFD
               CLICK_DX 0
               CLICK_DY 0
 
-            gen_rotary Scale >= 0.51 2
+            gen_rotary Scale Amber 2
               POS 994.500000 618.500000
-              IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscale
+              IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscaleAmb
               DATAREF 
-              SHOW_LESS -0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
+              SHOW_EQUAL 2.000000 laminar/B747/pfd/fo/loc_scale
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -83262,8 +83446,29 @@ GROUP First Officer PFD
               POS 994.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscaleEx
               DATAREF 
-              SHOW_LESS 0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
-              SHOW_GREATER -0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
+              SHOW_EQUAL 3.000000 laminar/B747/pfd/fo/loc_scale
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Scale Exp Amber 2
+              POS 994.500000 618.500000
+              IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscaleExAmb
+              DATAREF 
+              SHOW_EQUAL 4.000000 laminar/B747/pfd/fo/loc_scale
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -84912,7 +85117,7 @@ GROUP First Officer PFD
         END_GROUP
       END_GROUP
       GROUP Approach Ref 2
-        SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+        SHOW_GREATER 0.500000 laminar/B747/pfd/fo/ils_show
         HIDE
         gen_text ILS L
           POS 879.000000 1013.500000
@@ -86045,7 +86250,7 @@ GROUP First Officer PFD
         END_GROUP
       END_GROUP
       GROUP Approach Course 2
-        SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+        SHOW_GREATER 0.500000 laminar/B747/pfd/fo/ils_show
         HIDE
         gen_rotary CRS Label 2
           POS 843.500000 576.000000
@@ -86560,6 +86765,48 @@ GROUP First Officer PFD
     END_GROUP
     GROUP FO IRS OFF PFD
       HIDE
+      gen_rotary GS X 2
+        POS 1144.500000 767.500000
+        IMAGE CRT Displays/PFD/Failure Flags/gsX
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/fo/gs_flag
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 5
+        BUS_SRC 4
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary LOC X 2
+        POS 994.500000 618.500000
+        IMAGE CRT Displays/PFD/Failure Flags/locX
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/fo/loc_flag
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 5
+        BUS_SRC 4
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
       gen_rotary FPV X 2
         POS 895.000000 838.000000
         IMAGE CRT Displays/PFD/Failure Flags/fpvX
@@ -86802,8 +87049,7 @@ GROUP First Officer PFD
           DEFLECT_PIX 613.000000
 
         GROUP Rsng Rwy Offset 2
-          SHOW_EQUAL 1.000000 laminar/B747/ra/fo/show
-          SHOW_GREATER 0.500000 laminar/B747/pfd/fo/att
+          SHOW_GREATER 0.500000 laminar/B747/pfd/fo/rwy_show
           HIDE
           GROUP_ANIMATE_MODE TRANSLATE
           GROUP_WIDTH 320
@@ -86821,7 +87067,7 @@ GROUP First Officer PFD
             POS 994.500000 671.000000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznRisingRunway
             DATAREF laminar/B747/ra/fo/value
-            SHOW_EQUAL 1.000000 sim/cockpit2/radios/indicators/hsi_display_horizontal_copilot
+            SHOW_GREATER 0.500000 laminar/B747/pfd/fo/rwy_show
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 5
@@ -87180,50 +87426,48 @@ GROUP First Officer PFD
           END_GROUP
         END_GROUP
         GROUP Glideslope 2
-          SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+          SHOW_GREATER 0.500000 laminar/B747/pfd/fo/ils_show
           HIDE
           GROUP Pointer 2
-            SHOW_GREATER 1.000000 sim/cockpit2/radios/indicators/hsi_display_vertical_copilot
+            SHOW_GREATER 0.500000 laminar/B747/pfd/fo/gs_ptr
             HIDE
             GROUP Pointer VDEF > 2.3
-              SHOW_GREATER 2.340000 sim/cockpit2/radios/indicators/hsi_vdef_dots_copilot
+              SHOW_EQUAL 2.000000 laminar/B747/pfd/fo/gs_ptr
               HIDE
               gen_pointer Pointer 2
                 POS 1144.500000 767.500000
                 IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSpointer
                 DATAREF sim/cockpit2/radios/indicators/hsi_vdef_dots_copilot
                 HIDE
-                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 5
                 BUS_SRC 4
-                KEY_FRAME -999.000000 97.000000 1.000000
-                KEY_FRAME -2.500000 97.000000 1.000000
+                KEY_FRAME -999.000000 121.250000 1.000000
+                KEY_FRAME -2.500000 121.250000 1.000000
                 KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 2.500000 -97.000000 1.000000
-                KEY_FRAME 999.000000 -97.000000
+                KEY_FRAME 2.500000 -121.250000 1.000000
+                KEY_FRAME 999.000000 -121.250000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
 
             END_GROUP
             GROUP Pointer VDEF <= 2.3
-              SHOW_LESS 2.333333 sim/cockpit2/radios/indicators/hsi_vdef_dots_copilot
+              SHOW_EQUAL 1.000000 laminar/B747/pfd/fo/gs_ptr
               HIDE
               gen_pointer Pointer 2
                 POS 1144.500000 767.500000
                 IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSpointer2
                 DATAREF sim/cockpit2/radios/indicators/hsi_vdef_dots_copilot
                 HIDE
-                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 5
                 BUS_SRC 4
-                KEY_FRAME -999.000000 97.000000 1.000000
-                KEY_FRAME -2.500000 97.000000 1.000000
+                KEY_FRAME -999.000000 121.250000 1.000000
+                KEY_FRAME -2.500000 121.250000 1.000000
                 KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 2.500000 -97.000000 1.000000
-                KEY_FRAME 999.000000 -97.000000
+                KEY_FRAME 2.500000 -121.250000 1.000000
+                KEY_FRAME 999.000000 -121.250000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -87234,7 +87478,29 @@ GROUP First Officer PFD
             POS 1144.500000 767.500000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSscale
             DATAREF 
-            SHOW_GREATER 0.100000 laminar/B747/pfd/fo/irs
+            SHOW_EQUAL 1.000000 laminar/B747/pfd/fo/gs_scale
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 5
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary Scale Amber 2
+            POS 1144.500000 767.500000
+            IMAGE CRT Displays/PFD/Artificial Horizon/HrznGSscaleAmb
+            DATAREF 
+            SHOW_EQUAL 2.000000 laminar/B747/pfd/fo/gs_scale
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 5
@@ -87254,7 +87520,7 @@ GROUP First Officer PFD
 
         END_GROUP
         GROUP Localizer 2
-          SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+          SHOW_GREATER 0.500000 laminar/B747/pfd/fo/ils_show
           HIDE
           GROUP Localizer Mask 2
             HIDE
@@ -87281,13 +87547,13 @@ GROUP First Officer PFD
 
           END_GROUP
           GROUP Localizer Pointer 2
-            SHOW_GREATER 1.000000 sim/cockpit2/radios/indicators/hsi_display_horizontal_copilot
+            SHOW_GREATER 0.500000 laminar/B747/pfd/fo/loc_ptr
             HIDE
             gen_pointer Ptr >= 2.34 2
               POS 994.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCpointer
               DATAREF sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
-              SHOW_GREATER 2.340000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
+              SHOW_EQUAL 2.000000 laminar/B747/pfd/fo/loc_ptr
               HIDE
               CLIP
               LIGHT_MODE GLASS_AUTO
@@ -87306,8 +87572,7 @@ GROUP First Officer PFD
               POS 994.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCpointer2
               DATAREF sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
-              SHOW_LESS 2.330000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
-              SHOW_GREATER 0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
+              SHOW_EQUAL 1.000000 laminar/B747/pfd/fo/loc_ptr
               HIDE
               CLIP
               LIGHT_MODE GLASS_AUTO
@@ -87326,7 +87591,7 @@ GROUP First Officer PFD
               POS 994.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCpointer2
               DATAREF sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
-              SHOW_LESS 0.500000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
+              SHOW_EQUAL 3.000000 laminar/B747/pfd/fo/loc_ptr
               HIDE
               CLIP
               LIGHT_MODE GLASS_AUTO
@@ -87348,7 +87613,7 @@ GROUP First Officer PFD
               POS 994.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscale
               DATAREF 
-              SHOW_GREATER 0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
+              SHOW_EQUAL 1.000000 laminar/B747/pfd/fo/loc_scale
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -87366,11 +87631,11 @@ GROUP First Officer PFD
               CLICK_DX 0
               CLICK_DY 0
 
-            gen_rotary Scale >= 0.51 2
+            gen_rotary Scale Amber 2
               POS 994.500000 618.500000
-              IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscale
+              IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscaleAmb
               DATAREF 
-              SHOW_LESS -0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
+              SHOW_EQUAL 2.000000 laminar/B747/pfd/fo/loc_scale
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -87392,8 +87657,29 @@ GROUP First Officer PFD
               POS 994.500000 618.500000
               IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscaleEx
               DATAREF 
-              SHOW_LESS 0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
-              SHOW_GREATER -0.510000 sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot
+              SHOW_EQUAL 3.000000 laminar/B747/pfd/fo/loc_scale
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Scale Exp Amber 2
+              POS 994.500000 618.500000
+              IMAGE CRT Displays/PFD/Artificial Horizon/HrznLOCscaleExAmb
+              DATAREF 
+              SHOW_EQUAL 4.000000 laminar/B747/pfd/fo/loc_scale
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -89042,7 +89328,7 @@ GROUP First Officer PFD
         END_GROUP
       END_GROUP
       GROUP Approach Ref 2
-        SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+        SHOW_GREATER 0.500000 laminar/B747/pfd/fo/ils_show
         HIDE
         gen_text ILS L
           POS 879.000000 1013.500000
@@ -90175,7 +90461,7 @@ GROUP First Officer PFD
         END_GROUP
       END_GROUP
       GROUP Approach Course 2
-        SHOW_GREATER 0.100000 laminar/B747/autopilot/ils_dots
+        SHOW_GREATER 0.500000 laminar/B747/pfd/fo/ils_show
         HIDE
         gen_rotary CRS Label 2
           POS 843.500000 576.000000
@@ -90690,6 +90976,48 @@ GROUP First Officer PFD
     END_GROUP
     GROUP FO IRS OFF PFD
       HIDE
+      gen_rotary GS X 2
+        POS 1144.500000 767.500000
+        IMAGE CRT Displays/PFD/Failure Flags/gsX
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/fo/gs_flag
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 5
+        BUS_SRC 4
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
+      gen_rotary LOC X 2
+        POS 994.500000 618.500000
+        IMAGE CRT Displays/PFD/Failure Flags/locX
+        DATAREF 
+        SHOW_GREATER 0.500000 laminar/B747/pfd/fo/loc_flag
+        LIGHT_MODE GLASS_AUTO
+        LIGHT_RHEOSTAT 5
+        BUS_SRC 4
+        KEY_FRAME 0.000000 0.000000 1.000000
+        KEY_FRAME 1.000000 6.000000
+        DIGITS 1
+        ROTARY_TYPE NO_CLICK
+        CLICK_RADIUS 0.000000
+        CLICK_RADIUS_DY 0.000000
+        OFFSET 0.000000
+        STEP1 1.000000
+        STEP2 1.000000
+        CURSOR DEFAULT
+        CLICK_DX 0
+        CLICK_DY 0
+
       gen_rotary FPV X 2
         POS 895.000000 838.000000
         IMAGE CRT Displays/PFD/Failure Flags/fpvX

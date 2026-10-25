@@ -92,6 +92,7 @@ function Test-Op($actual, [string]$op, $expected) {
         '<'       { return $actual -lt $expected }
         '<='      { return $actual -le $expected }
         'between' { return ($actual -ge $expected[0]) -and ($actual -le $expected[1]) }
+        'outside' { return ($actual -lt $expected[0]) -or ($actual -gt $expected[1]) }
         'contains' { return ([string]$actual).Contains([string]$expected) }
         'in'      { return @($expected) -contains $actual }
         default   { throw "unknown op $op" }

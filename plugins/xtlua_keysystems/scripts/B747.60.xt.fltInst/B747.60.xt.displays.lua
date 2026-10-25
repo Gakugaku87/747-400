@@ -17,12 +17,21 @@
 -- each side's attitude in; the flight path vector (pfd/capt|fo/fpv_show,
 -- fpv_flag, fpv_x, fpv_y) and the PITCH and ROLL flags (pfd/pitch_flag,
 -- roll_flag) out.
+-- Step 4e: the PFD ILS model (B747.60.pfd_ils_model.lua) with each side's
+-- ILS receiver (X-Plane's NAV1 and NAV2 through the pilot's and copilot's
+-- HSI, their failures and buses), roll, track, radio altitude and flight
+-- director, and the AFDS modes in; each PFD's approach reference, localizer
+-- and glideslope scales, pointers and flags and the rising runway
+-- (pfd/capt|fo/ils_show, loc_scale, loc_ptr, loc_flag, gs_scale, gs_ptr,
+-- gs_flag, rwy_show) out.
 -- dofile'd from B747.60.xt.fltInst.lua after B747.60.xt.fltInst02.lua.
 
 dofile("B747.60.display_model.lua")
 dofile("B747.60.pfd_model.lua")
+dofile("B747.60.pfd_ils_model.lua")
 local DM = B747_display_model
 local PM = B747_pfd_model
+local IM = B747_pfd_ils_model
 
 B747DR_dsp_bus_stby_apu         = find_dataref("laminar/B747/electrical/bus/stby_apu")
 B747DR_dsp_bus_stby_main        = find_dataref("laminar/B747/electrical/bus/stby_main")
@@ -79,6 +88,49 @@ B747DR_dsp_fpv_x_fo             = find_dataref("laminar/B747/pfd/fo/fpv_x")
 B747DR_dsp_fpv_y_fo             = find_dataref("laminar/B747/pfd/fo/fpv_y")
 B747DR_dsp_pitch_flag           = find_dataref("laminar/B747/pfd/pitch_flag")
 B747DR_dsp_roll_flag            = find_dataref("laminar/B747/pfd/roll_flag")
+B747DR_dsp_bus_ac               = find_dataref("laminar/B747/electrical/bus/ac")
+B747DR_dsp_ils_dots             = find_dataref("laminar/B747/autopilot/ils_dots")
+simDR_dsp_nav1_fail             = find_dataref("sim/operation/failures/rel_nav1")
+simDR_dsp_nav2_fail             = find_dataref("sim/operation/failures/rel_nav2")
+simDR_dsp_loc_fail              = find_dataref("sim/operation/failures/rel_loc")
+simDR_dsp_gs_fail               = find_dataref("sim/operation/failures/rel_gls")
+simDR_dsp_hdef_pilot            = find_dataref("sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot")
+simDR_dsp_hdef_copilot          = find_dataref("sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot")
+simDR_dsp_vdef_pilot            = find_dataref("sim/cockpit2/radios/indicators/hsi_vdef_dots_pilot")
+simDR_dsp_vdef_copilot          = find_dataref("sim/cockpit2/radios/indicators/hsi_vdef_dots_copilot")
+simDR_dsp_loc_rx_pilot          = find_dataref("sim/cockpit2/radios/indicators/hsi_display_horizontal_pilot")
+simDR_dsp_loc_rx_copilot        = find_dataref("sim/cockpit2/radios/indicators/hsi_display_horizontal_copilot")
+simDR_dsp_gs_rx_pilot           = find_dataref("sim/cockpit2/radios/indicators/hsi_display_vertical_pilot")
+simDR_dsp_gs_rx_copilot         = find_dataref("sim/cockpit2/radios/indicators/hsi_display_vertical_copilot")
+B747DR_dsp_ra_capt_value        = find_dataref("laminar/B747/ra/capt/value")
+B747DR_dsp_ra_capt_flag         = find_dataref("laminar/B747/ra/capt/flag")
+B747DR_dsp_ra_capt_show         = find_dataref("laminar/B747/ra/capt/show")
+B747DR_dsp_ra_fo_value          = find_dataref("laminar/B747/ra/fo/value")
+B747DR_dsp_ra_fo_flag           = find_dataref("laminar/B747/ra/fo/flag")
+B747DR_dsp_ra_fo_show           = find_dataref("laminar/B747/ra/fo/show")
+B747DR_dsp_toggle_switch        = find_dataref("laminar/B747/toggle_switch/position")
+B747DR_dsp_ap_cmd_L             = find_dataref("laminar/B747/autopilot/cmd_L_mode/status")
+B747DR_dsp_ap_cmd_C             = find_dataref("laminar/B747/autopilot/cmd_C_mode/status")
+B747DR_dsp_ap_cmd_R             = find_dataref("laminar/B747/autopilot/cmd_R_mode/status")
+B747DR_dsp_fma_roll             = find_dataref("laminar/B747/autopilot/FMA/active_roll_mode")
+B747DR_dsp_fma_roll_armed       = find_dataref("laminar/B747/autopilot/FMA/armed_roll_mode")
+B747DR_dsp_fma_pitch            = find_dataref("laminar/B747/autopilot/FMA/active_pitch_mode")
+B747DR_dsp_ils_show_capt        = find_dataref("laminar/B747/pfd/capt/ils_show")
+B747DR_dsp_loc_scale_capt       = find_dataref("laminar/B747/pfd/capt/loc_scale")
+B747DR_dsp_loc_ptr_capt         = find_dataref("laminar/B747/pfd/capt/loc_ptr")
+B747DR_dsp_loc_flag_capt        = find_dataref("laminar/B747/pfd/capt/loc_flag")
+B747DR_dsp_gs_scale_capt        = find_dataref("laminar/B747/pfd/capt/gs_scale")
+B747DR_dsp_gs_ptr_capt          = find_dataref("laminar/B747/pfd/capt/gs_ptr")
+B747DR_dsp_gs_flag_capt         = find_dataref("laminar/B747/pfd/capt/gs_flag")
+B747DR_dsp_rwy_show_capt        = find_dataref("laminar/B747/pfd/capt/rwy_show")
+B747DR_dsp_ils_show_fo          = find_dataref("laminar/B747/pfd/fo/ils_show")
+B747DR_dsp_loc_scale_fo         = find_dataref("laminar/B747/pfd/fo/loc_scale")
+B747DR_dsp_loc_ptr_fo           = find_dataref("laminar/B747/pfd/fo/loc_ptr")
+B747DR_dsp_loc_flag_fo          = find_dataref("laminar/B747/pfd/fo/loc_flag")
+B747DR_dsp_gs_scale_fo          = find_dataref("laminar/B747/pfd/fo/gs_scale")
+B747DR_dsp_gs_ptr_fo            = find_dataref("laminar/B747/pfd/fo/gs_ptr")
+B747DR_dsp_gs_flag_fo           = find_dataref("laminar/B747/pfd/fo/gs_flag")
+B747DR_dsp_rwy_show_fo          = find_dataref("laminar/B747/pfd/fo/rwy_show")
 
 -- the EIU selectors' positions: Captain and centre L, AUTO, C, R; F/O L, C, AUTO, R
 local EIU_CAPT = {[0] = DM.EIU_L, DM.SEL_AUTO, DM.EIU_C, DM.EIU_R}
@@ -95,6 +147,8 @@ local dsp_state = DM.new()
 local dsp_inputs = DM.inputs()
 local pfd_state = PM.new()
 local pfd_inputs = PM.inputs()
+local ils_state = IM.new()
+local ils_inputs = IM.inputs()
 
 local function msg(i, on)
     local v = on and 1 or 0
@@ -108,6 +162,63 @@ end
 -- an IRS source selector (0 L, 1 C, 2 R) as the IRU
 local function iru(v)
     return math.max(1, math.min(3, math.floor(v + 0.5) + 1))
+end
+
+-- each PFD's ILS (step 4e): the Captain's ILS L (X-Plane's NAV1, the AC
+-- standby bus), the F/O's ILS R (NAV2, AC bus 2: notes/ATA-34.md §2.1); the
+-- tuning is still the stock one (autopilot/ils_dots: 5-1 step 3)
+local function ils_side(i, tuned, rx_fail, loc_rx, gs_rx, loc_dots, gs_dots, roll, trk, ra, ra_flag, ra_show, fd)
+    i.tuned, i.rx_fail = tuned, rx_fail
+    i.loc_fail, i.gs_fail = simDR_dsp_loc_fail == 6, simDR_dsp_gs_fail == 6
+    i.loc_rx, i.gs_rx = loc_rx > 0.5, gs_rx > 0.5
+    i.loc_dots, i.gs_dots, i.roll, i.trk = loc_dots, gs_dots, roll, trk
+    i.ra, i.ra_valid, i.ra_show = ra, ra_flag < 0.5, ra_show > 0.5
+    i.guidance = B747DR_dsp_ap_cmd_L + B747DR_dsp_ap_cmd_C + B747DR_dsp_ap_cmd_R > 0.5 or fd > 0.5
+end
+
+local function pfd_ils(trk_capt, trk_fo)
+    local inp = ils_inputs
+    local tuned = B747DR_dsp_ils_dots > 0.1
+    ils_side(inp.side[IM.CAPT], tuned, simDR_dsp_nav1_fail == 6 or B747DR_dsp_bus_stby_main < 0.5,
+        simDR_dsp_loc_rx_pilot, simDR_dsp_gs_rx_pilot, simDR_dsp_hdef_pilot, simDR_dsp_vdef_pilot,
+        simDR_dsp_roll_pilot, trk_capt, B747DR_dsp_ra_capt_value, B747DR_dsp_ra_capt_flag,
+        B747DR_dsp_ra_capt_show, B747DR_dsp_toggle_switch[23])
+    ils_side(inp.side[IM.FO], tuned, simDR_dsp_nav2_fail == 6 or B747DR_dsp_bus_ac[1] < 0.5,
+        simDR_dsp_loc_rx_copilot, simDR_dsp_gs_rx_copilot, simDR_dsp_hdef_copilot, simDR_dsp_vdef_copilot,
+        simDR_dsp_roll_copilot, trk_fo, B747DR_dsp_ra_fo_value, B747DR_dsp_ra_fo_flag,
+        B747DR_dsp_ra_fo_show, B747DR_dsp_toggle_switch[24])
+    -- the AFDS modes (FMA: roll 2 LNAV, 3 LOC, 4 ROLLOUT; pitch 2 G/S)
+    local roll = B747DR_dsp_fma_roll
+    inp.loc_active = roll == 3 or roll == 4
+    inp.lnav_active = roll == 2
+    inp.loc_armed = B747DR_dsp_fma_roll_armed == 3
+    inp.gs_active = B747DR_dsp_fma_pitch == 2
+    local out = IM.update(ils_state, inp, SIM_PERIOD)
+    local c, f = out[IM.CAPT], out[IM.FO]
+    local v = c.ils and 1 or 0
+    if B747DR_dsp_ils_show_capt ~= v then B747DR_dsp_ils_show_capt = v end
+    if B747DR_dsp_loc_scale_capt ~= c.loc_scale then B747DR_dsp_loc_scale_capt = c.loc_scale end
+    if B747DR_dsp_loc_ptr_capt ~= c.loc_ptr then B747DR_dsp_loc_ptr_capt = c.loc_ptr end
+    v = c.loc_flag and 1 or 0
+    if B747DR_dsp_loc_flag_capt ~= v then B747DR_dsp_loc_flag_capt = v end
+    if B747DR_dsp_gs_scale_capt ~= c.gs_scale then B747DR_dsp_gs_scale_capt = c.gs_scale end
+    if B747DR_dsp_gs_ptr_capt ~= c.gs_ptr then B747DR_dsp_gs_ptr_capt = c.gs_ptr end
+    v = c.gs_flag and 1 or 0
+    if B747DR_dsp_gs_flag_capt ~= v then B747DR_dsp_gs_flag_capt = v end
+    v = c.rwy and 1 or 0
+    if B747DR_dsp_rwy_show_capt ~= v then B747DR_dsp_rwy_show_capt = v end
+    v = f.ils and 1 or 0
+    if B747DR_dsp_ils_show_fo ~= v then B747DR_dsp_ils_show_fo = v end
+    if B747DR_dsp_loc_scale_fo ~= f.loc_scale then B747DR_dsp_loc_scale_fo = f.loc_scale end
+    if B747DR_dsp_loc_ptr_fo ~= f.loc_ptr then B747DR_dsp_loc_ptr_fo = f.loc_ptr end
+    v = f.loc_flag and 1 or 0
+    if B747DR_dsp_loc_flag_fo ~= v then B747DR_dsp_loc_flag_fo = v end
+    if B747DR_dsp_gs_scale_fo ~= f.gs_scale then B747DR_dsp_gs_scale_fo = f.gs_scale end
+    if B747DR_dsp_gs_ptr_fo ~= f.gs_ptr then B747DR_dsp_gs_ptr_fo = f.gs_ptr end
+    v = f.gs_flag and 1 or 0
+    if B747DR_dsp_gs_flag_fo ~= v then B747DR_dsp_gs_flag_fo = v end
+    v = f.rwy and 1 or 0
+    if B747DR_dsp_rwy_show_fo ~= v then B747DR_dsp_rwy_show_fo = v end
 end
 
 -- each PFD's sources (step 4a)
@@ -179,6 +290,8 @@ local function pfd_sources(fmc)
     if B747DR_dsp_pitch_flag ~= v then B747DR_dsp_pitch_flag = v end
     v = dr and 1 or 0
     if B747DR_dsp_roll_flag ~= v then B747DR_dsp_roll_flag = v end
+
+    pfd_ils(c.trk, f.trk)
 end
 
 -- the barometric setting's amber box at the transition (step 4b): the FMC's
