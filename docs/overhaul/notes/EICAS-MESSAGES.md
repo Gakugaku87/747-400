@@ -205,7 +205,7 @@
 | >IRS AC CENTER, LEFT, RIGHT | advisory | IRU の AC 電源喪失 | — | p.1429 (11.60.1) | no：a225–227 L411–413（綴り `CENTRE`） | 航法 (34) |
 | >IRS DC CENTER, LEFT, RIGHT | advisory | IRU のバックアップ DC 喪失 | — | p.1429 (11.60.1) | no：a229–231 L415–417（綴り `CENTRE`） | 航法 (34) |
 | IRS MOTION | advisory | アライン中に過大な機体運動 | — | p.1430 (11.60.2) | yes：a233 L419 ← irs:244、fms:1149 | 航法 (34) |
-| >SNGL SOURCE ILS | caution | 両操縦士の表示が同じ LOC/GS 受信機 | beeper | p.1430 (11.60.2) | no：c57 L165 | 航法 (34) |
+| >SNGL SOURCE ILS | caution | 両操縦士の表示が同じ LOC/GS 受信機 | beeper | p.1430 (11.60.2) | yes：c57 L165 ← displays:308（両席が同じ EIU：5-2 段 5b-1a） | 航法 (34) |
 | >TRANSPONDER L, R | advisory | ATC トランスポンダ故障 | — | p.1430 (11.60.2) | no：a292–293 L478–479 | 航法 (34) |
 | UNABLE RNP | advisory（進入以外）/ caution（進入） | 航法性能が RNP を満たさない（極域で抑止） | beeper（caution 時） | p.1430 (11.60.2) | partly：c66 L174 ← autopilot:2228 だけ。a295 L481 は立たない | FMC (34) |
 | IRS ALIGN MODE C, L, R | memo | IRS がアラインモード（全 IRU が NAV に入ると消える） | — | p.1430 (11.60.2) | yes：m14–16 L507–509 ← irs:233 | 航法 (34) |

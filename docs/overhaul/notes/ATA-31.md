@@ -145,7 +145,7 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 | >AOA RIGHT | 勧告 | 右 AOA 故障 | FCOM p.1198 | 実装（X-Plane の rel_AOA、fltInst02.lua:3176-3182） |
 | >EFIS CONTROL L, R / >EFIS/EICAS C/P | 勧告 | EFIS CP 故障 / 両 CP と DSP 故障 | FCOM p.1198-1199 | 未実装（:274-276） |
 | >EIU LEFT | 勧告 | 左 EIU 故障。空中は抑止 | FCOM p.1199 | 未実装（:277） |
-| >SNGL SOURCE ILS | 注意・beeper | 両席が同じ LOC/GS 受信機 | FCOM p.1430 (11.60.2) | 未実装（:165） |
+| >SNGL SOURCE ILS | 注意・beeper | 両席が同じ LOC/GS 受信機 | FCOM p.1430 (11.60.2) | 済（段 5b-1a：両席が同じ EIU） |
 | >AIRSPEED LOW | 注意・beeper | 最小機動速度未満 | FCOM p.1556, p.1605 | 実装（代用値、fltInst02.lua:3166-3174） |
 | >OVERSPEED | 警告・siren | Vmo/Mmo 超過（placard は含まない） | FCOM p.1557, p.1605 | 実装だが placard でも出る（:3156-3164） |
 
@@ -335,7 +335,7 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - 表示器と EIU のモデル・グルーに、両席のソース選択の比較を足した：>SOURCE SEL EIU（両席が同じ EIU を使う）、>SOURCE SEL F/D（同じ FCC）、>SOURCE SEL NAV（同じ FMC。CDU の位置は FMC ではないので出さない）（FCOM p.1197）。選択器の向き（FCOM p.1043 の図と 3D の回転）：FLT DIR は両席とも 0 L・1 C・2 R、NAV は機長 0 FMC L・1 FMC R・2 CDU L・3 CDU C、副操縦士は逆向きで 0 CDU C・1 CDU R・2 FMC L・3 FMC R。
 - EFIS 操作パネルと表示選択パネル：新設の故障 `efis/fail[2]`（L・R）・`dsp/fail`。電源は L が main standby bus、R が F/O transfer bus（FCOM p.800、p.804）。>EFIS CONTROL L・R（そのパネルが働かない）、>EFIS/EICAS C/P（両パネルと表示選択パネルが働かない。このときは L・R の代わりに：推定）（FCOM p.1198–1199）。パネルが働かないときに操作が効かなくなることと CDU の代替（DSP-31）は段 5 で。
 - 航法センサーのモジュール：>ATTITUDE（caution、beeper：選んだ IRU の姿勢の差 3° 以上）と >HEADING（表示の方位の差 4° 以上）を IRS のグルーに（FCOM p.1197–1198）。PFD は X-Plane の機長側・副操縦士側の AHRS を表示するので、その差を見る（両席が同じ IRU なら姿勢は比べない：推定）。>SNGL SOURCE RA（両 PFD が同じ電波高度計）を電波高度計のグルーに（FCOM p.1197）。
-- 後に回したもの：>TRACK（席ごとの航跡の源が無い）、>SNGL SOURCE ILS と PFD の ILS の目盛の出し方（DSP-14。どちらも ILS 受信機と自動同調に絡むので、無線の同調（5-1 段 3、FMC と一緒）で）。FLT DIR・NAV の選択で FD の指示や地図の源が変わること（FCC・FMC が 1 つずつしか無い。AFDS・FMC の作り直しで）。
+- 後に回したもの：>TRACK（席ごとの航跡の源が無い）、>SNGL SOURCE ILS と PFD の ILS の目盛の出し方（DSP-14。どちらも ILS 受信機と自動同調に絡むので、無線の同調（5-1 段 3、FMC と一緒）で）。（>SNGL SOURCE ILS は段 5b-1a で済：§23。）FLT DIR・NAV の選択で FD の指示や地図の源が変わること（FCC・FMC が 1 つずつしか無い。AFDS・FMC の作り直しで）。
 - X-Plane での確認（カスタム acf）：`s47_sources` 21/21。両席が FCC L で >SOURCE SEL F/D、FMC R で >SOURCE SEL NAV、EIU L で >SOURCE SEL EIU（このとき副操縦士の電波高度計の順も L からになり >SNGL SOURCE RA も出た）、電波高度計 R・C の故障で >SNGL SOURCE RA、左 EFIS 操作パネルの故障で >EFIS CONTROL L、両パネルと表示選択パネルで >EFIS/EICAS C/P だけ、X-Plane の副操縦士側の姿勢計と方位の故障と右旋回で >ATTITUDE（機長のバンク 16.9°、副操縦士 0°）と >HEADING、故障を戻すと消える。EICAS の行を記録した。Log.txt に Lua の誤りなし。
 
 ## 13. 段 3 の計画と段 3a の実装（2026-10-25 夕方：速度テープ）
@@ -452,7 +452,7 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
   - 立ち上がる滑走路：LOC のポインターがあり、その席の電波高度の数字が出ている（2,500 ft より下）。
 - グルー：書くもの：新設 `pfd/<席>/ils_show`、`loc_scale`（0 なし、1、2 琥珀、3 拡大、4 拡大の琥珀）、`loc_ptr`（0 なしか点滅の消えた半分、1 塗り、2 中抜き、3 拡大の目盛の上）、`loc_flag`、`gs_scale`（0、1、2 琥珀）、`gs_ptr`（0、1 塗り、2 中抜き）、`gs_flag`、`rwy_show`。純正の `B747_loc_gs_vis_flags`（`localizer_ptr/visibility_flag_*` など）はパネルも 3D も使っていないが、そのまま残した。
 - パネル（道具 `docs/overhaul/tools/panel_pfd_ils.lua`、画像 `make_pfd_ils_images.ps1`、ACF_DIFF.md §5）：4 面の PFD の ILS の部品を、純正の `ils_dots` と偏位の値から上の dataref に付け替えた（計器は最後の SHOW しか見ない）。純正の誤り：中抜きのポインターは片側だけ、拡大 LOC 目盛は中心線の右では普通の目盛と重なって出ていた、G/S のポインターは 2.5 ドットで 2 ドットの印（振れが目盛の 8 割。X-Plane の dots は、Laminar の 737 の PFD と同じく 2 ドットが目盛の外の点）。G/S のポインターの振れを目盛の点と同じ 48.5 px/ドットにし、土台の画像（高さ 209）で切られないように CLIP を外した。琥珀の目盛は純正の目盛の色を替えたもの。G/S・LOC の旗は、ATA34_1 p.470 のとおり置き換わる目盛の場所に（FCOM p.999 の図とも合う）、純正の ALT・ATT の旗の作りで。
-- 残り：周波数・ID の欄は純正のまま X-Plane の局の ID だけを出すので、ID が受からない（X-Plane の localizer の故障など）と空白（実機は ID を受けるまで周波数：ATA34_1 p.466）。周波数・コースの不一致の琥珀の線（FCOM p.986）。どちらも同調の作り直し（5-1 段 3）で。
+- 残り：周波数・ID の欄は純正のまま X-Plane の局の ID だけを出すので、ID が受からない（X-Plane の localizer の故障など）と空白（実機は ID を受けるまで周波数：ATA34_1 p.466。段 5b-1a で済：§23）。周波数・コースの不一致の琥珀の線（FCOM p.986）は同調の作り直し（5-1 段 3）で。
 - 試験：ILS のモデル 47 件、表示器のモジュール 22 件（計 107）。X-Plane の新しいシナリオ `s59_pfd_ils`（12 NM の進入路で表示・ポインター・旗・ロール 53°：34 件合格）、`s60_pfd_ils_alert`（立ち上がる滑走路、G/S と LOC の偏位過大：15 件合格）。s60 は中心線の上から入ると AFDS が LOC も捕まえた（LAND 3）ので、LOC の偏位過大も X-Plane で確かめた。LOC の捕捉失敗（LNAV で LOC を arm）は FMC の経路が要るので回帰試験だけ。ILS の同調は、CDU の NAV RAD で手動にしてから `ils_dots` を書く（純正の自動の同調は経路の目的地まで 50 NM 以内でないと 2 秒ごとに 0 に戻す。Web API で書いた同調の文字列 `radio/tuningmodes` は XTLua のモジュールに届かない）。
 
 ## 21. 段 5 の計画（2026-10-26 未明：ND）
@@ -487,3 +487,17 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - パネル（道具 `docs/overhaul/tools/panel_nd_orientation.lua`、ACF_DIFF.md §5）：2 面の ND の目盛（全周の APP・VOR と MAP、拡大）、上の数字（PLN も航跡：109 は FCOM p.1141 で MAP・MAP CTR・PLAN が TRK）、全周の針のグループ（`nd/up` で回す）、方位の印（全周・拡大・PLN）、選択方位と破線、航跡の線（副操縦士の航跡）、旗、風の矢印。副操縦士の全周の目盛は DATAREF が空で回っていなかった。全周の目盛の KEY_FRAME は拡大と同じ −1°/°に（機長は 1° ずれ、副操縦士は逆向きだった）。PLN の上の数字は、PLN の箱の位置にある元の HDG の部品を TRK（自席の航跡）に替えた（MAP の TRK の部品は位置が違う）。
 - 残り：全周表示の選択方位と航跡の線（パネルに無い）、航跡の印（VOR・APP の線に横線：FCOM p.1142。WXR・TFC が入っていないときの拡大の VOR・APP）、109 で TAS を出さないこと、VOR・ADF の針を航跡が上の表示の向きに合わせること（段 5b）、PLN の真北（段 5d）。
 - 試験：ND のモデル 39 件、表示器のモジュール 17 件（計 124）、nd.lua の向き 5 件（新しい `tests/displays/nd_orientation_test.lua`）。X-Plane の新しいシナリオ `s61_nd_orientation`（31 件合格。西風 50 kt で方位 007・航跡 019：MAP は航跡が上で ▽ が左に、VOR・APP は方位が上、副操縦士の VOR は副操縦士の方位、PLN は PLN の箱に TRK と北が上の ▽、旗）。最初の試験で、PLN の TRK が MAP の位置に出たのと、旗のときに航跡の線が残ったのを直した。
+
+## 23. 段 5b-1a の実装（2026-10-26 未明：PFD の ILS の受信機）
+
+- 段 5b は 3 つに分けた：5b-1a（PFD の ILS の受信機を EIU に）、5b-1b（ND の APP：基準受信機、偏位、LOC・G/S の旗）、5b-2（ND の VOR と VOR・ADF の針）。
+- 資料：FCOM p.1044（EIU の選択器が各席の PFD と ND の LOC・G/S の受信機を決める）、p.986（進入の基準：選んだ ILS の ID か周波数と ILS の DME、進入コース）、p.1430（>SNGL SOURCE ILS：caution・beeper、両席の表示が同じ LOC か G/S の受信機を参照）、ATA34_1 p.466（周波数は EIU が局の ID を受けるまで、受けたら ID）、p.474（ND の ILS の源は、表示器がアンテナと偏位の状態と EIU の選択から決める）、p.478（SNGL SOURCE ILS：両席の PFD と ND が同じ ILS から）、notes/ATA-34.md §2.1（ILS L は AC standby bus、C は AC bus 1、R は AC bus 2）。
+- グルー（段 4e の `pfd_ils`）：
+  - 受信機は使用中の EIU（`eiu/used`）の側：L は ILS L（X-Plane の NAV1）、C は ILS C、R は ILS R（NAV2）。X-Plane に 3 台目が無いので、ILS C は NAV1 のデータ（同じ周波数に同調される）で、電源は AC bus 1、X-Plane の故障は無し（推定）。EIU が無い（0：表示は消えている）ときは自席の既定（機長 L、副操縦士 R）。表示器がアンテナや偏位の状態で源を替える論理（ATA34_1 p.474）は中身が資料に無いので作らない。
+  - pilot・copilot の HSI の値をやめて、`nav1_`・`nav2_` の偏位と信号を直接読む。新設 `pfd/<席>/ils_rx`（1 L、2 C、3 R）、`loc_dots`・`gs_dots`（その受信機の偏位。パネルのポインターと立ち上がる滑走路が読む）。
+  - G/S の信号：X-Plane の `display_vertical` は、ILS の周波数を同調していれば局が無くても 1 のまま（NAV2 を局の無い 108.15 にして確かめた）。EFIS の G/S の旗 `flag_glideslope`（来るはずの G/S が来ない）が 0 のときだけ受けているとした。段 4e の見落としで、G/S の範囲の外でもポインターが残っていた。LOC の `display_horizontal` は局が無いと 0 になる。
+  - 進入の基準の ID：新設の文字列 `pfd/<席>/ils_ref`。受信機の局の ID（X-Plane の `nav_id` は受けている間だけ入る）、受けるまでは周波数（"111.90"）。変わったときだけ書く。
+  - >SNGL SOURCE ILS（caution 57。表に名前だけあった）：両席が同じ EIU を使っているとき（受信機は EIU で決まるので、>SOURCE SEL EIU と同じ条件）。
+- パネル（道具 `docs/overhaul/tools/panel_pfd_ils_rx.lua`、ACF_DIFF.md §5）：4 組の PFD の LOC のポインター 3 本と立ち上がる滑走路を `loc_dots`、G/S のポインター 2 本を `gs_dots` に。進入の基準の ID を `ils_ref` に（副操縦士の組の 2 つ目の ID の部品は消した。前は両席とも NAV1 の ID で、副操縦士の ILS R の部品も NAV1 を読んでいた）。DME と進入コースは、中央の FMC master 選択器での切り替えをやめて `ils_rx` で NAV1・NAV2 を出し分ける（コースは X-Plane の LOC の向きなので両側とも同じ値）。
+- 残り：周波数・コースの不一致の琥珀の線（X-Plane では 3 台が同じに同調されるので起きない。同調の作り直し 5-1 段 3 で）。DME の局が無いときの DME の欄は純正のまま「. 0」（資料に記載が見つからない）。周波数の文字は純正の字形のため「108. 15」と点の後が空く。
+- 試験：表示器のモジュール 23 件（計 147）。X-Plane の新しいシナリオ `s62_pfd_ils_rx`（31 件合格：機長の EIU を R・C、副操縦士を L に回して偏位の出どころと ID、>SNGL SOURCE ILS と >SOURCE SEL EIU、NAV2 を局の無い 108.15 にして周波数とポインターの消去）。1 回目は NAV2 の局が無くなっても G/S のポインターが残り、上の G/S の信号の読み違いが分かった。

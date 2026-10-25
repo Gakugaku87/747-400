@@ -29,6 +29,10 @@
 -- the IRUs in NAV, the wind, the MCP heading and the AFDS roll mode in;
 -- X-Plane's map mode for each side and each ND's rose, flags, heading
 -- pointer, selected heading bug and line and wind arrow (nd/capt|fo/*) out.
+-- Step 5b: each PFD's ILS from the receiver of the EIU in use (X-Plane's
+-- NAV1 and NAV2 directly), its deviations (pfd/capt|fo/ils_rx, loc_dots,
+-- gs_dots), the approach reference's identifier or frequency (pfd/capt|fo/
+-- ils_ref) and >SNGL SOURCE ILS out.
 -- dofile'd from B747.60.xt.fltInst.lua after B747.60.xt.fltInst02.lua.
 
 dofile("B747.60.display_model.lua")
@@ -101,14 +105,28 @@ simDR_dsp_nav1_fail             = find_dataref("sim/operation/failures/rel_nav1"
 simDR_dsp_nav2_fail             = find_dataref("sim/operation/failures/rel_nav2")
 simDR_dsp_loc_fail              = find_dataref("sim/operation/failures/rel_loc")
 simDR_dsp_gs_fail               = find_dataref("sim/operation/failures/rel_gls")
-simDR_dsp_hdef_pilot            = find_dataref("sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot")
-simDR_dsp_hdef_copilot          = find_dataref("sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot")
-simDR_dsp_vdef_pilot            = find_dataref("sim/cockpit2/radios/indicators/hsi_vdef_dots_pilot")
-simDR_dsp_vdef_copilot          = find_dataref("sim/cockpit2/radios/indicators/hsi_vdef_dots_copilot")
-simDR_dsp_loc_rx_pilot          = find_dataref("sim/cockpit2/radios/indicators/hsi_display_horizontal_pilot")
-simDR_dsp_loc_rx_copilot        = find_dataref("sim/cockpit2/radios/indicators/hsi_display_horizontal_copilot")
-simDR_dsp_gs_rx_pilot           = find_dataref("sim/cockpit2/radios/indicators/hsi_display_vertical_pilot")
-simDR_dsp_gs_rx_copilot         = find_dataref("sim/cockpit2/radios/indicators/hsi_display_vertical_copilot")
+simDR_dsp_nav1_hdef             = find_dataref("sim/cockpit2/radios/indicators/nav1_hdef_dots_pilot")
+simDR_dsp_nav2_hdef             = find_dataref("sim/cockpit2/radios/indicators/nav2_hdef_dots_pilot")
+simDR_dsp_nav1_vdef             = find_dataref("sim/cockpit2/radios/indicators/nav1_vdef_dots_pilot")
+simDR_dsp_nav2_vdef             = find_dataref("sim/cockpit2/radios/indicators/nav2_vdef_dots_pilot")
+simDR_dsp_nav1_loc_rx           = find_dataref("sim/cockpit2/radios/indicators/nav1_display_horizontal")
+simDR_dsp_nav2_loc_rx           = find_dataref("sim/cockpit2/radios/indicators/nav2_display_horizontal")
+simDR_dsp_nav1_gs_rx            = find_dataref("sim/cockpit2/radios/indicators/nav1_display_vertical")
+simDR_dsp_nav2_gs_rx            = find_dataref("sim/cockpit2/radios/indicators/nav2_display_vertical")
+simDR_dsp_nav1_gs_flag          = find_dataref("sim/cockpit2/radios/indicators/nav1_flag_glideslope")
+simDR_dsp_nav2_gs_flag          = find_dataref("sim/cockpit2/radios/indicators/nav2_flag_glideslope")
+simDR_dsp_nav1_id               = find_dataref("sim/cockpit2/radios/indicators/nav1_nav_id")
+simDR_dsp_nav2_id               = find_dataref("sim/cockpit2/radios/indicators/nav2_nav_id")
+simDR_dsp_nav1_freq             = find_dataref("sim/cockpit2/radios/actuators/nav1_frequency_hz")
+simDR_dsp_nav2_freq             = find_dataref("sim/cockpit2/radios/actuators/nav2_frequency_hz")
+B747DR_dsp_ils_ref_capt         = find_dataref("laminar/B747/pfd/capt/ils_ref")
+B747DR_dsp_ils_ref_fo           = find_dataref("laminar/B747/pfd/fo/ils_ref")
+B747DR_dsp_ils_rx_capt          = find_dataref("laminar/B747/pfd/capt/ils_rx")
+B747DR_dsp_ils_rx_fo            = find_dataref("laminar/B747/pfd/fo/ils_rx")
+B747DR_dsp_loc_dots_capt        = find_dataref("laminar/B747/pfd/capt/loc_dots")
+B747DR_dsp_loc_dots_fo          = find_dataref("laminar/B747/pfd/fo/loc_dots")
+B747DR_dsp_gs_dots_capt         = find_dataref("laminar/B747/pfd/capt/gs_dots")
+B747DR_dsp_gs_dots_fo           = find_dataref("laminar/B747/pfd/fo/gs_dots")
 B747DR_dsp_ra_capt_value        = find_dataref("laminar/B747/ra/capt/value")
 B747DR_dsp_ra_capt_flag         = find_dataref("laminar/B747/ra/capt/flag")
 B747DR_dsp_ra_capt_show         = find_dataref("laminar/B747/ra/capt/show")
@@ -187,6 +205,7 @@ local EIU_FO = {[0] = DM.EIU_L, DM.EIU_C, DM.SEL_AUTO, DM.EIU_R}
 local ADV_EIU_LEFT = 91
 local ADV_EFIS_CONTROL, ADV_EFIS_EICAS_CP = {88, 89}, 90
 local ADV_SOURCE_SEL_EIU, ADV_SOURCE_SEL_FD, ADV_SOURCE_SEL_NAV = 268, 269, 271
+local CAU_SNGL_SOURCE_ILS = 57
 -- the NAV source selectors' positions (FCOM p.1043; the F/O's knob mirrored):
 -- Captain FMC L, FMC R, CDU L, CDU C; F/O CDU C, CDU R, FMC L, FMC R (0 a CDU)
 local NAV_CAPT = {[0] = 1, 2, 0, 0}
@@ -206,6 +225,11 @@ local function msg(i, on)
     if B747DR_CAS_advisory_status[i] ~= v then B747DR_CAS_advisory_status[i] = v end
 end
 
+local function caution(i, on)
+    local v = on and 1 or 0
+    if B747DR_CAS_caution_status[i] ~= v then B747DR_CAS_caution_status[i] = v end
+end
+
 local function knob(v, map)
     return map[math.max(0, math.min(3, math.floor(v + 0.5)))]
 end
@@ -215,14 +239,46 @@ local function iru(v)
     return math.max(1, math.min(3, math.floor(v + 0.5) + 1))
 end
 
--- each PFD's ILS (step 4e): the Captain's ILS L (X-Plane's NAV1, the AC
--- standby bus), the F/O's ILS R (NAV2, AC bus 2: notes/ATA-34.md §2.1); the
--- tuning is still the stock one (autopilot/ils_dots: 5-1 step 3)
-local function ils_side(i, tuned, rx_fail, loc_rx, gs_rx, loc_dots, gs_dots, roll, trk, ra, ra_flag, ra_show, fd)
-    i.tuned, i.rx_fail = tuned, rx_fail
+-- each PFD's ILS (step 4e): the receiver of the EIU in use (step 5b: FCOM
+-- p.1044, the EIU source selector determines each PFD's and ND's localizer
+-- and glideslope receivers), EIU L ILS L, C ILS C, R ILS R. X-Plane has
+-- NAV1 for ILS L (the AC standby bus) and NAV2 for ILS R (AC bus 2:
+-- notes/ATA-34.md §2.1); ILS C (AC bus 1) reads NAV1, tuned alike, and has
+-- no X-Plane failure (estimate). The tuning is still the stock one
+-- (autopilot/ils_dots: 5-1 step 3)
+local function ils_rx(eiu, default)
+    local e = math.floor(eiu + 0.5)
+    return (e >= 1 and e <= 3) and e or default
+end
+
+-- the approach reference's identifier, or the frequency until the
+-- receiver has the station's identification (ATA34_1 p.466; X-Plane's
+-- nav_id stays empty until the station is received)
+local ref_freq, ref_text, ref_shown = {}, {}, {}
+local function ils_ref(k, nav2)
+    local id = nav2 and simDR_dsp_nav2_id or simDR_dsp_nav1_id
+    local b = string.byte(id)
+    if b and b > 32 then return id end
+    local hz = nav2 and simDR_dsp_nav2_freq or simDR_dsp_nav1_freq
+    if ref_freq[k] ~= hz then ref_freq[k], ref_text[k] = hz, string.format("%.2f", hz / 100) end
+    return ref_text[k]
+end
+
+local function ils_side(i, rx, tuned, roll, trk, ra, ra_flag, ra_show, fd)
+    local nav2 = rx == 3
+    i.tuned = tuned
+    if rx == 1 then i.rx_fail = simDR_dsp_nav1_fail == 6 or B747DR_dsp_bus_stby_main < 0.5
+    elseif nav2 then i.rx_fail = simDR_dsp_nav2_fail == 6 or B747DR_dsp_bus_ac[1] < 0.5
+    else i.rx_fail = B747DR_dsp_bus_ac[0] < 0.5 end
     i.loc_fail, i.gs_fail = simDR_dsp_loc_fail == 6, simDR_dsp_gs_fail == 6
-    i.loc_rx, i.gs_rx = loc_rx > 0.5, gs_rx > 0.5
-    i.loc_dots, i.gs_dots, i.roll, i.trk = loc_dots, gs_dots, roll, trk
+    i.loc_rx = (nav2 and simDR_dsp_nav2_loc_rx or simDR_dsp_nav1_loc_rx) > 0.5
+    -- X-Plane's display_vertical stays 1 on an ILS frequency without the
+    -- station; its EFIS glideslope flag marks "expected but not received"
+    i.gs_rx = (nav2 and simDR_dsp_nav2_gs_rx or simDR_dsp_nav1_gs_rx) > 0.5
+        and (nav2 and simDR_dsp_nav2_gs_flag or simDR_dsp_nav1_gs_flag) < 0.5
+    i.loc_dots = nav2 and simDR_dsp_nav2_hdef or simDR_dsp_nav1_hdef
+    i.gs_dots = nav2 and simDR_dsp_nav2_vdef or simDR_dsp_nav1_vdef
+    i.roll, i.trk = roll, trk
     i.ra, i.ra_valid, i.ra_show = ra, ra_flag < 0.5, ra_show > 0.5
     i.guidance = B747DR_dsp_ap_cmd_L + B747DR_dsp_ap_cmd_C + B747DR_dsp_ap_cmd_R > 0.5 or fd > 0.5
 end
@@ -230,14 +286,26 @@ end
 local function pfd_ils(trk_capt, trk_fo)
     local inp = ils_inputs
     local tuned = B747DR_dsp_ils_dots > 0.1
-    ils_side(inp.side[IM.CAPT], tuned, simDR_dsp_nav1_fail == 6 or B747DR_dsp_bus_stby_main < 0.5,
-        simDR_dsp_loc_rx_pilot, simDR_dsp_gs_rx_pilot, simDR_dsp_hdef_pilot, simDR_dsp_vdef_pilot,
-        simDR_dsp_roll_pilot, trk_capt, B747DR_dsp_ra_capt_value, B747DR_dsp_ra_capt_flag,
+    local rx_c, rx_f = ils_rx(B747DR_dsp_eiu_used[0], 1), ils_rx(B747DR_dsp_eiu_used[1], 3)
+    local ci, fi = inp.side[IM.CAPT], inp.side[IM.FO]
+    ils_side(ci, rx_c, tuned, simDR_dsp_roll_pilot, trk_capt, B747DR_dsp_ra_capt_value, B747DR_dsp_ra_capt_flag,
         B747DR_dsp_ra_capt_show, B747DR_dsp_toggle_switch[23])
-    ils_side(inp.side[IM.FO], tuned, simDR_dsp_nav2_fail == 6 or B747DR_dsp_bus_ac[1] < 0.5,
-        simDR_dsp_loc_rx_copilot, simDR_dsp_gs_rx_copilot, simDR_dsp_hdef_copilot, simDR_dsp_vdef_copilot,
-        simDR_dsp_roll_copilot, trk_fo, B747DR_dsp_ra_fo_value, B747DR_dsp_ra_fo_flag,
+    ils_side(fi, rx_f, tuned, simDR_dsp_roll_copilot, trk_fo, B747DR_dsp_ra_fo_value, B747DR_dsp_ra_fo_flag,
         B747DR_dsp_ra_fo_show, B747DR_dsp_toggle_switch[24])
+    if B747DR_dsp_ils_rx_capt ~= rx_c then B747DR_dsp_ils_rx_capt = rx_c end
+    if B747DR_dsp_ils_rx_fo ~= rx_f then B747DR_dsp_ils_rx_fo = rx_f end
+    if B747DR_dsp_loc_dots_capt ~= ci.loc_dots then B747DR_dsp_loc_dots_capt = ci.loc_dots end
+    if B747DR_dsp_loc_dots_fo ~= fi.loc_dots then B747DR_dsp_loc_dots_fo = fi.loc_dots end
+    if B747DR_dsp_gs_dots_capt ~= ci.gs_dots then B747DR_dsp_gs_dots_capt = ci.gs_dots end
+    if B747DR_dsp_gs_dots_fo ~= fi.gs_dots then B747DR_dsp_gs_dots_fo = fi.gs_dots end
+    local s = ils_ref(1, rx_c == 3)
+    if ref_shown[1] ~= s then ref_shown[1] = s; B747DR_dsp_ils_ref_capt = s end
+    s = ils_ref(2, rx_f == 3)
+    if ref_shown[2] ~= s then ref_shown[2] = s; B747DR_dsp_ils_ref_fo = s end
+    -- >SNGL SOURCE ILS: both pilots' displays on one localizer and
+    -- glideslope receiver (FCOM p.1430, ATA34_1 p.478), here both on one EIU
+    local e = B747DR_dsp_eiu_used[0]
+    caution(CAU_SNGL_SOURCE_ILS, e >= 0.5 and e == B747DR_dsp_eiu_used[1])
     -- the AFDS modes (FMA: roll 2 LNAV, 3 LOC, 4 ROLLOUT; pitch 2 G/S)
     local roll = B747DR_dsp_fma_roll
     inp.loc_active = roll == 3 or roll == 4
