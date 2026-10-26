@@ -507,3 +507,31 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - POS INIT の REF AIRPORT（FCOM p.1285）：航法データの空港の ICAO 4 文字、その位置を行に出す（前は ND の航法施設の一覧から引き、無くても受け付けた）。無い空港は NOT IN DATA BASE、4 文字の英字でなければ INVALID ENTRY。DELETE で GATE も消す（前は REF AIRPORT に GATE の既定を入れていた）。離陸で REF AIRPORT と GATE を消す（FCOM p.1285–1286）。
 - CLB ページの TRANS ALT（FCOM p.1329）：ORIGIN を入れると、その空港の遷移高度（`earth_aptmeta.dat`）、無ければ 18,000 ft（前は 18,000 固定：FMC-10 の残り）。乗員の入力は今までどおり。遷移レベル（DESCENT FORECAST、FCOM p.1396：到着の手続きか FL180）は DESCENT FORECAST のページ（段 8）と到着の手続き（段 5）で。
 - 試験：`tests/fms/navdb_test.lua`（モジュール：合成のデータと、この PC にあれば本物のデータ）、`tests/fms/navdb_fmc_test.lua`（32 件：FMS のモジュールを XTLua のモックで）。X-Plane：`s85_navdb` 22/22（RJAA の地上で、航法データ（Custom Data の AIRAC 2610）を IDENT を開いてから 6.5 秒以内に読み終え、NAV DATA AIRAC 2610 と ACTIVE OCT01OCT29/26、日付を 11 月にすると NAV DATA OUT OF DATE と >FMC MESSAGE（両方の CDU）、CLR で全部から消え、10 月に戻すと条件が消える、ORIGIN RJAA で TRANS ALT 14000（CLB ページにも）、IRS を入れ直したアライン中に REF AIRPORT の ZZZZ は NOT IN DATA BASE、RJAA は N35°45.9 E140°23.1）。Lua の誤りなし。CDU を撮った。
+
+## 18. 段 5 の段取り（2026-10-26：経路モデルと RTE・LEGS・DEP ARR）
+
+- 段 5 は 6 つに分ける。どの小段の後でも、今の読み手（AFDS の LNAV・VNAV、ND の地図、ETA）が X-Plane の FMS の経路で動くように、FMC の経路を `xtlua/loadtoFMS`（X-Plane の .fms の書式の文字列。XTLua は XPLMLoadFMSFlightPlan で読み込ませる）で流し込む。
+
+| 小段 | 中身 | 主な資料 |
+|---|---|---|
+| 5a | 経路のモデル（新しい純粋なモジュール）：RTE 1 の出発地・目的地・出発滑走路、区間（VIA：DIRECT・airway、TO：点）、airway の展開、airway の交点、discontinuity、120 点（ROUTE FULL）、ACT と MOD（EXEC・ERASE）、ACTIVATE、点の候補（SELECT DESIRED WPT）、X-Plane の .fms の書式 | FCOM p.1238, p.1287–1298, p.1335, p.1435；FMSPG p.79–91 |
+| 5b | RTE のページ：1 ページ目（ORIGIN・DEST・RUNWAY・FLT NO・CO ROUTE・ACTIVATE>/PERF INIT>/TAKEOFF>）、2 ページ目以降（VIA/TO を 5 組ずつ）、題名（RTE 1・ACT RTE 1・MOD RTE 1）、6L の ERASE、SELECT DESIRED WPT のページ、X-Plane の FMS への流し込み。X-Plane の RTE ページの透かしをやめる | FCOM p.1287–1298, p.1335 |
+| 5c | RTE LEGS のページ：点・針路・距離・制限（大字）、削除・挿入・並べ替え・discontinuity をつなぐ、direct-to と INTC CRS、ABEAM PTS、制限の入力（A・B・窓）、PLAN の CTR と STEP。予測（小字）は段 8 | FCOM p.1331–1334 |
+| 5d | CIFP の手続き：SID・STAR・進入と transition の脚（種類・高度と速度の制限・fly-over・針路・距離）。DEP/ARR INDEX・DEPARTURES・ARRIVALS のページ（選択 → MOD）、DEP ARR キーの行き先 | FCOM p.1299–1303, p.1343, p.1400–1405 |
+| 5e | X-Plane の FMS への流し込みの確かめ：手続きの点、条件点、AFDS の現用点（`xtlua/currentFMSID`）との整合、ND の線と出発・到着の滑走路、各点の ETA | X-Plane の .fms 書式（v1100） |
+| 5f | 飛行試験キット：経路の入れ方を CDU の操作に（`B747_route.lua` は残す）、シナリオの経路の見直し | TESTING.md |
+
+- 手続きの脚の形（旋回、条件点）と LNAV の誘導は段 6、ホールドと RTE 2 は段 7、予測（小字の速度と高度、RTE DATA）は段 8。
+- 順序：5b は 5e の流し込みと一緒に入れる（RTE を FMC のものにすると、X-Plane の FMS へは流し込みでしか経路が入らない）。5d までは X-Plane の DEP ARR のページ（X-Plane の FMS に直接入る）が残り、そこで選んだ手続きは FMC の経路が次に変わると上書きされる（暫定）。
+- EXEC 灯：3D の物体（`Cockpit_Pedestal1.obj` の `ATTR_light_level`）は X-Plane の `sim/cockpit2/radios/indicators/fms_exec_light_pilot`・`_copilot` を見ていて、これは書き込めない（DataRefs.txt）。FMC の MOD に合わせて灯すには 3D の物体の変更が要る（3D は対象外なので利用者に確かめる：PROGRESS.md「利用者に確かめたいこと」）。それまでは CDU の題名の MOD と 6L の ERASE で示す。
+- CO ROUTE：会社の経路の DB が無いので、入力は NOT IN DATA BASE（FCOM p.1290：名前が DB に無ければその旨を出す）。
+
+## 19. 段 5a の実装（2026-10-26：経路のモデル）
+
+- 新しい純粋なモジュール `B747.68.route_model.lua`（まだ機体からは読まない：5b で使う）。経路は脚の列で持つ：`{via, fix}`（via は DIRECT・airway・手続きの名前、fix は nav DB の点）、`{via, pending}`（TO の無い airway：RTE ページの箱）、`{disc}`（ROUTE DISCONTINUITY：FMSPG p.91）。RTE ページの区間（ATC の形）は脚から作る（同じ airway・手続きの続く脚、DIRECT の各脚、discontinuity）。
+- RTE 1 ページ目：ORIGIN（nav DB の空港。地上で新しい出発地は経路を消す：FCOM p.1288。目的地も消す：前の FMC の動きのまま、推定）、DEST、RUNWAY（出発地の CIFP の滑走路、16R・RW16R の形：FCOM p.1289）。
+- 区間（FCOM p.1296–1298；FMSPG p.82–83）：終わりのダッシュの TO は DIRECT、VIA の airway は前の TO を含むこと（含まなければ INVALID ENTRY、DB に無ければ NOT IN DATA BASE）、その TO（箱）は airway 上の点で、間の点を脚に展開（一方通行は逆に入らない）。TO の無い airway の次に airway を入れると、2 本の交わる点を前の airway の TO にする（INTC）。最初の VIA の airway（前の TO が無い：airway intercept）はまだ作らず INVALID ENTRY（推定）。120 点を超える変更は ROUTE FULL で入れない（FCOM p.1435）。
+- ACT と MOD（FCOM p.1238, p.1290）：非アクティブの経路は直接変わる。ACTIVATE（出発地と目的地のあるとき：推定）と EXEC でアクティブ。アクティブの経路への変更は MOD（写し）に入り、EXEC で反映、ERASE で取り消し。題名の ACT・MOD。
+- 点の候補（SELECT DESIRED WPT：FCOM p.1335）：同じ識別子の点・航法施設・空港と、出発地・目的地のターミナルの点を、指定の位置から近い順に（nav DB の `find`）。
+- X-Plane の .fms（v1100）の書式：出発地・目的地は空港（1）、各点は位置で fix（11）・NDB（2）・VOR/DME（3）、via は DRCT か airway。手続きの見出しは書かない（FMC 自身の脚：X-Plane に自分の手続きを展開させない）。
+- 試験：`tests/fms/route_model_test.lua`（63 件：合成のデータの airway Z1・Z2）。X-Plane では未使用（5b で）。
