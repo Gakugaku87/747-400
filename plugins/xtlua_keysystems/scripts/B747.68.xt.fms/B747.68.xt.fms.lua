@@ -865,6 +865,53 @@ function createPage(page)
   return retVal
 end
 dofile("B747.68.cdu_model.lua")
+dofile("B747.68.navdb.lua")
+-- the FMC's navigation database (6-1/6-2 step 4; notes/ATA-34-61-FMC.md
+-- §17): X-Plane's navigation data, Custom Data's when it has them (a
+-- Navigraph cycle) else the default, read a block a frame
+local function navdb_folder()
+  if B747_NAVDB_FOLDER then return B747_NAVDB_FOLDER end
+  local f=io.open("Custom Data/earth_nav.dat","rb")
+  if f then f:close() return "Custom Data/" end
+  return "Resources/default data/"
+end
+local NAVDB_FOLDER=navdb_folder()
+B747_fmc_navdb=B747_navdb.new(function(name) return io.open(NAVDB_FOLDER..name,"rb") end)
+-- the clocks' dates: the FMC's clock calendar from the Captain's clock,
+-- else the F/O's (FCOM p.1285)
+B747DR_fmc_clock_capt_on=find_dataref("laminar/B747/fltInst/capt/clock_on")
+B747DR_fmc_clock_capt_day=find_dataref("laminar/B747/fltInst/capt/clock_day")
+B747DR_fmc_clock_capt_month=find_dataref("laminar/B747/fltInst/capt/clock_month")
+B747DR_fmc_clock_capt_year=find_dataref("laminar/B747/fltInst/capt/clock_year")
+B747DR_fmc_clock_fo_on=find_dataref("laminar/B747/fltInst/fo/clock_on")
+B747DR_fmc_clock_fo_day=find_dataref("laminar/B747/fltInst/fo/clock_day")
+B747DR_fmc_clock_fo_month=find_dataref("laminar/B747/fltInst/fo/clock_month")
+B747DR_fmc_clock_fo_year=find_dataref("laminar/B747/fltInst/fo/clock_year")
+local function clock_date()
+  if B747DR_fmc_clock_capt_on>0 and B747DR_fmc_clock_capt_month>=1 then
+    return 2000+B747DR_fmc_clock_capt_year,B747DR_fmc_clock_capt_month,B747DR_fmc_clock_capt_day
+  end
+  if B747DR_fmc_clock_fo_on>0 and B747DR_fmc_clock_fo_month>=1 then
+    return 2000+B747DR_fmc_clock_fo_year,B747DR_fmc_clock_fo_month,B747DR_fmc_clock_fo_day
+  end
+end
+-- NAV DATA OUT OF DATE (an alert, FCOM p.1433): the clock's date past the
+-- database's cycle; REF AIRPORT and GATE blank at lift-off (FCOM p.1285-
+-- 1286)
+local NAV_DATA_OUT_OF_DATE=55
+function update_navdb()
+  local db=B747_fmc_navdb
+  local out=0
+  local y,m,d=clock_date()
+  if db.ready and y and B747_navdb.out_of_date(db,y,m,d) then out=1 end
+  if B747DR_fmc_notifications[NAV_DATA_OUT_OF_DATE]~=out then B747DR_fmc_notifications[NAV_DATA_OUT_OF_DATE]=out end
+  if simDR_onGround==0 and fmsModules["data"]["airportpos"]~="----" then
+    setFMSData("airportpos","----")
+    setFMSData("airportgate","----")
+    setFMSData("irsLat",defaultFMSData().irsLat)
+    setFMSData("irsLon",defaultFMSData().irsLon)
+  end
+end
 dofile("B744.notifications.lua")
 dofile("irs/irs_system.lua")
 dofile("B744.fms.baro.lua")
@@ -1296,6 +1343,7 @@ end
 
 function after_physics()
   if debug_fms>0 then return end
+  if not B747_fmc_navdb.ready then B747_navdb.load(B747_fmc_navdb,32768) end
 	
   if hasSimConfig()==false then return end
   if flightInit==false then
@@ -1325,6 +1373,7 @@ function after_physics()
     setNotifications()
     update_spd_trans()
     update_perf()
+    update_navdb()
     update_takeoff()
     B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
     --print(B747DR_FMSdata)
