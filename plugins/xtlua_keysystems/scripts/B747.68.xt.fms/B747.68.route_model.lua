@@ -319,12 +319,14 @@ function M.course(lat1, lon1, lat2, lon2)
     return (math.atan2(y, x) / r + 360) % 360, 2 * math.asin(math.min(1, math.sqrt(a))) * 3440.065
 end
 
--- the point a leg starts from: a direct-to's start, the waypoint before
--- it, the last passed waypoint, the origin's runway or the origin before
--- the first; nil after a discontinuity
+-- the point a leg starts from: a direct-to's start, where LNAV started it
+-- (`start`: step 6b), the waypoint before it, the last passed waypoint,
+-- the origin's runway or the origin before the first; nil after a
+-- discontinuity
 function M.leg_from(r, i)
     local l = r.legs[i]
     if l and l.dto and l.from then return l.from end
+    if l and l.start then return l.start end
     local prev = r.legs[i - 1]
     if i == 1 then prev = r.passed[#r.passed] end
     if prev then
@@ -359,7 +361,7 @@ function M.legs_entry(st, i, fix)
         r = M.edit(st)
         for _ = i, j - 1 do table.remove(r.legs, i) end
         local l = r.legs[i]
-        l.via, l.intc, l.dto, l.crs, l.pt = M.DIRECT, nil, nil, nil, nil
+        l.via, l.intc, l.dto, l.crs, l.pt, l.start = M.DIRECT, nil, nil, nil, nil, nil
         return
     end
     if full(r, 1) then return M.ROUTE_FULL end
@@ -379,7 +381,7 @@ function M.legs_delete(st, i)
     local r = M.edit(st)
     table.remove(r.legs, i)
     local nxt = r.legs[i]
-    if nxt and nxt.fix then nxt.via, nxt.dto, nxt.crs, nxt.pt = M.DIRECT, nil, nil, nil end
+    if nxt and nxt.fix then nxt.via, nxt.dto, nxt.crs, nxt.pt, nxt.start = M.DIRECT, nil, nil, nil, nil end
 end
 
 -- DIRECT TO (FMSPG p.141-144): a waypoint entered over the active
@@ -667,8 +669,11 @@ local function same_leg(a, b)
 end
 
 -- the active route's first `n` legs passed (the active leg stays); the
--- modification's too when it starts with them. True when it sequenced
-function M.sequence(st, n)
+-- modification's too when it starts with them. `start`: where the new
+-- active leg starts (LNAV, step 6b: the airplane's position after a leg
+-- ending at a condition, else nil: the passed leg's fix). True when it
+-- sequenced
+function M.sequence(st, n, start)
     local r, m = st.rte, st.mod
     if not st.active then return false end
     n = math.min(n, #r.legs - 1)
@@ -679,6 +684,10 @@ function M.sequence(st, n)
     for _ = 1, n do
         r.passed[#r.passed + 1] = table.remove(r.legs, 1)
         if m then m.passed[#m.passed + 1] = table.remove(m.legs, 1) end
+    end
+    if start then
+        r.legs[1].start = {lat = start.lat, lon = start.lon}
+        if m and m.legs[1] then m.legs[1].start = r.legs[1].start end
     end
     return true
 end
