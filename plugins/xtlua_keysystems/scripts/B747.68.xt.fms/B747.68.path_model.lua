@@ -5,13 +5,13 @@
 --    heading, a track or a DME arc (FCOM p.1245), an RF leg an arc of
 --    constant radius (FCOM p.1247; FCTM p.61); curved transitions join the
 --    legs (ATA34_2 p.615, p.626).
---  - An element for each leg (none for a discontinuity or a pending
---    airway): {leg (its index), kind, a (where it starts), b (where it
---    ends: the fix, or a conditional leg's end as predicted; nil when it
---    cannot be), len (nm), term (how it ends: "fix", "alt", "dme",
---    "radial", "intc", "dist", "manual"), alt (ft), dme (nm), navaid,
---    radial (true degrees), flyover, turn (the procedure's turn direction
---    into it: "L", "R"), missed}
+--  - An element for each leg: {leg (its index), kind, a (where it
+--    starts), b (where it ends: the fix, or a conditional leg's end as
+--    predicted; nil when it cannot be), len (nm), term (how it ends:
+--    "fix", "alt", "dme", "radial", "intc", "dist", "manual"), alt (ft),
+--    dme (nm), navaid, radial (true degrees), flyover, turn (the
+--    procedure's turn direction into it: "L", "R"), missed}
+--      "disc": a discontinuity or a pending airway, no path
 --      "line": the great circle from a to b, crs its course at a (true
 --        degrees): TF, DF, IF, CF and the FMC's own legs (DIRECT, airways,
 --        direct-to)
@@ -284,12 +284,13 @@ end
 -- the first one starts (the route model's leg_from), env = {var =
 -- function(lat, lon) (the magnetic variation there, degrees east, or nil),
 -- alt (ft, the altitude at the start), grad (ft/nm)}. elements[i] for
--- legs[i]; nil for a discontinuity or a pending airway
+-- legs[i]
 function M.build(legs, start, env)
     local out = {}
     local prev, alt = start, env.alt or 0
     for i, l in ipairs(legs) do
         if l.disc or l.pending then
+            out[i] = {leg = i, kind = "disc"}
             prev = nil
         else
             local e = M.element(l, i, prev, legs[i + 1], env, alt)

@@ -70,7 +70,7 @@ T.check(M.turn(straight[1], straight[2], 250) == nil, "straight on: no turn")
 
 -- a discontinuity: no path into the waypoint after it
 path = M.build({{via = "DIRECT", fix = B}, {disc = true}, {via = "DIRECT", fix = C}}, A, env)
-T.check(path[2] == nil, "no element for the discontinuity")
+T.check(path[2].kind == "disc", "the discontinuity: no path")
 T.check(path[3].kind == "none" and path[3].b == C, "C after it: no path in, its fix")
 
 -- a direct-to: from its start
