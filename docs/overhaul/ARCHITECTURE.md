@@ -460,6 +460,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
   - `activepages/*.lua`：動くページ（PERF INIT、POS INIT、TAKEOFF、THRUST LIM、PROGRESS、VNAV、DOORS、EFIS/EICAS CTL、地上作業、乗客・貨物、ATC/CPDLC など）
   - `refonly/*.lua`：見た目だけのページ（`***` の雛形。REF NAV DATA、NAV RAD、DEP/ARR、HOLD、FIX など）
 - `B744.createfms.lua` が CDU を作り、`B747.68.xt.fms.lua` がページ遷移・入力・データ（`getFMSData`）を扱う。
+- CDU の枠組み（6-2 段 2）：純粋なモデル `B747.68.cdu_model.lua`（scratchpad のキー、CDU ごとの入力のメッセージ、FMC のメッセージの列、入力の形の解釈）。`keyDown` は自前のページの scratchpad のキーをモデルに、ほかを前の振り分け（`pageKey`）に渡す。ページは前と同じく `fmsO.scratchpad` を読み書きし、`fmsO.notify` に立てたメッセージはその CDU の列に移る。FMC のメッセージは `laminar/B747/fms/notification` の旗（系統が条件の間だけ立てる）から毎フレーム写し、alert で >FMC MESSAGE。CDU の電源は `electrical/display_has_power[8]`・`[7]`・`[6]`。
 - ACARS/CPDLC：`acars/*`（AutoATC と Hoppie の provider）。
 - IRS：`irs/irs_system.lua`（アライン、位置）。`irs/rnav_system.lua`。
 - ルート・航法：X-Plane の FMS（`xtlua/fms`）。LNAV のポイント切り替えは autopilot 側（`override_fms_advance`）。VNAV は `B744.fms.pages.vnav*.lua` と `B747.70.xt.autopilot.vnav*`。

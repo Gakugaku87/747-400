@@ -848,6 +848,7 @@ function createPage(page)
   fmsFunctionsDefs[page]={}
   return retVal
 end
+dofile("B747.68.cdu_model.lua")
 dofile("B744.notifications.lua")
 dofile("irs/irs_system.lua")
 dofile("B744.fms.baro.lua")
@@ -1204,33 +1205,13 @@ end
 
 debug_fms     = find_dataref("laminar/B747/debug/fms")
 fms_style = find_dataref("sim/cockpit2/radios/indicators/fms_cdu1_style_line2")
-lastNotify=0
+-- the FMC's messages each frame from laminar/B747/fms/notification's flags
+-- into the CDUs' message list (B744.createfms.lua); >FMC MESSAGE while an
+-- alert waits (FCOM p.1429-1430; 6-1/6-2 step 2: before, one flag every
+-- ten seconds, any message, and CLR cleared the flag)
 function setNotifications()
-  local diff=simDRTime-lastNotify
-  if diff<10 then return end
-  --print("FMS notify")
-  local hasNotify=false
-  lastNotify=simDRTime
-  for i =1,54,1 do
-    --print("do FMS notify".." ".. i .." " ..B747DR_fmc_notifications[i])
-    if B747DR_fmc_notifications[i]>0 then
-      fmsModules["fmsL"]["notify"]=B747_FMCAlertMsg[i].name
-      fmsModules["fmsC"]["notify"]=B747_FMCAlertMsg[i].name
-      fmsModules["fmsR"]["notify"]=B747_FMCAlertMsg[i].name
-      --print("do FMS notify "..B747_FMCAlertMsg[i].name)
-	  hasNotify=true
-      break
-    else
-      if fmsModules["fmsL"]["notify"]==B747_FMCAlertMsg[i].name then fmsModules["fmsL"]["notify"]="" end
-      if fmsModules["fmsC"]["notify"]==B747_FMCAlertMsg[i].name then fmsModules["fmsC"]["notify"]="" end
-      if fmsModules["fmsR"]["notify"]==B747_FMCAlertMsg[i].name then fmsModules["fmsR"]["notify"]="" end
-    end
-  end
-  if hasNotify==true then 
-	B747DR_CAS_advisory_status[145] = 1 
-  else
-	B747DR_CAS_advisory_status[145] = 0
-  end
+  B747_cdu_sync_fmc_messages(B747DR_fmc_notifications)
+  B747DR_CAS_advisory_status[145] = B747_cdu_fmc_alert() and 1 or 0
 end
 local didFlightInit=false
 B747DR_ap_target_speed               	= find_dataref("laminar/B747/autopilot/speed/target")

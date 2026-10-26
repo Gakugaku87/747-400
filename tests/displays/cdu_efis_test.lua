@@ -15,6 +15,8 @@ rt:load("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.xt.fms.lua")
 rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS"}}')
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
+-- the CDUs' power (no keys without it: 6-1/6-2 step 2)
+for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
 rt:callout("flight_start")
 local function frames(seconds)
     for _ = 1, math.floor(seconds * 30 + 0.5) do rt:frame(1 / 30) end
