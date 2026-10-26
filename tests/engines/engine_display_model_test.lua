@@ -293,4 +293,41 @@ do
     T.check(not o.epr_red[1], "CF6: no EPR")
 end
 
+-- the secondary engine exceedances for the partial format (5-2 step 6b;
+-- FCOM p.852-854, p.874): N2 at its operating limit, the oil at a caution
+-- range or its operating limit or magenta, the vibration at the high band
+do
+    local s, inp = D.new(fixed(0)), D.inputs()
+    running(inp, 95)
+    inp.oil_psi = {90, 90, 90, 90}
+    inp.oil_degc = {100, 100, 100, 100}
+    local o = D.update(s, inp, DT)
+    T.check(not o.exceed_n2 and not o.exceed_oil and not o.exceed_vib, "normal: no exceedance")
+    inp.n2[3] = 111.5
+    o = D.update(s, inp, DT)
+    T.check(o.exceed_n2 and not o.exceed_oil, "P&W N2 3 at 111.5 % (red line 111.4): N2")
+    inp.n2[3] = 95
+    inp.oil_psi[2] = 40
+    o = D.update(s, inp, DT)
+    T.check(o.exceed_oil and not o.exceed_n2, "oil pressure 2 at 40 psi (red line 70): oil")
+    inp.oil_psi[2] = 90
+    inp.oil_degc[4] = 161
+    o = D.update(s, inp, DT)
+    T.check(o.exceed_oil, "oil temperature 4 at 161 °C (amber band 160): oil")
+    inp.oil_degc[4] = 100
+    inp.cutoff[2], inp.running[2], inp.n2[2], inp.oil_psi[2] = true, false, 0, 0
+    o = D.update(s, inp, DT)
+    T.check(not o.exceed_oil, "an engine shut down at 0 psi: no exceedance (white, FCOM p.846)")
+    inp.type = "GE"
+    running(inp, 65)
+    inp.oil_psi = {13, 30, 30, 30}
+    o = D.update(s, inp, DT)
+    T.check(o.exceed_oil, "CF6 oil pressure in the amber band: oil")
+    inp.oil_psi[1] = 30
+    inp.oil_ratio = {1, 1, 1, 0.1}
+    o = D.update(s, inp, DT)
+    T.check(o.exceed_oil and o.oil_qty_magenta[4], "CF6 oil quantity low (magenta): oil")
+    T.equal(D.VIB_HIGH, 4.0, "the vibration's high band: 4.0 units (ATA70_80 p.395)")
+end
+
 T.done()

@@ -50,6 +50,13 @@
 -- Step 5e: the ground speed and each side's bank angle to the ND model; each
 -- ND's position trend vector's pieces (nd/capt|fo/tv_show, tv_x, tv_y,
 -- tv_rot, tv_frame) out.
+-- Step 6b: the EICAS format model (B747.60.eicas_format_model.lua) with the
+-- secondary EICAS display selected, the engines' secondary exceedances
+-- (engines/sec_exceed) and where primary and secondary EICAS show in; ENG
+-- when the displays first get power (dsp/synoptic_display), the secondary
+-- engine rows on secondary EICAS (eicas/sec_eng, sec_rows), the compact
+-- format on primary EICAS (eicas/compact, cmp_rows) and the exceedance cue
+-- (eicas/exceed_cue, exceed_cue_text) out.
 -- dofile'd from B747.60.xt.fltInst.lua after B747.60.xt.fltInst02.lua.
 
 dofile("B747.60.display_model.lua")
@@ -57,11 +64,13 @@ dofile("B747.60.pfd_model.lua")
 dofile("B747.60.pfd_ils_model.lua")
 dofile("B747.60.nd_model.lua")
 dofile("B747.60.hdg_ref_model.lua")
+dofile("B747.60.eicas_format_model.lua")
 local DM = B747_display_model
 local PM = B747_pfd_model
 local IM = B747_pfd_ils_model
 local NM = B747_nd_model
 local HR = B747_hdg_ref_model
+local FM = B747_eicas_format_model
 
 B747DR_dsp_bus_stby_apu         = find_dataref("laminar/B747/electrical/bus/stby_apu")
 B747DR_dsp_bus_stby_main        = find_dataref("laminar/B747/electrical/bus/stby_main")
@@ -379,6 +388,15 @@ B747DR_dsp_tv_x_fo              = find_dataref("laminar/B747/nd/fo/tv_x")
 B747DR_dsp_tv_y_fo              = find_dataref("laminar/B747/nd/fo/tv_y")
 B747DR_dsp_tv_rot_fo            = find_dataref("laminar/B747/nd/fo/tv_rot")
 B747DR_dsp_tv_frame_fo          = find_dataref("laminar/B747/nd/fo/tv_frame")
+-- the EICAS formats (step 6b); dsp/synoptic_display is fltInst02's
+-- B747DR_dsp_synoptic_display
+B747DR_dsp_sec_exceed           = find_dataref("laminar/B747/engines/sec_exceed")
+B747DR_dsp_eicas_sec_eng        = find_dataref("laminar/B747/eicas/sec_eng")
+B747DR_dsp_eicas_sec_rows       = find_dataref("laminar/B747/eicas/sec_rows")
+B747DR_dsp_eicas_compact        = find_dataref("laminar/B747/eicas/compact")
+B747DR_dsp_eicas_cmp_rows       = find_dataref("laminar/B747/eicas/cmp_rows")
+B747DR_dsp_eicas_cue            = find_dataref("laminar/B747/eicas/exceed_cue")
+B747DR_dsp_eicas_cue_text       = find_dataref("laminar/B747/eicas/exceed_cue_text")
 
 -- the EIU selectors' positions: Captain and centre L, AUTO, C, R; F/O L, C, AUTO, R
 local EIU_CAPT = {[0] = DM.EIU_L, DM.SEL_AUTO, DM.EIU_C, DM.EIU_R}
@@ -400,6 +418,11 @@ local ils_state = IM.new()
 local ils_inputs = IM.inputs()
 local nd_state = NM.new()
 local nd_inputs = NM.inputs()
+local fmt_state = FM.new()
+local fmt_inputs = {synoptic = FM.SYN_NONE, exceed_n2 = false, exceed_oil = false, exceed_vib = false,
+    pri_shown = false, sec_shown = false}
+-- the secondary engine exceedance cue (FCOM p.840)
+local EXCEED_CUE_TEXT = "VVVVVV"
 
 local function msg(i, on)
     local v = on and 1 or 0
@@ -1002,6 +1025,31 @@ local function pfd_baro()
     if B747DR_dsp_pfd_baro_alert_fo ~= v then B747DR_dsp_pfd_baro_alert_fo = v end
 end
 
+-- the EICAS formats (step 6b): shown_on, the display model's units
+local function eicas_format(shown)
+    local f = fmt_inputs
+    f.synoptic = math.floor(B747DR_dsp_synoptic_display + 0.5)
+    f.exceed_n2 = B747DR_dsp_sec_exceed[0] > 0.5
+    f.exceed_oil = B747DR_dsp_sec_exceed[1] > 0.5
+    f.exceed_vib = B747DR_dsp_sec_exceed[2] > 0.5
+    f.pri_shown = shown[DM.C_PRI] ~= 0
+    f.sec_shown = shown[DM.C_SEC] ~= 0
+    local o = FM.update(fmt_state, f)
+    if o.select_eng then B747DR_dsp_synoptic_display = FM.SYN_ENG end
+    local v = o.sec and 1 or 0
+    if B747DR_dsp_eicas_sec_eng ~= v then B747DR_dsp_eicas_sec_eng = v end
+    if B747DR_dsp_eicas_compact ~= o.compact then B747DR_dsp_eicas_compact = o.compact end
+    for r = 1, 4 do
+        v = o.sec_rows[r] and 1 or 0
+        if B747DR_dsp_eicas_sec_rows[r - 1] ~= v then B747DR_dsp_eicas_sec_rows[r - 1] = v end
+        v = o.cmp_rows[r] and 1 or 0
+        if B747DR_dsp_eicas_cmp_rows[r - 1] ~= v then B747DR_dsp_eicas_cmp_rows[r - 1] = v end
+    end
+    v = o.cue and 1 or 0
+    if B747DR_dsp_eicas_cue ~= v then B747DR_dsp_eicas_cue = v end
+    if B747DR_dsp_eicas_cue_text ~= EXCEED_CUE_TEXT then B747DR_dsp_eicas_cue_text = EXCEED_CUE_TEXT end
+end
+
 function B747_displays()
     local inp = dsp_inputs
     -- the Captain's knobs as the model's positions; the F/O's are mirrored
@@ -1057,6 +1105,7 @@ function B747_displays()
     msg(ADV_EFIS_CONTROL[1], out.msg_efis_control[1])
     msg(ADV_EFIS_CONTROL[2], out.msg_efis_control[2])
     msg(ADV_EFIS_EICAS_CP, out.msg_efis_eicas_cp)
+    eicas_format(out.shown_on)
     pfd_sources(inp.fmc)
     pfd_baro()
 end

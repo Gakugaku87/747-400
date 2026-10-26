@@ -430,6 +430,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 段 5d（HDG REF）：表示のグルー（`B747.60.xt.displays.lua`）が純粋なモデル `B747.60.hdg_ref_model.lua` で基準を決め、新設 `efis/hdg_ref/*`（`true`・`pfd_label`・`nd_label`・`nd_plan_label`）と両席の基準の方位・航跡 `pfd/<席>/hdg_deg`・`trk_deg`（init `B747.60.fltInst`）を毎フレーム書く。パネルの方位の計器、ND のモジュールのローズ（`nd/up`）、ND のモデル、FMC の風の数字、AFDS（`ap_hdg_target`・`ap_hdg_ref_hold`）がそれを読む。
 - 段 5e（ND のトレンドベクトル）：ND のモデル（`B747.60.nd_model.lua` の `trend`）が対地速度と各席の傾きから 9 片の位置・向き・長さを出し、表示のグルーが新設 `nd/<席>/tv_*`（init `B747.60.fltInst`）に書く。
 - 段 6a（時計）：時計のモデル（`B747.60.clock_model.lua`）を時計のグルー（`B747.60.xt.fltInst03.lua`、両席）が動かす。fltInst02 の after_physics が `B747_clocks()`、flight_start が `B747_clocks_flight_start()` を呼ぶ。出力は新設 `fltInst/<席>/clock_on`・`clock_utc_hours`・`clock_utc_minutes`・`clock_day`・`clock_month`・`clock_et_show` と今までの時計の dataref（init `B747.60.fltInst`）。
+- 段 6b-1（EICAS の部分表示と逸脱の印）：エンジンの表示モデルが逸脱の 3 群を新設 `engines/sec_exceed` に出し、EICAS の形式のモデル（`B747.60.eicas_format_model.lua`）を表示のグルー（`B747.60.xt.displays.lua` の `eicas_format`）が動かす。選んだ二次表示と表示器のモデルの主・二次 EICAS を入れ、新設 `eicas/*`（init `B747.60.fltInst`）を出す。電源投入時は `dsp/synoptic_display` に ENG を書く。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 

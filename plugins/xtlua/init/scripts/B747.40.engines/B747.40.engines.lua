@@ -98,6 +98,9 @@ B747DR_EPR_red_on                   = deferred_dataref("laminar/B747/engines/EPR
 B747DR_oil_press_amber              = deferred_dataref("laminar/B747/engines/oil_press_amber", "array[4]")
 B747DR_oil_qty_magenta              = deferred_dataref("laminar/B747/engines/oil_qty_magenta", "array[4]")
 B747DR_vib_source                   = deferred_dataref("laminar/B747/engines/vib_source", "array[4]")
+-- the secondary engine exceedances of any engine: N2, oil, vibration (5-2
+-- step 6b, the EICAS formats)
+B747DR_sec_exceed                   = deferred_dataref("laminar/B747/engines/sec_exceed", "array[3]")
 
 B747DR_init_engines_CD              = deferred_dataref("laminar/B747/engines/init_CD", "number")
 

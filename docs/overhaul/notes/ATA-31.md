@@ -633,3 +633,20 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - パネル（道具 `docs/overhaul/tools/panel_clocks.lua`、ACF_DIFF.md §5）：UTC と日付を時計自身の値に（前は X-Plane の zulu の時・分と、その地の日付）、両方の LCD の数字を `clock_on` の新しいグループに、ET の数字の SHOW を `clock_et_show` 1 つに（前は 2 つで後の `clock_et_seconds > 0` が勝ち、CHR の下に ET が重なった）。
 - FMC への時刻・日付（GPS が無いとき機長の時計、その故障で副操縦士の時計：ATA31 p.77）は FMC の作り直しで（FMC は X-Plane の時刻のまま）。
 - 試験：新しい `tests/displays/clock_test.lua`（68 件：暦、UTC、DATE の交互、SET の HLD・MS・HS と繰り上がらないこと、日付の HS D・MS M・HLD Y、ET、CHR、電源と NCD、グルーのコマンド、終わりが先に来る一度きりのコマンド）。X-Plane のシナリオ `s74_clock`（45 件合格：成田 34L に電源の無い状態で開始、BATTERY OFF で両席の時計の表示が消え（main hot battery bus はある）、ON で X-Plane の UTC（01:00）と UTC の日付（23 10）・年 26、DATE で日と月、1 秒後に年、ET の RUN で 00:00、CHR で ET に代わって秒針が進み、2 回目で止まり、3 回目でリセットして裏で進んでいた ET が出る、グレアシールドのボタンも動く、ET の HLD で止まり RESET で 0 と空白、ばねで HLD に戻る、SET の HLD・MS で 1 秒に 1 分、副操縦士の時計は別。時計と外観を撮った。1 回目は開始で BATTERY がすでに ON だったこと（試験の誤り）と、一度きりのコマンドで DATE・CHR のボタンと ET の RESET が戻らなかったこと（XTLua の扱い：気づいたこと）、2 回目は DATE のボタンを戻る前に確かめたこと（試験の誤り）で落ちた）。
+
+## 36. 段 6b の計画と段 6b-1 の実装（2026-10-26 朝：EICAS の部分表示と逸脱の印）
+
+- 下調べ：段 6 の残りのうち DSP-25（STATUS のメッセージの行とページ）と DSP-26（CAS の 10 ページ）は警報 1-3 の WARN-17・WARN-09 で済んでいた（カスタム acf。GAP は純正 acf を見ていた）。DSP-06（OVERSPEED を Vmo/Mmo だけで）は 5-1 段 1 の NAV-02 で済。残りは DSP-24（＝エンジンの ENG-22）で、空中の CUTOFF での自動表示は燃料 2-2（ENG-23）で済んでいた。DSP-19（TERR）は外部のプラグイン頼みのまま。
+- 段 6b を 2 つに分ける：6b-1 は部分表示・逸脱の印・電源投入時の自動表示（Lua と小さなパネルの変更）、6b-2 は主 EICAS の compact の形（一次エンジン表示そのものの作り替えで、パネルの大きな作業）。
+- 資料：FCOM p.839–840（二次エンジンの逸脱の印：水色の VVVVVV、STATUS の印と同じ欄でそれに代わる）、p.849（VIB の high band が自動表示の値）、p.852–854（部分表示：N2 は運用限界、OIL P・T・Q は注意域か運用限界か、CF6 は油量の low と differential、VIB は high band）、p.855–857（compact の形）、p.872（電源投入時と空中の CUTOFF で自動表示）、p.874–875（部分表示と compact の規則、正常域に戻るまで残る）。
+- エンジン側（`B747.40.engine_display_model.lua`）：どれかのエンジンの逸脱を 3 群で出す（N2：N2 が赤線、RB211 は N3 も。油：油圧が赤線か CF6 の琥珀の帯、油温が琥珀の帯より上、油量が magenta。VIB：high band 4.0 units（CF6 は ATA70_80 p.395、P&W と RB211 は資料が無く同じ値：推定））。グルーが新設 `engines/sec_exceed[3]`（init `B747.40.engines`）に書く。
+- EICAS の形式のモデル（新しい純粋なモジュール `B747.60.eicas_format_model.lua`）：
+  - ENG を選んでいれば二次 EICAS に二次エンジンの全表示。選んでいないとき逸脱があれば、その群の行だけの部分表示（FF は出ない）。ENG で全表示、もう一度で部分表示（今の ENG の切り替えのままで成り立つ）。
+  - 逸脱の印：逸脱がある間（全表示のときも）。
+  - ほかの二次表示（STAT・FUEL など）を選んでいて逸脱があれば、部分表示は主 EICAS の compact へ（`eicas/compact` = 2）。二次 EICAS を出す表示器が無い（表示器 1 台）ときは、ENG で compact の全表示（= 1）、逸脱で compact の部分表示（= 2）。
+  - 電源投入時の自動表示：主 EICAS が表示器に出てきたとき（推定：「表示器が初めて電源を得たとき」をこう読んだ）に ENG を選ぶ。前は新しいフライトのときだけ。
+  - STATUS の印が出ていて部分表示が出ていないときの STAT（FCOM p.875）は、ほかの二次表示の規則で compact に出るので、別には作らない。
+- グルー（`B747.60.xt.displays.lua`）：選んだ二次表示（`dsp/synoptic_display`）、`engines/sec_exceed`、表示器のモデルの主・二次 EICAS の表示器を入れ、新設 `eicas/sec_eng`・`sec_rows[4]`（N2・FF・油・VIB）・`compact`・`cmp_rows[4]`・`exceed_cue`・`exceed_cue_text`（"VVVVVV"。init `B747.60.fltInst`）を出す。電源投入時は `dsp/synoptic_display` に ENG を書く。
+- パネル（道具 `docs/overhaul/tools/panel_eicas_partial.lua`、ACF_DIFF.md §5）：二次 EICAS の ENG のページを `eicas/sec_eng` で出し（前は `dsp/synoptic_display` = 1）、N2（P&W・GE・RB211）・FF・油（P・T・Q）・VIB の群をそれぞれ新しいグループ（`eicas/sec_rows[0..3]`）に入れた。主 EICAS の STATUS の印を `eicas/exceed_cue` のときは隠し、同じ場所に逸脱の印（`eicas/exceed_cue_text`）を足した。
+- compact の形のパネル（主 EICAS の EPR・N1・EGT の作り替えと、二次の行の数字）は段 6b-2 で。それまで `eicas/compact` と `cmp_rows` は値だけ。
+- 試験：新しい `tests/displays/eicas_format_test.lua`（27 件：電源投入時の ENG、全表示、部分表示の行、ENG の切り替え、ほかの表示での compact、表示器 1 台、グルーのコマンドと表示器の故障）、エンジンの表示モデルの試験に 7 件、グルーの試験に 1 件。X-Plane のシナリオ `s75_eicas_partial`（25 件合格：成田 34L にエンジン運転中で開始、開始で二次 EICAS に二次エンジンの全表示、ENG で消え、2 番の油ポンプの故障で油圧が赤線を割ると 0.6 秒で油の行（OIL P・T・Q）だけの部分表示と主 EICAS の水色の VVVVVV、ENG で全表示（印は残る）、もう一度で部分表示、FUEL で二次 EICAS は FUEL のページになり compact の判定（部分表示、油の行）、もう一度 FUEL で部分表示が戻り、故障を戻すと部分表示と印が消える。上下の EICAS と外観を撮った）。

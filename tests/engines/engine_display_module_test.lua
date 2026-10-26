@@ -85,6 +85,8 @@ T.check(q0 >= 22 and q0 <= 30, "oil quantity running: 22-30 L (" .. q0 .. ")")
 T.check(q3 >= 11 and q3 <= 15, "engine 4 with its own ratio 0.5 (" .. q3 .. ")")
 local v0 = rt:get(ENG .. "vibration", 0)
 T.check(v0 > 0 and v0 < 0.6, "vibration at 70 % N2 (" .. v0 .. ")")
+T.check(rt:get(ENG .. "sec_exceed", 0) == 0 and rt:get(ENG .. "sec_exceed", 1) == 1 and rt:get(ENG .. "sec_exceed", 2) == 0,
+    "the secondary exceedances for the EICAS formats: the oil (5-2 step 6b)")
 rt:set(FUEL_CONTROL, 1, 0)
 frames(1)
 T.equal(rt:get(ENG .. "EICAS2_oil_press_status", 1), 0, "CUTOFF: oil pressure stays white")
