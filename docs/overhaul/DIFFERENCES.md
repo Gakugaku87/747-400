@@ -1,6 +1,6 @@
 # 実機との違い（DIFFERENCES）
 
-Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこで違うかを、全分野についてまとめたもの。2026-10-25 の時点（`overhaul`、航法センサー 5-1 段 1 まで）。
+Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこで違うかを、全分野についてまとめたもの。2026-10-26 の時点（`overhaul`、表示 5-2 の段 7 まで。FMC・CDU は段取りまで）。
 
 - 元の調査は [GAP_ANALYSIS.md](GAP_ANALYSIS.md)（作り直し前のコードと資料の読み比べ、550 件）。ここでは、その後の作り直しで直った点を反映し、残っている違いを分野ごとに短く書いた。各項目の括弧は GAP の ID で、詳しい内容と出典は GAP_ANALYSIS.md と `notes/` にある。
 - 基準の機体は FCOM の 109（旅客機、PW4056）。405（PW の改造貨物機）と 570（GE の貨物機）の違いは notes に書いてある。RR には資料が無い。
@@ -25,10 +25,10 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 火災防護（ATA 26） | 作り直し済み（3-4：エンジン・APU・貨物室の検知と消火、車輪格納部、ダクトリーク、煙、試験、スクイブ試験） | FUEL CONTROL の赤灯（3D）、M869 とホーンの音、火の元は失敗の dataref（X-Plane に無いもの） |
 | 操縦系統（ATA 27） | 作り直し中（4-1 段 1：フラップの FCU、段 2：SRM の外側エルロンのロックアウト・ラダー比変換器・安定板トリム・speed trim、グリーンバンド、段 3：スピードブレーキ、段 4：横操縦・遮断弁・ヨーダンパーの INOP） | フラップの拡大・代替の表示のパネル、>STAB GREENBAND、昇降舵の舵角、ヨーダンパーの制御則（AFDS） |
 | 脚・ブレーキ・ステアリング（ATA 32） | 作り直し済み（4-2 段 1〜5：脚の作動・代替下げ・位置監視・表示、ブレーキ、オートブレーキ、ステアリング、ブレーキ温度とタイヤ圧） | AIR/GND SYSTEM と脚の STATUS の一部、tiller の軸が無いときのペダル（実機ではない手当て） |
-| 表示（PFD・ND・EICAS） | 作り直し中（5-2 段 1：表示器と EIU、選択器と自動切替、内容ごとの輝度。ND の TCAS は 5-1 段 5 で） | ソース選択、速度テープの帯、405 型の RADIO/BARO の minimums、compact EICAS |
-| 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記） | FMC の位置への GPS の更新、PFD の昇降率の源、GPWS の地形の look-ahead、PWS、無線の自動同調 |
-| FMC | 未着手 | 経路モデル、ホールド、LNAV・VNAV、予測 |
-| CDU | 未着手 | 3 台が 1 つを共有、MOD/EXEC、入力の検査、データリンク |
+| 表示（PFD・ND・EICAS） | ほぼ作り直し済み（5-2 段 1：表示器と EIU、段 2：ソース選択の比較、段 3：速度テープ、段 4：PFD の気圧・PLI・FPV・ILS と旗、段 5：ND の向き・APP・VOR・DATA・POS・地図の記号・空港・HDG REF・トレンドベクトル、段 6：時計、EICAS の部分表示と compact、段 7：パネルの表示の条件の重なり） | TERR（外部のプラグイン頼み）、ND の FMC の記号の残り（S/C・E/D など：FMC の作り直しで）、405 型の RADIO/BARO の minimums |
+| 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記。段 5d：PFD の TCAS RA・トランスポンダのコード・ND の WXR の文字） | FMC の位置への GPS の更新、GPWS の地形の look-ahead、PWS、無線の自動同調（FMC の作り直しで） |
+| FMC | 未着手（段取りは決めた：経路を自前で持ち、12 段で作り直す。notes/ATA-34-61-FMC.md §10） | 経路モデル、ホールド、LNAV・VNAV、予測 |
+| CDU | 未着手（段取りは FMC と 1 本） | 3 台が 1 つを共有、MOD/EXEC、入力の検査、データリンク |
 | 自動操縦・FD | 未着手 | ロールが X-Plane の AP 頼み、LOC・TO/GA・autoland の則 |
 | オートスロットル・推力管理 | 未着手 | 推力制限のモード、assumed temperature、THR・HOLD、操縦者の override |
 | 通信（ATA 23） | 未着手 | VHF の電源、ACP の連動、VHF C と HF が無い |
