@@ -35,7 +35,7 @@ local function copy_route(r)
         for k, v in pairs(l) do c[k] = v end
         legs[i] = c
     end
-    return {origin = r.origin, dest = r.dest, runway = r.runway, legs = legs}
+    return {origin = r.origin, dest = r.dest, runway = r.runway, legs = legs, sid = r.sid, star = r.star, appr = r.appr}
 end
 
 -- the FMC's routes: `N` the navigation database module, `db` its database
@@ -95,17 +95,31 @@ function M.status(st)
     return ""
 end
 
--- the number of waypoints in a route's legs
+-- the number of waypoints in a route's legs (the conditional ones too)
 local function count(r)
     local n = 0
     for _, l in ipairs(r.legs) do
-        if l.fix then n = n + 1 end
+        if l.fix or l.name then n = n + 1 end
     end
     return n
 end
+-- a procedure's legs out of a route (`proc`: "SID", "STAR", "APPR")
+local function strip(r, kind)
+    local legs = {}
+    for _, l in ipairs(r.legs) do
+        if l.proc ~= kind then legs[#legs + 1] = l end
+    end
+    r.legs = legs
+end
+-- a leg's waypoint as the pages name it: the fix, or a conditional leg's
+-- name (FCOM p.1249)
+function M.leg_name(l)
+    return l.fix and l.fix.ident or l.name or ""
+end
 
--- the fix the legs up to `n` end on (where the next segment starts); nil
--- after a discontinuity or a pending airway, or with no leg
+-- the fix the legs up to `n` end on (where the next segment starts; an
+-- airway crossing waypoint's `node` the airways' point); nil after a
+-- discontinuity or a pending airway, or with no leg
 local function end_fix(r, n)
     local l = r.legs[n or #r.legs]
     if l and l.fix and not l.disc and not l.pending then return l.fix end
@@ -120,13 +134,21 @@ function M.set_origin(st, icao)
     if not apt then return M.NOT_IN_DATA_BASE end
     local r = M.edit(st)
     r.origin, r.dest, r.runway, r.legs = apt, nil, nil, {}
+    r.sid, r.star, r.appr = nil, nil, nil
 end
 
--- DEST (FCOM p.1289): an airport of the database
+-- DEST (FCOM p.1289): an airport of the database; a new destination
+-- deletes the arrival procedures of the one before (FMSPG p.79)
 function M.set_dest(st, icao)
     local apt = st.N.airport(st.db, icao)
     if not apt then return M.NOT_IN_DATA_BASE end
-    M.edit(st).dest = apt
+    local r = M.edit(st)
+    if r.dest and r.dest.ident ~= apt.ident and (r.star or r.appr) then
+        strip(r, "STAR")
+        strip(r, "APPR")
+        r.star, r.appr = nil, nil
+    end
+    r.dest = apt
 end
 
 -- RUNWAY (FCOM p.1289): a runway of the origin in the database ("16R" or
@@ -154,10 +176,10 @@ function M.segments(r)
             segs[#segs + 1] = {via = l.via, first = i, last = i}
             cur = nil
         elseif l.via == M.DIRECT or not cur or cur.via ~= l.via then
-            cur = {via = l.via, to = l.fix.ident, first = i, last = i}
+            cur = {via = l.via, to = M.leg_name(l), first = i, last = i}
             segs[#segs + 1] = cur
         else
-            cur.to, cur.last = l.fix.ident, i
+            cur.to, cur.last = M.leg_name(l), i
         end
     end
     return segs
@@ -188,7 +210,7 @@ function M.add_to(st, fix)
     if last and last.pending then
         local from = end_fix(r, #r.legs - 1)
         if not from then return M.INVALID_ENTRY end
-        local path = st.N.airway_path(st.db, last.via, from.ident, fix.ident)
+        local path = st.N.airway_path(st.db, last.via, from.node or from.ident, fix.ident)
         if not path or #path < 2 then return M.INVALID_ENTRY end
         if full(r, #path - 1) then return M.ROUTE_FULL end
         r = M.edit(st)
@@ -225,8 +247,9 @@ end
 
 -- an airway on the VIA line after the route's end (FCOM p.1296-1297): it
 -- must contain the previous TO waypoint (the boxes for its TO), or meet
--- the previous airway entered without a TO waypoint (the FMC's
--- intersection waypoint, INTC, as that airway's TO)
+-- the previous airway entered without a TO waypoint: the FMC's airway
+-- crossing waypoint, X and the second airway's name (FCOM p.1250: J70 then
+-- J52 gives XJ52), at the point the two airways share, as that airway's TO
 function M.add_via(st, name)
     local segs = st.N.airway(st.db, name)
     if not segs then return M.NOT_IN_DATA_BASE end
@@ -235,18 +258,20 @@ function M.add_via(st, name)
     if last and last.pending then
         local x = intersection(st, last.via, name)
         if not x then return M.INVALID_ENTRY end
-        local err = M.add_to(st, st.N.point(st.db, x.ident, x.region, x.kind) or x)
+        local p = st.N.point(st.db, x.ident, x.region, x.kind) or x
+        local err = M.add_to(st, p)
         if err then return err end
         r = M.edit(st)
+        r.legs[#r.legs].fix = {kind = "LL", ident = "X" .. name, lat = p.lat, lon = p.lon, node = p.ident}
         r.legs[#r.legs].intc = true
         r.legs[#r.legs + 1] = {via = name, pending = true}
         return
     end
     local from = end_fix(r)
     if not from then return M.INVALID_ENTRY end
-    local found = false
+    local id, found = from.node or from.ident, false
     for _, s in ipairs(segs) do
-        if s.from.ident == from.ident or s.to.ident == from.ident then found = true break end
+        if s.from.ident == id or s.to.ident == id then found = true break end
     end
     if not found then return M.INVALID_ENTRY end
     local e = M.edit(st)
@@ -259,27 +284,170 @@ function M.legs(r)
     return r.legs
 end
 
+-- the great circle's course from one point to another at the first (true
+-- degrees) and its length (nm)
+function M.course(lat1, lon1, lat2, lon2)
+    local r = math.pi / 180
+    local p1, p2, dl = lat1 * r, lat2 * r, (lon2 - lon1) * r
+    local y = math.sin(dl) * math.cos(p2)
+    local x = math.cos(p1) * math.sin(p2) - math.sin(p1) * math.cos(p2) * math.cos(dl)
+    local a = math.sin((p2 - p1) / 2) ^ 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ^ 2
+    return (math.atan2(y, x) / r + 360) % 360, 2 * math.asin(math.min(1, math.sqrt(a))) * 3440.065
+end
+
+-- the point a leg starts from: the waypoint before it, the origin's runway
+-- or the origin before the first; nil after a discontinuity
+function M.leg_from(r, i)
+    local prev = r.legs[i - 1]
+    if prev then
+        if prev.fix and not prev.disc and not prev.pending then return prev.fix end
+        return nil
+    end
+    return r.runway or r.origin
+end
+
+-- the leg from `from` on with this fix (the same identifier and place)
+local function find_leg(r, fix, from)
+    for i = from or 1, #r.legs do
+        local f = r.legs[i].fix
+        if f and f.ident == fix.ident and math.abs(f.lat - fix.lat) < 1e-4 and math.abs(f.lon - fix.lon) < 1e-4 then
+            return i
+        end
+    end
+    return nil
+end
+
+-- a waypoint entered on the LEGS pages over leg `i` (#legs + 1: the dashes
+-- after the end) (6-1/6-2 step 5c; FMSPG p.82, p.91; the rules the sources
+-- leave out: estimate): a waypoint later in the route: the legs before it
+-- from `i` on go and the route goes DIRECT to it (a discontinuity's boxes
+-- closed with the waypoint after it); another: inserted before leg `i`, a
+-- ROUTE DISCONTINUITY after it
+function M.legs_entry(st, i, fix)
+    local r = M.shown(st)
+    if i < 1 or i > #r.legs + 1 then return M.INVALID_ENTRY end
+    local j = find_leg(r, fix, i)
+    if j then
+        r = M.edit(st)
+        for _ = i, j - 1 do table.remove(r.legs, i) end
+        local l = r.legs[i]
+        l.via, l.intc, l.dto, l.crs, l.pt = M.DIRECT, nil, nil, nil, nil
+        return
+    end
+    if full(r, 1) then return M.ROUTE_FULL end
+    r = M.edit(st)
+    table.insert(r.legs, i, {via = M.DIRECT, fix = fix})
+    local nxt = r.legs[i + 1]
+    if nxt and not nxt.disc then table.insert(r.legs, i + 1, {disc = true}) end
+end
+
+-- DELETE over leg `i` (estimate: the waypoints before and after it joined
+-- DIRECT; a discontinuity is closed by entering the waypoint after it, not
+-- deleted: INVALID DELETE)
+M.INVALID_DELETE = "INVALID DELETE"
+function M.legs_delete(st, i)
+    local l = M.shown(st).legs[i]
+    if not l or l.disc or l.pending then return M.INVALID_DELETE end
+    local r = M.edit(st)
+    table.remove(r.legs, i)
+    local nxt = r.legs[i]
+    if nxt and nxt.fix then nxt.via, nxt.dto, nxt.crs, nxt.pt = M.DIRECT, nil, nil, nil end
+end
+
+-- DIRECT TO (FMSPG p.141-144): a waypoint entered over the active
+-- waypoint, the first leg of the active route: from the airplane's
+-- position direct to it, the legs before it gone (one later in the
+-- route), or it inserted with a ROUTE DISCONTINUITY after it (another).
+-- `route_crs`: the route's course into it (INTC CRS offers it)
+function M.direct_to(st, fix, route_crs)
+    if not st.active then return M.INVALID_ENTRY end
+    local err = M.legs_entry(st, 1, fix)
+    if err then return err end
+    local l = M.edit(st).legs[1]
+    l.dto, l.crs, l.route_crs = true, nil, route_crs
+end
+
+-- INTC CRS (FMSPG p.143-144): the course into the direct-to waypoint (a
+-- course to intercept, 0-360); the direct-to modification only
+function M.intc_crs(st, crs)
+    local l = st.mod and st.mod.legs[1]
+    if not (l and l.dto) or crs < 0 or crs > 360 then return M.INVALID_ENTRY end
+    l.crs = crs % 360
+end
+
+-- a waypoint's speed and altitude constraint (FCOM p.1332; FMSPG
+-- p.125-128): `c` = {spd (CAS, 100-400 kt), alt, alt2 (feet), akind ("":
+-- at, "A": at or above, "B": at or below, "AB": the block alt..alt2)};
+-- below the cruise altitude; a speed alone over an altitude constraint;
+-- a new constraint drops the old speed. Not on a leg ending at an altitude
+-- (`altterm`, the procedures' legs: step 5d)
+function M.set_constraint(st, i, c, crz_alt)
+    local l = M.shown(st).legs[i]
+    if not l or l.disc or l.pending or l.altterm then return M.INVALID_ENTRY end
+    if c.spd and (c.spd < 100 or c.spd > 400) then return M.INVALID_ENTRY end
+    if not c.alt then
+        if not (c.spd and l.alt) then return M.INVALID_ENTRY end
+    else
+        local top = math.max(c.alt, c.alt2 or c.alt)
+        if crz_alt and top >= crz_alt then return M.INVALID_ENTRY end
+    end
+    l = M.edit(st).legs[i]
+    l.spd = c.spd
+    if c.alt then l.alt, l.alt2, l.akind = c.alt, c.alt2, c.akind or "" end
+end
+
+-- DELETE over a constraint: the speed and the altitude both go (FMSPG
+-- p.128); INVALID DELETE where there is none
+function M.delete_constraint(st, i)
+    local l = M.shown(st).legs[i]
+    if not (l and (l.alt or l.spd)) or l.altterm then return M.INVALID_DELETE end
+    l = M.edit(st).legs[i]
+    l.spd, l.alt, l.alt2, l.akind = nil, nil, nil, nil
+end
+
+-- a constraint as the LEGS pages show it: "250/10000A", "/FL240",
+-- "220A240B" (the speed's slash also alone: FCOM p.1332)
+function M.constraint_text(l, trans_alt)
+    if not l.alt and not l.spd then return nil end
+    local function ft(a) return a > (trans_alt or 18000) and string.format("FL%03d", math.floor(a / 100 + 0.5)) or tostring(a) end
+    local alt = ""
+    if l.alt then
+        if l.akind == "AB" then
+            alt = ft(l.alt) .. "A" .. ft(l.alt2) .. "B"
+        else
+            alt = ft(l.alt) .. (l.akind or "")
+        end
+    end
+    return (l.spd and tostring(l.spd) or "") .. "/" .. alt
+end
+
 -- the route as X-Plane's flight plan file (version 1100), for
 -- xtlua/loadtoFMS: X-Plane's FMS draws the ND's line and the readers not
 -- rebuilt yet (the AFDS's LNAV and VNAV) fly it. The origin and the
 -- destination as airports (1), each waypoint as a fix (11) by its position
--- (an NDB 2, a VOR or DME 3), DRCT or its airway; no procedure headers (the
--- FMC's own legs: X-Plane would expand its own); discontinuities and
--- pending airways left out
-local FMS_TYPE = {VOR = 3, DME = 3, NDB = 2}
+-- (an NDB 2, a VOR or DME 3, the FMC's own points a position 28), DRCT or
+-- its airway; the runways as positions by their names with the
+-- thresholds' elevations, the departure runway after the origin (as
+-- X-Plane's DEP ARR puts them: the ND finds them there); no procedure
+-- headers (the FMC's own legs: X-Plane would expand its own, and the
+-- procedures' legs go DRCT); discontinuities, pending airways, the
+-- conditional legs (no fix: step 5e) and the missed approach left out
+local FMS_TYPE = {VOR = 3, DME = 3, NDB = 2, LL = 28, RWY = 28}
 function M.to_fms(r, cycle)
     local rows = {}
     local function row(t, ident, via, alt, lat, lon)
         rows[#rows + 1] = string.format("%d %s %s %.6f %.6f %.6f", t, ident, via, alt or 0, lat, lon)
     end
     if r.origin then row(1, r.origin.ident, "ADEP", r.origin.elev, r.origin.lat, r.origin.lon) end
+    if r.runway then row(28, r.runway.ident, "DRCT", r.runway.elev, r.runway.lat, r.runway.lon) end
     for _, l in ipairs(r.legs) do
-        if l.fix then
-            local via = l.via == M.DIRECT and "DRCT" or l.via
+        if l.fix and not l.missed then
+            local via = (l.via == M.DIRECT or l.proc) and "DRCT" or l.via
             if l.fix.kind == "APT" then
                 row(1, l.fix.ident, via, l.fix.elev, l.fix.lat, l.fix.lon)
             else
-                row(FMS_TYPE[l.fix.kind] or 11, l.fix.ident, via, 0, l.fix.lat, l.fix.lon)
+                row(FMS_TYPE[l.fix.kind] or 11, l.fix.ident, via, l.fix.kind == "RWY" and l.fix.elev or 0,
+                    l.fix.lat, l.fix.lon)
             end
         end
     end
@@ -288,6 +456,7 @@ function M.to_fms(r, cycle)
     if r.origin then head[#head + 1] = "ADEP " .. r.origin.ident end
     if r.runway then head[#head + 1] = "DEPRWY " .. r.runway.ident end
     if r.dest then head[#head + 1] = "ADES " .. r.dest.ident end
+    if r.appr and r.appr.rwy then head[#head + 1] = "DESRWY " .. r.appr.rwy end
     head[#head + 1] = "NUMENR " .. #rows
     return table.concat(head, "\n") .. "\n" .. table.concat(rows, "\n") .. "\n"
 end

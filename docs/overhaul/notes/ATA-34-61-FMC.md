@@ -535,3 +535,17 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 点の候補（SELECT DESIRED WPT：FCOM p.1335）：同じ識別子の点・航法施設・空港と、出発地・目的地のターミナルの点を、指定の位置から近い順に（nav DB の `find`）。
 - X-Plane の .fms（v1100）の書式：出発地・目的地は空港（1）、各点は位置で fix（11）・NDB（2）・VOR/DME（3）、via は DRCT か airway。手続きの見出しは書かない（FMC 自身の脚：X-Plane に自分の手続きを展開させない）。
 - 試験：`tests/fms/route_model_test.lua`（63 件：合成のデータの airway Z1・Z2）。X-Plane では未使用（5b で）。
+
+## 20. 段 5b・5c の実装（2026-10-26：RTE と LEGS のページ、X-Plane の FMS への流し込み）
+
+- 5b と 5c は 1 つにまとめた（どちらも経路のモデルのページで、RTE を自前にすると LEGS も X-Plane のページを透かせない）。
+- RTE のページ（`activepages/B744.fms.pages.rte.lua`、FCOM p.1287–1298）：1 ページ目は ORIGIN・DEST（箱）、RUNWAY、FLT NO、CO ROUTE（会社の経路の DB が無いので NOT IN DATA BASE）、6R は ACTIVATE>（非アクティブの間。押しても EXEC までは残る）、PERF INIT>（性能データが未完。TAKEOFF REF の PRE-FLT と同じ判定）、TAKEOFF>（FCOM p.1290）。2 ページ目以降は VIA と TO を 5 組ずつ、終わりにダッシュ、TO の無い airway に箱、discontinuity に箱。入力は終わりのダッシュと箱だけ（ほかの行の変更は LEGS で：推定）、空の scratchpad で行の識別子を写す（airway は VIA から：FMSPG p.82）。題名は RTE 1・ACT RTE 1・MOD RTE 1、MOD のとき 6L に ERASE（FCOM p.1238）。前は X-Plane の RTE ページの行を透かし、下の行に X-Plane の FLT NO の欄が出ていた。
+- TAKEOFF REF の PRE-FLT の ROUTE は、RTE 1 をアクティブにするまで出す（FCOM p.1290：アクティブ化で経路の準備が終わる。前は ORIGIN と DEST が入っていれば済）。POS SHIFT の滑走路は RTE 1 の出発滑走路（FCOM p.1321。選ぶまでは RW***）。
+- SELECT DESIRED WPT（FCOM p.1335）：同じ識別子が 2 つ以上なら、前の点から近い順に識別子・種類・周波数・位置を出し、選ぶと元のページの入力を終える。機能キーで選ばずに抜ける。題名は中央で、1 ページならページ番号を出さない（FCOM の図）。
+- airway の交点の点の名前を X＋2 本目の airway 名にした（FCOM p.1250：J70 の後に J52 で XJ52。段 5a では交わる点の名前だった）。
+- RTE LEGS のページ（`activepages/B744.fms.pages.legs.lua`、FCOM p.1330–1334）：5 点ずつ。見出しの行に前の点からの針路（磁方位：nav DB の近くの VOR の偏差、無ければ真方位に T：推定）と距離（アクティブな経路の最初の点は機体から）、点の行に識別子と速度・高度の制限（大字。予測の小字は段 8）。discontinuity は THEN と箱、次の点の見出しが「-- ROUTE DISCONTINUITY -」（FCOM p.1333）、終わりにダッシュ。
+- LEGS の入力（FMSPG p.82, p.91, p.125–128, p.141–144；資料に無い規則は推定）：経路の先にある点を入れると、その間の点が消えて直行。無い点は挿入され、その後に ROUTE DISCONTINUITY。箱に次の点を入れると閉じる。DELETE は前後をつなぐ（推定。空中のアクティブな点は INVALID DELETE、discontinuity は消せない）。アクティブな経路の最初の行への入力は DIRECT TO（MOD）で、6R に INTC CRS（経路上の点なら経路のコースと >、無ければ箱：FMSPG p.144）。速度・高度の制限は右の LSK に「XXX/」「XXX/高度」「/高度」「高度」（A・B、窓は 220A240B）、速度は CAS 100–400 kt、速度だけは高度の制限の上だけ、CRZ ALT 未満、新しい制限で古い速度は消える、DELETE は両方を消す。
+- まだ無いもの：RTE 2・RTE COPY（段 7）、RTE DATA（段 8）、ABEAM PTS、PLAN の CTR と STEP（5e）、LEGS の予測（段 8）、点の種類の増え（PBD、緯経度など：FMSPG p.82–83、5e 以降）。
+- X-Plane の FMS への流し込み：RTE 1（アクティブなら EXEC 後の経路、MOD は入れない）が変わると、X-Plane の .fms（v1100）の文字列を `xtlua/loadtoFMS` に書く（XTLua が XPLMLoadFMSFlightPlan で読み込ませる）。出発の滑走路は出発地の次に、名前のついた位置の点（閾値、高度は閾値の標高）として書く（X-Plane の DEP ARR が入れるのと同じ形で、ND はそこで出発の滑走路を見つける）。目的地が入るまでは流さない（X-Plane は目的地の無い飛行計画を受け付けず、画面にエラーを出す：X-Plane での試験で見つけた）。X-Plane の FMS は ND の線と、作り直していない読み手（AFDS の LNAV・VNAV）のため。FMC のデータの `fltdep`・`fltdst`・`runway` も合わせ、新しい出発地で TRANS ALT（FCOM p.1329）。RTE と LEGS のキー、ほかのページから RTE へ行くプロンプト（POS INIT と TAKEOFF REF の ROUTE>、FMC COMM の L1）は、もう X-Plane のキーを押さない。X-Plane の DEP ARR のページ（段 5d まで）で選んだ手続きは X-Plane の FMS にだけ入り、FMC の経路が次に変わると上書きされる。
+- EXEC 灯は FMC の MOD に合わせられない（§18。利用者に確かめ中）。
+- 試験：`tests/fms/route_model_test.lua`（101 件）、`rte_pages_test.lua`（52 件）、`legs_pages_test.lua`（40 件）。X-Plane：`s86_rte_pages` 18/18（ORIGIN RJAA・DEST RJBB・RUNWAY 34L、DIRECT SPENS、Y71 で XAC、AKAGI の SELECT DESIRED WPT、ACTIVATE と EXEC、X-Plane の FMS の RTE に RJAA と RJBB、ND が出発滑走路 34L を見つける）、`s87_legs_pages` 21/21、RTE ページに入力する `s14` 66/66・`s83` 18/18・`s84` 13/13・`s85` 22/22。CDU と ND の写真（RTE の 1・2 ページ、SELECT DESIRED WPT、LEGS の discontinuity と DIRECT TO、ND の経路と出発滑走路）。目的地の前の流し込みで X-Plane が画面にエラーを出していたのを直し、直した後の s86・s87 ではエラー 0。Lua の誤りなし。

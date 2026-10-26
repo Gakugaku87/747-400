@@ -122,17 +122,19 @@ fmsPages["TAKEOFF"]=createPage("TAKEOFF")
 -- the TAKEOFF REF lines (6-1/6-2 step 3b; FCOM p.1318-1321): FLAP/ACCEL
 -- HT, E/O ACCEL HT and THR REDUCTION (defaults 1000 FT, 1000 FT and FLAPS
 -- 5 as FCOM's figure, small; entries large), WIND/SLOPE (dashes until
--- entered), TRIM/CG, POS SHIFT (the runway with the route: step 5),
+-- entered), TRIM/CG, POS SHIFT (RTE 1's runway: step 5b),
 -- PRE-FLT (the first page not complete) or THRUST LIM
+-- the performance data PERF INIT requires (the RTE page's 6R too: FCOM
+-- p.1290)
+function perf_init_complete()
+  local d = fmsModules["data"]
+  return perf_gw_t() ~= nil and d.crzalt ~= "*****" and tonumber(d.costindex) ~= nil and tonumber(d.reserves) ~= nil
+end
 local function preflight_page()
   if B747DR_nav_irs_set_pos == 1 then return "POSINIT", "POS INIT>" end
-  if str_trim(fmsModules["data"].fltdep) == "****" or str_trim(fmsModules["data"].fltdst) == "****" then
-    return "RTE1", "ROUTE>"
-  end
-  if perf_gw_t() == nil or fmsModules["data"].crzalt == "*****" or tonumber(fmsModules["data"].costindex) == nil
-    or tonumber(fmsModules["data"].reserves) == nil then
-    return "PERFINIT", "PERF INIT>"
-  end
+  -- the route until RTE 1 is activated (FCOM p.1290; step 5b)
+  if not B747_fmc_route.active then return "RTE1", "ROUTE>" end
+  if not perf_init_complete() then return "PERFINIT", "PERF INIT>" end
   return nil, "THRUST LIM>"
 end
 function takeoff_preflight()
@@ -145,6 +147,11 @@ local function thrred_text()
   local v = str_trim(fmsModules["data"].thrred)
   if v == "5" then return "FLAPS 5" end
   return v .. "FT"
+end
+-- POS SHIFT's runway: RTE 1's departure runway (FCOM p.1321; step 5b)
+local function shift_rwy()
+  local r = B747_fmc_route.rte.runway
+  return string.format("%-5s", r and r.ident or "RW***")
 end
 local function shift_text()
   local s = str_trim(fmsModules["data"].posshift)
@@ -189,7 +196,7 @@ fmsPages["TAKEOFF"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be 
   "                        ",
   string.format("%-21s%-3s", wind, cg_lineLg),
   "                        ",
-  "            RW*** " .. string.format("%-6s", shift_text()),
+  "            " .. shift_rwy() .. " " .. string.format("%-6s", shift_text()),
   "                        ",
   string.format("<INDEX%18s", pre)
   }
