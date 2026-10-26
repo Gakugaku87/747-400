@@ -949,14 +949,18 @@ local function lnav_leg_key(l)
   if f then k=k..string.format(" %.5f %.5f",f.lat,f.lon) end
   return k
 end
+-- RTE 1's path, active or not: LNAV's and the ND's line's shape in
+-- X-Plane's flight plan (step 6d)
+local routePath=nil
 function B747_fmc_lnav_build()
   local st=B747_fmc_route
-  if not st.active then lnavPath,lnavFirst=nil,nil return end
   local r=st.rte
+  routePath=B747_path_model.build(r.legs,B747_route_model.leg_from(r,1),{var=lnav_var,alt=simDR_pressureAlt1})
+  if not st.active then lnavPath,lnavFirst=nil,nil return end
   local key=lnav_leg_key(r.legs[1])
   if key~=lnavFirst and not lnavSequencing then B747_lnav_model.reset(B747_fmc_lnav) end
   lnavFirst=key
-  lnavPath=B747_path_model.build(r.legs,B747_route_model.leg_from(r,1),{var=lnav_var,alt=simDR_pressureAlt1})
+  lnavPath=routePath
 end
 local function fms_text(id) return (string.gsub(fmsModules["data"][id],"%s+$","")) end
 function B747_fmc_route_changed()
@@ -975,7 +979,7 @@ function B747_fmc_route_changed()
   -- X-Plane takes a flight plan with a destination only (without, an error
   -- message on the screen): none before the DEST
   if r.dest==nil then return end
-  local fms,map=B747_route_model.to_fms(r,(B747_navdb.cycle_info(B747_fmc_navdb)))
+  local fms,map=B747_route_model.to_fms(r,(B747_navdb.cycle_info(B747_fmc_navdb)),B747_path_model.shape(routePath))
   local active=B747_fmc_route.active
   if fms==routeLoaded then
     -- the plan X-Plane has: its rows' legs as the route is now (sequencing
@@ -1378,12 +1382,15 @@ function waypoint_eta_display()
 		if B747DR_fms_route_eta ~= "[]" then B747DR_fms_route_eta = "[]" end
 	end
 	
-	if fms_current_waypoint == "" or string.match(fms_current_waypoint, "%(") then
+	-- the active waypoint (FCOM p.1147), a conditional one by its name too
+	-- ((INTC), (600): its end as the FMC predicts it, 6-1/6-2 step 6d;
+	-- before, dashes); vectors without a distance (no end: FCOM p.1237)
+	if fms_current_waypoint == "" then
 		B747DR_ND_current_waypoint = "-----"
 		B747DR_ND_waypoint_distance = "------NM"
 		B747DR_ND_waypoint_eta = "------Z"
-			
-	elseif fms_current_waypoint == "VECTOR" then
+
+	elseif fms_current_waypoint == "VECTOR" or fms_current_waypoint == "VECTORS" then
 		B747DR_ND_current_waypoint = fms_current_waypoint
 		B747DR_ND_waypoint_distance = "------NM"
 		B747DR_ND_waypoint_eta = "------Z"

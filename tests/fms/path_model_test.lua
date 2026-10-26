@@ -167,4 +167,21 @@ T.near(M.end_course(rf), 90, 0.05, "east at ZB001")
 T.near(path[3].crs, 90, 0.05, "the TF to RW09: east")
 T.check(M.turn(rf, path[3], 160) == nil, "tangent: no turn")
 
+-- the shape for the ND's line (step 6d): the arc's points every 15
+-- degrees, the conditional legs' ends as predicted, a vectors leg's line
+local sh = M.shape(path)
+T.check(sh[2] and #sh[2].pts == 5, "the RF's 90 degrees: 5 points between its ends (15 to 75 degrees)")
+T.near(dist(legs[2].center, sh[2].pts[1]), 3.0, 0.01, "on the arc")
+T.near((M.course(legs[2].center, sh[2].pts[1])), (M.course(legs[2].center, rf.a) + 15) % 360, 0.01, "15 degrees on, clockwise")
+T.check(sh[1] == nil and sh[3] == nil, "nothing for the other legs")
+path = M.build({
+    {pt = "VA", crs = 337, alt = 600, altterm = true, name = "(600)"},
+    {pt = "VI", crs = 45, turn = "R", name = "(INTC)"},
+    {pt = "CF", fix = ZZV, crs = 90, dist = 8},
+    {pt = "VM", crs = 90, name = "VECTORS"},
+}, RWY, {var = env.var, alt = 98})
+sh = M.shape(path)
+T.check(sh[1].at == path[1].b and sh[2].at == path[2].b and sh[3] == nil, "the conditional legs' ends as predicted")
+T.near(dist(path[4].a, sh[4].at), M.VECTORS_LEN, 1e-6, "VECTORS: its line's end, 10 nm on")
+
 T.done()

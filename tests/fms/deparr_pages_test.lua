@@ -86,8 +86,8 @@ T.equal(line(3), "(600)              /600A", "LEGS: the heading to 600 ft (FCOM 
 T.check(small(2):find("^ 337` HDG"), "its heading 337 (FCOM p.1249: 180` HDG): " .. small(2))
 T.equal(line(5), "(INTC)                  ", "the intercept")
 T.equal(line(7), "ZZV            230/3000A", "ZZV at or above 3000, 230 kt (the SID's constraint)")
-T.check(xpfms():find("DEPRWY RW34L") and xpfms():find("\n3 ZZV DRCT ") and not xpfms():find("%(600%)"),
-    "X-Plane's flight plan: the runway, ZZV, no conditional leg")
+T.check(xpfms():find("DEPRWY RW34L") and xpfms():find("\n28 %(600%) DRCT 0%.000000 [^\n]*\n28 %(INTC%) DRCT 0%.000000 [^\n]*\n3 ZZV DRCT "),
+    "X-Plane's flight plan: the runway, (600) and (INTC) where predicted (the ND's line: step 6d), ZZV")
 
 -- ACTIVATE and EXEC; the DEP ARR key on the ground: DEPARTURES with <ACT>
 key("func_key/fpln")

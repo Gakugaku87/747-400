@@ -608,10 +608,22 @@ end
 -- follows X-Plane's current waypoint, which only xtlua/currentFMSID sets,
 -- while the AFDS's best track takes this leg as any other). Also the rows'
 -- map: `leg[row]` the route's leg, `row[leg]` its row, `ident[row]`, `n`
--- the rows
+-- the rows.
+-- The legs' shape (step 6d; `shape`: the path model's `shape`, shape[i] =
+-- {at = conditional leg i's end as predicted, pts = arc leg i's points}):
+-- a conditional leg's end as a position by its name ((600), NRE001,
+-- (INTC), VECTORS: FCOM p.1249) where the path model predicts it (a
+-- passed one where it ended: `end_at`), an RF or DME arc's points as
+-- positions "~" before its fix (no symbol on the ND). X-Plane's map draws
+-- the ND's line straight from row to row, through each: the fly-by turns
+-- not as curves, a VECTORS leg's end joined to the next waypoint. At most
+-- MAX_XP_ROWS rows (X-Plane's FMS: 100, XPLMNavigation.h): the arcs'
+-- points left out first, then the passed legs but the last
 M.DTO_START = "DTOPOS"
+M.ARC_POINT = "~"
+M.MAX_XP_ROWS = 100
 local FMS_TYPE = {VOR = 3, DME = 3, NDB = 2, LL = 28, RWY = 28}
-function M.to_fms(r, cycle)
+local function fms_rows(r, shape, arcs, first_passed)
     local rows, map = {}, {leg = {}, row = {}, ident = {}}
     local function row(t, ident, via, alt, lat, lon)
         rows[#rows + 1] = string.format("%d %s %s %.6f %.6f %.6f", t, ident, via, alt or 0, lat, lon)
@@ -619,7 +631,11 @@ function M.to_fms(r, cycle)
     end
     local function leg_rows(l, i)
         if l.dto and l.from then row(28, M.DTO_START, "DRCT", 0, l.from.lat, l.from.lon) end
+        local sh = i and shape and shape[i]
         if l.fix and not l.missed then
+            if arcs and sh and sh.pts then
+                for _, p in ipairs(sh.pts) do row(28, M.ARC_POINT, "DRCT", 0, p.lat, p.lon) end
+            end
             local via = (l.via == M.DIRECT or l.proc) and "DRCT" or l.via
             if l.fix.kind == "APT" then
                 row(1, l.fix.ident, via, l.fix.elev, l.fix.lat, l.fix.lon)
@@ -632,14 +648,28 @@ function M.to_fms(r, cycle)
                 row(FMS_TYPE[l.fix.kind] or 11, l.fix.ident, via, alt, l.fix.lat, l.fix.lon)
             end
             if i then map.leg[#rows], map.row[i] = i, #rows end
+        elseif not l.fix and not l.missed and l.name and l.name ~= "" then
+            -- a conditional leg's end (no altitude: not a constraint for
+            -- the AFDS's VNAV)
+            local at = (sh and sh.at) or (not i and l.end_at)
+            if at then
+                row(28, l.name, "DRCT", 0, at.lat, at.lon)
+                if i then map.leg[#rows], map.row[i] = i, #rows end
+            end
         end
     end
     if r.origin then row(1, r.origin.ident, "ADEP", r.origin.elev, r.origin.lat, r.origin.lon) end
     if r.runway then row(28, r.runway.ident, "DRCT", r.runway.elev, r.runway.lat, r.runway.lon) end
-    for _, l in ipairs(r.passed) do leg_rows(l, nil) end
+    for k = first_passed, #r.passed do leg_rows(r.passed[k], nil) end
     for i, l in ipairs(r.legs) do leg_rows(l, i) end
     if r.dest then row(1, r.dest.ident, "ADES", r.dest.elev, r.dest.lat, r.dest.lon) end
     map.n = #rows
+    return rows, map
+end
+function M.to_fms(r, cycle, shape)
+    local rows, map = fms_rows(r, shape, true, 1)
+    if map.n > M.MAX_XP_ROWS then rows, map = fms_rows(r, shape, false, 1) end
+    if map.n > M.MAX_XP_ROWS then rows, map = fms_rows(r, shape, false, math.max(1, #r.passed)) end
     local head = {"I", "1100 Version", "CYCLE " .. (cycle or "0000")}
     if r.origin then head[#head + 1] = "ADEP " .. r.origin.ident end
     if r.runway then head[#head + 1] = "DEPRWY " .. r.runway.ident end
@@ -686,8 +716,11 @@ function M.sequence(st, n, start)
         if m then m.passed[#m.passed + 1] = table.remove(m.legs, 1) end
     end
     if start then
-        r.legs[1].start = {lat = start.lat, lon = start.lon}
-        if m and m.legs[1] then m.legs[1].start = r.legs[1].start end
+        -- where the conditional leg ended and the next one starts (its
+        -- row in X-Plane's flight plan there: step 6d)
+        local at = {lat = start.lat, lon = start.lon}
+        r.passed[#r.passed].end_at, r.legs[1].start = at, at
+        if m and m.legs[1] then m.passed[#m.passed].end_at, m.legs[1].start = at, at end
     end
     return true
 end

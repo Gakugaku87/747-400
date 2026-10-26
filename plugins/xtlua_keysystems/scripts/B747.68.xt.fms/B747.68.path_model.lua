@@ -309,6 +309,36 @@ function M.build(legs, start, env)
     return out
 end
 
+-- the legs' shape for the ND's line (step 6d; the route model's to_fms):
+-- shape[i] = {at = the end of conditional element i (a vectors leg's: its
+-- line's VECTORS_LEN nm)} or {pts = the points of arc element i every
+-- ARC_STEP degrees (estimate), its ends left out}
+M.ARC_STEP = 15
+function M.shape(path)
+    local out = {}
+    for i, e in ipairs(path or {}) do
+        if (e.kind == "course" or e.kind == "heading") and e.a then
+            if e.b then
+                out[i] = {at = e.b}
+            elseif e.term == "manual" then
+                out[i] = {at = M.point(e.a, e.crs or e.hdg, M.VECTORS_LEN)}
+            end
+        elseif e.kind == "arc" and e.center and e.a and e.len then
+            local s0 = M.course(e.center, e.a)
+            local sweep = e.len / (e.r * RAD)
+            local pts = {}
+            local k = 1
+            while k * M.ARC_STEP < sweep - M.ARC_STEP / 3 do
+                local brg = e.dir == "R" and s0 + k * M.ARC_STEP or s0 - k * M.ARC_STEP
+                pts[#pts + 1] = M.point(e.center, brg % 360, e.r)
+                k = k + 1
+            end
+            out[i] = {pts = pts}
+        end
+    end
+    return out
+end
+
 -- the fly-by turn from element e1 into e2 at e1's fix, flown at `gs` kt:
 -- {r (nm), d (nm before the fix), delta (degrees, right positive), dir,
 -- center, t1 (where it starts), t2 (where it ends), c1, c2 (the courses
