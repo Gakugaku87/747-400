@@ -1012,8 +1012,11 @@ function B747_fmc_lnav_build()
   lnavPath=routePath
 end
 local function fms_text(id) return (string.gsub(fmsModules["data"][id],"%s+$","")) end
+-- CRS REVERSAL AT FA FIX (step 7c; FCOM p.1435), the route shown
+local crsReversal=false
 function B747_fmc_route_changed()
   B747_fmc_lnav_build()
+  crsReversal=B747_route_model.crs_reversal(B747_fmc_route,B747_route_model.shown(B747_fmc_route))
   local r=B747_fmc_route.rte
   local dep=r.origin and r.origin.ident or "****"
   if fms_text("fltdep")~=dep then
@@ -1222,6 +1225,7 @@ function B747_fmc_lnav_update()
   lnav_flag(END_OF_ROUTE,s.msg_eor)
   lnav_flag(NO_ACTIVE_ROUTE,(armed or engaged) and not st.active)
   B747_cdu_fmc_condition("NOT ON INTERCEPT HEADING",s.msg_intc,false)
+  B747_cdu_fmc_condition("CRS REVERSAL AT FA FIX",crsReversal,false)
 end
 -- the clocks' dates: the FMC's clock calendar from the Captain's clock,
 -- else the F/O's (FCOM p.1285)

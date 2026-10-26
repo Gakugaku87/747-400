@@ -6,7 +6,9 @@
 -- waypoint of the route and one not in it, PPOS (FCOM p.1414-1415; FMSPG
 -- p.157-158), the RTE HOLD page's lines and entries (FCOM p.1417-1419;
 -- FMSPG p.159-162), EXIT HOLD, DELETE of the hold flown (FCOM p.1416), the
--- hold in X-Plane's flight plan (its racetrack after its fix).
+-- hold in X-Plane's flight plan (its racetrack after its fix); a procedure
+-- turn's PROC TURN and CRS REVERSAL AT FA FIX (step 7c: FCOM p.1331,
+-- p.1435).
 B747_NAVDB_FOLDER = "tests/fms/data/navdb/"
 local T = dofile("tests/lib/check.lua")("hold_pages")
 local xtlua = dofile("tests/lib/xtlua.lua")
@@ -201,6 +203,32 @@ T.equal(small(2):sub(1, 10), " PROC HOLD", "an HF hold after CHARL: PROC HOLD at
 key("func_key/legs")
 T.equal(small(10), " PROC HOLD              ", "and over its LEGS line (FCOM p.1331)")
 table.remove(st.rte.legs, 5)
+-- a procedure turn: PROC TURN over its line (FCOM p.1331; step 7c)
+table.insert(st.rte.legs, 5, {via = "DIRECT", pt = "PI", fix = st.rte.legs[4].fix, crs = 130, turn = "R", dist = 10})
+fms.ns.B747_fmc_route_changed()
+frames(0.5)
+T.equal(small(10), " PROC TURN              ", "a PI leg: PROC TURN (FCOM p.1331)")
+table.remove(st.rte.legs, 5)
+-- CRS REVERSAL AT FA FIX (FCOM p.1435): CHARL made the final approach fix
+-- with the final course back south past BRAVO
+local charl = st.rte.legs[4].fix
+charl.faf = nil
+st.rte.legs[4].faf = true
+table.insert(st.rte.legs, 5, {via = "DIRECT", fix = st.rte.legs[2].fix})
+fms.ns.B747_fmc_route_changed()
+frames(0.5)
+T.equal(pad(), "CRS REVERSAL AT FA FIX", "the course back at the final approach fix, no procedure turn: CRS REVERSAL AT FA FIX")
+key("key/clear")
+T.equal(pad(), "", "CLR")
+table.insert(st.rte.legs, 4, {via = "DIRECT", pt = "PI", fix = charl, crs = 130, turn = "R", dist = 10})
+fms.ns.B747_fmc_route_changed()
+frames(0.5)
+T.equal(pad(), "", "with a procedure turn at it: no message")
+table.remove(st.rte.legs, 4)
+table.remove(st.rte.legs, 5)
+st.rte.legs[4].faf = nil
+fms.ns.B747_fmc_route_changed()
+frames(0.5)
 
 -- in the air: PPOS (FCOM p.1415), EXIT HOLD (FCOM p.1419), DELETE of the
 -- hold flown (FCOM p.1416)

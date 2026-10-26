@@ -51,13 +51,15 @@ end
 -- a leg's title line (FCOM p.1331-1332): the course into the waypoint
 -- (the INTC CRS; a procedure's course, or its heading with HDG; HOLD AT
 -- for a hold, PROC HOLD for a procedure's in lieu of a procedure turn
--- (HF: FCOM p.1331, p.1416); else the great circle's from where the leg
--- starts, dashes when undefined) and the distance (none for a conditional
--- waypoint: FMSPG p.119)
+-- (HF: FCOM p.1331, p.1416), PROC TURN for a procedure turn (PI: step 7c);
+-- else the great circle's from where the leg starts, dashes when
+-- undefined) and the distance (none for a conditional waypoint: FMSPG
+-- p.119)
 local function leg_title(r, i)
   local l = r.legs[i]
   local pt = l.pt or ""
   if pt == "HF" then return pad(" PROC HOLD") end
+  if pt == "PI" then return pad(" PROC TURN") end
   if pt == "HA" or pt == "HM" then return pad(" HOLD AT") end
   local from = leg_start(r, i)
   local crs, dist = "---`", ""

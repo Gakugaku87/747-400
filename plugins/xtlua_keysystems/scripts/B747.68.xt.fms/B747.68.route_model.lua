@@ -631,6 +631,36 @@ function M.hold_exit(st, i)
     M.edit(st).legs[i].exit = true
 end
 
+-- CRS REVERSAL AT FA FIX (step 7c; FCOM p.1435): the route comes to its
+-- final approach fix against the final approach course (the course from
+-- the waypoint before it more than 90 degrees off the course on from it:
+-- estimate) without a procedure turn or a hold at the fix before it
+function M.crs_reversal(st, r)
+    for i, l in ipairs(r.legs) do
+        if l.faf and l.fix and not M.is_hold(l) then
+            local from, nxt = M.leg_from(r, i), r.legs[i + 1]
+            if not (from and nxt) then return false end
+            local back, d = M.course(l.fix.lat, l.fix.lon, from.lat, from.lon)
+            if d < 0.1 then return false end
+            local out = nil
+            if nxt.fix then
+                out = M.course(l.fix.lat, l.fix.lon, nxt.fix.lat, nxt.fix.lon)
+            elseif nxt.crs then
+                local var = st.N.variation and st.N.variation(st.db, l.fix.lat, l.fix.lon) or 0
+                out = (nxt.crs + (var or 0)) % 360
+            end
+            if not out then return false end
+            if math.abs((out - (back + 180) + 180) % 360 - 180) <= 90 then return false end
+            for j = 1, i - 1 do
+                local k = r.legs[j]
+                if (k.pt == "PI" or M.is_hold(k)) and k.fix and k.fix.ident == l.fix.ident then return false end
+            end
+            return true
+        end
+    end
+    return false
+end
+
 -- the terminal procedures (6-1/6-2 step 5d; B747.68.proc_model.lua makes
 -- their legs, the glue gives it as `st.P`). A procedure's legs carry `proc`
 -- ("SID", "STAR", "APPR"); the route keeps the selections (`sid`, `star`,
