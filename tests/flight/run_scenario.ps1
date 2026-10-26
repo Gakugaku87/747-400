@@ -47,6 +47,17 @@
 #                                                panel at 25 deg); the user's comes back
 #                                                with the next view and at the end
 #   shot    {name}                               screenshot
+#   cdu     {keys: [...], [cdu]}                 keys on a CDU (cdu "fms1", the
+#                                                Captain's, unless given): a line
+#                                                select key L1..R6; a key by its name
+#                                                (RTE, LEGS, DEPARR, MENU, INITREF,
+#                                                PROG, NAVRAD, PREV, NEXT, EXEC, DEL,
+#                                                CLR); ?SEL: on SELECT DESIRED WPT the
+#                                                first (the nearest) candidate, else
+#                                                nothing (the Captain's CDU); else text
+#                                                typed on its keyboard (A-Z, 0-9,
+#                                                / . - and space; "=" first types text
+#                                                that reads as a key)
 # Every step may carry "note" (shown in the report) and "cite" (source page).
 param(
     [Parameter(Mandatory = $true)][string]$Scenario,
@@ -288,6 +299,45 @@ foreach ($step in $spec.steps) {
                 Set-XPDataref 'sim/graphics/view/pilots_head_psi' $v[1]
                 Start-Sleep -Seconds 1
                 Add-Result $step 'info' ("view pitch {0} heading {1} fov {2}" -f $v[0], $v[1], $fov)
+            }
+            'cdu' {
+                # FCOM's key names to the CDU's commands (MENU is the FIX
+                # command, DEP ARR the CLB one: B744.createfms.lua); EXEC held
+                # 0.2 s like the scenarios' own EXEC steps
+                $id = if ($step.cdu) { $step.cdu } else { 'fms1' }
+                $names = @{ RTE = 'func_key/fpln'; LEGS = 'func_key/legs'; DEPARR = 'func_key/clb'; MENU = 'func_key/fix'
+                    INITREF = 'func_key/index'; PROG = 'func_key/prog'; NAVRAD = 'func_key/navrad'
+                    PREV = 'func_key/prev_pg'; NEXT = 'func_key/next_pg'; EXEC = 'key/execute'; DEL = 'key/del'; CLR = 'key/clear' }
+                $chars = @{ '/' = 'key/slash'; '.' = 'key/period'; '-' = 'key/minus'; ' ' = 'key/space' }
+                foreach ($k in @($step.keys)) {
+                    $k = [string]$k
+                    if ($k -cmatch '^[LR][1-6]$') {
+                        Invoke-XPCommand "laminar/B747/$id/ls_key/$k"
+                        Start-Sleep -Milliseconds 500
+                    } elseif ($k -cmatch '^[A-Z]+$' -and $names.ContainsKey($k)) {
+                        $d = if ($k -ceq 'EXEC') { 0.2 } else { 0 }
+                        Invoke-XPCommand "laminar/B747/$id/$($names[$k])" $d
+                        Start-Sleep -Milliseconds 500
+                    } elseif ($k -ceq '?SEL') {
+                        # the Captain's CDU shows its lines in fms3 (§4.6)
+                        if ($id -ne 'fms1') { throw "cdu: ?SEL on the Captain's CDU (fms1) only" }
+                        if ([string](Get-XPDataref 'laminar/B747/fms3/Line01_L') -match 'SELECT DESIRED WPT') {
+                            Invoke-XPCommand "laminar/B747/$id/ls_key/L1"
+                            Start-Sleep -Milliseconds 500
+                        }
+                    } else {
+                        $text = if ($k.StartsWith('=')) { $k.Substring(1) } else { $k }
+                        foreach ($ch in $text.ToCharArray()) {
+                            $c = [string]$ch
+                            $cmd = if ($chars.ContainsKey($c)) { $chars[$c] } elseif ($c -cmatch '^[A-Z0-9]$') { "alphanum_key/$c" } else { throw "cdu: no key for '$c'" }
+                            Invoke-XPCommand "laminar/B747/$id/$cmd"
+                            # a key twice in one frame is taken once (EDDF typed EDF)
+                            Start-Sleep -Milliseconds 70
+                        }
+                        Start-Sleep -Milliseconds 100
+                    }
+                }
+                Add-Result $step 'info' ("cdu {0}: {1}" -f $id, (@($step.keys) -join ' '))
             }
             'shot' {
                 $f = Save-XPScreenshot (Join-Path $out ("shot_{0:D2}_{1}.png" -f ($results.Count + 1), $step.name))

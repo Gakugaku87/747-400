@@ -52,7 +52,10 @@ local function type_in(text)
     frames(0.1)
 end
 local function enter(text, lsk) type_in(text) key("ls_key/" .. lsk) end
+-- the plan the FMC loaded last (raw: a new one goes to X-Plane once the
+-- route has stayed the same a second)
 local function xpfms() return rt:get("xtlua/loadtoFMS") or "" end
+local function loaded() frames(1.2) end
 -- xtlua/currentFMSID: a string dataref XTLua reads as a number from 1
 local function xpcur() return tonumber(rt:get("xtlua/currentFMSID")) or 0 end
 -- X-Plane with the plan the FMC loaded last, its current waypoint `active`
@@ -60,10 +63,10 @@ local function xpcur() return tonumber(rt:get("xtlua/currentFMSID")) or 0 end
 -- position, [8] the identifier, [10] the current waypoint)
 local function xplane(active)
     local out, k = {}, 0
-    for t, ident, lat, lon in xpfms():gmatch("\n(%d+) (%S+) %S+ %S+ (%S+) (%S+)") do
+    for t, ident, alt, lat, lon in xpfms():gmatch("\n(%d+) (%S+) %S+ (%S+) (%S+) (%S+)") do
         k = k + 1
-        out[k] = string.format('[0,%d,0,0,%s,%s,"%s","%s",0,%s]', t == "1" and 1 or 2048, lat, lon, ident, ident,
-            tostring(k == active))
+        out[k] = string.format('[0,%d,0,0,%s,%s,"%s","%s",%s,%s]', t == "1" and 1 or 2048, lat, lon, ident, ident,
+            alt, tostring(k == active))
     end
     rt:set("xtlua/fms", "[" .. table.concat(out, ",") .. "]")
     frames(0.2)
@@ -85,23 +88,39 @@ enter("ALPHA", "R1")
 key("ls_key/L1")                 -- SELECT DESIRED WPT: the nearer ALPHA
 enter("Z1", "L2")
 enter("CHARL", "R2")
+T.equal(rows(), "", "nothing in X-Plane's plan while the route keeps changing (a plan a second after the last change)")
+loaded()
 T.equal(rows(), "ZZAA RW16R ALPHA BRAVO CHARL ZZBB", "X-Plane's flight plan")
 xplane(1)
 
 -- airborne: the activation makes ALPHA X-Plane's current waypoint and the
--- AFDS's
+-- AFDS's; right after a load (a constraint at ALPHA) not before xtlua/fms
+-- shows the new plan (a write before X-Plane takes it is lost)
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set("sim/flightmodel/position/latitude", 35.3)
 rt:set("sim/flightmodel/position/longitude", 140.3)
 rt:set(CUR, 2)
 key("func_key/legs")
+enter("5000", "R1")
+frames(1.05)
+T.check(xpfms():find("\n11 ALPHA DRCT 5000%.000000 "), "ALPHA's 5000 loaded")
 key("ls_key/R6")
 key("key/execute")
 T.check(line(1):find("ACT RTE 1 LEGS"), "ACT RTE 1 LEGS: " .. line(1))
+T.equal(xpcur(), 0, "the activation right after the load: xtlua/fms not showing the new plan yet, nothing written")
+xplane(1)
 T.equal(xpcur(), 3, "X-Plane's current waypoint: ALPHA, the third (from 1)")
 T.equal(rt:get(CUR), 3, "the AFDS's: ALPHA")
-xplane(3)
+-- X-Plane does not take it: written once more after two seconds, no more
 rt:set("xtlua/currentFMSID", "")
+frames(1)
+T.equal(xpcur(), 0, "not every frame")
+frames(1.2)
+T.equal(xpcur(), 3, "once more after two seconds")
+rt:set("xtlua/currentFMSID", "")
+frames(3)
+T.equal(xpcur(), 0, "twice at most (XTLua calls X-Plane's FMS from its own thread)")
+xplane(3)
 frames(0.5)
 T.equal(xpcur(), 0, "once X-Plane has it, written no more")
 
@@ -111,6 +130,7 @@ xplane(4)
 frames(0.3)
 T.equal(line(3), "BRAVO                   ", "BRAVO the active waypoint, the first line (FCOM p.1331; FMSPG p.119)")
 T.equal(line(5), "CHARL                   ", "then CHARL")
+loaded()
 T.equal(rows(), "ZZAA RW16R ALPHA BRAVO CHARL ZZBB", "X-Plane's flight plan the same")
 T.equal(xpcur(), 0, "nothing written")
 
@@ -120,6 +140,7 @@ key("key/del")
 key("ls_key/L2")
 T.check(line(1):find("MOD RTE 1 LEGS"), "MOD RTE 1 LEGS: " .. line(1))
 key("key/execute")
+loaded()
 T.equal(rows(), "ZZAA RW16R ALPHA BRAVO ZZBB", "the new plan")
 T.equal(xpcur(), 0, "not before X-Plane has it")
 xplane(1)
@@ -134,6 +155,7 @@ frames(0.5)
 -- BRAVO current, until X-Plane has the new one at ZZAA
 enter("DELTA", "L2")
 key("key/execute")
+loaded()
 xplane(4)
 rt:set("xtlua/currentFMSID", "")
 frames(0.5)
@@ -142,8 +164,8 @@ key("key/del")
 key("ls_key/L2")
 enter("CHARL", "L2")
 key("key/execute")
+loaded()
 T.equal(rows(), "ZZAA RW16R ALPHA BRAVO CHARL ZZBB", "CHARL in DELTA's place: as many rows")
-frames(0.2)
 T.equal(xpcur(), 0, "the old plan in xtlua/fms (BRAVO current): nothing yet")
 xplane(1)
 T.equal(xpcur(), 4, "the new plan from ZZAA: BRAVO current again")
@@ -157,12 +179,13 @@ T.check(line(1):find("MOD RTE 1 LEGS"), "DIRECT TO ZZD: MOD RTE 1 LEGS: " .. lin
 rt:set("sim/flightmodel/position/latitude", 35.4)
 rt:set("sim/flightmodel/position/longitude", 140.35)
 key("key/execute")
-T.equal(rows(), "ZZAA RW16R ALPHA PPOS ZZD BRAVO CHARL ZZBB",
-    "ALPHA passed, the direct-to's start PPOS, ZZD (the discontinuity after it not in X-Plane's plan)")
-T.check(xpfms():find("\n28 PPOS DRCT 0%.000000 35%.400000 140%.350000\n"), "PPOS where the airplane was at EXEC (estimate)")
+loaded()
+T.equal(rows(), "ZZAA RW16R ALPHA DTOPOS ZZD BRAVO CHARL ZZBB",
+    "ALPHA passed, the direct-to's start DTOPOS, ZZD (the discontinuity after it not in X-Plane's plan)")
+T.check(xpfms():find("\n28 DTOPOS DRCT 0%.000000 35%.400000 140%.350000\n"), "DTOPOS where the airplane was at EXEC (estimate)")
 xplane(1)
 T.equal(xpcur(), 5, "ZZD X-Plane's current waypoint")
-T.equal(rt:get(CUR), 5, "and the AFDS's (after PPOS: it follows X-Plane's)")
+T.equal(rt:get(CUR), 5, "and the AFDS's (its best track takes the leg from DTOPOS)")
 T.equal(line(3), "ZZD                     ", "ZZD the active waypoint")
 
 -- on the ground nothing follows the AFDS

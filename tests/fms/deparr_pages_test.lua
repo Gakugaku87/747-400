@@ -42,7 +42,8 @@ local function enter(text, lsk)
     frames(0.1)
     key("ls_key/" .. lsk)
 end
-local function xpfms() return rt:get("xtlua/loadtoFMS") or "" end
+-- the plan X-Plane gets: loaded once the route has stayed the same a second
+local function xpfms() frames(1.2) return rt:get("xtlua/loadtoFMS") or "" end
 
 -- a route: ZZAA to ZZAA (the synthetic data's procedures), DIRECT ALPHA,
 -- DIRECT DELTA

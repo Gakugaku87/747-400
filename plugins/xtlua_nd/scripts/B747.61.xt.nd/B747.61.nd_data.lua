@@ -15,11 +15,13 @@ M.NONE, M.WHITE, M.MAGENTA = 0, 1, 2
 M.TRANS_ALT_FT = 18000          -- the FMC's transition altitude when it gives none (as the PFD's)
 
 -- the altitude line: none for an entry without an altitude (X-Plane gives
--- 0); a flight level at and above the FMC's transition altitude (estimate:
--- the sources show 12000 only; the CDU's way)
+-- 0); a flight level above the FMC's transition altitude, the transition
+-- altitude itself in feet (estimate: the sources show 12000 only; the
+-- LEGS page's way, the altitude at or below which altitudes are flown, as
+-- ICAO defines it)
 function M.alt_text(alt_ft, trans_alt_ft)
     if type(alt_ft) ~= "number" or alt_ft < 1 then return nil end
-    if alt_ft >= trans_alt_ft then return string.format("FL%03d", math.floor(alt_ft / 100 + 0.5)) end
+    if alt_ft > trans_alt_ft then return string.format("FL%03d", math.floor(alt_ft / 100 + 0.5)) end
     return string.format("%d", math.floor(alt_ft + 0.5))
 end
 

@@ -592,18 +592,22 @@ end
 -- xtlua/loadtoFMS: X-Plane's FMS draws the ND's line and the readers not
 -- rebuilt yet (the AFDS's LNAV and VNAV) fly it. The origin and the
 -- destination as airports (1), each waypoint as a fix (11) by its position
--- (an NDB 2, a VOR or DME 3, the FMC's own points a position 28), DRCT or
--- its airway; the runways as positions by their names with the
+-- (an NDB 2, a VOR or DME 3, the FMC's own points a position 28) with its
+-- altitude constraint, DRCT or its airway; the runways as positions by
+-- their names with the
 -- thresholds' elevations, the departure runway after the origin (as
 -- X-Plane's DEP ARR puts them: the ND finds them there); no procedure
 -- headers (the FMC's own legs: X-Plane would expand its own, and the
 -- procedures' legs go DRCT); discontinuities, pending airways, the
 -- conditional legs (no fix) and the missed approach left out. The passed
 -- legs before the route's (step 5e: the active leg starts at the last of
--- them); a direct-to's start as a position PPOS before its waypoint (the
--- name X-Plane's own direct-to gives it: the AFDS then follows X-Plane's
--- current waypoint). Also the rows' map: `leg[row]` the route's leg,
--- `row[leg]` its row, `ident[row]`, `n` the rows
+-- them); a direct-to's start as a position DTOPOS before its waypoint (no
+-- fix's name; not X-Plane's own direct-to's PPOS: after a PPOS the AFDS
+-- follows X-Plane's current waypoint, which only xtlua/currentFMSID sets,
+-- while the AFDS's best track takes this leg as any other). Also the rows'
+-- map: `leg[row]` the route's leg, `row[leg]` its row, `ident[row]`, `n`
+-- the rows
+M.DTO_START = "DTOPOS"
 local FMS_TYPE = {VOR = 3, DME = 3, NDB = 2, LL = 28, RWY = 28}
 function M.to_fms(r, cycle)
     local rows, map = {}, {leg = {}, row = {}, ident = {}}
@@ -612,14 +616,18 @@ function M.to_fms(r, cycle)
         map.ident[#rows] = ident
     end
     local function leg_rows(l, i)
-        if l.dto and l.from then row(28, "PPOS", "DRCT", 0, l.from.lat, l.from.lon) end
+        if l.dto and l.from then row(28, M.DTO_START, "DRCT", 0, l.from.lat, l.from.lon) end
         if l.fix and not l.missed then
             local via = (l.via == M.DIRECT or l.proc) and "DRCT" or l.via
             if l.fix.kind == "APT" then
                 row(1, l.fix.ident, via, l.fix.elev, l.fix.lat, l.fix.lon)
             else
-                row(FMS_TYPE[l.fix.kind] or 11, l.fix.ident, via, l.fix.kind == "RWY" and l.fix.elev or 0,
-                    l.fix.lat, l.fix.lon)
+                -- its altitude constraint, entered or the procedure's (the
+                -- ND's DATA shows it: FCOM p.1148; the AFDS's VNAV reads
+                -- it; a block's first altitude: estimate); a runway its
+                -- threshold's elevation
+                local alt = l.fix.kind == "RWY" and l.fix.elev or l.alt or 0
+                row(FMS_TYPE[l.fix.kind] or 11, l.fix.ident, via, alt, l.fix.lat, l.fix.lon)
             end
             if i then map.leg[#rows], map.row[i] = i, #rows end
         end
