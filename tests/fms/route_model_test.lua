@@ -196,4 +196,77 @@ T.check(fms:find("\n3 ZZV DRCT 0%.000000 35%.200000 140%.200000\n"), "a VOR, DIR
 T.check(fms:find("\n11 BRAVO Z2 0%.000000 36%.000000 140%.500000\n"), "a fix on Z2")
 T.check(fms:find("\n1 ZZBB ADES 50%.000000 36%.000000 141%.000000\n$"), "the destination last")
 
+-- the active waypoint and X-Plane's flight plan (step 5e): the rows' map,
+-- the legs passed as the AFDS's current waypoint moves on (FMSPG p.119;
+-- FCOM p.1331), the flight plan the same
+st = R.new(N, db)
+R.set_origin(st, "ZZAA")
+R.set_runway(st, "16R")
+R.set_dest(st, "ZZBB")
+R.add_to(st, fix("ALPHA"))
+R.add_via(st, "Z1")
+R.add_to(st, fix("DELTA"))
+local text, map = R.to_fms(R.shown(st), "2610")
+T.check(map.n == 7 and map.ident[1] == "ZZAA" and map.ident[2] == "RW16R" and map.ident[3] == "ALPHA"
+    and map.ident[7] == "ZZBB", "the rows: the origin, its runway, ALPHA BRAVO CHARL DELTA, the destination")
+T.check(map.leg[3] == 1 and map.row[1] == 3 and map.leg[6] == 4 and not map.leg[2] and not map.leg[7], "the rows' legs")
+T.equal(R.active_row(R.shown(st), map), 3, "the active waypoint's row: ALPHA's")
+T.check(not R.sequence(st, 1), "an inactive route does not sequence")
+R.activate(st)
+R.exec(st)
+T.check(R.sequence(st, 2), "the AFDS at CHARL: ALPHA and BRAVO passed")
+T.equal(idents(st), "CHARL DELTA", "the LEGS pages from the active waypoint")
+T.equal(segs(st), "Z1 DELTA", "the RTE pages from the active leg")
+local text2, map2 = R.to_fms(R.shown(st), "2610")
+T.equal(text2, text, "X-Plane's flight plan the same: the passed legs before the active one")
+T.check(map2.leg[5] == 1 and not map2.leg[3] and R.active_row(R.shown(st), map2) == 5, "CHARL's row the active one")
+T.equal(R.leg_from(R.shown(st), 1).ident, "BRAVO", "the active leg from the last passed waypoint")
+T.check(R.sequence(st, 5) and idents(st) == "DELTA", "never past the last leg: DELTA active")
+T.check(not R.sequence(st, 1), "the active leg stays")
+
+-- a modification sequences with the route when it starts with the same
+-- legs; a direct-to's keeps its own
+st = R.new(N, db)
+R.set_origin(st, "ZZAA")
+R.set_dest(st, "ZZBB")
+R.add_to(st, fix("ALPHA"))
+R.add_via(st, "Z1")
+R.add_to(st, fix("DELTA"))
+R.activate(st)
+R.exec(st)
+R.legs_delete(st, 4)
+T.check(R.sequence(st, 1) and idents(st) == "BRAVO CHARL", "DELTA deleted in the modification, ALPHA passed: BRAVO CHARL")
+R.exec(st)
+T.equal(table.concat({st.rte.passed[1].fix.ident, #st.rte.passed}, " "), "ALPHA 1", "EXEC: ALPHA passed")
+T.equal(R.direct_to(st, fix("CHARL"), nil, {lat = 35.9, lon = 140.4}), nil, "DIRECT TO CHARL")
+T.check(R.sequence(st, 1) and idents(st) == "CHARL" and st.rte.legs[1].fix.ident == "CHARL",
+    "BRAVO passed on the route, the direct-to's modification as it was")
+R.exec(st, {lat = 35.95, lon = 140.45})
+local text3, map3 = R.to_fms(R.shown(st), "2610")
+T.check(text3:find("\n11 BRAVO Z1 [^\n]*\n28 PPOS DRCT 0%.000000 35%.950000 140%.450000\n11 CHARL DRCT "),
+    "the direct-to from the airplane's position at EXEC (estimate): PPOS before CHARL")
+T.check(map3.ident[4] == "PPOS" and not map3.leg[4] and R.active_row(R.shown(st), map3) == 5, "CHARL's row active, PPOS no leg's")
+T.equal(R.leg_from(R.shown(st), 1).lat, 35.95, "the direct-to's leg from its start")
+T.check(not R.legs(R.shown(st))[1].dto_exec, "set once")
+
+-- INTC CRS: the start on the course into the waypoint, as far from it as
+-- the airplane (estimate)
+st = R.new(N, db)
+R.set_origin(st, "ZZAA")
+R.set_dest(st, "ZZBB")
+R.add_to(st, fix("ALPHA"))
+R.add_to(st, fix("DELTA"))
+R.activate(st)
+R.exec(st)
+local delta = fix("DELTA")
+R.direct_to(st, delta, nil, {lat = 35.5, lon = 140.5})
+R.intc_crs(st, 90)
+R.exec(st, {lat = 35.6, lon = 140.6})
+local from = R.legs(R.shown(st))[1].from
+local var = N.variation(db, delta.lat, delta.lon) or 0
+local back, d = R.course(delta.lat, delta.lon, from.lat, from.lon)
+local _, d0 = R.course(35.6, 140.6, delta.lat, delta.lon)
+T.check(math.abs(d - d0) < 0.1 and math.abs((back - (90 + var + 180) + 180) % 360 - 180) < 0.1,
+    string.format("INTC CRS 090: from %.1f nm on the course into DELTA (%.1f true back; the airplane %.1f nm)", d, back, d0))
+
 T.done()

@@ -888,6 +888,17 @@ B747_fmc_route=B747_route_model.new(B747_navdb,B747_fmc_navdb)
 -- the terminal procedures (6-1/6-2 step 5d)
 B747_fmc_route.P=B747_proc_model
 local routeLoaded=nil
+-- the loaded flight plan's rows and the route's legs, and the row X-Plane's
+-- current waypoint goes to once X-Plane has the plan (6-1/6-2 step 5e)
+local routeMap=nil
+local routeSync=nil
+local routeSyncT=0
+local routeSyncOld=nil
+local routeWasActive=false
+B747DR_fmscurrentIndex=find_dataref("laminar/B747/autopilot/ap_monitor/fmscurrentIndex")
+-- (B747DR_fms_setCurrent is xtlua/currentFMS, by name: a global XTLua has
+-- bound to a dataref keeps it)
+B747DR_fms_currentID=find_dataref("xtlua/currentFMSID")
 local function fms_text(id) return (string.gsub(fmsModules["data"][id],"%s+$","")) end
 function B747_fmc_route_changed()
   local r=B747_fmc_route.rte
@@ -904,10 +915,58 @@ function B747_fmc_route_changed()
   -- X-Plane takes a flight plan with a destination only (without, an error
   -- message on the screen): none before the DEST
   if r.dest==nil then return end
-  local fms=B747_route_model.to_fms(r,(B747_navdb.cycle_info(B747_fmc_navdb)))
-  if fms~=routeLoaded then
+  local fms,map=B747_route_model.to_fms(r,(B747_navdb.cycle_info(B747_fmc_navdb)))
+  -- the rows' legs as the route is now (sequencing keeps the plan, not the
+  -- legs' numbers)
+  routeMap=map
+  local active=B747_fmc_route.active
+  local new=fms~=routeLoaded
+  if new then
     routeLoaded=fms
     fmsLoadDref=fms
+  end
+  -- in flight X-Plane's current waypoint and the AFDS's to the active one,
+  -- after a new plan (X-Plane starts it at its first waypoint) or the
+  -- activation
+  if active and simDR_onGround==0 and (new or not routeWasActive) then
+    routeSync=B747_route_model.active_row(r,map)
+    routeSyncT=simDRTime
+    -- X-Plane's plan as it was: a new one shows once xtlua/fms changes
+    routeSyncOld=new and fmsJSON or nil
+  end
+  routeWasActive=active
+end
+
+-- in flight on the active route (6-1/6-2 step 5e): X-Plane's current
+-- waypoint and the AFDS's to the active one once X-Plane has the plan, then
+-- the route sequenced as the AFDS's current waypoint moves on (its best
+-- track, until LNAV's own sequencing: step 6)
+function B747_fmc_route_sync()
+  -- read every frame: XTLua passes a write on only when it differs from
+  -- the value it last read
+  local cur=B747DR_fmscurrentIndex
+  local set=B747DR_fms_currentID
+  local st=B747_fmc_route
+  if not (st.active and routeMap) or simDR_onGround==1 then routeSync=nil return end
+  local fms=fms_route()
+  -- X-Plane's plan the one loaded last
+  if table.getn(fms)~=routeMap.n then return end
+  if routeSync then
+    local k=routeSync
+    -- a new plan not before xtlua/fms changes (with as many rows, the old
+    -- one could show the active waypoint current already); a second: the
+    -- same as before
+    if routeSyncOld and fmsJSON==routeSyncOld and simDRTime-routeSyncT<1 then return end
+    if fms[k]==nil or simDRTime-routeSyncT>10 then routeSync=nil return end
+    if fms[k][8]~=routeMap.ident[k] then return end
+    if fms[k][10]==true and cur==k then routeSync=nil return end
+    B747DR_fms_currentID=k
+    B747DR_fmscurrentIndex=k
+    return
+  end
+  local i=routeMap.leg[cur]
+  if i and i>1 and fms[cur][8]==routeMap.ident[cur] and B747_route_model.sequence(st,i-1) then
+    B747_fmc_route_changed()
   end
 end
 -- the clocks' dates: the FMC's clock calendar from the Captain's clock,
@@ -1414,6 +1473,7 @@ function after_physics()
     update_perf()
     update_navdb()
     update_takeoff()
+    B747_fmc_route_sync()
     B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
     --print(B747DR_FMSdata)
     fmsL:B747_fms_display()

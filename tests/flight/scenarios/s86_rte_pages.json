@@ -104,7 +104,7 @@
     { "do": "check", "note": "X-Plane の FMS に流し込まれた目的地", "dref": "sim/cockpit2/radios/indicators/fms_cdu1_text_line2", "op": "contains", "value": "RJBB" },
     { "do": "check", "note": "出発地", "dref": "sim/cockpit2/radios/indicators/fms_cdu1_text_line2", "op": "contains", "value": "RJAA" },
     { "do": "wait", "note": "ND の出発滑走路：X-Plane の FMS の出発地の次の点 RW34L（X-Plane の DEP ARR と同じ、名前のついた位置）を ND が見つける", "dref": "laminar/B747/nd/capt/apt/rwy0", "op": "contains", "value": "34L", "timeout": 10 },
-    { "do": "set", "note": "ND の表示範囲を広く", "dref": "laminar/B747/nd/range/capt/sel_dial_pos", "value": 5 },
+    { "do": "switch", "note": "ND の表示範囲を広く（つまみのコマンドで：dataref を書くと X-Plane の地図の層の範囲が変わらない）", "dref": "laminar/B747/nd/range/capt/sel_dial_pos", "value": 5, "cmd": "laminar/B747/nd/range/capt/sel_dial_up", "cmd_down": "laminar/B747/nd/range/capt/sel_dial_dn" },
     { "do": "sleep", "seconds": 1 },
     { "do": "view", "note": "機長の ND", "the": -22, "psi": 8, "fov": 20 },
     { "do": "shot", "name": "nd_route" },

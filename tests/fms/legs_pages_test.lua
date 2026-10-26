@@ -152,7 +152,8 @@ T.check(small(2):find("^ 090`"), "INTC CRS 090: " .. small(2))
 T.check(not xpfms():find("NUMENR 4"), "X-Plane's FMS keeps the active route until EXEC")
 key("key/execute")
 T.check(line(1):find("ACT RTE 1 LEGS"), "EXEC: " .. line(1))
-T.check(xpfms():find("NUMENR 4\n1 ZZAA ADEP[^\n]*\n28 RW16R DRCT "), "X-Plane's FMS: ZZAA, its runway, CHARL, ZZBB")
+T.check(xpfms():find("NUMENR 5\n1 ZZAA ADEP[^\n]*\n28 RW16R DRCT [^\n]*\n28 PPOS DRCT [^\n]*\n11 CHARL DRCT "),
+    "X-Plane's FMS: ZZAA, its runway, the direct-to's start PPOS (step 5e), CHARL, ZZBB")
 T.check(xpfms():find("\n11 CHARL DRCT "), "CHARL direct")
 
 T.done()
