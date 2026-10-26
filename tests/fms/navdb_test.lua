@@ -126,7 +126,7 @@ local leg = c and c.sid.ZULU1.RW16R[1]
 T.check(leg and leg[1] == "010" and leg[5] == "ZA001" and leg[12] == "CF" and leg[14] == "ZZV" and leg[26] == "14000",
     "the SID's first leg: its fields (sequence, fix, path terminator, navaid, transition altitude)")
 T.check(c and c.star.ALPHA1 and c.star.ALPHA1.ALL and c.appch.I16R and c.appch.I16R.ZZV, "the STAR ALPHA1 and the approach I16R")
-T.check(N.cifp(db, "ZZBB") == nil and db.cifp.ZZBB == false, "ZZBB: no CIFP (remembered)")
+T.check(N.cifp(db, "ZZXX") == nil and db.cifp.ZZXX == false, "ZZXX: no CIFP (remembered; ZZBB has one since step 6a)")
 T.check(N.cifp(db, "ZZAA") == c, "the CIFP read once")
 
 -- a file missing: skipped
