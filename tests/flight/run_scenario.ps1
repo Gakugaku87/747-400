@@ -183,6 +183,15 @@ if ($Reload) {
     $script:XPCmds = @{}
     $t = Wait-XPSimRunning -TimeoutSec 600
     Add-Result @{ do = 'reload' } 'info' "aircraft reloaded (sim time $([math]::Round($t,1)) s)"
+    # An air start flies on the scenario before's systems until the reload
+    # and comes back from it where it got to (s15: 41,000 ft and 80 kt, not
+    # FL350 and M0.85, then a stall with the custom acf's stall of
+    # 2026-10-25), so the reloaded aircraft gets the air start again (the
+    # same aircraft: X-Plane keeps it and its reloaded plugins).
+    if ($init.lle_air_start) {
+        $t = Start-XPFlight $init
+        Add-Result @{ do = 'flight' } 'info' ("the air start again on the reloaded aircraft (sim time {0} s)" -f [math]::Round($t, 1))
+    }
 }
 $loaded = Get-XPDataref 'sim/aircraft/view/acf_relative_path'
 Add-Result @{ do = 'aircraft' } 'info' $loaded
