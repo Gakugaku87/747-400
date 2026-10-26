@@ -710,6 +710,24 @@ B747DR_DH_alert                                 = deferred_dataref("laminar/B747
 B747DR_10000_callout                            = deferred_dataref("laminar/B747/fmod/callouts/10000", "number")
 B747DR_fltInst_capt_clock_ET_seconds            = deferred_dataref("laminar/B747/fltInst/capt/clock_et_seconds", "number")
 B747DR_fltInst_fo_clock_ET_seconds              = deferred_dataref("laminar/B747/fltInst/fo/clock_et_seconds", "number")
+-- the clocks (5-2 step 6a, B747.60.xt.fltInst03.lua, B747.60.clock_model.lua):
+-- the LCDs powered (the APU battery bus too), the clock's own UTC and date,
+-- the ET digits shown (not blank, not the chronograph); the glareshield CHR
+-- switches' animation (the 3D's spelling)
+B747DR_fltInst_capt_clock_on = deferred_dataref("laminar/B747/fltInst/capt/clock_on", "number")
+B747DR_fltInst_capt_clock_utc_hours = deferred_dataref("laminar/B747/fltInst/capt/clock_utc_hours", "number")
+B747DR_fltInst_capt_clock_utc_minutes = deferred_dataref("laminar/B747/fltInst/capt/clock_utc_minutes", "number")
+B747DR_fltInst_capt_clock_day = deferred_dataref("laminar/B747/fltInst/capt/clock_day", "number")
+B747DR_fltInst_capt_clock_month = deferred_dataref("laminar/B747/fltInst/capt/clock_month", "number")
+B747DR_fltInst_capt_clock_et_show = deferred_dataref("laminar/B747/fltInst/capt/clock_et_show", "number")
+B747DR_fltInst_fo_clock_on = deferred_dataref("laminar/B747/fltInst/fo/clock_on", "number")
+B747DR_fltInst_fo_clock_utc_hours = deferred_dataref("laminar/B747/fltInst/fo/clock_utc_hours", "number")
+B747DR_fltInst_fo_clock_utc_minutes = deferred_dataref("laminar/B747/fltInst/fo/clock_utc_minutes", "number")
+B747DR_fltInst_fo_clock_day = deferred_dataref("laminar/B747/fltInst/fo/clock_day", "number")
+B747DR_fltInst_fo_clock_month = deferred_dataref("laminar/B747/fltInst/fo/clock_month", "number")
+B747DR_fltInst_fo_clock_et_show = deferred_dataref("laminar/B747/fltInst/fo/clock_et_show", "number")
+B747DR_glrshld_captain_chrono_switch_pos = deferred_dataref("laminar/B747/glareshiled/captain/chrono_switch_pos", "number")
+B747DR_glrshld_fo_chrono_switch_pos = deferred_dataref("laminar/B747/glareshiled/fo/chrono_switch_pos", "number")
 -- the heading reference (5-2 step 5d, B747.60.xt.displays.lua): 1 true north;
 -- the PFDs' and NDs' labels (B747.60.hdg_ref_model.lua); each side's heading
 -- and track in the reference
