@@ -27,7 +27,7 @@
     { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
     { "do": "cmd", "note": "ALT HOLD", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
     { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
-    { "do": "wait", "note": "200 kt 付近", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [196, 204], "timeout": 240 },
+    { "do": "wait", "note": "220 kt 未満（speed trim の条件）。A/T は MCP の 200 kt まで下げず、今の AFDS の速度の下限 Vmc + 10（この重さで約 214 kt）で止まる（2026-10-26。前は空中開始の読み直しで遅くなった機体が加速の途中で 200 kt を通って合格していた）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": "<", "value": 218, "timeout": 240 },
     { "do": "sleep", "seconds": 20, "note": "落ち着かせる" },
     { "do": "check", "note": "A/P の間は speed trim は入らない（ATA22 p.156）", "dref": "laminar/B747/flt_ctrls/stab_trim/speed_trim", "op": "==", "value": 0 },
 
@@ -41,8 +41,8 @@
     { "do": "snapshot", "note": "speed trim", "drefs": [ "laminar/B747/gauges/indicators/airspeed_kts_pilot", "laminar/B747/flt_ctrls/stab_trim/units",
       "laminar/B747/autopilot/FMA/autothrottle_mode", "sim/cockpit2/gauges/indicators/altitude_ft_pilot" ] },
     { "do": "remember", "dref": "laminar/B747/flt_ctrls/stab_trim/units", "as": "u0" },
-    { "do": "set", "note": "A/T の速度を 215 kt に（A/P が無いので、速度が上がると speed trim の機首上げで上昇に転じる）", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 215 },
-    { "do": "wait", "note": "安定板が機首上げへ 0.1 units 動く（約 +4 kt：ATA22 p.159 の 0.0255 units/kt）", "dref": "laminar/B747/flt_ctrls/stab_trim/units", "op": ">", "value": 0.1, "rel": "u0", "timeout": 120 },
+    { "do": "set", "note": "A/T の速度を 215 kt に（A/P が無いので、速度は上にも下にも動く。速くなれば speed trim の機首上げで上昇に転じる）", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 215 },
+    { "do": "wait", "note": "安定板が速度に従って 0.04 units 以上動く（速くなれば機首上げ、遅くなれば機首下げ、約 1.6 kt：ATA22 p.159 の 0.0255 units/kt。A/P を外したあと速度がどちらへ動くかは毎回違い、A/T の下限の約 214〜217 kt から 220 kt までは 3〜6 kt しかない：2026-10-26）", "dref": "laminar/B747/flt_ctrls/stab_trim/units", "op": "outside", "value": [-0.04, 0.04], "rel": "u0", "timeout": 120 },
     { "do": "snapshot", "note": "加速の後（units の増えは IAS の増え × 0.0255 になる）", "drefs": [ "laminar/B747/gauges/indicators/airspeed_kts_pilot", "laminar/B747/flt_ctrls/stab_trim/units",
       "laminar/B747/flt_ctrls/stab_trim/speed_trim", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/cockpit2/gauges/indicators/vvi_fpm_pilot" ] },
 

@@ -67,7 +67,7 @@
     { "do": "sleep", "seconds": 2 },
     { "do": "check", "note": "CUTOFF では油圧が低くても白（FCOM p.846）", "dref": "laminar/B747/engines/EICAS2_oil_press_status[0]", "op": "==", "value": 0 },
     { "do": "cas", "note": "CUTOFF（ENG 1 OIL PRESS は地上の CUTOFF では出さない、FCOM p.1586）" },
-    { "do": "wait", "note": "回転が下がると油がタンクに戻る（33〜37 L × X-Plane の比）", "dref": "laminar/B747/engines/oil_qty_liters[0]", "op": ">", "value": 27, "timeout": 120 },
+    { "do": "wait", "note": "回転が下がると油がタンクに戻る（33〜37 L × X-Plane の比 0.85 で 28〜31 L。風で N1 が 2〜3 % 回り続けると、推定の模型では 2 L ほどがエンジンに残る。運転中は多くて 25.5 L）", "dref": "laminar/B747/engines/oil_qty_liters[0]", "op": ">", "value": 26, "timeout": 120 },
     { "do": "view", "the": -31.5, "psi": 33, "fov": 30 },
     { "do": "shot", "name": "lower_eicas_eng1_cutoff" },
     { "do": "record_stop" }
