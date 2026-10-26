@@ -61,6 +61,8 @@
     { "do": "mark", "note": "入力の誤りのメッセージ" },
     { "do": "cmd", "note": "INIT REF", "name": "laminar/B747/fms1/func_key/index" },
     { "do": "sleep", "seconds": 0.3 },
+    { "do": "cmd", "note": "<INDEX（INIT REF のキーは状況でページを選ぶ：段 3a）", "name": "laminar/B747/fms1/ls_key/L6" },
+    { "do": "sleep", "seconds": 0.3 },
     { "do": "cmd", "note": "PERF（L3）", "name": "laminar/B747/fms1/ls_key/L3" },
     { "do": "sleep", "seconds": 0.3 },
     { "do": "cmd", "note": "A", "name": "laminar/B747/fms1/alphanum_key/A" },

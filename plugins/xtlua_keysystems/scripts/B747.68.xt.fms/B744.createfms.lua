@@ -92,7 +92,13 @@ local function pageKey(fmsModule,key)
   local fmsO=fmsModules[fmsModule]
   if key=="index" then
       fmsO.targetCustomFMC=true
-      fmsO.targetPage="INITREF"
+      if irsSystem.anyATT() or (simDR_onGround==1 and B747DR_nav_irs_set_pos==1) then
+        fmsO.targetPage="POSINIT"
+      elseif simDR_onGround==1 then
+        fmsO.targetPage="PERFINIT"
+      else
+        fmsO.targetPage="APPROACH"
+      end
       fmsO.targetpgNo=1
       return
   elseif key=="fpln" then --RTE
