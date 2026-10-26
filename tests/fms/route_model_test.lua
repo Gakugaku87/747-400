@@ -393,4 +393,25 @@ T.check(R.sequence(st, 1), "the hold sequenced (LNAV: its exit)")
 T.check(st.rte.passed[#st.rte.passed] == pp and st.rte.legs[1].fix.ident == "CHARL", "CHARL next")
 T.equal(select(2, R.hold_ppos(R.new(N, db), {lat = 36, lon = 140})), R.INVALID_ENTRY, "PPOS: not without an active route")
 
+-- CRS REVERSAL AT FA FIX (step 7c; FCOM p.1435): the route coming to the
+-- final approach fix against the final approach course
+local function rev(legs)
+    local s2 = R.new(N, db)
+    s2.rte.legs, s2.rte.runway = legs, {ident = "RW", lat = 35.3, lon = 139.8}
+    return R.crs_reversal(s2, s2.rte)
+end
+local FAF = {ident = "FAFX", kind = "WPT", lat = 35.0, lon = 140.0}
+local RWX = {ident = "RWX", kind = "RWY", lat = 34.92, lon = 140.04}
+local SOUTH = {ident = "SOUTH", kind = "WPT", lat = 34.8, lon = 140.1}
+local NORTH = {ident = "NORTH", kind = "WPT", lat = 35.1, lon = 139.95}
+T.check(not rev({{via = "DIRECT", fix = NORTH}, {via = "APPR", pt = "CF", fix = FAF, crs = 164, faf = true}, {via = "APPR", fix = RWX}}),
+    "from the north on to the runway south-south-east: no reversal")
+T.check(rev({{via = "DIRECT", fix = SOUTH}, {via = "APPR", pt = "CF", fix = FAF, crs = 164, faf = true}, {via = "APPR", fix = RWX}}),
+    "from the south, the final course back south: CRS REVERSAL AT FA FIX")
+T.check(not rev({{via = "DIRECT", fix = SOUTH}, {via = "APPR", fix = FAF}, {via = "APPR", pt = "PI", fix = FAF, crs = 300, turn = "L"},
+    {via = "APPR", pt = "CF", fix = FAF, crs = 164, faf = true}, {via = "APPR", fix = RWX}}), "with a procedure turn at it: none")
+T.check(not rev({{via = "DIRECT", fix = SOUTH}, {via = "APPR", fix = FAF}, {via = "APPR", pt = "HF", fix = FAF, crs = 164},
+    {via = "APPR", pt = "CF", fix = FAF, crs = 164, faf = true}, {via = "APPR", fix = RWX}}), "with a hold in lieu of it: none")
+T.check(not rev({{via = "DIRECT", fix = SOUTH}}), "no final approach fix: none")
+
 T.done()

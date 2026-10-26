@@ -741,3 +741,11 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 飛行試験キット：CDU のキー名に HOLD（`run_scenario.ps1`）。
 - 試験：新しい `tests/fms/hold_pages_test.lua`（78 件：HOLD キー、RTE LEGS HOLD AT、BRAVO に HOLD AT と各欄、X-Plane の計画の行、HOLD AT ZZD、PROC HOLD、空中の PPOS と EXIT HOLD と DELETE、LNAV の dataref、ホールドが無くなった時の RTE LEGS HOLD AT）、`route_model_test.lua`（173 件：ホールドの作成・既定・入力・計画の行・EXIT・DELETE・PPOS）。
 - X-Plane：新しい `s92_hold` 47/47（RJAA→XAC の脚の上で LNAV、HOLD キーで RTE LEGS HOLD AT、XAC に HOLD AT して INBD CRS 044 で EXEC：XAC の上で teardrop、teardrop の脚と右への戻りのバンク最大 29.7°、1 周を形から 0.23 nm 以内、保持点を入航コースの 0.01 nm 以内で通る。2 周目の出航脚で EXIT HOLD と EXEC：すぐ戻りの旋回、XAC で出て SPENS へ（127° の旋回で 4.7 nm はみ出してから戻る）、ホールドが無くなった RTE HOLD のページは RTE LEGS HOLD AT に。PPOS で N34E139、その場で右へ（LNAV の指令 30°）、DELETE で SPENS へ直行。ND（20 nm）の写真で、XAC の手前は XAC の先のホールドの側に LNAV の大きさの形、ホールド中は前方に出航脚・戻りの旋回・入航脚）、`s87_legs_pages` 29/29、`s86_rte_pages` 19/19、`s90_lnav` 30/30、`s89_route_sync` 26/26。Lua の誤りなし。初めの 3 回の `s92` の不合格は試験の作り（ND の範囲を dataref だけで変えて X-Plane の地図の範囲が別のまま：TESTING.md の注意のとおり、つまみのコマンドで変える。旋回中の PPOS。脚に乗る前の確認）で、シナリオを直した。
+
+## 34. 段 7c の実装（2026-10-27：procedure turn と手続きのホールド）
+
+- 手続きのホールド：HF（procedure turn の代わりのホールド）は、LEGS と RTE HOLD の 1L に PROC HOLD（FCOM p.1331、p.1416）、入航で保持点に着いたら自動で出る（EXIT HOLD は要らない。続けるなら新しいホールドを作る：FCTM p.4.20）。HA は高度で出る（SID のホールド：FCOM p.1416）。どちらも段 7a・7b で入っている。
+- procedure turn（PI）：LEGS の行の上に PROC TURN（FCOM p.1331）。FMC が描き飛ぶ形（45° の脚の長さ、180° の旋回、制限の内側に収める：FCTM p.150 は「空域の制限に収まる」「大きさは IAF での対地速度で決まる」とだけ書く）は手元の資料に無いので、作らない（推測で作らない）。今の LNAV は PI の脚をその点で順送りし、次の脚（最終進入の IF・CF）へ進む（ND の線もそのとおり。ND の procedure turn の記号：FCOM p.1149、FMSPG p.51 も無い）。作るなら推定（手元に無い PANS-OPS の 45°/180° の形など）になる。
+- CRS REVERSAL AT FA FIX（advisory：FCOM p.1435）：表示中の経路が最終進入点（FAF）に最終進入のコースと逆向きで来て（前の点からのコースと FAF からのコースが 90° を超えて違う：推定）、その前に FAF での procedure turn もホールドも無いとき。経路が変わるたびに確かめ、条件の間は CDU のメッセージ（CLR で消え、条件が一度消えるまで出ない）。
+- 試験：`route_model_test.lua`（178 件：逆向きで来る・来ない、procedure turn やホールドがあれば出ない）、`hold_pages_test.lua`（82 件：PROC TURN、CRS REVERSAL AT FA FIX と CLR、procedure turn があれば出ない）。
+- X-Plane：`s88_deparr` 26/26（DEPARTURES・ARRIVALS で手続きを入れても CRS REVERSAL AT FA FIX は出ない）、`s87_legs_pages` 29/29。Lua の誤りなし。
