@@ -52,7 +52,7 @@
     { "do": "cmd", "note": "機長の POS", "name": "laminar/B747/nd/pos/capt/switch" },
     { "do": "cmd", "note": "機長の STA（局の記号を出す）", "name": "laminar/B747/nd/sta/capt/switch" },
     { "do": "wait", "note": "VOR L（FKS）の radial", "dref": "laminar/B747/nd/capt/pos_rad_l", "op": "==", "value": 1, "timeout": 5 },
-    { "do": "check", "note": "DME の距離まで（約 6〜9 NM：20 NM で 465 px の 0.3〜0.45）", "dref": "laminar/B747/nd/capt/pos_rad_l_len", "op": "between", "value": [120, 230] },
+    { "do": "check", "note": "DME の距離まで（約 6〜11 NM：20 NM で 465 px の 0.3〜0.55。空中開始は読み直しの間に局へ近づかなくなり約 10 NM：2026-10-26）", "dref": "laminar/B747/nd/capt/pos_rad_l_len", "op": "between", "value": [120, 260] },
     { "do": "check", "note": "DME の印", "dref": "laminar/B747/nd/capt/pos_rad_l_tick", "op": "==", "value": 1 },
     { "do": "check", "note": "radial の文字（FKS の南：R-1xx か R-2xx）", "dref": "laminar/B747/nd/capt/pos_rad_l_text", "op": "contains", "value": "R-" },
     { "do": "wait", "note": "VOR R（TAU）の radial（信号を受けてから）", "dref": "laminar/B747/nd/capt/pos_rad_r", "op": "==", "value": 1, "timeout": 30 },
