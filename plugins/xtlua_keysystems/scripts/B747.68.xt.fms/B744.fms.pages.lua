@@ -603,6 +603,7 @@ function fmsFunctions.setpage(fmsO,value)
 end
 function fmsFunctions.custom2fmc(fmsO,value)
   print("custom2fmc" .. value)
+  B747_cdu_native_sent(fmsO["id"], fmsO["scratchpad"], 3 + string.len(fmsO["scratchpad"]))
   simCMD_FMS_key[fmsO["id"]]["del"]:once()
   simCMD_FMS_key[fmsO["id"]]["clear"]:once()
   if value~="next" and value~="prev" and string.len(fmsO["scratchpad"])>0 then
@@ -623,6 +624,7 @@ function fmsFunctions.custom2fmc(fmsO,value)
 end
 function fmsFunctions.key2fmc(fmsO,value)
   print("key2fmc" .. value)
+  B747_cdu_native_sent(fmsO["id"], fmsO["scratchpad"], 3 + string.len(fmsO["scratchpad"]))
   if string.len(fmsO["scratchpad"])>0 then
     simCMD_FMS_key[fmsO["id"]]["del"]:once()
     simCMD_FMS_key[fmsO["id"]]["clear"]:once()

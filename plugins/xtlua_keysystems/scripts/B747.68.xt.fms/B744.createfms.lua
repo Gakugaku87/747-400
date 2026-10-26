@@ -541,6 +541,14 @@ end
 local BLANK = "                        "
 local pageError = {}
 local lastNativeMsg = {}
+-- the keys the FMC typed into X-Plane's CDU last (custom2fmc, key2fmc):
+-- the text, how many keys, when and the frames since; its scratchpad
+-- shows them going in for a moment, and keeps the text when its page
+-- does not take it
+local nativeSent = {}
+function B747_cdu_native_sent(id, text, keys)
+  nativeSent[id] = {text = text or "", keys = keys or 1, t = simDRTime, frames = 0}
+end
 function fms:B747_fms_display()
     local thisID=self.id
     local st=cduState[thisID]
@@ -577,16 +585,29 @@ function fms:B747_fms_display()
     local page=self.currentPage
 
     if B747DR_srcfms[thisID][14]=="[NAV DATA OUT OF DATE  ]" then simCMD_FMS_key[thisID]["clear"]:once() return end
-    -- X-Plane's CDU's scratchpad message (its pages' entries) as this CDU's
+    -- X-Plane's CDU's scratchpad message (its pages' entries) as this CDU's,
+    -- not the keys the FMC types into it while they go in, nor the text it
+    -- typed (its line has brackets always: "[                      ]")
     local native=B747DR_srcfms[thisID][14]
     if type(native)~="string" then native="" end
-    if string.len(string.gsub(native,"[ %[%]]",""))>0 then
-      if native~=lastNativeMsg[thisID] then
-        lastNativeMsg[thisID]=native
-        if inCustomFMC then C.error(st, cleanFMSLine(native):match("^%s*(.-)%s*$")) end
+    local nativeMsg=string.match(native,"%[%s*(.-)%s*%]") or string.match(native,"^%s*(.-)%s*$")
+    local sent=nativeSent[thisID]
+    if sent then
+      sent.frames=sent.frames+1
+      if sent.frames>=sent.keys+5 and simDRTime-sent.t>=0.3 then
+        nativeSent[thisID]=nil
+        if nativeMsg==sent.text or nativeMsg=="DELETE" then lastNativeMsg[thisID]=native end
       end
-    else
-      lastNativeMsg[thisID]=nil
+    end
+    if nativeSent[thisID]==nil then
+      if nativeMsg~="" then
+        if native~=lastNativeMsg[thisID] then
+          lastNativeMsg[thisID]=native
+          if inCustomFMC then C.error(st, nativeMsg) end
+        end
+      else
+        lastNativeMsg[thisID]=nil
+      end
     end
     if not inCustomFMC then
       for i=1,13,1 do

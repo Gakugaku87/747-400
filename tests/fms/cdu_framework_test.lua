@@ -130,6 +130,33 @@ T.equal(pad("L"), "DISCONTINUITY", "FCOM's name (before: DISCONTINUITY - LNAV)")
 rt:set(N, 8, 0)
 frames(0.2)
 
+-- X-Plane's CDU's scratchpad (brackets always): the keys the FMC types into
+-- it (custom2fmc) no message while they go in, nor the text it typed; its
+-- message after that this CDU's (step 2 fix: the typed text blocked the
+-- typing)
+local NATIVE = "sim/cockpit2/radios/indicators/fms_cdu1_text_line13"
+local EMPTY = "[" .. string.rep(" ", 22) .. "]"
+rt:set(NATIVE, EMPTY)
+key("L", "func_key/fpln")
+type_in("L", "AB")
+key("L", "ls_key/L1")
+rt:set(NATIVE, "[DELETE                ]")
+frames(0.05)
+rt:set(NATIVE, "[AB                    ]")
+frames(0.05)
+type_in("L", "C")
+T.equal(pad("L"), "C", "the keys going into X-Plane's CDU (RTE's L1: DEL, A, B): no message, the typing goes on")
+frames(1)
+T.equal(pad("L"), "C", "the text typed left in X-Plane's CDU: no message")
+rt:set(NATIVE, "[NOT IN DATABASE       ]")
+frames(0.2)
+T.equal(pad("L"), "NOT IN DATABASE", "X-Plane's message after that: this CDU's")
+rt:set(NATIVE, EMPTY)
+key("L", "key/clear")
+key("L", "key/clear", 1.2)
+T.equal(pad("L"), "", "cleared")
+key("L", "func_key/fix")
+
 -- NEXT on the last page: the first
 key("L", "func_key/des")                               -- VNAV: CLB, CRZ, DES
 local first = line("L", 1)
