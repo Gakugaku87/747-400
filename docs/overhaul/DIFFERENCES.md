@@ -1,6 +1,6 @@
 # 実機との違い（DIFFERENCES）
 
-Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこで違うかを、全分野についてまとめたもの。2026-10-26 の時点（`overhaul`、表示 5-2 の段 7 まで、FMC・CDU は 6-1・6-2 の段 5d まで）。
+Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこで違うかを、全分野についてまとめたもの。2026-10-26 の時点（`overhaul`、表示 5-2 の段 7 まで、FMC・CDU は 6-1・6-2 の段 5e まで）。
 
 - 元の調査は [GAP_ANALYSIS.md](GAP_ANALYSIS.md)（作り直し前のコードと資料の読み比べ、550 件）。ここでは、その後の作り直しで直った点を反映し、残っている違いを分野ごとに短く書いた。各項目の括弧は GAP の ID で、詳しい内容と出典は GAP_ANALYSIS.md と `notes/` にある。
 - 基準の機体は FCOM の 109（旅客機、PW4056）。405（PW の改造貨物機）と 570（GE の貨物機）の違いは notes に書いてある。RR には資料が無い。
@@ -27,7 +27,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 脚・ブレーキ・ステアリング（ATA 32） | 作り直し済み（4-2 段 1〜5：脚の作動・代替下げ・位置監視・表示、ブレーキ、オートブレーキ、ステアリング、ブレーキ温度とタイヤ圧） | AIR/GND SYSTEM と脚の STATUS の一部、tiller の軸が無いときのペダル（実機ではない手当て） |
 | 表示（PFD・ND・EICAS） | ほぼ作り直し済み（5-2 段 1：表示器と EIU、段 2：ソース選択の比較、段 3：速度テープ、段 4：PFD の気圧・PLI・FPV・ILS と旗、段 5：ND の向き・APP・VOR・DATA・POS・地図の記号・空港・HDG REF・トレンドベクトル、段 6：時計、EICAS の部分表示と compact、段 7：パネルの表示の条件の重なり） | TERR（外部のプラグイン頼み）、ND の FMC の記号の残り（S/C・E/D など：FMC の作り直しで）、405 型の RADIO/BARO の minimums |
 | 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記。段 5d：PFD の TCAS RA・トランスポンダのコード・ND の WXR の文字） | FMC の位置への GPS の更新、GPWS の地形の look-ahead、PWS、無線の自動同調（FMC の作り直しで） |
-| FMC | 作り直し中（段取り：経路を自前で持ち、12 段で。notes/ATA-34-61-FMC.md §10。段 1：小修正、段 4：航法データベース、段 5a〜5d：経路のモデル、RTE・LEGS・DEP/ARR） | 条件の点の流し込み、ホールド、LNAV・VNAV（X-Plane の FMS に流した経路を飛ぶ）、予測 |
+| FMC | 作り直し中（段取り：経路を自前で持ち、12 段で。notes/ATA-34-61-FMC.md §10。段 1：小修正、段 4：航法データベース、段 5a〜5e：経路のモデル、RTE・LEGS・DEP/ARR、現用点と X-Plane の FMS） | 条件の点の流し込み、LNAV 自身の順送り、PLAN の CTR と STEP、ホールド、LNAV・VNAV（X-Plane の FMS に流した経路を飛ぶ）、予測 |
 | CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み、段 3：地上準備のページ、段 4：航法データベース、段 5：経路（RTE・LEGS・DEP/ARR まで）） | 3 台が 1 つを共有、MOD/EXEC、入力の検査、データリンク |
 | 自動操縦・FD | 未着手 | ロールが X-Plane の AP 頼み、LOC・TO/GA・autoland の則 |
 | オートスロットル・推力管理 | 未着手 | 推力制限のモード、assumed temperature、THR・HOLD、操縦者の override |
@@ -367,7 +367,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 
 ### FMC（航法・性能・誘導）：作り直し中（6-1 段 1）
 
-- 経路は FMC 自身のモデル（段 5a〜5d：RTE・LEGS・DEP/ARR）で持ち、手続きのレグの種類（条件の点、高度と速度の制限、fly-over）も持つ。X-Plane の FMS へは点だけを流し込み（条件の点とミストアプローチは書かない）、誘導はそれを飛ぶ（FMC-01 の残り：段 5e・6 で）。ホールドが無い（FMC-02）。
+- 経路は FMC 自身のモデル（段 5a〜5e：RTE・LEGS・DEP/ARR、現用点）で持ち、手続きのレグの種類（条件の点、高度と速度の制限、fly-over）も持つ。X-Plane の FMS へは点だけを流し込み（条件の点とミストアプローチは書かない）、誘導はそれを飛ぶ（FMC-01 の残り：段 6 で）。飛行中の順送りは、実機の FMC の LNAV が自分で行うのと違い、自動操縦（AFDS）の現用点に合わせて行う（段 6 まで）。DIRECT TO の始点は EXEC の時の位置（推定）。LEGS の PLAN の CTR と STEP が無い。ホールドが無い（FMC-02）。
 - LNAV の作動条件が無い、横の誘導は方位を HDG SEL に入れるだけ、経路の終わりや discontinuity で方位を保持しない（FMC-03・04・06）。
 - 高度制限の種類（AT・A・B・窓）と速度制限が無い（FMC-07・08）。CI は巡航 Mach の経験式にだけ（FMC-11）。ECON の上昇・降下の速度は固定（上昇 340/.84 は PI の通常の上昇速度：推定）。
 - VNAV の降下パスと PTH の則、approach 段階（FMC-12・13・16）。飛行段階を MCP のボタンで決めている（FMC-17）。
@@ -385,6 +385,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 空中の THRUST LIM の GA・CON・CRZ は選べない（KEY/FUNCTION INOP。推力管理 6-4 で。前は離陸の derate が動いた：CDU-10）。VNAV・PROGRESS・NAV RADIO のページの不足（CDU-14〜16）。
 - 無いページ（RTE 2、REF NAV DATA、DESCENT FORECAST など。CDU-18）。故障の扱い（CDU-19）。MSG・DSPY・OFST・FAIL の灯（3D に無い：CDU-22）。
 - データリンク：アップリンクの処理が無い（CDU-34〜38）。
+- 実機に合わせた点（段 5e）：飛行中は LEGS の 1 行目が現用点になり、通過した点が消える（前は通過した点も残った）。空中で経路を変えて EXEC しても、ND の現用点と ETA が出発地に戻らない。DIRECT TO は現在位置からの線（前は出発地からの線に乗りに行った）。
 - 実機に合わせた点（段 5d）：SID・STAR・進入を FMC が自分の航法データ（CIFP）から経路に入れる（条件の点、制限、ミストアプローチ）。DEPARTURES・ARRIVALS の <SEL>・<ACT> と、選ぶと他の選択肢が消える動き、DEP ARR キーの行き先（前は X-Plane の DEP ARR のページ）。
 - 実機に合わせた点（段 5b・5c）：RTE と LEGS は FMC 自身の経路で、ORIGIN・DEST・RUNWAY と VIA/TO（airway の展開と交点）、SELECT DESIRED WPT、ACTIVATE・EXEC・MOD・ERASE、LEGS の針路と距離・制限・挿入と discontinuity・DIRECT TO と INTC CRS（前は X-Plane の RTE・LEGS のページを透かしていた）。X-Plane の FMS には FMC の経路を流し込む。
 - 実機に合わせた点（段 4）：FMC が X-Plane の航法データ（Custom Data があればそれ）を自分で読む。IDENT に周期と有効期間、時計の日付が周期を過ぎると NAV DATA OUT OF DATE、POS INIT の REF AIRPORT は航法データの空港だけ（位置を出す）、CLB の TRANS ALT は出発地の遷移高度。

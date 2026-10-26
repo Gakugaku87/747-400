@@ -1029,9 +1029,12 @@ function newIcons()
   if start<1 then start=1 end
 
   for n=start,table.getn(fmsTable),1 do
+    -- a direct-to's start (PPOS: the FMC's flight plan, 6-1/6-2 step 5e) is
+    -- not a waypoint (the LEGS pages do not show it: FMSPG p.142-143)
+    local wpt=fmsTable[n][8]~="PPOS"
     local distance = getDistance(display_latitude_cpt,display_longitude_cpt,fmsTable[n][5],fmsTable[n][6])
     --Captain flightplan
-    if distance < ranges[simDR_range_dial_capt + 1] and (simDR_map_mode==2 or simDR_map_mode==4) then 
+    if wpt and distance < ranges[simDR_range_dial_capt + 1] and (simDR_map_mode==2 or simDR_map_mode==4) then
 
       if fmsTable[n][10]==true then
 	      makeIcon(iconTextDataCapt,3003,fmsTable[n][8],fmsTable[n][5],fmsTable[n][6],distance,n)
@@ -1041,7 +1044,7 @@ function newIcons()
     end
     --FO flightplan
     distance = getDistance(display_latitude_fo,display_longitude_fo,fmsTable[n][5],fmsTable[n][6])
-    if distance < ranges[simDR_range_dial_fo + 1] and (backport_map_mode_copilot==2 or backport_map_mode_copilot==4) then 
+    if wpt and distance < ranges[simDR_range_dial_fo + 1] and (backport_map_mode_copilot==2 or backport_map_mode_copilot==4) then
 
       if fmsTable[n][10]==true then
 	      makeIcon(iconTextDataFO,3003,fmsTable[n][8],fmsTable[n][5],fmsTable[n][6],distance,n)

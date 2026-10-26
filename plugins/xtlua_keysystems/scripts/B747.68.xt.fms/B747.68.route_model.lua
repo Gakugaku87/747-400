@@ -25,7 +25,7 @@ M.INVALID_ENTRY, M.NOT_IN_DATA_BASE, M.ROUTE_FULL = "INVALID ENTRY", "NOT IN DAT
 M.DIRECT = "DIRECT"
 
 local function new_route()
-    return {origin = nil, dest = nil, runway = nil, legs = {}}
+    return {origin = nil, dest = nil, runway = nil, legs = {}, passed = {}}
 end
 
 local function copy_route(r)
@@ -35,7 +35,10 @@ local function copy_route(r)
         for k, v in pairs(l) do c[k] = v end
         legs[i] = c
     end
-    return {origin = r.origin, dest = r.dest, runway = r.runway, legs = legs, sid = r.sid, star = r.star, appr = r.appr}
+    local passed = {}
+    for i, l in ipairs(r.passed) do passed[i] = l end
+    return {origin = r.origin, dest = r.dest, runway = r.runway, legs = legs, passed = passed,
+        sid = r.sid, star = r.star, appr = r.appr}
 end
 
 -- the FMC's routes: `N` the navigation database module, `db` its database
@@ -65,9 +68,19 @@ function M.activate(st)
     st.activating = true
 end
 
--- EXEC: the modification or the activation; false when there is none
-function M.exec(st)
+-- EXEC: the modification or the activation; false when there is none.
+-- `ppos`: the airplane's position ({lat, lon}), where a direct-to's path
+-- starts (step 5e)
+local start_of_dto
+function M.exec(st, ppos)
     if st.mod then
+        local l = st.mod.legs[1]
+        if l and l.dto_exec then
+            l.from, l.dto_exec = ppos and start_of_dto(st, l, ppos) or l.from, nil
+        end
+        -- the legs passed as they are now (the modification's copy may be
+        -- older: step 5e)
+        st.mod.passed = st.rte.passed
         st.rte, st.mod = st.mod, nil
         return true
     end
@@ -142,7 +155,7 @@ function M.set_origin(st, icao)
     local apt = st.N.airport(st.db, icao)
     if not apt then return M.NOT_IN_DATA_BASE end
     local r = M.edit(st)
-    r.origin, r.dest, r.runway, r.legs = apt, nil, nil, {}
+    r.origin, r.dest, r.runway, r.legs, r.passed = apt, nil, nil, {}, {}
     r.sid, r.star, r.appr = nil, nil, nil
 end
 
@@ -306,10 +319,14 @@ function M.course(lat1, lon1, lat2, lon2)
     return (math.atan2(y, x) / r + 360) % 360, 2 * math.asin(math.min(1, math.sqrt(a))) * 3440.065
 end
 
--- the point a leg starts from: the waypoint before it, the origin's runway
--- or the origin before the first; nil after a discontinuity
+-- the point a leg starts from: a direct-to's start, the waypoint before
+-- it, the last passed waypoint, the origin's runway or the origin before
+-- the first; nil after a discontinuity
 function M.leg_from(r, i)
+    local l = r.legs[i]
+    if l and l.dto and l.from then return l.from end
     local prev = r.legs[i - 1]
+    if i == 1 then prev = r.passed[#r.passed] end
     if prev then
         if prev.fix and not prev.disc and not prev.pending then return prev.fix end
         return nil
@@ -369,13 +386,36 @@ end
 -- waypoint, the first leg of the active route: from the airplane's
 -- position direct to it, the legs before it gone (one later in the
 -- route), or it inserted with a ROUTE DISCONTINUITY after it (another).
--- `route_crs`: the route's course into it (INTC CRS offers it)
-function M.direct_to(st, fix, route_crs)
+-- `route_crs`: the route's course into it (INTC CRS offers it); `ppos`:
+-- the airplane's position, the path's start until EXEC sets it
+function M.direct_to(st, fix, route_crs, ppos)
     if not st.active then return M.INVALID_ENTRY end
     local err = M.legs_entry(st, 1, fix)
     if err then return err end
     local l = M.edit(st).legs[1]
-    l.dto, l.crs, l.route_crs = true, nil, route_crs
+    l.dto, l.crs, l.route_crs, l.dto_exec = true, nil, route_crs, true
+    l.from = ppos and {lat = ppos.lat, lon = ppos.lon} or nil
+end
+
+-- the point `d` nm from `p` on the true course `crs`
+local function course_point(p, crs, d)
+    local r = math.pi / 180
+    local lat1, lon1, t, a = p.lat * r, p.lon * r, crs * r, d / 3440.065
+    local lat2 = math.asin(math.sin(lat1) * math.cos(a) + math.cos(lat1) * math.sin(a) * math.cos(t))
+    local lon2 = lon1 + math.atan2(math.sin(t) * math.sin(a) * math.cos(lat1), math.cos(a) - math.sin(lat1) * math.sin(lat2))
+    return {lat = lat2 / r, lon = (lon2 / r + 540) % 360 - 180}
+end
+
+-- where a direct-to's path starts at EXEC (step 5e; the sources leave the
+-- moment out: estimate): the airplane's position; with an INTC CRS, the
+-- point on the course into the waypoint as far from it as the airplane
+-- (estimate: X-Plane's flight plan has the course as a leg, and the AFDS
+-- intercepts it)
+function start_of_dto(st, l, ppos)
+    if not l.crs then return {lat = ppos.lat, lon = ppos.lon} end
+    local _, d = M.course(ppos.lat, ppos.lon, l.fix.lat, l.fix.lon)
+    local var = st.N.variation and st.N.variation(st.db, l.fix.lat, l.fix.lon) or 0
+    return course_point(l.fix, (l.crs + (var or 0) + 180) % 360, math.max(d, 5))
 end
 
 -- INTC CRS (FMSPG p.143-144): the course into the direct-to waypoint (a
@@ -558,16 +598,21 @@ end
 -- X-Plane's DEP ARR puts them: the ND finds them there); no procedure
 -- headers (the FMC's own legs: X-Plane would expand its own, and the
 -- procedures' legs go DRCT); discontinuities, pending airways, the
--- conditional legs (no fix: step 5e) and the missed approach left out
+-- conditional legs (no fix) and the missed approach left out. The passed
+-- legs before the route's (step 5e: the active leg starts at the last of
+-- them); a direct-to's start as a position PPOS before its waypoint (the
+-- name X-Plane's own direct-to gives it: the AFDS then follows X-Plane's
+-- current waypoint). Also the rows' map: `leg[row]` the route's leg,
+-- `row[leg]` its row, `ident[row]`, `n` the rows
 local FMS_TYPE = {VOR = 3, DME = 3, NDB = 2, LL = 28, RWY = 28}
 function M.to_fms(r, cycle)
-    local rows = {}
+    local rows, map = {}, {leg = {}, row = {}, ident = {}}
     local function row(t, ident, via, alt, lat, lon)
         rows[#rows + 1] = string.format("%d %s %s %.6f %.6f %.6f", t, ident, via, alt or 0, lat, lon)
+        map.ident[#rows] = ident
     end
-    if r.origin then row(1, r.origin.ident, "ADEP", r.origin.elev, r.origin.lat, r.origin.lon) end
-    if r.runway then row(28, r.runway.ident, "DRCT", r.runway.elev, r.runway.lat, r.runway.lon) end
-    for _, l in ipairs(r.legs) do
+    local function leg_rows(l, i)
+        if l.dto and l.from then row(28, "PPOS", "DRCT", 0, l.from.lat, l.from.lon) end
         if l.fix and not l.missed then
             local via = (l.via == M.DIRECT or l.proc) and "DRCT" or l.via
             if l.fix.kind == "APT" then
@@ -576,16 +621,67 @@ function M.to_fms(r, cycle)
                 row(FMS_TYPE[l.fix.kind] or 11, l.fix.ident, via, l.fix.kind == "RWY" and l.fix.elev or 0,
                     l.fix.lat, l.fix.lon)
             end
+            if i then map.leg[#rows], map.row[i] = i, #rows end
         end
     end
+    if r.origin then row(1, r.origin.ident, "ADEP", r.origin.elev, r.origin.lat, r.origin.lon) end
+    if r.runway then row(28, r.runway.ident, "DRCT", r.runway.elev, r.runway.lat, r.runway.lon) end
+    for _, l in ipairs(r.passed) do leg_rows(l, nil) end
+    for i, l in ipairs(r.legs) do leg_rows(l, i) end
     if r.dest then row(1, r.dest.ident, "ADES", r.dest.elev, r.dest.lat, r.dest.lon) end
+    map.n = #rows
     local head = {"I", "1100 Version", "CYCLE " .. (cycle or "0000")}
     if r.origin then head[#head + 1] = "ADEP " .. r.origin.ident end
     if r.runway then head[#head + 1] = "DEPRWY " .. r.runway.ident end
     if r.dest then head[#head + 1] = "ADES " .. r.dest.ident end
     if r.appr and r.appr.rwy then head[#head + 1] = "DESRWY " .. r.appr.rwy end
     head[#head + 1] = "NUMENR " .. #rows
-    return table.concat(head, "\n") .. "\n" .. table.concat(rows, "\n") .. "\n"
+    return table.concat(head, "\n") .. "\n" .. table.concat(rows, "\n") .. "\n", map
+end
+
+-- the active waypoint and X-Plane's flight plan (6-1/6-2 step 5e). Until
+-- LNAV sequences the route itself (step 6), the AFDS's current waypoint in
+-- X-Plane's flight plan (its best track, laminar/B747/autopilot/ap_monitor/
+-- fmscurrentIndex) is the active waypoint: the legs before it passed
+-- (FMSPG p.119: they leave the LEGS pages; FCOM p.1331: the active leg is
+-- the first line). The passed legs stay in the flight plan before the
+-- active waypoint, so it does not change when the route sequences.
+
+-- the same leg: the same fix, the same conditional leg, discontinuities
+local function same_leg(a, b)
+    if not (a and b) then return false end
+    if a.disc or b.disc then return a.disc == b.disc end
+    if a.fix and b.fix then
+        return a.fix.ident == b.fix.ident and math.abs(a.fix.lat - b.fix.lat) < 1e-4
+            and math.abs(a.fix.lon - b.fix.lon) < 1e-4
+    end
+    return not (a.fix or b.fix) and a.name == b.name
+end
+
+-- the active route's first `n` legs passed (the active leg stays); the
+-- modification's too when it starts with them. True when it sequenced
+function M.sequence(st, n)
+    local r, m = st.rte, st.mod
+    if not st.active then return false end
+    n = math.min(n, #r.legs - 1)
+    if n < 1 then return false end
+    for k = 1, n do
+        if m and not same_leg(r.legs[k], m.legs[k]) then m = nil end
+    end
+    for _ = 1, n do
+        r.passed[#r.passed + 1] = table.remove(r.legs, 1)
+        if m then m.passed[#m.passed + 1] = table.remove(m.legs, 1) end
+    end
+    return true
+end
+
+-- the row of the active waypoint (the first leg with one) in the flight
+-- plan to_fms made with `map`; nil without one
+function M.active_row(r, map)
+    for i = 1, #r.legs do
+        if map.row[i] then return map.row[i] end
+    end
+    return nil
 end
 
 return M

@@ -256,7 +256,8 @@ function fmsFunctions.rteerase(fmsO, value)
   B747_fmc_route_changed()
 end
 function fmsFunctions.rteexec(fmsO, value)
-  if R.exec(B747_fmc_route) then B747_fmc_route_changed() end
+  -- the airplane's position: a direct-to's start (step 5e)
+  if R.exec(B747_fmc_route, {lat = simDR_latitude, lon = simDR_longitude}) then B747_fmc_route_changed() end
 end
 fmsFunctionsDefs["RTE1"]["exec"]={"rteexec", ""}
 fmsFunctionsDefs["RTE1"]["next"]=nil

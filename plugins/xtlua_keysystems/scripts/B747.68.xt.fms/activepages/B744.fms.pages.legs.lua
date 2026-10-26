@@ -187,7 +187,7 @@ function fmsFunctions.legsfix(fmsO, value)
           break
         end
       end
-      B747_fmc_route_entry(fmsO, R.direct_to(st, p, rc))
+      B747_fmc_route_entry(fmsO, R.direct_to(st, p, rc, airplane()))
     else
       B747_fmc_route_entry(fmsO, R.legs_entry(st, i, p))
     end
