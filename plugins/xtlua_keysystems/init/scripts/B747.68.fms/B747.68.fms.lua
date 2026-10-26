@@ -108,6 +108,13 @@ B747DR_fms_lnav_mode					= deferred_dataref("laminar/B747/fms/lnav/mode", "numbe
 B747DR_fms_lnav_xtk						= deferred_dataref("laminar/B747/fms/lnav/xtk", "number")
 B747DR_fms_lnav_dtk						= deferred_dataref("laminar/B747/fms/lnav/dtk", "number")
 B747DR_fms_lnav_route					= deferred_dataref("laminar/B747/fms/lnav/route", "number")
+-- the hold flown (step 7b): its phase (0 none, 1 to its fix, 2 direct, 3
+-- teardrop, 4 parallel, 5 the entry's turn back, 6 the turn at the fix, 7
+-- outbound, 8 the turn back, 9 inbound), the crossings of its fix, its
+-- exit armed (1)
+B747DR_fms_lnav_hold_phase				= deferred_dataref("laminar/B747/fms/lnav/hold_phase", "number")
+B747DR_fms_lnav_hold_loops				= deferred_dataref("laminar/B747/fms/lnav/hold_loops", "number")
+B747DR_fms_lnav_hold_exit				= deferred_dataref("laminar/B747/fms/lnav/hold_exit", "number")
 
 --IRS ND DISPLAY
 B747DR_ND_GPS_Line						= deferred_dataref("laminar/B747/irs/gps_display_line", "string")

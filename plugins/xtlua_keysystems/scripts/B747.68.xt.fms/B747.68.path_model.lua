@@ -350,8 +350,9 @@ end
 -- shape[i] = {at = the end of conditional element i (a vectors leg's: its
 -- line's VECTORS_LEN nm)} or {pts = the points of arc element i every
 -- ARC_STEP degrees (estimate), its ends left out; of hold element i its
--- racetrack at `kt` (default 250), from the fix round to the inbound
--- leg's start: step 7a}
+-- racetrack, from the fix round to the inbound leg's start: of the size
+-- sizes[i] = {r, l} (the hold whose fix is the TO fix: step 7b), else at
+-- `kt` (default 250: step 7a)}
 M.ARC_STEP = 15
 local function arc_points(pts, c, from_brg, r, sgn, step, sweep)
     local k = 1
@@ -360,11 +361,13 @@ local function arc_points(pts, c, from_brg, r, sgn, step, sweep)
         k = k + 1
     end
 end
-function M.shape(path, kt)
+function M.shape(path, kt, sizes)
     local out = {}
     for i, e in ipairs(path or {}) do
         if e.kind == "hold" then
-            local t = M.racetrack(e, M.hold_size(e, kt or 250))
+            local z = sizes and sizes[i]
+            local t
+            if z then t = M.racetrack(e, z.r, z.l) else t = M.racetrack(e, M.hold_size(e, kt or 250)) end
             local pts = {}
             arc_points(pts, t.o1, (t.n + 180) % 360, t.r, t.sgn, 30, 180)
             pts[#pts + 1] = t.p1
