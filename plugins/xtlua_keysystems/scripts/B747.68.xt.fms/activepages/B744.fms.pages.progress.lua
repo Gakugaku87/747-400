@@ -1,3 +1,10 @@
+-- the title: the FMC's flight number from the RTE page (FCOM p.1371;
+-- 6-1/6-2 step 3c)
+local function progress_title()
+  local fltno=string.gsub(fmsModules["data"]["fltno"],"%s+$","")
+  if fltno=="" or string.find(fltno,"^%-+$") then return "        PROGRESS        " end
+  return string.format("%-24s",string.format("%8s PROGRESS",fltno))
+end
 fmsPages["PROGRESS"]=createPage("PROGRESS")
 --[[
 fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
@@ -122,7 +129,7 @@ fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
       selSpd=string.format("%-5.3f ",simDR_autopilot_airspeed_kts_mach)
     end
     lastPage[fmsID]= {
-    "        PROGRESS        ",
+    progress_title(),
     "                        ",
     "                        ",
     "                        ",
@@ -174,7 +181,7 @@ fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
     end
     xtk_error=string.format("%2.1f",B747DR_ap_lnav_xtk_error)
     lastPage[fmsID]= {
-    "        PROGRESS        ",
+    progress_title(),
     "                        ",
     longWind.."KT "..string.format("%10s",B747DR_ND_Wind_Line.."KT").."  "..windSide..latWind .."KT",
     "                        ",

@@ -102,7 +102,7 @@ fmsPages["INDEX"].getSmallPage=function(self,pgNo,fmsID)
       }
 end
 fmsFunctionsDefs["INDEX"]={}
-fmsFunctionsDefs["INDEX"]["L1"]={"setpage","IDENT"}
+fmsFunctionsDefs["INDEX"]["L1"]={"menufmc",""}
 
 fmsFunctionsDefs["INDEX"]["L5"]={"setpage","ACMS"}
 fmsFunctionsDefs["INDEX"]["L6"]={"setpage","CMC"}
@@ -173,9 +173,13 @@ fmsPages["RTE1"].getPage=function(self,pgNo,fmsID)
   fmsFunctionsDefs["RTE1"]["L1"]={"setdata","fltdep"}
   fmsFunctionsDefs["RTE1"]["L2"]={"setdata","runway"}
   fmsFunctionsDefs["RTE1"]["R1"]={"setdata","fltdst"}
-  fmsFunctionsDefs["RTE1"]["R2"]={"custom2fmc","R3"}
+  fmsFunctionsDefs["RTE1"]["R2"]={"setdata","fltno"}
   fmsFunctionsDefs["RTE1"]["L4"]={"custom2fmc","L4"}
   fmsFunctionsDefs["RTE1"]["R3"]={"setpage","FMC"}
+  -- RUNWAY and the FMC's FLT NO (6-1/6-2 step 3c)
+  local runway=fmsModules["data"]["runway"]
+  local fltno=string.format("%8s",(string.gsub(fmsModules["data"]["fltno"],"%s+$","")))
+  local rwyFlt=runway..string.rep(" ",math.max(1,24-string.len(runway)-8))..fltno
   local line5="                "..string.sub(cleanFMSLine(B747DR_srcfms[fmsID][5]),1,8)
   if acarsSystem.provider.online() then line5=" <SEND          "..string.sub(cleanFMSLine(B747DR_srcfms[fmsID][5]),1,8) end
   local page={
@@ -183,7 +187,7 @@ fmsPages["RTE1"].getPage=function(self,pgNo,fmsID)
   "                        ",
   cleanFMSLine(B747DR_srcfms[fmsID][3]),
   "                        ",
-  fmsModules["data"]["runway"] .."            ".. string.sub(cleanFMSLine(B747DR_srcfms[fmsID][7]),-7,-1), 
+  rwyFlt,
   "                        ",
   line5,
   cleanFMSLine(B747DR_srcfms[fmsID][8]),
@@ -253,7 +257,7 @@ fmsFunctionsDefs["RTE1"]["L5"]={"custom2fmc","L5"}
 
 --fmsFunctionsDefs["RTE1"]["R1"]={"custom2fmc","R1"}
 fmsFunctionsDefs["RTE1"]["R1"]={"setdata","fltdst"}
-fmsFunctionsDefs["RTE1"]["R2"]={"custom2fmc","R3"}
+fmsFunctionsDefs["RTE1"]["R2"]={"setdata","fltno"}
 fmsFunctionsDefs["RTE1"]["R3"]={"custom2fmc","L2"}
 fmsFunctionsDefs["RTE1"]["R4"]={"custom2fmc","R4"}
 fmsFunctionsDefs["RTE1"]["R5"]={"custom2fmc","R5"}
@@ -593,6 +597,10 @@ function fmsFunctions.efiscp(fmsO,value)
 end
 function fmsFunctions.eicascp(fmsO,value)
   if B744_cdu_eicas_cp_available() then fmsFunctions.setpage(fmsO,value) end
+end
+-- MENU's <FMC (6-1/6-2 step 3c)
+function fmsFunctions.menufmc(fmsO,value)
+  B747_cdu_menu_fmc(fmsO)
 end
 function fmsFunctions.setpage(fmsO,value)
   value=value.."_1"
@@ -1483,6 +1491,14 @@ function fmsFunctions.setdata(fmsO,value)
 	else
 		setFMSData(value, fmsO["scratchpad"])
 	end
+  elseif value == "fltno" then
+	-- FLT NO (RTE page 1, ATC LOGON/STATUS, ACARS; 6-1/6-2 step 3c): 1 to 8
+	-- letters or digits, no deletion (FMSPG p.79, p.278); the FMC's flight
+	-- number for PROGRESS, ATC and ACARS (FCOM p.1289; LH3460 p.85)
+	if del then fmsO["notify"] = "INVALID DELETE" return end
+	local sp = fmsO["scratchpad"]
+	if not string.match(sp, "^%w+$") or string.len(sp) > 8 then fmsO["notify"] = "INVALID ENTRY" return end
+	setFMSData("fltno", sp)
   elseif value == "toflaps" then
 	-- FLAP/ACCEL HT (6-1/6-2 step 3b; FCOM p.1318-1319): XX (10 or 20),
 	-- /YYYY (400 to 9999 ft above the airport) or both; a new flap setting

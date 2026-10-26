@@ -86,10 +86,22 @@ local function switchNow(fmsO)
   fmsO.currentPage = fmsO.targetPage
   fmsO.pgNo = fmsO.targetpgNo
 end
+-- MENU's <FMC: the FMC's last page on this CDU (FCOM p.1323), kept when
+-- MENU leaves the FMC's pages (an FMC function key or <FMC since the last
+-- MENU; ACARS, ACMS, CMC, the EFIS and EICAS controls and the sim's
+-- pages are not the FMC's); the pages that show X-Plane's CDU come back
+-- with their key
+local lastFmcPage = {}
+local inFmc = {}
+local FMC_KEYS = {index = true, fpln = true, clb = true, crz = true, des = true, dir_intc = true,
+  legs = true, dep_arr = true, hold = true, navrad = true, prog = true}
+local RETURN_KEY = {RTE1 = "fpln", LEGS = "legs", RTE2 = "legs", DEPARR = "clb", FIX = "dir_intc",
+  HOLD = "dep_arr"}
 -- the page's keys: the function keys, the line select keys, NEXT, PREV,
 -- EXEC, and the keys passed to X-Plane's CDU on its pages
 local function pageKey(fmsModule,key)
   local fmsO=fmsModules[fmsModule]
+  if FMC_KEYS[key] then inFmc[fmsModule]=true end
   if key=="index" then
       fmsO.targetCustomFMC=true
       if irsSystem.anyATT() or (simDR_onGround==1 and B747DR_nav_irs_set_pos==1) then
@@ -154,6 +166,8 @@ local function pageKey(fmsModule,key)
       fmsO.targetpgNo=1
       return
   elseif key=="fix" then --menu
+      if inFmc[fmsModule] then lastFmcPage[fmsModule]={fmsO.currentPage, fmsO.pgNo} end
+      inFmc[fmsModule]=false
       fmsO.targetCustomFMC=true
       fmsO.targetPage="INDEX"
       fmsO.targetpgNo=1
@@ -192,6 +206,23 @@ local function pageKey(fmsModule,key)
     simCMD_FMS_key[fmsModule][key]:once()
   else
     fmsO.notify="KEY/FUNCTION INOP"
+  end
+end
+-- MENU's <FMC: the FMC's last page, IDENT the first time (FCOM p.1323)
+function B747_cdu_menu_fmc(fmsO)
+  local id=fmsO.id
+  local last=lastFmcPage[id]
+  inFmc[id]=true
+  if last==nil then
+    fmsO.targetCustomFMC=true
+    fmsO.targetPage="IDENT"
+    fmsO.targetpgNo=1
+  elseif RETURN_KEY[last[1]] then
+    pageKey(id, RETURN_KEY[last[1]])
+  else
+    fmsO.targetCustomFMC=true
+    fmsO.targetPage=last[1]
+    fmsO.targetpgNo=last[2] or 1
   end
 end
 function keyDown(fmsModule,key,phase,duration)

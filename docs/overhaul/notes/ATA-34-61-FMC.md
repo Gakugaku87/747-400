@@ -488,3 +488,12 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - POS SHIFT：±X・XX（100 m 単位、109）。滑走路は経路の段 5 で（今は RW***）。TO/GA で位置を移すのは段 10。
   - PRE-FLT：POS INIT（IRS の位置）、ROUTE（出発地と目的地）、PERF INIT（GR WT、CRZ ALT、COST INDEX、RESERVES）の最初の未了のページを見出し PRE-FLT と 6R に出し、押すとそのページへ。終わっていれば破線と THRUST LIM>（前は POS INIT> の固定）。
 - 試験：`tests/fms/takeoff_ref_test.lua`（37 件）。X-Plane：`s83_takeoff_ref` 18/18（RJAA の地上で、THRUST LIM の SEL 26°C と 75°F（OAT も °F）と削除、TAKEOFF REF の既定 1000FT・FLAPS 5（小さい字）、10/1500・E/O ACCEL HT 1200・THR REDUCTION 1500、WIND/SLOPE H40/U1.0 で V1 の計算値が 130 から 134、CG 25 でトリム 4.8、POS SHIFT +0300M、PRE-FLT の ROUTE> で RTE へ。1 回目は SEL の空白の確かめ方の誤り（空白 24 文字の行を "" と比べた）で 17/18、直して流し直した）。Lua の誤りなし。CDU を撮った。
+
+## 16. 段 3c の実装（2026-10-26：MENU の <FMC と FLT NO）
+
+- 段 3c は小さくした。APPROACH REF の GROSS WT と滑走路は到着の滑走路が要るので経路（段 5）と、IDENT の NAV DATA と ACTIVE の入れ替えは nav DB（段 4）と一緒にする。
+- MENU の <FMC（FCOM p.1323）：その CDU で最後に出ていた FMC のページへ、最初は IDENT（前は常に IDENT）。FMC のページかどうかは、最後の MENU の後に FMC の機能キー（INIT REF・RTE・DEP ARR・ATC・VNAV・FIX・LEGS・HOLD・FMC COMM・PROG・NAV RAD）か <FMC を押したかで決める（ACARS・ACMS・CMC・EFIS/EICAS CP・シムのページを挟んでも、戻るのは FMC のページ）。X-Plane の CDU を使うページ（RTE・LEGS・DEP ARR・FIX・HOLD）は、X-Plane の CDU も合わせるためにそのキーで戻す（1 ページ目）。
+- FLT NO（RTE 1 ページ。ATC LOGON/STATUS と ACARS の INITIALIZE も同じ欄）：1〜8 文字の英数字、DELETE は INVALID DELETE（FMSPG p.79, p.278）。FMC の便名（`laminar/B747/fms/data` の `fltno`）になり、ACARS・ATC のログオン・PROGRESS が使う（FCOM p.1289；LH3460 p.85。前は RTE ページの入力を X-Plane の RTE ページに送るだけで、表示も X-Plane の行の末尾 7 文字：CDU-29）。RTE ページは FMC の便名を右寄せで出す。9 文字以上は前は 3 文字に切られていた。
+- PROGRESS の 1・2 ページの題名に便名（「TBC12345 PROGRESS」：FCOM p.1371, p.1374, p.1376）。便名が無いときは今までの題名。
+- 便名が電源投入と飛行の終わりで消えること（ATA34_2 p.521）は、飛行の終わりの処理（段 10）で。
+- 試験：`tests/fms/menu_fltno_test.lua`（26 件）。X-Plane：`s84_menu_fltno` 13/13（RJAA の地上で、最初の <FMC は IDENT、INIT REF → PERF INIT → THRUST LIM の後の MENU → <FMC は THRUST LIM、ACMS を挟んでも THRUST LIM、右の CDU は IDENT から。RTE の FLT NO JL123 が FMC の便名になって右寄せで出る、9 文字は INVALID ENTRY、DELETE は INVALID DELETE、PROGRESS の題名に JL123）。Lua の誤りなし。CDU を撮った（RTE ページの下の行には X-Plane の RTE ページの行がまだ透けて出て、そこにも FLT NO の欄がある：段 5b で RTE を自前にして消える）。
