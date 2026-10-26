@@ -130,8 +130,9 @@
     { "do": "check", "note": "1・4 と 2・3 が逆推力：group A が格納（ATA27 p.382）", "dref": "sim/flightmodel2/controls/slat1_deploy_ratio", "op": "<", "value": 0.4 },
     { "do": "check", "note": "group B はそのまま", "dref": "sim/flightmodel2/controls/slat2_deploy_ratio", "op": ">", "value": 0.99 },
     { "do": "check", "note": "表示は移動中（FCOM p.955）", "dref": "laminar/B747/flt_ctrls/flap/transition_status", "op": "==", "value": 1 },
+    { "do": "set", "note": "推力レバーを前のアイドルへ（逆推力のレバーを下げきる。放しただけでは reverse idle のままで、逆推力は出たまま：2026-10-25 から）", "dref": "sim/cockpit2/engine/actuators/throttle_jet_rev_ratio_all", "value": 0 },
     { "do": "sleep", "seconds": 13 },
-    { "do": "check", "note": "逆推力をやめると group A が出る", "dref": "sim/flightmodel2/controls/slat1_deploy_ratio", "op": ">", "value": 0.99 },
+    { "do": "check", "note": "逆推力を格納すると group A が出る", "dref": "sim/flightmodel2/controls/slat1_deploy_ratio", "op": ">", "value": 0.99 },
     { "do": "set", "note": "レバー UP", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0 },
     { "do": "sleep", "seconds": 2 },
     { "do": "view", "name": "forward" }

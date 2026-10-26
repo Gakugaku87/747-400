@@ -45,6 +45,7 @@
     { "do": "wait", "note": "逆推力レバー 2・4 と推力レバー 1・3 のアイドルで UP（FCOM p.951）。放した後も ARM 以上なので UP のまま", "dref": "laminar/B747/flt_ctrls/speedbrake_lever", "op": "==", "value": 1, "timeout": 8 },
     { "do": "snapshot", "note": "逆推力を放した直後", "drefs": [ "laminar/B747/engine/throttle[0]", "laminar/B747/engine/throttle[2]", "sim/cockpit2/engine/actuators/throttle_ratio[0]",
       "sim/cockpit2/engine/actuators/prop_mode[1]", "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]", "sim/cockpit2/controls/speedbrake_ratio" ] },
+    { "do": "set", "note": "推力レバーを前のアイドルへ（逆推力のレバーを下げきる。放しただけでは reverse idle のままで、逆推力は出たまま：2026-10-25 から）", "dref": "sim/cockpit2/engine/actuators/throttle_jet_rev_ratio_all", "value": 0 },
     { "do": "sleep", "seconds": 8, "note": "逆推力が格納されるのを待つ" },
     { "do": "check", "note": "逆推力を放しても推力レバー 1・3 はアイドル：UP のまま（逆推力の間の X-Plane の比 1.0 で DN へ戻さない）", "dref": "laminar/B747/flt_ctrls/speedbrake_lever", "op": "==", "value": 1 },
     { "do": "snapshot", "note": "逆推力の格納後", "drefs": [ "laminar/B747/engine/throttle[0]", "laminar/B747/engine/throttle[2]", "sim/cockpit2/engine/actuators/throttle_ratio[0]",
