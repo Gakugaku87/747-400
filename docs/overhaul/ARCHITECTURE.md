@@ -462,6 +462,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - `B744.createfms.lua` が CDU を作り、`B747.68.xt.fms.lua` がページ遷移・入力・データ（`getFMSData`）を扱う。
 - CDU の枠組み（6-2 段 2）：純粋なモデル `B747.68.cdu_model.lua`（scratchpad のキー、CDU ごとの入力のメッセージ、FMC のメッセージの列、入力の形の解釈）。`keyDown` は自前のページの scratchpad のキーをモデルに、ほかを前の振り分け（`pageKey`）に渡す。ページは前と同じく `fmsO.scratchpad` を読み書きし、`fmsO.notify` に立てたメッセージはその CDU の列に移る。FMC のメッセージは `laminar/B747/fms/notification` の旗（系統が条件の間だけ立てる）から毎フレーム写し、alert で >FMC MESSAGE。CDU の電源は `electrical/display_has_power[8]`・`[7]`・`[6]`。
 - 航法データベース（6-2 段 4）：FMS のモジュールが `B747.68.navdb.lua` で X-Plane の航法データ（Custom Data か `Resources/default data`）を 1 フレームに 32 KB ずつ読み、グローバル `B747_fmc_navdb`（メタテーブル付きの表）に持つ。ページは `B747_navdb.airport` などで引く。試験では `B747_NAVDB_FOLDER` で合成のデータ（`tests/fms/data/navdb/`）を指す。NAV DATA OUT OF DATE は `laminar/B747/fms/notification` の 55 番目。
+- 経路（6-2 段 5a〜5c）：FMS のモジュールが `B747.68.route_model.lua` の経路をグローバル `B747_fmc_route`（メタテーブル付き）に持つ。RTE と LEGS のページ（`activepages/B744.fms.pages.rte.lua`・`legs.lua`）が変え、`B747_fmc_route_changed()` が RTE 1 の変化を FMC のデータ（`fltdep`・`fltdst`・`runway`・`transalt`）と X-Plane の FMS（`xtlua/loadtoFMS` に .fms v1100 の文字列）へ流す。X-Plane の FMS は ND の経路の線と AFDS の LNAV・VNAV（作り直すまで）が読む。
 - 離陸の V speeds（6-2 段 3b-1）：計器のモジュール（`fltInst02`）が FMC の重量（`laminar/B747/fms/data` の `grwt`）と TAKEOFF REF のフラップ・風から計算値を `airspeed/V1_ref`・`Vr_ref`・`V2_ref` に出し、FMC が選んだものを `airspeed/V1`・`Vr`・`V2`（PFD）に書く（999 は NO V SPD）。
 - ACARS/CPDLC：`acars/*`（AutoATC と Hoppie の provider）。
 - IRS：`irs/irs_system.lua`（アライン、位置）。`irs/rnav_system.lua`。

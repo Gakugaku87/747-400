@@ -498,6 +498,45 @@ function M.out_of_date(db, y, m, d)
     return db.last_day ~= nil and days(y, m, d) > db.last_day
 end
 
+-- the magnetic variation near a point, degrees east: the nearest VOR's
+-- (earth_nav.dat's slaved variation) within about 600 nm, else nil
+-- (estimate: the FMC's own variation table is not in the data). The VORs
+-- in 2-degree cells, made the first time
+local function vcell(lat, lon)
+    return (floor(lat / 2) + 45) * 1000 + (floor(lon / 2) + 90) % 180
+end
+function M.variation(db, lat, lon)
+    local grid = db.vgrid
+    if not grid then
+        grid = {}
+        for i = 1, db.n do
+            local nav = db.nav[i]
+            if db.kind[i] == M.VOR and nav and nav.var then
+                local key = vcell(db.lat[i], db.lon[i])
+                local cell = grid[key]
+                if not cell then cell = {}; grid[key] = cell end
+                cell[#cell + 1] = i
+            end
+        end
+        db.vgrid = grid
+    end
+    local best, bd = nil, 1e9
+    for ring = 0, 5 do
+        for dy = -ring, ring do
+            for dx = -ring, ring do
+                if math.max(math.abs(dy), math.abs(dx)) == ring then
+                    for _, i in ipairs(grid[vcell(lat + 2 * dy, lon + 2 * dx)] or {}) do
+                        local d = M.distance(lat, lon, db.lat[i], db.lon[i])
+                        if d < bd then best, bd = i, d end
+                    end
+                end
+            end
+        end
+        if best and bd < 120 * (ring + 1) then break end
+    end
+    return best and db.nav[best].var or nil
+end
+
 -- the data cycle: the AIRAC cycle, its first and last day (days since 1970)
 function M.cycle_info(db)
     return db.cycle, db.first_day, db.last_day

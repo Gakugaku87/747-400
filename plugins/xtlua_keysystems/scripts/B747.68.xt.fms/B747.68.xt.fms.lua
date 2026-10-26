@@ -877,6 +877,36 @@ local function navdb_folder()
 end
 local NAVDB_FOLDER=navdb_folder()
 B747_fmc_navdb=B747_navdb.new(function(name) return io.open(NAVDB_FOLDER..name,"rb") end)
+dofile("B747.68.route_model.lua")
+-- the FMC's route (6-1/6-2 step 5b; notes/ATA-34-61-FMC.md §18): RTE 1 on
+-- the RTE pages. When RTE 1 changes, the FMC's data the other modules
+-- read (fltdep, fltdst, runway; TRANS ALT from a new origin: FCOM p.1329)
+-- and X-Plane's FMS (its ND line; the AFDS's LNAV and VNAV until they are
+-- rebuilt: xtlua/loadtoFMS) follow
+B747_fmc_route=B747_route_model.new(B747_navdb,B747_fmc_navdb)
+local routeLoaded=nil
+local function fms_text(id) return (string.gsub(fmsModules["data"][id],"%s+$","")) end
+function B747_fmc_route_changed()
+  local r=B747_fmc_route.rte
+  local dep=r.origin and r.origin.ident or "****"
+  if fms_text("fltdep")~=dep then
+    setFMSData("fltdep",dep)
+    local ta=r.origin and r.origin.ta
+    setFMSData("transalt",string.format("%d",ta and ta>0 and ta or 18000))
+  end
+  local dst=r.dest and r.dest.ident or "****"
+  if fms_text("fltdst")~=dst then setFMSData("fltdst",dst) end
+  local rwy=r.runway and r.runway.ident or "-----"
+  if fms_text("runway")~=rwy then setFMSData("runway",rwy) end
+  -- X-Plane takes a flight plan with a destination only (without, an error
+  -- message on the screen): none before the DEST
+  if r.dest==nil then return end
+  local fms=B747_route_model.to_fms(r,(B747_navdb.cycle_info(B747_fmc_navdb)))
+  if fms~=routeLoaded then
+    routeLoaded=fms
+    fmsLoadDref=fms
+  end
+end
 -- the clocks' dates: the FMC's clock calendar from the Captain's clock,
 -- else the F/O's (FCOM p.1285)
 B747DR_fmc_clock_capt_on=find_dataref("laminar/B747/fltInst/capt/clock_on")

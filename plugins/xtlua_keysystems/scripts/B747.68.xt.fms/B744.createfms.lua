@@ -95,7 +95,7 @@ local lastFmcPage = {}
 local inFmc = {}
 local FMC_KEYS = {index = true, fpln = true, clb = true, crz = true, des = true, dir_intc = true,
   legs = true, dep_arr = true, hold = true, navrad = true, prog = true}
-local RETURN_KEY = {RTE1 = "fpln", LEGS = "legs", RTE2 = "legs", DEPARR = "clb", FIX = "dir_intc",
+local RETURN_KEY = {RTE2 = "legs", DEPARR = "clb", FIX = "dir_intc",
   HOLD = "dep_arr"}
 -- the page's keys: the function keys, the line select keys, NEXT, PREV,
 -- EXEC, and the keys passed to X-Plane's CDU on its pages
@@ -115,7 +115,6 @@ local function pageKey(fmsModule,key)
       return
   elseif key=="fpln" then --RTE
       fmsO.targetCustomFMC=true
-      simCMD_FMS_key[fmsModule]["fpln"]:once()
       fmsO.targetPage="RTE1"
       fmsO.targetpgNo=1
       return
@@ -142,17 +141,10 @@ local function pageKey(fmsModule,key)
       fmsO.targetpgNo=1
       return
   elseif key=="legs" then
-      if simDR_onGround ==1 or simDR_version>=120012 then
-        fmsO.targetCustomFMC=true
-        fmsO.targetPage="LEGS"
-        simCMD_FMS_key[fmsModule]["legs"]:once()
-        fmsO.targetpgNo=1
-      else
-        fmsO.targetCustomFMC=false
-        fmsO.targetPage="RTE2"
-        simCMD_FMS_key[fmsModule]["dir_intc"]:once()
-        fmsO.targetpgNo=1
-      end
+      -- the FMC's LEGS pages (6-1/6-2 step 5c)
+      fmsO.targetCustomFMC=true
+      fmsO.targetPage="LEGS"
+      fmsO.targetpgNo=1
       return
   elseif key=="dep_arr" then
       fmsO.targetCustomFMC=false

@@ -112,160 +112,8 @@ fmsFunctionsDefs["INDEX"]["R4"]={"setpage","GNDHNDL"}
 fmsFunctionsDefs["INDEX"]["R6"]={"setpage","MAINTSIMCONFIG"}
 --fmsFunctionsDefs["INDEX"]["R6"]={"setpage", "MAINTSIMCONFIG"}
 
-fmsPages["RTE1"]=createPage("RTE1")
-fmsPages["RTE1"].getPage=function(self,pgNo,fmsID)
-  local l1=cleanFMSLine(B747DR_srcfms[fmsID][1])
-  local pageNo=tonumber(string.sub(l1,21,22))
-  local lastLine1=cleanFMSLine(B747DR_srcfms[fmsID][12])
-  local lastLine2="<RTE 2             PERF>"
-  if simDR_onGround ==1 then
-    fmsFunctionsDefs["RTE1"]["L6"]=nil
-	fmsFunctionsDefs["RTE1"]["R6"]={"setpage","PERFINIT"}
-    lastLine2="                   PERF>"
-  else
-    
-	local offsetT="---"
-	if pageNo~=1 then
-		offsetT="   "
-		fmsFunctionsDefs["RTE1"]["R6"]=nil
-	else
-		fmsFunctionsDefs["RTE1"]["R6"]={"setdata","lnoffs"}
-		if B747DR_ap_lnav_xtk_target~=0 and B747DR_ap_lnav_xtk_target~=-100 then
-			if B747DR_ap_lnav_xtk_target<0 then
-				offsetT="L"..string.format("%02d", math.abs(B747DR_ap_lnav_xtk_target))
-			else
-				offsetT="R"..string.format("%02d", B747DR_ap_lnav_xtk_target)
-			end
-		end
-		lastLine1="                       "
-	end
-	--if simDR_version<123004 then
-		fmsFunctionsDefs["RTE1"]["L6"]={"setpage","RTE2"}
-	--else
-    --	fmsFunctionsDefs["RTE1"]["L6"]={"setpage","LEGS"}
-	--end
-	
-    lastLine2="<RTE 2                "..offsetT
-  end
-
-  if pageNo~=1 then
-	fmsFunctionsDefs["RTE1"]["L1"]={"custom2fmc","L1"}
-	fmsFunctionsDefs["RTE1"]["L2"]={"custom2fmc","L2"}
-	fmsFunctionsDefs["RTE1"]["R1"]={"custom2fmc","R1"}
-	fmsFunctionsDefs["RTE1"]["R2"]={"custom2fmc","R2"}
-	fmsFunctionsDefs["RTE1"]["R3"]={"custom2fmc","R3"}
-	return {
-		"      ACT RTE 1    " .. string.sub(cleanFMSLine(B747DR_srcfms[fmsID][1]),-5,-1) ,
-		cleanFMSLine(B747DR_srcfms[fmsID][2]),
-		cleanFMSLine(B747DR_srcfms[fmsID][3]),
-		cleanFMSLine(B747DR_srcfms[fmsID][4]),
-		cleanFMSLine(B747DR_srcfms[fmsID][5]),
-		cleanFMSLine(B747DR_srcfms[fmsID][6]),
-		cleanFMSLine(B747DR_srcfms[fmsID][7]),
-		cleanFMSLine(B747DR_srcfms[fmsID][8]),
-		cleanFMSLine(B747DR_srcfms[fmsID][9]),
-		cleanFMSLine(B747DR_srcfms[fmsID][10]),
-		cleanFMSLine(B747DR_srcfms[fmsID][11]),
-		lastLine1,
-		lastLine2,
-		}
-  end
-  fmsFunctionsDefs["RTE1"]["L1"]={"setdata","fltdep"}
-  fmsFunctionsDefs["RTE1"]["L2"]={"setdata","runway"}
-  fmsFunctionsDefs["RTE1"]["R1"]={"setdata","fltdst"}
-  fmsFunctionsDefs["RTE1"]["R2"]={"setdata","fltno"}
-  fmsFunctionsDefs["RTE1"]["L4"]={"custom2fmc","L4"}
-  fmsFunctionsDefs["RTE1"]["R3"]={"setpage","FMC"}
-  -- RUNWAY and the FMC's FLT NO (6-1/6-2 step 3c)
-  local runway=fmsModules["data"]["runway"]
-  local fltno=string.format("%8s",(string.gsub(fmsModules["data"]["fltno"],"%s+$","")))
-  local rwyFlt=runway..string.rep(" ",math.max(1,24-string.len(runway)-8))..fltno
-  local line5="                "..string.sub(cleanFMSLine(B747DR_srcfms[fmsID][5]),1,8)
-  if acarsSystem.provider.online() then line5=" <SEND          "..string.sub(cleanFMSLine(B747DR_srcfms[fmsID][5]),1,8) end
-  local page={
-  "      ACT RTE 1     " .. string.sub(cleanFMSLine(B747DR_srcfms[fmsID][1]),-4,-1) ,
-  "                        ",
-  cleanFMSLine(B747DR_srcfms[fmsID][3]),
-  "                        ",
-  rwyFlt,
-  "                        ",
-  line5,
-  cleanFMSLine(B747DR_srcfms[fmsID][8]),
-  cleanFMSLine(B747DR_srcfms[fmsID][9]),
-  cleanFMSLine(B747DR_srcfms[fmsID][10]),
-  cleanFMSLine(B747DR_srcfms[fmsID][11]),
-  lastLine1,
-  lastLine2,
-  }
-  return page 
-end
-fmsPages["RTE1"].getSmallPage=function(self,pgNo,fmsID)
-	local l1=cleanFMSLine(B747DR_srcfms[fmsID][1])
-  local pageNo=tonumber(string.sub(l1,21,22))
-  if pageNo~=1 then
-	
-
-	return {
-		"                        ",
-		"                        ",
-		"                        ",
-		"                        ",
-		"                        ",
-		"                        ",
-		"                        ",
-		"                        ",
-		"                        ",
-		"                        ",
-		"                        ",
-		"                        ",
-		"                        ",
-		}
-  end
-	local line4 = "               CO ROUTE "
-	tLine="                        "
-	
-	if simDR_onGround ==0 then
-		tLine="                 OFFSET "
-	end
-	if acarsSystem.provider.online() then line4=" REQUEST       CO ROUTE " end
-	local page={
-		"                        ",
-		cleanFMSLine(B747DR_srcfms[fmsID][2]),
-		"                        ",
-		" RUNWAY          FLT NO ",
-		"                        ",
-		line4,
-		"                        ",
-		"                        ",
-		"                        ",
-		"                        ",
-		"                        ",
-		tLine,
-		"                        ",
-		"                        ",
-		}
-	return page 
-end
---fmsFunctionsDefs["RTE1"]["L1"]={"custom2fmc","L1"}
-fmsFunctionsDefs["RTE1"]["L1"]={"setdata","fltdep"}
---fmsFunctionsDefs["RTE1"]["L1"]={"setdata","origin"}
-fmsFunctionsDefs["RTE1"]["L2"]={"setdata","runway"}
-
-fmsFunctionsDefs["RTE1"]["L3"]={"custom2fmc","L3"}
-fmsFunctionsDefs["RTE1"]["L4"]={"custom2fmc","L4"}
-fmsFunctionsDefs["RTE1"]["L5"]={"custom2fmc","L5"}
-
---fmsFunctionsDefs["RTE1"]["R1"]={"custom2fmc","R1"}
-fmsFunctionsDefs["RTE1"]["R1"]={"setdata","fltdst"}
-fmsFunctionsDefs["RTE1"]["R2"]={"setdata","fltno"}
-fmsFunctionsDefs["RTE1"]["R3"]={"custom2fmc","L2"}
-fmsFunctionsDefs["RTE1"]["R4"]={"custom2fmc","R4"}
-fmsFunctionsDefs["RTE1"]["R5"]={"custom2fmc","R5"}
-fmsFunctionsDefs["RTE1"]["R6"]={"setpage","PERFINIT"}
-
-fmsFunctionsDefs["RTE1"]["next"]={"custom2fmc","next"}
-fmsFunctionsDefs["RTE1"]["prev"]={"custom2fmc","prev"}
-fmsFunctionsDefs["RTE1"]["exec"]={"custom2fmc","exec"}
+-- RTE 1: activepages/B744.fms.pages.rte.lua (6-1/6-2 step 5b)
+dofile("activepages/B744.fms.pages.rte.lua")
 dofile("activepages/B744.fms.pages.posinit.lua")
 dofile("activepages/B744.fms.pages.perfinit.lua")
 dofile("activepages/B744.fms.pages.thrustlim.lua")
@@ -571,19 +419,10 @@ function fmsFunctions.setpage_no(fmsO,valueA)
     fmsO["targetPage"]="DATABASE"
     simCMD_FMS_key[fmsO.id]["index"]:once()
     simCMD_FMS_key[fmsO.id]["R2"]:once()
-  elseif value=="RTE1" then
-    simCMD_FMS_key[fmsO.id]["fpln"]:once()
-    fmsO["targetCustomFMC"]=true
-    fmsO["targetPage"]="RTE1"
   elseif value=="RTE2" then
     fmsO["targetCustomFMC"]=false
     fmsO["targetPage"]="RTE2"
     simCMD_FMS_key[fmsO.id]["dir_intc"]:once()
-  elseif value=="LEGS" then
-	fmsModules[fmsO.id].targetCustomFMC=true
-	fmsModules[fmsO.id].targetPage="LEGS"
-	simCMD_FMS_key[fmsO.id]["legs"]:once()
-	fmsModules[fmsO.id].targetpgNo=1  
   else
     fmsO["targetCustomFMC"]=true
     fmsO["targetPage"]=value 

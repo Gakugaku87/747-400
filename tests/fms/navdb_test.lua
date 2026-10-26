@@ -157,4 +157,8 @@ if base then
     print(string.format("X-Plane's data (%s, cycle %s): %.2f s, %d calls of 32 KB", base, real.cycle or "?", secs, calls2))
 end
 
+-- the magnetic variation near a point: the nearest VOR's (step 5c)
+T.equal(N.variation(db, 35.2, 140.2), -7, "near ZZV: its -7 (7 degrees west)")
+T.equal(N.variation(db, 10.1, 10.1), 1, "near the other ZZV: its 1")
+T.equal(N.variation(db, -60, -100), nil, "far from any VOR: none")
 T.done()
