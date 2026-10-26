@@ -1400,6 +1400,8 @@ laminar/B747/flt_mgmt/txpdr/mode_sel_pos	dataref	obj,snd	B747.30.fltMgmt,B747.30
 laminar/B747/fmc/cockpit_seats_hide	dataref	obj	B747.05.simconfig,B747.05.xt.simconfig,B744.fms.pages
 laminar/B747/fmod/callouts/appDH	dataref	snd	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/fmod/callouts/v1	dataref	snd	B747.60.fltInst,B747.60.xt.fltInst02
+laminar/B747/fms/exec_light_copilot	dataref	obj	B747.68.fms,B747.68.xt.fms
+laminar/B747/fms/exec_light_pilot	dataref	obj	B747.68.fms,B747.68.xt.fms
 laminar/B747/fms1/Line01_L	dynamic	panel	
 laminar/B747/fms1/Line01_S	dynamic	panel	
 laminar/B747/fms1/Line02_L	dynamic	panel	
