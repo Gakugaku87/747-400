@@ -345,7 +345,7 @@ PLAN.md §3 に書いた。要点：
   - ロックアウトのアクチュエータがロックとロック解除の間を動く時間 2 秒。ラダー比変換器のアクチュエータの速さ 0.2 in/s、servo の誤差が 2 秒続くと監視が立つ。
   - ラダー比変換器の速度の表は p.637 の図から読んだ点（170 kt 0.2 in、195 kt 0.4、245 kt 0.6、310 kt 0.8、355 kt 0.9、420 kt 0.97）の間を直線で。延長と舵角の関係は直線（資料に無い。地上試験の 367 kt の位置で 6–8° に合う）。
   - 機能を持つ SRM は L から（実機は電源投入時にランダム）。ラダー比変換器の servo の監視は、エアデータが無いときも働く（160 kt 未満で止める条件が分からないため）。
-  - 安定板トリム（段 2b）：STCM のブレーキが解除される圧 1000 psi。unscheduled trim monitor が見つける動き 0.1 units。dead trim は 2 秒。column cutout は操縦桿の行程の 35 %（4.5° を、行程 6.55/6.63 in と柱の長さ約 30 in で換算。柱の長さは資料に無い）。X-Plane のトリムの暴走の故障を系統 3 の STCM の機首上げの暴走として受けること。STAB AUTO TRIM を A/P が全部外れるまで残すこと。MOV の動きは瞬時。
+  - 安定板トリム（段 2b）：STCM のブレーキが解除される圧 1000 psi。unscheduled trim monitor が見つける動き 0.1 units。dead trim は 2 秒。column cutout は操縦桿の行程の 35 %（4.5° を、行程 6.55/6.63 in と柱の長さ約 30 in で換算。柱の長さは資料に無い）。X-Plane のトリムの暴走の故障を系統 3 の STCM の機首上げの暴走として受けること。STAB AUTO TRIM を A/P が全部外れるまで残すこと。MOV の動きは瞬時。空中開始では X-Plane の自動トリムに合わせず、モデルの初期値 7.5 units から始めること（2026-10-26、notes/ATA-27.md §17）。
   - A/P が外れたときの A/P の昇降舵・補助翼の指令の戻り（毎秒 1。AFDS の `B747.19.xt.afds_control.lua`）。
   - speed trim（段 2c）：指令と位置の差が 0.05 units を超えたら動かし、着いたら止める。グリーンバンドの選び方（FMC の離陸トリムが mid 帯の中なら mid、上なら nose up、下なら nose down。CG を入れる前は mid。`B747.45.greenband_model.lua`）。
 
@@ -1070,3 +1070,4 @@ PLAN.md §3 に書いた。要点：
 - 2026-10-26 午後：6-1・6-2 段 3c（MENU の <FMC と FLT NO）。X-Plane：`s84_menu_fltno` 13/13（RJAA の地上で、最初の <FMC は IDENT、INIT REF → PERF INIT → THRUST LIM の後の MENU → <FMC は THRUST LIM、ACMS を挟んでも THRUST LIM、右の CDU は IDENT から。RTE の FLT NO JL123 が FMC の便名になって右寄せで出る、9 文字は INVALID ENTRY、DELETE は INVALID DELETE、PROGRESS の題名に JL123）。Lua の誤りなし。CDU を撮った（RTE ページの下の行には X-Plane の RTE ページの行がまだ透けて出て、そこにも FLT NO の欄がある：段 5b で RTE を自前にして消える）。
 - 2026-10-26 午後：6-1・6-2 段 4（航法データベース）。X-Plane：`s85_navdb` 22/22（RJAA の地上で、航法データ（Custom Data の AIRAC 2610）を IDENT を開いてから 6.5 秒以内に読み終え、NAV DATA AIRAC 2610 と ACTIVE OCT01OCT29/26、日付を 11 月にすると NAV DATA OUT OF DATE と >FMC MESSAGE（両方の CDU）、CLR で全部から消え、10 月に戻すと条件が消える、ORIGIN RJAA で TRANS ALT 14000（CLB ページにも）、IRS を入れ直したアライン中に REF AIRPORT の ZZZZ は NOT IN DATA BASE、RJAA は N35°45.9 E140°23.1）。Lua の誤りなし。CDU を撮った。
 - 2026-10-26 午後：6-1・6-2 段 5 の段取り（6 つ：notes/ATA-34-61-FMC.md §18）と段 5a（経路のモデル、まだ機体からは使わない：§19）。全シナリオ（前半 s00〜s42）を X-Plane で回している間に、機体が読まない新しいモジュールだけをコミット。
+- 2026-10-26 夕方：操縦系統（4-1）の空中開始の安定板。X-Plane の空中開始の自動トリム（FL350 で 0.5）に SRM が合わせて機首が 35〜45° まで上がっていたので、空中開始ではモデルの 7.5 units から始めるようにした（notes/ATA-27.md §17）。X-Plane：FL350・M0.85 の空中開始で安定板は 7.5 units のまま（X-Plane が入れた 0.5 を 0 に書き戻す。A/P なしでは 9 秒で機首 21°、前は 45°）。`s15_press_cruise` 41/41（トリム 0 から A/P が 40 秒で −0.26 にし、最高 36,012 ft。前は 41,000 ft まで上がって失速し墜落した）、`s00` 69/69。Lua の誤りなし。
