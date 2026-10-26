@@ -601,10 +601,13 @@ end
 -- procedures' legs go DRCT); discontinuities, pending airways, the
 -- conditional legs (no fix) and the missed approach left out. The passed
 -- legs before the route's (step 5e: the active leg starts at the last of
--- them); a direct-to's start as a position PPOS before its waypoint (the
--- name X-Plane's own direct-to gives it: the AFDS then follows X-Plane's
--- current waypoint). Also the rows' map: `leg[row]` the route's leg,
--- `row[leg]` its row, `ident[row]`, `n` the rows
+-- them); a direct-to's start as a position DTOPOS before its waypoint (no
+-- fix's name; not X-Plane's own direct-to's PPOS: after a PPOS the AFDS
+-- follows X-Plane's current waypoint, which only xtlua/currentFMSID sets,
+-- while the AFDS's best track takes this leg as any other). Also the rows'
+-- map: `leg[row]` the route's leg, `row[leg]` its row, `ident[row]`, `n`
+-- the rows
+M.DTO_START = "DTOPOS"
 local FMS_TYPE = {VOR = 3, DME = 3, NDB = 2, LL = 28, RWY = 28}
 function M.to_fms(r, cycle)
     local rows, map = {}, {leg = {}, row = {}, ident = {}}
@@ -613,7 +616,7 @@ function M.to_fms(r, cycle)
         map.ident[#rows] = ident
     end
     local function leg_rows(l, i)
-        if l.dto and l.from then row(28, "PPOS", "DRCT", 0, l.from.lat, l.from.lon) end
+        if l.dto and l.from then row(28, M.DTO_START, "DRCT", 0, l.from.lat, l.from.lon) end
         if l.fix and not l.missed then
             local via = (l.via == M.DIRECT or l.proc) and "DRCT" or l.via
             if l.fix.kind == "APT" then

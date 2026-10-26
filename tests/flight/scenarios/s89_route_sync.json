@@ -1,6 +1,6 @@
 {
   "name": "s89_route_sync",
-  "description": "経路の現用点と X-Plane の FMS（6-1・6-2 段 5e）の X-Plane での確認、空中。XAC の 8 NM 手前、10,000 ft、XAC へ向けて 250 kt で開始（機体を読み直す）。RTE で RJAA→RJBB、DIRECT XAC・SPENS・ATMUG を入れ、空中で ACTIVATE と EXEC：X-Plane の FMS の現用点が XAC（流し込んだ計画は最初の点から始まるので FMC が戻す）、ND の現用点と ETA も XAC から。LNAV で XAC を過ぎると FMC が順送りし、LEGS の 1 行目が SPENS（FMSPG p.119；FCOM p.1331）。ATMUG を消して EXEC しても現用点は SPENS のまま。DIRECT TO AKAGI（経路に無い点）を EXEC：始点 PPOS（EXEC の時の機体の位置、推定）から AKAGI へ、現用点は AKAGI、機体は AKAGI へ向かう。ND と CDU を撮る。",
+  "description": "経路の現用点と X-Plane の FMS（6-1・6-2 段 5e）の X-Plane での確認、空中。XAC の 8 NM 手前、10,000 ft、XAC へ向けて 250 kt で開始（機体を読み直す）。RTE で RJAA→RJBB、DIRECT XAC・SPENS・ATMUG を入れ、空中で ACTIVATE と EXEC：X-Plane の FMS の現用点が XAC（流し込んだ計画は最初の点から始まるので FMC が戻す）、ND の現用点と ETA も XAC から。LNAV で XAC を過ぎると FMC が順送りし、LEGS の 1 行目が SPENS（FMSPG p.119；FCOM p.1331）。ATMUG を消して EXEC しても現用点は SPENS のまま。DIRECT TO AKAGI（経路に無い点）を EXEC：始点 DTOPOS（EXEC の時の機体の位置、推定）から AKAGI へ、現用点は AKAGI、機体は AKAGI へ向かう。ND と CDU を撮る。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 34.8185, "longitude": 139.5117, "elevation_in_meters": 3048, "heading_true": 217, "speed_in_meters_per_second": 128.6 },
@@ -121,7 +121,7 @@
     { "do": "check", "note": "MOD RTE 1 LEGS、1 行目 AKAGI（FMSPG p.142）", "dref": "laminar/B747/fms3/Line03_L", "op": "contains", "value": "AKAGI" },
     { "do": "cmd", "note": "EXEC", "name": "laminar/B747/fms1/key/execute", "duration": 0.2 },
     { "do": "sleep", "seconds": 3 },
-    { "do": "check", "note": "AFDS の現用点：4 番目の AKAGI（RJAA・XAC・PPOS・AKAGI・SPENS・RJBB）", "dref": "laminar/B747/autopilot/ap_monitor/fmscurrentIndex", "op": "==", "value": 4 },
+    { "do": "check", "note": "AFDS の現用点：4 番目の AKAGI（RJAA・XAC・DTOPOS・AKAGI・SPENS・RJBB）", "dref": "laminar/B747/autopilot/ap_monitor/fmscurrentIndex", "op": "==", "value": 4 },
     { "do": "check", "note": "ND の現用点 AKAGI", "dref": "laminar/B747/nd/current_waypoint", "op": "==", "value": "AKAGI" },
     { "do": "check", "note": "ETA は AKAGI から", "dref": "laminar/B747/fms/route_eta", "op": "contains", "value": "[-1,-1,-1," },
     { "do": "wait", "note": "機体が AKAGI（北、磁方位 約 15°）へ向かう", "dref": "sim/cockpit2/gauges/indicators/ground_track_mag_pilot", "op": "outside", "value": [40, 350], "timeout": 150 },

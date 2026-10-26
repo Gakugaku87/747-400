@@ -227,7 +227,8 @@
 - シナリオは必ず 1 本ずつ流す。2026-10-24 に、待ち合わせの条件の誤りで `s08`（地上）と `s09`（空中開始）が同時に始まり、X-Plane が内部エラー（`MACIBM_alert: spin_pwr_dg v=NaN`、`fm_indi.cpp:274`）で止まった（Web API の dataref の読み書きが時間切れになる）。続けて流すときは、同じシェルの中で順に呼ぶ（別のコマンドを「前の結果の行が出たら」で待たせない。前の回の結果の行に先に当たる）。止まったときは X-Plane を起動し直した（Steam から。Web API は約 35 秒で答える）。
 - X-Plane を長く動かして機体を何度も読み直すと資源が尽きる（2026-10-26：約 20 時間・40 回余りで、読み直しのたびに FMOD error 38 が数十万行出て、`s14` が落ち、最後は GPU バッファの割り当ての失敗で X-Plane が落ちた）。FMOD のエラーが Log.txt に出始めたら、また全シナリオの前に、X-Plane を立ち上げ直す。落ちたときは、クラッシュ報告のプロセス（`X-Plane.exe --report_crash`）を閉じてから Steam で起動する（`steam://rungameid/2014780`）。起動で「SAFE MODE」のダイアログが出るので No Thanks を押す（セーフモードではプラグインと追加の機体が読まれない）。
 - ND の範囲は、つまみのコマンド（`laminar/B747/nd/range/capt/sel_dial_up`・`_dn`。シナリオでは `switch` の手順）で変える。つまみの dataref（`laminar/B747/nd/range/capt/sel_dial_pos`）を直接書くと、ND の点の記号はその範囲で描かれるが、X-Plane の地図の層（経路の線・気象レーダー）の範囲（`sim/cockpit2/EFIS/map_range`）は変わらず、縮尺がずれる（2026-10-26、`s89` の写真で見つけた。つまみのコマンドは両方を変える。`s86` も直した）。`s44`・`s45`・`s50`・`s66` も dataref を書いているので、次の全シナリオのときに直す。
-- X-Plane は、機体の読み直しが 30 回に届く前にも落ちることがある（2026-10-26 22:29：起動から約 1 時間 15 分、約 12 回目の読み直しの後の `s88` で、計画の読み込みのときに例外 0xc0000409。起動し直すと同じシナリオが合格）。落ちたら X-Plane を起動し直して、そのシナリオから流し直す。
+- X-Plane は、機体の読み直しが 30 回に届く前にも落ちることがある（2026-10-26 22:29：起動から約 1 時間 15 分、約 12 回目の読み直しの後の `s88` で、計画の読み込みのときに例外 0xc0000409。起動し直すと同じシナリオが合格）。落ちたら X-Plane を起動し直して、そのシナリオから流し直す。原因は XTLua の FMS の dataref（作業スレッドから排他なしで X-Plane を呼ぶ）で、FMS の操作をプラグイン `b747_fms_bridge` に移した（notes/ATA-34-61-FMC.md §23）。XTLua の中で落ちると、次の起動で PLUGIN CRASH の画面が出る。Edge の Game Assist の重ね表示で OK を押せないときは、X-Plane を止めて起動し直す（次は出ない）。
+- プラグイン `b747_fms_bridge` を作り直すときは X-Plane を止めておく（読み込まれた `win.xpl` は書き換えられない）。`bash docs/overhaul/tools/build_fms_bridge.sh`（w64devkit と X-Plane SDK 4.3.0 は `C:\Users\gakug\tools`）。X-Plane が読み込んだことは Log.txt の `Loaded: …/b747_fms_bridge/64/win.xpl` で分かる。
 
 ## 5. 1 項目ごとの流れ（フェーズ1以降）
 

@@ -52,7 +52,8 @@ end
 local function enter(c, text, lsk) type_in(c, text) key(c, "ls_key/" .. lsk) end
 local function clear(c) key(c, "key/clear") key(c, "key/clear", 1.2) end
 local function fmsdata(k) return (rt:get("laminar/B747/fms/data"):match('"' .. k .. '":"([^"]*)"') or ""):gsub("%s+$", "") end
-local function xpfms() return rt:get("xtlua/loadtoFMS") or "" end
+-- the plan X-Plane gets: loaded once the route has stayed the same a second
+local function xpfms() frames(1.2) return rt:get("xtlua/loadtoFMS") or "" end
 -- X-Plane CDU key presses (its commands end with FMS/<key>)
 local function onces(suffix)
     local n = 0

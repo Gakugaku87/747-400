@@ -21,6 +21,7 @@
 | `plugins/xtlua_keysystems` | XTLua（2つめ） | 油圧、air（空調・抽気・与圧）、飛行計器、FMC/CDU、AFDS・autothrottle、照明 |
 | `plugins/xtlua_nd` | XTLua（3つめ） | ND の地図データ |
 | `plugins/xtlua_fdr` | XTLua（4つめ） | flight data recorder（解析用の記録） |
+| `plugins/b747_fms_bridge` | C（MinGW-w64、Windows の `64/win.xpl`） | FMC の計画・現用点・表示中の点を X-Plane の FMS に、X-Plane のスレッドで（`laminar/B747/fms/xp/*`。2026-10-27：notes/ATA-34-61-FMC.md §23） |
 | `plugins/AutoATC` | 設定のみ | AutoATC の音声コマンド定義（`voice commands/voice_control.json`）。AutoATC 本体は別途インストール |
 
 - XTLua の各インスタンスは同じ構成になっている。
@@ -464,7 +465,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 航法データベース（6-2 段 4）：FMS のモジュールが `B747.68.navdb.lua` で X-Plane の航法データ（Custom Data か `Resources/default data`）を 1 フレームに 32 KB ずつ読み、グローバル `B747_fmc_navdb`（メタテーブル付きの表）に持つ。ページは `B747_navdb.airport` などで引く。試験では `B747_NAVDB_FOLDER` で合成のデータ（`tests/fms/data/navdb/`）を指す。NAV DATA OUT OF DATE は `laminar/B747/fms/notification` の 55 番目。
 - 経路（6-2 段 5a〜5c）：FMS のモジュールが `B747.68.route_model.lua` の経路をグローバル `B747_fmc_route`（メタテーブル付き）に持つ。RTE と LEGS のページ（`activepages/B744.fms.pages.rte.lua`・`legs.lua`）が変え、`B747_fmc_route_changed()` が RTE 1 の変化を FMC のデータ（`fltdep`・`fltdst`・`runway`・`transalt`）と X-Plane の FMS（`xtlua/loadtoFMS` に .fms v1100 の文字列）へ流す。X-Plane の FMS は ND の経路の線と AFDS の LNAV・VNAV（作り直すまで）が読む。
 - 手続き（6-2 段 5d）：`B747.68.proc_model.lua`（`B747_fmc_route.P`）が CIFP の SID・STAR・進入を脚にし、経路のモデルの `set_departure`・`set_arrival` が経路に入れる。DEP/ARR のページは `activepages/B744.fms.pages.deparr.lua`、DEP ARR キーの行き先は `B747_cdu_deparr_page`。
-- 現用点（6-2 段 5e）：`B747_fmc_route_sync()`（FMS のモジュールの毎フレーム）が、飛行中は AFDS の現用点（`laminar/B747/autopilot/ap_monitor/fmscurrentIndex`）に合わせて経路を順送りし（通過した脚は `passed`、X-Plane の計画には残す）、新しい計画を流し込んだあとと空中のアクティブ化のあとは、X-Plane の FMS の現用点（`xtlua/currentFMSID`）と AFDS の現用点を FMC の現用点に合わせる。`to_fms` が返す行と脚の対応（`map`）を使う。DIRECT TO の始点は計画の PPOS（ND は点として描かない）。
+- 現用点（6-2 段 5e）：`B747_fmc_route_sync()`（FMS のモジュールの毎フレーム）が、飛行中は AFDS の現用点（`laminar/B747/autopilot/ap_monitor/fmscurrentIndex`）に合わせて経路を順送りし（通過した脚は `passed`、X-Plane の計画には残す）、新しい計画を流し込んだあとと空中のアクティブ化のあとは、X-Plane の FMS の現用点（`xtlua/currentFMSID`）と AFDS の現用点を FMC の現用点に合わせる。`to_fms` が返す行と脚の対応（`map`）を使う。DIRECT TO の始点は計画の DTOPOS（ND は点として描かない）。X-Plane の FMS へは、プラグイン `b747_fms_bridge` があれば `laminar/B747/fms/xp/plan`・`xp/current`（X-Plane のスレッド）、無ければ XTLua の `xtlua/loadtoFMS`・`xtlua/currentFMSID`（作業スレッドで排他なし：計画は経路が 1 秒変わらなくなってから、現用点は計画 1 回につき 2 回まで）。
 - 離陸の V speeds（6-2 段 3b-1）：計器のモジュール（`fltInst02`）が FMC の重量（`laminar/B747/fms/data` の `grwt`）と TAKEOFF REF のフラップ・風から計算値を `airspeed/V1_ref`・`Vr_ref`・`V2_ref` に出し、FMC が選んだものを `airspeed/V1`・`Vr`・`V2`（PFD）に書く（999 は NO V SPD）。
 - ACARS/CPDLC：`acars/*`（AutoATC と Hoppie の provider）。
 - IRS：`irs/irs_system.lua`（アライン、位置）。`irs/rnav_system.lua`。

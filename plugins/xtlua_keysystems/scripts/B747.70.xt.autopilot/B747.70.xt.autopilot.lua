@@ -183,6 +183,18 @@ simDR_autopilot_destination_index = find_dataref("sim/cockpit/gps/destination_in
 simDR_autopilot_airspeed_kts = find_dataref("sim/cockpit2/autopilot/airspeed_dial_kts")
 simDR_autopilot_airspeed_kts_mach = find_dataref("sim/cockpit2/autopilot/airspeed_dial_kts_mach")
 B747DR_fms_setCurrent = find_dataref("xtlua/currentFMSID")
+B747DR_fms_xp_bridge = find_dataref("laminar/B747/fms/xp/bridge")
+B747DR_fms_xp_current = find_dataref("laminar/B747/fms/xp/current")
+-- X-Plane's FMS's current entry (from 1): through the FMS bridge plugin when
+-- it is there (X-Plane's thread), else XTLua's currentFMSID (XTLua's own
+-- thread with no lock against X-Plane's: 6-1/6-2 step 5e)
+function B747_set_fms_current(n)
+	if B747DR_fms_xp_bridge == 1 then
+		B747DR_fms_xp_current = n
+	else
+		B747DR_fms_setCurrent = n
+	end
+end
 --simDR_autopilot_heading_deg         	= find_dataref("sim/cockpit2/autopilot/heading_dial_deg_mag_pilot")
 simDR_autopilot_heading_deg = find_dataref("sim/cockpit/autopilot/heading_mag")
 simDR_autopilot_vs_fpm = find_dataref("sim/cockpit2/autopilot/vvi_dial_fpm")
@@ -2342,7 +2354,7 @@ function B747_getCurrentWayPoint_function(fmsO)
 		B747DR_ap_lnav_xtk_error=bestOffTrack
 		--print("best Track to waypoint="..best.." / "..bestOffTrack)
 		if best>0 and (best>B747DR_fmscurrentIndex or best<B747DR_fmscurrentIndex-1) and B747DR_fmscurrentIndex ~=best then
-			B747DR_fms_setCurrent = best
+			B747_set_fms_current(best)
 			B747DR_fmscurrentIndex = best
 			if B747DR_ap_lnav_state == 2 then
 				B747DR_ap_lnavHeading_mode = best
@@ -2352,7 +2364,7 @@ function B747_getCurrentWayPoint_function(fmsO)
 			setVNAVState("recalcAfter", best)
 		elseif B747DR_fmscurrentIndex == 0 and maxPhaseLeg>2 and fmsO[2][2]~=2048 then
 			B747DR_fmscurrentIndex = 2
-			B747DR_fms_setCurrent = 2
+			B747_set_fms_current(2)
 			B747DR_ap_lnav_xtk_target=0 --target no track offset
 			--print("B747DR_fmscurrentIndex="..1)
 			setVNAVState("recalcAfter", 1)

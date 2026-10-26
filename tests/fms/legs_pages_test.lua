@@ -52,7 +52,8 @@ local function type_in(text)
 end
 local function enter(text, lsk) type_in(text) key("ls_key/" .. lsk) end
 local function clear() key("key/clear") key("key/clear", 1.2) end
-local function xpfms() return rt:get("xtlua/loadtoFMS") or "" end
+-- the plan X-Plane gets: loaded once the route has stayed the same a second
+local function xpfms() frames(1.2) return rt:get("xtlua/loadtoFMS") or "" end
 -- X-Plane CDU key presses (its commands end with FMS/<key>)
 local function onces(suffix)
     local n = 0
@@ -152,8 +153,8 @@ T.check(small(2):find("^ 090`"), "INTC CRS 090: " .. small(2))
 T.check(not xpfms():find("NUMENR 4"), "X-Plane's FMS keeps the active route until EXEC")
 key("key/execute")
 T.check(line(1):find("ACT RTE 1 LEGS"), "EXEC: " .. line(1))
-T.check(xpfms():find("NUMENR 5\n1 ZZAA ADEP[^\n]*\n28 RW16R DRCT [^\n]*\n28 PPOS DRCT [^\n]*\n11 CHARL DRCT "),
-    "X-Plane's FMS: ZZAA, its runway, the direct-to's start PPOS (step 5e), CHARL, ZZBB")
+T.check(xpfms():find("NUMENR 5\n1 ZZAA ADEP[^\n]*\n28 RW16R DRCT [^\n]*\n28 DTOPOS DRCT [^\n]*\n11 CHARL DRCT "),
+    "X-Plane's FMS: ZZAA, its runway, the direct-to's start DTOPOS (step 5e), CHARL, ZZBB")
 T.check(xpfms():find("\n11 CHARL DRCT "), "CHARL direct")
 
 T.done()

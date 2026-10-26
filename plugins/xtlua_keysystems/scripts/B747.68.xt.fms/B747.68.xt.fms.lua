@@ -893,12 +893,28 @@ local routeLoaded=nil
 local routeMap=nil
 local routeSync=nil
 local routeSyncT=0
-local routeSyncOld=nil
+local routeSyncWrites=0
+-- the last load: when, and xtlua/fms before it
+local routeLoadT=-10
+local routeLoadOld=nil
 local routeWasActive=false
+-- XTLua's xtlua/loadtoFMS and xtlua/currentFMSID call X-Plane's FMS from
+-- XTLua's own thread, with no lock against X-Plane's (XTLua's
+-- xpmtdatarefs.cpp; X-Plane crashed three times, 2026-10-26): the FMS
+-- bridge plugin (plugins/b747_fms_bridge) takes the plan and the current
+-- waypoint on X-Plane's thread; without it, a new plan goes to X-Plane once
+-- the route has stayed the same a second, X-Plane's current waypoint is
+-- written twice at most a plan
+local routePending=nil
+local routePendingMap=nil
+local routePendingT=0
 B747DR_fmscurrentIndex=find_dataref("laminar/B747/autopilot/ap_monitor/fmscurrentIndex")
 -- (B747DR_fms_setCurrent is xtlua/currentFMS, by name: a global XTLua has
 -- bound to a dataref keeps it)
 B747DR_fms_currentID=find_dataref("xtlua/currentFMSID")
+B747DR_xp_bridge=find_dataref("laminar/B747/fms/xp/bridge")
+B747DR_xp_plan=find_dataref("laminar/B747/fms/xp/plan")
+B747DR_xp_current=find_dataref("laminar/B747/fms/xp/current")
 local function fms_text(id) return (string.gsub(fmsModules["data"][id],"%s+$","")) end
 function B747_fmc_route_changed()
   local r=B747_fmc_route.rte
@@ -916,52 +932,79 @@ function B747_fmc_route_changed()
   -- message on the screen): none before the DEST
   if r.dest==nil then return end
   local fms,map=B747_route_model.to_fms(r,(B747_navdb.cycle_info(B747_fmc_navdb)))
-  -- the rows' legs as the route is now (sequencing keeps the plan, not the
-  -- legs' numbers)
-  routeMap=map
   local active=B747_fmc_route.active
-  local new=fms~=routeLoaded
-  if new then
-    routeLoaded=fms
-    fmsLoadDref=fms
+  if fms==routeLoaded then
+    -- the plan X-Plane has: its rows' legs as the route is now (sequencing
+    -- keeps the plan, not the legs' numbers)
+    routeMap=map
+    routePending=nil
+  else
+    -- loaded by B747_fmc_route_sync once the route stays the same
+    if fms~=routePending then routePending,routePendingT=fms,simDRTime end
+    routePendingMap=map
   end
-  -- in flight X-Plane's current waypoint and the AFDS's to the active one,
-  -- after a new plan (X-Plane starts it at its first waypoint) or the
-  -- activation
-  if active and simDR_onGround==0 and (new or not routeWasActive) then
+  -- the activation in flight: X-Plane's current waypoint and the AFDS's to
+  -- the active one (with a new plan: once it is loaded)
+  if active and not routeWasActive and simDR_onGround==0 and routePending==nil then
     routeSync=B747_route_model.active_row(r,map)
-    routeSyncT=simDRTime
-    -- X-Plane's plan as it was: a new one shows once xtlua/fms changes
-    routeSyncOld=new and fmsJSON or nil
+    routeSyncT,routeSyncWrites=simDRTime,0
   end
   routeWasActive=active
 end
 
--- in flight on the active route (6-1/6-2 step 5e): X-Plane's current
--- waypoint and the AFDS's to the active one once X-Plane has the plan, then
--- the route sequenced as the AFDS's current waypoint moves on (its best
--- track, until LNAV's own sequencing: step 6)
+-- each frame (6-1/6-2 step 5e): a new plan to X-Plane once the route has
+-- stayed the same a second; in flight on the active route, X-Plane's
+-- current waypoint and the AFDS's to the active one once X-Plane has the
+-- plan, then the route sequenced as the AFDS's current waypoint moves on
+-- (its best track, until LNAV's own sequencing: step 6)
 function B747_fmc_route_sync()
   -- read every frame: XTLua passes a write on only when it differs from
   -- the value it last read
   local cur=B747DR_fmscurrentIndex
   local set=B747DR_fms_currentID
+  local xpcur=B747DR_xp_current
+  local bridge=B747DR_xp_bridge==1
   local st=B747_fmc_route
-  if not (st.active and routeMap) or simDR_onGround==1 then routeSync=nil return end
+  if routePending and simDRTime-routePendingT>=1 then
+    routeLoadT,routeLoadOld=simDRTime,fmsJSON
+    routeLoaded,routeMap=routePending,routePendingMap
+    -- X-Plane starts a new plan at its first waypoint: in flight the
+    -- active one current again (the bridge right after the load)
+    local k=nil
+    if st.active and simDR_onGround==0 then k=B747_route_model.active_row(st.rte,routeMap) end
+    if bridge then
+      B747DR_xp_plan=(k and string.format("CURRENT %d\n",k) or "")..routePending
+    else
+      fmsLoadDref=routePending
+    end
+    routePending=nil
+    routeSync=k
+    routeSyncT,routeSyncWrites=simDRTime,0
+    return
+  end
+  if not (st.active and routeMap) or simDR_onGround==1 or routePending then routeSync=nil return end
   local fms=fms_route()
   -- X-Plane's plan the one loaded last
   if table.getn(fms)~=routeMap.n then return end
   if routeSync then
     local k=routeSync
-    -- a new plan not before xtlua/fms changes (with as many rows, the old
-    -- one could show the active waypoint current already); a second: the
-    -- same as before
-    if routeSyncOld and fmsJSON==routeSyncOld and simDRTime-routeSyncT<1 then return end
+    -- not before xtlua/fms shows the plan loaded last (the old one, with
+    -- as many rows, could show the active waypoint current already, and a
+    -- write before X-Plane takes the plan is lost to it: the activation
+    -- right after a load); a second: the same as before
+    if fmsJSON==routeLoadOld and simDRTime-routeLoadT<1 then return end
     if fms[k]==nil or simDRTime-routeSyncT>10 then routeSync=nil return end
     if fms[k][8]~=routeMap.ident[k] then return end
     if fms[k][10]==true and cur==k then routeSync=nil return end
-    B747DR_fms_currentID=k
-    B747DR_fmscurrentIndex=k
+    if bridge then
+      -- X-Plane's thread: until X-Plane shows it
+      if xpcur~=k then B747DR_xp_current=k end
+    elseif routeSyncWrites<2 and simDRTime-routeSyncT>=2*routeSyncWrites then
+      -- XTLua's: now, and once more after two seconds
+      B747DR_fms_currentID=k
+      routeSyncWrites=routeSyncWrites+1
+    end
+    if cur~=k then B747DR_fmscurrentIndex=k end
     return
   end
   local i=routeMap.leg[cur]

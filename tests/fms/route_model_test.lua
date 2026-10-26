@@ -246,9 +246,9 @@ T.check(R.sequence(st, 1) and idents(st) == "CHARL" and st.rte.legs[1].fix.ident
     "BRAVO passed on the route, the direct-to's modification as it was")
 R.exec(st, {lat = 35.95, lon = 140.45})
 local text3, map3 = R.to_fms(R.shown(st), "2610")
-T.check(text3:find("\n11 BRAVO Z1 [^\n]*\n28 PPOS DRCT 0%.000000 35%.950000 140%.450000\n11 CHARL DRCT "),
-    "the direct-to from the airplane's position at EXEC (estimate): PPOS before CHARL")
-T.check(map3.ident[4] == "PPOS" and not map3.leg[4] and R.active_row(R.shown(st), map3) == 5, "CHARL's row active, PPOS no leg's")
+T.check(text3:find("\n11 BRAVO Z1 [^\n]*\n28 DTOPOS DRCT 0%.000000 35%.950000 140%.450000\n11 CHARL DRCT "),
+    "the direct-to from the airplane's position at EXEC (estimate): DTOPOS before CHARL")
+T.check(map3.ident[4] == "DTOPOS" and not map3.leg[4] and R.active_row(R.shown(st), map3) == 5, "CHARL's row active, DTOPOS no leg's")
 T.equal(R.leg_from(R.shown(st), 1).lat, 35.95, "the direct-to's leg from its start")
 T.check(not R.legs(R.shown(st))[1].dto_exec, "set once")
 
