@@ -119,11 +119,11 @@
 ## 利用者に確かめたいこと
 
 - LEGS の PLAN の CTR と STEP（2026-10-26、6-1・6-2 段 5e。FCOM p.1333；FMSPG p.124）：ND の PLAN の中心は X-Plane の FMS の表示中の点で、XTLua からは書けない（`xtlua/xpFMSData` の書き込みは INOP）。(a) X-Plane の CDU のキー（LEGS・NEXT・PREV と PLAN の STEP）を裏で押して X-Plane の表示中の点を動かす（XTLua だけで済むが、X-Plane のページ送りに合わせるので壊れやすい）、(b) XPLMSetDisplayedFMSEntry を呼ぶだけの小さなプラグイン（C++。CLAUDE.md で採用してよいとされた範囲）を作る、(c) 段 7 まで置く、のどれにするか。
-- CDU の EXEC 灯（2026-10-26、6-1・6-2 段 5）：3D の物体（`objects/747_cockpit/Cockpit_Pedestal1.obj`）の EXEC 灯は X-Plane 標準の `sim/cockpit2/radios/indicators/fms_exec_light_pilot`・`_copilot` を見ていて、これは書き込めない。FMC の MOD（自前の経路の変更）に合わせて灯すには、物体の `ATTR_light_level` の dataref を FMC の新しい dataref に替える必要がある（3D は対象外なので、変えてよいか確かめたい。手元の 3D 一式と非公開リポジトリの方の変更になる）。それまでは CDU の題名の MOD と 6L の ERASE で示す。
 - ND の MAP CTR の縮尺（2026-10-26、5-2 段 5c-3）：MAP CTR では、地図の記号（局・経路の点・TCAS）と X-Plane の地図の層が拡大の MAP と同じ縮尺（465 px＝選んだ範囲）で描かれ、見えるのは機体から 250 単位（182 px、範囲の約 4 割）まで。一方、全周のローズの半径は約 230 px。FCOM p.1143 の図からは、MAP CTR ではローズの半径が範囲に当たるようにも読めるが、明記は無い。実機の MAP CTR で、ローズの円が選んだ範囲（または範囲の半分）を表すかを確かめたい。直すなら、MAP CTR のときだけ X-Plane の地図の範囲を 1 段上げ、記号・TCAS・高度の弧・POS の線の縮尺を半分にする（試しに X-Plane の範囲を 1 段上げると地図の層の縮尺が半分になることは確かめた）。
 
 ## 決まったこと（2026-10-27 未明、利用者の回答）
 
+- CDU の EXEC 灯は、破綻しない範囲で作り直してよい（3D の物体の変更を含む）。→ 3D の物体の EXEC 灯の 2 行だけ、見る dataref を FMC のものに替えた（notes/ATA-34-61-FMC.md §25）。
 - X-Plane の FMS を X-Plane のスレッドで操作する小さなプラグイン（C、Windows 用）を作ってよい。コンパイラー（MinGW-w64）と X-Plane SDK のダウンロードも承認（CLAUDE.md の「XLua 2.0 や C++」の範囲。XTLua では足りない理由・ほかの案・影響は notes/ATA-34-61-FMC.md §23）。プラグインは完成後の普通のフライトでも使う（機体のフォルダーにあり、機体と一緒に読み込まれる）。
 
 ## 決まったこと（2026-10-23 朝、利用者の回答）
@@ -1088,3 +1088,4 @@ PLAN.md §3 に書いた。要点：
 - 2026-10-27 未明：X-Plane の FMS を X-Plane のスレッドで（新しいプラグイン `plugins/b747_fms_bridge`、プラグインが無いときは XTLua の呼び出しを絞る。DIRECT TO の始点は DTOPOS）。X-Plane：プラグイン入りで `s89_route_sync` 26/26（作り直したプラグインでもう一度）、`s67_nd_data` 25/25（空中の ACTIVATE と EXEC の直後から現用点が FR）、`s70_nd_airports` 39/39、`s88_deparr` 26/26、`s86_rte_pages` 19/19、`s87_legs_pages` 21/21 で、X-Plane は落ちなかった。プラグインは機体の読み直しのたびに読み込まれる（Log.txt の Loaded）。Lua の誤りなし。
 - 2026-10-27：ND の DATA の高度は遷移高度ちょうどをフィートで（LEGS ページと同じ）。X-Plane：`s67_nd_data` 25/25（遷移高度 5000 ft の EDDF を出発地にした経路で、FR の 5000 が 5000 と出る）。
 - 2026-10-27：6-1・6-2 段 5f（飛行試験キットの経路を CDU で）。X-Plane：`s67_nd_data` 25/25、`s70_nd_airports` 39/39（どちらも経路を CDU で入れる）。ND の写真（DATA の現用点 FR のマゼンタと高度・ETA、TAU の FL200、26R の滑走路の絵）。
+- 2026-10-27：CDU の EXEC 灯を FMC の修正に合わせる（3D の物体 `Cockpit_Pedestal1.obj` の 2 行、利用者の承認）。X-Plane：`s87_legs_pages` 29/29（ACTIVATE と DIRECT TO の修正で左・中央と右の灯りが 1、EXEC で 0。写真で、MOD の間は CDU の EXEC キーの上の灯りが光り、EXEC で消える）。X-Plane を起動して最初のフライトでは交流の母線に電気が来ておらず、右の CDU の灯りが 0 だった（電源の割り当てのとおり。2 回目のフライトで合格）。Lua の誤りなし。

@@ -380,7 +380,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 ### CDU：作り直し中（6-2 段 1〜4、段 5 の RTE・LEGS・DEP/ARR）
 
 - 3 台が X-Plane 標準の CDU 1 つを共有する（HOLD・FIX などの X-Plane のページ：CDU-02。段 7 で）。
-- 性能のページ（CLB・CRZ・DES など）に MOD・EXEC・ERASE が無く、即時に効く（CDU-03。RTE・LEGS は段 5b・5c で MOD・EXEC・ERASE を持った。EXEC 灯は X-Plane のもののまま）。題名、大字と小字（CDU-04・05）。DEP ARR・HOLD・VNAV のキーで開くページが文脈で変わらない（CDU-06。INIT REF は段 3a で）。
+- 性能のページ（CLB・CRZ・DES など）に MOD・EXEC・ERASE が無く、即時に効く（CDU-03。RTE・LEGS は段 5b・5c で MOD・EXEC・ERASE を持った。EXEC 灯は 2026-10-27 から、経路の修正と ACTIVATE、X-Plane のページ（HOLD・FIX）の実行待ちで点く）。題名、大字と小字（CDU-04・05）。DEP ARR・HOLD・VNAV のキーで開くページが文脈で変わらない（CDU-06。INIT REF は段 3a で）。
 - 入力の検査が不正確（CDU-07〜09）。
 - 空中の THRUST LIM の GA・CON・CRZ は選べない（KEY/FUNCTION INOP。推力管理 6-4 で。前は離陸の derate が動いた：CDU-10）。VNAV・PROGRESS・NAV RADIO のページの不足（CDU-14〜16）。
 - 無いページ（RTE 2、REF NAV DATA、DESCENT FORECAST など。CDU-18）。故障の扱い（CDU-19）。MSG・DSPY・OFST・FAIL の灯（3D に無い：CDU-22）。

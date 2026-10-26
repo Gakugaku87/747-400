@@ -92,6 +92,11 @@ B747DR_ND_waypoint_distance				= deferred_dataref("laminar/B747/nd/waypoint_dist
 B747DR_ND_range_display_capt			= deferred_dataref("laminar/B747/nd/range_display_capt", "number")
 B747DR_ND_range_display_fo				= deferred_dataref("laminar/B747/nd/range_display_fo", "number")
 
+-- the CDUs' EXEC key lights (6-1/6-2 step 5): the left and centre CDUs'
+-- (the 3D cockpit's "pilot" light) and the right CDU's ("copilot")
+B747DR_fms_exec_light_pilot				= deferred_dataref("laminar/B747/fms/exec_light_pilot", "number")
+B747DR_fms_exec_light_copilot			= deferred_dataref("laminar/B747/fms/exec_light_copilot", "number")
+
 --IRS ND DISPLAY
 B747DR_ND_GPS_Line						= deferred_dataref("laminar/B747/irs/gps_display_line", "string")
 B747DR_ND_IRS_Line						= deferred_dataref("laminar/B747/irs/irs_display_line", "string")

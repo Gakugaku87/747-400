@@ -523,7 +523,7 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 
 - 手続きの脚の形（旋回、条件点）と LNAV の誘導は段 6、ホールドと RTE 2 は段 7、予測（小字の速度と高度、RTE DATA）は段 8。
 - 順序：5b は 5e の流し込みと一緒に入れる（RTE を FMC のものにすると、X-Plane の FMS へは流し込みでしか経路が入らない）。5d までは X-Plane の DEP ARR のページ（X-Plane の FMS に直接入る）が残り、そこで選んだ手続きは FMC の経路が次に変わると上書きされる（暫定）。
-- EXEC 灯：3D の物体（`Cockpit_Pedestal1.obj` の `ATTR_light_level`）は X-Plane の `sim/cockpit2/radios/indicators/fms_exec_light_pilot`・`_copilot` を見ていて、これは書き込めない（DataRefs.txt）。FMC の MOD に合わせて灯すには 3D の物体の変更が要る（3D は対象外なので利用者に確かめる：PROGRESS.md「利用者に確かめたいこと」）。それまでは CDU の題名の MOD と 6L の ERASE で示す。
+- EXEC 灯：3D の物体（`Cockpit_Pedestal1.obj` の `ATTR_light_level`）は X-Plane の `sim/cockpit2/radios/indicators/fms_exec_light_pilot`・`_copilot` を見ていて、これは書き込めない（DataRefs.txt）。FMC の MOD に合わせて灯すには 3D の物体の変更が要る（3D は対象外なので利用者に確かめる：PROGRESS.md「利用者に確かめたいこと」）。それまでは CDU の題名の MOD と 6L の ERASE で示す。→ 2026-10-27 に利用者の承認で作り直した（§25）。
 - CO ROUTE：会社の経路の DB が無いので、入力は NOT IN DATA BASE（FCOM p.1290：名前が DB に無ければその旨を出す）。
 
 ## 19. 段 5a の実装（2026-10-26：経路のモデル）
@@ -547,7 +547,7 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - LEGS の入力（FMSPG p.82, p.91, p.125–128, p.141–144；資料に無い規則は推定）：経路の先にある点を入れると、その間の点が消えて直行。無い点は挿入され、その後に ROUTE DISCONTINUITY。箱に次の点を入れると閉じる。DELETE は前後をつなぐ（推定。空中のアクティブな点は INVALID DELETE、discontinuity は消せない）。アクティブな経路の最初の行への入力は DIRECT TO（MOD）で、6R に INTC CRS（経路上の点なら経路のコースと >、無ければ箱：FMSPG p.144）。速度・高度の制限は右の LSK に「XXX/」「XXX/高度」「/高度」「高度」（A・B、窓は 220A240B）、速度は CAS 100–400 kt、速度だけは高度の制限の上だけ、CRZ ALT 未満、新しい制限で古い速度は消える、DELETE は両方を消す。
 - まだ無いもの：RTE 2・RTE COPY（段 7）、RTE DATA（段 8）、ABEAM PTS、PLAN の CTR と STEP（5e）、LEGS の予測（段 8）、点の種類の増え（PBD、緯経度など：FMSPG p.82–83、5e 以降）。
 - X-Plane の FMS への流し込み：RTE 1（アクティブなら EXEC 後の経路、MOD は入れない）が変わると、X-Plane の .fms（v1100）の文字列を `xtlua/loadtoFMS` に書く（XTLua が XPLMLoadFMSFlightPlan で読み込ませる）。出発の滑走路は出発地の次に、名前のついた位置の点（閾値、高度は閾値の標高）として書く（X-Plane の DEP ARR が入れるのと同じ形で、ND はそこで出発の滑走路を見つける）。目的地が入るまでは流さない（X-Plane は目的地の無い飛行計画を受け付けず、画面にエラーを出す：X-Plane での試験で見つけた）。X-Plane の FMS は ND の線と、作り直していない読み手（AFDS の LNAV・VNAV）のため。FMC のデータの `fltdep`・`fltdst`・`runway` も合わせ、新しい出発地で TRANS ALT（FCOM p.1329）。RTE と LEGS のキー、ほかのページから RTE へ行くプロンプト（POS INIT と TAKEOFF REF の ROUTE>、FMC COMM の L1）は、もう X-Plane のキーを押さない。X-Plane の DEP ARR のページ（段 5d まで）で選んだ手続きは X-Plane の FMS にだけ入り、FMC の経路が次に変わると上書きされる。
-- EXEC 灯は FMC の MOD に合わせられない（§18。利用者に確かめ中）。
+- EXEC 灯は FMC の MOD に合わせられない（§18）。→ §25 で作り直した。
 - 試験：`tests/fms/route_model_test.lua`（101 件）、`rte_pages_test.lua`（52 件）、`legs_pages_test.lua`（40 件）。X-Plane：`s86_rte_pages` 18/18（ORIGIN RJAA・DEST RJBB・RUNWAY 34L、DIRECT SPENS、Y71 で XAC、AKAGI の SELECT DESIRED WPT、ACTIVATE と EXEC、X-Plane の FMS の RTE に RJAA と RJBB、ND が出発滑走路 34L を見つける）、`s87_legs_pages` 21/21、RTE ページに入力する `s14` 66/66・`s83` 18/18・`s84` 13/13・`s85` 22/22。CDU と ND の写真（RTE の 1・2 ページ、SELECT DESIRED WPT、LEGS の discontinuity と DIRECT TO、ND の経路と出発滑走路）。目的地の前の流し込みで X-Plane が画面にエラーを出していたのを直し、直した後の s86・s87 ではエラー 0。Lua の誤りなし。
 
 ## 21. 段 5d の実装（2026-10-26：手続きと DEP/ARR のページ）
@@ -586,3 +586,10 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - `s67`（ND の DATA）と `s70`（ND の空港と滑走路）は、FlyWithLua で X-Plane の FMS に直接入れていた経路を、CDU で FMC に入れる形にした（`s67`：EDDF→EDDF、DIRECT FR・TAU、LEGS で FR に 5000、TAU に FL200、空中で ACTIVATE と EXEC。`s70`：EDDF の 25C から EDDM、ARRIVALS で ILS26R）。FMC が流す計画（滑走路の行、高度の制限、現用点）で ND が描けることを確かめる。これで流し込みに高度が無いこと（上の §22 の追記）と、ND の遷移高度の書式（notes/ATA-31.md §28 の追記）が見つかった。
 - `s79`（FMC の小修正）は、緯度経度の点（FMC はまだ受け付けない）を使うので FlyWithLua の経路のまま。`s86`〜`s89` は初めから CDU。`B747_route.lua` は残す。
 - X-Plane：`s67_nd_data` 25/25、`s70_nd_airports` 39/39（どちらも経路を CDU で入れる）。ND の写真（DATA の現用点 FR のマゼンタと高度・ETA、TAU の FL200、26R の滑走路の絵）。
+
+## 25. EXEC 灯（2026-10-27：利用者の承認で 3D の物体も）
+
+- FMC の新しい dataref `laminar/B747/fms/exec_light_pilot`・`_copilot`（init スクリプト `B747.68.fms`）：経路の修正（MOD）か ACTIVATE の実行待ち（FCOM p.1238、p.1290）、または X-Plane のページ（HOLD・FIX：まだ X-Plane の CDU の上）の実行待ち（X-Plane の `fms_exec_light_pilot`）で 1。その CDU の電源が無ければ 0（左・中央の灯りは左の CDU の電源、右は右の CDU の電源：電源の割り当ては B744.createfms.lua の推定のとおり）。`B747_fmc_exec_lights()` が毎フレーム、変わったときだけ書く。
+- 3D の物体 `objects/747_cockpit/Cockpit_Pedestal1.obj` の `ATTR_light_level` 2 行だけ、見る dataref を X-Plane 標準から上の 2 つに替えた（明るさの範囲 0〜1 とほかの記述はそのまま）。頂点の左右の位置で、`pilot` の組が左と中央の CDU、`copilot` の組が右の CDU と確かめた。手元の 3D 一式と非公開リポジトリ（Gakugaku87/747-400-assets）の変更で、変更前の物体は `D:\747-400-local-assets\backup_20261027_exec_light\` に控えた。物体を変えたら X-Plane を起動し直して読ませる（絵ごとの読み直し `sim/operation/reload_aircraft` では X-Plane が固まった：TESTING.md）。
+- AutoATC の CDU の写し（`acars/autoatcProvider.lua`）も右の CDU の灯り（`exec_light_copilot`）を読む。INTERFACES.tsv に 2 行を足した。
+- 試験：`legs_pages_test.lua`（42 件：DIRECT TO の修正で 2 つとも 1、EXEC で 0）。X-Plane：`s87_legs_pages` 29/29（ACTIVATE と DIRECT TO の修正で左・中央と右の灯りが 1、EXEC で 0。写真で、MOD の間は CDU の EXEC キーの上の灯りが光り、EXEC で消える）。X-Plane を起動して最初のフライトでは交流の母線に電気が来ておらず、右の CDU の灯りが 0 だった（電源の割り当てのとおり。2 回目のフライトで合格）。Lua の誤りなし。

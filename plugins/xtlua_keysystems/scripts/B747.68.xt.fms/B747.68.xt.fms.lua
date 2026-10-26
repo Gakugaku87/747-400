@@ -915,6 +915,9 @@ B747DR_fms_currentID=find_dataref("xtlua/currentFMSID")
 B747DR_xp_bridge=find_dataref("laminar/B747/fms/xp/bridge")
 B747DR_xp_plan=find_dataref("laminar/B747/fms/xp/plan")
 B747DR_xp_current=find_dataref("laminar/B747/fms/xp/current")
+B747DR_fms_exec_light_pilot=find_dataref("laminar/B747/fms/exec_light_pilot")
+B747DR_fms_exec_light_copilot=find_dataref("laminar/B747/fms/exec_light_copilot")
+simDR_fms_exec_light=find_dataref("sim/cockpit2/radios/indicators/fms_exec_light_pilot")
 local function fms_text(id) return (string.gsub(fmsModules["data"][id],"%s+$","")) end
 function B747_fmc_route_changed()
   local r=B747_fmc_route.rte
@@ -950,6 +953,18 @@ function B747_fmc_route_changed()
     routeSyncT,routeSyncWrites=simDRTime,0
   end
   routeWasActive=active
+end
+
+-- the EXEC keys' lights (6-1/6-2 step 5; FCOM p.1238: a modification or an
+-- activation to execute; X-Plane's own for its pages still behind the
+-- CDUs, HOLD and FIX): the left and centre CDUs' light (the 3D cockpit's
+-- "pilot" one) with the left CDU's power, the right CDU's with its own
+function B747_fmc_exec_lights()
+  local on=B747_route_model.exec_lit(B747_fmc_route) or simDR_fms_exec_light>0
+  local l=(on and cduPowered("fmsL")) and 1 or 0
+  local r=(on and cduPowered("fmsR")) and 1 or 0
+  if B747DR_fms_exec_light_pilot~=l then B747DR_fms_exec_light_pilot=l end
+  if B747DR_fms_exec_light_copilot~=r then B747DR_fms_exec_light_copilot=r end
 end
 
 -- each frame (6-1/6-2 step 5e): a new plan to X-Plane once the route has
@@ -1517,6 +1532,7 @@ function after_physics()
     update_navdb()
     update_takeoff()
     B747_fmc_route_sync()
+    B747_fmc_exec_lights()
     B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
     --print(B747DR_FMSdata)
     fmsL:B747_fms_display()
