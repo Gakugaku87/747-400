@@ -2,27 +2,29 @@ fmsPages["IDENT"]=createPage("IDENT")
 --dofile("activepages/version.lua")
 
 fmsPages["IDENT"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be this way
-	local nav_data_from_month = string.sub(B747DR_srcfms[fmsID][5],3,5)
-	local nav_data_from_day = string.sub(B747DR_srcfms[fmsID][5],1,2)
-	local nav_data_to_month = string.sub(B747DR_srcfms[fmsID][5],11,13)
-	local nav_data_to_day = string.sub(B747DR_srcfms[fmsID][5],9,10)
-	local nav_data_yr = string.sub(B747DR_srcfms[fmsID][5],14,15)
-	simConfigData["data"].FMC.INIT.active = string.format("%s%s%s%s/%s", nav_data_from_month, nav_data_from_day, nav_data_to_month, nav_data_to_day, nav_data_yr)
-	--simConfigData["data"].FMC.INIT.op_program = fmcVersion
-	
+	-- NAV DATA and ACTIVE from the FMC's navigation database (6-1/6-2 step 4;
+	-- FCOM p.1283-1284): the AIRAC cycle (the data have no part number:
+	-- estimate) and its dates; one database, no inactive line (estimate)
+	local navId,active="          ","             "
+	local cycle,first=B747_navdb.cycle_info(B747_fmc_navdb)
+	if B747_fmc_navdb.ready and cycle and first then
+		navId=string.format("%-10s","AIRAC "..cycle)
+		active=B747_navdb.date_range(first)
+	end
+	local codata=string.gsub(fmsModules["data"].codata,"%s+$","")
     return{
 
  "       IDENT            ",
  "                        ",
  string.format("%-11s %12s",simConfigData["data"].PLANE.model,simConfigData["data"].PLANE.engines),
  "                        ",
- "           "..simConfigData["data"].FMC.INIT.active,
+ navId.." "..active,
  "                        ",
- "                        ",
+ string.format("%-24s",simConfigData["data"].FMC.INIT.drag_ff),
  "                        ",
  simConfigData["data"].FMC.INIT.op_program.."       ",
  "                        ",
- simConfigData["data"].FMC.INIT.drag_ff.."         "..fmsModules["data"].codata,
+ string.format("%24s",codata),
  "------------------------",
  "<INDEX         POS INIT>"
     }
@@ -34,12 +36,12 @@ fmsPages["IDENT"]["templateSmall"]={
 "                        ",
 " NAV DATA         ACTIVE",
 "                        ",
-"                        ",
+" DRAG/FF                ",
 "                        ",
 " OP PROGRAM             ",
 "                        ",
-" DRAG/FF         CO DATA",
-"                        ", 
+"                 CO DATA",
+"                        ",
 "                        ",
 "                        "
 }
@@ -47,6 +49,7 @@ fmsPages["IDENT"]["templateSmall"]={
 
   
   
+fmsFunctionsDefs["IDENT"]={}
 fmsFunctionsDefs["IDENT"]={}
 fmsFunctionsDefs["IDENT"]["L6"]={"setpage","INITREF"}
 fmsFunctionsDefs["IDENT"]["R5"]={"setdata","codata"}

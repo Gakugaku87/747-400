@@ -1144,33 +1144,27 @@ function fmsFunctions.setdata(fmsO,value)
 	setFMSData("desrestalt",validAlt(alt))
       end
     end
-  elseif value=="airportpos" then --and string.len(fmsO["scratchpad"])>3 then
-    
-	if string.len(navAidsJSON) > 1 and string.len(fmsO["scratchpad"])>3 then
-		local navAids=json.decode(navAidsJSON)
-		print(table.getn(navAids).." navaids")
-		--print(navAidsJSON)
-		for n=table.getn(navAids),1,-1 do
-		  if navAids[n][2] == 1 and navAids[n][8]==fmsO["scratchpad"] then
-			print("navaid "..n.."->".. navAids[n][1].." ".. navAids[n][2].." ".. navAids[n][3].." ".. navAids[n][4].." ".. navAids[n][5].." ".. navAids[n][6].." ".. navAids[n][7].." ".. navAids[n][8])
-			local lat=toDMS(navAids[n][5],true)
-			local lon=toDMS(navAids[n][6],false)
-		
-			setFMSData("irsLat",lat)
-			setFMSData("irsLon",lon)
-			--irsSystem["irsLat"]=lat
-			--irsSystem["irsLon"]=lon
-		  end
-		end
-		setFMSData("airportpos",fmsO["scratchpad"])
-		setFMSData("airportgate","----")
-	elseif del == true then
+  elseif value=="airportpos" then
+	-- REF AIRPORT (FCOM p.1285): an ICAO identifier of an airport in the FMC's
+	-- navigation database, its position on the line (6-1/6-2 step 4; before
+	-- the ND's navaid list); STANDBY ONE while the database is read
+	if del == true then
 		setFMSData("airportpos",defaultFMSData().airportpos)
-		setFMSData("airportpos",defaultFMSData().airportgate)
+		setFMSData("airportgate",defaultFMSData().airportgate)
 		setFMSData("irsLat",defaultFMSData().irsLat)
-		setFMSData("irsLon",defaultFMSData().irsLon)		
+		setFMSData("irsLon",defaultFMSData().irsLon)
+		return
 	end
+	if not B747_fmc_navdb.ready then fmsO["notify"]="STANDBY ONE" return end
+	local sp=fmsO["scratchpad"]
+	local apt=string.match(sp,"^%u%u%u%u$") and B747_navdb.airport(B747_fmc_navdb,sp) or nil
+	if apt==nil then fmsO["notify"]=string.match(sp,"^%w%w%w%w$") and "NOT IN DATA BASE" or "INVALID ENTRY" return end
+	setFMSData("irsLat",toDMS(apt.lat,true))
+	setFMSData("irsLon",toDMS(apt.lon,false))
+	setFMSData("airportpos",sp)
+	setFMSData("airportgate","----")
 
+  elseif value=="flttime" then 
   elseif value=="flttime" then 
     hhV=string.sub(fmsO["scratchpad"],1,2)
     mmV=string.sub(fmsO["scratchpad"],-2)
@@ -1363,10 +1357,15 @@ function fmsFunctions.setdata(fmsO,value)
 		if del==true then
 			setFMSData("fltdep","****")
 			setFMSData("fltdst","****")
+			setFMSData("transalt","18000")
 		else	
 			dep=string.sub(fmsO["scratchpad"],1,4)
 			setFMSData("fltdep",dep)
 			setFMSData("fltdst","****")
+			-- TRANS ALT: the origin's from the FMC's navigation database, 18,000 ft
+			-- when it has none (FCOM p.1329; 6-1/6-2 step 4)
+			local apt=B747_fmc_navdb.ready and B747_navdb.airport(B747_fmc_navdb,dep) or nil
+			setFMSData("transalt",string.format("%d",apt and apt.ta and apt.ta>0 and apt.ta or 18000))
 			simCMD_FMS_key[fmsO.id]["fpln"]:once()
 			fmsFunctions["custom2fmc"](fmsO,"L1")
 		end

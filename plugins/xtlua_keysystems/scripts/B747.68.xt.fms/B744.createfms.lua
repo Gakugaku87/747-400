@@ -19,7 +19,7 @@ fms={
 simCMD_FMS_key={}
 function fmsClearNotify(notification)
   
-  for i =1,54,1 do
+  for i =1,55,1 do
     print("do FMS notify".." ".. i .." " ..B747DR_fmc_notifications[i])
     if B747_FMCAlertMsg[i].name==notification then
       fmsModules["fmsL"]["notify"]=""
@@ -58,7 +58,7 @@ end
 local FMC_EVENT = {["PERF/VNAV UNAVAILABLE"] = true, ["DESTINATION NOT SET"] = true, ["TAKEOFF SPEEDS DELETED"] = true}
 local FMC_ADVISORY = {["TAKEOFF SPEEDS DELETED"] = true}
 function B747_cdu_sync_fmc_messages(flags)
-  for i = 1, 54 do
+  for i = 1, 55 do
     local m = B747_FMCAlertMsg[i]
     local name = m.name
     local text = name
