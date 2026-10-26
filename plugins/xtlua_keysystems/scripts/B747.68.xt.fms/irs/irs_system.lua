@@ -138,6 +138,11 @@ irsSystem.enterHdg=function(hdg)
   B747DR_nav_irs_hdg_seq=B747DR_nav_irs_hdg_seq+1
 end
 -- an IRU aligning: the SET IRS POS line is in use
+-- an IRU in attitude mode (the INIT REF key's POS INIT: FCOM p.1285)
+irsSystem.anyATT=function()
+  for i=0,2 do if B747DR_nav_irs_mode[i]==MODE_ATT then return true end end
+  return false
+end
 irsSystem.aligning=function()
   return B747DR_nav_irs_aligning==1
 end

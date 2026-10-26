@@ -655,28 +655,13 @@ end
 
 function monitorCRZALT()
 	local thisCRZ=B747BR_cruiseAlt
-	if not(thisCRZ==lastCrz) then
-		print("update because "..thisCRZ.."!="..lastCrz)
-		local fmsO=fmsL
-		simCMD_FMS_key[fmsO.id]["fpln"]:once()--make sure we arent on the vnav page
-		simCMD_FMS_key[fmsO.id]["clb"]:once()--go to the vnav page
-		simCMD_FMS_key[fmsO.id]["next"]:once() --go to the vnav page 2
-		local newcrzalt=""..B747BR_cruiseAlt
-		for c in string.gmatch(newcrzalt,".") do
-			local v=c
-		  	if v=="/" then v="slash" end
-			simCMD_FMS_key[fmsO["id"]][v]:once()
-		end
-		simCMD_FMS_key[fmsO["id"]]["R1"]:once()
-		updateFrom=fmsO.id
-		local toGet=B747DR_srcfms[updateFrom][3] --make sure we update it
-		if is_timer_scheduled(updateCRZ) == true then
-			stop_timer(updateCRZ)                                -- KILL THE TIMER
-		end
-		run_after_time(updateCRZ,2.0)
-		lastCrz=B747BR_cruiseAlt
+	if thisCRZ==lastCrz then return end
+	lastCrz=thisCRZ
+	if thisCRZ>0 then
+		fmsModules:setData("crzalt", B747_cdu_model.format_alt(thisCRZ, tonumber(fmsModules["data"]["transalt"]) or 18000))
+	else
+		fmsModules:setData("crzalt", "*****")
 	end
-	
 end
 
 function fmsFunctions.getdata(fmsO,value) 
@@ -1252,41 +1237,21 @@ function fmsFunctions.setdata(fmsO,value)
 		end	
 	end
   elseif value=="crzalt" then
-	if simDR_inReplay==1 then
-		fmsModules:setData("crzalt","FL350") -- if in replay just default to FL350 since we cant set the default FMS
-	else
-		if string.len(fmsO["scratchpad"])>0 then
-			local alt=validAlt(fmsO["scratchpad"])
-			if alt~=nil then 
-				simCMD_FMS_key[fmsO.id]["fpln"]:once()--make sure we arent on the vnav page
-				simCMD_FMS_key[fmsO.id]["clb"]:once()--go to the vnav page
-				simCMD_FMS_key[fmsO.id]["next"]:once() --go to the vnav page 2
-
-				fmsFunctions["custom2fmc"](fmsO,"R1")
-				updateFrom=fmsO.id
-				local toGet=B747DR_srcfms[updateFrom][3] --make sure we update it
-				run_after_time(updateCRZ,0.5)
-			else
-				fmsO["notify"]="INVALID CRZ ALT"
-			end
-		else
-			fmsModules:setData("crzalt","")
-			B747BR_cruiseAlt=0
-		end	
+	-- CRZ ALT (6-1/6-2 step 3a; FCOM p.1311, p.1269-1270): XXX, XXXX, XXXXX
+	-- or FLXXX, up to the maximum certified altitude 45,100 ft; on the
+	-- ground above the airplane (FMSPG p.97); in the air PERF INIT takes it
+	-- into the boxes only, the CLB and CRZ pages change it. The FMC keeps it
+	-- (before: typed into X-Plane's FMS and read back)
+	if del then fmsO["notify"]="INVALID DELETE" return end
+	local ft = B747_cdu_model.parse_alt(fmsO["scratchpad"])
+	local onPerfInit = fmsO.currentPage == "PERFINIT"
+	if ft == nil or ft > 45100 or (simDR_onGround == 1 and ft <= simDR_pressureAlt1)
+		or (onPerfInit and simDR_onGround ~= 1 and B747BR_cruiseAlt > 0) then
+		fmsO["notify"]="INVALID ENTRY"
+		return
 	end
-	--[[if string.len(fmsO["scratchpad"])>0 then
-		local alt=validAlt(fmsO["scratchpad"])
-		if alt~=nil then 
-			B747BR_cruiseAlt=alt 
-			lastCrz=alt
-			fmsModules:setData("crzalt",fmsO["scratchpad"])
-		else
-			fmsO["notify"]="INVALID CRZ ALT"
-		end
-	else
-		fmsModules:setData("crzalt","")
-		B747BR_cruiseAlt=0
-	end]]--
+	B747BR_cruiseAlt=ft
+	monitorCRZALT()
   elseif value=="irspos" then
 	if string.len(fmsO["scratchpad"])>10 then
 		print("set irs pos")
@@ -1446,89 +1411,52 @@ function fmsFunctions.setdata(fmsO,value)
 	B747DR_airspeed_Vref=vref
 	B747DR_airspeed_VrefFlap=(flap == "25") and 1 or 2
 	setFMSData(value,flap.."/"..string.format("%3d", vref))
-  elseif value == "grwt" then
-	local grwt
-	if string.len(fmsO["scratchpad"]) ~= 0 and string.len(fmsO["scratchpad"]) ~= 3 and string.len(fmsO["scratchpad"]) ~= 5 then
-		fmsO["notify"]="INVALID ENTRY"
-		fmsO["scratchpad"] = ""
-		return
-  	elseif string.len(fmsO["scratchpad"]) > 0 and string.len(fmsO["scratchpad"]) <= 5 and tonumber(fmsO["scratchpad"])~=nil then
-		if simConfigData["data"].SIM.weight_display_units == "LBS" then
-			grwt = tonumber(fmsO["scratchpad"]) / simConfigData["data"].SIM.kgs_to_lbs  --store LBS in KGS
-		else
-			grwt = tonumber(fmsO["scratchpad"])
-		end
-	elseif fmsO["scratchpad"] == "" then
-		grwt = simDR_GRWT / 1000
-	else
-		fmsO["notify"]="INVALID ENTRY"
-		fmsO["scratchpad"] = ""
-		return
-	end
-	grwt = string.format("%5.1f", grwt)
-	if tonumber(grwt) > 999 then
-		fmsO["notify"]="INVALID ENTRY"
-		fmsO["scratchpad"] = ""
-		return
-	end
-	zfw = string.format("%5.1f", tonumber(grwt) - (simDR_fuel / 1000))
-	if tonumber(zfw) <50 then
-		fmsO["notify"]="INVALID ENTRY"
-		fmsO["scratchpad"] = ""
-		return
-	end
-	setFMSData(value, grwt)
-	setFMSData("zfw", zfw)
+  elseif value == "grwt" or value == "zfw" then
+	-- GR WT or ZFW (6-1/6-2 step 3a; FCOM p.1309-1310): XXX or XXX.X; the
+	-- other follows from FUEL; an entry after the takeoff speeds are
+	-- selected deletes them (TAKEOFF SPEEDS DELETED)
+	if del then fmsO["notify"]="INVALID DELETE" return end
+	local v = B747_cdu_model.parse_weight(fmsO["scratchpad"])
+	if v == nil then fmsO["notify"]="INVALID ENTRY" return end
+	local t = perf_in(v)
+	local fuel = perf_fuel_t()
+	local zfw = value == "grwt" and t - fuel or t
+	local gw = zfw + fuel
+	if zfw < 130 or zfw > 270 or gw < 150 or gw > 400 then fmsO["notify"]="INVALID ENTRY" return end
+	setFMSData("zfw", string.format("%5.1f", zfw))
+	setFMSData("gwsrc", value == "grwt" and "GW" or "ZFW")
+	update_perf()
 	calc_CGMAC()  --Recalc CG %MAC and TRIM units
 	if (B747DR_airspeed_V1 < 999 or B747DR_airspeed_Vr < 999 or B747DR_airspeed_V2 < 999) and simDR_onground == 1 then
 		B747DR_airspeed_flapsRef = 0
-		--B747DR_airspeed_V1 = 999
-		--B747DR_airspeed_Vr = 999
-		--B747DR_airspeed_V2 = 999
 		fmsO["notify"] = "TAKEOFF SPEEDS DELETED"
 	end
-
-  elseif value == "zfw" and not del then
-	local zfw
-	if string.len(fmsO["scratchpad"]) > 0 and string.len(fmsO["scratchpad"]) <= 5 and string.match(fmsO["scratchpad"], "%d") then
-		if simConfigData["data"].SIM.weight_display_units == "LBS" then
-			zfw = fmsO["scratchpad"] / simConfigData["data"].SIM.kgs_to_lbs  --store LBS in KGS
-		else
-			zfw = fmsO["scratchpad"]
-		end
-	elseif fmsO["scratchpad"] == "" then
-		zfw = (simDR_GRWT-simDR_fuel) / 1000
+  elseif value == "fuel" then
+	-- FUEL: an entry makes it MANUAL; only that can be deleted (FCOM p.1310)
+	if del then
+		if tonumber(fmsModules["data"].fuelman) == nil then fmsO["notify"]="INVALID DELETE" return end
+		setFMSData("fuelman", "")
 	else
-		fmsO["notify"]="INVALID ENTRY"
-		fmsO["scratchpad"] = ""
-		return
+		local v = B747_cdu_model.parse_weight(fmsO["scratchpad"])
+		if v == nil or perf_in(v) > 180 then fmsO["notify"]="INVALID ENTRY" return end
+		setFMSData("fuelman", string.format("%5.1f", perf_in(v)))
 	end
-	zfw = string.format("%5.1f", zfw)
-	grwt = string.format("%5.1f", tonumber(zfw) + (simDR_fuel / 1000))
-	setFMSData(value, zfw)
-	setFMSData("grwt", grwt)
-	calc_CGMAC()  --Recalc CG %MAC and TRIM units
-	if (B747DR_airspeed_V1 < 999 or B747DR_airspeed_Vr < 999 or B747DR_airspeed_V2 < 999) and simDR_onground == 1 then
-		B747DR_airspeed_flapsRef = 0
-		--B747DR_airspeed_V1 = 999
-		--B747DR_airspeed_Vr = 999
-		--B747DR_airspeed_V2 = 999
-		fmsO["notify"] = "TAKEOFF SPEEDS DELETED"
-	end
+	update_perf()
   elseif value == "reserves" then
-	local rsv = 0
-	if not string.match(fmsO["scratchpad"], "%d") or string.len(fmsO["scratchpad"]) > 5 then
-		fmsO["notify"] = "INVALID ENTRY"
-		fmsO["scratchpad"] = ""
-		return
-	else
-		if simConfigData["data"].SIM.weight_display_units == "LBS" then
-			rsv = string.format("%5.1f", fmsO["scratchpad"] / simConfigData["data"].SIM.kgs_to_lbs)  --store LBS in KGS
-		else
-			rsv = string.format("%5.1f", fmsO["scratchpad"])
-		end
-		setFMSData(value, rsv)
-	end
+	-- RESERVES: XXX or XXX.X (FCOM p.1311)
+	if del then fmsO["notify"]="INVALID DELETE" return end
+	local v = B747_cdu_model.parse_weight(fmsO["scratchpad"])
+	if v == nil or perf_in(v) > 180 then fmsO["notify"]="INVALID ENTRY" return end
+	setFMSData(value, string.format("%5.1f", perf_in(v)))
+  elseif value == "costindex" then
+	-- COST INDEX: 0 to 9999 (FCOM p.1311); not within 10 NM of the T/D
+	-- (FMSPG p.97)
+	if del then fmsO["notify"]="INVALID DELETE" return end
+	local ci = B747_cdu_model.parse_int(fmsO["scratchpad"], 0, 9999)
+	local nearTD = simDR_onGround ~= 1 and B747BR_tod > 0 and B747BR_totalDistance > 0
+		and (B747BR_totalDistance - B747BR_tod) < 10
+	if ci == nil or nearTD then fmsO["notify"]="INVALID ENTRY" return end
+	setFMSData(value, string.format("%d", ci))
   elseif value == "crzcg" then
 	-- 8.5 to 33.0 % (CDU-09, 6-1 step 1; FCOM p.1311)
 	local cg = string.match(fmsO["scratchpad"], "^%d%d?%.?%d?$") and tonumber(fmsO["scratchpad"])

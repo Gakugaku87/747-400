@@ -12,29 +12,60 @@ crzcg_lineSm = ""
 --Marauder28
 
 fmsPages["PERFINIT"]=createPage("PERFINIT")
-fmsPages["PERFINIT"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be this way
-	--Marauder28
-	local grwt = fmsModules["data"].grwt
-	local grwt_diff = 0  --used to track differences in manually entered GW and sim-provided GW
-	local zfw = fmsModules["data"].zfw
-	local calc_gw = string.format("%5.1f", (simDR_GRWT / 1000))
-	local calc_zfw = string.format("%5.1f", ((simDR_GRWT - simDR_fuel) / 1000))
-	local rsv = fmsModules["data"].reserves
-	
-	if not string.match(grwt, "***.*") then
-		calc_zfw = string.format("%5.1f", (tonumber(grwt) - simDR_fuel) / 1000)
-		grwt_diff = string.format("%5.1f", tonumber(grwt) - simDR_GRWT)
-	end
-	
-	if not string.match(zfw, "***.*") then
-		zfw = string.format("%5.1f", zfw)
-		grwt = string.format("%5.1f", tonumber(zfw) + (simDR_fuel / 1000))
-	end
+-- PERF INIT (6-1/6-2 step 3a; FCOM p.1307-1312). The weights in thousands
+-- of the display units (kilograms or pounds), kept in thousands of
+-- kilograms. GR WT or ZFW is entered, the other follows from the FUEL line
+-- (an entered GR WT is kept as the ZFW it gives, so that it goes down as
+-- the fuel burns); FUEL: the totalizer's (CALC) or an entry (MANUAL, which
+-- can be deleted). Entered values in large font, the FMC's in small
+-- (estimate for the computed GR WT and ZFW).
+function perf_lbs()
+	return simConfigData["data"].SIM.weight_display_units == "LBS"
+end
+-- thousands of the display units from thousands of kilograms, and back
+function perf_out(t)
+	if perf_lbs() then return t * simConfigData["data"].SIM.kgs_to_lbs end
+	return t
+end
+function perf_in(v)
+	if perf_lbs() then return v / simConfigData["data"].SIM.kgs_to_lbs end
+	return v
+end
+-- the FUEL line in thousands of kilograms: the entry, else the totalizer's
+function perf_fuel_t()
+	local m = tonumber(fmsModules["data"].fuelman)
+	if m then return m end
+	return simDR_fuel / 1000
+end
+-- the zero fuel weight and the gross weight, thousands of kilograms; nil
+-- before an entry
+function perf_zfw_t()
+	return tonumber(fmsModules["data"].zfw)
+end
+function perf_gw_t()
+	local z = perf_zfw_t()
+	if z == nil then return nil end
+	return z + perf_fuel_t()
+end
+-- each frame: the GR WT kept with the fuel (other pages read it)
+function update_perf()
+	local gw = perf_gw_t()
+	local s = gw and string.format("%5.1f", gw) or "***.*"
+	if string.sub(fmsModules["data"].grwt, 1, 5) ~= s then fmsModules:setData("grwt", s) end
+end
+local function weight_text(t)
+	if t == nil then return "***.*" end
+	return string.format("%5.1f", perf_out(t))
+end
 
-	if not string.match(rsv, "***.*") then
-		rsv = string.format("%5.1f", rsv)
-	end
-	
+fmsPages["PERFINIT"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be this way
+	local src = str_trim(fmsModules["data"].gwsrc)
+	local gw, zfw = perf_gw_t(), perf_zfw_t()
+	-- large: the entered one of GR WT and ZFW, FUEL, RESERVES, COST INDEX
+	local gwL = (src == "GW" or gw == nil) and weight_text(gw) or "     "
+	local zfwL = (src == "ZFW" or zfw == nil) and weight_text(zfw) or "     "
+	local rsv = tonumber(fmsModules["data"].reserves)
+	local rsvL = rsv and string.format("%5.1f", perf_out(rsv)) or "***.*"
 	local crzcgV = tonumber(fmsModules["data"].crzcg) or 20.0
 	if string.len(crzcg_lineLg) < 1 then
 		crzcg_lineSm = string.format("%5.1f%%", crzcgV)
@@ -42,91 +73,53 @@ fmsPages["PERFINIT"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be
 		crzcg_lineLg = string.format("%5.1f%%", crzcgV)
 		crzcg_lineSm = ""
 	end
-	--Marauder28
-	
-    --local grwtV=simDR_GRWT/1000
-    local grfuelV=simDR_fuel/1000
-    --local zfwV=(simDR_GRWT-simDR_fuel)/1000
-    --local reservesV=(simDR_fuel_tanks[5]+simDR_fuel_tanks[6])/1000
-    local jet_weightV=simDR_m_jettison/1000
-
-	if simConfigData["data"].SIM.weight_display_units == "LBS" then
-	  --Marauder28
-	  if not string.match(grwt, "***.*") then grwt = string.format("%5.1f", tonumber(grwt) * simConfigData["data"].SIM.kgs_to_lbs) end
-	  if not string.match(zfw, "***.*") then zfw = string.format("%5.1f", tonumber(zfw) * simConfigData["data"].SIM.kgs_to_lbs) end
-      if not string.match(rsv, "***.*") then rsv = string.format("%5.1f", tonumber(rsv) * simConfigData["data"].SIM.kgs_to_lbs) end
-	  calc_gw = string.format("%5.1f", tonumber(calc_gw) * simConfigData["data"].SIM.kgs_to_lbs)
-	  calc_zfw = string.format("%5.1f", tonumber(calc_zfw) * simConfigData["data"].SIM.kgs_to_lbs)	  
-	  --Marauder28
-
-      --grwtV=grwtV * simConfigData["data"].kgs_to_lbs
-      grfuelV=grfuelV * simConfigData["data"].SIM.kgs_to_lbs
-      --zfwV=zfwV * simConfigData["data"].kgs_to_lbs
-      jet_weightV=jet_weightV * simConfigData["data"].SIM.kgs_to_lbs
-    end
-	
-    --local grwt=string.format("%05.1f",grwtV)
-    local grfuel=string.format("%5.1f",grfuelV)
-    --local zfw=string.format("%05.1f",zfwV)
-    --local reserves=string.format("%5.1f",tonumber(reservesV))
-    local jet_weight="     "
-    if jet_weightV>0 then jet_weight=string.format("%5.1f",jet_weightV) end
-
-	--Marauder28
-	if string.match(grwt, "***.*") then
-		grwt_lineLg = "     "
-		grwt_lineSm = "<"..calc_gw
-	else
-		fmsModules["data"].grwt = string.format("%5.1f", simDR_GRWT + grwt_diff)
-		grwt_lineLg = string.format("%5.1f", tonumber(grwt))
-		grwt_lineSm = "      "   --..calc_gw
-	end
-	--Marauder28
-	
-    return{
-
+	local jet_weightV=simDR_m_jettison/1000
+	local jet_weight="     "
+	if jet_weightV>0 then jet_weight=string.format("%5.1f",perf_out(jet_weightV)) end
+	return{
  "       PERF INIT        ",
  "                        ",
- "".. grwt_lineLg .."              "..fmsModules["data"]["crzalt"],
+ gwL.."              "..fmsModules["data"]["crzalt"],
  "                        ",
- ""..grfuel .. "              "..jet_weight ,
+ string.format("%5.1f", perf_out(perf_fuel_t())).."              "..jet_weight,
  "                        ",
- ""..zfw,
+ zfwL.."                   ",
  "                        ",
--- ""..reserves .."              "..crzcg_lineLg,
- ""..rsv .."              "..crzcg_lineLg,
+ rsvL.."              "..string.format("%-5s", crzcg_lineLg),
  "                        ",
- ""..fmsModules["data"]["costindex"] .."                "..fmsModules["data"].stepsize, 
+ string.format("%-4s", str_trim(fmsModules["data"]["costindex"])).."                "..string.format("%4s", str_trim(fmsModules["data"].stepsize)),
  "                        ",
  "<INDEX       THRUST LIM>"
-    }
+	}
 end
 fmsPages["PERFINIT"].getSmallPage=function(self,pgNo,fmsID)
-    local lineA=" FUEL                   "
-    if simDR_m_jettison>0 then
-    lineA=" FUEL         RETARDANT "
-    end
-    return {
-      "                        ",
-      " GR WT ADV       CRZ ALT",
-	  grwt_lineSm,
---      "                        ",
-      lineA,
-      "      CALC              ",
-      " ZFW                    ",
-      "                        ",
-      " RESERVES         CRZ CG",
---      "                        ",
-      "                   "..crzcg_lineSm,
-      " COST INDEX    STEP SIZE",
-      "                        ", 
-      "                        ",
-      "                        "
-      }
+	local src = str_trim(fmsModules["data"].gwsrc)
+	local gw, zfw = perf_gw_t(), perf_zfw_t()
+	-- small: the computed one of GR WT and ZFW, FUEL's source
+	local gwS = (src ~= "GW" and gw ~= nil) and weight_text(gw) or "     "
+	local zfwS = (src ~= "ZFW" and zfw ~= nil) and weight_text(zfw) or "     "
+	local fuelSrc = tonumber(fmsModules["data"].fuelman) and "MANUAL" or "CALC  "
+	local lineA=" FUEL                   "
+	if simDR_m_jettison>0 then
+		lineA=" FUEL         RETARDANT "
+	end
+	return{
+	  "                        ",
+	  " GR WT           CRZ ALT",
+	  gwS.."                   ",
+	  lineA,
+	  "      "..fuelSrc.."            ",
+	  " ZFW                    ",
+	  zfwS.."                   ",
+	  " RESERVES         CRZ CG",
+	  "                   "..crzcg_lineSm,
+	  " COST INDEX    STEP SIZE",
+	  "                        ",
+	  "------------------------",
+	  "                        "
+	}
 end
 
-  
-  
 fmsFunctionsDefs["PERFINIT"]={}
 
 

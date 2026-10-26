@@ -81,6 +81,7 @@ key("L", "key/clear", 1.2)
 
 -- an entry's message: this CDU's only; no typing under it; CLR
 key("L", "func_key/index")
+key("L", "ls_key/L6")  -- <INDEX (the INIT REF key goes by context: step 3a)
 key("L", "ls_key/L3")                                 -- PERF INIT
 type_in("L", "A")
 key("L", "ls_key/R4")                                 -- CRZ CG: INVALID ENTRY
