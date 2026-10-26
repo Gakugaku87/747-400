@@ -579,3 +579,10 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - FMC と AFDS：`laminar/B747/fms/xp/bridge` が 1 なら、FMC は計画を `xp/plan` に（空中でアクティブなら `CURRENT n` つき）、現用点を `xp/current` に書き、AFDS の順送りの書き込み（`B747_set_fms_current`）も `xp/current` に。プラグインが無ければ（Mac・Linux など）上の XTLua の道。
 - 採用の理由（CLAUDE.md の決まり、利用者の承認 2026-10-27 未明）：XTLua だけでは、X-Plane の FMS を X-Plane のスレッドで操作する手段が無い（`xtlua/` の FMS の dataref はどれも作業スレッドで即時に呼ぶ。XTLua 本体には手を入れない）。ほかの案：(1) 呼ぶ回数を減らす（上：それでも落ちた）、(2) X-Plane の FMS を使わない（ND の経路の線は X-Plane の地図の層が、AFDS の LNAV・VNAV は X-Plane の FMS の点を読むので、段 6 以降まで無理）、(3) FlyWithLua（利用者の環境にしか無い）、(4) XLua（FMS の関数が無い）。影響：Windows だけ（ほかは XTLua の道）。X-Plane の FMS は最大 100 点（SDK の説明）。ソースと作り方はリポジトリに、コンパイラー（w64devkit 2.10.0）と SDK は外（`C:\Users\gakug\tools`）。
 - 試験：新しい `tests/fms/route_bridge_test.lua`（13 件：地上は CURRENT なし、空中のアクティブ化は `xp/current`、修正の EXEC は CURRENT つき、DIRECT TO、XTLua の FMS の dataref を使わない）、`route_sync_test.lua`（31 件：プラグインが無いときの道。続けての編集は 1 回の読み込み、現用点は 2 回まで、読み込み直後のアクティブ化）、RTE・LEGS・DEP/ARR のページの試験は読み込みを待つ。X-Plane：プラグイン入りで `s89_route_sync` 26/26（作り直したプラグインでもう一度）、`s67_nd_data` 25/25（空中の ACTIVATE と EXEC の直後から現用点が FR）、`s70_nd_airports` 39/39、`s88_deparr` 26/26、`s86_rte_pages` 19/19、`s87_legs_pages` 21/21 で、X-Plane は落ちなかった。プラグインは機体の読み直しのたびに読み込まれる（Log.txt の Loaded）。Lua の誤りなし。
+
+## 24. 段 5f の実装（2026-10-27：飛行試験キットの経路を CDU で）
+
+- 実行器（`tests/flight/run_scenario.ps1`）の新しい手順 `cdu`：CDU のキーを FCOM の名前（RTE・LEGS・DEPARR・MENU・INITREF・PROG・NAVRAD・PREV・NEXT・EXEC・DEL・CLR）、行選択キー（L1〜R6）、打つ文字で並べる。`?SEL` は SELECT DESIRED WPT が出ていればいちばん近い候補を選ぶ。文字は 1 つずつ 70 ms 空けて打つ（同じキーが同じフレームに 2 回届くと 1 回になり、EDDF が EDF になった）。
+- `s67`（ND の DATA）と `s70`（ND の空港と滑走路）は、FlyWithLua で X-Plane の FMS に直接入れていた経路を、CDU で FMC に入れる形にした（`s67`：EDDF→EDDF、DIRECT FR・TAU、LEGS で FR に 5000、TAU に FL200、空中で ACTIVATE と EXEC。`s70`：EDDF の 25C から EDDM、ARRIVALS で ILS26R）。FMC が流す計画（滑走路の行、高度の制限、現用点）で ND が描けることを確かめる。これで流し込みに高度が無いこと（上の §22 の追記）と、ND の遷移高度の書式（notes/ATA-31.md §28 の追記）が見つかった。
+- `s79`（FMC の小修正）は、緯度経度の点（FMC はまだ受け付けない）を使うので FlyWithLua の経路のまま。`s86`〜`s89` は初めから CDU。`B747_route.lua` は残す。
+- X-Plane：`s67_nd_data` 25/25、`s70_nd_airports` 39/39（どちらも経路を CDU で入れる）。ND の写真（DATA の現用点 FR のマゼンタと高度・ETA、TAU の FL200、26R の滑走路の絵）。

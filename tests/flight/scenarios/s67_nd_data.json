@@ -1,6 +1,6 @@
 {
   "name": "s67_nd_data",
-  "description": "ND の DATA（5-2 段 5c-2a）の X-Plane での確認、空中。フランクフルトの南 4,000 ft・200 kt・北向きで開始。FlyWithLua の B747_route.lua で X-Plane の FMS に NDB FR（現用点、5000 ft）、TAU（20000 ft）、EDDF（高度なし）を入れる。機長の DATA を入れると、ND の経路の点の下に高度と FMC の ETA（現用点はマゼンタ、ほかは白。高度の無い点は ETA を 1 行目に）が出る（FCOM p.1040、p.1148、FMSPG p.50）。副操縦士は DATA を入れない。PLN でも出る。ND を撮る。",
+  "description": "ND の DATA（5-2 段 5c-2a）の X-Plane での確認、空中。フランクフルトの南 4,000 ft・200 kt・北向きで開始。CDU で FMC に経路（EDDF→EDDF、DIRECT FR（NDB）・DIRECT TAU、LEGS で FR に 5000、TAU に FL200）を入れ、空中で ACTIVATE と EXEC（6-1・6-2 段 5f：前は FlyWithLua の B747_route.lua で X-Plane の FMS に直接入れた）。FMC が X-Plane の FMS に高度の制限ごと流し、現用点を FR にする。機長の DATA を入れると、ND の経路の点の下に高度と FMC の ETA（現用点はマゼンタ、ほかは白。高度の無い点は ETA を 1 行目に）が出る（FCOM p.1040、p.1148、FMSPG p.50）。副操縦士は DATA を入れない。PLN でも出る。ND を撮る。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 49.900000, "longitude": 8.683488, "elevation_in_meters": 1219.2, "heading_true": 0.0, "speed_in_meters_per_second": 102.9 },
@@ -34,8 +34,17 @@
     { "do": "set", "dref": "laminar/B747/nd/range/fo/sel_dial_pos", "value": 2 },
     { "do": "set", "dref": "sim/cockpit2/EFIS/map_range_copilot", "value": 2 },
 
-    { "do": "route", "note": "経路：NDB FR（現用点、5000 ft、出発点の 10 NM 北）、TAU（20000 ft）、EDDF（高度なし）",
-      "entries": ["FR 50.07 8.68 5000 ACTIVE", "TAU 50.25 8.16 20000", "EDDF 50.04 8.56 0"] },
+    { "do": "cmd", "note": "MENU", "name": "laminar/B747/fms1/func_key/fix" },
+    { "do": "sleep", "seconds": 0.5 },
+    { "do": "cmd", "note": "<FMC（IDENT）", "name": "laminar/B747/fms1/ls_key/L1" },
+    { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
+    { "do": "cdu", "note": "経路（FMC）：EDDF→EDDF、DIRECT FR（NDB、出発点の 10 NM 北）、DIRECT TAU（同じ名前が複数なら近い方）",
+      "keys": ["RTE", "EDDF", "L1", "EDDF", "R1", "NEXT", "FR", "R1", "?SEL", "TAU", "R2", "?SEL"] },
+    { "do": "check", "note": "DIRECT TAU", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "TAU" },
+    { "do": "cdu", "note": "LEGS：FR に 5000、TAU に FL200（「200」：FCOM p.1332）、ACTIVATE と EXEC",
+      "keys": ["LEGS", "5000", "R1", "200", "R2", "R6", "EXEC"] },
+    { "do": "check", "note": "ACT RTE 1 LEGS", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "ACT RTE 1 LEGS" },
+    { "do": "check", "note": "LEGS の FR に /5000", "dref": "laminar/B747/fms3/Line03_L", "op": "contains", "value": "/5000" },
     { "do": "wait", "note": "FMC が各点の ETA を出す", "dref": "laminar/B747/fms/route_eta", "op": "contains", "value": ",", "timeout": 20 },
     { "do": "wait", "note": "ND の 1 枠目に現用点 FR（マゼンタの文字）", "dref": "laminar/B747/nd/capt/text/redtext0", "op": "==", "value": "FR", "timeout": 20 },
     { "do": "check", "note": "DATA を入れる前は経路のデータ無し", "dref": "laminar/B747/nd/capt/text/rdata_color[0]", "op": "==", "value": 0 },
@@ -67,7 +76,6 @@
     { "do": "switch", "note": "機長の ND を MAP に戻す", "dref": "laminar/B747/nd/mode/capt/sel_dial_pos", "value": 2, "cmd": "laminar/B747/nd/mode/capt/sel_dial_up", "cmd_down": "laminar/B747/nd/mode/capt/sel_dial_dn" },
     { "do": "cmd", "note": "機長の DATA を切る", "name": "laminar/B747/nd/data/capt/switch" },
     { "do": "wait", "note": "データが消える", "dref": "laminar/B747/nd/capt/text/rdata_color[0]", "op": "==", "value": 0, "timeout": 5 },
-    { "do": "route_clear", "note": "経路を消す" },
     { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
     { "do": "view", "name": "forward" }
   ]
