@@ -655,3 +655,17 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - まだ無いもの：オフセット（前の LNAV のオフセットは、段 7 まで効かない）、ホールド（段 7）、ND の線を経路の形どおりに（段 6d）。
 - 試験：`tests/fms/lnav_glue_test.lua`（19 件：経路が無いときの NO ACTIVE ROUTE、脚の上の valid、平行に 10 nm 離れた NOT ON INTERCEPT HEADING、右 1 nm で左へのバンク、PROGRESS 2 の R 1.0NM、discontinuity での保持と DISCONTINUITY）、`lnav_model_test.lua`（58 件：後ろの点への DIRECT TO が近い向きに回り、大回りしない）、`path_model_test.lua`（81 件：`direct`）、`route_sync_test.lua`・`route_bridge_test.lua`（機体の位置で LNAV が順送りする形に書き直した）、`cdu_framework_test.lua`（37 件のまま）。飛行試験キットの `run_scenario.ps1` に `watch`（dataref を 0.25 秒ごとに見て、条件までの最大・最小を判定）を足した。X-Plane：`s90_lnav` 30/30（脚の右 6 nm で平行に arm：engage せず NOT ON INTERCEPT HEADING、ロールモードは HDG SEL のまま。30° 向けると 2.49 nm で engage して脚に乗る。XAC の右 54° の fly-by の旋回で、経路から前半 0.10 nm・後半 0.22 nm 以内、バンクは指令の 25° に 24.3〜24.8°。後ろの XAC への DIRECT TO は近い向きに回り、飛んだ経路から 0.01 nm 以内（直す前は EXEC の時の位置からの線に戻ろうとして 5.5 nm の大回り）。XAC を過ぎるとヘディングを保持し DISCONTINUITY）、`s89_route_sync` 26/26（FMC 自身の順送りで XAC の次が SPENS、DIRECT TO AKAGI）、`s67_nd_data` 25/25、`s70_nd_airports` 39/39、`s86_rte_pages` 19/19、`s87_legs_pages` 29/29、`s88_deparr` 26/26。Lua の誤りなし。
 - 6c の続き（2026-10-27）：手続きの旋回の向き（CIFP の 10 番目の欄 L・R）を、ヘディングの脚と、点へのコースに乗るまでの DF・DIRECT TO の旋回に効かせる（遠回りでも。旋回が終わる（10° 以内）まで：推定）。切込みの脚（CI・VI）の終わりは、交角 90° を超えても（150° まで）その角の旋回の始まりで（前は 90° で頭打ちで、123° の切込みで旋回が遅れる）。試験：`lnav_model_test.lua`（63 件：右回りの指定で左が近くても右へ、123° の切込みの行き過ぎなし）。X-Plane：新しい `s91_lnav_sid` 23/23（RJAA 34L の SAKUR5：CF で D337F を真上で過ぎ、手続きの右回りでヘディング 100、NRE の radial 001・036 で順送り、ヘディング 160 から 283 のコースへの 123° の旋回はコースの 3.2 nm 手前で始まり、行き過ぎ 0.19 nm。NRE・TETRA を経て経路の終わりでヘディングを保持し END OF ROUTE。バンクは指令の 25° に 23.7〜24.7°）、`s90_lnav` 30/30。Lua の誤りなし。
+
+## 30. 段 6d の実装（2026-10-27：ND の線を経路の形に）
+
+- ND の経路の線は、FMC が流し込んだ X-Plane の FMS を X-Plane の地図の層が描く（行から行へ直線で、全部の行を通る）。経路の形（§27）を、その行で表せる範囲で計画に入れる（ATA34_2 p.626：全点を滑らかにつなぐ）：
+  - 条件の脚（CA・VA・VR・VI・CD・VD・CR・CI・FA・FC・FD）の終わり：経路の形のモデルが予測する所に、その名前（(600)・NRE001・(INTC) など：FCOM p.1249）の位置の行（型 28、高度 0：古い VNAV の制限にしない）。ND はその名前の記号を描く（推定：資料に ND の条件点の描き方は無い）。アクティブな条件の脚はその行が X-Plane の FMS の現用点（ND の右上も）。
+  - VECTORS（VM・FM）：ヘディングかコースの 10 nm 先（推定）。X-Plane の線は次の点へつながってしまう（実機は終点の無い線：FCOM p.1237）。
+  - RF・DME の弧：15° ごとの点（推定）を名前「~」の位置の行で弧の点の前に（ND は記号を描かない）。
+  - 通過した条件の脚は、終わった所（順送りの時の位置 `end_at`）の行で残す（アクティブな点の行の番号を変えないため）。
+  - fly-by の旋回の曲線は描けない（X-Plane の線は点の行を必ず通り、点の行は現用点の対応に要る）。
+  - X-Plane の FMS は 100 行まで（SDK の XPLMNavigation.h）：超えたら弧の点をやめ、まだ超えたら通過した脚を最後の 1 つにする（前は超えた分が X-Plane で切られ、現用点の対応が外れていた）。
+- ND の右上のアクティブな点（FCOM p.1147：名前・距離・ETA）は、条件の点も名前と、予測した点への距離・ETA で出す（前は括弧のある名前のとき「-----」）。VECTORS は名前だけ（終わりが無い：FCOM p.1237）。
+- 予測の限り（推定）：ヘディングやコースの脚の終わりは、前の脚の終わりから旋回なしの直線で予測するので、実際の旋回の分だけずれる（`s91` の写真で、D337F の後の NRE001 は機体の右後ろに描かれた）。
+- 経路の形は RTE 1 が変わるたびに（非アクティブの経路でも）作り直す（`B747_fmc_lnav_build`）。予測は作った時の高度から。経路の形のモデル `shape`、経路のモデル `to_fms(r, cycle, shape)`、ND のモジュールは「~」の記号を描かない。
+- 試験：`path_model_test.lua`（87 件：`shape`）、`route_model_test.lua`（136 件：条件の脚の行、弧の点、通過した条件の脚、100 行）、`deparr_pages_test.lua`（38 件：X-Plane の計画に (600) と (INTC)。前は「条件の脚は書かない」を確かめていた）。X-Plane：`s91_lnav_sid` 27/27（ND の現用点が D337F・NRE001・(INTC)：X-Plane の計画の条件の点の行。20 nm の ND の写真で、マゼンタの線が NRE001・NRE036（ヘディング 100）、(INTC)（ヘディング 160）、NRE（283 のコース）を通り、条件の点に名前）、`s88_deparr` 26/26、`s89_route_sync` 26/26、`s90_lnav` 30/30、`s87_legs_pages` 29/29、`s86_rte_pages` 19/19、`s67_nd_data` 25/25、`s70_nd_airports` 39/39。Lua の誤りなし。

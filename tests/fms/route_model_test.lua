@@ -252,6 +252,48 @@ T.check(map3.ident[4] == "DTOPOS" and not map3.leg[4] and R.active_row(R.shown(s
 T.equal(R.leg_from(R.shown(st), 1).lat, 35.95, "the direct-to's leg from its start")
 T.check(not R.legs(R.shown(st))[1].dto_exec, "set once")
 
+-- the legs' shape in X-Plane's flight plan (step 6d): the conditional
+-- legs' ends by their names where predicted, an arc's points "~", a
+-- passed conditional leg where it ended
+st = R.new(N, db)
+R.set_origin(st, "ZZAA")
+R.set_dest(st, "ZZBB")
+st.rte.legs = {
+    {pt = "VA", via = "ZULU1", crs = 337, alt = 600, altterm = true, name = "(600)", proc = "SID"},
+    {pt = "VI", via = "ZULU1", crs = 45, name = "(INTC)", proc = "SID"},
+    {pt = "CF", via = "ZULU1", fix = fix("ZZV"), crs = 90, proc = "SID"},
+}
+local shape = {{at = {lat = 35.01, lon = 140.0}}, {at = {lat = 35.1, lon = 140.1}}, {pts = {{lat = 35.15, lon = 140.15}}}}
+text, map = R.to_fms(st.rte, "2610", shape)
+T.check(text:find("\n28 %(600%) DRCT 0%.000000 35%.010000 140%.000000\n28 %(INTC%) DRCT 0%.000000 35%.100000 140%.100000\n"
+    .. "28 ~ DRCT 0%.000000 35%.150000 140%.150000\n3 ZZV DRCT "),
+    "(600) and (INTC) where predicted, an arc's point ~, then ZZV: " .. text:gsub("\n", " | "))
+T.check(map.leg[2] == 1 and map.leg[3] == 2 and not map.leg[4] and map.leg[5] == 3, "the conditional legs' rows theirs, ~ no leg's")
+T.equal(R.active_row(st.rte, map), 2, "the active waypoint (600)'s row")
+T.check(not R.to_fms(st.rte, "2610"):find("%(600%)"), "without the shape: no conditional rows (as before step 6d)")
+st.active = true
+T.check(R.sequence(st, 1, {lat = 35.02, lon = 140.01}), "(600) passed at an altitude")
+T.check(st.rte.passed[1].end_at.lat == 35.02 and st.rte.legs[1].start.lat == 35.02, "where it ended: its end, the next leg's start")
+text = R.to_fms(st.rte, "2610", {{at = {lat = 35.1, lon = 140.1}}})
+T.check(text:find("\n28 %(600%) DRCT 0%.000000 35%.020000 140%.010000\n28 %(INTC%) "), "the passed (600) where it ended")
+-- at most 100 rows (X-Plane's FMS): the arcs' points left out first, then
+-- the passed legs but the last
+st = R.new(N, db)
+R.set_origin(st, "ZZAA")
+R.set_dest(st, "ZZBB")
+local many, pts = {}, {}
+for k = 1, 60 do many[k] = {via = "DIRECT", fix = {ident = "P" .. k, kind = "WPT", lat = 35 + k / 100, lon = 140}} end
+for k = 1, 40 do pts[k] = {lat = 35, lon = 140 + k / 100} end
+st.rte.legs = many
+text, map = R.to_fms(st.rte, "2610", {[30] = {pts = pts}})
+T.equal(map.n, 62, "102 rows with the arc's 40 points: 62 without them")
+T.check(not text:find("\n28 ~ "), "no arc points")
+st.rte.passed = {}
+for k = 1, 50 do st.rte.passed[k] = {via = "DIRECT", fix = {ident = "Q" .. k, kind = "WPT", lat = 34, lon = 140 + k / 100}} end
+text, map = R.to_fms(st.rte, "2610")
+T.equal(map.n, 63, "112 rows with 50 passed legs: the last passed one kept")
+T.check(text:find("\n11 Q50 DRCT ") and not text:find("\n11 Q49 DRCT "), "Q50, the last passed, kept")
+
 -- INTC CRS: the start on the course into the waypoint, as far from it as
 -- the airplane (estimate)
 st = R.new(N, db)
