@@ -1429,10 +1429,7 @@ function fmsFunctions.setdata(fmsO,value)
 	setFMSData("gwsrc", value == "grwt" and "GW" or "ZFW")
 	update_perf()
 	calc_CGMAC()  --Recalc CG %MAC and TRIM units
-	if (B747DR_airspeed_V1 < 999 or B747DR_airspeed_Vr < 999 or B747DR_airspeed_V2 < 999) and simDR_onground == 1 then
-		B747DR_airspeed_flapsRef = 0
-		fmsO["notify"] = "TAKEOFF SPEEDS DELETED"
-	end
+	takeoff_speeds_deleted()
   elseif value == "fuel" then
 	-- FUEL: an entry makes it MANUAL; only that can be deleted (FCOM p.1310)
 	if del then
@@ -2571,6 +2568,7 @@ function fmsFunctions.setDref(fmsO,value)
   if value=="CLB" then clbderate=0 return  end
   if value=="CLB1" then clbderate=1 return  end
   if value=="CLB2" then clbderate=2  return end
+  if value=="V1" or value=="VR" or value=="V2" then takeoff_speed_entry(fmsO, value) return end
   if value=="ILS" then 
     if findILS(fmsO["scratchpad"])==false then fmsO["notify"]="INVALID ENTRY" end
     fmsO["scratchpad"]="" 
@@ -2617,6 +2615,7 @@ function fmsFunctions.setDref(fmsO,value)
 		fmsO["notify"]="INVALID ENTRY"
      	return 
 	end
+	if val ~= B747DR_airspeed_flapsRef then takeoff_speeds_deleted() end
 	B747DR_airspeed_flapsRef=val 
   end
 

@@ -670,6 +670,9 @@ function defaultFMSData()
   vs="****",
   fuel="***.*",
   zfw="***.*   ",
+  v1sel="   ",
+  vrsel="   ",
+  v2sel="   ",
   fuelman="     ",
   gwsrc="   ",
   reserves="***.*",
@@ -1311,6 +1314,7 @@ function after_physics()
     setNotifications()
     update_spd_trans()
     update_perf()
+    update_takeoff()
     B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
     --print(B747DR_FMSdata)
     fmsL:B747_fms_display()

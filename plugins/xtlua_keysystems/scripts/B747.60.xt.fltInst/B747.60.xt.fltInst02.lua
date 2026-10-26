@@ -2277,67 +2277,77 @@ end
 
 
 
--- V1 WIND ADJUSTMENT
-local B747_V1windAdj = 0
-function B747_V1_wind_adjustment()
-
-    local weight_max = math.min(420000, roundUpToIncrement(simDR_acf_weight_total_kg, 20000))
-    local weight_min = math.max(200000, weight_max-20000)
-    weight_max = math.max(200000,weight_max)
-    local HW = simDR_wind_speed_kts * math.cos(math.rad(recipAngle(simDR_wind_heading_deg))-math.rad(simDR_position_mag_psi))
-    local HWmax = 0
-    local HWmin = 0
-
-    if HW < 0 then
-        HWmin = math.max(-15, roundDownToIncrement(HW, 5))
-        HWmax = math.min(0, HWmin + 5)
-     elseif HW > 0 then
-        HWmax = math.min(40, roundUpToIncrement(HW, 10))
-        HWmin = math.max(0, HWmax - 10)
+-- the FMC's takeoff speeds (6-1/6-2 step 3b; FCOM p.1319-1320): computed
+-- into airspeed/V1_ref, Vr_ref and V2_ref from the TAKEOFF REF flaps (10 or
+-- 20), the FMC's gross weight (PERF INIT), the temperature and altitude
+-- region and the TAKEOFF REF wind (none entered: calm); 999 (dashes) when
+-- the flaps or the weight are missing or no IRU is aligned. The FMC selects
+-- them for the PFD (airspeed/V1, Vr, V2: B744.fms.pages.takeoff.lua).
+-- Before: the airplane's weight and X-Plane's wind, straight to the PFD
+-- when the flaps were entered. V1 not above VR (estimate).
+B747DR_airspeed_V1_ref = find_dataref("laminar/B747/airspeed/V1_ref")
+B747DR_airspeed_Vr_ref = find_dataref("laminar/B747/airspeed/Vr_ref")
+B747DR_airspeed_V2_ref = find_dataref("laminar/B747/airspeed/V2_ref")
+B747DR_fltinst_fms_data = find_dataref("laminar/B747/fms/data")
+B747DR_fltinst_irs_mode = find_dataref("laminar/B747/irs/mode")
+local V1_WIND_KEYS = {-15, -10, -5, 0, 10, 20, 30, 40}
+-- the V1 wind adjustment between the table's weights and headwinds (kg, kt)
+local function v1_wind_adjustment(weight, hw)
+    local w1 = math.max(200000, math.min(400000, math.floor(weight / 20000) * 20000))
+    local w2 = w1 + 20000
+    hw = math.max(-15, math.min(40, hw))
+    local h1, h2 = -15, -10
+    for i = 1, #V1_WIND_KEYS - 1 do
+        if hw >= V1_WIND_KEYS[i] and hw <= V1_WIND_KEYS[i + 1] then
+            h1, h2 = V1_WIND_KEYS[i], V1_WIND_KEYS[i + 1]
+            break
+        end
     end
-
-    B747_V1windAdj = B747_rescale(HWmin, V1windAdj[HWmin][weight_min], HWmax, V1windAdj[HWmax][weight_max], simDR_wind_speed_kts)
-
+    local function at(h) return B747_rescale(w1, V1windAdj[h][w1], w2, V1windAdj[h][w2], weight) end
+    return B747_rescale(h1, at(h1), h2, at(h2), hw)
 end
-
-
-
-
+-- the FMC's gross weight (kg; nil before PERF INIT) and the TAKEOFF REF
+-- headwind (kt; a tailwind negative)
+local function fms_takeoff_data()
+    local d = B747DR_fltinst_fms_data
+    if type(d) ~= "string" then return nil, 0 end
+    local gw = tonumber(d:match('"grwt"%s*:%s*"%s*([%d.]+)'))
+    local dir, kt = d:match('"towind"%s*:%s*"([HT]?)(%d+)')
+    local hw = tonumber(kt) or 0
+    if dir == "T" then hw = -hw end
+    return gw and gw * 1000 or nil, hw
+end
+function B747_V1_wind_adjustment()
+end
 B747DR_airspeed_flapsRef                              = find_dataref("laminar/B747/airspeed/flapsRef")
-lastFlaps=-1
--- V1 / Vr / V2
+-- V1 / Vr / V2: the FMC's
 function B747_setV1VrV2()
 
-    local weight_max = math.min(420000, roundUpToIncrement(simDR_acf_weight_total_kg, 20000))
-    local weight_min = math.max(200000, weight_max-20000)
     local flaps = roundToIncrement(B747DR_airspeed_flapsRef, 10)
     if B747DR_radio_altitude>1000 then
         B747DR_airspeed_flapsRef=0
     end
-
-    if flaps >= 10.0 and flaps <= 20.0 and lastFlaps~=flaps then
-
-        -- V1
-        B747DR_airspeed_V1 = B747_rescale(weight_min, B747_V1[flaps][tempAltRegion][weight_min], weight_max, B747_V1[flaps][tempAltRegion][weight_max], simDR_acf_weight_total_kg)
-        B747DR_airspeed_V1 = B747DR_airspeed_V1 + B747_V1windAdj
-
-        -- Vr
-        B747DR_airspeed_Vr = B747_rescale(weight_min, B747_Vr[flaps][tempAltRegion][weight_min], weight_max, B747_Vr[flaps][tempAltRegion][weight_max], simDR_acf_weight_total_kg)
-
-        -- V2
-        B747DR_airspeed_V2 = B747_rescale(weight_min, B747_V2[flaps][tempAltRegion][weight_min], weight_max, B747_V2[flaps][tempAltRegion][weight_max], simDR_acf_weight_total_kg)
-        lastFlaps=flaps
-    elseif lastFlaps~=flaps then
-        if simDR_all_wheels_on_ground==1 then
-            B747DR_airspeed_V1 = 999.0
-        else
-            B747DR_airspeed_V1 = 998.0 --only show no vspd on the ground
-        end
-        B747DR_airspeed_Vr = 999.0
-        B747DR_airspeed_V2 = 999.0
-        lastFlaps=flaps
+    local gw, hw = fms_takeoff_data()
+    local aligned = false
+    for i = 0, 2 do
+        if B747DR_fltinst_irs_mode[i] == 2 then aligned = true end
     end
-	
+    local v1, vr, v2 = 999, 999, 999
+    if (flaps == 10 or flaps == 20) and gw ~= nil and aligned and tempAltRegion > 0 then
+        local weight = math.max(200000, math.min(420000, gw))
+        local weight_max = math.max(220000, math.min(420000, roundUpToIncrement(weight, 20000)))
+        local weight_min = weight_max - 20000
+        local function speed(t)
+            return B747_rescale(weight_min, t[flaps][tempAltRegion][weight_min], weight_max, t[flaps][tempAltRegion][weight_max], weight)
+        end
+        vr = math.floor(speed(B747_Vr) + 0.5)
+        v2 = math.floor(speed(B747_V2) + 0.5)
+        v1 = math.min(vr, math.floor(speed(B747_V1) + v1_wind_adjustment(weight, hw) + 0.5))
+    end
+    if B747DR_airspeed_V1_ref ~= v1 then B747DR_airspeed_V1_ref = v1 end
+    if B747DR_airspeed_Vr_ref ~= vr then B747DR_airspeed_Vr_ref = vr end
+    if B747DR_airspeed_V2_ref ~= v2 then B747DR_airspeed_V2_ref = v2 end
+
     -- crazytimtimtim V1 callout
     if simDR_airspeed >= B747DR_airspeed_V1 and
     simDR_all_wheels_on_ground == 1 and
