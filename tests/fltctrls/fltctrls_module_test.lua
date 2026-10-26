@@ -287,6 +287,22 @@ T.near(get(TRIM), u / 7.5 - 1, 1e-6, "during X-Plane's runaway its own trim move
 rt:set("sim/operation/failures/rel_elv_trim_run", 0)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 fly(0, 0, 1)
+-- the flight's start: X-Plane's trim followed on the ground; an air start
+-- keeps 7.5 units (X-Plane trims for its own trim there: 0.5 at FL350)
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:callout("flight_start")
+rt:set(TRIM, 0.2)
+frames(1)
+T.near(units(), 9, 1e-6, "a start on the ground: the stabilizer follows X-Plane's trim (9 units)")
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:callout("flight_start")
+rt:set(TRIM, 0.5)
+frames(1)
+T.near(units(), 7.5, 1e-6, "an air start: X-Plane's trim 0.5 not followed (7.5 units)")
+T.near(get(TRIM), 0, 1e-6, "X-Plane's trim written back to 0")
+frames(4)
+T.near(units(), 7.5, 1e-6, "after the start's 3 s: still 7.5 units")
+rt:set("sim/flightmodel/failures/onground_any", 1)
 
 -- the takeoff greenband (B747.45.greenband_model.lua, step 2c): the FMC's
 -- takeoff trim selects the band; the indicator shows it on the ground

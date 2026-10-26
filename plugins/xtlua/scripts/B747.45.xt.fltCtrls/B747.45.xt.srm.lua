@@ -40,6 +40,9 @@ simDR_srm_elevator_trim         = find_dataref("sim/flightmodel2/controls/elevat
 simDR_srm_yoke_pitch            = find_dataref("sim/cockpit2/controls/yoke_pitch_ratio")
 simDR_srm_trim_runaway          = find_dataref("sim/operation/failures/rel_elv_trim_run")
 simDR_srm_trim_fail             = find_dataref("sim/operation/failures/rel_trim_elv")
+-- X-Plane's flight start on the ground or in the air (its flight load, not
+-- the airplane's air/ground logic: the PSEU can still say ground then)
+simDR_srm_xp_on_ground          = find_dataref("sim/flightmodel/failures/onground_any")
 B747DR_srm_hyd_2                = find_dataref("laminar/B747/hydraulics/pressure_2")
 B747DR_srm_hyd_3                = find_dataref("laminar/B747/hydraulics/pressure_3")
 B747DR_srm_all_gear_down        = find_dataref("laminar/B747/gear/air_ground/all_gear_down")
@@ -200,12 +203,18 @@ function B747_srm()
     inp.manual_pwr = dc[2] > 0.5
     inp.altn_pwr = bat
 
-    -- X-Plane's trim: followed at the start; afterwards a value that is not
-    -- one we wrote (allowing for XTLua's one-frame lag) is an outside change
+    -- X-Plane's trim: followed at a start on the ground; afterwards a value
+    -- that is not one we wrote (allowing for XTLua's one-frame lag) is an
+    -- outside change. An air start keeps the model's stabilizer (7.5 units):
+    -- X-Plane trims the airplane there for its own trim, not for the
+    -- stabilizer this aircraft drives (0.5 at FL350, 45 degrees nose up
+    -- without the A/P: 2026-10-26; the 7.5 units an estimate)
     local xp = simDR_srm_elevator_trim
     srm_t = srm_t + SIM_PERIOD
-    if srm_t < STAB_INIT_S or (trim_w1 and math.abs(xp - trim_w1) > TRIM_SAME
-        and math.abs(xp - (trim_w2 or trim_w1)) > TRIM_SAME and not xp_runaway) then
+    local starting = srm_t < STAB_INIT_S
+    if (starting and simDR_srm_xp_on_ground == 1) or (not starting and trim_w1
+        and math.abs(xp - trim_w1) > TRIM_SAME and math.abs(xp - (trim_w2 or trim_w1)) > TRIM_SAME
+        and not xp_runaway) then
         S.stab_set(srm_state, units(xp))
     end
 
