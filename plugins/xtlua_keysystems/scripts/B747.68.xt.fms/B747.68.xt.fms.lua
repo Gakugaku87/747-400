@@ -1370,6 +1370,12 @@ function after_physics()
 	local cM=hh
 	cM=mm
 	cM=ss
+	-- X-Plane's map ranges read each frame, as the time: XTLua passes a
+	-- write on only when it differs from the value it last read, and the
+	-- range knobs (the fltInst module) and the Web API change them; the
+	-- CDU's RANGE INCR and DECR write them (5-2 step 5c)
+	cM=simDR_EFIS_map_range
+	cM=simDR_EFIS_map_range_copilot
     setNotifications()
     update_spd_trans()
     update_perf()
