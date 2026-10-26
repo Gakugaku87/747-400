@@ -936,6 +936,7 @@ PLAN.md §3 に書いた。要点：
 
 - 5-2 段 5c-3b の試験（2026-10-26）で見つけたこと：機体を空中で読み直した直後、CDU の RTE で ORIGIN を入れても X-Plane の FMS の経路に入らなかった。3 台の CDU（左・中央・右）はどれも X-Plane の FMS の CDU1 に文字を送る作り（`custom2fmc`：DEL・CLR を 1 回ずつ押してから文字と LSK）で、X-Plane の FMS はメッセージ（NO PROCEDURES、KEY NOT ACTIVE、INVALID ENTRY など）をため、CLR のたびに 1 つずつ出し、出ている間は文字を受け付けない。読み直した直後に何がメッセージを出すかは突き止めていない。FMC が X-Plane の FMS を間に挟む作りそのものを FMC の作り直し（6-1・6-2）で扱う。巡航高度が変わると毎フレーム X-Plane の VNAV ページに打ち込む `monitorCRZALT` も、受け付けられないと押し続ける作りなので、そのときに見直す。
 
+- 全シナリオ（2026-10-26）で `s60_pfd_ils_alert` だけが残った：AFDS の APP が LOC も G/S も捕まえず、機体は 2,700 ft で G/S を下から通り過ぎる。機体の LOC・G/S の状態（`laminar/B747/autopilot/actual_nav_status`）は armed のまま、FMA は LOC armed・HDG SEL。FMA に映す `autopilot/nav_status` は F/D スイッチのどちらかが ON のときしか更新されない作りで、試験では F/D は両方 OFF。同じ日の朝（01:44）は合格していた。空中開始の手順を変えた（f77b0247：読み直しの後に空中開始をかけ直す）後の開始の状態の違いが関係しそう。自動操縦（6-3）の作り直しで見る。
 ## 日誌
 
 - 2026-10-22 23:27〜23:44：利用者が、別の 3D 一式（git に無い）とカスタム acf を作業ツリーに上書きコピー。
