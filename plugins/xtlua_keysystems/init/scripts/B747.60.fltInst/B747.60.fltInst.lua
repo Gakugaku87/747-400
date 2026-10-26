@@ -728,6 +728,17 @@ B747DR_fltInst_fo_clock_month = deferred_dataref("laminar/B747/fltInst/fo/clock_
 B747DR_fltInst_fo_clock_et_show = deferred_dataref("laminar/B747/fltInst/fo/clock_et_show", "number")
 B747DR_glrshld_captain_chrono_switch_pos = deferred_dataref("laminar/B747/glareshiled/captain/chrono_switch_pos", "number")
 B747DR_glrshld_fo_chrono_switch_pos = deferred_dataref("laminar/B747/glareshiled/fo/chrono_switch_pos", "number")
+-- the EICAS formats (5-2 step 6b, B747.60.xt.displays.lua,
+-- B747.60.eicas_format_model.lua): the secondary engine indications on
+-- secondary EICAS and their rows (N2, FF, oil, VIB), the compact format on
+-- primary EICAS (0 off, 1 every row, 2 the partial rows) and its rows, the
+-- secondary engine exceedance cue and its text
+B747DR_eicas_sec_eng = deferred_dataref("laminar/B747/eicas/sec_eng", "number")
+B747DR_eicas_sec_rows = deferred_dataref("laminar/B747/eicas/sec_rows", "array[4]")
+B747DR_eicas_compact = deferred_dataref("laminar/B747/eicas/compact", "number")
+B747DR_eicas_cmp_rows = deferred_dataref("laminar/B747/eicas/cmp_rows", "array[4]")
+B747DR_eicas_exceed_cue = deferred_dataref("laminar/B747/eicas/exceed_cue", "number")
+B747DR_eicas_exceed_cue_text = deferred_dataref("laminar/B747/eicas/exceed_cue_text", "string")
 -- the heading reference (5-2 step 5d, B747.60.xt.displays.lua): 1 true north;
 -- the PFDs' and NDs' labels (B747.60.hdg_ref_model.lua); each side's heading
 -- and track in the reference

@@ -2,7 +2,8 @@
 -- EGT indication (white, amber, red), the amber inhibit after a TO/GA push
 -- and the EGT start limit line; N1, N2 and N3 red at their red lines and the
 -- P&W EPR tape red at max EPR; the oil pressure, temperature and quantity
--- with their colours and messages; the vibration and its source. Logic and
+-- with their colours and messages; the vibration and its source; the
+-- secondary engine exceedances (5-2 step 6b, the EICAS formats). Logic and
 -- sources: docs/overhaul/notes/ATA-70-80.md §3.2, §3.4, §4.9-§4.11 (FCOM
 -- 7.10, 7.11, 7.20 p.833-838, p.843-850, p.872-873, p.879, p.890, p.901;
 -- ATA70_80 p.356-357, p.395, p.522, p.524 for the CF6). The red boxes are
@@ -93,6 +94,10 @@ M.EPR_RED_BELOW, M.EPR_WHITE_BELOW = 0.003, 0.01
 M.VIB_SOURCES = {PW = {"N1", "N2"}, GE = {"FAN", "LPT", "N2"}, RR = {"N1", "N2"}}
 M.VIB_ROTOR = {N1 = "n1", FAN = "n1", LPT = "n1", N2 = "n2"}
 M.VIB_UNITS = {0.2, 1.2}
+-- the high band, where the vibration indications come up by themselves
+-- (FCOM p.849): the CF6's 4.0 units (ATA70_80 p.395); P&W and RB211 the
+-- same (no source)
+M.VIB_HIGH = 4.0
 
 local function four(v) return {v, v, v, v} end
 local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
@@ -147,7 +152,8 @@ function M.new(random)
         oil_degc = four(15), oil_temp_msg = four(false),
         oil_qty = four(0), oil_qty_magenta = four(false),
         vib = four(0), vib_source = four(0),
-        n1_red = four(false), n2_red = four(false), n3_red = four(false), epr_red = four(false)}
+        n1_red = four(false), n2_red = four(false), n3_red = four(false), epr_red = four(false),
+        exceed_n2 = false, exceed_oil = false, exceed_vib = false}
     return s
 end
 
@@ -244,6 +250,20 @@ function M.update(s, inp, dt)
     oil(s, inp, out)
     vibration(s, inp, out)
     rpm(s, inp, out)
+    -- the secondary engine exceedances of any engine, which bring up the
+    -- partial format and the exceedance cue (FCOM p.839-840, p.852-854,
+    -- p.874): N2 (the RB211's N3 too) at its operating limit; the oil
+    -- pressure at its red line or in the CF6's amber band, the temperature
+    -- in its amber band or above, the quantity magenta (low, the CF6's
+    -- differential); the vibration at the high band
+    out.exceed_n2, out.exceed_oil, out.exceed_vib = false, false, false
+    for n = 1, 4 do
+        if out.n2_red[n] or out.n3_red[n] then out.exceed_n2 = true end
+        if out.oil_red[n] or out.oil_amber[n] or out.oil_temp_msg[n] or out.oil_qty_magenta[n] then
+            out.exceed_oil = true
+        end
+        if out.vib[n] >= M.VIB_HIGH then out.exceed_vib = true end
+    end
     return out
 end
 

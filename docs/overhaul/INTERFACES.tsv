@@ -1137,6 +1137,10 @@ laminar/B747/efis/ref_alt/capt/set_dial_up	command	obj	B747.60.fltInst,B747.60.x
 laminar/B747/efis/ref_alt/fo/set_dial_dn	command	obj	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/efis/ref_alt/fo/set_dial_pos	dataref	obj,snd	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/efis/ref_alt/fo/set_dial_up	command	obj	B747.60.fltInst,B747.60.xt.fltInst02
+laminar/B747/eicas/exceed_cue	dataref	panel	B747.60.fltInst,B747.60.xt.displays
+laminar/B747/eicas/exceed_cue_text	dataref	panel	B747.60.fltInst,B747.60.xt.displays
+laminar/B747/eicas/sec_eng	dataref	panel	B747.60.fltInst,B747.60.xt.displays
+laminar/B747/eicas/sec_rows	dataref	panel	B747.60.fltInst,B747.60.xt.displays
 laminar/B747/electrical/apu/sel_dial_dn	command	obj	B747.03.electrical,B747.03.xt.electrical
 laminar/B747/electrical/apu/sel_dial_pos	dataref	obj,snd	B747.03.electrical,B747.03.xt.electrical
 laminar/B747/electrical/apu/sel_dial_up	command	obj	B747.03.electrical,B747.03.xt.electrical

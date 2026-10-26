@@ -476,3 +476,13 @@
 | 2026-10-26・時計（DSP-33） | 同じく下の LCD（`GROUP Elapsed Time`・`GROUP Chronograph`） | ET の数字は `SHOW_EQUAL 0 clock_et_chr_display` と `SHOW_GREATER 0.000001 clock_et_seconds` の 2 つ（後のものが勝ち、CHR の下に ET が重なった）、電源の条件なし | ET の数字は `SHOW_EQUAL 1 clock_et_show` 1 つ。2 つのグループを新しい `GROUP Digits`（`clock_on`）に入れた | ATA31 p.68; FCOM p.1058 |
 
 上の 2 行は `docs/overhaul/tools/panel_clocks.lua` で書き換えた（2 面で 14 か所。増えた 346 行・減った 336 行の多くは入れ子にした分の字下げ）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_clocks`。外から見た姿は変わらない（外観の写真）。
+
+表示（5-2 段 6b-1、2026-10-26：EICAS の部分表示と逸脱の印）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・EICAS の形式（DSP-24・ENG-22） | 二次 EICAS の `GROUP ENG Synoptic` | `SHOW_EQUAL 1 laminar/B747/dsp/synoptic_display`（ENG を選んだときだけ） | `SHOW_EQUAL 1 laminar/B747/eicas/sec_eng`（全表示か部分表示） | FCOM p.852, p.874 |
+| 同 | その中の N2（`GROUP N2`・`N2 GE`・`N2 N3 RR`）、FF（`FF`・`FF RR`）、油（`Oil Pressure`・`Oil Temp`・`Oil Qty`）、VIB（`VIB`） | いつも出る | それぞれ新しいグループ `N2 Rows`・`FF Rows`・`Oil Rows`・`VIB Row`（`SHOW_EQUAL 1 eicas/sec_rows[0..3]`）の中に | FCOM p.852–854 |
+| 同 | 主 EICAS の `GROUP CAS Messages` の `gen_text STATUS cue` | STATUS の印だけ | STATUS の印を新しい `GROUP Status Cue`（`SHOW_EQUAL 0 eicas/exceed_cue`）に入れ、同じ場所に `gen_text Exceedance cue`（`eicas/exceed_cue_text`、"VVVVVV"、`SHOW_EQUAL 1 eicas/exceed_cue`。STATUS の印の写し）を足した | FCOM p.840 |
+
+上の 3 行は `docs/overhaul/tools/panel_eicas_partial.lua` で書き換えた（7 か所。増えた 4,162 行・減った 4,134 行の多くは入れ子にした分の字下げ）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_eicas_partial`。外から見た姿は変わらない（外観の写真）。

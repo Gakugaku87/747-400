@@ -11,7 +11,9 @@
 -- (US quarts for the CF6), vibration; the GE oil pressure amber band, the
 -- oil quantity magenta and the vibration source label for the panel:
 -- oil_press_amber, oil_qty_magenta, vib_source) and ENG n OIL PRESS, ENG n
--- OIL TEMP.
+-- OIL TEMP. 5-2 step 6b: the secondary engine exceedances (new
+-- engines/sec_exceed[3]: N2, oil, vibration) for the EICAS formats (the
+-- display glue, B747.60.xt.displays.lua).
 -- B747.40.xt.engines.lua loads it after the start glue and calls
 -- B747_engine_display() every frame (after_physics) and
 -- B747_engine_display_toga() from its TO/GA command.
@@ -39,6 +41,7 @@ B747DR_EPR_red_on               = find_dataref("laminar/B747/engines/EPR/red_on"
 B747DR_oil_press_amber          = find_dataref("laminar/B747/engines/oil_press_amber")
 B747DR_oil_qty_magenta          = find_dataref("laminar/B747/engines/oil_qty_magenta")
 B747DR_vib_source               = find_dataref("laminar/B747/engines/vib_source")
+B747DR_sec_exceed               = find_dataref("laminar/B747/engines/sec_exceed")
 -- the panel's vibration source labels: 0 BB, 1 N1, 2 N2, 3 FAN, 4 LPT
 local VIB_LABEL = {N1 = 1, N2 = 2, FAN = 3, LPT = 4}
 
@@ -143,4 +146,7 @@ function B747_engine_display()
         put(B747DR_CAS_advisory_status, ADV_OIL_TEMP + i, flag(out.oil_temp_msg[n]))
         put(B747DR_CAS_advisory_status, ADV_OIL_PRESS + i, flag(out.oil_press_msg[n]))
     end
+    put(B747DR_sec_exceed, 0, flag(out.exceed_n2))
+    put(B747DR_sec_exceed, 1, flag(out.exceed_oil))
+    put(B747DR_sec_exceed, 2, flag(out.exceed_vib))
 end
