@@ -51,6 +51,7 @@
     { "do": "snapshot", "drefs": [ "laminar/B747/airdata/alt_capt", "laminar/B747/pfd/capt/baro_alert", "laminar/B747/pfd/fo/baro_alert" ] },
     { "do": "shot", "name": "pfd_std_amber" },
 
+    { "do": "set", "note": "機長の EFIS 操作パネルの故障（CDU の EFIS CONTROL は、そのパネルが故障したときだけ MENU に出る：FCOM p.1060–1061、5-2 段 5c-1 から）", "dref": "laminar/B747/efis/fail[0]", "value": 1 },
     { "do": "cmd", "note": "左の CDU の MENU（コマンドは func_key/fix。index は INIT/REF の索引）", "name": "laminar/B747/fms1/func_key/fix" },
     { "do": "sleep", "seconds": 1 },
     { "do": "cmd", "note": "EFIS CP SELECT>", "name": "laminar/B747/fms1/ls_key/R1" },
@@ -82,6 +83,7 @@
     { "do": "check", "note": "機長の STD", "dref": "laminar/B747/efis/baro_std/capt/switch_pos", "op": "==", "value": 1 },
     { "do": "check", "note": "副操縦士は STD にならない", "dref": "laminar/B747/efis/baro_std/fo/switch_pos", "op": "==", "value": 0 },
     { "do": "check", "note": "STD の前の値（1013 hPa）を覚えている（FCOM p.1037）", "dref": "laminar/B747/efis/baro/capt/preselect", "op": "between", "value": [29.905, 29.92] },
+    { "do": "set", "note": "EFIS 操作パネルの故障を戻す", "dref": "laminar/B747/efis/fail[0]", "value": 0 },
     { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
     { "do": "view", "name": "forward" }
   ]

@@ -38,7 +38,7 @@
     { "do": "check", "note": "副操縦士は選んでいない", "dref": "laminar/B747/pfd/fo/fpv_show", "op": "==", "value": 0 },
     { "do": "snapshot", "note": "水平飛行：FPV は迎角だけ飛行機の記号の下", "drefs": [ "laminar/B747/pfd/capt/fpv_x", "laminar/B747/pfd/capt/fpv_y", "sim/flightmodel/position/vpath",
       "sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot", "sim/flightmodel/position/alpha", "sim/flightmodel/position/hpath", "sim/flightmodel/position/psi" ] },
-    { "do": "check", "note": "水平飛行で迎角 0〜6°：飛行機の記号の 0〜41 px 下", "dref": "laminar/B747/pfd/capt/fpv_y", "op": "between", "value": [-41, 0] },
+    { "do": "check", "note": "水平飛行で迎角 0〜9°：飛行機の記号の 0〜60 px 下（1° 約 6.8 px。10,000 ft・172 kt のクリーンの重い機体で約 7.4°：2026-10-26。前は空中開始の読み直しで速度が変わり 6° に収まっていた）", "dref": "laminar/B747/pfd/capt/fpv_y", "op": "between", "value": [-60, 0] },
     { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
     { "do": "view", "note": "機長の PFD", "the": -24, "psi": -1, "fov": 24 },
     { "do": "shot", "name": "pfd_fpv_level" },

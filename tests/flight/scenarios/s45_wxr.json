@@ -159,7 +159,7 @@
     { "do": "set", "note": "X-Plane のレーダーの故障", "dref": "sim/operation/failures/rel_wxr_radar", "value": 6 },
     { "do": "sleep", "seconds": 1 },
     { "do": "check", "note": "故障でレーダーなし", "dref": "sim/cockpit2/EFIS/EFIS_weather_mode", "op": "==", "value": 0 },
-    { "do": "check", "note": "ND の注記なし（前は RT）", "dref": "laminar/B747/nd/capt/text/wxr", "op": "==", "value": " " },
+    { "do": "check", "note": "ND に琥珀の WXR FAIL（FCOM p.1155。5-1 段 5d から。その前は注記なし、もっと前は RT）", "dref": "laminar/B747/nd/capt/text/wxr", "op": "==", "value": "WXR" },
     { "do": "set", "dref": "sim/operation/failures/rel_wxr_radar", "value": 0 },
     { "do": "cmd", "note": "LR/T", "name": "laminar/B747/wxr/buttons/lr" },
     { "do": "sleep", "seconds": 1 },

@@ -98,7 +98,7 @@
     { "do": "wait", "note": "ILS C", "dref": "laminar/B747/pfd/capt/ils_rx", "op": "==", "value": 2, "timeout": 5 },
     { "do": "wait", "note": "LOC のバーが戻る", "dref": "laminar/B747/nd/capt/loc_ptr", "op": ">", "value": 0, "timeout": 10 },
     { "do": "check", "note": "旗は消える", "dref": "laminar/B747/nd/capt/loc_flag", "op": "==", "value": 0 },
-    { "do": "check", "note": "DME も戻る", "dref": "laminar/B747/nd/capt/dme", "op": "==", "value": 1 },
+    { "do": "wait", "note": "DME も戻る（故障を戻した直後は 0 のことがある：2026-10-26）", "dref": "laminar/B747/nd/capt/dme", "op": "==", "value": 1, "timeout": 5 },
     { "do": "shot", "name": "nd_app_ils_c" },
     { "do": "set", "note": "機長の EIU 選択を AUTO", "dref": "laminar/B747/flt_inst/eiu_src/capt/sel_dial_pos", "value": 1 },
     { "do": "set", "note": "NAV2 を局の無い 108.15 に", "dref": "sim/cockpit2/radios/actuators/nav2_frequency_hz", "value": 10815 },

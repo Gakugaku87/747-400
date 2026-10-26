@@ -43,7 +43,7 @@
     { "do": "wait", "note": "VOR L の識別符号 FKS", "dref": "laminar/B747/nd/vor_l_ref", "op": "==", "value": "FKS", "timeout": 30 },
     { "do": "wait", "note": "STA なしでも同調中の FKS が出る（1 枠目、緑の字：FCOM p.1145）", "dref": "laminar/B747/nd/capt/text/greentext0", "op": "==", "value": "FKS", "timeout": 10 },
     { "do": "check", "note": "同調中の VOR の記号", "dref": "laminar/B747/nd/capt/text/icon[0]", "op": "==", "value": 10 },
-    { "do": "check", "note": "2 枠目は VOR R の局（FMC の自動同調）：これも同調中なので緑の記号", "dref": "laminar/B747/nd/capt/text/icon[1]", "op": "==", "value": 10 },
+    { "do": "wait", "note": "2 枠目は VOR R の局（FMC の自動同調）：これも同調中なので緑の記号（VOR L を FKS にした直後は R も FKS のままで、FMC の自動同調が R を 2 番目に近い RID に選び直すまで約 11 秒：2026-10-26）", "dref": "laminar/B747/nd/capt/text/icon[1]", "op": "==", "value": 10, "timeout": 20 },
     { "do": "check", "note": "ほかの記号は無い（3 枠目は空）", "dref": "laminar/B747/nd/capt/text/show[2]", "op": "==", "value": 0 },
     { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
     { "do": "view", "note": "機長の ND", "the": -22, "psi": 12, "fov": 28 },
