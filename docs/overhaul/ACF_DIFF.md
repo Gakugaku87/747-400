@@ -496,3 +496,13 @@
 | 同 | `GROUP Engine` の最後 | なし | 新しい `GROUP Compact`（`SHOW_GREATER 0.5 eicas/compact`）：見出し（`eicas_cmp_epr`・`eicas_cmp_n1`・`eicas_cmp_egt`、推力の基準ごと）と、`GROUP Cmp Rows` の中の N2・FF・油・VIB の行（推力の基準が N1 のとき行ごとに下へ）（`SHOW_EQUAL 1 eicas/cmp_rows[0..3]`、二次エンジンのページの数字と見出しの写し） | FCOM p.855–857 |
 
 上の 3 行は `docs/overhaul/tools/panel_eicas_compact.lua` で書き換えた（5 か所、`GROUP Compact` は 1,831 行）。画像は `docs/overhaul/tools/make_eicas_cmp_images.ps1`。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_eicas_compact`。外から見た姿は変わらない（外観の写真）。
+
+表示（5-2 段 7、2026-10-26：SHOW の条件の重なり）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・パネル全体（PFD・ND・EICAS） | 名前の無い dataref（`[3]` だけ）の SHOW を持つ部品とグループ | 128 行（何も決めていない） | 消した | ― |
+| 同 | 副操縦士の PFD の作動中の FLARE（`gen_rotary FLARE 2`、2 か所） | `SHOW_LESS 0 laminar/B747/CAS/caution_status`（添字の無い配列）と `SHOW_EQUAL 3 autopilot/FMA/active_pitch_mode` | ピッチのモードだけ（機長の方と同じ） | ― |
+| 同 | 別々の dataref の SHOW を持つ部品とグループ 114 か所（主 EICAS 56、二次 EICAS 42、PFD 8、ND 8） | 最後の 1 本だけが効く | 最後の dataref の条件を部品に残し、ほかの dataref の条件をそれぞれ外側の新しいグループ（`<名前> and <n>`、130 個）に入れた：すべてが成り立つときに出る | FCOM p.972 ほか |
+
+上の 3 行は `docs/overhaul/tools/panel_show_and.lua` で書き換えた。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_show_and`。外から見た姿は変わらない（外観の写真）。
