@@ -181,6 +181,23 @@ T.check(xti > 0.6 and xti < 1.0, "where the turn onto the course starts, 0.8 nm 
 T.check(after < 0.3, "the course captured without overshooting 0.3 nm: " .. after)
 T.check(math.abs(s.xtk) < 0.05, "and held: " .. s.xtk)
 
+-- DIRECT TO a fix behind (FCOM p.1237): the turn onto the course from
+-- where the airplane is, then the great circle from there; no loop back
+-- to the line from where it was at EXEC
+local HERE = {lat = 35.3, lon = 140.0}
+local BEHIND = P.point(HERE, 170, 10)
+st = route({{via = "DIRECT", fix = BEHIND, dto = true, from = HERE}, {via = "DIRECT", fix = P.point(BEHIND, 170, 30)}}, A)
+s = L.new(P)
+a = plane({lat = HERE.lat, lon = HERE.lon, hdg = 0, tas = 250})
+local devd, left = 0, false
+log = fly(st, s, a, 300, {each = function(t, s, air, path)
+    if path[1].direct then devd = math.max(devd, math.abs(s.xtk)) end
+    if t < 15 and a.bank < -1 then left = true end end})
+T.equal(#log, 1, "the fix behind reached")
+T.check(not left, "the shorter turn, to the right")
+T.check(devd < 0.1, "within 0.1 nm of the path flown (from where the turn ended): " .. devd)
+T.check(log[1] and log[1].t < 260, "no loop: there in " .. (log[1] and log[1].t or -1) .. " s (the turn and 10 nm: about 230 s)")
+
 -- the capture criteria, armed (not engaged): 10 nm off the leg
 local LEFT = P.point(P.point(A, 0, 10), 270, 10)
 st = route({{via = "DIRECT", fix = B}}, A)

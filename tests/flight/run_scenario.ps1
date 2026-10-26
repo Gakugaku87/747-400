@@ -34,6 +34,12 @@
 #                                                value must go down) until dref
 #                                                equals value (up to 6 presses)
 #   wait    {dref, op, value, timeout}           wait for a condition
+#   watch   {dref, [abs], [max], [min],          sample dref every 0.25 s until the
+#            [until: {dref, op, value}],         condition (else for the timeout);
+#            timeout, [level]}                   pass when the condition came and
+#                                                the largest value (absolute with
+#                                                abs) is at most max, the least at
+#                                                least min
 #   check   {dref, op, value, [cite], [level]}   record pass/fail (level fail|warn)
 #   remember {dref, as}                          keep a value: a wait or check with
 #                                                "rel": "<as>" adds it to its value(s)
@@ -266,6 +272,29 @@ foreach ($step in $spec.steps) {
                 $last = $script:lastValue
                 if ($null -ne $sec) { Add-Result $step 'pass' ("{0} {1} {2} after {3:N1} s" -f $step.dref, $step.op, ($want -join '..'), $sec) $last }
                 else { Add-Result $step $(if ($step.level -eq 'warn') { 'warn' } else { 'fail' }) ("{0} {1} {2} not reached in {3} s (last {4})" -f $step.dref, $step.op, ($want -join '..'), $timeout, $last) $last }
+            }
+            'watch' {
+                $timeout = if ($step.timeout) { [double]$step.timeout } else { 60 }
+                $u = $step.until
+                $uwant = if ($u) { Get-Expected $u } else { $null }
+                $hi = $null; $lo = $null; $n = 0; $met = $false
+                $t0 = Get-Date
+                while (((Get-Date) - $t0).TotalSeconds -lt $timeout) {
+                    if (Test-XPStuck) { throw 'stuck' }
+                    $v = [double](Get-XPDataref $step.dref)
+                    if ($step.abs) { $v = [math]::Abs($v) }
+                    if ($null -eq $hi -or $v -gt $hi) { $hi = $v }
+                    if ($null -eq $lo -or $v -lt $lo) { $lo = $v }
+                    $n++
+                    if ($u -and (Test-Op (Get-XPDataref $u.dref) $u.op $uwant)) { $met = $true; break }
+                    Start-Sleep -Milliseconds 250
+                }
+                $ok = $met -or -not $u
+                if ($null -ne $step.max -and $hi -gt [double]$step.max) { $ok = $false }
+                if ($null -ne $step.min -and $lo -lt [double]$step.min) { $ok = $false }
+                $status = if ($ok) { 'pass' } elseif ($step.level -eq 'warn') { 'warn' } else { 'fail' }
+                $why = if (-not $u) { '' } elseif ($met) { " until {0} {1} {2}" -f $u.dref, $u.op, ($uwant -join '..') } else { " ({0} {1} {2} not reached in {3} s)" -f $u.dref, $u.op, ($uwant -join '..'), $timeout }
+                Add-Result $step $status ("{0}{1}: {2} samples, {3:N3} .. {4:N3} (max {5}, min {6}){7}" -f $(if ($step.abs) { '|' + $step.dref + '|' } else { $step.dref }), '', $n, $lo, $hi, $step.max, $step.min, $why) $hi
             }
             'check' {
                 $want = Get-Expected $step

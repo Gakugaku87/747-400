@@ -97,6 +97,18 @@ B747DR_ND_range_display_fo				= deferred_dataref("laminar/B747/nd/range_display_
 B747DR_fms_exec_light_pilot				= deferred_dataref("laminar/B747/fms/exec_light_pilot", "number")
 B747DR_fms_exec_light_copilot			= deferred_dataref("laminar/B747/fms/exec_light_copilot", "number")
 
+-- LNAV (6-1/6-2 step 6c): the FMC's lateral steering for the AFDS (valid:
+-- the FCC engages LNAV on it; roll: the bank command, degrees; mode: 0
+-- none, 1 the path, 2 a heading leg, 3 the heading held), the cross-track
+-- error (nm, right positive), the desired track (true degrees); route: 1
+-- while the FMC sequences its active route itself
+B747DR_fms_lnav_valid					= deferred_dataref("laminar/B747/fms/lnav/valid", "number")
+B747DR_fms_lnav_roll					= deferred_dataref("laminar/B747/fms/lnav/roll", "number")
+B747DR_fms_lnav_mode					= deferred_dataref("laminar/B747/fms/lnav/mode", "number")
+B747DR_fms_lnav_xtk						= deferred_dataref("laminar/B747/fms/lnav/xtk", "number")
+B747DR_fms_lnav_dtk						= deferred_dataref("laminar/B747/fms/lnav/dtk", "number")
+B747DR_fms_lnav_route					= deferred_dataref("laminar/B747/fms/lnav/route", "number")
+
 --IRS ND DISPLAY
 B747DR_ND_GPS_Line						= deferred_dataref("laminar/B747/irs/gps_display_line", "string")
 B747DR_ND_IRS_Line						= deferred_dataref("laminar/B747/irs/irs_display_line", "string")

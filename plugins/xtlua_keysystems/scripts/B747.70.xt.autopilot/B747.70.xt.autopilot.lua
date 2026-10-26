@@ -185,6 +185,12 @@ simDR_autopilot_airspeed_kts_mach = find_dataref("sim/cockpit2/autopilot/airspee
 B747DR_fms_setCurrent = find_dataref("xtlua/currentFMSID")
 B747DR_fms_xp_bridge = find_dataref("laminar/B747/fms/xp/bridge")
 B747DR_fms_xp_current = find_dataref("laminar/B747/fms/xp/current")
+-- the FMC's LNAV (6-1/6-2 step 6c; notes/ATA-34-61-FMC.md §29): its
+-- steering's validity (LNAV engages on it: ATA34_2 p.619) and bank
+-- command, and whether it sequences its active route itself
+B747DR_fms_lnav_valid = find_dataref("laminar/B747/fms/lnav/valid")
+B747DR_fms_lnav_roll = find_dataref("laminar/B747/fms/lnav/roll")
+B747DR_fms_lnav_route = find_dataref("laminar/B747/fms/lnav/route")
 -- X-Plane's FMS's current entry (from 1): through the FMS bridge plugin when
 -- it is there (X-Plane's thread), else XTLua's currentFMSID (XTLua's own
 -- thread with no lock against X-Plane's: 6-1/6-2 step 5e)
@@ -2621,7 +2627,8 @@ function B747_ap_appr_mode()
 		B747DR_ap_approach_mode = 0
 	end
 
-	if B747DR_ap_lnav_state > 0 and simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status == 0 then
+	-- (LNAV engaged: armed, the roll mode before it stays, FCOM p.644)
+	if B747DR_ap_lnav_state == 2 and simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status == 0 then
 		print("simCMD_autopilot_heading_select in appr_mode")
 		simCMD_autopilot_heading_select:once()
 		B747DR_ap_ATT = 0.0
@@ -2694,13 +2701,15 @@ function fma_rollModes()
 		B747DR_ap_lnav_state = 0
 	elseif B747DR_ap_lnav_state == 2 then
 		B747DR_ap_FMA_active_roll_mode = 2 -- (LNAV) --
-	elseif simDR_autopilot_heading_status == 2 and B747DR_ap_lnav_state == 0 then
-		-- (HDG SEL) --
+	elseif simDR_autopilot_heading_status == 2 then
+		-- (HDG SEL) --, LNAV armed too: the roll mode before it stays active
+		-- until LNAV engages (FCOM p.644; armed in the air until its capture
+		-- since 6-1/6-2 step 6c)
 		simDR_autopilot_heading_deg = ap_hdg_target(B747DR_ap_heading_deg)
 		B747DR_ap_FMA_active_roll_mode = 6 -- (HDG SEL) --
 	elseif simDR_autopilot_heading_hold_status == 2 then
+		-- (selecting HDG HOLD cancels LNAV: its command handler)
 		B747DR_ap_FMA_active_roll_mode = 7 -- (HDG HLD) --
-		B747DR_ap_lnav_state = 0
 	else
 		B747DR_ap_FMA_active_roll_mode = 0 -- (NONE) --
 	end
@@ -2868,8 +2877,12 @@ function fma_PitchModes()
 end
 
 function B747_ap_fma(fms)
-	B747DR_capt_ap_roll = B747_animate_value(B747DR_capt_ap_roll, B747DR_ap_target_roll - simDR_capt_roll, -25, 25, 10)
-	B747DR_fo_ap_roll = B747_animate_value(B747DR_fo_ap_roll, B747DR_ap_target_roll - simDR_fo_roll, -25, 25, 10)
+	-- the flight directors' roll: in LNAV the FMC's steering (6-1/6-2 step
+	-- 6c: ATA22 p.358), else X-Plane's
+	local fdRoll = B747DR_ap_target_roll
+	if B747DR_ap_FMA_active_roll_mode == 2 and B747DR_fms_lnav_valid == 1 then fdRoll = B747DR_fms_lnav_roll end
+	B747DR_capt_ap_roll = B747_animate_value(B747DR_capt_ap_roll, fdRoll - simDR_capt_roll, -25, 25, 10)
+	B747DR_fo_ap_roll = B747_animate_value(B747DR_fo_ap_roll, fdRoll - simDR_fo_roll, -25, 25, 10)
 	--B747DR_capt_ap_roll=B747DR_ap_target_roll-simDR_capt_roll
 	--B747DR_fo_ap_roll=B747DR_ap_target_roll-simDR_fo_roll
 	glideSlopeLOCProgress()
@@ -2936,7 +2949,9 @@ function B747_ap_fma(fms)
 		end
 	end
 
-	if simDR_radarAlt1 > 50 and B747DR_ap_lnav_state == 1 then
+	-- LNAV engages once the FMC's steering is valid: an active route and
+	-- its capture (6-1/6-2 step 6c; ATA34_2 p.618-619; ATA22 p.270)
+	if simDR_radarAlt1 > 50 and B747DR_ap_lnav_state == 1 and B747DR_fms_lnav_valid == 1 then
 		B747DR_ap_lnav_state = 2
 		print("simDR_radarAlt1>50 and B747DR_ap_lnav_state==1")
 
@@ -3408,10 +3423,12 @@ function B474_ap_target_heading()
 		B747DR_ap_activate_target_heading_deg=0
 		print("change to HDG SEL")
 	end
-	if simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status == 0 and B747DR_ap_lnav_state > 0 then
+	-- (LNAV engaged: armed, the roll mode before it stays, HDG HOLD too:
+	-- FCOM p.644)
+	if simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status == 0 and B747DR_ap_lnav_state == 2 then
 		if diff < 0.05 then
 			return
-		end	
+		end
 		print("simCMD_autopilot_heading_select in B747DR_ap_lnav_state")
 		simCMD_autopilot_heading_select:once()
 		B747DR_ap_lastCommand=simDRTime
@@ -3606,7 +3623,14 @@ function after_physics()
 		lastFMS = json.decode(fmsSTR)
 	end
 	local fms = lastFMS
-	B747_getCurrentWayPoint(fms)
+	-- the FMC sequences its active route and sets the current waypoints
+	-- itself (6-1/6-2 step 6c): X-Plane's FMS does not advance; the best
+	-- track only without the FMC's
+	if B747DR_fms_lnav_route == 1 then
+		if simDR_override_fms_progress ~= 1 then simDR_override_fms_progress = 1 end
+	else
+		B747_getCurrentWayPoint(fms)
+	end
 	B747_monitorAP(fms)
 	B747_ap_fma(fms)
 	B747_ap_button_switch_animation()

@@ -103,11 +103,18 @@ T.equal(rt:get(CUR), 3, "the AFDS's: ALPHA")
 xplane(3)
 frames(0.5)
 
--- a modification's EXEC: the plan with CURRENT, the plugin sets it after the load
-rt:set(CUR, 4)
-xplane(4)
+-- LNAV sequences ALPHA (step 6c: past its turn on the way to BRAVO): the
+-- plugin's current waypoint BRAVO
+rt:set("sim/flightmodel/position/latitude", 35.5333)
+rt:set("sim/flightmodel/position/longitude", 140.5)
+rt:set("sim/flightmodel2/position/groundspeed", 128.6)
+rt:set("sim/flightmodel/position/true_airspeed", 128.6)
 frames(0.3)
-T.equal(line(3), "BRAVO                   ", "the AFDS on BRAVO: ALPHA passed")
+T.equal(line(3), "BRAVO                   ", "ALPHA passed: BRAVO the active waypoint")
+T.equal(rt:get(XCUR), 4, "the plugin's current waypoint BRAVO, the fourth")
+T.equal(rt:get(CUR), 4, "and the AFDS's")
+xplane(4)
+-- a modification's EXEC: the plan with CURRENT, the plugin sets it after the load
 key("key/del")
 key("ls_key/L2")
 key("key/execute")

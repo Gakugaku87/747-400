@@ -401,3 +401,10 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
 8. RR 型の AUTOPILOT DISC の音、ATT・G/S 捕捉順の型式（FCOM の 109/405/570）をリバリー（エンジン型式）にどう対応させるか。
 9. speed trim を X-Plane の機体モデルの上でどこまで入れるか（手動操縦の速度安定に効く。trim 指示器が自動で動くのは乗員に見える）。
 10. full rate autotrim（LAND 2）の ND 限界は `資料に記載なし`。
+
+## 6-1・6-2 段 6c での AFDS の変更（2026-10-27：notes/ATA-34-61-FMC.md §29）
+
+- LNAV の engage：arm 中、電波高度 50 ft 超で FMC の steering が valid になるのを待つ（ATA34_2 p.618–619：アクティブな経路と捕捉の条件）。AFDS-08 の「2.5 NM・intercept の判定が無い」の分。NOT ON INTERCEPT HEADING は FMC が出す。
+- LNAV が engage している間のロール：FMC のバンクの指令を 3°/s で追う（ATA22 p.358。推定の速さ）。X-Plane の HDG SEL の FD roll とその 10 点の移動平均は通さない（AFDS-01 の LNAV の分）。PFD の FD のバーも同じ指令。
+- LNAV の arm 中も前のロールモード（HDG SEL・HDG HOLD）が active のまま（FCOM p.644）。前は arm 中の HDG SEL が NONE になってサーボが離れ、HDG HOLD は arm を消していた（arm がすぐ engage していたので表に出なかった）。arm 中に X-Plane の HDG SEL を入れない（engage してから）。
+- 残り（6-3）：50 ft は滑走路の標高 +50 ft でなく電波高度のまま、active の LNAV を押すと解除する、LNAV にも効く AUTO のバンクの制限（離陸フラップで V2+10 未満は 15°：FCTM p.118）。

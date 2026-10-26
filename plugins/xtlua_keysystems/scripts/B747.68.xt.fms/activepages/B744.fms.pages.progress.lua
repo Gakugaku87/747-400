@@ -179,13 +179,15 @@ fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
       latWind=string.format("%3d",math.sin(angle)*simDR_wind_speed)
       longWind=string.format("%3d",math.cos(angle)*simDR_wind_speed)
     end
-    xtk_error=string.format("%2.1f",B747DR_ap_lnav_xtk_error)
+    -- XTK ERROR: left or right of the active route (FCOM p.1377: "L
+    -- 0.1NM"; the FMC's LNAV since 6-1/6-2 step 6c, FMC-38)
+    xtk_error=string.format("%s %.1fNM",B747DR_fms_lnav_xtk<0 and "L" or "R",B747DR_ap_lnav_xtk_error)
     lastPage[fmsID]= {
     progress_title(),
     "                        ",
     longWind.."KT "..string.format("%10s",B747DR_ND_Wind_Line.."KT").."  "..windSide..latWind .."KT",
     "                        ",
-    "L "..xtk_error.."              +**FT",
+    xtk_error..string.rep(" ",19-string.len(xtk_error)).."+**FT",
     "                        ",
     string.format("%03.0f",B747DR_TAS_pilot).."                ".. string.format("%3d",simDR_air_temp) .."`C",
     "                        ",

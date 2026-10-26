@@ -918,8 +918,49 @@ B747DR_xp_current=find_dataref("laminar/B747/fms/xp/current")
 B747DR_fms_exec_light_pilot=find_dataref("laminar/B747/fms/exec_light_pilot")
 B747DR_fms_exec_light_copilot=find_dataref("laminar/B747/fms/exec_light_copilot")
 simDR_fms_exec_light=find_dataref("sim/cockpit2/radios/indicators/fms_exec_light_pilot")
+-- LNAV (6-1/6-2 step 6c; notes/ATA-34-61-FMC.md §29): the active route's
+-- path (B747.68.path_model.lua) built anew when the route changes or
+-- sequences; LNAV (B747.68.lnav_model.lua) each frame, its steering to
+-- the AFDS
+dofile("B747.68.path_model.lua")
+dofile("B747.68.lnav_model.lua")
+B747_fmc_lnav=B747_lnav_model.new(B747_path_model)
+local lnavPath=nil
+-- the active leg the path was built with (a new one not by sequencing:
+-- captured again, FCOM p.644), sequencing now, LNAV engaged a frame ago
+local lnavFirst=nil
+local lnavSequencing=false
+local lnavWasEngaged=false
+B747DR_fms_lnav_valid=find_dataref("laminar/B747/fms/lnav/valid")
+B747DR_fms_lnav_roll=find_dataref("laminar/B747/fms/lnav/roll")
+B747DR_fms_lnav_mode=find_dataref("laminar/B747/fms/lnav/mode")
+B747DR_fms_lnav_xtk=find_dataref("laminar/B747/fms/lnav/xtk")
+B747DR_fms_lnav_dtk=find_dataref("laminar/B747/fms/lnav/dtk")
+B747DR_fms_lnav_route=find_dataref("laminar/B747/fms/lnav/route")
+B747DR_fms_ap_lnav_state=find_dataref("laminar/B747/autopilot/lnav_state")
+simDR_lnav_trk=find_dataref("sim/flightmodel/position/hpath")
+simDR_lnav_tas=find_dataref("sim/flightmodel/position/true_airspeed")
+local function lnav_var(lat,lon) return B747_navdb.variation(B747_fmc_navdb,lat,lon) end
+-- a leg as LNAV flies it: its fix or name, a direct-to's or LNAV's start
+local function lnav_leg_key(l)
+  if not l then return "" end
+  local k=l.fix and string.format("%s %.5f %.5f",l.fix.ident,l.fix.lat,l.fix.lon) or (l.name or (l.disc and "DISC" or ""))
+  local f=(l.dto and l.from) or l.start
+  if f then k=k..string.format(" %.5f %.5f",f.lat,f.lon) end
+  return k
+end
+function B747_fmc_lnav_build()
+  local st=B747_fmc_route
+  if not st.active then lnavPath,lnavFirst=nil,nil return end
+  local r=st.rte
+  local key=lnav_leg_key(r.legs[1])
+  if key~=lnavFirst and not lnavSequencing then B747_lnav_model.reset(B747_fmc_lnav) end
+  lnavFirst=key
+  lnavPath=B747_path_model.build(r.legs,B747_route_model.leg_from(r,1),{var=lnav_var,alt=simDR_pressureAlt1})
+end
 local function fms_text(id) return (string.gsub(fmsModules["data"][id],"%s+$","")) end
 function B747_fmc_route_changed()
+  B747_fmc_lnav_build()
   local r=B747_fmc_route.rte
   local dep=r.origin and r.origin.ident or "****"
   if fms_text("fltdep")~=dep then
@@ -1022,10 +1063,89 @@ function B747_fmc_route_sync()
     if cur~=k then B747DR_fmscurrentIndex=k end
     return
   end
-  local i=routeMap.leg[cur]
-  if i and i>1 and fms[cur][8]==routeMap.ident[cur] and B747_route_model.sequence(st,i-1) then
-    B747_fmc_route_changed()
+  -- X-Plane's current waypoint and the AFDS's after the FMC's active one
+  -- (LNAV sequences the route itself since step 6c), looked at again
+  -- every 5 s
+  if simDRTime-routeSyncT<5 then return end
+  routeSyncT=simDRTime
+  local k=B747_route_model.active_row(st.rte,routeMap)
+  if not k then return end
+  local xk=nil
+  for i=1,table.getn(fms) do
+    if fms[i][10]==true then xk=i break end
   end
+  if cur~=k or xk~=k then
+    routeSync=k
+    routeSyncT,routeSyncWrites=simDRTime,0
+  end
+end
+
+-- each frame (6-1/6-2 step 6c; notes/ATA-34-61-FMC.md §29): LNAV on the
+-- active route (B747.68.lnav_model.lua): the route sequenced as it says,
+-- X-Plane's current waypoint and the AFDS's after it; its steering for
+-- the AFDS, its cross-track error, its messages (FCOM p.1431, p.1433,
+-- p.1435)
+local LNAV_MODE={path=1,heading=2,hold=3}
+local DISCONTINUITY,END_OF_ROUTE,NO_ACTIVE_ROUTE=8,11,27
+-- a message's flag, written when LNAV's condition changes
+local lnavFlags={}
+local function lnav_flag(i,on)
+  local v=on and 1 or 0
+  if lnavFlags[i]~=v then
+    lnavFlags[i]=v
+    B747DR_fmc_notifications[i]=v
+  end
+end
+function B747_fmc_lnav_update()
+  local st=B747_fmc_route
+  local lnavState=B747DR_fms_ap_lnav_state
+  local armed,engaged=lnavState==1,lnavState==2
+  local s=B747_fmc_lnav
+  -- a DF from where the airplane is when LNAV engages (estimate: after the
+  -- takeoff the runway's threshold is behind it)
+  if engaged and not lnavWasEngaged and st.active then
+    local l=st.rte.legs[1]
+    if l and l.pt=="DF" and not l.dto then
+      l.start={lat=simDR_latitude,lon=simDR_longitude}
+      B747_fmc_lnav_build()
+    end
+  end
+  lnavWasEngaged=engaged
+  if st.active and not lnavPath then B747_fmc_lnav_build() end
+  -- X-Plane's variation: west positive (magnetic = true + it)
+  local air={lat=simDR_latitude,lon=simDR_longitude,trk=simDR_lnav_trk,hdg=simDR_fms_true_psi,
+    gs=simDR_groundspeed*1.94384,tas=simDR_lnav_tas*1.94384,wind=simDR_wind_speed,
+    alt=simDR_pressureAlt1,var=-simDR_variation,ground=simDR_onGround==1}
+  local n=B747_lnav_model.update(s,st.active and lnavPath or nil,air,armed,engaged)
+  if n>0 then
+    -- after a leg ending at a condition the next starts where the airplane is
+    local start=lnavPath[1].term~="fix" and {lat=air.lat,lon=air.lon} or nil
+    lnavSequencing=true
+    if B747_route_model.sequence(st,n,start) then
+      B747_fmc_route_changed()
+      if routeMap and not routePending then
+        routeSync=B747_route_model.active_row(st.rte,routeMap)
+        routeSyncT,routeSyncWrites=simDRTime,0
+      end
+    end
+    lnavSequencing=false
+  end
+  local valid=s.valid and 1 or 0
+  if B747DR_fms_lnav_valid~=valid then B747DR_fms_lnav_valid=valid end
+  B747DR_fms_lnav_roll=s.roll
+  local mode=LNAV_MODE[s.mode] or 0
+  if B747DR_fms_lnav_mode~=mode then B747DR_fms_lnav_mode=mode end
+  B747DR_fms_lnav_xtk=s.xtk
+  B747DR_fms_lnav_dtk=s.dtk or 0
+  local route=st.active and 1 or 0
+  if B747DR_fms_lnav_route~=route then B747DR_fms_lnav_route=route end
+  -- PROGRESS page 2's XTK ERROR (FCOM p.1377: the AFDS's best track's
+  -- before)
+  if st.active then B747DR_ap_lnav_xtk_error=math.abs(s.xtk) end
+  lnav_flag(DISCONTINUITY,s.msg_disc)
+  lnav_flag(END_OF_ROUTE,s.msg_eor)
+  lnav_flag(NO_ACTIVE_ROUTE,(armed or engaged) and not st.active)
+  B747_cdu_fmc_condition("NOT ON INTERCEPT HEADING",s.msg_intc,false)
 end
 -- the clocks' dates: the FMC's clock calendar from the Captain's clock,
 -- else the F/O's (FCOM p.1285)
@@ -1531,6 +1651,7 @@ function after_physics()
     update_perf()
     update_navdb()
     update_takeoff()
+    B747_fmc_lnav_update()
     B747_fmc_route_sync()
     B747_fmc_exec_lights()
     B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
