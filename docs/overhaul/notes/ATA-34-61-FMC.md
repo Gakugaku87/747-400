@@ -398,3 +398,29 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 資料に記載なし：fly-by/fly-over の扱い、通常の旋回のバンクと旋回開始点、ANP の計算式、ECON 速度の CI 依存（FCOM PI に表が無い）、最小機動速度の作り方、VNAV の推力目標の値、CDU と電源 bus の対応、DME-DME の更新式。
 - 実機で見ること：ネイティブで STAR・進入を選んだときの `xtlua/fms` の中身、ND の ETA（534 kt の影響）、ベクター中の UNABLE RNP、VNAV 上昇の速度（250/272）、ネイティブの HOLD を入れたときの LNAV の動き。
 - 乗員応答監視（PILOT RESPONSE）は APF のオプション（ATA34_2 p.480）。入れるかはユーザーの判断。
+
+## 10. 段階 6-1・6-2 の段取り（2026-10-26）
+
+- 方式：§6.1 の B（経路を自前で持つ）。PLAN.md 6-1 の「自前の経路モデル（段階的に）」のとおり。ネイティブ FMS は、自前の経路の点を流して ND の線を描かせるのと、作り直していない読み手（AP の LNAV・VNAV、ND の地図）のためだけに残す。流し方（`xtlua/fltpln` か `xtlua/loadtoFMS`）は段 5 で確かめる。
+- 6-1（FMC）と 6-2（CDU）は 1 本の段取りで進める。CDU のページは FMC のモデルと組で動くので、ページは中身のモデルと同じ段で作る（CDU のノート §8 の進め方を、この表に溶かした）。
+- AFDS（6-3）は段 6（LNAV）の後に、A/T（6-4）は段 9（VNAV）と並べて入れる。FMC から FCC への誘導の指令（目標トラックとロール、目標速度、目標パス、A/T のモードの要求）の境界は、AFDS の作り直しで決める（§6.2）。それまでの LNAV・VNAV は、今の AP のしくみ（HDG SEL・FLCH・V/S）に指令を渡す。
+- 新しい純粋なモジュールは `plugins/xtlua_keysystems/scripts/B747.68.xt.fms/` に置く（CDU、nav DB、経路、経路の形、LNAV、性能、VNAV など。名前は作るときに決める）。試験は `tests/fms/`。
+- どの段の後でも機体は飛べるようにする。古いコードは、置き換えるまで動かしておく。
+- 負荷：航法データは、ND の読み方（1 フレームに決まった行数）と同じく分けて読む。JSON の decode は変わったときだけ。ページの描画は文字列を組むだけにし、計算はモデルで行う。
+- 表示灯 MSG・DSPY・OFST・FAIL（CDU-22）は 3D に参照が無いので対象外のまま。
+
+| 段 | 内容 | GAP | 主な資料 |
+|---|---|---|---|
+| 1 | 小修正（局所で害の大きいもの）：空中の THRUST LIM（<GA・<CON・<CRZ を正しく選び、離陸の減格を GA 推力に掛けない）、EMERGENCY REPORT の DIVERT TO で目的地を書き換えない、CRZ CG の検査と描画の保護、APPROACH REF の 4R、VNAV の上昇中に気圧を自動で STD にしない、XTK による UNABLE RNP をやめる（ANP と RNP の比較は段 10）、`xtlua/fms` の decode を変わったときだけにして毎フレームの `collectgarbage` をやめる、ETA の速度の下限、上昇の速度（SPD TRANS の高度より下は SPD TRANS の速度＝制限速度と VREF30+100 の大きい方、上は ECON。CI の表は資料に無いので PI の 340/.84：推定）、SPD RESTR の既定をダッシュに、TRANS ALT を nav DB（`earth_aptmeta.dat`）から、RESET MCP ALT を T/D の 2 分前に、VOR の自動同調の 2 番目の局 | CDU-09, 10, 28, 33；FMC-09, 10, 15, 21, 29（一部）, 30（一部）, 33, 40 | FCOM p.1326, p.1328–1329, p.1337–1340, p.1409–1412, p.1430, p.1433；PI p.316 |
+| 2 | CDU の枠組み：CDU ごとの状態（3 台が別々）、キーの規則（CLR の 1 字消しと長押しの全消し、DEL、+/−、メッセージを出している間の打鍵）、メッセージの列（alert と advisory、優先、CLR、条件が消えたら消す）、項目の定義と検査（高度・速度・重量・CRZ ALT の共通の検査、INVALID ENTRY・INVALID DELETE、伏せ字を写さない）、描画（大字と小字、ページ番号、NEXT の循環、`pcall` の保護、ページを変えたときの 0.5 秒の空白をやめる）、電源（表示とキー）と BRT | CDU-01, 05（自前のページ）, 07, 08, 09, 20, 21, 23 | FCOM p.1210–1214, p.1269–1270, p.1430–1436；FMSPG p.39–49 |
+| 3 | 地上準備のページ：IDENT、POS INIT・POS REF、PERF INIT（検査、CI、RESERVES、ZFW と GW を性能に）、THRUST LIM（地上の SEL・減格・CLB の自動の ARM）、TAKEOFF REF（V speeds の計算 → 選択の流れ、選ぶまで NO V SPD、ACCEL HT・E/O ACCEL HT・THR REDUCTION、WIND/SLOPE、PRE-FLT）、APPROACH REF、MENU、INIT REF キーの行き先、FLT NO | CDU-06（一部）, 11, 12, 13, 24, 26, 27（一部）, 28, 29；FMC-24 | FCOM p.1282–1324, p.1409–1412 |
+| 4 | nav DB：X-Plane の航法データ（Custom Data を優先）を分けて読む。fix・航法施設・airway・空港（`earth_aptmeta.dat`：位置、標高、遷移高度と遷移レベル）・CIFP（滑走路、SID・STAR・進入、制限）・ホールド（`earth_hold.dat`）。識別子が重なるときの選択（SELECT DESIRED WPT）、版と有効期間（IDENT、NAV DATA OUT OF DATE） | FMC-10（残り）, 32（一部）, 39 | FCOM p.1271, p.1284, p.1433；X-Plane のデータの書式 |
+| 5 | 経路モデルと RTE・LEGS・DEP ARR：RTE 1（出発地・目的地・滑走路・airway・direct・discontinuity・120 点）、ACT/MOD/EXEC/ERASE（性能の変更も）、手続き（SID・STAR・進入と transition、高度と速度の制限）、LEGS（並べ替え、削除、direct-to、制限の入力）、EXEC 灯、ネイティブ FMS への写し（ND の線と、作り直していない読み手）、各点の ETA。飛行試験キットの経路の入れ方を CDU の操作に変える | FMC-01（モデル）, 06（一部）, 34（一部）；CDU-02, 03, 04, 05（残り）, 06（RTE・DEP ARR）, 17, 18（一部） | FCOM p.1238, p.1245–1251, p.1285–1301, p.1331–1336；FMSPG 3 章 |
+| 6 | 経路の形と LNAV：脚の種類ごとの形（IF・TF・CF・DF・FA・FC・FD・FM・CA・CD・CI・CR・VA・VD・VI・VM・VR・AF・RF・PI・HA・HF・HM）、fly-by の旋回と fly-over、シーケンス（21 NM、重複点）、捕捉（2.5 NM、切込み、NOT ON INTERCEPT HEADING、NO ACTIVE ROUTE）、XTK と誘導の指令、DISCONTINUITY・END OF ROUTE でのヘディングの保持、ND の線を形どおりに | FMC-01, 03, 04, 05, 06, 35；DSP-23（一部） | FCOM p.644–647, p.663, p.1237, p.1245–1249, p.1298, p.1431；ATA34_2 p.615–619, p.626 |
+| 7 | ホールド・オフセット・残りの経路の操作：ホールド（形、進入、30° のバンク、出口、EXIT HOLD、HOLD AVAIL・BEST SPEED・EFC、nav DB のホールド）、オフセット（END OF OFFSET、direct-to で解除）、FIX INFO、REF NAV DATA、RTE 2・RTE COPY、ABEAM PTS、INTC CRS、ND のホールドの記号 | FMC-02, 34；CDU-18；DSP-23（一部） | FCOM p.1287–1299, p.1333–1334, p.1413–1419；FMSPG p.164, p.221–227 |
+| （6-3） | AFDS：FCC の状態機械、ロールとピッチの則（LNAV の指令を使う）。ATA 22 のノートの段取りで | AFDS-01〜 | notes/ATA-22.md |
+| 8 | 性能 DB と予測：FCOM PI の表（PW4056 p.223–324、CF6-80C2B1F p.325–412。LRC の制御・最大運用高度・区間の燃料と時間、降下 .84/290/250、待機、最大上昇 EPR）、ECON の CI（資料に表が無いので推定）、OPT・MAX、ステップ、軌跡の予測（上昇・巡航・アイドル降下・減速・風。上昇の表は資料に無いので推定の模型）、T/C・T/D・E/D・S/C、PROGRESS・RTE DATA、燃料と時刻の予測、点ごとの風と DESCENT FORECAST | FMC-11, 12（計算）, 19, 20, 21, 23, 25；CDU-14（表示）, 15；DSP-23（一部） | FCOM p.1257–1264, p.1272–1274, p.1311, p.1348–1366, p.1371–1378；PI p.268–272, p.316 |
+| 9 | VNAV（6-4 の A/T と並べて）：飛行段階（T/C・T/D・approach・flight complete）、高度と速度の制限、パスと許容、VNAV SPD・PTH・ALT、早期降下・DES NOW、MCP の高度と速度のノブ、approach の段階とミスト進入、E/O、RTA、メッセージ | FMC-07, 08, 12, 13, 14, 15, 16, 17, 18, 26, 27；CDU-14 | FCOM p.643–649, p.664–667, p.1253–1269, p.1325–1330, p.1341–1354, p.1383–1408 |
+| 10 | 航法センサーと同調（5-1 段 3 を含む）：FMC の位置（IRS の混合、GPS と無線の更新、ANP と RNP、UNABLE RNP、PURGE、GPS NAV INHIBIT、VERIFY POSITION）、VOR・DME・ILS の自動同調（P/R、PARK・A、離陸後 10 分、ILS TUNE INHIBITED）、NAV RADIO のページ、ND の更新の表示、ILS の同調の印 | FMC-28, 29, 30, 31；CDU-16, 27；DSP-14 | FCOM p.1240–1245, p.1303–1307, p.1355–1357, p.1367–1370, p.1430；ATA34_2 p.586, p.601–606 |
+| 11 | 燃料の監視・二重系・メッセージの残り：CALCULATED と TOTALIZER（MANUAL・SENSED・USE）、FUEL DISAGREE、INSUFFICIENT FUEL、FMC 2 台（master、故障、FMC LEFT・RIGHT、SINGLE FMC、RESYNC）、代替航法（IRS LEGS・IRS PROGRESS・ALTN NAV RADIO）、CPCS への着陸高度、PROGRESS 2 の XTK と VTK、>FMC MESSAGE を alert だけに | FMC-22, 32, 36, 37, 38；CDU-19 | FCOM p.1273–1275, p.1378–1382, p.1400, p.1421–1436；ATA34_2 p.569, p.589–592 |
+| 12 | 残りのページとデータリンク：自動のページ変更、保守のページ、データリンク（109 は KEY/FUNCTION INOP、simconfig で入切）、ATC と会社のデータリンクの残り | CDU-30, 31, 32–42 | FCOM p.725–776, p.1211；FMSPG 8・9 章 |
