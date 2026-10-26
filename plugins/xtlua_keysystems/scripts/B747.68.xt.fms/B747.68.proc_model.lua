@@ -15,7 +15,7 @@
 --    nil for the conditional legs), from_fix (FA, FC, FD, FM: the fix they
 --    start at), turn (L, R), flyover, navaid (the recommended navaid),
 --    theta, rho (its radial and DME distance), crs (the magnetic course or
---    heading), dist (nm; minutes for the holds' times), alt, alt2, akind
+--    heading), dist (nm), time (a hold's leg time, minutes), alt, alt2, akind
 --    (the constraint: "" at, "A" at or above, "B" at or below, "AB" the
 --    block), spd (at or below), vangle (degrees), altterm (the legs ending
 --    at an altitude: CA, FA, VA, HA), name (a conditional leg's: "(1000)",
@@ -172,6 +172,8 @@ local function leg_of(N, db, c, icao, f, via)
     else
         l.fix = point
     end
+    -- a hold's leg time (step 7a): field 22 "T010", minutes and tenths
+    if f[22] and f[22]:sub(1, 1) == "T" then l.time = num(f[22]:sub(2), 10) end
     -- an RF leg's arc (step 6a; FCOM p.1247): the centre (fields 31-34) and
     -- the radius (field 18, thousandths of a nm)
     if pt == "RF" and f[31] and f[31] ~= "" then

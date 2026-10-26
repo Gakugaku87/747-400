@@ -952,6 +952,13 @@ end
 -- RTE 1's path, active or not: LNAV's and the ND's line's shape in
 -- X-Plane's flight plan (step 6d)
 local routePath=nil
+-- the holds' racetracks on the ND's line: at the true airspeed and the
+-- wind's (FMSPG p.224); on the ground the path model's 250 kt (estimate)
+local function lnav_hold_kt()
+  local tas=simDR_lnav_tas*1.94384
+  if tas<100 then return nil end
+  return tas+simDR_wind_speed
+end
 function B747_fmc_lnav_build()
   local st=B747_fmc_route
   local r=st.rte
@@ -979,7 +986,7 @@ function B747_fmc_route_changed()
   -- X-Plane takes a flight plan with a destination only (without, an error
   -- message on the screen): none before the DEST
   if r.dest==nil then return end
-  local fms,map=B747_route_model.to_fms(r,(B747_navdb.cycle_info(B747_fmc_navdb)),B747_path_model.shape(routePath))
+  local fms,map=B747_route_model.to_fms(r,(B747_navdb.cycle_info(B747_fmc_navdb)),B747_path_model.shape(routePath,lnav_hold_kt()))
   local active=B747_fmc_route.active
   if fms==routeLoaded then
     -- the plan X-Plane has: its rows' legs as the route is now (sequencing

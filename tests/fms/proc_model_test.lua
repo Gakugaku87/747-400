@@ -60,6 +60,8 @@ T.equal(rwy, "RW16R", "it lands on RW16R")
 T.check(legs[3].faf and legs[3].vangle == -3 and legs[3].alt == 3000, "ZA001 the final approach fix: 3.00 degrees, at or above 3000")
 T.check(legs[4].map and legs[4].fix.kind == "RWY" and legs[4].alt == 150, "RW16R the missed approach point at 150 ft")
 T.check(legs[5].missed and legs[5].pt == "CA" and legs[7].missed and legs[7].pt == "HM", "the missed approach from (1000) on, to the hold at ZZV")
+T.check(legs[7].crs == 337 and legs[7].time == 1 and legs[7].dist == nil and legs[7].turn == nil,
+    "the hold: inbound 337, 1.0 minute legs (T010), right turns (no direction)")
 T.check(not legs[4].missed, "not before it")
 
 -- the route's DEPARTURES and ARRIVALS

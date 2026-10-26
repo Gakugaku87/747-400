@@ -96,6 +96,7 @@
 | `tests/lib/check.lua` | 判定の道具（`check`・`equal`・`near`。失敗を集めて最後に出す） |
 | `tests/lib/source.lua` | 機体の Lua を文字列で読む。init と xt の区別、init で作られる名前の一覧 |
 | `tests/lib/xtlua.lua` | XTLua のモジュールを X-Plane なしで動かす（下） |
+| `tests/lib/lnav_sim.lua` | LNAV の閉ループの試験の簡単な機体（ロールは 3°/s まで、旋回はバンクから、風。経路は LNAV が言うとおりに順送り）。`tests/fms/lnav_model_test.lua`・`lnav_hold_test.lua` が使う（2026-10-27、6-1・6-2 段 7a） |
 | `tests/static/*_test.lua` | 全系統に共通の検査。xt スクリプトの dataref が init で作られているか、`INTERFACES.tsv` の名前が残っているか、全モジュール（26）が X-Plane なしで読み込み・`flight_start`・60 フレームを Lua の誤りなしに通るか（`modules_run_test.lua`） |
 | `tests/tools/same_behaviour.lua` | 挙動を変えない変更（コードの切り出しなど）の確認。作業ツリーと git の版で同じモジュールを同じ入力・同じ乱数の種で回し、毎フレーム、書かれた dataref・実行したコマンド・print の行を比べる。20・30・45 fps で回す |
 | `tests/tools/scenarios/*.lua` | `same_behaviour.lua` の入力。`hydraulics_afds.lua` は油圧モジュール（AFDS の制御則・ヨーダンパー・スラットを含む） |

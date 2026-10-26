@@ -158,6 +158,9 @@ end
 local COURSE = {CA = "alt", CD = "dme", CI = "intc", CR = "radial"}
 local FROM_FIX = {FA = "alt", FC = "dist", FD = "dme", FM = "manual"}
 local HEADING = {VA = "alt", VD = "dme", VI = "intc", VM = "manual", VR = "radial"}
+-- the holds' ends (FMSPG p.221-222): at an altitude, at the fix after one
+-- loop, by the crew
+local HOLD = {HA = "alt", HF = "fix", HM = "manual"}
 
 -- where a course or heading from a on the true direction crs ends, as
 -- predicted: e's term with the next leg `nxt` (for the intercepts);
@@ -263,6 +266,14 @@ function M.element(l, i, prev, nxt, env, alt)
         e.kind, e.center, e.r, e.dir = "arc", l.navaid, l.rho, l.turn == "L" and "L" or "R"
         e.a = M.point(l.navaid, true_of(env, l.crs, l.navaid), l.rho)
         e.b = l.fix
+    elseif HOLD[pt] and l.fix then
+        -- a hold (step 7a): around its fix, the inbound course (true) and
+        -- the turn direction (right unless left), its legs' time or
+        -- distance; `hold` how it ends, `exit` armed by the crew
+        e.kind, e.a, e.b, e.len = "hold", l.fix, l.fix, 0
+        e.inbd, e.dir = true_of(env, l.crs or 0, l.fix), l.turn == "L" and "L" or "R"
+        e.time, e.dist, e.alt, e.hold, e.exit = l.time, l.dist, l.alt, HOLD[pt], l.exit
+        return e
     elseif pt == "RF" and l.center and l.fix and prev then
         local _, r = M.course(l.center, l.fix)
         e.kind, e.center, e.r, e.dir = "arc", l.center, l.arc_r or r, l.turn == "L" and "L" or "R"
@@ -309,15 +320,59 @@ function M.build(legs, start, env)
     return out
 end
 
+-- a hold's racetrack (step 7a; FCOM p.1413; FMSPG p.164-165): around its
+-- fix f, the inbound course (true) and turns of radius r nm the hold's
+-- way, straight legs l nm: {f, o1 (the turn at the fix: its centre), p1
+-- (its end, where the outbound leg starts), p2 (the outbound leg's end),
+-- o2 (the turn back's centre), s (where the inbound leg starts), sgn (1
+-- right, -1 left), n (the course from the fix to the pattern's side)}
+function M.racetrack(e, r, l)
+    local sgn = e.dir == "L" and -1 or 1
+    local n = (e.inbd + 90 * sgn) % 360
+    local f = e.b
+    local p1 = M.point(f, n, 2 * r)
+    local p2 = M.point(p1, (e.inbd + 180) % 360, l)
+    return {f = f, o1 = M.point(f, n, r), p1 = p1, p2 = p2, o2 = M.point(p2, (n + 180) % 360, r),
+        s = M.point(f, (e.inbd + 180) % 360, l), sgn = sgn, n = n, r = r, l = l}
+end
+-- a hold's size (FMSPG p.224): the turns' radius at `kt` with BANK
+-- degrees of bank, the legs' length: its distance, or its time at
+-- `inbound_kt` (the ground speed along the inbound course); without
+-- either 1 minute, 1.5 above 14,000 ft (its altitude constraint: FMSPG
+-- p.222-223)
+function M.hold_size(e, kt, inbound_kt)
+    local r = (math.max(kt, 60) * KT) ^ 2 / (G * math.tan(M.BANK * RAD)) / 1852
+    local time = e.time or ((e.alt or 0) > 14000 and 1.5 or 1)
+    return r, e.dist or time / 60 * math.max(inbound_kt or kt, 60)
+end
+
 -- the legs' shape for the ND's line (step 6d; the route model's to_fms):
 -- shape[i] = {at = the end of conditional element i (a vectors leg's: its
 -- line's VECTORS_LEN nm)} or {pts = the points of arc element i every
--- ARC_STEP degrees (estimate), its ends left out}
+-- ARC_STEP degrees (estimate), its ends left out; of hold element i its
+-- racetrack at `kt` (default 250), from the fix round to the inbound
+-- leg's start: step 7a}
 M.ARC_STEP = 15
-function M.shape(path)
+local function arc_points(pts, c, from_brg, r, sgn, step, sweep)
+    local k = 1
+    while k * step < sweep - step / 3 do
+        pts[#pts + 1] = M.point(c, (from_brg + sgn * k * step) % 360, r)
+        k = k + 1
+    end
+end
+function M.shape(path, kt)
     local out = {}
     for i, e in ipairs(path or {}) do
-        if (e.kind == "course" or e.kind == "heading") and e.a then
+        if e.kind == "hold" then
+            local t = M.racetrack(e, M.hold_size(e, kt or 250))
+            local pts = {}
+            arc_points(pts, t.o1, (t.n + 180) % 360, t.r, t.sgn, 30, 180)
+            pts[#pts + 1] = t.p1
+            pts[#pts + 1] = t.p2
+            arc_points(pts, t.o2, t.n, t.r, t.sgn, 30, 180)
+            pts[#pts + 1] = t.s
+            out[i] = {pts = pts}
+        elseif (e.kind == "course" or e.kind == "heading") and e.a then
             if e.b then
                 out[i] = {at = e.b}
             elseif e.term == "manual" then
