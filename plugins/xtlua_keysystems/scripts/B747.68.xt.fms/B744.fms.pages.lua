@@ -1483,18 +1483,109 @@ function fmsFunctions.setdata(fmsO,value)
 	else
 		setFMSData(value, fmsO["scratchpad"])
 	end
-  elseif value == "cg_mac" then
-	if string.match(fmsO["scratchpad"], "%a") or string.match(fmsO["scratchpad"], "%s") or fmsModules["data"].cg_mac == "--" then
+  elseif value == "toflaps" then
+	-- FLAP/ACCEL HT (6-1/6-2 step 3b; FCOM p.1318-1319): XX (10 or 20),
+	-- /YYYY (400 to 9999 ft above the airport) or both; a new flap setting
+	-- after the takeoff speeds are selected deletes them. DELETE: the
+	-- acceleration height's default (estimate)
+	if del then setFMSData("accelset", "") setFMSData("accelht", "1000") return end
+	local sp = fmsO["scratchpad"]
+	local f, h = string.match(sp, "^(%d%d)/(%d+)$")
+	if not f then f = string.match(sp, "^(%d%d)$") end
+	if not f then h = string.match(sp, "^/(%d+)$") end
+	local fv, hv = tonumber(f), tonumber(h)
+	if (f and fv ~= 10 and fv ~= 20) or (h and (hv < 400 or hv > 9999)) or (not f and not h) then
 		fmsO["notify"] = "INVALID ENTRY"
 		return
-	elseif string.len(fmsO["scratchpad"]) > 0 then 
-		calc_stab_trim(fmsModules["data"].grwt, fmsO["scratchpad"])
-		setFMSData(value, fmsO["scratchpad"])
-	else
-		calc_stab_trim(fmsModules["data"].grwt, fmsModules["data"].cg_mac)
 	end
-	
-	cg_lineLg = string.format("%2.0f%%", tonumber(fmsModules["data"].cg_mac))
+	if fv then
+		if fv ~= B747DR_airspeed_flapsRef then takeoff_speeds_deleted() end
+		B747DR_airspeed_flapsRef = fv
+	end
+	if hv then setFMSData("accelht", string.format("%d", hv)) setFMSData("accelset", "Y") end
+  elseif value == "eoaccelht" then
+	-- E/O ACCEL HT: 400 to 9999 ft (FCOM p.1319); DELETE: the default
+	if del then setFMSData("eoaccelset", "") setFMSData("eoaccelht", "1000") return end
+	local hv = B747_cdu_model.parse_int(fmsO["scratchpad"], 400, 9999)
+	if hv == nil then fmsO["notify"] = "INVALID ENTRY" return end
+	setFMSData("eoaccelht", string.format("%d", hv))
+	setFMSData("eoaccelset", "Y")
+  elseif value == "thrred" then
+	-- THR REDUCTION: 5 (flaps 5) or 400 to 9999 ft (FCOM p.1319); DELETE:
+	-- the default, FLAPS 5
+	if del then setFMSData("thrredset", "") setFMSData("thrred", "5") return end
+	local sp = fmsO["scratchpad"]
+	local hv = sp == "5" and 5 or B747_cdu_model.parse_int(sp, 400, 9999)
+	if hv == nil then fmsO["notify"] = "INVALID ENTRY" return end
+	setFMSData("thrred", string.format("%d", hv))
+	setFMSData("thrredset", "Y")
+  elseif value == "towind" then
+	-- WIND/SLOPE (FCOM p.1319): HXX, XX (headwind) or TXX; UX.X, X.X
+	-- (upslope) or DX.X, 0.0 to 2.0 (FMSPG p.106); the wind goes into the
+	-- V1 (the flight instruments' takeoff speeds); a change deletes the
+	-- selected speeds. DELETE: dashes
+	if del then setFMSData("towind", "---") setFMSData("toslope", "----") takeoff_speeds_deleted() return end
+	local w, s = B747_cdu_model.pair(fmsO["scratchpad"], "L")
+	if w == nil then fmsO["notify"] = "INVALID ENTRY" return end
+	local wd, wv = string.match(w, "^([HT]?)(%d%d?)$")
+	local sd, sv = string.match(s, "^([UD]?)(%d%.%d)$")
+	if (w ~= "" and not wv) or (s ~= "" and (not sv or tonumber(sv) > 2.0)) then
+		fmsO["notify"] = "INVALID ENTRY"
+		return
+	end
+	if wv then setFMSData("towind", string.format("%s%02d", wd == "T" and "T" or "H", tonumber(wv))) end
+	if sv then setFMSData("toslope", (sd == "D" and "D" or "U") .. sv) end
+	takeoff_speeds_deleted()
+  elseif value == "posshift" then
+	-- POS SHIFT (FCOM p.1321, 109): +/- X or XX hundreds of meters past the
+	-- threshold; DELETE: none
+	if del then setFMSData("posshift", "---") return end
+	local sg, n = string.match(fmsO["scratchpad"], "^([+-]?)(%d%d?)$")
+	if not n then fmsO["notify"] = "INVALID ENTRY" return end
+	setFMSData("posshift", string.format("%s%02d", sg == "-" and "-" or "+", tonumber(n)))
+  elseif value == "topreflt" then
+	-- PRE-FLT: the first page not complete, else THRUST LIM (FCOM p.1321)
+	fmsFunctions["setpage"](fmsO, takeoff_preflight())
+	return
+  elseif value == "thrustsel" then
+	-- SEL (FCOM p.1314): 0 to 99 C or 32 to 210 F (XX, XXC, XXF, XXXF),
+	-- kept in degrees C; an F entry shows the OAT in F too. The assumed
+	-- temperature thrust reduction is the thrust management's (6-4).
+	-- After the takeoff speeds are selected an entry deletes them
+	if del then
+		setFMSData("thrustsel", "  ")
+		setFMSData("selunit", "")
+		return
+	end
+	local sp = fmsO["scratchpad"]
+	local c = string.match(sp, "^(%d%d?)C?$")
+	local fv = string.match(sp, "^(%d%d%d?)F$")
+	if c then
+		setFMSData("thrustsel", string.format("%2d", tonumber(c)))
+		setFMSData("selunit", "")
+	elseif fv and tonumber(fv) >= 32 and tonumber(fv) <= 210 then
+		setFMSData("thrustsel", string.format("%2d", math.floor((tonumber(fv) - 32) * 5 / 9 + 0.5)))
+		setFMSData("thrustself", string.format("%3d", tonumber(fv)))
+		setFMSData("selunit", "F")
+	else
+		fmsO["notify"] = "INVALID ENTRY"
+		return
+	end
+	takeoff_speeds_deleted()
+  elseif value == "cg_mac" then
+	-- CG (FCOM p.1320, 109): whole numbers 0 to 40 % MAC; the trim from
+	-- it. DELETE: dashes (before: no entry until the PAX/CARGO page set one)
+	if del then
+		setFMSData(value, "--")
+		setFMSData("stab_trim", "    ")
+		cg_lineLg = ""
+		return
+	end
+	local cg = B747_cdu_model.parse_int(fmsO["scratchpad"], 0, 40)
+	if cg == nil then fmsO["notify"] = "INVALID ENTRY" return end
+	calc_stab_trim(fmsModules["data"].grwt, string.format("%d", cg))
+	setFMSData(value, string.format("%d", cg))
+	cg_lineLg = string.format("%2.0f%%", cg)
 --Marauder28
 --PAX / CARGO page
   elseif value == "paxFirstClassA" then
@@ -2562,6 +2653,8 @@ function fmsFunctions.setDref(fmsO,value)
   -- in the air <GA, <CON and <CRZ, not the takeoff's (CDU-10, 6-1 step 1;
   -- FCOM p.1337-1340): the thrust management's (6-4)
   if (value=="TO" or value=="TO1" or value=="TO2") and simDR_onGround~=1 then fmsO["notify"]="KEY/FUNCTION INOP" return end
+  local rating = ({TO = 0, TO1 = 1, TO2 = 2})[value]
+  if rating and rating ~= toderate then takeoff_speeds_deleted() end
   if value=="TO" then toderate=0 clbderate=0 return  end
   if value=="TO1" then toderate=1 clbderate=1 return  end
   if value=="TO2" then toderate=2 clbderate=2 return  end

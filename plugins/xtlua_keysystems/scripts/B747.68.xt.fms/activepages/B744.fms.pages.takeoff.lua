@@ -119,20 +119,51 @@ local function vspeed(k)
 end
 
 fmsPages["TAKEOFF"]=createPage("TAKEOFF")
+-- the TAKEOFF REF lines (6-1/6-2 step 3b; FCOM p.1318-1321): FLAP/ACCEL
+-- HT, E/O ACCEL HT and THR REDUCTION (defaults 1000 FT, 1000 FT and FLAPS
+-- 5 as FCOM's figure, small; entries large), WIND/SLOPE (dashes until
+-- entered), TRIM/CG, POS SHIFT (the runway with the route: step 5),
+-- PRE-FLT (the first page not complete) or THRUST LIM
+local function preflight_page()
+  if B747DR_nav_irs_set_pos == 1 then return "POSINIT", "POS INIT>" end
+  if str_trim(fmsModules["data"].fltdep) == "****" or str_trim(fmsModules["data"].fltdst) == "****" then
+    return "RTE1", "ROUTE>"
+  end
+  if perf_gw_t() == nil or fmsModules["data"].crzalt == "*****" or tonumber(fmsModules["data"].costindex) == nil
+    or tonumber(fmsModules["data"].reserves) == nil then
+    return "PERFINIT", "PERF INIT>"
+  end
+  return nil, "THRUST LIM>"
+end
+function takeoff_preflight()
+  local page = preflight_page()
+  return page or "THRUSTLIM"
+end
+local function set_text(k) return str_trim(fmsModules["data"][k]) ~= "" end
+local function height_text(k) return str_trim(fmsModules["data"][k]) .. "FT" end
+local function thrred_text()
+  local v = str_trim(fmsModules["data"].thrred)
+  if v == "5" then return "FLAPS 5" end
+  return v .. "FT"
+end
+local function shift_text()
+  local s = str_trim(fmsModules["data"].posshift)
+  if s == "---" then return "--00M" end
+  return s .. "00M"
+end
 fmsPages["TAKEOFF"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be this way
   local flaps = string.format("%02d",roundToIncrement(B747DR_airspeed_flapsRef, 5))
   if B747DR_airspeed_flapsRef==0 then flaps="**" end
   local clbV=" "
-  local clbF=string.format("%-8s", "")
   if clbderate>0 then
     clbV=""..clbderate
   end
 	--Marauder28
 	if string.len(cg_lineLg) == 0 then
-		if fmsModules["data"].cg_mac == "--" then
-			cg_lineSm = string.format("%s%%", fmsModules["data"].cg_mac)
+		if str_trim(fmsModules["data"].cg_mac) == "--" then
+			cg_lineSm = "--%"
 		else
-			cg_lineSm = string.format("%2.0f%%>", fmsModules["data"].cg_mac)
+			cg_lineSm = string.format("%2.0f%%>", tonumber(fmsModules["data"].cg_mac))
 		end
 	else
 		cg_lineLg = string.format("%2.0f%%", tonumber(fmsModules["data"].cg_mac))
@@ -142,20 +173,25 @@ fmsPages["TAKEOFF"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be 
   local v1 = vspeed("V1")
   local vr = vspeed("VR")
   local v2 = vspeed("V2")
+  local accel = set_text("accelset") and ("/" .. height_text("accelht")) or ""
+  local eo = set_text("eoaccelset") and height_text("eoaccelht") or ""
+  local thr = set_text("thrredset") and thrred_text() or ""
+  local wind = str_trim(fmsModules["data"].towind) .. "/" .. str_trim(fmsModules["data"].toslope)
+  local _, pre = preflight_page()
   return{
   "      TAKEOFF REF       ",
   "                        ",
-  flaps.."                   "..v1,
+  string.format("%-21s%s", flaps .. accel, v1),
   "                        ",
-  "                     "..vr,
+  string.format("%-21s%s", eo, vr),
   "                        ",
-  string.format("%s CLB %1s       %s",clbF,clbV,v2),
+  string.format("%-8s CLB %1s       %s", thr, clbV, v2),
   "                        ",
-  "                     "..cg_lineLg,
+  string.format("%-21s%-3s", wind, cg_lineLg),
   "                        ",
-  "            RW***       ",
-  "-----------------       ",
-  "<INDEX         POS INIT>"
+  "            RW*** " .. string.format("%-6s", shift_text()),
+  "                        ",
+  string.format("<INDEX%18s", pre)
   }
 end
 
@@ -173,33 +209,41 @@ fmsPages["TAKEOFF"].getSmallPage=function(self,pgNo,fmsID)
   end
   --Marauder28
 
-  clbF_Sm = string.format("%-8s", "FLAPS 5")
   local _, v1S, v1T = vspeed("V1")
   local _, vrS, vrT = vspeed("VR")
   local _, v2S, v2T = vspeed("V2")
+  local accel = set_text("accelset") and "" or ("  /" .. height_text("accelht"))
+  local eo = set_text("eoaccelset") and "" or height_text("eoaccelht")
+  local thr = set_text("thrredset") and "" or thrred_text()
+  local page = preflight_page()
     return{
 
 "                        ",
 string.format(" FLAP/ACCEL HT%10s", v1T),
-"  /1500FT           "..v1S,
+string.format("%-20s%s", accel, v1S),
 string.format(" E/O ACCEL HT%11s", vrT),
-"1500FT              "..vrS,
+string.format("%-20s%s", eo, vrS),
 string.format(" THR REDUCTION%10s", v2T),
-clbF_Sm.."            "..v2S,
-"               TRIM   CG",
-"                "..stab_trim.."     "..cg_lineSm,
+string.format("%-20s%s", thr, v2S),
+" WIND/SLOPE    TRIM   CG",
+"                "..string.format("%-4s", stab_trim).." "..string.format("%-3s", cg_lineSm),
 "               POS SHIFT",
-"                   --00M",
-"-----------------PRE-FLT",
+"                        ",
+page and "-----------------PRE-FLT" or "------------------------",
 "                        "
     }
 end
 
+
 fmsFunctionsDefs["TAKEOFF"]={}
+fmsFunctionsDefs["TAKEOFF"]["L1"]={"setdata","toflaps"}
+fmsFunctionsDefs["TAKEOFF"]["L2"]={"setdata","eoaccelht"}
+fmsFunctionsDefs["TAKEOFF"]["L3"]={"setdata","thrred"}
+fmsFunctionsDefs["TAKEOFF"]["L4"]={"setdata","towind"}
 fmsFunctionsDefs["TAKEOFF"]["L6"]={"setpage","INITREF"}
-fmsFunctionsDefs["TAKEOFF"]["R6"]={"setpage","POSINIT"}
 fmsFunctionsDefs["TAKEOFF"]["R1"]={"setDref","V1"}
 fmsFunctionsDefs["TAKEOFF"]["R2"]={"setDref","VR"}
 fmsFunctionsDefs["TAKEOFF"]["R3"]={"setDref","V2"}
 fmsFunctionsDefs["TAKEOFF"]["R4"]={"setdata","cg_mac"}
-fmsFunctionsDefs["TAKEOFF"]["L1"]={"setDref","flapsRef"}
+fmsFunctionsDefs["TAKEOFF"]["R5"]={"setdata","posshift"}
+fmsFunctionsDefs["TAKEOFF"]["R6"]={"setdata","topreflt"}
