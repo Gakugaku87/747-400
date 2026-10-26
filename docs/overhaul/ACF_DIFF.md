@@ -467,3 +467,12 @@
 | 2026-10-26・ND のトレンドベクトル（DSP-23） | 機長・副操縦士の ND の `GROUP ND Text Center`（地図の記号：CTR で動く）の最後 | なし | 新しい `GROUP ND Trend`：9 片それぞれ `GROUP TV<k>`（新設 `nd/<席>/tv_show[k]`）の中で `tv_x[k]` だけ右、`tv_y[k]` だけ上に動かし、`tv_rot[k]` で回した `gen_rotary TV<k> Piece`（新しい `CRT Displays/ND/tv_piece`、40 コマ、`tv_frame[k]`） | FCOM p.1147 |
 
 上の 1 行は `docs/overhaul/tools/panel_nd_tv.lua` で書き換えた（2 面で 1,012 行）。画像は `docs/overhaul/tools/make_nd_tv_image.ps1`。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_nd_tv`。
+
+表示（5-2 段 6a、2026-10-26：時計）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・時計（DSP-33） | 機長・副操縦士の `GROUP Clocks` の上の LCD（`GROUP UTC`・`GROUP Date`） | UTC は X-Plane の `sim/cockpit2/clock_timer/zulu_time_hours`・`zulu_time_minutes`、日付はその地の `current_day`・`current_month`、電源の条件なし | UTC は時計自身の `fltInst/<席>/clock_utc_hours`・`clock_utc_minutes`、日付は `clock_day`・`clock_month`。2 つのグループを新しい `GROUP Digits`（`SHOW_EQUAL 1 clock_on`）に入れた（黒い背景は残す） | ATA31 p.64–66, p.74; FCOM p.1075 |
+| 2026-10-26・時計（DSP-33） | 同じく下の LCD（`GROUP Elapsed Time`・`GROUP Chronograph`） | ET の数字は `SHOW_EQUAL 0 clock_et_chr_display` と `SHOW_GREATER 0.000001 clock_et_seconds` の 2 つ（後のものが勝ち、CHR の下に ET が重なった）、電源の条件なし | ET の数字は `SHOW_EQUAL 1 clock_et_show` 1 つ。2 つのグループを新しい `GROUP Digits`（`clock_on`）に入れた | ATA31 p.68; FCOM p.1058 |
+
+上の 2 行は `docs/overhaul/tools/panel_clocks.lua` で書き換えた（2 面で 14 か所。増えた 346 行・減った 336 行の多くは入れ子にした分の字下げ）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_clocks`。外から見た姿は変わらない（外観の写真）。

@@ -617,3 +617,19 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - 表示のグルー：新設 `nd/<席>/tv_show`・`tv_x`・`tv_y`・`tv_rot`・`tv_frame`（各 9 片、init `B747.60.fltInst`）。パネル（道具 `docs/overhaul/tools/panel_nd_tv.lua`、画像 `make_nd_tv_image.ps1`、ACF_DIFF.md §5）：地図の記号のグループの最後に、小片ごとに表示、左右と上下の移動、回転、長さのコマ（1.5 px ごと 40）。
 - FMC の記号のうち S/C・E/D・減速点、待機・PT、エネルギー円、FIX の基準点は FMC の作り直し（6-x）で（GAP DSP-23 の残り）。
 - 試験：新しい `tests/displays/nd_trend_test.lua`（17 件：直進の位置と長さ、区間と隙間、範囲ごとの区間の数、右・左の旋回の弧と向き、MAP 以外・航跡なし・停止で無し、モデルとグルー）。X-Plane のシナリオ `s73_nd_trend`（15 件合格：フランクフルトの南 4,000 ft・220 kt、40 NM で 9 片、直進は真っすぐ上（3 区間目の終わり 54 px）、右旋回（傾き 25°）で最後の片が右に 41 px・向き 131°、20 NM は 2 区間、10 NM は 1 区間、VOR では出さない。ND を撮った）。
+
+## 35. 段 6a の実装（2026-10-26 朝：時計）
+
+- 資料：ATA31 p.64–80（31-25。電源は main hot battery bus が時刻の元で、APU battery bus の電圧で表示・出力・秒針のモーターの電源 B を許す。SET の RUN・HLD Y・MS M・HS D、DATE、ET、CHR とグレアシールドの CLOCK スイッチ（並列）。電源の復帰後は NCD：両 LCD が 00:00 のまま、秒針は 60、SET で UTC を 1 桁進めるまで。故障と電源断は LCD が消え秒針が止まる）、FCOM p.1057–1059（操作と表示）、p.1075（APU battery bus が無いと表示だけ消え、main hot battery bus が無いと全部止まり合わせ直しが要る）。
+- 時計のモデル（新しい純粋なモジュール `B747.60.clock_model.lua`）：
+  - 時刻は X-Plane の UTC に時計ごとのずれを足したもの（推定：X-Plane の時刻を変えると時計もついてくる）。時刻の表示で SET を HLD にすると秒を 0 にして止まり、MS・HS で 1 秒に 1 分・1 時間進み（その間も止まったまま：推定）、RUN でそこから動く。日付の表示中は HS D・MS M・HLD Y で日・月・年が 1 秒に 1 つ進む（時刻は動いたまま：推定）。どの欄もほかの欄に繰り上がらない（推定：59 分→00、23 時→00、月末→1、新しい月に無い日はその月の末日、99 年→00）。歩みは選択器を回してから 1 秒ごと（推定）。
+  - DATE：日と月、次に年を 1 秒ずつ交互（コロンなし）、もう一度で UTC（前は年から始まった）。
+  - ET：RUN で前の HLD・RESET から積算、HLD で止め、RESET（ばねで HLD）で 0 と空白、99:59 で止める（推定）。CHR の表示中も裏で動き、選択器も効く（前は CHR の間は効かなかった）。
+  - CHR：押すごとに開始・保持・リセット。分は下の LCD の右 2 桁、秒は秒針（3D の `clock_chr_seconds`）、99:59 で止める（推定。前は 59:99 で止まった）。開始からリセットまで ET に代わって出る。
+  - 電源：APU battery bus が無いと表示が消え（中は動く）、秒針はその位置で止まる。main hot battery bus が切れて戻ると NCD（両 LCD が 00:00 のまま、秒針 60）で、SET で UTC を 1 桁進めると解ける。NCD の間の日付は 2000 年 1 月 1 日、ET・CHR は進まず DATE・CHR は効かない（推定）。機体の読み込みのときに電源が無かったときは合わせ済みとみなす（推定）。
+- グルー（`B747.60.xt.fltInst03.lua` を書き直した。副操縦士の複製の `fltInst04` は畳み込んで削除）：X-Plane の UTC（`sim/time/zulu_time_sec`、`clock_timer/zulu_day`・`zulu_month`。年はコンピューターの年で、X-Plane の 12 月から 1 月で次の年）、ET・CHR は X-Plane の飛行時間（`sim/time/total_flight_time_sec`）で進める。新設 `fltInst/<席>/clock_on`・`clock_utc_hours`・`clock_utc_minutes`・`clock_day`・`clock_month`・`clock_et_show`（init `B747.60.fltInst`）。今までの dataref とコマンドの名前と意味はそのまま。ET の選択器のコマンドは文字盤の並び（RUN・HLD・RESET）どおり、上で RUN の方へ、HLD から下で RESET（前は上で HLD→RUN→RESET と RUN を通った。3D のつまみの角度もこの並び）。グレアシールドの CLOCK スイッチの動きの dataref（`glareshiled/<席>/chrono_switch_pos`、3D の綴り）を init で作った。3D の 2 つのボタンは同じコマンドなので一緒に動く。新しいフライトで時計を X-Plane の UTC に合わせ直し、ET と CHR を 0 にする。
+- 気づいたこと：XTLua は一度きりのコマンド（つまみのクリック＝X-Plane の CommandOnce、Web API の duration 0）の終わり（phase 2）を始め（phase 0）より先に流すか落とす（`s74` の 1 回目で DATE・CHR のボタンが押されたまま、ET の RESET が戻らなかった）。押しボタンと RESET は始めから 0.2 秒で自分で戻す（押し続ける間の phase 1 で延ばし、あとから来た終わりではすぐ戻す）。
+- fltInst02 の死んだ時計のコード（コメントアウトされた古い dataref・コマンド・タイマー、使われない X-Plane の時計の dataref 5 個と `timer_is_GMT` のコマンド。約 490 行）を消し、静的試験の既知の一覧から時計の dataref 40 個とコマンド 14 個、グレアシールドの dataref 2 個を外した。
+- パネル（道具 `docs/overhaul/tools/panel_clocks.lua`、ACF_DIFF.md §5）：UTC と日付を時計自身の値に（前は X-Plane の zulu の時・分と、その地の日付）、両方の LCD の数字を `clock_on` の新しいグループに、ET の数字の SHOW を `clock_et_show` 1 つに（前は 2 つで後の `clock_et_seconds > 0` が勝ち、CHR の下に ET が重なった）。
+- FMC への時刻・日付（GPS が無いとき機長の時計、その故障で副操縦士の時計：ATA31 p.77）は FMC の作り直しで（FMC は X-Plane の時刻のまま）。
+- 試験：新しい `tests/displays/clock_test.lua`（68 件：暦、UTC、DATE の交互、SET の HLD・MS・HS と繰り上がらないこと、日付の HS D・MS M・HLD Y、ET、CHR、電源と NCD、グルーのコマンド、終わりが先に来る一度きりのコマンド）。X-Plane のシナリオ `s74_clock`（45 件合格：成田 34L に電源の無い状態で開始、BATTERY OFF で両席の時計の表示が消え（main hot battery bus はある）、ON で X-Plane の UTC（01:00）と UTC の日付（23 10）・年 26、DATE で日と月、1 秒後に年、ET の RUN で 00:00、CHR で ET に代わって秒針が進み、2 回目で止まり、3 回目でリセットして裏で進んでいた ET が出る、グレアシールドのボタンも動く、ET の HLD で止まり RESET で 0 と空白、ばねで HLD に戻る、SET の HLD・MS で 1 秒に 1 分、副操縦士の時計は別。時計と外観を撮った。1 回目は開始で BATTERY がすでに ON だったこと（試験の誤り）と、一度きりのコマンドで DATE・CHR のボタンと ET の RESET が戻らなかったこと（XTLua の扱い：気づいたこと）、2 回目は DATE のボタンを戻る前に確かめたこと（試験の誤り）で落ちた）。

@@ -74,7 +74,7 @@
 | xtlua_keysystems | B747.20.hydraulics | 92 / 555 | 油圧パネルと表示 | |
 | xtlua_keysystems | B747.30.fltMgmt | 112 / 452 | IRU のモードセレクタ、トランスポンダのパネル | |
 | xtlua_keysystems | B747.55.air | 170 / 1220 | 空調パック、抽気、与圧、温度 | |
-| xtlua_keysystems | B747.60.fltInst | 459 / 4716 | 飛行計器。`fltInst02` が PFD・EICAS・ND 補助、`03`・`04` が時計。表示器と EIU は 5-2 段 1 で `B747.60.display_model.lua`・`B747.60.xt.displays.lua`（§4.18） | |
+| xtlua_keysystems | B747.60.fltInst | 459 / 4716 | 飛行計器。`fltInst02` が PFD・EICAS・ND 補助、`03` が両席の時計（5-2 段 6a で `B747.60.clock_model.lua` のグルーに。`04` は畳み込んで削除）。表示器と EIU は 5-2 段 1 で `B747.60.display_model.lua`・`B747.60.xt.displays.lua`（§4.18） | |
 | xtlua_keysystems | B747.68.fms | 199 / 13196 | FMC/CDU（3 台、詳細は §6） | |
 | xtlua_keysystems | B747.70.autopilot | 274 / 5449 | AFDS（MCP、FMA、LNAV/VNAV）、autothrottle、autoland（`B747.autoland`）、監視（`monitor`） | throttles、fms_advance |
 | xtlua_keysystems | B747.90.lighting | 215 / 2403 | 照明（計器、フラッド、外部灯）、気象レーダーの表示操作（`wxr`） | |
@@ -429,6 +429,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 段 5c-3c（ND のコースの線）：ND のモジュールが毎フレーム、`laminar/B747/radio/tuningmodes` で手動同調の VOR L・R の局（航法施設の一覧から 1 秒ごと）と CRS（NAV3・4 の OBS）から、新設 `nd/<席>/crs/*`（init `B747.61.nd`）に、線の機体に一番近い点・向き・破線のずらしと見える破線、局の位置とコース・反対の数字を書く（`B747.61.nd_data.lua` の `crs_line`）。
 - 段 5d（HDG REF）：表示のグルー（`B747.60.xt.displays.lua`）が純粋なモデル `B747.60.hdg_ref_model.lua` で基準を決め、新設 `efis/hdg_ref/*`（`true`・`pfd_label`・`nd_label`・`nd_plan_label`）と両席の基準の方位・航跡 `pfd/<席>/hdg_deg`・`trk_deg`（init `B747.60.fltInst`）を毎フレーム書く。パネルの方位の計器、ND のモジュールのローズ（`nd/up`）、ND のモデル、FMC の風の数字、AFDS（`ap_hdg_target`・`ap_hdg_ref_hold`）がそれを読む。
 - 段 5e（ND のトレンドベクトル）：ND のモデル（`B747.60.nd_model.lua` の `trend`）が対地速度と各席の傾きから 9 片の位置・向き・長さを出し、表示のグルーが新設 `nd/<席>/tv_*`（init `B747.60.fltInst`）に書く。
+- 段 6a（時計）：時計のモデル（`B747.60.clock_model.lua`）を時計のグルー（`B747.60.xt.fltInst03.lua`、両席）が動かす。fltInst02 の after_physics が `B747_clocks()`、flight_start が `B747_clocks_flight_start()` を呼ぶ。出力は新設 `fltInst/<席>/clock_on`・`clock_utc_hours`・`clock_utc_minutes`・`clock_day`・`clock_month`・`clock_et_show` と今までの時計の dataref（init `B747.60.fltInst`）。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 

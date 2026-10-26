@@ -9,11 +9,10 @@ local T = dofile("tests/lib/check.lua")("interfaces")
 local src = dofile("tests/lib/source.lua")
 
 -- Listed as datarefs but created only in an xt script, so they probably do not
--- exist at run time: an existing defect on 041c9ffa (the CHRONO switches of the
--- glareshield clocks). Remove an entry when its system is rebuilt.
+-- exist at run time: existing defects (on 041c9ffa the glareshield CHR
+-- switches' animation, created since the clocks' rebuild, 5-2 step 6a).
+-- Remove an entry when its system is rebuilt.
 local KNOWN = {
-    ["laminar/B747/glareshiled/captain/chrono_switch_pos"] = true,
-    ["laminar/B747/glareshiled/fo/chrono_switch_pos"] = true,
 }
 
 local drefs, cmds = src.created(src.lua_files())

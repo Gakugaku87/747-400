@@ -33,15 +33,6 @@ per-frame callback you’d do fuel = fuel + 3 * SIM_PERIOD.
 --** 					               CONSTANTS                    				 **--
 --*************************************************************************************--
 
---[[
-B747_RESET  = -1
-B747_HOLD   = 0
-B747_RUN    = 1
-B747_START  = 1
-B747_STOP   = 0
-B747_ET     = 0
-B747_CHRONO = 1
---]]
 
 
 
@@ -83,11 +74,6 @@ simDR_all_wheels_on_ground          = find_dataref("sim/flightmodel/failures/ong
 simDR_autopilot_source              = find_dataref("sim/cockpit2/autopilot/autopilot_source")
 simDR_apu_start_switch_mode     = find_dataref("sim/cockpit2/electrical/APU_starter_switch")
 simDR_apu_N1_pct                = find_dataref("sim/cockpit2/electrical/APU_N1_percent")
-simDR_time_is_GMT                   = find_dataref("sim/cockpit2/clock_timer/timer_is_GMT")
-simDR_time_zulu_minutes             = find_dataref("sim/cockpit2/clock_timer/zulu_time_minutes")
-simDR_time_zulu_hours               = find_dataref("sim/cockpit2/clock_timer/zulu_time_hours")
-simDR_time_current_day              = find_dataref("sim/cockpit2/clock_timer/current_day")
-simDR_time_current_month            = find_dataref("sim/cockpit2/clock_timer/current_month")
 
 simDR_rmi_captain_left_use_adf      = find_dataref("sim/cockpit2/radios/actuators/RMI_left_use_adf_pilot")
 simDR_rmi_captain_right_use_adf     = find_dataref("sim/cockpit2/radios/actuators/RMI_right_use_adf_pilot")
@@ -359,54 +345,6 @@ B747DR_ap_FMA_active_roll_mode      	= find_dataref("laminar/B747/autopilot/FMA/
     6 = HDG SEL
     7 = HDG HOLD
 --]]
---[[
-B747DR_clock_captain_chrono_switch_pos          = deferred_dataref("laminar/B747/clock/captain/chrono_switch_pos", "number")
-B747DR_clock_captain_et_sel_switch_pos          = deferred_dataref("laminar/B747/clock/captain/et_sel_switch_pos", "number")
-B747DR_clock_captain_date_switch_pos            = deferred_dataref("laminar/B747/clock/captain/date_switch_pos", "number")
-B747DR_clock_captain_set_switch_pos             = deferred_dataref("laminar/B747/clock/captain/set_switch_pos", "number")
-
-B747DR_clock_fo_chrono_switch_pos               = deferred_dataref("laminar/B747/clock/fo/chrono_switch_pos", "number")
-B747DR_clock_fo_et_sel_switch_pos               = deferred_dataref("laminar/B747/clock/fo/et_sel_switch_pos", "number")
-B747DR_clock_fo_date_switch_pos                 = deferred_dataref("laminar/B747/clock/fo/date_switch_pos", "number")
-B747DR_clock_fo_set_switch_pos                  = deferred_dataref("laminar/B747/clock/fo/set_switch_pos", "number")
-
-B747DR_glrshld_captain_chrono_switch_pos        = deferred_dataref("laminar/B747/glareshiled/captain/chrono_switch_pos", "number")
-B747DR_glrshld_fo_chrono_switch_pos             = deferred_dataref("laminar/B747/glareshiled/fo/chrono_switch_pos", "number")
-
-B747DR_clock_captain_gmt_display_mode           = deferred_dataref("laminar/B747/clock/captain/gmt_display_mode", "number")
-B747DR_clock_captain_gmt_date_mode              = deferred_dataref("laminar/B747/clock/captain/gmt_date_mode", "number")
-B747DR_clock_captain_et_chr_display_mode        = deferred_dataref("laminar/B747/clock/captain/et_chr_display_mode", "number")
-B747DR_clock_captain_chrono_mode                = deferred_dataref("laminar/B747/clock/captain/chrono_mode", "number")
-B747DR_clock_captain_chrono_seconds             = deferred_dataref("laminar/B747/clock/captain/chrono_seconds", "number")
-B747DR_clock_captain_chrono_minutes             = deferred_dataref("laminar/B747/clock/captain/chrono_minutes", "number")
-B747DR_clock_captain_et_mode                    = deferred_dataref("laminar/B747/clock/captain/et_mode", "number")
-B747DR_clock_captain_et_seconds                 = deferred_dataref("laminar/B747/clock/captain/et_seconds", "number")
-B747DR_clock_captain_et_minutes                 = deferred_dataref("laminar/B747/clock/captain/et_minutes", "number")
-B747DR_clock_captain_et_hours                   = deferred_dataref("laminar/B747/clock/captain/et_hours", "number")
-B747DR_clock_captain_date_month                 = deferred_dataref("laminar/B747/clock/captain/date_month", "number")
-B747DR_clock_captain_date_day                   = deferred_dataref("laminar/B747/clock/captain/date_day", "number")
-B747DR_clock_captain_date_year12                = deferred_dataref("laminar/B747/clock/captain/date_year12", "number")
-B747DR_clock_captain_date_year34                = deferred_dataref("laminar/B747/clock/captain/date_year34", "number")
-B747DR_clock_captain_gmt_minutes                = deferred_dataref("laminar/B747/clock/captain/gmt_minutes", "number")
-B747DR_clock_captain_gmt_hours                  = deferred_dataref("laminar/B747/clock/captain/gmt_hours", "number")
-
-B747DR_clock_fo_gmt_display_mode                = deferred_dataref("laminar/B747/clock/fo/gmt_display_mode", "number")
-B747DR_clock_fo_gmt_date_mode                   = deferred_dataref("laminar/B747/clock/fo/gmt_date_mode", "number")
-B747DR_clock_fo_et_chr_display_mode             = deferred_dataref("laminar/B747/clock/fo/et_chr_display_mode", "number")
-B747DR_clock_fo_chrono_mode                     = deferred_dataref("laminar/B747/clock/fo/chrono_mode", "number")
-B747DR_clock_fo_chrono_seconds                  = deferred_dataref("laminar/B747/clock/fo/chrono_seconds", "number")
-B747DR_clock_fo_chrono_minutes                  = deferred_dataref("laminar/B747/clock/fo/chrono_minutes", "number")
-B747DR_clock_fo_et_mode                         = deferred_dataref("laminar/B747/clock/fo/et_mode", "number")
-B747DR_clock_fo_et_seconds                      = deferred_dataref("laminar/B747/clock/fo/et_seconds", "number")
-B747DR_clock_fo_et_minutes                      = deferred_dataref("laminar/B747/clock/fo/et_minutes", "number")
-B747DR_clock_fo_et_hours                        = deferred_dataref("laminar/B747/clock/fo/et_hours", "number")
-B747DR_clock_fo_date_month                      = deferred_dataref("laminar/B747/clock/fo/date_month", "number")
-B747DR_clock_fo_date_day                        = deferred_dataref("laminar/B747/clock/fo/date_day", "number")
-B747DR_clock_fo_date_year12                     = deferred_dataref("laminar/B747/clock/fo/date_year12", "number")
-B747DR_clock_fo_date_year34                     = deferred_dataref("laminar/B747/clock/fo/date_year34", "number")
-B747DR_clock_fo_gmt_minutes                     = deferred_dataref("laminar/B747/clock/fo/gmt_minutes", "number")
-B747DR_clock_fo_gmt_hours                       = deferred_dataref("laminar/B747/clock/fo/gmt_hours", "number")
---]]
 
 B747DR_RMI_left_bearing                         = deferred_dataref("laminar/B747/rmi_left/captain/bearing", "number")
 B747DR_RMI_right_bearing                        = deferred_dataref("laminar/B747/rmi_right/captain/bearing", "number")
@@ -507,7 +445,6 @@ B747DR_10000_callout                            = deferred_dataref("laminar/B747
 --** 				                 X-PLANE COMMANDS                   	    	 **--
 --*************************************************************************************--
 
-simCMD_clock_is_gmt             = find_command("sim/instruments/timer_is_GMT")
 
 simCMD_EFIS_wxr                 = find_command("sim/instruments/EFIS_wxr")
 simCMD_EFIS_wxr_fo                 = find_command("sim/instruments/EFIS_copilot_wxr")
@@ -1584,172 +1521,6 @@ function B747_dsp_rcl_switch_CMDhandler(phase, duration)
 end
 
 
---[[
-
--- CLOCK (CAPTAIN) 
-function B747_clock_captain_chrono_switch_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747DR_clock_captain_chrono_switch_pos = 1
-        if B747DR_clock_captain_chrono_mode == B747_START then
-            B747DR_clock_captain_chrono_mode = B747_STOP
-        elseif B747DR_clock_captain_chrono_mode == B747_STOP then
-            B747DR_clock_captain_chrono_mode = B747_RESET
-        elseif B747DR_clock_captain_chrono_mode == B747_RESET then
-            B747DR_clock_captain_chrono_mode = B747_START
-        end
-    elseif phase == 2 then
-        B747DR_clock_captain_chrono_switch_pos = 0
-    end
-end
-
-function B747_glareshield_captain_chrono_switch_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747DR_glrshld_captain_chrono_switch_pos = 1
-        if B747DR_clock_captain_chrono_mode == B747_START then
-            B747DR_clock_captain_chrono_mode = B747_STOP
-        elseif B747DR_clock_captain_chrono_mode == B747_STOP then
-            B747DR_clock_captain_chrono_mode = B747_RESET
-        elseif B747DR_clock_captain_chrono_mode == B747_RESET then
-            B747DR_clock_captain_chrono_mode = B747_START
-        end
-    elseif phase == 2 then
-        B747DR_glrshld_captain_chrono_switch_pos = 0
-    end
-end
-
-function B747_clock_captain_et_sel_switch_up_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747DR_clock_captain_et_sel_switch_pos = math.min(B747DR_clock_captain_et_sel_switch_pos+1, 1)
-        if B747DR_clock_captain_et_sel_switch_pos == 0 then
-            B747DR_clock_captain_et_mode = B747_HOLD
-        elseif B747DR_clock_captain_et_sel_switch_pos == 1 then
-            B747DR_clock_captain_et_mode = B747_RUN
-        end
-    end
-end
-
-function B747_clock_captain_et_sel_switch_dn_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747DR_clock_captain_et_sel_switch_pos = math.max(B747DR_clock_captain_et_sel_switch_pos-1, -1)
-        if B747DR_clock_captain_et_sel_switch_pos == 0 then
-            B747DR_clock_captain_et_mode = B747_HOLD
-        elseif B747DR_clock_captain_et_sel_switch_pos == -1 then
-            B747DR_clock_captain_et_mode = B747_RESET
-        end
-    elseif phase == 2 then
-        if B747DR_clock_captain_et_sel_switch_pos == -1 then
-            B747DR_clock_captain_et_sel_switch_pos = 0
-            B747DR_clock_captain_et_mode = B747_HOLD
-        end
-    end
-
-end
-
-function B747_clock_captain_date_switch_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747DR_clock_captain_date_switch_pos = 1
-        B747DR_clock_captain_gmt_display_mode = 1.0 - B747DR_clock_captain_gmt_display_mode
-    elseif phase == 2 then
-        B747DR_clock_captain_date_switch_pos = 0
-    end
-end
-
-function B747_clock_captain_set_switch_up_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747DR_clock_captain_set_switch_pos = math.min(B747DR_clock_captain_set_switch_pos+1, 3)
-    end
-end
-
-function B747_clock_captain_set_switch_dn_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747DR_clock_captain_set_switch_pos = math.max(B747DR_clock_captain_set_switch_pos-1, 0)
-    end
-end
-
-
-
-
-
--- CLOCK (FIRST OFFICER) 
-function B747_clock_fo_chrono_switch_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747DR_clock_fo_chrono_switch_pos = 1
-        if B747DR_clock_fo_chrono_mode == B747_START then
-            B747DR_clock_fo_chrono_mode = B747_STOP
-        elseif B747DR_clock_fo_chrono_mode == B747_STOP then
-            B747DR_clock_fo_chrono_mode = B747_RESET
-        elseif B747DR_clock_fo_chrono_mode == B747_RESET then
-            B747DR_clock_fo_chrono_mode = B747_START
-        end
-    elseif phase == 2 then
-        B747DR_clock_fo_chrono_switch_pos = 0
-    end
-end
-
-function B747_glareshield_fo_chrono_switch_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747DR_glrshld_fo_chrono_switch_pos = 1
-        if B747DR_clock_fo_chrono_mode == B747_START then
-            B747DR_clock_fo_chrono_mode = B747_STOP
-        elseif B747DR_clock_fo_chrono_mode == B747_STOP then
-            B747DR_clock_fo_chrono_mode = B747_RESET
-        elseif B747DR_clock_fo_chrono_mode == B747_RESET then
-            B747DR_clock_fo_chrono_mode = B747_START
-        end
-    elseif phase == 2 then
-        B747DR_glrshld_fo_chrono_switch_pos = 0
-    end
-end
-
-function B747_clock_fo_et_sel_switch_up_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747DR_clock_fo_et_sel_switch_pos = math.min(B747DR_clock_fo_et_sel_switch_pos+1, 1)
-        if B747DR_clock_fo_et_sel_switch_pos == 0 then
-            B747DR_clock_fo_et_mode = B747_HOLD
-        elseif B747DR_clock_fo_et_sel_switch_pos == 1 then
-            B747DR_clock_fo_et_mode = B747_RUN
-        end
-    end
-end
-
-function B747_clock_fo_et_sel_switch_dn_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747DR_clock_fo_et_sel_switch_pos = math.max(B747DR_clock_fo_et_sel_switch_pos-1, -1)
-        if B747DR_clock_fo_et_sel_switch_pos == 0 then
-            B747DR_clock_fo_et_mode = B747_HOLD
-        elseif B747DR_clock_fo_et_sel_switch_pos == -1 then
-            B747DR_clock_fo_et_mode = B747_RESET
-        end
-    elseif phase == 2 then
-        if B747DR_clock_fo_et_sel_switch_pos == -1 then
-            B747DR_clock_fo_et_sel_switch_pos = 0
-            B747DR_clock_fo_et_mode = B747_HOLD
-        end
-    end
-
-end
-
-function B747_clock_fo_date_switch_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747DR_clock_fo_date_switch_pos = 1
-        B747DR_clock_fo_gmt_display_mode = 1.0 - B747DR_clock_fo_gmt_display_mode
-    elseif phase == 2 then
-        B747DR_clock_fo_date_switch_pos = 0
-    end
-end
-
-function B747_clock_fo_set_switch_up_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747DR_clock_fo_set_switch_pos = math.min(B747DR_clock_fo_set_switch_pos+1, 3)
-    end
-end
-
-function B747_clock_fo_set_switch_dn_CMDhandler(phase, duration)
-    if phase == 0 then
-        B747DR_clock_fo_set_switch_pos = math.max(B747DR_clock_fo_set_switch_pos-1, 0)
-    end
-end
---]]
 
 
 
@@ -1977,25 +1748,6 @@ B747CMD_dsp_canc_switch                     = deferred_command("laminar/B747/dsp
 B747CMD_dsp_rcl_switch                      = deferred_command("laminar/B747/dsp/rcl_switch", "Display Select Panel Recall Switch", B747_dsp_rcl_switch_CMDhandler)
 
 
---[[
--- CLOCK
-B747CMD_clock_captain_chrono_switch         = deferred_command("laminar/B747/clock/captain/chrono_switch", "Captain Clock Chronograph Switch", B747_clock_captain_chrono_switch_CMDhandler)
-B747CMD_glrshld_captain_chrono_switch       = deferred_command("laminar/B747/glareshield/captain/chrono_switch", "Captain Glareshield Chronograph Switch", B747_glareshield_captain_chrono_switch_CMDhandler)
-B747CMD_clock_captain_et_sel_switch_up      = deferred_command("laminar/B747/clock/captain/et_switch_up", "Captain Clock Elapsed Time Switch_Up", B747_clock_captain_et_sel_switch_up_CMDhandler)
-B747CMD_clock_captain_et_sel_switch_dn      = deferred_command("laminar/B747/clock/captain/et_switch_dn", "Captain Clock Elapsed Time Switch_Down", B747_clock_captain_et_sel_switch_dn_CMDhandler)
-B747CMD_clock_captain_date_switch           = deferred_command("laminar/B747/clock/captain/date_switch", "Captain Clock Date Switch", B747_clock_captain_date_switch_CMDhandler)
-B747CMD_clock_captain_set_switch_up         = deferred_command("laminar/B747/clock/captain/set_switch_up", "Captain Clock Set Switch Up", B747_clock_captain_set_switch_up_CMDhandler)
-B747CMD_clock_captain_set_switch_dn         = deferred_command("laminar/B747/clock/captain/set_switch_dn", "Captain Clock Set Switch Down", B747_clock_captain_set_switch_dn_CMDhandler)
-
-
-B747CMD_clock_fo_chrono_switch              = deferred_command("laminar/B747/clock/fo/chrono_switch", "First Officer Clock Chronograph Switch", B747_clock_fo_chrono_switch_CMDhandler)
-B747CMD_glrshld_fo_chrono_switch            = deferred_command("laminar/B747/glareshield/fo/chrono_switch", "First Officer Glareshield Chronograph Switch", B747_glareshield_fo_chrono_switch_CMDhandler)
-B747CMD_clock_fo_et_sel_switch_up           = deferred_command("laminar/B747/clock/fo/et_switch_up", "First Officer Clock Elapsed Time Switch_Up", B747_clock_fo_et_sel_switch_up_CMDhandler)
-B747CMD_clock_fo_et_sel_switch_dn           = deferred_command("laminar/B747/clock/fo/et_switch_dn", "First Officer Clock Elapsed Time Switch_Down", B747_clock_fo_et_sel_switch_dn_CMDhandler)
-B747CMD_clock_fo_date_switch                = deferred_command("laminar/B747/clock/fo/date_switch", "First Officer Clock Date Switch", B747_clock_fo_date_switch_CMDhandler)
-B747CMD_clock_fo_set_switch_up              = deferred_command("laminar/B747/clock/fo/set_switch_up", "First Officer Clock Set Switch Up", B747_clock_fo_set_switch_up_CMDhandler)
-B747CMD_clock_fo_set_switch_dn              = deferred_command("laminar/B747/clock/fo/set_switch_dn", "First Officer Clock Set Switch Down", B747_clock_fo_set_switch_dn_CMDhandler)
---]]
 
 
 -- AI
@@ -2091,245 +1843,12 @@ end
 
 
 
------ CLOCK (CAPTAIN) -------------------------------------------------------------------
 
---[[
-function B747_captain_clock_et_timer()
 
-    B747DR_clock_captain_et_seconds = B747DR_clock_captain_et_seconds + 0.01
 
-    if B747DR_clock_captain_et_seconds > 59.99 then
-        B747DR_clock_captain_et_seconds = 0.0
-        B747DR_clock_captain_et_minutes = B747DR_clock_captain_et_minutes + 1
 
-        if B747DR_clock_captain_et_minutes > 59 then
-            B747DR_clock_captain_et_minutes = 0.0
-            B747DR_clock_captain_et_hours = B747DR_clock_captain_et_hours + 1
 
-            if B747DR_clock_captain_et_hours > 23.0 then
-                B747DR_clock_captain_et_hours = 0
-            end
-        end
-    end
 
-end
-
-
-
-
-
-function B747_captain_clock_chrono_timer()
-	
-		
-    B747DR_clock_captain_chrono_seconds = B747DR_clock_captain_chrono_seconds + 0.01
-
-    if B747DR_clock_captain_chrono_seconds > 59.99 then
-        B747DR_clock_captain_chrono_seconds = 0.0
-        B747DR_clock_captain_chrono_minutes = B747DR_clock_captain_chrono_minutes + 1
-
-        if B747DR_clock_captain_chrono_minutes > 59.0 then
-            B747DR_clock_captain_chrono_minutes = 0.0
-        end
-    end
-
-end
-
-
-
-
-function B747_captain_clock_date_mode()
-
-    B747DR_clock_captain_gmt_date_mode = 1.0 - B747DR_clock_captain_gmt_date_mode
-
-end
-
-
-
-
-function B747_captain_clock()
-
-    -- GMT TIME
-    if simDR_time_is_GMT == 0 then simCMD_clock_is_gmt:once() end               -- TODO:  RESET ON EXIT?  DO WE EVEN NEED THIS?
-    B747DR_clock_captain_gmt_minutes    = simDR_time_zulu_minutes
-    B747DR_clock_captain_gmt_hours      = simDR_time_zulu_hours
-
-
-    -- DATE
-    local currentDate                   = os.date("*t")
-    B747DR_clock_captain_date_day       = simDR_time_current_day
-    B747DR_clock_captain_date_month     = simDR_time_current_month
-    B747DR_clock_captain_date_year12    = string.sub(currentDate.year, -4, -3)
-    B747DR_clock_captain_date_year34    = string.sub(currentDate.year, -2, -1)
-
-
-    -- TIME/DATE SWITCH             TODO:  ELECTRICAL POWER REQ
-    if B747DR_clock_captain_gmt_display_mode == 1.0 then
-        if is_timer_scheduled(B747_captain_clock_date_mode) == false then
-            run_at_interval(B747_captain_clock_date_mode, 2.0)
-        end
-    else
-        if is_timer_scheduled(B747_captain_clock_date_mode) == true then
-            stop_timer(B747_captain_clock_date_mode)
-            B747DR_clock_captain_gmt_date_mode = 0.0
-        end
-    end
-
-
-    -- ELAPSED TIMER                TODO:  ELECTRICAL POWER REQ
-    if B747DR_clock_captain_et_mode == B747_RUN then
-        if is_timer_scheduled(B747_captain_clock_et_timer) == false then
-            run_at_interval(B747_captain_clock_et_timer, 0.01)
-        end
-    elseif B747DR_clock_captain_et_mode == B747_HOLD then
-        if is_timer_scheduled(B747_captain_clock_et_timer) == true then
-            stop_timer(B747_captain_clock_et_timer)
-        end
-    elseif B747DR_clock_captain_et_mode == B747_RESET then
-        B747DR_clock_captain_et_seconds = 0
-        B747DR_clock_captain_et_minutes = 0
-        B747DR_clock_captain_et_hours = 0
-    end
-
-
-    -- CHRONOGRAPH TIMER            TODO:  ELECTRICAL POWER REQ
-    if B747DR_clock_captain_chrono_mode == B747_START then
-        if is_timer_scheduled(B747_captain_clock_chrono_timer) == false then
-            run_at_interval(B747_captain_clock_chrono_timer, 0.01)
-        end
-        B747DR_clock_captain_et_chr_display_mode = B747_CHRONO
-    elseif B747DR_clock_captain_chrono_mode == B747_STOP then
-        if is_timer_scheduled(B747_captain_clock_chrono_timer) == true then
-            stop_timer(B747_captain_clock_chrono_timer)
-        end
-    elseif B747DR_clock_captain_chrono_mode == B747_RESET then
-        B747DR_clock_captain_chrono_seconds = 0
-        B747DR_clock_captain_chrono_minutes = 0
-        B747DR_clock_captain_et_chr_display_mode = B747_ET
-    end
-
-
-end--]]
-
-
-
-
-
-
------ CLOCK (FIRST OFFICER) -------------------------------------------------------------
-
---[[
-function B747_fo_clock_et_timer()
-
-    B747DR_clock_fo_et_seconds = B747DR_clock_fo_et_seconds + 0.01
-
-    if B747DR_clock_fo_et_seconds > 59.99 then
-        B747DR_clock_fo_et_seconds = 0.0
-        B747DR_clock_fo_et_minutes = B747DR_clock_fo_et_minutes + 1
-
-        if B747DR_clock_fo_et_minutes > 59 then
-            B747DR_clock_fo_et_minutes = 0.0
-            B747DR_clock_fo_et_hours = B747DR_clock_fo_et_hours + 1
-
-            if B747DR_clock_fo_et_hours > 23.0 then
-                B747DR_clock_fo_et_hours = 0
-            end
-        end
-    end
-
-end
-
-
-
-
-function B747_fo_clock_chrono_timer()
-
-    B747DR_clock_fo_chrono_seconds = B747DR_clock_fo_chrono_seconds + 0.01
-
-    if B747DR_clock_fo_chrono_seconds > 59.99 then
-        B747DR_clock_fo_chrono_seconds = 0.0
-        B747DR_clock_fo_chrono_minutes = B747DR_clock_fo_chrono_minutes + 1
-
-        if B747DR_clock_fo_chrono_minutes > 59.0 then
-            B747DR_clock_fo_chrono_minutes = 0.0
-        end
-    end
-
-end
-
-
-
-
-function B747_fo_clock_date_mode()
-
-    B747DR_clock_fo_gmt_date_mode = 1.0 - B747DR_clock_fo_gmt_date_mode
-
-end
-
-
-
-
-function B747_fo_clock()
-
-    -- GMT TIME
-    B747DR_clock_fo_gmt_minutes    = simDR_time_zulu_minutes
-    B747DR_clock_fo_gmt_hours      = simDR_time_zulu_hours
-
-
-    -- DATE
-    local currentDate              = os.date("*t")
-    B747DR_clock_fo_date_day       = simDR_time_current_day
-    B747DR_clock_fo_date_month     = simDR_time_current_month
-    B747DR_clock_fo_date_year12    = string.sub(currentDate.year, -4, -3)
-    B747DR_clock_fo_date_year34    = string.sub(currentDate.year, -2, -1)
-
-
-    -- TIME/DATE SWITCH
-    if B747DR_clock_fo_gmt_display_mode == 1.0 then
-        if is_timer_scheduled(B747_fo_clock_date_mode) == false then
-            run_at_interval(B747_fo_clock_date_mode, 2.0)
-        end
-    else
-        if is_timer_scheduled(B747_fo_clock_date_mode) == true then
-            stop_timer(B747_fo_clock_date_mode)
-            B747DR_clock_fo_gmt_date_mode = 0.0
-        end
-    end
-
-
-    -- ELAPSED TIMER                TODO:  ELECTRICAL POWER REQ
-    if B747DR_clock_fo_et_mode == B747_RUN then
-        if is_timer_scheduled(B747_fo_clock_et_timer) == false then
-            run_at_interval(B747_fo_clock_et_timer, 0.01)
-        end
-    elseif B747DR_clock_fo_et_mode == B747_HOLD then
-        if is_timer_scheduled(B747_fo_clock_et_timer) == true then
-            stop_timer(B747_fo_clock_et_timer)
-        end
-    elseif B747DR_clock_fo_et_mode == B747_RESET then
-        B747DR_clock_fo_et_seconds = 0
-        B747DR_clock_fo_et_minutes = 0
-        B747DR_clock_fo_et_hours = 0
-    end
-
-
-    -- CHRONOGRAPH TIMER            TODO:  ELECTRICAL POWER REQ
-    if B747DR_clock_fo_chrono_mode == B747_START then
-        if is_timer_scheduled(B747_fo_clock_chrono_timer) == false then
-            run_at_interval(B747_fo_clock_chrono_timer, 0.01)
-        end
-        B747DR_clock_fo_et_chr_display_mode = B747_CHRONO
-    elseif B747DR_clock_fo_chrono_mode == B747_STOP then
-        if is_timer_scheduled(B747_fo_clock_chrono_timer) == true then
-            stop_timer(B747_fo_clock_chrono_timer)
-        end
-    elseif B747DR_clock_fo_chrono_mode == B747_RESET then
-        B747DR_clock_fo_chrono_seconds = 0
-        B747DR_clock_fo_chrono_minutes = 0
-        B747DR_clock_fo_et_chr_display_mode = B747_ET
-    end
-
-
-end--]]
 
 
 
@@ -3188,10 +2707,6 @@ function B747_set_inst_all_modes()
     B747DR_STAT_msg_page = 1
     B747DR_STAT_num_msg_pages = 1
 
---[[
-    B747DR_clock_captain_chrono_mode = B747_RESET
-    B747DR_clock_fo_chrono_mode = B747_RESET
---]]
     
     
     B747DR_dsp_synoptic_display = 1
@@ -3332,6 +2847,7 @@ function flight_start()
     simDR_autopilot_TOGA_pitch_deg      = 8.0
     B747_flight_start_fltInst()
     B747_speedtape_flight_start()
+    B747_clocks_flight_start()
 
 end
 local lastHeading=0
@@ -3387,17 +2903,10 @@ debug_fltinst     = deferred_dataref("laminar/B747/debug/fltinst", "number")
 function after_physics()
   if debug_fltinst>0 then return end
 
-    --B747_captain_clock()
-    --B747_fo_clock()
     local refresh_capt_nd=simDR_EFIS_map_mode  
     local refresh_fo_nd=simDR_EFIS_map_mode_copilot
-    B747_fltInst_capt_get_clock_year()
-    B747_fltInst_capt_elapsed_timer()
-    B747_fltInst_capt_chrono_timer()
-    
-    B747_fltInst_fo_get_clock_year()
-    B747_fltInst_fo_elapsed_timer()
-    B747_fltInst_fo_chrono_timer()
+    -- the clocks (B747.60.xt.fltInst03.lua)
+    B747_clocks()
     
     B747_rmi()
     B747_altimteter()
