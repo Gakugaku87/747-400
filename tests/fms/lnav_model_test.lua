@@ -198,6 +198,30 @@ T.check(not left, "the shorter turn, to the right")
 T.check(devd < 0.1, "within 0.1 nm of the path flown (from where the turn ended): " .. devd)
 T.check(log[1] and log[1].t < 260, "no loop: there in " .. (log[1] and log[1].t or -1) .. " s (the turn and 10 nm: about 230 s)")
 
+-- the procedure's turn direction: heading 300 (293 true) turning right
+-- from north, the long way round (the shorter is left)
+st = route({{pt = "VM", crs = 300, turn = "R", name = "VECTORS"}, {via = "DIRECT", fix = ZZV}}, A)
+s = L.new(P)
+a = plane({lat = A.lat, lon = A.lon, hdg = 0, tas = 250})
+local wentleft, rightturn = false, false
+fly(st, s, a, 200, {each = function(t, s)
+    if t < 60 and s.roll < -1 then wentleft = true end
+    if t > 5 and t < 60 and s.roll > 20 then rightturn = true end end})
+T.check(rightturn and not wentleft, "turned right as the procedure says, not the shorter way left (CIFP field 10)")
+T.check(math.abs(P.wrap180(a.hdg - 293)) < 1, "then heading 300 magnetic held: " .. a.hdg)
+-- heading 160 to intercept the course 283 into ZZV: a turn of 123 degrees
+-- onto it, begun early enough (estimate)
+local Z283 = P.point(P.point(ZZV, 96, 10), 6, 5)
+st = route({{pt = "VI", crs = 160, name = "(INTC)"}, {pt = "CF", fix = ZZV, crs = 283, dist = 10}}, Z283)
+s = L.new(P)
+a = plane({lat = Z283.lat, lon = Z283.lon, hdg = 153, tas = 220, alt = 5000})
+local over123 = 0
+log = fly(st, s, a, 240, {each = function(t, s, air, path) if path[1].kind == "line" then
+    over123 = math.max(over123, -s.xtk) end end})
+T.equal(#log, 1, "the 123 degree intercept sequenced")
+T.check(over123 < 0.5, "the course 283 captured overshooting less than 0.5 nm: " .. over123)
+T.check(math.abs(s.xtk) < 0.05, "and held: " .. s.xtk)
+
 -- the capture criteria, armed (not engaged): 10 nm off the leg
 local LEFT = P.point(P.point(A, 0, 10), 270, 10)
 st = route({{via = "DIRECT", fix = B}}, A)

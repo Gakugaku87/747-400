@@ -20,7 +20,9 @@
 --    track; the law is an estimate): a track back onto the path at most
 --    MAX_INTC degrees off it, the more the farther, a bank to it, on an arc
 --    or a fly-by turn the arc's own bank too; at most 25 degrees (ATA34_2
---    p.618). A heading leg's heading, magnetic.
+--    p.618). A heading leg's heading, magnetic. The procedure's turn
+--    direction into a heading leg, or a direct leg still turning onto its
+--    course, the long way round too (estimate).
 --  - The heading held (FCOM p.644, p.1431): past the last waypoint (END OF
 --    ROUTE), at a discontinuity (DISCONTINUITY), and after a new active leg
 --    out of the capture until the capture (`recapture`).
@@ -128,12 +130,22 @@ local function against(P, e, p)
     return 0, nil, nil
 end
 
--- how far off a path the turn onto it at `theta` degrees begins (nm):
--- the turn's radius at the speed `vt` kt, the roll into it at the ground
--- speed (estimate)
+-- how far off a path the turn onto it at `theta` degrees (up to 150: an
+-- intercept leg's) begins (nm): the turn's radius at the speed `vt` kt,
+-- the roll into it at the ground speed (estimate)
 local function turn_in(air, vt, theta)
-    local t = math.min(math.abs(theta), 90) * RAD
-    return radius(vt, M.BANK) * (1 - math.cos(t)) + air.gs * KT * M.ROLL_LEAD / 1852 * math.sin(t)
+    local t = math.min(math.abs(theta), 150) * RAD
+    local roll = air.gs * KT * M.ROLL_LEAD / 1852
+    return radius(vt, M.BANK) * (1 - math.cos(t)) + roll * (t <= math.pi / 2 and math.sin(t) or 1)
+end
+
+-- a track or heading error turned the procedure's way (its turn direction
+-- "L" or "R" into the leg: CIFP field 10) while the turn into the leg
+-- lasts, the long way round too (estimate: until within 10 degrees)
+local function directed(err, dir)
+    if dir == "R" and err < -5 then return err + 360 end
+    if dir == "L" and err > 5 then return err - 360 end
+    return err
 end
 
 -- the capture of element e (ATA34_2 p.618): met, and whether the track
@@ -181,14 +193,35 @@ local function ended(s, e, path, air, p, vt)
 end
 
 -- the bank to fly the desired track dtk with the cross-track error xt
--- (and `ff` the arc's own bank)
-local function steer(xt, dtk, ff, air)
+-- (and `ff` the arc's own bank; `dir` a turn direction asked for)
+local function steer(xt, dtk, ff, air, dir)
     local ahead = math.max(air.gs * KT * M.LOOKAHEAD / 1852, 0.5)
     local intc = clamp(math.atan2(xt, ahead) / RAD, -M.MAX_INTC, M.MAX_INTC)
-    return clamp(M.K_TRK * wrap180(dtk - intc - air.trk) + ff, -M.BANK, M.BANK)
+    return clamp(M.K_TRK * directed(wrap180(dtk - intc - air.trk), dir) + ff, -M.BANK, M.BANK)
 end
-local function steer_hdg(hdg, air)
-    return clamp(M.K_HDG * wrap180(hdg - air.hdg), -M.BANK, M.BANK)
+local function steer_hdg(hdg, air, dir)
+    return clamp(M.K_HDG * directed(wrap180(hdg - air.hdg), dir), -M.BANK, M.BANK)
+end
+
+-- the turn direction a leg asks for while the turn into it lasts: a
+-- heading leg's, a direct leg's still turning onto its course (the
+-- procedure's: `turn`); `err` the heading or track error now (degrees)
+local function turn_dir(s, e, err)
+    if not e.turn then return nil end
+    local key
+    if e.kind == "heading" and e.a then
+        key = string.format("H %.5f %.5f %s", e.a.lat, e.a.lon, tostring(e.mag))
+    elseif e.direct and e.b and not (s.anchor and s.anchor.from) then
+        key = string.format("D %.5f %.5f", e.b.lat, e.b.lon)
+    else
+        return nil
+    end
+    if s.turned == key then return nil end
+    if math.abs(err) < 10 then
+        s.turned = key
+        return nil
+    end
+    return e.turn
 end
 
 -- one frame: `path` the active route's elements (nil: no active route),
@@ -270,9 +303,10 @@ function M.update(s, path, air, armed, engaged)
         s.mode = mode
         s.valid = true
         if mode == "path" and ref_dtk then
-            s.roll = steer(ref_xt, ref_dtk, ff, air)
+            s.roll = steer(ref_xt, ref_dtk, ff, air, turn_dir(s, e, wrap180(ref_dtk - air.trk)))
         elseif mode == "heading" then
-            s.roll = steer_hdg(((e.mag or 0) + (air.var or 0)) % 360, air)
+            local hdg = ((e.mag or 0) + (air.var or 0)) % 360
+            s.roll = steer_hdg(hdg, air, turn_dir(s, e, wrap180(hdg - air.hdg)))
         else
             s.roll = steer_hdg(s.hold or air.hdg, air)
         end
