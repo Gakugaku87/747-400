@@ -623,7 +623,11 @@ function take_off_thrust_corrected(altitude_ft_in, temperature_K_in)
 		TOGA_corrected_thrust_lbf = (-0.0000546 * altitude_ft_in^2 + 1.37 * altitude_ft_in + approximate_max_TO_thrust_lbf)
 	end
 
-	if B747DR_toderate == 1 then
+	-- the takeoff derate in the takeoff modes only, not on the go-around
+	-- thrust (CDU-10, 6-1 step 1; FCOM p.1314-1316)
+	local takeoff = simDR_onGround == 1 or string.match(B747DR_ref_thr_limit_mode or "", "^TO") ~= nil
+	if not takeoff then
+	elseif B747DR_toderate == 1 then
 	  TOGA_corrected_thrust_lbf = TOGA_corrected_thrust_lbf * 0.9
 	elseif B747DR_toderate == 2 then
 	  TOGA_corrected_thrust_lbf = TOGA_corrected_thrust_lbf * 0.8

@@ -71,7 +71,7 @@ fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
     local dtgTO=" ---"
     local dtgNext=" ---"
     local meters_per_second_to_kts = 1.94384449
-    local default_speed = 275 * meters_per_second_to_kts
+    local default_speed = 275 -- kt (FMC-21; the predictions come in step 8)
     local actual_speed = simDR_groundspeed * meters_per_second_to_kts
     local distToNext=tonumber(string.sub(B747DR_ND_waypoint_distance,1,5))
     --print("B747DR_ND_waypoint_distance "..string.sub(B747DR_ND_waypoint_distance,1,5))

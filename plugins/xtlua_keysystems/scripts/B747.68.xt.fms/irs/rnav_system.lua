@@ -67,6 +67,10 @@ function B747_setNAVRAD()
 	  vor2_closest_index=vor1_closest_index
 	  vor1_closest=distance
 	  vor1_closest_index=n
+	elseif distance<vor2_closest then
+	  -- the second nearest (FMC-30)
+	  vor2_closest=distance
+	  vor2_closest_index=n
 	end
       end
     end
