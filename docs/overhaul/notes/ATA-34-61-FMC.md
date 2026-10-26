@@ -476,3 +476,15 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 選択（FMC の `B744.fms.pages.takeoff.lua`）：計算値は小さい字で見出しが REF V1 と >（FCOM p.1319）。R1〜R3 を空の scratchpad で押すと選び、数を入れると（100–300 kt：FMSPG p.107）乗員の値、どちらも大きい字で見出しの REF が消え、PFD の V1・VR・V2 に出る（選ぶまでは 999：NO V SPD）。DELETE で計算値に戻る。
 - 削除（FCOM p.1309–1310, p.1319–1320）：選んだ後にフラップ・GR WT・ZFW を入れると、選んだ速度を消して TAKEOFF SPEEDS DELETED（FMC の advisory として全 CDU に。`laminar/B747/fms/notification` の出来事の旗）。3 発目の始動の後は、計算値が選んだときから 1 kt を超えて変わると同じく消す。GR WT・ZFW の入力はフラップを残す（前はフラップを 0 にしていた）。1,000 ft を超えると（計器のモジュールがフラップを 0 にする）、選んだ速度は黙って消える（前と同じく飛行中は出さない）。
 - 試験：`tests/fms/takeoff_speeds_test.lua`（22 件：計器と FMS の 2 つのモジュールを XTLua のモックで動かし、計算値、選択、入力、削除、3 発目の始動の後の変化、IRU の整列）。X-Plane：`s82_takeoff_speeds` 14/14（RJAA の地上で、フラップが無いと計算値は 999、フラップ 10 で計算値 V1 130 が小さい字で > つき、選ぶまで PFD は NO V SPD、R1〜R3 で選ぶと PFD に V1 130・V2 165、見出しの REF が消え、フラップ 20 で TAKEOFF SPEEDS DELETED と PFD の V1 が消える）。Lua の誤りなし。CDU と PFD を撮った。
+
+## 15. 段 3b-2 の実装（2026-10-26：THRUST LIM の地上と TAKEOFF REF の欄）
+
+- THRUST LIM（地上、FCOM p.1314–1316）：SEL は 0–99 °C（XX・XXC）か 32–210 °F（XXF・XXXF）、°C で持ち、°F で入れると OAT も °F（前は検査なし）。SEL は大きい字、OAT と離陸の EPR/N1 は小さい字。EPR/N1 の行は表示だけ（前は入力できた）。選んだ後に SEL か離陸の定格（TO・TO 1・TO 2）を替えると、選んだ V speeds を消して TAKEOFF SPEEDS DELETED（FCOM p.1314–1315）。仮定温度による推力の減少と「D」の表示は推力管理（6-4）で（EEC の仮定温度の処理はコメントアウトされたまま）。
+- TAKEOFF REF（FCOM p.1318–1321）：
+  - FLAP/ACCEL HT：XX（10 か 20）、/YYYY（空港上 400–9999 ft）、XX/YYYY。新しいフラップは選んだ速度を消す。
+  - E/O ACCEL HT：400–9999 ft。THR REDUCTION：5（FLAPS 5）か 400–9999 ft、後ろに ARM の上昇の定格。既定は ACCEL HT・E/O ACCEL HT が 1000 ft、THR REDUCTION が FLAPS 5（FCOM の図。小さい字）、入れると大きい字。削除で既定に（推定）。値は VNAV（段 9）と推力管理（6-4）で使う。
+  - WIND/SLOPE：HXX・XX（向かい風）・TXX と UX.X・X.X（上り）・DX.X（0.0–2.0：FMSPG p.106）。入れるまでダッシュ（「乗員の入力の後に出す」：FCOM p.1319）。風は V1 の計算に入る。替えると選んだ速度を消す（性能データの変化）。
+  - TRIM/CG：整数 0–40 % MAC（109）、トリムを出す（前は PAX/CARGO のページで CG が出た後でしか入らなかった）。削除でダッシュ。
+  - POS SHIFT：±X・XX（100 m 単位、109）。滑走路は経路の段 5 で（今は RW***）。TO/GA で位置を移すのは段 10。
+  - PRE-FLT：POS INIT（IRS の位置）、ROUTE（出発地と目的地）、PERF INIT（GR WT、CRZ ALT、COST INDEX、RESERVES）の最初の未了のページを見出し PRE-FLT と 6R に出し、押すとそのページへ。終わっていれば破線と THRUST LIM>（前は POS INIT> の固定）。
+- 試験：`tests/fms/takeoff_ref_test.lua`（37 件）。X-Plane：`s83_takeoff_ref` 18/18（RJAA の地上で、THRUST LIM の SEL 26°C と 75°F（OAT も °F）と削除、TAKEOFF REF の既定 1000FT・FLAPS 5（小さい字）、10/1500・E/O ACCEL HT 1200・THR REDUCTION 1500、WIND/SLOPE H40/U1.0 で V1 の計算値が 130 から 134、CG 25 でトリム 4.8、POS SHIFT +0300M、PRE-FLT の ROUTE> で RTE へ。1 回目は SEL の空白の確かめ方の誤り（空白 24 文字の行を "" と比べた）で 17/18、直して流し直した）。Lua の誤りなし。CDU を撮った。

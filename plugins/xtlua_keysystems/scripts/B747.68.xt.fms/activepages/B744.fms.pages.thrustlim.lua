@@ -31,11 +31,21 @@ fmsPages["THRUSTLIM"].getPage=function(self,pgNo,fmsID)--dynamic pages need to b
 	  if clbderate==0 then c1="<ARM>" end
 	  if clbderate==1 then c2="<ARM>" end
 	  if clbderate==2 then c3="<ARM>" end
+	  -- SEL large, the OAT (in F with an F SEL) and the takeoff limit small
+	  -- (6-1/6-2 step 3b; FCOM p.1314-1315)
+	  local selC = tonumber(fmsModules["data"]["thrustsel"])
+	  local inF = str_trim(fmsModules["data"]["selunit"]) == "F"
+	  local selText = ""
+	  if selC then
+		selText = inF and (str_trim(fmsModules["data"]["thrustself"]) .. "`F") or string.format("%d`C", selC)
+	  end
+	  thrust_sel_line = string.format("%-24s", selText)
+	  local oat = inF and math.floor(simDR_OAT * 9 / 5 + 32 + 0.5) or math.floor(simDR_OAT + 0.5)
+	  thrust_oat_line = string.format("          %-5s%9s", string.format("%d`%s", oat, inF and "F" or "C"), thrust_ref)
 	    return{
 	"       THRUST LIM       ",
 	"                        ",
-	--""..fmsModules["data"]["thrustsel"] .."`C      "..string.format("%02d",simDR_OAT).."`C         ",
-	""..fmsModules["data"]["thrustsel"] .."`C     "..string.format("%02d",simDR_OAT).."`C      "..thrust_ref,
+	thrust_sel_line,
 	"                        ",
 	"<TO   "..t1.." "..c1.."    CLB>",
 	"                        ",
@@ -43,7 +53,7 @@ fmsPages["THRUSTLIM"].getPage=function(self,pgNo,fmsID)--dynamic pages need to b
 	"                        ",
 	"<TO 2 "..t3.." "..c3.."  CLB 2>",
 	"                        ",
-	"                        ", 
+	"                        ",
 	"------------------------",
 	"<INDEX          TAKEOFF>"
 		}
@@ -75,7 +85,7 @@ if simDR_onGround==1 then
 "                        ",
 --" SEL      OAT D-TO 1 N1 ",
 " SEL      OAT  "..string.format("%-6s", to_mode).." "..string.format("%3s", thrust_text),
-"                        ",
+(thrust_oat_line or "                        "),
 "                        ",
 "                        ",
 "                        ",
@@ -167,7 +177,6 @@ fmsFunctionsDefs["THRUSTLIM"]["L2"]={"setDref","TO"}
 fmsFunctionsDefs["THRUSTLIM"]["L3"]={"setDref","TO1"}
 fmsFunctionsDefs["THRUSTLIM"]["L4"]={"setDref","TO2"}
 fmsFunctionsDefs["THRUSTLIM"]["L6"]={"setpage","INITREF"}
-fmsFunctionsDefs["THRUSTLIM"]["R1"]={"setdata","thrustn1"}
 fmsFunctionsDefs["THRUSTLIM"]["R2"]={"setDref","CLB"}
 fmsFunctionsDefs["THRUSTLIM"]["R3"]={"setDref","CLB1"}
 fmsFunctionsDefs["THRUSTLIM"]["R4"]={"setDref","CLB2"}
