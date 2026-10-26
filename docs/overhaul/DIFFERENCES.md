@@ -28,7 +28,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 表示（PFD・ND・EICAS） | ほぼ作り直し済み（5-2 段 1：表示器と EIU、段 2：ソース選択の比較、段 3：速度テープ、段 4：PFD の気圧・PLI・FPV・ILS と旗、段 5：ND の向き・APP・VOR・DATA・POS・地図の記号・空港・HDG REF・トレンドベクトル、段 6：時計、EICAS の部分表示と compact、段 7：パネルの表示の条件の重なり） | TERR（外部のプラグイン頼み）、ND の FMC の記号の残り（S/C・E/D など：FMC の作り直しで）、405 型の RADIO/BARO の minimums |
 | 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記。段 5d：PFD の TCAS RA・トランスポンダのコード・ND の WXR の文字） | FMC の位置への GPS の更新、GPWS の地形の look-ahead、PWS、無線の自動同調（FMC の作り直しで） |
 | FMC | 作り直し中（段取り：経路を自前で持ち、12 段で。notes/ATA-34-61-FMC.md §10。段 1：小修正） | 経路モデル、ホールド、LNAV・VNAV、予測 |
-| CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正） | 3 台が 1 つを共有、MOD/EXEC、入力の検査、データリンク |
+| CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み） | 3 台が 1 つを共有、MOD/EXEC、入力の検査、データリンク |
 | 自動操縦・FD | 未着手 | ロールが X-Plane の AP 頼み、LOC・TO/GA・autoland の則 |
 | オートスロットル・推力管理 | 未着手 | 推力制限のモード、assumed temperature、THR・HOLD、操縦者の override |
 | 通信（ATA 23） | 未着手 | VHF の電源、ACP の連動、VHF C と HF が無い |
@@ -377,14 +377,15 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 経路の管理と ND の経路線は X-Plane 標準の FMS 任せで、機体は自前の LNAV で別の経路を飛ぶ（FMC-34・35）。FMC 2 台の扱いが無い（FMC-36）。
 - 実機に合わせた点（段 1）：上昇は SPD TRANS の高度まで SPD TRANS の速度（制限速度と VREF30+100 の大きい方）、その上は ECON（前は取り違え）。SPD RESTR は入れるまでダッシュ。遷移高度で気圧を自動で STD にしない。XTK による UNABLE RNP の誤警報をやめた。RESET MCP ALT は T/D の 2 分前。ETA の速度の下限の単位の誤り。VOR の自動同調の 2 番目の局。AP の毎フレームの完全な GC と decode をやめた。
 
-### CDU：作り直し中（6-2 段 1）
+### CDU：作り直し中（6-2 段 1・2）
 
-- CLR・DEL・+/- の動き（CDU-01）。3 台が X-Plane 標準の CDU 1 つを共有する（CDU-02）。
+- 3 台が X-Plane 標準の CDU 1 つを共有する（RTE・LEGS・DEP ARR などの X-Plane のページ：CDU-02。段 5 で）。
 - 独自のページに MOD・EXEC・ERASE が無く、即時に効く（CDU-03）。題名、大字と小字（CDU-04・05）。キーで開くページが文脈で変わらない（CDU-06）。
 - 入力の検査が不正確（CDU-07〜09）。
 - 空中の THRUST LIM の GA・CON・CRZ は選べない（KEY/FUNCTION INOP。推力管理 6-4 で。前は離陸の derate が動いた：CDU-10）。TAKEOFF REF の V speeds の選択の流れ（CDU-12）。PERF INIT・VNAV・PROGRESS・NAV RADIO のページの不足（CDU-13〜16）。
-- 無いページ（RTE 2、REF NAV DATA、DESCENT FORECAST など。CDU-18）。故障・電源・メッセージの扱い（CDU-19〜21）。
+- 無いページ（RTE 2、REF NAV DATA、DESCENT FORECAST など。CDU-18）。故障の扱い（CDU-19）。MSG・DSPY・OFST・FAIL の灯（3D に無い：CDU-22）。
 - データリンク：アップリンクの処理が無い（CDU-34〜38）。
+- 実機に合わせた点（段 2）：CLR は 1 字、押し続けると全部、DEL は空のときだけ、+/- は交互、メッセージの間は打鍵を受けない。入力のメッセージはその CDU だけ、FMC のメッセージは全 CDU に出てどれかの CLR で全部から消え、条件が続く間は再び出ない。alert で >FMC MESSAGE。ページはすぐ切り替わる。NEXT は最後のページから 1 ページ目へ。CDU の電源が無いとキーが効かず、戻ると MENU。
 - 実機に合わせた点（段 1）：CRZ CG の範囲（前は文字で描画が止まった）、APPROACH REF の FLAP/SPEED の入力の形と複写・削除、EMERGENCY REPORT の DIVERT TO は経路を書き換えない、SPD TRANS は削除だけ、速度の入力は CAS 100–400。
 
 ### 自動操縦・FD（ATA 22）：未着手

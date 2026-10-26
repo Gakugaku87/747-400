@@ -32,158 +32,198 @@ function fmsClearNotify(notification)
   end
 end
 local lastKeyDown=""
-function keyDown(fmsModule,key)
-  run_after_time(switchCustomMode, 0.5)
-  print(fmsModule.. " do " .. key)
-  if(string.len(lastKeyDown) > 2) then
-    B747DR_fdr_log_json=lastKeyDown.." then "..fmsModule.. " do " .. key
-  else
-    B747DR_fdr_log_json=fmsModule.. " do " .. key
+-- the CDUs' scratchpads and messages and the FMC's messages (6-1/6-2 step
+-- 2; B747.68.cdu_model.lua; notes/ATA-34-61-CDU.md §3.1, §3.2, §4.1):
+-- each CDU its own scratchpad and entry messages, the FMC's messages on
+-- every CDU (FMSPG p.39)
+local C = B747_cdu_model
+local cduState = {fmsL = C.new(), fmsC = C.new(), fmsR = C.new()}
+local fmcMsgs = C.fmc_new()
+-- the CDUs' power: the left CDU on the main standby bus, the right on the
+-- F/O transfer bus (FCOM p.800, p.804), the centre on the F/O transfer bus
+-- (estimate): electrical/display_has_power[8], [7], [6], as the panel's
+-- screens; no keys and no drawing without it, the MENU page when it comes
+-- (FMSPG p.53)
+B747DR_cdu_display_power = find_dataref("laminar/B747/electrical/display_has_power")
+local CDU_POWER = {fmsL = 8, fmsC = 6, fmsR = 7}
+local cduWasPowered = {}
+function cduPowered(fmsModule)
+  return (B747DR_cdu_display_power[CDU_POWER[fmsModule]] or 0) > 0
+end
+-- the FMC's messages from laminar/B747/fms/notification's flags
+-- (B744.notifications.lua + 1): the systems set a flag while its condition
+-- holds; an event's flag, set once, is posted and cleared so that it can
+-- come again. FCOM's advisories among them (p.1435); the rest are alerts
+-- (p.1431-1434)
+local FMC_EVENT = {["PERF/VNAV UNAVAILABLE"] = true, ["DESTINATION NOT SET"] = true, ["TAKEOFF SPEEDS DELETED"] = true}
+local FMC_ADVISORY = {["TAKEOFF SPEEDS DELETED"] = true}
+function B747_cdu_sync_fmc_messages(flags)
+  for i = 1, 54 do
+    local m = B747_FMCAlertMsg[i]
+    local name = m.name
+    local text = name
+    if m.data ~= "" then text = string.gsub(name, "___", m.data) end
+    local on = (flags[i] or 0) > 0
+    if FMC_EVENT[name] then
+      if on then
+        C.fmc_post(fmcMsgs, text, not FMC_ADVISORY[name])
+        flags[i] = 0
+      end
+    else
+      C.fmc_set(fmcMsgs, text, on, not FMC_ADVISORY[name])
+    end
   end
-  lastKeyDown =  fmsModule.. " did " .. key
+end
+function B747_cdu_fmc_alert()
+  return C.fmc_alert(fmcMsgs)
+end
+-- the scratchpad's keys, by B747.68.cdu_model.lua's names
+local SP_KEYS = {space = "SP", slash = "/", ["."] = ".", ["-"] = "+/-", del = "DEL", clear = "CLR"}
+-- a CDU's page now: the custom pages at once (no blank half second:
+-- CDU-23); X-Plane's after its CDU has turned (switchCustomMode)
+local function switchNow(fmsO)
+  fmsO.inCustomFMC = fmsO.targetCustomFMC
+  fmsO.currentPage = fmsO.targetPage
+  fmsO.pgNo = fmsO.targetpgNo
+end
+-- the page's keys: the function keys, the line select keys, NEXT, PREV,
+-- EXEC, and the keys passed to X-Plane's CDU on its pages
+local function pageKey(fmsModule,key)
+  local fmsO=fmsModules[fmsModule]
   if key=="index" then
-      fmsModules[fmsModule].targetCustomFMC=true
-      fmsModules[fmsModule].targetPage="INITREF"
-      fmsModules[fmsModule].targetpgNo=1
+      fmsO.targetCustomFMC=true
+      fmsO.targetPage="INITREF"
+      fmsO.targetpgNo=1
       return
   elseif key=="fpln" then --RTE
-      fmsModules[fmsModule].targetCustomFMC=true
+      fmsO.targetCustomFMC=true
       simCMD_FMS_key[fmsModule]["fpln"]:once()
-      fmsModules[fmsModule].targetPage="RTE1"
-      fmsModules[fmsModule].targetpgNo=1
-      --[[fmsModules[fmsModule].inCustomFMC=false
-      simCMD_FMS_key[fmsModule]["fpln"]:once()]]
+      fmsO.targetPage="RTE1"
+      fmsO.targetpgNo=1
       return
   elseif key=="clb" then
-      fmsModules[fmsModule].targetCustomFMC=false
+      fmsO.targetCustomFMC=false
       simCMD_FMS_key[fmsModule]["dep_arr"]:once()
-      fmsModules[fmsModule].targetPage="DEPARR"
-      fmsModules[fmsModule].targetpgNo=1
+      fmsO.targetPage="DEPARR"
+      fmsO.targetpgNo=1
       return
   elseif key=="crz" then
-      fmsModules[fmsModule].targetCustomFMC=true
-      fmsModules[fmsModule].targetPage="ATCINDEX"
-      fmsModules[fmsModule].targetpgNo=1
+      fmsO.targetCustomFMC=true
+      fmsO.targetPage="ATCINDEX"
+      fmsO.targetpgNo=1
       return
   elseif key=="des" then
-      fmsModules[fmsModule].targetCustomFMC=true
-      --simCMD_FMS_key[fmsModule]["clb"]:once()
-      fmsModules[fmsModule].targetPage="VNAV"
-      fmsModules[fmsModule].targetpgNo=1
+      fmsO.targetCustomFMC=true
+      fmsO.targetPage="VNAV"
+      fmsO.targetpgNo=1
       return
   elseif key=="dir_intc" then
-      fmsModules[fmsModule].targetCustomFMC=false
-      fmsModules[fmsModule].targetPage="FIX"
+      fmsO.targetCustomFMC=false
+      fmsO.targetPage="FIX"
       simCMD_FMS_key[fmsModule]["fix"]:once()
-      fmsModules[fmsModule].targetpgNo=1
+      fmsO.targetpgNo=1
       return
   elseif key=="legs" then
-      
       if simDR_onGround ==1 or simDR_version>=120012 then
-        fmsModules[fmsModule].targetCustomFMC=true
-        fmsModules[fmsModule].targetPage="LEGS"
+        fmsO.targetCustomFMC=true
+        fmsO.targetPage="LEGS"
         simCMD_FMS_key[fmsModule]["legs"]:once()
-        fmsModules[fmsModule].targetpgNo=1
+        fmsO.targetpgNo=1
       else
-        fmsModules[fmsModule].targetCustomFMC=false
-        fmsModules[fmsModule].targetPage="RTE2"
+        fmsO.targetCustomFMC=false
+        fmsO.targetPage="RTE2"
         simCMD_FMS_key[fmsModule]["dir_intc"]:once()
-        fmsModules[fmsModule].targetpgNo=1
+        fmsO.targetpgNo=1
       end
       return
   elseif key=="dep_arr" then
-      fmsModules[fmsModule].targetCustomFMC=false
-      fmsModules[fmsModule].targetPage="HOLD"
+      fmsO.targetCustomFMC=false
+      fmsO.targetPage="HOLD"
       simCMD_FMS_key[fmsModule]["hold"]:once()
-      fmsModules[fmsModule].targetpgNo=1
+      fmsO.targetpgNo=1
       return
   elseif key=="hold" then --FMC COMM
-      fmsModules[fmsModule].targetCustomFMC=true 
-      fmsModules[fmsModule].targetPage="FMCCOMM"
-      fmsModules[fmsModule].targetpgNo=1
+      fmsO.targetCustomFMC=true
+      fmsO.targetPage="FMCCOMM"
+      fmsO.targetpgNo=1
       return
   elseif key=="fix" then --menu
-      fmsModules[fmsModule].targetCustomFMC=true
-      fmsModules[fmsModule].targetPage="INDEX"
-      fmsModules[fmsModule].targetpgNo=1
+      fmsO.targetCustomFMC=true
+      fmsO.targetPage="INDEX"
+      fmsO.targetpgNo=1
       return
   elseif key=="navrad" then
-      fmsModules[fmsModule].targetCustomFMC=true
-      fmsModules[fmsModule].targetPage="NAVRAD"
-      fmsModules[fmsModule].targetpgNo=1
+      fmsO.targetCustomFMC=true
+      fmsO.targetPage="NAVRAD"
+      fmsO.targetpgNo=1
       return
   elseif key=="prog" then
-      fmsModules[fmsModule].targetCustomFMC=true
-      --simCMD_FMS_key[fmsModule][key]:once()
-      fmsModules[fmsModule].targetPage="PROGRESS"
-      fmsModules[fmsModule].targetpgNo=1
+      fmsO.targetCustomFMC=true
+      fmsO.targetPage="PROGRESS"
+      fmsO.targetpgNo=1
       return
   end
 
-  if not fmsModules[fmsModule].targetCustomFMC then
+  if not fmsO.targetCustomFMC then
     if simCMD_FMS_key[fmsModule][key]~=nil then
       simCMD_FMS_key[fmsModule][key]:once()
       print(fmsModule.. " did " .. key)
     end
-     if key=="clear" then
-       if string.len(fmsModules[fmsModule].notify)>0 then
-	 fmsClearNotify(fmsModules[fmsModule].notify)
-	 fmsModules[fmsModule].notify=""
-	 
-	else 
-	  fmsModules[fmsModule].scratchpad="" 
-	end
-     end
-  else
-    page=fmsModules[fmsModule].targetPage
-
-    
-     
-     if key=="clear" then
-       simCMD_FMS_key[fmsModule]["clear"]:once()
-       if string.len(fmsModules[fmsModule].notify)>0 then 
-	 fmsClearNotify(fmsModules[fmsModule].notify)
-	 fmsModules[fmsModule].notify=""
-	else 
-	  fmsModules[fmsModule].scratchpad="" 
-	end
-       return
-     end
-     if hasChild(fmsFunctionsDefs[page],key) then
-      print(fmsModule.. " found " .. fmsFunctionsDefs[page][key][1] .. " for " .. key)
-      fmsFunctions[ fmsFunctionsDefs[page][key][1] ](fmsModules[fmsModule],fmsFunctionsDefs[page][key][2])
-      print(fmsModule.. " did " .. key .. " for " .. page)
-      return
-     elseif string.len(key)==1 then
-       fmsModules[fmsModule].scratchpad=fmsModules[fmsModule].scratchpad .. key
-     elseif key=="slash" then
-       fmsModules[fmsModule].scratchpad=fmsModules[fmsModule].scratchpad.."/"
-       return
-     elseif key=="space" then
-       fmsModules[fmsModule].scratchpad=fmsModules[fmsModule].scratchpad.." "
-       return
-     elseif key=="del" then
-       if fmsModules[fmsModule].scratchpad=="" then 
-	 fmsModules[fmsModule].scratchpad="DELETE"
-       elseif fmsModules[fmsModule].scratchpad~="DELETE" then
-	  fmsModules[fmsModule].scratchpad=string.sub(fmsModules[fmsModule].scratchpad,1,-2)
-       end
-       return
-     elseif key=="next" then
-       fmsModules[fmsModule].targetpgNo=fmsModules[fmsModule].pgNo+1
-       print(fmsModule.. " did " .. key .. " for " .. page)
-       return 
-     elseif key=="prev" and fmsModules[fmsModule].pgNo > 1 then
-       fmsModules[fmsModule].targetpgNo=fmsModules[fmsModule].pgNo-1
-       print(fmsModule.. " did " .. key .. " for " .. page)
-       return  
-     elseif key=="exec" then
-       simCMD_FMS_key[fmsModule][key]:once()
-       return  
-     else
-       fmsModules[fmsModule].notify="KEY/FUNCTION INOP"
-     end
+    return
   end
+  local page=fmsO.targetPage
+  if hasChild(fmsFunctionsDefs[page],key) then
+    print(fmsModule.. " found " .. fmsFunctionsDefs[page][key][1] .. " for " .. key)
+    fmsFunctions[ fmsFunctionsDefs[page][key][1] ](fmsO,fmsFunctionsDefs[page][key][2])
+    print(fmsModule.. " did " .. key .. " for " .. page)
+  elseif key=="next" then
+    -- NEXT on the last page: the first (FMSPG p.42)
+    local n = fmsPages[page] and fmsPages[page]:getNumPages(fmsModule) or 1
+    if fmsO.pgNo < n then fmsO.targetpgNo=fmsO.pgNo+1 else fmsO.targetpgNo=1 end
+  elseif key=="prev" and fmsO.pgNo > 1 then
+    fmsO.targetpgNo=fmsO.pgNo-1
+  elseif key=="exec" then
+    simCMD_FMS_key[fmsModule][key]:once()
+  else
+    fmsO.notify="KEY/FUNCTION INOP"
+  end
+end
+function keyDown(fmsModule,key,phase,duration)
+  phase=phase or 0
+  local fmsO=fmsModules[fmsModule]
+  local st=cduState[fmsModule]
+  if not cduPowered(fmsModule) then return end
+  if phase==0 then
+    print(fmsModule.. " do " .. key)
+    if(string.len(lastKeyDown) > 2) then
+      B747DR_fdr_log_json=lastKeyDown.." then "..fmsModule.. " do " .. key
+    else
+      B747DR_fdr_log_json=fmsModule.. " do " .. key
+    end
+    lastKeyDown =  fmsModule.. " did " .. key
+  end
+  -- the scratchpad's keys on the custom pages, and CLR on a message on any
+  -- page (FCOM p.1212-1213; FMSPG p.39-43)
+  local k=SP_KEYS[key] or (string.len(key)==1 and key) or nil
+  if k and (fmsO.targetCustomFMC or (k=="CLR" and C.message(st, fmcMsgs))) then
+    if k=="CLR" and phase==0 and fmsO.targetCustomFMC then
+      simCMD_FMS_key[fmsModule]["clear"]:once() -- X-Plane's CDU's message (RTE, LEGS entries)
+    end
+    st.sp=fmsO.scratchpad
+    C.key(st, fmcMsgs, k, phase, duration)
+    fmsO.scratchpad=st.sp
+    return
+  end
+  if phase~=0 then return end
+  fmsO.notify=""
+  pageKey(fmsModule,key)
+  st.sp=fmsO.scratchpad
+  -- a message the page set (notify): this CDU's (FMSPG p.39)
+  if fmsO.notify~="" then
+    C.error(st, fmsO.notify)
+    fmsO.notify=""
+  end
+  if fmsO.targetCustomFMC then switchNow(fmsO) else run_after_time(switchCustomMode, 0.5) end
 end
 
 fmsKeyFunc={}
@@ -266,7 +306,7 @@ function create_keypad(fms)
     key_space_CMDhandler=function (phase, duration) if phase ==0 then keyDown(fmsKeyFunc[fms]["funcs"]["parent"], "space") end end,
     key_del_CMDhandler=function (phase, duration) if phase ==0 then keyDown(fmsKeyFunc[fms]["funcs"]["parent"], "del") end end,
     key_slash_CMDhandler=function (phase, duration) if phase ==0 then keyDown(fmsKeyFunc[fms]["funcs"]["parent"], "slash") end end,
-    key_clear_CMDhandler=function (phase, duration) if phase ==0 then keyDown(fmsKeyFunc[fms]["funcs"]["parent"], "clear") end end
+    key_clear_CMDhandler=function (phase, duration) keyDown(fmsKeyFunc[fms]["funcs"]["parent"], "clear", phase, duration) end
   }
   fmsKeyFunc[fms].funcs.parent=fms
 end
@@ -492,69 +532,84 @@ B747CMD_fms1_key_clear              = deferred_command("laminar/B747/".. fmskeyi
 end  
 
 
+local BLANK = "                        "
+local pageError = {}
+local lastNativeMsg = {}
 function fms:B747_fms_display()
     local thisID=self.id
-   -- local m="false"
-   -- if self.inCustomFMC then m="true" end
-    --print("B747_fms_display "..thisID.." "..m.." "..self.currentPage)
-    if self.currentPage=="FMC" then 
-      self.inCustomFMC = false 
+    local st=cduState[thisID]
+    -- no drawing without power; the MENU page when power comes (FMSPG p.53)
+    local powered=cduPowered(thisID)
+    if powered and cduWasPowered[thisID]==false then
+      self.targetCustomFMC=true
+      self.targetPage="INDEX"
+      self.targetpgNo=1
+      switchNow(self)
+    end
+    cduWasPowered[thisID]=powered
+    if not powered then return end
+    -- a message a page set while drawing (notify): this CDU's
+    if self.notify~=nil and self.notify~="" then
+      C.error(st, self.notify)
+      self.notify=""
+    end
+    if self.currentPage=="FMC" then
+      self.inCustomFMC = false
     end
     if self.targetPage=="FMC" then
-      self.targetCustomFMC= false 
+      self.targetCustomFMC= false
     end
-    if self.inCustomFMC~=self.targetCustomFMC or self.currentPage~=self.targetPage or self.pgNo~=self.targetpgNo then 
+    if self.inCustomFMC~=self.targetCustomFMC or self.currentPage~=self.targetPage or self.pgNo~=self.targetpgNo then
       for i=1,14,1 do
-      B747DR_fms[thisID][i]="                        "
-      B747DR_fms_s[thisID][i]="                        "
+      B747DR_fms[thisID][i]=BLANK
+      B747DR_fms_s[thisID][i]=BLANK
       end
-      return 
+      return
     end
-    
-    --self.swipeOut=1
-    
+
     local inCustomFMC=self.inCustomFMC
     local page=self.currentPage
-    
 
     if B747DR_srcfms[thisID][14]=="[NAV DATA OUT OF DATE  ]" then simCMD_FMS_key[thisID]["clear"]:once() return end
+    -- X-Plane's CDU's scratchpad message (its pages' entries) as this CDU's
+    local native=B747DR_srcfms[thisID][14]
+    if type(native)~="string" then native="" end
+    if string.len(string.gsub(native,"[ %[%]]",""))>0 then
+      if native~=lastNativeMsg[thisID] then
+        lastNativeMsg[thisID]=native
+        if inCustomFMC then C.error(st, cleanFMSLine(native):match("^%s*(.-)%s*$")) end
+      end
+    else
+      lastNativeMsg[thisID]=nil
+    end
     if not inCustomFMC then
       for i=1,13,1 do
 	      B747DR_fms[thisID][i]=cleanFMSLine(B747DR_srcfms[thisID][i])
-	      B747DR_fms_s[thisID][i]="                        "
+	      B747DR_fms_s[thisID][i]=BLANK
       end
-      if string.len(self.notify)>0 then 
-        B747DR_fms[thisID][14]=self.notify
-        B747DR_fms_s[thisID][14]="                        "
-      else
-        B747DR_fms[thisID][14]=cleanFMSLine(B747DR_srcfms[thisID][14])
-	      B747DR_fms_s[thisID][14]="                        "
-      end
+      B747DR_fms[thisID][14]=C.message(st, fmcMsgs) or cleanFMSLine(native)
+      B747DR_fms_s[thisID][14]=BLANK
     else
-      --print("getNumPages "..thisID)
-      if self.pgNo>fmsPages[page]:getNumPages(thisID) then self.pgNo=fmsPages[page]:getNumPages(thisID) self.targetpgNo=fmsPages[page]:getNumPages(thisID) end
-      if self.pgNo<1 then self.pgNo=1 self.targetpgNo=1 end
-      --print("getPage "..thisID)
-      local fmsPage = fmsPages[page]:getPage(self.pgNo,thisID);
-      --print("getSmallPage "..thisID)
-      local fmsPagesmall = fmsPages[page]:getSmallPage(self.pgNo,thisID);
-      local tmpSRC
-      for i=1,13,1 do
-	      tmpSRC=B747DR_srcfms[thisID][i] -- make sure src is always fresh
-	      B747DR_fms[thisID][i]=fmsPage[i]
+      -- the page drawn under pcall: an error blanks it and goes to the log
+      -- once, the other CDUs and modules go on (CDU-09)
+      local ok,fmsPage,fmsPagesmall=pcall(function()
+        local n=fmsPages[page]:getNumPages(thisID)
+        if self.pgNo>n then self.pgNo=n self.targetpgNo=n end
+        if self.pgNo<1 then self.pgNo=1 self.targetpgNo=1 end
+        return fmsPages[page]:getPage(self.pgNo,thisID), fmsPages[page]:getSmallPage(self.pgNo,thisID)
+      end)
+      if not ok then
+        if not pageError[page] then
+          pageError[page]=true
+          print("CDU page "..tostring(page).." error: "..tostring(fmsPage))
+        end
+        fmsPage,fmsPagesmall={},{}
       end
       for i=1,13,1 do
-	      B747DR_fms_s[thisID][i]=fmsPagesmall[i]
+	      B747DR_fms[thisID][i]=fmsPage[i] or BLANK
+	      B747DR_fms_s[thisID][i]=fmsPagesmall[i] or BLANK
       end
-      if string.len(string.gsub(B747DR_srcfms[thisID][14],"[ %[%]]",""))>0 then 
-        B747DR_fms[thisID][14]=B747DR_srcfms[thisID][14]
-        self.notify=B747DR_srcfms[thisID][14]--string.gsub(B747DR_srcfms[thisID][14],"[ %[%]]","")
-        print("notify["..self.notify.."]")
-      elseif string.len(self.notify)>0 then 
-	      B747DR_fms[thisID][14]=self.notify
-      else
-	      B747DR_fms[thisID][14]=self.scratchpad;
-      end
+      st.sp=self.scratchpad or ""
+      B747DR_fms[thisID][14]=C.line(st, fmcMsgs)
     end
-    
 end
