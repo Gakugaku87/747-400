@@ -432,6 +432,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 段 6a（時計）：時計のモデル（`B747.60.clock_model.lua`）を時計のグルー（`B747.60.xt.fltInst03.lua`、両席）が動かす。fltInst02 の after_physics が `B747_clocks()`、flight_start が `B747_clocks_flight_start()` を呼ぶ。出力は新設 `fltInst/<席>/clock_on`・`clock_utc_hours`・`clock_utc_minutes`・`clock_day`・`clock_month`・`clock_et_show` と今までの時計の dataref（init `B747.60.fltInst`）。
 - 段 6b-1（EICAS の部分表示と逸脱の印）：エンジンの表示モデルが逸脱の 3 群を新設 `engines/sec_exceed` に出し、EICAS の形式のモデル（`B747.60.eicas_format_model.lua`）を表示のグルー（`B747.60.xt.displays.lua` の `eicas_format`）が動かす。選んだ二次表示と表示器のモデルの主・二次 EICAS を入れ、新設 `eicas/*`（init `B747.60.fltInst`）を出す。電源投入時は `dsp/synoptic_display` に ENG を書く。
 - 段 6b-2（EICAS の compact の形）：パネルだけ。主 EICAS の `GROUP Engine` が `eicas/compact` で通常の見出しとテープを隠し、新しい `GROUP Compact` が `eicas/cmp_rows` で二次の行（二次エンジンのページの数字の写し）を出す。
+- 段 7（SHOW の条件の重なり）：パネルだけ。パネルの部品とグループは 1 つの dataref の条件しか見ないので、別々の dataref の条件は入れ子のグループで重ねる（道具 `panel_show_and.lua`。新しくパネルを書く道具も同じ形にする）。
 
 ## 5. 表示系（PFD・ND・EICAS・CDU）
 
