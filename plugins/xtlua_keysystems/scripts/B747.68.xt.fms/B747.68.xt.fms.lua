@@ -883,7 +883,10 @@ dofile("B747.68.route_model.lua")
 -- read (fltdep, fltdst, runway; TRANS ALT from a new origin: FCOM p.1329)
 -- and X-Plane's FMS (its ND line; the AFDS's LNAV and VNAV until they are
 -- rebuilt: xtlua/loadtoFMS) follow
+dofile("B747.68.proc_model.lua")
 B747_fmc_route=B747_route_model.new(B747_navdb,B747_fmc_navdb)
+-- the terminal procedures (6-1/6-2 step 5d)
+B747_fmc_route.P=B747_proc_model
 local routeLoaded=nil
 local function fms_text(id) return (string.gsub(fmsModules["data"][id],"%s+$","")) end
 function B747_fmc_route_changed()

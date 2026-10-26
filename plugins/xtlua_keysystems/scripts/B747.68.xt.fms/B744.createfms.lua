@@ -95,7 +95,7 @@ local lastFmcPage = {}
 local inFmc = {}
 local FMC_KEYS = {index = true, fpln = true, clb = true, crz = true, des = true, dir_intc = true,
   legs = true, dep_arr = true, hold = true, navrad = true, prog = true}
-local RETURN_KEY = {RTE2 = "legs", DEPARR = "clb", FIX = "dir_intc",
+local RETURN_KEY = {RTE2 = "legs", FIX = "dir_intc",
   HOLD = "dep_arr"}
 -- the page's keys: the function keys, the line select keys, NEXT, PREV,
 -- EXEC, and the keys passed to X-Plane's CDU on its pages
@@ -118,11 +118,8 @@ local function pageKey(fmsModule,key)
       fmsO.targetPage="RTE1"
       fmsO.targetpgNo=1
       return
-  elseif key=="clb" then
-      fmsO.targetCustomFMC=false
-      simCMD_FMS_key[fmsModule]["dep_arr"]:once()
-      fmsO.targetPage="DEPARR"
-      fmsO.targetpgNo=1
+  elseif key=="clb" then --DEP ARR
+      B747_cdu_deparr_page(fmsO)
       return
   elseif key=="crz" then
       fmsO.targetCustomFMC=true

@@ -436,7 +436,8 @@ M.dms = dms
 
 -- an airport's CIFP: {runways = {RW16L = {ident, lat, lon, elev (feet),
 -- loc (the localizer's identifier or nil), cat, displaced (feet)}},
--- sid/star/appch = {name = {transition = {the legs' fields}}}, order =
+-- sid/star/appch = {name = {transition = {the legs' fields, trimmed; desc
+-- the description code as it is}}}, order =
 -- {sid/star/appch = the names in the file's order}}. Read once; nil when
 -- the airport has none.
 function M.cifp(db, icao)
@@ -465,8 +466,13 @@ function M.cifp(db, icao)
                 end
             end
         elseif KIND[rtype] then
-            local fields = {}
-            for v in (rest:gsub(";$", "") .. ","):gmatch("([^,]*),") do fields[#fields + 1] = v:match("^%s*(.-)%s*$") end
+            local fields, raw = {}, {}
+            for v in (rest:gsub(";$", "") .. ","):gmatch("([^,]*),") do
+                raw[#raw + 1] = v
+                fields[#fields + 1] = v:match("^%s*(.-)%s*$")
+            end
+            -- the waypoint description code as it is (its characters' places)
+            fields.desc = raw[9]
             local kind, name, trans = KIND[rtype], fields[3], fields[4]
             local procs = c[kind]
             local p = procs[name]

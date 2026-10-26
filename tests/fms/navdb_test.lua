@@ -120,8 +120,8 @@ T.check(r and math.abs(r.lat - 35.01) < 1e-9 and math.abs(r.lon - 140.005) < 1e-
 r = c and c.runways.RW34L
 T.check(r and r.loc == nil and r.cat == nil and r.displaced == 500 and math.abs(r.lat - (34 + 59 / 60)) < 1e-9,
     "RW34L: no localizer, displaced 500 ft")
-T.check(c and #c.order.sid == 1 and c.order.sid[1] == "ZULU1" and #c.sid.ZULU1.RW16R == 2 and #c.sid.ZULU1.ALPHA == 1,
-    "the SID ZULU1: the runway transition RW16R (2 legs) and the transition ALPHA")
+T.check(c and #c.order.sid == 1 and c.order.sid[1] == "ZULU1" and #c.sid.ZULU1.RW16R == 2 and #c.sid.ZULU1.ALPHA == 2,
+    "the SID ZULU1: the runway transition RW16R (2 legs) and the transition ALPHA (2)")
 local leg = c and c.sid.ZULU1.RW16R[1]
 T.check(leg and leg[1] == "010" and leg[5] == "ZA001" and leg[12] == "CF" and leg[14] == "ZZV" and leg[26] == "14000",
     "the SID's first leg: its fields (sequence, fix, path terminator, navaid, transition altitude)")
