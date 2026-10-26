@@ -425,6 +425,10 @@ B747DR_airspeed_flapsRef                              = deferred_dataref("lamina
 B747DR_airspeed_V1                              = deferred_dataref("laminar/B747/airspeed/V1", "number")
 B747DR_airspeed_Vr                              = deferred_dataref("laminar/B747/airspeed/Vr", "number")
 B747DR_airspeed_V2                              = deferred_dataref("laminar/B747/airspeed/V2", "number")
+-- the FMC's computed takeoff speeds (6-1/6-2 step 3b), before selection
+B747DR_airspeed_V1_ref                          = deferred_dataref("laminar/B747/airspeed/V1_ref", "number")
+B747DR_airspeed_Vr_ref                          = deferred_dataref("laminar/B747/airspeed/Vr_ref", "number")
+B747DR_airspeed_V2_ref                          = deferred_dataref("laminar/B747/airspeed/V2_ref", "number")
 B747DR_airspeed_Va                              = deferred_dataref("laminar/B747/airspeed/Va", "number")
 B747DR_airspeed_Vf0                             = deferred_dataref("laminar/B747/airspeed/Vf0", "number")
 B747DR_airspeed_Vf1                             = deferred_dataref("laminar/B747/airspeed/Vf1", "number")
