@@ -454,6 +454,7 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 描画：ページの描画を `pcall` で守り、誤りはページを空白にして Log.txt に 1 回だけ（CDU-09 の類が全体を止めないように）。
 - 電源：左の CDU は main standby bus、右は F/O transfer bus（FCOM p.800, p.804）、中央は F/O transfer bus（推定）。`electrical/display_has_power[8]`・`[7]`・`[6]`（パネルの画面と同じ）。電源の無い CDU はキーを受けず描かず、電源が戻ると MENU（FMSPG p.53。CDU-20 の一部）。
 - 試験：`tests/fms/cdu_model_test.lua`（80 件：モデル）、`tests/fms/cdu_framework_test.lua`（33 件：FMS のモジュールで、キー、メッセージ、FMC のメッセージ、NEXT、電源、即時のページ切替）。`tests/displays/cdu_efis_test.lua` は CDU の電源を入れるように。全体 92 本。X-Plane の `s80_cdu_framework`（28 件合格：銚子沖の空中で、MENU が 0.2 秒で出る（前は 0.5 秒の空白）、CLR は 1 字（FL35 → FL3）、1.5 秒の押し続けで全部、+/- の 2 回目で 1+、データがあると DEL は効かない、空で DELETE、INVALID ENTRY は左の CDU だけで、その間の打鍵は入らず CLR で scratchpad の A に戻る、RESET MCP ALT の旗で左右の CDU に出て >FMC MESSAGE、右の CDU の CLR で両方から消え 11 秒たっても再び出ない、PERF/VNAV UNAVAILABLE の旗は写したら 0 に戻る、VNAV の 3 ページ目の NEXT で CLB へ、STANDBY POWER の OFF で左の CDU の電源が切れてキーが効かず、AUTO に戻すと MENU。Lua の誤りなし。CDU を撮った）。
+- 手直し（2026-10-26 午後）：X-Plane の CDU の scratchpad（独自のページで RTE などの入力を X-Plane の CDU に打ち込む `custom2fmc`・`key2fmc` の結果）をこの CDU のメッセージにするのは、FMC が打ち込んだキー（DEL・CLR・文字・行選択キー）が入り終わった後（キーの数 + 5 フレームかつ 0.3 秒）で、打ち込んだ文字そのものでないときだけにした。X-Plane の scratchpad は空でも角括弧が付く（「[　　　]」）ので、角括弧ではメッセージと打ち込み中の文字を区別できない。段 2 ではメッセージの間は打鍵を受けないので、打ち込み中の文字がメッセージになると次の入力が入らなかった（`s14_press_ground` で出発地の入力が入らず 1〜3 件失敗。前は文字を出すだけで打鍵を止めなかった）。
 
 ## 13. 段 3a の実装（2026-10-26：PERF INIT と INIT REF のキー）
 
