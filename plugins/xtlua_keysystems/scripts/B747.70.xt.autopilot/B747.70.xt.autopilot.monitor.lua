@@ -229,7 +229,7 @@ function VNAV_DES(numAPengaged,fms)
 
     setDescentVSpeed(fms)
     if B747DR_switchingIASMode==1 then return end
-    local upperAlt=math.max(tonumber(getFMSData("desspdtransalt")),tonumber(getFMSData("desrestalt")))
+    local upperAlt=math.max(tonumber(getFMSData("desspdtransalt")),desRestAlt())
     --print("upperAlt "..upperAlt)
     if B747DR_ap_ias_mach_window_open == 1 then
 
@@ -449,9 +449,11 @@ function B747_monitor_THR_REF_AT()
 
 end
 function checkMCPAlt(dist)
-    local eta=dist/simDR_groundspeed
+    -- two minutes before the T/D (FMC-15; FCOM p.665, p.1433): hours from
+    -- the distance in nm and the ground speed in knots
+    local eta=dist/math.max(simDR_groundspeed*1.94384449, 1)
 
-    if eta>0.0334 then
+    if eta>2/60 then
         B747DR_fmc_notifications[33]=0
         --print("checkMCPAlt "..eta.. " "..dist)
         return

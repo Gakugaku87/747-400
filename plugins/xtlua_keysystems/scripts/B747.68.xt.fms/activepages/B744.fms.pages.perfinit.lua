@@ -35,10 +35,11 @@ fmsPages["PERFINIT"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be
 		rsv = string.format("%5.1f", rsv)
 	end
 	
+	local crzcgV = tonumber(fmsModules["data"].crzcg) or 20.0
 	if string.len(crzcg_lineLg) < 1 then
-		crzcg_lineSm = string.format("%5.1f%%", tonumber(fmsModules["data"].crzcg))
+		crzcg_lineSm = string.format("%5.1f%%", crzcgV)
 	else
-		crzcg_lineLg = string.format("%5.1f%%", tonumber(fmsModules["data"].crzcg))
+		crzcg_lineLg = string.format("%5.1f%%", crzcgV)
 		crzcg_lineSm = ""
 	end
 	--Marauder28

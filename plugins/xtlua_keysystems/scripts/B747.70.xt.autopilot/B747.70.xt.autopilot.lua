@@ -2070,7 +2070,7 @@ function setDistances(fmsO)
 		local minsToAlt=altDiff/useFPM
 		if simDR_groundspeed<150 then minsToAlt=minsToAlt+15 end
 		local meters_per_second_to_kts = 1.94384449
-		local default_speed = 250 * meters_per_second_to_kts
+		local default_speed = 250 -- kt (FMC-21; the predictions come in step 8)
   		local actual_speed = simDR_groundspeed * meters_per_second_to_kts
 		B747BR_toc=(math.max(default_speed, actual_speed)*minsToAlt)/60
 	else
@@ -2275,7 +2275,7 @@ function B747_getCurrentWayPoint_function(fmsO)
 				maxError=1
 			end
 			if B747DR_ap_lnav_xtk_target>=-99 and track[2]>maxError and track[1]>math.min(5,trackLength/5) then
-				B747DR_CAS_caution_status[66]=1 --its an advisory when > 40
+				B747DR_CAS_caution_status[66]=0 -- not from the cross-track (FMC-29): ANP above RNP, 6-1 step 10
 			else
 				B747DR_CAS_caution_status[66]=0
 			end
@@ -3550,11 +3550,13 @@ function hasSimConfig()
 	end
 	return setSimConfig
 end
+-- the last strings decoded and X-Plane's flight plan decoded (locals: a
+-- table in a global would be copied by XTLua)
+local lastFMSdataSTR, lastFMSSTR, lastFMS
 function after_physics()
 	if hasSimConfig() == false then
 		return
 	end
-	collectgarbage("collect")
 	if debug_autopilot > 0 then
 		return
 	end
@@ -3578,15 +3580,20 @@ function after_physics()
 	local cruiseAlt = B747BR_cruiseAlt
 	local tDist = B747BR_totalDistance
 	local tod = B747BR_tod
-	--print(B747DR_FMSdata)
-	if string.len(B747DR_FMSdata) > 0 then
-		fmsData = json.decode(B747DR_FMSdata)
-	else
-		fmsData = json.decode("[]")
+	-- the FMC's data and X-Plane's flight plan decoded when they change, not
+	-- every frame, and no full garbage collection every frame (FMC-40, 6-1
+	-- step 1); nothing here changes the decoded tables
+	local fmsDataSTR = B747DR_FMSdata
+	if fmsDataSTR ~= lastFMSdataSTR then
+		lastFMSdataSTR = fmsDataSTR
+		fmsData = json.decode(string.len(fmsDataSTR) > 0 and fmsDataSTR or "[]")
 	end
-
 	local fmsSTR = fmsJSON
-	local fms = json.decode(fmsSTR)
+	if fmsSTR ~= lastFMSSTR then
+		lastFMSSTR = fmsSTR
+		lastFMS = json.decode(fmsSTR)
+	end
+	local fms = lastFMS
 	B747_getCurrentWayPoint(fms)
 	B747_monitorAP(fms)
 	B747_ap_fma(fms)

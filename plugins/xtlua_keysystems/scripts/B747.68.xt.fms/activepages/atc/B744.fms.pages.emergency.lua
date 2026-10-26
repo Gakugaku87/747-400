@@ -31,8 +31,8 @@ fmsPages["ATCEMERGENCYREPORT"].getSmallPage=function(self,pgNo,fmsID)--dynamic p
     if getFMSData("acarsEMERSOB")~="---" then
         pMessage=pMessage.." SOB "..getFMSData("acarsEMERSOB")
     end
-    if fmsModules.data["fltdst"]~="****" then
-        pMessage=pMessage.." DIVERTING TO "..fmsModules.data["fltdst"]
+    if emer_divert()~="****" then
+        pMessage=pMessage.." DIVERTING TO "..str_trim(emer_divert())
     end
     if getFMSData("acarsEMEROFFSET")~="---" then
         pMessage=pMessage.." OFFSET "..getFMSData("acarsEMEROFFSET")
@@ -56,7 +56,7 @@ fmsPages["ATCEMERGENCYREPORT"].getSmallPage=function(self,pgNo,fmsID)--dynamic p
 "                        ",
 line1,
 " DIVERT TO           SOB",
-" "..fmsModules.data["fltdst"].."                "..getFMSData("acarsEMERSOB"),
+string.format(" %-20s%s", emer_divert(), getFMSData("acarsEMERSOB")),
 "  OFFSET  FUEL REMAINING",
 getFMSData("acarsEMEROFFSET").."                     ", --fuel remaining if SOB
 " DESCEND TO             ",
@@ -70,9 +70,16 @@ end
 
 
   
+-- DIVERT TO: the entry, else the active destination (CDU-33, 6-1 step 1;
+-- FCOM p.729); the route stays
+function emer_divert()
+    local d = str_trim(getFMSData("acarsEMERDIVERT"))
+    if d ~= "" then return d end
+    return fmsModules.data["fltdst"]
+end
 fmsFunctionsDefs["ATCEMERGENCYREPORT"]={}
 fmsFunctionsDefs["ATCEMERGENCYREPORT"]["L1"]={"setmayday","MAYDAY MAYDAY MAYDAY"}
-fmsFunctionsDefs["ATCEMERGENCYREPORT"]["L2"]={"setdata","fltdst"}
+fmsFunctionsDefs["ATCEMERGENCYREPORT"]["L2"]={"setdata","acarsEMERDIVERT"}
 fmsFunctionsDefs["ATCEMERGENCYREPORT"]["L3"]={"setdata","acarsEMEROFFSET"}
 fmsFunctionsDefs["ATCEMERGENCYREPORT"]["L4"]={"setdata","acarsEMERDESC"}
 fmsFunctionsDefs["ATCEMERGENCYREPORT"]["L5"]={"clearemergency",""}

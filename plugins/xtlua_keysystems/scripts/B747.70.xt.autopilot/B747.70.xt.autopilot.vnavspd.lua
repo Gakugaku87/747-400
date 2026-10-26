@@ -12,6 +12,16 @@
 *
 --]]
 
+-- the speed restrictions and the transition (6-1 step 1): SPD RESTR shows
+-- dashes until entered (FMC-10), SPD TRANS can be deleted; without them the
+-- climb goes on at the next speed (the restriction's altitude below any),
+-- the descent's restriction is the transition's (FCOM p.1326-1329, p.1392)
+function clbRestAlt() return tonumber(getFMSData("clbrestalt")) or -99999 end
+function clbEconSpd() return tonumber(getFMSData("clbspd")) or 340 end
+function clbTransSpd() return tonumber(getFMSData("transpd")) or clbEconSpd() end
+function clbRestSpd() return tonumber(getFMSData("clbrestspd")) or clbTransSpd() end
+function desRestAlt() return tonumber(getFMSData("desrestalt")) or tonumber(getFMSData("desspdtransalt")) or 10000 end
+function desRestSpd() return tonumber(getFMSData("desrestspd")) or tonumber(getFMSData("destranspd")) or 240 end
 local vnavSPD_conditions={}
 vnavSPD_conditions["onground"]=0
 vnavSPD_conditions["below"]=-1
@@ -45,7 +55,7 @@ end
 ]]
 function clb_aptres_next()
     --return tonumber(getFMSData("clbrestalt"))+100
-    local tAlt=tonumber(getFMSData("clbrestalt"))+100
+    local tAlt=clbRestAlt()+100
     if tAlt>simDR_pressureAlt1+500 then
         tAlt=math.min(simDR_pressureAlt1+500,tAlt)
     end
@@ -89,7 +99,7 @@ function des_src_next()
     return tAlt
 end
 function des_aptres_next()
-    local tAlt=tonumber(getFMSData("desrestalt"))
+    local tAlt=desRestAlt()
     if tAlt<simDR_pressureAlt1-500 then
         tAlt=math.max(simDR_pressureAlt1-500,tAlt)
     end
@@ -165,7 +175,7 @@ function clb_src_setSpd()
     vnavSPD_state["setBaro"]=false
 end
 function clb_aptres_setSpd()
-    local spdval=modFlapSpeed(tonumber(getFMSData("clbrestspd")))
+    local spdval=modFlapSpeed(clbRestSpd())
     spdval=math.max(spdval,simDR_ind_airspeed_kts_pilot-15)
     simDR_autopilot_airspeed_is_mach = 0
     print("convert to clb clbrestspd ".. spdval)
@@ -176,7 +186,8 @@ function clb_aptres_setSpd()
 
 end
 function clb_spcres_setSpd()
-    local spdval=modFlapSpeed(tonumber(getFMSData("clbspd")))
+    -- below the SPD TRANS altitude: the SPD TRANS speed (FMC-09; FCOM p.1326)
+    local spdval=modFlapSpeed(clbTransSpd())
     B747DR_switchingIASMode=1
     local crzspdval=tonumber(getFMSData("crzspd"))/10
     if simDR_airspeed_mach > (crzspdval/100) then
@@ -201,7 +212,8 @@ function clb_spcres_setSpd()
 
 end
 function clb_nores_setSpd()
-    local spdval=modFlapSpeed(tonumber(getFMSData("transpd")))
+    -- above the SPD TRANS altitude: ECON (FMC-09; FCOM p.1326)
+    local spdval=modFlapSpeed(clbEconSpd())
     B747DR_switchingIASMode=1
     local crzspdval=tonumber(getFMSData("crzspd"))/10
     if simDR_airspeed_mach > (crzspdval/100) then
@@ -269,7 +281,7 @@ function clb_crz_setSpd()
         spdval = ci_mach/10
     end
     local transalt=tonumber(getFMSData("transalt"))
-    local tspdval=modFlapSpeed(tonumber(getFMSData("transpd")))
+    local tspdval=modFlapSpeed(clbEconSpd())
     if simDR_pressureAlt1>=transalt or simDR_ind_airspeed_kts_pilot>=tspdval-1 then
         print("convert to cruise speed in clb_crz_setSpd ".. spdval)
         simDR_autopilot_airspeed_is_mach = 1
@@ -309,10 +321,10 @@ function des_src_setSpd()
 end
 function des_aptres_setSpd()
     local spdval=tonumber(getFMSData("destranspd"))
-    local lowerAlt=tonumber(getFMSData("desrestalt"))
+    local lowerAlt=desRestAlt()
 
 
-    local nextspdval=tonumber(getFMSData("desrestspd"))
+    local nextspdval=desRestSpd()
     spdval=B747_rescale(lowerAlt+1000,nextspdval,lowerAlt+1500,spdval,simDR_pressureAlt1)
     simDR_autopilot_airspeed_is_mach = 0
     print("convert to destranspd speed ".. spdval)
@@ -328,7 +340,7 @@ function des_aptres_setSpd()
     end
 end
 function des_spcres_setSpd()
-    local spdval=tonumber(getFMSData("desrestspd"))
+    local spdval=desRestSpd()
     simDR_autopilot_airspeed_is_mach = 0
     print("convert to desrestspd speed ".. spdval)
     B747DR_ap_ias_dial_value = math.min(399.0, spdval)
@@ -417,21 +429,8 @@ function B747_vnav_setClimbspeed()
         nextAlt=spd_states["clb"][cState]["nextfunc"]()
         print("B747_vnav_setClimbspeed "..lastAlt .. " cState ".. cState.. " nextAlt ".. nextAlt)
     end
-    local transalt=tonumber(getFMSData("transalt"))
-    if vnavSPD_state["setBaro"]==false and nextAlt>transalt and simDR_pressureAlt1<=transalt then
-        nextAlt=transalt
-       -- print("prepped baro")
-    end
-
-    if vnavSPD_state["setBaro"]==false and simDR_pressureAlt1>=transalt then
-        vnavSPD_state["setBaro"]=true
-        B747DR_efis_baro_std_capt_switch_pos = 1
-        --print("set baro")
-        simDR_altimeter_baro_inHg = 29.92
-        B747DR_efis_baro_std_fo_switch_pos = 1
-        simDR_altimeter_baro_inHg_fo = 29.92
-
-    end
+    -- no altimeters to STD at the transition altitude: the FMC has no such
+    -- function (FMC-33, 6-1 step 1; FCOM p.1329)
     vnavSPD_conditions["name"]="clb_"..cState
     vnavSPD_conditions["onground"]=simDR_onGround
     vnavSPD_conditions["below"]=lastAlt

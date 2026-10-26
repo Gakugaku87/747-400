@@ -183,6 +183,17 @@ simDR_fueL_tank_weight_total_kg     = find_dataref("sim/flightmodel/weight/m_fue
 
 navAidsJSON   = find_dataref("xtlua/navaids")
 fmsJSON = find_dataref("xtlua/fms")
+-- X-Plane's flight plan decoded when it changes (FMC-40, 6-1 step 1); the
+-- callers do not change it
+local fmsRouteSTR, fmsRoute = nil, {}
+function fms_route()
+	local s = fmsJSON
+	if s ~= fmsRouteSTR then
+		fmsRouteSTR = s
+		fmsRoute = string.len(s) > 2 and json.decode(s) or {}
+	end
+	return fmsRoute
+end
 fmsFlightPlan = find_dataref("xtlua/fltpln")
 
 B747DR_fms1_display_mode            = find_dataref("laminar/B747/fms1/display_mode")
@@ -611,6 +622,7 @@ function defaultFMSData()
   acarsEMERSOB=string.rep("-", 3),
   acarsEMEROFFSET=string.rep("-", 3),
   acarsEMERDESC="-----",
+  acarsEMERDIVERT="               ",
   acarsWCWCRZCLB=string.rep("-", 5),
   acarsWCWCLB=string.rep("-", 5),
   acarsWCWDES=string.rep("-", 5),
@@ -638,21 +650,21 @@ function defaultFMSData()
   grwt="***.*   ",
   crzalt=string.rep("*", 5),
   acarsMessage="",
-  clbspd="250",
-  transpd="272",
+  clbspd="340",
+  transpd="250",
   spdtransalt="10000",
   transalt="18000",
-  clbrestspd="250",
+  clbrestspd="---",
   maxkts="420",
-  clbrestalt="5000 ",
+  clbrestalt="-----",
   stepalt="FL360",
   crzspd="810",
   desspdmach="805",
   desspd="270",
   destranspd="240",
   desspdtransalt="10000",
-  desrestspd="180",
-  desrestalt="5000 ",
+  desrestspd="---",
+  desrestalt="-----",
   fpa="*.*",
   vb="*.*",
   vs="****",
@@ -676,7 +688,7 @@ function defaultFMSData()
   irsLon=string.rep(" ", 9),
   initIRSLat="****`**.*",
   initIRSLon="****`**.*",
-  flapspeed="**/***",
+  flapspeed="--/---",
   airportpos=string.rep("-", 4),
   airportgate=string.rep(" ", 5),
   preselectLeft=string.rep("-", 6),
@@ -751,6 +763,18 @@ function setFMSData(id,value)
 	end
    fmsModules:setData(id,value)
 end  
+-- the climb's SPD TRANS speed: the greater of the transition speed (250 kt;
+-- the origin's from the nav DB comes in step 4) and VREF 30 + 100 kt (FCOM
+-- p.1328: "272/10000"; VREF 30: estimate); dashes once deleted (FMC-09,
+-- 6-1 step 1)
+B747DR_airspeed_Vf30 = find_dataref("laminar/B747/airspeed/Vf30")
+function update_spd_trans()
+	local cur = fmsModules["data"]["transpd"]
+	if cur == nil or cur == "---" then return end
+	local vref = tonumber(B747DR_airspeed_Vf30) or 0
+	local spd = string.format("%3d", math.max(250, math.floor(vref + 100 + 0.5)))
+	if vref > 80 and spd ~= cur then fmsModules:setData("transpd", spd) end
+end
 function getFMSData(id)
   if hasChild(fmsModules["data"],id) then
     return fmsModules["data"][id]
@@ -897,7 +921,7 @@ function get_ETA_for_Distance(distance,additionalTime)
 	local mins = 0
 	local secs = 0
 	local time_to_waypoint = 0
-	local default_speed = 275 * meters_per_second_to_kts
+	local default_speed = 275 -- kt (FMC-21; the predictions come in step 8)
 	local actual_speed = simDR_groundspeed * meters_per_second_to_kts
 	time_to_waypoint = additionalTime + (distance / math.max(default_speed, actual_speed)) * 3600
 	
@@ -997,7 +1021,7 @@ function waypoint_eta_display()
 	local fms_distance_to_waypoint = 0
 	local fms_distance_to_next_waypoint = 0
 	if string.len(fmsJSON) > 2 then
-		fms = json.decode(fmsJSON)
+		fms = fms_route()
 		if fms[table.getn(fms)][8]~="LATLON" then
         	B747DR_destination = string.format("%4s",fms[table.getn(fms)][8])
 		else
@@ -1302,6 +1326,7 @@ function after_physics()
 	cM=mm
 	cM=ss
     setNotifications()
+    update_spd_trans()
     B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
     --print(B747DR_FMSdata)
     fmsL:B747_fms_display()

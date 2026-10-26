@@ -424,3 +424,20 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 | 10 | 航法センサーと同調（5-1 段 3 を含む）：FMC の位置（IRS の混合、GPS と無線の更新、ANP と RNP、UNABLE RNP、PURGE、GPS NAV INHIBIT、VERIFY POSITION）、VOR・DME・ILS の自動同調（P/R、PARK・A、離陸後 10 分、ILS TUNE INHIBITED）、NAV RADIO のページ、ND の更新の表示、ILS の同調の印 | FMC-28, 29, 30, 31；CDU-16, 27；DSP-14 | FCOM p.1240–1245, p.1303–1307, p.1355–1357, p.1367–1370, p.1430；ATA34_2 p.586, p.601–606 |
 | 11 | 燃料の監視・二重系・メッセージの残り：CALCULATED と TOTALIZER（MANUAL・SENSED・USE）、FUEL DISAGREE、INSUFFICIENT FUEL、FMC 2 台（master、故障、FMC LEFT・RIGHT、SINGLE FMC、RESYNC）、代替航法（IRS LEGS・IRS PROGRESS・ALTN NAV RADIO）、CPCS への着陸高度、PROGRESS 2 の XTK と VTK、>FMC MESSAGE を alert だけに | FMC-22, 32, 36, 37, 38；CDU-19 | FCOM p.1273–1275, p.1378–1382, p.1400, p.1421–1436；ATA34_2 p.569, p.589–592 |
 | 12 | 残りのページとデータリンク：自動のページ変更、保守のページ、データリンク（109 は KEY/FUNCTION INOP、simconfig で入切）、ATC と会社のデータリンクの残り | CDU-30, 31, 32–42 | FCOM p.725–776, p.1211；FMSPG 8・9 章 |
+
+## 11. 段 1 の実装（2026-10-26：小修正）
+
+- FMC-40：AP の after_physics が毎フレーム `collectgarbage("collect")` を呼び、FMC のデータ（`laminar/B747/fms/data`）と X-Plane の飛行計画（`xtlua/fms`）を毎フレーム decode していた。GC をやめ、文字列が変わったときだけ decode する（AP はファイルの local に持つ。グローバルの表は XTLua が写すので）。FMC の ND の ETA の処理と VNAV ページの decode も、変わったときだけの `fms_route()` に。nav DB（段 4、約 40 MB）を同じ XTLua に置く前に要る（毎フレームの完全な GC がそれも全部たどるため）。
+- FMC-21：ETA と T/C の距離の速度の下限が、kt の値に m/s → kt の係数を掛けていた（275 × 1.944 ＝ 534.6 kt、250 × 1.944 ＝ 486 kt）。kt の 275・250 に（推定のまま。予測は段 8）。
+- FMC-33：VNAV の上昇中に遷移高度で両席の気圧を STD・29.92 にしていたのをやめた（FCOM p.1329：FMC にこの機能は無い。気圧は乗員が替え、PFD は琥珀の枠を出す：5-2 段 4b）。
+- FMC-29：LNAV のクロストラック（目的地の 40 NM 以内で 1 NM、進入中 0.3 NM）で UNABLE RNP の caution を出していたのをやめた。ANP と RNP の比較は段 10。
+- FMC-15：RESET MCP ALT を、NM ÷ m/s の比較（約 1 分前）から、時間（NM ÷ kt）で T/D の 2 分前に（FCOM p.665, p.1433）。
+- FMC-30：VOR の自動同調の 2 番目の局は、最寄りが替わったときの前の最寄りしか入らなかった。2 番目に近い局に。
+- FMC-09：上昇の速度の取り違え。SPD TRANS の高度より下は SPD TRANS の速度（前は ECON SPD の欄の 250）、上は ECON（前は SPD TRANS の 272）。SPD TRANS の速度は、出発地の制限速度（250 kt。nav DB からは段 4）と VREF30 + 100 kt の大きい方（FCOM p.1328：例 272/10000。VREF が VREF30 なのは推定）を FMC が毎フレーム出し、入力はできず削除だけ（削除すると制限なし）。ECON の上昇 CAS は 340 kt（CI の表は資料に無いので、FCOM PI p.316 の通常の上昇速度 340/.84：推定。CI による値は段 8）。上昇から巡航の Mach へ移る判定の CAS も ECON に。
+- FMC-10：上昇と降下の SPD RESTR の既定をダッシュに（前は 250/5000 と 180/5000：FCOM p.1328, p.1392）。削除でダッシュに戻る。制限が無いとき、上昇は次の速度へ進み、降下の制限は遷移（SPD TRANS）と同じとして扱う（AP の降下の処理が制限の高度と速度を使うため）。TRANS ALT を nav DB から取るのは段 4。
+- 速度の入力の範囲：CAS 130–300 kt を 100–400 kt に（FCOM p.1269–1270。CDU-08 の一部。ECON 340 を入れ直せるように）。
+- CDU-10：空中の THRUST LIM の <GA・<CON・<CRZ が TO・TO 1・TO 2 の処理を呼び、CLB と離陸の減格を替えていた（TO 1・TO 2 なら GA 推力が 10・20 % 下がった）。空中では KEY/FUNCTION INOP（GA・CON・CRZ の選択は推力管理 6-4 で）。EEC は離陸の減格を離陸のモード（TO 1・TO 2、地上）でだけ掛ける。
+- CDU-33：ATC の EMERGENCY REPORT の DIVERT TO（2L）が `fltdst`（経路の目的地）に入り、X-Plane の FMS へ送っていた。自分の値（`acarsEMERDIVERT`、15 字まで）にし、無ければ目的地を出す（FCOM p.729）。削除で目的地に戻る。経路は変わらない。
+- CDU-09：CRZ CG に数でない文字が入り、PERF INIT の描画が `string.format` の nil で止まっていた。8.5–33.0 % に（FCOM p.1311）、削除で既定の 20.0（小さい字）。
+- CDU-28：APPROACH REF の FLAP/SPEED：空の scratchpad で 4R を押すと VREF が消えていた。値を写す。入力は XX/YYY・/YYY・YYY（フラップは 25 か 30。フラップの無い入力は前の値か 30：推定）、削除で VREF を PFD から消す（FCOM p.1412）。既定はダッシュ（--/---：FCOM p.1410–1411 の図。前はボックス）。
+- 試験：`tests/fms/fmc_fixes_test.lua`（41 件：FMS のモジュールを XTLua のモックで動かし、CLB・DES ページ、THRUST LIM、APPROACH REF、CRZ CG、DIVERT TO を CDU のキーで確かめる。直す前のコードでは CRZ CG の入力で描画が止まった）。全体 92 本。X-Plane の `s79_fmc_fixes`（31 件合格：銚子沖の空中で、CLB ページの ECON SPD 340、SPD TRANS 252/10000（VREF30 152＋100）で入力は INVALID ENTRY・削除でダッシュ、SPD RESTR は上昇・降下ともダッシュ、空中の THRUST LIM の <GA は KEY/FUNCTION INOP で離陸の減格はそのまま、APPROACH REF の /150・25/155・空の scratchpad での複写・削除、CRZ CG の A と 40 は INVALID ENTRY で 25.5 と削除の 20.0、DIVERT TO は経路の目的地（fltdst）を書き換えない、VOR の自動同調は L 117.90（48 NM）・R 113.30（59 NM）、現用点まで 33.3 NM・GS 278 kt の ETA は 0308.9z（GS どおり。前の下限 534.6 kt なら 0305.5z）。Lua の誤りなし。CDU を撮った）。

@@ -695,7 +695,7 @@ end
 function validateSpeed(value)
   local val=tonumber(value)
   if val==nil then return false end
-  if val<130 or val>300 then return false end
+  if val<100 or val>400 then return false end
 
   return true
 end
@@ -1068,15 +1068,12 @@ function fmsFunctions.setdata(fmsO,value)
       setFMSData("clbspd",fmsO["scratchpad"])
     end
   elseif value=="clbtrans" then
-    spd=string.sub(fmsO["scratchpad"],1,3)
-    alt=string.sub(fmsO["scratchpad"],5)
-    if validateSpeed(spd) ==false then 
-      fmsO["notify"]="INVALID ENTRY"
+    -- SPD TRANS: from the nav DB and VREF, deleted only (FMC-09, 6-1 step 1;
+    -- FCOM p.1328); no transition speed then
+    if del then
+      setFMSData("transpd","---")
     else
-      setFMSData("transpd",spd)
-      if validAlt(alt) ~=nil then 
-	setFMSData("spdtransalt",validAlt(alt))
-      end
+      fmsO["notify"]="INVALID ENTRY"
     end
   elseif value=="transalt" then
     if validAlt(fmsO["scratchpad"]) ~=nil then 
@@ -1084,6 +1081,9 @@ function fmsFunctions.setdata(fmsO,value)
     else
       fmsO["notify"]="INVALID ENTRY"
     end
+  elseif value=="clbrest" and del then
+    setFMSData("clbrestspd","---")
+    setFMSData("clbrestalt","-----")
   elseif value=="clbrest" then
     spd=string.sub(fmsO["scratchpad"],1,3)
     alt=string.sub(fmsO["scratchpad"],5)
@@ -1135,6 +1135,9 @@ function fmsFunctions.setdata(fmsO,value)
 	setFMSData("desspdtransalt",validAlt(alt))
       end
     end 
+   elseif value=="desrest" and del then
+    setFMSData("desrestspd","---")
+    setFMSData("desrestalt","-----")
    elseif value=="desrest" then
     spd=string.sub(fmsO["scratchpad"],1,3)
     alt=string.sub(fmsO["scratchpad"],5)
@@ -1419,24 +1422,30 @@ function fmsFunctions.setdata(fmsO,value)
 	fmsO["scratchpad"]=string.format("30/%3d", B747DR_airspeed_Vf30)
 	return
   elseif value == "flapspeed" then
-	if fmsO["scratchpad"]=="" then 
+	-- XX/YYY, /YYY or YYY; the empty scratchpad copies the value; DELETE
+	-- removes VREF (CDU-28, 6-1 step 1; FCOM p.1412). Without the flap: the
+	-- one before, else 30 (estimate)
+	local cur = getFMSData(value)
+	if del then
 		B747DR_airspeed_VrefFlap=0
-		setFMSData(value,"") 
-		return 
+		setFMSData(value,"")
+		return
 	end
-	local vref=tonumber(string.sub(fmsO["scratchpad"],4))
-	if vref==nil or vref<110 or vref>180 then 
-		fmsO["notify"]="INVALID ENTRY" 
-		return 
+	if fmsO["scratchpad"]=="" then
+		if string.match(cur, "%d") then fmsO["scratchpad"]=str_trim(cur) end
+		return
+	end
+	local flap, spd = string.match(fmsO["scratchpad"], "^(%d*)/(%d+)$")
+	if not spd then flap, spd = "", string.match(fmsO["scratchpad"], "^(%d+)$") end
+	local vref=tonumber(spd or "")
+	if flap == "" then flap = string.match(cur, "^(%d%d)/") or "30" end
+	if vref==nil or vref<110 or vref>180 or (flap ~= "25" and flap ~= "30") then
+		fmsO["notify"]="INVALID ENTRY"
+		return
 	end
 	B747DR_airspeed_Vref=vref
-	print(string.sub(fmsO["scratchpad"],1,2))
-	if string.sub(fmsO["scratchpad"],1,2) == "25" then
-		B747DR_airspeed_VrefFlap=1
-  	else
-		B747DR_airspeed_VrefFlap=2
-	end	
-	setFMSData(value,fmsO["scratchpad"])
+	B747DR_airspeed_VrefFlap=(flap == "25") and 1 or 2
+	setFMSData(value,flap.."/"..string.format("%3d", vref))
   elseif value == "grwt" then
 	local grwt
 	if string.len(fmsO["scratchpad"]) ~= 0 and string.len(fmsO["scratchpad"]) ~= 3 and string.len(fmsO["scratchpad"]) ~= 5 then
@@ -1521,8 +1530,18 @@ function fmsFunctions.setdata(fmsO,value)
 		setFMSData(value, rsv)
 	end
   elseif value == "crzcg" then
-	if string.len(fmsO["scratchpad"]) > 0 and not string.find(fmsO["scratchpad"], " ") then
-		setFMSData(value, fmsO["scratchpad"])
+	-- 8.5 to 33.0 % (CDU-09, 6-1 step 1; FCOM p.1311)
+	local cg = string.match(fmsO["scratchpad"], "^%d%d?%.?%d?$") and tonumber(fmsO["scratchpad"])
+	if del then
+		-- the default, 20.0 in small font (FCOM p.1311)
+		setFMSData(value, "20.0")
+		crzcg_lineLg = ""
+		return
+	elseif cg and cg >= 8.5 and cg <= 33.0 then
+		setFMSData(value, string.format("%4.1f", cg))
+	else
+		fmsO["notify"]="INVALID ENTRY"
+		return
 	end
 	if string.len(fmsModules["data"].crzcg) > 0 then
 		crzcg_lineLg = string.format("%4.1f%%", tonumber(fmsModules["data"].crzcg))
@@ -2613,6 +2632,9 @@ function fmsFunctions.setDref(fmsO,value)
 
 
  	
+  -- in the air <GA, <CON and <CRZ, not the takeoff's (CDU-10, 6-1 step 1;
+  -- FCOM p.1337-1340): the thrust management's (6-4)
+  if (value=="TO" or value=="TO1" or value=="TO2") and simDR_onGround~=1 then fmsO["notify"]="KEY/FUNCTION INOP" return end
   if value=="TO" then toderate=0 clbderate=0 return  end
   if value=="TO1" then toderate=1 clbderate=1 return  end
   if value=="TO2" then toderate=2 clbderate=2 return  end

@@ -66,7 +66,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
 
       --if(simDR_onGround~=1) then
       if(string.len(fmsJson) > 2) then
-        local fms2 = json.decode(fmsJson)
+        local fms2 = fms_route()
         if(fms2 ~= nil and fmsModules["data"]["crzalt"]~="*****") then
 --          print("fmsJson")
 --          print(fmsJson)
@@ -100,16 +100,18 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
               --spdalt = " ***/*****"
               spdalt = "     FL"..string.format("%03d",alt/100)
               if(i <= maxidx and math.abs(maxalt-simDR_pressureAlt1) > 500) then -- climb phase
-                local restSpd = tonumber(fmsModules["data"]["clbrestspd"])   -- 180
-                local restAlt = tonumber(fmsModules["data"]["clbrestalt"])   -- 5000
-                local transSpd = tonumber(fmsModules["data"]["transpd"])     -- 272
-                local transAlt = tonumber(fmsModules["data"]["spdtransalt"]) -- 10000
-                if(alt < restAlt) then
+                -- no SPD RESTR (dashes) or SPD TRANS (deleted): none (6-1 step 1)
+                local restSpd = tonumber(fmsModules["data"]["clbrestspd"])
+                local restAlt = tonumber(fmsModules["data"]["clbrestalt"]) or -99999
+                local transSpd = tonumber(fmsModules["data"]["transpd"])
+                local transAlt = tonumber(fmsModules["data"]["spdtransalt"]) or 10000
+                local econSpd = tonumber(fmsModules["data"]["clbspd"]) or 340
+                if(restSpd and alt < restAlt) then
                   spdalt = restSpd.."/"..alt
-                elseif(alt < transAlt) then
-                  spdalt = "250/"..alt
-                else
+                elseif(transSpd and alt < transAlt) then
                   spdalt = transSpd.."/"..alt
+                else
+                  spdalt = econSpd.."/"..alt
                 end
                 
                 local altdif = math.abs(simDR_pressureAlt1 - alt) --diff actual vs cruise altitude
@@ -356,7 +358,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       local lowalt = 99999
 
       if(string.len(fmsJson) > 2) then
-        local fms = json.decode(fmsJson)
+        local fms = fms_route()
         if(fms ~= nil and fmsModules["data"]["crzalt"]~="*****" ) then
           n = table.getn(fms)
           
@@ -407,8 +409,9 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       nxtspd = tonumber(fmsModules["data"]["desspd"])
       local dtransalt = tonumber(fmsModules["data"]["desspdtransalt"])
       local dtransspd = tonumber(fmsModules["data"]["destranspd"])
-      local drestalt  = tonumber(fmsModules["data"]["desrestalt"])
-      local drestspd  = tonumber(fmsModules["data"]["desrestspd"])
+      -- no SPD RESTR (dashes): none (6-1 step 1)
+      local drestalt  = tonumber(fmsModules["data"]["desrestalt"]) or -99999
+      local drestspd  = tonumber(fmsModules["data"]["desrestspd"]) or dtransspd
 
       if(nxtalt < dtransalt) then
         nxtspd = dtransspd
