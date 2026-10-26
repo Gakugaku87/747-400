@@ -77,6 +77,11 @@ T.check(path[3].kind == "none" and path[3].b == C, "C after it: no path in, its 
 local from = {lat = 35.2, lon = 140.3}
 path = M.build({{via = "DIRECT", fix = C, dto = true, from = from}}, A, env)
 T.check(path[1].kind == "line" and path[1].a == from and path[1].b == C, "a direct-to: the line from its start")
+T.check(path[1].direct, "flown from where the airplane is (direct)")
+path = M.build({{via = "DIRECT", fix = C, dto = true, from = from, crs = 90}}, A, env)
+T.check(not path[1].direct, "with an INTC CRS: the course, not direct")
+path = M.build({{via = "DIRECT", fix = B}, {pt = "DF", fix = C}, {pt = "TF", fix = A}}, A, env)
+T.check(not path[1].direct and path[2].direct and not path[3].direct, "a DF direct; DIRECT and TF not")
 
 -- a departure: heading 337 to 600 ft, heading 045 to intercept the course
 -- 090 into ZZV, ZZV (ZZAA's ZULU1 from RW34L: tests/fms/data/navdb)

@@ -5,11 +5,13 @@
 -- synthetic navigation data. X-Plane starts a new flight plan at its first
 -- waypoint: after the activation in flight, a modification's EXEC and a
 -- DIRECT TO, the FMC makes X-Plane's current waypoint (xtlua/currentFMSID,
--- from 1) and the AFDS's (fmscurrentIndex) the active one; as the AFDS's
--- current waypoint moves on, the legs before it are passed (FMSPG p.119:
--- they leave the LEGS pages; FCOM p.1331) and the flight plan stays the
--- same. The test plays X-Plane: xtlua/fms from the rows the FMC loaded,
--- [10] the current waypoint (XTLua's xpmtdatarefs.cpp).
+-- from 1) and the AFDS's (fmscurrentIndex) the active one; as LNAV
+-- sequences the route (step 6c: the airplane past a waypoint; before, the
+-- AFDS's best track), the legs before it are passed (FMSPG p.119: they
+-- leave the LEGS pages; FCOM p.1331), the flight plan stays the same and
+-- X-Plane's current waypoint and the AFDS's follow. The test plays
+-- X-Plane: xtlua/fms from the rows the FMC loaded, [10] the current
+-- waypoint (XTLua's xpmtdatarefs.cpp).
 B747_NAVDB_FOLDER = "tests/fms/data/navdb/"
 local T = dofile("tests/lib/check.lua")("route_sync")
 local xtlua = dofile("tests/lib/xtlua.lua")
@@ -124,15 +126,24 @@ xplane(3)
 frames(0.5)
 T.equal(xpcur(), 0, "once X-Plane has it, written no more")
 
--- the AFDS on BRAVO: ALPHA passed
-rt:set(CUR, 4)
-xplane(4)
+-- past ALPHA's turn on the way to BRAVO, north at 250 kt: LNAV sequences
+-- ALPHA (step 6c), X-Plane's current waypoint and the AFDS's follow
+rt:set("sim/flightmodel/position/latitude", 35.5333)
+rt:set("sim/flightmodel/position/longitude", 140.5)
+rt:set("sim/flightmodel/position/hpath", 0)
+rt:set("sim/flightmodel/position/psi", 0)
+rt:set("sim/flightmodel2/position/groundspeed", 128.6)
+rt:set("sim/flightmodel/position/true_airspeed", 128.6)
 frames(0.3)
 T.equal(line(3), "BRAVO                   ", "BRAVO the active waypoint, the first line (FCOM p.1331; FMSPG p.119)")
 T.equal(line(5), "CHARL                   ", "then CHARL")
+T.equal(xpcur(), 4, "X-Plane's current waypoint: BRAVO, the fourth")
+T.equal(rt:get(CUR), 4, "and the AFDS's")
+xplane(4)
+rt:set("xtlua/currentFMSID", "")
 loaded()
 T.equal(rows(), "ZZAA RW16R ALPHA BRAVO CHARL ZZBB", "X-Plane's flight plan the same")
-T.equal(xpcur(), 0, "nothing written")
+T.equal(xpcur(), 0, "nothing written once X-Plane shows it")
 
 -- a modification: CHARL deleted; after the EXEC X-Plane starts the new
 -- plan at ZZAA, the FMC makes BRAVO current again
@@ -188,10 +199,11 @@ T.equal(xpcur(), 5, "ZZD X-Plane's current waypoint")
 T.equal(rt:get(CUR), 5, "and the AFDS's (its best track takes the leg from DTOPOS)")
 T.equal(line(3), "ZZD                     ", "ZZD the active waypoint")
 
--- on the ground nothing follows the AFDS
+-- on the ground nothing sequences, past ZZD too
 rt:set("sim/flightmodel/failures/onground_any", 1)
 xplane(5)
-rt:set(CUR, 6)
+rt:set("sim/flightmodel/position/latitude", 35.32)
+rt:set("sim/flightmodel/position/longitude", 140.32)
 frames(0.3)
 T.equal(line(3), "ZZD                     ", "on the ground: no sequencing")
 

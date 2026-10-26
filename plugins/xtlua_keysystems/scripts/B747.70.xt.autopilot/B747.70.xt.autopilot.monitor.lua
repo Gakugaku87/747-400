@@ -788,7 +788,9 @@ function B747_updateApproachHeading(fmsO)
         return
     end
 
-    if (B747DR_ap_approach_mode~=0 or B747DR_ap_lnavHeading_mode~=0) and simDR_autopilot_nav_status==0 and B747DR_ap_lnav_state>0 and diff>0.5 then
+    -- (the FMC's own LNAV steers with its route: 6-1/6-2 step 6c)
+    if (B747DR_ap_approach_mode~=0 or B747DR_ap_lnavHeading_mode~=0) and simDR_autopilot_nav_status==0 and B747DR_ap_lnav_state>0 and diff>0.5
+        and B747DR_fms_lnav_route~=1 then
         if simDR_autopilot_heading_status == 0 then
             print("simCMD_autopilot_heading_select in B747DR_ap_approach_mode~=0")
             simCMD_autopilot_heading_select:once()

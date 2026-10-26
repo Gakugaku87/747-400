@@ -588,9 +588,32 @@ rollPid.target=0
 rollPid.input = 0
 rollPid:compute()
 
+-- LNAV's bank (6-1/6-2 step 6c; notes/ATA-34-61-FMC.md §29): the FMC's
+-- steering to the F/D and the roll attitude integrator as it is (ATA22
+-- p.358), at most 3 degrees a second (estimate), not X-Plane's heading
+-- select's averaged roll; from the roll there when LNAV engages
+local lnavRoll=nil
+local lnavRollT=0
+local function lnav_director_roll()
+    local dt=math.min(math.max(simDRTime-lnavRollT,0),0.5)
+    lnavRollT=simDRTime
+    if lnavRoll==nil then lnavRoll=simDR_AHARS_roll_heading_deg_pilot end
+    local t=B747DR_fms_lnav_roll
+    local step=3*dt
+    if t>lnavRoll+step then lnavRoll=lnavRoll+step elseif t<lnavRoll-step then lnavRoll=lnavRoll-step else lnavRoll=t end
+    return lnavRoll
+end
+
 function ap_roll_assist(doCompute)
     local retval=B747DR_sim_roll_ratio--B747_interpolate_value(B747DR_sim_roll_ratio,0,-1,1,20)
-    local flight_director_roll=ap_director_roll_integral()
+    local flight_director_roll
+    if B747DR_ap_FMA_active_roll_mode==2 and B747DR_fms_lnav_valid==1 then
+        flight_director_roll=lnav_director_roll()
+        B747DR_flight_director_roll=flight_director_roll
+    else
+        lnavRoll=nil
+        flight_director_roll=ap_director_roll_integral()
+    end
     rollPid.kp=B747DR_pidRollP
     rollPid.ki=B747DR_pidRollI
     B747DR_pidRollD=B747_rescale(3000,B747DR_pidRollDL,30000,B747DR_pidRollDH,B747DR_autopilot_altitude_ft_pfd)

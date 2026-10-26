@@ -24,6 +24,9 @@
 --  - The heading held (FCOM p.644, p.1431): past the last waypoint (END OF
 --    ROUTE), at a discontinuity (DISCONTINUITY), and after a new active leg
 --    out of the capture until the capture (`recapture`).
+--  - A DIRECT TO or a DF flown from where the airplane is: the course to
+--    the fix while it turns onto it, then the great circle from there
+--    (FCOM p.1237; the turn: estimate).
 -- Pure: the path model in, the path and the airplane's state each frame;
 -- the commands and the messages out.
 --   local L = B747_lnav_model                      -- in XTLua, after dofile
@@ -59,10 +62,33 @@ function M.new(P)
 end
 
 -- a new active leg not by sequencing (EXEC, ACTIVATE: the route changed):
--- the fly-by turn and the end of the route forgotten; engaged, the heading
--- held until the new leg is captured (FCOM p.644)
+-- the fly-by turn, the end of the route and a direct leg's start
+-- forgotten; engaged, the heading held until the new leg is captured
+-- (FCOM p.644)
 function M.reset(s)
-    s.turn, s.eor, s.recapture = nil, false, true
+    s.turn, s.eor, s.recapture, s.anchor = nil, false, true, nil
+end
+
+-- a direct leg (a DIRECT TO, a DF: the path model's `direct`) as flown:
+-- while the airplane turns onto it, the course from where it is to the
+-- fix; once on that course (within 3 degrees), the great circle from
+-- there (FCOM p.1237: after the EXEC the course is the current course to
+-- the waypoint; the turn onto it: estimate)
+local function direct(s, e, air, p)
+    local P = s.P
+    local a = s.anchor
+    if not (a and a.lat == e.b.lat and a.lon == e.b.lon) then
+        a = {lat = e.b.lat, lon = e.b.lon}
+        s.anchor = a
+    end
+    if not a.from then
+        local c, d = P.course(p, e.b)
+        if math.abs(wrap180(air.trk - c)) <= 3 or d < 0.5 then a.from = {lat = p.lat, lon = p.lon} end
+    end
+    local from = a.from or p
+    local c, d = P.course(from, e.b)
+    return {kind = "line", a = from, b = e.b, crs = c, len = d, term = e.term, flyover = e.flyover, turn = e.turn,
+        leg = e.leg, missed = e.missed, direct = true}
 end
 
 -- the radius of a turn at gs kt with `bank` degrees of bank (nm)
@@ -187,6 +213,7 @@ function M.update(s, path, air, armed, engaged)
     -- the turns' speed: the true airspeed and the wind's (the fastest
     -- ground speed in a turn; as for the holds: FMSPG p.164)
     local vt = (air.tas or air.gs) + (air.wind or 0)
+    if e.direct and e.kind == "line" and e.b then e = direct(s, e, air, p) end
     local met, conv = capture(s, e, air, p, vt)
     local xt, dtk, dtg = against(P, e, p)
     -- sequencing (not on the ground; within 21 nm of the leg)

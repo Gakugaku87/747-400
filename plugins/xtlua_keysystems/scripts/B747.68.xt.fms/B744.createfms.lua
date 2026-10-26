@@ -77,6 +77,12 @@ end
 function B747_cdu_fmc_alert()
   return C.fmc_alert(fmcMsgs)
 end
+-- a condition's FMC message by its text, for the messages not among the
+-- flags (6-1/6-2 step 6c: LNAV's NOT ON INTERCEPT HEADING, an advisory:
+-- FCOM p.1435)
+function B747_cdu_fmc_condition(text, on, alert)
+  C.fmc_set(fmcMsgs, text, on, alert)
+end
 -- the scratchpad's keys, by B747.68.cdu_model.lua's names
 local SP_KEYS = {space = "SP", slash = "/", ["."] = ".", ["-"] = "+/-", del = "DEL", clear = "CLR"}
 -- a CDU's page now: the custom pages at once (no blank half second:

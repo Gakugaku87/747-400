@@ -14,7 +14,8 @@
 --      "disc": a discontinuity or a pending airway, no path
 --      "line": the great circle from a to b, crs its course at a (true
 --        degrees): TF, DF, IF, CF and the FMC's own legs (DIRECT, airways,
---        direct-to)
+--        direct-to); `direct` for a DF and a DIRECT TO (not one with an
+--        INTC CRS): LNAV flies them from where the airplane is
 --      "course": the great circle from a on the true course crs: CA, CD,
 --        CI, CR from the leg before's end; FA, FC, FD, FM from their fix
 --      "heading": the true heading hdg from a (mag: the magnetic one), no
@@ -216,7 +217,11 @@ function M.element(l, i, prev, nxt, env, alt)
     local e = {leg = i, flyover = l.flyover, turn = l.turn, missed = l.missed, term = "fix"}
     local pt = l.pt
     if l.dto and l.from then
-        return line(e, l.from, l.fix)
+        -- a DIRECT TO (not one with an INTC CRS): flown from where the
+        -- airplane is (`direct`: the LNAV model)
+        line(e, l.from, l.fix)
+        e.direct = not l.crs
+        return e
     elseif pt == "CF" and l.fix and l.crs then
         -- the course into the fix, from abeam the point before it
         -- (estimate), else its distance (or 5 nm) back along it
@@ -268,7 +273,9 @@ function M.element(l, i, prev, nxt, env, alt)
             e.kind, e.b = "none", l.fix
             return e
         end
-        return line(e, prev, l.fix)
+        line(e, prev, l.fix)
+        e.direct = pt == "DF"
+        return e
     else
         e.kind = "none"
         return e
