@@ -559,6 +559,7 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - 試験キット：X-Plane の FMS に試験の経路を入れる FlyWithLua の `tests/flight/fwl/B747_route.lua`（XPLM の FMS 関数を FFI で呼ぶ。ID は近くの空港・VOR・NDB・fix から探す）と、シナリオの手順 `route`・`route_clear`。
 - 残り：POS（5c-2b）。FIX ページの予測の点（FCOM p.1149）、ステップ上昇などの FMC の予測（6-1）。
 - 試験：新しい `tests/displays/nd_data_test.lua`（29 件：行の作り、FMC の各点の ETA（モックの FMS モジュール）、ND の枠（モックの ND モジュール）、席ごとの DATA、ETA の無い点）。X-Plane のシナリオ `s67_nd_data`（21 件合格：フランクフルトの南、4,000 ft。`route` で NDB FR（現用点、5000 ft）、TAU（20000 ft）、EDDF（高度なし）。FMC の各点の ETA（10:01・10:04・10:06）、機長の DATA で FR は「5000 / 1001Z」がマゼンタ（右上の現用点の ETA 1001.4z と一致）、TAU は「FL200 / 1004Z」、EDDF は「1006Z」（白）、副操縦士の ND は DATA なしで出ない、PLN でも出る、DATA を切ると消える。ND を撮った。1 回目は経路の FKS が実際は出発点の南西（機体の後ろ）で、拡大の MAP に出ないのが正しかった（経路を組み直した）。2 回目は ND が FMC の ETA を読む前（2 秒ごと）に確かめて 3 件落ちた）。
+- 追記（2026-10-27）：高度の行の FL は遷移高度より上だけにした（遷移高度ちょうどはフィート。LEGS ページと同じで、ICAO の定義では遷移高度はその高度以下を高度で飛ぶ境目。推定のまま）。出発地 EDDF（遷移高度 5000 ft）で FR の 5000 が FL050 と出ていた（6-2 段 5f の s67 で見つけた）。試験：`nd_data_test.lua`。X-Plane：`s67_nd_data` 25/25（遷移高度 5000 ft の EDDF を出発地にした経路で、FR の 5000 が 5000 と出る）。
 
 ## 29. 段 5c-2b の実装（2026-10-26 朝：ND の POS）
 
