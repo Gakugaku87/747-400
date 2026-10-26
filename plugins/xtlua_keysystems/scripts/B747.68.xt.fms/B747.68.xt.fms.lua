@@ -941,10 +941,12 @@ B747DR_fms_ap_lnav_state=find_dataref("laminar/B747/autopilot/lnav_state")
 simDR_lnav_trk=find_dataref("sim/flightmodel/position/hpath")
 simDR_lnav_tas=find_dataref("sim/flightmodel/position/true_airspeed")
 local function lnav_var(lat,lon) return B747_navdb.variation(B747_fmc_navdb,lat,lon) end
--- a leg as LNAV flies it: its fix or name, a direct-to's or LNAV's start
+-- a leg as LNAV flies it: its fix or name, a direct-to's or LNAV's start,
+-- a hold at its fix
 local function lnav_leg_key(l)
   if not l then return "" end
   local k=l.fix and string.format("%s %.5f %.5f",l.fix.ident,l.fix.lat,l.fix.lon) or (l.name or (l.disc and "DISC" or ""))
+  if B747_route_model.is_hold(l) then k=k.." HOLD" end
   local f=(l.dto and l.from) or l.start
   if f then k=k..string.format(" %.5f %.5f",f.lat,f.lon) end
   return k
@@ -952,12 +954,52 @@ end
 -- RTE 1's path, active or not: LNAV's and the ND's line's shape in
 -- X-Plane's flight plan (step 6d)
 local routePath=nil
--- the holds' racetracks on the ND's line: at the true airspeed and the
--- wind's (FMSPG p.224); on the ground the path model's 250 kt (estimate)
-local function lnav_hold_kt()
-  local tas=simDR_lnav_tas*1.94384
-  if tas<100 then return nil end
-  return tas+simDR_wind_speed
+-- the holds' racetracks on the ND's line (step 7b; FMSPG p.223; FCOM
+-- p.1148): the hold whose fix is the TO fix as LNAV makes it (when the
+-- fix becomes the TO fix, anew at each crossing: FMSPG p.224), the others
+-- of one size (the small symbol: 210 kt and their legs, estimate)
+local HOLD_SYMBOL_KT=210
+local lnavAir=nil
+local holdDrawn=nil
+-- the hold whose fix is the TO fix: its leg and racetrack, or nil (on
+-- the ground the small symbol: estimate)
+local function lnav_to_hold()
+  local path=lnavPath
+  if not path or simDR_onGround==1 then return nil end
+  local s=B747_fmc_lnav
+  local e1,e2=path[1],path[2]
+  local i,t
+  if e1 and e1.kind=="hold" then
+    i=1
+    local h=s.hp
+    if h and h.t and h.lat==e1.b.lat and h.lon==e1.b.lon then t=h.t end
+  elseif e2 and e2.kind=="hold" and e1 and e1.b and e1.b.lat==e2.b.lat and e1.b.lon==e2.b.lon then
+    i=2
+    local a=s.ahead
+    if a and a.lat==e2.b.lat and a.lon==e2.b.lon then t=a.t end
+  end
+  if not i then return nil end
+  if not t and lnavAir then t=B747_lnav_model.hold_now(s,path[i],lnavAir) end
+  if not t then return nil end
+  return i,t
+end
+local function lnav_hold_sizes()
+  local i,t=lnav_to_hold()
+  holdDrawn=i and {i=i,r=t.r,l=t.l} or nil
+  if not i then return nil end
+  return {[i]={r=t.r,l=t.l}}
+end
+-- the TO hold's racetrack other than drawn (by 2 % or 0.05 nm: estimate):
+-- drawn anew (true)
+local function lnav_hold_changed()
+  local i,t=lnav_to_hold()
+  local d=holdDrawn
+  local function off(a,b) return math.abs(a-b)>math.max(0.05,0.02*b) end
+  local changed
+  if not i then changed=d~=nil
+  else changed=not d or d.i~=i or off(t.r,d.r) or off(t.l,d.l) end
+  if changed then holdDrawn=i and {i=i,r=t.r,l=t.l} or nil end
+  return changed
 end
 function B747_fmc_lnav_build()
   local st=B747_fmc_route
@@ -986,7 +1028,7 @@ function B747_fmc_route_changed()
   -- X-Plane takes a flight plan with a destination only (without, an error
   -- message on the screen): none before the DEST
   if r.dest==nil then return end
-  local fms,map=B747_route_model.to_fms(r,(B747_navdb.cycle_info(B747_fmc_navdb)),B747_path_model.shape(routePath,lnav_hold_kt()))
+  local fms,map=B747_route_model.to_fms(r,(B747_navdb.cycle_info(B747_fmc_navdb)),B747_path_model.shape(routePath,HOLD_SYMBOL_KT,lnav_hold_sizes()))
   local active=B747_fmc_route.active
   if fms==routeLoaded then
     -- the plan X-Plane has: its rows' legs as the route is now (sequencing
@@ -1097,6 +1139,18 @@ end
 -- the AFDS, its cross-track error, its messages (FCOM p.1431, p.1433,
 -- p.1435)
 local LNAV_MODE={path=1,heading=2,hold=3}
+-- a hold's phase (step 7b): to its fix, the entries, the loop's parts
+local HOLD_PHASE={to=1,direct=2,teardrop=3,parallel=4,intercept=5,turn1=6,outbound=7,turn2=8,inbound=9}
+B747DR_fms_lnav_hold_phase=find_dataref("laminar/B747/fms/lnav/hold_phase")
+B747DR_fms_lnav_hold_loops=find_dataref("laminar/B747/fms/lnav/hold_loops")
+B747DR_fms_lnav_hold_exit=find_dataref("laminar/B747/fms/lnav/hold_exit")
+-- the airplane's track, magnetic as the FMC's courses (the nearest VOR's
+-- variation, else X-Plane's): a PPOS hold's inbound course (step 7b)
+function B747_fmc_track_mag()
+  local var=B747_navdb.variation(B747_fmc_navdb,simDR_latitude,simDR_longitude)
+  if var==nil then var=-simDR_variation end
+  return (simDR_lnav_trk-var)%360
+end
 local DISCONTINUITY,END_OF_ROUTE,NO_ACTIVE_ROUTE=8,11,27
 -- a message's flag, written when LNAV's condition changes
 local lnavFlags={}
@@ -1127,6 +1181,7 @@ function B747_fmc_lnav_update()
   local air={lat=simDR_latitude,lon=simDR_longitude,trk=simDR_lnav_trk,hdg=simDR_fms_true_psi,
     gs=simDR_groundspeed*1.94384,tas=simDR_lnav_tas*1.94384,wind=simDR_wind_speed,
     alt=simDR_pressureAlt1,var=-simDR_variation,ground=simDR_onGround==1}
+  lnavAir=air
   local n=B747_lnav_model.update(s,st.active and lnavPath or nil,air,armed,engaged)
   if n>0 then
     -- after a leg ending at a condition the next starts where the airplane is
@@ -1153,6 +1208,16 @@ function B747_fmc_lnav_update()
   -- PROGRESS page 2's XTK ERROR (FCOM p.1377: the AFDS's best track's
   -- before)
   if st.active then B747DR_ap_lnav_xtk_error=math.abs(s.xtk) end
+  -- the hold (step 7b): its phase, its loops, its exit armed
+  local h=st.active and s.hp or nil
+  local ph=h and HOLD_PHASE[h.phase] or 0
+  if B747DR_fms_lnav_hold_phase~=ph then B747DR_fms_lnav_hold_phase=ph end
+  local loops=h and h.loops or 0
+  if B747DR_fms_lnav_hold_loops~=loops then B747DR_fms_lnav_hold_loops=loops end
+  local ex=(h and h.exit) and 1 or 0
+  if B747DR_fms_lnav_hold_exit~=ex then B747DR_fms_lnav_hold_exit=ex end
+  -- the ND's racetrack anew when LNAV made the TO hold's anew
+  if st.active and n==0 and lnav_hold_changed() then B747_fmc_route_changed() end
   lnav_flag(DISCONTINUITY,s.msg_disc)
   lnav_flag(END_OF_ROUTE,s.msg_eor)
   lnav_flag(NO_ACTIVE_ROUTE,(armed or engaged) and not st.active)

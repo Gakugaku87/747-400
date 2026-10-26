@@ -6,7 +6,8 @@
 -- Z2): ORIGIN, DEST and RUNWAY (FCOM p.1288-1289), the RTE pages' DIRECT
 -- and airway segments, the airways' intersection, ROUTE FULL (FCOM
 -- p.1296-1298, p.1435; FMSPG p.82-83), ACTIVATE, MOD, EXEC and ERASE (FCOM
--- p.1238, p.1290), X-Plane's flight plan file.
+-- p.1238, p.1290), X-Plane's flight plan file, the holds (step 7b: HOLD AT,
+-- PPOS, the entries, EXIT HOLD, DELETE).
 local T = dofile("tests/lib/check.lua")("route_model")
 local N = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.navdb.lua")
 local R = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.route_model.lua")
@@ -313,5 +314,83 @@ local back, d = R.course(delta.lat, delta.lon, from.lat, from.lon)
 local _, d0 = R.course(35.6, 140.6, delta.lat, delta.lon)
 T.check(math.abs(d - d0) < 0.1 and math.abs((back - (90 + var + 180) + 180) % 360 - 180) < 0.1,
     string.format("INTC CRS 090: from %.1f nm on the course into DELTA (%.1f true back; the airplane %.1f nm)", d, back, d0))
+
+-- the holds (step 7b; FCOM p.1413-1419; FMSPG p.157-163, p.221-223)
+st = R.new(N, db)
+R.set_origin(st, "ZZAA")
+R.set_dest(st, "ZZBB")
+R.set_runway(st, "16R")
+R.add_to(st, fix("ALPHA"))
+R.add_via(st, "Z1")
+R.add_to(st, fix("CHARL"))
+local h, err = R.hold_at(st, 2, nil)
+T.check(h == 3 and not err, "HOLD AT BRAVO on the inactive route: the hold after the leg to BRAVO (FMSPG p.158)")
+local hl = R.shown(st).legs[3]
+T.check(R.is_hold(hl) and hl.pt == "HM" and hl.fix.ident == "BRAVO" and hl.turn == "R" and hl.time == 1.0,
+    "a hold ended by the crew (HM), right turns, 1.0 minute")
+T.equal(hl.crs, 7, "inbound the leg's course into BRAVO: north, 007 magnetic (FMSPG p.160)")
+T.equal(idents(st), "ALPHA BRAVO BRAVO CHARL", "the legs")
+T.equal(segs(st), "DIRECT ALPHA, Z1 CHARL", "the RTE segments as before: the hold in Z1's")
+T.check(select(2, R.hold_at(st, 3, nil)) == R.INVALID_ENTRY and select(2, R.hold_at(st, 2, nil)) == R.INVALID_ENTRY,
+    "not at a hold, nor twice")
+T.equal(R.find_fix(R.shown(st), fix("BRAVO")), 2, "BRAVO's leg, not its hold")
+T.equal(table.concat(R.holds(R.shown(st)), " "), "3", "the holds")
+-- the default leg time (FMSPG p.222-223)
+R.set_constraint(st, 2, {alt = 15000, akind = "A"}, nil)
+R.hold_at(st, 4, nil)
+T.equal(R.shown(st).legs[5].time, 1.0, "at CHARL, nothing above 14,000 ft: 1.0")
+st.rte.legs[4].alt = 15000
+table.remove(st.rte.legs, 5)
+R.hold_at(st, 4, nil)
+T.equal(R.shown(st).legs[5].time, 1.5, "CHARL at or above 15,000: 1.5 minutes")
+table.remove(st.rte.legs, 5)
+st.rte.legs[4].alt = nil
+R.hold_at(st, 4, 35000)
+T.equal(R.shown(st).legs[5].time, 1.5, "no constraint, cruise FL350: 1.5 minutes (estimate)")
+table.remove(st.rte.legs, 5)
+-- its entries
+T.equal(R.hold_set(st, 3, {radial = 330}), nil, "QUAD/RADIAL 330")
+T.check(hl.crs == 150 and hl.radial == 330, "the inbound course 150")
+R.hold_set(st, 3, {crs = 90, turn = "L"})
+T.check(hl.crs == 90 and hl.radial == nil and hl.turn == "L", "INBD CRS/DIR 090/L: no radial")
+R.hold_set(st, 3, {dist = 5})
+T.check(hl.dist == 5 and hl.time == nil, "LEG DIST: no time")
+R.hold_set(st, 3, {time = 2})
+T.check(hl.time == 2 and hl.dist == nil, "LEG TIME: no distance")
+T.equal(R.hold_set(st, 2, {time = 2}), R.INVALID_ENTRY, "not a hold")
+T.equal(R.hold_exit(st, 3), R.INVALID_ENTRY, "EXIT HOLD: not on the inactive route")
+-- X-Plane's flight plan: the hold's fix, its racetrack, the fix again
+local hpts = {{lat = 36.01, lon = 140.52}, {lat = 36.02, lon = 140.55}}
+text, map = R.to_fms(st.rte, "2610", {[3] = {pts = hpts}})
+T.check(text:find("\n11 BRAVO Z1 [^\n]*\n11 BRAVO DRCT [^\n]*\n28 ~ DRCT 0.000000 36.010000 140.520000\n28 ~ DRCT 0.000000 36.020000 140.550000\n28 ~ DRCT 0.000000 36.000000 140.500000\n11 CHARL Z1 "),
+    "BRAVO, the hold's BRAVO, its points and BRAVO again, CHARL")
+T.equal(map.leg[map.row[3]], 3, "the hold's row: its fix's")
+T.equal(map.ident[map.row[3]], "BRAVO", "BRAVO")
+-- active: the hold flown, EXIT HOLD, DELETE (FCOM p.1416, p.1419)
+R.activate(st)
+R.exec(st)
+T.check(R.sequence(st, 2), "ALPHA and BRAVO passed: the hold active")
+T.check(R.is_hold(st.rte.legs[1]), "the hold first")
+T.equal(R.hold_exit(st, 1), nil, "EXIT HOLD")
+T.check(st.mod and st.mod.legs[1].exit and not st.rte.legs[1].exit, "armed in the modification")
+R.exec(st)
+T.check(st.rte.legs[1].exit, "EXEC: armed")
+T.equal(R.hold_exit(st, 1), R.INVALID_ENTRY, "once")
+T.equal(R.legs_delete(st, 1), nil, "DELETE the hold flown")
+local nx = st.mod.legs[1]
+T.check(nx.fix.ident == "CHARL" and nx.dto and nx.dto_exec, "CHARL direct (FCOM p.1416)")
+R.exec(st, {lat = 36.1, lon = 140.6})
+T.check(st.rte.legs[1].from.lat == 36.1, "from where the airplane is at EXEC")
+-- PPOS (FCOM p.1415): its fix at EXEC, N36E140
+h, err = R.hold_ppos(st, {lat = 36.2, lon = 140.7, trk = 52.4}, nil)
+T.check(h == 1 and not err and st.mod.legs[1].fix.ident == R.PPOS and st.mod.legs[1].crs == 52, "PPOS: the hold first, inbound the track")
+T.check(not st.mod.legs[2].dto and st.mod.legs[2].from == nil, "the leg on from its fix")
+R.exec(st, {lat = 36.25, lon = 140.75, trk = 60})
+local pp = st.rte.legs[1]
+T.check(pp.fix.ident == "N36E140" and pp.fix.lat == 36.25 and pp.fix.kind == "LL", "EXEC: the fix there, N36E140")
+T.equal(pp.crs, 60, "inbound the track at EXEC (estimate)")
+T.check(R.sequence(st, 1), "the hold sequenced (LNAV: its exit)")
+T.check(st.rte.passed[#st.rte.passed] == pp and st.rte.legs[1].fix.ident == "CHARL", "CHARL next")
+T.equal(select(2, R.hold_ppos(R.new(N, db), {lat = 36, lon = 140})), R.INVALID_ENTRY, "PPOS: not without an active route")
 
 T.done()

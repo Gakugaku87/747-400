@@ -6,7 +6,8 @@
 -- DISCONTINUITY's boxes; the waypoints entered, deleted and their
 -- constraints on the line select keys; DIRECT TO and INTC CRS on the active
 -- route's first line (FMSPG p.141-144). Before: X-Plane's LEGS page shown
--- through.
+-- through. RTE LEGS HOLD AT (step 7b; FCOM p.1414; FMSPG p.157-158): the
+-- LEGS pages with the HOLD AT boxes and PPOS> (B744.fms.pages.hold.lua).
 local R = B747_route_model
 local BLANK = "                        "
 local DISC_TITLE = "-- ROUTE DISCONTINUITY -"
@@ -49,13 +50,15 @@ end
 
 -- a leg's title line (FCOM p.1331-1332): the course into the waypoint
 -- (the INTC CRS; a procedure's course, or its heading with HDG; HOLD AT
--- for a hold; else the great circle's from where the leg starts, dashes
--- when undefined) and the distance (none for a conditional waypoint:
--- FMSPG p.119)
+-- for a hold, PROC HOLD for a procedure's in lieu of a procedure turn
+-- (HF: FCOM p.1331, p.1416); else the great circle's from where the leg
+-- starts, dashes when undefined) and the distance (none for a conditional
+-- waypoint: FMSPG p.119)
 local function leg_title(r, i)
   local l = r.legs[i]
   local pt = l.pt or ""
-  if pt == "HA" or pt == "HF" or pt == "HM" then return pad(" HOLD AT") end
+  if pt == "HF" then return pad(" PROC HOLD") end
+  if pt == "HA" or pt == "HM" then return pad(" HOLD AT") end
   local from = leg_start(r, i)
   local crs, dist = "---`", ""
   if l.fix and from then
@@ -85,13 +88,11 @@ local function dto_mod()
   return l and l.dto and l or nil
 end
 
-fmsPages["LEGS"]=createPage("LEGS")
-fmsPages["LEGS"].getNumPages=function(self)
-  return num_pages()
-end
-fmsPages["LEGS"].getPage=function(self,pgNo,fmsID)
+-- the LEGS page's lines, its line select keys' functions in `defs`;
+-- `hold_at`: RTE LEGS HOLD AT, the HOLD AT boxes at 6L and PPOS> at 6R
+-- (FCOM p.1414)
+local function legs_page(pgNo, defs, hold_at)
   local r = route()
-  local defs = fmsFunctionsDefs["LEGS"]
   local lines = {title()}
   for k = 1, 5 do
     local i = leg_index(pgNo, k)
@@ -108,6 +109,13 @@ fmsPages["LEGS"].getPage=function(self,pgNo,fmsID)
     else
       lines[#lines + 1] = BLANK
     end
+  end
+  if hold_at then
+    defs["L6"] = {"legsholdat", ""}
+    defs["R6"] = {"legsholdppos", ""}
+    lines[12] = "--------HOLD AT---------"
+    lines[13] = lr("*****", "PPOS>")
+    return lines
   end
   local d = dto_mod()
   defs["L6"] = B747_fmc_route.mod and {"rteerase", ""} or nil
@@ -126,7 +134,7 @@ fmsPages["LEGS"].getPage=function(self,pgNo,fmsID)
   lines[13] = lr(left, right)
   return lines
 end
-fmsPages["LEGS"].getSmallPage=function(self,pgNo,fmsID)
+local function legs_small(pgNo, hold_at)
   local r = route()
   local lines = {string.format("%23s ", pgNo .. "/" .. num_pages())}
   for k = 1, 5 do
@@ -144,16 +152,40 @@ fmsPages["LEGS"].getSmallPage=function(self,pgNo,fmsID)
     lines[#lines + 1] = pad(t)
     lines[#lines + 1] = BLANK
   end
-  lines[12] = dto_mod() and "                INTC CRS" or BLANK
+  lines[12] = (dto_mod() and not hold_at) and "                INTC CRS" or BLANK
   lines[13] = BLANK
   return lines
 end
+fmsPages["LEGS"]=createPage("LEGS")
+fmsPages["LEGS"].getNumPages=function(self)
+  return num_pages()
+end
+fmsPages["LEGS"].getPage=function(self,pgNo,fmsID)
+  return legs_page(pgNo, fmsFunctionsDefs["LEGS"], false)
+end
+fmsPages["LEGS"].getSmallPage=function(self,pgNo,fmsID)
+  return legs_small(pgNo, false)
+end
 fmsFunctionsDefs["LEGS"]={}
 fmsFunctionsDefs["LEGS"]["exec"]={"rteexec", ""}
+fmsPages["LEGSHOLD"]=createPage("LEGSHOLD")
+fmsPages["LEGSHOLD"].getNumPages=function(self)
+  return num_pages()
+end
+fmsPages["LEGSHOLD"].getPage=function(self,pgNo,fmsID)
+  return legs_page(pgNo, fmsFunctionsDefs["LEGSHOLD"], true)
+end
+fmsPages["LEGSHOLD"].getSmallPage=function(self,pgNo,fmsID)
+  return legs_small(pgNo, true)
+end
+fmsFunctionsDefs["LEGSHOLD"]={}
+fmsFunctionsDefs["LEGSHOLD"]["exec"]={"rteexec", ""}
 
 -- a waypoint over leg i (FMSPG p.82, p.91, p.141): an empty scratchpad
 -- copies its identifier; DELETE deletes it (not the active waypoint in
--- the air); an entry on the active route's first line is a DIRECT TO
+-- the air, but the hold flown: FCOM p.1416); an entry on the active
+-- route's first line is a DIRECT TO; HOLD AT XXXXX (a waypoint not in the
+-- route: FCOM p.1414) its hold there
 function fmsFunctions.legsfix(fmsO, value)
   local st = B747_fmc_route
   local r = route()
@@ -165,10 +197,11 @@ function fmsFunctions.legsfix(fmsO, value)
     return
   end
   if sp == "DELETE" then
-    if st.active and i == 1 and simDR_onGround == 0 then fmsO["notify"] = "INVALID DELETE" return end
+    if st.active and i == 1 and simDR_onGround == 0 and not R.is_hold(l) then fmsO["notify"] = "INVALID DELETE" return end
     B747_fmc_route_entry(fmsO, R.legs_delete(st, i))
     return
   end
+  if B747_cdu_hold_at_entry(fmsO, i) then return end
   if i > #r.legs + 1 then fmsO["notify"] = "INVALID ENTRY" return end
   local near = leg_start(r, i) or (i == 1 and airplane()) or r.origin
   B747_fmc_with_point(fmsO, sp, near, function(p)
@@ -227,6 +260,8 @@ local function parse_constraint(s)
   if not (c.spd or c.alt) then return nil end
   return c
 end
+-- the RTE HOLD page's SPD/TGT ALT too (step 7b)
+B747_cdu_parse_constraint = parse_constraint
 function fmsFunctions.legscons(fmsO, value)
   local st = B747_fmc_route
   local i = leg_index(fmsO.pgNo, tonumber(value))

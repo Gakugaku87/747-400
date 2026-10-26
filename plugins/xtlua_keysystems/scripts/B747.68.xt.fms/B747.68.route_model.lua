@@ -71,12 +71,20 @@ end
 -- EXEC: the modification or the activation; false when there is none.
 -- `ppos`: the airplane's position ({lat, lon}), where a direct-to's path
 -- starts (step 5e)
-local start_of_dto
+local start_of_dto, latlon_name
 function M.exec(st, ppos)
     if st.mod then
         local l = st.mod.legs[1]
         if l and l.dto_exec then
             l.from, l.dto_exec = ppos and start_of_dto(st, l, ppos) or l.from, nil
+        end
+        -- a PPOS hold: its fix the position at EXEC, its default inbound
+        -- course the track then (FCOM p.1415; the course: estimate)
+        for _, h in ipairs(st.mod.legs) do
+            if h.ppos and ppos and h.fix.ident == M.PPOS then
+                h.fix = {kind = "LL", ident = latlon_name(ppos), lat = ppos.lat, lon = ppos.lon}
+                if h.crs_default and ppos.trk then h.crs = math.floor(ppos.trk + 0.5) % 360 end
+            end
         end
         -- the legs passed as they are now (the modification's copy may be
         -- older: step 5e)
@@ -106,6 +114,19 @@ function M.status(st)
     if st.mod then return "MOD" end
     if st.active then return "ACT" end
     return ""
+end
+
+-- a hold's leg (step 7b): at its fix after the leg to that fix (FCOM
+-- p.1413-1419; FMSPG p.157-163, p.221-223): pt "HM" (ended by the crew:
+-- the crew's holds and a procedure's), "HA" (at an altitude), "HF" (at
+-- the fix: a procedure's); crs its inbound course (magnetic), turn "L" or
+-- "R", time (minutes) or dist (nm), radial (the QUAD/RADIAL entered), efc
+-- (the EFC TIME, "hhmm"), exit (EXIT HOLD executed), ppos (a PPOS hold:
+-- its fix where the airplane is at EXEC), crs_default (the course not
+-- entered)
+local HOLD_PT = {HM = true, HA = true, HF = true}
+function M.is_hold(l)
+    return l ~= nil and l.pt ~= nil and HOLD_PT[l.pt] == true
 end
 
 -- the number of waypoints in a route's legs (the conditional ones too)
@@ -199,6 +220,10 @@ function M.segments(r)
         elseif l.pending then
             segs[#segs + 1] = {via = l.via, first = i, last = i}
             cur = nil
+        elseif M.is_hold(l) and cur then
+            -- a hold: the segment its fix ends (not a route segment of
+            -- its own: step 7b)
+            cur.last = i
         elseif l.via == M.DIRECT or not cur or cur.via ~= l.via then
             cur = {via = l.via, to = M.leg_name(l), first = i, last = i}
             segs[#segs + 1] = cur
@@ -336,15 +361,21 @@ function M.leg_from(r, i)
     return r.runway or r.origin
 end
 
--- the leg from `from` on with this fix (the same identifier and place)
+-- the leg from `from` on with this fix (the same identifier and place;
+-- not a hold at it)
 local function find_leg(r, fix, from)
     for i = from or 1, #r.legs do
         local f = r.legs[i].fix
-        if f and f.ident == fix.ident and math.abs(f.lat - fix.lat) < 1e-4 and math.abs(f.lon - fix.lon) < 1e-4 then
+        if f and not M.is_hold(r.legs[i]) and f.ident == fix.ident and math.abs(f.lat - fix.lat) < 1e-4 and math.abs(f.lon - fix.lon) < 1e-4 then
             return i
         end
     end
     return nil
+end
+
+-- the route's leg to this waypoint (not a hold at it); nil when none
+function M.find_fix(r, fix)
+    return find_leg(r, fix, 1)
 end
 
 -- a waypoint entered on the LEGS pages over leg `i` (#legs + 1: the dashes
@@ -373,7 +404,9 @@ end
 
 -- DELETE over leg `i` (estimate: the waypoints before and after it joined
 -- DIRECT; a discontinuity is closed by entering the waypoint after it, not
--- deleted: INVALID DELETE)
+-- deleted: INVALID DELETE). The hold being flown (the active route's
+-- first leg): LNAV direct to the next waypoint (FCOM p.1416), from where
+-- the airplane is at EXEC
 M.INVALID_DELETE = "INVALID DELETE"
 function M.legs_delete(st, i)
     local l = M.shown(st).legs[i]
@@ -382,6 +415,7 @@ function M.legs_delete(st, i)
     table.remove(r.legs, i)
     local nxt = r.legs[i]
     if nxt and nxt.fix then nxt.via, nxt.dto, nxt.crs, nxt.pt, nxt.start = M.DIRECT, nil, nil, nil, nil end
+    if nxt and nxt.fix and i == 1 and st.active and M.is_hold(l) then nxt.dto, nxt.dto_exec = true, true end
 end
 
 -- DIRECT TO (FMSPG p.141-144): a waypoint entered over the active
@@ -472,6 +506,129 @@ function M.constraint_text(l, trans_alt)
         end
     end
     return (l.spd and tostring(l.spd) or "") .. "/" .. alt
+end
+
+-- the holds (6-1/6-2 step 7b; notes/ATA-34-61-FMC.md §33)
+
+-- the holds' legs in flight order
+function M.holds(r)
+    local out = {}
+    for i, l in ipairs(r.legs) do
+        if M.is_hold(l) then out[#out + 1] = i end
+    end
+    return out
+end
+
+-- a lat/lon fix's name by its whole degrees ("N47W120": FCOM p.1415)
+function latlon_name(p)
+    return string.format("%s%02d%s%03d", p.lat >= 0 and "N" or "S", math.floor(math.abs(p.lat)),
+        p.lon >= 0 and "E" or "W", math.floor(math.abs(p.lon)))
+end
+M.PPOS = "PPOS"
+
+-- the inbound course into `fix` from `from` (the great circle's at the
+-- fix), magnetic (the nearest VOR's variation; true without one)
+local function inbound_course(st, from, fix)
+    if not from then return 0 end
+    local back = M.course(fix.lat, fix.lon, from.lat, from.lon)
+    local var = st.N.variation and st.N.variation(st.db, fix.lat, fix.lon) or 0
+    return math.floor((back + 180 - (var or 0)) % 360 + 0.5) % 360
+end
+-- a hold's default leg time (FMSPG p.222-223; FCOM p.1417-1418): 1.5
+-- minutes above 14,000 ft, else 1.0, by the hold's altitude constraint
+-- (a block's upper), else the leg before it's, else the cruise altitude
+-- (estimate: the flight phase is VNAV's, step 9), else 1.0
+local function time_default(r, i, crz_alt)
+    local function top(l) return l and l.alt and math.max(l.alt, l.alt2 or l.alt) end
+    local alt = top(r.legs[i]) or top(r.legs[i - 1]) or crz_alt
+    return (alt and alt > 14000) and 1.5 or 1.0
+end
+-- a new hold at `fix` as leg i: the default inbound course (into the fix
+-- from `from`) and right turns (FMSPG p.160), the default leg time
+local function new_hold(st, r, i, fix, crz_alt, from)
+    local h = {via = M.DIRECT, pt = "HM", fix = fix, crs = inbound_course(st, from, fix), turn = "R", crs_default = true}
+    table.insert(r.legs, i, h)
+    h.time = time_default(r, i, crz_alt)
+    return h
+end
+
+-- HOLD AT a waypoint of the route, leg j (FMSPG p.158: the hold after the
+-- leg to it, the legs between staying). Returns the hold's leg, or nil
+-- and the error
+function M.hold_at(st, j, crz_alt)
+    local r = M.shown(st)
+    local l = r.legs[j]
+    if not (l and l.fix) or l.disc or l.pending or M.is_hold(l) or M.is_hold(r.legs[j + 1]) then
+        return nil, M.INVALID_ENTRY
+    end
+    if full(r, 1) then return nil, M.ROUTE_FULL end
+    r = M.edit(st)
+    new_hold(st, r, j + 1, r.legs[j].fix, crz_alt, M.leg_from(r, j))
+    return j + 1
+end
+
+-- HOLD AT a waypoint not in the route on line i of the LEGS pages (FCOM
+-- p.1414; not the active waypoint): the waypoint and its hold before leg
+-- i, a ROUTE DISCONTINUITY after them (as a waypoint inserted: FMSPG p.91;
+-- estimate). `ppos` the airplane's position: the course into it when no
+-- leg comes before
+function M.hold_insert(st, i, fix, crz_alt, ppos)
+    local r = M.shown(st)
+    if i < 1 or i > #r.legs + 1 or (st.active and i == 1) then return nil, M.INVALID_ENTRY end
+    if full(r, 2) then return nil, M.ROUTE_FULL end
+    r = M.edit(st)
+    table.insert(r.legs, i, {via = M.DIRECT, fix = fix})
+    new_hold(st, r, i + 1, fix, crz_alt, M.leg_from(r, i) or ppos)
+    local nxt = r.legs[i + 2]
+    if nxt and not nxt.disc then table.insert(r.legs, i + 2, {disc = true}) end
+    return i + 1
+end
+
+-- HOLD AT PPOS (FCOM p.1415; FMSPG p.158): on the active route a hold
+-- where the airplane is, its fix set at EXEC, before the active leg (the
+-- route on after it from its fix: estimate); `ppos` = {lat, lon, trk (the
+-- track, magnetic: the default inbound course, estimate)}
+function M.hold_ppos(st, ppos, crz_alt)
+    if not st.active then return nil, M.INVALID_ENTRY end
+    local r = M.shown(st)
+    if full(r, 1) then return nil, M.ROUTE_FULL end
+    r = M.edit(st)
+    local nxt = r.legs[1]
+    if nxt then
+        nxt.dto, nxt.from, nxt.dto_exec, nxt.start = nil, nil, nil, nil
+        if not nxt.pt then nxt.crs = nil end
+    end
+    local h = new_hold(st, r, 1, {kind = "LL", ident = M.PPOS, lat = ppos.lat, lon = ppos.lon}, crz_alt)
+    h.crs, h.ppos = math.floor((ppos.trk or 0) + 0.5) % 360, true
+    return 1
+end
+
+-- the RTE HOLD page's entries on hold leg i (FCOM p.1417-1418; FMSPG
+-- p.159-160): `f` = {crs (the inbound course, 0-360), turn ("L", "R"),
+-- radial (the QUAD/RADIAL: the inbound course its reciprocal), time
+-- (minutes: no distance), dist (nm: no time)}
+function M.hold_set(st, i, f)
+    if not M.is_hold(M.shown(st).legs[i]) then return M.INVALID_ENTRY end
+    local l = M.edit(st).legs[i]
+    if f.crs then l.crs, l.radial, l.crs_default = f.crs % 360, nil, nil end
+    if f.radial then l.radial, l.crs, l.crs_default = f.radial % 360, (f.radial + 180) % 360, nil end
+    if f.turn then l.turn = f.turn end
+    if f.time then l.time, l.dist = f.time, nil end
+    if f.dist then l.dist, l.time = f.dist, nil end
+end
+-- EFC TIME ("hhmm", nil: none): the route shown, no modification (it
+-- moves the predictions only: estimate)
+function M.hold_efc(st, i, efc)
+    local l = M.shown(st).legs[i]
+    if not M.is_hold(l) then return M.INVALID_ENTRY end
+    l.efc = efc
+end
+-- EXIT HOLD (FCOM p.1419; FMSPG p.162): the hold flown (the active route's
+-- first leg), the exit armed by EXEC
+function M.hold_exit(st, i)
+    local l = M.shown(st).legs[i]
+    if not (st.active and i == 1 and M.is_hold(l)) or l.exit then return M.INVALID_ENTRY end
+    M.edit(st).legs[i].exit = true
 end
 
 -- the terminal procedures (6-1/6-2 step 5d; B747.68.proc_model.lua makes
@@ -632,8 +789,9 @@ local function fms_rows(r, shape, arcs, first_passed)
     local function leg_rows(l, i)
         if l.dto and l.from then row(28, M.DTO_START, "DRCT", 0, l.from.lat, l.from.lon) end
         local sh = i and shape and shape[i]
+        local hold = M.is_hold(l)
         if l.fix and not l.missed then
-            if arcs and sh and sh.pts then
+            if arcs and sh and sh.pts and not hold then
                 for _, p in ipairs(sh.pts) do row(28, M.ARC_POINT, "DRCT", 0, p.lat, p.lon) end
             end
             local via = (l.via == M.DIRECT or l.proc) and "DRCT" or l.via
@@ -648,6 +806,12 @@ local function fms_rows(r, shape, arcs, first_passed)
                 row(FMS_TYPE[l.fix.kind] or 11, l.fix.ident, via, alt, l.fix.lat, l.fix.lon)
             end
             if i then map.leg[#rows], map.row[i] = i, #rows end
+            -- a hold's racetrack after its fix, round to the fix again
+            -- (the line drawn while it is the active waypoint: step 7b)
+            if hold and arcs and sh and sh.pts then
+                for _, p in ipairs(sh.pts) do row(28, M.ARC_POINT, "DRCT", 0, p.lat, p.lon) end
+                row(28, M.ARC_POINT, "DRCT", 0, l.fix.lat, l.fix.lon)
+            end
         elseif not l.fix and not l.missed and l.name and l.name ~= "" then
             -- a conditional leg's end (no altitude: not a constraint for
             -- the AFDS's VNAV)
@@ -691,6 +855,7 @@ end
 local function same_leg(a, b)
     if not (a and b) then return false end
     if a.disc or b.disc then return a.disc == b.disc end
+    if M.is_hold(a) ~= M.is_hold(b) then return false end
     if a.fix and b.fix then
         return a.fix.ident == b.fix.ident and math.abs(a.fix.lat - b.fix.lat) < 1e-4
             and math.abs(a.fix.lon - b.fix.lon) < 1e-4

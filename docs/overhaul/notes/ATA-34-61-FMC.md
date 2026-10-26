@@ -712,3 +712,32 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 試験：新しい `tests/fms/lnav_hold_test.lua`（65 件。経路・形・LNAV のモデルを閉ループで。簡単な機体は `lnav_model_test.lua` と共通の `tests/lib/lnav_sim.lua` に出した）。250 kt・無風で、入航コースからの direct：1 周 296 秒前後（旋回 88 秒 ×2 と 2 分）、半径 1.95 nm・脚 4.17 nm の形の ±0.3 nm に収まり、保持点を入航コースから 0.15 nm 以内で通る。teardrop（150 から）、parallel（240 から：反対側の脚と左の戻り）、direct の型 II（030：すぐ右へ）、100 から、型 I（300）、左回り（210・120・330）、正面の風 30 kt（半径 2.45 nm、脚は 220 kt の 1 分）、横風 30 kt、遅くなった時の次の通過での大きさ、保持中の変更、出航脚の途中の EXIT HOLD（そこで戻る）、保持点の旋回中の EXIT HOLD（出航脚なし）、HA（11,000 ft で出る、上なら飛ばない）、HF（1 周）、遠くからの保持点への脚、DIRECT TO。`path_model_test.lua`（115 件：ホールドの要素・大きさ・形・ND の点）、`proc_model_test.lua`（59 件：ZZAA の進入復行のホールドを `T010` にし、1.0 分を読む）。
 - X-Plane：`s90_lnav` 30/30、`s91_lnav_sid` 27/27、`s89_route_sync` 26/26（ホールドの無い経路で、LNAV の捕捉・順送り・旋回と経路の同期が前と同じ。操舵則の切込みの角を関数に分けた）。Lua の誤りなし。
 - ホールドを X-Plane で飛ぶ試験は段 7b（HOLD のページで作る）。ND のホールドの記号（保持点が TO の点で 80 nm 以下なら大きさの変わる形、ほかは小さい記号：FMSPG p.223）も 7b。
+
+## 33. 段 7b の実装（2026-10-27：ホールドの CDU と ND）
+
+- HOLD キー（CDU の `dep_arr` のコマンド）：経路にホールドがあれば RTE 1 HOLD の 1 ページ目（最初のホールド：FCOM p.1416；FMSPG p.222）、無ければ RTE LEGS HOLD AT（FCOM p.1413–1414）。前は X-Plane の HOLD ページ。
+- RTE LEGS HOLD AT（LEGS のページの 6 行目に HOLD AT の線、6L の箱、6R の PPOS>：FCOM p.1414；FMSPG p.157–158）：
+  - 6L に経路の点：その点への脚の後にホールド（間の脚はそのまま：FMSPG p.158）。MOD RTE 1 HOLD へ。
+  - 経路に無い点：スクラッチパッドに HOLD AT XXXXX。LEGS の行に入れると、その前に点とホールド、後ろに ROUTE DISCONTINUITY（点の挿入と同じ：推定）。アクティブな点（1 行目）には入れられない（FCOM p.1414）。
+  - 6R PPOS>：アクティブな経路の先頭に、EXEC の時の位置を点とするホールド（FCOM p.1415）。点の名前は整数の度で N47W120 の形。入航コースは EXEC の時のトラック（磁方位：推定）。ホールドの後は元のアクティブな点へ（推定）。
+  - 既定（FMSPG p.160、p.222–223）：右回り、入航コースは前の脚の保持点へのコース（磁方位）、LEG TIME は保持の制限の高度・前の脚の制限・巡航高度の順に見て 14,000 ft を超えれば 1.5 分、ほかは 1.0 分（巡航高度を使うのは推定：飛行段階は VNAV の段 9 で）。
+- RTE 1 HOLD（ホールドごとに 1 ページ：FCOM p.1415–1419；FMSPG p.159–162）：
+  - 題名は ACT・MOD・無印の RTE 1 HOLD とページ番号。NEXT・PREV PAGE で次・前のホールド。
+  - 1L FIX（手続きの HF は PROC HOLD、HA は HOLD AT：FCOM p.1416）：ここでは変えられない（FMSPG p.159）。
+  - 2L QUAD/RADIAL：NW/330・NW330・/330・330。象限は radial から直す（FMSPG p.159 の境）。入航コースはその逆向き。消せない。
+  - 3L INBD CRS/DIR：XXX、XXX/L（XXXL）、/L・L。入れると QUAD/RADIAL はダッシュ（FMSPG p.160）。
+  - 4L LEG TIME（XXX.X 分）と 5L LEG DIST（XX.X nm）：どちらかを入れると他方はダッシュ（FCOM p.1417–1418）。
+  - 1R SPD/TGT ALT：ホールドの脚の制限（LEGS の行と同じ。速度は高度の制限があるときだけ、巡航高度より下：FCOM p.1418）。
+  - 3R EFC TIME：XXXX（時と分）、DELETE で消す（予測に使うのは段 8。修正にはしない：推定）。
+  - 2R FIX ETA・4R HOLD AVAIL・5R BEST SPEED：予測（段 8）までダッシュ（推定）。
+  - 単位（FIX ETA と EFC TIME の Z、MIN、NM、KT）は小字（FCOM p.1415 の図）。
+  - 表示中にホールドが無くなったら（出た、消した）RTE LEGS HOLD AT に替える（HOLD キーと同じ：推定）。
+  - 6L <NEXT HOLD（修正の間は <ERASE）。6R EXIT HOLD>（アクティブな経路の先頭のホールドで、出口が armed でないとき：FMSPG p.162）を押すと EXIT ARMED（修正。EXEC で LNAV へ：FCOM p.1419）。HA の高度に達したときと HF の進入の後も EXIT ARMED（FMSPG p.162）。
+- LEGS：ホールドの行の上に HOLD AT（HF は PROC HOLD：FCOM p.1331）。飛んでいるホールドは DELETE できる：次の点へ機体のいる所から直行（FCOM p.1416）。DIRECT TO や次の点の入力で通り越すのは前のまま。
+- 経路のモデル：ホールドの脚（HM・HA・HF）は点への脚とは別の脚（順送りの修正の比較や LNAV の脚の鍵で区別）。RTE の区間はホールドをその点の区間に含める（自分の区間を作らない）。点の検索（DIRECT TO・点の入力）はホールドを飛ばす。
+- X-Plane の計画（ND の線：§30）：ホールドは点の行の後に、形の 13 点（「~」）と点に戻る行（X-Plane の線は現用点から先を描く：ホールドの間も前に形が出るのを X-Plane で確かめた）。TO の点のホールド（保持点がアクティブな点、またはアクティブなホールド）は LNAV の形（保持点が TO の点になった時に作り、保持点を通るたびに作り直す：FMSPG p.224）。ほかは決まった大きさ（210 kt とその脚の時間：小さい記号の代わり。推定）。LNAV が形を作り直したら（2 % か 0.05 nm を超えて変われば）計画を作り直す。地上では全部決まった大きさ。範囲 80 nm を超えると小さい記号にすること（FMSPG p.223）と、画面の上で大きさの決まった記号はまだ無い（X-Plane の線は nm で描く）。
+- LNAV：保持点が TO の点になった時に形を作り（`s.ahead`）、進入はその形で飛ぶ（FMSPG p.224。段 7a は保持点で作っていた）。ホールドを出て次の脚へは保持点の上から回る（ホールドは線の要素でないので fly-by にしない：推定）。X-Plane の `s92_hold` で、XAC の入航コース 037 から SPENS への 270 へ左に 127° 回ると、旋回の半径（2.6 nm）の約 1.6 倍の 4.7 nm はみ出してから 45° で切込んで戻った。
+- 新しい dataref（試験と確認のため）：`laminar/B747/fms/lnav/hold_phase`（0 なし、1 保持点へ、2 direct、3 teardrop、4 parallel、5 進入の戻りの旋回、6 保持点の旋回、7 出航脚、8 戻りの旋回、9 入航脚）、`hold_loops`（保持点を通った回数）、`hold_exit`（EXIT ARMED）。
+- 飛行試験キット：CDU のキー名に HOLD（`run_scenario.ps1`）。
+- 試験：新しい `tests/fms/hold_pages_test.lua`（78 件：HOLD キー、RTE LEGS HOLD AT、BRAVO に HOLD AT と各欄、X-Plane の計画の行、HOLD AT ZZD、PROC HOLD、空中の PPOS と EXIT HOLD と DELETE、LNAV の dataref、ホールドが無くなった時の RTE LEGS HOLD AT）、`route_model_test.lua`（173 件：ホールドの作成・既定・入力・計画の行・EXIT・DELETE・PPOS）。
+- X-Plane：新しい `s92_hold` 47/47（RJAA→XAC の脚の上で LNAV、HOLD キーで RTE LEGS HOLD AT、XAC に HOLD AT して INBD CRS 044 で EXEC：XAC の上で teardrop、teardrop の脚と右への戻りのバンク最大 29.7°、1 周を形から 0.23 nm 以内、保持点を入航コースの 0.01 nm 以内で通る。2 周目の出航脚で EXIT HOLD と EXEC：すぐ戻りの旋回、XAC で出て SPENS へ（127° の旋回で 4.7 nm はみ出してから戻る）、ホールドが無くなった RTE HOLD のページは RTE LEGS HOLD AT に。PPOS で N34E139、その場で右へ（LNAV の指令 30°）、DELETE で SPENS へ直行。ND（20 nm）の写真で、XAC の手前は XAC の先のホールドの側に LNAV の大きさの形、ホールド中は前方に出航脚・戻りの旋回・入航脚）、`s87_legs_pages` 29/29、`s86_rte_pages` 19/19、`s90_lnav` 30/30、`s89_route_sync` 26/26。Lua の誤りなし。初めの 3 回の `s92` の不合格は試験の作り（ND の範囲を dataref だけで変えて X-Plane の地図の範囲が別のまま：TESTING.md の注意のとおり、つまみのコマンドで変える。旋回中の PPOS。脚に乗る前の確認）で、シナリオを直した。

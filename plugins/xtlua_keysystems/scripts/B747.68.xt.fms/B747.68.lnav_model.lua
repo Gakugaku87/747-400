@@ -73,7 +73,7 @@ end
 -- forgotten; engaged, the heading held until the new leg is captured
 -- (FCOM p.644)
 function M.reset(s)
-    s.turn, s.eor, s.recapture, s.anchor, s.hp = nil, false, true, nil, nil
+    s.turn, s.eor, s.recapture, s.anchor, s.hp, s.ahead = nil, false, true, nil, nil, nil
 end
 
 -- a direct leg (a DIRECT TO, a DF: the path model's `direct`) as flown:
@@ -164,6 +164,18 @@ end
 -- active leg: to the fix first (FMSPG p.225: the entry once over it;
 -- estimate)
 M.HOLD_NEAR = 1
+-- the hold next, its fix the TO fix (the active leg's: step 7b): its
+-- racetrack as it is first made then (FMSPG p.224), kept for the entry
+-- and the ND (`s.ahead`)
+local function hold_ahead(s, e, nxt, air, vt)
+    if not (nxt and nxt.kind == "hold" and e.b and e.b.lat == nxt.b.lat and e.b.lon == nxt.b.lon) then
+        s.ahead = nil
+        return
+    end
+    local a = s.ahead
+    if a and a.lat == nxt.b.lat and a.lon == nxt.b.lon then return end
+    s.ahead = {lat = nxt.b.lat, lon = nxt.b.lon, t = hold_track(s, nxt, air, vt)}
+end
 -- the hold entered over its fix: its racetrack and its entry. A direct
 -- entry (FMSPG p.165, p.225: type I and II, no segment of its own): a turn
 -- the hold's way of the turns' radius from the track over the fix onto
@@ -172,7 +184,9 @@ M.HOLD_NEAR = 1
 -- exit is armed (FMSPG p.221-222): false
 local function hold_enter(s, h, e, air, vt)
     if e.exit or (e.hold == "alt" and air.alt >= (e.alt or 0)) then return false end
-    local t = hold_track(s, e, air, vt)
+    local a = s.ahead
+    local t = (a and a.lat == e.b.lat and a.lon == e.b.lon) and a.t or hold_track(s, e, air, vt)
+    s.ahead = nil
     h.t = t
     h.entry = hold_entry(e, air)
     h.phase = h.entry
@@ -182,6 +196,10 @@ local function hold_enter(s, h, e, air, vt)
         h.c0 = s.P.point(e.b, (air.trk + 90 * t.sgn) % 360, t.r)
     end
     return true
+end
+-- a hold's racetrack were it made now (the ND's, step 7b)
+function M.hold_now(s, e, air)
+    return hold_track(s, e, air, (air.tas or air.gs) + (air.wind or 0))
 end
 -- a frame in the hold: the phases (to the fix; the entry: teardrop, the
 -- 40 degree leg of 2.95 r, or parallel, 2.41 r on the reciprocal track,
@@ -433,6 +451,7 @@ function M.update(s, path, air, armed, engaged)
     local met, conv = capture(s, e, air, p, vt)
     local xt, dtk, dtg = against(P, e, p)
     local nxt = path[2]
+    hold_ahead(s, e, nxt, air, vt)
     -- a hold (step 7a): its phases, its end, its bank
     local hff, hdir, bank = 0, nil, M.BANK
     if e.kind == "hold" then

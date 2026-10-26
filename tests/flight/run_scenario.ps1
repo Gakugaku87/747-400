@@ -56,9 +56,9 @@
 #   cdu     {keys: [...], [cdu]}                 keys on a CDU (cdu "fms1", the
 #                                                Captain's, unless given): a line
 #                                                select key L1..R6; a key by its name
-#                                                (RTE, LEGS, DEPARR, MENU, INITREF,
-#                                                PROG, NAVRAD, PREV, NEXT, EXEC, DEL,
-#                                                CLR); ?SEL: on SELECT DESIRED WPT the
+#                                                (RTE, LEGS, DEPARR, HOLD, MENU,
+#                                                INITREF, PROG, NAVRAD, PREV, NEXT,
+#                                                EXEC, DEL, CLR); ?SEL: on SELECT DESIRED WPT the
 #                                                first (the nearest) candidate, else
 #                                                nothing (the Captain's CDU); else text
 #                                                typed on its keyboard (A-Z, 0-9,
@@ -331,10 +331,11 @@ foreach ($step in $spec.steps) {
             }
             'cdu' {
                 # FCOM's key names to the CDU's commands (MENU is the FIX
-                # command, DEP ARR the CLB one: B744.createfms.lua); EXEC held
-                # 0.2 s like the scenarios' own EXEC steps
+                # command, DEP ARR the CLB one, HOLD the DEP_ARR one:
+                # B744.createfms.lua); EXEC held 0.2 s like the scenarios' own
+                # EXEC steps
                 $id = if ($step.cdu) { $step.cdu } else { 'fms1' }
-                $names = @{ RTE = 'func_key/fpln'; LEGS = 'func_key/legs'; DEPARR = 'func_key/clb'; MENU = 'func_key/fix'
+                $names = @{ RTE = 'func_key/fpln'; LEGS = 'func_key/legs'; DEPARR = 'func_key/clb'; HOLD = 'func_key/dep_arr'; MENU = 'func_key/fix'
                     INITREF = 'func_key/index'; PROG = 'func_key/prog'; NAVRAD = 'func_key/navrad'
                     PREV = 'func_key/prev_pg'; NEXT = 'func_key/next_pg'; EXEC = 'key/execute'; DEL = 'key/del'; CLR = 'key/clear' }
                 $chars = @{ '/' = 'key/slash'; '.' = 'key/period'; '-' = 'key/minus'; ' ' = 'key/space' }
