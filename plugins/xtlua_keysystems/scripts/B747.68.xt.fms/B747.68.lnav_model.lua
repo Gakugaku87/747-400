@@ -29,6 +29,9 @@
 --  - A DIRECT TO or a DF flown from where the airplane is: the course to
 --    the fix while it turns onto it, then the great circle from there
 --    (FCOM p.1237; the turn: estimate).
+--  - A hold (step 7a; notes §31): to its fix, the entry by the track over
+--    it, the loops, the exit; 30 degrees of bank at most (FCOM p.1413;
+--    FMSPG p.164-165, p.221-226).
 -- Pure: the path model in, the path and the airplane's state each frame;
 -- the commands and the messages out.
 --   local L = B747_lnav_model                      -- in XTLua, after dofile
@@ -42,6 +45,8 @@ local KT = 1852 / 3600        -- m/s in a knot
 M.CAPTURE = 2.5
 M.SEQ_LIMIT = 21
 M.BANK = 25
+-- in a hold and its entry (FCOM p.1413; FMSPG p.164, p.226-227)
+M.HOLD_BANK = 30
 -- the steering law (estimate): the steepest intercept back onto the path,
 -- the distance ahead it aims at (s at the ground speed), the bank for a
 -- degree of track or heading error
@@ -68,7 +73,7 @@ end
 -- forgotten; engaged, the heading held until the new leg is captured
 -- (FCOM p.644)
 function M.reset(s)
-    s.turn, s.eor, s.recapture, s.anchor = nil, false, true, nil
+    s.turn, s.eor, s.recapture, s.anchor, s.hp = nil, false, true, nil, nil
 end
 
 -- a direct leg (a DIRECT TO, a DF: the path model's `direct`) as flown:
@@ -109,6 +114,184 @@ local function circle(P, center, r, dir, p)
     local brg, dc = P.course(center, p)
     local xt = dir == "R" and (r - dc) or (dc - r)
     return xt, (brg + (dir == "R" and 90 or -90)) % 360, brg
+end
+
+-- the track's angle off a path to fly back onto it from xt nm off it
+-- (right positive): the steepest MAX_INTC, the more the farther, aimed
+-- LOOKAHEAD s ahead
+local function intc_of(xt, air)
+    local ahead = math.max(air.gs * KT * M.LOOKAHEAD / 1852, 0.5)
+    return clamp(math.atan2(xt, ahead) / RAD, -M.MAX_INTC, M.MAX_INTC)
+end
+-- in a turn the way `way` (1 right, -1 left): on the track c (within 5
+-- degrees) or past it
+local function onto(c, trk, way)
+    local left = (way * (c - trk)) % 360
+    return left <= 5 or left > 300
+end
+
+-- the wind along the true course crs (kt): the ground speed's vector less
+-- the true airspeed's
+local function wind_along(air, crs)
+    local tas = air.tas or air.gs
+    local wx = air.gs * math.sin(air.trk * RAD) - tas * math.sin(air.hdg * RAD)
+    local wy = air.gs * math.cos(air.trk * RAD) - tas * math.cos(air.hdg * RAD)
+    return wx * math.sin(crs * RAD) + wy * math.cos(crs * RAD)
+end
+
+-- a hold (step 7a): entered as the airplane crosses its fix, by its track
+-- then (FCOM p.1413; FMSPG p.165, p.225: the lines through the fix 5 and
+-- 70 degrees off the inbound course; the hold's way round: direct 75 (type
+-- I) and 105 degrees (type II), parallel 105, teardrop 75)
+local function hold_entry(e, air)
+    local th = wrap180(air.trk - e.inbd)
+    if e.dir == "L" then th = -th end
+    if th > -70 and th <= 110 then return "direct" end
+    if th > 110 or th <= -175 then return "teardrop" end
+    return "parallel"
+end
+-- its racetrack: the turns at `vt` kt, the legs' time at the speed along
+-- the inbound course (FMSPG p.224); with its inbound course `u` and its
+-- direction `dir` (a change to the hold flown from the next crossing of
+-- the fix: FCOM p.1416)
+local function hold_track(s, e, air, vt)
+    local P = s.P
+    local t = P.racetrack(e, P.hold_size(e, vt, (air.tas or air.gs) + wind_along(air, e.inbd)))
+    t.u, t.dir = e.inbd, e.dir
+    return t
+end
+-- the airplane farther than this from the fix as the hold becomes the
+-- active leg: to the fix first (FMSPG p.225: the entry once over it;
+-- estimate)
+M.HOLD_NEAR = 1
+-- the hold entered over its fix: its racetrack and its entry. A direct
+-- entry (FMSPG p.165, p.225: type I and II, no segment of its own): a turn
+-- the hold's way of the turns' radius from the track over the fix onto
+-- the outbound course, then the outbound leg captured (estimate). An
+-- altitude hold not flown when at its altitude already, nor a hold whose
+-- exit is armed (FMSPG p.221-222): false
+local function hold_enter(s, h, e, air, vt)
+    if e.exit or (e.hold == "alt" and air.alt >= (e.alt or 0)) then return false end
+    local t = hold_track(s, e, air, vt)
+    h.t = t
+    h.entry = hold_entry(e, air)
+    h.phase = h.entry
+    -- a fix hold: one loop (FMSPG p.221)
+    h.exit = e.hold == "fix"
+    if h.entry == "direct" then
+        h.c0 = s.P.point(e.b, (air.trk + 90 * t.sgn) % 360, t.r)
+    end
+    return true
+end
+-- a frame in the hold: the phases (to the fix; the entry: teardrop, the
+-- 40 degree leg of 2.95 r, or parallel, 2.41 r on the reciprocal track,
+-- then a turn back onto the inbound course (FMSPG p.225); then the turn
+-- at the fix, the outbound leg, the turn back, the inbound leg) and how
+-- it ends: at the fix after the exit armed by the crew (EXIT HOLD) or at
+-- its altitude, the racetrack made the shortest way back then (on the
+-- outbound leg the turn back at once; in the turn at the fix, no outbound
+-- leg: FMSPG p.221-222); a fix hold at the fix after its entry. The size
+-- anew at each crossing of the fix (FMSPG p.224). Returns 1 when it ends,
+-- the cross-track error, the desired track, the arc's bank and a turn
+-- direction asked for
+local function hold_step(s, e, air, p, vt)
+    local P = s.P
+    local h = s.hp
+    if not (h and h.lat == e.b.lat and h.lon == e.b.lon) then
+        h = {lat = e.b.lat, lon = e.b.lon, loops = 0}
+        s.hp = h
+        local _, d = P.course(p, e.b)
+        if d > M.HOLD_NEAR then
+            h.phase, h.from = "to", {lat = p.lat, lon = p.lon}
+        elseif not hold_enter(s, h, e, air, vt) then
+            s.hp = nil
+            return 1, 0, nil, 0
+        end
+    end
+    if h.phase == "to" then
+        local c, len = P.course(h.from, e.b)
+        local xt, at = P.track(h.from, c, p)
+        if at < len then return 0, xt, P.course_at(h.from, c, at), 0 end
+        if not hold_enter(s, h, e, air, vt) then
+            s.hp = nil
+            return 1, 0, nil, 0
+        end
+    end
+    local t = h.t
+    local u, sgn, dir = t.u, t.sgn, t.dir
+    local out = (u + 180) % 360
+    local ph = h.phase
+    -- EXIT ARMED: by the crew, at the altitude
+    if not h.exit and (e.exit or (e.hold == "alt" and air.alt >= (e.alt or 0))) then
+        h.exit = true
+        if ph == "turn1" or ph == "direct" or ph == "outbound" then
+            local l = 0
+            if ph == "outbound" then
+                local _, at = P.track(t.p1, out, p)
+                l, ph = clamp(at, 0, t.l), "turn2"
+            end
+            t = P.racetrack({b = t.f, inbd = u, dir = dir}, t.r, l)
+            t.u, t.dir = u, dir
+            h.t = t
+        end
+    end
+    if ph == "direct" or ph == "turn1" then
+        -- turned onto the track that captures the outbound leg
+        local xt = P.track(t.p1, out, p)
+        if onto((out - intc_of(xt, air)) % 360, air.trk, sgn) then ph = "outbound" end
+    elseif ph == "outbound" then
+        -- the turn back begun ROLL_LEAD early
+        local _, at = P.track(t.p1, out, p)
+        if at >= t.l - air.gs * KT * M.ROLL_LEAD / 1852 then ph = "turn2" end
+    elseif ph == "turn2" or ph == "intercept" then
+        -- turned onto the track that captures the inbound course (the
+        -- entry's turn back its way)
+        local xt = P.track(t.f, u, p)
+        local way = ph == "turn2" and sgn or (h.back == "L" and -1 or 1)
+        if onto((u - intc_of(xt, air)) % 360, air.trk, way) then ph = "inbound" end
+    elseif ph == "inbound" then
+        local _, at = P.track(t.f, u, p)
+        if at >= 0 then
+            h.loops = h.loops + 1
+            if h.exit then
+                s.hp = nil
+                return 1, 0, nil, 0
+            end
+            t = hold_track(s, e, air, vt)
+            h.t = t
+            u, sgn, dir = t.u, t.sgn, t.dir
+            out = (u + 180) % 360
+            ph = "turn1"
+        end
+    elseif ph == "teardrop" then
+        local _, at = P.track(t.f, (out - 40 * sgn) % 360, p)
+        if at >= 2.95 * t.r then ph, h.back = "intercept", dir end
+    elseif ph == "parallel" then
+        local _, at = P.track(t.f, out, p)
+        if at >= 2.41 * t.r then ph, h.back = "intercept", dir == "R" and "L" or "R" end
+    end
+    h.phase = ph
+    if ph == "turn1" or ph == "turn2" or ph == "direct" then
+        local c = ph == "direct" and h.c0 or (ph == "turn1" and t.o1 or t.o2)
+        local xt, dtk = circle(P, c, t.r, dir, p)
+        return 0, xt, dtk, arc_bank(air.gs, t.r, dir)
+    elseif ph == "outbound" then
+        local xt, at = P.track(t.p1, out, p)
+        return 0, xt, P.course_at(t.p1, out, at), 0
+    elseif ph == "teardrop" then
+        local c = (out - 40 * sgn) % 360
+        local xt, at = P.track(t.f, c, p)
+        return 0, xt, P.course_at(t.f, c, at), 0
+    elseif ph == "parallel" then
+        -- the track; the offset as the turn from the fix leaves it (FMSPG
+        -- p.225)
+        return 0, 0, out, 0
+    elseif ph == "intercept" then
+        -- onto the track that captures the inbound course, its way
+        return 0, (P.track(t.f, u, p)), u, 0, h.back
+    end
+    local xt, at = P.track(t.f, u, p)
+    return 0, xt, P.course_at(t.f, u, at), 0
 end
 
 -- the airplane at p against element e: the cross-track error (nm, right
@@ -193,11 +376,11 @@ local function ended(s, e, path, air, p, vt)
 end
 
 -- the bank to fly the desired track dtk with the cross-track error xt
--- (and `ff` the arc's own bank; `dir` a turn direction asked for)
-local function steer(xt, dtk, ff, air, dir)
-    local ahead = math.max(air.gs * KT * M.LOOKAHEAD / 1852, 0.5)
-    local intc = clamp(math.atan2(xt, ahead) / RAD, -M.MAX_INTC, M.MAX_INTC)
-    return clamp(M.K_TRK * directed(wrap180(dtk - intc - air.trk), dir) + ff, -M.BANK, M.BANK)
+-- (and `ff` the arc's own bank; `dir` a turn direction asked for;
+-- `bank` the most, BANK unless given)
+local function steer(xt, dtk, ff, air, dir, bank)
+    local b = bank or M.BANK
+    return clamp(M.K_TRK * directed(wrap180(dtk - intc_of(xt, air) - air.trk), dir) + ff, -b, b)
 end
 local function steer_hdg(hdg, air, dir)
     return clamp(M.K_HDG * directed(wrap180(hdg - air.hdg), dir), -M.BANK, M.BANK)
@@ -249,9 +432,18 @@ function M.update(s, path, air, armed, engaged)
     if e.direct and e.kind == "line" and e.b then e = direct(s, e, air, p) end
     local met, conv = capture(s, e, air, p, vt)
     local xt, dtk, dtg = against(P, e, p)
-    -- sequencing (not on the ground; within 21 nm of the leg)
     local nxt = path[2]
-    if not air.ground and not s.eor and math.abs(xt) <= M.SEQ_LIMIT then
+    -- a hold (step 7a): its phases, its end, its bank
+    local hff, hdir, bank = 0, nil, M.BANK
+    if e.kind == "hold" then
+        local seq
+        seq, xt, dtk, hff, hdir = hold_step(s, e, air, p, vt)
+        met, conv, dtg, bank = true, true, nil, M.HOLD_BANK
+        if seq == 1 and not air.ground then
+            if nxt then s.seq = 1 else s.eor = true end
+        end
+    -- sequencing (not on the ground; within 21 nm of the leg)
+    elseif not air.ground and not s.eor and math.abs(xt) <= M.SEQ_LIMIT then
         if e.term == "fix" and (e.kind == "line" or e.kind == "arc") then
             -- a turn not flown (the airplane back away from the fix)
             if s.turn and not s.turn.past and dtg and dtg > s.turn.d + 1 then s.turn = nil end
@@ -283,7 +475,7 @@ function M.update(s, path, air, armed, engaged)
         if at >= 0 or not engaged or math.abs(cx) > 2 then s.turn, u = nil, nil end
     end
     -- the guidance
-    local ref_xt, ref_dtk, ff = xt, dtk, 0
+    local ref_xt, ref_dtk, ff = xt, dtk, hff
     if u then
         ref_xt, ref_dtk = circle(P, u.center, u.r, u.dir, p)
         ff = arc_bank(air.gs, u.r, u.dir)
@@ -303,7 +495,7 @@ function M.update(s, path, air, armed, engaged)
         s.mode = mode
         s.valid = true
         if mode == "path" and ref_dtk then
-            s.roll = steer(ref_xt, ref_dtk, ff, air, turn_dir(s, e, wrap180(ref_dtk - air.trk)))
+            s.roll = steer(ref_xt, ref_dtk, ff, air, hdir or turn_dir(s, e, wrap180(ref_dtk - air.trk)), bank)
         elseif mode == "heading" then
             local hdg = ((e.mag or 0) + (air.var or 0)) % 360
             s.roll = steer_hdg(hdg, air, turn_dir(s, e, wrap180(hdg - air.hdg)))
@@ -312,7 +504,7 @@ function M.update(s, path, air, armed, engaged)
         end
     else
         s.valid = met and e.kind ~= "disc" and e.kind ~= "none"
-        s.roll = (s.valid and ref_dtk) and steer(ref_xt, ref_dtk, ff, air) or 0
+        s.roll = (s.valid and ref_dtk) and steer(ref_xt, ref_dtk, ff, air, hdir, bank) or 0
         s.msg_intc = armed and not air.ground and not met and not conv and e.kind ~= "disc"
     end
     s.msg_disc = engaged and (e.kind == "disc" or e.kind == "none")

@@ -4,7 +4,8 @@
 -- The great circles' courses and cross-track distances, each leg type's
 -- element (lines, courses, headings, arcs) with the conditional legs' ends
 -- as predicted (FCOM p.1245, p.1249), an RF leg from the synthetic CIFP of
--- ZZBB (FCOM p.1247), the fly-by turns (estimate: 25 degrees of bank).
+-- ZZBB (FCOM p.1247), the fly-by turns (estimate: 25 degrees of bank), the
+-- holds' elements, size and racetrack (step 7a; FMSPG p.164, p.224).
 local T = dofile("tests/lib/check.lua")("path_model")
 local N = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.navdb.lua")
 local P = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.proc_model.lua")
@@ -183,5 +184,55 @@ path = M.build({
 sh = M.shape(path)
 T.check(sh[1].at == path[1].b and sh[2].at == path[2].b and sh[3] == nil, "the conditional legs' ends as predicted")
 T.near(dist(path[4].a, sh[4].at), M.VECTORS_LEN, 1e-6, "VECTORS: its line's end, 10 nm on")
+
+-- the holds (step 7a; FCOM p.1413; FMSPG p.164, p.221-224): HM, HA, HF at
+-- their fix, the inbound course true, right unless left
+path = M.build({
+    {via = "DIRECT", fix = B},
+    {pt = "HM", fix = B, crs = 7, time = 1.5},
+    {pt = "HA", fix = B, crs = 97, turn = "L", alt = 6000, dist = 4},
+    {pt = "HF", fix = B, crs = 187, exit = true},
+}, A, env)
+local hm, ha, hf = path[2], path[3], path[4]
+T.check(hm.kind == "hold" and hm.a == B and hm.b == B and hm.len == 0 and hm.term == "fix", "HM: a hold at B")
+T.near(hm.inbd, 0, 1e-9, "inbound 007 magnetic: 000 true")
+T.check(hm.dir == "R" and hm.time == 1.5 and hm.hold == "manual", "right turns, 1.5 minutes, ended by the crew")
+T.check(ha.dir == "L" and ha.dist == 4 and ha.hold == "alt" and ha.alt == 6000, "HA: left, 4 nm legs, ended at 6000 ft")
+T.check(hf.hold == "fix" and hf.exit, "HF: ended at the fix; EXIT armed")
+T.check(M.turn(path[1], hm, 250) == nil, "no fly-by turn into it: over the fix")
+-- its size: the radius at 250 kt and 25 degrees, the legs' time at the
+-- speed inbound, or their distance
+local r, l = M.hold_size(hm, 250, 240)
+T.near(r, 1.953, 0.001, "the turns' radius at 250 kt: 1.95 nm")
+T.near(l, 6, 1e-9, "1.5 minutes at 240 kt inbound: 6 nm")
+T.near(select(2, M.hold_size(ha, 250, 240)), 4, 1e-9, "the legs' distance")
+T.near(select(2, M.hold_size(hf, 250)), 250 / 60, 1e-9, "neither: 1 minute (FMSPG p.222)")
+T.near(select(2, M.hold_size({alt = 15000}, 250)), 1.5 * 250 / 60, 1e-9, "above 14,000 ft: 1.5 minutes")
+-- its racetrack (right): the turn at the fix east of it, the outbound leg
+-- south from 2 r east, the turn back, the inbound leg's start
+local t = M.racetrack(hm, 2, 5)
+T.near(dist(B, t.o1), 2, 1e-6, "the turn at the fix: its centre r from it")
+T.near((M.course(B, t.o1)), 90, 1e-6, "east: the hold's side")
+T.near(dist(B, t.p1), 4, 1e-6, "the outbound leg's start 2 r across")
+T.near(dist(t.p1, t.p2), 5, 1e-6, "the outbound leg: l")
+T.near((M.course(t.p1, t.p2)), 180, 0.05, "south")
+T.near(dist(t.o2, t.p2), 2, 1e-6, "the turn back: r")
+T.near(dist(B, t.s), 5, 1e-6, "the inbound leg: l to the fix")
+T.near((M.course(t.s, B)), 0, 0.01, "on the inbound course")
+T.near(dist(t.o2, t.s), 2, 0.01, "the turn back's end")
+T.check(t.sgn == 1 and M.racetrack(ha, 2, 4).sgn == -1, "right and left")
+T.near((M.course(ha.b, M.racetrack(ha, 2, 4).o1)), (90 - 90) % 360, 1e-6, "left, inbound 090: north")
+-- its shape for the ND's line: round the turn at the fix every 30
+-- degrees, the outbound leg, round the turn back, the inbound leg's start
+sh = M.shape(path, 250)
+local hp = sh[2] and sh[2].pts or {}
+t = M.racetrack(hm, M.hold_size(hm, 250))
+T.equal(#hp, 13, "13 points: 5, the outbound leg's ends, 5, the inbound leg's start")
+T.near(dist(t.o1, hp[1]), t.r, 1e-6, "on the turn at the fix")
+T.near((M.course(t.o1, hp[1])), 300, 1e-6, "30 degrees round it, clockwise")
+T.check(hp[13] and dist(hp[6], t.p1) < 1e-6 and dist(hp[7], t.p2) < 1e-6 and dist(hp[13], t.s) < 1e-6,
+    "the outbound leg, the inbound leg's start")
+T.near(dist(t.o2, hp[10]), t.r, 1e-6, "on the turn back")
+T.near(dist(B, hp[6]), 2 * 1.953, 0.002, "250 kt: 2 r across")
 
 T.done()
