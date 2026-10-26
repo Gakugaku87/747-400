@@ -195,6 +195,9 @@ T.check(fms:find("\n1 ZZAA ADEP [^\n]*\n28 RW16R DRCT %d+%.000000 "), "the depar
 T.check(fms:find("\n3 ZZV DRCT 0%.000000 35%.200000 140%.200000\n"), "a VOR, DIRECT")
 T.check(fms:find("\n11 BRAVO Z2 0%.000000 36%.000000 140%.500000\n"), "a fix on Z2")
 T.check(fms:find("\n1 ZZBB ADES 50%.000000 36%.000000 141%.000000\n$"), "the destination last")
+T.equal(R.set_constraint(st, 1, {alt = 5000, akind = "A"}, 35000), nil, "5000A at ZZV")
+T.check(R.to_fms(R.shown(st), "2610"):find("\n3 ZZV DRCT 5000%.000000 35%.200000 140%.200000\n"),
+    "its altitude in X-Plane's flight plan (the ND's DATA shows it: FCOM p.1148)")
 
 -- the active waypoint and X-Plane's flight plan (step 5e): the rows' map,
 -- the legs passed as the AFDS's current waypoint moves on (FMSPG p.119;

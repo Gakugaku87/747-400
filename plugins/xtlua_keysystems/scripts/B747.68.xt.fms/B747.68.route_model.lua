@@ -592,8 +592,9 @@ end
 -- xtlua/loadtoFMS: X-Plane's FMS draws the ND's line and the readers not
 -- rebuilt yet (the AFDS's LNAV and VNAV) fly it. The origin and the
 -- destination as airports (1), each waypoint as a fix (11) by its position
--- (an NDB 2, a VOR or DME 3, the FMC's own points a position 28), DRCT or
--- its airway; the runways as positions by their names with the
+-- (an NDB 2, a VOR or DME 3, the FMC's own points a position 28) with its
+-- altitude constraint, DRCT or its airway; the runways as positions by
+-- their names with the
 -- thresholds' elevations, the departure runway after the origin (as
 -- X-Plane's DEP ARR puts them: the ND finds them there); no procedure
 -- headers (the FMC's own legs: X-Plane would expand its own, and the
@@ -618,8 +619,12 @@ function M.to_fms(r, cycle)
             if l.fix.kind == "APT" then
                 row(1, l.fix.ident, via, l.fix.elev, l.fix.lat, l.fix.lon)
             else
-                row(FMS_TYPE[l.fix.kind] or 11, l.fix.ident, via, l.fix.kind == "RWY" and l.fix.elev or 0,
-                    l.fix.lat, l.fix.lon)
+                -- its altitude constraint, entered or the procedure's (the
+                -- ND's DATA shows it: FCOM p.1148; the AFDS's VNAV reads
+                -- it; a block's first altitude: estimate); a runway its
+                -- threshold's elevation
+                local alt = l.fix.kind == "RWY" and l.fix.elev or l.alt or 0
+                row(FMS_TYPE[l.fix.kind] or 11, l.fix.ident, via, alt, l.fix.lat, l.fix.lon)
             end
             if i then map.leg[#rows], map.row[i] = i, #rows end
         end
