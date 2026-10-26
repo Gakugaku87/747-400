@@ -486,3 +486,13 @@
 | 同 | 主 EICAS の `GROUP CAS Messages` の `gen_text STATUS cue` | STATUS の印だけ | STATUS の印を新しい `GROUP Status Cue`（`SHOW_EQUAL 0 eicas/exceed_cue`）に入れ、同じ場所に `gen_text Exceedance cue`（`eicas/exceed_cue_text`、"VVVVVV"、`SHOW_EQUAL 1 eicas/exceed_cue`。STATUS の印の写し）を足した | FCOM p.840 |
 
 上の 3 行は `docs/overhaul/tools/panel_eicas_partial.lua` で書き換えた（7 か所。増えた 4,162 行・減った 4,134 行の多くは入れ子にした分の字下げ）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_eicas_partial`。外から見た姿は変わらない（外観の写真）。
+
+表示（5-2 段 6b-2、2026-10-26：主 EICAS の compact の形）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-26・EICAS の形式（DSP-24・ENG-22） | 主 EICAS の `GROUP Engine` の通常の見出し（`gen_rotary Background` 2 つ）、`GROUP N1 Tape`、`GROUP EGT Tape`・`EGT Tape GE` | いつも出る | それぞれ新しいグループ `Normal Labels`・`N1 Tape Normal`・`EGT Tapes Normal`（`SHOW_EQUAL 0 laminar/B747/eicas/compact`）の中に | FCOM p.855–856 |
+| 同 | `GROUP EGT LED`（P&W・RB211 の EGT の数字と枠） | y 674 | 新しい移動グループ `EGT LED Compact`（`eicas/compact` が 1・2 で 108 px 上）の中に | FCOM p.856 |
+| 同 | `GROUP Engine` の最後 | なし | 新しい `GROUP Compact`（`SHOW_GREATER 0.5 eicas/compact`）：見出し（`eicas_cmp_epr`・`eicas_cmp_n1`・`eicas_cmp_egt`、推力の基準ごと）と、`GROUP Cmp Rows` の中の N2・FF・油・VIB の行（推力の基準が N1 のとき行ごとに下へ）（`SHOW_EQUAL 1 eicas/cmp_rows[0..3]`、二次エンジンのページの数字と見出しの写し） | FCOM p.855–857 |
+
+上の 3 行は `docs/overhaul/tools/panel_eicas_compact.lua` で書き換えた（5 か所、`GROUP Compact` は 1,831 行）。画像は `docs/overhaul/tools/make_eicas_cmp_images.ps1`。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_eicas_compact`。外から見た姿は変わらない（外観の写真）。

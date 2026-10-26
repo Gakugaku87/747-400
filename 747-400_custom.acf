@@ -142599,47 +142599,50 @@ GROUP Upper EICAS
 
       END_GROUP
       GROUP Engine
-        gen_rotary Background
-          POS 1588.500000 796.000000
-          IMAGE CRT Displays/EICAS Upper/EICAS_eng_bgnd
-          DATAREF 
-          SHOW_EQUAL 0.000000 laminar/B747/engines/thrust_ref
-          LIGHT_MODE GLASS_AUTO
-          LIGHT_RHEOSTAT 9
-          BUS_SRC 2
-          KEY_FRAME 0.000000 0.000000 1.000000
-          KEY_FRAME 1.000000 6.000000
-          DIGITS 1
-          ROTARY_TYPE NO_CLICK
-          CLICK_RADIUS 0.000000
-          CLICK_RADIUS_DY 0.000000
-          OFFSET 0.000000
-          STEP1 1.000000
-          STEP2 1.000000
-          CURSOR DEFAULT
-          CLICK_DX 0
-          CLICK_DY 0
+        GROUP Normal Labels
+          SHOW_EQUAL 0.000000 laminar/B747/eicas/compact
+          gen_rotary Background
+            POS 1588.500000 796.000000
+            IMAGE CRT Displays/EICAS Upper/EICAS_eng_bgnd
+            DATAREF 
+            SHOW_EQUAL 0.000000 laminar/B747/engines/thrust_ref
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
 
-        gen_rotary Background
-          POS 1588.500000 776.000000
-          IMAGE CRT Displays/EICAS Upper/EICAS_eng_bgnd-noepr
-          DATAREF 
-          SHOW_EQUAL 1.000000 laminar/B747/engines/thrust_ref
-          LIGHT_MODE GLASS_AUTO
-          LIGHT_RHEOSTAT 9
-          BUS_SRC 2
-          KEY_FRAME 0.000000 0.000000 1.000000
-          KEY_FRAME 1.000000 6.000000
-          DIGITS 1
-          ROTARY_TYPE NO_CLICK
-          CLICK_RADIUS 0.000000
-          CLICK_RADIUS_DY 0.000000
-          OFFSET 0.000000
-          STEP1 1.000000
-          STEP2 1.000000
-          CURSOR DEFAULT
-          CLICK_DX 0
-          CLICK_DY 0
+          gen_rotary Background
+            POS 1588.500000 776.000000
+            IMAGE CRT Displays/EICAS Upper/EICAS_eng_bgnd-noepr
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/engines/thrust_ref
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+        END_GROUP
 
         GROUP THRUST TARGET
           GROUP Target EPR
@@ -143835,193 +143838,196 @@ GROUP Upper EICAS
           END_GROUP
         END_GROUP
         GROUP N1
-          GROUP N1 Tape
-            SHOW_EQUAL 0.000000 laminar/B747/engines/thrust_ref
-            gen_tape Engine 4 Red
-              POS 1748.500000 760.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
-              DATAREF laminar/B747/engines/display_N1[3]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/N1/red_on[3]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 112.000000 46.500000 0.000000
-              KEY_FRAME 112.000000 46.500000
-
-            gen_tape Engine 3 Red
-              POS 1642.500000 760.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
-              DATAREF laminar/B747/engines/display_N1[2]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/N1/red_on[2]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 112.000000 46.500000 0.000000
-              KEY_FRAME 112.000000 46.500000
-
-            gen_tape Engine 2 Red
-              POS 1536.500000 760.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
-              DATAREF laminar/B747/engines/display_N1[1]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/N1/red_on[1]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 112.000000 46.500000 0.000000
-              KEY_FRAME 112.000000 46.500000
-
-            gen_tape Engine 1 Red
-              POS 1430.500000 760.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
-              DATAREF laminar/B747/engines/display_N1[0]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/N1/red_on[0]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 112.000000 46.500000 0.000000
-              KEY_FRAME 112.000000 46.500000
-
-            gen_tape Engine 4 White
-              POS 1748.500000 760.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
-              DATAREF laminar/B747/engines/display_N1[3]
-              SHOW_EQUAL 0.000000 laminar/B747/engines/N1/red_on[3]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 112.000000 46.500000 0.000000
-              KEY_FRAME 112.000000 46.500000
-
-            gen_tape Engine 3 White
-              POS 1642.500000 760.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
-              DATAREF laminar/B747/engines/display_N1[2]
-              SHOW_EQUAL 0.000000 laminar/B747/engines/N1/red_on[2]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 112.000000 46.500000 0.000000
-              KEY_FRAME 112.000000 46.500000
-
-            gen_tape Engine 2 White
-              POS 1536.500000 760.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
-              DATAREF laminar/B747/engines/display_N1[1]
-              SHOW_EQUAL 0.000000 laminar/B747/engines/N1/red_on[1]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 112.000000 46.500000 0.000000
-              KEY_FRAME 112.000000 46.500000
-
-            gen_tape Engine 1 White
-              POS 1430.500000 760.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
-              DATAREF laminar/B747/engines/display_N1[0]
-              SHOW_EQUAL 0.000000 laminar/B747/engines/N1/red_on[0]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 112.000000 46.500000 0.000000
-              KEY_FRAME 112.000000 46.500000
-
-            GROUP Redline Markers
-              gen_rotary Engine 4
-                POS 1748.500000 806.000000
-                IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
-                DATAREF 
+          GROUP N1 Tape Normal
+            SHOW_EQUAL 0.000000 laminar/B747/eicas/compact
+            GROUP N1 Tape
+              SHOW_EQUAL 0.000000 laminar/B747/engines/thrust_ref
+              gen_tape Engine 4 Red
+                POS 1748.500000 760.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
+                DATAREF laminar/B747/engines/display_N1[3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/N1/red_on[3]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 112.000000 46.500000 0.000000
+                KEY_FRAME 112.000000 46.500000
 
-              gen_rotary Engine 3
-                POS 1642.500000 806.000000
-                IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
-                DATAREF 
+              gen_tape Engine 3 Red
+                POS 1642.500000 760.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
+                DATAREF laminar/B747/engines/display_N1[2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/N1/red_on[2]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 112.000000 46.500000 0.000000
+                KEY_FRAME 112.000000 46.500000
 
-              gen_rotary Engine 2
-                POS 1536.500000 806.000000
-                IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
-                DATAREF 
+              gen_tape Engine 2 Red
+                POS 1536.500000 760.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
+                DATAREF laminar/B747/engines/display_N1[1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/N1/red_on[1]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 112.000000 46.500000 0.000000
+                KEY_FRAME 112.000000 46.500000
 
-              gen_rotary Engine 1
-                POS 1430.500000 806.000000
-                IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
-                DATAREF 
+              gen_tape Engine 1 Red
+                POS 1430.500000 760.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
+                DATAREF laminar/B747/engines/display_N1[0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/N1/red_on[0]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 112.000000 46.500000 0.000000
+                KEY_FRAME 112.000000 46.500000
 
+              gen_tape Engine 4 White
+                POS 1748.500000 760.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
+                DATAREF laminar/B747/engines/display_N1[3]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/N1/red_on[3]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 112.000000 46.500000 0.000000
+                KEY_FRAME 112.000000 46.500000
+
+              gen_tape Engine 3 White
+                POS 1642.500000 760.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
+                DATAREF laminar/B747/engines/display_N1[2]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/N1/red_on[2]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 112.000000 46.500000 0.000000
+                KEY_FRAME 112.000000 46.500000
+
+              gen_tape Engine 2 White
+                POS 1536.500000 760.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
+                DATAREF laminar/B747/engines/display_N1[1]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/N1/red_on[1]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 112.000000 46.500000 0.000000
+                KEY_FRAME 112.000000 46.500000
+
+              gen_tape Engine 1 White
+                POS 1430.500000 760.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
+                DATAREF laminar/B747/engines/display_N1[0]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/N1/red_on[0]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 112.000000 46.500000 0.000000
+                KEY_FRAME 112.000000 46.500000
+
+              GROUP Redline Markers
+                gen_rotary Engine 4
+                  POS 1748.500000 806.000000
+                  IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 3
+                  POS 1642.500000 806.000000
+                  IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 2
+                  POS 1536.500000 806.000000
+                  IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 1
+                  POS 1430.500000 806.000000
+                  IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+              END_GROUP
             END_GROUP
           END_GROUP
           GROUP N1 Tape GE
@@ -145054,590 +145060,867 @@ GROUP Upper EICAS
           END_GROUP
         END_GROUP
         GROUP EGT
-          GROUP EGT Tape
-            SHOW_EQUAL 0.000000 laminar/B747/engines/thrust_ref
-            gen_tape Engine 4 Red
-              POS 1748.500000 596.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
-              DATAREF laminar/B747/engines/display_EGT[3]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[3]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 690.000000 55.500000
-
-            gen_tape Engine 3 Red
-              POS 1642.500000 596.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
-              DATAREF laminar/B747/engines/display_EGT[2]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[2]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 690.000000 55.500000
-
-            gen_tape Engine 2 Red
-              POS 1536.500000 596.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
-              DATAREF laminar/B747/engines/display_EGT[1]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[1]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 690.000000 55.500000
-
-            gen_tape Engine 1 Red
-              POS 1430.500000 596.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
-              DATAREF laminar/B747/engines/display_EGT[0]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[0]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 690.000000 55.500000
-
-            gen_tape Engine 4 Amber
-              POS 1748.500000 596.500000
-              IMAGE CRT Displays/EICAS Upper/EGT_tapeA
-              DATAREF laminar/B747/engines/display_EGT[3]
-              SHOW_LESS 654.000000 [3]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[3]
-              SHOW_GREATER 629.000000 [3]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 690.000000 55.500000
-
-            gen_tape Engine 3 Amber
-              POS 1642.500000 596.500000
-              IMAGE CRT Displays/EICAS Upper/EGT_tapeA
-              DATAREF laminar/B747/engines/display_EGT[2]
-              SHOW_LESS 654.000000 [2]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[2]
-              SHOW_GREATER 629.000000 [2]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 690.000000 55.500000
-
-            gen_tape Engine 2 Amber
-              POS 1536.500000 596.500000
-              IMAGE CRT Displays/EICAS Upper/EGT_tapeA
-              DATAREF laminar/B747/engines/display_EGT[1]
-              SHOW_LESS 654.000000 [1]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[1]
-              SHOW_GREATER 629.000000 [1]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 690.000000 55.500000
-
-            gen_tape Engine 1 Amber
-              POS 1430.500000 596.500000
-              IMAGE CRT Displays/EICAS Upper/EGT_tapeA
-              DATAREF laminar/B747/engines/display_EGT[0]
-              SHOW_LESS 654.000000 [0]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[0]
-              SHOW_GREATER 629.000000 [0]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 690.000000 55.500000
-
-            gen_tape Engine 4 White
-              POS 1748.500000 596.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
-              DATAREF laminar/B747/engines/display_EGT[3]
-              SHOW_LESS 1.000000 [3]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[3]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 690.000000 55.500000
-
-            gen_tape Engine 3 White
-              POS 1642.500000 596.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
-              DATAREF laminar/B747/engines/display_EGT[2]
-              SHOW_LESS 1.000000 [2]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[2]
-              SHOW_GREATER 100.000000 [3]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 690.000000 55.500000
-
-            gen_tape Engine 2 White
-              POS 1536.500000 596.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
-              DATAREF laminar/B747/engines/display_EGT[1]
-              SHOW_LESS 1.000000 [1]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[1]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 690.000000 55.500000
-
-            gen_tape Engine 1 White
-              POS 1430.500000 596.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
-              DATAREF laminar/B747/engines/display_EGT[0]
-              SHOW_LESS 1.000000 [0]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[0]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 690.000000 55.500000
-
-            GROUP Continuous  Limit
-              gen_rotary Engine 4
-                POS 1748.500000 638.000000
-                IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
-                DATAREF 
-                SHOW_LESS 2.190000 [3]
-                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[3]
+          GROUP EGT Tapes Normal
+            SHOW_EQUAL 0.000000 laminar/B747/eicas/compact
+            GROUP EGT Tape
+              SHOW_EQUAL 0.000000 laminar/B747/engines/thrust_ref
+              gen_tape Engine 4 Red
+                POS 1748.500000 596.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
+                DATAREF laminar/B747/engines/display_EGT[3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[3]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 690.000000 55.500000
 
-              gen_rotary Engine 3
-                POS 1642.500000 638.000000
-                IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
-                DATAREF 
-                SHOW_LESS 2.190000 [2]
-                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[2]
+              gen_tape Engine 3 Red
+                POS 1642.500000 596.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
+                DATAREF laminar/B747/engines/display_EGT[2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[2]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 690.000000 55.500000
 
-              gen_rotary Engine 2
-                POS 1536.500000 638.000000
-                IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
-                DATAREF 
-                SHOW_LESS 2.190000 [1]
-                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[1]
-                SHOW_GREATER 0.000000 [1]
+              gen_tape Engine 2 Red
+                POS 1536.500000 596.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
+                DATAREF laminar/B747/engines/display_EGT[1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[1]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 690.000000 55.500000
 
-              gen_rotary Engine 1
-                POS 1430.500000 638.000000
-                IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
-                DATAREF 
-                SHOW_LESS 2.190000 [0]
-                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[0]
+              gen_tape Engine 1 Red
+                POS 1430.500000 596.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
+                DATAREF laminar/B747/engines/display_EGT[0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[0]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 690.000000 55.500000
 
+              gen_tape Engine 4 Amber
+                POS 1748.500000 596.500000
+                IMAGE CRT Displays/EICAS Upper/EGT_tapeA
+                DATAREF laminar/B747/engines/display_EGT[3]
+                SHOW_LESS 654.000000 [3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[3]
+                SHOW_GREATER 629.000000 [3]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 690.000000 55.500000
+
+              gen_tape Engine 3 Amber
+                POS 1642.500000 596.500000
+                IMAGE CRT Displays/EICAS Upper/EGT_tapeA
+                DATAREF laminar/B747/engines/display_EGT[2]
+                SHOW_LESS 654.000000 [2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[2]
+                SHOW_GREATER 629.000000 [2]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 690.000000 55.500000
+
+              gen_tape Engine 2 Amber
+                POS 1536.500000 596.500000
+                IMAGE CRT Displays/EICAS Upper/EGT_tapeA
+                DATAREF laminar/B747/engines/display_EGT[1]
+                SHOW_LESS 654.000000 [1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[1]
+                SHOW_GREATER 629.000000 [1]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 690.000000 55.500000
+
+              gen_tape Engine 1 Amber
+                POS 1430.500000 596.500000
+                IMAGE CRT Displays/EICAS Upper/EGT_tapeA
+                DATAREF laminar/B747/engines/display_EGT[0]
+                SHOW_LESS 654.000000 [0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[0]
+                SHOW_GREATER 629.000000 [0]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 690.000000 55.500000
+
+              gen_tape Engine 4 White
+                POS 1748.500000 596.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
+                DATAREF laminar/B747/engines/display_EGT[3]
+                SHOW_LESS 1.000000 [3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[3]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 690.000000 55.500000
+
+              gen_tape Engine 3 White
+                POS 1642.500000 596.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
+                DATAREF laminar/B747/engines/display_EGT[2]
+                SHOW_LESS 1.000000 [2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[2]
+                SHOW_GREATER 100.000000 [3]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 690.000000 55.500000
+
+              gen_tape Engine 2 White
+                POS 1536.500000 596.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
+                DATAREF laminar/B747/engines/display_EGT[1]
+                SHOW_LESS 1.000000 [1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[1]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 690.000000 55.500000
+
+              gen_tape Engine 1 White
+                POS 1430.500000 596.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
+                DATAREF laminar/B747/engines/display_EGT[0]
+                SHOW_LESS 1.000000 [0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[0]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 690.000000 55.500000
+
+              GROUP Continuous  Limit
+                gen_rotary Engine 4
+                  POS 1748.500000 638.000000
+                  IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
+                  DATAREF 
+                  SHOW_LESS 2.190000 [3]
+                  SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[3]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 3
+                  POS 1642.500000 638.000000
+                  IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
+                  DATAREF 
+                  SHOW_LESS 2.190000 [2]
+                  SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[2]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 2
+                  POS 1536.500000 638.000000
+                  IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
+                  DATAREF 
+                  SHOW_LESS 2.190000 [1]
+                  SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[1]
+                  SHOW_GREATER 0.000000 [1]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 1
+                  POS 1430.500000 638.000000
+                  IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
+                  DATAREF 
+                  SHOW_LESS 2.190000 [0]
+                  SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[0]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+              END_GROUP
+              GROUP Start Limit Markers
+                gen_rotary Engine 4
+                  POS 1748.500000 626.000000
+                  IMAGE CRT Displays/EICAS Upper/EGT_startLimit
+                  DATAREF 
+                  SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[3]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 3
+                  POS 1642.500000 626.000000
+                  IMAGE CRT Displays/EICAS Upper/EGT_startLimit
+                  DATAREF 
+                  SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[2]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 2
+                  POS 1536.500000 626.000000
+                  IMAGE CRT Displays/EICAS Upper/EGT_startLimit
+                  DATAREF 
+                  SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[1]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 1
+                  POS 1430.500000 626.000000
+                  IMAGE CRT Displays/EICAS Upper/EGT_startLimit
+                  DATAREF 
+                  SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[0]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+              END_GROUP
+              GROUP Redline Markers
+                gen_rotary Engine 4
+                  POS 1748.500000 642.000000
+                  IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 3
+                  POS 1642.500000 642.000000
+                  IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 2
+                  POS 1536.500000 642.000000
+                  IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 1
+                  POS 1430.500000 642.000000
+                  IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+              END_GROUP
             END_GROUP
-            GROUP Start Limit Markers
-              gen_rotary Engine 4
-                POS 1748.500000 626.000000
-                IMAGE CRT Displays/EICAS Upper/EGT_startLimit
-                DATAREF 
-                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[3]
+            GROUP EGT Tape GE
+              SHOW_EQUAL 1.000000 laminar/B747/engines/type
+              gen_tape Engine 4 Red
+                POS 1748.500000 670.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
+                DATAREF laminar/B747/engines/display_GE_EGT[3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[3]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 960.000000 47.500000 0.000000
+                KEY_FRAME 961.000000 47.500000
 
-              gen_rotary Engine 3
-                POS 1642.500000 626.000000
-                IMAGE CRT Displays/EICAS Upper/EGT_startLimit
-                DATAREF 
-                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[2]
+              gen_tape Engine 3 Red
+                POS 1642.500000 670.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
+                DATAREF laminar/B747/engines/display_GE_EGT[2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[2]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 960.000000 47.500000 0.000000
+                KEY_FRAME 961.000000 47.500000
 
-              gen_rotary Engine 2
-                POS 1536.500000 626.000000
-                IMAGE CRT Displays/EICAS Upper/EGT_startLimit
-                DATAREF 
-                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[1]
+              gen_tape Engine 2 Red
+                POS 1536.500000 670.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
+                DATAREF laminar/B747/engines/display_GE_EGT[1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[1]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 960.000000 47.500000 0.000000
+                KEY_FRAME 961.000000 47.500000
 
-              gen_rotary Engine 1
-                POS 1430.500000 626.000000
-                IMAGE CRT Displays/EICAS Upper/EGT_startLimit
-                DATAREF 
-                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[0]
+              gen_tape Engine 1 Red
+                POS 1430.500000 670.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
+                DATAREF laminar/B747/engines/display_GE_EGT[0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[0]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 960.000000 47.500000 0.000000
+                KEY_FRAME 961.000000 47.500000
 
-            END_GROUP
-            GROUP Redline Markers
-              gen_rotary Engine 4
-                POS 1748.500000 642.000000
-                IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
-                DATAREF 
+              gen_tape Engine 4 Amber
+                POS 1748.500000 670.500000
+                IMAGE CRT Displays/EICAS Upper/EGT_tapeA
+                DATAREF laminar/B747/engines/display_GE_EGT[3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[3]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 960.000000 47.500000 0.000000
+                KEY_FRAME 961.000000 47.500000
 
-              gen_rotary Engine 3
-                POS 1642.500000 642.000000
-                IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
-                DATAREF 
+              gen_tape Engine 3 Amber
+                POS 1642.500000 670.500000
+                IMAGE CRT Displays/EICAS Upper/EGT_tapeA
+                DATAREF laminar/B747/engines/display_GE_EGT[2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[2]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 960.000000 47.500000 0.000000
+                KEY_FRAME 961.000000 47.500000
 
-              gen_rotary Engine 2
-                POS 1536.500000 642.000000
-                IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
-                DATAREF 
+              gen_tape Engine 2 Amber
+                POS 1536.500000 670.500000
+                IMAGE CRT Displays/EICAS Upper/EGT_tapeA
+                DATAREF laminar/B747/engines/display_GE_EGT[1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[1]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 960.000000 47.500000 0.000000
+                KEY_FRAME 961.000000 47.500000
 
-              gen_rotary Engine 1
-                POS 1430.500000 642.000000
-                IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
-                DATAREF 
+              gen_tape Engine 1 Amber
+                POS 1430.500000 670.500000
+                IMAGE CRT Displays/EICAS Upper/EGT_tapeA
+                DATAREF laminar/B747/engines/display_GE_EGT[0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[0]
+                CLIP
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 960.000000 47.500000 0.000000
+                KEY_FRAME 961.000000 47.500000
 
+              gen_tape Engine 4 White
+                POS 1748.500000 670.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
+                DATAREF laminar/B747/engines/display_GE_EGT[3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[3]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 960.000000 47.500000 0.000000
+                KEY_FRAME 961.000000 47.500000
+
+              gen_tape Engine 3 White
+                POS 1642.500000 670.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
+                DATAREF laminar/B747/engines/display_GE_EGT[2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[2]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 960.000000 47.500000 0.000000
+                KEY_FRAME 961.000000 47.500000
+
+              gen_tape Engine 2 White
+                POS 1536.500000 670.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
+                DATAREF laminar/B747/engines/display_GE_EGT[1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[1]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 960.000000 47.500000 0.000000
+                KEY_FRAME 961.000000 47.500000
+
+              gen_tape Engine 1 White
+                POS 1430.500000 670.500000
+                IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
+                DATAREF laminar/B747/engines/display_GE_EGT[0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[0]
+                CLIP
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 -55.500000 1.000000
+                KEY_FRAME 960.000000 47.500000 0.000000
+                KEY_FRAME 961.000000 47.500000
+
+              GROUP Continuous  Limit
+                gen_rotary Engine 4
+                  POS 1748.500000 710.000000
+                  IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
+                  DATAREF 
+                  SHOW_LESS 2.190000 [3]
+                  SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[3]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 3
+                  POS 1642.500000 710.000000
+                  IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
+                  DATAREF 
+                  SHOW_LESS 2.190000 [2]
+                  SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[2]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 2
+                  POS 1536.500000 710.000000
+                  IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
+                  DATAREF 
+                  SHOW_LESS 2.190000 [1]
+                  SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[1]
+                  SHOW_GREATER 0.000000 [1]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 1
+                  POS 1430.500000 710.000000
+                  IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
+                  DATAREF 
+                  SHOW_LESS 2.190000 [0]
+                  SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[0]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+              END_GROUP
+              GROUP Start Limit Markers
+                gen_rotary Engine 4
+                  POS 1748.500000 781.000000
+                  IMAGE CRT Displays/EICAS Upper/EGT_startLimit
+                  DATAREF 
+                  SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[3]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 3
+                  POS 1642.500000 781.000000
+                  IMAGE CRT Displays/EICAS Upper/EGT_startLimit
+                  DATAREF 
+                  SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[2]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 2
+                  POS 1536.500000 781.000000
+                  IMAGE CRT Displays/EICAS Upper/EGT_startLimit
+                  DATAREF 
+                  SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[1]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 1
+                  POS 1430.500000 781.000000
+                  IMAGE CRT Displays/EICAS Upper/EGT_startLimit
+                  DATAREF 
+                  SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[0]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+              END_GROUP
+              GROUP Redline Markers
+                gen_rotary Engine 4
+                  POS 1748.500000 716.000000
+                  IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 3
+                  POS 1642.500000 716.000000
+                  IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 2
+                  POS 1536.500000 716.000000
+                  IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Engine 1
+                  POS 1430.500000 716.000000
+                  IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
+                  DATAREF 
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 0.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+              END_GROUP
             END_GROUP
           END_GROUP
-          GROUP EGT Tape GE
-            SHOW_EQUAL 1.000000 laminar/B747/engines/type
-            gen_tape Engine 4 Red
-              POS 1748.500000 670.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
-              DATAREF laminar/B747/engines/display_GE_EGT[3]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[3]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 960.000000 47.500000 0.000000
-              KEY_FRAME 961.000000 47.500000
-
-            gen_tape Engine 3 Red
-              POS 1642.500000 670.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
-              DATAREF laminar/B747/engines/display_GE_EGT[2]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[2]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 960.000000 47.500000 0.000000
-              KEY_FRAME 961.000000 47.500000
-
-            gen_tape Engine 2 Red
-              POS 1536.500000 670.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
-              DATAREF laminar/B747/engines/display_GE_EGT[1]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[1]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 960.000000 47.500000 0.000000
-              KEY_FRAME 961.000000 47.500000
-
-            gen_tape Engine 1 Red
-              POS 1430.500000 670.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeR
-              DATAREF laminar/B747/engines/display_GE_EGT[0]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[0]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 960.000000 47.500000 0.000000
-              KEY_FRAME 961.000000 47.500000
-
-            gen_tape Engine 4 Amber
-              POS 1748.500000 670.500000
-              IMAGE CRT Displays/EICAS Upper/EGT_tapeA
-              DATAREF laminar/B747/engines/display_GE_EGT[3]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[3]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 960.000000 47.500000 0.000000
-              KEY_FRAME 961.000000 47.500000
-
-            gen_tape Engine 3 Amber
-              POS 1642.500000 670.500000
-              IMAGE CRT Displays/EICAS Upper/EGT_tapeA
-              DATAREF laminar/B747/engines/display_GE_EGT[2]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[2]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 960.000000 47.500000 0.000000
-              KEY_FRAME 961.000000 47.500000
-
-            gen_tape Engine 2 Amber
-              POS 1536.500000 670.500000
-              IMAGE CRT Displays/EICAS Upper/EGT_tapeA
-              DATAREF laminar/B747/engines/display_GE_EGT[1]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[1]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 960.000000 47.500000 0.000000
-              KEY_FRAME 961.000000 47.500000
-
-            gen_tape Engine 1 Amber
-              POS 1430.500000 670.500000
-              IMAGE CRT Displays/EICAS Upper/EGT_tapeA
-              DATAREF laminar/B747/engines/display_GE_EGT[0]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[0]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 960.000000 47.500000 0.000000
-              KEY_FRAME 961.000000 47.500000
-
-            gen_tape Engine 4 White
-              POS 1748.500000 670.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
-              DATAREF laminar/B747/engines/display_GE_EGT[3]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[3]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 960.000000 47.500000 0.000000
-              KEY_FRAME 961.000000 47.500000
-
-            gen_tape Engine 3 White
-              POS 1642.500000 670.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
-              DATAREF laminar/B747/engines/display_GE_EGT[2]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[2]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 960.000000 47.500000 0.000000
-              KEY_FRAME 961.000000 47.500000
-
-            gen_tape Engine 2 White
-              POS 1536.500000 670.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
-              DATAREF laminar/B747/engines/display_GE_EGT[1]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[1]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 960.000000 47.500000 0.000000
-              KEY_FRAME 961.000000 47.500000
-
-            gen_tape Engine 1 White
-              POS 1430.500000 670.500000
-              IMAGE CRT Displays/EICAS Upper/N1.EGT_tapeW
-              DATAREF laminar/B747/engines/display_GE_EGT[0]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[0]
-              CLIP
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 -55.500000 1.000000
-              KEY_FRAME 960.000000 47.500000 0.000000
-              KEY_FRAME 961.000000 47.500000
-
-            GROUP Continuous  Limit
-              gen_rotary Engine 4
-                POS 1748.500000 710.000000
-                IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
+          GROUP EGT LED Compact
+            GROUP_ANIMATE_MODE TRANSLATE
+            GROUP_WIDTH 0
+            GROUP_HEIGHT 0
+            DATAREF laminar/B747/eicas/compact
+            POS 0.000000 0.000000
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 108.000000 1.000000
+            KEY_FRAME 2.000000 108.000000
+            IS_VERTICAL 1
+            OFFSET 0.000000
+            GROUP EGT LED
+              SHOW_EQUAL 0.000000 laminar/B747/engines/thrust_ref
+              gen_rotary Box 1 Amber
+                POS 1430.500000 674.000000
+                IMAGE CRT Displays/EICAS Upper/EGT_box_amber
                 DATAREF 
-                SHOW_LESS 2.190000 [3]
-                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[3]
+                SHOW_LESS 654.000000 [0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[0]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[0]
+                SHOW_GREATER 629.000000 [0]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -145654,12 +145937,14 @@ GROUP Upper EICAS
                 CLICK_DX 0
                 CLICK_DY 0
 
-              gen_rotary Engine 3
-                POS 1642.500000 710.000000
-                IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
+              gen_rotary Box 2 Amber
+                POS 1536.500000 674.000000
+                IMAGE CRT Displays/EICAS Upper/EGT_box_amber
                 DATAREF 
-                SHOW_LESS 2.190000 [2]
-                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[2]
+                SHOW_LESS 654.000000 [1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[1]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[1]
+                SHOW_GREATER 629.000000 [1]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -145676,13 +145961,14 @@ GROUP Upper EICAS
                 CLICK_DX 0
                 CLICK_DY 0
 
-              gen_rotary Engine 2
-                POS 1536.500000 710.000000
-                IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
+              gen_rotary Box 3 Amber
+                POS 1642.500000 674.000000
+                IMAGE CRT Displays/EICAS Upper/EGT_box_amber
                 DATAREF 
-                SHOW_LESS 2.190000 [1]
-                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[1]
-                SHOW_GREATER 0.000000 [1]
+                SHOW_LESS 654.000000 [2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[2]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[2]
+                SHOW_GREATER 629.000000 [2]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -145699,12 +145985,14 @@ GROUP Upper EICAS
                 CLICK_DX 0
                 CLICK_DY 0
 
-              gen_rotary Engine 1
-                POS 1430.500000 710.000000
-                IMAGE CRT Displays/EICAS Upper/EPR_maxLineA
+              gen_rotary Box 4 Amber
+                POS 1748.500000 674.000000
+                IMAGE CRT Displays/EICAS Upper/EGT_box_amber
                 DATAREF 
-                SHOW_LESS 2.190000 [0]
-                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/amber_inhibit[0]
+                SHOW_LESS 654.000000 [3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[3]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[3]
+                SHOW_GREATER 629.000000 [3]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -145720,655 +146008,388 @@ GROUP Upper EICAS
                 CURSOR DEFAULT
                 CLICK_DX 0
                 CLICK_DY 0
+
+              gen_rotary Box 1 Red
+                POS 1430.500000 674.000000
+                IMAGE CRT Displays/EICAS Upper/EPR.EGT_box_red
+                DATAREF 
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/box_red[0]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_rotary Box 2 Red
+                POS 1536.500000 674.000000
+                IMAGE CRT Displays/EICAS Upper/EPR.EGT_box_red
+                DATAREF 
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/box_red[1]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_rotary Box 3 Red
+                POS 1642.500000 674.000000
+                IMAGE CRT Displays/EICAS Upper/EPR.EGT_box_red
+                DATAREF 
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/box_red[2]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_rotary Box 4 Red
+                POS 1748.500000 674.000000
+                IMAGE CRT Displays/EICAS Upper/EPR.EGT_box_red
+                DATAREF 
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/box_red[3]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_rotary Box 1
+                POS 1430.500000 674.000000
+                IMAGE CRT Displays/EICAS Upper/EPR.EGT_box
+                DATAREF 
+                SHOW_LESS 629.000000 [0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[0]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[0]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_rotary Box 2
+                POS 1536.500000 674.000000
+                IMAGE CRT Displays/EICAS Upper/EPR.EGT_box
+                DATAREF 
+                SHOW_LESS 629.000000 [1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[1]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[1]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_rotary Box 3
+                POS 1642.500000 674.000000
+                IMAGE CRT Displays/EICAS Upper/EPR.EGT_box
+                DATAREF 
+                SHOW_LESS 629.000000 [2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[2]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[2]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_rotary Box 4
+                POS 1748.500000 674.000000
+                IMAGE CRT Displays/EICAS Upper/EPR.EGT_box
+                DATAREF 
+                SHOW_LESS 629.000000 [3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[3]
+                SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[3]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_LED EGT 4 LED Red
+                POS 1748.000000 674.000000
+                IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
+                DATAREF laminar/B747/engines/display_EGT[3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[3]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 5
+                LED_ROWS 3
+                ROUNDING ROUND_ROUND
+
+              gen_LED EGT 3 LED Red
+                POS 1642.000000 674.000000
+                IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
+                DATAREF laminar/B747/engines/display_EGT[2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[2]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 5
+                LED_ROWS 3
+                ROUNDING ROUND_ROUND
+
+              gen_LED EGT 2 LED Red
+                POS 1536.000000 674.000000
+                IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
+                DATAREF laminar/B747/engines/display_EGT[1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[1]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 5
+                LED_ROWS 3
+                ROUNDING ROUND_ROUND
+
+              gen_LED EGT 1 LED Red
+                POS 1430.000000 674.000000
+                IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
+                DATAREF laminar/B747/engines/display_EGT[0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[0]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 5
+                LED_ROWS 3
+                ROUNDING ROUND_ROUND
+
+              gen_LED EGT 4 LED Amber
+                POS 1748.000000 674.000000
+                IMAGE CRT Displays/LED/LED_3.30B.xxx##0.amber
+                DATAREF laminar/B747/engines/display_EGT[3]
+                SHOW_LESS 654.000000 [3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[3]
+                SHOW_GREATER 629.000000 [3]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 5
+                LED_ROWS 3
+                ROUNDING ROUND_ROUND
+
+              gen_LED EGT 3 LED Amber
+                POS 1642.000000 674.000000
+                IMAGE CRT Displays/LED/LED_3.30B.xxx##0.amber
+                DATAREF laminar/B747/engines/display_EGT[2]
+                SHOW_LESS 654.000000 [2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[2]
+                SHOW_GREATER 629.000000 [2]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 5
+                LED_ROWS 3
+                ROUNDING ROUND_ROUND
+
+              gen_LED EGT 2 LED Amber
+                POS 1536.000000 674.000000
+                IMAGE CRT Displays/LED/LED_3.30B.xxx##0.amber
+                DATAREF laminar/B747/engines/display_EGT[1]
+                SHOW_LESS 654.000000 [1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[1]
+                SHOW_GREATER 629.000000 [1]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 5
+                LED_ROWS 3
+                ROUNDING ROUND_ROUND
+
+              gen_LED EGT 1 LED Amber
+                POS 1430.000000 674.000000
+                IMAGE CRT Displays/LED/LED_3.30B.xxx##0.amber
+                DATAREF laminar/B747/engines/display_EGT[0]
+                SHOW_LESS 654.000000 [0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[0]
+                SHOW_GREATER 629.000000 [0]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 5
+                LED_ROWS 3
+                ROUNDING ROUND_ROUND
+
+              gen_LED EGT 4 LED White
+                POS 1748.000000 674.000000
+                IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
+                DATAREF laminar/B747/engines/display_EGT[3]
+                SHOW_LESS 629.000000 [3]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[3]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 5
+                LED_ROWS 3
+                ROUNDING ROUND_ROUND
+
+              gen_LED EGT 3 LED White
+                POS 1642.000000 674.000000
+                IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
+                DATAREF laminar/B747/engines/display_EGT[2]
+                SHOW_LESS 629.000000 [2]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[2]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 5
+                LED_ROWS 3
+                ROUNDING ROUND_ROUND
+
+              gen_LED EGT 2 LED White
+                POS 1536.000000 674.000000
+                IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
+                DATAREF laminar/B747/engines/display_EGT[1]
+                SHOW_LESS 629.000000 [1]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[1]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 5
+                LED_ROWS 3
+                ROUNDING ROUND_ROUND
+
+              gen_LED EGT 1 LED White
+                POS 1430.000000 674.000000
+                IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
+                DATAREF laminar/B747/engines/display_EGT[0]
+                SHOW_LESS 629.000000 [0]
+                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[0]
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 5
+                LED_ROWS 3
+                ROUNDING ROUND_ROUND
 
             END_GROUP
-            GROUP Start Limit Markers
-              gen_rotary Engine 4
-                POS 1748.500000 781.000000
-                IMAGE CRT Displays/EICAS Upper/EGT_startLimit
-                DATAREF 
-                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[3]
-                LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 9
-                BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
-
-              gen_rotary Engine 3
-                POS 1642.500000 781.000000
-                IMAGE CRT Displays/EICAS Upper/EGT_startLimit
-                DATAREF 
-                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[2]
-                LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 9
-                BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
-
-              gen_rotary Engine 2
-                POS 1536.500000 781.000000
-                IMAGE CRT Displays/EICAS Upper/EGT_startLimit
-                DATAREF 
-                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[1]
-                LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 9
-                BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
-
-              gen_rotary Engine 1
-                POS 1430.500000 781.000000
-                IMAGE CRT Displays/EICAS Upper/EGT_startLimit
-                DATAREF 
-                SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[0]
-                LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 9
-                BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
-
-            END_GROUP
-            GROUP Redline Markers
-              gen_rotary Engine 4
-                POS 1748.500000 716.000000
-                IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
-                DATAREF 
-                LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 9
-                BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
-
-              gen_rotary Engine 3
-                POS 1642.500000 716.000000
-                IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
-                DATAREF 
-                LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 9
-                BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
-
-              gen_rotary Engine 2
-                POS 1536.500000 716.000000
-                IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
-                DATAREF 
-                LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 9
-                BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
-
-              gen_rotary Engine 1
-                POS 1430.500000 716.000000
-                IMAGE CRT Displays/EICAS Upper/N1.EGT_redLine
-                DATAREF 
-                LIGHT_MODE GLASS_AUTO
-                LIGHT_RHEOSTAT 9
-                BUS_SRC 2
-                KEY_FRAME 0.000000 0.000000 1.000000
-                KEY_FRAME 1.000000 6.000000
-                DIGITS 1
-                ROTARY_TYPE NO_CLICK
-                CLICK_RADIUS 0.000000
-                CLICK_RADIUS_DY 0.000000
-                OFFSET 0.000000
-                STEP1 1.000000
-                STEP2 1.000000
-                CURSOR DEFAULT
-                CLICK_DX 0
-                CLICK_DY 0
-
-            END_GROUP
-          END_GROUP
-          GROUP EGT LED
-            SHOW_EQUAL 0.000000 laminar/B747/engines/thrust_ref
-            gen_rotary Box 1 Amber
-              POS 1430.500000 674.000000
-              IMAGE CRT Displays/EICAS Upper/EGT_box_amber
-              DATAREF 
-              SHOW_LESS 654.000000 [0]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[0]
-              SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[0]
-              SHOW_GREATER 629.000000 [0]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
-              ROTARY_TYPE NO_CLICK
-              CLICK_RADIUS 0.000000
-              CLICK_RADIUS_DY 0.000000
-              OFFSET 0.000000
-              STEP1 1.000000
-              STEP2 1.000000
-              CURSOR DEFAULT
-              CLICK_DX 0
-              CLICK_DY 0
-
-            gen_rotary Box 2 Amber
-              POS 1536.500000 674.000000
-              IMAGE CRT Displays/EICAS Upper/EGT_box_amber
-              DATAREF 
-              SHOW_LESS 654.000000 [1]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[1]
-              SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[1]
-              SHOW_GREATER 629.000000 [1]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
-              ROTARY_TYPE NO_CLICK
-              CLICK_RADIUS 0.000000
-              CLICK_RADIUS_DY 0.000000
-              OFFSET 0.000000
-              STEP1 1.000000
-              STEP2 1.000000
-              CURSOR DEFAULT
-              CLICK_DX 0
-              CLICK_DY 0
-
-            gen_rotary Box 3 Amber
-              POS 1642.500000 674.000000
-              IMAGE CRT Displays/EICAS Upper/EGT_box_amber
-              DATAREF 
-              SHOW_LESS 654.000000 [2]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[2]
-              SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[2]
-              SHOW_GREATER 629.000000 [2]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
-              ROTARY_TYPE NO_CLICK
-              CLICK_RADIUS 0.000000
-              CLICK_RADIUS_DY 0.000000
-              OFFSET 0.000000
-              STEP1 1.000000
-              STEP2 1.000000
-              CURSOR DEFAULT
-              CLICK_DX 0
-              CLICK_DY 0
-
-            gen_rotary Box 4 Amber
-              POS 1748.500000 674.000000
-              IMAGE CRT Displays/EICAS Upper/EGT_box_amber
-              DATAREF 
-              SHOW_LESS 654.000000 [3]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[3]
-              SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[3]
-              SHOW_GREATER 629.000000 [3]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
-              ROTARY_TYPE NO_CLICK
-              CLICK_RADIUS 0.000000
-              CLICK_RADIUS_DY 0.000000
-              OFFSET 0.000000
-              STEP1 1.000000
-              STEP2 1.000000
-              CURSOR DEFAULT
-              CLICK_DX 0
-              CLICK_DY 0
-
-            gen_rotary Box 1 Red
-              POS 1430.500000 674.000000
-              IMAGE CRT Displays/EICAS Upper/EPR.EGT_box_red
-              DATAREF 
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/box_red[0]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
-              ROTARY_TYPE NO_CLICK
-              CLICK_RADIUS 0.000000
-              CLICK_RADIUS_DY 0.000000
-              OFFSET 0.000000
-              STEP1 1.000000
-              STEP2 1.000000
-              CURSOR DEFAULT
-              CLICK_DX 0
-              CLICK_DY 0
-
-            gen_rotary Box 2 Red
-              POS 1536.500000 674.000000
-              IMAGE CRT Displays/EICAS Upper/EPR.EGT_box_red
-              DATAREF 
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/box_red[1]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
-              ROTARY_TYPE NO_CLICK
-              CLICK_RADIUS 0.000000
-              CLICK_RADIUS_DY 0.000000
-              OFFSET 0.000000
-              STEP1 1.000000
-              STEP2 1.000000
-              CURSOR DEFAULT
-              CLICK_DX 0
-              CLICK_DY 0
-
-            gen_rotary Box 3 Red
-              POS 1642.500000 674.000000
-              IMAGE CRT Displays/EICAS Upper/EPR.EGT_box_red
-              DATAREF 
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/box_red[2]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
-              ROTARY_TYPE NO_CLICK
-              CLICK_RADIUS 0.000000
-              CLICK_RADIUS_DY 0.000000
-              OFFSET 0.000000
-              STEP1 1.000000
-              STEP2 1.000000
-              CURSOR DEFAULT
-              CLICK_DX 0
-              CLICK_DY 0
-
-            gen_rotary Box 4 Red
-              POS 1748.500000 674.000000
-              IMAGE CRT Displays/EICAS Upper/EPR.EGT_box_red
-              DATAREF 
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/box_red[3]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
-              ROTARY_TYPE NO_CLICK
-              CLICK_RADIUS 0.000000
-              CLICK_RADIUS_DY 0.000000
-              OFFSET 0.000000
-              STEP1 1.000000
-              STEP2 1.000000
-              CURSOR DEFAULT
-              CLICK_DX 0
-              CLICK_DY 0
-
-            gen_rotary Box 1
-              POS 1430.500000 674.000000
-              IMAGE CRT Displays/EICAS Upper/EPR.EGT_box
-              DATAREF 
-              SHOW_LESS 629.000000 [0]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[0]
-              SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[0]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
-              ROTARY_TYPE NO_CLICK
-              CLICK_RADIUS 0.000000
-              CLICK_RADIUS_DY 0.000000
-              OFFSET 0.000000
-              STEP1 1.000000
-              STEP2 1.000000
-              CURSOR DEFAULT
-              CLICK_DX 0
-              CLICK_DY 0
-
-            gen_rotary Box 2
-              POS 1536.500000 674.000000
-              IMAGE CRT Displays/EICAS Upper/EPR.EGT_box
-              DATAREF 
-              SHOW_LESS 629.000000 [1]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[1]
-              SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[1]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
-              ROTARY_TYPE NO_CLICK
-              CLICK_RADIUS 0.000000
-              CLICK_RADIUS_DY 0.000000
-              OFFSET 0.000000
-              STEP1 1.000000
-              STEP2 1.000000
-              CURSOR DEFAULT
-              CLICK_DX 0
-              CLICK_DY 0
-
-            gen_rotary Box 3
-              POS 1642.500000 674.000000
-              IMAGE CRT Displays/EICAS Upper/EPR.EGT_box
-              DATAREF 
-              SHOW_LESS 629.000000 [2]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[2]
-              SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[2]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
-              ROTARY_TYPE NO_CLICK
-              CLICK_RADIUS 0.000000
-              CLICK_RADIUS_DY 0.000000
-              OFFSET 0.000000
-              STEP1 1.000000
-              STEP2 1.000000
-              CURSOR DEFAULT
-              CLICK_DX 0
-              CLICK_DY 0
-
-            gen_rotary Box 4
-              POS 1748.500000 674.000000
-              IMAGE CRT Displays/EICAS Upper/EPR.EGT_box
-              DATAREF 
-              SHOW_LESS 629.000000 [3]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[3]
-              SHOW_EQUAL 0.000000 laminar/B747/engines/EGT/box_red[3]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 6.000000
-              DIGITS 1
-              ROTARY_TYPE NO_CLICK
-              CLICK_RADIUS 0.000000
-              CLICK_RADIUS_DY 0.000000
-              OFFSET 0.000000
-              STEP1 1.000000
-              STEP2 1.000000
-              CURSOR DEFAULT
-              CLICK_DX 0
-              CLICK_DY 0
-
-            gen_LED EGT 4 LED Red
-              POS 1748.000000 674.000000
-              IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
-              DATAREF laminar/B747/engines/display_EGT[3]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[3]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 999.000000 999.000000
-              DIGITS 3
-              DECIMALS 0
-              PERIOD_WIDTH 5
-              LED_ROWS 3
-              ROUNDING ROUND_ROUND
-
-            gen_LED EGT 3 LED Red
-              POS 1642.000000 674.000000
-              IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
-              DATAREF laminar/B747/engines/display_EGT[2]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[2]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 999.000000 999.000000
-              DIGITS 3
-              DECIMALS 0
-              PERIOD_WIDTH 5
-              LED_ROWS 3
-              ROUNDING ROUND_ROUND
-
-            gen_LED EGT 2 LED Red
-              POS 1536.000000 674.000000
-              IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
-              DATAREF laminar/B747/engines/display_EGT[1]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[1]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 999.000000 999.000000
-              DIGITS 3
-              DECIMALS 0
-              PERIOD_WIDTH 5
-              LED_ROWS 3
-              ROUNDING ROUND_ROUND
-
-            gen_LED EGT 1 LED Red
-              POS 1430.000000 674.000000
-              IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
-              DATAREF laminar/B747/engines/display_EGT[0]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/red_on[0]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 999.000000 999.000000
-              DIGITS 3
-              DECIMALS 0
-              PERIOD_WIDTH 5
-              LED_ROWS 3
-              ROUNDING ROUND_ROUND
-
-            gen_LED EGT 4 LED Amber
-              POS 1748.000000 674.000000
-              IMAGE CRT Displays/LED/LED_3.30B.xxx##0.amber
-              DATAREF laminar/B747/engines/display_EGT[3]
-              SHOW_LESS 654.000000 [3]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[3]
-              SHOW_GREATER 629.000000 [3]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 999.000000 999.000000
-              DIGITS 3
-              DECIMALS 0
-              PERIOD_WIDTH 5
-              LED_ROWS 3
-              ROUNDING ROUND_ROUND
-
-            gen_LED EGT 3 LED Amber
-              POS 1642.000000 674.000000
-              IMAGE CRT Displays/LED/LED_3.30B.xxx##0.amber
-              DATAREF laminar/B747/engines/display_EGT[2]
-              SHOW_LESS 654.000000 [2]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[2]
-              SHOW_GREATER 629.000000 [2]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 999.000000 999.000000
-              DIGITS 3
-              DECIMALS 0
-              PERIOD_WIDTH 5
-              LED_ROWS 3
-              ROUNDING ROUND_ROUND
-
-            gen_LED EGT 2 LED Amber
-              POS 1536.000000 674.000000
-              IMAGE CRT Displays/LED/LED_3.30B.xxx##0.amber
-              DATAREF laminar/B747/engines/display_EGT[1]
-              SHOW_LESS 654.000000 [1]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[1]
-              SHOW_GREATER 629.000000 [1]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 999.000000 999.000000
-              DIGITS 3
-              DECIMALS 0
-              PERIOD_WIDTH 5
-              LED_ROWS 3
-              ROUNDING ROUND_ROUND
-
-            gen_LED EGT 1 LED Amber
-              POS 1430.000000 674.000000
-              IMAGE CRT Displays/LED/LED_3.30B.xxx##0.amber
-              DATAREF laminar/B747/engines/display_EGT[0]
-              SHOW_LESS 654.000000 [0]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/amber_on[0]
-              SHOW_GREATER 629.000000 [0]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 999.000000 999.000000
-              DIGITS 3
-              DECIMALS 0
-              PERIOD_WIDTH 5
-              LED_ROWS 3
-              ROUNDING ROUND_ROUND
-
-            gen_LED EGT 4 LED White
-              POS 1748.000000 674.000000
-              IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
-              DATAREF laminar/B747/engines/display_EGT[3]
-              SHOW_LESS 629.000000 [3]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[3]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 999.000000 999.000000
-              DIGITS 3
-              DECIMALS 0
-              PERIOD_WIDTH 5
-              LED_ROWS 3
-              ROUNDING ROUND_ROUND
-
-            gen_LED EGT 3 LED White
-              POS 1642.000000 674.000000
-              IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
-              DATAREF laminar/B747/engines/display_EGT[2]
-              SHOW_LESS 629.000000 [2]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[2]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 999.000000 999.000000
-              DIGITS 3
-              DECIMALS 0
-              PERIOD_WIDTH 5
-              LED_ROWS 3
-              ROUNDING ROUND_ROUND
-
-            gen_LED EGT 2 LED White
-              POS 1536.000000 674.000000
-              IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
-              DATAREF laminar/B747/engines/display_EGT[1]
-              SHOW_LESS 629.000000 [1]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[1]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 999.000000 999.000000
-              DIGITS 3
-              DECIMALS 0
-              PERIOD_WIDTH 5
-              LED_ROWS 3
-              ROUNDING ROUND_ROUND
-
-            gen_LED EGT 1 LED White
-              POS 1430.000000 674.000000
-              IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
-              DATAREF laminar/B747/engines/display_EGT[0]
-              SHOW_LESS 629.000000 [0]
-              SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/white_on[0]
-              LIGHT_MODE GLASS_AUTO
-              LIGHT_RHEOSTAT 9
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 999.000000 999.000000
-              DIGITS 3
-              DECIMALS 0
-              PERIOD_WIDTH 5
-              LED_ROWS 3
-              ROUNDING ROUND_ROUND
-
           END_GROUP
           GROUP EGT LED GE
             SHOW_EQUAL 1.000000 laminar/B747/engines/type
@@ -146828,6 +146849,1837 @@ GROUP Upper EICAS
               LED_ROWS 3
               ROUNDING ROUND_ROUND
 
+          END_GROUP
+        END_GROUP
+        GROUP Compact
+          SHOW_GREATER 0.500000 laminar/B747/eicas/compact
+          GROUP Cmp Labels EPR
+            SHOW_EQUAL 0.000000 laminar/B747/engines/thrust_ref
+            gen_rotary Background
+              POS 1589.500000 980.000000
+              IMAGE CRT Displays/EICAS Upper/eicas_cmp_epr
+              DATAREF 
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 9
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Background
+              POS 1589.500000 841.000000
+              IMAGE CRT Displays/EICAS Upper/eicas_cmp_n1
+              DATAREF 
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 9
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Background
+              POS 1589.500000 782.000000
+              IMAGE CRT Displays/EICAS Upper/eicas_cmp_egt
+              DATAREF 
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 9
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
+          GROUP Cmp Labels N1
+            SHOW_EQUAL 1.000000 laminar/B747/engines/thrust_ref
+            gen_rotary Background
+              POS 1589.500000 959.500000
+              IMAGE CRT Displays/EICAS Upper/eicas_cmp_n1
+              DATAREF 
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 9
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Background
+              POS 1589.500000 752.500000
+              IMAGE CRT Displays/EICAS Upper/eicas_cmp_egt
+              DATAREF 
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 9
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
+          GROUP Cmp Rows
+            GROUP Cmp N2
+              SHOW_EQUAL 1.000000 laminar/B747/eicas/cmp_rows[0]
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/engines/thrust_ref
+              POS 0.000000 0.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 -34.000000
+              IS_VERTICAL 1
+              OFFSET 0.000000
+              gen_rotary Background
+                POS 1589.500000 746.000000
+                IMAGE CRT Displays/EICAS Lower/N2_bgnd
+                DATAREF 
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              GROUP N2 LED
+                GROUP Red
+                  gen_LED LED 1
+                    POS 1430.000000 746.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
+                    DATAREF laminar/B747/engines/display_N2[0]
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/N2/red_on[0]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 100.000000 100.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 3
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED LED 2
+                    POS 1536.000000 746.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
+                    DATAREF laminar/B747/engines/display_N2[1]
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/N2/red_on[1]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 100.000000 100.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 3
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED LED 3
+                    POS 1642.000000 746.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
+                    DATAREF laminar/B747/engines/display_N2[2]
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/N2/red_on[2]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 100.000000 100.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 3
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED LED 4
+                    POS 1749.000000 746.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xxx##0.red
+                    DATAREF laminar/B747/engines/display_N2[3]
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/N2/red_on[3]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 100.000000 100.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 3
+                    ROUNDING ROUND_ROUND
+
+                END_GROUP
+                GROUP White
+                  gen_LED LED 1
+                    POS 1430.000000 746.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
+                    DATAREF laminar/B747/engines/display_N2[0]
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/N2/red_on[0]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 100.000000 100.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 3
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED LED 2
+                    POS 1536.000000 746.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
+                    DATAREF laminar/B747/engines/display_N2[1]
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/N2/red_on[1]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 100.000000 100.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 3
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED LED 3
+                    POS 1642.000000 746.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
+                    DATAREF laminar/B747/engines/display_N2[2]
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/N2/red_on[2]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 100.000000 100.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 3
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED LED 4
+                    POS 1749.000000 746.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xxx##0.white
+                    DATAREF laminar/B747/engines/display_N2[3]
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/N2/red_on[3]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 100.000000 100.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 3
+                    ROUNDING ROUND_ROUND
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+            GROUP Cmp FF
+              SHOW_EQUAL 1.000000 laminar/B747/eicas/cmp_rows[1]
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/engines/thrust_ref
+              POS 0.000000 0.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 -37.000000
+              IS_VERTICAL 1
+              OFFSET 0.000000
+              gen_rotary Background
+                POS 1589.500000 717.000000
+                IMAGE CRT Displays/EICAS Lower/FF_bgnd
+                DATAREF 
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              GROUP Cmp FF
+                SHOW_LESS 1.100000 laminar/B747/engines/type
+                GROUP FF LED
+                  gen_LED LED 1
+                    POS 1427.000000 717.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xx##00.white
+                    DATAREF laminar/B747/fuel/fuel_flow_sec_display[0]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 3.600000
+                    DIGITS 3
+                    DECIMALS 1
+                    PERIOD_WIDTH 5
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED LED 2
+                    POS 1533.000000 717.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xx##00.white
+                    DATAREF laminar/B747/fuel/fuel_flow_sec_display[1]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 3.600000
+                    DIGITS 3
+                    DECIMALS 1
+                    PERIOD_WIDTH 5
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED LED 3
+                    POS 1639.000000 717.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xx##00.white
+                    DATAREF laminar/B747/fuel/fuel_flow_sec_display[2]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 3.600000
+                    DIGITS 3
+                    DECIMALS 1
+                    PERIOD_WIDTH 5
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED LED 4
+                    POS 1745.000000 717.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xx##00.white
+                    DATAREF laminar/B747/fuel/fuel_flow_sec_display[3]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 3.600000
+                    DIGITS 3
+                    DECIMALS 1
+                    PERIOD_WIDTH 5
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                END_GROUP
+              END_GROUP
+              GROUP Cmp FF RR
+                SHOW_EQUAL 2.000000 laminar/B747/engines/type
+                GROUP FF LED
+                  gen_LED LED 1
+                    POS 1427.000000 717.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xx##00.white
+                    DATAREF laminar/B747/fuel/fuel_flow_sec_display[0]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 3.600000
+                    DIGITS 3
+                    DECIMALS 1
+                    PERIOD_WIDTH 5
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED LED 2
+                    POS 1533.000000 717.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xx##00.white
+                    DATAREF laminar/B747/fuel/fuel_flow_sec_display[1]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 3.600000
+                    DIGITS 3
+                    DECIMALS 1
+                    PERIOD_WIDTH 5
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED LED 3
+                    POS 1639.000000 717.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xx##00.white
+                    DATAREF laminar/B747/fuel/fuel_flow_sec_display[2]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 3.600000
+                    DIGITS 3
+                    DECIMALS 1
+                    PERIOD_WIDTH 5
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED LED 4
+                    POS 1745.000000 717.000000
+                    IMAGE CRT Displays/LED/LED_3.30B.xx##00.white
+                    DATAREF laminar/B747/fuel/fuel_flow_sec_display[3]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 3.600000
+                    DIGITS 3
+                    DECIMALS 1
+                    PERIOD_WIDTH 5
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                END_GROUP
+              END_GROUP
+            END_GROUP
+            GROUP Cmp Oil
+              SHOW_EQUAL 1.000000 laminar/B747/eicas/cmp_rows[2]
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/engines/thrust_ref
+              POS 0.000000 0.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 -23.500000
+              IS_VERTICAL 1
+              OFFSET 0.000000
+              gen_rotary Background
+                POS 1589.500000 643.000000
+                IMAGE CRT Displays/EICAS Lower/oil_p_bgnd
+                DATAREF 
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              GROUP Oil P LED
+                GROUP Lo Limit
+                  gen_LED Engine 4
+                    POS 1748.000000 643.000000
+                    IMAGE CRT Displays/LED/LED_3.26B.xx###0.red
+                    DATAREF laminar/B747/engines/oil_press_psi[3]
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/EICAS2_oil_press_status[3]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED Engine 3
+                    POS 1642.000000 643.000000
+                    IMAGE CRT Displays/LED/LED_3.26B.xx###0.red
+                    DATAREF laminar/B747/engines/oil_press_psi[2]
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/EICAS2_oil_press_status[2]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED Engine 2
+                    POS 1536.000000 643.000000
+                    IMAGE CRT Displays/LED/LED_3.26B.xx###0.red
+                    DATAREF laminar/B747/engines/oil_press_psi[1]
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/EICAS2_oil_press_status[1]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED Engine 1
+                    POS 1430.000000 643.000000
+                    IMAGE CRT Displays/LED/LED_3.26B.xx###0.red
+                    DATAREF laminar/B747/engines/oil_press_psi[0]
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/EICAS2_oil_press_status[0]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                END_GROUP
+                GROUP Normal
+                  GROUP Engine 4 1
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[3]
+                    gen_LED Engine 4
+                      POS 1748.000000 643.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
+                      DATAREF laminar/B747/engines/oil_press_psi[3]
+                      SHOW_EQUAL 0.000000 laminar/B747/engines/oil_press_amber[3]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                  GROUP Engine 4 Amber 1
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[3]
+                    gen_LED Engine 4 Amber
+                      POS 1748.000000 643.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                      DATAREF laminar/B747/engines/oil_press_psi[3]
+                      SHOW_EQUAL 1.000000 laminar/B747/engines/oil_press_amber[3]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                  GROUP Engine 3 1
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[2]
+                    gen_LED Engine 3
+                      POS 1642.000000 643.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
+                      DATAREF laminar/B747/engines/oil_press_psi[2]
+                      SHOW_EQUAL 0.000000 laminar/B747/engines/oil_press_amber[2]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                  GROUP Engine 3 Amber 1
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[2]
+                    gen_LED Engine 3 Amber
+                      POS 1642.000000 643.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                      DATAREF laminar/B747/engines/oil_press_psi[2]
+                      SHOW_EQUAL 1.000000 laminar/B747/engines/oil_press_amber[2]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                  GROUP Engine 2 1
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[1]
+                    gen_LED Engine 2
+                      POS 1536.000000 643.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
+                      DATAREF laminar/B747/engines/oil_press_psi[1]
+                      SHOW_EQUAL 0.000000 laminar/B747/engines/oil_press_amber[1]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                  GROUP Engine 2 Amber 1
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[1]
+                    gen_LED Engine 2 Amber
+                      POS 1536.000000 643.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                      DATAREF laminar/B747/engines/oil_press_psi[1]
+                      SHOW_EQUAL 1.000000 laminar/B747/engines/oil_press_amber[1]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                  GROUP Engine 1 1
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[0]
+                    gen_LED Engine 1
+                      POS 1430.000000 643.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
+                      DATAREF laminar/B747/engines/oil_press_psi[0]
+                      SHOW_EQUAL 0.000000 laminar/B747/engines/oil_press_amber[0]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                  GROUP Engine 1 Amber 1
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/EICAS2_oil_press_status[0]
+                    gen_LED Engine 1 Amber
+                      POS 1430.000000 643.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                      DATAREF laminar/B747/engines/oil_press_psi[0]
+                      SHOW_EQUAL 1.000000 laminar/B747/engines/oil_press_amber[0]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                END_GROUP
+              END_GROUP
+              gen_rotary Background
+                POS 1589.500000 617.000000
+                IMAGE CRT Displays/EICAS Lower/oil_t_bgnd
+                DATAREF 
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              GROUP Oil T LED
+                GROUP Redline
+                  gen_LED Engine 4
+                    POS 1748.000000 617.000000
+                    IMAGE CRT Displays/LED/LED_3.26B.xx###0.red
+                    DATAREF laminar/B747/engines/oil_temp_degC[3]
+                    SHOW_GREATER 175.000000 laminar/B747/engines/oil_temp_degC[3]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED Engine 3
+                    POS 1642.000000 617.000000
+                    IMAGE CRT Displays/LED/LED_3.26B.xx###0.red
+                    DATAREF laminar/B747/engines/oil_temp_degC[2]
+                    SHOW_GREATER 175.000000 laminar/B747/engines/oil_temp_degC[2]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED Engine 2
+                    POS 1536.000000 617.000000
+                    IMAGE CRT Displays/LED/LED_3.26B.xx###0.red
+                    DATAREF laminar/B747/engines/oil_temp_degC[1]
+                    SHOW_GREATER 175.000000 laminar/B747/engines/oil_temp_degC[1]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED Engine 1
+                    POS 1430.000000 617.000000
+                    IMAGE CRT Displays/LED/LED_3.26B.xx###0.red
+                    DATAREF laminar/B747/engines/oil_temp_degC[0]
+                    SHOW_GREATER 175.000000 laminar/B747/engines/oil_temp_degC[0]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                END_GROUP
+                GROUP Amber Hi
+                  GROUP Engine 4 1
+                    SHOW_LESS 174.990005 laminar/B747/engines/oil_temp_degC[3]
+                    gen_LED Engine 4
+                      POS 1748.000000 617.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                      DATAREF laminar/B747/engines/oil_temp_degC[3]
+                      SHOW_GREATER 160.009995 laminar/B747/engines/oil_temp_degC[3]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                  GROUP Engine 3 1
+                    SHOW_LESS 174.990005 laminar/B747/engines/oil_temp_degC[2]
+                    gen_LED Engine 3
+                      POS 1642.000000 617.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                      DATAREF laminar/B747/engines/oil_temp_degC[2]
+                      SHOW_GREATER 160.009995 laminar/B747/engines/oil_temp_degC[2]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                  GROUP Engine 2 1
+                    SHOW_LESS 174.990005 laminar/B747/engines/oil_temp_degC[1]
+                    gen_LED Engine 2
+                      POS 1536.000000 617.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                      DATAREF laminar/B747/engines/oil_temp_degC[1]
+                      SHOW_GREATER 160.009995 laminar/B747/engines/oil_temp_degC[1]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                  GROUP Engine 1 1
+                    SHOW_LESS 174.990005 laminar/B747/engines/oil_temp_degC[0]
+                    gen_LED Engine 1
+                      POS 1430.000000 617.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                      DATAREF laminar/B747/engines/oil_temp_degC[0]
+                      SHOW_GREATER 160.009995 laminar/B747/engines/oil_temp_degC[0]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                END_GROUP
+                GROUP Normal
+                  GROUP Engine 4 1
+                    SHOW_LESS 160.000000 laminar/B747/engines/oil_temp_degC[3]
+                    gen_LED Engine 4
+                      POS 1748.000000 617.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
+                      DATAREF laminar/B747/engines/oil_temp_degC[3]
+                      SHOW_GREATER 50.000000 laminar/B747/engines/oil_temp_degC[3]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                  GROUP Engine 3 1
+                    SHOW_LESS 160.000000 laminar/B747/engines/oil_temp_degC[2]
+                    gen_LED Engine 3
+                      POS 1642.000000 617.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
+                      DATAREF laminar/B747/engines/oil_temp_degC[2]
+                      SHOW_GREATER 50.000000 laminar/B747/engines/oil_temp_degC[2]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                  GROUP Engine 2 1
+                    SHOW_LESS 160.000000 laminar/B747/engines/oil_temp_degC[1]
+                    gen_LED Engine 2
+                      POS 1536.000000 617.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
+                      DATAREF laminar/B747/engines/oil_temp_degC[1]
+                      SHOW_GREATER 50.000000 laminar/B747/engines/oil_temp_degC[1]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                  GROUP Engine 1 1
+                    SHOW_LESS 160.000000 laminar/B747/engines/oil_temp_degC[0]
+                    gen_LED Engine 1
+                      POS 1430.000000 617.000000
+                      IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
+                      DATAREF laminar/B747/engines/oil_temp_degC[0]
+                      SHOW_GREATER 50.000000 laminar/B747/engines/oil_temp_degC[0]
+                      HIDE
+                      LIGHT_MODE GLASS_AUTO
+                      LIGHT_RHEOSTAT 9
+                      BUS_SRC 2
+                      KEY_FRAME 0.000000 0.000000 1.000000
+                      KEY_FRAME 1.000000 1.000000
+                      DIGITS 3
+                      DECIMALS 0
+                      PERIOD_WIDTH 0
+                      LED_ROWS 4
+                      ROUNDING ROUND_ROUND
+
+                  END_GROUP
+                END_GROUP
+                GROUP Amber Lo
+                  gen_LED Engine 4
+                    POS 1748.000000 617.000000
+                    IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                    DATAREF laminar/B747/engines/oil_temp_degC[3]
+                    SHOW_LESS 49.990002 laminar/B747/engines/oil_temp_degC[3]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED Engine 3
+                    POS 1642.000000 617.000000
+                    IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                    DATAREF laminar/B747/engines/oil_temp_degC[2]
+                    SHOW_LESS 49.990002 laminar/B747/engines/oil_temp_degC[2]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED Engine 2
+                    POS 1536.000000 617.000000
+                    IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                    DATAREF laminar/B747/engines/oil_temp_degC[1]
+                    SHOW_LESS 49.990002 laminar/B747/engines/oil_temp_degC[1]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                  gen_LED Engine 1
+                    POS 1430.000000 617.000000
+                    IMAGE CRT Displays/LED/LED_3.26B.xx###0.amber
+                    DATAREF laminar/B747/engines/oil_temp_degC[0]
+                    SHOW_LESS 49.990002 laminar/B747/engines/oil_temp_degC[0]
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 1.000000
+                    DIGITS 3
+                    DECIMALS 0
+                    PERIOD_WIDTH 0
+                    LED_ROWS 4
+                    ROUNDING ROUND_ROUND
+
+                END_GROUP
+              END_GROUP
+              gen_rotary Background
+                POS 1589.500000 592.000000
+                IMAGE CRT Displays/EICAS Lower/oil_q_bgnd
+                DATAREF 
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              GROUP Oil Q LED
+                gen_LED Engine 4
+                  POS 1748.000000 592.000000
+                  IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
+                  DATAREF laminar/B747/engines/oil_qty_liters[3]
+                  SHOW_EQUAL 0.000000 laminar/B747/engines/oil_qty_magenta[3]
+                  HIDE
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  DIGITS 2
+                  DECIMALS 0
+                  PERIOD_WIDTH 0
+                  LED_ROWS 4
+                  ROUNDING ROUND_ROUND
+
+                gen_LED Engine 4 Magenta
+                  POS 1748.000000 592.000000
+                  IMAGE CRT Displays/LED/LED_3.26B.xx###0.magenta
+                  DATAREF laminar/B747/engines/oil_qty_liters[3]
+                  SHOW_EQUAL 1.000000 laminar/B747/engines/oil_qty_magenta[3]
+                  HIDE
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  DIGITS 2
+                  DECIMALS 0
+                  PERIOD_WIDTH 0
+                  LED_ROWS 4
+                  ROUNDING ROUND_ROUND
+
+                gen_LED Engine 3
+                  POS 1642.000000 592.000000
+                  IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
+                  DATAREF laminar/B747/engines/oil_qty_liters[2]
+                  SHOW_EQUAL 0.000000 laminar/B747/engines/oil_qty_magenta[2]
+                  HIDE
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  DIGITS 2
+                  DECIMALS 0
+                  PERIOD_WIDTH 0
+                  LED_ROWS 4
+                  ROUNDING ROUND_ROUND
+
+                gen_LED Engine 3 Magenta
+                  POS 1642.000000 592.000000
+                  IMAGE CRT Displays/LED/LED_3.26B.xx###0.magenta
+                  DATAREF laminar/B747/engines/oil_qty_liters[2]
+                  SHOW_EQUAL 1.000000 laminar/B747/engines/oil_qty_magenta[2]
+                  HIDE
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  DIGITS 2
+                  DECIMALS 0
+                  PERIOD_WIDTH 0
+                  LED_ROWS 4
+                  ROUNDING ROUND_ROUND
+
+                gen_LED Engine 2
+                  POS 1536.000000 592.000000
+                  IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
+                  DATAREF laminar/B747/engines/oil_qty_liters[1]
+                  SHOW_EQUAL 0.000000 laminar/B747/engines/oil_qty_magenta[1]
+                  HIDE
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  DIGITS 2
+                  DECIMALS 0
+                  PERIOD_WIDTH 0
+                  LED_ROWS 4
+                  ROUNDING ROUND_ROUND
+
+                gen_LED Engine 2 Magenta
+                  POS 1536.000000 592.000000
+                  IMAGE CRT Displays/LED/LED_3.26B.xx###0.magenta
+                  DATAREF laminar/B747/engines/oil_qty_liters[1]
+                  SHOW_EQUAL 1.000000 laminar/B747/engines/oil_qty_magenta[1]
+                  HIDE
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  DIGITS 2
+                  DECIMALS 0
+                  PERIOD_WIDTH 0
+                  LED_ROWS 4
+                  ROUNDING ROUND_ROUND
+
+                gen_LED Engine 1
+                  POS 1430.000000 592.000000
+                  IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
+                  DATAREF laminar/B747/engines/oil_qty_liters[0]
+                  SHOW_EQUAL 0.000000 laminar/B747/engines/oil_qty_magenta[0]
+                  HIDE
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  DIGITS 2
+                  DECIMALS 0
+                  PERIOD_WIDTH 0
+                  LED_ROWS 4
+                  ROUNDING ROUND_ROUND
+
+                gen_LED Engine 1 Magenta
+                  POS 1430.000000 592.000000
+                  IMAGE CRT Displays/LED/LED_3.26B.xx###0.magenta
+                  DATAREF laminar/B747/engines/oil_qty_liters[0]
+                  SHOW_EQUAL 1.000000 laminar/B747/engines/oil_qty_magenta[0]
+                  HIDE
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 1.000000
+                  DIGITS 2
+                  DECIMALS 0
+                  PERIOD_WIDTH 0
+                  LED_ROWS 4
+                  ROUNDING ROUND_ROUND
+
+              END_GROUP
+            END_GROUP
+            GROUP Cmp VIB
+              SHOW_EQUAL 1.000000 laminar/B747/eicas/cmp_rows[3]
+              GROUP_ANIMATE_MODE TRANSLATE
+              GROUP_WIDTH 0
+              GROUP_HEIGHT 0
+              DATAREF laminar/B747/engines/thrust_ref
+              POS 0.000000 0.000000
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 -23.000000
+              IS_VERTICAL 1
+              OFFSET 0.000000
+              gen_rotary Background
+                POS 1589.500000 567.000000
+                IMAGE CRT Displays/EICAS Lower/vib_bgnd
+                DATAREF 
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              GROUP VIB Source
+                GROUP BB-4 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[3]
+                  gen_rotary BB-4
+                    POS 1726.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_BB_label
+                    DATAREF 
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/vib_source[3]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP N1-4 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[3]
+                  gen_rotary N1-4
+                    POS 1726.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_N1_label
+                    DATAREF 
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/vib_source[3]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP N2-4 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[3]
+                  gen_rotary N2-4
+                    POS 1726.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_N2_label
+                    DATAREF 
+                    SHOW_EQUAL 2.000000 laminar/B747/engines/vib_source[3]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP FAN-4 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[3]
+                  gen_rotary FAN-4
+                    POS 1726.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_FAN_label
+                    DATAREF 
+                    SHOW_EQUAL 3.000000 laminar/B747/engines/vib_source[3]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP LPT-4 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[3]
+                  gen_rotary LPT-4
+                    POS 1726.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_LPT_label
+                    DATAREF 
+                    SHOW_EQUAL 4.000000 laminar/B747/engines/vib_source[3]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP BB-3 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[2]
+                  gen_rotary BB-3
+                    POS 1620.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_BB_label
+                    DATAREF 
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/vib_source[2]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP N1-3 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[2]
+                  gen_rotary N1-3
+                    POS 1620.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_N1_label
+                    DATAREF 
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/vib_source[2]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP N2-3 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[2]
+                  gen_rotary N2-3
+                    POS 1620.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_N2_label
+                    DATAREF 
+                    SHOW_EQUAL 2.000000 laminar/B747/engines/vib_source[2]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP FAN-3 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[2]
+                  gen_rotary FAN-3
+                    POS 1620.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_FAN_label
+                    DATAREF 
+                    SHOW_EQUAL 3.000000 laminar/B747/engines/vib_source[2]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP LPT-3 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[2]
+                  gen_rotary LPT-3
+                    POS 1620.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_LPT_label
+                    DATAREF 
+                    SHOW_EQUAL 4.000000 laminar/B747/engines/vib_source[2]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP BB-2 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[1]
+                  gen_rotary BB-2
+                    POS 1514.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_BB_label
+                    DATAREF 
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/vib_source[1]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP N1-2 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[1]
+                  gen_rotary N1-2
+                    POS 1514.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_N1_label
+                    DATAREF 
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/vib_source[1]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP N2-2 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[1]
+                  gen_rotary N2-2
+                    POS 1514.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_N2_label
+                    DATAREF 
+                    SHOW_EQUAL 2.000000 laminar/B747/engines/vib_source[1]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP FAN-2 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[1]
+                  gen_rotary FAN-2
+                    POS 1514.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_FAN_label
+                    DATAREF 
+                    SHOW_EQUAL 3.000000 laminar/B747/engines/vib_source[1]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP LPT-2 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[1]
+                  gen_rotary LPT-2
+                    POS 1514.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_LPT_label
+                    DATAREF 
+                    SHOW_EQUAL 4.000000 laminar/B747/engines/vib_source[1]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP BB-1 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[0]
+                  gen_rotary BB-1
+                    POS 1408.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_BB_label
+                    DATAREF 
+                    SHOW_EQUAL 0.000000 laminar/B747/engines/vib_source[0]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP N1-1 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[0]
+                  gen_rotary N1-1
+                    POS 1408.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_N1_label
+                    DATAREF 
+                    SHOW_EQUAL 1.000000 laminar/B747/engines/vib_source[0]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP N2-1 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[0]
+                  gen_rotary N2-1
+                    POS 1408.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_N2_label
+                    DATAREF 
+                    SHOW_EQUAL 2.000000 laminar/B747/engines/vib_source[0]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP FAN-1 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[0]
+                  gen_rotary FAN-1
+                    POS 1408.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_FAN_label
+                    DATAREF 
+                    SHOW_EQUAL 3.000000 laminar/B747/engines/vib_source[0]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+                GROUP LPT-1 1
+                  SHOW_GREATER 0.010000 laminar/B747/engines/vibration[0]
+                  gen_rotary LPT-1
+                    POS 1408.500000 567.000000
+                    IMAGE CRT Displays/EICAS Lower/vib_LPT_label
+                    DATAREF 
+                    SHOW_EQUAL 4.000000 laminar/B747/engines/vib_source[0]
+                    SIZE 1.200000
+                    HIDE
+                    LIGHT_MODE GLASS_AUTO
+                    LIGHT_RHEOSTAT 9
+                    BUS_SRC 2
+                    KEY_FRAME 0.000000 0.000000 1.000000
+                    KEY_FRAME 1.000000 6.000000
+                    DIGITS 1
+                    ROTARY_TYPE NO_CLICK
+                    CLICK_RADIUS 0.000000
+                    CLICK_RADIUS_DY 0.000000
+                    OFFSET 0.000000
+                    STEP1 1.000000
+                    STEP2 1.000000
+                    CURSOR DEFAULT
+                    CLICK_DX 0
+                    CLICK_DY 0
+
+                END_GROUP
+              END_GROUP
+              GROUP VIB LED
+                gen_LED Engine 4
+                  POS 1758.500000 567.000000
+                  IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
+                  DATAREF laminar/B747/engines/vibration[3]
+                  HIDE
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 5.000000 5.000000
+                  DIGITS 2
+                  DECIMALS 1
+                  PERIOD_WIDTH 6
+                  LED_ROWS 3
+                  ROUNDING ROUND_ROUND
+
+                gen_LED Engine 3
+                  POS 1652.500000 567.000000
+                  IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
+                  DATAREF laminar/B747/engines/vibration[2]
+                  HIDE
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 5.000000 5.000000
+                  DIGITS 2
+                  DECIMALS 1
+                  PERIOD_WIDTH 6
+                  LED_ROWS 3
+                  ROUNDING ROUND_ROUND
+
+                gen_LED Engine 2
+                  POS 1546.500000 567.000000
+                  IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
+                  DATAREF laminar/B747/engines/vibration[1]
+                  HIDE
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 5.000000 5.000000
+                  DIGITS 2
+                  DECIMALS 1
+                  PERIOD_WIDTH 6
+                  LED_ROWS 3
+                  ROUNDING ROUND_ROUND
+
+                gen_LED Engine 1
+                  POS 1440.500000 567.000000
+                  IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
+                  DATAREF laminar/B747/engines/vibration[0]
+                  HIDE
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 9
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 5.000000 5.000000
+                  DIGITS 2
+                  DECIMALS 1
+                  PERIOD_WIDTH 6
+                  LED_ROWS 3
+                  ROUNDING ROUND_ROUND
+
+              END_GROUP
+            END_GROUP
           END_GROUP
         END_GROUP
       END_GROUP

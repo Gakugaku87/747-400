@@ -650,3 +650,14 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - パネル（道具 `docs/overhaul/tools/panel_eicas_partial.lua`、ACF_DIFF.md §5）：二次 EICAS の ENG のページを `eicas/sec_eng` で出し（前は `dsp/synoptic_display` = 1）、N2（P&W・GE・RB211）・FF・油（P・T・Q）・VIB の群をそれぞれ新しいグループ（`eicas/sec_rows[0..3]`）に入れた。主 EICAS の STATUS の印を `eicas/exceed_cue` のときは隠し、同じ場所に逸脱の印（`eicas/exceed_cue_text`）を足した。
 - compact の形のパネル（主 EICAS の EPR・N1・EGT の作り替えと、二次の行の数字）は段 6b-2 で。それまで `eicas/compact` と `cmp_rows` は値だけ。
 - 試験：新しい `tests/displays/eicas_format_test.lua`（27 件：電源投入時の ENG、全表示、部分表示の行、ENG の切り替え、ほかの表示での compact、表示器 1 台、グルーのコマンドと表示器の故障）、エンジンの表示モデルの試験に 7 件、グルーの試験に 1 件。X-Plane のシナリオ `s75_eicas_partial`（25 件合格：成田 34L にエンジン運転中で開始、開始で二次 EICAS に二次エンジンの全表示、ENG で消え、2 番の油ポンプの故障で油圧が赤線を割ると 0.6 秒で油の行（OIL P・T・Q）だけの部分表示と主 EICAS の水色の VVVVVV、ENG で全表示（印は残る）、もう一度で部分表示、FUEL で二次 EICAS は FUEL のページになり compact の判定（部分表示、油の行）、もう一度 FUEL で部分表示が戻り、故障を戻すと部分表示と印が消える。上下の EICAS と外観を撮った）。
+
+## 37. 段 6b-2 の実装（2026-10-26 朝：主 EICAS の compact の形）
+
+- 資料：FCOM p.855–857（compact の形の図：109・405 は EPR を数字とテープ、N1・EGT は数字だけ、570 は N1 を数字とテープ、EGT は数字。その下に N2・FF・OIL P・OIL T・OIL Q・VIB の数字。部分の compact はその行だけ）、p.874–875（いつ compact か）。
+- パネルだけの変更（Lua は段 6b-1 の `eicas/compact`・`cmp_rows` のまま。道具 `docs/overhaul/tools/panel_eicas_compact.lua`、画像 `make_eicas_cmp_images.ps1`、ACF_DIFF.md §5）：
+  - compact のとき、通常の見出し（EPR・N1・EGT の背景）、P&W と RB211 の N1 のテープ、EGT のテープを隠し、P&W と RB211 の EGT の数字と枠を N1 の数字の下へ 108 px 上げる。
+  - 新しい `GROUP Compact`：見出しを箱の行に（P&W：EPR はそのまま、N1 と EGT は数字の行。CF6：N1 はそのまま、EGT は数字の行。見出しの画像は背景から切り出した）、EGT の数字の下に二次の行（N2、FF（P&W と CF6、RB211）、OIL P、OIL T、OIL Q、VIB と振動源）。二次エンジンのページの数字の部品を主 EICAS の列に写し、色の部品と条件はそのまま、見出しは二次のページの画像。CF6 は行ごとに p.855 の位置へ（EGT の数字の下。N2 は −34、FF は −37、油は −23.5、VIB は −23 px：推力の基準が N1 のとき動かすグループ）。
+  - 位置は FCOM の図の行の間隔を、列の間隔の比（パネル 0.806 px／図 1 px）で写した。P&W は p.856、CF6 は p.855（推定：図の比で）。RB211 は資料が無く P&W と同じ形で、N3 は出さない（推定）。
+  - 写した部品の明るさは主 EICAS のつまみ（`LIGHT_RHEOSTAT 9`）にした。二次のページのつまみ（10）のままでは、下の表示器が故障したとき（compact が要るとき）に暗くなった（`s76` の 1 回目）。
+  - 写した部品のうち SHOW を 2 本持つもの（白の油圧・油温：パネルの部品は最後の SHOW しか見ない）は、前の SHOW を外側のグループに分けて、両方が成り立つときに出るようにした（同じ dataref の上限と下限は X-Plane が範囲として扱うので、そのままでもよいが同じ形にした）。元のパネルで SHOW を 2 本以上持つ部品とグループは 308 個（EICAS と PFD）で、そのうち別々の dataref の条件が 116 個（最後の 1 本しか効かない）、名前の無い dataref（`[3]` だけ）の条件を含むものが 68 個、同じ dataref の範囲が 124 個。二次エンジンのページでは、2 番の油圧が赤のとき白の数字も重なって出ていた。別の段でまとめて直す（PROGRESS.md 気づいたこと）。
+- 試験：Lua の変更なし（全 89 本合格のまま）。X-Plane のシナリオ `s76_eicas_compact`・`s77_eicas_compact_ge`（`s76_eicas_compact` 18 件合格（PW）：下の表示器の故障で ENG の選択のまま主 EICAS が compact の全表示（EPR の数字とテープ、N1・EGT の枠、N2・FF・油・VIB の行と見出し）、ENG で通常の形、2 番の油ポンプの故障で compact の部分表示（油の行、2 番の油圧は赤だけ）、表示器を戻して FUEL のまま逸脱で compact の部分表示。`s77_eicas_compact_ge` 7 件合格（Saudia のリバリーで CF6）：N1 の数字とテープのまま EGT の枠の下に二次の行、部分表示も。1 回目の `s76` は写した数字の明るさが二次のページのつまみのままで表示器 1 台のとき薄く、1 回目の `s77` は読み直しで STANDBY POWER が OFF のまま主 EICAS が下の表示器に出ていて、2 回目の `s77` は CF6 の行を一律 30 px 下げたため VIB の行が気圧の欄に重なった（どれも直した）。主 EICAS と外観を撮った）。
