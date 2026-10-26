@@ -20,7 +20,8 @@
 --    block), spd (at or below), vangle (degrees), altterm (the legs ending
 --    at an altitude: CA, FA, VA, HA), name (a conditional leg's: "(1000)",
 --    "(INTC)", "VECTORS", "NRE180", "NRE/20": FCOM p.1249), faf, map,
---    missed}.
+--    missed, center and arc_r (an RF leg's arc: its centre, a point of the
+--    nav DB, and its radius in nm: step 6a)}.
 -- Pure: the glue gives the nav DB module and its database.
 local M = setmetatable({}, {})
 B747_proc_model = M
@@ -170,6 +171,12 @@ local function leg_of(N, db, c, icao, f, via)
         -- conditional
     else
         l.fix = point
+    end
+    -- an RF leg's arc (step 6a; FCOM p.1247): the centre (fields 31-34) and
+    -- the radius (field 18, thousandths of a nm)
+    if pt == "RF" and f[31] and f[31] ~= "" then
+        l.center = N.point(db, f[31], f[32], KIND[f[33]], icao)
+        l.arc_r = num(f[18], 1000)
     end
     -- a conditional leg's name (FCOM p.1249): an altitude in parentheses,
     -- (INTC), VECTORS, a radial (the navaid and the radial), a DME

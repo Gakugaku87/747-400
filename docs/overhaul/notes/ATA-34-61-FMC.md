@@ -593,3 +593,37 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 3D の物体 `objects/747_cockpit/Cockpit_Pedestal1.obj` の `ATTR_light_level` 2 行だけ、見る dataref を X-Plane 標準から上の 2 つに替えた（明るさの範囲 0〜1 とほかの記述はそのまま）。頂点の左右の位置で、`pilot` の組が左と中央の CDU、`copilot` の組が右の CDU と確かめた。手元の 3D 一式と非公開リポジトリ（Gakugaku87/747-400-assets）の変更で、変更前の物体は `D:\747-400-local-assets\backup_20261027_exec_light\` に控えた。物体を変えたら X-Plane を起動し直して読ませる（絵ごとの読み直し `sim/operation/reload_aircraft` では X-Plane が固まった：TESTING.md）。
 - AutoATC の CDU の写し（`acars/autoatcProvider.lua`）も右の CDU の灯り（`exec_light_copilot`）を読む。INTERFACES.tsv に 2 行を足した。
 - 試験：`legs_pages_test.lua`（42 件：DIRECT TO の修正で 2 つとも 1、EXEC で 0）。X-Plane：`s87_legs_pages` 29/29（ACTIVATE と DIRECT TO の修正で左・中央と右の灯りが 1、EXEC で 0。写真で、MOD の間は CDU の EXEC キーの上の灯りが光り、EXEC で消える）。X-Plane を起動して最初のフライトでは交流の母線に電気が来ておらず、右の CDU の灯りが 0 だった（電源の割り当てのとおり。2 回目のフライトで合格）。Lua の誤りなし。
+
+## 26. 段 6 の段取り（2026-10-27：経路の形と LNAV）
+
+- 資料から決まること（§4.5・§4.7 の続き）：
+  - LNAV は点の間の大円。手続きでは FMC がヘディング、トラック、DME arc を指令する（FCOM p.1245）。RF は一定半径の弧（FCOM p.1247；FCTM p.61）。区間の間は曲線でつなぐ（ATA34_2 p.615）。ND の線も全点を滑らかにつなぐ（ATA34_2 p.626）。
+  - 誘導：次と前の点の位置と機体の位置からクロストラック誤差を作り、横の steering 指令を FCC へ（ATA34_2 p.617 の図）。FCC は LNAV の steering を FD と ROLL ATT INTEG に入れる。指令は希望トラックからの偏差に基づく（ATA22 p.358、p.348）。
+  - 作動：arm 中に、FMC が「software monitor・IRS・ADC が有効、アクティブな経路、50 ft 超、捕捉の条件、LNAV ARM/OPERATE」の AND で横の指令を valid にし、FCC が engage（ATA34_2 p.618–619；ATA22 p.270）。捕捉の条件：アクティブな脚から 2.5 NM 以内、またはトラックが脚に交わり、最大 25° のバンクで滑らかに乗れる（ATA34_2 p.618；FCOM p.644、p.663）。
+  - 今のヘディングを保持：経路の最終点、discontinuity の手前の点、オフセットの最終点の通過と、捕捉の条件の外での activate（FCOM p.644）。メッセージは DISCONTINUITY・END OF ROUTE（FCOM p.1431）、NO ACTIVE ROUTE（p.1433）、NOT ON INTERCEPT HEADING（p.1435）。
+  - 順送り：オフセットでなく経路から 21 NM 超離れていると進めない（FCOM p.1237）。VECTORS は終点の無い線で、先へは DIRECT TO か INTC（FCOM p.1237；FMSPG p.215）。条件点（FCOM p.1249；FMSPG p.215）。
+  - AUTO のバンク制限は LNAV にも効き、離陸フラップで V2+10 未満は 15°（FCTM p.118）：AFDS（6-3）の側。
+- 資料に無いこと（推定で作る）：fly-by の旋回の半径（25° のバンクと今の対地速度）と旋回の始め（方向の変化 Δ に対し R·tan(Δ/2) 手前）、点の順送りは旋回の二等分線（fly-over は点の真横）、135° を超える方向の変化は fly-over として扱う、誘導の則（交角の上限、先読みの距離、ゲイン）、コースの脚（C で始まる脚）は始点からその方位の線に乗る、DF の始点は前の脚が終わった位置、高度で終わる脚の終わりの予測（上昇の勾配）。
+- 分け方：
+
+| 段 | 内容 |
+|---|---|
+| 6a | 経路の形のモデル（新しいモジュール `B747.68.path_model.lua`）：脚の種類ごとの形（IF・TF・CF・DF・直行・DIRECT TO、CA・CD・CI・CR、FA・FC・FD・FM、VA・VD・VI・VM・VR、AF・RF）、fly-by と fly-over の旋回、ND に描く点列。手続きのモデルが RF の中心と半径を読む。まだ機体からは使わない |
+| 6b | LNAV のモデル（`B747.68.lnav_model.lua`）：アクティブな脚、XTK と希望トラック、順送り（21 NM）、捕捉の条件、steering（ロールの指令）、ヘディングの保持、メッセージ。試験は簡単な機体の運動で閉ループにする |
+| 6c | 組み込み：FMC が毎フレーム順送りと LNAV を回す。AFDS の LNAV は FMC の valid で engage し、FMC のロールの指令を FD とサーボへ（AFDS の作り直し 6-3 までのつなぎ）。X-Plane の FMS の現用点は FMC から（AFDS の best track をやめる）。メッセージ |
+| 6d | ND の線を経路の形どおりに（X-Plane の FMS に旋回と弧の点を足す。X-Plane の FMS の点の数の上限を確かめる） |
+
+- ホールドと procedure turn（HA・HF・HM・PI）は段 7（ホールドの形・進入・出口と一緒に）。段 6 では保持点への線として飛んで順送りする（推定、段 7 まで）。
+
+## 27. 段 6a の実装（2026-10-27：経路の形のモデル）
+
+- 新しい純粋なモジュール `B747.68.path_model.lua`（まだ機体からは読まない：6b・6c で使う）。経路の脚ごとに形の要素を作る：
+  - 線（大円）：TF・DF・IF・CF と FMC 自身の脚（DIRECT・airway・DIRECT TO）。CF は前の点の真横から、その方位の線（推定）。
+  - コース：CA・CD・CI・CR は前の脚の終わりから、FA・FC・FD・FM はその点から、真方位の線（FCOM p.1245 の「トラック」）。
+  - ヘディング：VA・VD・VI・VM・VR（終わりの予測は風なし）。
+  - 弧：RF（中心と半径。手続きのモデルが CIFP の 31〜34 番目と 18 番目の欄から読む）、AF（航法施設のまわりの DME の弧。境界の radial から点まで）。
+  - 条件で終わる脚の終わりの予測（FCOM p.1249）：高度（前の高度から 500 ft/nm の上昇：推定）、DME の距離、radial、次の脚への切込み（CF の方位、FA・FC・FD・FM の方位、AF の弧）、距離（FC）。VECTORS（VM・FM）は終わりが無く、ND には 10 nm の線（推定）。
+  - discontinuity の後と、終わりを予測できない脚の後は、次の点への線が無い（none）。
+- fly-by の旋回（推定）：半径は対地速度と 25° のバンクから（250 kt で 1.95 nm）、点の R·tan(Δ/2) 手前から始める。どちらかの脚の半分を超えない（超えるなら半径を小さく）。fly-over の点、135° を超える方向の変化、手続きの旋回の向きと逆、ヘディングの脚へ、点から始まらない脚へは、点の上を飛ぶ。
+- 地球は半径 3440.065 nm の球（経路のモデルと同じ）。端末の幾何（交点、弧）は点のまわりの平面で近似する。真方位は磁方位＋偏差（nav DB の近い VOR の偏差：段 5c と同じ）。
+- 試験：`tests/fms/path_model_test.lua`（78 件。合成のデータに ZZBB の RNAV 進入 R09：IF・RF（中心 ZBRF1、半径 3.0 nm）・TF を足した）、`proc_model_test.lua`（58 件のまま）。X-Plane では未使用（6c で）。
