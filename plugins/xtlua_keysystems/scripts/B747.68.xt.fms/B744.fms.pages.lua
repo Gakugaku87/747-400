@@ -114,6 +114,7 @@ fmsFunctionsDefs["INDEX"]["R6"]={"setpage","MAINTSIMCONFIG"}
 
 -- RTE 1: activepages/B744.fms.pages.rte.lua (6-1/6-2 step 5b)
 dofile("activepages/B744.fms.pages.rte.lua")
+dofile("activepages/B744.fms.pages.deparr.lua")
 dofile("activepages/B744.fms.pages.posinit.lua")
 dofile("activepages/B744.fms.pages.perfinit.lua")
 dofile("activepages/B744.fms.pages.thrustlim.lua")

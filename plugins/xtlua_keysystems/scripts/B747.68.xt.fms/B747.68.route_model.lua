@@ -103,11 +103,20 @@ local function count(r)
     end
     return n
 end
--- a procedure's legs out of a route (`proc`: "SID", "STAR", "APPR")
+-- a procedure's legs out of a route (`proc`: "SID", "STAR", "APPR"); the
+-- route's waypoint a procedure joined at (`joined`: its leg) back, where
+-- a procedure selected again joins again (estimate: the sources leave it
+-- out; the RTE pages' segments go on after the procedure's)
 local function strip(r, kind)
     local legs = {}
     for _, l in ipairs(r.legs) do
-        if l.proc ~= kind then legs[#legs + 1] = l end
+        if l.proc ~= kind then legs[#legs + 1] = l
+        elseif l.joined then
+            -- a copy: the modification's copied legs share it
+            local c = {}
+            for k, v in pairs(l.joined) do c[k] = v end
+            legs[#legs + 1] = c
+        end
     end
     r.legs = legs
 end
@@ -138,7 +147,8 @@ function M.set_origin(st, icao)
 end
 
 -- DEST (FCOM p.1289): an airport of the database; a new destination
--- deletes the arrival procedures of the one before (FMSPG p.79)
+-- deletes the arrival procedures of the one before (FMSPG p.79), the
+-- discontinuity before them with them (estimate)
 function M.set_dest(st, icao)
     local apt = st.N.airport(st.db, icao)
     if not apt then return M.NOT_IN_DATA_BASE end
@@ -147,6 +157,7 @@ function M.set_dest(st, icao)
         strip(r, "STAR")
         strip(r, "APPR")
         r.star, r.appr = nil, nil
+        while r.legs[#r.legs] and r.legs[#r.legs].disc do r.legs[#r.legs] = nil end
     end
     r.dest = apt
 end
@@ -419,6 +430,122 @@ function M.constraint_text(l, trans_alt)
         end
     end
     return (l.spd and tostring(l.spd) or "") .. "/" .. alt
+end
+
+-- the terminal procedures (6-1/6-2 step 5d; B747.68.proc_model.lua makes
+-- their legs, the glue gives it as `st.P`). A procedure's legs carry `proc`
+-- ("SID", "STAR", "APPR"); the route keeps the selections (`sid`, `star`,
+-- `appr`: their names, runways and transitions) for the DEP/ARR pages.
+local function count_new(legs)
+    local n = 0
+    for _, l in ipairs(legs) do if l.fix or l.name then n = n + 1 end end
+    return n
+end
+local function procs_of(legs, kind)
+    for _, l in ipairs(legs) do l.proc = kind end
+    return legs
+end
+
+-- DEPARTURES (FCOM p.1301-1302): the SID `name` (nil: none) with the
+-- runway `rwy` and the enroute transition `trans`, before the route's
+-- legs: the route goes on from the SID's last fix when it has it (its legs
+-- up to there go), else after a ROUTE DISCONTINUITY. A runway alone sets
+-- the origin's runway; a new runway the SID does not serve deletes it
+function M.set_departure(st, name, rwy, trans)
+    local r = M.shown(st)
+    if not r.origin then return M.INVALID_ENTRY end
+    local c = st.N.cifp(st.db, r.origin.ident)
+    local runway = rwy and c and c.runways[rwy]
+    if rwy and not runway then return M.NOT_IN_DATA_BASE end
+    local new = {}
+    if name then
+        new = st.P.sid_legs(st.N, st.db, r.origin.ident, name, rwy, trans)
+        if not new then return M.NOT_IN_DATA_BASE end
+    end
+    local old = 0
+    for _, l in ipairs(r.legs) do if l.proc == "SID" and (l.fix or l.name) then old = old + 1 end end
+    if count(r) - old + count_new(new) > M.MAX_WPTS then return M.ROUTE_FULL end
+    r = M.edit(st)
+    strip(r, "SID")
+    if r.legs[1] and r.legs[1].disc then table.remove(r.legs, 1) end
+    procs_of(new, "SID")
+    local last = new[#new]
+    if #new > 0 and #r.legs > 0 then
+        local j = last.fix and find_leg(r, last.fix, 1)
+        if j then
+            -- the route's leg the SID ends on, back when the SID goes
+            last.joined = r.legs[j]
+            for _ = 1, j do table.remove(r.legs, 1) end
+        else
+            table.insert(r.legs, 1, {disc = true})
+        end
+    end
+    for k = #new, 1, -1 do table.insert(r.legs, 1, new[k]) end
+    if runway then r.runway = runway end
+    r.sid = name and {name = name, rwy = rwy, trans = trans} or nil
+end
+
+-- the arrival's legs at the end of the route: the STAR, then the approach
+-- (a ROUTE DISCONTINUITY between them when they do not meet)
+local function arrival_legs(st, r)
+    local out = {}
+    local dest = r.dest.ident
+    if r.star then
+        for _, l in ipairs(procs_of(st.P.star_legs(st.N, st.db, dest, r.star.name, r.star.trans, r.appr and r.appr.rwy) or {}, "STAR")) do
+            out[#out + 1] = l
+        end
+    end
+    if r.appr then
+        local legs = procs_of(st.P.approach_legs(st.N, st.db, dest, r.appr.id, r.appr.trans) or {}, "APPR")
+        local last = out[#out]
+        local first = legs[1]
+        if last and first and last.fix and first.fix and last.fix.ident == first.fix.ident then
+            table.remove(legs, 1)
+        elseif last and first then
+            out[#out + 1] = {disc = true, proc = "STAR"}
+        end
+        for _, l in ipairs(legs) do out[#out + 1] = l end
+    end
+    return out
+end
+
+-- ARRIVALS (FCOM p.1401-1405): the STAR (`star` = {name, trans}) and the
+-- approach (`appr` = {id, trans}) (false: out; nil: as it is), after the
+-- route's legs: from the arrival's first fix when the route has it (its
+-- legs from there go), else after a ROUTE DISCONTINUITY
+function M.set_arrival(st, star, appr)
+    local r = M.shown(st)
+    if not r.dest then return M.INVALID_ENTRY end
+    local sel = {star = r.star, appr = r.appr}
+    if star ~= nil then sel.star = star or nil end
+    if appr ~= nil then
+        sel.appr = appr or nil
+        if appr then
+            local _, rwy = st.P.approach_legs(st.N, st.db, r.dest.ident, appr.id, appr.trans)
+            sel.appr.rwy = rwy
+        end
+    end
+    local new = arrival_legs(st, {dest = r.dest, star = sel.star, appr = sel.appr})
+    local old = 0
+    for _, l in ipairs(r.legs) do if (l.proc == "STAR" or l.proc == "APPR") and (l.fix or l.name) then old = old + 1 end end
+    if count(r) - old + count_new(new) > M.MAX_WPTS then return M.ROUTE_FULL end
+    r = M.edit(st)
+    strip(r, "STAR")
+    strip(r, "APPR")
+    while r.legs[#r.legs] and r.legs[#r.legs].disc do r.legs[#r.legs] = nil end
+    local first = new[1]
+    if first and #r.legs > 0 then
+        local j = first.fix and find_leg(r, first.fix, 1)
+        if j then
+            -- the route's leg the arrival starts on, back when it goes
+            first.joined = r.legs[j]
+            for _ = j, #r.legs do r.legs[#r.legs] = nil end
+        else
+            r.legs[#r.legs + 1] = {disc = true}
+        end
+    end
+    for _, l in ipairs(new) do r.legs[#r.legs + 1] = l end
+    r.star, r.appr = sel.star, sel.appr
 end
 
 -- the route as X-Plane's flight plan file (version 1100), for
