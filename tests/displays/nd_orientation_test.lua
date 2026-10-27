@@ -7,9 +7,8 @@
 -- Captain's heading and track and X-Plane's map mode, which made VOR track
 -- up. Step 5d: the heading and track in the heading reference, from the
 -- display glue (laminar/B747/pfd/capt|fo/hdg_deg, trk_deg: magnetic, or
--- true with TRU). The airplane: the 570 (GE: engines/type 1) is track up in
--- MAP as the 109 (these checks first), the 405 (PW; RR as PW) heading up
--- (the last ones: the user's choice of the 405, 2026-10-27).
+-- true with TRU). The airplanes built, the 109 (PW; RR as PW) and the 570
+-- (GE), are both MAP track up (the user's choice, 2026-10-27).
 local T = dofile("tests/lib/check.lua")("nd_orientation")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
@@ -27,7 +26,6 @@ rt:set(P .. "fo/hdg_deg", 101)
 rt:set(P .. "fo/trk_deg", 107)
 rt:set(ND .. "mode/capt/sel_dial_pos", 2)                          -- MAP
 rt:set(ND .. "mode/fo/sel_dial_pos", 1)                            -- VOR
-rt:set("laminar/B747/engines/type", 1)                             -- the 570 (GE)
 rt:callout("flight_start")
 frames(0.2)
 T.equal(rt:get(ND .. "up/capt"), 106, "the Captain's MAP: the pilot track up")
@@ -45,10 +43,11 @@ rt:set(P .. "capt/trk_deg", 110)                                   -- TRU: the t
 frames(0.1)
 T.equal(rt:get(ND .. "up/capt"), 110, "MAP in TRU: the true track up (step 5d)")
 
--- the 405 (PW): MAP heading up too
+-- the 109 (PW) and the 570 (GE) alike: the F/O's MAP track up too
 rt:set("laminar/B747/engines/type", 0)
+rt:set(P .. "capt/trk_deg", 106)
 rt:set(ND .. "mode/fo/sel_dial_pos", 2)                            -- MAP
 frames(0.1)
-T.equal(rt:get(ND .. "up/capt"), 100, "the 405's MAP: heading up")
-T.equal(rt:get(ND .. "up/fo"), 101, "the F/O's too")
+T.equal(rt:get(ND .. "up/capt"), 106, "PW (the 109): MAP track up")
+T.equal(rt:get(ND .. "up/fo"), 107, "the F/O's too")
 T.done()

@@ -104,7 +104,10 @@ function M.inputs()
         wind_from = 0,      -- the wind direction, magnetic
         hdg_sel = 0,        -- the MCP selected heading
         roll_mode = 0,      -- the AFDS's roll mode (FMA: 2 LNAV, 3 LOC, 4 ROLLOUT)
-        track_map = false,  -- MAP track up (the 570, GE); else heading up (the 405)
+        -- MAP track up: the airplanes built, the 109 (PW; RR as PW) and the
+        -- 570 (GE: the user's choice, 2026-10-27); false is a 405's heading
+        -- up, which no airplane uses
+        track_map = true,
         gs_kt = 0,          -- the ground speed
     }
 end
@@ -156,7 +159,7 @@ end
 
 -- the trend vector's pieces into o (tv_*): along an arc from the airplane
 -- symbol, or straight below half a degree of bank; it starts along the
--- track, dir_deg from the display's top (0 track up; the 405's heading up
+-- track, dir_deg from the display's top (0 track up; a 405's heading up
 -- MAP: the drift)
 local function arc_point(a, r, sign)
     if r == nil then return 0, a end
@@ -208,9 +211,9 @@ function M.edge_px(dir, center)
     return M.RAD_ARC_PX
 end
 
--- the display's top (FCOM p.1109-1110): MAP heading up on the 405 (PW;
--- RR as PW: an estimate), track up on the 570 (GE: `track_map`, as the
--- 109); VOR and APP heading up; PLN north up (FCOM: true north; the stock
+-- the display's top (FCOM p.1109-1110): MAP track up on the 109 (PW; RR as
+-- PW: an estimate) and the 570 (GE), `track_map` (a 405's heading up when
+-- false); VOR and APP heading up; PLN north up (FCOM: true north; the stock
 -- map and symbols are magnetic north up, kept until the heading
 -- reference, step 5d)
 function M.orientation(mode, hdg, trk, track_map)
@@ -233,11 +236,11 @@ function M.update(s, inp, dt)
         local track_map = inp.track_map
         o.up = M.orientation(mode, i.hdg, i.trk, track_map)
         o.xp_mode = (mode == M.MAP and (track_map and M.XP_MAP or M.XP_APP)) or (mode == M.PLN and M.XP_PLN) or M.XP_APP
-        -- the box at the top and the orientation's source: the 570's MAP
-        -- and PLAN the track (FCOM p.1141: TRK), else the heading (the
-        -- 405: HDG in all modes); PLN's rose is fixed, north up. Failed,
-        -- the flag at the top (FCOM p.1033-1034: the 570's TRK in the MAP
-        -- modes, HDG in VOR and APP; the 405's HDG)
+        -- the box at the top and the orientation's source: MAP and PLAN the
+        -- track (the 109 and the 570, FCOM p.1141: TRK), else the heading
+        -- (a 405: HDG in all modes); PLN's rose is fixed, north up. Failed,
+        -- the flag at the top (FCOM p.1033-1034: TRK in the MAP modes, HDG
+        -- in VOR and APP; a 405's HDG)
         local map_modes = mode == M.MAP or mode == M.PLN
         local by_trk = map_modes and track_map
         o.box = (mode == M.PLN and 2 or 0) + (by_trk and 2 or 1)
@@ -324,7 +327,7 @@ function M.update(s, inp, dt)
             o.pos_rad_tick[k] = o.pos_rad[k] and dme and dme_px <= edge
         end
         -- the position trend vector (step 5e), along the track on the
-        -- display (the 405's heading up MAP: turned by the drift)
+        -- display (a 405's heading up MAP: turned by the drift)
         M.trend(o, mode == M.MAP and o.rose and i.trk_valid, inp.gs_kt, i.roll_deg, i.range_nm, wrap(i.trk - o.up))
     end
     return s.out

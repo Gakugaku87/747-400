@@ -1,8 +1,8 @@
 # 109 で作ってきた部分と 405 の違い（2026-10-27 の棚卸し）
 
-2026-10-27、利用者の決定で、P&W の機体は FCOM の有効番号 405、GE は 570 として作ることになった（RR は資料が無いので P&W と同じ：推定）。それまでの作り直しは「機体は 109、405・570 の項目は `laminar/B747/freighter` が 1 のときだけ」としていた（PLAN.md、PROGRESS.md、DIFFERENCES.md）。コードで 109 と 405 を分けているのは engine_start.lua、eec_model.lua、fuel.lua、fltCtrls.lua の 4 か所で、どれも `freighter` を見ている。
+2026-10-27、利用者がいったん P&W の機体を FCOM の有効番号 405 として作ると決め（GE は 570、RR は資料が無いので P&W と同じ：推定）、この棚卸しをした。同じ日に利用者は P&W を 109 に戻した（「P&WはNDとAFDSも109に戻してよ」）ので、作り直しは今までどおり「機体は 109、405・570 の項目は `laminar/B747/freighter` が 1 のときだけ。FCOM が 109 と 570 で分けている違い（AFDS の ATT など）は GE を 570 に」とする（PLAN.md、PROGRESS.md、DIFFERENCES.md）。コードで 109 と 405 を分けているのは engine_start.lua、eec_model.lua、fuel.lua、fltCtrls.lua の 4 か所で、どれも `freighter` を見ている。
 
-このファイルは、109 で作った部分のうち 405 では違うものの一覧。ND の向き（全モードで方位が上）は 2026-10-27 に 405 にした（notes/ATA-31.md §39）。AFDS の段 1d の G/S は 405 の規則（LOC の捕捉の後：FCOM p.670）で作る。**ほかをどこまで 405 にするかは利用者に確認中。**
+このファイルは、109 で作った部分のうち 405 では違うものの一覧で、参考に残す。ND の向き（405 は全モードで方位が上）と AFDS の G/S（405 は LOC の捕捉の後：FCOM p.670）は、いったん 405 にして同じ日に 109 に戻した（notes/ATA-31.md §39 の追記、notes/ATA-22.md §14）。405 の道は、ND のモデル（`track_map` が false）と AFDS のモデル（`inp.gs_after_loc`）に、どの機体も使わない入力として残してある。
 
 FCOM のページは `p.` で書く。見え方：Y は乗員に見える、v は小さい。(?) は確かでないもの。棚卸しはエージェントに任せたもので、FCOM の 405 の記述は各行で確かめてあるが、作り替えるときに改めて資料を読む。
 
@@ -10,7 +10,7 @@ FCOM のページは `p.` で書く。見え方：Y は乗員に見える、v �
 |---|---|---|---|---|
 | 21 | 空調：温度区画 7、PASS TEMP、再循環ファン、synoptic | 区画 6（主デッキの前・後と床下を含む）、FLT DECK FAN、主デッキと床下の温度選択（p.561, 588） | ATA-21 §3、B747.55.* | Y |
 | 21/26 | 貨物室火災の ARM：パック 3 停止、パック 1・2 を高流量、ファンを全部停止 | パック 2 台停止、トリム空気の主弁を閉（p.908–909） | pack_model.lua | Y |
-| 22 | 段 1d の計画：G/S は LOC の前でも捕捉 | LOC の捕捉まで G/S を待つ（p.670）。前のコードは 405 どおり | ATA-22 §10, §13 | Y |
+| 22 | 段 1d の計画：G/S は LOC の前でも捕捉 | LOC の捕捉まで G/S を待つ（p.670）。前のコードは 405 どおり。2026-10-27 にいったん 405 にして、同じ日に 109 に戻した（モデルの `inp.gs_after_loc`） | ATA-22 §10, §13 | Y |
 | 22-AT | 計画：CLB 1/2 を減格の % で選び、30,000/35,000 ft までに戻す | TO 1→CLB 1、TO 2→CLB 2、15,000 ft までに戻す（p.1273, 1315）。前のコードの 15,000 ft は ATHR-05 として誤り扱いにしていた | ATA-22-AT、FCTM.md | Y |
 | 限界 | 試験の計画：追い風の限界 15 kt（離陸・着陸・autoland） | 10 kt（p.77, 80） | FCTM.md | ― |
 | 23（未作成） | PCP の客室インターホン、SERV INT、データリンクなし | CALL パネル、貨物インターホン、VOICE RECORDER と ANR のスイッチ、8.33 kHz、他の RTP が OFF のときも offside 灯、ATC データリンク（p.686–725） | ATA-23 §1–3 | Y |
@@ -29,7 +29,7 @@ FCOM のページは `p.` で書く。見え方：Y は乗員に見える、v �
 | 31 | 離陸の master CAUTION の抑止は 400 ft か 20 秒まで | 800 ft か、回転から 30 秒（p.1591） | alert_model.lua | Y |
 | 31 | PILOT RESPONSE なし | ある（p.1559, 1606） | WARN-20 | Y |
 | 31 | 空中の CONFIG SPOILERS は貨物機だけ | 405 はいつも（p.1558） | fltCtrls.lua | Y |
-| 31 | ND の MAP と MAP CTR は航跡が上、TRK | **済（2026-10-27）**：全モードで方位が上、HDG（p.1038, 1109, 1141） | nd_model.lua、xt.nd.lua | Y |
+| 31 | ND の MAP と MAP CTR は航跡が上、TRK | 全モードで方位が上、HDG（p.1038, 1109, 1141）。2026-10-27 にいったん 405 にして、同じ日に 109 に戻した（モデルの `track_map` が false の道） | nd_model.lua、xt.nd.lua | Y |
 | 31 | ND は GS だけ | GS と TAS（p.1141。570 も） | fms.lua | Y |
 | 31 | ND の範囲 10–640 NM | 5–640 NM（p.1038）。3D のつまみは確かめていない | ATA-31 §3.1 | Y |
 | 31 | PFD は 109 の DH/MDA | RADIO/BARO の minimums（p.981–982, 994） | DIFFERENCES.md | Y |
@@ -57,7 +57,7 @@ FCOM のページは `p.` で書く。見え方：Y は乗員に見える、v �
 405 に替えたら見直すもの：
 
 - コードの頭の「airplane 109」：elec_model.lua、alert_model.lua、fuel_model.lua、engine_start_model.lua。
-- 109 の挙動を確かめている X-Plane のシナリオ：s08、s09、s18、s20、s21、s23、s32、s40、s56、s61（済）、s65、s69、s83。
+- 109 の挙動を確かめている X-Plane のシナリオ：s08、s09、s18、s20、s21、s23、s32、s40、s56、s61、s65、s69、s83。
 
 もう 405 のもの（変えなくてよい）：GPWS のコールアウトと BANK ANGLE、G/S INHIBIT 灯なし、TCAS Ver 7.0（p.1553）、HYD の synoptic の不作動の表示（405 だけの機能、p.1490）。
 

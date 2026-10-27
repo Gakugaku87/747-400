@@ -395,12 +395,10 @@ T.check(rt:get(P .. "capt/loc_scale") == 0 and rt:get(P .. "capt/gs_scale") == 0
     "the scales and the rising runway too")
 rt:set("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot", 0)
 
--- the ND (step 5a): each ND from its own side and mode; the 570 (GE) is
--- track up in MAP as the 109 (these checks and the ones after), the 405
--- (PW; RR as PW) heading up (the last block: the user's choice of the 405,
--- 2026-10-27)
+-- the ND (step 5a): each ND from its own side and mode; the airplanes
+-- built, the 109 (PW; RR as PW) and the 570 (GE), are both MAP track up
+-- (the user's choice, 2026-10-27)
 local NDP = "laminar/B747/nd/"
-rt:set("laminar/B747/engines/type", 1)                             -- the 570 (GE)
 rt:set(IRS .. "hdg_valid", 0, 1)                                   -- IRU L's heading back
 rt:set(NDP .. "mode/capt/sel_dial_pos", 2)                         -- MAP
 rt:set(NDP .. "mode/fo/sel_dial_pos", 1)                           -- VOR
@@ -431,7 +429,7 @@ for i = 0, 2 do rt:set(IRS .. "nav_valid", i, 1) end
 rt:set(NDP .. "mode/capt/sel_dial_pos", 3)                         -- PLN
 frames(0.1)
 T.equal(rt:get("sim/cockpit2/EFIS/map_mode"), 4, "PLN: X-Plane's 4")
-T.equal(rt:get(NDP .. "capt/box"), 4, "the 570's PLN: TRK in PLAN's box")
+T.equal(rt:get(NDP .. "capt/box"), 4, "PLN: TRK in PLAN's box (FCOM p.1141)")
 T.equal(rt:get(NDP .. "capt/hdg_ptr_pln"), 1, "PLN's heading pointer")
 T.equal(rt:get(NDP .. "capt/hdg_bug"), 0, "no selected heading in PLN")
 
@@ -607,20 +605,20 @@ rt:set(ND .. "data/capt/pos", 0)
 frames(0.1)
 T.check(rt:get(PC .. "pos_rad_l") == 0 and rt:get(PC .. "pos_gps") == 0, "POS off: none")
 
--- the 405 (PW: engines/type 0; RR as PW): heading up in all modes, HDG in
--- the box (FCOM p.1109, p.1141; nd/up is nd.lua's: nd_orientation_test);
--- the Captain's MAP 40 NM, heading 100, track 110, 250 kt
+-- PW (engines/type 0: the 109) as the 570: MAP track up with TRK, the trend
+-- vector straight up; the Captain's MAP 40 NM, heading 100, track 110,
+-- 250 kt
 rt:set("laminar/B747/engines/type", 0)
 rt:set("sim/flightmodel2/position/groundspeed", 128.6)
 rt:set("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot", 0)
 frames(0.1)
-T.equal(rt:get("sim/cockpit2/EFIS/map_mode"), 0, "the 405's MAP: X-Plane's heading-up map")
-T.equal(rt:get(PC .. "box"), 1, "HDG in the box")
-T.check(rt:get(PC .. "tv_show", 0) == 1 and math.abs(rt:get(PC .. "tv_rot", 0) - 10) < 1e-6,
-    "the trend vector along the track, 10 right of the heading up")
+T.equal(rt:get("sim/cockpit2/EFIS/map_mode"), 2, "PW's MAP: X-Plane's track-up map")
+T.equal(rt:get(PC .. "box"), 2, "TRK in the box")
+T.check(rt:get(PC .. "tv_show", 0) == 1 and math.abs(rt:get(PC .. "tv_rot", 0)) < 1e-6,
+    "the trend vector straight up the track")
 rt:set(ND .. "mode/capt/sel_dial_pos", 3)
 frames(0.1)
-T.equal(rt:get(PC .. "box"), 3, "the 405's PLN: HDG in PLAN's box")
+T.equal(rt:get(PC .. "box"), 4, "PW's PLN: TRK in PLAN's box")
 rt:set(ND .. "mode/capt/sel_dial_pos", 2)
 
 T.done()

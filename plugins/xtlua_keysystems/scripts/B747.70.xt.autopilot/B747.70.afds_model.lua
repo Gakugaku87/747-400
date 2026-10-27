@@ -79,8 +79,9 @@
 --    resets (from LOC only before G/S is active). G/S armed by the APP
 --    request (table p.335: from V/S, ALT, FLCH, VNAV, not from T/O, G/A or
 --    FLARE), engaged armed at its capture (the old detector until step 3)
---    within 80 degrees, the 405 (PW; RR as PW: an estimate) only with LOC
---    engaged, the 570 (GE) either first; a latch the next pitch mode resets
+--    within 80 degrees, either first (the 109 and the 570: FCOM p.669; a
+--    405's only with LOC engaged, p.670, by an input no airplane sets: the
+--    user's choice of the 109 and the 570); a latch the next pitch mode resets
 --    (from G/S only before LOC is active). APP armed (both armed) is
 --    disarmed by its second push, a LOC request (G/S's arm only: a
 --    localizer approach), LNAV's or VNAV's arm; with LOC engaged a new roll
@@ -237,11 +238,12 @@ local function gs_enabled(s, inp)
     if s.pitch == "GS" or inp.old_pitch == "FLARE" then return false end
     return not toga(s.pitch)
 end
--- the 405 captures G/S only with LOC engaged (PW, the user's choice of
--- the 405, 2026-10-27; RR as PW: an estimate); the 570 (GE) either first
--- (FCOM p.651, p.669-670)
+-- the 109 and the 570 capture G/S either first (FCOM p.669), a 405 only
+-- with LOC engaged (p.670): `inp.gs_after_loc`, which no airplane sets (the
+-- airplanes built are the 109, PW and RR as PW, and the 570, GE: the
+-- user's choice, 2026-10-27)
 local function gs_after_loc(inp)
-    return inp.engine ~= M.ENGINE_GE
+    return inp.gs_after_loc == true
 end
 
 -- a CMD switch pushed: channel ch. `inp`: {hyd = {[1] = psi, [2], [3]},
@@ -544,7 +546,7 @@ function M.update(s, inp)
         s.loc_new = true
     end
     -- G/S captured (`inp.gs_detect`: the old detector until step 3) within
-    -- 80 degrees, the 405 only with LOC engaged
+    -- 80 degrees (a 405: only with LOC engaged)
     if s.gs_arm and inp.gs_detect and err < M.GS_COURSE and (s.roll == "LOC" or not gs_after_loc(inp)) then
         s.gs_arm, s.vnav_arm = false, false
         set_pitch(s, "GS")
