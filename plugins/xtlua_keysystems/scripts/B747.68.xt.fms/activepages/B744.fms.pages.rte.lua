@@ -178,11 +178,12 @@ end
 
 -- a point entered by its identifier: the one location, or SELECT DESIRED
 -- WPT (sorted from the point before it, else the airplane: FCOM p.1335);
--- NOT IN DATA BASE when none (the RTE and LEGS pages)
-function B747_fmc_with_point(fmsO, ident, near, done)
+-- NOT IN DATA BASE when none (the RTE and LEGS pages); `list`, the
+-- candidates when the page takes only some (REF NAV DATA's inhibits)
+function B747_fmc_with_point(fmsO, ident, near, done, list)
   local lat, lon = simDR_latitude, simDR_longitude
   if near then lat, lon = near.lat, near.lon end
-  local list = R.candidates(B747_fmc_route, ident, lat, lon)
+  list = list or R.candidates(B747_fmc_route, ident, lat, lon)
   if #list == 0 then fmsO["notify"] = "NOT IN DATA BASE" return end
   if #list == 1 then done(list[1]) return end
   selwpt[fmsO.id] = {list = list, done = done, page = fmsO.currentPage, pgNo = fmsO.pgNo, sp = fmsO["scratchpad"]}

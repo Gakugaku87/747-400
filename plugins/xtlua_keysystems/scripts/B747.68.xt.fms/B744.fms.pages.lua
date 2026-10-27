@@ -122,6 +122,7 @@ dofile("activepages/B744.fms.pages.takeoff.lua")
 dofile("activepages/B744.fms.pages.approach.lua")
 dofile("activepages/B744.fms.pages.legs.lua")
 dofile("activepages/B744.fms.pages.hold.lua")
+dofile("activepages/B744.fms.pages.refnavdata.lua")
 dofile("activepages/B744.fms.pages.maint.lua")
 dofile("activepages/B744.fms.pages.maintbite.lua")
 dofile("activepages/B744.fms.pages.maintcrossload.lua")
@@ -222,7 +223,9 @@ fmsFunctionsDefs["INITREF"]["L4"]={"setpage","THRUSTLIM"}
 
 fmsFunctionsDefs["INITREF"]["L6"]={"setpage","APPROACH"}
 
-fmsFunctionsDefs["INITREF"]["R1"]={"setpage","DATABASE"}
+-- REF NAV DATA (step 7e: B744.fms.pages.refnavdata.lua; before: X-Plane's
+-- DATABASE page)
+fmsFunctionsDefs["INITREF"]["R1"]={"refnavdata",""}
 local navAids
 simDR_variation=find_dataref("sim/flightmodel/position/magnetic_variation")
 B747DR_ils_dots           	= deferred_dataref("laminar/B747/autopilot/ils_dots", "number")

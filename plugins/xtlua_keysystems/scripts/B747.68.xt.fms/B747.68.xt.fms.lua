@@ -115,14 +115,14 @@ function getDistance(lat1,lon1,lat2,lon2)
   return retVal
 end
 
--- degrees and minutes with tenths (N35`45.9, E140`23.2); the minutes from
--- the size of the value (NAV-23: they came from the signed value, wrong
--- west and south)
+-- degrees and minutes with tenths (N35`45.9, E140`23.2), rounded to the
+-- tenth (step 7e: they were cut, so 35.3 showed N35`17.9); the minutes
+-- from the size of the value (NAV-23: they came from the signed value,
+-- wrong west and south)
 function toDMS(value,isLat)
-  local degrees=math.abs(value)
-  local minutes=(degrees-math.floor(degrees))*60
-  local seconds=minutes-math.floor(minutes)
-  degrees=math.floor(degrees)
+  local tenths=math.floor(math.abs(value)*600+0.5)
+  local degrees=math.floor(tenths/600)
+  local minutes=(tenths%600)/10
   local p="E"
   if isLat==true and value<0 then 
     p="S"
@@ -133,9 +133,9 @@ function toDMS(value,isLat)
   end
   local retVal
   if isLat==true then
-  	retVal=string.format(p .. "%02d`%02d.%1d",degrees,math.floor(minutes),math.floor(seconds*10))
+  	retVal=string.format(p .. "%02d`%04.1f",degrees,minutes)
   else
-	retVal=string.format(p .. "%03d`%02d.%1d",degrees,math.floor(minutes),math.floor(seconds*10))
+	retVal=string.format(p .. "%03d`%04.1f",degrees,minutes)
   end
   return retVal
 end

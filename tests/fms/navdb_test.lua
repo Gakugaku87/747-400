@@ -128,6 +128,14 @@ T.check(leg and leg[1] == "010" and leg[5] == "ZA001" and leg[12] == "CF" and le
 T.check(c and c.star.ALPHA1 and c.star.ALPHA1.ALL and c.appch.I16R and c.appch.I16R.ZZV, "the STAR ALPHA1 and the approach I16R")
 T.check(N.cifp(db, "ZZXX") == nil and db.cifp.ZZXX == false, "ZZXX: no CIFP (remembered; ZZBB has one since step 6a)")
 T.check(N.cifp(db, "ZZAA") == c, "the CIFP read once")
+-- a runway's length (step 7e: REF NAV DATA's LENGTH, estimate): threshold
+-- to threshold with the displaced parts
+local len16 = N.runway_length(c, "RW16R")
+T.near(len16, N.distance(35.01, 140.005, 34 + 59 / 60, 140 + 1 / 60) * 6076.12 + 500, 0.01,
+    "RW16R: to RW34L's threshold, and RW34L's 500 ft displaced")
+T.near(N.runway_length(c, "RW34L"), len16, 1e-6, "RW34L: the same")
+T.check(N.runway_length(N.cifp(db, "ZZBB"), "RW09") == nil, "ZZBB's RW09: no RW27, no length")
+T.check(N.runway_length(c, "RW01") == nil and N.runway_length(nil, "RW16R") == nil, "no such runway, no CIFP: none")
 
 -- a file missing: skipped
 local db2 = N.new(opener(DIR, {["earth_hold.dat"] = true}))
@@ -154,6 +162,7 @@ if base then
     T.check(nre[1] and nre[1].kind == N.VOR and nre[1].dme, "X-Plane's data: NRE, the nearest a VOR/DME")
     local cr = N.cifp(real, "RJAA")
     T.check(cr and cr.runways.RW16R and cr.runways.RW34L and #cr.order.sid > 0, "X-Plane's data: RJAA's runways and SIDs")
+    T.near(N.runway_length(cr, "RW16R"), 13123, 100, "X-Plane's data: RJAA RW16R, 4,000 m (13,123 ft)")
     print(string.format("X-Plane's data (%s, cycle %s): %.2f s, %d calls of 32 KB", base, real.cycle or "?", secs, calls2))
 end
 

@@ -490,6 +490,19 @@ function M.cifp(db, icao)
     return c
 end
 
+-- a runway's length in feet (REF NAV DATA's LENGTH: FCOM p.1356): from its
+-- threshold to the other end's, with both displaced parts (estimate: the
+-- CIFP has no length); nil without the other end in the CIFP
+local OTHER_SIDE = {L = "R", R = "L", C = "C", [""] = ""}
+function M.runway_length(c, id)
+    local rw = c and c.runways[id]
+    local num, side = match(id or "", "^RW(%d%d)([LCR]?)$")
+    if not (rw and num) then return nil end
+    local other = c.runways[string.format("RW%02d%s", (tonumber(num) + 17) % 36 + 1, OTHER_SIDE[side])]
+    if not other then return nil end
+    return M.distance(rw.lat, rw.lon, other.lat, other.lon) * 6076.12 + rw.displaced + other.displaced
+end
+
 -- the IDENT page's date range of a cycle starting on `first` (FCOM p.1283:
 -- "APR14MAY12/05"): its first day, the next cycle's, the first's year
 local MONTHS = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"}
