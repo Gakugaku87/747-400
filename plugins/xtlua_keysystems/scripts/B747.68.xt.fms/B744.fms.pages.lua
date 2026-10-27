@@ -425,10 +425,6 @@ function fmsFunctions.setpage_no(fmsO,valueA)
     fmsO["targetPage"]="DATABASE"
     simCMD_FMS_key[fmsO.id]["index"]:once()
     simCMD_FMS_key[fmsO.id]["R2"]:once()
-  elseif value=="RTE2" then
-    fmsO["targetCustomFMC"]=false
-    fmsO["targetPage"]="RTE2"
-    simCMD_FMS_key[fmsO.id]["dir_intc"]:once()
   else
     fmsO["targetCustomFMC"]=true
     fmsO["targetPage"]=value 

@@ -838,3 +838,18 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 後の段と推定：ETA・ALT と PRED ETA-ALT の距離は予測（段 8）まで空白。ND に FIX の円・方位線・距離の円を描かない（X-Plane の地図は経路だけ）。距離に交点が無いと方位を出さない、FIX が無いと BRG/DIS の行を出さない（推定）。
 - 試験：`route_model_test.lua`（251 件：経路の形、ABEAM、方位線、距離の円、届かない・交わらないもの、通り過ぎた交点の負の DTG）、新しい `tests/fms/fixinfo_pages_test.lua`（46 件：FIX キー、箱と見出し、FIX の入力と写し、BRG/DIS FR、方位線と距離の円の交点と DTG、両方の入力、不可の入力、DELETE、写しを LEGS に入れて ZB001、ABEAM と写し、ERASE FIX、PRED ETA-ALT、2 ページ目、右の CDU）。
 - X-Plane：新しい `s96_fixinfo` 25/25（RJAA→XAC の脚の上で LNAV、経路 XAC・SPENS・SAGRA。FIX キーで FIX INFO、FIX に KOUGA：BRG/DIS FR 032/35、方位 360 の線と XAC→SPENS の脚との交点（小字の 22 nm、DTG）、距離 /30 の近い方の交点（小字の方位 029、DTG）、<ABEAM で 007/22 と DTG、もう一度押して KOUGA007.5/021.9 の写し、LEGS の経路の終わりの後に入れて KOU01、PRED ETA-ALT の 1234Z、<ERASE FIX で箱（PRED ETA-ALT は残る）、2 ページ目の箱。CDU の写真で小字と配置を確かめた）、`s94_refnavdata` 38/38。Lua の誤りなし。初めの `s96` の 1 件の不合格は、scratchpad の行の末尾に空白があるとしたシナリオの正規表現の誤り（値は正しかった）。
+
+## 40. 段 7e4 の実装（2026-10-27：RTE 2 と RTE COPY）
+
+- 資料：FCOM p.1287–1294、p.1296、p.1299–1300、p.1330、p.1334、FMSPG p.134–136、FCOM p.1250（番号）。
+- 経路の状態を二つにした：RTE 1 と RTE 2（`num` 1・2）。結線の `B747_fmc_route` はいつもアクティブな経路（アクティブが無ければ RTE 1）、もう一つが `B747_fmc_route2`。もう一つの経路を ACTIVATE して EXEC すると、二つの中身を入れ替え（`swap`）、その経路がアクティブ、前の経路はアクティブでなくなる（FCOM p.1290）。LNAV・X-Plane の FMS（ND の線）・HOLD・FIX INFO・REF NAV DATA は `B747_fmc_route`（アクティブな経路）を見るので、そのまま。`B747_fmc_route_num(n)` で RTE n の状態を引く。
+- EXEC：アクティブな経路の修正か ACTIVATE、無ければもう一つの経路の ACTIVATE（`exec_both`）。EXEC 灯はどちらかに実行待ちがあれば点く。
+- RTE ページ（FCOM p.1287–1296）：RTE1・RTE2 の二つのページを同じコードで作る。題名 RTE n・ACT RTE n・MOD RTE n。6L は修正中は <ERASE、それ以外はもう一つの経路の <RTE 2・<RTE 1（全ページ：FCOM p.1289、p.1296 の図）。1 ページ目の破線は 8 行目（FCOM p.1288・p.1293 の図。前は 6L の上）、2 ページ目以降は 6L の上（p.1296 の図。前は空白）。アクティブでない経路は直接変わる（MOD にならない）。空中の ORIGIN はアクティブでない経路だけ（FCOM p.1288）。
+- RTE COPY（FCOM p.1289）：アクティブな経路の 1 ページ目の 5L に <RTE COPY。押すと、アクティブな経路（修正でないもの）をもう一つの経路に写し（前の中身は消える）、COMPLETE（その上に小字の RTE COPY：推定）。アクティブな経路が次に変わるまで COMPLETE（推定）。
+- LEGS ページ：LEGS・LEGS2 を同じコードで。題名 RTE n LEGS。6L は修正中は <ERASE、それ以外は <RTE 2 LEGS・<RTE 1 LEGS（FCOM p.1330 の図）。DIRECT TO・ABEAM PTS・INTC CRS・HOLD AT はアクティブな経路のページだけ。DIRECT TO の修正の 1 ページ目の 5R に RTE COPY>（FCOM p.1334；FMSPG p.135）。押すと写して、小字の RTE COPY と COMPLETE（FMSPG p.136 の図）。ほかの変更で消える。ABEAM PTS> は残る（図）。
+- RTE・LEGS・DEP ARR キーと ROUTE>（POS INIT・FMC COMM・TAKEOFF REF・DEPARTURES・ARRIVALS）はアクティブな経路のページへ（FCOM p.1287：RTE 2 がアクティブでも同じ）。HOLD の題名は RTE n HOLD。
+- DEP/ARR（FCOM p.1299–1300）：INDEX に RTE 1 と RTE 2 の行（DEP は出発地、ARR は目的地。アクティブな方に (ACT)）。DEPARTURES・ARRIVALS は INDEX で選んだ経路（DEP ARR キーではアクティブな経路）のもの、題名の小字に RTE n。出発地の ARR（離陸後の引き返し）と OTHER はまだ。
+- place/bearing/distance の点の番号：RTE 2 は 51–99（FCOM p.1250）。
+- 古いコードの X-Plane の RTE 2 ページへの切り替え（setpage の RTE2 で X-Plane の DIR INTC キー）を外した。
+- 試験：新しい `tests/fms/rte2_pages_test.lua`（46 件：<RTE 2・<RTE 1、RTE 2 の入力、<RTE 2 LEGS、RTE COPY と COMPLETE、RTE 2 だけの変更、RTE 2 の ACTIVATE と EXEC、X-Plane の FMS、RTE・LEGS キー、DIRECT TO の RTE COPY>、ALP51、DEP/ARR INDEX の RTE 2）、`rte_pages_test.lua`（63 件：1 ページ目の破線の位置）。
+- X-Plane：新しい `s97_rte2` 31/31（成田の地上：RTE 1 の 1 ページ目の破線が 8 行目、<RTE 2 と ACTIVATE>、RTE 1 を有効にして 5L の <RTE COPY で COMPLETE、<RTE 2 で写した RJAA→RJBB、RTE 2 にだけ SAGRA（題名は RTE 2 のまま）、ACTIVATE で EXEC 灯、EXEC で ACT RTE 2 と EXEC 灯の消灯、RTE 1 は ACTIVATE> に戻る、RTE・LEGS キーは ACT RTE 2 へ、<RTE 1 LEGS、DIRECT TO SPENS の 5R の RTE COPY> で COMPLETE、写された RTE 1 に SAGRA、DEP ARR キーで RTE 2 の DEPARTURES、INDEX の RTE 2 (ACT) の行。CDU の写真で確かめた）、`s86_rte_pages` 19/19、`s87_legs_pages` 29/29、`s88_deparr` 26/26、`s93_offset` 25/25（1 ページ目の破線の確かめを 8 行目に）。Lua の誤りなし。

@@ -887,6 +887,18 @@ dofile("B747.68.proc_model.lua")
 B747_fmc_route=B747_route_model.new(B747_navdb,B747_fmc_navdb)
 -- the terminal procedures (6-1/6-2 step 5d)
 B747_fmc_route.P=B747_proc_model
+-- RTE 2 (6-1/6-2 step 7e4; FCOM p.1287-1294): the other route's state.
+-- The two exchange their contents when the other is activated, so that
+-- B747_fmc_route is always the active one (or RTE 1 with none); `num`
+-- tells which route a state holds
+B747_fmc_route.num=1
+B747_fmc_route2=B747_route_model.new(B747_navdb,B747_fmc_navdb)
+B747_fmc_route2.P=B747_proc_model
+B747_fmc_route2.num=2
+function B747_fmc_route_num(n)
+  if B747_fmc_route.num==n then return B747_fmc_route end
+  return B747_fmc_route2
+end
 local routeLoaded=nil
 -- the loaded flight plan's rows and the route's legs, and the row X-Plane's
 -- current waypoint goes to once X-Plane has the plan (6-1/6-2 step 5e)
@@ -1060,7 +1072,7 @@ end
 -- CDUs, HOLD and FIX): the left and centre CDUs' light (the 3D cockpit's
 -- "pilot" one) with the left CDU's power, the right CDU's with its own
 function B747_fmc_exec_lights()
-  local on=B747_route_model.exec_lit(B747_fmc_route) or simDR_fms_exec_light>0
+  local on=B747_route_model.exec_lit(B747_fmc_route) or B747_route_model.exec_lit(B747_fmc_route2) or simDR_fms_exec_light>0
   local l=(on and cduPowered("fmsL")) and 1 or 0
   local r=(on and cduPowered("fmsR")) and 1 or 0
   if B747DR_fms_exec_light_pilot~=l then B747DR_fms_exec_light_pilot=l end

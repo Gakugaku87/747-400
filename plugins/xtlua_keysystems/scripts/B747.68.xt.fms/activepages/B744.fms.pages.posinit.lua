@@ -24,7 +24,7 @@ fmsPages["POSINIT"].getPage=function(self,pgNo,fmsID)
 	else
 		fmsFunctionsDefs["POSINIT"]["L5"]=nil
 	end
-    fmsFunctionsDefs["POSINIT"]["R6"]={"setpage","RTE1"}
+    fmsFunctionsDefs["POSINIT"]["R6"]={"rtepage",""}
     return {
     "      POS INIT       1/3",
     "                        ",

@@ -80,7 +80,7 @@ fmsPages["FMCCOMM"].getNumPages=function(self)
 end
   
 fmsFunctionsDefs["FMCCOMM"]={}
-fmsFunctionsDefs["FMCCOMM"]["L1"]={"setpage","RTE1"}
+fmsFunctionsDefs["FMCCOMM"]["L1"]={"rtepage",""}
 --[[
 fmsFunctionsDefs["FMCCOMM"]["L1"]={"setpage",""}
 fmsFunctionsDefs["FMCCOMM"]["L2"]={"setpage",""}

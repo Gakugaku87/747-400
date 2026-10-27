@@ -6,27 +6,33 @@
 -- others of its kind no longer show and the route has a modification
 -- (on the inactive route the change itself); after EXEC <SEL> is <ACT>;
 -- leaving the page and coming back shows all the options again with the
--- prompts. Before: X-Plane's DEP ARR page.
+-- prompts. RTE 2's from the INDEX's RTE 2 lines (step 7e4; FCOM
+-- p.1299-1300). Before: X-Plane's DEP ARR page.
 local R = B747_route_model
 local P = B747_proc_model
 local BLANK = "                        "
 local function pad(s) return string.sub(s .. BLANK, 1, 24) end
 local function lr(l, r) return l .. string.rep(" ", math.max(1, 24 - #l - #r)) .. r end
-local function route() return R.shown(B747_fmc_route) end
 local function short_rwy(id) return (id:gsub("^RW", "")) end
 
 -- each CDU's view: the airport, the page's kind, the options narrowed by a
--- selection on this visit (FCOM p.1301-1302, p.1401)
+-- selection on this visit (FCOM p.1301-1302, p.1401), the route (num: 1
+-- or 2)
 local view = {}
 local function v_of(fmsID)
   local v = view[fmsID]
   if not v then v = {narrow = false}; view[fmsID] = v end
   return v
 end
+-- the route of the view in use, set where a page or a key starts
+local curNum = 1
+local function use(fmsID) curNum = v_of(fmsID).num or B747_fmc_route.num end
+local function st_cur() return B747_fmc_route_num(curNum) end
+local function route() return R.shown(st_cur()) end
 
 -- <SEL> or <ACT>: a selection not yet executed, or one of the active route
 local function marker(field, value)
-  local st = B747_fmc_route
+  local st = st_cur()
   local shown = R.shown(st)
   local function sel_of(r) return r and r[field[1]] and r[field[1]][field[2]] end
   if sel_of(shown) ~= value then return nil end
@@ -86,7 +92,7 @@ local function dep_columns(fmsID)
   end
   for _, id in ipairs(rwys) do
     local m = nil
-    if rwy == id then m = (B747_fmc_route.active and not B747_fmc_route.mod) and "<ACT>" or "<SEL>" end
+    if rwy == id then m = (st_cur().active and not st_cur().mod) and "<ACT>" or "<SEL>" end
     right[#right + 1] = {text = short_rwy(id), mark = m, act = {"rwy", id}}
   end
   return left, right
@@ -120,19 +126,21 @@ local function small_draw(left, right, pgNo, n, first)
 end
 
 local function six(fmsID, page)
-  local st = B747_fmc_route
+  local st = st_cur()
   local defs = fmsFunctionsDefs[page]
   defs["L6"] = st.mod and {"rteerase", ""} or {"setpage", "DEPARRINDEX"}
-  defs["R6"] = {"setpage", "RTE1"}
+  defs["R6"] = {"setpage", "RTE" .. curNum}
   return lr(st.mod and "<ERASE" or "<INDEX", "ROUTE>")
 end
 
 fmsPages["DEPARTURES"]=createPage("DEPARTURES")
 fmsPages["DEPARTURES"].getNumPages=function(self, fmsID)
+  use(fmsID)
   local left, right = dep_columns(fmsID)
   return num_pages_of(left, right)
 end
 fmsPages["DEPARTURES"].getPage=function(self,pgNo,fmsID)
+  use(fmsID)
   local r = route()
   local left, right = dep_columns(fmsID)
   local lines = draw((r.origin and r.origin.ident or "----") .. " DEPARTURES", left, right, pgNo)
@@ -146,8 +154,9 @@ fmsPages["DEPARTURES"].getPage=function(self,pgNo,fmsID)
   return lines
 end
 fmsPages["DEPARTURES"].getSmallPage=function(self,pgNo,fmsID)
+  use(fmsID)
   local left, right = dep_columns(fmsID)
-  return small_draw(left, right, pgNo, num_pages_of(left, right), " SIDS    RTE 1   RUNWAYS")
+  return small_draw(left, right, pgNo, num_pages_of(left, right), string.format(" SIDS    RTE %d   RUNWAYS", curNum))
 end
 fmsFunctionsDefs["DEPARTURES"]={}
 fmsFunctionsDefs["DEPARTURES"]["exec"]={"rteexec", ""}
@@ -155,7 +164,8 @@ fmsFunctionsDefs["DEPARTURES"]["exec"]={"rteexec", ""}
 -- a selection on DEPARTURES: a SID (its runway kept when it serves it), a
 -- transition, a runway (a SID that does not serve it out)
 function fmsFunctions.depsel(fmsO, value)
-  local st = B747_fmc_route
+  use(fmsO.id)
+  local st = st_cur()
   local side, k = value:sub(1, 1), tonumber(value:sub(2))
   local left, right = dep_columns(fmsO.id)
   local item = page_rows(side == "L" and left or right, fmsO.pgNo)[k]
@@ -231,10 +241,12 @@ end
 
 fmsPages["ARRIVALS"]=createPage("ARRIVALS")
 fmsPages["ARRIVALS"].getNumPages=function(self, fmsID)
+  use(fmsID)
   local left, right = arr_columns(fmsID)
   return num_pages_of(left, right)
 end
 fmsPages["ARRIVALS"].getPage=function(self,pgNo,fmsID)
+  use(fmsID)
   local r = route()
   local left, right = arr_columns(fmsID)
   local lines = draw((r.dest and r.dest.ident or "----") .. " ARRIVALS", left, right, pgNo)
@@ -248,14 +260,16 @@ fmsPages["ARRIVALS"].getPage=function(self,pgNo,fmsID)
   return lines
 end
 fmsPages["ARRIVALS"].getSmallPage=function(self,pgNo,fmsID)
+  use(fmsID)
   local left, right = arr_columns(fmsID)
-  return small_draw(left, right, pgNo, num_pages_of(left, right), " STARS   RTE 1  APPROACH")
+  return small_draw(left, right, pgNo, num_pages_of(left, right), string.format(" STARS   RTE %d  APPROACH", curNum))
 end
 fmsFunctionsDefs["ARRIVALS"]={}
 fmsFunctionsDefs["ARRIVALS"]["exec"]={"rteexec", ""}
 
 function fmsFunctions.arrsel(fmsO, value)
-  local st = B747_fmc_route
+  use(fmsO.id)
+  local st = st_cur()
   local side, k = value:sub(1, 1), tonumber(value:sub(2))
   local left, right = arr_columns(fmsO.id)
   local item = page_rows(side == "L" and left or right, fmsO.pgNo)[k]
@@ -278,32 +292,38 @@ function fmsFunctions.arrsel(fmsO, value)
 end
 
 -------------------------------------------------------------------------
--- DEP/ARR INDEX (FCOM p.1299-1300): RTE 1's origin (DEP) and destination
--- (ARR); the origin's ARR (an air turnback), RTE 2 (step 7) and OTHER
--- airports (viewing only) not yet
+-- DEP/ARR INDEX (FCOM p.1299-1300): RTE 1's and RTE 2's origin (DEP) and
+-- destination (ARR) (RTE 2 step 7e4); the origins' ARR (an air turnback)
+-- and OTHER airports (viewing only) not yet
 fmsPages["DEPARRINDEX"]=createPage("DEPARRINDEX")
 fmsPages["DEPARRINDEX"].getPage=function(self,pgNo,fmsID)
-  local r = route()
   local defs = fmsFunctionsDefs["DEPARRINDEX"]
-  defs["L1"] = r.origin and {"deparrgo", "DEPARTURES"} or nil
-  defs["R2"] = r.dest and {"deparrgo", "ARRIVALS"} or nil
+  local function rows(n, dep_key, arr_key)
+    local r = R.shown(B747_fmc_route_num(n))
+    defs[dep_key] = r.origin and {"deparrgo", "DEPARTURES:" .. n} or nil
+    defs[arr_key] = r.dest and {"deparrgo", "ARRIVALS:" .. n} or nil
+    return lr(r.origin and ("<DEP    " .. r.origin.ident) or "", ""),
+      lr(r.dest and ("        " .. r.dest.ident) or "", r.dest and "ARR>" or "")
+  end
+  local a1, a2 = rows(1, "L1", "R2")
+  local b1, b2 = rows(2, "L3", "R4")
   return {
-    pad("     DEP/ARR INDEX"), BLANK,
-    lr(r.origin and ("<DEP    " .. r.origin.ident) or "", ""), BLANK,
-    lr(r.dest and ("        " .. r.dest.ident) or "", r.dest and "ARR>" or ""), BLANK,
-    BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK,
+    pad("     DEP/ARR INDEX"), BLANK, a1, BLANK, a2, BLANK, b1, BLANK, b2,
+    BLANK, BLANK, BLANK, BLANK,
   }
 end
 fmsPages["DEPARRINDEX"].getSmallPage=function(self,pgNo,fmsID)
-  local status = B747_fmc_route.active and "(ACT)" or ""
-  return {"                    1/1 ", pad("          RTE 1 " .. status), BLANK, BLANK, BLANK,
-    BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK}
+  local function status(n) return B747_fmc_route_num(n).active and "(ACT)" or "" end
+  return {"                    1/1 ", pad("          RTE 1 " .. status(1)), BLANK, BLANK, BLANK,
+    pad("          RTE 2 " .. status(2)), BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK}
 end
 fmsFunctionsDefs["DEPARRINDEX"]={}
 function fmsFunctions.deparrgo(fmsO, value)
-  v_of(fmsO.id).narrow = false
+  local page, n = string.match(value, "^(%u+):(%d)$")
+  local v = v_of(fmsO.id)
+  v.narrow, v.num = false, tonumber(n)
   fmsO.targetCustomFMC = true
-  fmsO.targetPage = value
+  fmsO.targetPage = page
   fmsO.targetpgNo = 1
 end
 
@@ -312,7 +332,8 @@ end
 -- ARRIVALS in the air (the destination's: its origin's view while near the
 -- origin is not made yet)
 function B747_cdu_deparr_page(fmsO)
-  v_of(fmsO.id).narrow = false
+  local v = v_of(fmsO.id)
+  v.narrow, v.num = false, B747_fmc_route.num
   local st = B747_fmc_route
   fmsO.targetCustomFMC = true
   fmsO.targetpgNo = 1
