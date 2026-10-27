@@ -389,7 +389,8 @@ function ap_director_pitch(pitchMode)
             return last_simDR_AHARS_pitch_heading_deg_pilot--ap_director_pitch_retVal(pitchMode,retval)
         --end
     elseif pitchMode==1 then
-       -- print("simDR_autopilot_TOGA_pitch_deg ="..simDR_autopilot_TOGA_pitch_deg)
+        -- TO/GA: the pitch laws' since 6-3 step 3b; X-Plane's TOGA pitch
+        -- (the instruments' 8 degrees) only without them
         if debug_flight_directors==1 then
             print("ap_director_pitch for TOGA")
         end
@@ -547,7 +548,7 @@ pitchPid.input = 0
 pitchPid:compute()
 
 -- the old law's state on the new law's command (6-3 step 3a): its last
--- command and its 10 samples, so that it goes on from there (FLCH after ALT)
+-- command and its 10 samples, so that it goes on from there (G/S after V/S)
 local function ap_director_pitch_sync(p)
     last_simDR_AHARS_pitch_heading_deg_pilot=p
     lastRetVal=p
@@ -555,9 +556,9 @@ local function ap_director_pitch_sync(p)
     current_pitch_intregal=10*p
 end
 
--- the pitch command: the pitch laws' (6-3 step 3a: V/S, ALT and its
--- capture, the old VNAV's V/S and altitude), else the old one (FLCH, the
--- old VNAV's speed, TO/GA, G/S, FLARE until steps 3b, 3c and 4)
+-- the pitch command: the pitch laws' (6-3 steps 3a and 3b: V/S, ALT and
+-- its capture, FLCH, T/O, G/A, the old VNAV's), else the old one (G/S,
+-- FLARE until steps 3c and 4)
 function ap_pitch_assist(doCompute)
     local flight_director_pitch
     if B747DR_ap_pitch_law==1 then

@@ -145,7 +145,6 @@ simDR_airspeed2                      = find_dataref("laminar/B747/gauges/indicat
 simDR_airspeed_mach                 = find_dataref("sim/flightmodel/misc/machno")
 simDR_AOA_fail                      = find_dataref("sim/operation/failures/rel_AOA")
 simDR_battery_chg_watt_hr           = find_dataref("sim/cockpit/electrical/battery_charge_watt_hr")
-simDR_stalled_elements              = find_dataref("sim/flightmodel2/wing/elements/element_is_stalled")
 simDR_stall_warning                  = find_dataref("sim/flightmodel/failures/stallwarning")
 simDR_has_stall_warning                  = find_dataref("sim/aircraft/view/acf_has_stallwarn")
 simDR_hsi_hdef_dots_pilot           = find_dataref("sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot")
@@ -2526,112 +2525,9 @@ function B747_animate_value(current_value, target, min, max, speed)
 
 end
 
--- The stall speed table (Laminar's; the FCTM's stall speeds: notes/FCTM.md
--- §1.14) for X-Plane's TOGA pitch below, which the AFDS uses (6-3). The
--- speed tape's red and black band and the stick shaker are the minimum speed
--- model's (B747.60.xt.speedtape.lua, 5-2 step 3b): the band is the stick
--- shaker speed (FCOM p.973), not the stall speed.
-function B747_Vs()
-
-    local weight_min, weight_max = bracket_weights()
-
-    -- the table's altitude bands, highest first (DSP-07: the 0 ft band
-    -- caught every altitude above it)
-    local alt_min = -2000
-    local alt_max = 0.0
-    if simDR_altitude_ft_pilot >= 10000.0 then
-        alt_min = 10000.0
-        alt_max = 10000.0
-    elseif simDR_altitude_ft_pilot >= 6000.0 then
-        alt_min = 6000.0
-        alt_max = 10000.0
-    elseif simDR_altitude_ft_pilot >= 2000.0 then
-        alt_min = 2000.0
-        alt_max = 6000.0
-    elseif simDR_altitude_ft_pilot >= 0.0 then
-        alt_min = 0.0
-        alt_max = 2000.0
-    end
-
-    local flap_min = 0
-    local flap_max = 0
-    if simDR_wing_flap1_deg[0] >= 0.01 and simDR_wing_flap1_deg[0] < 1.0 then
-        flap_min = 0
-        flap_max = 1
-    elseif simDR_wing_flap1_deg[0] >= 0.99 and simDR_wing_flap1_deg[0] < 1.01 then
-        flap_min = 1
-        flap_max = 1
-    elseif simDR_wing_flap1_deg[0] >= 1.01 and simDR_wing_flap1_deg[0] < 4.99 then
-        flap_min = 1
-        flap_max = 5
-    elseif simDR_wing_flap1_deg[0] >= 4.99 and simDR_wing_flap1_deg[0] < 5.01 then
-        flap_min = 5
-        flap_max = 5
-    elseif simDR_wing_flap1_deg[0] >= 5.01 and simDR_wing_flap1_deg[0] < 9.99 then
-        flap_min = 5
-        flap_max = 10
-    elseif simDR_wing_flap1_deg[0] >= 9.99 and simDR_wing_flap1_deg[0] < 10.01 then
-        flap_min = 10
-        flap_max = 10
-    elseif simDR_wing_flap1_deg[0] >= 10.01 and simDR_wing_flap1_deg[0] < 19.99 then
-        flap_min = 10
-        flap_max = 20
-    elseif simDR_wing_flap1_deg[0] >= 19.99 and simDR_wing_flap1_deg[0] < 20.01 then
-        flap_min = 20
-        flap_max = 20
-    elseif simDR_wing_flap1_deg[0] >= 20.01 and simDR_wing_flap1_deg[0] < 24.99 then
-        flap_min = 20
-        flap_max = 25
-    elseif simDR_wing_flap1_deg[0] >= 24.99 and simDR_wing_flap1_deg[0] < 25.01 then
-        flap_min = 25
-        flap_max = 25
-    elseif simDR_wing_flap1_deg[0] >= 25.01 and simDR_wing_flap1_deg[0] < 29.99 then
-        flap_min = 25
-        flap_max = 30
-    elseif simDR_wing_flap1_deg[0] >= 29.99 then
-        flap_min = 30
-        flap_max = 30
-    end
-
-    local weight_min_index          = weight_min*0.001
-    local weight_max_index          = weight_max*0.001
-    local Vs_min_flap_min_alt_speed = B747_rescale(weight_min, VsData[flap_min][alt_min][weight_min_index], weight_max, VsData[flap_min][alt_min][weight_max_index], simDR_acf_weight_total_kg)
-    local Vs_min_flap_max_alt_speed = B747_rescale(weight_min, VsData[flap_min][alt_max][weight_min_index], weight_max, VsData[flap_min][alt_max][weight_max_index], simDR_acf_weight_total_kg)
-    local Vs_min_flap_alt_speed     = B747_rescale(alt_min, Vs_min_flap_min_alt_speed, alt_max, Vs_min_flap_max_alt_speed, simDR_altitude_ft_pilot)
-    local Vs_max_flap_min_alt_speed = B747_rescale(weight_min, VsData[flap_max][alt_min][weight_min_index], weight_max, VsData[flap_max][alt_min][weight_max_index], simDR_acf_weight_total_kg)
-    local Vs_max_flap_max_alt_speed = B747_rescale(weight_min, VsData[flap_max][alt_max][weight_min_index], weight_max, VsData[flap_max][alt_max][weight_max_index], simDR_acf_weight_total_kg)
-    local Vs_max_flap_alt_speed     = B747_rescale(alt_min, Vs_max_flap_min_alt_speed, alt_max, Vs_max_flap_max_alt_speed, simDR_altitude_ft_pilot)
-    local target_airspeed_Vs              = B747_rescale(flap_min, Vs_min_flap_alt_speed, flap_max, Vs_max_flap_alt_speed, simDR_wing_flap1_deg[0])
-    if simDR_airspeed > target_airspeed_Vs then
-        local numStalled=0
-        for i=0,320 do
-            if simDR_stalled_elements[i]>0 then
-                numStalled=numStalled+1
-            end
-        end
-        if numStalled > 0 then
-           if simDR_all_wheels_on_ground==0 then
-                simDR_autopilot_TOGA_pitch_deg=math.min(12-(17*numStalled/10),3)
-                --print("simDR_autopilot_TOGA_pitch_deg1="..simDR_autopilot_TOGA_pitch_deg)
-           else --on ground, pitch for 8
-                simDR_autopilot_TOGA_pitch_deg=8
-           end
-
-        elseif simDR_all_wheels_on_ground==1 then
-            simDR_autopilot_TOGA_pitch_deg=8
-        else
-            local tSpeed=target_airspeed_Vs+20
-            if B747DR_airspeed_V2<900 then
-                tSpeed=B747DR_airspeed_V2+10
-            end
-            simDR_autopilot_TOGA_pitch_deg=B747_rescale(target_airspeed_Vs,2,tSpeed,12,simDR_airspeed)
-            --print("simDR_autopilot_TOGA_pitch_deg2="..simDR_autopilot_TOGA_pitch_deg)
-        end
-    else
-        simDR_autopilot_TOGA_pitch_deg=8
-        --print("simDR_autopilot_TOGA_pitch_deg3="..simDR_autopilot_TOGA_pitch_deg)
-    end
-end
+-- The TO/GA pitch (X-Plane's TOGA pitch out of the stall speed table, the
+-- stalled wing elements and V2) is the AFDS's pitch laws' since 6-3 step 3b
+-- (B747.70.afds_pitch_model.lua).
 
 
 
@@ -2933,7 +2829,6 @@ function after_physics()
     B747_setVref30()
     B747_Vspeeds()
     B747_speedtape()
-    B747_Vs()
 
     B747_setTempAltRegion()
     B747_V1_wind_adjustment()

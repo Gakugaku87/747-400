@@ -15,7 +15,9 @@
 -- course's angles (LOC's by the roll laws' geometry, step 2b, and its law),
 -- the MCP's heading at LOC's capture, the old state; 1e:
 -- TO/GA (the engines module's push count, G/A and its conditions, the old
--- go-around, the F/Ds shown with their switches OFF and FD, T/O).
+-- go-around, the F/Ds shown with their switches OFF and FD, T/O). Steps 3a
+-- and 3b: V/S, ALT, FLCH (20 kt slow: the command down), G/A (under 600
+-- fpm: up) and T/O on the ground (8 degrees) on the pitch laws.
 local T = dofile("tests/lib/check.lua")("afds_glue")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
@@ -246,11 +248,22 @@ rt:set("sim/flightmodel/position/vh_ind_fpm", 0)
 rt:command(CMD .. "vs_mode")
 frames()
 T.equal(rt:get(VS_DIAL), 0, "V/S after ALT: 000 (ATA22 p.282)")
+local IAS = "laminar/B747/gauges/indicators/airspeed_kts_pilot"
+rt:set(IAS, 200)
 rt:command(CMD .. "flch_mode")
 frames()
 T.equal(rt:get(FLCH_STATUS), 2, "FLCH SPD")
 T.equal(rt:get(PITCH), 8, "the FMA's FLCH SPD")
 T.equal(rt:get(VS_STATUS), 0, "V/S off")
+-- the speed law (step 3b): at the window's 200 kt, then 20 kt slower:
+-- the command down (after the step's rate has gone)
+T.equal(rt:get(PITCH_LAW), 1, "FLCH: the pitch law (step 3b)")
+rt:set(IAS, 180)
+frames(200)
+local p1 = rt:get(PITCH_CMD)
+frames(30)
+T.check(rt:get(PITCH_CMD) < p1 - 0.1, "20 kt slow: the command down")
+rt:set(IAS, 0)
 rt:command(CMD .. "speed_mode")
 frames()
 T.equal(rt:get(PITCH), 8, "SPD in FLCH SPD: nothing (FCOM p.642; the old one went to V/S)")
@@ -427,6 +440,11 @@ T.check(rt:get(ROLL) ~= 1 and rt:get(TOGA_FLAG) == 0, "flaps up, no G/S: no G/A"
 rt:set(FLAPS, 0.668)
 push()
 T.check(rt:get(ROLL) == 1 and rt:get(PITCH) == 1, "the flaps out of up: G/A, the FMA's TO/GA")
+T.equal(rt:get(PITCH_LAW), 1, "G/A: the pitch law (step 3b)")
+rt:set("sim/flightmodel/position/vh_ind_fpm", 0)
+local g0 = rt:get(PITCH_CMD)
+frames(10)
+T.check(rt:get(PITCH_CMD) > g0 + 0.1, "G/A under 600 fpm: up toward 15 degrees (FCOM p.674)")
 T.equal(rt:get(TOGA_FLAG), 1, "the old code's TO/GA flag")
 T.equal(rt:get("laminar/B747/autopilot/autoland"), -2, "the old autoland's go-around")
 T.check(rt:get(SHOWN_C) == 1 and rt:get(SHOWN_F) == 0, "the F/Ds shown: the Captain's switch ON")
@@ -452,6 +470,8 @@ frames()
 rt:set(FD, 23, 1)
 frames()
 T.check(rt:get(ROLL) == 1 and rt:get(PITCH) == 1 and rt:get(TOGA_FLAG) == 1, "the first F/D ON on the ground: T/O")
+T.equal(rt:get(PITCH_LAW), 1, "T/O on the ground: the pitch law (step 3b)")
+T.equal(rt:get(PITCH_CMD), 8, "8 degrees (FCOM p.666)")
 rt:set(FD, 23, 0)
 frames()
 rt:set("sim/flightmodel/failures/onground_any", 0)

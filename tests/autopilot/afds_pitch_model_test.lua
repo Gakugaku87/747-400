@@ -1,5 +1,6 @@
 -- Run from the repository root with LuaJIT: luajit tests/autopilot/afds_pitch_model_test.lua
--- The FCCs' pitch laws, step 3a (6-3: docs/overhaul/notes/ATA-22.md §18):
+-- The FCCs' pitch laws, steps 3a and 3b (6-3: docs/overhaul/notes/ATA-22.md
+-- §18, §19):
 -- plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.afds_pitch_model.lua.
 -- The capture's start (closing within the 0.05 g level-off and 10 s),
 -- ALT's vertical speed, a level-off flown on a simple airplane (the
@@ -9,7 +10,20 @@
 -- 10,000 ft in s107's first run): no overshoot, within the 0.05 g,
 -- settled; V/S established within the limit; V/S 000 holding where it was
 -- set; ALT HOLD pushed in a climb: over and back; the old VNAV's laws by
--- its flags; no law (FLCH, nothing engaged or shown, on the ground).
+-- its flags; no law (nothing engaged or shown, on the ground).
+-- Step 3b, on the lagged airplane with a speed (the thrust's excess less the
+-- climb): the speed protection; FLCH's climb entry (the thrust up 1.2 kt/s
+-- in 8 s) within 10 kt and settled, a new speed (250 to 280 kt) without an
+-- overshoot over 2 kt (5 kt 1.5 times as slow), within SPD_G, the descent;
+-- the old VNAV's speed flag; T/O: 8 degrees on the ground, the rotation's
+-- speed, V2 the window's, V2 + 10 or the rotation's + 10, the target reset
+-- after 5 s above it (up to V2 + 25), the window when set higher, a takeoff
+-- flown near the target, the PLI, a windshear from the attitude, a
+-- takeoff on an attitude loop little damped (as X-Plane's 747 at 170 kt:
+-- s109) without a lasting swing; G/A: the
+-- window's or the speed then, the cap (MCP + 25 or the speed then), the 15
+-- degrees (or 1 below the PLI) blended into the speed from 600 to 1,200
+-- fpm, a go-around flown, on the ground too.
 local T = dofile("tests/lib/check.lua")("afds_pitch_model")
 local P = dofile("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.afds_pitch_model.lua")
 
@@ -124,14 +138,228 @@ T.check(P.update(s, inp({mode = "VNAV", vnav_law = "VS", vnav_vs = -1000}), DT) 
 s = P.new()
 T.check(P.update(s, inp({mode = "VNAV", vnav_law = "ALT", vnav_alt = 9000}), DT) ~= nil, "VNAV with the old ALT flag: here")
 s = P.new()
-T.equal(P.update(s, inp({mode = "VNAV", vnav_law = "FLCH"}), DT), nil, "VNAV with the old speed flag: the old law (step 3b)")
+T.check(P.update(s, inp({mode = "VNAV", vnav_law = "FLCH", ias = 250, spd_sel = 250}), DT) ~= nil,
+    "VNAV with the old speed flag: here (step 3b)")
 -- no law
-T.equal(P.update(s, inp({mode = "FLCH"}), DT), nil, "FLCH: the old law (step 3b)")
+T.equal(P.update(s, inp({mode = "FLCH", active = false}), DT), nil, "FLCH, nothing engaged or shown")
 T.equal(P.update(s, inp({mode = "VS", vs_sel = 1000, active = false}), DT), nil, "nothing engaged or shown")
 T.equal(P.update(s, inp({mode = "VS", vs_sel = 1000, ground = true}), DT), nil, "on the ground")
 -- the command starts from the attitude
 s = P.new()
 local c = P.update(s, inp({mode = "VS", vs_sel = 0, pitch = 4.5, vs = 0}), DT)
 T.near(c, 4.5, 0.05, "from the attitude where the law starts")
+
+-- step 3b: the speed protection (FCOM p.675)
+T.equal(P.protect(150, inp({v_min = 170, v_max = 0, flaps_up = true})), 170, "under the minimum maneuvering: it")
+T.equal(P.protect(150, inp({v_min = 170, v_max = 0, flaps_up = false})), 175, "flaps out: 5 kt above it")
+T.equal(P.protect(340, inp({v_min = 0, v_max = 330})), 325, "over the maximum: 5 kt under it")
+T.equal(P.protect(250, inp({v_min = 0, v_max = 0})), 250, "no speeds: as set")
+
+-- the lagged airplane with a speed: the attitude 2 s behind the command,
+-- the path 3 s behind the attitude less the angle of attack; the speed's
+-- rate the thrust's excess (kt a second) less the climb's
+local KT = 1852 / 3600
+local function fly_spd(s, i, seconds, thrust, tau_t, tau_g, alpha, cb)
+    tau_t, tau_g, alpha = tau_t or 2, tau_g or 3, alpha or 2
+    local gam = i.gam or (i.pitch - alpha)
+    local t, g, last = 0, 0, i.vs
+    local r = {vmin = i.ias, vmax = i.ias, pmax = i.pitch}
+    for _ = 1, math.floor(seconds / DT + 0.5) do
+        local cmd = P.update(s, i, DT)
+        if cmd then i.pitch = i.pitch + (cmd - i.pitch) * DT / tau_t end
+        gam = gam + ((i.pitch - alpha) - gam) * DT / tau_g
+        i.ias = i.ias + (thrust(t) - 9.80665 * math.sin(math.rad(gam)) / KT) * DT
+        i.tas = i.ias * (i.tas_ratio or 1.16)
+        i.vs = i.tas * KT * math.sin(math.rad(gam)) / 0.3048 * 60
+        i.alt = i.alt + i.vs / 60 * DT
+        g = math.max(g, math.abs(i.vs - last) / 60 / DT / G_FT)
+        last = i.vs
+        r.vmin, r.vmax, r.pmax = math.min(r.vmin, i.ias), math.max(r.vmax, i.ias), math.max(r.pmax, i.pitch)
+        t = t + DT
+        if cb then cb(t, i, cmd) end
+    end
+    i.gam, r.g = gam, g
+    return r
+end
+local function ramp(a, secs) return function(t) return a * math.min(1, t / secs) end end
+
+-- FLCH from level at 250 kt, the thrust up 1.2 kt/s in 8 s: within 10 kt,
+-- then on the speed; a new speed, 280 kt
+s = P.new()
+i = inp({mode = "FLCH", ias = 250, spd_sel = 250, vs = 0, tas = 290})
+local r = fly_spd(s, i, 120, ramp(1.2, 8))
+T.check(r.vmax < 260 and r.vmin > 245, ("FLCH's climb entry within 10 kt (%.1f..%.1f)"):format(r.vmin, r.vmax))
+T.near(i.ias, 250, 1, "on the speed after 2 minutes")
+T.check(i.vs > 1000, "climbing (" .. i.vs .. ")")
+i.spd_sel = 280
+r = fly_spd(s, i, 150, function() return 1.2 end)
+T.check(r.vmax < 282, ("250 to 280 kt: no overshoot over 2 kt (%.1f)"):format(r.vmax))
+T.near(i.ias, 280, 1, "at 280 kt")
+T.check(r.g <= P.SPD_G * 1.06, "within SPD_G (" .. r.g .. ")")
+-- the same 1.5 times as slow
+s = P.new()
+i = inp({mode = "FLCH", ias = 250, spd_sel = 250, vs = 0, tas = 290})
+fly_spd(s, i, 120, ramp(1.2, 8), 3, 4.5)
+i.spd_sel = 280
+r = fly_spd(s, i, 150, function() return 1.2 end, 3, 4.5)
+T.check(r.vmax < 285, ("slower: no overshoot over 5 kt (%.1f)"):format(r.vmax))
+T.near(i.ias, 280, 1, "slower: at 280 kt")
+-- FLCH's descent at idle: on the speed, going down
+s = P.new()
+i = inp({mode = "FLCH", ias = 250, spd_sel = 250, vs = 0, tas = 290})
+r = fly_spd(s, i, 120, ramp(-0.8, 5))
+T.check(r.vmin > 240 and r.vmax < 255, ("FLCH's descent entry (%.1f..%.1f)"):format(r.vmin, r.vmax))
+T.near(i.ias, 250, 1, "descending on the speed")
+T.check(i.vs < -1000, "descending (" .. i.vs .. ")")
+-- the reference protected: under the minimum maneuvering speed with the
+-- flaps out, 5 kt above it
+s = P.new()
+i = inp({mode = "FLCH", ias = 180, spd_sel = 160, v_min = 175, flaps_up = false, vs = 0, tas = 200})
+P.update(s, i, DT)
+T.equal(s.target, 180, "FLCH under the minimum maneuvering speed: 5 kt above it (flaps out)")
+
+-- T/O: 8 degrees on the ground; the rotation (pitch over 2 degrees) at 150
+-- kt, V2 160 in the window: V2 + 10
+s = P.new()
+i = inp({mode = "TO", ground = true, mcp_ias = 160, ias = 100, pitch = 0, vs = 0, alt = 0, tas = 100})
+T.equal(P.update(s, i, DT), 8, "T/O on the ground: 8 degrees (FCOM p.666)")
+i.ias = 150; i.pitch = 2.5
+P.update(s, i, DT)
+T.equal(s.vrot, 150, "the rotation's speed: pitch over 2 degrees")
+T.equal(s.v2, 160, "V2 the window's (FCOM p.664)")
+i.ground, i.ias, i.pitch, i.gam = false, 165, 9, 1
+c = P.update(s, i, DT)
+T.near(c, 9, 0.5, "lift-off: from the attitude")
+T.equal(s.target, 170, "V2 + 10 (the rotation's + 10: 160)")
+-- the rotation late (165 kt): its + 10
+s = P.new()
+i = inp({mode = "TO", ground = true, mcp_ias = 160, ias = 165, pitch = 3, vs = 0, alt = 0, tas = 165})
+P.update(s, i, DT)
+i.ground = false
+P.update(s, i, DT)
+T.equal(s.target, 175, "rotated at 165 kt: 175")
+-- 5 s above the target: the speed then (up to V2 + 25)
+s = P.new()
+i = inp({mode = "TO", ground = true, mcp_ias = 160, ias = 150, pitch = 3, vs = 0, alt = 0, tas = 150})
+P.update(s, i, DT)
+i.ground, i.ias = false, 178
+for _ = 1, math.floor(4.9 / DT) do P.update(s, i, DT) end
+T.equal(s.target, 170, "4.9 s above: still V2 + 10")
+for _ = 1, math.floor(0.2 / DT + 0.5) do P.update(s, i, DT) end
+T.equal(s.target, 178, "5 s above: the speed then")
+i.ias = 192
+for _ = 1, math.floor(5.2 / DT) do P.update(s, i, DT) end
+T.equal(s.target, 185, "and at most V2 + 25")
+i.mcp_ias = 200
+P.update(s, i, DT)
+T.equal(s.target, 200, "the window set higher: the window's")
+-- a takeoff flown: lift-off at 165 kt, the thrust's excess 2.4 kt/s
+s = P.new()
+i = inp({mode = "TO", ground = true, mcp_ias = 160, ias = 150, pitch = 3, vs = 0, alt = 0, tas = 150})
+P.update(s, i, DT)
+i.ground, i.ias, i.pitch, i.gam, i.tas_ratio = false, 165, 9, 1, 1.02
+r = fly_spd(s, i, 60, function() return 2.4 end, 2, 3, 7)
+T.check(r.vmax < 178, ("a takeoff: within V2 + 18 (%.1f)"):format(r.vmax))
+T.check(math.abs(i.ias - s.target) < 1.5, ("on the target after a minute (%.1f, %.1f)"):format(i.ias, s.target))
+T.check(r.pmax < 20, "the pitch under 20 degrees (" .. r.pmax .. ")")
+-- the same on an attitude loop little damped (natural 0.55 rad/s, damping
+-- 0.3: X-Plane's A/P at 170 kt swung the pitch 3.6 degrees every 12 s
+-- with the full gain): within a degree after 30 s
+s = P.new()
+i = inp({mode = "TO", ground = true, mcp_ias = 160, ias = 121, pitch = 3, vs = 0, alt = 0, tas = 121})
+P.update(s, i, DT)
+i.ground, i.ias, i.pitch = false, 141, 5.7
+do
+    local gam, q, lo, hi = 0, 0, 99, -99
+    for n = 1, math.floor(60 / DT) do
+        local cmd = P.update(s, i, DT) or i.pitch
+        q = q + (0.55 * 0.55 * (cmd - i.pitch) - 2 * 0.3 * 0.55 * q) * DT
+        i.pitch = i.pitch + q * DT
+        gam = gam + ((i.pitch - 5) - gam) * DT / 3
+        i.ias = i.ias + (2.6 - 9.80665 * math.sin(math.rad(gam)) / KT) * DT
+        i.tas = i.ias * 1.02
+        i.vs = i.tas * KT * math.sin(math.rad(gam)) / 0.3048 * 60
+        if n * DT > 30 then lo, hi = math.min(lo, i.pitch), math.max(hi, i.pitch) end
+    end
+    T.check(hi - lo < 2, ("an attitude loop little damped: the pitch within a degree after 30 s (%.1f..%.1f)"):format(lo, hi))
+    T.check(math.abs(i.ias - s.target) < 2, ("and on the target (%.1f, %.1f)"):format(i.ias, s.target))
+end
+-- the PLI: not over it
+s = P.new()
+i = inp({mode = "TO", ground = true, mcp_ias = 160, ias = 150, pitch = 3, vs = 0, alt = 0, tas = 150})
+P.update(s, i, DT)
+i.ground, i.ias, i.pitch, i.pli = false, 140, 10, 2
+for _ = 1, 20 do c = P.update(s, i, DT) end
+i.ias = 200
+for _ = 1, 20 do c = P.update(s, i, DT) end
+T.check(c <= 12 + 1e-9, "T/O: not over the PLI (" .. c .. ")")
+-- a windshear: from the attitude (15 degrees) below 600 fpm; 10 kt slow
+s = P.new()
+i = inp({mode = "TO", ground = true, mcp_ias = 160, ias = 160, pitch = 3, vs = 0, alt = 0, tas = 160})
+P.update(s, i, DT)
+i.ground, i.pitch, i.vs, i.windshear = false, 10, 200, true
+for _ = 1, 20 do c = P.update(s, i, DT) end
+T.check(c > 11, "T/O in a windshear, 10 kt slow: up toward 15 degrees (" .. c .. ")")
+s = P.new()
+i = inp({mode = "TO", ground = true, mcp_ias = 160, ias = 160, pitch = 3, vs = 0, alt = 0, tas = 160})
+P.update(s, i, DT)
+i.ground, i.pitch, i.vs = false, 10, 200
+for _ = 1, 20 do c = P.update(s, i, DT) end
+T.check(c < 10, "without: down for the speed (" .. c .. ")")
+
+-- G/A: the window's or the speed then, the cap
+s = P.new()
+i = inp({mode = "GA", mcp_ias = 150, ias = 145, pitch = 2.5, vs = -800, alt = 300, tas = 150})
+P.update(s, i, DT)
+T.equal(s.target, 150, "G/A at 145 kt: the window's 150")
+T.equal(s.ga_cap, 175, "up to MCP + 25")
+s = P.new()
+i = inp({mode = "GA", mcp_ias = 150, ias = 180, pitch = 2.5, vs = -800, alt = 300, tas = 180})
+P.update(s, i, DT)
+T.equal(s.target, 180, "at 180 kt: the speed then")
+T.equal(s.ga_cap, 180, "over MCP + 25: that speed kept (FCOM p.664)")
+-- the attitude below 600 fpm: up to 15 degrees at most 3 degrees a second
+s = P.new()
+i = inp({mode = "GA", mcp_ias = 150, ias = 150, pitch = 2.5, vs = -800, alt = 300, tas = 150})
+local prev = 2.5
+local fastest = 0
+for _ = 1, 150 do
+    c = P.update(s, i, DT)
+    fastest = math.max(fastest, (c - prev) / DT)
+    prev = c
+end
+T.near(c, 15, 0.1, "G/A below 600 fpm: 15 degrees (FCOM p.674)")
+T.check(fastest <= P.TOGA_RATE + 1e-9, "at most 3 degrees a second (" .. fastest .. ")")
+-- or 1 below the PLI
+s = P.new()
+i = inp({mode = "GA", mcp_ias = 150, ias = 150, pitch = 8, vs = -800, alt = 300, tas = 150, pli = 4})
+for _ = 1, 100 do c = P.update(s, i, DT) end
+T.near(c, 11, 0.1, "the PLI 4 degrees above: 1 below it")
+-- blended: above 1,200 fpm the speed only, under 600 the attitude only
+s = P.new()
+i = inp({mode = "GA", mcp_ias = 150, ias = 150, pitch = 12, vs = 1500, alt = 600, tas = 150})
+P.update(s, i, DT)
+i.ias = 140
+for _ = 1, 20 do c = P.update(s, i, DT) end
+T.check(c < 12, "1,500 fpm, 10 kt slow: down for the speed (" .. c .. ")")
+s = P.new()
+i = inp({mode = "GA", mcp_ias = 150, ias = 150, pitch = 12, vs = 300, alt = 600, tas = 150})
+P.update(s, i, DT)
+i.ias = 140
+for _ = 1, 20 do c = P.update(s, i, DT) end
+T.check(c > 12, "300 fpm, 10 kt slow: up for the attitude (" .. c .. ")")
+-- a go-around flown: 150 kt, -3 degrees, the thrust's excess up to 3 kt/s
+-- in 6 s
+s = P.new()
+i = inp({mode = "GA", mcp_ias = 150, ias = 150, pitch = 2.5, vs = -800, alt = 300, tas = 153, gam = -3, tas_ratio = 1.02})
+r = fly_spd(s, i, 60, ramp(3, 6), 2, 3, 5.5)
+T.check(r.vmin > 148, ("the go-around: no slower than 2 kt under (%.1f)"):format(r.vmin))
+T.check(r.pmax < 17, "the pitch under 17 degrees (" .. r.pmax .. ")")
+T.check(i.vs > 1200, "climbing over 1,200 fpm (" .. i.vs .. ")")
+T.check(math.abs(i.ias - s.target) < 1.5 and s.target <= 175, ("on the target (%.1f, %.1f)"):format(i.ias, s.target))
+-- on the ground too (a touch and go: FCOM p.673)
+s = P.new()
+T.check(P.update(s, inp({mode = "GA", ground = true, mcp_ias = 150, ias = 140, pitch = 1, vs = 0, tas = 140}), DT) ~= nil,
+    "G/A on the ground: here")
 
 T.done()
