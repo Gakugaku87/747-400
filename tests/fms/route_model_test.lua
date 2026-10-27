@@ -464,4 +464,83 @@ R.erase(st)
 st.rte.legs[1].proc = "SID"
 T.check(not R.offset_allowed(st, true), "not on a SID (FMSPG p.155)")
 
+-- ABEAM PTS (step 7e2; FCOM p.1333-1334; FMSPG p.136-139): ALPHA, BRAVO,
+-- CHARL and DELTA north along 140.5 E; the airplane east of ALPHA, direct
+-- to DELTA
+st = R.new(N, db)
+R.set_origin(st, "ZZAA")
+R.set_dest(st, "ZZBB")
+R.add_to(st, fix("ALPHA"))
+R.add_via(st, "Z1")
+R.add_to(st, fix("DELTA"))
+R.activate(st)
+R.exec(st)
+local ppos = {lat = 35.5, lon = 141.0}
+T.check(not R.abeam_offered(st), "no ABEAM PTS without a direct-to")
+R.direct_to(st, fix("DELTA"), nil, ppos)
+T.equal(idents(st), "DELTA", "DIRECT TO DELTA: ALPHA, BRAVO and CHARL passed by")
+T.check(R.abeam_offered(st) and not R.abeam_selected(st), "ABEAM PTS> offered (FCOM p.1334)")
+T.equal(R.abeam_points(st, ppos), nil, "ABEAM PTS")
+T.equal(idents(st), "ALP01 BRA02 CHA03 DELTA", "their abeam points: the first three characters and a number (FCOM p.1250)")
+T.check(R.abeam_selected(st) and not R.abeam_offered(st), "SELECTED (FMSPG p.138)")
+local legs = R.legs(R.shown(st))
+local crs0, len0 = R.course(ppos.lat, ppos.lon, 37.0, 140.5)
+local ok_line = true
+for k = 1, 3 do
+    local f = legs[k].fix
+    local c, d = R.course(ppos.lat, ppos.lon, f.lat, f.lon)
+    if math.abs(c - crs0) > 0.01 or d >= len0 then ok_line = false end
+end
+T.check(ok_line, "on the direct path to DELTA, before it")
+local a1 = legs[1].fix
+local brg, dist = R.course(35.5, 140.5, a1.lat, a1.lon)
+local cpt = R.course(a1.lat, a1.lon, 37.0, 140.5)
+T.check(a1.kind == "PBD" and a1.place.ident == "ALPHA" and math.abs(brg - a1.brg) < 1e-6 and math.abs(dist - a1.dist) < 1e-6,
+    "ALP01: from ALPHA, its bearing and distance")
+T.check(math.abs(((brg - cpt) % 360) - 90) < 0.5, "abeam ALPHA: square to the path (FMSPG p.136)")
+T.check(legs[1].dto and legs[1].dto_exec and not legs[4].dto and not legs[4].dto_exec, "the direct-to's first leg the first abeam point's")
+T.check(not legs[2].alt and not legs[2].spd, "no constraints (FMSPG p.137)")
+T.equal(R.intc_crs(st, 300), R.INVALID_ENTRY, "no INTC CRS after it (FMSPG p.139's figure)")
+T.equal(R.abeam_points(st, ppos), R.INVALID_ENTRY, "once")
+R.exec(st, {lat = 35.51, lon = 140.99})
+T.check(R.legs(st.rte)[1].from.lat == 35.51, "EXEC: from where the airplane is then")
+local xp = R.to_fms(st.rte, "2610")
+T.check(xp:find("\n28 ALP01 DRCT ") and xp:find("\n28 CHA03 DRCT ") and xp:find("\n11 DELTA DRCT "), "X-Plane's flight plan: the abeam points as lat/lon rows")
+-- another direct-to past ALP01 and BRA02: a new point from ALPHA, the
+-- lowest number free (estimate)
+R.direct_to(st, R.legs(st.rte)[3].fix, nil, {lat = 35.6, lon = 141.2})
+R.abeam_points(st, {lat = 35.6, lon = 141.2})
+T.equal(idents(st), "ALP04 BRA05 CHA03 DELTA", "ALP01's from ALPHA again (FMSPG p.136); 01-03 still the active route's: 04 and 05")
+R.erase(st)
+-- a change removes the prompt (FCOM p.1334); INTC CRS too
+R.direct_to(st, fix("DELTA"), nil, ppos)
+R.set_constraint(st, 1, {alt = 10000}, 35000)
+T.check(not R.abeam_offered(st), "another change: no ABEAM PTS>")
+R.erase(st)
+R.direct_to(st, fix("DELTA"), nil, ppos)
+R.intc_crs(st, 10)
+T.check(not R.abeam_offered(st), "INTC CRS: no ABEAM PTS> (FCOM p.1334)")
+R.erase(st)
+-- a direct-to waypoint not in the route: none passed by
+R.direct_to(st, fix("ZZV"), nil, ppos)
+local before = idents(st)
+T.equal(R.abeam_points(st, ppos), nil, "ABEAM PTS to ZZV, not in the route")
+T.check(idents(st) == before and R.abeam_selected(st), "no points: SELECTED (estimate)")
+R.erase(st)
+-- procedures: not their points but a departure's last (FMSPG p.137)
+st.rte.legs[1].proc, st.rte.legs[2].proc, st.rte.legs[3].proc = "SID", "SID", nil
+R.direct_to(st, fix("DELTA"), nil, ppos)
+R.abeam_points(st, ppos)
+T.equal((idents(st):gsub("%d", "#")), "BRA## CHA## DELTA", "ALPHA a SID's point: none; BRAVO the SID's last: one")
+R.erase(st)
+-- a lat/lon waypoint's a lat/lon one; 700 nm across at most (FMSPG p.136-137)
+st = R.new(N, db)
+st.rte.legs = {{via = "DIRECT", fix = {kind = "LL", ident = "N40E148", lat = 40, lon = 148}},
+    {via = "DIRECT", fix = {kind = "WPT", ident = "FARAW", lat = 41, lon = 157}},
+    {via = "DIRECT", fix = {kind = "WPT", ident = "ENDPT", lat = 45, lon = 140.5}}}
+st.active = true
+R.direct_to(st, st.rte.legs[3].fix, nil, {lat = 35, lon = 140.5})
+R.abeam_points(st, {lat = 35, lon = 140.5})
+T.check(idents(st):match("^N4%dE140 ENDPT$"), "N40E148 abeam: a lat/lon waypoint (N4xE140); FARAW 750 nm across: none: " .. idents(st))
+
 T.done()

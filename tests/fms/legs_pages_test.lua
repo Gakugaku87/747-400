@@ -90,9 +90,9 @@ local db = N.new(function(name) return io.open("tests/fms/data/navdb/" .. name, 
 while not N.load(db) do end
 local rw = N.cifp(db, "ZZAA").runways.RW16R
 local c, d = R.course(rw.lat, rw.lon, 35.5, 140.5)
-local want = string.format(" %03d`       %5s", math.floor((c + 7) % 360 + 0.5), string.format("%dNM", math.floor(d + 0.5)))
-T.equal(small(2):sub(1, 17), want, "ALPHA's course (magnetic: true + 7) and distance from RW16R (FCOM p.1331-1332)")
-T.equal(small(4):sub(1, 17), " 007`        30NM", "BRAVO: north along 140.5 E, magnetic 007, 30 NM")
+local want = string.format(" %03d`   %6s", math.floor((c + 7) % 360 + 0.5), string.format("%dNM", math.floor(d + 0.5)))
+T.equal(small(2), want .. string.rep(" ", 10), "ALPHA's course (magnetic: true + 7) and distance from RW16R (FCOM p.1331-1332)")
+T.equal(small(4), " 007`     30NM          ", "BRAVO: north along 140.5 E, magnetic 007, 30 NM, the 14th place its last (step 7e2)")
 T.check(line(13):find("ACTIVATE>$"), "ACTIVATE> (FCOM p.1332)")
 
 -- constraints
@@ -160,5 +160,30 @@ T.check(rt:get("laminar/B747/fms/exec_light_pilot") == 0 and rt:get("laminar/B74
 T.check(xpfms():find("NUMENR 5\n1 ZZAA ADEP[^\n]*\n28 RW16R DRCT [^\n]*\n28 DTOPOS DRCT [^\n]*\n11 CHARL DRCT "),
     "X-Plane's FMS: ZZAA, its runway, the direct-to's start DTOPOS (step 5e), CHARL, ZZBB")
 T.check(xpfms():find("\n11 CHARL DRCT "), "CHARL direct")
+
+-- ABEAM PTS (step 7e2; FCOM p.1333-1334; FMSPG p.136-139): DELTA after
+-- CHARL, DIRECT TO DELTA from the airplane at 35 N 140 E
+enter("DELTA", "L2")
+key("key/execute")
+enter("DELTA", "L1")
+T.check(line(1):find("MOD RTE 1 LEGS"), "DIRECT TO DELTA: " .. line(1))
+T.equal(line(8), string.rep(" ", 14) .. "----------", "dashes over 4R (FCOM p.1333)")
+T.equal(line(9), string.rep(" ", 14) .. "ABEAM PTS>", "ABEAM PTS> at 4R")
+T.equal(small(12), "                INTC CRS", "with INTC CRS")
+key("ls_key/R4")
+T.equal(line(3):sub(1, 5), "CHA01", "CHARL's abeam point CHA01 the active waypoint (FMSPG p.136)")
+T.equal(line(5):sub(1, 5), "DELTA", "then DELTA")
+T.equal(small(8), string.rep(" ", 15) .. "ABEAM PTS", "ABEAM PTS (FMSPG p.138)")
+T.equal(line(9), string.rep(" ", 14) .. "  SELECTED", "SELECTED")
+T.check(small(12) == string.rep(" ", 24) and not line(13):find("`"), "no INTC CRS (FMSPG p.139's figure)")
+T.check(line(13):find("^<ERASE"), "ERASE")
+key("key/execute")
+T.check(line(1):find("ACT RTE 1 LEGS") and line(3):find("^CHA01"), "EXEC: CHA01 active")
+T.equal(line(9), string.rep(" ", 24), "the prompt gone")
+T.check(xpfms():find("\n28 DTOPOS DRCT [^\n]*\n28 CHA01 DRCT [^\n]*\n11 DELTA DRCT "), "X-Plane's FMS: DTOPOS, CHA01, DELTA")
+enter("DELTA", "L1")
+enter("FL200", "R1")
+T.check(not line(9):find("ABEAM"), "another change: the prompt gone (FCOM p.1334): " .. line(9))
+key("ls_key/L6")
 
 T.done()
