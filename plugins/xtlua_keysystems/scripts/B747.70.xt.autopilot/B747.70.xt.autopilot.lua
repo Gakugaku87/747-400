@@ -587,6 +587,18 @@ simDR_afds_tas = find_dataref("sim/cockpit2/gauges/indicators/true_airspeed_kts_
 -- localizer course: 6-3 step 1d)
 simDR_afds_track_mag = find_dataref("sim/cockpit2/gauges/indicators/ground_track_mag_pilot")
 local afdsIn = {fd = {L = false, R = false}, hyd = {0, 0, 0}}
+-- LOC's inputs to the roll laws (step 2b): NAV 1's deviation (X-Plane's
+-- dots), both receivers' localizer, the course and the track (magnetic),
+-- the ground speed, the radio altitude; no LOC in NORM's polar areas
+local function afds_loc_inputs(r)
+	r.loc_dots = simDR_hsi_ldef_dots_nav1
+	r.loc_valid = simDR_hsi_nav1_horizontal_signal == 1 and simDR_hsi_nav2_horizontal_signal == 1
+	r.course = simDR_radio_nav_obs_deg[0]
+	r.trk_mag = simDR_afds_track_mag
+	r.gs = simDR_groundspeed * 1.94384
+	r.ra = simDR_radarAlt1
+	r.hdg_valid = not (B747DR_ap_hdg_ref_true > 0.5 and B747DR_ap_toggle_sw[30] < 0.5)
+end
 -- the TO/GA switches (step 1e): the engines module counts their pushes
 -- (its command handler, with the A/T's part); the F/Ds shown, a switch ON
 -- or TO/GA's display with them OFF (FCOM p.661), for the panel's command
@@ -632,10 +644,12 @@ local function afds_inp()
 	local land = simDR_radarAlt1 > 200 and (B747DR_ap_AFDS_status_annun_pilot == 3 or B747DR_ap_AFDS_status_annun_pilot == 4)
 	afdsIn.old_armed_roll = land and 4 or 0
 	afdsIn.dt = SIM_PERIOD
-	-- the approach (step 1d): the old detectors as they were (until steps 2
-	-- and 3: LOC with both receivers' signals, G/S under 1.5 dots with both
-	-- receivers' signals and no flag), the track's angle to the course
-	afdsIn.loc_detect = simDR_hsi_nav1_horizontal_signal == 1 and simDR_hsi_nav2_horizontal_signal == 1
+	-- the approach (step 1d): LOC's capture by the roll laws (step 2b: the
+	-- ground speed, the intercept angle and the deviation, ATA22 p.290), G/S
+	-- the old detector (until step 3: under 1.5 dots with both receivers'
+	-- signals and no flag), the track's angle to the course
+	afds_loc_inputs(afdsRollIn)
+	afdsIn.loc_detect = B747_afds_roll_model.loc_capture(afdsRollIn)
 	afdsIn.gs_detect = simDR_nav1_gs_flag == 0 and simDR_nav2_gs_flag == 0 and math.abs(simDR_hsi_vdef_dots_pilot) < 1.5
 		and simDR_hsi_nav1_vertical_signal == 1 and simDR_hsi_nav2_vertical_signal == 1
 	afdsIn.course_err = getHeadingDifference(simDR_radio_nav_obs_deg[0], simDR_afds_track_mag)
@@ -793,6 +807,7 @@ local function afds_roll_law()
 	r.ias = simDR_ind_airspeed_kts_pilot
 	r.flaps_up = simDR_flap_ratio_control < 0.01
 	r.v2 = B747DR_airspeed_V2
+	afds_loc_inputs(r)
 	local cmd = B747_afds_roll_model.update(afdsRoll, r, SIM_PERIOD)
 	local law, valid = cmd and 1 or 0, (cmd and afdsRoll.valid) and 1 or 0
 	if B747DR_ap_roll_law ~= law then B747DR_ap_roll_law = law end
@@ -2747,9 +2762,9 @@ function fma_PitchModes()
 end
 
 function B747_ap_fma(fms)
-	-- the flight directors' roll: the roll laws' command (6-3 step 2a; NCD
-	-- centred until the mode failures, step 5), else X-Plane's (LOC until
-	-- step 2b)
+	-- the flight directors' roll: the roll laws' command (6-3 steps 2a and
+	-- 2b; NCD centred until the mode failures, step 5), else X-Plane's (none
+	-- of the modes now)
 	local fdRoll = B747DR_ap_target_roll
 	if B747DR_ap_roll_law == 1 then
 		fdRoll = B747DR_ap_roll_valid == 1 and B747DR_ap_roll_cmd or simDR_capt_roll

@@ -12,7 +12,8 @@
 -- the F/D switches (their positions); everything off; the MCP's IAS 200;
 -- 1c: the pitch modes (V/S synced, ALT HOLD, FLCH, SPD, VNAV's arm and the
 -- old VNAV's engage, no route); 1d: APP and LOC, the captures within the
--- course's angles, the MCP's heading at LOC's capture, the old state; 1e:
+-- course's angles (LOC's by the roll laws' geometry, step 2b, and its law),
+-- the MCP's heading at LOC's capture, the old state; 1e:
 -- TO/GA (the engines module's push count, G/A and its conditions, the old
 -- go-around, the F/Ds shown with their switches OFF and FD, T/O).
 local T = dofile("tests/lib/check.lua")("afds_glue")
@@ -320,12 +321,25 @@ T.equal(rt:get("laminar/B747/autopilot/heading/degrees"), 100, "the MCP's headin
 ils(true, false)
 frames(10)
 T.equal(rt:get(NAV), 1, "no LOC capture 176 degrees off the course")
--- the track 26 degrees off: LOC captured, the MCP's heading to the course
+-- the capture by the roll laws' geometry (step 2b): the track 26 degrees
+-- off from the beam's right at 200 kt, 2 dots (2.82 degrees, 866 m at the
+-- radio altimeter's 2,500 ft) closing: not yet (the turn takes 414 m);
+-- 0.8 dot (346 m): captured, the MCP's heading to the course
+rt:set("sim/flightmodel/position/groundspeed", 200 * 1852 / 3600)
+rt:set(RI .. "nav1_hdef_dots_pilot", -2)
 rt:set("sim/cockpit2/gauges/indicators/ground_track_mag_pilot", 310)
+frames(10)
+T.equal(rt:get(NAV), 1, "2 dots right closing at 26 degrees: not yet captured")
+rt:set(RI .. "nav1_hdef_dots_pilot", -0.8)
 frames()
-T.check(rt:get(NAV) == 2 and rt:get(NAV_ACT) == 2, "LOC captured (the old status 2)")
+T.check(rt:get(NAV) == 2 and rt:get(NAV_ACT) == 2, "0.8 dot: LOC captured (the old status 2)")
 T.equal(rt:get(ROLL), 3, "the FMA's LOC")
 T.equal(rt:get("laminar/B747/autopilot/heading/degrees"), 336, "the MCP's heading to the course at LOC's capture")
+-- LOC's law: right of the beam closing from the right at 26 degrees,
+-- rolling right to come onto the course
+frames(60)
+T.check(rt:get("laminar/B747/autopilot/roll_law") == 1 and rt:get("laminar/B747/autopilot/roll_cmd") > 3,
+    "LOC's law: rolling right onto the course (not X-Plane's HDG SEL)")
 -- G/S captured under 1.5 dots
 ils(true, true)
 frames()

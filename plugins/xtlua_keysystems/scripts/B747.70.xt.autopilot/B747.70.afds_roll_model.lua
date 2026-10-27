@@ -18,7 +18,18 @@
 --    (FCOM p.663), wings level on the ground.
 --  - LNAV: the FMC's steering (ATA22 p.358), at the rate below as before
 --    (6-1/6-2 step 6c).
---  - LOC and ROLLOUT: not here (the old law until steps 2b and 4).
+--  - LOC (step 2b; ATA22 p.290, p.358, figure p.359): the deviation made a
+--    distance from the beam's centre with the distance to the localizer
+--    from the radio altitude (a 3 degree glide slope and a 10,000 ft
+--    runway); blended with the cross runway velocity (the inertial path:
+--    on through a lost signal); the track steered to the beam over a
+--    lookahead; LOC TRACK (the final roll down on the centreline) within
+--    the bank limit of tracking. Wings level from 5 ft (ROLL DOWN,
+--    p.348). The capture (`loc_capture`, the AFDS model's input): the
+--    turn onto the course at the capture bank needs the distance left, by
+--    the ground speed, the intercept angle and the deviation (p.290), or
+--    the deviation is small.
+--  - ROLLOUT: not here (step 4; LOC's law on the ground is wings level).
 -- A heading or track error asks for a turn of error / TAU_S degrees a
 -- second, the bank of that turn at the TAS, within the bank limit
 -- (estimate: the sources give no gains); the command moves at most
@@ -30,8 +41,15 @@
 -- TAS (estimate: 25 to 300 kt, 15 from 480 kt). In LNAV with AUTO only
 -- the 15 below V2 + 10 (FCTM p.118: the FMC's holds bank up to 30, FMSPG
 -- p.164, p.226); HDG HOLD and TO/GA within AUTO (estimate). NORM's
--- reference in the polar areas gives HDG SEL and HDG HOLD no heading
--- (FCOM p.1046): no command (NCD), the bank held.
+-- reference in the polar areas gives HDG SEL, HDG HOLD and LOC no heading
+-- (FCOM p.1046): no command (NCD), the bank held; no LOC capture.
+-- LOC's numbers are estimates (the sources give the inputs, not the
+-- gains): the capture bank 25 with a 4 s lead, captured within 0.7
+-- degrees whatever the closure; a lookahead of 30 s; the deviation blended
+-- with the inertial path over 5 s; LOC TRACK within 100 m and 5 degrees,
+-- its bank limit 15 (25 in the capture). X-Plane's localizer deviation is
+-- 1.41 degrees a dot (measured at RJAA 34L against the localizer's place
+-- in X-Plane's nav data: 0.711 dots a degree).
 -- Pure: the airplane's state in, the command out.
 --   local R = B747_afds_roll_model                      -- in XTLua, after dofile
 --   local R = dofile(".../B747.70.afds_roll_model.lua") -- in the tests
@@ -52,8 +70,31 @@ M.AUTO_TAS_LO = 300
 M.AUTO_TAS_HI = 480
 -- the selector's positions 1-5 (0 AUTO: FCOM p.647)
 M.SELECTOR = {5, 10, 15, 20, 25}
+-- LOC (step 2b): X-Plane's deviation, degrees a dot (measured); the
+-- distance to the localizer from the radio altitude (in its range) on a
+-- GS_DEG glide slope with a RWY_FT runway beyond (ATA22 p.358)
+M.LOC_DOT_DEG = 1.41
+M.GS_DEG = 3
+M.RWY_FT = 10000
+M.RA_MAX = 2500
+-- the capture (estimates): the turn onto the course at CAPTURE_BANK with
+-- a CAPTURE_LEAD_S roll-in, or within CAPTURE_BAND degrees
+M.CAPTURE_BANK = 25
+M.CAPTURE_LEAD_S = 4
+M.CAPTURE_BAND = 0.7
+-- the law (estimates): the track to the beam over LOOK_S of ground speed,
+-- the deviation blended with the inertial path over BLEND_S, LOC TRACK
+-- within TRACK_M and TRACK_DEG, the bank limits in the capture and in
+-- tracking, wings level below ROLL_DOWN_FT (ATA22 p.348)
+M.LOOK_S = 30
+M.BLEND_S = 5
+M.TRACK_M = 100
+M.TRACK_DEG = 5
+M.LOC_LIMIT = 25
+M.TRACK_LIMIT = 15
+M.ROLL_DOWN_FT = 5
 -- the modes with a law here
-M.LAW = {HDG_SEL = true, HDG_HOLD = true, ATT = true, LNAV = true, TO = true, GA = true}
+M.LAW = {HDG_SEL = true, HDG_HOLD = true, ATT = true, LNAV = true, TO = true, GA = true, LOC = true}
 
 local G = 9.80665
 local KT = 1852 / 3600
@@ -62,7 +103,7 @@ local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
 
 function M.new()
     return {cmd = nil, mode = nil, err = nil, hold = nil, trk_ref = nil, valid = false,
-        last_sel = nil, last_hdg = nil, ref_true = nil}
+        last_sel = nil, last_hdg = nil, ref_true = nil, loc_y = nil, loc_track = false}
 end
 
 function M.inputs()
@@ -84,7 +125,40 @@ function M.inputs()
         ias = 0,            -- kt
         flaps_up = true,
         v2 = 999,           -- the FMC's V2 (999: none)
+        -- LOC (step 2b)
+        loc_dots = 0,       -- the localizer deviation (X-Plane's: plus with the beam to the right)
+        loc_valid = false,  -- both receivers have the localizer
+        course = 0,         -- the localizer course (magnetic)
+        trk_mag = 0,        -- the track (magnetic)
+        gs = 0,             -- the ground speed, kt
+        ra = 0,             -- the radio altitude, ft
     }
+end
+
+-- the distance to the localizer (m) from the radio altitude: on the glide
+-- slope with the runway beyond (ATA22 p.358)
+function M.loc_distance(ra)
+    local h = clamp(ra or M.RA_MAX, 0, M.RA_MAX)
+    return (h / math.tan(math.rad(M.GS_DEG)) + M.RWY_FT) * 0.3048
+end
+-- the deviation, degrees right of the centreline, and the distance (m)
+function M.loc_dev(inp) return -inp.loc_dots * M.LOC_DOT_DEG end
+function M.loc_lateral(inp) return M.loc_distance(inp.ra) * math.tan(math.rad(M.loc_dev(inp))) end
+-- the track's angle to the course (right plus), the cross runway velocity
+local function loc_angle(inp) return wrap(inp.trk_mag - inp.course) end
+local function cross_velocity(inp) return inp.gs * KT * math.sin(math.rad(loc_angle(inp))) end
+
+-- LOC's capture (ATA22 p.290: by the ground speed, the intercept angle and
+-- the deviation): closing on the beam with no more distance left than the
+-- turn onto the course takes, or the deviation small
+function M.loc_capture(inp)
+    if not inp.loc_valid or not inp.hdg_valid then return false end
+    if math.abs(M.loc_dev(inp)) <= M.CAPTURE_BAND then return true end
+    local y, v = M.loc_lateral(inp), cross_velocity(inp)
+    if y * v >= 0 then return false end
+    local gs = inp.gs * KT
+    local r = gs * gs / (G * math.tan(math.rad(M.CAPTURE_BANK)))
+    return math.abs(y) <= r * (1 - math.cos(math.rad(loc_angle(inp)))) + math.abs(v) * M.CAPTURE_LEAD_S
 end
 
 -- below V2 + 10 with the flaps out (FCTM p.118)
@@ -127,17 +201,19 @@ local function sel_err(s, inp)
 end
 
 -- the command (degrees of bank, right positive), or nil without a law here
--- (no mode, LOC, ROLLOUT); s.valid false for NCD
+-- (no mode, ROLLOUT); s.valid false for NCD
 function M.update(s, inp, dt)
     dt = dt or 0
     local mode = inp.active and inp.mode or nil
     if not M.LAW[mode] then
         s.mode, s.cmd, s.valid, s.err, s.hold, s.trk_ref = mode, nil, false, nil, nil, nil
+        s.loc_y, s.loc_track = nil, false
         s.last_sel, s.last_hdg, s.ref_true = inp.sel, inp.hdg, inp.ref_true
         return nil
     end
     if mode ~= s.mode then
         s.mode, s.err, s.hold, s.trk_ref = mode, nil, nil, nil
+        s.loc_y, s.loc_track = nil, false
         if mode == "GA" and not inp.ground then s.trk_ref = inp.trk end
     end
     if s.cmd == nil then s.cmd = inp.bank end
@@ -159,6 +235,20 @@ function M.update(s, inp, dt)
     elseif mode == "LNAV" then
         target = inp.lnav_bank
         if inp.selector == 0 and below_v2(inp) then target = clamp(target, -M.AUTO_MIN, M.AUTO_MIN) end
+    elseif mode == "LOC" then
+        -- the distance from the beam's centre: on the cross runway velocity,
+        -- to the deviation over BLEND_S while there is one (the inertial
+        -- path holds without it)
+        valid = inp.hdg_valid
+        local th = loc_angle(inp)
+        if s.loc_y == nil then s.loc_y = M.loc_lateral(inp) end
+        s.loc_y = s.loc_y + cross_velocity(inp) * dt
+        if inp.loc_valid then s.loc_y = s.loc_y + (M.loc_lateral(inp) - s.loc_y) * math.min(1, dt / M.BLEND_S) end
+        if not s.loc_track and math.abs(s.loc_y) < M.TRACK_M and math.abs(th) < M.TRACK_DEG then s.loc_track = true end
+        if not inp.ground and inp.ra >= M.ROLL_DOWN_FT then
+            local want = -math.deg(math.atan(s.loc_y / (math.max(inp.gs, 100) * KT * M.LOOK_S)))
+            target = M.bank_for(wrap(want - th), inp, s.loc_track and M.TRACK_LIMIT or M.LOC_LIMIT)
+        end
     elseif inp.ground then
         -- T/O and G/A on the ground: wings level, the track from the lift-off
         s.trk_ref = nil

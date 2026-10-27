@@ -596,9 +596,10 @@ rollPid.target=0
 rollPid.input = 0
 rollPid:compute()
 
--- the roll command: the roll laws' (6-3 step 2a: HDG SEL, HDG HOLD, ATT,
--- LNAV, TO/GA; not X-Plane's heading modes' averaged roll), else the old
--- one (LOC and ROLLOUT until steps 2b and 4)
+-- the roll command: the roll laws' (6-3 steps 2a and 2b: HDG SEL, HDG
+-- HOLD, ATT, LNAV, TO/GA, LOC; not X-Plane's heading modes' averaged roll),
+-- else the old one (no mode of the AFDS model's: the old autoland until
+-- step 4)
 function ap_roll_assist(doCompute)
     local retval=B747DR_sim_roll_ratio--B747_interpolate_value(B747DR_sim_roll_ratio,0,-1,1,20)
     local flight_director_roll
