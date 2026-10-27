@@ -589,4 +589,44 @@ T.check(f2.ident == "ALP02" and math.abs(ca - 90) < 0.01 and math.abs(cb - 135) 
     "ALPHA097/BRAVO142: on both radials (" .. string.format("%.3f %.3f", ca, cb) .. ")")
 T.equal(R.pbd_fix(st, R.parse_pbd("ALPHA097/BRAVO007"), alpha, bravo), nil, "radials that do not meet: none")
 
+-- FIX INFO's geometry (step 7e3b; FCOM p.1358-1359; FMSPG p.166-169): the
+-- route RW16R, ALPHA, BRAVO, CHARL; the airplane at 35 N 140 E, just
+-- short of RW16R; a fix 12.9 nm east of ALPHA-BRAVO
+st = R.new(N, db)
+R.set_origin(st, "ZZAA")
+R.set_dest(st, "ZZBB")
+R.set_runway(st, "16R")
+R.add_to(st, fix("ALPHA"))
+R.add_via(st, "Z1")
+R.add_to(st, fix("CHARL"))
+local here = {lat = 35, lon = 140}
+T.equal(R.fix_path(st, here), nil, "no active route: no path")
+R.activate(st)
+R.exec(st)
+local path = R.fix_path(st, here)
+T.check(path and #path.segs == 3, "the path: RW16R-ALPHA, ALPHA-BRAVO, BRAVO-CHARL")
+T.check(path.at < 0 and path.at > -1, "the airplane just short of the first segment's start: " .. path.at)
+local seg1 = select(2, R.course(35.01, 140.005, 35.5, 140.5))
+local fx = {lat = 35.95, lon = 140.7646}
+local across = (140.7646 - 140.5) * 60 * math.cos(math.rad(35.95))
+local ab = R.fix_abeam(path, fx)
+local _, ab_d = R.course(fx.lat, fx.lon, ab.lat, ab.lon)
+T.check(math.abs(ab.lon - 140.5) < 1e-6 and math.abs(ab.lat - 35.95) < 0.01, "ABEAM: on ALPHA-BRAVO at the fix's latitude")
+T.near(ab_d, across, 0.1, "square to it: " .. string.format("%.2f", ab_d) .. " nm")
+T.near(ab.dtg, seg1 + (ab.lat - 35.5) * 60 - path.at, 0.1, "its distance to go along the path")
+local rx = R.fix_radial(path, fx, 270, 512)
+T.check(rx and math.abs(rx.lon - 140.5) < 1e-6 and math.abs(rx.lat - 35.95) < 0.01, "the radial 270 true: across ALPHA-BRAVO")
+T.equal(R.fix_radial(path, fx, 90, 512), nil, "090: away from the route: none")
+T.equal(R.fix_radial(path, fx, 270, 10), nil, "beyond the radial's reach: none")
+local cx = R.fix_circle(path, fx, 20)
+local _, cx_d = R.course(fx.lat, fx.lon, cx.lat, cx.lon)
+local h = math.sqrt(20 ^ 2 - across ^ 2) / 60
+T.check(math.abs(cx.lon - 140.5) < 1e-6 and math.abs(cx.lat - (35.95 - h)) < 0.01 and math.abs(cx_d - 20) < 0.01,
+    "the circle of 20 nm: the nearer crossing, on ALPHA-BRAVO (FCOM p.1358: the closest of the two)")
+T.equal(R.fix_circle(path, fx, 5), nil, "a circle short of the route: none")
+T.equal(R.fix_abeam(path, {lat = 34.5, lon = 142.0}), nil, "no segment square to it: none (FMSPG p.168: INVALID ENTRY)")
+local fx2 = {lat = 35.15, lon = 140.40}
+local past = R.fix_path(st, {lat = 35.45, lon = 140.45})
+T.check(past.at > 0 and R.fix_abeam(past, fx2).dtg < 0, "a fix abeam the first leg, the airplane past it: negative (FMSPG p.168)")
+
 T.done()
