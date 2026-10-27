@@ -566,6 +566,123 @@ function isATEnabled()
 	return false
 end
 dofile("B747.70.xt.autopilot.vnav.lua")
+
+-- the FCCs' mode logic (6-3 step 1a; notes/ATA-22.md §10): the engage
+-- state, AUTOPILOT DISC, the F/Ds and the default modes. The other modes
+-- are still the code below; the defaults asked for go to it
+dofile("B747.70.afds_model.lua")
+B747DR_ap_engine_type = find_dataref("laminar/B747/engines/type")
+local afds = B747_afds_model.new()
+local afdsIn = {fd = {L = false, R = false}, hyd = {0, 0, 0}}
+local function afds_inp()
+	afdsIn.fd.L = B747DR_toggle_switch_position[23] > 0.5
+	afdsIn.fd.R = B747DR_toggle_switch_position[24] > 0.5
+	afdsIn.hyd[1], afdsIn.hyd[2], afdsIn.hyd[3] = B747DR_hyd_sys_pressure_1, B747DR_hyd_sys_pressure_2, B747DR_hyd_sys_pressure_3
+	afdsIn.bank = simDR_AHARS_roll_deg_pilot
+	afdsIn.engine = B747DR_ap_engine_type
+	afdsIn.ground = simDR_onGround == 1
+	afdsIn.toga = B747DR_autopilot_TOGA_status ~= 0
+	return afdsIn
+end
+-- V/S as the V/S switch sets it, synced to the present vertical speed
+-- (ATA22 p.282, p.344: the switch's own sync is step 1c)
+local function afds_vs_default()
+	if B747DR_autothrottle_active == 0 and isATEnabled() and simDR_onGround == 0 then
+		B747DR_autothrottle_active = 1
+	end
+	B747DR_engine_TOGA_mode = 0
+	B747DR_autopilot_TOGA_status = 0
+	simDR_autopilot_altitude_ft = B747DR_autopilot_altitude_ft
+	simDR_autopilot_hold_altitude_ft = simDR_autopilot_altitude_ft
+	simDR_autopilot_alt_hold_status = 0
+	simDR_autopilot_flch_status = 0
+	simDR_autopilot_vs_status = 2
+	B747DR_ap_thrust_mode = 0
+	B747DR_ap_inVNAVdescent = 0
+	B747DR_ap_flightPhase = B747DR_autopilot_altitude_ft > simDR_pressureAlt1 and 1 or 3
+	B747DR_ap_vnav_state = 0
+	local vs = math.max(-8000, math.min(6000, roundToIncrement(simDR_vvi_fpm_pilot, 100)))
+	simDR_autopilot_vs_fpm = vs
+	B747DR_autopilot_vs_fpm = vs
+end
+-- the modes the model asks for, on the old code's state: V/S, X-Plane's
+-- HDG HOLD (its roll until step 2), ATT's bank, the F/D's TO/GA; all off
+-- (FCOM p.660) with X-Plane's heading modes
+local function afds_apply(act)
+	if not act then return end
+	if act.all_off then
+		B747DR_ap_vnav_state = 0
+		B747DR_ap_lnav_state = 0
+		B747DR_ap_inVNAVdescent = 0
+		B747DR_engine_TOGA_mode = 0
+		B747DR_ap_approach_mode = 0
+		B747DR_autopilot_gs_status = 0
+		B747DR_autopilot_nav_status = 0
+		B747DR_autopilot_TOGA_status = 0
+		B747DR_ap_ATT = 0
+		simDR_autopilot_vs_status = 0
+		simDR_autopilot_flch_status = 0
+		simDR_autopilot_alt_hold_status = 0
+		simCMD_autopilot_servos_fdir_off:once()
+		simCMD_autopilot_servos2_fdir_off:once()
+		simCMD_autopilot_servos3_fdir_off:once()
+		return
+	end
+	if act.toga then B747DR_autopilot_TOGA_status = 1 end
+	if act.toga_off then B747DR_autopilot_TOGA_status = 0 end
+	if act.pitch == "VS" then afds_vs_default() end
+	if act.roll == "ATT" then
+		B747DR_ap_ATT = act.bank
+	elseif act.roll == "HDG_HOLD" then
+		B747DR_ap_ATT = 0
+		if simDR_autopilot_heading_hold_status ~= 2 then simCMD_autopilot_heading_hold_mode:once() end
+	end
+end
+-- the engage state on the datarefs: the channels (CMD lights), the servos
+-- (their start for the hydraulics' 2 s), AUTOPILOT DISC
+local function afds_sync()
+	local L, C, R = afds.L and 1 or 0, afds.C and 1 or 0, afds.R and 1 or 0
+	local on = (L + C + R) > 0 and 1 or 0
+	if on == 1 and simDR_autopilot_servos_on == 0 then B747DR_switching_servos_on = simDRTime end
+	if B747DR_ap_cmd_L_mode ~= L then B747DR_ap_cmd_L_mode = L end
+	if B747DR_ap_cmd_C_mode ~= C then B747DR_ap_cmd_C_mode = C end
+	if B747DR_ap_cmd_R_mode ~= R then B747DR_ap_cmd_R_mode = R end
+	if simDR_autopilot_servos_on ~= on then simDR_autopilot_servos_on = on end
+	local w = afds.disc and 1 or 0
+	if B747DR_CAS_warning_status[0] ~= w then B747DR_CAS_warning_status[0] = w end
+end
+-- a CMD switch pushed
+local function afds_cmd(ch)
+	B747CMD_fdr_log_apon:once()
+	afds_apply(B747_afds_model.cmd(afds, ch, afds_inp()))
+	afds_sync()
+end
+-- the old code's part of a disengage: the A/T back after its reset,
+-- X-Plane's servos
+local function afds_disengaged()
+	if B747DR_autothrottle_active == 1 then
+		run_after_time(autothrottle_reengage, 0.5)
+	end
+	B747CMD_ap_reset:once()
+	simCMD_autopilot_servos_off:once()
+end
+-- a control wheel A/P disengage switch pushed
+local function afds_wheel()
+	B747CMD_fdr_log_apdisconnect:once()
+	local was = B747_afds_model.engaged(afds)
+	B747_afds_model.wheel(afds)
+	if was > 0 then afds_disengaged() end
+	afds_sync()
+end
+-- each frame, first: the F/Ds, the hydraulics, the defaults asked for
+function B747_afds_update()
+	afds_apply(B747_afds_model.update(afds, afds_inp()))
+	afds_sync()
+end
+-- a new flight: the FCCs anew
+function B747_afds_reset()
+	afds = B747_afds_model.new()
+end
 function autothrottle_reengage()
 	if B747DR_autothrottle_active == 0 and isATEnabled() and simDR_onGround == 0 then
 		--simCMD_autopilot_autothrottle_on:once()
@@ -850,143 +967,58 @@ function B747_ap_alt_hold_mode_CMDhandler(phase, duration)
 end
 
 
+-- the CMD switches (6-3 step 1a): the AFDS model engages on the push
+-- (the old code engaged L on the push, C and R on the release, and only
+-- above 400 ft)
 function B747_ap_switch_cmd_L_CMDhandler(phase, duration)
-	print("B747_ap_switch_cmd_L_CMDhandler "..phase.." "..duration)
 	if phase == 0 then
-		--B747CMD_ap_reset:once()
-		B747CMD_fdr_log_apon:once()
-		B747DR_CAS_warning_status[0] = 0
-		if B747DR_ap_button_switch_position[14] == 0 then -- DISENGAGE BAR IS "UP/OFF"
-			if B747DR_ap_cmd_L_mode == 0 and simDR_radarAlt1>400 and (B747DR_ap_cmd_R_mode+B747DR_ap_cmd_C_mode)==0 then -- LEFT CMD AP MODE IS "OFF"
-				if simDR_autopilot_servos_on == 0 then -- AUTOPILOT IS NOT ENGAGED
-					--simCMD_autopilot_servos_on:once()
-
-					B747DR_switching_servos_on = simDRTime -- TURN THE AP SERVOS "ON"
-					simDR_autopilot_servos_on=1
-				end
-				B747DR_ap_cmd_L_mode = 1 -- SET AP CMD L MODE TO "ON"
-			end
-		end
-	elseif phase == 1 then
 		B747_ap_button_switch_position_target[10] = 1 -- SET THE BUTTON ANIMATION TO "DOWN"
+		afds_cmd("L")
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[10] = 0 -- SET THE BUTTON ANIMATION TO "UP"
-
 	end
 end
 
 function B747_ap_switch_cmd_C_CMDhandler(phase, duration)
 	if phase == 0 then
-		B747CMD_fdr_log_apon:once()
 		B747_ap_button_switch_position_target[11] = 1 -- SET THE BUTTON ANIMATION TO "DOWN"
-		B747DR_CAS_warning_status[0] = 0
+		afds_cmd("C")
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[11] = 0 -- SET THE BUTTON ANIMATION TO "UP"
-		if B747DR_ap_button_switch_position[14] == 0 then -- DISENGAGE BAR IS "UP/OFF"
-			if B747DR_ap_cmd_C_mode == 0 and simDR_radarAlt1>400 and (B747DR_ap_cmd_L_mode+B747DR_ap_cmd_R_mode)==0 then -- CENTER CMD AP MODE IS "OFF"
-				if simDR_autopilot_servos_on == 0 then -- AUTOPILOT IS NOT ENGAGED
-					--simCMD_autopilot_servos2_on:once()
-					--simCMD_autopilot_servos_on:once()
-					simDR_autopilot_servos_on=1
-					B747DR_switching_servos_on = simDRTime
-				end
-				B747DR_ap_cmd_C_mode = 1 -- SET AP CMD C MODE TO "ON"
-			end
-		end
 	end
 end
 
 function B747_ap_switch_cmd_R_CMDhandler(phase, duration)
 	if phase == 0 then
-		B747CMD_fdr_log_apon:once()
 		B747_ap_button_switch_position_target[12] = 1 -- SET THE BUTTON ANIMATION TO "DOWN"
-		B747DR_CAS_warning_status[0] = 0
+		afds_cmd("R")
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[12] = 0 -- SET THE BUTTON ANIMATION TO "UP"
-		if B747DR_ap_button_switch_position[14] == 0 then -- DISENGAGE BAR IS "UP/OFF"
-			if B747DR_ap_cmd_R_mode == 0 and simDR_radarAlt1>400 and (B747DR_ap_cmd_L_mode+B747DR_ap_cmd_C_mode)==0 then -- RIGHT CMD AP MODE IS "OFF"
-				if simDR_autopilot_servos_on == 0 then -- AUTOPILOT IS NOT ENGAGED
-					--simCMD_autopilot_servos3_on:once()
-					--simCMD_autopilot_servos_on:once()
-					simDR_autopilot_servos_on=1
-					B747DR_switching_servos_on = simDRTime
-				end
-				B747DR_ap_cmd_R_mode = 1 -- SET AP CMD R MODE TO "ON"
-			end
-		end
 	end
 end
 
+-- the disengage bar: down disengages all A/Ps and keeps them off, the F/Ds
+-- keep their modes (FCOM p.640); lifting it does not reset AUTOPILOT DISC
+-- (ATA22 p.380)
 function B747_ap_switch_disengage_bar_CMDhandler(phase, duration) --disengage bar
 	if phase == 0 then
 		B747CMD_fdr_log_apdisconnect:once()
 		B747_ap_button_switch_position_target[14] = 1.0 - B747_ap_button_switch_position_target[14]
-		B747DR_ap_lastCommand = simDRTime
-		if B747_ap_button_switch_position_target[14] == 1.0 then -- DISENGAGE
-			local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
-			if numAPengaged > 0 then
-				B747DR_CAS_warning_status[0] = 1
-			end
-			if B747DR_autothrottle_active == 1 then
-				run_after_time(autothrottle_reengage,0.5)
-			end
-			B747CMD_ap_reset:once() -- TURN FLIGHT DIRECTOR AND SERVOS "OFF"
-			B747_ap_all_cmd_modes_off()
-			B747DR_ap_lastCommand=simDRTime
-			simCMD_autopilot_servos_off:once()
-			simCMD_autopilot_servos_fdir_off:once()
-			simCMD_autopilot_servos2_fdir_off:once()
-			simCMD_autopilot_servos3_fdir_off:once()
-			simDR_autopilot_servos_on=0
-
-		else
-			B747DR_CAS_warning_status[0] = 0
-		end
+		local down = B747_ap_button_switch_position_target[14] == 1.0
+		local was = B747_afds_model.engaged(afds)
+		B747_afds_model.bar(afds, down)
+		if down and was > 0 then afds_disengaged() end
+		afds_sync()
 	end
 end
 
+-- the control wheel A/P disengage switches (FCOM p.655)
 function B747_ap_switch_yoke_disengage_capt_CMDhandler(phase, duration)
-	if phase == 0 then
-		B747CMD_fdr_log_apdisconnect:once()
-		B747DR_ap_lastCommand = simDRTime
-		local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
-		if B747DR_CAS_warning_status[0] == 0 and numAPengaged > 0 then
-			B747DR_CAS_warning_status[0] = 1
-		else
-			B747DR_CAS_warning_status[0] = 0
-		end
-		if B747DR_autothrottle_active == 1 then
-			run_after_time(autothrottle_reengage,0.5)
-		end
-		B747CMD_ap_reset:once()
-		simCMD_autopilot_servos_off:once()
-		simDR_autopilot_servos_on=0
-		--simCMD_autopilot_fdir_servos_down_one:once()							-- TURN ONLY THE SERVOS OFF, LEAVE FLIGHT DIRECTOR ON
-		B747_ap_all_cmd_modes_off()
-		B747DR_ap_lastCommand=simDRTime
-	end
+	if phase == 0 then afds_wheel() end
 end
 
 function B747_ap_switch_yoke_disengage_fo_CMDhandler(phase, duration)
-	if phase == 0 then
-		B747CMD_fdr_log_apdisconnect:once()
-		B747DR_ap_lastCommand = simDRTime
-		local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
-		if B747DR_CAS_warning_status[0] == 0 and numAPengaged > 0 then
-			B747DR_CAS_warning_status[0] = 1
-		else
-			B747DR_CAS_warning_status[0] = 0
-		end
-		if B747DR_autothrottle_active == 1 then
-			run_after_time(autothrottle_reengage,0.5)
-		end
-		B747CMD_ap_reset:once()
-		simCMD_autopilot_servos_off:once()
-		simDR_autopilot_servos_on=0
-		--simCMD_autopilot_fdir_servos_down_one:once()							-- TURN ONLY THE SERVOS OFF, LEAVE FLIGHT DIRECTOR ON
-		B747_ap_all_cmd_modes_off()
-		B747DR_ap_lastCommand=simDRTime
-	end
+	if phase == 0 then afds_wheel() end
 end
 
 -- the control wheel stab trim switches with a single A/P engaged (the SRMs,
@@ -994,18 +1026,11 @@ end
 -- p.142), an automatic disengagement, so AUTOPILOT DISC shows (FCOM 4.20)
 function B747_ap_trim_disengage_CMDhandler(phase, duration)
 	if phase == 0 then
-		local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
-		if numAPengaged == 0 then return end
+		if B747_afds_model.engaged(afds) == 0 then return end
 		B747CMD_fdr_log_apdisconnect:once()
-		B747DR_CAS_warning_status[0] = 1
-		if B747DR_autothrottle_active == 1 then
-			run_after_time(autothrottle_reengage,0.5)
-		end
-		B747CMD_ap_reset:once()
-		simCMD_autopilot_servos_off:once()
-		simDR_autopilot_servos_on=0
-		B747_ap_all_cmd_modes_off()
-		B747DR_ap_lastCommand=simDRTime
+		B747_afds_model.disengage(afds)
+		afds_disengaged()
+		afds_sync()
 	end
 end
 
@@ -2473,10 +2498,10 @@ function B747_ap_appr_mode_beforeCMDhandler(phase, duration)
 		--if diff>0.5 then
 		if B747DR_ap_approach_mode <= 0 then
 			B747DR_ap_approach_mode = 1
-			if (B747DR_ap_cmd_L_mode ==1 or B747DR_ap_cmd_C_mode ==1 or B747DR_ap_cmd_R_mode==1) and simDR_radarAlt1>1500 then
-				B747DR_ap_cmd_L_mode=1
-				B747DR_ap_cmd_C_mode=1
-				B747DR_ap_cmd_R_mode=1
+			if B747_afds_model.engaged(afds) > 0 and simDR_radarAlt1>1500 then
+				-- the old approach's channels together (until 6-3 step 4)
+				B747_afds_model.multi(afds, afds_inp())
+				afds_sync()
 			end
 			print("arm APP approach")
 		elseif B747DR_autopilot_gs_status ~= 2 and B747DR_autopilot_nav_status ~= 2 then
@@ -2543,27 +2568,12 @@ function B747_ap_appr_mode()
 	if
 		B747DR_ap_approach_mode ~= 0 and simDR_radarAlt1 < 1500 and B747DR_autopilot_nav_status == 2 and
 		B747DR_autopilot_gs_status == 2 and
-			(B747DR_ap_cmd_L_mode == 1 or B747DR_ap_cmd_C_mode == 1 or B747DR_ap_cmd_R_mode == 1)
+			B747_afds_model.engaged(afds) > 0
 	 then
-		if B747DR_hyd_sys_pressure_3>1000 then
-			B747DR_ap_cmd_L_mode = 1
-		end
-		if B747DR_hyd_sys_pressure_1>1000 then
-			B747DR_ap_cmd_C_mode = 1
-		end
-		if B747DR_hyd_sys_pressure_2>1000 then
-			B747DR_ap_cmd_R_mode = 1
-		end
-	end
-	--print(B747DR_hyd_sys_pressure_1.." "..B747DR_hyd_sys_pressure_2.." "..B747DR_hyd_sys_pressure_3.." "..B747DR_ap_cmd_L_mode.." "..B747DR_ap_cmd_C_mode.." "..B747DR_ap_cmd_R_mode)
-	if B747DR_hyd_sys_pressure_3<1000 then
-		B747DR_ap_cmd_L_mode = 0
-	end
-	if B747DR_hyd_sys_pressure_1<1000 then
-		B747DR_ap_cmd_C_mode = 0
-	end
-	if B747DR_hyd_sys_pressure_2<1000 then
-		B747DR_ap_cmd_R_mode = 0
+		-- the old approach's channels together (until 6-3 step 4); those
+		-- without hydraulic pressure drop out in the AFDS model
+		B747_afds_model.multi(afds, afds_inp())
+		afds_sync()
 	end
 	if B747DR_ap_approach_mode == 0 then
 		--[[if simDR_autopilot_gs_status > 0 then
@@ -2642,7 +2652,6 @@ end
 
 dofile("B747.autoland.lua")
 dofile("B747.70.xt.autopilot.monitor.lua")
-local apWasOn=0
 function fma_rollModes()
 	local diff = simDRTime - B747DR_ap_lastCommand
 
@@ -2654,18 +2663,19 @@ function fma_rollModes()
 
 	-- (NONE) --
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
-	if numAPengaged>0 then
-		apWasOn=1
-	end
 	if numAPengaged>0 or B747DR_toggle_switch_position[23] > 0.5 or B747DR_toggle_switch_position[24] > 0.5 then
 		B747BR_showFMA=1
 	else
 		B747BR_showFMA=0
 	end
-	if B747DR_toggle_switch_position[23] == 0.0 and B747DR_toggle_switch_position[24] == 0.0  and numAPengaged == 0 and apWasOn==1 then
-		
+	-- everything off with neither the A/P nor a F/D (FCOM p.660; the AFDS
+	-- model clears the old state as it happens: 6-3 step 1a)
+	if numAPengaged == 0 and B747DR_toggle_switch_position[23] < 0.5 and B747DR_toggle_switch_position[24] < 0.5 then
 		B747DR_ap_FMA_armed_roll_mode = 0
-	elseif B747DR_ap_lnav_state == 1 then
+		B747DR_ap_FMA_active_roll_mode = 0
+		return
+	end
+	if B747DR_ap_lnav_state == 1 then
 		B747DR_ap_FMA_armed_roll_mode = 2 -- (LNAV) --
 	elseif B747DR_autopilot_nav_status == 1 or (B747DR_ap_approach_mode ~= 0 and B747DR_autopilot_nav_status ~= 2) then
 		B747DR_ap_FMA_armed_roll_mode = 3 -- (LOC) --
@@ -2685,9 +2695,7 @@ function fma_rollModes()
 	local navcrz = simDR_nav1_radio_course_deg
 	--print("navcrz "..navcrz)
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
-	if B747DR_toggle_switch_position[23] == 0.0 and B747DR_toggle_switch_position[24] == 0.0  and numAPengaged == 0 and apWasOn==1 then
-		B747DR_ap_FMA_active_roll_mode = 0 -- (NONE) --
-	elseif math.abs(B747DR_ap_ATT) >= 5.0 then
+	if math.abs(B747DR_ap_ATT) >= 5.0 then
 		B747DR_ap_FMA_active_roll_mode = 5
 	elseif B747DR_autopilot_TOGA_status~=0 and B747DR_ap_lnav_state ~= 2 then --simDR_autopilot_TOGA_lat_status == 2 then
 		B747DR_ap_FMA_active_roll_mode = 1 -- (TOGA) --
@@ -2768,10 +2776,14 @@ function fma_PitchModes()
 	-- (NONE) --
 
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
-	if B747DR_toggle_switch_position[23] == 0.0 and B747DR_toggle_switch_position[24] == 0.0  and numAPengaged == 0 and apWasOn==1 then
-			-- (TOGA) --
+	-- everything off with neither the A/P nor a F/D (FCOM p.660; the old
+	-- capture window showed ALT near the MCP altitude without a mode)
+	if numAPengaged == 0 and B747DR_toggle_switch_position[23] < 0.5 and B747DR_toggle_switch_position[24] < 0.5 then
 		B747DR_ap_FMA_armed_pitch_mode = 0
-	elseif B747DR_ap_vnav_state == 1 then
+		B747DR_ap_FMA_active_pitch_mode = 0
+		return
+	end
+	if B747DR_ap_vnav_state == 1 then
 		-- (G/S) --
 		B747DR_ap_FMA_armed_pitch_mode = 4
 	elseif B747DR_autopilot_gs_status == 1 or (B747DR_ap_approach_mode > 0 and B747DR_autopilot_gs_status ~= 2) then
@@ -2792,28 +2804,7 @@ function fma_PitchModes()
 	local altDiff=math.abs(simDR_pressureAlt1-simDR_autopilot_altitude_ft)
 	-- (NONE) --
 	--B747DR_ap_FMA_active_pitch_mode = 0
-	if B747DR_toggle_switch_position[23] == 0.0 and B747DR_toggle_switch_position[24] == 0.0 and numAPengaged == 0 and apWasOn==1 then
-		-- (TOGA) --
-		if (simDRTime - B747DR_switching_servos_on) > 1 then
-			B747_ap_all_cmd_modes_off()
-			simCMD_autopilot_servos_fdir_off:once()
-			simCMD_autopilot_servos2_fdir_off:once()
-			simCMD_autopilot_servos3_fdir_off:once()
-		end
-
-		B747DR_ap_FMA_active_pitch_mode = 0
-		B747DR_ap_vnav_state = 0
-		B747DR_ap_lnav_state = 0
-		B747DR_ap_inVNAVdescent = 0
-		--B747DR_ap_thrust_mode=0
-		B747DR_engine_TOGA_mode = 0
-		--if B747DR_autopilot_gs_status ~= 2 and B747DR_autopilot_nav_status ~= 2 then
-		B747DR_ap_approach_mode = 0
-		apWasOn=0
-		B747DR_autopilot_gs_status = 0
-		B747DR_autopilot_nav_status = 0
-		--end
-	elseif B747DR_autopilot_TOGA_status == 1 then
+	if B747DR_autopilot_TOGA_status == 1 then
 		--if B747DR_engine_TOGA_mode == 1 then
 
 		B747DR_ap_FMA_active_pitch_mode = 1
@@ -2995,36 +2986,9 @@ end
 ---- AFDS STATUS -------------------------------------------------------------------------
 function B747_ap_afds()
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
-	if simDR_autopilot_servos_on == 0 then
-		if numAPengaged > 0 and (simDRTime - B747DR_switching_servos_on) > 1 then
-			print("reset AP in B747_ap_afds")
-			run_after_time(ap_reset, 2)
-			B747DR_CAS_warning_status[0] = 1
-			B747DR_ap_cmd_L_mode = 0
-			B747DR_ap_cmd_C_mode = 0
-			B747DR_ap_cmd_R_mode = 0
-		elseif numAPengaged == 0 then
-			B747DR_switching_servos_on = simDRTime
-
-		end
-
-
-		--simDR_autopilot_approach_status =0
+	-- (the engage state is the AFDS model's: 6-3 step 1a)
+	if numAPengaged == 0 then
 		B747DR_ap_autoland = 0
-		landAssist = false
-	elseif simDR_autopilot_servos_on == 1 and (simDRTime - B747DR_switching_servos_on) > 1 then
-		if numAPengaged == 0 then
-			if B747DR_autothrottle_active == 1 then
-				run_after_time(autothrottle_reengage,0.5)
-			end
-			B747CMD_ap_reset:once()
-			simCMD_autopilot_servos_off:once()
-			simDR_autopilot_servos_on=0
-			B747_ap_all_cmd_modes_off()
-			B747DR_CAS_warning_status[0] = 1
-			B747DR_ap_lastCommand=simDRTime
-
-		end
 	end
 	local diff = simDRTime - B747DR_ap_lastCommand
 	if diff < 0.1 then
@@ -3204,6 +3168,7 @@ end
 ----- TURN AUTOPILOT COMMAND MODES OFF --------------------------------------------------
 function B747_ap_all_cmd_modes_off()
 	print("B747_ap_all_cmd_modes_off")
+	B747_afds_model.disengage(afds, true)
 	B747DR_ap_cmd_L_mode = 0
 	B747DR_ap_cmd_C_mode = 0
 	B747DR_ap_cmd_R_mode = 0
@@ -3510,7 +3475,7 @@ function B747_set_ap_all_modes()
 	B747DR_ap_alt_show_thousands = 1
 
 	simDR_autopilot_airspeed_kts_mach = 0.76 --200.0
-	B747DR_ap_ias_dial_value = 100
+	B747DR_ap_ias_dial_value = 200
 	simDR_autopilot_heading_deg = 0.0
 	simDR_autopilot_vs_fpm = 0.0
 	simDR_autopilot_altitude_ft = 10000.0
@@ -3553,6 +3518,7 @@ end
 --function aircraft_unload() end
 
 function flight_start()
+	B747_afds_reset()
 	B747_flight_start_autopilot()
 	simDR_elevator = 0
 	simDR_rudder = 0
@@ -3591,6 +3557,7 @@ function after_physics()
 	end
 	simDR_allThrottle=math.max(B747DR_throttle[0],B747DR_throttle[1],B747DR_throttle[2],B747DR_throttle[3])
 	ap_hdg_ref_hold()
+	B747_afds_update()
 	local cHeading = simDR_AHARS_heading_deg_pilot --constant refresh of data
 	local tHeading = simDR_autopilot_heading_deg --constant refresh of data
 	local headingStatus = simDR_autopilot_heading_hold_status --constant refresh of data

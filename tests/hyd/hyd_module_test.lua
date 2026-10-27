@@ -281,4 +281,18 @@ rt:command(HP .. "tail_3")
 co_frames(2.5)
 T.equal(get(HP .. "tail_valve_shut", 2), 0, "TAIL 3 open again")
 
+-- the old pitch law (B747.19.xt.afds_control.lua, until 6-3 step 3) with no
+-- pitch mode (everything off: the AFDS model, 6-3 step 1a): its capture
+-- window latches no ALT HOLD; with V/S inside it, it still does
+rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 0)
+rt:set("laminar/B747/autopilot/altitude_hold_status", 0)
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 10000)
+rt:set("laminar/B747/autopilot/altitude_dial_ft", 10050)
+rt:set("laminar/B747/autopilot/ap_monitor/alt_capture_window", 500)
+frames(3)
+T.equal(get("laminar/B747/autopilot/altitude_hold_status"), 0, "no pitch mode: no ALT HOLD latched near the target")
+rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 7)
+frames(3)
+T.equal(get("laminar/B747/autopilot/altitude_hold_status"), 2, "V/S inside the window: ALT HOLD latched (the old capture)")
+
 T.done()

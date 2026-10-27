@@ -142,6 +142,12 @@ function ap_director_pitch(pitchMode)
     if simDR_autopilot_alt_hold_status==2 and (pitchMode~=5 and pitchMode~=6 and pitchMode~=9) then
         simDR_autopilot_alt_hold_status=0
     end
+    -- no pitch mode (everything off: the AFDS model, 6-3 step 1a): no
+    -- command, and no capture (the window below latched ALT HOLD without a
+    -- mode)
+    if pitchMode == 0 then
+        return simDR_AHARS_pitch_heading_deg_pilot
+    end
     if simDR_autopilot_alt_hold_status==2 then
         holdAlt=simDR_autopilot_hold_altitude_ft
     end

@@ -473,6 +473,11 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - IRS：`irs/irs_system.lua`（アライン、位置）。`irs/rnav_system.lua`。
 - ルート・航法：X-Plane の FMS（`xtlua/fms`）。LNAV のポイント切り替えは autopilot 側（`override_fms_advance`）。VNAV は `B744.fms.pages.vnav*.lua` と `B747.70.xt.autopilot.vnav*`。
 
+## 6a. AFDS（6-3）
+
+- 作り直しの段取りは notes/ATA-22.md §10。モードの論理を、自動操縦のモジュール（`B747.70.xt.autopilot`）の純粋なモデル `B747.70.afds_model.lua`（`B747_afds_model`）に段ごとに移す。移していないモードと制御則は前のコード（`B747.70.xt.autopilot.lua`・monitor・autoland と、油圧のモジュールの `B747.19.xt.afds_control.lua`）のまま。
+- 段 1a（2026-10-27、notes §11）：モデルが A/P の engage の状態（L・C・R、解除バー）、AUTOPILOT DISC、F/D のスイッチと既定のモードを持つ。グルー（`B747.70.xt.autopilot.lua` の `afds_*`）は、CMD・解除バー・操縦輪のスイッチ・トリムによる解除のハンドラーからモデルを呼び、毎フレームの最初（`B747_afds_update()`）に F/D のスイッチ（`toggle_switch/position[23]`・`[24]`）と油圧を渡して、`autopilot/cmd_L_mode/status`・`cmd_C_…`・`cmd_R_…`、`autopilot/servos_on`（engage の時刻 `ap_monitor/servos_on_time`）、`CAS/warning_status[0]`（AUTOPILOT DISC）を書く。既定のモードは前のコードの状態（`vvi_status` と V/S の目標、X-Plane の `sim/autopilot/heading_hold`、`att_rate`、`TOGA_status`）に書く。前のコードの全チャンネル解除（`B747_ap_all_cmd_modes_off`）はモデルを警報なしで解除する。F/D のスイッチのハンドラー（`plugins/xtlua` の manipulators）はスイッチだけ。
+
 ## 7. エンジン型式
 
 - 機体設定 `engines` の選択肢：PW4056 / PW4060 / PW4062、CF6-80C2-B1F / B5F / B1F1、RB211-524G / H / H8T。既定は PW4056。
