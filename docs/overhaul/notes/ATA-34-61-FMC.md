@@ -805,3 +805,16 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - RTE COPY>（5R）は段 7e4（RTE 2 と一緒に）。
 - 試験：`route_model_test.lua`（222 件：飛ばした点の真横、名前と番号、直行の線の上と直角、制限なし、押した後の INTC CRS の不可、EXEC の始点、X-Plane の行、ほかの変更と INTC CRS で消える、経路に無い点への DIRECT TO、手続きの点、緯度経度の点、700 nm）、`legs_pages_test.lua`（56 件：破線と ABEAM PTS>、押すと CHA01、SELECTED、INTC CRS が消える、EXEC、X-Plane の FMS、ほかの変更で消える、距離の位置）。
 - X-Plane：新しい `s95_abeam` 23/23（RJAA→XAC の脚の上で LNAV、経路 XAC・KOUGA・SPENS・SAGRA。DIRECT TO SAGRA の 4R に破線と ABEAM PTS>、INTC CRS 279°>。押すと XAC01（9 nm）・KOU02・SPE03・SAGRA と ABEAM PTS SELECTED、INTC CRS が消える。EXEC で LNAV が直行の線を飛び（XTK 0.02 nm 以内）、XAC01 を順送りして ND の現用点が KOU02。CDU と ND の写真：LEGS の距離の位置、4R の表示、ND の線の上の KOU02・SPE03）、`s87_legs_pages` 29/29。Lua の誤りなし。
+
+## 38. 段 7e3a の実装（2026-10-27：自分で作る点の入力）
+
+- 段 7e3（FIX INFO）は 2 つに分ける：7e3a 自分で作る点の入力、7e3b FIX INFO のページ。FIX INFO で作る点を経路に入れる（FCOM p.1359）には、RTE と LEGS のページが乗員の定義する点を受ける必要がある（FCOM p.1245：緯度経度、place/bearing/distance、place bearing/place bearing で入れられる）。
+- 緯度経度（FCOM p.1250）：N47W008（度だけ）か N4715.4W00803.4（分を 1/10 まで）。緯度と経度は別々にどちらの形でもよい。名前は度の 7 文字（N47W008）。
+- place/bearing/distance：SEA330/10、ABC180.0/026.4（FIX INFO の写しの形：FCOM p.1359）。place bearing/place bearing：SEA240/OLM320。
+  - 方位は磁方位で、場所の偏差（最寄りの VOR の値）で真方位にする（推定）。000–360、小数 1 桁まで。距離は 0 より大きく 999.9 nm まで（推定）。
+  - 場所は航法データの点。1 つ目は SELECT DESIRED WPT（前の点の近い順）、2 つ目は 1 つ目に近いもの（推定）。2 本の方位線が前で交わらなければ INVALID ENTRY（推定）。
+  - 名前は場所の頭 3 文字と番号（SEA01：FCOM p.1250。番号は段 7e2 の abeam の点と同じ、経路に無い一番小さいもの）。
+- 経路にある乗員の点は、その名前で入れ直せる（SEA01、N47W008：候補に経路の点を足した）。
+- REF NAV DATA の IDENT と FIX INFO の FIX は航法データの点だけ（FCOM p.1355、p.1358）なので、これらの形は受けない。
+- 試験：`route_model_test.lua`（237 件：緯度経度の形、PBD・PB/PB の形と不可の入力、点の位置、番号、名前で入れ直す、方位線の交点、交わらない方位線）、`legs_pages_test.lua`（63 件：N3700.0E14100.0、ALPHA097/10（ALPHA が 2 つあるので場所の SELECT DESIRED WPT）、ALP02 を名前で、データに無い場所、交わらない方位線）。
+- X-Plane：`s95_abeam` 26/26（段 7e2 の確認の後、LEGS の経路の終わりの後に N3442.0E13800.0 で N34E138、SPENS180/10 で SPE04（XAC01・KOU02・SPE03 の次の番号）、ERASE。CDU の写真で確かめた）、`s86_rte_pages` 19/19。Lua の誤りなし。

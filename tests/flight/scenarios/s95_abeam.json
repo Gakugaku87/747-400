@@ -1,6 +1,6 @@
 {
   "name": "s95_abeam",
-  "description": "DIRECT TO の ABEAM PTS（6-1・6-2 段 7e2）の X-Plane での確認、空中。RJAA→XAC の脚の上、XAC の 15 nm 手前、10,000 ft、250 kt で開始（機体を読み直す）。RTE で RJAA→RJBB、DIRECT XAC・KOUGA・SPENS・SAGRA を入れ、ACTIVATE と EXEC、LNAV。LEGS で DIRECT TO SAGRA：MOD の 4R に破線と ABEAM PTS>（FCOM p.1333-1334；FMSPG p.138）、押すと飛ばした XAC・KOUGA・SPENS の真横の点 XAC01・KOU02・SPE03 が SAGRA の前に入り（FMSPG p.136：場所の頭 3 文字と番号、FCOM p.1250）、4R は ABEAM PTS SELECTED、INTC CRS は消える（FMSPG p.139 の図）。EXEC で LNAV が直行の線を飛び、XAC01 を順送り。CDU と ND を撮る。",
+  "description": "DIRECT TO の ABEAM PTS（6-1・6-2 段 7e2）の X-Plane での確認、空中。RJAA→XAC の脚の上、XAC の 15 nm 手前、10,000 ft、250 kt で開始（機体を読み直す）。RTE で RJAA→RJBB、DIRECT XAC・KOUGA・SPENS・SAGRA を入れ、ACTIVATE と EXEC、LNAV。LEGS で DIRECT TO SAGRA：MOD の 4R に破線と ABEAM PTS>（FCOM p.1333-1334；FMSPG p.138）、押すと飛ばした XAC・KOUGA・SPENS の真横の点 XAC01・KOU02・SPE03 が SAGRA の前に入り（FMSPG p.136：場所の頭 3 文字と番号、FCOM p.1250）、4R は ABEAM PTS SELECTED、INTC CRS は消える（FMSPG p.139 の図）。EXEC で LNAV が直行の線を飛び、XAC01 を順送り。CDU と ND を撮る。最後に LEGS で緯度経度（N3442.0E13800.0）と PBD（SPENS180/10）を経路の終わりの後に入れて ERASE（段 7e3a：FCOM p.1245、p.1249-1250）。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 34.91121, "longitude": 139.59895, "elevation_in_meters": 3048, "heading_true": 217, "speed_in_meters_per_second": 128.6 },
@@ -76,6 +76,17 @@
     { "do": "sleep", "seconds": 3 },
     { "do": "view", "note": "機長の ND：直行の線の上の KOU02・SPE03 と SAGRA", "the": -22, "psi": 8, "fov": 20 },
     { "do": "shot", "name": "nd_abeam_points" },
+    { "do": "view", "name": "forward" },
+    { "do": "mark", "note": "自分で作る点（段 7e3a：FCOM p.1245、p.1249-1250）：緯度経度と PBD を経路の終わりの後に" },
+    { "do": "cdu", "keys": ["LEGS", "N3442.0E13800.0", "L4"] },
+    { "do": "check", "note": "N34E138（7 文字の名前：FCOM p.1250）", "dref": "laminar/B747/fms3/Line09_L", "op": "matches", "value": "^N34E138 " },
+    { "do": "cdu", "keys": ["SPENS180/10", "L5", "?SEL"] },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "SPENS の 180 度 10 nm：SPE04（XAC01、KOU02、SPE03 の次の番号：FCOM p.1250）", "dref": "laminar/B747/fms3/Line11_L", "op": "matches", "value": "^SPE04 " },
+    { "do": "check", "note": "MOD RTE 1 LEGS", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "MOD RTE 1 LEGS" },
+    { "do": "view", "note": "左の CDU", "the": -34, "psi": 22, "fov": 16 },
+    { "do": "shot", "name": "cdu_pilot_waypoints" },
+    { "do": "cdu", "note": "ERASE", "keys": ["L6"] },
     { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
     { "do": "view", "name": "forward" }
   ]

@@ -27,7 +27,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 脚・ブレーキ・ステアリング（ATA 32） | 作り直し済み（4-2 段 1〜5：脚の作動・代替下げ・位置監視・表示、ブレーキ、オートブレーキ、ステアリング、ブレーキ温度とタイヤ圧） | AIR/GND SYSTEM と脚の STATUS の一部、tiller の軸が無いときのペダル（実機ではない手当て） |
 | 表示（PFD・ND・EICAS） | ほぼ作り直し済み（5-2 段 1：表示器と EIU、段 2：ソース選択の比較、段 3：速度テープ、段 4：PFD の気圧・PLI・FPV・ILS と旗、段 5：ND の向き・APP・VOR・DATA・POS・地図の記号・空港・HDG REF・トレンドベクトル、段 6：時計、EICAS の部分表示と compact、段 7：パネルの表示の条件の重なり） | TERR（外部のプラグイン頼み）、ND の FMC の記号の残り（S/C・E/D など：FMC の作り直しで）、405 型の RADIO/BARO の minimums |
 | 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記。段 5d：PFD の TCAS RA・トランスポンダのコード・ND の WXR の文字） | FMC の位置への GPS の更新、GPWS の地形の look-ahead、PWS、無線の自動同調（FMC の作り直しで） |
-| FMC | 作り直し中（段取り：経路を自前で持ち、12 段で。notes/ATA-34-61-FMC.md §10。段 1：小修正、段 4：航法データベース、段 5a〜5e：経路のモデル、RTE・LEGS・DEP/ARR、現用点と X-Plane の FMS。段 6a〜6d：経路の形と LNAV、ND の線。段 7a〜7d：ホールド、オフセット。段 7e1・7e2：REF NAV DATA、ABEAM PTS） | ND の fly-by の旋回の曲線とオフセットの線、PLAN の CTR と STEP、procedure turn、VNAV（X-Plane の FMS に流した経路を飛ぶ）、予測 |
+| FMC | 作り直し中（段取り：経路を自前で持ち、12 段で。notes/ATA-34-61-FMC.md §10。段 1：小修正、段 4：航法データベース、段 5a〜5e：経路のモデル、RTE・LEGS・DEP/ARR、現用点と X-Plane の FMS。段 6a〜6d：経路の形と LNAV、ND の線。段 7a〜7d：ホールド、オフセット。段 7e1〜7e3a：REF NAV DATA、ABEAM PTS、自分で作る点） | ND の fly-by の旋回の曲線とオフセットの線、PLAN の CTR と STEP、procedure turn、VNAV（X-Plane の FMS に流した経路を飛ぶ）、予測 |
 | CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み、段 3：地上準備のページ、段 4：航法データベース、段 5：経路（RTE・LEGS・DEP/ARR まで）） | 3 台が 1 つを共有、MOD/EXEC、入力の検査、データリンク |
 | 自動操縦・FD | 未着手 | ロールが X-Plane の AP 頼み、LOC・TO/GA・autoland の則 |
 | オートスロットル・推力管理 | 未着手 | 推力制限のモード、assumed temperature、THR・HOLD、操縦者の override |
@@ -385,6 +385,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 空中の THRUST LIM の GA・CON・CRZ は選べない（KEY/FUNCTION INOP。推力管理 6-4 で。前は離陸の derate が動いた：CDU-10）。VNAV・PROGRESS・NAV RADIO のページの不足（CDU-14〜16）。
 - 無いページ（RTE 2、DESCENT FORECAST など。CDU-18。REF NAV DATA は 2026-10-27 から）。故障の扱い（CDU-19）。MSG・DSPY・OFST・FAIL の灯（3D に無い：CDU-22）。
 - データリンク：アップリンクの処理が無い（CDU-34〜38）。
+- 実機に合わせた点（段 7e3a）：RTE と LEGS で緯度経度（N47W008、N4715.4W00803.4）、place/bearing/distance（SEA330/10）、place bearing/place bearing（SEA240/OLM320）の点を入れられる（前は航法データの点だけ）。名前は N47W008・SEA01（FCOM p.1245、p.1250）。方位の偏差は最寄りの VOR の値（推定）。
 - 実機に合わせた点（段 7e2）：LEGS の各点の見出しの距離は 14 桁目で終わる（前は 17 桁目で、右の制限の列に入っていた）。DIRECT TO の修正の 4R に ABEAM PTS>、押すと SELECTED（FCOM p.1333–1334）。
 - 実機に合わせた点（段 7e1）：INIT/REF INDEX の NAV DATA> は FMC 自身の REF NAV DATA（前は X-Plane の DATABASE ページ）。IDENT にウェイポイント・航法施設・空港・目的地の滑走路を入れると FREQ・緯度と経度・MAG VAR か LENGTH・ELEVATION を出し、NAVAID INHIBIT・VOR ONLY INHIBIT・VOR/DME NAV の入力を持つ（FCOM p.1355–1357）。抑止はまだ何も変えない（FMC の無線の位置の更新は段 10）、飛行の終わりでも消えない（段 9）。滑走路の長さは閾値の間から（推定）。緯度と経度の表示は分の 1/10 に四捨五入（前は切り捨て）。
 - 実機に合わせた点（段 5e）：飛行中は LEGS の 1 行目が現用点になり、通過した点が消える（前は通過した点も残った）。空中で経路を変えて EXEC しても、ND の現用点と ETA が出発地に戻らない。DIRECT TO は現在位置からの線（前は出発地からの線に乗りに行った）。ND の DATA に、入力した、または手続きの高度の制限が出る（段 5b から出ていなかった）。

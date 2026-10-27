@@ -192,6 +192,30 @@ function B747_fmc_with_point(fmsO, ident, near, done, list)
   fmsO.targetpgNo = 1
 end
 
+-- a waypoint entered on the RTE and LEGS pages: a database point (or a
+-- waypoint of the route the crew defined: B747_fmc_with_point), or one
+-- the crew defines (step 7e3a; FCOM p.1245, p.1249-1250): latitude/
+-- longitude, place/bearing/distance, place bearing/place bearing; the
+-- first place by SELECT DESIRED WPT, the second the nearest to it
+-- (estimate); INVALID ENTRY when the radials do not meet
+function B747_fmc_with_fix(fmsO, sp, near, done)
+  local st = B747_fmc_route
+  local ll = R.parse_latlon(sp)
+  if ll then done(ll) return end
+  local e = R.parse_pbd(sp)
+  if not e then B747_fmc_with_point(fmsO, sp, near, done) return end
+  B747_fmc_with_point(fmsO, e.place, near, function(place)
+    local place2 = nil
+    if e.place2 then
+      place2 = R.candidates(st, e.place2, place.lat, place.lon)[1]
+      if not place2 then fmsO["notify"] = "NOT IN DATA BASE" return end
+    end
+    local f = R.pbd_fix(st, e, place, place2)
+    if not f then fmsO["notify"] = "INVALID ENTRY" return end
+    done(f)
+  end)
+end
+
 -- the entries (FCOM p.1288-1289, p.1296-1298; FMSPG p.82-83): an empty
 -- scratchpad copies the line's identifier into it (FMSPG p.82); a route
 -- entry's message, or the scratchpad emptied and the route changed (the
@@ -261,7 +285,7 @@ function fmsFunctions.rteto(fmsO, value)
   local last = r.legs[#r.legs]
   local before = r.legs[#r.legs - (boxes and 1 or 0)]
   local near = before and before.fix or r.origin
-  B747_fmc_with_point(fmsO, sp, near, function(p) entry(fmsO, R.add_to(B747_fmc_route, p)) end)
+  B747_fmc_with_fix(fmsO, sp, near, function(p) entry(fmsO, R.add_to(B747_fmc_route, p)) end)
 end
 -- OFFSET (FCOM p.1298; FMSPG p.156): L or R and 1-99 nm (R20, L5); L0, 0,
 -- R0 or DELETE cancels it

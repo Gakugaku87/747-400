@@ -238,13 +238,28 @@ end
 
 -- the candidates for an identifier (SELECT DESIRED WPT when more than
 -- one: FCOM p.1335), nearest first to `lat`, `lon`; the origin's and the
--- destination's terminal waypoints with them
-function M.candidates(st, ident, lat, lon)
+-- destination's terminal waypoints with them, and the waypoints the crew
+-- defined in the route by their names (step 7e3a: SEA01, N47W008) but
+-- with `db_only` (REF NAV DATA, FIX INFO: the database's)
+local PILOT = {LL = true, PBD = true}
+function M.candidates(st, ident, lat, lon, db_only)
     local r = M.shown(st)
     local apts = {}
     if r.origin then apts[#apts + 1] = r.origin.ident end
     if r.dest then apts[#apts + 1] = r.dest.ident end
-    return st.N.find(st.db, ident, lat, lon, apts)
+    local list = st.N.find(st.db, ident, lat, lon, apts)
+    if db_only then return list end
+    for _, l in ipairs(r.legs) do
+        local f = l.fix
+        if f and PILOT[f.kind] and f.ident == ident then
+            local seen = false
+            for _, c in ipairs(list) do
+                if c.ident == f.ident and math.abs(c.lat - f.lat) < 1e-6 and math.abs(c.lon - f.lon) < 1e-6 then seen = true end
+            end
+            if not seen then list[#list + 1] = f end
+        end
+    end
+    return list
 end
 
 local function full(r, extra)
@@ -509,6 +524,102 @@ local function pbd_number(st, more)
         if not used[n] then return n end
     end
     return nil
+end
+
+-- the waypoints the crew defines (step 7e3a; FCOM p.1245, p.1249-1250):
+--  - latitude/longitude: N47W008 (whole degrees) or N4715.4W00803.4 (the
+--    minutes to the tenth), each part on its own; named by its whole
+--    degrees (N47W008);
+--  - place/bearing/distance: SEA330/10, ABC180.0/026.4 (FIX INFO's copy:
+--    FCOM p.1359); place bearing/place bearing: SEA240/OLM320. The
+--    bearings magnetic (the variation at the place: the nearest VOR's,
+--    estimate), 000-360 with a tenth; the distance up to 999.9 nm, more
+--    than 0 (estimate). Named by the place's first three characters and a
+--    number (SEA01: FCOM p.1250).
+local function lat_lon_part(s, hemi, ndeg)
+    local h, rest = string.match(s, "^([" .. hemi .. "])(.+)$")
+    if not h then return nil end
+    local digits = string.rep("%d", ndeg)
+    local v = tonumber(string.match(rest, "^(" .. digits .. ")$") or "")
+    if not v then
+        local d, m = string.match(rest, "^(" .. digits .. ")(%d%d%.%d)$")
+        if not d or tonumber(m) >= 60 then return nil end
+        v = tonumber(d) + tonumber(m) / 60
+    end
+    return (h == "S" or h == "W") and -v or v
+end
+function M.parse_latlon(s)
+    local a, b = string.match(s, "^([NS][%d%.]+)([EW][%d%.]+)$")
+    if not a then return nil end
+    local lat, lon = lat_lon_part(a, "NS", 2), lat_lon_part(b, "EW", 3)
+    if not (lat and lon) or math.abs(lat) > 90 or math.abs(lon) > 180 then return nil end
+    return {kind = "LL", ident = latlon_name({lat = lat, lon = lon}), lat = lat, lon = lon}
+end
+-- "SEA330" or "ABC180.0": the place and the bearing
+local function place_bearing(s)
+    local p, b = string.match(s, "^(%w-)(%d%d%d%.%d)$")
+    if not p then p, b = string.match(s, "^(%w-)(%d%d%d)$") end
+    b = tonumber(b or "")
+    if not p or #p < 1 or #p > 5 or not string.match(p, "^%a") or b > 360 then return nil end
+    return p, b % 360
+end
+-- {place, brg, dist} or {place, brg, place2, brg2} (the identifiers and
+-- magnetic bearings), nil for another entry
+function M.parse_pbd(s)
+    local a, b = string.match(s, "^([%w%.]+)/([%w%.]+)$")
+    if not a then return nil end
+    local p, brg = place_bearing(a)
+    if not p then return nil end
+    local d = tonumber(string.match(b, "^%d%d?%d?$") or string.match(b, "^%d?%d?%d?%.%d$") or "")
+    if d then
+        if d <= 0 then return nil end
+        return {place = p, brg = brg, dist = d}
+    end
+    local p2, brg2 = place_bearing(b)
+    if not p2 then return nil end
+    return {place = p, brg = brg, place2 = p2, brg2 = brg2}
+end
+-- the true course of a magnetic bearing at a point
+local function true_of(st, mag, p)
+    local var = st.N.variation and st.N.variation(st.db, p.lat, p.lon) or nil
+    return (mag + (var or 0)) % 360
+end
+-- where two great circles from `a` on the course `c1` and from `b` on
+-- `c2` (true) meet ahead of both (E. Williams' formulary); nil when they
+-- do not
+local function radials_meet(a, c1, b, c2)
+    local r = math.pi / 180
+    local la1, lo1, la2, lo2 = a.lat * r, a.lon * r, b.lat * r, b.lon * r
+    local _, d = M.course(a.lat, a.lon, b.lat, b.lon)
+    local d12 = d / 3440.065
+    if d12 < 1e-9 then return nil end
+    local c12, c21 = M.course(a.lat, a.lon, b.lat, b.lon), M.course(b.lat, b.lon, a.lat, a.lon)
+    local a1 = ((c1 - c12 + 180) % 360 - 180) * r
+    local a2 = ((c21 - c2 + 180) % 360 - 180) * r
+    if math.sin(a1) == 0 and math.sin(a2) == 0 then return nil end
+    if math.sin(a1) * math.sin(a2) < 0 then return nil end
+    a1, a2 = math.abs(a1), math.abs(a2)
+    local a3 = math.acos(math.max(-1, math.min(1, -math.cos(a1) * math.cos(a2) + math.sin(a1) * math.sin(a2) * math.cos(d12))))
+    local d13 = math.atan2(math.sin(d12) * math.sin(a1) * math.sin(a2), math.cos(a2) + math.cos(a1) * math.cos(a3))
+    if d13 <= 0 then return nil end
+    return course_point(a, c1, d13 * 3440.065)
+end
+-- a place/bearing/distance or place bearing/place bearing waypoint from
+-- `e` (M.parse_pbd's) with its places' records; nil when the radials do
+-- not meet or no number is left
+function M.pbd_fix(st, e, place, place2)
+    local p
+    if e.dist then
+        p = course_point(place, true_of(st, e.brg, place), e.dist)
+    else
+        p = radials_meet(place, true_of(st, e.brg, place), place2, true_of(st, e.brg2, place2))
+    end
+    if not p then return nil end
+    local n = pbd_number(st, {})
+    if not n then return nil end
+    local brg, dist = M.course(place.lat, place.lon, p.lat, p.lon)
+    return {kind = "PBD", ident = string.format("%s%02d", string.sub(place.ident, 1, 3), n), seq = n,
+        place = place, brg = brg, dist = dist, lat = p.lat, lon = p.lon}
 end
 
 -- ABEAM PTS pushed (FMSPG p.136-137): the waypoints the direct-to passes
