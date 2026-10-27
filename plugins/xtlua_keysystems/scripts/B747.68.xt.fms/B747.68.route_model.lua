@@ -622,6 +622,85 @@ function M.pbd_fix(st, e, place, place2)
         place = place, brg = brg, dist = dist, lat = p.lat, lon = p.lon}
 end
 
+-- FIX INFO (step 7e3b; FCOM p.1358-1359; FMSPG p.166-169): the active
+-- route's path, its points from where the active leg starts through the
+-- waypoints to the first discontinuity (conditional legs and holds left
+-- out: estimate), and the airplane's distance along it; nil without an
+-- active route of two points
+function M.fix_path(st, ppos)
+    if not st.active then return nil end
+    local r = st.rte
+    local pts = {}
+    local start = M.leg_from(r, 1)
+    if start then pts[1] = {lat = start.lat, lon = start.lon} end
+    for _, l in ipairs(r.legs) do
+        if l.disc or l.pending then break end
+        if l.fix and not M.is_hold(l) then pts[#pts + 1] = {lat = l.fix.lat, lon = l.fix.lon} end
+    end
+    if #pts < 2 then return nil end
+    local segs, d = {}, 0
+    for k = 1, #pts - 1 do
+        local a, b = pts[k], pts[k + 1]
+        local crs, len = M.course(a.lat, a.lon, b.lat, b.lon)
+        segs[k] = {a = a, b = b, crs = crs, len = len, d0 = d}
+        d = d + len
+    end
+    return {segs = segs, at = (abeam_of(pts[1], pts[2], ppos))}
+end
+-- a point on the path: its position and its distance to go from the
+-- airplane (negative behind it: FMSPG p.168)
+local function path_point(path, s, along)
+    local x = course_point(s.a, s.crs, along)
+    return {lat = x.lat, lon = x.lon, dtg = s.d0 + along - path.at}
+end
+local function closer(best, p)
+    if not best or math.abs(p.dtg) < math.abs(best.dtg) then return p end
+    return best
+end
+-- where the radial from `f` on the true course `crs` crosses the path
+-- within `maxd` nm of it (512: FMSPG p.167); the one nearest the airplane
+-- along the path (estimate)
+function M.fix_radial(path, f, crs, maxd)
+    local best
+    for _, s in ipairs(path.segs) do
+        local x = radials_meet(f, crs, s.a, s.crs)
+        if x then
+            local _, along = M.course(s.a.lat, s.a.lon, x.lat, x.lon)
+            local _, df = M.course(f.lat, f.lon, x.lat, x.lon)
+            if along <= s.len + 1e-6 and df <= maxd then best = closer(best, path_point(path, s, along)) end
+        end
+    end
+    return best
+end
+-- where the circle of `r` nm round `f` crosses the path: the crossing
+-- nearest the airplane (FCOM p.1358: the closest of the two)
+function M.fix_circle(path, f, r)
+    local best
+    for _, s in ipairs(path.segs) do
+        local along, across = abeam_of(s.a, s.b, f)
+        local cx = math.cos(across / 3440.065)
+        if math.abs(across) <= r and cx > 0 then
+            local h = math.acos(math.max(-1, math.min(1, math.cos(r / 3440.065) / cx))) * 3440.065
+            for _, d in ipairs({along - h, along + h}) do
+                if d >= 0 and d <= s.len then best = closer(best, path_point(path, s, d)) end
+            end
+        end
+    end
+    return best
+end
+-- the point of the path abeam `f`, square to its nearest segment (FCOM
+-- p.1359; FMSPG p.168); nil when no segment has one
+function M.fix_abeam(path, f)
+    local best, best_x
+    for _, s in ipairs(path.segs) do
+        local along, across = abeam_of(s.a, s.b, f)
+        if along >= 0 and along <= s.len and (not best_x or math.abs(across) < best_x) then
+            best, best_x = path_point(path, s, along), math.abs(across)
+        end
+    end
+    return best
+end
+
 -- ABEAM PTS pushed (FMSPG p.136-137): the waypoints the direct-to passes
 -- by (the active route's from the active waypoint to the one before the
 -- direct-to waypoint) put on the direct path abeam where they are, in

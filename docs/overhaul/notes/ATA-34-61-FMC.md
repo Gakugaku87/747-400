@@ -818,3 +818,23 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - REF NAV DATA の IDENT と FIX INFO の FIX は航法データの点だけ（FCOM p.1355、p.1358）なので、これらの形は受けない。
 - 試験：`route_model_test.lua`（237 件：緯度経度の形、PBD・PB/PB の形と不可の入力、点の位置、番号、名前で入れ直す、方位線の交点、交わらない方位線）、`legs_pages_test.lua`（63 件：N3700.0E14100.0、ALPHA097/10（ALPHA が 2 つあるので場所の SELECT DESIRED WPT）、ALP02 を名前で、データに無い場所、交わらない方位線）。
 - X-Plane：`s95_abeam` 26/26（段 7e2 の確認の後、LEGS の経路の終わりの後に N3442.0E13800.0 で N34E138、SPENS180/10 で SPE04（XAC01・KOU02・SPE03 の次の番号）、ERASE。CDU の写真で確かめた）、`s86_rte_pages` 19/19。Lua の誤りなし。
+
+## 39. 段 7e3b の実装（2026-10-27：FIX INFO）
+
+- 資料：FCOM p.1358–1359、FMSPG p.166–169。
+- FIX キーで FMC の FIX INFO（前は X-Plane の FIX ページ）。2 ページ（NEXT・PREV）に FIX をひとつずつ。データは FMC のもので、両方の CDU で同じ（推定）。新しいページ `activepages/B744.fms.pages.fixinfo.lua`、経路との交点は経路のモデル（`fix_path`・`fix_radial`・`fix_circle`・`fix_abeam`）。
+- FIX（1L）：航法データの空港・航法施設・ウェイポイント（FCOM p.1358）。箱、SELECT DESIRED WPT（飛行機に近い順）、NOT IN DATA BASE。DELETE は不可（消すのは <ERASE FIX だけ：FMSPG p.167）。空の scratchpad で FIX を写す。新しい FIX で BRG/DIS と ABEAM は消える（推定）。
+- BRG/DIS FR（1R）：飛行機の FIX からの方位と距離。
+- BRG/DIS（2L–4L）：方位 XXX（000–360）、距離 /YYY（1–999）、両方 XXX/YYY（FCOM p.1358–1359）。
+  - 方位：FIX からの線がアクティブな経路と FIX から 512 nm 以内で交われば、その距離を / の後に小字で（FMSPG p.167）。
+  - 距離：円が経路と交われば、近い方の交点の方位を / の前に小字で（FCOM p.1358 の図）。
+  - DTG：飛行機から経路に沿った交点までの距離、通り過ぎたら負（FMSPG p.168）。方位と距離の両方を入れたものは交点を出さない（FCOM p.1359）。
+  - 空の scratchpad で、その place/bearing/distance を写す（ABC180.0/026.4 の形：FCOM p.1359 の図）。RTE・LEGS に点として入れられる（段 7e3a）。DELETE でダッシュに戻る。
+- <ABEAM（5L）：経路の一番近い区間に直角な点の方位と距離、DTG。無ければ INVALID ENTRY（FMSPG p.168）。もう一度押すと place/bearing/distance を写す（FCOM p.1359）。DELETE でプロンプトに戻る。
+- <ERASE FIX（6L）：そのページの FIX と線を消す。PRED ETA-ALT は残す（FMSPG p.168）。FIX が無いときは出さない。
+- PRED ETA-ALT（6R）：時刻 hhmmZ か高度を入れて表示（FMSPG p.169）。予測の距離は段 8 の後。
+- 経路の形はアクティブな脚の始まりから、点の大圏を discontinuity まで（条件の脚とホールドは入れない：推定）。交点が二つ以上なら、飛行機に経路に沿って一番近いもの（推定）。
+- 方位は磁方位：VOR はその偏差、ほかは最寄りの VOR の値（推定）。極地方の真方位（FMSPG p.166）は段 10。
+- 後の段と推定：ETA・ALT と PRED ETA-ALT の距離は予測（段 8）まで空白。ND に FIX の円・方位線・距離の円を描かない（X-Plane の地図は経路だけ）。距離に交点が無いと方位を出さない、FIX が無いと BRG/DIS の行を出さない（推定）。
+- 試験：`route_model_test.lua`（251 件：経路の形、ABEAM、方位線、距離の円、届かない・交わらないもの、通り過ぎた交点の負の DTG）、新しい `tests/fms/fixinfo_pages_test.lua`（46 件：FIX キー、箱と見出し、FIX の入力と写し、BRG/DIS FR、方位線と距離の円の交点と DTG、両方の入力、不可の入力、DELETE、写しを LEGS に入れて ZB001、ABEAM と写し、ERASE FIX、PRED ETA-ALT、2 ページ目、右の CDU）。
+- X-Plane：新しい `s96_fixinfo` 25/25（RJAA→XAC の脚の上で LNAV、経路 XAC・SPENS・SAGRA。FIX キーで FIX INFO、FIX に KOUGA：BRG/DIS FR 032/35、方位 360 の線と XAC→SPENS の脚との交点（小字の 22 nm、DTG）、距離 /30 の近い方の交点（小字の方位 029、DTG）、<ABEAM で 007/22 と DTG、もう一度押して KOUGA007.5/021.9 の写し、LEGS の経路の終わりの後に入れて KOU01、PRED ETA-ALT の 1234Z、<ERASE FIX で箱（PRED ETA-ALT は残る）、2 ページ目の箱。CDU の写真で小字と配置を確かめた）、`s94_refnavdata` 38/38。Lua の誤りなし。初めの `s96` の 1 件の不合格は、scratchpad の行の末尾に空白があるとしたシナリオの正規表現の誤り（値は正しかった）。
