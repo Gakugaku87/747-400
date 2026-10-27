@@ -283,3 +283,10 @@ B747DR_ap_fd_shown_fo = deferred_dataref("laminar/B747/autopilot/fd/fo/shown", "
 -- the TO/GA switches' pushes (6-3 step 1e): counted by the engines module
 -- (its TO/GA command handler, which creates it too), read by the AFDS
 B747DR_ap_toga_pushes = deferred_dataref("laminar/B747/autopilot/toga_pushes", "number")
+-- the roll laws (6-3 step 2a): the command (degrees of bank, right
+-- positive) the A/P flies and the F/Ds show, whether a law of the new model
+-- gives it (0: the old law, LOC and ROLLOUT) and whether it is valid (0:
+-- NCD)
+B747DR_ap_roll_cmd = deferred_dataref("laminar/B747/autopilot/roll_cmd", "number")
+B747DR_ap_roll_law = deferred_dataref("laminar/B747/autopilot/roll_law", "number")
+B747DR_ap_roll_valid = deferred_dataref("laminar/B747/autopilot/roll_valid", "number")

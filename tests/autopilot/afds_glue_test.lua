@@ -1,13 +1,14 @@
 -- Run from the repository root with LuaJIT: luajit tests/autopilot/afds_glue_test.lua
 -- The FCCs' mode logic, step 1a (6-3: docs/overhaul/notes/ATA-22.md §10), in
 -- the autopilot module (B747.70.xt.autopilot.lua with B747.70.afds_model.lua),
--- with step 1b's roll modes:
+-- with step 1b's roll modes and step 2a's roll laws (their command, not
+-- X-Plane's HDG SEL):
 -- the CMD switches, the disengage bar and the control wheel switches through
 -- the model to the CMD channels, the servos and AUTOPILOT DISC
 -- (laminar/B747/CAS/warning_status[0]); the defaults on the old code's state
--- (V/S synced to the present vertical speed, HDG HOLD on X-Plane's HDG SEL,
--- ATT's bank); 1b: HDG SEL, LNAV's arm and engage, HDG HOLD (X-Plane's
--- command replaced) and its heading after 2 s;
+-- (V/S synced to the present vertical speed, HDG HOLD, ATT's bank); 1b:
+-- HDG SEL, LNAV's arm and engage, HDG HOLD (X-Plane's command replaced) and
+-- its heading after 2 s, on the roll law's command;
 -- the F/D switches (their positions); everything off; the MCP's IAS 200;
 -- 1c: the pitch modes (V/S synced, ALT HOLD, FLCH, SPD, VNAV's arm and the
 -- old VNAV's engage, no route); 1d: APP and LOC, the captures within the
@@ -48,7 +49,8 @@ end
 local function frames(n) for _ = 1, n or 3 do rt:frame(1 / 30) end end
 
 -- CMD C with both F/Ds OFF: engaged on the push, V/S at the present 1,200
--- fpm, HDG HOLD (flown by X-Plane's HDG SEL until 6-3 step 2)
+-- fpm, HDG HOLD (the roll law's, not X-Plane's HDG SEL: 6-3 step 2a)
+local ROLL_LAW, ROLL_CMD = "laminar/B747/autopilot/roll_law", "laminar/B747/autopilot/roll_cmd"
 rt.command_log = {}
 rt:command(CMD .. "cmd_C")
 frames()
@@ -57,7 +59,9 @@ T.equal(rt:get(SERVOS), 1, "the servos on")
 T.equal(rt:get(VS_STATUS), 2, "the default V/S")
 T.equal(rt:get(VS_DIAL), 1200, "V/S synced to the present vertical speed (1,234 fpm: 1,200)")
 T.equal(rt:get("laminar/B747/autopilot/FMA/active_roll_mode"), 7, "the FMA's HDG HOLD")
-T.check(sent("sim/autopilot/heading"), "X-Plane's HDG SEL flies it")
+T.equal(rt:get(ROLL_LAW), 1, "the roll law flies it")
+T.check(rt:get(ROLL_CMD) < 2 and rt:get(ROLL_CMD) > 0, "rolling out from 2 degrees: wings level")
+T.check(not sent("sim/autopilot/heading"), "not X-Plane's HDG SEL")
 rt:command(CMD .. "cmd_L")
 frames()
 T.equal(rt:get("laminar/B747/autopilot/cmd_L_mode/status"), 0, "CMD L with C engaged: no second channel")
@@ -126,12 +130,13 @@ rt:set(FD, 24, 1)
 frames()
 T.near(rt:get(ATT), 15, 0.01, "the second F/D ON: nothing new")
 
--- 1b: the roll modes through the model. HDG SEL: X-Plane's HDG SEL to the
--- MCP's heading; LNAV armed with HDG SEL active, then engaged by the FMC's
--- steering above 50 ft; HDG HOLD (X-Plane's command, replaced): the
--- present heading until the roll stays under 3 degrees for 2 s
+-- 1b: the roll modes through the model. HDG SEL: the roll law to the MCP's
+-- heading (2a); LNAV armed with HDG SEL active, then engaged by the FMC's
+-- steering above 50 ft, the law on it; HDG HOLD (X-Plane's command,
+-- replaced): wings level until the roll stays under 3 degrees for 2 s,
+-- then the heading there
 local ROLL, ROLL_ARMED = "laminar/B747/autopilot/FMA/active_roll_mode", "laminar/B747/autopilot/FMA/armed_roll_mode"
-local LNAV_STATE, HDG_TARGET = "laminar/B747/autopilot/lnav_state", "sim/cockpit/autopilot/heading_mag"
+local LNAV_STATE = "laminar/B747/autopilot/lnav_state"
 rt:set("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot", 0)
 rt:set("sim/flightmodel/position/mag_psi", 95)
 rt:set("laminar/B747/autopilot/heading/degrees", 120)
@@ -139,8 +144,8 @@ rt.command_log = {}
 rt:command(CMD .. "heading_select")
 frames()
 T.equal(rt:get(ROLL), 6, "HDG SEL: the FMA's HDG SEL")
-T.near(rt:get(HDG_TARGET), 120, 0.01, "X-Plane's HDG SEL to the MCP's heading 120")
-T.check(sent("sim/autopilot/heading"), "X-Plane's HDG SEL mode")
+T.check(rt:get(ROLL_LAW) == 1 and rt:get(ROLL_CMD) > 0, "the MCP's 120 right of 095: banking right")
+T.check(not sent("sim/autopilot/heading"), "not X-Plane's HDG SEL mode")
 rt:command(CMD .. "LNAV")
 frames()
 T.equal(rt:get(LNAV_STATE), 1, "LNAV armed")
@@ -153,6 +158,9 @@ rt:set("laminar/B747/fms/lnav/valid", 1)
 frames()
 T.equal(rt:get(LNAV_STATE), 2, "the FMC's steering valid above 50 ft: LNAV engaged")
 T.equal(rt:get(ROLL), 2, "the FMA's LNAV")
+rt:set("laminar/B747/fms/lnav/roll", -10)
+frames(300)
+T.near(rt:get(ROLL_CMD), -10, 1e-6, "the law on the FMC's steering")
 rt:command(CMD .. "LNAV")
 frames()
 T.equal(rt:get(LNAV_STATE), 2, "a push while active: still engaged")
@@ -161,13 +169,15 @@ rt:command("sim/autopilot/heading_hold")
 frames()
 T.equal(rt:get(ROLL), 7, "HDG HOLD (X-Plane's command, the 3D's button): the FMA's HDG HOLD at once")
 T.equal(rt:get(LNAV_STATE), 0, "LNAV off")
-T.near(rt:get(HDG_TARGET), 95, 0.01, "rolling out: the present heading")
+local c0 = rt:get(ROLL_CMD)
+frames(30)
+T.near(rt:get(ROLL_CMD), math.min(0, c0 + 3), 0.2, "rolling out at 3 degrees a second")
 rt:set("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot", 1)
 rt:set("sim/flightmodel/position/mag_psi", 101)
 frames(70)
 rt:set("sim/flightmodel/position/mag_psi", 104)
 frames(5)
-T.near(rt:get(HDG_TARGET), 101, 0.01, "2 s under 3 degrees: the heading then held (101)")
+T.check(rt:get(ROLL_CMD) < 0, "2 s under 3 degrees: the heading then held (101), back left from 104")
 
 -- 1c: the pitch modes through the model. V/S synced to the present
 -- vertical speed (the old one set 0); ALT HOLD at the altitude then; FLCH

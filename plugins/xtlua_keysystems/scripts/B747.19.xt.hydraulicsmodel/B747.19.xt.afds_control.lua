@@ -7,6 +7,10 @@
 -- (B747.45.xt.srm.lua, 4-1 step 2b; before, doTrim wrote X-Plane's trim).
 B747DR_ap_AFDS_mode_box_status_pilot = find_dataref("laminar/B747/autopilot/AFDS/mode_box_status_pilot")
 B747DR_ap_AFDS_mode_box_status_copilot =find_dataref("laminar/B747/autopilot/AFDS/mode_box_status_copilot")
+-- the roll laws' command (6-3 step 2a, the autopilot module's
+-- B747.70.afds_roll_model.lua): the bank to fly when roll_law is 1
+B747DR_ap_roll_cmd = find_dataref("laminar/B747/autopilot/roll_cmd")
+B747DR_ap_roll_law = find_dataref("laminar/B747/autopilot/roll_law")
  local lastUp=0
  local lastDown=0
 local pitchRecord={}
@@ -592,30 +596,16 @@ rollPid.target=0
 rollPid.input = 0
 rollPid:compute()
 
--- LNAV's bank (6-1/6-2 step 6c; notes/ATA-34-61-FMC.md §29): the FMC's
--- steering to the F/D and the roll attitude integrator as it is (ATA22
--- p.358), at most 3 degrees a second (estimate), not X-Plane's heading
--- select's averaged roll; from the roll there when LNAV engages
-local lnavRoll=nil
-local lnavRollT=0
-local function lnav_director_roll()
-    local dt=math.min(math.max(simDRTime-lnavRollT,0),0.5)
-    lnavRollT=simDRTime
-    if lnavRoll==nil then lnavRoll=simDR_AHARS_roll_heading_deg_pilot end
-    local t=B747DR_fms_lnav_roll
-    local step=3*dt
-    if t>lnavRoll+step then lnavRoll=lnavRoll+step elseif t<lnavRoll-step then lnavRoll=lnavRoll-step else lnavRoll=t end
-    return lnavRoll
-end
-
+-- the roll command: the roll laws' (6-3 step 2a: HDG SEL, HDG HOLD, ATT,
+-- LNAV, TO/GA; not X-Plane's heading modes' averaged roll), else the old
+-- one (LOC and ROLLOUT until steps 2b and 4)
 function ap_roll_assist(doCompute)
     local retval=B747DR_sim_roll_ratio--B747_interpolate_value(B747DR_sim_roll_ratio,0,-1,1,20)
     local flight_director_roll
-    if B747DR_ap_FMA_active_roll_mode==2 and B747DR_fms_lnav_valid==1 then
-        flight_director_roll=lnav_director_roll()
+    if B747DR_ap_roll_law==1 then
+        flight_director_roll=B747DR_ap_roll_cmd
         B747DR_flight_director_roll=flight_director_roll
     else
-        lnavRoll=nil
         flight_director_roll=ap_director_roll_integral()
     end
     rollPid.kp=B747DR_pidRollP

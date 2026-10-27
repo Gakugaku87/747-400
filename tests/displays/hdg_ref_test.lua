@@ -4,9 +4,10 @@
 -- B747.60.hdg_ref_model.lua: the polar areas, TRU's box amber in a descent,
 -- MAG's box after TRU), the display glue in the flight instruments module
 -- (each side's heading and track in the reference, the labels, the ND
--- model's wind) and the AFDS (B747.70.xt.autopilot.lua: the MCP heading
--- made magnetic for X-Plane's heading mode in TRUE, HDG HOLD when the
--- switch moves in HDG SEL), as XTLua runs them (tests/lib/xtlua.lua).
+-- model's wind) and the AFDS (B747.70.xt.autopilot.lua: HDG SEL's error in
+-- the reference, the roll laws of 6-3 step 2a; no HDG SEL and no heading in
+-- NORM's polar areas; HDG HOLD when the switch moves in HDG SEL), as XTLua
+-- runs them (tests/lib/xtlua.lua).
 local T = dofile("tests/lib/check.lua")("hdg_ref")
 local HR = dofile("plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/B747.60.hdg_ref_model.lua")
 local xtlua = dofile("tests/lib/xtlua.lua")
@@ -104,7 +105,8 @@ T.equal(rt:get(E .. "nd_plan_label"), HR.ND_TRU_OFF, "PLN: TRU without the box (
 T.check(near(rt:get("laminar/B747/nd/capt/wind_deg"), wind_mag, 1e-6),
     "the wind arrow where it was: its direction and the display's top both true")
 
--- the AFDS: the MCP heading in the reference
+-- the AFDS: HDG SEL's error in the reference (ATA22 p.358), none in NORM's
+-- polar areas (FCOM p.1046)
 local ra = xtlua.new()
 ra:load("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.xt.autopilot.lua")
 ra:set("laminar/B747/simconfig", '{"PLANE":{"engines":"PW4056"}}')
@@ -114,27 +116,33 @@ ra:set("sim/time/total_running_time_sec", 10)
 ra:callout("flight_start")
 ra:set("sim/flightmodel/position/psi", 104)
 ra:set("sim/flightmodel/position/mag_psi", 100)
-ra:set("sim/cockpit2/autopilot/heading_status", 2)               -- X-Plane's HDG SEL
 -- HDG SEL with a F/D ON (neither the A/P nor a F/D: no modes at all, FCOM
 -- p.660; the roll modes the AFDS model's: 6-3 steps 1a, 1b)
 ra:set("laminar/B747/toggle_switch/position", 23, 1)
 ra:set("laminar/B747/autopilot/heading/target", -1)              -- no slew of the MCP heading (made at 0 here)
-ra:set("laminar/B747/autopilot/heading/degrees", 90)
+ra:set("laminar/B747/autopilot/heading/degrees", 102)
 for _ = 1, 3 do ra:frame(1 / 30) end
 ra:command("laminar/B747/autopilot/button_switch/heading_select")
 for _ = 1, 30 do ra:frame(1 / 30) end
-T.check(near(ra:get("sim/cockpit/autopilot/heading_mag"), 90, 1e-6), "MAG: X-Plane's heading mode on the MCP's 090")
-ra:set("laminar/B747/efis/hdg_ref/true", 1)
-for _ = 1, 30 do ra:frame(1 / 30) end
-T.check(near(ra:get("sim/cockpit/autopilot/heading_mag"), 86, 1e-6),
-    "TRU: the MCP's 090 true is 086 magnetic for X-Plane (ATA22 p.358: on the true heading)")
-local ROLL = "laminar/B747/autopilot/FMA/active_roll_mode"
+local ROLL, CMD_R, VALID = "laminar/B747/autopilot/FMA/active_roll_mode", "laminar/B747/autopilot/roll_cmd", "laminar/B747/autopilot/roll_valid"
 T.equal(ra:get(ROLL), 6, "HDG SEL")
-ra:set("laminar/B747/toggle_switch/position", 30, 1)             -- the switch moved in HDG SEL
+T.check(ra:get(CMD_R) > 0 and ra:get(VALID) == 1, "MAG: the MCP's 102 right of the magnetic 100")
+ra:set("laminar/B747/efis/hdg_ref/true", 1)                      -- TRUE by the switch
+ra:set("laminar/B747/toggle_switch/position", 30, 1)             -- (moved in HDG SEL)
 for _ = 1, 5 do ra:frame(1 / 30) end
 T.equal(ra:get(ROLL), 7, "the HDG REF switch moved in HDG SEL: HDG HOLD (FCOM p.1046, ATA22 p.352)")
+ra:command("laminar/B747/autopilot/button_switch/heading_select")
+for _ = 1, 60 do ra:frame(1 / 30) end
+T.check(ra:get(CMD_R) < 0 and ra:get(VALID) == 1, "TRUE: the MCP's 102 left of the true 104 (ATA22 p.358)")
+ra:set("laminar/B747/toggle_switch/position", 30, 0)             -- NORM: the polar areas still true
+for _ = 1, 5 do ra:frame(1 / 30) end
+T.equal(ra:get(ROLL), 7, "moved in HDG SEL: HDG HOLD")
+T.equal(ra:get(VALID), 0, "NORM's true north (the polar areas): HDG HOLD without a heading, NCD (FCOM p.1046)")
+ra:command("laminar/B747/autopilot/button_switch/heading_select")
+for _ = 1, 5 do ra:frame(1 / 30) end
+T.equal(ra:get(ROLL), 7, "and no HDG SEL (HDG SEL valid: ATA22 p.352)")
 ra:command("laminar/B747/autopilot/button_switch/LNAV")
-ra:set("laminar/B747/toggle_switch/position", 30, 0)
+ra:set("laminar/B747/toggle_switch/position", 30, 1)
 for _ = 1, 5 do ra:frame(1 / 30) end
 T.equal(ra:get(ROLL), 7, "not out of HDG SEL (HDG HOLD, LNAV armed): nothing")
 
