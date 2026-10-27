@@ -574,7 +574,9 @@ dofile("B747.70.afds_model.lua")
 B747DR_ap_engine_type = find_dataref("laminar/B747/engines/type")
 local afds = B747_afds_model.new()
 local afdsHdgSelTime = 0
-local afdsLocWas = false
+-- the magnetic track (LOC and G/S capture within 120 and 80 degrees of the
+-- localizer course: 6-3 step 1d)
+simDR_afds_track_mag = find_dataref("sim/cockpit2/gauges/indicators/ground_track_mag_pilot")
 local afdsIn = {fd = {L = false, R = false}, hyd = {0, 0, 0}}
 -- the old VNAV's sub-mode, as the old FMA inferred it from its law's flags
 -- (until the FMC's step 9): VNAV SPD 4, VNAV ALT 5, VNAV PTH 6
@@ -599,43 +601,32 @@ local function afds_inp()
 	afdsIn.engine = B747DR_ap_engine_type
 	afdsIn.ground = simDR_onGround == 1
 	afdsIn.toga = B747DR_autopilot_TOGA_status ~= 0
-	-- the roll (step 1b): the old code's LOC and TO/GA (until steps 1d and
-	-- 1e), the heading HDG HOLD holds (magnetic, as X-Plane's HDG SEL's
-	-- target), the FMC's steering, the old arms of LOC and ROLLOUT
+	-- the roll (step 1b): the old code's TO/GA (until step 1e), the heading
+	-- HDG HOLD holds (magnetic, as X-Plane's HDG SEL's target), the FMC's
+	-- steering, the old autoland's ROLLOUT and FLARE arms (until step 4)
 	afdsIn.ra = simDR_radarAlt1
 	afdsIn.hdg = simDR_ap_mag_psi
 	afdsIn.lnav_valid = B747DR_fms_lnav_valid == 1
-	afdsIn.gs_active = B747DR_autopilot_gs_status == 2
 	-- the old TO/GA a go-around (its autoland -1 or -2)
 	afdsIn.ga = B747DR_ap_autoland < 0
-	if B747DR_autopilot_nav_status == 2 then
-		afdsIn.old_roll = "LOC"
-	elseif B747DR_autopilot_TOGA_status ~= 0 then
-		afdsIn.old_roll = "TOGA"
-	else
-		afdsIn.old_roll = nil
-	end
-	if B747DR_autopilot_nav_status == 1 or (B747DR_ap_approach_mode ~= 0 and B747DR_autopilot_nav_status ~= 2) then
-		afdsIn.old_armed_roll = 3
-	elseif simDR_radarAlt1 > 200 and (B747DR_ap_AFDS_status_annun_pilot == 3 or B747DR_ap_AFDS_status_annun_pilot == 4) then
-		afdsIn.old_armed_roll = 4
-	else
-		afdsIn.old_armed_roll = 0
-	end
+	afdsIn.old_roll = B747DR_autopilot_TOGA_status ~= 0 and "TOGA" or nil
+	local land = simDR_radarAlt1 > 200 and (B747DR_ap_AFDS_status_annun_pilot == 3 or B747DR_ap_AFDS_status_annun_pilot == 4)
+	afdsIn.old_armed_roll = land and 4 or 0
 	afdsIn.dt = SIM_PERIOD
-	-- the pitch (step 1c): the old code's G/S and TO/GA (until steps 1d and
-	-- 1e), the vertical speed, the altitude, the speeds, the old capture
-	-- window (until step 3), the old VNAV (until the FMC's step 9), the old
-	-- law's mode, the old arms of G/S and FLARE
+	-- the approach (step 1d): the old detectors as they were (until steps 2
+	-- and 3: LOC with both receivers' signals, G/S under 1.5 dots with both
+	-- receivers' signals and no flag), the track's angle to the course
+	afdsIn.loc_detect = simDR_hsi_nav1_horizontal_signal == 1 and simDR_hsi_nav2_horizontal_signal == 1
+	afdsIn.gs_detect = simDR_nav1_gs_flag == 0 and simDR_nav2_gs_flag == 0 and math.abs(simDR_hsi_vdef_dots_pilot) < 1.5
+		and simDR_hsi_nav1_vertical_signal == 1 and simDR_hsi_nav2_vertical_signal == 1
+	afdsIn.course_err = getHeadingDifference(simDR_radio_nav_obs_deg[0], simDR_afds_track_mag)
+	-- the pitch (step 1c): the old code's TO/GA (until step 1e), the
+	-- vertical speed, the altitude, the speeds, the old capture window (until
+	-- step 3), the old VNAV (until the FMC's step 9), the old law's mode, the
+	-- old autoland's FLARE arm
 	afdsIn.vs = simDR_vvi_fpm_pilot
 	afdsIn.alt = simDR_pressureAlt1
-	if B747DR_autopilot_gs_status == 2 then
-		afdsIn.old_pitch = "GS"
-	elseif B747DR_autopilot_TOGA_status ~= 0 then
-		afdsIn.old_pitch = "TOGA"
-	else
-		afdsIn.old_pitch = nil
-	end
+	afdsIn.old_pitch = B747DR_autopilot_TOGA_status ~= 0 and "TOGA" or nil
 	afdsIn.ias = simDR_ind_airspeed_kts_pilot
 	afdsIn.mcp_ias = B747DR_ap_ias_dial_value
 	afdsIn.window_open = B747DR_ap_ias_mach_window_open == 1
@@ -654,13 +645,7 @@ local function afds_inp()
 	else
 		afdsIn.old_law = nil
 	end
-	if B747DR_autopilot_gs_status == 1 or (B747DR_ap_approach_mode > 0 and B747DR_autopilot_gs_status ~= 2) then
-		afdsIn.old_armed_pitch = 2
-	elseif simDR_radarAlt1 > 200 and (B747DR_ap_AFDS_status_annun_pilot == 3 or B747DR_ap_AFDS_status_annun_pilot == 4) then
-		afdsIn.old_armed_pitch = 3
-	else
-		afdsIn.old_armed_pitch = 0
-	end
+	afdsIn.old_armed_pitch = land and 3 or 0
 	return afdsIn
 end
 -- V/S as the V/S switch sets it, synced to the present vertical speed
@@ -750,6 +735,21 @@ local function afds_sync()
 	end
 	local att = afds.roll == "ATT" and afds.att_bank or 0
 	if B747DR_ap_ATT ~= att then B747DR_ap_ATT = att end
+	-- the approach (step 1d) on the old code's state: the approach mode (-1
+	-- LOC, 1 APP), LOC's and G/S's status (1 armed, 2 engaged) for the old
+	-- laws, lights and autoland, the MCP's heading to the course at LOC's
+	-- capture (ATA22 p.290; the old APP switch set it at once)
+	local nav = afds.roll == "LOC" and 2 or (afds.loc_arm and 1 or 0)
+	local gs = afds.pitch == "GS" and 2 or (afds.gs_arm and 1 or 0)
+	local app = gs > 0 and 1 or (nav > 0 and -1 or 0)
+	if B747DR_ap_approach_mode ~= app then B747DR_ap_approach_mode = app end
+	if simDR_autopilot_nav_status ~= nav then simDR_autopilot_nav_status = nav end
+	if B747DR_autopilot_nav_status ~= nav then B747DR_autopilot_nav_status = nav end
+	if simDR_autopilot_gs_status ~= gs then simDR_autopilot_gs_status = gs end
+	if B747DR_autopilot_gs_status ~= gs then B747DR_autopilot_gs_status = gs end
+	if B747_afds_model.loc_engaged_now(afds) then
+		B747DR_ap_heading_deg = roundToIncrement(simDR_radio_nav_obs_deg[0], 1)
+	end
 	if afds.roll == "HDG_SEL" or afds.roll == "HDG_HOLD" then
 		if afds.roll == "HDG_SEL" then
 			simDR_autopilot_heading_deg = ap_hdg_target(B747DR_ap_heading_deg)
@@ -764,25 +764,22 @@ local function afds_sync()
 		end
 	end
 end
--- a roll mode the model took (HDG SEL, HDG HOLD): from the old LOC
--- (before G/S: the model's transitions) the approach off, LOC and APP
--- with its G/S arm (FCOM p.651-652; until step 1d)
-local function afds_roll_taken(i)
-	if i.old_roll == "LOC" then
-		B747DR_ap_approach_mode = 0
-		B747DR_autopilot_nav_status = 0
-		B747DR_autopilot_gs_status = 0
-	end
-end
 -- the roll switches (step 1b)
 function B747_afds_hdg_sel()
-	local i = afds_inp()
-	if B747_afds_model.hdg_sel(afds, i) then afds_roll_taken(i) end
+	B747_afds_model.hdg_sel(afds, afds_inp())
 	afds_sync()
 end
 function B747_afds_hdg_hold(default)
-	local i = afds_inp()
-	if B747_afds_model.hdg_hold(afds, i, default) then afds_roll_taken(i) end
+	B747_afds_model.hdg_hold(afds, afds_inp(), default)
+	afds_sync()
+end
+-- the approach switches (step 1d)
+function B747_afds_loc()
+	B747_afds_model.loc(afds, afds_inp())
+	afds_sync()
+end
+function B747_afds_app()
+	B747_afds_model.app(afds, afds_inp())
 	afds_sync()
 end
 function B747_afds_lnav()
@@ -887,9 +884,6 @@ local function afds_wheel()
 end
 -- each frame, first: the F/Ds, the hydraulics, the defaults asked for
 function B747_afds_update()
-	local loc = B747DR_autopilot_nav_status == 2
-	if loc and not afdsLocWas then B747_afds_model.loc_captured(afds) end
-	afdsLocWas = loc
 	afds_apply(B747_afds_model.update(afds, afds_inp()))
 	afds_sync()
 end
@@ -2591,29 +2585,18 @@ function B747_ap_appr_mode_beforeCMDhandler(phase, duration)
 		--simCMD_autopilot_appr_mode:once()
 		B747CMD_fdr_log_app:once()
 		B747_ap_button_switch_position_target[9] = 1
-		if B747DR_ils_dots ==0 then
-			B747DR_fmc_notifications[40]=1
-			return;
-		else
-			B747DR_fmc_notifications[40]=0
+		-- the AFDS model (6-3 step 1d): LOC and G/S armed, the second push;
+		-- with no ILS too (the old one posted RW/ILS CRS ERROR, the FMC's
+		-- message for an ILS course not the runway's); the MCP's heading to
+		-- the course at LOC's capture (the old switch set it at once)
+		local was = afds.gs_arm
+		B747_afds_app()
+		if afds.gs_arm and not was and B747_afds_model.engaged(afds) > 0 and simDR_radarAlt1 > 1500 then
+			-- the old approach's channels together (until 6-3 step 4)
+			B747_afds_model.multi(afds, afds_inp())
+			afds_sync()
 		end
-		--simCMD_autopilot_roll_center_sync_mode:once()
-		local diff = simDRTime - B747DR_ap_lastCommand
-		--if diff>0.5 then
-		if B747DR_ap_approach_mode <= 0 then
-			B747DR_ap_approach_mode = 1
-			if B747_afds_model.engaged(afds) > 0 and simDR_radarAlt1>1500 then
-				-- the old approach's channels together (until 6-3 step 4)
-				B747_afds_model.multi(afds, afds_inp())
-				afds_sync()
-			end
-			print("arm APP approach")
-		elseif B747DR_autopilot_gs_status ~= 2 and B747DR_autopilot_nav_status ~= 2 then
-			B747DR_ap_approach_mode = 0
-		end
-
 		B747DR_ap_lastCommand = simDRTime
-		B747DR_ap_heading_deg = roundToIncrement(simDR_radio_nav_obs_deg[0], 1) -- SET THE SELECTED HEADING VALUE TO THE LOC COURSE
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[9] = 0 -- SET THE LOC SWITCH ANIMATION TO "OUT"
 	end
@@ -2624,22 +2607,10 @@ function B747_ap_switch_loc_mode_CMDhandler(phase, duration)
 		--simCMD_autopilot_nav_mode:once()
 		B747CMD_fdr_log_loc:once()
 		B747_ap_button_switch_position_target[8] = 1
-		if B747DR_ils_dots ==0 then
-			B747DR_fmc_notifications[40]=1
-			return;
-		else
-			B747DR_fmc_notifications[40]=0
-		end
-		local diff = simDRTime - B747DR_ap_lastCommand
-		--if diff>0.5 then
-		if B747DR_ap_approach_mode >= 0 then
-			B747DR_ap_approach_mode = -1
-
-			print("arm LOC approach")
-		--else
-		--	B747DR_ap_approach_mode=0
-		end
-		--end
+		-- the AFDS model (6-3 step 1d): armed, the second push, a localizer
+		-- approach from APP; with no ILS too (the old one posted RW/ILS CRS
+		-- ERROR)
+		B747_afds_loc()
 		B747DR_ap_lastCommand = simDRTime
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[8] = 0 -- SET THE LOC SWITCH ANIMATION TO "OUT"
@@ -2657,90 +2628,16 @@ B747CMD_ap_switch_loc_mode =
 ----- APPROACH MODE ---------------------------------------------------------------------
 
 function B747_ap_appr_mode()
-	local diff = simDRTime - B747DR_ap_lastCommand
-	local appRefreshnav = simDR_autopilot_nav_status
-	local appRefreshgs = simDR_autopilot_gs_status
-	if B747DR_ap_approach_mode ~= 0 then --only if we'll need it
-		local refreshheading = simDR_autopilot_heading_status
-	end
-	--reactivate LNAV if required
-
-	if diff < 0.2 then
+	-- the approach's modes are the AFDS model's (6-3 step 1d); the old
+	-- approach's channels together below 1,500 ft with LOC and G/S engaged
+	-- (until 6-3 step 4)
+	if simDRTime - B747DR_ap_lastCommand < 0.2 then
 		return
 	end
-
-	if
-		B747DR_ap_approach_mode ~= 0 and simDR_radarAlt1 < 1500 and B747DR_autopilot_nav_status == 2 and
-		B747DR_autopilot_gs_status == 2 and
-			B747_afds_model.engaged(afds) > 0
-	 then
-		-- the old approach's channels together (until 6-3 step 4); those
-		-- without hydraulic pressure drop out in the AFDS model
+	if afds.roll == "LOC" and afds.pitch == "GS" and simDR_radarAlt1 < 1500 and B747_afds_model.engaged(afds) > 0 then
 		B747_afds_model.multi(afds, afds_inp())
 		afds_sync()
 	end
-	if B747DR_ap_approach_mode == 0 then
-		--[[if simDR_autopilot_gs_status > 0 then
-			simCMD_autopilot_glideslope_mode:once() -- CANX GLIDESLOPE MODE
-			B747DR_ap_lastCommand = simDRTime
-			return
-		end
-		if simDR_autopilot_nav_status > 0 then
-			simCMD_autopilot_nav_mode:once() --DEACTIVATE LOC
-			B747DR_ap_lastCommand = simDRTime
-			return
-		end]]--
-		if simDR_autopilot_nav_status~=0 or simDR_autopilot_gs_status~=0 then
-			B747DR_ap_lastCommand = simDRTime
-		end
-		simDR_autopilot_nav_status=0
-		simDR_autopilot_gs_status=0
-
-		return
-	end -- no approach mode enabled
-	local diffap = getHeadingDifference(simDR_radio_nav_obs_deg[0], simDR_AHARS_heading_deg_pilot)
-	if diffap > -120 and diffap < 120 then --can really arm the mode
-		if B747DR_ap_approach_mode == -1 then --WANT LOC
-			if simDR_autopilot_nav_status == 0 or simDR_autopilot_gs_status > 0 then
-				--simCMD_autopilot_nav_mode:once() --ACTIVATE LOC
-				simDR_autopilot_nav_status=1
-				simDR_autopilot_gs_status=0
-
-				B747DR_ap_lastCommand = simDRTime
-
-			end
-		elseif B747DR_ap_approach_mode == 1 then --WANT APP
-			if simDR_autopilot_gs_status == 0 and simDR_radarAlt1 < 3500 then
-				print("simCMD_autopilot_appr_mode in B747DR_ap_approach_mode=1")
-				--simCMD_autopilot_appr_mode:once() --ACTIVATE APP
-				simDR_autopilot_nav_status=1
-				simDR_autopilot_gs_status=1
-				B747DR_ap_lastCommand = simDRTime
-			end
-		end
-	elseif simDR_autopilot_nav_status > 0 then
-		--[[if simDR_autopilot_gs_status > 0 then
-			print("simCMD_autopilot_appr_mode in elseif")
-			simCMD_autopilot_appr_mode:once() --DEACTIVATE APP
-			B747DR_ap_lastCommand = simDRTime
-		else
-			simCMD_autopilot_nav_mode:once() --DEACTIVATE LOC
-			B747DR_ap_lastCommand = simDRTime
-		end]]--
-		simDR_autopilot_nav_status=0
-		simDR_autopilot_gs_status=0
-		B747DR_ap_lastCommand = simDRTime
-	elseif simDR_autopilot_gs_status > 0 then
-		--simCMD_autopilot_glideslope_mode:once() -- CANX GLIDESLOPE MODE
-		simDR_autopilot_nav_status=0
-		simDR_autopilot_gs_status=0
-		B747DR_ap_lastCommand = simDRTime
-	end
-	if simDR_onGround == 1 then
-		print("simDR_onGround to B747DR_ap_approach_mode=0")
-		B747DR_ap_approach_mode = 0
-	end
-
 	-- (LNAV engaged: armed, the roll mode before it stays, FCOM p.644)
 	if B747DR_ap_lnav_state == 2 and simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status == 0 then
 		print("simCMD_autopilot_heading_select in appr_mode")
@@ -2778,46 +2675,9 @@ local restoreAlt=0
 function restoreAltFunc()
 	simDR_autopilot_altitude_ft=restoreAlt
 end
-local lastGSProgress=0
+-- the approach's states are the AFDS model's (6-3 step 1d: its sync
+-- writes them; the old latch with a F/D ON and its "recover" are gone)
 function glideSlopeLOCProgress()
-	--print("B747DR_ap_approach_mode "..B747DR_ap_approach_mode.." B747DR_engine_TOGA_mode "..B747DR_engine_TOGA_mode)
-	if B747DR_ap_approach_mode == 0 or B747DR_engine_TOGA_mode == 1 then
-		B747DR_autopilot_gs_status = 0
-		B747DR_autopilot_nav_status = 0
-		B747DR_ap_approach_mode = 0
-	elseif B747DR_toggle_switch_position[23] == 1.0 or B747DR_toggle_switch_position[24] == 1.0 then
-		if 	simDR_autopilot_gs_status>B747DR_autopilot_gs_status  then
-			B747DR_autopilot_gs_status=simDR_autopilot_gs_status
-		end
-		if 	simDR_autopilot_nav_status>B747DR_autopilot_nav_status  then
-			B747DR_autopilot_nav_status=simDR_autopilot_nav_status
-		end
-		local diff=simDRTime-lastGSProgress
-		if simDR_autopilot_nav_status ==0 and B747DR_autopilot_nav_status>1 and diff>1 then
-			lastGSProgress=simDRTime
-			print("recover LOC mode")
-			--simCMD_pause:once()
-			if B747DR_autopilot_nav_status > 0 then
-				--simCMD_autopilot_nav_mode:once() --DEACTIVATE LOC
-				simDR_autopilot_nav_status=1
-
-				B747DR_ap_lastCommand = simDRTime
-				return
-			end
-		end
-		if simDR_autopilot_gs_status ==0 and B747DR_autopilot_gs_status>1 and diff>1 then
-			lastGSProgress=simDRTime
-			print("recover GS mode")
-			--simCMD_pause:once()
-			if B747DR_autopilot_gs_status > 0 then
-				--simCMD_autopilot_glideslope_mode:once() -- CANX GLIDESLOPE MODE
-				simDR_autopilot_gs_status=1
-				B747DR_ap_lastCommand = simDRTime
-				return
-			end
-		end
-
-	end
 end
 function fma_PitchModes()
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode

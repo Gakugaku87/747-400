@@ -734,15 +734,8 @@ function B747_updateApproachHeading(fmsO)
     " simDR_hsi_vdef_dots_pilot " .. simDR_hsi_vdef_dots_pilot.. "B747DR_ap_lastCommand "..B747DR_ap_lastCommand )]]--
     
     local diff = simDRTime - B747DR_ap_lastCommand
-    if simDR_autopilot_nav_status==1 and simDR_hsi_nav1_horizontal_signal==1 and simDR_hsi_nav2_horizontal_signal==1  and diff>0.5 then
-        simDR_autopilot_nav_status=2
-        B747DR_ap_lastCommand = simDRTime
-    end
-
-    if simDR_autopilot_nav_status==2 and simDR_nav1_gs_flag ==0 and simDR_nav2_gs_flag ==0 and simDR_autopilot_gs_status==1 and math.abs(simDR_hsi_vdef_dots_pilot)<1.5 and simDR_hsi_nav1_vertical_signal==1 and simDR_hsi_nav2_vertical_signal ==1 and diff>0.5 then
-        simDR_autopilot_gs_status=2
-        B747DR_ap_lastCommand = simDRTime
-    end
+    -- LOC's and G/S's captures are the AFDS model's (6-3 step 1d: these
+    -- detectors are its inputs until steps 2 and 3); LOC tracked here
 
     if simDR_autopilot_nav_status==2 then
         if simDR_hsi_nav1_horizontal_signal==1 and simDR_hsi_nav2_horizontal_signal==1 then
@@ -771,12 +764,7 @@ function B747_updateApproachHeading(fmsO)
             end
             if onApproach==true and math.abs(simDR_hsi_ldef_dots_nav1+simDR_hsi_ldef_dots_nav2) > 4 then
                 onApproach=false
-                --print("LOC glitching")
-                simDR_autopilot_nav_status=1
             end
-        else
-           -- print("LOC signal glitching")
-            simDR_autopilot_nav_status=1
         end
         return
     end
