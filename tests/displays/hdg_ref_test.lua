@@ -114,30 +114,28 @@ ra:set("sim/time/total_running_time_sec", 10)
 ra:callout("flight_start")
 ra:set("sim/flightmodel/position/psi", 104)
 ra:set("sim/flightmodel/position/mag_psi", 100)
-ra:set("sim/cockpit2/autopilot/heading_status", 2)               -- HDG SEL
--- with a F/D ON (neither the A/P nor a F/D: no modes at all, FCOM p.660:
--- the AFDS model, 6-3 step 1a)
+ra:set("sim/cockpit2/autopilot/heading_status", 2)               -- X-Plane's HDG SEL
+-- HDG SEL with a F/D ON (neither the A/P nor a F/D: no modes at all, FCOM
+-- p.660; the roll modes the AFDS model's: 6-3 steps 1a, 1b)
 ra:set("laminar/B747/toggle_switch/position", 23, 1)
 ra:set("laminar/B747/autopilot/heading/target", -1)              -- no slew of the MCP heading (made at 0 here)
 ra:set("laminar/B747/autopilot/heading/degrees", 90)
+for _ = 1, 3 do ra:frame(1 / 30) end
+ra:command("laminar/B747/autopilot/button_switch/heading_select")
 for _ = 1, 30 do ra:frame(1 / 30) end
 T.check(near(ra:get("sim/cockpit/autopilot/heading_mag"), 90, 1e-6), "MAG: X-Plane's heading mode on the MCP's 090")
 ra:set("laminar/B747/efis/hdg_ref/true", 1)
 for _ = 1, 30 do ra:frame(1 / 30) end
 T.check(near(ra:get("sim/cockpit/autopilot/heading_mag"), 86, 1e-6),
     "TRU: the MCP's 090 true is 086 magnetic for X-Plane (ATA22 p.358: on the true heading)")
-local function holds()
-    local n = 0
-    for _, c in ipairs(ra.command_log) do if c.name == "sim/autopilot/heading_hold" then n = n + 1 end end
-    return n
-end
-local before = holds()
+local ROLL = "laminar/B747/autopilot/FMA/active_roll_mode"
+T.equal(ra:get(ROLL), 6, "HDG SEL")
 ra:set("laminar/B747/toggle_switch/position", 30, 1)             -- the switch moved in HDG SEL
 for _ = 1, 5 do ra:frame(1 / 30) end
-T.equal(holds() - before, 1, "the HDG REF switch moved in HDG SEL: HDG HOLD (FCOM p.1046, ATA22 p.352)")
-ra:set("sim/cockpit2/autopilot/heading_status", 0)
+T.equal(ra:get(ROLL), 7, "the HDG REF switch moved in HDG SEL: HDG HOLD (FCOM p.1046, ATA22 p.352)")
+ra:command("laminar/B747/autopilot/button_switch/LNAV")
 ra:set("laminar/B747/toggle_switch/position", 30, 0)
 for _ = 1, 5 do ra:frame(1 / 30) end
-T.equal(holds() - before, 1, "not out of HDG SEL")
+T.equal(ra:get(ROLL), 7, "not out of HDG SEL (HDG HOLD, LNAV armed): nothing")
 
 T.done()
