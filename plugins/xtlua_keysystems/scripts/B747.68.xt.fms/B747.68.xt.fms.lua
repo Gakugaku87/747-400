@@ -1635,8 +1635,12 @@ function disalignIRSs()
 end
 
 local flightInit=false
+local didFlightInit=false
+-- a new flight: the in-flight start again (an air start re-done after the
+-- aircraft's reload: the AFDS's flight_start resets its engage state)
 function flight_start()
     flightInit=false
+    didFlightInit=false
 end
 function do_flight_start()
 	B747DR_last_waypoint_fuel=simDR_fueL_tank_weight_total_kg
@@ -1669,15 +1673,18 @@ function setNotifications()
   B747_cdu_sync_fmc_messages(B747DR_fmc_notifications)
   B747DR_CAS_advisory_status[145] = B747_cdu_fmc_alert() and 1 or 0
 end
-local didFlightInit=false
 B747DR_ap_target_speed               	= find_dataref("laminar/B747/autopilot/speed/target")
 B747DR_ap_target_heading_deg               	= find_dataref("laminar/B747/autopilot/heading/target")
 B747CMD_flight_dir_switch_L = find_command("laminar/B747/toggle_switch/flight_dir_L")
-B747CMD_autothrottle_arm_switch 		= find_command("laminar/B747/toggle_switch/autothrottle")
+B747CMD_autothrottle_arm 		= find_command("laminar/B747/authrottle_arm")
+B747DR_fms_toggle_sw		= find_dataref("laminar/B747/toggle_switch/position")
 B747CMD_ap_switch_alt_hold_mode			= find_command("laminar/B747/autopilot/button_switch/alt_hold_mode")
 B747CMD_ap_switch_cmd_L					= find_command("laminar/B747/autopilot/button_switch/cmd_L")
 B747DR_ap_target_altitude               	= find_dataref("laminar/B747/autopilot/altitude/target")
 function fin_activate_inflightAP()
+	-- ALT HOLD after the F/D's default V/S and HDG HOLD (the AFDS model,
+	-- 6-3 step 1a), then the A/P in the F/D's modes
+	B747CMD_ap_switch_alt_hold_mode:once()
 	B747CMD_ap_switch_cmd_L:once()
 	B747DR_ap_target_altitude=math.floor(simDR_pressureAlt1/100)*100
 	
@@ -1686,9 +1693,10 @@ function fin_activate_inflightAP()
 	B747DR_pfd_mode_fo		 = 1
 end
 function activate_inflightAP()
-	B747CMD_flight_dir_switch_L:once()
-	B747CMD_autothrottle_arm_switch:once()
-	B747CMD_ap_switch_alt_hold_mode:once()
+	-- idempotent (it may run twice around an air start re-done): F/D L ON
+	-- only when OFF (its switch toggles), the A/T by its arm command
+	if B747DR_fms_toggle_sw[23] < 0.5 then B747CMD_flight_dir_switch_L:once() end
+	B747CMD_autothrottle_arm:once()
 	B747DR_ap_target_speed=math.floor(math.min(simDR_ias_pilot,B747DR_airspeed_Vmc+10))
 	B747DR_ap_target_heading_deg=math.floor(simDR_aircraft_hdg)
 	local ref1=B747DR_CAS_advisory_status[233]

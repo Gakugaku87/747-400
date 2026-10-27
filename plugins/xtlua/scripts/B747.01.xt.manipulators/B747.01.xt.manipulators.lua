@@ -1252,120 +1252,20 @@ function B747_outflow_valve_switch_close_CMDhandler(phase, duration)
     end
 end
 
+-- the F/D switch: the switch only (its modes: the AFDS model in the
+-- autopilot module, 6-3 step 1a)
 function B747_flight_dir_switch_L_CMDhandler(phase, duration)
     if phase == 0 then
-
-	    ----- SWITCH IS SET TO "ON" POSITION
-		if simDR_all_wheels_on_ground == 1 then															-- ON THE GROUND
-			if simDR_autopilot_servos_on == 0 then														-- NO AUTOPIOT ENGAGED
-				if B747_toggle_switch_position_target[23] == 0.0 										-- LEFT FLIGHT DIRECTOR SWITCH IS OFF
-					and B747_toggle_switch_position_target[24] == 0.0 									-- RIGHT FLIGHT DIRECTOR SWITCH IS OFF
-				then
-					if B747DR_autopilot_TOGA_status == 0												-- TOGA LATERAL MODE IS OFF
-					then
-						B747DR_autopilot_TOGA_status=1												-- ACTIVATE "TOGA" MODE
-					end
-				end
-			end
-		elseif simDR_all_wheels_on_ground == 0 then														-- IN FLIGHT
-			if simDR_autopilot_servos_on == 0 then														-- NO AUTOPIOT ENGAGED
-				if B747_toggle_switch_position_target[23] == 0.0 										-- LEFT FLIGHT DIRECTOR SWITCH IS OFF
-					and B747_toggle_switch_position_target[24] == 0.0 									-- RIGHT FLIGHT DIRECTOR SWITCH IS OFF
-				then
-					simCMD_autopilot_vert_speed_mode:once()												-- ACTIVATE "VS" MODE
-					simDR_autopilot_alt_hold_status=0
-                    if math.abs(simDR_AHARS_roll_deg_pilot) < 5.0 then									-- BANK ANGLE LESS THAN 5 DEGREES
-						simCMD_autopilot_heading_mode:once()											-- ACTIVATE "HEADING HOLD" MODE
-					else
-					--	B747CMD_ap_att_mode:once()														-- ACTIVATE "ATT" MODE
-                        B747DR_ap_ATT = simDR_AHARS_roll_deg_pilot
-					end
-				end
-			end
-		end
-
-
-		-- SET THE TOGGLE SWITCH ANIMATION POSITION
-		B747_toggle_switch_position_target[23] = 1.0 - B747_toggle_switch_position_target[23]
-		if B747_toggle_switch_position_target[23] == 0.0 										-- LEFT FLIGHT DIRECTOR SWITCH IS OFF
-					and B747_toggle_switch_position_target[24] == 0.0 									-- RIGHT FLIGHT DIRECTOR SWITCH IS OFF
-				then
-                    B747DR_ap_lastCommand=simDRTime
-                    B747DR_autopilot_TOGA_status=0
-        end
-
-		----- SWITCH IS SET TO "OFF" POSITION
-		--[[if B747_toggle_switch_position_target[23] == 0.0 												-- LEFT FLIGHT DIRECTOR SWITCH IS OFF
-			and B747_toggle_switch_position_target[24] == 0.0 											-- RIGHT FLIGHT DIRECTOR SWITCH IS OFF
-		then
-            if B747DR_autopilot_cmd_L_mode == 0 														-- LEFT CMD AP MODE IS "OFF"
-            	and B747DR_autopilot_cmd_C_mode == 0 													-- CENTER CMD AP MODE IS "OFF"
-				and B747DR_autopilot_cmd_R_mode == 0 													-- RIGHT CMD AP MODE IS "OFF"
-			then
-            	B747CMD_ap_reset:once()
-            end
-		end]]
-
-	end
+        B747_toggle_switch_position_target[23] = 1.0 - B747_toggle_switch_position_target[23]
+    end
 end
 
+-- the F/D switch: the switch only (its modes: the AFDS model in the
+-- autopilot module, 6-3 step 1a)
 function B747_flight_dir_switch_R_CMDhandler(phase, duration)
     if phase == 0 then
-
-	    ----- SWITCH IS SET TO "ON" POSITION
-		if simDR_all_wheels_on_ground == 1 then															-- ON THE GROUND
-			if simDR_autopilot_servos_on == 0 then														-- NO AUTOPIOT ENGAGED
-				if B747_toggle_switch_position_target[23] == 0.0 										-- LEFT FLIGHT DIRECTOR SWITCH IS OFF
-					and B747_toggle_switch_position_target[24] == 0.0 									-- RIGHT FLIGHT DIRECTOR SWITCH IS OFF
-				then
-					if B747DR_autopilot_TOGA_status == 0										-- TOGA LATERAL MODE IS OFF
-					then
-                        B747DR_ap_lastCommand=simDRTime
-						B747DR_autopilot_TOGA_status=1												-- ACTIVATE "TOGA" MODE
-					end
-				end
-			end
-		elseif simDR_all_wheels_on_ground == 0 then														-- IN FLIGHT
-			if simDR_autopilot_servos_on == 0 then														-- NO AUTOPIOT ENGAGED
-				if B747_toggle_switch_position_target[23] == 0.0 										-- LEFT FLIGHT DIRECTOR SWITCH IS OFF
-					and B747_toggle_switch_position_target[24] == 0.0 									-- RIGHT FLIGHT DIRECTOR SWITCH IS OFF
-				then
-					simCMD_autopilot_vert_speed_mode:once()												-- ACTIVATE "VS" MODE
-					simDR_autopilot_alt_hold_status=0
-                    if math.abs(simDR_AHARS_roll_deg_pilot) < 5.0 then									-- BANK ANGLE LESS THAN 5 DEGREES
-						simCMD_autopilot_heading_mode:once()											-- ACTIVATE "HEADING HOLD" MODE
-					else
-						--B747CMD_ap_att_mode:once()														-- ACTIVATE "ATT" MODE
-                        B747DR_ap_ATT = simDR_AHARS_roll_deg_pilot
-					end
-				end
-
-			end
-		end
-
-
-		-- SET THE TOGGLE SWITCH ANIMATION POSITION
-		B747_toggle_switch_position_target[24] = 1.0 - B747_toggle_switch_position_target[24]
-		if B747_toggle_switch_position_target[23] == 0.0 										-- LEFT FLIGHT DIRECTOR SWITCH IS OFF
-					and B747_toggle_switch_position_target[24] == 0.0 									-- RIGHT FLIGHT DIRECTOR SWITCH IS OFF
-				then
-                    B747DR_ap_lastCommand=simDRTime
-                    B747DR_autopilot_TOGA_status=0
-        end
-
-		----- SWITCH IS SET TO "OFF" POSITION
-		--[[if B747_toggle_switch_position_target[23] == 0.0 												-- LEFT FLIGHT DIRECTOR SWITCH IS OFF
-			and B747_toggle_switch_position_target[24] == 0.0 											-- RIGHT FLIGHT DIRECTOR SWITCH IS OFF
-		then
-            if B747DR_autopilot_cmd_L_mode == 0 														-- LEFT CMD AP MODE IS "OFF"
-            	and B747DR_autopilot_cmd_C_mode == 0 													-- CENTER CMD AP MODE IS "OFF"
-				and B747DR_autopilot_cmd_R_mode == 0 													-- RIGHT CMD AP MODE IS "OFF"
-			then
-            	B747CMD_ap_reset:once()
-            end
-		end]]
-
-	end
+        B747_toggle_switch_position_target[24] = 1.0 - B747_toggle_switch_position_target[24]
+    end
 end
 
 function B747_vor_adf_pilot_switch_L_up_CMDhandler(phase, duration)
