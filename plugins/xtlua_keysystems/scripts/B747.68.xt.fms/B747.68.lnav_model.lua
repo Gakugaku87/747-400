@@ -44,6 +44,11 @@ local G = 9.80665
 local KT = 1852 / 3600        -- m/s in a knot
 M.CAPTURE = 2.5
 M.SEQ_LIMIT = 21
+-- during the transitions to and from an offset over 21 nm (FCOM p.1298);
+-- END OF OFFSET this far before the offset's end (FCOM p.1431; FMSPG
+-- p.155)
+M.SEQ_LIMIT_WIDE = 200
+M.EOO_DIST = 5
 M.BANK = 25
 -- in a hold and its entry (FCOM p.1413; FMSPG p.164, p.226-227)
 M.HOLD_BANK = 30
@@ -65,7 +70,7 @@ local function wrap180(a) return (a + 180) % 360 - 180 end
 function M.new(P)
     return setmetatable({P = P, mode = nil, hold = nil, turn = nil, recapture = false, eor = false,
         valid = false, roll = 0, xtk = 0, dtk = nil, tae = 0, dtg = nil, seq = 0,
-        msg_disc = false, msg_eor = false, msg_intc = false}, {})
+        msg_disc = false, msg_eor = false, msg_intc = false, msg_eoo = false, ofst = false}, {})
 end
 
 -- a new active leg not by sequencing (EXEC, ACTIVATE: the route changed):
@@ -441,7 +446,7 @@ function M.update(s, path, air, armed, engaged)
     if not engaged then s.mode, s.hold, s.recapture = nil, nil, false end
     if not e then
         s.valid, s.roll, s.xtk, s.dtk, s.dtg, s.tae = false, 0, 0, nil, nil, 0
-        s.msg_disc, s.msg_eor = false, false
+        s.msg_disc, s.msg_eor, s.msg_eoo, s.ofst = false, false, false, false
         return 0
     end
     -- the turns' speed: the true airspeed and the wind's (the fastest
@@ -461,8 +466,9 @@ function M.update(s, path, air, armed, engaged)
         if seq == 1 and not air.ground then
             if nxt then s.seq = 1 else s.eor = true end
         end
-    -- sequencing (not on the ground; within 21 nm of the leg)
-    elseif not air.ground and not s.eor and math.abs(xt) <= M.SEQ_LIMIT then
+    -- sequencing (not on the ground; within 21 nm of the leg, 200 to and
+    -- from a wide offset)
+    elseif not air.ground and not s.eor and math.abs(xt) <= (e.wide and M.SEQ_LIMIT_WIDE or M.SEQ_LIMIT) then
         if e.term == "fix" and (e.kind == "line" or e.kind == "arc") then
             -- a turn not flown (the airplane back away from the fix)
             if s.turn and not s.turn.past and dtg and dtg > s.turn.d + 1 then s.turn = nil end
@@ -528,6 +534,10 @@ function M.update(s, path, air, armed, engaged)
     end
     s.msg_disc = engaged and (e.kind == "disc" or e.kind == "none")
     s.msg_eor = engaged and s.eor
+    -- the offset (step 7d): its guidance (the OFST light: FCOM p.1210),
+    -- END OF OFFSET on its last leg
+    s.ofst = engaged and e.offset ~= nil
+    s.msg_eoo = s.ofst and not (nxt and nxt.offset) and dtg ~= nil and dtg <= M.EOO_DIST
     return s.seq
 end
 

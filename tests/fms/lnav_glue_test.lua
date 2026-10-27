@@ -5,7 +5,8 @@
 -- (laminar/B747/autopilot/lnav_state: 1 armed, 2 engaged) in; the FMC's
 -- steering out (laminar/B747/fms/lnav/valid, roll, mode, xtk, route), the
 -- messages NO ACTIVE ROUTE, NOT ON INTERCEPT HEADING, DISCONTINUITY (FCOM
--- p.1431-1435) on the CDUs, PROGRESS page 2's XTK ERROR (FCOM p.1377).
+-- p.1431-1435) on the CDUs, PROGRESS page 2's XTK ERROR (FCOM p.1377); an
+-- offset's path and the OFST light (step 7d; FCOM p.1210, p.1298).
 B747_NAVDB_FOLDER = "tests/fms/data/navdb/"
 local T = dofile("tests/lib/check.lua")("lnav_glue")
 local xtlua = dofile("tests/lib/xtlua.lua")
@@ -111,6 +112,20 @@ key("func_key/prog")
 key("func_key/next_pg")
 frames(1.2)
 T.equal(line(5), "R 1.0NM            +**FT", "PROGRESS page 2: XTK ERROR R 1.0NM (FCOM p.1377; before always L)")
+
+-- OFFSET R5 (step 7d): LNAV's path 5 nm right, the OFST light
+key("func_key/fpln")
+enter("R5", "R6")
+key("key/execute")
+frames(0.3)
+T.near(lnav("xtk"), -4.0, 0.05, "R5: 1 nm right of the route is 4 nm left of the offset path")
+T.check(lnav("roll") > 5, "a bank to the right toward it: " .. lnav("roll"))
+T.equal(rt:get("laminar/B747/fms/ofst_light"), 1, "the OFST light (FCOM p.1210)")
+enter("L0", "R6")
+key("key/execute")
+frames(0.3)
+T.near(lnav("xtk"), 1.0, 0.02, "L0: the route again")
+T.equal(rt:get("laminar/B747/fms/ofst_light"), 0, "the OFST light off")
 
 -- ZZD inserted after ALPHA with a ROUTE DISCONTINUITY after it; past it
 -- engaged: the heading held, DISCONTINUITY (FCOM p.1431)

@@ -4,6 +4,8 @@
 -- the route's segments, VIA and TO five a page, dashes after the end (FCOM
 -- p.1296-1298). The title RTE 1, ACT RTE 1 or MOD RTE 1, ERASE at 6L on a
 -- modification (FCOM p.1238). Before: X-Plane's RTE page shown through.
+-- OFFSET at 6R in the air on the active route, its active leg not a SID's,
+-- a STAR's or an approach's (step 7d; FCOM p.1298; FMSPG p.155-156).
 local R = B747_route_model
 local BLANK = "                        "
 
@@ -26,9 +28,19 @@ local function title()
 end
 
 -- 6R: ACTIVATE on the inactive route (until EXEC), then PERF INIT until
--- the performance data are complete, then TAKEOFF (FCOM p.1290)
+-- the performance data are complete, then TAKEOFF (FCOM p.1290); OFFSET in
+-- the air (step 7d)
+local function offset_shown()
+  return R.offset_allowed(B747_fmc_route, simDR_onGround == 0)
+end
+local function offset_text()
+  local d = route().offset
+  if not d then return "---" end
+  return (d < 0 and "L" or "R") .. tostring(math.abs(d))
+end
 local function six_right()
   if not B747_fmc_route.active then return "ACTIVATE>", {"rteactivate", ""} end
+  if offset_shown() then return offset_text(), {"rteoffset", ""} end
   if not perf_init_complete() then return "PERF INIT>", {"setpage", "PERFINIT"} end
   return "TAKEOFF>", {"setpage", "TAKEOFF"}
 end
@@ -61,7 +73,7 @@ fmsPages["RTE1"].getPage=function(self,pgNo,fmsID)
       lr(runway, fltno), BLANK,
       lr("", "----------"), BLANK,
       BLANK, BLANK,
-      BLANK, "------------------------",
+      BLANK, offset_shown() and "------------------      " or "------------------------",
       six
     }
   end
@@ -85,22 +97,24 @@ fmsPages["RTE1"].getPage=function(self,pgNo,fmsID)
     lines[#lines + 1] = BLANK
     lines[#lines + 1] = lr(via, to)
   end
-  lines[12] = BLANK
+  lines[12] = offset_shown() and "------------------      " or BLANK
   lines[13] = six
   return lines
 end
 fmsPages["RTE1"].getSmallPage=function(self,pgNo,fmsID)
   local n = num_pages()
   local pn = string.format("%23s ", pgNo .. "/" .. n)
+  -- the OFFSET label in small font at the dashes' end (FCOM p.1298)
+  local off = offset_shown() and "                  OFFSET" or BLANK
   if pgNo == 1 then
     return {
       pn, " ORIGIN             DEST", BLANK,
       " RUNWAY           FLT NO", BLANK,
       "                CO ROUTE", BLANK,
-      BLANK, BLANK, BLANK, BLANK, BLANK, BLANK
+      BLANK, BLANK, BLANK, BLANK, off, BLANK
     }
   end
-  return {pn, " VIA                  TO", BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK}
+  return {pn, " VIA                  TO", BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, off, BLANK}
 end
 fmsFunctionsDefs["RTE1"]={}
 
@@ -247,6 +261,21 @@ function fmsFunctions.rteto(fmsO, value)
   local before = r.legs[#r.legs - (boxes and 1 or 0)]
   local near = before and before.fix or r.origin
   B747_fmc_with_point(fmsO, sp, near, function(p) entry(fmsO, R.add_to(B747_fmc_route, p)) end)
+end
+-- OFFSET (FCOM p.1298; FMSPG p.156): L or R and 1-99 nm (R20, L5); L0, 0,
+-- R0 or DELETE cancels it
+function fmsFunctions.rteoffset(fmsO, value)
+  local sp = fmsO["scratchpad"]
+  if sp == "" then return end
+  local d
+  if sp == "DELETE" or sp == "0" then
+    d = 0
+  else
+    local side, n = sp:match("^([LR])(%d%d?)$")
+    if not side then fmsO["notify"] = "INVALID ENTRY" return end
+    d = tonumber(n) * (side == "L" and -1 or 1)
+  end
+  entry(fmsO, R.set_offset(B747_fmc_route, d, simDR_onGround == 0))
 end
 function fmsFunctions.rteactivate(fmsO, value)
   entry(fmsO, R.activate(B747_fmc_route))
