@@ -1,5 +1,5 @@
 -- Run from the repository root with LuaJIT: luajit tests/autopilot/afds_model_test.lua
--- The FCCs' mode logic, steps 1a and 1b (6-3: docs/overhaul/notes/ATA-22.md
+-- The FCCs' mode logic, steps 1a-1c (6-3: docs/overhaul/notes/ATA-22.md
 -- §10): plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.afds_model.lua.
 -- 1a: the A/P's engage (CMD: the bar, the other channels, the servos'
 -- hydraulics; on the ground too) and disengage (the bar, the control wheel
@@ -10,6 +10,9 @@
 -- 1b: the roll modes HDG SEL, HDG HOLD (its heading after 2 s under 3
 -- degrees), ATT, LNAV (arm, second push, engage, kept armed by HDG SEL),
 -- the transitions from the old LOC and G/A, the FMA's roll.
+-- 1c: the pitch modes V/S (synced: 000 after ALT and TO/GA descending),
+-- ALT HOLD, the capture, FLCH (its speed), VNAV (arm, second push, the old
+-- VNAV's engage and end), the transitions, the SPD switch, the FMA's pitch.
 local T = dofile("tests/lib/check.lua")("afds_model")
 local A = dofile("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.afds_model.lua")
 
@@ -19,7 +22,11 @@ local function inp(o)
     return {fd = {L = o.fdL or false, R = o.fdR or false}, hyd = o.hyd or HYD, bank = o.bank or 0,
         engine = o.engine or 0, ground = o.ground or false, toga = o.toga or false, ra = o.ra or 9000,
         hdg = o.hdg or 100, lnav_valid = o.lnav_valid or false, old_roll = o.old_roll,
-        gs_active = o.gs_active or false, old_armed_roll = o.old_armed_roll, dt = o.dt or 0.1, ga = o.ga or false}
+        gs_active = o.gs_active or false, old_armed_roll = o.old_armed_roll, dt = o.dt or 0.1, ga = o.ga or false,
+        vs = o.vs or 0, alt = o.alt or 10000, old_pitch = o.old_pitch, window_open = o.window_open,
+        ias = o.ias or 250, mcp_ias = o.mcp_ias or 250, fmc_speed = o.fmc_speed, capture = o.capture or false,
+        capture_alt = o.capture_alt, vnav_engaged = o.vnav_engaged or false, vnav_fma = o.vnav_fma,
+        old_law = o.old_law, old_armed_pitch = o.old_armed_pitch, old_hold_alt = o.old_hold_alt}
 end
 
 -- engage with both F/Ds OFF: V/S and HDG HOLD (FCOM p.640; ATA22 p.266)
@@ -232,5 +239,175 @@ A.update(t, inp({fdL = true, old_roll = "TOGA"}))
 T.equal(select(1, A.roll_fma(t, inp({old_roll = "TOGA"}))), 1, "TO/GA again: its roll again")
 -- the HDG REF switch in HDG SEL: HDG HOLD by default (ATA22 p.352)
 T.equal(A.hdg_hold(c, inp({old_roll = "LOC", gs_active = true}), true), true, "HDG HOLD by default: no conditions")
+
+-- 1c: the pitch modes. V/S synced to the present vertical speed (100 fpm,
+-- -8000..+6000), 000 after ALT or after TO/GA descending (ATA22 p.282)
+local p = A.new()
+A.update(p, inp({fdL = true, vs = 1234}))
+T.equal(p.pitch, "VS", "the F/D's default: V/S in the model")
+T.equal(select(1, A.pitch_fma(p, inp())), 7, "the FMA's V/S (7)")
+T.equal(A.vs(p, inp({vs = 1234})), 1200, "V/S synced to 1,234 fpm: 1,200")
+T.equal(A.vs(p, inp({vs = -9300})), -8000, "the window's -8,000 at most")
+T.equal(A.vs(p, inp({vs = 7100})), 6000, "+6,000 at most")
+T.check(A.alt_hold(p, inp({alt = 12345})) and p.pitch == "ALT" and p.hold_alt == 12345, "ALT HOLD: the altitude then")
+T.equal(select(1, A.pitch_fma(p, inp())), 9, "the FMA's ALT (9)")
+T.equal(A.vs(p, inp({vs = 800})), 0, "V/S after ALT: 000")
+local pt = A.new()
+A.update(pt, inp({fdL = true}))
+A.update(pt, inp({fdL = true, old_pitch = "TOGA"}))
+T.equal(select(1, A.pitch_fma(pt, inp({old_pitch = "TOGA"}))), 1, "the old TO/GA's pitch (1)")
+T.equal(A.vs(pt, inp({vs = -500, old_pitch = "TOGA"})), 0, "V/S from TO/GA descending: 000")
+T.equal(select(1, A.pitch_fma(pt, inp({old_pitch = "TOGA"}))), 7, "V/S over TO/GA's pitch")
+local pt2 = A.new()
+A.update(pt2, inp({fdL = true}))
+A.update(pt2, inp({fdL = true, old_pitch = "TOGA"}))
+T.equal(A.vs(pt2, inp({vs = 1500, old_pitch = "TOGA"})), 1500, "V/S from TO/GA climbing: synced")
+-- the transitions (table p.335): G/A below 400 ft, the old G/S once LOC is
+-- active, FLARE
+local pg = A.new()
+A.update(pg, inp({fdL = true}))
+T.equal(A.vs(pg, inp({old_pitch = "TOGA", old_roll = "TOGA", ga = true, ra = 300})), nil, "V/S in G/A below 400 ft: no")
+T.equal(A.alt_hold(pg, inp({old_pitch = "TOGA", ga = true, ra = 300})), false, "ALT HOLD in G/A below 400 ft: no")
+T.equal(A.flch(pg, inp({old_pitch = "TOGA", ga = true, ra = 300})), false, "FLCH in G/A below 400 ft: no")
+T.equal(A.vs(pg, inp({old_pitch = "GS", old_roll = "LOC"})), nil, "V/S from G/S with LOC active: no")
+T.check(A.vs(pg, inp({old_pitch = "GS"})) ~= nil, "V/S from G/S before LOC: yes")
+T.equal(A.alt_hold(pg, inp({old_pitch = "FLARE"})), false, "nothing from FLARE")
+-- FLCH (FCOM p.646): the window open: as it is; blank: the FMC's target,
+-- else the present speed; from TO/GA the higher of the present and the
+-- selected
+local pf = A.new()
+A.update(pf, inp({fdL = true}))
+local ok1, sp1 = A.flch(pf, inp({window_open = true, ias = 250, mcp_ias = 270}))
+T.check(ok1 and pf.pitch == "FLCH" and sp1 == nil, "FLCH with the window open: its speed as it is")
+T.equal(select(1, A.pitch_fma(pf, inp())), 8, "the FMA's FLCH SPD (8)")
+local _, sp2 = A.flch(pf, inp({window_open = false, ias = 250, fmc_speed = 290}))
+T.equal(sp2, 290, "the window blank: the FMC's target")
+local _, sp3 = A.flch(pf, inp({window_open = false, ias = 250}))
+T.equal(sp3, 250, "the window blank, no FMC target: the present speed")
+local pf2 = A.new()
+A.update(pf2, inp({fdL = true}))
+A.update(pf2, inp({fdL = true, old_pitch = "TOGA"}))
+local _, sp4 = A.flch(pf2, inp({old_pitch = "TOGA", window_open = true, ias = 175, mcp_ias = 160}))
+T.equal(sp4, 175, "from TO/GA: the higher of the present 175 and the selected 160")
+-- the capture of the MCP altitude from V/S and FLCH (the old window)
+A.update(pf, inp({fdL = true, capture = true, capture_alt = 15000}))
+T.check(pf.pitch == "ALT" and pf.hold_alt == 15000, "FLCH captures the MCP altitude: ALT at 15,000")
+local pc = A.new()
+A.update(pc, inp({fdL = true}))
+A.alt_hold(pc, inp({alt = 9000}))
+A.update(pc, inp({fdL = true, capture = true, capture_alt = 9500}))
+T.equal(pc.hold_alt, 9000, "ALT HOLD is not a capture: still 9,000")
+-- VNAV (FCOM p.645; ATA22 p.340): armed by the first push, the active mode
+-- stays (the old arm forced ALT HOLD); the second push disarms; engaged by
+-- the old VNAV; V/S ends it, not its arm; not armed with G/S active
+local pv = A.new()
+A.update(pv, inp({fdL = true}))
+A.alt_hold(pv, inp({alt = 9000}))
+A.vnav(pv, inp())
+T.check(pv.vnav_arm and pv.pitch == "ALT", "VNAV armed, ALT still active")
+local va, varm = A.pitch_fma(pv, inp())
+T.check(va == 9 and varm == 4, "the FMA: ALT, VNAV armed")
+A.vnav(pv, inp())
+T.check(not pv.vnav_arm, "the second push disarms")
+A.vnav(pv, inp())
+A.update(pv, inp({fdL = true, vnav_engaged = true}))
+T.check(pv.pitch == "VNAV" and not pv.vnav_arm, "the old VNAV engaged: VNAV")
+T.equal(select(1, A.pitch_fma(pv, inp({vnav_fma = 6}))), 6, "the FMA: the old VNAV's VNAV PTH")
+A.vnav(pv, inp())
+T.equal(pv.pitch, "VNAV", "a push while active: nothing")
+A.vnav(pv, inp())
+T.check(not pv.vnav_arm, "and no arm either")
+A.vs(pv, inp({vs = 0}))
+T.equal(pv.pitch, "VS", "V/S ends VNAV")
+local pv2 = A.new()
+A.update(pv2, inp({fdL = true}))
+A.vnav(pv2, inp({old_pitch = "GS"}))
+T.check(not pv2.vnav_arm, "VNAV not armed with G/S active")
+A.vnav(pv2, inp())
+A.vs(pv2, inp({vs = 0}))
+T.check(pv2.vnav_arm, "V/S keeps VNAV's arm")
+-- VNAV ended by the old VNAV (no route): the old law's mode then
+local pv3 = A.new()
+A.update(pv3, inp({fdL = true}))
+A.vnav(pv3, inp())
+A.update(pv3, inp({fdL = true, vnav_engaged = true}))
+A.update(pv3, inp({fdL = true, vnav_engaged = false, old_law = "ALT", alt = 31000}))
+T.check(pv3.pitch == "ALT" and pv3.hold_alt == 31000, "the old VNAV ended: its ALT")
+-- the SPD switch (FCOM p.642)
+T.equal(A.spd_works(pv3, inp()), true, "SPD works in ALT")
+A.flch(pv3, inp({window_open = true}))
+T.equal(A.spd_works(pv3, inp()), false, "not in FLCH SPD")
+T.equal(A.spd_works(pt2, inp({old_pitch = "TOGA"})), true, "in V/S after TO/GA")
+local pt3 = A.new()
+A.update(pt3, inp({fdL = true}))
+A.update(pt3, inp({fdL = true, old_pitch = "TOGA"}))
+T.equal(A.spd_works(pt3, inp({old_pitch = "TOGA"})), false, "not in TO/GA")
+-- everything off clears the pitch
+local po = A.new()
+A.update(po, inp({fdL = true}))
+A.vnav(po, inp())
+A.update(po, inp())
+T.check(not po.pitch and not po.vnav_arm, "everything off: no pitch mode, no VNAV arm")
+-- the old VNAV ended into ALT: at the old law's altitude
+local pv4 = A.new()
+A.update(pv4, inp({fdL = true}))
+A.vnav(pv4, inp())
+A.update(pv4, inp({fdL = true, vnav_engaged = true}))
+A.update(pv4, inp({fdL = true, vnav_engaged = false, old_law = "ALT", alt = 30950, old_hold_alt = 31000}))
+T.check(pv4.pitch == "ALT" and pv4.hold_alt == 31000, "the old VNAV ended: ALT at its 31,000 (not the present 30,950)")
+-- VNAV lost (no route for the old VNAV): the arm ends, the active mode stays
+local pv5 = A.new()
+A.update(pv5, inp({fdL = true}))
+A.alt_hold(pv5, inp({alt = 9000}))
+A.vnav(pv5, inp())
+A.vnav_lost(pv5)
+T.check(not pv5.vnav_arm and pv5.pitch == "ALT", "VNAV lost: the arm ends, ALT stays")
+-- the old G/S engaged ends the pitch mode and VNAV's arm (FCOM p.645)
+local pg2 = A.new()
+A.update(pg2, inp({fdL = true}))
+A.alt_hold(pg2, inp({alt = 3000}))
+A.vnav(pg2, inp())
+A.update(pg2, inp({fdL = true, old_pitch = "GS"}))
+T.check(not pg2.pitch and not pg2.hold_alt and not pg2.vnav_arm, "the old G/S: no pitch mode, no VNAV arm")
+T.equal(select(1, A.pitch_fma(pg2, inp({old_pitch = "GS"}))), 2, "the FMA's G/S (2)")
+-- ALT HOLD by default in FLCH 8,000 ft away from the path to the MCP
+-- altitude (ATA22 p.338), from the nearest point (an estimate)
+local pa = A.new()
+A.update(pa, inp({fdL = true}))
+A.flch(pa, inp({window_open = true, alt = 20000}))
+A.update(pa, inp({fdL = true, alt = 21000, capture_alt = 30000}))
+A.update(pa, inp({fdL = true, alt = 14000, capture_alt = 30000}))
+T.equal(pa.pitch, "FLCH", "FLCH 7,000 ft below the nearest 21,000: still FLCH")
+A.update(pa, inp({fdL = true, alt = 12900, capture_alt = 30000}))
+T.check(pa.pitch == "ALT" and pa.hold_alt == 12900, "8,100 ft away: ALT HOLD at 12,900 (the default)")
+local pa2 = A.new()
+A.update(pa2, inp({fdL = true}))
+A.flch(pa2, inp({window_open = true, alt = 15000}))
+A.update(pa2, inp({fdL = true, alt = 15000, capture_alt = 20000}))
+A.update(pa2, inp({fdL = true, alt = 16000, capture_alt = 5000}))
+T.equal(pa2.pitch, "FLCH", "the MCP altitude reset below, 1,000 ft on: FLCH")
+A.update(pa2, inp({fdL = true, alt = 24100, capture_alt = 5000}))
+T.equal(pa2.pitch, "ALT", "8,100 ft past the nearest: ALT HOLD")
+-- the old TO/GA's pitch replaces the pitch mode (VNAV too: FCOM p.645), not
+-- VNAV's arm
+local pt4 = A.new()
+A.update(pt4, inp({fdL = true}))
+A.alt_hold(pt4, inp({alt = 3000}))
+A.vnav(pt4, inp())
+A.update(pt4, inp({fdL = true, old_pitch = "TOGA"}))
+T.check(not pt4.pitch and not pt4.hold_alt and pt4.vnav_arm, "the old TO/GA: no pitch mode, VNAV still armed")
+T.equal(select(1, A.pitch_fma(pt4, inp({old_pitch = "TOGA"}))), 1, "the FMA's TO/GA")
+local pt5 = A.new()
+A.update(pt5, inp({fdL = true}))
+A.vnav(pt5, inp())
+A.update(pt5, inp({fdL = true, vnav_engaged = true}))
+A.update(pt5, inp({fdL = true, vnav_engaged = true, old_pitch = "TOGA"}))
+T.check(not pt5.pitch, "TO/GA ends VNAV")
+-- VNAV from G/A at any height (table p.335: V/S, ALT HOLD and FLCH only
+-- above 400 ft)
+local pv6 = A.new()
+A.update(pv6, inp({fdL = true}))
+A.vnav(pv6, inp({old_pitch = "TOGA", old_roll = "TOGA", ga = true, ra = 300}))
+T.check(pv6.vnav_arm, "VNAV armed in G/A below 400 ft")
 
 T.done()

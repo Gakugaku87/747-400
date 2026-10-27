@@ -98,4 +98,34 @@ for _, c in ipairs({{7, true, "HDG HOLD"}, {5, true, "ATT"}, {6, false, "HDG SEL
 end
 rt:set(ROLL, 0)
 rt:frame(1 / 30)
+-- the MCP's pitch lights (6-3 step 1c; FCOM p.645-650): V/S, ALT HOLD and
+-- FLCH their mode active, VNAV armed or active. VNAV's arm leaves the
+-- active mode's light (the old lights put V/S and ALT HOLD out), VNAV
+-- engaged puts them out (the old VNAV sets the old law's flags for its
+-- sub-modes), the old G/S too
+local APS = "laminar/B747/autopilot/"
+local function pitch_lights(vs, alt, fma, vnav, gs)
+    rt:set(APS .. "vvi_status", vs)
+    rt:set(APS .. "altitude_hold_status", alt)
+    rt:set(APS .. "FMA/active_pitch_mode", fma)
+    rt:set(APS .. "vnav_state", vnav)
+    rt:set(APS .. "glideslope_status", gs or 0)
+    rt:frame(1 / 30)
+    local function on(i) return rt:get(ANNUN, i) > 0.01 end
+    return {vs = on(263), alt = on(264), flch = on(261), vnav = on(260)}
+end
+local l = pitch_lights(2, 0, 7, 1)
+T.check(l.vs and not l.alt and l.vnav, "V/S with VNAV armed: the V/S and VNAV lights (the old V/S light went out)")
+l = pitch_lights(0, 2, 9, 1)
+T.check(l.alt and not l.vs and l.vnav, "ALT with VNAV armed: ALT HOLD and VNAV (the old ALT HOLD light went out)")
+l = pitch_lights(0, 0, 8, 1)
+T.check(l.flch and l.vnav, "FLCH SPD with VNAV armed: FLCH and VNAV")
+l = pitch_lights(2, 0, 6, 2)
+T.check(not l.vs and not l.alt and not l.flch and l.vnav, "VNAV PTH (the old VNAV's V/S flag): VNAV only")
+l = pitch_lights(0, 2, 5, 3)
+T.check(not l.alt and l.vnav, "VNAV ALT (its ALT flag): VNAV only")
+l = pitch_lights(0, 2, 2, 0, 2)
+T.check(not l.alt and not l.vs and not l.vnav, "the old G/S captured (a stale ALT flag): out")
+l = pitch_lights(0, 0, 0, 0)
+T.check(not l.vs and not l.alt and not l.flch and not l.vnav, "no pitch mode: all out")
 T.done()

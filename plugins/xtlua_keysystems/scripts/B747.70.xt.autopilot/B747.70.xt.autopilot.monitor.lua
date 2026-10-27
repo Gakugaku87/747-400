@@ -484,6 +484,10 @@ function VNAV_modeSwitch(fmsO)
         B747_monitor_THR_REF_AT()
         return
     end --not requested
+    -- no route: the old VNAV can't run without one, VNAV and its arm end
+    -- through the AFDS model (B747_ap_altitude: 6-3 step 1c); it read the
+    -- route's entry 0 and stopped the frame with a Lua error before that
+    if fmsO == nil or table.getn(fmsO) < 2 or fmsO[table.getn(fmsO)][2] ~= 1 then return end
     local dist=B747BR_totalDistance-B747BR_tod
 
     if B747DR_ap_inVNAVdescent >0 and B747DR_autothrottle_active == 0 and isATEnabled() and simDR_allThrottle>0 and simDR_radarAlt1>1000 and B747DR_ap_FMA_autothrottle_mode==5 then
