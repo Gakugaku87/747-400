@@ -115,6 +115,9 @@ B747DR_fms_lnav_route					= deferred_dataref("laminar/B747/fms/lnav/route", "num
 B747DR_fms_lnav_hold_phase				= deferred_dataref("laminar/B747/fms/lnav/hold_phase", "number")
 B747DR_fms_lnav_hold_loops				= deferred_dataref("laminar/B747/fms/lnav/hold_loops", "number")
 B747DR_fms_lnav_hold_exit				= deferred_dataref("laminar/B747/fms/lnav/hold_exit", "number")
+-- the CDUs' OFST light (step 7d; FCOM p.1210): 1 while LNAV gives the
+-- offset's guidance (not in the 3D cockpit yet)
+B747DR_fms_ofst_light					= deferred_dataref("laminar/B747/fms/ofst_light", "number")
 
 --IRS ND DISPLAY
 B747DR_ND_GPS_Line						= deferred_dataref("laminar/B747/irs/gps_display_line", "string")

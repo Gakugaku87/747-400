@@ -38,7 +38,7 @@ local function copy_route(r)
     local passed = {}
     for i, l in ipairs(r.passed) do passed[i] = l end
     return {origin = r.origin, dest = r.dest, runway = r.runway, legs = legs, passed = passed,
-        sid = r.sid, star = r.star, appr = r.appr}
+        sid = r.sid, star = r.star, appr = r.appr, offset = r.offset}
 end
 
 -- the FMC's routes: `N` the navigation database module, `db` its database
@@ -428,9 +428,12 @@ function M.direct_to(st, fix, route_crs, ppos)
     if not st.active then return M.INVALID_ENTRY end
     local err = M.legs_entry(st, 1, fix)
     if err then return err end
-    local l = M.edit(st).legs[1]
+    local e = M.edit(st)
+    local l = e.legs[1]
     l.dto, l.crs, l.route_crs, l.dto_exec = true, nil, route_crs, true
     l.from = ppos and {lat = ppos.lat, lon = ppos.lon} or nil
+    -- the offset cancelled (FCOM p.1299; FMSPG p.156)
+    e.offset = nil
 end
 
 -- the point `d` nm from `p` on the true course `crs`
@@ -600,6 +603,8 @@ function M.hold_ppos(st, ppos, crz_alt)
     end
     local h = new_hold(st, r, 1, {kind = "LL", ident = M.PPOS, lat = ppos.lat, lon = ppos.lon}, crz_alt)
     h.crs, h.ppos = math.floor((ppos.trk or 0) + 0.5) % 360, true
+    -- the offset deleted (FMSPG p.158)
+    r.offset = nil
     return 1
 end
 
@@ -629,6 +634,49 @@ function M.hold_exit(st, i)
     local l = M.shown(st).legs[i]
     if not (st.active and i == 1 and M.is_hold(l)) or l.exit then return M.INVALID_ENTRY end
     M.edit(st).legs[i].exit = true
+end
+
+-- the lateral offset (step 7d; notes/ATA-34-61-FMC.md §35; FCOM
+-- p.1298-1299; FMSPG p.155-156): `r.offset`, nm, right positive, from the
+-- active leg through the legs it reaches.
+
+-- a leg the offset goes along: one straight to its fix (the FMC's own
+-- DIRECT and airway legs, a direct-to's, TF: estimate), not a hold, a
+-- SID's, a STAR's or an approach's (their transitions too: FCOM p.1298)
+local function offset_leg(l)
+    return l ~= nil and l.fix ~= nil and not (l.disc or l.pending or M.is_hold(l))
+        and (l.pt == nil or l.pt == "TF") and l.proc ~= "SID" and l.proc ~= "STAR" and l.proc ~= "APPR"
+end
+-- how many legs from the first the offset reaches: up to the end of the
+-- route, a discontinuity, a STAR's or an approach's (or their
+-- transitions') first leg, a DME arc, a heading leg, a hold, a course
+-- change of 135 degrees or more (FMSPG p.155; FCOM p.1299)
+function M.offset_legs(r)
+    local n = 0
+    for i, l in ipairs(r.legs) do
+        if not offset_leg(l) then break end
+        n = i
+        local nxt, from = r.legs[i + 1], M.leg_from(r, i)
+        if offset_leg(nxt) and from then
+            local back = M.course(l.fix.lat, l.fix.lon, from.lat, from.lon)
+            local out = M.course(l.fix.lat, l.fix.lon, nxt.fix.lat, nxt.fix.lon)
+            if math.abs((out - back) % 360 - 180) >= 135 then break end
+        end
+    end
+    return n
+end
+-- OFFSET possible (FCOM p.1298; FMSPG p.155): the active route in the
+-- air, its active leg one the offset goes along (not on a SID, a STAR or
+-- an approach or their transitions)
+function M.offset_allowed(st, airborne)
+    return st.active and airborne and offset_leg(M.shown(st).legs[1]) or false
+end
+-- OFFSET L or R 1-99 nm (signed), 0 cancels it; in the modification until
+-- EXEC (FCOM p.1298; FMSPG p.156)
+function M.set_offset(st, d, airborne)
+    if not M.offset_allowed(st, airborne) or math.abs(d) > 99 then return M.INVALID_ENTRY end
+    if d == 0 and not M.shown(st).offset then return M.INVALID_DELETE end
+    M.edit(st).offset = (d ~= 0) and d or nil
 end
 
 -- CRS REVERSAL AT FA FIX (step 7c; FCOM p.1435): the route comes to its
@@ -903,6 +951,9 @@ function M.sequence(st, n, start)
     if not st.active then return false end
     n = math.min(n, #r.legs - 1)
     if n < 1 then return false end
+    -- the offset's last leg passed: the offset over (step 7d; estimate)
+    if r.offset and M.offset_legs(r) <= n then r.offset = nil end
+    if m and m.offset and M.offset_legs(m) <= n then m.offset = nil end
     for k = 1, n do
         if m and not same_leg(r.legs[k], m.legs[k]) then m = nil end
     end

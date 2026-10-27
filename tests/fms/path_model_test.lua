@@ -235,4 +235,22 @@ T.check(hp[13] and dist(hp[6], t.p1) < 1e-6 and dist(hp[7], t.p2) < 1e-6 and dis
 T.near(dist(t.o2, hp[10]), t.r, 1e-6, "on the turn back")
 T.near(dist(B, hp[6]), 2 * 1.953, 0.002, "250 kt: 2 r across")
 
+-- the lateral offset (step 7d): A north to B, B east to C; 5 nm right
+path = M.build({{via = "DIRECT", fix = B}, {via = "J1", pt = "TF", fix = C}, {via = "DIRECT", fix = ZZV}}, A, env)
+local off = M.offset(path, 5, 2)
+local o1, o2 = off[1], off[2]
+T.check(o1.kind == "line" and o1.offset == 5 and o1.leg == 1 and not o1.wide, "the offset lines")
+T.near((M.track(A, 0, o1.a)), 5, 0.01, "the first from abeam its start, 5 nm right")
+T.near((M.track(A, 0, o1.b)), 5, 0.01, "parallel to A-B")
+local cx, cy = (o1.b.lon - B.lon) * 60 * math.cos(B.lat * rad), (o1.b.lat - B.lat) * 60
+T.check(math.abs(cx - 5) < 0.05 and math.abs(cy + 5) < 0.05, "the corner 5 nm east and 5 nm south of B (inside the right turn)")
+T.check(o2.a == o1.b, "the next from the corner")
+T.near((M.track(B, path[2].crs, o2.b)), 5, 0.02, "and 5 nm right of B-C to abeam C")
+T.check(off[3] == path[3], "the route on after the offset")
+T.check(M.turn(o1, o2, 250) ~= nil, "a fly-by turn at the corner")
+local wide = M.offset(path, -30, 1)
+T.check(wide[1].offset == -30 and wide[1].wide and wide[2].wide and not wide[3].wide, "30 nm left: wide, and the element after")
+T.check(not path[2].wide, "the route's own element not changed")
+T.near((M.track(A, 0, wide[1].b)), -30, 0.05, "left: negative")
+
 T.done()

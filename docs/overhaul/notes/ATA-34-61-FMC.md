@@ -749,3 +749,22 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - CRS REVERSAL AT FA FIX（advisory：FCOM p.1435）：表示中の経路が最終進入点（FAF）に最終進入のコースと逆向きで来て（前の点からのコースと FAF からのコースが 90° を超えて違う：推定）、その前に FAF での procedure turn もホールドも無いとき。経路が変わるたびに確かめ、条件の間は CDU のメッセージ（CLR で消え、条件が一度消えるまで出ない）。
 - 試験：`route_model_test.lua`（178 件：逆向きで来る・来ない、procedure turn やホールドがあれば出ない）、`hold_pages_test.lua`（82 件：PROC TURN、CRS REVERSAL AT FA FIX と CLR、procedure turn があれば出ない）。
 - X-Plane：`s88_deparr` 26/26（DEPARTURES・ARRIVALS で手続きを入れても CRS REVERSAL AT FA FIX は出ない）、`s87_legs_pages` 29/29。Lua の誤りなし。
+
+## 35. 段 7d の実装（2026-10-27：オフセット）
+
+- 経路のモデル：オフセットは経路の値（`offset`、nm、右が正。修正の写しにも入る）。
+  - OFFSET の入力（FCOM p.1298；FMSPG p.155–156）：アクティブな経路で空中、アクティブな脚がオフセットのかかる脚（SID・STAR・進入とその遷移の上でない）のとき、L か R の 1–99 nm。修正になり EXEC で有効。L0・0・R0・DELETE で消す（無いのに消すと INVALID DELETE：推定）。
+  - DIRECT TO で消える（FCOM p.1299；FMSPG p.156）。PPOS のホールドで消える（FMSPG p.158）。
+  - かかる脚（FMSPG p.155；FCOM p.1299）：アクティブな脚から、経路の終わり、discontinuity、STAR・進入（とその遷移）の最初の脚、DME の弧、ヘディングの脚、ホールド、135° 以上のコースの変化の手前まで。点へまっすぐの脚（FMC 自身の DIRECT と airway、DIRECT TO の脚、TF）だけ（推定）。最後の脚を順送りしたらオフセットは終わって消える（推定）。DIRECT TO の後もその脚に新しいオフセットを入れられる（FCOM p.1298：SID・STAR・遷移の上でなければ出す）。
+- 経路の形のモデル `offset(path, d, n)`：かかる脚を d nm 右（左は負）の平行な線にする。線と線は二つのオフセットの線の交点（角：旋回の二等分線の上）でつなぐので、fly-by の旋回と順送りは経路と同じ作りのまま。最初の線は脚の始まりの横から、最後の線は点の横まで。その後は元の経路。経路そのものの要素は変えない（ND の線は元の経路）。
+- LNAV：オフセットの線を飛ぶ（EXEC で捕捉の旋回：FCOM p.1298。今までの操舵則の切込み）。
+  - 21 nm を超えるオフセットでは、その線と後の脚（戻り）の順送りの制限を 200 nm に（FCOM p.1298）。
+  - 最後の線の終わりの 5 nm 手前から END OF OFFSET（alert：FCOM p.1431；FMSPG p.155）。
+  - オフセットの線の誘導中は CDU の OFST 灯（新しい dataref `laminar/B747/fms/ofst_light`：FCOM p.1210。3D の CDU にはつないでいない：見た目の変更は承認が要る）。
+  - オフセットが終わったら、次の脚（元の経路）へ切込んで戻る（戻り方は推定：資料に無い）。
+  - PROGRESS 2 の XTK ERROR はオフセットの線から。
+- RTE ページ：空中でオフセットのかかる脚の上なら、全ページの 6R に OFFSET（6L の上の線の右端に小字の OFFSET、値は R20・L5、無ければダッシュ：FCOM p.1298 の図）。1 ページ目では PERF INIT>・TAKEOFF> の代わり（推定）。
+- ND：X-Plane の線は 1 本なので、元の経路（マゼンタの実線）だけを描く。オフセットの線（修正中は白の破線、実行後はマゼンタの破線：FCOM p.1298）は描かない。
+- 前の LNAV のオフセット（`lnoffs` と `laminar/B747/autopilot/lnav/xtk_target`）は、どのページからも使われていない（段 6c から効かない）。そのまま残す。
+- 試験：新しい `tests/fms/lnav_offset_test.lua`（16 件：R5 で右へ回り 150 秒以内に捕捉、25° まで、経路の 5 nm 右、角の二等分線で順送り、5 nm 手前で END OF OFFSET、オフセットの終わりで消えて D へ戻る、40 nm のオフセットで B を線から 21 nm を超えて順送り）、`path_model_test.lua`（126 件：オフセットの線と角、wide）、`route_model_test.lua`（199 件：かかる脚の範囲、入力と消え方）、`rte_pages_test.lua`（63 件：空中の 6R の OFFSET、R20・L0・X5・DELETE、地上では出ない）、`lnav_glue_test.lua`（24 件：R5 で XTK が 4 nm 左、右へのバンク、OFST 灯、L0 で戻る）。試験用の機体（`tests/lib/lnav_sim.lua`）が LNAV の経路を変える関数を受ける。
+- X-Plane：新しい `s93_offset` 25/25（RJAA→XAC の脚の上で LNAV、空中の RTE の 6R に OFFSET と小字の見出し、R5 で EXEC：XTK がオフセットの線から 5.1 nm 左、右へのバンクの指令、OFST 灯、オフセットの線を捕まえて XAC の角を 0.14 nm 以内で回り、SPENS の横（経路の終わり）の手前で END OF OFFSET、DIRECT TO SPENS で OFST 灯が消え、RTE の OFFSET はダッシュ、SPENS へ直行。CDU と ND の写真：RTE の OFFSET R5、ND は元の経路の線で機体はその 5 nm 右）、`s86_rte_pages` 19/19、`s90_lnav` 30/30、`s89_route_sync` 26/26。Lua の誤りなし。初めの 2 回の `s93` の不合格は、シナリオの作り（LEGS を出さずに現用点を待った）と、DIRECT TO の脚にオフセットを入れられなかったこと（直した）。

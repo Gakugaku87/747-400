@@ -1010,6 +1010,9 @@ function B747_fmc_lnav_build()
   if key~=lnavFirst and not lnavSequencing then B747_lnav_model.reset(B747_fmc_lnav) end
   lnavFirst=key
   lnavPath=routePath
+  -- the lateral offset (step 7d): LNAV's path its lines; the ND's line the
+  -- route (X-Plane's flight plan draws one line)
+  if r.offset then lnavPath=B747_path_model.offset(routePath,r.offset,B747_route_model.offset_legs(r)) end
 end
 local function fms_text(id) return (string.gsub(fmsModules["data"][id],"%s+$","")) end
 -- CRS REVERSAL AT FA FIX (step 7c; FCOM p.1435), the route shown
@@ -1147,6 +1150,7 @@ local HOLD_PHASE={to=1,direct=2,teardrop=3,parallel=4,intercept=5,turn1=6,outbou
 B747DR_fms_lnav_hold_phase=find_dataref("laminar/B747/fms/lnav/hold_phase")
 B747DR_fms_lnav_hold_loops=find_dataref("laminar/B747/fms/lnav/hold_loops")
 B747DR_fms_lnav_hold_exit=find_dataref("laminar/B747/fms/lnav/hold_exit")
+B747DR_fms_ofst_light=find_dataref("laminar/B747/fms/ofst_light")
 -- the airplane's track, magnetic as the FMC's courses (the nearest VOR's
 -- variation, else X-Plane's): a PPOS hold's inbound course (step 7b)
 function B747_fmc_track_mag()
@@ -1154,7 +1158,7 @@ function B747_fmc_track_mag()
   if var==nil then var=-simDR_variation end
   return (simDR_lnav_trk-var)%360
 end
-local DISCONTINUITY,END_OF_ROUTE,NO_ACTIVE_ROUTE=8,11,27
+local DISCONTINUITY,END_OF_OFFSET,END_OF_ROUTE,NO_ACTIVE_ROUTE=8,10,11,27
 -- a message's flag, written when LNAV's condition changes
 local lnavFlags={}
 local function lnav_flag(i,on)
@@ -1222,7 +1226,11 @@ function B747_fmc_lnav_update()
   -- the ND's racetrack anew when LNAV made the TO hold's anew
   if st.active and n==0 and lnav_hold_changed() then B747_fmc_route_changed() end
   lnav_flag(DISCONTINUITY,s.msg_disc)
+  lnav_flag(END_OF_OFFSET,s.msg_eoo)
   lnav_flag(END_OF_ROUTE,s.msg_eor)
+  -- the CDU's OFST light (FCOM p.1210: LNAV's offset guidance)
+  local ofst=s.ofst and 1 or 0
+  if B747DR_fms_ofst_light~=ofst then B747DR_fms_ofst_light=ofst end
   lnav_flag(NO_ACTIVE_ROUTE,(armed or engaged) and not st.active)
   B747_cdu_fmc_condition("NOT ON INTERCEPT HEADING",s.msg_intc,false)
   B747_cdu_fmc_condition("CRS REVERSAL AT FA FIX",crsReversal,false)

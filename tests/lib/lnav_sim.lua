@@ -30,7 +30,8 @@ return function(N, R, P, L, VAR)
     end
     -- fly `seconds` (steps of 0.1 s): the route sequenced as LNAV says;
     -- opts.engaged (default true), opts.armed, opts.engage_when_valid,
-    -- opts.each(t, s, air, path) (true: stop).
+    -- opts.each(t, s, air, path) (true: stop), opts.path(st, path) LNAV's
+    -- path from the route's (an offset's: step 7d).
     -- Returns the sequencing log
     function M.fly(st, s, a, seconds, opts)
         opts = opts or {}
@@ -39,6 +40,7 @@ return function(N, R, P, L, VAR)
         for k = 1, math.floor(seconds / dt + 0.5) do
             local r = st.rte
             local path = P.build(r.legs, R.leg_from(r, 1), {var = var, alt = a.alt})
+            if opts.path then path = opts.path(st, path) end
             local air = M.state(a)
             local n = L.update(s, path, air, opts.armed or false, engaged)
             if opts.each and opts.each(k * dt, s, air, path) then break end

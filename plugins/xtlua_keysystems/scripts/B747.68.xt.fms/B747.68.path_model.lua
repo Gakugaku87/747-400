@@ -346,6 +346,57 @@ function M.hold_size(e, kt, inbound_kt)
     return r, e.dist or time / 60 * math.max(inbound_kt or kt, 60)
 end
 
+-- the lateral offset (step 7d; FCOM p.1298-1299; FMSPG p.155): the
+-- path with its first n elements (lines to their fixes: the route model's
+-- offset_legs) as lines d nm to their right (left negative), each from
+-- the corner with the one before to the corner with the one after (the
+-- miter of the two offset lines, on the turn's bisector: the fly-by turns
+-- and their sequencing as on the route), the first from abeam its start,
+-- the last to abeam its fix; then the route as it is. An offset over 21
+-- nm: `wide` on the offset lines and the element after (LNAV's sequencing
+-- limit 200 nm during the transitions: FCOM p.1298). The path's own
+-- elements are not changed
+local function normal(crs) return math.cos(crs * RAD), -math.sin(crs * RAD) end
+local function shifted(p, crs, d)
+    local nx, ny = normal(crs)
+    return ll(p, nx * d, ny * d)
+end
+local function offset_line(e) return e.kind == "line" and e.crs and e.a and e.b end
+function M.offset(path, d, n)
+    local out = {}
+    local wide = math.abs(d) > 21
+    local prev_b, done = nil, false
+    for i, e in ipairs(path) do
+        if not done and i <= n and offset_line(e) then
+            local a = prev_b or shifted(e.a, M.start_course(e), d)
+            local b
+            local nx = path[i + 1]
+            if i < n and nx and offset_line(nx) then
+                -- the corner: W + d (n1 + n2) / (1 + n1 . n2)
+                local n1x, n1y = normal(M.end_course(e))
+                local n2x, n2y = normal(M.start_course(nx))
+                local k = d / (1 + n1x * n2x + n1y * n2y)
+                b = ll(e.b, (n1x + n2x) * k, (n1y + n2y) * k)
+            else
+                b = shifted(e.b, M.end_course(e), d)
+            end
+            local c, len = M.course(a, b)
+            out[i] = {kind = "line", a = a, b = b, crs = c, len = len, term = "fix", leg = e.leg, flyover = e.flyover,
+                missed = e.missed, offset = d, wide = wide or nil}
+            prev_b = b
+        else
+            if prev_b and not done and wide then
+                local c = {}
+                for k, v in pairs(e) do c[k] = v end
+                c.wide, e = true, c
+            end
+            done = done or prev_b ~= nil
+            out[i] = e
+        end
+    end
+    return out
+end
+
 -- the legs' shape for the ND's line (step 6d; the route model's to_fms):
 -- shape[i] = {at = the end of conditional element i (a vectors leg's: its
 -- line's VECTORS_LEN nm)} or {pts = the points of arc element i every
