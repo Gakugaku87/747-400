@@ -127,6 +127,9 @@ simCMD_autopilot_appr_mode					= find_command("sim/autopilot/approach")
 simDR_autopilot_TOGA_vert_status    	= find_dataref("sim/cockpit2/autopilot/TOGA_status")
 simDR_autopilot_TOGA_lat_status     	= find_dataref("sim/cockpit2/autopilot/TOGA_lateral_status")
 B747DR_autopilot_TOGA_status     	= deferred_dataref("laminar/B747/autopilot/TOGA_status","number")
+-- the TO/GA switches' pushes, for the AFDS (6-3 step 1e: G/A's conditions
+-- and the old autoland's go-around are the autopilot module's)
+B747DR_ap_toga_pushes = deferred_dataref("laminar/B747/autopilot/toga_pushes", "number")
 simCMD_autopilot_TOGA_mode          = find_command("sim/autopilot/take_off_go_around")
 simDRTime					= find_dataref("sim/time/total_running_time_sec")
 B747DR_ap_lastCommand              		= deferred_dataref("laminar/B747/autopilot/lastCommand", "number")
@@ -494,7 +497,6 @@ function B747_thrust_rev_hold_max_all_CMDhandler(phase, duration)
 	B747DR_ap_vnav_state = 0
 	B747DR_ap_inVNAVdescent = 0
 	B747DR_ap_flightPhase = 2
-	B747DR_autopilot_TOGA_status=0 
     if phase < 2 then
 	    
 		-- AIRCRAFT MUST BE ON THE GROUND
@@ -557,16 +559,8 @@ function B747_engine_TOGA_power_CMDhandler(phase, duration)
     simDR_prop_mode[3] = 1
 	if phase == 0 then
         B747_engine_display_toga()  -- the EGT amber inhibit (FCOM p.872)
-        if simDR_all_wheels_on_ground==0 then
-            B747DR_ap_autoland=-2
-            if B747DR_autopilot_TOGA_status == 0 										-- TOGA LATERAL MODE IS OFF 
-            then	
-                    B747DR_ap_lastCommand=simDRTime									
-                    B747DR_autopilot_TOGA_status=1												-- ACTIVATE "TOGA" MODE
-            end	
-            
-        end
-        B747DR_ap_approach_mode = 0
+        -- the AFDS takes the push from the count (6-3 step 1e)
+        B747DR_ap_toga_pushes = B747DR_ap_toga_pushes + 1
         if B747DR_engine_TOGA_mode == 0 and (simDR_all_wheels_on_ground==0 or (simDR_all_wheels_on_ground==1 and B747DR_toggle_switch_position[29] == 1)) then
             --[[simDR_engine_throttle_input[0] = 0.95
             simDR_engine_throttle_input[1] = 0.95
@@ -799,7 +793,6 @@ function B747_prop_mode()
             B747DR_ap_vnav_state = 0
             B747DR_ap_inVNAVdescent = 0
             B747DR_ap_flightPhase = 2
-            B747DR_autopilot_TOGA_status=0 
         end
     end 
     -- AIRCRAFT IS "ON THE GROUND" 

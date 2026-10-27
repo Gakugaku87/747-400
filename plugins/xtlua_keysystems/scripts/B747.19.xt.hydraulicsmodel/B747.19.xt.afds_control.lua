@@ -245,8 +245,6 @@ function ap_director_pitch(pitchMode)
             simDR_autopilot_alt_hold_status=2
             simDR_autopilot_vs_status=0
             simDR_autopilot_flch_status=0
-            --cancel TOGA pitch
-            B747DR_autopilot_TOGA_status=0 
             holdAlt=simDR_autopilot_hold_altitude_ft
         end
         local fpmBias=get_FPM_bias()

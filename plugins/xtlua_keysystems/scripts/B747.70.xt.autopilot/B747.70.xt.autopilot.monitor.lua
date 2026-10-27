@@ -145,7 +145,6 @@ function VNAV_CLB(numAPengaged,fmsO)
                 simDR_autopilot_alt_hold_status=0
                 --simDR_autopilot_alt_hold_status=0
                 B747DR_engine_TOGA_mode = 0
-                B747DR_autopilot_TOGA_status=0
                 B747DR_ap_autoland=-1
                 B747DR_ap_lastCommand = simDRTime
                 print("flch > 1000 feet climb ")
@@ -644,7 +643,6 @@ function B747_monitorAT()
         end
         B747DR_ap_thrust_mode=0
         B747DR_engine_TOGA_mode = 0	-- CANX ENGINE TOGA IF ACTIVE
-        B747DR_autopilot_TOGA_status=0
         if B747DR_ap_flightPhase<3 then
             B747DR_ap_flightPhase=2
         end

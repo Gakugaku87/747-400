@@ -578,6 +578,14 @@ local afdsHdgSelTime = 0
 -- localizer course: 6-3 step 1d)
 simDR_afds_track_mag = find_dataref("sim/cockpit2/gauges/indicators/ground_track_mag_pilot")
 local afdsIn = {fd = {L = false, R = false}, hyd = {0, 0, 0}}
+-- the TO/GA switches (step 1e): the engines module counts their pushes
+-- (its command handler, with the A/T's part); the F/Ds shown, a switch ON
+-- or TO/GA's display with them OFF (FCOM p.661), for the panel's command
+-- bars and the AFDS status
+B747DR_ap_toga_pushes = find_dataref("laminar/B747/autopilot/toga_pushes")
+B747DR_ap_fd_shown_capt = find_dataref("laminar/B747/autopilot/fd/capt/shown")
+B747DR_ap_fd_shown_fo = find_dataref("laminar/B747/autopilot/fd/fo/shown")
+local afdsTogaPushes = nil
 -- the old VNAV's sub-mode, as the old FMA inferred it from its law's flags
 -- (until the FMC's step 9): VNAV SPD 4, VNAV ALT 5, VNAV PTH 6
 local function afds_old_vnav_fma()
@@ -600,16 +608,16 @@ local function afds_inp()
 	afdsIn.bank = simDR_AHARS_roll_deg_pilot
 	afdsIn.engine = B747DR_ap_engine_type
 	afdsIn.ground = simDR_onGround == 1
-	afdsIn.toga = B747DR_autopilot_TOGA_status ~= 0
-	-- the roll (step 1b): the old code's TO/GA (until step 1e), the heading
-	-- HDG HOLD holds (magnetic, as X-Plane's HDG SEL's target), the FMC's
-	-- steering, the old autoland's ROLLOUT and FLARE arms (until step 4)
+	-- TO/GA (step 1e): the flaps up (the handle at UP: estimate, the FCC's
+	-- flaps up), the A/T in SPD (T/O's pitch reset: ATA22 p.337)
+	afdsIn.flaps_up = simDR_flap_ratio_control < 0.01
+	afdsIn.at_spd = B747DR_ap_FMA_autothrottle_mode == 3
+	-- the roll (step 1b): the heading HDG HOLD holds (magnetic, as X-Plane's
+	-- HDG SEL's target), the FMC's steering, the old autoland's ROLLOUT and
+	-- FLARE arms (until step 4)
 	afdsIn.ra = simDR_radarAlt1
 	afdsIn.hdg = simDR_ap_mag_psi
 	afdsIn.lnav_valid = B747DR_fms_lnav_valid == 1
-	-- the old TO/GA a go-around (its autoland -1 or -2)
-	afdsIn.ga = B747DR_ap_autoland < 0
-	afdsIn.old_roll = B747DR_autopilot_TOGA_status ~= 0 and "TOGA" or nil
 	local land = simDR_radarAlt1 > 200 and (B747DR_ap_AFDS_status_annun_pilot == 3 or B747DR_ap_AFDS_status_annun_pilot == 4)
 	afdsIn.old_armed_roll = land and 4 or 0
 	afdsIn.dt = SIM_PERIOD
@@ -620,13 +628,11 @@ local function afds_inp()
 	afdsIn.gs_detect = simDR_nav1_gs_flag == 0 and simDR_nav2_gs_flag == 0 and math.abs(simDR_hsi_vdef_dots_pilot) < 1.5
 		and simDR_hsi_nav1_vertical_signal == 1 and simDR_hsi_nav2_vertical_signal == 1
 	afdsIn.course_err = getHeadingDifference(simDR_radio_nav_obs_deg[0], simDR_afds_track_mag)
-	-- the pitch (step 1c): the old code's TO/GA (until step 1e), the
-	-- vertical speed, the altitude, the speeds, the old capture window (until
-	-- step 3), the old VNAV (until the FMC's step 9), the old law's mode, the
-	-- old autoland's FLARE arm
+	-- the pitch (step 1c): the vertical speed, the altitude, the speeds, the
+	-- old capture window (until step 3), the old VNAV (until the FMC's step
+	-- 9), the old law's mode, the old autoland's FLARE arm
 	afdsIn.vs = simDR_vvi_fpm_pilot
 	afdsIn.alt = simDR_pressureAlt1
-	afdsIn.old_pitch = B747DR_autopilot_TOGA_status ~= 0 and "TOGA" or nil
 	afdsIn.ias = simDR_ind_airspeed_kts_pilot
 	afdsIn.mcp_ias = B747DR_ap_ias_dial_value
 	afdsIn.window_open = B747DR_ap_ias_mach_window_open == 1
@@ -655,7 +661,6 @@ local function afds_vs_default()
 		B747DR_autothrottle_active = 1
 	end
 	B747DR_engine_TOGA_mode = 0
-	B747DR_autopilot_TOGA_status = 0
 	simDR_autopilot_altitude_ft = B747DR_autopilot_altitude_ft
 	simDR_autopilot_hold_altitude_ft = simDR_autopilot_altitude_ft
 	simDR_autopilot_alt_hold_status = 0
@@ -669,9 +674,9 @@ local function afds_vs_default()
 	simDR_autopilot_vs_fpm = vs
 	B747DR_autopilot_vs_fpm = vs
 end
--- the modes the model asks for, on the old code's state: V/S, the F/D's
--- TO/GA; all off (FCOM p.660) with X-Plane's heading modes (the roll
--- modes are the model's own: afds_sync)
+-- the modes the model asks for, on the old code's state: V/S; all off
+-- (FCOM p.660) with X-Plane's heading modes (the roll modes are the
+-- model's own: afds_sync)
 local function afds_apply(act)
 	if not act then return end
 	if act.all_off then
@@ -682,7 +687,6 @@ local function afds_apply(act)
 		B747DR_ap_approach_mode = 0
 		B747DR_autopilot_gs_status = 0
 		B747DR_autopilot_nav_status = 0
-		B747DR_autopilot_TOGA_status = 0
 		B747DR_ap_ATT = 0
 		simDR_autopilot_vs_status = 0
 		simDR_autopilot_flch_status = 0
@@ -692,8 +696,6 @@ local function afds_apply(act)
 		simCMD_autopilot_servos3_fdir_off:once()
 		return
 	end
-	if act.toga then B747DR_autopilot_TOGA_status = 1 end
-	if act.toga_off then B747DR_autopilot_TOGA_status = 0 end
 	if act.pitch == "VS" then afds_vs_default() end
 end
 -- the engage state on the datarefs: the channels (CMD lights), the servos
@@ -750,6 +752,15 @@ local function afds_sync()
 	if B747_afds_model.loc_engaged_now(afds) then
 		B747DR_ap_heading_deg = roundToIncrement(simDR_radio_nav_obs_deg[0], 1)
 	end
+	-- TO/GA (step 1e) on the old code's state: its TO/GA flag (its laws and
+	-- A/T go by the FMA), the F/Ds shown (FCOM p.661)
+	local tg = B747_afds_model.toga_active(afds) and 1 or 0
+	if B747DR_autopilot_TOGA_status ~= tg then B747DR_autopilot_TOGA_status = tg end
+	local auto = B747_afds_model.fd_auto(afds)
+	local fc = (B747DR_toggle_switch_position[23] > 0.5 or auto) and 1 or 0
+	local ff = (B747DR_toggle_switch_position[24] > 0.5 or auto) and 1 or 0
+	if B747DR_ap_fd_shown_capt ~= fc then B747DR_ap_fd_shown_capt = fc end
+	if B747DR_ap_fd_shown_fo ~= ff then B747DR_ap_fd_shown_fo = ff end
 	if afds.roll == "HDG_SEL" or afds.roll == "HDG_HOLD" then
 		if afds.roll == "HDG_SEL" then
 			simDR_autopilot_heading_deg = ap_hdg_target(B747DR_ap_heading_deg)
@@ -882,9 +893,20 @@ local function afds_wheel()
 	if was > 0 then afds_disengaged() end
 	afds_sync()
 end
--- each frame, first: the F/Ds, the hydraulics, the defaults asked for
+-- the old code's go-around on G/A's engage, as its TO/GA switch did in the
+-- air: its autoland's (until step 4) and its A/T's debounce
+local function afds_go_around()
+	B747DR_ap_autoland = -2
+	B747DR_ap_lastCommand = simDRTime
+end
+-- each frame, first: a TO/GA push (step 1e), the F/Ds, the hydraulics, the
+-- defaults asked for
 function B747_afds_update()
-	afds_apply(B747_afds_model.update(afds, afds_inp()))
+	local inp = afds_inp()
+	local n = B747DR_ap_toga_pushes
+	if afdsTogaPushes ~= nil and n ~= afdsTogaPushes and B747_afds_model.toga(afds, inp) then afds_go_around() end
+	afdsTogaPushes = n
+	afds_apply(B747_afds_model.update(afds, inp))
 	afds_sync()
 end
 -- a new flight: the FCCs anew
@@ -2655,14 +2677,14 @@ dofile("B747.autoland.lua")
 dofile("B747.70.xt.autopilot.monitor.lua")
 function fma_rollModes()
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
-	if numAPengaged>0 or B747DR_toggle_switch_position[23] > 0.5 or B747DR_toggle_switch_position[24] > 0.5 then
+	if numAPengaged>0 or B747DR_ap_fd_shown_capt == 1 or B747DR_ap_fd_shown_fo == 1 then
 		B747BR_showFMA=1
 	else
 		B747BR_showFMA=0
 	end
 	-- everything off with neither the A/P nor a F/D (FCOM p.660; the AFDS
 	-- model clears the old state as it happens: 6-3 step 1a)
-	if numAPengaged == 0 and B747DR_toggle_switch_position[23] < 0.5 and B747DR_toggle_switch_position[24] < 0.5 then
+	if numAPengaged == 0 and B747DR_ap_fd_shown_capt == 0 and B747DR_ap_fd_shown_fo == 0 then
 		B747DR_ap_FMA_armed_roll_mode = 0
 		B747DR_ap_FMA_active_roll_mode = 0
 		return
@@ -2683,7 +2705,7 @@ function fma_PitchModes()
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
 	-- everything off with neither the A/P nor a F/D (FCOM p.660; the old
 	-- capture window showed ALT near the MCP altitude without a mode)
-	if numAPengaged == 0 and B747DR_toggle_switch_position[23] < 0.5 and B747DR_toggle_switch_position[24] < 0.5 then
+	if numAPengaged == 0 and B747DR_ap_fd_shown_capt == 0 and B747DR_ap_fd_shown_fo == 0 then
 		B747DR_ap_FMA_armed_pitch_mode = 0
 		B747DR_ap_FMA_active_pitch_mode = 0
 		return
@@ -2780,7 +2802,7 @@ function B747_ap_fma(fms)
 
 	-- (LNAV engages in the AFDS model: 6-3 step 1b)
 
-	if B747DR_toggle_switch_position[23] == 0.0 and B747DR_toggle_switch_position[24] == 0.0  and numAPengaged == 0 then
+	if B747DR_ap_fd_shown_capt == 0 and B747DR_ap_fd_shown_fo == 0 and numAPengaged == 0 then
 		B747DR_ap_approach_mode = 0
 	end
 	fma_rollModes()
@@ -2800,12 +2822,12 @@ function set_afds_status(value)
 	end
 	B747_ap_AFDS_status_annun = value
 	if value == 1 then
-		if B747DR_toggle_switch_position[23] == 1.0 then
+		if B747DR_ap_fd_shown_capt == 1 then
 			B747DR_ap_AFDS_status_annun_pilot = value
 		else
 			B747DR_ap_AFDS_status_annun_pilot = 0
 		end
-		if B747DR_toggle_switch_position[24] == 1.0 then
+		if B747DR_ap_fd_shown_fo == 1 then
 			B747DR_ap_AFDS_status_annun_copilot = value
 		else
 			B747DR_ap_AFDS_status_annun_copilot = 0
@@ -2856,7 +2878,7 @@ function B747_ap_afds()
 	else
 		if numAPengaged >= 1 then
 			set_afds_status(2) -- AFDS MODE = "CMD"
-		elseif B747DR_toggle_switch_position[23] > 0.95 or B747DR_toggle_switch_position[24] > 0.95 then
+		elseif B747DR_ap_fd_shown_capt == 1 or B747DR_ap_fd_shown_fo == 1 then
 			set_afds_status(1) -- AFDS MODE = "FD"
 		else
 			set_afds_status(0)
@@ -2904,12 +2926,12 @@ function B747_ap_afds_fma_mode_change()
 			B747DR_ap_AFDS_mode_box2_status_pilot = 0
 			B747DR_ap_AFDS_mode_box2_status_copilot = 0
 		elseif B747_ap_AFDS_status_annun > 0 and B747_ap_AFDS_status_annun < 5 then -- MODE IS NOT "NONE" AND NOT "NO AUTOLAND"
-			if B747DR_toggle_switch_position[23] == 1 then
+			if B747DR_ap_fd_shown_capt == 1 then
 				B747DR_ap_AFDS_mode_box_status_pilot = 1
 			else
 				B747DR_ap_AFDS_mode_box2_status_pilot = 0
 			end -- SHOW THE MODE CHANGE BOX
-			if B747DR_toggle_switch_position[24] == 1 then
+			if B747DR_ap_fd_shown_fo == 1 then
 				B747DR_ap_AFDS_mode_box_status_copilot = 1
 			else
 				B747DR_ap_AFDS_mode_box2_status_copilot = 0
@@ -2923,10 +2945,10 @@ function B747_ap_afds_fma_mode_change()
 		elseif B747_ap_AFDS_status_annun == 5 then -- MODE IS "NO AUTOLAND"
 			B747DR_ap_AFDS_mode_box_status_pilot = 0
 			B747DR_ap_AFDS_mode_box_status_copilot = 0
-			if B747DR_toggle_switch_position[23] == 1 then
+			if B747DR_ap_fd_shown_capt == 1 then
 				B747DR_ap_AFDS_mode_box2_status_pilot = 1
 			end -- SHOW THE MODE CHANGE BOX
-			if B747DR_toggle_switch_position[24] == 1 then
+			if B747DR_ap_fd_shown_fo == 1 then
 				B747DR_ap_AFDS_mode_box2_status_copilot = 1
 			end -- SHOW THE MODE CHANGE BOX
 			if is_timer_scheduled(B747_AFDS_status_mode_chg2_timeout) == false then -- CHECK TIMEOUT STATUS

@@ -840,6 +840,8 @@ laminar/B747/autopilot/button_switch/yoke_disengage_capt	command	obj,snd	B747.70
 laminar/B747/autopilot/button_switch/yoke_disengage_fo	command	obj,snd	B747.70.autopilot
 laminar/B747/autopilot/capt_roll_ref	dataref	panel	B747.70.autopilot
 laminar/B747/autopilot/dist/flight_path_error	dataref	panel	B747.70.autopilot
+laminar/B747/autopilot/fd/capt/shown	dataref	panel	B747.70.autopilot,B747.70.xt.autopilot
+laminar/B747/autopilot/fd/fo/shown	dataref	panel	B747.70.autopilot,B747.70.xt.autopilot
 laminar/B747/autopilot/flaps/target	dataref	autoatc	B747.70.autopilot,B747.70.xt.autopilot
 laminar/B747/autopilot/flight_director_pitch_deg	dataref	panel	B747.19.hydraulicsmodel,B747.19.xt.hydraulicsmodel
 laminar/B747/autopilot/fo_roll_ref	dataref	panel	B747.70.autopilot
