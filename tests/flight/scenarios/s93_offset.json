@@ -41,7 +41,7 @@
 
     { "do": "mark", "note": "RTE の 6R に OFFSET（空中、SID・STAR の上でない：FCOM p.1298；FMSPG p.155）。R5 で EXEC" },
     { "do": "cdu", "keys": ["RTE"] },
-    { "do": "check", "note": "6L の上のダッシュの線", "dref": "laminar/B747/fms3/Line12_L", "op": "==", "value": "------------------      " },
+    { "do": "check", "note": "1 ページ目の破線は 8 行目（FCOM p.1293 の図：段 7e4。6L の上の線は 2 ページ目から）", "dref": "laminar/B747/fms3/Line08_L", "op": "==", "value": "------------------------" },
     { "do": "check", "note": "OFFSET の見出し（小字）", "dref": "laminar/B747/fms3/Line12_S", "op": "contains", "value": "OFFSET" },
     { "do": "check", "note": "オフセットが無いのでダッシュ", "dref": "laminar/B747/fms3/Line13_L", "op": "contains", "value": "---" },
     { "do": "cdu", "note": "R5 と打って 6R（= はキーの名前でない文字の印）", "keys": ["=R5", "R6"] },

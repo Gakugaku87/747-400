@@ -124,7 +124,7 @@ fmsPages["RTEHOLD"].getNumPages=function(self)
 end
 fmsPages["RTEHOLD"].getPage=function(self,pgNo,fmsID)
   local s = R.status(B747_fmc_route)
-  local t = (s ~= "" and (s .. " ") or "") .. "RTE 1 HOLD"
+  local t = (s ~= "" and (s .. " ") or "") .. "RTE " .. B747_fmc_route.num .. " HOLD"
   local lines = {pad(string.rep(" ", math.floor((24 - #t) / 2)) .. t)}
   local i, l = hold_of(pgNo)
   if not l then

@@ -106,6 +106,47 @@ function M.erase(st)
     st.mod, st.activating = nil, false
 end
 
+-- RTE 2 (step 7e4; FCOM p.1287-1294; FMSPG p.134-136): two routes, each a
+-- state of its own (`num` 1 or 2); the glue keeps the active one as its
+-- B747_fmc_route. EXEC: the active route's modification or activation,
+-- else the other route's activation: it is active and the one before
+-- inactive (FCOM p.1290), the two states' contents exchanged so that `st`
+-- is the active one after. False with nothing to execute
+function M.swap(a, b)
+    local keys = {}
+    for k in pairs(a) do keys[k] = true end
+    for k in pairs(b) do keys[k] = true end
+    for k in pairs(keys) do a[k], b[k] = b[k], a[k] end
+end
+function M.exec_both(st, other, ppos)
+    if st.mod or st.activating then return M.exec(st, ppos) end
+    if other.activating then
+        other.activating, other.active, other.mod = false, true, nil
+        st.active, st.activating, st.mod = false, false, nil
+        M.swap(st, other)
+        return true
+    end
+    return false
+end
+-- RTE COPY (FCOM p.1289, p.1334; FMSPG p.134-136): the active route as it
+-- is (not its modification) into the other, the route there before gone;
+-- COMPLETE until the active route changes again (estimate)
+function M.copy_active(st, other)
+    if not st.active then return M.INVALID_ENTRY end
+    local c = copy_route(st.rte)
+    c.passed = {}
+    other.rte, other.mod, other.active, other.activating = c, nil, false, false
+    st.copied = st.edits or 0
+end
+function M.copy_done(st)
+    return st.copied ~= nil and st.copied == (st.edits or 0)
+end
+-- RTE COPY> on the direct-to modification's LEGS page (FCOM p.1334;
+-- FMSPG p.135): until another change
+function M.copy_offered(st)
+    return st.mod ~= nil and st.dto_offer == st.edits and not M.copy_done(st)
+end
+
 -- the EXEC light: a modification or an activation to execute
 function M.exec_lit(st)
     return st.mod ~= nil or st.activating
@@ -509,9 +550,9 @@ local function abeam_of(a, b, p)
     return along * 3440.065, across * 3440.065, crs, len
 end
 
--- a place/bearing/distance waypoint's number: RTE 1's 01-49 (FCOM
--- p.1250), the lowest no waypoint of the route has (estimate); nil when
--- none is left
+-- a place/bearing/distance waypoint's number: RTE 1's 01-49, RTE 2's
+-- 51-99 (FCOM p.1250), the lowest no waypoint of the route has
+-- (estimate); nil when none is left
 local function pbd_number(st, more)
     local used = {}
     local function mark(l) if l.fix and l.fix.kind == "PBD" then used[l.fix.seq] = true end end
@@ -520,7 +561,8 @@ local function pbd_number(st, more)
         for _, l in ipairs(r.passed) do mark(l) end
     end
     for _, f in ipairs(more) do mark({fix = f}) end
-    for n = 1, 49 do
+    local lo = st.num == 2 and 51 or 1
+    for n = lo, lo + 48 do
         if not used[n] then return n end
     end
     return nil

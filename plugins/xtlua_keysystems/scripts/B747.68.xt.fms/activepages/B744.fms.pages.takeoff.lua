@@ -133,7 +133,7 @@ end
 local function preflight_page()
   if B747DR_nav_irs_set_pos == 1 then return "POSINIT", "POS INIT>" end
   -- the route until RTE 1 is activated (FCOM p.1290; step 5b)
-  if not B747_fmc_route.active then return "RTE1", "ROUTE>" end
+  if not B747_fmc_route.active then return "RTE" .. B747_fmc_route.num, "ROUTE>" end
   if not perf_init_complete() then return "PERFINIT", "PERF INIT>" end
   return nil, "THRUST LIM>"
 end

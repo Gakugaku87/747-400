@@ -101,7 +101,7 @@ local lastFmcPage = {}
 local inFmc = {}
 local FMC_KEYS = {index = true, fpln = true, clb = true, crz = true, des = true, dir_intc = true,
   legs = true, dep_arr = true, hold = true, navrad = true, prog = true}
-local RETURN_KEY = {RTE2 = "legs"}
+local RETURN_KEY = {}
 -- the page's keys: the function keys, the line select keys, NEXT, PREV,
 -- EXEC, and the keys passed to X-Plane's CDU on its pages
 local function pageKey(fmsModule,key)
@@ -119,9 +119,8 @@ local function pageKey(fmsModule,key)
       fmsO.targetpgNo=1
       return
   elseif key=="fpln" then --RTE
-      fmsO.targetCustomFMC=true
-      fmsO.targetPage="RTE1"
-      fmsO.targetpgNo=1
+      -- the active route's pages (6-1/6-2 step 7e4: RTE 1 or RTE 2)
+      B747_cdu_rte_page(fmsO)
       return
   elseif key=="clb" then --DEP ARR
       B747_cdu_deparr_page(fmsO)
@@ -142,10 +141,8 @@ local function pageKey(fmsModule,key)
       B747_cdu_fix_page(fmsO)
       return
   elseif key=="legs" then
-      -- the FMC's LEGS pages (6-1/6-2 step 5c)
-      fmsO.targetCustomFMC=true
-      fmsO.targetPage="LEGS"
-      fmsO.targetpgNo=1
+      -- the FMC's LEGS pages (6-1/6-2 step 5c), the active route's (step 7e4)
+      B747_cdu_legs_page(fmsO)
       return
   elseif key=="dep_arr" then
       -- HOLD: the FMC's holds (6-1/6-2 step 7b; before: X-Plane's HOLD
