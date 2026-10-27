@@ -104,6 +104,7 @@ function M.inputs()
         wind_from = 0,      -- the wind direction, magnetic
         hdg_sel = 0,        -- the MCP selected heading
         roll_mode = 0,      -- the AFDS's roll mode (FMA: 2 LNAV, 3 LOC, 4 ROLLOUT)
+        track_map = false,  -- MAP track up (the 570, GE); else heading up (the 405)
         gs_kt = 0,          -- the ground speed
     }
 end
@@ -113,6 +114,7 @@ local function side_out()
         up = 0,             -- the display's top: heading, track or 0 (north)
         xp_mode = M.XP_MAP, -- X-Plane's map mode
         rose = false,       -- the compass rose and the digital heading or track
+        box = 1,            -- the box at the top: 1 HDG, 2 TRK; in PLAN 3 HDG, 4 TRK
         trk_flag = false,
         hdg_flag = false,
         map_flag = false,
@@ -153,12 +155,16 @@ local function side_out()
 end
 
 -- the trend vector's pieces into o (tv_*): along an arc from the airplane
--- symbol, or straight below half a degree of bank
+-- symbol, or straight below half a degree of bank; it starts along the
+-- track, dir_deg from the display's top (0 track up; the 405's heading up
+-- MAP: the drift)
 local function arc_point(a, r, sign)
     if r == nil then return 0, a end
     return sign * r * (1 - math.cos(a / r)), r * math.sin(a / r)
 end
-function M.trend(o, on, gs_kt, roll_deg, range_nm)
+function M.trend(o, on, gs_kt, roll_deg, range_nm, dir_deg)
+    dir_deg = dir_deg or 0
+    local cd, sd = math.cos(math.rad(dir_deg)), math.sin(math.rad(dir_deg))
     local segs = (range_nm <= 10 and 1) or (range_nm <= 20 and 2) or M.TV_SEGS
     local gs = math.max(0, gs_kt) * KT_MS
     local r, sign = nil, roll_deg < 0 and -1 or 1
@@ -176,8 +182,9 @@ function M.trend(o, on, gs_kt, roll_deg, range_nm)
             local dx, dy = (x2 - x1) * px_m, (y2 - y1) * px_m
             local len = math.sqrt(dx * dx + dy * dy)
             o.tv_show[n] = on and k < segs and len >= M.TV_FRAME_PX / 2
-            o.tv_x[n], o.tv_y[n] = (x1 + x2) / 2 * px_m, (y1 + y2) / 2 * px_m
-            o.tv_rot[n] = math.deg(math.atan2(dx, dy))
+            local mx, my = (x1 + x2) / 2 * px_m, (y1 + y2) / 2 * px_m
+            o.tv_x[n], o.tv_y[n] = mx * cd + my * sd, my * cd - mx * sd
+            o.tv_rot[n] = math.deg(math.atan2(dx, dy)) + dir_deg
             o.tv_frame[n] = math.max(0, math.min(M.TV_FRAMES - 1, math.floor(len / M.TV_FRAME_PX + 0.5) - 1))
         end
     end
@@ -201,11 +208,13 @@ function M.edge_px(dir, center)
     return M.RAD_ARC_PX
 end
 
--- the display's top (FCOM p.1109-1110, 109): MAP track up, VOR and APP
--- heading up, PLN north up (FCOM: true north; the stock map and symbols
--- are magnetic north up, kept until the heading reference, step 5d)
-function M.orientation(mode, hdg, trk)
-    if mode == M.MAP then return trk end
+-- the display's top (FCOM p.1109-1110): MAP heading up on the 405 (PW;
+-- RR as PW: an estimate), track up on the 570 (GE: `track_map`, as the
+-- 109); VOR and APP heading up; PLN north up (FCOM: true north; the stock
+-- map and symbols are magnetic north up, kept until the heading
+-- reference, step 5d)
+function M.orientation(mode, hdg, trk, track_map)
+    if mode == M.MAP and track_map then return trk end
     if mode == M.PLN then return 0 end
     return hdg
 end
@@ -221,18 +230,23 @@ function M.update(s, inp, dt)
     for p = M.CAPT, M.FO do
         local i, o = inp.side[p], s.out[p]
         local mode = i.mode
-        o.up = M.orientation(mode, i.hdg, i.trk)
-        o.xp_mode = (mode == M.MAP and M.XP_MAP) or (mode == M.PLN and M.XP_PLN) or M.XP_APP
-        -- the orientation's source: the track in MAP, the heading in VOR and
-        -- APP (PLN's rose is fixed, north up); failed, the flag at the
-        -- top (FCOM p.1034: TRK in the MAP modes, HDG in VOR and APP)
-        local track_up = mode == M.MAP or mode == M.PLN
-        o.rose = (mode == M.MAP and i.trk_valid) or mode == M.PLN or (not track_up and i.hdg_valid)
-        o.trk_flag = track_up and not i.trk_valid
-        o.hdg_flag = not track_up and not i.hdg_valid
+        local track_map = inp.track_map
+        o.up = M.orientation(mode, i.hdg, i.trk, track_map)
+        o.xp_mode = (mode == M.MAP and (track_map and M.XP_MAP or M.XP_APP)) or (mode == M.PLN and M.XP_PLN) or M.XP_APP
+        -- the box at the top and the orientation's source: the 570's MAP
+        -- and PLAN the track (FCOM p.1141: TRK), else the heading (the
+        -- 405: HDG in all modes); PLN's rose is fixed, north up. Failed,
+        -- the flag at the top (FCOM p.1033-1034: the 570's TRK in the MAP
+        -- modes, HDG in VOR and APP; the 405's HDG)
+        local map_modes = mode == M.MAP or mode == M.PLN
+        local by_trk = map_modes and track_map
+        o.box = (mode == M.PLN and 2 or 0) + (by_trk and 2 or 1)
+        o.rose = mode == M.PLN or (by_trk and i.trk_valid) or (not by_trk and i.hdg_valid)
+        o.trk_flag = by_trk and not i.trk_valid
+        o.hdg_flag = not by_trk and not i.hdg_valid
         -- the map and vertical track flags: the FMC's map data (estimate:
         -- its position, which needs an IRU in NAV)
-        o.map_flag = track_up and not inp.map_valid
+        o.map_flag = map_modes and not inp.map_valid
         o.vtk_flag = mode == M.MAP and not inp.map_valid
         -- the current heading pointer (FCOM p.1142): MAP, MAP CTR, PLAN; in
         -- VOR and APP it stays under the heading box (FCOM p.1024's figures)
@@ -309,8 +323,9 @@ function M.update(s, inp, dt)
             o.pos_rad_len[k] = o.pos_rad[k] and math.min(dme_px, edge) or 0
             o.pos_rad_tick[k] = o.pos_rad[k] and dme and dme_px <= edge
         end
-        -- the position trend vector (step 5e)
-        M.trend(o, mode == M.MAP and o.rose and i.trk_valid, inp.gs_kt, i.roll_deg, i.range_nm)
+        -- the position trend vector (step 5e), along the track on the
+        -- display (the 405's heading up MAP: turned by the drift)
+        M.trend(o, mode == M.MAP and o.rose and i.trk_valid, inp.gs_kt, i.roll_deg, i.range_nm, wrap(i.trk - o.up))
     end
     return s.out
 end

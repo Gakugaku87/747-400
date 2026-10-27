@@ -6,6 +6,10 @@
 -- wind arrow (FCOM p.1109-1110, p.1141-1143, p.1033-1034); the VOR mode's
 -- reference VOR (step 5b: ATA34_1 p.356-369); the bearing pointers and the
 -- lower corner blocks (step 5b: FCOM p.1034, p.1038-1040, p.1144-1146).
+-- The airplane: the 570 (GE) is track up in MAP as the 109 (the checks
+-- below), the 405 (PW; RR as PW) heading up in all modes with HDG in the
+-- box (the last block: FCOM p.1109, p.1141, p.1033; the user's choice of
+-- the 405, 2026-10-27).
 local T = dofile("tests/lib/check.lua")("nd_model")
 local M = dofile("plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/B747.60.nd_model.lua")
 
@@ -16,12 +20,14 @@ local function run(seconds)
 end
 
 s, inp = M.new(), M.inputs()
+inp.track_map = true    -- the 570 (GE)
 local c, f = inp.side[M.CAPT], inp.side[M.FO]
 c.hdg, c.trk, f.hdg, f.trk = 100, 106, 101, 107
 c.mode, f.mode = M.MAP, M.VOR
 run()
 local oc, of = out[M.CAPT], out[M.FO]
-T.equal(oc.up, 106, "MAP: track up (109: FCOM p.1109)")
+T.equal(oc.up, 106, "MAP: track up (570 as 109: FCOM p.1109)")
+T.equal(oc.box, 2, "the 570's MAP: TRK in the box (FCOM p.1141)")
 T.equal(of.up, 101, "VOR: heading up from the F/O's own heading (FCOM p.1110)")
 T.equal(oc.xp_mode, M.XP_MAP, "X-Plane's map mode for MAP")
 T.equal(of.xp_mode, M.XP_APP, "VOR: X-Plane's heading-up mode (APP), not its MAP as before")
@@ -166,7 +172,9 @@ run()
 T.equal(oc.vor_dme, 0, "no DME: dashes")
 
 -- the bearing pointers (step 5b): VOR L on the left switch, ADF R on the right
+-- (and the POS switch below), on the 570's track up MAP
 s, inp = M.new(), M.inputs()
+inp.track_map = true
 c = inp.side[M.CAPT]
 c.mode, c.hdg, c.trk = M.MAP, 100, 110
 c.sw[1], c.sw[2] = M.SW_VOR, M.SW_ADF
@@ -272,4 +280,31 @@ run()
 T.equal(oc.pos_rad_radial[1], 360, "the radial 360, not 0")
 T.check(not of.pos_iru[1] and not of.pos_rad[1], "the F/O's POS off: none")
 
+-- the 405 (PW; RR as PW): heading up in all modes, HDG in the box and the
+-- HDG flag (FCOM p.1109, p.1141, p.1033)
+s, inp = M.new(), M.inputs()
+c = inp.side[M.CAPT]
+c.hdg, c.trk, c.mode = 100, 106, M.MAP
+run()
+oc = out[M.CAPT]
+T.equal(oc.up, 100, "405 MAP: heading up")
+T.equal(oc.xp_mode, M.XP_APP, "405 MAP: X-Plane's heading-up map")
+T.equal(oc.box, 1, "405 MAP: HDG in the box")
+T.check(oc.trk_line and oc.hdg_ptr, "405 MAP: the track line and the heading pointer")
+c.trk_valid = false
+run()
+T.check(oc.rose and not oc.trk_flag and not oc.hdg_flag, "405 MAP without a track: the rose, no flag")
+c.trk_valid, c.hdg_valid = true, false
+run()
+T.check(oc.hdg_flag and not oc.rose and not oc.trk_flag, "405 MAP without a heading: the HDG flag")
+c.hdg_valid = true
+c.mode = M.PLN
+run()
+T.equal(oc.box, 3, "405 PLAN: HDG in PLAN's box")
+inp.track_map = true
+run()
+T.equal(oc.box, 4, "570 PLAN: TRK in PLAN's box")
+c.mode = M.VOR
+run()
+T.equal(oc.box, 1, "VOR: HDG")
 T.done()

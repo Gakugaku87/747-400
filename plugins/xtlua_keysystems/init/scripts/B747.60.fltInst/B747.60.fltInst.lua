@@ -295,6 +295,10 @@ B747DR_nd_fo_pos_rad_r_text                     = deferred_dataref("laminar/B747
 -- current heading pointer (APP, VOR, MAP; PLN); the selected heading bug and
 -- its dashed line; the wind arrow shown and its direction on the display
 B747DR_nd_rose_capt                             = deferred_dataref("laminar/B747/nd/capt/rose", "number")
+-- the box at the top (the 405's HDG in all modes, the 570's TRK in MAP and
+-- PLAN): 1 HDG, 2 TRK, in PLAN 3 HDG, 4 TRK
+B747DR_nd_box_capt                              = deferred_dataref("laminar/B747/nd/capt/box", "number")
+B747DR_nd_box_fo                                = deferred_dataref("laminar/B747/nd/fo/box", "number")
 B747DR_nd_trk_flag_capt                         = deferred_dataref("laminar/B747/nd/capt/trk_flag", "number")
 B747DR_nd_hdg_flag_capt                         = deferred_dataref("laminar/B747/nd/capt/hdg_flag", "number")
 B747DR_nd_map_flag_capt                         = deferred_dataref("laminar/B747/nd/capt/map_flag", "number")
