@@ -8,7 +8,9 @@
 -- (V/S synced to the present vertical speed, HDG HOLD on X-Plane's HDG SEL,
 -- ATT's bank); 1b: HDG SEL, LNAV's arm and engage, HDG HOLD (X-Plane's
 -- command replaced) and its heading after 2 s;
--- the F/D switches (their positions); everything off; the MCP's IAS 200.
+-- the F/D switches (their positions); everything off; the MCP's IAS 200;
+-- 1c: the pitch modes (V/S synced, ALT HOLD, FLCH, SPD, VNAV's arm and the
+-- old VNAV's engage, no route).
 local T = dofile("tests/lib/check.lua")("afds_glue")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
@@ -106,6 +108,9 @@ frames(10)
 T.equal(rt:get("laminar/B747/autopilot/FMA/active_pitch_mode"), 0, "no pitch mode at the MCP altitude with everything off")
 T.equal(rt:get("laminar/B747/autopilot/FMA/active_roll_mode"), 0, "no roll mode")
 
+-- away from the MCP altitude (there V/S captures ALT at once: 1c)
+rt:set("laminar/B747/autopilot/altitude_dial_ft", 20000)
+rt:set("laminar/B747/autopilot/heading/altitude_dial_ft", 20000)
 -- the first F/D ON at 15 degrees of bank: V/S and ATT
 rt:set("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot", 15)
 rt:set("sim/cockpit2/gauges/indicators/vvi_fpm_pilot", -640)
@@ -161,4 +166,101 @@ rt:set("sim/flightmodel/position/mag_psi", 104)
 frames(5)
 T.near(rt:get(HDG_TARGET), 101, 0.01, "2 s under 3 degrees: the heading then held (101)")
 
+-- 1c: the pitch modes through the model. V/S synced to the present
+-- vertical speed (the old one set 0); ALT HOLD at the altitude then; FLCH
+-- with the speed window open as it is; SPD inactive in FLCH SPD; VNAV: no
+-- cruise altitude, PERF/VNAV UNAVAILABLE (flag 30: B744.notifications.lua's
+-- DRindex + 1); armed below 400 ft with the active mode kept (the old arm
+-- forced ALT HOLD), the second push; engaged by the old VNAV above 400 ft
+-- (its sub-mode in the FMA), a push while active, V/S ends it; no route
+-- ends the arm without DESTINATION NOT SET (flag 54)
+local PITCH, PITCH_ARMED = "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/armed_pitch_mode"
+local ALT_STATUS, FLCH_STATUS = "laminar/B747/autopilot/altitude_hold_status", "laminar/B747/autopilot/speed_status"
+local NOTIFY, VNAV_STATE = "laminar/B747/fms/notification", "laminar/B747/autopilot/vnav_state"
+local RA = "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot"
+-- the FMC's data the old VNAV reads (its speeds: the FMS module's defaults,
+-- the CRZ ALT FL350)
+rt:set("laminar/B747/fms/data", '{"clbspd":"340","transpd":"250","spdtransalt":"10000","transalt":"18000",'
+    .. '"clbrestspd":"---","clbrestalt":"-----","crzalt":"FL350","crzspd":"810","desspdmach":"805",'
+    .. '"desspd":"270","destranspd":"240","desspdtransalt":"10000","desrestspd":"---","desrestalt":"-----",'
+    .. '"costindex":"100"}')
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 12000)
+rt:set("laminar/B747/autopilot/altitude_dial_ft", 20000)
+rt:set("laminar/B747/autopilot/heading/altitude_dial_ft", 20000)
+rt:set("sim/cockpit2/gauges/indicators/vvi_fpm_pilot", 1840)
+rt:command(CMD .. "vs_mode")
+frames()
+T.equal(rt:get(VS_STATUS), 2, "V/S")
+T.equal(rt:get(VS_DIAL), 1800, "synced to the present 1,840 fpm: 1,800 (the old switch set 0)")
+T.equal(rt:get(PITCH), 7, "the FMA's V/S")
+rt:command(CMD .. "alt_hold_mode")
+frames()
+T.equal(rt:get(ALT_STATUS), 2, "ALT HOLD")
+T.near(rt:get("laminar/B747/autopilot/altitude_hold_ft"), 12000, 0.5, "at the altitude then")
+T.equal(rt:get(PITCH), 9, "the FMA's ALT")
+rt:command(CMD .. "vs_mode")
+frames()
+T.equal(rt:get(VS_DIAL), 0, "V/S after ALT: 000 (ATA22 p.282)")
+rt:command(CMD .. "flch_mode")
+frames()
+T.equal(rt:get(FLCH_STATUS), 2, "FLCH SPD")
+T.equal(rt:get(PITCH), 8, "the FMA's FLCH SPD")
+T.equal(rt:get(VS_STATUS), 0, "V/S off")
+rt:command(CMD .. "speed_mode")
+frames()
+T.equal(rt:get(PITCH), 8, "SPD in FLCH SPD: nothing (FCOM p.642; the old one went to V/S)")
+rt:set("laminar/B747/autopilot/dist/cruise_alt", 0)
+rt:command(CMD .. "VNAV")
+frames()
+T.equal(rt:get(NOTIFY, 30), 1, "VNAV without a cruise altitude: PERF/VNAV UNAVAILABLE (flag 30)")
+T.equal(rt:get(VNAV_STATE), 0, "not armed")
+-- a route on X-Plane's FMS ([2] the type, 1 an airport; [5] [6] the
+-- position; [9] the altitude): the old VNAV cancels itself without one.
+-- Below 400 ft VNAV stays armed (FCOM p.645: it activates at 400 ft)
+rt:set("xtlua/fms", '[[1,1,0,0,35.76,140.39,0,"RJAA",0,false],[2,512,0,0,35.0,139.5,0,"XAC",0,true],'
+    .. '[3,1,0,0,34.43,135.24,0,"RJBB",0,false]]')
+rt:set("laminar/B747/autopilot/dist/cruise_alt", 35000)
+rt:set("laminar/B747/autopilot/dist/remaining_distance", 500)
+rt:set(RA, 300)
+rt:command(CMD .. "VNAV")
+frames(30)
+T.equal(rt:get(VNAV_STATE), 1, "VNAV armed")
+T.equal(rt:get(PITCH), 8, "FLCH SPD still active (the old arm forced ALT HOLD)")
+T.equal(rt:get(PITCH_ARMED), 4, "the FMA's VNAV armed")
+rt:command(CMD .. "VNAV")
+frames()
+T.equal(rt:get(VNAV_STATE), 0, "the second push disarms")
+T.equal(rt:get(PITCH_ARMED), 0, "the FMA's arm goes")
+rt:command(CMD .. "VNAV")
+frames()
+T.equal(rt:get(VNAV_STATE), 1, "armed again")
+-- above 400 ft the old VNAV engages it (until the FMC's step 9): VNAV SPD
+-- on FLCH's law
+rt:set(RA, 9000)
+frames(30)
+T.check(rt:get(VNAV_STATE) >= 2, "engaged by the old VNAV above 400 ft")
+T.equal(rt:get(PITCH), 4, "the FMA's VNAV SPD")
+T.equal(rt:get(PITCH_ARMED), 0, "no arm")
+rt:command(CMD .. "VNAV")
+frames()
+T.check(rt:get(VNAV_STATE) >= 2, "a push while active: nothing (the old one disengaged it)")
+rt:command(CMD .. "vs_mode")
+frames()
+T.equal(rt:get(VNAV_STATE), 0, "V/S ends VNAV (FCOM p.645)")
+T.equal(rt:get(PITCH), 7, "the FMA's V/S")
+T.equal(rt:get(VS_STATUS), 2, "the old law's V/S")
+-- no route: VNAV pushed in the air ends through the model at once, no
+-- DESTINATION NOT SET (the old monitor's VNAV read the route's entry 0, a
+-- Lua error before the cancel)
+rt:set(NOTIFY, 54, 0)
+rt:set("xtlua/fms", "[]")
+frames()
+rt:command(CMD .. "VNAV")
+frames()
+T.equal(rt:get(VNAV_STATE), 0, "no route: VNAV's arm ends at once")
+T.equal(rt:get(PITCH_ARMED), 0, "no arm in the FMA")
+T.equal(rt:get(PITCH), 7, "V/S stays")
+frames()
+T.equal(rt:get(VNAV_STATE), 0, "not armed again by the model")
+T.equal(rt:get(NOTIFY, 54), 0, "no DESTINATION NOT SET (the old cancel posted it)")
 T.done()

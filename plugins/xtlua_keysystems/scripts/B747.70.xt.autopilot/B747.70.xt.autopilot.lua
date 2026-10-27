@@ -576,6 +576,21 @@ local afds = B747_afds_model.new()
 local afdsHdgSelTime = 0
 local afdsLocWas = false
 local afdsIn = {fd = {L = false, R = false}, hyd = {0, 0, 0}}
+-- the old VNAV's sub-mode, as the old FMA inferred it from its law's flags
+-- (until the FMC's step 9): VNAV SPD 4, VNAV ALT 5, VNAV PTH 6
+local function afds_old_vnav_fma()
+	if simDR_autopilot_flch_status == 2 then return 4 end
+	if simDR_autopilot_alt_hold_status == 2 or math.abs(simDR_pressureAlt1 - simDR_autopilot_altitude_ft) < B747DR_alt_capture_window then
+		local crz = fmsData and fmsData["crzalt"] and tonumber(string.sub(fmsData["crzalt"], 3))
+		if B747DR_mcp_hold == 1 and simDR_autopilot_altitude_ft / 100 ~= crz then return 5 end
+		return 6
+	end
+	if simDR_autopilot_vs_status == 2 then
+		if B747DR_ap_flightPhase == 3 and simDR_autopilot_vs_fpm == -500 then return 4 end
+		return 6
+	end
+	return 4
+end
 local function afds_inp()
 	afdsIn.fd.L = B747DR_toggle_switch_position[23] > 0.5
 	afdsIn.fd.R = B747DR_toggle_switch_position[24] > 0.5
@@ -608,6 +623,44 @@ local function afds_inp()
 		afdsIn.old_armed_roll = 0
 	end
 	afdsIn.dt = SIM_PERIOD
+	-- the pitch (step 1c): the old code's G/S and TO/GA (until steps 1d and
+	-- 1e), the vertical speed, the altitude, the speeds, the old capture
+	-- window (until step 3), the old VNAV (until the FMC's step 9), the old
+	-- law's mode, the old arms of G/S and FLARE
+	afdsIn.vs = simDR_vvi_fpm_pilot
+	afdsIn.alt = simDR_pressureAlt1
+	if B747DR_autopilot_gs_status == 2 then
+		afdsIn.old_pitch = "GS"
+	elseif B747DR_autopilot_TOGA_status ~= 0 then
+		afdsIn.old_pitch = "TOGA"
+	else
+		afdsIn.old_pitch = nil
+	end
+	afdsIn.ias = simDR_ind_airspeed_kts_pilot
+	afdsIn.mcp_ias = B747DR_ap_ias_dial_value
+	afdsIn.window_open = B747DR_ap_ias_mach_window_open == 1
+	afdsIn.fmc_speed = B747DR_ap_vnav_state >= 2 and simDR_autopilot_airspeed_kts or nil
+	afdsIn.capture = math.abs(simDR_pressureAlt1 - simDR_autopilot_altitude_ft) < B747DR_alt_capture_window
+	afdsIn.capture_alt = simDR_autopilot_altitude_ft
+	afdsIn.old_hold_alt = simDR_autopilot_hold_altitude_ft
+	afdsIn.vnav_engaged = B747DR_ap_vnav_state >= 2
+	afdsIn.vnav_fma = afds_old_vnav_fma()
+	if simDR_autopilot_alt_hold_status == 2 then
+		afdsIn.old_law = "ALT"
+	elseif simDR_autopilot_vs_status == 2 then
+		afdsIn.old_law = "VS"
+	elseif simDR_autopilot_flch_status == 2 then
+		afdsIn.old_law = "FLCH"
+	else
+		afdsIn.old_law = nil
+	end
+	if B747DR_autopilot_gs_status == 1 or (B747DR_ap_approach_mode > 0 and B747DR_autopilot_gs_status ~= 2) then
+		afdsIn.old_armed_pitch = 2
+	elseif simDR_radarAlt1 > 200 and (B747DR_ap_AFDS_status_annun_pilot == 3 or B747DR_ap_AFDS_status_annun_pilot == 4) then
+		afdsIn.old_armed_pitch = 3
+	else
+		afdsIn.old_armed_pitch = 0
+	end
 	return afdsIn
 end
 -- V/S as the V/S switch sets it, synced to the present vertical speed
@@ -677,6 +730,24 @@ local function afds_sync()
 	-- held (the present one until captured)
 	local ln = afds.lnav_arm and 1 or (afds.roll == "LNAV" and 2 or 0)
 	if B747DR_ap_lnav_state ~= ln then B747DR_ap_lnav_state = ln end
+	-- the pitch modes (step 1c) on the old code's state: VNAV's (1 armed;
+	-- engaged the old VNAV's own 2 and 3), the old law's flags for V/S,
+	-- ALT (its altitude) and FLCH (the old VNAV sets them for its
+	-- sub-modes, the old G/S and TO/GA laws go by the FMA)
+	if afds.pitch ~= "VNAV" then
+		local vn = afds.vnav_arm and 1 or 0
+		if B747DR_ap_vnav_state ~= vn then B747DR_ap_vnav_state = vn end
+		local p = afds.pitch
+		local vs, al, fl = p == "VS" and 2 or 0, p == "ALT" and 2 or 0, p == "FLCH" and 2 or 0
+		if p then
+			if simDR_autopilot_vs_status ~= vs then simDR_autopilot_vs_status = vs end
+			if simDR_autopilot_alt_hold_status ~= al then simDR_autopilot_alt_hold_status = al end
+			if simDR_autopilot_flch_status ~= fl then simDR_autopilot_flch_status = fl end
+			if p == "ALT" and afds.hold_alt and simDR_autopilot_hold_altitude_ft ~= afds.hold_alt then
+				simDR_autopilot_hold_altitude_ft = afds.hold_alt
+			end
+		end
+	end
 	local att = afds.roll == "ATT" and afds.att_bank or 0
 	if B747DR_ap_ATT ~= att then B747DR_ap_ATT = att end
 	if afds.roll == "HDG_SEL" or afds.roll == "HDG_HOLD" then
@@ -721,6 +792,71 @@ end
 -- the FMA's roll
 function B747_afds_roll_fma()
 	return B747_afds_model.roll_fma(afds, afds_inp())
+end
+-- the pitch switches (step 1c): the old code's own parts kept (the A/T,
+-- its flight phase, its targets)
+function B747_afds_vs()
+	local sync = B747_afds_model.vs(afds, afds_inp())
+	if not sync then return end
+	if B747DR_autothrottle_active == 0 and isATEnabled() and simDR_onGround == 0 then
+		B747DR_autothrottle_active = 1
+	end
+	B747DR_engine_TOGA_mode = 0
+	simDR_autopilot_altitude_ft = B747DR_autopilot_altitude_ft
+	B747DR_ap_thrust_mode = 0
+	B747DR_ap_inVNAVdescent = 0
+	B747DR_ap_flightPhase = B747DR_autopilot_altitude_ft > simDR_pressureAlt1 and 1 or 3
+	simDR_autopilot_vs_fpm = sync
+	B747DR_autopilot_vs_fpm = sync
+	afds_sync()
+end
+function B747_afds_alt_hold()
+	if not B747_afds_model.alt_hold(afds, afds_inp()) then return end
+	if B747DR_autothrottle_active == 0 and isATEnabled() then
+		B747DR_autothrottle_active = 1
+		B747DR_engine_TOGA_mode = 0
+	end
+	B747DR_ap_thrust_mode = 0
+	B747DR_ap_inVNAVdescent = 0
+	B747DR_ap_flightPhase = 2
+	afds_sync()
+end
+function B747_afds_flch()
+	local ok, speed = B747_afds_model.flch(afds, afds_inp())
+	if not ok then return end
+	simDR_autopilot_altitude_ft = B747DR_autopilot_altitude_ft
+	if speed and simDR_autopilot_airspeed_is_mach == 0 then
+		B747DR_ap_ias_dial_value = math.floor(speed + 0.5)
+	end
+	B747DR_ap_inVNAVdescent = 0
+	B747DR_ap_flightPhase = B747DR_autopilot_altitude_ft > simDR_pressureAlt1 and 1 or 3
+	B747DR_ap_thrust_mode = 2
+	afds_sync()
+end
+function B747_afds_vnav()
+	local was = afds.vnav_arm
+	B747_afds_model.vnav(afds, afds_inp())
+	afds_sync()
+	if afds.vnav_arm and not was then
+		-- the old VNAV's start (its speed, not in descent) once armed
+		B747DR_mcp_hold = 0
+		B747DR_ap_inVNAVdescent = 0
+		setDescent(false)
+		setVNAVState("gotVNAVSpeed", false)
+		B747_vnav_speed()
+	end
+end
+-- VNAV lost: no route for the old VNAV (until the FMC's step 9)
+function B747_afds_vnav_lost()
+	B747_afds_model.vnav_lost(afds)
+	B747DR_ap_vnav_state = 0
+end
+function B747_afds_spd_works()
+	return B747_afds_model.spd_works(afds, afds_inp())
+end
+-- the FMA's pitch
+function B747_afds_pitch_fma()
+	return B747_afds_model.pitch_fma(afds, afds_inp())
 end
 -- the roll mode is HDG SEL (the HDG REF switch's default)
 function B747_afds_roll_is(mode)
@@ -787,6 +923,9 @@ function B747_ap_switch_speed_mode_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747CMD_fdr_log_spd:once()
 		B747_ap_button_switch_position_target[1] = 1 -- SET THE SPEED SWITCH ANIMATION TO "IN"
+		-- inactive in VNAV, FLCH SPD and TO/GA (FCOM p.642: the AFDS model,
+		-- 6-3 step 1c; the old one ended VNAV and FLCH into V/S)
+		if not B747_afds_spd_works() then return end
 		B747DR_ap_lastCommand = simDRTime
 
 		if isATEnabled() and simDR_onGround == 0 then -- AUTOTHROTTLE ""ARM" SWITCH IS "ON"
@@ -796,14 +935,6 @@ function B747_ap_switch_speed_mode_CMDhandler(phase, duration)
 			if B747DR_engine_TOGA_mode > 0 then
 				B747DR_engine_TOGA_mode = 0
 			end -- CANX ENGINE TOGA IF ACTIVE
-		end
-		B747DR_ap_vnav_state = 0
-		B747DR_ap_inVNAVdescent = 0
-		if simDR_autopilot_flch_status~=0 then
-		 simDR_autopilot_flch_status=0
-		 if simDR_autopilot_vs_status==0 and  simDR_autopilot_alt_hold_status==0 then
-			simDR_autopilot_vs_status=2
-		 end
 		end
 		--B747DR_ap_flightPhase = 2
 		if B747DR_autopilot_altitude_ft > simDR_pressureAlt1 then
@@ -952,26 +1083,8 @@ function B747_ap_switch_flch_mode_CMDhandler(phase, duration)
 		B747CMD_fdr_log_flch:once()
 		B747_ap_button_switch_position_target[4] = 1
 		B747DR_ap_lastCommand = simDRTime
-		simDR_autopilot_altitude_ft = B747DR_autopilot_altitude_ft
-		simDR_autopilot_hold_altitude_ft=simDR_autopilot_altitude_ft
-		B747DR_autopilot_TOGA_status=0
-		if B747DR_ap_vnav_state == 0 or (simDR_autopilot_flch_status == 0 and B747DR_ap_vnav_state > 0) then
-			simCMD_autopilot_flch_mode:once()
-			simDR_autopilot_flch_status=2
-            simDR_autopilot_vs_status=0
-            simDR_autopilot_alt_hold_status=0
-			--simDR_autopilot_flch_status=2
-
-		end
-		simDR_autopilot_alt_hold_status=0
-		B747DR_ap_vnav_state = 0
-		B747DR_ap_inVNAVdescent = 0
-		if B747DR_autopilot_altitude_ft > simDR_pressureAlt1 then
-			B747DR_ap_flightPhase = 1
-		else
-			B747DR_ap_flightPhase = 3
-		end
-		B747DR_ap_thrust_mode = 2
+		-- the AFDS model (6-3 step 1c; the old one ended TO/GA's roll too)
+		B747_afds_flch()
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[4] = 0
 	end
@@ -980,35 +1093,10 @@ end
 function B747_ap_switch_vs_mode_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747CMD_fdr_log_vs:once()
-		local cAlt = simDR_radarAlt1
 		B747_ap_button_switch_position_target[6] = 1
-		--for animation
-
-		if B747DR_autothrottle_active == 0 and isATEnabled() and simDR_onGround == 0 then -- AUTOTHROTTLE IS "OFF"
-			--simCMD_autopilot_autothrottle_on:once() -- ACTIVATE THE AUTOTHROTTLE
-			B747DR_autothrottle_active=1
-
-		end
-		B747DR_engine_TOGA_mode = 0
-		B747DR_autopilot_TOGA_status=0
-		simDR_autopilot_altitude_ft = B747DR_autopilot_altitude_ft
-		simDR_autopilot_hold_altitude_ft=simDR_autopilot_altitude_ft
-		simDR_autopilot_alt_hold_status=0
-		B747DR_ap_thrust_mode = 0
-		B747DR_ap_inVNAVdescent = 0
-		if B747DR_autopilot_altitude_ft > simDR_pressureAlt1 then
-			B747DR_ap_flightPhase = 1
-		else
-			B747DR_ap_flightPhase = 3
-		end
-		if B747DR_ap_vnav_state == 0 or (simDR_autopilot_vs_status == 0 and B747DR_ap_vnav_state > 0) then
-			simCMD_autopilot_vert_speed_mode:once()
-			simDR_autopilot_vs_status=2
-			simDR_autopilot_vs_fpm = 0
-			B747DR_ap_vvi_fpm = 0
-			B747DR_autopilot_vs_fpm = 0
-		end
-		B747DR_ap_vnav_state = 0
+		-- the AFDS model (6-3 step 1c): synced to the present vertical speed
+		-- (the old one set 0, and ended TO/GA's roll too)
+		B747_afds_vs()
 	elseif phase == 2 then
 	--for autpilot
 	end
@@ -1018,27 +1106,8 @@ function B747_ap_alt_hold_mode_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747CMD_fdr_log_alt:once()
 		B747_ap_button_switch_position_target[7] = 1
-		if B747DR_autothrottle_active == 0 and isATEnabled() then -- AUTOTHROTTLE IS "OFF"
-			--simCMD_autopilot_autothrottle_on:once() -- ACTIVATE THE AUTOTHROTTLE
-			B747DR_autothrottle_active=1
-			B747DR_engine_TOGA_mode = 0
-		end
-
-		if simDR_autopilot_alt_hold_status == 2 and B747DR_ap_vnav_state > 0 then
-			print("dont leave alt hold")
-			simDR_autopilot_hold_altitude_ft=simDR_pressureAlt1
-		else
-			--simCMD_autopilot_alt_hold_mode:once()
-			simDR_autopilot_alt_hold_status = 2
-			simDR_autopilot_vs_status=0
-            simDR_autopilot_flch_status=0
-			simDR_autopilot_hold_altitude_ft=simDR_pressureAlt1
-		end
-		B747DR_ap_thrust_mode = 0
-		B747DR_ap_vnav_state = 0
-		B747DR_ap_inVNAVdescent = 0
-		B747DR_ap_flightPhase = 2
-		B747DR_autopilot_TOGA_status=0
+		-- the AFDS model (6-3 step 1c; the old one ended TO/GA's roll too)
+		B747_afds_alt_hold()
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[7] = 0
 	end
@@ -1172,31 +1241,9 @@ function B747_ap_VNAV_mode_CMDhandler(phase, duration)
 			B747DR_fmc_notifications[30] = 1
 			return
 		end
-		if B747DR_ap_vnav_state > 0 then
-			B747DR_ap_vnav_state = 0
-			B747DR_ap_inVNAVdescent = 0
-			B747DR_ap_thrust_mode = 0
-			B747DR_mcp_hold=0
-			if B747DR_autothrottle_active == 0 and isATEnabled() and simDR_onGround == 1 then
-				--simCMD_autopilot_autothrottle_on:once()
-				B747DR_autothrottle_active=1
-			end
-		elseif B747DR_ap_FMA_active_pitch_mode==1 then
-			B747DR_ap_vnav_state = 1
-			setDescent(false)
-			setVNAVState("gotVNAVSpeed", false)
-			B747_vnav_speed()
-		else
-			B747DR_ap_vnav_state = 1
-			simDR_autopilot_alt_hold_status = 2
-			simDR_autopilot_vs_status=0
-			B747DR_ap_thrust_mode = 0
-			B747DR_mcp_hold=0
-			B747DR_ap_inVNAVdescent = 0
-			setDescent(false)
-			setVNAVState("gotVNAVSpeed", false)
-			B747_vnav_speed()
-		end
+		-- the AFDS model (6-3 step 1c): the arm, the second push; the active
+		-- mode stays while it is armed (the old one forced ALT HOLD)
+		B747_afds_vnav()
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[3] = 0
 	end
@@ -2525,10 +2572,11 @@ function B747_ap_altitude(fms)
 	end
 	if B747DR_ap_vnav_state > 0 then
 		if table.getn(fms) < 2 or fms[table.getn(fms)][2] ~= 1 then
-			print("Cancel VNAV " .. table.getn(fms))
-			B747DR_fmc_notifications[54] = 1
-			B747DR_ap_vnav_state = 0
-			--B747DR_ap_thrust_mode = 0
+			-- no route: the old VNAV can't run without one (until the FMC's
+			-- step 9), VNAV and its arm end through the AFDS model (6-3 step
+			-- 1c; the old one also posted DESTINATION NOT SET, not an FCOM
+			-- message)
+			B747_afds_vnav_lost()
 		end --no vnav
 
 	--computeVNAVAlt(fms)
@@ -2773,13 +2821,6 @@ function glideSlopeLOCProgress()
 end
 function fma_PitchModes()
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
-
-	-- PITCH MODES: ARMED
-	-- ----------------------------------------------------------------------------------
-
-	-- (NONE) --
-
-	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
 	-- everything off with neither the A/P nor a F/D (FCOM p.660; the old
 	-- capture window showed ALT near the MCP altitude without a mode)
 	if numAPengaged == 0 and B747DR_toggle_switch_position[23] < 0.5 and B747DR_toggle_switch_position[24] < 0.5 then
@@ -2787,88 +2828,21 @@ function fma_PitchModes()
 		B747DR_ap_FMA_active_pitch_mode = 0
 		return
 	end
-	if B747DR_ap_vnav_state == 1 then
-		-- (G/S) --
-		B747DR_ap_FMA_armed_pitch_mode = 4
-	elseif B747DR_autopilot_gs_status == 1 or (B747DR_ap_approach_mode > 0 and B747DR_autopilot_gs_status ~= 2) then
-		-- (VNAV) --
-		B747DR_ap_FMA_armed_pitch_mode = 2
-	elseif B747DR_ap_vnav_state == 1 then
-		B747DR_ap_FMA_armed_pitch_mode = 4
-	elseif simDR_radarAlt1 > 200 and (B747DR_ap_AFDS_status_annun_pilot == 3 or B747DR_ap_AFDS_status_annun_pilot == 4) then
-		-- ROLLOUT and FLARE ARMED (dont get here once in autoland)
-		B747DR_ap_FMA_armed_pitch_mode = 3
-	else
-		-- (FLARE) --
-		B747DR_ap_FMA_armed_pitch_mode = 0
-	end
-
-	-- PITCH MODES: ACTIVE
-	-- ----------------------------------------------------------------------------------
-	local altDiff=math.abs(simDR_pressureAlt1-simDR_autopilot_altitude_ft)
-	-- (NONE) --
-	--B747DR_ap_FMA_active_pitch_mode = 0
-	if B747DR_autopilot_TOGA_status == 1 then
-		--if B747DR_engine_TOGA_mode == 1 then
-
-		B747DR_ap_FMA_active_pitch_mode = 1
-	elseif simDR_onGround == 1 then
-		-- (G/S) --
-		B747DR_ap_FMA_active_pitch_mode = 0
-	elseif B747DR_autopilot_gs_status == 2 then
-		-- (FLARE) --
-		-- TODO: AUTOLAND LOGIC
-
-		B747DR_ap_FMA_active_pitch_mode = 2 -- (GS) --
+	-- the old G/S (until 6-3 step 1d) ends VNAV
+	if B747DR_autopilot_gs_status == 2 then
 		B747DR_ap_vnav_state = 0
 		B747DR_ap_inVNAVdescent = 0
 		B747DR_ap_flightPhase = 4
 		B747DR_ap_thrust_mode = 0
-	elseif (simDR_autopilot_fms_vnav == 1 or B747DR_ap_vnav_state >= 2) and simDR_autopilot_flch_status == 2 then
-
-
-		B747DR_ap_FMA_active_pitch_mode = 4 -- (VNAV SPD) --
-
-	 --
-	elseif (simDR_autopilot_fms_vnav == 1 or B747DR_ap_vnav_state >= 2) and (simDR_autopilot_alt_hold_status == 2 or altDiff<B747DR_alt_capture_window) then
-		--[[if clbderate==0 then
-			throttlederate=1.0
-		elseif clbderate==1 then
-			throttlederate=0.9
-		elseif clbderate==2 then
-			throttlederate=0.8
-		end   ]]
-		-- (VNAV PATH) --
-		if B747DR_mcp_hold == 1 and (simDR_autopilot_altitude_ft / 100 ~= tonumber(string.sub(fmsData["crzalt"], 3))) then
-			B747DR_ap_FMA_active_pitch_mode = 5 --VNAV ALT - MCP alt
-		else
-			B747DR_ap_FMA_active_pitch_mode = 6 --VNAV PTH - FMC alt
-		end
-	elseif (simDR_autopilot_fms_vnav == 1 or B747DR_ap_vnav_state >= 2) and simDR_autopilot_vs_status == 2 then
-		-- (V/S) --
-		if B747DR_ap_flightPhase == 3 and simDR_autopilot_vs_fpm == -500 then
-			B747DR_ap_FMA_active_pitch_mode = 4 -- (VNAV SPD) --
-		else
-			B747DR_ap_FMA_active_pitch_mode = 6 -- (VNAV PATH) --
-		end
-	elseif (simDR_autopilot_vs_status == 2 and altDiff>B747DR_alt_capture_window) and simDR_autopilot_fms_vnav == 0 and B747DR_ap_vnav_state == 0 and simDR_autopilot_alt_hold_status ~= 2 then
-		-- (FLCH SPD) --
-		B747DR_ap_FMA_active_pitch_mode = 7 --VS
-
-
-	elseif (simDR_autopilot_flch_status == 2 and altDiff>B747DR_alt_capture_window) and simDR_autopilot_fms_vnav == 0 and B747DR_ap_vnav_state == 0 and simDR_autopilot_alt_hold_status ~= 2 then
-		-- (ALT) --
-		B747DR_ap_FMA_active_pitch_mode = 8 --FLCH
-
-	elseif (simDR_autopilot_alt_hold_status == 2 or altDiff<B747DR_alt_capture_window) and simDR_autopilot_fms_vnav == 0 and B747DR_ap_vnav_state == 0 then
-		--throttlederate=1.0
-
-		B747DR_ap_FMA_active_pitch_mode = 9 -- ALT
-	else
-		-- (NONE) --
-		--throttlederate=1.0
-		B747DR_ap_FMA_active_pitch_mode = 0
 	end
+	-- the AFDS model's pitch modes (6-3 step 1c), the old G/S and TO/GA
+	-- first, VNAV's sub-mode the old VNAV's
+	local active, armed = B747_afds_pitch_fma()
+	-- on the ground only TO/GA: the old pitch law goes by this number and
+	-- would move the elevator for V/S or ALT with the A/P engaged on the
+	-- ground (as the old FMA did, until 6-3 step 3)
+	if simDR_onGround == 1 and active ~= 1 then active = 0 end
+	B747DR_ap_FMA_active_pitch_mode, B747DR_ap_FMA_armed_pitch_mode = active, armed
 end
 
 function B747_ap_fma(fms)
