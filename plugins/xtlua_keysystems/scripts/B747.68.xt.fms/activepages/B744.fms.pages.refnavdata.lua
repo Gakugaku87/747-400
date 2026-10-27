@@ -146,10 +146,12 @@ function fmsFunctions.refnavident(fmsO, value)
     return
   end
   if not string.match(sp, "^%w%w?%w?%w?%w?$") then fmsO["notify"] = "NOT IN DATA BASE" return end
+  -- the database's points, not the crew's waypoints of the route (step 7e3a)
+  local list = R.candidates(B747_fmc_route, sp, simDR_latitude, simDR_longitude, true)
   B747_fmc_with_point(fmsO, sp, nil, function(p)
     refPoint[fmsO.id] = p
     fmsO["scratchpad"] = ""
-  end)
+  end, list)
 end
 
 -- 4L/4R NAVAID INHIBIT: a VOR, VOR/DME, VORTAC or DME; 5L/5R VOR ONLY

@@ -46,7 +46,7 @@ local function key(k, held)
 end
 local function type_in(text)
     for ch in text:gmatch(".") do
-        rt:command(K .. (ch == "/" and "key/slash" or "alphanum_key/" .. ch))
+        rt:command(K .. (ch == "/" and "key/slash" or ch == "." and "key/period" or "alphanum_key/" .. ch))
     end
     frames(0.1)
 end
@@ -184,6 +184,27 @@ T.check(xpfms():find("\n28 DTOPOS DRCT [^\n]*\n28 CHA01 DRCT [^\n]*\n11 DELTA DR
 enter("DELTA", "L1")
 enter("FL200", "R1")
 T.check(not line(9):find("ABEAM"), "another change: the prompt gone (FCOM p.1334): " .. line(9))
+key("ls_key/L6")
+
+-- the waypoints the crew defines (step 7e3a; FCOM p.1245, p.1249-1250)
+enter("N3700.0E14100.0", "L3")
+T.equal(line(7), "N37E141                 ", "N3700.0E14100.0 after DELTA: N37E141")
+enter("ALPHA097/10", "L4")
+T.check(line(1):find("SELECT DESIRED WPT"), "ALPHA097/10: two ALPHAs: SELECT DESIRED WPT for the place")
+key("ls_key/L1")
+frames(0.6)
+T.equal(line(9), "ALP02                   ", "the nearer: ALP02 (CHA01 has 01)")
+enter("ALP02", "L5")
+T.equal(pad(), "", "ALP02 by its name")
+T.equal(line(11), "ALP02                   ", "the same point again")
+enter("XYZQQ090/10", "L5")
+T.equal(pad(), "NOT IN DATA BASE", "a place not in the data: NOT IN DATA BASE")
+clear()
+enter("ALPHA097/BRAVO007", "L5")
+key("ls_key/L1")
+frames(0.6)
+T.equal(pad(), "INVALID ENTRY", "radials that do not meet: INVALID ENTRY")
+clear()
 key("ls_key/L6")
 
 T.done()

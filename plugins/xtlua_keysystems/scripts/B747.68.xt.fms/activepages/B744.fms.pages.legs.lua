@@ -231,7 +231,7 @@ function fmsFunctions.legsfix(fmsO, value)
   if B747_cdu_hold_at_entry(fmsO, i) then return end
   if i > #r.legs + 1 then fmsO["notify"] = "INVALID ENTRY" return end
   local near = leg_start(r, i) or (i == 1 and airplane()) or r.origin
-  B747_fmc_with_point(fmsO, sp, near, function(p)
+  B747_fmc_with_fix(fmsO, sp, near, function(p)
     if st.active and i == 1 then
       -- the route's course into it when it is later in the route
       local rc = nil
