@@ -29,7 +29,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記。段 5d：PFD の TCAS RA・トランスポンダのコード・ND の WXR の文字） | FMC の位置への GPS の更新、GPWS の地形の look-ahead、PWS、無線の自動同調（FMC の作り直しで） |
 | FMC | 作り直し中（段取り：経路を自前で持ち、12 段で。notes/ATA-34-61-FMC.md §10。段 1：小修正、段 4：航法データベース、段 5a〜5e：経路のモデル、RTE・LEGS・DEP/ARR、現用点と X-Plane の FMS。段 6a〜6d：経路の形と LNAV、ND の線。段 7a〜7d：ホールド、オフセット。段 7e1〜7f：REF NAV DATA、ABEAM PTS、自分で作る点、FIX INFO、RTE 2、procedure turn の形（推定）） | ND の fly-by の旋回の曲線とオフセットの線、FIX INFO の円と方位線、PLAN の CTR と STEP、VNAV（X-Plane の FMS に流した経路を飛ぶ）、予測 |
 | CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み、段 3：地上準備のページ、段 4：航法データベース、段 5：経路（RTE・LEGS・DEP/ARR）、段 7：HOLD・OFFSET・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO） | 3 台が 1 つを共有（RTE 2 など）、性能のページの MOD/EXEC、入力の検査、データリンク |
-| 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード。LNAV のロールは FMC の指令：6-1 段 6c） | ロールが X-Plane の AP 頼み、ロール・ピッチ・TO/GA のモードの論理の残り、LOC・TO/GA・autoland の則 |
+| 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード。LNAV のロールは FMC の指令：6-1 段 6c） | ロールが X-Plane の HDG SEL 頼み、ピッチ・進入・TO/GA のモードの論理の残り、LOC・TO/GA・autoland の則 |
 | オートスロットル・推力管理 | 未着手 | 推力制限のモード、assumed temperature、THR・HOLD、操縦者の override |
 | 通信（ATA 23） | 未着手 | VHF の電源、ACP の連動、VHF C と HF が無い |
 | 照明（ATA 33） | 未着手（P5 の灯の入力は各系統で移し中） | 外部灯の電源、非常灯、毎フレームの完全 GC |
@@ -401,13 +401,16 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 実機に合わせた点（段 2）：CLR は 1 字、押し続けると全部、DEL は空のときだけ、+/- は交互、メッセージの間は打鍵を受けない。入力のメッセージはその CDU だけ、FMC のメッセージは全 CDU に出てどれかの CLR で全部から消え、条件が続く間は再び出ない。alert で >FMC MESSAGE。ページはすぐ切り替わる。NEXT は最後のページから 1 ページ目へ。CDU の電源が無いとキーが効かず、戻ると MENU。
 - 実機に合わせた点（段 1）：CRZ CG の範囲（前は文字で描画が止まった）、APPROACH REF の FLAP/SPEED の入力の形と複写・削除、EMERGENCY REPORT の DIVERT TO は経路を書き換えない、SPD TRANS は削除だけ、速度の入力は CAS 100–400。
 
-### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a）
+### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a・1b）
+
+- 実機に合わせた点（段 1b、2026-10-27）：ロールのモード（HDG SEL・HDG HOLD・ATT・LNAV）を新しいモデルが持つ。HDG HOLD は押すとすぐ表示し、ロールが 3° 未満で 2 秒続いた時の方位を保つ（前は X-Plane の heading hold）。ATT は次のロールのモードまで。LNAV は arm 中の 2 回目でだけ disarm し、engage 中に押しても外れない（前は外れた）、HDG SEL を押しても arm が残る（前は消えた）、経路が無くても外れない（前は外れて CDU に、FCOM に無い DESTINATION NOT SET を出した）。LOC と G/S の捕捉後と G/A の 400 ft 未満は HDG SEL・HDG HOLD を受け付けない（前は X-Plane の heading hold がそのまま入った）。MCP の HDG HOLD の灯は ATT でも点く。
+  - 残り：HDG SEL・HDG HOLD の旋回は段 2 まで X-Plane の HDG SEL（バンクの制限の AUTO も X-Plane）。
 
 - 実機に合わせた点（段 1a、2026-10-27）：A/P は CMD を押したときに engage する（地上でも。前は 400 ft より上だけ、C と R は離したとき）。2 台目は engage しない。そのチャンネルのサーボの油圧が無いと engage せず、失うと外れる。AUTOPILOT DISC は解除のたび（手でも自動でも）に出て、再 engage か、A/P の無いときに操縦輪のスイッチを押すと消える（前は解除バーを上げても消えた）。F/D の最初の ON は、空中で V/S（今の昇降率に合わせる）と HDG HOLD、5° を超えるバンクなら ATT（PW と RR。GE は HDG HOLD）、地上で TO/GA。A/P を F/D OFF で入れると V/S と HDG HOLD・ATT、F/D が地上の T/O なら HDG HOLD と V/S（前はモードが入らず FMA が空白）。A/P が無く F/D が両方 OFF になると全モードを消す（前は X-Plane の HDG のモードの解除が送られていなかった）。MCP の IAS の初期値は 200（前は 100）。
   - 残り（推定）：engage に要る油圧は 1000 psi（前のコードの解除の値）、RR の ATT は PW と同じ。
-- ロールの指令を X-Plane の AP に頼っている（AFDS-01。LNAV だけは 2026-10-27 から FD とサーボの目標が FMC のバンクの指令：6-1 段 6c のつなぎ）。HDG HOLD は 3D のボタンが X-Plane の heading hold を押している。
+- ロールの指令を X-Plane の AP に頼っている（AFDS-01。HDG SEL と HDG HOLD は X-Plane の HDG SEL。LNAV だけは 2026-10-27 から FD とサーボの目標が FMC のバンクの指令：6-1 段 6c のつなぎ）。
 - LOC の捕捉に条件が無い（AFDS-02）。TO/GA のピッチの則（AFDS-03）。autoland の flare・rollout（AFDS-04）。複数チャンネル（AFDS-05）。
-- V/S のスイッチの同期、LNAV・VNAV の作動と解除、モードの遷移（AFDS-07〜09）。LOC・G/S の捕捉中に A/P を入れたときの再捕捉、TO/GA のロールとピッチが 1 つのフラグ（段 1b〜1d）。
+- V/S のスイッチの同期、VNAV の作動と解除、ピッチと進入のモードの遷移（AFDS-07〜09：段 1c・1d）。LOC・G/S の捕捉中に A/P を入れたときの再捕捉（段 1d）、TO/GA のロールとピッチが 1 つのフラグ（段 1e）。
 - ピッチの制御則、速度の保護と自動反転（AFDS-10・11）。
 - AUTOPILOT caution、NO LAND 3・NO AUTOLAND が出ない（AFDS-12・13）。作動のインターロックのうち電源・センサー・操縦輪の 25°・override（AFDS-15 の残り）と電源（AFDS-16）。AUTOPILOT DISC の音が型式によらない（AFDS-14 の残り）。
 - ヨーダンパーの則、A/P 中のトリム（AFDS-17・19・20）。

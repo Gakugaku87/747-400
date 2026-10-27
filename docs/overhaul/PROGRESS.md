@@ -51,7 +51,7 @@
 5b. 5-1（航法センサーと無線）：段 1（エアデータ）、段 2（IRS・GPS）、段 4（電波高度計・GPWS。音声は 405 の組）、段 5（トランスポンダ・TCAS Ver 7.0、ND の TCAS 表示）、段 5c（気象レーダー：570 型のパネルの論理、R/T と電源、安定化の IRU、ND の注記）、段 5d（PFD の TCAS RA の表示、トランスポンダのコード表示、ND の気象レーダーの故障とゲインの注記）は済。
 5c. 5-2（表示）：段 1（表示器と EIU：選択器と自動切替、EIU の選択と故障、内容ごとの輝度）、段 2（ソース選択の比較：>SOURCE SEL EIU・F/D・NAV、>SNGL SOURCE RA、>ATTITUDE・>HEADING、>EFIS CONTROL・>EFIS/EICAS C/P）は済。段 3a（速度テープのうち資料から決まるもの：フラップの機動速度と VREF25、バグの出し方、最小機動速度の帯の出し始め、最小速度の表の高度帯）も済（notes/ATA-31.md §13）。段 3b（最小速度・最小と最大の機動速度・スティックシェーカー・AIRSPEED LOW と琥珀の枠：FCTM p.261–262 のシェーカー速度の図と FCOM PI.11.1 の最大運用高度から作った境界。notes/ATA-31.md §14、新しいモデル `B747.60.minspeed_model.lua`）も済。重量の補間の誤り（VREF30 が最大 3 kt 低い）と表の誤記（DSP-08）も直し、フラップのバグは約 20,000 ft より上で出さない。`airspeed/Vmc` は AFDS・A/T・VNAV の速度の下限のために前の式のまま（PFD の帯は新設 `Vminm`）。段 4（気圧と PFD の記号・旗・方位：DSP-01・04・11・12。PLI も）は 4a〜4e に分けた（notes/ATA-31.md §15）。段 4a（PFD の姿勢・方位・昇降率の源と ATT・HDG・VERT の旗、方位目盛を ND の向きからその席の方位へ：DSP-01、DSP-04 の IRS の分。新しいモデル `B747.60.pfd_model.lua`、notes/ATA-31.md §16）は済。段 4b（気圧設定の遷移高度での琥珀の枠、CDU の EFIS CONTROL の BARO SET をその CDU の側だけに：DSP-11 の残り。notes/ATA-31.md §17）も済。段 4c（PLI と VR の R：notes/ATA-31.md §18。段の分け直しもそこに）も済。段 4d（FPV のスイッチのラッチと FPV、FPV・PITCH・ROLL の旗：notes/ATA-31.md §19）も済。段 4e（ILS の表示：偏位過大の琥珀と点滅、G/S・LOC の旗、ロール 53° 超での消去：notes/ATA-31.md §20）も済で、段 4 は終わり。段 5（ND）は 5a〜5e に分けた（notes/ATA-31.md §21）。段 5a（ND の向き、方位・航跡、TRK・HDG・MAP・VTK の旗：§22）も済。段 5b は 5b-1a（PFD の ILS の受信機を使用中の EIU に、進入の基準の ID か周波数、>SNGL SOURCE ILS：§23）、5b-1b（ND の APP：基準受信機、偏位、LOC・G/S の旗）、5b-2（ND の VOR と VOR・ADF の針、TO/FROM、VOR・DME の旗）に分けた。5b-1a・5b-1b（§24）は済。5b-2 は 5b-2a（VOR モード：§25）と 5b-2b（VOR・ADF の針と左右下の欄：§26）に分け、どちらも済で、段 5b は終わり。段 5c は 5c-1（CDU の EFIS CONTROL・OPTIONS を席ごとに、パネルの故障のときだけ。EFIS 操作パネルの故障でパネルの操作が効かない：§27）、5c-2（DATA・POS の表示）、5c-3（STA の高・低高度、同調中の局、ARPT、EXCESS DATA）に分けた。5c-1 は済。5c-2 は 5c-2a（DATA：経路の点の高度と FMC の ETA：§28）と 5c-2b（POS）に分け、5c-2a は済。5c-2b（POS：IRU・GPS の位置、VOR の radial：§29）も済で、段 5c-2 は終わり。5c-3 は 5c-3a（STA の高・低高度、同調中の局、STA・WPT・ARPT は MAP だけ、EXCESS DATA、109 の GS：§30）、5c-3b（出発・到着空港と滑走路、経路の点は MAP・MAP CTR・PLAN だけ：§31）、5c-3c（手動同調の局のコースの線：§32）に分け、どれも済。段 5d（HDG REF：§33）、段 5e（位置のトレンドベクトル：§34）、段 6a（時計：§35）、段 6b-1（EICAS の部分表示と二次エンジンの逸脱の印：§36）、段 6b-2（主 EICAS の compact の形：§37）も済。段 7（パネルの SHOW の条件の重なり：§38）も済。5-2 の残りは DSP-19（TERR、外部のプラグイン頼み）と、ND の FMC の記号の残り（FMC の作り直し 6-x で）。MAP CTR の縮尺は資料に明記が無いので利用者に確かめる（下の「利用者に確かめたいこと」）。カスタム acf は図よりずっと遅くまで失速しなかった（クリーンで約 20 kt、フラップ 10・20・30 は昇降舵いっぱいでも失速しない）ので、利用者の承認（「acf も調整しよう」）を得て、主翼の翼型の失速を早め、前縁スラットの効きを下げた（2026-10-25 夜、ACF_DIFF.md §5：図との差は UP −2、10 +6、20 −5、30 +4 kt）。DSP-14 は無線の同調（5-1 段 3）で（>SNGL SOURCE ILS は段 5b-1a で済）。段取りは notes/ATA-31.md §10。待っていた 3 件（PFD の TCAS の RA の表示、R を選んだときのトランスポンダのコード表示、ND の WXR FAIL と原因・ゲインの文字）は段 5d で済（パネルの変更は全範囲で承認なしでよくなった：2026-10-25）。WXR RANGE DISAGREE・RSTR INOP は残り。段 3（無線の同調）は、自動同調の判断と NAV RADIO ページが FMC の経路と航法データに依るので、6-1・6-2（FMC・CDU）と一緒に行う（2026-10-25 朝に決めた。notes/ATA-34.md §13）。PFD の昇降率の源（IRS）と ATT・HDG の別々の旗は段 4a で済。
 5d. 6-1・6-2（FMC と CDU）：段 1（小修正）・段 2（CDU の枠組み）・段 3（地上準備のページ）、段 4（航法データベース）、段 5a〜5f（経路のモデル、RTE と LEGS、手続きと DEP/ARR、現用点と X-Plane の FMS、試験キット）は済で、段 5 は終わり。段 6（経路の形と LNAV）と段 7（ホールド・オフセット・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO・RTE 2・procedure turn の形）も済。次は段取りの表の順で 6-3（AFDS）、そのあと段 8（性能 DB と予測）（下の「FMC と CDU（6-1・6-2）の段取りと GAP の状態」）。
-5e. 6-3（AFDS）：段取りを決めた（2026-10-27、notes/ATA-22.md §10）。段 1（モードの論理：1a 枠組みと engage、1b ロールのモード、1c ピッチのモード、1d TO/GA の論理）、段 2（ロールの則）、段 3（ピッチの則）、段 4（autoland と 3 チャンネル）、段 5（監視と警報）、段 6（ヨーダンパーと autotrim）。段 1a（枠組みと engage：新しいモデル `B747.70.afds_model.lua`、§11）は済。次は 1b（ロールのモード）。
+5e. 6-3（AFDS）：段取りを決めた（2026-10-27、notes/ATA-22.md §10）。段 1（モードの論理：1a 枠組みと engage、1b ロールのモード、1c ピッチのモード、1d 進入のモード、1e TO/GA の論理）、段 2（ロールの則）、段 3（ピッチの則）、段 4（autoland と 3 チャンネル）、段 5（監視と警報）、段 6（ヨーダンパーと autotrim）。段 1a（枠組みと engage：新しいモデル `B747.70.afds_model.lua`、§11）、段 1b（ロールのモード：§12。段 1 の残りを 1c ピッチ、1d 進入、1e TO/GA に分け直した）は済。次は 1c（ピッチのモード）。
 6. 2-3（エンジン）の残り：段 1〜3 は済（下の「エンジン（2-3）の GAP の状態」）。後回し：表示値の作り方（ENG-33。EGT は X-Plane の EGT の比例では始動と離陸を両立できず、N1・N2 などから作り直す必要があるが、値は資料に無く推定になる。N1・EPR・N2 の式を変えると EEC の推力の制御の調整もやり直し）、始動の空気（ENG-38・PNEU-08。ダクト圧と starter の関係が資料に無い）、GE の油圧の目盛りと値（CF6 の値が資料に無い）、振動の high band。partial・compact 形式と exceedance cue（ENG-22）は 5-2 で。空中始動の範囲（ENG-24）は資料に値が無く作れない。燃費の離陸・上昇の値（純正と同じにした SFC）を PI.11 の上昇の燃料の表と比べるのも残り。A/T（6-4）との境界は、EEC がレバー → 指令・最大定格・推力の制御まで、FMC の推力基準と A/T のサーボ（レバーを動かす）は 6-4。
 7. 1-5（空圧）の残り：故障の入れ方（過熱、過圧、HPSOV・PRV の固着、ダクトリーク）、地上空気の操作、スターターがダクト圧で回ること（エンジン 2-3）。
 8. 1-4（油圧）の残り：脚・ブレーキ・ステアリング（4-2 段 1・2・4）、逆推力（2-3 段 3）、stab trim・ヨーダンパー（4-1 段 2b・4）の「油圧で動くか」（HYD-09・11・12）は済。リザーバ与圧の表示（HYD-18）と STATUS のメッセージ（HYD-20）は済。
@@ -830,7 +830,7 @@ PLAN.md §3 に書いた。要点：
 | 5 | 経路モデルと RTE・LEGS・DEP ARR | 6 つに分けた（§18）。5a は済（経路のモデル：§19）、5b・5c は済（RTE と LEGS：§20）、5d は済（手続きと DEP/ARR：§21）、5e は済（現用点と X-Plane の FMS：§22。PLAN の CTR と STEP は残り）、5f は済（試験キットの経路を CDU で：§24）|
 | 6 | 経路の形と LNAV | 4 つに分けた（§26）。6a は済（経路の形のモデル：§27）、6b は済（LNAV のモデル：§28）、6c は済（組み込み：§29）、6d は済（ND の線：§30）。段 6 は終わり |
 | 7 | ホールド・オフセット・残りの経路の操作 | 5 つに分けた（§31）。7a は済（ホールドのモデルと LNAV：§32）、7b は済（ホールドの CDU と ND：§33）、7c は済（PROC HOLD、PROC TURN の表示、CRS REVERSAL AT FA FIX：§34）、7d は済（オフセット：§35）。7e は 4 つに分けた：7e1 は済（REF NAV DATA：§36）、7e2 は済（ABEAM PTS：§37）、7e3a は済（自分で作る点の入力：§38）、7e3b は済（FIX INFO：§39）、7e4 は済（RTE 2 と RTE COPY：§40）、7f は済（procedure turn の形：推定、利用者の依頼：§41）。段 7 は終わり |
-| （6-3） | AFDS | 段取りを決めた（2026-10-27、notes/ATA-22.md §10：段 1a〜1d・2〜6）。1a は済（枠組みと engage：§11）。下の「自動操縦（6-3）の段取りと GAP の状態」 |
+| （6-3） | AFDS | 段取りを決めた（2026-10-27、notes/ATA-22.md §10：段 1a〜1e・2〜6。段 1 は 1b の作業で分け直した）。1a（枠組みと engage：§11）・1b（ロールのモード：§12）は済。下の「自動操縦（6-3）の段取りと GAP の状態」 |
 | 8 | 性能 DB と予測 | 未 |
 | 9 | VNAV（6-4 の A/T と並べて） | 未 |
 | 10 | 航法センサーと同調（5-1 段 3 を含む） | 未 |
@@ -839,14 +839,15 @@ PLAN.md §3 に書いた。要点：
 
 ## 自動操縦（6-3）の段取りと GAP の状態
 
-段取りの全文（中身・GAP・資料）は notes/ATA-22.md §10。モードの論理を 1a〜1d で新しいモデルに移し、その間は前の則が飛ばす。
+段取りの全文（中身・GAP・資料）は notes/ATA-22.md §10。モードの論理を 1a〜1e で新しいモデルに移し、その間は前の則が飛ばす。
 
 | 段 | 内容 | 状態 |
 |---|---|---|
 | 1a | 枠組みと engage | 済（2026-10-27。notes/ATA-22.md §11） |
-| 1b | ロールのモード | 未 |
-| 1c | ピッチのモード | 未 |
-| 1d | TO/GA の論理 | 未 |
+| 1b | ロールのモード（HDG SEL・HDG HOLD・ATT・LNAV） | 済（2026-10-27。§12） |
+| 1c | ピッチのモード（V/S・ALT・FLCH・VNAV・SPD） | 未 |
+| 1d | 進入のモード（LOC・G/S・APP） | 未 |
+| 1e | TO/GA の論理 | 未 |
 | 2 | ロールの則 | 未 |
 | 3 | ピッチの則 | 未 |
 | 4 | autoland と 3 チャンネル | 未 |
@@ -855,10 +856,12 @@ PLAN.md §3 に書いた。要点：
 
 | ID | 状態 |
 |---|---|
-| AFDS-06 A/P engage の既定のモード | 一部（段 1a。F/D OFF で V/S と HDG HOLD・ATT（PW と RR。GE は HDG HOLD）、F/D が地上の T/O なら HDG HOLD と V/S、F/D の最初の ON の既定。LOC・G/S 捕捉中の engage は 1b・1c） |
+| AFDS-06 A/P engage の既定のモード | 一部（段 1a。F/D OFF で V/S と HDG HOLD・ATT（PW と RR。GE は HDG HOLD）、F/D が地上の T/O なら HDG HOLD と V/S、F/D の最初の ON の既定。LOC・G/S 捕捉中の engage は 1d） |
 | AFDS-14 AUTOPILOT DISC | 一部（段 1a。解除のたびに出て、再 engage か A/P の無いときの操縦輪のスイッチで消える。解除バーを上げても消えない。型式の音は段 5） |
 | AFDS-15 engage のインターロック | 一部（段 1a。400 ft の制限をやめて地上でも、解除バー・ほかのチャンネル・そのチャンネルの油圧。残りは段 5） |
-| AFDS-21 MCP の細部 | 一部（段 1a。IAS の初期値 200。残りは 1b〜1d と段 2） |
+| AFDS-21 MCP の細部 | 一部（段 1a。IAS の初期値 200。残りは 1c〜1e と段 2） |
+| AFDS-08 LNAV・VNAV・SPD | 一部（段 1b。LNAV の 2 回目は arm のときだけ disarm、engage 中に押しても何もしない、HDG SEL で arm が消えない、経路が無くても外れない。VNAV・SPD は 1c） |
+| AFDS-09 遷移の規則 | 一部（段 1b。ロール：LOC と G/S の捕捉後と GA の 400 ft 未満の HDG SEL・HDG HOLD・LNAV、LOC の engage 中の LNAV の arm、HDG HOLD が X-Plane の heading hold を直接入れない。ピッチは 1c、進入は 1d） |
 | ほかの AFDS-01〜24 | 未（段取りの表の段で） |
 
 ## 気づいたこと（作業の途中で）
@@ -1133,3 +1136,4 @@ PLAN.md §3 に書いた。要点：
 - 2026-10-27：6-1・6-2 段 7f（procedure turn の形・推定：notes/ATA-34-61-FMC.md §41）。資料に形が無く、利用者の依頼で PANS-OPS の 45°/180° を推定で作った。経路の形のモデルに PI の要素（PI の点から出航、角の fly-by の弧、45° の脚 1 分 15 秒、25° のバンクで PI の向きに 180°、戻り。出航の長さは旋回が PI の距離の 1 nm 内側に収まるまで）、LNAV がその段階（新しい dataref `laminar/B747/fms/lnav/pturn_phase`）を追って飛び、戻りの脚で入航コースへの旋回の始まりに順送り、ND に形を描く。X-Plane：新しい `s98_pturn` 1 回目 15/16（出航から 45° の脚への角に先行が無く 0.71 nm 外へふくらんだ：角を弧にし、角と 180° の旋回をロールの 4 秒だけ早めて直した）、2 回目 16/16（XTK は出航〜45° の脚で最大 0.055 nm、旋回で 0.148 nm、入航コースで 0.031 nm 以内）、`s90_lnav` 30/30。Lua の誤りなし。
 - 2026-10-27：6-3（AFDS）の段取り（notes/ATA-22.md §10）。今のコードを調べ直し（§10.1：モードの論理が自動操縦のモジュール・monitor・autoland・F/D スイッチ・TO/GA スイッチに散り、ピッチの則は FMA の数値で選び、ロールは X-Plane の HDG のモード、順序は `lastCommand` の待ち）、FCOM 4.10〜4.30 と ATA22 の 22-10〜22-14 を読み直して、段 1（モードの論理を 1a〜1d に分ける。今の則は段 1 の間そのまま動かす）・段 2（ロールの則）・段 3（ピッチの則）・段 4（autoland と 3 チャンネル）・段 5（監視と警報）・段 6（ヨーダンパーと autotrim）にした。
 - 2026-10-27：6-3（AFDS）段 1a（枠組みと engage：notes/ATA-22.md §11）。新しいモデル `B747.70.afds_model.lua` が A/P の engage の状態（CMD は押したとき、地上でも、2 台目は engage しない、そのチャンネルの油圧）、AUTOPILOT DISC（解除のたび、再 engage か A/P の無いときの操縦輪のスイッチで消える。解除バーを上げても消えない）、F/D の最初の ON と A/P engage の既定のモード（V/S を今の昇降率に合わせ、HDG HOLD か 5° を超えるバンクで ATT：PW・RR）、A/P も F/D も無いときの全モードの消去を持つ。F/D のスイッチのハンドラーはスイッチだけに、MCP の IAS の初期値 200、空中開始の初期化は ALT HOLD を F/D の既定の後に、飛行の開始のたびに、何度走っても同じに。前の則はピッチのモードの無い間に ALT HOLD を立てない。X-Plane：新しい `s99_afds_engage` 36/36（4 回目。前の 3 回で全モードの消去の後の前の FMA と前の則の ALT、空中の初期化を直した）、`s01_ap_basic` 15/15、`s28_stab_trim` 25/25、`s30_speed_trim` 11/11、`s59_pfd_ils` 34/34、`s90_lnav` 30/30。Lua の誤りなし。
+- 2026-10-27：6-3（AFDS）段 1b（ロールのモード：notes/ATA-22.md §12）。モデルがロールのモード（HDG SEL、HDG HOLD：すぐ表示し 3° 未満で 2 秒の方位を保つ、ATT：次のモードまで、LNAV：arm 中の 2 回目でだけ disarm・engage 中は押しても何もしない・HDG SEL で arm が消えない・経路が無くても外れない）と遷移（LOC と G/S の捕捉後・G/A の 400 ft 未満）を持ち、FMA のロールを出す。3D の HDG HOLD のボタン（X-Plane のコマンド）は replace でモデルへ、旋回は段 2 まで X-Plane の HDG SEL。HDG HOLD の灯は ATT でも。段 1 の残りを 1c ピッチ、1d 進入、1e TO/GA に分け直した。X-Plane：新しい `s100_afds_roll` 25/25（空中：HDG SEL の旋回と方位、LNAV の arm と 2 回目、旋回中の HDG HOLD、ATT。PFD で CMD と「SPD｜HDG SEL・LNAV（arm）｜ALT」、ATT で約 25° のバンクを保つのを画像で確かめた）、回帰の `s99_afds_engage` 36/36、`s01_ap_basic` 15/15、`s72_hdg_ref` 19/19、`s90_lnav` 30/30、`s91_lnav_sid` 27/27、`s92_hold` 47/47、`s59_pfd_ils` 34/34。Log.txt に Lua の誤りなし。

@@ -87,4 +87,15 @@ valve_only("tail", 3, 1)
 T.near(rt:get(ANNUN, 87), 0.8, 0.01, "TAIL 4 valve shut -> annunciator 87")
 T.near(rt:get(ANNUN, 83), 0, 0.01, "WING 4 open: out")
 valve_only()
+-- the MCP's HDG HOLD light (6-3 step 1b): HDG HOLD or ATT in the FMA's roll
+-- (ATA22 p.266: ATT lights it too), not HDG SEL or LNAV (the old one went by
+-- X-Plane's heading hold)
+local ROLL = "laminar/B747/autopilot/FMA/active_roll_mode"
+for _, c in ipairs({{7, true, "HDG HOLD"}, {5, true, "ATT"}, {6, false, "HDG SEL"}, {2, false, "LNAV"}}) do
+    rt:set(ROLL, c[1])
+    rt:frame(1 / 30)
+    T.check((rt:get(ANNUN, 262) > 0.01) == c[2], "the HDG HOLD light with " .. c[3] .. (c[2] and ": on" or ": out"))
+end
+rt:set(ROLL, 0)
+rt:frame(1 / 30)
 T.done()

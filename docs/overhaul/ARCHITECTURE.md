@@ -477,6 +477,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 
 - 作り直しの段取りは notes/ATA-22.md §10。モードの論理を、自動操縦のモジュール（`B747.70.xt.autopilot`）の純粋なモデル `B747.70.afds_model.lua`（`B747_afds_model`）に段ごとに移す。移していないモードと制御則は前のコード（`B747.70.xt.autopilot.lua`・monitor・autoland と、油圧のモジュールの `B747.19.xt.afds_control.lua`）のまま。
 - 段 1a（2026-10-27、notes §11）：モデルが A/P の engage の状態（L・C・R、解除バー）、AUTOPILOT DISC、F/D のスイッチと既定のモードを持つ。グルー（`B747.70.xt.autopilot.lua` の `afds_*`）は、CMD・解除バー・操縦輪のスイッチ・トリムによる解除のハンドラーからモデルを呼び、毎フレームの最初（`B747_afds_update()`）に F/D のスイッチ（`toggle_switch/position[23]`・`[24]`）と油圧を渡して、`autopilot/cmd_L_mode/status`・`cmd_C_…`・`cmd_R_…`、`autopilot/servos_on`（engage の時刻 `ap_monitor/servos_on_time`）、`CAS/warning_status[0]`（AUTOPILOT DISC）を書く。既定のモードは前のコードの状態（`vvi_status` と V/S の目標、X-Plane の `sim/autopilot/heading_hold`、`att_rate`、`TOGA_status`）に書く。前のコードの全チャンネル解除（`B747_ap_all_cmd_modes_off`）はモデルを警報なしで解除する。F/D のスイッチのハンドラー（`plugins/xtlua` の manipulators）はスイッチだけ。
+- 段 1b（2026-10-27、notes §12）：モデルがロールのモード（HDG SEL・HDG HOLD・ATT・LNAV と LNAV の arm）を持ち、グルーが `autopilot/lnav_state`・`att_rate` と FMA のロールを書く。旋回は段 2 まで X-Plane の HDG SEL（`sim/cockpit/autopilot/heading_mag` に MCP の方位か保つ方位）。`sim/autopilot/heading_hold`（3D の HDG HOLD のボタン）は replace してモデルへ（X-Plane の heading hold は使わない）。前のコードの LOC と TO/GA はモデルの入力（段 1d・1e まで）。照明（`B747.90.xt.lighting.lua`）の HDG HOLD の灯は FMA のロールが HDG HOLD か ATT。
 
 ## 7. エンジン型式
 
