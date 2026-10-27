@@ -790,3 +790,18 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - `B747_fmc_with_point` は候補の一覧も受ける（抑止の行は VOR・DME だけ）。シナリオの `op` に正規表現の `matches` を足した。
 - 試験：新しい `tests/fms/refnavdata_pages_test.lua`（78 件：NAV DATA>、見出しとダッシュ、DME・VOR・NDB・LOC・ウェイポイント・空港・目的地の滑走路、SELECT DESIRED WPT、NOT IN DATA BASE、INVALID DELETE、選び直してダッシュ、抑止の入力・上書き・DELETE、VOR/DME NAV、右の CDU で同じ抑止）、`navdb_test.lua`（63 件：滑走路の長さ、X-Plane のデータの RJAA 16R）。
 - X-Plane：新しい `s94_refnavdata` 38/38（成田の地上：INIT/REF INDEX の NAV DATA> で FMC の REF NAV DATA、NRE の FREQ 117.90・N35`46.9 E140`21.8・W7・153 ft、AKAGI は SELECT DESIRED WPT で近い方、目的地が無いと RW06R は NOT IN DATA BASE、RTE で RJBB を入れて選び直すと IDENT はダッシュ、RW06R の LENGTH 11,478 ft（3,500 m の滑走路）と ELEVATION 5 ft、NAVAID INHIBIT に NRE、VOR ONLY INHIBIT に XAC、INHIBIT> で小字の ALL と ENABLE>、右の CDU にも同じ抑止でそこから ENABLE>、左で DELETE。CDU の写真で配置と大字・小字を確かめた）、`s86_rte_pages` 19/19、`s85_navdb` 22/22。Lua の誤りなし。初めの `s94` の写真は操縦輪が CDU の左を隠していたので、隠して撮り直した。
+
+## 37. 段 7e2 の実装（2026-10-27：DIRECT TO の ABEAM PTS）
+
+- 資料：FCOM p.1333–1334、FMSPG p.136–139（ABEAM PTS）、FCOM p.1250（place/bearing/distance の点の名前）。
+- 経路のモデル：
+  - DIRECT TO の修正に ABEAM PTS>。ほかの変更（INTC CRS を含む）をすると消える（FCOM p.1334）。変更を `st.edits`（`M.edit` と INTC CRS で 1 つ増える）で数え、DIRECT TO の時の値 `st.dto_offer` と比べる。
+  - 押すと（FMSPG p.136–137）：アクティブな経路の、現用点から DIRECT TO の点の前までの点を、直行の線（飛行機の位置から DIRECT TO の点への大圏）の上の真横に移し、DIRECT TO の点の前に、線に沿った順に入れる。横の距離が 700 nm を超える点は作らない。手続きの点は作らない（出発の手続きの最後の点と、到着の手続きの最初の脚の前の点は作る）。滑走路・ホールド・条件の脚からは作らない（推定）。真横が飛行機の後ろか DIRECT TO の点の先になる点は作らない（推定）。DIRECT TO の点が経路に無い（後ろに discontinuity）ときは、飛ばした点が無いので何も作らずに SELECTED（推定）。
+  - 名前（FMSPG p.136；FCOM p.1250）：航法データの点の真横は、その点からの place/bearing/distance の点（頭 3 文字と 2 桁の番号：XAC01）。緯度経度の点の真横は緯度経度の点（N47W008 の形）。place/bearing/distance の点の真横は、その場所からの新しい点。番号は RTE 1 の 01–49 のうち、経路（アクティブと修正、通過した点も）に無い一番小さいもの（推定）。高度と速度の制限は持たない（FMSPG p.137）。風はまだ入力が無いので持たない（100 nm 以内なら持つ：FMSPG p.137）。
+  - 最初の abeam の点の脚が DIRECT TO の脚（始点は EXEC の時の位置）になり、DIRECT TO の点は普通の DIRECT の脚になる。押した後は INTC CRS が無い（FMSPG p.139 の図では 6R が RTE DATA>：RTE DATA は段 8）。
+  - X-Plane の FMS には緯度経度の行（28）で名前をつけて流す。ND の線と名前はそれ。
+- LEGS ページ（FCOM p.1333；FMSPG p.138–139 の図）：DIRECT TO の修正の 1 ページ目の 4R（4 番目の点の制限の場所）に、上の行の右の破線（15–24 桁）と ABEAM PTS>。押した後は小字の ABEAM PTS と SELECTED。ほかの変更で消える。2 ページ目以降には出さない（推定）。
+- LEGS の各点の見出しの距離を 14 桁目で終わるようにした（FCOM p.1330・p.1333、FMSPG p.137–139 の図。前は 17 桁目で右の制限の列に入り、ABEAM PTS の破線と重なる）。
+- RTE COPY>（5R）は段 7e4（RTE 2 と一緒に）。
+- 試験：`route_model_test.lua`（222 件：飛ばした点の真横、名前と番号、直行の線の上と直角、制限なし、押した後の INTC CRS の不可、EXEC の始点、X-Plane の行、ほかの変更と INTC CRS で消える、経路に無い点への DIRECT TO、手続きの点、緯度経度の点、700 nm）、`legs_pages_test.lua`（56 件：破線と ABEAM PTS>、押すと CHA01、SELECTED、INTC CRS が消える、EXEC、X-Plane の FMS、ほかの変更で消える、距離の位置）。
+- X-Plane：新しい `s95_abeam` 23/23（RJAA→XAC の脚の上で LNAV、経路 XAC・KOUGA・SPENS・SAGRA。DIRECT TO SAGRA の 4R に破線と ABEAM PTS>、INTC CRS 279°>。押すと XAC01（9 nm）・KOU02・SPE03・SAGRA と ABEAM PTS SELECTED、INTC CRS が消える。EXEC で LNAV が直行の線を飛び（XTK 0.02 nm 以内）、XAC01 を順送りして ND の現用点が KOU02。CDU と ND の写真：LEGS の距離の位置、4R の表示、ND の線の上の KOU02・SPE03）、`s87_legs_pages` 29/29。Lua の誤りなし。

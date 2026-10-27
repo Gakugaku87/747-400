@@ -5,8 +5,9 @@
 -- (the predictions in small font with the performance, step 8); a ROUTE
 -- DISCONTINUITY's boxes; the waypoints entered, deleted and their
 -- constraints on the line select keys; DIRECT TO and INTC CRS on the active
--- route's first line (FMSPG p.141-144). Before: X-Plane's LEGS page shown
--- through. RTE LEGS HOLD AT (step 7b; FCOM p.1414; FMSPG p.157-158): the
+-- route's first line (FMSPG p.141-144), ABEAM PTS on its modification
+-- (step 7e2: FCOM p.1333-1334; FMSPG p.136-139). Before: X-Plane's LEGS
+-- page shown through. RTE LEGS HOLD AT (step 7b; FCOM p.1414; FMSPG p.157-158): the
 -- LEGS pages with the HOLD AT boxes and PPOS> (B744.fms.pages.hold.lua).
 local R = B747_route_model
 local BLANK = "                        "
@@ -54,7 +55,9 @@ end
 -- (HF: FCOM p.1331, p.1416), PROC TURN for a procedure turn (PI: step 7c);
 -- else the great circle's from where the leg starts, dashes when
 -- undefined) and the distance (none for a conditional waypoint: FMSPG
--- p.119)
+-- p.119), its last character at the 14th place (FCOM p.1330, p.1333 and
+-- FMSPG p.137-139's figures: before step 7e2 at the 17th, under the
+-- constraints)
 local function leg_title(r, i)
   local l = r.legs[i]
   local pt = l.pt or ""
@@ -76,18 +79,30 @@ local function leg_title(r, i)
   if not l.fix then dist = "" end
   -- the INTC CRS: the crew's magnetic course
   if l.dto and l.crs then crs = string.format("%03d`", l.crs == 0 and 360 or l.crs) end
-  return pad(string.format(" %-11s%5s", crs, dist))
+  return pad(string.format(" %-7s%6s", crs, dist))
 end
 
 local function trans_alt() return tonumber(fmsModules["data"]["transalt"]) or 18000 end
 local function crz_alt() return B747_cdu_model.parse_alt((string.gsub(fmsModules["data"]["crzalt"], "%s+$", ""))) end
 
 -- the direct-to modification: the INTC CRS line at 6R (boxes, or the
--- route's course into the waypoint with its caret: FMSPG p.144)
+-- route's course into the waypoint with its caret: FMSPG p.144); none
+-- once ABEAM PTS made the abeam points (FMSPG p.139's figure)
 local function dto_mod()
   local m = B747_fmc_route.mod
   local l = m and m.legs[1]
-  return l and l.dto and l or nil
+  return l and l.dto and not m.abeam and l or nil
+end
+
+-- ABEAM PTS on the direct-to modification's first page (FCOM p.1333-1334;
+-- FMSPG p.138-139): "ABEAM PTS>" at 4R under dashes, then ABEAM PTS
+-- SELECTED, until another change (in the 4th waypoint's constraint's
+-- place; the first page only: estimate)
+local function abeam_state(pgNo)
+  if pgNo ~= 1 then return nil end
+  if R.abeam_offered(B747_fmc_route) then return "offered" end
+  if R.abeam_selected(B747_fmc_route) then return "selected" end
+  return nil
 end
 
 -- the LEGS page's lines, its line select keys' functions in `defs`;
@@ -111,6 +126,12 @@ local function legs_page(pgNo, defs, hold_at)
     else
       lines[#lines + 1] = BLANK
     end
+  end
+  local ab = not hold_at and abeam_state(pgNo)
+  if ab then
+    defs["R4"] = {"legsabeam", ""}
+    lines[8] = ab == "offered" and string.rep(" ", 14) .. "----------" or BLANK
+    lines[9] = string.sub(lines[9], 1, 14) .. (ab == "offered" and "ABEAM PTS>" or "  SELECTED")
   end
   if hold_at then
     defs["L6"] = {"legsholdat", ""}
@@ -153,6 +174,10 @@ local function legs_small(pgNo, hold_at)
     end
     lines[#lines + 1] = pad(t)
     lines[#lines + 1] = BLANK
+  end
+  local ab = not hold_at and abeam_state(pgNo)
+  if ab then
+    lines[8] = ab == "offered" and string.sub(lines[8], 1, 14) .. "          " or string.sub(lines[8], 1, 15) .. "ABEAM PTS"
   end
   lines[12] = (dto_mod() and not hold_at) and "                INTC CRS" or BLANK
   lines[13] = BLANK
@@ -281,6 +306,15 @@ function fmsFunctions.legscons(fmsO, value)
   local c = parse_constraint(sp)
   if not c then fmsO["notify"] = "INVALID ENTRY" return end
   B747_fmc_route_entry(fmsO, R.set_constraint(st, i, c, crz_alt()))
+end
+
+-- ABEAM PTS> (FCOM p.1334; FMSPG p.138): the abeam points made, the
+-- scratchpad as it is (a prompt)
+function fmsFunctions.legsabeam(fmsO, value)
+  if not R.abeam_offered(B747_fmc_route) then return end
+  local err = R.abeam_points(B747_fmc_route, airplane())
+  if err then fmsO["notify"] = err return end
+  B747_fmc_route_changed()
 end
 
 -- INTC CRS: a course (0-360) or, with an empty scratchpad, the route's

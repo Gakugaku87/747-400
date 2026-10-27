@@ -52,8 +52,10 @@ function M.shown(st)
 end
 
 -- the route a change goes to: on the active route the modification
--- (made by the first change), else RTE 1 itself
+-- (made by the first change), else RTE 1 itself. `st.edits` counts the
+-- changes (the direct-to's prompts last until the next: step 7e2)
 function M.edit(st)
+    st.edits = (st.edits or 0) + 1
     if st.active then
         if not st.mod then st.mod = copy_route(st.rte) end
         return st.mod
@@ -434,6 +436,8 @@ function M.direct_to(st, fix, route_crs, ppos)
     l.from = ppos and {lat = ppos.lat, lon = ppos.lon} or nil
     -- the offset cancelled (FCOM p.1299; FMSPG p.156)
     e.offset = nil
+    -- ABEAM PTS> (and RTE COPY>) until the next change (FCOM p.1334)
+    st.dto_offer = st.edits
 end
 
 -- the point `d` nm from `p` on the true course `crs`
@@ -461,8 +465,112 @@ end
 -- course to intercept, 0-360); the direct-to modification only
 function M.intc_crs(st, crs)
     local l = st.mod and st.mod.legs[1]
-    if not (l and l.dto) or crs < 0 or crs > 360 then return M.INVALID_ENTRY end
+    if not (l and l.dto) or st.mod.abeam or crs < 0 or crs > 360 then return M.INVALID_ENTRY end
+    -- a change: the ABEAM PTS and RTE COPY prompts gone (FCOM p.1334)
+    st.edits = (st.edits or 0) + 1
     l.crs = crs % 360
+end
+
+-- ABEAM PTS (step 7e2; FCOM p.1333-1334; FMSPG p.136-139): the direct-to
+-- modification offers it at 4R until another change (FCOM p.1334);
+-- SELECTED after it until another change
+function M.abeam_offered(st)
+    return st.mod ~= nil and st.dto_offer == st.edits and not st.mod.abeam
+end
+function M.abeam_selected(st)
+    return st.mod ~= nil and st.dto_offer == st.edits and st.mod.abeam == true
+end
+
+-- the point abeam `p` on the great circle from `a` to `b`: its distance
+-- along it from `a` (negative behind `a`) and across it (nm), the
+-- course at `a` and the length to `b`
+local function abeam_of(a, b, p)
+    local crs, len = M.course(a.lat, a.lon, b.lat, b.lon)
+    local crs_p, d_p = M.course(a.lat, a.lon, p.lat, p.lon)
+    local dp, dc = d_p / 3440.065, math.rad(crs_p - crs)
+    local across = math.asin(math.sin(dp) * math.sin(dc))
+    local along = math.acos(math.max(-1, math.min(1, math.cos(dp) / math.cos(across))))
+    if math.cos(dc) < 0 then along = -along end
+    return along * 3440.065, across * 3440.065, crs, len
+end
+
+-- a place/bearing/distance waypoint's number: RTE 1's 01-49 (FCOM
+-- p.1250), the lowest no waypoint of the route has (estimate); nil when
+-- none is left
+local function pbd_number(st, more)
+    local used = {}
+    local function mark(l) if l.fix and l.fix.kind == "PBD" then used[l.fix.seq] = true end end
+    for _, r in ipairs({st.rte, st.mod}) do
+        for _, l in ipairs(r.legs) do mark(l) end
+        for _, l in ipairs(r.passed) do mark(l) end
+    end
+    for _, f in ipairs(more) do mark({fix = f}) end
+    for n = 1, 49 do
+        if not used[n] then return n end
+    end
+    return nil
+end
+
+-- ABEAM PTS pushed (FMSPG p.136-137): the waypoints the direct-to passes
+-- by (the active route's from the active waypoint to the one before the
+-- direct-to waypoint) put on the direct path abeam where they are, in
+-- order along it, within 700 nm across. Not the procedures' but a
+-- departure's last fix and the fix before an arrival; not a runway, a
+-- hold or a conditional leg (estimate). A database point's abeam point a
+-- place/bearing/distance waypoint from it ("FOO01"), a lat/lon waypoint's
+-- another lat/lon waypoint, a place/bearing/distance waypoint's another
+-- from its place; no constraints. The first leg the direct-to's then; no
+-- INTC CRS after it (FMSPG p.139's figure). Points abeam behind the
+-- airplane or past the direct-to waypoint left out (estimate). `ppos`:
+-- the airplane's position, the direct path's start
+M.ABEAM_LIMIT = 700
+function M.abeam_points(st, ppos)
+    if not M.abeam_offered(st) then return M.INVALID_ENTRY end
+    local rte, dto = st.rte, st.mod.legs[1]
+    local j = find_leg(rte, dto.fix, 1)
+    local last_dep, first_arr
+    for i, l in ipairs(rte.legs) do
+        if l.proc == "SID" then last_dep = i end
+        if (l.proc == "STAR" or l.proc == "APPR") and not first_arr then first_arr = i end
+    end
+    local pts = {}
+    for i = 1, (j or 1) - 1 do
+        local l = rte.legs[i]
+        local f = l.fix
+        if f and not l.disc and not M.is_hold(l) and f.kind ~= "RWY"
+            and (not l.proc or i == last_dep or (first_arr and i == first_arr - 1)) then
+            local along, across, crs, len = abeam_of(ppos, dto.fix, f)
+            if along > 0 and along < len and math.abs(across) <= M.ABEAM_LIMIT then
+                pts[#pts + 1] = {along = along, fix = f, at = course_point(ppos, crs, along)}
+            end
+        end
+    end
+    table.sort(pts, function(a, b) return a.along < b.along end)
+    local made = {}
+    for _, a in ipairs(pts) do
+        local f, p = a.fix, a.at
+        if f.kind == "LL" then
+            made[#made + 1] = {kind = "LL", ident = latlon_name(p), lat = p.lat, lon = p.lon}
+        else
+            local place = f.kind == "PBD" and f.place or f
+            local n = pbd_number(st, made)
+            if not n then break end
+            local brg, dist = M.course(place.lat, place.lon, p.lat, p.lon)
+            made[#made + 1] = {kind = "PBD", ident = string.format("%s%02d", string.sub(place.ident, 1, 3), n),
+                seq = n, place = place, brg = brg, dist = dist, lat = p.lat, lon = p.lon}
+        end
+    end
+    if full(M.shown(st), #made) then return M.ROUTE_FULL end
+    local r = M.edit(st)
+    local old = r.legs[1]
+    for k = #made, 1, -1 do table.insert(r.legs, 1, {via = M.DIRECT, fix = made[k]}) end
+    if #made > 0 then
+        local l = r.legs[1]
+        l.dto, l.dto_exec, l.from = true, old.dto_exec, old.from
+        old.dto, old.dto_exec, old.from, old.crs, old.route_crs = nil, nil, nil, nil, nil
+    end
+    r.abeam = true
+    st.dto_offer = st.edits
 end
 
 -- a waypoint's speed and altitude constraint (FCOM p.1332; FMSPG
@@ -857,7 +965,7 @@ end
 M.DTO_START = "DTOPOS"
 M.ARC_POINT = "~"
 M.MAX_XP_ROWS = 100
-local FMS_TYPE = {VOR = 3, DME = 3, NDB = 2, LL = 28, RWY = 28}
+local FMS_TYPE = {VOR = 3, DME = 3, NDB = 2, LL = 28, RWY = 28, PBD = 28}
 local function fms_rows(r, shape, arcs, first_passed)
     local rows, map = {}, {leg = {}, row = {}, ident = {}}
     local function row(t, ident, via, alt, lat, lon)
