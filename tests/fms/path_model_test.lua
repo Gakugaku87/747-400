@@ -253,4 +253,24 @@ T.check(wide[1].offset == -30 and wide[1].wide and wide[2].wide and not wide[3].
 T.check(not path[2].wide, "the route's own element not changed")
 T.near((M.track(A, 0, wide[1].b)), -30, 0.05, "left: negative")
 
+-- a procedure turn (step 7f, estimate): PI at F, its 45 degree leg 045
+-- true (052 magnetic, 7 W), a right turn, 10 nm
+local Fp = {lat = 35.5, lon = 140.0}
+local pe = M.element({pt = "PI", fix = Fp, crs = 52, turn = "R", dist = 10}, 1, Fp, nil, env, 0)
+T.check(pe.kind == "pturn" and math.abs(pe.pc - 45) < 1e-9 and math.abs(pe.out - 90) < 1e-9 and pe.dir == "R" and pe.limit == 10,
+    "a PI: the 45 degree leg 045, outbound 090 (45 degrees the other way), a right turn, 10 nm")
+local g = M.pturn(pe, 220)
+local _, far = M.course(Fp, g.c)
+T.near(far + g.r, 9, 0.02, "the turn's farthest point 1 nm inside the 10 nm")
+T.near((M.track(Fp, 90, g.x)), 0, 0.01, "the leg back meets the inbound course")
+T.check(M.track(Fp, 90, g.p) < 0 and M.track(Fp, 90, g.q) < 0, "the 45 degree leg and the turn left of the outbound course")
+T.near(select(2, M.course(g.o, g.p)), 220 * 1.25 / 60, 0.01, "the 45 degree leg 1 min 15 s at 220 kt")
+local ld = M.element({pt = "PI", fix = Fp, crs = 142, turn = "L"}, 1, Fp, nil, env, 0)
+T.check(math.abs(ld.out - 90) < 1e-9 and ld.limit == 10 and M.track(Fp, 90, M.pturn(ld, 220).p) > 0,
+    "left: 135 true, outbound 090, its 45 degree leg on the right; 10 nm without a distance")
+local sh = M.shape({pe}, 220)
+local pts = sh[1] and sh[1].pts
+T.check(pts and pts[1] == nil or (pts[1].lat == M.pturn(pe, 220).o.lat), "the ND's points from the outbound leg's end")
+T.check(pts and #pts == 9 and math.abs(pts[#pts].lat - g.x.lat) < 1e-9, "o, p, five points round the turn, q, x: " .. (pts and #pts or 0))
+
 T.done()

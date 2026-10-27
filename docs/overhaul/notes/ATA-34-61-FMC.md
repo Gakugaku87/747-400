@@ -853,3 +853,19 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 古いコードの X-Plane の RTE 2 ページへの切り替え（setpage の RTE2 で X-Plane の DIR INTC キー）を外した。
 - 試験：新しい `tests/fms/rte2_pages_test.lua`（46 件：<RTE 2・<RTE 1、RTE 2 の入力、<RTE 2 LEGS、RTE COPY と COMPLETE、RTE 2 だけの変更、RTE 2 の ACTIVATE と EXEC、X-Plane の FMS、RTE・LEGS キー、DIRECT TO の RTE COPY>、ALP51、DEP/ARR INDEX の RTE 2）、`rte_pages_test.lua`（63 件：1 ページ目の破線の位置）。
 - X-Plane：新しい `s97_rte2` 31/31（成田の地上：RTE 1 の 1 ページ目の破線が 8 行目、<RTE 2 と ACTIVATE>、RTE 1 を有効にして 5L の <RTE COPY で COMPLETE、<RTE 2 で写した RJAA→RJBB、RTE 2 にだけ SAGRA（題名は RTE 2 のまま）、ACTIVATE で EXEC 灯、EXEC で ACT RTE 2 と EXEC 灯の消灯、RTE 1 は ACTIVATE> に戻る、RTE・LEGS キーは ACT RTE 2 へ、<RTE 1 LEGS、DIRECT TO SPENS の 5R の RTE COPY> で COMPLETE、写された RTE 1 に SAGRA、DEP ARR キーで RTE 2 の DEPARTURES、INDEX の RTE 2 (ACT) の行。CDU の写真で確かめた）、`s86_rte_pages` 19/19、`s87_legs_pages` 29/29、`s88_deparr` 26/26、`s93_offset` 25/25（1 ページ目の破線の確かめを 8 行目に）。Lua の誤りなし。
+
+## 41. 段 7f の実装（2026-10-27：procedure turn の形・推定）
+
+- 利用者の依頼（2026-10-27「後でprocedure turnも推定で作ってよ」）。§34 で資料に形が無いので作らなかった procedure turn（PI）の形を、推定で作る。FCTM p.150（空域の制限に収まる、大きさは対地速度で決まる）に合わせる。
+- 形（推定：PANS-OPS の 45°/180° の procedure turn）：
+  - PI の点から入航コースの逆（出航コース）へ出る。出航コースは PI の脚のコース（ARINC 424 の PI の outbound course＝45° の脚のコース）から、旋回の向きと反対へ 45°。例：RJSM の ILS28-Z の GABII（PI 058°、右旋回、15 nm）は出航 103°、入航 283°。
+  - 出航から 45° の脚への 45° の角は、旋回と同じ半径の fly-by の弧で回る（角の前後 r·tan 22.5° で接する）。
+  - 45° の脚（PI の脚のコース）を 1 分 15 秒（PANS-OPS の category C–E）。
+  - PI の旋回の向きに 180°（25° のバンクの半径）。
+  - 45° の脚の逆のコースで戻り、入航コースへ 45° で切込む。
+  - 出航の長さは、180° の旋回の一番遠い所が PI の距離（ARINC 424 の route distance＝"remain within"。無ければ 10 nm）の 1 nm 内側に収まる長さ（0 以上）。
+- 経路の形のモデル：PI の要素（`pturn`）。形は `M.pturn(e, kt)`。要素の終わり（次の脚の始まり）は 210 kt（ND の記号と同じ速度）の形の、戻りの脚と入航コースの交点（推定）。
+- LNAV：PI の前の脚は PI の点を fly-over（fly-by にしない）。PI の点を通った時の速度（TAS＋風）で形を作り、出航・角の弧・45° の脚・180° の旋回・戻りの順に誘導する（ホールドと同じ作り。角の弧と 180° の旋回は、ホールドの旋回と同じくロールの 4 秒だけ早く始める）。戻りの脚で、入航コースへの 45° の旋回を始める所（旋回の先行距離＋ロールの 4 秒）で順送りし、次の脚（CF など）が捕捉して入航コースに乗る。段階は新しい dataref `laminar/B747/fms/lnav/pturn_phase`（0 無し、1 出航、2 角の弧と 45° の脚、3 180° の旋回、4 戻り）。
+- ND の線：PI の点の後に形の点（出航の終わり、45° の脚の終わり、旋回の 30° ごとの点、旋回の終わり、入航コースとの交点）。LNAV が飛んでいる間はその形、ほかは 210 kt の形。
+- 試験：`path_model_test.lua`（134 件：PI の要素の 45° の脚・出航コース・制限、形の一番遠い点、交点、左右、ND の点）、新しい `tests/fms/lnav_pturn_test.lua`（17 件：閉ループで段階の順、10 nm の内側、右と左の旋回、25° まで、出航・角・45° の脚と 180° の旋回で形から 0.2 nm 以内、入航 270 に乗って CF へ、0.3 nm 以内、X-Plane の行、15 nm で長い出航）。
+- X-Plane：新しい `s98_pturn`（三沢の西で RJSS→RJSM、ILS28-Z の遷移 GABII：PI 058°・右・15 nm、DIRECT TO GABII と LNAV）。1 回目 15/16：出航から 45° の脚への角に旋回の先行が無く、XTK が最大 0.71 nm 外へふくらんだ（閉ループの試験でも 0.62）。角を fly-by の弧にし、角と 180° の旋回をロールの 4 秒だけ早めて直した。2 回目 16/16：XTK は出航〜45° の脚で最大 0.055 nm、180° の旋回で 0.148 nm、戻りの脚で 0.14 nm、入航コースで 0.031 nm 以内、DTK 275（真）。許容は 0.3・0.3・0.5・0.3 nm に締めた。`s90_lnav` 30/30。Lua の誤りなし。
