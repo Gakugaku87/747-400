@@ -1,13 +1,17 @@
 -- Run from the repository root with LuaJIT: luajit tests/autopilot/afds_roll_model_test.lua
--- The FCCs' roll laws, step 2a (6-3: docs/overhaul/notes/ATA-22.md §16):
--- plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.afds_roll_model.lua.
+-- The FCCs' roll laws, steps 2a and 2b (6-3: docs/overhaul/notes/ATA-22.md
+-- §16, §17): plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.afds_roll_model.lua.
 -- The bank of a heading error, the bank limit (the selector, AUTO by TAS,
 -- flaps and V2), HDG SEL's turn (the smaller error when selected before the
 -- push, the knob's way after it, past 180 degrees too), HDG HOLD (wings
 -- level, then the heading; kept through a change of the reference), ATT,
 -- LNAV (only the V2 + 10 limit), T/O and G/A's track, no command without a
--- law (LOC, no mode, nothing engaged or shown), NCD in NORM's polar areas,
--- the rate.
+-- law (ROLLOUT, no mode, nothing engaged or shown), NCD in NORM's polar
+-- areas, the rate. 2b: LOC's distance from the radio altitude, the
+-- capture (closing at the turn's distance, the small deviation, no signal,
+-- the polar areas), the law (onto the course, LOC TRACK and its limit, the
+-- inertial path without a signal, wings level below 5 ft and on the ground,
+-- NCD).
 local T = dofile("tests/lib/check.lua")("afds_roll_model")
 local R = dofile("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.afds_roll_model.lua")
 
@@ -45,7 +49,7 @@ T.equal(R.limit("HDG_HOLD", inp({selector = 1})), 25, "the selector is for HDG S
 
 -- no law here
 local s = R.new()
-T.equal(R.update(s, inp({mode = "LOC"}), DT), nil, "LOC: the old law")
+T.equal(R.update(s, inp({mode = "ROLLOUT"}), DT), nil, "ROLLOUT: not here (step 4)")
 T.equal(R.update(s, inp({mode = nil}), DT), nil, "no mode")
 T.equal(R.update(s, inp({mode = "HDG_SEL", active = false}), DT), nil, "nothing engaged or shown")
 
@@ -144,6 +148,60 @@ run(s, inp({mode = "HDG_HOLD", hdg = 100, bank = 0, held = true, hdg_valid = fal
 T.check(not s.valid and s.hold == nil, "HDG HOLD without a reference: no heading")
 c = run(s, inp({mode = "LNAV", lnav_bank = 10, bank = 0, hdg_valid = false}), 1)
 T.check(s.valid and math.abs(c - 3) < 1e-9, "LNAV has its reference (the FMC): on from the held command")
+
+-- LOC (step 2b): the distance from the radio altitude (a 3 degree glide
+-- slope, a 10,000 ft runway, the radio altimeter's 2,500 ft), the
+-- deviation (X-Plane's 1.41 degrees a dot, plus to the beam's right)
+T.near(R.loc_distance(0), 3048, 1e-6, "on the runway: 10,000 ft to the localizer")
+T.near(R.loc_distance(1000), (1000 / math.tan(math.rad(3)) + 10000) * 0.3048, 1e-6, "1,000 ft: on the glide slope")
+T.equal(R.loc_distance(5000), R.loc_distance(2500), "above the radio altimeter's range: 2,500 ft")
+T.near(R.loc_dev(inp({loc_dots = 1})), -1.41, 1e-9, "1 dot, the beam right: 1.41 degrees left of it")
+-- the capture: closing at 30 degrees from the left at 180 kt, 2,500 ft:
+-- the turn at 25 degrees needs 251 m and the 4 s lead 185 m
+local function loc_inp(o)
+    local i = inp({loc_valid = true, course = 337, trk_mag = 7, gs = 180, ra = 2500, loc_dots = 1.5})
+    for k, v in pairs(o or {}) do i[k] = v end
+    return i
+end
+T.check(not R.loc_capture(loc_inp()), "1.5 dots left (649 m) closing at 30: not yet")
+T.check(R.loc_capture(loc_inp({loc_dots = 1.0})), "1 dot (433 m): captured (436 m)")
+T.check(not R.loc_capture(loc_inp({loc_dots = 1.0, trk_mag = 307})), "going away at 30: not")
+T.check(R.loc_capture(loc_inp({loc_dots = 0.4, trk_mag = 307})), "within 0.7 degrees: captured whatever the closure")
+T.check(R.loc_capture(loc_inp({loc_dots = 2.4, trk_mag = 67, gs = 220})), "closing at 90 at 220 kt from 2.4 dots: the turn needs it")
+T.check(not R.loc_capture(loc_inp({loc_dots = 1.0, loc_valid = false})), "no localizer: no capture")
+T.check(not R.loc_capture(loc_inp({loc_dots = 0.2, hdg_valid = false})), "NORM's polar areas: no capture (FCOM p.1046)")
+-- the law: from the capture, turning onto the course
+s = R.new()
+i = loc_inp({mode = "LOC", loc_dots = 1.0, tas = 180, bank = 0})
+c = run(s, i, 3)
+T.check(c < -8, "left of the beam closing at 30: rolling left onto the course")
+T.check(not s.loc_track, "not yet LOC TRACK")
+-- on the centreline, parallel: LOC TRACK, its limit 15
+i.loc_dots, i.trk_mag = 0.05, 336
+c = run(s, i, 20)
+T.check(s.loc_track, "LOC TRACK: on the centreline within 5 degrees")
+i.loc_dots, i.trk_mag = -2.5, 337
+c = run(s, i, 30)
+T.check(c >= -15 and c < -10, "2.5 dots right in tracking: left, within the 15 of tracking")
+-- the inertial path: no signal, the deviation's distance carried on the
+-- cross runway velocity (the path held)
+s = R.new()
+i = loc_inp({mode = "LOC", loc_dots = 0, trk_mag = 337, tas = 180, bank = 0})
+run(s, i, 1)
+i.loc_valid, i.loc_dots, i.trk_mag = false, 2.5, 339
+run(s, i, 10)
+local drift = 180 * 1852 / 3600 * math.sin(math.rad(2)) * 10
+T.near(s.loc_y, drift, 2, "no signal: the distance from the track (2 degrees right, 10 s), not the deviation")
+-- wings level from 5 ft (ROLL DOWN: ATA22 p.348) and on the ground
+s = R.new()
+c = run(s, loc_inp({mode = "LOC", loc_dots = -1, trk_mag = 337, ra = 4, bank = 2}), 1)
+T.equal(c, 0, "below 5 ft: wings level")
+c = run(s, loc_inp({mode = "LOC", loc_dots = -1, trk_mag = 337, ground = true}), 1)
+T.equal(c, 0, "on the ground: wings level")
+-- NORM's polar areas: NCD
+s = R.new()
+c = run(s, loc_inp({mode = "LOC", hdg_valid = false, bank = 4}), 1)
+T.check(not s.valid and c == 4, "LOC in NORM's polar areas: NCD, the bank held")
 
 -- off and on: the command starts again from the bank there
 s = R.new()
