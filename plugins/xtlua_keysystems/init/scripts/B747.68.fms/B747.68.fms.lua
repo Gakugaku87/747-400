@@ -115,6 +115,10 @@ B747DR_fms_lnav_route					= deferred_dataref("laminar/B747/fms/lnav/route", "num
 B747DR_fms_lnav_hold_phase				= deferred_dataref("laminar/B747/fms/lnav/hold_phase", "number")
 B747DR_fms_lnav_hold_loops				= deferred_dataref("laminar/B747/fms/lnav/hold_loops", "number")
 B747DR_fms_lnav_hold_exit				= deferred_dataref("laminar/B747/fms/lnav/hold_exit", "number")
+-- the procedure turn flown (step 7f, estimate): its phase (0 none, 1 out
+-- from its fix, 2 the turn onto the 45 degree leg and the leg, 3 the 180
+-- degree turn, 4 back)
+B747DR_fms_lnav_pturn_phase				= deferred_dataref("laminar/B747/fms/lnav/pturn_phase", "number")
 -- the CDUs' OFST light (step 7d; FCOM p.1210): 1 while LNAV gives the
 -- offset's guidance (not in the 3D cockpit yet)
 B747DR_fms_ofst_light					= deferred_dataref("laminar/B747/fms/ofst_light", "number")

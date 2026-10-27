@@ -1209,7 +1209,7 @@ local function fms_rows(r, shape, arcs, first_passed)
         local sh = i and shape and shape[i]
         local hold = M.is_hold(l)
         if l.fix and not l.missed then
-            if arcs and sh and sh.pts and not hold then
+            if arcs and sh and sh.pts and not hold and l.pt ~= "PI" then
                 for _, p in ipairs(sh.pts) do row(28, M.ARC_POINT, "DRCT", 0, p.lat, p.lon) end
             end
             local via = (l.via == M.DIRECT or l.proc) and "DRCT" or l.via
@@ -1229,6 +1229,10 @@ local function fms_rows(r, shape, arcs, first_passed)
             if hold and arcs and sh and sh.pts then
                 for _, p in ipairs(sh.pts) do row(28, M.ARC_POINT, "DRCT", 0, p.lat, p.lon) end
                 row(28, M.ARC_POINT, "DRCT", 0, l.fix.lat, l.fix.lon)
+            end
+            -- a procedure turn's shape after its fix (step 7f)
+            if l.pt == "PI" and arcs and sh and sh.pts then
+                for _, p in ipairs(sh.pts) do row(28, M.ARC_POINT, "DRCT", 0, p.lat, p.lon) end
             end
         elseif not l.fix and not l.missed and l.name and l.name ~= "" then
             -- a conditional leg's end (no altitude: not a constraint for

@@ -995,11 +995,24 @@ local function lnav_to_hold()
   if not t then return nil end
   return i,t
 end
+-- the procedure turn LNAV flies (step 7f): its shape on the ND's line
+local ptDrawn=nil
+local function lnav_pturn()
+  local e1=lnavPath and lnavPath[1]
+  local h=B747_fmc_lnav.ptn
+  if e1 and e1.kind=="pturn" and h and h.leg==e1.leg then return h end
+  return nil
+end
 local function lnav_hold_sizes()
   local i,t=lnav_to_hold()
   holdDrawn=i and {i=i,r=t.r,l=t.l} or nil
-  if not i then return nil end
-  return {[i]={r=t.r,l=t.l}}
+  local h=lnav_pturn()
+  ptDrawn=h
+  if not i and not h then return nil end
+  local out={}
+  if i then out[i]={r=t.r,l=t.l} end
+  if h then out[1]={pt=h.t} end
+  return out
 end
 -- the TO hold's racetrack other than drawn (by 2 % or 0.05 nm: estimate):
 -- drawn anew (true)
@@ -1011,6 +1024,7 @@ local function lnav_hold_changed()
   if not i then changed=d~=nil
   else changed=not d or d.i~=i or off(t.r,d.r) or off(t.l,d.l) end
   if changed then holdDrawn=i and {i=i,r=t.r,l=t.l} or nil end
+  if lnav_pturn()~=ptDrawn then changed=true end
   return changed
 end
 function B747_fmc_lnav_build()
@@ -1160,6 +1174,8 @@ local LNAV_MODE={path=1,heading=2,hold=3}
 -- a hold's phase (step 7b): to its fix, the entries, the loop's parts
 local HOLD_PHASE={to=1,direct=2,teardrop=3,parallel=4,intercept=5,turn1=6,outbound=7,turn2=8,inbound=9}
 B747DR_fms_lnav_hold_phase=find_dataref("laminar/B747/fms/lnav/hold_phase")
+local PTURN_PHASE={out=1,corner=2,leg45=2,turn=3,back=4}
+B747DR_fms_lnav_pturn_phase=find_dataref("laminar/B747/fms/lnav/pturn_phase")
 B747DR_fms_lnav_hold_loops=find_dataref("laminar/B747/fms/lnav/hold_loops")
 B747DR_fms_lnav_hold_exit=find_dataref("laminar/B747/fms/lnav/hold_exit")
 B747DR_fms_ofst_light=find_dataref("laminar/B747/fms/ofst_light")
@@ -1235,6 +1251,10 @@ function B747_fmc_lnav_update()
   if B747DR_fms_lnav_hold_loops~=loops then B747DR_fms_lnav_hold_loops=loops end
   local ex=(h and h.exit) and 1 or 0
   if B747DR_fms_lnav_hold_exit~=ex then B747DR_fms_lnav_hold_exit=ex end
+  -- the procedure turn (step 7f): its phase
+  local pt=st.active and lnav_pturn() or nil
+  local pp=pt and PTURN_PHASE[pt.phase] or 0
+  if B747DR_fms_lnav_pturn_phase~=pp then B747DR_fms_lnav_pturn_phase=pp end
   -- the ND's racetrack anew when LNAV made the TO hold's anew
   if st.active and n==0 and lnav_hold_changed() then B747_fmc_route_changed() end
   lnav_flag(DISCONTINUITY,s.msg_disc)

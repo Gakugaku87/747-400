@@ -24,12 +24,14 @@
 --        a to b: RF; AF around its navaid at its DME distance
 --      "none": no path into the fix b (after a discontinuity, or after a
 --        leg whose end cannot be predicted)
+--      "hold": a hold at its fix (step 7a); "pturn": a procedure turn from
+--        its fix (step 7f: M.pturn's shape)
 --  - The sources leave these out (estimate): a course leg flies the line
 --    from where it starts; a DF and the conditional legs start where the
 --    leg before ended; a leg ending at an altitude ends where a climb of
 --    GRAD ft/nm from the altitude before reaches it; a CF starts abeam the
---    point before it on its course; holds and procedure turns (HA, HF, HM,
---    PI) the line to their fix until step 7. A fly-by turn's radius from
+--    point before it on its course; a procedure turn's shape (step 7f:
+--    M.pturn). A fly-by turn's radius from
 --    the ground speed and BANK degrees of bank, its start r tan(delta / 2)
 --    before the fix, at most half of either leg; turns of more than
 --    MAX_FLYBY degrees, against the procedure's turn direction, onto a
@@ -161,6 +163,21 @@ local HEADING = {VA = "alt", VD = "dme", VI = "intc", VM = "manual", VR = "radia
 -- the holds' ends (FMSPG p.221-222): at an altitude, at the fix after one
 -- loop, by the crew
 local HOLD = {HA = "alt", HF = "fix", HM = "manual"}
+-- a procedure turn (PI; step 7f): the sources give no shape (FCTM p.150:
+-- within the airspace, its size by the ground speed); asked for as an
+-- estimate (the user, 2026-10-27): PANS-OPS's 45/180, from its fix out on
+-- the reciprocal of the inbound course, then on the leg's course (45
+-- degrees off it, away from the turn) for PT_TIME minutes (PANS-OPS
+-- category C-E: 1 min 15 s), a 180 degree turn its way, back on the
+-- reciprocal of the leg's course to the inbound course; the outbound leg
+-- as long as keeps the turn PT_MARGIN nm inside the leg's distance (its
+-- "remain within": ARINC 424's route distance; PT_LIMIT without one)
+M.PT_TIME = 1.25
+M.PT_LIMIT = 10
+M.PT_MARGIN = 1
+-- the speed of a procedure turn's end on the route (the ND's symbol's, as
+-- the holds': estimate)
+M.PT_KT = 210
 
 -- where a course or heading from a on the true direction crs ends, as
 -- predicted: e's term with the next leg `nxt` (for the intercepts);
@@ -274,6 +291,19 @@ function M.element(l, i, prev, nxt, env, alt)
         e.inbd, e.dir = true_of(env, l.crs or 0, l.fix), l.turn == "L" and "L" or "R"
         e.time, e.dist, e.alt, e.hold, e.exit = l.time, l.dist, l.alt, HOLD[pt], l.exit
         return e
+    elseif pt == "PI" and l.fix and l.crs then
+        -- a procedure turn (step 7f, estimate): from its fix; pc the 45
+        -- degree leg's course (true), dir the 180 degree turn's, out the
+        -- outbound course (45 degrees the other way from pc), limit its
+        -- distance
+        e.kind, e.a, e.fix, e.len = "pturn", l.fix, l.fix, 0
+        e.pc, e.dir = true_of(env, l.crs, l.fix), l.turn == "L" and "L" or "R"
+        e.out = (e.pc + (e.dir == "R" and 45 or -45)) % 360
+        e.limit = l.dist or M.PT_LIMIT
+        -- where it ends at PT_KT (the next leg starts there; LNAV flies its
+        -- own at the speed then)
+        e.b = M.pturn(e, M.PT_KT).x
+        return e
     elseif pt == "RF" and l.center and l.fix and prev then
         local _, r = M.course(l.center, l.fix)
         e.kind, e.center, e.r, e.dir = "arc", l.center, l.arc_r or r, l.turn == "L" and "L" or "R"
@@ -335,6 +365,36 @@ function M.racetrack(e, r, l)
     return {f = f, o1 = M.point(f, n, r), p1 = p1, p2 = p2, o2 = M.point(p2, (n + 180) % 360, r),
         s = M.point(f, (e.inbd + 180) % 360, l), sgn = sgn, n = n, r = r, l = l}
 end
+-- a procedure turn's shape at `kt` (step 7f, estimate): the turn's radius
+-- with BANK degrees of bank, the 45 degree leg PT_TIME minutes; the
+-- corner onto it flown as a fly-by arc of the same radius the other way:
+-- {f, o (the outbound leg's end), p (the 45 degree leg's end), c (the
+-- turn's centre), q (its end), x (where the leg back meets the inbound
+-- course), k (the corner's arc from k nm before o), kc (its centre), r,
+-- out, pc, back (the course from q), sgn (1 right, -1 left), dout, d45}
+function M.pturn(e, kt)
+    local sgn = e.dir == "L" and -1 or 1
+    local r = (math.max(kt, 60) * KT) ^ 2 / (G * math.tan(M.BANK * RAD)) / 1852
+    local d45 = M.PT_TIME / 60 * math.max(kt, 60)
+    -- the turn's centre past the outbound leg's end along it (a) and to
+    -- the 45 degree leg's side (b): its farthest point |centre| + r
+    local a, b = 0.70711 * (d45 + r), 0.70711 * (d45 - r)
+    local lim = math.max(e.limit - M.PT_MARGIN, r)
+    local dout = math.max(0, math.sqrt(math.max(0, (lim - r) ^ 2 - b ^ 2)) - a)
+    local f = e.fix
+    local o = M.point(f, e.out, dout)
+    local p = M.point(o, e.pc, d45)
+    local n = (e.pc + 90 * sgn) % 360
+    local c = M.point(p, n, r)
+    local q = M.point(p, n, 2 * r)
+    local back = (e.pc + 180) % 360
+    local x = line_line(q, back, f, e.out, true) or q
+    local k = r * math.tan(22.5 * RAD)
+    local kc = M.point(M.point(f, e.out, dout - k), (e.out - 90 * sgn) % 360, r)
+    return {f = f, o = o, p = p, c = c, q = q, x = x, k = k, kc = kc, r = r, out = e.out, pc = e.pc, back = back,
+        sgn = sgn, dout = dout, d45 = d45, n = n}
+end
+
 -- a hold's size (FMSPG p.224): the turns' radius at `kt` with BANK
 -- degrees of bank, the legs' length: its distance, or its time at
 -- `inbound_kt` (the ground speed along the inbound course); without
@@ -403,7 +463,9 @@ end
 -- ARC_STEP degrees (estimate), its ends left out; of hold element i its
 -- racetrack, from the fix round to the inbound leg's start: of the size
 -- sizes[i] = {r, l} (the hold whose fix is the TO fix: step 7b), else at
--- `kt` (default 250: step 7a)}
+-- `kt` (default 250: step 7a); of procedure turn element i its shape
+-- after the fix, sizes[i] = {pt = M.pturn's} (the one LNAV flies), else
+-- at `kt` (step 7f)}
 M.ARC_STEP = 15
 local function arc_points(pts, c, from_brg, r, sgn, step, sweep)
     local k = 1
@@ -415,7 +477,15 @@ end
 function M.shape(path, kt, sizes)
     local out = {}
     for i, e in ipairs(path or {}) do
-        if e.kind == "hold" then
+        if e.kind == "pturn" then
+            local z = sizes and sizes[i]
+            local t = (z and z.pt) or M.pturn(e, kt or 250)
+            local pts = {t.o, t.p}
+            arc_points(pts, t.c, (t.n + 180) % 360, t.r, t.sgn, 30, 180)
+            pts[#pts + 1] = t.q
+            pts[#pts + 1] = t.x
+            out[i] = {pts = pts}
+        elseif e.kind == "hold" then
             local z = sizes and sizes[i]
             local t
             if z then t = M.racetrack(e, z.r, z.l) else t = M.racetrack(e, M.hold_size(e, kt or 250)) end

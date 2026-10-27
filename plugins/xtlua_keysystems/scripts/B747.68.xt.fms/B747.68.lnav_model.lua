@@ -32,6 +32,10 @@
 --  - A hold (step 7a; notes §31): to its fix, the entry by the track over
 --    it, the loops, the exit; 30 degrees of bank at most (FCOM p.1413;
 --    FMSPG p.164-165, p.221-226).
+--  - A procedure turn (step 7f, estimate: the path model's pturn): out
+--    from its fix, round the corner onto the 45 degree leg, the 45 degree
+--    leg, the 180 degree turn, back until the turn onto the inbound course
+--    begins (the next leg captures it).
 -- Pure: the path model in, the path and the airplane's state each frame;
 -- the commands and the messages out.
 --   local L = B747_lnav_model                      -- in XTLua, after dofile
@@ -78,7 +82,7 @@ end
 -- forgotten; engaged, the heading held until the new leg is captured
 -- (FCOM p.644)
 function M.reset(s)
-    s.turn, s.eor, s.recapture, s.anchor, s.hp, s.ahead = nil, false, true, nil, nil, nil
+    s.turn, s.eor, s.recapture, s.anchor, s.hp, s.ahead, s.ptn = nil, false, true, nil, nil, nil, nil
 end
 
 -- a direct leg (a DIRECT TO, a DF: the path model's `direct`) as flown:
@@ -336,6 +340,56 @@ local function against(P, e, p)
     return 0, nil, nil
 end
 
+-- a procedure turn (step 7f, estimate): its shape (the path model's
+-- pturn at the turns' speed `vt`) made as it starts, then its phases: out
+-- on the outbound course from its fix, round the corner onto the 45
+-- degree leg (the shape's fly-by arc, the other way), the 45 degree leg,
+-- the 180 degree turn its way, back on the reciprocal of the 45 degree leg
+-- until the turn onto the inbound course (45 degrees) begins (the next
+-- leg's capture); the corner and the turn begun ROLL_LEAD early (as a
+-- hold's turns). Returns 1 when it ends, the cross-track error, the
+-- desired track, the arc's bank and a turn direction asked for
+local function pturn_step(s, e, air, p, vt)
+    local P = s.P
+    local h = s.ptn
+    if not (h and h.lat == e.fix.lat and h.lon == e.fix.lon and h.leg == e.leg) then
+        h = {lat = e.fix.lat, lon = e.fix.lon, leg = e.leg, t = P.pturn(e, vt), phase = "out"}
+        s.ptn = h
+    end
+    local t = h.t
+    local roll = air.gs * KT * M.ROLL_LEAD / 1852
+    if h.phase == "out" then
+        local xt, at = P.track(t.f, t.out, p)
+        if at < t.dout - t.k - roll then return 0, xt, P.course_at(t.f, t.out, at), 0, nil end
+        h.phase = "corner"
+    end
+    if h.phase == "corner" then
+        local cdir = t.sgn > 0 and "L" or "R"
+        if not onto(t.pc, air.trk, -t.sgn) then
+            local xt, dtk = circle(P, t.kc, t.r, cdir, p)
+            return 0, xt, dtk, arc_bank(air.gs, t.r, cdir), cdir
+        end
+        h.phase = "leg45"
+    end
+    local dir = t.sgn > 0 and "R" or "L"
+    if h.phase == "leg45" then
+        local xt, at = P.track(t.o, t.pc, p)
+        if at < t.d45 - roll then return 0, xt, P.course_at(t.o, t.pc, at), 0, nil end
+        h.phase = "turn"
+    end
+    if h.phase == "turn" then
+        if not onto(t.back, air.trk, t.sgn) then
+            local xt, dtk = circle(P, t.c, t.r, dir, p)
+            return 0, xt, dtk, arc_bank(air.gs, t.r, dir), dir
+        end
+        h.phase = "back"
+    end
+    local xt, at = P.track(t.q, t.back, p)
+    local _, len = P.course(t.q, t.x)
+    local lead = radius(vt, M.BANK) * math.tan(22.5 * RAD) + roll
+    return (at >= len - lead) and 1 or 0, xt, P.course_at(t.q, t.back, at), 0, nil
+end
+
 -- how far off a path the turn onto it at `theta` degrees (up to 150: an
 -- intercept leg's) begins (nm): the turn's radius at the speed `vt` kt,
 -- the roll into it at the ground speed (estimate)
@@ -463,6 +517,13 @@ function M.update(s, path, air, armed, engaged)
         local seq
         seq, xt, dtk, hff, hdir = hold_step(s, e, air, p, vt)
         met, conv, dtg, bank = true, true, nil, M.HOLD_BANK
+        if seq == 1 and not air.ground then
+            if nxt then s.seq = 1 else s.eor = true end
+        end
+    elseif e.kind == "pturn" then
+        local seq
+        seq, xt, dtk, hff, hdir = pturn_step(s, e, air, p, vt)
+        met, conv, dtg = true, true, nil
         if seq == 1 and not air.ground then
             if nxt then s.seq = 1 else s.eor = true end
         end
