@@ -1,0 +1,53 @@
+{
+  "name": "s103_afds_to",
+  "description": "AFDS の作り直し 6-3 段 1e（TO/GA）の地上の確認。RJAA 34L でエンジン運転中に始め（機体を読み直す）、F/D を両方 OFF にして全部切、F/D L ON で T/O（ロール・ピッチとも TO/GA、TO/GA の旗、F/D の表示、機長の PFD の FD：ATA22 p.337、p.353、FCOM p.663）。機長の PFD を撮る（TO/GA で F/D のバーが出ること）。F/D R ON では変わらない。地上の CMD L で T/O が終わり HDG HOLD と V/S（ATA22 p.337）。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10 },
+    { "do": "switch", "note": "F/D L OFF", "dref": "laminar/B747/toggle_switch/position[23]", "value": 0, "cmd": "laminar/B747/toggle_switch/flight_dir_L" },
+    { "do": "switch", "note": "F/D R OFF", "dref": "laminar/B747/toggle_switch/position[24]", "value": 0, "cmd": "laminar/B747/toggle_switch/flight_dir_R" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "A/P も F/D も無い：全部切", "dref": "laminar/B747/autopilot/FMA/active_roll_mode", "op": "==", "value": 0 },
+    { "do": "check", "note": "TO/GA の旗も無い", "dref": "laminar/B747/autopilot/TOGA_status", "op": "==", "value": 0 },
+    { "do": "check", "note": "F/D は出ていない", "dref": "laminar/B747/autopilot/fd/capt/shown", "op": "==", "value": 0 },
+    { "do": "switch", "note": "F/D L ON（地上で最初の F/D）", "dref": "laminar/B747/toggle_switch/position[23]", "value": 1, "cmd": "laminar/B747/toggle_switch/flight_dir_L" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "T/O：FMA のロールは TO/GA（ATA22 p.353）", "dref": "laminar/B747/autopilot/FMA/active_roll_mode", "op": "==", "value": 1 },
+    { "do": "check", "note": "FMA のピッチも TO/GA（ATA22 p.337）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 1 },
+    { "do": "check", "note": "前のコードの TO/GA の旗", "dref": "laminar/B747/autopilot/TOGA_status", "op": "==", "value": 1 },
+    { "do": "check", "note": "機長の F/D の表示", "dref": "laminar/B747/autopilot/fd/capt/shown", "op": "==", "value": 1 },
+    { "do": "check", "note": "副操縦士の F/D は出ない", "dref": "laminar/B747/autopilot/fd/fo/shown", "op": "==", "value": 0 },
+    { "do": "check", "note": "機長の PFD の AFDS の表示は FD", "dref": "laminar/B747/autopilot/AFDS/status_annun_pilot", "op": "==", "value": 1 },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "view", "note": "機長の PFD：TO/GA と F/D のバー", "the": -24, "psi": -1, "fov": 24 },
+    { "do": "shot", "name": "pfd_to" },
+    { "do": "switch", "note": "F/D R ON", "dref": "laminar/B747/toggle_switch/position[24]", "value": 1, "cmd": "laminar/B747/toggle_switch/flight_dir_R" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "2 つ目の F/D：T/O のまま", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 1 },
+    { "do": "check", "note": "副操縦士の F/D の表示", "dref": "laminar/B747/autopilot/fd/fo/shown", "op": "==", "value": 1 },
+    { "do": "cmd", "note": "CMD L（地上）", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "note": "A/P のサーボ", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "地上の A/P で T/O が終わる：HDG HOLD（ATA22 p.337）", "dref": "laminar/B747/autopilot/FMA/active_roll_mode", "op": "==", "value": 7 },
+    { "do": "check", "note": "V/S（モデルの V/S を前の則の旗で見る。FMA のピッチは地上では TO/GA のほかは出さない：前の則を地上で動かさないため、段 3 まで）", "dref": "laminar/B747/autopilot/vvi_status", "op": "==", "value": 2 },
+    { "do": "check", "note": "TO/GA の旗も消える", "dref": "laminar/B747/autopilot/TOGA_status", "op": "==", "value": 0 },
+    { "do": "cmd", "note": "操縦輪の A/P 解除", "name": "laminar/B747/autopilot/button_switch/yoke_disengage_capt" },
+    { "do": "cmd", "note": "2 回目で AUTOPILOT DISC を消す", "name": "laminar/B747/autopilot/button_switch/yoke_disengage_capt" },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" }
+  ]
+}

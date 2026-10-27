@@ -518,3 +518,12 @@
 | 同 | 機長の拡大の目盛（`gen_needle Rose 2` 2 つ）と覆い（`gen_rotary Mask:Expanded 2`） | x 340.5（回転の中心・航跡の線・選択方位・枠の 335 より 5.5 px 右。航跡の目盛が航跡の線の右にずれて見えた） | x 335.5（副操縦士の 1022.5 と中心 1022、機長の PLAN の目盛と覆いの 335.5 と同じ関係） | ― |
 
 上の 5 行は `docs/overhaul/tools/panel_nd_405.lua` で書き換えた（2 面で 23 か所、`GROUP PLN HDG` は 41 行ずつ）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261027_before_nd_405`。X-Plane の写真（`s61_nd_orientation`・`s61_nd_orientation_ge`）で、HDG と TRK の枠、▽ の先が目盛の縁に触れること、目盛の線と航跡の線がそろうことを確かめた。外から見た姿は変わらない（外観の写真）。
+
+自動操縦（6-3 段 1e、2026-10-27：F/D のバー）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-27・AFDS（AFDS-03） | 4 面の PFD の `GROUP Flight Director`（副操縦士は ` 2`。ロールとピッチの F/D のバーのグループ） | `SHOW_EQUAL 1 laminar/B747/toggle_switch/position[23]`（機長）・`[24]`（副操縦士）：F/D のスイッチ ON | `SHOW_EQUAL 1 laminar/B747/autopilot/fd/capt/shown`・`fd/fo/shown`（スイッチ ON か、TO/GA で F/D のスイッチ OFF のまま出す表示） | FCOM p.661 |
+
+上の 1 行は `docs/overhaul/tools/panel_fd_shown.lua` で書き換えた（4 か所）。中のバーは今までどおりモードがあるとき（`SHOW_GREATER 1` の FMA：X-Plane では 1 以上なので TO/GA でも出る。写真で確かめた）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261027_before_fd_shown`。X-Plane の写真（`s103_afds_to`、`s104_afds_ga`）で、地上の T/O と、F/D のスイッチ OFF のままの G/A で F/D のバーと FD が出ることを確かめた。外から見た姿は変わらない（外観の写真）。
+

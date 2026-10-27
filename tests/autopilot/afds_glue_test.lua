@@ -11,7 +11,9 @@
 -- the F/D switches (their positions); everything off; the MCP's IAS 200;
 -- 1c: the pitch modes (V/S synced, ALT HOLD, FLCH, SPD, VNAV's arm and the
 -- old VNAV's engage, no route); 1d: APP and LOC, the captures within the
--- course's angles, the MCP's heading at LOC's capture, the old state.
+-- course's angles, the MCP's heading at LOC's capture, the old state; 1e:
+-- TO/GA (the engines module's push count, G/A and its conditions, the old
+-- go-around, the F/Ds shown with their switches OFF and FD, T/O).
 local T = dofile("tests/lib/check.lua")("afds_glue")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
@@ -345,5 +347,56 @@ T.check(rt:get(APPM) == -1 and rt:get(NAV) == 1 and rt:get(GS) == 0, "LOC armed 
 rt:command(CMD .. "loc_mode")
 frames()
 T.check(rt:get(APPM) == 0 and rt:get(NAV) == 0, "the second LOC push disarms")
+rt:set(RA, 9000)
+-- 1e: TO/GA. A push counted by the engines module (laminar/B747/autopilot/
+-- toga_pushes): G/A in the air with the flaps out of up, the old code's
+-- go-around (its autoland -2 with the A/P engaged), its TO/GA flag, the
+-- FMA's TO/GA; with both F/D switches OFF above 80 kt the F/Ds shown and
+-- FD on both PFDs until a switch is cycled ON and OFF (FCOM p.657,
+-- p.661); T/O by the first F/D ON on the ground
+local PUSHES, TOGA_FLAG = "laminar/B747/autopilot/toga_pushes", "laminar/B747/autopilot/TOGA_status"
+local SHOWN_C, SHOWN_F = "laminar/B747/autopilot/fd/capt/shown", "laminar/B747/autopilot/fd/fo/shown"
+local AFDS_C, AFDS_F = "laminar/B747/autopilot/AFDS/status_annun_pilot", "laminar/B747/autopilot/AFDS/status_annun_copilot"
+local FLAPS = "sim/cockpit2/controls/flap_ratio"
+local function push() rt:set(PUSHES, (rt:get(PUSHES) or 0) + 1) frames() end
+rt:set("laminar/B747/gauges/indicators/airspeed_kts_pilot", 160)
+rt:set(RA, 1000)                                                   -- below 1,500 ft (the old code ends its go-around above)
+rt:command(CMD .. "cmd_L")
+frames()
+T.equal(rt:get(SERVOS), 1, "the A/P engaged in the F/D's modes")
+rt:set(FLAPS, 0)
+push()
+T.check(rt:get(ROLL) ~= 1 and rt:get(TOGA_FLAG) == 0, "flaps up, no G/S: no G/A")
+rt:set(FLAPS, 0.668)
+push()
+T.check(rt:get(ROLL) == 1 and rt:get(PITCH) == 1, "the flaps out of up: G/A, the FMA's TO/GA")
+T.equal(rt:get(TOGA_FLAG), 1, "the old code's TO/GA flag")
+T.equal(rt:get("laminar/B747/autopilot/autoland"), -2, "the old autoland's go-around")
+T.check(rt:get(SHOWN_C) == 1 and rt:get(SHOWN_F) == 0, "the F/Ds shown: the Captain's switch ON")
+rt:command(CMD .. "yoke_disengage_capt")
+rt:command(CMD .. "yoke_disengage_capt")
+rt:set(FD, 23, 0)
+frames()
+T.check(rt:get(ROLL) == 0 and rt:get(TOGA_FLAG) == 0, "the A/P off and both F/Ds OFF: everything off")
+push()
+T.check(rt:get(ROLL) == 1 and rt:get(PITCH) == 1, "both switches OFF: G/A")
+T.check(rt:get(SHOWN_C) == 1 and rt:get(SHOWN_F) == 1, "the F/Ds shown on both sides")
+frames(10)
+T.check(rt:get(AFDS_C) == 1 and rt:get(AFDS_F) == 1, "FD on both PFDs")
+rt:set(FD, 24, 1)
+frames()
+T.equal(rt:get(ROLL), 1, "the F/O's switch ON: G/A kept")
+rt:set(FD, 24, 0)
+frames()
+T.check(rt:get(ROLL) == 0 and rt:get(SHOWN_C) == 0 and rt:get(SHOWN_F) == 0, "and OFF: everything off, nothing shown")
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set(RA, 0)
+frames()
+rt:set(FD, 23, 1)
+frames()
+T.check(rt:get(ROLL) == 1 and rt:get(PITCH) == 1 and rt:get(TOGA_FLAG) == 1, "the first F/D ON on the ground: T/O")
+rt:set(FD, 23, 0)
+frames()
+rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set(RA, 9000)
 T.done()

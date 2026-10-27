@@ -274,3 +274,12 @@ function aircraft_unload()
     simDR_override_steering=0
     simDR_override_fms_progress=0
 end
+
+-- the F/Ds shown (6-3 step 1e): a F/D switch ON, or TO/GA's display with
+-- the switches OFF (FCOM p.661); the panel's command bars and the AFDS
+-- status
+B747DR_ap_fd_shown_capt = deferred_dataref("laminar/B747/autopilot/fd/capt/shown", "number")
+B747DR_ap_fd_shown_fo = deferred_dataref("laminar/B747/autopilot/fd/fo/shown", "number")
+-- the TO/GA switches' pushes (6-3 step 1e): counted by the engines module
+-- (its TO/GA command handler, which creates it too), read by the AFDS
+B747DR_ap_toga_pushes = deferred_dataref("laminar/B747/autopilot/toga_pushes", "number")
