@@ -1,6 +1,6 @@
 # 実機との違い（DIFFERENCES）
 
-Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこで違うかを、全分野についてまとめたもの。2026-10-26 の時点（`overhaul`、表示 5-2 の段 7 まで、FMC・CDU は 6-1・6-2 の段 5e まで）。
+Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこで違うかを、全分野についてまとめたもの。2026-10-27 の時点（`overhaul`、表示 5-2 の段 7 まで、FMC・CDU は 6-1・6-2 の段 7e3b まで）。
 
 - 元の調査は [GAP_ANALYSIS.md](GAP_ANALYSIS.md)（作り直し前のコードと資料の読み比べ、550 件）。ここでは、その後の作り直しで直った点を反映し、残っている違いを分野ごとに短く書いた。各項目の括弧は GAP の ID で、詳しい内容と出典は GAP_ANALYSIS.md と `notes/` にある。
 - 基準の機体は FCOM の 109（旅客機、PW4056）。405（PW の改造貨物機）と 570（GE の貨物機）の違いは notes に書いてある。RR には資料が無い。
@@ -28,8 +28,8 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 表示（PFD・ND・EICAS） | ほぼ作り直し済み（5-2 段 1：表示器と EIU、段 2：ソース選択の比較、段 3：速度テープ、段 4：PFD の気圧・PLI・FPV・ILS と旗、段 5：ND の向き・APP・VOR・DATA・POS・地図の記号・空港・HDG REF・トレンドベクトル、段 6：時計、EICAS の部分表示と compact、段 7：パネルの表示の条件の重なり） | TERR（外部のプラグイン頼み）、ND の FMC の記号の残り（S/C・E/D など：FMC の作り直しで）、405 型の RADIO/BARO の minimums |
 | 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記。段 5d：PFD の TCAS RA・トランスポンダのコード・ND の WXR の文字） | FMC の位置への GPS の更新、GPWS の地形の look-ahead、PWS、無線の自動同調（FMC の作り直しで） |
 | FMC | 作り直し中（段取り：経路を自前で持ち、12 段で。notes/ATA-34-61-FMC.md §10。段 1：小修正、段 4：航法データベース、段 5a〜5e：経路のモデル、RTE・LEGS・DEP/ARR、現用点と X-Plane の FMS。段 6a〜6d：経路の形と LNAV、ND の線。段 7a〜7d：ホールド、オフセット。段 7e1〜7e3b：REF NAV DATA、ABEAM PTS、自分で作る点、FIX INFO） | ND の fly-by の旋回の曲線とオフセットの線、FIX INFO の円と方位線、PLAN の CTR と STEP、procedure turn、VNAV（X-Plane の FMS に流した経路を飛ぶ）、予測 |
-| CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み、段 3：地上準備のページ、段 4：航法データベース、段 5：経路（RTE・LEGS・DEP/ARR まで）） | 3 台が 1 つを共有、MOD/EXEC、入力の検査、データリンク |
-| 自動操縦・FD | 未着手 | ロールが X-Plane の AP 頼み、LOC・TO/GA・autoland の則 |
+| CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み、段 3：地上準備のページ、段 4：航法データベース、段 5：経路（RTE・LEGS・DEP/ARR）、段 7：HOLD・OFFSET・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO） | 3 台が 1 つを共有（RTE 2 など）、性能のページの MOD/EXEC、入力の検査、データリンク |
+| 自動操縦・FD | 未着手（LNAV のロールだけは FMC の指令：6-1 段 6c のつなぎ） | ロールが X-Plane の AP 頼み、LOC・TO/GA・autoland の則 |
 | オートスロットル・推力管理 | 未着手 | 推力制限のモード、assumed temperature、THR・HOLD、操縦者の override |
 | 通信（ATA 23） | 未着手 | VHF の電源、ACP の連動、VHF C と HF が無い |
 | 照明（ATA 33） | 未着手（P5 の灯の入力は各系統で移し中） | 外部灯の電源、非常灯、毎フレームの完全 GC |
@@ -374,7 +374,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 軌跡の予測が無い（燃料・ETA は経験式。FMC-20）。CALCULATED の燃料が無い（FMC-22）。風の扱い、片発の VNAV（FMC-25・26）。
 - FMC の位置はシムの真値（IRS のドリフトや更新が無い。FMC-28）。UNABLE RNP が無い（ANP と RNP の比較は段 10。FMC-29）。
 - メッセージは 55 件のうち 8 件だけ（FMC-32。段 3b-1 で TAKEOFF SPEEDS DELETED、段 4 で NAV DATA OUT OF DATE を足した。出し方は段 2 で直した）。RW/ILS CRS ERROR の使い方の誤り、Boeing に無い DESTINATION NOT SET、進入中 500 ft 未満の抑止の無さは残る。
-- 経路の管理は FMC 自身になった（段 5b・5c）。RTE 2・RTE COPY・ABEAM PTS、性能の変更の MOD/EXEC、オフセットの終わりはまだ（FMC-34）。ND の経路線は FMC が流し込んだ X-Plane の FMS が描き、機体は自前の LNAV でそれと別の経路を飛ぶ（FMC-35）。FMC 2 台の扱いが無い（FMC-36）。
+- 経路の管理は FMC 自身になった（段 5b・5c）。RTE 2・RTE COPY（段 7e4 で）と、性能の変更の MOD/EXEC はまだ（FMC-34）。ND の経路線は FMC が流し込んだ X-Plane の FMS が描く。段 6d から条件の脚の終わりと弧も描くが、fly-by の旋回の曲線、オフセットの線、FIX INFO の記号は描かない（FMC-35 の残り）。FMC 2 台の扱いが無い（FMC-36）。
 - 実機に合わせた点（段 1）：上昇は SPD TRANS の高度まで SPD TRANS の速度（制限速度と VREF30+100 の大きい方）、その上は ECON（前は取り違え）。SPD RESTR は入れるまでダッシュ。遷移高度で気圧を自動で STD にしない。XTK による UNABLE RNP の誤警報をやめた。RESET MCP ALT は T/D の 2 分前。ETA の速度の下限の単位の誤り。VOR の自動同調の 2 番目の局。AP の毎フレームの完全な GC と decode をやめた。
 
 ### CDU：作り直し中（6-2 段 1〜4、段 5 の RTE・LEGS・DEP/ARR）
@@ -402,7 +402,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 
 ### 自動操縦・FD（ATA 22）：未着手
 
-- ロールの指令を X-Plane の AP に頼っている（AFDS-01）。HDG HOLD のコマンドが無い。
+- ロールの指令を X-Plane の AP に頼っている（AFDS-01。LNAV だけは 2026-10-27 から FD とサーボの目標が FMC のバンクの指令：6-1 段 6c のつなぎ）。HDG HOLD のコマンドが無い。
 - LOC の捕捉に条件が無い（AFDS-02）。TO/GA のピッチの則（AFDS-03）。autoland の flare・rollout（AFDS-04）。複数チャンネル（AFDS-05）。
 - A/P を入れたときの既定のモード、V/S の同期、LNAV・VNAV の作動と解除、モードの遷移（AFDS-06〜09）。
 - ピッチの制御則、速度の保護と自動反転（AFDS-10・11）。
