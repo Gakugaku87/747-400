@@ -316,9 +316,11 @@ function M.disengage(s, quiet)
     if not quiet then dropped(s, was) end
 end
 
--- the HDG SEL switch (`inp`: old_roll, gs_active, ground, ra): true when
--- engaged
+-- the HDG SEL switch (`inp`: old_roll, gs_active, ground, ra, hdg_valid):
+-- true when engaged. HDG SEL valid needed (ATA22 p.352): NORM's reference
+-- in the polar areas gives it no heading (FCOM p.1046; step 2a)
 function M.hdg_sel(s, inp)
+    if inp.hdg_valid == false then return false end
     if (s.roll == "LOC" and s.pitch == "GS") or ga_low(s, inp) then return false end
     loc_replaced(s)
     set_roll(s, "HDG_SEL")

@@ -573,7 +573,16 @@ dofile("B747.70.xt.autopilot.vnav.lua")
 dofile("B747.70.afds_model.lua")
 B747DR_ap_engine_type = find_dataref("laminar/B747/engines/type")
 local afds = B747_afds_model.new()
-local afdsHdgSelTime = 0
+-- the roll laws (step 2a; notes/ATA-22.md §16): the command the A/P flies
+-- (the hydraulics module's servo law reads it) and the F/Ds show; without
+-- a law there (LOC, ROLLOUT) the old law
+dofile("B747.70.afds_roll_model.lua")
+local afdsRoll = B747_afds_roll_model.new()
+local afdsRollIn = B747_afds_roll_model.inputs()
+B747DR_ap_roll_cmd = find_dataref("laminar/B747/autopilot/roll_cmd")
+B747DR_ap_roll_law = find_dataref("laminar/B747/autopilot/roll_law")
+B747DR_ap_roll_valid = find_dataref("laminar/B747/autopilot/roll_valid")
+simDR_afds_tas = find_dataref("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot")
 -- the magnetic track (LOC and G/S capture within 120 and 80 degrees of the
 -- localizer course: 6-3 step 1d)
 simDR_afds_track_mag = find_dataref("sim/cockpit2/gauges/indicators/ground_track_mag_pilot")
@@ -617,6 +626,8 @@ local function afds_inp()
 	-- FLARE arms (until step 4)
 	afdsIn.ra = simDR_radarAlt1
 	afdsIn.hdg = simDR_ap_mag_psi
+	-- HDG SEL valid (step 2a): no heading in NORM's polar areas (FCOM p.1046)
+	afdsIn.hdg_valid = not (B747DR_ap_hdg_ref_true > 0.5 and B747DR_ap_toggle_sw[30] < 0.5)
 	afdsIn.lnav_valid = B747DR_fms_lnav_valid == 1
 	local land = simDR_radarAlt1 > 200 and (B747DR_ap_AFDS_status_annun_pilot == 3 or B747DR_ap_AFDS_status_annun_pilot == 4)
 	afdsIn.old_armed_roll = land and 4 or 0
@@ -711,10 +722,8 @@ local function afds_sync()
 	local w = afds.disc and 1 or 0
 	if B747DR_CAS_warning_status[0] ~= w then B747DR_CAS_warning_status[0] = w end
 	-- the roll modes (step 1b) on the old code's state: LNAV's (0 off, 1
-	-- armed, 2 engaged: the FMC's LNAV and the old laws read it), ATT's
-	-- bank (the old law holds it); HDG SEL and HDG HOLD flown by X-Plane's
-	-- HDG SEL (its roll until step 2), to the MCP's heading or the heading
-	-- held (the present one until captured)
+	-- armed, 2 engaged: the FMC's LNAV reads it), ATT's bank; the roll laws
+	-- are the new model's (step 2a: afds_roll_law)
 	local ln = afds.lnav_arm and 1 or (afds.roll == "LNAV" and 2 or 0)
 	if B747DR_ap_lnav_state ~= ln then B747DR_ap_lnav_state = ln end
 	-- the pitch modes (step 1c) on the old code's state: VNAV's (1 armed;
@@ -761,19 +770,34 @@ local function afds_sync()
 	local ff = (B747DR_toggle_switch_position[24] > 0.5 or auto) and 1 or 0
 	if B747DR_ap_fd_shown_capt ~= fc then B747DR_ap_fd_shown_capt = fc end
 	if B747DR_ap_fd_shown_fo ~= ff then B747DR_ap_fd_shown_fo = ff end
-	if afds.roll == "HDG_SEL" or afds.roll == "HDG_HOLD" then
-		if afds.roll == "HDG_SEL" then
-			simDR_autopilot_heading_deg = ap_hdg_target(B747DR_ap_heading_deg)
-		else
-			simDR_autopilot_heading_deg = afds.hold_hdg or simDR_ap_mag_psi
-		end
-		-- X-Plane's mode once a second at most (the command's effect shows
-		-- a frame or more later)
-		if simDR_autopilot_heading_status ~= 2 and simDRTime - afdsHdgSelTime > 1 then
-			afdsHdgSelTime = simDRTime
-			simCMD_autopilot_heading_select:once()
-		end
-	end
+end
+-- the roll law (step 2a), each frame after the modes: the heading in the
+-- reference (true north by the switch or in the polar areas, where NORM
+-- gives HDG SEL and HDG HOLD no reference: FCOM p.1046), the track true
+local function afds_roll_law()
+	local r = afdsRollIn
+	r.mode = afds.roll
+	r.active = B747_afds_model.engaged(afds) > 0 or B747DR_ap_fd_shown_capt == 1 or B747DR_ap_fd_shown_fo == 1
+	r.ground = simDR_onGround == 1
+	r.bank = simDR_AHARS_roll_deg_pilot
+	r.ref_true = B747DR_ap_hdg_ref_true > 0.5
+	r.hdg = r.ref_true and simDR_true_heading or simDR_ap_mag_psi
+	r.hdg_valid = not (r.ref_true and B747DR_ap_toggle_sw[30] < 0.5)
+	r.trk = (simDR_afds_track_mag + simDR_true_heading - simDR_ap_mag_psi) % 360
+	r.sel = B747DR_ap_heading_deg
+	r.held = afds.hold_hdg ~= nil
+	r.att_bank = afds.att_bank
+	r.lnav_bank = B747DR_fms_lnav_roll
+	r.selector = B747DR_ap_bank_limit_sel_dial_pos
+	r.tas = simDR_afds_tas
+	r.ias = simDR_ind_airspeed_kts_pilot
+	r.flaps_up = simDR_flap_ratio_control < 0.01
+	r.v2 = B747DR_airspeed_V2
+	local cmd = B747_afds_roll_model.update(afdsRoll, r, SIM_PERIOD)
+	local law, valid = cmd and 1 or 0, (cmd and afdsRoll.valid) and 1 or 0
+	if B747DR_ap_roll_law ~= law then B747DR_ap_roll_law = law end
+	if B747DR_ap_roll_valid ~= valid then B747DR_ap_roll_valid = valid end
+	B747DR_ap_roll_cmd = cmd or 0
 end
 -- the roll switches (step 1b)
 function B747_afds_hdg_sel()
@@ -908,10 +932,12 @@ function B747_afds_update()
 	afdsTogaPushes = n
 	afds_apply(B747_afds_model.update(afds, inp))
 	afds_sync()
+	afds_roll_law()
 end
 -- a new flight: the FCCs anew
 function B747_afds_reset()
 	afds = B747_afds_model.new()
+	afdsRoll = B747_afds_roll_model.new()
 end
 function autothrottle_reengage()
 	if B747DR_autothrottle_active == 0 and isATEnabled() and simDR_onGround == 0 then
@@ -2660,13 +2686,6 @@ function B747_ap_appr_mode()
 		B747_afds_model.multi(afds, afds_inp())
 		afds_sync()
 	end
-	-- (LNAV engaged: armed, the roll mode before it stays, FCOM p.644)
-	if B747DR_ap_lnav_state == 2 and simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status == 0 then
-		print("simCMD_autopilot_heading_select in appr_mode")
-		simCMD_autopilot_heading_select:once()
-		B747DR_ap_ATT = 0.0
-		B747DR_ap_lastCommand = simDRTime
-	end
 end
 
 
@@ -2728,10 +2747,13 @@ function fma_PitchModes()
 end
 
 function B747_ap_fma(fms)
-	-- the flight directors' roll: in LNAV the FMC's steering (6-1/6-2 step
-	-- 6c: ATA22 p.358), else X-Plane's
+	-- the flight directors' roll: the roll laws' command (6-3 step 2a; NCD
+	-- centred until the mode failures, step 5), else X-Plane's (LOC until
+	-- step 2b)
 	local fdRoll = B747DR_ap_target_roll
-	if B747DR_ap_FMA_active_roll_mode == 2 and B747DR_fms_lnav_valid == 1 then fdRoll = B747DR_fms_lnav_roll end
+	if B747DR_ap_roll_law == 1 then
+		fdRoll = B747DR_ap_roll_valid == 1 and B747DR_ap_roll_cmd or simDR_capt_roll
+	end
 	B747DR_capt_ap_roll = B747_animate_value(B747DR_capt_ap_roll, fdRoll - simDR_capt_roll, -25, 25, 10)
 	B747DR_fo_ap_roll = B747_animate_value(B747DR_fo_ap_roll, fdRoll - simDR_fo_roll, -25, 25, 10)
 	--B747DR_capt_ap_roll=B747DR_ap_target_roll-simDR_capt_roll
@@ -3219,22 +3241,9 @@ function B474_ap_target_speed()
 	end
 end
 function B474_ap_target_heading()
-	local diff = simDRTime - B747DR_ap_lastCommand
-		
-	local simDR_autopilot_heading_status=simDR_autopilot_heading_status
 	if B747DR_ap_activate_target_heading_deg==1 then
 		B747DR_ap_activate_target_heading_deg=0
 		B747_afds_hdg_sel()
-	end
-	-- (LNAV engaged: armed, the roll mode before it stays, HDG HOLD too:
-	-- FCOM p.644)
-	if simDR_autopilot_heading_status == 0 and simDR_autopilot_nav_status == 0 and B747DR_ap_lnav_state == 2 then
-		if diff < 0.05 then
-			return
-		end
-		print("simCMD_autopilot_heading_select in B747DR_ap_lnav_state")
-		simCMD_autopilot_heading_select:once()
-		B747DR_ap_lastCommand=simDRTime
 	end
 	if B747DR_ap_target_heading_deg == -1 then
 		return

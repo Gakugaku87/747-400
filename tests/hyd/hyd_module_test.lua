@@ -185,6 +185,24 @@ frames(0.5)
 T.equal(get("laminar/B747/flt_ctrls/sim_pitch_ratio"), 0, "elevator command at neutral")
 T.equal(get("laminar/B747/flt_ctrls/sim_roll_ratio"), 0, "aileron command at neutral")
 T.equal(get("laminar/B747/flt_ctrls/stab_trim/autotrim_cmd"), 0, "no autotrim command")
+-- the roll laws' command (6-3 step 2a): with roll_law 1 the servo law flies
+-- roll_cmd, not X-Plane's F/D roll
+rt:set("sim/time/total_running_time_sec", 1000)
+rt:set("laminar/B747/autopilot/ap_monitor/servos_on_time", 0)
+rt:set("laminar/B747/autopilot/servos_on", 1)
+rt:set("laminar/B747/autopilot/FMA/active_roll_mode", 6)
+rt:set("laminar/B747/autopilot/roll_law", 1)
+rt:set("laminar/B747/autopilot/roll_cmd", 10)
+rt:set("sim/cockpit2/autopilot/flight_director_roll_deg", -20)
+rt:set("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot", 0)
+frames(0.2)
+T.check(get("laminar/B747/flt_ctrls/sim_roll_ratio") > 0, "the roll law's 10 right, not X-Plane's 20 left: the ailerons right")
+T.near(get("laminar/B747/autopilot/flight_director_roll_deg"), 10, 1e-6, "the F/D roll: the law's")
+rt:set("laminar/B747/autopilot/servos_on", 0)
+rt:set("laminar/B747/autopilot/roll_law", 0)
+rt:set("laminar/B747/autopilot/FMA/active_roll_mode", 0)
+frames(1)
+T.equal(get("laminar/B747/flt_ctrls/sim_roll_ratio"), 0, "A/P off: back to neutral")
 
 -- lateral control (B747.19.lateral_model.lua, 4-1 step 4): the controlObject
 -- rows make the control wheel's angle from the pilots', the A/P's and the
