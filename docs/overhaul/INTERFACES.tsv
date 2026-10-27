@@ -1926,6 +1926,7 @@ laminar/B747/nd/capt/apt/sym	dataref	panel	B747.61.nd
 laminar/B747/nd/capt/apt/thr_distance	dataref	panel	B747.61.nd
 laminar/B747/nd/capt/apt/thr_heading	dataref	panel	B747.61.nd
 laminar/B747/nd/capt/apt/thr_show	dataref	panel	B747.61.nd
+laminar/B747/nd/capt/box	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/nd/capt/brg_l	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/nd/capt/brg_r	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/nd/capt/crs	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
@@ -2373,6 +2374,7 @@ laminar/B747/nd/fo/apt/sym	dataref	panel	B747.61.nd
 laminar/B747/nd/fo/apt/thr_distance	dataref	panel	B747.61.nd
 laminar/B747/nd/fo/apt/thr_heading	dataref	panel	B747.61.nd
 laminar/B747/nd/fo/apt/thr_show	dataref	panel	B747.61.nd
+laminar/B747/nd/fo/box	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/nd/fo/brg_l	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/nd/fo/brg_r	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/nd/fo/crs	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst

@@ -273,27 +273,32 @@ function getHeadingDifference(desireddirection,current_heading)
 end
 
 -- a true bearing on that side's ND, from the display's top as nd_up orients
--- it (step 5a): that side's track (MAP) or heading (VOR, APP) made true with
--- the variation; PLN north up as before. The map symbols every 0.2 s
--- (makeIcon) and every frame (updateIcon: before, the Captain's track in
--- MAP for both sides and the true heading in the other modes) and the
--- airports (step 5c)
+-- it (step 5a): that side's heading (the 405's MAP, VOR, APP) or track (the
+-- 570's MAP) made true with the variation; PLN north up as before. The map
+-- symbols every 0.2 s (makeIcon) and every frame (updateIcon: before, the
+-- Captain's track in MAP for both sides and the true heading in the other
+-- modes) and the airports (step 5c)
+-- the airplane: the 570 (GE, engines/type 1) has MAP track up, the 405
+-- (PW; RR as PW: an estimate) heading up (FCOM p.1109; the user's choice
+-- of the 405, 2026-10-27)
+simDR_nd_engine_type = find_dataref("laminar/B747/engines/type")
+local function nd_track_map() return simDR_nd_engine_type == 1 end
 local function nd_bearing(isCapt,abs_heading)
   local mode, trk, hdg = B747DR_nd_mode_capt, simDR_ground_track, simDR_heading_track
   if not isCapt then
     mode, trk, hdg = B747DR_nd_mode_fo, simDR_ground_track_copilot, simDR_heading_copilot
   end
   local mag_diff=getHeadingDifference(simDR_true_heading,simDR_mag_heading)
-  if mode==2 then return getHeadingDifference(trk-mag_diff,abs_heading) end
+  if mode==2 and nd_track_map() then return getHeadingDifference(trk-mag_diff,abs_heading) end
   if mode==3 then return abs_heading+simDR_variation end
   return getHeadingDifference(hdg-mag_diff,abs_heading)
 end
 
 -- each ND's top (5-2 step 5a; the rule of B747.60.nd_model.lua's
--- orientation, FCOM p.1109-1110 for the 109): MAP that side's track, VOR
--- and APP its heading, PLN north
+-- orientation, FCOM p.1109-1110): MAP that side's heading on the 405, its
+-- track on the 570; VOR and APP its heading, PLN north
 function nd_up(mode,hdg,trk)
-  if mode==2 then return trk end
+  if mode==2 and nd_track_map() then return trk end
   if mode==3 then return 0 end
   return hdg
 end

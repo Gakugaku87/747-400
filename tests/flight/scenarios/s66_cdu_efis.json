@@ -80,7 +80,7 @@
     { "do": "check", "note": "X-Plane の地図も PLN（4。GAP の DSP-31：前は CDU のモードが X-Plane に届かなかった）", "dref": "sim/cockpit2/EFIS/map_mode", "op": "==", "value": 4 },
     { "do": "cmd", "note": "MAP", "name": "laminar/B747/fms1/ls_key/R1" },
     { "do": "sleep", "seconds": 1 },
-    { "do": "check", "note": "X-Plane の地図も MAP（2）", "dref": "sim/cockpit2/EFIS/map_mode", "op": "==", "value": 2 },
+    { "do": "check", "note": "X-Plane の地図も ND の MAP に合わせる（405 は方位が上で 0）", "dref": "sim/cockpit2/EFIS/map_mode", "op": "==", "value": 0 },
     { "do": "view", "note": "左の CDU", "the": -34, "psi": 22, "fov": 16 },
     { "do": "shot", "name": "cdu_efis_control" },
 

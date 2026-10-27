@@ -2,8 +2,9 @@
 -- The ND's position trend vector (5-2 step 5e, FCOM p.1147): the ND model
 -- (plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/B747.60.nd_model.lua:
 -- the 30 s segments at the ground speed, the turn of the bank angle, the
--- segments by range, MAP only), then the display glue in the flight
--- instruments module as XTLua runs it (tests/lib/xtlua.lua).
+-- segments by range, MAP only, along the track on the display: the 405's
+-- heading up MAP turns it by the drift), then the display glue in the
+-- flight instruments module as XTLua runs it (tests/lib/xtlua.lua).
 local T = dofile("tests/lib/check.lua")("nd_trend")
 local NM = dofile("plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/B747.60.nd_model.lua")
 local xtlua = dofile("tests/lib/xtlua.lua")
@@ -48,6 +49,12 @@ NM.trend(o, false, 250, 0, 40)
 T.equal(shown(), 0, "not in MAP or no track: none")
 NM.trend(o, true, 0, 0, 40)
 T.equal(shown(), 0, "standing still: none")
+-- the 405's heading up MAP (the user's choice, 2026-10-27): from the
+-- airplane symbol along the track, here 6 degrees right of the top
+NM.trend(o, true, 240, 0, 40, 6)
+local y1 = 432 * px_m
+T.check(near(o.tv_x[1], y1 * math.sin(math.rad(6)), 0.01) and near(o.tv_y[1], y1 * math.cos(math.rad(6)), 0.01)
+    and near(o.tv_rot[1], 6, 1e-9), "turned by the drift: the first piece 6 degrees right")
 
 -- the ND model: MAP and MAP CTR only, with the track
 local s = NM.new()
@@ -61,6 +68,17 @@ T.check(n_of(out[NM.CAPT]) == 9 and n_of(out[NM.FO]) == 0, "the Captain's MAP: s
 inp.side[NM.CAPT].trk_valid = false
 out = NM.update(s, inp, 0.1)
 T.equal(n_of(out[NM.CAPT]), 0, "no track (TRK flag): none")
+-- the 405 (heading up) turns it by the drift, the 570 (track up) not
+inp.side[NM.CAPT].trk_valid = true
+inp.side[NM.CAPT].hdg, inp.side[NM.CAPT].trk = 100, 106
+out = NM.update(s, inp, 0.1)
+T.check(near(out[NM.CAPT].tv_rot[1], 6, 1e-9) and out[NM.CAPT].tv_x[1] > 0,
+    "the 405's MAP: along the track, 6 degrees right of the heading up")
+inp.track_map = true
+out = NM.update(s, inp, 0.1)
+T.check(near(out[NM.CAPT].tv_rot[1], 0, 1e-9) and near(out[NM.CAPT].tv_x[1], 0, 1e-9),
+    "the 570's MAP (track up): straight up")
+inp.track_map = false
 
 -- the display glue
 local rt = xtlua.new()

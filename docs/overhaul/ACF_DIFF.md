@@ -506,3 +506,15 @@
 | 同 | 別々の dataref の SHOW を持つ部品とグループ 114 か所（主 EICAS 56、二次 EICAS 42、PFD 8、ND 8） | 最後の 1 本だけが効く | 最後の dataref の条件を部品に残し、ほかの dataref の条件をそれぞれ外側の新しいグループ（`<名前> and <n>`、130 個）に入れた：すべてが成り立つときに出る | FCOM p.972 ほか |
 
 上の 3 行は `docs/overhaul/tools/panel_show_and.lua` で書き換えた。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261026_before_show_and`。外から見た姿は変わらない（外観の写真）。
+
+表示（2026-10-27：機体の型式による ND の向き、拡大の方位の印の位置。P&W は 405、GE は 570、RR は P&W と同じ：利用者の決定）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-27・ND の向き | 全周と拡大の上の枠の `GROUP TRACK`（全周は中の `gen_LED LED Track MAP` も） | `SHOW_EQUAL 2 nd/mode/<席>/sel_dial_pos`（MAP） | `SHOW_EQUAL 2 laminar/B747/nd/<席>/box`（570 の MAP・MAP CTR の TRK） | FCOM p.1141 |
+| 同 | 全周の `GROUP HDG` の `APP/VOR/MAP`、拡大の `GROUP HDG` の `APP/VOR` | `SHOW_LESS 1 nd/mode/<席>/sel_dial_pos`（APP・VOR） | `SHOW_EQUAL 1 nd/<席>/box`（405 は全モード、570 は VOR・APP の HDG） | FCOM p.1141 |
+| 同 | 全周の `GROUP HDG` の `PLN`（段 5a で TRK と自席の航跡にしたもの） | `SHOW_EQUAL 3 nd/mode/<席>/sel_dial_pos`（PLN） | `SHOW_EQUAL 4 nd/<席>/box`（570 の PLAN の TRK）。後ろに写し `GROUP PLN HDG`（`SHOW_EQUAL 3 nd/<席>/box`、`EFIS/Maps/label_HDG` と自席の方位 `pfd/<席>/hdg_deg`：405 の PLAN の HDG）を足した | FCOM p.1141 |
+| 同 | 拡大の方位の印（`gen_needle Hdg Ptr Exp`、段 5a で足したもの） | POS（x, 362）、OFFSET 457、NEEDLE_OFFSET_Y −457（回転の中心が目盛の中心より 11 px 下：上では目盛に食い込み、下では浮き、表示が回ると左右へずれた） | POS（x, 367）、OFFSET 451、NEEDLE_OFFSET_Y −451（中心は `GROUP Heading Offset` の回転の中心 y −84。先が目盛の外縁 449.7 に触れる） | FCOM p.1142 |
+| 同 | 機長の拡大の目盛（`gen_needle Rose 2` 2 つ）と覆い（`gen_rotary Mask:Expanded 2`） | x 340.5（回転の中心・航跡の線・選択方位・枠の 335 より 5.5 px 右。航跡の目盛が航跡の線の右にずれて見えた） | x 335.5（副操縦士の 1022.5 と中心 1022、機長の PLAN の目盛と覆いの 335.5 と同じ関係） | ― |
+
+上の 5 行は `docs/overhaul/tools/panel_nd_405.lua` で書き換えた（2 面で 23 か所、`GROUP PLN HDG` は 41 行ずつ）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261027_before_nd_405`。X-Plane の写真（`s61_nd_orientation`・`s61_nd_orientation_ge`）で、HDG と TRK の枠、▽ の先が目盛の縁に触れること、目盛の線と航跡の線がそろうことを確かめた。外から見た姿は変わらない（外観の写真）。
