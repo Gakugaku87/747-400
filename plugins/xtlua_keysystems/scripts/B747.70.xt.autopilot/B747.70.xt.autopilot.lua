@@ -583,9 +583,9 @@ B747DR_ap_roll_cmd = find_dataref("laminar/B747/autopilot/roll_cmd")
 B747DR_ap_roll_law = find_dataref("laminar/B747/autopilot/roll_law")
 B747DR_ap_roll_valid = find_dataref("laminar/B747/autopilot/roll_valid")
 simDR_afds_tas = find_dataref("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot")
--- the pitch laws (step 3a; notes/ATA-22.md §18): the command the A/P flies
--- (the hydraulics module's servo law reads it) and the F/Ds show; without
--- a law there (FLCH, the old VNAV's speed, TO/GA, G/S, FLARE) the old law
+-- the pitch laws (steps 3a and 3b; notes/ATA-22.md §18, §19): the command
+-- the A/P flies (the hydraulics module's servo law reads it) and the F/Ds
+-- show; without a law there (G/S, FLARE) the old law
 dofile("B747.70.afds_pitch_model.lua")
 local afdsPitch = B747_afds_pitch_model.new()
 local afdsPitchIn = B747_afds_pitch_model.inputs()
@@ -593,9 +593,25 @@ B747DR_ap_pitch_cmd = find_dataref("laminar/B747/autopilot/pitch_cmd")
 B747DR_ap_pitch_law = find_dataref("laminar/B747/autopilot/pitch_law")
 simDR_afds_pitch = find_dataref("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot")
 simDR_afds_vs = find_dataref("sim/flightmodel/position/vh_ind_fpm")
+-- the speed laws' (step 3b): the minimum maneuvering and the maximum speeds
+-- (the speed tape's, for the FMC's of FCOM p.675), the PLI (valid when the
+-- PFDs show it: estimate), GPWS's windshear
+B747DR_afds_vminm = find_dataref("laminar/B747/airspeed/Vminm")
+B747DR_afds_vmax = find_dataref("laminar/B747/airspeed/Vmax")
+B747DR_afds_pli = find_dataref("laminar/B747/pfd/pli")
+B747DR_afds_pli_show = find_dataref("laminar/B747/pfd/pli_show")
+B747DR_afds_windshear = find_dataref("laminar/B747/gpws/windshear")
+-- the speed laws' reference: the IAS/MACH window's when open (a Mach's
+-- knots: X-Plane's dial), else the old VNAV's (X-Plane's dial)
+local function afds_speed_ref()
+	if B747DR_ap_ias_mach_window_open == 1 and simDR_autopilot_airspeed_is_mach == 0 then return B747DR_ap_ias_dial_value end
+	return simDR_autopilot_airspeed_kts
+end
 -- the pitch laws' inputs: the attitude, the inertial vertical speed (ATA22
 -- p.344), the TAS, the altitude, the MCP's V/S, the old VNAV's law by its
--- flags and its targets
+-- flags and its targets; the speed laws' (step 3b): the IAS, the reference
+-- (T/O's V2 and G/A's MCP speed too), the speed protection, the PLI, the
+-- flaps, a windshear
 local function afds_pitch_inputs(p)
 	p.pitch = simDR_afds_pitch
 	p.vs = simDR_afds_vs
@@ -606,6 +622,15 @@ local function afds_pitch_inputs(p)
 		or (simDR_autopilot_flch_status == 2 and "FLCH") or nil
 	p.vnav_vs = simDR_autopilot_vs_fpm
 	p.vnav_alt = simDR_autopilot_hold_altitude_ft
+	local ref = afds_speed_ref()
+	p.ias = simDR_ind_airspeed_kts_pilot
+	p.spd_sel = ref
+	p.mcp_ias = ref
+	p.v_min = B747DR_afds_vminm
+	p.v_max = B747DR_afds_vmax
+	p.pli = B747DR_afds_pli_show > 0.5 and B747DR_afds_pli or nil
+	p.flaps_up = simDR_flap_ratio_control < 0.01
+	p.windshear = B747DR_afds_windshear > 0.5
 end
 -- the magnetic track (LOC and G/S capture within 120 and 80 degrees of the
 -- localizer course: 6-3 step 1d)
@@ -840,7 +865,7 @@ local function afds_roll_law()
 	if B747DR_ap_roll_valid ~= valid then B747DR_ap_roll_valid = valid end
 	B747DR_ap_roll_cmd = cmd or 0
 end
--- the pitch law (step 3a), each frame after the roll law
+-- the pitch laws (steps 3a and 3b), each frame after the roll law
 local function afds_pitch_law()
 	local p = afdsPitchIn
 	p.mode = afds.pitch

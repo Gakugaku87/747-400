@@ -240,10 +240,11 @@ Vref30data = {
 
 
 -- Vs SPEEDS: the stall speeds (Laminar's table; its 10,000 ft rows are the
--- FCTM's stall speed charts within 2 kt: notes/FCTM.md §1.14), now only for
--- X-Plane's TOGA pitch (fltInst02's B747_Vs). Two typos fixed from the
--- charts and the neighbours (DSP-08, 5-2 step 3b): flaps 20 at 10,000 ft
--- and 200 t was 133.60, at 0 ft and 360 t 156.66.
+-- FCTM's stall speed charts within 2 kt: notes/FCTM.md §1.14). No reader
+-- since X-Plane's TOGA pitch, which came from it, gave way to the AFDS's
+-- pitch laws (6-3 step 3b); kept as the checked table. Two typos fixed from
+-- the charts and the neighbours (DSP-08, 5-2 step 3b): flaps 20 at 10,000
+-- ft and 200 t was 133.60, at 0 ft and 360 t 156.66.
 VsData = {
     [0] = {
         [-2000] = {[200]=142.72, [220]=150.21, [240]=157.53, [260]=164.69, [280]=172.27, [300]=178.95, [320]=185.50, [340]=191.76, [360]=197.77, [380]=203.51, [400]=205.91},

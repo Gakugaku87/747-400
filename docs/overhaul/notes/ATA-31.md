@@ -367,7 +367,7 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - グルー：`B747.60.xt.speedtape.lua` に入れた（段 3a のモデルと一緒）。書くもの：`airspeed/Vs`（赤と黒の帯の上端：前は失速速度）、新設 `airspeed/Vminm`（最小機動速度）、`airspeed/Vmaxm`、`sim/flightmodel/failures/stallwarning`（シェーカー）、AIRSPEED LOW（`CAS/caution_status[0]`）、`airspeed_window/min`、新設 `airspeed/tape_capt[4]`・`tape_fo[4]`（帯 4 本の速度からその席の速度を引いた値：[0] 最小速度、[1] 最小機動速度、[2] 最大機動速度、[3] 最大速度）。
   - `airspeed/Vmc` は前の式（重量とフラップの一次式）のまま残す。AFDS・A/T・VNAV・EEC・FMS の速度の下限（`Vmc + 10` とフラップごとの補正）がこの値に合わせてあるので（6-3・6-4 で作り直す）。
   - パネル（道具 `docs/overhaul/tools/panel_speed_bands.lua`、ACF_DIFF.md §5）：純正の速度テープの帯は、速度で上下する 2 つのグループ（最大の側は 320 kt、最小の側は 160 kt が真ん中）にあり、切り抜きの窓もグループと一緒に動くので、その近くの速度でしか見えなかった（巡航の約 250 kt の最小機動速度は出ない）。グループを止め、帯 4 本は `tape_capt`・`tape_fo` を 4 px/kt で読む（琥珀の帯は前の `Vmc` から最小機動速度に）。
-  - fltInst02：`B747_Vs` は X-Plane の TO/GA のピッチ（AFDS）のためだけに失速速度の表を引く（帯・シェーカー・`vSAOA` の帯の持ち上げは外した）。前の AIRSPEED LOW（前の `Vmc` か失速速度より遅い）と琥珀の枠（前の `Vmc` より遅い：地上でも）は外した。最大機動速度（最大速度 −10 kt）も外した。
+  - fltInst02：`B747_Vs` は X-Plane の TO/GA のピッチ（AFDS）のためだけに失速速度の表を引く（帯・シェーカー・`vSAOA` の帯の持ち上げは外した）。`B747_Vs` そのものも 6-3 段 3b で外した（TO/GA のピッチは AFDS のピッチの則：notes/ATA-22.md §19）。前の AIRSPEED LOW（前の `Vmc` か失速速度より遅い）と琥珀の枠（前の `Vmc` より遅い：地上でも）は外した。最大機動速度（最大速度 −10 kt）も外した。
   - 重量の補間（`bracket_weights`）：VREF30 と失速速度の表で、重量をはさむ 2 つの重量の間で比例（前は 20 t 単位に丸めた重量を上端にしたので、区間の前半は下の重量の値のままだった）。
   - 前の失速速度の表の誤記 2 か所（DSP-08）：フラップ 20 の 10,000 ft・200 t（133.60 → 113.60）、0 ft・360 t（156.66 → 153.66）。
 - 段 3a のモデル：フラップのバグを約 20,000 ft（指示高度）より上で出さない（FCOM p.972）。
