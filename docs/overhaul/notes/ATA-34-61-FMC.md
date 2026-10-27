@@ -768,3 +768,25 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 前の LNAV のオフセット（`lnoffs` と `laminar/B747/autopilot/lnav/xtk_target`）は、どのページからも使われていない（段 6c から効かない）。そのまま残す。
 - 試験：新しい `tests/fms/lnav_offset_test.lua`（16 件：R5 で右へ回り 150 秒以内に捕捉、25° まで、経路の 5 nm 右、角の二等分線で順送り、5 nm 手前で END OF OFFSET、オフセットの終わりで消えて D へ戻る、40 nm のオフセットで B を線から 21 nm を超えて順送り）、`path_model_test.lua`（126 件：オフセットの線と角、wide）、`route_model_test.lua`（199 件：かかる脚の範囲、入力と消え方）、`rte_pages_test.lua`（63 件：空中の 6R の OFFSET、R20・L0・X5・DELETE、地上では出ない）、`lnav_glue_test.lua`（24 件：R5 で XTK が 4 nm 左、右へのバンク、OFST 灯、L0 で戻る）。試験用の機体（`tests/lib/lnav_sim.lua`）が LNAV の経路を変える関数を受ける。
 - X-Plane：新しい `s93_offset` 25/25（RJAA→XAC の脚の上で LNAV、空中の RTE の 6R に OFFSET と小字の見出し、R5 で EXEC：XTK がオフセットの線から 5.1 nm 左、右へのバンクの指令、OFST 灯、オフセットの線を捕まえて XAC の角を 0.14 nm 以内で回り、SPENS の横（経路の終わり）の手前で END OF OFFSET、DIRECT TO SPENS で OFST 灯が消え、RTE の OFFSET はダッシュ、SPENS へ直行。CDU と ND の写真：RTE の OFFSET R5、ND は元の経路の線で機体はその 5 nm 右）、`s86_rte_pages` 19/19、`s90_lnav` 30/30、`s89_route_sync` 26/26。Lua の誤りなし。初めの 2 回の `s93` の不合格は、シナリオの作り（LEGS を出さずに現用点を待った）と、DIRECT TO の脚にオフセットを入れられなかったこと（直した）。
+
+## 36. 段 7e1 の実装（2026-10-27：REF NAV DATA）
+
+- 段 7e は 4 つに分けて 1 つずつ入れる：7e1 REF NAV DATA、7e2 DIRECT TO の ABEAM PTS、7e3 FIX INFO、7e4 RTE 2 と RTE COPY。
+- 資料：FCOM p.1355–1357（乗員から見える挙動）、FMSPG p.170–176、ATA34_2 p.547–548（保守マニュアル）。
+- 行き方：INIT/REF INDEX の 1R の NAV DATA>（ここからだけ：FCOM p.1281）。前は X-Plane の DATABASE ページを見せていた。新しいページ `activepages/B744.fms.pages.refnavdata.lua`。
+- IDENT（1L）：ページを選ぶたびにダッシュ（FCOM p.1355；FMSPG p.171）。ウェイポイント（出発地・目的地のターミナルの点も）・航法施設・空港・目的地の滑走路（RW06R の形：FMSPG p.171；ATA34_2 p.547）。同じ識別子が 2 つ以上なら SELECT DESIRED WPT（飛行機に近い順：FCOM p.1335；FMSPG p.175–176）。ほかの入力は NOT IN DATA BASE（ATA34_2 p.547）。DELETE は INVALID DELETE（FMSPG p.171）。IDENT は CDU ごと。
+- 表示（FCOM p.1355–1356；FMSPG p.171–172；ATA34_2 p.547–548）：
+  - FREQ：航法施設だけ。VOR・DME・LOC は 117.90 の形、NDB は kHz の整数（推定）。
+  - LATITUDE・LONGITUDE：滑走路は閾値、空港は標点。
+  - MAG VAR：航法施設。VOR は局の偏差（earth_nav.dat の slaved variation）、NDB・DME 単独・LOC はそこの偏差（最寄りの VOR の値：推定。FMC の偏差の表はデータに無い）。E15・W7 の形（推定）。
+  - LENGTH：滑走路。CIFP に長さが無いので、閾値から反対側の閾値までの距離に両方の移設分を足す（推定：navdb の `runway_length`）。反対側が CIFP に無ければ空白。X-Plane のデータで RJAA 16R は 13,129 ft（実際は 4,000 m＝13,123 ft）。
+  - ELEVATION：航法施設・空港・滑走路の閾値。ウェイポイントは見出しごと空白（FMSPG p.172）。FT は小字（FCOM p.1355 の図）。LENGTH も ft で FT を小字（推定）。
+  - IDENT の下の見出し（FREQ・LATITUDE など）は点を入れたときだけ、IDENT のダッシュは 5 つ（推定）。
+- NAVAID INHIBIT（4L・4R）：VOR・VOR/DME・VORTAC・DME を 2 局。VOR ONLY INHIBIT（5L・5R）：VOR を 2 局。上書きか DELETE で前の局の抑止を外す（FCOM p.1356；FMSPG p.172–173）。同じ識別子が 2 つ以上なら、種類の合うものだけで SELECT DESIRED WPT。ほかの種類（NDB など）は INVALID ENTRY、ダッシュの DELETE は INVALID DELETE（推定）。
+- VOR/DME NAV（6R）：INHIBIT> で VOR/DME の位置の更新を抑止して ENABLE>、5L・5R に小字の ALL（VOR ONLY の入力は消える）。ENABLE> で戻り、5L・5R はダッシュ（FCOM p.1357；FMSPG p.173–174）。ALL の間の VOR ONLY の入力は INVALID ENTRY（推定）。
+- 抑止は両方の FMC のもの（どの CDU でも同じ）。`B747_fmc_nav_inhibits()` で読める。
+- 効き目と消し方は後の段：無線の位置の更新（段 10。今の FMC の位置は X-Plane の位置そのままなので、抑止は何も変えない）、飛行の終わり（段 9 の飛行段階）と長い電源断（段 11）で消すこと。資料の食い違い：ATA34_2 p.548 は VOR/DME NAV の状態が飛行の終わりと電源断を越えて残ると書き、FCOM p.1357・FMSPG p.173 は飛行の終わりで INHIBIT> に戻ると書く。乗員から見える挙動なので FCOM を採る（段 9 で入れる）。
+- 緯度と経度の表示（`toDMS`）を、分の 1/10 の切り捨てから四捨五入にした（35.3 が N35`17.9 になっていた）。POS INIT・SELECT DESIRED WPT などにも効く。
+- `B747_fmc_with_point` は候補の一覧も受ける（抑止の行は VOR・DME だけ）。シナリオの `op` に正規表現の `matches` を足した。
+- 試験：新しい `tests/fms/refnavdata_pages_test.lua`（78 件：NAV DATA>、見出しとダッシュ、DME・VOR・NDB・LOC・ウェイポイント・空港・目的地の滑走路、SELECT DESIRED WPT、NOT IN DATA BASE、INVALID DELETE、選び直してダッシュ、抑止の入力・上書き・DELETE、VOR/DME NAV、右の CDU で同じ抑止）、`navdb_test.lua`（63 件：滑走路の長さ、X-Plane のデータの RJAA 16R）。
+- X-Plane：新しい `s94_refnavdata` 38/38（成田の地上：INIT/REF INDEX の NAV DATA> で FMC の REF NAV DATA、NRE の FREQ 117.90・N35`46.9 E140`21.8・W7・153 ft、AKAGI は SELECT DESIRED WPT で近い方、目的地が無いと RW06R は NOT IN DATA BASE、RTE で RJBB を入れて選び直すと IDENT はダッシュ、RW06R の LENGTH 11,478 ft（3,500 m の滑走路）と ELEVATION 5 ft、NAVAID INHIBIT に NRE、VOR ONLY INHIBIT に XAC、INHIBIT> で小字の ALL と ENABLE>、右の CDU にも同じ抑止でそこから ENABLE>、左で DELETE。CDU の写真で配置と大字・小字を確かめた）、`s86_rte_pages` 19/19、`s85_navdb` 22/22。Lua の誤りなし。初めの `s94` の写真は操縦輪が CDU の左を隠していたので、隠して撮り直した。
