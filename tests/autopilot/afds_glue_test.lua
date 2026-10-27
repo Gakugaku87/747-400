@@ -207,11 +207,42 @@ frames()
 T.equal(rt:get(VS_STATUS), 2, "V/S")
 T.equal(rt:get(VS_DIAL), 1800, "synced to the present 1,840 fpm: 1,800 (the old switch set 0)")
 T.equal(rt:get(PITCH), 7, "the FMA's V/S")
+-- the pitch laws (step 3a): V/S flown by the new law's command (the
+-- airplane here does not answer it: the command's way only); 1,000 fpm
+-- more than flown: the command up
+local PITCH_LAW, PITCH_CMD = "laminar/B747/autopilot/pitch_law", "laminar/B747/autopilot/pitch_cmd"
+rt:set("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot", 5)
+rt:set("sim/flightmodel/position/vh_ind_fpm", 1840)
+rt:set("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot", 300)
+frames(150)
+T.equal(rt:get(PITCH_LAW), 1, "V/S: the pitch law")
+rt:set("sim/cockpit2/autopilot/vvi_dial_fpm", 2800)
+local p0 = rt:get(PITCH_CMD)
+frames(30)
+T.check(rt:get(PITCH_CMD) > p0 + 0.1, "1,000 fpm more asked: the command up")
+rt:set("sim/cockpit2/autopilot/vvi_dial_fpm", 1800)
 rt:command(CMD .. "alt_hold_mode")
 frames()
 T.equal(rt:get(ALT_STATUS), 2, "ALT HOLD")
 T.near(rt:get("laminar/B747/autopilot/altitude_hold_ft"), 12000, 0.5, "at the altitude then")
 T.equal(rt:get(PITCH), 9, "the FMA's ALT")
+T.equal(rt:get(PITCH_LAW), 1, "ALT: the pitch law")
+-- the capture by the 0.05 g level-off and 10 s (step 3a; before, the old
+-- window): V/S at 2,000 fpm 700 ft below the MCP altitude 12,700 is not
+-- yet, 600 ft below it is (678 ft)
+rt:command(CMD .. "vs_mode")
+frames()
+rt:set("laminar/B747/autopilot/altitude_dial_ft", 12700)
+rt:set("sim/flightmodel/position/vh_ind_fpm", 2000)
+frames(3)
+T.equal(rt:get(PITCH), 7, "700 ft below at 2,000 fpm: V/S")
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 12100)
+frames()
+T.equal(rt:get(PITCH), 9, "600 ft below: ALT, the capture")
+T.near(rt:get("laminar/B747/autopilot/altitude_hold_ft"), 12700, 0.5, "to the MCP altitude")
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 12000)
+rt:set("laminar/B747/autopilot/altitude_dial_ft", 20000)
+rt:set("sim/flightmodel/position/vh_ind_fpm", 0)
 rt:command(CMD .. "vs_mode")
 frames()
 T.equal(rt:get(VS_DIAL), 0, "V/S after ALT: 000 (ATA22 p.282)")
@@ -336,9 +367,11 @@ T.check(rt:get(NAV) == 2 and rt:get(NAV_ACT) == 2, "0.8 dot: LOC captured (the o
 T.equal(rt:get(ROLL), 3, "the FMA's LOC")
 T.equal(rt:get("laminar/B747/autopilot/heading/degrees"), 336, "the MCP's heading to the course at LOC's capture")
 -- LOC's law: right of the beam closing from the right at 26 degrees,
--- rolling right to come onto the course
+-- rolling right to come onto the course (from the command it had: the
+-- airplane here does not answer it)
+local r0 = rt:get("laminar/B747/autopilot/roll_cmd")
 frames(60)
-T.check(rt:get("laminar/B747/autopilot/roll_law") == 1 and rt:get("laminar/B747/autopilot/roll_cmd") > 3,
+T.check(rt:get("laminar/B747/autopilot/roll_law") == 1 and rt:get("laminar/B747/autopilot/roll_cmd") > r0 + 3,
     "LOC's law: rolling right onto the course (not X-Plane's HDG SEL)")
 -- G/S captured under 1.5 dots
 ils(true, true)

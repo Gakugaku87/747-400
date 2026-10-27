@@ -583,6 +583,30 @@ B747DR_ap_roll_cmd = find_dataref("laminar/B747/autopilot/roll_cmd")
 B747DR_ap_roll_law = find_dataref("laminar/B747/autopilot/roll_law")
 B747DR_ap_roll_valid = find_dataref("laminar/B747/autopilot/roll_valid")
 simDR_afds_tas = find_dataref("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot")
+-- the pitch laws (step 3a; notes/ATA-22.md §18): the command the A/P flies
+-- (the hydraulics module's servo law reads it) and the F/Ds show; without
+-- a law there (FLCH, the old VNAV's speed, TO/GA, G/S, FLARE) the old law
+dofile("B747.70.afds_pitch_model.lua")
+local afdsPitch = B747_afds_pitch_model.new()
+local afdsPitchIn = B747_afds_pitch_model.inputs()
+B747DR_ap_pitch_cmd = find_dataref("laminar/B747/autopilot/pitch_cmd")
+B747DR_ap_pitch_law = find_dataref("laminar/B747/autopilot/pitch_law")
+simDR_afds_pitch = find_dataref("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot")
+simDR_afds_vs = find_dataref("sim/flightmodel/position/vh_ind_fpm")
+-- the pitch laws' inputs: the attitude, the inertial vertical speed (ATA22
+-- p.344), the TAS, the altitude, the MCP's V/S, the old VNAV's law by its
+-- flags and its targets
+local function afds_pitch_inputs(p)
+	p.pitch = simDR_afds_pitch
+	p.vs = simDR_afds_vs
+	p.tas = simDR_afds_tas
+	p.alt = simDR_pressureAlt1
+	p.vs_sel = simDR_autopilot_vs_fpm
+	p.vnav_law = (simDR_autopilot_alt_hold_status == 2 and "ALT") or (simDR_autopilot_vs_status == 2 and "VS")
+		or (simDR_autopilot_flch_status == 2 and "FLCH") or nil
+	p.vnav_vs = simDR_autopilot_vs_fpm
+	p.vnav_alt = simDR_autopilot_hold_altitude_ft
+end
 -- the magnetic track (LOC and G/S capture within 120 and 80 degrees of the
 -- localizer course: 6-3 step 1d)
 simDR_afds_track_mag = find_dataref("sim/cockpit2/gauges/indicators/ground_track_mag_pilot")
@@ -654,15 +678,17 @@ local function afds_inp()
 		and simDR_hsi_nav1_vertical_signal == 1 and simDR_hsi_nav2_vertical_signal == 1
 	afdsIn.course_err = getHeadingDifference(simDR_radio_nav_obs_deg[0], simDR_afds_track_mag)
 	-- the pitch (step 1c): the vertical speed, the altitude, the speeds, the
-	-- old capture window (until step 3), the old VNAV (until the FMC's step
-	-- 9), the old law's mode, the old autoland's FLARE arm
+	-- MCP altitude's capture by the pitch laws (step 3a: the 0.05 g level-off;
+	-- before, the old window), the old VNAV (until the FMC's step 9), the old
+	-- law's mode, the old autoland's FLARE arm
 	afdsIn.vs = simDR_vvi_fpm_pilot
 	afdsIn.alt = simDR_pressureAlt1
 	afdsIn.ias = simDR_ind_airspeed_kts_pilot
 	afdsIn.mcp_ias = B747DR_ap_ias_dial_value
 	afdsIn.window_open = B747DR_ap_ias_mach_window_open == 1
 	afdsIn.fmc_speed = B747DR_ap_vnav_state >= 2 and simDR_autopilot_airspeed_kts or nil
-	afdsIn.capture = math.abs(simDR_pressureAlt1 - simDR_autopilot_altitude_ft) < B747DR_alt_capture_window
+	afds_pitch_inputs(afdsPitchIn)
+	afdsIn.capture = B747_afds_pitch_model.capture(afdsPitchIn, simDR_autopilot_altitude_ft)
 	afdsIn.capture_alt = simDR_autopilot_altitude_ft
 	afdsIn.old_hold_alt = simDR_autopilot_hold_altitude_ft
 	afdsIn.vnav_engaged = B747DR_ap_vnav_state >= 2
@@ -814,6 +840,19 @@ local function afds_roll_law()
 	if B747DR_ap_roll_valid ~= valid then B747DR_ap_roll_valid = valid end
 	B747DR_ap_roll_cmd = cmd or 0
 end
+-- the pitch law (step 3a), each frame after the roll law
+local function afds_pitch_law()
+	local p = afdsPitchIn
+	p.mode = afds.pitch
+	p.active = afdsRollIn.active
+	p.ground = simDR_onGround == 1
+	p.hold_alt = afds.hold_alt
+	afds_pitch_inputs(p)
+	local cmd = B747_afds_pitch_model.update(afdsPitch, p, SIM_PERIOD)
+	local law = cmd and 1 or 0
+	if B747DR_ap_pitch_law ~= law then B747DR_ap_pitch_law = law end
+	B747DR_ap_pitch_cmd = cmd or 0
+end
 -- the roll switches (step 1b)
 function B747_afds_hdg_sel()
 	B747_afds_model.hdg_sel(afds, afds_inp())
@@ -948,11 +987,13 @@ function B747_afds_update()
 	afds_apply(B747_afds_model.update(afds, inp))
 	afds_sync()
 	afds_roll_law()
+	afds_pitch_law()
 end
 -- a new flight: the FCCs anew
 function B747_afds_reset()
 	afds = B747_afds_model.new()
 	afdsRoll = B747_afds_roll_model.new()
+	afdsPitch = B747_afds_pitch_model.new()
 end
 function autothrottle_reengage()
 	if B747DR_autothrottle_active == 0 and isATEnabled() and simDR_onGround == 0 then

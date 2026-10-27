@@ -290,3 +290,8 @@ B747DR_ap_toga_pushes = deferred_dataref("laminar/B747/autopilot/toga_pushes", "
 B747DR_ap_roll_cmd = deferred_dataref("laminar/B747/autopilot/roll_cmd", "number")
 B747DR_ap_roll_law = deferred_dataref("laminar/B747/autopilot/roll_law", "number")
 B747DR_ap_roll_valid = deferred_dataref("laminar/B747/autopilot/roll_valid", "number")
+-- the pitch laws (6-3 step 3a): the command (degrees of pitch) the A/P
+-- flies and the F/Ds show, and whether a law of the new model gives it (0:
+-- the old law)
+B747DR_ap_pitch_cmd = deferred_dataref("laminar/B747/autopilot/pitch_cmd", "number")
+B747DR_ap_pitch_law = deferred_dataref("laminar/B747/autopilot/pitch_law", "number")

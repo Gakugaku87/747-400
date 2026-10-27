@@ -11,6 +11,10 @@ B747DR_ap_AFDS_mode_box_status_copilot =find_dataref("laminar/B747/autopilot/AFD
 -- B747.70.afds_roll_model.lua): the bank to fly when roll_law is 1
 B747DR_ap_roll_cmd = find_dataref("laminar/B747/autopilot/roll_cmd")
 B747DR_ap_roll_law = find_dataref("laminar/B747/autopilot/roll_law")
+-- the pitch laws' command (6-3 step 3a, B747.70.afds_pitch_model.lua): the
+-- attitude to fly when pitch_law is 1
+B747DR_ap_pitch_cmd = find_dataref("laminar/B747/autopilot/pitch_cmd")
+B747DR_ap_pitch_law = find_dataref("laminar/B747/autopilot/pitch_law")
  local lastUp=0
  local lastDown=0
 local pitchRecord={}
@@ -542,8 +546,27 @@ pitchPid.target=0
 pitchPid.input = 0
 pitchPid:compute()
 
+-- the old law's state on the new law's command (6-3 step 3a): its last
+-- command and its 10 samples, so that it goes on from there (FLCH after ALT)
+local function ap_director_pitch_sync(p)
+    last_simDR_AHARS_pitch_heading_deg_pilot=p
+    lastRetVal=p
+    for i=1,10,1 do director_pitchRecord[i]=p end
+    current_pitch_intregal=10*p
+end
+
+-- the pitch command: the pitch laws' (6-3 step 3a: V/S, ALT and its
+-- capture, the old VNAV's V/S and altitude), else the old one (FLCH, the
+-- old VNAV's speed, TO/GA, G/S, FLARE until steps 3b, 3c and 4)
 function ap_pitch_assist(doCompute)
-    local flight_director_pitch=ap_director_pitch_integral()
+    local flight_director_pitch
+    if B747DR_ap_pitch_law==1 then
+        flight_director_pitch=B747DR_ap_pitch_cmd
+        B747DR_flight_director_pitch=flight_director_pitch
+        ap_director_pitch_sync(flight_director_pitch)
+    else
+        flight_director_pitch=ap_director_pitch_integral()
+    end
     local target=0
     local retval=B747DR_sim_pitch_ratio--B747_interpolate_value(B747DR_sim_pitch_ratio,0,-1,1,20)
     local refreshsimDR_electric_trim=simDR_electric_trim

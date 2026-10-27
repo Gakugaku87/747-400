@@ -29,7 +29,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記。段 5d：PFD の TCAS RA・トランスポンダのコード・ND の WXR の文字） | FMC の位置への GPS の更新、GPWS の地形の look-ahead、PWS、無線の自動同調（FMC の作り直しで） |
 | FMC | 作り直し中（段取り：経路を自前で持ち、12 段で。notes/ATA-34-61-FMC.md §10。段 1：小修正、段 4：航法データベース、段 5a〜5e：経路のモデル、RTE・LEGS・DEP/ARR、現用点と X-Plane の FMS。段 6a〜6d：経路の形と LNAV、ND の線。段 7a〜7d：ホールド、オフセット。段 7e1〜7f：REF NAV DATA、ABEAM PTS、自分で作る点、FIX INFO、RTE 2、procedure turn の形（推定）） | ND の fly-by の旋回の曲線とオフセットの線、FIX INFO の円と方位線、PLAN の CTR と STEP、VNAV（X-Plane の FMS に流した経路を飛ぶ）、予測 |
 | CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み、段 3：地上準備のページ、段 4：航法データベース、段 5：経路（RTE・LEGS・DEP/ARR）、段 7：HOLD・OFFSET・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO） | 3 台が 1 つを共有（RTE 2 など）、性能のページの MOD/EXEC、入力の検査、データリンク |
-| 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）。LNAV のロールは FMC の指令：6-1 段 6c） | VNAV のサブモードは前の VNAV、G/S の捕捉の判定、G/S・TO/GA のピッチ・autoland の則 |
+| 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）、段 3a：ピッチの則のうち V/S・ALT とその捕捉。LNAV のロールは FMC の指令：6-1 段 6c） | VNAV のサブモードは前の VNAV、G/S の捕捉の判定、速度を昇降舵で保つ則（FLCH・TO/GA）・G/S・autoland の則 |
 | オートスロットル・推力管理 | 未着手 | 推力制限のモード、assumed temperature、THR・HOLD、操縦者の override |
 | 通信（ATA 23） | 未着手 | VHF の電源、ACP の連動、VHF C と HF が無い |
 | 照明（ATA 33） | 未着手（P5 の灯の入力は各系統で移し中） | 外部灯の電源、非常灯、毎フレームの完全 GC |
@@ -403,7 +403,10 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 実機に合わせた点（段 2）：CLR は 1 字、押し続けると全部、DEL は空のときだけ、+/- は交互、メッセージの間は打鍵を受けない。入力のメッセージはその CDU だけ、FMC のメッセージは全 CDU に出てどれかの CLR で全部から消え、条件が続く間は再び出ない。alert で >FMC MESSAGE。ページはすぐ切り替わる。NEXT は最後のページから 1 ページ目へ。CDU の電源が無いとキーが効かず、戻ると MENU。
 - 実機に合わせた点（段 1）：CRZ CG の範囲（前は文字で描画が止まった）、APPROACH REF の FLAP/SPEED の入力の形と複写・削除、EMERGENCY REPORT の DIVERT TO は経路を書き換えない、SPD TRANS は削除だけ、速度の入力は CAS 100–400。
 
-### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a〜1e・2a・2b）
+### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a〜1e・2a・2b・3a）
+
+- 実機に合わせた点（段 3a、2026-10-28）：V/S・ALT のピッチの指令を新しいモデルが出す（前は「ピッチの目標を少しずつ増減する」則を 10 点の平均で遅らせていた）。V/S は MCP の昇降率と慣性の昇降率の差で飛び、000 はその時の高度を保つ（前は 000 でも V/S の則）。MCP 高度の捕捉は 0.05 g の引き起こしで（前は昇降率に比例する 200〜1,000 ft の窓と「差 × 2 fpm」で、10,000 ft より上では約 500 ft 行き過ぎた）、捕捉の始まりは引き起こしの距離から決まる。ALT HOLD は押した時の高度へ 0.05 g で戻る。前の VNAV の V/S と高度も同じ則（ATA22 p.282、p.286、p.344、p.346）。
+  - 残り（推定）：経路角の差からの指令の速さ、0.05 g を全モードに、慣性の上下加速度の先読み、高度の先取り、捕捉の前倒し（X-Plane の機体の遅れに合わせた。2,000 fpm で約 700 ft 手前から捕捉する）。速度を昇降舵で保つ則（FLCH・TO/GA・VNAV SPD）と速度の保護は段 3b、G/S は段 3c。
 
 - 実機に合わせた点（段 2b、2026-10-27）：LOC の捕捉と追従を新しいモデルが行う。捕捉は対地速度・進入角・偏位で決まり、ビームへ寄っていて、コースへ回るのに要る距離まで来たときか、偏位が小さいとき（前は両受信機に信号があるだけで、遠くでもいっぱいに振れていても捕まえた）。追従は、偏位を電波高度から推定した局までの距離で直線にし、滑走路を横切る速度で補う慣性の経路でビームに乗る（前は X-Plane の HDG SEL に、偏位と局の方位から決めた方位を渡していた）。信号を失っても経路を保つ。コースに乗ったら（LOC TRACK）バンクを 15° までにする。5 ft 未満と地上では翼水平（ATA22 p.290、p.348、p.358；FCOM p.650–651）。
   - 残り（推定）：捕捉のバンク・lead・偏位の帯、先読み、慣性の経路の混ぜ方、LOC TRACK の条件とバンクの制限。局までの距離は電波高度からの推定なので、遠くで低いと短く出て、捕捉は早め・寄せ方はゆっくりになる（資料どおりの推定のしかた）。X-Plane の LOC の目盛（1 ドット ＝ 1.41°）は測った値。FCC ごとの ILS の受信機は使い分けていない（NAV1 の偏位）。ROLLOUT は段 4。
@@ -418,7 +421,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - 残り：G/S の捕捉の判定と追従の則は段 3（LOC は段 2b で済）、APP での他の A/P の arm は段 4（前のコードは APP を押すと 1,500 ft より上でもすぐに入れる）。RR の G/S は PW と同じ（推定）。
 
 - 実機に合わせた点（段 1c、2026-10-27）：ピッチのモード（V/S・ALT・FLCH・VNAV）を新しいモデルが持つ。V/S は押すと今の昇降率に合わせる（前は 0。前のモードが ALT か TO/GA で降下中なら 000）。TO/GA からの FLCH は今の速度と選んだ速度の大きい方。VNAV は arm の間は今のモードのまま（前は ALT HOLD になった）、arm 中の 2 回目でだけ disarm し、engage 中に押しても外れない（前は外れた）、TO/GA で終わる（前は残った）。SPD は VNAV・FLCH SPD・TO/GA の間は効かない（前は V/S に落ちた）。FLCH で MCP 高度への道から 8,000 ft 離れると ALT HOLD（測り始めは推定）。V/S・ALT HOLD・FLCH を押してもロールの TO/GA は残る（前は消えた）。MCP の V/S・ALT HOLD・FLCH・SPD の灯は VNAV の arm の間も点いたまま（前は消えた）。経路が無くて VNAV が外れるときに、FCOM に無い DESTINATION NOT SET を出さない（前は空の経路で Lua の誤りが続き、取り消しにも届かなかった）。
-  - 残り：VNAV のサブモードと engage の判定は前の VNAV（FMC の段 9）、経路が無いと VNAV は外れる（前の VNAV が動けないため）。V/S 000 の内部の ALT HOLD（段 3）、速度を昇降舵で保つ間に A/T が SPD に変わったときの V/S（6-4）。
+  - 残り：VNAV のサブモードと engage の判定は前の VNAV（FMC の段 9）、経路が無いと VNAV は外れる（前の VNAV が動けないため）。（V/S 000 の内部の ALT HOLD は段 3a で済）、速度を昇降舵で保つ間に A/T が SPD に変わったときの V/S（6-4）。
 
 - 実機に合わせた点（段 1b、2026-10-27）：ロールのモード（HDG SEL・HDG HOLD・ATT・LNAV）を新しいモデルが持つ。HDG HOLD は押すとすぐ表示し、ロールが 3° 未満で 2 秒続いた時の方位を保つ（前は X-Plane の heading hold）。ATT は次のロールのモードまで。LNAV は arm 中の 2 回目でだけ disarm し、engage 中に押しても外れない（前は外れた）、HDG SEL を押しても arm が残る（前は消えた）、経路が無くても外れない（前は外れて CDU に、FCOM に無い DESTINATION NOT SET を出した）。LOC と G/S の捕捉後と G/A の 400 ft 未満は HDG SEL・HDG HOLD を受け付けない（前は X-Plane の heading hold がそのまま入った）。MCP の HDG HOLD の灯は ATT でも点く。
   - 残り：（HDG SEL・HDG HOLD の旋回とバンクの制限は段 2a で新しいロールの則に）。
@@ -426,7 +429,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 実機に合わせた点（段 1a、2026-10-27）：A/P は CMD を押したときに engage する（地上でも。前は 400 ft より上だけ、C と R は離したとき）。2 台目は engage しない。そのチャンネルのサーボの油圧が無いと engage せず、失うと外れる。AUTOPILOT DISC は解除のたび（手でも自動でも）に出て、再 engage か、A/P の無いときに操縦輪のスイッチを押すと消える（前は解除バーを上げても消えた）。F/D の最初の ON は、空中で V/S（今の昇降率に合わせる）と HDG HOLD、5° を超えるバンクなら ATT（PW と RR。GE は HDG HOLD）、地上で TO/GA。A/P を F/D OFF で入れると V/S と HDG HOLD・ATT、F/D が地上の T/O なら HDG HOLD と V/S（前はモードが入らず FMA が空白）。A/P が無く F/D が両方 OFF になると全モードを消す（前は X-Plane の HDG のモードの解除が送られていなかった）。MCP の IAS の初期値は 200（前は 100）。
   - 残り（推定）：engage に要る油圧は 1000 psi（前のコードの解除の値）、RR の ATT は PW と同じ。
 - G/S の捕捉の判定が前の簡単な検出（AFDS-02 の残り：段 3）。TO/GA のピッチの則（AFDS-03）。autoland の flare・rollout（AFDS-04）。複数チャンネル（AFDS-05）。
-- ピッチの制御則、速度の保護と自動反転（AFDS-10・11）。
+- 速度を昇降舵で保つピッチの則と G/S の則、速度の保護と自動反転（AFDS-10・11 の残り：段 3b・3c）。
 - AUTOPILOT caution、NO LAND 3・NO AUTOLAND が出ない（AFDS-12・13）。作動のインターロックのうち電源・センサー・操縦輪の 25°・override（AFDS-15 の残り）と電源（AFDS-16）。AUTOPILOT DISC の音が型式によらない（AFDS-14 の残り）。
 - ヨーダンパーの則、A/P 中のトリム（AFDS-17・19・20）。
 - 空中開始では FMS が F/D L・A/T・ALT HOLD・CMD L を入れる（試験のための初期化。段 1a から ALT HOLD は F/D の既定のモードの 1 秒後、飛行の開始のたびに、何度走っても同じ）。前は機体の読み込み方で動きが変わった。
