@@ -16,8 +16,9 @@
 -- ALT HOLD, the capture, FLCH (its speed), VNAV (arm, second push, the old
 -- VNAV's engage and end), the transitions, the SPD switch, the FMA's pitch.
 -- 1d: the approach modes LOC, G/S and APP (arms, second pushes, the mutual
--- disarms with LNAV and VNAV, captures within 120 and 80 degrees, 405 and
--- 570, deselects, TO/GA, the A/P's engage with LOC and G/S engaged).
+-- disarms with LNAV and VNAV, captures within 120 and 80 degrees, either
+-- first (the 109, the 570) or after LOC (a 405), deselects, TO/GA, the
+-- A/P's engage with LOC and G/S engaged).
 -- 1e: TO/GA (T/O's latches and resets, G/A's conditions, after the
 -- takeoff only G/A's roll from 50 ft, the switches' inhibit after a
 -- touchdown, the captures above 800 ft, LNAV from G/A, the F/Ds shown with
@@ -36,7 +37,8 @@ local function inp(o)
         ias = o.ias or 250, mcp_ias = o.mcp_ias or 250, fmc_speed = o.fmc_speed, capture = o.capture or false,
         capture_alt = o.capture_alt, vnav_engaged = o.vnav_engaged or false, vnav_fma = o.vnav_fma,
         old_law = o.old_law, old_armed_pitch = o.old_armed_pitch, old_hold_alt = o.old_hold_alt,
-        loc_detect = o.loc_detect, gs_detect = o.gs_detect, course_err = o.course_err}
+        loc_detect = o.loc_detect, gs_detect = o.gs_detect, course_err = o.course_err,
+        gs_after_loc = o.gs_after_loc}
 end
 
 -- engage with both F/Ds OFF: V/S and HDG HOLD (FCOM p.640; ATA22 p.266)
@@ -495,10 +497,19 @@ A.vnav(b, inp())
 T.check(b.vnav_arm and not b.loc_arm and not b.gs_arm, "VNAV's arm disarms APP")
 A.app(b, inp())
 T.check(not b.vnav_arm, "APP ends VNAV's arm")
--- G/S: the 405 (PW) captures only with LOC engaged, the 570 (GE) either
--- first, within 80 degrees
-A.update(b, inp({fdL = true, gs_detect = true, course_err = 20}))
-T.check(b.gs_arm and b.pitch == "ALT", "PW: no G/S before LOC")
+-- G/S: the 109 (PW) and the 570 (GE) capture it either first (FCOM
+-- p.669), within 80 degrees; a 405 only with LOC engaged (p.670: an input
+-- no airplane sets)
+local b4 = A.new()
+for k, v in pairs(b) do b4[k] = v end
+A.update(b4, inp({fdL = true, gs_detect = true, course_err = 20, gs_after_loc = true}))
+T.check(b4.gs_arm and b4.pitch == "ALT", "a 405: no G/S before LOC")
+local gp = A.new()
+A.update(gp, inp({fdL = true}))
+A.alt_hold(gp, inp({alt = 3000}))
+A.app(gp, inp())
+A.update(gp, inp({fdL = true, gs_detect = true, course_err = 20}))
+T.check(gp.pitch == "GS" and gp.loc_arm, "PW (the 109): G/S first, LOC still armed")
 local g = A.new()
 A.update(g, inp({fdL = true, engine = 1}))
 A.alt_hold(g, inp({alt = 3000, engine = 1}))

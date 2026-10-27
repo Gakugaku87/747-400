@@ -6,10 +6,11 @@
 -- wind arrow (FCOM p.1109-1110, p.1141-1143, p.1033-1034); the VOR mode's
 -- reference VOR (step 5b: ATA34_1 p.356-369); the bearing pointers and the
 -- lower corner blocks (step 5b: FCOM p.1034, p.1038-1040, p.1144-1146).
--- The airplane: the 570 (GE) is track up in MAP as the 109 (the checks
--- below), the 405 (PW; RR as PW) heading up in all modes with HDG in the
--- box (the last block: FCOM p.1109, p.1141, p.1033; the user's choice of
--- the 405, 2026-10-27).
+-- The airplanes built, the 109 (PW; RR as PW) and the 570 (GE), are both
+-- track up in MAP (the model's default, the checks below; the user's
+-- choice, 2026-10-27); the last block checks the model's 405 (`track_map`
+-- false: heading up in all modes with HDG in the box, FCOM p.1109, p.1141,
+-- p.1033), which no airplane uses.
 local T = dofile("tests/lib/check.lua")("nd_model")
 local M = dofile("plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/B747.60.nd_model.lua")
 
@@ -20,7 +21,6 @@ local function run(seconds)
 end
 
 s, inp = M.new(), M.inputs()
-inp.track_map = true    -- the 570 (GE)
 local c, f = inp.side[M.CAPT], inp.side[M.FO]
 c.hdg, c.trk, f.hdg, f.trk = 100, 106, 101, 107
 c.mode, f.mode = M.MAP, M.VOR
@@ -174,7 +174,6 @@ T.equal(oc.vor_dme, 0, "no DME: dashes")
 -- the bearing pointers (step 5b): VOR L on the left switch, ADF R on the right
 -- (and the POS switch below), on the 570's track up MAP
 s, inp = M.new(), M.inputs()
-inp.track_map = true
 c = inp.side[M.CAPT]
 c.mode, c.hdg, c.trk = M.MAP, 100, 110
 c.sw[1], c.sw[2] = M.SW_VOR, M.SW_ADF
@@ -280,9 +279,10 @@ run()
 T.equal(oc.pos_rad_radial[1], 360, "the radial 360, not 0")
 T.check(not of.pos_iru[1] and not of.pos_rad[1], "the F/O's POS off: none")
 
--- the 405 (PW; RR as PW): heading up in all modes, HDG in the box and the
--- HDG flag (FCOM p.1109, p.1141, p.1033)
+-- the model's 405 (no airplane uses it): heading up in all modes, HDG in
+-- the box and the HDG flag (FCOM p.1109, p.1141, p.1033)
 s, inp = M.new(), M.inputs()
+inp.track_map = false
 c = inp.side[M.CAPT]
 c.hdg, c.trk, c.mode = 100, 106, M.MAP
 run()

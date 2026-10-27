@@ -273,16 +273,15 @@ function getHeadingDifference(desireddirection,current_heading)
 end
 
 -- a true bearing on that side's ND, from the display's top as nd_up orients
--- it (step 5a): that side's heading (the 405's MAP, VOR, APP) or track (the
--- 570's MAP) made true with the variation; PLN north up as before. The map
--- symbols every 0.2 s (makeIcon) and every frame (updateIcon: before, the
--- Captain's track in MAP for both sides and the true heading in the other
--- modes) and the airports (step 5c)
--- the airplane: the 570 (GE, engines/type 1) has MAP track up, the 405
--- (PW; RR as PW: an estimate) heading up (FCOM p.1109; the user's choice
--- of the 405, 2026-10-27)
-simDR_nd_engine_type = find_dataref("laminar/B747/engines/type")
-local function nd_track_map() return simDR_nd_engine_type == 1 end
+-- it (step 5a): that side's track (MAP) or heading (VOR, APP) made true with
+-- the variation; PLN north up as before. The map symbols every 0.2 s
+-- (makeIcon) and every frame (updateIcon: before, the Captain's track in
+-- MAP for both sides and the true heading in the other modes) and the
+-- airports (step 5c)
+-- the airplanes built, the 109 (PW; RR as PW) and the 570 (GE), are both
+-- MAP track up (FCOM p.1109; the user's choice, 2026-10-27); a 405 would be
+-- heading up (false here)
+local function nd_track_map() return true end
 local function nd_bearing(isCapt,abs_heading)
   local mode, trk, hdg = B747DR_nd_mode_capt, simDR_ground_track, simDR_heading_track
   if not isCapt then
@@ -295,8 +294,8 @@ local function nd_bearing(isCapt,abs_heading)
 end
 
 -- each ND's top (5-2 step 5a; the rule of B747.60.nd_model.lua's
--- orientation, FCOM p.1109-1110): MAP that side's heading on the 405, its
--- track on the 570; VOR and APP its heading, PLN north
+-- orientation, FCOM p.1109-1110): MAP that side's track (the 109 and the
+-- 570; a 405's heading); VOR and APP its heading, PLN north
 function nd_up(mode,hdg,trk)
   if mode==2 and nd_track_map() then return trk end
   if mode==3 then return 0 end

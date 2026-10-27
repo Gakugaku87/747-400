@@ -334,9 +334,6 @@ B747DR_dsp_hdg_sel              = find_dataref("laminar/B747/autopilot/heading/d
 B747DR_dsp_nd_rose_capt         = find_dataref("laminar/B747/nd/capt/rose")
 B747DR_dsp_nd_box_capt          = find_dataref("laminar/B747/nd/capt/box")
 B747DR_dsp_nd_box_fo            = find_dataref("laminar/B747/nd/fo/box")
--- the airplane (0 PW, 1 GE, 2 RR): the 570 (GE) has MAP track up, the 405
--- (PW; RR as PW, an estimate) heading up (the user's choice of the 405)
-B747DR_dsp_engine_type          = find_dataref("laminar/B747/engines/type")
 B747DR_dsp_nd_trk_flag_capt     = find_dataref("laminar/B747/nd/capt/trk_flag")
 B747DR_dsp_nd_hdg_flag_capt     = find_dataref("laminar/B747/nd/capt/hdg_flag")
 B747DR_dsp_nd_map_flag_capt     = find_dataref("laminar/B747/nd/capt/map_flag")
@@ -712,7 +709,6 @@ local function nd_sources(c, f, nav_valid)
     inp.wind_from = HR.heading(simDR_dsp_wind_from, hr_mag_diff, hr_ref)
     inp.hdg_sel = B747DR_dsp_hdg_sel
     inp.roll_mode = B747DR_dsp_fma_roll
-    inp.track_map = B747DR_dsp_engine_type == 1
     -- the trend vector (step 5e): the ground speed and each side's bank
     inp.gs_kt = simDR_dsp_gs * 3600 / 1852
     inp.side[NM.CAPT].roll_deg, inp.side[NM.FO].roll_deg = simDR_dsp_roll_pilot, simDR_dsp_roll_copilot
