@@ -1,5 +1,5 @@
 -- Run from the repository root with LuaJIT: luajit tests/autopilot/afds_model_test.lua
--- The FCCs' mode logic, steps 1a-1c (6-3: docs/overhaul/notes/ATA-22.md
+-- The FCCs' mode logic, steps 1a-1d (6-3: docs/overhaul/notes/ATA-22.md
 -- §10): plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.afds_model.lua.
 -- 1a: the A/P's engage (CMD: the bar, the other channels, the servos'
 -- hydraulics; on the ground too) and disengage (the bar, the control wheel
@@ -13,6 +13,9 @@
 -- 1c: the pitch modes V/S (synced: 000 after ALT and TO/GA descending),
 -- ALT HOLD, the capture, FLCH (its speed), VNAV (arm, second push, the old
 -- VNAV's engage and end), the transitions, the SPD switch, the FMA's pitch.
+-- 1d: the approach modes LOC, G/S and APP (arms, second pushes, the mutual
+-- disarms with LNAV and VNAV, captures within 120 and 80 degrees, 405 and
+-- 570, deselects, TO/GA, the A/P's engage with LOC and G/S engaged).
 local T = dofile("tests/lib/check.lua")("afds_model")
 local A = dofile("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.afds_model.lua")
 
@@ -26,7 +29,8 @@ local function inp(o)
         vs = o.vs or 0, alt = o.alt or 10000, old_pitch = o.old_pitch, window_open = o.window_open,
         ias = o.ias or 250, mcp_ias = o.mcp_ias or 250, fmc_speed = o.fmc_speed, capture = o.capture or false,
         capture_alt = o.capture_alt, vnav_engaged = o.vnav_engaged or false, vnav_fma = o.vnav_fma,
-        old_law = o.old_law, old_armed_pitch = o.old_armed_pitch, old_hold_alt = o.old_hold_alt}
+        old_law = o.old_law, old_armed_pitch = o.old_armed_pitch, old_hold_alt = o.old_hold_alt,
+        loc_detect = o.loc_detect, gs_detect = o.gs_detect, course_err = o.course_err}
 end
 
 -- engage with both F/Ds OFF: V/S and HDG HOLD (FCOM p.640; ATA22 p.266)
@@ -206,20 +210,25 @@ T.check(l.roll == "LNAV" and not l.lnav_arm, "a push while active: nothing (the 
 A.hdg_hold(l, inp({fdL = true}))
 T.check(l.roll == "HDG_HOLD", "HDG HOLD deactivates LNAV")
 
--- the old LOC (until step 1d): LNAV not armed while it is engaged, its
--- capture ends LNAV; HDG SEL from it only before G/S is active (table
--- p.351)
+-- LOC (1d): its request ends LNAV's arm (ATA22 p.354), its capture LNAV;
+-- LNAV not armed while it is engaged; HDG SEL from it only before G/S is
+-- active (table p.351)
 local c = A.new()
 A.update(c, inp({fdL = true}))
-A.lnav(c, inp({fdL = true, old_roll = "LOC"}))
-T.check(not c.lnav_arm, "LNAV not armed with LOC engaged")
 A.lnav(c, inp({fdL = true}))
-A.loc_captured(c)
-T.check(not c.lnav_arm and not c.roll, "the LOC's capture: LNAV's arm gone, the roll the old code's")
-T.equal(select(1, A.roll_fma(c, inp({old_roll = "LOC"}))), 3, "the FMA's LOC (3)")
-T.equal(A.hdg_sel(c, inp({old_roll = "LOC", gs_active = true})), false, "HDG SEL with LOC and G/S active: no")
-T.equal(A.hdg_hold(c, inp({old_roll = "LOC", gs_active = true})), false, "HDG HOLD with LOC and G/S active: no")
-T.equal(A.hdg_sel(c, inp({old_roll = "LOC"})), true, "HDG SEL with LOC before G/S: yes")
+A.loc(c, inp())
+T.check(c.loc_arm and not c.lnav_arm, "the LOC request ends LNAV's arm")
+c.roll = "LNAV"
+A.update(c, inp({fdL = true, loc_detect = true, course_err = 30}))
+T.check(c.roll == "LOC" and not c.loc_arm, "LOC captured: LNAV ends")
+A.lnav(c, inp({fdL = true}))
+T.check(not c.lnav_arm, "LNAV not armed with LOC engaged")
+T.equal(select(1, A.roll_fma(c, inp())), 3, "the FMA's LOC (3)")
+c.pitch = "GS"
+T.equal(A.hdg_sel(c, inp()), false, "HDG SEL with LOC and G/S active: no")
+T.equal(A.hdg_hold(c, inp()), false, "HDG HOLD with LOC and G/S active: no")
+c.pitch = nil
+T.equal(A.hdg_sel(c, inp()), true, "HDG SEL with LOC before G/S: yes")
 -- the old TO/GA (until step 1e): G/A below 400 ft keeps its roll; above,
 -- a roll mode replaces its roll in the FMA
 local t = A.new()
@@ -238,7 +247,8 @@ A.update(t, inp({fdL = true}))
 A.update(t, inp({fdL = true, old_roll = "TOGA"}))
 T.equal(select(1, A.roll_fma(t, inp({old_roll = "TOGA"}))), 1, "TO/GA again: its roll again")
 -- the HDG REF switch in HDG SEL: HDG HOLD by default (ATA22 p.352)
-T.equal(A.hdg_hold(c, inp({old_roll = "LOC", gs_active = true}), true), true, "HDG HOLD by default: no conditions")
+c.roll, c.pitch = "LOC", "GS"
+T.equal(A.hdg_hold(c, inp(), true), true, "HDG HOLD by default: no conditions")
 
 -- 1c: the pitch modes. V/S synced to the present vertical speed (100 fpm,
 -- -8000..+6000), 000 after ALT or after TO/GA descending (ATA22 p.282)
@@ -269,8 +279,10 @@ A.update(pg, inp({fdL = true}))
 T.equal(A.vs(pg, inp({old_pitch = "TOGA", old_roll = "TOGA", ga = true, ra = 300})), nil, "V/S in G/A below 400 ft: no")
 T.equal(A.alt_hold(pg, inp({old_pitch = "TOGA", ga = true, ra = 300})), false, "ALT HOLD in G/A below 400 ft: no")
 T.equal(A.flch(pg, inp({old_pitch = "TOGA", ga = true, ra = 300})), false, "FLCH in G/A below 400 ft: no")
-T.equal(A.vs(pg, inp({old_pitch = "GS", old_roll = "LOC"})), nil, "V/S from G/S with LOC active: no")
-T.check(A.vs(pg, inp({old_pitch = "GS"})) ~= nil, "V/S from G/S before LOC: yes")
+pg.pitch, pg.roll = "GS", "LOC"
+T.equal(A.vs(pg, inp()), nil, "V/S from G/S with LOC active: no")
+pg.roll = "HDG_HOLD"
+T.check(A.vs(pg, inp()) ~= nil, "V/S from G/S before LOC: yes")
 T.equal(A.alt_hold(pg, inp({old_pitch = "FLARE"})), false, "nothing from FLARE")
 -- FLCH (FCOM p.646): the window open: as it is; blank: the FMC's target,
 -- else the present speed; from TO/GA the higher of the present and the
@@ -321,8 +333,10 @@ A.vs(pv, inp({vs = 0}))
 T.equal(pv.pitch, "VS", "V/S ends VNAV")
 local pv2 = A.new()
 A.update(pv2, inp({fdL = true}))
-A.vnav(pv2, inp({old_pitch = "GS"}))
+pv2.pitch = "GS"
+A.vnav(pv2, inp())
 T.check(not pv2.vnav_arm, "VNAV not armed with G/S active")
+pv2.pitch = "VS"
 A.vnav(pv2, inp())
 A.vs(pv2, inp({vs = 0}))
 T.check(pv2.vnav_arm, "V/S keeps VNAV's arm")
@@ -362,14 +376,15 @@ A.alt_hold(pv5, inp({alt = 9000}))
 A.vnav(pv5, inp())
 A.vnav_lost(pv5)
 T.check(not pv5.vnav_arm and pv5.pitch == "ALT", "VNAV lost: the arm ends, ALT stays")
--- the old G/S engaged ends the pitch mode and VNAV's arm (FCOM p.645)
+-- G/S captured ends the pitch mode (FCOM p.645)
 local pg2 = A.new()
 A.update(pg2, inp({fdL = true}))
 A.alt_hold(pg2, inp({alt = 3000}))
-A.vnav(pg2, inp())
-A.update(pg2, inp({fdL = true, old_pitch = "GS"}))
-T.check(not pg2.pitch and not pg2.hold_alt and not pg2.vnav_arm, "the old G/S: no pitch mode, no VNAV arm")
-T.equal(select(1, A.pitch_fma(pg2, inp({old_pitch = "GS"}))), 2, "the FMA's G/S (2)")
+A.app(pg2, inp())
+A.update(pg2, inp({fdL = true, loc_detect = true, course_err = 10}))
+A.update(pg2, inp({fdL = true, gs_detect = true, course_err = 10}))
+T.check(pg2.pitch == "GS" and not pg2.hold_alt and not pg2.vnav_arm, "G/S captured: no other pitch mode, no VNAV arm")
+T.equal(select(1, A.pitch_fma(pg2, inp())), 2, "the FMA's G/S (2)")
 -- ALT HOLD by default in FLCH 8,000 ft away from the path to the MCP
 -- altitude (ATA22 p.338), from the nearest point (an estimate)
 local pa = A.new()
@@ -410,4 +425,126 @@ A.update(pv6, inp({fdL = true}))
 A.vnav(pv6, inp({old_pitch = "TOGA", old_roll = "TOGA", ga = true, ra = 300}))
 T.check(pv6.vnav_arm, "VNAV armed in G/A below 400 ft")
 
+-- 1d: the approach modes (ATA22 p.342-343, p.356-357; FCOM p.650-652).
+-- LOC: armed, the second push disarms; LNAV's arm disarms a LOC only arm
+local a = A.new()
+A.update(a, inp({fdL = true}))
+A.loc(a, inp())
+T.check(a.loc_arm and not a.gs_arm, "LOC armed")
+local ar, aa = A.roll_fma(a, inp())
+T.check(ar == 7 and aa == 3, "the FMA: HDG HOLD, LOC armed")
+A.loc(a, inp())
+T.check(not a.loc_arm, "the second LOC push disarms")
+A.loc(a, inp())
+A.lnav(a, inp())
+T.check(a.lnav_arm and not a.loc_arm, "LNAV's arm disarms a LOC only arm")
+-- HDG SEL keeps LOC's arm (the figure p.357: FCOM's "another roll mode")
+local a2 = A.new()
+A.update(a2, inp({fdL = true}))
+A.loc(a2, inp())
+A.hdg_sel(a2, inp())
+T.check(a2.loc_arm and a2.roll == "HDG_SEL", "HDG SEL keeps LOC's arm")
+-- no LOC or APP from TO/GA (tables p.351, p.335)
+local a3 = A.new()
+A.update(a3, inp({fdL = true}))
+A.update(a3, inp({fdL = true, old_roll = "TOGA", old_pitch = "TOGA"}))
+A.loc(a3, inp({old_roll = "TOGA", old_pitch = "TOGA"}))
+A.app(a3, inp({old_roll = "TOGA", old_pitch = "TOGA"}))
+T.check(not a3.loc_arm and not a3.gs_arm, "no LOC or APP from TO/GA")
+-- the capture only with the track within 120 degrees of the course
+local a4 = A.new()
+A.update(a4, inp({fdL = true}))
+A.loc(a4, inp())
+A.update(a4, inp({fdL = true, loc_detect = true, course_err = 130}))
+T.check(a4.loc_arm and a4.roll ~= "LOC", "no capture 130 degrees off the course")
+A.update(a4, inp({fdL = true, loc_detect = true, course_err = -110}))
+T.check(a4.roll == "LOC" and not a4.loc_arm, "captured 110 degrees off")
+T.check(A.loc_engaged_now(a4) and not A.loc_engaged_now(a4), "the capture's event once (the MCP heading to the course)")
+-- APP: both armed, its second push disarms both; LOC with APP armed: a
+-- localizer approach; LNAV's or VNAV's arm disarms APP; APP ends theirs
+local b = A.new()
+A.update(b, inp({fdL = true}))
+A.alt_hold(b, inp({alt = 3000}))
+A.app(b, inp())
+T.check(b.loc_arm and b.gs_arm, "APP: LOC and G/S armed")
+local bp, ba = A.pitch_fma(b, inp())
+T.check(bp == 9 and ba == 2, "the FMA: ALT, G/S armed")
+A.app(b, inp())
+T.check(not b.loc_arm and not b.gs_arm, "the second APP push disarms both")
+A.app(b, inp())
+A.loc(b, inp())
+T.check(b.loc_arm and not b.gs_arm, "LOC with APP armed: a localizer approach")
+A.app(b, inp())
+A.lnav(b, inp())
+T.check(b.lnav_arm and not b.loc_arm and not b.gs_arm, "LNAV's arm disarms APP")
+A.app(b, inp())
+T.check(not b.lnav_arm and b.loc_arm and b.gs_arm, "APP ends LNAV's arm")
+A.vnav(b, inp())
+T.check(b.vnav_arm and not b.loc_arm and not b.gs_arm, "VNAV's arm disarms APP")
+A.app(b, inp())
+T.check(not b.vnav_arm, "APP ends VNAV's arm")
+-- G/S: the 405 (PW) captures only with LOC engaged, the 570 (GE) either
+-- first, within 80 degrees
+A.update(b, inp({fdL = true, gs_detect = true, course_err = 20}))
+T.check(b.gs_arm and b.pitch == "ALT", "PW: no G/S before LOC")
+local g = A.new()
+A.update(g, inp({fdL = true, engine = 1}))
+A.alt_hold(g, inp({alt = 3000, engine = 1}))
+A.app(g, inp({engine = 1}))
+A.update(g, inp({fdL = true, engine = 1, gs_detect = true, course_err = 20}))
+T.check(g.pitch == "GS" and g.loc_arm, "GE: G/S first, LOC still armed")
+T.equal(select(2, A.roll_fma(g, inp({engine = 1}))), 3, "the FMA: LOC armed")
+local g2 = A.new()
+A.update(g2, inp({fdL = true, engine = 1}))
+A.app(g2, inp({engine = 1}))
+A.update(g2, inp({fdL = true, engine = 1, gs_detect = true, course_err = 85}))
+T.check(g2.gs_arm and g2.pitch ~= "GS", "no G/S 85 degrees off")
+-- G/S engaged, LOC armed (570): a pitch mode other than VNAV ends LOC's arm
+-- (FCOM p.652)
+A.alt_hold(g, inp({alt = 2800, engine = 1}))
+T.check(g.pitch == "ALT" and not g.loc_arm, "ALT HOLD after G/S: LOC's arm ends")
+-- LOC engaged, G/S armed: HDG SEL ends G/S's arm (APP deselected); LOC
+-- pushed: a localizer approach
+A.update(b, inp({fdL = true, loc_detect = true, course_err = 20}))
+T.check(b.roll == "LOC" and b.gs_arm, "LOC captured, G/S armed")
+local bh = A.new()
+for k, v in pairs(b) do bh[k] = v end
+A.hdg_sel(bh, inp())
+T.check(bh.roll == "HDG_SEL" and not bh.gs_arm, "HDG SEL after LOC: G/S's arm ends")
+A.loc(b, inp())
+T.check(b.roll == "LOC" and not b.gs_arm, "LOC pushed after LOC: a localizer approach")
+-- LOC and G/S engaged: no HDG SEL, no V/S (tables); TO/GA ends them
+local c2 = A.new()
+A.update(c2, inp({fdL = true}))
+A.alt_hold(c2, inp({alt = 3000}))
+A.app(c2, inp())
+A.update(c2, inp({fdL = true, loc_detect = true, course_err = 5}))
+A.update(c2, inp({fdL = true, gs_detect = true, course_err = 5}))
+T.check(c2.roll == "LOC" and c2.pitch == "GS", "LOC and G/S engaged")
+local cp, ca = A.pitch_fma(c2, inp())
+T.check(cp == 2 and ca == 0, "the FMA: G/S, nothing armed")
+T.equal(A.hdg_sel(c2, inp()), false, "no HDG SEL after G/S")
+T.equal(A.vs(c2, inp()), nil, "no V/S after LOC")
+A.update(c2, inp({fdL = true, old_roll = "TOGA", old_pitch = "TOGA"}))
+T.check(not c2.roll and not c2.pitch and not c2.loc_arm and not c2.gs_arm, "TO/GA ends LOC and G/S")
+-- the A/P engaged with a F/D ON and LOC, G/S engaged: HDG HOLD with LOC
+-- armed, V/S with G/S armed (ATA22 p.266)
+local e = A.new()
+A.update(e, inp({fdL = true}))
+A.alt_hold(e, inp({alt = 3000}))
+A.app(e, inp({fdL = true}))
+A.update(e, inp({fdL = true, loc_detect = true, course_err = 5}))
+A.update(e, inp({fdL = true, gs_detect = true, course_err = 5}))
+local act = A.cmd(e, "L", inp({fdL = true}))
+T.check(e.roll == "HDG_HOLD" and e.loc_arm and e.pitch == "VS" and e.gs_arm, "the A/P engaged: HDG HOLD, V/S, LOC and G/S armed")
+T.check(act and act.pitch == "VS", "V/S asked for (synced)")
+-- on the ground the approach modes end
+A.update(e, inp({fdL = true, ground = true}))
+T.check(not e.loc_arm and not e.gs_arm, "on the ground: no approach")
+-- everything off clears them
+local o2 = A.new()
+A.update(o2, inp({fdL = true}))
+A.app(o2, inp())
+A.update(o2, inp())
+T.check(not o2.loc_arm and not o2.gs_arm, "everything off: no approach")
 T.done()

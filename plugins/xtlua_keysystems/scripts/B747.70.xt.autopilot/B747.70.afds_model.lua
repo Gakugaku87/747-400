@@ -1,10 +1,10 @@
 -- The FCCs' mode logic (6-3, being rebuilt in steps: the plan and sources
--- in docs/overhaul/notes/ATA-22.md §10). Steps 1a-1c: the autopilot's
+-- in docs/overhaul/notes/ATA-22.md §10). Steps 1a-1d: the autopilot's
 -- engage and disengage, AUTOPILOT DISC, the flight directors, the default
 -- modes on the first F/D ON and on the A/P's engage, everything off; the
 -- roll modes HDG SEL, HDG HOLD, ATT and LNAV; the pitch modes V/S, ALT,
--- FLCH SPD and VNAV. The approach modes (LOC, G/S) and TO/GA are still the
--- old code's (steps 1d and 1e move them here); the glue
+-- FLCH SPD and VNAV; the approach modes LOC, G/S and APP. TO/GA is still
+-- the old code's (step 1e moves it here); the glue
 -- (B747.70.xt.autopilot.lua) applies the modes asked for to it and tells
 -- the model which of those is active.
 --  - Engage (FCOM p.640; ATA22 p.302-318): a CMD switch engages its
@@ -66,8 +66,28 @@
 --    FLCH SPD and TO/GA (FCOM p.642; the old one ended VNAV and FLCH into
 --    V/S).
 --    ALT HOLD by default in FLCH 8,000 ft away from the path to the MCP
---    altitude (ATA22 p.338; from the nearest point: an estimate). The old
---    G/S engaged ends the pitch mode and VNAV's arm (until step 1d).
+--    altitude (ATA22 p.338; from the nearest point: an estimate).
+--  - The approach modes (step 1d; ATA22 p.342-343, p.356-357, p.266;
+--    FCOM p.650-652, p.669-670): LOC armed by the LOC or APP request (table
+--    p.351: from HDG HOLD, HDG SEL, LNAV and ATT, not from T/O or G/A); a
+--    LOC only arm disarmed by the second LOC push or LNAV's arm (FCOM's
+--    "selecting another roll mode": the figure p.357 has LNAV's arm only);
+--    engaged armed at its capture (the old detector until step 2) with the
+--    track within 120 degrees of the course, a latch the next roll mode
+--    resets (from LOC only before G/S is active). G/S armed by the APP
+--    request (table p.335: from V/S, ALT, FLCH, VNAV, not from T/O, G/A or
+--    FLARE), engaged armed at its capture (the old detector until step 3)
+--    within 80 degrees, the 405 (PW; RR as PW: an estimate) only with LOC
+--    engaged, the 570 (GE) either first; a latch the next pitch mode resets
+--    (from G/S only before LOC is active). APP armed (both armed) is
+--    disarmed by its second push, a LOC request (G/S's arm only: a
+--    localizer approach), LNAV's or VNAV's arm; with LOC engaged a new roll
+--    mode ends G/S's arm, with G/S engaged a new pitch mode LOC's (FCOM
+--    p.652). The LOC and APP requests end LNAV's arm (p.354), APP VNAV's
+--    (p.340). The old TO/GA ends them all (until step 1e); on the ground
+--    they end (the old code's, until step 4's rollout). The A/P engaged
+--    with a F/D ON and LOC or G/S engaged: HDG HOLD with LOC armed, V/S
+--    with G/S armed (ATA22 p.266).
 -- Pure: the switches' events and the airplane's state in; the engage
 -- state, the warning, the roll mode and the modes asked for out.
 --   local A = B747_afds_model                      -- in XTLua, after dofile
@@ -101,6 +121,10 @@ M.VS_MAX = 6000
 -- ALT HOLD by default in FLCH this far away from the path to the MCP
 -- altitude (ATA22 p.338)
 M.FLCH_AWAY = 8000
+-- LOC captures with the track within LOC_COURSE degrees of the localizer
+-- course, G/S within GS_COURSE (FCOM p.650-651; ATA22 p.356)
+M.LOC_COURSE = 120
+M.GS_COURSE = 80
 
 -- the state
 function M.new()
@@ -108,7 +132,7 @@ function M.new()
         fd = {L = false, R = false}, off = true,
         roll = nil, lnav_arm = false, hold_hdg = nil, level_t = 0, att_bank = 0, toga_roll_off = false, toga_seen = false,
         pitch = nil, vnav_arm = false, hold_alt = nil, toga_pitch_off = false, togap_seen = false,
-        flch_near = nil}, {})
+        flch_near = nil, loc_arm = false, gs_arm = false, loc_new = false}, {})
 end
 
 -- the channels engaged
@@ -155,12 +179,39 @@ local function set_pitch(s, mode, alt)
     s.flch_near = nil
     s.toga_pitch_off = true
 end
--- the pitch modes' transitions (table p.335): from the old G/S only before
--- LOC is active, from G/A only at 400 ft RA, none from FLARE
-local function pitch_enabled(inp)
+-- the pitch modes' transitions (table p.335): from G/S only before LOC is
+-- active, from G/A only at 400 ft RA, none from FLARE
+local function pitch_enabled(s, inp)
     if inp.old_pitch == "FLARE" then return false end
-    if inp.old_pitch == "GS" and inp.old_roll == "LOC" then return false end
+    if s.pitch == "GS" and s.roll == "LOC" then return false end
     return not (inp.old_pitch == "TOGA" and inp.ga and not inp.ground and (inp.ra or 0) < M.GA_RA)
+end
+-- a pitch mode replacing G/S ends LOC's arm (109/570: FCOM p.652; ATA22
+-- p.357), a roll mode replacing LOC G/S's arm (ATA22 p.343)
+local function gs_replaced(s)
+    if s.pitch == "GS" then s.loc_arm = false end
+end
+local function loc_replaced(s)
+    if s.roll == "LOC" then s.gs_arm = false end
+end
+-- into LOC (table p.351): from HDG HOLD, HDG SEL, LNAV, ATT (not in the
+-- table: as HDG HOLD, an estimate) or none; not from T/O or G/A (the old
+-- TO/GA's roll until step 1e)
+local function loc_enabled(s, inp)
+    if s.roll == "LOC" then return false end
+    return not (inp.old_roll == "TOGA" and not s.toga_roll_off)
+end
+-- into G/S (table p.335): from V/S, ALT, FLCH, VNAV or none; not from
+-- T/O, G/A or FLARE
+local function gs_enabled(s, inp)
+    if s.pitch == "GS" or inp.old_pitch == "FLARE" then return false end
+    return not (inp.old_pitch == "TOGA" and not s.toga_pitch_off)
+end
+-- the 405 captures G/S only with LOC engaged (PW, the user's choice of
+-- the 405, 2026-10-27; RR as PW: an estimate); the 570 (GE) either first
+-- (FCOM p.651, p.669-670)
+local function gs_after_loc(inp)
+    return inp.engine ~= M.ENGINE_GE
 end
 
 -- a CMD switch pushed: channel ch. `inp`: {hyd = {[1] = psi, [2], [3]},
@@ -182,7 +233,17 @@ function M.cmd(s, ch, inp)
         set_pitch(s, "VS")
         return {pitch = "VS", toga_off = true}
     end
-    return nil
+    local act
+    if s.roll == "LOC" then
+        set_roll(s, "HDG_HOLD")
+        s.loc_arm = true
+    end
+    if s.pitch == "GS" then
+        set_pitch(s, "VS")
+        s.gs_arm = true
+        act = {pitch = "VS"}
+    end
+    return act
 end
 
 -- the old approach's channels (until step 4): engaged together without
@@ -226,7 +287,8 @@ end
 -- the HDG SEL switch (`inp`: old_roll, gs_active, ground, ra): true when
 -- engaged
 function M.hdg_sel(s, inp)
-    if (inp.old_roll == "LOC" and inp.gs_active) or ga_low(inp) then return false end
+    if (s.roll == "LOC" and s.pitch == "GS") or ga_low(inp) then return false end
+    loc_replaced(s)
     set_roll(s, "HDG_SEL")
     return true
 end
@@ -234,7 +296,8 @@ end
 -- the HDG HOLD switch; `default` (the HDG REF switch moved in HDG SEL:
 -- ATA22 p.352) without the transition's conditions. True when engaged
 function M.hdg_hold(s, inp, default)
-    if not default and ((inp.old_roll == "LOC" and inp.gs_active) or ga_low(inp)) then return false end
+    if not default and ((s.roll == "LOC" and s.pitch == "GS") or ga_low(inp)) then return false end
+    loc_replaced(s)
     set_roll(s, "HDG_HOLD")
     return true
 end
@@ -243,15 +306,18 @@ end
 function M.lnav(s, inp)
     if s.lnav_arm then
         s.lnav_arm = false
-    elseif s.roll ~= "LNAV" and inp.old_roll ~= "LOC" and not ga_low(inp) then
+    elseif s.roll ~= "LNAV" and s.roll ~= "LOC" and not ga_low(inp) then
         s.lnav_arm = true
+        -- LOC's arm ends, G/S's with it (APP disarmed: ATA22 p.343, p.357)
+        if s.loc_arm then s.loc_arm, s.gs_arm = false, false end
     end
 end
 
 -- the V/S switch (`inp`: vs the present vertical speed, old_pitch, old_roll,
 -- ga, ground, ra): the target it synced, or nil when not engaged
 function M.vs(s, inp)
-    if not pitch_enabled(inp) then return nil end
+    if not pitch_enabled(s, inp) then return nil end
+    gs_replaced(s)
     local sync = 0
     if not (s.pitch == "ALT" or (inp.old_pitch == "TOGA" and not s.toga_pitch_off and (inp.vs or 0) < 0)) then
         sync = math.floor((inp.vs or 0) / 100 + 0.5) * 100
@@ -263,7 +329,8 @@ end
 
 -- the ALT HOLD switch (`inp.alt` the altitude): true when engaged
 function M.alt_hold(s, inp)
-    if not pitch_enabled(inp) then return false end
+    if not pitch_enabled(s, inp) then return false end
+    gs_replaced(s)
     set_pitch(s, "ALT", inp.alt)
     return true
 end
@@ -271,7 +338,8 @@ end
 -- the FLCH switch (`inp`: ias, mcp_ias, window_open, fmc_speed): true when
 -- engaged, and the speed to set (nil: the window's as it is)
 function M.flch(s, inp)
-    if not pitch_enabled(inp) then return false end
+    if not pitch_enabled(s, inp) then return false end
+    gs_replaced(s)
     local speed
     if inp.old_pitch == "TOGA" and not s.toga_pitch_off then
         speed = math.max(inp.ias or 0, inp.mcp_ias or 0)
@@ -287,8 +355,10 @@ end
 function M.vnav(s, inp)
     if s.vnav_arm then
         s.vnav_arm = false
-    elseif s.pitch ~= "VNAV" and inp.old_pitch ~= "GS" and inp.old_pitch ~= "FLARE" then
+    elseif s.pitch ~= "VNAV" and s.pitch ~= "GS" and inp.old_pitch ~= "FLARE" then
         s.vnav_arm = true
+        -- APP armed: disarmed (ATA22 p.343, p.357)
+        if s.loc_arm and s.gs_arm then s.loc_arm, s.gs_arm = false, false end
     end
 end
 
@@ -298,12 +368,40 @@ function M.spd_works(s, inp)
     return s.pitch ~= "VNAV" and s.pitch ~= "FLCH"
 end
 
--- the old LOC captured (until step 1d): LNAV off, its arm too (FCOM
--- p.645), the roll the old code's
-function M.loc_captured(s)
-    s.lnav_arm = false
-    s.roll = nil
-    s.hold_hdg, s.level_t = nil, 0
+-- the LOC switch: a LOC only arm, the second push disarms; with G/S armed,
+-- the LOC request ends G/S's arm (a localizer approach: FCOM p.652; ATA22
+-- p.343); else LOC armed when enabled, LNAV's arm ends (p.354)
+function M.loc(s, inp)
+    if s.loc_arm and not s.gs_arm then
+        s.loc_arm = false
+    elseif s.gs_arm then
+        s.gs_arm = false
+    elseif loc_enabled(s, inp) then
+        s.loc_arm = true
+        s.lnav_arm = false
+    end
+end
+
+-- the APP switch: APP armed (both), the second push disarms; else LOC and
+-- G/S armed (each unless engaged) when both are enabled or engaged; the
+-- arms of LNAV (p.354) and VNAV (p.340) end
+function M.app(s, inp)
+    if s.loc_arm and s.gs_arm then
+        s.loc_arm, s.gs_arm = false, false
+        return
+    end
+    if not (loc_enabled(s, inp) or s.roll == "LOC") or not (gs_enabled(s, inp) or s.pitch == "GS") then return end
+    if s.roll ~= "LOC" then s.loc_arm = true end
+    if s.pitch ~= "GS" then s.gs_arm = true end
+    s.lnav_arm, s.vnav_arm = false, false
+end
+
+-- LOC engaged since the last call (the glue sets the MCP heading to the
+-- course: ATA22 p.290)
+function M.loc_engaged_now(s)
+    local n = s.loc_new
+    s.loc_new = false
+    return n
 end
 
 -- each frame: `inp` {fd = {L, R} the switches ON, hyd, bank, engine,
@@ -320,7 +418,12 @@ function M.update(s, inp)
     dropped(s, was)
     -- the old TO/GA begun: its roll until a roll mode replaces it
     local toga = inp.old_roll == "TOGA"
-    if toga and not s.toga_seen then s.toga_roll_off = false end
+    if toga and not s.toga_seen then
+        s.toga_roll_off = false
+        if s.roll == "LOC" then s.roll = nil end
+        if s.pitch == "GS" then s.pitch = nil end
+        s.loc_arm, s.gs_arm = false, false
+    end
     s.toga_seen = toga
     -- the old TO/GA's pitch starts (until step 1e): it replaces the pitch
     -- mode, VNAV too (FCOM p.645), not VNAV's arm (ATA22 p.340)
@@ -344,6 +447,7 @@ function M.update(s, inp)
             s.off = true
             s.roll, s.lnav_arm, s.hold_hdg, s.level_t, s.att_bank = nil, false, nil, 0, 0
             s.pitch, s.vnav_arm, s.hold_alt = nil, false, nil
+            s.loc_arm, s.gs_arm = false, false
             return {all_off = true}
         end
         return nil
@@ -360,11 +464,27 @@ function M.update(s, inp)
         s.lnav_arm = false
         set_roll(s, "LNAV")
     end
-    -- the old G/S engaged (until step 1d) ends the pitch mode, VNAV's arm
-    -- with it (FCOM p.645: G/S deactivates VNAV; the arm goes with the APP
-    -- request, ATA22 p.340, still the old code's)
-    if inp.old_pitch == "GS" and (s.pitch or s.vnav_arm) then
-        s.pitch, s.hold_alt, s.vnav_arm = nil, nil, false
+    -- on the ground the approach modes end (the old code's, until step 4's
+    -- rollout)
+    if inp.ground and (s.loc_arm or s.gs_arm or s.roll == "LOC" or s.pitch == "GS") then
+        s.loc_arm, s.gs_arm = false, false
+        if s.roll == "LOC" then s.roll = nil end
+        if s.pitch == "GS" then s.pitch = nil end
+    end
+    -- LOC captured (`inp.loc_detect`: the old detector until step 2) with the
+    -- track within 120 degrees of the course (`inp.course_err`): LNAV and its
+    -- arm end (FCOM p.645)
+    local err = math.abs(inp.course_err or 180)
+    if s.loc_arm and inp.loc_detect and err < M.LOC_COURSE then
+        s.loc_arm, s.lnav_arm = false, false
+        set_roll(s, "LOC")
+        s.loc_new = true
+    end
+    -- G/S captured (`inp.gs_detect`: the old detector until step 3) within
+    -- 80 degrees, the 405 only with LOC engaged
+    if s.gs_arm and inp.gs_detect and err < M.GS_COURSE and (s.roll == "LOC" or not gs_after_loc(inp)) then
+        s.gs_arm, s.vnav_arm = false, false
+        set_pitch(s, "GS")
     end
     -- the MCP altitude captured from V/S and FLCH (the old window: `inp.capture`
     -- with `inp.capture_alt`)
@@ -402,15 +522,13 @@ function M.vnav_lost(s)
 end
 
 -- the FMA's pitch (the init's numbers): active and armed. The old code's
--- FLARE, G/S, and its TO/GA until a pitch mode replaced it, come first;
--- VNAV the old VNAV's sub-mode (`inp.vnav_fma`); the arms VNAV, else the
--- old G/S's and FLARE's (`inp.old_armed_pitch`)
+-- FLARE, and its TO/GA until a pitch mode replaced it, come first; VNAV
+-- the old VNAV's sub-mode (`inp.vnav_fma`); the arms G/S, else VNAV, else
+-- the old FLARE's (`inp.old_armed_pitch`)
 function M.pitch_fma(s, inp)
     local active = 0
     if inp.old_pitch == "FLARE" then
         active = M.PITCH_FMA.FLARE
-    elseif inp.old_pitch == "GS" then
-        active = M.PITCH_FMA.GS
     elseif inp.old_pitch == "TOGA" and not s.toga_pitch_off then
         active = M.PITCH_FMA.TOGA
     elseif s.pitch == "VNAV" then
@@ -418,23 +536,31 @@ function M.pitch_fma(s, inp)
     elseif s.pitch then
         active = M.PITCH_FMA[s.pitch]
     end
-    local armed = s.vnav_arm and M.PITCH_FMA.VNAV_SPD or (inp.old_armed_pitch or 0)
+    local armed = inp.old_armed_pitch or 0
+    if s.gs_arm then
+        armed = M.PITCH_FMA.GS
+    elseif s.vnav_arm then
+        armed = M.PITCH_FMA.VNAV_SPD
+    end
     return active, armed
 end
 
 -- the FMA's roll (the init's numbers): active and armed. The old code's
--- LOC, and its TO/GA until a roll mode replaced it, come first; the old
--- LOC's and ROLLOUT's arms after LNAV's (`inp.old_armed_roll`)
+-- TO/GA until a roll mode replaced it comes first; the arms LNAV, LOC,
+-- else the old ROLLOUT's (`inp.old_armed_roll`)
 function M.roll_fma(s, inp)
     local active = 0
-    if inp.old_roll == "LOC" then
-        active = M.ROLL_FMA.LOC
-    elseif inp.old_roll == "TOGA" and not s.toga_roll_off then
+    if inp.old_roll == "TOGA" and not s.toga_roll_off then
         active = M.ROLL_FMA.TOGA
     elseif s.roll then
         active = M.ROLL_FMA[s.roll]
     end
-    local armed = s.lnav_arm and M.ROLL_FMA.LNAV or (inp.old_armed_roll or 0)
+    local armed = inp.old_armed_roll or 0
+    if s.lnav_arm then
+        armed = M.ROLL_FMA.LNAV
+    elseif s.loc_arm then
+        armed = M.ROLL_FMA.LOC
+    end
     return active, armed
 end
 

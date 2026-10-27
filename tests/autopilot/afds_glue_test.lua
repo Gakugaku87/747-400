@@ -10,7 +10,8 @@
 -- command replaced) and its heading after 2 s;
 -- the F/D switches (their positions); everything off; the MCP's IAS 200;
 -- 1c: the pitch modes (V/S synced, ALT HOLD, FLCH, SPD, VNAV's arm and the
--- old VNAV's engage, no route).
+-- old VNAV's engage, no route); 1d: APP and LOC, the captures within the
+-- course's angles, the MCP's heading at LOC's capture, the old state.
 local T = dofile("tests/lib/check.lua")("afds_glue")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
@@ -263,4 +264,86 @@ T.equal(rt:get(PITCH), 7, "V/S stays")
 frames()
 T.equal(rt:get(VNAV_STATE), 0, "not armed again by the model")
 T.equal(rt:get(NOTIFY, 54), 0, "no DESTINATION NOT SET (the old cancel posted it)")
+-- 1d: the approach modes through the model. APP arms LOC and G/S (with no
+-- ILS too: the old one posted RW/ILS CRS ERROR, flag 40); the captures by
+-- the old detectors' conditions (both receivers' signals; G/S under 1.5
+-- dots) with the track within 120 and 80 degrees of the course (the old
+-- monitor no longer captures by itself); the MCP's heading to the course at
+-- LOC's capture (the old APP switch set it at once); the old state written
+-- (approach_mode, nav and G/S status) for the old laws, lights and autoland
+local NAV, NAV_ACT = "laminar/B747/autopilot/nav_status", "laminar/B747/autopilot/actual_nav_status"
+local GS, GS_ACT = "laminar/B747/autopilot/glideslope_status", "laminar/B747/autopilot/actual_glideslope_status"
+local APPM = "laminar/B747/autopilot/approach_mode"
+local ROLL, ROLL_ARMED = "laminar/B747/autopilot/FMA/active_roll_mode", "laminar/B747/autopilot/FMA/armed_roll_mode"
+local RI = "sim/cockpit2/radios/indicators/"
+local function ils(loc, gs)
+    rt:set(RI .. "nav1_display_horizontal", loc and 1 or 0)
+    rt:set(RI .. "nav2_display_horizontal", loc and 1 or 0)
+    rt:set(RI .. "nav1_display_vertical", gs and 1 or 0)
+    rt:set(RI .. "nav2_display_vertical", gs and 1 or 0)
+    rt:set(RI .. "nav1_flag_glideslope", gs and 0 or 1)
+    rt:set(RI .. "nav2_flag_glideslope", gs and 0 or 1)
+    rt:set(RI .. "hsi_vdef_dots_pilot", gs and 0.4 or 2.5)
+end
+ils(false, false)
+rt:set("laminar/B747/autopilot/ils_dots", 0)
+rt:set("sim/cockpit2/radios/actuators/nav_obs_deg_mag_pilot", 0, 336)
+rt:set("sim/cockpit2/gauges/indicators/ground_track_mag_pilot", 160)
+rt:set("laminar/B747/autopilot/heading/degrees", 100)
+rt:set(RA, 3000)
+rt:set(NOTIFY, 40, 0)
+rt:command(CMD .. "alt_hold_mode")
+frames()
+rt:command("laminar/B747/autopilot/approach")
+frames()
+T.equal(rt:get(NOTIFY, 40), 0, "APP with no ILS: armed, no RW/ILS CRS ERROR")
+T.equal(rt:get(APPM), 1, "the approach mode APP")
+T.check(rt:get(NAV) == 1 and rt:get(NAV_ACT) == 1, "LOC armed (the old status 1)")
+T.check(rt:get(GS) == 1 and rt:get(GS_ACT) == 1, "G/S armed")
+T.equal(rt:get(ROLL_ARMED), 3, "the FMA's LOC armed")
+T.equal(rt:get(PITCH_ARMED), 2, "the FMA's G/S armed")
+T.equal(rt:get("laminar/B747/autopilot/heading/degrees"), 100, "the MCP's heading not yet the course")
+-- both receivers' signals with the track 176 degrees off the course: no
+-- capture (the old monitor captured on the signals alone)
+ils(true, false)
+frames(10)
+T.equal(rt:get(NAV), 1, "no LOC capture 176 degrees off the course")
+-- the track 26 degrees off: LOC captured, the MCP's heading to the course
+rt:set("sim/cockpit2/gauges/indicators/ground_track_mag_pilot", 310)
+frames()
+T.check(rt:get(NAV) == 2 and rt:get(NAV_ACT) == 2, "LOC captured (the old status 2)")
+T.equal(rt:get(ROLL), 3, "the FMA's LOC")
+T.equal(rt:get("laminar/B747/autopilot/heading/degrees"), 336, "the MCP's heading to the course at LOC's capture")
+-- G/S captured under 1.5 dots
+ils(true, true)
+frames()
+T.check(rt:get(GS) == 2 and rt:get(GS_ACT) == 2, "G/S captured")
+T.equal(rt:get(PITCH), 2, "the FMA's G/S")
+T.equal(rt:get(PITCH_ARMED), 0, "nothing armed in pitch")
+-- the signals lost: LOC stays engaged (its latch; the old monitor armed it
+-- again)
+ils(false, false)
+frames(10)
+T.equal(rt:get(NAV), 2, "LOC stays engaged without the signals")
+-- HDG SEL after G/S: not taken (table p.351)
+rt:command(CMD .. "heading_select")
+frames()
+T.equal(rt:get(ROLL), 3, "HDG SEL with LOC and G/S engaged: still LOC")
+-- everything off: the approach too
+rt:command(CMD .. "yoke_disengage_capt")
+rt:command(CMD .. "yoke_disengage_capt")
+rt:set(FD, 23, 0)
+rt:set(FD, 24, 0)
+frames()
+T.check(rt:get(APPM) == 0 and rt:get(NAV) == 0 and rt:get(GS) == 0, "everything off: no approach")
+-- LOC alone: armed, the second push disarms
+rt:set(FD, 23, 1)
+frames()
+rt:command(CMD .. "loc_mode")
+frames()
+T.check(rt:get(APPM) == -1 and rt:get(NAV) == 1 and rt:get(GS) == 0, "LOC armed alone (approach mode -1)")
+rt:command(CMD .. "loc_mode")
+frames()
+T.check(rt:get(APPM) == 0 and rt:get(NAV) == 0, "the second LOC push disarms")
+rt:set(RA, 9000)
 T.done()
