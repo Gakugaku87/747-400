@@ -2326,6 +2326,7 @@ laminar/B747/nd/capt/track_line_on	dataref	panel	B747.60.fltInst,B747.60.xt.fltI
 laminar/B747/nd/capt/traffic	dataref	panel	B747.34.nav
 laminar/B747/nd/capt/trk_flag	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/nd/capt/trk_line	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/nd/capt/trk_line_ctr	dataref	panel	B747.60.fltInst
 laminar/B747/nd/capt/tv_frame	dataref	panel	B747.60.fltInst
 laminar/B747/nd/capt/tv_rot	dataref	panel	B747.60.fltInst
 laminar/B747/nd/capt/tv_show	dataref	panel	B747.60.fltInst
@@ -2342,6 +2343,7 @@ laminar/B747/nd/capt/vor_rx	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/nd/capt/vtk_flag	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/nd/capt/wind	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/nd/capt/wind_deg	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/nd/capt/xp_map_half	dataref	panel	B747.60.fltInst
 laminar/B747/nd/center/capt/switch	command	obj,snd	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/nd/center/fo/switch	command	obj,snd	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/nd/current_waypoint	dataref	panel	B747.68.fms,B747.68.xt.fms
@@ -2774,6 +2776,7 @@ laminar/B747/nd/fo/track_line_on	dataref	panel	B747.60.fltInst,B747.60.xt.fltIns
 laminar/B747/nd/fo/traffic	dataref	panel	B747.34.nav
 laminar/B747/nd/fo/trk_flag	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/nd/fo/trk_line	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/nd/fo/trk_line_ctr	dataref	panel	B747.60.fltInst
 laminar/B747/nd/fo/tv_frame	dataref	panel	B747.60.fltInst
 laminar/B747/nd/fo/tv_rot	dataref	panel	B747.60.fltInst
 laminar/B747/nd/fo/tv_show	dataref	panel	B747.60.fltInst
@@ -2790,6 +2793,7 @@ laminar/B747/nd/fo/vor_rx	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/nd/fo/vtk_flag	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/nd/fo/wind	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/nd/fo/wind_deg	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/nd/fo/xp_map_half	dataref	panel	B747.60.fltInst
 laminar/B747/nd/gs_tas_line	dataref	panel	B747.68.fms,B747.68.xt.fms
 laminar/B747/nd/gs_tas_line_copilot	dataref	panel	B747.68.fms,B747.68.xt.fms
 laminar/B747/nd/gs_tas_line_pilot	dataref	panel	B747.68.fms,B747.68.xt.fms

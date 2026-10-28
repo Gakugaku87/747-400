@@ -527,3 +527,14 @@
 
 上の 1 行は `docs/overhaul/tools/panel_fd_shown.lua` で書き換えた（4 か所）。中のバーは今までどおりモードがあるとき（`SHOW_GREATER 1` の FMA：X-Plane では 1 以上なので TO/GA でも出る。写真で確かめた）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261027_before_fd_shown`。X-Plane の写真（`s103_afds_to`、`s104_afds_ga`）で、地上の T/O と、F/D のスイッチ OFF のままの G/A で F/D のバーと FD が出ることを確かめた。外から見た姿は変わらない（外観の写真）。
 
+
+表示（2026-10-28：ND の MAP CTR を実機どおりに。利用者の決定）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-28・ND の MAP CTR | 両席の全周表示の方位の印（`gen_needle Hdg Ptr:APP/VOR/MAP`） | POS（x, 309）、OFFSET 237、NEEDLE_OFFSET_Y −237（先がローズの外縁より 7 px 外） | POS（x, 302）、OFFSET 230、NEEDLE_OFFSET_Y −230（回転の中心 y 72。先が目盛の外端 229 px に触れる） | FCOM p.1142 |
+| 同 | 両席の全周の X-Plane の地図（`EFIS_map_s_HM`、`GROUP Map/Rose` の中） | SIZE 3.5 だけ | 今の部品を `GROUP XP Map Full`（`SHOW_LESS 0.5 nd/<席>/xp_map_half`）に入れ、写しを SIZE 1.75 で `GROUP XP Map Half`（`SHOW_GREATER 0.5 nd/<席>/xp_map_half`）に足した（640 NM の MAP CTR：X-Plane の地図に 640 NM より上の段が無い） | FCOM p.1009（図） |
+| 同 | 両席の MAP CTR の飛行機の記号（`GROUP Map:Centered` の `gen_rotary Aircraft Triangle`） | POS（x, 49）（絵の頂点は中心より 16 px 上：頂点 65 が地図の原点 78.5 より 13.5 px 下） | POS（x, 62.5）（頂点が地図の原点に） | FCOM p.1251 |
+| 同 | 両席の全周の `GROUP Compass Rose` の `gen_needle Rose:MAP` の後 | 無し | `GROUP Trk Line Ctr`（`SHOW_GREATER 0.5 nd/<席>/trk_line_ctr`）：`gen_rotary Trk Line Ctr`（`EFIS/Maps/Centered/track_line_ctr`、ローズの中心）と、半分の範囲の数字 `gen_LED Range Ctr Up`・`Range Ctr Dn`（拡大の範囲の数字の写し、`nd/range_display_<席>`。上と下の目盛に、拡大の数字と目盛の関係のまま） | FCOM p.1143、p.1009（図） |
+
+上の 4 行は `docs/overhaul/tools/panel_nd_ctr.lua` で書き換えた（2 面で 8 か所）。航跡の線の絵は `docs/overhaul/tools/make_nd_ctr_image.ps1`。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261028_before_nd_ctr`。X-Plane の写真（`s110_nd_map_ctr`、`s61_nd_orientation`）で確かめた：MAP CTR の 10・40・320・640 NM で選んだ範囲がローズまで、経路の線が点の記号を通る、上下の範囲の数字、640 NM の半分の大きさの X-Plane の地図、▽ の先がローズの外縁に触れる、飛行機の記号の頂点が地図の原点に一致。外から見た姿は変わらない（外観の写真）。

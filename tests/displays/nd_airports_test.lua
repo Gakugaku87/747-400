@@ -59,7 +59,8 @@ T.equal(D.runway(35.0, 140.0, 0, 35.0, 140.0, 0), nil, "thresholds at one place:
 T.check(D.inside(0, 100, D.EXPANDED) and not D.inside(0, -1, D.EXPANDED), "expanded: ahead, not behind")
 T.check(D.inside(340, 100, D.EXPANDED) and not D.inside(-330, 100, D.EXPANDED), "expanded: within the sides 329 left, 348 right")
 T.check(not D.inside(0, 466, D.EXPANDED), "expanded: within the range arc")
-T.check(D.inside(0, -181, D.CENTRED) and not D.inside(0, 182, D.CENTRED), "MAP CTR: 181.6 pixels round")
+T.check(D.inside(0, -224, D.CENTRED) and not D.inside(0, 226, D.CENTRED), "MAP CTR: the centred mask's circle, 225 pixels round")
+T.equal(D.CTR_PX_PER_RANGE, 232.5, "MAP CTR's selected range: the compass rose, half the expanded 465 pixels (2026-10-28)")
 T.check(D.inside(0, -326, D.PLAN) and not D.inside(0, 328, D.PLAN), "PLAN: 327 pixels round")
 T.check(D.rwy_frame(4) == 0 and D.rwy_frame(100) == 24 and D.rwy_frame(1000) == 39 and D.rwy_frame(0) == 0,
     "the runway image's frames: 4 px the first, 100 px the 25th, at most the 40th")
@@ -168,15 +169,24 @@ T.equal(slot("ZZBB"), nil, "but not the destination: its own symbol")
 rt:set("laminar/B747/nd/data/capt/apt", 0)
 run(0.5)
 T.equal(get("sym", 1), 1, "the destination whatever ARPT (FCOM p.1149)")
--- MAP CTR, 40 NM: the origin's runway 12 NM behind within the circle
+-- MAP CTR, 40 NM: the selected range the compass rose, half the expanded
+-- scale (2026-10-28): the origin's runway 12 NM behind and the
+-- destination's 18 NM ahead within the circle
 rt:set("laminar/B747/nd/range/capt/sel_dial_pos", 2)
 rt:set("laminar/B747/nd/map_center/capt", 1)
 run(0.5)
 T.check(get("rwy_show", 0) == 1 and rt:get(A .. "rwy0") == "09", "MAP CTR: ZZAA's runway 09 behind")
 T.check(near(math.abs(get("rwy_heading", 0)), 180, 1) and near(get("dir", 0), -90, 1),
     "its middle behind, turned to the west threshold's end")
+T.check(near(get("rwy_distance", 1), 18 * 8, 2) and get("thr_show", 1) == 1,
+    "ZZBB's runway 18 NM ahead at half the expanded scale (320 units for 40 NM), its threshold within the circle")
+T.check(near(get("rwy_len", 1), 2 * 5.8125, 0.3) and get("rwy_frame", 1) == 2, "2 NM long: 12 px, the 3rd frame")
+-- 10 NM: the circle 9.7 NM round
+rt:set("laminar/B747/nd/range/capt/sel_dial_pos", 0)
+run(0.5)
 T.check(get("rwy_show", 1) == 1 and get("rwy_frame", 1) == -1 and get("thr_show", 1) == 0,
-    "ZZBB 18 NM ahead beyond the centred circle: only its centreline's dashes within it")
+    "MAP CTR 10 NM: ZZBB 17 NM ahead beyond the centred circle, only its centreline's dashes within it")
+rt:set("laminar/B747/nd/range/capt/sel_dial_pos", 2)
 -- PLAN: north up, both
 rt:set("laminar/B747/nd/mode/capt/sel_dial_pos", 3)
 rt:set("sim/cockpit2/EFIS/map_mode", 4)

@@ -1111,11 +1111,12 @@ function B747_nd_mode_capt_sel_dial_dn_CMDhandler(phase, duration)
 end
 
 
+-- the range selectors; X-Plane's map ranges follow them in the display glue
+-- (B747.60.xt.displays.lua: MAP CTR one range up, 2026-10-28)
 function B747_nd_range_capt_sel_dial_up_CMDhandler(phase, duration)
     if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_nd_range_capt_sel_dial_pos = math.min(B747DR_nd_range_capt_sel_dial_pos+1, 6)
-        simDR_EFIS_map_range = B747DR_nd_range_capt_sel_dial_pos
         --B747DR_nd_range_fo_sel_dial_pos = B747DR_nd_range_capt_sel_dial_pos
     end
 end
@@ -1124,7 +1125,6 @@ function B747_nd_range_capt_sel_dial_dn_CMDhandler(phase, duration)
     if not efis_panel_ok(0) then return end
     if phase == 0 then
         B747DR_nd_range_capt_sel_dial_pos = math.max(B747DR_nd_range_capt_sel_dial_pos-1, 0)
-        simDR_EFIS_map_range = B747DR_nd_range_capt_sel_dial_pos
         --B747DR_nd_range_fo_sel_dial_pos = B747DR_nd_range_capt_sel_dial_pos
     end
 end
@@ -1283,7 +1283,6 @@ function B747_nd_range_fo_sel_dial_up_CMDhandler(phase, duration)
     if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_nd_range_fo_sel_dial_pos = math.min(B747DR_nd_range_fo_sel_dial_pos+1, 6)
-        simDR_EFIS_map_range_copilot = B747DR_nd_range_fo_sel_dial_pos
         --B747DR_nd_range_fo_sel_dial_pos = B747DR_nd_range_fo_sel_dial_pos
     end
 end
@@ -1292,7 +1291,6 @@ function B747_nd_range_fo_sel_dial_dn_CMDhandler(phase, duration)
     if not efis_panel_ok(1) then return end
     if phase == 0 then
         B747DR_nd_range_fo_sel_dial_pos = math.max(B747DR_nd_range_fo_sel_dial_pos-1, 0)
-        simDR_EFIS_map_range_copilot = B747DR_nd_range_fo_sel_dial_pos
         --B747DR_nd_range_capt_sel_dial_pos = B747DR_nd_range_fo_sel_dial_pos
     end
 end
@@ -2635,12 +2633,15 @@ function B747_set_inst_all_modes()
     B747DR_flt_inst_air_data_src_fo_dial_pos = 1
 
 
+    -- MAP CTR's X-Plane map is one range up (2026-10-28): a Captain's ND
+    -- left in MAP CTR keeps its range selector (held without a reload)
+    local capt_map_ctr = B747DR_nd_mode_capt_sel_dial_pos == 2 and B747_nd_map_center_capt > 0.5
     simDR_EFIS_map_mode = 2
     simDR_EFIS_map_mode_copilot = 2
     B747DR_nd_mode_capt_sel_dial_pos = 2
     B747DR_nd_mode_fo_sel_dial_pos = 2
 
-    B747DR_nd_range_capt_sel_dial_pos = simDR_EFIS_map_range
+    if not capt_map_ctr then B747DR_nd_range_capt_sel_dial_pos = simDR_EFIS_map_range end
     B747DR_nd_range_fo_sel_dial_pos = B747DR_nd_range_capt_sel_dial_pos
 
     simDR_EFIS_1_sel_pilot = 1

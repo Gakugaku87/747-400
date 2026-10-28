@@ -87,11 +87,17 @@ M.RWY_FRAME_PX, M.RWY_FRAMES = 4, 40
 -- the map's visible part, in pixels from the airplane symbol (the selected
 -- range is 465) up the display's top: expanded, the range arc ahead within
 -- the display's sides (as the POS radials: B747.60.nd_model.lua's edge_px);
--- MAP CTR and PLAN, the circles of the map symbols' limits (makeIcon: 250
--- and 450 of 640 units)
+-- PLAN, the circle of the map symbols' limit (makeIcon: 450 of 640 units).
+-- MAP CTR's selected range is the compass rose, half the expanded one
+-- (2026-10-28, the real airplane's: FCOM p.1009's figure has the half
+-- range's marks halfway to the rose; before, 465 pixels as expanded),
+-- X-Plane's map one range up (the display glue); its visible part the
+-- centred mask's circle (X-Plane's map shows inside it; before, 250 of the
+-- old 640 units, 182 pixels)
 M.PX_PER_RANGE = 465
+M.CTR_PX_PER_RANGE = M.PX_PER_RANGE / 2
 M.EXP_ARC_PX, M.EXP_LEFT_PX, M.EXP_RIGHT_PX = 465, 329, 348
-M.CTR_PX = 250 / 640 * 465
+M.CTR_PX = 225
 M.PLAN_PX = 450 / 640 * 465
 M.EXPANDED, M.CENTRED, M.PLAN = 1, 2, 3
 

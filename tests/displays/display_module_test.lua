@@ -621,4 +621,29 @@ frames(0.1)
 T.equal(rt:get(PC .. "box"), 4, "PW's PLN: TRK in PLAN's box")
 rt:set(ND .. "mode/capt/sel_dial_pos", 2)
 
+-- MAP CTR (2026-10-28, the real airplane's): the selected range the compass
+-- rose; X-Plane's map one range up (its half scale) from the range selector
+-- (the knobs and the CDUs set only the selectors), at 640 NM the panel's
+-- half-size map; MAP CTR's track line and range scale
+rt:set(ND .. "range/capt/sel_dial_pos", 2)
+rt:set(ND .. "range/fo/sel_dial_pos", 4)
+rt:set("sim/cockpit2/EFIS/map_range", 0)
+frames(0.1)
+T.equal(rt:get("sim/cockpit2/EFIS/map_range"), 2, "MAP 40 NM: X-Plane's map range 2 (the selector's)")
+T.equal(rt:get("sim/cockpit2/EFIS/map_range_copilot"), 4, "the F/O's 160 NM: 4")
+T.check(rt:get(PC .. "trk_line") == 1 and rt:get(PC .. "trk_line_ctr") == 0, "expanded: the expanded track line")
+rt:set(ND .. "map_center/capt", 1)
+frames(0.1)
+T.equal(rt:get("sim/cockpit2/EFIS/map_range"), 3, "MAP CTR 40 NM: X-Plane's map at 80 NM (half the scale)")
+T.equal(rt:get(PC .. "xp_map_half"), 0, "drawn at full size")
+T.check(rt:get(PC .. "trk_line") == 0 and rt:get(PC .. "trk_line_ctr") == 1, "MAP CTR's track line and range scale")
+rt:set(ND .. "range/capt/sel_dial_pos", 6)
+frames(0.1)
+T.equal(rt:get("sim/cockpit2/EFIS/map_range"), 6, "MAP CTR 640 NM: X-Plane's map at 640 NM (no step above)")
+T.equal(rt:get(PC .. "xp_map_half"), 1, "drawn at half size")
+rt:set(ND .. "map_center/capt", 0)
+rt:set(ND .. "range/capt/sel_dial_pos", 2)
+frames(0.1)
+T.check(rt:get("sim/cockpit2/EFIS/map_range") == 2 and rt:get(PC .. "xp_map_half") == 0, "back to MAP 40 NM")
+
 T.done()

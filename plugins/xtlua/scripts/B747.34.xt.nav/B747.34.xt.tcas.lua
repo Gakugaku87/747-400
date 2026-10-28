@@ -93,12 +93,10 @@ local function traffic_mode(mode, center)
     return mode == ND_MAP or (mode < ND_MAP and center < 0.5)
 end
 
--- the range the ND shows: in the centred modes the compass rose is half the
--- selected range (seen in X-Plane, 2026-10-25)
-local function range_nm(pos, center)
-    local r = RANGES_NM[math.floor(pos + 0.5) + 1] or 640
-    if center > 0.5 then r = r / 2 end
-    return r
+-- the range the ND shows, the selected one: MAP CTR's compass rose too
+-- (2026-10-28, the real airplane's; before, the rose was half of it)
+local function range_nm(pos)
+    return RANGES_NM[math.floor(pos + 0.5) + 1] or 640
 end
 
 function B747_tcas()
@@ -125,8 +123,8 @@ function B747_tcas()
     inp.nd_ok[1], inp.nd_ok[2] = dp[DSP_ND_CAPT] > 0.1, dp[DSP_ND_FO] > 0.1
     inp.nd_traffic_mode[1] = traffic_mode(B747DR_tcas_nd_mode_capt, B747DR_tcas_nd_center_capt)
     inp.nd_traffic_mode[2] = traffic_mode(B747DR_tcas_nd_mode_fo, B747DR_tcas_nd_center_fo)
-    inp.nd_range_nm[1] = range_nm(B747DR_tcas_nd_range_capt, B747DR_tcas_nd_center_capt)
-    inp.nd_range_nm[2] = range_nm(B747DR_tcas_nd_range_fo, B747DR_tcas_nd_center_fo)
+    inp.nd_range_nm[1] = range_nm(B747DR_tcas_nd_range_capt)
+    inp.nd_range_nm[2] = range_nm(B747DR_tcas_nd_range_fo)
     inp.tfc_pushes[1] = B747DR_tcas_tfc_pushes_capt
     inp.tfc_pushes[2] = B747DR_tcas_tfc_pushes_fo
     inp.own_vs = simDR_tcas_vs

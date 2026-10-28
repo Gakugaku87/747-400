@@ -83,6 +83,8 @@
     { "do": "check", "note": "全周", "dref": "laminar/B747/nd/map_center/capt", "op": "==", "value": 1 },
     { "do": "check", "note": "MAP CTR も航跡が上", "dref": "laminar/B747/nd/up/capt", "op": "between", "value": [12, 40] },
     { "do": "check", "note": "枠は TRK", "dref": "laminar/B747/nd/capt/box", "op": "==", "value": 2 },
+    { "do": "check", "note": "MAP CTR の航跡線と範囲の目盛（2026-10-28：s110）", "dref": "laminar/B747/nd/capt/trk_line_ctr", "op": "==", "value": 1 },
+    { "do": "check", "note": "X-Plane の地図は 1 段上（40 NM で 3）", "dref": "sim/cockpit2/EFIS/map_range", "op": "==", "value": 3 },
     { "do": "shot", "name": "nd_map_ctr" },
     { "do": "switch", "note": "VOR CTR", "dref": "laminar/B747/nd/mode/capt/sel_dial_pos", "value": 1, "cmd": "laminar/B747/nd/mode/capt/sel_dial_up", "cmd_down": "laminar/B747/nd/mode/capt/sel_dial_dn" },
     { "do": "sleep", "seconds": 1 },

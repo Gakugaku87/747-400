@@ -66,6 +66,13 @@ inp.side[NM.FO].mode = NM.VOR
 local out = NM.update(s, inp, 0.1)
 local function n_of(side) local n = 0 for k = 1, NM.TV_N do if side.tv_show[k] then n = n + 1 end end return n end
 T.check(n_of(out[NM.CAPT]) == 9 and n_of(out[NM.FO]) == 0, "the Captain's MAP: shown; the F/O's VOR: none")
+-- MAP CTR: the selected range the compass rose, half the expanded scale
+-- (2026-10-28)
+local y_exp = out[NM.CAPT].tv_y[4]
+inp.side[NM.CAPT].center = true
+out = NM.update(s, inp, 0.1)
+T.check(n_of(out[NM.CAPT]) == 9 and near(out[NM.CAPT].tv_y[4], y_exp / 2, 1e-6), "MAP CTR: shown at half the scale")
+inp.side[NM.CAPT].center = false
 inp.side[NM.CAPT].trk_valid = false
 out = NM.update(s, inp, 0.1)
 T.equal(n_of(out[NM.CAPT]), 0, "no track (TRK flag): none")

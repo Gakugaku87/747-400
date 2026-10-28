@@ -117,6 +117,16 @@ rt:set(TI .. "relative_distance_mtrs", 1, 12 * 1852)
 frames(0.1)
 T.equal(rt:get("laminar/B747/nd/capt/offscale"), 2, "beyond 10 nm: red OFFSCALE on the Captain's ND")
 T.equal(rt:get("laminar/B747/nd/fo/offscale"), 0, "not on the F/O's (20 nm)")
+-- MAP CTR shows the selected range to the compass rose (2026-10-28; before,
+-- half of it): the F/O's 20 nm centred, the RA 12 nm away within it
+rt:set("laminar/B747/nd/map_center/fo", 1)
+frames(0.1)
+T.equal(rt:get("laminar/B747/nd/fo/offscale"), 0, "MAP CTR 20 nm: the RA 12 nm away on the map, no OFFSCALE")
+rt:set("laminar/B747/nd/map_center/capt", 1)
+frames(0.1)
+T.equal(rt:get("laminar/B747/nd/capt/offscale"), 2, "MAP CTR 10 nm: beyond the rose, OFFSCALE")
+rt:set("laminar/B747/nd/map_center/capt", 0)
+rt:set("laminar/B747/nd/map_center/fo", 0)
 rt:set("laminar/B747/nd/range/capt/sel_dial_pos", 1)
 -- the RA ends
 rt:set(TG .. "threat", 1, 1)
