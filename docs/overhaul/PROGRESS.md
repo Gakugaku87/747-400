@@ -2,7 +2,7 @@
 
 次のセッションは、ここと [PLAN.md](PLAN.md) を読んでから続きに入る。
 
-最終更新：2026-10-28（区切りで中断：作業中の項目なし、次は LEGS の PLAN の CTR と STEP、その次に空力の比較（次にやること 5f）。直前に 5-2 の残り：ND の MAP CTR を実機どおりに。選んだ範囲が全周のローズまで、X-Plane の地図は 1 段上、MAP CTR の航跡線と範囲の目盛、全周の ▽ をローズの外縁に。notes/ATA-31.md §40。その前に 6-3：A/P の姿勢のループ。スタビライザーの動きを積分から差し引く作りと自動トリムの帯（§20）、内側のループの姿勢の変化率と全高度共通のゲイン（§21）で、FL350 の ALT HOLD の揺れを ±740 → ±12 fpm に。その前に段 3b：速度を昇降舵で保つ則と速度の保護、§19）。
+最終更新：2026-10-28 夕方（中断：作業中の項目は LEGS の PLAN の CTR と STEP。実装と単体試験は済で、作業ツリーにあり未コミット。残りは X-Plane の試験・資料・コミット：下の「作業中の項目」。その次に空力の比較（次にやること 5f）。その前の区切り（2026-10-28 昼）の直前に 5-2 の残り：ND の MAP CTR を実機どおりに。選んだ範囲が全周のローズまで、X-Plane の地図は 1 段上、MAP CTR の航跡線と範囲の目盛、全周の ▽ をローズの外縁に。notes/ATA-31.md §40。その前に 6-3：A/P の姿勢のループ。スタビライザーの動きを積分から差し引く作りと自動トリムの帯（§20）、内側のループの姿勢の変化率と全高度共通のゲイン（§21）で、FL350 の ALT HOLD の揺れを ±740 → ±12 fpm に。その前に段 3b：速度を昇降舵で保つ則と速度の保護、§19）。
 
 ## いまどこか
 
@@ -38,6 +38,57 @@
 - **段階 6**：
   - 6-1（FMC）と 6-2（CDU）：段取りを決めた（2026-10-26、notes/ATA-34-61-FMC.md §10。下の「FMC と CDU（6-1・6-2）の段取りと GAP の状態」）。経路は自前で持つ（PLAN.md 6-1）。12 段で進め、AFDS（6-3）は段 6 の後、A/T（6-4）は段 9 と並べる。段 1（小修正：FMC-09・10・15・21・29・30・33・40、CDU-09・10・28・33。§11）は済。段 2（CDU の枠組み：新しいモデル `B747.68.cdu_model.lua`。キーと scratchpad、メッセージの列、FMC のメッセージ、即時のページ切替、描画の保護、CDU の電源。§12）も済。段 3a（PERF INIT：GR WT と ZFW、FUEL の CALC・MANUAL、RESERVES、COST INDEX、CRZ ALT を FMC が持つ。INIT REF のキーの行き先。§13）も済。段 3b-1（TAKEOFF REF の V speeds：計器のモジュールが FMC の重量とフラップから計算し、FMC が小さい字で出して選ぶと PFD へ。性能データが変わると TAKEOFF SPEEDS DELETED。§14）も済。段 3b-2（THRUST LIM の SEL と OAT、TAKEOFF REF の ACCEL HT・E/O ACCEL HT・THR REDUCTION・WIND/SLOPE・CG・POS SHIFT・PRE-FLT。§15）も済。段 3c（MENU の <FMC は最後の FMC のページへ、FLT NO は FMC の便名。§16）も済で、段 3 は終わり。段 4（航法データベース：新しいモジュール `B747.68.navdb.lua` で X-Plane の航法データを分けて読む。IDENT の NAV DATA と ACTIVE、NAV DATA OUT OF DATE、REF AIRPORT、ORIGIN の TRANS ALT。§17）も済。段 5 は 6 つに分けた（§18）。段 5a（経路のモデル：新しいモジュール `B747.68.route_model.lua`。まだ機体からは使わない。§19）も済。段 5b・5c（RTE と LEGS のページを FMC の経路に、SELECT DESIRED WPT、X-Plane の FMS への流し込み：§20）も済。段 5d（手続き：新しいモジュール `B747.68.proc_model.lua`、DEP/ARR INDEX・DEPARTURES・ARRIVALS のページ：§21）も済。段 5e（現用点と X-Plane の FMS：飛行中の順送り、流し込みの後の現用点、DIRECT TO の始点 DTOPOS：§22）も済。段 5f（飛行試験キットの経路を CDU で：§24）も済で、段 5 は終わり。X-Plane の FMS の操作は新しいプラグイン `plugins/b747_fms_bridge`（C）で X-Plane のスレッドに移した（§23：XTLua の作業スレッドからの呼び出しで X-Plane が落ちていた）。CDU の EXEC 灯は FMC の修正に合わせた（§25：3D の物体の 2 行、利用者の承認）。段 6（経路の形と LNAV）は 4 つに分けた（§26）。段 6a（経路の形のモデル `B747.68.path_model.lua`：§27）、段 6b（LNAV のモデル `B747.68.lnav_model.lua`：§28）、段 6c（LNAV の組み込み：FMC が順送りし、AFDS の LNAV は FMC の valid で engage して FMC のバンクの指令で飛ぶ：§29）、段 6d（ND の線に条件の脚と弧：§30）も済で、段 6 は終わり。段 7（ホールド・オフセット・残りの経路の操作）は 5 つに分けた（§31）。段 7a（ホールドのモデルと LNAV：経路の HM・HA・HF を進入・周回・出口まで飛ぶ：§32）、段 7b（HOLD キー、RTE LEGS HOLD AT と PPOS、RTE 1 HOLD のページと EXIT HOLD、ND の線のホールド：§33）は済。段 7c（PROC TURN の表示と CRS REVERSAL AT FA FIX：§34。形は段 7f で推定）も済。段 7d（オフセット：RTE の 6R の OFFSET、LNAV のオフセットの線、END OF OFFSET、OFST 灯の dataref：§35）も済。段 7e は 4 つに分けた（§36）。段 7e1（INIT/REF INDEX の NAV DATA> を FMC の REF NAV DATA に：IDENT の点のデータ、NAVAID INHIBIT・VOR ONLY INHIBIT・VOR/DME NAV：§36）、段 7e2（DIRECT TO の ABEAM PTS：飛ばした点の真横の点、LEGS の距離の位置：§37）も済。段 7e3 は 2 つに分けた（§38）。段 7e3a（RTE と LEGS で緯度経度・place/bearing/distance・place bearing/place bearing の点：§38）、段 7e3b（FIX キーで FMC の FIX INFO：方位線・距離の円と経路の交点、ABEAM、place/bearing/distance の写し：§39）、段 7e4（RTE 2 と RTE COPY：二つの経路、もう一つの経路の ACTIVATE、RTE・LEGS・DEP/ARR の RTE 2：§40）も済。段 7f（procedure turn の形：資料に無いので利用者の依頼で推定。LNAV が飛び ND に描く：§41）も済で、段 7 は終わり。次は段取りの表の順で AFDS（6-3）。
 
+## 作業中の項目（2026-10-28 夕方に中断）
+
+LEGS の PLAN の CTR と STEP（6-1・6-2。FCOM p.1333 の 9・10、p.1039；FMSPG p.124）。利用者の「締め作業だけして」で、X-Plane の試験の前に止めた。
+
+- 状態：実装と単体試験は済。コードは作業ツリーにあり、まだコミットしていない（CLAUDE.md の順：X-Plane の試験のあとにコミット）。
+  - 変えたファイル（`git status` で見える）：
+    - `B747.68.route_model.lua`：`M.same_leg` を外に出した。
+    - `B747.68.xt.fms.lua`：`B747DR_xp_displayed`（`laminar/B747/fms/xp/displayed`）を結び、`B747_fmc_plan_ctr_sync()` を足して `after_physics` で `B747_fmc_route_sync()` の次に呼ぶ。
+    - `activepages/B744.fms.pages.legs.lua`：中心の状態（`planCtr`）、`<CTR>`、6R の `STEP>` と小さい字の `MAP CTR`、NEXT・PREV・LEGS キー、6R の振り分け `legsr6`、`B747_cdu_plan_ctr()`、`B747_cdu_plan_ctr_update()`。
+    - 新しい試験 `tests/fms/legs_plan_ctr_test.lua`（63 件）。
+  - `tests/run.sh` は 120 ファイルとも合格。
+  - 控え：`D:\747-400-local-assets\backup_20261028_legs_plan_ctr\`（土台 e23001be に対する `uncommitted.patch` と新しい試験）。
+- 作りの要点（推定は §42 にも書く）：
+  - CDU と ND の組：右 CDU は副操縦士の ND、ほかは機長の ND（EFIS CONTROL のページと同じ）。その ND が PLN（つまみ 3）のときだけ `<CTR>` と STEP を出す。
+  - 中心は FMC に 1 つで、ある経路（番号）の脚を指す。X-Plane の表示中の項目が 1 つなので、両席で同じ中心になる（実機は席ごと：DIFFERENCES に書く）。
+  - STEP が出る場所：ACTIVATE と RTE DATA の代わりの 6R（RTE DATA は未実装で空き）。DIRECT TO の INTC CRS がある間は INTC CRS のまま（推定）。RTE LEGS HOLD AT のページは変えない。
+  - STEP の動き：次の点へ進め、ページもついていく（推定）。最後の点では動かない（推定）。
+  - ページのキー：LEGS キー・NEXT・PREV では、表示したページの最初の点が中心になる（FMSPG p.124）。6L の <RTE x LEGS では中心を動かさない。
+  - PLN にしたとき：LEGS が出ていれば、そのページの最初の点（推定。副操縦士側でも中心を動かす）。中心がまだ無ければ、現用の経路の最初の点。
+  - 中心の点が通過や削除で消えたら、その位置からの次の点（推定）。
+  - X-Plane の行：中心の脚の行（`routeMap.row`）。MOD やもう一つの経路では、X-Plane の計画にある同じ点の行を使い、無ければそのまま。進入復行の脚と、終点を予測していない条件の脚には行が無い。
+  - `<CTR>` は 9 桁目から。制約の文字が長くて入らないとき（FL のある block の制約）は出さない（推定）。
+  - 6R の振り分け：ページのキーの表は 3 台の CDU で共用なので、押した CDU に合わせてその場で振り分ける（前は描いた CDU で表が書き換わっていた）。どれにも当たらなければ前と同じ KEY/FUNCTION INOP。
+  - X-Plane への書き込み：ND のどちらかが PLN で、ブリッジがあり、計画を読み込み済みのときに書く。違うときだけ書き、同じ値は 1 秒あける。
+  - 番号の数え方：XTLua の `xtlua/xpFMSData` の [1] は、X-Plane の表示中の項目 + 1（1 から：XTLua の xpmtdatarefs.cpp）で、ブリッジの `displayed` と同じ。nd.lua の `updateNDLatLong` は、この番号で記号の中心を決める。
+- 再開したらやること：
+  1. `tests/flight/scenarios/s111_legs_plan_ctr.json` を書く。
+     - s110 と同じ空中開始と経路（EDDF 25C → EDDM の ILS26R、EXEC）。
+     - LEGS を出し、`laminar/B747/fms/xp/current` を remember する。
+     - 機長の ND を PLN にする（switch、つまみ 3）。
+     - 確かめること：
+       - `fms3/Line13_L` が `STEP>$` に合う。
+       - `Line12_S` に `MAP CTR`。
+       - `Line03_L` に `<CTR>`。
+       - `fms/xp/displayed` が current と同じ（rel）。
+       - `sim/cockpit2/EFIS/map_mode` が 4。
+     - ND を撮る。
+     - STEP（R6）：`Line05_L` に `<CTR>`。`displayed` が +1（2 番目の脚に行があれば）。
+     - NEXT・PREV の動き、副操縦士の CDU（fms2）と ND、MAP に戻すと STEP が消えること。
+     - 進入の脚の名前は分からないので、最初は `fms3` の Line01〜13 を snapshot して確かめ、あとで条件を締める。
+  2. X-Plane を起動する（止まっている）。捨ての s66 のあと、s111 と関係するシナリオ（s87 LEGS、s89 経路の同期、s95 ABEAM、s97 RTE 2、s110 MAP CTR、s70）を回し、`log_full.txt` の Lua の誤りを確かめる。ND の PLAN の写真で、中心の点・記号・X-Plane の地図がそろうことを見る。
+  3. 資料を更新する：
+     - notes/ATA-34-61-FMC.md §42（新しい節）。
+     - この PROGRESS（5d と FMC の表を済に、この節を消す）。
+     - DIFFERENCES（FMC：PLAN の中心は両席で 1 つ）。
+     - TESTING（s111 と legs_plan_ctr_test）。
+     - ARCHITECTURE（`B747_fmc_plan_ctr_sync`・`B747_cdu_plan_ctr`）。
+  4. 1 テーマでコミットする（コード・試験・資料を一緒に）。overhaul と master を push し、custom を更新して push する。
+  5. 次は空力の比較（5f）。
+- 毎朝の DIFFERENCES の仕事（cron）は、このセッションだけのもの。新しいセッションで作り直す。
+
 ## 次にやること
 
 項目を終えるたびに、[DIFFERENCES.md](DIFFERENCES.md)（実機との違い、全分野。2026-10-23 に利用者の依頼で作った）の該当分野も直す。
@@ -50,7 +101,7 @@
 5a. 4-2（脚・ブレーキ・ステアリング）：段 1〜5 は済。tiller の軸が無い利用者のための「ペダルを tiller に」はそのまま、逆推力の hold コマンドは離したら reverse idle（利用者、2026-10-25）。残りは AIR/GND SYSTEM と脚の残りの STATUS（GEAR MONITOR・A/G DISAGREE・PARK BRK VALVE：GEAR-22 の残り）、CONFIG GEAR のラッチと GND PROX GEAR OVRD（GEAR-17 の残り）、ドアの箱の空箱。段階 4 の区切りの全シナリオは合格（2026-10-25：日誌）。
 5b. 5-1（航法センサーと無線）：段 1（エアデータ）、段 2（IRS・GPS）、段 4（電波高度計・GPWS。音声は 405 の組）、段 5（トランスポンダ・TCAS Ver 7.0、ND の TCAS 表示）、段 5c（気象レーダー：570 型のパネルの論理、R/T と電源、安定化の IRU、ND の注記）、段 5d（PFD の TCAS RA の表示、トランスポンダのコード表示、ND の気象レーダーの故障とゲインの注記）は済。
 5c. 5-2（表示）：段 1（表示器と EIU：選択器と自動切替、EIU の選択と故障、内容ごとの輝度）、段 2（ソース選択の比較：>SOURCE SEL EIU・F/D・NAV、>SNGL SOURCE RA、>ATTITUDE・>HEADING、>EFIS CONTROL・>EFIS/EICAS C/P）は済。段 3a（速度テープのうち資料から決まるもの：フラップの機動速度と VREF25、バグの出し方、最小機動速度の帯の出し始め、最小速度の表の高度帯）も済（notes/ATA-31.md §13）。段 3b（最小速度・最小と最大の機動速度・スティックシェーカー・AIRSPEED LOW と琥珀の枠：FCTM p.261–262 のシェーカー速度の図と FCOM PI.11.1 の最大運用高度から作った境界。notes/ATA-31.md §14、新しいモデル `B747.60.minspeed_model.lua`）も済。重量の補間の誤り（VREF30 が最大 3 kt 低い）と表の誤記（DSP-08）も直し、フラップのバグは約 20,000 ft より上で出さない。`airspeed/Vmc` は AFDS・A/T・VNAV の速度の下限のために前の式のまま（PFD の帯は新設 `Vminm`）。段 4（気圧と PFD の記号・旗・方位：DSP-01・04・11・12。PLI も）は 4a〜4e に分けた（notes/ATA-31.md §15）。段 4a（PFD の姿勢・方位・昇降率の源と ATT・HDG・VERT の旗、方位目盛を ND の向きからその席の方位へ：DSP-01、DSP-04 の IRS の分。新しいモデル `B747.60.pfd_model.lua`、notes/ATA-31.md §16）は済。段 4b（気圧設定の遷移高度での琥珀の枠、CDU の EFIS CONTROL の BARO SET をその CDU の側だけに：DSP-11 の残り。notes/ATA-31.md §17）も済。段 4c（PLI と VR の R：notes/ATA-31.md §18。段の分け直しもそこに）も済。段 4d（FPV のスイッチのラッチと FPV、FPV・PITCH・ROLL の旗：notes/ATA-31.md §19）も済。段 4e（ILS の表示：偏位過大の琥珀と点滅、G/S・LOC の旗、ロール 53° 超での消去：notes/ATA-31.md §20）も済で、段 4 は終わり。段 5（ND）は 5a〜5e に分けた（notes/ATA-31.md §21）。段 5a（ND の向き、方位・航跡、TRK・HDG・MAP・VTK の旗：§22）も済。段 5b は 5b-1a（PFD の ILS の受信機を使用中の EIU に、進入の基準の ID か周波数、>SNGL SOURCE ILS：§23）、5b-1b（ND の APP：基準受信機、偏位、LOC・G/S の旗）、5b-2（ND の VOR と VOR・ADF の針、TO/FROM、VOR・DME の旗）に分けた。5b-1a・5b-1b（§24）は済。5b-2 は 5b-2a（VOR モード：§25）と 5b-2b（VOR・ADF の針と左右下の欄：§26）に分け、どちらも済で、段 5b は終わり。段 5c は 5c-1（CDU の EFIS CONTROL・OPTIONS を席ごとに、パネルの故障のときだけ。EFIS 操作パネルの故障でパネルの操作が効かない：§27）、5c-2（DATA・POS の表示）、5c-3（STA の高・低高度、同調中の局、ARPT、EXCESS DATA）に分けた。5c-1 は済。5c-2 は 5c-2a（DATA：経路の点の高度と FMC の ETA：§28）と 5c-2b（POS）に分け、5c-2a は済。5c-2b（POS：IRU・GPS の位置、VOR の radial：§29）も済で、段 5c-2 は終わり。5c-3 は 5c-3a（STA の高・低高度、同調中の局、STA・WPT・ARPT は MAP だけ、EXCESS DATA、109 の GS：§30）、5c-3b（出発・到着空港と滑走路、経路の点は MAP・MAP CTR・PLAN だけ：§31）、5c-3c（手動同調の局のコースの線：§32）に分け、どれも済。段 5d（HDG REF：§33）、段 5e（位置のトレンドベクトル：§34）、段 6a（時計：§35）、段 6b-1（EICAS の部分表示と二次エンジンの逸脱の印：§36）、段 6b-2（主 EICAS の compact の形：§37）も済。段 7（パネルの SHOW の条件の重なり：§38）も済。機体の型式による ND の向き（2026-10-27 の利用者の決定：P&W は 109、GE は 570 で、どちらも MAP は航跡が上・TRK。RR は P&W と同じ。いったん P&W を 405（全モードで方位が上）にして、同じ日に戻した）と拡大の方位の印の位置（§39）も済。5-2 の残りは DSP-19（TERR、外部のプラグイン頼み）と、ND の FMC の記号の残り（FMC の作り直し 6-x で）。MAP CTR の縮尺は実機どおりに直す（2026-10-28 に決まった。まだ：下の「決まったこと（2026-10-28、利用者の回答）」）。カスタム acf は図よりずっと遅くまで失速しなかった（クリーンで約 20 kt、フラップ 10・20・30 は昇降舵いっぱいでも失速しない）ので、利用者の承認（「acf も調整しよう」）を得て、主翼の翼型の失速を早め、前縁スラットの効きを下げた（2026-10-25 夜、ACF_DIFF.md §5：図との差は UP −2、10 +6、20 −5、30 +4 kt）。DSP-14 は無線の同調（5-1 段 3）で（>SNGL SOURCE ILS は段 5b-1a で済）。段取りは notes/ATA-31.md §10。待っていた 3 件（PFD の TCAS の RA の表示、R を選んだときのトランスポンダのコード表示、ND の WXR FAIL と原因・ゲインの文字）は段 5d で済（パネルの変更は全範囲で承認なしでよくなった：2026-10-25）。WXR RANGE DISAGREE・RSTR INOP は残り。段 3（無線の同調）は、自動同調の判断と NAV RADIO ページが FMC の経路と航法データに依るので、6-1・6-2（FMC・CDU）と一緒に行う（2026-10-25 朝に決めた。notes/ATA-34.md §13）。PFD の昇降率の源（IRS）と ATT・HDG の別々の旗は段 4a で済。ND の MAP CTR の縮尺（選んだ範囲が全周のローズまで、MAP CTR の航跡線と範囲の目盛）は 2026-10-28 に済（notes/ATA-31.md §40）。
-5d. 6-1・6-2（FMC と CDU）：段 1（小修正）・段 2（CDU の枠組み）・段 3（地上準備のページ）、段 4（航法データベース）、段 5a〜5f（経路のモデル、RTE と LEGS、手続きと DEP/ARR、現用点と X-Plane の FMS、試験キット）は済で、段 5 は終わり。段 6（経路の形と LNAV）と段 7（ホールド・オフセット・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO・RTE 2・procedure turn の形）も済。次は段取りの表の順で 6-3（AFDS）、そのあと段 8（性能 DB と予測）（下の「FMC と CDU（6-1・6-2）の段取りと GAP の状態」）。LEGS の PLAN の CTR と STEP は (b)（FMS ブリッジの `xp/displayed`）で作る（2026-10-28 に決まった。まだ）。
+5d. 6-1・6-2（FMC と CDU）：段 1（小修正）・段 2（CDU の枠組み）・段 3（地上準備のページ）、段 4（航法データベース）、段 5a〜5f（経路のモデル、RTE と LEGS、手続きと DEP/ARR、現用点と X-Plane の FMS、試験キット）は済で、段 5 は終わり。段 6（経路の形と LNAV）と段 7（ホールド・オフセット・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO・RTE 2・procedure turn の形）も済。次は段取りの表の順で 6-3（AFDS）、そのあと段 8（性能 DB と予測）（下の「FMC と CDU（6-1・6-2）の段取りと GAP の状態」）。LEGS の PLAN の CTR と STEP は (b)（FMS ブリッジの `xp/displayed`）で作る（2026-10-28 に決まった。実装と単体試験は済、X-Plane の試験とコミットはまだ：上の「作業中の項目」）。
 5e. 6-3（AFDS）：段取りを決めた（2026-10-27、notes/ATA-22.md §10）。段 1（モードの論理：1a 枠組みと engage、1b ロールのモード、1c ピッチのモード、1d 進入のモード、1e TO/GA の論理）、段 2（ロールの則）、段 3（ピッチの則）、段 4（autoland と 3 チャンネル）、段 5（監視と警報）、段 6（ヨーダンパーと autotrim）。段 1a（枠組みと engage：新しいモデル `B747.70.afds_model.lua`、§11）、段 1b（ロールのモード：§12。段 1 の残りを 1c ピッチ、1d 進入、1e TO/GA に分け直した）、段 1c（ピッチのモード：§13）、段 1d（進入のモード：§14）、段 1e（TO/GA：§15）は済で、段 1（モードの論理）は終わり。段 2（ロールの則）は 2a（方位・姿勢・航跡の則：HDG SEL・HDG HOLD・ATT・LNAV・TO/GA、bank limit、HDG REF）と 2b（LOC の捕捉と追従）に分け、2a（§16。新しいモデル `B747.70.afds_roll_model.lua`）と 2b（§17）は済で、段 2 は終わり。段 3（ピッチの則）は 3a（V/S・ALT とその捕捉）、3b（速度を昇降舵で保つ則と速度の保護）、3c（G/S）に分け、3a（§18。新しいモデル `B747.70.afds_pitch_model.lua`）と 3b（§19）は済。段 3b の試験で見つかった A/P の姿勢のループ（内側のループ）の揺れ（FL350 の ALT HOLD で ±740 fpm・±0.16 g）は、自動トリムと PID の積分の取り合いが原因で、スタビライザーの動きを積分から差し引く作りと資料の自動トリムの帯で ±250 fpm・±0.07 g にした（§20。いったん中断して同じ日に再開）。内側のループに姿勢の変化率を足し、ゲインを全高度で 0.1 にして、残りの揺れも止めた（§21：FL350 で ±12 fpm）。次は 2026-10-28 に決まった LEGS の PLAN の CTR と STEP（もう 1 件の ND の MAP CTR の縮尺は同じ日に済：notes/ATA-31.md §40）、その次に空力の比較（下の 5f）、そのあと段 3c（G/S）。
 5f. 空力の比較（カスタム acf。2026-10-28 の利用者の指示で、LEGS の PLAN の CTR と STEP の次に行う）：FCOM・FCTM の目安と、カスタム acf の釣り合いの姿勢・推力・昇降率を比べ、ずれていれば acf の空力を調整する（2026-10-28 から、見た目が変わらない範囲で承認なしでよい：CLAUDE.md。手順はバックアップ・変更前後の一覧・外観の写真）。システム側で補正しない。
    - 目安：FCOM PI.10.38–10.40（p.264–266、PW4056。CF6 は p.361–362）の Flight With Unreliable Airspeed の表（重量 200〜390 t・高度ごとの、上昇（290/.84、最大上昇推力）の姿勢と昇降率、巡航（.84/290）の姿勢と EPR・N1、降下（アイドル）の姿勢と昇降率、待機・終端区域・最終進入のフラップと脚ごとの姿勢と推力）。文字起こしは表が崩れているので、PNG にして読む。
