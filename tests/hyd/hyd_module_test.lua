@@ -203,6 +203,77 @@ rt:set("laminar/B747/autopilot/roll_law", 0)
 rt:set("laminar/B747/autopilot/FMA/active_roll_mode", 0)
 frames(1)
 T.equal(get("laminar/B747/flt_ctrls/sim_roll_ratio"), 0, "A/P off: back to neutral")
+-- the A/P's attitude loop (6-3, after step 3b): the autotrim from 0.4
+-- degrees of the elevator servo command until back within 0.25 (0.6 with
+-- the G/S captured: ATA22 p.149; before, 0.005 of the travel in ALT HOLD,
+-- no band), the travel X-Plane's (22 degrees up, 17 down); the
+-- stabilizer's trim given back by the elevator integrator (ATA22 p.333)
+local ELEV, AUTOTRIM = "laminar/B747/flt_ctrls/sim_pitch_ratio", "laminar/B747/flt_ctrls/stab_trim/autotrim_cmd"
+rt:set("sim/aircraft/controls/acf_elev_up", 22)
+rt:set("sim/aircraft/controls/acf_elev_dn", 17)
+rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 5000)
+rt:set("sim/flightmodel2/controls/elevator_trim", 0)
+rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 9)
+rt:set("laminar/B747/autopilot/pitch_law", 1)
+rt:set("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot", 2)
+rt:set("laminar/B747/autopilot/pitch_cmd", 2)
+rt:set("laminar/B747/autopilot/servos_on", 1)
+frames(1)
+-- the servo command (degrees) one frame before against the autotrim command
+local function deg_of(r) return r >= 0 and r * 22 or r * 17 end
+local prev = get(ELEV)
+local bad, on_at, held_at, off_at = nil, nil, nil, nil
+local function step(seconds)
+    for _ = 1, math.floor(seconds * 30 + 0.5) do
+        rt:frame(1 / 30)
+        local d, cmd = deg_of(prev), get(AUTOTRIM)
+        if math.abs(d) > 0.4 and cmd ~= (d > 0 and 1 or -1) then bad = bad or ("not trimming at " .. d) end
+        if math.abs(d) < 0.25 and cmd ~= 0 then bad = bad or ("trimming at " .. d) end
+        if cmd == 1 and not on_at then on_at = d end
+        if cmd == 1 and d > 0.25 and d < 0.4 then held_at = held_at or d end
+        if on_at and cmd == 0 and not off_at then off_at = d end
+        prev = get(ELEV)
+    end
+end
+-- 0.5 degree of pitch up asked: the elevator up past 0.4 degrees
+rt:set("laminar/B747/autopilot/pitch_cmd", 2.5)
+step(3)
+T.check(on_at ~= nil and on_at > 0.4, "the autotrim from 0.4 degrees up (" .. tostring(on_at) .. ")")
+-- then 0.5 degree down: the elevator back through the band
+rt:set("laminar/B747/autopilot/pitch_cmd", 1.5)
+step(6)
+T.check(held_at ~= nil, "trimming on between 0.4 and 0.25 degrees (the band: " .. tostring(held_at) .. ")")
+T.check(off_at ~= nil and off_at < 0.25, "off within 0.25 degrees (" .. tostring(off_at) .. ")")
+T.check(bad == nil, "the autotrim command by the band all along (" .. tostring(bad) .. ")")
+-- the G/S captured: on from 0.6 degrees
+rt:set("laminar/B747/autopilot/pitch_cmd", 2)
+step(4)
+rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 2)
+on_at = nil
+local last_cmd = get(AUTOTRIM)
+rt:set("laminar/B747/autopilot/pitch_cmd", 2.5)
+for _ = 1, 150 do
+    rt:frame(1 / 30)
+    local d, cmd = deg_of(prev), get(AUTOTRIM)
+    if cmd == 1 and last_cmd ~= 1 and not on_at then on_at = d end
+    last_cmd = cmd
+    prev = get(ELEV)
+end
+T.check(on_at ~= nil and on_at > 0.6, "G/S: the nose up autotrim from 0.6 degrees (" .. tostring(on_at) .. ")")
+-- steady, the stabilizer trimmed 0.05 nose up: the elevator command 1.9
+-- times that less
+rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 9)
+rt:set("laminar/B747/autopilot/pitch_cmd", 2)
+step(6)
+local before = get(ELEV)
+rt:set("sim/flightmodel2/controls/elevator_trim", 0.05)
+frames(1)
+T.near(before - get(ELEV), 1.9 * 0.05, 0.01, "the stabilizer 0.05 nose up: the elevator 0.095 less (" .. before .. " to " .. get(ELEV) .. ")")
+rt:set("sim/flightmodel2/controls/elevator_trim", 0)
+rt:set("laminar/B747/autopilot/servos_on", 0)
+rt:set("laminar/B747/autopilot/pitch_law", 0)
+rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 0)
+frames(1)
 
 -- lateral control (B747.19.lateral_model.lua, 4-1 step 4): the controlObject
 -- rows make the control wheel's angle from the pilots', the A/P's and the

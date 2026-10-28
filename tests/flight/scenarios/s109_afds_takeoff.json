@@ -1,6 +1,6 @@
 {
   "name": "s109_afds_takeoff",
-  "description": "AFDS の作り直し 6-3 段 3b（T/O の速度の則）の X-Plane での確認、離陸。RJAA 34L でエンジン運転中に始め（機体を読み直す）、フラップ 20、MCP 速度を V2 の 160 kt、MCP 高度 5,000 ft。F/D を両方 OFF にしてから F/D L ON で T/O：地上の F/D のピッチは 8°（FCOM p.666）。手で推力を最大にし、150 kt で操縦輪を引いて離陸（この機体はフラップ 20 では 150 kt の前に自分で浮くことがある）、浮いたら A/P CMD L（T/O のまま：FCOM p.666）、脚上げ。T/O の則は V2 + 10 か引き起こし（ピッチ 2° 超え）の速度 + 10 の高い方、5 秒より長く上回れば今の速度（V2 + 25 まで）を保つ（FCOM p.664）。5,000 ft の捕捉（ALT）で推力を戻す。PFD を撮る。",
+  "description": "AFDS の作り直し 6-3 段 3b（T/O の速度の則）の X-Plane での確認、離陸。RJAA 34L でエンジン運転中に始め（機体を読み直す）、フラップ 20、MCP 速度を V2 の 160 kt、MCP 高度 5,000 ft、離陸トリム約 4.9 単位（代替トリム）。F/D を両方 OFF にしてから F/D L ON で T/O：地上の F/D のピッチは 8°（FCOM p.666）。手で推力を最大にし、150 kt で操縦輪を引いて離陸（この機体はフラップ 20 では 150 kt の前に自分で浮くことがある）、浮いたら A/P CMD L（T/O のまま：FCOM p.666）、脚上げ。T/O の則は V2 + 10 か引き起こし（ピッチ 2° 超え）の速度 + 10 の高い方、5 秒より長く上回れば今の速度（V2 + 25 まで）を保つ（FCOM p.664）。5,000 ft の捕捉（ALT）で推力を戻す。PFD を撮る。",
   "reload": true,
   "flight": {
     "runway_start": { "airport_id": "RJAA", "runway": "34L" },
@@ -23,6 +23,8 @@
     { "do": "set", "note": "MCP 速度 160 kt（V2：FCOM p.664 の注）", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 160 },
     { "do": "set", "note": "MCP 高度 5,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 5000 },
     { "do": "set", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 5000 },
+    { "do": "cmd", "note": "離陸トリム：代替トリムで機首下げを 5.2 秒（7.5 から約 4.9 単位。離陸後に自動トリムが合わせた付近。合わせないと滑走路開始の 7.5 単位は機首上げ側に外れていて、120 kt で自分で浮き、浮いてから 500 ft まで昇降舵が下げいっぱいに張り付いた）", "name": "laminar/B747/flt_ctrls/altn_stab_trim_dn", "duration": 5.2 },
+    { "do": "check", "note": "トリムは比 −0.28〜−0.42（約 4.4〜5.4 単位）", "dref": "sim/flightmodel2/controls/elevator_trim", "op": "between", "value": [-0.42, -0.28] },
     { "do": "switch", "note": "F/D L OFF", "dref": "laminar/B747/toggle_switch/position[23]", "value": 0, "cmd": "laminar/B747/toggle_switch/flight_dir_L" },
     { "do": "switch", "note": "F/D R OFF", "dref": "laminar/B747/toggle_switch/position[24]", "value": 0, "cmd": "laminar/B747/toggle_switch/flight_dir_R" },
     { "do": "sleep", "seconds": 1 },
