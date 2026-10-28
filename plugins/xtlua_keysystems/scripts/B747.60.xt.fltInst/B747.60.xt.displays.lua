@@ -50,6 +50,11 @@
 -- Step 5e: the ground speed and each side's bank angle to the ND model; each
 -- ND's position trend vector's pieces (nd/capt|fo/tv_show, tv_x, tv_y,
 -- tv_rot, tv_frame) out.
+-- MAP CTR (2026-10-28): X-Plane's map range for each side from the model
+-- (one up in MAP CTR: the half scale; the range knobs and the CDUs set only
+-- the selectors), the panel's half-size X-Plane map at 640 NM (nd/capt|fo/
+-- xp_map_half) and MAP CTR's track line and range scale (nd/capt|fo/
+-- trk_line_ctr) out.
 -- Step 6b: the EICAS format model (B747.60.eicas_format_model.lua) with the
 -- secondary EICAS display selected, the engines' secondary exceedances
 -- (engines/sec_exceed) and where primary and secondary EICAS show in; ENG
@@ -328,6 +333,8 @@ simDR_dsp_trk_copilot           = find_dataref("sim/cockpit2/gauges/indicators/g
 simDR_dsp_wind_from             = find_dataref("sim/cockpit2/gauges/indicators/wind_heading_deg_mag")
 simDR_dsp_map_mode              = find_dataref("sim/cockpit2/EFIS/map_mode")
 simDR_dsp_map_mode_copilot      = find_dataref("sim/cockpit2/EFIS/map_mode_copilot")
+simDR_dsp_map_range             = find_dataref("sim/cockpit2/EFIS/map_range")
+simDR_dsp_map_range_copilot     = find_dataref("sim/cockpit2/EFIS/map_range_copilot")
 B747DR_dsp_ias_capt             = find_dataref("laminar/B747/gauges/indicators/airspeed_kts_pilot")
 B747DR_dsp_ias_fo               = find_dataref("laminar/B747/gauges/indicators/airspeed_kts_copilot")
 B747DR_dsp_hdg_sel              = find_dataref("laminar/B747/autopilot/heading/degrees")
@@ -357,6 +364,10 @@ B747DR_dsp_nd_wind_fo           = find_dataref("laminar/B747/nd/fo/wind")
 B747DR_dsp_nd_wind_deg_fo       = find_dataref("laminar/B747/nd/fo/wind_deg")
 B747DR_dsp_nd_trk_line_capt     = find_dataref("laminar/B747/nd/capt/trk_line")
 B747DR_dsp_nd_trk_line_fo       = find_dataref("laminar/B747/nd/fo/trk_line")
+B747DR_dsp_nd_trk_line_ctr_capt = find_dataref("laminar/B747/nd/capt/trk_line_ctr")
+B747DR_dsp_nd_trk_line_ctr_fo   = find_dataref("laminar/B747/nd/fo/trk_line_ctr")
+B747DR_dsp_nd_xp_half_capt      = find_dataref("laminar/B747/nd/capt/xp_map_half")
+B747DR_dsp_nd_xp_half_fo        = find_dataref("laminar/B747/nd/fo/xp_map_half")
 B747DR_dsp_nd_center_capt       = find_dataref("laminar/B747/nd/map_center/capt")
 B747DR_dsp_nd_center_fo         = find_dataref("laminar/B747/nd/map_center/fo")
 simDR_dsp_wxr_on                = find_dataref("sim/cockpit2/EFIS/EFIS_weather_on")
@@ -718,7 +729,15 @@ local function nd_sources(c, f, nav_valid)
     -- it differs (TESTING.md §1.2)
     if simDR_dsp_map_mode ~= oc.xp_mode then simDR_dsp_map_mode = oc.xp_mode end
     if simDR_dsp_map_mode_copilot ~= of.xp_mode then simDR_dsp_map_mode_copilot = of.xp_mode end
-    local v = oc.rose and 1 or 0
+    -- and its map range: the selected one, MAP CTR one up (the half scale;
+    -- at 640 NM the panel's half-size map)
+    if simDR_dsp_map_range ~= oc.xp_range then simDR_dsp_map_range = oc.xp_range end
+    if simDR_dsp_map_range_copilot ~= of.xp_range then simDR_dsp_map_range_copilot = of.xp_range end
+    local v = oc.xp_half and 1 or 0
+    if B747DR_dsp_nd_xp_half_capt ~= v then B747DR_dsp_nd_xp_half_capt = v end
+    v = of.xp_half and 1 or 0
+    if B747DR_dsp_nd_xp_half_fo ~= v then B747DR_dsp_nd_xp_half_fo = v end
+    v = oc.rose and 1 or 0
     if B747DR_dsp_nd_rose_capt ~= v then B747DR_dsp_nd_rose_capt = v end
     if B747DR_dsp_nd_box_capt ~= oc.box then B747DR_dsp_nd_box_capt = oc.box end
     if B747DR_dsp_nd_box_fo ~= of.box then B747DR_dsp_nd_box_fo = of.box end
@@ -782,6 +801,10 @@ local function nd_sources(c, f, nav_valid)
     if B747DR_dsp_nd_trk_line_capt ~= v then B747DR_dsp_nd_trk_line_capt = v end
     v = of.trk_line and 1 or 0
     if B747DR_dsp_nd_trk_line_fo ~= v then B747DR_dsp_nd_trk_line_fo = v end
+    v = oc.trk_line_ctr and 1 or 0
+    if B747DR_dsp_nd_trk_line_ctr_capt ~= v then B747DR_dsp_nd_trk_line_ctr_capt = v end
+    v = of.trk_line_ctr and 1 or 0
+    if B747DR_dsp_nd_trk_line_ctr_fo ~= v then B747DR_dsp_nd_trk_line_ctr_fo = v end
 
     -- the VOR mode: the Captain's VOR L, the F/O's VOR R (the flag 1 VOR L,
     -- 2 VOR R)

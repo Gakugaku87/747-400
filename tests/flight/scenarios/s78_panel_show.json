@@ -1,6 +1,6 @@
 {
   "name": "s78_panel_show",
-  "description": "パネルの SHOW の条件の重なりの整理（5-2 段 7）の X-Plane での確認、空中。銚子沖の海上 7,000 ft・250 kt で開始（機体を読み直す）。V スピードが無くても空中では PFD に NO V SPD が出ない（前は V1 の条件だけで出ていた：FCOM p.972）、ND の範囲の数字は MAP で出て MAP CTR では出ない、ECS のページのパックの A・B は弁が開のときだけ（パック 1 を OFF にすると OFF だけ）、上の EICAS は通常どおり。PFD・ND・EICAS を撮る。",
+  "description": "パネルの SHOW の条件の重なりの整理（5-2 段 7）の X-Plane での確認、空中。銚子沖の海上 7,000 ft・250 kt で開始（機体を読み直す）。V スピードが無くても空中では PFD に NO V SPD が出ない（前は V1 の条件だけで出ていた：FCOM p.972）、ND の範囲の数字は MAP で出て MAP CTR では拡大の数字を出さない（2026-10-28 から MAP CTR は自分の航跡線と上下の数字：s110）、ECS のページのパックの A・B は弁が開のときだけ（パック 1 を OFF にすると OFF だけ）、上の EICAS は通常どおり。PFD・ND・EICAS を撮る。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 2133.6, "heading_true": 0, "speed_in_meters_per_second": 128.6 },

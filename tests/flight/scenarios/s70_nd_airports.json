@@ -71,7 +71,7 @@
     { "do": "cmd", "note": "CTR（MAP CTR）", "name": "laminar/B747/nd/center/capt/switch" },
     { "do": "sleep", "seconds": 2 },
     { "do": "check", "note": "MAP CTR", "dref": "laminar/B747/nd/map_center/capt", "op": "==", "value": 1 },
-    { "do": "check", "note": "MAP CTR：26R（中点 13 NM）は円の内", "dref": "laminar/B747/nd/capt/apt/rwy_frame[1]", "op": "==", "value": 5 },
+    { "do": "check", "note": "MAP CTR：26R（中点 13 NM）は円の内、拡大の半分の縮尺で 12 px の 3 コマ目（2026-10-28 から：s110）", "dref": "laminar/B747/nd/capt/apt/rwy_frame[1]", "op": "==", "value": 2 },
     { "do": "shot", "name": "nd_rwy_ctr" },
     { "do": "cmd", "note": "CTR を戻す", "name": "laminar/B747/nd/center/capt/switch" },
     { "do": "set", "note": "範囲 20 NM", "dref": "laminar/B747/nd/range/capt/sel_dial_pos", "value": 1 },

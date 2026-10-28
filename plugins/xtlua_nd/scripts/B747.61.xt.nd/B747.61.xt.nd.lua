@@ -220,6 +220,21 @@ local display_longitude_fo=0
 local captIRS=0
 local foIRS=0
 local ranges = {10, 20, 40, 80, 160, 320, 640}
+-- each side's map scale in the panel's units (640 units for 465 pixels):
+-- the units per NM and the selected range (NM). MAP CTR's selected range is
+-- the compass rose, half the expanded MAP's (B747.61.nd_data.lua's
+-- CTR_PX_PER_RANGE: the real airplane's, 2026-10-28; before, as expanded),
+-- its symbols within the centred mask's circle (CTR_UNITS); PLAN as before
+local UNITS_PER_PX = 640 / ND_DATA.PX_PER_RANGE
+local CTR_UNITS = ND_DATA.CTR_PX * UNITS_PER_PX
+local CTR_RANGE_UNITS = ND_DATA.CTR_PX_PER_RANGE * UNITS_PER_PX
+local function map_scale(isCapt)
+  local dial, mode, center = simDR_range_dial_capt, B747DR_nd_mode_capt, B747_nd_map_center_capt
+  if not isCapt then dial, mode, center = simDR_range_dial_fo, B747DR_nd_mode_fo, B747_nd_map_center_fo end
+  local range = ranges[dial + 1] or 40
+  local px = (center > 0 and mode == 2) and ND_DATA.CTR_PX_PER_RANGE or ND_DATA.PX_PER_RANGE
+  return px * UNITS_PER_PX / range, range
+end
 local usedNaviadsTableFO={}
 local usedNaviadsTableCapt={}
 local currentNaviadsTable={}
@@ -337,13 +352,14 @@ function makeIcon(iconTextData,navtype,text,latitude,longitude,distance,routeInd
   local apt=0
   local displayDistance=0
   local range=0
+  local units
   if iconTextData==iconTextDataCapt then
     if captIRS==0 then return end
-    range=ranges[simDR_range_dial_capt + 1]
-    displayDistance=distance*(640/ranges[simDR_range_dial_capt + 1])
+    units, range=map_scale(true)
+    displayDistance=distance*units
     if (heading_diff < -90 or heading_diff > 90) and B747_nd_map_center_capt<1 then return end
     if (heading_diff < -135 or heading_diff > 135) and displayDistance> 160 and B747_nd_map_center_capt<1 then return end
-    if displayDistance> 250 and B747_nd_map_center_capt>0 and simDR_map_mode~=4 then return end
+    if displayDistance> CTR_UNITS and B747_nd_map_center_capt>0 and simDR_map_mode~=4 then return end
     if displayDistance > 450 and simDR_map_mode==4 then return end
     if (heading_diff < -45 or heading_diff > 45) and displayDistance> 480 and B747_nd_map_center_capt<1 then return end
     if (heading_diff < -55 or heading_diff > 55) and displayDistance> 400 and B747_nd_map_center_capt<1 then return end
@@ -353,11 +369,11 @@ function makeIcon(iconTextData,navtype,text,latitude,longitude,distance,routeInd
     wpt=B747DR_nd_capt_wpt
   else
     if foIRS==0 then return end
-    range=ranges[simDR_range_dial_fo + 1]
-    displayDistance=distance*(640/ranges[simDR_range_dial_fo + 1])
-    if (heading_diff < -90 or heading_diff > 90) and B747_nd_map_center_fo<1 then return end 
-    if (heading_diff < -135 or heading_diff > 135) and displayDistance> 160 and B747_nd_map_center_fo<1 then return end 
-     if displayDistance> 250 and B747_nd_map_center_fo>0 and backport_map_mode_copilot~=4 then return end
+    units, range=map_scale(false)
+    displayDistance=distance*units
+    if (heading_diff < -90 or heading_diff > 90) and B747_nd_map_center_fo<1 then return end
+    if (heading_diff < -135 or heading_diff > 135) and displayDistance> 160 and B747_nd_map_center_fo<1 then return end
+     if displayDistance> CTR_UNITS and B747_nd_map_center_fo>0 and backport_map_mode_copilot~=4 then return end
      if displayDistance > 450 and backport_map_mode_copilot==4 then return end
      if (heading_diff < -45 or heading_diff > 45) and displayDistance> 480 and B747_nd_map_center_fo<1 then return end
      if (heading_diff < -55 or heading_diff > 55) and displayDistance> 400 and B747_nd_map_center_fo<1 then return end
@@ -456,11 +472,11 @@ function updateIcon(iconData,n,isCaptain)
   local abs_heading=getHeading(cLat,cLon,iconData[n].latitude,iconData[n].longitude)
   local heading_diff=nd_bearing(isCaptain==1,abs_heading)
   if isCaptain==1 then
-    displayDistance=distance*(640/ranges[simDR_range_dial_capt + 1])
+    displayDistance=distance*map_scale(true)
     B747DR_text_capt_heading[n]=heading_diff
     B747DR_text_capt_distance[n]=displayDistance
   else
-     displayDistance=distance*(640/ranges[simDR_range_dial_fo + 1])
+     displayDistance=distance*map_scale(false)
      B747DR_text_fo_heading[n]=heading_diff
      B747DR_text_fo_distance[n]=displayDistance
 
@@ -551,16 +567,15 @@ local function byTcas(a, b)
   return a.distance < b.distance
 end
 local function tcasSide(slots, isCaptain)
-  local on, irs, cLat, cLon, mapMode, center, range
+  local on, irs, cLat, cLon, mapMode, center
   if isCaptain then
     on, irs = B747DR_nd_capt_tcas_on, captIRS
     cLat, cLon, mapMode, center = display_latitude_cpt, display_longitude_cpt, simDR_map_mode, B747_nd_map_center_capt
-    range = ranges[simDR_range_dial_capt + 1]
   else
     on, irs = B747DR_nd_fo_tcas_on, foIRS
     cLat, cLon, mapMode, center = display_latitude_fo, display_longitude_fo, backport_map_mode_copilot, B747_nd_map_center_fo
-    range = ranges[simDR_range_dial_fo + 1]
   end
+  local units, range = map_scale(isCaptain)
   local k = 0
   if on > 0.5 and irs > 0 and range ~= nil then
     local nc = 0
@@ -590,14 +605,15 @@ local function tcasSide(slots, isCaptain)
       else
         heading_diff = getHeadingDifference(simDR_true_heading, abs_heading)
       end
-      local displayDistance = c.distance * (640 / range)
+      local displayDistance = c.distance * units
       local visible = true
       if center < 1 then
         if heading_diff < -90 or heading_diff > 90 then visible = false end
         if (heading_diff < -45 or heading_diff > 45) and displayDistance > 480 then visible = false end
         if (heading_diff < -55 or heading_diff > 55) and displayDistance > 400 then visible = false end
-      elseif displayDistance > 320 then
-        -- centred: the compass rose's radius is half the range (seen in X-Plane)
+      elseif displayDistance > CTR_RANGE_UNITS then
+        -- centred: within the selected range, the compass rose (2026-10-28;
+        -- before, the rose was half the range)
         visible = false
       end
       if visible then
@@ -767,12 +783,11 @@ end
 local function aptSide(isCapt, t, last)
   local mode=isCapt and B747DR_nd_mode_capt or B747DR_nd_mode_fo
   local irs=isCapt and captIRS or foIRS
-  local dial=isCapt and simDR_range_dial_capt or simDR_range_dial_fo
   local center=(isCapt and B747_nd_map_center_capt or B747_nd_map_center_fo)>0
   local view=ND_DATA.EXPANDED
   if mode==3 then view=ND_DATA.PLAN elseif center then view=ND_DATA.CENTRED end
-  local range=ranges[dial+1] or 40
-  local units, ppn=640/range, ND_DATA.PX_PER_RANGE/range
+  local units, range=map_scale(isCapt)
+  local ppn=units/UNITS_PER_PX
   local cLat, cLon=display_latitude_cpt, display_longitude_cpt
   if not isCapt then cLat, cLon=display_latitude_fo, display_longitude_fo end
   local on=irs>0 and (mode==2 or mode==3)
@@ -923,11 +938,10 @@ end
 local function crsSide(isCapt, t, last)
   local mode=isCapt and B747DR_nd_mode_capt or B747DR_nd_mode_fo
   local irs=isCapt and captIRS or foIRS
-  local dial=isCapt and simDR_range_dial_capt or simDR_range_dial_fo
   local center=(isCapt and B747_nd_map_center_capt or B747_nd_map_center_fo)>0
   local view=center and ND_DATA.CENTRED or ND_DATA.EXPANDED
-  local range=ranges[dial+1] or 40
-  local units, ppn=640/range, ND_DATA.PX_PER_RANGE/range
+  local units=map_scale(isCapt)
+  local ppn=units/UNITS_PER_PX
   local cLat, cLon=display_latitude_cpt, display_longitude_cpt
   if not isCapt then cLat, cLon=display_latitude_fo, display_longitude_fo end
   local modes=B747DR_nd_radio_modes
@@ -1210,13 +1224,15 @@ function compute_and_show_alt_range_arc()
     minsToAlt=altDiff/fpmVal
     distanceToAlt=(actual_speed*minsToAlt)/60
     --print("distanceToAlt="..distanceToAlt.." minsToAlt="..minsToAlt.." altDiff="..altDiff.." actual_speed="..actual_speed)
+    -- MAP and MAP CTR (FCOM p.1148), on that side's map scale (MAP CTR's
+    -- half: 2026-10-28)
     if distanceToAlt < ranges[simDR_range_dial_capt + 1] then
-      B747DR_nd_alt_distance_capt=distanceToAlt*(640/ranges[simDR_range_dial_capt + 1])
+      B747DR_nd_alt_distance_capt=distanceToAlt*map_scale(true)
     else
       B747DR_nd_alt_distance_capt=-99
     end
     if distanceToAlt < ranges[simDR_range_dial_fo + 1] then
-      B747DR_nd_alt_distance_fo=distanceToAlt*(640/ranges[simDR_range_dial_fo + 1])
+      B747DR_nd_alt_distance_fo=distanceToAlt*map_scale(false)
     else
       B747DR_nd_alt_distance_fo=-99
     end

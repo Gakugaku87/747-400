@@ -878,17 +878,13 @@ function fmsFunctions.setdata(fmsO,value)
 		end
   elseif value=="RANGEINC" or value=="RANGEDEC" then
 	-- that CDU's side (5-2 step 5c: both before), as the range selector does;
-	-- both written from the new value (a dataref read back in the same frame
-	-- can still give the old one)
+	-- X-Plane's map range follows the selector in the display glue
+	-- (B747.60.xt.displays.lua: MAP CTR one range up, 2026-10-28)
 	local step=value=="RANGEINC" and 1 or -1
 	if fo then
-		local r=math.max(0, math.min(6, simDR_range_dial_fo+step))
-		simDR_range_dial_fo=r
-		simDR_EFIS_map_range_copilot=r
+		simDR_range_dial_fo=math.max(0, math.min(6, simDR_range_dial_fo+step))
 	else
-		local r=math.max(0, math.min(6, simDR_range_dial_capt+step))
-		simDR_range_dial_capt=r
-		simDR_EFIS_map_range=r
+		simDR_range_dial_capt=math.max(0, math.min(6, simDR_range_dial_capt+step))
 	end
   elseif value=="depdst" and string.len(fmsO["scratchpad"])>3  then
     dep=string.sub(fmsO["scratchpad"],1,4)

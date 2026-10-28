@@ -40,11 +40,21 @@ M.SW_OFF, M.SW_VOR, M.SW_ADF = 0, 1, 2
 -- where no DME distance, to the display's edge (estimate: the expanded
 -- map's range arc ahead, within the display's sides from the airplane
 -- symbol, nothing behind it, as the map's symbols; the centred map's
--- symbols' 250 units)
+-- symbols' circle)
 M.PX_PER_RANGE = 465
 M.RAD_ARC_PX = 465
 M.RAD_LEFT_PX, M.RAD_RIGHT_PX = 329, 348
-M.RAD_CTR_PX = 250 / 640 * 465
+-- MAP CTR (2026-10-28, the real airplane's; FCOM p.1009's figure: the half
+-- range's marks halfway to the compass rose): the selected range is the
+-- rose, half the expanded map's pixels (before, as expanded), the map's
+-- symbols within the centred mask's circle, 225 pixels (X-Plane's map
+-- shows inside it; before, 250 of the old 640 units, 182 pixels), and the
+-- track line and range scale (FCOM p.1143: MAP CTR); X-Plane's map one
+-- range up for its half scale (sim/cockpit2/EFIS/map_range 0 to 6, 10 to
+-- 640 NM: at 640 NM no step above, the panel's half-size map instead)
+M.CTR_PX_PER_RANGE = M.PX_PER_RANGE / 2
+M.RAD_CTR_PX = 225
+M.RANGES_NM = {10, 20, 40, 80, 160, 320, 640}
 -- the position trend vector (step 5e, FCOM p.1147): MAP and MAP CTR, from
 -- the airplane symbol along the track, the positions at the end of 30, 60
 -- and 90 s at the ground speed and the turn of the bank angle (a radius of
@@ -116,6 +126,8 @@ local function side_out()
     return {
         up = 0,             -- the display's top: heading, track or 0 (north)
         xp_mode = M.XP_MAP, -- X-Plane's map mode
+        xp_range = 2,       -- X-Plane's map range, 0 to 6 (10 to 640 NM)
+        xp_half = false,    -- X-Plane's map drawn at half size (MAP CTR at 640 NM)
         rose = false,       -- the compass rose and the digital heading or track
         box = 1,            -- the box at the top: 1 HDG, 2 TRK; in PLAN 3 HDG, 4 TRK
         trk_flag = false,
@@ -127,6 +139,7 @@ local function side_out()
         hdg_bug = false,    -- the selected heading bug
         hdg_line = false,   -- its dashed line
         trk_line = false,   -- the expanded track line
+        trk_line_ctr = false, -- MAP CTR's track line and range scale
         wind = false,       -- the wind arrow
         wind_deg = 0,       -- the wind arrow's direction on the display
         -- the VOR mode
@@ -165,7 +178,7 @@ local function arc_point(a, r, sign)
     if r == nil then return 0, a end
     return sign * r * (1 - math.cos(a / r)), r * math.sin(a / r)
 end
-function M.trend(o, on, gs_kt, roll_deg, range_nm, dir_deg)
+function M.trend(o, on, gs_kt, roll_deg, range_nm, dir_deg, px_per_range)
     dir_deg = dir_deg or 0
     local cd, sd = math.cos(math.rad(dir_deg)), math.sin(math.rad(dir_deg))
     local segs = (range_nm <= 10 and 1) or (range_nm <= 20 and 2) or M.TV_SEGS
@@ -173,7 +186,7 @@ function M.trend(o, on, gs_kt, roll_deg, range_nm, dir_deg)
     local r, sign = nil, roll_deg < 0 and -1 or 1
     if math.abs(roll_deg) >= 0.5 and gs > 0 then r = gs * gs / (G * math.tan(math.rad(math.abs(roll_deg)))) end
     local seg = gs * M.TV_SEG_S                     -- metres a segment
-    local px_m = M.PX_PER_RANGE / (range_nm * 1852)
+    local px_m = (px_per_range or M.PX_PER_RANGE) / (range_nm * 1852)
     local n = 0
     for k = 0, M.TV_SEGS - 1 do
         local a0 = k * seg
@@ -262,6 +275,19 @@ function M.update(s, inp, dt)
         -- WXR or TFC on (the stock's rule); with a track
         o.trk_line = not i.center and o.rose and i.trk_valid
             and (mode == M.MAP or ((mode == M.VOR or mode == M.APP) and (i.wxr or i.tfc)))
+        -- MAP CTR's (FCOM p.1143; p.1009's figure: through the airplane
+        -- symbol both ways to the rose, the half range marked each way)
+        local ctr_map = mode == M.MAP and i.center
+        o.trk_line_ctr = ctr_map and o.rose and i.trk_valid
+        -- X-Plane's map range: the selected one; MAP CTR one up (its
+        -- half scale), at 640 NM the panel's half-size map
+        local k = #M.RANGES_NM - 1
+        for n, r in ipairs(M.RANGES_NM) do
+            if i.range_nm <= r then k = n - 1 break end
+        end
+        o.xp_half = ctr_map and k == #M.RANGES_NM - 1
+        o.xp_range = (ctr_map and not o.xp_half) and k + 1 or k
+        local ppr = ctr_map and M.CTR_PX_PER_RANGE or M.PX_PER_RANGE
         -- the wind arrow with respect to the display orientation (FCOM
         -- p.1142): where the wind blows to
         o.wind = i.ias >= M.WIND_KT and o.rose
@@ -321,14 +347,14 @@ function M.update(s, inp, dt)
             o.pos_rad_radial[k] = radial == 0 and 360 or radial
             local edge = M.edge_px(o.pos_rad_brg[k], i.center)
             local dme = inp.vor_dme_rx[k] and not i.dme_fail
-            local dme_px = dme and inp.vor_dme_nm[k] * M.PX_PER_RANGE / i.range_nm or math.huge
+            local dme_px = dme and inp.vor_dme_nm[k] * ppr / i.range_nm or math.huge
             o.pos_rad[k] = on and edge > 0
             o.pos_rad_len[k] = o.pos_rad[k] and math.min(dme_px, edge) or 0
             o.pos_rad_tick[k] = o.pos_rad[k] and dme and dme_px <= edge
         end
         -- the position trend vector (step 5e), along the track on the
         -- display (a 405's heading up MAP: turned by the drift)
-        M.trend(o, mode == M.MAP and o.rose and i.trk_valid, inp.gs_kt, i.roll_deg, i.range_nm, wrap(i.trk - o.up))
+        M.trend(o, mode == M.MAP and o.rose and i.trk_valid, inp.gs_kt, i.roll_deg, i.range_nm, wrap(i.trk - o.up), ppr)
     end
     return s.out
 end

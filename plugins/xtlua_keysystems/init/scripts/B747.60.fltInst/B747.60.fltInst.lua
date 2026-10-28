@@ -322,6 +322,12 @@ B747DR_nd_wind_fo                               = deferred_dataref("laminar/B747
 B747DR_nd_wind_deg_fo                           = deferred_dataref("laminar/B747/nd/fo/wind_deg", "number")
 B747DR_nd_trk_line_capt                         = deferred_dataref("laminar/B747/nd/capt/trk_line", "number")
 B747DR_nd_trk_line_fo                           = deferred_dataref("laminar/B747/nd/fo/trk_line", "number")
+-- MAP CTR (2026-10-28): its track line and range scale, and X-Plane's map
+-- drawn at half size at 640 NM (the display glue)
+B747DR_nd_trk_line_ctr_capt                     = deferred_dataref("laminar/B747/nd/capt/trk_line_ctr", "number")
+B747DR_nd_trk_line_ctr_fo                       = deferred_dataref("laminar/B747/nd/fo/trk_line_ctr", "number")
+B747DR_nd_xp_map_half_capt                      = deferred_dataref("laminar/B747/nd/capt/xp_map_half", "number")
+B747DR_nd_xp_map_half_fo                        = deferred_dataref("laminar/B747/nd/fo/xp_map_half", "number")
 B747DR_nd_fo_heading_bug            			= deferred_dataref("laminar/B747/nd/mode/fo/show_heading_bug", "number")
 B747DR_nd_capt_heading_bug          			= deferred_dataref("laminar/B747/nd/mode/capt/show_heading_bug", "number")
 

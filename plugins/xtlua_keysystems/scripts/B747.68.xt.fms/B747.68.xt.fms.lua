@@ -277,7 +277,6 @@ B747DR_efis_fpv_fo_selected                     = find_dataref("laminar/B747/efi
 B747DR_efis_meters_capt_selected                = find_dataref("laminar/B747/efis/meters/capt/selected")
 B747DR_efis_meters_fo_selected                  = find_dataref("laminar/B747/efis/meters/fo/selected")
 simDR_EFIS_wxr_copilot                          = find_dataref("sim/cockpit2/EFIS/EFIS_weather_on_copilot")
-simDR_EFIS_map_range_copilot                    = find_dataref("sim/cockpit2/EFIS/map_range_copilot")
 simDR_radio_alt_DH_capt             = find_dataref("sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_pilot")
 simDR_radio_alt_DH_fo               = find_dataref("sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_copilot")
 
@@ -296,7 +295,6 @@ simDR_nd_mode_dial_fo			= find_dataref("laminar/B747/nd/mode/fo/sel_dial_pos")
 simDR_nd_center_dial_capt		= find_dataref("laminar/B747/nd/map_center/capt")
 simDR_nd_center_dial_fo			= find_dataref("laminar/B747/nd/map_center/fo")
 simDR_EFIS_map_mode                 = find_dataref("sim/cockpit2/EFIS/map_mode")
-simDR_EFIS_map_range                = find_dataref("sim/cockpit2/EFIS/map_range")
 
 simDR_groundspeed			= find_dataref("sim/flightmodel2/position/groundspeed")
 simDR_ias_pilot				= find_dataref("laminar/B747/gauges/indicators/airspeed_kts_pilot")
@@ -1771,12 +1769,6 @@ function after_physics()
 	local cM=hh
 	cM=mm
 	cM=ss
-	-- X-Plane's map ranges read each frame, as the time: XTLua passes a
-	-- write on only when it differs from the value it last read, and the
-	-- range knobs (the fltInst module) and the Web API change them; the
-	-- CDU's RANGE INCR and DECR write them (5-2 step 5c)
-	cM=simDR_EFIS_map_range
-	cM=simDR_EFIS_map_range_copilot
     setNotifications()
     update_spd_trans()
     update_perf()

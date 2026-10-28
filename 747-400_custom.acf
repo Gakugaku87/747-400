@@ -91234,18 +91234,36 @@ GROUP First Officer ND
         GROUP Map/Rose
           SHOW_GREATER 0.500000 laminar/B747/nd/fo/rose
           HIDE
-          EFIS_map_s_HM map_s_HM.png
-            POS 1023.000000 78.000000
-            DATAREF 
-            SIZE 3.500000
-            COPILOT
-            HIDE
-            LIGHT_MODE MECHANICAL
-            LIGHT_RHEOSTAT 3
-            BUS_SRC 4
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 1.000000 1.000000
+          GROUP XP Map Full
+            SHOW_LESS 0.500000 laminar/B747/nd/fo/xp_map_half
+            EFIS_map_s_HM map_s_HM.png
+              POS 1023.000000 78.000000
+              DATAREF 
+              SIZE 3.500000
+              COPILOT
+              HIDE
+              LIGHT_MODE MECHANICAL
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
 
+          END_GROUP
+          GROUP XP Map Half
+            SHOW_GREATER 0.500000 laminar/B747/nd/fo/xp_map_half
+            EFIS_map_s_HM map_s_HM.png
+              POS 1023.000000 78.000000
+              DATAREF 
+              SIZE 1.750000
+              COPILOT
+              HIDE
+              LIGHT_MODE MECHANICAL
+              LIGHT_RHEOSTAT 3
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+
+          END_GROUP
           gen_rotary Mask:Centered:0:1:2
             POS 1023.500000 95.000000
             IMAGE EFIS/Maps/mask_centered
@@ -91342,6 +91360,60 @@ GROUP First Officer ND
               IS_DRAGGABLE 0
               OFFSET 0.000000
 
+            GROUP Trk Line Ctr
+              SHOW_GREATER 0.500000 laminar/B747/nd/fo/trk_line_ctr
+              gen_rotary Trk Line Ctr
+                POS 1023.000000 72.000000
+                IMAGE EFIS/Maps/Centered/track_line_ctr
+                DATAREF 
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 3
+                BUS_SRC 4
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_LED Range Ctr Up
+                POS 990.000000 215.250000
+                IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+                DATAREF laminar/B747/nd/range_display_fo
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 3
+                BUS_SRC 4
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 0
+                LED_ROWS 4
+                ROUNDING ROUND_ROUND
+              gen_LED Range Ctr Dn
+                POS 990.000000 -17.250000
+                IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+                DATAREF laminar/B747/nd/range_display_fo
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 3
+                BUS_SRC 4
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 0
+                LED_ROWS 4
+                ROUNDING ROUND_ROUND
+            END_GROUP
             gen_needle Rose:PLN
               POS 1022.500000 166.000000
               IMAGE EFIS/Maps/rose_L
@@ -91926,7 +91998,7 @@ GROUP First Officer ND
             END_GROUP
           END_GROUP
           gen_needle Hdg Ptr:APP/VOR/MAP
-            POS 1022.000000 309.000000
+            POS 1022.000000 302.000000
             IMAGE EFIS/Maps/hdg_ptr
             DATAREF laminar/B747/pfd/fo/hdg_deg
             SHOW_GREATER 0.500000 laminar/B747/nd/fo/hdg_ptr
@@ -91937,8 +92009,8 @@ GROUP First Officer ND
             KEY_FRAME 0.000000 0.000000 1.000000
             KEY_FRAME 90.000000 90.000000
             IS_DRAGGABLE 0
-            OFFSET 237.000000
-            NEEDLE_OFFSET_Y -237.000000
+            OFFSET 230.000000
+            NEEDLE_OFFSET_Y -230.000000
 
         END_GROUP
         GROUP Hdg Ofst:PLN
@@ -92046,7 +92118,7 @@ GROUP First Officer ND
           END_GROUP
         END_GROUP
         gen_rotary Aircraft Triangle
-          POS 1022.500000 49.000000
+          POS 1022.500000 62.500000
           IMAGE EFIS/Maps/aircraft_triangle
           DATAREF 
           SHOW_EQUAL 2.000000 laminar/B747/nd/mode/fo/sel_dial_pos
@@ -114038,17 +114110,34 @@ GROUP Captain ND
         GROUP Map/Rose 2
           SHOW_GREATER 0.500000 laminar/B747/nd/capt/rose
           HIDE
-          EFIS_map_s_HM map_s_HM.png 2
-            POS 336.000000 78.000000
-            DATAREF 
-            SIZE 3.500000
-            HIDE
-            LIGHT_MODE MECHANICAL
-            LIGHT_RHEOSTAT 0
-            BUS_SRC 2
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 1.000000 1.000000
+          GROUP XP Map Full
+            SHOW_LESS 0.500000 laminar/B747/nd/capt/xp_map_half
+            EFIS_map_s_HM map_s_HM.png 2
+              POS 336.000000 78.000000
+              DATAREF 
+              SIZE 3.500000
+              HIDE
+              LIGHT_MODE MECHANICAL
+              LIGHT_RHEOSTAT 0
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
 
+          END_GROUP
+          GROUP XP Map Half
+            SHOW_GREATER 0.500000 laminar/B747/nd/capt/xp_map_half
+            EFIS_map_s_HM map_s_HM.png 2
+              POS 336.000000 78.000000
+              DATAREF 
+              SIZE 1.750000
+              HIDE
+              LIGHT_MODE MECHANICAL
+              LIGHT_RHEOSTAT 0
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 1.000000
+
+          END_GROUP
           gen_rotary Mask:Centered:0:1:2
             POS 336.500000 95.000000
             IMAGE EFIS/Maps/mask_centered
@@ -114145,6 +114234,60 @@ GROUP Captain ND
               IS_DRAGGABLE 0
               OFFSET 0.000000
 
+            GROUP Trk Line Ctr
+              SHOW_GREATER 0.500000 laminar/B747/nd/capt/trk_line_ctr
+              gen_rotary Trk Line Ctr
+                POS 336.000000 72.000000
+                IMAGE EFIS/Maps/Centered/track_line_ctr
+                DATAREF 
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 0
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_LED Range Ctr Up
+                POS 301.000000 215.250000
+                IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+                DATAREF laminar/B747/nd/range_display_capt
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 0
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 0
+                LED_ROWS 4
+                ROUNDING ROUND_ROUND
+              gen_LED Range Ctr Dn
+                POS 301.000000 -17.250000
+                IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+                DATAREF laminar/B747/nd/range_display_capt
+                HIDE
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 0
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 999.000000 999.000000
+                DIGITS 3
+                DECIMALS 0
+                PERIOD_WIDTH 0
+                LED_ROWS 4
+                ROUNDING ROUND_ROUND
+            END_GROUP
             gen_needle Rose:PLN 2
               POS 335.500000 166.000000
               IMAGE EFIS/Maps/rose_L
@@ -114729,7 +114872,7 @@ GROUP Captain ND
             END_GROUP
           END_GROUP
           gen_needle Hdg Ptr:APP/VOR/MAP
-            POS 335.000000 309.000000
+            POS 335.000000 302.000000
             IMAGE EFIS/Maps/hdg_ptr
             DATAREF laminar/B747/pfd/capt/hdg_deg
             SHOW_GREATER 0.500000 laminar/B747/nd/capt/hdg_ptr
@@ -114740,8 +114883,8 @@ GROUP Captain ND
             KEY_FRAME 0.000000 0.000000 1.000000
             KEY_FRAME 90.000000 90.000000
             IS_DRAGGABLE 0
-            OFFSET 237.000000
-            NEEDLE_OFFSET_Y -237.000000
+            OFFSET 230.000000
+            NEEDLE_OFFSET_Y -230.000000
 
         END_GROUP
         GROUP Hdg Ofst:PLN 2
@@ -114849,7 +114992,7 @@ GROUP Captain ND
           END_GROUP
         END_GROUP
         gen_rotary Aircraft Triangle 2
-          POS 335.500000 49.000000
+          POS 335.500000 62.500000
           IMAGE EFIS/Maps/aircraft_triangle
           DATAREF 
           SHOW_EQUAL 2.000000 laminar/B747/nd/mode/capt/sel_dial_pos

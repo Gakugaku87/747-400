@@ -131,6 +131,36 @@ T.check(oc.rose, "the rose")
 c.trk_valid, c.center = true, true
 run()
 T.check(not oc.trk_line, "centred: not this one")
+T.check(not oc.trk_line_ctr, "VOR CTR: no track line (FCOM p.1143: MAP CTR)")
+
+-- MAP CTR (2026-10-28, the real airplane's; FCOM p.1009, p.1143): its
+-- track line and range scale; X-Plane's map one range up (the half scale),
+-- at 640 NM the panel's half-size map
+c.mode, c.wxr = M.MAP, false
+c.range_nm = 40
+run()
+T.check(oc.trk_line_ctr and not oc.trk_line, "MAP CTR: its own track line and range scale")
+T.check(oc.xp_range == 3 and not oc.xp_half, "40 NM: X-Plane's map at 80 NM (half the scale)")
+c.trk_valid = false
+run()
+T.check(not oc.trk_line_ctr, "no track: none")
+c.trk_valid = true
+c.range_nm = 640
+run()
+T.check(oc.xp_range == 6 and oc.xp_half, "640 NM: X-Plane's map at 640 NM, drawn at half size")
+c.center = false
+run()
+T.check(oc.xp_range == 6 and not oc.xp_half and not oc.trk_line_ctr, "expanded MAP 640 NM: as selected")
+c.range_nm = 10
+run()
+T.equal(oc.xp_range, 0, "10 NM: X-Plane's map range 0")
+c.mode, c.center = M.PLN, true
+run()
+T.check(oc.xp_range == 0 and not oc.xp_half and not oc.trk_line_ctr, "PLN (centred): as selected")
+c.mode = M.VOR
+run()
+T.equal(oc.xp_range, 0, "VOR CTR: as selected (no map)")
+c.mode, c.center, c.range_nm = M.MAP, false, 40
 
 -- the VOR mode (step 5b): autotuned, received
 s, inp = M.new(), M.inputs()
@@ -255,7 +285,9 @@ run()
 T.check(not oc.pos_rad[2], "behind the airplane on the expanded map: none (as the map's symbols)")
 c.center = true
 run()
-T.near(oc.pos_rad_len[2], 250 / 640 * 465, 1e-6, "the centred map: the map symbols' radius")
+T.near(oc.pos_rad_len[2], 225, 1e-6, "the centred map: to the centred mask's circle (the map symbols')")
+T.near(oc.pos_rad_len[1], 20 * 232.5 / 40, 1e-6, "MAP CTR: 20 NM DME at 40 NM at half the scale, 116 pixels")
+T.check(oc.pos_rad_tick[1], "its tick mark")
 c.center = false
 inp.vor_dme_nm[1] = 60
 run()
