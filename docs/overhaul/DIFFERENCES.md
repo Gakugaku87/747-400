@@ -1,6 +1,6 @@
 # 実機との違い（DIFFERENCES）
 
-Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこで違うかを、全分野についてまとめたもの。2026-10-27 の時点（`overhaul`、表示 5-2 の段 7 まで、FMC・CDU は 6-1・6-2 の段 7e3b まで）。
+Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこで違うかを、全分野についてまとめたもの。2026-10-28 の時点（`overhaul`、表示 5-2 の段 7 まで、FMC・CDU は 6-1・6-2 の段 7f まで、自動操縦は 6-3 の段 3b と A/P の姿勢のループまで）。
 
 - 元の調査は [GAP_ANALYSIS.md](GAP_ANALYSIS.md)（作り直し前のコードと資料の読み比べ、550 件）。ここでは、その後の作り直しで直った点を反映し、残っている違いを分野ごとに短く書いた。各項目の括弧は GAP の ID で、詳しい内容と出典は GAP_ANALYSIS.md と `notes/` にある。
 - 基準の機体は FCOM の 109（旅客機、PW4056）。FCOM が P&W の 109 と GE の 570（GE の貨物機）で分けている乗員から見える違い（AFDS の ATT など）は、GE の機体を 570 に合わせる（RR は資料が無いので P&W と同じ：推定）。2026-10-27 に利用者がいったん P&W を 405（PW の改造貨物機）にすると決め、ND の向きと AFDS の G/S を 405 にしたが、同じ日に 109 に戻した。109 と 405 の違いの一覧は [EFFECTIVITY_405.md](EFFECTIVITY_405.md)（参考）。
@@ -25,11 +25,11 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 火災防護（ATA 26） | 作り直し済み（3-4：エンジン・APU・貨物室の検知と消火、車輪格納部、ダクトリーク、煙、試験、スクイブ試験） | FUEL CONTROL の赤灯（3D）、M869 とホーンの音、火の元は失敗の dataref（X-Plane に無いもの） |
 | 操縦系統（ATA 27） | 作り直し中（4-1 段 1：フラップの FCU、段 2：SRM の外側エルロンのロックアウト・ラダー比変換器・安定板トリム・speed trim、グリーンバンド、段 3：スピードブレーキ、段 4：横操縦・遮断弁・ヨーダンパーの INOP） | フラップの拡大・代替の表示のパネル、>STAB GREENBAND、昇降舵の舵角、ヨーダンパーの制御則（AFDS） |
 | 脚・ブレーキ・ステアリング（ATA 32） | 作り直し済み（4-2 段 1〜5：脚の作動・代替下げ・位置監視・表示、ブレーキ、オートブレーキ、ステアリング、ブレーキ温度とタイヤ圧） | AIR/GND SYSTEM と脚の STATUS の一部、tiller の軸が無いときのペダル（実機ではない手当て） |
-| 表示（PFD・ND・EICAS） | ほぼ作り直し済み（5-2 段 1：表示器と EIU、段 2：ソース選択の比較、段 3：速度テープ、段 4：PFD の気圧・PLI・FPV・ILS と旗、段 5：ND の向き・APP・VOR・DATA・POS・地図の記号・空港・HDG REF・トレンドベクトル、段 6：時計、EICAS の部分表示と compact、段 7：パネルの表示の条件の重なり） | TERR（外部のプラグイン頼み）、ND の FMC の記号の残り（S/C・E/D など：FMC の作り直しで）、405 型の RADIO/BARO の minimums |
+| 表示（PFD・ND・EICAS） | ほぼ作り直し済み（5-2 段 1：表示器と EIU、段 2：ソース選択の比較、段 3：速度テープ、段 4：PFD の気圧・PLI・FPV・ILS と旗、段 5：ND の向き・APP・VOR・DATA・POS・地図の記号・空港・HDG REF・トレンドベクトル、段 6：時計、EICAS の部分表示と compact、段 7：パネルの表示の条件の重なり） | TERR（外部のプラグイン頼み）、ND の FMC の記号の残り（S/C・E/D など：FMC の作り直しで）、ND の MAP CTR の縮尺、GE（570）の RADIO/BARO の minimums |
 | 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記。段 5d：PFD の TCAS RA・トランスポンダのコード・ND の WXR の文字） | FMC の位置への GPS の更新、GPWS の地形の look-ahead、PWS、無線の自動同調（FMC の作り直しで） |
 | FMC | 作り直し中（段取り：経路を自前で持ち、12 段で。notes/ATA-34-61-FMC.md §10。段 1：小修正、段 4：航法データベース、段 5a〜5e：経路のモデル、RTE・LEGS・DEP/ARR、現用点と X-Plane の FMS。段 6a〜6d：経路の形と LNAV、ND の線。段 7a〜7d：ホールド、オフセット。段 7e1〜7f：REF NAV DATA、ABEAM PTS、自分で作る点、FIX INFO、RTE 2、procedure turn の形（推定）） | ND の fly-by の旋回の曲線とオフセットの線、FIX INFO の円と方位線、PLAN の CTR と STEP、VNAV（X-Plane の FMS に流した経路を飛ぶ）、予測 |
-| CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み、段 3：地上準備のページ、段 4：航法データベース、段 5：経路（RTE・LEGS・DEP/ARR）、段 7：HOLD・OFFSET・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO） | 3 台が 1 つを共有（RTE 2 など）、性能のページの MOD/EXEC、入力の検査、データリンク |
-| 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）、段 3a・3b：ピッチの則のうち V/S・ALT とその捕捉、速度を昇降舵で保つ則（FLCH・T/O・G/A・前の VNAV の速度）と速度の保護。LNAV のロールは FMC の指令：6-1 段 6c） | VNAV のサブモードは前の VNAV、G/S の捕捉の判定、G/S・autoland の則 |
+| CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み、段 3：地上準備のページ、段 4：航法データベース、段 5：経路（RTE・LEGS・DEP/ARR）、段 7：HOLD・OFFSET・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO・RTE 2） | 3 台が X-Plane の CDU 1 つを共有（性能・データリンクなど、残りの X-Plane のページ）、性能のページの MOD/EXEC、入力の検査、データリンク |
+| 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）、段 3a・3b：ピッチの則のうち V/S・ALT とその捕捉、速度を昇降舵で保つ則（FLCH・T/O・G/A・前の VNAV の速度）と速度の保護、A/P の姿勢のループ（自動トリムの帯、スタビライザーの差し引き、姿勢の変化率）。LNAV のロールは FMC の指令：6-1 段 6c） | VNAV のサブモードは前の VNAV、G/S の捕捉の判定、G/S・autoland の則 |
 | オートスロットル・推力管理 | 未着手 | 推力制限のモード、assumed temperature、THR・HOLD、操縦者の override |
 | 通信（ATA 23） | 未着手 | VHF の電源、ACP の連動、VHF C と HF が無い |
 | 照明（ATA 33） | 未着手（P5 の灯の入力は各系統で移し中） | 外部灯の電源、非常灯、毎フレームの完全 GC |
@@ -280,7 +280,8 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 実機に合わせた点（段 5c-3a、ND の地図の記号）：局・fix・空港は MAP と MAP CTR でだけ出る（前はどのモードでも）。VOR L・R が同調している局は STA に関わらず緑で出る（FCOM p.1145。前は STA のときだけ）。STA は 10・20・40 NM で高・低高度の局、80 NM 以上で高高度の局だけ（FCOM p.1040。前は全部）。記号が表示できる数（60）を超えると EXCESS DATA が出る（FCOM p.1111。前は黙って捨てた）。109 の ND は GS だけで TAS を出さない（FCOM p.1141）。
   - 残り（推定）：高高度の局は X-Plane の受信範囲（100 NM 以上）で見分ける。EXCESS DATA の色。遠くの空港・局は XTLua の一覧に無いので出ない。
 - 実機に合わせた点（段 5c-3b、ND の出発・到着空港と滑走路）：出発・到着空港は ARPT に関わらず MAP・MAP CTR・PLAN でいつも白で出る（FCOM p.1149。前は経路の点の星）。80 NM 以上は空港の記号と ID、選んだ滑走路の番号と滑走路に沿う線、40 NM 以下は選んだ滑走路を縮尺どおりと両端から 14.2 NM の破線、閾値に番号。経路の点は MAP・MAP CTR・PLAN だけ（FCOM p.1148。前は VOR でも出た）。
-  - 残り（推定）：滑走路は X-Plane の FMS の経路の RW の項目（DEP ARR で選んだもの）と CIFP の閾値から作る。RTE の RUNWAY の欄は経路に入らない（FMC の作り直しで）。記号の大きさ、線の向き、破線の長さと間。MAP CTR の縮尺は利用者に確認中。
+  - 残り（推定）：滑走路は X-Plane の FMS の経路の RW の項目（DEP ARR で選んだもの）と CIFP の閾値から作る。RTE の RUNWAY の欄は経路に入らない（FMC の作り直しで）。記号の大きさ、線の向き、破線の長さと間。
+  - MAP CTR の縮尺が実機と違う：地図の記号・TCAS と X-Plane の地図の層が拡大の MAP と同じ縮尺で描かれ、全周のローズの円が選んだ範囲の約半分に当たる（記号は範囲の約 4 割まで）。実機は拡大の MAP と同じく、選んだ範囲が機体の記号からローズの円まで（2026-10-28 に実機どおりにすると決まった：次に直す）。
 - 実機に合わせた点（段 5c-3c、ND のコースの線）：CDU の NAV RADIO で手動同調した VOR は、MAP と MAP CTR で局を通る選んだコースの線と、コース・反対の数字が出る（FCOM p.1145。前は無し）。
   - 残り（推定）：線の色（緑）、破線、地図の端までの長さ、数字の位置。コースは機体の磁気偏差で真方位にする。NAV RADIO の CRS は手動同調の後も「---」にならない（FMC の作り直しで）。
 - 実機に合わせた点（段 5d、HDG REF）：HDG REF の TRUE（と NORM の極地域）で PFD・ND の方位・航跡・ローズ・風が真方位になり、PFD は枠つきの TRU、ND は白枠の TRU（真北のまま 800 fpm を超えて 2,000 ft 降りると琥珀で 10 秒点滅）、TRU から MAG に戻すと MAG に 10 秒の枠（FCOM p.998、p.1046、p.1110、p.1142。前はスイッチが動くだけ）。AFDS は MCP の方位を真方位として扱い、HDG SEL のときに切り替えると HDG HOLD になる。
@@ -336,12 +337,14 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 実機に合わせた点（段 1、表示器と EIU）：INBD・LWR の選択器を FCOM の規則どおりにした（前は 81 通りのうち 11 通りだけを表で持ち、資料に無い入れ替えもした）。表示器 6 台の故障で、outboard が使えなければ PFD が inboard に、upper が使えなければ primary EICAS が lower に自動で移る。EIU 3 台（電源と故障）を作り、各席の EIU 選択器の AUTO（機長 L→C→R、副操縦士 R→C→L）と中央の EIU SEL（EICAS）、手で選んだ EIU が壊れると切り替えずにその表示が消えること、standby の電源で L の EIU が壊れると全部の表示が消えること、>EIU LEFT（地上だけ）。内容の明るさは、出している表示器のつまみで変わる（DSP-27〜30）。
   - 故障の無いときに選択器で内容を別の表示器に出すと、もとの表示器は消える（実機は同じ内容を 2 面に出せるが、パネルが 1 か所にしか描けない：推定）。compact EICAS（表示器 1 台のとき）は段 6 で。
 
-- ソースの選択（FLT DIR、NAV、EIU、AIR DATA、IRS）が無い（DSP-02・03）。PFD の故障旗が少ない（DSP-04：MACH・SPD LIM・SEL SPD・FD・G/S・LOC・DH・FPV・NO TDZ・PITCH/ROLL は段 4c〜4e）。
-- 速度テープの帯（最大・最小機動速度）が違う、OVERSPEED を Vmax で出す、Vs の表の高度区分の誤りと誤記（DSP-05〜08）。
-- DH は 109 型の表示（緑の DH と数字、大きな琥珀の DH）のまま。405 の RADIO/BARO の表示は 5-2 で。DH RST と各席の DH の警報は 5-1 段 4 で直した（DSP-09・10）。STD と preselect（DSP-11）。FPV・PLI など PFD の記号が無い（DSP-12）。
-- ND の DATA・POS が効かない（DSP-16）、TERR は外部のプラグイン頼み（DSP-19）、HDG REF（DSP-20）。ND の TCAS の記号とメッセージは 5-1 段 5 で、気象レーダーの注記と航跡線の判定（DSP-21 の一部）は段 5c で直した（DSP-18）。
-- EICAS の形式（DSP-24）は段 6b で直した。表示器と EIU の故障と自動切替（DSP-27）、表示選択の組み合わせ（DSP-28）。
-- 時計（DSP-33）は段 6a で作り直した。
+- 残っている違い（GAP の ID ごと。直した点は上の各段）：
+  - FLT DIR・NAV の選択で、FD の指示や地図の源が変わらない（DSP-02：FCC・FMC が 1 つずつ。AFDS・FMC の作り直しで）。>TRACK が無い（DSP-32）。
+  - PFD の旗：MACH・SPD LIM・SEL SPD・FD は源の故障が無いので出ない。DH・NO TDZ は FMC と EFIS 操作パネルの作り直しで（DSP-04）。
+  - PFD の記号：ILS の周波数・コースの不一致の線（同調の作り直しで）、LCD の PFD のバンク 35° 以上の琥珀と横滑りの印の色（既定は CRT）、範囲外の V1・VREF の数字、TDZ（DSP-12）。ILS の同調は目的地の 50 NM 以内だけ（DSP-14：5-1 段 3 の無線の自動同調で）。
+  - DH は 109 型の表示（緑の DH と数字、大きな琥珀の DH）。GE の機体（570）の RADIO/BARO の minimums の表示は無い（FCOM p.1539–1540：405・570）。
+  - VR・V2 の表の誤記（DSP-08：FMC の作り直しで）。計器のモジュールが BAT DISCH MAIN・BATTERY OFF を書く（DSP-34）。
+  - ND：FMC の記号の残り（S/C・E/D・減速点、待機・PT、エネルギー円、FIX の基準点：DSP-23）、MAP CTR の縮尺（DSP-17：上の段 5c-3b の残り）、TERR は外部のプラグイン頼み（DSP-19）。
+  - 輝度の周囲光の補正と、WXR の内側のつまみが無い（DSP-30）。
 - 直した点：表示器と CDU の電源（1-1）。同じ機体のまま新しいフライトを始めると表示器と CDU が真っ暗になる不具合（作り直し前から）を直した（2026-10-23）。
 
 ### 航法センサーと無線（ATA 34）：作り直し中（5-1 段 1：エアデータ、段 2：IRS、段 4：電波高度計・GPWS、段 5：トランスポンダ・TCAS、段 5c：気象レーダー、段 5d：PFD の TCAS RA の表示は済）
@@ -357,7 +360,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - 音のバンクが自分で音量を絞るので、SINK RATE は昇降計が 2,500 fpm 以上の降下でないと聞こえず、TOO LOW FLAPS はフラップ 20 以上・140 kt 未満などで聞こえない。DON'T SINK の音は使えない（音声パックの GUIDs.txt で外されている）。GLIDE SLOPE の音量と繰り返しの速さは変わらない。音は対象外なので直していない。
   - mode 1 の PULL UP の線、mode 2 の一部の点と速度の間、mode 3 の閾値の細部、各声の再 arm などは推定（資料に数値が無い）。mode 3B は無い。
   - 地形の look-ahead と TCF が無い（NAV-62。TERR OVRD は >TERR OVRD だけ）。GPWC の自己試験、envelope modulation が無い。windshear は X-Plane の検出をそのまま使う。
-  - DH の表示は 109 型（緑の DH と数字、大きな琥珀の DH）のまま。405 の RADIO/BARO の表示は表示の作り直し（5-2）で。EIU の故障と AUTO の切替が無い。
+  - DH の表示は 109 型（緑の DH と数字、大きな琥珀の DH）。GE の機体（570）の RADIO/BARO の minimums の表示は無い（表示の残り：上）。EIU の故障と AUTO の切替は 5-2 段 1 で済。
 - 実機に合わせた点（段 5、トランスポンダと TCAS Ver 7.0）：トランスポンダのパネルを 3D の 570 型として、STBY・ALT RPTG OFF・XPDR・TA ONLY・TA/RA を X-Plane のトランスポンダのモードにつないだ（前は STBY 以外がすべて高度なしの mode A で、X-Plane の TCAS も動いていなかった：NAV-66）。L・R とも働き、電源（L は AC standby bus、R は AC bus 2）と故障で止まる（>TRANSPONDER L・R）。TCAS は X-Plane の TCAS の判定（TA・RA、反転、複数機）を使い、747 の層を足した：TA ONLY・TA/RA でだけ動く、RA 1,000 ft 未満と地上・GPWS の警報・windshear で TA ONLY（ND に TA ONLY）、DESCEND・INCREASE DESCENT の低高度の抑止、TA の声は 500 ft 未満で出さない、windshear で TCAS の声と自動表示なし。ND に機影 4 種（RA の赤の四角、TA の琥珀の丸、近接の白塗りの菱形、その他の白抜きの菱形）と上下の矢印、100 ft 単位の相対高度（上なら記号の上に +、下なら下に −）、TRAFFIC（琥珀・赤）、OFFSCALE、TA ONLY、TCAS FAIL、TCAS OFF。新しい TA・RA で両 ND に TFC が自動で出る（出せないモードの ND は arm）。声は Ver 7.0 の 14 種（TRAFFIC, TRAFFIC、CLIMB, CLIMB、… ADJUST VERTICAL SPEED, ADJUST、CLEAR OF CONFLICT）。EICAS の >TCAS OFF（地上と 400 ft 未満は出さない）・>TCAS SYSTEM・>TCAS RA CAPTAIN・F/O（NAV-66・69・70・72〜78）。
   - PFD の RA の表示（段 5d、カスタム acf のパネル）：姿勢表示に赤枠の RA のピッチの領域（上・下。複数の RA なら両方）、570 の VSI に赤の範囲の帯、昇降率が赤の範囲にあるうちは VS ポインタが赤（FCOM p.1536–1537）。前は値だけで描いていなかった（NAV-71）。赤枠の位置（限界の昇降率と今の昇降率の経路角の差を、機体シンボルから）は推定（資料は「RA のデータの関数」とだけ）。X-Plane が 1 つの RA で上下両方に赤を出せば赤枠も 2 つ出る（実機は 1 つの RA では片方だけ）。
   - トランスポンダのコード表示（段 5d、パネル）：L・R どちらでもコードを出し、窓の左上に ATC L・ATC R（FCOM p.1218）。前は R を選ぶと INOP の絵だった（NAV-67）。表示の電源は操作盤の 2 本のバス（AC standby bus か AC bus 2：ATA34_1 p.584）。
@@ -367,11 +370,11 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - ND の故障とゲインの注記（段 5d、パネル）：R/T・アンテナ・操作盤の故障で琥珀の WXR FAIL（反射は出さない）、TEST でチルトの欄に故障の源（ANT・CONT・WEAK・ATT）、校正の故障で WEAK、安定化の姿勢が無ければ ATT（反射は残る。WEAK が先）、MAP のゲインは CAL か VAR（推定：FCOM は CAL を挙げるだけ）。前は R/T が止まると何も出なかった（NAV-80・81）。アンテナ・操作盤・校正の故障は新設（X-Plane に無い）。WXR RANGE DISAGREE、RSTR INOP は出ない。PWS（予測ウインドシア）と TEST の 12 秒の PWS 試験は無い。両 ND の交互の更新は無い（X-Plane の描画のまま）。
   - 推定：R/T の電源のバス、TFR の両押しを両側の TFR とみなすこと、TEST の戻り方を席ごとにしたこと、MAP GAIN のつまみの幅。
 
-### FMC（航法・性能・誘導）：作り直し中（6-1 段 1）
+### FMC（航法・性能・誘導）：作り直し中（6-1・6-2 の段 1〜7：経路・LNAV・ホールド・オフセット・残りの経路の操作。段 8〜12 は未）
 
 - 経路は FMC 自身のモデル（段 5a〜5e：RTE・LEGS・DEP/ARR、現用点）で持ち、手続きのレグの種類（条件の点、高度と速度の制限、fly-over）も持つ。X-Plane の FMS へは点とその高度の制限を流し込み（条件の点とミストアプローチは書かない）、ND の線はそれを描く（2026-10-27 から条件の脚の終わりと RF・DME の弧の点も。fly-by の旋回は角のまま、VECTORS の線は次の点へつながる、条件の脚の終わりの予測に旋回を入れない：推定）。LNAV は 2026-10-27 から FMC 自身が経路の形（脚の種類ごとの線・コース・ヘディング・弧、fly-by の旋回：半径と旋回の始めは推定）を飛び、自分で順送りする（段 6c）。DIRECT TO の始点は EXEC の時の位置（推定）。LEGS の PLAN の CTR と STEP が無い。ホールドは 2026-10-27 から、経路の HM・HA・HF（いまは手続きのもの）を LNAV が飛ぶ（進入は保持点を通る時のトラックで parallel・teardrop・direct、30° までのバンク、保持点を通るたびの大きさ、EXIT の最短の戻り：FMSPG p.164–165、p.221–226。direct の旋回は推定）。HOLD キーのページ（RTE LEGS HOLD AT・PPOS・RTE 1 HOLD・EXIT HOLD）も 2026-10-27 から（段 7b）。予測の欄（FIX ETA・HOLD AVAIL・BEST SPEED）はダッシュ、EFC TIME は予測に効かない（段 8 で）。ND のホールドは X-Plane の線の形の点で描く：TO の点のホールドは LNAV の大きさ、ほかは決まった大きさ（小さい記号の代わり：推定）。範囲 80 nm 超で小さい記号にすることと、画面で大きさの決まった記号は無い（FMSPG p.223）。procedure turn（PI）の形は 2026-10-27 から推定（段 7f：資料に形が無く、利用者の依頼で PANS-OPS の 45°/180°。出航は PI の距離の 1 nm 内側に収まる長さ、45° の脚は 1 分 15 秒）で、LNAV が飛び ND に描く。オフセットは 2026-10-27 から（段 7d：RTE の 6R の OFFSET、LNAV が平行な線を飛ぶ、END OF OFFSET、DIRECT TO と PPOS で消える）。ND にオフセットの破線を描かない（X-Plane の線は元の経路の 1 本）、CDU の OFST 灯は 3D にない（dataref だけ）。DIRECT TO の ABEAM PTS は 2026-10-27 から（段 7e2：飛ばした点の真横に XAC01 などの点を作る。風を持ち越さない：風の入力がまだ無い）。
 - LNAV（段 6c で作り直した）：捕捉の条件（2.5 nm か、脚に交わるトラックで 25° の旋回を始める所）、NOT ON INTERCEPT HEADING、経路の終わりと discontinuity でのヘディングの保持（END OF ROUTE・DISCONTINUITY）、21 nm 超で順送りしない（FMC-03〜06）。誘導の則（交角とゲイン）、fly-by の点の順送りを二等分線ですること、条件の脚の終わりの予測（上昇の勾配）は推定。作動の高度は電波高度 50 ft のまま（実機は滑走路の標高 +50 ft：AFDS 6-3 で）。オフセットはまだ（段 7。前の LNAV のオフセットも効かなくなった）。
-- 高度制限の種類（AT・A・B・窓）と速度制限が無い（FMC-07・08）。CI は巡航 Mach の経験式にだけ（FMC-11）。ECON の上昇・降下の速度は固定（上昇 340/.84 は PI の通常の上昇速度：推定）。
+- VNAV が高度制限の種類（AT・A・B・窓）と速度制限を使わない（経路のモデルは段 5a・5d から持つ。VNAV の作り直しの段 9 で：FMC-07・08）。CI は巡航 Mach の経験式にだけ（FMC-11）。ECON の上昇・降下の速度は固定（上昇 340/.84 は PI の通常の上昇速度：推定）。
 - VNAV の降下パスと PTH の則、approach 段階（FMC-12・13・16）。飛行段階を MCP のボタンで決めている（FMC-17）。
 - 軌跡の予測が無い（燃料・ETA は経験式。FMC-20）。CALCULATED の燃料が無い（FMC-22）。風の扱い、片発の VNAV（FMC-25・26）。
 - FMC の位置はシムの真値（IRS のドリフトや更新が無い。FMC-28）。UNABLE RNP が無い（ANP と RNP の比較は段 10。FMC-29）。
@@ -379,7 +382,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 経路の管理は FMC 自身になった（段 5b・5c）。RTE 2 と RTE COPY は 2026-10-27 から（段 7e4）。性能の変更の MOD/EXEC はまだ（FMC-34）。ND の経路線は FMC が流し込んだ X-Plane の FMS が描く。段 6d から条件の脚の終わりと弧も描くが、fly-by の旋回の曲線、オフセットの線、FIX INFO の記号は描かない（FMC-35 の残り）。FMC 2 台の扱いが無い（FMC-36）。
 - 実機に合わせた点（段 1）：上昇は SPD TRANS の高度まで SPD TRANS の速度（制限速度と VREF30+100 の大きい方）、その上は ECON（前は取り違え）。SPD RESTR は入れるまでダッシュ。遷移高度で気圧を自動で STD にしない。XTK による UNABLE RNP の誤警報をやめた。RESET MCP ALT は T/D の 2 分前。ETA の速度の下限の単位の誤り。VOR の自動同調の 2 番目の局。AP の毎フレームの完全な GC と decode をやめた。
 
-### CDU：作り直し中（6-2 段 1〜4、段 5 の RTE・LEGS・DEP/ARR）
+### CDU：作り直し中（6-2 段 1〜5、段 7 の HOLD・OFFSET・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO・RTE 2）
 
 - 3 台が X-Plane 標準の CDU 1 つを共有する（X-Plane のページ：CDU-02。HOLD は段 7b、FIX は段 7e3b、RTE 2 は段 7e4 で FMC のページに。残りは性能・データリンクのページなど）。
 - 性能のページ（CLB・CRZ・DES など）に MOD・EXEC・ERASE が無く、即時に効く（CDU-03。RTE・LEGS は段 5b・5c で MOD・EXEC・ERASE を持った。EXEC 灯は 2026-10-27 から、経路の修正と ACTIVATE、X-Plane のページ（FIX）の実行待ちで点く）。題名、大字と小字（CDU-04・05）。VNAV のキーで開くページが文脈で変わらない（CDU-06。INIT REF は段 3a、DEP ARR は段 5d、HOLD は段 7b で）。
@@ -403,7 +406,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 実機に合わせた点（段 2）：CLR は 1 字、押し続けると全部、DEL は空のときだけ、+/- は交互、メッセージの間は打鍵を受けない。入力のメッセージはその CDU だけ、FMC のメッセージは全 CDU に出てどれかの CLR で全部から消え、条件が続く間は再び出ない。alert で >FMC MESSAGE。ページはすぐ切り替わる。NEXT は最後のページから 1 ページ目へ。CDU の電源が無いとキーが効かず、戻ると MENU。
 - 実機に合わせた点（段 1）：CRZ CG の範囲（前は文字で描画が止まった）、APPROACH REF の FLAP/SPEED の入力の形と複写・削除、EMERGENCY REPORT の DIVERT TO は経路を書き換えない、SPD TRANS は削除だけ、速度の入力は CAS 100–400。
 
-### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a〜1e・2a・2b・3a・3b）
+### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a〜1e・2a・2b・3a・3b、A/P の姿勢のループ）
 
 - 実機に合わせた点（A/P の姿勢のループ、2026-10-28）：
   - 自動トリムは、昇降舵のサーボの指令が 0.4°（G/S 捕捉中 0.6°）を超えたら動かし、0.25° 以内で止める（ATA22 p.149。前はモードごとの幅で帯なし、ALT HOLD は 0.1°）。
