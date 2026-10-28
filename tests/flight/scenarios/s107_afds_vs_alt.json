@@ -82,7 +82,7 @@
     { "do": "wait", "note": "+2,000 fpm に乗る", "dref": "sim/flightmodel/position/vh_ind_fpm", "op": "between", "value": [1800, 2200], "timeout": 40 },
     { "do": "cmd", "note": "ALT HOLD", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
     { "do": "remember", "dref": "laminar/B747/autopilot/altitude_hold_ft", "as": "alt_push" },
-    { "do": "watch", "note": "行き過ぎは 0.05 g の引き起こしの分（450 ft まで）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "max": 99999, "timeout": 60 },
+    { "do": "watch", "note": "行き過ぎは 0.05 g の引き起こしの分（450 ft まで）。戻りを 90 秒見る（60 秒では回によって 36〜63 ft 上で、±60 ft の境目だった：2026-10-28）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "max": 99999, "timeout": 90 },
     { "do": "check", "note": "押した時の高度へ戻る（±60 ft）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [-60, 60], "rel": "alt_push" },
     { "do": "view", "note": "機長の PFD", "the": -24, "psi": -1, "fov": 24 },
     { "do": "shot", "name": "pfd_alt_hold" },
