@@ -269,6 +269,13 @@ local before = get(ELEV)
 rt:set("sim/flightmodel2/controls/elevator_trim", 0.05)
 frames(1)
 T.near(before - get(ELEV), 1.9 * 0.05, 0.01, "the stabilizer 0.05 nose up: the elevator 0.095 less (" .. before .. " to " .. get(ELEV) .. ")")
+-- the attitude rate (ATA22 p.330): 1 degree a second nose up, the
+-- elevator command 0.03 less
+local e0 = get(ELEV)
+rt:set("sim/flightmodel/position/Q", 1)
+frames(1)
+T.near(e0 - get(ELEV), 0.03, 0.005, "pitching up 1 degree a second: the elevator 0.03 less (" .. e0 .. " to " .. get(ELEV) .. ")")
+rt:set("sim/flightmodel/position/Q", 0)
 rt:set("sim/flightmodel2/controls/elevator_trim", 0)
 rt:set("laminar/B747/autopilot/servos_on", 0)
 rt:set("laminar/B747/autopilot/pitch_law", 0)

@@ -18,6 +18,8 @@ B747DR_ap_pitch_law = find_dataref("laminar/B747/autopilot/pitch_law")
 -- the elevator's travel (degrees up and down) for the autotrim's band
 simDR_ap_elev_up = find_dataref("sim/aircraft/controls/acf_elev_up")
 simDR_ap_elev_dn = find_dataref("sim/aircraft/controls/acf_elev_dn")
+-- the pitch rate (the IRUs': X-Plane's body rate, degrees a second)
+simDR_ap_pitch_rate = find_dataref("sim/flightmodel/position/Q")
  local lastUp=0
  local lastDown=0
 local pitchRecord={}
@@ -566,6 +568,17 @@ pitchPid:compute()
 local AP_STAB_PER_ELEV = 1.9
 local ap_trim_last = nil
 
+-- the inner loop's attitude rate (ATA22 p.330: the attitude error and the
+-- attitude rate make the command): AP_PITCH_RATE_K of the elevator's ratio
+-- against each degree a second of pitch rate, damping the short period
+-- (X-Plane's 747 at FL350: 1.7 rad/s damped 0.28, fitted to s07's
+-- recording) under the attitude error's gain, now 0.1 at all altitudes
+-- (B747.19.xt.hydraulicsmodel.lua; notes/ATA-22.md §21). Alone with the
+-- old gain it did not help (FL350: 250 to 340 fpm); with 0.1, ALT HOLD at
+-- FL350 within 12 fpm and 0.01 g. Before, the attitude error only
+-- (estimate)
+local AP_PITCH_RATE_K = 0.03
+
 -- the old law's state on the new law's command (6-3 step 3a): its last
 -- command and its 10 samples, so that it goes on from there (G/S after V/S)
 local function ap_director_pitch_sync(p)
@@ -618,7 +631,8 @@ function ap_pitch_assist(doCompute)
         end
         local speed=B747_rescale(1,3,10,10,math.abs(flight_director_pitch-simDR_AHARS_pitch_heading_deg_pilot))
         if pitchPid.output==nil then return 0 end
-        retval=B747_interpolate_value(B747DR_sim_pitch_ratio,pitchPid.output,-1,1,speed) 
+        local out = math.max(-1, math.min(1, pitchPid.output - AP_PITCH_RATE_K * simDR_ap_pitch_rate))
+        retval=B747_interpolate_value(B747DR_sim_pitch_ratio,out,-1,1,speed) 
         
         --retval=pitchPid.output
 

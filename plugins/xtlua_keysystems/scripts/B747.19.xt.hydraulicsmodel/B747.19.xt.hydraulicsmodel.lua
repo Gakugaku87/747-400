@@ -386,8 +386,13 @@ function flight_start()
   B747DR_pidRollDL = 0.05 --low 0.1 high 0.4
   B747DR_pidRollDH = 0.1 --low 0.1 high 0.4
 
-  B747DR_pidPitchPL = 0.07 --low 0.15 high 0.05
-  B747DR_pidPitchPH = 0.04 --low 0.15 high 0.05
+  -- the A/P's attitude loop: one gain at all altitudes, with the attitude
+  -- rate in afds_control (6-3, after step 3b: notes/ATA-22.md §21). The MCP
+  -- altitude's schedule, 0.07 at 3,000 ft down to 0.04 at 40,000, left the
+  -- A/P 0.45 degree behind a 0.11 degree a second command at FL350 and ALT
+  -- HOLD swinging 250 fpm; 0.1 holds within 12 fpm (estimate)
+  B747DR_pidPitchPL = 0.1
+  B747DR_pidPitchPH = 0.1
   B747DR_pidPitchI = 0.07 --0.07
   B747DR_pidPitchD = 0.0002
 
