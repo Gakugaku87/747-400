@@ -15,6 +15,9 @@ B747DR_ap_roll_law = find_dataref("laminar/B747/autopilot/roll_law")
 -- attitude to fly when pitch_law is 1
 B747DR_ap_pitch_cmd = find_dataref("laminar/B747/autopilot/pitch_cmd")
 B747DR_ap_pitch_law = find_dataref("laminar/B747/autopilot/pitch_law")
+-- the elevator's travel (degrees up and down) for the autotrim's band
+simDR_ap_elev_up = find_dataref("sim/aircraft/controls/acf_elev_up")
+simDR_ap_elev_dn = find_dataref("sim/aircraft/controls/acf_elev_dn")
  local lastUp=0
  local lastDown=0
 local pitchRecord={}
@@ -507,35 +510,39 @@ local function ap_release(v)
 end
 
 -- autotrim (ATA22 p.147): the FCC commands nose up or down trim while its
--- elevator servo command is out of neutral; the SRM trims after 3.5 s, at
--- its rate and limits (B747.45.xt.srm.lua). The neutral band by mode is the
--- old tuning. No trim command below 500 ft RA, as before (the old flare
--- tuning): the sources trim down to touchdown, with full-rate autotrim
--- below 120 ft in LAND 2 and a nose-up bias (ATA22 p.147), which waits for
--- the AFDS's rebuild. The full-rate request goes out by its own condition
+-- elevator servo command is out of neutral, from 0.4 degrees (0.6 with the
+-- G/S captured) until it is back within 0.25 (ATA22 p.149: notes/ATA-22.md
+-- §4.8; before, windows by mode from 0.1 degree in ALT HOLD to 4 in FLCH,
+-- no band); the SRM trims after 3.5 s, at its rate and limits
+-- (B747.45.xt.srm.lua). No trim command below 500 ft RA, as before (the
+-- old flare tuning): the sources trim down to touchdown, with full-rate
+-- autotrim below 120 ft in LAND 2 and a nose-up bias (ATA22 p.147), which
+-- waits for the AFDS's rebuild (6-3 step 6). The full-rate request goes out
+-- by its own condition
 function setAutotrim(cmd)
     if B747DR_autotrim_cmd ~= cmd then B747DR_autotrim_cmd = cmd end
     local frat = 0
     if cmd ~= 0 and B747DR_ap_autoland == 1 and simDR_radarAlt1 < 120 then frat = 1 end
     if B747DR_autotrim_frat ~= frat then B747DR_autotrim_frat = frat end
 end
+local AUTOTRIM_ON_DEG, AUTOTRIM_ON_GS_DEG, AUTOTRIM_OFF_DEG = 0.4, 0.6, 0.25
+local autotrim_dir = 0
 function doTrim()
     local cmd = 0
     if simDR_radarAlt1 >= 500 then
-        local ratioWindow=0.05
-        if simDR_autopilot_alt_hold_status==2 then
-            ratioWindow=0.005
-        elseif B747DR_ap_FMA_active_pitch_mode==2 then
-            ratioWindow=0.01 --quick trim on glideslope and alt hold
-        elseif B747DR_ap_FMA_active_pitch_mode==4 or B747DR_ap_FMA_active_pitch_mode==8 or (B747DR_ap_FMA_active_pitch_mode==6 and B747DR_ap_inVNAVdescent>0) then
-            ratioWindow=0.2 --limit trim activity when pitching for speed
-        end
-        if B747DR_sim_pitch_ratio>ratioWindow then
+        -- the servo command in degrees of the elevator's travel
+        local r = B747DR_sim_pitch_ratio
+        local deg = r >= 0 and r * simDR_ap_elev_up or r * simDR_ap_elev_dn
+        local on = B747DR_ap_FMA_active_pitch_mode == 2 and AUTOTRIM_ON_GS_DEG or AUTOTRIM_ON_DEG
+        if autotrim_dir ~= 0 and deg * autotrim_dir > AUTOTRIM_OFF_DEG then
+            cmd = autotrim_dir
+        elseif deg > on then
             cmd = 1
-        elseif B747DR_sim_pitch_ratio<-ratioWindow then
+        elseif deg < -on then
             cmd = -1
         end
     end
+    autotrim_dir = cmd
     setAutotrim(cmd)
 end
 local previous_simDR_AHARS_pitch_heading_deg_pilot=0
@@ -546,6 +553,18 @@ pitchPid.maxout=1
 pitchPid.target=0
 pitchPid.input = 0
 pitchPid:compute()
+
+-- the elevator trim integrator's stabilizer input (ATA22 p.330, p.333):
+-- as the stabilizer trims, the integrator gives back the elevator the
+-- stabilizer now stands for, X-Plane's stabilizer (its trim ratio) being
+-- AP_STAB_PER_ELEV times as strong as the elevator (its ratio): 1.7 clean
+-- at FL350, 2.35 with flaps 20 at 170 kt, fitted to s07's, s53's and
+-- s109's recordings (estimate). Without it the autotrim and the integrator
+-- took turns: at FL350 in ALT HOLD the pitch swung 1.3 degrees, 740 fpm
+-- and 0.16 g every 17 s (s53), which a model of those recordings
+-- reproduced; with it, from 1.2 to 2.2, the model holds level
+local AP_STAB_PER_ELEV = 1.9
+local ap_trim_last = nil
 
 -- the old law's state on the new law's command (6-3 step 3a): its last
 -- command and its 10 samples, so that it goes on from there (G/S after V/S)
@@ -587,6 +606,11 @@ function ap_pitch_assist(doCompute)
     
     if simDR_autopilot_servos_on>0 and (B747DR_ap_FMA_active_pitch_mode>0 or B747DR_ap_autoland == 1) then
         simDR_electric_trim=0
+        local trim = simDR_elevator_trim
+        if ap_trim_last and pitchPid._Iterm then
+            pitchPid._Iterm = pitchPid._Iterm - AP_STAB_PER_ELEV * (trim - ap_trim_last)
+        end
+        ap_trim_last = trim
         pitchPid.input = simDR_AHARS_pitch_heading_deg_pilot
         pitchPid.target= flight_director_pitch
         if doCompute==1 then
@@ -603,6 +627,8 @@ function ap_pitch_assist(doCompute)
        -- print("flight_director_pitch "..flight_director_pitch .." simDR_AHARS_pitch_heading_deg_pilot "..simDR_AHARS_pitch_heading_deg_pilot .." retval "..retval)
     else
         pitchPid:compute(true)
+        ap_trim_last = nil
+        autotrim_dir = 0
         simDR_electric_trim=1
         setAutotrim(0)
         retval=ap_release(B747DR_sim_pitch_ratio)
