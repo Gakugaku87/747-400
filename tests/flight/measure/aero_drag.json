@@ -1,0 +1,38 @@
+{
+  "name": "aero_drag",
+  "description": "測定（合否なし、全シナリオの実行に入れない）：カスタム acf の空力の比較（PROGRESS.md 5f）、抵抗の分け方。銚子沖の海上 10,000 ft・290 kt・東向きで開始（機体を読み直す）。A/P の ALT HOLD・HDG SEL と A/T の SPD で 290 kt と 231 kt の水平飛行（揚力係数 約 0.36 と 0.57）を mark。記録 v4 の力の列から、`luajit tests/flight/tools/aero_compare.lua <記録のフォルダー>` が抗力 ÷ 重量を出す。2 点から形状抵抗 CD0 と誘導抵抗の係数を分ける（notes/AERO.md §3.4）。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 3048.0, "heading_true": 90, "speed_in_meters_per_second": 172.0 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": { "definition": "vfr_few_clouds", "vertical_speed_in_thermal_in_feet_per_minute": 0, "wave_height_in_meters": 0.5, "wave_direction_in_degrees": 0, "terrain_state": "dry", "variation_across_region_percentage": 0, "evolution_over_time_enum": "static" }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 5, "note": "空中開始の揺れ" },
+    { "do": "set", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 10000 },
+    { "do": "set", "dref": "laminar/B747/autopilot/heading/degrees", "value": 97 },
+    { "do": "set", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 290 },
+    { "do": "cmd", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "cmd", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "cmd", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "set", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0 },
+    { "do": "wait", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "between", "value": [-300, 300], "timeout": 90 },
+    { "do": "record_start" },
+    { "do": "wait", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [288, 292], "timeout": 120 },
+    { "do": "sleep", "seconds": 50 },
+    { "do": "wait", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "between", "value": [-100, 100], "timeout": 60 },
+    { "do": "mark", "note": "290 kt" },
+    { "do": "sleep", "seconds": 32 },
+    { "do": "set", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 231 },
+    { "do": "wait", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [229, 233], "timeout": 180 },
+    { "do": "sleep", "seconds": 50 },
+    { "do": "wait", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "between", "value": [-100, 100], "timeout": 60 },
+    { "do": "mark", "note": "231 kt" },
+    { "do": "sleep", "seconds": 32 },
+    { "do": "record_stop" }
+  ]
+}
