@@ -122,10 +122,14 @@ M.RPM_LIM_SHOW = {GE = 0.2, PW = 0.005}     -- N1 % or EPR
 -- alike at any thrust. With the lever at its idle end the throttle is 0
 -- (the EEC's idle). Gains, rates and slopes: estimates, the slopes measured
 -- in X-Plane (8,000-13,500 ft, M.42-.49; near idle the displays hardly move).
+-- The P&W slopes follow the displayed EPR: with the EPR model of 2026-10-30
+-- (B747.42.epr_model.lua) they are the measured ones carried through the
+-- two EPR formulas at 10,000 ft, M.45 (the same thrusts); above 1.42 (full
+-- throttle there) carried on (estimate).
 M.THRUST = {
     PW = {ki = 2.0, kp = 3.0, lag = 1.5, up = 0.15, down = 0.15,       -- EPR each second
-        at = {0.97, 1.03, 1.1, 1.23, 1.34, 1.46, 1.57, 1.64, 1.71},
-        slope = {0.3, 0.6, 0.9, 1.35, 1.86, 2.5, 2.9, 3.7, 4.2}},     -- EPR for each unit of throttle
+        at = {0.97, 1.02, 1.09, 1.20, 1.26, 1.32, 1.37, 1.42, 1.71},
+        slope = {0.3, 0.62, 0.82, 0.93, 1.03, 1.16, 1.17, 1.47, 1.8}}, -- EPR for each unit of throttle
     GE = {ki = 2.0, kp = 3.0, lag = 1.5, up = 15, down = 5,            -- N1 % each second
         at = {35, 45, 60, 75, 90, 100},
         slope = {20, 100, 112, 100, 80, 77}},                          -- N1 % for each unit of throttle
