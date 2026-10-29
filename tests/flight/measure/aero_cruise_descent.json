@@ -1,0 +1,57 @@
+{
+  "name": "aero_cruise_descent",
+  "description": "測定（合否なし、全シナリオの実行に入れない）：カスタム acf の空力の比較（PROGRESS.md 5f）、フラップ UP。銚子沖の海上 35,000 ft・.84（287 KIAS）・東向きで開始（機体を読み直す）。A/P の ALT HOLD・HDG SEL と A/T の SPD（MCP は IAS 表示のまま 287 kt：上昇中に Mach が .84 を超えると前のコードが Mach 表示に替え、IAS の数字を Mach と読むので、上昇はしない）で FCOM PI.10.38 の Cruise (.84/290) の水平飛行、MCP 290 kt の FLCH（速度は昇降舵）で A/T を切ってアイドル、8,000 ft へ降下（PI.10.39 の Descent (.84/290)：30,000・20,000・10,000 ft を通る所）。上昇は aero_climb_maxclb.json（最大上昇 EPR）。記録は `luajit tests/flight/tools/aero_compare.lua <記録のフォルダー>` で FCOM の表の姿勢・EPR・N1・昇降率と比べる（重量と高度で内挿）。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 10668.0, "heading_true": 90, "speed_in_meters_per_second": 249.0 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 5, "note": "空中開始の揺れ" },
+    { "do": "set", "note": "MCP 高度 35,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 35000 },
+    { "do": "set", "note": "MCP 方位 097（東向き）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 97 },
+    { "do": "check", "note": "MCP は IAS 表示", "dref": "sim/cockpit2/autopilot/airspeed_is_mach", "op": "==", "value": 0 },
+    { "do": "set", "note": "MCP 速度 287 kt（35,000 ft の .84）", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 287 },
+    { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "note": "A/P のサーボ", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "cmd", "note": "ALT HOLD", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "cmd", "note": "SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "set", "note": "レバー UP", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0 },
+    { "do": "wait", "note": "水平飛行に落ち着く", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "between", "value": [-300, 300], "timeout": 90 },
+    { "do": "snapshot", "note": "開始の状態（重量・重心・外気温）", "drefs": [ "sim/flightmodel/weight/m_total", "sim/flightmodel2/misc/cg_offset_z_mac", "sim/weather/aircraft/temperature_ambient_deg_c", "sim/flightmodel/misc/machno", "laminar/B747/engines/type", "sim/cockpit2/autopilot/airspeed_is_mach", "sim/cockpit2/autopilot/airspeed_dial_kts" ] },
+    { "do": "record_start" },
+    { "do": "wait", "note": "287 kt", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [285, 289], "timeout": 240 },
+    { "do": "sleep", "seconds": 90, "note": "速度と推力が落ち着く" },
+    { "do": "wait", "note": "水平", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "between", "value": [-100, 100], "timeout": 60 },
+    { "do": "mark", "note": "cruise 35,000 ft .84" },
+    { "do": "sleep", "seconds": 35 },
+    { "do": "snapshot", "note": "巡航 35,000 ft", "drefs": [ "sim/flightmodel/weight/m_total", "sim/flightmodel2/misc/cg_offset_z_mac", "sim/weather/aircraft/temperature_ambient_deg_c", "sim/flightmodel/misc/machno", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/position/theta", "sim/flightmodel/position/alpha", "sim/flightmodel/engine/ENGN_EPR[0]", "sim/flightmodel/engine/ENGN_N1_[0]", "sim/flightmodel/engine/POINT_thrust[0]", "sim/cockpit2/engine/indicators/fuel_flow_kg_sec[0]", "sim/flightmodel2/wing/speedbrake1_deg[2]", "sim/flightmodel2/wing/spoiler1_deg[2]" ] },
+
+    { "do": "set", "note": "MCP 速度 290 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 290 },
+    { "do": "set", "note": "MCP 高度 8,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 8000 },
+    { "do": "cmd", "note": "FLCH（速度は昇降舵）", "name": "laminar/B747/autopilot/button_switch/flch_mode" },
+    { "do": "cmd", "note": "A/T OFF（推力を確かにアイドルに：A/T の作り直しは 6-4）", "name": "laminar/B747/authrottle_disarm" },
+    { "do": "set", "note": "アイドル", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
+    { "do": "sleep", "seconds": 40 },
+    { "do": "snapshot", "note": "降下のモードと推力", "drefs": [ "laminar/B747/autopilot/FMA/active_pitch_mode", "sim/cockpit2/autopilot/airspeed_is_mach", "sim/cockpit2/autopilot/airspeed_dial_kts", "sim/flightmodel/engine/ENGN_thro_use[0]", "sim/flightmodel/engine/ENGN_N1_[0]", "sim/flightmodel/engine/POINT_thrust[0]", "sim/cockpit2/gauges/indicators/vvi_fpm_pilot" ] },
+    { "do": "wait", "note": "20,000 ft", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "<", "value": 20000, "timeout": 600 },
+    { "do": "snapshot", "note": "20,000 ft", "drefs": [ "sim/flightmodel/weight/m_total", "sim/weather/aircraft/temperature_ambient_deg_c", "sim/flightmodel/engine/ENGN_N1_[0]", "sim/flightmodel/engine/POINT_thrust[0]", "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "sim/flightmodel/position/theta", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot" ] },
+    { "do": "wait", "note": "9,000 ft より下", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "<", "value": 9000, "timeout": 900 },
+    { "do": "record_stop" },
+    { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "note": "SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "wait", "note": "8,000 ft で ALT", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9, "timeout": 120 }
+  ]
+}

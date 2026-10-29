@@ -1,0 +1,36 @@
+{
+  "name": "aero_exterior_air",
+  "description": "測定（合否なし）：カスタム acf の空力・エンジンを変えた後の外から見た写真、巡航と旋回（CLAUDE.md の acf の手順：翼の曲がりが違和感のない範囲か）。銚子沖の海上 35,000 ft・.84・東向きで開始（機体を読み直す）、A/P の ALT HOLD・HDG SEL。チェースビューで巡航を撮り、MCP の方位を 90° 右にして 25° のバンクの旋回中を撮る。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 10668.0, "heading_true": 90, "speed_in_meters_per_second": 249.0 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": { "definition": "vfr_few_clouds", "vertical_speed_in_thermal_in_feet_per_minute": 0, "wave_height_in_meters": 0.5, "wave_direction_in_degrees": 0, "terrain_state": "dry", "variation_across_region_percentage": 0, "evolution_over_time_enum": "static" }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 5 },
+    { "do": "set", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 35000 },
+    { "do": "set", "dref": "laminar/B747/autopilot/heading/degrees", "value": 97 },
+    { "do": "set", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 287 },
+    { "do": "cmd", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "cmd", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "cmd", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "wait", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "between", "value": [-300, 300], "timeout": 90 },
+    { "do": "sleep", "seconds": 20 },
+    { "do": "cmd", "note": "チェースビュー", "name": "sim/view/chase" },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "snapshot", "drefs": [ "sim/flightmodel2/wing/wing_tip_deflection_deg[0]", "sim/flightmodel/position/phi", "sim/flightmodel/forces/g_nrml" ] },
+    { "do": "shot", "name": "exterior_cruise" },
+    { "do": "set", "note": "90° 右へ", "dref": "laminar/B747/autopilot/heading/degrees", "value": 187 },
+    { "do": "wait", "note": "バンク 20° 超", "dref": "sim/flightmodel/position/phi", "op": ">", "value": 20, "timeout": 30 },
+    { "do": "sleep", "seconds": 4 },
+    { "do": "snapshot", "drefs": [ "sim/flightmodel2/wing/wing_tip_deflection_deg[0]", "sim/flightmodel/position/phi", "sim/flightmodel/forces/g_nrml" ] },
+    { "do": "shot", "name": "exterior_turn" },
+    { "do": "cmd", "note": "操縦席に戻す", "name": "sim/view/3d_cockpit_cmnd_look" },
+    { "do": "sleep", "seconds": 2 }
+  ]
+}
