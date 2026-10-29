@@ -1,5 +1,6 @@
 -- The custom acf's aerodynamic changes from the comparison with the FCOM and
--- FCTM (PROGRESS.md 5f, notes/AERO.md). Run from the repository root:
+-- FCTM, and the engines' since 2026-10-30 (PROGRESS.md 5f, notes/AERO.md).
+-- Run from the repository root:
 --   luajit docs/overhaul/tools/acf_aero.lua <acf in> <acf out> [key=value ...]
 -- It prints every change: the values in SET below (or given as
 -- <key>=<value> arguments, for trying), each the whole "P <key> <value>"
@@ -41,6 +42,20 @@ local SET = {
     ["_body/22/_part_cd"] = 0.025,
     ["_body/23/_part_cd"] = 0.025,
     ["_body/24/_part_cd"] = 0.025,
+    -- the engines' idle fuel flow (2026-10-30): X-Plane's jet idle burns this
+    -- share whatever the idle thrust (measured: 0.01 gave 0.02 kg/s standing
+    -- at sea level, about none in flight; aero_idle_ground.json). Aimed at
+    -- about 0.13 kg/s at the 10.3 kN ground idle: the ICAO fuel flows at 30
+    -- and 7 % of the rated thrust (0.647 and 0.188 kg/s, ICAO_EEDB 1PW041)
+    -- carried on straight to 4 % (estimate). 0.062 gave 0.150 (s11), so 0.054
+    ["acf/_ff_rat_idle_JET"] = 0.054,
+    -- the tyres' rolling friction 0.025 -> 0.015 (2026-10-30, the user
+    -- allowed it for the FCTM's taxi, p.76: idle keeps a taxi going in most
+    -- conditions, a slightly higher thrust begins it). At 270 t on RJAA 34L
+    -- with the 10.3 kN ground idle (aero_idle_taxi_roll.json): 0.020 slows
+    -- from 23 kt, 0.015 holds 26 kt and does not start from a stop, 0.012
+    -- starts from a stop
+    ["acf/_roll_co"] = 0.015,
 }
 for w, v in pairs(INC) do
     SET["_wing/" .. w .. "/_incidence"] = v       -- left

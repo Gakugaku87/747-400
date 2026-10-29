@@ -41,6 +41,40 @@ M.TLA_STOP, M.TLA_TO, M.TLA_CLB = 50, 48, 35
 M.APPROACH_HOLD_S = 5
 M.LANDING_FLAPS_DEG = 23            -- trailing edge flaps past 23° (ATA70_80 p.211)
 
+-- X-Plane's idle (sim/aircraft2/engine/high_idle_ratio) for the idle
+-- selected: one ratio for all engines (X-Plane takes the larger of it and
+-- low_idle_ratio and keeps idle_speed_ratio at high idle), so approach idle
+-- on any engine raises all four. The ratio sets X-Plane's idle N2 (69.7 %
+-- at 1.07, 84.4 % at 5, at any height and speed), and with it the idle
+-- thrust. Measured with the custom acf (tests/flight/measure/
+-- aero_idle_ground.json, aero_idle_sweep.json, aero_idle_taxi.json,
+-- 2026-10-30; notes/AERO.md 3.7):
+-- - minimum idle in the air, by pressure altitude: the net thrust that,
+--   with the acf's drag, gives the FCOM's idle descents (PI.10.39, p.265:
+--   290 KIAS, .84 above 30,000 ft), about +4 kN an engine at sea level,
+--   +2 at 10,000 ft and -1 at 20,000-30,000 ft. The FCOM fixes drag less
+--   idle thrust only, so the split is an estimate; above 30,000 ft the
+--   ratio is carried on (estimate);
+-- - minimum idle on the ground: the previous code's 15 °C value, 4 % of the
+--   rated thrust standing at sea level (10.3 kN; the ICAO reference idle is
+--   7 %, ICAO_EEDB 1PW041). With the acf's rolling friction lowered to fit
+--   (_roll_co 0.015) it keeps a taxi going at 270 t and does not start one
+--   from a stop (FCTM p.76) (estimate);
+-- - approach idle: 0.5 above the minimum idle in the air, also on the
+--   ground (a flight setting, held until 5 s after touchdown; near the
+--   ground about the previous code's 2.625). No figures for the PW4056;
+--   the CF6's is up to 73 % N2 against its 61.6 % minimum (ATA70_80
+--   p.206-208) (estimate).
+-- X-Plane's engine is the same for every engine type, so the CF6 has the
+-- same ratios (the previous code gave it higher ones, estimates; its idle
+-- N2 on the EICAS is the display model's, ENG-33).
+M.IDLE = {
+    alt = {0, 10000, 20000, 30000, 35000},
+    air = {2.3, 2.5, 2.9, 4.1, 4.7},
+    ground = 1.07,
+    approach_step = 0.5,
+}
+
 -- alternate mode (FCOM p.876-877; ATA70_80 p.202-207), selected with the
 -- EEC MODE switch (the sim has no EEC faults, so no automatic reversion).
 -- It does not limit thrust at the maximum: the command is a fixed schedule
@@ -269,6 +303,15 @@ function M.lookup(t, tat, alt)
             return v0 + (v1 - v0) * (alt - a[j - 1]) / (a[j] - a[j - 1])
         end
     end
+end
+
+-- X-Plane's idle ratio (M.IDLE): approach idle, or minimum idle in the air
+-- or on the ground, at a pressure altitude (ft)
+function M.idle_ratio(air, alt, approach)
+    local r = interp(M.IDLE.alt, M.IDLE.air, alt)
+    if approach then return r + M.IDLE.approach_step end
+    if air then return r end
+    return M.IDLE.ground
 end
 
 -- the bleed adjustment of a rating: packs off (go-around tables), engine

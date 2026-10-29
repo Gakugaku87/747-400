@@ -363,4 +363,23 @@ do
     T.near(E.thrust_control(s, "PW", 1, 1.60, 1.00, 0.4, 0.95, DT), 0.4, 0.05, "thrust control: after a reset it starts from X-Plane's throttle")
 end
 
+-- X-Plane's idle ratio (M.IDLE, measured in X-Plane against the FCOM's idle
+-- descents): minimum idle in the air by pressure altitude, one value on the
+-- ground, approach idle 0.5 above the air's
+T.near(E.idle_ratio(true, 10000, false), 2.5, 1e-9, "idle ratio: minimum idle in the air at 10,000 ft")
+T.near(E.idle_ratio(true, 25000, false), 3.5, 1e-9, "idle ratio: between 20,000 and 30,000 ft")
+T.near(E.idle_ratio(true, 41000, false), 4.7, 1e-9, "idle ratio: held above 35,000 ft")
+T.near(E.idle_ratio(false, 0, false), 1.07, 1e-9, "idle ratio: minimum idle on the ground")
+T.near(E.idle_ratio(false, 5000, false), 1.07, 1e-9, "idle ratio: the same on a high airport")
+T.near(E.idle_ratio(true, 0, true), 2.8, 1e-9, "idle ratio: approach idle in the air near the ground")
+T.near(E.idle_ratio(false, 0, true), 2.8, 1e-9, "idle ratio: approach idle on the ground (after touchdown, CF6 reversers)")
+do
+    local above = true
+    for h = -1000, 45000, 500 do
+        above = above and E.idle_ratio(true, h, true) > E.idle_ratio(true, h, false)
+            and E.idle_ratio(true, h, false) > E.idle_ratio(false, h, false)
+    end
+    T.check(above, "idle ratio: approach idle above minimum idle in the air, that above the ground's, at every height")
+end
+
 T.done()
