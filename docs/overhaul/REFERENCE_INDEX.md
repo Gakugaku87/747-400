@@ -38,6 +38,7 @@
 | ATA34_2 | 同：ATA 34 Navigation（2）：TCAS、RA、GPWS、IRS、GPS、FMCS | 736 | 410 | FMCS（34-61）が 310 ページある |
 | ATA38_51_52_56 | 同：ATA 38 Water/Waste、51 Structures、52 Doors、56 Windows | 614 | 327 | |
 | ATA70_80 | 同：ATA 71〜80 Powerplant | 576 | 298 | CF6-80C2 |
+| ICAO_EEDB | ICAO Aircraft Engine Emissions Databank のデータシート（`_ref/ICAO_EEDB/`、1 エンジン 1 枚、テキストは `_ref/text/ICAO_EEDB/`。2026-10-30 に利用者が置いた） | 20 枚 | — | PW4056（1PW041・1PW042）、PW4062、CF6-80C2B1F（1GE023・1GE024・2GE045 ほか）、CF6-80C2B5F、RB211-524G・H（-T を含む）。定格推力 F00・バイパス比・全体圧力比、海面静止の LTO の 4 つの推力（100・85・30・7 %）の燃料流量。引用は `ICAO_EEDB 1PW041` の形 |
 
 - APU（ATA 49）の整備資料は無い。APU は FCOM 7.14・7.30・7.40 を基準にする。
 - 電源（ATA 24）は LH24 だけ（PW 機）。整備訓練マニュアルには ATA 24 の巻が無い。

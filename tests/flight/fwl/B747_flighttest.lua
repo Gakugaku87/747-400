@@ -19,7 +19,7 @@
 --   FlyWithLua/B747_flighttest/mark    add a "mark" row to events.csv
 -- Does nothing unless the 747-400 is the user aircraft.
 
-local VERSION = "4"
+local VERSION = "5"
 
 if not string.find(AIRCRAFT_PATH or "", "747-400", 1, true)
     or XPLMFindDataRef("laminar/B747/engines/type") == nil then
@@ -85,6 +85,12 @@ local COLUMNS = {
     {"faxil_aero", "sim/flightmodel/forces/faxil_aero"}, {"fnrml_aero", "sim/flightmodel/forces/fnrml_aero"},
     {"faxil_prop", "sim/flightmodel/forces/faxil_prop"}, {"fnrml_prop", "sim/flightmodel/forces/fnrml_prop"},
     {"tat", "sim/weather/aircraft/temperature_leadingedge_deg_c"},
+    -- the EPR and N1 the EICAS shows (the EEC and the A/T hold these, not
+    -- X-Plane's ENGN_EPR: v5)
+    {"depr_1", "laminar/B747/engines/display_EPR", 0}, {"depr_2", "laminar/B747/engines/display_EPR", 1},
+    {"depr_3", "laminar/B747/engines/display_EPR", 2}, {"depr_4", "laminar/B747/engines/display_EPR", 3},
+    {"dn1_1", "laminar/B747/engines/display_N1", 0}, {"dn1_2", "laminar/B747/engines/display_N1", 1},
+    {"dn1_3", "laminar/B747/engines/display_N1", 2}, {"dn1_4", "laminar/B747/engines/display_N1", 3},
 }
 -- the four engines' thrust, for the "thrust" column
 local THRUST = {{"sim/flightmodel/engine/POINT_thrust", 0}, {"sim/flightmodel/engine/POINT_thrust", 1},
