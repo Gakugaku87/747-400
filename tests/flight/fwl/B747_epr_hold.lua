@@ -7,8 +7,9 @@
 --
 -- The aircraft's A/T sets the climb thrust from a fixed climb rate (ATHR-04,
 -- to be rebuilt in 6-4), not the rating. With the A/T off, this moves the
--- thrust levers every frame so that the four engines' mean EPR
--- (sim/flightmodel/engine/ENGN_EPR) is the PW4056 Max Climb EPR of FCOM
+-- thrust levers every frame so that the four engines' mean EPR as the EICAS
+-- shows it (laminar/B747/engines/display_EPR: the EEC and the A/T hold that,
+-- not X-Plane's ENGN_EPR; v3) is the PW4056 Max Climb EPR of FCOM
 -- PI.10.36 (p.262: 3 packs on, engine and wing anti-ice off) at the pressure
 -- altitude and TAT (sim/weather/aircraft/temperature_leadingedge_deg_c),
 -- interpolated in both. The table's speeds (340 KIAS, .84) are not looked
@@ -20,7 +21,7 @@
 --   FlyWithLua/B747_epr_hold/stop        stop moving the levers
 -- B747/test/epr_hold_target (float): the EPR held, 0 when stopped.
 
-local VERSION = "2"
+local VERSION = "3"
 
 if not string.find(AIRCRAFT_PATH or "", "747-400", 1, true) then
     logMsg("B747 EPR hold: not the 747-400, inactive")
@@ -49,10 +50,10 @@ local GAIN = 1.0
 dataref("B747EH_palt", "sim/flightmodel2/position/pressure_altitude", "readonly")
 dataref("B747EH_tat", "sim/weather/aircraft/temperature_leadingedge_deg_c", "readonly")
 dataref("B747EH_time", "sim/time/total_running_time_sec", "readonly")
-dataref("B747EH_epr0", "sim/flightmodel/engine/ENGN_EPR", "readonly", 0)
-dataref("B747EH_epr1", "sim/flightmodel/engine/ENGN_EPR", "readonly", 1)
-dataref("B747EH_epr2", "sim/flightmodel/engine/ENGN_EPR", "readonly", 2)
-dataref("B747EH_epr3", "sim/flightmodel/engine/ENGN_EPR", "readonly", 3)
+dataref("B747EH_epr0", "laminar/B747/engines/display_EPR", "readonly", 0)
+dataref("B747EH_epr1", "laminar/B747/engines/display_EPR", "readonly", 1)
+dataref("B747EH_epr2", "laminar/B747/engines/display_EPR", "readonly", 2)
+dataref("B747EH_epr3", "laminar/B747/engines/display_EPR", "readonly", 3)
 -- the levers read and written with get() and set() while holding: a
 -- "writable" dataref variable would be written back every frame, fighting
 -- the A/T while stopped (docs/overhaul/TESTING.md)

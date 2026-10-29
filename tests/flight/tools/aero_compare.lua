@@ -130,12 +130,13 @@ end
 local function read_csv(path)
     local f = assert(io.open(path, "rb"), "no " .. path)
     local col, n = {}, 0
-    for name in f:read("*l"):gmatch("[^,]+") do n = n + 1; col[name] = n end
+    -- (the recorder writes CRLF on Windows: the last name would keep the CR)
+    for name in (f:read("*l"):gsub("\r$", "")):gmatch("[^,]+") do n = n + 1; col[name] = n end
     local rows = {}
     for line in f:lines() do
         local v, k = {}, 0
         for x in (line .. ","):gmatch("([^,]*),") do k = k + 1; v[k] = tonumber(x) or x end
-        rows[#rows + 1] = v
+        if k >= n then rows[#rows + 1] = v end  -- a row cut short (the recording stopped) is left out
     end
     f:close()
     return col, rows
@@ -175,9 +176,11 @@ local function avg(r0, r1)
             s.lift = s.lift + fn * math.cos(a) - fx * math.sin(a)
             s.prop = s.prop - v[col.faxil_prop] * math.cos(a) - v[col.fnrml_prop] * math.sin(a)
         end
+        -- the EPR and N1 the EICAS shows when recorded (v5: the EEC and the
+        -- A/T hold these), else X-Plane's engine's
         for e = 1, 4 do
-            s.epr = s.epr + v[col["epr_" .. e]] / 4
-            s.n1 = s.n1 + v[col["n1_" .. e]] / 4
+            s.epr = s.epr + v[col[(col.depr_1 and "depr_" or "epr_") .. e]] / 4
+            s.n1 = s.n1 + v[col[(col.dn1_1 and "dn1_" or "n1_") .. e]] / 4
             s.thro = s.thro + v[col["thro_" .. e]] / 4
         end
         n = n + 1
@@ -239,8 +242,8 @@ local function rows_between(t0, t1)
     return a, b
 end
 
-print(string.format("%s: %d rows, %.0f s, %d mark(s); FCOM PI.10.38-10.40 (PW4056)", dir, #rows,
-    rows[#rows][col.t] - rows[1][col.t], #marks))
+print(string.format("%s: %d rows, %.0f s, %d mark(s); FCOM PI.10.38-10.40 (PW4056); EPR and N1 %s", dir, #rows,
+    rows[#rows][col.t] - rows[1][col.t], #marks, col.depr_1 and "as the EICAS shows them" or "X-Plane's engine's (recorder before v5)"))
 print("level and glide path: the " .. window .. " s after each mark")
 for k, tm in ipairs(marks) do
     local a, b = rows_between(tm, tm + window)
