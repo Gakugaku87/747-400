@@ -56,6 +56,21 @@ local SET = {
     -- from 23 kt, 0.015 holds 26 kt and does not start from a stop, 0.012
     -- starts from a stop
     ["acf/_roll_co"] = 0.015,
+    -- the engines' fuel per thrust (lb/lbf/h) at X-Plane's four points
+    -- (2026-10-30): the FCOM's holding (PI.11.6) and Long Range
+    -- Cruise (PI.11.2) fuel flows at the thrust the custom acf needs there
+    -- ask for about 0.52 at part power, X-Plane gave 0.41-0.47; takeoff
+    -- matched ICAO (0.348 in the takeoff run, ICAO_EEDB 1PW041 0.343 standing).
+    -- From the measured effect of each point (aero_sfc_sweep.json); trial
+    -- 1 (takeoff 0.323, climb 0.481, low cruise 0.442, high cruise 0.510)
+    -- gave the cruise 4-6 % short, holding 2-4 % over and the takeoff run
+    -- 0.384 (the climb point reaches it). These (trial 2): the cruise
+    -- within 2 %, holding 2-3 % over, the takeoff run 2.48 kg/s (ICAO 2.45
+    -- standing)
+    ["acf/_jet_SFC_takeoff"] = 0.300,
+    ["acf/_jet_SFC_climb"] = 0.440,
+    ["acf/_jet_SFC_locrz"] = 0.470,
+    ["acf/_jet_SFC_hicrz"] = 0.535,
 }
 for w, v in pairs(INC) do
     SET["_wing/" .. w .. "/_incidence"] = v       -- left
