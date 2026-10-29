@@ -351,7 +351,8 @@ do
     s = E.new()
     local th0 = E.thrust_control(s, "PW", 1, 1.20, 1.20, 0.7, 0.95, DT)
     local th1 = E.thrust_control(s, "PW", 1, 1.60, 1.20, 0.7, 0.95, DT)
-    T.check(th1 - th0 < 0.05, "thrust control: a lever slam moves the throttle gradually")
+    -- (0.06 a 0.1 s step at the P&W slope of the 2026-10-30 EPR model, 0.93 at 1.20)
+    T.check(th1 - th0 < 0.06, "thrust control: a lever slam moves the throttle gradually")
     T.near(th0, 0.7, 1e-9, "thrust control: it starts from X-Plane's throttle")
     -- the lever at its idle end: the EEC's idle
     T.equal(E.thrust_control(s, "PW", 1, 0.95, 1.40, 0.9, 0.95, DT), 0, "thrust control: idle lever, throttle 0")

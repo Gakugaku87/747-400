@@ -13,6 +13,10 @@
 *****************************************************************************************
 ]]
 
+dofile("B747.42.epr_model.lua")
+simDR_epr_ambient_pa = find_dataref("sim/weather/aircraft/barometer_current_pas")
+simDR_epr_mach = find_dataref("sim/flightmodel/misc/machno")
+
 --This function calculates the target position of the throttle target on the Upper EICAS
 --(the EEC's command for the lever, B747.42.xt.eec_thrust.lua)
 function throttle_resolver_angle_PW(engine_in)
@@ -368,55 +372,18 @@ function engine_idle_control_PW(altitude_ft_in)
     return N2_display
   end
   
+  --The EPR shown: the EPR model (B747.42.epr_model.lua, ENG-33, 2026-10-30) from
+  --the engine's net thrust, the ambient pressure and the Mach (it replaced the
+  --previous regression on thrust / density ratio). A stopped engine's display
+  --follows its last thrust (N1_display_PW keeps it).
   function EPR_display_PW(altitude_ft_in, thrust_N_in, engine_in)
-      local EPR_actual = 0.0
-      local EPR_corrected_thrust_N = 0.0
-      local EPR_corrected_thrust_calibrated_N = 0.0
-
       if last_thrust_n[engine_in] == nil then
         last_thrust_n[engine_in] = 0.0
       end
-
-      --Handle display of an engine shutdown
       if simDR_engine_running[engine_in] == 0 then
-        thrust_N_in = last_thrust_n[engine_in]  --calculated in N1_display_PW()
+        thrust_N_in = last_thrust_n[engine_in]
       end
-  
-      EPR_corrected_thrust_N = thrust_N_in / (1000 * sigma_density_ratio)
-      --EPR_corrected_thrust_N = thrust_N_in / (1000 * pressure_ratio)
-    
-      EPR_corrected_thrust_calibrated_N = (-0.4795 * mach^2 + 0.5903 * mach + 0.925) * EPR_corrected_thrust_N  --Sigma version 2
-      --EPR_corrected_thrust_calibrated_N = (-0.0811 * mach^2 + 0.2349 * mach + 0.919) * EPR_corrected_thrust_N  --Sigma version 2
-
-      EPR_actual = (-1.8E-08 * mach^2 - 5.87E-08 * mach + 7.179999999999999E-08) * EPR_corrected_thrust_calibrated_N^3 + (-0.0000237 * mach^2 + 0.0000529 * mach - 0.0000218)
-        * EPR_corrected_thrust_calibrated_N^2 + (0.002 * mach^2 - 0.0036 * mach + 0.0034) * EPR_corrected_thrust_calibrated_N + (-0.3287 * mach^2 - 0.0833 * mach + 0.9932)
-
-        
-      --Ensure EPR doesn't drop to an unrealistic value during IDLE descent.  This also ensures that the EPR tapes don't fall off the display.
-      if EPR_actual < 0.97 then
-        EPR_actual = 0.97
-      --try to combat the formula issue where EPR increases due to mach rising faster than thrust decreases during TO
-      elseif B747DR_ref_thr_limit_mode ~= "GA" and simDR_flap_ratio > 0.0 then
-        if EPR_actual > B747DR_display_EPR_max[engine_in] then
-          EPR_actual = B747DR_display_EPR_max[engine_in]
-        end
-      end
-
-      if B747DR_log_level ==-2 then
-        print("\t\t\t\t\t<<<--- EPR DISPLAY (PW) --->>>".."\t\tEngine # "..engine_in + 1)
-        print("Altitude IN = ", altitude_ft_in)
-        print("Thrust IN = ", thrust_N_in)
-        print("Pressure Ratio = ", pressure_ratio)
-        print("Temperature K = ", temperature_K)
-        print("Temperature Ratio = ", temperature_ratio)
-        print("Mach = ", mach)
-        print("Corrected Thrust N (1000's) = ", EPR_corrected_thrust_N)
-        print("Corrected Thrust Calibrated N (1000's) = ", EPR_corrected_thrust_calibrated_N)
-        print("EPR Actual = ", EPR_actual)
-        print("Last Thrust In = ", last_thrust_n[engine_in])
-      end
-      
-      return EPR_actual
+      return B747_epr_model.epr(thrust_N_in / 1000, simDR_epr_ambient_pa / 101325, simDR_epr_mach)
   end
 
   function EGT_display_PW(engine_in)
