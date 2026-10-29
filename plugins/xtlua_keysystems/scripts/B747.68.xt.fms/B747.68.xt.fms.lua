@@ -925,6 +925,7 @@ B747DR_fms_currentID=find_dataref("xtlua/currentFMSID")
 B747DR_xp_bridge=find_dataref("laminar/B747/fms/xp/bridge")
 B747DR_xp_plan=find_dataref("laminar/B747/fms/xp/plan")
 B747DR_xp_current=find_dataref("laminar/B747/fms/xp/current")
+B747DR_xp_displayed=find_dataref("laminar/B747/fms/xp/displayed")
 B747DR_fms_exec_light_pilot=find_dataref("laminar/B747/fms/exec_light_pilot")
 B747DR_fms_exec_light_copilot=find_dataref("laminar/B747/fms/exec_light_copilot")
 simDR_fms_exec_light=find_dataref("sim/cockpit2/radios/indicators/fms_exec_light_pilot")
@@ -1160,6 +1161,37 @@ function B747_fmc_route_sync()
   if cur~=k or xk~=k then
     routeSync=k
     routeSyncT,routeSyncWrites=simDRTime,0
+  end
+end
+
+-- each frame (6-1/6-2; notes/ATA-34-61-FMC.md §42; FCOM p.1333; FMSPG
+-- p.124): with an ND in PLN, X-Plane's displayed waypoint (the ND's PLAN
+-- centre, the FMS bridge's from 1) the row of the LEGS pages' centre
+-- (B744.fms.pages.legs.lua) in X-Plane's flight plan: its leg's, else the
+-- same waypoint's in the route X-Plane has (a modification's, the other
+-- route's); none there (a modification's new waypoint, a conditional leg
+-- not predicted): as it was. One row written again after a second at most
+local planCtrRow,planCtrT=nil,-10
+function B747_fmc_plan_ctr_sync()
+  if not B747_cdu_plan_ctr_update() then return end
+  if B747DR_xp_bridge~=1 or not routeMap or routePending then return end
+  local st,r,i=B747_cdu_plan_ctr()
+  if not st then return end
+  local act=B747_fmc_route
+  local k=nil
+  if st==act and r==act.rte then
+    k=routeMap.row[i]
+  else
+    local l=r.legs[i]
+    for j,a in ipairs(act.rte.legs) do
+      if B747_route_model.same_leg(a,l) then k=routeMap.row[j] break end
+    end
+  end
+  -- X-Plane's plan the one loaded last
+  if not k or table.getn(fms_route())~=routeMap.n then return end
+  if B747DR_xp_displayed~=k and (k~=planCtrRow or simDRTime-planCtrT>=1) then
+    B747DR_xp_displayed=k
+    planCtrRow,planCtrT=k,simDRTime
   end
 end
 
@@ -1776,6 +1808,7 @@ function after_physics()
     update_takeoff()
     B747_fmc_lnav_update()
     B747_fmc_route_sync()
+    B747_fmc_plan_ctr_sync()
     B747_fmc_exec_lights()
     B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
     --print(B747DR_FMSdata)

@@ -869,3 +869,22 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - ND の線：PI の点の後に形の点（出航の終わり、45° の脚の終わり、旋回の 30° ごとの点、旋回の終わり、入航コースとの交点）。LNAV が飛んでいる間はその形、ほかは 210 kt の形。
 - 試験：`path_model_test.lua`（134 件：PI の要素の 45° の脚・出航コース・制限、形の一番遠い点、交点、左右、ND の点）、新しい `tests/fms/lnav_pturn_test.lua`（17 件：閉ループで段階の順、10 nm の内側、右と左の旋回、25° まで、出航・角・45° の脚と 180° の旋回で形から 0.2 nm 以内、入航 270 に乗って CF へ、0.3 nm 以内、X-Plane の行、15 nm で長い出航）。
 - X-Plane：新しい `s98_pturn`（三沢の西で RJSS→RJSM、ILS28-Z の遷移 GABII：PI 058°・右・15 nm、DIRECT TO GABII と LNAV）。1 回目 15/16：出航から 45° の脚への角に旋回の先行が無く、XTK が最大 0.71 nm 外へふくらんだ（閉ループの試験でも 0.62）。角を fly-by の弧にし、角と 180° の旋回をロールの 4 秒だけ早めて直した。2 回目 16/16：XTK は出航〜45° の脚で最大 0.055 nm、180° の旋回で 0.148 nm、戻りの脚で 0.14 nm、入航コースで 0.031 nm 以内、DTK 275（真）。許容は 0.3・0.3・0.5・0.3 nm に締めた。`s90_lnav` 30/30。Lua の誤りなし。
+
+## 42. LEGS の PLAN の CTR と STEP（2026-10-28〜29：ND の PLAN の中心）
+
+- 資料：FCOM p.1333 の 9・10（ND が PLAN のとき、PLAN の中心の点の横に <CTR>。6R の STEP（ACTIVATE・RTE DATA の代わり）で <CTR> が次の点へ進み、PLAN の中心が移る）、p.1039（ND の PLAN）、p.1330 の図（`BANDR   <CTR>`：<CTR> は 9 桁目から、区切り線の端に小字の MAP CTR）、FMSPG p.124（ACT RTE LEGS で ND が PLN のとき 6R に STEP>。LEGS キー・PREV PAGE・NEXT PAGE で、表示したページの最初の点が中心。PLN でないときのアクティブでない LEGS は 6R が ACTIVATE>）。
+- 作り方は利用者の決定（2026-10-28、(b)）：FMS ブリッジ（§23）の `laminar/B747/fms/xp/displayed`（X-Plane の FMS の項目、1 から）に中心の点の行を書き、プラグインが XPLMSetDisplayedFMSEntry を X-Plane のスレッドで呼ぶ。プラグインは変えていない。ND（`B747.61.xt.nd.lua` の `updateNDLatLong`）は X-Plane の表示中の項目（`xtlua/xpFMSData` の [1]：XTLua の xpmtdatarefs.cpp で表示中の項目 + 1、ブリッジの `displayed` と同じ数え方）を PLAN の記号の中心にし、X-Plane の地図の層も同じ点を中心に描くので、両方がそろう。前は X-Plane の表示中の項目を動かす手段が無く（`xtlua/xpFMSData` への書き込みは INOP）、中心は X-Plane の FMS のまま動かなかった。
+- CDU と ND の組：右の CDU は副操縦士の ND、左と中央の CDU は機長の ND（EFIS CONTROL のページと同じ）。その ND が PLN（つまみ 3）のときだけ <CTR> と STEP> を出す。
+- 中心は FMC に 1 つで、ある経路（番号）の脚を指す（`legs.lua` の `planCtr`）。X-Plane の表示中の項目は 1 つなので、両席の ND の PLAN は同じ中心になる（実機は CDU ごと：DIFFERENCES に書いた）。
+- LEGS のページ：
+  - <CTR> は 9 桁目から（8 文字以上の名前は 1 字あけて）。制限の文字が長くて入らないとき（FL のある block の制約）は出さない（推定）。
+  - 6R の STEP>：ACTIVATE と RTE DATA の代わり（RTE DATA は未実装で、前から空き）。区切り線を 17 桁目までにし、その端に小字の MAP CTR。DIRECT TO の INTC CRS がある間は INTC CRS のまま（推定）。RTE LEGS HOLD AT のページは変えない。
+  - 6R の振り分け（`legsr6`）：ページのキーの表は 3 台の CDU で共用なので、押した CDU に合わせてその場で INTC CRS・STEP・ACTIVATE に振り分ける（前は最後に描いた CDU で表が書き換わっていた）。どれにも当たらなければ前と同じ KEY/FUNCTION INOP。
+- 中心の動き（`legs.lua`）：
+  - STEP：次の点へ進め、ページもついていく（推定）。最後の点では動かない（推定）。discontinuity と未確定の脚は飛ばす。VECTORS の脚は中心にできる（FMSPG p.124 の図）。
+  - LEGS キー・NEXT PAGE・PREV PAGE：表示したページの最初の点が中心（FMSPG p.124）。ページに点が無ければ（経路の終わりの破線だけのページ）、中心は動かない（推定）。NEXT は最後のページで 1 ページ目へ（前と同じ）。6L の <RTE x LEGS では中心を動かさない。
+  - ND を PLN にしたとき（`B747_cdu_plan_ctr_update`、毎フレーム）：その CDU に LEGS が出ていれば、そのページの最初の点（推定。副操縦士の側でも中心を動かす）。中心がまだ無ければ、アクティブな経路の最初の点。
+  - 中心の点が通過や削除で消えたら、その位置からの次の点（推定）。修正（MOD）の写しや、修正が消えたあとは同じ点（経路のモデルの `same_leg` を外に出した）。
+- X-Plane の行（`B747.68.xt.fms.lua` の `B747_fmc_plan_ctr_sync`、`after_physics` で `B747_fmc_route_sync` の次）：中心の脚の行（`routeMap.row`）。MOD やもう一つの経路の中心では、X-Plane の計画（アクティブな経路）にある同じ点の行を使い、無ければそのまま。進入復行の脚と、終点を予測していない条件の脚には行が無い（§22：X-Plane の計画に書かない）ので、それを中心にしても ND の PLAN の中心は前の点のまま（違い）。ND のどちらかが PLN で、ブリッジがあり、最後に流した計画を X-Plane が持っているときだけ書く。違うときだけ書き、同じ値の書き直しは 1 秒あける。
+- 試験：新しい `tests/fms/legs_plan_ctr_test.lua`（63 件：MAP では前のまま・X-Plane に書かない、副操縦士の PLN で現用の経路の最初の点、機長の PLN で表示中のページの最初の点、PREV で 1 ページ目、9 桁目の <CTR>・STEP>・17 桁目までの区切り線・小字の MAP CTR、右の CDU はそのまま、STEP で次の点と表示中の行、ページ送り、最後の点、NEXT と LEGS キー、制限つきの <CTR>、block の制約、両席の PLN で 1 つの中心と右の STEP、機長の MAP、空中で右の CDU から ACTIVATE と EXEC、DIRECT TO の INTC CRS と修正の中の中心、ERASE、現用点の順送り）。`tests/run.sh` は 120 ファイルとも合格。
+- X-Plane（2026-10-29）：新しい `s111_legs_plan_ctr`（s110 と同じ EDDM 26R の進入路の上、EDDF 25C から EDDM・ILS26R を EXEC）。1 回目 46/47：この経路は 5 点（FI26R・RW26R・D261A・(1900)・MIQ）で 2 ページ目が終わりの破線だけになり、NEXT で中心が動かないのを作りどおりと確かめた（シナリオの期待の誤り。点の無いページの扱いを推定として書いた）。2 回目 51/51：MAP では <CTR> も STEP> も無い、機長の ND を PLN にすると X-Plane の地図が PLN、`FI26R   <CTR>     /5000A`・STEP>・17 桁目までの区切り線と小字の MAP CTR、表示中の点は現用点の行 4、STEP で RW26R と行 5、もう一度の STEP で進入復行の D261A（行は 5 のまま）、NEXT で 2 ページ目（中心は動かない）、PREV と LEGS キーで FI26R と行 4、副操縦士の ND を PLN にして右の CDU にも <CTR> と STEP>、右の STEP で両方の CDU の <CTR> が RW26R へ、ND を MAP に戻すと STEP> が消える。ND の写真で、PLAN の中心が FI26R、STEP の後は RW26R に移り、点の記号と X-Plane の地図の経路の線がそろうことを確かめた。CDU の写真は FCOM p.1330 の図の配置。`s87_legs_pages` 29/29、`s89_route_sync` 26/26、`s95_abeam` 26/26、`s97_rte2` 31/31、`s110_nd_map_ctr` 45/45、`s70_nd_airports` 39/39。Lua の誤りなし。

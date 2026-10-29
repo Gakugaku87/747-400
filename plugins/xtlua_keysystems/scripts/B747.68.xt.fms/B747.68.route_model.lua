@@ -1284,6 +1284,8 @@ local function same_leg(a, b)
     end
     return not (a.fix or b.fix) and a.name == b.name
 end
+-- (the LEGS pages' PLAN centre in a modification and the other route too)
+M.same_leg = same_leg
 
 -- the active route's first `n` legs passed (the active leg stays); the
 -- modification's too when it starts with them. `start`: where the new

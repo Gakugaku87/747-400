@@ -11,7 +11,8 @@
 -- FCOM p.1334; FMSPG p.135-136); <RTE 2 LEGS and <RTE 1 LEGS at 6L (FCOM
 -- p.1330's figure). Before: X-Plane's LEGS page shown through. RTE LEGS
 -- HOLD AT (step 7b; FCOM p.1414; FMSPG p.157-158): the active route's LEGS
--- pages with the HOLD AT boxes and PPOS> (B744.fms.pages.hold.lua).
+-- pages with the HOLD AT boxes and PPOS> (B744.fms.pages.hold.lua). The ND's
+-- PLAN centre: <CTR> and STEP (FCOM p.1333; FMSPG p.124; §42).
 local R = B747_route_model
 local BLANK = "                        "
 local DISC_TITLE = "-- ROUTE DISCONTINUITY -"
@@ -29,6 +30,74 @@ end
 
 local function num_pages(st)
   return math.max(1, math.ceil((#R.shown(st).legs + 1) / 5))
+end
+
+-- the ND's PLAN centre (FCOM p.1333 items 9-10, p.1039; FMSPG p.124): with
+-- the CDU's side ND in PLN (the right CDU the F/O's, the others the
+-- captain's, as the EFIS CONTROL page), <CTR> beside the waypoint PLAN is
+-- centred on and STEP> at 6R for ACTIVATE and RTE DATA, MAP CTR small at
+-- the separator's end (a direct-to's INTC CRS stays: estimate). STEP: the
+-- next waypoint, the page following it (none after the last: estimate);
+-- the LEGS key and NEXT and PREV PAGE: the first waypoint of the page
+-- shown, and PLN selected with a LEGS page up (estimate). One centre for
+-- the FMC, a route's (by its number) leg: X-Plane's FMS shows one entry
+-- (the real FMC's are each side's: a difference); B747.68.xt.fms.lua
+-- makes it X-Plane's displayed waypoint
+local ND_PLN = 3
+local planCtr = {num = 0, leg = nil, i = 0}
+local function plan_mode(fmsID)
+  return (fmsID == "fmsR" and simDR_nd_mode_dial_fo or simDR_nd_mode_dial_capt) == ND_PLN
+end
+-- a waypoint PLAN can be centred on (a VECTORS leg's too: FMSPG p.124's
+-- figure)
+local function centrable(l) return l ~= nil and not (l.disc or l.pending) end
+-- the first waypoint on page `pgNo` of route r, or nil
+local function page_first(r, pgNo)
+  for k = 1, 5 do
+    local i = leg_index(pgNo, k)
+    if centrable(r.legs[i]) then return i end
+  end
+  return nil
+end
+local function set_ctr(st, r, i)
+  planCtr.num, planCtr.leg, planCtr.i = st.num, r.legs[i], i
+end
+-- the centre's leg in route r of st (the one shown), nil on another
+-- route's: the leg itself, else the same waypoint (a modification's copy,
+-- the modification gone), else the first waypoint from its place on (it
+-- was passed or deleted: estimate)
+local function ctr_index(st, r)
+  if planCtr.num ~= st.num or planCtr.leg == nil then return nil end
+  local legs = r.legs
+  if legs[planCtr.i] == planCtr.leg then return planCtr.i end
+  local found = nil
+  for i, l in ipairs(legs) do
+    if l == planCtr.leg then found = i break end
+  end
+  if not found then
+    for i, l in ipairs(legs) do
+      if centrable(l) and R.same_leg(l, planCtr.leg) then found = i break end
+    end
+  end
+  if not found then
+    for i = math.min(planCtr.i, #legs), #legs do
+      if centrable(legs[i]) then found = i break end
+    end
+  end
+  if not found then
+    for i = math.min(planCtr.i, #legs), 1, -1 do
+      if centrable(legs[i]) then found = i break end
+    end
+  end
+  if found then set_ctr(st, r, found) end
+  return found
+end
+-- (a page without one, the end of the route's dashes alone, leaves the
+-- centre: estimate)
+local function ctr_to_page(st, pgNo)
+  local r = R.shown(st)
+  local i = page_first(r, pgNo)
+  if i then set_ctr(st, r, i) end
 end
 
 local function title(st)
@@ -94,6 +163,19 @@ end
 local function trans_alt() return tonumber(fmsModules["data"]["transalt"]) or 18000 end
 local function crz_alt() return B747_cdu_model.parse_alt((string.gsub(fmsModules["data"]["crzalt"], "%s+$", ""))) end
 
+-- a waypoint's line: its name and constraint; PLAN's centre with <CTR> at
+-- the 9th place (FCOM p.1330's and FMSPG p.124's figures: "BANDR   <CTR>"),
+-- after a longer name, none where the constraint leaves no room
+local function leg_line(l, ctr)
+  local name = R.leg_name(l)
+  local cons = R.constraint_text(l, trans_alt()) or ""
+  if ctr then
+    local c = name .. string.rep(" ", math.max(1, 8 - #name)) .. "<CTR>"
+    if #c + 1 + #cons <= 24 then name = c end
+  end
+  return lr(name, cons)
+end
+
 -- the active route's direct-to modification: the INTC CRS line at 6R
 -- (boxes, or the route's course into the waypoint with its caret: FMSPG
 -- p.144); none once ABEAM PTS made the abeam points (FMSPG p.139's figure)
@@ -124,9 +206,11 @@ end
 
 -- the LEGS page's lines, its line select keys' functions in `defs`;
 -- `hold_at`: RTE LEGS HOLD AT, the HOLD AT boxes at 6L and PPOS> at 6R
--- (FCOM p.1414)
-local function legs_page(st, pgNo, defs, hold_at)
+-- (FCOM p.1414); `fmsID` the CDU it is for (PLAN's centre)
+local function legs_page(st, pgNo, defs, hold_at, fmsID)
   local r = R.shown(st)
+  local plan = not hold_at and plan_mode(fmsID)
+  local ci = plan and ctr_index(st, r)
   local lines = {title(st)}
   for k = 1, 5 do
     local i = leg_index(pgNo, k)
@@ -137,7 +221,7 @@ local function legs_page(st, pgNo, defs, hold_at)
     if l and (l.disc or l.pending) then
       lines[#lines + 1] = pad("*****")
     elseif l then
-      lines[#lines + 1] = lr(R.leg_name(l), R.constraint_text(l, trans_alt()) or "")
+      lines[#lines + 1] = leg_line(l, i == ci)
     elseif i == #r.legs + 1 then
       lines[#lines + 1] = pad("-----")
     else
@@ -168,20 +252,21 @@ local function legs_page(st, pgNo, defs, hold_at)
   defs["L6"] = st.mod and {"rteerase", ""} or {"setpage", o == 2 and "LEGS2" or "LEGS"}
   local left = st.mod and "<ERASE" or ("<RTE " .. o .. " LEGS")
   local right = ""
-  defs["R6"] = nil
+  -- 6R as the CDU pressing it has it (the three CDUs share the page's keys)
+  defs["R6"] = {"legsr6", ""}
   if d then
-    defs["R6"] = {"legsintc", ""}
     right = d.crs and string.format("%03d`", d.crs == 0 and 360 or d.crs)
       or (d.route_crs and string.format("%03d`>", d.route_crs == 0 and 360 or d.route_crs) or "***")
+  elseif plan then
+    right = "STEP>"
   elseif not st.active and not st.activating then
-    defs["R6"] = {"rteactivate", ""}
     right = "ACTIVATE>"
   end
-  lines[12] = d and "-------------           " or "------------------------"
+  lines[12] = d and "-------------           " or (plan and "-----------------       " or "------------------------")
   lines[13] = lr(left, right)
   return lines
 end
-local function legs_small(st, pgNo, hold_at)
+local function legs_small(st, pgNo, hold_at, fmsID)
   local r = R.shown(st)
   local lines = {string.format("%23s ", pgNo .. "/" .. num_pages(st))}
   for k = 1, 5 do
@@ -206,7 +291,16 @@ local function legs_small(st, pgNo, hold_at)
   if not hold_at and copy_state(st, pgNo) == "complete" then
     lines[10] = string.sub(lines[10], 1, 16) .. "RTE COPY"
   end
-  lines[12] = (dto_mod(st) and not hold_at) and "                INTC CRS" or BLANK
+  if hold_at then
+    lines[12] = BLANK
+  elseif dto_mod(st) then
+    lines[12] = "                INTC CRS"
+  elseif plan_mode(fmsID) then
+    -- FCOM p.1330's figure: "-----------------MAP CTR"
+    lines[12] = "                 MAP CTR"
+  else
+    lines[12] = BLANK
+  end
   lines[13] = BLANK
   return lines
 end
@@ -216,22 +310,100 @@ local function make_legs(name, num)
     return num_pages(B747_fmc_route_num(num))
   end
   fmsPages[name].getPage=function(self,pgNo,fmsID)
-    return legs_page(B747_fmc_route_num(num), pgNo, fmsFunctionsDefs[name], false)
+    return legs_page(B747_fmc_route_num(num), pgNo, fmsFunctionsDefs[name], false, fmsID)
   end
   fmsPages[name].getSmallPage=function(self,pgNo,fmsID)
-    return legs_small(B747_fmc_route_num(num), pgNo, false)
+    return legs_small(B747_fmc_route_num(num), pgNo, false, fmsID)
   end
   fmsFunctionsDefs[name]={}
   fmsFunctionsDefs[name]["exec"]={"rteexec", ""}
+  fmsFunctionsDefs[name]["next"]={"legsnext", ""}
+  fmsFunctionsDefs[name]["prev"]={"legsprev", ""}
 end
 make_legs("LEGS", 1)
 make_legs("LEGS2", 2)
 -- the LEGS key (B744.createfms.lua): the active route's LEGS pages (FCOM
--- p.1330's figure), RTE 1's with none active
+-- p.1330's figure), RTE 1's with none active; in PLN its first waypoint
+-- PLAN's centre (FMSPG p.124)
 function B747_cdu_legs_page(fmsO)
   fmsO.targetCustomFMC = true
   fmsO.targetPage = B747_fmc_route.num == 2 and "LEGS2" or "LEGS"
   fmsO.targetpgNo = 1
+  if plan_mode(fmsO.id) then ctr_to_page(B747_fmc_route, 1) end
+end
+-- NEXT and PREV PAGE (as B744.createfms.lua's: NEXT on the last page the
+-- first), in PLN the new page's first waypoint PLAN's centre (FMSPG p.124)
+local function legs_turn(fmsO, pgNo)
+  fmsO.targetpgNo = pgNo
+  if plan_mode(fmsO.id) then ctr_to_page(st_of(fmsO), pgNo) end
+end
+function fmsFunctions.legsnext(fmsO, value)
+  local n = num_pages(st_of(fmsO))
+  legs_turn(fmsO, fmsO.pgNo < n and fmsO.pgNo + 1 or 1)
+end
+function fmsFunctions.legsprev(fmsO, value)
+  if fmsO.pgNo > 1 then legs_turn(fmsO, fmsO.pgNo - 1) end
+end
+-- STEP (FCOM p.1333 item 10): PLAN's centre to the next waypoint, the page
+-- following it; from another route's centre the page's first (estimate)
+local function legs_step(fmsO)
+  local st = st_of(fmsO)
+  local r = R.shown(st)
+  local i = ctr_index(st, r)
+  local n = nil
+  if i then
+    for j = i + 1, #r.legs do
+      if centrable(r.legs[j]) then n = j break end
+    end
+  else
+    n = page_first(r, fmsO.pgNo)
+  end
+  if not n then return end
+  set_ctr(st, r, n)
+  local pgNo = math.ceil(n / 5)
+  if pgNo ~= fmsO.pgNo then fmsO.targetpgNo = pgNo end
+end
+-- 6R: INTC CRS, STEP or ACTIVATE as legs_page shows them to this CDU
+function fmsFunctions.legsr6(fmsO, value)
+  local st = st_of(fmsO)
+  if dto_mod(st) then
+    fmsFunctions.legsintc(fmsO, value)
+  elseif plan_mode(fmsO.id) then
+    legs_step(fmsO)
+  elseif not st.active and not st.activating then
+    fmsFunctions.rteactivate(fmsO, value)
+  else
+    fmsO["notify"] = "KEY/FUNCTION INOP"
+  end
+end
+-- PLAN's centre for X-Plane (B747.68.xt.fms.lua): its route's state, the
+-- route shown and the leg's index, nil without one
+function B747_cdu_plan_ctr()
+  if planCtr.num == 0 then return nil end
+  local st = B747_fmc_route_num(planCtr.num)
+  local r = R.shown(st)
+  local i = ctr_index(st, r)
+  if not i then return nil end
+  return st, r, i
+end
+-- each frame (B747.68.xt.fms.lua): a CDU's side ND turned to PLN with a
+-- LEGS page up, the page's first waypoint the centre (estimate); with none
+-- yet, the active route's first. True with an ND in PLN
+local wasPlan = {}
+local function plan_selected(fmsO)
+  local id = fmsO.id
+  local on = plan_mode(id)
+  local n = fmsO.inCustomFMC and PAGE_NUM[fmsO.currentPage]
+  if on and not wasPlan[id] and n then ctr_to_page(B747_fmc_route_num(n), fmsO.pgNo) end
+  wasPlan[id] = on
+end
+function B747_cdu_plan_ctr_update()
+  plan_selected(fmsL)
+  plan_selected(fmsC)
+  plan_selected(fmsR)
+  local any = simDR_nd_mode_dial_capt == ND_PLN or simDR_nd_mode_dial_fo == ND_PLN
+  if any and planCtr.num == 0 then ctr_to_page(B747_fmc_route, 1) end
+  return any
 end
 fmsPages["LEGSHOLD"]=createPage("LEGSHOLD")
 fmsPages["LEGSHOLD"].getNumPages=function(self)
