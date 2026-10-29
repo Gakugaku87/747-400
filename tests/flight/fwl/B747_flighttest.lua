@@ -19,7 +19,7 @@
 --   FlyWithLua/B747_flighttest/mark    add a "mark" row to events.csv
 -- Does nothing unless the 747-400 is the user aircraft.
 
-local VERSION = "3"
+local VERSION = "4"
 
 if not string.find(AIRCRAFT_PATH or "", "747-400", 1, true)
     or XPLMFindDataRef("laminar/B747/engines/type") == nil then
@@ -79,6 +79,12 @@ local COLUMNS = {
     {"frame_rate", "sim/operation/misc/frame_rate_period", nil, -1},  -- stored as frames per second
     {"sim_t", "sim/time/total_running_time_sec"},
     {"elev_deg", "laminar/B747/flt_ctrls/l_elev_inner"},  -- left inner elevator surface, deg
+    -- the forces on the airframe (N, body axes: backward and upward), the
+    -- aerodynamic and the engines' (v4: for the aerodynamic comparison,
+    -- notes/AERO.md)
+    {"faxil_aero", "sim/flightmodel/forces/faxil_aero"}, {"fnrml_aero", "sim/flightmodel/forces/fnrml_aero"},
+    {"faxil_prop", "sim/flightmodel/forces/faxil_prop"}, {"fnrml_prop", "sim/flightmodel/forces/fnrml_prop"},
+    {"tat", "sim/weather/aircraft/temperature_leadingedge_deg_c"},
 }
 -- the four engines' thrust, for the "thrust" column
 local THRUST = {{"sim/flightmodel/engine/POINT_thrust", 0}, {"sim/flightmodel/engine/POINT_thrust", 1},

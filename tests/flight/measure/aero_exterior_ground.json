@@ -1,0 +1,19 @@
+{
+  "name": "aero_exterior_ground",
+  "description": "測定（合否なし）：カスタム acf の空力・エンジンを変えた後の外から見た写真、地上（CLAUDE.md の acf の手順：見た目が変わっていないこと。2026-10-24 の tests/flight/runs/*_exterior_view_* と同じ RJAA 34L・チェースビュー）。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": { "definition": "vfr_few_clouds", "vertical_speed_in_thermal_in_feet_per_minute": 0, "wave_height_in_meters": 0.5, "wave_direction_in_degrees": 0, "terrain_state": "dry", "variation_across_region_percentage": 0, "evolution_over_time_enum": "static" }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10 },
+    { "do": "cmd", "note": "チェースビュー", "name": "sim/view/chase" },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "shot", "name": "exterior_ground" },
+    { "do": "cmd", "note": "操縦席に戻す", "name": "sim/view/3d_cockpit_cmnd_look" },
+    { "do": "sleep", "seconds": 2 }
+  ]
+}
