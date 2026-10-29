@@ -10140,7 +10140,7 @@ P _body/1/_locked/9,9 0
 P _body/1/_locked/i_count 20
 P _body/1/_locked/j_count 18
 P _body/1/_part_area_rule 1.000000000
-P _body/1/_part_cd 0.059999999
+P _body/1/_part_cd 0.030000000
 P _body/1/_part_phi 0.000000000
 P _body/1/_part_psi 0.000000000
 P _body/1/_part_rad 15.000000000
@@ -20437,7 +20437,7 @@ P _body/21/_locked/9,9 0
 P _body/21/_locked/i_count 20
 P _body/21/_locked/j_count 18
 P _body/21/_part_area_rule 1.000000000
-P _body/21/_part_cd 0.100000001
+P _body/21/_part_cd 0.025000000
 P _body/21/_part_phi 0.000000000
 P _body/21/_part_psi 0.000000000
 P _body/21/_part_rad 5.300000191
@@ -21908,7 +21908,7 @@ P _body/22/_locked/9,9 0
 P _body/22/_locked/i_count 20
 P _body/22/_locked/j_count 18
 P _body/22/_part_area_rule 1.000000000
-P _body/22/_part_cd 0.100000001
+P _body/22/_part_cd 0.025000000
 P _body/22/_part_phi 0.000000000
 P _body/22/_part_psi 0.000000000
 P _body/22/_part_rad 5.300000191
@@ -23379,7 +23379,7 @@ P _body/23/_locked/9,9 0
 P _body/23/_locked/i_count 20
 P _body/23/_locked/j_count 18
 P _body/23/_part_area_rule 1.000000000
-P _body/23/_part_cd 0.100000001
+P _body/23/_part_cd 0.025000000
 P _body/23/_part_phi 0.000000000
 P _body/23/_part_psi 0.000000000
 P _body/23/_part_rad 5.300000191
@@ -24850,7 +24850,7 @@ P _body/24/_locked/9,9 0
 P _body/24/_locked/i_count 20
 P _body/24/_locked/j_count 18
 P _body/24/_part_area_rule 1.000000000
-P _body/24/_part_cd 0.100000001
+P _body/24/_part_cd 0.025000000
 P _body/24/_part_phi 0.000000000
 P _body/24/_part_psi 0.000000000
 P _body/24/_part_rad 5.300000191

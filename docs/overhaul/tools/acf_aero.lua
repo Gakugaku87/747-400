@@ -26,9 +26,21 @@ local INC = {
 -- (20 deg: 20, 25 and 30 gave the same), the FCOM's attitudes want it
 -- growing to 30 (notes/AERO.md). The FCU writes the angles itself (the 3D
 -- flaps follow laminar/B747/flt_ctrls/flaps), so no look changes
+-- the bodies' drag: the four nacelles (bodies 21-24) 0.1 -> 0.025 and the
+-- wing to body fairing (body 1) 0.06 -> 0.03. Measured (aero_drag.json),
+-- a unit of Cd on the four nacelles is 0.054 of the airplane's CD (wing
+-- 541 m2), on the fairing 0.032, on the fuselage 0.071: the nacelles gave
+-- 0.0054, about four times their outer skin's friction (estimate: the
+-- engine model already has the inlet's ram drag in its net thrust); the
+-- fuselage's 0.0060 is about its skin friction's and stays
 local SET = {
     ["acf/_flap1_dn/6"] = 50,
     ["acf/_flap2_dn/6"] = 50,
+    ["_body/1/_part_cd"] = 0.03,
+    ["_body/21/_part_cd"] = 0.025,
+    ["_body/22/_part_cd"] = 0.025,
+    ["_body/23/_part_cd"] = 0.025,
+    ["_body/24/_part_cd"] = 0.025,
 }
 for w, v in pairs(INC) do
     SET["_wing/" .. w .. "/_incidence"] = v       -- left

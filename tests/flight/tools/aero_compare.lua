@@ -198,6 +198,10 @@ local function line(label, s, ref, ref_ias)
         local w = s.weight * 9.80665
         print(string.format("%22s X-Plane: lift/W %.3f  drag/W %.4f (L/D %.1f)  engines along the path/W %+.4f (%.0f kN each)",
             "", s.lift / w, s.drag / w, s.lift / s.drag, s.prop / w, s.prop / 4000))
+        -- the coefficients on 541.2 m2 (the reference area: only the ratios
+        -- matter) and the dynamic pressure from the CAS (low Mach)
+        local qs = 0.5 * 1.225 * (s.ias * 0.514444) ^ 2 * 541.2
+        print(string.format("%22s CL %.3f  CD %.4f", "", s.lift / qs, s.drag / qs))
     end
     if not ref then
         print(string.format("%22s FCOM: no value for this weight and altitude", ""))
