@@ -26,18 +26,6 @@ local IDLE_COMMAND = {GE = 25, PW = 0.95}
 -- the flap lever's detents (0, 1, 5, 10, 20, 25, 30 at even steps of
 -- sim/cockpit2/controls/flap_ratio) as trailing edge flap degrees
 local FLAP_DETENTS = {0, 1, 5, 10, 20, 25, 30}
--- X-Plane has one idle setting for all engines (high_idle_ratio): approach
--- idle when any engine selects it, else minimum idle by the outside air
--- temperature (the previous code's values, estimate)
-local APPROACH_IDLE_RATIO = 2.625
-local function minimum_idle_ratio(t)
-    if B747DR_engineType == 1 then
-        if t < 15 then return B747_rescale(-75.0, 1.04, 14.99, 1.249, t) end
-        return B747_rescale(15.0, 1.25, 75.0, 1.49, t)
-    end
-    if t < 15 then return B747_rescale(-75.0, 1.00, 14.99, 1.07, t) end
-    return B747_rescale(15.0, 1.071, 75.0, 1.14, t)
-end
 -- EICAS slots (laminar/B747/CAS/advisory_status, caution_status)
 local ADV_IDLE_DISAGREE = 223
 local ADV_LOW_IDLE = 309            -- ENG 1-4 LOW IDLE: 309-312
@@ -113,8 +101,8 @@ function B747_eec_update()
         if B747DR_autothrottle_active == 1 then B747DR_autothrottle_active = 0 end
     end
     if eec_out.at_inhibit then EEC_status = 1 else EEC_status = 0 end
-    local ratio = APPROACH_IDLE_RATIO
-    if not approach then ratio = minimum_idle_ratio(simDR_temperature) end
+    -- X-Plane's one idle setting: approach idle when any engine selects it
+    local ratio = E.idle_ratio(inp.air, inp.alt, approach)
     if math.abs(simDR_engine_high_idle_ratio - ratio) > 0.0001 then simDR_engine_high_idle_ratio = ratio end
 end
 

@@ -6,7 +6,8 @@
 -- 20 s) after each mark: altitude, KIAS, Mach (standard atmosphere), TAT,
 -- V/S, and the four engines' mean X-Plane N1 and N2, fuel flow (kg/s) and
 -- thrust (POINT_thrust, kN), with the fuel flow per thrust (lb/lbf/h) when
--- the thrust is above 1 kN.
+-- the thrust is above 1 kN; on the ground the mean ground speed and its
+-- change over the window (kt/s).
 local dir, window = arg[1], tonumber(arg[2] or "20")
 assert(dir, "usage: idle_sweep.lua <run folder> [window s]")
 dir = dir:gsub("[/\\]$", "")
@@ -40,13 +41,16 @@ for _, e in ipairs(events) do
 end
 
 print(string.format("%s: %d rows, %d marks, the %d s after each", dir, #rows, #marks, window))
-print(" mark    alt  KIAS  Mach   TAT    V/S    N1    N2   FF kg/s  thrust kN  SFC")
+print(" mark    alt  KIAS  Mach   TAT    V/S    N1    N2   FF kg/s  thrust kN  SFC    GS kt  dGS kt/s")
 for k, tm in ipairs(marks) do
-    local s, n = {alt = 0, ias = 0, tat = 0, vs = 0, n1 = 0, n2 = 0, ff = 0, thrust = 0}, 0
+    local s, n = {alt = 0, ias = 0, tat = 0, vs = 0, n1 = 0, n2 = 0, ff = 0, thrust = 0, gs = 0}, 0
+    local first, last
     for _, v in ipairs(rows) do
         local t = v[col.t]
         if t >= tm and t <= tm + window then
             n = n + 1
+            first, last = first or v, v
+            s.gs = s.gs + v[col.gs_kt]
             s.alt, s.ias, s.vs = s.alt + v[col.alt], s.ias + v[col.ias], s.vs + v[col.vs]
             s.tat = s.tat + (col.tat and v[col.tat] or 0)
             s.thrust = s.thrust + v[col.thrust]
@@ -64,7 +68,9 @@ for k, tm in ipairs(marks) do
         local sfc = ""
         -- kg/s per kN -> lb/lbf/h: x 3600 (h) / 101.97 (kgf per kN)
         if thrust_kn > 1 then sfc = string.format("%.3f", s.ff * 3600 / (thrust_kn * 101.97)) end
-        print(string.format("%5d %6.0f %5.0f %5.3f %5.1f %6.0f %5.1f %5.1f %8.3f %9.2f  %s",
-            k, s.alt, s.ias, m, s.tat, s.vs, s.n1, s.n2, s.ff, thrust_kn, sfc))
+        local dgs = 0
+        if last[col.t] > first[col.t] then dgs = (last[col.gs_kt] - first[col.gs_kt]) / (last[col.t] - first[col.t]) end
+        print(string.format("%5d %6.0f %5.0f %5.3f %5.1f %6.0f %5.1f %5.1f %8.3f %9.2f  %-5s %6.1f %8.3f",
+            k, s.alt, s.ias, m, s.tat, s.vs, s.n1, s.n2, s.ff, thrust_kn, sfc, s.gs, dgs))
     end
 end

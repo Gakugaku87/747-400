@@ -73046,7 +73046,7 @@ P acf/_feather_on_mixt_pull_EQ 0
 P acf/_feather_on_prop_pull_EQ 0
 P acf/_feather_prop_with_oilp 0
 P acf/_feathered_pitch 0.000000000
-P acf/_ff_rat_idle_JET 0.010000000
+P acf/_ff_rat_idle_JET 0.054000000
 P acf/_ff_rat_idle_PRP 0.250000000
 P acf/_ff_rat_idle_turbo 0.250000000
 P acf/_file_writer_version 123300
@@ -73768,7 +73768,7 @@ P acf/_rock_max_vac 0.000000000
 P acf/_roll_acft_lf_trim_rat 0.050000001
 P acf/_roll_acft_rt_trim_rat 0.050000001
 P acf/_roll_acft_trim_mode 0
-P acf/_roll_co 0.025000000
+P acf/_roll_co 0.015000000
 P acf/_roll_max_full_def_KIAS 500.000000000
 P acf/_roll_to_eng_spo1 0.109999999
 P acf/_roll_to_eng_spo2 0.109999999
