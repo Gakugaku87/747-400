@@ -202,8 +202,12 @@ local function line(label, s, ref, ref_ias)
         print(string.format("%22s X-Plane: lift/W %.3f  drag/W %.4f (L/D %.1f)  engines along the path/W %+.4f (%.0f kN each)",
             "", s.lift / w, s.drag / w, s.lift / s.drag, s.prop / w, s.prop / 4000))
         -- the coefficients on 541.2 m2 (the reference area: only the ratios
-        -- matter) and the dynamic pressure from the CAS (low Mach)
-        local qs = 0.5 * 1.225 * (s.ias * 0.514444) ^ 2 * 541.2
+        -- matter) and the dynamic pressure 0.7 p M^2 (standard atmosphere,
+        -- the Mach from the CAS and pressure altitude; until 2026-10-30 it
+        -- was 0.5 rho0 CAS^2, about 14 % high at M.85)
+        local d = (1 - 6.87559e-6 * s.alt) ^ 5.25588
+        if s.alt > 36089 then d = 0.223361 * math.exp(-4.80637e-5 * (s.alt - 36089)) end
+        local qs = 0.7 * 101325 * d * mach(s.ias, s.alt) ^ 2 * 541.2
         print(string.format("%22s CL %.3f  CD %.4f", "", s.lift / qs, s.drag / qs))
     end
     if not ref then

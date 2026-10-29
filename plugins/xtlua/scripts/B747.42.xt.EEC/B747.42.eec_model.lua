@@ -51,8 +51,8 @@ M.LANDING_FLAPS_DEG = 23            -- trailing edge flaps past 23° (ATA70_80 p
 -- 2026-10-30; notes/AERO.md 3.7):
 -- - minimum idle in the air, by pressure altitude: the net thrust that,
 --   with the acf's drag, gives the FCOM's idle descents (PI.10.39, p.265:
---   290 KIAS, .84 above 30,000 ft), about +4 kN an engine at sea level,
---   +2 at 10,000 ft and -1 at 20,000-30,000 ft. The FCOM fixes drag less
+--   290 KIAS, .84 above 30,000 ft), about +3 kN an engine at sea level,
+--   +2 at 10,000 ft and 0 at 20,000-30,000 ft. The FCOM fixes drag less
 --   idle thrust only, so the split is an estimate; above 30,000 ft the
 --   ratio is carried on (estimate);
 -- - minimum idle on the ground: the previous code's 15 °C value, 4 % of the
