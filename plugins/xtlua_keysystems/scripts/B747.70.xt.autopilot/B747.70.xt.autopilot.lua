@@ -636,6 +636,30 @@ end
 -- flags and its targets; the speed laws' (step 3b): the IAS, the reference
 -- (T/O's V2 and G/A's MCP speed too), the speed protection, the PLI, the
 -- flaps, a windshear; G/S's (step 3c)
+-- (6-1/6-2 step 9a, until the FMC's VNAV of step 9c) VNAV levels off at
+-- the MCP altitude (VNAV ALT: FCOM p.645, ATA22 p.280) and at the old
+-- VNAV's target altitude (the FMC's: VNAV PTH), captured as V/S and FLCH
+-- capture theirs (B747.70.afds_pitch_model.lua's capture), and holds it
+-- until that altitude moves (a new MCP altitude, the old VNAV's next
+-- target). Before, the rebuilt AFDS flew the old VNAV's FLCH and V/S flags
+-- through them (s137: on through MCP 13,000 ft to 16,900 ft)
+local vnavLevel = nil
+local function afds_vnav_level(p)
+	if afds.pitch ~= "VNAV" then vnavLevel = nil return end
+	local mcp, tgt = B747DR_autopilot_altitude_ft, simDR_autopilot_altitude_ft
+	if vnavLevel then
+		local now = vnavLevel.fma == 5 and mcp or tgt
+		if math.abs(now - vnavLevel.alt) > 50 then vnavLevel = nil end
+	end
+	if not vnavLevel and p.vnav_law ~= "ALT" then
+		if B747_afds_pitch_model.capture(p, mcp) then
+			vnavLevel = {alt = mcp, fma = 5}
+		elseif tgt ~= mcp and B747_afds_pitch_model.capture(p, tgt) then
+			vnavLevel = {alt = tgt, fma = 6}
+		end
+	end
+	if vnavLevel then p.vnav_law, p.vnav_alt = "ALT", vnavLevel.alt end
+end
 local function afds_pitch_inputs(p)
 	p.pitch = simDR_afds_pitch
 	p.vs = simDR_afds_vs
@@ -646,6 +670,7 @@ local function afds_pitch_inputs(p)
 		or (simDR_autopilot_flch_status == 2 and "FLCH") or nil
 	p.vnav_vs = simDR_autopilot_vs_fpm
 	p.vnav_alt = simDR_autopilot_hold_altitude_ft
+	afds_vnav_level(p)
 	local ref = afds_speed_ref()
 	p.ias = simDR_ind_airspeed_kts_pilot
 	p.spd_sel = ref
@@ -828,6 +853,8 @@ local afdsTogaPushes = nil
 -- the old VNAV's sub-mode, as the old FMA inferred it from its law's flags
 -- (until the FMC's step 9): VNAV SPD 4, VNAV ALT 5, VNAV PTH 6
 local function afds_old_vnav_fma()
+	-- levelled off (step 9a): VNAV ALT at the MCP altitude, else VNAV PTH
+	if vnavLevel then return vnavLevel.fma end
 	if simDR_autopilot_flch_status == 2 then return 4 end
 	if simDR_autopilot_alt_hold_status == 2 or math.abs(simDR_pressureAlt1 - simDR_autopilot_altitude_ft) < B747DR_alt_capture_window then
 		local crz = fmsData and fmsData["crzalt"] and tonumber(string.sub(fmsData["crzalt"], 3))
@@ -3094,7 +3121,9 @@ function B747_ap_fma(fms)
 		B747DR_ap_FMA_autothrottle_mode = 1 --HOLD
 		B747DR_engine_TOGA_mode = 1 --reached hold state
 	elseif
-		(simDR_autopilot_fms_vnav == 1 or B747DR_ap_vnav_state == 2) and
+		-- (not when levelled off: VNAV ALT and PTH's A/T SPD, FCOM p.645;
+		-- step 9a)
+		not vnavLevel and (simDR_autopilot_fms_vnav == 1 or B747DR_ap_vnav_state == 2) and
 			(((simDR_autopilot_flch_status > 0 and (simDR_pressureAlt1> simDR_autopilot_altitude_ft+B747DR_alt_capture_window or simDR_pressureAlt1< simDR_autopilot_altitude_ft-B747DR_alt_capture_window)) or B747DR_engine_TOGA_mode == 1) and B747DR_ap_inVNAVdescent == 0)
 	 then
 		B747DR_ap_FMA_autothrottle_mode = 5 --THR REF

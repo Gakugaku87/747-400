@@ -1080,3 +1080,39 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 試験：
   - 回帰：`wind_model_test.lua` 60 件（入力の書き方、測った風の割合 1・0.5・0.2・0、点の間と高度の間の補間、最も高い高度の上、最も低い高度の下は目的地と出発地の標高で 0、降下予報とその上の巡航の風へのつなぎ、経路の風が無いとき、測った風の割合を巡航は距離・上昇は高度の差で、気温の差と標準大気）、`pred_model_test.lua` 53 件（場で一定の向かい風と ISA+5 なら前の相ごとの値と同じ、50 kt の追い風で 1,000 NM が 10 分より早い、降下の低い所だけの向かい風で到着が遅れ T/D はほぼ動かない）、`pred_glue_test.lua` 65 件（WIND のページの FL100 の入力が最も長い脚の中ほどで、地上からの高度の差の割合だけ減った向かい風になる、予測の到着が変わる）。全 132 本。
   - X-Plane：新設の `s136_fmc_pred_winds` 10/10。FL350 の巡航で、風なしの目的地 0158z/80.2 t が、AKAGI に FL350 の 250/100（ほぼ向かい風、全点に伝わる）を入れると 0201z/79.7 t（3 分遅れ、0.5 t 減。近くは測った無風が混ざるので、100 kt だけの計算より小さい）。PROGRESS の ATMUG は 0143z→0146z、TO T/D は 0138z→0141z。DESCENT FORECAST の FL200 250/080 では分の単位では変わらなかった（経路の FL350 の風が下へ 0 まで伸びた値と近い）。`s135_fmc_des_forecast` を FMSPG の入力の検査を足した版で 11/11。Lua の誤りなし。
+
+## 54. 段 9 の段取り（2026-10-31：VNAV と 6-4 の A/T）
+
+- 下調べ（2026-10-31、資料とコードを下調べ役 2 つで）：
+  - 資料：VNAV は FMC の誘導の機能で、縦の形を「性能の脚」のつながりとして持ち、脚ごとに昇降舵が速度か経路を持つ。経路を昇降舵が持つ間は速度の指令は推力管理へ（ATA34_2 p.597）。4 つの制御：速度/推力（上昇・早期降下・E/O の driftdown）、経路/速度（巡航・浅い降下）、経路/アイドル（ふつうの降下）、速度/ホールド（段の降下）（ATA34_2 p.615–616）。FMC から FCC へ：目標の対気速度・Mach・高度、縦の steering とその rate、離散信号（ATA22 p.206、ATA34_2 p.470）。FCC は VNAV の engage 中だけ縦の steering を姿勢の積分に足す（ATA22 p.332、p.347）。FCC の速度の則は TO・GA・FLCH だけ（ATA22 p.344）なので、VNAV の速度と経路のループは FMC 側と読める（推定）。engage は FMC の VNAV CONTROL（監視・センサ・PERF の入力・400 ft の上・ARM）と FCC の ARM・ENGAGE の latch（ATA34_2 p.621、ATA22 p.279、p.340–341）。サブモードの移り方（ATA22 p.279–280、ATA34_2 p.624）、MCP のノブ（ATA34_2 p.623–624）、FCOM の許容（経路 150 ft、速度 15 kt と 10 kt、349・354 kt、DES NOW 約 1,250 fpm、T/D の 2 分前の RESET MCP ALT、50 NM の早期降下：FCOM p.1258–1262、p.645、p.665）。
+  - 推力管理（ATA34_2 p.638–675）：engage の論理、モード（THR REF・THR・SPD・IDLE・HOLD）とピッチのモードからの選び方、速度・V/S（FLCH は 125 s で MCP 高度へ、GA は 2,000 fpm）・推力の各則、servo（0〜10°/s の積分、flare 5°/s、FLCH の 8° の override で HOLD）、推力制限と自動の切り替え。ゲインと時定数は資料に無い。
+  - コード：今の VNAV は前の AP の `VNAV_modeSwitch`・`setDistances`（X-Plane の FMS の JSON から 290 ft/NM の T/D）・`setDescentVSpeed`（幾何の V/S）・速度の状態機械（`vnavspd.lua`）で、FMC の経路と段 8 の予測を使っていない。AFDS（6-3 で作り直し）は VNAV のサブモードを前のフラグから推し、則は前のフラグ（FLCH → 速度の則、V/S → V/S の則）で飛ぶ。A/T は前の AP の if の連鎖が FMA の値を毎フレーム作り、servo は EEC（別のプラグイン）にある（ATA-22-AT.md §7 の ATHR-01〜20）。
+  - 下調べの指摘：作り直した AFDS の則に VNAV の高度の捕捉が無く、VNAV の上昇が MCP の高度を行き過ぎるおそれ（s137 で確かめる）。
+- 方針：
+  - VNAV は FMC の純粋なモデル（`B747.68.vnav_model.lua`、新設）で、飛行の段階、サブモードの要求（SPD・PTH・ALT）、目標の速度・高度、経路（段 8 の予測の降下の経路を E/D までの距離で地上に固定）、経路の偏差と V/S の指令、A/T のモードの要求、メッセージを出す。受け渡しは LNAV と同じく dataref（`laminar/B747/fms/vnav/*`）。AFDS が arm・engage・逆戻りを決め、則を飛ぶ（ATA-22.md §8 の取り決め）。
+  - A/T は推力管理を 1 つのモジュールにまとめて作り直す（ATA-22-AT.md §8）。A/T の状態と FMA の値の持ち主を 1 つにする。servo は EEC から移し、EEC は TRA から EPR/N1 だけ。
+  - `flightPhase`（多くの読み手：EEC の推力制限、CDU のページ、予測）の持ち主も FMC の VNAV の段階にする。
+  - 3D・表示・音の名前（`FMA/active_pitch_mode`・`autothrottle_mode` の値の意味、`ias_dial_value` など：INTERFACES.tsv）は変えない。
+- 段（それぞれ、純粋なモデルの回帰試験と X-Plane の試験を付ける）：
+
+| 段 | 内容 | GAP |
+|---|---|---|
+| 9a | （s137 で行き過ぎなら）今の VNAV の高度の捕捉の応急の修正 | — |
+| 9b | VNAV のモデル（純粋）：段階（CLB・CRZ・DES）、目標の速度（上昇・巡航・降下の予定、SPD TRANS・RESTR、点の速度制限、フラップの placard、最小・最大）と高度、降下の経路（予測から、地上に固定）、偏差と V/S の指令、サブモードと A/T の要求。FMS に組み込み dataref に出すが、AFDS はまだ前のまま（影の動き：X-Plane で前の VNAV と並べて比べる） | FMC-07, 08, 12, 13, 17, 18 |
+| 9c | AFDS が新しい VNAV で飛ぶ：engage は FMC の有効、SPD は FMC の目標速度、PTH は V/S の指令と FMC の高度の捕捉、ALT は MCP の高度、FMA はサブモードから。A/T は VNAV の要求に従う（つなぎ）。前の VNAV（`VNAV_modeSwitch`・`setDistances` の T/D・`vnav.lua`・`vnavspd.lua`）を外す。`flightPhase` の持ち主を FMC に | AFDS-08 |
+| 9d | MCP の操作と早期降下：ALT ノブ（制限を 1 つずつ消す、CRZ ALT、巡航の上昇・降下、T/D 50 NM の内の早期降下）、SPD ノブ（速度介入）、DES NOW、RESET MCP ALT、CRZ のページの見出し | FMC-14, 15 |
+| 9e | 降下の許容と進入：経路 150 ft、速度の閾値と逆戻り、THRUST REQUIRED・DRAG REQUIRED、on approach、END OF DES、進入復行（CRZ ALT は進入復行の最も高い高度）、離陸の VNAV（400 ft、V2+10〜25、加速高度、VREF+100） | FMC-16 |
+| 9f | 推力管理 1（6-4）：A/T のモードの状態機械、engage と disconnect（AUTOTHROT DISC）、モードの則（SPD、THR の V/S、THR REF、IDLE・HOLD）、servo（10°/s、5°/s、8° の override）、EEC から servo を移す | ATHR-06〜16, 19, 20 |
+| 9g | 推力管理 2（6-4）：推力制限（TO・CLB・CRZ・CON・GA、CLB 1/2、derate と assumed temp、自動の切り替え）、EICAS の reference・target・max、THRUST LIM のページ | ATHR-01〜05, 17 |
+| 9h | E/O の VNAV と RTA（109） | FMC-26, 27 |
+
+- 順は 9a → 9b → 9c → 9f → 9d → 9e → 9g → 9h（A/T の IDLE・HOLD・THR が要る所の前に 9f）。
+
+## 55. 段 9a の実装（2026-10-31：VNAV の水平の応急の修正）
+
+- 見つけたこと：下調べで、6-3 で作り直した AFDS の則が、前の VNAV（`VNAV_modeSwitch`）の FLCH・V/S のフラグのまま VNAV を飛び、高度を捕捉しないおそれが分かった（AFDS のモデルの捕捉は V/S・FLCH・TO/GA のピッチのモードだけ。前の VNAV が高度を保つフラグを立てるのは CRZ ALT と engage の時だけ）。X-Plane の新設の `s137_vnav_level_off` で確かめると、10,000 ft から MCP 13,000 ft へ VNAV SPD で上がり、13,000 ft を越えて 16,870 ft でもまだ 1,760 fpm で上がっていた（FMA は VNAV SPD のまま、中の目標高度は 35,000 ft に書き換わっていた）。
+- 直し方（AP のつなぎ `B747.70.xt.autopilot.lua`、段 9c で新しい VNAV に置き換えるまで）：AFDS のピッチが VNAV の間、MCP の高度と前の VNAV の目標高度を、V/S・FLCH と同じ捕捉（`B747_afds_pitch_model.capture`）で捕らえ、その高度を ALT の則で保つ。MCP の高度なら FMA は VNAV ALT（FCOM p.645：VNAV と MCP の高度が食い違えば水平にして VNAV ALT）、前の VNAV の目標なら VNAV PTH（ATA22 p.280：FMC の高度の捕捉で PTH）。その高度が動いたら（新しい MCP の高度、前の VNAV の次の目標）離す。水平の間、A/T は THR REF でなく SPD（FCOM p.645：VNAV ALT・PTH の A/T は SPD）。
+- 推定：MCP の高度を動かせば上昇・降下を続ける（実機は MCP の高度を変えてノブを押す：段 9d で）。
+- 試験：
+  - 回帰：`tests/autopilot/afds_glue_test.lua` 186 件（VNAV SPD で MCP の高度の 60 ft 下を上昇中に VNAV ALT、A/T は THR REF でない、MCP を上げると VNAV SPD）。全 132 本。
+  - X-Plane：新設の `s137_vnav_level_off` 12/12（直す前は 13,000 ft を越えて 16,870 ft まで上がった。直した後は 13,003 ft で水平・VNAV ALT・A/T SPD・340 kt、MCP 15,000 ft で VNAV SPD に戻り 15,003 ft で VNAV ALT）。Lua の誤りなし。
