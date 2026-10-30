@@ -926,3 +926,29 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 試験：
   - 回帰（LuaJIT）：新設の `tests/fms/perf_db_test.lua` 36 件（表の升と升の間と端、PW と GE、RR は PW、最大高度の推力で決まる印と ISA 偏差と余裕、待機、降下、風の係数、最大高度が届く重さ）。全 123 本。
   - X-Plane（カスタム acf）：新設の `s128_fmc_perf_db`（空中、10,000 ft）5/5：CRZ のページの OPT・MAX が FL361・FL403、CRZ ALT を FL350 にした LRC のページの Mach が .848、T/D の時刻が X-Plane の UTC（0100）。どれも、その時の重量（270 t）と外気温（ISA 偏差 0°）から性能 DB で求めた値と同じ。Lua の誤りなし。
+
+## 45. 段 8b1 の実装（2026-10-31：ECON の速さ）
+
+- 段 8b を 2 つに分けた。8b1：巡航の模型、ECON の速さ、SEL SPD と <ECON・LRC>、CLB・DES のページ、自動操縦が FMC の速さで飛ぶこと。8b2：CRZ のページ（EPR/N1、STEP SIZE・STEP TO・AT、ECON の OPT、MAX ALT のメッセージ）。
+- 資料：
+  - CI：時間の費用（$/h）÷ 燃料の値段（¢/lb）。1 につき燃料 100 lb/h（FMSPG p.261）。CI 0 は最大航続（FCOM p.1257）。
+  - ECON 巡航は重量・巡航高度・CI・向かい風で変わる。向かい風で速く、追い風で遅く、ただし無風の最大航続より遅くしない。LRC は最大の 99 % の燃費で、風の補正なし。CI 5000 以上でおおむね推力か速度の上限に当たる（FCTM p.4.7）。
+  - ECON 上昇は CAS 一定・Mach 一定。Mach は巡航高度での ECON 巡航の Mach、CAS は重量・CI など。巡航高度が低ければ巡航の速さまで上げる。FMC が使えないときの ECON 上昇は 340 kt/.84、最大上昇率はおよそフラップ上げの maneuver + 60 kt（FCTM p.4.3）。PI.10.36 の最大上昇 EPR の表も 340/.84。
+  - 降下：ECON の目標は 349 kt（VMO/MMO − 16 kt）まで、乗員の速さは 354 kt（− 11 kt）まで（FCOM p.1258）。標準の降下は .84/290/250（PI.11.5）。
+  - ページ：CLB の ECON SPD は CAS/Mach（FMSPG p.113 の例 358/.853）。入力は CAS 100〜400、Mach（小数点と 1〜3 桁、.100〜.990）、CAS/Mach か Mach/CAS。乗員の入力で SEL SPD、<ECON（5L）で戻す。CRZ は ECON SPD・SEL SPD・LRC SPD（CAS か Mach：FCOM p.1348）、<ECON（5L）、LRC>（6R）。DES は Mach/CAS、SEL SPD と <ECON（5L：FMSPG p.192–193）。表題は ECON・XXXKT・M.XXX・LRC（FCOM p.1327、p.1347、p.1391）、上昇は SPD TRANS・RESTR の下ではその速さ（FMSPG p.112：ACT 250KT CLB）。
+- 巡航の模型（`B747.68.perf_db.lua` に足した、推定）：
+  - CD = CD0 + K CL² + KW (M − MC)⁴（MC = MC0 − MCL CL、その上で）+ KD (M − MD)⁴（抗力発散、MD の上で）。燃料流量 = (T0 + T1 M)(1 + T2 · 100 kN ÷ (F/δ)) √θ · F（F は 1 発の推力、T2 は部分推力で消費率が上がる分）。
+  - 合わせ込み（新設の `tests/tools/perf_fit.lua`、Nelder–Mead、型式ごと）：LRC の燃料流量（表の Mach で）、待機の燃料流量（racetrack の 5 % を除く。推力の上限近くの升は除く）、LRC の Mach（模型の最大航続の 99 % の燃費の速さ）。燃料流量だけでは抗力と消費率の比が決まらないので、抗力の大きさは速度計が使えないときの .84/290 のアイドル降下の V/S（PI.10.39・PI.20.33。速さの変化の分を補正し、アイドルの推力は 0 とみなした）から。抗力発散は、表の LRC が重さによらず .860〜.862 で頭打ちになることと、CI 5000 で ECON が速度の上限に届くこと（FCTM p.4.7）から。
+  - 結果：PW は LRC の燃料流量 rms 1.7 %（最大 4.5 %）、LRC の Mach の差は最大 0.014、待機 1.3 %、アイドル降下の抗力 5.6 %。GE は 1.1 %（2.6 %）、0.007、1.3 %、6.5 %。模型の最適高度は表と 500 ft（PW）・900 ft（GE）ほど。LRC から .88 で燃料流量 +24 %（PW 300 t・FL350）。
+  - 水平飛行の推力（8b2 の CRZ のページの EPR・N1 用）：1 発の推力 ÷ δ と Mach の 2 次式を、LRC・待機・.84/290 の巡航（PI.10.38・PI.20.33）の EPR（PW）・N1 ÷ √θt2（GE）に最小二乗で（新設の `tests/tools/thrust_fit.lua`）。EPR 0.01 rms（表の刻み）、N1 0.4〜0.9 %。RR は PW の EPR。
+- ECON（推定）：
+  - 巡航：対地の 1 NM あたりの費用（燃料 + CI × 100 lb/h）が最小の Mach。無風の最大航続より遅くせず、VMO/MMO − 16 kt を超えない。PW 300 t・FL350 で CI 0 は .822、100 は .854、約 270 で LRC 相当の .859、1000 は .866、5000 で上限 .879。CI 100 で向かい風 100 kt は .857、追い風 100 kt は .844。
+  - 上昇・降下の CAS：表が無いので、CI の位置（0 は最大航続、1 は ECON 巡航が LRC になる CI、2 は CI 5000：1 と 2 の間は CI の対数）で、上昇は「最小抗力の速さ + 60 kt」（FCTM の maneuver + 60 に当たる）→ 340 → 360 kt、降下は「最小抗力の速さ」（最良滑空）→ 290 → 349 kt。Mach はどちらも巡航の ECON。上昇は低い巡航高度で巡航の CAS まで上げる。上昇の上限 360 kt は FMSPG の例（358）からの推定。重量は今のもの（T/C・T/D の予測重量は 8c）。
+  - MAX ANGLE：その高度と重量の最小抗力の速さ（前は V2 + 80 か 100）。
+- FMC（`B747.68.xt.fms.lua`）：5 秒ごと（CI・CRZ ALT の入力、<ECON・LRC> ですぐ）に、CI、FMC の重量（PERF INIT の ZFW＋燃料、入れる前は X-Plane の重量：`B747_fms_gw_kg`）、CRZ ALT、巡航高度の ±2,000 ft では今の向かい風（予報は 8e）、ISA 偏差から ECON を計算し、ECON のモードの速さに書く（2 kt・.002 未満の変化は書かない：自動操縦はどの変化も新しい目標として取り直すため）。LRC のモードは表の LRC。FMC のデータに速さのモード（clbspdmode・crzspdmode・desspdmode：E・S・L）、上昇の Mach（clbspdmach、空欄は巡航の Mach）、巡航の CAS（crzcas）を足した。CI を入れる前は前と同じ既定値（340、.810、.805/270）。
+- 自動操縦（`B747.70.xt.autopilot.vnavspd.lua`）：巡航は FMC の Mach か乗員の CAS（前は CI から重量と高度の一次式で Mach を作り、乗員の巡航速度を上書きしていた：FMC-11）。上昇の Mach は FMC の上昇の Mach。降下の目標は VMO/MMO − 11 kt まで（CAS と、MMO の側の Mach）。FMC の速さのどれかが変われば目標を取り直す。前の式のための dataref（重量・TAS・GS）は外した。
+- 古い LRC のページ（`vnav.lrc.lua`：TGT SPD・TURB N1・FUEL AT DEST など、2009 年版の FCOM に無い）は外し、CRZ のページの LRC のモードに置き換えた。s128 も CRZ のページで LRC を確かめるように直した。
+- 残り：8b2（上の通り）。VNAV のページの入力は今もすぐ効き、MOD と EXEC が無い（FMC-34）。速さの表題の LIM SPD・MCP SPD・E/O は無い。
+- 試験：
+  - 回帰（LuaJIT）：`tests/fms/perf_db_test.lua` 84 件（模型の 48 件を足した：大気と速さの換算、表の全升の燃料流量・LRC の Mach・推力の設定、最大航続と ECON の CI・風・重量での動き、上昇・降下の CAS の位置）。新設の `tests/fms/vnav_pages_test.lua` 52 件（FMS のモジュールを通しで：CI の前の既定値、CI と CRZ ALT で ECON、CLB・CRZ・DES の表示と SEL SPD・<ECON・LRC>、誤った入力、MAX ANGLE、CI の変更と重量の減りへの追従、24 文字）と `tests/autopilot/vnav_speed_test.lua` 9 件（巡航は FMC の Mach か CAS で CI に左右されない、上昇の Mach、降下の 354 kt と MMO − 11 kt）。全 125 本。
+  - X-Plane（カスタム acf）：新設の `s129_fmc_econ`（FL350 の空中開始）18/18。270 t・CI 100・ISA で CRZ の ECON SPD .853、DES .853/294、LRC .848、MAX ANGLE 229 kt（その高度）が、記録の重量と外気温から性能 DB で求めた値と同じ。CLB は 341 kt のところ既定値の 340 が残った（2 kt 未満の変化を書かない処理のため）ので、入力の後の最初の値は必ず書くように直した（X-Plane を起動し直した 2 回目も 18/18、CLB 341/.853。CDU の写真で ACT ECON CRZ、ACT M.840 CRZ と SEL SPD と <ECON、LRC> を確かめた）。s128 5/5（LRC> を CRZ のページの LRC のモードで）。Lua の誤りなし。CDU の写真の視点が違っていたので直した（the −34、psi 22、fov 16）。

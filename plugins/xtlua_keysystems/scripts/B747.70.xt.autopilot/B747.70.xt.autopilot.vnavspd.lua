@@ -22,6 +22,25 @@ function clbTransSpd() return tonumber(getFMSData("transpd")) or clbEconSpd() en
 function clbRestSpd() return tonumber(getFMSData("clbrestspd")) or clbTransSpd() end
 function desRestAlt() return tonumber(getFMSData("desrestalt")) or tonumber(getFMSData("desspdtransalt")) or 10000 end
 function desRestSpd() return tonumber(getFMSData("desrestspd")) or tonumber(getFMSData("destranspd")) or 240 end
+-- the FMC's speeds (6-1/6-2 step 8b: ECON from the cost index, SEL SPD,
+-- LRC): the climb's Mach in thousandths (blank: the cruise's), and the
+-- limit of VNAV's descent targets, VMO/MMO less 11 kt for a crew's (the
+-- FMC's ECON is less: FCOM p.1258) here: the CAS, and the Mach of MMO's
+function clbMachSpd() return tonumber(getFMSData("clbspdmach")) or tonumber(getFMSData("crzspd")) end
+local function desSpdLimit()
+    local h = simDR_pressureAlt1 * 0.3048
+    local p = h <= 11000 and 101325 * (1 - 2.25577e-5 * h) ^ 5.25588 or 22632.06 * math.exp(-1.5769e-4 * (h - 11000))
+    local qc = p * (1.16928 ^ 3.5 - 1)
+    local mmoCas = 661.4786 * math.sqrt(5 * ((qc / 101325 + 1) ^ (2 / 7) - 1))
+    qc = 101325 * ((1 + 0.2 * ((mmoCas - 11) / 661.4786) ^ 2) ^ 3.5 - 1)
+    return math.min(365, mmoCas) - 11, math.sqrt(5 * ((qc / p + 1) ^ (2 / 7) - 1))
+end
+-- the FMC's speeds together: a change is a new target (6-1/6-2 step 8b)
+function fmcSpdKey()
+    local k = ""
+    for _, id in ipairs({"crzspd", "crzcas", "clbspd", "clbspdmach", "desspd", "desspdmach"}) do k = k .. tostring(getFMSData(id)) .. "," end
+    return k
+end
 local vnavSPD_conditions={}
 vnavSPD_conditions["onground"]=0
 vnavSPD_conditions["below"]=-1
@@ -189,7 +208,7 @@ function clb_spcres_setSpd()
     -- below the SPD TRANS altitude: the SPD TRANS speed (FMC-09; FCOM p.1326)
     local spdval=modFlapSpeed(clbTransSpd())
     B747DR_switchingIASMode=1
-    local crzspdval=tonumber(getFMSData("crzspd"))/10
+    local crzspdval=clbMachSpd()/10
     if simDR_airspeed_mach > (crzspdval/100) then
       print("convert to cruise speed in clb ".. crzspdval)
       simDR_autopilot_airspeed_is_mach = 1
@@ -215,7 +234,7 @@ function clb_nores_setSpd()
     -- above the SPD TRANS altitude: ECON (FMC-09; FCOM p.1326)
     local spdval=modFlapSpeed(clbEconSpd())
     B747DR_switchingIASMode=1
-    local crzspdval=tonumber(getFMSData("crzspd"))/10
+    local crzspdval=clbMachSpd()/10
     if simDR_airspeed_mach > (crzspdval/100) then
       print("convert to cruise speed in clb".. crzspdval)
       simDR_autopilot_airspeed_is_mach = 1
@@ -240,60 +259,33 @@ function clb_nores_setSpd()
 
 end
 function clb_crz_setSpd()
+    -- the FMC's cruise speed (6-1/6-2 step 8b: ECON from the cost index by
+    -- the FMC's cruise model, SEL SPD or LRC; before, a Mach fitted to the
+    -- weight and altitude here): a Mach, or a crew's CAS
     local spdval=tonumber(getFMSData("crzspd"))/10
-
-    local ci = tonumber( getFMSData("costindex") )
-    local ci_mach = 850
-    if(ci == nil or ci == "****") then
-        if(spdval == nil) then
-          spdval = 85
-        end
-    else
-        -- mach numbers in thousands...
-        local lrcMach = 388.2356 + 0.6203 * gwtKG/1000 + 7.8061 * simDR_pressureAlt1/1000
-        local mrcMach = lrcMach -  20
-        local maxMach = 920 - 20
-        local ci_mach = lrcMach --default
-
-        if(ci <= 230) then --LRC or less  (CI 230 corresponds to LRC - ref Boeing)
-          ci_mach = mrcMach + 20 * (ci / 230)
-        else
-          ci_mach = lrcMach + (maxMach - lrcMach) * ((ci-230)/(9999-230)) -- interpolate LRC to Mmo wrt. CI=230 to CI=9999, respectively.
-        end
-
-        -- Faster with headwind, slower with tailwind (cf., LRC which does not adjust for wind)
-        -- Source: https://mediawiki.ivao.aero/index.php?title=Cost_Index and https://www.pprune.org/tech-log/248931-use-cost-index-winds.html
-        local tas = simDR_TAS_mps * 1.94384 -- true airspeed in knots
-        local gs = simDR_GS_mps * 1.94384 -- ground speed in knots
-        local relWind = tas - gs  -- headwind positive, tailwind negative
-        local adjWind = 0
-        if(relWind > 0) then
-          adjWind = 10 * relWind/50 -- plus M0.01 per 50 knots of headwind
-        else
-          adjWind = 20 * relWind/50 -- minus M0.02 per 50 knots of tailwind
-        end
-        ci_mach = ci_mach + adjWind
-
-        if(ci_mach < mrcMach) then ci_mach = mrcMach end
-        if(ci_mach > maxMach) then ci_mach = maxMach end
-
-        ci_mach = math.floor(ci_mach)
-        spdval = ci_mach/10
-    end
+    local cas=tonumber(getFMSData("crzcas"))
     local transalt=tonumber(getFMSData("transalt"))
     local tspdval=modFlapSpeed(clbEconSpd())
     if simDR_pressureAlt1>=transalt or simDR_ind_airspeed_kts_pilot>=tspdval-1 then
-        print("convert to cruise speed in clb_crz_setSpd ".. spdval)
-        simDR_autopilot_airspeed_is_mach = 1
-        B747DR_ap_ias_dial_value = spdval
-        B747DR_lastap_dial_airspeed=spdval*0.01
+        if cas then
+            print("convert to cruise CAS in clb_crz_setSpd ".. cas)
+            simDR_autopilot_airspeed_is_mach = 0
+            B747DR_ap_ias_dial_value = math.min(399.0, cas)
+            B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
+        else
+            print("convert to cruise speed in clb_crz_setSpd ".. spdval)
+            simDR_autopilot_airspeed_is_mach = 1
+            B747DR_ap_ias_dial_value = spdval
+            B747DR_lastap_dial_airspeed=spdval*0.01
+        end
         run_after_time(B747_updateIAS, 0.25)
     end
 end
 
 function des_src_setSpd()
-    local crzspdval=tonumber(getFMSData("desspdmach"))/10
-    local spdval=tonumber(getFMSData("desspd"))
+    local limcas, limmach = desSpdLimit()
+    local crzspdval=math.min(tonumber(getFMSData("desspdmach")), limmach * 1000)/10
+    local spdval=math.min(tonumber(getFMSData("desspd")), limcas)
     local nextspdval=tonumber(getFMSData("destranspd"))
     if simDR_airspeed_mach > (crzspdval/100) then
       print("convert to mach descend speed in des".. crzspdval)
@@ -392,7 +384,7 @@ function B747_update_vnav_speed()
        vnavSPD_state["gotVNAVSpeed"]=false
        lastVNAVSpeed=simDRTime
     end
-    if vnavSPD_conditions["crzSpd"]~=getFMSData("crzspd") then
+    if vnavSPD_conditions["crzSpd"]~=fmcSpdKey() then
        print("new crzSpd")
        vnavSPD_state["gotVNAVSpeed"]=false
        lastVNAVSpeed=simDRTime
@@ -437,7 +429,7 @@ function B747_vnav_setClimbspeed()
     vnavSPD_conditions["above"]=nextAlt
     vnavSPD_conditions["descent"]=true
     vnavSPD_conditions["crzAlt"]=B747BR_cruiseAlt
-    vnavSPD_conditions["crzSpd"]=getFMSData("crzspd")
+    vnavSPD_conditions["crzSpd"]=fmcSpdKey()
     vnavSPD_conditions["leg"]=B747DR_fmscurrentIndex
     vnavSPD_state["spdIsMach"]=simDR_autopilot_airspeed_is_mach
     vnavSPD_state["gotVNAVSpeed"]=true
@@ -463,7 +455,7 @@ function B747_vnav_setDescendspeed()
     vnavSPD_conditions["above"]=lastAlt
     vnavSPD_conditions["descent"]=false
     vnavSPD_conditions["crzAlt"]=B747BR_cruiseAlt
-    vnavSPD_conditions["crzSpd"]=getFMSData("crzspd")
+    vnavSPD_conditions["crzSpd"]=fmcSpdKey()
     vnavSPD_conditions["leg"]=B747DR_fmscurrentIndex
     vnavSPD_state["spdIsMach"]=simDR_autopilot_airspeed_is_mach
     vnavSPD_state["gotVNAVSpeed"]=true

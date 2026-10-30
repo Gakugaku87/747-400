@@ -28,10 +28,43 @@ local dICAO = "****"
 local dLat = 0 --destination latitude
 local dLon = 0 --destination longitude
 local dNM = -1 --distance to destination, this is currently assigned and used on Pg1 and also used on Pg2
-local ClbV2 = 0 --backup of V2 speed which
 --dNM = find_dataref("laminar/B747/autopilot/dist/remaining_distance") -- this is too inconsistent to use right now
 
 local conv = 1.0 --converter (pounds to kilos)
+
+-- the speeds (6-1/6-2 step 8b; notes/ATA-34-61-FMC.md §45): ECON from the
+-- cost index (B747.68.xt.fms.lua's update_econ), SEL SPD by a crew's entry,
+-- LRC; <ECON (5L) and LRC> (CRZ 6R) choose (FCOM p.1327-1328, p.1347-1350,
+-- p.1391-1392; FMSPG p.112-113, p.131-134, p.192-193)
+local function vnav_text(id) return (string.gsub(fmsModules["data"][id], "%s+$", "")) end
+-- a page title centred in the room left of the page number, ACT if active
+local function vnav_title(text, active)
+  local s = (active and "ACT " or "") .. text
+  local pad = math.max(0, math.floor((22 - string.len(s)) / 2))
+  return string.rep(" ", pad) .. s .. string.rep(" ", math.max(0, 24 - pad - string.len(s)))
+end
+-- the title's speed: ECON, LRC, or the selected XXXKT, or M.XXX once at it
+local function spd_title(mode, cas, mach)
+  if mode == "E" then return "ECON" end
+  if mode == "L" then return "LRC" end
+  if mach and (cas == nil or simDR_mach_pilot >= mach / 1000 - 0.0005) then return string.format("M.%03d", mach) end
+  return string.format("%dKT", cas)
+end
+-- a line of a left and a right part
+local function lr(l, r) return l .. string.rep(" ", math.max(1, 24 - string.len(l) - string.len(r))) .. r end
+function fmsFunctions.vnavspd(fmsO, value)
+  if value == "clb" then
+    setFMSData("clbspdmode", "E") setFMSData("clbspd", "") setFMSData("clbspdmach", "")
+  elseif value == "crz" then
+    setFMSData("crzspdmode", "E") setFMSData("crzspd", "") setFMSData("crzcas", "")
+  elseif value == "des" then
+    setFMSData("desspdmode", "E") setFMSData("desspd", "") setFMSData("desspdmach", "")
+  elseif value == "lrc" then
+    setFMSData("crzspdmode", "L") setFMSData("crzcas", "")
+  end
+  B747_fms_econ_now()
+  update_econ()
+end
 
 fmsPages["VNAV"]=createPage("VNAV")
 fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be this way
@@ -51,6 +84,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["L2"]={"setdata","clbspd"}
       fmsFunctionsDefs["VNAV"]["L3"]={"setdata","clbtrans"}
       fmsFunctionsDefs["VNAV"]["L4"]={"setdata","clbrest"}
+      fmsFunctionsDefs["VNAV"]["L5"]=fmsModules["data"]["clbspdmode"]=="S" and {"vnavspd","clb"} or nil
       fmsFunctionsDefs["VNAV"]["L6"]=nil
       fmsFunctionsDefs["VNAV"]["R1"]=nil
       fmsFunctionsDefs["VNAV"]["R3"]={"setdata","transalt"}
@@ -136,42 +170,44 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       end        
       --end
 
-      -- Max Angle (Vx): speed for best angle-of-climb
-      -- ref. https://code7700.com/pdfs/approximation_of_giii_best_angle_of_climb_speed_dave_fedors.pdf
-      vxadj = 0
-      if(simDR_pressureAlt1 <= 15000) then
-        vxadj = 80
-      else
-        vxadj = 100
-      end
+      -- MAX ANGLE: the minimum drag speed at the weight and altitude (the
+      -- cruise model, 6-1/6-2 step 8b: an estimate; before, V2 + 80 or 100)
+      local _, maxAngle = B747_perf_db.min_drag(B747_fms_perf(), B747_fms_gw_kg(), math.max(0, simDR_pressureAlt1))
+      VxSpeed = string.format("%3d", math.floor(maxAngle + 0.5))
 
-      if(B747DR_airspeed_V2 ~= nil and B747DR_airspeed_V2 ~= 999) then -- if value is 999, then V2 not set, otherwise 
-        ClbV2 = B747DR_airspeed_V2
-      else
-        if(ClbV2 == 0) then --it was never set?
-          ClbV2 = 170 --typical
-        end
+      -- the title: the speed restriction's or transition's below their
+      -- altitudes while active (FMSPG p.112: ACT 250KT CLB), else ECON or
+      -- the selected speed
+      local mode = vnav_text("clbspdmode")
+      local cas, mach = tonumber(fmsModules["data"]["clbspd"]), tonumber(fmsModules["data"]["clbspdmach"])
+      local active = B747DR_ap_flightPhase==1
+      local title = spd_title(mode, cas, mach)
+      local restSpd, restAlt = tonumber(fmsModules["data"]["clbrestspd"]), tonumber(fmsModules["data"]["clbrestalt"])
+      local transSpd, transAlt = tonumber(fmsModules["data"]["transpd"]), tonumber(fmsModules["data"]["spdtransalt"])
+      if active and restSpd and restAlt and simDR_pressureAlt1 < restAlt then
+        title = string.format("%dKT", restSpd)
+      elseif active and transSpd and transAlt and simDR_pressureAlt1 < transAlt then
+        title = string.format("%dKT", transSpd)
       end
-
-      VxSpeed = string.format("  %03d",ClbV2 + vxadj)
-
-      line1="       ECON CLB         " 
-      if B747DR_ap_flightPhase==1 then
-        line1="     ACT ECON CLB       "
-      end
+      -- ECON SPD or SEL SPD: CAS/Mach (FMSPG p.113: 358/.853), a selected
+      -- CAS alone without the Mach
+      local spdText = vnav_text("clbspd")
+      local machText = vnav_text("clbspdmach")
+      if machText == "" and mode ~= "S" then machText = vnav_text("crzspd") end
+      if machText ~= "" then spdText = spdText .. "/." .. machText end
       return{
-        line1,
+        vnav_title(title .. " CLB", active),
       "                        ",
       fmsModules["data"]["crzalt"].."         "..spdalt,
       "                        ",
-      fmsModules["data"]["clbspd"].."    "..error_line,
+      lr(spdText, (string.gsub(error_line, "%s+$", ""))),
                                         --**** LO  ** LONG
       "                        ",
       fmsModules["data"]["transpd"].."/"..fmsModules["data"]["spdtransalt"].."          "..fmsModules["data"]["transalt"],
       "                        ",
-      fmsModules["data"]["clbrestspd"].."/"..fmsModules["data"]["clbrestalt"].."          "..VxSpeed,
+      lr(fmsModules["data"]["clbrestspd"].."/"..fmsModules["data"]["clbrestalt"], VxSpeed),
       "------------------------",
-      "                ENG OUT>", 
+      lr(mode=="S" and "<ECON" or "", "ENG OUT>"),
       "                        ",
       "                CLB DIR>"
       }
@@ -181,10 +217,11 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["L2"]={"setdata","crzspd"}
       fmsFunctionsDefs["VNAV"]["L3"]=nil
       fmsFunctionsDefs["VNAV"]["L4"]=nil
+      fmsFunctionsDefs["VNAV"]["L5"]=fmsModules["data"]["crzspdmode"]~="E" and {"vnavspd","crz"} or nil
       fmsFunctionsDefs["VNAV"]["L6"]={"setpage","PROGRESS"}
       fmsFunctionsDefs["VNAV"]["R1"]={"setdata","stepalt"}
       fmsFunctionsDefs["VNAV"]["R3"]=nil
-      fmsFunctionsDefs["VNAV"]["R6"]={"setpage","LRC"}
+      fmsFunctionsDefs["VNAV"]["R6"]=fmsModules["data"]["crzspdmode"]~="L" and {"vnavspd","lrc"} or nil
       
       dNM = getDistance(simDR_latitude, simDR_longitude, dLat, dLon)
 
@@ -314,33 +351,33 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       --local utcNow = string.formt("%02f%02f",dt1hour,dt1.min)
 
       etafuel = string.format("%02d%02dz/ %03.1f",eta_h,eta_m,conv*fad/1000)
-      line1="       ECON CRZ         " 
-      if B747DR_ap_flightPhase==2 then
-        line1="     ACT ECON CRZ       "
-      end
+      -- ECON, LRC or SEL SPD: a Mach, or a selected CAS
+      local mode = vnav_text("crzspdmode")
+      local cas, mach = tonumber(fmsModules["data"]["crzcas"]), tonumber(fmsModules["data"]["crzspd"])
+      local spdText = cas and string.format("%3d", cas) or "." .. vnav_text("crzspd")
       return{
-        line1,
+        vnav_title(spd_title(mode, cas, (not cas) and mach or nil) .. " CRZ", B747DR_ap_flightPhase==2),
       "                        ",
       fmsModules["data"]["crzalt"].."              "..fmsModules["data"]["stepalt"],
       "                        ",
-      --"."..fmsModules["data"]["crzspd"].."       ****z /****NM",
-      "."..fmsModules["data"]["crzspd"].."     "..stepTD,
+      lr(spdText, stepTD),
       "                        ",
       --pctn1.."    ****z /***.*",
       pctn1.."%       "..etafuel,
       "                        ",
       "ICAO        "..optmax,
       "------------------------",
-      "                ENG OUT>", 
+      lr(mode~="E" and "<ECON" or "", "ENG OUT>"),
       "                        ",
-      "<RTA PROGRESS       LRC>"
-      }  
+      lr("<RTA PROGRESS", mode~="L" and "LRC>" or "")
+      }
     elseif pgNo==3 then 
       --ref FCOM Virgin p.1023, Lease p.822
       fmsFunctionsDefs["VNAV"]["L1"]=nil
       fmsFunctionsDefs["VNAV"]["L2"]={"setdata","desspds"}
       fmsFunctionsDefs["VNAV"]["L3"]={"setdata","destrans"}
       fmsFunctionsDefs["VNAV"]["L4"]={"setdata","desrest"}
+      fmsFunctionsDefs["VNAV"]["L5"]=fmsModules["data"]["desspdmode"]=="S" and {"vnavspd","des"} or nil
       fmsFunctionsDefs["VNAV"]["L6"]=nil
       fmsFunctionsDefs["VNAV"]["R1"]=nil
       fmsFunctionsDefs["VNAV"]["R3"]=nil
@@ -431,12 +468,9 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       if nxtalt>0 then
         nextAltText=string.format("%3d",nxtspd).."/"..string.format("%5d",nxtalt)
       end
-      line1="       ECON DES         " 
-      if B747DR_ap_flightPhase==3 then
-        line1="     ACT ECON DES       "
-      end
+      local mode = vnav_text("desspdmode")
       return{
-        line1,
+        vnav_title(spd_title(mode, tonumber(fmsModules["data"]["desspd"]), tonumber(fmsModules["data"]["desspdmach"])) .. " DES", B747DR_ap_flightPhase==3),
       "                        ",
       --"  **** *****    ***/****",
       " "..edaltText.." "..string.format("%5s",eodWpt).."    "..nextAltText,
@@ -447,13 +481,19 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       "                        ",
       fmsModules["data"]["desrestspd"].."/"..fmsModules["data"]["desrestalt"].."   "..fmsModules["data"]["fpa"].." "..fmsModules["data"]["vb"].." "..fmsModules["data"]["vs"],
       "------------------------",
-      "               FORECAST>", 
+      lr(mode=="S" and "<ECON" or "", "FORECAST>"),
       "                        ",
       "OFFPATH DES     DES DIR>"
       
 
       }
     end
+end
+
+-- the speed line's label by its mode
+local function spd_label(id)
+  local mode = vnav_text(id)
+  return mode == "S" and " SEL SPD " or mode == "L" and " LRC SPD " or " ECON SPD"
 end
 
 fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
@@ -463,7 +503,7 @@ fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
       "                    1/3 ",
       " CRZ ALT        AT "..nxWpt,
       "                        ",
-      " ECON SPD          ERROR",
+      spd_label("clbspdmode") .. "          ERROR",
       "                        ",
       " SPD TRANS     TRANS ALT",
       "                        ",
@@ -480,7 +520,7 @@ fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
       "                    2/3 ",
       " CRZ ALT         STEP TO",
       "                        ",
-      " ECON SPD             AT",
+      spd_label("crzspdmode") .. "             AT",
       "                        ",
       " N1        "..dICAO.." ETA/FUEL",  
       "                        ",
@@ -497,7 +537,7 @@ fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
       --" E/D AT         AT *****",
       " E/D AT         AT "..nxWpt,
       "                        ",
-      " ECON SPD               ",
+      spd_label("desspdmode") .. "               ",
       "                        ",
       " SPD TRANS              ",
       "                        ",

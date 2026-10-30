@@ -133,7 +133,6 @@ dofile("activepages/B744.fms.pages.progress.lua")
 dofile("activepages/B744.fms.pages.actrte1.lua")
 dofile("activepages/B744.fms.pages.fmccomm.lua")
 dofile("activepages/B744.fms.pages.vnav.lua")
-dofile("activepages/B744.fms.pages.vnav.lrc.lua")
 dofile("activepages/B744.fms.pages.groundhandling.lua")
 dofile("activepages/B744.fms.pages.maintsimconfig.lua")
 dofile("activepages/B744.fms.pages.identpage.lua")
@@ -562,6 +561,25 @@ function validFL(value)
 
   return "FL".. (val/100)
 end
+-- a speed entry (6-1/6-2 step 8b; FMSPG p.113): a CAS of 100 to 400 kt, a
+-- Mach of .100 to .990 (the point and one to three digits) or both, CAS/Mach
+-- or Mach/CAS: the CAS and the Mach in thousandths, either nil; nil, nil if
+-- invalid
+function parseSpeedEntry(s)
+  local cas, mach
+  local a, b = string.match(s, "^([^/]*)/([^/]*)$")
+  for _, v in ipairs(a and {a, b} or {s}) do
+    local c, m = B747_cdu_model.parse_speed(v)
+    if c and c >= 100 and c <= 400 and not cas then
+      cas = c
+    elseif m and m >= 0.1 and not mach then
+      mach = math.floor(m * 1000 + 0.5)
+    else
+      return nil, nil
+    end
+  end
+  return cas, mach
+end
 function validateMachSpeed(value)
   local val=tonumber(value)
   
@@ -899,11 +917,13 @@ function fmsFunctions.setdata(fmsO,value)
     setFMSData("fltdep",dep)
     setFMSData("fltdst",dst)
   elseif value=="clbspd" then
-    if validateSpeed(fmsO["scratchpad"]) ==false then 
-      fmsO["notify"]="INVALID ENTRY"
-    else
-      setFMSData("clbspd",fmsO["scratchpad"])
-    end
+    -- SEL SPD (6-1/6-2 step 8b; FMSPG p.113): a CAS, a Mach or both; a
+    -- CAS alone climbs to the cruise's Mach. <ECON gives ECON back.
+    local cas, mach = parseSpeedEntry(fmsO["scratchpad"])
+    if cas == nil and mach == nil then fmsO["notify"]="INVALID ENTRY" return end
+    if cas then setFMSData("clbspd", string.format("%3d", cas)) end
+    setFMSData("clbspdmach", mach and string.format("%03d", mach) or "")
+    setFMSData("clbspdmode", "S")
   elseif value=="clbtrans" then
     -- SPD TRANS: from the nav DB and VREF, deleted only (FMC-09, 6-1 step 1;
     -- FCOM p.1328); no transition speed then
@@ -933,11 +953,12 @@ function fmsFunctions.setdata(fmsO,value)
       end
     end
   elseif value=="crzspd" then
-    if validateMachSpeed(fmsO["scratchpad"]) ==nil then 
-      fmsO["notify"]="INVALID ENTRY"
-    else
-      setFMSData("crzspd",validateMachSpeed(fmsO["scratchpad"]))
-    end
+    -- SEL SPD (6-1/6-2 step 8b; FCOM p.1348, FMSPG p.132): a CAS or a Mach
+    local cas, mach = parseSpeedEntry(fmsO["scratchpad"])
+    if (cas == nil) == (mach == nil) then fmsO["notify"]="INVALID ENTRY" return end
+    if mach then setFMSData("crzspd", string.format("%03d", mach)) end
+    setFMSData("crzcas", cas and string.format("%3d", cas) or "")
+    setFMSData("crzspdmode", "S")
   elseif value=="stepalt" then
     if validFL(fmsO["scratchpad"]) ~=nil then 
 		setFMSData("stepalt",validFL(fmsO["scratchpad"]))
@@ -945,22 +966,13 @@ function fmsFunctions.setdata(fmsO,value)
       fmsO["notify"]="INVALID ENTRY"
     end
   elseif value=="desspds" then
-    div = string.find(fmsO["scratchpad"], "%/")
-    spd=getFMSData("desspd")
-   -- print(spd)
-    if div==nil then 
-      div=string.len(fmsO["scratchpad"])+1 
-    else
-      spd=string.sub(fmsO["scratchpad"],div+1)
-    end
-   -- print(spd)
-    machspd=string.sub(fmsO["scratchpad"],1,div-1)
-    if validateMachSpeed(machspd) ==nil or validateSpeed(spd) ==false then 
-      fmsO["notify"]="INVALID ENTRY"
-    else
-      setFMSData("desspd",spd)
-      setFMSData("desspdmach",validateMachSpeed(machspd))
-    end
+    -- SEL SPD (6-1/6-2 step 8b; FCOM p.1392, FMSPG p.192): a CAS, a Mach or
+    -- both (the A/P commands no more than 354 kt of them, FCOM p.1258)
+    local cas, mach = parseSpeedEntry(fmsO["scratchpad"])
+    if cas == nil and mach == nil then fmsO["notify"]="INVALID ENTRY" return end
+    if cas then setFMSData("desspd", string.format("%3d", cas)) end
+    if mach then setFMSData("desspdmach", string.format("%03d", mach)) end
+    setFMSData("desspdmode", "S")
   elseif value=="destrans" then
     spd=string.sub(fmsO["scratchpad"],1,3)
     alt=string.sub(fmsO["scratchpad"],5)
@@ -1098,6 +1110,7 @@ function fmsFunctions.setdata(fmsO,value)
 	end
 	B747BR_cruiseAlt=ft
 	monitorCRZALT()
+	B747_fms_econ_now()
   elseif value=="irspos" then
 	if string.len(fmsO["scratchpad"])>10 then
 		print("set irs pos")
@@ -1305,6 +1318,7 @@ function fmsFunctions.setdata(fmsO,value)
 		and (B747BR_totalDistance - B747BR_tod) < 10
 	if ci == nil or nearTD then fmsO["notify"]="INVALID ENTRY" return end
 	setFMSData(value, string.format("%d", ci))
+	B747_fms_econ_now()
   elseif value == "crzcg" then
 	-- 8.5 to 33.0 % (CDU-09, 6-1 step 1; FCOM p.1311)
 	local cg = string.match(fmsO["scratchpad"], "^%d%d?%.?%d?$") and tonumber(fmsO["scratchpad"])
