@@ -994,3 +994,15 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 試験：
   - 回帰（LuaJIT）：新設の `tests/fms/pred_model_test.lua` 38 件（速さの予定、最大上昇推力とアイドル、PI.11.5 の降下の増分、PI.11.4 の区間の燃料と時間 3 つ、上昇の AT OR BELOW での水平、降下の AT、T/C・T/D・E/D、STEP 2 回と FCTM の STEP の燃料、短い飛行、降下中から、E/D 無し）と `tests/fms/pred_glue_test.lua` 35 件（合成の CIFP の ZZAA：経路が無ければ予測なし、脚・距離・E/D・SID、390 t で FL320 は UNABLE CRZ ALT、FL100 で T/C と T/D、CRZ のページの目的地の ETA/FUEL と名前、MAX の上で予測なし）。`vnav_pages_test.lua` は TO T/D と目的地を予測から確かめる形にして 70 件。全 128 本。
   - X-Plane（カスタム acf）：新設の `s131_fmc_pred` 9/9。FL350 の空中開始で RJAA→RJBB（DIRECT AKAGI、STAR ATMUGA、ILS06LY・遷移 GATES）を ACTIVATE、目的地の ETA/FUEL が予測から 0158z/80.2（残り 426 NM を指令の M.853 で 58 分、6.3 t：風はほぼ無し）。T/D は約 300 NM 先なので AT のまま（1 回目は T/D が 200 NM の内と見込んで試験の方が外れた）。s130 13/13。Lua の誤りなし。
+
+## 48. 段 8d1 の実装（2026-10-31：PROGRESS と LEGS の予測）
+
+- 段 8d を分けた：8d1 は PROGRESS と LEGS、8d2 は RTE DATA、8d3 は ND の T/C・T/D。
+- 資料：PROGRESS 1/3（FCOM p.1371–1373）：TO・NEXT・DEST の DTG・ETA・FUEL、SEL SPD の見出しは速さのモード、5R は T/C・STEP CLB・T/D・E/D の ETA と距離。LEGS（FCOM p.1332）：点の速さと高度の予測は小さい字、降下の経路を作る前（高度の制限が巡航高度より下に無い）の降下の区域はダッシュ。
+- 予測（§47）に、点ごとの速さ（T/C の前は上昇の、T/D の後は降下の予定、間は巡航の）、T/C・T/D・S/C・E/D の時刻、E/D の脚の番号を加えた。経路が変わる（LNAV の順送りも）と、すぐ予測し直す（ページは予測を脚の番号で読むため）。
+- PROGRESS 1/3：TO（有効な点）、NEXT（その次の点のある脚）、DEST の距離・ETA・燃料を予測から（前は ND の距離を 275 kt と対地速度の大きい方で割り、今の燃料流量を掛けていた：FMC-20・21）。5R は上昇中なら TO T/C、次に STEP CLB、TO T/D、E/D（前は AP の T/D）。5L の見出しは今の相の速さのモード（ECON SPD・LRC SPD・SEL SPD）。予測が無い（有効な経路が無い）ときは前のまま。
+- LEGS：有効な経路（変更中でない）の点に、予測の速さ（Mach の区間は .853、ほかは CAS）と高度（遷移高度より上は FL、下は 10 ft 単位）を小さい字で右寄せ。高度だけの制限の点は大きい字の「/」の前に速さだけ、速さの制限のある点には出さない。到着（STAR・進入）の脚は E/D が無ければダッシュ。E/D の後（進入復行）には出さない。ABEAM PTS>・RTE COPY> の行には出さない。
+- 試験：
+  - 回帰：`pred_model_test.lua` 46 件（点の速さ、事象の時刻）、`pred_glue_test.lua` 45 件（PROGRESS の TO・NEXT・DEST と TO T/C・ECON SPD、LEGS の (600) の速さ、(INTC) の速さ/高度、速さと高度の制限の ZZV には無し、滑走路の速さ、進入復行には無し）。全 128 本。
+  - X-Plane：`s131_fmc_pred` に LEGS と PROGRESS を足して 14/14。LEGS：AKAGI .853/FL360、ATMUG 294/FL243、SAKVA 294/FL143、ATVID（/4000A）の前に 294、進入の遷移の点に 240。PROGRESS：TO AKAGI 47 NM・0106・85.6、NEXT ATMUG 341・0143・80.7、DEST RJBB 433・0158・80.2、ECON SPD と TO T/D 0138z/303NM。Lua の誤りなし。
+- 推定・残り：条件の脚（VA・CA など）は距離を 0 とした（その間の予測は前の点のまま）。予測は今の高度から（巡航高度とずれた空中開始は今の高度で巡航）。RTE DATA と ND は 8d2・8d3。

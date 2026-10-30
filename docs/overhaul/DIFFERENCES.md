@@ -375,7 +375,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - ND の故障とゲインの注記（段 5d、パネル）：R/T・アンテナ・操作盤の故障で琥珀の WXR FAIL（反射は出さない）、TEST でチルトの欄に故障の源（ANT・CONT・WEAK・ATT）、校正の故障で WEAK、安定化の姿勢が無ければ ATT（反射は残る。WEAK が先）、MAP のゲインは CAL か VAR（推定：FCOM は CAL を挙げるだけ）。前は R/T が止まると何も出なかった（NAV-80・81）。アンテナ・操作盤・校正の故障は新設（X-Plane に無い）。WXR RANGE DISAGREE、RSTR INOP は出ない。PWS（予測ウインドシア）と TEST の 12 秒の PWS 試験は無い。両 ND の交互の更新は無い（X-Plane の描画のまま）。
   - 推定：R/T の電源のバス、TFR の両押しを両側の TFR とみなすこと、TEST の戻り方を席ごとにしたこと、MAP GAIN のつまみの幅。
 
-### FMC（航法・性能・誘導）：作り直し中（6-1・6-2 の段 1〜7：経路・LNAV・ホールド・オフセット・残りの経路の操作、段 8a：性能 DB、段 8b：ECON の速さと CRZ のページ、段 8c：軌跡の予測。段 8d〜12 は未）
+### FMC（航法・性能・誘導）：作り直し中（6-1・6-2 の段 1〜7：経路・LNAV・ホールド・オフセット・残りの経路の操作、段 8a：性能 DB、段 8b：ECON の速さと CRZ のページ、段 8c：軌跡の予測、段 8d1：PROGRESS と LEGS の予測。段 8d2〜12 は未）
 
 - 実機に合わせた点（段 8a、2026-10-31）：CRZ と LRC のページの OPT・MAX と LRC の Mach を、FCOM の PI の表（PW4056、GE は 747-400F の表、RR は PW の表：推定）から重量・高度・ISA 偏差で補間して出す（前は重量だけの一次式で、MAX は ISA+10 以下の値だけ）。LRC のページの T/D の時刻は X-Plane の UTC から（前は PC の時計で、分の欄に時を入れていた）。推定：buffet の余裕 1.3 g。
 - 実機に合わせた点（段 8b1、2026-10-31）：ECON の速さを CI から求める。巡航は 1 NM あたりの費用（燃料と、CI × 100 lb/h の時間の費用：FMSPG p.261）が最小の Mach で、重量・巡航高度・巡航の風・ISA 偏差で変わる（向かい風で速く、追い風で遅く、無風の最大航続より遅くしない：FCTM p.4.7）。上昇は CAS/Mach（Mach は巡航の ECON）、降下は Mach/CAS で、349 kt（VMO/MMO − 16 kt）まで。乗員の入れた速さ（SEL SPD：CAS、Mach、両方）は CI に上書きされず、<ECON で戻る。CRZ の LRC> で表の LRC。自動操縦は FMC の速さで飛ぶ（前は CI から自前の一次式の Mach を作り、乗員の巡航速度を上書きしていた）。乗員の降下の速さは 354 kt（VMO/MMO − 11 kt）まで。CLB の MAX ANGLE は最小抗力の速さ（前は V2 + 80 か 100）。推定：FCOM に ECON の表が無いので、PI の表（LRC・待機・アイドル降下）に合わせた抗力と燃料消費率の模型で巡航を求め、上昇・降下の CAS は CI の位置で 340/290 kt（FCTM と PI の標準）を中心に上下させる。古い LRC のページ（TURB N1 など、2009 年版の FCOM に無い）は外した。
@@ -386,7 +386,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - LNAV（段 6c で作り直した）：捕捉の条件（2.5 nm か、脚に交わるトラックで 25° の旋回を始める所）、NOT ON INTERCEPT HEADING、経路の終わりと discontinuity でのヘディングの保持（END OF ROUTE・DISCONTINUITY）、21 nm 超で順送りしない（FMC-03〜06）。誘導の則（交角とゲイン）、fly-by の点の順送りを二等分線ですること、条件の脚の終わりの予測（上昇の勾配）は推定。作動の高度は電波高度 50 ft のまま（実機は滑走路の標高 +50 ft：AFDS 6-3 で）。オフセットはまだ（段 7。前の LNAV のオフセットも効かなくなった）。
 - VNAV が高度制限の種類（AT・A・B・窓）と速度制限を使わない（経路のモデルは段 5a・5d から持つ。VNAV の作り直しの段 9 で：FMC-07・08）。
 - VNAV の降下パスと PTH の則、approach 段階（FMC-12・13・16）。飛行段階を MCP のボタンで決めている（FMC-17）。
-- 軌跡の予測は段 8c で作ったが、LEGS・RTE DATA・PROGRESS・ND にはまだ出していない（PROGRESS の燃料と ETA は今の燃料流量と対地速度から：FMC-20 の残り）。CALCULATED の燃料が無い（FMC-22）。風の扱い、片発の VNAV（FMC-25・26）。
+- 軌跡の予測は段 8c で作り、段 8d1 で PROGRESS 1/3（TO・NEXT・DEST、TO T/C・T/D など）と LEGS（点の予測の速さと高度）に出した。RTE DATA と ND の T/C・T/D はまだ（FMC-20 の残り）。条件の脚（VA・CA など）の距離は 0 とした（推定）。CALCULATED の燃料が無い（FMC-22）。風の扱い、片発の VNAV（FMC-25・26）。
 - FMC の位置はシムの真値（IRS のドリフトや更新が無い。FMC-28）。UNABLE RNP が無い（ANP と RNP の比較は段 10。FMC-29）。
 - メッセージは 55 件のうち 8 件だけ（FMC-32。段 3b-1 で TAKEOFF SPEEDS DELETED、段 4 で NAV DATA OUT OF DATE を足した。出し方は段 2 で直した）。RW/ILS CRS ERROR の使い方の誤り、Boeing に無い DESTINATION NOT SET、進入中 500 ft 未満の抑止の無さは残る。
 - 経路の管理は FMC 自身になった（段 5b・5c）。RTE 2 と RTE COPY は 2026-10-27 から（段 7e4）。性能の変更の MOD/EXEC はまだ（FMC-34）。ND の経路線は FMC が流し込んだ X-Plane の FMS が描く。段 6d から条件の脚の終わりと弧も描くが、fly-by の旋回の曲線、オフセットの線、FIX INFO の記号は描かない（FMC-35 の残り）。FMC 2 台の扱いが無い（FMC-36）。

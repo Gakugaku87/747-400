@@ -136,6 +136,48 @@ for i, p in ipairs(r.pts) do
     T.check(p.h <= 10000 + 1, "leg " .. i .. " at or below FL100: " .. math.floor(p.h))
 end
 
+-- PROGRESS page 1 from the predictions (step 8d; FCOM p.1371-1373): TO
+-- the first leg with a point, NEXT the one after, DEST; TO T/C on the
+-- ground (the climb)
+key("func_key/prog")
+local legsR = fms.ns.B747_fmc_route.rte.legs
+local to, nxt
+for i, l in ipairs(legsR) do
+    if l.fix and r.pts[i] then
+        if not to then to = i elseif not nxt then nxt = i break end
+    end
+end
+local function eta4(t) local _, h, m = fms.ns.get_ETA_for_Distance(0, t) return string.format("%02d%02d", h, m) end
+local function row_ok(n, name, p)
+    local tail = string.format("%4d %s  %5.1f", math.floor(p.x + 0.5), eta4(p.t), p.fuel / 1000)
+    return line(n):find("^" .. name) and line(n):sub(-#tail) == tail
+end
+T.check(row_ok(5, legsR[to].fix.ident, r.pts[to]), "TO " .. legsR[to].fix.ident .. ": its distance, ETA and fuel predicted: " .. line(5))
+T.check(row_ok(7, legsR[nxt].fix.ident, r.pts[nxt]), "NEXT " .. legsR[nxt].fix.ident .. ": " .. line(7))
+T.check(row_ok(9, "ZZAA", r.dest), "DEST ZZAA: " .. line(9))
+local tcText = string.format("%sz/%dNM", eta4(r.tc_t), math.floor(r.tc + 0.5))
+T.check(small(10):find("TO T/C$") and line(11):sub(-#tcText) == tcText,
+    "TO T/C: its ETA and distance: " .. small(10) .. "|" .. line(11))
+T.check(small(10):find("^ ECON SPD"), "the speed's mode: ECON SPD: " .. small(10))
+
+-- LEGS: the predicted speed and altitude in small font (step 8d; FCOM
+-- p.1332): before an altitude constraint's slash the speed alone, without a
+-- constraint speed/altitude, none under a speed and altitude constraint
+key("func_key/legs")
+local function spd_of(p) return p.machMode and string.format(".%03d", math.floor(p.mach * 1000 + 0.5)) or string.format("%3d", math.floor(p.cas + 0.5)) end
+local function alt_of(p) return p.h > 18000 and string.format("FL%03d", math.floor(p.h / 100 + 0.5)) or string.format("%5d", math.floor(p.h / 10 + 0.5) * 10) end
+local cons1 = fms.ns.B747_route_model.constraint_text(legsR[1], 18000)
+T.equal(small(3), string.rep(" ", 24 - #cons1 - #spd_of(r.pts[1])) .. spd_of(r.pts[1]) .. string.rep(" ", #cons1),
+    "(600) with " .. cons1 .. ": its predicted speed before the slash: " .. small(3) .. "|" .. line(3))
+T.equal(small(5), string.rep(" ", 24 - #spd_of(r.pts[2]) - 1 - #alt_of(r.pts[2])) .. spd_of(r.pts[2]) .. "/" .. alt_of(r.pts[2]),
+    "(INTC) without a constraint: speed/altitude: " .. small(5))
+T.equal((small(7):gsub("%s+$", "")), "", "ZZV with 230/3000A: none: " .. line(7))
+key("func_key/next_pg")
+key("func_key/next_pg")
+T.check(line(5):find("^RW16R") and small(5):find("240"), "the runway (the E/D): its speed: " .. small(5))
+T.equal((small(7):gsub("%s+$", "")), "", "the missed approach after the E/D: none: " .. line(7))
+key("func_key/legs")
+
 -- the CRZ page: the destination's ETA and fuel the predictions'
 key("func_key/des")
 key("func_key/next_pg")

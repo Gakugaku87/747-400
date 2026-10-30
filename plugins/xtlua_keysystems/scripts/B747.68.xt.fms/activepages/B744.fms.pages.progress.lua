@@ -50,6 +50,71 @@ local lastPage={}
 function refreshPages()
   lastPageNum={}
 end
+
+-- page 1 from the trajectory predictions (6-1/6-2 step 8d; notes/
+-- ATA-34-61-FMC.md §48; FCOM p.1371-1373): TO the active waypoint, NEXT
+-- the one after, DEST, each with its distance to go, ETA and fuel; the
+-- speed's mode; 5R the next of the T/C (in the climb), the STEP CLB, the
+-- T/D and the E/D with its ETA and distance (before: the ND's distances
+-- over the greater of 275 kt and the ground speed, the present fuel flow,
+-- the A/P's T/D)
+local progEvent, progSpdLabel = "T/D", " SEL SPD"
+local function progress_pred(pred, mult)
+  local legs = B747_fmc_route.rte.legs
+  local to, nxt
+  for i, l in ipairs(legs) do
+    if l.fix and pred.pts[i] then
+      if not to then to = i elseif not nxt then nxt = i break end
+    end
+  end
+  local function eta(t)
+    local _, h, m = get_ETA_for_Distance(0, t)
+    return string.format("%02d%02d", h, m)
+  end
+  local function row(name, p)
+    if not p then return string.format("%-5s", name or "") end
+    return string.format("%-5s   %4d %s  %5.1f", name, math.floor(p.x + 0.5), eta(p.t), p.fuel * mult / 1000)
+  end
+  local toRow = to and row(legs[to].fix.ident, pred.pts[to]) or ""
+  local nextRow = nxt and row(legs[nxt].fix.ident, pred.pts[nxt]) or ""
+  local dest = B747_fmc_route.rte.dest
+  local destRow = string.format("%-4s    %4d %s  %5.1f", dest and dest.ident or "", math.floor(pred.dest.x + 0.5),
+    eta(pred.dest.t), pred.dest.fuel * mult / 1000)
+  local ex, et
+  if pred.tc and B747DR_ap_flightPhase < 2 then
+    progEvent, ex, et = "T/C", pred.tc, pred.tc_t
+  elseif pred.sc[1] then
+    progEvent, ex, et = "STEP CLB", pred.sc[1], pred.sc_t[1]
+  elseif pred.td then
+    progEvent, ex, et = "T/D", pred.td, pred.td_t
+  elseif pred.ed then
+    progEvent, ex, et = "E/D", pred.ed, pred.ed_t
+  end
+  local evText = ex and string.format("%sz/%dNM", eta(et), math.floor(ex + 0.5)) or ""
+  -- the speed: the A/P's target, its mode's label by the phase
+  local modeId = ({[1] = "clbspdmode", [2] = "crzspdmode", [3] = "desspdmode"})[B747DR_ap_flightPhase] or "clbspdmode"
+  local mode = fmsModules["data"][modeId]
+  progSpdLabel = mode == "S" and " SEL SPD" or mode == "L" and " LRC SPD" or " ECON SPD"
+  local selSpd=string.format("%3dkt ",simDR_autopilot_airspeed_kts)
+  if simDR_autopilot_airspeed_is_mach==1 then
+    selSpd=string.format("%-5.3f ",simDR_autopilot_airspeed_kts_mach)
+  end
+  return {
+    progress_title(),
+    "                        ",
+    "                        ",
+    "                        ",
+    toRow,
+    "                        ",
+    nextRow,
+    "                        ",
+    destRow,
+    "                        ",
+    selSpd .. string.rep(" ", math.max(1, 24 - #selSpd - #evText)) .. evText,
+    "------------------------",
+    "<POS REPORT     POS REF>"
+  }
+end
 fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
   --print(avocatd:test())
   if simDR_onGround == 1 then
@@ -65,9 +130,16 @@ fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
     if simConfigData["data"].SIM.weight_display_units == "LBS" then
       mult=simConfigData["data"].SIM.kgs_to_lbs
     end
-  if pgNo==1 then 
+  if pgNo==1 then
     fmsFunctionsDefs["PROGRESS"]["L6"]={"setpage","POSREPORT"}
     fmsFunctionsDefs["PROGRESS"]["R6"]={"setpage","POSINIT_2"}
+    local pred = B747_fms_preds()
+    if pred then
+      lastPage[fmsID] = progress_pred(pred, mult)
+      lastPageNum[fmsID]=1
+      return lastPage[fmsID]
+    end
+    progEvent, progSpdLabel = nil, " SEL SPD"
     local ffkgs = (simDR_eng_fuel_flow_kg_sec[0] + simDR_eng_fuel_flow_kg_sec[1] + simDR_eng_fuel_flow_kg_sec[2] + simDR_eng_fuel_flow_kg_sec[3])
     if simDR_onGround == 1 then
       B747DR_last_waypoint_fuel=simDR_fueL_tank_weight_total_kg
@@ -229,11 +301,15 @@ fmsPages["PROGRESS"].getSmallPage=function(self,pgNo,fmsID)
     end 
   if pgNo==1 then 
     local fuel_ata=string.format("%5.1f",(B747DR_last_waypoint_fuel*mult/1000))
-    local toText="T/D"
-    local dist=B747BR_totalDistance-B747BR_tod
+    local toText=progEvent
+    if not toText then
+      toText="T/D"
+      local dist=B747BR_totalDistance-B747BR_tod
       if B747BR_toc>=0 and dist > B747BR_toc and B747DR_ap_flightPhase<2 then
         toText="T/C"
       end
+    end
+    local label=progSpdLabel..string.rep(" ",math.max(1,21-#progSpdLabel-#toText)).."TO "..toText
     return {
 "                    1/3 ",
 " LAST   ALT   ATA   FUEL",
@@ -244,7 +320,7 @@ string.format("%-5s", B747DR_last_waypoint).."        "..string.sub(B747DR_waypo
 "                 Z      ",
 " DEST                   ",
 "                 Z      ",
-" SEL SPD          TO "..toText,
+label,
 "                        ", 
 "                        ",
 "                        "

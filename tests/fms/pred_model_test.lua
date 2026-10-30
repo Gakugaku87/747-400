@@ -82,6 +82,14 @@ for i = 1, #r.pts do
 end
 T.check(mono and r.pts[6].fuel < r.pts[1].fuel, "times growing, fuel going down along the route")
 T.near(r.dest.t, r.pts[6].t, 1e-6, "the destination's time: the E/D's")
+T.check(r.tc_t and r.td_t and r.ed_t and r.tc_t < r.td_t and r.td_t < r.ed_t, "the times of the T/C, T/D and E/D in order")
+T.near(r.ed_t, r.dest.t, 1e-6, "the E/D's time: the destination's")
+T.check(r.tc_t > r.pts[2].t - 1e-6 and r.tc_t < r.pts[3].t, "the T/C between C2 and MID in time")
+-- each waypoint's speed: the climb's, the cruise's Mach, the descent's
+T.check(r.pts[1].cas == 340 and not r.pts[1].machMode, "C1 in the climb: 340 kt")
+T.check(r.pts[3].machMode and r.pts[3].mach == 0.85, "MID in the cruise: M.85")
+T.check(r.pts[5].cas == 290 and not r.pts[5].machMode, "D2 in the descent at 10,000 ft: 290 kt")
+T.check(r.pts[6].cas == 250, "the runway below 10,000 ft: 250 kt")
 
 -- step climbs where the steps function says: at 300 t to FL350, at 280 t to
 -- FL390
@@ -90,6 +98,7 @@ local function steps(h, kg) if h < 39000 then return h + 4000, 300000 - (h - 310
 r = PM.predict{P = P, t = pw, gw = 320000, fuel = 110000, alt = 31000, phase = "crz", crz = 31000, clb = clb, des = des,
     crzspd = {mach = 0.85}, legs = legs3, ed = 3, steps = steps}
 T.equal(#r.sc, 2, "two step climbs")
+T.check(#r.sc_t == 2 and r.sc_t[1] < r.sc_t[2], "their times in order")
 T.equal(r.crz, 39000, "to FL390")
 T.check(r.pts[1].h == 35000 and r.pts[2].h == 39000, "A at FL350, B at FL390")
 -- a step's extra fuel, as the FCTM's 225-300 kg for 4,000 ft (p.4.8): with

@@ -1232,6 +1232,9 @@ local function fms_text(id) return (string.gsub(fmsModules["data"][id],"%s+$",""
 local crsReversal=false
 function B747_fmc_route_changed()
   B747_fmc_lnav_build()
+  -- the predictions for the new legs at once (step 8d: the pages read them
+  -- by the legs' places)
+  B747_fms_preds_now()
   crsReversal=B747_route_model.crs_reversal(B747_fmc_route,B747_route_model.shown(B747_fmc_route))
   local r=B747_fmc_route.rte
   local dep=r.origin and r.origin.ident or "****"
