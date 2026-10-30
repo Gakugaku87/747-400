@@ -470,8 +470,17 @@ local lastVNAVSwitch=0
 function VNAV_modeSwitch(fmsO)
     --if B747BR_cruiseAlt < 10 then return end --no cruise alt set, not needed because cant set to 1 without this
     local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
-    if B747DR_ap_vnav_state == 0 then
-        if B747DR_ap_inDescent ==1  and fmsO~=nil then
+    -- VNAV engaged: the FMC's VNAV flies it (6-1/6-2 step 9c;
+    -- B747.70.xt.autopilot.lua's afds_pitch_inputs, afds_fmc_vnav), the old
+    -- VNAV's climb, cruise and descent below (VNAV_CLB, VNAV_CRZ, VNAV_DES)
+    -- no longer run; the old RESET MCP ALT kept until step 9d. Armed, as
+    -- off (the old VNAV engaged itself from its arm)
+    if B747DR_ap_vnav_state >= 2 then
+        if B747DR_ap_flightPhase >= 2 then checkMCPAlt(B747BR_totalDistance-B747BR_tod) end
+        return
+    end
+    if B747DR_ap_vnav_state <= 1 then
+        if B747DR_ap_vnav_state == 0 and B747DR_ap_inDescent ==1  and fmsO~=nil then
             local diff = simDRTime - lastVNAVSwitch
 
             if diff > 0.2 then

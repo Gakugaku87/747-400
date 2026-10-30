@@ -13,7 +13,8 @@
 --   the target speed: the climb's, the cruise's or the descent's schedule
 --   (B747.68.pred_model.lua's), the crew's MCP speed in speed intervention,
 --   within the flap placard less 5 kt and the minimum maneuvering speed
---   plus 5 kt (FCOM p.663, p.1255: the FMC's margin);
+--   plus 5 kt (FCOM p.663, p.1255: the FMC's margin); after takeoff V2 +
+--   10 to V2 + 25 until the acceleration height (FCOM p.1255; step 9c);
 --   the FMC altitude: the climb's next AT or AT OR BELOW constraint (the
 --   glue's), CRZ ALT, the descent's next constraint or the E/D's;
 --   the descent path: the trajectory predictions' (B747.68.pred_model.lua),
@@ -40,9 +41,16 @@ B747_vnav_model = M
 M.AT_HOLD, M.AT_IDLE, M.AT_SPD, M.AT_THR, M.AT_THR_REF = 1, 2, 3, 4, 5
 -- the speed margins (FCOM p.663, p.1255)
 M.PLACARD_MARGIN, M.VMIN_MARGIN = 5, 5
--- the path's correction (fpm a foot off it: estimate) and the most it may
--- fly steeper than the path (estimate)
-M.K_PATH, M.VS_STEEPER = 3, 1500
+-- the path's correction (fpm a foot off it) and the most it may fly
+-- steeper than the path (estimates; step 9c: 3 and 1,500 before, s140 went
+-- from 1,424 ft above the path to 860 ft below it: the AFDS's V/S law
+-- changes the vertical speed some 50 fpm a second at cruise speeds, so
+-- the path is closed over a minute)
+M.K_PATH, M.VS_STEEPER = 1, 1000
+-- the takeoff's target speed (FCOM p.1255): V2 + TO_ADD_MIN to V2 +
+-- TO_ADD_MAX; the flaps' retraction from the takeoff's by TO_FLAPS of the
+-- handle's ratio (estimate)
+M.TO_ADD_MIN, M.TO_ADD_MAX, M.TO_FLAPS = 10, 25, 0.02
 -- the descent starts past the T/D with the MCP altitude this far below
 -- (estimate: FCOM p.665 holds the altitude, RESET MCP ALT, while the MCP
 -- altitude stays at the cruise altitude)
@@ -71,10 +79,34 @@ function M.path_at(path, e)
     return hs[lo] + g * (e - es[lo]), g, path.k[hi] or "idle"
 end
 
--- the target speed: the schedule's (or the MCP's in speed intervention),
--- within the margins
-local function target_speed(P, sched, crz, inp, phase)
+-- the takeoff (FCOM p.1255): from the ground (with V2 selected) the
+-- target follows the airspeed between V2 + 10 and V2 + 25 until VNAV
+-- engages, then stays there until the acceleration height or the flaps'
+-- retraction; nil after it (or an air start: the climb's schedule)
+local function takeoff_speed(s, inp)
+    local t = inp.takeoff
+    if inp.ground then
+        s.to = (t and t.v2 and t.v2 > 0) and {v2 = t.v2, flaps = t.flaps} or nil
+    end
+    local to = s.to
+    if not (to and t) then return nil end
+    if (t.accel_alt and inp.alt >= t.accel_alt) or (t.flaps and to.flaps and t.flaps < to.flaps - M.TO_FLAPS) then
+        s.to = nil
+        return nil
+    end
+    if not (inp.engaged and to.cas) then
+        to.cas = math.max(to.v2 + M.TO_ADD_MIN, math.min(to.v2 + M.TO_ADD_MAX, inp.ias or 0))
+    end
+    return to.cas
+end
+
+-- the target speed: the schedule's (or the MCP's in speed intervention,
+-- the takeoff's), within the margins
+local function target_speed(P, sched, crz, inp, phase, to_cas)
     local cas, mach, mm
+    if not inp.spd_int and to_cas and phase == "CLB" then
+        return to_cas, P.cas_to_mach(to_cas, inp.alt), false
+    end
     if inp.spd_int then
         if inp.spd_int.mach then
             mach, mm = inp.spd_int.mach, true
@@ -116,6 +148,9 @@ end
 --   flaps_placard  the flap placard speed (kt) or nil (flaps up)
 --   vmin         the minimum maneuvering speed (kt) or nil
 --   spd_int      the MCP speed in speed intervention ({cas} or {mach})
+--   takeoff      {v2 (nil: none), accel_alt (the acceleration height's
+--                altitude, ft), flaps (the handle's ratio)}; ias the
+--                airspeed (kt); engaged VNAV engaged (the AFDS's)
 --   clb_alt      the climb's next AT or AT OR BELOW constraint below CRZ
 --                ALT ahead (ft) or nil; des_alt the descent's next
 --                constraint ahead or the E/D's (ft) or nil
@@ -148,7 +183,7 @@ function M.update(s, inp)
     s.phase = ph
     out.phase = ph
 
-    out.cas, out.mach, out.mach_mode = target_speed(P, inp.sched, inp.crz, inp, ph)
+    out.cas, out.mach, out.mach_mode = target_speed(P, inp.sched, inp.crz, inp, ph, takeoff_speed(s, inp))
     out.path_alt, out.path_dev, out.vs = nil, nil, nil
     if ph == "CLB" then
         out.mode = "SPD"

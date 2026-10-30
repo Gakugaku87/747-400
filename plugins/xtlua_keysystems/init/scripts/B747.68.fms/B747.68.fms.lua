@@ -145,6 +145,13 @@ B747DR_fms_vnav_alt						= deferred_dataref("laminar/B747/fms/vnav/alt", "number
 B747DR_fms_vnav_vs						= deferred_dataref("laminar/B747/fms/vnav/vs", "number")
 B747DR_fms_vnav_path_dev				= deferred_dataref("laminar/B747/fms/vnav/path_dev", "number")
 B747DR_fms_vnav_at						= deferred_dataref("laminar/B747/fms/vnav/at", "number")
+-- (step 9c) the performance data VNAV needs entered: gross weight, cost
+-- index, CRZ ALT (1; else the VNAV switch's PERF/VNAV UNAVAILABLE, FCOM
+-- p.1433)
+B747DR_fms_vnav_perf					= deferred_dataref("laminar/B747/fms/vnav/perf", "number")
+-- (step 9c) the distance to go to the E/D the path is looked up with (NM;
+-- 0 without a path)
+B747DR_fms_vnav_dist					= deferred_dataref("laminar/B747/fms/vnav/dist", "number")
 
 --IRS ND DISPLAY
 B747DR_ND_GPS_Line						= deferred_dataref("laminar/B747/irs/gps_display_line", "string")

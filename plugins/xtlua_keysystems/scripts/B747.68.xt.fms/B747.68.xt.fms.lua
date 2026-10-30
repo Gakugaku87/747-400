@@ -1205,6 +1205,8 @@ B747DR_fms_vnav_alt = find_dataref("laminar/B747/fms/vnav/alt")
 B747DR_fms_vnav_vs = find_dataref("laminar/B747/fms/vnav/vs")
 B747DR_fms_vnav_path_dev = find_dataref("laminar/B747/fms/vnav/path_dev")
 B747DR_fms_vnav_at = find_dataref("laminar/B747/fms/vnav/at")
+B747DR_fms_vnav_perf = find_dataref("laminar/B747/fms/vnav/perf")
+B747DR_fms_vnav_dist = find_dataref("laminar/B747/fms/vnav/dist")
 B747DR_fms_vnav_mcp_alt = find_dataref("laminar/B747/autopilot/heading/altitude_dial_ft")
 B747DR_fms_vnav_vmax = find_dataref("laminar/B747/airspeed/Vmax")
 B747DR_fms_vnav_vminm = find_dataref("laminar/B747/airspeed/Vminm")
@@ -1212,6 +1214,10 @@ simDR_fms_vnav_flaps = find_dataref("sim/cockpit2/controls/flap_ratio")
 local vnavState = B747_vnav_model.new()
 function B747_fms_vnav_phase() return vnavState.phase end
 local vnavIn = {P = B747_perf_db, sched = B747_pred_model.schedule, crz = B747_pred_model.crz_mach}
+local vnavTakeoff = {}
+-- the distance to go to the E/D VNAV's path is looked up with (NM; nil
+-- without a path)
+function B747_fms_vnav_dist() return vnavIn.d_ed end
 -- the predictions' path by the distance to go to the E/D, the route's first
 -- point and its distance on to the E/D, the climb's and descent's
 -- constraints (route order: {upper} and {alt})
@@ -1246,7 +1252,12 @@ function vnav_geo_set(s, r)
     g.path = {e = {}, h = dp.h, k = dp.k}
     for i = 1, #dp.x do g.path.e[i] = r.ed - dp.x[i] end
     g.hed = dp.h[1]
-    -- the first leg with a point, the legs' distance after it to the E/D
+    -- the first leg with a point, the legs' distance after it to the E/D;
+    -- (step 9c) each point's distance on to the E/D, by the point (the
+    -- route's legs keep their tables as LNAV sequences them: the distance
+    -- goes on from the active leg's point between the predictions; s140
+    -- went 700 ft off the path in the 10 s after ATMUG, the distance
+    -- growing from the point passed)
     local sum = 0
     for i = 1, s.ed do
       local l = s.legs[i]
@@ -1257,6 +1268,13 @@ function vnav_geo_set(s, r)
       end
     end
     g.sum = sum
+    g.rem = {}
+    local rem = 0
+    for i = s.ed, 1, -1 do
+      local l = s.legs[i]
+      if l.p1 then g.rem[l.p1] = rem end
+      rem = rem + l.dist
+    end
   end
   vnavGeo = g
 end
@@ -1275,6 +1293,17 @@ local function update_vnav()
   inp.clb, inp.des, inp.crzspd = B747_fms_schedules(perf)
   inp.flaps_placard = simDR_fms_vnav_flaps > 0.01 and B747DR_fms_vnav_vmax > 0 and B747DR_fms_vnav_vmax or nil
   inp.vmin = B747DR_fms_vnav_vminm > 0 and B747DR_fms_vnav_vminm or nil
+  -- the takeoff (step 9c; FCOM p.1255): V2 selected on TAKEOFF REF (999
+  -- none), ACCEL HT above the origin, the flap handle; the airspeed, VNAV
+  -- engaged (the AFDS's)
+  local rte = B747_fmc_route.rte
+  local v2 = B747DR_airspeed_V2
+  vnavTakeoff.v2 = (v2 > 0 and v2 < 900) and v2 or nil
+  vnavTakeoff.accel_alt = (rte and rte.origin and rte.origin.elev or 0) + (tonumber(fmsModules["data"].accelht) or 1000)
+  vnavTakeoff.flaps = simDR_fms_vnav_flaps
+  inp.takeoff = vnavTakeoff
+  inp.ias = simDR_ias_pilot
+  inp.engaged = B747DR_ap_vnav_state == 2
   inp.clb_alt, inp.des_alt, inp.path, inp.d_ed = nil, nil, nil, nil
   if g then
     for _, a in ipairs(g.clb) do
@@ -1282,9 +1311,19 @@ local function update_vnav()
     end
     inp.des_alt = g.des[1] or g.hed
     if g.path and g.first then
-      local _, d1 = B747_route_model.course(simDR_latitude, simDR_longitude, g.first.lat, g.first.lon)
+      -- the distance to go: to the active route's first point the
+      -- predictions had (step 9c: the active leg's once LNAV sequenced),
+      -- else the first then, and on from it
+      local p, rem = g.first, g.sum
+      local st = B747_fmc_route
+      if g.rem and st.active then
+        for _, l in ipairs(st.rte.legs) do
+          if l.fix and g.rem[l.fix] then p, rem = l.fix, g.rem[l.fix] break end
+        end
+      end
+      local _, d1 = B747_route_model.course(simDR_latitude, simDR_longitude, p.lat, p.lon)
       inp.path = g.path
-      inp.d_ed = d1 + g.sum
+      inp.d_ed = d1 + rem
     end
   end
   local out = B747_vnav_model.update(vnavState, inp)
@@ -1298,6 +1337,10 @@ local function update_vnav()
   B747DR_fms_vnav_vs = out.vs or 0
   B747DR_fms_vnav_path_dev = out.path_dev or 0
   B747DR_fms_vnav_at = out.at or 0
+  B747DR_fms_vnav_dist = inp.d_ed or 0
+  -- (step 9c) PERF INIT's gross weight and cost index, and CRZ ALT, entered
+  local perfIn = inp.kg and inp.crz_alt and tonumber(fmsModules["data"].costindex)
+  B747DR_fms_vnav_perf = perfIn and 1 or 0
 end
 -- UNABLE CRZ ALT: in the climb, the climb to a cruise altitude meets the
 -- descent path before it (FCOM p.1436; estimate: no minimum cruise time)
