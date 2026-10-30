@@ -169,9 +169,18 @@ PW.HOLD = {
 }
 
 -- PI.10.38-39 (p.264-265) Flight With Unreliable Airspeed, flaps up at
--- .84/290: by weight and pressure altitude (ft) the thrust for level flight
--- {EPR, %N1 (alt mode)} and the idle descent's V/S (ft/min)
+-- .84/290: by weight and pressure altitude (ft) the climb's V/S (ft/min) at
+-- max climb thrust (290/.84), the thrust for level flight {EPR, %N1 (alt
+-- mode)} and the idle descent's V/S (ft/min)
 PW.U84_W = {200, 250, 300, 350, 390}
+PW.U84_CLB = {
+    [40000] = {1500, 700},
+    [35000] = {2900, 1900, 1200, 500},
+    [30000] = {2700, 1900, 1400, 900, 500},
+    [20000] = {4100, 3100, 2400, 1800, 1400},
+    [10000] = {5300, 4100, 3200, 2600, 2100},
+    [0] = {6100, 4700, 3800, 3000, 2600},
+}
 PW.U84_CRZ = {
     [40000] = {{1.16, 83.2}, {1.31, 88.0}},
     [35000] = {{1.08, 80.6}, {1.14, 83.0}, {1.24, 86.3}, {1.43, 92.2}},
@@ -322,9 +331,18 @@ GE.HOLD = {
 }
 
 -- PI.20.33 (p.361) Flight With Unreliable Airspeed, flaps up at .84/290: by
--- weight (1000 lb) and pressure altitude (ft) the %N1 for level flight and
--- the idle descent's V/S (ft/min)
+-- weight (1000 lb) and pressure altitude (ft) the climb's V/S (ft/min) at
+-- max climb thrust (290/.84), the %N1 for level flight and the idle
+-- descent's V/S (ft/min)
 GE.U84_W = {450, 550, 650, 750, 850, 870}
+GE.U84_CLB = {
+    [40000] = {1600, 900},
+    [35000] = {2900, 2000, 1300, 700},
+    [30000] = {2900, 2100, 1600, 1100, 700, 600},
+    [20000] = {4300, 3300, 2600, 2100, 1600, 1500},
+    [10000] = {5700, 4500, 3700, 3000, 2500, 2400},
+    [0] = {6500, 5200, 4300, 3500, 3000, 2900},
+}
 GE.U84_CRZ = {
     [40000] = {{88.4}, {92.6}},
     [35000] = {{85.8}, {88.1}, {90.9}, {95.0}},
@@ -518,6 +536,10 @@ GE.POLAR = {cd0 = 0.015534, k = 0.042486, kw = 0.20291, mc0 = 0.79383, mcl = 0.6
 PW.THRUST = {1.12261, -0.881672, 0.58381, 0.473007, -0.47932, 0.0810096}
 GE.THRUST = {29.6446, 32.3389, 16.5883, 69.155, -62.4791, -0.284529}
 GE.N1 = true
+-- the idle (7 %) fuel flow at sea level static, kg/s (the ICAO engine
+-- emissions databank: 1PW041 PW4056, 1GE023 CF6-80C2B1F)
+PW.FF_IDLE_SL = 0.188
+GE.FF_IDLE_SL = 0.205
 
 -- the ISA atmosphere at a pressure altitude (ft): static pressure (Pa) and
 -- the temperature (K) with an ISA deviation (degrees C)
@@ -563,12 +585,59 @@ function M.drag(t, kg, ft, mach)
     return q * M.S * cd, cl
 end
 
--- the fuel flow per engine (kg/h) in level flight there
-function M.cruise_ff(t, kg, ft, mach, isa_dev)
+-- the fuel flow per engine (kg/h) at an engine's thrust (N) at a pressure
+-- altitude (ft) and Mach
+function M.thrust_ff(t, f, ft, mach, isa_dev)
     local c = t.POLAR
     local p, temp = M.atmos(ft, isa_dev)
-    local f = M.drag(t, kg, ft, mach) / 4
     return (c.t0 + c.t1 * mach) * (1 + c.t2 * 1e5 / (f / (p / P0))) * math.sqrt(temp / T0K) * f
+end
+
+-- the fuel flow per engine (kg/h) in level flight there
+function M.cruise_ff(t, kg, ft, mach, isa_dev)
+    return M.thrust_ff(t, M.drag(t, kg, ft, mach) / 4, ft, mach, isa_dev)
+end
+
+-- the max climb thrust (N, all engines) at a pressure altitude (ft), an
+-- estimate: the thrust over delta the climb table's V/S at 290/.84 gives
+-- with the model's drag and the speed's change (PI.10.38/20.33: within 2-3 %
+-- of each other across the weights), their mean by altitude, between them
+-- in a line; no Mach or temperature effect (6-1/6-2 step 8c)
+local climbTd = {}
+local function climb_td(t)
+    if climbTd[t] then return climbTd[t] end
+    local alts, vals = {}, {}
+    for alt in pairs(t.U84_CLB) do alts[#alts + 1] = alt end
+    table.sort(alts)
+    local function v_ms(ft) return M.tas(math.min(0.84, M.cas_to_mach(290, ft)), ft) * KT end
+    for n, alt in ipairs(alts) do
+        local mach = math.min(0.84, M.cas_to_mach(290, alt))
+        local v = v_ms(alt)
+        local ef = 1 + v / G * (v_ms(alt + 500) - v_ms(alt - 500)) / (1000 * 0.3048)
+        local sum, k = 0, 0
+        for i, vs in ipairs(t.U84_CLB[alt]) do
+            local kg = t.U84_W[i] * 1000 * t.wf
+            sum = sum + M.drag(t, kg, alt, mach) + kg * G * (vs * 0.3048 / 60) / v * ef
+            k = k + 1
+        end
+        vals[n] = sum / k / 4 / (M.atmos(alt) / P0)
+    end
+    climbTd[t] = {alts = alts, vals = vals}
+    return climbTd[t]
+end
+function M.climb_thrust(t, ft)
+    local c = climb_td(t)
+    local i, j, f = bracket(c.alts, ft)
+    return 4 * lerp(c.vals[i], c.vals[j], f) * M.atmos(ft) / P0
+end
+
+-- the idle fuel flow per engine (kg/h) at a pressure altitude (ft) and
+-- Mach, an estimate: the ICAO 7 % (idle) fuel flow at sea level static
+-- (FF_IDLE_SL) at the inlet's corrected conditions, delta_t2 sqrt(theta_t2)
+function M.idle_ff(t, ft, mach, isa_dev)
+    local p, temp = M.atmos(ft, isa_dev)
+    local k = 1 + 0.2 * mach * mach
+    return t.FF_IDLE_SL * 3600 * (p / P0) * k ^ 3.5 * math.sqrt(temp / T0K * k)
 end
 
 -- the x in [a, b] where f is least (golden section: f unimodal there)

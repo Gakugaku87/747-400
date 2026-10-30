@@ -1018,6 +1018,111 @@ function update_econ()
     econ_put("desspd", cas)
   end
 end
+
+-- the trajectory predictions (6-1/6-2 step 8c; notes/ATA-34-61-FMC.md
+-- §47): every 10 s (at once after an entry) along the active route's legs
+-- ahead, with their great circle distances and altitude constraints, by
+-- B747.68.pred_model.lua with the FMC's speeds (ECON or SEL, LRC), weight
+-- and fuel, the step climbs (STEP SIZE, STEP TO) and the cruise's wind.
+-- The E/D: the approach's runway, 50 ft above it (FCOM p.1258; the missed
+-- approach after it not the descent's), else the last constrained leg
+-- after the climb's (the SID's); none, no descent (ATA34_2 p.611)
+dofile("B747.68.pred_model.lua")
+local predNext, predResult = 0, nil
+function B747_fms_preds() return predResult end
+function B747_fms_preds_now() predNext = 0 end
+local function pred_num(id) return tonumber(fmsModules["data"][id]) end
+-- the prediction's input for a cruise altitude, nil without an active route
+function B747_fms_pred_input(crz)
+  local st = B747_fmc_route
+  if not st.active or crz == nil or crz <= 0 then return nil end
+  local R, r = B747_route_model, st.rte
+  local legs, clbLast, lastCon, rwy = {}, nil, nil, nil
+  -- the distances: great circles from the point before (the airplane's
+  -- for the first), across a conditional leg or a discontinuity too (an
+  -- estimate; a conditional leg itself none)
+  local from = {lat = simDR_latitude, lon = simDR_longitude}
+  for i, l in ipairs(r.legs) do
+    local d = 0
+    if l.fix then
+      local _, dd = R.course(from.lat, from.lon, l.fix.lat, l.fix.lon)
+      d = dd
+      from = l.fix
+    end
+    local con = nil
+    if l.alt then
+      if l.akind == "A" then con = {kind = "A", a = l.alt}
+      elseif l.akind == "B" then con = {kind = "B", a = l.alt}
+      elseif l.akind == "AB" then con = {kind = "W", a = math.max(l.alt, l.alt2 or l.alt), b = math.min(l.alt, l.alt2 or l.alt)}
+      else con = {kind = "AT", a = l.alt} end
+    end
+    if l.fix and l.fix.kind == "RWY" and l.proc ~= "SID" then
+      con = {kind = "AT", a = (l.fix.elev or 0) + 50}
+      rwy = rwy or i
+    end
+    legs[i] = {name = l.fix and l.fix.ident or "", dist = d, con = con}
+    if l.proc == "SID" then clbLast = i end
+    if con and not rwy then lastCon = i end
+  end
+  local ed = rwy
+  if not ed and lastCon and lastCon > (clbLast or 0) then ed = lastCon end
+  local perf, isa = B747_fms_perf(), B747_fms_isa_dev()
+  local clb = {cas = pred_num("clbspd") or 340, mach = (pred_num("clbspdmach") or pred_num("crzspd") or 810) / 1000,
+    trans_cas = pred_num("transpd"), trans_alt = pred_num("spdtransalt"),
+    restr_cas = pred_num("clbrestspd"), restr_alt = pred_num("clbrestalt")}
+  local des = {cas = pred_num("desspd") or 270, mach = (pred_num("desspdmach") or 805) / 1000,
+    trans_cas = pred_num("destranspd"), trans_alt = pred_num("desspdtransalt"),
+    restr_cas = pred_num("desrestspd"), restr_alt = pred_num("desrestalt")}
+  local crzspd
+  if pred_num("crzcas") then
+    crzspd = {cas = pred_num("crzcas")}
+  elseif fmsModules["data"]["crzspdmode"] == "L" then
+    crzspd = {fn = function(h, kg) return (B747_perf_db.lrc(perf, kg, h)) end}
+  else
+    crzspd = {mach = (pred_num("crzspd") or 810) / 1000}
+  end
+  -- the step climbs: STEP SIZE's (none with 0), the crew's STEP TO first
+  local steps = nil
+  local size = (string.gsub(fmsModules["data"]["stepsize"], "%s+$", ""))
+  if tonumber(size) ~= 0 then
+    local east = B747_fms_step_east()
+    local crewTo = B747_cdu_model.parse_alt((string.gsub(fmsModules["data"]["stepalt"], "%s+$", "")))
+    local light = perf.MAX_ALT_W[#perf.MAX_ALT_W] * 1000 * perf.wf
+    local heavy = perf.MAX_ALT_W[1] * 1000 * perf.wf
+    local function opt(kg) return B747_perf_db.opt_alt(perf, kg) end
+    steps = function(h, kg)
+      local to = (crewTo and crewTo > h + 1) and crewTo or B747_crz_model.step_to(h, opt(kg), size, east)
+      if not to then return nil end
+      local w = B747_crz_model.step_weight(h, to, opt, light, heavy)
+      if B747_perf_db.max_alt(perf, w, isa) < to then w = math.min(w, B747_perf_db.max_alt_weight(perf, to, isa)) end
+      return to, w
+    end
+  end
+  local phase = "clb"
+  if simDR_onGround ~= 1 then
+    if B747DR_ap_flightPhase == 3 then phase = "des" elseif B747DR_ap_flightPhase == 2 then phase = "crz" end
+  end
+  return {P = B747_perf_db, t = perf, isa = isa, gw = B747_fms_gw_kg(), fuel = perf_fuel_t() * 1000,
+    alt = math.max(0, simDR_pressureAlt1), cas = (simDR_onGround ~= 1 and simDR_ias_pilot > 100) and simDR_ias_pilot or nil,
+    phase = phase, crz = crz, clb = clb, des = des, crzspd = crzspd, legs = legs, ed = ed, clb_last = clbLast,
+    steps = steps, wind = {clb = 0, crz = B747_fms_crz_headwind(), des = 0}}
+end
+function update_preds()
+  if simDRTime < predNext then return end
+  predNext = simDRTime + 10
+  local s = B747_fms_pred_input(B747BR_cruiseAlt)
+  -- none with CRZ ALT at or above MAX (ATA34_2 p.611)
+  if s and s.crz >= B747_perf_db.max_alt(s.t, s.gw, s.isa) then s = nil end
+  predResult = s and B747_pred_model.predict(s) or nil
+end
+-- UNABLE CRZ ALT: in the climb, the climb to a cruise altitude meets the
+-- descent path before it (FCOM p.1436; estimate: no minimum cruise time)
+function B747_fms_unable_crz(crz)
+  local s = B747_fms_pred_input(crz)
+  if not s or s.phase ~= "clb" or not s.ed then return false end
+  local r = B747_pred_model.predict(s)
+  return r.tc == nil and r.td ~= nil
+end
 B747_fmc_lnav=B747_lnav_model.new(B747_path_model)
 local lnavPath=nil
 -- the active leg the path was built with (a new one not by sequencing:
@@ -1903,6 +2008,7 @@ function after_physics()
     update_spd_trans()
     update_perf()
     update_econ()
+    update_preds()
     update_navdb()
     update_takeoff()
     B747_fmc_lnav_update()

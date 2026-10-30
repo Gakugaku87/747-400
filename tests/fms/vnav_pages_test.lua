@@ -241,15 +241,16 @@ rt:set("sim/flightmodel/weight/m_total", 250000)
 frames(0.1)
 vnav(2)
 T.check(line(3):find("FL390$") and line(5):find("NOW$"), "250 t: OPT above FL370: NOW: " .. line(5))
--- within 200 NM of the T/D: TO T/D, no STEP TO
-rt:set("laminar/B747/autopilot/dist/remaining_distance", 1000)
-rt:set("laminar/B747/autopilot/dist/top_of_descent", 850)
+-- within 200 NM of the predicted T/D (step 8c's predictions, here given):
+-- TO T/D, no STEP TO; the destination's ETA and fuel the predictions'
+local realPreds = fms.ns.B747_fms_preds
+fms.ns.B747_fms_preds = function() return {td = 150, dest = {t = 2.5 * 3600, fuel = 30000}} end
 frames(0.1)
 vnav(2)
 T.check(small(4):find("TO T/D$") and line(5):find("z/ 150NM$") and (line(3):gsub("%s+$", "")) == "FL350",
     "150 NM to the T/D: TO T/D, 150 NM, no STEP TO: " .. small(4) .. "|" .. line(5) .. "|" .. line(3))
-rt:set("laminar/B747/autopilot/dist/remaining_distance", 0)
-rt:set("laminar/B747/autopilot/dist/top_of_descent", 0)
+T.check(line(7):find("0230z/30%.0$"), "the destination's ETA and fuel: 0230z/30.0 (2.5 h, 30 t): " .. line(7))
+fms.ns.B747_fms_preds = realPreds
 -- CRZ ALT above MAX: taken, MAX ALT FLXXX (FMSPG p.131)
 rt:set("sim/flightmodel/weight/m_total", 270000)
 local max270 = P.max_alt(pw, 270000, 0)

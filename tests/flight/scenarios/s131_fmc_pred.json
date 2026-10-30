@@ -1,0 +1,51 @@
+{
+  "name": "s131_fmc_pred",
+  "description": "6-1/6-2 段 8c（軌跡の予測）の X-Plane での確認、空中。FL350・M.84 で RJAA の東から西へ空中開始（機体を読み直す）。RTE で RJAA→RJBB、DIRECT AKAGI、ARRIVALS で STAR ATMUGA と ILS06LY（遷移 GATES）、ACTIVATE と EXEC、CRZ ALT FL350、COST INDEX 100。予測（`B747.68.pred_model.lua`）の T/D が 200 NM の内なら CRZ のページの AT は TO T/D（距離と ETA。この経路は約 430 NM で T/D は約 300 NM 先なので AT）、目的地の ETA/FUEL は予測のもの（前は 51.6 lb/NM などの経験式）。値を記録し、残りの距離・燃料・速さと比べてもっともらしいかを見る。Lua の誤りも確かめる。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.95, "longitude": 140.6, "elevation_in_meters": 10668, "heading_true": 255, "speed_in_meters_per_second": 249 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れと FMS の初期化" },
+    { "do": "record_start" },
+    { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
+    { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
+    { "do": "cdu", "note": "RTE：RJAA→RJBB、NEXT、DIRECT AKAGI（SELECT DESIRED WPT の最初）", "keys": ["RTE", "RJAA", "L1", "RJBB", "R1", "NEXT", "AKAGI", "R1", "?SEL"] },
+    { "do": "cmd", "note": "DEP ARR", "name": "laminar/B747/fms1/func_key/clb" },
+    { "do": "sleep", "seconds": 0.5 },
+    { "do": "cdu", "note": "ARR>（R2：目的地）", "keys": ["R2"] },
+    { "do": "check", "note": "RJBB ARRIVALS", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "RJBB ARRIVALS" },
+    { "do": "cdu", "note": "STAR ATMUGA（L1）、ILS06LY（R3）、遷移 GATES（R2）", "keys": ["L1", "R3", "R2"] },
+    { "do": "check", "note": "<SEL>GATES", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "<SEL>GATES" },
+    { "do": "cdu", "note": "RTE、ACTIVATE、EXEC", "keys": ["RTE", "R6", "EXEC"] },
+    { "do": "check", "note": "ACT RTE 1", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "ACT RTE 1" },
+    { "do": "cdu", "note": "PERF INIT：COST INDEX 100", "keys": ["INITREF", "L6", "L3", "100", "L5"] },
+    { "do": "cmd", "note": "VNAV", "name": "laminar/B747/fms1/func_key/des" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "cdu", "note": "NEXT：CRZ、CRZ ALT FL350", "keys": ["NEXT", "350", "L1"] },
+    { "do": "sleep", "seconds": 12, "note": "ECON と予測（10 秒ごと、入力ですぐ）" },
+    { "do": "check", "note": "ACT ECON CRZ", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "ACT ECON CRZ" },
+    { "do": "check", "note": "目的地の ETA/FUEL：予測のもの", "dref": "laminar/B747/fms3/Line07_L", "op": "matches", "value": "[0-9]{4}z/[0-9]+\\.[0-9]$" },
+    { "do": "check", "note": "目的地の名前（FMC の経路の）", "dref": "laminar/B747/fms3/Line06_S", "op": "contains", "value": "RJBB ETA/FUEL" },
+    { "do": "check", "note": "AT（T/D の 200 NM の内なら TO T/D：経路は約 430 NM、T/D は約 300 NM 先なので AT のはず）", "dref": "laminar/B747/fms3/Line04_S", "op": "matches", "value": "( AT|TO T/D)$" },
+    { "do": "check", "note": "その ETA と距離", "dref": "laminar/B747/fms3/Line05_L", "op": "matches", "value": "([0-9]{4}z/ *[0-9]+NM|NOW)$" },
+    { "do": "snapshot", "note": "CRZ のページと、比べる位置・燃料・重量・速さ・時刻", "drefs": [ "laminar/B747/fms3/Line03_L", "laminar/B747/fms3/Line04_S", "laminar/B747/fms3/Line05_L", "laminar/B747/fms3/Line06_S", "laminar/B747/fms3/Line07_L", "laminar/B747/fms3/Line09_L", "sim/flightmodel/position/latitude", "sim/flightmodel/position/longitude", "sim/flightmodel/weight/m_fuel_total", "sim/flightmodel/weight/m_total", "sim/flightmodel/position/groundspeed", "sim/flightmodel/position/true_airspeed", "sim/cockpit2/gauges/indicators/wind_speed_kts", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/cockpit2/clock_timer/zulu_time_hours", "sim/cockpit2/clock_timer/zulu_time_minutes", "laminar/B747/autopilot/dist/remaining_distance", "laminar/B747/autopilot/dist/top_of_descent" ] },
+    { "do": "view", "note": "左の CDU", "the": -34, "psi": 24, "fov": 18 },
+    { "do": "shot", "name": "cdu_crz_pred" },
+    { "do": "cdu", "note": "LEGS（経路の点と距離）", "keys": ["LEGS"] },
+    { "do": "snapshot", "note": "LEGS の 1 ページ目", "drefs": [ "laminar/B747/fms3/Line01_L", "laminar/B747/fms3/Line02_S", "laminar/B747/fms3/Line03_L", "laminar/B747/fms3/Line04_S", "laminar/B747/fms3/Line05_L", "laminar/B747/fms3/Line06_S", "laminar/B747/fms3/Line07_L" ] },
+    { "do": "view", "name": "forward" },
+    { "do": "record_stop" }
+  ]
+}

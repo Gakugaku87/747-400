@@ -1120,7 +1120,14 @@ function fmsFunctions.setdata(fmsO,value)
 	-- above the maximum altitude the entry stands with MAX ALT FLXXX (6-1/6-2
 	-- step 8b2; FMSPG p.131, FCOM p.1435)
 	local maxft = B747_perf_db.max_alt(B747_fms_perf(), B747_fms_gw_kg(), B747_fms_isa_dev())
-	if ft > maxft then fmsO["notify"] = string.format("MAX ALT FL%03d", math.floor(maxft / 100)) end
+	if ft > maxft then
+		fmsO["notify"] = string.format("MAX ALT FL%03d", math.floor(maxft / 100))
+	elseif B747_fms_unable_crz(ft) then
+		-- the predicted climb meets the descent below it (6-1/6-2 step 8c;
+		-- FCOM p.1436)
+		fmsO["notify"] = "UNABLE CRZ ALT"
+	end
+	B747_fms_preds_now()
   elseif value=="irspos" then
 	if string.len(fmsO["scratchpad"])>10 then
 		print("set irs pos")
