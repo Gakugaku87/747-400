@@ -67,6 +67,19 @@ function M.delete_wind(r, i, ft)
     l.wind = next(w) and w or nil
 end
 
+-- a wind entry (FMSPG p.179, the DESCENT FORECAST's; the WIND pages' as
+-- well: an estimate): ddd/sss, ddd/ or /sss, the direction (true) three
+-- digits up to 360, the speed up to 250 kt; nil, nil when not valid
+function M.parse_wind(s)
+    s = s or ""
+    local d, k = s:match("^(%d%d%d)/(%d%d?%d?)$")
+    if not d then d = s:match("^(%d%d%d)/$") end
+    if not d and not k then k = s:match("^/(%d%d?%d?)$") end
+    local dir, kt = tonumber(d), tonumber(k)
+    if (not dir and not kt) or (dir and dir > 360) or (kt and kt > 250) then return nil, nil end
+    return dir and dir % 360, kt
+end
+
 -- a leg has winds entered (RTE DATA's W>: FCOM p.1363)
 function M.entered(l) return l ~= nil and l.wind ~= nil and next(l.wind) ~= nil end
 

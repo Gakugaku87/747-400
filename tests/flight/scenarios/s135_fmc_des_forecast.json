@@ -1,0 +1,47 @@
+{
+  "name": "s135_fmc_des_forecast",
+  "description": "6-1/6-2 段 8e2（DESCENT FORECAST のページ）の X-Plane での確認、空中。FL350・M.84 で RJAA の東から西へ空中開始（機体を読み直す）。VNAV の DES のページの 5R の FORECAST> から DESCENT FORECAST（FCOM p.1396 の図、109 の形）、TRANS LVL FL180、TAI/ON ALT のダッシュ、FCOM の図と同じ FL290 090/105・FL210 078/69・5000 130/29 の入力、/80 で速さだけ、TAI/ON ALT FL150（遷移高度の下なので 15000）。画面の写真で配置を確かめる。Lua の誤りも確かめる。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.95, "longitude": 140.6, "elevation_in_meters": 10668, "heading_true": 255, "speed_in_meters_per_second": 249 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れと FMS の初期化" },
+    { "do": "record_start" },
+    { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
+    { "do": "cmd", "note": "VNAV", "name": "laminar/B747/fms1/func_key/des" },
+    { "do": "sleep", "seconds": 0.5 },
+    { "do": "cdu", "note": "NEXT 2 回：DES", "keys": ["NEXT", "NEXT"] },
+    { "do": "check", "note": "DES のページ", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "DES" },
+    { "do": "check", "note": "5R に FORECAST>", "dref": "laminar/B747/fms3/Line11_L", "op": "matches", "value": "FORECAST>$" },
+    { "do": "cdu", "note": "FORECAST>", "keys": ["R5"] },
+    { "do": "check", "note": "DESCENT FORECAST", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "DESCENT FORECAST" },
+    { "do": "check", "note": "TRANS LVL FL180、TAI/ON ALT のダッシュ", "dref": "laminar/B747/fms3/Line03_L", "op": "matches", "value": "^FL180 +-----$" },
+    { "do": "check", "note": "見出し", "dref": "laminar/B747/fms3/Line04_S", "op": "contains", "value": "ALT        WIND DIR/SPD" },
+    { "do": "check", "note": "109 の 6 行目", "dref": "laminar/B747/fms3/Line13_L", "op": "matches", "value": "^<OFFPATH DES +DES DIR>$" },
+    { "do": "cdu", "note": "FCOM の図の風", "keys": ["FL290", "L2", "090/105", "R2", "FL210", "L3", "078/69", "R3", "5000", "L4", "130/29", "R4"] },
+    { "do": "check", "note": "FL290 090/105", "dref": "laminar/B747/fms3/Line05_L", "op": "matches", "value": "^FL290 +090`/105" },
+    { "do": "check", "note": "FL210 078/ 69", "dref": "laminar/B747/fms3/Line07_L", "op": "matches", "value": "^FL210 +078`/ 69" },
+    { "do": "check", "note": "5000 130/ 29", "dref": "laminar/B747/fms3/Line09_L", "op": "matches", "value": "^5000 +130`/ 29" },
+    { "do": "cdu", "note": "/80 で速さだけ", "keys": ["/80", "R4"] },
+    { "do": "check", "note": "130/ 80", "dref": "laminar/B747/fms3/Line09_L", "op": "contains", "value": "130`/ 80" },
+    { "do": "cdu", "note": "TAI/ON ALT FL150", "keys": ["FL150", "R1"] },
+    { "do": "check", "note": "遷移高度の下なので 15000", "dref": "laminar/B747/fms3/Line03_L", "op": "matches", "value": "^FL180 +15000$" },
+    { "do": "snapshot", "note": "DESCENT FORECAST のページ", "drefs": [ "laminar/B747/fms3/Line01_L", "laminar/B747/fms3/Line02_S", "laminar/B747/fms3/Line03_L", "laminar/B747/fms3/Line04_S", "laminar/B747/fms3/Line05_L", "laminar/B747/fms3/Line05_S", "laminar/B747/fms3/Line07_L", "laminar/B747/fms3/Line09_L", "laminar/B747/fms3/Line11_L", "laminar/B747/fms3/Line12_L", "laminar/B747/fms3/Line13_L" ] },
+    { "do": "view", "note": "左の CDU", "the": -34, "psi": 24, "fov": 18 },
+    { "do": "shot", "name": "cdu_des_forecast" },
+    { "do": "view", "name": "forward" },
+    { "do": "record_stop" }
+  ]
+}

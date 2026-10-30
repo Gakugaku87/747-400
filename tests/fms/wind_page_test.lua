@@ -158,6 +158,13 @@ enter("270/50", "R" .. row350)
 enter("361/50", "R" .. row350)
 T.equal(pad(), "INVALID ENTRY", "361 degrees: INVALID ENTRY")
 clear()
+enter("90/50", "R" .. row350)
+T.equal(pad(), "INVALID ENTRY", "a two-digit direction: INVALID ENTRY (FMSPG p.179)")
+clear()
+enter("090/251", "R" .. row350)
+T.equal(pad(), "INVALID ENTRY", "251 kt: INVALID ENTRY")
+clear()
+T.equal(fms.ns.B747_fms_trans_lvl(), 14000, "the descent's transition level: the destination ZZAA's FL140 (FMSPG p.178)")
 
 -- RTE DATA>: back, W> at the first waypoint
 key("ls_key/R6")
