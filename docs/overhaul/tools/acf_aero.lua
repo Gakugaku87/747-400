@@ -26,7 +26,12 @@ local INC = {
 -- grew their lift in proportion up to half the last detent and no more
 -- (20 deg: 20, 25 and 30 gave the same), the FCOM's attitudes want it
 -- growing to 30 (notes/AERO.md). The FCU writes the angles itself (the 3D
--- flaps follow laminar/B747/flt_ctrls/flaps), so no look changes
+-- flaps follow laminar/B747/flt_ctrls/flaps), so no look changes.
+-- 2026-10-30: the last detent 75 and the flaps' lift coefficient 1.35 ->
+-- 1.62, which gave flaps 30 the FCOM's lift (within 0.05 deg of its
+-- attitude); X-Plane's lift then hardly grows past 20 deg (notes/AERO.md
+-- section 3.10), so the FCU gives X-Plane smaller angles at 5 to 25, a
+-- correction the user allowed (B747.19.xt.hydraulics_override.lua)
 -- the bodies' drag: the four nacelles (bodies 21-24) 0.1 -> 0.025 and the
 -- wing to body fairing (body 1) 0.06 -> 0.03. Measured (aero_drag.json),
 -- a unit of Cd on the four nacelles is 0.054 of the airplane's CD (wing
@@ -35,8 +40,10 @@ local INC = {
 -- engine model already has the inlet's ram drag in its net thrust); the
 -- fuselage's 0.0060 is about its skin friction's and stays
 local SET = {
-    ["acf/_flap1_dn/6"] = 50,
-    ["acf/_flap2_dn/6"] = 50,
+    ["acf/_flap1_dn/6"] = 75,
+    ["acf/_flap2_dn/6"] = 75,
+    ["acf/_flap1_cl"] = 1.62,
+    ["acf/_flap2_cl"] = 1.62,
     ["_body/1/_part_cd"] = 0.03,
     ["_body/21/_part_cd"] = 0.025,
     ["_body/22/_part_cd"] = 0.025,

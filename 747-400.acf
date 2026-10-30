@@ -73108,7 +73108,7 @@ P acf/_fixed_role/7 0
 P acf/_fixed_role/8 0
 P acf/_fixed_role/count 9
 P acf/_flap1_cd 0.140000001
-P acf/_flap1_cl 1.350000024
+P acf/_flap1_cl 1.620000000
 P acf/_flap1_cm -0.389999986
 P acf/_flap1_cratR 0.259999990
 P acf/_flap1_cratT 0.259999990
@@ -73120,7 +73120,7 @@ P acf/_flap1_dn/2 5.000000000
 P acf/_flap1_dn/3 10.000000000
 P acf/_flap1_dn/4 20.000000000
 P acf/_flap1_dn/5 25.000000000
-P acf/_flap1_dn/6 50.000000000
+P acf/_flap1_dn/6 75.000000000
 P acf/_flap1_dn/7 0.000000000
 P acf/_flap1_dn/8 0.000000000
 P acf/_flap1_dn/9 0.000000000
@@ -73132,7 +73132,7 @@ P acf/_flap1_roll 0.000000000
 P acf/_flap1_roll_above_50 0
 P acf/_flap1_type 4
 P acf/_flap2_cd 0.140000001
-P acf/_flap2_cl 1.350000024
+P acf/_flap2_cl 1.620000000
 P acf/_flap2_cm -0.389999986
 P acf/_flap2_cratR 0.259999990
 P acf/_flap2_cratT 0.259999990
@@ -73144,7 +73144,7 @@ P acf/_flap2_dn/2 5.000000000
 P acf/_flap2_dn/3 10.000000000
 P acf/_flap2_dn/4 20.000000000
 P acf/_flap2_dn/5 25.000000000
-P acf/_flap2_dn/6 50.000000000
+P acf/_flap2_dn/6 75.000000000
 P acf/_flap2_dn/7 0.000000000
 P acf/_flap2_dn/8 0.000000000
 P acf/_flap2_dn/9 0.000000000

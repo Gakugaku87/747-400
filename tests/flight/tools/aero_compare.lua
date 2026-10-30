@@ -227,6 +227,17 @@ local function line(label, s, ref, ref_ias)
     local here = s.pitch - path_deg(s.vs, s.ias, s.alt)
     print(string.format("%22s pitch - path: %5.2f, FCOM %5.2f (%+.2f)", "", here, ref.pitch - fcom_path,
         here - (ref.pitch - fcom_path)))
+    -- at the table's speed (2026-10-30): the lift coefficient there,
+    -- CL (V / V_table)^2, on a lift slope of 0.08 a degree (estimate: the
+    -- clean wing's 0.077, notes/AERO.md §3.10); the protections (the
+    -- maneuver speeds) can keep the speed several knots off the table's
+    if ref_ias and s.lift and s.ias > 0 then
+        local d = (1 - 6.87559e-6 * s.alt) ^ 5.25588
+        local cl = s.lift / (0.7 * 101325 * d * mach(s.ias, s.alt) ^ 2 * 541.2)
+        local fix = cl * ((s.ias / ref_ias) ^ 2 - 1) / 0.08
+        print(string.format("%22s at the table's %.1f kt: %5.2f (%+.2f)", "", ref_ias, here + fix,
+            here + fix - (ref.pitch - fcom_path)))
+    end
     -- an idle descent: (drag - idle thrust) / weight is the sine of the
     -- path's angle (its ratio to the FCOM's: the drag's, near enough)
     if ref.vs and ref.vs < 0 and s.vs < 0 then

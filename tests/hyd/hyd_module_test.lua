@@ -458,4 +458,22 @@ rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 7)
 frames(3)
 T.equal(get("laminar/B747/autopilot/altitude_hold_status"), 2, "V/S inside the window: ALT HOLD latched (the old capture)")
 
+-- the flaps' angle X-Plane gets (2026-10-30, a correction: notes/AERO.md
+-- §3.10): the FCU's 20 degrees give X-Plane's wings the angle of the FCOM's
+-- lift, the 3D flaps the actual 20; 30 as it is; between detents straight
+for i = 0, 3 do rt:set("laminar/B747/flt_ctrls/fcu/te_deg", i, 20) end
+frames(0.1)
+T.near(get("laminar/B747/flt_ctrls/flaps", 1), 20, 1e-6, "flaps 20: the 3D flaps at 20")
+T.near(get("sim/flightmodel/controls/wing3l_fla2def"), 15.1, 1e-6, "flaps 20: X-Plane's outboard flaps at 15.1")
+T.near(get("sim/flightmodel/controls/wing1l_fla1def"), 15.1, 1e-6, "and the inboard")
+for i = 0, 3 do rt:set("laminar/B747/flt_ctrls/fcu/te_deg", i, 30) end
+frames(0.1)
+T.near(get("sim/flightmodel/controls/wing2r_fla2def"), 30, 1e-6, "flaps 30: 30")
+for i = 0, 3 do rt:set("laminar/B747/flt_ctrls/fcu/te_deg", i, 7.5) end
+frames(0.1)
+T.near(get("sim/flightmodel/controls/wing3r_fla2def"), 3.2 + 2.5 * (8.2 - 3.2) / 5, 1e-6, "7.5 on the way: straight between 5 and 10")
+for i = 0, 3 do rt:set("laminar/B747/flt_ctrls/fcu/te_deg", i, 0) end
+frames(0.1)
+T.equal(get("sim/flightmodel/controls/wing3l_fla2def"), 0, "up: 0")
+
 T.done()
