@@ -60,6 +60,7 @@ enter("100", "L5")
 enter("350", "R1")
 frames(11)
 T.equal(fms.ns.B747_fms_preds(), nil, "no active route: no predictions")
+T.equal(rt:get("laminar/B747/fms/profile/kind", 0), 0, "nor the ND's profile points")
 
 -- the route: ZZAA to ZZAA, DIRECT ALPHA, DELTA; ZULU1 from 34L by ALPHA;
 -- ALPHA1 by DELTA to the ILS 16R; ACTIVATE and EXEC
@@ -135,6 +136,32 @@ T.check(r.tc and r.td and r.tc < r.td, string.format("FL100: T/C %.0f NM before 
 for i, p in ipairs(r.pts) do
     T.check(p.h <= 10000 + 1, "leg " .. i .. " at or below FL100: " .. math.floor(p.h))
 end
+-- the ND's profile points (step 8d3; FCOM p.1149): T/C, T/D and E/D where
+-- they are on the legs' great circles; no S/C with STEP SIZE 0
+local PR = "laminar/B747/fms/profile/"
+local prof = {}
+for k = 0, 7 do
+    local kind = rt:get(PR .. "kind", k)
+    if kind > 0 then prof[kind] = {lat = rt:get(PR .. "lat", k), lon = rt:get(PR .. "lon", k)} end
+end
+T.check(prof[1] and prof[3] and prof[4] and not prof[2], "FL100, STEP SIZE 0: T/C, T/D and E/D, no S/C")
+local rwFix = legs[rwy].fix
+T.check(math.abs(prof[4].lat - rwFix.lat) < 1e-4 and math.abs(prof[4].lon - rwFix.lon) < 1e-4, "the E/D at the runway's threshold")
+local function on_leg(p, x)
+    local RM = fms.ns.B747_route_model
+    local acc = 0
+    for _, l in ipairs(fms.ns.B747_fms_pred_input(10000).legs) do
+        if l.dist > 0 and x <= acc + l.dist then
+            local _, d0 = RM.course(l.p0.lat, l.p0.lon, p.lat, p.lon)
+            local _, d1 = RM.course(p.lat, p.lon, l.p1.lat, l.p1.lon)
+            return math.abs(d0 - (x - acc)) < 0.05 and math.abs(d0 + d1 - l.dist) < 0.05
+        end
+        acc = acc + l.dist
+    end
+    return false
+end
+T.check(on_leg(prof[3], r.td), string.format("the T/D on its leg, %.1f NM along the route", r.td))
+T.check(on_leg(prof[1], r.tc), string.format("the T/C on its leg, %.1f NM along the route", r.tc))
 
 -- PROGRESS page 1 from the predictions (step 8d; FCOM p.1371-1373): TO
 -- the first leg with a point, NEXT the one after, DEST; TO T/C on the

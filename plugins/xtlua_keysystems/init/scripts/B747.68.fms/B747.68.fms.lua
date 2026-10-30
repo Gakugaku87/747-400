@@ -122,6 +122,13 @@ B747DR_fms_lnav_pturn_phase				= deferred_dataref("laminar/B747/fms/lnav/pturn_p
 -- the CDUs' OFST light (step 7d; FCOM p.1210): 1 while LNAV gives the
 -- offset's guidance (not in the 3D cockpit yet)
 B747DR_fms_ofst_light					= deferred_dataref("laminar/B747/fms/ofst_light", "number")
+-- the ND's altitude profile points (6-1/6-2 step 8d3; FCOM p.1149): the
+-- trajectory predictions' points ahead on the active route (kind: 0 none,
+-- 1 T/C, 2 S/C, 3 T/D, 4 E/D, 5 a deceleration; their latitudes and
+-- longitudes), for the ND module (B747.61.xt.nd.lua)
+B747DR_fms_profile_kind					= deferred_dataref("laminar/B747/fms/profile/kind", "array[8]")
+B747DR_fms_profile_lat					= deferred_dataref("laminar/B747/fms/profile/lat", "array[8]")
+B747DR_fms_profile_lon					= deferred_dataref("laminar/B747/fms/profile/lon", "array[8]")
 
 --IRS ND DISPLAY
 B747DR_ND_GPS_Line						= deferred_dataref("laminar/B747/irs/gps_display_line", "string")

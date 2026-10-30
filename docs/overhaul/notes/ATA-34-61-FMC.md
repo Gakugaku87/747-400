@@ -1021,3 +1021,16 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - 回帰：`pred_glue_test.lua` に RTE DATA を足して 58 件（LEGS の 6R の RTE DATA>、見出し、(600) の名前と「>」の位置、ETA と燃料の位置と値、ZZV の燃料、109 の線、2 ページ目の discontinuity、570 の <LEGS と 6R の無反応、LEGS> で LEGS へ）。全 128 本。
   - X-Plane：`s131_fmc_pred` に RTE DATA を足して 21/21。AKAGI 0106z・85.6、discontinuity、ATMUG 0143z・80.8、SAKVA 0147z・80.6、ATVID 0149z・80.6（PROGRESS の TO・NEXT と同じ値）、14 字の線と LEGS>。画面の写真で配置と字の大きさを確かめた。Lua の誤りなし。
 - 残り：ND の T/C・T/D・S/C・E/D（8d3）、WIND のページと W>（8e）。
+
+## 50. 段 8d3 の実装（2026-10-31：ND の T/C・S/C・T/D・E/D と減速点）
+
+- 資料：FCOM p.1149（altitude profile point and identifier、緑：MAP と MAP CTR で、FMC が計算した T/C・S/C・T/D・E/D の位置に丸と名前。減速点は名前なし。FIX のページの予測の高度/ETA の点は別：段 10 以降）。FMSPG p.51（記号と色：緑）、p.153（S/C は巡航の上昇を始める位置。T/D の 200 NM の内には予測しない）。
+- 前：ND のモジュール（`plugins/xtlua_nd/scripts/B747.61.xt.nd/B747.61.xt.nd.lua`）が、AP の `setDistances` の T/D と T/C の位置（`laminar/B747/autopilot/dist/top_of_*`）に緑の丸（記号 8）と名前を描いていた。T/D は電波高度 5,000 ft の上だけ。S/C・E/D・減速点は無かった。
+- 作ったもの：
+  - 予測のモデル（`B747.68.pred_model.lua`）：降下の経路を E/D から作るときに、水平の減速（遷移と制限の速さへ：推定）の始まりを記録し（`dp.decel`）、T/D（降下中は今）より先・E/D まで・巡航高度より下のものを `decel` で出す。
+  - FMC（`B747.68.xt.fms.lua`）：予測のたびに（10 秒ごと、経路の変更や CRZ ALT の入力ですぐ）、T/C、次の S/C、T/D、E/D、減速点の、経路に沿った距離を、予測と同じ脚の大円（直前の点から点へ）の上の緯度経度にして、新設の `laminar/B747/fms/profile/kind`・`lat`・`lon`（各 8 個。kind は 1 T/C、2 S/C、3 T/D、4 E/D、5 減速点、0 無し）に出す。後ろの点と、予測が無いとき（有効な経路が無い、CRZ ALT が MAX 以上）は出さない。経路のモデルの `course_point` を外から使えるようにした。
+  - ND：前の AP の T/C・T/D の代わりにこの点を、両席の MAP（MAP CTR も）で、選んだ範囲の内に、緑の丸と名前（減速点は名前なし。同じ名前を一度しか描かない仕組みは、空の名前の "latlong" で避けた）で描く。PLAN・VOR・APP では描かない（FCOM p.1149）。ND の AP の距離の dataref と電波高度は使わなくなったので外した。
+- 推定：S/C は次の 1 つだけ（FMSPG p.153 の書き方から）。減速点は降下の遷移と制限の速さへの水平の減速だけ（点の速度制限は予測に入っていない：FMC-08）。点は予測の時の経路の上の位置なので、通り過ぎた点は次の予測（10 秒の内）まで残る（拡大の MAP では後ろは描かない）。VNAV の降下は前の AP のままなので、ND の T/D と、AP が降下を始める所は段 9 まで一致しない。
+- 試験：
+  - 回帰：`pred_model_test.lua` 49 件（10,000 ft の減速点が T/D の後・制限の点の手前に 1 つ、降下中にも、E/D が無ければ無し）、`pred_glue_test.lua` 63 件（経路が無ければ点も無し、FL100 で T/C・T/D・E/D、STEP SIZE 0 で S/C 無し、E/D は滑走路の threshold、T/D と T/C はその脚の大円の上の予測の距離）、新設の `tests/displays/nd_profile_test.lua` 10 件（ND の MAP 40 NM に T/C・T/D と減速点 2 つ（名前なし）、90 NM の E/D は 160 NM で、後ろの S/C は無し、kind 0 で消える、PLAN と VOR では無し）。全 129 本。
+  - X-Plane：新設の `s132_nd_profile` 10/10（FL250 から FLCH で上昇。最初の点は T/C、PROGRESS の TO T/C 51NM と同じ所、AKAGI の 3 NM 先。160 NM の ND で経路の線の上に緑の丸と T/C、PLAN では無し）、新設の `s133_nd_profile_des` 11/11（ATMUG の手前 FL350 の巡航。点は T/D・E/D・減速点の順、T/D は PROGRESS の TO T/D 78NM の所。80 NM の ND で T/D は経路の線の上、E/D は RJBB 06L の threshold、160 NM で ATVID と GATES の間に減速点）。Lua の誤りなし。

@@ -68,11 +68,13 @@ end
 -- E/D up to the ceiling of x (NM from now), h, the time (s) and fuel (kg)
 -- from there to the E/D. Straight from anchor to anchor (the E/D and the
 -- constraints the path has to keep), at idle above the first; level
--- decelerations to the schedule's speeds (estimates)
+-- decelerations to the schedule's speeds (estimates), where each starts in
+-- decel {x, h} (step 8d3: the ND's deceleration points, FCOM p.1149)
 local function descent_path(s, kg, cons, xed, hed)
     local P, t, isa = s.P, s.t, s.isa or 0
     local hw = (s.wind and s.wind.des) or 0
     local xs, hs, ts, fs = {xed}, {hed}, {0}, {0}
+    local decel = {}
     local x, h, tt, ff = xed, hed, 0, 0
     local cas = M.schedule(P, s.des, h)
     local ci = #cons    -- the constraints in route order; going back from the last
@@ -106,6 +108,7 @@ local function descent_path(s, kg, cons, xed, hed)
             x = x - gs * dt / NM
             tt = tt + dt
             ff = ff + 4 * P.idle_ff(t, h, mm, isa) * dt / 3600
+            if cas >= tgt - 0.5 then decel[#decel + 1] = {x = x, h = h} end
         else
             cas = tgt
             local dh = 250
@@ -137,7 +140,7 @@ local function descent_path(s, kg, cons, xed, hed)
         end
         push()
     end
-    return {x = xs, h = hs, t = ts, f = fs}
+    return {x = xs, h = hs, t = ts, f = fs, decel = decel}
 end
 
 -- on the descent path (index i up, arrays going back from the E/D), the x
@@ -195,7 +198,8 @@ end
 --   there: the climb's before the T/C, the descent's after the T/D, else
 --   the cruise's)}, tc = x or nil, td = x or nil,
 --   ed = x or nil, sc = {x...}, their times tc_t, td_t, ed_t, sc_t = {t...},
---   ed_i the E/D's leg, dest = {x, t, fuel}, crz = the last cruise altitude}
+--   ed_i the E/D's leg, dest = {x, t, fuel}, crz = the last cruise altitude,
+--   decel = {x...} the descent's decelerations ahead (where each starts)}
 function M.predict(s)
     local P, t, isa = s.P, s.t, s.isa or 0
     local wind = s.wind or {}
@@ -424,6 +428,13 @@ function M.predict(s)
     end
     R.tc, R.td, R.ed, R.sc, R.crz = tc, td, xed, sc, crzAlt
     R.tc_t, R.td_t, R.sc_t = tcT, tdT, scT
+    -- the deceleration points ahead on the descent (after the T/D or now)
+    R.decel = {}
+    if dp and xed then
+        for _, d in ipairs(dp.decel) do
+            if d.h < crzAlt - 1 and d.x > math.max(td or 0, 0) and d.x <= xed then R.decel[#R.decel + 1] = d.x end
+        end
+    end
     R.ed_t = xed and tt or nil
     R.ed_i = xed and s.ed or nil
     -- each waypoint's speed by where it is

@@ -1043,7 +1043,7 @@ function B747_fms_pred_input(crz)
   -- estimate; a conditional leg itself none)
   local from = {lat = simDR_latitude, lon = simDR_longitude}
   for i, l in ipairs(r.legs) do
-    local d = 0
+    local d, p0 = 0, from
     if l.fix then
       local _, dd = R.course(from.lat, from.lon, l.fix.lat, l.fix.lon)
       d = dd
@@ -1060,7 +1060,8 @@ function B747_fms_pred_input(crz)
       con = {kind = "AT", a = (l.fix.elev or 0) + 50}
       rwy = rwy or i
     end
-    legs[i] = {name = l.fix and l.fix.ident or "", dist = d, con = con}
+    -- (p0, p1: the great circle's ends, for the ND's profile points)
+    legs[i] = {name = l.fix and l.fix.ident or "", dist = d, con = con, p0 = p0, p1 = l.fix}
     if l.proc == "SID" then clbLast = i end
     if con and not rwy then lastCon = i end
   end
@@ -1107,6 +1108,49 @@ function B747_fms_pred_input(crz)
     phase = phase, crz = crz, clb = clb, des = des, crzspd = crzspd, legs = legs, ed = ed, clb_last = clbLast,
     steps = steps, wind = {clb = 0, crz = B747_fms_crz_headwind(), des = 0}}
 end
+-- the ND's altitude profile points (6-1/6-2 step 8d3; notes/
+-- ATA-34-61-FMC.md §50; FCOM p.1149): the predictions' T/C, the next S/C
+-- (FMSPG p.153: the step point; estimate: the next one only), T/D, E/D and
+-- the descent's deceleration points ahead, where they are on the legs'
+-- great circles, for the ND module
+B747DR_fms_profile_kind = find_dataref("laminar/B747/fms/profile/kind")
+B747DR_fms_profile_lat = find_dataref("laminar/B747/fms/profile/lat")
+B747DR_fms_profile_lon = find_dataref("laminar/B747/fms/profile/lon")
+local PROFILE_N = 8
+-- the point x NM along the prediction's legs, nil beyond them
+local function pred_point(legs, x)
+  local acc = 0
+  for _, l in ipairs(legs) do
+    if l.dist > 0 and x <= acc + l.dist then
+      local crs = B747_route_model.course(l.p0.lat, l.p0.lon, l.p1.lat, l.p1.lon)
+      return B747_route_model.course_point(l.p0, crs, x - acc)
+    end
+    acc = acc + l.dist
+  end
+  return nil
+end
+local function put_profile(s, r)
+  local pts = {}
+  if r then
+    local function add(kind, x) if x and x > 0 then pts[#pts + 1] = {kind = kind, x = x} end end
+    add(1, r.tc)
+    add(2, r.sc[1])
+    add(3, r.td)
+    add(4, r.ed)
+    for _, x in ipairs(r.decel) do add(5, x) end
+  end
+  for k = 0, PROFILE_N - 1 do
+    local p = pts[k + 1]
+    local q = p and pred_point(s.legs, p.x)
+    if q then
+      B747DR_fms_profile_lat[k] = q.lat
+      B747DR_fms_profile_lon[k] = q.lon
+      B747DR_fms_profile_kind[k] = p.kind
+    elseif B747DR_fms_profile_kind[k] ~= 0 then
+      B747DR_fms_profile_kind[k] = 0
+    end
+  end
+end
 function update_preds()
   if simDRTime < predNext then return end
   predNext = simDRTime + 10
@@ -1114,6 +1158,7 @@ function update_preds()
   -- none with CRZ ALT at or above MAX (ATA34_2 p.611)
   if s and s.crz >= B747_perf_db.max_alt(s.t, s.gw, s.isa) then s = nil end
   predResult = s and B747_pred_model.predict(s) or nil
+  put_profile(s, predResult)
 end
 -- UNABLE CRZ ALT: in the climb, the climb to a cruise altitude meets the
 -- descent path before it (FCOM p.1436; estimate: no minimum cruise time)
