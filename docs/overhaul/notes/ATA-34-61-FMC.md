@@ -1034,3 +1034,20 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 試験：
   - 回帰：`pred_model_test.lua` 49 件（10,000 ft の減速点が T/D の後・制限の点の手前に 1 つ、降下中にも、E/D が無ければ無し）、`pred_glue_test.lua` 63 件（経路が無ければ点も無し、FL100 で T/C・T/D・E/D、STEP SIZE 0 で S/C 無し、E/D は滑走路の threshold、T/D と T/C はその脚の大円の上の予測の距離）、新設の `tests/displays/nd_profile_test.lua` 10 件（ND の MAP 40 NM に T/C・T/D と減速点 2 つ（名前なし）、90 NM の E/D は 160 NM で、後ろの S/C は無し、kind 0 で消える、PLAN と VOR では無し）。全 129 本。
   - X-Plane：新設の `s132_nd_profile` 10/10（FL250 から FLCH で上昇。最初の点は T/C、PROGRESS の TO T/C 51NM と同じ所、AKAGI の 3 NM 先。160 NM の ND で経路の線の上に緑の丸と T/C、PLAN では無し）、新設の `s133_nd_profile_des` 11/11（ATMUG の手前 FL350 の巡航。点は T/D・E/D・減速点の順、T/D は PROGRESS の TO T/D 78NM の所。80 NM の ND で T/D は経路の線の上、E/D は RJBB 06L の threshold、160 NM で ATVID と GATES の間に減速点）。Lua の誤りなし。
+
+## 51. 段 8e1 の実装（2026-10-31：WIND のページと点ごとの風）
+
+- 段 8e を分けた：8e1 は WIND のページと点ごとの風・気温の入力と伝わり方、8e2 は DESCENT FORECAST のページ、8e3 は予測が風と気温を使うこと（測った風との混ぜ方を含む）。
+- 資料：
+  - FCOM p.1363（RTE DATA の W> と >）、p.1364–1366（WIND のページ：XXXXX WINDS、ALT・OAT・DIR/SPD、1L に高度を入れると並べ替えて 1〜4 行に、4 つあれば先に消す、DIR/SPD は方向と速さ、最初の入力は前後に・ほかは先へ伝わり、伝わった値は小さい字、ALT/OAT は標準の減率で他の高度へ、入力は大きい字・計算は小さい字、6R RTE DATA>）。入力した風は予測で測った風と混ぜる（p.1364：8e3）。
+  - FMSPG p.121–124（FOOTS WINDS の例：4 つの高度はすべての点で共通、高度を消すとすべての点のその風も消える、入力が無ければ風は 0、OAT は −80℃ から、海面 55℃・45,100 ft −40℃ の線まで、入力の無いときは標準大気、OAT を入れたページの気温は大きい字・ほかのページは小さい字、RTE DATA> はその点の RTE DATA へ、W> は風の入力のある点）、p.228–232（伝わり方の例：図 4.6-1・4.6-2、点を消したときの伝わり直し、通過した点からも伝わる、10.2 の前後の違い）。
+- 作ったもの：
+  - 純粋なモデル `B747.68.wind_model.lua`（新設、`B747_wind_model`）：経路に高度（`r.windAlts`、4 つまで、高い順）、脚に風（`l.wind[ft] = {dir, kt}`）と気温（`l.oat = {ft, c}`）。点の風は、その点の入力、無ければ前の最後の入力（通過した点も）、無ければ後ろの最初の入力。気温も同じ伝わり方で、ほかの高度は標準大気からの差のまま（圏界面の上は一定）。高度を消すとすべての点のその風も消す。
+  - 経路のモデル：複製（MOD・RTE COPY）で高度の一覧を写し、脚の複製に元の脚（`orig`）を持たせる（WIND の入力を、有効な経路と MOD の同じ脚に入れるため。fix の無い条件の脚もあるので fix では対応できない）。ORIGIN の入力で高度の一覧も消す。
+  - WIND のページ（新設 `activepages/B744.fms.pages.wind.lua`）：RTE DATA の 1R–5R から、その点のページ。1 ページ 1 点で、NEXT・PREV PAGE は経路に沿って進む（"9/13"）。配置は FCOM p.1365 の図：ALT は 1〜5 桁、OAT は 8〜11 桁と小さい「C」、DIR/SPD は 15〜22 桁と小さい「KT」、高度は下に詰めて、4 つ未満なら 1L はダッシュ。ALT/OAT は 5R（小さい見出し、小さい「C」）、6R は RTE DATA>（その点のある RTE DATA のページへ）。字の大きさ：その点の入力は大きく、伝わった値は小さく、風の無い高度はダッシュ。OAT はその点で入力したなら大きく（FMSPG p.122）、ほかは小さく。
+  - 入力：1L に高度（4 つあれば INVALID ENTRY、高度のある行への入力も INVALID ENTRY：先に消す）、高度の行の DELETE でその高度。1R–4R に DIR/SPD（000–360/0–250）、DELETE でその点の入力。5R に ALT/OAT（範囲の外は INVALID ENTRY）、DELETE。入力はすぐ効き、有効な経路と MOD の両方に入る。
+  - RTE DATA：風の入力のある点は W>、1R–5R でその点の WIND のページ（discontinuity の行は何もしない）。
+- 推定：気温の伝わり方（資料は伝わるとだけ）、風の速さの上限 250 kt、入力がすぐ効く（EXEC の要る MOD にしない）、点を消すとその点の入力も消える（10.2 より前の FMC の扱い：FMSPG p.231）。予測が風を使うのは 8e3（今の予測は巡航の今の風だけ）。データリンクの風の要求（570）は無い。
+- 試験：
+  - 回帰：新設の `tests/fms/wind_model_test.lua` 34 件（4 つの高度と並べ方、FMSPG の図 4.6-1 の伝わり方を高度ごとに全点、図 4.6-2 の点を消したとき、通過した点からも伝わる、高度を消す、その点の風を消す、MOD の写しは別の表、気温：FCOM の図の FL330 −53℃ から FL270 −41℃、前後への伝わり、圏界面の上、範囲）、新設の `tests/fms/wind_page_test.lua` 42 件（合成の ZZAA：RTE DATA の 1R から、見出しと配置、FL350 と 270/50、次の点の小さい字、FL300/−40 と FL350 の −50、範囲の外、4 つ目まで・5 つ目と重ねた入力は INVALID ENTRY、DELETE、361 は INVALID ENTRY、RTE DATA> と W>、MOD の脚にも入り EXEC の後も残る）。全 131 本。
+  - X-Plane：新設の `s134_fmc_winds` 16/16（AKAGI の WIND のページ 1/13、FL350 の行と DIR/SPD のダッシュ、標準大気 −54℃ の小さい字、270/50、次の ATMUG で小さい字、FL300/−40 で FL350 は −50、RTE DATA で AKAGI が W>）。写真で配置と字の大きさを確かめた。Lua の誤りなし。

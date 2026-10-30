@@ -2,8 +2,8 @@
 -- the active route's waypoints, five a page as on its LEGS pages, each with
 -- its ETA and fuel remaining (small) from the trajectory predictions (step
 -- 8c; across a discontinuity direct: FCOM p.1363; none after the E/D, as on
--- LEGS) and the WIND page's prompt ">" (the waypoint winds and their page
--- come in step 8e: no function yet). LEGS> at 6R on the 109 (FCOM p.1362),
+-- LEGS) and the waypoint's WIND page at 1R-5R (step 8e1: "W>" where winds
+-- are entered, else ">"; FCOM p.1363). LEGS> at 6R on the 109 (FCOM p.1362),
 -- <LEGS at 6L on the 570 (FCOM p.1361; its REQUEST SEND> only with a wind
 -- uplink, which there is none of: not shown, an estimate). From the active
 -- LEGS page's 6R.
@@ -32,7 +32,7 @@ local function rd_rows(pgNo)
     if l and (l.disc or l.pending) then
       small[k] = "-- ROUTE DISCONTINUITY -"
     elseif l then
-      large[k] = lr(string.format("      %-8s", R.leg_name(l)), ">")
+      large[k] = lr(string.format("      %-8s", R.leg_name(l)), B747_wind_model.entered(l) and "W>" or ">")
       local p = pred and not (pred.ed_i and i > pred.ed_i) and pred.pts[i]
       if p then
         local _, h, m = get_ETA_for_Distance(0, p.t)
@@ -69,6 +69,13 @@ end
 function fmsFunctions.rtedatalegs(fmsO, value)
   if (value == "L") == is570() then B747_cdu_legs_page(fmsO) end
 end
+-- 1R-5R: that row's waypoint's WIND page (FCOM p.1363)
+function fmsFunctions.rtedatawind(fmsO, value)
+  local i = (fmsO.pgNo - 1) * 5 + tonumber(value)
+  local l = B747_fmc_route.rte.legs[i]
+  if l and not (l.disc or l.pending) then B747_cdu_wind_page(fmsO, i) end
+end
 fmsFunctionsDefs["RTEDATA"] = {}
 fmsFunctionsDefs["RTEDATA"]["L6"] = {"rtedatalegs", "L"}
 fmsFunctionsDefs["RTEDATA"]["R6"] = {"rtedatalegs", "R"}
+for k = 1, 5 do fmsFunctionsDefs["RTEDATA"]["R" .. k] = {"rtedatawind", tostring(k)} end
