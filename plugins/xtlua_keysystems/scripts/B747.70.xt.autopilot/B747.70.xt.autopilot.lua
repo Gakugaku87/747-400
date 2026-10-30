@@ -650,6 +650,35 @@ end
 -- localizer course: 6-3 step 1d)
 simDR_afds_track_mag = find_dataref("sim/cockpit2/gauges/indicators/ground_track_mag_pilot")
 local afdsIn = {fd = {L = false, R = false}, hyd = {0, 0, 0}}
+-- the autoland status's redundancy (step 4a; ATA22 p.256): the FCCs'
+-- power (L AC 3 and DC 3, C AC 1 and DC 1, R AC 2 and DC 2: ATA22 p.191,
+-- p.304), the autoland sensors: the IRUs, the radio altimeters and the ILS
+-- receivers valid (X-Plane has two: ILS C as L, an estimate); the
+-- channels armed for multi-channel (their CMD lights)
+B747DR_afds_bus_ac = find_dataref("laminar/B747/electrical/bus/ac")
+B747DR_afds_bus_dc = find_dataref("laminar/B747/electrical/bus/dc")
+B747DR_afds_irs_nav_valid = find_dataref("laminar/B747/irs/nav_valid")
+B747DR_afds_ra_valid = find_dataref("laminar/B747/ra/valid")
+B747DR_ap_cmd_armed = deferred_dataref("laminar/B747/autopilot/cmd_armed", "array[3]")
+local AFDS_FCC_BUS = {2, 0, 1}
+local function afds_power()
+	local n = 0
+	for _, i in ipairs(AFDS_FCC_BUS) do
+		if B747DR_afds_bus_ac[i] > 0.5 and B747DR_afds_bus_dc[i] > 0.5 then n = n + 1 end
+	end
+	return n
+end
+local function afds_sensors()
+	local iru, ra = 0, 0
+	for i = 0, 2 do
+		if B747DR_afds_irs_nav_valid[i] > 0.5 then iru = iru + 1 end
+		if B747DR_afds_ra_valid[i] > 0.5 then ra = ra + 1 end
+	end
+	local l = simDR_hsi_nav1_horizontal_signal == 1 and simDR_hsi_nav1_vertical_signal == 1 and simDR_nav1_gs_flag == 0
+	local r = simDR_hsi_nav2_horizontal_signal == 1 and simDR_hsi_nav2_vertical_signal == 1 and simDR_nav2_gs_flag == 0
+	local ils = (l and 2 or 0) + (r and 1 or 0)
+	return math.min(iru, ra, ils)
+end
 -- LOC's inputs to the roll laws (step 2b): NAV 1's deviation (X-Plane's
 -- dots), both receivers' localizer, the course and the track (magnetic),
 -- the ground speed, the radio altitude; no LOC in NORM's polar areas
@@ -697,15 +726,15 @@ local function afds_inp()
 	afdsIn.flaps_up = simDR_flap_ratio_control < 0.01
 	afdsIn.at_spd = B747DR_ap_FMA_autothrottle_mode == 3
 	-- the roll (step 1b): the heading HDG HOLD holds (magnetic, as X-Plane's
-	-- HDG SEL's target), the FMC's steering, the old autoland's ROLLOUT and
-	-- FLARE arms (until step 4)
+	-- HDG SEL's target), the FMC's steering
 	afdsIn.ra = simDR_radarAlt1
 	afdsIn.hdg = simDR_ap_mag_psi
 	-- HDG SEL valid (step 2a): no heading in NORM's polar areas (FCOM p.1046)
 	afdsIn.hdg_valid = not (B747DR_ap_hdg_ref_true > 0.5 and B747DR_ap_toggle_sw[30] < 0.5)
 	afdsIn.lnav_valid = B747DR_fms_lnav_valid == 1
-	local land = simDR_radarAlt1 > 200 and (B747DR_ap_AFDS_status_annun_pilot == 3 or B747DR_ap_AFDS_status_annun_pilot == 4)
-	afdsIn.old_armed_roll = land and 4 or 0
+	-- the autoland status's redundancy (step 4a)
+	afdsIn.power = afds_power()
+	afdsIn.sensors = afds_sensors()
 	afdsIn.dt = SIM_PERIOD
 	-- the approach (step 1d): LOC's capture by the roll laws (step 2b: the
 	-- ground speed, the intercept angle and the deviation, ATA22 p.290),
@@ -742,7 +771,6 @@ local function afds_inp()
 	else
 		afdsIn.old_law = nil
 	end
-	afdsIn.old_armed_pitch = land and 3 or 0
 	return afdsIn
 end
 -- V/S as the V/S switch sets it, synced to the present vertical speed
@@ -798,6 +826,11 @@ local function afds_sync()
 	if B747DR_ap_cmd_L_mode ~= L then B747DR_ap_cmd_L_mode = L end
 	if B747DR_ap_cmd_C_mode ~= C then B747DR_ap_cmd_C_mode = C end
 	if B747DR_ap_cmd_R_mode ~= R then B747DR_ap_cmd_R_mode = R end
+	-- the channels armed for multi-channel (step 4a): their CMD lights
+	for i, ch in ipairs(B747_afds_model.CHANNELS) do
+		local a = afds.arm[ch] and 1 or 0
+		if B747DR_ap_cmd_armed[i - 1] ~= a then B747DR_ap_cmd_armed[i - 1] = a end
+	end
 	if simDR_autopilot_servos_on ~= on then simDR_autopilot_servos_on = on end
 	local w = afds.disc and 1 or 0
 	if B747DR_CAS_warning_status[0] ~= w then B747DR_CAS_warning_status[0] = w end
@@ -2732,14 +2765,10 @@ function B747_ap_appr_mode_beforeCMDhandler(phase, duration)
 		-- the AFDS model (6-3 step 1d): LOC and G/S armed, the second push;
 		-- with no ILS too (the old one posted RW/ILS CRS ERROR, the FMC's
 		-- message for an ILS course not the runway's); the MCP's heading to
-		-- the course at LOC's capture (the old switch set it at once)
-		local was = afds.gs_arm
+		-- the course at LOC's capture (the old switch set it at once); with a
+		-- channel engaged the others armed for multi-channel (step 4a; before,
+		-- all engaged at once)
 		B747_afds_app()
-		if afds.gs_arm and not was and B747_afds_model.engaged(afds) > 0 and simDR_radarAlt1 > 1500 then
-			-- the old approach's channels together (until 6-3 step 4)
-			B747_afds_model.multi(afds, afds_inp())
-			afds_sync()
-		end
 		B747DR_ap_lastCommand = simDRTime
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[9] = 0 -- SET THE LOC SWITCH ANIMATION TO "OUT"
@@ -2772,16 +2801,8 @@ B747CMD_ap_switch_loc_mode =
 ----- APPROACH MODE ---------------------------------------------------------------------
 
 function B747_ap_appr_mode()
-	-- the approach's modes are the AFDS model's (6-3 step 1d); the old
-	-- approach's channels together below 1,500 ft with LOC and G/S engaged
-	-- (until 6-3 step 4)
-	if simDRTime - B747DR_ap_lastCommand < 0.2 then
-		return
-	end
-	if afds.roll == "LOC" and afds.pitch == "GS" and simDR_radarAlt1 < 1500 and B747_afds_model.engaged(afds) > 0 then
-		B747_afds_model.multi(afds, afds_inp())
-		afds_sync()
-	end
+	-- the approach's modes and channels are the AFDS model's (6-3 steps 1d
+	-- and 4a)
 end
 
 
@@ -2962,51 +2983,15 @@ function B747_ap_afds()
 	if numAPengaged == 0 then
 		B747DR_ap_autoland = 0
 	end
-	local diff = simDRTime - B747DR_ap_lastCommand
-	if diff < 0.1 then
-		return
-	end
-
-	local landAssist = false
-
-	if ((B747DR_autopilot_nav_status ==2 and B747DR_autopilot_gs_status==2) or simDR_autopilot_approach_status > 1 or B747DR_ap_autoland == 1) and simDR_radarAlt1<1500 then
-		landAssist = true
-	end
-	noAutoLand = false
-	if
-		numAPengaged > 0 and (B747DR_ap_approach_mode ~= 0) and simDR_radarAlt1 > 200 and simDR_radarAlt1 < 1000 and
-		B747DR_autopilot_nav_status ~= 2 and
-		B747DR_autopilot_gs_status ~= 2
-	 then
-		set_afds_status(5)
-		noAutoLand = true
-	elseif numAPengaged == 1 then -- TODO:  CHANGE TO "==" WHEN AUTOLAND LOGIC (BELOW) IS IMPLEMENTED
-		-- TODO: IF LOC OR APP CAPTURED ? THEN...
-		if landAssist == true and simDR_radarAlt1 < 1500 then
-			set_afds_status(5) -- AFDS MODE = "NO AUTOLAND" (NOT MODELED)
-		else
-			set_afds_status(2) -- AFDS MODE = "CMD"
-		end
-	elseif numAPengaged == 2 and landAssist == true then
-		set_afds_status(3) -- AFDS MODE = "LAND 2"
-		B747_AFDS_land2_EICAS_status = 1
-	elseif numAPengaged == 3 and landAssist == true then
-		set_afds_status(4) -- AFDS MODE = "LAND 3"
-		B747_AFDS_land3_EICAS_status = 1
-	else
-		if numAPengaged >= 1 then
-			set_afds_status(2) -- AFDS MODE = "CMD"
-		elseif B747DR_ap_fd_shown_capt == 1 or B747DR_ap_fd_shown_fo == 1 then
-			set_afds_status(1) -- AFDS MODE = "FD"
-		else
-			set_afds_status(0)
-		end
-	end
-	if noAutoLand then
-		B747DR_CAS_advisory_status[246] = 1
-	else
-		B747DR_CAS_advisory_status[246] = 0
-	end
+	-- the AFDS model's status (6-3 step 4a): FD, CMD, or below 1,500 ft in
+	-- a multi-channel approach LAND 3, LAND 2 or NO AUTOLAND (before, LAND
+	-- 3 and 2 by the channels engaged only, and NO AUTOLAND for a single
+	-- channel approach below 1,500 ft); the advisory [246] with NO AUTOLAND
+	-- as before (the alerts: step 5)
+	local status = B747_afds_model.status(afds)
+	set_afds_status(status)
+	local na = status == B747_afds_model.STATUS.NO_AUTOLAND and 1 or 0
+	if B747DR_CAS_advisory_status[246] ~= na then B747DR_CAS_advisory_status[246] = na end
 end
 
 ----- FLIGHT MODE ANNUNCIATORS MODE CHANGE BOX ------------------------------------------

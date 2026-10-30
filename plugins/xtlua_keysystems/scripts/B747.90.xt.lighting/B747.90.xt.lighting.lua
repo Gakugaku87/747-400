@@ -429,6 +429,9 @@ B747DR_bleed_air_engine4_start_valve_pos = find_dataref("laminar/B747/air/engine
 B747DR_autopilot_cmd_L_status       = find_dataref("laminar/B747/autopilot/cmd_L_mode/status")
 B747DR_autopilot_cmd_C_status       = find_dataref("laminar/B747/autopilot/cmd_C_mode/status")
 B747DR_autopilot_cmd_R_status       = find_dataref("laminar/B747/autopilot/cmd_R_mode/status")
+-- the channels L, C, R armed for multi-channel: their CMD lights on too
+-- (6-3 step 4a; ATA22 p.288)
+B747DR_autopilot_cmd_armed          = find_dataref("laminar/B747/autopilot/cmd_armed")
 
 B747DR_master_warning               = find_dataref("laminar/B747/warning/master_warning")
 B747DR_master_caution               = find_dataref("laminar/B747/warning/master_caution")
@@ -1514,9 +1517,9 @@ function B747_annunciators()
     annun.b.ap_alt_hold = B747_ternary(simDR_autopilot_alt_hold_status == 2 and simDR_autopilot_fms_vnav_status < 1 and B747DR_ap_vnav_state < 2 and B747DR_autopilot_gs_status < 2, 1, 0)
     annun.b.ap_app 		= B747_ternary((B747DR_autopilot_nav_status > 0 and B747DR_autopilot_gs_status > 0) or B747DR_ap_approach_mode>0, 1, 0)
     annun.b.ap_loc 		= B747_ternary((B747DR_autopilot_nav_status > 0 or B747DR_ap_approach_mode<0) and annun.b.ap_app == 0, 1, 0) --test this
-    annun.b.ap_CMD_L 	= B747_ternary(B747DR_autopilot_cmd_L_status == 1 and simDR_autopilot_servos_on == 1, 1, 0)
-    annun.b.ap_CMD_C 	= B747_ternary(B747DR_autopilot_cmd_C_status == 1 and simDR_autopilot_servos_on == 1, 1, 0)
-    annun.b.ap_CMD_R 	= B747_ternary(B747DR_autopilot_cmd_R_status == 1 and simDR_autopilot_servos_on == 1, 1, 0)
+    annun.b.ap_CMD_L 	= B747_ternary((B747DR_autopilot_cmd_L_status == 1 and simDR_autopilot_servos_on == 1) or B747DR_autopilot_cmd_armed[0] == 1, 1, 0)
+    annun.b.ap_CMD_C 	= B747_ternary((B747DR_autopilot_cmd_C_status == 1 and simDR_autopilot_servos_on == 1) or B747DR_autopilot_cmd_armed[1] == 1, 1, 0)
+    annun.b.ap_CMD_R 	= B747_ternary((B747DR_autopilot_cmd_R_status == 1 and simDR_autopilot_servos_on == 1) or B747DR_autopilot_cmd_armed[2] == 1, 1, 0)
     
     
 end

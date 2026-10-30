@@ -1,6 +1,6 @@
 # 実機との違い（DIFFERENCES）
 
-Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこで違うかを、全分野についてまとめたもの。2026-10-30 の時点（`overhaul`、表示 5-2 の段 7 と MAP CTR まで、FMC・CDU は 6-1・6-2 の段 7f と LEGS の PLAN の CTR・STEP まで、自動操縦は 6-3 の段 3c（G/S と A/P の入り方）まで、カスタム acf の空力とエンジンは FCOM・ICAO との比べ合わせ（5f）をフラップの揚力の形を残して済ませた）。
+Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこで違うかを、全分野についてまとめたもの。2026-10-30 の時点（`overhaul`、表示 5-2 の段 7 と MAP CTR まで、FMC・CDU は 6-1・6-2 の段 7f と LEGS の PLAN の CTR・STEP まで、自動操縦は 6-3 の段 4a（multi-channel と LAND 3・2）まで、カスタム acf の空力とエンジンは FCOM・ICAO との比べ合わせ（5f）をフラップの揚力の形を残して済ませた）。
 
 - 元の調査は [GAP_ANALYSIS.md](GAP_ANALYSIS.md)（作り直し前のコードと資料の読み比べ、550 件）。ここでは、その後の作り直しで直った点を反映し、残っている違いを分野ごとに短く書いた。各項目の括弧は GAP の ID で、詳しい内容と出典は GAP_ANALYSIS.md と `notes/` にある。
 - 基準の機体は FCOM の 109（旅客機、PW4056）。FCOM が P&W の 109 と GE の 570（GE の貨物機）で分けている乗員から見える違い（AFDS の ATT など）は、GE の機体を 570 に合わせる（RR は資料が無いので P&W と同じ：推定）。2026-10-27 に利用者がいったん P&W を 405（PW の改造貨物機）にすると決め、ND の向きと AFDS の G/S を 405 にしたが、同じ日に 109 に戻した。109 と 405 の違いの一覧は [EFFECTIVITY_405.md](EFFECTIVITY_405.md)（参考）。
@@ -29,7 +29,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記。段 5d：PFD の TCAS RA・トランスポンダのコード・ND の WXR の文字） | FMC の位置への GPS の更新、GPWS の地形の look-ahead、PWS、無線の自動同調（FMC の作り直しで） |
 | FMC | 作り直し中（段取り：経路を自前で持ち、12 段で。notes/ATA-34-61-FMC.md §10。段 1：小修正、段 4：航法データベース、段 5a〜5e：経路のモデル、RTE・LEGS・DEP/ARR、現用点と X-Plane の FMS。段 6a〜6d：経路の形と LNAV、ND の線。段 7a〜7d：ホールド、オフセット。段 7e1〜7f：REF NAV DATA、ABEAM PTS、自分で作る点、FIX INFO、RTE 2、procedure turn の形（推定）。LEGS の PLAN の CTR と STEP） | ND の fly-by の旋回の曲線とオフセットの線、FIX INFO の円と方位線、ND の PLAN の中心が両席で 1 つ、VNAV（X-Plane の FMS に流した経路を飛ぶ）、予測 |
 | CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み、段 3：地上準備のページ、段 4：航法データベース、段 5：経路（RTE・LEGS・DEP/ARR）、段 7：HOLD・OFFSET・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO・RTE 2、LEGS の PLAN の CTR と STEP） | 3 台が X-Plane の CDU 1 つを共有（性能・データリンクなど、残りの X-Plane のページ）、性能のページの MOD/EXEC、入力の検査、データリンク |
-| 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）、段 3a〜3c：ピッチの則（V/S・ALT とその捕捉、速度を昇降舵で保つ則（FLCH・T/O・G/A・前の VNAV の速度）と速度の保護、G/S とその捕捉）、A/P の姿勢のループ（自動トリムの帯、スタビライザーの差し引き、姿勢の変化率、入るときの舵面への同期）。LNAV のロールは FMC の指令：6-1 段 6c） | VNAV のサブモードは前の VNAV、autoland の則（FLARE・ROLLOUT） |
+| 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）、段 4a：multi-channel の arm と engage、LAND 3・LAND 2・NO AUTOLAND。段 3a〜3c：ピッチの則（V/S・ALT とその捕捉、速度を昇降舵で保つ則（FLCH・T/O・G/A・前の VNAV の速度）と速度の保護、G/S とその捕捉）、A/P の姿勢のループ（自動トリムの帯、スタビライザーの差し引き、姿勢の変化率、入るときの舵面への同期）。LNAV のロールは FMC の指令：6-1 段 6c） | VNAV のサブモードは前の VNAV、autoland の則（FLARE・ROLLOUT・runway align） |
 | オートスロットル・推力管理 | 未着手 | 推力制限のモード、assumed temperature、THR・HOLD、操縦者の override |
 | 通信（ATA 23） | 未着手 | VHF の電源、ACP の連動、VHF C と HF が無い |
 | 照明（ATA 33） | 未着手（P5 の灯の入力は各系統で移し中） | 外部灯の電源、非常灯、毎フレームの完全 GC |
@@ -414,13 +414,19 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 実機に合わせた点（段 2）：CLR は 1 字、押し続けると全部、DEL は空のときだけ、+/- は交互、メッセージの間は打鍵を受けない。入力のメッセージはその CDU だけ、FMC のメッセージは全 CDU に出てどれかの CLR で全部から消え、条件が続く間は再び出ない。alert で >FMC MESSAGE。ページはすぐ切り替わる。NEXT は最後のページから 1 ページ目へ。CDU の電源が無いとキーが効かず、戻ると MENU。
 - 実機に合わせた点（段 1）：CRZ CG の範囲（前は文字で描画が止まった）、APPROACH REF の FLAP/SPEED の入力の形と複写・削除、EMERGENCY REPORT の DIVERT TO は経路を書き換えない、SPD TRANS は削除だけ、速度の入力は CAS 100–400。
 
-### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a〜1e・2a・2b・3a〜3c、A/P の姿勢のループ）
+### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a〜1e・2a・2b・3a〜3c・4a、A/P の姿勢のループ）
+
+- 実機に合わせた点（段 4a、2026-10-30）：
+  - A/P が 1 台入っているとき APP を押すと、他の A/P は arm して CMD 灯が点き、LOC と G/S を捕まえて電波高度 1,500 ft の下で航跡がコースに沿うと、5 秒後に engage する（ATA22 p.288、p.314、p.318。前は APP を押すと 3 台とも即 engage した）。
+  - LAND 3 は 3 台と FCC の電源・センサー（IRU・電波高度計・ILS 受信機）が 3 重、LAND 2 は 2 重以上（前は engage の台数だけ）。multi-channel の進入で 600 ft までに LAND が出ないか、1 台に減ると NO AUTOLAND。200 ft 未満では LAND 3 から LAND 2 にしない。1 台の進入は CMD のまま（前は 1,500 ft の下で NO AUTOLAND）（ATA22 p.250、p.256；FCOM p.653、p.662）。
+  - FLARE と ROLLOUT は LAND 3・2 のとき arm（FCOM p.671）。multi-channel の G/A から別のモードにすると最初の A/P だけ残る（ATA22 p.318）。
+  - 残り（推定）：X-Plane に無い ILS C を L と同じに数える。ILS の滑走路方位の補正（5° まで）は作らず、コースで見る。電源の 3 重は FCC の母線が生きているかだけ（autoland のときの母線の分離 ELEC-18 は後で）。NO LAND 3 などの EICAS（段 5）、FLARE・ROLLOUT・runway align の則（段 4b〜4d）は前の autoland のまま。
 
 - 実機に合わせた点（段 3c、2026-10-30）：
   - G/S の追従を新しいモデルが行う（前は「−tan（G/S の角度）× 対地速度 − 75 fpm × ドット」の昇降率を前の V/S の則で飛んだ）。偏位を、電波高度から推定した送信所までの距離（3° を仮定）でビームからの直線の距離（G/S DEV ALT）にし、慣性の昇降率と合わせた経路で飛ぶ。信号を失ってもその時の経路を保つ（ATA22 p.346）。
   - G/S の捕捉は、ビームからの距離と寄る速さで決まる（ATA22 p.292。前は両受信機の信号があって 1.5 ドット未満なら、離れていくときでも捕まえた）。
   - A/P は入った瞬間から、操縦輪と操縦桿の位置のまま舵を保つ（ATA22 p.332、p.348：A/P の arm 中はサーボを舵面に同期。前は入ってから 2 秒間は A/P の指令を舵に出さず、そのあと中立からゆっくり動かしたので、浮いた直後に入れると機首が下がってから大きく上がった）。
-  - 残り（推定）：G/S の則のゲイン（3 fpm/ft）、偏位の寄せ方（5 秒）とビームの昇降率の直し方、±1,000 fpm、捕捉の先読み 6 秒と 0.1° の帯。X-Plane の G/S の目盛（1 ドット 0.272°）は測った値。G/S は NAV1 の偏位（FCC ごとの受信機の使い分けは無い）。FLARE・ROLLOUT は段 4（前の autoland のまま）。
+  - 残り（推定）：G/S の則のゲイン（3 fpm/ft）、偏位の寄せ方（5 秒）とビームの昇降率の直し方、±1,000 fpm、捕捉の先読み 6 秒と 0.1° の帯、X-Plane の目盛の端（2.45 ドット以上）では捕まえないこと。X-Plane の G/S の目盛（1 ドット 0.272°）は測った値。G/S は NAV1 の偏位（FCC ごとの受信機の使い分けは無い）。FLARE・ROLLOUT は段 4（前の autoland のまま）。
 
 - 実機に合わせた点（A/P の姿勢のループ、2026-10-28）：
   - 自動トリムは、昇降舵のサーボの指令が 0.4°（G/S 捕捉中 0.6°）を超えたら動かし、0.25° 以内で止める（ATA22 p.149。前はモードごとの幅で帯なし、ALT HOLD は 0.1°）。

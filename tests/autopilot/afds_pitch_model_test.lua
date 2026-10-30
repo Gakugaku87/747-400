@@ -390,6 +390,11 @@ T.check(not P.gs_capture(gs_inp({ra = 1500, vs = -1500, gs_dots = dots_at(-(clos
 T.check(P.gs_capture(gs_inp({ra = 1500, vs = -1500, gs_dots = dots_at(close - 10, 1500)})), "above, going down faster: captured")
 T.check(P.gs_capture(gs_inp({ra = 1500, vs = -743, gs_dots = P.GS_BAND / P.GS_DOT_DEG * 0.9})), "on the beam's path within the band: captured")
 T.check(not P.gs_capture(gs_inp({ra = 1500, gs_valid = false, gs_dots = 0})), "no signal: not")
+-- at the end of the scale (X-Plane's 2.5 dots) the distance is unknown:
+-- climbing 1,500 fpm toward it (the closing would capture 750 ft away), not
+-- until inside the scale
+T.check(not P.gs_capture(gs_inp({ra = 2000, vs = 1500, gs_dots = -2.5})), "2.5 dots below, climbing fast: not (the scale's end)")
+T.check(P.gs_capture(gs_inp({ra = 2000, vs = 1500, gs_dots = -2.4})), "2.4 dots below, climbing fast: captured")
 
 -- an ILS flown: from x ft out, h ft above the transmitter, the beam at
 -- `angle`; the capture by `gs_capture` from `mode`; the signal lost

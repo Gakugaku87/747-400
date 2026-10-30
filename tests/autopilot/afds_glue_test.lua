@@ -429,6 +429,60 @@ T.check(rt:get(APPM) == -1 and rt:get(NAV) == 1 and rt:get(GS) == 0, "LOC armed 
 rt:command(CMD .. "loc_mode")
 frames()
 T.check(rt:get(APPM) == 0 and rt:get(NAV) == 0, "the second LOC push disarms")
+-- 4a: multi-channel through the model. CMD L, APP: C and R armed (their
+-- CMD lights: laminar/B747/autopilot/cmd_armed), not engaged; LOC and G/S
+-- captured at 1,400 ft with the track on the course: all three engaged 5 s
+-- later, LAND 3 (the AFDS status 4) with three FCC power sources (AC and
+-- DC 3, 1, 2), IRUs, radio altimeters and ILS receivers valid; FLARE and
+-- ROLLOUT armed on the FMA; a radio altimeter lost: LAND 2 (3)
+local ARMED, STATUS_P = "laminar/B747/autopilot/cmd_armed", "laminar/B747/autopilot/AFDS/status_annun_pilot"
+for i = 0, 3 do
+    rt:set("laminar/B747/electrical/bus/ac", i, 1)
+    rt:set("laminar/B747/electrical/bus/dc", i, 1)
+end
+for i = 0, 2 do
+    rt:set("laminar/B747/irs/nav_valid", i, 1)
+    rt:set("laminar/B747/ra/valid", i, 1)
+end
+rt:command(CMD .. "cmd_L")
+frames()
+T.equal(rt:get(STATUS_P), 2, "CMD L: the status CMD")
+rt:set(RA, 3000)
+rt:set(RI .. "nav1_hdef_dots_pilot", 0)
+rt:set(RI .. "nav1_vdef_dots_pilot", 0)
+rt:set("sim/cockpit2/gauges/indicators/ground_track_mag_pilot", 336)
+ils(true, true)
+rt:set(RI .. "nav1_vdef_dots_pilot", 0)
+rt:command("laminar/B747/autopilot/approach")
+frames()
+T.check(rt:get(ARMED, 1) == 1 and rt:get(ARMED, 2) == 1 and rt:get(ARMED, 0) == 0, "APP with L engaged: C and R armed")
+T.check(rt:get("laminar/B747/autopilot/cmd_C_mode/status") == 0 and rt:get("laminar/B747/autopilot/cmd_R_mode/status") == 0,
+    "armed, not engaged (before, all three engaged at once)")
+frames(30)
+T.check(rt:get(NAV) == 2 and rt:get(GS) == 2, "LOC and G/S captured")
+T.equal(rt:get("laminar/B747/autopilot/cmd_C_mode/status"), 0, "at 3,000 ft: not engaged")
+rt:set(RA, 1400)
+frames(30 * 4)
+T.equal(rt:get("laminar/B747/autopilot/cmd_C_mode/status"), 0, "4 s below 1,500 ft: not yet")
+frames(30 * 1.2)
+T.check(rt:get("laminar/B747/autopilot/cmd_C_mode/status") == 1 and rt:get("laminar/B747/autopilot/cmd_R_mode/status") == 1,
+    "5 s below 1,500 ft: C and R engaged")
+T.check(rt:get(ARMED, 1) == 0 and rt:get(ARMED, 2) == 0, "no arms left")
+T.equal(rt:get(STATUS_P), 4, "LAND 3")
+T.equal(rt:get(ROLL_ARMED), 4, "the FMA's ROLLOUT armed")
+T.equal(rt:get(PITCH_ARMED), 3, "the FMA's FLARE armed")
+rt:set("laminar/B747/ra/valid", 2, 0)
+frames()
+T.equal(rt:get(STATUS_P), 3, "a radio altimeter lost: LAND 2")
+rt:set("laminar/B747/ra/valid", 2, 1)
+rt:command(CMD .. "yoke_disengage_capt")
+rt:command(CMD .. "yoke_disengage_capt")
+rt:set(FD, 23, 0)
+rt:set(FD, 24, 0)
+frames()
+T.equal(rt:get(STATUS_P), 0, "all off: no status")
+rt:set(FD, 23, 1)
+frames()
 rt:set(RA, 9000)
 -- 1e: TO/GA. A push counted by the engines module (laminar/B747/autopilot/
 -- toga_pushes): G/A in the air with the flaps out of up, the old code's
