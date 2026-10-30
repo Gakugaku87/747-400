@@ -1,0 +1,48 @@
+{
+  "name": "aero_vmcg_hold_110",
+  "description": "測定（合否なし、全シナリオの実行に入れない）：カスタム acf の空力の比較（PROGRESS.md 5f、notes/AERO.md §3.11）、地上の最小操縦速度 VMCG（FCOM p.236 (PI.10.10)：最大離陸推力、海面・15 °C で 121 KIAS）。成田（RJAA）34L でエンジン運転中に開始（機体を読み直す）、フラップ 10、前脚のステアリングは故障にする。110 kt でエンジン 1 を止め、FlyWithLua の `B747_rudder_hold.lua` が 1 秒後からペダルで方位を保つ（いっぱいまで）。`luajit tests/flight/tools/aero_vmcg.lua <記録のフォルダー>` で止めたエンジンの側への横のずれ（VMCG の基準は 30 ft：14 CFR 25.149(e)、資料には無い）と方位を読む。B747/test/rudder_hold_sat はペダルがいっぱいだった秒",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "システムの準備" },
+    { "do": "set", "note": "海面 15 °C", "dref": "sim/weather/region/sealevel_temperature_c", "value": 15 },
+    { "do": "set", "note": "フラップ 10", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.5 },
+    { "do": "set", "note": "ペダルを tiller にする手当てを切る", "dref": "laminar/B747/gear/steering/pedal_tiller", "value": 0 },
+    { "do": "set", "note": "ペダルのステアリングを故障に（VMCG は前脚のステアリングを使わない）", "dref": "laminar/B747/gear/fail/pedal_steering", "value": 1 },
+    { "do": "set", "note": "ラダーは中立", "dref": "sim/cockpit2/controls/yoke_heading_ratio", "value": 0 },
+    { "do": "set", "note": "パーキング・ブレーキを外す", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 0 },
+    { "do": "sleep", "seconds": 8 },
+    { "do": "snapshot", "note": "開始", "drefs": [ "sim/flightmodel/weight/m_total", "sim/flightmodel2/misc/cg_offset_z_mac", "sim/weather/aircraft/temperature_ambient_deg_c", "laminar/B747/engines/type", "sim/flightmodel/position/mag_psi", "sim/flightmodel2/wing/flap1_deg[0]" ] },
+    { "do": "remember", "dref": "sim/flightmodel/position/mag_psi", "as": "hdg0" },
+    { "do": "record_start" },
+    { "do": "set", "note": "スラスト・レバー 4 本を最前方（最大離陸推力）", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 1 },
+    { "do": "cmd", "note": "TO/GA スイッチ", "name": "sim/engines/TOGA_power" },
+    { "do": "wait", "note": "100 kt", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 100, "timeout": 60 },
+    { "do": "snapshot", "note": "100 kt：方位と推力", "drefs": [ "sim/flightmodel/position/mag_psi", "sim/flightmodel/engine/ENGN_EPR[0]", "sim/flightmodel/engine/ENGN_N1_[0]", "sim/flightmodel/engine/POINT_thrust[0]" ] },
+    { "do": "wait", "note": "110 kt", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 110, "timeout": 30 },
+    { "do": "set", "note": "エンジン 1 の故障（すぐ止まる）", "dref": "sim/operation/failures/rel_engfai0", "value": 6 },
+    { "do": "cmd", "note": "ペダルで方位を保つ（1 秒後から）", "name": "FlyWithLua/B747_rudder_hold/start" },
+    { "do": "mark", "note": "engine 1 failed" },
+    { "do": "watch", "note": "方位（記録だけ）", "dref": "sim/flightmodel/position/mag_psi", "timeout": 10 },
+    { "do": "snapshot", "note": "故障から 10 秒", "drefs": [ "sim/flightmodel/position/mag_psi", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "B747/test/rudder_hold_sat", "sim/cockpit2/controls/yoke_heading_ratio" ] },
+    { "do": "cmd", "note": "ペダルを止める", "name": "FlyWithLua/B747_rudder_hold/stop" },
+    { "do": "set", "note": "アイドル", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
+    { "do": "set", "note": "ラダーを戻す", "dref": "sim/cockpit2/controls/yoke_heading_ratio", "value": 0 },
+    { "do": "set", "note": "ブレーキ", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
+    { "do": "wait", "note": "止まる", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "<", "value": 30, "timeout": 60 },
+    { "do": "record_stop" }
+  ]
+}
