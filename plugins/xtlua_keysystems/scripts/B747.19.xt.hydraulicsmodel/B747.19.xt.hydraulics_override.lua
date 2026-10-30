@@ -398,8 +398,10 @@ function flight_controls_override()
     --(B747.45.xt.srm.lua). The pedals and the rudder trim (80 % of the full
     --travel) go through the ratio changers together, so the changers limit
     --their sum (ATA27 p.596, p.612-614, p.634). The pedals from the pilots'
-    --input alone: X-Plane's total_heading_ratio holds some trim in the air
-    local rudder_input=simDR_yoke_heading_ratio+simDR_rudder_trim_ratio*0.8
+    --input alone: X-Plane's total_heading_ratio holds some trim in the air.
+    --The A/P's rudder (ROLLOUT, 6-3 step 4c) moves the pedals: with them the
+    --nose wheel steering (the steering module reads this; FCOM p.659)
+    local rudder_input=simDR_yoke_heading_ratio+simDR_rudder_trim_ratio*0.8+B747DR_ap_rudder_cmd
     if rudder_input>1 then rudder_input=1 elseif rudder_input<-1 then rudder_input=-1 end
     if B747DR_rudder_input~=rudder_input then B747DR_rudder_input=rudder_input end
     B747DR_elevator_ratio=1.0--(1.0-B747_rescale(150,0,350,0.84375,simDR_ias_pilot))*-1

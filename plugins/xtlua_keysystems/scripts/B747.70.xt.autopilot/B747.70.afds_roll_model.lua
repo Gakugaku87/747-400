@@ -29,7 +29,12 @@
 --    turn onto the course at the capture bank needs the distance left, by
 --    the ground speed, the intercept angle and the deviation (p.290), or
 --    the deviation is small.
---  - ROLLOUT: not here (step 4; LOC's law on the ground is wings level).
+--  - ROLLOUT (step 4c; ATA22 p.296, p.348, p.362; FCOM p.659, p.671):
+--    wings level, and a rudder command (s.rudder, the pedals' ratio) to
+--    the centreline on LOC's distance from it and the cross runway
+--    velocity, the distance to the localizer shortened by the ground run;
+--    the A/P applies it with more than one channel (the glue: rudder and
+--    nose wheel steering, FCOM p.659).
 -- A heading or track error asks for a turn of error / TAU_S degrees a
 -- second, the bank of that turn at the TAS, within the bank limit
 -- (estimate: the sources give no gains); the command moves at most
@@ -93,8 +98,21 @@ M.TRACK_DEG = 5
 M.LOC_LIMIT = 25
 M.TRACK_LIMIT = 15
 M.ROLL_DOWN_FT = 5
+-- ROLLOUT (step 4c; estimates: the sources give the inputs, ATA22 p.362):
+-- the cross runway velocity asked to close the distance in ROLLOUT_T_S,
+-- the track within ROLLOUT_DEG of the course; the rudder RUDDER_K a degree
+-- of the track's error and RUDDER_KR a degree a second of its rate, within
+-- RUDDER_MAX; the distance to the localizer from ROLLOUT's engage less the
+-- ground run, ROLLOUT_MIN_M at least
+M.ROLLOUT_T_S = 8
+M.ROLLOUT_DEG = 3
+M.RUDDER_K = 0.15
+M.RUDDER_KR = 0.3
+M.RUDDER_MAX = 0.5
+M.ROLLOUT_MIN_M = 300
 -- the modes with a law here
-M.LAW = {HDG_SEL = true, HDG_HOLD = true, ATT = true, LNAV = true, TO = true, GA = true, LOC = true}
+M.LAW = {HDG_SEL = true, HDG_HOLD = true, ATT = true, LNAV = true, TO = true, GA = true, LOC = true,
+    ROLLOUT = true}
 
 local G = 9.80665
 local KT = 1852 / 3600
@@ -103,7 +121,8 @@ local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
 
 function M.new()
     return {cmd = nil, mode = nil, err = nil, hold = nil, trk_ref = nil, valid = false,
-        last_sel = nil, last_hdg = nil, ref_true = nil, loc_y = nil, loc_track = false}
+        last_sel = nil, last_hdg = nil, ref_true = nil, loc_y = nil, loc_track = false,
+        rudder = nil, ro_dist = nil, last_trk = nil}
 end
 
 function M.inputs()
@@ -201,10 +220,12 @@ local function sel_err(s, inp)
 end
 
 -- the command (degrees of bank, right positive), or nil without a law here
--- (no mode, ROLLOUT); s.valid false for NCD
+-- (no mode); s.valid false for NCD; in ROLLOUT s.rudder the rudder's
+-- command (the pedals' ratio, right positive), else nil
 function M.update(s, inp, dt)
     dt = dt or 0
     local mode = inp.active and inp.mode or nil
+    if mode ~= "ROLLOUT" then s.rudder, s.ro_dist, s.last_trk = nil, nil, nil end
     if not M.LAW[mode] then
         s.mode, s.cmd, s.valid, s.err, s.hold, s.trk_ref = mode, nil, false, nil, nil, nil
         s.loc_y, s.loc_track = nil, false
@@ -212,8 +233,9 @@ function M.update(s, inp, dt)
         return nil
     end
     if mode ~= s.mode then
+        -- (ROLLOUT goes on from LOC's distance)
+        if not (mode == "ROLLOUT" and s.mode == "LOC") then s.loc_y, s.loc_track = nil, false end
         s.mode, s.err, s.hold, s.trk_ref = mode, nil, nil, nil
-        s.loc_y, s.loc_track = nil, false
         if mode == "GA" and not inp.ground then s.trk_ref = inp.trk end
     end
     if s.cmd == nil then s.cmd = inp.bank end
@@ -249,6 +271,27 @@ function M.update(s, inp, dt)
             local want = -math.deg(math.atan(s.loc_y / (math.max(inp.gs, 100) * KT * M.LOOK_S)))
             target = M.bank_for(wrap(want - th), inp, s.loc_track and M.TRACK_LIMIT or M.LOC_LIMIT)
         end
+    elseif mode == "ROLLOUT" then
+        -- wings level (ROLL DOWN: ATA22 p.348); the rudder to the centreline
+        -- on the distance from it and the cross runway velocity (p.362), the
+        -- distance to the localizer shortened by the ground run
+        valid = inp.hdg_valid
+        local th = loc_angle(inp)
+        if s.ro_dist == nil then s.ro_dist = M.loc_distance(inp.ra) end
+        s.ro_dist = math.max(s.ro_dist - inp.gs * KT * dt, M.ROLLOUT_MIN_M)
+        if s.loc_y == nil then s.loc_y = s.ro_dist * math.tan(math.rad(M.loc_dev(inp))) end
+        s.loc_y = s.loc_y + cross_velocity(inp) * dt
+        if inp.loc_valid then
+            local y = s.ro_dist * math.tan(math.rad(M.loc_dev(inp)))
+            s.loc_y = s.loc_y + (y - s.loc_y) * math.min(1, dt / M.BLEND_S)
+        end
+        local v = math.max(inp.gs, 20) * KT
+        local lim = math.sin(math.rad(M.ROLLOUT_DEG))
+        local want = -math.deg(math.asin(clamp(s.loc_y / M.ROLLOUT_T_S / v, -lim, lim)))
+        local rate = (s.last_trk and dt > 0) and wrap(inp.trk_mag - s.last_trk) / dt or 0
+        s.last_trk = inp.trk_mag
+        s.rudder = clamp(M.RUDDER_K * wrap(want - th) - M.RUDDER_KR * rate, -M.RUDDER_MAX, M.RUDDER_MAX)
+        if not valid then s.rudder = 0 end
     elseif inp.ground then
         -- T/O and G/A on the ground: wings level, the track from the lift-off
         s.trk_ref = nil

@@ -77,7 +77,7 @@
 | xtlua_keysystems | B747.55.air | 170 / 1220 | 空調パック、抽気、与圧、温度 | |
 | xtlua_keysystems | B747.60.fltInst | 459 / 4716 | 飛行計器。`fltInst02` が PFD・EICAS・ND 補助、`03` が両席の時計（5-2 段 6a で `B747.60.clock_model.lua` のグルーに。`04` は畳み込んで削除）。表示器と EIU は 5-2 段 1 で `B747.60.display_model.lua`・`B747.60.xt.displays.lua`（§4.18） | |
 | xtlua_keysystems | B747.68.fms | 199 / 13196 | FMC/CDU（3 台、詳細は §6） | |
-| xtlua_keysystems | B747.70.autopilot | 274 / 5449 | AFDS（MCP、FMA、LNAV/VNAV）、autothrottle、autoland（`B747.autoland`）、監視（`monitor`） | throttles、fms_advance |
+| xtlua_keysystems | B747.70.autopilot | 274 / 5449 | AFDS（MCP、FMA、LNAV/VNAV）、autothrottle、監視（`monitor`。autoland は AFDS のモデル：段 4。前の `B747.autoland` は段 4c で外した） | throttles、fms_advance |
 | xtlua_keysystems | B747.90.lighting | 215 / 2403 | 照明（計器、フラッド、外部灯）、気象レーダーの表示操作（`wxr`） | |
 | xtlua_nd | B747.61.nd | 532 / 1314 | ND の地図。ウェイポイント、航法施設、シンボル（`laminar/B747/nd/*`、633 個） | |
 | xtlua_fdr | B747.01.fdr | 34 / 1038 | flight data recorder。モード変化のマーカー（`laminar/B747/fdr/*`）、解析用の記録 | |
@@ -492,6 +492,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 段 3c（2026-10-30、notes §22）：同じピッチのモデルに G/S の則と捕捉の判定（`gs_capture`：グルーが AFDS のモデルの `gs_detect` に渡す）を足した。グルーの `afds_gs_inputs` が NAV1 の G/S のドット（X-Plane の `nav1_vdef_dots_pilot`、ビームの上が正）・両受信機の G/S と旗・電波高度・対地速度・慣性の昇降率を渡す。`afds_control` の G/S の古い則（`getGlideSlopeFPM`）は外した。A/P が外れている間、`afds_control` はピッチとロールの PID の積分を操縦輪の位置と A/P の指令の和に合わせ（ATA22 p.332、p.348）、`hydraulics_override` はサーボが入ってからの 2 秒の待ちをやめた（`autopilot/ap_monitor/servos_on_time` は書き続けるが、油圧のモジュールは読まない）。
 - 段 4a（2026-10-30、notes §24）：AFDS のモデルが multi-channel の arm（`arm`）と engage、autoland の状態（`land`：LAND 3・LAND 2・NO AUTOLAND、`M.status` で状態表示の数）と FLARE・ROLLOUT の arm を持つ。グルーが FCC の電源（`electrical/bus/ac`・`dc`）とセンサー（`irs/nav_valid`・`ra/valid`・NAV1・NAV2 の信号）の数を渡し、状態表示と新設 `autopilot/cmd_armed`（init `B747.70.autopilot`）を書く。照明のモジュールが CMD 灯を `cmd_armed` でも点ける。前の `multi` と、前の autoland の FMA の arm の書き込みは外した。
 - 段 4b（2026-10-30、notes §26）：AFDS のモデルが FLARE の engage（gear altitude と慣性の降下率：グルーの `afds_gear_alt` は電波高度 − 2.3 ft − 10 ft × sin ピッチ）、接地からの NOSE LETDOWN（`letdown`）と retard（`retard`：グルーが A/T の FMA を IDLE に）を持ち、ピッチのモデルが FLARE と NOSE LETDOWN の則を出す（`pitch_law` 1 のまま。`afds_control` は FMA のモードが無くても `pitch_law` が 1 なら内側のループを回す）。グルーの `B747_ap_fma` は LAND 3・2 で前の autoland の後に戻らず、ピッチと A/T の FMA を出す（ロールの FMA だけ前の autoland の ROLLOUT：段 4c まで）。前の autoland（`B747.autoland.lua`）の FLARE と A/T の FMA の書き込みは外した。`afds_control` の内側のピッチのループは、比例・積分・姿勢の変化率のゲインを X-Plane の IAS（`sim/cockpit2/gauges/indicators/airspeed_kts_pilot`）で (250 ÷ IAS)²、1〜3 倍にする。
+- 段 4c（2026-10-30、notes §28）：AFDS のモデルが ROLLOUT（LOC から電波高度 5 ft の下で engage、A/P を外すまで）を持ち、ロールのモデルが ROLLOUT の則（翼を水平、方向舵の指令 `rudder`：LOC の中心線からの距離と滑走路を横切る速さ）を出す。グルーが 2 台以上のとき新設 `autopilot/rudder_cmd`（init `B747.70.autopilot`）に書き、油圧のモジュールの `hydraulics_override` がペダルとトリムに足して `flt_ctrls/rudder_input` にする（操向のモジュールがそれで前輪を切る）。`autopilot/autoland`（SRM の autoland）はグルーが AFDS のモデルの LAND 3・2 から書く（G/A の −2 は今のまま）。前の autoland（`B747.autoland.lua`）は外した：グルーの `B747_ap_fma` は毎フレームロールとピッチの FMA を出し、`afds_control` の前の則の autoland の枝も外した。
 
 ## 7. エンジン型式
 

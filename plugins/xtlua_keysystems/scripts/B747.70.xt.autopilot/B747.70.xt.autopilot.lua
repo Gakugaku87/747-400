@@ -575,13 +575,16 @@ B747DR_ap_engine_type = find_dataref("laminar/B747/engines/type")
 local afds = B747_afds_model.new()
 -- the roll laws (step 2a; notes/ATA-22.md §16): the command the A/P flies
 -- (the hydraulics module's servo law reads it) and the F/Ds show; without
--- a law there (LOC, ROLLOUT) the old law
+-- a law there the old law. ROLLOUT's rudder (step 4c): the pedals' ratio
+-- the A/P adds with more than one channel (the hydraulics module: the
+-- rudder and the nose wheel steering, FCOM p.659)
 dofile("B747.70.afds_roll_model.lua")
 local afdsRoll = B747_afds_roll_model.new()
 local afdsRollIn = B747_afds_roll_model.inputs()
 B747DR_ap_roll_cmd = find_dataref("laminar/B747/autopilot/roll_cmd")
 B747DR_ap_roll_law = find_dataref("laminar/B747/autopilot/roll_law")
 B747DR_ap_roll_valid = find_dataref("laminar/B747/autopilot/roll_valid")
+B747DR_ap_rudder_cmd = find_dataref("laminar/B747/autopilot/rudder_cmd")
 simDR_afds_tas = find_dataref("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot")
 -- the pitch laws (steps 3a and 3b; notes/ATA-22.md §18, §19): the command
 -- the A/P flies (the hydraulics module's servo law reads it) and the F/Ds
@@ -665,8 +668,10 @@ local afdsIn = {fd = {L = false, R = false}, hyd = {0, 0, 0}}
 -- the autoland status's redundancy (step 4a; ATA22 p.256): the FCCs'
 -- power (L AC 3 and DC 3, C AC 1 and DC 1, R AC 2 and DC 2: ATA22 p.191,
 -- p.304), the autoland sensors: the IRUs, the radio altimeters and the ILS
--- receivers valid (X-Plane has two: ILS C as L, an estimate); the
--- channels armed for multi-channel (their CMD lights)
+-- receivers valid (X-Plane has two: ILS C as L, an estimate), their glide
+-- slope only until FLARE (G/S ends there: ATA22 p.342; X-Plane flags it in
+-- the last feet, and LAND 3 went to NO AUTOLAND before the touchdown:
+-- step 4c); the channels armed for multi-channel (their CMD lights)
 B747DR_afds_bus_ac = find_dataref("laminar/B747/electrical/bus/ac")
 B747DR_afds_bus_dc = find_dataref("laminar/B747/electrical/bus/dc")
 B747DR_afds_irs_nav_valid = find_dataref("laminar/B747/irs/nav_valid")
@@ -686,8 +691,11 @@ local function afds_sensors()
 		if B747DR_afds_irs_nav_valid[i] > 0.5 then iru = iru + 1 end
 		if B747DR_afds_ra_valid[i] > 0.5 then ra = ra + 1 end
 	end
-	local l = simDR_hsi_nav1_horizontal_signal == 1 and simDR_hsi_nav1_vertical_signal == 1 and simDR_nav1_gs_flag == 0
-	local r = simDR_hsi_nav2_horizontal_signal == 1 and simDR_hsi_nav2_vertical_signal == 1 and simDR_nav2_gs_flag == 0
+	local gs_used = afds.pitch ~= "FLARE" and not afds.letdown
+	local l = simDR_hsi_nav1_horizontal_signal == 1
+		and (not gs_used or (simDR_hsi_nav1_vertical_signal == 1 and simDR_nav1_gs_flag == 0))
+	local r = simDR_hsi_nav2_horizontal_signal == 1
+		and (not gs_used or (simDR_hsi_nav2_vertical_signal == 1 and simDR_nav2_gs_flag == 0))
 	local ils = (l and 2 or 0) + (r and 1 or 0)
 	return math.min(iru, ra, ils)
 end
@@ -836,6 +844,15 @@ end
 -- the engage state on the datarefs: the channels (CMD lights), the servos
 -- (and the time they came on), AUTOPILOT DISC
 local function afds_sync()
+	-- the SRMs' autoland (step 4c; ATA27 p.636: the rudder ratio changers at
+	-- full authority, the autotrim without its delay): a multi-channel
+	-- landing, LAND 3 or 2 through the rollout (before, the old autoland's
+	-- below 100 ft with three channels); the old go-around's -2 kept (the
+	-- A/T's G/A thrust) until 1,500 ft
+	if B747DR_ap_autoland >= 0 then
+		local al = (afds.land == "LAND3" or afds.land == "LAND2") and 1 or 0
+		if B747DR_ap_autoland ~= al then B747DR_ap_autoland = al end
+	end
 	local L, C, R = afds.L and 1 or 0, afds.C and 1 or 0, afds.R and 1 or 0
 	local on = (L + C + R) > 0 and 1 or 0
 	if on == 1 and simDR_autopilot_servos_on == 0 then B747DR_switching_servos_on = simDRTime end
@@ -928,6 +945,9 @@ local function afds_roll_law()
 	if B747DR_ap_roll_law ~= law then B747DR_ap_roll_law = law end
 	if B747DR_ap_roll_valid ~= valid then B747DR_ap_roll_valid = valid end
 	B747DR_ap_roll_cmd = cmd or 0
+	-- ROLLOUT's rudder with more than one channel (step 4c; FCOM p.659)
+	local rud = (afdsRoll.rudder and B747_afds_model.engaged(afds) >= 2) and afdsRoll.rudder or 0
+	if B747DR_ap_rudder_cmd ~= rud then B747DR_ap_rudder_cmd = rud end
 end
 -- the pitch laws (steps 3a and 3b), each frame after the roll law
 local function afds_pitch_law()
@@ -2825,7 +2845,7 @@ end
 
 ----- FLIGHT MODE ANNUNCIATORS ----------------------------------------------------------
 
-dofile("B747.autoland.lua")
+-- (the old autoland, B747.autoland.lua, is gone: 6-3 step 4c)
 dofile("B747.70.xt.autopilot.monitor.lua")
 function fma_rollModes()
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
@@ -2898,20 +2918,9 @@ function B747_ap_fma(fms)
 			B747DR_ap_lastCommand=simDRTime
 			B747DR_ap_FMA_autothrottle_mode=3
 	end
-	-- the old autoland with LAND 3 or 2 (its runway align, rollout and
-	-- disconnect at 65 kt until 6-3 step 4c): the roll FMA is its ROLLOUT.
-	-- The pitch FMA and the A/T go on (step 4b: the AFDS model's FLARE and
-	-- retard; before, both froze at the LAND's engage)
-	local autoland = (B747DR_ap_AFDS_status_annun_pilot == 3 or B747DR_ap_AFDS_status_annun_pilot == 4) and runAutoland()
-	if autoland and fms~=nil then
-		local endI = table.getn(fms)
-		if endI>0 then
-			local dtoAirport = getDistance(simDR_latitude,simDR_longitude, fms[endI][5], fms[endI][6])
-			B747DR_fmstargetDistance=dtoAirport
-			--B747DR_fmstargetIndex=endI
-			B747DR_ap_vnav_target_alt=fms[endI][9]
-		end
-	end
+	-- (the old autoland is gone, 6-3 step 4c: FLARE, NOSE LETDOWN, the
+	-- retard and ROLLOUT are the AFDS model's; before, with LAND 3 or 2 it
+	-- returned here and the FMAs froze at the LAND's engage)
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
 	-- AUTOTHROTTLE
 	-------------------------------------------------------------------------------------
@@ -2965,7 +2974,7 @@ function B747_ap_fma(fms)
 	if B747DR_ap_fd_shown_capt == 0 and B747DR_ap_fd_shown_fo == 0 and numAPengaged == 0 then
 		B747DR_ap_approach_mode = 0
 	end
-	if not autoland then fma_rollModes() end
+	fma_rollModes()
 	fma_PitchModes()
 end
 

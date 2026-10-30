@@ -6,7 +6,7 @@
 -- push, the knob's way after it, past 180 degrees too), HDG HOLD (wings
 -- level, then the heading; kept through a change of the reference), ATT,
 -- LNAV (only the V2 + 10 limit), T/O and G/A's track, no command without a
--- law (ROLLOUT, no mode, nothing engaged or shown), NCD in NORM's polar
+-- law (no mode, nothing engaged or shown), NCD in NORM's polar
 -- areas, the rate. 2b: LOC's distance from the radio altitude, the
 -- capture (closing at the turn's distance, the small deviation, no signal,
 -- the polar areas), the law (onto the course, LOC TRACK and its limit, the
@@ -49,7 +49,6 @@ T.equal(R.limit("HDG_HOLD", inp({selector = 1})), 25, "the selector is for HDG S
 
 -- no law here
 local s = R.new()
-T.equal(R.update(s, inp({mode = "ROLLOUT"}), DT), nil, "ROLLOUT: not here (step 4)")
 T.equal(R.update(s, inp({mode = nil}), DT), nil, "no mode")
 T.equal(R.update(s, inp({mode = "HDG_SEL", active = false}), DT), nil, "nothing engaged or shown")
 
@@ -202,6 +201,48 @@ T.equal(c, 0, "on the ground: wings level")
 s = R.new()
 c = run(s, loc_inp({mode = "LOC", hdg_valid = false, bank = 4}), 1)
 T.check(not s.valid and c == 4, "LOC in NORM's polar areas: NCD, the bank held")
+
+-- 4c: ROLLOUT (ATA22 p.348, p.362): wings level; the rudder to the
+-- centreline on LOC's distance and the cross runway velocity; none in the
+-- other modes
+s = R.new()
+i = loc_inp({mode = "ROLLOUT", loc_dots = 0, trk_mag = 337, gs = 140, ra = 3, ground = true, bank = 1})
+c = run(s, i, 1)
+T.equal(c, 0, "ROLLOUT: wings level")
+T.near(s.rudder, 0, 1e-9, "on the centreline along the course: no rudder")
+s = R.new()
+i.loc_dots = 0.05
+c = run(s, i, 0.2)
+T.check(s.rudder > 0, "left of the centreline (the beam right): right rudder")
+s = R.new()
+i.loc_dots, i.trk_mag = 0, 339
+run(s, i, 0.2)
+T.check(s.rudder < 0, "on it heading 2 degrees right of the course: left rudder")
+i.trk_mag = 357
+run(s, i, 0.2)
+T.equal(s.rudder, -R.RUDDER_MAX, "a large error: within RUDDER_MAX")
+run(s, loc_inp({mode = "LOC", loc_dots = 0, trk_mag = 337}), DT)
+T.equal(s.rudder, nil, "LOC: no rudder")
+-- closed on a ground run (the track's rate a degree a second for each
+-- tenth of rudder, 1 s behind it; 140 kt slowing 5 kt a second, the
+-- localizer 8,600 ft ahead): 20 ft left of the centreline, back within 3
+-- ft in 20 s without crossing it by more than 3 ft
+s = R.new()
+local y, trk, gs, over, yr = -20 * 0.3048, 337, 140, 0, 0
+local d = 8600 * 0.3048
+for n = 1, 200 do
+    local dev = math.deg(math.atan(y / d))
+    local g = loc_inp({mode = "ROLLOUT", loc_dots = -dev / R.LOC_DOT_DEG, trk_mag = trk, gs = gs, ra = 2, ground = true})
+    R.update(s, g, DT)
+    yr = yr + (10 * s.rudder - yr) * DT
+    trk = trk + yr * DT
+    y = y + gs * 1852 / 3600 * math.sin(math.rad(trk - 337)) * DT
+    d = d - gs * 1852 / 3600 * DT
+    gs = math.max(gs - 5 * DT, 20)
+    over = math.max(over, y / 0.3048)
+end
+T.check(math.abs(y / 0.3048) < 3, ("20 ft left: back within 3 ft in 20 s (%.1f)"):format(y / 0.3048))
+T.check(over < 3, ("not past the centreline by more than 3 ft (%.1f)"):format(over))
 
 -- off and on: the command starts again from the bank there
 s = R.new()

@@ -140,13 +140,8 @@ function ap_director_pitch(pitchMode)
     if debug_flight_directors==1 then
         print("ap_director_pitch for "..pitchMode.." holdAlt "..holdAlt)
     end
-    if B747DR_ap_autoland == 1 then 
-        if debug_flight_directors==1 then
-            print("pitching for autoland "..B744DR_autolandPitch .. " simDR_AHARS_pitch_heading_deg_pilot "..simDR_AHARS_pitch_heading_deg_pilot.. "simDR_touchGround "..simDR_touchGround)
-        end
-        directorSampleRate=0.02
-        return ap_director_pitch_retVal(pitchMode,B744DR_autolandPitch)
-    end
+    -- (the old autoland's flare pitch is gone: FLARE is the pitch laws',
+    -- 6-3 steps 4b and 4c)
     --B747DR_ap_flightPhase == 3 and simDR_autopilot_vs_fpm == -500
     if ((pitchMode==4 and B747DR_ap_flightPhase ~= 3) or pitchMode==8) 
     and (simDR_pressureAlt1> holdAlt+B747DR_alt_capture_window or simDR_pressureAlt1< holdAlt-B747DR_alt_capture_window) then
