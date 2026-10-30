@@ -191,9 +191,11 @@ end
 --   steps       function(h, kg) -> STEP TO (ft), the step point's weight
 --               (kg), or nil: the step climbs (nil: none)
 --   wind        {clb, crz, des} headwinds (kt)
--- returns {pts = per leg {x, h, t, fuel}, tc = x or nil, td = x or nil,
---   ed = x or nil, sc = {x...}, dest = {x, t, fuel}, crz = the last cruise
---   altitude}
+-- returns {pts = per leg {x, h, t, fuel, cas, mach, machMode (the speed
+--   there: the climb's before the T/C, the descent's after the T/D, else
+--   the cruise's)}, tc = x or nil, td = x or nil,
+--   ed = x or nil, sc = {x...}, their times tc_t, td_t, ed_t, sc_t = {t...},
+--   ed_i the E/D's leg, dest = {x, t, fuel}, crz = the last cruise altitude}
 function M.predict(s)
     local P, t, isa = s.P, s.t, s.isa or 0
     local wind = s.wind or {}
@@ -220,6 +222,7 @@ function M.predict(s)
     local crzAlt = s.crz
     local dp = nil
     local tc, td, sc = nil, nil, {}
+    local tcT, tdT, scT = nil, nil, {}
 
     -- the climb's legs: those whose constraints the climb keeps to
     local clbLast = s.clb_last
@@ -347,6 +350,7 @@ function M.predict(s)
         cas = s.cas or (M.schedule(P, s.clb, h))
         phase = s.phase or (h < s.crz - 500 and "clb" or "crz")
         R.pts, sc, tc, td = {}, {}, nil, nil
+        scT, tcT, tdT = {}, nil, nil
         crzAlt = s.crz
         guard = 0
         dp = build_dp(estKg, tcPrev)
@@ -369,13 +373,13 @@ function M.predict(s)
                         break
                     end
                 end
-                if phase ~= "des" then tc = x; phase = "crz" end
+                if phase ~= "des" then tc, tcT = x, tt; phase = "crz" end
             end
             local hcur = h
             while phase == "crz" and guard < 200000 do
                 local r, to = cruise_until(xEnd, hcur)
                 if r == "step" then
-                    sc[#sc + 1] = x
+                    sc[#sc + 1], scT[#sc + 1] = x, tt
                     phase = "sc"
                     local rr = climb_to(to)
                     phase = "crz"
@@ -395,7 +399,7 @@ function M.predict(s)
             if not startDes then
                 local xtd = path_at_h(dp, h)
                 if x < xtd then x = xtd end
-                td = x
+                td, tdT = x, tt
             end
             local _, t0, f0 = path_at_x(dp, x)
             local tbase, bbase = tt, burnt
@@ -419,6 +423,24 @@ function M.predict(s)
         R.pts[i] = {x = lx[i], h = h, t = tt, fuel = fuel0 - burnt}
     end
     R.tc, R.td, R.ed, R.sc, R.crz = tc, td, xed, sc, crzAlt
+    R.tc_t, R.td_t, R.sc_t = tcT, tdT, scT
+    R.ed_t = xed and tt or nil
+    R.ed_i = xed and s.ed or nil
+    -- each waypoint's speed by where it is
+    local inClb = (s.phase or "clb") == "clb"
+    for _, p in ipairs(R.pts) do
+        local cas, mach, mm
+        if inClb and ((tc and p.x < tc - 0.01) or (not tc and td and p.x < td - 0.01)) then
+            cas, mach, mm = M.schedule(P, s.clb, p.h)
+        elseif td and p.x > td + 0.01 or (startDes and xed and p.x <= xed) then
+            cas, mach, mm = M.schedule(P, s.des, p.h)
+        else
+            mach = crz_mach(P, s.crzspd, p.h, s.gw - (fuel0 - p.fuel))
+            cas, mm = P.mach_to_cas(mach, p.h), not s.crzspd.cas
+            if s.crzspd.cas then cas = s.crzspd.cas end
+        end
+        p.cas, p.mach, p.machMode = cas, mach, mm
+    end
     R.dest = {x = xEnd, t = tt, fuel = fuel0 - burnt}
     R.dp = dp
     return R

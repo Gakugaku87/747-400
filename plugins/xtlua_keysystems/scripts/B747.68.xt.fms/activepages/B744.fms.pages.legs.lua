@@ -266,9 +266,38 @@ local function legs_page(st, pgNo, defs, hold_at, fmsID)
   lines[13] = lr(left, right)
   return lines
 end
+-- a waypoint's predicted speed and altitude in small font where its
+-- constraint leaves room (6-1/6-2 step 8d; notes/ATA-34-61-FMC.md §48; FCOM
+-- p.1332): the speed before an altitude constraint's slash, "speed/
+-- altitude" without one (a Mach above the crossover, FL above the
+-- transition altitude); dashes in the descent's region (the arrival's
+-- legs) without a descent path (no E/D); the active route as it is (none
+-- on a modification), from the trajectory predictions (step 8c)
+local function pred_text(st, r, i)
+  local pred = B747_fms_preds()
+  if not (pred and st.active and r == st.rte) then return nil end
+  local l, p = r.legs[i], pred.pts[i]
+  if not (l and p) or l.disc or l.pending or l.spd then return nil end
+  -- (none after the E/D: the missed approach's)
+  if pred.ed_i and i > pred.ed_i then return nil end
+  local dashes = not pred.ed and (l.proc == "STAR" or l.proc == "APPR")
+  local spd, alt = "---", "-----"
+  if not dashes then
+    spd = p.machMode and string.format(".%03d", math.floor(p.mach * 1000 + 0.5)) or string.format("%3d", math.floor(p.cas + 0.5))
+    alt = p.h > trans_alt() and string.format("FL%03d", math.floor(p.h / 100 + 0.5)) or string.format("%5d", math.floor(p.h / 10 + 0.5) * 10)
+  end
+  if l.alt then
+    local cons = R.constraint_text(l, trans_alt()) or ""
+    return string.rep(" ", 24 - #cons - #spd) .. spd .. string.rep(" ", #cons)
+  end
+  return string.rep(" ", 24 - #spd - 1 - #alt) .. spd .. "/" .. alt
+end
+
 local function legs_small(st, pgNo, hold_at, fmsID)
   local r = R.shown(st)
   local lines = {string.format("%23s ", pgNo .. "/" .. num_pages(st))}
+  local ab = not hold_at and abeam_state(st, pgNo)
+  local cp = not hold_at and copy_state(st, pgNo)
   for k = 1, 5 do
     local i = leg_index(pgNo, k)
     local l = r.legs[i]
@@ -282,9 +311,10 @@ local function legs_small(st, pgNo, hold_at, fmsID)
       t = leg_title(st, r, i)
     end
     lines[#lines + 1] = pad(t)
-    lines[#lines + 1] = BLANK
+    -- (not under ABEAM PTS> at 4R or RTE COPY> at 5R)
+    local free = not hold_at and not (ab and k == 4) and not (cp and k == 5)
+    lines[#lines + 1] = (free and pred_text(st, r, i)) or BLANK
   end
-  local ab = not hold_at and abeam_state(st, pgNo)
   if ab then
     lines[8] = ab == "offered" and string.sub(lines[8], 1, 14) .. "          " or string.sub(lines[8], 1, 15) .. "ABEAM PTS"
   end
