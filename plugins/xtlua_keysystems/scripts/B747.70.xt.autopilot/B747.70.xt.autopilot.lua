@@ -575,9 +575,9 @@ B747DR_ap_engine_type = find_dataref("laminar/B747/engines/type")
 local afds = B747_afds_model.new()
 -- the roll laws (step 2a; notes/ATA-22.md §16): the command the A/P flies
 -- (the hydraulics module's servo law reads it) and the F/Ds show; without
--- a law there the old law. ROLLOUT's rudder (step 4c): the pedals' ratio
--- the A/P adds with more than one channel (the hydraulics module: the
--- rudder and the nose wheel steering, FCOM p.659)
+-- a law there the old law. ROLLOUT's rudder (step 4c) and runway align's
+-- (step 4d): the pedals' ratio the A/P adds with more than one channel (the
+-- hydraulics module: the rudder and the nose wheel steering, FCOM p.659)
 dofile("B747.70.afds_roll_model.lua")
 local afdsRoll = B747_afds_roll_model.new()
 local afdsRollIn = B747_afds_roll_model.inputs()
@@ -940,12 +940,16 @@ local function afds_roll_law()
 	r.flaps_up = simDR_flap_ratio_control < 0.01
 	r.v2 = B747DR_airspeed_V2
 	afds_loc_inputs(r)
+	-- runway align (step 4d): the AFDS model's, the heading magnetic
+	r.rwy_align = afds.rwy_align
+	r.hdg_mag = simDR_ap_mag_psi
 	local cmd = B747_afds_roll_model.update(afdsRoll, r, SIM_PERIOD)
 	local law, valid = cmd and 1 or 0, (cmd and afdsRoll.valid) and 1 or 0
 	if B747DR_ap_roll_law ~= law then B747DR_ap_roll_law = law end
 	if B747DR_ap_roll_valid ~= valid then B747DR_ap_roll_valid = valid end
 	B747DR_ap_roll_cmd = cmd or 0
-	-- ROLLOUT's rudder with more than one channel (step 4c; FCOM p.659)
+	-- ROLLOUT's and runway align's rudder with more than one channel (steps
+	-- 4c and 4d; FCOM p.659, p.670)
 	local rud = (afdsRoll.rudder and B747_afds_model.engaged(afds) >= 2) and afdsRoll.rudder or 0
 	if B747DR_ap_rudder_cmd ~= rud then B747DR_ap_rudder_cmd = rud end
 end

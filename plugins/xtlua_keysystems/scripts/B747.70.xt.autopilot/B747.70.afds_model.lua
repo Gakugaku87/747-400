@@ -130,6 +130,9 @@
 --  - ROLLOUT (step 4c; FCOM p.664, p.671; ATA22 p.360): engaged armed from
 --    LOC below ROLLOUT_RA ft RA; kept on the ground until the A/Ps are
 --    disengaged or a G/A.
+--  - Runway align (step 4d; ATA22 p.360, figure p.361; FCOM p.670): with
+--    LAND 3 or 2 in LOC (multi-channel; G/A and ROLLOUT end it with LOC):
+--    the roll law's rudder, no annunciation.
 -- Pure: the switches' events and the airplane's state in; the engage
 -- state, the warning, the roll mode and the modes asked for out.
 --   local A = B747_afds_model                      -- in XTLua, after dofile
@@ -211,7 +214,7 @@ function M.new()
         fd_auto = false, inhibit = false, ra_low = false, ra_t = 0,
         arm = {L = false, C = false, R = false}, first = nil, multi_t = 0, multi_app = false,
         land = nil, flare_arm = false, rollout_arm = false, was_ga = false,
-        letdown = false, retard = false}, {})
+        letdown = false, retard = false, rwy_align = false}, {})
 end
 
 -- the flare height (ft of gear altitude) for a sink rate (ft/s)
@@ -545,7 +548,8 @@ end
 -- down to one channel after a status, or without one by NO_LAND_RA; LAND 3
 -- kept below LAND2_RA. FLARE and ROLLOUT armed with LAND 3 or 2
 -- (FCOM p.671), FLARE and ROLLOUT until they engage (steps 4b and 4c),
--- the status kept through the flare, the nose let down and the rollout
+-- the status kept through the flare, the nose let down and the rollout;
+-- runway align with LAND 3 or 2 in LOC (step 4d: p.361)
 local function land_status(s, inp)
     local n = M.engaged(s)
     local approach = s.loc_arm or s.gs_arm or s.roll == "LOC" or s.pitch == "GS" or s.pitch == "FLARE"
@@ -571,6 +575,7 @@ local function land_status(s, inp)
     local landing = land == "LAND3" or land == "LAND2"
     s.flare_arm = landing and s.pitch == "GS"
     s.rollout_arm = landing and s.roll == "LOC"
+    s.rwy_align = landing and s.roll == "LOC"
 end
 
 -- each frame: `inp` {fd = {L, R} the switches ON, hyd, bank, engine,
@@ -618,6 +623,7 @@ function M.update(s, inp)
             s.loc_arm, s.gs_arm = false, false
             disarm(s)
             s.land, s.flare_arm, s.rollout_arm, s.multi_app = nil, false, false, false
+            s.rwy_align = false
             s.letdown, s.retard = false, false
             return {all_off = true}
         end

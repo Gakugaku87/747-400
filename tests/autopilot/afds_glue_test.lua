@@ -477,6 +477,15 @@ T.equal(rt:get(STATUS_P), 3, "a radio altimeter lost: LAND 2")
 rt:set("laminar/B747/ra/valid", 2, 1)
 frames()
 T.equal(rt:get(STATUS_P), 4, "LAND 3 again")
+-- 4d: runway align with LAND 3 in LOC (FCOM p.670): the wings held level
+-- with the rudder, LOC asking for a right bank (the track 2 degrees left of
+-- the course, as a left engine out yaws it) asking for right rudder; none
+-- before the multi-channel engage (above)
+rt:set("sim/flightmodel/position/mag_psi", 336)
+rt:set("sim/cockpit2/gauges/indicators/ground_track_mag_pilot", 334)
+frames(30 * 2)
+T.check(rt:get("laminar/B747/autopilot/rudder_cmd") > 0, "4d: LAND 3, LOC banking right: the A/P's rudder right")
+rt:set("sim/cockpit2/gauges/indicators/ground_track_mag_pilot", 336)
 -- 4b: FLARE in LAND 3 through the glue: the pitch FMA's FLARE (3) at the
 -- flare height on the gear altitude (the radio altitude less 2.3 ft and 10
 -- ft x sin pitch) for the sink rate (13 ft/s: 50 ft), the A/T's IDLE (2) at 25 ft;
