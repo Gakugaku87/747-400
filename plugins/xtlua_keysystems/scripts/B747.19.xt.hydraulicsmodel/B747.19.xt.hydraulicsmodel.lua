@@ -380,8 +380,12 @@ function flight_start()
   --i 0.003
   --d 0.04
 
+  -- the A/P's inner roll loop (6-3 step 4d, afds_control: the aileron trim
+  -- integrator, ATA22 p.348-349): the same at all speeds; the roll and yaw
+  -- rates' gains there (estimates). Before 0.05 and 0.0003 with the error's
+  -- derivative (DL, DH by altitude: no longer used)
   B747DR_pidRollP = 0.05
-  B747DR_pidRollI = 0.0003
+  B747DR_pidRollI = 0.02
   B747DR_pidRollDL = 0.05 --low 0.1 high 0.4
   B747DR_pidRollDH = 0.1 --low 0.1 high 0.4
 
