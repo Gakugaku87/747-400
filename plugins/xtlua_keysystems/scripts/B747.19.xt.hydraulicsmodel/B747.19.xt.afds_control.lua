@@ -20,6 +20,9 @@ simDR_ap_elev_up = find_dataref("sim/aircraft/controls/acf_elev_up")
 simDR_ap_elev_dn = find_dataref("sim/aircraft/controls/acf_elev_dn")
 -- the pitch rate (the IRUs': X-Plane's body rate, degrees a second)
 simDR_ap_pitch_rate = find_dataref("sim/flightmodel/position/Q")
+-- the roll and yaw rates (the same: the inner roll loop, 6-3 step 4d)
+simDR_ap_roll_rate = find_dataref("sim/flightmodel/position/P")
+simDR_ap_yaw_rate = find_dataref("sim/flightmodel/position/R")
  local lastUp=0
  local lastDown=0
 local pitchRecord={}
@@ -644,6 +647,32 @@ rollPid.target=0
 rollPid.input = 0
 rollPid:compute()
 
+-- the inner roll loop (6-3 step 4d; ATA22 p.348-349: the aileron trim
+-- integrator on the roll command less the bank, with the roll rate and the
+-- yaw rate): the PID's bank error and its integral (B747DR_pidRollP and I),
+-- the integral held while the command moves faster than AP_ROLL_HOLD
+-- degrees a second and for AP_ROLL_SETTLE s after (a turn's roll-in wound
+-- it up: a 5 degree bank limit went to 6.1 at 250 kt in s105; runway
+-- align's roll command for the drift moves slower), the roll rate
+-- AP_ROLL_RATE_K a degree a second against the command's rate, the yaw rate
+-- AP_ROLL_YAW_K against the roll it brings (no derivative of the error).
+-- The same at all speeds, as the proportional gain was: scaled by the
+-- airspeed as the pitch's, at 250 kt with the flaps up (the outboard
+-- ailerons locked out) a 5 degree bank limit went to 7.6 (s105).
+-- Estimates, from a model of X-Plane's 747 at 150 kt fitted to s115
+-- (tests/tools/roll_loop_150kt.lua): as they were (0.05 a degree, an
+-- integral of 0.0003, the error's derivative) the sideslip's roll held the
+-- bank 1.5 to 2 degrees off the command with 0.1 of rudder and turns stayed
+-- 0.5 to 1 degree past it; runway align holds up to 5 degrees of sideslip
+-- (about 0.3 of rudder). The command's rate is smoothed over
+-- AP_ROLL_RATE_TAU s: the roll law's command changes every frame or two of
+-- X-Plane's (at 75 frames a second a 0.9 degree a second roll-in read 0 and
+-- 1.8 to 2.8 by turns, and the integral stayed held: s115)
+local AP_ROLL_RATE_K, AP_ROLL_YAW_K, AP_ROLL_HOLD, AP_ROLL_SETTLE, AP_ROLL_RATE_TAU = 0.04, 0.01, 1, 2, 0.3
+local ap_roll_last_cmd = nil
+local ap_roll_still = 0
+local ap_roll_cmd_rate = 0
+
 -- the roll command: the roll laws' (6-3 steps 2a and 2b: HDG SEL, HDG
 -- HOLD, ATT, LNAV, TO/GA, LOC; not X-Plane's heading modes' averaged roll),
 -- else the old one (no mode of the AFDS model's: the old autoland until
@@ -659,23 +688,30 @@ function ap_roll_assist(doCompute)
     end
     rollPid.kp=B747DR_pidRollP
     rollPid.ki=B747DR_pidRollI
-    B747DR_pidRollD=B747_rescale(3000,B747DR_pidRollDL,30000,B747DR_pidRollDH,B747DR_autopilot_altitude_ft_pfd)
-    rollPid.kd=B747DR_pidRollD
+    rollPid.kd=0
     if simDR_autopilot_servos_on>0 and (B747DR_ap_FMA_active_roll_mode>0) then
         rollPid.input = simDR_AHARS_roll_heading_deg_pilot
         rollPid.target= flight_director_roll
+        local raw = (ap_roll_last_cmd and SIM_PERIOD > 0) and (flight_director_roll - ap_roll_last_cmd) / SIM_PERIOD or 0
+        ap_roll_last_cmd = flight_director_roll
+        ap_roll_cmd_rate = ap_roll_cmd_rate + (raw - ap_roll_cmd_rate) * math.min(1, SIM_PERIOD / AP_ROLL_RATE_TAU)
+        local rate = ap_roll_cmd_rate
+        if math.abs(rate) > AP_ROLL_HOLD then ap_roll_still = 0 else ap_roll_still = ap_roll_still + SIM_PERIOD end
+        if math.abs(rate) > AP_ROLL_HOLD or ap_roll_still < AP_ROLL_SETTLE then rollPid.ki = 0 end
         if doCompute==1 then
             rollPid:compute()
         end
         local speed=B747_rescale(0.1,3,10,5,math.abs(flight_director_roll-simDR_AHARS_roll_heading_deg_pilot))
         if rollPid.output==nil then return 0 end
-        retval=B747_interpolate_value(B747DR_sim_roll_ratio,rollPid.output,-1,1,speed)
+        local out = rollPid.output + AP_ROLL_RATE_K * (rate - simDR_ap_roll_rate) - AP_ROLL_YAW_K * simDR_ap_yaw_rate
+        retval=B747_interpolate_value(B747DR_sim_roll_ratio,math.max(-1, math.min(1, out)),-1,1,speed)
         --print("flight_director_roll "..flight_director_roll.." speed "..speed .." simDR_AHARS_roll_heading_deg_pilot "..simDR_AHARS_roll_heading_deg_pilot .." retval "..retval)
     else
         -- the A/P off: the aileron trim integrator synchronized to the
         -- surfaces (ATA22 p.348), as the pitch's above
         rollPid.output = math.max(-1, math.min(1, simDR_yoke_roll_ratio + B747DR_sim_roll_ratio))
         rollPid:compute(true)
+        ap_roll_last_cmd, ap_roll_still, ap_roll_cmd_rate = nil, 0, 0
         retval=ap_release(B747DR_sim_roll_ratio)
     end
     return retval

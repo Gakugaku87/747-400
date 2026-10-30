@@ -19,7 +19,7 @@
 --   FlyWithLua/B747_flighttest/mark    add a "mark" row to events.csv
 -- Does nothing unless the 747-400 is the user aircraft.
 
-local VERSION = "5"
+local VERSION = "6"
 
 if not string.find(AIRCRAFT_PATH or "", "747-400", 1, true)
     or XPLMFindDataRef("laminar/B747/engines/type") == nil then
@@ -91,6 +91,14 @@ local COLUMNS = {
     {"depr_3", "laminar/B747/engines/display_EPR", 2}, {"depr_4", "laminar/B747/engines/display_EPR", 3},
     {"dn1_1", "laminar/B747/engines/display_N1", 0}, {"dn1_2", "laminar/B747/engines/display_N1", 1},
     {"dn1_3", "laminar/B747/engines/display_N1", 2}, {"dn1_4", "laminar/B747/engines/display_N1", 3},
+    -- the lateral and directional motion and the A/P's rudder (runway align
+    -- and ROLLOUT, 6-3 step 4d: v6)
+    {"beta", "sim/flightmodel/position/beta"}, {"r", "sim/flightmodel/position/R"},
+    {"p", "sim/flightmodel/position/P"},
+    {"trk_mag", "sim/cockpit2/gauges/indicators/ground_track_mag_pilot"},
+    {"rud_in", "laminar/B747/flt_ctrls/rudder_input"}, {"ap_rud", "laminar/B747/autopilot/rudder_cmd"},
+    {"roll_ratio", "laminar/B747/flt_ctrls/custom_roll_ratio"}, {"roll_cmd", "laminar/B747/autopilot/roll_cmd"},
+    {"loc_dots", "sim/cockpit2/radios/indicators/nav1_hdef_dots_pilot"},
 }
 -- the four engines' thrust, for the "thrust" column
 local THRUST = {{"sim/flightmodel/engine/POINT_thrust", 0}, {"sim/flightmodel/engine/POINT_thrust", 1},
