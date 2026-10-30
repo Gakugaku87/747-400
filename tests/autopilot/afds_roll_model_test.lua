@@ -197,6 +197,16 @@ c = run(s, loc_inp({mode = "LOC", loc_dots = -1, trk_mag = 337, ra = 4, bank = 2
 T.equal(c, 0, "below 5 ft: wings level")
 c = run(s, loc_inp({mode = "LOC", loc_dots = -1, trk_mag = 337, ground = true}), 1)
 T.equal(c, 0, "on the ground: wings level")
+-- 4d: LOC TRACK's track error integrated too (the roll attitude
+-- integrator takes LOC's signal: figure p.359), not in the capture
+s = R.new()
+i = loc_inp({mode = "LOC", loc_dots = 0, trk_mag = 336, course = 337, tas = 152, gs = 150, ra = 1000, bank = 0})
+local c2 = run(s, i, 2)
+c = run(s, i, 10)
+T.check(s.loc_track and c > c2 + 0.5, ("LOC TRACK, the track a degree off for 10 s: the bank grows (%.2f, then %.2f)"):format(c2, c))
+s = R.new()
+run(s, loc_inp({mode = "LOC", loc_dots = 1.0, tas = 180, bank = 0}), 3)
+T.check(not s.loc_track and s.loc_int == 0, "the capture: no integral")
 -- NORM's polar areas: NCD
 s = R.new()
 c = run(s, loc_inp({mode = "LOC", hdg_valid = false, bank = 4}), 1)
@@ -243,6 +253,64 @@ for n = 1, 200 do
 end
 T.check(math.abs(y / 0.3048) < 3, ("20 ft left: back within 3 ft in 20 s (%.1f)"):format(y / 0.3048))
 T.check(over < 3, ("not past the centreline by more than 3 ft (%.1f)"):format(over))
+
+-- 4d: runway align (ATA22 p.296, p.360-362; FCOM p.670). The decrab's
+-- table: the crab at 500 ft taken down by what is past 5 (at most 5) below
+-- 500 ft, by 5 (all under 5) below 200 ft
+T.equal(R.decrab(12, 0), 0, "above 500 ft: none")
+T.equal(R.decrab(12, 1), 5, "crab 12 below 500 ft: 5 (FCOM p.670)")
+T.equal(R.decrab(12, 2), 5, "crab 12 below 200 ft: still 5, the most")
+T.equal(R.decrab(8, 1), 3, "crab 8 below 500 ft: down to 5")
+T.equal(R.decrab(8, 2), 5, "crab 8 below 200 ft: the rest of the 5")
+T.equal(R.decrab(3, 1), 0, "crab 3 below 500 ft: none yet")
+T.equal(R.decrab(3, 2), 3, "crab 3 below 200 ft: all of it")
+local function al_inp(o)
+    local i = loc_inp({mode = "LOC", rwy_align = true, loc_dots = 0, trk_mag = 337, course = 337, hdg_mag = 337,
+        gs = 150, tas = 152, ra = 1000, bank = 0})
+    for k, v in pairs(o) do i[k] = v end
+    return i
+end
+-- the wings level (an engine out): the bank LOC's law asks for, and its
+-- integral (the airplane's own bank brings the sideslip's roll in)
+s = R.new()
+run(s, al_inp({bank = 3}), 2)
+T.near(s.rudder, 0, 1e-9, "on the centreline along the course: no rudder, whatever the bank")
+run(s, al_inp({trk_mag = 335}), 1)
+T.check(s.rudder > 0, "the track 2 degrees left (a left engine out): LOC banks right, right rudder")
+local r1 = s.rudder
+run(s, al_inp({trk_mag = 335}), 2)
+T.check(s.rudder > r1, "integrated while LOC asks for the bank")
+s = R.new()
+run(s, al_inp({hdg_mag = 343, trk_mag = 335}), 3)
+T.near(s.rudder, 0, 1e-9, "crab 6 (wind from the right), LOC banking right: upwind, left alone (FCOM p.670)")
+run(s, al_inp({hdg_mag = 343, trk_mag = 339}), 2)
+T.check(s.rudder < 0, "crab 6, LOC banking left (downwind): left rudder to level the wings")
+run(s, al_inp({mode = "LOC", rwy_align = false}), DT)
+T.equal(s.rudder, nil, "no runway align: no rudder")
+-- the decrab: crab 8 at 500 ft, its target down at a degree a second; the
+-- wings' integral kept
+s = R.new()
+run(s, al_inp({hdg_mag = 345, trk_mag = 339, ra = 600}), 2)
+local eo = s.al_eo
+T.check(eo < 0, "above 500 ft, LOC banking downwind: the wings' rudder")
+run(s, al_inp({hdg_mag = 345, trk_mag = 339, ra = 450}), 1)
+T.near(s.al_tgt, 7, 0.06, "below 500 ft: the crab's target from 8 toward 5 at a degree a second")
+T.check(s.rudder < eo, "the nose to the left (toward the course): left rudder")
+T.equal(s.al_eo, eo, "the wings' integral kept in the decrab")
+c = run(s, al_inp({hdg_mag = 345, ra = 450}), 5)
+T.near(s.al_tgt, 5, 1e-9, "crab 5 below 500 ft")
+T.near(c - s.loc_int, R.ALIGN_BANK * 3, 0.1, "the decrab's roll: 0.54 a degree taken down, the upwind wing down (p.362; LOC's own part a few hundredths)")
+run(s, al_inp({hdg_mag = 340, ra = 150}), 3)
+T.near(s.al_tgt, 3, 1e-9, "below 200 ft: 3, the rest of the 5")
+run(s, al_inp({hdg_mag = 340, ra = 600}), 1)
+T.equal(s.al_stage, 2, "the stage kept going back up")
+-- into ROLLOUT: its integral from runway align's rudder; G/A: none
+local before = s.rudder
+R.update(s, al_inp({mode = "ROLLOUT", rwy_align = false, hdg_mag = 340, ra = 4}), DT)
+T.near(s.rudder, before, 0.02, "ROLLOUT goes on from runway align's rudder")
+T.equal(s.al_stage, 0, "runway align's state reset")
+R.update(s, al_inp({mode = "GA", rwy_align = false}), DT)
+T.equal(s.rudder, nil, "G/A: no rudder (the pedals and trim)")
 
 -- off and on: the command starts again from the bank there
 s = R.new()

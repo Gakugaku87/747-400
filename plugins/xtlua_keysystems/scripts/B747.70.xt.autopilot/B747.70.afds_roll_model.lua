@@ -25,7 +25,9 @@
 --    on through a lost signal); the track steered to the beam over a
 --    lookahead; LOC TRACK (the final roll down on the centreline) within
 --    the bank limit of tracking. Wings level from 5 ft (ROLL DOWN,
---    p.348). The capture (`loc_capture`, the AFDS model's input): the
+--    p.348). In LOC TRACK the track error integrated too (step 4d: the
+--    roll attitude integrator takes LOC's signal, figure p.359). The
+--    capture (`loc_capture`, the AFDS model's input): the
 --    turn onto the course at the capture bank needs the distance left, by
 --    the ground speed, the intercept angle and the deviation (p.290), or
 --    the deviation is small.
@@ -34,7 +36,25 @@
 --    the centreline on LOC's distance from it and the cross runway
 --    velocity, the distance to the localizer shortened by the ground run;
 --    the A/P applies it with more than one channel (the glue: rudder and
---    nose wheel steering, FCOM p.659).
+--    nose wheel steering, FCOM p.659). Its integral starts from runway
+--    align's rudder (step 4d).
+--  - Runway align (step 4d; ATA22 p.296, p.360-362; FCOM p.670), in LOC
+--    with the AFDS model's runway align (LAND 3 or 2): a rudder command
+--    too. The crab is the magnetic heading less the runway's (LOC's
+--    course: p.362). From 500 ft the decrab (p.296; FCOM p.670): the crab
+--    at 500 ft taken down by 5 degrees of it past 5 (at most 5) at 500 ft
+--    and by 5 of it (all under 5) at 200 ft, the heading's target moved
+--    there at DECRAB_RATE; the rudder on the crab's error and its integral
+--    less the crab's rate; and a roll command for the drift (p.362, figure
+--    p.349: runway align into the roll attitude integrator), ALIGN_BANK a
+--    degree of the crab taken down, the upwind wing down, on LOC's (its
+--    track loop alone left the airplane drifting downwind). Before, and
+--    between 500 and 200 ft with nothing to take down yet, the wings held
+--    level with the rudder (an engine out: p.360): the bank LOC's law asks
+--    for, and its integral, not with the upwind wing low in a crosswind
+--    (FCOM p.670; FCTM p.169); kept through the decrab. The FCCs have no
+--    engine data (ATA22 p.200-220): the bank the track takes shows the
+--    failure (estimate).
 -- A heading or track error asks for a turn of error / TAU_S degrees a
 -- second, the bank of that turn at the TAS, within the bank limit
 -- (estimate: the sources give no gains); the command moves at most
@@ -98,6 +118,12 @@ M.TRACK_DEG = 5
 M.LOC_LIMIT = 25
 M.TRACK_LIMIT = 15
 M.ROLL_DOWN_FT = 5
+-- LOC TRACK's track error integrated (the roll attitude integrator takes
+-- LOC's signal: ATA22 figure p.359; step 4d), LOC_KI degrees of bank a
+-- degree-second, within LOC_INT: a bank the track takes for good (an engine
+-- out's sideslip) leaves no distance off the centreline (estimates)
+M.LOC_KI = 0.1
+M.LOC_INT = 5
 -- ROLLOUT (step 4c; estimates: the sources give the inputs, ATA22 p.362):
 -- the cross runway velocity asked to close the distance in ROLLOUT_T_S,
 -- the track within ROLLOUT_DEG of the course; the rudder RUDDER_K a degree
@@ -110,6 +136,34 @@ M.RUDDER_K = 0.15
 M.RUDDER_KR = 0.3
 M.RUDDER_MAX = 0.5
 M.ROLLOUT_MIN_M = 300
+-- ROLLOUT's integral, a degree-second of the track's error (step 4d,
+-- estimate)
+M.RUDDER_KI = 0.02
+-- runway align (step 4d): the decrab's heights, ft RA, and most crab taken
+-- down (the sources: ATA22 p.296, p.362; FCOM p.670); estimates: the
+-- heading's target moved DECRAB_RATE degrees a second; the rudder ALIGN_K
+-- a degree of the crab's error, ALIGN_KI a degree-second, less ALIGN_KD a
+-- degree a second of its rate; the wings level by EO_P a degree of LOC's
+-- bank and EO_K a degree-second of it, not with the upwind wing low in a
+-- crab of XWIND_DEG or more; within ALIGN_MAX; the decrab's bank
+-- ALIGN_BANK a degree of crab taken down (the sideslip's side force). On
+-- X-Plane's 747 at 150 kt (tests/tools/lat_model_150kt.lua and
+-- align_sim.lua): a 20 kt crosswind's crab 7.6 degrees down to 5.0 and 2.6,
+-- within a metre of the centreline; an outboard engine out before the
+-- approach (as much as 0.15 of rudder) wings level by 1,300 ft, at most 12 m
+-- off and 2 m at 50 ft
+M.DECRAB_HI = 500
+M.DECRAB_LO = 200
+M.DECRAB_MAX = 5
+M.DECRAB_RATE = 1
+M.ALIGN_K = 0.05
+M.ALIGN_KI = 0.02
+M.ALIGN_KD = 0.1
+M.EO_K = 0.01
+M.EO_P = 0.03
+M.XWIND_DEG = 4
+M.ALIGN_MAX = 0.5
+M.ALIGN_BANK = 0.54
 -- the modes with a law here
 M.LAW = {HDG_SEL = true, HDG_HOLD = true, ATT = true, LNAV = true, TO = true, GA = true, LOC = true,
     ROLLOUT = true}
@@ -122,7 +176,8 @@ local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
 function M.new()
     return {cmd = nil, mode = nil, err = nil, hold = nil, trk_ref = nil, valid = false,
         last_sel = nil, last_hdg = nil, ref_true = nil, loc_y = nil, loc_track = false,
-        rudder = nil, ro_dist = nil, last_trk = nil}
+        rudder = nil, ro_dist = nil, last_trk = nil, ro_int = nil, loc_int = 0,
+        al_stage = 0, al_crab0 = nil, al_tgt = nil, al_int = 0, al_eo = 0, al_last = nil, al_slip = 0}
 end
 
 function M.inputs()
@@ -151,6 +206,9 @@ function M.inputs()
         trk_mag = 0,        -- the track (magnetic)
         gs = 0,             -- the ground speed, kt
         ra = 0,             -- the radio altitude, ft
+        -- runway align (step 4d)
+        rwy_align = false,  -- the AFDS model's runway align
+        hdg_mag = 0,        -- the heading (magnetic)
     }
 end
 
@@ -219,22 +277,69 @@ local function sel_err(s, inp)
     return r
 end
 
+-- the decrab's crab taken down (ATA22 p.296, p.362; FCOM p.670) for the
+-- crab c at 500 ft (its size), at the stage (1 below 500 ft, 2 below 200)
+function M.decrab(c, stage)
+    if stage >= 2 then return math.min(c, M.DECRAB_MAX) end
+    if stage == 1 then return clamp(c - M.DECRAB_MAX, 0, M.DECRAB_MAX) end
+    return 0
+end
+
+-- runway align's rudder (step 4d), in LOC: the decrab, else the wings
+-- level
+local function align(s, inp, dt, bank)
+    local crab = wrap(inp.hdg_mag - inp.course)
+    local rate = (s.al_last and dt > 0) and wrap(crab - s.al_last) / dt or 0
+    s.al_last = crab
+    local ra = inp.ra or 9999
+    local stage = (ra <= M.DECRAB_LO and 2) or (ra <= M.DECRAB_HI and 1) or 0
+    if stage > s.al_stage then
+        if s.al_stage == 0 then s.al_crab0 = crab end
+        s.al_stage = stage
+    end
+    local d = s.al_crab0 and M.decrab(math.abs(s.al_crab0), s.al_stage) or 0
+    s.al_slip = 0
+    if d > 0 then
+        local tgt = s.al_crab0 - (s.al_crab0 >= 0 and d or -d)
+        if s.al_tgt == nil then s.al_tgt = crab end
+        local step = M.DECRAB_RATE * dt
+        s.al_tgt = s.al_tgt + clamp(tgt - s.al_tgt, -step, step)
+        s.al_slip = s.al_crab0 - s.al_tgt
+        local e = s.al_tgt - crab
+        s.al_int = clamp(s.al_int + M.ALIGN_KI * e * dt, -M.ALIGN_MAX, M.ALIGN_MAX)
+        return clamp(s.al_eo + M.ALIGN_K * e + s.al_int - M.ALIGN_KD * rate, -M.ALIGN_MAX, M.ALIGN_MAX)
+    end
+    -- the wings level: LOC's bank (what the track takes: the airplane's
+    -- own bank brings the sideslip's roll in, and the loop ran away) and its
+    -- integral; the upwind wing low in a crosswind left alone
+    local b = bank
+    if math.abs(crab) >= M.XWIND_DEG and b * crab > 0 then return s.al_eo end
+    s.al_eo = clamp(s.al_eo + M.EO_K * b * dt, -M.ALIGN_MAX, M.ALIGN_MAX)
+    return clamp(s.al_eo + M.EO_P * b, -M.ALIGN_MAX, M.ALIGN_MAX)
+end
+
 -- the command (degrees of bank, right positive), or nil without a law here
--- (no mode); s.valid false for NCD; in ROLLOUT s.rudder the rudder's
--- command (the pedals' ratio, right positive), else nil
+-- (no mode); s.valid false for NCD; in ROLLOUT, and in LOC with runway
+-- align, s.rudder the rudder's command (the pedals' ratio, right
+-- positive), else nil
 function M.update(s, inp, dt)
     dt = dt or 0
     local mode = inp.active and inp.mode or nil
-    if mode ~= "ROLLOUT" then s.rudder, s.ro_dist, s.last_trk = nil, nil, nil end
+    local aligning = mode == "LOC" and inp.rwy_align
+    if mode ~= "ROLLOUT" and not aligning then s.rudder, s.ro_dist, s.last_trk, s.ro_int = nil, nil, nil, nil end
+    if not aligning then
+        s.al_stage, s.al_crab0, s.al_tgt, s.al_int, s.al_eo, s.al_last, s.al_slip = 0, nil, nil, 0, 0, nil, 0
+    end
     if not M.LAW[mode] then
         s.mode, s.cmd, s.valid, s.err, s.hold, s.trk_ref = mode, nil, false, nil, nil, nil
-        s.loc_y, s.loc_track = nil, false
+        s.loc_y, s.loc_track, s.loc_int = nil, false, 0
         s.last_sel, s.last_hdg, s.ref_true = inp.sel, inp.hdg, inp.ref_true
         return nil
     end
     if mode ~= s.mode then
         -- (ROLLOUT goes on from LOC's distance)
         if not (mode == "ROLLOUT" and s.mode == "LOC") then s.loc_y, s.loc_track = nil, false end
+        s.loc_int = 0
         s.mode, s.err, s.hold, s.trk_ref = mode, nil, nil, nil
         if mode == "GA" and not inp.ground then s.trk_ref = inp.trk end
     end
@@ -269,7 +374,19 @@ function M.update(s, inp, dt)
         if not s.loc_track and math.abs(s.loc_y) < M.TRACK_M and math.abs(th) < M.TRACK_DEG then s.loc_track = true end
         if not inp.ground and inp.ra >= M.ROLL_DOWN_FT then
             local want = -math.deg(math.atan(s.loc_y / (math.max(inp.gs, 100) * KT * M.LOOK_S)))
-            target = M.bank_for(wrap(want - th), inp, s.loc_track and M.TRACK_LIMIT or M.LOC_LIMIT)
+            local e = wrap(want - th)
+            local lim = s.loc_track and M.TRACK_LIMIT or M.LOC_LIMIT
+            local p = M.bank_for(e, inp, lim)
+            -- the integral near the centreline (LOC TRACK within TRACK_M), not
+            -- past the bank limit
+            if s.loc_track and math.abs(s.loc_y) < M.TRACK_M and math.abs(p + s.loc_int) < lim then
+                s.loc_int = clamp(s.loc_int + M.LOC_KI * e * dt, -M.LOC_INT, M.LOC_INT)
+            end
+            target = clamp(p + s.loc_int, -lim, lim)
+        end
+        if aligning then
+            s.rudder = valid and align(s, inp, dt, target) or 0
+            if not inp.ground and inp.ra >= M.ROLL_DOWN_FT then target = target + M.ALIGN_BANK * s.al_slip end
         end
     elseif mode == "ROLLOUT" then
         -- wings level (ROLL DOWN: ATA22 p.348); the rudder to the centreline
@@ -290,7 +407,10 @@ function M.update(s, inp, dt)
         local want = -math.deg(math.asin(clamp(s.loc_y / M.ROLLOUT_T_S / v, -lim, lim)))
         local rate = (s.last_trk and dt > 0) and wrap(inp.trk_mag - s.last_trk) / dt or 0
         s.last_trk = inp.trk_mag
-        s.rudder = clamp(M.RUDDER_K * wrap(want - th) - M.RUDDER_KR * rate, -M.RUDDER_MAX, M.RUDDER_MAX)
+        local err = wrap(want - th)
+        if s.ro_int == nil then s.ro_int = clamp(s.rudder or 0, -M.RUDDER_MAX, M.RUDDER_MAX) end
+        s.ro_int = clamp(s.ro_int + M.RUDDER_KI * err * dt, -M.RUDDER_MAX, M.RUDDER_MAX)
+        s.rudder = clamp(s.ro_int + M.RUDDER_K * err - M.RUDDER_KR * rate, -M.RUDDER_MAX, M.RUDDER_MAX)
         if not valid then s.rudder = 0 end
     elseif inp.ground then
         -- T/O and G/A on the ground: wings level, the track from the lift-off
