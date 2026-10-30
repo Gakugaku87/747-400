@@ -612,6 +612,15 @@ end
 -- no flag, the radio altitude, the ground speed, the inertial vertical
 -- speed (the capture's too)
 simDR_afds_gs_dots_nav1 = find_dataref("sim/cockpit2/radios/indicators/nav1_vdef_dots_pilot")
+-- the gear altitude (step 4b; ATA22 p.346: the radio altitude, the pitch
+-- and the antenna's distance to the gear): X-Plane's radio altitude reads
+-- AFDS_RA_ZERO ft and AFDS_RA_ARM ft x sin pitch as the main gear touches
+-- (estimate: a line through s114's four touchdowns, 3.12 ft at 5.0
+-- degrees to 3.48 at 7.0; s109's lift-off, 3 ft at 3.1, on it)
+local AFDS_RA_ZERO, AFDS_RA_ARM = 2.3, 10
+local function afds_gear_alt()
+	return simDR_radarAlt1 - AFDS_RA_ZERO - AFDS_RA_ARM * math.sin(math.rad(simDR_afds_pitch))
+end
 local function afds_gs_inputs(p)
 	p.gs_dots = simDR_afds_gs_dots_nav1
 	p.gs_valid = simDR_hsi_nav1_vertical_signal == 1 and simDR_hsi_nav2_vertical_signal == 1
@@ -619,6 +628,9 @@ local function afds_gs_inputs(p)
 	p.ra = simDR_radarAlt1
 	p.gs = simDR_groundspeed * 1.94384
 	p.vs = simDR_afds_vs
+	-- FLARE and NOSE LETDOWN (step 4b)
+	p.gear_alt = afds_gear_alt()
+	p.letdown = afds.letdown
 end
 -- the pitch laws' inputs: the attitude, the inertial vertical speed (ATA22
 -- p.344), the TAS, the altitude, the MCP's V/S, the old VNAV's law by its
@@ -735,6 +747,10 @@ local function afds_inp()
 	-- the autoland status's redundancy (step 4a)
 	afdsIn.power = afds_power()
 	afdsIn.sensors = afds_sensors()
+	-- FLARE's height (step 4b): the gear altitude, the inertial vertical
+	-- speed (the VSI's lags)
+	afdsIn.gear_alt = afds_gear_alt()
+	afdsIn.ivs = simDR_afds_vs
 	afdsIn.dt = SIM_PERIOD
 	-- the approach (step 1d): LOC's capture by the roll laws (step 2b: the
 	-- ground speed, the intercept angle and the deviation, ATA22 p.290),
@@ -2882,22 +2898,27 @@ function B747_ap_fma(fms)
 			B747DR_ap_lastCommand=simDRTime
 			B747DR_ap_FMA_autothrottle_mode=3
 	end
-	if (B747DR_ap_AFDS_status_annun_pilot == 3 or B747DR_ap_AFDS_status_annun_pilot == 4) and runAutoland() then
-		if fms~=nil then
-			local endI = table.getn(fms)
-			if endI>0 then
-				local dtoAirport = getDistance(simDR_latitude,simDR_longitude, fms[endI][5], fms[endI][6])
-				B747DR_fmstargetDistance=dtoAirport
-				--B747DR_fmstargetIndex=endI
-				B747DR_ap_vnav_target_alt=fms[endI][9]
-			end
+	-- the old autoland with LAND 3 or 2 (its runway align, rollout and
+	-- disconnect at 65 kt until 6-3 step 4c): the roll FMA is its ROLLOUT.
+	-- The pitch FMA and the A/T go on (step 4b: the AFDS model's FLARE and
+	-- retard; before, both froze at the LAND's engage)
+	local autoland = (B747DR_ap_AFDS_status_annun_pilot == 3 or B747DR_ap_AFDS_status_annun_pilot == 4) and runAutoland()
+	if autoland and fms~=nil then
+		local endI = table.getn(fms)
+		if endI>0 then
+			local dtoAirport = getDistance(simDR_latitude,simDR_longitude, fms[endI][5], fms[endI][6])
+			B747DR_fmstargetDistance=dtoAirport
+			--B747DR_fmstargetIndex=endI
+			B747DR_ap_vnav_target_alt=fms[endI][9]
 		end
-		return
 	end
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
 	-- AUTOTHROTTLE
 	-------------------------------------------------------------------------------------
-	if B747DR_ap_autoland == 1 and simDR_radarAlt1 < 25 then
+	-- the AFDS's retard (6-3 step 4b; ATA22 p.294: FLARE at 25 ft RA, kept
+	-- through the touchdown) makes the A/T IDLE (FCOM p.671; before, the old
+	-- autoland's with three channels only)
+	if afds.retard then
 
 		B747DR_ap_FMA_autothrottle_mode = 2 --IDLE
 	elseif B747DR_toggle_switch_position[29] == 0 or B747DR_autothrottle_fail > 0 then
@@ -2944,7 +2965,7 @@ function B747_ap_fma(fms)
 	if B747DR_ap_fd_shown_capt == 0 and B747DR_ap_fd_shown_fo == 0 and numAPengaged == 0 then
 		B747DR_ap_approach_mode = 0
 	end
-	fma_rollModes()
+	if not autoland then fma_rollModes() end
 	fma_PitchModes()
 end
 

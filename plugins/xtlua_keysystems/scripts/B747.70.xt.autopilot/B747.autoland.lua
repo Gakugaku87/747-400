@@ -28,10 +28,9 @@ local pitchMeasurements=0;
 
 function start_flare()
   local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
-    print("start_flare ".. simDR_radarAlt1 .. " "..B747DR_ap_FMA_active_roll_mode.. " "..B747DR_ap_FMA_active_pitch_mode.. " "..numAPengaged)
     --B747DR_ap_FMA_active_roll_mode = 4 --ROLLOUT
-    B747DR_ap_FMA_armed_pitch_mode = 0
-    B747DR_ap_FMA_active_pitch_mode = 3 --SHOW FLARE
+    -- (FLARE: the AFDS model's, 6-3 step 4b; this runs each frame below
+    -- 50 ft until the model's FLARE shows, so no print)
     pinThrottle=simDR_allThrottle
     --simCMD_autopilot_autothrottle_off:once()
 
@@ -212,25 +211,20 @@ function during_Flare()
   if altdiff~=0 and lastRod==0 and lastAlt~=0 then lastRod=altdiff
   elseif altdiff~=0 then lastRod=(altdiff+lastRod)/2 end
   if lastRod<0 then lastRod=0 end
-  print("during_Flare ".. simDR_radarAlt1 .. " "..B747DR_ap_FMA_active_roll_mode.. " "..B747DR_ap_FMA_active_pitch_mode)
   --doThrottle()
-  if simDR_onGround==1 then
-    B747DR_ap_FMA_autothrottle_mode = 0
-  elseif simDR_radarAlt1<40 then
-    B747DR_ap_FMA_autothrottle_mode = 2
-  end
+  -- (the A/T's IDLE: the AFDS model's retard, 6-3 step 4b; no print each
+  -- frame of the flare)
   doPitch()
   controlYaw()
 
 
 end
 function end_Flare()
-        B747DR_ap_FMA_active_pitch_mode = 0 --no pitch
+        -- (FLARE's end at the touchdown and the A/T: the AFDS model's, 6-3
+        -- step 4b)
        -- simDR_elevator=initElevator-0.05--B747_set_ap_animation_position(simDR_elevator,initElevator-0.05,0,1,5)
         simDR_pitch  =0.0
         B747DR_ap_active_land=1.0
-
-        B747DR_ap_FMA_autothrottle_mode = 0
 end
 --[[function touchdown_elevator()
       if simDR_AHARS_pitch_heading_deg_pilot>2 then targetPitch=1

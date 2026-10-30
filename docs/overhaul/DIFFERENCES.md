@@ -1,6 +1,6 @@
 # 実機との違い（DIFFERENCES）
 
-Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこで違うかを、全分野についてまとめたもの。2026-10-30 の時点（`overhaul`、表示 5-2 の段 7 と MAP CTR まで、FMC・CDU は 6-1・6-2 の段 7f と LEGS の PLAN の CTR・STEP まで、自動操縦は 6-3 の段 4a（multi-channel と LAND 3・2）まで、カスタム acf の空力とエンジンは FCOM・ICAO との比べ合わせ（5f）をフラップの揚力の形を残して済ませた）。
+Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこで違うかを、全分野についてまとめたもの。2026-10-30 の時点（`overhaul`、表示 5-2 の段 7 と MAP CTR まで、FMC・CDU は 6-1・6-2 の段 7f と LEGS の PLAN の CTR・STEP まで、自動操縦は 6-3 の段 4b（FLARE と NOSE LETDOWN）まで、カスタム acf の空力とエンジンは FCOM・ICAO との比べ合わせ（5f）をフラップの揚力の形を残して済ませた）。
 
 - 元の調査は [GAP_ANALYSIS.md](GAP_ANALYSIS.md)（作り直し前のコードと資料の読み比べ、550 件）。ここでは、その後の作り直しで直った点を反映し、残っている違いを分野ごとに短く書いた。各項目の括弧は GAP の ID で、詳しい内容と出典は GAP_ANALYSIS.md と `notes/` にある。
 - 基準の機体は FCOM の 109（旅客機、PW4056）。FCOM が P&W の 109 と GE の 570（GE の貨物機）で分けている乗員から見える違い（AFDS の ATT など）は、GE の機体を 570 に合わせる（RR は資料が無いので P&W と同じ：推定）。2026-10-27 に利用者がいったん P&W を 405（PW の改造貨物機）にすると決め、ND の向きと AFDS の G/S を 405 にしたが、同じ日に 109 に戻した。109 と 405 の違いの一覧は [EFFECTIVITY_405.md](EFFECTIVITY_405.md)（参考）。
@@ -29,7 +29,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記。段 5d：PFD の TCAS RA・トランスポンダのコード・ND の WXR の文字） | FMC の位置への GPS の更新、GPWS の地形の look-ahead、PWS、無線の自動同調（FMC の作り直しで） |
 | FMC | 作り直し中（段取り：経路を自前で持ち、12 段で。notes/ATA-34-61-FMC.md §10。段 1：小修正、段 4：航法データベース、段 5a〜5e：経路のモデル、RTE・LEGS・DEP/ARR、現用点と X-Plane の FMS。段 6a〜6d：経路の形と LNAV、ND の線。段 7a〜7d：ホールド、オフセット。段 7e1〜7f：REF NAV DATA、ABEAM PTS、自分で作る点、FIX INFO、RTE 2、procedure turn の形（推定）。LEGS の PLAN の CTR と STEP） | ND の fly-by の旋回の曲線とオフセットの線、FIX INFO の円と方位線、ND の PLAN の中心が両席で 1 つ、VNAV（X-Plane の FMS に流した経路を飛ぶ）、予測 |
 | CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み、段 3：地上準備のページ、段 4：航法データベース、段 5：経路（RTE・LEGS・DEP/ARR）、段 7：HOLD・OFFSET・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO・RTE 2、LEGS の PLAN の CTR と STEP） | 3 台が X-Plane の CDU 1 つを共有（性能・データリンクなど、残りの X-Plane のページ）、性能のページの MOD/EXEC、入力の検査、データリンク |
-| 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）、段 4a：multi-channel の arm と engage、LAND 3・LAND 2・NO AUTOLAND。段 3a〜3c：ピッチの則（V/S・ALT とその捕捉、速度を昇降舵で保つ則（FLCH・T/O・G/A・前の VNAV の速度）と速度の保護、G/S とその捕捉）、A/P の姿勢のループ（自動トリムの帯、スタビライザーの差し引き、姿勢の変化率、入るときの舵面への同期）。LNAV のロールは FMC の指令：6-1 段 6c） | VNAV のサブモードは前の VNAV、autoland の則（FLARE・ROLLOUT・runway align） |
+| 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）、段 4a：multi-channel の arm と engage、LAND 3・LAND 2・NO AUTOLAND、段 4b：FLARE と NOSE LETDOWN、A/T の IDLE。段 3a〜3c：ピッチの則（V/S・ALT とその捕捉、速度を昇降舵で保つ則（FLCH・T/O・G/A・前の VNAV の速度）と速度の保護、G/S とその捕捉）、A/P の姿勢のループ（自動トリムの帯、スタビライザーの差し引き、姿勢の変化率、入るときの舵面への同期、速度によるゲイン）。LNAV のロールは FMC の指令：6-1 段 6c） | VNAV のサブモードは前の VNAV、autoland の ROLLOUT・runway align |
 | オートスロットル・推力管理 | 未着手 | 推力制限のモード、assumed temperature、THR・HOLD、操縦者の override |
 | 通信（ATA 23） | 未着手 | VHF の電源、ACP の連動、VHF C と HF が無い |
 | 照明（ATA 33） | 未着手（P5 の灯の入力は各系統で移し中） | 外部灯の電源、非常灯、毎フレームの完全 GC |
@@ -414,7 +414,15 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 実機に合わせた点（段 2）：CLR は 1 字、押し続けると全部、DEL は空のときだけ、+/- は交互、メッセージの間は打鍵を受けない。入力のメッセージはその CDU だけ、FMC のメッセージは全 CDU に出てどれかの CLR で全部から消え、条件が続く間は再び出ない。alert で >FMC MESSAGE。ページはすぐ切り替わる。NEXT は最後のページから 1 ページ目へ。CDU の電源が無いとキーが効かず、戻ると MENU。
 - 実機に合わせた点（段 1）：CRZ CG の範囲（前は文字で描画が止まった）、APPROACH REF の FLAP/SPEED の入力の形と複写・削除、EMERGENCY REPORT の DIVERT TO は経路を書き換えない、SPD TRANS は削除だけ、速度の入力は CAS 100–400。
 
-### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a〜1e・2a・2b・3a〜3c・4a、A/P の姿勢のループ）
+### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a〜1e・2a・2b・3a〜3c・4a・4b、A/P の姿勢のループ）
+
+- 実機に合わせた点（段 4b、2026-10-30）：
+  - LAND 3・2 のとき、gear altitude が降下率で決まる高さ（40〜60 ft：ATA22 p.342）になると FLARE が engage して FMA に FLARE が出る。降下率を、接地で 1.5 ft/s になるよう一定の減速で減らす則で飛ぶ（ATA22 p.294、p.346）。前は前の autoland が 50 ft で FMA だけ FLARE にし、ピッチは G/S の則のままだった（段 3c から。その前は 3 台のときだけ「事前の平均のピッチ＋1〜2.5°」を目標にし、LAND 2 では flare しなかった）。
+  - 電波高度 25 ft で A/T が IDLE になり（FCOM p.671。前は 3 台のときだけ 40 ft で）、接地で FLARE が消え、IDLE は残る（前は 5 ft で FMA と A/T の表示を消した）。
+  - 接地で機首を下ろし（姿勢の 1° 下から毎秒 1°）、地上で 2° 未満になると機首下げの指令で前脚を押さえる（NOSE LETDOWN：ATA22 p.294、p.332。前は無し）。
+  - LAND 3・2 の間もピッチと A/T の FMA が変わる（前は LAND の engage の時のまま止まっていた）。
+  - A/P の内側のピッチのループは、250 kt より遅いとゲインを上げる（姿勢の差は速度の 2 乗に反比例して最大 3 倍、姿勢の変化率はさらに強く）。前は進入の速度で姿勢が指令から約 1 秒遅れた。
+  - 残り（推定）：FLARE の則の形と値（資料は接地だけ）、NOSE LETDOWN の速さと指令、gear altitude の電波高度の読み（主脚の接地で 2.3 ft ＋ 10 ft × sin（ピッチ））、5 ft の下で FLARE の指令を上げないこと、内側のループのゲインの速度の表。ROLLOUT と runway align（段 4c・4d）は前の autoland のまま（接地後は方向舵のトリムを中央へ、65 kt で A/P を外す。ロールの FMA は接地後も LOC で ROLLOUT は arm のまま：FCOM p.671 は約 5 ft で ROLLOUT）。
 
 - 実機に合わせた点（段 4a、2026-10-30）：
   - A/P が 1 台入っているとき APP を押すと、他の A/P は arm して CMD 灯が点き、LOC と G/S を捕まえて電波高度 1,500 ft の下で航跡がコースに沿うと、5 秒後に engage する（ATA22 p.288、p.314、p.318。前は APP を押すと 3 台とも即 engage した）。

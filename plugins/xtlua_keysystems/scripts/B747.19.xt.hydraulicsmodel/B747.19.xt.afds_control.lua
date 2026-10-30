@@ -599,7 +599,9 @@ function ap_pitch_assist(doCompute)
     pitchPid.ki=B747DR_pidPitchI * gain
     pitchPid.kd=B747DR_pidPitchD
     
-    if simDR_autopilot_servos_on>0 and (B747DR_ap_FMA_active_pitch_mode>0 or B747DR_ap_autoland == 1) then
+    -- (a pitch law's command too: NOSE LETDOWN on the ground has no FMA
+    -- mode, 6-3 step 4b)
+    if simDR_autopilot_servos_on>0 and (B747DR_ap_FMA_active_pitch_mode>0 or B747DR_ap_autoland == 1 or B747DR_ap_pitch_law == 1) then
         simDR_electric_trim=0
         local trim = simDR_elevator_trim
         if ap_trim_last and pitchPid._Iterm then
