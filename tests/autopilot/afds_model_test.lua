@@ -39,7 +39,8 @@ local function inp(o)
         old_law = o.old_law, old_armed_pitch = o.old_armed_pitch, old_hold_alt = o.old_hold_alt,
         loc_detect = o.loc_detect, gs_detect = o.gs_detect, course_err = o.course_err,
         gs_after_loc = o.gs_after_loc, sensors = o.sensors, power = o.power, gear_alt = o.gear_alt,
-        fcc = o.fcc, mcp = o.mcp, stby = o.stby, iru = o.iru, adc = o.adc, trim = o.trim, wheel = o.wheel}
+        fcc = o.fcc, mcp = o.mcp, stby = o.stby, iru = o.iru, adc = o.adc, trim = o.trim, wheel = o.wheel,
+        cap = o.cap}
 end
 
 -- engage with both F/Ds OFF: V/S and HDG HOLD (FCOM p.640; ATA22 p.266)
@@ -980,4 +981,45 @@ T.check(A.engaged(mf) == 1 and mf.pitch == "FLARE", "C and R lost in FLARE: L al
 T.equal(A.status(mf), A.STATUS.NO_AUTOLAND, "NO AUTOLAND")
 approach(mf, {ra = 4, gear_alt = 1, vs = -120, hyd = {0, 0, 3000}})
 T.check(A.engaged(mf) == 0 and mf.disc, "a single channel in FLARE under 5 ft: disengaged, AUTOPILOT DISC")
+
+-- 5b: the autoland capability's EICAS message (ATA22 p.373-374, p.384-386;
+-- FCOM p.662, p.677): one failure of a kind NO LAND 3, two NO AUTOLAND
+local function cap(o)
+    local c = {}
+    for k, v in pairs(A.CAP_FULL) do c[k] = v end
+    for k, v in pairs(o or {}) do c[k] = v end
+    return c
+end
+T.equal(A.capability(cap()), 3, "5b: all there: 3")
+T.equal(A.capability(cap({iru = 2})), 2, "an IRU failed: 2 (NO LAND 3)")
+T.equal(A.capability(cap({ra = 1})), 1, "two radio altimeters failed: NO AUTOLAND")
+T.equal(A.capability(cap({srm = 1})), 2, "an SRM failed: NO LAND 3")
+T.equal(A.capability(cap({srm = 0})), 1, "both SRMs: NO AUTOLAND (FCOM p.47)")
+T.equal(A.capability(cap({channels = 2, ils = 2})), 2, "a channel and an ILS receiver: one of each kind, NO LAND 3")
+T.equal(A.capability(nil), 3, "no inputs: whole")
+-- in cruise (not multi-channel): advisories
+local al = A.new()
+A.update(al, inp({cap = cap({iru = 2})}))
+T.check(al.alert == "NO_LAND3" and al.alert_level == "advisory", "cruise, an IRU failed: NO LAND 3, an advisory")
+A.update(al, inp({cap = cap({iru = 1})}))
+T.check(al.alert == "NO_AUTOLAND" and al.alert_level == "advisory", "the second: NO AUTOLAND, an advisory")
+A.update(al, inp({cap = cap()}))
+T.equal(al.alert, nil, "repaired: none")
+-- with LAND 3 shown: a caution, kept while it stays
+local am = land3()
+approach(am, {cap = cap()})
+T.equal(am.alert, nil, "(LAND 3: none)")
+approach(am, {cap = cap({ra = 2}), sensors = 2})
+T.check(am.alert == "NO_LAND3" and am.alert_level == "caution", "LAND 3, a radio altimeter failed: NO LAND 3, a caution")
+T.equal(A.status(am), A.STATUS.LAND2, "and LAND 2")
+-- below 200 ft only NO AUTOLAND comes; the rest after the touchdown
+local an = land3()
+approach(an, {ra = 150, cap = cap({fcu = 2})})
+T.equal(an.alert, nil, "LAND 3 at 150 ft, an FCU failed: NO LAND 3 waits")
+approach(an, {ra = 150, cap = cap({fcu = 1})})
+T.check(an.alert == "NO_AUTOLAND" and an.alert_level == "caution", "a second: NO AUTOLAND comes, a caution")
+local ao = land3()
+approach(ao, {ra = 150, cap = cap({fcu = 2})})
+approach(ao, {ra = 3, ground = true, cap = cap({fcu = 2})})
+T.equal(ao.alert, "NO_LAND3", "on the ground: the NO LAND 3 that waited comes")
 T.done()

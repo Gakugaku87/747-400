@@ -151,6 +151,11 @@
 --    removes the multi-channel arms (p.316, p.320, p.322: all three: an
 --    estimate). Before the captures X-Plane's ILS signal is missing out of
 --    range, which is no failure (the FCC's NCD), so the arms wait for them.
+--  - The autoland capability's EICAS message (step 5b; ATA22 p.373-374,
+--    p.384-386; FCOM p.662, p.677): one failure of a kind NO LAND 3, two
+--    NO AUTOLAND, a caution when it comes with LAND 3 or 2 shown, else an
+--    advisory; below 200 ft only NO AUTOLAND comes, the rest after the
+--    touchdown.
 -- Pure: the switches' events and the airplane's state in; the engage
 -- state, the warning, the roll mode and the modes asked for out.
 --   local A = B747_afds_model                      -- in XTLua, after dofile
@@ -229,6 +234,11 @@ M.ROLLOUT_RA = 5
 M.WHEEL_ARM = 25
 M.GROUND_RA = 5
 M.SENSORS_MIN = 2
+-- the autoland capability's kinds (step 5b; ATA22 p.256, p.384) and how
+-- many of each there are: the channels valid and the FCCs' power sources,
+-- the IRUs (NAV), the radio altimeters, the ILS receivers, the SRMs (the
+-- stabilizer's control units), the FCUs (the flaps')
+M.CAP_FULL = {channels = 3, power = 3, iru = 3, ra = 3, ils = 3, srm = 2, fcu = 3}
 
 -- the state
 function M.new()
@@ -240,7 +250,8 @@ function M.new()
         fd_auto = false, inhibit = false, ra_low = false, ra_t = 0,
         arm = {L = false, C = false, R = false}, first = nil, multi_t = 0, multi_app = false,
         land = nil, flare_arm = false, rollout_arm = false, was_ga = false,
-        letdown = false, retard = false, rwy_align = false}, {})
+        letdown = false, retard = false, rwy_align = false,
+        alert = nil, alert_level = nil}, {})
 end
 
 -- the flare height (ft of gear altitude) for a sink rate (ft/s)
@@ -647,6 +658,38 @@ local function landing_modes(s)
     return (s.roll == "LOC" or s.roll == "ROLLOUT") and (s.pitch == "GS" or s.pitch == "FLARE" or s.letdown)
 end
 
+-- the autoland capability (step 5b; ATA22 p.384): 3 less the most failures
+-- of one kind (`cap`: how many of each kind of M.CAP_FULL are valid; a kind
+-- left out counts as whole), at least 0. One failure NO LAND 3 (2), two of
+-- a kind (both SRMs) NO AUTOLAND
+function M.capability(cap)
+    local worst = 0
+    for kind, full in pairs(M.CAP_FULL) do
+        local n = cap and cap[kind]
+        if n then worst = math.max(worst, full - n) end
+    end
+    return math.max(0, 3 - worst)
+end
+
+-- the EICAS message of the autoland capability (step 5b; ATA22 p.373-374,
+-- p.384-386; FCOM p.662, p.677): NO LAND 3 at 2, NO AUTOLAND under 2
+-- (`inp.cap`). A caution when it comes with multi-channel engaged (LAND 3
+-- or 2 shown: the FCOM's "after LAND 3 or LAND 2 annunciates"), else an
+-- advisory, at that level while it stays. Below LAND2_RA ft in the air
+-- with multi-channel engaged it changes only to NO AUTOLAND; the rest waits
+-- for the touchdown (FCOM p.662). Its inhibit on the ground until an
+-- engine start is the alert model's (FCOM p.47)
+local function autoland_alert(s, inp)
+    local c = M.capability(inp.cap)
+    local msg = (c < 2 and "NO_AUTOLAND") or (c < 3 and "NO_LAND3") or nil
+    local multi = s.land == "LAND3" or s.land == "LAND2"
+    local hold = multi and not inp.ground and (inp.ra or 9999) < M.LAND2_RA
+    if msg ~= s.alert and (not hold or msg == "NO_AUTOLAND") then
+        s.alert = msg
+        s.alert_level = msg and (multi and "caution" or "advisory") or nil
+    end
+end
+
 -- each frame: `inp` {fd = {L, R} the switches ON, hyd, bank, engine,
 -- ground, ra, hdg (the heading HDG HOLD holds), lnav_valid, at_spd (the
 -- A/T in SPD), dt; the interlocks (step 5a: M.valid's, trim, sensors)}.
@@ -669,6 +712,9 @@ function M.update(s, inp)
         s.L, s.C, s.R = false, false, false
     end
     dropped(s, was)
+    -- the autoland capability's message, every frame (step 5b: on the
+    -- autoland status of the frame before)
+    autoland_alert(s, inp)
     -- the TO/GA switches: inhibited 2 s after the radio altitude goes below
     -- 5 ft, enabled 3 s after it goes above (FCOM p.672)
     local low = (inp.ra or 0) < M.SWITCH_RA

@@ -556,6 +556,7 @@ do
     inp.srm_fail[1] = true
     out = M.update(s, inp, DT)
     T.check(not out.autotrim_valid[1] and out.autotrim_valid[2], "SRM L failed: its autotrim valid lost")
+    T.check(not out.srm_valid[1] and out.srm_valid[2], "5b: SRM L failed: not valid")
     inp.srm_fail[1], inp.srm_pwr[2] = false, false
     out = M.update(s, inp, DT)
     T.check(out.autotrim_valid[1] and not out.autotrim_valid[2], "SRM R unpowered: its autotrim valid lost")
@@ -563,6 +564,7 @@ do
     inp.trim_capt = 1
     out = M.update(s, inp, DT)
     T.check(not out.autotrim_valid[1] and not out.autotrim_valid[2], "the wheel switches in use: both lost")
+    T.check(out.srm_valid[1] and out.srm_valid[2], "5b: the SRMs themselves still valid (the autoland capability)")
     inp.ap_l, inp.ap_c = true, true
     out = M.update(s, inp, DT)
     T.check(out.autotrim_valid[1] and out.autotrim_valid[2], "two A/Ps: the switches inhibited, autotrim valid kept")

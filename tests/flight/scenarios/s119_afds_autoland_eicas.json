@@ -1,0 +1,66 @@
+{
+  "name": "s119_afds_autoland_eicas",
+  "description": "AFDS の作り直し 6-3 段 5b（autoland の能力の EICAS）の X-Plane での確認、空中。10,000 ft・約 290 kt で空中から始め（機体を読み直す）、巡航（multi-channel でない）では能力の低下が advisory で出ること：電波高度計 1 台の故障で >NO LAND 3、2 台で >NO AUTOLAND、戻すと消える。FCU 1 台の故障と X-Plane の NAV 2（ILS R）の故障でも >NO LAND 3（ATA22 p.374、p.384；FCOM p.677）。LAND 3 の後の caution は s113。570 の AUTOPILOT DISC の siren と地上の抑止は回帰試験だけ（型式はリバリーの設定で、Web API から変えない）。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 3048, "heading_true": 340, "speed_in_meters_per_second": 150 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れと FMS の空中の初期化を待つ" },
+    { "do": "wait", "note": "空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 20 },
+    { "do": "check", "note": "能力が落ちていない：NO LAND 3 の advisory 無し", "dref": "laminar/B747/CAS/advisory_status[248]", "op": "==", "value": 0 },
+    { "do": "check", "note": "NO AUTOLAND の advisory 無し", "dref": "laminar/B747/CAS/advisory_status[246]", "op": "==", "value": 0 },
+    { "do": "check", "note": "NO LAND 3 の caution 無し", "dref": "laminar/B747/CAS/caution_status[50]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "電波高度計 R の故障：NO LAND 3（advisory）" },
+    { "do": "set", "note": "電波高度計 R の故障", "dref": "laminar/B747/ra/fail[2]", "value": 1 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": ">NO LAND 3 の advisory（multi-channel でない：ATA22 p.374）", "dref": "laminar/B747/CAS/advisory_status[248]", "op": "==", "value": 1 },
+    { "do": "check", "note": "caution ではない", "dref": "laminar/B747/CAS/caution_status[50]", "op": "==", "value": 0 },
+    { "do": "cas", "note": ">NO LAND 3（advisory）" },
+    { "do": "view", "note": "上の EICAS", "name": "eicas" },
+    { "do": "shot", "name": "eicas_no_land3_advisory" },
+
+    { "do": "mark", "note": "電波高度計 C も故障：NO AUTOLAND（advisory）" },
+    { "do": "set", "note": "電波高度計 C の故障", "dref": "laminar/B747/ra/fail[1]", "value": 1 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": ">NO AUTOLAND の advisory（同じ種類の 2 個：ATA22 p.384）", "dref": "laminar/B747/CAS/advisory_status[246]", "op": "==", "value": 1 },
+    { "do": "check", "note": "NO LAND 3 は消える", "dref": "laminar/B747/CAS/advisory_status[248]", "op": "==", "value": 0 },
+    { "do": "check", "note": "A/P はそのまま（巡航は電波高度計を使わない）", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1 },
+    { "do": "cas", "note": ">NO AUTOLAND（advisory）" },
+    { "do": "shot", "name": "eicas_no_autoland_advisory" },
+    { "do": "set", "note": "電波高度計 C を戻す", "dref": "laminar/B747/ra/fail[1]", "value": 0 },
+    { "do": "set", "note": "電波高度計 R を戻す", "dref": "laminar/B747/ra/fail[2]", "value": 0 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "戻すと NO AUTOLAND が消える", "dref": "laminar/B747/CAS/advisory_status[246]", "op": "==", "value": 0 },
+    { "do": "check", "note": "NO LAND 3 も出ない", "dref": "laminar/B747/CAS/advisory_status[248]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "FCU L の故障：NO LAND 3（flap/stab control unit の 1 個：ATA22 p.384）" },
+    { "do": "set", "note": "FCU L の故障", "dref": "laminar/B747/flt_ctrls/fail/fcu[0]", "value": 1 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": ">NO LAND 3 の advisory", "dref": "laminar/B747/CAS/advisory_status[248]", "op": "==", "value": 1 },
+    { "do": "set", "note": "FCU L を戻す", "dref": "laminar/B747/flt_ctrls/fail/fcu[0]", "value": 0 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "戻すと消える", "dref": "laminar/B747/CAS/advisory_status[248]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "X-Plane の NAV 2 の故障（ILS R）：NO LAND 3" },
+    { "do": "set", "note": "X-Plane の故障：NAV 2（6 = 故障中）", "dref": "sim/operation/failures/rel_nav2", "value": 6 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": ">NO LAND 3 の advisory", "dref": "laminar/B747/CAS/advisory_status[248]", "op": "==", "value": 1 },
+    { "do": "set", "note": "NAV 2 を戻す", "dref": "sim/operation/failures/rel_nav2", "value": 0 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "戻すと消える", "dref": "laminar/B747/CAS/advisory_status[248]", "op": "==", "value": 0 },
+    { "do": "view", "name": "forward" }
+  ]
+}

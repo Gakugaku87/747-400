@@ -198,6 +198,18 @@ do
     for _, line in ipairs(out.pages[1]) do if line and line.text == "ELEC GEN OFF 2" then shown = true end end
     T.check(shown, "FUEL CONTROL 2 RUN: ELEC GEN OFF 2 shown")
 end
+-- >NO AUTOLAND and >NO LAND 3 hidden on the ground until an engine start
+-- (FCOM p.47; 6-3 step 5b)
+do
+    local s, inp = A.new(), A.inputs()
+    alerts(inp, {{">NO AUTOLAND", "advisory"}, {">NO LAND 3", "advisory"}})
+    local out = run(s, inp, 1)
+    T.equal(#out.pages[1], 0, "before start: NO AUTOLAND and NO LAND 3 hidden")
+    inp.fuel_cutoff[3] = false
+    out = run(s, inp, 1)
+    T.equal(table.concat(texts(out.pages[1]), "|"):find(">NO AUTOLAND", 1, true) ~= nil, true,
+        "FUEL CONTROL 3 RUN: NO AUTOLAND shown")
+end
 
 -- engine start (FCOM p.1587): new cautions and advisories wait for the start
 -- to end, except the start ones
@@ -430,6 +442,20 @@ do
     T.check(out.aural.wailer, "AP disconnect: the wailer lasts 1 s")
     out = run(s, inp, 0.3)
     T.check(not out.aural.wailer, "AP disconnect: and then stops")
+end
+-- the 570 (GE): >AUTOPILOT DISC sounds the siren while it is shown, no
+-- wailer (FCOM p.655, p.677, p.1551; 6-3 step 5b)
+do
+    local s, inp = flying()
+    inp.ap_siren = true
+    alerts(inp, {{">AUTOPILOT DISC", "warning"}})
+    local out = run(s, inp, 0.3)
+    T.check(out.aural.siren and not out.aural.wailer, "570, AP disconnect: siren, no wailer")
+    out = push(s, inp, "master_reset")
+    T.check(out.aural.siren, "570: the master reset does not stop it")
+    alerts(inp, {})
+    out = run(s, inp, 0.2)
+    T.check(not out.aural.siren and not out.aural.wailer, "570: it stops with the message (no 1 s minimum)")
 end
 
 -- a fire past V1 rings when the takeoff inhibit ends (FCOM p.1594)

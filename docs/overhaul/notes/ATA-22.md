@@ -921,3 +921,19 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
     - 診断（シナリオは作業用で、リポジトリには入れない）：空中開始の直後 0.6 秒は IRU の姿勢と ADC が無効、0.9 秒後には有効。X-Plane 起動直後の最初のフライトでは AC 1・3 と DC 2・3 が無く（電池と standby だけ：TESTING.md の既知の性質）、ADC は L だけ、SRM の autotrim valid は無く、A/P は入らない（正しい）。
     - 2 回目（X-Plane を起動し直して捨ての s66 のあと）：`s118_afds_interlocks` 27/27。
 - 作っていないもの：FCC・MCP・サーボの内部故障（program pin、servo loop、LVDT、hot short、自己試験）、電源投入の試験中の engage の禁止（時間が無い）、aileron exceedance の監視が働く故障、detent と camout（操縦士の override：単一は AUTOPILOT caution、2 台は両方、3 台はそのチャンネルが外れる p.322。X-Plane の操縦桿の入力は A/P の出力に足されるので、段 5c で見る）、first-in-command の移り（p.324：G/A からの残りは今の作りのまま）。
+
+## 35. 段 5b の実装（2026-10-30：NO LAND 3・NO AUTOLAND の EICAS と AUTOPILOT DISC の音）
+
+- AFDS のモデル（`B747.70.afds_model.lua`）：
+  - autoland の能力（`M.capability`）：種類ごとの故障の数の最大を 3 から引く（0 より下にしない）。種類と数（`M.CAP_FULL`）は、有効なチャンネル 3（段 5a の `M.valid`：FCC の電源・サーボの油圧・MCP・inner loop のセンサー）、FCC の電源 3、IRU 3（NAV のもの）、電波高度計 3、ILS 受信機 3、SRM 2、FCU 3。1 個の故障で 2（NO LAND 3）、同じ種類の 2 個（SRM は両方）で 1 以下（NO AUTOLAND）（ATA22 p.384：IRU・ILS・RA、flap/stab control unit、FCC・サーボの 1 個で NO LAND 3、同種 2 個で NO AUTOLAND）。
+  - EICAS の文（`alert`、`alert_level`）：LAND 3・2 を出している間に起きれば caution、そうでなければ advisory で、続く間はその level のまま（FCOM p.677 の「LAND 3 or LAND 2 annunciates の後か前か」。ATA22 p.373–374 は multi-channel engaged かどうかで level B・C）。空中で LAND 3・2 のとき 200 ft の下では NO AUTOLAND への変化だけ出し、ほかは接地の後に出す（FCOM p.662；ATA22 p.386）。毎フレーム、update の初め（前のフレームの autoland の状態で）に決める。F/D も A/P も無いときも出す。
+- SRM：SRM 自体の有効（故障でなく電源がある）を新設の `laminar/B747/flt_ctrls/stab_trim/srm_valid[2]` に書く。autotrim valid（段 5a）は操縦輪のトリムのスイッチを使う間も落ちるので、能力には使わない（巡航でトリムを使うたびに NO AUTOLAND が出てしまう）。
+- グルー（`B747.70.xt.autopilot.lua`）：能力の入力（`afds_cap`）：有効なチャンネル、FCC の電源、`irs/nav_valid`・`ra/valid` の数、ILS 受信機（X-Plane の故障だけ：`rel_nav1` が L と C、`rel_nav2` が R、`rel_loc`・`rel_gls` は 3 台とも。電波が届かないのは故障ではない）、`srm_valid`、`flt_ctrls/fail/fcu`。EICAS は caution [49] >NO AUTOLAND・[50] >NO LAND 3、advisory [246] >NO AUTOLAND・[248] >NO LAND 3（`B747.87.xt.warning.lua` の表）。前は PFD の NO AUTOLAND のときに [246] を立てるだけだった。
+- 警報のモデル（`B747.87.alert_model.lua`）とグルー（`B747.87.xt.alerts.lua`）：
+  - >AUTOPILOT DISC の音：`ap_siren`（`laminar/B747/engines/type` が GE）なら siren を表示の間（master reset では止まらない）、そうでなければ前のとおり wailer を最低 1 秒（FCOM p.655、p.677、p.1550–1551。RR は PW と同じ：推定）。
+  - >NO AUTOLAND と >NO LAND 3 は地上でエンジン始動まで隠す（`PRESTART_HIDDEN_ANY`：地上で FUEL CONTROL が 4 つとも CUTOFF の間。FCOM p.47 は NO AUTOLAND。NO LAND 3 も同じにした：推定）。`M.classify` は NO LAND 3 の 3 をエンジンの番号と読むので、その類は「NO LAND」。
+  - 着陸の抑止（FCOM p.1600–1602）で master CAUTION を点けるのは NO AUTOLAND（前から `LANDING_SHOWN`）。NO LAND 3 の caution は 200 ft の下では AFDS 側で出さない。
+- 試験：
+  - 回帰（LuaJIT）：AFDS のモデル +16（能力の数え方、巡航の advisory、LAND 3 の後の caution と LAND 2、200 ft の下は NO AUTOLAND だけ、接地の後に NO LAND 3）、グルー +3（LAND 3 で電波高度計を 1 台失うと caution [50]、戻すと消える）、警報のモデル +5（570 の siren：master reset で止まらず表示とともに止まる、地上のエンジン始動前に隠す）、SRM のモデル +2（SRM の有効はトリムのスイッチでは落ちない）。全 121 本。
+  - X-Plane（カスタム acf、X-Plane を起動し直した後の 4・5 回目の読み込み）：新設の `s119_afds_autoland_eicas` 15/15：巡航で電波高度計 R の故障で >NO LAND 3 の advisory（EICAS で字下げした琥珀）、C も故障で >NO AUTOLAND の advisory（>SNGL SOURCE RA も出る）、戻すと消える、FCU L と X-Plane の NAV 2 の故障でも >NO LAND 3。`s113_afds_multi`（確認を足した）：LAND 3 の進入で電波高度計 R の故障で LAND 2 と >NO LAND 3 の caution（EICAS の一番上）、advisory は出ない、戻すと消える。Lua の誤りなし。
+- 作っていないもの（推定・後回し）：ILS 受信機と FCU の電源、tune・test の inhibit に応じない受信機（段 5d）、bus の分離（ELEC-18）、LOC・G/S アンテナの切り替えの故障、autoland に関係しない FCC の故障の NO LAND 3（地上で A/P を外しているとき：p.384）、MCP の wrap-around の試験。
