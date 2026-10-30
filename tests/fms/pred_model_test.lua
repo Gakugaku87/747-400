@@ -85,6 +85,10 @@ T.near(r.dest.t, r.pts[6].t, 1e-6, "the destination's time: the E/D's")
 T.check(r.tc_t and r.td_t and r.ed_t and r.tc_t < r.td_t and r.td_t < r.ed_t, "the times of the T/C, T/D and E/D in order")
 T.near(r.ed_t, r.dest.t, 1e-6, "the E/D's time: the destination's")
 T.check(r.tc_t > r.pts[2].t - 1e-6 and r.tc_t < r.pts[3].t, "the T/C between C2 and MID in time")
+-- the deceleration to 250 kt at 10,000 ft (step 8d3: the ND's deceleration
+-- point, FCOM p.1149): one, after the T/D, just before D2 (AT 10,000)
+T.check(#r.decel == 1 and r.decel[1] > r.td and r.decel[1] < 1100 and r.decel[1] > 1100 - 15,
+    string.format("one deceleration point, %.1f NM before D2", 1100 - (r.decel[1] or 0)))
 -- each waypoint's speed: the climb's, the cruise's Mach, the descent's
 T.check(r.pts[1].cas == 340 and not r.pts[1].machMode, "C1 in the climb: 340 kt")
 T.check(r.pts[3].machMode and r.pts[3].mach == 0.85, "MID in the cruise: M.85")
@@ -124,11 +128,13 @@ r = PM.predict{P = P, t = pw, gw = 250000, fuel = 20000, alt = 25000, phase = "d
     crzspd = {mach = 0.85}, legs = legs4, ed = 2}
 T.check(r.td == nil and r.pts[1].h > 5000 and r.pts[1].h < 25000 and r.pts[2].h == 50, "in the descent: no T/D, D between, the runway")
 T.check(r.dest.t > 10 * 60 and r.dest.t < 20 * 60, string.format("80 NM: %.1f min", r.dest.t / 60))
+T.check(#r.decel == 1 and r.decel[1] > 0 and r.decel[1] < 80, "the deceleration at 10,000 ft ahead")
 
 -- no E/D: the cruise to the route's end
 r = PM.predict{P = P, t = pw, gw = 300000, fuel = 80000, alt = 35000, phase = "crz", crz = 35000, clb = clb, des = des,
     crzspd = {mach = 0.85}, legs = {{name = "A", dist = 500}, {name = "B", dist = 500}}}
 T.check(r.td == nil and r.pts[2].h == 35000, "without an E/D: no T/D, at FL350 to the end")
+T.equal(#r.decel, 0, "nor deceleration points")
 T.near(r.dest.t / 3600, 1000 / P.tas(0.85, 35000), 0.01, "1,000 NM at M.85's TAS")
 
 T.done()

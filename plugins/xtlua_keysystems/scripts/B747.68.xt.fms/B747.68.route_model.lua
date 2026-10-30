@@ -504,6 +504,7 @@ local function course_point(p, crs, d)
     local lon2 = lon1 + math.atan2(math.sin(t) * math.sin(a) * math.cos(lat1), math.cos(a) - math.sin(lat1) * math.sin(lat2))
     return {lat = lat2 / r, lon = (lon2 / r + 540) % 360 - 180}
 end
+M.course_point = course_point
 
 -- where a direct-to's path starts at EXEC (step 5e; the sources leave the
 -- moment out: estimate): the airplane's position; with an INTC CRS, the
