@@ -92,33 +92,6 @@ function ap_director_pitch_retVal(pitchMode,retVal)
     return retVal
 
 end
-local thisTargetGlideslipeFPM=-800
-local last_simDR_hsi_vdef_dots_pilot=0
-local lastSimDRTime=0
-local last_speed_delta=0
-
-
-function getGlideSlopeFPM()
-    local diff=simDRTime-lastSimDRTime
-    --[[if diff<1 then
-        return thisTargetGlideslipeFPM
-    end]]
-    local speed_fpm=simDR_groundspeed*196.85
-    thisTargetGlideslipeFPM=-math.tan(math.rad(simDR_glideslope1))*speed_fpm
-    local nextVdef=simDR_hsi_vdef_dots_pilot 
-   -- local correction=(8*nextVdef*nextVdef*nextVdef)
-    if math.abs(nextVdef)>2.0 then
-        nextVdef=nextVdef*3
-    end
-    local correction=(75*nextVdef)
-    local resultTargetGlideslipeFPM=thisTargetGlideslipeFPM-correction --was 75 last testing
-    --print("fin thisTargetGlideslipeFPM "..thisTargetGlideslipeFPM.." correction "..correction.." resultTargetGlideslipeFPM "..resultTargetGlideslipeFPM)
-    if debug_flight_directors==1 then
-        print("fin simDR_glideslope1 "..simDR_glideslope1.."thisTargetGlideslipeFPM "..thisTargetGlideslipeFPM.." correction "..correction.." resultTargetGlideslipeFPM "..resultTargetGlideslipeFPM)
-    end
-    return resultTargetGlideslipeFPM
-  
-end
 
 
 local previous_pitchTime=0
@@ -297,7 +270,7 @@ function ap_director_pitch(pitchMode)
         last_simDR_AHARS_pitch_heading_deg_pilot=retval
         return ap_director_pitch_retVal(pitchMode,retval)
     
-    elseif pitchMode==4 or pitchMode==7 or pitchMode==6 or pitchMode==2 then --pitchMode==2 GLIDESLOPE
+    elseif pitchMode==4 or pitchMode==7 or pitchMode==6 then --G/S: the pitch laws' (6-3 step 3c)
         local pitchError=simDR_AHARS_pitch_heading_deg_pilot-last_simDR_AHARS_pitch_heading_deg_pilot
         
         if debug_flight_directors==1 then
@@ -313,13 +286,6 @@ function ap_director_pitch(pitchMode)
             if debug_flight_directors==1 then
                 print("prev_vvi_update=2.0") --recover overshoots
             end
-        end
-        if pitchMode==2 then --set FPM based on glideslope
-            targetFPM=getGlideSlopeFPM()
-        --    print("getGlideSlopeFPM="..targetFPM.." dots="..simDR_hsi_vdef_dots_pilot)
-             --minUpdateRate=B747_rescale(0,0.5,2.5,0.1,math.abs(simDR_hsi_vdef_dots_pilot)) -- be faster on glideslope
-        --else
-        --    print("standard FPM="..targetFPM.." dots="..simDR_hsi_vdef_dots_pilot)
         end
         if debug_flight_directors==1 then
             print("autopilot FPM="..currentFPM.." target="..targetFPM)
@@ -588,9 +554,9 @@ local function ap_director_pitch_sync(p)
     current_pitch_intregal=10*p
 end
 
--- the pitch command: the pitch laws' (6-3 steps 3a and 3b: V/S, ALT and
--- its capture, FLCH, T/O, G/A, the old VNAV's), else the old one (G/S,
--- FLARE until steps 3c and 4)
+-- the pitch command: the pitch laws' (6-3 steps 3a to 3c: V/S, ALT and
+-- its capture, FLCH, T/O, G/A, G/S, the old VNAV's), else the old one
+-- (FLARE until step 4)
 function ap_pitch_assist(doCompute)
     local flight_director_pitch
     if B747DR_ap_pitch_law==1 then
@@ -640,6 +606,11 @@ function ap_pitch_assist(doCompute)
         doTrim()
        -- print("flight_director_pitch "..flight_director_pitch .." simDR_AHARS_pitch_heading_deg_pilot "..simDR_AHARS_pitch_heading_deg_pilot .." retval "..retval)
     else
+        -- the A/P off: the elevator trim integrator synchronized to the
+        -- surface (ATA22 p.332), the pilot's column and the A/P's own
+        -- command going back, so that the A/P goes in holding the column
+        -- where it is (before, from the integrator's last value)
+        pitchPid.output = math.max(-1, math.min(1, simDR_yoke_pitch_ratio + B747DR_sim_pitch_ratio))
         pitchPid:compute(true)
         ap_trim_last = nil
         autotrim_dir = 0
@@ -688,6 +659,9 @@ function ap_roll_assist(doCompute)
         retval=B747_interpolate_value(B747DR_sim_roll_ratio,rollPid.output,-1,1,speed)
         --print("flight_director_roll "..flight_director_roll.." speed "..speed .." simDR_AHARS_roll_heading_deg_pilot "..simDR_AHARS_roll_heading_deg_pilot .." retval "..retval)
     else
+        -- the A/P off: the aileron trim integrator synchronized to the
+        -- surfaces (ATA22 p.348), as the pitch's above
+        rollPid.output = math.max(-1, math.min(1, simDR_yoke_roll_ratio + B747DR_sim_roll_ratio))
         rollPid:compute(true)
         retval=ap_release(B747DR_sim_roll_ratio)
     end

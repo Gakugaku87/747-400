@@ -1,9 +1,9 @@
--- The FCCs' pitch laws (6-3 steps 3a and 3b; the plan and sources in
--- docs/overhaul/notes/ATA-22.md §10, §18 and §19): the pitch command, the
--- attitude the A/P flies and the F/Ds show, of V/S, ALT (the hold and the
--- MCP altitude's capture), the speed laws (FLCH, T/O, G/A) and the old
--- VNAV's laws, out of the pitch mode the AFDS model (B747.70.afds_model.lua)
--- has.
+-- The FCCs' pitch laws (6-3 steps 3a to 3c; the plan and sources in
+-- docs/overhaul/notes/ATA-22.md §10, §18, §19 and §22): the pitch command,
+-- the attitude the A/P flies and the F/Ds show, of V/S, ALT (the hold and
+-- the MCP altitude's capture), the speed laws (FLCH, T/O, G/A), G/S and
+-- its capture, and the old VNAV's laws, out of the pitch mode the AFDS
+-- model (B747.70.afds_model.lua) has.
 --  - V/S: the MCP's vertical speed against the IRUs' inertial one (ATA22
 --    p.344); 000 holds the altitude where it was set (ATA22 p.282, p.338:
 --    the FMA stays V/S).
@@ -29,7 +29,17 @@
 --    start's speed when it was more); from 600 to 1,200 fpm of climb
 --    from the attitude (15 degrees, or 1 below the PLI) to the speed.
 --  - VNAV: the old VNAV's laws by its flags (until the FMC's step 9).
---  - G/S, FLARE: not here (the old law until steps 3c and 4).
+--  - G/S (step 3c; ATA22 p.346): the deviation made a distance from the
+--    beam's centre (G/S DEV ALT) with the distance to the transmitter from
+--    the radio altitude on an assumed 3 degree glide slope; blended into
+--    the inertial vertical speed against the beam's (the inertial path
+--    control: on through a lost signal, the path held); the beam's
+--    vertical speed at the ground speed less GS_K of the distance. The
+--    capture (`gs_capture`, the AFDS model's input; ATA22 p.292: the
+--    distance from the beam's centre and the deviation's rate): closing
+--    on the beam no farther than the change of path at G_LIMIT and
+--    GS_LEAD_S of the closing take, or within GS_BAND.
+--  - FLARE: not here (the old autoland until step 4).
 -- A vertical speed asks for its flight path; the command moves at
 -- K_PATH times the flight path's error a second, the path flown taken
 -- LEAD_S ahead on the inertial vertical acceleration (damping: ATA22
@@ -111,10 +121,32 @@ M.BLEND_LO = 600
 M.BLEND_HI = 1200
 M.K_ATT = 0.5
 M.TOGA_RATE = 3
+-- G/S (step 3c): the distance to the transmitter from the radio altitude
+-- (in its range, GS_RA_MAX) on GS_DEG (ATA22 p.346); estimates: the
+-- deviation blended over GS_BLEND_S, the beam's vertical speed corrected
+-- GS_KB fpm a second a foot of the difference near the beam (with the
+-- blend, a filter critically damped over some 10 s), GS_K fpm a foot of
+-- distance (within GS_VS_MAX of the beam's), the capture GS_LEAD_S ahead
+-- or within GS_BAND degrees. Tuned on the lagged airplane (the attitude 2
+-- s behind the command, the path 3 s behind it, 140 kt down a 3 degree
+-- ILS): from below 6 ft through the beam, from above 8 ft, a 3.2 degree
+-- beam within 3 ft. X-Plane's glide slope deviation is GS_DOT_DEG a dot, plus
+-- above the beam (measured at RJAA 34L against the transmitter's place
+-- in X-Plane's nav data, flat: 3.67 dots a degree; gs_scale.json)
+M.GS_DEG = 3
+M.GS_RA_MAX = 2500
+M.GS_BLEND_S = 5
+M.GS_KB = 0.6
+M.GS_K = 3
+M.GS_VS_MAX = 1000
+M.GS_LEAD_S = 6
+M.GS_BAND = 0.1
+M.GS_DOT_DEG = 0.272
 
 local G = 9.80665
 local FT = 0.3048
 local KT = 1852 / 3600
+local FPM_KT = 1852 / FT / 60    -- fpm a knot
 local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
 local function a_ft() return M.G_LIMIT * G / FT end   -- the limit, ft/s/s
 -- the flight path (degrees) of a vertical speed (fpm) at v (m/s)
@@ -149,6 +181,11 @@ function M.inputs()
         pli = nil,          -- the PLI, degrees above the pitch (nil: none)
         flaps_up = true,
         windshear = false,
+        -- G/S (step 3c)
+        gs_dots = 0,        -- the glide slope deviation, dots, plus above the beam
+        gs_valid = false,   -- both receivers' glide slope
+        ra = 0,             -- the radio altitude, ft
+        gs = 0,             -- the ground speed, kt
     }
 end
 
@@ -185,6 +222,29 @@ function M.protect(v, inp)
     return v
 end
 
+-- G/S's deviation (degrees above the beam) and G/S DEV ALT (ft above the
+-- beam's centre): the distance to the transmitter from the radio altitude
+-- on GS_DEG (ATA22 p.346)
+function M.gs_dev(inp) return inp.gs_dots * M.GS_DOT_DEG end
+function M.gs_dev_alt(inp)
+    local h = clamp(inp.ra or M.GS_RA_MAX, 0, M.GS_RA_MAX)
+    return h / math.tan(math.rad(M.GS_DEG)) * math.tan(math.rad(M.gs_dev(inp)))
+end
+-- the beam's vertical speed (fpm) at the ground speed on GS_DEG
+function M.beam_vs(inp) return -inp.gs * FPM_KT * math.tan(math.rad(M.GS_DEG)) end
+
+-- G/S's capture (ATA22 p.292: the distance from the beam's centre and the
+-- deviation's rate): closing on the beam no farther than the change of path
+-- at G_LIMIT and GS_LEAD_S of the closing take, or within GS_BAND
+function M.gs_capture(inp)
+    if not inp.gs_valid then return false end
+    if math.abs(M.gs_dev(inp)) <= M.GS_BAND then return true end
+    local d = M.gs_dev_alt(inp)
+    local v = (inp.vs - M.beam_vs(inp)) / 60
+    if d * v >= 0 then return false end
+    return math.abs(d) <= v * v / (2 * a_ft()) + math.abs(v) * M.GS_LEAD_S
+end
+
 -- T/O's and G/A's speed: once above it ABOVE_S, the speed then up to the
 -- cap; the IAS/MACH window when set higher
 local function ratchet(s, inp, target, cap, dt)
@@ -199,7 +259,7 @@ end
 
 -- the law of the mode: "VS" with its vertical speed, "ALT" with its
 -- altitude, "SPD" with its speed (and whether it blends from the
--- attitude), "TOGND" (8 degrees), or nil (not here)
+-- attitude), "GS", "TOGND" (8 degrees), or nil (not here)
 local function law_of(s, inp, dt)
     local mode = inp.mode
     if mode ~= s.mode then
@@ -222,6 +282,7 @@ local function law_of(s, inp, dt)
     if mode == "VNAV" and inp.vnav_law == "ALT" then return "ALT", inp.vnav_alt end
     if mode == "VNAV" and inp.vnav_law == "FLCH" then return "SPD", M.protect(inp.spd_sel, inp) end
     if mode == "FLCH" then return "SPD", M.protect(inp.spd_sel, inp) end
+    if mode == "GS" then return "GS" end
     if mode == "TO" then
         if inp.ground then
             -- the rotation's speed; V2 the IAS/MACH window's
@@ -251,6 +312,7 @@ function M.update(s, inp, dt)
     if inp.active and (not inp.ground or inp.mode == "TO" or inp.mode == "GA") then
         law, target, blend = law_of(s, inp, dt)
     end
+    if law ~= "GS" then s.gs_d = nil end
     if law == nil then
         s.cmd, s.law, s.target, s.cap_vs, s.last_vs, s.vs_rate = nil, nil, nil, nil, nil, 0
         s.last_ias, s.ias_rate, s.mode = nil, 0, inp.active and inp.mode or nil
@@ -303,6 +365,23 @@ function M.update(s, inp, dt)
             if s.cap_vs then
                 if math.abs(want) < s.cap_vs then s.cap_vs = nil else want = want > 0 and s.cap_vs or -s.cap_vs end
             end
+        elseif law == "GS" then
+            -- the distance from the beam's centre and the beam's vertical
+            -- speed: on the inertial vertical speed against the beam's, to
+            -- G/S DEV ALT over GS_BLEND_S while there is a signal, the
+            -- difference also correcting the beam's (an angle not 3
+            -- degrees, the wind); without a signal the path is held
+            if s.gs_d == nil then s.gs_d, s.gs_b = inp.gs_valid and M.gs_dev_alt(inp) or 0, 0 end
+            local beam = M.beam_vs(inp) + s.gs_b
+            s.gs_d = s.gs_d + (inp.vs - beam) / 60 * dt
+            if inp.gs_valid then
+                local r = M.gs_dev_alt(inp) - s.gs_d
+                s.gs_d = s.gs_d + r * math.min(1, dt / M.GS_BLEND_S)
+                -- near the beam only, where the distance from the radio
+                -- altitude makes G/S DEV ALT true to scale
+                if math.abs(M.gs_dev(inp)) <= M.GS_BAND then s.gs_b = s.gs_b - M.GS_KB * r * dt end
+            end
+            want = beam - clamp(M.GS_K * s.gs_d, -M.GS_VS_MAX, M.GS_VS_MAX)
         end
         local flown = inp.vs + (s.vs_rate or 0) * M.LEAD_S
         rate = M.K_PATH * (path(want, v) - path(flown, v))

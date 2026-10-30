@@ -30,11 +30,8 @@ debug_flight_directors     = deferred_dataref("laminar/B747/debug/flight_directo
 simDR_autopilot_hold_altitude_ft = find_dataref("laminar/B747/autopilot/altitude_hold_ft")
 simDR_autopilot_alt_hold_status         = find_dataref("laminar/B747/autopilot/altitude_hold_status")
 B747DR_autopilot_TOGA_status     	= deferred_dataref("laminar/B747/autopilot/TOGA_status","number")
-simDR_hsi_vdef_dots_pilot           = find_dataref("sim/cockpit2/radios/indicators/hsi_vdef_dots_pilot")
 B747DR_ap_flightPhase 				= deferred_dataref("laminar/B747/autopilot/flightPhase", "number")
 B747DR_autopilot_altitude_ft_pfd = deferred_dataref("laminar/B747/autopilot/heading/altitude_dial_ft_pfd", "number")
-simDR_glideslope1 = find_dataref("sim/cockpit/radios/nav1_slope_degt")
-simDR_groundspeed			= find_dataref("sim/flightmodel2/position/groundspeed")
 simDR_radarAlt1 = find_dataref("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
 B747DR_flap_ratio = deferred_dataref("laminar/B747/cablecontrols/flap_ratio", "number")
 B747DR_flap_lever_detent		= deferred_dataref("laminar/B747/flt_ctrls/flap_lever_detent", "number")
@@ -179,6 +176,7 @@ B747DR_l_elev_outer   = deferred_dataref("laminar/B747/flt_ctrls/l_elev_outer", 
 B747DR_r_elev_outer   = deferred_dataref("laminar/B747/flt_ctrls/r_elev_outer", "number")
 
 simDR_yoke_pitch_ratio           = find_dataref("sim/cockpit2/controls/yoke_pitch_ratio")
+simDR_yoke_roll_ratio            = find_dataref("sim/cockpit2/controls/yoke_roll_ratio")
 B747DR_sim_pitch_ratio   = find_dataref("laminar/B747/flt_ctrls/sim_pitch_ratio")
 B747DR_sim_roll_ratio   = find_dataref("laminar/B747/flt_ctrls/sim_roll_ratio")
 --B747DR_yaw_damp_ratio   = deferred_dataref("laminar/B747/flt_ctrls/sim_yaw_damp_ratio", "number")
@@ -340,7 +338,6 @@ function B747_rescale(in1, out1, in2, out2, x)
   return out1 + (out2 - out1) * (x - in1) / (in2 - in1)
 
 end
-B747DR_switching_servos_on = deferred_dataref("laminar/B747/autopilot/ap_monitor/servos_on_time", "number")
 dofile("pid.lua")
 dofile("B747.19.lateral_model.lua")
 dofile("B747.19.xt.hydraulics_override.lua")

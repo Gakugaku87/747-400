@@ -607,11 +607,24 @@ local function afds_speed_ref()
 	if B747DR_ap_ias_mach_window_open == 1 and simDR_autopilot_airspeed_is_mach == 0 then return B747DR_ap_ias_dial_value end
 	return simDR_autopilot_airspeed_kts
 end
+-- G/S's inputs to the pitch laws (step 3c): NAV 1's glide slope deviation
+-- (X-Plane's dots: plus above the beam), both receivers' glide slope with
+-- no flag, the radio altitude, the ground speed, the inertial vertical
+-- speed (the capture's too)
+simDR_afds_gs_dots_nav1 = find_dataref("sim/cockpit2/radios/indicators/nav1_vdef_dots_pilot")
+local function afds_gs_inputs(p)
+	p.gs_dots = simDR_afds_gs_dots_nav1
+	p.gs_valid = simDR_hsi_nav1_vertical_signal == 1 and simDR_hsi_nav2_vertical_signal == 1
+		and simDR_nav1_gs_flag == 0 and simDR_nav2_gs_flag == 0
+	p.ra = simDR_radarAlt1
+	p.gs = simDR_groundspeed * 1.94384
+	p.vs = simDR_afds_vs
+end
 -- the pitch laws' inputs: the attitude, the inertial vertical speed (ATA22
 -- p.344), the TAS, the altitude, the MCP's V/S, the old VNAV's law by its
 -- flags and its targets; the speed laws' (step 3b): the IAS, the reference
 -- (T/O's V2 and G/A's MCP speed too), the speed protection, the PLI, the
--- flaps, a windshear
+-- flaps, a windshear; G/S's (step 3c)
 local function afds_pitch_inputs(p)
 	p.pitch = simDR_afds_pitch
 	p.vs = simDR_afds_vs
@@ -631,6 +644,7 @@ local function afds_pitch_inputs(p)
 	p.pli = B747DR_afds_pli_show > 0.5 and B747DR_afds_pli or nil
 	p.flaps_up = simDR_flap_ratio_control < 0.01
 	p.windshear = B747DR_afds_windshear > 0.5
+	afds_gs_inputs(p)
 end
 -- the magnetic track (LOC and G/S capture within 120 and 80 degrees of the
 -- localizer course: 6-3 step 1d)
@@ -694,13 +708,14 @@ local function afds_inp()
 	afdsIn.old_armed_roll = land and 4 or 0
 	afdsIn.dt = SIM_PERIOD
 	-- the approach (step 1d): LOC's capture by the roll laws (step 2b: the
-	-- ground speed, the intercept angle and the deviation, ATA22 p.290), G/S
-	-- the old detector (until step 3: under 1.5 dots with both receivers'
-	-- signals and no flag), the track's angle to the course
+	-- ground speed, the intercept angle and the deviation, ATA22 p.290),
+	-- G/S's by the pitch laws (step 3c: the distance from the beam's centre
+	-- and its rate, ATA22 p.292; before, under 1.5 dots), the track's angle
+	-- to the course
 	afds_loc_inputs(afdsRollIn)
 	afdsIn.loc_detect = B747_afds_roll_model.loc_capture(afdsRollIn)
-	afdsIn.gs_detect = simDR_nav1_gs_flag == 0 and simDR_nav2_gs_flag == 0 and math.abs(simDR_hsi_vdef_dots_pilot) < 1.5
-		and simDR_hsi_nav1_vertical_signal == 1 and simDR_hsi_nav2_vertical_signal == 1
+	afds_gs_inputs(afdsPitchIn)
+	afdsIn.gs_detect = B747_afds_pitch_model.gs_capture(afdsPitchIn)
 	afdsIn.course_err = getHeadingDifference(simDR_radio_nav_obs_deg[0], simDR_afds_track_mag)
 	-- the pitch (step 1c): the vertical speed, the altitude, the speeds, the
 	-- MCP altitude's capture by the pitch laws (step 3a: the 0.05 g level-off;
@@ -775,7 +790,7 @@ local function afds_apply(act)
 	if act.pitch == "VS" then afds_vs_default() end
 end
 -- the engage state on the datarefs: the channels (CMD lights), the servos
--- (their start for the hydraulics' 2 s), AUTOPILOT DISC
+-- (and the time they came on), AUTOPILOT DISC
 local function afds_sync()
 	local L, C, R = afds.L and 1 or 0, afds.C and 1 or 0, afds.R and 1 or 0
 	local on = (L + C + R) > 0 and 1 or 0
