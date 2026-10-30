@@ -1116,3 +1116,23 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 試験：
   - 回帰：`tests/autopilot/afds_glue_test.lua` 186 件（VNAV SPD で MCP の高度の 60 ft 下を上昇中に VNAV ALT、A/T は THR REF でない、MCP を上げると VNAV SPD）。全 132 本。
   - X-Plane：新設の `s137_vnav_level_off` 12/12（直す前は 13,000 ft を越えて 16,870 ft まで上がった。直した後は 13,003 ft で水平・VNAV ALT・A/T SPD・340 kt、MCP 15,000 ft で VNAV SPD に戻り 15,003 ft で VNAV ALT）。Lua の誤りなし。
+
+## 56. 段 9b の実装（2026-10-31：FMC の VNAV のモデル、影の動き）
+
+- 資料：§54 の下調べ（ATA34_2 p.597、p.610–617、p.621、ATA22 p.206、p.279–280、FCOM p.645、p.1253–1262）。
+- 作ったもの：
+  - 純粋なモデル `B747.68.vnav_model.lua`（新設、`B747_vnav_model`）：
+    - 段階：上昇から巡航へは CRZ ALT の 50 ft 内、巡航から上昇へは CRZ ALT が 500 ft より上（FCOM p.1257 の cruise climb）、上昇・巡航から降下へは T/D を過ぎて（地上に固定した降下の経路の、今の位置の高度が機体の高度以下：巡航から経路に当たる T/D も、T/C の無い短い飛行の上昇が経路に当たる所も同じ）、MCP の高度が 200 ft より下にあるとき（MCP が巡航高度のままなら高度を保つ：FCOM p.665 の RESET MCP ALT）。地上と有効な経路が無いときは上昇。予測の T/D（予測の時の段階で変わる）は使わない。
+    - 予測の段階（上昇・巡航・降下の始め方）は、前の AP の `flightPhase` でなく、この VNAV の段階から取る（X-Plane の s138 の 1 回目で、T/D を過ぎた所の空中開始で前の段階のまま予測が T/D を出さず、VNAV が上昇のままだった）。
+    - サブモードと A/T の要求（ATA34_2 p.615–616 の 4 つの制御）：上昇は VNAV SPD と THR REF（速度/推力）、巡航は VNAV PTH と SPD（経路/速度）、降下は VNAV PTH と IDLE（経路/アイドル）。ただし降下で経路の区間がアイドルには浅い（予測の印 "spd"：FCOM p.1258）か、経路の 200 ft より下にいる間は SPD。
+    - 目標の速度：上昇・巡航・降下の予定（予測と同じ関数）、MCP の速度介入、フラップの placard の 5 kt 下（FCOM p.1255）、最小機動速度の 5 kt 上（FCOM p.663）。
+    - FMC の高度：上昇は先の AT・AT OR BELOW・窓の上限のうち、上昇の脚（SID の脚、無ければ E/D までの道のりの半分まで：予測と同じ）にあって、今の高度の 100 ft 下より上で CRZ ALT より下の最初のもの、無ければ CRZ ALT。巡航は CRZ ALT。降下は次の制限、無ければ E/D の高度。
+    - 降下の経路：予測の降下の経路（`dp`）を E/D までの距離の表にしたもの（予測のモデルに、点ごとの区間の種類 "idle"・"spd" を足した）。今の E/D までの距離（今の位置から最初の点までの大円と、その先の脚の距離の和）で、経路の高度・勾配・区間の種類を引く（地上に固定した経路：ATA34_2 p.563）。
+    - V/S の指令：経路の V/S（勾配と対地速度から）から、経路より上の偏差 1 ft につき 3 fpm 急にする（K_PATH）。上へは指令しない（経路より下なら水平で経路を待つ）、経路より 1,500 fpm を超えて急にしない。
+    - valid：有効な経路、CRZ ALT、総重量（PERF INIT の ZFW の入力：FCOM p.645 の PERF/VNAV UNAVAILABLE）、降下では経路があること。
+  - FMC（`B747.68.xt.fms.lua`）：毎フレーム入力を組んでモデルを回し、新設の `laminar/B747/fms/vnav/*`（valid、phase、mode、cas、mach、mach_mode、alt、vs、path_dev、at）に出す。速度の予定は予測と同じ関数（`B747_fms_schedules`）。予測のたびに、経路の表、最初の点と E/D までの脚の距離、上昇と降下の制限の表を作り直す（`vnav_geo_set`）。
+  - AFDS と A/T はまだ前の VNAV で飛ぶ（影の動き。段 9c で切り替える）。
+- 推定：段階の切り替えの閾値（50 ft、500 ft、200 ft）、K_PATH と 1,500 fpm、上昇の制限の選び方（SID の脚、無ければ道のりの半分）、経路の 200 ft 下からの SPD。
+- 試験：
+  - 回帰：新設の `tests/fms/vnav_model_test.lua` 39 件（上昇の VNAV SPD・THR REF・250 kt と 340 kt と M.84・FMC の高度、placard・最小機動速度・速度介入、CRZ ALT で巡航の VNAV PTH・SPD・M.85、高い CRZ ALT で上昇へ、T/D を過ぎても MCP が巡航高度なら巡航、MCP が下で降下の VNAV PTH・IDLE、経路の V/S、経路の上・下・ずっと下・ずっと上、浅い区間の SPD、240 kt、valid、短い飛行、経路の引き方）、`pred_glue_test.lua` 72 件（地上：ZFW が無ければ無効、ZFW 210 で有効・上昇・VNAV SPD・THR REF・CRZ ALT・250 kt）。全 133 本。
+  - X-Plane：新設の `s138_vnav_shadow` 8/8（T/D を過ぎた FL314 で降下・VNAV PTH・IDLE、目標 287 kt、FMC の高度 4,000 ft（ATVID の制限）、経路の 1,710 ft 上で V/S の指令 −3,322 fpm（経路より 1,500 fpm 急の上限））。1 回目は予測の T/D に頼った段階の切り替えで上昇のまま（上の直し）、2 回目は確かめる時機が T/D の手前だった。Lua の誤りなし。

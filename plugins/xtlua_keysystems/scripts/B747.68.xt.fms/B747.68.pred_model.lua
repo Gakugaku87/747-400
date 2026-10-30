@@ -53,6 +53,7 @@ local function crz_mach(P, c, ft, kg)
     if c.cas then return P.cas_to_mach(c.cas, ft) end
     return c.mach
 end
+M.crz_mach = crz_mach
 
 -- the constraint's altitude a path at h keeps to it: an AT's, a window's
 -- nearer bound, an AT OR ABOVE's when below it, an AT OR BELOW's when above
@@ -74,12 +75,18 @@ local function descent_path(s, kg, cons, xed, hed)
     local P, t, isa0 = s.P, s.t, s.isa or 0
     local hw0 = (s.wind and s.wind.des) or 0
     local xs, hs, ts, fs = {xed}, {hed}, {0}, {0}
+    -- each point's segment (from the point before, back toward the E/D):
+    -- "idle" (the idle path, a level deceleration, a line steeper than
+    -- idle) or "spd" (a line too shallow for idle: the A/T's SPD, FCOM
+    -- p.1258; step 9b)
+    local ks = {"idle"}
+    local kind = "idle"
     local decel = {}
     local x, h, tt, ff = xed, hed, 0, 0
     local cas = M.schedule(P, s.des, h)
     local ci = #cons    -- the constraints in route order; going back from the last
     local CEIL = 45100
-    local function push() xs[#xs + 1] = x; hs[#hs + 1] = h; ts[#ts + 1] = tt; fs[#fs + 1] = ff end
+    local function push() xs[#xs + 1] = x; hs[#hs + 1] = h; ts[#ts + 1] = tt; fs[#fs + 1] = ff; ks[#ks + 1] = kind end
     local steps = 0
     while h < CEIL and steps < 20000 do
         steps = steps + 1
@@ -113,6 +120,7 @@ local function descent_path(s, kg, cons, xed, hed)
             tt = tt + dt
             ff = ff + 4 * P.idle_ff(t, h, mm, isa) * dt / 3600
             if cas >= tgt - 0.5 then decel[#decel + 1] = {x = x, h = h} end
+            kind = "idle"
         else
             cas = tgt
             local dh = 250
@@ -132,6 +140,7 @@ local function descent_path(s, kg, cons, xed, hed)
             local need = P.drag(t, kg, h, m) - kg * G * sinG * energy(P, h, cas, m, machMode, isa)
             local f = P.idle_ff(t, h, m, isa)
             if need > 0 then f = math.max(f, P.thrust_ff(t, need / 4, h, m, isa)) end
+            kind = (anchor and need > 0) and "spd" or "idle"
             h = h + dh
             x = x - dxa * gs / v / NM
             tt = tt + dt
@@ -144,7 +153,7 @@ local function descent_path(s, kg, cons, xed, hed)
         end
         push()
     end
-    return {x = xs, h = hs, t = ts, f = fs, decel = decel}
+    return {x = xs, h = hs, t = ts, f = fs, k = ks, decel = decel}
 end
 
 -- on the descent path (index i up, arrays going back from the E/D), the x
