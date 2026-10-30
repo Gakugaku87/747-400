@@ -188,7 +188,6 @@ T.equal(get("laminar/B747/flt_ctrls/stab_trim/autotrim_cmd"), 0, "no autotrim co
 -- the roll laws' command (6-3 step 2a): with roll_law 1 the servo law flies
 -- roll_cmd, not X-Plane's F/D roll
 rt:set("sim/time/total_running_time_sec", 1000)
-rt:set("laminar/B747/autopilot/ap_monitor/servos_on_time", 0)
 rt:set("laminar/B747/autopilot/servos_on", 1)
 rt:set("laminar/B747/autopilot/FMA/active_roll_mode", 6)
 rt:set("laminar/B747/autopilot/roll_law", 1)
@@ -280,6 +279,41 @@ rt:set("sim/flightmodel2/controls/elevator_trim", 0)
 rt:set("laminar/B747/autopilot/servos_on", 0)
 rt:set("laminar/B747/autopilot/pitch_law", 0)
 rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 0)
+frames(1)
+-- the A/P going in (6-3 step 3c; ATA22 p.332, p.348: the elevator and
+-- aileron trim integrators synchronized to the surfaces while the A/P is
+-- off): it holds the column and the wheel where the pilot had them, at
+-- once (before, nothing for 2 s, then from neutral and the integrators'
+-- last values)
+local AIL = "laminar/B747/flt_ctrls/sim_roll_ratio"
+rt:set("sim/cockpit2/controls/yoke_pitch_ratio", 0.15)
+rt:set("sim/cockpit2/controls/yoke_roll_ratio", -0.1)
+rt:set("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot", 7)
+rt:set("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot", 0)
+rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 1)
+rt:set("laminar/B747/autopilot/FMA/active_roll_mode", 6)
+rt:set("laminar/B747/autopilot/pitch_law", 1)
+rt:set("laminar/B747/autopilot/pitch_cmd", 7)
+rt:set("laminar/B747/autopilot/roll_law", 1)
+rt:set("laminar/B747/autopilot/roll_cmd", 0)
+frames(2)
+T.equal(get(ELEV), 0, "A/P off: no A/P elevator command, the pilot flies")
+T.equal(get(AIL), 0, "and no A/P aileron command")
+rt:set("laminar/B747/autopilot/servos_on", 1)
+frames(1 / 30)
+-- the pilot lets go
+rt:set("sim/cockpit2/controls/yoke_pitch_ratio", 0)
+rt:set("sim/cockpit2/controls/yoke_roll_ratio", 0)
+frames(0.5)
+T.near(get(ELEV), 0.15, 0.02, "A/P in: the elevator where the column was (" .. get(ELEV) .. ")")
+T.near(get(AIL), -0.1, 0.02, "and the ailerons where the wheel was (" .. get(AIL) .. ")")
+frames(2)
+T.near(get(ELEV), 0.15, 0.02, "held there, the pitch on the command (" .. get(ELEV) .. ")")
+rt:set("laminar/B747/autopilot/servos_on", 0)
+rt:set("laminar/B747/autopilot/pitch_law", 0)
+rt:set("laminar/B747/autopilot/roll_law", 0)
+rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 0)
+rt:set("laminar/B747/autopilot/FMA/active_roll_mode", 0)
 frames(1)
 
 -- lateral control (B747.19.lateral_model.lua, 4-1 step 4): the controlObject

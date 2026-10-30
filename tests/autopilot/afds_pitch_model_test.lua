@@ -362,4 +362,95 @@ s = P.new()
 T.check(P.update(s, inp({mode = "GA", ground = true, mcp_ias = 150, ias = 140, pitch = 1, vs = 0, tas = 140}), DT) ~= nil,
     "G/A on the ground: here")
 
+-- G/S (step 3c; ATA22 p.346, p.292): G/S DEV ALT from the radio altitude
+-- on a 3 degree glide slope, the capture by the distance and its rate, the
+-- law on the lagged airplane down an ILS (the beam 3 degrees from a
+-- transmitter, the radio altitude the height above it, 140 kt over the
+-- ground)
+local TAN3 = math.tan(math.rad(3))
+local function gs_dots(h, x, angle)
+    return (math.deg(math.atan(h / x)) - (angle or 3)) / P.GS_DOT_DEG
+end
+local function gs_inp(o)
+    local g = inp({mode = "ALT", tas = 145, gs = 140, gs_valid = true, vs = 0, pitch = 4})
+    for k, v in pairs(o or {}) do g[k] = v end
+    return g
+end
+-- 1,500 ft up, 0.35 degree above the beam: 28,621 ft out, 175 ft above
+T.near(P.gs_dev_alt(gs_inp({ra = 1500, gs_dots = 0.35 / P.GS_DOT_DEG})), 1500 / TAN3 * math.tan(math.rad(0.35)), 1e-6,
+    "G/S DEV ALT: 0.35 degree above at 1,500 ft is " .. math.floor(1500 / TAN3 * math.tan(math.rad(0.35)) + 0.5) .. " ft")
+T.near(P.beam_vs(gs_inp()), -140 * 1852 / 0.3048 / 60 * TAN3, 1e-6, "the beam's vertical speed at 140 kt: 743 fpm down")
+-- level below the beam, closing at the beam's 743 fpm: 12.4 ft/s needs 48
+-- ft to turn onto it at 0.05 g, and the lead
+local close = (140 * 6076.12 / 3600 * TAN3) ^ 2 / (2 * 0.05 * G_FT) + 140 * 6076.12 / 3600 * TAN3 * P.GS_LEAD_S
+local function dots_at(d, ra) return math.deg(math.atan(d * TAN3 / ra)) / P.GS_DOT_DEG end
+T.check(not P.gs_capture(gs_inp({ra = 1500, gs_dots = dots_at(-(close + 30), 1500)})), "level, " .. math.floor(close + 30) .. " ft below: not yet")
+T.check(P.gs_capture(gs_inp({ra = 1500, gs_dots = dots_at(-(close - 10), 1500)})), "level, " .. math.floor(close - 10) .. " ft below: captured")
+T.check(not P.gs_capture(gs_inp({ra = 1500, vs = -1500, gs_dots = dots_at(-(close - 10), 1500)})), "below and going down faster than the beam: not")
+T.check(P.gs_capture(gs_inp({ra = 1500, vs = -1500, gs_dots = dots_at(close - 10, 1500)})), "above, going down faster: captured")
+T.check(P.gs_capture(gs_inp({ra = 1500, vs = -743, gs_dots = P.GS_BAND / P.GS_DOT_DEG * 0.9})), "on the beam's path within the band: captured")
+T.check(not P.gs_capture(gs_inp({ra = 1500, gs_valid = false, gs_dots = 0})), "no signal: not")
+
+-- an ILS flown: from x ft out, h ft above the transmitter, the beam at
+-- `angle`; the capture by `gs_capture` from `mode`; the signal lost
+-- between `lost` seconds; the deviation from the beam's centre (ft) each
+-- step to cb
+local function ils(o)
+    local sp = P.new()
+    local x, h = o.x, o.h
+    local g = gs_inp({mode = o.mode or "ALT", hold_alt = o.mode == nil and h or nil, vs_sel = o.vs_sel or 0, vs = o.vs or 0, alt = h, ra = h})
+    local v = 145 * 1852 / 3600
+    g.pitch = 4 + math.deg(math.asin(g.vs / 60 * 0.3048 / v))
+    local gam = g.pitch - 4
+    local t, r = 0, {cap = nil, dmin = 1e9, dmax = -1e9}
+    local angle = o.angle or 3
+    while t < o.seconds do
+        local c = P.update(sp, g, DT)
+        if c then g.pitch = g.pitch + (c - g.pitch) * DT / 2 end
+        gam = gam + ((g.pitch - 4) - gam) * DT / 3
+        g.vs = v * math.sin(math.rad(gam)) / 0.3048 * 60
+        h = h + g.vs / 60 * DT
+        x = x - 140 * 6076.12 / 3600 * DT
+        g.alt, g.ra = h, h
+        local lost = o.lost and t >= o.lost[1] and t < o.lost[2]
+        g.gs_valid = not lost
+        g.gs_dots = lost and 0 or gs_dots(h, x, angle)
+        if g.mode ~= "GS" and P.gs_capture(g) then g.mode, r.cap = "GS", t end
+        local d = h - x * math.tan(math.rad(angle))
+        if r.cap then
+            r.dmin, r.dmax = math.min(r.dmin, d), math.max(r.dmax, d)
+            if o.cb then o.cb(t - r.cap, d, g) end
+        end
+        t = t + DT
+    end
+    r.d, r.vs = h - x * math.tan(math.rad(angle)), g.vs
+    return r
+end
+-- from below, level at 1,500 ft 9 NM out (the beam 2,865 ft there)
+local settled = 0
+local r = ils({x = 9 * 6076.12, h = 1500, seconds = 200, cb = function(t, d) if t > 40 then settled = math.max(settled, math.abs(d)) end end})
+T.check(r.cap ~= nil, "from below: captured (" .. tostring(r.cap) .. " s)")
+T.check(r.dmax < 10, ("from below: through the beam no more than 10 ft (%.1f)"):format(r.dmax))
+T.check(settled < 8, ("on the beam within 8 ft from 40 s after the capture (%.1f)"):format(settled))
+T.near(r.vs, -743, 20, "down the beam at its 743 fpm")
+-- from above: V/S 1,500 down from 3,500 ft 9 NM out
+settled = 0
+r = ils({x = 9 * 6076.12, h = 3500, mode = "VS", vs_sel = -1500, vs = -1500, seconds = 200, cb = function(t, d) if t > 40 then settled = math.max(settled, math.abs(d)) end end})
+T.check(r.cap ~= nil, "from above: captured (" .. tostring(r.cap) .. " s)")
+T.check(r.dmin > -12, ("from above: under the beam no more than 12 ft (%.1f)"):format(r.dmin))
+T.check(settled < 5, ("from above: on the beam within 5 ft from 40 s (%.1f)"):format(settled))
+-- a 3.2 degree glide slope (the law assumes 3): on it all the same
+settled = 0
+r = ils({x = 9 * 6076.12, h = 1500, angle = 3.2, seconds = 200, cb = function(t, d) if t > 60 then settled = math.max(settled, math.abs(d)) end end})
+T.check(settled < 5, ("a 3.2 degree beam: within 5 ft from 60 s (%.1f)"):format(settled))
+-- the signal lost for 20 s on the beam (50 s after the capture): the path
+-- held (ATA22 p.346)
+local during = 0
+r = ils({x = 9 * 6076.12, h = 1500, seconds = 180, lost = {150, 170}, cb = function(t, d, g)
+    if not g.gs_valid then during = math.max(during, math.abs(d)) end
+end})
+T.check(during < 15, ("the signal lost 20 s: still within 15 ft of the beam (%.1f)"):format(during))
+-- no G/S law off the mode, and none on the ground
+T.check(P.update(P.new(), gs_inp({mode = "GS", ground = true, ra = 0, gs_dots = 0}), DT) == nil, "G/S on the ground: not here")
+
 T.done()

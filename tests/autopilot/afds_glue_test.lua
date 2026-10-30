@@ -323,10 +323,11 @@ T.equal(rt:get(VNAV_STATE), 0, "not armed again by the model")
 T.equal(rt:get(NOTIFY, 54), 0, "no DESTINATION NOT SET (the old cancel posted it)")
 -- 1d: the approach modes through the model. APP arms LOC and G/S (with no
 -- ILS too: the old one posted RW/ILS CRS ERROR, flag 40); the captures by
--- the old detectors' conditions (both receivers' signals; G/S under 1.5
--- dots) with the track within 120 and 80 degrees of the course (the old
--- monitor no longer captures by itself); the MCP's heading to the course at
--- LOC's capture (the old APP switch set it at once); the old state written
+-- the pitch and roll laws' geometry (steps 2b and 3c: both receivers'
+-- signals, the distance from the beam and its closing) with the track
+-- within 120 and 80 degrees of the course (the old monitor no longer
+-- captures by itself); the MCP's heading to the course at LOC's capture
+-- (the old APP switch set it at once); the old state written
 -- (approach_mode, nav and G/S status) for the old laws, lights and autoland
 local NAV, NAV_ACT = "laminar/B747/autopilot/nav_status", "laminar/B747/autopilot/actual_nav_status"
 local GS, GS_ACT = "laminar/B747/autopilot/glideslope_status", "laminar/B747/autopilot/actual_glideslope_status"
@@ -340,7 +341,7 @@ local function ils(loc, gs)
     rt:set(RI .. "nav2_display_vertical", gs and 1 or 0)
     rt:set(RI .. "nav1_flag_glideslope", gs and 0 or 1)
     rt:set(RI .. "nav2_flag_glideslope", gs and 0 or 1)
-    rt:set(RI .. "hsi_vdef_dots_pilot", gs and 0.4 or 2.5)
+    rt:set(RI .. "nav1_vdef_dots_pilot", gs and -0.3 or -2.5)
 end
 ils(false, false)
 rt:set("laminar/B747/autopilot/ils_dots", 0)
@@ -386,12 +387,23 @@ local r0 = rt:get("laminar/B747/autopilot/roll_cmd")
 frames(60)
 T.check(rt:get("laminar/B747/autopilot/roll_law") == 1 and rt:get("laminar/B747/autopilot/roll_cmd") > r0 + 3,
     "LOC's law: rolling right onto the course (not X-Plane's HDG SEL)")
--- G/S captured under 1.5 dots
+-- G/S's capture by the pitch laws (step 3c): level under the beam at 200
+-- kt, its 1,061 fpm closing (17.7 ft/s: 203 ft to turn onto it at 0.05 g
+-- with the 6 s lead), at the radio altimeter's 2,500 ft (47,702 ft out):
+-- 2 dots (0.54 degree, 453 ft) not yet, 0.3 dot (68 ft) captured
 ils(true, true)
+rt:set(RI .. "nav1_vdef_dots_pilot", -2)
+frames(10)
+T.equal(rt:get(GS), 1, "2 dots under the beam, level: not yet captured")
+rt:set(RI .. "nav1_vdef_dots_pilot", -0.3)
 frames()
-T.check(rt:get(GS) == 2 and rt:get(GS_ACT) == 2, "G/S captured")
+T.check(rt:get(GS) == 2 and rt:get(GS_ACT) == 2, "0.3 dot: G/S captured")
 T.equal(rt:get(PITCH), 2, "the FMA's G/S")
 T.equal(rt:get(PITCH_ARMED), 0, "nothing armed in pitch")
+-- G/S's law (not the old one): under the beam level, down onto it
+local gs_p0 = rt:get(PITCH_CMD)
+frames(150)
+T.check(rt:get(PITCH_LAW) == 1 and rt:get(PITCH_CMD) < gs_p0 - 0.5, "G/S's law: the nose down onto the beam (" .. gs_p0 .. " to " .. rt:get(PITCH_CMD) .. ")")
 -- the signals lost: LOC stays engaged (its latch; the old monitor armed it
 -- again)
 ils(false, false)
