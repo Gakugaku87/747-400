@@ -337,12 +337,9 @@ function runAutoland()
   end
 
 
+  -- (FLARE and ROLLOUT armed with LAND 3 or 2: the AFDS model's, 6-3 step 4a)
   retval=false
   if (B747DR_ap_AFDS_status_annun_pilot==3 or B747DR_ap_AFDS_status_annun_pilot==4) then
-    if simDR_radarAlt1>200 then
-      B747DR_ap_FMA_armed_roll_mode = 4
-      B747DR_ap_FMA_armed_pitch_mode = 3
-    end
     retval=true
   end
 

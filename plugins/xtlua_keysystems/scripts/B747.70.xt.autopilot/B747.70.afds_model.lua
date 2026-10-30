@@ -107,6 +107,21 @@
 --    MCP altitude's capture from T/O or G/A only above 800 ft (table
 --    p.335); below 400 ft G/A ends only with the A/P disengaged and both
 --    F/Ds OFF (FCOM p.673).
+--  - Multi-channel (step 4a; ATA22 p.250, p.256, p.288, p.314, p.318; FCOM
+--    p.653, p.662, p.671): the approach selected with a channel engaged
+--    arms the others with hydraulic pressure (their CMD lights on); they
+--    engage MULTI_S s into LOC and G/S captured below MULTI_RA ft RA with
+--    the track within MULTI_TRK degrees of the course (the runway's: the
+--    FCC's adjustment of the ILS's heading by up to 5 degrees not made).
+--    The arms end with the first channel's disengage or the approach's
+--    end (estimate). Below MULTI_RA with two or three channels engaged the
+--    autoland status replaces the AFDS status: LAND 3 with three engaged
+--    and triple power sources and autoland sensors, LAND 2 with at least
+--    two of each (channels and sensors), else NO AUTOLAND; NO AUTOLAND
+--    too when a multi-channel approach has no LAND 3 or 2 by NO_LAND_RA
+--    ft; LAND 3 to LAND 2 not shown below LAND2_RA ft. FLARE and ROLLOUT
+--    armed with LAND 3 or 2. From a multi-channel G/A into another mode
+--    only the first channel stays engaged.
 -- Pure: the switches' events and the airplane's state in; the engage
 -- state, the warning, the roll mode and the modes asked for out.
 --   local A = B747_afds_model                      -- in XTLua, after dofile
@@ -157,6 +172,17 @@ M.FLCH_AWAY = 8000
 -- course, G/S within GS_COURSE (FCOM p.650-651; ATA22 p.356)
 M.LOC_COURSE = 120
 M.GS_COURSE = 80
+-- multi-channel (step 4a): engaged MULTI_S s into the conditions below
+-- MULTI_RA ft RA, the track within MULTI_TRK degrees of the course (ATA22
+-- p.288, p.318); NO AUTOLAND by NO_LAND_RA ft without LAND 3 or 2 (FCOM
+-- p.653); no LAND 3 to LAND 2 below LAND2_RA ft (FCOM p.662)
+M.MULTI_S = 5
+M.MULTI_RA = 1500
+M.MULTI_TRK = 2
+M.NO_LAND_RA = 600
+M.LAND2_RA = 200
+-- the AFDS status (the init's numbers)
+M.STATUS = {FD = 1, CMD = 2, LAND2 = 3, LAND3 = 4, NO_AUTOLAND = 5}
 
 -- the state
 function M.new()
@@ -165,12 +191,22 @@ function M.new()
         roll = nil, lnav_arm = false, hold_hdg = nil, level_t = 0, att_bank = 0,
         pitch = nil, vnav_arm = false, hold_alt = nil,
         flch_near = nil, loc_arm = false, gs_arm = false, loc_new = false,
-        fd_auto = false, inhibit = false, ra_low = false, ra_t = 0}, {})
+        fd_auto = false, inhibit = false, ra_low = false, ra_t = 0,
+        arm = {L = false, C = false, R = false}, first = nil, multi_t = 0, multi_app = false,
+        land = nil, flare_arm = false, rollout_arm = false, was_ga = false}, {})
 end
 
 -- the channels engaged
 function M.engaged(s)
     return (s.L and 1 or 0) + (s.C and 1 or 0) + (s.R and 1 or 0)
+end
+-- the channels armed for multi-channel (step 4a)
+function M.armed(s)
+    return (s.arm.L and 1 or 0) + (s.arm.C and 1 or 0) + (s.arm.R and 1 or 0)
+end
+local function disarm(s)
+    s.arm.L, s.arm.C, s.arm.R = false, false, false
+    s.multi_t = 0
 end
 local function fd_on(s) return s.fd.L or s.fd.R end
 -- the F/Ds shown: a switch ON, or TO/GA's display with them OFF
@@ -252,6 +288,7 @@ function M.cmd(s, ch, inp)
     if s.bar or s[ch] or M.engaged(s) > 0 then return nil end
     if ((inp.hyd or {})[M.HYD[ch]] or 0) < M.HYD_MIN then return nil end
     s[ch] = true
+    s.first = ch
     s.disc = false
     s.off = false
     if not fd_shown(s) then
@@ -278,14 +315,6 @@ function M.cmd(s, ch, inp)
     return act
 end
 
--- the old approach's channels (until step 4): engaged together without
--- the single-channel rule, those with hydraulic pressure
-function M.multi(s, inp)
-    if s.bar or M.engaged(s) == 0 then return end
-    for _, ch in ipairs(M.CHANNELS) do
-        if ((inp.hyd or {})[M.HYD[ch]] or 0) >= M.HYD_MIN then s[ch] = true end
-    end
-end
 
 -- the disengage bar moved: down disengages all (by hand)
 function M.bar(s, down)
@@ -417,16 +446,24 @@ end
 
 -- the APP switch: APP armed (both), the second push disarms; else LOC and
 -- G/S armed (each unless engaged) when both are enabled or engaged; the
--- arms of LNAV (p.354) and VNAV (p.340) end
+-- arms of LNAV (p.354) and VNAV (p.340) end. With a channel engaged the
+-- others with hydraulic pressure arm for multi-channel (step 4a; ATA22
+-- p.314)
 function M.app(s, inp)
     if s.loc_arm and s.gs_arm then
         s.loc_arm, s.gs_arm = false, false
+        disarm(s)
         return
     end
     if not (loc_enabled(s, inp) or s.roll == "LOC") or not (gs_enabled(s, inp) or s.pitch == "GS") then return end
     if s.roll ~= "LOC" then s.loc_arm = true end
     if s.pitch ~= "GS" then s.gs_arm = true end
     s.lnav_arm, s.vnav_arm = false, false
+    if M.engaged(s) > 0 and not s.bar then
+        for _, ch in ipairs(M.CHANNELS) do
+            if not s[ch] and ((inp.hyd or {})[M.HYD[ch]] or 0) >= M.HYD_MIN then s.arm[ch] = true end
+        end
+    end
 end
 
 -- a TO/GA switch pushed (`inp`: ground, ra, flaps_up, ias): G/A in the air
@@ -468,6 +505,39 @@ function M.loc_engaged_now(s)
     local n = s.loc_new
     s.loc_new = false
     return n
+end
+
+-- the autoland status (step 4a; ATA22 p.250, p.256; FCOM p.653, p.662):
+-- below MULTI_RA in an approach with two or three channels engaged, LAND 3
+-- with three and triple power sources and sensors (`inp.power`,
+-- `inp.sensors`: how many of each are valid), LAND 2 with at least two
+-- sensors, else NO AUTOLAND; NO AUTOLAND too in a multi-channel approach
+-- down to one channel after a status, or without one by NO_LAND_RA; LAND 3
+-- kept below LAND2_RA. FLARE and ROLLOUT armed with LAND 3 or 2
+-- (FCOM p.671)
+local function land_status(s, inp)
+    local n = M.engaged(s)
+    local approach = s.loc_arm or s.gs_arm or s.roll == "LOC" or s.pitch == "GS"
+    if not approach then s.multi_app = false end
+    if approach and n >= 2 then s.multi_app = true end
+    local ra = inp.ra or 9999
+    local land
+    if approach and n >= 2 and ra < M.MULTI_RA then
+        local sensors, power = inp.sensors or 3, inp.power or 3
+        if n >= 3 and sensors >= 3 and power >= 3 then
+            land = "LAND3"
+        elseif sensors >= 2 then
+            land = "LAND2"
+        else
+            land = "NO_AUTOLAND"
+        end
+        if land == "LAND2" and s.land == "LAND3" and ra < M.LAND2_RA then land = "LAND3" end
+    elseif approach and s.multi_app and ra < M.MULTI_RA and (s.land or ra < M.NO_LAND_RA) then
+        land = "NO_AUTOLAND"
+    end
+    s.land = land
+    s.flare_arm = land == "LAND3" or land == "LAND2"
+    s.rollout_arm = s.flare_arm
 end
 
 -- each frame: `inp` {fd = {L, R} the switches ON, hyd, bank, engine,
@@ -513,6 +583,8 @@ function M.update(s, inp)
             s.roll, s.lnav_arm, s.hold_hdg, s.level_t, s.att_bank = nil, false, nil, 0, 0
             s.pitch, s.vnav_arm, s.hold_alt = nil, false, nil
             s.loc_arm, s.gs_arm = false, false
+            disarm(s)
+            s.land, s.flare_arm, s.rollout_arm, s.multi_app = nil, false, false, false
             return {all_off = true}
         end
         return nil
@@ -553,6 +625,27 @@ function M.update(s, inp)
         s.gs_arm, s.vnav_arm = false, false
         set_pitch(s, "GS")
     end
+    -- multi-channel (step 4a): the arms end with the first channel's
+    -- disengage (ATA22 p.314), a channel's hydraulics or the approach's end
+    -- (estimate); the armed channels engage MULTI_S s into LOC and G/S below
+    -- MULTI_RA with the track along the course (p.288, p.318)
+    if s.first and not s[s.first] then disarm(s) end
+    if not (s.loc_arm or s.gs_arm or s.roll == "LOC" or s.pitch == "GS") then disarm(s) end
+    for _, ch in ipairs(M.CHANNELS) do
+        if s.arm[ch] and ((inp.hyd or {})[M.HYD[ch]] or 0) < M.HYD_MIN then s.arm[ch] = false end
+    end
+    if M.armed(s) > 0 then s.multi_app = true end
+    if M.armed(s) > 0 and s.roll == "LOC" and s.pitch == "GS" and (inp.ra or 9999) < M.MULTI_RA and err <= M.MULTI_TRK then
+        s.multi_t = s.multi_t + (inp.dt or 0)
+        if s.multi_t >= M.MULTI_S then
+            for _, ch in ipairs(M.CHANNELS) do
+                if s.arm[ch] then s[ch] = true end
+            end
+            disarm(s)
+        end
+    else
+        s.multi_t = 0
+    end
     -- the MCP altitude captured from V/S and FLCH, from T/O and G/A above
     -- 800 ft RA (table p.335) (the old window: `inp.capture` with
     -- `inp.capture_alt`)
@@ -581,7 +674,29 @@ function M.update(s, inp)
     elseif s.pitch == "VNAV" and not inp.vnav_engaged then
         set_pitch(s, inp.old_law, inp.old_hold_alt or inp.alt)
     end
+    -- from a multi-channel G/A into another mode, roll or pitch, the first
+    -- channel only (ATA22 p.318)
+    local ga = toga(s.roll) and toga(s.pitch)
+    if s.was_ga and not ga and M.engaged(s) >= 2 then
+        local keep = s.first and s[s.first] and s.first
+        for _, ch in ipairs(M.CHANNELS) do
+            if not keep and s[ch] then keep = ch end
+            if ch ~= keep then s[ch] = false end
+        end
+        s.first = keep
+    end
+    s.was_ga = ga
+    land_status(s, inp)
     return nil
+end
+
+-- the AFDS status (the init's numbers): the autoland status, else CMD
+-- with a channel engaged, FD with a F/D shown
+function M.status(s)
+    if s.land then return M.STATUS[s.land] end
+    if M.engaged(s) > 0 then return M.STATUS.CMD end
+    if fd_shown(s) then return M.STATUS.FD end
+    return 0
 end
 
 -- VNAV lost (no route for the old VNAV: until the FMC's step 9): the arm
@@ -592,8 +707,8 @@ end
 
 -- the FMA's pitch (the init's numbers): active and armed. The old code's
 -- FLARE comes first; T/O and G/A TO/GA; VNAV the old VNAV's sub-mode
--- (`inp.vnav_fma`); the arms G/S, else VNAV, else the old FLARE's
--- (`inp.old_armed_pitch`)
+-- (`inp.vnav_fma`); the arms G/S, else VNAV, else FLARE (step 4a: with
+-- LAND 3 or 2, until the old code's FLARE)
 function M.pitch_fma(s, inp)
     local active = 0
     if inp.old_pitch == "FLARE" then
@@ -605,7 +720,7 @@ function M.pitch_fma(s, inp)
     elseif s.pitch then
         active = M.PITCH_FMA[s.pitch]
     end
-    local armed = inp.old_armed_pitch or 0
+    local armed = (s.flare_arm and inp.old_pitch ~= "FLARE") and M.PITCH_FMA.FLARE or 0
     if s.gs_arm then
         armed = M.PITCH_FMA.GS
     elseif s.vnav_arm then
@@ -615,7 +730,7 @@ function M.pitch_fma(s, inp)
 end
 
 -- the FMA's roll (the init's numbers): active and armed. T/O and G/A
--- TO/GA; the arms LNAV, LOC, else the old ROLLOUT's (`inp.old_armed_roll`)
+-- TO/GA; the arms LNAV, LOC, else ROLLOUT (step 4a: with LAND 3 or 2)
 function M.roll_fma(s, inp)
     local active = 0
     if toga(s.roll) then
@@ -623,7 +738,7 @@ function M.roll_fma(s, inp)
     elseif s.roll then
         active = M.ROLL_FMA[s.roll]
     end
-    local armed = inp.old_armed_roll or 0
+    local armed = s.rollout_arm and M.ROLL_FMA.ROLLOUT or 0
     if s.lnav_arm then
         armed = M.ROLL_FMA.LNAV
     elseif s.loc_arm then

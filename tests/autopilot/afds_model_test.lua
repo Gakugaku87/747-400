@@ -38,7 +38,7 @@ local function inp(o)
         capture_alt = o.capture_alt, vnav_engaged = o.vnav_engaged or false, vnav_fma = o.vnav_fma,
         old_law = o.old_law, old_armed_pitch = o.old_armed_pitch, old_hold_alt = o.old_hold_alt,
         loc_detect = o.loc_detect, gs_detect = o.gs_detect, course_err = o.course_err,
-        gs_after_loc = o.gs_after_loc}
+        gs_after_loc = o.gs_after_loc, sensors = o.sensors, power = o.power}
 end
 
 -- engage with both F/Ds OFF: V/S and HDG HOLD (FCOM p.640; ATA22 p.266)
@@ -163,13 +163,130 @@ A.update(h3, inp({fdL = true}))
 A.cmd(h3, "L", inp({fdL = true}))
 T.equal(A.update(h3, inp()), nil, "both F/Ds OFF with the A/P engaged: its modes stay")
 
--- the old approach's channels (until step 4)
+-- 4a: multi-channel (ATA22 p.288, p.314, p.318; FCOM p.653, p.662,
+-- p.671). APP with a channel engaged arms the others with hydraulic
+-- pressure; none without one engaged
+local function app_inp(o)
+    o = o or {}
+    o.fdL = true
+    return inp(o)
+end
+local m0 = A.new()
+A.update(m0, app_inp())
+A.app(m0, app_inp())
+T.equal(A.armed(m0), 0, "APP with no channel engaged: no multi-channel arm")
 local m = A.new()
-A.multi(m, inp())
-T.equal(A.engaged(m), 0, "the approach's channels need one engaged")
-A.cmd(m, "C", inp())
-A.multi(m, inp({hyd = {3000, 0, 3000}}))
-T.check(m.L and m.C and not m.R, "the approach's channels with hydraulic pressure: L and C, not R (system 2)")
+A.update(m, app_inp())
+A.cmd(m, "C", app_inp())
+A.app(m, app_inp({hyd = {3000, 0, 3000}}))
+T.check(m.arm.L and not m.arm.C and not m.arm.R, "APP with C engaged: L armed, not R (system 2 without pressure)")
+T.equal(A.engaged(m), 1, "armed, not engaged")
+local function approach(st, o)
+    o = o or {}
+    o.loc_detect, o.gs_detect, o.course_err = true, true, o.course_err or 0
+    o.ra = o.ra or 1400
+    return A.update(st, app_inp(o))
+end
+-- LOC and G/S captured below 1,500 ft with the track on the course: the
+-- armed channels engage 5 s later
+m = A.new()
+A.update(m, app_inp())
+A.cmd(m, "L", app_inp())
+A.app(m, app_inp())
+T.check(m.arm.C and m.arm.R, "APP with L engaged: C and R armed")
+approach(m, {ra = 1600})
+T.equal(m.roll .. m.pitch, "LOCGS", "LOC and G/S captured")
+for _ = 1, 60 do approach(m, {ra = 1600}) end
+T.equal(A.engaged(m), 1, "above 1,500 ft: not engaged")
+for _ = 1, 48 do approach(m) end
+-- (4.8 s)
+T.equal(A.engaged(m), 1, "4.8 s below 1,500 ft: not yet")
+approach(m)
+approach(m)
+approach(m)
+T.equal(A.engaged(m), 3, "5.1 s below 1,500 ft: all three engaged")
+T.equal(A.armed(m), 0, "no arms left")
+T.equal(A.status(m), A.STATUS.LAND3, "LAND 3")
+T.check(m.flare_arm and m.rollout_arm, "FLARE and ROLLOUT armed")
+T.equal(select(2, A.roll_fma(m, app_inp())), A.ROLL_FMA.ROLLOUT, "the FMA's ROLLOUT armed")
+T.equal(select(2, A.pitch_fma(m, app_inp())), A.PITCH_FMA.FLARE, "the FMA's FLARE armed")
+T.equal(select(2, A.pitch_fma(m, app_inp({old_pitch = "FLARE"}))), 0, "not armed once the old code's FLARE is on")
+-- the track 3 degrees off the course: not engaged
+local mt = A.new()
+A.update(mt, app_inp())
+A.cmd(mt, "L", app_inp())
+A.app(mt, app_inp())
+for _ = 1, 80 do approach(mt, {course_err = 3}) end
+T.equal(A.engaged(mt), 1, "the track 3 degrees off the course: not engaged")
+for _ = 1, 51 do approach(mt, {course_err = 1.5}) end
+T.equal(A.engaged(mt), 3, "within 2 degrees: engaged")
+-- LAND 2: a sensor of each kind down to two, or two channels; NO AUTOLAND
+-- with one sensor
+T.equal((function() approach(m, {sensors = 2}); return A.status(m) end)(), A.STATUS.LAND2, "two sensors valid: LAND 2")
+T.equal((function() approach(m, {power = 2}); return A.status(m) end)(), A.STATUS.LAND2, "two power sources: LAND 2")
+T.equal((function() approach(m, {sensors = 1}); return A.status(m) end)(), A.STATUS.NO_AUTOLAND, "one sensor: NO AUTOLAND")
+T.check(not m.flare_arm and not m.rollout_arm, "NO AUTOLAND: no FLARE or ROLLOUT arm")
+approach(m)
+T.equal(A.status(m), A.STATUS.LAND3, "back: LAND 3")
+-- below 200 ft LAND 3 to LAND 2 not shown (FCOM p.662)
+approach(m, {ra = 150, sensors = 2})
+T.equal(A.status(m), A.STATUS.LAND3, "150 ft, a sensor lost: still LAND 3")
+approach(m, {ra = 150, sensors = 1})
+T.equal(A.status(m), A.STATUS.NO_AUTOLAND, "150 ft, two lost: NO AUTOLAND")
+-- a channel's hydraulics lost: LAND 2; down to one: NO AUTOLAND
+approach(m, {ra = 800, hyd = {3000, 0, 3000}})
+T.equal(A.engaged(m) .. A.status(m), "2" .. A.STATUS.LAND2, "a channel lost (system 2): two engaged, LAND 2")
+approach(m, {ra = 800, hyd = {0, 0, 3000}})
+T.equal(A.engaged(m) .. A.status(m), "1" .. A.STATUS.NO_AUTOLAND, "down to one channel: NO AUTOLAND")
+-- a multi-channel approach without LAND 3 or 2 by 600 ft: NO AUTOLAND
+-- (FCOM p.653); above it CMD
+local mn = A.new()
+A.update(mn, app_inp())
+A.cmd(mn, "L", app_inp())
+A.app(mn, app_inp())
+approach(mn, {ra = 700, course_err = 5})
+T.equal(A.status(mn), A.STATUS.CMD, "armed, 700 ft, not engaged: CMD")
+approach(mn, {ra = 550, course_err = 5})
+T.equal(A.status(mn), A.STATUS.NO_AUTOLAND, "550 ft without LAND 3 or 2: NO AUTOLAND")
+-- a single-channel approach (nothing armed: the other channels' hydraulics
+-- out) stays CMD
+local ms = A.new()
+A.update(ms, app_inp())
+A.cmd(ms, "L", app_inp())
+A.app(ms, app_inp({hyd = {0, 0, 3000}}))
+approach(ms, {ra = 300, hyd = {0, 0, 3000}})
+T.equal(A.status(ms), A.STATUS.CMD, "a single-channel approach: CMD")
+-- the arms end with the first channel's disengage (ATA22 p.314) and with
+-- the approach's end (the second APP push)
+local md = A.new()
+A.update(md, app_inp())
+A.cmd(md, "L", app_inp())
+A.app(md, app_inp())
+A.disengage(md)
+A.update(md, app_inp())
+T.equal(A.armed(md), 0, "the first channel disengaged: the arms end")
+local mp = A.new()
+A.update(mp, app_inp())
+A.cmd(mp, "L", app_inp())
+A.app(mp, app_inp())
+A.app(mp, app_inp())
+T.equal(A.armed(mp), 0, "APP's second push: the arms end")
+-- a multi-channel G/A into another mode: the first channel only (ATA22
+-- p.318)
+local mg = A.new()
+A.update(mg, app_inp())
+A.cmd(mg, "C", app_inp())
+A.app(mg, app_inp())
+for _ = 1, 51 do approach(mg) end
+T.equal(A.engaged(mg), 3, "multi-channel")
+A.toga(mg, app_inp({ra = 300}))
+A.update(mg, app_inp({ra = 400}))
+T.equal(A.engaged(mg), 3, "G/A: all three stay")
+A.update(mg, app_inp({ra = 1500}))
+A.vs(mg, app_inp({ra = 1500}))
+A.update(mg, app_inp({ra = 1500}))
+T.check(mg.C and not mg.L and not mg.R, "V/S from G/A: C (the first in command) only")
+T.equal(A.status(mg), A.STATUS.CMD, "CMD")
 
 -- 1b: the roll modes. HDG SEL, then HDG HOLD: annunciated at once, its
 -- heading once the roll stays under 3 degrees for 2 s (ATA22 figure p.353)

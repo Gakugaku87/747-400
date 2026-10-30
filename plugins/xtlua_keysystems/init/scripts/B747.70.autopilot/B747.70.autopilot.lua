@@ -101,6 +101,8 @@ B747DR_ap_alt_show_tenThousands			= deferred_dataref("laminar/B747/autopilot/alt
 B747DR_ap_cmd_L_mode         			= deferred_dataref("laminar/B747/autopilot/cmd_L_mode/status", "number")
 B747DR_ap_cmd_C_mode         			= deferred_dataref("laminar/B747/autopilot/cmd_C_mode/status", "number")
 B747DR_ap_cmd_R_mode         			= deferred_dataref("laminar/B747/autopilot/cmd_R_mode/status", "number")
+-- the channels L, C, R armed for multi-channel (6-3 step 4a): their CMD lights
+B747DR_ap_cmd_armed          			= deferred_dataref("laminar/B747/autopilot/cmd_armed", "array[3]")
 B747DR_ap_autothrottle_armed        	= deferred_dataref("laminar/B747/autothrottle/armed", "number")
 B747DR_ap_mach_decimal_visibiilty	    = deferred_dataref("laminar/B747/autopilot/mach_dec_vis", "number")
 B747DR_ap_fpa	    = deferred_dataref("laminar/B747/autopilot/navadata/fpa", "number")

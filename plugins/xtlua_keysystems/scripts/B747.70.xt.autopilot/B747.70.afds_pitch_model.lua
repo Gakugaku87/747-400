@@ -142,6 +142,7 @@ M.GS_VS_MAX = 1000
 M.GS_LEAD_S = 6
 M.GS_BAND = 0.1
 M.GS_DOT_DEG = 0.272
+M.GS_DOTS_MAX = 2.45
 
 local G = 9.80665
 local FT = 0.3048
@@ -235,9 +236,12 @@ function M.beam_vs(inp) return -inp.gs * FPM_KT * math.tan(math.rad(M.GS_DEG)) e
 
 -- G/S's capture (ATA22 p.292: the distance from the beam's centre and the
 -- deviation's rate): closing on the beam no farther than the change of path
--- at G_LIMIT and GS_LEAD_S of the closing take, or within GS_BAND
+-- at G_LIMIT and GS_LEAD_S of the closing take, or within GS_BAND; none at
+-- the end of the scale (GS_DOTS_MAX: X-Plane's deviation stops at 2.5 dots,
+-- the distance then unknown; an estimate. s102 and s112 had captured 2.5
+-- dots below climbing back after an air start's sink)
 function M.gs_capture(inp)
-    if not inp.gs_valid then return false end
+    if not inp.gs_valid or math.abs(inp.gs_dots) >= M.GS_DOTS_MAX then return false end
     if math.abs(M.gs_dev(inp)) <= M.GS_BAND then return true end
     local d = M.gs_dev_alt(inp)
     local v = (inp.vs - M.beam_vs(inp)) / 60

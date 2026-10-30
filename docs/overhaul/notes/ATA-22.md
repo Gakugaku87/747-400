@@ -709,3 +709,32 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
 - s109 を手順どおりに直した：電波高度 1,500 ft（推力減の高度）で上昇推力（FCOM の Max Climb EPR を `B747_epr_hold.lua` が保つ。A/T の THR REF の代わり）、捕捉で EPR の保持をやめて MCP 速度 180 kt と A/T の SPD。
 - X-Plane（X-Plane を起動し直して捨ての s66 のあと）：`s109_afds_takeoff` 20/20。300 ft で A/P を入れ、1,500 ft まで 182〜187 kt（4,000 fpm）、上昇推力（EPR 1.29）で捕捉まで 171〜187 kt、捕捉は 4,388 ft・1,867 fpm から入って行き過ぎ 0（最高 5,000 ft）。
 - 残り：離陸推力のまま高い昇降率で捕捉すると行き過ぎる（FCTM p.124 のとおりの振る舞い）。捕捉の則の 0.05 g（推定）と A/T（6-4）の取り合いは、A/T を作り直すときに見る。
+
+## 23. 段 4 の段取り（2026-10-30：autoland と 3 チャンネル）
+
+- 資料：
+  - multi-channel：APP を選ぶと、engage 中の A/P があれば他のチャンネルが arm（CMD 灯がすべて点く：ATA22 p.288、p.314）。arm のチャンネルは、LOC と G/S の捕捉・電波高度 1,500 ft 未満・航跡が補正した滑走路方位から 2° 以内（ILS の滑走路方位と 5° までの差を補正）で engage（p.318）、1,500 ft を通って 5 秒後（p.288、p.294）。arm は、先に engage していたチャンネルが外れると消える（p.314）。multi-channel の G/A から巡航のモードへ移ると、最初のチャンネルだけ残る（p.318）。
+  - 状態表示：1,500 ft 未満の multi-channel で AFDS の状態表示の代わりに LAND 3（電源・engage の FCC・autoland のセンサが 3 重）、LAND 2（FCC とセンサが少なくとも 2 重）、NO AUTOLAND（p.250、p.256；FCOM p.662）。multi-channel の進入なのに 600 ft までに LAND 3・2 が出ないと NO AUTOLAND で、FLARE と ROLLOUT は arm しない（FCOM p.653）。200 ft 未満では LAND 3 から LAND 2 への劣化は出さない（FCOM p.662）。
+  - FLARE：LAND 2・3 で arm（FCOM p.671）、engage の高さは降下率で 40〜60 ft（ATA22 p.342）、gear altitude で、送信所の 450 ft 先に 1.5 ft/s で接地（p.294、p.346）。25 ft で retard（A/T の IDLE：FCOM p.671）。5 ft 未満で flare の指令が 2° 未満なら NOSE LETDOWN（p.294、p.332）。
+  - ROLLOUT：LAND 2・3 で arm、約 5 ft（FCOM p.671。ATA22 p.296 は 5 ft で翼水平、2 ft から rollout）、ラダーと前輪のステアリングで LOC の中心線、A/P を外すまで（p.362）。
+  - runway align と片発（FCOM p.670；ATA22 p.296、p.360–362）：crab が 10° 超は 500 ft で 5° の forward slip、5〜10° は 500 ft で 5° まで減らし 200 ft で残り、5° 未満は 200 ft で全部。片発が進入前なら 1,300 ft で翼水平の sideslip、進入中なら検出時。故障の反対側からの強い横風では翼水平にしない。A/P が外れるとラダーはトリムの位置へ。
+- 分け方：
+  - 4a：multi-channel の arm と engage、LAND 3・LAND 2・NO AUTOLAND（engage のチャンネル、FCC の電源（AFDS-16：FCC L は AC 3・DC 3、C は AC 1・DC 1、R は AC 2・DC 2）、IRU 3 台、電波高度計 3 台、ILS 受信機（X-Plane は 2 台：C は推定）、600 ft の規則）、FLARE・ROLLOUT の arm。AFDS-05 と、前の autoland の FMA と状態表示を AFDS のモデルへ。
+  - 4b：FLARE の則、retard、NOSE LETDOWN（AFDS-04）。
+  - 4c：ROLLOUT と ROLL DOWN（AFDS-04）。
+  - 4d：runway align と片発。
+  - 電源の autoland の分離（ELEC-18）は 4a の後、NO LAND 3 などの警報（AFDS-13）は段 5。
+
+## 24. 段 4a の実装（2026-10-30：multi-channel と autoland の状態表示）
+
+- 前の作り：APP を押すと（A/P が 1 台入っていて 1,500 ft より上なら）3 台とも即 engage、1,500 ft より下では LOC と G/S の捕捉で即 engage（5 秒の遅れも航跡の 2° の条件も無い）。LAND 3・2 は engage の台数だけで決め、1 台の進入では 1,500 ft の下で NO AUTOLAND を出していた。FLARE・ROLLOUT の arm は前の autoland が状態表示から FMA に書いていた（AFDS-05）。
+- 実装（`B747.70.afds_model.lua`）：
+  - APP を選んだとき engage 中のチャンネルがあれば、油圧のある他のチャンネルが arm（`arm`）。arm は、最初のチャンネル（`first`）が外れる、APP の 2 回目、進入のモード（LOC・G/S とその arm）が無くなる、油圧を失う、で消える（後の 2 つは推定）。
+  - arm のチャンネルは、LOC と G/S が engage、電波高度 1,500 ft 未満、航跡がコースから 2° 以内が 5 秒続くと engage（ILS の滑走路方位の FCC の補正は作っていない：コースを滑走路方位として使う）。
+  - 状態（`land`、`M.status`）：進入中に 2 台以上 engage で 1,500 ft 未満なら、3 台で FCC の電源 3・センサー 3 なら LAND 3、センサー 2 以上なら LAND 2、それ以下は NO AUTOLAND。multi-channel の進入で、LAND の後に 1 台に減ったか、600 ft までに LAND が出なければ NO AUTOLAND。200 ft 未満では LAND 3 から LAND 2 にしない。それ以外は CMD・FD。FLARE と ROLLOUT は LAND 3・2 のとき arm（FMA の armed にモデルが出す）。
+  - multi-channel の G/A から、ロールかピッチのどちらかが G/A でなくなると、最初のチャンネルだけ残る。
+- グルー（`B747.70.xt.autopilot.lua`）：前の `multi` の呼び出しを外した。FCC の電源（L は AC 3・DC 3、C は AC 1・DC 1、R は AC 2・DC 2：`electrical/bus/ac`・`dc`）の数、センサー（`irs/nav_valid`・`ra/valid` の数と ILS の受信機の数の最小：ILS は NAV1・NAV2 の LOC と G/S の信号と旗で、X-Plane に無い ILS C は L と同じ：推定）を渡す。状態表示（`AFDS/status_annun_pilot`・`copilot`）はモデルの `status` から（前の台数だけの判定は外した）。advisory [246] は NO AUTOLAND のとき（前と同じ意味。警報は段 5）。新しい `autopilot/cmd_armed`（L・C・R の arm。init `B747.70.autopilot` で作る）を書き、照明のモジュールが CMD 灯を engage か arm で点ける（ATA22 p.288）。前の autoland（`B747.autoland.lua`）の FMA の arm の書き込みは外した（FLARE・ROLLOUT の則は段 4b・4c まで前のまま）。
+- 推定：arm が消える条件のうち、進入のモードが無くなるときと油圧、ILS C を L と同じに、航跡の 2° を ILS のコースで見ること。資料の「電源の 3 重」は FCC の AC・DC の母線が生きているかだけで見る（autoland のときの母線の分離：ELEC-18 は後で）。
+- 試験：AFDS のモデルに 34 件（APP の arm と油圧、1,500 ft より上と下、4.8 秒と 5.1 秒、航跡 3° と 1.5°、LAND 2 のセンサー・電源、NO AUTOLAND、200 ft 未満の LAND 3、チャンネルを失う、600 ft の規則、1 台の進入は CMD、最初のチャンネルの解除と APP の 2 回目で arm が消える、G/A から V/S で最初だけ）。前の `multi` の試験 2 件は外した。AFDS のグルーの試験に 13 件（APP で C・R が arm で engage しない、3,000 ft では engage しない、1,400 ft で 4 秒は未だ・5.2 秒で engage、LAND 3、FMA の ROLLOUT・FLARE の arm、電波高度計 1 台で LAND 2、すべて切で状態なし）。全 121 本。
+- G/S の捕捉の直し（同じ日、段 3c の続き）：段 4a の試験で、空中開始の直後に −2,900 fpm で沈み、ALT HOLD が +850 fpm で戻る途中、偏位が X-Plane の目盛の端（2.5 ドットで止まる）のまま、寄る速さが大きいので G/S を捕まえた（s112：2.5 ドット下で捕まえ、ビームに乗るまで 60 秒、500 ft に間に合わず。s102：G/S のかなり下で捕まえ、続く確認が 4 件落ちた）。目盛の端では本当の距離が分からないので、捕捉は 2.45 ドット未満だけにした（推定）。ピッチの則のモデルの試験に 2 件（2.5 ドットで上昇中は捕まえず、2.4 ドットで捕まえる）。
+- X-Plane（カスタム acf、段 4a）：新しい `s113_afds_multi` 29/29 を 2 回（APP で C・R が arm して CMD 灯が点き、engage しない。G/S を捕まえた後、電波高度 1,407 ft（1,500 ft を通って 5 秒）で C・R が engage、LAND 3 と FMA の FLARE・ROLLOUT の arm。電波高度計 R の故障で LAND 2、戻して LAND 3。800 ft の TO/GA で 3 台のまま、1,000 ft の上で ALT HOLD を押すと L だけ。PFD を撮った：LAND 3（緑の枠）、SPD｜LOC（ROLLOUT）｜G/S（FLARE））、`s99_afds_engage` 36/36。G/S の捕捉を直した後（X-Plane を起動し直して捨ての s66 のあと）：`s102_afds_app` 37/37、`s112_afds_gs` 12/12（−0.86 ドットで捕まえ、ビームの上へ出ず、500 ft まで ±0.12 ドット）、`s113` 29/29。直す前の回では s102 33/37・s112 11/12（上の G/S の捕捉の直しの件）。Lua の誤りなし。
