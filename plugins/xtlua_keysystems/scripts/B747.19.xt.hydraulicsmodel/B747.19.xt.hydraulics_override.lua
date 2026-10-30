@@ -118,6 +118,25 @@ function B747_fcsov_flight_start()
         B747DR_fcsov_wing_valve[i], B747DR_fcsov_tail_valve[i] = 0, 0
     end
 end
+
+-- the trailing edge flaps' angle X-Plane's wings get (2026-10-30: a
+-- correction the user allowed, CLAUDE.md; notes/AERO.md §3.10). X-Plane's
+-- flap lift follows the actual angle and hardly grows past 20 degrees,
+-- which no acf setting changes, while the FCOM's attitudes want it growing
+-- to 30. At the FCU's detent angles (5, 10, 20, 22 for 25, 30) X-Plane gets
+-- the angle that gives the FCOM's lift increment with the acf's flaps (lift
+-- coefficient 1.62, last detent 75), straight between (estimates, measured
+-- in X-Plane: tests/flight/measure/aero_flap_shape.json). The 3D flaps and
+-- EICAS keep the actual angle (laminar/B747/flt_ctrls/flaps, fcu/te_deg)
+local XP_FLAP = {{0, 0}, {5, 3.2}, {10, 8.2}, {20, 15.1}, {22, 18.6}, {30, 30}}
+function B747_xp_flap(deg)
+    if deg <= 0 then return deg end
+    for i = 2, #XP_FLAP do
+        local a, b = XP_FLAP[i - 1], XP_FLAP[i]
+        if deg <= b[1] then return a[2] + (deg - a[1]) * (b[2] - a[2]) / (b[1] - a[1]) end
+    end
+    return deg
+end
 -- the hydraulic model's pressures (B747.19.xt.hyd_power.lua); each move of
 -- a surface takes some, and a surface stops when its systems have no more
 function pressure_input()
@@ -215,16 +234,18 @@ function pressure_output()
     B747DR_outer_spoilers[1]=B747_animate_value(B747DR_outer_spoilers[1],B747DR_spoilers[12],-100,100,10)
 
     --flaps: where the flap control units drive them; the outboard flaps
-    --are on the acf's wings 2 and 3 (flap set 2), the inboard on wing 1
+    --are on the acf's wings 2 and 3 (flap set 2), the inboard on wing 1.
+    --X-Plane's wings get the angle that gives the actual angle's lift
+    --(B747_xp_flap: a correction), the 3D flaps and EICAS the actual angle
     for i=1,4,1 do
         B747DR_flaps[i]=controlRatios[22+i]
     end
-    simDR_flap1=B747DR_flaps[1]
-    simDR_flap2=B747DR_flaps[2]
-    simDR_flap3=B747DR_flaps[3]
-    simDR_flap4=B747DR_flaps[4]
-    simDR_flap1_wing2=B747DR_flaps[1]
-    simDR_flap4_wing2=B747DR_flaps[4]
+    simDR_flap1=B747_xp_flap(B747DR_flaps[1])
+    simDR_flap2=B747_xp_flap(B747DR_flaps[2])
+    simDR_flap3=B747_xp_flap(B747DR_flaps[3])
+    simDR_flap4=B747_xp_flap(B747DR_flaps[4])
+    simDR_flap1_wing2=B747_xp_flap(B747DR_flaps[1])
+    simDR_flap4_wing2=B747_xp_flap(B747DR_flaps[4])
 end
 
 
