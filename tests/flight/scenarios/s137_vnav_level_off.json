@@ -1,0 +1,51 @@
+{
+  "name": "s137_vnav_level_off",
+  "description": "今の VNAV（段 9 の前：AFDS は作り直し済み、VNAV のサブモードは前の VNAV_modeSwitch）が上昇で MCP の高度に水平になるかの確認（下調べで、作り直した AFDS の則には VNAV の捕捉が無く行き過ぎるおそれが見つかった）。空中、10,000 ft・約 290 kt（s101 と同じ始め方、機体を読み直す）。RJAA→RJBB の経路と CRZ ALT FL350、MCP 13,000 ft で VNAV：VNAV SPD で上がり、13,000 ft で VNAV ALT（か PTH）に水平になるはず（FCOM p.645：MCP の高度と食い違えば水平にして VNAV ALT）。300 秒の高度の最大を見る（行き過ぎ 300 ft まで）。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 3048, "heading_true": 340, "speed_in_meters_per_second": 150 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れを待つ" },
+    { "do": "wait", "note": "FMS の空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 30 },
+    { "do": "sleep", "seconds": 5, "note": "初期化の残りを待つ" },
+    { "do": "record_start" },
+    { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
+    { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
+    { "do": "cdu", "note": "RTE：RJAA→RJBB、DIRECT XAC・SPENS・BOKJO", "keys": ["RTE", "RJAA", "L1", "RJBB", "R1", "NEXT", "XAC", "R1", "?SEL", "SPENS", "R2", "?SEL", "BOKJO", "R3", "?SEL"] },
+    { "do": "cdu", "note": "ACTIVATE と EXEC", "keys": ["LEGS", "R6", "EXEC"] },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "cdu", "note": "INIT REF、<INDEX、PERF：CRZ ALT FL350、COST INDEX 100", "keys": ["INITREF", "L6", "L3", "350", "R1", "100", "L5"] },
+    { "do": "check", "note": "FMC の巡航高度 35,000 ft", "dref": "laminar/B747/autopilot/dist/cruise_alt", "op": "==", "value": 35000 },
+    { "do": "set", "note": "MCP 高度 13,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 13000 },
+    { "do": "sleep", "seconds": 5, "note": "MCP の高度が中へ写るのを待つ（3 秒）" },
+    { "do": "remember", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "as": "alt0" },
+    { "do": "cmd", "note": "VNAV", "name": "laminar/B747/autopilot/button_switch/VNAV" },
+    { "do": "wait", "note": "VNAV engage", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "between", "value": [4, 6], "timeout": 10 },
+    { "do": "snapshot", "note": "VNAV の状態", "drefs": [ "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode", "laminar/B747/autopilot/vnav_state", "laminar/B747/autopilot/altitude_dial_ft", "laminar/B747/autopilot/heading/altitude_dial_ft", "laminar/B747/autopilot/flightPhase", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot" ] },
+    { "do": "watch", "note": "300 秒：MCP の 13,000 ft を 300 ft より行き過ぎない（340 kt への加速の後に上がる）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "max": 13300, "timeout": 300 },
+    { "do": "snapshot", "note": "300 秒後", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode", "laminar/B747/autopilot/vnav_state", "laminar/B747/autopilot/altitude_dial_ft", "laminar/B747/autopilot/flightPhase", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot" ] },
+    { "do": "check", "note": "13,000 ft の近くで水平", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [12800, 13300] },
+    { "do": "check", "note": "VNAV ALT（5）か VNAV PTH（6）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "between", "value": [5, 6] },
+    { "do": "check", "note": "A/T は SPD（水平の VNAV ALT・PTH：FCOM p.645）", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3 },
+    { "do": "set", "note": "MCP 高度 15,000 ft（新しい許可）", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 15000 },
+    { "do": "wait", "note": "VNAV SPD で上昇を続ける", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 4, "timeout": 10 },
+    { "do": "watch", "note": "200 秒：15,000 ft を 300 ft より行き過ぎない", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "max": 15300, "timeout": 200 },
+    { "do": "snapshot", "note": "15,000 ft", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot" ] },
+    { "do": "check", "note": "15,000 ft の近くで水平", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [14800, 15300] },
+    { "do": "check", "note": "VNAV ALT", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 5 },
+    { "do": "record_stop" }
+  ]
+}

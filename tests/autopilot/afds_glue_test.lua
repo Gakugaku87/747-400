@@ -247,6 +247,7 @@ T.check(rt:get(ROLL_CMD) < 0, "2 s under 3 degrees: the heading then held (101),
 -- (its sub-mode in the FMA), a push while active, V/S ends it; no route
 -- ends the arm without DESTINATION NOT SET (flag 54)
 local PITCH, PITCH_ARMED = "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/armed_pitch_mode"
+local AT_FMA_ST = "laminar/B747/autopilot/FMA/autothrottle_mode"
 local ALT_STATUS, FLCH_STATUS = "laminar/B747/autopilot/altitude_hold_status", "laminar/B747/autopilot/speed_status"
 local NOTIFY, VNAV_STATE = "laminar/B747/fms/notification", "laminar/B747/autopilot/vnav_state"
 local RA = "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot"
@@ -355,6 +356,24 @@ frames(30)
 T.check(rt:get(VNAV_STATE) >= 2, "engaged by the old VNAV above 400 ft")
 T.equal(rt:get(PITCH), 4, "the FMA's VNAV SPD")
 T.equal(rt:get(PITCH_ARMED), 0, "no arm")
+-- 6-1/6-2 step 9a: climbing in VNAV SPD to the MCP altitude, VNAV levels
+-- there (VNAV ALT: FCOM p.645, ATA22 p.280; before, the rebuilt AFDS flew
+-- the old VNAV's FLCH on through it: s137); a new MCP altitude, VNAV SPD
+local ALT_IND, VSI = "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm"
+local MCP_ALT = "laminar/B747/autopilot/heading/altitude_dial_ft"
+local a0 = rt:get(ALT_IND)
+local mcp0 = rt:get(MCP_ALT)
+rt:set(VSI, 1500)
+rt:set(MCP_ALT, a0 + 60)
+frames(3)
+T.equal(rt:get(PITCH), 5, string.format("climbing 60 ft below the MCP altitude: VNAV ALT (%d)", rt:get(PITCH)))
+T.check(rt:get(AT_FMA_ST) ~= 5, "the A/T not THR REF while level (SPD: FCOM p.645)")
+rt:set(MCP_ALT, a0 + 3000)
+frames(3)
+T.equal(rt:get(PITCH), 4, "a new MCP altitude above: VNAV SPD again")
+rt:set(MCP_ALT, mcp0)
+rt:set(VSI, 0)
+frames(3)
 rt:command(CMD .. "VNAV")
 frames()
 T.check(rt:get(VNAV_STATE) >= 2, "a push while active: nothing (the old one disengaged it)")
