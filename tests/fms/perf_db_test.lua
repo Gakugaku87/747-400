@@ -161,7 +161,7 @@ local _, vmd = P.min_drag(pw, 300000, 10000)
 T.check(vmd > 230 and vmd < 250, string.format("the minimum drag speed at 300 t: %.0f kt (about the flaps up maneuvering speed, VREF 30 + 80)", vmd))
 T.check(select(2, P.min_drag(pw, 200000, 10000)) < vmd and select(2, P.min_drag(pw, 400000, 10000)) > vmd, "it goes with the weight")
 local cas, mach = P.econ_climb(pw, 300000, 35000, 0)
-T.check(math.abs(cas - (vmd + 60)) < 0.01 and mach == mrc, "climb at index 0: the minimum drag speed + 60 kt (FCTM p.4.3's maximum rate climb), the cruise Mach")
+T.check(math.abs(cas - (vmd + 60)) < 0.01 and mach == mrc, "climb at index 0: the minimum drag speed + 60 kt (FCTM p.4.4's maximum rate climb), the cruise Mach")
 local lo, hi = 0, 5000
 for _ = 1, 40 do
     local mid = (lo + hi) / 2
@@ -169,7 +169,7 @@ for _ = 1, 40 do
 end
 T.check(hi > 150 and hi < 400, string.format("the long range cruise's cost index: %.0f", hi))
 cas, mach = P.econ_climb(pw, 300000, 35000, hi + 0.01)
-T.near(cas, 340, 0.5, "climb there: 340 kt (FCTM p.4.3)")
+T.near(cas, 340, 0.5, "climb there: 340 kt (FCTM p.4.4)")
 T.near(mach, P.econ_cruise(pw, 300000, 35000, hi + 0.01, 0), 1e-9, "at the economy cruise's Mach")
 T.check(P.econ_climb(pw, 300000, 35000, 1000) > 340 and P.econ_climb(pw, 300000, 35000, 1000) < 360, "climb at 1000: between")
 T.equal(P.econ_climb(pw, 300000, 35000, 5000), 360, "climb at 5000: 360 kt (an estimate)")
