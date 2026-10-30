@@ -517,6 +517,11 @@ frames()
 T.check(rt:get(ARMED, 1) == 1 and rt:get(ARMED, 2) == 1 and rt:get(ARMED, 0) == 0, "APP with L engaged: C and R armed")
 T.check(rt:get("laminar/B747/autopilot/cmd_C_mode/status") == 0 and rt:get("laminar/B747/autopilot/cmd_R_mode/status") == 0,
     "armed, not engaged (before, all three engaged at once)")
+-- ELEC-18: the bus isolation request from the APP's multi-channel arm
+-- (ATA22 p.192); the electrical module's BUS ISOLATED back (as it would)
+local BUS_REQ, BUS_ISO = "laminar/B747/autopilot/bus_isolate_req", "laminar/B747/electrical/bus_isolated"
+T.equal(rt:get(BUS_REQ), 1, "ELEC-18: APP, C and R armed: the bus isolation request")
+rt:set(BUS_ISO, 1)
 frames(30)
 T.check(rt:get(NAV) == 2 and rt:get(GS) == 2, "LOC and G/S captured")
 T.check(rt:get(ILS_INH) == 1 and rt:get(RA_INH) == 1, "5d: the A/P with LOC and G/S captured: ILS TUNE and RA TEST INHIBIT (ATA22 p.212)")
@@ -542,6 +547,16 @@ rt:set("laminar/B747/ra/valid", 2, 1)
 frames()
 T.equal(rt:get(STATUS_P), 4, "LAND 3 again")
 T.equal(rt:get(CAUTION, 50), 0, "NO LAND 3 gone")
+-- ELEC-18: BUS ISOLATED gone (a second generator channel lost above
+-- 200 ft): LAND 2, and NO LAND 3 after 4 s (ATA22 p.384)
+rt:set(BUS_ISO, 0)
+frames()
+T.equal(rt:get(STATUS_P), 3, "ELEC-18: BUS ISOLATED gone: LAND 2")
+frames(30 * 4.2)
+T.equal(rt:get(CAUTION, 50), 1, "not isolated for 4 s: NO LAND 3, the caution [50]")
+rt:set(BUS_ISO, 1)
+frames()
+T.check(rt:get(STATUS_P) == 4 and rt:get(CAUTION, 50) == 0, "isolated again: LAND 3, NO LAND 3 gone")
 -- 4d: runway align with LAND 3 in LOC (FCOM p.670): the wings held level
 -- with the rudder, LOC asking for a right bank (the track 2 degrees left of
 -- the course, as a left engine out yaws it) asking for right rudder; none

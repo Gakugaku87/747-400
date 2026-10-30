@@ -354,3 +354,19 @@ foreach ($word in 'CHG', 'DIS') {
     [void](Add-Block $cv @($word) 2 0)
     Save-Canvas $cv ("bat_" + $word.ToLower()) $WHITE
 }
+
+# --- ELEC synoptic: inhibited for autoland -----------------------------------
+
+# "ELECTRICAL SYNOPTIC INHIBITED FOR AUTOLAND" in place of the synoptic while
+# the buses are isolated for autoland (ELEC-18; FCOM p.789 (6.10.11), p.802
+# (6.20.8)). In the page's font (the strip's), on a canvas of the
+# background's size (672 x 680: the same POS), each line centred, white (the
+# colour and the two lines are estimates: the FCOM gives only the words)
+$dir = Join-Path $root 'cockpit_3d\generic\CRT Displays\EICAS Lower\ELEC'
+$cv = New-Canvas 672 680 0
+foreach ($ln in @(@{ t = 'ELECTRICAL SYNOPTIC'; y = 312 }, @{ t = 'INHIBITED FOR AUTOLAND'; y = 336 })) {
+    $m = Add-Text $null @($ln.t) 100 0
+    $left = [int][math]::Round((672 - ($m[1] - $m[0] + 1)) / 2)
+    [void](Add-Block $cv @($ln.t) $left $ln.y)
+}
+Save-Canvas $cv 'synoptic_inhibited' $WHITE

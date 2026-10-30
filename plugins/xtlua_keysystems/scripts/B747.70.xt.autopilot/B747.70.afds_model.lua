@@ -254,6 +254,11 @@ M.CAP_FULL = {channels = 3, power = 3, iru = 3, ra = 3, ils = 3, srm = 2, fcu = 
 M.INHIBIT_FD_RA = 500
 M.INHIBIT_GND_DEG = 45
 M.INHIBIT_GND_KT = 40
+-- the bus isolation request (ELEC-18): ended by TO/GA above ISO_GA_RA ft
+-- RA (FCOM p.802); the buses isolated within ISO_WAIT_S s (ATA22 p.192),
+-- else NO LAND 3 (p.384: the wait an estimate)
+M.ISO_GA_RA = 100
+M.ISO_WAIT_S = 4
 
 -- the state
 function M.new()
@@ -267,7 +272,8 @@ function M.new()
         land = nil, flare_arm = false, rollout_arm = false, was_ga = false,
         letdown = false, retard = false, rwy_align = false,
         alert = nil, alert_level = nil,
-        roll_fail = false, pitch_fail = false, fail_bank = 0, fail_pitch = 0, ils_freq = nil}, {})
+        roll_fail = false, pitch_fail = false, fail_bank = 0, fail_pitch = 0, ils_freq = nil,
+        iso_req = false, iso_t = 0}, {})
 end
 
 -- the flare height (ft of gear altitude) for a sink rate (ft/s)
@@ -654,7 +660,7 @@ local function land_status(s, inp)
     local land
     if approach and n >= 2 and ra < M.MULTI_RA then
         local sensors, power = inp.sensors or 3, inp.power or 3
-        if n >= 3 and sensors >= 3 and power >= 3 then
+        if n >= 3 and sensors >= 3 and power >= 3 and inp.bus_isolated ~= false then
             land = "LAND3"
         elseif sensors >= 2 then
             land = "LAND2"
@@ -770,6 +776,32 @@ function M.capability(cap)
     return math.max(0, 3 - worst)
 end
 
+-- the bus isolation request to BCU 1 (ELEC-18; ATA22 p.192: "during the
+-- approach arm mode"; LH24 p.242: for triple channel autoland): from APP
+-- (G/S armed or engaged, the flare and the rollout after it) with
+-- multi-channel (the others armed or engaged: a single channel's approach
+-- asks for none, an estimate), until every A/P is disengaged, TO/GA above
+-- ISO_GA_RA ft RA, or the approach disarmed or deselected (FCOM p.802).
+-- How long it has gone without BUS ISOLATED (`inp.bus_isolated`)
+local function bus_isolation(s, inp)
+    local n = M.engaged(s)
+    local app = s.gs_arm or s.pitch == "GS" or s.pitch == "FLARE" or s.letdown or s.roll == "ROLLOUT"
+    local ga = toga(s.pitch)
+    if n == 0 or (ga and (inp.ra or 9999) > M.ISO_GA_RA) or not (app or ga) then
+        s.iso_req = false
+    elseif app and (M.armed(s) > 0 or n >= 2) then
+        s.iso_req = true
+    end
+    if s.iso_req and inp.bus_isolated == false then
+        s.iso_t = s.iso_t + (inp.dt or 0)
+    else
+        s.iso_t = 0
+    end
+end
+function M.bus_isolate_request(s)
+    return s.iso_req
+end
+
 -- the EICAS message of the autoland capability (step 5b; ATA22 p.373-374,
 -- p.384-386; FCOM p.662, p.677): NO LAND 3 at 2, NO AUTOLAND under 2
 -- (`inp.cap`). A caution when it comes with multi-channel engaged (LAND 3
@@ -777,9 +809,11 @@ end
 -- advisory, at that level while it stays. Below LAND2_RA ft in the air
 -- with multi-channel engaged it changes only to NO AUTOLAND; the rest waits
 -- for the touchdown (FCOM p.662). Its inhibit on the ground until an
--- engine start is the alert model's (FCOM p.47)
+-- engine start is the alert model's (FCOM p.47). The buses not isolated
+-- ISO_WAIT_S s after the request: NO LAND 3 (ELEC-18; ATA22 p.384)
 local function autoland_alert(s, inp)
     local c = M.capability(inp.cap)
+    if s.iso_t >= M.ISO_WAIT_S then c = math.min(c, 2) end
     local msg = (c < 2 and "NO_AUTOLAND") or (c < 3 and "NO_LAND3") or nil
     local multi = s.land == "LAND3" or s.land == "LAND2"
     local hold = multi and not inp.ground and (inp.ra or 9999) < M.LAND2_RA
@@ -811,6 +845,8 @@ function M.update(s, inp)
         s.L, s.C, s.R = false, false, false
     end
     dropped(s, was)
+    -- the bus isolation request (ELEC-18: on the modes of the frame before)
+    bus_isolation(s, inp)
     -- the autoland capability's message, every frame (step 5b: on the
     -- autoland status of the frame before)
     autoland_alert(s, inp)
@@ -849,6 +885,7 @@ function M.update(s, inp)
             s.rwy_align = false
             s.letdown, s.retard = false, false
             s.roll_fail, s.pitch_fail, s.ils_freq = false, false, nil
+            s.iso_req, s.iso_t = false, 0
             return {all_off = true}
         end
         return nil

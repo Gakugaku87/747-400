@@ -42,7 +42,7 @@ local function inp(o)
         fcc = o.fcc, mcp = o.mcp, stby = o.stby, iru = o.iru, adc = o.adc, trim = o.trim, wheel = o.wheel,
         cap = o.cap, loc_rx = o.loc_rx, gs_rx = o.gs_rx, ra_n = o.ra_n, iru_nav = o.iru_nav,
         iru_hdg = o.iru_hdg, adc_sel = o.adc_sel, pitch_att = o.pitch_att, ils_freq = o.ils_freq,
-        loc_alive = o.loc_alive, loc_hdg_err = o.loc_hdg_err, gs_kt = o.gs_kt}
+        loc_alive = o.loc_alive, loc_hdg_err = o.loc_hdg_err, gs_kt = o.gs_kt, bus_isolated = o.bus_isolated}
 end
 
 -- engage with both F/Ds OFF: V/S and HDG HOLD (FCOM p.640; ATA22 p.266)
@@ -1148,4 +1148,64 @@ T.check(not A.ils_inhibit(gi, gnd({loc_hdg_err = 50})), "50 degrees off the cour
 T.check(not A.ils_inhibit(gi, gnd({loc_alive = false})), "no localizer: none")
 A.loc(gi, gnd())
 T.check(gi.loc_arm and not A.ils_inhibit(gi, gnd()), "LOC selected: none (ATA22)")
+
+-- ELEC-18: the bus isolation request to BCU 1 from the approach's
+-- multi-channel arm (ATA22 p.192), until every A/P is disengaged, TO/GA
+-- above 100 ft RA, or APP disarmed (FCOM p.802); BUS ISOLATED needed for
+-- LAND 3 (p.192); not isolated 4 s after the request: NO LAND 3 (p.384)
+local bi = A.new()
+A.update(bi, app_inp())
+A.cmd(bi, "L", app_inp())
+A.update(bi, app_inp())
+T.check(not A.bus_isolate_request(bi), "ELEC-18: CMD L in cruise: no bus isolation request")
+A.loc(bi, app_inp())
+A.update(bi, app_inp())
+T.check(bi.loc_arm and not A.bus_isolate_request(bi), "LOC armed alone: none")
+A.app(bi, app_inp())
+A.update(bi, app_inp({bus_isolated = false, cap = cap()}))
+T.check(bi.gs_arm and A.armed(bi) == 2 and A.bus_isolate_request(bi), "APP, C and R armed: the request")
+for _ = 1, 34 do A.update(bi, app_inp({bus_isolated = false, cap = cap()})) end
+T.equal(bi.alert, nil, "3.5 s without BUS ISOLATED: nothing yet")
+for _ = 1, 10 do A.update(bi, app_inp({bus_isolated = false, cap = cap()})) end
+T.check(bi.alert == "NO_LAND3" and bi.alert_level == "advisory", "4.5 s: NO LAND 3, an advisory (the buses do not isolate)")
+A.update(bi, app_inp({bus_isolated = true, cap = cap()}))
+A.update(bi, app_inp({bus_isolated = true, cap = cap()}))
+T.equal(bi.alert, nil, "isolated: gone")
+A.app(bi, app_inp())
+A.update(bi, app_inp({bus_isolated = true}))
+T.check(not bi.gs_arm and not A.bus_isolate_request(bi), "APP pushed again (disarmed): the request ends")
+-- a single channel's APP (the others invalid): none (estimate)
+local hy3 = {hyd = {0, 0, 3000}}
+local bs = A.new()
+A.update(bs, app_inp(hy3))
+A.cmd(bs, "L", app_inp(hy3))
+A.app(bs, app_inp(hy3))
+A.update(bs, app_inp(hy3))
+T.check(bs.gs_arm and A.armed(bs) == 0 and not A.bus_isolate_request(bs), "a single channel's APP: no request")
+-- LAND 3 needs BUS ISOLATED: without it LAND 2
+local bl = A.new()
+A.update(bl, app_inp())
+A.cmd(bl, "L", app_inp())
+A.app(bl, app_inp())
+for _ = 1, 55 do approach(bl, {bus_isolated = false}) end
+T.equal(A.engaged(bl) .. A.status(bl), "3" .. A.STATUS.LAND2, "three engaged, the buses not isolated: LAND 2")
+approach(bl, {bus_isolated = true})
+T.equal(A.status(bl), A.STATUS.LAND3, "isolated: LAND 3")
+T.check(A.bus_isolate_request(bl), "multi-channel engaged: still requested")
+approach(bl, {bus_isolated = false, ra = 150})
+T.equal(A.status(bl), A.STATUS.LAND3, "150 ft, BUS ISOLATED gone (BCU 1 holds the BTBs): LAND 3 kept")
+-- two channels lost: still requested until every A/P is disengaged
+approach(bl, {bus_isolated = true, ra = 800, hyd = {0, 0, 3000}})
+T.check(A.engaged(bl) == 1 and A.bus_isolate_request(bl), "down to one channel: still requested")
+A.disengage(bl)
+approach(bl, {bus_isolated = true, ra = 800})
+T.check(A.engaged(bl) == 0 and not A.bus_isolate_request(bl), "every A/P disengaged: the request ends")
+-- G/A: kept to 100 ft RA
+local bg = land3()
+T.check(A.bus_isolate_request(bg), "(LAND 3: requested)")
+A.toga(bg, app_inp({ra = 80}))
+A.update(bg, app_inp({ra = 80}))
+T.check(bg.pitch == "GA" and A.bus_isolate_request(bg), "G/A at 80 ft: still requested")
+A.update(bg, app_inp({ra = 120}))
+T.check(bg.pitch == "GA" and not A.bus_isolate_request(bg), "above 100 ft: the request ends")
 T.done()

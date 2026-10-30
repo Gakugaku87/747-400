@@ -550,6 +550,14 @@
 
 上の 2 行は `docs/overhaul/tools/panel_fma_fail.lua` で書き換えた（16 か所：計器を 8 つ足し、バーの条件を 8 つ替えた）。線の画像は `docs/overhaul/tools/make_fma_fail_images.ps1`。条件が 2 行以上ある計器・グループの数は変わらない。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261030_before_fma_fail`。X-Plane の写真（`s120_afds_mode_fail`、2026-10-30 22:47）で、LOC と G/S の故障で FMA の LOC と G/S に琥珀の横線が引かれ、F/D のバーが両方消えること、TO/GA の後に線が消えてバーが戻ることを確かめた。外から見た姿は変わらない（パネルの計器だけの変更）。
 
+電源（ELEC-18、2026-10-30：autoland の間の ELEC synoptic の抑止）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-30・電源（ELEC-18） | 下の EICAS の `GROUP ELEC Synoptic`（`SHOW_EQUAL 3 laminar/B747/dsp/synoptic_display`） | 背景と計器（1,157 行）がグループに直に入っていて、autoland の母線の分離の間も synoptic を出す | 中身を新しい `GROUP ELEC Synoptic shown`（`SHOW_EQUAL 0 laminar/B747/electrical/synoptic_inhibit`）に入れ、計器 `gen_rotary synoptic inhibited`（背景の写し：`CRT Displays/EICAS Lower/ELEC/synoptic_inhibited`、672 × 680、POS 1704, 95。`SHOW_EQUAL 1 laminar/B747/electrical/synoptic_inhibit`）を足した：分離の間は「ELECTRICAL SYNOPTIC INHIBITED FOR AUTOLAND」だけ（白の 2 行、中央。色と行の分け方は推定） | FCOM p.789（6.10.11）、p.802（6.20.8） |
+
+上の 1 行は `docs/overhaul/tools/panel_elec_synoptic.lua` で書き換えた（25 行を足した。中身は字下げし直さない：`panel_clocks.lua` と同じ）。文言の絵は `docs/overhaul/tools/make_synoptic_images.ps1`（HYD の故障の項目と同じ字体）。条件が 2 行以上ある計器・グループの数は変わらない。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261030_before_elec_synoptic`。X-Plane の写真（`s122_elec_autoland_isolation`、2026-10-30 23:36）で、APP の前は今までの synoptic（BTB が閉で緑の流れ）、APP の後（分離）は文言だけ、分離が解けると synoptic が戻ることを確かめた。外から見た姿は変わらない（パネルの計器だけの変更）。
+
 
 表示（2026-10-28：ND の MAP CTR を実機どおりに。利用者の決定）：
 

@@ -964,3 +964,12 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
   - 回帰（LuaJIT）：AFDS のモデル +11（何も捕捉していなければ無し、A/P で LOC と G/S を捕捉して両方、F/D だけは 600 ft で無し 450 ft で両方、地上の離陸の滑走で ILS TUNE だけ、30 kt・コースから 50°・LOC が無い・LOC を選んだときは無し）、グルー +2（捕捉の前は無し、A/P で LOC と G/S を捕捉して両方）。全 121 本。
   - X-Plane（カスタム acf）：新設の `s121_afds_ils_inhibit` 13/13：A/P で LOC と G/S を捕捉すると ILS TUNE INHIBIT と RA TEST INHIBIT が立ち、NAV 1 は 111.90 のまま（前の自動同調が書かない）、CDU の NAV RADIO で 110.30 を入れると INVALID ENTRY で周波数は変わらない、モード故障は立たない、A/P を外して F/D を切ると両方消える。`s114_autoland`（回帰）20/20（WARN は前からの接地の後の跳ね 1 つ）。Lua の誤りなし。
 - 作っていないもの：電波高度計と ILS の自己試験（X-Plane にも機体にも無いので、RA TEST INHIBIT は dataref だけ）、LOC・G/S のアンテナの切り替えとその監視（ATA22 p.214–216：NO LAND 3・NO AUTOLAND の原因）、離陸後 10 分の自動同調の抑止（FMC の段 9 以降）。
+
+## 38. ELEC-18 の AFDS の側（2026-10-30：母線の分離の要求と BUS ISOLATED）
+
+- AFDS のモデル（`B747.70.afds_model.lua`）：
+  - 分離の要求（`bus_isolation`、`M.bus_isolate_request`）：APP（G/S の arm か捕捉、その後の FLARE・NOSE LETDOWN・ROLLOUT）で multi-channel（ほかのチャンネルが arm か engage）のとき（ATA22 p.192：「approach arm mode の間」、LH24 p.242：3 チャンネルの autoland のため。単一チャンネルの APP では求めない：推定）。終わりは、A/P が全部切れたとき、TO/GA で電波高度 100 ft 超、APP の解除（FCOM p.802）。チャンネルが 1 つに減っても続く。
+  - LAND 3 には BUS ISOLATED（`inp.bus_isolated`）が要る（ATA22 p.192）。無ければ LAND 2（200 ft の下は今までどおり LAND 3 を保つ：電源の側も 200 ft の下は BTB を保つ）。
+  - 要求から 4 秒たっても BUS ISOLATED が無ければ能力を 2 に落とし、>NO LAND 3（ATA22 p.384：「Electric buses do not isolate when requested」。4 秒は p.192 の「4 秒以内」から：推定）。LAND 3・2 を出していれば caution、前なら advisory（段 5b の規則）。
+- グルー（`B747.70.xt.autopilot.lua`）：新設の `autopilot/bus_isolate_req`（init `B747.70.autopilot`）に書き、電源の `electrical/bus_isolated` を読む。
+- 電源の側と試験：notes/ATA-24.md §10。回帰：AFDS のモデル +17（巡航の CMD L と LOC だけでは求めない、APP で C と R が arm して求める、3.5 秒では何も無く 4.5 秒で NO LAND 3 の advisory、分離すると消える、APP の解除で終わる、単一チャンネルの APP では求めない、BUS ISOLATED が無いと 3 チャンネルでも LAND 2・あれば LAND 3、150 ft で消えても LAND 3、1 チャンネルに減っても続く、全部切れると終わる、80 ft の G/A では続き 120 ft で終わる）、グルー +4（APP で要求、BUS ISOLATED が消えると LAND 2、4 秒で >NO LAND 3 の caution、戻すと LAND 3）。

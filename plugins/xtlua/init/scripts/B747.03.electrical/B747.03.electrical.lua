@@ -131,6 +131,10 @@ B747DR_elec_breaker_ssb         = deferred_dataref("laminar/B747/electrical/brea
 B747DR_elec_idg_connected       = deferred_dataref("laminar/B747/electrical/idg_connected", "array[4]")
 B747DR_elec_air_mode            = deferred_dataref("laminar/B747/electrical/air_mode", "number")
 B747DR_elec_load_shed           = deferred_dataref("laminar/B747/electrical/load_shed", "number")
+-- autoland isolation (ELEC-18): BCU 2's BUS ISOLATED to the FCCs, and the
+-- isolation in effect ("ELECTRICAL SYNOPTIC INHIBITED FOR AUTOLAND")
+B747DR_elec_bus_isolated        = deferred_dataref("laminar/B747/electrical/bus_isolated", "number")
+B747DR_elec_synoptic_inhibit    = deferred_dataref("laminar/B747/electrical/synoptic_inhibit", "number")
 -- main [0] and APU [1] battery: volts, amps (+ discharge, - charge)
 B747DR_elec_battery_volts       = deferred_dataref("laminar/B747/electrical/battery/volts", "array[2]")
 B747DR_elec_battery_amps        = deferred_dataref("laminar/B747/electrical/battery/amps", "array[2]")

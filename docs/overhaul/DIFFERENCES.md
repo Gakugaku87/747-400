@@ -11,7 +11,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 
 | 分野 | 状態 | 残っている主な違い |
 |---|---|---|
-| 電源（ATA 24） | 作り直し済み（1-1） | 保護トリップと故障、autoland のバス分離、いくつかの系統がまだ X-Plane の bus 0 で電源を見る |
+| 電源（ATA 24） | 作り直し済み（1-1。autoland のバス分離も） | 保護トリップと故障、いくつかの系統がまだ X-Plane の bus 0 で電源を見る |
 | 空地判定（PSEU） | 作り直し済み（1-2） | 15 モジュールがまだ X-Plane の「どれか 1 輪接地」を読む（各系統の作り直しで乗り換え） |
 | 乗員への警報 | 枠組みは作り直し済み（1-3） | 形態警報・失速警報など、各系統の警報の中身 |
 | 油圧（ATA 29） | 作り直し済み（1-4） | 油温に燃料の熱交換が無い（系統の圧による制限は、脚・ブレーキ・ステアリングは 4-2、安定板トリムとヨーダンパーは 4-1、逆推力は 2-3 で済） |
@@ -39,13 +39,13 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 
 ### 電源（ATA 24）：作り直し済み（1-1）
 
-実機に合わせた点：バス単位のモデル（AC 1〜4、同期バス、SSB、transfer bus、standby、ground service・ground handling、DC 1〜4、バッテリー母線）、電源の切替（LH24 の表と FCOM）、GCB・BTB の許可、standby 電源、ELEC GEN OFF・ELEC AC BUS・ELEC BUS ISLN、DRIVE 灯と DRIVE DISC、ELCU の load shed（簡略）、バッテリーの表示と BAT DISCH、air mode。P5 の灯、EICAS、表示器と CDU の電源もモデルから。カスタム acf の ELEC synoptic（ISLN・DRIVE の枠、UTILITY と GALLEY を母線ごとの色で）と STAT のバッテリー値・CHG/DIS。
+実機に合わせた点：バス単位のモデル（AC 1〜4、同期バス、SSB、transfer bus、standby、ground service・ground handling、DC 1〜4、バッテリー母線）、電源の切替（LH24 の表と FCOM）、GCB・BTB の許可、standby 電源、ELEC GEN OFF・ELEC AC BUS・ELEC BUS ISLN、DRIVE 灯と DRIVE DISC、ELCU の load shed（簡略）、バッテリーの表示と BAT DISCH、air mode。P5 の灯、EICAS、表示器と CDU の電源もモデルから。カスタム acf の ELEC synoptic（ISLN・DRIVE の枠、UTILITY と GALLEY を母線ごとの色で）と STAT のバッテリー値・CHG/DIS。autoland の母線の分離（ELEC-18、2026-10-30）：APP で multi-channel が arm すると FCC が分離を求め、BCU が発電機の数で構成 A〜E に BTB と DCIR を開く（LH24 p.244–247）。分離の間は ISLN 1〜3 の灯と ELEC BUS ISLN 1〜3 を出さず、カスタム acf の ELEC synoptic は「ELECTRICAL SYNOPTIC INHIBITED FOR AUTOLAND」だけ（FCOM p.789、p.802）。分離の完了（BUS ISOLATED）が LAND 3 の条件で、分離しなければ NO LAND 3（ATA22 p.192、p.384）。
 
 残っている違い：
 - 保護トリップ、3.5 秒の break power transfer、last source on が無い（ELEC-04）。故障の仕組みがまだ無い。
 - 手動の SSB スイッチ・OPEN 灯、GEN FIELD MAN RESET・FIELD OFF 灯が無い（3D にも操作子が無い。ELEC-05・22）。
 - 客室側の ground service switch が無い（ELEC-13）。
-- autoland のバス分離が無い（ELEC-18。AFDS の作り直しで）。
+- autoland のバス分離：TRU の故障が無いので、構成を選ぶのは発電機だけ。分離は瞬時（実機は 4 秒以内）。4 秒で分離しなければ NO LAND 3 の、4 秒は推定。
 - 故障で出る status（ELEC DRIVE、BAT CHARGER、ELEC TR UNIT、ELEC IDG VALVE）が無い（ELEC-23）。
 - 外部電源は XP12 では X-Plane の GPU 電圧に依る（ELEC-17）。
 - まだ X-Plane の bus 0 で電源を見る系統：機器冷却、IRS と無線、表示灯の輝度、客室灯、ヨーダンパー。

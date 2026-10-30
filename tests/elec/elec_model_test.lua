@@ -423,4 +423,114 @@ do
     T.check(not inp.apu_request[1], "APU gen not ok: the switch request dropped")
 end
 
+-- Autoland bus isolation (ELEC-18; LH24 p.244-249, figure p.249; FCOM
+-- p.802; ATA22 p.192, p.196): on the FCCs' request with four generator
+-- channels configuration A: BTB and DCIR 1-3 open, AC 4 on the
+-- synchronous bus, BUS ISOLATED to the FCCs; the ISLN lights 1-3 out, no
+-- ELEC BUS ISLN, the synoptic inhibited. One channel out: its bus with AC 4
+-- (B to E). Then a second out: above 200 ft back as before; below, the
+-- DCIRs closed, the BTBs kept until the request ends. Two out before the
+-- request: it is ignored
+local function flying_iso()
+    local s, inp = powered_up()
+    engines(inp, 69)
+    inp.on_ground = false
+    run(s, inp, 2)
+    return s, inp
+end
+do
+    local s, inp = flying_iso()
+    local out = run(s, inp, 0.1)
+    T.check(all(out.btb, 4, true) and all(out.dcir, 4, true) and not out.bus_isolated, "ELEC-18: (in flight: BTBs and DCIRs closed)")
+    inp.autoland_req, inp.ra = true, 1000
+    out = run(s, inp, 0.5)
+    T.check(not out.btb[1] and not out.btb[2] and not out.btb[3] and out.btb[4], "config A: BTB 1-3 open, BTB 4 closed")
+    T.check(not out.dcir[1] and not out.dcir[2] and not out.dcir[3] and out.dcir[4], "DCIR 1-3 open, 4 closed")
+    T.check(all(out.ac, 4, true) and all(out.dc, 4, true), "every AC and DC bus powered")
+    T.check(out.bus_isolated, "BUS ISOLATED to the FCCs")
+    T.check(not out.lights.isln[1] and not out.lights.isln[2] and not out.lights.isln[3], "ISLN 1-3 out (FCOM p.802)")
+    T.check(not out.cas.bus_isln[1] and not out.cas.bus_isln[2] and not out.cas.bus_isln[3], "no ELEC BUS ISLN")
+    T.check(out.synoptic_inhibit, "the synoptic inhibited")
+    inp.gen_cont[2] = false
+    out = run(s, inp, 0.5)
+    T.check(out.btb[2] and not out.btb[1] and not out.btb[3] and out.btb[4], "generator 2 out: config C, BTB 2 and 4 closed")
+    T.check(out.dcir[2] and not out.dcir[1] and not out.dcir[3] and out.dcir[4], "DCIR 2 and 4 closed")
+    T.check(out.ac[2] and out.bus_isolated, "AC 2 from the synchronous bus, still isolated")
+    inp.gen_cont[1] = false
+    out = run(s, inp, 0.5)
+    T.check(not out.bus_isolated, "a second channel out: BUS ISOLATED gone")
+    T.check(all(out.btb, 4, true) and all(out.dcir, 4, true), "above 200 ft: back as before")
+    T.check(out.ac[1] and out.ac[2] and not out.synoptic_inhibit, "AC 1 and 2 from the synchronous bus, the synoptic back")
+    inp.autoland_req = false
+    out = run(s, inp, 0.5)
+    T.check(all(out.btb, 4, true) and not out.bus_isolated, "the request ended")
+end
+do
+    local s, inp = flying_iso()
+    inp.autoland_req, inp.ra = true, 150
+    inp.gen_cont[4] = false
+    local out = run(s, inp, 0.5)
+    T.check(out.btb[3] and out.btb[4] and not out.btb[1] and not out.btb[2], "generator 4 out: config E, AC 3 and 4 on the synchronous bus")
+    T.check(out.dcir[3] and out.dcir[4] and not out.dcir[1] and not out.dcir[2], "DCIR 3 and 4 closed")
+    T.check(out.ac[4] and out.bus_isolated, "AC 4 from generator 3, isolated")
+    inp.gen_cont[1] = false
+    out = run(s, inp, 0.5)
+    T.check(not out.bus_isolated, "150 ft, a second channel out: BUS ISOLATED gone")
+    T.check(all(out.dcir, 4, true), "below 200 ft: the DCIRs closed")
+    T.check(not out.btb[1] and not out.btb[2], "the BTBs kept (LH24 p.246)")
+    T.check(not out.lights.isln[1] and out.synoptic_inhibit, "still autoland: ISLN out, the synoptic inhibited")
+    inp.autoland_req = false
+    out = run(s, inp, 0.5)
+    T.check(out.btb[1] and out.btb[2] and not out.synoptic_inhibit, "the request ended: the BTBs closed")
+end
+do
+    local s, inp = powered_up()
+    engines(inp, 69)
+    inp.on_ground = false
+    inp.gen_cont[1], inp.gen_cont[3] = false, false
+    run(s, inp, 2)
+    inp.autoland_req, inp.ra = true, 1000
+    local out = run(s, inp, 0.5)
+    T.check(not out.bus_isolated and all(out.btb, 4, true), "two generators out before it: the request ignored")
+    inp.gen_cont[3] = true
+    out = run(s, inp, 0.5)
+    T.check(not out.bus_isolated and all(out.btb, 4, true), "one comes back: still ignored until the request ends")
+    inp.autoland_req = false
+    run(s, inp, 0.5)
+    inp.autoland_req = true
+    out = run(s, inp, 0.5)
+    T.check(out.bus_isolated and not out.btb[2] and not out.btb[3] and out.btb[1], "a new request: config B")
+end
+do
+    -- B: AC 1 from generator 4 through the SSB (figure p.247 note); the
+    -- generator back, B stays (logic p.245)
+    local s, inp = flying_iso()
+    inp.gen_cont[1] = false
+    run(s, inp, 1)
+    inp.autoland_req, inp.ra = true, 1000
+    local out = run(s, inp, 0.5)
+    T.check(out.btb[1] and out.btb[4] and not out.btb[2] and not out.btb[3], "generator 1 out: config B")
+    T.check(out.ssb and out.ac[1] and out.bus_isolated, "AC 1 from generator 4 through the SSB")
+    inp.gen_cont[1] = true
+    out = run(s, inp, 2)
+    T.check(out.btb[1] and not out.btb[2] and not out.btb[3] and out.bus_isolated, "generator 1 back: config B kept")
+end
+do
+    -- D: AC 3 from generator 4; a BTB opened before the request stays open
+    -- (LH24 p.244) and its ISLN light stays lit
+    local s, inp = flying_iso()
+    inp.gen_cont[3] = false
+    inp.bus_tie[4] = false
+    run(s, inp, 1)
+    inp.autoland_req, inp.ra = true, 1000
+    local out = run(s, inp, 0.5)
+    T.check(not out.btb[1] and not out.btb[2] and out.btb[3] and not out.btb[4], "generator 3 out, BUS TIE 4 OFF: BTB 4 stays open")
+    T.check(not out.ac[3] and out.ac[4], "AC 3 without generator 4 (its BTB open)")
+    T.check(out.lights.isln[4] and not out.lights.isln[3] and out.cas.bus_isln[4], "ISLN 4 and ELEC BUS ISLN 4 still shown")
+    inp.bus_tie[4] = true
+    out = run(s, inp, 0.5)
+    T.check(out.btb[3] and out.btb[4] and out.ac[3] and out.bus_isolated, "BUS TIE 4 AUTO: config D, AC 3 from generator 4")
+    T.check(not out.lights.isln[1] and not out.lights.isln[4], "no ISLN light")
+end
+
 T.done()

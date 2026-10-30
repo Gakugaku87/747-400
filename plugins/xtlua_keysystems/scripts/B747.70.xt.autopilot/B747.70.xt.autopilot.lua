@@ -687,6 +687,10 @@ B747DR_afds_irs_att_valid = find_dataref("laminar/B747/irs/att_valid")
 B747DR_afds_adc_valid = find_dataref("laminar/B747/airdata/valid")
 B747DR_afds_autotrim_valid = find_dataref("laminar/B747/flt_ctrls/stab_trim/autotrim_valid")
 B747DR_afds_wheel = find_dataref("laminar/B747/cablecontrols/wheel")
+-- (ELEC-18: BCU 2's BUS ISOLATED, B747.03.xt.elec_buses.lua; the request
+-- out, afds_sync)
+B747DR_afds_bus_isolated = find_dataref("laminar/B747/electrical/bus_isolated")
+B747DR_ap_bus_isolate_req = find_dataref("laminar/B747/autopilot/bus_isolate_req")
 local AFDS_FCC_BUS = {2, 0, 1}
 local afdsFcc = {L = false, C = false, R = false}
 local afdsTrim = {L = false, R = false}
@@ -714,6 +718,7 @@ local function afds_interlocks(inp)
 	afdsTrim.R = B747DR_afds_autotrim_valid[1] > 0.5
 	inp.trim = afdsTrim
 	inp.wheel = B747DR_afds_wheel
+	inp.bus_isolated = B747DR_afds_bus_isolated > 0.5
 end
 -- the autoland capability (step 5b; ATA22 p.384): the channels valid, the
 -- FCCs' power, the IRUs (NAV), the radio altimeters, the ILS receivers
@@ -1046,6 +1051,9 @@ local function afds_sync()
 	if B747DR_ap_ils_tune_inhibit ~= v then B747DR_ap_ils_tune_inhibit = v end
 	v = B747_afds_model.ra_test_inhibit(afds, afdsIn) and 1 or 0
 	if B747DR_ap_ra_test_inhibit ~= v then B747DR_ap_ra_test_inhibit = v end
+	-- the bus isolation request to BCU 1 (ELEC-18; ATA22 p.192)
+	v = B747_afds_model.bus_isolate_request(afds) and 1 or 0
+	if B747DR_ap_bus_isolate_req ~= v then B747DR_ap_bus_isolate_req = v end
 end
 -- the roll law (step 2a), each frame after the modes: the heading in the
 -- reference (true north by the switch or in the polar areas, where NORM
