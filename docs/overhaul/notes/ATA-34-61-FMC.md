@@ -987,7 +987,7 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - 降下：E/D から後ろへ作る。E/D と、守らないといけない制限（AT、窓、外れる AT OR ABOVE・AT OR BELOW）の間は直線、いちばん上の制限より上はアイドル（模型の抗力から、推力はアイドル分を引いたもの）。遷移と制限の速さへは水平のアイドルの減速（推定）。浅い直線にはアイドルより上の推力の燃料。降下の重さは 1 回目の予測の T/D の重さ（2 回まわす）。
   - 出すもの：点ごとの高度・時刻・燃料、T/C・T/D・E/D・S/C、目的地の時刻と燃料、最後の巡航高度。風は相の向かい風だけ（今は巡航の今の風、予報は 8e）。
   - PI と比べた結果：降下の FL270→FL350 の増分 26 NM・3.4 分（PI.11.5 は 28 NM・4 分）、FL350→FL410 の増分 15 NM（16 NM）。FL350 から 1,500 ft までは 107 NM・18 分で、表の 124 NM・23 分との差は表の直進進入の分。区間（300 t、LRC と降下）：3,000 NM・FL330 で 56.3 t・6:17（PI.11.4：56.3 t・6:20）、FL370 で 55.4 t・6:11（55.2 t・6:13）、5,000 NM・FL290 で 94.7 t・10:58（95.0 t・11:01）。4,000 ft の STEP の上昇で、その 50 NM 先までに多く使う燃料は FCTM の 225〜300 kg の幅に入る。計算は 1 回 1 ms ほど。
-- FMC（`B747.68.xt.fms.lua`）：10 秒ごと（CRZ ALT の入力ですぐ）に、有効な経路の先の脚（大円の距離。条件の脚と discontinuity の先も直前の点から：推定）、高度の制限（AT・A・B・窓）、E/D（進入の滑走路の 50 ft 上、その後の進入復行は使わない。無ければ上昇の脚の後の最後の制限の点）、上昇の脚（SID の最後）、FMC の速さ・重量・燃料（PERF INIT の FUEL）・STEP・巡航の風で予測（`B747_fms_preds()`）。CRZ ALT が MAX 以上なら予測しない。
+- FMC（`B747.68.xt.fms.lua`）：10 秒ごと（CRZ ALT の入力ですぐ）に、有効な経路の先の脚（大円の距離。条件の脚の先も直前の点から：推定。discontinuity の先も直前の点からの直行：FCOM p.1363 の注で確かめた（§49））、高度の制限（AT・A・B・窓）、E/D（進入の滑走路の 50 ft 上、その後の進入復行は使わない。無ければ上昇の脚の後の最後の制限の点）、上昇の脚（SID の最後）、FMC の速さ・重量・燃料（PERF INIT の FUEL）・STEP・巡航の風で予測（`B747_fms_preds()`）。CRZ ALT が MAX 以上なら予測しない。
 - CRZ のページ：目的地の ETA/FUEL を予測から（前は 51.6 lb/NM などの経験式）、目的地の名前を FMC の経路から、T/D の 200 NM の内の判定と TO T/D の距離を予測の T/D から（前は AP の `setDistances` の T/D）。
 - UNABLE CRZ ALT（FCOM p.1436）：上昇の相で、入れた CRZ ALT への上昇が降下の経路に先に当たる（予測に T/C が無い）とき、CRZ ALT の入力でメッセージを出す（巡航の最短時間の条件は資料に値が無いので入れていない）。
 - 残り：LEGS の小字の予測・RTE DATA・PROGRESS・ND の T/C・T/D（8d）、点ごとの風と DESCENT FORECAST（8e）、VNAV の経路と指令に予測を使うこと（段 9。今の VNAV の降下は前の `setDistances` の 290 ft/NM のまま）、待機・オフセット・速度の制限の点（FMC-08）は予測に入れていない。
@@ -1006,3 +1006,18 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - 回帰：`pred_model_test.lua` 46 件（点の速さ、事象の時刻）、`pred_glue_test.lua` 45 件（PROGRESS の TO・NEXT・DEST と TO T/C・ECON SPD、LEGS の (600) の速さ、(INTC) の速さ/高度、速さと高度の制限の ZZV には無し、滑走路の速さ、進入復行には無し）。全 128 本。
   - X-Plane：`s131_fmc_pred` に LEGS と PROGRESS を足して 14/14。LEGS：AKAGI .853/FL360、ATMUG 294/FL243、SAKVA 294/FL143、ATVID（/4000A）の前に 294、進入の遷移の点に 240。PROGRESS：TO AKAGI 47 NM・0106・85.6、NEXT ATMUG 341・0143・80.7、DEST RJBB 433・0158・80.2、ECON SPD と TO T/D 0138z/303NM。Lua の誤りなし。
 - 推定・残り：条件の脚（VA・CA など）は距離を 0 とした（その間の予測は前の点のまま）。予測は今の高度から（巡航高度とずれた空中開始は今の高度で巡航）。RTE DATA と ND は 8d2・8d3。
+
+## 49. 段 8d2 の実装（2026-10-31：RTE DATA）
+
+- 資料：FCOM p.1360–1363（RTE DATA）。有効な経路だけのページで、ACT RTE x LEGS の点ごとの ETA と、FMC が計算した残りの燃料（入力はできない）、WIND のページへの「>」（風を入れた点は「W>」）。ETA と燃料の計算は discontinuity をまっすぐ飛ぶとする（p.1363 の注：§47 の推定のうち discontinuity の分はこれで資料どおり）。109 は 6R が LEGS>（p.1362）。405・570 は 6L が <LEGS、6R がデータリンクの REQUEST SEND>（データリンクが使えて降下・進入の相でないとき）と、風のアップリンクの LOAD・ERASE（p.1361、p.1363–1364）。LEGS の 6R の RTE DATA>（p.1332）。
+- 図（p.1361・p.1362）からの配置：ETA（小さい字）が 1〜5 桁、WPT（大きい字）が 7 桁目から、FUEL（小さい字）が 15〜19 桁、WIND の「>」（大きい字）が 24 桁目。見出しは「ETA WPT FUEL WIND」（小さい字）。discontinuity は点の行に「-- ROUTE DISCONTINUITY -」（小さい字）。5 行目と 6 行目の間の線は、109 が左の 14 字、570 が左の 16 字と REQUEST。
+- 作ったもの（新設 `activepages/B744.fms.pages.rtedata.lua`）：
+  - 有効な経路の LEGS のページ（変更中でないとき）の 6R に RTE DATA>（前は空き）。押すと RTE DATA。点は LEGS のページと同じ 5 点ずつ（ページの番号も同じ）。
+  - 各点の ETA と燃料は予測（§47）から（燃料は表示の単位）。E/D の後（進入復行）と予測が無いとき（CRZ ALT が MAX 以上など）は空き（LEGS と同じ）。
+  - 109（PW・RR）は 6R に LEGS>、570（GE：`laminar/B747/engines/type`）は 6L に <LEGS。570 の REQUEST SEND> は、風のアップリンクを作っていないので出さない（推定：データリンクが使えないときの形とした）。
+  - WIND の「>」は出すが、まだ押しても何もしない（WIND のページと点ごとの風は 8e）。
+  - FMC COMM の <RTE DATA（570）はつないでいない（データリンクのページは別の項目）。
+- 試験：
+  - 回帰：`pred_glue_test.lua` に RTE DATA を足して 58 件（LEGS の 6R の RTE DATA>、見出し、(600) の名前と「>」の位置、ETA と燃料の位置と値、ZZV の燃料、109 の線、2 ページ目の discontinuity、570 の <LEGS と 6R の無反応、LEGS> で LEGS へ）。全 128 本。
+  - X-Plane：`s131_fmc_pred` に RTE DATA を足して 21/21。AKAGI 0106z・85.6、discontinuity、ATMUG 0143z・80.8、SAKVA 0147z・80.6、ATVID 0149z・80.6（PROGRESS の TO・NEXT と同じ値）、14 字の線と LEGS>。画面の写真で配置と字の大きさを確かめた。Lua の誤りなし。
+- 残り：ND の T/C・T/D・S/C・E/D（8d3）、WIND のページと W>（8e）。

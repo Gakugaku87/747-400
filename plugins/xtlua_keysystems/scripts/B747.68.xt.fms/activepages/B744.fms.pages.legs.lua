@@ -261,6 +261,9 @@ local function legs_page(st, pgNo, defs, hold_at, fmsID)
     right = "STEP>"
   elseif not st.active and not st.activating then
     right = "ACTIVATE>"
+  elseif st.active and not st.mod then
+    -- RTE DATA on the active route (FCOM p.1332; step 8d2)
+    right = "RTE DATA>"
   end
   lines[12] = d and "-------------           " or (plan and "-----------------       " or "------------------------")
   lines[13] = lr(left, right)
@@ -402,6 +405,8 @@ function fmsFunctions.legsr6(fmsO, value)
     legs_step(fmsO)
   elseif not st.active and not st.activating then
     fmsFunctions.rteactivate(fmsO, value)
+  elseif st.active and not st.mod then
+    fmsFunctions.setpage(fmsO, "RTEDATA")
   else
     fmsO["notify"] = "KEY/FUNCTION INOP"
   end
