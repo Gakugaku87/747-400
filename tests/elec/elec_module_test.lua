@@ -110,6 +110,21 @@ rt:set(SW, 24, 1)
 frames(1)
 T.equal(get("laminar/B747/electrical/breaker/gcb", 2), 1, "GEN CONT 3 OFF and ON: GCB 3 closed again (LH24 p.108)")
 
+-- autoland isolation (ELEC-18): the FCCs' request in (the AFDS glue), the
+-- breakers of configuration A, BUS ISOLATED back and the synoptic inhibit
+-- out, ISLN 1-3 and ELEC BUS ISLN 1-3 not shown; the request ended, back
+local BTB, DCIR = "laminar/B747/electrical/breaker/btb", "laminar/B747/electrical/breaker/dcir"
+rt:set("laminar/B747/autopilot/bus_isolate_req", 1)
+frames(0.5)
+T.check(get(BTB, 0) == 0 and get(BTB, 2) == 0 and get(BTB, 3) == 1, "ELEC-18: the request: BTB 1-3 open, BTB 4 closed")
+T.check(get(DCIR, 1) == 0 and get(DCIR, 3) == 1, "DCIR 2 open, DCIR 4 closed")
+T.check(get("laminar/B747/electrical/bus_isolated") == 1 and get("laminar/B747/electrical/synoptic_inhibit") == 1,
+    "BUS ISOLATED, the synoptic inhibited")
+T.check(get("laminar/B747/electrical/light/isln", 0) == 0 and get(ADVISORY, 92) == 0, "no ISLN 1 light, no ELEC BUS ISLN 1")
+rt:set("laminar/B747/autopilot/bus_isolate_req", 0)
+frames(0.5)
+T.check(get(BTB, 0) == 1 and get(DCIR, 1) == 1 and get("laminar/B747/electrical/bus_isolated") == 0, "the request ended: closed again")
+
 -- DRIVE DISC 1 pushed at idle (the manipulator sets the flag)
 rt:set("laminar/B747/electrical/generator/drive_disc_status", 0, 1)
 frames(1)

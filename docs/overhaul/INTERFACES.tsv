@@ -1181,6 +1181,7 @@ laminar/B747/electrical/standby_power/sel_dial_up	command	obj	B747.03.electrical
 laminar/B747/electrical/stby_ignit/sel_dial_dn	command	obj	B747.03.electrical,B747.03.xt.electrical
 laminar/B747/electrical/stby_ignit/sel_dial_pos	dataref	obj,snd	B747.03.electrical,B747.03.xt.electrical
 laminar/B747/electrical/stby_ignit/sel_dial_up	command	obj	B747.03.electrical,B747.03.xt.electrical
+laminar/B747/electrical/synoptic_inhibit	dataref	panel	B747.03.electrical
 laminar/B747/electrical/topleftbus	dataref	panel	B747.03.electrical,B747.03.xt.electrical
 laminar/B747/electrical/toprightbus	dataref	panel	B747.03.electrical,B747.03.xt.electrical
 laminar/B747/electrical/utilityleft1	dataref	panel	B747.03.electrical,B747.03.xt.electrical

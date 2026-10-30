@@ -158343,6 +158343,8 @@ GROUP LOWER EICAS POWER
       GROUP ELEC Synoptic
         SHOW_EQUAL 3.000000 laminar/B747/dsp/synoptic_display
         HIDE
+        GROUP ELEC Synoptic shown
+          SHOW_EQUAL 0.000000 laminar/B747/electrical/synoptic_inhibit
         gen_rotary background
           POS 1704.000000 95.000000
           IMAGE CRT Displays/EICAS Lower/ELEC/background
@@ -159483,6 +159485,29 @@ GROUP LOWER EICAS POWER
           IMAGE CRT Displays/EICAS Lower/ELEC/drive
           DATAREF 
           SHOW_EQUAL 1.000000 laminar/B747/electrical/light/drive[3]
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 10
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        END_GROUP
+        gen_rotary synoptic inhibited
+          POS 1704.000000 95.000000
+          IMAGE CRT Displays/EICAS Lower/ELEC/synoptic_inhibited
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/electrical/synoptic_inhibit
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 10

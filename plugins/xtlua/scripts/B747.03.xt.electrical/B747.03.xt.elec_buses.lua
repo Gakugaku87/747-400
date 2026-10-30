@@ -56,6 +56,12 @@ B747DR_elec_fire_switch_1       = find_dataref("laminar/B747/fire/engine01/ext_s
 B747DR_elec_fire_switch_2       = find_dataref("laminar/B747/fire/engine02/ext_switch/pos_arm")
 B747DR_elec_fire_switch_3       = find_dataref("laminar/B747/fire/engine03/ext_switch/pos_arm")
 B747DR_elec_fire_switch_4       = find_dataref("laminar/B747/fire/engine04/ext_switch/pos_arm")
+-- autoland isolation (ELEC-18): the FCCs' request (the AFDS glue,
+-- B747.70.xt.autopilot.lua), the radio altitude, BUS ISOLATED back
+B747DR_elec_bus_isolate_req     = find_dataref("laminar/B747/autopilot/bus_isolate_req")
+simDR_elec_radio_alt            = find_dataref("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
+B747DR_elec_bus_isolated        = find_dataref("laminar/B747/electrical/bus_isolated")
+B747DR_elec_synoptic_inhibit    = find_dataref("laminar/B747/electrical/synoptic_inhibit")
 
 local elec_state = E.new()
 local elec_inputs = E.inputs()
@@ -105,6 +111,8 @@ local function read_inputs(inp)
     inp.apu_gen_ok = B747_apu_gen_ready()                   -- the APU model (B747.03.xt.apu.lua)
     inp.apu_start = simDR_apu_start_switch_mode == 2 and simDR_apu_N1_pct < E.APU_READY_N1
     inp.on_ground = B747DR_elec_pseu_air == 0               -- PSEU air relays, ATA29_32 p.299
+    inp.autoland_req = B747DR_elec_bus_isolate_req > 0.5
+    inp.ra = simDR_elec_radio_alt
 end
 
 local function write_buses(out)
@@ -146,6 +154,8 @@ local function write_buses(out)
     B747DR_elec_breaker_ssb = flag(out.ssb)
     B747DR_elec_air_mode = flag(out.air_mode)
     B747DR_elec_load_shed = flag(out.load_shed)
+    B747DR_elec_bus_isolated = flag(out.bus_isolated)
+    B747DR_elec_synoptic_inhibit = flag(out.synoptic_inhibit)
     B747DR_elec_battery_volts[0] = out.battery.main.volts
     B747DR_elec_battery_volts[1] = out.battery.apu.volts
     B747DR_elec_battery_amps[0] = out.battery.main.amps

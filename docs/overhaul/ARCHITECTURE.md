@@ -166,6 +166,7 @@ Lua が作る名前の数：dataref 1617 個、コマンド 628 個。静的に�
 | `battery/stat_amps` | array[2] | 同じ電流の符号なし（カスタム acf の STAT ページの A-DC、2026-10-23） |
 | `light/ext_avail`・`light/apu_avail`・`light/util_off` | array[2] | P5 の AVAIL・UTILITY OFF 灯 |
 | `light/isln`・`light/gen_off`・`light/drive` | array[4] | P5 の ISLN・GEN CONT OFF・DRIVE 灯 |
+| `bus_isolated`・`synoptic_inhibit` | number | autoland の母線の分離（ELEC-18、2026-10-30）：BCU 2 の BUS ISOLATED（AFDS の LAND 3 の条件）、分離の間（ELEC の synoptic の抑止）。要求は AFDS の `laminar/B747/autopilot/bus_isolate_req` |
 
 - 前からある名前（`bus1hot`〜`bus4hot`、`topleftbus`・`toprightbus`、`ssb`、`utilityleft1/2`・`utilityright1/2`、`ext_pwr1_on`・`apu_pwr1_on` など、`laminar/B747/rel_esys`〜`rel_esys4`、`capt_display_power`・`fo_display_power`、`display_has_power[6-8]`、`apu_volts`）も、同じモデルから意味を保って書く（notes/ATA-24.md §6）。
 - カスタム acf の ELEC synoptic は ISLN の枠を `breaker/btb`、DRIVE の枠を `light/drive`（IDG の油圧低）で、STAT ページのバッテリーは `battery/volts`・`battery/stat_amps` で出す（ACF_DIFF.md §5）。純正 acf は前のまま（スイッチ位置、エンジン滑油圧、X-Plane のバッテリー）。
@@ -499,6 +500,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 段 5b（2026-10-30、notes §35）：AFDS のモデルが autoland の能力（`M.capability`）と EICAS の文（`alert`：NO LAND 3・NO AUTOLAND と `alert_level`：caution・advisory）を持つ。グルーが能力の入力（有効なチャンネル、FCC の電源、`irs/nav_valid`・`ra/valid` の数、X-Plane の `rel_nav1`・`rel_nav2`・`rel_loc`・`rel_gls`、新設の `flt_ctrls/stab_trim/srm_valid[2]`（init `B747.45.fltCtrls`。SRM の有効だけ：autotrim valid と違い操縦輪のトリムのスイッチでは落ちない）、`flt_ctrls/fail/fcu`）を渡し、`CAS/caution_status[49]`・`[50]` と `CAS/advisory_status[246]`・`[248]` を書く。警報のモデルが、地上でエンジン始動まで NO AUTOLAND・NO LAND 3 を隠し（`PRESTART_HIDDEN_ANY`）、`ap_siren`（警報のグルーが `engines/type` の GE で立てる）で AUTOPILOT DISC を siren にする。
 - 段 5c（2026-10-30、notes §36）：AFDS のモデルがモード故障（`roll_fail`・`pitch_fail`、故障の時のバンクとピッチ）と AUTOPILOT の caution（`M.caution`）を持つ。グルーが受信機・電波高度計・IRU（NAV と方位：`irs/hdg_valid`）・選んだ ADC（`airdata/valid_capt`・`valid_fo`）・NAV 1 の周波数を渡し、故障したモードの則を ATT（ロールはバンク、ピッチは新しい `att_pitch`）にし、新設の `autopilot/FMA/roll_fail`・`pitch_fail`・`fd/roll_bar`・`fd/pitch_bar`（init `B747.70.autopilot`。カスタム acf の PFD の琥珀の線と F/D のバーの条件：ACF_DIFF.md）と caution [4] を書く。
 - 段 5d（2026-10-30、notes §37）：AFDS のモデルが ILS TUNE INHIBIT（`M.ils_inhibit`）と RA TEST INHIBIT（`M.ra_test_inhibit`）を持ち、グルーが新設の `autopilot/ils_tune_inhibit`・`ra_test_inhibit`（init `B747.70.autopilot`）に書く。前の ILS の自動同調（`B747_fltmgmt_setILS`）と FMC の NAV RADIO ページの手動の同調（`B744.fms.pages.lua` の `findILS`）は、`ils_tune_inhibit` の間は周波数を変えない。
+- ELEC-18（2026-10-30、notes §38、ATA-24.md §10）：AFDS のモデルが母線の分離の要求（`M.bus_isolate_request`）を持ち、グルーが新設の `autopilot/bus_isolate_req`（init `B747.70.autopilot`）に書く。電源のモジュール（別のプラグイン `xtlua`）がそれを読んで BTB・DCIR を開き、`electrical/bus_isolated` を返す。LAND 3 にはそれが要る。
 
 ## 7. エンジン型式
 

@@ -115,6 +115,9 @@ B747DR_ap_fd_pitch_bar       			= deferred_dataref("laminar/B747/autopilot/fd/pi
 -- self-test
 B747DR_ap_ils_tune_inhibit   			= deferred_dataref("laminar/B747/autopilot/ils_tune_inhibit", "number")
 B747DR_ap_ra_test_inhibit    			= deferred_dataref("laminar/B747/autopilot/ra_test_inhibit", "number")
+-- the FCCs' bus isolation request to BCU 1 (ELEC-18): 1 from the APP's
+-- multi-channel arm (the electrical module isolates AC and DC 1-3)
+B747DR_ap_bus_isolate_req    			= deferred_dataref("laminar/B747/autopilot/bus_isolate_req", "number")
 B747DR_ap_autothrottle_armed        	= deferred_dataref("laminar/B747/autothrottle/armed", "number")
 B747DR_ap_mach_decimal_visibiilty	    = deferred_dataref("laminar/B747/autopilot/mach_dec_vis", "number")
 B747DR_ap_fpa	    = deferred_dataref("laminar/B747/autopilot/navadata/fpa", "number")

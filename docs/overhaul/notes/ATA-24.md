@@ -492,3 +492,19 @@
 - IDG disconnect の電源（FCOM：main battery bus、LH24 の図：hot battery bus）。
 - バッテリーの放電電流（standby 時）は資料に記載なし。「最低 30 分」（FCOM p.804）を満たす値を推定で置く必要がある。X-Plane のバッテリーは 1 個（1272 Wh）なので、APU バッテリーは Lua 側で持つ必要がある。
 - INTERFACES.tsv が、パネルの SHOW_* 条件にだけ出る laminar 名（175 個。電源関係は bus1hot など 15 個）を拾っていない。再生成が必要。
+
+## 10. ELEC-18 の実装（2026-10-30：autoland の母線の分離）
+
+- 電源のモデル（`B747.03.elec_model.lua` の `isolation`）：FCC の分離の要求（`inp.autoland_req`）で BCU 1 が構成を決める（LH24 p.244–247 の論理図と構成図）。
+  - 発電機チャンネル（GC：発電機と TRU。TRU の故障は無いので、発電機が良いか）が全部そろえば構成 A（BTB と DCIR の 1〜3 を開き、AC 4 が同期母線）。1 つ欠けていれば B〜E（1 番なら B：2・3 を開く、2 番なら C：1・3、3 番・4 番なら D・E：1・2）。A のときに 1 つ欠ければ B〜E へ。B〜E から A には戻らない（図のとおり。欠けた GC が戻っても）。
+  - 要求の時に 2 つ以上欠けていれば、要求が終わるまで無視する。分離中に 2 つ目を失えば、電波高度 200 ft より上なら要求の前の形に戻し、下なら DCIR だけ閉じて BTB はそのまま。どちらも要求が終わるまで続き、BUS ISOLATED を消す。
+  - 要求の前から開いていた BTB（BUS TIE スイッチ）は開いたまま（p.244 の注）。この模型では SSB が空中で開かないので、図の注 1（B・C で SSB が開いていれば確認を外す）は働く所が無い。
+  - 出力：BCU 2 の BUS ISOLATED（`out.bus_isolated`：構成があって、200 ft の下の保持でない）。分離の間（保持も含む）は ISLN 1〜3 の灯と ELEC BUS ISLN 1〜3 を出さない（FCOM p.802。4 は今までどおり）、synoptic を抑止する（`out.synoptic_inhibit`：FCOM p.789、p.802）。
+  - 分離は瞬時（資料は「4 秒以内」：ATA22 p.192）。
+- グルー（`B747.03.xt.elec_buses.lua`）：要求は AFDS の `laminar/B747/autopilot/bus_isolate_req`、電波高度は X-Plane の機長側の電波高度計（BCU が使う高度の出どころは資料に無い：推定）。新設の `laminar/B747/electrical/bus_isolated`・`synoptic_inhibit`（init `B747.03.electrical`）に書く。
+- AFDS の側（notes/ATA-22.md §38）：要求、LAND 3 に BUS ISOLATED が要ること、4 秒で分離しなければ NO LAND 3。
+- パネル（カスタム acf、ACF_DIFF.md）：ELEC の synoptic を、`synoptic_inhibit` が 1 の間は消して「ELECTRICAL SYNOPTIC INHIBITED FOR AUTOLAND」だけを出す（色と 2 行に分けたのは推定）。`panel_elec_synoptic.lua`、絵は `make_synoptic_images.ps1`。§6 の「autoland の抑止文言を出せない」は、カスタム acf では解消。
+- 試験：
+  - 回帰（LuaJIT）：電源のモデル +34（構成 A の BTB・DCIR・全母線・BUS ISOLATED・ISLN と ELEC BUS ISLN・synoptic、2 番が欠けて C、200 ft の上で 2 つ目：元の形、要求の終わり、150 ft で 4 番が欠けて E、2 つ目：DCIR だけ閉じて BTB はそのまま、2 つ欠けた時の要求は無視・1 つ戻っても無視・新しい要求で B、B は SSB を通して AC 1、発電機が戻っても B のまま、BUS TIE 4 OFF の BTB 4 は開いたままで ISLN 4 は点く）、電源のモジュール +5（要求の dataref から BTB・DCIR・BUS ISOLATED・synoptic・ISLN と ELEC BUS ISLN まで）、AFDS のモデル +17、グルー +4。全 121 本。
+  - X-Plane（カスタム acf）：新設の `s122_elec_autoland_isolation` 55/55：CMD L で APP を押すと C と R が arm して要求が立ち、2 秒後に BTB と DCIR の 1〜3 が開いて 4 が閉、全母線に電源、BUS ISOLATED、ISLN 1・3 の灯と ELEC BUS ISLN 1・2 は出ず、下の EICAS の ELEC は抑止の文言だけ（写真）。GEN CONT 2 OFF で構成 C（BTB 2・DCIR 2 が閉、AC 2 は同期母線から、R は arm のまま）。そのまま G/S と LAND 3。1,000 ft で GEN CONT 1 も OFF にすると BTB・DCIR が全部閉じて BUS ISOLATED が消え、synoptic が戻り（写真）、LAND 2、5 秒後に >NO LAND 3 の caution（3 チャンネルは入ったまま。上の EICAS の写真）。発電機を戻しても分離しない。TO/GA で要求が終わり NO LAND 3 も消える。`s114_autoland`（回帰）20/20（WARN は前からの接地の後の跳ね 1 つ）：LAND 3 に BUS ISOLATED が要るようになっても、1,345 ft で LAND 3、要求と BUS ISOLATED が立っていた（Web API）。Lua の誤りなし。
+- 作っていないもの：TRU の故障（GC の欠けは発電機だけ）、分離にかかる時間、SSB が開いている時の注 1、BCU の故障。

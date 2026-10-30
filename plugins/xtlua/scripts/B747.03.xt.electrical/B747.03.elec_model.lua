@@ -40,6 +40,12 @@ M.LOAD_AMPS = {
 -- ELCU shed order (galley 1-4, utility 1-4), LH24 p.236
 M.SHED_ORDER = {{"galley", 1}, {"galley", 4}, {"galley", 2}, {"galley", 3},
     {"utility", 1}, {"utility", 4}, {"utility", 2}, {"utility", 3}}
+-- Autoland bus isolation (ELEC-18): the BTBs and DCIRs BCU 1 opens in each
+-- configuration, A with every generator channel working, B to E with
+-- channel 1 to 4 inoperative (LH24 p.246, figure p.247)
+M.ISO_OPEN = {A = {1, 2, 3}, B = {2, 3}, C = {1, 3}, D = {1, 2}, E = {1, 2}}
+M.ISO_CONFIG = {"B", "C", "D", "E"}
+M.ISO_HOLD_RA = 200            -- below it a second channel lost keeps the BTBs open, LH24 p.244
 
 local L, R = 1, 2
 local SIDE = {L, L, R, R}             -- sync bus side of AC bus / IDG 1-4
@@ -76,6 +82,8 @@ function M.inputs()
         n2 = {0, 0, 0, 0},
         on_ground = true,
         fire_handle = flags(4, false),   -- engine fire switch pulled: trips the GCR, LH24 p.108
+        autoland_req = false,            -- the FCCs' bus isolation request (laminar/B747/autopilot/bus_isolate_req)
+        ra = 9999,                       -- radio altitude, ft
     }
 end
 
@@ -92,6 +100,9 @@ function M.new()
         ext_request_prev = {false, false}, apu_request_prev = {false, false},
         xfr = {capt = {alt = false, t = 0}, fo = {alt = false, t = 0}},
         shed = 0, shed_t = 0,            -- ELCUs shed so far (from the front of SHED_ORDER)
+        -- autoland isolation: the configuration set, the BTBs held below
+        -- ISO_HOLD_RA, the request ignored or given up until it ends
+        iso = {config = nil, hold = false, done = false},
         apu_start_prev = false, apu_start_relay = 0,
         bat = {main = bat(), apu = bat()},
         out = nil,
@@ -210,6 +221,48 @@ local function settle_ssb(s, good)
     end
 end
 
+-- Autoland bus isolation (ELEC-18; LH24 p.242-247, logic figure p.245;
+-- ATA22 p.192, p.196; FCOM p.802): on the FCCs' request BCU 1 sets
+-- configuration A with every generator channel working (`gc`: a generator
+-- and its TRU, LH24 p.244; no TRU fails here, so the generators), B to E
+-- with one inoperative, and goes from A to B-E when one fails; with more
+-- than one inoperative it ignores the request. More than one lost while
+-- isolated: above ISO_HOLD_RA ft RA back to before the request, below it
+-- the DCIRs close and the BTBs stay as they were, until the request ends.
+-- An SSB or BTB open before the request stays open (bus_tie: LH24 p.244);
+-- the SSB never opens in flight here, so the figure's note 1 (B and C need
+-- it closed) has nothing to act on. Returns the BTBs and DCIRs it opens
+local function isolation(s, inp, gc)
+    local iso = s.iso
+    if not inp.autoland_req then
+        iso.config, iso.hold, iso.done = nil, false, false
+    elseif not (iso.done or iso.hold) then
+        local inop, last = 0, nil
+        for n = 1, 4 do
+            if not gc[n] then inop, last = inop + 1, n end
+        end
+        if inop > 1 then
+            if iso.config and inp.ra < M.ISO_HOLD_RA then
+                iso.hold = true
+            else
+                iso.config, iso.done = nil, true
+            end
+        elseif inop == 1 then
+            if iso.config == nil or iso.config == "A" then iso.config = M.ISO_CONFIG[last] end
+        elseif iso.config == nil then
+            iso.config = "A"
+        end
+    end
+    local open = {btb = flags(4, false), dcir = flags(4, false)}
+    if iso.config then
+        for _, n in ipairs(M.ISO_OPEN[iso.config]) do
+            open.btb[n] = true
+            open.dcir[n] = not iso.hold
+        end
+    end
+    return open
+end
+
 -- One frame. dt in seconds.
 function M.update(s, inp, dt)
     local out = {clear_ext = {false, false}, clear_apu = {false, false}}
@@ -258,9 +311,10 @@ function M.update(s, inp, dt)
     local ext_ok = {inp.ext_available[1] and true or false, inp.ext_available[2] and true or false}
 
     -- breakers -------------------------------------------------------------
+    local iso_open = isolation(s, inp, good)
     for n = 1, 4 do
-        s.btb[n] = inp.bus_tie[n]                                   -- FCOM p.785, LH24 p.104
-        s.dcir[n] = inp.bus_tie[n]                                  -- FCOM p.819
+        s.btb[n] = inp.bus_tie[n] and not iso_open.btb[n]           -- FCOM p.785, LH24 p.104
+        s.dcir[n] = inp.bus_tie[n] and not iso_open.dcir[n]         -- FCOM p.819
         if s.gcb[n] and not good[n] then s.gcb[n] = false end       -- GEN CONT OFF, underspeed, GCR trip
     end
     for k = 1, 2 do
@@ -439,6 +493,12 @@ function M.update(s, inp, dt)
     out.idg_connected = {}
     for n = 1, 4 do out.idg_connected[n] = s.idg_connected[n] end
     out.load_shed = s.shed > 0
+    -- autoland isolation (ELEC-18): BCU 2's BUS ISOLATED to the FCCs (ATA22
+    -- p.192), and the isolation in effect: ISLN 1-3 out, no ELEC BUS ISLN 1-3,
+    -- "ELECTRICAL SYNOPTIC INHIBITED FOR AUTOLAND" (FCOM p.789, p.802)
+    local autoland = s.iso.config ~= nil
+    out.bus_isolated = autoland and not s.iso.hold
+    out.synoptic_inhibit = autoland
 
     -- panel lights (FCOM p.781-786)
     local lt = {ext_avail = {}, ext_on = {}, apu_avail = {}, apu_on = {},
@@ -452,7 +512,7 @@ function M.update(s, inp, dt)
     end
     local drive_low = {}
     for n = 1, 4 do
-        lt.isln[n] = not s.btb[n]
+        lt.isln[n] = not s.btb[n] and not (autoland and n <= 3)
         lt.gen_off[n] = not s.gcb[n]
         -- IDG oil pressure builds with input speed: estimate, low below the
         -- on-line speed (DRIVE lights on before start, FCOM p.104 NP.21.10)
@@ -464,12 +524,13 @@ function M.update(s, inp, dt)
 
     -- EICAS (FCOM p.821-823). Levels: ELEC AC BUS caution, the rest advisory
     -- (109). ELEC GEN OFF and ELEC BUS ISLN n are not shown while ELEC AC BUS
-    -- n is (FCOM p.802 for ISLN; estimate for GEN OFF).
+    -- n is (FCOM p.802 for ISLN; estimate for GEN OFF), ELEC BUS ISLN 1-3
+    -- neither in the autoland isolation (FCOM p.802).
     local cas = {ac_bus = {}, gen_off = {}, bus_isln = {}, drive = {}, drive_disc = {}}
     for n = 1, 4 do
         cas.ac_bus[n] = not ac[n]
         cas.gen_off[n] = not s.gcb[n] and ac[n]
-        cas.bus_isln[n] = not s.btb[n] and ac[n]
+        cas.bus_isln[n] = not s.btb[n] and ac[n] and not (autoland and n <= 3)
         -- ELEC DRIVE: DRIVE light with the engine running and the IDG
         -- connected (LH24 p.72-73); never in normal operation here
         cas.drive[n] = drive_low[n] and speed[n] and s.idg_connected[n]
