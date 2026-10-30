@@ -178,6 +178,35 @@ T.check(line(5):find("^RW16R") and small(5):find("240"), "the runway (the E/D): 
 T.equal((small(7):gsub("%s+$", "")), "", "the missed approach after the E/D: none: " .. line(7))
 key("func_key/legs")
 
+-- RTE DATA (step 8d2; FCOM p.1360-1363): from the active LEGS page's 6R;
+-- each waypoint's ETA and fuel in small font (FCOM p.1362), ">" for its
+-- winds; LEGS> back on the 109, <LEGS on the 570 (the GE airplane)
+key("func_key/legs")
+T.check(line(13):find("RTE DATA>$"), "the active LEGS page: RTE DATA> at 6R: " .. line(13))
+key("ls_key/R6")
+T.check(line(1):find("ACT RTE 1 DATA"), "RTE DATA: " .. line(1))
+T.equal(small(2), " ETA    WPT   FUEL  WIND", "its titles")
+local function fuel_of(p) return string.format("%5.1f", p.fuel / 1000) end
+T.check(line(3):find("^      %(600%) +>$"), "(600): its name at the 7th place, > at the 24th: " .. line(3))
+T.equal(small(3), eta4(r.pts[1].t) .. "z         " .. fuel_of(r.pts[1]) .. "     ",
+    "its ETA at the 1st to 5th places and fuel at the 15th to 19th, small")
+T.check(line(7):find("^      ZZV") and small(7):sub(15, 19) == fuel_of(r.pts[3]), "ZZV: its fuel: " .. small(7))
+T.equal(line(12), "--------------          ", "the 109's line above 6")
+key("func_key/next_pg")
+T.equal(small(9), "-- ROUTE DISCONTINUITY -", "the discontinuity (leg 9) on page 2's fourth row")
+T.check(line(3):find("^      DELTA"), "page 2 from leg 6, DELTA: " .. line(3))
+rt:set("laminar/B747/engines/type", 1)
+frames(0.3)
+T.check(line(13):find("^<LEGS +$"), "the 570: <LEGS at 6L, no SEND> without an uplink: " .. line(13))
+key("ls_key/R6")
+T.check(line(1):find("ACT RTE 1 DATA"), "the 570: 6R nothing: " .. line(1))
+key("ls_key/L6")
+T.check(line(1):find("ACT RTE 1 LEGS"), "the 570: <LEGS: the LEGS page: " .. line(1))
+rt:set("laminar/B747/engines/type", 0)
+key("ls_key/R6")
+key("ls_key/R6")
+T.check(line(1):find("ACT RTE 1 LEGS"), "the 109: LEGS>: the LEGS page: " .. line(1))
+
 -- the CRZ page: the destination's ETA and fuel the predictions'
 key("func_key/des")
 key("func_key/next_pg")
