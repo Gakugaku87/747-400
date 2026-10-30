@@ -776,3 +776,44 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
     - 5 回目（NOSE LETDOWN の指令を接地の時の姿勢の 1° 下から）：送信所の 363 ft 先に、慣性の経路で 0.4〜1.0 ft/s、主脚の回転分を足して約 1.1〜1.4 ft/s（資料の 1.5 ft/s・450 ft にいちばん近い）・1.47 g。それでも接地の 0.8 秒後に 2 秒浮いた（5 ft まで）：接地の時の姿勢は 7.0° で毎秒 1.1° 上がり途中、昇降舵は 0.51。A/P の昇降舵の指令は誤差 1° で 3 秒かけて全行程（毎秒 0.67：前のコードの B747_interpolate_value）なので、0.5 を戻すのに約 0.8 秒かかり、その間に姿勢は 7.25° まで上がった。
     - 6 回目（gear altitude 5 ft の下で FLARE の指令を上げない、gear altitude を 2.3 ft ＋ 10 ft × sin で。X-Plane を起動し直して捨ての s66 のあと）：送信所の 341 ft 先に、慣性の経路で約 1 ft/s・1.35 g（いちばん柔らかい）。接地の時の機首の上がりは毎秒 0.16°（5 回目は 1.1°）、昇降舵 0.24（0.51）、gear altitude は接地で 0.07 ft。それでも接地の 0.5 秒後から 1.5 秒、1 ft ほど浮いた（機首は下がりながら）：揚力が重さに近いまま主脚の台車が水平にならず、PSEU が地上にならない（ATA29_32 p.322 の式、台車 4°：`B747.10.pseu_model.lua`）ので、スピードブレーキは出始めず、浮いている間は止まる。接地のピッチ 6.7° は FCTM の 4〜5° より高い（進入のピッチ 3.4° も FCTM の 2° より高い：フラップの揚力の形、notes/AERO.md §3.10）。s114 は 13 が合格で跳ねの確認だけ不合格。その確認は WARN にした（段 4c とフラップの揚力の形で見直す）。
 - 回帰（X-Plane、カスタム acf）：`s112_afds_gs` 12/12、`s109_afds_takeoff` 20/20、`s102_afds_app` 37/37、`s104_afds_ga` 34/34、`s113_afds_multi` 29/29。Lua の誤りなし。
+
+## 27. 段 4c の段取り（2026-10-30：ROLLOUT と roll down）
+
+- 資料：
+  - ROLLOUT の arm は multi-channel（LAND 3・2）、表示は電波高度 1,500 ft の下から、約 5 ft の下で active（FCOM p.664、p.671、p.672 の図）。ATA22 p.360 は電波高度 2 ft で engage、multi-channel でなければ F/D だけで表示は LOC。X-Plane の電波高度は主脚の接地で約 3.3 ft なので、5 ft は主脚の高さで約 1.6 ft（ATA の 2 ft に近い）。乗員に見える表示は FCOM の 5 ft にする。
+  - ROLL DOWN：autoland で gear altitude 5 ft から翼を水平に（ATA22 p.296、p.348）。wings level は 5 ft、2 ft から rollout（p.296）。
+  - ROLLOUT の則：LOC の偏位の距離と速さ（LOC の則と同じもの）で、方向舵と前輪の操向（multi-channel のとき）。A/P が無ければ F/D だけ（ATA22 p.362；FCOM p.659：方向舵の指令は multi-channel の進入だけ、前輪の操向は autoland の rollout）。
+  - ROLLOUT は A/P を外すまで続く（FCOM p.671）。A/P と自動ブレーキは安全に止まるまで入れておく（FCTM p.159）。前の autoland の 65 kt の A/P の解除は資料に無い：外す。
+  - A/T の IDLE は逆推力のレバーで A/T が切れるまで（FCOM p.671）：エンジンのモジュールが逆推力で A/T を切る（今のまま）。
+- 作るもの：
+  - AFDS のモデル：ROLLOUT の engage（arm で電波高度 5 ft の下）、FMA の ROLLOUT、地上で進入のモードを終えない（ROLLOUT・NOSE LETDOWN のとき）、A/P が外れるか TO/GA で終わる。multi-channel でなければ F/D だけで表示は LOC（p.360）。
+  - ロールの則：ROLLOUT は翼を水平（補助翼）と、方向舵の指令（偏位の距離と、滑走路を横切る速さ）。地上の LOC までの距離は、接地からの対地速度の積分で減らす（推定）。
+  - グルー：方向舵の指令の新しい dataref（`autopilot/rudder_cmd`）。油圧のモジュールが方向舵の入力に、操向のモデルが前輪の指令（ペダルと同じ 7°）に足す（multi-channel のとき）。`autopilot/autoland`（SRM の autoland：RRC の全権・自動トリムの遅れなし）は AFDS のモデルの LAND 3・2 から（G/A の −2 は今のまま）。
+  - 前の autoland（`B747.autoland.lua`）をやめる：方向舵のトリム、ROLLOUT の FMA、65 kt の解除、`B747_ap_fma` のロールの FMA の止め。`afds_control` の前の則の autoland の枝も外す。
+  - X-Plane：s114 を接地の後に延ばす（5 ft の下で ROLLOUT、中心線からのずれ、60 kt の下でも A/P のまま、止まってから A/P を外す）。横風の試験は段 4d（runway align）と一緒に。
+
+## 28. 段 4c の実装（2026-10-30：ROLLOUT と前の autoland の撤去）
+
+- AFDS のモデル（`B747.70.afds_model.lua`）：
+  - ROLLOUT の engage：ROLLOUT が arm（LAND 3・2 で LOC）で、電波高度 5 ft（`ROLLOUT_RA`）の下（FCOM p.664、p.671。ATA22 p.360 の 2 ft は、X-Plane の電波高度が主脚の接地で約 3.3 ft なので、ここでは主脚の高さ約 1.6 ft にあたる）。FMA のロールは ROLLOUT（4）、arm は消える。
+  - 地上では進入のモード（LOC・G/S とその arm）は終わるが、ROLLOUT と NOSE LETDOWN は続く。ROLLOUT は A/P が全部外れるか TO/GA まで（FCOM p.671）。LAND 3・2 の表示も ROLLOUT の間は続く。
+  - multi-channel でないときの F/D だけの rollout（表示は LOC：ATA22 p.360）は作っていない（ROLLOUT の arm が LAND 3・2 だけなので、その時は LOC のまま地上で終わる）。
+- ロールの則（`B747.70.afds_roll_model.lua`）：ROLLOUT は翼を水平（ROLL DOWN：ATA22 p.348）にし、方向舵の指令（`rudder`、ペダルの比、右が正）を出す：LOC の中心線からの距離（LOC の則の距離を引き継ぎ、LOC までの距離を engage からの走行で減らす）と滑走路を横切る速さ（p.362）で、中心線へ 8 秒で寄る横の速さ（コースから 3° まで）を求め、その航跡との差に 0.15/°、航跡の変化率に 0.3/(°/s)、±0.5（推定）。
+- グルー（`B747.70.xt.autopilot.lua`）：
+  - 2 台以上の A/P のとき（FCOM p.659）ROLLOUT の方向舵を新設 `autopilot/rudder_cmd` に書く。油圧のモジュール（`hydraulics_override`）がペダルとトリムに足して `flt_ctrls/rudder_input` にし、操向のモジュールがそれで前輪（ペダルの 7°）を切る：方向舵と前輪の操向（FCOM p.659）。
+  - `autopilot/autoland`（SRM の autoland：RRC の全権・自動トリムの遅れなし、ATA27 p.636）は AFDS のモデルの LAND 3・2 から（前は前の autoland が 3 台で 100 ft の下）。G/A の −2 は今のまま（A/T の G/A 推力、1,500 ft で 0）。
+  - 自動着陸のセンサーの数（段 4a）で、ILS 受信機の G/S は FLARE までだけ数える（G/S は FLARE で終わる：ATA22 p.342）。X-Plane は最後の数 ft で G/S の旗を出し、LAND 3 が接地の直前に NO AUTOLAND になって ROLLOUT の arm が消えていた（1 回目の試験）。
+  - 前の autoland（`B747.autoland.lua`）を外した：毎フレームの `runAutoland`（方向舵のトリムを方位の差で、接地後は中央へ、65 kt で A/P を外す、FLARE の残り）と、`B747_ap_fma` のロールの FMA の止め。`afds_control` の前の則の autoland の枝（`autolandPitch`）も外した。
+- 試験：
+  - 回帰（LuaJIT）：AFDS のモデル +9（ROLLOUT の engage・FMA・地上で続く・A/P を外すと終わる）、ロールの則 +7（翼を水平、方向舵の向き、上限、他のモードでは無し、地上の走行の模型で 20 ft の横ずれが 20 秒で 3 ft 以内に戻り行き過ぎない）、グルー +8（地上で ROLLOUT、3 台で方向舵、SRM の autoland、40 kt でも A/P のまま、FLARE 中の G/S の旗で LAND 3 のまま）。
+  - X-Plane（カスタム acf、`s114_autoland` を止まるまで延ばした。RJAA 34L、無風、150 kt）：
+    - 1 回目：ROLLOUT が入らなかった。X-Plane は最後の約 4 ft で G/S の旗を出し、自動着陸のセンサーの数で LAND 3 が接地の直前に NO AUTOLAND になって、ROLLOUT の arm が消えた → センサーの G/S を FLARE までにした（上）。この回は接地が硬かった（主脚の高さで約 6 ft/s・1.66 g。FLARE の始まりでピッチが他の回より 0.3° 低く、gear altitude 5 ft で 8.5 ft/s。状態表示が変わったのは最後の数 ft で、FLARE の途中ではない）。
+    - 2 回目：電波高度 4.9 ft で ROLLOUT（G/S の旗は 2 台とも出ていて LAND 3 のまま）、60 kt まで LOC の偏位 0.031〜0.036 ドット、60 kt の下でも A/P のまま、止まって操縦輪のスイッチで外すと ROLLOUT が終わる。ただし接地の待ちが `onground_any` で、最初の 0.2 秒の接地を読み取りの間隔で取りこぼし、跳ねた後の 2 回目の接地（ピッチ 3.2°）から見ていたので、跳ねの確認が合格に見えた → s114 は接地を FLARE が消えるので待つ（FCOM p.671）ように直した。
+    - 3 回目：19 が合格、跳ねの確認だけ WARN。電波高度 5.0 ft で ROLLOUT、送信所の 337 ft 先に接地（主脚の高さで約 2.8 ft/s・1.43 g、ピッチ 6.5°）、0.3 秒後から 1.6 秒、1 ft ほど浮いて、ピッチ 3.2° で再接地（段 4b と同じ：§26）。60 kt まで LOC の偏位 0.031〜0.037 ドット、60 kt の下でも A/P のまま、止まって外すと ROLLOUT が終わる。Lua の誤りなし。
+    - 接地の降下率は回でばらつく：主脚の高さの最後の 0.25 秒で 1.4（段 4b の 6 回目）、2.0（2 回目）、2.8（3 回目）、約 6 ft/s（1 回目）。FLARE の途中は 1 回目のほかは 0.2 ft/s 以内で同じで、差は最後の 1.5 ft で出る。gear altitude 5 ft での降下率は 7.1〜8.5 ft/s で、則の降下率（√(1.5² + 2ah) で 4.1 ft/s）より遅れている（段 4b の則のまま。フラップの揚力の形を決めた後に、接地のピッチと一緒に見直す）。
+    - 回帰：`s113_afds_multi` 29/29、`s109_afds_takeoff` 20/20、`s102_afds_app` 37/37、`s104_afds_ga` 34/34（X-Plane を起動し直して捨ての s66 のあと）。Lua の誤りなし。
+- 残り（推定・作っていないもの）：
+  - ROLLOUT の則のゲイン（資料は入力だけ：p.362）。
+  - p.361 の図では、ROLLOUT の engage の出力に LOC VALID も要る。ここでは LOC の則と同じく、LOC を失っても慣性の経路で続ける（推定）。
+  - multi-channel でないときの F/D だけの rollout（表示は LOC：p.360、p.361 の F/D ONLY）。
+  - 片発や横風の rollout（方向舵の則は比例と変化率だけで、積分は無い）は段 4d と一緒に見る。

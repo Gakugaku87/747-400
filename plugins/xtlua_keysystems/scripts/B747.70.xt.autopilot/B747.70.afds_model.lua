@@ -87,10 +87,10 @@
 --    localizer approach), LNAV's or VNAV's arm; with LOC engaged a new roll
 --    mode ends G/S's arm, with G/S engaged a new pitch mode LOC's (FCOM
 --    p.652). The LOC and APP requests end LNAV's arm (p.354), APP VNAV's
---    (p.340). G/A ends them all (FCOM p.660); on the ground they end (the
---    old code's, until step 4's rollout). The A/P engaged with a F/D ON and
---    LOC or G/S engaged: HDG HOLD with LOC armed, V/S with G/S armed (ATA22
---    p.266).
+--    (p.340). G/A ends them all (FCOM p.660); on the ground they end
+--    (ROLLOUT and NOSE LETDOWN go on: step 4). The A/P engaged with a F/D
+--    ON and LOC or G/S engaged: HDG HOLD with LOC armed, V/S with G/S armed
+--    (ATA22 p.266).
 --  - TO/GA (step 1e; ATA22 p.336-337, p.353, p.355; FCOM p.656-657,
 --    p.663-668, p.672-673): T/O (pitch and roll, a latch each) by the
 --    first F/D switched ON on the ground with no A/P engaged; its pitch
@@ -127,6 +127,9 @@
 --    altitude); the retard at RETARD_RA ft RA; at the touchdown FLARE ends
 --    (its annunciation off) into NOSE LETDOWN, until the A/P's disengage
 --    or a G/A. No pitch mode from FLARE but G/A.
+--  - ROLLOUT (step 4c; FCOM p.664, p.671; ATA22 p.360): engaged armed from
+--    LOC below ROLLOUT_RA ft RA; kept on the ground until the A/Ps are
+--    disengaged or a G/A.
 -- Pure: the switches' events and the airplane's state in; the engage
 -- state, the warning, the roll mode and the modes asked for out.
 --   local A = B747_afds_model                      -- in XTLua, after dofile
@@ -193,6 +196,10 @@ M.STATUS = {FD = 1, CMD = 2, LAND2 = 3, LAND3 = 4, NO_AUTOLAND = 5}
 -- them straight: an estimate); the retard RETARD_RA ft RA (p.294)
 M.FLARE_HEIGHT = {{8.5, 40}, {12.5, 50}, {14.5, 50}, {18, 60}}
 M.RETARD_RA = 25
+-- ROLLOUT (step 4c): engaged below ROLLOUT_RA ft RA (FCOM p.664, p.671;
+-- ATA22 p.360's 2 ft is about X-Plane's main gear height there: its radio
+-- altitude reads about 3.3 ft as the main gear touches)
+M.ROLLOUT_RA = 5
 
 -- the state
 function M.new()
@@ -361,8 +368,7 @@ function M.wheel(s)
 end
 
 -- disengaged automatically (the stab trim switches with one A/P); `quiet`
--- without the warning (the old autoland's disconnect on the rollout: until
--- step 4)
+-- without the warning
 function M.disengage(s, quiet)
     local was = M.engaged(s)
     s.L, s.C, s.R = false, false, false
@@ -538,11 +544,12 @@ end
 -- sensors, else NO AUTOLAND; NO AUTOLAND too in a multi-channel approach
 -- down to one channel after a status, or without one by NO_LAND_RA; LAND 3
 -- kept below LAND2_RA. FLARE and ROLLOUT armed with LAND 3 or 2
--- (FCOM p.671), FLARE until it engages (step 4b), the status kept through
--- the flare and the nose let down
+-- (FCOM p.671), FLARE and ROLLOUT until they engage (steps 4b and 4c),
+-- the status kept through the flare, the nose let down and the rollout
 local function land_status(s, inp)
     local n = M.engaged(s)
-    local approach = s.loc_arm or s.gs_arm or s.roll == "LOC" or s.pitch == "GS" or s.pitch == "FLARE" or s.letdown
+    local approach = s.loc_arm or s.gs_arm or s.roll == "LOC" or s.pitch == "GS" or s.pitch == "FLARE"
+        or s.letdown or s.roll == "ROLLOUT"
     if not approach then s.multi_app = false end
     if approach and n >= 2 then s.multi_app = true end
     local ra = inp.ra or 9999
@@ -563,7 +570,7 @@ local function land_status(s, inp)
     s.land = land
     local landing = land == "LAND3" or land == "LAND2"
     s.flare_arm = landing and s.pitch == "GS"
-    s.rollout_arm = landing
+    s.rollout_arm = landing and s.roll == "LOC"
 end
 
 -- each frame: `inp` {fd = {L, R} the switches ON, hyd, bank, engine,
@@ -646,8 +653,15 @@ function M.update(s, inp)
     end
     if s.letdown and (M.engaged(s) == 0 or toga(s.pitch)) then s.letdown = false end
     s.retard = (s.pitch == "FLARE" and (inp.ra or 9999) <= M.RETARD_RA) or (s.retard and s.letdown)
-    -- on the ground the approach modes end (the old code's, until step 4's
-    -- rollout)
+    -- ROLLOUT (step 4c; FCOM p.664, p.671): armed (LAND 3 or 2, LOC
+    -- engaged), engaged below ROLLOUT_RA ft RA, until the A/Ps are
+    -- disengaged (FCOM p.671) or a G/A
+    if s.rollout_arm and s.roll == "LOC" and (inp.ra or 9999) < M.ROLLOUT_RA then
+        set_roll(s, "ROLLOUT")
+        s.rollout_arm = false
+    end
+    if s.roll == "ROLLOUT" and M.engaged(s) == 0 then s.roll = nil end
+    -- on the ground the approach modes end (ROLLOUT and NOSE LETDOWN go on)
     if inp.ground and (s.loc_arm or s.gs_arm or s.roll == "LOC" or s.pitch == "GS") then
         s.loc_arm, s.gs_arm = false, false
         if s.roll == "LOC" then s.roll = nil end

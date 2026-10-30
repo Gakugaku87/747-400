@@ -287,11 +287,13 @@ B747DR_ap_fd_shown_fo = deferred_dataref("laminar/B747/autopilot/fd/fo/shown", "
 B747DR_ap_toga_pushes = deferred_dataref("laminar/B747/autopilot/toga_pushes", "number")
 -- the roll laws (6-3 step 2a): the command (degrees of bank, right
 -- positive) the A/P flies and the F/Ds show, whether a law of the new model
--- gives it (0: the old law, LOC and ROLLOUT) and whether it is valid (0:
--- NCD)
+-- gives it (0: the old law) and whether it is valid (0: NCD); ROLLOUT's
+-- rudder (6-3 step 4c: the pedals' ratio, right positive) the A/P adds with
+-- more than one channel
 B747DR_ap_roll_cmd = deferred_dataref("laminar/B747/autopilot/roll_cmd", "number")
 B747DR_ap_roll_law = deferred_dataref("laminar/B747/autopilot/roll_law", "number")
 B747DR_ap_roll_valid = deferred_dataref("laminar/B747/autopilot/roll_valid", "number")
+B747DR_ap_rudder_cmd = deferred_dataref("laminar/B747/autopilot/rudder_cmd", "number")
 -- the pitch laws (6-3 step 3a): the command (degrees of pitch) the A/P
 -- flies and the F/Ds show, and whether a law of the new model gives it (0:
 -- the old law)

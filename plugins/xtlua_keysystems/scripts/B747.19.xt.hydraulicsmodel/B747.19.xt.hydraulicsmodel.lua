@@ -144,6 +144,8 @@ B747DR_rudder_ratio   = deferred_dataref("laminar/B747/flt_ctrls/rudder_ratio", 
 simDR_yoke_heading_ratio    = find_dataref("sim/cockpit2/controls/yoke_heading_ratio")
 simDR_rudder_trim_ratio     = find_dataref("sim/cockpit2/controls/rudder_trim")
 B747DR_rudder_input         = find_dataref("laminar/B747/flt_ctrls/rudder_input")
+-- the A/P's rudder (ROLLOUT, more than one channel: 6-3 step 4c)
+B747DR_ap_rudder_cmd        = find_dataref("laminar/B747/autopilot/rudder_cmd")
 -- the FCCs' autotrim to the SRMs (B747.19.xt.afds_control.lua, 4-1 step 2b)
 B747DR_autotrim_cmd         = find_dataref("laminar/B747/flt_ctrls/stab_trim/autotrim_cmd")
 B747DR_autotrim_frat        = find_dataref("laminar/B747/flt_ctrls/stab_trim/frat")
