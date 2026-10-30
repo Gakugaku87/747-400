@@ -501,7 +501,7 @@ end
 local G, RAIR, P0, T0K, A0_KT, KT = 9.80665, 287.053, 101325, 288.15, 661.4786, 0.514444
 M.S = 541.16                -- wing area (m2), 5,825 sq ft
 M.VMO, M.MMO = 365, 0.92
-M.ECON_CLB_KT = 340         -- the economy climb without the FMC's data, 340/.84 (FCTM p.4.3; PI.10.36's climb EPR too)
+M.ECON_CLB_KT = 340         -- the economy climb without the FMC's data, 340/.84 (FCTM p.4.4; PI.10.36's climb EPR too)
 M.ECON_DES_KT = 290         -- the .84/290/250 descent (PI.11.5)
 M.ECON_CLB_MAX = 360        -- an estimate: the FMS pilot's guide's climb page shows 358/.853 (p.112)
 M.ECON_DES_MAX = 349        -- VMO/MMO less 16 kt (FCOM p.1258)
@@ -690,7 +690,7 @@ end
 -- CAS (kt) and Mach. The Mach is the economy cruise's at the cruise
 -- altitude (FCTM p.4.3). The CAS, an estimate, from about the maximum rate
 -- climb at index 0 (the minimum drag speed + 60 kt, as the FCTM's flaps up
--- maneuvering speed + 60, p.4.3) through 340 kt at 1 to 360 kt at 2; for a
+-- maneuvering speed + 60, p.4.4) through 340 kt at 1 to 360 kt at 2; for a
 -- low cruise altitude up to the cruise's CAS (FCTM p.4.3).
 function M.econ_climb(t, kg, crz_ft, ci, isa_dev)
     local r, mach = econ_index(t, kg, crz_ft, ci, isa_dev)

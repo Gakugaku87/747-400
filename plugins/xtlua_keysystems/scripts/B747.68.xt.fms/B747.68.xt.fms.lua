@@ -655,7 +655,7 @@ function defaultFMSData()
   clbrestspd="---",
   maxkts="420",
   clbrestalt="-----",
-  stepalt="FL360",
+  stepalt="     ",
   crzspd="810",
   desspdmach="805",
   desspd="270",
@@ -961,6 +961,22 @@ function B747_fms_gw_kg()
   if gw then return gw * 1000 end
   return simDR_GRWT
 end
+-- the headwind (kt) of the cruise: the present wind's within 2,000 ft of
+-- CRZ ALT, else none (the forecasts are step 8e)
+function B747_fms_crz_headwind()
+  local crz = B747BR_cruiseAlt
+  if simDR_onGround == 1 or crz == nil or crz <= 0 or math.abs(simDR_pressureAlt1 - crz) >= 2000 then return 0 end
+  return simDR_wind_speed * math.cos(math.rad(simDR_wind_degrees - simDR_fms_mag_psi))
+end
+-- the step climb (6-1/6-2 step 8b2; notes/ATA-34-61-FMC.md §46): ICAO's
+-- STEP TO goes by the direction of the cruise altitude entered before
+-- takeoff (FCOM p.1349), kept while on the ground; CRZ ALT's without it
+-- (an air start)
+dofile("B747.68.crz_model.lua")
+local crzAltTakeoff = nil
+function B747_fms_step_east()
+  return B747_crz_model.east(crzAltTakeoff or B747BR_cruiseAlt)
+end
 -- the economy speeds (6-1/6-2 step 8b; notes/ATA-34-61-FMC.md §45): every
 -- 5 s by the performance database's cruise model (an estimate) from the
 -- cost index, the gross weight, the cruise altitude, the wind there (the
@@ -980,6 +996,7 @@ local function econ_put(id, v, mach)
   if fmsModules["data"][id] ~= s then fmsModules:setData(id, s) end
 end
 function update_econ()
+  if simDR_onGround == 1 and B747BR_cruiseAlt > 0 then crzAltTakeoff = B747BR_cruiseAlt end
   if simDRTime < econNext then return end
   econNext = simDRTime + 5
   local crz = B747BR_cruiseAlt
@@ -989,11 +1006,7 @@ function update_econ()
   if d.crzspdmode == "L" then econ_put("crzspd", (P.lrc(t, kg, crz)), true) end
   local ci = tonumber(d.costindex)
   if ci == nil then return end
-  local hw = 0
-  if simDR_onGround ~= 1 and math.abs(simDR_pressureAlt1 - crz) < 2000 then
-    hw = simDR_wind_speed * math.cos(math.rad(simDR_wind_degrees - simDR_fms_mag_psi))
-  end
-  if d.crzspdmode == "E" then econ_put("crzspd", (P.econ_cruise(t, kg, crz, ci, hw, isa)), true) end
+  if d.crzspdmode == "E" then econ_put("crzspd", (P.econ_cruise(t, kg, crz, ci, B747_fms_crz_headwind(), isa)), true) end
   if d.clbspdmode == "E" then
     local cas, m = P.econ_climb(t, kg, crz, ci, isa)
     econ_put("clbspd", cas)

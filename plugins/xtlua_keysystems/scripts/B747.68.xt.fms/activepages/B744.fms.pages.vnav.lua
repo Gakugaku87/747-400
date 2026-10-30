@@ -52,6 +52,8 @@ local function spd_title(mode, cas, mach)
 end
 -- a line of a left and a right part
 local function lr(l, r) return l .. string.rep(" ", math.max(1, 24 - string.len(l) - string.len(r))) .. r end
+-- the CRZ page's labels that change: AT, AVAIL AT or TO T/D; EPR or N1
+local crzAtLabel, crzThrLabel = "AT", "N1"
 function fmsFunctions.vnavspd(fmsO, value)
   if value == "clb" then
     setFMSData("clbspdmode", "E") setFMSData("clbspd", "") setFMSData("clbspdmach", "")
@@ -216,86 +218,74 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["L1"]={"setdata","crzalt"}
       fmsFunctionsDefs["VNAV"]["L2"]={"setdata","crzspd"}
       fmsFunctionsDefs["VNAV"]["L3"]=nil
-      fmsFunctionsDefs["VNAV"]["L4"]=nil
+      fmsFunctionsDefs["VNAV"]["L4"]={"setdata","stepsize"}
       fmsFunctionsDefs["VNAV"]["L5"]=fmsModules["data"]["crzspdmode"]~="E" and {"vnavspd","crz"} or nil
       fmsFunctionsDefs["VNAV"]["L6"]={"setpage","PROGRESS"}
       fmsFunctionsDefs["VNAV"]["R1"]={"setdata","stepalt"}
       fmsFunctionsDefs["VNAV"]["R3"]=nil
       fmsFunctionsDefs["VNAV"]["R6"]=fmsModules["data"]["crzspdmode"]~="L" and {"vnavspd","lrc"} or nil
-      
+
       dNM = getDistance(simDR_latitude, simDR_longitude, dLat, dLon)
 
-
-      local gwtk = simDR_GRWT/1000 -- kilograms, thousands
-      local optmax = "FL***/***"
-      local pctn1 = "*.**"
-      local svcCeil = 45.1 --service ceiling in thousands of feet
+      -- OPT and MAX: the FCOM PI tables at the FMC's weight (6-1/6-2 steps
+      -- 8a, 8b2: notes/ATA-34-61-FMC.md §44, §46; before, lines fitted to FCOM
+      -- p.1576). OPT is the long range cruise's least fuel in every speed
+      -- mode (ECON's least cost by the cost index: not made)
       local perf = B747_fms_perf()
       local isaDev = B747_fms_isa_dev()
-      if(gwtk ~= nil) then
-        -- the FCOM PI tables (6-1/6-2 step 8a: notes/ATA-34-61-FMC.md §44;
-        -- before, lines fitted to FCOM p.1576, ISA+10 and below)
-        optA = B747_perf_db.opt_alt(perf, simDR_GRWT) / 1000
-        maxA = B747_perf_db.max_alt(perf, simDR_GRWT, isaDev) / 1000
-        pctn1 = string.format("%02.1f",74.157374+ 0.053892*gwtk) -- percent N1
-        if(maxA > svcCeil) then maxA=svcCeil end -- service ceiling 45100 MSL
-        optmax = string.format("FL%03.0f  FL%03.0f",optA*10,maxA*10) -- displayed in flight levels
+      local gw = B747_fms_gw_kg()
+      local optFt = B747_perf_db.opt_alt(perf, gw)
+      local maxFt = math.min(B747_perf_db.max_alt(perf, gw, isaDev), 45100)
+      local optmax = string.format("FL%03.0f  FL%03.0f", optFt / 100, maxFt / 100)
+
+      -- STEP TO and AT (step 8b2; FCOM p.1257, p.1348-1349, FMSPG p.133): a
+      -- crew's STEP TO or the FMC's by the step size, blank without an
+      -- active route and within 200 NM of the T/D, where AT is TO T/D
+      local crz = B747BR_cruiseAlt
+      local mode = vnav_text("crzspdmode")
+      local cas, mach = tonumber(fmsModules["data"]["crzcas"]), tonumber(fmsModules["data"]["crzspd"])
+      local cmdMach = (cas and crz > 0) and B747_perf_db.cas_to_mach(cas, crz) or (mach or 810) / 1000
+      local tdNM = (B747BR_tod > 0 and B747BR_totalDistance > 0) and (B747BR_totalDistance - B747BR_tod) or nil
+      local nearTD = tdNM ~= nil and tdNM < 200
+      local stepTo = nil
+      if crz > 0 and B747_fmc_route.active and not nearTD then
+        stepTo = B747_cdu_model.parse_alt(vnav_text("stepalt"))
+          or B747_crz_model.step_to(crz, optFt, vnav_text("stepsize"), B747_fms_step_east())
       end
-  
-      -- Calculate altitude, and time/distance to step climb altitude
-      -- only show if crz alt +2000 < max
-      local czak = -1
-      local crzaltString = fmsModules["data"]["crzalt"]
-      local stepTD = "  ****z /****NM"
-
-      if(crzaltString ~= "*****" and crzaltString ~= nil and gwtk ~= nil) then
-      
-        if(string.sub(crzaltString,1,2) == "FL") then
-          czak = string.sub(crzaltString,3)/10 --altitude in thousands of feet
+      local atText = ""
+      crzAtLabel = "AT"
+      local function eta_text(hours, nm)
+        local _, h, m = get_ETA_for_Distance(0, hours * 3600)
+        return string.format("%02d%02dz/%4dNM", h, m, math.floor(nm + 0.5))
+      end
+      if nearTD then
+        crzAtLabel = "TO T/D"
+        atText = eta_text(tdNM / math.max(gsKTS, 100), tdNM)
+      elseif stepTo then
+        -- the optimum step point, where OPT is halfway to STEP TO; AVAIL AT
+        -- where MAX reaches STEP TO when that comes later
+        local light = perf.MAX_ALT_W[#perf.MAX_ALT_W] * 1000 * perf.wf
+        local w = B747_crz_model.step_weight(crz, stepTo, function(kg) return B747_perf_db.opt_alt(perf, kg) end, light, gw)
+        if B747_perf_db.max_alt(perf, w, isaDev) < stepTo then
+          crzAtLabel = "AVAIL AT"
+          w = math.min(w, B747_perf_db.max_alt_weight(perf, stepTo, isaDev))
+        end
+        if w >= gw then
+          atText = "NOW"
         else
-          czak = crzaltString/1000 ----altitude in thousands of feet
+          -- the fuel down to it at the cruise model's flow at the mean weight
+          local hrs = (gw - w) / (4 * B747_perf_db.cruise_ff(perf, (gw + w) / 2, crz, cmdMach, isaDev))
+          atText = eta_text(hrs, hrs * (B747_perf_db.tas(cmdMach, crz, isaDev) - B747_fms_crz_headwind()))
         end
-        if((czak + 2) < maxA) then
-          fmsModules["data"]["stepalt"] = "FL"..string.format("%03.0f",(czak+2)*10)
-          --stepTD = string.format("     %02d%02dz %04d",hh,mm,dNM)
-          stepTD = string.format("          %02d%02dz",hh,mm)
-
-        elseif(czak+2 < svcCeil) then --step climb below service ceiline
-
-          local stepAlt = maxA + 2 --in thousands of feet
-          rgw = B747_perf_db.max_alt_weight(perf, stepAlt * 1000, isaDev) / 1000 -- required gross weight, thousands of kg (step 8a)
-
-          --gross weight to lose == kg*1000 fuel to burn
-          gwl = gwtk - rgw -- thousands of kg
-          
-          local hh_sc = hh --default to current time
-          local mm_sc = mm --default to current time
-          local ffkgh = (simDR_eng_fuel_flow_kg_sec[0] + simDR_eng_fuel_flow_kg_sec[1] + simDR_eng_fuel_flow_kg_sec[2] + simDR_eng_fuel_flow_kg_sec[3]) * 3600.0
-          if(ffkgh == nil or ffkgh == 0) then ffkgh = 11000 end
-          if(ffkgh > 0) then
-            htsc = (gwl*1000) / ffkgh --hours to step climb
-            tasc = hh+mm/60 + htsc --time at step climb
-            hh_sc = math.floor(tasc)
-            mm_sc = math.floor(60*(tasc - hh_sc))
-            if(hh_sc > 24) then hh_sc = hh_sc%24 end
-
-            local nmsc = htsc*400 --default, eg., used on ground to approximate time of step climb
-            if(gsKTS > 200) then
-              nmsc = htsc * gsKTS
-            end
-            stepTD = string.format("%02d%02dz/ %4.1fNM",hh_sc,mm_sc,nmsc) --"****z /****NM"
-
-          else
-            --engines not running
-            stepTD="NO ENG PERF"
-          end
-
-          fmsModules["data"]["stepalt"] = string.format("FL%03d",(czak+2)*10)
-
-        else --cannot climb above service ceiling
-          fmsModules["data"]["stepalt"] = "*****"
-          stepTD = "****z /****NM"    
-        end
+      end
+      -- EPR (PW, RR) or N1 (GE) for level flight at the command speed at CRZ
+      -- ALT on the active page (FCOM p.1348, FMSPG p.132; the cruise model:
+      -- an estimate; before, N1 from the weight alone for every engine)
+      local thrText = ""
+      crzThrLabel = perf.N1 and "N1" or "EPR"
+      if B747DR_ap_flightPhase==2 and crz > 0 then
+        local v = B747_perf_db.level_setting(perf, gw, crz, cmdMach, isaDev)
+        thrText = perf.N1 and string.format("%.1f%%", v) or string.format("%.2f", v)
       end
 
       -- Calculate ETA based on sim time
@@ -352,20 +342,17 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
 
       etafuel = string.format("%02d%02dz/ %03.1f",eta_h,eta_m,conv*fad/1000)
       -- ECON, LRC or SEL SPD: a Mach, or a selected CAS
-      local mode = vnav_text("crzspdmode")
-      local cas, mach = tonumber(fmsModules["data"]["crzcas"]), tonumber(fmsModules["data"]["crzspd"])
       local spdText = cas and string.format("%3d", cas) or "." .. vnav_text("crzspd")
       return{
         vnav_title(spd_title(mode, cas, (not cas) and mach or nil) .. " CRZ", B747DR_ap_flightPhase==2),
       "                        ",
-      fmsModules["data"]["crzalt"].."              "..fmsModules["data"]["stepalt"],
+      lr(fmsModules["data"]["crzalt"], stepTo and string.format("FL%03d", math.floor(stepTo / 100 + 0.5)) or ""),
       "                        ",
-      lr(spdText, stepTD),
+      lr(spdText, atText),
       "                        ",
-      --pctn1.."    ****z /***.*",
-      pctn1.."%       "..etafuel,
+      lr(thrText, etafuel),
       "                        ",
-      "ICAO        "..optmax,
+      string.format("%-12s", vnav_text("stepsize"))..optmax,
       "------------------------",
       lr(mode~="E" and "<ECON" or "", "ENG OUT>"),
       "                        ",
@@ -520,9 +507,9 @@ fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
       "                    2/3 ",
       " CRZ ALT         STEP TO",
       "                        ",
-      spd_label("crzspdmode") .. "             AT",
+      lr(spd_label("crzspdmode"), crzAtLabel),
       "                        ",
-      " N1        "..dICAO.." ETA/FUEL",  
+      string.format(" %-10s", crzThrLabel)..dICAO.." ETA/FUEL",  
       "                        ",
       " STEP SIZE  OPT      MAX",
       "                        ",

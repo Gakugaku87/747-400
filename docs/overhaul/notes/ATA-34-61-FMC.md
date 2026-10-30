@@ -933,7 +933,7 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 資料：
   - CI：時間の費用（$/h）÷ 燃料の値段（¢/lb）。1 につき燃料 100 lb/h（FMSPG p.261）。CI 0 は最大航続（FCOM p.1257）。
   - ECON 巡航は重量・巡航高度・CI・向かい風で変わる。向かい風で速く、追い風で遅く、ただし無風の最大航続より遅くしない。LRC は最大の 99 % の燃費で、風の補正なし。CI 5000 以上でおおむね推力か速度の上限に当たる（FCTM p.4.7）。
-  - ECON 上昇は CAS 一定・Mach 一定。Mach は巡航高度での ECON 巡航の Mach、CAS は重量・CI など。巡航高度が低ければ巡航の速さまで上げる。FMC が使えないときの ECON 上昇は 340 kt/.84、最大上昇率はおよそフラップ上げの maneuver + 60 kt（FCTM p.4.3）。PI.10.36 の最大上昇 EPR の表も 340/.84。
+  - ECON 上昇は CAS 一定・Mach 一定。Mach は巡航高度での ECON 巡航の Mach、CAS は重量・CI など。巡航高度が低ければ巡航の速さまで上げる（FCTM p.4.3）。FMC が使えないときの ECON 上昇は 340 kt/.84、最大上昇率はおよそフラップ上げの maneuver + 60 kt（FCTM p.4.4）。PI.10.36 の最大上昇 EPR の表も 340/.84。
   - 降下：ECON の目標は 349 kt（VMO/MMO − 16 kt）まで、乗員の速さは 354 kt（− 11 kt）まで（FCOM p.1258）。標準の降下は .84/290/250（PI.11.5）。
   - ページ：CLB の ECON SPD は CAS/Mach（FMSPG p.113 の例 358/.853）。入力は CAS 100〜400、Mach（小数点と 1〜3 桁、.100〜.990）、CAS/Mach か Mach/CAS。乗員の入力で SEL SPD、<ECON（5L）で戻す。CRZ は ECON SPD・SEL SPD・LRC SPD（CAS か Mach：FCOM p.1348）、<ECON（5L）、LRC>（6R）。DES は Mach/CAS、SEL SPD と <ECON（5L：FMSPG p.192–193）。表題は ECON・XXXKT・M.XXX・LRC（FCOM p.1327、p.1347、p.1391）、上昇は SPD TRANS・RESTR の下ではその速さ（FMSPG p.112：ACT 250KT CLB）。
 - 巡航の模型（`B747.68.perf_db.lua` に足した、推定）：
@@ -952,3 +952,21 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 試験：
   - 回帰（LuaJIT）：`tests/fms/perf_db_test.lua` 84 件（模型の 48 件を足した：大気と速さの換算、表の全升の燃料流量・LRC の Mach・推力の設定、最大航続と ECON の CI・風・重量での動き、上昇・降下の CAS の位置）。新設の `tests/fms/vnav_pages_test.lua` 52 件（FMS のモジュールを通しで：CI の前の既定値、CI と CRZ ALT で ECON、CLB・CRZ・DES の表示と SEL SPD・<ECON・LRC>、誤った入力、MAX ANGLE、CI の変更と重量の減りへの追従、24 文字）と `tests/autopilot/vnav_speed_test.lua` 9 件（巡航は FMC の Mach か CAS で CI に左右されない、上昇の Mach、降下の 354 kt と MMO − 11 kt）。全 125 本。
   - X-Plane（カスタム acf）：新設の `s129_fmc_econ`（FL350 の空中開始）18/18。270 t・CI 100・ISA で CRZ の ECON SPD .853、DES .853/294、LRC .848、MAX ANGLE 229 kt（その高度）が、記録の重量と外気温から性能 DB で求めた値と同じ。CLB は 341 kt のところ既定値の 340 が残った（2 kt 未満の変化を書かない処理のため）ので、入力の後の最初の値は必ず書くように直した（X-Plane を起動し直した 2 回目も 18/18、CLB 341/.853。CDU の写真で ACT ECON CRZ、ACT M.840 CRZ と SEL SPD と <ECON、LRC> を確かめた）。s128 5/5（LRC> を CRZ のページの LRC のモードで）。Lua の誤りなし。CDU の写真の視点が違っていたので直した（the −34、psi 22、fov 16）。
+
+## 46. 段 8b2 の実装（2026-10-31：CRZ のページ）
+
+- 資料：CRZ のページ（FCOM p.1346–1350、FMSPG p.131–134）、STEP（FCOM p.1257、p.1312、p.1349、FMSPG p.98、p.133、FCTM p.4.8）、メッセージ（FCOM p.1435、FMSPG p.131）。
+- STEP TO（新設の純粋なモデル `B747.68.crz_model.lua`）：
+  - ICAO：出発前に入れた CRZ ALT の向きの、OPT より上の最初の高度（FCOM p.1349）。高度の割り振りは RVSM の前のもの（FL290 の下は奇数千 ft が東・偶数が西、FL290 から上は FL290＋4,000 ft の倍数が東・FL310＋4,000 ft の倍数が西）。FCOM の例（FL280 で出発、OPT FL337 → FL350）と FMSPG の例（FL310、OPT FL311 → FL350）がこの割り振りで、FCTM p.4.8 も「FMC の STEP の既定は RVSM の空域に合わないことがある」と書く。FL300 から上の偶数千（RVSM の高度）は西とした（推定）。飛行中に CRZ ALT を変えても向きは変えない。出発前の CRZ ALT が無い空中開始は今の CRZ ALT の向き。
+  - STEP SIZE が数字なら CRZ ALT にその倍数を足した OPT より上の最初の高度、0 は STEP なし（FCOM p.1312）。どちらも CRZ ALT より上で 45,000 ft まで、でなければ空欄。
+  - 乗員の STEP TO：CRZ ALT より上で 45,100 ft まで、新しい CRZ ALT まで残る（FMSPG p.133）。DELETE で FMC のものに。
+  - 有効な経路が無いときと、T/D の 200 NM の内は空欄（FCOM p.1349）。
+- AT（FCOM p.1349、FMSPG p.133）：最適な STEP の点は OPT が CRZ ALT と STEP TO の中間になる重さ（FCOM p.1257）。その重さで MAX が STEP TO に届かなければ、MAX が届く重さまで待ち、見出しは AVAIL AT。燃やす燃料を巡航の模型の燃料流量（指令の速さ、CRZ ALT、間の重さ）で割って時間、真対気速度から向かい風を引いて距離、ETA は X-Plane の UTC から。過ぎていれば NOW。T/D の 200 NM の内は TO T/D（T/D までの距離と、今の対地速度での ETA）。T/D は今も AP の `setDistances` のもの（8c で作り直す）。最適な点は燃料と重さからで、ECON の費用の最小ではない（推定）。
+- EPR・N1（FCOM p.1348、FMSPG p.132）：CRZ ALT で指令の速さを保つ水平飛行の推力の設定を、巡航の模型の抗力と回帰の式で（§45。PW・RR は EPR、GE は N1）。動いているページ（巡航の段階）だけに出す。前は重量だけの一次式の N1 を、どの型式にも出していた。
+- OPT・MAX：FMC の重量で（前は X-Plane の重量）。OPT は ECON でも表の LRC の燃料最小のまま：模型の ECON の最適高度は CI が小さいうちは上がり、大きいと下がって、FCTM p.4.6（ECON の OPT は CI が小さいほど高い）と食い違ったので作らなかった。MAX は速さのモードで変えない。
+- MAX ALT FLXXX（FMSPG p.131、FCOM p.1435）：性能の最大高度より上の CRZ ALT は通し、メッセージを出す（45,100 ft より上は今までどおり INVALID ENTRY）。
+- STEP SIZE：CRZ のページの 4L でも入れられる（FMSPG p.132）。DELETE で ICAO（FMSPG p.98）。PERF INIT と同じ。
+- 残り：目的地の ETA/FUEL と STEP を含む予測、UNABLE CRZ ALT（8c）。CRZ CLB・CRZ DES の表題と MOD/EXEC（FMC-34）。LEGS の STEP の入力。
+- 試験：
+  - 回帰（LuaJIT）：新設の `tests/fms/crz_model_test.lua` 20 件（向き、ICAO の FCOM と FMSPG の例、STEP SIZE、0、天井、最適な点の重さ）。`tests/fms/vnav_pages_test.lua` に CRZ のページの 17 件を足して 69 件（経路が無ければ空欄、ICAO の FL390 と AT、EPR と動いていないページで空欄、STEP SIZE 2000・0・DELETE、乗員の STEP TO と INVALID ENTRY、AVAIL AT、NOW、TO T/D、MAX ALT FLXXX）。`tests/fms/perf_init_test.lua` は地上の FL370 で MAX ALT FL367 が出ることを足して 30 件。全 126 本。
+  - X-Plane（カスタム acf）：新設の `s130_fmc_crz_step`（FL350 の空中開始、RJAA→PHNL を ACTIVATE と EXEC）13/13。270 t・CI 100 で STEP TO FL390、AT 0214z/599NM、EPR 1.18、OPT FL361・MAX FL403、STEP SIZE 2000 で FL370 は NOW、乗員の FL410 で AT 1,252 NM、CRZ ALT FL450 で MAX ALT FL403。どれも記録の重量・外気温・風から性能 DB と STEP のモデルで求めた値と同じ（FL410 の距離は風の変化で 3 NM 違う）。s129 18/18。Lua の誤りなし。CDU の写真で CRZ のページの並びを確かめた。

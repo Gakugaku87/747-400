@@ -960,11 +960,16 @@ function fmsFunctions.setdata(fmsO,value)
     setFMSData("crzcas", cas and string.format("%3d", cas) or "")
     setFMSData("crzspdmode", "S")
   elseif value=="stepalt" then
-    if validFL(fmsO["scratchpad"]) ~=nil then 
-		setFMSData("stepalt",validFL(fmsO["scratchpad"]))
-    else
+    -- STEP TO (6-1/6-2 step 8b2; FCOM p.1348, FMSPG p.133): a crew's entry
+    -- above CRZ ALT, FLXXX, XXX or XXXXX, kept until a new CRZ ALT; DELETE
+    -- gives the FMC's back
+    if del then setFMSData("stepalt", "") return end
+    local ft = B747_cdu_model.parse_alt(fmsO["scratchpad"])
+    if ft == nil or B747BR_cruiseAlt <= 0 or ft <= B747BR_cruiseAlt or ft > 45100 then
       fmsO["notify"]="INVALID ENTRY"
+      return
     end
+    setFMSData("stepalt", string.format("FL%03d", math.floor(ft / 100 + 0.5)))
   elseif value=="desspds" then
     -- SEL SPD (6-1/6-2 step 8b; FCOM p.1392, FMSPG p.192): a CAS, a Mach or
     -- both (the A/P commands no more than 354 kt of them, FCOM p.1258)
@@ -1111,6 +1116,11 @@ function fmsFunctions.setdata(fmsO,value)
 	B747BR_cruiseAlt=ft
 	monitorCRZALT()
 	B747_fms_econ_now()
+	setFMSData("stepalt", "")
+	-- above the maximum altitude the entry stands with MAX ALT FLXXX (6-1/6-2
+	-- step 8b2; FMSPG p.131, FCOM p.1435)
+	local maxft = B747_perf_db.max_alt(B747_fms_perf(), B747_fms_gw_kg(), B747_fms_isa_dev())
+	if ft > maxft then fmsO["notify"] = string.format("MAX ALT FL%03d", math.floor(maxft / 100)) end
   elseif value=="irspos" then
 	if string.len(fmsO["scratchpad"])>10 then
 		print("set irs pos")
@@ -1337,6 +1347,9 @@ function fmsFunctions.setdata(fmsO,value)
 		crzcg_lineLg = string.format("%4.1f%%", tonumber(fmsModules["data"].crzcg))
 	end
   elseif value == "stepsize" then
+	-- STEP SIZE (PERF INIT 5R, CRZ 4L): DELETE gives ICAO back (FMSPG p.98,
+	-- p.132; 6-1/6-2 step 8b2)
+	if del then setFMSData(value, "ICAO") return end
 	if fmsO["scratchpad"] == "ICAO" then
 		setFMSData(value, fmsO["scratchpad"])
 	elseif tonumber(fmsO["scratchpad"]) == nil then
