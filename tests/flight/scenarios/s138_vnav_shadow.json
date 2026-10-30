@@ -1,0 +1,46 @@
+{
+  "name": "s138_vnav_shadow",
+  "description": "6-1/6-2 段 9b（FMC の VNAV のモデル、影の動き：AFDS はまだ前の VNAV）の X-Plane での確認、空中。FL300・約 290 kt で T/D を過ぎた所（AKAGI→ATMUG の大円の上、ATMUG の約 25 NM 手前：s133 の T/D は北緯 34.80・東経 134.85）から西南西へ空中開始（機体を読み直す）。s131 と同じ経路を ACTIVATE と EXEC、LEGS で ATMUG へ DIRECT TO、PERF INIT で ZFW 200・COST INDEX 100・CRZ ALT FL350、MCP 10,000 ft。FMC の `laminar/B747/fms/vnav/*` が、有効（1）、降下（3）、VNAV PTH（2）、A/T は IDLE（2）か SPD（3）、経路からの偏差と V/S の指令がもっともらしいこと（予測の降下の経路に対して）を記録で見る。Lua の誤りも確かめる。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 34.66, "longitude": 134.62, "elevation_in_meters": 9144, "heading_true": 250, "speed_in_meters_per_second": 225 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れと FMS の初期化" },
+    { "do": "record_start" },
+    { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
+    { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
+    { "do": "cdu", "note": "RTE：RJAA→RJBB、NEXT、DIRECT AKAGI（SELECT DESIRED WPT の最初）", "keys": ["RTE", "RJAA", "L1", "RJBB", "R1", "NEXT", "AKAGI", "R1", "?SEL"] },
+    { "do": "cmd", "note": "DEP ARR", "name": "laminar/B747/fms1/func_key/clb" },
+    { "do": "sleep", "seconds": 0.5 },
+    { "do": "cdu", "note": "ARR>（R2：目的地）", "keys": ["R2"] },
+    { "do": "check", "note": "RJBB ARRIVALS", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "RJBB ARRIVALS" },
+    { "do": "cdu", "note": "STAR ATMUGA（L1）、ILS06LY（R3）、遷移 GATES（R2）", "keys": ["L1", "R3", "R2"] },
+    { "do": "cdu", "note": "RTE、ACTIVATE、EXEC", "keys": ["RTE", "R6", "EXEC"] },
+    { "do": "check", "note": "ACT RTE 1", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "ACT RTE 1" },
+    { "do": "cdu", "note": "LEGS：ATMUG へ DIRECT TO（1L）、EXEC", "keys": ["LEGS", "ATMUG", "L1", "EXEC"] },
+    { "do": "check", "note": "1 行目が ATMUG", "dref": "laminar/B747/fms3/Line03_L", "op": "contains", "value": "ATMUG" },
+    { "do": "cdu", "note": "PERF INIT：ZFW 200、COST INDEX 100、CRZ ALT FL350", "keys": ["INITREF", "L6", "L3", "200", "L3", "100", "L5", "350", "R1"] },
+    { "do": "set", "note": "MCP 高度 10,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 10000 },
+    { "do": "sleep", "seconds": 12, "note": "予測と VNAV" },
+    { "do": "check", "note": "VNAV は有効", "dref": "laminar/B747/fms/vnav/valid", "op": "==", "value": 1 },
+    { "do": "wait", "note": "降下（T/D を過ぎ、MCP は下：始めは T/D の少し手前）", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 3, "timeout": 180 },
+    { "do": "check", "note": "VNAV PTH", "dref": "laminar/B747/fms/vnav/mode", "op": "==", "value": 2 },
+    { "do": "check", "note": "A/T は IDLE か SPD", "dref": "laminar/B747/fms/vnav/at", "op": "between", "value": [2, 3] },
+    { "do": "snapshot", "note": "FMC の VNAV と機体", "drefs": [ "laminar/B747/fms/vnav/phase", "laminar/B747/fms/vnav/mode", "laminar/B747/fms/vnav/at", "laminar/B747/fms/vnav/cas", "laminar/B747/fms/vnav/mach", "laminar/B747/fms/vnav/mach_mode", "laminar/B747/fms/vnav/alt", "laminar/B747/fms/vnav/vs", "laminar/B747/fms/vnav/path_dev", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/position/latitude", "sim/flightmodel/position/longitude", "laminar/B747/fms/profile/kind[0]", "laminar/B747/fms/profile/lat[0]", "laminar/B747/fms/profile/lon[0]" ] },
+    { "do": "sleep", "seconds": 20, "note": "水平で 20 秒：経路が下がり偏差が変わる" },
+    { "do": "snapshot", "note": "20 秒後", "drefs": [ "laminar/B747/fms/vnav/path_dev", "laminar/B747/fms/vnav/vs", "laminar/B747/fms/vnav/at", "sim/cockpit2/gauges/indicators/altitude_ft_pilot" ] },
+    { "do": "record_stop" }
+  ]
+}

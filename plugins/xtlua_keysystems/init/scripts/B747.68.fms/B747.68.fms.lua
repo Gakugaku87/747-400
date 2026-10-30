@@ -129,6 +129,22 @@ B747DR_fms_ofst_light					= deferred_dataref("laminar/B747/fms/ofst_light", "num
 B747DR_fms_profile_kind					= deferred_dataref("laminar/B747/fms/profile/kind", "array[8]")
 B747DR_fms_profile_lat					= deferred_dataref("laminar/B747/fms/profile/lat", "array[8]")
 B747DR_fms_profile_lon					= deferred_dataref("laminar/B747/fms/profile/lon", "array[8]")
+-- VNAV (6-1/6-2 step 9b): the FMC's vertical guidance for the AFDS and the
+-- A/T: valid (1: VNAV may engage), the phase (1 climb, 2 cruise, 3
+-- descent), the sub-mode asked for (1 VNAV SPD, 2 VNAV PTH), the target
+-- speed (CAS kt, Mach, 1 in Mach), the FMC altitude (ft), PTH's vertical
+-- speed (fpm, 0 level), the path's deviation (ft above it), the A/T mode
+-- asked for (the FMA's numbers: 1 HOLD, 2 IDLE, 3 SPD, 4 THR, 5 THR REF)
+B747DR_fms_vnav_valid					= deferred_dataref("laminar/B747/fms/vnav/valid", "number")
+B747DR_fms_vnav_phase					= deferred_dataref("laminar/B747/fms/vnav/phase", "number")
+B747DR_fms_vnav_mode					= deferred_dataref("laminar/B747/fms/vnav/mode", "number")
+B747DR_fms_vnav_cas						= deferred_dataref("laminar/B747/fms/vnav/cas", "number")
+B747DR_fms_vnav_mach					= deferred_dataref("laminar/B747/fms/vnav/mach", "number")
+B747DR_fms_vnav_mach_mode				= deferred_dataref("laminar/B747/fms/vnav/mach_mode", "number")
+B747DR_fms_vnav_alt						= deferred_dataref("laminar/B747/fms/vnav/alt", "number")
+B747DR_fms_vnav_vs						= deferred_dataref("laminar/B747/fms/vnav/vs", "number")
+B747DR_fms_vnav_path_dev				= deferred_dataref("laminar/B747/fms/vnav/path_dev", "number")
+B747DR_fms_vnav_at						= deferred_dataref("laminar/B747/fms/vnav/at", "number")
 
 --IRS ND DISPLAY
 B747DR_ND_GPS_Line						= deferred_dataref("laminar/B747/irs/gps_display_line", "string")

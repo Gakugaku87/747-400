@@ -194,6 +194,7 @@ Wm.delete_alt(st.rte, 10000)
 fms.ns.B747_fms_preds_now()
 frames(1)
 
+
 -- PROGRESS page 1 from the predictions (step 8d; FCOM p.1371-1373): TO
 -- the first leg with a point, NEXT the one after, DEST; TO T/C on the
 -- ground (the climb)
@@ -280,5 +281,21 @@ T.check(pad():find("^MAX ALT FL"), "FL410 at 390 t: MAX ALT: " .. pad())
 clear()
 frames(11)
 T.equal(fms.ns.B747_fms_preds(), nil, "above MAX: no predictions")
+
+-- the FMC's VNAV (step 9b; notes §56) on the ground: the climb, VNAV SPD
+-- with THR REF, the FMC altitude CRZ ALT (the SID's constraints at or
+-- above only), the climb's 250 kt below 10,000 ft; valid once the gross
+-- weight is in (PERF INIT's ZFW: FCOM p.645)
+local VN = "laminar/B747/fms/vnav/"
+T.equal(rt:get(VN .. "valid"), 0, "no ZFW on PERF INIT: VNAV not valid (PERF/VNAV UNAVAILABLE)")
+key("func_key/index")
+enter("210", "L3")
+frames(0.5)
+T.equal(rt:get(VN .. "valid"), 1, "ZFW 210: valid")
+T.equal(rt:get(VN .. "phase"), 1, "on the ground: the climb")
+T.equal(rt:get(VN .. "mode"), 1, "VNAV SPD")
+T.equal(rt:get(VN .. "at"), 5, "THR REF")
+T.equal(rt:get(VN .. "alt"), 41000, "the FMC altitude: CRZ ALT FL410")
+T.near(rt:get(VN .. "cas"), 250, 0.5, "250 kt below SPD TRANS's 10,000 ft")
 
 T.done()

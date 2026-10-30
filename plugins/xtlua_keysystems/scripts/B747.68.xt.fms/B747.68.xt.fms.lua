@@ -1043,6 +1043,25 @@ local predNext, predResult = 0, nil
 function B747_fms_preds() return predResult end
 function B747_fms_preds_now() predNext = 0 end
 local function pred_num(id) return tonumber(fmsModules["data"][id]) end
+-- the FMC's climb, descent and cruise speeds as the predictions and VNAV
+-- fly them (the CLB, CRZ and DES pages')
+function B747_fms_schedules(perf)
+  local clb = {cas = pred_num("clbspd") or 340, mach = (pred_num("clbspdmach") or pred_num("crzspd") or 810) / 1000,
+    trans_cas = pred_num("transpd"), trans_alt = pred_num("spdtransalt"),
+    restr_cas = pred_num("clbrestspd"), restr_alt = pred_num("clbrestalt")}
+  local des = {cas = pred_num("desspd") or 270, mach = (pred_num("desspdmach") or 805) / 1000,
+    trans_cas = pred_num("destranspd"), trans_alt = pred_num("desspdtransalt"),
+    restr_cas = pred_num("desrestspd"), restr_alt = pred_num("desrestalt")}
+  local crzspd
+  if pred_num("crzcas") then
+    crzspd = {cas = pred_num("crzcas")}
+  elseif fmsModules["data"]["crzspdmode"] == "L" then
+    crzspd = {fn = function(h, kg) return (B747_perf_db.lrc(perf, kg, h)) end}
+  else
+    crzspd = {mach = (pred_num("crzspd") or 810) / 1000}
+  end
+  return clb, des, crzspd
+end
 -- the prediction's input for a cruise altitude, nil without an active route
 function B747_fms_pred_input(crz)
   local st = B747_fmc_route
@@ -1079,20 +1098,7 @@ function B747_fms_pred_input(crz)
   local ed = rwy
   if not ed and lastCon and lastCon > (clbLast or 0) then ed = lastCon end
   local perf, isa = B747_fms_perf(), B747_fms_isa_dev()
-  local clb = {cas = pred_num("clbspd") or 340, mach = (pred_num("clbspdmach") or pred_num("crzspd") or 810) / 1000,
-    trans_cas = pred_num("transpd"), trans_alt = pred_num("spdtransalt"),
-    restr_cas = pred_num("clbrestspd"), restr_alt = pred_num("clbrestalt")}
-  local des = {cas = pred_num("desspd") or 270, mach = (pred_num("desspdmach") or 805) / 1000,
-    trans_cas = pred_num("destranspd"), trans_alt = pred_num("desspdtransalt"),
-    restr_cas = pred_num("desrestspd"), restr_alt = pred_num("desrestalt")}
-  local crzspd
-  if pred_num("crzcas") then
-    crzspd = {cas = pred_num("crzcas")}
-  elseif fmsModules["data"]["crzspdmode"] == "L" then
-    crzspd = {fn = function(h, kg) return (B747_perf_db.lrc(perf, kg, h)) end}
-  else
-    crzspd = {mach = (pred_num("crzspd") or 810) / 1000}
-  end
+  local clb, des, crzspd = B747_fms_schedules(perf)
   -- the step climbs: STEP SIZE's (none with 0), the crew's STEP TO first
   local steps = nil
   local size = (string.gsub(fmsModules["data"]["stepsize"], "%s+$", ""))
@@ -1110,10 +1116,10 @@ function B747_fms_pred_input(crz)
       return to, w
     end
   end
+  -- the phase: the FMC's VNAV's (step 9b; before, the old AP's flightPhase)
   local phase = "clb"
-  if simDR_onGround ~= 1 then
-    if B747DR_ap_flightPhase == 3 then phase = "des" elseif B747DR_ap_flightPhase == 2 then phase = "crz" end
-  end
+  local vph = B747_fms_vnav_phase and B747_fms_vnav_phase()
+  if simDR_onGround ~= 1 and vph then phase = string.lower(vph) end
   -- the winds and temperatures along the route (step 8e3; notes/
   -- ATA-34-61-FMC.md §53): the WIND pages' and DESCENT FORECAST's mixed
   -- with the measured wind (true) and temperature
@@ -1179,6 +1185,119 @@ function update_preds()
   if s and s.crz >= B747_perf_db.max_alt(s.t, s.gw, s.isa) then s = nil end
   predResult = s and B747_pred_model.predict(s) or nil
   put_profile(s, predResult)
+  vnav_geo_set(s, predResult)
+end
+
+-- VNAV (6-1/6-2 step 9b; notes/ATA-34-61-FMC.md §56): the FMC's vertical
+-- guidance (B747.68.vnav_model.lua) every frame from the predictions'
+-- descent path (fixed to the ground by the distance to go to the E/D), the
+-- FMC's speeds, CRZ ALT, the route's constraints and the MCP altitude into
+-- laminar/B747/fms/vnav/* for the AFDS and the A/T (step 9c: until then
+-- they fly the old VNAV)
+dofile("B747.68.vnav_model.lua")
+B747DR_fms_vnav_valid = find_dataref("laminar/B747/fms/vnav/valid")
+B747DR_fms_vnav_phase = find_dataref("laminar/B747/fms/vnav/phase")
+B747DR_fms_vnav_mode = find_dataref("laminar/B747/fms/vnav/mode")
+B747DR_fms_vnav_cas = find_dataref("laminar/B747/fms/vnav/cas")
+B747DR_fms_vnav_mach = find_dataref("laminar/B747/fms/vnav/mach")
+B747DR_fms_vnav_mach_mode = find_dataref("laminar/B747/fms/vnav/mach_mode")
+B747DR_fms_vnav_alt = find_dataref("laminar/B747/fms/vnav/alt")
+B747DR_fms_vnav_vs = find_dataref("laminar/B747/fms/vnav/vs")
+B747DR_fms_vnav_path_dev = find_dataref("laminar/B747/fms/vnav/path_dev")
+B747DR_fms_vnav_at = find_dataref("laminar/B747/fms/vnav/at")
+B747DR_fms_vnav_mcp_alt = find_dataref("laminar/B747/autopilot/heading/altitude_dial_ft")
+B747DR_fms_vnav_vmax = find_dataref("laminar/B747/airspeed/Vmax")
+B747DR_fms_vnav_vminm = find_dataref("laminar/B747/airspeed/Vminm")
+simDR_fms_vnav_flaps = find_dataref("sim/cockpit2/controls/flap_ratio")
+local vnavState = B747_vnav_model.new()
+function B747_fms_vnav_phase() return vnavState.phase end
+local vnavIn = {P = B747_perf_db, sched = B747_pred_model.schedule, crz = B747_pred_model.crz_mach}
+-- the predictions' path by the distance to go to the E/D, the route's first
+-- point and its distance on to the E/D, the climb's and descent's
+-- constraints (route order: {upper} and {alt})
+local vnavGeo = nil
+local VNAV_PHASE = {CLB = 1, CRZ = 2, DES = 3}
+local VNAV_MODE = {SPD = 1, PTH = 2}
+function vnav_geo_set(s, r)
+  if not (s and r) then vnavGeo = nil return end
+  local g = {clb = {}, des = {}}
+  local lx, acc = {}, 0
+  for i, l in ipairs(s.legs) do acc = acc + l.dist; lx[i] = acc end
+  -- the climb's legs: the SID's, else those before half the way (the
+  -- predictions')
+  local clbLast = s.clb_last
+  if not clbLast then
+    local half = ((s.ed and lx[s.ed]) or acc) / 2
+    clbLast = 0
+    for i = 1, #s.legs do if lx[i] <= half then clbLast = i end end
+  end
+  for i, l in ipairs(s.legs) do
+    local c = l.con
+    if c and (not s.ed or i < s.ed) then
+      if i <= clbLast then
+        if c.kind == "AT" or c.kind == "B" or c.kind == "W" then g.clb[#g.clb + 1] = c.a end
+      else
+        g.des[#g.des + 1] = c.kind == "W" and c.b or c.a
+      end
+    end
+  end
+  if r.dp and r.ed then
+    local dp = r.dp
+    g.path = {e = {}, h = dp.h, k = dp.k}
+    for i = 1, #dp.x do g.path.e[i] = r.ed - dp.x[i] end
+    g.hed = dp.h[1]
+    -- the first leg with a point, the legs' distance after it to the E/D
+    local sum = 0
+    for i = 1, s.ed do
+      local l = s.legs[i]
+      if not g.first then
+        if l.p1 then g.first = l.p1 end
+      else
+        sum = sum + l.dist
+      end
+    end
+    g.sum = sum
+  end
+  vnavGeo = g
+end
+local function update_vnav()
+  local inp, g = vnavIn, vnavGeo
+  local perf = B747_fms_perf()
+  inp.alt = simDR_pressureAlt1
+  inp.vs = simDR_vvi_fpm_pilot
+  inp.gs = simDR_groundspeed * 1.94384
+  inp.ground = simDR_onGround == 1
+  inp.active = B747_fmc_route.active
+  local gw = perf_gw_t()
+  inp.kg = gw and gw * 1000 or nil
+  inp.crz_alt = (B747BR_cruiseAlt and B747BR_cruiseAlt > 0) and B747BR_cruiseAlt or nil
+  inp.mcp_alt = B747DR_fms_vnav_mcp_alt
+  inp.clb, inp.des, inp.crzspd = B747_fms_schedules(perf)
+  inp.flaps_placard = simDR_fms_vnav_flaps > 0.01 and B747DR_fms_vnav_vmax > 0 and B747DR_fms_vnav_vmax or nil
+  inp.vmin = B747DR_fms_vnav_vminm > 0 and B747DR_fms_vnav_vminm or nil
+  inp.clb_alt, inp.des_alt, inp.path, inp.d_ed = nil, nil, nil, nil
+  if g then
+    for _, a in ipairs(g.clb) do
+      if a > inp.alt - 100 and (not inp.crz_alt or a < inp.crz_alt) then inp.clb_alt = a break end
+    end
+    inp.des_alt = g.des[1] or g.hed
+    if g.path and g.first then
+      local _, d1 = B747_route_model.course(simDR_latitude, simDR_longitude, g.first.lat, g.first.lon)
+      inp.path = g.path
+      inp.d_ed = d1 + g.sum
+    end
+  end
+  local out = B747_vnav_model.update(vnavState, inp)
+  B747DR_fms_vnav_valid = out.valid and 1 or 0
+  B747DR_fms_vnav_phase = VNAV_PHASE[out.phase] or 0
+  B747DR_fms_vnav_mode = VNAV_MODE[out.mode] or 0
+  B747DR_fms_vnav_cas = out.cas or 0
+  B747DR_fms_vnav_mach = out.mach or 0
+  B747DR_fms_vnav_mach_mode = out.mach_mode and 1 or 0
+  B747DR_fms_vnav_alt = out.alt or 0
+  B747DR_fms_vnav_vs = out.vs or 0
+  B747DR_fms_vnav_path_dev = out.path_dev or 0
+  B747DR_fms_vnav_at = out.at or 0
 end
 -- UNABLE CRZ ALT: in the climb, the climb to a cruise altitude meets the
 -- descent path before it (FCOM p.1436; estimate: no minimum cruise time)
@@ -2077,6 +2196,7 @@ function after_physics()
     update_perf()
     update_econ()
     update_preds()
+    update_vnav()
     update_navdb()
     update_takeoff()
     B747_fmc_lnav_update()
