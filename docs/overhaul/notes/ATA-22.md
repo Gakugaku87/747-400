@@ -973,3 +973,17 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
   - 要求から 4 秒たっても BUS ISOLATED が無ければ能力を 2 に落とし、>NO LAND 3（ATA22 p.384：「Electric buses do not isolate when requested」。4 秒は p.192 の「4 秒以内」から：推定）。LAND 3・2 を出していれば caution、前なら advisory（段 5b の規則）。
 - グルー（`B747.70.xt.autopilot.lua`）：新設の `autopilot/bus_isolate_req`（init `B747.70.autopilot`）に書き、電源の `electrical/bus_isolated` を読む。
 - 電源の側と試験：notes/ATA-24.md §10。回帰：AFDS のモデル +17（巡航の CMD L と LOC だけでは求めない、APP で C と R が arm して求める、3.5 秒では何も無く 4.5 秒で NO LAND 3 の advisory、分離すると消える、APP の解除で終わる、単一チャンネルの APP では求めない、BUS ISOLATED が無いと 3 チャンネルでも LAND 2・あれば LAND 3、150 ft で消えても LAND 3、1 チャンネルに減っても続く、全部切れると終わる、80 ft の G/A では続き 120 ft で終わる）、グルー +4（APP で要求、BUS ISOLATED が消えると LAND 2、4 秒で >NO LAND 3 の caution、戻すと LAND 3）。
+
+## 39. 段 6a の実装（2026-10-30：ヨーダンパーのモード、engage と INOP）
+
+- ヨーダンパーのモデル（新設の `B747.19.yd_model.lua`。油圧モジュールの中、前の則の隣）：上下の YDM ごとに、ATA22 p.83–85 の図のモードを持つ。
+  - off：スイッチ OFF か電源なし（スイッチが YDM に 28V DC を渡す：p.69）。INOP。
+  - 電源投入：地上なら電源投入の試験（INOP。「最大 5 秒」：p.83。長さを 5 秒にしたのは推定）の後に地上の待機（ground operation：engage して指令なし）、空中なら試験なしで fade-in（5 秒）。
+  - 地上の待機から空中で fade-in、5 秒で flight mode。着陸で fade-out（5 秒）から地上の待機。途中で空地が変われば、その時の割合から戻る。
+  - 故障（自分の故障 `flt_ctrls/fail/yaw_damper`、または有効な IRU が無い：FCOM p.958「IRUs off or in align」、p.87 の表）で fault INOP（解除、INOP、作動筒はばねで中立：p.90）。自動復帰は、どれかの IRU が NAV に入ったとき、または 5 秒未満の故障が消えたとき（p.84）。空中は fade-in、地上は地上の待機へ。それ以外はスイッチの入れ直し。
+  - INOP（INOP 灯と >YAW DAMPER UPR・LWR）：engage していないとき（off、試験、fault INOP：p.72、p.88；FCOM p.931、p.958）。
+  - 権限（p.86–87、ATA27 p.656）：有効な IRU が 3・2 台なら ±4°、1 台で ADC が 2 台なら「可変」（値が無い：2.5° と推定）、1 台で ADC が 1 台以下なら ±1°。ADC は L と R の 2 台（ATA27 p.42）。舵の指令に使うのは段 6b。
+- グルー（`B747.19.xt.yaw_damper.lua`）：入力はスイッチ（`button_switch/position[82]`・`[83]`）、電源（上：AC standby と電池母線、下：AC 1 と、DC 1 か 2：ATA22 p.60–62 の「DC bus 1 and bus 2」をどちらかでよいとしたのは推定）、IRU（姿勢と NAV の台数）、ADC L・R、PSEU の空地、故障。出力は `flt_ctrls/yaw_damper_upr_on`・`lwr_on`（1 で engage。前は操縦系統のモジュールが書いていた：そちらは EICAS の >YAW DAMPER だけを残した）と、新設の `flt_ctrls/yaw_damper_mode`（init `B747.19.hydraulicsmodel`。0 off、1 試験、2 地上の待機、3 fade-in、4 flight、5 fade-out、6 fault INOP）。前の則の指令に fade をかける（地上の待機は 0）。則そのものと権限・ratio changer の扱いは段 6b。
+- 試験：
+  - 回帰（LuaJIT）：新設の `tests/autopilot/yd_model_test.lua` 32 件（off、地上の試験 5 秒、地上の待機、fade-in と flight、fade-out と途中の離陸、空中の電源投入、2 秒と 6 秒の故障とスイッチの入れ直し、IRU の整列中と NAV での自動復帰、ATT だけでは戻らない、片方の電源、権限の表）。油圧モジュール +9（配線：IRU の整列中は fault INOP、NAV で地上の待機、LOWER の OFF と ON の試験、空中の fade-in、AC 1 で下だけ off、上の故障と自動復帰）。操縦系統のモジュールの試験は、INOP の判定を移したので EICAS の >YAW DAMPER だけに。全 122 本。
+  - X-Plane（カスタム acf）：新設の `s123_yd_modes`（地上、エンジン運転中）33/33：IRS が NAV になると両方が地上の待機（指令 0）、UPPER の OFF で off・INOP・>YAW DAMPER UPR、ON で 2 秒後も試験中（INOP）、6 秒後に地上の待機で >YAW DAMPER UPR が消える、LOWER の 2 秒の故障で fault INOP と >YAW DAMPER LWR・戻すと自動復帰、7 秒の故障は戻しても INOP・スイッチの入れ直しで試験の後に engage。新設の `s124_yd_air`（空中、10,000 ft）11/11：両方が flight mode、UPPER の 2 秒の故障で fault INOP、戻すと fade-in、5 秒で flight mode。続けて Web API で、LOWER の故障で INOP 灯（`annunciator/brightness_ratio[68]`）が点き、戻すと消えるのを確かめた。Lua の誤りなし。

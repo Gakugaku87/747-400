@@ -86,11 +86,6 @@ B747DR_CAS_memo_status          = find_dataref("laminar/B747/CAS/memo_status")
 -- crazytimtimtim
 B747DR_IRS_dial_pos             = find_dataref("laminar/B747/flt_mgmt/iru/mode_sel_dial_pos")
 B747DR_ELEC_BATT                = find_dataref("sim/cockpit/electrical/battery_array_on")
--- the yaw dampers (B747_yaw_damper): the FCE power supplies' buses, the IRUs, the failures
-B747DR_yd_bus_stby              = find_dataref("laminar/B747/electrical/bus/stby_main")
-B747DR_yd_bus_bat               = find_dataref("laminar/B747/electrical/bus/bat_main")
-B747DR_yd_iru_att               = find_dataref("laminar/B747/irs/att_valid")
-B747DR_yd_fail                  = find_dataref("laminar/B747/flt_ctrls/fail/yaw_damper")
 -- crazytimtimtim end
 --*************************************************************************************--
 --** 				               FIND CUSTOM COMMANDS              			     **--
@@ -634,35 +629,11 @@ end
 
 
 ----- YAW DAMPER ------------------------------------------------------------------------
--- each yaw damper module works with its switch ON, its power (the upper
--- from the left FCE power supplies: the AC standby bus and the battery bus;
--- the lower from the right ones: AC bus 1 and DC bus 1. ATA27 p.20-22), an
--- IRU aligned in NAV or ATT and no fault (laminar/B747/flt_ctrls/fail/
--- yaw_damper: upper, lower). Otherwise INOP and >YAW DAMPER UPR, LWR (FCOM
--- p.931, p.958: "IRUs off or in align ... module power off"; before, the
--- switch, an IRU selector at NAV and the battery switch). Their actuators'
--- hydraulics: the hydraulics module (no INOP for those, ATA27 p.40). 4-1
--- step 4
-local function yd_iru_valid()
-    -- an IRU's attitude: NAV, or ATT after its 30 s (the navigation sensors
-    -- module, B747.34.xt.irs.lua)
-    for i = 0, 2 do
-        if B747DR_yd_iru_att[i] > 0.5 then return true end
-    end
-    return false
-end
-
+-- the yaw damper modules' modes, engagement and INOP (laminar/B747/
+-- flt_ctrls/yaw_damper_upr_on, lwr_on, read for >YAW DAMPER UPR, LWR
+-- below): the yaw damper model in the hydraulics module
+-- (B747.19.yd_model.lua, 6-3 step 6a; before, here: 4-1 step 4)
 function B747_yaw_damper()
-    local iru = yd_iru_valid()
-    local upr = B747DR_button_switch_position[82] > 0.95 and iru and B747DR_yd_fail[0] < 0.5
-        and B747DR_yd_bus_stby > 0.5 and B747DR_yd_bus_bat > 0.5
-    local lwr = B747DR_button_switch_position[83] > 0.95 and iru and B747DR_yd_fail[1] < 0.5
-        and B747DR_fcu_bus_ac[0] > 0.5 and B747DR_fcu_bus_dc[0] > 0.5
-    local u, l = 0, 0
-    if upr then u = 1 end
-    if lwr then l = 1 end
-    if B747DR_yaw_damper_upr_on ~= u then B747DR_yaw_damper_upr_on = u end
-    if B747DR_yaw_damper_lwr_on ~= l then B747DR_yaw_damper_lwr_on = l end
     if  simDR_yaw_damper_on == 1
     then
         simCMD_yaw_damper_off:once()                -- X-Plane's own yaw damper stays off

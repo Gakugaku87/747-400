@@ -488,4 +488,48 @@ for i = 0, 3 do rt:set("laminar/B747/flt_ctrls/fcu/te_deg", i, 0) end
 frames(0.1)
 T.equal(get("sim/flightmodel/controls/wing3l_fla2def"), 0, "up: 0")
 
+-- the yaw dampers (6-3 step 6a): the model's modes and INOP through its
+-- glue (B747.19.xt.yaw_damper.lua): the switches, the buses, the IRUs, the
+-- air/ground and the failures in; yaw_damper_upr_on, lwr_on (1 engaged)
+-- and the modes out (the model: tests/autopilot/yd_model_test.lua)
+local YDM, YD_UPR, YD_LWR = "laminar/B747/flt_ctrls/yaw_damper_mode", "laminar/B747/flt_ctrls/yaw_damper_upr_on",
+    "laminar/B747/flt_ctrls/yaw_damper_lwr_on"
+rt:set(SW, 82, 1)
+rt:set(SW, 83, 1)
+rt:set("laminar/B747/electrical/bus/stby_main", 1)
+rt:set("laminar/B747/electrical/bus/bat_main", 1)
+for i = 0, 2 do
+    rt:set("laminar/B747/irs/att_valid", i, 0)
+    rt:set("laminar/B747/irs/nav_valid", i, 0)
+end
+frames(0.5)
+T.check(get(YDM, 0) == 6 and get(YD_UPR) == 0 and get(YD_LWR) == 0, "YD: the IRUs aligning: the fault INOP mode, both INOP")
+for i = 0, 2 do
+    rt:set("laminar/B747/irs/att_valid", i, 1)
+    rt:set("laminar/B747/irs/nav_valid", i, 1)
+end
+frames(0.2)
+T.check(get(YDM, 0) == 2 and get(YD_UPR) == 1 and get(YD_LWR) == 1, "YD: the IRUs into NAV: the ground operation, engaged")
+rt:set(SW, 83, 0)
+frames(0.2)
+T.check(get(YDM, 1) == 0 and get(YD_LWR) == 0, "YD: the lower switch OFF: off, INOP")
+rt:set(SW, 83, 1)
+frames(1)
+T.check(get(YDM, 1) == 1 and get(YD_LWR) == 0, "YD: ON again on the ground: the power-up test, INOP")
+frames(4.5)
+T.check(get(YDM, 1) == 2 and get(YD_LWR) == 1, "YD: after 5 s engaged")
+rt:set("laminar/B747/gear/air_ground/pri_air", 1)
+frames(1)
+T.equal(get(YDM, 0), 3, "YD: in the air the fade-in")
+rt:set("laminar/B747/electrical/bus/ac", 0, 0)
+frames(0.2)
+T.check(get(YDM, 1) == 0 and get(YD_LWR) == 0 and get(YD_UPR) == 1, "YD: AC 1 lost: the lower off (FCE power supply 1R), the upper on")
+rt:set("laminar/B747/electrical/bus/ac", 0, 1)
+rt:set("laminar/B747/flt_ctrls/fail/yaw_damper", 0, 1)
+frames(0.2)
+T.check(get(YDM, 0) == 6 and get(YD_UPR) == 0, "YD: the upper's failure: the fault INOP mode")
+rt:set("laminar/B747/flt_ctrls/fail/yaw_damper", 0, 0)
+frames(0.2)
+T.check(get(YDM, 0) == 3 and get(YD_UPR) == 1, "YD: a short fault: autorecovery, the fade-in")
+
 T.done()

@@ -414,50 +414,24 @@ frames(1.5)
 T.near(get(LEVER), 0.333, 0.001, "2 s later: snapped to flaps 5")
 
 
--- the yaw dampers (4-1 step 4): the switch, the FCE power (upper: the AC
--- standby and battery buses; lower: AC 1 and DC 1, ATA27 p.20-22), an IRU
--- aligned in NAV or ATT, no fault; otherwise INOP and >YAW DAMPER UPR, LWR
--- (FCOM p.931, p.958)
-local YD_SW = "laminar/B747/button_switch/position"
--- (the IRUs' attitude: the navigation sensors module, laminar/B747/irs/att_valid)
-local IRU_ATT = "laminar/B747/irs/att_valid"
+-- >YAW DAMPER UPR, LWR (FCOM p.958): the yaw damper modules' INOP, which
+-- the yaw damper model writes (the hydraulics module, 6-3 step 6a:
+-- tests/autopilot/yd_model_test.lua, tests/hyd/hyd_module_test.lua; before,
+-- this module decided it)
 local UPR, LWR = "laminar/B747/flt_ctrls/yaw_damper_upr_on", "laminar/B747/flt_ctrls/yaw_damper_lwr_on"
-local YD_FAIL = "laminar/B747/flt_ctrls/fail/yaw_damper"
-rt:set(YD_SW, 82, 1)
-rt:set(YD_SW, 83, 1)
-rt:set("laminar/B747/electrical/bus/stby_main", 1)
-rt:set("laminar/B747/electrical/bus/bat_main", 1)
-for i = 0, 2 do rt:set(IRU_ATT, i, 0) end
+rt:set(UPR, 0)
+rt:set(LWR, 1)
 frames(0.2)
-T.equal(get(UPR), 0, "IRUs aligning: upper yaw damper inoperative")
-T.equal(get(ADVISORY, 301), 1, ">YAW DAMPER UPR")
-T.equal(get(ADVISORY, 300), 1, ">YAW DAMPER LWR")
-rt:set(IRU_ATT, 1, 1)
+T.equal(get(ADVISORY, 301), 1, "upper INOP: >YAW DAMPER UPR")
+T.equal(get(ADVISORY, 300), 0, "no >YAW DAMPER LWR")
+rt:set(UPR, 1)
+rt:set(LWR, 0)
 frames(0.2)
-T.equal(get(UPR), 1, "an IRU's attitude (NAV, or ATT after its 30 s): upper on")
-T.equal(get(LWR), 1, "lower on")
 T.equal(get(ADVISORY, 301), 0, "no >YAW DAMPER UPR")
-rt:set("laminar/B747/electrical/bus/stby_main", 0)
+T.equal(get(ADVISORY, 300), 1, "lower INOP: >YAW DAMPER LWR")
+rt:set(LWR, 1)
 frames(0.2)
-T.equal(get(UPR), 0, "AC standby bus lost: upper inoperative (left FCE power supplies)")
-T.equal(get(LWR), 1, "the lower one stays on")
-rt:set("laminar/B747/electrical/bus/stby_main", 1)
-rt:set("laminar/B747/electrical/bus/ac", 0, 0)
-frames(0.2)
-T.equal(get(LWR), 0, "AC bus 1 lost: lower inoperative (right FCE power supply 1R)")
-T.equal(get(ADVISORY, 300), 1, ">YAW DAMPER LWR")
-T.equal(get(UPR), 1, "the upper one stays on")
-rt:set("laminar/B747/electrical/bus/ac", 0, 1)
-rt:set(YD_FAIL, 0, 1)
-frames(0.2)
-T.equal(get(UPR), 0, "upper module fault: inoperative")
-rt:set(YD_FAIL, 0, 0)
-rt:set(YD_SW, 83, 0)
-frames(0.2)
-T.equal(get(LWR), 0, "lower switch OFF: inoperative")
-rt:set(YD_SW, 83, 1)
-frames(0.2)
-T.equal(get(UPR) + get(LWR), 2, "both on again")
+T.equal(get(ADVISORY, 300), 0, "both engaged: none")
 
 -- CONFIG GEAR CTR (4-2 step 4): a body gear truck unlocked (the gear
 -- module's steering), on the ground under V1, three fuel control switches in

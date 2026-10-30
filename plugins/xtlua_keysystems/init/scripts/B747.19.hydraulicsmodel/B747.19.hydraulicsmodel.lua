@@ -188,6 +188,9 @@ B747DR_flap_deployed_ratio3        = deferred_dataref("laminar/B747/gauges/indic
 B747DR_flap_deployed_ratio4        = deferred_dataref("laminar/B747/gauges/indicators/flap_deployed_ratio4", "number")
 B747DR_yaw_damper_upr_on             = deferred_dataref("laminar/B747/flt_ctrls/yaw_damper_upr_on", "number")
 B747DR_yaw_damper_lwr_on             = deferred_dataref("laminar/B747/flt_ctrls/yaw_damper_lwr_on", "number")
+-- the yaw damper modules' modes, upper and lower (6-3 step 6a, B747.19.yd_model.lua):
+-- 0 off, 1 power-up test, 2 ground operation, 3 fade-in, 4 flight, 5 fade-out, 6 fault INOP
+B747DR_yd_mode                       = deferred_dataref("laminar/B747/flt_ctrls/yaw_damper_mode", "array[2]")
 B747DR_outer_spoilers      = deferred_dataref("laminar/B747/flt_ctrls/outer_spoilers", "array[2]") --for stat display
 B747DR_flaps      = deferred_dataref("laminar/B747/flt_ctrls/flaps", "array[5]") --0 unuse
 

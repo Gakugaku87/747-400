@@ -1,0 +1,43 @@
+{
+  "name": "s124_yd_air",
+  "description": "6-3 段 6a（ヨーダンパーのモード）の X-Plane での確認、空中。10,000 ft・約 290 kt で空中から始め（機体を読み直す）、上下の YDM が空中の電源投入で試験なしに 5 秒の fade-in から flight mode（ATA22 p.83–85）。UPPER の 2 秒の故障で fault INOP、戻すと自動復帰して fade-in、5 秒で flight mode（p.84）。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 3048, "heading_true": 340, "speed_in_meters_per_second": 150 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 12, "note": "空中開始の揺れ、IRS の初期化と YDM の fade-in" },
+    { "do": "mark", "note": "空中：flight mode、INOP なし" },
+    { "do": "check", "note": "UPPER は flight mode（4）", "dref": "laminar/B747/flt_ctrls/yaw_damper_mode[0]", "op": "==", "value": 4 },
+    { "do": "check", "note": "LOWER も", "dref": "laminar/B747/flt_ctrls/yaw_damper_mode[1]", "op": "==", "value": 4 },
+    { "do": "check", "note": "UPPER engage", "dref": "laminar/B747/flt_ctrls/yaw_damper_upr_on", "op": "==", "value": 1 },
+    { "do": "check", "note": "LOWER engage", "dref": "laminar/B747/flt_ctrls/yaw_damper_lwr_on", "op": "==", "value": 1 },
+    { "do": "check", "note": ">YAW DAMPER UPR なし", "dref": "laminar/B747/CAS/advisory_status[301]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "UPPER の 2 秒の故障：自動復帰で fade-in、5 秒で flight mode（ATA22 p.84）" },
+    { "do": "set", "note": "UPPER の故障", "dref": "laminar/B747/flt_ctrls/fail/yaw_damper[0]", "value": 1 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "fault INOP（6）", "dref": "laminar/B747/flt_ctrls/yaw_damper_mode[0]", "op": "==", "value": 6 },
+    { "do": "check", "note": "INOP", "dref": "laminar/B747/flt_ctrls/yaw_damper_upr_on", "op": "==", "value": 0 },
+    { "do": "check", "note": ">YAW DAMPER UPR", "dref": "laminar/B747/CAS/advisory_status[301]", "op": "==", "value": 1 },
+    { "do": "set", "note": "故障を戻す", "dref": "laminar/B747/flt_ctrls/fail/yaw_damper[0]", "value": 0 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "自動復帰で fade-in（3）", "dref": "laminar/B747/flt_ctrls/yaw_damper_mode[0]", "op": "==", "value": 3 },
+    { "do": "check", "note": "engage", "dref": "laminar/B747/flt_ctrls/yaw_damper_upr_on", "op": "==", "value": 1 },
+    { "do": "sleep", "seconds": 5 },
+    { "do": "check", "note": "flight mode", "dref": "laminar/B747/flt_ctrls/yaw_damper_mode[0]", "op": "==", "value": 4 },
+    { "do": "record_stop" }
+  ]
+}
