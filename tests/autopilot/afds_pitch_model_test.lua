@@ -515,6 +515,20 @@ T.check(h2 > h1, "FLARE at 8 ft sinking 8 ft/s: the command up")
 hi.gear_alt = 4
 local h3 = P.update(sh, hi, DT)
 T.check(h3 <= h2, "under 5 ft: the command not raised")
+-- under 5 ft not sinking any more (the ground effect's float, s116): the
+-- command down at K_FLOAT a second of the path error to TD_SINK's, more
+-- than K_FLARE's; sinking at TD_SINK or more, no more than K_FLARE's
+local function settle(vs, steps)
+    local sf2, fl = P.new(), P.inputs()
+    fl.active, fl.mode, fl.tas, fl.ias, fl.pitch, fl.vs, fl.gear_alt = true, "FLARE", 150, 150, 6.5, vs, 1.5
+    local c, last = nil, nil
+    for _ = 1, steps do last = c; c = P.update(sf2, fl, DT) end
+    return (c - last) / DT
+end
+local v150 = 150 * 1852 / 3600
+local want = -(math.deg(math.atan((P.TD_SINK * 0.3048) / v150)))
+T.near(settle(0, 30), P.K_FLOAT * want, 0.05, ("level at 1.5 ft: down at K_FLOAT (%.2f a second)"):format(P.K_FLOAT * want))
+T.check(settle(-150, 30) > P.K_FLOAT * want, "sinking 2.5 ft/s at 1.5 ft: not the float's rate")
 -- NOSE LETDOWN on the ground after FLARE: from a degree under the attitude
 -- (FLARE's last command higher), down a degree a second, the nose held down
 -- at -1 under 2 degrees (ATA22 p.332)
