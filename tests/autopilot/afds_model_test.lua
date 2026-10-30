@@ -38,7 +38,7 @@ local function inp(o)
         capture_alt = o.capture_alt, vnav_engaged = o.vnav_engaged or false, vnav_fma = o.vnav_fma,
         old_law = o.old_law, old_armed_pitch = o.old_armed_pitch, old_hold_alt = o.old_hold_alt,
         loc_detect = o.loc_detect, gs_detect = o.gs_detect, course_err = o.course_err,
-        gs_after_loc = o.gs_after_loc, sensors = o.sensors, power = o.power}
+        gs_after_loc = o.gs_after_loc, sensors = o.sensors, power = o.power, gear_alt = o.gear_alt}
 end
 
 -- engage with both F/Ds OFF: V/S and HDG HOLD (FCOM p.640; ATA22 p.266)
@@ -210,7 +210,6 @@ T.equal(A.status(m), A.STATUS.LAND3, "LAND 3")
 T.check(m.flare_arm and m.rollout_arm, "FLARE and ROLLOUT armed")
 T.equal(select(2, A.roll_fma(m, app_inp())), A.ROLL_FMA.ROLLOUT, "the FMA's ROLLOUT armed")
 T.equal(select(2, A.pitch_fma(m, app_inp())), A.PITCH_FMA.FLARE, "the FMA's FLARE armed")
-T.equal(select(2, A.pitch_fma(m, app_inp({old_pitch = "FLARE"}))), 0, "not armed once the old code's FLARE is on")
 -- the track 3 degrees off the course: not engaged
 local mt = A.new()
 A.update(mt, app_inp())
@@ -287,6 +286,59 @@ A.vs(mg, app_inp({ra = 1500}))
 A.update(mg, app_inp({ra = 1500}))
 T.check(mg.C and not mg.L and not mg.R, "V/S from G/A: C (the first in command) only")
 T.equal(A.status(mg), A.STATUS.CMD, "CMD")
+
+-- 4b: FLARE (ATA22 p.294, p.342; FCOM p.671): the flare height by the sink
+-- rate; engaged armed at it; the FMA's FLARE; the retard at 25 ft; at the
+-- touchdown FLARE off and NOSE LETDOWN until the A/P's disengage; no other
+-- pitch mode from FLARE but G/A
+T.equal(A.flare_height(8), 40, "sink 8 ft/s: 40 ft")
+T.equal(A.flare_height(13.5), 50, "13.5 ft/s: 50 ft")
+T.equal(A.flare_height(20), 60, "20 ft/s: 60 ft")
+T.near(A.flare_height(10.5), 45, 1e-9, "10.5 ft/s: 45 ft (between, an estimate)")
+local function landing_in(o)
+    local st = A.new()
+    A.update(st, app_inp())
+    A.cmd(st, "L", app_inp())
+    A.app(st, app_inp())
+    for _ = 1, 51 do approach(st, {vs = -800}) end
+    return st
+end
+local mf = landing_in()
+T.check(A.status(mf) == A.STATUS.LAND3 and mf.flare_arm, "LAND 3, FLARE armed")
+approach(mf, {ra = 60, gear_alt = 55, vs = -800})
+T.equal(mf.pitch, "GS", "55 ft of gear altitude at 13.3 ft/s: still G/S")
+approach(mf, {ra = 54, gear_alt = 49, vs = -800})
+T.equal(mf.pitch, "FLARE", "49 ft: FLARE")
+T.equal(select(1, A.pitch_fma(mf, app_inp())), A.PITCH_FMA.FLARE, "the FMA's FLARE")
+T.equal(select(2, A.pitch_fma(mf, app_inp())), 0, "nothing armed in pitch")
+T.check(not mf.retard, "not yet the retard")
+approach(mf, {ra = 25, gear_alt = 20, vs = -300})
+T.check(mf.retard, "25 ft: the retard")
+T.equal(A.status(mf), A.STATUS.LAND3, "LAND 3 kept in the flare")
+T.equal(A.vs(mf, app_inp({ra = 25})), nil, "no V/S from FLARE")
+approach(mf, {ra = 0, gear_alt = 0, vs = -90, ground = true})
+T.check(mf.pitch == nil and mf.letdown and mf.retard, "touchdown: FLARE off, NOSE LETDOWN, the retard kept (the A/T's IDLE: FCOM p.671)")
+T.equal(select(1, A.pitch_fma(mf, app_inp({ground = true}))), 0, "the FMA's pitch blank")
+T.equal(A.status(mf), A.STATUS.LAND3, "LAND 3 kept on the ground")
+A.disengage(mf)
+A.update(mf, app_inp({ground = true, ra = 0}))
+T.check(not mf.letdown and not mf.retard, "the A/P disengaged: NOSE LETDOWN and the retard end")
+-- a low sink rate flares lower: 6 ft/s at 45 ft not yet, 39 ft FLARE
+local ml = landing_in()
+approach(ml, {ra = 50, gear_alt = 45, vs = -360})
+T.equal(ml.pitch, "GS", "6 ft/s at 45 ft: still G/S")
+approach(ml, {ra = 44, gear_alt = 39, vs = -360})
+T.equal(ml.pitch, "FLARE", "39 ft: FLARE")
+-- G/A from FLARE
+T.check(A.toga(ml, app_inp({ra = 30})) and ml.pitch == "GA", "TO/GA from FLARE: G/A")
+-- no FLARE without LAND 3 or 2 (a single channel approach)
+local m1 = A.new()
+A.update(m1, app_inp())
+A.cmd(m1, "L", app_inp())
+A.app(m1, app_inp({hyd = {0, 0, 3000}}))
+for _ = 1, 51 do approach(m1, {vs = -800, hyd = {0, 0, 3000}}) end
+approach(m1, {ra = 40, gear_alt = 35, vs = -800, hyd = {0, 0, 3000}})
+T.equal(m1.pitch, "GS", "a single channel: no FLARE (G/S to the ground)")
 
 -- 1b: the roll modes. HDG SEL, then HDG HOLD: annunciated at once, its
 -- heading once the roll stays under 3 degrees for 2 s (ATA22 figure p.353)
@@ -413,7 +465,8 @@ pg.pitch, pg.roll = "GS", "LOC"
 T.equal(A.vs(pg, inp()), nil, "V/S from G/S with LOC active: no")
 pg.roll = "HDG_HOLD"
 T.check(A.vs(pg, inp()) ~= nil, "V/S from G/S before LOC: yes")
-T.equal(A.alt_hold(pg, inp({old_pitch = "FLARE"})), false, "nothing from FLARE")
+pg.pitch = "FLARE"
+T.equal(A.alt_hold(pg, inp()), false, "nothing from FLARE")
 -- FLCH (FCOM p.646): the window open: as it is; blank: the FMC's target,
 -- else the present speed; from TO/GA the higher of the present and the
 -- selected

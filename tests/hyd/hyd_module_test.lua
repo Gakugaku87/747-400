@@ -210,6 +210,7 @@ T.equal(get("laminar/B747/flt_ctrls/sim_roll_ratio"), 0, "A/P off: back to neutr
 local ELEV, AUTOTRIM = "laminar/B747/flt_ctrls/sim_pitch_ratio", "laminar/B747/flt_ctrls/stab_trim/autotrim_cmd"
 rt:set("sim/aircraft/controls/acf_elev_up", 22)
 rt:set("sim/aircraft/controls/acf_elev_dn", 17)
+rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 288)   -- the gains as set (from 250 kt up)
 rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 5000)
 rt:set("sim/flightmodel2/controls/elevator_trim", 0)
 rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 9)
@@ -274,6 +275,18 @@ local e0 = get(ELEV)
 rt:set("sim/flightmodel/position/Q", 1)
 frames(1)
 T.near(e0 - get(ELEV), 0.03, 0.005, "pitching up 1 degree a second: the elevator 0.03 less (" .. e0 .. " to " .. get(ELEV) .. ")")
+-- the gains by airspeed: at 150 kt the attitude error's (250 / 150) squared,
+-- 2.78 times (under 145 kt 3 times), the attitude rate's that to the 1.5,
+-- 4.6 times
+rt:set("sim/flightmodel/position/Q", 0)
+frames(2)
+rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 150)
+frames(1)
+e0 = get(ELEV)
+rt:set("sim/flightmodel/position/Q", 1)
+frames(1)
+T.near(e0 - get(ELEV), 0.03 * ((250 / 150) ^ 2) ^ 1.5, 0.01, "at 150 kt the pitch rate's 4.6 times: the elevator 0.139 less (" .. e0 .. " to " .. get(ELEV) .. ")")
+rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 288)
 rt:set("sim/flightmodel/position/Q", 0)
 rt:set("sim/flightmodel2/controls/elevator_trim", 0)
 rt:set("laminar/B747/autopilot/servos_on", 0)

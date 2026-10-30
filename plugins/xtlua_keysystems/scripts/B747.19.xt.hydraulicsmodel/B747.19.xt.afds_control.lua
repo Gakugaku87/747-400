@@ -545,6 +545,21 @@ local ap_trim_last = nil
 -- (estimate)
 local AP_PITCH_RATE_K = 0.03
 
+-- the inner loop's gains by airspeed (estimate; the gains above were set
+-- from 250 kt up: FL350, 10,000 ft): the attitude error's g = (AP_GAIN_KT /
+-- IAS) squared, within AP_GAIN_MAX, the attitude rate's g to the
+-- AP_RATE_POW. With the gains as set, at 150 kt the attitude followed the
+-- command a second late and the autoland's flare came too late (s114: about
+-- 8 ft/s at the touchdown); with g on the rate too the pitch swung 0.11
+-- degrees every 3.3 s on the glide slope. X-Plane's 747 at 150 kt and flaps
+-- 30 (fitted to that swing: notes/ATA-22.md §26) has a fifth of the pitch
+-- stiffness of FL350's; on it this rate damps the swing in a cycle
+local AP_GAIN_KT, AP_GAIN_MAX, AP_RATE_POW = 250, 3, 1.5
+local function ap_gain_scale()
+    local ias = math.max(simDR_ias_pilot, 60)
+    return math.max(1, math.min(AP_GAIN_MAX, (AP_GAIN_KT / ias) ^ 2))
+end
+
 -- the old law's state on the new law's command (6-3 step 3a): its last
 -- command and its 10 samples, so that it goes on from there (G/S after V/S)
 local function ap_director_pitch_sync(p)
@@ -579,11 +594,14 @@ function ap_pitch_assist(doCompute)
         B747DR_pidPitchI=B747DR_pidPitchP
     end
     B747DR_pidPitchI=B747DR_pidPitchP--*0.1 --scale this with P
-    pitchPid.kp=B747DR_pidPitchP
-    pitchPid.ki=B747DR_pidPitchI
+    local gain = ap_gain_scale()
+    pitchPid.kp=B747DR_pidPitchP * gain
+    pitchPid.ki=B747DR_pidPitchI * gain
     pitchPid.kd=B747DR_pidPitchD
     
-    if simDR_autopilot_servos_on>0 and (B747DR_ap_FMA_active_pitch_mode>0 or B747DR_ap_autoland == 1) then
+    -- (a pitch law's command too: NOSE LETDOWN on the ground has no FMA
+    -- mode, 6-3 step 4b)
+    if simDR_autopilot_servos_on>0 and (B747DR_ap_FMA_active_pitch_mode>0 or B747DR_ap_autoland == 1 or B747DR_ap_pitch_law == 1) then
         simDR_electric_trim=0
         local trim = simDR_elevator_trim
         if ap_trim_last and pitchPid._Iterm then
@@ -597,7 +615,7 @@ function ap_pitch_assist(doCompute)
         end
         local speed=B747_rescale(1,3,10,10,math.abs(flight_director_pitch-simDR_AHARS_pitch_heading_deg_pilot))
         if pitchPid.output==nil then return 0 end
-        local out = math.max(-1, math.min(1, pitchPid.output - AP_PITCH_RATE_K * simDR_ap_pitch_rate))
+        local out = math.max(-1, math.min(1, pitchPid.output - AP_PITCH_RATE_K * gain ^ AP_RATE_POW * simDR_ap_pitch_rate))
         retval=B747_interpolate_value(B747DR_sim_pitch_ratio,out,-1,1,speed) 
         
         --retval=pitchPid.output

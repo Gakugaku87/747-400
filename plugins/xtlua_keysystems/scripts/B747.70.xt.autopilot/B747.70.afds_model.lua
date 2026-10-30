@@ -122,6 +122,11 @@
 --    ft; LAND 3 to LAND 2 not shown below LAND2_RA ft. FLARE and ROLLOUT
 --    armed with LAND 3 or 2. From a multi-channel G/A into another mode
 --    only the first channel stays engaged.
+--  - FLARE (step 4b; ATA22 p.294, p.332, p.342; FCOM p.671): engaged armed
+--    from G/S at the flare height for the sink rate (FLARE_HEIGHT, of gear
+--    altitude); the retard at RETARD_RA ft RA; at the touchdown FLARE ends
+--    (its annunciation off) into NOSE LETDOWN, until the A/P's disengage
+--    or a G/A. No pitch mode from FLARE but G/A.
 -- Pure: the switches' events and the airplane's state in; the engage
 -- state, the warning, the roll mode and the modes asked for out.
 --   local A = B747_afds_model                      -- in XTLua, after dofile
@@ -183,6 +188,11 @@ M.NO_LAND_RA = 600
 M.LAND2_RA = 200
 -- the AFDS status (the init's numbers)
 M.STATUS = {FD = 1, CMD = 2, LAND2 = 3, LAND3 = 4, NO_AUTOLAND = 5}
+-- FLARE (step 4b): its height (ft of gear altitude) by the sink rate (ft/s)
+-- (ATA22 p.342: 40 under 8.5, 50 from 12.5 to 14.5, 60 over 18; between
+-- them straight: an estimate); the retard RETARD_RA ft RA (p.294)
+M.FLARE_HEIGHT = {{8.5, 40}, {12.5, 50}, {14.5, 50}, {18, 60}}
+M.RETARD_RA = 25
 
 -- the state
 function M.new()
@@ -193,7 +203,21 @@ function M.new()
         flch_near = nil, loc_arm = false, gs_arm = false, loc_new = false,
         fd_auto = false, inhibit = false, ra_low = false, ra_t = 0,
         arm = {L = false, C = false, R = false}, first = nil, multi_t = 0, multi_app = false,
-        land = nil, flare_arm = false, rollout_arm = false, was_ga = false}, {})
+        land = nil, flare_arm = false, rollout_arm = false, was_ga = false,
+        letdown = false, retard = false}, {})
+end
+
+-- the flare height (ft of gear altitude) for a sink rate (ft/s)
+function M.flare_height(sink)
+    local t = M.FLARE_HEIGHT
+    if sink <= t[1][1] then return t[1][2] end
+    for i = 2, #t do
+        if sink <= t[i][1] then
+            local a, b = t[i - 1], t[i]
+            return a[2] + (b[2] - a[2]) * (sink - a[1]) / (b[1] - a[1])
+        end
+    end
+    return t[#t][2]
 end
 
 -- the channels engaged
@@ -251,7 +275,7 @@ end
 -- the pitch modes' transitions (table p.335): from G/S only before LOC is
 -- active, from G/A only at 400 ft RA, none from FLARE
 local function pitch_enabled(s, inp)
-    if inp.old_pitch == "FLARE" then return false end
+    if s.pitch == "FLARE" then return false end
     if s.pitch == "GS" and s.roll == "LOC" then return false end
     return not (s.pitch == "GA" and not inp.ground and (inp.ra or 0) < M.GA_RA)
 end
@@ -271,7 +295,7 @@ end
 -- into G/S (table p.335): from V/S, ALT, FLCH, VNAV or none; not from
 -- T/O, G/A or FLARE
 local function gs_enabled(s, inp)
-    if s.pitch == "GS" or inp.old_pitch == "FLARE" then return false end
+    if s.pitch == "GS" or s.pitch == "FLARE" then return false end
     return not toga(s.pitch)
 end
 -- the 109 and the 570 capture G/S either first (FCOM p.669), a 405 only
@@ -376,8 +400,8 @@ function M.lnav(s, inp)
     end
 end
 
--- the V/S switch (`inp`: vs the present vertical speed, old_pitch, ground,
--- ra): the target it synced, or nil when not engaged
+-- the V/S switch (`inp`: vs the present vertical speed, ground, ra): the
+-- target it synced, or nil when not engaged
 function M.vs(s, inp)
     if not pitch_enabled(s, inp) then return nil end
     gs_replaced(s)
@@ -418,7 +442,7 @@ end
 function M.vnav(s, inp)
     if s.vnav_arm then
         s.vnav_arm = false
-    elseif s.pitch ~= "VNAV" and s.pitch ~= "GS" and inp.old_pitch ~= "FLARE" then
+    elseif s.pitch ~= "VNAV" and s.pitch ~= "GS" and s.pitch ~= "FLARE" then
         s.vnav_arm = true
         -- APP armed: disarmed (ATA22 p.343, p.357)
         if s.loc_arm and s.gs_arm then s.loc_arm, s.gs_arm = false, false end
@@ -514,10 +538,11 @@ end
 -- sensors, else NO AUTOLAND; NO AUTOLAND too in a multi-channel approach
 -- down to one channel after a status, or without one by NO_LAND_RA; LAND 3
 -- kept below LAND2_RA. FLARE and ROLLOUT armed with LAND 3 or 2
--- (FCOM p.671)
+-- (FCOM p.671), FLARE until it engages (step 4b), the status kept through
+-- the flare and the nose let down
 local function land_status(s, inp)
     local n = M.engaged(s)
-    local approach = s.loc_arm or s.gs_arm or s.roll == "LOC" or s.pitch == "GS"
+    local approach = s.loc_arm or s.gs_arm or s.roll == "LOC" or s.pitch == "GS" or s.pitch == "FLARE" or s.letdown
     if not approach then s.multi_app = false end
     if approach and n >= 2 then s.multi_app = true end
     local ra = inp.ra or 9999
@@ -536,8 +561,9 @@ local function land_status(s, inp)
         land = "NO_AUTOLAND"
     end
     s.land = land
-    s.flare_arm = land == "LAND3" or land == "LAND2"
-    s.rollout_arm = s.flare_arm
+    local landing = land == "LAND3" or land == "LAND2"
+    s.flare_arm = landing and s.pitch == "GS"
+    s.rollout_arm = landing
 end
 
 -- each frame: `inp` {fd = {L, R} the switches ON, hyd, bank, engine,
@@ -585,6 +611,7 @@ function M.update(s, inp)
             s.loc_arm, s.gs_arm = false, false
             disarm(s)
             s.land, s.flare_arm, s.rollout_arm, s.multi_app = nil, false, false, false
+            s.letdown, s.retard = false, false
             return {all_off = true}
         end
         return nil
@@ -603,6 +630,22 @@ function M.update(s, inp)
         s.lnav_arm = false
         set_roll(s, "LNAV")
     end
+    -- FLARE (step 4b; ATA22 p.342; FCOM p.671): armed (LAND 3 or 2, G/S
+    -- engaged), engaged at the flare height for the sink rate (`inp.gear_alt`,
+    -- the inertial `inp.ivs`, else `inp.vs`); the retard RETARD_RA ft RA
+    -- into it (ATA22 p.294), kept through the touchdown (the A/T's IDLE
+    -- stays: FCOM p.671); at the touchdown FLARE ends and the nose comes
+    -- down (NOSE LETDOWN: p.294, p.332) until the A/P is disengaged or a G/A
+    if s.flare_arm and s.pitch == "GS" and not inp.ground and inp.gear_alt
+        and inp.gear_alt <= M.flare_height(-(inp.ivs or inp.vs or 0) / 60) then
+        set_pitch(s, "FLARE")
+        s.flare_arm = false
+    end
+    if s.pitch == "FLARE" and inp.ground then
+        s.pitch, s.letdown = nil, true
+    end
+    if s.letdown and (M.engaged(s) == 0 or toga(s.pitch)) then s.letdown = false end
+    s.retard = (s.pitch == "FLARE" and (inp.ra or 9999) <= M.RETARD_RA) or (s.retard and s.letdown)
     -- on the ground the approach modes end (the old code's, until step 4's
     -- rollout)
     if inp.ground and (s.loc_arm or s.gs_arm or s.roll == "LOC" or s.pitch == "GS") then
@@ -705,22 +748,19 @@ function M.vnav_lost(s)
     s.vnav_arm = false
 end
 
--- the FMA's pitch (the init's numbers): active and armed. The old code's
--- FLARE comes first; T/O and G/A TO/GA; VNAV the old VNAV's sub-mode
--- (`inp.vnav_fma`); the arms G/S, else VNAV, else FLARE (step 4a: with
--- LAND 3 or 2, until the old code's FLARE)
+-- the FMA's pitch (the init's numbers): active and armed. T/O and G/A
+-- TO/GA; VNAV the old VNAV's sub-mode (`inp.vnav_fma`); FLARE (step 4b);
+-- the arms G/S, else VNAV, else FLARE (step 4a: with LAND 3 or 2)
 function M.pitch_fma(s, inp)
     local active = 0
-    if inp.old_pitch == "FLARE" then
-        active = M.PITCH_FMA.FLARE
-    elseif toga(s.pitch) then
+    if toga(s.pitch) then
         active = M.PITCH_FMA.TOGA
     elseif s.pitch == "VNAV" then
         active = inp.vnav_fma or M.PITCH_FMA.VNAV_SPD
     elseif s.pitch then
         active = M.PITCH_FMA[s.pitch]
     end
-    local armed = (s.flare_arm and inp.old_pitch ~= "FLARE") and M.PITCH_FMA.FLARE or 0
+    local armed = s.flare_arm and M.PITCH_FMA.FLARE or 0
     if s.gs_arm then
         armed = M.PITCH_FMA.GS
     elseif s.vnav_arm then

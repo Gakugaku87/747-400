@@ -24,6 +24,9 @@
 -- window's or the speed then, the cap (MCP + 25 or the speed then), the 15
 -- degrees (or 1 below the PLI) blended into the speed from 600 to 1,200
 -- fpm, a go-around flown, on the ground too.
+-- Step 4b: FLARE flown on a model of X-Plane's 747 at 130, 150 and 170 kt
+-- over the ground (0.5 to 3 ft/s, 150 to 1,000 ft past the G/S
+-- transmitter), the sink rate held under the deceleration's, NOSE LETDOWN.
 local T = dofile("tests/lib/check.lua")("afds_pitch_model")
 local P = dofile("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.afds_pitch_model.lua")
 
@@ -457,5 +460,83 @@ end})
 T.check(during < 15, ("the signal lost 20 s: still within 15 ft of the beam (%.1f)"):format(during))
 -- no G/S law off the mode, and none on the ground
 T.check(P.update(P.new(), gs_inp({mode = "GS", ground = true, ra = 0, gs_dots = 0}), DT) == nil, "G/S on the ground: not here")
+
+-- step 4b: FLARE on a model of X-Plane's 747 (fitted to s114's first run:
+-- the attitude second order, 1.4 rad/s, damping 0.35, 0.4 s late; the path
+-- 0.45 s behind the attitude; the main gear 35 ft behind the radio
+-- altimeter's arm), from the AFDS model's flare height on the 3 degree
+-- path, no wind; the gear's path without a flare on the runway 90 ft before
+-- the transmitter: about 1.5 ft/s 450 ft past it (ATA22 p.294, p.346)
+local AF = dofile("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.afds_model.lua")
+local function flare(gs_kt)
+    local dt, ft = 0.02, 0.3048
+    local s, i = P.new(), P.inputs()
+    local vf = gs_kt * 1852 / 3600 / ft
+    local gam, alpha0, off = -3, 6.3, 0.24
+    local h = AF.flare_height(vf * math.sin(math.rad(3)))
+    local x = -90 - h / math.tan(math.rad(3))
+    local th, thd, hist, t, thmax, hd = alpha0 + gam, 0, {}, 0, 0, 0
+    i.active, i.mode, i.tas, i.ias = true, "FLARE", gs_kt, gs_kt
+    s.cmd, s.law, s.last_vs = th + off, "GS", vf * math.sin(math.rad(gam)) * 60
+    while h > 0 and t < 30 do
+        i.pitch, i.vs, i.gear_alt = th, vf * math.sin(math.rad(gam)) * 60, h
+        hist[#hist + 1] = P.update(s, i, dt)
+        local cmd = hist[math.max(#hist - 20, 1)] - off
+        thd = thd + (1.96 * (cmd - th) - 2 * 0.35 * 1.4 * thd) * dt
+        th = th + thd * dt
+        gam = gam + ((th - alpha0) - gam) * dt / 0.45
+        hd = vf * math.sin(math.rad(gam)) - 35 * math.rad(thd)
+        h, x, t = h + hd * dt, x + vf * dt, t + dt
+        thmax = math.max(thmax, th)
+    end
+    return {sink = -hd, x = x, thmax = thmax}
+end
+for _, gs in ipairs({130, 150, 170}) do
+    local r = flare(gs)
+    T.check(r.sink > 0.5 and r.sink < 3, ("FLARE at %d kt over the ground: the touchdown 0.5 to 3 ft/s (%.1f)"):format(gs, r.sink))
+    T.check(r.x > 150 and r.x < 1000, ("FLARE at %d kt: 150 to 1,000 ft past the transmitter (%.0f)"):format(gs, r.x))
+    T.check(r.thmax < 8, ("FLARE at %d kt: the pitch under 8 degrees (%.1f)"):format(gs, r.thmax))
+end
+-- the sink rate under the deceleration's: held (no command to sink faster)
+local sf = P.new()
+local fi = P.inputs()
+fi.active, fi.mode, fi.tas, fi.ias, fi.pitch, fi.vs, fi.gear_alt = true, "FLARE", 140, 140, 3, -480, 50
+local c0 = P.update(sf, fi, DT)
+local c1 = P.update(sf, fi, DT)
+T.near(c1, c0, 0.01, "FLARE at 50 ft sinking 8 ft/s (under the deceleration's 12): the sink held")
+-- under 5 ft of gear altitude FLARE's command is not raised, sinking
+-- faster than the profile too
+local sh = P.new()
+local hi = P.inputs()
+hi.active, hi.mode, hi.tas, hi.ias, hi.pitch, hi.vs, hi.gear_alt = true, "FLARE", 150, 150, 6, -480, 8
+local h1 = P.update(sh, hi, DT)
+local h2 = P.update(sh, hi, DT)
+T.check(h2 > h1, "FLARE at 8 ft sinking 8 ft/s: the command up")
+hi.gear_alt = 4
+local h3 = P.update(sh, hi, DT)
+T.check(h3 <= h2, "under 5 ft: the command not raised")
+-- NOSE LETDOWN on the ground after FLARE: from a degree under the attitude
+-- (FLARE's last command higher), down a degree a second, the nose held down
+-- at -1 under 2 degrees (ATA22 p.332)
+local sl = P.new()
+local li = P.inputs()
+li.active, li.mode, li.tas, li.ias, li.pitch, li.vs, li.gear_alt = true, "FLARE", 140, 140, 5, -90, 0
+sl.cmd, sl.law = 6, "FLARE"
+P.update(sl, li, DT)
+li.mode, li.ground, li.letdown = nil, true, true
+local l1 = P.update(sl, li, DT)
+T.near(l1, 5 - P.LETDOWN_STEP - P.LETDOWN_RATE * DT, 1e-9, "NOSE LETDOWN: from a degree under the attitude (5), not FLARE's command (6)")
+local l2 = P.update(sl, li, 1)
+T.near(l1 - l2, P.LETDOWN_RATE, 1e-9, "NOSE LETDOWN: the command down LETDOWN_RATE a second")
+li.pitch = 3
+for _ = 1, 10 do l2 = P.update(sl, li, 1) end
+T.equal(l2, P.LETDOWN_PITCH, "NOSE LETDOWN: down to LETDOWN_PITCH")
+local sl2 = P.new()
+li.pitch = 4
+P.update(sl2, li, DT)
+li.pitch = 1.9
+T.equal(P.update(sl2, li, DT), P.LETDOWN_PITCH, "under 2 degrees on the ground: the nose held down at once")
+li.letdown = false
+T.check(P.update(sl, li, DT) == nil, "NOSE LETDOWN's end: no law on the ground")
 
 T.done()

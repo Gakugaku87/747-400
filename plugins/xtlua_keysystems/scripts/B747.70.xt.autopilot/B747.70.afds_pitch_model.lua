@@ -39,7 +39,14 @@
 --    distance from the beam's centre and the deviation's rate): closing
 --    on the beam no farther than the change of path at G_LIMIT and
 --    GS_LEAD_S of the closing take, or within GS_BAND.
---  - FLARE: not here (the old autoland until step 4).
+--  - FLARE (step 4b; ATA22 p.294, p.346): from where it engages on the
+--    gear altitude, the sink rate then until a steady deceleration of
+--    FLARE_DECEL down to TD_SINK ft/s at the touchdown asks for less (the
+--    deceleration's change of path fed forward), followed at K_FLARE
+--    within FLARE_G, not raised under FLARE_HOLD_FT; then NOSE LETDOWN
+--    on the ground (p.294, p.332): the command down LETDOWN_RATE degrees
+--    a second from LETDOWN_STEP under the attitude, at LETDOWN_PITCH
+--    under LETDOWN_DOWN degrees.
 -- A vertical speed asks for its flight path; the command moves at
 -- K_PATH times the flight path's error a second, the path flown taken
 -- LEAD_S ahead on the inertial vertical acceleration (damping: ATA22
@@ -143,6 +150,32 @@ M.GS_LEAD_S = 6
 M.GS_BAND = 0.1
 M.GS_DOT_DEG = 0.272
 M.GS_DOTS_MAX = 2.45
+-- FLARE and NOSE LETDOWN (step 4b): the touchdown's sink rate (ATA22 p.294,
+-- p.346); estimates (the sources give the touchdown, 450 ft past the G/S
+-- transmitter, not the law): the sink rate held, then a steady deceleration
+-- of FLARE_DECEL g to it, followed at K_FLARE with a FLARE_LEAD_S lead, the
+-- command's rate within FLARE_G, not raised under FLARE_HOLD_FT of gear
+-- altitude (the 5 ft of NOSE LETDOWN's logic, p.294: raised to the
+-- touchdown, the nose was still coming up a degree a second with the
+-- elevator 0.5 up, which the A/P's servo takes most of a second to take
+-- off, and X-Plane's 747 skipped 2 s). On a model of X-Plane's 747 about
+-- 1.5 to 2.5 ft/s 250 to 850 ft past the transmitter at 130 to 170 kt over
+-- the ground; in X-Plane (s114, 150 kt) about 1 ft/s 340 to 360 ft past it
+-- (notes/ATA-22.md §26). NOSE LETDOWN: the nose lowered LETDOWN_RATE
+-- degrees a second from LETDOWN_STEP under the attitude (from the attitude
+-- the nose went on up and the airplane skipped 2 s), held down at
+-- LETDOWN_PITCH under LETDOWN_DOWN degrees (ATA22 p.332: on the ground and
+-- under 2); the rate, the step and the pitch estimates
+M.TD_SINK = 1.5
+M.FLARE_DECEL = 0.045
+M.FLARE_G = 0.2
+M.K_FLARE = 0.5
+M.FLARE_LEAD_S = 0.8
+M.FLARE_HOLD_FT = 5
+M.LETDOWN_RATE = 1
+M.LETDOWN_STEP = 1
+M.LETDOWN_PITCH = -1
+M.LETDOWN_DOWN = 2
 
 local G = 9.80665
 local FT = 0.3048
@@ -187,6 +220,9 @@ function M.inputs()
         gs_valid = false,   -- both receivers' glide slope
         ra = 0,             -- the radio altitude, ft
         gs = 0,             -- the ground speed, kt
+        -- FLARE and NOSE LETDOWN (step 4b)
+        gear_alt = 0,       -- the gear altitude, ft
+        letdown = false,    -- NOSE LETDOWN (the AFDS model's)
     }
 end
 
@@ -287,6 +323,8 @@ local function law_of(s, inp, dt)
     if mode == "VNAV" and inp.vnav_law == "FLCH" then return "SPD", M.protect(inp.spd_sel, inp) end
     if mode == "FLCH" then return "SPD", M.protect(inp.spd_sel, inp) end
     if mode == "GS" then return "GS" end
+    if mode == "FLARE" then return "FLARE" end
+    if mode == nil and inp.letdown then return "LETDOWN" end
     if mode == "TO" then
         if inp.ground then
             -- the rotation's speed; V2 the IAS/MACH window's
@@ -313,10 +351,11 @@ end
 function M.update(s, inp, dt)
     dt = dt or 0
     local law, target, blend
-    if inp.active and (not inp.ground or inp.mode == "TO" or inp.mode == "GA") then
+    if inp.active and (not inp.ground or inp.mode == "TO" or inp.mode == "GA" or inp.letdown) then
         law, target, blend = law_of(s, inp, dt)
     end
     if law ~= "GS" then s.gs_d = nil end
+    if law ~= "FLARE" then s.flare_s = nil end
     if law == nil then
         s.cmd, s.law, s.target, s.cap_vs, s.last_vs, s.vs_rate = nil, nil, nil, nil, nil, 0
         s.last_ias, s.ias_rate, s.mode = nil, 0, inp.active and inp.mode or nil
@@ -329,6 +368,19 @@ function M.update(s, inp, dt)
     if s.last_vs and dt > 0 then s.vs_rate = (s.vs_rate or 0) + ((inp.vs - s.last_vs) / dt - (s.vs_rate or 0)) * k end
     if s.last_ias and dt > 0 then s.ias_rate = s.ias_rate + ((inp.ias - s.last_ias) / dt - s.ias_rate) * k end
     s.last_vs, s.last_ias = inp.vs, inp.ias
+    if law == "LETDOWN" then
+        -- the nose lowered to the runway from under the attitude at the
+        -- touchdown (FCOM p.671), then held down under LETDOWN_DOWN degrees
+        -- (ATA22 p.294, p.332)
+        if s.law ~= "LETDOWN" then s.cmd = math.min(s.cmd or inp.pitch, inp.pitch) - M.LETDOWN_STEP end
+        if inp.pitch < M.LETDOWN_DOWN then
+            s.cmd = M.LETDOWN_PITCH
+        else
+            s.cmd = math.max(s.cmd - M.LETDOWN_RATE * dt, M.LETDOWN_PITCH)
+        end
+        s.law, s.target = law, nil
+        return s.cmd
+    end
     if law == "TOGND" then
         -- T/O on the ground: the F/D's 8 degrees (FCOM p.666)
         s.cmd, s.law, s.target = target, law, target
@@ -356,7 +408,7 @@ function M.update(s, inp, dt)
         lim = toga and M.TOGA_RATE or math.deg(M.SPD_G * G / v)
         s.cap_vs = nil
     else
-        local want = target
+        local want, ff = target, 0
         if law == "ALT" then
             -- a new altitude: closing on it, no more than the vertical speed
             -- now until the level-off asks for less; the altitude
@@ -368,6 +420,20 @@ function M.update(s, inp, dt)
             want = M.alt_vs(target, inp.alt + inp.vs / 60 * M.ANTICIPATE_S)
             if s.cap_vs then
                 if math.abs(want) < s.cap_vs then s.cap_vs = nil else want = want > 0 and s.cap_vs or -s.cap_vs end
+            end
+        elseif law == "FLARE" then
+            -- the sink rate where FLARE began, held until a steady
+            -- deceleration of FLARE_DECEL to TD_SINK at the touchdown asks
+            -- for less; the deceleration's change of path fed forward
+            local sink = -inp.vs / 60
+            if s.flare_s == nil then s.flare_s = math.max(sink, M.TD_SINK) end
+            local a = M.FLARE_DECEL * G / FT
+            local prof = math.sqrt(M.TD_SINK * M.TD_SINK + 2 * a * math.max(inp.gear_alt or 0, 0))
+            if prof < s.flare_s then
+                want = -prof * 60
+                ff = math.deg(a * FT / v) * clamp(sink / prof, 0, 2)
+            else
+                want = -s.flare_s * 60
             end
         elseif law == "GS" then
             -- the distance from the beam's centre and the beam's vertical
@@ -387,10 +453,12 @@ function M.update(s, inp, dt)
             end
             want = beam - clamp(M.GS_K * s.gs_d, -M.GS_VS_MAX, M.GS_VS_MAX)
         end
-        local flown = inp.vs + (s.vs_rate or 0) * M.LEAD_S
-        rate = M.K_PATH * (path(want, v) - path(flown, v))
+        local flown = inp.vs + (s.vs_rate or 0) * (law == "FLARE" and M.FLARE_LEAD_S or M.LEAD_S)
+        rate = (law == "FLARE" and M.K_FLARE or M.K_PATH) * (path(want, v) - path(flown, v)) + ff
+        if law == "FLARE" and (inp.gear_alt or 0) < M.FLARE_HOLD_FT then rate = math.min(rate, 0) end
     end
     s.law, s.target = law, target
+    if law == "FLARE" then lim = math.deg(M.FLARE_G * G / v) end
     s.cmd = clamp(s.cmd + clamp(rate, -lim, lim) * dt, M.PITCH_MIN, M.PITCH_MAX)
     -- T/O and G/A not over the PLI (FCOM p.664)
     if (inp.mode == "TO" or inp.mode == "GA") and inp.pli then
