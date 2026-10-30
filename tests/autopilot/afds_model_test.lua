@@ -38,7 +38,8 @@ local function inp(o)
         capture_alt = o.capture_alt, vnav_engaged = o.vnav_engaged or false, vnav_fma = o.vnav_fma,
         old_law = o.old_law, old_armed_pitch = o.old_armed_pitch, old_hold_alt = o.old_hold_alt,
         loc_detect = o.loc_detect, gs_detect = o.gs_detect, course_err = o.course_err,
-        gs_after_loc = o.gs_after_loc, sensors = o.sensors, power = o.power, gear_alt = o.gear_alt}
+        gs_after_loc = o.gs_after_loc, sensors = o.sensors, power = o.power, gear_alt = o.gear_alt,
+        fcc = o.fcc, mcp = o.mcp, stby = o.stby, iru = o.iru, adc = o.adc, trim = o.trim, wheel = o.wheel}
 end
 
 -- engage with both F/Ds OFF: V/S and HDG HOLD (FCOM p.640; ATA22 p.266)
@@ -187,6 +188,15 @@ local function approach(st, o)
     o.ra = o.ra or 1400
     return A.update(st, app_inp(o))
 end
+-- three channels engaged in LOC and G/S at 1,400 ft (LAND 3)
+local function land3()
+    local st = A.new()
+    A.update(st, app_inp())
+    A.cmd(st, "L", app_inp())
+    A.app(st, app_inp())
+    for _ = 1, 55 do approach(st) end
+    return st
+end
 -- LOC and G/S captured below 1,500 ft with the track on the course: the
 -- armed channels engage 5 s later
 m = A.new()
@@ -225,16 +235,20 @@ T.equal(A.engaged(mt), 3, "within 2 degrees: engaged")
 -- with one sensor
 T.equal((function() approach(m, {sensors = 2}); return A.status(m) end)(), A.STATUS.LAND2, "two sensors valid: LAND 2")
 T.equal((function() approach(m, {power = 2}); return A.status(m) end)(), A.STATUS.LAND2, "two power sources: LAND 2")
-T.equal((function() approach(m, {sensors = 1}); return A.status(m) end)(), A.STATUS.NO_AUTOLAND, "one sensor: NO AUTOLAND")
-T.check(not m.flare_arm and not m.rollout_arm, "NO AUTOLAND: no FLARE or ROLLOUT arm")
-T.check(not m.rwy_align, "NO AUTOLAND: no runway align (the A/P's rudder with LAND 3 or 2: FCOM p.670)")
+-- one sensor of a kind left (two of the same failed) with LOC and G/S
+-- captured: the multi-channel engagement removed, all three (step 5a;
+-- ATA22 p.320, p.322), AUTOPILOT DISC; with no A/P the F/D's FD
+local md = land3()
+T.equal(A.engaged(md) .. A.status(md), "3" .. A.STATUS.LAND3, "(land3: LAND 3)")
+approach(md, {sensors = 1})
+T.check(A.engaged(md) == 0 and md.disc, "5a: a dual failure of an autoland sensor: all three disengaged, AUTOPILOT DISC")
+T.check(not md.flare_arm and not md.rollout_arm and not md.rwy_align, "no FLARE or ROLLOUT arm, no runway align")
+T.equal(A.status(md), A.STATUS.FD, "no A/P engaged: FD, not NO AUTOLAND")
 approach(m)
 T.equal(A.status(m), A.STATUS.LAND3, "back: LAND 3")
 -- below 200 ft LAND 3 to LAND 2 not shown (FCOM p.662)
 approach(m, {ra = 150, sensors = 2})
 T.equal(A.status(m), A.STATUS.LAND3, "150 ft, a sensor lost: still LAND 3")
-approach(m, {ra = 150, sensors = 1})
-T.equal(A.status(m), A.STATUS.NO_AUTOLAND, "150 ft, two lost: NO AUTOLAND")
 -- a channel's hydraulics lost: LAND 2; down to one: NO AUTOLAND
 approach(m, {ra = 800, hyd = {3000, 0, 3000}})
 T.equal(A.engaged(m) .. A.status(m), "2" .. A.STATUS.LAND2, "a channel lost (system 2): two engaged, LAND 2")
@@ -861,4 +875,109 @@ T.equal(gk.pitch, "GA", "no capture from G/A at 600 ft")
 A.update(gk, inp({fdL = true, ra = 1000, capture = true, capture_alt = 1500}))
 T.equal(gk.pitch, "ALT", "above 800 ft: ALT")
 T.check(gk.roll == "GA" and A.toga_active(gk), "G/A's roll kept: TO/GA still active")
+
+-- 5a: the engage interlocks (ATA22 p.302-322; FCOM p.47). Each FCC's
+-- power (AC and DC: p.191): to engage and to stay engaged
+local e = A.new()
+local noL, noC = {L = false, C = true, R = true}, {L = true, C = false, R = true}
+T.equal(A.cmd(e, "L", inp({fcc = noL})), nil, "5a: L's FCC unpowered: CMD L does not engage")
+T.check(not e.L, "L not engaged")
+A.cmd(e, "C", inp({fcc = noL}))
+T.check(e.C, "C's FCC powered: CMD C engages")
+A.update(e, inp({fcc = noC}))
+T.check(not e.C and e.disc, "C's FCC unpowered once engaged: disengaged, AUTOPILOT DISC")
+-- the MCP (either of its channels: p.209, p.314)
+e = A.new()
+T.equal(A.cmd(e, "R", inp({mcp = false})), nil, "the MCP not valid: no engage")
+A.cmd(e, "R", inp())
+A.update(e, inp({mcp = false}))
+T.check(not e.R and e.disc, "the MCP lost: disengaged")
+-- the 28V DC STBY bus: needed to engage, not to stay engaged (p.304)
+e = A.new()
+T.equal(A.cmd(e, "L", inp({stby = false})), nil, "the 28V DC STBY bus off: no engage")
+A.cmd(e, "L", inp())
+A.update(e, inp({stby = false}))
+T.check(e.L and not e.disc, "the 28V DC STBY bus lost once engaged: still engaged")
+-- the inner loop sensors: a dual failure of the IRUs' attitude or the ADCs
+-- (p.316, p.382)
+e = A.new()
+T.equal(A.cmd(e, "L", inp({iru = 1})), nil, "two IRUs failed: no engage")
+T.equal(A.cmd(e, "L", inp({adc = 1})), nil, "two ADCs failed: no engage")
+A.cmd(e, "L", inp({iru = 2, adc = 2}))
+T.check(e.L, "one of each failed: engaged")
+A.update(e, inp({iru = 2, adc = 1}))
+T.check(not e.L and e.disc, "the second ADC failed: disengaged")
+-- the autotrim valid: L FCC SRM L's, R SRM R's, C either (p.224); a single
+-- channel disengages without it (p.318); both SRMs lost, no A/P engages
+-- (FCOM p.47)
+e = A.new()
+local srmR = {L = false, R = true}
+T.equal(A.cmd(e, "L", inp({trim = srmR})), nil, "SRM L not valid: CMD L does not engage")
+A.cmd(e, "C", inp({trim = srmR}))
+T.check(e.C, "CMD C engages on SRM R's autotrim valid")
+A.update(e, inp({trim = srmR}))
+T.check(e.C, "C stays engaged on SRM R's")
+A.update(e, inp({trim = {L = false, R = false}}))
+T.check(not e.C and e.disc, "both lost: the single channel disengaged")
+for _, ch in ipairs(A.CHANNELS) do A.cmd(e, ch, inp({trim = {L = false, R = false}})) end
+T.equal(A.engaged(e), 0, "both SRMs lost: no channel engages")
+local mt3 = land3()
+approach(mt3, {trim = {L = false, R = false}})
+T.equal(A.engaged(mt3), 3, "multi-channel: the autotrim valid lost, three still engaged (single only: p.318)")
+-- the control wheel past 25 degrees: no single channel's arm (p.314)
+e = A.new()
+T.equal(A.cmd(e, "L", inp({wheel = 30})), nil, "the wheel at 30 degrees: no engage")
+A.cmd(e, "L", inp({wheel = -20}))
+T.check(e.L, "at 20 degrees: engaged")
+-- why a CMD push does not engage (for X-Plane's log): the first condition
+-- missing, nil when it engages
+local rf = A.new()
+T.equal(A.refused(rf, "L", inp()), nil, "all there: not refused")
+T.equal(A.refused(rf, "L", inp({hyd = {3000, 3000, 0}})), "hydraulics", "system 3 out: hydraulics")
+T.equal(A.refused(rf, "L", inp({fcc = noL})), "FCC power", "L's FCC unpowered: FCC power")
+T.equal(A.refused(rf, "L", inp({mcp = false})), "MCP", "the MCP")
+T.equal(A.refused(rf, "L", inp({iru = 1})), "IRUs", "two IRUs failed: IRUs")
+T.equal(A.refused(rf, "L", inp({adc = 1})), "ADCs", "two ADCs failed: ADCs")
+T.equal(A.refused(rf, "L", inp({stby = false})), "28V DC STBY", "the battery bus off: 28V DC STBY")
+T.equal(A.refused(rf, "L", inp({trim = srmR})), "autotrim valid", "SRM L lost: autotrim valid")
+T.equal(A.refused(rf, "L", inp({wheel = 30})), "control wheel", "the wheel at 30 degrees: control wheel")
+A.cmd(rf, "C", inp())
+T.equal(A.refused(rf, "L", inp()), "engaged", "C engaged: engaged")
+A.bar(rf, true)
+T.equal(A.refused(rf, "L", inp()), "disengage bar", "the bar down: disengage bar")
+-- the multi-channel arms: only valid channels (and the 28V DC STBY bus);
+-- removed with a dual sensor failure once LOC and G/S are captured (p.316),
+-- not before (X-Plane's ILS signal out of range)
+local ma = A.new()
+A.update(ma, app_inp())
+A.cmd(ma, "L", app_inp())
+A.app(ma, app_inp({fcc = noC}))
+T.check(not ma.arm.C and ma.arm.R, "APP: C's FCC unpowered, only R armed")
+local mb = A.new()
+A.update(mb, app_inp())
+A.cmd(mb, "L", app_inp())
+A.app(mb, app_inp({stby = false}))
+T.equal(A.armed(mb), 0, "APP without the 28V DC STBY bus: no arm")
+A.app(mb, app_inp())
+A.app(mb, app_inp())
+T.equal(A.armed(mb), 2, "(APP again: C and R armed)")
+A.update(mb, app_inp({sensors = 0}))
+T.equal(A.armed(mb), 2, "before the captures no sensor counted: the arms kept")
+approach(mb, {ra = 1600})
+approach(mb, {ra = 1600, sensors = 1})
+T.check(A.armed(mb) == 0 and A.engaged(mb) == 1, "captured, a dual sensor failure: the arms removed, L still engaged")
+-- a single channel in FLARE disengaged under 5 ft RA (p.318); three go on
+-- into NOSE LETDOWN
+local mf = land3()
+approach(mf, {ra = 60, gear_alt = 45, vs = -700})
+T.equal(mf.pitch, "FLARE", "(LAND 3: FLARE at 45 ft for 11.7 ft/s)")
+approach(mf, {ra = 4, gear_alt = 1, vs = -120})
+T.equal(A.engaged(mf), 3, "three channels in FLARE under 5 ft: engaged")
+mf = land3()
+approach(mf, {ra = 60, gear_alt = 45, vs = -700})
+approach(mf, {ra = 30, gear_alt = 26, vs = -400, hyd = {0, 0, 3000}})
+T.check(A.engaged(mf) == 1 and mf.pitch == "FLARE", "C and R lost in FLARE: L alone, FLARE kept")
+T.equal(A.status(mf), A.STATUS.NO_AUTOLAND, "NO AUTOLAND")
+approach(mf, {ra = 4, gear_alt = 1, vs = -120, hyd = {0, 0, 3000}})
+T.check(A.engaged(mf) == 0 and mf.disc, "a single channel in FLARE under 5 ft: disengaged, AUTOPILOT DISC")
 T.done()

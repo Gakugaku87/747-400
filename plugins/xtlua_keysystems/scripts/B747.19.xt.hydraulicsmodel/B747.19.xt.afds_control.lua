@@ -23,6 +23,10 @@ simDR_ap_pitch_rate = find_dataref("sim/flightmodel/position/Q")
 -- the roll and yaw rates (the same: the inner roll loop, 6-3 step 4d)
 simDR_ap_roll_rate = find_dataref("sim/flightmodel/position/P")
 simDR_ap_yaw_rate = find_dataref("sim/flightmodel/position/R")
+-- the channels engaged (a single channel's aileron limit, 6-3 step 5a)
+B747DR_ap_ctl_cmd_L = find_dataref("laminar/B747/autopilot/cmd_L_mode/status")
+B747DR_ap_ctl_cmd_C = find_dataref("laminar/B747/autopilot/cmd_C_mode/status")
+B747DR_ap_ctl_cmd_R = find_dataref("laminar/B747/autopilot/cmd_R_mode/status")
  local lastUp=0
  local lastDown=0
 local pitchRecord={}
@@ -669,6 +673,13 @@ rollPid:compute()
 -- X-Plane's (at 75 frames a second a 0.9 degree a second roll-in read 0 and
 -- 1.8 to 2.8 by turns, and the integral stayed held: s115)
 local AP_ROLL_RATE_K, AP_ROLL_YAW_K, AP_ROLL_HOLD, AP_ROLL_SETTLE, AP_ROLL_RATE_TAU = 0.04, 0.01, 1, 2, 0.3
+-- a single channel's aileron command limited to AP_ROLL_SINGLE of the
+-- wheel (6-3 step 5a; ATA22 p.316, p.320: the FCC limits it, a monitor
+-- trips at 25 degrees of wheel; the limit's own value is not given, so the
+-- monitor's: an estimate). 1 is the captain's wheel stop, 90 degrees
+-- (ATA27 p.59). The recorded single-channel flights stayed under 23 degrees
+-- but for s115's rudder steps (28)
+local AP_ROLL_SINGLE = 25 / 90
 local ap_roll_last_cmd = nil
 local ap_roll_still = 0
 local ap_roll_cmd_rate = 0
@@ -689,6 +700,9 @@ function ap_roll_assist(doCompute)
     rollPid.kp=B747DR_pidRollP
     rollPid.ki=B747DR_pidRollI
     rollPid.kd=0
+    local single = B747DR_ap_ctl_cmd_L + B747DR_ap_ctl_cmd_C + B747DR_ap_ctl_cmd_R == 1
+    local lim = single and AP_ROLL_SINGLE or 1
+    rollPid.minout, rollPid.maxout = -lim, lim
     if simDR_autopilot_servos_on>0 and (B747DR_ap_FMA_active_roll_mode>0) then
         rollPid.input = simDR_AHARS_roll_heading_deg_pilot
         rollPid.target= flight_director_roll
@@ -704,7 +718,7 @@ function ap_roll_assist(doCompute)
         local speed=B747_rescale(0.1,3,10,5,math.abs(flight_director_roll-simDR_AHARS_roll_heading_deg_pilot))
         if rollPid.output==nil then return 0 end
         local out = rollPid.output + AP_ROLL_RATE_K * (rate - simDR_ap_roll_rate) - AP_ROLL_YAW_K * simDR_ap_yaw_rate
-        retval=B747_interpolate_value(B747DR_sim_roll_ratio,math.max(-1, math.min(1, out)),-1,1,speed)
+        retval=B747_interpolate_value(B747DR_sim_roll_ratio,math.max(-lim, math.min(lim, out)),-1,1,speed)
         --print("flight_director_roll "..flight_director_roll.." speed "..speed .." simDR_AHARS_roll_heading_deg_pilot "..simDR_AHARS_roll_heading_deg_pilot .." retval "..retval)
     else
         -- the A/P off: the aileron trim integrator synchronized to the

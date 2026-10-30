@@ -677,13 +677,43 @@ B747DR_afds_bus_dc = find_dataref("laminar/B747/electrical/bus/dc")
 B747DR_afds_irs_nav_valid = find_dataref("laminar/B747/irs/nav_valid")
 B747DR_afds_ra_valid = find_dataref("laminar/B747/ra/valid")
 B747DR_ap_cmd_armed = deferred_dataref("laminar/B747/autopilot/cmd_armed", "array[3]")
+-- the engage interlocks (step 5a; ATA22 p.302-322): each FCC powered (its
+-- AC and DC bus), the MCP (DC 3 or DC 2: p.191, p.209), the 28V DC STBY
+-- bus (the battery bus: p.190), the inner loop sensors (the IRUs' attitude,
+-- the ADCs), each SRM's autotrim valid (B747.45.xt.srm.lua), the control
+-- wheel (degrees, the captain's)
+B747DR_afds_bus_bat = find_dataref("laminar/B747/electrical/bus/bat_main")
+B747DR_afds_irs_att_valid = find_dataref("laminar/B747/irs/att_valid")
+B747DR_afds_adc_valid = find_dataref("laminar/B747/airdata/valid")
+B747DR_afds_autotrim_valid = find_dataref("laminar/B747/flt_ctrls/stab_trim/autotrim_valid")
+B747DR_afds_wheel = find_dataref("laminar/B747/cablecontrols/wheel")
 local AFDS_FCC_BUS = {2, 0, 1}
+local afdsFcc = {L = false, C = false, R = false}
+local afdsTrim = {L = false, R = false}
+-- the FCCs powered (L, C, R as AFDS_FCC_BUS): how many
 local function afds_power()
 	local n = 0
-	for _, i in ipairs(AFDS_FCC_BUS) do
-		if B747DR_afds_bus_ac[i] > 0.5 and B747DR_afds_bus_dc[i] > 0.5 then n = n + 1 end
+	for k, ch in ipairs(B747_afds_model.CHANNELS) do
+		local i = AFDS_FCC_BUS[k]
+		afdsFcc[ch] = B747DR_afds_bus_ac[i] > 0.5 and B747DR_afds_bus_dc[i] > 0.5
+		if afdsFcc[ch] then n = n + 1 end
 	end
 	return n
+end
+local function afds_interlocks(inp)
+	inp.fcc = afdsFcc
+	inp.mcp = B747DR_afds_bus_dc[2] > 0.5 or B747DR_afds_bus_dc[1] > 0.5
+	inp.stby = B747DR_afds_bus_bat > 0.5
+	local iru, adc = 0, 0
+	for i = 0, 2 do
+		if B747DR_afds_irs_att_valid[i] > 0.5 then iru = iru + 1 end
+		if B747DR_afds_adc_valid[i] > 0.5 then adc = adc + 1 end
+	end
+	inp.iru, inp.adc = iru, adc
+	afdsTrim.L = B747DR_afds_autotrim_valid[0] > 0.5
+	afdsTrim.R = B747DR_afds_autotrim_valid[1] > 0.5
+	inp.trim = afdsTrim
+	inp.wheel = B747DR_afds_wheel
 end
 local function afds_sensors()
 	local iru, ra = 0, 0
@@ -752,9 +782,11 @@ local function afds_inp()
 	-- HDG SEL valid (step 2a): no heading in NORM's polar areas (FCOM p.1046)
 	afdsIn.hdg_valid = not (B747DR_ap_hdg_ref_true > 0.5 and B747DR_ap_toggle_sw[30] < 0.5)
 	afdsIn.lnav_valid = B747DR_fms_lnav_valid == 1
-	-- the autoland status's redundancy (step 4a)
+	-- the autoland status's redundancy (step 4a), the engage interlocks
+	-- (step 5a: the FCCs' power after afds_power)
 	afdsIn.power = afds_power()
 	afdsIn.sensors = afds_sensors()
+	afds_interlocks(afdsIn)
 	-- FLARE's height (step 4b): the gear altitude, the inertial vertical
 	-- speed (the VSI's lags)
 	afdsIn.gear_alt = afds_gear_alt()

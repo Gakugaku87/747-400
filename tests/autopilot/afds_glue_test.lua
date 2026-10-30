@@ -38,6 +38,20 @@ rt:set("sim/time/total_running_time_sec", 10)
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 9000)
 for i = 1, 3 do rt:set("laminar/B747/hydraulics/pressure_" .. i, 3000) end
+-- the engage interlocks (6-3 step 5a) satisfied: the FCCs' AC and DC buses,
+-- the battery bus, the IRUs' attitude, the ADCs, both SRMs' autotrim valid
+for i = 0, 3 do
+    rt:set("laminar/B747/electrical/bus/ac", i, 1)
+    rt:set("laminar/B747/electrical/bus/dc", i, 1)
+end
+rt:set("laminar/B747/electrical/bus/bat_main", 1)
+for i = 0, 2 do
+    rt:set("laminar/B747/irs/att_valid", i, 1)
+    rt:set("laminar/B747/airdata/valid", i, 1)
+end
+local ATV = "laminar/B747/flt_ctrls/stab_trim/autotrim_valid"
+rt:set(ATV, 0, 1)
+rt:set(ATV, 1, 1)
 rt:set("sim/cockpit2/gauges/indicators/vvi_fpm_pilot", 1234)
 rt:set("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot", 2)
 rt:callout("flight_start")
@@ -97,6 +111,42 @@ rt:command(CMD .. "cmd_L")
 frames()
 T.equal(rt:get(SERVOS), 1, "CMD L: engaged")
 T.equal(rt:get(DISC, 0), 0, "the engage resets AUTOPILOT DISC")
+
+-- 6-3 step 5a: the engage interlocks through the glue (ATA22 p.302-322).
+-- SRM L's autotrim valid lost: L alone (on SRM L's) disengages with
+-- AUTOPILOT DISC, CMD L does not engage, CMD C does (SRM R's); the battery
+-- bus (the 28V DC STBY bus) lost once engaged: still engaged; AC bus 1
+-- (C's FCC) lost: out; no engage without the battery bus or with the
+-- control wheel at 30 degrees
+rt:set(ATV, 0, 0)
+frames()
+T.check(rt:get(SERVOS) == 0 and rt:get(DISC, 0) == 1, "5a: SRM L's autotrim valid lost: L out, AUTOPILOT DISC")
+rt:command(CMD .. "cmd_L")
+frames()
+T.equal(rt:get(SERVOS), 0, "CMD L without SRM L's: not engaged")
+rt:command(CMD .. "cmd_C")
+frames()
+T.equal(rt:get("laminar/B747/autopilot/cmd_C_mode/status"), 1, "CMD C on SRM R's: engaged")
+rt:set("laminar/B747/electrical/bus/bat_main", 0)
+frames()
+T.equal(rt:get("laminar/B747/autopilot/cmd_C_mode/status"), 1, "the battery bus lost: still engaged (ATA22 p.304)")
+rt:set("laminar/B747/electrical/bus/ac", 0, 0)
+frames()
+T.check(rt:get(SERVOS) == 0 and rt:get(DISC, 0) == 1, "AC bus 1 lost: C's FCC off, disengaged, AUTOPILOT DISC")
+rt:set("laminar/B747/electrical/bus/ac", 0, 1)
+rt:set(ATV, 0, 1)
+rt:command(CMD .. "cmd_C")
+frames()
+T.equal(rt:get(SERVOS), 0, "the battery bus off: no engage")
+rt:set("laminar/B747/electrical/bus/bat_main", 1)
+rt:set("laminar/B747/cablecontrols/wheel", 30)
+rt:command(CMD .. "cmd_C")
+frames()
+T.equal(rt:get(SERVOS), 0, "the control wheel at 30 degrees: no engage (ATA22 p.314)")
+rt:set("laminar/B747/cablecontrols/wheel", 0)
+rt:command(CMD .. "cmd_L")
+frames()
+T.check(rt:get(SERVOS) == 1 and rt:get(DISC, 0) == 0, "CMD L: engaged again")
 
 -- the hydraulics of the left channel (system 3) lost: out, the warning
 rt:set("laminar/B747/hydraulics/pressure_3", 400)
