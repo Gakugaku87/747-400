@@ -2,10 +2,11 @@
 -- yaw damper modules (YDM), their operational modes (the power-up test,
 -- the ground operation, the fade-in and fade-out, the flight mode, the
 -- fault INOP mode and its autorecovery), engagement and INOP, and the
--- authority by the valid IRUs and ADCs. Logic and sources:
--- docs/overhaul/notes/ATA-22.md §2.4, §4.7 and §39 (ATA22 22-21 p.52-90,
--- the modes' figure p.85, the command's p.87; ATA27 p.42, p.656; FCOM
--- p.931, p.949-950, p.958).
+-- authority by the valid IRUs and ADCs; their command (step 6b): the
+-- dutch roll damping on the sideslip rate. Logic and sources:
+-- docs/overhaul/notes/ATA-22.md §2.4, §4.7, §39 and §40 (ATA22 22-21
+-- p.52-90, the modes' figure p.85, the command's p.87; ATA27 p.42, p.656,
+-- p.760; FCOM p.931, p.949-950, p.958).
 --
 --   local Y = B747_yd_model               -- in XTLua, after dofile
 --   local Y = dofile(".../B747.19.yd_model.lua")   -- in the tests
@@ -29,6 +30,19 @@ M.TRANSIENT_S = 5       -- a fault shorter than this recovers by itself (p.84)
 -- the valid ADCs of its two (L and R: ATA27 p.42). One IRU with both ADCs
 -- is "variable" (no value: an estimate between); no IRU, INOP
 M.AUTH_FULL, M.AUTH_VAR, M.AUTH_LOW = 4.0, 2.5, 1.0
+-- the command (step 6b): "positioning the rudder in response to computed
+-- airplane sideslip rate and impact pressure" (ATA27 p.760). The sideslip
+-- rate from the IRUs' lateral acceleration, yaw and roll rates and bank
+-- and the ADCs' AOA and true airspeed; its gain, rudder degrees per degree
+-- a second, inversely with the impact pressure from K_REF at K_REF_KT
+-- CAS, within K_MIN to K_MAX. The gain is not in the sources: fitted to
+-- the custom acf's dutch roll (tests/tools/yd_design.lua on s125 and s126,
+-- the yaw dampers OFF: damping 0.05 at 150 kt with the flaps at 30, 0.21
+-- at 250 kt clean) for a damping ratio of about 0.4 (an estimate)
+M.K_REF, M.K_REF_KT = 2.0, 150
+M.K_MIN, M.K_MAX = 0.2, 3.0
+M.K_NO_ADC_KT = 250     -- without an ADC: the gain at this CAS, the ground speed for the true airspeed (an estimate)
+M.G = 9.80665
 
 local ENGAGED = {[M.GROUND] = true, [M.FADE_IN] = true, [M.FLIGHT] = true, [M.FADE_OUT] = true}
 
@@ -43,6 +57,14 @@ function M.inputs()
         iru_nav = 0,                -- IRUs in NAV (one more than before: autorecovery, p.84)
         adc = 0,                    -- valid ADCs of the two
         fault = {false, false},     -- a module's own fault (laminar/B747/flt_ctrls/fail/yaw_damper)
+        -- the command's inputs (step 6b; X-Plane's signs, right plus)
+        cas = 0,                    -- kt (the ADCs)
+        tas = 0,                    -- m/s (the ADCs)
+        gs = 0,                     -- m/s (the IRUs)
+        alpha = 0,                  -- degrees (the ADCs)
+        pitch = 0, roll = 0,        -- degrees (the IRUs)
+        p = 0, r = 0,               -- roll and yaw rates, degrees per second (the IRUs)
+        ny = 0,                     -- lateral load factor, g (the IRUs)
     }
 end
 
@@ -56,6 +78,31 @@ function M.authority(iru, adc)
     if iru >= 2 then return M.AUTH_FULL end
     if iru == 1 then return adc >= 2 and M.AUTH_VAR or M.AUTH_LOW end
     return 0
+end
+
+-- the impact pressure for a CAS (kt), over the standard sea level pressure
+local function qc(kt)
+    local x = kt / 661.47
+    return (1 + 0.2 * x * x) ^ 3.5 - 1
+end
+-- the gain (rudder degrees per degree a second of sideslip rate) at a CAS
+function M.gain(kt)
+    if kt <= 1 then return M.K_MAX end
+    return math.max(M.K_MIN, math.min(M.K_MAX, M.K_REF * qc(M.K_REF_KT) / qc(kt)))
+end
+-- the sideslip rate (degrees a second; X-Plane's sign: the nose swinging
+-- right of the flown path plus) from the kinematics: r cos(alpha) -
+-- p sin(alpha) - (ny g + g cos(pitch) sin(bank)) / V. In a steady
+-- coordinated turn the bank's term balances the yaw rate: the turn
+-- coordination by bank and true airspeed (ATA27 p.760) is in it, and the
+-- custom acf needs no steady rudder in its turns (0.01 degree per degree
+-- of bank, tests/tools/yd_design.lua)
+function M.sideslip_rate(inp, v)
+    if v < 1 then return 0 end
+    local a, th, ph = math.rad(inp.alpha), math.rad(inp.pitch), math.rad(inp.roll)
+    local rad = math.rad(inp.r) * math.cos(a) - math.rad(inp.p) * math.sin(a)
+        - (inp.ny * M.G + M.G * math.cos(th) * math.sin(ph)) / v
+    return math.deg(rad)
 end
 
 -- One module for one frame (the figure p.85). Without its switch or power
@@ -111,10 +158,17 @@ end
 
 -- One frame. dt in seconds.
 function M.update(s, inp, dt)
-    local out = s.out or {mode = {}, engaged = {}, inop = {}, fade = {}, authority = {}}
+    local out = s.out or {mode = {}, engaged = {}, inop = {}, fade = {}, authority = {}, cmd = {}}
     local nav_up = inp.iru_nav > s.iru_nav
     s.iru_nav = inp.iru_nav
     local auth = M.authority(inp.iru, inp.adc)
+    -- the command (step 6b): the dutch roll damping, the rudder against the
+    -- sideslip rate; no modal suppression (X-Plane's airframe does not bend:
+    -- its 1 degree and the ADC overspeed's cutoff, p.86, have nothing to do)
+    local v, gain = inp.tas, M.gain(inp.cas)
+    if inp.adc == 0 then v, gain = inp.gs, M.gain(M.K_NO_ADC_KT) end
+    local beta_rate = M.sideslip_rate(inp, v)
+    out.beta_rate = beta_rate
     for i = 1, 2 do
         local y = s.ydm[i]
         step(y, inp, i, dt, nav_up)
@@ -127,6 +181,11 @@ function M.update(s, inp, dt)
         -- the command's share: none in the ground operation (p.83)
         out.fade[i] = engaged and y.fade or 0
         out.authority[i] = engaged and auth or 0
+        -- each module's rudder (degrees, right plus) within its authority
+        -- (p.86-87; ATA27 p.656), faded
+        local c = -gain * beta_rate
+        c = math.max(-out.authority[i], math.min(out.authority[i], c))
+        out.cmd[i] = c * out.fade[i]
     end
     s.out = out
     return out

@@ -144,4 +144,55 @@ do
     local out = run(s, inp, 0.1)
     T.check(out.authority[UPR] == 1 and out.mode[UPR] == Y.FLIGHT, "in flight, 1 IRU and 1 ADC: 1 degree, still engaged")
 end
+-- 6b: the command (ATA22 p.86-87; ATA27 p.656, p.760): the rudder against
+-- the sideslip rate (X-Plane's sign: the nose swinging right of the path
+-- plus) computed from the lateral acceleration, the yaw and roll rates,
+-- the bank, the AOA and the true airspeed; the gain inversely with the
+-- impact pressure, 2.0 at 150 kt (fitted to the custom acf: an estimate)
+T.near(Y.gain(150), 2.0, 1e-9, "6b: the gain at 150 kt: 2.0 degrees per degree a second")
+T.near(Y.gain(250), 0.704, 0.005, "at 250 kt: 0.70 (the impact pressure 2.84 times)")
+T.equal(Y.gain(100), Y.K_MAX, "at 100 kt: the most, 3.0")
+T.check(Y.gain(350) >= Y.K_MIN and Y.gain(350) < 0.4, "at 350 kt: 0.2 to 0.4")
+do
+    local inp = Y.inputs()
+    local v = 80
+    -- a steady level turn at 20 degrees of bank: the yaw rate g sin(bank) / V
+    inp.roll, inp.r = 20, math.deg(9.80665 * math.sin(math.rad(20)) / v)
+    T.near(Y.sideslip_rate(inp, v), 0, 1e-9, "a coordinated level turn: no sideslip rate (the turn coordination)")
+    inp.roll, inp.r = 0, 1
+    T.near(Y.sideslip_rate(inp, v), 1, 1e-9, "wings level, yawing right 1 degree a second: +1")
+    inp.r, inp.ny = 0, 0.01
+    T.near(Y.sideslip_rate(inp, v), -math.deg(0.0980665 / v), 1e-9, "a side force to the right: the path swings right, -")
+    inp.ny, inp.alpha, inp.p = 0, 10, 1
+    T.near(Y.sideslip_rate(inp, v), -math.sin(math.rad(10)), 1e-9, "rolling right at 10 degrees of AOA: - sin(alpha)")
+end
+do
+    local s, inp = ready(true)
+    inp.cas, inp.tas, inp.gs = 150, 80, 80
+    run(s, inp, 6)
+    inp.r = 1
+    local out = run(s, inp, 0.1)
+    T.near(out.cmd[UPR], -2.0, 1e-9, "flight mode at 150 kt, yawing right 1 deg/s: the upper rudder 2 degrees left")
+    T.near(out.cmd[LWR], -2.0, 1e-9, "the lower the same")
+    inp.r = 5
+    out = run(s, inp, 0.1)
+    T.equal(out.cmd[UPR], -4, "5 deg/s: within the authority, 4 degrees")
+    inp.iru, inp.adc = 1, 1
+    out = run(s, inp, 0.1)
+    T.equal(out.cmd[UPR], -1, "1 IRU and 1 ADC: 1 degree")
+    inp.iru, inp.adc, inp.r = 3, 0, 1
+    inp.gs = 100
+    out = run(s, inp, 0.1)
+    T.near(out.cmd[UPR], -Y.gain(Y.K_NO_ADC_KT), 1e-9, "no ADC: the gain at 250 kt (estimate)")
+    inp.adc, inp.air = 2, false
+    out = run(s, inp, 2.5)
+    T.check(out.mode[UPR] == Y.FADE_OUT and math.abs(out.cmd[UPR] + 1.0) < 0.05, "landed: the fade-out, half the command after 2.5 s")
+    out = run(s, inp, 3)
+    T.check(out.mode[UPR] == Y.GROUND and out.cmd[UPR] == 0, "the ground operation: no command")
+    inp.fault[LWR] = true
+    inp.air = true
+    out = run(s, inp, 1)
+    T.check(out.cmd[LWR] == 0 and out.cmd[UPR] < 0, "the lower's fault: no command from it, the upper fading in")
+end
+
 T.done()

@@ -502,6 +502,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - 段 5d（2026-10-30、notes §37）：AFDS のモデルが ILS TUNE INHIBIT（`M.ils_inhibit`）と RA TEST INHIBIT（`M.ra_test_inhibit`）を持ち、グルーが新設の `autopilot/ils_tune_inhibit`・`ra_test_inhibit`（init `B747.70.autopilot`）に書く。前の ILS の自動同調（`B747_fltmgmt_setILS`）と FMC の NAV RADIO ページの手動の同調（`B744.fms.pages.lua` の `findILS`）は、`ils_tune_inhibit` の間は周波数を変えない。
 - ELEC-18（2026-10-30、notes §38、ATA-24.md §10）：AFDS のモデルが母線の分離の要求（`M.bus_isolate_request`）を持ち、グルーが新設の `autopilot/bus_isolate_req`（init `B747.70.autopilot`）に書く。電源のモジュール（別のプラグイン `xtlua`）がそれを読んで BTB・DCIR を開き、`electrical/bus_isolated` を返す。LAND 3 にはそれが要る。
 - 段 6a（2026-10-31、notes §39）：ヨーダンパーのモデル（`plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.yd_model.lua`）が上下の YDM のモード・engage・INOP・権限を持つ。グルーは同じ油圧モジュールの `B747.19.xt.yaw_damper.lua`（則と舵の上書きの隣）で、`flt_ctrls/yaw_damper_upr_on`・`lwr_on`（INOP 灯と EICAS が読む。前は `xtlua` の操縦系統のモジュールが書いていた）と新設の `flt_ctrls/yaw_damper_mode` を書く。
+- 段 6b（2026-10-31、notes §40）：同じモデルが指令（横滑りの変化率 × 動圧のゲイン、各 ±4°）も出し、グルーが `flt_ctrls/yaw_damper_upr`・`lwr`（4° に対する比）に書く。油圧モジュールの上書きはそれを ratio changer を通さずに舵に足す。
 
 ## 7. エンジン型式
 

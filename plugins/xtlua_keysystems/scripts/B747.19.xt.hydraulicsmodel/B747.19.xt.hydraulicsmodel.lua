@@ -47,20 +47,8 @@ B747DR_pidPitchP = deferred_dataref("laminar/B747/flt_ctrls/pid/pitch/p", "numbe
 B747DR_pidPitchI = deferred_dataref("laminar/B747/flt_ctrls/pid/pitch/i", "number")
 B747DR_pidPitchD = deferred_dataref("laminar/B747/flt_ctrls/pid/pitch/d", "number")
 
-
-B747DR_pidyawP = deferred_dataref("laminar/B747/flt_ctrls/pid/yaw/p", "number")
-B747DR_pidyawI = deferred_dataref("laminar/B747/flt_ctrls/pid/yaw/i", "number")
-B747DR_pidyawD = deferred_dataref("laminar/B747/flt_ctrls/pid/yaw/d", "number")
-
-B747DR_pidyawDslipH = deferred_dataref("laminar/B747/flt_ctrls/pid/yaw/d/slip/h", "number")
-B747DR_pidyawDslipL = deferred_dataref("laminar/B747/flt_ctrls/pid/yaw/d/slip/l", "number")
-B747DR_pidyawPslipH = deferred_dataref("laminar/B747/flt_ctrls/pid/yaw/p/slip/h", "number")
-B747DR_pidyawPslipL = deferred_dataref("laminar/B747/flt_ctrls/pid/yaw/p/slip/l", "number")
-
-B747DR_pidyawDrollH = deferred_dataref("laminar/B747/flt_ctrls/pid/yaw/d/roll/h", "number")
-B747DR_pidyawDrollL = deferred_dataref("laminar/B747/flt_ctrls/pid/yaw/d/roll/l", "number")
-B747DR_pidyawProllH = deferred_dataref("laminar/B747/flt_ctrls/pid/yaw/p/roll/h", "number")
-B747DR_pidyawProllL = deferred_dataref("laminar/B747/flt_ctrls/pid/yaw/p/roll/l", "number")
+-- (the yaw dampers' PID gains, laminar/B747/flt_ctrls/pid/yaw/...: no
+-- longer used, the yaw damper model's law: 6-3 step 6b)
 B747DR_alt_capture_window        = deferred_dataref("laminar/B747/autopilot/ap_monitor/alt_capture_window", "number")
 
 simDR_AHARS_heading_deg_pilot = find_dataref("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot")
@@ -399,29 +387,17 @@ function flight_start()
   B747DR_pidPitchI = 0.07 --0.07
   B747DR_pidPitchD = 0.0002
 
-
-  B747DR_pidyawP = 1.0
-  B747DR_pidyawI = 0.00003
-  B747DR_pidyawD = 3.0
-
-  B747DR_pidyawDslipH = 0.1
-  B747DR_pidyawDslipL = 0.1
-  B747DR_pidyawPslipH = 0.02
-  B747DR_pidyawPslipL = 0.02
-
-  B747DR_pidyawDrollH = 0.1
-  B747DR_pidyawDrollL = 0.1
-  B747DR_pidyawProllH = 0.1
-  B747DR_pidyawProllL = 0.1
     --rudder
     B747DR_rudder_ratio=1.0
     B747DR_elevator_ratio   = 1.0
     if initialiseControls then
 
-      --YAW DAMPER, scaled by each rudder's ratio changer (the SRMs,
-      --B747.45.xt.srm.lua; before, both by one ratio)
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3.5,"maxout":3.5,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_lwr","dstDref":"laminar/B747/cablecontrols/lower_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio_lwr"}';
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3.5,"maxout":3.5,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_upr","dstDref":"laminar/B747/cablecontrols/upper_rudder","scaledref":"laminar/B747/flt_ctrls/rudder_ratio_upr"}';
+      --YAW DAMPER: each module's 4 degrees on its rudder, added after the
+      --ratio changers (the damper's actuator drives the summing bar of the
+      --rudder's power control module: ATA27 p.656; 6-3 step 6b. Before,
+      --3.5 degrees scaled by each rudder's ratio changer)
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-4,"maxout":4,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_lwr","dstDref":"laminar/B747/cablecontrols/lower_rudder"}';
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-4,"maxout":4,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/yaw_damper_upr","dstDref":"laminar/B747/cablecontrols/upper_rudder"}';
 
       --PEDALS AND RUDDER TRIM together (the trim moves the pedals' neutral,
       --up to 80 % of the full travel: hydraulics_override.lua), through the
