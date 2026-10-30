@@ -16,11 +16,16 @@ local function lr(l, r) return l .. string.rep(" ", math.max(1, 24 - #l - #r)) .
 -- the forecast (the descent's: B747_fms_des_forecast() for the predictions)
 local fc = {translvl = nil, tai = nil, slots = {{}, {}, {}, {}}}
 function B747_fms_des_forecast() return fc end
--- the transition level (ft): the crew's entry, else the destination's
--- (the navigation data's: FMSPG p.178), else FL180 (FCOM p.1396)
+-- the transition level (ft): the crew's entry, else the arrival
+-- procedure's stored one, else the destination's (the navigation data's:
+-- FMSPG p.178), else FL180 (FCOM p.1396)
 function B747_fms_trans_lvl()
   if fc.translvl then return fc.translvl end
-  local d = B747_fmc_route.rte.dest
+  local r = B747_fmc_route.rte
+  for _, l in ipairs(r.legs) do
+    if (l.proc == "STAR" or l.proc == "APPR") and l.ta and l.ta > 0 then return l.ta end
+  end
+  local d = r.dest
   if d and d.tl and d.tl > 0 then return d.tl end
   return 18000
 end
