@@ -888,3 +888,41 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - X-Plane の行（`B747.68.xt.fms.lua` の `B747_fmc_plan_ctr_sync`、`after_physics` で `B747_fmc_route_sync` の次）：中心の脚の行（`routeMap.row`）。MOD やもう一つの経路の中心では、X-Plane の計画（アクティブな経路）にある同じ点の行を使い、無ければそのまま。進入復行の脚と、終点を予測していない条件の脚には行が無い（§22：X-Plane の計画に書かない）ので、それを中心にしても ND の PLAN の中心は前の点のまま（違い）。ND のどちらかが PLN で、ブリッジがあり、最後に流した計画を X-Plane が持っているときだけ書く。違うときだけ書き、同じ値の書き直しは 1 秒あける。
 - 試験：新しい `tests/fms/legs_plan_ctr_test.lua`（63 件：MAP では前のまま・X-Plane に書かない、副操縦士の PLN で現用の経路の最初の点、機長の PLN で表示中のページの最初の点、PREV で 1 ページ目、9 桁目の <CTR>・STEP>・17 桁目までの区切り線・小字の MAP CTR、右の CDU はそのまま、STEP で次の点と表示中の行、ページ送り、最後の点、NEXT と LEGS キー、制限つきの <CTR>、block の制約、両席の PLN で 1 つの中心と右の STEP、機長の MAP、空中で右の CDU から ACTIVATE と EXEC、DIRECT TO の INTC CRS と修正の中の中心、ERASE、現用点の順送り）。`tests/run.sh` は 120 ファイルとも合格。
 - X-Plane（2026-10-29）：新しい `s111_legs_plan_ctr`（s110 と同じ EDDM 26R の進入路の上、EDDF 25C から EDDM・ILS26R を EXEC）。1 回目 46/47：この経路は 5 点（FI26R・RW26R・D261A・(1900)・MIQ）で 2 ページ目が終わりの破線だけになり、NEXT で中心が動かないのを作りどおりと確かめた（シナリオの期待の誤り。点の無いページの扱いを推定として書いた）。2 回目 51/51：MAP では <CTR> も STEP> も無い、機長の ND を PLN にすると X-Plane の地図が PLN、`FI26R   <CTR>     /5000A`・STEP>・17 桁目までの区切り線と小字の MAP CTR、表示中の点は現用点の行 4、STEP で RW26R と行 5、もう一度の STEP で進入復行の D261A（行は 5 のまま）、NEXT で 2 ページ目（中心は動かない）、PREV と LEGS キーで FI26R と行 4、副操縦士の ND を PLN にして右の CDU にも <CTR> と STEP>、右の STEP で両方の CDU の <CTR> が RW26R へ、ND を MAP に戻すと STEP> が消える。ND の写真で、PLAN の中心が FI26R、STEP の後は RW26R に移り、点の記号と X-Plane の地図の経路の線がそろうことを確かめた。CDU の写真は FCOM p.1330 の図の配置。`s87_legs_pages` 29/29、`s89_route_sync` 26/26、`s95_abeam` 26/26、`s97_rte2` 31/31、`s110_nd_map_ctr` 45/45、`s70_nd_airports` 39/39。Lua の誤りなし。
+
+## 43. 段 8 の段取り（2026-10-31：性能 DB と予測）
+
+- 今のコード（2026-10-31 の調べ）：
+  - ECON：CI を使うのは巡航 Mach の経験式だけ（AP `B747.70.xt.autopilot.vnavspd.lua` の `clb_crz_setSpd`：LRC＝388.2＋0.6203·GW[t]＋7.806·高度[kft] の千分率、CI 230 で LRC）。上昇・降下の速度は既定の文字列（.805/270 など）。MCP の Mach を書くだけで、CRZ の ECON SPD は変わらない（FMC-11）。
+  - OPT・MAX：重量の一次式（`B744.fms.pages.vnav.lua` の CRZ と `vnav.lrc.lua`）。STEP は常に CRZ＋2,000 ft、STEP SIZE は表示が "ICAO" の文字だけ（FMC-19）。
+  - T/C・T/D・E/D：AP の `setDistances`（約 2 秒ごと）。T/C は今の V/S から、E/D は目的地 10 NM 以内の最初の点、T/D は E/D から 290 ft/NM（FMC-12）。前の VNAV の降下（`vnav.lua`）と監視（`monitor.lua`）がそれを読む。
+  - 燃料と ETA：ETA は距離 ÷ max(275 kt, GS)、CRZ の目的地の燃料は 51.6 lb/NM の経験式、PROGRESS は今の燃料流量 × 時間（FMC-20）。LRC のページの T/D の時刻は PC の時計（`os.date("%H%I")`、%I は時）。
+  - LEGS の小字の予測、RTE DATA、DESCENT FORECAST、点ごとの風は無い（`refonly/` の型紙だけ：FMC-25）。
+  - 性能のページは X-Plane の重量（`m_total`）を使い、PERF INIT の GR WT を使わない。
+- 資料：
+  - PW4056（109。RR は資料が無いので PW を使う：推定）：PI.11.1〜11.6（p.267–273）の最大運用高度と最適高度（重量 × ISA 偏差 × buffet の余裕）、LRC の制御（重量 × 高度ごとの EPR・Mach・KIAS・燃料流量）、区間の燃料と時間（計画用）、風と高度の交換、.84/290/250 の降下の距離と時間、待機（重量 × 高度ごとの EPR・KIAS・燃料流量）。
+  - CF6-80C2B1F：PI.21（p.363–369）は 747-400F（FAA）の表で、重量は 1000 lb。GE は 570（貨物機）なので、そのまま使う。
+  - 上昇の表は無い（PI.10.38 の速度計が使えないときの上昇の姿勢と V/S だけ：`tests/flight/tools/aero_compare.lua`）。ECON の CI の表も無い。最大上昇 EPR は EEC のモデルにある。
+  - FCOM p.1257–1264（VNAV の性能）、p.1311（CRZ の高度）、p.1348–1366（CLB・CRZ・DES・RTE DATA・DESCENT FORECAST）、p.1371–1378（PROGRESS）。
+- 方針：純粋なモデルを 2 つ作る。性能 DB（`B747.68.perf_db.lua`：PI の表と補間）と予測（`B747.68.pred_model.lua`：経路に沿った上昇・巡航・降下の軌跡）。前の VNAV（AP の `setDistances` と降下の則）は段 9 で置き換え、段 8 の予測が段 9 の降下パスの元になる。重量は FMC のもの（PERF INIT の ZFW＋燃料。入れる前は X-Plane の重量）。
+- 小段：
+  - 8a：性能 DB。PI の表を型式ごとに（PW4056、CF6 は lb を kg に）、補間（重量と高度の双線形、表の外は端で止める）：LRC（Mach・KIAS・燃料流量）、最適高度、最大高度（ISA 偏差・buffet の余裕 1.3 g が既定）、待機（KIAS・燃料流量）、.84/290/250 の降下の距離と時間、風と高度の交換。CRZ・LRC のページの OPT・MAX をこれに（FMC-19 の一部）。
+  - 8b：ECON の速度（CI → 上昇・巡航・降下の速度：表が無いので LRC を元にした推定）、CRZ のページ（ECON SPD、LRC、OPT・MAX・RECMD、STEP TO と STEP SIZE、UNABLE CRZ ALT）、CLB・DES の ECON（FMC-11、FMC-19）。
+  - 8c：軌跡の予測。上昇（PI.10.38 の V/S と最大上昇 EPR からの推定の模型）、巡航（LRC の表の燃料流量、Mach が LRC から外れたときは推定）、降下（.84/290/250 の表、アイドルの燃料流量は推定）、高度と速度の制限、T/C・T/D・E/D・S/C、点ごとの高度・速度・ETA・燃料（FMC-12 の予測の側、FMC-20）。
+  - 8d：表示。LEGS の小字の予測、RTE DATA、PROGRESS（点と目的地の ETA・燃料、TO T/C・T/D）、ND の T/C・T/D（S/C・E/D の記号は DSP-23 の残り）。
+  - 8e：点ごとの風（RTE DATA の入力、伝搬と補間）と DESCENT FORECAST、それを予測に。
+- 推定になるもの：ECON の CI と速度の関係、上昇の燃料と時間、LRC から外れた Mach の燃料流量、降下の燃料、RR に PW の表、FL450 より上と表の外の重量。各小段で X-Plane の記録（カスタム acf）と比べる。
+
+## 44. 段 8a の実装（2026-10-31：性能 DB）
+
+- 性能 DB（新設の `B747.68.perf_db.lua`、純粋なモデル）：FCOM PI の表を描いた頁から読んで打ち込んだ。
+  - PW4056（109。RR は資料が無いので PW の表：推定）：PI.11.1 最大運用高度と最適高度（p.267：重量 12 段 × buffet の余裕 1.20〜1.50 g × ISA+10 以下・+15・+20、推力で決まる値の印）、PI.11.2 LRC の制御（p.268：重量 11 段 × FL270〜450 の EPR・Mach・KIAS・1 発の燃料流量 kg/h）、PI.11.5 風と高度の交換と .84/290/250 の降下の距離と時間（p.271）、PI.11.6 待機（p.272：EPR・KIAS・燃料流量、racetrack の 5 % 込み）。
+  - CF6-80C2B1F（570）：PI.21 は 747-400F（FAA）の表で、重量と燃料が lb（p.363、p.364、p.367、p.368）。kg に直して使う。推力の値は %N1。
+  - 補間：重量と高度の双線形。表の外は端で止める（重い重量の高い高度は、その重量の表の最も高い所）。降下の表より低い所は、表の最も低い高度の値に比例（推定）。最大高度の ISA 偏差は +10 以下・+15・+20 の間を直線で、+20 より上は +20。buffet の余裕は既定 1.3 g（推定：FMC の保守のページの MNVR MARGIN 1.20〜1.30）。最大高度が届く重さ（`max_alt_weight`）は二分探索。
+  - 区間の燃料と時間の表（p.269–270）は計画用なので入れていない（8c の予測の確かめに使う）。
+- FMC（`B747.68.xt.fms.lua`）：性能 DB を読み込み、型式（`laminar/B747/engines/type`）の表を選ぶ `B747_fms_perf()` と、気圧高度の外気の ISA 偏差 `B747_fms_isa_dev()`。
+- CRZ のページ（`vnav.lua` の 2 頁）：OPT・MAX を表から（前は FCOM p.1576 に合わせた重量の一次式、ISA+10 以下だけ）。STEP の点の「MAX が STEP の高度に届く重さ」も表から。%N1 と STEP の作り直しは 8b。
+- LRC のページ（`vnav.lrc.lua`）：LRC の Mach を巡航高度と重量で表から（前は一次式）、先頭の 0 を出さない（.861）。OPT・MAX も表から。T/D の時刻は X-Plane の UTC から（前は PC の時計で、`%I` を分の代わりに使っていた）。
+- 重量は今までどおり X-Plane の `m_total`（FMC の重量にするのは 8b・8c）。
+- 試験：
+  - 回帰（LuaJIT）：新設の `tests/fms/perf_db_test.lua` 36 件（表の升と升の間と端、PW と GE、RR は PW、最大高度の推力で決まる印と ISA 偏差と余裕、待機、降下、風の係数、最大高度が届く重さ）。全 123 本。
+  - X-Plane（カスタム acf）：新設の `s128_fmc_perf_db`（空中、10,000 ft）5/5：CRZ のページの OPT・MAX が FL361・FL403、CRZ ALT を FL350 にした LRC のページの Mach が .848、T/D の時刻が X-Plane の UTC（0100）。どれも、その時の重量（270 t）と外気温（ISA 偏差 0°）から性能 DB で求めた値と同じ。Lua の誤りなし。

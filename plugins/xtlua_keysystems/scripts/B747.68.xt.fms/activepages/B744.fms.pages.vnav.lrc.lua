@@ -36,7 +36,10 @@ end
 --print(os.date("%c",os.time())) 
 --local time_at_tod = os.date("%H%I",os.clock())
 
-time_at_tod = os.date("%H%I",os.time() + 3600 * dist_to_tod / currTAS)
+-- the sim's zulu time (6-1/6-2 step 8a; before, the PC's clock, and %I
+-- is the hour, not the minutes)
+local _, tod_h, tod_m = get_ETA_for_Distance(dist_to_tod, 0)
+time_at_tod = string.format("%02d%02d", tod_h, tod_m)
 
 tds = string.format("%s/  %.0f NM",time_at_tod,dist_to_tod);
 
@@ -57,17 +60,19 @@ if(crzaltString ~= "*****" and crzaltString ~= nil and gwtk ~= nil) then
   end
   turbN1=string.format("%.1f",  46.152762+0.79337*czak + 0.060831*gwtk) -- model derived fcom p.1573
 
-  -- Target speed for long range cruise, model derived from fcom p. 1577
-  local lrc = (388.2356 + 0.6203 * gwtk + 7.8061 * czak) / 1000
-  lrcMach = string.format("%.3f",lrc)
+  -- the long range cruise Mach at the cruise altitude and weight, from the
+  -- FCOM PI tables (6-1/6-2 step 8a: notes/ATA-34-61-FMC.md §44; before, a
+  -- line fitted to FCOM p.1577)
+  local lrc = B747_perf_db.lrc(B747_fms_perf(), simDR_GRWT, czak * 1000)
+  lrcMach = string.format("%.3f",lrc):gsub("^0", "")
 
 end
 
--- Optimum and Maximum Altitudes
+-- Optimum and Maximum Altitudes (the PI tables, step 8a)
 local optmax = "FL***/***"
 if(gwtk ~= nil) then
-  optA = 56.87272727 - 0.07227273 * gwtk -- model derived fcom p. 1576
-  maxA = 58.16363636 - 0.06154545  * gwtk -- model derived fcom p. 1576, ISA+10 and below
+  optA = B747_perf_db.opt_alt(B747_fms_perf(), simDR_GRWT) / 1000
+  maxA = B747_perf_db.max_alt(B747_fms_perf(), simDR_GRWT, B747_fms_isa_dev()) / 1000
   if(maxA > 45.1) then maxA=45.1 end -- service ceiling 45100 MSL
   optmax = string.format("FL%.0f/%.0f",optA*10,maxA*10) -- displayed in flight levela
 end
