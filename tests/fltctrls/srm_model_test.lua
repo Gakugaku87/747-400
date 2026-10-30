@@ -546,4 +546,26 @@ do
     T.check(not out.speed_trim, "on the ground: no speed trim")
 end
 
+-- the autotrim valid to the FCCs (6-3 step 5a; ATA22 p.122, p.142, p.224):
+-- each SRM valid (not failed, powered) and no manual trim command (the
+-- wheel switches; with two or more autopilots they are inhibited)
+do
+    local s, inp = stab_setup(200, 6)
+    local out = M.update(s, inp, DT)
+    T.check(out.autotrim_valid[1] and out.autotrim_valid[2], "5a: both SRMs: autotrim valid")
+    inp.srm_fail[1] = true
+    out = M.update(s, inp, DT)
+    T.check(not out.autotrim_valid[1] and out.autotrim_valid[2], "SRM L failed: its autotrim valid lost")
+    inp.srm_fail[1], inp.srm_pwr[2] = false, false
+    out = M.update(s, inp, DT)
+    T.check(out.autotrim_valid[1] and not out.autotrim_valid[2], "SRM R unpowered: its autotrim valid lost")
+    inp.srm_pwr[2] = true
+    inp.trim_capt = 1
+    out = M.update(s, inp, DT)
+    T.check(not out.autotrim_valid[1] and not out.autotrim_valid[2], "the wheel switches in use: both lost")
+    inp.ap_l, inp.ap_c = true, true
+    out = M.update(s, inp, DT)
+    T.check(out.autotrim_valid[1] and out.autotrim_valid[2], "two A/Ps: the switches inhibited, autotrim valid kept")
+end
+
 T.done()

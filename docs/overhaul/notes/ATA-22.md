@@ -900,3 +900,24 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
   - 5c AUTOPILOT caution とモード故障（AFDS-12）：engaged のモードの入力（LOC・G/S の 2 個目、RA の 2 個目、LNAV・VNAV の FMC など）を失うと、A/P は姿勢を保つモードで engaged のまま、FMA に amber の線、AUTOPILOT（caution）。A/P を外すか、条件の要らないモードを選ぶと消える（ATA22 p.254、p.382；FCOM p.660）。F/D の故障旗と、NCD でのバーの消し方（PW は該当のバー、GE は両方：FCOM p.660）。表示はパネルの計器（カスタム acf、2026-10-25 から承認なしで変えてよい。手順は CLAUDE.md）。
   - 5d ILS TUNE INHIBIT・RA TEST INHIBIT（AFDS-23）：A/P では LOC・G/S の捕捉から、F/D だけなら 500 ft RA の下、地上で滑走路の向きに 45° 以内・40 kt 以上・LOC/APP を選んでいないとき、ILS の自動同調を止める（p.212）。ATA 34（FMC・無線）との境界。
 - 故障の模型は無い（FCC・MCP・サーボの内部故障）ので、他のモジュールから取れる有効性（電源、油圧、IRS、ADC、RA、ILS、FMC、SRM）だけで作る（§5）。
+
+## 34. 段 5a の実装（2026-10-30：電源と engage のインターロック）
+
+- AFDS のモデル（`B747.70.afds_model.lua`）：
+  - チャンネルの有効（`M.valid`）：サーボの油圧（前から）、その FCC の電源（L は AC 3 と DC 3、C は AC 1 と DC 1、R は AC 2 と DC 2：p.191）、MCP（2 チャンネルのどちらか：DC 3 か DC 2、p.209）、inner loop のセンサー（IRU の姿勢と ADC、それぞれ 2 台以上：二重の故障で arm が外れる p.316、ADC の 2 台目の故障で外れる p.382）。engage にも engage を保つのにも要る。multi-channel の arm にも。
+  - engage だけに要るもの：28V DC STBY（電池の母線。警報の電源で、engage の後に失っても外れない：p.304。multi-channel の arm にも：p.314 の power monitor）、そのチャンネルの SRM の autotrim valid（L FCC は SRM L、R は SRM R、C はどちらか：p.224）、操縦輪 25° 以内（単一チャンネルの arm：p.314）。
+  - 単一チャンネルは、autotrim valid を失うと外れる（p.318）。両方の SRM が無いとどれも engage しない（FCOM p.47）。L と R の FCC が自分の側の SRM しか見ないのは p.224 の結線から（「1 and 2 の喪失」は C のこと、と読んだ：推定）。
+  - 単一チャンネルで FLARE のまま電波高度 5 ft（`GROUND_RA`）を下回ると外れる（p.318）。FLARE は LAND 3・2 でしか arm しないので、FLARE の後に 1 台に減ったときだけ。
+  - 2・3 台で LOC と G/S の捕捉の後（FLARE・NOSE LETDOWN・ROLLOUT も）、同じ種類の autoland センサーが 1 台だけになると（`inp.sensors` < 2）全部が外れる（p.320、p.322。2 台は「non-isolated disconnect」、3 台は「engage removal」で、どのチャンネルかは書いていないので全部：推定）。multi-channel の arm もそこで外れる（p.316）。捕捉の前は見ない：X-Plane の ILS は範囲の外で信号が無くなり、FCC の NCD（故障ではない）と区別できない。IRU と電波高度計の故障は捕捉の時に arm が外れる。
+  - 外れたときは前と同じ自動の解除（AUTOPILOT DISC）。A/P が 1 台も無いときは autoland の状態を出さない（F/D の FD。前は全部外れても NO AUTOLAND が残った）。
+- SRM（`B747.45.srm_model.lua`、グルー `B747.45.xt.srm.lua`）：autotrim valid（SRM が有効＝故障でなく電源があり、操縦輪のトリムのスイッチの指令が無い：ATA22 p.122、p.142）を新設の `laminar/B747/flt_ctrls/stab_trim/autotrim_valid[2]`（init `B747.45.fltCtrls`）に書く。A/P 2 台以上ではスイッチが効かないので valid のまま。A/P 1 台でスイッチを使うと外れるのは前からのコマンド（`autopilot/trim_disengage`）でも起きる（同じ結果）。
+- グルー（`B747.70.xt.autopilot.lua`）：FCC の電源（`afds_power` が L・C・R ごとに）、MCP、電池の母線（`electrical/bus/bat_main`）、`irs/att_valid` と `airdata/valid` の数、`autotrim_valid`、操縦輪の角度（`cablecontrols/wheel`）をモデルに渡す。
+- 内側のロールのループ（`B747.19.xt.afds_control.lua`）：単一チャンネル（CMD の状態の和が 1）のとき、補助翼の指令（PID の出力と積分も）を操縦輪 25°（25/90）までにする（p.316：単一チャンネルの補助翼の指令は制限され、25° を超えると監視が働く。制限の値そのものは無いので監視の値：推定）。これまでの記録では単一チャンネルの操縦輪は 23° まで（s115 の方向舵の段差だけ 28°）。
+- 試験の初期化（`B747.68.xt.fms.lua`）：空中開始で FMS が押す CMD L を、入るまで 0.5 秒おきに最大 10 回押し直す。IRU と ADC のモジュールは読み込みの 3 秒後から動く（最初の読みが 0 のため）ので、約 3 秒後の CMD L が入ったり入らなかったりした（s118 の 1 回目）。
+- 試験：
+  - 回帰（LuaJIT）：AFDS のモデル +41（チャンネルの有効：FCC の電源・MCP・DC STBY（engage だけ）・IRU と ADC の二重故障、SRM の autotrim valid（L・R・C の結線、単一チャンネルだけ外れる、両方で engage しない）、操縦輪 25°、multi-channel の arm（有効なチャンネルだけ、DC STBY、捕捉の後のセンサーの二重故障、捕捉の前は外さない）、単一チャンネルの FLARE の 5 ft、3 台は外れない、入らない理由 `M.refused`。前の「センサー 1 個で NO AUTOLAND」は「全部外れて AUTOPILOT DISC、状態は FD」に）、グルー +8（SRM L の autotrim valid で L が外れ C が入る、電池の母線は engage の後なら外れない、AC 1 で C が外れる、電池の母線と操縦輪 30° で入らない）、油圧のモジュール +2（単一チャンネルの補助翼は操縦輪 25° まで、2 台なら越える）、SRM のモデル +5（autotrim valid：故障・電源・操縦輪のスイッチ、2 台の A/P ではスイッチが効かないので保つ）。全 121 本。
+  - X-Plane（カスタム acf）：
+    - 1 回目の一覧（X-Plane を 20:47 に起動してから 5〜8 回目の読み込み）：`s118_afds_interlocks`（新設）24/27：SRM L の故障で L が入らず C が入る、SRM R も故障で C が外れて AUTOPILOT DISC、どれも入らない、戻すと入る、ADC は 1 台では外れず 2 台目で外れて入らない、IRU も 2 台目で外れる。落ちた 3 つは空中開始の初期化の CMD L が入らなかったこと（上の試験の初期化で直した）とその続き。`s99_afds_engage` 36/36。`s115_rudder_steps` 4/4（単一チャンネルの操縦輪は最大 22.5° で、上限には届かず）。`s114_autoland` 21/21（LAND 3、3 台の FLARE で 5 ft を下回っても外れない。接地は主脚の高さ約 0.2 ft で降下が止まって 1 ft ほど浮き（+75 fpm）、浮き止めでピッチが 6.3° から 3.1° に下がってから 1.38 g：段 5a とは別の FLARE の残り）。Lua の誤りなし。
+    - 診断（シナリオは作業用で、リポジトリには入れない）：空中開始の直後 0.6 秒は IRU の姿勢と ADC が無効、0.9 秒後には有効。X-Plane 起動直後の最初のフライトでは AC 1・3 と DC 2・3 が無く（電池と standby だけ：TESTING.md の既知の性質）、ADC は L だけ、SRM の autotrim valid は無く、A/P は入らない（正しい）。
+    - 2 回目（X-Plane を起動し直して捨ての s66 のあと）：`s118_afds_interlocks` 27/27。
+- 作っていないもの：FCC・MCP・サーボの内部故障（program pin、servo loop、LVDT、hot short、自己試験）、電源投入の試験中の engage の禁止（時間が無い）、aileron exceedance の監視が働く故障、detent と camout（操縦士の override：単一は AUTOPILOT caution、2 台は両方、3 台はそのチャンネルが外れる p.322。X-Plane の操縦桿の入力は A/P の出力に足されるので、段 5c で見る）、first-in-command の移り（p.324：G/A からの残りは今の作りのまま）。

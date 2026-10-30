@@ -1711,11 +1711,26 @@ B747DR_fms_toggle_sw		= find_dataref("laminar/B747/toggle_switch/position")
 B747CMD_ap_switch_alt_hold_mode			= find_command("laminar/B747/autopilot/button_switch/alt_hold_mode")
 B747CMD_ap_switch_cmd_L					= find_command("laminar/B747/autopilot/button_switch/cmd_L")
 B747DR_ap_target_altitude               	= find_dataref("laminar/B747/autopilot/altitude/target")
+B747DR_fms_ap_cmd_L					= find_dataref("laminar/B747/autopilot/cmd_L_mode/status")
+-- CMD L again until it engages, INFLIGHT_AP_TRIES times INFLIGHT_AP_S apart:
+-- the engage interlocks (6-3 step 5a) wait for the IRUs and the ADCs, whose
+-- modules start 3 s after the load (their first reads are 0), about when
+-- this runs
+local INFLIGHT_AP_TRIES, INFLIGHT_AP_S = 10, 0.5
+local inflightAP_tries = 0
+function retry_inflightAP_cmd()
+	if B747DR_fms_ap_cmd_L > 0.5 or inflightAP_tries >= INFLIGHT_AP_TRIES then return end
+	inflightAP_tries = inflightAP_tries + 1
+	B747CMD_ap_switch_cmd_L:once()
+	run_after_time(retry_inflightAP_cmd, INFLIGHT_AP_S)
+end
 function fin_activate_inflightAP()
 	-- ALT HOLD after the F/D's default V/S and HDG HOLD (the AFDS model,
 	-- 6-3 step 1a), then the A/P in the F/D's modes
 	B747CMD_ap_switch_alt_hold_mode:once()
 	B747CMD_ap_switch_cmd_L:once()
+	inflightAP_tries = 0
+	run_after_time(retry_inflightAP_cmd, INFLIGHT_AP_S)
 	B747DR_ap_target_altitude=math.floor(simDR_pressureAlt1/100)*100
 	
 	B747DR_CAS_advisory_status[233] = 0

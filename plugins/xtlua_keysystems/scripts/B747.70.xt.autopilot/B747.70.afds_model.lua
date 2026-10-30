@@ -11,7 +11,8 @@
 --    channel when the disengage bar is up, no other channel is engaged (a
 --    second channel only by the approach's multi-channel arm: ATA22 p.314,
 --    p.318) and its servos have hydraulic pressure (L system 3, C 1, R 2:
---    ATA22 p.10-12; 1000 psi as the old code: estimate). On the ground
+--    ATA22 p.10-12; 1000 psi as the old code: estimate), with the engage
+--    interlocks (step 5a, below). On the ground
 --    too (the old code's 400 ft is in no source; 250 ft after takeoff is
 --    an operating limit: FCOM p.80).
 --  - Disengage: the bar (all; no engage while it is down), either control
@@ -133,6 +134,23 @@
 --  - Runway align (step 4d; ATA22 p.360, figure p.361; FCOM p.670): with
 --    LAND 3 or 2 in LOC (multi-channel; G/A and ROLLOUT end it with LOC):
 --    the roll law's rudder, no annunciation.
+--  - The engage interlocks (step 5a; ATA22 p.302-322; FCOM p.47): a
+--    channel valid has its FCC powered (115V AC and 28V DC: L AC 3 and DC
+--    3, C AC 1 and DC 1, R AC 2 and DC 2, p.191), the MCP valid (either of
+--    its channels, DC 3 or DC 2: p.209), its servos' hydraulics and the
+--    inner loop sensors (the IRUs' attitude and the ADCs: a dual failure
+--    removes the arm, p.316; the ADCs' second, p.382); it engages and stays
+--    engaged only so. To engage also the 28V DC STBY bus (the battery bus,
+--    the warning's power: its loss once engaged disengages nothing, p.304),
+--    the channel's SRM's autotrim valid (L FCC SRM L's, R SRM R's, C
+--    either: p.224; both SRMs lost, no engage: FCOM p.47) and the control
+--    wheel within WHEEL_ARM degrees (a single channel's arm, p.314). A
+--    single channel disengages without its autotrim valid or on the ground
+--    in FLARE (under GROUND_RA ft RA, p.318); two or three with LOC and G/S
+--    captured on a dual failure of one kind of autoland sensor, which also
+--    removes the multi-channel arms (p.316, p.320, p.322: all three: an
+--    estimate). Before the captures X-Plane's ILS signal is missing out of
+--    range, which is no failure (the FCC's NCD), so the arms wait for them.
 -- Pure: the switches' events and the airplane's state in; the engage
 -- state, the warning, the roll mode and the modes asked for out.
 --   local A = B747_afds_model                      -- in XTLua, after dofile
@@ -203,6 +221,14 @@ M.RETARD_RA = 25
 -- ATA22 p.360's 2 ft is about X-Plane's main gear height there: its radio
 -- altitude reads about 3.3 ft as the main gear touches)
 M.ROLLOUT_RA = 5
+-- the engage interlocks (step 5a): a single channel's arm removed with the
+-- control wheel past WHEEL_ARM degrees (ATA22 p.314); a single channel in
+-- FLARE disengaged under GROUND_RA ft RA (p.318); the inner loop and
+-- autoland sensors failed with fewer than SENSORS_MIN valid (a dual
+-- failure: p.316, p.322)
+M.WHEEL_ARM = 25
+M.GROUND_RA = 5
+M.SENSORS_MIN = 2
 
 -- the state
 function M.new()
@@ -237,6 +263,41 @@ end
 -- the channels armed for multi-channel (step 4a)
 function M.armed(s)
     return (s.arm.L and 1 or 0) + (s.arm.C and 1 or 0) + (s.arm.R and 1 or 0)
+end
+-- what a channel lacks to be valid (step 5a; ATA22 p.302, p.314-316), or
+-- nil: its servos' hydraulic pressure (`inp.hyd`), its FCC's power
+-- (`inp.fcc`, {L, C, R}: AC and DC), the MCP (`inp.mcp`), two of the inner
+-- loop sensors of each kind (`inp.iru`: the IRUs' attitude, `inp.adc`: how
+-- many are valid). An input left out counts as valid
+local function invalid(ch, inp)
+    if ((inp.hyd or {})[M.HYD[ch]] or 0) < M.HYD_MIN then return "hydraulics" end
+    if inp.fcc and not inp.fcc[ch] then return "FCC power" end
+    if inp.mcp == false then return "MCP" end
+    if (inp.iru or 3) < M.SENSORS_MIN then return "IRUs" end
+    if (inp.adc or 3) < M.SENSORS_MIN then return "ADCs" end
+    return nil
+end
+function M.valid(ch, inp) return invalid(ch, inp) == nil end
+-- the channel's autotrim valid (`inp.trim`, {L, R}: each SRM's): L FCC SRM
+-- L's, R SRM R's, C either (ATA22 p.224)
+local function trim_valid(ch, inp)
+    local t = inp.trim
+    if not t then return true end
+    if ch == "L" then return t.L end
+    if ch == "R" then return t.R end
+    return t.L or t.R
+end
+-- why a CMD push would not engage channel ch: the first condition missing
+-- (the disengage bar, a channel engaged, the interlocks of M.cmd), or nil
+function M.refused(s, ch, inp)
+    if s.bar then return "disengage bar" end
+    if s[ch] or M.engaged(s) > 0 then return "engaged" end
+    local why = invalid(ch, inp)
+    if why then return why end
+    if inp.stby == false then return "28V DC STBY" end
+    if not trim_valid(ch, inp) then return "autotrim valid" end
+    if math.abs(inp.wheel or 0) > M.WHEEL_ARM then return "control wheel" end
+    return nil
 end
 local function disarm(s)
     s.arm.L, s.arm.C, s.arm.R = false, false, false
@@ -317,10 +378,11 @@ local function gs_after_loc(inp)
 end
 
 -- a CMD switch pushed: channel ch. `inp`: {hyd = {[1] = psi, [2], [3]},
--- bank, engine, ground}. Returns the other modes asked for ({pitch}) or nil
+-- bank, engine, ground} and the interlocks (step 5a: M.valid's, `stby` the
+-- 28V DC STBY bus, `trim`, `wheel` the control wheel's degrees). Returns
+-- the other modes asked for ({pitch}) or nil
 function M.cmd(s, ch, inp)
-    if s.bar or s[ch] or M.engaged(s) > 0 then return nil end
-    if ((inp.hyd or {})[M.HYD[ch]] or 0) < M.HYD_MIN then return nil end
+    if M.refused(s, ch, inp) then return nil end
     s[ch] = true
     s.first = ch
     s.disc = false
@@ -480,8 +542,8 @@ end
 -- the APP switch: APP armed (both), the second push disarms; else LOC and
 -- G/S armed (each unless engaged) when both are enabled or engaged; the
 -- arms of LNAV (p.354) and VNAV (p.340) end. With a channel engaged the
--- others with hydraulic pressure arm for multi-channel (step 4a; ATA22
--- p.314)
+-- others valid arm for multi-channel (step 4a; ATA22 p.314; step 5a: with
+-- the 28V DC STBY bus, the power monitor's)
 function M.app(s, inp)
     if s.loc_arm and s.gs_arm then
         s.loc_arm, s.gs_arm = false, false
@@ -492,9 +554,9 @@ function M.app(s, inp)
     if s.roll ~= "LOC" then s.loc_arm = true end
     if s.pitch ~= "GS" then s.gs_arm = true end
     s.lnav_arm, s.vnav_arm = false, false
-    if M.engaged(s) > 0 and not s.bar then
+    if M.engaged(s) > 0 and not s.bar and inp.stby ~= false then
         for _, ch in ipairs(M.CHANNELS) do
-            if not s[ch] and ((inp.hyd or {})[M.HYD[ch]] or 0) >= M.HYD_MIN then s.arm[ch] = true end
+            if not s[ch] and M.valid(ch, inp) then s.arm[ch] = true end
         end
     end
 end
@@ -545,7 +607,8 @@ end
 -- with three and triple power sources and sensors (`inp.power`,
 -- `inp.sensors`: how many of each are valid), LAND 2 with at least two
 -- sensors, else NO AUTOLAND; NO AUTOLAND too in a multi-channel approach
--- down to one channel after a status, or without one by NO_LAND_RA; LAND 3
+-- down to one channel after a status, or without one by NO_LAND_RA (with
+-- no channel engaged none: the F/D's FD, step 5a); LAND 3
 -- kept below LAND2_RA. FLARE and ROLLOUT armed with LAND 3 or 2
 -- (FCOM p.671), FLARE and ROLLOUT until they engage (steps 4b and 4c),
 -- the status kept through the flare, the nose let down and the rollout;
@@ -568,7 +631,7 @@ local function land_status(s, inp)
             land = "NO_AUTOLAND"
         end
         if land == "LAND2" and s.land == "LAND3" and ra < M.LAND2_RA then land = "LAND3" end
-    elseif approach and s.multi_app and ra < M.MULTI_RA and (s.land or ra < M.NO_LAND_RA) then
+    elseif approach and n >= 1 and s.multi_app and ra < M.MULTI_RA and (s.land or ra < M.NO_LAND_RA) then
         land = "NO_AUTOLAND"
     end
     s.land = land
@@ -578,17 +641,32 @@ local function land_status(s, inp)
     s.rwy_align = landing and s.roll == "LOC"
 end
 
+-- LOC and G/S captured, or the flare and the rollout after them: the
+-- autoland sensors monitored (step 5a)
+local function landing_modes(s)
+    return (s.roll == "LOC" or s.roll == "ROLLOUT") and (s.pitch == "GS" or s.pitch == "FLARE" or s.letdown)
+end
+
 -- each frame: `inp` {fd = {L, R} the switches ON, hyd, bank, engine,
 -- ground, ra, hdg (the heading HDG HOLD holds), lnav_valid, at_spd (the
--- A/T in SPD), dt}. The channels without hydraulic pressure drop out; the
--- TO/GA switches' inhibit; the F/D switched ON first asks for its modes;
--- everything off once neither the A/P nor a F/D is on; HDG HOLD's heading,
--- LNAV's engage. Returns the other modes asked for ({pitch} or
--- {all_off = true}) or nil
+-- A/T in SPD), dt; the interlocks (step 5a: M.valid's, trim, sensors)}.
+-- The channels no longer valid drop out, a single one also without its
+-- autotrim valid or on the ground in FLARE, two or three on a dual failure
+-- of the autoland sensors in the landing modes; the TO/GA switches'
+-- inhibit; the F/D switched ON first asks for its modes; everything off
+-- once neither the A/P nor a F/D is on; HDG HOLD's heading, LNAV's engage.
+-- Returns the other modes asked for ({pitch} or {all_off = true}) or nil
 function M.update(s, inp)
     local was = M.engaged(s)
     for _, ch in ipairs(M.CHANNELS) do
-        if s[ch] and ((inp.hyd or {})[M.HYD[ch]] or 0) < M.HYD_MIN then s[ch] = false end
+        if s[ch] and not M.valid(ch, inp) then s[ch] = false end
+    end
+    if M.engaged(s) == 1 then
+        local ch = s.L and "L" or (s.C and "C" or "R")
+        if not trim_valid(ch, inp) or (s.pitch == "FLARE" and (inp.ra or 9999) < M.GROUND_RA) then s[ch] = false end
+    end
+    if M.engaged(s) >= 2 and landing_modes(s) and (inp.sensors or 3) < M.SENSORS_MIN then
+        s.L, s.C, s.R = false, false, false
     end
     dropped(s, was)
     -- the TO/GA switches: inhibited 2 s after the radio altitude goes below
@@ -689,13 +767,16 @@ function M.update(s, inp)
         set_pitch(s, "GS")
     end
     -- multi-channel (step 4a): the arms end with the first channel's
-    -- disengage (ATA22 p.314), a channel's hydraulics or the approach's end
-    -- (estimate); the armed channels engage MULTI_S s into LOC and G/S below
-    -- MULTI_RA with the track along the course (p.288, p.318)
+    -- disengage (ATA22 p.314), a channel no longer valid (step 5a), a dual
+    -- failure of the autoland sensors with LOC and G/S captured (p.316) or
+    -- the approach's end (estimate); the armed channels engage MULTI_S s
+    -- into LOC and G/S below MULTI_RA with the track along the course
+    -- (p.288, p.318)
     if s.first and not s[s.first] then disarm(s) end
     if not (s.loc_arm or s.gs_arm or s.roll == "LOC" or s.pitch == "GS") then disarm(s) end
+    if landing_modes(s) and (inp.sensors or 3) < M.SENSORS_MIN then disarm(s) end
     for _, ch in ipairs(M.CHANNELS) do
-        if s.arm[ch] and ((inp.hyd or {})[M.HYD[ch]] or 0) < M.HYD_MIN then s.arm[ch] = false end
+        if s.arm[ch] and not M.valid(ch, inp) then s.arm[ch] = false end
     end
     if M.armed(s) > 0 then s.multi_app = true end
     if M.armed(s) > 0 and s.roll == "LOC" and s.pitch == "GS" and (inp.ra or 9999) < M.MULTI_RA and err <= M.MULTI_TRK then

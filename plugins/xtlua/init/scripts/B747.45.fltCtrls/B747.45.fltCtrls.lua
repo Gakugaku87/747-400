@@ -195,6 +195,7 @@ B747DR_srm_fail_rrc             = deferred_dataref("laminar/B747/flt_ctrls/fail/
 -- down, 1 nose up)
 B747DR_srm_stab_units           = deferred_dataref("laminar/B747/flt_ctrls/stab_trim/units", "number")
 B747DR_srm_speed_trim           = deferred_dataref("laminar/B747/flt_ctrls/stab_trim/speed_trim", "number")    -- 1: speed trim engaged (step 2c)
+B747DR_srm_autotrim_valid       = deferred_dataref("laminar/B747/flt_ctrls/stab_trim/autotrim_valid", "array[2]")  -- SRM L, R to the FCCs (6-3 step 5a)
 B747DR_srm_cutout_sw            = deferred_dataref("laminar/B747/flt_ctrls/stab_trim/cutout_sw", "array[2]")
 B747DR_srm_altn_sw              = deferred_dataref("laminar/B747/flt_ctrls/stab_trim/altn_sw", "number")
 B747DR_srm_fail_stab_actuator   = deferred_dataref("laminar/B747/flt_ctrls/fail/stab_actuator", "array[2]")
