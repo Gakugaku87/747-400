@@ -168,6 +168,27 @@ PW.HOLD = {
     [200] = {{1.00, 208, 1710}, {1.00, 208, 1700}, {1.01, 208, 1690}, {1.01, 208, 1650}, {1.01, 219, 1620}, {1.02, 220, 1600}, {1.05, 222, 1600}, {1.09, 224, 1600}, {1.17, 228, 1660}, {1.34, 233, 1850}},
 }
 
+-- PI.10.38-39 (p.264-265) Flight With Unreliable Airspeed, flaps up at
+-- .84/290: by weight and pressure altitude (ft) the thrust for level flight
+-- {EPR, %N1 (alt mode)} and the idle descent's V/S (ft/min)
+PW.U84_W = {200, 250, 300, 350, 390}
+PW.U84_CRZ = {
+    [40000] = {{1.16, 83.2}, {1.31, 88.0}},
+    [35000] = {{1.08, 80.6}, {1.14, 83.0}, {1.24, 86.3}, {1.43, 92.2}},
+    [30000] = {{1.02, 77.3}, {1.07, 79.8}, {1.13, 82.6}, {1.21, 85.7}, {1.32, 89.3}},
+    [20000] = {{0.97, 70.5}, {0.99, 72.7}, {1.03, 75.3}, {1.07, 78.1}, {1.11, 80.8}},
+    [10000] = {{0.96, 64.3}, {0.98, 66.3}, {1.00, 68.7}, {1.02, 71.1}, {1.04, 73.3}},
+    [0] = {{0.97, 55.6}, {0.98, 57.8}, {0.99, 60.4}, {1.00, 63.2}, {1.01, 65.7}},
+}
+PW.U84_DES = {
+    [40000] = {-2800, -2700},
+    [35000] = {-3800, -3400, -3200, -3300},
+    [30000] = {-2600, -2300, -2200, -2100, -2200},
+    [20000] = {-2500, -2200, -2100, -2000, -2000},
+    [10000] = {-2200, -1900, -1800, -1700, -1700},
+    [0] = {-1900, -1700, -1500, -1500, -1500},
+}
+
 
 -- CF6-80C2B1F (747-400F), weights in 1000 lb, fuel flows in lb/h
 local GE = {wf = M.LB}
@@ -298,6 +319,27 @@ GE.HOLD = {
     [520] = {{56.5, 219, 4090}, {59.3, 219, 4020}, {63.4, 219, 3950}, {67.4, 219, 3890}, {71.8, 231, 3920}, {76.1, 233, 3910}, {80.3, 235, 3890}, {84.6, 238, 3980}, {90.7, 242, 4250}, {100.7, 222, 4750}},
     [480] = {{54.6, 214, 3830}, {57.3, 214, 3750}, {61.3, 214, 3680}, {65.4, 214, 3610}, {69.8, 222, 3630}, {74.0, 223, 3630}, {78.3, 226, 3570}, {82.5, 228, 3630}, {88.6, 231, 3840}, {96.2, 222, 4170}},
     [440] = {{52.6, 207, 3570}, {55.2, 207, 3490}, {59.2, 207, 3410}, {63.3, 207, 3340}, {67.5, 212, 3350}, {71.8, 214, 3340}, {76.0, 215, 3270}, {80.3, 218, 3290}, {86.3, 221, 3450}, {93.1, 222, 3730}},
+}
+
+-- PI.20.33 (p.361) Flight With Unreliable Airspeed, flaps up at .84/290: by
+-- weight (1000 lb) and pressure altitude (ft) the %N1 for level flight and
+-- the idle descent's V/S (ft/min)
+GE.U84_W = {450, 550, 650, 750, 850, 870}
+GE.U84_CRZ = {
+    [40000] = {{88.4}, {92.6}},
+    [35000] = {{85.8}, {88.1}, {90.9}, {95.0}},
+    [30000] = {{81.8}, {84.4}, {86.9}, {89.9}, {93.7}, {94.6}},
+    [20000] = {{74.4}, {76.6}, {79.2}, {81.8}, {84.9}, {85.5}},
+    [10000] = {{67.1}, {69.1}, {71.4}, {73.9}, {76.8}, {77.4}},
+    [0] = {{60.0}, {61.9}, {64.0}, {66.3}, {68.9}, {69.5}},
+}
+GE.U84_DES = {
+    [40000] = {-3000, -2900},
+    [35000] = {-3600, -3300, -3100, -3200},
+    [30000] = {-2500, -2200, -2100, -2100, -2100, -2100},
+    [20000] = {-2200, -2000, -1900, -1800, -1800, -1800},
+    [10000] = {-2000, -1800, -1700, -1600, -1600, -1600},
+    [0] = {-1600, -1400, -1300, -1300, -1300, -1300},
 }
 
 
@@ -434,6 +476,237 @@ function M.wind_factor(t, kg, ft)
     local v1, v2 = at(alts[ai]), at(alts[aj])
     if not (v1 and v2) then return nil end
     return lerp(v1, v2, af)
+end
+
+-- ---------------------------------------------------------------------------
+-- The cruise model (6-1/6-2 step 8b; notes/ATA-34-61-FMC.md §45), an
+-- estimate: a drag polar and a fuel consumption fitted to the tables' long
+-- range cruise (Mach and fuel flow) and holding (fuel flow) by
+-- tests/tools/perf_fit.lua:
+--   CL = W / (q S), CD = CD0 + K CL^2 + KW (M - MC)^4 above MC = MC0 - MCL CL
+--        + KD (M - MD)^4 above MD (the drag divergence)
+--   fuel flow = (T0 + T1 M) (1 + T2 100 kN / (F / delta)) sqrt(theta) F
+--   (F an engine's thrust, the drag over 4: kg/h per N; T2 the part power's
+--   higher consumption)
+-- The drag's scale from the idle descents' V/S at .84/290 (PI.10.39/20.33,
+-- the idle thrust taken as none); the drag divergence from the tables' long
+-- range cruise stopping at about .861 whatever the weight and the economy
+-- speed reaching the speed limit at a cost index of about 5000 (FCTM p.4.7).
+-- From it the fuel flow at any Mach, the maximum range cruise, the minimum
+-- drag speed, the thrust setting for level flight and the economy speeds
+-- for a cost index: the FMS pilot's guide (p.261) defines the index as the
+-- time's cost per hour over the fuel's in cents per pound, so a unit is
+-- 100 lb of fuel an hour.
+
+local G, RAIR, P0, T0K, A0_KT, KT = 9.80665, 287.053, 101325, 288.15, 661.4786, 0.514444
+M.S = 541.16                -- wing area (m2), 5,825 sq ft
+M.VMO, M.MMO = 365, 0.92
+M.ECON_CLB_KT = 340         -- the economy climb without the FMC's data, 340/.84 (FCTM p.4.3; PI.10.36's climb EPR too)
+M.ECON_DES_KT = 290         -- the .84/290/250 descent (PI.11.5)
+M.ECON_CLB_MAX = 360        -- an estimate: the FMS pilot's guide's climb page shows 358/.853 (p.112)
+M.ECON_DES_MAX = 349        -- VMO/MMO less 16 kt (FCOM p.1258)
+M.ECON_CI_LIMIT = 5000      -- where the economy speeds reach their limits (FCTM p.4.7)
+
+-- (perf_fit.lua: PW the long range cruise's fuel flow 1.7 % rms and Mach
+-- 0.0025, holding 1.3 %, the descent's drag 5.6 %; GE 1.1 %, 0.0015, 1.3 %,
+-- 6.5 %)
+PW.POLAR = {cd0 = 0.016338, k = 0.047216, kw = 0.25926, mc0 = 0.78895, mcl = 0.59575, t0 = 0.047924, t1 = 0.014737, t2 = 0.045172, kd = 5819.7, md = 0.8483}
+GE.POLAR = {cd0 = 0.015534, k = 0.042486, kw = 0.20291, mc0 = 0.79383, mcl = 0.63214, t0 = 0.051024, t1 = 0.015894, t2 = 0.015392, kd = 1579.6, md = 0.83273}
+-- the thrust setting for level flight (tests/tools/thrust_fit.lua): EPR (PW,
+-- 0.01 rms) or N1 / sqrt(theta_t2) (GE, 0.4-0.9 % rms) = C1 + C2 M + C3 M^2
+-- + (C4 + C5 M) x + C6 x^2, x an engine's thrust / delta / 100 kN
+PW.THRUST = {1.12261, -0.881672, 0.58381, 0.473007, -0.47932, 0.0810096}
+GE.THRUST = {29.6446, 32.3389, 16.5883, 69.155, -62.4791, -0.284529}
+GE.N1 = true
+
+-- the ISA atmosphere at a pressure altitude (ft): static pressure (Pa) and
+-- the temperature (K) with an ISA deviation (degrees C)
+function M.atmos(ft, isa_dev)
+    local h = ft * 0.3048
+    local t, p
+    if h <= 11000 then
+        t = T0K - 0.0065 * h
+        p = P0 * (t / T0K) ^ 5.255877
+    else
+        t = 216.65
+        p = 22632.06 * math.exp(-G * (h - 11000) / (RAIR * 216.65))
+    end
+    return p, t + (isa_dev or 0)
+end
+
+-- Mach and calibrated airspeed (kt) at a pressure altitude (ft)
+function M.cas_to_mach(kt, ft)
+    local qc = P0 * ((1 + 0.2 * (kt / A0_KT) ^ 2) ^ 3.5 - 1)
+    return math.sqrt(5 * ((qc / M.atmos(ft) + 1) ^ (2 / 7) - 1))
+end
+function M.mach_to_cas(mach, ft)
+    local qc = M.atmos(ft) * ((1 + 0.2 * mach * mach) ^ 3.5 - 1)
+    return A0_KT * math.sqrt(5 * ((qc / P0 + 1) ^ (2 / 7) - 1))
+end
+
+-- the true airspeed (kt)
+function M.tas(mach, ft, isa_dev)
+    local _, t = M.atmos(ft, isa_dev)
+    return mach * math.sqrt(1.4 * RAIR * t) / KT
+end
+
+-- the drag (N) and the lift coefficient in level flight at a weight (kg),
+-- pressure altitude (ft) and Mach
+function M.drag(t, kg, ft, mach)
+    local c = t.POLAR
+    local q = 0.7 * M.atmos(ft) * mach * mach
+    local cl = kg * G / (q * M.S)
+    local cd = c.cd0 + c.k * cl * cl
+    local dm = mach - (c.mc0 - c.mcl * cl)
+    if dm > 0 then cd = cd + c.kw * dm ^ 4 end
+    if mach > c.md then cd = cd + c.kd * (mach - c.md) ^ 4 end
+    return q * M.S * cd, cl
+end
+
+-- the fuel flow per engine (kg/h) in level flight there
+function M.cruise_ff(t, kg, ft, mach, isa_dev)
+    local c = t.POLAR
+    local p, temp = M.atmos(ft, isa_dev)
+    local f = M.drag(t, kg, ft, mach) / 4
+    return (c.t0 + c.t1 * mach) * (1 + c.t2 * 1e5 / (f / (p / P0))) * math.sqrt(temp / T0K) * f
+end
+
+-- the x in [a, b] where f is least (golden section: f unimodal there)
+local function least(f, a, b, tol)
+    local r = (math.sqrt(5) - 1) / 2
+    local c, d = b - r * (b - a), a + r * (b - a)
+    local fc, fd = f(c), f(d)
+    while b - a > (tol or 1e-4) do
+        if fc < fd then
+            b, d, fd = d, c, fc
+            c = b - r * (b - a); fc = f(c)
+        else
+            a, c, fc = c, d, fd
+            d = a + r * (b - a); fd = f(d)
+        end
+    end
+    return (a + b) / 2
+end
+M.least = least
+
+local MACH_LO, MACH_HI = 0.40, 0.95
+
+-- the fuel (kg) per NM in still air, all engines
+local function per_nm(t, kg, ft, mach, isa_dev)
+    return 4 * M.cruise_ff(t, kg, ft, mach, isa_dev) / M.tas(mach, ft, isa_dev)
+end
+
+-- the maximum range cruise Mach: the least fuel per NM in still air
+function M.mrc(t, kg, ft, isa_dev)
+    return least(function(m) return per_nm(t, kg, ft, m, isa_dev) end, MACH_LO, MACH_HI)
+end
+
+-- the model's long range cruise Mach, above the maximum range cruise with
+-- 1 % less NM per kg (FCTM p.4.7): to check the fit against the tables
+function M.lrc_model(t, kg, ft, isa_dev)
+    local lo = M.mrc(t, kg, ft, isa_dev)
+    local target = per_nm(t, kg, ft, lo, isa_dev) / 0.99
+    local hi = MACH_HI
+    if per_nm(t, kg, ft, hi, isa_dev) < target then return hi end
+    for _ = 1, 40 do
+        local mid = (lo + hi) / 2
+        if per_nm(t, kg, ft, mid, isa_dev) < target then lo = mid else hi = mid end
+    end
+    return (lo + hi) / 2
+end
+
+-- the minimum drag speed at a weight (kg) and pressure altitude (ft): the
+-- Mach and CAS (kt)
+function M.min_drag(t, kg, ft)
+    local m = least(function(x) return (M.drag(t, kg, ft, x)) end, 0.2, MACH_HI)
+    return m, M.mach_to_cas(m, ft)
+end
+
+-- the economy targets' limit, VMO/MMO less 16 kt (FCOM p.1258), at a
+-- pressure altitude (ft): Mach and CAS (kt)
+function M.econ_limit(ft)
+    local cas = math.min(M.VMO, M.mach_to_cas(M.MMO, ft)) - 16
+    return M.cas_to_mach(cas, ft), cas
+end
+
+-- the economy cruise Mach at a weight (kg), pressure altitude (ft), cost
+-- index and headwind (kt, a tailwind negative): the least cost per NM over
+-- the ground, (fuel + 100 CI lb an hour) / ground speed; not below the
+-- still-air maximum range cruise (FCTM p.4.7) nor above the limit
+function M.econ_cruise(t, kg, ft, ci, headwind, isa_dev)
+    local hw = headwind or 0
+    local c = (ci or 0) * 100 * M.LB
+    local function cost(m)
+        local gs = M.tas(m, ft, isa_dev) - hw
+        if gs < 50 then return math.huge end
+        return (4 * M.cruise_ff(t, kg, ft, m, isa_dev) + c) / gs
+    end
+    local m = least(cost, MACH_LO, MACH_HI)
+    return math.max(M.mrc(t, kg, ft, isa_dev), math.min(M.econ_limit(ft), m)), m
+end
+
+-- the thrust setting for level flight at a weight (kg), pressure altitude
+-- (ft), Mach and ISA deviation: EPR (PW; RR too) or %N1 (GE), the CRZ
+-- page's (FCOM p.1348)
+function M.level_setting(t, kg, ft, mach, isa_dev)
+    local c = t.THRUST
+    local p, temp = M.atmos(ft, isa_dev)
+    local x = M.drag(t, kg, ft, mach) / 4 / (p / P0) / 1e5
+    local v = c[1] + c[2] * mach + c[3] * mach * mach + (c[4] + c[5] * mach) * x + c[6] * x * x
+    if t.N1 then v = v * math.sqrt(temp / T0K * (1 + 0.2 * mach * mach)) end
+    return v
+end
+
+-- the cost index's place at a weight and cruise altitude, an estimate (no
+-- table): from 0 at the still-air maximum range cruise to 1 where the
+-- still-air economy cruise is the long range cruise (the index CI_L), then
+-- to 2 with the log of the index from CI_L to 5000, where the limits come
+-- (FCTM p.4.7); and the economy cruise Mach. The economy climb's and
+-- descent's speeds follow it.
+local function econ_index(t, kg, ft, ci, isa_dev)
+    local mrc = M.mrc(t, kg, ft, isa_dev)
+    local lrc = M.lrc_model(t, kg, ft, isa_dev)
+    local m = M.econ_cruise(t, kg, ft, ci, 0, isa_dev)
+    local r = (m - mrc) / math.max(lrc - mrc, 0.005)
+    if r < 1 then return math.max(0, r), m end
+    if ci >= M.ECON_CI_LIMIT then return 2, m end
+    local lo, hi = 0, ci
+    for _ = 1, 30 do
+        local mid = (lo + hi) / 2
+        if M.econ_cruise(t, kg, ft, mid, 0, isa_dev) < lrc then lo = mid else hi = mid end
+    end
+    local cil = math.max(hi, 1)
+    return 1 + math.log(math.max(ci, cil) / cil) / math.log(M.ECON_CI_LIMIT / cil), m
+end
+M.econ_index = econ_index
+
+-- a speed by the index: v0 at 0, v1 at 1, v2 at 2
+local function by_index(r, v0, v1, v2)
+    if r <= 1 then return v0 + (v1 - v0) * r end
+    return v1 + (v2 - v1) * (r - 1)
+end
+
+-- the economy climb at a weight (kg), cruise altitude (ft) and cost index:
+-- CAS (kt) and Mach. The Mach is the economy cruise's at the cruise
+-- altitude (FCTM p.4.3). The CAS, an estimate, from about the maximum rate
+-- climb at index 0 (the minimum drag speed + 60 kt, as the FCTM's flaps up
+-- maneuvering speed + 60, p.4.3) through 340 kt at 1 to 360 kt at 2; for a
+-- low cruise altitude up to the cruise's CAS (FCTM p.4.3).
+function M.econ_climb(t, kg, crz_ft, ci, isa_dev)
+    local r, mach = econ_index(t, kg, crz_ft, ci, isa_dev)
+    local _, vmd = M.min_drag(t, kg, 10000)
+    local cas = by_index(r, vmd + 60, M.ECON_CLB_KT, M.ECON_CLB_MAX)
+    return math.min(M.ECON_CLB_MAX, math.max(cas, M.mach_to_cas(mach, crz_ft))), mach
+end
+
+-- the economy descent at a weight (kg), cruise altitude (ft) and cost index:
+-- Mach (the economy cruise's) and CAS (kt), an estimate: from the minimum
+-- drag speed at index 0 (the best glide) through 290 kt at 1 to 349 kt at
+-- 2 (FCOM p.1258)
+function M.econ_descent(t, kg, crz_ft, ci, isa_dev)
+    local r, mach = econ_index(t, kg, crz_ft, ci, isa_dev)
+    local _, vmd = M.min_drag(t, kg, 10000)
+    return mach, math.min(M.ECON_DES_MAX, by_index(r, vmd, M.ECON_DES_KT, M.ECON_DES_MAX))
 end
 
 return M

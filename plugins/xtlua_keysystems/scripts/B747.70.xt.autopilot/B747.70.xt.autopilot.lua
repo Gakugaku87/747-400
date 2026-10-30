@@ -302,10 +302,6 @@ throttlederate = find_dataref("sim/aircraft/engine/acf_throtmax_FWD") -- can use
    32 = GLIDESLOPE
    40 = ILS WITH GLIDESLOPE
 -]]
--- Datarefs for cost index calculations
-gwtKG = find_dataref("sim/flightmodel/weight/m_total") -- kilograms
-simDR_TAS_mps = find_dataref("sim/flightmodel/position/true_airspeed") -- true airspeed in meters per second
-simDR_GS_mps = find_dataref("sim/flightmodel/position/groundspeed") -- ground airspeed in meters per secon
 
 --*************************************************************************************--
 --** 				              FIND CUSTOM DATAREFS             			    	 **--

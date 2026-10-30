@@ -661,6 +661,14 @@ function defaultFMSData()
   desspd="270",
   destranspd="240",
   desspdtransalt="10000",
+  -- the speeds' modes (6-1/6-2 step 8b): E ECON from the cost index, S a
+  -- crew's (SEL SPD), L the cruise's LRC; the climb's Mach (blank: the
+  -- cruise's) and a cruise CAS (blank: crzspd's Mach)
+  clbspdmode="E",
+  crzspdmode="E",
+  desspdmode="E",
+  clbspdmach="   ",
+  crzcas="   ",
   desrestspd="---",
   desrestalt="-----",
   fpa="*.*",
@@ -946,6 +954,56 @@ end
 function B747_fms_isa_dev()
   local h = math.min(simDR_pressureAlt1, 36089)
   return simDR_air_temp - (15 - 1.98 * h / 1000)
+end
+-- the FMC's gross weight (kg): PERF INIT's (ZFW + fuel), else X-Plane's
+function B747_fms_gw_kg()
+  local gw = perf_gw_t()
+  if gw then return gw * 1000 end
+  return simDR_GRWT
+end
+-- the economy speeds (6-1/6-2 step 8b; notes/ATA-34-61-FMC.md §45): every
+-- 5 s by the performance database's cruise model (an estimate) from the
+-- cost index, the gross weight, the cruise altitude, the wind there (the
+-- present one while near it; forecasts are step 8e) and the ISA deviation,
+-- into the climb's, cruise's and descent's speeds while they are ECON (a
+-- crew's entry makes one SEL SPD); LRC the table's long range cruise. After
+-- the first value since an entry, a change under 2 kt or .002 is left (the
+-- A/P takes each change as a new target).
+local econNext = 0
+local econPut = {}
+function B747_fms_econ_now() econNext = 0 econPut = {} end
+local function econ_put(id, v, mach)
+  local old = tonumber(fmsModules["data"][id])
+  local s = mach and string.format("%03d", math.floor(v * 1000 + 0.5)) or string.format("%3d", math.floor(v + 0.5))
+  if econPut[id] and old and math.abs(old - tonumber(s)) < 2 then return end
+  econPut[id] = true
+  if fmsModules["data"][id] ~= s then fmsModules:setData(id, s) end
+end
+function update_econ()
+  if simDRTime < econNext then return end
+  econNext = simDRTime + 5
+  local crz = B747BR_cruiseAlt
+  if crz == nil or crz <= 0 then return end
+  local d = fmsModules["data"]
+  local P, t, kg, isa = B747_perf_db, B747_fms_perf(), B747_fms_gw_kg(), B747_fms_isa_dev()
+  if d.crzspdmode == "L" then econ_put("crzspd", (P.lrc(t, kg, crz)), true) end
+  local ci = tonumber(d.costindex)
+  if ci == nil then return end
+  local hw = 0
+  if simDR_onGround ~= 1 and math.abs(simDR_pressureAlt1 - crz) < 2000 then
+    hw = simDR_wind_speed * math.cos(math.rad(simDR_wind_degrees - simDR_fms_mag_psi))
+  end
+  if d.crzspdmode == "E" then econ_put("crzspd", (P.econ_cruise(t, kg, crz, ci, hw, isa)), true) end
+  if d.clbspdmode == "E" then
+    local cas, m = P.econ_climb(t, kg, crz, ci, isa)
+    econ_put("clbspd", cas)
+    econ_put("clbspdmach", m, true)
+  end
+  if d.desspdmode == "E" then
+    local m, cas = P.econ_descent(t, kg, crz, ci, isa)
+    econ_put("desspdmach", m, true)
+    econ_put("desspd", cas)
+  end
 end
 B747_fmc_lnav=B747_lnav_model.new(B747_path_model)
 local lnavPath=nil
@@ -1831,6 +1889,7 @@ function after_physics()
     setNotifications()
     update_spd_trans()
     update_perf()
+    update_econ()
     update_navdb()
     update_takeoff()
     B747_fmc_lnav_update()
