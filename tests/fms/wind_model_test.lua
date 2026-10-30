@@ -115,5 +115,69 @@ T.near(W.oat(r2, 3, 35000), -54.3, 0.05, "deleted: the standard day")
 T.check(W.oat_valid(0, 55) and not W.oat_valid(0, 56), "sea level: up to 55 C")
 T.check(W.oat_valid(45100, -40) and not W.oat_valid(45100, -39), "45,100 ft: up to -40 C")
 T.check(W.oat_valid(30000, -80) and not W.oat_valid(30000, -81), "-80 C the lowest")
+-- the entry's form (FMSPG p.179)
+local d, k = W.parse_wind("090/105")
+T.check(d == 90 and k == 105, "090/105")
+d, k = W.parse_wind("140/")
+T.check(d == 140 and k == nil, "140/: the direction only")
+d, k = W.parse_wind("/80")
+T.check(d == nil and k == 80, "/80: the speed only")
+T.check(W.parse_wind("90/50") == nil and W.parse_wind("361/50") == nil and select(2, W.parse_wind("100/251")) == nil,
+    "two digits, 361, 251 kt: not valid")
+
+-- the field the predictions fly in (step 8e3, notes §53)
+T.near(W.mix(0), 1, 1e-9, "the measured wind's share: all of it here")
+T.near(W.mix(200), 0.5, 1e-9, "half at 200 NM (FMSPG p.233)")
+T.near(W.mix(400), 0.2, 1e-9, "a fifth at 400 NM")
+T.equal(W.mix(800), 0, "none from 750 NM")
+-- two waypoints east of here, 1,000 and 2,000 NM along a track of 090;
+-- FL350's winds 270/100 at the first (a tailwind), 090/50 at the second
+local rf = {legs = {{fix = {ident = "P1"}}, {fix = {ident = "P2"}}}, passed = {}}
+W.add_alt(rf, 35000)
+W.set_wind(rf, 1, 35000, 270, 100)
+W.set_wind(rf, 2, 35000, 90, 50)
+local flegs = {{dist = 1000, p0 = {lat = 0, lon = 0}, p1 = {lat = 0, lon = 16}}, {dist = 1000, p0 = {lat = 0, lon = 16}, p1 = {lat = 0, lon = 33}}}
+local function east() return 90 end
+local F = W.field{legs = flegs, route = rf, course = east, measured = {dir = 0, kt = 0, isa = 0, h = 35000, phase = "crz"},
+    orig_elev = 5000, dest_elev = 0, crz = 35000}
+T.near(F.wind(1000, 35000, "crz"), -100, 1e-6, "at the first waypoint: its 100 kt tailwind (no measured share 1,000 NM ahead)")
+T.near(F.wind(1500, 35000, "crz"), -25, 1e-6, "halfway: the two in a line (100 east and 50 west: 25 east)")
+T.near(F.wind(1000, 40000, "crz"), -100, 1e-6, "above the highest altitude: its wind (FMSPG p.230)")
+T.near(F.wind(1000, 17500, "crz"), -50, 1e-6, "below the lowest: down to none at the destination (half of it halfway)")
+T.near(F.wind(1000, 20000, "clb"), -100 * 15000 / 30000, 1e-6, "in the climb: down to none at the origin (5,000 ft)")
+T.near(F.wind(1000, 0, "crz"), 0, 1e-6, "at the destination's elevation: none")
+-- the descent: the DESCENT FORECAST's winds, into the cruise's above them
+local Fd = W.field{legs = flegs, route = rf, course = east, measured = {dir = 0, kt = 0, isa = 0, h = 35000, phase = "crz"},
+    dest_elev = 0, crz = 35000, des = {{ft = 10000, dir = 90, kt = 40}, {}}}
+T.near(Fd.wind(1000, 10000, "des"), 40, 1e-6, "at its altitude: the forecast's 40 kt headwind")
+T.near(Fd.wind(1000, 22500, "des"), -30, 1e-6, "halfway up to FL350: halfway to the cruise wind (40 west to 100 east)")
+T.near(Fd.wind(1000, 5000, "des"), 20, 1e-6, "below it: down to none at the destination")
+local rn = {legs = {{fix = {ident = "P1"}}, {fix = {ident = "P2"}}}, passed = {}}
+local Fn = W.field{legs = flegs, route = rn, course = east, measured = {dir = 0, kt = 0, isa = 0, h = 35000, phase = "crz"},
+    dest_elev = 0, crz = 35000, des = {{ft = 10000, dir = 90, kt = 40}}}
+T.near(Fn.wind(1000, 22500, "des"), 40, 1e-6, "no route winds: the highest forecast's up to the cruise altitude")
+-- the measured wind (270/60, a tailwind) mixed in: by the distance in the
+-- cruise, by the altitude in the climb (5,000 ft as 200 NM)
+local Fm = W.field{legs = flegs, route = rn, course = east, measured = {dir = 270, kt = 60, isa = 10, h = 35000, phase = "crz"},
+    dest_elev = 0, crz = 35000}
+T.near(Fm.wind(0, 35000, "crz"), -60, 1e-6, "here: the measured wind")
+T.near(Fm.wind(200, 35000, "crz"), -30, 1e-6, "200 NM ahead: half of it (no forecast)")
+T.near(Fm.wind(400, 35000, "crz"), -12, 1e-6, "400 NM: a fifth")
+local Fc = W.field{legs = flegs, route = rn, course = east, measured = {dir = 270, kt = 60, isa = 10, h = 10000, phase = "clb"},
+    orig_elev = 0, dest_elev = 0, crz = 35000}
+T.near(Fc.wind(1500, 15000, "clb"), -30, 1e-6, "climbing at 10,000 ft: half at 15,000 ft, wherever")
+-- the temperature: the waypoints' deviation (FL300 -40 C at the second:
+-- +4.4 there and back to the first), the measured one's share near
+local rt2 = {legs = {{fix = {ident = "P1"}}, {fix = {ident = "P2"}}}, passed = {}}
+W.set_oat(rt2, 2, 30000, -40)
+local Ft = W.field{legs = flegs, route = rt2, course = east, measured = {dir = 0, kt = 0, isa = 10, h = 35000, phase = "crz"},
+    dest_elev = 0, crz = 35000}
+local dev = -40 - W.isa(30000)
+T.near(Ft.isa(0, 35000), 10, 1e-6, "here: the measured +10")
+T.near(Ft.isa(200, 35000), 0.5 * 10 + 0.5 * dev, 1e-6, "200 NM: half and half")
+T.near(Ft.isa(1500, 35000), dev, 1e-6, "far: the forecast's " .. string.format("%+.1f", dev))
+local Fs = W.field{legs = flegs, route = rn, course = east, measured = {dir = 0, kt = 0, isa = 10, h = 35000, phase = "crz"},
+    dest_elev = 0, crz = 35000}
+T.near(Fs.isa(1500, 35000), 0, 1e-6, "no entries: the standard day far ahead (FMSPG p.122)")
 
 T.done()

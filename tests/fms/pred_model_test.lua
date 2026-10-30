@@ -137,4 +137,29 @@ T.check(r.td == nil and r.pts[2].h == 35000, "without an E/D: no T/D, at FL350 t
 T.equal(#r.decel, 0, "nor deceleration points")
 T.near(r.dest.t / 3600, 1000 / P.tas(0.85, 35000), 0.01, "1,000 NM at M.85's TAS")
 
+-- step 8e3: a field (the winds and temperatures along the route) in place
+-- of the phases' headwinds and the ISA deviation now
+local function const_field(hw, dev) return {wind = function() return hw end, isa = function() return dev end} end
+local base = {P = P, t = pw, gw = 300000, fuel = 80000, alt = 35000, phase = "crz", crz = 35000, clb = clb, des = des,
+    crzspd = {mach = 0.85}, legs = {{name = "A", dist = 500}, {name = "RW", dist = 500, con = {kind = "AT", a = 50}}}, ed = 2}
+local function with(extra)
+    local s = {}
+    for key, v in pairs(base) do s[key] = v end
+    for key, v in pairs(extra) do s[key] = v end
+    return s
+end
+local rw = PM.predict(with{wind = {clb = 50, crz = 50, des = 50}, isa = 5})
+local rf = PM.predict(with{field = const_field(50, 5)})
+T.near(rf.dest.t, rw.dest.t, 1e-6, "a field of a 50 kt headwind and ISA+5: as the phases' 50 kt and ISA+5")
+T.near(rf.dest.fuel, rw.dest.fuel, 1e-6, "the fuel too")
+local rt = PM.predict(with{field = const_field(-50, 5)})
+T.check(rt.dest.t < rf.dest.t - 600, string.format("a 50 kt tailwind: %.0f min sooner over 1,000 NM", (rf.dest.t - rt.dest.t) / 60))
+-- the field's wind by where and how high: a headwind only in the descent
+-- below FL200 makes the descent longer in time, not the cruise
+local rd = PM.predict(with{field = {wind = function(x, h, phase) return (phase == "des" and h < 20000) and 60 or 0 end,
+    isa = function() return 0 end}})
+local r0 = PM.predict(with{field = const_field(0, 0)})
+T.check(rd.dest.t > r0.dest.t + 60 and math.abs(rd.td - r0.td) < 20, string.format("a headwind low in the descent: %.1f min later, the T/D %.1f NM apart",
+    (rd.dest.t - r0.dest.t) / 60, rd.td - r0.td))
+
 T.done()
