@@ -110,6 +110,11 @@ B747DR_ap_FMA_roll_fail      			= deferred_dataref("laminar/B747/autopilot/FMA/r
 B747DR_ap_FMA_pitch_fail     			= deferred_dataref("laminar/B747/autopilot/FMA/pitch_fail", "number")
 B747DR_ap_fd_roll_bar        			= deferred_dataref("laminar/B747/autopilot/fd/roll_bar", "number")
 B747DR_ap_fd_pitch_bar       			= deferred_dataref("laminar/B747/autopilot/fd/pitch_bar", "number")
+-- ILS TUNE INHIBIT and RA TEST INHIBIT (6-3 step 5d): 1 holds the ILS's
+-- frequency (the FMC's tuning, auto and manual) and the radio altimeters'
+-- self-test
+B747DR_ap_ils_tune_inhibit   			= deferred_dataref("laminar/B747/autopilot/ils_tune_inhibit", "number")
+B747DR_ap_ra_test_inhibit    			= deferred_dataref("laminar/B747/autopilot/ra_test_inhibit", "number")
 B747DR_ap_autothrottle_armed        	= deferred_dataref("laminar/B747/autothrottle/armed", "number")
 B747DR_ap_mach_decimal_visibiilty	    = deferred_dataref("laminar/B747/autopilot/mach_dec_vis", "number")
 B747DR_ap_fpa	    = deferred_dataref("laminar/B747/autopilot/navadata/fpa", "number")

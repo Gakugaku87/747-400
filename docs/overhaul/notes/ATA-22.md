@@ -952,3 +952,15 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
   - 回帰（LuaJIT）：AFDS のモデル +24（受信機 1 台では故障しない、位置の 2 台目で LOC が故障して FMA はそのまま・バンクを保つ・AUTOPILOT、電波が戻っても故障のまま、G/S の捕捉の後は HDG SEL を受けない、G/S の 2 台目でピッチを保つ、TO/GA で消える、LOC だけの進入は HDG SEL で消える、A/P を外すと AUTOPILOT が消える、周波数の変更、1,500 ft の下の電波高度計、IRU の NAV と方位、multi-channel の G/A の ADC、単一チャンネルの FLARE、multi-channel で電波が無いのはモード故障で受信機の故障の 2 台目は解除）、グルー +9（HDG HOLD で方位の IRU を 2 台失うと線・ロールのバーが消える・AUTOPILOT・ロールの則、570 は両方のバー、戻して HDG SEL で消える）。IRU の有効を試験の初めに入れた（グルーとヘディング基準の試験）。全 121 本。
   - X-Plane（カスタム acf）：新設の `s120_afds_mode_fail` 28/28：LOC と G/S を 1,500 ft より上で捕まえて NAV 1 を故障にすると、LOC と G/S が故障（FMA に琥珀の線、FMA のモードはそのまま）、>AUTOPILOT の caution、A/P は入ったまま 8 秒間バンク 0° 付近を保つ、F/D のバーは両方消える、>NO AUTOLAND は advisory（段 5b）。NAV 1 を戻しても故障のまま、TO/GA で消えて F/D のバーが戻る。PFD と EICAS の写真で確かめた。`s114_autoland`（回帰）20/20（WARN は前からの接地の後の跳ね 1 つ）：Web API で 0.5 秒おきに見て、進入から G/S、45 ft の FLARE、接地までモード故障は一度も立たない（X-Plane の G/S の旗は FLARE の後）。`s99_afds_engage`（回帰）36/36。Lua の誤りなし。
 - 作っていないもの：F/D の故障旗（FCC の故障の模型が無い）、master FMC の故障、caution の後に解除する故障（p.382 の最初の組：FCC・MCP の内部、IRU の上下加速度の 2 台目。ADC の 2 台目は段 5a で解除）、AUTOPILOT の「caution だけ」の条件の大半、detent と camout（操縦士の override）。
+
+## 37. 段 5d の実装（2026-10-30：ILS TUNE INHIBIT と RA TEST INHIBIT）
+
+- AFDS のモデル（`B747.70.afds_model.lua`）：
+  - RA TEST INHIBIT（`M.ra_test_inhibit`）：A/P が入っていて LOC か G/S を捕捉している（FLARE・NOSE LETDOWN・ROLLOUT も）、または F/D だけでそれを捕捉していて電波高度 500 ft の下（ATA22 p.212）。
+  - ILS TUNE INHIBIT（`M.ils_inhibit`）：その条件に加えて、地上で LOC が生きていて（位置の信号のある受信機）、機首が LOC のコースの 45° 以内、対地 40 kt 超、LOC も APP も選んでいない（離陸の滑走：ATA22 p.212。FCOM p.1305 は LOC/APP の条件を書かない）。
+- グルー（`B747.70.xt.autopilot.lua`）：入力は LOC の受信機（段 5c の数）、磁方位と NAV 1 のコース、対地速度。新設の `laminar/B747/autopilot/ils_tune_inhibit`・`ra_test_inhibit`（init `B747.70.autopilot`）に書く。前の ILS の自動同調（`B747_fltmgmt_setILS`）は、ILS TUNE INHIBIT の間は周波数とコースを書かない（前は捕捉の後も 2 秒ごとに書いていた：GAP の AFDS-23）。
+- FMC（`B744.fms.pages.lua` の `findILS`）：NAV RADIO ページの ILS の手動の同調も、ILS TUNE INHIBIT の間は受け付けない（INVALID ENTRY：FCOM p.1305 は「manual-tuning are inhibited」とだけ。文言は推定）。
+- 試験：
+  - 回帰（LuaJIT）：AFDS のモデル +11（何も捕捉していなければ無し、A/P で LOC と G/S を捕捉して両方、F/D だけは 600 ft で無し 450 ft で両方、地上の離陸の滑走で ILS TUNE だけ、30 kt・コースから 50°・LOC が無い・LOC を選んだときは無し）、グルー +2（捕捉の前は無し、A/P で LOC と G/S を捕捉して両方）。全 121 本。
+  - X-Plane（カスタム acf）：新設の `s121_afds_ils_inhibit` 13/13：A/P で LOC と G/S を捕捉すると ILS TUNE INHIBIT と RA TEST INHIBIT が立ち、NAV 1 は 111.90 のまま（前の自動同調が書かない）、CDU の NAV RADIO で 110.30 を入れると INVALID ENTRY で周波数は変わらない、モード故障は立たない、A/P を外して F/D を切ると両方消える。`s114_autoland`（回帰）20/20（WARN は前からの接地の後の跳ね 1 つ）。Lua の誤りなし。
+- 作っていないもの：電波高度計と ILS の自己試験（X-Plane にも機体にも無いので、RA TEST INHIBIT は dataref だけ）、LOC・G/S のアンテナの切り替えとその監視（ATA22 p.214–216：NO LAND 3・NO AUTOLAND の原因）、離陸後 10 分の自動同調の抑止（FMC の段 9 以降）。

@@ -1115,4 +1115,37 @@ approach(mn2, {cap = cap(), sensors = 1, loc_rx = 1, gs_rx = 1})
 T.check(A.engaged(mn2) == 3 and mn2.roll_fail and mn2.pitch_fail, "LAND 3, the signal lost: three still engaged, LOC and G/S failed")
 approach(mn2, {cap = cap({ils = 1}), sensors = 1, loc_rx = 1, gs_rx = 1})
 T.check(A.engaged(mn2) == 0 and mn2.disc, "two receivers failed: disengaged (p.320, p.322)")
+
+-- 5d: ILS TUNE INHIBIT and RA TEST INHIBIT (ATA22 p.212; FCOM p.1305):
+-- the A/P engaged with LOC or G/S captured; the F/Ds only with them
+-- captured under 500 ft RA; ILS TUNE also on the ground with a localizer
+-- alive, the heading within 45 degrees of its course, over 40 kt and LOC or
+-- APP not selected
+local ia = A.new()
+A.update(ia, app_inp())
+A.cmd(ia, "L", app_inp(single))
+A.app(ia, app_inp(single))
+T.check(not A.ils_inhibit(ia, app_inp()) and not A.ra_test_inhibit(ia, app_inp()), "5d: APP armed, nothing captured: no inhibit")
+approach(ia, sgl({ra = 2000}))
+T.check(A.ils_inhibit(ia, app_inp({ra = 2000})) and A.ra_test_inhibit(ia, app_inp({ra = 2000})), "the A/P with LOC and G/S: both inhibits")
+local fi = A.new()
+A.update(fi, app_inp())
+A.app(fi, app_inp())
+approach(fi, {ra = 2000})
+T.check(fi.roll == "LOC" and A.engaged(fi) == 0, "(the F/D only in LOC and G/S)")
+T.check(not A.ils_inhibit(fi, app_inp({ra = 600})), "the F/D only at 600 ft: no inhibit")
+T.check(A.ils_inhibit(fi, app_inp({ra = 450})) and A.ra_test_inhibit(fi, app_inp({ra = 450})), "under 500 ft: both")
+local gi = A.new()
+local function gnd(o)
+    local t = {ground = true, loc_alive = true, loc_hdg_err = 10, gs_kt = 60}
+    for k, v in pairs(o or {}) do t[k] = v end
+    return inp(t)
+end
+T.check(A.ils_inhibit(gi, gnd()), "the takeoff roll: a localizer alive, 10 degrees, 60 kt: ILS TUNE INHIBIT")
+T.check(not A.ra_test_inhibit(gi, gnd()), "not RA TEST INHIBIT")
+T.check(not A.ils_inhibit(gi, gnd({gs_kt = 30})), "30 kt: none")
+T.check(not A.ils_inhibit(gi, gnd({loc_hdg_err = 50})), "50 degrees off the course: none")
+T.check(not A.ils_inhibit(gi, gnd({loc_alive = false})), "no localizer: none")
+A.loc(gi, gnd())
+T.check(gi.loc_arm and not A.ils_inhibit(gi, gnd()), "LOC selected: none (ATA22)")
 T.done()

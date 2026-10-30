@@ -29,7 +29,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記。段 5d：PFD の TCAS RA・トランスポンダのコード・ND の WXR の文字） | FMC の位置への GPS の更新、GPWS の地形の look-ahead、PWS、無線の自動同調（FMC の作り直しで） |
 | FMC | 作り直し中（段取り：経路を自前で持ち、12 段で。notes/ATA-34-61-FMC.md §10。段 1：小修正、段 4：航法データベース、段 5a〜5e：経路のモデル、RTE・LEGS・DEP/ARR、現用点と X-Plane の FMS。段 6a〜6d：経路の形と LNAV、ND の線。段 7a〜7d：ホールド、オフセット。段 7e1〜7f：REF NAV DATA、ABEAM PTS、自分で作る点、FIX INFO、RTE 2、procedure turn の形（推定）。LEGS の PLAN の CTR と STEP） | ND の fly-by の旋回の曲線とオフセットの線、FIX INFO の円と方位線、ND の PLAN の中心が両席で 1 つ、VNAV（X-Plane の FMS に流した経路を飛ぶ）、予測 |
 | CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み、段 3：地上準備のページ、段 4：航法データベース、段 5：経路（RTE・LEGS・DEP/ARR）、段 7：HOLD・OFFSET・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO・RTE 2、LEGS の PLAN の CTR と STEP） | 3 台が X-Plane の CDU 1 つを共有（性能・データリンクなど、残りの X-Plane のページ）、性能のページの MOD/EXEC、入力の検査、データリンク |
-| 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）、段 4a：multi-channel の arm と engage、LAND 3・LAND 2・NO AUTOLAND、段 4b：FLARE と NOSE LETDOWN、A/T の IDLE、段 4c：ROLLOUT、段 4d：runway align と片発、段 5a：電源と engage のインターロック、段 5b：NO LAND 3・NO AUTOLAND と AUTOPILOT DISC の音、段 5c：モード故障と AUTOPILOT caution、F/D のバー。段 3a〜3c：ピッチの則（V/S・ALT とその捕捉、速度を昇降舵で保つ則（FLCH・T/O・G/A・前の VNAV の速度）と速度の保護、G/S とその捕捉）、A/P の姿勢のループ（自動トリムの帯、スタビライザーの差し引き、姿勢の変化率、入るときの舵面への同期、速度によるゲイン）。LNAV のロールは FMC の指令：6-1 段 6c） | VNAV のサブモードは前の VNAV |
+| 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）、段 4a：multi-channel の arm と engage、LAND 3・LAND 2・NO AUTOLAND、段 4b：FLARE と NOSE LETDOWN、A/T の IDLE、段 4c：ROLLOUT、段 4d：runway align と片発、段 5a：電源と engage のインターロック、段 5b：NO LAND 3・NO AUTOLAND と AUTOPILOT DISC の音、段 5c：モード故障と AUTOPILOT caution、F/D のバー、段 5d：ILS TUNE INHIBIT と RA TEST INHIBIT。段 3a〜3c：ピッチの則（V/S・ALT とその捕捉、速度を昇降舵で保つ則（FLCH・T/O・G/A・前の VNAV の速度）と速度の保護、G/S とその捕捉）、A/P の姿勢のループ（自動トリムの帯、スタビライザーの差し引き、姿勢の変化率、入るときの舵面への同期、速度によるゲイン）。LNAV のロールは FMC の指令：6-1 段 6c） | VNAV のサブモードは前の VNAV |
 | オートスロットル・推力管理 | 未着手 | 推力制限のモード、assumed temperature、THR・HOLD、操縦者の override |
 | 通信（ATA 23） | 未着手 | VHF の電源、ACP の連動、VHF C と HF が無い |
 | 照明（ATA 33） | 未着手（P5 の灯の入力は各系統で移し中） | 外部灯の電源、非常灯、毎フレームの完全 GC |
@@ -414,7 +414,11 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 実機に合わせた点（段 2）：CLR は 1 字、押し続けると全部、DEL は空のときだけ、+/- は交互、メッセージの間は打鍵を受けない。入力のメッセージはその CDU だけ、FMC のメッセージは全 CDU に出てどれかの CLR で全部から消え、条件が続く間は再び出ない。alert で >FMC MESSAGE。ページはすぐ切り替わる。NEXT は最後のページから 1 ページ目へ。CDU の電源が無いとキーが効かず、戻ると MENU。
 - 実機に合わせた点（段 1）：CRZ CG の範囲（前は文字で描画が止まった）、APPROACH REF の FLAP/SPEED の入力の形と複写・削除、EMERGENCY REPORT の DIVERT TO は経路を書き換えない、SPD TRANS は削除だけ、速度の入力は CAS 100–400。
 
-### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a〜1e・2a・2b・3a〜3c・4a〜4d・5a〜5c、A/P の姿勢とロールのループ）
+### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a〜1e・2a・2b・3a〜3c・4a〜4d・5a〜5d、A/P の姿勢とロールのループ）
+
+- 実機に合わせた点（段 5d、2026-10-30）：
+  - ILS を使っている間は、ILS の周波数が変わらない（ILS TUNE INHIBIT：ATA22 p.212；FCOM p.1305）：A/P で LOC か G/S を捕捉した後、F/D だけならその捕捉中の 500 ft の下、地上で LOC が生きていて機首がコースの 45° 以内・対地 40 kt 超・LOC/APP を選んでいない（離陸の滑走）。FMC の自動同調は周波数とコースを書かず、NAV RADIO ページの手動の同調は INVALID ENTRY（文言は推定）。前は捕捉の後も自動同調が 2 秒ごとに書き、手動でも変えられた。
+  - RA TEST INHIBIT も同じ条件（地上を除く）で dataref に出す。電波高度計と ILS の自己試験は X-Plane にも機体にも無い。
 
 - 実機に合わせた点（段 5c、2026-10-30）：
   - 作動中のモードのセンサーを失うと、そのモードが故障になる：PFD の FMA のモードに琥珀の線、A/P は入ったまま姿勢を保ち、>AUTOPILOT の caution（FCOM p.660；ATA22 p.382）。LOC・G/S は受信機が 2 台を切る（故障か電波なし）か捕捉の後の周波数の変更、1,500 ft の下の電波高度計の 2 台目、LNAV・LOC と HDG SEL・HDG HOLD は IRU の 2 台目、multi-channel の G/A は選んだ ADC。新しいモードを選ぶ（LOC と G/S の捕捉の後は TO/GA）まで故障のまま、A/P を外すと caution は消える（ATA22 p.254）。単一チャンネルの FLARE でも >AUTOPILOT。前は >AUTOPILOT が出ず（定義されていない X-Plane の故障を見ていた）、LOC・G/S は電波が途切れてもそのまま飛ぼうとした。
