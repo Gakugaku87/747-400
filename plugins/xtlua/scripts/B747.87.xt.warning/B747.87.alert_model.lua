@@ -53,9 +53,15 @@ M.SIREN = {["CONFIG FLAPS"] = true, ["CONFIG GEAR"] = true, ["CONFIG GEAR CTR"] 
     ["CONFIG PARK BRK"] = true, ["CONFIG SPOILERS"] = true, ["CONFIG STAB"] = true,
     ["OVERSPEED"] = true}
 -- The wailer sounds at least 1 s; the autopilot ends the message (second
--- push of the disconnect switch or re-engaging, FCOM p.1550, p.655).
+-- push of the disconnect switch or re-engaging, FCOM p.1550, p.655). The
+-- 570 sounds the siren instead, while the message shows (`inp.ap_siren`:
+-- FCOM p.655, p.677, p.1551; 6-3 step 5b).
 M.WAILER = {["AUTOPILOT DISC"] = true}
 M.WAILER_MIN_S = 1
+-- Hidden on the ground until an engine start (FCOM p.47 for NO AUTOLAND;
+-- NO LAND 3 the same: estimate. M.classify takes its 3 for an engine's
+-- number: its class is NO LAND)
+M.PRESTART_HIDDEN_ANY = {["NO AUTOLAND"] = true, ["NO LAND"] = true}
 
 -- the class and engine number (1-4 or nil) of a message name
 function M.classify(name)
@@ -86,6 +92,7 @@ function M.inputs()
         status_active = {},                      -- the STATUS messages raised now (names)
         status_page_shown = false,               -- the STATUS page on the secondary EICAS
         gpws_warning = false,                    -- PULL UP or WINDSHEAR on the PFDs (the GPWS)
+        ap_siren = false,                        -- the 570 (GE): >AUTOPILOT DISC sounds the siren
     }
 end
 
@@ -202,6 +209,7 @@ local function hidden(name, ph, inp)
             and (inp.fuel_cutoff[engine] or inp.fire_switch_out[engine]) then
         return true
     end
+    if M.PRESTART_HIDDEN_ANY[class] and ph.prestart_caution then return true end
     if class == "ENG FAIL" and ph.eng_fail_hidden then return true end
     if class == "CONFIG GEAR" and ph.config_gear_hidden then return true end
     if class == "TCAS OFF" and ph.tcas_off_hidden then return true end
@@ -289,7 +297,7 @@ function M.update(s, inp, dt)
         rec.announced, rec.pending = true, false
         if rec.level == "warning" then
             s.master_warning = true
-            if M.WAILER[(M.classify(name))] then s.wailer_until = s.t + M.WAILER_MIN_S end
+            if M.WAILER[(M.classify(name))] and not inp.ap_siren then s.wailer_until = s.t + M.WAILER_MIN_S end
         elseif rec.level == "caution" then
             s.master_caution, beep = true, true
         else
@@ -349,7 +357,9 @@ function M.update(s, inp, dt)
             local class = M.classify(name)
             if M.BELL[class] and not rec.silenced then bell = true end
             if M.SIREN[class] or (M.SIREN_RESETTABLE[class] and not rec.silenced) then siren = true end
-            if M.WAILER[class] then wailer = true end
+            if M.WAILER[class] then
+                if inp.ap_siren then siren = true else wailer = true end
+            end
         end
     end
 

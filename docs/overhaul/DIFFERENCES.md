@@ -29,7 +29,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 航法センサーと無線（ATA 34） | 作り直し中（5-1 段 1：ADC 3 台と AIR DATA の選択、PFD の高度・Mach と旗、OVERSPEED、IAS・ALT DISAGREE、ALTITUDE ALERT。段 2：IRS のアライン・位置の検査・ATT・電源・メッセージ、GPS の電源・初回測位・故障。段 4：電波高度計 3 台と各席の RA・DH、GPWS の mode 1〜7・コールアウト・灯・master WARNING。段 5：トランスポンダ、TCAS Ver 7.0 の TA・RA・声・ND の表示・PFD の RA の表示。段 5c：気象レーダーの 570 型パネル・R/T・安定化・ND の注記。段 5d：PFD の TCAS RA・トランスポンダのコード・ND の WXR の文字） | FMC の位置への GPS の更新、GPWS の地形の look-ahead、PWS、無線の自動同調（FMC の作り直しで） |
 | FMC | 作り直し中（段取り：経路を自前で持ち、12 段で。notes/ATA-34-61-FMC.md §10。段 1：小修正、段 4：航法データベース、段 5a〜5e：経路のモデル、RTE・LEGS・DEP/ARR、現用点と X-Plane の FMS。段 6a〜6d：経路の形と LNAV、ND の線。段 7a〜7d：ホールド、オフセット。段 7e1〜7f：REF NAV DATA、ABEAM PTS、自分で作る点、FIX INFO、RTE 2、procedure turn の形（推定）。LEGS の PLAN の CTR と STEP） | ND の fly-by の旋回の曲線とオフセットの線、FIX INFO の円と方位線、ND の PLAN の中心が両席で 1 つ、VNAV（X-Plane の FMS に流した経路を飛ぶ）、予測 |
 | CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み、段 3：地上準備のページ、段 4：航法データベース、段 5：経路（RTE・LEGS・DEP/ARR）、段 7：HOLD・OFFSET・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO・RTE 2、LEGS の PLAN の CTR と STEP） | 3 台が X-Plane の CDU 1 つを共有（性能・データリンクなど、残りの X-Plane のページ）、性能のページの MOD/EXEC、入力の検査、データリンク |
-| 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）、段 4a：multi-channel の arm と engage、LAND 3・LAND 2・NO AUTOLAND、段 4b：FLARE と NOSE LETDOWN、A/T の IDLE、段 4c：ROLLOUT、段 4d：runway align と片発、段 5a：電源と engage のインターロック。段 3a〜3c：ピッチの則（V/S・ALT とその捕捉、速度を昇降舵で保つ則（FLCH・T/O・G/A・前の VNAV の速度）と速度の保護、G/S とその捕捉）、A/P の姿勢のループ（自動トリムの帯、スタビライザーの差し引き、姿勢の変化率、入るときの舵面への同期、速度によるゲイン）。LNAV のロールは FMC の指令：6-1 段 6c） | VNAV のサブモードは前の VNAV |
+| 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）、段 4a：multi-channel の arm と engage、LAND 3・LAND 2・NO AUTOLAND、段 4b：FLARE と NOSE LETDOWN、A/T の IDLE、段 4c：ROLLOUT、段 4d：runway align と片発、段 5a：電源と engage のインターロック、段 5b：NO LAND 3・NO AUTOLAND と AUTOPILOT DISC の音。段 3a〜3c：ピッチの則（V/S・ALT とその捕捉、速度を昇降舵で保つ則（FLCH・T/O・G/A・前の VNAV の速度）と速度の保護、G/S とその捕捉）、A/P の姿勢のループ（自動トリムの帯、スタビライザーの差し引き、姿勢の変化率、入るときの舵面への同期、速度によるゲイン）。LNAV のロールは FMC の指令：6-1 段 6c） | VNAV のサブモードは前の VNAV |
 | オートスロットル・推力管理 | 未着手 | 推力制限のモード、assumed temperature、THR・HOLD、操縦者の override |
 | 通信（ATA 23） | 未着手 | VHF の電源、ACP の連動、VHF C と HF が無い |
 | 照明（ATA 33） | 未着手（P5 の灯の入力は各系統で移し中） | 外部灯の電源、非常灯、毎フレームの完全 GC |
@@ -414,7 +414,12 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 実機に合わせた点（段 2）：CLR は 1 字、押し続けると全部、DEL は空のときだけ、+/- は交互、メッセージの間は打鍵を受けない。入力のメッセージはその CDU だけ、FMC のメッセージは全 CDU に出てどれかの CLR で全部から消え、条件が続く間は再び出ない。alert で >FMC MESSAGE。ページはすぐ切り替わる。NEXT は最後のページから 1 ページ目へ。CDU の電源が無いとキーが効かず、戻ると MENU。
 - 実機に合わせた点（段 1）：CRZ CG の範囲（前は文字で描画が止まった）、APPROACH REF の FLAP/SPEED の入力の形と複写・削除、EMERGENCY REPORT の DIVERT TO は経路を書き換えない、SPD TRANS は削除だけ、速度の入力は CAS 100–400。
 
-### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a〜1e・2a・2b・3a〜3c・4a〜4d・5a、A/P の姿勢とロールのループ）
+### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a〜1e・2a・2b・3a〜3c・4a〜4d・5a・5b、A/P の姿勢とロールのループ）
+
+- 実機に合わせた点（段 5b、2026-10-30）：
+  - autoland の能力が落ちると EICAS に出る：同じ種類の 1 個の故障（チャンネル、FCC の電源、IRU、電波高度計、ILS 受信機、SRM、FCU）で >NO LAND 3、2 個（SRM は両方）で >NO AUTOLAND（ATA22 p.384；FCOM p.677）。LAND 3・2 を出した後に起きると caution（beeper）、前なら advisory（ATA22 p.373–374）。200 ft の下では NO AUTOLAND だけ出し、ほかは接地の後（FCOM p.662）。地上ではエンジン始動まで出さない（FCOM p.47）。前は PFD の NO AUTOLAND のときに advisory の >NO AUTOLAND を出すだけで、NO LAND 3 は出なかった。
+  - >AUTOPILOT DISC の音は、570（GE）は siren（表示の間）、109・405（PW）は wailer（最低 1 秒）（FCOM p.655、p.677、p.1551。RR は PW と同じ：推定）。前は型式によらず wailer。
+  - 残り（推定）：ILS 受信機は X-Plane の NAV の故障だけで数え、電源は見ない。IRU は NAV でなければ数えない（整列中は NO LAND 3・NO AUTOLAND）。NO LAND 3 の地上の抑止は NO AUTOLAND と同じにした。autoland に関係しない FCC の故障の NO LAND 3（地上で A/P を外しているとき：ATA22 p.384）、tune・test の inhibit に応じない受信機（段 5d）、bus の分離（ELEC-18）、アンテナの切り替えの故障は無い。
 
 - 実機に合わせた点（段 5a、2026-10-30）：
   - A/P は、そのチャンネルの FCC の電源（L は AC 3 と DC 3、C は AC 1 と DC 1、R は AC 2 と DC 2）、MCP（DC 3 か DC 2）、サーボの油圧、IRU の姿勢と ADC（それぞれ 3 台のうち 2 台）が有効なときだけ engage し、どれかを失うと外れて AUTOPILOT DISC（ATA22 p.191、p.302–316、p.382。前は油圧だけを見た）。engage には 28V DC STBY（電池の母線）も要るが、engage の後に失っても外れない（p.304）。
@@ -502,7 +507,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - 残り（推定）：engage に要る油圧は 1000 psi（前のコードの解除の値）、RR の ATT は PW と同じ。
 - G/S の捕捉の判定が前の簡単な検出（AFDS-02 の残り：段 3）。片発の T/O の目標（AFDS-03 の残り）。autoland の flare・rollout（AFDS-04）。複数チャンネル（AFDS-05）。
 - G/S の則（AFDS-10 の残り：段 3c）、FMC が無効なときの FCC の速度の保護と自動反転（AFDS-11 の残り）。
-- AUTOPILOT caution、NO LAND 3・NO AUTOLAND が出ない（AFDS-12・13）。作動のインターロックのうち操縦士の override（detent と camout：AFDS-15 の残り。電源・センサー・操縦輪の 25° と AFDS-16 の電源は段 5a で済）。AUTOPILOT DISC の音が型式によらない（AFDS-14 の残り）。
+- AUTOPILOT caution が出ない（AFDS-12）。作動のインターロックのうち操縦士の override（detent と camout：AFDS-15 の残り。電源・センサー・操縦輪の 25° と AFDS-16 の電源は段 5a、NO LAND 3・NO AUTOLAND（AFDS-13）と AUTOPILOT DISC の音の型式（AFDS-14）は段 5b で済）。
 - ヨーダンパーの則、A/P 中のトリム（AFDS-17・19・20）。
 - 空中開始では FMS が F/D L・A/T・ALT HOLD・CMD L を入れる（試験のための初期化。段 1a から ALT HOLD は F/D の既定のモードの 1 秒後、飛行の開始のたびに、何度走っても同じ）。前は機体の読み込み方で動きが変わった。
 

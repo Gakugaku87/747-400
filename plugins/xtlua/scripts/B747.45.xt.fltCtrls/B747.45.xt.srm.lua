@@ -56,6 +56,7 @@ B747DR_srm_frat                 = find_dataref("laminar/B747/flt_ctrls/stab_trim
 B747DR_srm_stab_units           = find_dataref("laminar/B747/flt_ctrls/stab_trim/units")
 B747DR_srm_speed_trim           = find_dataref("laminar/B747/flt_ctrls/stab_trim/speed_trim")
 B747DR_srm_autotrim_valid       = find_dataref("laminar/B747/flt_ctrls/stab_trim/autotrim_valid")
+B747DR_srm_valid                = find_dataref("laminar/B747/flt_ctrls/stab_trim/srm_valid")
 B747DR_srm_cutout_sw            = find_dataref("laminar/B747/flt_ctrls/stab_trim/cutout_sw")
 B747DR_srm_altn_sw              = find_dataref("laminar/B747/flt_ctrls/stab_trim/altn_sw")
 B747DR_srm_fail_stab_actuator   = find_dataref("laminar/B747/flt_ctrls/fail/stab_actuator")
@@ -229,10 +230,13 @@ function B747_srm()
     local sp = flag(out.speed_trim)
     if B747DR_srm_speed_trim ~= sp then B747DR_srm_speed_trim = sp end
     if out.ap_disengage then B747CMD_srm_ap_trim_disengage:once() end
-    -- the autotrim valid to the FCCs (6-3 step 5a: the AFDS's engage interlocks)
+    -- the autotrim valid to the FCCs (6-3 step 5a: the AFDS's engage
+    -- interlocks) and the SRMs' validity (step 5b: the autoland capability)
     for k = 1, 2 do
         local v = flag(out.autotrim_valid[k])
         if B747DR_srm_autotrim_valid[k - 1] ~= v then B747DR_srm_autotrim_valid[k - 1] = v end
+        v = flag(out.srm_valid[k])
+        if B747DR_srm_valid[k - 1] ~= v then B747DR_srm_valid[k - 1] = v end
     end
 
     -- the controlObject rows' scales (the right outboard aileron's is negative)

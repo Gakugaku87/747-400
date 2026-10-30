@@ -715,6 +715,41 @@ local function afds_interlocks(inp)
 	inp.trim = afdsTrim
 	inp.wheel = B747DR_afds_wheel
 end
+-- the autoland capability (step 5b; ATA22 p.384): the channels valid, the
+-- FCCs' power, the IRUs (NAV), the radio altimeters, the ILS receivers
+-- (X-Plane's failures, not the signal: NAV 1 as L and C, NAV 2 as R, the
+-- localizer's and glide slope's failures all three), the SRMs (their
+-- validity: B747.45.xt.srm.lua), the FCUs (their failures)
+simDR_afds_fail_nav1 = find_dataref("sim/operation/failures/rel_nav1")
+simDR_afds_fail_nav2 = find_dataref("sim/operation/failures/rel_nav2")
+simDR_afds_fail_loc = find_dataref("sim/operation/failures/rel_loc")
+simDR_afds_fail_gs = find_dataref("sim/operation/failures/rel_gls")
+B747DR_afds_srm_valid = find_dataref("laminar/B747/flt_ctrls/stab_trim/srm_valid")
+B747DR_afds_fcu_fail = find_dataref("laminar/B747/flt_ctrls/fail/fcu")
+local AFDS_XP_FAILED = 6
+local afdsCap = {}
+local function afds_cap(inp)
+	local c = afdsCap
+	local n = 0
+	for _, ch in ipairs(B747_afds_model.CHANNELS) do
+		if B747_afds_model.valid(ch, inp) then n = n + 1 end
+	end
+	c.channels, c.power = n, inp.power
+	local iru, ra, fcu = 0, 0, 0
+	for i = 0, 2 do
+		if B747DR_afds_irs_nav_valid[i] > 0.5 then iru = iru + 1 end
+		if B747DR_afds_ra_valid[i] > 0.5 then ra = ra + 1 end
+		if B747DR_afds_fcu_fail[i] < 0.5 then fcu = fcu + 1 end
+	end
+	c.iru, c.ra, c.fcu = iru, ra, fcu
+	local ils = 0
+	if simDR_afds_fail_loc ~= AFDS_XP_FAILED and simDR_afds_fail_gs ~= AFDS_XP_FAILED then
+		ils = (simDR_afds_fail_nav1 ~= AFDS_XP_FAILED and 2 or 0) + (simDR_afds_fail_nav2 ~= AFDS_XP_FAILED and 1 or 0)
+	end
+	c.ils = ils
+	c.srm = (B747DR_afds_srm_valid[0] > 0.5 and 1 or 0) + (B747DR_afds_srm_valid[1] > 0.5 and 1 or 0)
+	inp.cap = c
+end
 local function afds_sensors()
 	local iru, ra = 0, 0
 	for i = 0, 2 do
@@ -787,6 +822,7 @@ local function afds_inp()
 	afdsIn.power = afds_power()
 	afdsIn.sensors = afds_sensors()
 	afds_interlocks(afdsIn)
+	afds_cap(afdsIn)
 	-- FLARE's height (step 4b): the gear altitude, the inertial vertical
 	-- speed (the VSI's lags)
 	afdsIn.gear_alt = afds_gear_alt()
@@ -3052,12 +3088,22 @@ function B747_ap_afds()
 	-- the AFDS model's status (6-3 step 4a): FD, CMD, or below 1,500 ft in
 	-- a multi-channel approach LAND 3, LAND 2 or NO AUTOLAND (before, LAND
 	-- 3 and 2 by the channels engaged only, and NO AUTOLAND for a single
-	-- channel approach below 1,500 ft); the advisory [246] with NO AUTOLAND
-	-- as before (the alerts: step 5)
+	-- channel approach below 1,500 ft)
 	local status = B747_afds_model.status(afds)
 	set_afds_status(status)
-	local na = status == B747_afds_model.STATUS.NO_AUTOLAND and 1 or 0
-	if B747DR_CAS_advisory_status[246] ~= na then B747DR_CAS_advisory_status[246] = na end
+	-- the autoland capability's EICAS message (step 5b) at the model's level:
+	-- NO AUTOLAND caution [49] or advisory [246], NO LAND 3 caution [50] or
+	-- advisory [248] (B747.87.xt.warning.lua). Before, the advisory [246]
+	-- came with the PFD's NO AUTOLAND and nothing else
+	local a, lv = afds.alert, afds.alert_level
+	local function put(arr, i, on)
+		local v = on and 1 or 0
+		if arr[i] ~= v then arr[i] = v end
+	end
+	put(B747DR_CAS_caution_status, 49, a == "NO_AUTOLAND" and lv == "caution")
+	put(B747DR_CAS_caution_status, 50, a == "NO_LAND3" and lv == "caution")
+	put(B747DR_CAS_advisory_status, 246, a == "NO_AUTOLAND" and lv == "advisory")
+	put(B747DR_CAS_advisory_status, 248, a == "NO_LAND3" and lv == "advisory")
 end
 
 ----- FLIGHT MODE ANNUNCIATORS MODE CHANGE BOX ------------------------------------------

@@ -52,6 +52,9 @@ end
 local ATV = "laminar/B747/flt_ctrls/stab_trim/autotrim_valid"
 rt:set(ATV, 0, 1)
 rt:set(ATV, 1, 1)
+-- (step 5b: the SRMs valid for the autoland capability)
+rt:set("laminar/B747/flt_ctrls/stab_trim/srm_valid", 0, 1)
+rt:set("laminar/B747/flt_ctrls/stab_trim/srm_valid", 1, 1)
 rt:set("sim/cockpit2/gauges/indicators/vvi_fpm_pilot", 1234)
 rt:set("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot", 2)
 rt:callout("flight_start")
@@ -521,12 +524,17 @@ T.check(rt:get(ARMED, 1) == 0 and rt:get(ARMED, 2) == 0, "no arms left")
 T.equal(rt:get(STATUS_P), 4, "LAND 3")
 T.equal(rt:get(ROLL_ARMED), 4, "the FMA's ROLLOUT armed")
 T.equal(rt:get(PITCH_ARMED), 3, "the FMA's FLARE armed")
+local CAUTION, ADVISORY = "laminar/B747/CAS/caution_status", "laminar/B747/CAS/advisory_status"
+T.check(rt:get(CAUTION, 50) == 0 and rt:get(ADVISORY, 248) == 0 and rt:get(ADVISORY, 246) == 0,
+    "5b: LAND 3, all there: no NO LAND 3 or NO AUTOLAND")
 rt:set("laminar/B747/ra/valid", 2, 0)
 frames()
 T.equal(rt:get(STATUS_P), 3, "a radio altimeter lost: LAND 2")
+T.check(rt:get(CAUTION, 50) == 1 and rt:get(ADVISORY, 248) == 0, "5b: after LAND 3: NO LAND 3, the caution [50]")
 rt:set("laminar/B747/ra/valid", 2, 1)
 frames()
 T.equal(rt:get(STATUS_P), 4, "LAND 3 again")
+T.equal(rt:get(CAUTION, 50), 0, "NO LAND 3 gone")
 -- 4d: runway align with LAND 3 in LOC (FCOM p.670): the wings held level
 -- with the rudder, LOC asking for a right bank (the track 2 degrees left of
 -- the course, as a left engine out yaws it) asking for right rudder; none

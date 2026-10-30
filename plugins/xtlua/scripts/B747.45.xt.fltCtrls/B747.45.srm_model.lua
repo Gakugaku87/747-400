@@ -170,6 +170,7 @@ function M.new()
         st_speed_trim = false,          -- STATUS STAB SPEED TRIM
         ap_disengage = false,           -- this frame: disengage the single autopilot
         autotrim_valid = two(true),     -- to the FCCs (SRM L, R): valid, the wheel switches not in use
+        srm_valid = two(true),          -- SRM L, R valid (not failed, powered: the autoland capability)
     }
     return s
 end
@@ -289,6 +290,9 @@ local function stab_update(s, inp, dt, out)
     -- 5a): the SRM valid and no manual trim command (the wheel switches, two
     -- or more autopilots inhibiting them); the FCCs' engage interlocks
     out.autotrim_valid[1], out.autotrim_valid[2] = sv[1] and not manual, sv[2] and not manual
+    -- the SRMs themselves for the FCCs' autoland capability (6-3 step 5b:
+    -- ATA22 p.384's stab control units; the switches' use is no failure)
+    out.srm_valid[1], out.srm_valid[2] = sv[1], sv[2]
 
     -- autotrim (ATA27 p.488; ATA22 p.142-152): an engaged FCC's SRM (L FCC:
     -- SRM L, R: R, C: either) trims at half rate through its own module once
