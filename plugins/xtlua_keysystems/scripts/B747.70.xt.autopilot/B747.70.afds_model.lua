@@ -156,6 +156,12 @@
 --    NO AUTOLAND, a caution when it comes with LAND 3 or 2 shown, else an
 --    advisory; below 200 ft only NO AUTOLAND comes, the rest after the
 --    touchdown.
+--  - Mode failures and the AUTOPILOT caution (step 5c; ATA22 p.254, p.382;
+--    FCOM p.660): a mode whose sensors are lost (mode_failures, below) is
+--    failed until a new mode, the airplane held in its attitude, an amber
+--    line on the FMA; AUTOPILOT with the A/P engaged and a mode failed or
+--    a single channel in FLARE. A missing ILS signal is a mode failure,
+--    not the dual failure that disengages multi-channel (step 5a).
 -- Pure: the switches' events and the airplane's state in; the engage
 -- state, the warning, the roll mode and the modes asked for out.
 --   local A = B747_afds_model                      -- in XTLua, after dofile
@@ -251,7 +257,8 @@ function M.new()
         arm = {L = false, C = false, R = false}, first = nil, multi_t = 0, multi_app = false,
         land = nil, flare_arm = false, rollout_arm = false, was_ga = false,
         letdown = false, retard = false, rwy_align = false,
-        alert = nil, alert_level = nil}, {})
+        alert = nil, alert_level = nil,
+        roll_fail = false, pitch_fail = false, fail_bank = 0, fail_pitch = 0, ils_freq = nil}, {})
 end
 
 -- the flare height (ft of gear altitude) for a sink rate (ft/s)
@@ -319,11 +326,13 @@ local function fd_on(s) return s.fd.L or s.fd.R end
 local function fd_shown(s) return fd_on(s) or s.fd_auto end
 local function toga(mode) return mode == "TO" or mode == "GA" end
 
--- a roll mode engaged (the latch of the one before reset)
+-- a roll mode engaged (the latch of the one before reset; a failure of the
+-- one before too: step 5c)
 local function set_roll(s, mode, bank)
     s.roll = mode
     s.hold_hdg, s.level_t = nil, 0
     s.att_bank = mode == "ATT" and bank or 0
+    s.roll_fail = false
 end
 
 -- the roll mode by the bank: ATT (PW, RR) above ATT_MIN, held to ATT_MAX,
@@ -348,11 +357,13 @@ local function ga_low(s, inp)
     return s.roll == "GA" and not inp.ground and (inp.ra or 0) < M.GA_RA
 end
 
--- a pitch mode engaged (the latch of the one before reset)
+-- a pitch mode engaged (the latch of the one before reset; a failure of
+-- the one before too: step 5c)
 local function set_pitch(s, mode, alt)
     s.pitch = mode
     s.hold_alt = mode == "ALT" and alt or nil
     s.flch_near = nil
+    s.pitch_fail = false
 end
 -- the pitch modes' transitions (table p.335): from G/S only before LOC is
 -- active, from G/A only at 400 ft RA, none from FLARE
@@ -657,6 +668,61 @@ end
 local function landing_modes(s)
     return (s.roll == "LOC" or s.roll == "ROLLOUT") and (s.pitch == "GS" or s.pitch == "FLARE" or s.letdown)
 end
+-- a dual failure of one kind of autoland sensor (step 5a): failed, not
+-- without a signal (an ILS's NCD is a mode failure: step 5c), the IRUs at
+-- NAV, the radio altimeters and the ILS receivers of `inp.cap` (step 5b);
+-- without it `inp.sensors`
+local function autoland_dual_failure(inp)
+    local c = inp.cap
+    if c then return math.min(c.iru or 3, c.ra or 3, c.ils or 3) < M.SENSORS_MIN end
+    return (inp.sensors or 3) < M.SENSORS_MIN
+end
+
+-- the mode failures (step 5c; ATA22 p.254, p.382; FCOM p.660): the active
+-- roll or pitch mode's sensors lost, an amber line through it on the FMA,
+-- the airplane held in its attitude of then ("an attitude stabilizing
+-- mode": the bank to ATT_MAX), until a new mode. LOC with fewer than two
+-- localizer receivers (`inp.loc_rx`: failed or without a signal, NCD) or
+-- the ILS's frequency changed after the capture (`inp.ils_freq`); G/S the
+-- same with the glide slope (`inp.gs_rx`); LOC and G/S under MULTI_RA ft
+-- with fewer than two radio altimeters (`inp.ra_n`: both modes, an
+-- estimate); the IRUs' outer loop data, fewer than two: LNAV and LOC with
+-- the IRUs at NAV (`inp.iru_nav`), HDG SEL and HDG HOLD with a heading
+-- (`inp.iru_hdg`: ATT's set heading too); G/A's pitch with multi-channel
+-- and a selected ADC lost (`inp.adc_sel` false)
+local function mode_failures(s, inp)
+    local freq = s.ils_freq and inp.ils_freq and inp.ils_freq ~= s.ils_freq
+    local roll_bad = s.roll == "LOC" and ((inp.loc_rx or 3) < M.SENSORS_MIN or freq)
+    local pitch_bad = s.pitch == "GS" and ((inp.gs_rx or 3) < M.SENSORS_MIN or freq)
+    if s.roll == "LOC" and s.pitch == "GS" and (inp.ra or 9999) < M.MULTI_RA and (inp.ra_n or 3) < M.SENSORS_MIN then
+        roll_bad, pitch_bad = true, true
+    end
+    if (s.roll == "LNAV" or s.roll == "LOC") and (inp.iru_nav or 3) < M.SENSORS_MIN then roll_bad = true end
+    if (s.roll == "HDG_SEL" or s.roll == "HDG_HOLD") and (inp.iru_hdg or 3) < M.SENSORS_MIN then roll_bad = true end
+    if s.pitch == "GA" and M.engaged(s) >= 2 and inp.adc_sel == false then pitch_bad = true end
+    if roll_bad and not s.roll_fail then
+        s.roll_fail, s.fail_bank = true, math.max(-M.ATT_MAX, math.min(M.ATT_MAX, inp.bank or 0))
+    end
+    if pitch_bad and not s.pitch_fail then
+        s.pitch_fail, s.fail_pitch = true, inp.pitch_att or 0
+    end
+    -- the ILS's frequency at the capture
+    if s.roll == "LOC" or s.pitch == "GS" then
+        s.ils_freq = s.ils_freq or inp.ils_freq
+    else
+        s.ils_freq = nil
+    end
+    if not s.roll then s.roll_fail = false end
+    if not s.pitch then s.pitch_fail = false end
+end
+
+-- the AUTOPILOT caution (step 5c; ATA22 p.254, p.382; FCOM p.660, p.677):
+-- with the A/P engaged, a mode failed, or a single channel in FLARE
+function M.caution(s)
+    local n = M.engaged(s)
+    if n == 0 then return false end
+    return s.roll_fail or s.pitch_fail or (n == 1 and s.pitch == "FLARE")
+end
 
 -- the autoland capability (step 5b; ATA22 p.384): 3 less the most failures
 -- of one kind (`cap`: how many of each kind of M.CAP_FULL are valid; a kind
@@ -708,7 +774,7 @@ function M.update(s, inp)
         local ch = s.L and "L" or (s.C and "C" or "R")
         if not trim_valid(ch, inp) or (s.pitch == "FLARE" and (inp.ra or 9999) < M.GROUND_RA) then s[ch] = false end
     end
-    if M.engaged(s) >= 2 and landing_modes(s) and (inp.sensors or 3) < M.SENSORS_MIN then
+    if M.engaged(s) >= 2 and landing_modes(s) and autoland_dual_failure(inp) then
         s.L, s.C, s.R = false, false, false
     end
     dropped(s, was)
@@ -749,6 +815,7 @@ function M.update(s, inp)
             s.land, s.flare_arm, s.rollout_arm, s.multi_app = nil, false, false, false
             s.rwy_align = false
             s.letdown, s.retard = false, false
+            s.roll_fail, s.pitch_fail, s.ils_freq = false, false, nil
             return {all_off = true}
         end
         return nil
@@ -820,7 +887,7 @@ function M.update(s, inp)
     -- (p.288, p.318)
     if s.first and not s[s.first] then disarm(s) end
     if not (s.loc_arm or s.gs_arm or s.roll == "LOC" or s.pitch == "GS") then disarm(s) end
-    if landing_modes(s) and (inp.sensors or 3) < M.SENSORS_MIN then disarm(s) end
+    if landing_modes(s) and autoland_dual_failure(inp) then disarm(s) end
     for _, ch in ipairs(M.CHANNELS) do
         if s.arm[ch] and not M.valid(ch, inp) then s.arm[ch] = false end
     end
@@ -876,6 +943,7 @@ function M.update(s, inp)
         s.first = keep
     end
     s.was_ga = ga
+    mode_failures(s, inp)
     land_status(s, inp)
     return nil
 end

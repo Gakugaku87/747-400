@@ -40,7 +40,9 @@ local function inp(o)
         loc_detect = o.loc_detect, gs_detect = o.gs_detect, course_err = o.course_err,
         gs_after_loc = o.gs_after_loc, sensors = o.sensors, power = o.power, gear_alt = o.gear_alt,
         fcc = o.fcc, mcp = o.mcp, stby = o.stby, iru = o.iru, adc = o.adc, trim = o.trim, wheel = o.wheel,
-        cap = o.cap}
+        cap = o.cap, loc_rx = o.loc_rx, gs_rx = o.gs_rx, ra_n = o.ra_n, iru_nav = o.iru_nav,
+        iru_hdg = o.iru_hdg, adc_sel = o.adc_sel, pitch_att = o.pitch_att, ils_freq = o.ils_freq,
+        loc_alive = o.loc_alive, loc_hdg_err = o.loc_hdg_err, gs_kt = o.gs_kt}
 end
 
 -- engage with both F/Ds OFF: V/S and HDG HOLD (FCOM p.640; ATA22 p.266)
@@ -1022,4 +1024,95 @@ local ao = land3()
 approach(ao, {ra = 150, cap = cap({fcu = 2})})
 approach(ao, {ra = 3, ground = true, cap = cap({fcu = 2})})
 T.equal(ao.alert, "NO_LAND3", "on the ground: the NO LAND 3 that waited comes")
+
+-- 5c: the mode failures and the AUTOPILOT caution (ATA22 p.254, p.382;
+-- FCOM p.660). A single channel in LOC and G/S: the second localizer
+-- receiver lost (NCD: no signal) fails LOC, the airplane held in its bank
+-- of then, AUTOPILOT; one lost does nothing
+local mx = A.new()
+A.update(mx, app_inp())
+A.cmd(mx, "L", app_inp({hyd = {0, 0, 3000}}))
+A.app(mx, app_inp({hyd = {0, 0, 3000}}))
+local single = {hyd = {0, 0, 3000}, ils_freq = 109900}
+local function sgl(o)
+    local t = {}
+    for k, v in pairs(single) do t[k] = v end
+    for k, v in pairs(o or {}) do t[k] = v end
+    return t
+end
+approach(mx, sgl({ra = 2000}))
+T.equal(mx.roll .. mx.pitch, "LOCGS", "(single channel: LOC and G/S)")
+approach(mx, sgl({ra = 2000, loc_rx = 2, gs_rx = 2}))
+T.check(not mx.roll_fail and not mx.pitch_fail and not A.caution(mx), "5c: one receiver lost: no failure")
+approach(mx, sgl({ra = 2000, loc_rx = 1, gs_rx = 3, bank = 4, pitch_att = 1.5}))
+T.check(mx.roll_fail and not mx.pitch_fail, "the second localizer lost: LOC failed, G/S not")
+T.equal(mx.fail_bank, 4, "the bank then held")
+T.equal(mx.roll, "LOC", "LOC stays on the FMA (with the amber line)")
+T.check(A.caution(mx), "AUTOPILOT")
+approach(mx, sgl({ra = 2000, loc_rx = 3, bank = 10}))
+T.check(mx.roll_fail and mx.fail_bank == 4, "the signal back: still failed until a new mode (p.254)")
+A.hdg_sel(mx, app_inp({hyd = {0, 0, 3000}}))
+T.check(mx.roll == "LOC" and mx.roll_fail, "HDG SEL not taken with G/S captured (table p.351): LOC still failed")
+-- G/S: the glide slope's second receiver lost; the pitch of then held
+approach(mx, sgl({ra = 2000, gs_rx = 1, pitch_att = -2.5}))
+T.check(mx.pitch_fail and mx.fail_pitch == -2.5 and A.caution(mx), "the second glide slope lost: G/S failed, its pitch held, AUTOPILOT")
+A.toga(mx, app_inp({hyd = {0, 0, 3000}, ra = 2000}))
+T.check(mx.roll == "GA" and mx.pitch == "GA" and not mx.roll_fail and not mx.pitch_fail and not A.caution(mx),
+    "TO/GA: G/A's modes, no longer failed, no AUTOPILOT")
+-- LOC alone (a localizer approach): HDG SEL ends its failure
+local ml = A.new()
+A.update(ml, app_inp())
+A.cmd(ml, "L", app_inp(single))
+A.loc(ml, app_inp(single))
+approach(ml, sgl({ra = 2000, gs_detect = false}))
+T.equal(ml.roll, "LOC", "(LOC alone)")
+approach(ml, sgl({ra = 2000, loc_rx = 0}))
+T.check(ml.roll_fail, "LOC's signal lost: failed")
+A.hdg_sel(ml, app_inp({hyd = {0, 0, 3000}}))
+T.check(ml.roll == "HDG_SEL" and not ml.roll_fail and not A.caution(ml), "HDG SEL: no longer failed, no AUTOPILOT")
+A.disengage(ml, true)
+approach(ml, sgl({ra = 2000}))
+T.check(not A.caution(ml), "the A/P off: no AUTOPILOT")
+-- the ILS's frequency changed after the capture
+local mq = A.new()
+A.update(mq, app_inp())
+A.cmd(mq, "L", app_inp(single))
+A.app(mq, app_inp(single))
+approach(mq, sgl({ra = 2000}))
+approach(mq, sgl({ra = 2000, ils_freq = 110300}))
+T.check(mq.roll_fail and mq.pitch_fail, "the ILS retuned after the capture: LOC and G/S failed (p.382)")
+-- the radio altimeters' second loss in LOC and G/S below 1,500 ft
+local mr = A.new()
+A.update(mr, app_inp())
+A.cmd(mr, "L", app_inp(single))
+A.app(mr, app_inp(single))
+approach(mr, sgl({ra = 1800, ra_n = 1}))
+T.check(not mr.roll_fail, "two radio altimeters lost above 1,500 ft: nothing")
+approach(mr, sgl({ra = 1400, ra_n = 1}))
+T.check(mr.roll_fail and mr.pitch_fail, "below 1,500 ft: LOC and G/S failed")
+-- the IRUs: LNAV and LOC need two at NAV, HDG SEL and HDG HOLD two headings
+local mi = A.new()
+A.cmd(mi, "L", inp())
+T.equal(mi.roll, "HDG_HOLD", "(HDG HOLD)")
+A.update(mi, inp({iru_nav = 1}))
+T.check(not mi.roll_fail, "HDG HOLD with two IRUs off NAV (ATT, a heading set): not failed")
+A.update(mi, inp({iru_hdg = 1, bank = -6}))
+T.check(mi.roll_fail and mi.fail_bank == -6, "without two headings: failed")
+-- G/A with multi-channel: a selected ADC lost
+local mg = land3()
+A.toga(mg, app_inp({ra = 800}))
+A.update(mg, app_inp({ra = 850, adc_sel = false}))
+T.check(mg.pitch == "GA" and mg.pitch_fail and A.caution(mg), "multi-channel G/A, a selected ADC lost: G/A's pitch failed, AUTOPILOT")
+-- a single channel in FLARE: AUTOPILOT (p.382)
+local mf2 = land3()
+approach(mf2, {ra = 60, gear_alt = 45, vs = -700})
+approach(mf2, {ra = 30, gear_alt = 26, vs = -400, hyd = {0, 0, 3000}})
+T.check(A.engaged(mf2) == 1 and A.caution(mf2), "a single channel in FLARE: AUTOPILOT")
+-- multi-channel: the ILS's signal lost (NCD) is a mode failure, not the
+-- dual failure that disengages (step 5a: failures only)
+local mn2 = land3()
+approach(mn2, {cap = cap(), sensors = 1, loc_rx = 1, gs_rx = 1})
+T.check(A.engaged(mn2) == 3 and mn2.roll_fail and mn2.pitch_fail, "LAND 3, the signal lost: three still engaged, LOC and G/S failed")
+approach(mn2, {cap = cap({ils = 1}), sensors = 1, loc_rx = 1, gs_rx = 1})
+T.check(A.engaged(mn2) == 0 and mn2.disc, "two receivers failed: disengaged (p.320, p.322)")
 T.done()

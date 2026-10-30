@@ -750,6 +750,38 @@ local function afds_cap(inp)
 	c.srm = (B747DR_afds_srm_valid[0] > 0.5 and 1 or 0) + (B747DR_afds_srm_valid[1] > 0.5 and 1 or 0)
 	inp.cap = c
 end
+-- the mode failures (step 5c; ATA22 p.382): the ILS receivers with a
+-- localizer and with a glide slope (a signal and not failed: NAV 1 as L and
+-- C, NAV 2 as R), the radio altimeters and IRUs at NAV (afds_cap's), the
+-- IRUs with a heading, both pilots' selected ADCs, the pitch, NAV 1's
+-- frequency; out, the FMA's amber lines and the F/Ds' command bars
+B747DR_afds_irs_hdg_valid = find_dataref("laminar/B747/irs/hdg_valid")
+B747DR_afds_adc_valid_capt = find_dataref("laminar/B747/airdata/valid_capt")
+B747DR_afds_adc_valid_fo = find_dataref("laminar/B747/airdata/valid_fo")
+B747DR_ap_FMA_roll_fail = find_dataref("laminar/B747/autopilot/FMA/roll_fail")
+B747DR_ap_FMA_pitch_fail = find_dataref("laminar/B747/autopilot/FMA/pitch_fail")
+B747DR_ap_fd_roll_bar = find_dataref("laminar/B747/autopilot/fd/roll_bar")
+B747DR_ap_fd_pitch_bar = find_dataref("laminar/B747/autopilot/fd/pitch_bar")
+local function afds_mode_inputs(inp)
+	local loc_ok = simDR_afds_fail_loc ~= AFDS_XP_FAILED
+	local gs_ok = simDR_afds_fail_gs ~= AFDS_XP_FAILED
+	local nav1, nav2 = simDR_afds_fail_nav1 ~= AFDS_XP_FAILED, simDR_afds_fail_nav2 ~= AFDS_XP_FAILED
+	local loc1 = loc_ok and nav1 and simDR_hsi_nav1_horizontal_signal == 1
+	local loc2 = loc_ok and nav2 and simDR_hsi_nav2_horizontal_signal == 1
+	inp.loc_rx = (loc1 and 2 or 0) + (loc2 and 1 or 0)
+	local gs1 = gs_ok and nav1 and simDR_hsi_nav1_vertical_signal == 1 and simDR_nav1_gs_flag == 0
+	local gs2 = gs_ok and nav2 and simDR_hsi_nav2_vertical_signal == 1 and simDR_nav2_gs_flag == 0
+	inp.gs_rx = (gs1 and 2 or 0) + (gs2 and 1 or 0)
+	inp.ra_n, inp.iru_nav = afdsCap.ra, afdsCap.iru
+	local hdg = 0
+	for i = 0, 2 do
+		if B747DR_afds_irs_hdg_valid[i] > 0.5 then hdg = hdg + 1 end
+	end
+	inp.iru_hdg = hdg
+	inp.adc_sel = B747DR_afds_adc_valid_capt > 0.5 and B747DR_afds_adc_valid_fo > 0.5
+	inp.pitch_att = simDR_afds_pitch
+	inp.ils_freq = simDR_nav1Freq
+end
 local function afds_sensors()
 	local iru, ra = 0, 0
 	for i = 0, 2 do
@@ -823,6 +855,7 @@ local function afds_inp()
 	afdsIn.sensors = afds_sensors()
 	afds_interlocks(afdsIn)
 	afds_cap(afdsIn)
+	afds_mode_inputs(afdsIn)
 	-- FLARE's height (step 4b): the gear altitude, the inertial vertical
 	-- speed (the VSI's lags)
 	afdsIn.gear_alt = afds_gear_alt()
@@ -984,13 +1017,30 @@ local function afds_sync()
 	local ff = (B747DR_toggle_switch_position[24] > 0.5 or auto) and 1 or 0
 	if B747DR_ap_fd_shown_capt ~= fc then B747DR_ap_fd_shown_capt = fc end
 	if B747DR_ap_fd_shown_fo ~= ff then B747DR_ap_fd_shown_fo = ff end
+	-- the mode failures (step 5c; FCOM p.660): the FMA's amber lines; the
+	-- F/Ds' bars with a mode on the FMA, not failed (the 109's and 405's
+	-- bar of the failed axis goes, the 570's both: RR as PW, an estimate);
+	-- AUTOPILOT (caution [4]: before, an undefined X-Plane failure's)
+	local rf, pf = afds.roll_fail, afds.pitch_fail
+	local both = afdsIn.engine == B747_afds_model.ENGINE_GE and (rf or pf)
+	local v = rf and 1 or 0
+	if B747DR_ap_FMA_roll_fail ~= v then B747DR_ap_FMA_roll_fail = v end
+	v = pf and 1 or 0
+	if B747DR_ap_FMA_pitch_fail ~= v then B747DR_ap_FMA_pitch_fail = v end
+	v = (B747DR_ap_FMA_active_roll_mode >= 1 and not (rf or both)) and 1 or 0
+	if B747DR_ap_fd_roll_bar ~= v then B747DR_ap_fd_roll_bar = v end
+	v = (B747DR_ap_FMA_active_pitch_mode >= 1 and not (pf or both)) and 1 or 0
+	if B747DR_ap_fd_pitch_bar ~= v then B747DR_ap_fd_pitch_bar = v end
+	v = B747_afds_model.caution(afds) and 1 or 0
+	if B747DR_CAS_caution_status[4] ~= v then B747DR_CAS_caution_status[4] = v end
 end
 -- the roll law (step 2a), each frame after the modes: the heading in the
 -- reference (true north by the switch or in the polar areas, where NORM
 -- gives HDG SEL and HDG HOLD no reference: FCOM p.1046), the track true
 local function afds_roll_law()
 	local r = afdsRollIn
-	r.mode = afds.roll
+	-- a failed roll mode holds the bank of then (step 5c: ATT's law)
+	r.mode = afds.roll_fail and "ATT" or afds.roll
 	r.active = B747_afds_model.engaged(afds) > 0 or B747DR_ap_fd_shown_capt == 1 or B747DR_ap_fd_shown_fo == 1
 	r.ground = simDR_onGround == 1
 	r.bank = simDR_AHARS_roll_deg_pilot
@@ -1000,7 +1050,7 @@ local function afds_roll_law()
 	r.trk = (simDR_afds_track_mag + simDR_true_heading - simDR_ap_mag_psi) % 360
 	r.sel = B747DR_ap_heading_deg
 	r.held = afds.hold_hdg ~= nil
-	r.att_bank = afds.att_bank
+	r.att_bank = afds.roll_fail and afds.fail_bank or afds.att_bank
 	r.lnav_bank = B747DR_fms_lnav_roll
 	r.selector = B747DR_ap_bank_limit_sel_dial_pos
 	r.tas = simDR_afds_tas
@@ -1009,7 +1059,7 @@ local function afds_roll_law()
 	r.v2 = B747DR_airspeed_V2
 	afds_loc_inputs(r)
 	-- runway align (step 4d): the AFDS model's, the heading magnetic
-	r.rwy_align = afds.rwy_align
+	r.rwy_align = afds.rwy_align and not afds.roll_fail
 	r.hdg_mag = simDR_ap_mag_psi
 	local cmd = B747_afds_roll_model.update(afdsRoll, r, SIM_PERIOD)
 	local law, valid = cmd and 1 or 0, (cmd and afdsRoll.valid) and 1 or 0
@@ -1028,6 +1078,8 @@ local function afds_pitch_law()
 	p.active = afdsRollIn.active
 	p.ground = simDR_onGround == 1
 	p.hold_alt = afds.hold_alt
+	-- a failed pitch mode holds the pitch of then (step 5c)
+	p.att_pitch = afds.pitch_fail and afds.fail_pitch or nil
 	afds_pitch_inputs(p)
 	local cmd = B747_afds_pitch_model.update(afdsPitch, p, SIM_PERIOD)
 	local law = cmd and 1 or 0
@@ -3465,13 +3517,7 @@ function B474_ap_target_heading()
 end
 ----- EICAS MESSAGES --------------------------------------------------------------------
 function B747_ap_EICAS_msg()
-	-- >AUTOPILOT
-
-	if simDR_autopilot_fail == 6 then
-		B747DR_CAS_caution_status[4] = 1
-	else
-		B747DR_CAS_caution_status[4] = 0
-	end
+	-- >AUTOPILOT: the AFDS model's (6-3 step 5c, afds_sync)
 
 	--print("test drag required".. B747DR_speedbrake_lever .. " " .. simDR_all_wheels_on_ground .. " " .. simDR_autopilot_vs_fpm .. " " .. simDR_autopilot_vs_status .. " " )
 	-- >AUTOTHROT DISC

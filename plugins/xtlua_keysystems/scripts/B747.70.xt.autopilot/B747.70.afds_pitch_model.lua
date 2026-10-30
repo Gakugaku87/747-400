@@ -306,7 +306,8 @@ end
 
 -- the law of the mode: "VS" with its vertical speed, "ALT" with its
 -- altitude, "SPD" with its speed (and whether it blends from the
--- attitude), "GS", "TOGND" (8 degrees), or nil (not here)
+-- attitude), "GS", "TOGND" (8 degrees), "ATT" with the pitch a failed
+-- mode holds (`inp.att_pitch`: 6-3 step 5c), or nil (not here)
 local function law_of(s, inp, dt)
     local mode = inp.mode
     if mode ~= s.mode then
@@ -317,6 +318,7 @@ local function law_of(s, inp, dt)
             s.ga_cap = math.max(inp.mcp_ias + M.GA_MAX_ADD, inp.ias)
         end
     end
+    if inp.att_pitch then return "ATT", inp.att_pitch end
     if mode == "VS" then
         if inp.vs_sel ~= 0 then s.vs0_alt = nil; return "VS", inp.vs_sel end
         -- 000: the altitude where it was set (ATA22 p.282)
@@ -388,8 +390,9 @@ function M.update(s, inp, dt)
         s.law, s.target = law, nil
         return s.cmd
     end
-    if law == "TOGND" then
-        -- T/O on the ground: the F/D's 8 degrees (FCOM p.666)
+    if law == "TOGND" or law == "ATT" then
+        -- T/O on the ground: the F/D's 8 degrees (FCOM p.666); a failed
+        -- mode: the attitude of then held (step 5c; FCOM p.660)
         s.cmd, s.law, s.target = target, law, target
         return s.cmd
     end

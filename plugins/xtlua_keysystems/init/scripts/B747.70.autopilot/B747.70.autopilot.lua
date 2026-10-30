@@ -103,6 +103,13 @@ B747DR_ap_cmd_C_mode         			= deferred_dataref("laminar/B747/autopilot/cmd_C
 B747DR_ap_cmd_R_mode         			= deferred_dataref("laminar/B747/autopilot/cmd_R_mode/status", "number")
 -- the channels L, C, R armed for multi-channel (6-3 step 4a): their CMD lights
 B747DR_ap_cmd_armed          			= deferred_dataref("laminar/B747/autopilot/cmd_armed", "array[3]")
+-- the mode failures (6-3 step 5c): 1 draws an amber line through the FMA's
+-- roll or pitch mode; the F/Ds' command bars shown (1: the axis has a mode,
+-- not failed; the 570 hides both with either failed)
+B747DR_ap_FMA_roll_fail      			= deferred_dataref("laminar/B747/autopilot/FMA/roll_fail", "number")
+B747DR_ap_FMA_pitch_fail     			= deferred_dataref("laminar/B747/autopilot/FMA/pitch_fail", "number")
+B747DR_ap_fd_roll_bar        			= deferred_dataref("laminar/B747/autopilot/fd/roll_bar", "number")
+B747DR_ap_fd_pitch_bar       			= deferred_dataref("laminar/B747/autopilot/fd/pitch_bar", "number")
 B747DR_ap_autothrottle_armed        	= deferred_dataref("laminar/B747/autothrottle/armed", "number")
 B747DR_ap_mach_decimal_visibiilty	    = deferred_dataref("laminar/B747/autopilot/mach_dec_vis", "number")
 B747DR_ap_fpa	    = deferred_dataref("laminar/B747/autopilot/navadata/fpa", "number")

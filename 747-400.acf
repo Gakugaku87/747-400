@@ -75030,7 +75030,7 @@ GROUP Captain PFD
             POS 315.500000 767.500000
             IMAGE CRT Displays/PFD/FD/FDbarLateral
             DATAREF laminar/B747/autopilot/capt_roll_ref
-            SHOW_GREATER 1.000000 laminar/B747/autopilot/FMA/active_roll_mode
+            SHOW_EQUAL 1.000000 laminar/B747/autopilot/fd/roll_bar
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 2
@@ -75058,7 +75058,7 @@ GROUP Captain PFD
               POS 315.500000 767.500000
               IMAGE CRT Displays/PFD/FD/FDbarVertical
               DATAREF laminar/B747/autopilot/flight_director_pitch_deg
-              SHOW_GREATER 1.000000 laminar/B747/autopilot/FMA/active_pitch_mode
+              SHOW_EQUAL 1.000000 laminar/B747/autopilot/fd/pitch_bar
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -76350,6 +76350,28 @@ GROUP Captain PFD
               CLICK_DX 0
               CLICK_DY 0
 
+            gen_rotary Mode Fail
+              POS 320.500000 1086.500000
+              IMAGE CRT Displays/PFD/Flight Mode Annun/mode_fail
+              DATAREF 
+              SHOW_EQUAL 1.000000 laminar/B747/autopilot/FMA/roll_fail
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
           END_GROUP
         END_GROUP
         GROUP Pitch Modes
@@ -76651,6 +76673,28 @@ GROUP Captain PFD
               IMAGE CRT Displays/PFD/Flight Mode Annun/pitch_ALT
               DATAREF 
               SHOW_EQUAL 9.000000 laminar/B747/autopilot/FMA/active_pitch_mode
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Mode Fail
+              POS 442.500000 1086.500000
+              IMAGE CRT Displays/PFD/Flight Mode Annun/mode_fail
+              DATAREF 
+              SHOW_EQUAL 1.000000 laminar/B747/autopilot/FMA/pitch_fail
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -79272,7 +79316,7 @@ GROUP Captain PFD
             POS 315.500000 767.500000
             IMAGE CRT Displays/PFD/FD/FDbarLateral
             DATAREF laminar/B747/autopilot/capt_roll_ref
-            SHOW_GREATER 1.000000 laminar/B747/autopilot/FMA/active_roll_mode
+            SHOW_EQUAL 1.000000 laminar/B747/autopilot/fd/roll_bar
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 2
@@ -79300,7 +79344,7 @@ GROUP Captain PFD
               POS 315.500000 767.500000
               IMAGE CRT Displays/PFD/FD/FDbarVertical
               DATAREF laminar/B747/autopilot/flight_director_pitch_deg
-              SHOW_GREATER 1.000000 laminar/B747/autopilot/FMA/active_pitch_mode
+              SHOW_EQUAL 1.000000 laminar/B747/autopilot/fd/pitch_bar
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -80592,6 +80636,28 @@ GROUP Captain PFD
               CLICK_DX 0
               CLICK_DY 0
 
+            gen_rotary Mode Fail
+              POS 320.500000 1086.500000
+              IMAGE CRT Displays/PFD/Flight Mode Annun/mode_fail
+              DATAREF 
+              SHOW_EQUAL 1.000000 laminar/B747/autopilot/FMA/roll_fail
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
           END_GROUP
         END_GROUP
         GROUP Pitch Modes
@@ -80893,6 +80959,28 @@ GROUP Captain PFD
               IMAGE CRT Displays/PFD/Flight Mode Annun/pitch_ALT
               DATAREF 
               SHOW_EQUAL 9.000000 laminar/B747/autopilot/FMA/active_pitch_mode
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Mode Fail
+              POS 442.500000 1086.500000
+              IMAGE CRT Displays/PFD/Flight Mode Annun/mode_fail
+              DATAREF 
+              SHOW_EQUAL 1.000000 laminar/B747/autopilot/FMA/pitch_fail
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -83503,7 +83591,7 @@ GROUP First Officer PFD
             POS 994.500000 767.500000
             IMAGE CRT Displays/PFD/FD/FDbarLateral
             DATAREF laminar/B747/autopilot/fo_roll_ref
-            SHOW_GREATER 1.000000 laminar/B747/autopilot/FMA/active_roll_mode
+            SHOW_EQUAL 1.000000 laminar/B747/autopilot/fd/roll_bar
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 5
@@ -83531,7 +83619,7 @@ GROUP First Officer PFD
               POS 994.500000 767.500000
               IMAGE CRT Displays/PFD/FD/FDbarVertical
               DATAREF laminar/B747/autopilot/flight_director_pitch_deg
-              SHOW_GREATER 1.000000 laminar/B747/autopilot/FMA/active_pitch_mode
+              SHOW_EQUAL 1.000000 laminar/B747/autopilot/fd/pitch_bar
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -84000,6 +84088,28 @@ GROUP First Officer PFD
               CLICK_DX 0
               CLICK_DY 0
 
+            gen_rotary Mode Fail 2
+              POS 999.500000 1086.500000
+              IMAGE CRT Displays/PFD/Flight Mode Annun/mode_fail
+              DATAREF 
+              SHOW_EQUAL 1.000000 laminar/B747/autopilot/FMA/roll_fail
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
           END_GROUP
         END_GROUP
         GROUP Pitch Modes 2
@@ -84301,6 +84411,28 @@ GROUP First Officer PFD
               IMAGE CRT Displays/PFD/Flight Mode Annun/pitch_ALT
               DATAREF 
               SHOW_EQUAL 9.000000 laminar/B747/autopilot/FMA/active_pitch_mode
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Mode Fail 2
+              POS 1121.500000 1086.500000
+              IMAGE CRT Displays/PFD/Flight Mode Annun/mode_fail
+              DATAREF 
+              SHOW_EQUAL 1.000000 laminar/B747/autopilot/FMA/pitch_fail
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -87702,7 +87834,7 @@ GROUP First Officer PFD
             POS 994.500000 767.500000
             IMAGE CRT Displays/PFD/FD/FDbarLateral
             DATAREF laminar/B747/autopilot/fo_roll_ref
-            SHOW_GREATER 1.000000 laminar/B747/autopilot/FMA/active_roll_mode
+            SHOW_EQUAL 1.000000 laminar/B747/autopilot/fd/roll_bar
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 5
@@ -87730,7 +87862,7 @@ GROUP First Officer PFD
               POS 994.500000 767.500000
               IMAGE CRT Displays/PFD/FD/FDbarVertical
               DATAREF laminar/B747/autopilot/flight_director_pitch_deg
-              SHOW_GREATER 1.000000 laminar/B747/autopilot/FMA/active_pitch_mode
+              SHOW_EQUAL 1.000000 laminar/B747/autopilot/fd/pitch_bar
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -88199,6 +88331,28 @@ GROUP First Officer PFD
               CLICK_DX 0
               CLICK_DY 0
 
+            gen_rotary Mode Fail 2
+              POS 999.500000 1086.500000
+              IMAGE CRT Displays/PFD/Flight Mode Annun/mode_fail
+              DATAREF 
+              SHOW_EQUAL 1.000000 laminar/B747/autopilot/FMA/roll_fail
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
           END_GROUP
         END_GROUP
         GROUP Pitch Modes 2
@@ -88500,6 +88654,28 @@ GROUP First Officer PFD
               IMAGE CRT Displays/PFD/Flight Mode Annun/pitch_ALT
               DATAREF 
               SHOW_EQUAL 9.000000 laminar/B747/autopilot/FMA/active_pitch_mode
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+            gen_rotary Mode Fail 2
+              POS 1121.500000 1086.500000
+              IMAGE CRT Displays/PFD/Flight Mode Annun/mode_fail
+              DATAREF 
+              SHOW_EQUAL 1.000000 laminar/B747/autopilot/FMA/pitch_fail
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5

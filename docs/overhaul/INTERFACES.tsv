@@ -814,7 +814,9 @@ laminar/B747/autopilot/FMA/armed_roll_mode	dataref	panel	B747.70.autopilot,B747.
 laminar/B747/autopilot/FMA/autothrottle/mode_box_status	dataref	panel	B747.70.autopilot,B747.70.xt.autopilot
 laminar/B747/autopilot/FMA/autothrottle_mode	dataref	panel	B747.01.xt.manipulators,B747.40.xt.engines,B747.42.xt.EEC,B747.70.autopilot,B747.70.xt.autopilot,B747.90.xt.lighting
 laminar/B747/autopilot/FMA/pitch/mode_box_status	dataref	panel	B747.70.autopilot,B747.70.xt.autopilot
+laminar/B747/autopilot/FMA/pitch_fail	dataref	panel	B747.70.autopilot
 laminar/B747/autopilot/FMA/roll/mode_box_status	dataref	panel	B747.70.autopilot,B747.70.xt.autopilot
+laminar/B747/autopilot/FMA/roll_fail	dataref	panel	B747.70.autopilot
 laminar/B747/autopilot/FMA/showFMA	dataref	panel	B747.70.autopilot,B747.70.xt.autopilot
 laminar/B747/autopilot/altitude/show_tenThousands	dataref	obj	B747.70.autopilot,B747.70.xt.autopilot
 laminar/B747/autopilot/altitude/show_thousands	dataref	obj	B747.70.autopilot,B747.70.xt.autopilot
@@ -842,6 +844,8 @@ laminar/B747/autopilot/capt_roll_ref	dataref	panel	B747.70.autopilot
 laminar/B747/autopilot/dist/flight_path_error	dataref	panel	B747.70.autopilot
 laminar/B747/autopilot/fd/capt/shown	dataref	panel	B747.70.autopilot,B747.70.xt.autopilot
 laminar/B747/autopilot/fd/fo/shown	dataref	panel	B747.70.autopilot,B747.70.xt.autopilot
+laminar/B747/autopilot/fd/pitch_bar	dataref	panel	B747.70.autopilot
+laminar/B747/autopilot/fd/roll_bar	dataref	panel	B747.70.autopilot
 laminar/B747/autopilot/flaps/target	dataref	autoatc	B747.70.autopilot,B747.70.xt.autopilot
 laminar/B747/autopilot/flight_director_pitch_deg	dataref	panel	B747.19.hydraulicsmodel,B747.19.xt.hydraulicsmodel
 laminar/B747/autopilot/fo_roll_ref	dataref	panel	B747.70.autopilot
