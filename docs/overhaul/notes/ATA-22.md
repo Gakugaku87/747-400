@@ -890,3 +890,13 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
   - 回帰（LuaJIT）：ピッチの則 +2（5 ft の下で浮くと K_FLOAT の速さで下げる、1.5 ft/s より速く降りていれば効かない）。全 121 本。
   - X-Plane（カスタム acf、X-Plane を起動し直して捨ての s66 のあと）：`s116_autoland_xwind`：浮き上がらず（主脚の高さ 2 ft の後は上がらない）、接地はピッチ 6.5°・主脚で 2.5 ft/s・1.30 g（前は 2.19 g）。`s114_autoland`：1.4 ft/s・1.24 g・ピッチ 6.1°。`s117_autoland_engout`：5.6 ft/s・1.66 g・ピッチ 5.5°。3 本とも浮き上がりは無く、接地の後の跳ね（0.3〜0.9 ft、1 秒ほど：脚の跳ね返りと、スピードブレーキが出るまでの 2 秒（推定））は WARN のまま。Lua の誤りなし。
 - 残り：FLARE はピッチが指令より 0.9° ほど遅れ、主脚の高さ 5 ft で 7.6〜8.7 ft/s（則の 4.1 ft/s より遅い）。片発ではそのまま 5.6 ft/s で接地する。追従を速くすると接地のピッチが上がって跳ねやすくなるので、内側のループの FLARE での応え方と合わせて見直す。
+
+## 33. 段 5 の段取り（2026-10-30：監視と警報）
+
+- 対象（GAP の項目）：AFDS-12（AUTOPILOT caution、モード故障の amber の線、F/D の故障旗）、AFDS-13（NO LAND 3・NO AUTOLAND の EICAS）、AFDS-14 の残り（AUTOPILOT DISC の音の型式）、AFDS-15 の残り（engage のインターロック）、AFDS-16（AFDS の電源）、AFDS-23（ILS TUNE INHIBIT・RA TEST INHIBIT）。資料の要約は §3.4、§4.1、§4.5、§4.6（ATA22 p.190–216、p.250–256、p.302–324、p.366–386；FCOM p.640、p.653–655、p.660、p.662、p.677）。
+- 分け方（それぞれ回帰と X-Plane で確かめてコミット）：
+  - 5a 電源とインターロック（AFDS-15・16）：engage の前提（115V AC と 28V DC：FCC L は AC 3・DC 3、C は AC 1・DC 1、R は AC 2・DC 2。28V DC STBY は engage の後に失っても外れない。MCP の電源）、FCC・MCP・サーボと inner loop のセンサ（IRU・ADC）の有効、両 SRM の autotrim valid を失うと engage できず NO AUTOLAND（advisory、地上はエンジン始動まで出さない：FCOM p.47）、単一チャンネルの arm 中に操縦輪 25° 超で arm が外れる（p.314）、autotrim valid を両方失うと単一は外れる（p.318）。
+  - 5b 警報（AFDS-13・14）：AUTOPILOT DISC の音は 109・405（PW）が wailer（最低 1 秒）、570（GE）が siren（FCOM p.655、p.677。RR は PW と同じ：推定）。NO LAND 3・NO AUTOLAND の EICAS：LAND 3・2 を出した後は caution（multi-channel engaged 中は beeper の level B）、前は advisory（level C）。200 ft の下は NO AUTOLAND への劣化だけ、急がないものは接地の後（p.373–374、p.386；FCOM p.662、p.677）。
+  - 5c AUTOPILOT caution とモード故障（AFDS-12）：engaged のモードの入力（LOC・G/S の 2 個目、RA の 2 個目、LNAV・VNAV の FMC など）を失うと、A/P は姿勢を保つモードで engaged のまま、FMA に amber の線、AUTOPILOT（caution）。A/P を外すか、条件の要らないモードを選ぶと消える（ATA22 p.254、p.382；FCOM p.660）。F/D の故障旗と、NCD でのバーの消し方（PW は該当のバー、GE は両方：FCOM p.660）。表示はパネルの計器（カスタム acf、2026-10-25 から承認なしで変えてよい。手順は CLAUDE.md）。
+  - 5d ILS TUNE INHIBIT・RA TEST INHIBIT（AFDS-23）：A/P では LOC・G/S の捕捉から、F/D だけなら 500 ft RA の下、地上で滑走路の向きに 45° 以内・40 kt 以上・LOC/APP を選んでいないとき、ILS の自動同調を止める（p.212）。ATA 34（FMC・無線）との境界。
+- 故障の模型は無い（FCC・MCP・サーボの内部故障）ので、他のモジュールから取れる有効性（電源、油圧、IRS、ADC、RA、ILS、FMC、SRM）だけで作る（§5）。
