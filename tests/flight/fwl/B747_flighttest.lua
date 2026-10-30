@@ -19,7 +19,7 @@
 --   FlyWithLua/B747_flighttest/mark    add a "mark" row to events.csv
 -- Does nothing unless the 747-400 is the user aircraft.
 
-local VERSION = "6"
+local VERSION = "7"
 
 if not string.find(AIRCRAFT_PATH or "", "747-400", 1, true)
     or XPLMFindDataRef("laminar/B747/engines/type") == nil then
@@ -99,6 +99,12 @@ local COLUMNS = {
     {"rud_in", "laminar/B747/flt_ctrls/rudder_input"}, {"ap_rud", "laminar/B747/autopilot/rudder_cmd"},
     {"roll_ratio", "laminar/B747/flt_ctrls/custom_roll_ratio"}, {"roll_cmd", "laminar/B747/autopilot/roll_cmd"},
     {"loc_dots", "sim/cockpit2/radios/indicators/nav1_hdef_dots_pilot"},
+    -- the yaw dampers' commands (ratio of their authority), the rudders
+    -- (degrees), the lateral load factor and the true airspeed (m/s)
+    -- (6-3 step 6b: v7)
+    {"yd_upr", "laminar/B747/flt_ctrls/yaw_damper_upr"}, {"yd_lwr", "laminar/B747/flt_ctrls/yaw_damper_lwr"},
+    {"rud_upr", "laminar/B747/flt_ctrls/rudder_upr_pos"}, {"rud_lwr", "laminar/B747/flt_ctrls/rudder_lwr_pos"},
+    {"ny", "sim/flightmodel/forces/g_side"}, {"tas", "sim/flightmodel/position/true_airspeed"},
 }
 -- the four engines' thrust, for the "thrust" column
 local THRUST = {{"sim/flightmodel/engine/POINT_thrust", 0}, {"sim/flightmodel/engine/POINT_thrust", 1},

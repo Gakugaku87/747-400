@@ -1,12 +1,17 @@
--- Yaw dampers (upper and lower rudder): the yaw and sideslip inputs and the damper law.
--- Moved unchanged out of B747.19.xt.hydraulics_override.lua (docs/overhaul/PLAN.md R-1).
--- B747.19.xt.hydraulicsmodel.lua loads it after pid.lua; flight_controls_override()
--- calls yaw_damper_system(doCompute) every frame.
--- 6-3 step 6a: the yaw damper modules' modes, engagement and INOP from the
--- model (B747.19.yd_model.lua): the switches, their power, the IRUs, the
--- ADCs, the air/ground, the failures in; INOP out (laminar/B747/flt_ctrls/
--- yaw_damper_upr_on, lwr_on: 1 engaged; before, the flight controls module
--- wrote them) and the mode; the law's command faded in and out by it.
+-- Yaw dampers (upper and lower rudder): the yaw damper model
+-- (B747.19.yd_model.lua) in the aircraft. B747.19.xt.hydraulicsmodel.lua
+-- loads it; flight_controls_override() calls yaw_damper_system(doCompute)
+-- every frame. 6-3 step 6a: the modules' modes, engagement and INOP: the
+-- switches, their power, the IRUs, the ADCs, the air/ground, the failures
+-- in; INOP out (laminar/B747/flt_ctrls/yaw_damper_upr_on, lwr_on: 1
+-- engaged; before, the flight controls module wrote them) and the modes.
+-- Step 6b: their command from the sensors (X-Plane's values for the IRUs'
+-- and ADCs') to each rudder (laminar/B747/flt_ctrls/yaw_damper_upr, lwr:
+-- the ratio of 4 degrees, which the hydraulics module adds to the pedals'
+-- rudder after the ratio changers: ATA27 p.656). Before, a law of its own
+-- (the heading's 0.9 s average below 5 degrees of bank, the sideslip
+-- through a PID above, gains by the MCP altitude) scaled by the ratio
+-- changers.
 dofile("B747.19.yd_model.lua")
 local YD = B747_yd_model
 B747DR_yd_bus_stby              = find_dataref("laminar/B747/electrical/bus/stby_main")
@@ -19,6 +24,16 @@ B747DR_yd_adc_valid             = find_dataref("laminar/B747/airdata/valid")
 B747DR_yd_pseu_air              = find_dataref("laminar/B747/gear/air_ground/pri_air")
 B747DR_yd_fail                  = find_dataref("laminar/B747/flt_ctrls/fail/yaw_damper")
 B747DR_yd_mode                  = find_dataref("laminar/B747/flt_ctrls/yaw_damper_mode")
+-- the command's sensors (step 6b)
+simDR_yd_cas                    = find_dataref("sim/flightmodel/position/indicated_airspeed")
+simDR_yd_tas                    = find_dataref("sim/flightmodel/position/true_airspeed")
+simDR_yd_gs                     = find_dataref("sim/flightmodel/position/groundspeed")
+simDR_yd_alpha                  = find_dataref("sim/flightmodel/position/alpha")
+simDR_yd_pitch                  = find_dataref("sim/flightmodel/position/theta")
+simDR_yd_roll                   = find_dataref("sim/flightmodel/position/phi")
+simDR_yd_p                      = find_dataref("sim/flightmodel/position/P")
+simDR_yd_r                      = find_dataref("sim/flightmodel/position/R")
+simDR_yd_ny                     = find_dataref("sim/flightmodel/forces/g_side")
 local yd_state = YD.new()
 local yd_inputs = YD.inputs()
 local function yd_read(inp)
@@ -40,136 +55,12 @@ local function yd_read(inp)
     inp.adc = (B747DR_yd_adc_valid[0] > 0.5 and 1 or 0) + (B747DR_yd_adc_valid[2] > 0.5 and 1 or 0)
     inp.fault[1] = B747DR_yd_fail[0] > 0.5
     inp.fault[2] = B747DR_yd_fail[1] > 0.5
-end
-local director_yawRecord={}
-local director_currentyawRecord=1
-local director_lastyawRecordUpdate=0
-for i=1,30,1 do
-    director_yawRecord[i]=0
-end
-local directoryawSampleRate=0.03
-function ap_director_yaw()
-    if math.abs(simDR_AHARS_roll_heading_deg_pilot)>5 then 
-        return -simDR_sideslip
-    else
-        return simDR_AHARS_heading_deg_pilot
-    end
-end
-function dampSlip()
-    --[[local retval=0
-    for i=1,30,1 do
-        local tVal=director_yawRecord[i]
-        retval=retval+tVal
-       --if displayUpdate then print("i "..i.." = " ..pitchRecord[i].. " " ..retval) end
-    end
-    retval=retval/30]]
-    return ap_director_yaw()--retval
-end
-function dampYaw()
-    --local displayUpdate=false
-    
-    
-    local retval=director_yawRecord[1]
-    local left=0
-    if retval>270 then left=1 end
-    for i=2,30,1 do
-        local tVal=director_yawRecord[i]
-        if left==1 and tVal<90 then tVal=tVal+360 end
-        if left==0 and tVal>270 then tVal=tVal-360 end
-        retval=retval+tVal
-       --if displayUpdate then print("i "..i.." = " ..pitchRecord[i].. " " ..retval) end
-    end
-    retval=retval/30
-    if retval<0 then retval=retval+360 end
-
-    retval=getHeadingDifference(retval,simDR_AHARS_heading_deg_pilot)
-    --if displayUpdate then print("ap_director_yaw_integral "..retval.." simDR_AHARS_heading_deg_pilot "..simDR_AHARS_heading_deg_pilot) end
-    return retval
-end
-function clearYawIntegral()
-    local val=0
-    if math.abs(simDR_AHARS_roll_heading_deg_pilot)<5 then 
-        val=simDR_AHARS_heading_deg_pilot
-    end
-    for i=1,30,1 do
-        director_yawRecord[i]=val
-    end
-end
-local lastDamperSystem=0 --0 == slip, 1==yaw
-local current_yaw_intregal=0
-function ap_director_yaw_integral()
-    if (simDRTime-director_lastyawRecordUpdate)>directoryawSampleRate then
-         director_lastyawRecordUpdate=simDRTime
-         director_yawRecord[director_currentyawRecord]=ap_director_yaw()
-         director_currentyawRecord=director_currentyawRecord+1
-
-         if director_currentyawRecord>30 then
-             director_currentyawRecord=1
-         end
-        if math.abs(simDR_AHARS_roll_heading_deg_pilot)>5 then 
-            if lastDamperSystem~=0 then clearYawIntegral() end
-            lastDamperSystem=0
-            current_yaw_intregal= dampSlip()
-        else
-            if lastDamperSystem~=1 then clearYawIntegral() end
-            lastDamperSystem=1
-            current_yaw_intregal= dampYaw()
-        end
-     end
-    
-    return current_yaw_intregal
-end
-local yawPid = newPid()
-yawPid.minout=-1
-yawPid.maxout=1
-yawPid.target=0
-yawPid.input = 0
-yawPid:compute()
-
-function get_damper_value(currentValue)
-    local target=yawPid.output
-    
-    local speed=0.4
-    
-    --[[if math.abs(simDR_AHARS_roll_heading_deg_pilot)<5 and math.abs(yawPid.input)<0.35 then
-        speed=2
-        target=0
-    end]]
-    local mult=1
-    if math.abs(simDR_AHARS_roll_heading_deg_pilot)<5 then
-        mult=B747_rescale(0,0,0.35,1,yawPid.input)
-    end
-    
-    if mult==0 or target==nil then
-        return 0
-    end
-    --print("mult "..mult)
-    --print("target "..target)
-    target=target*mult
-    return target --B747_interpolate_value(currentValue,target,-1,1,speed)
+    inp.cas, inp.tas, inp.gs = simDR_yd_cas, simDR_yd_tas, simDR_yd_gs
+    inp.alpha, inp.pitch, inp.roll = simDR_yd_alpha, simDR_yd_pitch, simDR_yd_roll
+    inp.p, inp.r, inp.ny = simDR_yd_p, simDR_yd_r, simDR_yd_ny
 end
 
 function yaw_damper_system(doCompute)
-    if math.abs(simDR_AHARS_roll_heading_deg_pilot)<5 then
-        B747DR_pidyawP = B747_rescale(3000, B747DR_pidyawProllL,30000, B747DR_pidyawProllH,B747DR_autopilot_altitude_ft_pfd)
-        B747DR_pidyawI = 0.000003
-        B747DR_pidyawD = B747_rescale(3000,B747DR_pidyawDrollL,30000,B747DR_pidyawDrollH,B747DR_autopilot_altitude_ft_pfd)
-    else
-        B747DR_pidyawP = B747_rescale(3000, B747DR_pidyawPslipL,30000, B747DR_pidyawPslipH,B747DR_autopilot_altitude_ft_pfd)
-        B747DR_pidyawI = 0.000003
-        B747DR_pidyawD = B747_rescale(3000,B747DR_pidyawDslipL,30000,B747DR_pidyawDslipH,B747DR_autopilot_altitude_ft_pfd)
-    end
-
-    yawPid.kp=B747DR_pidyawP
-    yawPid.ki=B747DR_pidyawI
-    yawPid.kd=B747DR_pidyawD
-    yawPid.input = ap_director_yaw_integral()
-    if doCompute==1 then
-        yawPid:compute()
-    end
-    --print(B747DR_yaw_damper_lwr.." "..get_damper_value())
-    -- the modules' modes (6-3 step 6a): INOP, and the command faded in the
-    -- air, none in the ground operation
     yd_read(yd_inputs)
     local yd = YD.update(yd_state, yd_inputs, SIM_PERIOD)
     for i = 1, 2 do
@@ -178,19 +69,15 @@ function yaw_damper_system(doCompute)
         if i == 2 and B747DR_yaw_damper_lwr_on ~= v then B747DR_yaw_damper_lwr_on = v end
         if B747DR_yd_mode[i - 1] ~= yd.mode[i] then B747DR_yd_mode[i - 1] = yd.mode[i] end
     end
-    -- the dampers' actuators need their hydraulic system through the tail
-    -- shutoff valve (upper 3, lower 2: FCOM p.949). Without it they stop and
-    -- no INOP shows (the modules inhibit the faults a lack of hydraulic power
-    -- causes: ATA27 p.40). 4-1 step 4
-    if yd.engaged[1] and B747_fcsov_yaw_damper_hyd(3) then
-        B747DR_yaw_damper_upr=B747_interpolate_value(B747DR_yaw_damper_upr,get_damper_value(B747DR_yaw_damper_upr)*yd.fade[1],-1,1,0.3)
-    else
-        B747DR_yaw_damper_upr=B747_interpolate_value(B747DR_yaw_damper_upr,0,-1,1,0.3)
-    end
-
-    if yd.engaged[2] and B747_fcsov_yaw_damper_hyd(2) then
-        B747DR_yaw_damper_lwr=B747_interpolate_value(B747DR_yaw_damper_lwr,get_damper_value(B747DR_yaw_damper_lwr)*yd.fade[2],-1,1,0.3)
-    else
-        B747DR_yaw_damper_lwr=B747_interpolate_value(B747DR_yaw_damper_lwr,0,-1,1,0.3)
-    end
+    -- each actuator needs its hydraulic system through the tail shutoff
+    -- valve (upper 3, lower 2: FCOM p.949). Without it it stops and no INOP
+    -- shows (the modules inhibit the faults a lack of hydraulic power
+    -- causes: ATA27 p.40). 4-1 step 4. Disengaged, its springs center it
+    -- (ATA22 p.90). The ratio of the 4 degrees, at most 2 a 0.3 s (the
+    -- actuator's speed: an estimate)
+    local upr, lwr = 0, 0
+    if yd.engaged[1] and B747_fcsov_yaw_damper_hyd(3) then upr = yd.cmd[1] / YD.AUTH_FULL end
+    if yd.engaged[2] and B747_fcsov_yaw_damper_hyd(2) then lwr = yd.cmd[2] / YD.AUTH_FULL end
+    B747DR_yaw_damper_upr = B747_interpolate_value(B747DR_yaw_damper_upr, upr, -1, 1, 0.3)
+    B747DR_yaw_damper_lwr = B747_interpolate_value(B747DR_yaw_damper_lwr, lwr, -1, 1, 0.3)
 end
