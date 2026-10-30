@@ -964,11 +964,19 @@ function B747_fms_gw_kg()
   if gw then return gw * 1000 end
   return simDR_GRWT
 end
--- the headwind (kt) of the cruise: the present wind's within 2,000 ft of
--- CRZ ALT, else none (the forecasts are step 8e)
+-- the measured wind's direction (true; X-Plane's indicated one magnetic)
+function B747_fms_wind_true()
+  return (simDR_wind_degrees - ((simDR_fms_mag_psi - simDR_fms_true_psi + 180) % 360 - 180)) % 360
+end
+-- the headwind (kt) of the cruise for ECON (step 8e3): the predictions'
+-- winds (the last ones') at CRZ ALT here, the measured wind mixed with the
+-- forecasts; before any, the present wind's within 2,000 ft of CRZ ALT
+local predField = nil
 function B747_fms_crz_headwind()
   local crz = B747BR_cruiseAlt
-  if simDR_onGround == 1 or crz == nil or crz <= 0 or math.abs(simDR_pressureAlt1 - crz) >= 2000 then return 0 end
+  if crz == nil or crz <= 0 then return 0 end
+  if predField then return predField.wind(0, crz, "crz") end
+  if simDR_onGround == 1 or math.abs(simDR_pressureAlt1 - crz) >= 2000 then return 0 end
   return simDR_wind_speed * math.cos(math.rad(simDR_wind_degrees - simDR_fms_mag_psi))
 end
 -- the step climb (6-1/6-2 step 8b2; notes/ATA-34-61-FMC.md §46): ICAO's
@@ -1106,10 +1114,18 @@ function B747_fms_pred_input(crz)
   if simDR_onGround ~= 1 then
     if B747DR_ap_flightPhase == 3 then phase = "des" elseif B747DR_ap_flightPhase == 2 then phase = "crz" end
   end
+  -- the winds and temperatures along the route (step 8e3; notes/
+  -- ATA-34-61-FMC.md §53): the WIND pages' and DESCENT FORECAST's mixed
+  -- with the measured wind (true) and temperature
+  local fc = B747_fms_des_forecast and B747_fms_des_forecast()
+  local field = B747_wind_model.field{legs = legs, route = r, course = R.course,
+    measured = {dir = B747_fms_wind_true(), kt = simDR_wind_speed, isa = isa, h = simDR_pressureAlt1, phase = phase},
+    orig_elev = r.origin and r.origin.elev or 0, dest_elev = r.dest and r.dest.elev or 0, crz = crz,
+    des = fc and fc.slots or nil}
   return {P = B747_perf_db, t = perf, isa = isa, gw = B747_fms_gw_kg(), fuel = perf_fuel_t() * 1000,
     alt = math.max(0, simDR_pressureAlt1), cas = (simDR_onGround ~= 1 and simDR_ias_pilot > 100) and simDR_ias_pilot or nil,
     phase = phase, crz = crz, clb = clb, des = des, crzspd = crzspd, legs = legs, ed = ed, clb_last = clbLast,
-    steps = steps, wind = {clb = 0, crz = B747_fms_crz_headwind(), des = 0}}
+    steps = steps, wind = {clb = 0, crz = 0, des = 0}, field = field}
 end
 -- the ND's altitude profile points (6-1/6-2 step 8d3; notes/
 -- ATA-34-61-FMC.md §50; FCOM p.1149): the predictions' T/C, the next S/C
@@ -1158,6 +1174,7 @@ function update_preds()
   if simDRTime < predNext then return end
   predNext = simDRTime + 10
   local s = B747_fms_pred_input(B747BR_cruiseAlt)
+  predField = s and s.field or nil
   -- none with CRZ ALT at or above MAX (ATA34_2 p.611)
   if s and s.crz >= B747_perf_db.max_alt(s.t, s.gw, s.isa) then s = nil end
   predResult = s and B747_pred_model.predict(s) or nil

@@ -71,8 +71,8 @@ end
 -- decelerations to the schedule's speeds (estimates), where each starts in
 -- decel {x, h} (step 8d3: the ND's deceleration points, FCOM p.1149)
 local function descent_path(s, kg, cons, xed, hed)
-    local P, t, isa = s.P, s.t, s.isa or 0
-    local hw = (s.wind and s.wind.des) or 0
+    local P, t, isa0 = s.P, s.t, s.isa or 0
+    local hw0 = (s.wind and s.wind.des) or 0
     local xs, hs, ts, fs = {xed}, {hed}, {0}, {0}
     local decel = {}
     local x, h, tt, ff = xed, hed, 0, 0
@@ -94,6 +94,10 @@ local function descent_path(s, kg, cons, xed, hed)
             if a and a > h then anchor = {x = c.x, h = a} end
         end
         local tgt, m, machMode = M.schedule(P, s.des, h)
+        -- the wind and temperature here (step 8e3: the field's), else the
+        -- descent's headwind and the ISA deviation now
+        local isa, hw = isa0, hw0
+        if s.field then isa, hw = s.field.isa(x, h), s.field.wind(x, h, "des") end
         local v = P.tas(machMode and m or P.cas_to_mach(cas, h), h, isa) * KT
         local gs = math.max(v - hw * KT, 50)
         if cas < tgt - 0.5 then
@@ -194,6 +198,10 @@ end
 --   steps       function(h, kg) -> STEP TO (ft), the step point's weight
 --               (kg), or nil: the step climbs (nil: none)
 --   wind        {clb, crz, des} headwinds (kt)
+--   field       nil, or the winds and temperatures along the route (step
+--               8e3: B747.68.wind_model.lua's field): wind(x, h, phase) the
+--               headwind (kt), isa(x, h) the ISA deviation, in place of
+--               wind and isa
 -- returns {pts = per leg {x, h, t, fuel, cas, mach, machMode (the speed
 --   there: the climb's before the T/C, the descent's after the T/D, else
 --   the cruise's)}, tc = x or nil, td = x or nil,
@@ -298,8 +306,10 @@ function M.predict(s)
             end
             local tgt, m, machMode = M.schedule(P, s.clb, h)
             local mm = machMode and m or P.cas_to_mach(cas, h)
+            local isa, hw = isa, wind.clb or 0
+            if s.field then isa, hw = s.field.isa(x, h), s.field.wind(x, h, "clb") end
             local v = P.tas(mm, h, isa) * KT
-            local gs = math.max(v - (wind.clb or 0) * KT, 50)
+            local gs = math.max(v - hw * KT, 50)
             local thr = P.climb_thrust(t, h)
             local drag = P.drag(t, kg, h, mm)
             local ffl = 4 * P.thrust_ff(t, thr / 4, h, mm, isa)
@@ -327,8 +337,10 @@ function M.predict(s)
         while x < xstop - 1e-6 and guard < 200000 do
             guard = guard + 1
             local m = crz_mach(P, s.crzspd, hcur, kg)
+            local isa, hw = isa, wind.crz or 0
+            if s.field then isa, hw = s.field.isa(x, hcur), s.field.wind(x, hcur, "crz") end
             local v = P.tas(m, hcur, isa) * KT
-            local gs = math.max(v - (wind.crz or 0) * KT, 50)
+            local gs = math.max(v - hw * KT, 50)
             local ff = 4 * P.cruise_ff(t, kg, hcur, m, isa)
             local dt = 60
             local dx = gs * dt / NM

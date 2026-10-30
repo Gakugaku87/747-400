@@ -163,6 +163,37 @@ end
 T.check(on_leg(prof[3], r.td), string.format("the T/D on its leg, %.1f NM along the route", r.td))
 T.check(on_leg(prof[1], r.tc), string.format("the T/C on its leg, %.1f NM along the route", r.tc))
 
+-- the predictions' winds (step 8e3; notes §53): a WIND page's entry at
+-- FL100 straight down the longest leg, propagated everywhere; on the
+-- ground (the climb) its share by the altitude from here (FMSPG p.233)
+local Wm = fms.ns.B747_wind_model
+local sIn = fms.ns.B747_fms_pred_input(10000)
+local kLong, xMid, acc = 1, 0, 0
+for k, l in ipairs(sIn.legs) do
+    if l.dist > sIn.legs[kLong].dist then kLong = k end
+end
+for k, l in ipairs(sIn.legs) do
+    if k == kLong then xMid = acc + l.dist / 2 end
+    acc = acc + l.dist
+end
+local LL = sIn.legs[kLong]
+local crsLong = fms.ns.B747_route_model.course(LL.p0.lat, LL.p0.lon, LL.p1.lat, LL.p1.lon)
+local r0 = fms.ns.B747_fms_preds()
+local st = fms.ns.B747_fmc_route
+Wm.add_alt(st.rte, 10000)
+Wm.set_wind(st.rte, kLong, 10000, math.floor(crsLong + 0.5) % 360, 100)
+fms.ns.B747_fms_preds_now()
+frames(1)
+local s2 = fms.ns.B747_fms_pred_input(10000)
+local share = Wm.mix((10000 - 100) / Wm.MIX_FT_PER_NM)
+T.near(s2.field.wind(xMid, 10000, "crz"), 100 * (1 - share), 1.5,
+    string.format("the longest leg's middle at FL100: a %.0f kt headwind (the forecast's 100, %.0f %% measured calm)", 100 * (1 - share), share * 100))
+local r1 = fms.ns.B747_fms_preds()
+T.check(r1 ~= r0 and math.abs(r1.dest.t - r0.dest.t) > 30, string.format("the predictions with the wind: the destination %.1f min apart", (r1.dest.t - r0.dest.t) / 60))
+Wm.delete_alt(st.rte, 10000)
+fms.ns.B747_fms_preds_now()
+frames(1)
+
 -- PROGRESS page 1 from the predictions (step 8d; FCOM p.1371-1373): TO
 -- the first leg with a point, NEXT the one after, DEST; TO T/C on the
 -- ground (the climb)
