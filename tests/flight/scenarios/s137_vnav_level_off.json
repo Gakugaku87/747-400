@@ -27,7 +27,7 @@
     { "do": "cdu", "note": "RTE：RJAA→RJBB、DIRECT XAC・SPENS・BOKJO", "keys": ["RTE", "RJAA", "L1", "RJBB", "R1", "NEXT", "XAC", "R1", "?SEL", "SPENS", "R2", "?SEL", "BOKJO", "R3", "?SEL"] },
     { "do": "cdu", "note": "ACTIVATE と EXEC", "keys": ["LEGS", "R6", "EXEC"] },
     { "do": "sleep", "seconds": 3 },
-    { "do": "cdu", "note": "INIT REF、<INDEX、PERF：CRZ ALT FL350、COST INDEX 100", "keys": ["INITREF", "L6", "L3", "350", "R1", "100", "L5"] },
+    { "do": "cdu", "note": "INIT REF、<INDEX、PERF：ZFW 200（段 9c から：VNAV は総重量が無いと PERF/VNAV UNAVAILABLE、FCOM p.1433）、CRZ ALT FL350、COST INDEX 100", "keys": ["INITREF", "L6", "L3", "200", "L3", "350", "R1", "100", "L5"] },
     { "do": "check", "note": "FMC の巡航高度 35,000 ft", "dref": "laminar/B747/autopilot/dist/cruise_alt", "op": "==", "value": 35000 },
     { "do": "set", "note": "MCP 高度 13,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 13000 },
     { "do": "sleep", "seconds": 5, "note": "MCP の高度が中へ写るのを待つ（3 秒）" },

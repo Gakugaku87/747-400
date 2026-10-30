@@ -288,6 +288,7 @@ T.equal(fms.ns.B747_fms_preds(), nil, "above MAX: no predictions")
 -- weight is in (PERF INIT's ZFW: FCOM p.645)
 local VN = "laminar/B747/fms/vnav/"
 T.equal(rt:get(VN .. "valid"), 0, "no ZFW on PERF INIT: VNAV not valid (PERF/VNAV UNAVAILABLE)")
+T.equal(rt:get(VN .. "perf"), 0, "(step 9c) no gross weight: the VNAV switch's data not in")
 key("func_key/index")
 enter("210", "L3")
 frames(0.5)
@@ -297,5 +298,51 @@ T.equal(rt:get(VN .. "mode"), 1, "VNAV SPD")
 T.equal(rt:get(VN .. "at"), 5, "THR REF")
 T.equal(rt:get(VN .. "alt"), 41000, "the FMC altitude: CRZ ALT FL410")
 T.near(rt:get(VN .. "cas"), 250, 0.5, "250 kt below SPD TRANS's 10,000 ft")
+T.equal(rt:get(VN .. "perf"), 1, "(step 9c) the VNAV switch's data in: GW, COST INDEX 100, CRZ ALT (FCOM p.1433)")
+-- (step 9c) the takeoff's target (FCOM p.1255): V2 160 entered on TAKEOFF
+-- REF, on the ground stopped: V2 + 10
+key("ls_key/L6")
+key("ls_key/L5")
+T.check(line(1):find("TAKEOFF REF"), "TAKEOFF REF: " .. line(1))
+enter("160", "R3")
+frames(0.5)
+T.equal(rt:get("laminar/B747/airspeed/V2"), 160, "V2 160")
+T.near(rt:get(VN .. "cas"), 170, 0.5, "the takeoff's target: V2 + 10 (not the climb's 250 kt)")
+-- (step 9c) the distance to go to the E/D goes on from the active leg's
+-- point when LNAV sequences between the predictions (before, from the
+-- point passed: s140 went 700 ft off the path after ATMUG). CRZ ALT FL350
+-- again for the predictions (none above MAX)
+key("func_key/index")
+enter("350", "R1")
+frames(11)
+T.check(fms.ns.B747_fms_preds() ~= nil, "FL350: the predictions")
+local st, RM = fms.ns.B747_fmc_route, fms.ns.B747_route_model
+local d0 = fms.ns.B747_fms_vnav_dist()
+T.check(d0 ~= nil, "a distance to go to the E/D: " .. tostring(d0))
+local n1, f1, f2 = nil, nil, nil
+for i, l in ipairs(st.rte.legs) do
+    if l.fix then
+        if not f1 then n1, f1 = i, l.fix elseif not f2 then f2 = l.fix end
+    end
+end
+local lat, lon = rt:get("sim/flightmodel/position/latitude"), rt:get("sim/flightmodel/position/longitude")
+local _, a1 = RM.course(lat, lon, f1.lat, f1.lon)
+local _, a2 = RM.course(lat, lon, f2.lat, f2.lon)
+local _, d12 = RM.course(f1.lat, f1.lon, f2.lat, f2.lon)
+-- sequenced with the airplane halfway on to the next point (the one passed
+-- behind it): the distance from the next point, not from the one passed
+RM.sequence(st, n1)
+local mlat, mlon = (f1.lat + f2.lat) / 2, (f1.lon + f2.lon) / 2
+rt:set("sim/flightmodel/position/latitude", mlat)
+rt:set("sim/flightmodel/position/longitude", mlon)
+frames(0.1)
+local _, m1 = RM.course(mlat, mlon, f1.lat, f1.lon)
+local _, m2 = RM.course(mlat, mlon, f2.lat, f2.lon)
+local rem2 = d0 - a1 - d12
+T.near(fms.ns.B747_fms_vnav_dist(), m2 + rem2, 0.01,
+    string.format("%s sequenced: on from %s (%.1f NM; from %s %.1f)", f1.ident, f2.ident, fms.ns.B747_fms_vnav_dist(),
+        f1.ident, m1 + d12 + rem2))
+rt:set("sim/flightmodel/position/latitude", lat)
+rt:set("sim/flightmodel/position/longitude", lon)
 
 T.done()

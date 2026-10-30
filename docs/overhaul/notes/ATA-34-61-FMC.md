@@ -1136,3 +1136,31 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 試験：
   - 回帰：新設の `tests/fms/vnav_model_test.lua` 39 件（上昇の VNAV SPD・THR REF・250 kt と 340 kt と M.84・FMC の高度、placard・最小機動速度・速度介入、CRZ ALT で巡航の VNAV PTH・SPD・M.85、高い CRZ ALT で上昇へ、T/D を過ぎても MCP が巡航高度なら巡航、MCP が下で降下の VNAV PTH・IDLE、経路の V/S、経路の上・下・ずっと下・ずっと上、浅い区間の SPD、240 kt、valid、短い飛行、経路の引き方）、`pred_glue_test.lua` 72 件（地上：ZFW が無ければ無効、ZFW 210 で有効・上昇・VNAV SPD・THR REF・CRZ ALT・250 kt）。全 133 本。
   - X-Plane：新設の `s138_vnav_shadow` 8/8（T/D を過ぎた FL314 で降下・VNAV PTH・IDLE、目標 287 kt、FMC の高度 4,000 ft（ATVID の制限）、経路の 1,710 ft 上で V/S の指令 −3,322 fpm（経路より 1,500 fpm 急の上限））。1 回目は予測の T/D に頼った段階の切り替えで上昇のまま（上の直し）、2 回目は確かめる時機が T/D の手前だった。Lua の誤りなし。
+
+## 57. 段 9c の実装（2026-10-31：AFDS が FMC の VNAV で飛ぶ）
+
+- 資料：§54 の下調べ（ATA22 p.279–280、p.338、p.341、FCOM p.645、p.1149、p.1255、p.1433）。
+- 作ったもの（AP のつなぎ `B747.70.xt.autopilot.lua`・`B747.70.xt.autopilot.monitor.lua`、FMS の `B747.68.xt.fms.lua`・`B747.68.vnav_model.lua`）：
+  - engage：VNAV の arm から、FMC の valid（ATA22 p.341 の FMC DATA VALID）で 400 ft の上（FCOM p.645）。engage の後は valid の間続き、valid が消えると今の高度の ALT HOLD（ATA22 p.338）。arm も valid が無いと消える（前は前の VNAV の経路が無いとき）。
+  - PERF/VNAV UNAVAILABLE：VNAV スイッチで、総重量・COST INDEX・CRZ ALT のどれかが無いとき（FCOM p.1433。FMC の新しい `laminar/B747/fms/vnav/perf`。前は CRZ ALT だけ）。
+  - 則：VNAV SPD は速度の則（FLCH と同じ）で FMC の目標速度、巡航の VNAV PTH は FMC の高度を ALT の則で、降下の VNAV PTH は FMC の V/S の指令を V/S の則で。上昇では MCP の高度と FMC の高度（上昇の制限、CRZ ALT）を捕捉して水平（VNAV ALT・VNAV PTH：段 9a の捕捉の目標を、前の VNAV の目標から FMC の高度に）。
+  - FMA：水平の間は 9a のまま（MCP の高度で VNAV ALT、FMC の高度で VNAV PTH）、そうでなければ FMC のサブモード（SPD → VNAV SPD、PTH → VNAV PTH）。
+  - 速度：VNAV の engage 中で IAS/MACH の窓が閉じている間（速度介入でない間）、FMC の目標速度を速度のダイアルへ。Mach は Mach×100 で、ダイアルの単位も FMC に合わせて切り替える（前の VNAV と同じく 0.25 秒）。X-Plane のダイアル（速度の則と A/T の基準）と速度の bug は今までどおりダイアルから。
+  - 離陸（FCOM p.1255。§54 の 9e から前倒し：前の VNAV の V2 の扱いを外すため）：地上から VNAV の engage まで、目標速度は今の速度を V2 + 10〜V2 + 25 に収めたもの。engage の後はその値のまま、加速高度（TAKEOFF REF の ACCEL HT を出発空港の標高に足す）かフラップを上げ始めるまで。そのあとは上昇の予定（フラップの placard の 5 kt 下、SPD TRANS の 250 kt）。V2 が無い（999）ときと空中開始は、はじめから上昇の予定。
+  - A/T：engage の時に A/T ARM が ON なら A/T を active にする（FCOM p.645）。TO/GA の推力の状態と前の則のフラグは消す。VNAV の間の A/T のモードは FMC の要求（上昇 THR REF、巡航 SPD、降下 IDLE、経路の 200 ft 下と浅い区間は SPD）、水平（VNAV ALT と捕捉の VNAV PTH）は SPD。
+  - `flightPhase`：VNAV の間は FMC の段階（EEC の推力の基準：CLB・CRZ）。ただし離陸（0）の間は電波高度 1,000 ft までそのまま（前の THR REF と同じ。段 9f の THR REDUCTION までの推定）。
+  - ND の経路の指針：`vnav/after_tod` と `dist/flight_path_error` を、FMC の降下の段階と経路の偏差から（FCOM p.1149：降下の間だけ。VNAV の engage によらない）。前は前の VNAV の幾何。
+  - DRAG REQUIRED（前の判定のまま）は VNAV の降下の経路の上でも出る（前は前の V/S のフラグで判定）。段 9e で作り直す。
+  - 前の VNAV：`VNAV_modeSwitch` の上昇・巡航・降下（`VNAV_CLB`・`VNAV_CRZ`・`VNAV_DES`）、毎フレームの `B747_vnav_speed`、arm の時の前の VNAV の始め方を外した（関数は残してある。段 9d・9e で RESET MCP ALT と DES のページを作り直すときに消す）。RESET MCP ALT（前の `checkMCPAlt`）は VNAV の巡航・降下で今までどおり（段 9d まで）。DES のページの FPA・V/B（前の `setDescentVSpeed`）は VNAV が engage していない間だけ更新される（段 9e で FMC から）。
+  - engage で IAS/MACH の窓を閉じる：前の速度介入（SPD ノブの押し）の状態を消す（速度介入の作り直しは段 9d）。
+  - FMC の新しい `laminar/B747/fms/vnav/dist`（経路を引く E/D までの距離、NM：試験と記録 v8 の `fvn_dist` のため）。
+  - E/D までの距離（経路を引く所）：予測の時に点ごとの E/D までの残りの距離を表にし、毎フレーム、有効な経路の最初の点（LNAV が順送りした後はその次の点）までの大円にその残りを足す（経路の脚の表は順送りでも同じ表のまま残るので、点で引ける）。前は予測の時の最初の点からで、その点を過ぎると次の予測（10 秒ごと）まで距離が増え、経路が上へ逃げた（s140 の 2 回目：ATMUG の旋回の後 12 秒で経路の 700 ft 下）。
+  - 経路の戻し（§56 の K_PATH・VS_STEEPER）を 1 ft につき 3 fpm・1,500 fpm から 1 fpm・1,000 fpm に下げた：X-Plane の s140 の 1 回目で、経路の 1,424 ft 上から 3 分で 860 ft 下まで行き過ぎた（AFDS の V/S の則は巡航の速さで昇降率を毎秒 50 fpm ほどしか変えない：0.05 g の制限と遅れ。戻しの時定数 20 秒ではそれより速い）。1 分の時定数にした（推定）。
+- 推定：離陸の推力の基準を 1,000 ft まで保つこと、A/T を active にするのは engage の時だけ（あとで A/T を外せば戻さない）、フラップを上げ始めた判定（地上の角度から 0.02 の比）、経路の戻しの強さ。
+- 残り：経路の上下 150 ft の許容、速度の許容（目標 + 15 kt など）と速度の逆戻り（VNAV SPD）、THRUST REQUIRED・DRAG REQUIRED（FCOM p.1259–1260）は段 9e。今は経路から大きく外れると、遠い間は経路の V/S から 1,000 fpm 急に（上）か水平（下）で戻す。
+- 残り（予測から来るもの）：予測の脚の距離は点と点の大円で、旋回の弧を入れない（段 8c）。折り返しに近い旋回では実際の道のりが予測より長く、旋回の間に経路の下に出る（s140 の 2〜4 回目：ATMUG の上で SAKVA へ約 150° 折り返し、E/D までの距離が旋回の間 0.1 NM/s で増え −850 ft。VNAV の追従そのものは ATMUG で +69 ft）。実機の経路は旋回を含む横の経路に沿う。
+- 試験：
+  - 回帰：`afds_glue_test.lua` 216 件（PERF/VNAV UNAVAILABLE、arm・2 回目・FMC の valid で engage、VNAV SPD・前の則のフラグを消す・A/T が active で THR REF・窓を閉じダイアルに 300 kt・X-Plane のダイアルも・段階 1、MCP の高度で VNAV ALT と A/T SPD、FMC の高度で VNAV PTH、巡航の VNAV PTH・SPD・Mach .845 のダイアル、降下の VNAV PTH・IDLE・−2,000 fpm で指令が下へ・280 kt・after_tod と偏差、valid が消えると ALT HOLD・指針が消える・arm が消える、engage 中の押しは何もしない、V/S で終わる）、`vnav_model_test.lua` 51 件（離陸の目標速度：地上で V2 + 10、速度に合わせる、V2 + 25 まで、engage の時の値を保つ、加速高度で placard の 5 kt 下、フラップを上げ始めると上昇の予定、V2 が無いときと空中開始は上昇の予定）、`pred_glue_test.lua` 80 件（perf、TAKEOFF REF の V2 160 で地上の目標 170 kt、ZZV を順送りして次の点までの間にいるときの E/D までの距離：前の引き方では 253.1 NM、正しくは 229.9 NM）。全 133 本。
+  - X-Plane（1 回目、経路の戻しを下げる前）：新設の `s139_vnav_climb_crz` 18/18（10,000 ft から VNAV SPD・THR REF で上がり、FL170 で VNAV PTH・A/T SPD・巡航、行き過ぎなし）、`s137_vnav_level_off` 12/12（ZFW を入れるように直した。13,000 ft で VNAV ALT、15,000 ft でも）、新設の `s140_vnav_descent` 15/16（T/D の手前の FL300 から VNAV PTH で降下に入り、A/T IDLE、ND の指針。3 分後の偏差が −860 ft で外れた：上の直し）。Lua の誤りなし。
+  - X-Plane（2 回目、X-Plane を起動し直し、記録 v8 で FMC の VNAV の列も）：新設の `s141_vnav_takeoff` 37/37（RJAA 34L から V2 を選んで離陸、400 ft の上で VNAV SPD、目標は V2 + 10〜25 で加速高度まで保ち、その後フラップ 20 の placard の 5 kt 下、フラップを上げて 250 kt、9,000 ft で VNAV ALT・A/T SPD）、`s101_afds_pitch` 33/33（ZFW と CI を入れるように直した）、`s140_vnav_descent` 15/16（経路の 1,596 ft 上から V/S の指令に 50〜100 fpm で付いて 55 ft まで滑らかに戻った。そのあと ATMUG の旋回で −700 ft）。Lua の誤りなし。
+  - X-Plane（3〜5 回目）：E/D までの距離を点で引くように直した後も、同じ所で −806 ft（3 回目）。E/D までの距離と位置を記録して（4 回目）、ATMUG の真上（34.5583、134.1274）を通ってから SAKVA へ折り返していて、その道のりが予測に無いためと分かった（上の残り）。s140 を ATMUG の約 30 NM 西（STAR の入り口の側）からの開始に直し（5 回目）16/16：T/D（開始から約 48 秒）で VNAV PTH・A/T IDLE、速さが足りない間は A/T が推力を足し、偏差は最大 +188 ft から 200 秒で +11 ft、230 秒で −5 ft、300 kt（目標 294 kt）。Lua の誤りなし。

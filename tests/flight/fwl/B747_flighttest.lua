@@ -19,7 +19,7 @@
 --   FlyWithLua/B747_flighttest/mark    add a "mark" row to events.csv
 -- Does nothing unless the 747-400 is the user aircraft.
 
-local VERSION = "7"
+local VERSION = "8"
 
 if not string.find(AIRCRAFT_PATH or "", "747-400", 1, true)
     or XPLMFindDataRef("laminar/B747/engines/type") == nil then
@@ -105,6 +105,14 @@ local COLUMNS = {
     {"yd_upr", "laminar/B747/flt_ctrls/yaw_damper_upr"}, {"yd_lwr", "laminar/B747/flt_ctrls/yaw_damper_lwr"},
     {"rud_upr", "laminar/B747/flt_ctrls/rudder_upr_pos"}, {"rud_lwr", "laminar/B747/flt_ctrls/rudder_lwr_pos"},
     {"ny", "sim/flightmodel/forces/g_side"}, {"tas", "sim/flightmodel/position/true_airspeed"},
+    -- the FMC's VNAV (6-1/6-2 step 9c: v8): the phase, the sub-mode asked
+    -- for, PTH's vertical speed, the deviation from the path, the target
+    -- speed, the A/T mode asked for
+    {"fvn_phase", "laminar/B747/fms/vnav/phase"}, {"fvn_mode", "laminar/B747/fms/vnav/mode"},
+    {"fvn_vs", "laminar/B747/fms/vnav/vs"}, {"fvn_dev", "laminar/B747/fms/vnav/path_dev"},
+    {"fvn_cas", "laminar/B747/fms/vnav/cas"}, {"fvn_at", "laminar/B747/fms/vnav/at"},
+    {"fvn_dist", "laminar/B747/fms/vnav/dist"},
+    {"lat", "sim/flightmodel/position/latitude"}, {"lon", "sim/flightmodel/position/longitude"},
 }
 -- the four engines' thrust, for the "thrust" column
 local THRUST = {{"sim/flightmodel/engine/POINT_thrust", 0}, {"sim/flightmodel/engine/POINT_thrust", 1},

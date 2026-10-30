@@ -8,7 +8,9 @@
 -- FCOM p.645, p.1258), the target speeds (the schedules, the flap placard
 -- less 5 kt, the minimum maneuvering speed plus 5 kt, speed intervention),
 -- the FMC altitude, the descent path fixed to the ground and its vertical
--- speed (on it, above it, below it), valid.
+-- speed (on it, above it, below it), valid; step 9c: the takeoff's target
+-- speed (V2 + 10 to V2 + 25 until the acceleration height or the flaps'
+-- retraction: FCOM p.1255).
 local T = dofile("tests/lib/check.lua")("vnav_model")
 local P = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.perf_db.lua")
 local PM = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.pred_model.lua")
@@ -81,8 +83,8 @@ T.near(o.vs, -g * 400 / 60 - V.K_PATH * 200, 1, "above it: steeper by K_PATH a f
 o = V.update(s2, inp{alt = ph - 500, mcp_alt = 10000, d_ed = 60, gs = 400})
 T.near(o.vs, -g * 400 / 60 + V.K_PATH * 500, 1, "500 ft below the path: shallower, to meet it")
 T.equal(o.at, V.AT_SPD, "and the A/T on speed")
-o = V.update(s2, inp{alt = ph - 1000, mcp_alt = 10000, d_ed = 60, gs = 400})
-T.equal(o.vs, 0, "1,000 ft below: level until the path comes down (never up)")
+o = V.update(s2, inp{alt = ph - 2500, mcp_alt = 10000, d_ed = 60, gs = 400})
+T.equal(o.vs, 0, "2,500 ft below: level until the path comes down (never up)")
 o = V.update(s2, inp{alt = ph + 2000, mcp_alt = 10000, d_ed = 60, gs = 400})
 T.near(o.vs, -g * 400 / 60 - V.VS_STEEPER, 1, "2,000 ft above: at most VS_STEEPER steeper")
 -- the shallow line before the E/D: SPD (FCOM p.1258)
@@ -113,5 +115,44 @@ local h1, g1, k1 = V.path_at(path, 5)
 T.check(math.abs(h1 - 2250) < 1e-6 and math.abs(g1 - 150) < 1e-6 and k1 == "spd", "5 NM: 2,250 ft, 150 ft/NM, the shallow line")
 T.equal((V.path_at(path, 200)), 35000, "beyond the top: its altitude")
 T.equal((V.path_at(path, -1)), 1500, "past the E/D: the E/D's")
+
+-- the takeoff (step 9c; FCOM p.1255): from the ground until VNAV engages
+-- the target follows the airspeed between V2 + 10 and V2 + 25, then stays
+-- until the acceleration height or the flaps' retraction; then the
+-- climb's (the flap placard less 5 kt, SPD TRANS's 250 kt)
+local s5 = V.new()
+local to = {v2 = 160, accel_alt = 1000, flaps = 0.5}
+o = V.update(s5, inp{alt = 0, ground = true, ias = 0, takeoff = to})
+T.near(o.cas, 170, 1e-6, "on the ground, stopped: V2 + 10")
+o = V.update(s5, inp{alt = 0, ground = true, ias = 178, takeoff = to})
+T.near(o.cas, 178, 1e-6, "rotating at 178 kt: the airspeed")
+o = V.update(s5, inp{alt = 300, ias = 195, takeoff = to})
+T.near(o.cas, 185, 1e-6, "in the air at 195 kt before VNAV: V2 + 25 at most")
+o = V.update(s5, inp{alt = 390, ias = 181, takeoff = to})
+T.near(o.cas, 181, 1e-6, "at 181 kt: 181 kt")
+o = V.update(s5, inp{alt = 420, ias = 183, takeoff = to, engaged = true})
+T.near(o.cas, 181, 1e-6, "VNAV engaged: the target then kept")
+T.equal(o.mode, "SPD", "VNAV SPD")
+o = V.update(s5, inp{alt = 800, ias = 175, takeoff = to, engaged = true, flaps_placard = 250})
+T.near(o.cas, 181, 1e-6, "below the acceleration height: still 181 kt")
+o = V.update(s5, inp{alt = 1000, ias = 180, takeoff = to, engaged = true, flaps_placard = 230})
+T.near(o.cas, 225, 1e-6, "at the acceleration height: the placard less 5 kt")
+o = V.update(s5, inp{alt = 900, ias = 190, takeoff = to, engaged = true, flaps_placard = 230})
+T.near(o.cas, 225, 1e-6, "below it again: still the climb's (the takeoff is over)")
+-- the flaps' retraction before the acceleration height ends it too
+local s6 = V.new()
+V.update(s6, inp{alt = 0, ground = true, ias = 150, takeoff = to})
+V.update(s6, inp{alt = 500, ias = 175, takeoff = to, engaged = true})
+o = V.update(s6, inp{alt = 600, ias = 176, takeoff = {v2 = 160, accel_alt = 1000, flaps = 0.33}, engaged = true,
+    flaps_placard = 260})
+T.near(o.cas, 250, 1e-6, "the flaps retracting at 600 ft: the climb's 250 kt (the placard less 5, 255, above it)")
+-- no V2 (999 on TAKEOFF REF: the glue's nil): the climb's from the start
+local s7 = V.new()
+V.update(s7, inp{alt = 0, ground = true, ias = 0, takeoff = {accel_alt = 1000, flaps = 0.5}})
+o = V.update(s7, inp{alt = 500, ias = 170, takeoff = {accel_alt = 1000, flaps = 0.5}, engaged = true})
+T.near(o.cas, 250, 1e-6, "no V2: the climb's 250 kt")
+-- an air start (never on the ground): the climb's
+o = V.update(V.new(), inp{alt = 500, ias = 170, takeoff = to, engaged = true})
+T.near(o.cas, 250, 1e-6, "an air start: the climb's 250 kt")
 
 T.done()
