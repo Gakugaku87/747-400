@@ -33,12 +33,21 @@ local function copy_route(r)
     for i, l in ipairs(r.legs) do
         local c = {}
         for k, v in pairs(l) do c[k] = v end
+        -- the leg it copies, first of all (step 8e1: the same leg on the
+        -- active route and its modification, for the WIND pages' entries)
+        c.orig = l.orig or l
         legs[i] = c
     end
     local passed = {}
     for i, l in ipairs(r.passed) do passed[i] = l end
+    -- the wind altitudes (step 8e1; the legs' winds come with their fields)
+    local alts = nil
+    if r.windAlts then
+        alts = {}
+        for i, h in ipairs(r.windAlts) do alts[i] = h end
+    end
     return {origin = r.origin, dest = r.dest, runway = r.runway, legs = legs, passed = passed,
-        sid = r.sid, star = r.star, appr = r.appr, offset = r.offset}
+        sid = r.sid, star = r.star, appr = r.appr, offset = r.offset, windAlts = alts}
 end
 
 -- the FMC's routes: `N` the navigation database module, `db` its database
@@ -220,7 +229,7 @@ function M.set_origin(st, icao)
     if not apt then return M.NOT_IN_DATA_BASE end
     local r = M.edit(st)
     r.origin, r.dest, r.runway, r.legs, r.passed = apt, nil, nil, {}, {}
-    r.sid, r.star, r.appr = nil, nil, nil
+    r.sid, r.star, r.appr, r.windAlts = nil, nil, nil, nil
 end
 
 -- DEST (FCOM p.1289): an airport of the database; a new destination

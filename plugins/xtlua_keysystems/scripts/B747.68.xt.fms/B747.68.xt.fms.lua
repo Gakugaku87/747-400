@@ -884,6 +884,9 @@ end
 local NAVDB_FOLDER=navdb_folder()
 B747_fmc_navdb=B747_navdb.new(function(name) return io.open(NAVDB_FOLDER..name,"rb") end)
 dofile("B747.68.route_model.lua")
+-- the routes' waypoint winds and temperatures (6-1/6-2 step 8e1; notes/
+-- ATA-34-61-FMC.md §51: the WIND pages)
+dofile("B747.68.wind_model.lua")
 -- the FMC's route (6-1/6-2 step 5b; notes/ATA-34-61-FMC.md §18): RTE 1 on
 -- the RTE pages. When RTE 1 changes, the FMC's data the other modules
 -- read (fltdep, fltdst, runway; TRANS ALT from a new origin: FCOM p.1329)
