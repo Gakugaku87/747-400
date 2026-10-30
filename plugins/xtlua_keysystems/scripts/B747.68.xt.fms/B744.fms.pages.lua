@@ -230,9 +230,14 @@ fmsFunctionsDefs["INITREF"]["R1"]={"refnavdata",""}
 local navAids
 simDR_variation=find_dataref("sim/flightmodel/position/magnetic_variation")
 B747DR_ils_dots           	= deferred_dataref("laminar/B747/autopilot/ils_dots", "number")
+-- the AFDS's ILS TUNE INHIBIT (6-3 step 5d; FCOM p.1305: "manual-tuning
+-- [is] inhibited" with it): no entry or deletion then (INVALID ENTRY: an
+-- estimate of the CDU's answer)
+B747DR_fms_ils_tune_inhibit	= find_dataref("laminar/B747/autopilot/ils_tune_inhibit")
 function findILS(value)
-  
+
   local modes=B747DR_radioModes
+  if B747DR_fms_ils_tune_inhibit > 0.5 then return false end
   if navAidsJSON==nil or string.len(navAidsJSON)<5 then return false end
   if value=="DELETE" then 
     B747DR_radioModes=replace_char(1,modes," ")

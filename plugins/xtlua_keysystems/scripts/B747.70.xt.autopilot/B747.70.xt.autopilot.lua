@@ -762,6 +762,10 @@ B747DR_ap_FMA_roll_fail = find_dataref("laminar/B747/autopilot/FMA/roll_fail")
 B747DR_ap_FMA_pitch_fail = find_dataref("laminar/B747/autopilot/FMA/pitch_fail")
 B747DR_ap_fd_roll_bar = find_dataref("laminar/B747/autopilot/fd/roll_bar")
 B747DR_ap_fd_pitch_bar = find_dataref("laminar/B747/autopilot/fd/pitch_bar")
+-- ILS TUNE INHIBIT and RA TEST INHIBIT (step 5d): a localizer alive, the
+-- heading against NAV 1's course, the ground speed; out, the inhibits
+B747DR_ap_ils_tune_inhibit = find_dataref("laminar/B747/autopilot/ils_tune_inhibit")
+B747DR_ap_ra_test_inhibit = find_dataref("laminar/B747/autopilot/ra_test_inhibit")
 local function afds_mode_inputs(inp)
 	local loc_ok = simDR_afds_fail_loc ~= AFDS_XP_FAILED
 	local gs_ok = simDR_afds_fail_gs ~= AFDS_XP_FAILED
@@ -781,6 +785,10 @@ local function afds_mode_inputs(inp)
 	inp.adc_sel = B747DR_afds_adc_valid_capt > 0.5 and B747DR_afds_adc_valid_fo > 0.5
 	inp.pitch_att = simDR_afds_pitch
 	inp.ils_freq = simDR_nav1Freq
+	-- (step 5d)
+	inp.loc_alive = loc1 or loc2
+	inp.loc_hdg_err = getHeadingDifference(simDR_radio_nav_obs_deg[0], simDR_ap_mag_psi)
+	inp.gs_kt = simDR_groundspeed * 1.94384
 end
 local function afds_sensors()
 	local iru, ra = 0, 0
@@ -1033,6 +1041,11 @@ local function afds_sync()
 	if B747DR_ap_fd_pitch_bar ~= v then B747DR_ap_fd_pitch_bar = v end
 	v = B747_afds_model.caution(afds) and 1 or 0
 	if B747DR_CAS_caution_status[4] ~= v then B747DR_CAS_caution_status[4] = v end
+	-- ILS TUNE INHIBIT and RA TEST INHIBIT (step 5d; ATA22 p.212; FCOM p.1305)
+	v = B747_afds_model.ils_inhibit(afds, afdsIn) and 1 or 0
+	if B747DR_ap_ils_tune_inhibit ~= v then B747DR_ap_ils_tune_inhibit = v end
+	v = B747_afds_model.ra_test_inhibit(afds, afdsIn) and 1 or 0
+	if B747DR_ap_ra_test_inhibit ~= v then B747DR_ap_ra_test_inhibit = v end
 end
 -- the roll law (step 2a), each frame after the modes: the heading in the
 -- reference (true north by the switch or in the polar areas, where NORM
@@ -2278,7 +2291,9 @@ function B747_fltmgmt_setILS(fmsO)
 				targetILS = targetILSS
 				print("Tune ILS" .. targetILSS)
 
-				if string.len(targetILSS) > 0 then
+				-- not while ILS TUNE INHIBIT holds the frequency (6-3 step 5d;
+				-- FCOM p.1305: before, the tuning went on after the capture)
+				if string.len(targetILSS) > 0 and B747DR_ap_ils_tune_inhibit < 0.5 then
 					print("Tuning ILS" .. targetILSS)
 					local ilsNav = json.decode(targetILSS)
 					simDR_nav1Freq = ilsNav[3]
@@ -2291,6 +2306,8 @@ function B747_fltmgmt_setILS(fmsO)
 					simDR_radio_nav_obs_deg[1] = course
 					print("Tuned ILS " .. course)
 					targetDots = 1 -- make PFD loc and GS dots visible
+				elseif string.len(targetILSS) > 0 then
+					targetDots = 1
 				end
 			elseif B747DR_ap_FMA_active_roll_mode ~= 3 then
 				--print("cleared targetILS")
@@ -2301,18 +2318,21 @@ function B747_fltmgmt_setILS(fmsO)
 	elseif string.len(targetILSS) > 1 and string.len(targetILS) > 2 then
 		--print("Tuned ILS "..course)
 		--print("Tuning ILS".. targetILSS)
-		local ilsNav = json.decode(targetILSS)
-		simDR_nav1Freq = ilsNav[3]
-		simDR_nav2Freq = ilsNav[3]
-		local course = (ilsNav[4] + simDR_variation)
-		if course < 0 then
-			course = course + 360
-		elseif course > 360 then
-			course = course - 360
+		-- (not while ILS TUNE INHIBIT holds the frequency: 6-3 step 5d)
+		if B747DR_ap_ils_tune_inhibit < 0.5 then
+			local ilsNav = json.decode(targetILSS)
+			simDR_nav1Freq = ilsNav[3]
+			simDR_nav2Freq = ilsNav[3]
+			local course = (ilsNav[4] + simDR_variation)
+			if course < 0 then
+				course = course + 360
+			elseif course > 360 then
+				course = course - 360
+			end
+			--course=round(course)
+			simDR_radio_nav_obs_deg[0] = course
+			simDR_radio_nav_obs_deg[1] = course
 		end
-		--course=round(course)
-		simDR_radio_nav_obs_deg[0] = course
-		simDR_radio_nav_obs_deg[1] = course
 		targetDots = 1 -- make PFD loc and GS dots visible
 	else
 		if B747DR_ap_FMA_active_roll_mode == 3 then

@@ -162,6 +162,9 @@
 --    line on the FMA; AUTOPILOT with the A/P engaged and a mode failed or
 --    a single channel in FLARE. A missing ILS signal is a mode failure,
 --    not the dual failure that disengages multi-channel (step 5a).
+--  - ILS TUNE INHIBIT and RA TEST INHIBIT (step 5d; ATA22 p.212; FCOM
+--    p.1305): with LOC or G/S captured and the A/P engaged, or the F/Ds
+--    only under 500 ft; the ILS's also on the takeoff roll.
 -- Pure: the switches' events and the airplane's state in; the engage
 -- state, the warning, the roll mode and the modes asked for out.
 --   local A = B747_afds_model                      -- in XTLua, after dofile
@@ -245,6 +248,12 @@ M.SENSORS_MIN = 2
 -- the IRUs (NAV), the radio altimeters, the ILS receivers, the SRMs (the
 -- stabilizer's control units), the FCUs (the flaps')
 M.CAP_FULL = {channels = 3, power = 3, iru = 3, ra = 3, ils = 3, srm = 2, fcu = 3}
+-- ILS TUNE INHIBIT and RA TEST INHIBIT (step 5d): with the F/Ds only under
+-- INHIBIT_FD_RA ft RA; on the ground within INHIBIT_GND_DEG of the
+-- localizer's course over INHIBIT_GND_KT (ATA22 p.212; FCOM p.1305)
+M.INHIBIT_FD_RA = 500
+M.INHIBIT_GND_DEG = 45
+M.INHIBIT_GND_KT = 40
 
 -- the state
 function M.new()
@@ -714,6 +723,30 @@ local function mode_failures(s, inp)
     end
     if not s.roll then s.roll_fail = false end
     if not s.pitch then s.pitch_fail = false end
+end
+
+-- ILS TUNE INHIBIT and RA TEST INHIBIT (step 5d; ATA22 p.212; FCOM
+-- p.1305): the ILS's frequency and the radio altimeters' self-test held
+-- while the ILS is in use. LOC or G/S captured (FLARE, NOSE LETDOWN and
+-- ROLLOUT after them) with the A/P engaged, or with the F/Ds only under
+-- INHIBIT_FD_RA ft RA: both
+local function ils_captured(s)
+    return s.roll == "LOC" or s.roll == "ROLLOUT" or s.pitch == "GS" or s.pitch == "FLARE" or s.letdown
+end
+function M.ra_test_inhibit(s, inp)
+    if not ils_captured(s) then return false end
+    if M.engaged(s) > 0 then return true end
+    return fd_shown(s) and (inp.ra or 9999) < M.INHIBIT_FD_RA
+end
+-- ILS TUNE INHIBIT also on the ground with a localizer alive
+-- (`inp.loc_alive`), the heading within INHIBIT_GND_DEG of its course
+-- (`inp.loc_hdg_err`), over INHIBIT_GND_KT of ground speed (`inp.gs_kt`)
+-- and neither LOC nor APP selected: the takeoff roll (ATA22 p.212; FCOM
+-- p.1305 names no LOC or APP)
+function M.ils_inhibit(s, inp)
+    if M.ra_test_inhibit(s, inp) then return true end
+    return inp.ground == true and inp.loc_alive == true and math.abs(inp.loc_hdg_err or 180) <= M.INHIBIT_GND_DEG
+        and (inp.gs_kt or 0) > M.INHIBIT_GND_KT and not (s.loc_arm or s.gs_arm or s.roll == "LOC")
 end
 
 -- the AUTOPILOT caution (step 5c; ATA22 p.254, p.382; FCOM p.660, p.677):
