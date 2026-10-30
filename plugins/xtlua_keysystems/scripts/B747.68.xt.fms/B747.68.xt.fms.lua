@@ -935,6 +935,18 @@ simDR_fms_exec_light=find_dataref("sim/cockpit2/radios/indicators/fms_exec_light
 -- the AFDS
 dofile("B747.68.path_model.lua")
 dofile("B747.68.lnav_model.lua")
+-- the FMC's performance database (6-1/6-2 step 8a; notes/ATA-34-61-FMC.md
+-- §44): the FCOM PI tables for the engine type, and the outside air's ISA
+-- deviation (degrees C) at the pressure altitude for the maximum altitude
+dofile("B747.68.perf_db.lua")
+B747DR_fms_engine_type = find_dataref("laminar/B747/engines/type")
+function B747_fms_perf()
+  return B747_perf_db.tables(B747DR_fms_engine_type)
+end
+function B747_fms_isa_dev()
+  local h = math.min(simDR_pressureAlt1, 36089)
+  return simDR_air_temp - (15 - 1.98 * h / 1000)
+end
 B747_fmc_lnav=B747_lnav_model.new(B747_path_model)
 local lnavPath=nil
 -- the active leg the path was built with (a new one not by sequencing:

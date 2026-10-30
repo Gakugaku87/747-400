@@ -193,9 +193,13 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       local optmax = "FL***/***"
       local pctn1 = "*.**"
       local svcCeil = 45.1 --service ceiling in thousands of feet
+      local perf = B747_fms_perf()
+      local isaDev = B747_fms_isa_dev()
       if(gwtk ~= nil) then
-        optA = 56.87272727 - 0.07227273 * gwtk -- model derived fcom p. 1576
-        maxA = 58.16363636 - 0.06154545 * gwtk -- model derived fcom p. 1576, ISA+10 and below
+        -- the FCOM PI tables (6-1/6-2 step 8a: notes/ATA-34-61-FMC.md §44;
+        -- before, lines fitted to FCOM p.1576, ISA+10 and below)
+        optA = B747_perf_db.opt_alt(perf, simDR_GRWT) / 1000
+        maxA = B747_perf_db.max_alt(perf, simDR_GRWT, isaDev) / 1000
         pctn1 = string.format("%02.1f",74.157374+ 0.053892*gwtk) -- percent N1
         if(maxA > svcCeil) then maxA=svcCeil end -- service ceiling 45100 MSL
         optmax = string.format("FL%03.0f  FL%03.0f",optA*10,maxA*10) -- displayed in flight levels
@@ -222,7 +226,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
         elseif(czak+2 < svcCeil) then --step climb below service ceiline
 
           local stepAlt = maxA + 2 --in thousands of feet
-          rgw = (58.16363636 - stepAlt) / 0.06154545 -- required gross weight, thousands of kg
+          rgw = B747_perf_db.max_alt_weight(perf, stepAlt * 1000, isaDev) / 1000 -- required gross weight, thousands of kg (step 8a)
 
           --gross weight to lose == kg*1000 fuel to burn
           gwl = gwtk - rgw -- thousands of kg
