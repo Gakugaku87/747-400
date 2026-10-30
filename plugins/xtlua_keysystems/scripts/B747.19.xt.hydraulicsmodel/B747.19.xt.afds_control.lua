@@ -484,25 +484,45 @@ end
 -- G/S captured) until it is back within 0.25 (ATA22 p.149: notes/ATA-22.md
 -- §4.8; before, windows by mode from 0.1 degree in ALT HOLD to 4 in FLCH,
 -- no band); the SRM trims after 3.5 s, at its rate and limits
--- (B747.45.xt.srm.lua). No trim command below 500 ft RA, as before (the
--- old flare tuning): the sources trim down to touchdown, with full-rate
--- autotrim below 120 ft in LAND 2 and a nose-up bias (ATA22 p.147), which
--- waits for the AFDS's rebuild (6-3 step 6). The full-rate request goes out
--- by its own condition
+-- (B747.45.xt.srm.lua). Down to the touchdown, none in ROLLOUT (6-3 step
+-- 6c: notes/ATA-22.md §41; before, none below 500 ft RA). In LAND 2 only
+-- (ATA22 p.147): the full-rate autotrim below 120 ft RA with both SRMs
+-- valid (no 3.5 s delay, both SRMs: the SRM model; before, with the old
+-- autoland, LAND 3 too), and a bias toward nose up trim from 120 ft with
+-- both SRMs valid, 190 ft with one, until a go-around (for a pitch up if
+-- the A/P disconnects low): the trim aims for the elevator held
+-- TRIM_BIAS_DEG nose down (the size is not in the sources: an estimate)
+B747DR_ap_trim_afds_status = find_dataref("laminar/B747/autopilot/AFDS/status_annun_pilot")
+B747DR_ap_trim_srm_valid = find_dataref("laminar/B747/flt_ctrls/stab_trim/srm_valid")
+local AFDS_LAND2, ROLL_ROLLOUT, PITCH_TOGA = 3, 4, 1
+local FRAT_RA = 120
+local TRIM_BIAS_RA = {190, 120}          -- by the SRMs valid: one, both
+local TRIM_BIAS_DEG = 1.0
+local trim_bias = false
+local function srms_valid()
+    return (B747DR_ap_trim_srm_valid[0] > 0.5 and 1 or 0) + (B747DR_ap_trim_srm_valid[1] > 0.5 and 1 or 0)
+end
 function setAutotrim(cmd)
     if B747DR_autotrim_cmd ~= cmd then B747DR_autotrim_cmd = cmd end
     local frat = 0
-    if cmd ~= 0 and B747DR_ap_autoland == 1 and simDR_radarAlt1 < 120 then frat = 1 end
+    if cmd ~= 0 and B747DR_ap_trim_afds_status == AFDS_LAND2 and simDR_radarAlt1 < FRAT_RA and srms_valid() == 2 then frat = 1 end
     if B747DR_autotrim_frat ~= frat then B747DR_autotrim_frat = frat end
 end
 local AUTOTRIM_ON_DEG, AUTOTRIM_ON_GS_DEG, AUTOTRIM_OFF_DEG = 0.4, 0.6, 0.25
 local autotrim_dir = 0
 function doTrim()
     local cmd = 0
-    if simDR_radarAlt1 >= 500 then
+    local n = srms_valid()
+    if B747DR_ap_trim_afds_status ~= AFDS_LAND2 or B747DR_ap_FMA_active_pitch_mode == PITCH_TOGA then
+        trim_bias = false
+    elseif n > 0 and simDR_radarAlt1 < TRIM_BIAS_RA[n] then
+        trim_bias = true
+    end
+    if B747DR_ap_FMA_active_roll_mode ~= ROLL_ROLLOUT then
         -- the servo command in degrees of the elevator's travel
         local r = B747DR_sim_pitch_ratio
         local deg = r >= 0 and r * simDR_ap_elev_up or r * simDR_ap_elev_dn
+        if trim_bias then deg = deg + TRIM_BIAS_DEG end
         local on = B747DR_ap_FMA_active_pitch_mode == 2 and AUTOTRIM_ON_GS_DEG or AUTOTRIM_ON_DEG
         if autotrim_dir ~= 0 and deg * autotrim_dir > AUTOTRIM_OFF_DEG then
             cmd = autotrim_dir
@@ -634,6 +654,7 @@ function ap_pitch_assist(doCompute)
         pitchPid:compute(true)
         ap_trim_last = nil
         autotrim_dir = 0
+        trim_bias = false
         simDR_electric_trim=1
         setAutotrim(0)
         retval=ap_release(B747DR_sim_pitch_ratio)
