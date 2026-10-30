@@ -1061,7 +1061,8 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - 高度の表示は TRANS LVL の上が FL（FCOM p.1396）。
   - 入力（FMSPG p.178–179）：1L TRANS LVL（高度か FL。既定は目的地の遷移高度（航法データの earth_aptmeta.dat）、無ければ FL180。乗員の入力が優先。DELETE は INVALID DELETE）、1R TAI/ON ALT（DELETE でダッシュ）、2L〜5L ALT（順不同、ほかの行と同じ高度は INVALID ENTRY、DELETE でその行の高度と風）、2R〜5R WIND DIR/SPD（方向は真方位の 3 桁で 360 まで、速さは 0〜250 kt。最初は ddd/sss、後は ddd/ か /sss でもよい。その行に高度があるとき：推定。DELETE）。WIND のページの DIR/SPD も同じ書き方（方向 3 桁）にした（推定：FMSPG はこのページについて書いている）。
   - 予報（`B747_fms_des_forecast()`）と遷移高度（`B747_fms_trans_lvl()`）をほかから読めるようにした。予測が使うのは 8e3。
-- 残り：TRANS LVL を到着の手続きから取ること（今は目的地の空港の値）、ほかのページ（LEGS の降下の予測など）の FL と ft の切り替えに TRANS LVL を使うこと（今は TRANS ALT のまま）、OFFPATH DES と DES DIR（VNAV の段 9 以降）、TAI/ON ALT を降下の経路に使うこと（8e3、資料に値があれば）。
+- 残り：OFFPATH DES と DES DIR（VNAV の段 9 以降）、TAI/ON ALT を降下の経路に使うこと（資料に値があれば）、DES のページなどほかのページの FL と ft（LEGS 以外は TRANS ALT のまま）。
+- 追記（2026-10-31、8e3 の後）：TRANS LVL の既定に到着の手続きの値を足した（FMSPG p.178：目的地か到着の手続きに記録された値で変わる）。CIFP の手続きの行の 26 番目の欄（遷移高度）を手続きのモデルが脚の `ta` に持ち、乗員の入力、到着（STAR・進入）の脚の値、目的地の空港の値、FL180 の順に使う。LEGS のページは、到着の脚と（有効な経路の）予測の T/D の後の脚の高度（制限と小さい字の予測）を TRANS LVL の上で FL に、ほかは TRANS ALT の上で FL にした（FCOM p.1396：どの脚が降下かは推定）。試験：`wind_page_test.lua` 49 件（試験の CIFP の STAR に 13,000 ft を入れ、TRANS LVL が 13,000、STAR の ZZV に 13500 で FL135、SID の ZZV では 13500）、全 132 本。
 - 試験：
   - 回帰：新設の `tests/fms/des_forecast_test.lua` 44 件（CLB と CRZ の 5R は何もしない、DES の 5R の FORECAST>、配置、FCOM の図の 3 つの風、/80 と 140/、高度の無い行・最初の片方・251 kt・2 桁の方向・同じ高度は INVALID ENTRY、目的地が無ければ FL180、TRANS LVL 4000 で 5000 が FL050、DELETE は INVALID DELETE、TAI/ON ALT、行の DELETE、570 の DES>）、`wind_page_test.lua` 45 件（2 桁の方向・251 kt、目的地 ZZAA の遷移高度 FL140）。全 132 本。
   - X-Plane：新設の `s135_fmc_des_forecast` 11/11（DES の 5R から、FL180 とダッシュ、FCOM の図の 3 つの風、/80、TAI/ON ALT FL150 は 15000）。写真で配置を確かめた。Lua の誤りなし。この試験の後に、FMSPG に合わせた入力の検査（TRANS LVL の DELETE、同じ高度、3 桁の方向、目的地の遷移高度）を足した（回帰試験で確かめ、X-Plane では次の起動し直しの後に s135 をもう一度）。

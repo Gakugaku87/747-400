@@ -164,7 +164,27 @@ clear()
 enter("090/251", "R" .. row350)
 T.equal(pad(), "INVALID ENTRY", "251 kt: INVALID ENTRY")
 clear()
-T.equal(fms.ns.B747_fms_trans_lvl(), 14000, "the descent's transition level: the destination ZZAA's FL140 (FMSPG p.178)")
+T.equal(fms.ns.B747_fms_trans_lvl(), 13000,
+    "the descent's transition level: the arrival ALPHA1's stored 13,000 ft (the test data's), before ZZAA's FL140 (FMSPG p.178)")
+-- the arrival's altitudes as flight levels above it (FCOM p.1396), the
+-- departure's above TRANS ALT (ZZAA's 14,000): 13,500 at the STAR's ZZV
+-- FL135, at the SID's ZZV 13500
+local function legs_row(proc)
+    -- the LEGS page and row of the route's ZZV in that procedure
+    for i, l in ipairs(st.rte.legs) do
+        if l.fix and l.fix.ident == "ZZV" and l.proc == proc then return math.ceil(i / 5), (i - 1) % 5 + 1 end
+    end
+end
+for _, c in ipairs({{"STAR", "FL135$", "FL135 above the transition level"}, {"SID", "/13500$", "13500 below TRANS ALT"}}) do
+    local page, row = legs_row(c[1])
+    key("func_key/legs")
+    for _ = 2, page do key("func_key/next_pg") end
+    T.check(line(row * 2 + 1):find("^ZZV "), "the " .. c[1] .. "'s ZZV: " .. line(row * 2 + 1))
+    enter("13500", "R" .. row)
+    T.check(line(row * 2 + 1):find(c[2]), "13500 at the " .. c[1] .. "'s ZZV: " .. c[3] .. ": " .. line(row * 2 + 1))
+    key("ls_key/L6")             -- ERASE
+    clear()
+end
 
 -- RTE DATA>: back, W> at the first waypoint
 key("ls_key/R6")

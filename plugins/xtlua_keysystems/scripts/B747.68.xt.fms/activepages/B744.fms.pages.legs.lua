@@ -162,13 +162,30 @@ end
 
 local function trans_alt() return tonumber(fmsModules["data"]["transalt"]) or 18000 end
 local function crz_alt() return B747_cdu_model.parse_alt((string.gsub(fmsModules["data"]["crzalt"], "%s+$", ""))) end
+-- the altitude above which leg i's altitudes show as flight levels: the
+-- transition level in the descent (DESCENT FORECAST's TRANS LVL, FCOM
+-- p.1396; step 8e2), the transition altitude else (FCOM p.1328). The
+-- descent's legs: the arrival's (STAR, approach) and, on the active route,
+-- those after the predicted T/D (an estimate)
+local function fl_above(st, r, i)
+  local l = r.legs[i]
+  local des = l ~= nil and (l.proc == "STAR" or l.proc == "APPR")
+  if not des and st.active and r == st.rte then
+    local pred = B747_fms_preds()
+    local p = pred and pred.pts[i]
+    des = (pred and pred.td and p and p.x > pred.td) and true or false
+  end
+  if des and B747_fms_trans_lvl then return B747_fms_trans_lvl() end
+  return trans_alt()
+end
 
 -- a waypoint's line: its name and constraint; PLAN's centre with <CTR> at
 -- the 9th place (FCOM p.1330's and FMSPG p.124's figures: "BANDR   <CTR>"),
 -- after a longer name, none where the constraint leaves no room
-local function leg_line(l, ctr)
+local function leg_line(st, r, i, ctr)
+  local l = r.legs[i]
   local name = R.leg_name(l)
-  local cons = R.constraint_text(l, trans_alt()) or ""
+  local cons = R.constraint_text(l, fl_above(st, r, i)) or ""
   if ctr then
     local c = name .. string.rep(" ", math.max(1, 8 - #name)) .. "<CTR>"
     if #c + 1 + #cons <= 24 then name = c end
@@ -221,7 +238,7 @@ local function legs_page(st, pgNo, defs, hold_at, fmsID)
     if l and (l.disc or l.pending) then
       lines[#lines + 1] = pad("*****")
     elseif l then
-      lines[#lines + 1] = leg_line(l, i == ci)
+      lines[#lines + 1] = leg_line(st, r, i, i == ci)
     elseif i == #r.legs + 1 then
       lines[#lines + 1] = pad("-----")
     else
@@ -287,10 +304,10 @@ local function pred_text(st, r, i)
   local spd, alt = "---", "-----"
   if not dashes then
     spd = p.machMode and string.format(".%03d", math.floor(p.mach * 1000 + 0.5)) or string.format("%3d", math.floor(p.cas + 0.5))
-    alt = p.h > trans_alt() and string.format("FL%03d", math.floor(p.h / 100 + 0.5)) or string.format("%5d", math.floor(p.h / 10 + 0.5) * 10)
+    alt = p.h > fl_above(st, r, i) and string.format("FL%03d", math.floor(p.h / 100 + 0.5)) or string.format("%5d", math.floor(p.h / 10 + 0.5) * 10)
   end
   if l.alt then
-    local cons = R.constraint_text(l, trans_alt()) or ""
+    local cons = R.constraint_text(l, fl_above(st, r, i)) or ""
     return string.rep(" ", 24 - #cons - #spd) .. spd .. string.rep(" ", #cons)
   end
   return string.rep(" ", 24 - #spd - 1 - #alt) .. spd .. "/" .. alt
@@ -540,7 +557,7 @@ function fmsFunctions.legscons(fmsO, value)
   local l = R.shown(st).legs[i]
   local sp = fmsO["scratchpad"]
   if sp == "" then
-    local t = l and l.fix and R.constraint_text(l, trans_alt())
+    local t = l and l.fix and R.constraint_text(l, fl_above(st, R.shown(st), i))
     if t then fmsO["scratchpad"] = t end
     return
   end

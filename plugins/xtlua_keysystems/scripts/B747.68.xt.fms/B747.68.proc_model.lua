@@ -150,6 +150,9 @@ local function leg_of(N, db, c, icao, f, via)
     local l = {via = via, pt = pt, turn = (f[10] == "L" or f[10] == "R") and f[10] or nil,
         flyover = desc:sub(2, 2) == "Y", navaid = navaid, theta = num(f[19], 10), rho = num(f[20], 10),
         crs = num(f[21], 10), dist = num(f[22], 10), spd = num(f[28]), vangle = num(f[29], 100),
+        -- field 26: the procedure's transition altitude (an arrival's: its
+        -- transition level, DESCENT FORECAST's TRANS LVL: FMSPG p.178)
+        ta = alt_field(f[26]),
         faf = desc:sub(4, 4) == "F", map = desc:sub(4, 4) == "M", missed = desc:sub(3, 3) == "M",
         altterm = pt == "CA" or pt == "FA" or pt == "VA" or pt == "HA"}
     -- the altitude constraint (field 23 the description, 24 and 25 the
