@@ -541,6 +541,15 @@
 
 上の 1 行は `docs/overhaul/tools/panel_fd_shown.lua` で書き換えた（4 か所）。中のバーは今までどおりモードがあるとき（`SHOW_GREATER 1` の FMA：X-Plane では 1 以上なので TO/GA でも出る。写真で確かめた）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261027_before_fd_shown`。X-Plane の写真（`s103_afds_to`、`s104_afds_ga`）で、地上の T/O と、F/D のスイッチ OFF のままの G/A で F/D のバーと FD が出ることを確かめた。外から見た姿は変わらない（外観の写真）。
 
+自動操縦（6-3 段 5c、2026-10-30：モード故障の FMA の線と F/D のバー）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-30・AFDS（AFDS-12） | 4 面の PFD の `GROUP Flight Mode Annun`（副操縦士は ` 2`）のロールとピッチの `GROUP Active`（` 2`） | モードが故障しても何も出ない | 計器 `Mode Fail`（` 2`）を足した：琥珀の横線（`CRT Displays/PFD/Flight Mode Annun/mode_fail`、104 × 3）を、モードの枠の中心の横位置と文字の高さに。`SHOW_EQUAL 1 laminar/B747/autopilot/FMA/roll_fail`（ピッチは `pitch_fail`） | FCOM p.653、p.660；ATA22 p.382 |
+| 同 | 4 面の PFD の F/D のバー（`FD Bar - Roll`・`FD Bar - Pitch`、副操縦士は ` 2`） | `SHOW_GREATER 1 laminar/B747/autopilot/FMA/active_roll_mode`（ピッチは `active_pitch_mode`）：その軸のモードがあれば出す | `SHOW_EQUAL 1 laminar/B747/autopilot/fd/roll_bar`（`pitch_bar`）：モードがあって故障していないとき（109・405 は故障した軸のバーを消し、570 は両方） | FCOM p.660 |
+
+上の 2 行は `docs/overhaul/tools/panel_fma_fail.lua` で書き換えた（16 か所：計器を 8 つ足し、バーの条件を 8 つ替えた）。線の画像は `docs/overhaul/tools/make_fma_fail_images.ps1`。条件が 2 行以上ある計器・グループの数は変わらない。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261030_before_fma_fail`。X-Plane の写真（`s120_afds_mode_fail`、2026-10-30 22:47）で、LOC と G/S の故障で FMA の LOC と G/S に琥珀の横線が引かれ、F/D のバーが両方消えること、TO/GA の後に線が消えてバーが戻ることを確かめた。外から見た姿は変わらない（パネルの計器だけの変更）。
+
 
 表示（2026-10-28：ND の MAP CTR を実機どおりに。利用者の決定）：
 

@@ -113,6 +113,8 @@ ra:set("laminar/B747/simconfig", '{"PLANE":{"engines":"PW4056"}}')
 ra:set("laminar/B747/newsimconfig", 1)
 ra:set("xtlua/fms", "[]")
 ra:set("sim/time/total_running_time_sec", 10)
+-- the IRUs' heading valid (6-3 step 5c: HDG SEL fails without it)
+for i = 0, 2 do ra:set("laminar/B747/irs/hdg_valid", i, 1) end
 ra:callout("flight_start")
 ra:set("sim/flightmodel/position/psi", 104)
 ra:set("sim/flightmodel/position/mag_psi", 100)

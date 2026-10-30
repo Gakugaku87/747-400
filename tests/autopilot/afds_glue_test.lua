@@ -48,6 +48,9 @@ rt:set("laminar/B747/electrical/bus/bat_main", 1)
 for i = 0, 2 do
     rt:set("laminar/B747/irs/att_valid", i, 1)
     rt:set("laminar/B747/airdata/valid", i, 1)
+    -- (step 5c: the IRUs' heading and NAV for the roll modes' outer loop)
+    rt:set("laminar/B747/irs/hdg_valid", i, 1)
+    rt:set("laminar/B747/irs/nav_valid", i, 1)
 end
 local ATV = "laminar/B747/flt_ctrls/stab_trim/autotrim_valid"
 rt:set(ATV, 0, 1)
@@ -667,4 +670,35 @@ rt:set(FD, 23, 0)
 frames()
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set(RA, 9000)
+
+-- 6-3 step 5c: a mode failure through the glue (ATA22 p.382; FCOM p.660).
+-- CMD L in HDG HOLD and V/S: both F/D bars, no AUTOPILOT; two IRUs'
+-- headings lost: HDG HOLD failed, the FMA's amber line, the roll bar gone
+-- (the 109: the pitch bar stays; the 570: both), AUTOPILOT [4], the roll
+-- law holding the bank; the headings back and HDG SEL: none of it
+local RB, PB = "laminar/B747/autopilot/fd/roll_bar", "laminar/B747/autopilot/fd/pitch_bar"
+local RFAIL = "laminar/B747/autopilot/FMA/roll_fail"
+rt:set(FD, 23, 1)
+frames()
+rt:command(CMD .. "cmd_L")
+frames()
+T.check(rt:get("laminar/B747/autopilot/cmd_L_mode/status") == 1 and rt:get(ROLL) == 7, "5c: (CMD L in HDG HOLD)")
+T.check(rt:get(RB) == 1 and rt:get(PB) == 1 and rt:get(RFAIL) == 0, "5c: both F/D bars, no amber line")
+T.equal(rt:get(CAUTION, 4), 0, "no AUTOPILOT")
+rt:set("laminar/B747/irs/hdg_valid", 0, 0)
+rt:set("laminar/B747/irs/hdg_valid", 1, 0)
+frames()
+T.check(rt:get(RFAIL) == 1 and rt:get(ROLL) == 7, "two headings lost: HDG HOLD failed, its amber line")
+T.check(rt:get(RB) == 0 and rt:get(PB) == 1, "the roll bar gone, the pitch bar stays (the 109)")
+T.equal(rt:get(CAUTION, 4), 1, "AUTOPILOT")
+T.equal(rt:get(ROLL_LAW), 1, "the roll law holds the bank")
+rt:set("laminar/B747/engines/type", 1)
+frames()
+T.check(rt:get(RB) == 0 and rt:get(PB) == 0, "the 570: both bars gone")
+rt:set("laminar/B747/engines/type", 0)
+rt:set("laminar/B747/irs/hdg_valid", 0, 1)
+rt:set("laminar/B747/irs/hdg_valid", 1, 1)
+rt:command(CMD .. "heading_select")
+frames()
+T.check(rt:get(RFAIL) == 0 and rt:get(RB) == 1 and rt:get(CAUTION, 4) == 0, "the headings back, HDG SEL: no failure, the bar, no AUTOPILOT")
 T.done()
