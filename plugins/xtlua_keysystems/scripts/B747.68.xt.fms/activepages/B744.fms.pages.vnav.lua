@@ -225,8 +225,6 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["R3"]=nil
       fmsFunctionsDefs["VNAV"]["R6"]=fmsModules["data"]["crzspdmode"]~="L" and {"vnavspd","lrc"} or nil
 
-      dNM = getDistance(simDR_latitude, simDR_longitude, dLat, dLon)
-
       -- OPT and MAX: the FCOM PI tables at the FMC's weight (6-1/6-2 steps
       -- 8a, 8b2: notes/ATA-34-61-FMC.md §44, §46; before, lines fitted to FCOM
       -- p.1576). OPT is the long range cruise's least fuel in every speed
@@ -240,12 +238,14 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
 
       -- STEP TO and AT (step 8b2; FCOM p.1257, p.1348-1349, FMSPG p.133): a
       -- crew's STEP TO or the FMC's by the step size, blank without an
-      -- active route and within 200 NM of the T/D, where AT is TO T/D
+      -- active route and within 200 NM of the T/D (the predictions': step
+      -- 8c), where AT is TO T/D
       local crz = B747BR_cruiseAlt
       local mode = vnav_text("crzspdmode")
       local cas, mach = tonumber(fmsModules["data"]["crzcas"]), tonumber(fmsModules["data"]["crzspd"])
       local cmdMach = (cas and crz > 0) and B747_perf_db.cas_to_mach(cas, crz) or (mach or 810) / 1000
-      local tdNM = (B747BR_tod > 0 and B747BR_totalDistance > 0) and (B747BR_totalDistance - B747BR_tod) or nil
+      local pred = B747_fms_preds()
+      local tdNM = pred and pred.td or nil
       local nearTD = tdNM ~= nil and tdNM < 200
       local stepTo = nil
       if crz > 0 and B747_fmc_route.active and not nearTD then
@@ -288,59 +288,15 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
         thrText = perf.N1 and string.format("%.1f%%", v) or string.format("%.2f", v)
       end
 
-      -- Calculate ETA based on sim time
-      local dtogo = dNM 
-      local tmnow = hh + mm/60
-      local eta = 0
-      local fad = 0 --fuel at destination, lbs
-      local fuelKg = simDR_fueL_tank_weight_total_kg
-
-      if(simDR_onGround==1) then --on the ground
-        if(dtogo > 10) then -- at origin with route set
-          eta = tmnow + (18.464 + 0.132 * dtogo) / 60 -- hours
-          fad = simDR_fueL_tank_weight_total_kg * 2.205 - dtogo * 51.6 --rough approximation of fuel remaining at dest
-          if(fad < 0) then fad = 0 end
-        end
-      else
-        if(dtogo < 10) then -- near origin (0 with no flight plan) , or very near destination
-          eta = tmnow -- terminal airspace, therefore now
-          fad = simDR_fueL_tank_weight_total_kg * 2.205
-
-        elseif(dtogo < 90) then --near terminal airspace, assume idle thrust
-          ttg = dtogo/200 -- avg speed approx 200 kts from TOD to land
-          eta = tmnow + ttg
-          fad = simDR_fueL_tank_weight_total_kg * 2.205 - ( ttg * 22029/2.5 ) --40% of average enroute fuelage
-
-        elseif(simDR_vvi_fpm_pilot > 500 or simDR_vvi_fpm_pilot < -500) then --climbing or descending
-          eta = tmnow + (18.464 + 0.132 * dtogo) / 60 -- hours
-          fad = simDR_fueL_tank_weight_total_kg * 2.205 - dtogo * 51.6 -- mean fuel burn 55 pounds per nautical mile
-
-        else --enroute phase of flight
-          eta = tmnow + dtogo / gsKTS
-          ffkgh = (simDR_eng_fuel_flow_kg_sec[0] + simDR_eng_fuel_flow_kg_sec[1] + simDR_eng_fuel_flow_kg_sec[2] + simDR_eng_fuel_flow_kg_sec[3]) * 3600.0
-          
-          if(ffkgh ~= nil and ffkgh > 0 and dtogo ~= nil) then
-            ff  = math.floor(ffkgh/1000) * 1000 -- fuel flow 
-            if(ff < 1000) then ff = 1000 end
-            ttg = math.floor( 10 * dtogo / gsKTS ) / 10 --time to go, hh.m
-            fad = (simDR_fueL_tank_weight_total_kg - ttg*ff) * 2.205
-          else
-            fad = simDR_fueL_tank_weight_total_kg * 2.205 - dtogo * 51.6 -- mean fuel burn per NM, fuelplanner.com
-          end          
-
-        end
+      -- the destination's ETA and fuel: the predictions' (step 8c; FCOM
+      -- p.1349: with the step climbs; before, rules of thumb such as 51.6 lb a
+      -- NM); blank without them
+      local etafuel = ""
+      if pred then
+        local _, eh, em = get_ETA_for_Distance(0, pred.dest.t)
+        etafuel = string.format("%02d%02dz/%.1f", eh, em, perf_out(pred.dest.fuel / 1000))
       end
-
-      -- ETA based on sim zulu 
-      eta_h = math.floor(eta)
-      eta_m = math.ceil( (eta - eta_h) * 60 )
-      if(eta_h >= 24) then eta_h = eta_h - 24 end
-
-      --local timestamp = os.time() 
-      --local dt1 = os.date( "!%X", timestamp )  -- UTC
-      --local utcNow = string.formt("%02f%02f",dt1hour,dt1.min)
-
-      etafuel = string.format("%02d%02dz/ %03.1f",eta_h,eta_m,conv*fad/1000)
+      dICAO = (B747_fmc_route.rte.dest and B747_fmc_route.rte.dest.ident) or "****"
       -- ECON, LRC or SEL SPD: a Mach, or a selected CAS
       local spdText = cas and string.format("%3d", cas) or "." .. vnav_text("crzspd")
       return{
