@@ -161,8 +161,14 @@ M.GS_DOTS_MAX = 2.45
 -- off, and X-Plane's 747 skipped 2 s). On a model of X-Plane's 747 about
 -- 1.5 to 2.5 ft/s 250 to 850 ft past the transmitter at 130 to 170 kt over
 -- the ground; in X-Plane (s114, 150 kt) about 1 ft/s 340 to 360 ft past it
--- (notes/ATA-22.md §26). NOSE LETDOWN: the nose lowered LETDOWN_RATE
--- degrees a second from LETDOWN_STEP under the attitude (from the attitude
+-- (notes/ATA-22.md §26). Under FLARE_HOLD_FT, the sink predicted (the
+-- lead's) under TD_SINK lowers the command at K_FLOAT a second of its path
+-- error (the ground effect's float, estimate: in a 20 kt crosswind's decrab
+-- X-Plane's 747 stopped sinking at 1.4 ft of gear altitude with the nose
+-- at 6.9 degrees, rose to 11 ft as K_FLARE took the nose down 0.6 degree a
+-- second, and came down at 2.2 g: s116, 2026-10-30). NOSE LETDOWN: the
+-- nose lowered LETDOWN_RATE degrees a second from LETDOWN_STEP under the
+-- attitude (from the attitude
 -- the nose went on up and the airplane skipped 2 s), held down at
 -- LETDOWN_PITCH under LETDOWN_DOWN degrees (ATA22 p.332: on the ground and
 -- under 2); the rate, the step and the pitch estimates
@@ -172,6 +178,7 @@ M.FLARE_G = 0.2
 M.K_FLARE = 0.5
 M.FLARE_LEAD_S = 0.8
 M.FLARE_HOLD_FT = 5
+M.K_FLOAT = 2
 M.LETDOWN_RATE = 1
 M.LETDOWN_STEP = 1
 M.LETDOWN_PITCH = -1
@@ -455,7 +462,12 @@ function M.update(s, inp, dt)
         end
         local flown = inp.vs + (s.vs_rate or 0) * (law == "FLARE" and M.FLARE_LEAD_S or M.LEAD_S)
         rate = (law == "FLARE" and M.K_FLARE or M.K_PATH) * (path(want, v) - path(flown, v)) + ff
-        if law == "FLARE" and (inp.gear_alt or 0) < M.FLARE_HOLD_FT then rate = math.min(rate, 0) end
+        if law == "FLARE" and (inp.gear_alt or 0) < M.FLARE_HOLD_FT then
+            rate = math.min(rate, 0)
+            if -flown / 60 < M.TD_SINK then
+                rate = math.min(rate, M.K_FLOAT * (path(-M.TD_SINK * 60, v) - path(flown, v)))
+            end
+        end
     end
     s.law, s.target = law, target
     if law == "FLARE" then lim = math.deg(M.FLARE_G * G / v) end
