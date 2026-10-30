@@ -90,6 +90,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["L6"]=nil
       fmsFunctionsDefs["VNAV"]["R1"]=nil
       fmsFunctionsDefs["VNAV"]["R3"]={"setdata","transalt"}
+      fmsFunctionsDefs["VNAV"]["R5"]=nil
       fmsFunctionsDefs["VNAV"]["R6"]=nil
 
       spdalt = "     -----"
@@ -223,6 +224,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["L6"]={"setpage","PROGRESS"}
       fmsFunctionsDefs["VNAV"]["R1"]={"setdata","stepalt"}
       fmsFunctionsDefs["VNAV"]["R3"]=nil
+      fmsFunctionsDefs["VNAV"]["R5"]=nil
       fmsFunctionsDefs["VNAV"]["R6"]=fmsModules["data"]["crzspdmode"]~="L" and {"vnavspd","lrc"} or nil
 
       -- OPT and MAX: the FCOM PI tables at the FMC's weight (6-1/6-2 steps
@@ -324,6 +326,8 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["L6"]=nil
       fmsFunctionsDefs["VNAV"]["R1"]=nil
       fmsFunctionsDefs["VNAV"]["R3"]=nil
+      -- FORECAST> (FCOM p.1393; step 8e2): the DESCENT FORECAST page
+      fmsFunctionsDefs["VNAV"]["R5"]={"setpage","DESFORECAST"}
       fmsFunctionsDefs["VNAV"]["R6"]=nil
 
       if B747DR_ap_vnav_state==2 and simDR_autopilot_vs_status==2 then

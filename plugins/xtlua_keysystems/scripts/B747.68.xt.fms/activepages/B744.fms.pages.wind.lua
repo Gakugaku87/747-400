@@ -156,7 +156,8 @@ function fmsFunctions.windalt(fmsO, value)
   B747_fms_preds_now()
 end
 
--- 1R-4R: DIR/SPD at this waypoint (both: FCOM p.1366), DELETE this
+-- 1R-4R: DIR/SPD at this waypoint (both: FCOM p.1366; ddd/sss, the
+-- direction three digits as FMSPG p.179's), DELETE this
 -- waypoint's (the others' propagate here then)
 function fmsFunctions.windspd(fmsO, value)
   local sp = fmsO["scratchpad"]
@@ -170,10 +171,9 @@ function fmsFunctions.windspd(fmsO, value)
     on_routes(fmsO, i, function(rr, j) W.delete_wind(rr, j, ft) end)
     return
   end
-  local dir, kt = sp:match("^(%d%d?%d?)/(%d%d?%d?)$")
-  dir, kt = tonumber(dir), tonumber(kt)
-  if not dir or dir > 360 or kt > 250 then fmsO["notify"] = "INVALID ENTRY" return end
-  on_routes(fmsO, i, function(rr, j) W.set_wind(rr, j, ft, dir % 360, kt) end)
+  local dir, kt = W.parse_wind(sp)
+  if not (dir and kt) then fmsO["notify"] = "INVALID ENTRY" return end
+  on_routes(fmsO, i, function(rr, j) W.set_wind(rr, j, ft, dir, kt) end)
 end
 
 -- 5R ALT/OAT (FCOM p.1366; FMSPG p.122): an altitude and its OAT (C),

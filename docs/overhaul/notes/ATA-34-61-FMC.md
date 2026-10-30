@@ -1051,3 +1051,17 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 試験：
   - 回帰：新設の `tests/fms/wind_model_test.lua` 34 件（4 つの高度と並べ方、FMSPG の図 4.6-1 の伝わり方を高度ごとに全点、図 4.6-2 の点を消したとき、通過した点からも伝わる、高度を消す、その点の風を消す、MOD の写しは別の表、気温：FCOM の図の FL330 −53℃ から FL270 −41℃、前後への伝わり、圏界面の上、範囲）、新設の `tests/fms/wind_page_test.lua` 42 件（合成の ZZAA：RTE DATA の 1R から、見出しと配置、FL350 と 270/50、次の点の小さい字、FL300/−40 と FL350 の −50、範囲の外、4 つ目まで・5 つ目と重ねた入力は INVALID ENTRY、DELETE、361 は INVALID ENTRY、RTE DATA> と W>、MOD の脚にも入り EXEC の後も残る）。全 131 本。
   - X-Plane：新設の `s134_fmc_winds` 16/16（AKAGI の WIND のページ 1/13、FL350 の行と DIR/SPD のダッシュ、標準大気 −54℃ の小さい字、270/50、次の ATMUG で小さい字、FL300/−40 で FL350 は −50、RTE DATA で AKAGI が W>）。写真で配置と字の大きさを確かめた。Lua の誤りなし。
+
+## 52. 段 8e2 の実装（2026-10-31：DESCENT FORECAST）
+
+- 資料：FCOM p.1393（DES のページの FORECAST>）、p.1395–1397（DESCENT FORECAST：降下の 4 つの高度の風と、防氷を入れる高度を入れて降下の経路を正しくする。TRANS LVL は到着の手続きで決まることがあり既定は FL180、FL と ft の表示の切り替えに使う。ALT は順不同で並べ替えない。TAI/ON ALT は降下で防氷を最初に入れる高度。WIND DIR/SPD の最初の入力は方向と速さ、後は片方でよい。405/570 はデータリンクの SEND・LOAD・PURGE と DES>）、FMSPG p.230（降下予報の風は巡航の風と混ぜて滑らかに移す。巡航の風が無ければ最も高い降下の風を巡航高度まで、最も低い降下の風は目的地の標高で 0 へ：8e3）。
+- 作ったもの（新設 `activepages/B744.fms.pages.desforecast.lua`）：
+  - DES のページの 5R の FORECAST> から（前は押しても何も無かった。CLB と CRZ のページの 5R は何もしないままにした）。
+  - 配置は FCOM p.1396 の図（109）：DESCENT FORECAST、小さい見出し TRANS LVL・TAI/ON ALT、1L に TRANS LVL（既定 FL180）、1R に TAI/ON ALT（ダッシュか高度）、小さい見出し ALT・WIND DIR/SPD、2〜5 行目に高度（無ければダッシュ）と風（15〜22 桁と小さい「KT」、無ければ ---°/---）。6 行目は、109 は図のとおり <OFFPATH DES と DES DIR>（DES のページと同じく、まだ働かない）、570 は DES>（DES のページへ。データリンクの SEND・LOAD・PURGE は作らない：推定）。
+  - 高度の表示は TRANS LVL の上が FL（FCOM p.1396）。
+  - 入力（FMSPG p.178–179）：1L TRANS LVL（高度か FL。既定は目的地の遷移高度（航法データの earth_aptmeta.dat）、無ければ FL180。乗員の入力が優先。DELETE は INVALID DELETE）、1R TAI/ON ALT（DELETE でダッシュ）、2L〜5L ALT（順不同、ほかの行と同じ高度は INVALID ENTRY、DELETE でその行の高度と風）、2R〜5R WIND DIR/SPD（方向は真方位の 3 桁で 360 まで、速さは 0〜250 kt。最初は ddd/sss、後は ddd/ か /sss でもよい。その行に高度があるとき：推定。DELETE）。WIND のページの DIR/SPD も同じ書き方（方向 3 桁）にした（推定：FMSPG はこのページについて書いている）。
+  - 予報（`B747_fms_des_forecast()`）と遷移高度（`B747_fms_trans_lvl()`）をほかから読めるようにした。予測が使うのは 8e3。
+- 残り：TRANS LVL を到着の手続きから取ること（今は目的地の空港の値）、ほかのページ（LEGS の降下の予測など）の FL と ft の切り替えに TRANS LVL を使うこと（今は TRANS ALT のまま）、OFFPATH DES と DES DIR（VNAV の段 9 以降）、TAI/ON ALT を降下の経路に使うこと（8e3、資料に値があれば）。
+- 試験：
+  - 回帰：新設の `tests/fms/des_forecast_test.lua` 44 件（CLB と CRZ の 5R は何もしない、DES の 5R の FORECAST>、配置、FCOM の図の 3 つの風、/80 と 140/、高度の無い行・最初の片方・251 kt・2 桁の方向・同じ高度は INVALID ENTRY、目的地が無ければ FL180、TRANS LVL 4000 で 5000 が FL050、DELETE は INVALID DELETE、TAI/ON ALT、行の DELETE、570 の DES>）、`wind_page_test.lua` 45 件（2 桁の方向・251 kt、目的地 ZZAA の遷移高度 FL140）。全 132 本。
+  - X-Plane：新設の `s135_fmc_des_forecast` 11/11（DES の 5R から、FL180 とダッシュ、FCOM の図の 3 つの風、/80、TAI/ON ALT FL150 は 15000）。写真で配置を確かめた。Lua の誤りなし。この試験の後に、FMSPG に合わせた入力の検査（TRANS LVL の DELETE、同じ高度、3 桁の方向、目的地の遷移高度）を足した（回帰試験で確かめ、X-Plane では次の起動し直しの後に s135 をもう一度）。
