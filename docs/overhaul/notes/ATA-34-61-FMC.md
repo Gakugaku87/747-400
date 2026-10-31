@@ -1283,3 +1283,23 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 試験の道具で分かったこと：ノブの押しの処理は、ノブの絵が押し込みのままなら次の押しを離しとして捨てる（前からの守り：高度のノブも同じ）。Web API の長さ 0 のコマンドでは離し（phase 2）が XTLua に届かず、s147 の初めの版は 2 回目の押しが捨てられた。実際の押し（マウス・ボタン）は押しと離しが別に来るので起きない。シナリオではノブを 0.2 秒押して離す。
 - 推定・残り：進入中（on approach：FCOM p.1261 の条件）の VNAV PTH のままの介入は段 9e。介入の間の予測（DES のページの速さの行、T/D や E/D の時刻）はまだ FMC の予定の速さ。PROGRESS の予測の無いときの古い経路は前の `flightPhase` のまま。
 - 試験：`vnav_model_test.lua` 110 件（降下の介入で VNAV SPD・IDLE、ノブの 270 kt と M.82、FMC の高度は次の制限、40 kt 遅くても IDLE のまま、閉じれば VNAV PTH、早期降下は THR のまま）、`afds_glue_test.lua` 251 件（VNAV でノブを押すと `spd_intervention` 1・窓が開いて FMC の 300 kt、ノブを 280 に、もう一度押すと 0・窓が閉じて FMC の 300 kt）、`pred_glue_test.lua` 137 件（介入で FMC の目標がノブの 270 kt・M.805、ACT MCP SPD DES、PROGRESS の 5L の MCP SPD、閉じれば FMC の目標と ECON）、`vnav_pages_test.lua` 79 件（ACT MCP SPD CRZ・CLB、有効でないページはそのまま）。全 134 本。新設の X-Plane の `s147_vnav_spd_intervention`。
+
+## 67. 段 9e の段取り（2026-10-31：降下の許容と進入）
+
+- 資料：FCOM p.1258（降下の目標速度の上限：ECON 349 kt＝VMO/MMO −16、乗員の入力 354 kt＝−11）、p.1259–1260（経路を保つ間の速さの許容と速度の逆戻り、THRUST REQUIRED・DRAG REQUIRED）、p.1261–1262（on approach の条件と働き、glide path angle、進入復行）、p.1391（END OF DES の見出し）、p.1431・p.1434（DRAG REQUIRED・THRUST REQUIRED の文言）、FMSPG p.3.5-17 の図（限界の速さで経路を離れて VNAV SPD、経路に戻って VNAV PATH）。
+- 今：VNAV PTH の降下は経路へ K_PATH で戻すだけで、速さは成り行き（遅いときの A/T の SPD と THRUST REQUIRED は 9f2・9f3 で済）。DRAG REQUIRED は AP の前の判定（ダイヤルより 10 kt 速く増えていて、レバーがアイドル）。on approach・END OF DES・進入復行は無い。
+- 段：
+  - 9e1：降下の速さの許容と速度の逆戻り。ECON の目標の上限 349 kt・入力 354 kt。経路を保つ間の速さの幅：最初の速さの制限の上は、遅い側 15 kt で A/T の SPD、速い側 349 kt で DRAG REQUIRED・354 kt まで。下は、遅い側 10 kt、速い側 +10 kt で DRAG REQUIRED・+15 kt まで（遷移の高度の下では遷移の速さ +5、フラップがあれば placard −5 まで）。その先は経路から 150 ft まで離れて速さの変化を止め、それも超えると速度の逆戻り（VNAV SPD。目標は速い側が 349 kt か遷移の速さ −10、遅い側が最良の待機速度と最小の機動速度の高い方 +5 か遷移の速さ −10）と、そのメッセージをもう一度。経路に戻れば VNAV PTH（推定：FMSPG の図）。DRAG REQUIRED は FMC の判定に（前の AP の判定は使わない）。
+  - 9e2：on approach（条件：公表の進入を有効な経路に入れて最初の点を過ぎたか、VFR の進入で FAxxx を過ぎたか RWxx へ 25 NM の内。外れる：TO/GA、着陸、最後の点の先で END OF DES）。働き：速度介入でも VNAV PTH のまま A/T が速さ（段 9d3 の残り）、MCP の高度が 300 ft 以上上でも降下を続ける、placard の 5 kt の内まで速くなって 150 ft 上なら VNAV SPD。END OF DES の見出し（E/D を過ぎて上昇の脚が続かないとき）。
+  - 9e3：進入復行（TO/GA で、降下の制限のうち機体より下を消す、CRZ ALT を進入復行の最も高い高度に、上昇の段階へ、400 ft の上で VNAV・LNAV）。glide path angle の脚は、航法データに角度があるかを見て決める。
+
+## 68. 段 9e1 の実装（2026-10-31：降下の速さの許容と速度の逆戻り）
+
+- 資料：§67 の FCOM p.1258–1260、p.1431、FMSPG p.3.5-17。最良の待機速度は性能の DB の待機の表（PI.11.6：`B747_perf_db.hold`）。
+- 作ったもの（VNAV のモデル、経路の降下：早期降下と速度介入のときは除く）：
+  - 速さの限界（`speed_limits`）：最初の速さの制限（ここでは速さの遷移の高度）の上は、DRAG REQUIRED が VMO/MMO −16（349 kt：性能の DB の `econ_limit`）、経路を保つのは −11（354 kt）まで。下は、DRAG REQUIRED が目標 +10、保つのは目標 +15 まで、遷移の速さ（SPD TRANS の速さ +10）+5 とフラップの placard −5 を超えない。遅い側は最小の機動速度まで（それより前は 9f2 の A/T の SPD）。
+  - その先は経路を 150 ft（`PATH_TOL`）まで譲る：速すぎれば浅く（速さの超過 1 kt に 100 fpm：`SPD_VS`、推定）、遅すぎれば深く降りる。150 ft を超えても速さが戻らなければ速度の逆戻り（`reversion`）：VNAV SPD、A/T は IDLE。目標は、速い側が 349 kt（上）か SPD TRANS の速さ（下）、遅い側が最良の待機速度と最小の機動速度の高い方 +5（上）か SPD TRANS の速さ（最小の機動速度より下にしない：下）。経路に戻れば（速い側は上から、遅い側は下から）VNAV PTH と予定の速さ（推定：FMSPG の図）。
+  - メッセージ（`out.msg`、FMS が `laminar/B747/fms/vnav/msg` に：1 THRUST REQUIRED、2 DRAG REQUIRED）：DRAG REQUIRED はその速さを超えると出て、2 kt 下で消す（推定）。逆戻りの間は、速い側が DRAG REQUIRED、遅い側が THRUST REQUIRED。AP がそれで FMC のメッセージの旗（9 DRAG REQUIRED、45 THRUST REQUIRED）を立てる（THRUST REQUIRED の、A/T が切れていて FMC が SPD を求める条件は 9f3 のまま）。前の AP の DRAG REQUIRED の判定（ダイヤルより 10 kt 速く、増えていて、レバーがアイドル）は使わない。
+  - FMS：降下の間、最良の待機速度をモデルに（`hold_cas`）。
+- 推定：経路を譲る量の決め方（速さの超過に比例して浅く・深く）、DRAG REQUIRED の 2 kt の戻り、逆戻りの終わり（経路に戻ったとき）。「最初の速さの制限」を速さの遷移の高度に代えたこと（SPD RESTR や点の速さの制限がもっと上にあっても見ない）。
+- 試験：`vnav_model_test.lua` 125 件（349 を超えて DRAG REQUIRED・経路は保つ、354 を超えて浅く、150 ft を超えて逆戻りで 349 の VNAV SPD・IDLE・DRAG REQUIRED、経路に戻って PTH と予定の 290、下では 250 を超えて DRAG・255 を超えて 240 の逆戻り、遅い側は深く・150 ft の下で待機速度 +5 の逆戻りと THRUST REQUIRED・下から戻って PTH、速度介入で逆戻りが消える）、`afds_glue_test.lua` 254 件（FMC のメッセージで旗 9・45）。全 134 本。新設の X-Plane の `s148_vnav_speed_reversion`。

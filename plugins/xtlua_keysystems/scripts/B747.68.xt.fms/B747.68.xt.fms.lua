@@ -1205,6 +1205,7 @@ B747DR_fms_vnav_alt = find_dataref("laminar/B747/fms/vnav/alt")
 B747DR_fms_vnav_vs = find_dataref("laminar/B747/fms/vnav/vs")
 B747DR_fms_vnav_path_dev = find_dataref("laminar/B747/fms/vnav/path_dev")
 B747DR_fms_vnav_at = find_dataref("laminar/B747/fms/vnav/at")
+B747DR_fms_vnav_msg = find_dataref("laminar/B747/fms/vnav/msg")
 B747DR_fms_vnav_perf = find_dataref("laminar/B747/fms/vnav/perf")
 B747DR_fms_vnav_dist = find_dataref("laminar/B747/fms/vnav/dist")
 B747DR_fms_alt_sel_pushes = find_dataref("laminar/B747/autopilot/alt_sel_pushes")
@@ -1495,6 +1496,9 @@ local function update_vnav()
   inp.clb, inp.des, inp.crzspd = B747_fms_schedules(perf)
   inp.flaps_placard = simDR_fms_vnav_flaps > 0.01 and B747DR_fms_vnav_vmax > 0 and B747DR_fms_vnav_vmax or nil
   inp.vmin = B747DR_fms_vnav_vminm > 0 and B747DR_fms_vnav_vminm or nil
+  -- (step 9e1) the best holding speed for the descent's slow speed
+  -- reversion (FCOM p.1259; PI.11.6), in the descent only
+  inp.hold_cas = (vnavState.phase == "DES" and perf and inp.kg) and (B747_perf_db.hold(perf, inp.kg, inp.alt)) or nil
   -- (step 9d3) speed intervention: the MCP's speed (FCOM p.643)
   if B747_fms_spd_int() then
     local v, mach = B747DR_fms_ias_dial, simDR_autopilot_airspeed_is_mach == 1
@@ -1548,6 +1552,9 @@ local function update_vnav()
   B747DR_fms_vnav_vs = out.vs or 0
   B747DR_fms_vnav_path_dev = out.path_dev or 0
   B747DR_fms_vnav_at = out.at or 0
+  -- (step 9e1) THRUST REQUIRED, DRAG REQUIRED (the AP's notifications)
+  local msg = out.msg == "THRUST" and 1 or out.msg == "DRAG" and 2 or 0
+  if B747DR_fms_vnav_msg ~= msg then B747DR_fms_vnav_msg = msg end
   B747DR_fms_vnav_dist = inp.d_ed or 0
   -- RESET MCP ALT (step 9d1; FCOM p.665, p.1433: flag 33, DRindex 32 + 1;
   -- before, the old VNAV's T/D): VNAV in the cruise within two minutes of
