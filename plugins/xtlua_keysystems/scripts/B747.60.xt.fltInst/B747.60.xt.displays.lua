@@ -691,7 +691,8 @@ local function nd_sources(c, f, nav_valid)
     -- and R (NAV3 and NAV4: the AC standby bus, AC bus 2), ADF L and R (the
     -- ADFs 1 and 2: AC bus 3, AC bus 2, notes/ATA-34.md §2.1); an ADF's
     -- station counts as received with its identifier (X-Plane has no ADF
-    -- signal flag)
+    -- signal flag); no bearing in ANT (FCOM p.1304: the tuning modes' 4th
+    -- and 5th letters A, the FMC's NAV RADIO: 6-1/6-2 step 10b)
     local sc, sf = inp.side[NM.CAPT].sw, inp.side[NM.FO].sw
     sc[1], sc[2] = efis_sw(simDR_dsp_efis_sw_l_capt), efis_sw(simDR_dsp_efis_sw_r_capt)
     sf[1], sf[2] = efis_sw(simDR_dsp_efis_sw_l_fo), efis_sw(simDR_dsp_efis_sw_r_fo)
@@ -700,7 +701,8 @@ local function nd_sources(c, f, nav_valid)
     inp.adf_ok[2] = B747DR_dsp_bus_ac[1] > 0.5 and simDR_dsp_adf2_fail ~= 6
     local id1, id2 = simDR_dsp_adf1_id, simDR_dsp_adf2_id
     local b1, b2 = string.byte(id1), string.byte(id2)
-    inp.adf_brg_rx[1], inp.adf_brg_rx[2] = (b1 and b1 > 32) and true or false, (b2 and b2 > 32) and true or false
+    inp.adf_brg_rx[1] = (b1 and b1 > 32 and string.sub(modes, 4, 4) ~= "A") and true or false
+    inp.adf_brg_rx[2] = (b2 and b2 > 32 and string.sub(modes, 5, 5) ~= "A") and true or false
     for k = 1, 2 do
         local x = VOR_IDX[k]
         inp.vor_brg_rx[k] = simDR_dsp_nav_rx[x] > 0.5
