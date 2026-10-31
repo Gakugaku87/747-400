@@ -718,9 +718,11 @@ local function afds_vnav_level(p)
 		-- the FMC altitude the MCP's too: no conflict, VNAV PTH (FCOM p.645:
 		-- VNAV ALT for a conflict; step 9d1: s139's cruise climb to CRZ ALT
 		-- FL190 with the MCP at FL190 levelled in VNAV ALT). The FMC
-		-- altitude captured in VNAV SPD (step 9d2a: the cruise descent's
-		-- CRZ ALT, the early descent's constraint; before, the climb's only)
-		local fmc = B747DR_ap_fvn_mode == 1 and B747_afds_pitch_model.capture(p, tgt)
+		-- altitude captured in VNAV SPD (step 9d2a: the early descent's
+		-- constraint, the driftdown's CRZ ALT; before, the climb's only) and
+		-- in the cruise descent's VNAV PTH (the FMC's step 9h4c)
+		local fmc = (B747DR_ap_fvn_mode == 1 or (B747DR_ap_fvn_phase == 2 and B747DR_ap_fvn_vs ~= 0))
+			and B747_afds_pitch_model.capture(p, tgt)
 		if fmc and math.abs(tgt - mcp) <= 50 then
 			vnavLevel = {alt = tgt, fma = 6}
 		elseif B747_afds_pitch_model.capture(p, mcp) then
@@ -741,12 +743,13 @@ local function afds_pitch_inputs(p)
 	-- VNAV's laws by the FMC's VNAV (6-1/6-2 step 9c; notes/
 	-- ATA-34-61-FMC.md §57): VNAV SPD on the speed law at the FMC's target
 	-- speed (the speed dial: afds_fmc_speed), VNAV PTH level at the FMC
-	-- altitude (the cruise) or on its descent path's vertical speed; before,
-	-- the old VNAV's flags (FLCH, V/S, ALT)
+	-- altitude (the cruise) or on its descent path's vertical speed, (the
+	-- FMC's step 9h4c) the cruise descent's (the cruise phase with a
+	-- vertical speed); before, the old VNAV's flags (FLCH, V/S, ALT)
 	p.vnav_law, p.vnav_vs, p.vnav_alt = nil, 0, simDR_pressureAlt1
 	if B747DR_ap_fvn_mode == 1 then
 		p.vnav_law = "FLCH"
-	elseif B747DR_ap_fvn_phase == 3 then
+	elseif B747DR_ap_fvn_phase == 3 or (B747DR_ap_fvn_phase == 2 and B747DR_ap_fvn_vs ~= 0) then
 		p.vnav_law, p.vnav_vs = "VS", B747DR_ap_fvn_vs
 	elseif B747DR_ap_fvn_mode == 2 then
 		p.vnav_law, p.vnav_alt = "ALT", B747DR_ap_fvn_alt

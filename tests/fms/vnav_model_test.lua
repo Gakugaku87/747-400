@@ -236,14 +236,15 @@ T.equal(o.at, V.AT_THR_REF, "with THR REF")
 
 -- a lower CRZ ALT in the cruise (the selector's push more than 50 NM
 -- before the T/D: the glue's): the cruise descent (FCOM p.1257, p.1261):
--- the cruise phase, VNAV SPD at the cruise's speed (economy cruise), down
--- by the A/T's THR at the early descent's rate (estimate), level at the
--- new CRZ ALT; the CRZ page's CRZ DES (p.1347)
+-- the cruise phase at the cruise's speed (economy cruise), about 1,250 fpm
+-- down with the A/T keeping the speed (step 9h4c: FCOM p.1268's condition
+-- 3, p.1269; before, VNAV SPD with THR), level at the new CRZ ALT; the CRZ
+-- page's CRZ DES (p.1347)
 local s12 = V.new()
 V.update(s12, inp{alt = 35000})
 o = V.update(s12, inp{alt = 35000, crz_alt = 31000, mcp_alt = 31000, d_ed = 300})
 T.check(o.phase == "CRZ" and o.crz_chg == "DES", "CRZ ALT FL310: the cruise descent (CRZ DES)")
-T.check(o.mode == "SPD" and o.at == V.AT_THR and o.alt == 31000, "VNAV SPD with THR to FL310")
+T.check(o.mode == "PTH" and o.at == V.AT_SPD and o.alt == 31000, "VNAV PTH with SPD to FL310 (step 9h4c)")
 T.near(o.vs, -V.EARLY_VS, 1e-6, "1,250 fpm down")
 T.check(o.mach_mode and math.abs(o.mach - 0.85) < 1e-9, "the cruise's M.85")
 o = V.update(s12, inp{alt = 31040, crz_alt = 31000, mcp_alt = 31000, d_ed = 280})
@@ -534,6 +535,7 @@ o = V.update(s15, inp{alt = 31980, crz_alt = 30000, mcp_alt = 30000, crzspd = eo
 T.check(o.dd, "20 ft under the maximum at its start: the driftdown still")
 o = V.update(s15, inp{alt = 31900, crz_alt = 30000, mcp_alt = 30000, crzspd = eoLrc, eo_max = 32000})
 T.check(not o.dd and o.crz_chg == "DES", "100 ft under it: the cruise descent")
+T.check(o.mode == "PTH" and o.at == V.AT_SPD, "VNAV PTH with SPD, E/O LRC (FCOM p.1269's subsequent cruise descent)")
 T.near(o.vs, -V.EARLY_VS, 1e-6, "1,250 fpm down")
 o = V.update(s15, inp{alt = 31900, crz_alt = 30000, mcp_alt = 30000, crzspd = eoLrc, eo_max = 31750})
 T.check(not o.dd, "the maximum 150 ft under the airplane (within EO_DD_ABOVE): not back into it")
