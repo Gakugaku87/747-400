@@ -1361,6 +1361,8 @@ end
 -- deletion not after the approach's runway nor in a missed approach.
 local UNABLE_TOL_FT=10
 local predUnableNext,vnavUnableFlag=false,0
+-- (step 11c2b) CHECK ALT TGT's flag (4) as the VNAV model says
+local vnavCheckFlag=0
 local function unable_next(s,r)
   if not (s and r and r.pts) then return false end
   for i,l in ipairs(s.legs) do
@@ -2006,6 +2008,12 @@ local function update_vnav()
     B747DR_fmc_notifications[47] = un
   end
   update_limit_alt(inp)
+  -- (step 11c2b) CHECK ALT TGT (flag 4: B747.68.vnav_model.lua's)
+  local chk = out.check_alt and 1 or 0
+  if vnavCheckFlag ~= chk then
+    vnavCheckFlag = chk
+    B747DR_fmc_notifications[4] = chk
+  end
   -- (step 9c) PERF INIT's gross weight and cost index, and CRZ ALT, entered
   local perfIn = inp.kg and inp.crz_alt and tonumber(fmsModules["data"].costindex)
   B747DR_fms_vnav_perf = perfIn and 1 or 0

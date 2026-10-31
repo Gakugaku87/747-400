@@ -105,6 +105,9 @@ M.MAX_ADD_KT, M.DRAG_LOW_KT, M.MAX_LOW_KT, M.TRANS_ADD_KT = 5, 10, 15, 15
 M.DRAG_OFF_KT = 2
 M.PATH_TOL, M.SPD_VS = 150, 100
 M.REV_SLOW_ADD = 5
+-- (6-1/6-2 step 11c2b) CHECK ALT TGT: "between" the MCP and FMC altitudes
+-- with both this far away (estimate)
+M.CHECK_BAND_FT = 100
 
 function M.new()
     return {phase = "CLB", out = {},
@@ -113,7 +116,8 @@ function M.new()
         crz_last = nil,                      -- CRZ ALT the update before
         drag = false,                        -- DRAG REQUIRED (step 9e1)
         rev = nil, rev_cas = nil,            -- the speed reversion ("fast", "slow") and its speed
-        dd = nil}                            -- the driftdown's floor: the maximum at its start (step 9h4b)
+        dd = nil,                            -- the driftdown's floor: the maximum at its start (step 9h4b)
+        check = nil, was_engaged = false}    -- CHECK ALT TGT's altitude, VNAV engaged before (step 11c2b)
 end
 
 -- DES NOW (step 9d2a; FCOM p.1260, p.1389, p.1393; FMSPG p.3.5-5): the
@@ -342,7 +346,7 @@ end
 --   above the path), at (the A/T mode), msg ("DRAG" for DRAG REQUIRED,
 --   "THRUST" for THRUST REQUIRED, else nil: step 9e1), end_des (END OF DES:
 --   step 9e2), title ("LIM SPD", "VREF + 100" or nil: step 9h3b), dd (the
---   driftdown: step 9h4b)
+--   driftdown: step 9h4b), check_alt (CHECK ALT TGT: step 11c2b)
 function M.update(s, inp)
     local out = s.out
     local P = inp.P
@@ -547,6 +551,26 @@ function M.update(s, inp)
                 out.msg = s.rev == "fast" and "DRAG" or "THRUST"
             end
         end
+    end
+    -- (6-1/6-2 step 11c2b) CHECK ALT TGT (FCOM p.1431): VNAV engaged with
+    -- the airplane between the MCP altitude and the FMC altitude: level
+    -- where it engaged (VNAV PTH, the A/T on speed) while they stay on two
+    -- sides of it; once one side (the MCP altitude reset, or the FMC's
+    -- moved) the profile again. Estimates: CHECK_BAND_FT; the end
+    local tgt = out.alt
+    local between = inp.engaged and tgt and inp.mcp_alt
+        and (tgt - inp.alt) * (inp.mcp_alt - inp.alt) < 0
+        and math.abs(tgt - inp.alt) > M.CHECK_BAND_FT and math.abs(inp.mcp_alt - inp.alt) > M.CHECK_BAND_FT
+    if not between then
+        s.check = nil
+    elseif not s.was_engaged then
+        s.check = inp.alt
+    end
+    s.was_engaged = inp.engaged and true or false
+    out.check_alt = s.check ~= nil or nil
+    if s.check then
+        out.mode, out.at, out.vs, out.msg = "PTH", M.AT_SPD, nil, nil
+        out.alt = s.check
     end
     -- valid: an active route, CRZ ALT and the gross weight (ATA34_2 p.621:
     -- the performance data entered), a path in the descent (FCOM p.645:
