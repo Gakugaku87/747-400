@@ -347,5 +347,24 @@ for _ = 1, 10 do A.servo(s28, sv{vs = -1250, ivs = -1250, evs = -1600, vnav_vs =
 T.equal(A.fma(s28), A.THR, "the V/S at the rate, the energy's 350 fpm off (slowing): THR still")
 for _ = 1, A.REACH_S do A.servo(s28, sv{vs = -1250, ivs = -1250, evs = -1250, vnav_vs = -1250, lever = s28.cmd}) end
 T.equal(A.fma(s28), A.HOLD, "both at the rate for REACH_S: HOLD")
+-- the energy's rate at the target speed (target_vs): at a held IAS the V/S
+-- itself (on the TAS's change 260 fpm steeper at a held 294 kt going down:
+-- s146, no HOLD); the IAS falling 0.5 kt/s at 300 kt and 240 m/s TAS, the
+-- V/S less V^2 d(ln IAS)/dt / g once the second's filter has it; the
+-- measure's change (IAS to Mach) without a jump
+local s29 = A.new()
+local function tv(n, ivs, x, rate, mach)
+    local v
+    for _ = 1, n do
+        x = x * math.exp(rate / 30)
+        v = A.target_vs(s29, ivs, 240, x, mach, 1 / 30)
+    end
+    return v
+end
+T.near(tv(30, -960, 294, 0, false), -960, 1e-9, "a held IAS: the V/S itself")
+local v1 = tv(300, 1500, 300, -0.5 / 300, false)
+local want1 = 1500 + A.EVS_K * 240 * 240 * (-0.5 / 300)
+T.near(v1, want1, 20, string.format("climbing 1,500 fpm, the IAS falling 0.5 kt/s: %.0f fpm (%.0f)", v1, want1))
+T.near(A.target_vs(s29, 1500, 240, 0.78, true, 1 / 30), v1, 1e-6, "to the Mach: that frame the rate kept (no jump)")
 
 T.done()

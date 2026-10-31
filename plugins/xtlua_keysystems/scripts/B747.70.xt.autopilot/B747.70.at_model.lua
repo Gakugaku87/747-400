@@ -63,9 +63,11 @@ M.K_EPR, M.K_N1 = 0.33, 0.003
 M.FLCH_S, M.GA_VS = 125, 2000
 M.LIMIT_MARGIN = 5
 -- (the FMC's step 9d2) VNAV's THR (the early and the cruise descent): the
--- levers to the FMC's V/S on the energy's rate (the V/S the speed would
--- give at its target: the elevator trades speed for height, s146's +1,500
--- fpm slowing 12 kt to the descent's speed was the energy's -100; ATA34_2
+-- levers to the FMC's V/S on the energy's rate at the target speed (the V/S
+-- the speed would give held at its target, in the target's IAS or Mach: the
+-- elevator trades speed for height, s146's +1,500 fpm slowing 12 kt to the
+-- descent's speed was the energy's -100 to -800; on the TAS's change alone a
+-- held IAS's falling TAS left the V/S 260 fpm shallower and no HOLD; ATA34_2
 -- p.647's FMC reference thrust in steady flight: estimate), at half FLCH's
 -- K_VS (the engines' lag alone in that loop; a simulation of s146's
 -- engines, 2 s and 4 to 7 s behind: within 100 fpm in 25 s, FLCH's gain
@@ -80,6 +82,9 @@ M.LIMIT_MARGIN = 5
 -- (s146)
 M.VS_REACHED, M.SPD_REACHED, M.REACH_S = 100, 5, 5
 M.K_VS_VNAV = 6e-6
+-- the energy's rate at the target speed (target_vs): ft/min of V^2 d(ln
+-- X)/dt / g with the TAS in m/s
+M.EVS_K = 60 / 9.80665 / 0.3048
 
 function M.new()
     return {engaged = false, mode = nil, disc = false,
@@ -89,6 +94,7 @@ function M.new()
         idle_hold = false,  -- VNAV's or the retard's IDLE at the aft stop
         thr_hold = false,   -- VNAV's THR at its V/S, the aft stop, the hand
         reach_t = 0,        -- VNAV's THR: the seconds at its V/S
+        lx = nil, lx_mach = nil, lx_rate = 0,  -- target_vs: ln of the target's measure, its rate
         vnav_phase = nil,   -- the FMC's phase the update before
         ga = false,         -- G/A's THR (the first push) on
         retard = false,     -- the flare retard's IDLE
@@ -225,6 +231,24 @@ end
 
 local function clamp(x, lo, hi) return math.max(lo, math.min(hi, x)) end
 
+-- (step 9d2) the energy's rate at the target speed for VNAV's THR (evs,
+-- fpm): the inertial V/S ivs and the energy the speed's change gives, the
+-- change taken in the target's own measure x, the IAS (kt) or the Mach (mach
+-- true): a held IAS's TAS falls going down, so on the TAS's change the V/S
+-- came 260 fpm shallower than the energy's rate at a held 294 kt (s146) and
+-- HOLD never came. ln x's rate through a second's filter, kept a frame when
+-- the measure changes; tas in m/s; each frame before servo
+function M.target_vs(s, ivs, tas, x, mach, dt)
+    if x > (mach and 0.05 or 30) then
+        local lx = math.log(x)
+        if s.lx and s.lx_mach == mach and dt > 0 then
+            s.lx_rate = s.lx_rate + ((lx - s.lx) / dt - s.lx_rate) * math.min(1, dt)
+        end
+        s.lx, s.lx_mach = lx, mach
+    end
+    return ivs + M.EVS_K * tas * tas * s.lx_rate
+end
+
 -- the speed law's lever rate to a speed: the error and the acceleration,
 -- less when reducing
 local function speed_rate(inp, tgt)
@@ -240,8 +264,8 @@ end
 -- laws' kt), v_max and v_min (the maximum and the minimum maneuvering
 -- speeds); vs (fpm), alt, mcp_alt, vnav_vs (the FMC's V/S for VNAV's THR:
 -- step 9d2), ivs (the inertial V/S for it; vs without), evs (the energy's
--- rate for it, fpm: the inertial V/S and the TAS's change; ivs without);
--- thrust and
+-- rate at the target speed for it, fpm: the inertial V/S and the speed's
+-- change in the target's IAS or Mach; ivs without); thrust and
 -- thrust_ref (EPR or % N1, n1 true for N1); lever (the levers' mean)
 function M.servo(s, inp)
     local mode = s.engaged and s.mode or nil
