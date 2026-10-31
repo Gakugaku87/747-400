@@ -22,6 +22,9 @@ radioModes="AAAMM" --ils,vor l/r,adf l/r (ADF is manual only
 B747DR_FMSdata=deferred_dataref("laminar/B747/fms/data", "string")
 -- 5-2 step 5c: each route entry's ETA for the ND's route data (B747.68.xt.fms.lua)
 B747DR_fms_route_eta=deferred_dataref("laminar/B747/fms/route_eta", "string")
+-- 6-1/6-2 step 11b: the landing altitude (ft) for the cabin pressure controllers, 1 with one (B747.68.xt.fms.lua)
+B747DR_fms_landing_alt=deferred_dataref("laminar/B747/fms/landing_alt", "number")
+B747DR_fms_landing_alt_valid=deferred_dataref("laminar/B747/fms/landing_alt_valid", "number")
 B747DR_FMSdata="{}"
 irs_line1=deferred_dataref("laminar/B747/irs/line1", "string")
 irs_line2=deferred_dataref("laminar/B747/irs/line2", "string") 

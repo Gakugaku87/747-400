@@ -331,7 +331,7 @@ CAS 番号は `B747.87.xt.warning.lua` の表による（行 74, 118, 135, 273, 
 | ATA 36 / APU | 出力 | パックの空気需要。APU はエンジン始動中以外なら全パックを賄える。飛行中は 15,000 ft まで 1 パック。ZTC は APU に流量を要求し、ZTC 故障時は最大を要求する | FCOM p.895 (7.30.1); ATA21 p.18, 112, 368 |
 | ATA 24 電源 | 入力 | CPC A＝DC bus 1、B＝DC bus 2。手動＝battery bus と APU hot battery bus。PTC A＝bus 3、B＝bus 4。機器冷却の弁と fan の電源 | ATA21 p.84, 437, 449, 611 図 |
 | air/ground | 入力 | 与圧モード、地上の ram door 全開、TEMP 灯の抑止、機器冷却の構成。PTC は primary と alternate が食い違うと 75 s 後に status を出し、空中側に倒す。CPC も食い違いで status | ATA21 p.74, 92, 244, 428, 454 |
-| FMC | 入力 | 巡航高度、着陸高度（400 NM・半分・T/C・T/D の切替）、時間の情報、VNAV。現行の FMC はどれも出していない | FCOM p.1233 (11.30.1), 1400; ATA21 p.437 |
+| FMC | 入力 | 巡航高度、着陸高度（400 NM・半分・T/C・T/D の切替）、時間の情報、VNAV。分析の時点では FMC はどれも出していなかった。着陸高度は 2026-11-01（6-1・6-2 段 11b）から FMC が切替まで決めて `laminar/B747/fms/landing_alt` で出す（ATA-34-61-FMC.md §91） | FCOM p.1233 (11.30.1), 1400; ATA21 p.437 |
 | ADC・高度計 | 入力 | 静圧、機長の規正値（着陸高度の補正） | ATA21 p.437; FCOM p.608 |
 | AFDS | 入力 | AP が入っているか（時間の情報を使う条件） | ATA21 p.435 |
 | ATA 26 火災 | 入力 | 貨物室火災 ARM（4.7） | FCOM p.908 |
