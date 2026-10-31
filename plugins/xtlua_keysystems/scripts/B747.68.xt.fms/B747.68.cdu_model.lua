@@ -14,15 +14,21 @@
 --    cleared by CLR, it comes again only when the condition comes again
 --    (FCOM p.1430). The MSG light while a message waits; >FMC MESSAGE
 --    while an alert does (FCOM p.1429-1430).
+--  - The order (6-1/6-2 step 11c1; ATA34_2 p.635-636): the FMC's alerts
+--    over any other message, then the CDU's entry messages, then the
+--    FMC's advisories; each a stack, the newest on top (an event posted
+--    again goes on top), a CLR taking the top one. The alerts held (not
+--    shown, no >FMC MESSAGE) while the glue says: below 500 ft AGL on the
+--    approach (fmc_inhibit).
 --  - The entry forms: altitudes XXX (hundreds of feet), XXXX (up to 9,994
 --    ft), XXXXX, FLXXX, rounded to 10 ft, down to -1,000 ft, shown in feet
 --    up to the transition altitude and as flight levels above it; speeds:
 --    CAS three digits, Mach a point and one to three digits; pairs with a
 --    slash, needed before the inboard value alone (FCOM p.1269-1270).
--- Estimates: a CDU's entry messages show before the FMC's, alerts before
--- advisories, each kind in the order it came; a full scratchpad takes no
--- more; SP, for ACARS and SATCOM (FCOM p.1213), types a space; an altitude
--- equal to the transition altitude shows in feet (ICAO: at or below it).
+-- Estimates: the entry messages' and the advisories' stacks as the
+-- alerts'; a full scratchpad takes no more; SP, for ACARS and SATCOM (FCOM
+-- p.1213), types a space; an altitude equal to the transition altitude
+-- shows in feet (ICAO: at or below it).
 -- Pure functions: the CDU glue (B744.createfms.lua) runs them.
 --   local C = B747_cdu_model                       -- in XTLua, after dofile
 --   local C = dofile(".../B747.68.cdu_model.lua")  -- in the tests
@@ -45,9 +51,10 @@ function M.new()
 end
 
 -- the FMC's messages: {text, alert, cond (a condition's), seen (cleared
--- while the condition holds)}
+-- while the condition holds), seq (the order they came)}; inhibit: the
+-- alerts held
 function M.fmc_new()
-    return setmetatable({list = {}, n = 0}, {})
+    return setmetatable({list = {}, n = 0, inhibit = false}, {})
 end
 
 local function find_msg(fmc, text)
@@ -65,31 +72,35 @@ function M.fmc_set(fmc, text, on, alert)
         table.remove(fmc.list, i)
     end
 end
--- an event's message (TAKEOFF SPEEDS DELETED...): until cleared
+-- an event's message (TAKEOFF SPEEDS DELETED...): until cleared; posted
+-- again, on top again
 function M.fmc_post(fmc, text, alert)
     local _, m = find_msg(fmc, text)
+    fmc.n = fmc.n + 1
     if m then
-        if m.seen then m.seen = false end
+        m.seen, m.seq = false, fmc.n
         return
     end
-    fmc.n = fmc.n + 1
     fmc.list[#fmc.list + 1] = {text = text, alert = alert and true or false, cond = false, seen = false, seq = fmc.n}
 end
--- the FMC message to show: the oldest alert, else the oldest advisory
-local function fmc_top(fmc)
+-- the alerts held or shown again (the glue: below 500 ft AGL on the
+-- approach, ATA34_2 p.635)
+function M.fmc_inhibit(fmc, on)
+    fmc.inhibit = on and true or false
+end
+-- the FMC's alert (alert true) or advisory to show: the newest of the
+-- kind, none of the alerts while they are held
+local function fmc_top(fmc, alert)
+    if alert and fmc.inhibit then return nil end
     local best
     for _, m in ipairs(fmc.list) do
-        if not m.seen and (not best or (m.alert and not best.alert)
-            or (m.alert == best.alert and m.seq < best.seq)) then best = m end
+        if not m.seen and m.alert == alert and (not best or m.seq > best.seq) then best = m end
     end
     return best
 end
--- whether an alert is waiting (>FMC MESSAGE) and any message (MSG light)
+-- whether an alert is waiting (>FMC MESSAGE)
 function M.fmc_alert(fmc)
-    for _, m in ipairs(fmc.list) do
-        if m.alert and not m.seen then return true end
-    end
-    return false
+    return fmc_top(fmc, true) ~= nil
 end
 
 -- a message for this CDU only (an entry's)
@@ -98,11 +109,19 @@ function M.error(cdu, text)
     if msgs[#msgs] ~= text then msgs[#msgs + 1] = text end
 end
 
--- the message this CDU shows, or nil
+-- the message this CDU shows (its text, the FMC's message or the index
+-- of the CDU's): the FMC's alert, the CDU's entry message, the FMC's
+-- advisory, each the newest
+local function shown(cdu, fmc)
+    local a = fmc and fmc_top(fmc, true)
+    if a then return a.text, a end
+    local n = #cdu.msgs
+    if n > 0 then return cdu.msgs[n], nil, n end
+    local m = fmc and fmc_top(fmc, false)
+    if m then return m.text, m end
+end
 function M.message(cdu, fmc)
-    if cdu.msgs[1] then return cdu.msgs[1] end
-    local m = fmc and fmc_top(fmc)
-    return m and m.text or nil
+    return (shown(cdu, fmc))
 end
 function M.msg_light(cdu, fmc)
     return M.message(cdu, fmc) ~= nil
@@ -115,13 +134,11 @@ end
 -- CLR on the message shown: an entry's goes from this CDU, the FMC's from
 -- all (a condition's stays away while its condition holds)
 local function clear_message(cdu, fmc)
-    if cdu.msgs[1] then
-        table.remove(cdu.msgs, 1)
-        return true
-    end
-    local m = fmc and fmc_top(fmc)
-    if not m then return false end
-    if m.cond then
+    local text, m, n = shown(cdu, fmc)
+    if not text then return false end
+    if n then
+        table.remove(cdu.msgs, n)
+    elseif m.cond then
         m.seen = true
     else
         table.remove(fmc.list, (find_msg(fmc, m.text)))

@@ -1600,3 +1600,18 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 前は、出発地や目的地の滑走路の識別子（RW34L）を RTE・LEGS に入れると NOT IN DATA BASE だった（航法データの検索が、空港については terminal の点しか見ていなかった）。11c1 の X-Plane 試験（s167）で、進入の滑走路へ DIRECT TO しようとして分かった。
 - 作ったもの：`B747.68.navdb.lua` の `find` が、経路の出発地と目的地（どの空港を見るかは前から推定）の滑走路を、CIFP の閾値の位置と標高で返す。手続きの滑走路の点と同じ形なので、経路の中の同じ滑走路と一致し、そこへの DIRECT TO になる。
 - 試験：`navdb_test.lua`（空港を渡さなければ無い、渡せば ZZBB の RW09 を閾値の位置で、無い滑走路は無い）、`legs_pages_test.lua`（RW09 へ DIRECT TO、RW27 は NOT IN DATA BASE）。X-Plane：s167（2026-11-01）で、RJBB→RJAA の ILS34L の経路に LEGS の 1L から RW34L を入れて DIRECT TO にでき、現用点が RW34L（19 NM）になった。直す前の s167 の 1 回目は NOT IN DATA BASE で、現用点は GIINA のままだった。Log.txt に Lua の誤りなし
+
+## 93. 11c の段取りと 11c1 の実装（2026-11-01：メッセージの表示の規則）
+
+- 段取り（FMC-32 の残り。FCOM p.1430–1436 の一覧と今のコードを照らした。データリンク（405・570 だけ）は段 12、FMC 2 台の分（FMC L/R OUTPUT DATA LOSS、RESYNC、SINGLE FMC OPERATION、TIME OUT - RESELECT）は 11d）：
+  - 11c1：表示の規則（ATA34_2 p.635–636：警告がどのメッセージより上、最新が上の積み重ね、進入の段階で 500 ft AGL 未満の抑止）。Boeing に無い DESTINATION NOT SET を FMC の警告から外す。
+  - 11c2：VNAV と RTA の警告（CHECK ALT TGT、DESCENT PATH DELETED、LIMIT ALT FLXXX、UNABLE NEXT ALT、UNABLE FLXXX AT RTA FIX）。
+  - 11c3：航法の警告（IRS POS/ORIGIN DISAGREE、VERIFY POSITION、PURGE UPDATES - POS 2、NAV INVALID-TUNE AAA、SET CLOCK TO UTC TIME）。
+  - 11c4：advisory の残り（ARR N/A FOR RUNWAY、RUNWAY N/A FOR SID、VERIFY TAIL NUMBER、STANDBY ONE の確かめ）。
+- 資料：ATA34_2 p.635（警告は advisory より上で、書き込み行のどのメッセージより上。警告の表示中に新しい警告が来れば新しい方が出て、前のは積み重ねに入る。CLR で上から順に消える。進入中、有効な経路に滑走路があれば 500 ft AGL 未満では全部の警告の表示を抑え、その間の警告は flight complete か 1,000 ft AGL を上へ越えたときに出す）、p.636（入力の誤りの advisory は基本の advisory より上）、FCOM p.1236（進入の段階：手続きの最初の点を通過、または滑走路が現用点で残り 25 NM 未満）、p.1430（CLR か条件が直ると次のメッセージ）。
+- 作ったもの：
+  - CDU のモデル（`B747.68.cdu_model.lua`）：表示の順を、FMC の警告（最新が上）、その CDU の入力のメッセージ（最新が上）、FMC の advisory（最新が上）にした。CLR はいちばん上を消す。出来事のメッセージがもう一度来れば上に戻る。`fmc_inhibit` で警告を抑える（書き込み行に出さず、>FMC MESSAGE と MSG 灯も警告の分は出さない。advisory と入力のメッセージは出る）。前は入力のメッセージが FMC の警告より上で、どの種類も古い順だった。
+  - つなぎ（`B747.68.xt.fms.lua` の `update_msg_inhibit`、毎フレーム）：空中で電波高度 500 ft 未満、有効な経路に滑走路（進入の滑走路か滑走路の点）があり、進入の段階なら抑え、1,000 ft を上へ越えるか flight complete で戻す（新しい飛行でも戻す）。`B744.createfms.lua` に `B747_cdu_fmc_inhibit`。
+  - DESTINATION NOT SET を FMC の出来事のメッセージから外した（旗は立たない。ACARS のページが自分の入力のメッセージとして使う同じ文字は、段 12 で見直す）。
+- 推定：入力のメッセージと advisory の積み重ねは警告と同じ（最新が上）。経路の滑走路は進入の滑走路か滑走路の点。advisory は今まで通り全部の CDU に出す（ATA34_2 p.636 の「条件の CDU だけ」は、NOT ON INTERCEPT HEADING のように CDU に結びつかない advisory の扱いが分からないので見送り）。
+- 試験：`cdu_model_test.lua`（91 件：警告が入力のメッセージより上、入力のメッセージが advisory より上、積み重ね、出来事の再送、抑止の間の advisory、解除で最新の警告）、新しい `fmc_msg_inhibit_test.lua`（14 件：離陸の後は抑えない、進入の最初の点の通過のあと 500 ft 未満で抑え FMC MESSAGE も出ない、入力のメッセージは出る、800 ft ではまだ、1,000 ft を越えて出る、次の進入でまた抑え、着陸の後も、flight complete で出る）。全 152 本。X-Plane：新しい `s167_fmc_msg_inhibit`：15/15（2026-11-01、再起動後の 2 便目）。経路なしでは警告（UNABLE NEXT ALT の旗）が書き込み行と FMC MESSAGE に出る。V/S で 480 ft 未満に下げ、RJBB→RJAA の ILS34L で RW34L へ DIRECT TO（19 NM：進入の段階）した後は、警告も FMC MESSAGE も出ない（画像でも書き込み行は空）。FLCH で 1,000 ft を越えると出る。LIMIT ALT FLXXX の旗が新しく来ると上に出て、CLR で UNABLE NEXT ALT に戻る（積み重ね）。Log.txt に Lua の誤りなし。1〜3 回目は試験の組み方の誤りで 500 ft 未満にならず、抑止の 3 件が成り立たなかった（空中開始の後に 800 ft 近くまで上がる、V/S の目標の dataref の取り違え）。積み重ねと 1,000 ft の解除はその 3 回とも通った
