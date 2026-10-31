@@ -25,6 +25,7 @@ B747DR_engines_spar_valve2_pos  = find_dataref("laminar/B747/fuel/spar_vlv2_pos"
 B747DR_engines_spar_valve3_pos  = find_dataref("laminar/B747/fuel/spar_vlv3_pos")
 B747DR_engines_spar_valve4_pos  = find_dataref("laminar/B747/fuel/spar_vlv4_pos")
 B747DR_engine_start_valve_cmd   = find_dataref("laminar/B747/engines/start_valve_cmd")
+B747DR_engine_inop              = find_dataref("laminar/B747/engines/inop")
 
 local START_SWITCH = 16                     -- toggle_switch/position[16-19]
 local CON_SWITCH, AUTOSTART_SWITCH = 44, 45 -- button_switch/position
@@ -127,6 +128,8 @@ function B747_engine_start()
         if simDR_engine_auto_ignite_on[i] ~= 0 then simDR_engine_auto_ignite_on[i] = 0 end
         if simDR_engine_fuel_mix_ratio[i] ~= fuel then simDR_engine_fuel_mix_ratio[i] = fuel end
         B747DR_engine_fuel_valve_pos[i] = fuel
+        local inop = flag(o.inop)
+        if B747DR_engine_inop[i] ~= inop then B747DR_engine_inop[i] = inop end
         local m = out.msg
         local quiet = settling
         B747DR_CAS_warning_status[WARN_ENG_FAIL + i] = flag(m.fail[n] and not quiet)

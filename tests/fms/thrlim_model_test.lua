@@ -10,6 +10,9 @@
 -- (FCOM p.646); GA with the flaps extended, the landing flaps or G/S, held
 -- there (p.672), the THR switch's CLB or CON after it (p.642), VNAV's
 -- phase; the page's selections in the air (p.1339); an air start's CLB.
+-- Step 9h3 (§79): with an engine inoperative the reduction inhibited and
+-- CON at VREF + 98 with VNAV and the flaps up (p.1266, p.1272), the THR
+-- switch's and FLCH's CON (p.642, p.646), CON kept through VNAV's phases.
 local T = dofile("tests/lib/check.lua")("thrlim_model")
 local L = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.thrlim_model.lua")
 
@@ -112,4 +115,44 @@ T.equal(s.clb, 2, "27 % less thrust in all: CLB 2 armed (15 % or more)")
 T.equal(L.update(s, inp{alt_agl = 500, flaps = F10, sel_up = true}), "D-TO 1", "in the air: D-TO 1")
 T.equal(L.update(s, inp{alt_agl = 600, flaps = F10, sel_up = true, toga = true}), "TO", "a TO/GA push: TO (the derate and D- gone)")
 T.equal(L.update(s, inp{alt_agl = 700, flaps = F10, sel_up = true}), "TO", "and stays TO")
+-- (step 9h3) an engine inoperative: failed in TO, the thrust reduction
+-- inhibited; CON with VNAV and the flaps up at VREF + 98 (FCOM p.1266,
+-- p.1272); the THR switch CON (p.642)
+s = L.new()
+L.update(s, inp{ground = true, flaps = F10})
+T.equal(L.update(s, inp{alt_agl = 300, flaps = F10, eo = 1, ias = 180, vref = 150}), "TO", "an engine failed in TO: TO")
+T.equal(L.update(s, inp{alt_agl = 1600, flaps = F5, vnav = true, eo = 1, ias = 200, vref = 150}), "TO",
+    "flaps 5 (the thrust reduction point) with VNAV: TO kept (the reduction inhibited)")
+T.equal(L.update(s, inp{alt_agl = 2500, flaps = 0, vnav = true, eo = 1, ias = 247, vref = 150}), "TO", "flaps up at VREF + 97: TO")
+T.equal(L.update(s, inp{alt_agl = 2600, flaps = 0, vnav = true, eo = 1, ias = 248, vref = 150}), "CON", "flaps up at VREF + 98 with VNAV: CON")
+T.equal(L.update(s, inp{alt_agl = 2700, flaps = 0, vnav = true, eo = 1, ias = 250, vref = 150, phase = "CRZ"}), "CON",
+    "VNAV's phase to CRZ with the engine out: CON kept (estimate)")
+s = L.new()
+L.update(s, inp{ground = true, flaps = F10})
+L.update(s, inp{alt_agl = 300, flaps = F10, eo = 1, ias = 180, vref = 150})
+T.equal(L.update(s, inp{alt_agl = 600, flaps = F10, eo = 1, ias = 260, vref = 150}), "TO", "VREF + 110 with the flaps out, no VNAV: TO")
+T.equal(L.update(s, inp{alt_agl = 700, flaps = F10, eo = 1, pitch = "FLCH", thr = true, ra = 700}), "CON",
+    "the THR switch with FLCH after takeoff, an engine out: CON (FCOM p.642)")
+-- failed above the thrust reduction: the climb's kept (FCOM p.1266)
+s = L.new()
+L.update(s, inp{ground = true, flaps = F10})
+T.equal(L.update(s, inp{alt_agl = 1600, flaps = F5, vnav = true}), "CLB", "the thrust reduction with VNAV: CLB")
+T.equal(L.update(s, inp{alt_agl = 3000, flaps = 0, vnav = true, eo = 1, ias = 260, vref = 150}), "CLB",
+    "an engine failed above the reduction: CLB kept")
+-- FLCH pushed to a higher altitude with an engine out: CON (FCOM p.646);
+-- the crew's CLB after it kept while FLCH stays
+T.equal(L.update(s, inp{alt_agl = 3000, eo = 1, pitch = "FLCH", flch_up = true}), "CON", "FLCH up with an engine out: CON")
+L.select_clb(s, 0, false)
+T.equal(L.update(s, inp{alt_agl = 3100, eo = 1, pitch = "FLCH", flch_up = true}), "CLB", "CLB chosen during FLCH: kept")
+L.update(s, inp{alt_agl = 3200, eo = 1, pitch = "VS"})
+T.equal(L.update(s, inp{alt_agl = 3300, eo = 1, pitch = "FLCH", flch_up = true}), "CON", "FLCH pushed again: CON")
+s = L.new()
+L.update(s, inp{alt_agl = 30000, vnav = true, phase = "CRZ"})
+T.equal(L.update(s, inp{alt_agl = 30000, phase = "CRZ", pitch = "FLCH", flch_up = true}), "CLB", "all engines: FLCH up from CRZ CLB, as before")
+-- after GA the THR switch: CON with an engine out (FCOM p.642)
+s = L.new()
+L.update(s, inp{alt_agl = 1500, flaps = 0})
+L.update(s, inp{alt_agl = 1500, flaps = F20})
+T.equal(L.update(s, inp{alt_agl = 1500, flaps = F20}), "GA", "flaps out: GA")
+T.equal(L.update(s, inp{alt_agl = 1500, flaps = F20, thr = true, eo = 1}), "CON", "after GA the THR switch with an engine out: CON")
 T.done()

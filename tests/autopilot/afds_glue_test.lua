@@ -616,6 +616,23 @@ rt:set(XFR, 1)
 rt:command(CMD .. "speed_mode")
 frames()
 T.check(rt:get(AT_ACTIVE) == 1 and rt:get(DISC_ST, 5) == 0, "powered again: SPD, the message reset")
+-- (the FMC's step 9h3) the engines' inoperative signal: one out, the A/T
+-- stays; two out, off with >AUTOTHROT DISC (FCOM p.641); the windmilling
+-- N1 no longer counts
+local INOP = "laminar/B747/engines/inop"
+rt:set(INOP, 0, 1)
+frames()
+T.equal(rt:get(AT_ACTIVE), 1, "one engine inoperative: the A/T stays")
+rt:set(INOP, 1, 1)
+frames()
+T.equal(rt:get(AT_ACTIVE), 0, "two engines inoperative (their N1 still 90 %): the A/T off (FCOM p.641)")
+T.equal(rt:get(DISC_ST, 5), 1, ">AUTOTHROT DISC")
+rt:set(INOP, 0, 0)
+rt:set(INOP, 1, 0)
+rt:command(CMD .. "autothrottle_disco_L")
+rt:command(CMD .. "speed_mode")
+frames()
+T.check(rt:get(AT_ACTIVE) == 1 and rt:get(DISC_ST, 5) == 0, "running again: SPD, the message reset")
 -- 1d: the approach modes through the model. APP arms LOC and G/S (with no
 -- ILS too: the old one posted RW/ILS CRS ERROR, flag 40); the captures by
 -- the pitch and roll laws' geometry (steps 2b and 3c: both receivers'
