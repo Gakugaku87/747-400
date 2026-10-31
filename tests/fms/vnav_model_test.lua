@@ -155,4 +155,20 @@ T.near(o.cas, 250, 1e-6, "no V2: the climb's 250 kt")
 o = V.update(V.new(), inp{alt = 500, ias = 170, takeoff = to, engaged = true})
 T.near(o.cas, 250, 1e-6, "an air start: the climb's 250 kt")
 
+-- (the A/T's step 9f2) the descent more than 15 kt slow: the A/T's SPD
+-- until within 5 kt; below the speed transition 10 kt (FCOM p.1259-1260)
+local s8 = V.new()
+V.update(s8, inp{alt = 30000, crz_alt = 30000})
+o = V.update(s8, inp{alt = 30000, crz_alt = 30000, mcp_alt = 10000, d_ed = 90, gs = 450, ias = 280})
+T.check(o.phase == "DES" and o.at == V.AT_IDLE, string.format("the descent at %.0f kt for %.0f: IDLE", 280, o.cas))
+local tgt = o.cas
+o = V.update(s8, inp{alt = 30000, crz_alt = 30000, mcp_alt = 10000, d_ed = 90, gs = 450, ias = tgt - 16})
+T.equal(o.at, V.AT_SPD, "16 kt slow: SPD")
+o = V.update(s8, inp{alt = 30000, crz_alt = 30000, mcp_alt = 10000, d_ed = 90, gs = 450, ias = tgt - 8})
+T.equal(o.at, V.AT_SPD, "8 kt slow: SPD still")
+o = V.update(s8, inp{alt = 30000, crz_alt = 30000, mcp_alt = 10000, d_ed = 90, gs = 450, ias = tgt - 4})
+T.equal(o.at, V.AT_IDLE, "4 kt slow: IDLE again")
+o = V.update(s8, inp{alt = 8000, crz_alt = 30000, mcp_alt = 3000, d_ed = 30, gs = 300, ias = 240 - 11})
+T.equal(o.at, V.AT_SPD, "below 10,000 ft, 11 kt slow of 240: SPD")
+
 T.done()

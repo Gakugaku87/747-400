@@ -51,6 +51,11 @@ M.K_PATH, M.VS_STEEPER = 1, 1000
 -- TO_ADD_MAX; the flaps' retraction from the takeoff's by TO_FLAPS of the
 -- handle's ratio (estimate)
 M.TO_ADD_MIN, M.TO_ADD_MAX, M.TO_FLAPS = 10, 25, 0.02
+-- the descent slower than the target by more than SLOW_KT (SLOW_KT_LOW
+-- below the speed transition: the first speed constraint): the A/T from
+-- IDLE or HOLD to SPD until back within SLOW_BACK_KT (FCOM p.1259-1260;
+-- the A/T's step 9f2; the way back: estimate)
+M.SLOW_KT, M.SLOW_KT_LOW, M.SLOW_BACK_KT = 15, 10, 5
 -- the descent starts past the T/D with the MCP altitude this far below
 -- (estimate: FCOM p.665 holds the altitude, RESET MCP ALT, while the MCP
 -- altitude stays at the cruise altitude)
@@ -207,6 +212,17 @@ function M.update(s, inp)
             -- a line too shallow for idle, or below the path (levelling to
             -- meet it): the A/T on speed
             if kind == "spd" or out.path_dev < -M.MCP_BELOW then out.at = M.AT_SPD end
+        end
+        -- too slow: the A/T on speed until near the target again
+        if inp.ias and out.cas then
+            local tr = inp.des and inp.des.trans_alt or 10000
+            local slow = inp.alt < tr and M.SLOW_KT_LOW or M.SLOW_KT
+            if inp.ias < out.cas - slow then
+                s.slow = true
+            elseif inp.ias >= out.cas - M.SLOW_BACK_KT then
+                s.slow = false
+            end
+            if s.slow then out.at = M.AT_SPD end
         end
     end
     -- valid: an active route, CRZ ALT and the gross weight (ATA34_2 p.621:

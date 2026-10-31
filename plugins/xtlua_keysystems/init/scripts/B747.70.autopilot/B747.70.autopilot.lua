@@ -119,6 +119,10 @@ B747DR_ap_ra_test_inhibit    			= deferred_dataref("laminar/B747/autopilot/ra_te
 -- multi-channel arm (the electrical module isolates AC and DC 1-3)
 B747DR_ap_bus_isolate_req    			= deferred_dataref("laminar/B747/autopilot/bus_isolate_req", "number")
 B747DR_ap_autothrottle_armed        	= deferred_dataref("laminar/B747/autothrottle/armed", "number")
+-- (the FMC's step 9f2) the A/T's servo: excited (1: the EEC puts the
+-- levers at its command), its lever command (0 to 1)
+B747DR_at_servo                     	= deferred_dataref("laminar/B747/autothrottle/servo", "number")
+B747DR_at_lever_cmd                 	= deferred_dataref("laminar/B747/autothrottle/lever_cmd", "number")
 B747DR_ap_mach_decimal_visibiilty	    = deferred_dataref("laminar/B747/autopilot/mach_dec_vis", "number")
 B747DR_ap_fpa	    = deferred_dataref("laminar/B747/autopilot/navadata/fpa", "number")
 B747DR_ap_vb	    = deferred_dataref("laminar/B747/autopilot/navadata/vb", "number")

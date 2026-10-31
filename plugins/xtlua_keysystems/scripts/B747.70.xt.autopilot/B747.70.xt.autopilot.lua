@@ -917,8 +917,16 @@ end
 -- mode (step 9f2)
 dofile("B747.70.at_model.lua")
 simDR_at_rev_deploy = find_dataref("sim/flightmodel2/engines/thrust_reverser_deploy_ratio")
+-- (step 9f2) the servo's command for the EEC; the thrust and its
+-- reference (the EEC's EPR or N1 bugs) for the laws
+B747DR_at_servo = deferred_dataref("laminar/B747/autothrottle/servo", "number")
+B747DR_at_lever_cmd = deferred_dataref("laminar/B747/autothrottle/lever_cmd", "number")
+B747DR_at_TRA = find_dataref("laminar/B747/engines/TRA")
+simDR_at_EPR_bug = find_dataref("sim/cockpit2/engine/actuators/EPR_target_bug")
+simDR_at_N1_bug = find_dataref("sim/cockpit2/engine/actuators/N1_target_bug")
 local atState = B747_at_model.new()
 local atIn = {}
+local atIas, atAccel = nil, 0
 local atPush = {spd = 0, thr = 0, disc = 0}
 local atSeen = {spd = 0, thr = 0, disc = 0, toga = nil}
 local function afds_at()
@@ -954,6 +962,34 @@ local function afds_at()
 		atSeen[k] = atPush[k]
 	end
 	B747_at_model.update(atState, i)
+	-- the servo (step 9f2): the laws' inputs, the command out. The speed's
+	-- acceleration filtered over a second (estimate); the thrust the
+	-- levers' command, the EEC's TRA (EPR for P&W and RR, N1 for GE: type
+	-- 1; the highest), its reference the EEC's bug; the speed laws' target
+	-- X-Plane's dial (afds_speed_ref)
+	local dt = SIM_PERIOD
+	local ias = simDR_ind_airspeed_kts_pilot
+	if atIas and dt > 0 then
+		atAccel = atAccel + ((ias - atIas) / dt - atAccel) * math.min(1, dt)
+	end
+	atIas = ias
+	local n1 = B747DR_ap_engine_type == 1
+	local thr, lev = 0, 0
+	for e = 0, 3 do
+		thr = math.max(thr, B747DR_at_TRA[e])
+		lev = lev + B747DR_throttle[e] / 4
+	end
+	i.dt, i.ias, i.accel, i.target = dt, ias, atAccel, afds_speed_ref()
+	i.v_max = B747DR_afds_vmax > 0 and B747DR_afds_vmax or 365
+	i.v_min = B747DR_afds_vminm > 0 and B747DR_afds_vminm or 0
+	i.vs, i.alt, i.mcp_alt = simDR_vvi_fpm_pilot, simDR_pressureAlt1, B747DR_autopilot_altitude_ft
+	i.n1, i.thrust = n1, thr
+	i.thrust_ref = n1 and simDR_at_N1_bug[0] or simDR_at_EPR_bug[0]
+	i.lever = lev
+	B747_at_model.servo(atState, i)
+	local sv = atState.servo and 1 or 0
+	if B747DR_at_servo ~= sv then B747DR_at_servo = sv end
+	B747DR_at_lever_cmd = atState.cmd
 	local act = atState.engaged and 1 or 0
 	if B747DR_autothrottle_active ~= act then B747DR_autothrottle_active = act end
 	local fma = B747_at_model.fma(atState)

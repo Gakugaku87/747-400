@@ -1193,3 +1193,21 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 試験：
   - 回帰：新設の `tests/autopilot/at_model_test.lua` 44 件（TO の THR REF と 65 kt の HOLD、300 ft でも HOLD、VNAV で THR REF・SPD・水平の SPD、50 kt の禁止と 400 ft、disconnect と >AUTOTHROT DISC と 2 回目、ARM OFF・ON、VNAV の中の ARM ON、VNAV の IDLE と HOLD、V/S への SPD、FLCH と捕捉の SPD、G/A と水平、SPD・THR スイッチの条件、interlock、flare retard、地上の reverse、離陸後の TO/GA）、`afds_glue_test.lua` 224 件（ARM の dataref、VNAV の IDLE がレバーの stop で HOLD、V/S への SPD、disconnect で外れ caution 5、2 回目で消える、SPD スイッチ）、`eec_module_test.lua` 60 件（ALTN は fail だけ：active はモデルの）。全 134 本。
   - X-Plane（起動し直した 08:48 の後）：新設の `s142_at_takeoff` 31/31（TO/GA で THR REF、65 kt で HOLD（64〜80 kt）、300 ft でも HOLD、VNAV で THR REF、disconnect で外れ >AUTOTHROT DISC、2 回目で消え、ARM の入れ直しで VNAV の中の A/T が engage）、`s141_vnav_takeoff` 37/37、`s114_autoland` 20/0・WARN 1（2 回目：上の直しの後、retard で EEC の出力 0。WARN は前からの接地の後の小さな跳ね）、`s01_ap_basic` 14/0・WARN 1（空中開始の揺れで ALT HOLD が 10,750 ft から：A/T は SPD）。`s09_eec` 22/3 は approach idle の確かめ（minimum idle を 1.5 未満とする）が 10-30 のアイドルの表（高度で変わる）の後の古い期待値で、A/T とは関係ない（残り）。Lua の誤りなし。
+
+## 60. 段 9f2 の設計（2026-10-31：A/T の制御則と servo）
+
+- 受け渡し：A/T のモデル（AP）が servo の指令位置 `laminar/B747/autothrottle/lever_cmd`（0〜1）と励磁 `laminar/B747/autothrottle/servo`（1 で servo がレバーを動かす。HOLD・外れ・override で 0）を出す（AP の init で作る）。EEC はレバーの持ち主のまま、励磁中は `engine/throttle` を指令位置に（`ecc_throttle`・`spd_throttle` は使わない）、手の入力（ハードウェアか 3D の軸が A/T の間に 0.01 より動いた）があればその間は手に従い、手が止まって `OVR_S` 秒で指令位置へ戻す（推定。資料：他のモードは手を離すと戻る、ATA34_2 p.648）。EEC は A/T の間に自分で `throttle_jet_rev_ratio_all` を書かない（書くと手の入力に見える）。
+- servo（ATA34_2 p.648、p.472）：各則がレバーの速さ（誤差率）を出し、servo が積分して指令位置にする。速さは 10°/s まで（3D のレバーの全行程 50° で 0.2/s：推定）、flare retard は 5°/s（0.1/s）。
+- 則（ゲインは資料に無い：推定、X-Plane で合わせる）：
+  - SPD：目標（MCP か FMC の速さ：X-Plane のダイアル）との差と加速度から（PD を積分）。増は速く減は遅い（FCTM p.43：減は増の半分）。thrust limit を越えない（推力が基準以上なら増やさない）。速度の保護（最大は Vmax − 5、最小は FCC の最小 + 5：FCOM p.675）。
+  - THR：V/S の則（ATA34_2 p.646–647、p.670）。FLCH は 125 秒で MCP 高度に着く V/S、G/A の 1 回目は 2,000 fpm。上昇で V/S が足りなければ増やし、多くても減らさない。降下では減らし、レバーが後ろの stop なら IDLE から HOLD（FCOM p.662、ATA34_2 p.654）。thrust limit を越えない。FLCH でレバーが指令から 8°（0.16）離れたら HOLD（p.648）。
+  - THR REF：推力の基準（EEC の EPR・N1 の bug）へ。限界の速さ（Vmax）を越えそうなら速さで減らす（p.672）。
+  - IDLE：後ろの stop へ 10°/s（flare 5°/s）、着いたら HOLD（VNAV・FLCH。flare retard は IDLE のまま）。
+  - HOLD：励磁なし（レバーは手で）。
+- FMA：FLCH と G/A の 1 回目は THR（4）、G/A の 2 回目は THR REF。
+- 実装（2026-10-31）：上の設計どおり（`B747.70.at_model.lua` の `servo`、AP の `afds_at` が入力を組んで `autothrottle/servo`・`lever_cmd` を出し、EEC の `at_servo_levers` が当てる）。推力は EEC の TRA（レバーの指令の EPR・N1：エンジンの遅れが無い）で見る。ゲイン（推定）：SPD は 1 kt につき 0.002/s と加速度 1 kt/s につき 0.06（減は半分）、THR は 1 fpm につき 1.2e-5/s、THR REF は 1 EPR につき 0.33/s・1 % N1 につき 0.003/s。初めの 0.006・0.05 は s01 の 250 kt で、レバーがアイドルと 0.3 の間を 30 秒ごとに振れた（X-Plane のエンジンはアイドル近くでレバーに 7 秒ほど遅れ、レバー 0〜0.1 では推力がほぼ変わらない。この遅れと不感帯を入れた模擬でも同じ）。
+- FMC の VNAV に FCOM p.1259–1260 の「目標より 15 kt（速度の遷移の下では 10 kt）遅いと A/T は IDLE・HOLD から SPD、5 kt まで戻ると IDLE」を前倒しで入れた（9e の一部。前は EEC が IDLE のまま推力を足していたが、9f1 から VNAV の降下は stop で HOLD になり、s140 で目標 294 kt に 246〜262 kt のまま降りた）。
+- 試験：
+  - 回帰：`at_model_test.lua` 64 件（servo を足した）、`eec_module_test.lua` 66 件（servo の受け渡しと手の入力）、`vnav_model_test.lua` 56 件（遅いときの SPD）。全 134 本。
+  - X-Plane（09:35 と 10:08 に起動し直した）：`s01_ap_basic` 14/0・WARN 1（空中開始の高度：前から）、`s140_vnav_descent` 16/16（IDLE で 10°/s に後ろの stop、HOLD）、`s101_afds_pitch` 33/33（初めのゲインの回では V/S の +1,500 fpm で 800 fpm に 30 秒で届かなかった）、`s142_at_takeoff` 31/31（TO の THR REF を TRA で）、`s114_autoland` 20/0・WARN 1（flare retard は 5°/s。WARN は flare の浮き：回により出る）。Lua の誤りなし。
+- 残り：SPD の速さの戻りが遅い（s01：空中開始の 288 kt から 250 kt へ、2 分で 5 kt の内、3 分で 3 kt。もっと速くするとエンジンの遅れで揺れる）。アイドル近くの不感帯は EEC のレバーと推力の関係（段 9g の推力制限と一緒に見る）。ハードウェアのスロットルで FLCH の 8° の override を確かめていない。

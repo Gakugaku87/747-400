@@ -1102,13 +1102,13 @@ function throttle_management()
 	end
 	-- (the A/T off with its fail: the A/T model's, the FMC's step 9f1)
 	ecc_spd() --also handles reverse throttle
-	if B747DR_ap_autothrottle_armed == 1 and B747DR_ap_FMA_autothrottle_mode > 1 then --not none or HOLD
-		--new SPD
-		ecc_throttle()
-		for i = 0, 3 do
-			lastUserThrottleTargets[i]=getUserThrottleTarget(i)
-		end
+	-- the levers: the A/T's servo while excited (the FMC's step 9f2: the
+	-- A/T model's command, B747.70.at_model.lua; before, ecc_throttle by
+	-- the FMA's mode), the hand over it (the override)
+	if B747DR_at_servo == 1 then
+		at_servo_levers()
 	else
+		at_servo_off()
 		for i = 0, 3 do
 			if simDR_reverser_deploy_ratio[i]<0.01 then --reversers are not deployed
 					manipulate_throttle_axis(i)
@@ -1122,6 +1122,37 @@ function throttle_management()
 end
 
 
+
+-- the A/T's servo on the levers (the FMC's step 9f2; ATA34_2 p.648):
+-- at its command, which moves at the servo's rate; the hand's input
+-- (the hardware's axis or the 3D levers', moved more than 0.01 since)
+-- over it while it moves and AT_OVR_S after, then back to the command at
+-- the servo's 10 degrees a second (estimates: other modes than FLCH's
+-- THR go back to the command when the hand lets go)
+B747DR_at_servo = find_dataref("laminar/B747/autothrottle/servo")
+B747DR_at_lever_cmd = find_dataref("laminar/B747/autothrottle/lever_cmd")
+local AT_OVR_S = 1
+local atOvrUntil = {[0] = 0, 0, 0, 0}
+local atServoWas = false
+function at_servo_levers()
+	for i = 0, 3 do
+		local u = getUserThrottleTarget(i)
+		if not atServoWas then lastUserThrottleTargets[i] = u end
+		if math.abs(lastUserThrottleTargets[i] - u) >= 0.01 then
+			lastUserThrottleTargets[i] = u
+			atOvrUntil[i] = simDRTime + AT_OVR_S
+		end
+		if simDRTime < atOvrUntil[i] then
+			B747DR_throttle[i] = B747_interpolate_value(B747DR_throttle[i], u, 0, 1.00, 1)
+		else
+			B747DR_throttle[i] = B747_interpolate_value(B747DR_throttle[i], B747DR_at_lever_cmd, 0, 1.00, 5)
+		end
+	end
+	atServoWas = true
+end
+function at_servo_off()
+	atServoWas = false
+end
 
 function getUserThrottleTarget(engine_id)
 	if simDR_has_hardware_throttle == 1 then

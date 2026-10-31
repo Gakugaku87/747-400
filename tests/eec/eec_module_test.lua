@@ -193,4 +193,28 @@ ns.B747_eec_set_n2(0, 50)
 rt:frame(1 / 30)
 T.equal(get(ADV, RPM_LIM), 1, "RR: the EEC leaves RPM LIM alone")
 
+-- (the FMC's step 9f2) the A/T's servo excited: the levers to its command
+-- at 10 degrees a second (5 s the travel); the hand moving one: it follows
+-- the hand, a second after it stops back to the command; the servo off:
+-- the levers stay
+local LEV = "laminar/B747/engine/throttle"
+for i = 0, 3 do rt:set(USER, i, 0.2) end
+frames(2)
+local l0 = get(LEV, 0)
+rt:set("laminar/B747/autothrottle/lever_cmd", l0 + 0.4)
+rt:set("laminar/B747/autothrottle/servo", 1)
+frames(1)
+T.near(get(LEV, 0) - l0, 0.2, 0.03, "the servo: 0.2 of the lever in a second (10 degrees)")
+frames(2)
+T.near(get(LEV, 0), l0 + 0.4, 0.01, "at the command")
+rt:set(USER, 1, 0.9)
+frames(0.5)
+T.check(get(LEV, 1) > l0 + 0.4 + 0.1, "the hand on lever 2: it follows the hand")
+T.near(get(LEV, 0), l0 + 0.4, 0.01, "lever 1 stays at the command")
+frames(3)
+T.near(get(LEV, 1), l0 + 0.4, 0.01, "the hand still a second: back to the command")
+rt:set("laminar/B747/autothrottle/servo", 0)
+frames(1)
+T.near(get(LEV, 0), l0 + 0.4, 0.01, "the servo off: the levers stay (no hand)")
+
 T.done()
