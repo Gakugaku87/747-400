@@ -214,7 +214,12 @@ T.check(m == .743 and k == 312 and math.abs(ff - 3593) < 1e-9 and set == 1.25, "
 m = P.eo_lrc(pw, 1, 290000, 26000)
 T.near(m, ((.743 + .768) / 2 + (.719 + .749) / 2) / 2, 1e-9, "290 t, 26,000 ft: between the cells")
 m, k = P.eo_lrc(pw, 1, 400000, 25000)
-T.check(m == .765 and k == 356, "400 t at 25,000 ft: held at its highest altitude, 20,000 ft")
+T.check(m == .765 and math.abs(k - P.mach_to_cas(.765, 25000)) < 1e-9 and k < 356,
+    "400 t at 25,000 ft: its highest altitude's (20,000 ft) Mach held, the KIAS from it (step 9h4b): " .. k)
+-- (step 9h4b) below the lowest altitude its KIAS held, the Mach from it
+m, k, ff = P.eo_lrc(pw, 1, 300000, 5000)
+T.check(k == 304 and math.abs(m - P.cas_to_mach(304, 5000)) < 1e-9 and m < .549 and math.abs(ff - 3381) < 1e-9,
+    "300 t at 5,000 ft: 10,000 ft's 304 kt held, the Mach from it, its fuel flow: " .. m)
 m, k, ff = P.eo_lrc(pw, 2, 300000, 14000)
 T.check(m == .589 and k == 304 and math.abs(ff - 5334) < 1e-9, "PW two out, 300 t, 14,000 ft: .589, 304 kt, 5334 kg/h (PI.14.4)")
 local gm, gk, gff, gn1 = P.eo_lrc(ge, 1, 600 * KLB, 25000)

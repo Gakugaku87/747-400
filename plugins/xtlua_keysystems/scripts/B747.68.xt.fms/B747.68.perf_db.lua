@@ -789,13 +789,26 @@ end
 
 -- (step 9h2) engine-out long range cruise at a weight (kg) and pressure
 -- altitude (ft): Mach, KIAS, fuel flow per operating engine (kg/h) and the
--- thrust setting; within the tables (as M.lrc)
+-- thrust setting; within the tables (as M.lrc). (Step 9h4b) beyond a
+-- weight's altitudes its end's speed held: below the lowest its KIAS (the
+-- Mach from it), above the highest its Mach (the KIAS from it: the
+-- driftdown's start above the maximum); the fuel flow and the setting the
+-- end's (estimates)
 function M.eo_lrc(t, n, kg, ft)
     local e = eo_tables(t, n)
     local w, a = tw(t, kg), ft / 1000
     local i, j, f = bracket(e.LRC_W, w)
-    local r1 = row_at(e.LRC_ALT, e.LRC[e.LRC_W[i]], a)
-    local r2 = row_at(e.LRC_ALT, e.LRC[e.LRC_W[j]], a)
+    local function row(wk)
+        local cells = e.LRC[wk]
+        local r = row_at(e.LRC_ALT, cells, a)
+        local lo, hi
+        for _, k in ipairs(e.LRC_ALT) do
+            if cells[k] then lo, hi = lo or k, k end
+        end
+        if a < lo then r[2] = M.cas_to_mach(r[3], ft) elseif a > hi then r[3] = M.mach_to_cas(r[2], ft) end
+        return r
+    end
+    local r1, r2 = row(e.LRC_W[i]), row(e.LRC_W[j])
     local v = {}
     for k = 1, 4 do v[k] = lerp(r1[k], r2[k], f) end
     return v[2], v[3], v[4] * t.wf, v[1]

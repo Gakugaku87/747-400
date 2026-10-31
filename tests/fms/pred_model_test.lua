@@ -198,4 +198,57 @@ T.check(math.abs(hLevel - 5000) < 1 and kLevel == "spd", string.format("level at
 T.near(dp_h(r.dp, 50 + 6 - meet + 1), 5000 - G3, 1, "1 NM past the meeting point down the line")
 T.near(r.pts[3].h, hFaf, 1, "the FAF on the line still")
 
+-- (step 9h4b) the cruise descent under way (VNAV's: crz_des "des"): from
+-- FL350 down to CRZ ALT FL310 at 1,250 fpm first, its level off (lvl, its
+-- time), then the cruise there
+local long = {{name = "A", dist = 500}, {name = "B", dist = 500}}
+local rdes = PM.predict{P = P, t = pw, gw = 300000, fuel = 80000, alt = 35000, phase = "crz", crz = 31000, clb = clb,
+    des = des, crzspd = {mach = 0.85}, legs = long, crz_des = "des"}
+T.near(rdes.lvl_t, 4000 / PM.CRZ_DES_VS * 60, 1, string.format("4,000 ft at 1,250 fpm: level in %.0f s", rdes.lvl_t or -1))
+T.near(rdes.lvl, P.tas(0.85, 33000) * rdes.lvl_t / 3600, 1, string.format("%.1f NM on (M.85's TAS)", rdes.lvl or -1))
+T.check(rdes.lvl_dd == nil and rdes.pts[1].h == 31000 and rdes.crz == 31000, "not the driftdown's; A at FL310")
+local rlvl = PM.predict{P = P, t = pw, gw = 300000, fuel = 80000, alt = 35000, phase = "crz", crz = 31000, clb = clb,
+    des = des, crzspd = {mach = 0.85}, legs = long}
+T.check(rlvl.lvl == nil and rlvl.pts[1].h == 35000, "without crz_des: the cruise where the airplane is, as before")
+-- the engine-out driftdown (crz_des "dd", eo 1; FCOM p.1268): from FL350
+-- to the E/O MAX FL320 at 300 t at E/O LRC at FL320, CON at most, 300 fpm
+-- at least: LEVEL AT; slower than the cruise descent, at most 300 fpm's
+local eoLrc = {fn = function(h, kg) return (P.eo_lrc(pw, 1, kg, h)) end}
+local rdd = PM.predict{P = P, t = pw, gw = 300000, fuel = 80000, alt = 35000, phase = "crz", crz = 32000, clb = clb,
+    des = des, crzspd = eoLrc, legs = long, crz_des = "dd", eo = 1}
+T.check(rdd.lvl_dd and rdd.lvl and rdd.lvl_t, "the driftdown's level off (LEVEL AT)")
+T.check(rdd.lvl_t > 3000 / PM.CRZ_DES_VS * 60 and rdd.lvl_t <= 3000 / PM.DD_VS * 60 + 1,
+    string.format("3,000 ft in %.1f min: slower than 1,250 fpm, at least 300 fpm", rdd.lvl_t / 60))
+local mdd = P.eo_lrc(pw, 1, 300000, 32000)
+T.check(rdd.lvl > P.tas(mdd, 35000) * rdd.lvl_t / 3600 * 0.98 and rdd.lvl < P.tas(mdd, 32000) * rdd.lvl_t / 3600 * 1.02,
+    string.format("%.1f NM on at M%.3f (E/O LRC at FL320)", rdd.lvl, mdd))
+-- higher over the maximum: steeper at first (CON short of the drag), so
+-- 5,000 ft in less than 5/3 of the time
+local rdd2 = PM.predict{P = P, t = pw, gw = 300000, fuel = 80000, alt = 37000, phase = "crz", crz = 32000, clb = clb,
+    des = des, crzspd = eoLrc, legs = long, crz_des = "dd", eo = 1}
+T.check(rdd2.lvl_t < rdd.lvl_t * 5 / 3 - 30, string.format("from FL370: %.1f min (from FL350 %.1f)", rdd2.lvl_t / 60, rdd.lvl_t / 60))
+-- the engine-out fuel (eo): the cruise at E/O LRC on three engines, the
+-- tables' fuel flow (PI.13.4: 300 t, 25,000 ft, 3593 kg/h an engine)
+local reo = PM.predict{P = P, t = pw, gw = 300000, fuel = 80000, alt = 25000, phase = "crz", crz = 25000, clb = clb,
+    des = des, crzspd = {mach = .743}, legs = {{name = "A", dist = 100}}, eo = 1}
+local hrs = 100 / P.tas(.743, 25000)
+T.near((80000 - reo.dest.fuel) / hrs, 3 * 3593, 3 * 3593 * 0.01,
+    string.format("E/O LRC on three engines: %.0f kg/h (3 x 3593)", (80000 - reo.dest.fuel) / hrs))
+local rall = PM.predict{P = P, t = pw, gw = 300000, fuel = 80000, alt = 25000, phase = "crz", crz = 25000, clb = clb,
+    des = des, crzspd = {mach = .743}, legs = {{name = "A", dist = 100}}}
+T.check(80000 - reo.dest.fuel > 80000 - rall.dest.fuel, "more than with all four (the windmilling and trim drag)")
+-- the engine-out descent path steeper (the drag), the climb slower (three
+-- engines' share)
+local rte = {{name = "A", dist = 300}, {name = "RW", dist = 200, con = {kind = "AT", a = 50}}}
+local rpa = PM.predict{P = P, t = pw, gw = 280000, fuel = 60000, alt = 25000, phase = "crz", crz = 25000, clb = clb,
+    des = des, crzspd = {mach = .74}, legs = rte, ed = 2}
+local rpe = PM.predict{P = P, t = pw, gw = 280000, fuel = 60000, alt = 25000, phase = "crz", crz = 25000, clb = clb,
+    des = des, crzspd = {mach = .74}, legs = rte, ed = 2, eo = 1}
+T.check(rpe.td > rpa.td + 2, string.format("the engine-out T/D nearer the E/D: %.0f NM from it (all engines %.0f)", 500 - rpe.td, 500 - rpa.td))
+local rca = PM.predict{P = P, t = pw, gw = 280000, fuel = 60000, alt = 10000, phase = "clb", crz = 25000, clb = clb,
+    des = des, crzspd = {mach = .74}, legs = long}
+local rce = PM.predict{P = P, t = pw, gw = 280000, fuel = 60000, alt = 10000, phase = "clb", crz = 25000, clb = clb,
+    des = des, crzspd = {mach = .74}, legs = long, eo = 1}
+T.check(rce.tc > rca.tc * 1.3, string.format("the engine-out climb to FL250: T/C %.0f NM (all engines %.0f)", rce.tc, rca.tc))
+
 T.done()

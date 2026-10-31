@@ -81,9 +81,14 @@ local function progress_pred(pred, mult)
   local destRow = string.format("%-4s    %4d %s  %5.1f", dest and dest.ident or "", math.floor(pred.dest.x + 0.5),
     eta(pred.dest.t), pred.dest.fuel * mult / 1000)
   local ex, et
-  -- TO T/C on the ground and in the climb, by the FMC's phase (step 9d3;
-  -- before, the AP's old flightPhase)
-  if pred.tc and (B747_fms_vnav_page()) < 2 then
+  -- (step 9h4b) LEVEL AT in the engine-out driftdown, its level off (FCOM
+  -- p.1373; FMSPG p.3.4-19); TO T/C on the ground and in the climb, by the
+  -- FMC's phase (step 9d3; before, the AP's old flightPhase); none of them:
+  -- blank (before, the last one's title stayed)
+  progEvent = ""
+  if pred.lvl_dd and B747_fms_vnav_dd() then
+    progEvent, ex, et = "LEVEL AT", pred.lvl, pred.lvl_t
+  elseif pred.tc and (B747_fms_vnav_page()) < 2 then
     progEvent, ex, et = "T/C", pred.tc, pred.tc_t
   elseif pred.sc[1] then
     progEvent, ex, et = "STEP CLB", pred.sc[1], pred.sc_t[1]
@@ -98,10 +103,13 @@ local function progress_pred(pred, mult)
   -- (ATA34_2 p.568)
   local modeId = ({[1] = "clbspdmode", [2] = "crzspdmode", [3] = "desspdmode"})[(B747_fms_vnav_page())] or "clbspdmode"
   local mode = fmsModules["data"][modeId]
-  progSpdLabel = B747_fms_spd_int() and " MCP SPD" or mode == "S" and " SEL SPD" or mode == "L" and " LRC SPD" or " ECON SPD"
+  -- (step 9h4b) E/O SPD with ENG OUT active (FCOM p.1372; FMSPG p.3.4-19)
+  progSpdLabel = B747_fms_spd_int() and " MCP SPD" or B747_fms_eo().active and " E/O SPD" or mode == "S" and " SEL SPD"
+    or mode == "L" and " LRC SPD" or " ECON SPD"
   local selSpd=string.format("%3dkt ",simDR_autopilot_airspeed_kts)
   if simDR_autopilot_airspeed_is_mach==1 then
-    selSpd=string.format("%-5.3f ",simDR_autopilot_airspeed_kts_mach)
+    -- (step 9h4b) a Mach as .XXX (FCOM p.1371; before, 0.827)
+    selSpd=string.format(".%03d ",math.floor(simDR_autopilot_airspeed_kts_mach*1000+0.5))
   end
   return {
     progress_title(),
@@ -313,7 +321,10 @@ fmsPages["PROGRESS"].getSmallPage=function(self,pgNo,fmsID)
         toText="T/C"
       end
     end
-    local label=progSpdLabel..string.rep(" ",math.max(1,21-#progSpdLabel-#toText)).."TO "..toText
+    -- (step 9h4b) LEVEL AT alone (estimate: FCOM p.1373 lists it with the
+    -- TO line's titles); none: blank
+    local toPart=(toText=="" and "") or (toText=="LEVEL AT" and toText) or "TO "..toText
+    local label=progSpdLabel..string.rep(" ",math.max(1,24-#progSpdLabel-#toPart))..toPart
     return {
 "                    1/3 ",
 " LAST   ALT   ATA   FUEL",

@@ -303,6 +303,56 @@ A.update(s24, inp{pitch = "VNAV", vnav_at = A.THR, vnav_phase = 2})
 T.equal(A.fma(s24), A.HOLD, "the same phase: HOLD kept")
 A.update(s24, inp{pitch = "VNAV", vnav_at = A.THR, vnav_phase = 3})
 T.equal(A.fma(s24), A.THR, "the early descent (the FMC's descent phase): THR again")
+-- (the FMC's step 9h4b) the engine-out driftdown (FCOM p.1268): its start
+-- THR again from a cruise descent's HOLD (the engines to CON), at its rate
+-- no HOLD (the rate held at 300 fpm at least, CON the most), the aft stop
+-- HOLD still; over, the cruise descent's HOLD again
+local s24d = A.new()
+A.update(s24d, inp{pitch = "VNAV", vnav_at = A.THR, vnav_phase = 2})
+for _ = 1, A.REACH_S do A.servo(s24d, sv{vs = -1250, vnav_vs = -1250, lever = 0.3}) end
+T.equal(A.fma(s24d), A.HOLD, "a cruise descent at its rate: HOLD")
+A.update(s24d, inp{pitch = "VNAV", vnav_at = A.THR, vnav_phase = 2, vnav_dd = true})
+T.equal(A.fma(s24d), A.THR, "ENG OUT executed over the maximum, the driftdown: THR again in the same phase")
+A.servo(s24d, sv{vs = -1250, vnav_vs = -300, lever = 0.3, vnav_dd = true})
+T.check(s24d.cmd > 0.3, "1,250 fpm down, 300 asked: the levers forward (toward CON)")
+for _ = 1, 3 * A.REACH_S do A.servo(s24d, sv{vs = -300, vnav_vs = -300, lever = s24d.cmd, vnav_dd = true}) end
+T.equal(A.fma(s24d), A.THR, "at 300 fpm for 3 REACH_S: THR still, no HOLD")
+local c0 = s24d.cmd
+A.servo(s24d, sv{vs = -300, vnav_vs = -300, lever = c0, thrust = 1.6, thrust_ref = 1.5, vnav_dd = true})
+T.check(s24d.cmd < c0 and A.fma(s24d) == A.THR, "over the reference thrust (CON): back to it, THR")
+A.update(s24d, inp{pitch = "VNAV", vnav_at = A.THR, vnav_phase = 2, vnav_dd = true})
+A.servo(s24d, sv{vs = -100, vnav_vs = -300, lever = 0, vnav_dd = true})
+T.equal(A.fma(s24d), A.HOLD, "the aft stop with less asked: HOLD still")
+-- (the FMC's step 9h4b) the EEC's full-forward rating under the reference
+-- (above 25,000 ft the maximum climb, under CON's: s157 wound the levers to
+-- the forward stop): at it no further forward; within REF_NEAR slower; far
+-- below at the servo's rate; without a reference no limit
+local sw = A.new()
+A.update(sw, inp{pitch = "VNAV", vnav_at = A.THR, vnav_phase = 2, vnav_dd = true})
+A.servo(sw, sv{vs = -1500, vnav_vs = -300, lever = 0.7, thrust = 1.58, thrust_ref = 1.65, thrust_max = 1.58, vnav_dd = true})
+T.near(sw.cmd, 0.7, 1e-9, "1,500 fpm down, more thrust asked, at the full-forward rating 1.58 (CON 1.65): the levers no further")
+A.servo(sw, sv{vs = -1500, vnav_vs = -300, lever = sw.cmd, thrust = 1.56, thrust_ref = 1.65, thrust_max = 1.58, vnav_dd = true})
+T.near(sw.cmd - 0.7, A.K_VS_VNAV * 1200, 1e-9, "0.02 under it: forward at the law's rate (under the band's 0.08 a second)")
+local c0 = sw.cmd
+A.servo(sw, sv{vs = -1500, vnav_vs = -300, lever = c0, thrust = 1.579, thrust_ref = 1.65, thrust_max = 1.58, vnav_dd = true})
+T.near(sw.cmd - c0, 0.001 * A.SERVO_RATE / A.REF_NEAR_EPR, 1e-9, "0.001 under it: forward at the band's share of the servo's rate")
+c0 = sw.cmd
+A.servo(sw, sv{vs = -1500, vnav_vs = -300, lever = c0, thrust = 1.58, thrust_ref = 1.65, vnav_dd = true})
+T.near(sw.cmd - c0, A.K_VS_VNAV * 1200, 1e-9, "the rating not known (CON's 1.65 the limit): forward at the law's rate")
+local c1 = sw.cmd
+A.servo(sw, sv{vs = -200, vnav_vs = -300, lever = c1, thrust = 1.58, thrust_ref = 1.65, thrust_max = 1.58, vnav_dd = true})
+T.check(sw.cmd < c1, "less thrust asked at it: back at once")
+local sp = A.new()
+A.update(sp, inp{pitch = "VS", spd = true})
+A.servo(sp, sv{ias = 230, target = 250, lever = 0.8, thrust = 1.40, thrust_ref = 1.45, thrust_max = 1.40})
+T.near(sp.cmd, 0.8, 1e-9, "SPD 20 kt slow at the rating: no further forward")
+A.servo(sp, sv{ias = 230, target = 250, lever = 0.5, thrust = 0, thrust_ref = 0})
+T.check(sp.cmd > 0.5, "without a reference (0): SPD forward as before")
+local s24e = A.new()
+A.update(s24e, inp{pitch = "VNAV", vnav_at = A.THR, vnav_phase = 2, vnav_dd = true})
+A.update(s24e, inp{pitch = "VNAV", vnav_at = A.THR, vnav_phase = 2})
+for _ = 1, A.REACH_S do A.servo(s24e, sv{vs = -1250, vnav_vs = -1250, lever = 0.3}) end
+T.equal(A.fma(s24e), A.HOLD, "the driftdown over (under its floor), the cruise descent's rate: HOLD")
 -- the inertial V/S (ivs) for VNAV's THR when given: the VSI at the rate but
 -- the airplane at 200 fpm: THR still (s144: the VSI's lag held the levers)
 local s25 = A.new()

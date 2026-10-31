@@ -47,6 +47,9 @@ M.STOP_KT = 30
 -- second, estimate); FLCH's override at 8 degrees off the command
 M.SERVO_RATE, M.FLARE_RATE = 0.2, 0.1
 M.OVERRIDE = 0.16
+-- (the FMC's step 9h4b) SPD's and THR's levers forward slower within this
+-- of the reference thrust (EPR, % N1), to none at it (estimates)
+M.REF_NEAR_EPR, M.REF_NEAR_N1 = 0.05, 2.5
 -- the laws' gains (estimates: the sources give none). SPD: the lever's
 -- rate a kt of the speed's error and a kt/s of its acceleration, less when
 -- reducing (FCTM p.43: up fast, down slowly); THR: a fpm of the V/S
@@ -94,6 +97,7 @@ function M.new()
         idle_hold = false,  -- VNAV's or the retard's IDLE at the aft stop
         thr_hold = false,   -- VNAV's THR at its V/S, the aft stop, the hand
         reach_t = 0,        -- VNAV's THR: the seconds at its V/S
+        vnav_dd = false,    -- the FMC's driftdown the update before (its step 9h4b)
         lx = nil, lx_mach = nil, lx_rate = 0,  -- target_vs: ln of the target's measure, its rate
         vnav_phase = nil,   -- the FMC's phase the update before
         ga = false,         -- G/A's THR (the first push) on
@@ -110,6 +114,10 @@ local function vnav_mode(s, inp)
     -- descent: FCOM p.1260)
     if inp.vnav_phase ~= s.vnav_phase then s.thr_hold = false end
     s.vnav_phase = inp.vnav_phase
+    -- (the FMC's step 9h4b) the driftdown's start: THR again (FCOM p.1268:
+    -- the A/T advances the engines to CON, from a cruise descent's HOLD too)
+    if inp.vnav_dd and not s.vnav_dd then s.thr_hold = false end
+    s.vnav_dd = inp.vnav_dd and true or false
     local at = inp.vnav_level and M.SPD or inp.vnav_at
     if at ~= M.IDLE then s.idle_hold = false end
     if at ~= M.THR then s.thr_hold = false end
@@ -144,8 +152,8 @@ end
 -- inp: arm, ok, ground, cas, ra, flaps_up, reverse, limit_to, limit_ga,
 -- pitch (the AFDS's: "TO", "GA", "VNAV", "FLCH", "VS", "ALT", "GS",
 -- "FLARE" or nil), retard, vnav_at (the FMC's A/T mode), vnav_level,
--- vnav_phase (the FMC's: step 9d2a), lever_idle (the levers at the aft
--- stop); the pushes since the last
+-- vnav_phase (the FMC's: step 9d2a), vnav_dd (the FMC's driftdown: its step
+-- 9h4b), lever_idle (the levers at the aft stop); the pushes since the last
 -- update: toga, spd, thr, disc (true when pushed)
 function M.update(s, inp)
     local was = s.pitch
@@ -266,7 +274,9 @@ end
 -- step 9d2), ivs (the inertial V/S for it; vs without), evs (the energy's
 -- rate at the target speed for it, fpm: the inertial V/S and the speed's
 -- change in the target's IAS or Mach; ivs without); thrust and
--- thrust_ref (EPR or % N1, n1 true for N1); lever (the levers' mean)
+-- thrust_ref (EPR or % N1, n1 true for N1), thrust_max (the EEC's
+-- full-forward rating: the most the levers give, nil not known; the FMC's
+-- step 9h4b); lever (the levers' mean)
 function M.servo(s, inp)
     local mode = s.engaged and s.mode or nil
     if mode ~= M.THR then s.reach_t = 0 end
@@ -276,8 +286,23 @@ function M.servo(s, inp)
     end
     if not s.servo then s.servo, s.cmd = true, inp.lever end
     local k_thr = inp.n1 and M.K_N1 or M.K_EPR
-    local over = inp.thrust - inp.thrust_ref
-    local limit = -k_thr * over   -- the thrust limit's rate (none above)
+    -- (the FMC's step 9h4b) the reference within the EEC's full-forward
+    -- rating (above 25,000 ft the maximum climb, under CON's reference: the
+    -- levers past 35° give no more). SPD's and THR's levers forward slower
+    -- within REF_NEAR of it, to none there, so they stop where the thrust
+    -- does (s157's driftdown had wound them to the forward stop at CON's
+    -- reference: eight minutes back through the band); over it back at the
+    -- limit's rate (none without a reference)
+    local ref = inp.thrust_ref
+    if inp.thrust_max and inp.thrust_max < ref then ref = inp.thrust_max end
+    local over = inp.thrust - ref
+    local limit = -k_thr * over   -- the thrust limit's rate
+    local cap = math.huge
+    if over > 0 then
+        cap = limit
+    elseif ref > 0 then
+        cap = -over * M.SERVO_RATE / (inp.n1 and M.REF_NEAR_N1 or M.REF_NEAR_EPR)
+    end
     local vmax = inp.v_max - M.LIMIT_MARGIN
     local rate
     if mode == M.IDLE then
@@ -287,8 +312,7 @@ function M.servo(s, inp)
         rate = math.min(limit, speed_rate(inp, vmax))
     elseif mode == M.SPD then
         local tgt = clamp(inp.target, inp.v_min + M.LIMIT_MARGIN, vmax)
-        rate = speed_rate(inp, tgt)
-        if over > 0 then rate = math.min(rate, limit) end
+        rate = math.min(speed_rate(inp, tgt), cap)
     else
         -- THR: FLCH's V/S to the MCP altitude in 125 s, G/A's 2,000 fpm,
         -- VNAV's the FMC's (step 9d2a: the early and the cruise descent);
@@ -299,14 +323,16 @@ function M.servo(s, inp)
         local ev = (vnav and inp.evs) or vs
         rate = (vnav and M.K_VS_VNAV or M.K_VS) * (want - ev)
         if want > 0 and rate < 0 then rate = 0 end
-        if over > 0 then rate = math.min(rate, limit) end
+        rate = math.min(rate, cap)
         -- VNAV's descent at its V/S and the energy's at the target speed
         -- for REACH_S (FMSPG p.3.5-5)
         local at_rate = vnav and want < 0 and math.abs(vs - want) <= M.VS_REACHED
             and math.abs(ev - want) <= M.VS_REACHED
             and math.abs(inp.ias - inp.target) <= M.SPD_REACHED
         s.reach_t = at_rate and s.reach_t + inp.dt or 0
-        local reached = s.reach_t >= M.REACH_S
+        -- (the FMC's step 9h4b) not in the driftdown: its rate held, at
+        -- least 300 fpm with CON the most (FCOM p.1268)
+        local reached = s.reach_t >= M.REACH_S and not inp.vnav_dd
         -- the descent at the aft stop, or the hand 8 degrees off: HOLD
         -- (p.648, p.670); VNAV's at its V/S too, latched
         if not s.ga and ((want < 0 and s.cmd <= 0 and rate < 0)

@@ -24,6 +24,9 @@ B747_pred_model = M
 
 local G, KT, FT = 9.80665, 0.514444, 0.3048
 local NM = 1852
+-- (step 9h4b) the cruise descent's rate (fpm: VNAV's, B747.68.vnav_model.lua
+-- EARLY_VS) and the engine-out driftdown's least (its EO_DD_VS)
+M.CRZ_DES_VS, M.DD_VS = 1250, 300
 
 -- a climb or descent speed schedule at an altitude: the CAS and the Mach
 -- (s: cas, mach, trans_cas below trans_alt, restr_cas below restr_alt; the
@@ -66,6 +69,16 @@ local function con_alt(c, h)
     return nil
 end
 
+-- (6-1/6-2 step 9h4b) the drag (N) at a weight (kg), altitude (ft) and
+-- Mach, and the operating engines: with s.eo (the engines inoperative)
+-- the engine-out drag (the windmilling and trim drag) and 4 - s.eo of
+-- them (two out at most: the tables')
+local function perf_eo(s)
+    local P, t, n = s.P, s.t, s.eo
+    if not n then return function(kg, h, m) return (P.drag(t, kg, h, m)) end, 4 end
+    return function(kg, h, m) return (P.eo_drag(t, n, kg, h, m)) end, 4 - math.min(n, 2)
+end
+
 -- the descent path built back from the E/D at weight kg: arrays from the
 -- E/D up to the ceiling of x (NM from now), h, the time (s) and fuel (kg)
 -- from there to the E/D. Straight from anchor to anchor (the E/D and the
@@ -80,6 +93,7 @@ end
 -- deceleration on it
 local function descent_path(s, kg, cons, xed, hed, gps)
     local P, t, isa0 = s.P, s.t, s.isa or 0
+    local drag, ne = perf_eo(s)
     local hw0 = (s.wind and s.wind.des) or 0
     local xs, hs, ts, fs = {xed}, {hed}, {0}, {0}
     -- each point's segment (from the point before, back toward the E/D):
@@ -140,32 +154,32 @@ local function descent_path(s, kg, cons, xed, hed, gps)
                 local dh = math.min(250, gpl.hs - h)
                 local dxg = dh * FT / gpl.tan               -- m over the ground
                 dt = dxg / gs
-                need = P.drag(t, kg, h, m) - kg * G * (dh * FT / (dt * v)) * energy(P, h, cas, m, machMode, isa)
+                need = drag(kg, h, m) - kg * G * (dh * FT / (dt * v)) * energy(P, h, cas, m, machMode, isa)
                 h = h + dh
                 x = x - dxg / NM
                 if h >= gpl.hs - 1e-6 then h, x = gpl.hs, gpl.xs end
             else
                 dt = (x - gpl.x0) * NM / gs
-                need = P.drag(t, kg, h, m)
+                need = drag(kg, h, m)
                 x = gpl.x0
             end
             local f = P.idle_ff(t, h, m, isa)
-            if need > 0 then f = math.max(f, P.thrust_ff(t, need / 4, h, m, isa)) end
+            if need > 0 then f = math.max(f, P.thrust_ff(t, need / ne, h, m, isa)) end
             kind = need > 0 and "spd" or "idle"
             tt = tt + dt
-            ff = ff + 4 * f * dt / 3600
+            ff = ff + ne * f * dt / 3600
         elseif cas < tgt - 0.5 then
             -- (back in time) a level deceleration to cas: idle, the model's
             -- drag (less the idle thrust) slows it
             local mm = P.cas_to_mach(cas, h)
-            local a = P.drag(t, kg, h, mm) / kg
+            local a = drag(kg, h, mm) / kg
             local dt = 5
             local dv = a * dt / KT                     -- kt TAS
             local tas = P.tas(mm, h, isa) + dv
             cas = math.min(tgt, P.mach_to_cas(tas / P.tas(1, h, isa), h))
             x = x - gs * dt / NM
             tt = tt + dt
-            ff = ff + 4 * P.idle_ff(t, h, mm, isa) * dt / 3600
+            ff = ff + ne * P.idle_ff(t, h, mm, isa) * dt / 3600
             if cas >= tgt - 0.5 then decel[#decel + 1] = {x = x, h = h} end
             kind = "idle"
         else
@@ -178,20 +192,20 @@ local function descent_path(s, kg, cons, xed, hed, gps)
                 sinG = (anchor.h - h) * FT / math.max(dist, 1)
                 if anchor.h - h < dh then dh = anchor.h - h end
             else
-                sinG = P.drag(t, kg, h, m) / (kg * G) / energy(P, h, cas, m, machMode, isa)
+                sinG = drag(kg, h, m) / (kg * G) / energy(P, h, cas, m, machMode, isa)
             end
             sinG = math.max(sinG, 1e-4)
             local dxa = dh * FT / sinG                -- m along the air path
             local dt = dxa / v
             -- the thrust above idle a shallower path needs
-            local need = P.drag(t, kg, h, m) - kg * G * sinG * energy(P, h, cas, m, machMode, isa)
+            local need = drag(kg, h, m) - kg * G * sinG * energy(P, h, cas, m, machMode, isa)
             local f = P.idle_ff(t, h, m, isa)
-            if need > 0 then f = math.max(f, P.thrust_ff(t, need / 4, h, m, isa)) end
+            if need > 0 then f = math.max(f, P.thrust_ff(t, need / ne, h, m, isa)) end
             kind = (anchor and need > 0) and "spd" or "idle"
             h = h + dh
             x = x - dxa * gs / v / NM
             tt = tt + dt
-            ff = ff + 4 * f * dt / 3600
+            ff = ff + ne * f * dt / 3600
             if anchor and h >= anchor.h - 1 then
                 h = anchor.h
                 x = anchor.x
@@ -259,14 +273,27 @@ end
 --               8e3: B747.68.wind_model.lua's field): wind(x, h, phase) the
 --               headwind (kt), isa(x, h) the ISA deviation, in place of
 --               wind and isa
+--   eo          (step 9h4b) nil, or the engines inoperative for the
+--               engine-out data (ENG OUT active): the engine-out drag, the
+--               fuel of the 4 - eo operating engines (the cruise's the
+--               tables' E/O fuel flow, the climb at their share of the climb
+--               thrust: CON as it, estimate)
+--   crz_des     (step 9h4b) nil, or the cruise descent to the cruise
+--               altitude under way (VNAV's, the airplane above it): "des"
+--               at 1,250 fpm, or "dd" the engine-out driftdown (DD_VS at
+--               least, CON at most), at the cruise speed
 -- returns {pts = per leg {x, h, t, fuel, cas, mach, machMode (the speed
 --   there: the climb's before the T/C, the descent's after the T/D, else
 --   the cruise's)}, tc = x or nil, td = x or nil,
 --   ed = x or nil, sc = {x...}, their times tc_t, td_t, ed_t, sc_t = {t...},
 --   ed_i the E/D's leg, dest = {x, t, fuel}, crz = the last cruise altitude,
---   decel = {x...} the descent's decelerations ahead (where each starts)}
+--   decel = {x...} the descent's decelerations ahead (where each starts),
+--   lvl = x or nil, lvl_t, lvl_dd (step 9h4b: where the cruise descent
+--   levels at the cruise altitude, its time; true for the driftdown's:
+--   LEVEL AT)}
 function M.predict(s)
     local P, t, isa = s.P, s.t, s.isa or 0
+    local drag, ne = perf_eo(s)
     local wind = s.wind or {}
     local legs = s.legs
     local lx = {}
@@ -380,18 +407,18 @@ function M.predict(s)
             if s.field then isa, hw = s.field.isa(x, h), s.field.wind(x, h, "clb") end
             local v = P.tas(mm, h, isa) * KT
             local gs = math.max(v - hw * KT, 50)
-            local thr = P.climb_thrust(t, h)
-            local drag = P.drag(t, kg, h, mm)
-            local ffl = 4 * P.thrust_ff(t, thr / 4, h, mm, isa)
+            local thr = P.climb_thrust(t, h) * ne / 4
+            local dr = drag(kg, h, mm)
+            local ffl = ne * P.thrust_ff(t, thr / ne, h, mm, isa)
             if cas < tgt - 0.5 then
                 -- a level acceleration to the schedule's CAS
                 local dt = 5
-                local tas = P.tas(mm, h, isa) + (thr - drag) / kg * dt / KT
+                local tas = P.tas(mm, h, isa) + (thr - dr) / kg * dt / KT
                 cas = math.min(tgt, P.mach_to_cas(tas / P.tas(1, h, isa), h))
                 step_state(gs * dt / NM, 0, dt, ffl * dt / 3600)
             else
                 cas = tgt
-                local sinG = (thr - drag) / (kg * G) / energy(P, h, cas, mm, machMode, isa)
+                local sinG = (thr - dr) / (kg * G) / energy(P, h, cas, mm, machMode, isa)
                 if sinG <= 1e-4 then return "unable" end
                 local dh = math.min(250, target - h)
                 local dxa = dh * FT / sinG
@@ -411,7 +438,7 @@ function M.predict(s)
             if s.field then isa, hw = s.field.isa(x, hcur), s.field.wind(x, hcur, "crz") end
             local v = P.tas(m, hcur, isa) * KT
             local gs = math.max(v - hw * KT, 50)
-            local ff = 4 * P.cruise_ff(t, kg, hcur, m, isa)
+            local ff = s.eo and ne * P.eo_cruise_ff(t, s.eo, kg, hcur, m, isa) or 4 * P.cruise_ff(t, kg, hcur, m, isa)
             local dt = 60
             local dx = gs * dt / NM
             local lim = xstop
@@ -429,14 +456,56 @@ function M.predict(s)
         return "end"
     end
 
+    -- (step 9h4b) the cruise descent under way down to crzAlt (s.crz_des):
+    -- at the cruise speed, 1,250 fpm with the thrust it needs, at least
+    -- idle (VNAV's: FCOM p.1257, FMSPG p.3.5-5); the driftdown the speed
+    -- at crzAlt as a Mach and CON on the operating engines, at least DD_VS
+    -- down (FCOM p.1268): CON the climb thrust's share (estimate) scaled to
+    -- the drag at crzAlt, where the driftdown levels at the maximum (the
+    -- tables' level off: estimate). Stopping where the descent path is
+    -- reached
+    local function crz_descent()
+        local dd = s.crz_des == "dd"
+        local mDD = dd and crz_mach(P, s.crzspd, crzAlt, kg) or nil
+        local scale = dd and drag(kg, crzAlt, mDD) / (P.climb_thrust(t, crzAlt) * ne / 4) or 1
+        local machMode = dd or not s.crzspd.cas
+        while h > crzAlt + 1 and guard < 200000 do
+            guard = guard + 1
+            if dp and x >= (path_at_h(dp, h)) - 1e-6 then return "des" end
+            local dh = math.min(250, h - crzAlt)
+            local hm = h - dh / 2
+            local m = mDD or crz_mach(P, s.crzspd, hm, kg)
+            local isa, hw = isa, wind.crz or 0
+            if s.field then isa, hw = s.field.isa(x, hm), s.field.wind(x, hm, "crz") end
+            local v = P.tas(m, hm, isa) * KT
+            local gs = math.max(v - hw * KT, 50)
+            local ef = energy(P, hm, P.mach_to_cas(m, hm), m, machMode, isa)
+            local d = drag(kg, hm, m)
+            -- the rate down (m/s) and the thrust it takes (N)
+            local down = M.CRZ_DES_VS * FT / 60
+            if dd then
+                local con = P.climb_thrust(t, hm) * ne / 4 * scale
+                down = math.max((d - con) * v / (kg * G * ef), M.DD_VS * FT / 60)
+            end
+            local thr = d - kg * G * ef * down / v
+            local f = P.idle_ff(t, hm, m, isa)
+            if thr > 0 then f = math.max(f, P.thrust_ff(t, thr / ne, hm, m, isa)) end
+            local dt = dh * FT / down
+            step_state(gs * dt / NM, -dh, dt, ne * f * dt / 3600)
+        end
+        return "level"
+    end
+
     local tcPrev = 0
     local startDes = false
+    local lvl, lvlT = nil, nil
     for pass = 1, 2 do
         x, h, kg, tt, burnt, nextLeg = 0, s.alt, s.gw, 0, 0, 1
         cas = s.cas or (M.schedule(P, s.clb, h))
         phase = s.phase or (h < s.crz - 500 and "clb" or "crz")
         R.pts, sc, tc, td = {}, {}, nil, nil
         scT, tcT, tdT = {}, nil, nil
+        lvl, lvlT = nil, nil
         crzAlt = s.crz
         guard = 0
         dp = build_dp(estKg, tcPrev)
@@ -460,6 +529,11 @@ function M.predict(s)
                     end
                 end
                 if phase ~= "des" then tc, tcT = x, tt; phase = "crz" end
+            end
+            -- (step 9h4b) the cruise descent under way first, to its level
+            -- off at crzAlt (LEVEL AT)
+            if phase == "crz" and s.crz_des and h > crzAlt + 50 then
+                if crz_descent() == "des" then phase = "des" else lvl, lvlT = x, tt end
             end
             local hcur = h
             while phase == "crz" and guard < 200000 do
@@ -510,6 +584,7 @@ function M.predict(s)
     end
     R.tc, R.td, R.ed, R.sc, R.crz = tc, td, xed, sc, crzAlt
     R.tc_t, R.td_t, R.sc_t = tcT, tdT, scT
+    R.lvl, R.lvl_t, R.lvl_dd = lvl, lvlT, (lvl and s.crz_des == "dd") or nil
     -- the deceleration points ahead on the descent (after the T/D or now)
     R.decel = {}
     if dp and xed then

@@ -1133,10 +1133,13 @@ function B747_fms_schedules(perf)
     trans_cas = pred_num("destranspd"), trans_alt = pred_num("desspdtransalt"),
     restr_cas = pred_num("desrestspd"), restr_alt = pred_num("desrestalt")}
   local crzspd
+  -- (step 9h4b) LRC's weight without one given (VNAV's without the FMC's
+  -- gross weight): the FMC's or X-Plane's (before, an error)
+  local gw = B747_fms_gw_kg()
   if pred_num("crzcas") then
     crzspd = {cas = pred_num("crzcas")}
   elseif fmsModules["data"]["crzspdmode"] == "L" then
-    crzspd = {fn = function(h, kg) return (B747_perf_db.lrc(perf, kg, h)) end}
+    crzspd = {fn = function(h, kg) return (B747_perf_db.lrc(perf, kg or gw, h)) end}
   else
     crzspd = {mach = (pred_num("crzspd") or 810) / 1000}
   end
@@ -1144,7 +1147,7 @@ function B747_fms_schedules(perf)
   -- TRANS nor SPD REST (the E/O CLB page has none: estimate); E/O LRC, the
   -- minimum drag speed or the crew's (FCOM p.1342, p.1350-1353)
   if eoState.active then
-    local n, gw = eoState.n, B747_fms_gw_kg()
+    local n = eoState.n
     local sel = eoState.clb
     if sel then
       clb = {cas = sel.cas or 400, mach = sel.mach}
@@ -1153,7 +1156,7 @@ function B747_fms_schedules(perf)
     end
     local c = eoState.crz
     if c == "LRC" then
-      crzspd = {fn = function(h, kg) return (B747_perf_db.eo_lrc(perf, n, kg, h)) end}
+      crzspd = {fn = function(h, kg) return (B747_perf_db.eo_lrc(perf, n, kg or gw, h)) end}
     elseif c == "EO" then
       crzspd = {cas = B747_perf_db.eo_min_drag(perf, n, gw)}
     else
@@ -1215,10 +1218,13 @@ function B747_fms_pred_input(crz)
   if not ed and lastCon and lastCon > (clbLast or 0) then ed = lastCon end
   local perf, isa = B747_fms_perf(), B747_fms_isa_dev()
   local clb, des, crzspd = B747_fms_schedules(perf)
+  -- (step 9h4b) ENG OUT active: the engine-out data (no step climbs:
+  -- estimate)
+  local eo = eoState.active and eoState.n or nil
   -- the step climbs: STEP SIZE's (none with 0), the crew's STEP TO first
   local steps = nil
   local size = (string.gsub(fmsModules["data"]["stepsize"], "%s+$", ""))
-  if tonumber(size) ~= 0 then
+  if tonumber(size) ~= 0 and not eo then
     local east = B747_fms_step_east()
     local crewTo = B747_cdu_model.parse_alt((string.gsub(fmsModules["data"]["stepalt"], "%s+$", "")))
     local light = perf.MAX_ALT_W[#perf.MAX_ALT_W] * 1000 * perf.wf
@@ -1236,6 +1242,12 @@ function B747_fms_pred_input(crz)
   local phase = "clb"
   local vph = B747_fms_vnav_phase and B747_fms_vnav_phase()
   if simDR_onGround ~= 1 and vph then phase = string.lower(vph) end
+  -- (step 9h4b) VNAV's cruise descent under way, its driftdown
+  local crzDes = nil
+  if B747_fms_vnav_page then
+    local _, chg = B747_fms_vnav_page()
+    if chg == "DES" then crzDes = B747_fms_vnav_dd() and "dd" or "des" end
+  end
   -- the winds and temperatures along the route (step 8e3; notes/
   -- ATA-34-61-FMC.md §53): the WIND pages' and DESCENT FORECAST's mixed
   -- with the measured wind (true) and temperature
@@ -1247,7 +1259,7 @@ function B747_fms_pred_input(crz)
   return {P = B747_perf_db, t = perf, isa = isa, gw = B747_fms_gw_kg(), fuel = perf_fuel_t() * 1000,
     alt = math.max(0, simDR_pressureAlt1), cas = (simDR_onGround ~= 1 and simDR_ias_pilot > 100) and simDR_ias_pilot or nil,
     phase = phase, crz = crz, clb = clb, des = des, crzspd = crzspd, legs = legs, ed = ed, clb_last = clbLast,
-    steps = steps, wind = {clb = 0, crz = 0, des = 0}, field = field}
+    steps = steps, wind = {clb = 0, crz = 0, des = 0}, field = field, eo = eo, crz_des = crzDes}
 end
 -- the ND's altitude profile points (6-1/6-2 step 8d3; notes/
 -- ATA-34-61-FMC.md §50; FCOM p.1149): the predictions' T/C, the next S/C
@@ -1297,8 +1309,10 @@ function update_preds()
   predNext = simDRTime + 10
   local s = B747_fms_pred_input(B747BR_cruiseAlt)
   predField = s and s.field or nil
-  -- none with CRZ ALT at or above MAX (ATA34_2 p.611)
+  -- none with CRZ ALT at or above MAX (ATA34_2 p.611); (step 9h4b) with
+  -- ENG OUT active above the engine-out MAX (CRZ ALT set to it: on)
   if s and s.crz >= B747_perf_db.max_alt(s.t, s.gw, s.isa) then s = nil end
+  if s and s.eo and s.crz > B747_fms_eo_crz_max() + 1 then s = nil end
   predResult = s and B747_pred_model.predict(s) or nil
   put_profile(s, predResult)
   vnav_geo_set(s, predResult)
@@ -1325,6 +1339,8 @@ B747DR_fms_vnav_msg = find_dataref("laminar/B747/fms/vnav/msg")
 B747DR_fms_vnav_on_app = find_dataref("laminar/B747/fms/vnav/on_app")
 B747DR_fms_vnav_perf = find_dataref("laminar/B747/fms/vnav/perf")
 B747DR_fms_vnav_dist = find_dataref("laminar/B747/fms/vnav/dist")
+-- (step 9h4b) the engine-out driftdown for the A/T
+B747DR_fms_vnav_dd = find_dataref("laminar/B747/fms/vnav/dd")
 B747DR_fms_alt_sel_pushes = find_dataref("laminar/B747/autopilot/alt_sel_pushes")
 -- (step 9e3) the AFDS's pitch mode (the FMA's: 1 TO/GA, in the air G/A's)
 B747DR_fms_afds_pitch = find_dataref("laminar/B747/autopilot/FMA/active_pitch_mode")
@@ -1438,6 +1454,8 @@ end
 -- placard or the minimum speed limits it, VREF + 100 in the engine-out
 -- takeoff's climb (FCOM p.1265), nil else
 function B747_fms_vnav_title() return vnavState.out.title end
+-- (step 9h4b) the engine-out driftdown (FCOM p.1268): VNAV's in it
+function B747_fms_vnav_dd() return vnavState.dd ~= nil end
 -- (step 9d3) speed intervention: the FMC's target the MCP speed, the active
 -- page's title MCP SPD and PROGRESS's 5L (FCOM p.643; ATA34_2 p.557, p.563,
 -- p.568, p.623)
@@ -1660,6 +1678,7 @@ function B747_fms_vnav_exec()
 end
 function B747_fms_vnav_erase() vnavMod = nil end
 local vnavGaSeen = nil
+local vnavEoNext = 0
 local function update_vnav()
   local inp = vnavIn
   local pushes = B747DR_fms_alt_sel_pushes
@@ -1732,6 +1751,14 @@ local function update_vnav()
   vnavTakeoff.flaps = simDR_fms_vnav_flaps
   inp.takeoff = vnavTakeoff
   inp.eo, inp.vref = B747_fms_eng_out(), B747DR_airspeed_Vf30
+  -- (step 9h4b) ENG OUT active: the CRZ page's engine-out maximum for the
+  -- driftdown, once a second
+  local eo = B747_fms_eo()
+  if not (eo.active and inp.kg) then
+    inp.eo_max, vnavEoNext = nil, 0
+  elseif simDRTime >= vnavEoNext then
+    inp.eo_max, vnavEoNext = B747_fms_eo_crz_max(), simDRTime + 1
+  end
   inp.ias = simDR_ias_pilot
   inp.engaged = B747DR_ap_vnav_state == 2
   inp.clb_alt, inp.des_alt, inp.path, inp.d_ed = nil, nil, nil, nil
@@ -1767,6 +1794,13 @@ local function update_vnav()
   B747DR_fms_vnav_vs = out.vs or 0
   B747DR_fms_vnav_path_dev = out.path_dev or 0
   B747DR_fms_vnav_at = out.at or 0
+  -- (step 9h4b) the driftdown; the predictions at once when it starts or
+  -- ends (its level off: s157's first ones were before it)
+  local dd = out.dd and 1 or 0
+  if B747DR_fms_vnav_dd ~= dd then
+    B747DR_fms_vnav_dd = dd
+    B747_fms_preds_now()
+  end
   -- (step 9e1) THRUST REQUIRED, DRAG REQUIRED (the AP's notifications)
   local msg = out.msg == "THRUST" and 1 or out.msg == "DRAG" and 2 or 0
   if B747DR_fms_vnav_msg ~= msg then B747DR_fms_vnav_msg = msg end
