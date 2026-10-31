@@ -39,6 +39,7 @@ frames(4)
 local K, LN = "laminar/B747/fms1/", "laminar/B747/fms3/"
 local LNAV = "laminar/B747/autopilot/lnav_state"
 local function line(n) return rt:get(string.format("%sLine%02d_L", LN, n)) end
+local function small(n) return rt:get(string.format("%sLine%02d_S", LN, n)) end
 local function pad() return (line(14):gsub("%s+$", "")) end
 local function key(k, held)
     rt:command(K .. k, held)
@@ -111,7 +112,8 @@ T.near(rt:get("laminar/B747/autopilot/lnav/xtk_error"), 1.0, 0.02, "the AFDS's X
 key("func_key/prog")
 key("func_key/next_pg")
 frames(1.2)
-T.equal(line(5), "R 1.0NM            +**FT", "PROGRESS page 2: XTK ERROR R 1.0NM (FCOM p.1377; before always L)")
+T.check(line(5):find("^R 1%.0 ") and small(5):find("^     NM"), "PROGRESS page 2: XTK ERROR R 1.0, NM small (FCOM p.1377, p.1380; before always L): " .. line(5) .. "|" .. small(5))
+T.check(not line(5):find("FT", 1, true), "VTK ERROR blank out of the descent (FCOM p.1381; 6-1/6-2 step 11a: before +**FT)")
 
 -- OFFSET R5 (step 7d): LNAV's path 5 nm right, the OFST light
 key("func_key/fpln")

@@ -127,6 +127,76 @@ end
 function fmsFunctions.rtaprior(fmsO, value)
   if B747_rta_model.prior(B747_fms_rta(), B747_fms_rta_in_route) then rta_done(fmsO) end
 end
+-- (6-1/6-2 step 11a) PROGRESS 2 (FCOM p.1377-1382): H/WIND or T/WIND,
+-- WIND (true), X/WIND (L, R); XTK ERROR (L, R of the active route; blank
+-- without one), VTK ERROR (above +, below -: the VNAV path's in the
+-- descent, else blank); TAS, FUEL USED TOT, SAT; each engine's FUEL USED;
+-- <USE and USE> with FUEL DISAGREE; TOTALIZER and CALCULATED (blank by
+-- USE CALCULATED or a MANUAL entry, USE TOTALIZER). FUEL USED and the
+-- quantities B747.68.fuel_model.lua's (B747_fms_fuel). KT, NM, FT and C
+-- small, FUEL USED's TOT small (FCOM p.1380's figure). Before: KT and NM
+-- large, VTK ERROR +**FT always, FUEL USED since the load, both
+-- quantities the totalizer's, <USE and USE> always
+local function put(line, col, text)
+  return line:sub(1, col - 1) .. text .. line:sub(col + #text)
+end
+function prog2(mult)
+  local L, S = {}, {}
+  for i = 1, 13 do L[i], S[i] = string.rep(" ", 24), string.rep(" ", 24) end
+  L[1] = progress_title()
+  S[1] = string.format("                    2/%d ", prog_pages())
+  -- the wind, relative to the heading; its direction true
+  local spd = simDR_wind_speed
+  local wTrue = (simDR_wind_degrees - ((simDR_fms_mag_psi - simDR_fms_true_psi + 180) % 360 - 180)) % 360
+  local rel = math.rad(wTrue - simDR_fms_true_psi)
+  local head, cross = spd * math.cos(rel), spd * math.sin(rel)
+  S[2] = (head < 0 and " T/WIND" or " H/WIND") .. "   WIND    X/WIND"
+  L[3] = put(L[3], 1, string.format("%3d", math.floor(math.abs(head) + 0.5)))
+  S[3] = put(S[3], 4, "KT")
+  L[3] = put(L[3], 9, string.format("%03d`/%3d", math.floor(wTrue + 0.5) % 360, math.floor(spd + 0.5)))
+  L[3] = put(L[3], 19, string.format("%s%3d", cross >= 0 and "R" or "L", math.floor(math.abs(cross) + 0.5)))
+  S[3] = put(S[3], 23, "KT")
+  -- the track errors
+  S[4] = " XTK ERROR     VTK ERROR"
+  if B747_fmc_route.active then
+    local x = string.format("%s %.1f", B747DR_fms_lnav_xtk < 0 and "L" or "R", math.abs(B747DR_fms_lnav_xtk))
+    L[5] = put(L[5], 1, x)
+    S[5] = put(S[5], #x + 1, "NM")
+  end
+  local vtk = B747_fms_vtk()
+  if vtk then
+    local v = string.format("%+d", math.floor(vtk + 0.5))
+    L[5] = put(L[5], 23 - #v, v)
+    S[5] = put(S[5], 23, "FT")
+  end
+  -- TAS, FUEL USED, SAT
+  local o = B747_fms_fuel().out
+  S[6] = " TAS    FUEL USED    SAT"
+  L[7] = put(L[7], 1, string.format("%3d", math.floor(B747DR_TAS_pilot + 0.5)))
+  S[7] = put(S[7], 4, "KT")
+  if o.show_calc and o[5] then S[7] = put(S[7], 9, string.format("TOT %4.1f", o[5] * mult / 1000)) end
+  local sat = string.format("%d`", math.floor(simDR_air_temp + 0.5))
+  L[7] = put(L[7], 24 - #sat, sat)
+  S[7] = put(S[7], 24, "C")
+  S[8] = "   1     2      3     4 "
+  if o.show_calc and o[1] then
+    L[9] = string.format(" %4.1f  %4.1f   %4.1f  %4.1f", o[1] * mult / 1000, o[2] * mult / 1000, o[3] * mult / 1000, o[4] * mult / 1000)
+  end
+  -- the quantities and the prompts
+  local defs = fmsFunctionsDefs["PROGRESS"]
+  if o.disagree then
+    L[11] = "<USE                USE>"
+    defs["L5"], defs["R5"] = {"fueluse", "TOTALIZER"}, {"fueluse", "CALCULATED"}
+  else
+    defs["L5"], defs["R5"] = nil, nil
+  end
+  S[11] = "        FUEL QTY        "
+  S[12] = " TOTALIZER    CALCULATED"
+  if o.fqis and o.show_totalizer then L[13] = put(L[13], 1, string.format("%5.1f", o.fqis * mult / 1000)) end
+  if o.calc and o.show_calc then L[13] = put(L[13], 20, string.format("%5.1f", o.calc * mult / 1000)) end
+  return L, S
+end
+function fmsFunctions.fueluse(fmsO, value) B747_fms_fuel_choose(value) end
 -- (step 9h5a) NEXT and PREV within the pages, the last's NEXT the first and
 -- the first's PREV the last (FMSPG p.3.4-52: RTA PROGRESS by PREV from 1/3;
 -- before, X-Plane's own CDU's keys, PREV from 1/3 to a page 0)
@@ -372,56 +442,10 @@ fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
     return lastPage[fmsID]
 
   elseif pgNo==2 then
+    -- (step 11a) PROGRESS 2: prog2's
     fmsFunctionsDefs["PROGRESS"]["L6"]=nil
     fmsFunctionsDefs["PROGRESS"]["R6"]=nil
-    
-    local fuel1=string.format("%4.1f",(B747DR_engine_used_fuel[0]*mult/1000))
-    local fuel2=string.format("%4.1f",(B747DR_engine_used_fuel[1]*mult/1000))
-    local fuel3=string.format("%4.1f",(B747DR_engine_used_fuel[2]*mult/1000))
-    local fuel4=string.format("%4.1f",(B747DR_engine_used_fuel[3]*mult/1000))
-    local fuel_remaining=string.format("%5.1f",(simDR_fueL_tank_weight_total_kg*mult/1000))
-    local windSide="L"
-    local latWind="  0"
-    local longWind="  0"
-    if B747DR_ND_Wind_Bearing<-90 then 
-      windSide="R"
-      local angle=math.rad(180-(B747DR_ND_Wind_Bearing*-1))
-      latWind=string.format("%3d",math.sin(angle)*simDR_wind_speed)
-      longWind=string.format("%3d",math.cos(angle)*simDR_wind_speed)
-    elseif B747DR_ND_Wind_Bearing<0 then 
-      windSide="R"
-      local angle=math.rad(B747DR_ND_Wind_Bearing*-1)
-      latWind=string.format("%3d",math.sin(angle)*simDR_wind_speed)
-      longWind=string.format("%3d",math.cos(angle)*simDR_wind_speed)
-    elseif B747DR_ND_Wind_Bearing>90 then
-      windSide="L"
-      local angle=math.rad(180-B747DR_ND_Wind_Bearing)
-      latWind=string.format("%3d",math.sin(angle)*simDR_wind_speed)
-      longWind=string.format("%3d",math.cos(angle)*simDR_wind_speed)
-    else --0 to 90
-      windSide="L"
-      local angle=math.rad(B747DR_ND_Wind_Bearing)
-      latWind=string.format("%3d",math.sin(angle)*simDR_wind_speed)
-      longWind=string.format("%3d",math.cos(angle)*simDR_wind_speed)
-    end
-    -- XTK ERROR: left or right of the active route (FCOM p.1377: "L
-    -- 0.1NM"; the FMC's LNAV since 6-1/6-2 step 6c, FMC-38)
-    xtk_error=string.format("%s %.1fNM",B747DR_fms_lnav_xtk<0 and "L" or "R",B747DR_ap_lnav_xtk_error)
-    lastPage[fmsID]= {
-    progress_title(),
-    "                        ",
-    longWind.."KT "..string.format("%10s",B747DR_ND_Wind_Line.."KT").."  "..windSide..latWind .."KT",
-    "                        ",
-    xtk_error..string.rep(" ",19-string.len(xtk_error)).."+**FT",
-    "                        ",
-    string.format("%03.0f",B747DR_TAS_pilot).."                ".. string.format("%3d",simDR_air_temp) .."`C",
-    "                        ",
-    " ".. fuel1 .."  ".. fuel2 .."   ".. fuel3 .."  ".. fuel4 .."",
-    "                        ",
-	"<USE                USE>",
-    "                        ", 
-    fuel_remaining.."               "..fuel_remaining
-    }
+    lastPage[fmsID]=prog2(mult)
     lastPageNum[fmsID]=2
     return lastPage[fmsID]
   elseif pgNo==3 then
@@ -466,25 +490,8 @@ label,
 "                        "
 }
 elseif pgNo==2 then
-  
-  local fuel_used=string.format("%5.1f",(B747DR_engine_used_fuel[4]*mult/1000))
-  local tWind=" H/WIND"
-  if B747DR_ND_Wind_Bearing>-90 and B747DR_ND_Wind_Bearing<90 then tWind=" T/WIND" end
-  return {
-    string.format("                    2/%d ", prog_pages()),
-    tWind.."   WIND    X/WIND",
-    "                        ",
-    " XTK ERROR     VTK ERROR",
-    "      NM                ",
-    " TAS    FUEL USED    SAT",
-    "   KT   TOT ".. fuel_used .."      C",
-    "   1     2      3     4 ",
-    "                        ",
-    "                        ",   
-    "        FUEL QTY        ",
-    " TOTALIZER    CALCULATED", 
-    "                        "
-    } 
+  local _,S=prog2(mult)
+  return S
 	elseif pgNo==3 then return rta_page(true)
 end
 end
