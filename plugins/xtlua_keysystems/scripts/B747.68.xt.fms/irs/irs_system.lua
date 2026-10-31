@@ -3,9 +3,10 @@
 -- sensors module (plugins/xtlua/scripts/B747.34.xt.nav/B747.34.xt.irs.lua),
 -- which writes laminar/B747/irs/... and the IRU modes, the PFDs' IRS
 -- validity and the IRS messages. This reads them for the CDU (POS INIT,
--- POS REF, IRS MONITOR) and the ND (TIME TO ALIGN, the position update
--- line), and hands the present position and SET HDG entries to the IRUs
--- (laminar/B747/irs/pos_entry_*, set_hdg_*). GPS L and R: X-Plane's position
+-- POS REF, IRS MONITOR) and the ND's TIME TO ALIGN (its position update
+-- lines: B747.68.xt.fms.lua's update_navperf, step 10a), and hands the
+-- present position and SET HDG entries to the IRUs (laminar/B747/irs/
+-- pos_entry_*, set_hdg_*). GPS L and R: X-Plane's position
 -- while the module has them navigating (laminar/B747/gps/valid).
 simDR_groundspeed=find_dataref("sim/flightmodel/position/groundspeed")
 B747DR_iru_mode_sel_pos         = find_dataref("laminar/B747/flt_mgmt/iru/mode_sel_dial_pos")
@@ -188,19 +189,8 @@ irsSystem.update=function()
   gpsR["aligned"]=B747DR_nav_gps_valid[1]==1
   irsSystem.setStatus()
 
-  --Marauder28
-  --GPS/IRS DISPLAY
-  if irsSystem["irsL"]["aligned"] == true and irsSystem["irsC"]["aligned"] == true and irsSystem["irsR"]["aligned"] == true then
-    B747DR_ND_IRS_Line = "IRS (3)"
-  elseif irsSystem["irsL"]["aligned"] == true then
-	  B747DR_ND_IRS_Line = "IRS (L)"
-  elseif irsSystem["irsC"]["aligned"] == true then
-	  B747DR_ND_IRS_Line = "IRS (C)"
-  elseif irsSystem["irsR"]["aligned"] == true then
-	  B747DR_ND_IRS_Line = "IRS (R)"
-  else
-    B747DR_ND_GPS_Line = "GPS"
-  end
+  -- the ND's update lines: the FMC's (B747.68.xt.fms.lua's
+  -- update_navperf, 6-1/6-2 step 10a)
 
   --Update Set Hdg on FMC: dashes while an IRU is in ATT (FCOM p.1286),
   --an entry shown for 2 seconds

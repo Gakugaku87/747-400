@@ -170,4 +170,14 @@ end
 T.equal(N.variation(db, 35.2, 140.2), -7, "near ZZV: its -7 (7 degrees west)")
 T.equal(N.variation(db, 10.1, 10.1), 1, "near the other ZZV: its 1")
 T.equal(N.variation(db, -60, -100), nil, "far from any VOR: none")
+
+-- (step 10a) the radio navaids near a point: VORs, DMEs, localizers
+local seen, n = {}, 0
+for _, e in ipairs(N.radio_near(db, 35.0, 140.0, 60)) do seen[db.ident[e.i] ] = e.dist; n = n + 1 end
+T.check(n == 5 and seen.ZZV and seen.ZZD and seen.IZA and seen.ZZE and seen.ZZW and not seen.ZA,
+    "within 60 nm of 35N 140E: ZZV, ZZD, IZA, ZZE, ZZW, not the NDB ZA")
+T.near(seen.ZZV, 15.5, 0.2, "ZZV 15.5 nm away")
+T.equal(#N.radio_near(db, 35.0, 140.0, 10), 1, "within 10 nm: the localizer alone")
+T.equal(#N.radio_near(db, -60, -100, 200), 0, "none far away")
+T.equal(#N.radio_near(db, 89.5, 140.0, 200), 0, "near the pole: none, every cell's column")
 T.done()
