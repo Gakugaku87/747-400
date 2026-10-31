@@ -30,7 +30,7 @@ local FD = "laminar/B747/toggle_switch/position"
 local ATT = "laminar/B747/autopilot/att_rate"
 
 local rt = xtlua.new()
-rt:load(AP)
+local ap = rt:load(AP)
 rt:set("laminar/B747/simconfig", '{"PLANE":{"engines":"PW4056"}}')
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("xtlua/fms", "[]")
@@ -462,6 +462,14 @@ frames(3)
 T.equal(rt:get(PITCH), 4, "the cruise descent: VNAV SPD")
 T.equal(rt:get(AT_FMA_ST), 4, "the A/T's THR")
 T.check(rt:get(LEVER_CMD) < c0, string.format("the levers less for 1,250 fpm down: %.4f from %.4f", rt:get(LEVER_CMD), c0))
+-- (2026-10-31) one long frame (X-Plane below 20 fps: its time slower, the
+-- frame's SIM_PERIOD real time): the A/T's command 0.05 s worth at most
+-- (s145's F/D pitch and stabilizer stepped at once)
+local c1 = rt:get(LEVER_CMD)
+for e = 0, 3 do rt:set("laminar/B747/engine/throttle", e, c1) end
+rt:frame(2)
+T.check(c1 - rt:get(LEVER_CMD) <= ap.ns.B747_at_model.K_VS_VNAV * 1250 * 0.05 + 1e-9,
+    string.format("a 2 s frame: %.5f less, 0.05 s worth at most", c1 - rt:get(LEVER_CMD)))
 -- the hand 8 degrees off the A/T's command: HOLD (the crew sets the rate:
 -- FCOM p.1260; the settled HOLD at the rate is the A/T model's test's: here
 -- the speed stays 0, a jump of it would read as a dive)

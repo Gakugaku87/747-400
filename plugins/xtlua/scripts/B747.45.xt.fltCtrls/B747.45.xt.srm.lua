@@ -74,6 +74,10 @@ local STATUS_STAB_SPEED_TRIM = 93
 local LE_A_IN = 0.01        -- a group A panel counts as in below this (the FCU's position)
 local STAB_INIT_S = 3       -- from the flight's start, the stabilizer follows X-Plane's trim
 local TRIM_SAME = 1e-4      -- X-Plane's trim this close to what was written is ours
+-- (2026-10-31) the model's time step at most X-Plane's 0.05 s a frame: below
+-- 20 fps X-Plane's time runs slower while SIM_PERIOD stays real time (s145:
+-- one long frame moved the stabilizer 0.13 of X-Plane's trim at once)
+local SRM_DT_MAX = 0.05
 
 local srm_state = S.new()
 local srm_inputs = S.inputs()
@@ -220,7 +224,7 @@ function B747_srm()
         S.stab_set(srm_state, units(xp))
     end
 
-    local out = S.update(srm_state, inp, SIM_PERIOD)
+    local out = S.update(srm_state, inp, math.min(SIM_PERIOD, SRM_DT_MAX))
 
     -- the stabilizer (X-Plane keeps a float: compare with a margin)
     local trim = trim_of(out.stab_units)
