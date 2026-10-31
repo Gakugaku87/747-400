@@ -71,6 +71,10 @@ seconds(0.2)
 T.equal(rt:get(FUEL_ON, 0), 1, "CUTOFF: fuel-on indicator")
 T.equal(rt:get(FUEL_ON, 1), 0, "CUTOFF with fire switch 2 pulled: no fuel-on indicator")
 rt:set("laminar/B747/fire/engine02/ext_switch/pos_arm", 0)
+-- (the FMC's step 9h3) the engines inoperative (N2 under 52 %) for the
+-- FMC, the AFDS and the A/T
+local INOP = "laminar/B747/engines/inop"
+T.equal(rt:get(INOP, 0), 1, "not started: engine 1 inoperative")
 
 -- autostart: AUTOSTART ON, START 1, FUEL CONTROL 1 RUN
 rt:set("laminar/B747/button_switch/position", 45, 1)
@@ -96,6 +100,8 @@ T.equal(rt:get("laminar/B747/CAS/caution_status", 61), 0, "no STARTER CUTOUT 1")
 T.equal(rt:get("laminar/B747/CAS/caution_status", 19), 0, "no ENG 1 AUTOSTART")
 T.equal(rt:get(SPOOL), 5, "start over: spool time back to 5 s")
 T.equal(rt:get(FUEL_ON, 0), 0, "RUN: no fuel-on indicator")
+T.equal(rt:get(INOP, 0), 0, "at idle: engine 1 not inoperative")
+T.equal(rt:get(INOP, 1), 1, "engine 2 not started: inoperative")
 
 -- a manual start motors at CUTOFF: spool time 26 s from the START switch (ENG-35)
 rt:set("laminar/B747/button_switch/position", 45, 0)        -- AUTOSTART OFF

@@ -1701,6 +1701,18 @@ B747DR_fms_thrlim_eicas = find_dataref("laminar/B747/fms/thrlim/eicas")
 -- not see this one's string writes: s152 and s141's references were TO's)
 B747DR_fms_thrlim_code = find_dataref("laminar/B747/fms/thrlim/code")
 local THRLIM_CODE = {TO = 1, CLB = 2, CRZ = 3, CON = 4, GA = 5}
+-- (step 9h3) the engines inoperative (the engines' N2 under the ENG FAIL
+-- speed: B747.40.engine_start_model.lua), sensed in the air (on the
+-- ground before the start all four are)
+B747DR_fms_eng_inop = find_dataref("laminar/B747/engines/inop")
+function B747_fms_eng_out()
+  if simDR_onGround == 1 then return 0 end
+  local n = 0
+  for i = 0, 3 do
+    if B747DR_fms_eng_inop[i] > 0.5 then n = n + 1 end
+  end
+  return n
+end
 local thrlimState = B747_thrlim_model.new()
 local thrlimIn = {}
 local thrlimSeen = {}
@@ -1738,6 +1750,8 @@ local function update_thrlim()
   -- (the derate's own %, or the EEC's whole reduction with the assumed
   -- temperature's)
   inp.to_red = math.max(B747_fms_thrlim_pct(thrlimState.to), B747DR_fms_to_reduction)
+  -- (step 9h3) an engine inoperative: the takeoff's CON at VREF 30 + 98
+  inp.eo, inp.ias, inp.vref = B747_fms_eng_out(), simDR_ias_pilot, B747DR_airspeed_Vf30
   local mode = B747_thrlim_model.update(thrlimState, inp)
   if B747DR_fms_thrlim_mode ~= mode then B747DR_fms_thrlim_mode = mode end
   local s = thrlimState

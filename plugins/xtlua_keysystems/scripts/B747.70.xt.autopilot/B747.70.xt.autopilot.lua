@@ -949,6 +949,8 @@ simDR_at_rev_deploy = find_dataref("sim/flightmodel2/engines/thrust_reverser_dep
 -- the F/O transfer bus (FMC R's too; FMC L the APU standby bus), its drive
 -- on DC buses 1 and 2 (either: estimate)
 B747DR_at_bus_xfr_fo = find_dataref("laminar/B747/electrical/bus/xfr_fo")
+-- (the FMC's step 9h3) the engines inoperative (B747.40.engine_start_model.lua)
+B747DR_at_eng_inop = find_dataref("laminar/B747/engines/inop")
 -- (step 9f2) the servo's command for the EEC; the thrust and its
 -- reference (the EEC's EPR or N1 bugs) for the laws
 B747DR_at_servo = deferred_dataref("laminar/B747/autothrottle/servo", "number")
@@ -973,12 +975,15 @@ local atSeen = {spd = 0, thr = 0, disc = 0, toga = nil}
 local function afds_at()
 	local i = atIn
 	i.arm = B747DR_ap_autothrottle_armed == 1
-	-- the interlocks (ATA34_2 p.644-645): three engines running (N1 over
-	-- 15 %: the old monitor's), the A/T's fail (the EECs' ALTN:
-	-- B747.42.xt.eec_thrust.lua), an FMC and the servo powered (step 9f3)
+	-- the interlocks (ATA34_2 p.644-645): three engines running (FCOM
+	-- p.641: off with more than one inoperative; the FMC's step 9h3: the
+	-- engines' inoperative, N2 under the ENG FAIL speed; before, N1 over
+	-- 15 %, which a windmilling engine can pass), the A/T's fail (the EECs'
+	-- ALTN: B747.42.xt.eec_thrust.lua), an FMC and the servo powered (step
+	-- 9f3)
 	local run = 0
 	for e = 0, 3 do
-		if B747DR_display_N1[e] > 15 then run = run + 1 end
+		if B747DR_at_eng_inop[e] < 0.5 then run = run + 1 end
 	end
 	-- (the F/O transfer bus is FMC R's too: with it an FMC is powered)
 	local power = B747DR_at_bus_xfr_fo > 0.5

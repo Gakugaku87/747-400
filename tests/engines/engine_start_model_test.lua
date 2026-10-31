@@ -186,6 +186,16 @@ do
     T.check(out.eng[1].phase ~= S.ABORTED and not out.msg.autostart[1], "in-flight start: no abort, no ENG AUTOSTART")
     T.check(out.eng[1].igniter1 and out.eng[1].igniter2 or out.eng[1].phase == S.DRY, "in-flight start: both igniters")
     T.check(out.msg.fail[1], "in-flight start below 52 % N2: ENG 1 FAIL (caution)")
+    -- (the FMC's step 9h3) the engine inoperative for the FMC, the AFDS and
+    -- the A/T: below the ENG FAIL speed, on the ground too
+    T.check(out.eng[1].inop, "below 52 % N2: inoperative")
+    inp.n2[1], inp.burning[1] = 80, true
+    out = S.update(s, inp, 0.1)
+    T.check(not out.eng[1].inop, "80 % N2: not inoperative")
+    inp.on_ground = true
+    inp.n2[1], inp.burning[1] = 20, false
+    out = S.update(s, inp, 0.1)
+    T.check(out.eng[1].inop and not out.msg.fail[1], "on the ground at 20 % N2: inoperative (ENG FAIL inhibited there)")
 end
 
 -- ignition conditions and power (FCOM p.862-864, p.882-883)

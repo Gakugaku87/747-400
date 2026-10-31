@@ -297,6 +297,10 @@ function M.update(s, inp, dt)
         -- switch pulled or CUTOFF (FCOM p.902; on the ground not shown: estimate)
         msg.fail[n] = not inp.on_ground and run and n2 < M.FAIL_N2
         msg.shutdown[n] = not inp.on_ground and (inp.fire_out[n] or not inp.fuel_control[n])
+        -- (the FMC's step 9h3) the engine inoperative, failed, flamed out or
+        -- shut down, for the FMC, the AFDS and the A/T: below the ENG FAIL
+        -- speed, also on the ground (estimate: their sources give no speed)
+        o.inop = n2 < M.FAIL_N2
         o.phase = e.phase
         o.attempt = e.attempt
     end
