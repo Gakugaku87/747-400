@@ -361,13 +361,8 @@ function B747_monitor_THR_REF_AT()
 
     if timediff<0.1 then return end
     if not(isATEnabled()) then return end
-    if ((B747DR_ap_thrust_mode == 0 and simDR_autopilot_flch_status>0) or (simDR_radarAlt1>2000 and( simDR_pressureAlt1< simDR_autopilot_altitude_ft+B747DR_alt_capture_window and simDR_pressureAlt1> simDR_autopilot_altitude_ft-B747DR_alt_capture_window))) and B747DR_autothrottle_active == 0 then
-        print("B747_monitor_THR_REF_AT B747DR_ap_thrust_mode " .. B747DR_ap_thrust_mode)
-        B747DR_ap_thrust_mode = 0
-        B747DR_autothrottle_active=1
-        B747DR_ap_lastCommand = simDRTime
-        return
-    end
+    -- (the A/T's engage in FLCH and at a capture is the A/T model's: the
+    -- FMC's step 9f1; before, here)
     if B747DR_ap_FMA_autothrottle_mode~=5 then return end
 
     local n1_pct=math.max(B747DR_display_N1[0],B747DR_display_N1[1],B747DR_display_N1[2],B747DR_display_N1[3])
@@ -607,81 +602,17 @@ function B747_monitorAT()
     .. " course "..simDR_autopilot_course
     .. " type "..simDR_autopilot_destination_type
     .. " index "..simDR_autopilot_destination_index)]]
-    --disconnects if 2 more more (more than one) engine inop
-    local numRun=0;
-    if B747DR_display_N1[0]>15.0 then numRun=numRun+1 end
-    if B747DR_display_N1[1]>15.0 then numRun=numRun+1 end
-    if B747DR_display_N1[2]>15.0 then numRun=numRun+1 end
-    if B747DR_display_N1[3]>15.0 then numRun=numRun+1 end
-
-    if numRun<3 or B747DR_autothrottle_fail>0 then
-        if B747DR_autothrottle_active==1 then
-            print("2+ engines inop or fail AT")
-            --simCMD_autopilot_autothrottle_off:once()
-            B747DR_autothrottle_active=0
-            B747DR_ap_lastCommand=simDRTime
-            B747DR_autothrottle_fail=1
-        end
-        if B747DR_ap_FMA_autothrottle_mode>0 then
-            print("B747DR_ap_FMA_autothrottle_mode fail AT")
-            B747DR_autothrottle_fail=1
-        end
-        B747DR_engine_TOGA_mode = 0 
-    end
-
-   --AT OFF
-    if not(isATEnabled()) then --or simDR_radarAlt1<25
-        if B747DR_autothrottle_active==1 then
-            print("AT off")
-            --simCMD_autopilot_autothrottle_off:once()
-            B747DR_autothrottle_active=0
-            B747DR_ap_lastCommand=simDRTime
-        end
-
-        return
-    end
-
-    --ALT/VS/GS
-    --if simDR_autopilot_alt_hold_status == 2 then
-
-    --if  B747DR_ap_FMA_active_pitch_mode==5 or B747DR_ap_FMA_active_pitch_mode==9 then
-    if  simDR_autopilot_alt_hold_status==2 or B747DR_ap_FMA_active_pitch_mode==2 then
-        if B747DR_ap_thrust_mode~=0 then
-            print("B747DR_ap_thrust_mode~=0")
-            B747DR_ap_lastCommand=simDRTime
-        end
+    -- (the A/T's disconnect for two engines out and its fail, the ARM
+    -- switch off, and its engage and SPD in ALT, V/S and G/S are the A/T
+    -- model's: the FMC's step 9f1, B747.70.xt.autopilot.lua's afds_at;
+    -- before, here)
+    -- ALT HOLD or G/S: the old flight phase's cruise (the thrust
+    -- reference's, until step 9g)
+    if simDR_autopilot_alt_hold_status==2 or B747DR_ap_FMA_active_pitch_mode==2 then
         B747DR_ap_thrust_mode=0
-        B747DR_engine_TOGA_mode = 0	-- CANX ENGINE TOGA IF ACTIVE
         if B747DR_ap_flightPhase<3 then
             B747DR_ap_flightPhase=2
         end
-
-        if B747DR_autothrottle_active==0 then
-            print("simDR_autopilot_alt_hold_status")
-            B747DR_autothrottle_active=1
-            B747DR_ap_lastCommand=simDRTime
-        end
-
-        return
-    end
-    if (B747DR_ap_FMA_active_pitch_mode == 9
-    or B747DR_ap_FMA_active_pitch_mode == 7) and B747DR_ap_vnav_state > 0
-    or B747DR_ap_FMA_active_pitch_mode == 2 then
-        if B747DR_autothrottle_active==0 then
-            print("B747DR_ap_FMA_active_pitch_mode")
-            B747DR_autothrottle_active=1
-            if B747DR_engine_TOGA_mode ==1 then B747DR_engine_TOGA_mode = 0 end	-- CANX ENGINE TOGA IF ACTIVE
-            B747DR_ap_lastCommand=simDRTime
-        end
-        B747DR_ap_thrust_mode=0
-
-        return
-    end
-
-    if B747DR_autothrottle_active==1 and B747DR_ap_FMA_active_pitch_mode==2 and B747DR_ap_FMA_autothrottle_mode ~= 3 then -- SPD
-        B747DR_ap_lastCommand=simDRTime
-        B747DR_ap_FMA_autothrottle_mode=3
-        return
     end
 end
 

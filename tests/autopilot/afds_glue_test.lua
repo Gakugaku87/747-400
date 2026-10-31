@@ -346,6 +346,7 @@ fvn({perf = 1, valid = 1, phase = 1, mode = 1, cas = 300, mach = 0.84, mach_mode
 for i = 0, 3 do rt:set("laminar/B747/engines/display_N1", i, 90) end
 rt:set("laminar/B747/engines/autothrottle_fail", 0)
 rt:set(FD, 29, 1)
+rt:set("laminar/B747/autothrottle/armed", 1)
 rt:set("laminar/B747/airspeed/Vmo", 365)
 rt:set(RA, 300)
 rt:command(CMD .. "VNAV")
@@ -424,11 +425,17 @@ T.equal(rt:get(PHASE), 2, "the cruise's phase")
 -- again, the ND's VNAV path pointer (after_tod; 120 ft above the path:
 -- FCOM p.1149)
 rt:set(MCP_ALT, 3000)
+local LEVER = "laminar/B747/engine/throttle"
+for e = 0, 3 do rt:set(LEVER, e, 0.5) end
 fvn({phase = 3, mode = 2, alt = 10000, vs = -2000, path_dev = 120, at = 2, mach_mode = 0, cas = 280})
 local p2 = rt:get(PITCH_CMD)
 frames(30)
 T.equal(rt:get(PITCH), 6, "the descent: VNAV PTH")
 T.equal(rt:get(AT_FMA_ST), 2, "the A/T IDLE")
+-- (step 9f1) the levers at the aft stop: HOLD (ATA34_2 p.666)
+for e = 0, 3 do rt:set(LEVER, e, 0) end
+frames()
+T.equal(rt:get(AT_FMA_ST), 1, "the levers at the aft stop: HOLD")
 T.check(rt:get(PITCH_CMD) < p2 - 0.1, "-2,000 fpm asked from level: the command down")
 T.equal(rt:get("sim/cockpit2/autopilot/airspeed_is_mach"), 0, "the dial in knots")
 T.equal(rt:get(DIAL), 280, "the FMC's 280 kt")
@@ -465,6 +472,23 @@ frames()
 T.equal(rt:get(VNAV_STATE), 0, "V/S ends VNAV (FCOM p.645)")
 T.equal(rt:get(PITCH), 7, "the FMA's V/S")
 T.equal(rt:get(VS_STATUS), 2, "the old law's V/S")
+-- (the FMC's step 9f1) the A/T through the glue: SPD after VNAV into V/S
+-- (ATA34_2 p.654); a disconnect push: off, >AUTOTHROT DISC (caution 5);
+-- a second: the message off (FCOM p.657); the SPD switch: SPD
+local DISC_ST = "laminar/B747/CAS/caution_status"
+T.equal(rt:get(AT_FMA_ST), 3, "VNAV into V/S: the A/T's SPD")
+rt:command(CMD .. "autothrottle_disco_L")
+frames()
+T.equal(rt:get(AT_FMA_ST), 0, "a disconnect push: the A/T off")
+T.equal(rt:get(AT_ACTIVE), 0, "not active")
+T.equal(rt:get(DISC_ST, 5), 1, ">AUTOTHROT DISC")
+rt:command(CMD .. "autothrottle_disco_R")
+frames()
+T.equal(rt:get(DISC_ST, 5), 0, "a second push: the message off")
+rt:command(CMD .. "speed_mode")
+frames()
+T.equal(rt:get(AT_FMA_ST), 3, "the SPD switch in V/S: SPD")
+T.equal(rt:get(AT_ACTIVE), 1, "active")
 -- 1d: the approach modes through the model. APP arms LOC and G/S (with no
 -- ILS too: the old one posted RW/ILS CRS ERROR, flag 40); the captures by
 -- the pitch and roll laws' geometry (steps 2b and 3c: both receivers'

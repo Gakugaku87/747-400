@@ -323,13 +323,7 @@ function des_aptres_setSpd()
     B747DR_ap_ias_dial_value = math.min(399.0, spdval)
     B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
     run_after_time(B747_updateIAS, 0.25)
-    if B747DR_autothrottle_active == 0 and simDR_ind_airspeed_kts_pilot < spdval+5 then							-- AUTOTHROTTLE IS "OFF"
-       if isATEnabled() then
-        B747DR_autothrottle_active=1
-       end
-        B747DR_ap_lastCommand = simDRTime
-        if B747DR_engine_TOGA_mode ==1 then B747DR_engine_TOGA_mode = 0 end	-- CANX ENGINE TOGA IF ACTIVE
-    end
+    -- (the A/T: the A/T model's, the FMC's step 9f1; before, active here)
 end
 function des_spcres_setSpd()
     local spdval=desRestSpd()
@@ -338,13 +332,7 @@ function des_spcres_setSpd()
     B747DR_ap_ias_dial_value = math.min(399.0, spdval)
     B747DR_lastap_dial_airspeed=B747DR_ap_ias_dial_value
     run_after_time(B747_updateIAS, 0.25)
-    if B747DR_autothrottle_active == 0 and simDR_ind_airspeed_kts_pilot < spdval+5 then							-- AUTOTHROTTLE IS "OFF"
-        if isATEnabled() then
-            B747DR_autothrottle_active=1
-        end
-        B747DR_ap_lastCommand = simDRTime
-        if B747DR_engine_TOGA_mode ==1 then B747DR_engine_TOGA_mode = 0 end	-- CANX ENGINE TOGA IF ACTIVE
-    end
+    -- (the A/T: the A/T model's, the FMC's step 9f1; before, active here)
 end
 spd_states["clb"]["src"]["spdfunc"]=clb_src_setSpd
 spd_states["clb"]["aptres"]["spdfunc"]=clb_aptres_setSpd

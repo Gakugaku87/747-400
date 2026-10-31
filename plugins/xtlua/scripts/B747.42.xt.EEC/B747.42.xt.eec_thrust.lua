@@ -96,9 +96,9 @@ function B747_eec_update()
     B747DR_eec_CAS_advisory[ADV_IDLE_DISAGREE] = flag(eec_out.idle_disagree)
     -- the A/T: off when an EEC goes to the alternate mode and while it may
     -- not be used; EEC_status gates the A/T modes in throttle_management
+    -- (the A/T model disengages the A/T on the fail: the FMC's step 9f1)
     if eec_out.at_disconnect or eec_out.at_inhibit then
         if B747DR_autothrottle_fail == 0 then B747DR_autothrottle_fail = 1 end
-        if B747DR_autothrottle_active == 1 then B747DR_autothrottle_active = 0 end
     end
     if eec_out.at_inhibit then EEC_status = 1 else EEC_status = 0 end
     -- X-Plane's one idle setting: approach idle when any engine selects it

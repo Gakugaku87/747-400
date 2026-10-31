@@ -489,11 +489,8 @@ function B747_thrust_rev_hold_max_all_CMDhandler(phase, duration)
     callEngineReverse[1]=-1
     callEngineReverse[2]=-1
     callEngineReverse[3]=-1
-    B747DR_engine_TOGA_mode = 0
-    B747DR_autothrottle_active=0
-    B747DR_ap_FMA_autothrottle_mode=0
-    B747DR_autothrottle_fail = 1
-    B747DR_ap_thrust_mode = 0
+    -- (the A/T off without AUTOTHROT DISC on the reversers: the A/T model's,
+    -- the FMC's step 9f1; before, its fail here: the message every reverse)
 	B747DR_ap_vnav_state = 0
 	B747DR_ap_inVNAVdescent = 0
 	B747DR_ap_flightPhase = 2
@@ -560,22 +557,10 @@ function B747_engine_TOGA_power_CMDhandler(phase, duration)
 	if phase == 0 then
         B747_engine_display_toga()  -- the EGT amber inhibit (FCOM p.872)
         -- the AFDS takes the push from the count (6-3 step 1e)
+        -- (the A/T's TO and G/A too: the A/T model's, the FMC's step 9f1;
+        -- before, the A/T active and its fail reset here, TOGA_mode 0.9)
         B747DR_ap_toga_pushes = B747DR_ap_toga_pushes + 1
-        if B747DR_engine_TOGA_mode == 0 and (simDR_all_wheels_on_ground==0 or (simDR_all_wheels_on_ground==1 and B747DR_toggle_switch_position[29] == 1)) then
-            --[[simDR_engine_throttle_input[0] = 0.95
-            simDR_engine_throttle_input[1] = 0.95
-            simDR_engine_throttle_input[2] = 0.95
-            simDR_engine_throttle_input[3] = 0.95]]
-            B747DR_engine_TOGA_mode = 0.9
-            
-        
-        end	
-        if B747DR_toggle_switch_position[29] == 1 then
-            B747DR_autothrottle_fail = 0
-            B747DR_autothrottle_active=1
-            
-        end		
-	end	
+	end
 end
 
 
@@ -785,11 +770,7 @@ function B747_prop_mode()
           -- 
         elseif (callEngineReverse[i]==1 and B747DR_reverser_lockout == 0 and simDR_engine_throttle_jet_all<=0) or simDR_thrust_rev_deploy_ratio[i]>0.01 and not(clearingReverse) then
             simDR_prop_mode[i] = 3
-            B747DR_engine_TOGA_mode = 0
-            B747DR_autothrottle_active=0
-            B747DR_ap_FMA_autothrottle_mode=0
-            B747DR_autothrottle_fail = 1
-            B747DR_ap_thrust_mode = 0
+            -- (the A/T: the A/T model's, the FMC's step 9f1)
             B747DR_ap_vnav_state = 0
             B747DR_ap_inVNAVdescent = 0
             B747DR_ap_flightPhase = 2

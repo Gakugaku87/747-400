@@ -507,6 +507,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
 - ELEC-18（2026-10-30、notes §38、ATA-24.md §10）：AFDS のモデルが母線の分離の要求（`M.bus_isolate_request`）を持ち、グルーが新設の `autopilot/bus_isolate_req`（init `B747.70.autopilot`）に書く。電源のモジュール（別のプラグイン `xtlua`）がそれを読んで BTB・DCIR を開き、`electrical/bus_isolated` を返す。LAND 3 にはそれが要る。
 - 段 6a（2026-10-31、notes §39）：ヨーダンパーのモデル（`plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.yd_model.lua`）が上下の YDM のモード・engage・INOP・権限を持つ。グルーは同じ油圧モジュールの `B747.19.xt.yaw_damper.lua`（則と舵の上書きの隣）で、`flt_ctrls/yaw_damper_upr_on`・`lwr_on`（INOP 灯と EICAS が読む。前は `xtlua` の操縦系統のモジュールが書いていた）と新設の `flt_ctrls/yaw_damper_mode` を書く。
 - 段 6b（2026-10-31、notes §40）：同じモデルが指令（横滑りの変化率 × 動圧のゲイン、各 ±4°）も出し、グルーが `flt_ctrls/yaw_damper_upr`・`lwr`（4° に対する比）に書く。油圧モジュールの上書きはそれを ratio changer を通さずに舵に足す。
+- A/T（6-4、FMC の段 9f1、2026-10-31：notes/ATA-34-61-FMC.md §59）：`B747.70.at_model.lua`（純粋、`B747_at_model`）が engage の論理・>AUTOTHROT DISC の latch・モードを持ち、AP のつなぎ `afds_at` が毎フレーム AFDS の後に回して `engines/autothrottle_active`・FMA の A/T・`engines/TOGA_mode`・caution 5 を書く（書くのはここだけ。ほかは読むか、イベントを渡す：ARM は manipulators の `autothrottle/armed`、TO/GA の押しの数は engines の `autopilot/toga_pushes`、SPD・THR・disconnect のスイッチは AP のハンドラ、EEC の ALTN は `autothrottle_fail`）。レバーはまだ EEC の servo（FMA のモードで動かす：段 9f2 でモデルへ）。
 
 ## 7. エンジン型式
 

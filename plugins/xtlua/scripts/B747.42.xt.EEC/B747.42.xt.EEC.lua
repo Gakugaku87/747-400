@@ -914,10 +914,10 @@ function spd_throttle()
 
             spd_target_throttle= (spd_target_throttle-rog)
     end
-	if simDR_radarAlt1<25.1 then
-		B747DR_ap_FMA_autothrottle_mode=2
-		spd_target_throttle=0
-	elseif spd_target_throttle<0  then
+	-- (the flare retard is the AFDS's with LAND 3 or 2, the A/T model's IDLE:
+	-- ATA34_2 p.648, the FMC's step 9f1; before, SPD went IDLE here at 25 ft
+	-- in any landing and the EEC wrote the FMA)
+	if spd_target_throttle<0  then
 		spd_target_throttle=0
 	elseif 	spd_target_throttle>1 then
 		spd_target_throttle=1
@@ -947,8 +947,11 @@ function ecc_throttle()
 		if time>1 or time==0 then
 			return
 		end
+		-- (IDLE's added thrust when slow: not near the ground, the flare
+		-- retard's IDLE is idle: the FMC's step 9f1; before, SPD's own 25 ft
+		-- clamp kept it off. FCOM p.1259's SPD below the target: step 9e)
 		if B747DR_ap_FMA_autothrottle_mode==3 --SPD
-		or (B747DR_ap_FMA_autothrottle_mode==2 and simDR_ind_airspeed_kts_pilot<minSafeSpeed) --IDLE need thrust
+		or (B747DR_ap_FMA_autothrottle_mode==2 and simDR_ind_airspeed_kts_pilot<minSafeSpeed and simDR_radarAlt1>100) --IDLE need thrust
 		then
 				spd_throttle()
 				return
@@ -1087,10 +1090,8 @@ function throttle_management()
 		--Give throttle control back to the user
 		--hold_mode = 0
 		--simDR_override_throttles = 0
-		if B747DR_autothrottle_active == 1 then
-			B747DR_autothrottle_active = 0
-
-		end
+		-- (the A/T's state is the A/T model's: the FMC's step 9f1, AP's
+		-- afds_at)
 		B747DR_ref_line_magenta = 0
 		--speed_mode = 1
 		--ecc_spd()
@@ -1099,10 +1100,7 @@ function throttle_management()
 			print("Override Throttles = ", simDR_override_throttles)
 		end
 	end
-	if B747DR_autothrottle_fail == 1 then
-		--Autothrottle has been disabled for some reason
-		B747DR_autothrottle_active = 0
-	end
+	-- (the A/T off with its fail: the A/T model's, the FMC's step 9f1)
 	ecc_spd() --also handles reverse throttle
 	if B747DR_ap_autothrottle_armed == 1 and B747DR_ap_FMA_autothrottle_mode > 1 then --not none or HOLD
 		--new SPD
