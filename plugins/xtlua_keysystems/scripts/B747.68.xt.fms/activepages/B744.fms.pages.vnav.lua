@@ -153,6 +153,9 @@ function fmsFunctions.vnavspd(fmsO, value)
   elseif value == "lrc" then
     setFMSData("crzspdmode", "L") setFMSData("crzcas", "")
   end
+  -- (step 9h5b) ECON or LRC selected: an active RTA ended (FCOM p.1354:
+  -- ECON's execution ends it; at once and for LRC too: estimate)
+  if value == "crz" or value == "lrc" then B747_rta_model.terminate(B747_fms_rta()) B747_fms_preds_now() end
   B747_fms_econ_now()
   update_econ()
 end
@@ -354,7 +357,9 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["L2"]={"setdata","crzspd"}
       fmsFunctionsDefs["VNAV"]["L3"]=nil
       fmsFunctionsDefs["VNAV"]["L4"]={"setdata","stepsize"}
-      fmsFunctionsDefs["VNAV"]["L5"]=fmsModules["data"]["crzspdmode"]~="E" and {"vnavspd","crz"} or nil
+      -- (step 9h5b) an active RTA's speed (FCOM p.1354): <ECON too
+      local rtaMach = B747_fms_rta_mach()
+      fmsFunctionsDefs["VNAV"]["L5"]=(fmsModules["data"]["crzspdmode"]~="E" or rtaMach) and {"vnavspd","crz"} or nil
       -- (step 9h5a) <RTA PROGRESS: PROGRESS 3/3, the 109's (FCOM p.1354,
       -- p.1383; before, PROGRESS 1/3); none on the 570
       fmsFunctionsDefs["VNAV"]["L6"]=B747DR_fms_engine_type ~= 1 and {"setpage_no","PROGRESS_3"} or nil
@@ -382,6 +387,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       local mode = vnav_text("crzspdmode")
       local cas, mach = tonumber(fmsModules["data"]["crzcas"]), tonumber(fmsModules["data"]["crzspd"])
       local cmdMach = (cas and crz > 0) and B747_perf_db.cas_to_mach(cas, crz) or (mach or 810) / 1000
+      if rtaMach then cmdMach = rtaMach end
       local pred = B747_fms_preds()
       local tdNM = pred and pred.td or nil
       local nearTD = tdNM ~= nil and tdNM < 200
@@ -436,8 +442,10 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
         etafuel = string.format("%02d%02dz/%.1f", eh, em, perf_out(pred.dest.fuel / 1000))
       end
       dICAO = (B747_fmc_route.rte.dest and B747_fmc_route.rte.dest.ident) or "****"
-      -- ECON, LRC or SEL SPD: a Mach, or a selected CAS
+      -- ECON, LRC or SEL SPD: a Mach, or a selected CAS; (step 9h5b) RTA
+      -- SPD's Mach
       local spdText = cas and string.format("%3d", cas) or "." .. vnav_text("crzspd")
+      if rtaMach then spdText = string.format(".%03d", math.floor(rtaMach * 1000 + 0.5)) end
       -- (step 9h4a) the engine-out data (FCOM p.1350-1353; FMSPG p.3.4-5):
       -- CRZ ALT at most MAX (so shown in the modification), LRC SPD (E/O LRC
       -- at CRZ ALT), E/O SPD (the minimum drag) or SEL SPD; the title E/O
@@ -511,7 +519,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       end
       fmsFunctionsDefs["VNAV"]["R5"]={"eoeng","out"}
       return{
-        vnav_title(int_title(crzActive, spd_title(mode, cas, (not cas) and mach or nil)) .. " CRZ" .. (crzChg and " " .. crzChg or ""), crzActive,
+        vnav_title(int_title(crzActive, rtaMach and "RTA" or spd_title(mode, cas, (not cas) and mach or nil)) .. " CRZ" .. (crzChg and " " .. crzChg or ""), crzActive,
           eo.mod == "ALL ENG"),
       "                        ",
       lr(fmsModules["data"]["crzalt"], stepTo and string.format("FL%03d", math.floor(stepTo / 100 + 0.5)) or ""),
@@ -522,7 +530,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       "                        ",
       string.format("%-12s", vnav_text("stepsize"))..optmax,
       "------------------------",
-      lr(mode~="E" and "<ECON" or "", "ENG OUT>"),
+      lr((mode~="E" or rtaMach) and "<ECON" or "", "ENG OUT>"),
       "                        ",
       lr(vnav_6l(B747DR_fms_engine_type ~= 1 and "<RTA PROGRESS" or ""), mode~="L" and "LRC>" or "")
       }
@@ -718,7 +726,7 @@ fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
       "                    2/3 ",
       " CRZ ALT         STEP TO",
       "                        ",
-      lr(spd_label("crzspdmode"), crzAtLabel),
+      lr(B747_fms_rta_mach() and " RTA SPD " or spd_label("crzspdmode"), crzAtLabel),
       "                        ",
       string.format(" %-10s", crzThrLabel)..dICAO.." ETA/FUEL",  
       "                        ",

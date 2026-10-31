@@ -1,6 +1,6 @@
 {
   "name": "s158_rta_pages",
-  "description": "6-1/6-2 段 9h5a（RTA PROGRESS のページと RTA の変更・EXEC）の X-Plane での確認。空中、FL350 の巡航（機体を読み直す）、RJAA→RJBB の経路、PERF INIT で ZFW 200・CRZ ALT FL350・COST INDEX 100、VNAV PTH。PROGRESS 1/3 で PREV：RTA PROGRESS 3/3（FMSPG p.3.4-52）、1L は箱。経路に無い点は INVALID ENTRY、SPENS で MOD RTA PROGRESS と 1R の箱、時刻 1740.0B で 1740.0zB と EXEC の灯、EXEC で ACT RTA PROGRESS、2R に ALT/ETA（予測の SPENS の高度と時刻）、MAX SPD の入力と DELETE（.880 小さい字）、CRZ のページの <RTA PROGRESS で 3/3、時刻の DELETE で終わり PRIOR RTA>、ERASE（FCOM p.1354、p.1383–1385）。CDU を撮る。Lua の誤りも確かめる",
+  "description": "6-1/6-2 段 9h5a（RTA PROGRESS のページと RTA の変更・EXEC）の X-Plane での確認。空中、FL350 の巡航（機体を読み直す）、RJAA→RJBB の経路、PERF INIT で ZFW 200・CRZ ALT FL350・COST INDEX 100、VNAV PTH。PROGRESS 1/3 で PREV：RTA PROGRESS 3/3（FMSPG p.3.4-52）、1L は箱。経路に無い点は INVALID ENTRY、SPENS で MOD RTA PROGRESS と 1R の箱、時刻 0120.0B で 0120.0zB と EXEC の灯、EXEC で ACT RTA PROGRESS、2R に ALT/ETA（予測の SPENS の高度と時刻）、MAX SPD の入力と DELETE（.880 小さい字）、CRZ のページの <RTA PROGRESS で 3/3、時刻の DELETE で終わり PRIOR RTA>、ERASE（FCOM p.1354、p.1383–1385）。CDU を撮る。Lua の誤りも確かめる",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 10668, "heading_true": 340, "speed_in_meters_per_second": 245 },
@@ -52,8 +52,8 @@
     { "do": "check", "note": "MOD RTA PROGRESS", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "MOD RTA PROGRESS" },
     { "do": "check", "note": "1L SPENS、1R は箱", "dref": "laminar/B747/fms3/Line03_L", "op": "matches", "value": "^SPENS +[*]{7}$" },
     { "do": "check", "note": "時刻の前は EXEC の灯なし", "dref": "laminar/B747/fms/exec_light_pilot", "op": "==", "value": 0 },
-    { "do": "cdu", "note": "1740.0B を 1R へ", "keys": ["1740.0B", "R1"] },
-    { "do": "check", "note": "1R 1740.0zB", "dref": "laminar/B747/fms3/Line03_L", "op": "matches", "value": "1740[.]0zB$" },
+    { "do": "cdu", "note": "0120.0B を 1R へ（B：以前ならよい。予測は 0114 頃なので UNABLE RTA にならない：初めの 1740.0B は ±12 時間の見方で 7.6 時間遅れの UNABLE RTA になり、書き込み行の通知が後の入力を邪魔した（2026-11-01 4:12））", "keys": ["0120.0B", "R1"] },
+    { "do": "check", "note": "1R 0120.0zB", "dref": "laminar/B747/fms3/Line03_L", "op": "matches", "value": "0120[.]0zB$" },
     { "do": "check", "note": "EXEC の灯", "dref": "laminar/B747/fms/exec_light_pilot", "op": "==", "value": 1 },
     { "do": "cdu", "note": "EXEC", "keys": ["EXEC"] },
     { "do": "sleep", "seconds": 1 },
@@ -80,7 +80,7 @@
     { "do": "check", "note": "題は RTA PROGRESS に戻る", "dref": "laminar/B747/fms3/Line01_L", "op": "matches", "value": "^ +RTA PROGRESS +$" },
     { "do": "check", "note": "6R PRIOR RTA>（FCOM p.1384）", "dref": "laminar/B747/fms3/Line13_L", "op": "matches", "value": "PRIOR RTA>$" },
     { "do": "cdu", "note": "PRIOR RTA>", "keys": ["R6"] },
-    { "do": "check", "note": "MOD に前の SPENS と時刻", "dref": "laminar/B747/fms3/Line03_L", "op": "matches", "value": "^SPENS +1740[.]0zB$" },
+    { "do": "check", "note": "MOD に前の SPENS と時刻", "dref": "laminar/B747/fms3/Line03_L", "op": "matches", "value": "^SPENS +0120[.]0zB$" },
     { "do": "cdu", "note": "6L <ERASE", "keys": ["L6"] },
     { "do": "check", "note": "ERASE で消える", "dref": "laminar/B747/fms3/Line01_L", "op": "matches", "value": "^ +RTA PROGRESS +$" },
     { "do": "view", "name": "forward" },

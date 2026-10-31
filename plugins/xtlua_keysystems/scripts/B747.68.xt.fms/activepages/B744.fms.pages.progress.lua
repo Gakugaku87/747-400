@@ -50,7 +50,9 @@ local function rta_page(small)
     altEta = string.format("%s/%02d%02d.%dz", alt, h, m, math.min(9, math.floor(frac * 10)))
   end
   S[4] = lr(" RTA SPD", r and "ALT/ETA" or "")
-  L[5] = lr("", altEta)
+  -- (step 9h5b) RTA SPD: the active RTA's cruise Mach
+  local rm = B747_fms_rta_mach()
+  L[5] = lr((rm and s.mod == nil) and string.format(".%03d", math.floor(rm * 1000 + 0.5)) or "", altEta)
   S[6] = lr(" MAX SPD", "")
   local mach = string.format(".%03d", math.floor(R.max(s) * 1000 + 0.5))
   if s.max then L[7] = lr(mach, "") else S[7] = lr(mach, "") end
@@ -70,13 +72,16 @@ end
 -- in the route (INVALID ENTRY else, an estimate; and with ENG OUT), the
 -- time after a FIX, MAX SPD .100-.990; DELETE: an active RTA ended (FIX,
 -- time), a modification's FIX dropped or its time boxes, MAX SPD .880
-local function rta_done(fmsO)
+local function rta_done(fmsO, was)
   fmsO["scratchpad"] = ""
+  -- (step 9h5b) an active RTA ended by DELETE: ECON again (FCOM p.1384)
+  if was and not B747_fms_rta().active then fmsFunctions.vnavspd(fmsO, "crz") end
   B747_fms_preds_now()
 end
 function fmsFunctions.rtafix(fmsO, value)
   local sp = fmsO["scratchpad"]
   local R, s = B747_rta_model, B747_fms_rta()
+  local was = s.active ~= nil
   if sp == "" then return end
   if not B747_fms_rta_avail() then fmsO["notify"] = "INVALID ENTRY" return end
   if sp == "DELETE" then
@@ -88,11 +93,12 @@ function fmsFunctions.rtafix(fmsO, value)
     fmsO["notify"] = "INVALID ENTRY"
     return
   end
-  rta_done(fmsO)
+  rta_done(fmsO, was)
 end
 function fmsFunctions.rtatime(fmsO, value)
   local sp = fmsO["scratchpad"]
   local R, s = B747_rta_model, B747_fms_rta()
+  local was = s.active ~= nil
   if sp == "" then return end
   if not (B747_fms_rta_avail() and R.shown(s)) then fmsO["notify"] = sp == "DELETE" and "INVALID DELETE" or "INVALID ENTRY" return end
   if sp == "DELETE" then
@@ -102,7 +108,7 @@ function fmsFunctions.rtatime(fmsO, value)
     if not t then fmsO["notify"] = "INVALID ENTRY" return end
     R.enter_time(s, t, suffix)
   end
-  rta_done(fmsO)
+  rta_done(fmsO, was)
 end
 function fmsFunctions.rtamax(fmsO, value)
   local sp = fmsO["scratchpad"]
@@ -230,8 +236,10 @@ local function progress_pred(pred, mult)
   -- (ATA34_2 p.568)
   local modeId = ({[1] = "clbspdmode", [2] = "crzspdmode", [3] = "desspdmode"})[(B747_fms_vnav_page())] or "clbspdmode"
   local mode = fmsModules["data"][modeId]
-  -- (step 9h4b) E/O SPD with ENG OUT active (FCOM p.1372; FMSPG p.3.4-19)
-  progSpdLabel = B747_fms_spd_int() and " MCP SPD" or B747_fms_eo().active and " E/O SPD" or mode == "S" and " SEL SPD"
+  -- (step 9h4b) E/O SPD with ENG OUT active (FCOM p.1372; FMSPG p.3.4-19);
+  -- (step 9h5b) RTA SPD with an RTA active in the cruise
+  progSpdLabel = B747_fms_spd_int() and " MCP SPD" or B747_fms_eo().active and " E/O SPD"
+    or (B747_fms_rta_mach() and (B747_fms_vnav_page()) == 2) and " RTA SPD" or mode == "S" and " SEL SPD"
     or mode == "L" and " LRC SPD" or " ECON SPD"
   local selSpd=string.format("%3dkt ",simDR_autopilot_airspeed_kts)
   if simDR_autopilot_airspeed_is_mach==1 then

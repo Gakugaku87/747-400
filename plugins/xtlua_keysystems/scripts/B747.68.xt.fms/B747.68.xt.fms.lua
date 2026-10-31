@@ -1142,6 +1142,11 @@ function B747_fms_rta_exec()
   return true
 end
 function B747_fms_rta_erase() return B747_rta_model.erase(rtaState) end
+-- (step 9h5b) the active RTA's cruise Mach (RTA SPD), or nil
+function B747_fms_rta_mach()
+  if rtaState.active and rtaState.mach and B747_fms_rta_avail() then return rtaState.mach end
+  return nil
+end
 -- the time now (minutes of the day, UTC)
 function B747_fms_utc_min() return hh * 60 + mm + ss / 60 end
 
@@ -1159,8 +1164,9 @@ function B747_fms_preds() return predResult end
 function B747_fms_preds_now() predNext = 0 end
 local function pred_num(id) return tonumber(fmsModules["data"][id]) end
 -- the FMC's climb, descent and cruise speeds as the predictions and VNAV
--- fly them (the CLB, CRZ and DES pages')
-function B747_fms_schedules(perf)
+-- fly them (the CLB, CRZ and DES pages'); (step 9h5b) an active RTA's
+-- cruise Mach unless base (the cruise's own)
+function B747_fms_schedules(perf, base)
   local clb = {cas = pred_num("clbspd") or 340, mach = (pred_num("clbspdmach") or pred_num("crzspd") or 810) / 1000,
     trans_cas = pred_num("transpd"), trans_alt = pred_num("spdtransalt"),
     restr_cas = pred_num("clbrestspd"), restr_alt = pred_num("clbrestalt")}
@@ -1198,6 +1204,7 @@ function B747_fms_schedules(perf)
       crzspd = c.mach and {mach = c.mach} or {cas = c.cas}
     end
   end
+  if not base and rtaState.active and rtaState.mach then crzspd = {mach = rtaState.mach} end
   return clb, des, crzspd
 end
 -- (step 9e3) after a missed approach (B747_fms_missed_approach): the
@@ -1339,6 +1346,64 @@ local function put_profile(s, r)
     end
   end
 end
+-- (step 9h5b) RTA's speed (FCOM p.1269, p.1354, p.1383-1384; notes/
+-- ATA-34-61-FMC.md §85): with the predictions s and r, the cruise Mach that
+-- brings the airplane to its FIX at its time (B747_rta_model.speed: up to
+-- RTA_ITER steps, each predicting again), bounded by MAX SPD and VMO/MMO
+-- less 16 kt (FCOM p.1258) and by the larger of the minimum drag speed and
+-- the minimum maneuvering speed plus 5 kt (estimates); UNABLE RTA (FCOM
+-- p.1434: flag 48) more than 30 s off at a bound; RTA FIX DELETED (flag 39)
+-- while the route's modification has no FIX; ended once its FIX is no
+-- longer ahead in the active route (passed, or gone with an executed
+-- modification: estimate). The predictions after it
+local RTA_ITER = 3
+local function rta_update(s, r)
+  local st = rtaState
+  local unable, deleted = false, false
+  if st.active and not B747_fms_rta_avail() then B747_rta_model.terminate(st) end
+  if st.active then
+    local fix = st.active.fix
+    local mod = B747_fmc_route.mod
+    if mod then
+      deleted = true
+      for _, l in ipairs(mod.legs) do
+        if l.fix and l.fix.ident == fix then deleted = false break end
+      end
+    end
+    local i = B747_fms_rta_leg(fix)
+    if not i then
+      B747_rta_model.terminate(st)
+    elseif s and r and r.pts[i] then
+      local P = B747_perf_db
+      local _, _, own = B747_fms_schedules(s.t, true)
+      local base = B747_pred_model.crz_mach(P, own, s.crz, s.gw)
+      local lo = P.min_drag(s.t, s.gw, s.crz)
+      local vmin = B747DR_fms_vnav_vminm
+      if vmin and vmin > 0 then lo = math.max(lo, P.cas_to_mach(vmin + 5, s.crz)) end
+      local hi = math.min(B747_rta_model.max(st), (P.econ_limit(s.crz)))
+      for k = 1, RTA_ITER do
+        local p = r.pts[i]
+        -- the cruise's time before the FIX: from the T/C (now in the
+        -- cruise) to the FIX or the T/D; none in the descent
+        local t0 = (s.phase == "clb" and r.tc_t) or 0
+        local t1 = math.min(p.t, r.td_t or p.t)
+        local tc = s.phase == "des" and 0 or math.max(0, t1 - t0)
+        local m, un = B747_rta_model.speed(st.active, {mach = st.mach, base = base, now = B747_fms_utc_min(),
+          t_fix = p.t, t_cruise = tc, lo = lo, hi = hi})
+        unable = un
+        local moved = st.mach == nil or math.abs(m - st.mach) > 0.001
+        st.mach = m
+        if k == RTA_ITER or not moved then break end
+        s.crzspd = {mach = m}
+        r = B747_pred_model.predict(s)
+      end
+    end
+  end
+  if not st.active then st.mach = nil end
+  B747DR_fmc_notifications[48] = unable and 1 or 0
+  B747DR_fmc_notifications[39] = deleted and 1 or 0
+  return r
+end
 function update_preds()
   if simDRTime < predNext then return end
   predNext = simDRTime + 10
@@ -1349,6 +1414,8 @@ function update_preds()
   if s and s.crz >= B747_perf_db.max_alt(s.t, s.gw, s.isa) then s = nil end
   if s and s.eo and s.crz > B747_fms_eo_crz_max() + 1 then s = nil end
   predResult = s and B747_pred_model.predict(s) or nil
+  -- (step 9h5b) RTA's speed, the predictions with it
+  predResult = rta_update(s, predResult)
   put_profile(s, predResult)
   vnav_geo_set(s, predResult)
 end
