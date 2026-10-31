@@ -57,6 +57,60 @@ local function int_title(active, title)
   if active and B747_fms_spd_int() then return "MCP SPD" end
   return title
 end
+-- (step 9h4a) the engine-out pages (FCOM p.1341-1342, p.1350-1353; FMSPG
+-- p.3.3-6, p.3.4-5): the titles start E/O, 2E/O with two engines out
+-- (FCOM p.1350); a crew's speed as CAS or Mach and the title's XXXKT or
+-- M.XXX; on the active page LIM SPD or MCP SPD for the speed's part
+local function eo_base(eo) return B747_eo_model.engines(eo) >= 2 and "2E/O" or "E/O" end
+local function eo_sel_text(sel)
+  if sel.mach then
+    local m = math.floor(sel.mach * 1000 + 0.5)
+    return string.format(".%03d", m), string.format(" M.%03d", m)
+  end
+  return string.format("%3d", sel.cas), string.format(" %dKT", sel.cas)
+end
+local function eo_spd_title(active, spd)
+  if active then
+    if B747_fms_vnav_title() == "LIM SPD" then return " LIM SPD" end
+    if B747_fms_spd_int() then return " MCP SPD" end
+  end
+  return spd
+end
+local function eo_alt_text(ft)
+  return B747_cdu_model.format_alt(math.floor(ft / 100) * 100, tonumber(fmsModules["data"]["transalt"]) or 18000)
+end
+-- ENG OUT> and ALL ENG> (5R); the speed's entry (2L: XXX a CAS 100 to 400,
+-- .XXX a Mach .100 to .990, trailing zeros left out; DELETE the E/O climb
+-- speed or E/O LRC: FCOM p.1342, p.1353); <E/O SPD (5L) and LRC> (6R) on
+-- the E/O CRZ page
+function fmsFunctions.eoeng(fmsO, value)
+  if value == "out" then B747_fms_eo_eng_out() else B747_fms_eo_all_eng() end
+end
+function fmsFunctions.eospdmode(fmsO, value)
+  B747_fms_eo().crz = value
+  B747_fms_preds_now()
+end
+function fmsFunctions.eospd(fmsO, value)
+  local sp = fmsO["scratchpad"]
+  local sel = nil
+  if sp ~= "DELETE" then
+    local m = sp:match("^%.(%d%d?%d?)$")
+    local c = sp:match("^(%d%d%d)$")
+    local mach = m and tonumber(m) / 10 ^ #m
+    if mach and mach >= 0.1 and mach <= 0.99 then
+      sel = {mach = mach}
+    elseif c and tonumber(c) >= 100 and tonumber(c) <= 400 then
+      sel = {cas = tonumber(c)}
+    else
+      fmsO["notify"] = "INVALID ENTRY"
+      return
+    end
+  end
+  local eo = B747_fms_eo()
+  if value == "clb" then eo.clb = sel else eo.crz = sel or "LRC" end
+  fmsO["scratchpad"] = ""
+  B747_fms_preds_now()
+end
 -- a line of a left and a right part
 local function lr(l, r) return l .. string.rep(" ", math.max(1, 24 - string.len(l) - string.len(r))) .. r end
 -- the page active (6-1/6-2 step 9d2a): the FMC's phase (B747.68.xt.fms.lua's
@@ -77,7 +131,8 @@ local function vnav_6r(pg)
   return p or ""
 end
 local function vnav_6l(other)
-  if B747_fmc_route.mod then
+  -- (step 9h4a) the engine-out modification too
+  if B747_fmc_route.mod or B747_fms_eo().mod then
     fmsFunctionsDefs["VNAV"]["L6"] = {"rteerase", ""}
     return "<ERASE"
   end
@@ -241,8 +296,44 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       local machText = vnav_text("clbspdmach")
       if machText == "" and mode ~= "S" then machText = vnav_text("crzspd") end
       if machText ~= "" then spdText = spdText .. "/." .. machText end
+      -- (step 9h4a) the engine-out data (ENG OUT's modification or active:
+      -- FCOM p.1341-1342; FMSPG p.3.3-4, p.3.3-6): CRZ ALT at most MAX ALT,
+      -- E/O SPD (the minimum drag speed, or the crew's), MAX ALT (the lower
+      -- at the E/O climb and cruise speeds), ALL ENG>; no SPD TRANS, SPD
+      -- REST nor MAX ANGLE
+      local eo = B747_fms_eo()
+      if B747_eo_model.shown(eo) then
+        fmsFunctionsDefs["VNAV"]["L2"]={"eospd","clb"}
+        fmsFunctionsDefs["VNAV"]["L3"]=nil
+        fmsFunctionsDefs["VNAV"]["L4"]=nil
+        fmsFunctionsDefs["VNAV"]["L5"]=nil
+        fmsFunctionsDefs["VNAV"]["R5"]={"eoeng","all"}
+        local maxFt = B747_fms_eo_max("CLB")
+        local crzText = fmsModules["data"]["crzalt"]
+        if B747BR_cruiseAlt > maxFt then crzText = eo_alt_text(maxFt) end
+        local eoSpd, spdPart = string.format("%3d", math.floor(B747_fms_eo_min_drag() + 0.5)), ""
+        if eo.clb then eoSpd, spdPart = eo_sel_text(eo.clb) end
+        local eoActive = active and eo.active and eo.mod == nil
+        return{
+          vnav_title(eo_base(eo) .. eo_spd_title(eoActive, spdPart) .. " CLB", eoActive,
+            eo.mod == "ENG OUT" or B747_fms_vnav_mod() == "CLB DIR"),
+          "                        ",
+          lr(crzText, spdalt),
+          "                        ",
+          lr(eoSpd, (string.gsub(error_line, "%s+$", ""))),
+          "                        ",
+          lr("", fmsModules["data"]["transalt"]),
+          "                        ",
+          lr("", string.format("FL%03d", math.floor(maxFt / 100))),
+          "------------------------",
+          lr("", "ALL ENG>"),
+          "                        ",
+          lr(vnav_6l(""), vnav_6r(1))
+        }
+      end
+      fmsFunctionsDefs["VNAV"]["R5"]={"eoeng","out"}
       return{
-        vnav_title(title .. " CLB", active, B747_fms_vnav_mod() == "CLB DIR"),
+        vnav_title(title .. " CLB", active, B747_fms_vnav_mod() == "CLB DIR" or eo.mod == "ALL ENG"),
       "                        ",
       fmsModules["data"]["crzalt"].."         "..spdalt,
       "                        ",
@@ -345,8 +436,76 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       dICAO = (B747_fmc_route.rte.dest and B747_fmc_route.rte.dest.ident) or "****"
       -- ECON, LRC or SEL SPD: a Mach, or a selected CAS
       local spdText = cas and string.format("%3d", cas) or "." .. vnav_text("crzspd")
+      -- (step 9h4a) the engine-out data (FCOM p.1350-1353; FMSPG p.3.4-5):
+      -- CRZ ALT at most MAX (so shown in the modification), LRC SPD (E/O LRC
+      -- at CRZ ALT), E/O SPD (the minimum drag) or SEL SPD; the title E/O
+      -- LRC D/D above MAX, E/O CRZ CLB or DES, else the speed's (E/O LRC,
+      -- E/O, E/O XXXKT or M.XXX) CRZ; the thrust setting, OPT (estimate)
+      -- and MAX the engine-out ones; STEP TO up to MAX; <E/O SPD, ALL
+      -- ENG>, LRC>; AT only TO T/D (the driftdown's: step 9h4b)
+      local eo = B747_fms_eo()
+      if B747_eo_model.shown(eo) then
+        fmsFunctionsDefs["VNAV"]["L2"]={"eospd","crz"}
+        fmsFunctionsDefs["VNAV"]["L5"]=eo.crz ~= "EO" and {"eospdmode","EO"} or nil
+        fmsFunctionsDefs["VNAV"]["R5"]={"eoeng","all"}
+        fmsFunctionsDefs["VNAV"]["R6"]=eo.crz ~= "LRC" and {"eospdmode","LRC"} or nil
+        local maxFt = B747_fms_eo_crz_max()
+        local crzFt = (crz > maxFt and eo.mod == "ENG OUT") and math.floor(maxFt / 100) * 100 or crz
+        local crzText = crzFt == crz and fmsModules["data"]["crzalt"] or eo_alt_text(crzFt)
+        local eoSpd, spdPart, eoMach
+        if eo.crz == "LRC" then
+          eoMach = B747_fms_eo_lrc(crzFt)
+          eoSpd, spdPart = string.format(".%03d", math.floor(eoMach * 1000 + 0.5)), " LRC"
+        elseif eo.crz == "EO" then
+          local v = B747_fms_eo_min_drag()
+          eoSpd, spdPart = string.format("%3d", math.floor(v + 0.5)), ""
+          eoMach = B747_perf_db.cas_to_mach(v, crzFt)
+        else
+          eoSpd, spdPart = eo_sel_text(eo.crz)
+          eoMach = eo.crz.mach or B747_perf_db.cas_to_mach(eo.crz.cas, crzFt)
+        end
+        local eoActive = crzActive and eo.active and eo.mod == nil
+        local title
+        if eo.crz == "LRC" and simDR_pressureAlt1 > maxFt + 200 then
+          title = eo_base(eo) .. " LRC D/D"
+        elseif crzChg then
+          title = eo_base(eo) .. " CRZ " .. crzChg
+        else
+          title = eo_base(eo) .. eo_spd_title(eoActive, spdPart) .. " CRZ"
+        end
+        local eoThr = ""
+        if eoActive and crzFt > 0 then
+          local v = B747_fms_eo_setting(crzFt, eoMach)
+          eoThr = perf.N1 and string.format("%.1f%%", v) or string.format("%.2f", v)
+        end
+        local optFt = B747_fms_eo_opt()
+        local eoStep = nil
+        if crzFt > 0 and B747_fmc_route.active and not nearTD then
+          eoStep = B747_cdu_model.parse_alt(vnav_text("stepalt"))
+            or B747_crz_model.step_to(crzFt, optFt, vnav_text("stepsize"), B747_fms_step_east())
+          if eoStep and eoStep > maxFt then eoStep = nil end
+        end
+        crzAtLabel = nearTD and "TO T/D" or ""
+        return{
+          vnav_title(title, eoActive, eo.mod == "ENG OUT"),
+          "                        ",
+          lr(crzText, eoStep and string.format("FL%03d", math.floor(eoStep / 100 + 0.5)) or ""),
+          "                        ",
+          lr(eoSpd, nearTD and atText or ""),
+          "                        ",
+          lr(eoThr, etafuel),
+          "                        ",
+          string.format("%-12s", vnav_text("stepsize")) .. string.format("FL%03.0f  FL%03.0f", optFt / 100, maxFt / 100),
+          "------------------------",
+          lr(eo.crz ~= "EO" and "<E/O SPD" or "", "ALL ENG>"),
+          "                        ",
+          lr(vnav_6l("<RTA PROGRESS"), eo.crz ~= "LRC" and "LRC>" or "")
+        }
+      end
+      fmsFunctionsDefs["VNAV"]["R5"]={"eoeng","out"}
       return{
-        vnav_title(int_title(crzActive, spd_title(mode, cas, (not cas) and mach or nil)) .. " CRZ" .. (crzChg and " " .. crzChg or ""), crzActive),
+        vnav_title(int_title(crzActive, spd_title(mode, cas, (not cas) and mach or nil)) .. " CRZ" .. (crzChg and " " .. crzChg or ""), crzActive,
+          eo.mod == "ALL ENG"),
       "                        ",
       lr(fmsModules["data"]["crzalt"], stepTo and string.format("FL%03d", math.floor(stepTo / 100 + 0.5)) or ""),
       "                        ",
@@ -492,8 +651,45 @@ local function spd_label(id)
 end
 
 fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
+    -- (step 9h4a) the engine-out pages' labels (FCOM p.1341, p.1351-1352)
+    local eo = B747_fms_eo()
+    local eoShown = B747_eo_model.shown(eo)
+    if pgNo==1 and eoShown then
+      return{
+      "                    1/3 ",
+      " CRZ ALT        AT "..nxWpt,
+      "                        ",
+      lr(" E/O SPD", "ERROR"),
+      "                        ",
+      "               TRANS ALT",
+      "                        ",
+      "                 MAX ALT",
+      "                        ",
+      "                        ",
+      "                        ",
+      "                        ",
+      "                        "
+      }
+    elseif pgNo==2 and eoShown then
+      local lbl = eo.crz == "LRC" and " LRC SPD" or eo.crz == "EO" and " E/O SPD" or " SEL SPD"
+      return{
+      "                    2/3 ",
+      " CRZ ALT         STEP TO",
+      "                        ",
+      lr(lbl, crzAtLabel ~= "" and crzAtLabel or " "),
+      "                        ",
+      string.format(" %-10s", crzThrLabel)..dICAO.." ETA/FUEL",
+      "                        ",
+      " STEP SIZE  OPT      MAX",
+      "                        ",
+      "                        ",
+      "                        ",
+      "                        ",
+      "                        "
+      }
+    end
     if pgNo==1 then
-          
+
       return{
       "                    1/3 ",
       " CRZ ALT        AT "..nxWpt,

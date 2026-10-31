@@ -228,4 +228,10 @@ T.near(P.eo_cruise_ff(ge, 1, 600 * KLB, 25000, .701, 0), 6604 * P.LB, 1e-6, "GE:
 T.near(P.eo_level_setting(pw, 1, 300000, 25000, .743, 0), 1.25, 1e-9, "the setting at E/O LRC: the table's EPR 1.25")
 T.check(P.eo_level_setting(pw, 1, 300000, 25000, .78, 0) > 1.25, "faster: a higher EPR")
 T.near(P.eo_level_setting(ge, 2, 520 * KLB, 25000, .657, 0), 98.4, 1e-9, "GE two out: the table's 98.4 % N1 (PI.24.3)")
+-- (step 9h4a) the engine-out optimum altitude: the most NM a kg at E/O
+-- LRC up to the E/O maximum (estimate)
+local opt = P.eo_opt_alt(pw, 1, 300000, 0, 0)
+T.check(opt >= 28000 and opt <= 32000, "PW one out, 300 t: OPT " .. opt .. " ft, under MAX 32,000")
+T.check(P.eo_opt_alt(pw, 1, 200000, 0, 0) > opt, "lighter: higher")
+T.check(P.eo_opt_alt(pw, 2, 300000, 0, 0) <= 16500, "two out: under their MAX 16,500")
 T.done()
