@@ -1303,3 +1303,14 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - FMS：降下の間、最良の待機速度をモデルに（`hold_cas`）。
 - 推定：経路を譲る量の決め方（速さの超過に比例して浅く・深く）、DRAG REQUIRED の 2 kt の戻り、逆戻りの終わり（経路に戻ったとき）。「最初の速さの制限」を速さの遷移の高度に代えたこと（SPD RESTR や点の速さの制限がもっと上にあっても見ない）。
 - 試験：`vnav_model_test.lua` 125 件（349 を超えて DRAG REQUIRED・経路は保つ、354 を超えて浅く、150 ft を超えて逆戻りで 349 の VNAV SPD・IDLE・DRAG REQUIRED、経路に戻って PTH と予定の 290、下では 250 を超えて DRAG・255 を超えて 240 の逆戻り、遅い側は深く・150 ft の下で待機速度 +5 の逆戻りと THRUST REQUIRED・下から戻って PTH、速度介入で逆戻りが消える）、`afds_glue_test.lua` 254 件（FMC のメッセージで旗 9・45）。全 134 本。新設の X-Plane の `s148_vnav_speed_reversion`。
+
+## 69. 段 9e2 の実装（2026-10-31：on approach と END OF DES）
+
+- 資料：§67 の FCOM p.1261–1262（on approach の条件と働き）、p.643（進入中の速度介入は VNAV PTH のまま A/T が速さ）、p.1258（E/D は滑走路の 50 ft 上：VOR の進入は MAP）、p.1391（END OF DES）。
+- 作ったもの：
+  - FMS：on approach（`laminar/B747/fms/vnav/on_app`）は、有効な経路で進入の脚（`APPR`）の点が過ぎた側にあり、空中で、E/D を過ぎる前（公表の進入の最初の点を過ぎた：FCOM p.1261）。END OF DES は E/D の点（`vnav_geo_set` の `ed_p`）を過ぎたときに立て、新しい E/D が前に来るか地上に降りるまで保つ。予測の入力は、進入の滑走路の脚を過ぎた後の進入の脚（進入復行）の制限を E/D にしない（前はそれが新しい E/D になった）。
+  - VNAV のモデル：on approach では、速度介入でも VNAV PTH のまま A/T が SPD でノブの速さ（p.643、p.1261）。フラップが出ていれば経路を保つのはフラップの placard −5 まで、その先 150 ft 上で VNAV SPD（目標の速さのまま：p.1262 は名を挙げない、推定）。END OF DES（`end_des`）は水平（V/S 0）で A/T は SPD、経路が無くても VNAV は有効（推定：資料はこれ以上を書かない）。
+  - CDU：DES のページの見出しは、E/D を過ぎると ACT END OF DES。
+- X-Plane で分かったこと：経路より下から空中開始すると、FMC は降下でなく上昇の段階のまま（降下に入るのは経路が機体以下のとき：初めの s149 は 4,500 ft から FL300 へ上昇した）。速度介入で目標を下げても、経路を降りる間は A/T がアイドルで減速できず、速さは経路の降下で決まる（DRAG REQUIRED が出て、水平になって減速する：二つ目の s149。この進入の BERRY・BOLAL の 4,000 ft は「以上」なので経路はそこで水平にならず、MCP の 2,000 ft の VNAV ALT で減速した：三つ目）。
+- 推定・残り：VFR の進入（FAxxx、RWxx の 25 NM）の on approach は作っていない（VFR の進入の作り方が無い）。MCP を機体より 300 ft 以上上にしても降下を続けるのは、今は on approach に限らない（MCP の高度と経路の食い違い（FCOM p.645 の VNAV ALT）は、MCP が下で降下が当たるときだけ）。glide path angle の脚（航法データの −3.00 などの角度：CIFP にはある）は 9e3 で決める。TO/GA で on approach を出るのは 9e3。
+- 試験：`vnav_model_test.lua` 131 件（on approach の速度介入は VNAV PTH・A/T の SPD、外なら VNAV SPD、placard −5 の内は PTH・超えて 150 ft 上で目標のままの VNAV SPD、END OF DES は水平・A/T の SPD・経路なしでも有効）、`pred_glue_test.lua` 144 件（進入の最初の点を過ぎて on approach、滑走路を過ぎて END OF DES と on approach の終わり、DES のページの ACT END OF DES、予測の後も END OF DES と VNAV の有効のまま）。全 134 本。新設の X-Plane の `s149_vnav_on_approach`。

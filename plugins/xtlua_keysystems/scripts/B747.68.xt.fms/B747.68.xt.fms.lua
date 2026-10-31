@@ -1068,6 +1068,13 @@ function B747_fms_pred_input(crz)
   if not st.active or crz == nil or crz <= 0 then return nil end
   local R, r = B747_route_model, st.rte
   local legs, clbLast, lastCon, rwy = {}, nil, nil, nil
+  -- (step 9e2) the approach's runway passed: its legs left are the missed
+  -- approach's, no E/D (FCOM p.1258: the E/D 50 ft above the threshold;
+  -- before, its constraint made a new one and ended END OF DES)
+  local missed = false
+  for _, l in ipairs(r.passed) do
+    if l.proc == "APPR" and l.fix and l.fix.kind == "RWY" then missed = true end
+  end
   -- the distances: great circles from the point before (the airplane's
   -- for the first), across a conditional leg or a discontinuity too (an
   -- estimate; a conditional leg itself none)
@@ -1093,7 +1100,7 @@ function B747_fms_pred_input(crz)
     -- (p0, p1: the great circle's ends, for the ND's profile points)
     legs[i] = {name = l.fix and l.fix.ident or "", dist = d, con = con, p0 = p0, p1 = l.fix}
     if l.proc == "SID" then clbLast = i end
-    if con and not rwy then lastCon = i end
+    if con and not rwy and not (missed and l.proc == "APPR") then lastCon = i end
   end
   local ed = rwy
   if not ed and lastCon and lastCon > (clbLast or 0) then ed = lastCon end
@@ -1206,6 +1213,7 @@ B747DR_fms_vnav_vs = find_dataref("laminar/B747/fms/vnav/vs")
 B747DR_fms_vnav_path_dev = find_dataref("laminar/B747/fms/vnav/path_dev")
 B747DR_fms_vnav_at = find_dataref("laminar/B747/fms/vnav/at")
 B747DR_fms_vnav_msg = find_dataref("laminar/B747/fms/vnav/msg")
+B747DR_fms_vnav_on_app = find_dataref("laminar/B747/fms/vnav/on_app")
 B747DR_fms_vnav_perf = find_dataref("laminar/B747/fms/vnav/perf")
 B747DR_fms_vnav_dist = find_dataref("laminar/B747/fms/vnav/dist")
 B747DR_fms_alt_sel_pushes = find_dataref("laminar/B747/autopilot/alt_sel_pushes")
@@ -1270,6 +1278,8 @@ function vnav_geo_set(s, r)
     g.path = {e = {}, h = dp.h, k = dp.k}
     for i = 1, #dp.x do g.path.e[i] = r.ed - dp.x[i] end
     g.hed = dp.h[1]
+    -- (step 9e2) the E/D's point, for END OF DES
+    g.ed_p = s.ed and s.legs[s.ed] and s.legs[s.ed].p1 or nil
     -- the first leg with a point, the legs' distance after it to the E/D;
     -- (step 9c) each point's distance on to the E/D, by the point (the
     -- route's legs keep their tables as LNAV sequences them: the distance
@@ -1317,6 +1327,27 @@ end
 -- page's title MCP SPD and PROGRESS's 5L (FCOM p.643; ATA34_2 p.557, p.563,
 -- p.568, p.623)
 function B747_fms_spd_int() return B747DR_fms_spd_int == 1 end
+-- (step 9e2) on approach (FCOM p.1261): a published approach's first point
+-- passed in the air (the VFR approach's: not made); END OF DES (p.1391):
+-- the E/D's point passed, kept until a new E/D is ahead or the airplane is
+-- on the ground (TO/GA: step 9e3); on approach ends with it
+local vnavEndDes = false
+local function point_passed(p)
+  for _, l in ipairs(B747_fmc_route.rte.passed) do
+    if l.fix == p then return true end
+  end
+  return false
+end
+local function on_approach()
+  local st = B747_fmc_route
+  if not st.active or simDR_onGround == 1 then return false end
+  for _, l in ipairs(st.rte.passed) do
+    if l.proc == "APPR" and l.fix then return true end
+  end
+  return false
+end
+function B747_fms_end_des() return vnavEndDes end
+function B747_fms_on_app() return vnavIn.on_app == true end
 -- the descent's highest altitude constraint ahead (ft) or nil
 function B747_fms_des_top()
   local top = nil
@@ -1496,6 +1527,16 @@ local function update_vnav()
   inp.clb, inp.des, inp.crzspd = B747_fms_schedules(perf)
   inp.flaps_placard = simDR_fms_vnav_flaps > 0.01 and B747DR_fms_vnav_vmax > 0 and B747DR_fms_vnav_vmax or nil
   inp.vmin = B747DR_fms_vnav_vminm > 0 and B747DR_fms_vnav_vminm or nil
+  -- (step 9e2) END OF DES and on approach
+  if inp.ground or not inp.active then
+    vnavEndDes = false
+  elseif g and g.ed_p then
+    vnavEndDes = point_passed(g.ed_p)
+  end
+  inp.end_des = vnavEndDes
+  inp.on_app = (not vnavEndDes) and on_approach()
+  local onApp = inp.on_app and 1 or 0
+  if B747DR_fms_vnav_on_app ~= onApp then B747DR_fms_vnav_on_app = onApp end
   -- (step 9e1) the best holding speed for the descent's slow speed
   -- reversion (FCOM p.1259; PI.11.6), in the descent only
   inp.hold_cas = (vnavState.phase == "DES" and perf and inp.kg) and (B747_perf_db.hold(perf, inp.kg, inp.alt)) or nil
