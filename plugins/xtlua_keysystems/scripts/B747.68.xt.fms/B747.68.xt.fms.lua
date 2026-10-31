@@ -1334,6 +1334,10 @@ function B747_fms_vnav_page()
   if vnavState.crz_chg then return 2, vnavState.crz_chg end
   return VNAV_PHASE[vnavState.phase] or 0, nil
 end
+-- (step 9h3b) the active page's title for the target: LIM SPD where the flap
+-- placard or the minimum speed limits it, VREF + 100 in the engine-out
+-- takeoff's climb (FCOM p.1265), nil else
+function B747_fms_vnav_title() return vnavState.out.title end
 -- (step 9d3) speed intervention: the FMC's target the MCP speed, the active
 -- page's title MCP SPD and PROGRESS's 5L (FCOM p.643; ATA34_2 p.557, p.563,
 -- p.568, p.623)
@@ -1622,8 +1626,12 @@ local function update_vnav()
   local v2 = B747DR_airspeed_V2
   vnavTakeoff.v2 = (v2 > 0 and v2 < 900) and v2 or nil
   vnavTakeoff.accel_alt = (rte and rte.origin and rte.origin.elev or 0) + (tonumber(fmsModules["data"].accelht) or 1000)
+  -- (step 9h3b) the E/O ACCEL HT above the origin; an engine failure
+  -- sensed, VREF 30 (FCOM p.1265-1266)
+  vnavTakeoff.eo_accel_alt = (rte and rte.origin and rte.origin.elev or 0) + (tonumber(fmsModules["data"].eoaccelht) or 1000)
   vnavTakeoff.flaps = simDR_fms_vnav_flaps
   inp.takeoff = vnavTakeoff
+  inp.eo, inp.vref = B747_fms_eng_out(), B747DR_airspeed_Vf30
   inp.ias = simDR_ias_pilot
   inp.engaged = B747DR_ap_vnav_state == 2
   inp.clb_alt, inp.des_alt, inp.path, inp.d_ed = nil, nil, nil, nil

@@ -590,6 +590,7 @@ local afdsPitch = B747_afds_pitch_model.new()
 local afdsPitchIn = B747_afds_pitch_model.inputs()
 B747DR_ap_pitch_cmd = find_dataref("laminar/B747/autopilot/pitch_cmd")
 B747DR_ap_pitch_law = find_dataref("laminar/B747/autopilot/pitch_law")
+B747DR_ap_pitch_target = find_dataref("laminar/B747/autopilot/pitch_target")
 simDR_afds_pitch = find_dataref("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot")
 simDR_afds_vs = find_dataref("sim/flightmodel/position/vh_ind_fpm")
 -- the speed laws' (step 3b): the minimum maneuvering and the maximum speeds
@@ -758,6 +759,13 @@ local function afds_pitch_inputs(p)
 	p.pli = B747DR_afds_pli_show > 0.5 and B747DR_afds_pli or nil
 	p.flaps_up = simDR_flap_ratio_control < 0.01
 	p.windshear = B747DR_afds_windshear > 0.5
+	-- (the FMC's step 9h3b) an engine inoperative (the engines' signal:
+	-- B747.40.engine_start_model.lua) for T/O's and G/A's speeds
+	local eo = false
+	for e = 0, 3 do
+		if B747DR_at_eng_inop[e] > 0.5 then eo = true end
+	end
+	p.eo = eo
 	afds_gs_inputs(p)
 end
 -- the magnetic track (LOC and G/S capture within 120 and 80 degrees of the
@@ -1356,6 +1364,9 @@ local function afds_pitch_law()
 	local law = cmd and 1 or 0
 	if B747DR_ap_pitch_law ~= law then B747DR_ap_pitch_law = law end
 	B747DR_ap_pitch_cmd = cmd or 0
+	-- (the FMC's step 9h3b) the speed law's target for the flight tests
+	local tgt = (afdsPitch.law == "SPD" and afdsPitch.target) or 0
+	if B747DR_ap_pitch_target ~= tgt then B747DR_ap_pitch_target = tgt end
 end
 -- the roll switches (step 1b)
 function B747_afds_hdg_sel()

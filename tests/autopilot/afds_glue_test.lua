@@ -318,6 +318,7 @@ T.equal(rt:get(VS_STATUS), 0, "V/S off")
 -- the speed law (step 3b): at the window's 200 kt, then 20 kt slower:
 -- the command down (after the step's rate has gone)
 T.equal(rt:get(PITCH_LAW), 1, "FLCH: the pitch law (step 3b)")
+T.near(rt:get("laminar/B747/autopilot/pitch_target"), 200, 0.5, "(the FMC's step 9h3b) the speed law's target published: 200 kt")
 rt:set(IAS, 180)
 frames(200)
 local p1 = rt:get(PITCH_CMD)

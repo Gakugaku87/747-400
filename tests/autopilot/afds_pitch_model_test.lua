@@ -553,4 +553,66 @@ T.equal(P.update(sl2, li, DT), P.LETDOWN_PITCH, "under 2 degrees on the ground: 
 li.letdown = false
 T.check(P.update(sl, li, DT) == nil, "NOSE LETDOWN's end: no law on the ground")
 
+-- (the FMC's step 9h3b) an engine failure in T/O (ATA22 p.264; FCOM
+-- p.666): the speed then within V2 and V2 + 10, on the ground the
+-- lift-off's, the window's when set higher, no ratchet; the blend from
+-- the attitude to the speed between 0 and 600 fpm; in G/A up to MCP + 10
+s = P.new()
+i = inp({mode = "TO", ground = true, mcp_ias = 160, ias = 150, pitch = 3, vs = 0, alt = 0, tas = 150})
+P.update(s, i, DT)
+i.ground, i.ias, i.pitch = false, 178, 9
+for _ = 1, math.floor(5.2 / DT) do P.update(s, i, DT) end
+T.equal(s.target, 178, "all engines: 5 s above, the speed then (V2 + 18)")
+i.eo = true
+P.update(s, i, DT)
+T.equal(s.target, 170, "an engine failure at 178 kt: V2 + 10 at most")
+i.ias = 192
+for _ = 1, math.floor(6 / DT) do P.update(s, i, DT) end
+T.equal(s.target, 170, "no ratchet with the engine out")
+i.mcp_ias = 180
+P.update(s, i, DT)
+T.equal(s.target, 180, "the window set higher: the window's")
+s = P.new()
+i = inp({mode = "TO", ground = true, mcp_ias = 160, ias = 150, pitch = 3, vs = 0, alt = 0, tas = 150})
+P.update(s, i, DT)
+i.ground, i.ias, i.pitch, i.eo = false, 165, 9, true
+P.update(s, i, DT)
+T.equal(s.target, 165, "a failure at 165 kt (between V2 and V2 + 10): 165")
+s = P.new()
+i = inp({mode = "TO", ground = true, mcp_ias = 160, ias = 150, pitch = 3, vs = 0, alt = 0, tas = 150})
+P.update(s, i, DT)
+i.ground, i.ias, i.pitch, i.eo = false, 156, 9, true
+P.update(s, i, DT)
+T.equal(s.target, 160, "a failure at 156 kt (under V2): V2")
+s = P.new()
+i = inp({mode = "TO", ground = true, mcp_ias = 160, ias = 140, pitch = 3, vs = 0, alt = 0, tas = 140, eo = true})
+P.update(s, i, DT)
+i.ground, i.ias, i.pitch = false, 163, 9
+P.update(s, i, DT)
+T.equal(s.target, 163, "failed on the ground: the lift-off's 163 kt (FCOM p.666)")
+-- the blend with an engine out: at 700 fpm the speed only
+s = P.new()
+i = inp({mode = "GA", mcp_ias = 150, ias = 150, pitch = 12, vs = 700, alt = 600, tas = 150})
+P.update(s, i, DT)
+i.ias = 140
+for _ = 1, 20 do c = P.update(s, i, DT) end
+T.check(c > 12, "all engines, 700 fpm, 10 kt slow: up, mostly the attitude (" .. c .. ")")
+s = P.new()
+i = inp({mode = "GA", mcp_ias = 150, ias = 150, pitch = 12, vs = 700, alt = 600, tas = 150, eo = true})
+P.update(s, i, DT)
+i.ias = 140
+for _ = 1, 20 do c = P.update(s, i, DT) end
+T.check(c < 12, "an engine out, 700 fpm, 10 kt slow: down for the speed (the blend 0 to 600 fpm: ATA22 p.264) (" .. c .. ")")
+-- G/A: up to MCP + 10 with an engine out
+s = P.new()
+i = inp({mode = "GA", mcp_ias = 150, ias = 145, pitch = 2.5, vs = -800, alt = 300, tas = 150, eo = true})
+P.update(s, i, DT)
+T.equal(s.ga_cap, 160, "G/A with an engine out: up to MCP + 10 (ATA22 p.298)")
+s = P.new()
+i = inp({mode = "GA", mcp_ias = 150, ias = 145, pitch = 2.5, vs = -800, alt = 300, tas = 150})
+P.update(s, i, DT)
+T.equal(s.ga_cap, 175, "all engines: MCP + 25")
+i.eo = true
+P.update(s, i, DT)
+T.equal(s.ga_cap, 160, "an engine failing in G/A: MCP + 10")
 T.done()

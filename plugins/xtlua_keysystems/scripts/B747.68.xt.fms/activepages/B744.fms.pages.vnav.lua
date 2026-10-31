@@ -228,7 +228,13 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       elseif active and transSpd and transAlt and simDR_pressureAlt1 < transAlt then
         title = string.format("%dKT", transSpd)
       end
+      -- (step 9h3b) the engine-out takeoff's VREF + 100 (FCOM p.1265);
+      -- LIM SPD while the flap placard or the minimum speed limits the
+      -- target, over MCP SPD (FCOM p.1265's note; FMSPG p.3.3-3, p.3.4-19)
+      local fmcTitle = active and B747_fms_vnav_title() or nil
+      if fmcTitle == "VREF + 100" then title = fmcTitle end
       title = int_title(active, title)
+      if fmcTitle == "LIM SPD" then title = fmcTitle end
       -- ECON SPD or SEL SPD: CAS/Mach (FMSPG p.113: 358/.853), a selected
       -- CAS alone without the Mach
       local spdText = vnav_text("clbspd")
