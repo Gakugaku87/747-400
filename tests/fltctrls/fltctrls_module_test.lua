@@ -255,6 +255,12 @@ frames(3)
 T.near(units(), u, 1e-9, "autotrim, 3 s: waits")
 frames(2)
 T.check(units() > u + 0.2 and units() < u + 0.5, "then 0.25 units/s at 200 kt")
+-- (2026-10-31) one long frame (X-Plane below 20 fps: its time slower, the
+-- frame's SIM_PERIOD real time): at most 0.05 s worth (s145's stabilizer
+-- stepped 0.13 of X-Plane's trim at once)
+local u2 = units()
+rt:frame(2)
+T.check(units() - u2 <= 0.25 * 0.05 + 1e-6, string.format("a 2 s frame: %.4f units, 0.05 s worth at most", units() - u2))
 rt:set(STAB .. "autotrim_cmd", 0)
 rt:command("laminar/B747/flt_ctrls/stab_trim_dn_capt", 0.2)
 T.check(logged("laminar/B747/autopilot/trim_disengage", "once"), "one A/P and the wheel switches: disengage")

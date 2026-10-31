@@ -955,6 +955,12 @@ simDR_at_N1_bug = find_dataref("sim/cockpit2/engine/actuators/N1_target_bug")
 -- m/s/s: V dV/dt / g in ft/min)
 simDR_at_tas = find_dataref("sim/flightmodel/position/true_airspeed")
 local AT_EVS_K = 60 / 9.80665 / 0.3048
+-- (2026-10-31) the AFDS's and the A/T's time step at most X-Plane's 0.05 s
+-- a frame: below 20 fps X-Plane's time runs slower while SIM_PERIOD stays
+-- real time (s145: one long frame stepped the F/D's pitch 2.5 degrees and,
+-- in the SRM, the stabilizer at once)
+local AFDS_DT_MAX = 0.05
+local function afds_dt() return math.min(SIM_PERIOD, AFDS_DT_MAX) end
 local atState = B747_at_model.new()
 local atIn = {}
 local atIas, atAccel = nil, 0
@@ -1005,7 +1011,7 @@ local function afds_at()
 	-- levers' command, the EEC's TRA (EPR for P&W and RR, N1 for GE: type
 	-- 1; the highest), its reference the EEC's bug; the speed laws' target
 	-- X-Plane's dial (afds_speed_ref)
-	local dt = SIM_PERIOD
+	local dt = afds_dt()
 	local ias = simDR_ind_airspeed_kts_pilot
 	if atIas and dt > 0 then
 		atAccel = atAccel + ((ias - atIas) / dt - atAccel) * math.min(1, dt)
@@ -1080,7 +1086,7 @@ local function afds_inp()
 	-- speed (the VSI's lags)
 	afdsIn.gear_alt = afds_gear_alt()
 	afdsIn.ivs = simDR_afds_vs
-	afdsIn.dt = SIM_PERIOD
+	afdsIn.dt = afds_dt()
 	-- the approach (step 1d): LOC's capture by the roll laws (step 2b: the
 	-- ground speed, the intercept angle and the deviation, ATA22 p.290),
 	-- G/S's by the pitch laws (step 3c: the distance from the beam's centre
@@ -1315,7 +1321,7 @@ local function afds_roll_law()
 	-- runway align (step 4d): the AFDS model's, the heading magnetic
 	r.rwy_align = afds.rwy_align and not afds.roll_fail
 	r.hdg_mag = simDR_ap_mag_psi
-	local cmd = B747_afds_roll_model.update(afdsRoll, r, SIM_PERIOD)
+	local cmd = B747_afds_roll_model.update(afdsRoll, r, afds_dt())
 	local law, valid = cmd and 1 or 0, (cmd and afdsRoll.valid) and 1 or 0
 	if B747DR_ap_roll_law ~= law then B747DR_ap_roll_law = law end
 	if B747DR_ap_roll_valid ~= valid then B747DR_ap_roll_valid = valid end
@@ -1335,7 +1341,7 @@ local function afds_pitch_law()
 	-- a failed pitch mode holds the pitch of then (step 5c)
 	p.att_pitch = afds.pitch_fail and afds.fail_pitch or nil
 	afds_pitch_inputs(p)
-	local cmd = B747_afds_pitch_model.update(afdsPitch, p, SIM_PERIOD)
+	local cmd = B747_afds_pitch_model.update(afdsPitch, p, afds_dt())
 	local law = cmd and 1 or 0
 	if B747DR_ap_pitch_law ~= law then B747DR_ap_pitch_law = law end
 	B747DR_ap_pitch_cmd = cmd or 0

@@ -129,14 +129,17 @@ end
 
 -- engine 0-3: X-Plane's throttle from the EEC's thrust control (GE and P&W,
 -- forward thrust, engine running); ecc_spd in B747.42.xt.EEC.lua sets it
--- after the displays are worked out, and resets it otherwise
+-- after the displays are worked out, and resets it otherwise. Its time step
+-- at most X-Plane's 0.05 s a frame (2026-10-31: below 20 fps X-Plane's time
+-- runs slower while SIM_PERIOD stays real time)
+local EEC_DT_MAX = 0.05
 function B747_eec_throttle(engine)
     if eec_out == nil then return 0 end
     local key = eec_inputs.type
     local actual = B747DR_display_EPR[engine]
     if key == "GE" then actual = B747DR_display_N1[engine] end
     local n = engine + 1
-    return E.thrust_control(eec_state, key, n, eec_out.target[n], actual, simDR_engn_thro_use[engine], IDLE_COMMAND[key], SIM_PERIOD)
+    return E.thrust_control(eec_state, key, n, eec_out.target[n], actual, simDR_engn_thro_use[engine], IDLE_COMMAND[key], math.min(SIM_PERIOD, EEC_DT_MAX))
 end
 
 function B747_eec_reset_throttle(engine)
