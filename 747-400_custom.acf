@@ -143019,7 +143019,7 @@ GROUP Upper EICAS
         gen_text Mode
           POS 1582.500000 1072.000000
           IMAGE FMS Displays/TEXT/TXT.fms.34_2.green
-          DATAREF laminar/B747/engines/ref_thr_limit_mode
+          DATAREF laminar/B747/fms/thrlim/eicas
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 9
           BUS_SRC 2
@@ -143738,7 +143738,6 @@ GROUP Upper EICAS
               GROUP Engine 4 REF MAGENT and 1
                 SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
                 GROUP Engine 4 REF MAGENT and 2
-                  SHOW_EQUAL 5.000000 laminar/B747/autopilot/FMA/autothrottle_mode
                   gen_pointer Engine 4 REF MAGENT
                     POS 1748.500000 942.000000
                     IMAGE CRT Displays/EICAS Upper/ref-line-epr-magenta
@@ -143760,7 +143759,6 @@ GROUP Upper EICAS
               GROUP Engine 3 REF MAGENT and 1
                 SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
                 GROUP Engine 3 REF MAGENT and 2
-                  SHOW_EQUAL 5.000000 laminar/B747/autopilot/FMA/autothrottle_mode
                   gen_pointer Engine 3 REF MAGENT
                     POS 1642.500000 942.000000
                     IMAGE CRT Displays/EICAS Upper/ref-line-epr-magenta
@@ -143782,7 +143780,6 @@ GROUP Upper EICAS
               GROUP Engine 2 REF MAGENT and 1
                 SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
                 GROUP Engine 2 REF MAGENT and 2
-                  SHOW_EQUAL 5.000000 laminar/B747/autopilot/FMA/autothrottle_mode
                   gen_pointer Engine 2 REF MAGENT
                     POS 1536.500000 942.000000
                     IMAGE CRT Displays/EICAS Upper/ref-line-epr-magenta
@@ -143804,7 +143801,6 @@ GROUP Upper EICAS
               GROUP Engine 1 REF MAGENT and 1
                 SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
                 GROUP Engine 1 REF MAGENT and 2
-                  SHOW_EQUAL 5.000000 laminar/B747/autopilot/FMA/autothrottle_mode
                   gen_pointer Engine 1 REF MAGENT
                     POS 1430.500000 942.000000
                     IMAGE CRT Displays/EICAS Upper/ref-line-epr-magenta
@@ -144080,7 +144076,6 @@ GROUP Upper EICAS
               GROUP Engine 4 REF MAGENT and 1
                 SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
                 GROUP Engine 4 REF MAGENT and 2
-                  SHOW_EQUAL 5.000000 laminar/B747/autopilot/FMA/autothrottle_mode
                   gen_pointer Engine 4 REF MAGENT
                     POS 1748.500000 942.000000
                     IMAGE CRT Displays/EICAS Upper/ref-line-epr-magenta
@@ -144102,7 +144097,6 @@ GROUP Upper EICAS
               GROUP Engine 3 REF MAGENT and 1
                 SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
                 GROUP Engine 3 REF MAGENT and 2
-                  SHOW_EQUAL 5.000000 laminar/B747/autopilot/FMA/autothrottle_mode
                   gen_pointer Engine 3 REF MAGENT
                     POS 1642.500000 942.000000
                     IMAGE CRT Displays/EICAS Upper/ref-line-epr-magenta
@@ -144124,7 +144118,6 @@ GROUP Upper EICAS
               GROUP Engine 2 REF MAGENT and 1
                 SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
                 GROUP Engine 2 REF MAGENT and 2
-                  SHOW_EQUAL 5.000000 laminar/B747/autopilot/FMA/autothrottle_mode
                   gen_pointer Engine 2 REF MAGENT
                     POS 1536.500000 942.000000
                     IMAGE CRT Displays/EICAS Upper/ref-line-epr-magenta
@@ -144146,7 +144139,6 @@ GROUP Upper EICAS
               GROUP Engine 1 REF MAGENT and 1
                 SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
                 GROUP Engine 1 REF MAGENT and 2
-                  SHOW_EQUAL 5.000000 laminar/B747/autopilot/FMA/autothrottle_mode
                   gen_pointer Engine 1 REF MAGENT
                     POS 1430.500000 942.000000
                     IMAGE CRT Displays/EICAS Upper/ref-line-epr-magenta
@@ -144790,7 +144782,6 @@ GROUP Upper EICAS
               GROUP Engine 4 REF MAGENT and 1
                 SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
                 GROUP Engine 4 REF MAGENT and 2
-                  SHOW_EQUAL 5.000000 laminar/B747/autopilot/FMA/autothrottle_mode
                   gen_pointer Engine 4 REF MAGENT
                     POS 1748.500000 890.000000
                     IMAGE CRT Displays/EICAS Upper/ref-line-n1-magenta
@@ -144810,7 +144801,6 @@ GROUP Upper EICAS
               GROUP Engine 3 REF MAGENT and 1
                 SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
                 GROUP Engine 3 REF MAGENT and 2
-                  SHOW_EQUAL 5.000000 laminar/B747/autopilot/FMA/autothrottle_mode
                   gen_pointer Engine 3 REF MAGENT
                     POS 1642.500000 890.000000
                     IMAGE CRT Displays/EICAS Upper/ref-line-n1-magenta
@@ -144830,7 +144820,6 @@ GROUP Upper EICAS
               GROUP Engine 2 REF MAGENT and 1
                 SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
                 GROUP Engine 2 REF MAGENT and 2
-                  SHOW_EQUAL 5.000000 laminar/B747/autopilot/FMA/autothrottle_mode
                   gen_pointer Engine 2 REF MAGENT
                     POS 1536.500000 890.000000
                     IMAGE CRT Displays/EICAS Upper/ref-line-n1-magenta
@@ -144850,7 +144839,6 @@ GROUP Upper EICAS
               GROUP Engine 1 REF MAGENT and 1
                 SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
                 GROUP Engine 1 REF MAGENT and 2
-                  SHOW_EQUAL 5.000000 laminar/B747/autopilot/FMA/autothrottle_mode
                   gen_pointer Engine 1 REF MAGENT
                     POS 1430.500000 890.000000
                     IMAGE CRT Displays/EICAS Upper/ref-line-n1-magenta

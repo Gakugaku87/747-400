@@ -154,6 +154,13 @@ B747DR_fms_vnav_on_app					= deferred_dataref("laminar/B747/fms/vnav/on_app", "n
 -- takeoff derate (%) for the EEC's reference (B747.42.ref_thrust_model.lua)
 B747DR_fms_thrlim_sel					= deferred_dataref("laminar/B747/fms/thrlim/sel", "number")
 B747DR_fms_thrlim_to_pct				= deferred_dataref("laminar/B747/fms/thrlim/to_pct", "number")
+-- (step 9g4) the EICAS's thrust limit line: the mode and, with D-, the
+-- assumed temperature ("D-TO 1 +38C": FCOM p.831)
+B747DR_fms_thrlim_eicas					= deferred_dataref("laminar/B747/fms/thrlim/eicas", "string")
+-- the thrust limit's mode as a number for the EEC (the other plugin does not
+-- see this one's string writes): 10 x TO 1, CLB 2, CRZ 3, CON 4, GA 5, plus
+-- the rating (TO 1: 11), plus 100 with D- (D-TO 1: 111)
+B747DR_fms_thrlim_code					= deferred_dataref("laminar/B747/fms/thrlim/code", "number")
 -- (step 9c) the performance data VNAV needs entered: gross weight, cost
 -- index, CRZ ALT (1; else the VNAV switch's PERF/VNAV UNAVAILABLE, FCOM
 -- p.1433)

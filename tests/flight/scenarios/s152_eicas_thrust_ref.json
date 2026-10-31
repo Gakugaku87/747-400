@@ -1,0 +1,53 @@
+{
+  "name": "s152_eicas_thrust_ref",
+  "description": "6-1/6-2 段 9g4（EICAS の推力の表示）の X-Plane での確認、地上。RJAA 34L でエンジン運転中に始め（機体を読み直す）、CDU で経路（RJAA→RJBB）を ACTIVATE と EXEC、PERF INIT（ZFW 200・CRZ ALT FL170・COST INDEX 100）。THRUST LIM で SEL 50：推力制限は D-TO、EICAS の行は「D-TO +50C」（FCOM p.831）、reference の数字と緑のカーソルは D-TO の値（TO より低い）。A/T ARM が OFF の間はカーソルが紫（手の推力の目安：ATA34_2 p.652）、ARM で緑。TO 1 で「D-TO 1 +50C」、SEL を消すと「TO 1」。EICAS を撮る。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10 },
+    { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
+    { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
+    { "do": "cdu", "note": "RTE：RJAA→RJBB、DIRECT XAC", "keys": ["RTE", "RJAA", "L1", "RJBB", "R1", "NEXT", "XAC", "R1", "?SEL"] },
+    { "do": "cdu", "note": "RTE、ACTIVATE、EXEC", "keys": ["RTE", "R6", "EXEC"] },
+    { "do": "cdu", "note": "INIT REF、<INDEX、PERF：ZFW 200、CRZ ALT FL170、COST INDEX 100", "keys": ["INITREF", "L6", "L3", "200", "L3", "170", "R1", "100", "L5"] },
+    { "do": "cdu", "note": "<INDEX、THRUST LIM", "keys": ["L6", "L4"] },
+    { "do": "check", "note": "THRUST LIM", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "THRUST LIM" },
+    { "do": "check", "note": "EICAS の行は TO", "dref": "laminar/B747/fms/thrlim/eicas", "op": "==", "value": "TO" },
+    { "do": "remember", "dref": "sim/cockpit2/engine/actuators/EPR_target_bug[0]", "as": "to_ref" },
+    { "do": "cdu", "note": "SEL 50（L1）", "keys": ["50", "L1"] },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "推力制限は D-TO（FCOM p.1314）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "D-TO" },
+    { "do": "check", "note": "EICAS の行は D-TO +50C（FCOM p.831）", "dref": "laminar/B747/fms/thrlim/eicas", "op": "==", "value": "D-TO +50C" },
+    { "do": "check", "note": "reference は TO より低い（SEL 50 の定格）", "dref": "sim/cockpit2/engine/actuators/EPR_target_bug[0]", "op": "<", "value": 1.49 },
+    { "do": "snapshot", "note": "D-TO", "drefs": [ "sim/cockpit2/engine/actuators/EPR_target_bug[0]", "laminar/B747/engines/display_EPR_ref[0]", "laminar/B747/engines/display_EPR_max[0]", "laminar/B747/engines/to_reduction", "laminar/B747/fms3/Line02_S", "laminar/B747/fms3/Line03_S", "laminar/B747/autothrottle/armed", "laminar/B747/engines/display_ref_line_magenta" ] },
+    { "do": "check", "note": "A/T ARM が OFF：カーソルは紫（ATA34_2 p.652）", "dref": "laminar/B747/engines/display_ref_line_magenta", "op": "==", "value": 1 },
+    { "do": "view", "name": "eicas" },
+    { "do": "shot", "name": "eicas_dto_magenta" },
+    { "do": "switch", "note": "A/T ARM", "dref": "laminar/B747/toggle_switch/position[29]", "value": 1, "cmd": "laminar/B747/authrottle_arm" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "ARM：カーソルは緑", "dref": "laminar/B747/engines/display_ref_line_magenta", "op": "==", "value": 0 },
+    { "do": "shot", "name": "eicas_dto_green" },
+    { "do": "cdu", "note": "<TO 1（L3）", "keys": ["L3"] },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "EICAS の行は D-TO 1 +50C", "dref": "laminar/B747/fms/thrlim/eicas", "op": "==", "value": "D-TO 1 +50C" },
+    { "do": "shot", "name": "eicas_dto1" },
+    { "do": "cdu", "note": "SEL を消す（DEL、L1）", "keys": ["DEL", "L1"] },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "EICAS の行は TO 1", "dref": "laminar/B747/fms/thrlim/eicas", "op": "==", "value": "TO 1" },
+    { "do": "check", "note": "reference は TO より 8 % 推力の分低い", "dref": "sim/cockpit2/engine/actuators/EPR_target_bug[0]", "op": "between", "value": [-0.08, -0.03], "rel": "to_ref" },
+    { "do": "view", "name": "forward" }
+  ]
+}

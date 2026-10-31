@@ -562,18 +562,19 @@ function GE(altitude_ft_in)
   --(B747_eec_reference: the PI tables, the derates, the assumed temperature)
   --for the A/T's target and the EICAS's reference; the branches above no
   --longer set them
+  --(step 9g4) the cursor at idle in VNAV's idle descent with anti-ice
+  --(B747_eec_cursor, ATA34_2 p.652)
+  local _, idleCursor = B747_eec_cursor()
   for i = 0, 3 do
     local ref = B747_eec_reference(i)
     N1_target_bug[i] = ref
-    display_N1_ref[i] = math.min(ref, 117.5)
+    display_N1_ref[i] = math.min(idleCursor and B747_eec_idle(i) or ref, 117.5)
   end
 
   for i = 0, 3 do
-    if B747DR_ap_FMA_autothrottle_mode==5 and B747DR_ap_flightPhase>2 then
-      simDR_N1_target_bug[i]=25
-    else
-      simDR_N1_target_bug[i] = N1_target_bug[i]
-    end
+    --(step 9g4) the reference always (before, 25 in a descent's THR REF:
+    --ATHR-17)
+    simDR_N1_target_bug[i] = N1_target_bug[i]
     B747DR_display_N1_ref[i] = display_N1_ref[i]
     B747DR_display_N1_max[i] = B747_eec_max(i)  --the EEC's maximum rated N1, not the FMC's reference
   end

@@ -83,6 +83,7 @@
     { "do": "check", "note": "vnav_state は 2", "dref": "laminar/B747/autopilot/vnav_state", "op": "==", "value": 2 },
     { "do": "check", "note": "FMC の目標速度は V2 + 10〜V2 + 25（FCOM p.1255）", "dref": "laminar/B747/fms/vnav/cas", "op": "between", "value": [10, 25], "rel": "v2" },
     { "do": "check", "note": "A/T は THR REF（engage で A/T ARM から active）", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 5 },
+    { "do": "check", "note": "VNAV の上昇：EICAS のカーソルは紫（ATA34_2 p.652：段 9g4）", "dref": "laminar/B747/engines/display_ref_line_magenta", "op": "==", "value": 1 },
     { "do": "check", "note": "推力制限は TO のまま（THR REDUCTION のフラップ 5 の前：段 9g1）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "TO" },
     { "do": "remember", "dref": "laminar/B747/fms/vnav/cas", "as": "tocas" },
     { "do": "wait", "note": "加速高度（1,141 ft）の少し下", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": ">", "value": 1050, "timeout": 60 },

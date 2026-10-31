@@ -6,11 +6,12 @@
 -- at the armed climb; INDEX, TAKEOFF. In the air after it: the active mode
 -- and its limit, <GA, <CON, <CRZ, CLB, CLB 1, CLB 2 with <SEL> at the
 -- active one; INDEX, APPROACH. The limit the EEC's reference for the
--- FMC's mode (B747.68.thrlim_model.lua). Before: TO-1 style titles, the
+-- FMC's mode (B747.68.thrlim_model.lua), the A/T's target bug (step 9g4:
+-- always the limit; the EICAS's cursor may be the FMC's target). Before: TO-1 style titles, the
 -- A/T's target bug (0.90 in a descent), nothing in the air, <GA, <CON and
 -- <CRZ on the takeoff's keys (ATHR-02)
-B747DR_thrlim_epr_ref = find_dataref("laminar/B747/engines/display_EPR_ref")
-B747DR_thrlim_n1_ref = find_dataref("laminar/B747/engines/display_N1_ref")
+B747DR_thrlim_epr_ref = find_dataref("sim/cockpit2/engine/actuators/EPR_target_bug")
+B747DR_thrlim_n1_ref = find_dataref("sim/cockpit2/engine/actuators/N1_target_bug")
 simDR_OAT=find_dataref("sim/weather/temperature_ambient_c")
 
 fmsPages["THRUSTLIM"]=createPage("THRUSTLIM")

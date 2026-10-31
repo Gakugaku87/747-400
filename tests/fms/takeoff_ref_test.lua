@@ -12,6 +12,7 @@ for _, cdu in ipairs({"cdu1", "cdu2"}) do
     for n = 0, 15 do types["sim/cockpit2/radios/indicators/fms_" .. cdu .. "_text_line" .. n] = "string" end
 end
 types["laminar/B747/engines/ref_thr_limit_mode"] = "string"
+types["laminar/B747/fms/thrlim/eicas"] = "string"
 local rt = xtlua.new{types = types}
 rt:load("plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/B747.60.xt.fltInst.lua")
 rt:load("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.xt.fms.lua")
@@ -63,6 +64,8 @@ frames(0.2)
 T.equal(rt:get("laminar/B747/engines/ref_thr_limit_mode"), "D-TO", "SEL 26 over the OAT 15: D-TO")
 T.check(small(2):find("D%-TO EPR$"), "the title: D-TO EPR: " .. small(2))
 T.equal(rt:get("laminar/B747/fms/thrlim/sel"), 26, "the SEL for the EEC: 26 C")
+T.equal(rt:get("laminar/B747/fms/thrlim/eicas"), "D-TO +26C", "(step 9g4) the EICAS's line: D-TO +26C (FCOM p.831)")
+T.equal(rt:get("laminar/B747/fms/thrlim/code"), 110, "the mode's number for the EEC: D- and TO, 110")
 type_in("75F")
 key("ls_key/L1")
 T.check(line(3):find("^75`F") and small(3):find("59`F"), "SEL 75 F: the OAT in F (FCOM p.1315): " .. line(3) .. "|" .. small(3))
@@ -78,6 +81,7 @@ T.check(not line(3):find("%d"), "SEL deleted: blank: " .. line(3))
 frames(0.2)
 T.check(rt:get("laminar/B747/engines/ref_thr_limit_mode") == "TO" and rt:get("laminar/B747/fms/thrlim/sel") == -99,
     "SEL deleted: TO, no SEL for the EEC")
+T.equal(rt:get("laminar/B747/fms/thrlim/eicas"), "TO", "the EICAS's line: TO")
 T.check(small(3):find("15`C"), "the OAT back in C")
 
 -- TAKEOFF REF's defaults
@@ -176,6 +180,7 @@ T.check(small(2):find("^ SEL      OAT +TO 1 EPR$"), "SEL, OAT, TO 1 EPR: " .. sm
 T.equal(line(7), "<-8 % <SEL> <ARM> CLB 1>", "TO 1's row (FCOM p.1314)")
 T.check(small(6):find("^ TO 1") and small(8):find("^ TO 2") and line(9):find("^<%-20 %%"), "the labels TO 1, TO 2, <-20 %: " .. line(9))
 T.equal(rt:get(LIM), "TO 1", "the thrust limit: TO 1")
+T.equal(rt:get("laminar/B747/fms/thrlim/code"), 11, "its number for the EEC: 11")
 T.equal(rt:get("laminar/B747/engine/derate/CLB"), 1, "CLB 1 armed (TO 1's 8 %)")
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set("sim/cockpit2/controls/flap_ratio", 4 / 6)

@@ -593,10 +593,13 @@ function engine_idle_control_PW(altitude_ft_in)
     --takeoff's old cubic frozen after the liftoff, a design climb rate's
     --thrust, the M.85 cruise table, a fitted go-around formula) no longer
     --set them
+    --(step 9g4) the cursor at idle in VNAV's idle descent with anti-ice
+    --(B747_eec_cursor, ATA34_2 p.652)
+    local _, idleCursor = B747_eec_cursor()
     for i = 0, 3 do
       local ref = B747_eec_reference(i)
       EPR_target_bug[i] = ref
-      display_EPR_ref[i] = math.min(ref, 1.71)
+      display_EPR_ref[i] = math.min(idleCursor and B747_eec_idle(i) or ref, 1.71)
     end
 
     --Handle minor engine thrust differences where calculated (requested) thrust is less than the defined XP engine model can produce
@@ -623,11 +626,9 @@ function engine_idle_control_PW(altitude_ft_in)
     end
   
     for i = 0, 3 do
-      if (B747DR_ap_FMA_autothrottle_mode==5 or B747DR_ap_FMA_autothrottle_mode==2) and B747DR_ap_flightPhase>2 then
-        simDR_EPR_target_bug[i] = 0.9
-      else
-        simDR_EPR_target_bug[i] = EPR_target_bug[i]
-      end
+      --(step 9g4) the reference always: the EICAS's digits and the A/T's
+      --THR REF (before, 0.90 in a descent's THR REF or IDLE: ATHR-17)
+      simDR_EPR_target_bug[i] = EPR_target_bug[i]
       B747DR_display_EPR_ref[i] = display_EPR_ref[i]
       B747DR_display_EPR_max[i] = math.min(B747_eec_max(i), 1.71)  --the EEC's maximum rated EPR, not the FMC's reference
      -- EPR_display[i] = string.format("%3.2f", math.min(EPR_display_PW(altitude_ft_in, simDR_thrust_n[i], i), 1.71)) 
