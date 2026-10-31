@@ -1062,6 +1062,12 @@ function B747_fms_schedules(perf)
   end
   return clb, des, crzspd
 end
+-- (step 9e3) after a missed approach (B747_fms_missed_approach): the
+-- approach's legs then (by the leg each copies: the route's modifications
+-- copy them), no longer on approach, END OF DES's nor an E/D (a new
+-- approach's legs are), and CRZ ALT then; nil before one and on the ground
+local vnavMissed, vnavMissedCrz = nil, nil
+local function missed_leg(l) return vnavMissed ~= nil and vnavMissed[l.orig or l] == true end
 -- the prediction's input for a cruise altitude, nil without an active route
 function B747_fms_pred_input(crz)
   local st = B747_fmc_route
@@ -1070,8 +1076,9 @@ function B747_fms_pred_input(crz)
   local legs, clbLast, lastCon, rwy = {}, nil, nil, nil
   -- (step 9e2) the approach's runway passed: its legs left are the missed
   -- approach's, no E/D (FCOM p.1258: the E/D 50 ft above the threshold;
-  -- before, its constraint made a new one and ended END OF DES)
-  local missed = false
+  -- before, its constraint made a new one and ended END OF DES); (step 9e3)
+  -- after a missed approach the same, its runway ahead no E/D either
+  local missed = vnavMissed ~= nil
   for _, l in ipairs(r.passed) do
     if l.proc == "APPR" and l.fix and l.fix.kind == "RWY" then missed = true end
   end
@@ -1093,7 +1100,7 @@ function B747_fms_pred_input(crz)
       elseif l.akind == "AB" then con = {kind = "W", a = math.max(l.alt, l.alt2 or l.alt), b = math.min(l.alt, l.alt2 or l.alt)}
       else con = {kind = "AT", a = l.alt} end
     end
-    if l.fix and l.fix.kind == "RWY" and l.proc ~= "SID" then
+    if l.fix and l.fix.kind == "RWY" and l.proc ~= "SID" and not missed_leg(l) then
       con = {kind = "AT", a = (l.fix.elev or 0) + 50}
       rwy = rwy or i
     end
@@ -1217,6 +1224,8 @@ B747DR_fms_vnav_on_app = find_dataref("laminar/B747/fms/vnav/on_app")
 B747DR_fms_vnav_perf = find_dataref("laminar/B747/fms/vnav/perf")
 B747DR_fms_vnav_dist = find_dataref("laminar/B747/fms/vnav/dist")
 B747DR_fms_alt_sel_pushes = find_dataref("laminar/B747/autopilot/alt_sel_pushes")
+-- (step 9e3) the AFDS's pitch mode (the FMA's: 1 TO/GA, in the air G/A's)
+B747DR_fms_afds_pitch = find_dataref("laminar/B747/autopilot/FMA/active_pitch_mode")
 -- (step 9d3) speed intervention (the AP's: the IAS/MACH window opened with
 -- VNAV) and the MCP's speed (kt, a Mach as Mach x 100)
 B747DR_fms_spd_int = find_dataref("laminar/B747/autopilot/spd_intervention")
@@ -1330,11 +1339,12 @@ function B747_fms_spd_int() return B747DR_fms_spd_int == 1 end
 -- (step 9e2) on approach (FCOM p.1261): a published approach's first point
 -- passed in the air (the VFR approach's: not made); END OF DES (p.1391):
 -- the E/D's point passed, kept until a new E/D is ahead or the airplane is
--- on the ground (TO/GA: step 9e3); on approach ends with it
+-- on the ground; on approach ends with it. (step 9e3) A missed approach
+-- ends both: that approach's legs no longer count (FCOM p.1261)
 local vnavEndDes = false
 local function point_passed(p)
   for _, l in ipairs(B747_fmc_route.rte.passed) do
-    if l.fix == p then return true end
+    if l.fix == p and not missed_leg(l) then return true end
   end
   return false
 end
@@ -1342,12 +1352,49 @@ local function on_approach()
   local st = B747_fmc_route
   if not st.active or simDR_onGround == 1 then return false end
   for _, l in ipairs(st.rte.passed) do
-    if l.proc == "APPR" and l.fix then return true end
+    if l.proc == "APPR" and l.fix and not missed_leg(l) then return true end
   end
   return false
 end
 function B747_fms_end_des() return vnavEndDes end
 function B747_fms_on_app() return vnavIn.on_app == true end
+-- (step 9e3) the missed approach (FCOM p.1261-1262; FMSPG p.97; ATA34_2
+-- p.472: the FMC goes by the AFDS's go-around, not by the TO/GA switches):
+-- the descent's altitude constraints below the airplane deleted from the
+-- active route (its legs before the missed approach's; the waypoints
+-- kept), the missed approach's highest altitude CRZ ALT (none: CRZ ALT
+-- kept, estimate), the climb phase; on approach and END OF DES over, the
+-- approach's runway no E/D
+function B747_fms_missed_approach()
+  local st = B747_fmc_route
+  local r, alt = st.rte, simDR_pressureAlt1
+  local skip = {}
+  for _, l in ipairs(r.passed) do
+    if l.proc == "APPR" then skip[l.orig or l] = true end
+  end
+  local changed, top, ma = false, nil, false
+  for i, l in ipairs(r.legs) do
+    if l.proc == "APPR" then skip[l.orig or l] = true end
+    ma = ma or l.missed == true
+    if ma then
+      local a = math.max(l.alt or 0, l.alt2 or 0)
+      if l.proc == "APPR" and a > 0 and (not top or a > top) then top = a end
+    elseif l.alt and not l.altterm and math.max(l.alt, l.alt2 or l.alt) < alt then
+      changed = B747_route_model.delete_alt_active(st, i) or changed
+    end
+  end
+  vnavMissed = skip
+  if top then B747BR_cruiseAlt = top end
+  vnavMissedCrz = B747BR_cruiseAlt
+  vnavEndDes = false
+  B747_vnav_model.missed(vnavState)
+  -- the approach's descent path gone at once, the predictions' next without
+  -- it (s150's G/A 255 ft above the MCP altitude in its capture went back
+  -- to the descent past the old T/D in the same frame)
+  vnavGeo = nil
+  if changed then B747_fmc_route_changed() end
+  B747_fms_preds_now()
+end
 -- the descent's highest altitude constraint ahead (ft) or nil
 function B747_fms_des_top()
   local top = nil
@@ -1506,11 +1553,23 @@ function B747_fms_vnav_exec()
   vnavMod = nil
 end
 function B747_fms_vnav_erase() vnavMod = nil end
+local vnavGaSeen = nil
 local function update_vnav()
-  local inp, g = vnavIn, vnavGeo
+  local inp = vnavIn
   local pushes = B747DR_fms_alt_sel_pushes
   if vnavPushSeen ~= nil and pushes ~= vnavPushSeen then B747_fms_alt_sel_push() end
   vnavPushSeen = pushes
+  -- (step 9e3) the AFDS's G/A engaged in the air (the FMA's pitch to TO/GA
+  -- there; T/O's comes on on the ground) in the descent, on approach or at
+  -- END OF DES: the missed approach
+  local ga = B747DR_fms_afds_pitch == 1
+  if ga and vnavGaSeen == false and simDR_onGround == 0 and B747_fmc_route.active
+      and (vnavState.phase == "DES" or inp.on_app or vnavEndDes) then
+    B747_fms_missed_approach()
+  end
+  vnavGaSeen = ga
+  -- (after the missed approach's: its path gone)
+  local g = vnavGeo
   -- (step 9d2b) the modification gone (executed or erased elsewhere): its
   -- VNAV part too
   if vnavMod and not B747_fmc_route.mod then vnavMod = nil end
@@ -1537,9 +1596,14 @@ local function update_vnav()
   inp.on_app = (not vnavEndDes) and on_approach()
   local onApp = inp.on_app and 1 or 0
   if B747DR_fms_vnav_on_app ~= onApp then B747DR_fms_vnav_on_app = onApp end
+  -- (step 9e3) after a missed approach while its CRZ ALT stays; over on the
+  -- ground
+  if inp.ground then vnavMissed, vnavMissedCrz = nil, nil end
+  inp.missed = vnavMissed ~= nil and inp.crz_alt ~= nil and vnavMissedCrz == inp.crz_alt
   -- (step 9e1) the best holding speed for the descent's slow speed
-  -- reversion (FCOM p.1259; PI.11.6), in the descent only
-  inp.hold_cas = (vnavState.phase == "DES" and perf and inp.kg) and (B747_perf_db.hold(perf, inp.kg, inp.alt)) or nil
+  -- reversion (FCOM p.1259; PI.11.6), in the descent only; (step 9e3) the
+  -- cruise's after a missed approach too
+  inp.hold_cas = ((vnavState.phase == "DES" or inp.missed) and perf and inp.kg) and (B747_perf_db.hold(perf, inp.kg, inp.alt)) or nil
   -- (step 9d3) speed intervention: the MCP's speed (FCOM p.643)
   if B747_fms_spd_int() then
     local v, mach = B747DR_fms_ias_dial, simDR_autopilot_airspeed_is_mach == 1
