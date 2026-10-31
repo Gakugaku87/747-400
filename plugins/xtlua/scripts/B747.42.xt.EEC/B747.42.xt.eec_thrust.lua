@@ -170,6 +170,7 @@ function B747_eec_reference(engine)
     refIn.type, refIn.alt, refIn.tat = inp.type, inp.alt, inp.tat
     refIn.packs_on, refIn.wai, refIn.nai = inp.packs_on, inp.wai, inp.nai[engine + 1]
     refIn.mach = simDR_epr_mach
+    refIn.kias = inp.kias
     refIn.mode = B747_eec_thrlim_mode()
     refIn.to_pct = B747DR_eec_thrlim_to_pct
     local sel = B747DR_eec_thrlim_sel

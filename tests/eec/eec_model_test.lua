@@ -1,9 +1,11 @@
 -- Run from the repository root with LuaJIT: luajit tests/eec/eec_model_test.lua
 -- The EEC model (plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua)
--- against the FCOM PI tables (PW4056 p.262-263, CF6-80C2B1F p.359-360) and
--- the CF6 thrust management (ATA70_80 p.146-151, p.208-209): the maximum
--- rated thrust, its bleed adjustments, the full-forward rating by altitude
--- and speed, and the lever command between idle and the maximum.
+-- against the FCOM PI tables (PW4056 p.262-263, p.283-284, CF6-80C2B1F
+-- p.359-360, p.379-381) and the CF6 thrust management (ATA70_80 p.146-151,
+-- p.208-209): the maximum rated thrust, its bleed adjustments, the
+-- full-forward rating by altitude and speed (the maximum continuous band
+-- from its tables since the FMC's step 9h1), and the lever command between
+-- idle and the maximum.
 local T = dofile("tests/lib/check.lua")("eec_model")
 local E = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua")
 
@@ -31,6 +33,34 @@ T.near(E.lookup(PW.clb, 30, 35000), 1.39, 1e-9, "PW max climb EPR held at the wa
 T.near(E.lookup(PW.clb, -40, 0), 1.25, 1e-9, "PW max climb EPR held below -20")
 T.near(E.lookup(PW.ga, 54, 10000), 1.44, 1e-9, "PW go-around EPR held where TAT 54 and 50 are blank")
 T.near(E.lookup(GE.ga, 20, 20000), 109.8, 1e-9, "GE go-around N1 held above 10,000 ft")
+
+-- (the FMC's step 9h1) the maximum continuous tables (PI.13.1-13.2, PW4056
+-- p.283-284: EPR, MAX TAT, EPR CORR by KIAS and Mach; PI.23.1-23.3,
+-- CF6-80C2B1F p.379-381: N1 by KIAS and TAT)
+T.near(E.lookup_mct(PW.mct, 0, 25000, 300), 1.53, 1e-9, "PW max continuous EPR, 25,000 ft, 300 KIAS, TAT 0 (under MAX TAT 7)")
+T.near(E.lookup_mct(PW.mct, 17, 25000, 300), 1.44, 1e-9, "PW: 10 °C over MAX TAT, less EPR CORR 0.09")
+T.near(E.lookup_mct(PW.mct, -1, 25000, 250), 1.62, 1e-9, "PW: 250 KIAS 1.62")
+T.near(E.lookup_mct(PW.mct, -10, 26000, 300), 1.545, 1e-9, "PW: between 25,000 and 27,000 ft")
+T.near(E.lookup_mct(PW.mct, -14, 20000, 280), 1.512, 1e-9, "PW: between 250 and 300 KIAS at 20,000 ft")
+T.near(E.lookup_mct(PW.mct, -40, 35000, 291), 1.63, 0.005, "PW: M.85 at 35,000 ft (its CAS, about 291 kt)")
+T.near(E.lookup_mct(PW.mct, 20, 0, 150), 1.37, 1e-9, "PW: sea level, 150 KIAS")
+T.near(E.lookup_mct(GE.mct, -30, 35000, 240), 104.7, 1e-9, "GE max continuous N1, 35,000 ft, 240 KIAS, TAT -30")
+T.near(E.lookup_mct(GE.mct, -30, 35000, 260), 103.85, 1e-9, "GE: between 240 and 280 KIAS")
+T.near(E.lookup_mct(GE.mct, -60, 35000, 200), 100.4, 1e-9, "GE: held at the coldest TAT")
+T.near(E.lookup_mct(GE.mct, 15, 3000, 250), E.lookup_mct(GE.mct, 15, 5000, 250), 1e-9, "GE: held below 5,000 ft (estimate)")
+do
+    local i = E.inputs()
+    T.near(E.rating_mct(PW.mct, i, 0, 25000, 300, true), 1.495, 1e-9, "PW engine anti-ice: -0.035 at 25,000 ft")
+    i.packs_on = 2
+    T.near(E.rating_mct(PW.mct, i, 0, 25000, 300, false), 1.54, 1e-9, "PW 1 pack off: +0.01")
+    i.packs_on = 0
+    T.near(E.rating_mct(PW.mct, i, 0, 25000, 300, false), 1.55, 1e-9, "PW 3 packs off: the table's 2 packs off, +0.02")
+    T.near(E.rating_mct(GE.mct, i, -30, 35000, 260, false), 104.35, 1e-9, "GE packs off: +0.5 at 35,000 ft")
+    i.packs_on = 2
+    T.near(E.rating_mct(GE.mct, i, -30, 35000, 260, false), 103.85, 1e-9, "GE one pack off: nothing (the table's for all three: estimate)")
+    i.packs_on, i.wai = 3, true
+    T.near(E.rating_mct(GE.mct, i, -30, 35000, 260, true), 103.85 - 2.1, 1e-9, "GE engine and wing anti-ice: -2.1 at 35,000 ft")
+end
 
 -- the full-forward rating by altitude and speed (ATA70_80 p.208)
 local share, tla = E.rating_mix(0, 150)
@@ -99,11 +129,27 @@ inp.nai = {false, false, false, false}
 inp.alt, inp.tat, inp.kias = 17500, -5, 290
 out = E.update(s, inp, DT)
 local ga = E.lookup(GE.ga, -5, 10000)
-local clb = E.lookup(GE.clb, -5, 17500)
-T.near(out.max[1], 0.5 * ga + 0.5 * clb, 1e-9, "GE half way between the takeoff and the climb rating at 17,500 ft")
+local mct = E.lookup_mct(GE.mct, -5, 17500, 290)
+T.check(mct > E.lookup(GE.clb, -5, 17500), "GE at 17,500 ft, 290 KIAS: the maximum continuous table over the climb's")
+T.near(out.max[1], 0.5 * ga + 0.5 * mct, 1e-9, "GE half way between the takeoff and the maximum continuous rating at 17,500 ft (step 9h1)")
+inp.alt = 23500
+out = E.update(s, inp, DT)
+local clb = E.lookup(GE.clb, -5, 23500)
+mct = E.lookup_mct(GE.mct, -5, 23500, 290)
+T.near(out.max[1], clb + 0.5 * math.max(0, mct - clb), 1e-9, "GE at 23,500 ft: half way from the maximum continuous to the climb rating")
 inp.alt = 26000
 out = E.update(s, inp, DT)
 T.near(out.max[1], E.lookup(GE.clb, -5, 26000), 1e-9, "GE climb rating at 26,000 ft")
+-- P&W at 20,000 ft, 280 KIAS: the maximum continuous 1.512 over the climb's 1.43
+inp.type, inp.alt, inp.tat, inp.kias = "PW", 20000, -14, 280
+inp.idle = {1.0, 1.0, 1.0, 1.0}
+out = E.update(s, inp, DT)
+T.near(out.max[1], 1.512, 1e-9, "PW max EPR at 20,000 ft, 280 KIAS: the maximum continuous table's (step 9h1)")
+inp.kias = 360
+out = E.update(s, inp, DT)
+T.near(out.max[1], E.lookup(PW.clb, -14, 20000), 1e-9, "PW at 360 KIAS: the climb rating where the maximum continuous is under it")
+inp.type, inp.alt, inp.tat, inp.kias = "GE", 26000, -5, 290
+inp.idle = {25, 25, 25, 25}
 inp.lever = {0, 0, 0, 0}
 inp.idle = {120, 120, 120, 120}
 out = E.update(s, inp, DT)

@@ -12,8 +12,11 @@
 --   10,000 ft, then linearly back to CLB's at 30,000 and 35,000 ft (the
 --   109: P&W and RR; the 405 and 570, GE: both at 15,000 ft) (FCOM p.1273);
 --   GA the go-around table;
---   CRZ and CON the maximum climb table (estimates: the FCOM has no maximum
---   cruise table; the maximum continuous tables are step 9h's).
+--   CRZ the maximum climb table (estimate: the FCOM has no maximum cruise
+--   table);
+--   CON the maximum continuous table at the airspeed (step 9h1: PI.13.1-
+--   13.2, PI.23.1-23.3; one engine inoperative, also with all engines:
+--   estimate).
 -- P&W in EPR, a thrust's EPR from the EPR model (B747.42.epr_model.lua);
 -- GE in N1, a thrust's as N1 x the thrust ratio to the 1/3 (estimate).
 --
@@ -56,9 +59,9 @@ end
 
 -- inp: type ("PW" or "GE"), mode (the FMC's: "TO", "D-TO 1", "CLB 2", ...),
 -- to_pct (the takeoff derate, %), sel (the assumed temperature, °C, or
--- nil), alt (pressure altitude, ft), tat (°C), mach, packs_on, wai, nai
--- (this engine's). Returns the limit and the takeoff's thrust reduction (%:
--- 0 in other modes)
+-- nil), alt (pressure altitude, ft), tat (°C), mach, kias, packs_on, wai,
+-- nai (this engine's). Returns the limit and the takeoff's thrust reduction
+-- (%: 0 in other modes)
 function M.reference(inp)
     local E = B747_eec_model
     local ge = inp.type == "GE"
@@ -80,6 +83,7 @@ function M.reference(inp)
         return v, 100 * (1 - ratio(ge, full, v, mach))
     end
     if base == "GA" then return E.rating(tables.ga, inp, inp.tat, gaAlt, inp.nai), 0 end
+    if base == "CON" then return E.rating_mct(tables.mct, inp, inp.tat, inp.alt, inp.kias or 0, inp.nai), 0 end
     local v = E.rating(tables.clb, inp, inp.tat, inp.alt, inp.nai)
     local n = base:sub(1, 3) == "CLB" and tonumber(base:sub(5)) or nil
     if n and M.CLB_DERATE[n] then
