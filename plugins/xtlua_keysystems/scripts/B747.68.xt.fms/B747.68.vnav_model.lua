@@ -205,6 +205,11 @@ end
 local function speed_limits(P, inp, cas, below)
     if not cas then return nil, nil, nil end
     local lo = (inp.vmin and inp.vmin > 0) and inp.vmin or nil
+    -- (step 9e2) on approach with the flaps out: the path held up to the
+    -- flap placard less 5 (FCOM p.1262)
+    if inp.on_app and inp.flaps_placard then
+        return lo, inp.flaps_placard - M.PLACARD_MARGIN, cas + M.DRAG_LOW_KT
+    end
     if not below then
         local _, lim = P.econ_limit(inp.alt)
         return lo, lim + M.MAX_ADD_KT, lim
@@ -220,14 +225,17 @@ end
 -- VMO/MMO less 16 kt above the first speed constraint, the SPD TRANS's speed
 -- (the transition's less 10) below; slow, REV_SLOW_ADD over the higher of
 -- the best holding speed and the minimum maneuvering speed above, the SPD
--- TRANS's (not under the minimum maneuvering speed) below
-local function reversion(s, P, inp, kind, tr)
+-- TRANS's (not under the minimum maneuvering speed) below. On approach
+-- (step 9e2) the fast side's the target's (FCOM p.1262 names none: estimate)
+local function reversion(s, P, inp, kind, tr, target)
     if s.rev then return end
     local below = inp.alt < tr
     local tc = inp.des and inp.des.trans_cas or 240
     local vmin = (inp.vmin and inp.vmin > 0) and inp.vmin or 0
     local cas
-    if kind == "fast" then
+    if kind == "fast" and inp.on_app then
+        cas = target
+    elseif kind == "fast" then
         if below then
             cas = tc
         else
@@ -256,6 +264,8 @@ end
 --   vmin         the minimum maneuvering speed (kt) or nil; hold_cas the
 --                best holding speed (kt) or nil (step 9e1)
 --   spd_int      the MCP speed in speed intervention ({cas} or {mach})
+--   on_app       on approach (the glue's: FCOM p.1261; step 9e2); end_des
+--                the E/D passed (END OF DES: FCOM p.1391; step 9e2)
 --   takeoff      {v2 (nil: none), accel_alt (the acceleration height's
 --                altitude, ft), flaps (the handle's ratio)}; ias the
 --                airspeed (kt); engaged VNAV engaged (the AFDS's)
@@ -269,7 +279,8 @@ end
 --   mach_mode, alt (the FMC altitude), vs (PTH's vertical speed, nil level;
 --   THR's in the early and the cruise descent), path_alt, path_dev (ft
 --   above the path), at (the A/T mode), msg ("DRAG" for DRAG REQUIRED,
---   "THRUST" for THRUST REQUIRED, else nil: step 9e1)
+--   "THRUST" for THRUST REQUIRED, else nil: step 9e1), end_des (END OF DES:
+--   step 9e2)
 function M.update(s, inp)
     local out = s.out
     local P = inp.P
@@ -337,9 +348,12 @@ function M.update(s, inp)
     local spd_ph = s.crz_chg and "CRZ" or ph
     out.cas, out.mach, out.mach_mode = target_speed(P, inp.sched, inp.crz, inp, spd_ph, takeoff_speed(s, inp))
     out.path_alt, out.path_dev, out.vs, out.msg = nil, nil, nil, nil
+    -- (step 9e2) on approach speed intervention keeps the path; END OF DES
+    local int = inp.spd_int and not inp.on_app
+    out.end_des = (ph == "DES" and inp.end_des) and true or nil
     -- (step 9e1) DRAG REQUIRED and the speed reversion only in the descent
     -- on its path (not the early descent's, nor in speed intervention)
-    if ph ~= "DES" or s.early or inp.spd_int then s.drag, s.rev = false, nil end
+    if ph ~= "DES" or s.early or int or out.end_des then s.drag, s.rev = false, nil end
     if ph == "CLB" then
         out.mode = "SPD"
         out.alt = inp.clb_alt or inp.crz_alt
@@ -357,13 +371,19 @@ function M.update(s, inp)
         out.mode, out.at, out.vs = "SPD", M.AT_THR, -M.EARLY_VS
         out.alt = inp.des_alt
         if path_h then out.path_alt, out.path_dev = path_h, inp.alt - path_h end
-    elseif inp.spd_int then
+    elseif out.end_des then
+        -- (step 9e2) END OF DES (FCOM p.1391: the E/D passed, no climb after
+        -- it): level where the airplane is (V/S 0), the A/T on speed
+        -- (estimate: the sources say no more)
+        out.mode, out.at = "PTH", M.AT_SPD
+        out.alt = inp.alt
+    elseif int then
         -- (step 9d3) speed intervention in the descent (FCOM p.643): VNAV
         -- SPD, the MCP speed on the elevator and the A/T at IDLE, down to the
         -- next constraint, where the AFDS levels in VNAV PTH (its FMC
         -- altitude captured in VNAV SPD); the path's deviation for the ND.
         -- On approach VNAV PTH stays with the A/T on speed (p.643, p.1261:
-        -- step 9e)
+        -- step 9e2, below)
         out.mode, out.at = "SPD", M.AT_IDLE
         out.alt = inp.des_alt
         if path_h then out.path_alt, out.path_dev = path_h, inp.alt - path_h end
@@ -386,10 +406,10 @@ function M.update(s, inp)
             -- speed reversion
             if ias and hi and ias > hi then
                 vs = math.min(0, math.max(vs, rate + M.SPD_VS * (ias - hi)))
-                if dev > M.PATH_TOL then reversion(s, P, inp, "fast", tr) end
+                if dev > M.PATH_TOL then reversion(s, P, inp, "fast", tr, out.cas) end
             elseif ias and lo and ias < lo then
                 vs = math.min(vs, rate - M.SPD_VS * (lo - ias))
-                if dev < -M.PATH_TOL then reversion(s, P, inp, "slow", tr) end
+                if dev < -M.PATH_TOL then reversion(s, P, inp, "slow", tr, out.cas) end
             end
             out.vs = vs
             -- a line too shallow for idle, or below the path (levelling to
@@ -406,6 +426,9 @@ function M.update(s, inp)
             end
             if s.slow then out.at = M.AT_SPD end
         end
+        -- (step 9e2) on approach in speed intervention: VNAV PTH, the A/T
+        -- on the set speed (FCOM p.643, p.1261)
+        if inp.on_app and inp.spd_int then out.at = M.AT_SPD end
         -- DRAG REQUIRED over its speed, gone DRAG_OFF_KT under it
         if ias and drag then
             if ias > drag then s.drag = true elseif ias < drag - M.DRAG_OFF_KT then s.drag = false end
@@ -425,8 +448,8 @@ function M.update(s, inp)
     end
     -- valid: an active route, CRZ ALT and the gross weight (ATA34_2 p.621:
     -- the performance data entered), a path in the descent (FCOM p.645:
-    -- PERF/VNAV UNAVAILABLE without an E/D)
-    out.valid = (inp.active and inp.crz_alt and inp.kg and (ph ~= "DES" or path_h ~= nil)) and true or false
+    -- PERF/VNAV UNAVAILABLE without an E/D) or END OF DES (step 9e2)
+    out.valid = (inp.active and inp.crz_alt and inp.kg and (ph ~= "DES" or path_h ~= nil or out.end_des)) and true or false
     return out
 end
 

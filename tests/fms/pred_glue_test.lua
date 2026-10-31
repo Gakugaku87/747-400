@@ -558,6 +558,30 @@ key("func_key/des")
 key("func_key/next_pg")
 key("func_key/next_pg")
 T.check(line(1):find("ACT ECON DES"), "the DES page: ACT ECON DES again: " .. line(1))
+-- (step 9e2) on approach (FCOM p.1261): the approach's first point passed
+-- in the air (laminar/B747/fms/vnav/on_app); END OF DES (p.1391): the E/D
+-- (the runway leg, 50 ft above its threshold) passed: the DES page's title
+-- ACT END OF DES, VNAV still valid, on approach over
+local ONAPP = VN .. "on_app"
+T.equal(rt:get(ONAPP), 0, "before the approach: not on approach")
+local function pass_to(pred)
+    for i, l in ipairs(st.rte.legs) do
+        if pred(l) then return RM.sequence(st, i) end
+    end
+    return false
+end
+T.check(pass_to(function(l) return l.proc == "APPR" and l.fix ~= nil end), "the approach's first point passed")
+frames(0.5)
+T.check(rt:get(ONAPP) == 1 and fms.ns.B747_fms_on_app(), "on approach")
+T.check(pass_to(function(l) return l.proc == "APPR" and l.fix ~= nil and l.fix.kind == "RWY" end), "the runway (the E/D) passed")
+frames(0.5)
+T.check(fms.ns.B747_fms_end_des() and rt:get(ONAPP) == 0, "END OF DES; on approach over")
+key("func_key/des")
+key("func_key/next_pg")
+key("func_key/next_pg")
+T.check(line(1):find("ACT END OF DES"), "the DES page: ACT END OF DES (FCOM p.1391): " .. line(1))
+frames(11)
+T.check(fms.ns.B747_fms_end_des() and rt:get(VN .. "valid") == 1, "after the predictions again: END OF DES kept, VNAV valid")
 fms.ns.B747_fms_vnav_td = realTd
 rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 100)

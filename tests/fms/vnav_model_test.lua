@@ -381,4 +381,28 @@ V.update(s20, inp{alt = p75 + 200, mcp_alt = 3000, d_ed = 75, gs = 480, ias = 35
 T.equal(s20.rev, "fast", "reverted again")
 o = V.update(s20, inp{alt = p75 + 200, mcp_alt = 3000, d_ed = 75, gs = 480, ias = 358, spd_int = {cas = 300}})
 T.check(s20.rev == nil and o.msg == nil, "speed intervention: the reversion and DRAG REQUIRED gone")
+
+-- (step 9e2) on approach (the glue's on_app: FCOM p.1261): speed
+-- intervention keeps VNAV PTH with the A/T on the set speed (p.643); the
+-- flaps out, the path held up to the flap placard less 5, past it 150 ft
+-- above VNAV SPD at the target; END OF DES (the E/D passed: p.1391) level
+-- with the A/T on speed, VNAV valid without a path
+local s23 = V.new()
+local p8 = 1500 + (3000 - 1500) * 8 / 10   -- the shallow line at 8 NM: 2,700 ft
+V.update(s23, inp{alt = 35000, mcp_alt = 1000, d_ed = 110, gs = 480})
+o = V.update(s23, inp{alt = p8, mcp_alt = 1000, d_ed = 8, gs = 160, ias = 170, on_app = true, spd_int = {cas = 170}})
+T.check(o.mode == "PTH" and o.at == V.AT_SPD and math.abs(o.cas - 170) < 1e-6,
+    "on approach in speed intervention: VNAV PTH, the A/T on the set 170 kt (not VNAV SPD)")
+o = V.update(s23, inp{alt = p8, mcp_alt = 1000, d_ed = 8, gs = 160, ias = 170, spd_int = {cas = 170}})
+T.equal(o.mode, "SPD", "not on approach: VNAV SPD (step 9d3)")
+o = V.update(s23, inp{alt = p8 + 100, mcp_alt = 1000, d_ed = 8, gs = 160, ias = 198, on_app = true, flaps_placard = 200})
+T.equal(o.mode, "PTH", "on approach at 198 under the flap placard 200, 100 ft above: VNAV PTH")
+o = V.update(s23, inp{alt = p8 + 200, mcp_alt = 1000, d_ed = 8, gs = 160, ias = 198, on_app = true, flaps_placard = 200})
+T.check(o.mode == "SPD" and math.abs(o.cas - 195) < 1e-6,
+    string.format("within 5 kt of the placard, 200 ft above: VNAV SPD at the target %.0f (FCOM p.1262)", o.cas))
+local s24 = V.new()
+V.update(s24, inp{alt = 35000, mcp_alt = 1000, d_ed = 110, gs = 480})
+o = V.update(s24, inp{alt = 120, mcp_alt = 3000, path = nil, d_ed = nil, gs = 140, ias = 145, end_des = true})
+T.check(o.phase == "DES" and o.end_des and o.valid, "the E/D passed: END OF DES, VNAV valid without a path")
+T.check(o.mode == "PTH" and o.at == V.AT_SPD and (o.vs == nil or o.vs == 0), "level with the A/T on speed")
 T.done()

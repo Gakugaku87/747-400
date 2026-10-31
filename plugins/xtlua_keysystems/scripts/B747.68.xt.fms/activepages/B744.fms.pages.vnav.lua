@@ -454,8 +454,12 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
         nextAltText=string.format("%3d",nxtspd).."/"..string.format("%5d",nxtalt)
       end
       local mode = vnav_text("desspdmode")
+      -- (step 9e2) END OF DES past the E/D (FCOM p.1391)
+      local desActive = (vnav_active(3))
+      local desTitle = (desActive and B747_fms_end_des()) and "END OF DES"
+        or int_title(desActive, spd_title(mode, tonumber(fmsModules["data"]["desspd"]), tonumber(fmsModules["data"]["desspdmach"]))) .. " DES"
       return{
-        vnav_title(int_title((vnav_active(3)), spd_title(mode, tonumber(fmsModules["data"]["desspd"]), tonumber(fmsModules["data"]["desspdmach"]))) .. " DES", (vnav_active(3)), B747_fms_vnav_mod() == "DES NOW" or B747_fms_vnav_mod() == "DES DIR"),
+        vnav_title(desTitle, desActive, B747_fms_vnav_mod() == "DES NOW" or B747_fms_vnav_mod() == "DES DIR"),
       "                        ",
       --"  **** *****    ***/****",
       " "..edaltText.." "..string.format("%5s",eodWpt).."    "..nextAltText,
