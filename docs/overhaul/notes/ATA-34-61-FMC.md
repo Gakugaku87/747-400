@@ -1615,3 +1615,16 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - DESTINATION NOT SET を FMC の出来事のメッセージから外した（旗は立たない。ACARS のページが自分の入力のメッセージとして使う同じ文字は、段 12 で見直す）。
 - 推定：入力のメッセージと advisory の積み重ねは警告と同じ（最新が上）。経路の滑走路は進入の滑走路か滑走路の点。advisory は今まで通り全部の CDU に出す（ATA34_2 p.636 の「条件の CDU だけ」は、NOT ON INTERCEPT HEADING のように CDU に結びつかない advisory の扱いが分からないので見送り）。
 - 試験：`cdu_model_test.lua`（91 件：警告が入力のメッセージより上、入力のメッセージが advisory より上、積み重ね、出来事の再送、抑止の間の advisory、解除で最新の警告）、新しい `fmc_msg_inhibit_test.lua`（14 件：離陸の後は抑えない、進入の最初の点の通過のあと 500 ft 未満で抑え FMC MESSAGE も出ない、入力のメッセージは出る、800 ft ではまだ、1,000 ft を越えて出る、次の進入でまた抑え、着陸の後も、flight complete で出る）。全 152 本。X-Plane：新しい `s167_fmc_msg_inhibit`：15/15（2026-11-01、再起動後の 2 便目）。経路なしでは警告（UNABLE NEXT ALT の旗）が書き込み行と FMC MESSAGE に出る。V/S で 480 ft 未満に下げ、RJBB→RJAA の ILS34L で RW34L へ DIRECT TO（19 NM：進入の段階）した後は、警告も FMC MESSAGE も出ない（画像でも書き込み行は空）。FLCH で 1,000 ft を越えると出る。LIMIT ALT FLXXX の旗が新しく来ると上に出て、CLR で UNABLE NEXT ALT に戻る（積み重ね）。Log.txt に Lua の誤りなし。1〜3 回目は試験の組み方の誤りで 500 ft 未満にならず、抑止の 3 件が成り立たなかった（空中開始の後に 800 ft 近くまで上がる、V/S の目標の dataref の取り違え）。積み重ねと 1,000 ft の解除はその 3 回とも通った
+
+## 94. 11c2a の実装（2026-11-01：予測からの VNAV と RTA の警告）
+
+- 11c2 を 11c2a（予測から決まる 4 件）と 11c2b（CHECK ALT TGT：VNAV の engage の振る舞いも変わる）に分けた。
+- 資料：FCOM p.1431（DESCENT PATH DELETED）、p.1433（LIMIT ALT FLXXX）、p.1434（UNABLE FLXXX AT RTA FIX、UNABLE NEXT ALT）、p.1255（上昇の形が制限に届かないと UNABLE NEXT ALT）、FMSPG p.117（次の制限に届かないとき。図では 18000A に ECON で届かず、その前の 6000 を過ぎると出る）、ATA34_2 p.611（最大高度：上昇の速さと巡航の速さが速度の範囲に入る高度）、FMSPG p.131（MAX ALT より上の CRZ ALT は MAX ALT FLXXX のまま入る）。
+- 作ったもの（`B747.68.xt.fms.lua`）：
+  - UNABLE NEXT ALT（旗 47）：予測のたびに、T/C より前の次の AT・AT OR ABOVE・窓の制限（AT OR BELOW は低くて届かないことが無いので見ない）の点の予測の高度が、その高度（窓は下）より低いか。VNAV が engage で上昇の段階のとき出す（旗は値が変わったときだけ書く）。
+  - LIMIT ALT FLXXX：1 秒ごとに、VNAV が engage で CRZ ALT が最大高度（CRZ のページの MAX、ENG OUT 中は片発の最大）より上なら、その FL で出す。
+  - UNABLE FLXXX AT RTA FIX：RTA の速さを求めたあと、RTA の点の到着が許容（±30 秒。AFTER・BEFORE は向きの片側だけ）の内で、その点の高度制限（窓は下）より予測の通過高度が低いとき、その制限の FL で出す。
+  - DESCENT PATH DELETED（旗 6、出来事）：予測のたびに、VNAV が engage で、前の予測に降下の経路があり、今度は経路も E/D も無い（経路を決める制限が全部消えた）とき。進入の滑走路を過ぎた後と着陸復行の後は出さない。
+  - 高度の入る文字のメッセージは、数字が変われば古い文字を消してから新しい文字を出す（`B747_cdu_fmc_condition`）。
+- 推定：低いとみなす差 10 ft。RTA の点の FLXXX はその点の制限（無ければ出さない）。VNAV の limit altitude は最大高度とした（資料に定義が無い。VNAV の上昇を最大高度で止めることはしていない）。DESCENT PATH DELETED を出さない場合（滑走路の後、着陸復行）。
+- 試験：新しい `vnav_msgs_test.lua`（20 件：ALPHA に FL250A で UNABLE NEXT ALT と CDU、VNAV を切ると消え入れると出る、ALPHA に予測の時刻で RTA を入れると UNABLE FL250 AT RTA FIX が上に出て時刻を消すと消える、8000A で消える、CLB のページの CRZ ALT FL450 で LIMIT ALT FL411、VNAV を切ると下の MAX ALT が見える、FL350 で消える、BOKJO の 10000 だけで作った経路をその制限ごと消すと DESCENT PATH DELETED、CLR で消える）。全 153 本。X-Plane：新しい `s168_vnav_msgs`：13/13（2026-11-01）。XAC に FL330A で VNAV を engage すると、すぐ UNABLE NEXT ALT の旗が立ち、書き込み行と FMC MESSAGE に出た。CLB のページで CRZ ALT を FL450 にすると LIMIT ALT FL391（画像：CLB のページの CRZ ALT FL450 と書き込み行）、FL350 に戻すと消えた。XAC の制限を消すと UNABLE NEXT ALT は消え、BOKJO の 10000 を入れてから消すと DESCENT PATH DELETED が出た（VNAV は engage のまま）。Log.txt に Lua の誤りなし

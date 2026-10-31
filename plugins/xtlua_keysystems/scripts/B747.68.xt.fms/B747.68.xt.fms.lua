@@ -1346,6 +1346,57 @@ local function put_profile(s, r)
     end
   end
 end
+-- (6-1/6-2 step 11c2a; notes/ATA-34-61-FMC.md §94) VNAV's and RTA's alerts
+-- from the predictions (FCOM p.1431-1434): UNABLE NEXT ALT (flag 47: VNAV
+-- engaged in the climb, the next waypoint with an AT, AT OR ABOVE or window
+-- constraint before the T/C predicted under it, a window's lower; FCOM
+-- p.1255, FMSPG p.117), UNABLE FLXXX AT RTA FIX (the RTA FIX's crossing
+-- predicted under its altitude constraint while its ETA is within the
+-- tolerance), LIMIT ALT FLXXX (VNAV engaged with CRZ ALT above VNAV's
+-- limit altitude), DESCENT PATH DELETED (flag 6, an event: VNAV engaged,
+-- the path gone with the last constraint defining it). Estimates: 10 ft
+-- under; FLXXX at the RTA FIX its constraint's, none without one; VNAV's
+-- limit altitude the maximum altitude (the CRZ page's MAX, ENG OUT's
+-- engine-out maximum while active: the sources do not say); the path's
+-- deletion not after the approach's runway nor in a missed approach.
+local UNABLE_TOL_FT=10
+local predUnableNext,vnavUnableFlag=false,0
+local function unable_next(s,r)
+  if not (s and r and r.pts) then return false end
+  for i,l in ipairs(s.legs) do
+    local p=r.pts[i]
+    if not p or (r.tc and p.x>r.tc) or (r.td and p.x>=r.td) then return false end
+    local c=l.con
+    if c and c.kind~="B" then return p.h<(c.kind=="W" and c.b or c.a)-UNABLE_TOL_FT end
+  end
+  return false
+end
+-- a message with an altitude in its text: the old text's gone when it
+-- changes (B747_cdu_fmc_condition)
+local function fmc_alt_message(old,text)
+  if old==text then return text end
+  if old then B747_cdu_fmc_condition(old,false,true) end
+  if text then B747_cdu_fmc_condition(text,true,true) end
+  return text
+end
+local rtaFlText=nil
+local limitText,limitT=nil,nil
+local function update_limit_alt(inp)
+  local now=simDRTime
+  if limitT and now>=limitT and now-limitT<1 then return end
+  limitT=now
+  local text=nil
+  if inp.engaged and inp.crz_alt and inp.kg then
+    local lim
+    if B747_fms_eo().active then
+      lim=B747_fms_eo_crz_max()
+    else
+      lim=B747_perf_db.max_alt(B747_fms_perf(),inp.kg,B747_fms_isa_dev())
+    end
+    if lim and inp.crz_alt>lim+1 then text=string.format("LIMIT ALT FL%03d",math.floor(lim/100)) end
+  end
+  limitText=fmc_alt_message(limitText,text)
+end
 -- (step 9h5b) RTA's speed (FCOM p.1269, p.1354, p.1383-1384; notes/
 -- ATA-34-61-FMC.md §85): with the predictions s and r, the cruise Mach that
 -- brings the airplane to its FIX at its time (B747_rta_model.speed: up to
@@ -1359,7 +1410,7 @@ end
 local RTA_ITER = 3
 local function rta_update(s, r)
   local st = rtaState
-  local unable, deleted = false, false
+  local unable, deleted, flText, rtaD = false, false, nil, nil
   if st.active and not B747_fms_rta_avail() then B747_rta_model.terminate(st) end
   if st.active then
     local fix = st.active.fix
@@ -1388,18 +1439,30 @@ local function rta_update(s, r)
         local t0 = (s.phase == "clb" and r.tc_t) or 0
         local t1 = math.min(p.t, r.td_t or p.t)
         local tc = s.phase == "des" and 0 or math.max(0, t1 - t0)
-        local m, un = B747_rta_model.speed(st.active, {mach = st.mach, base = base, now = B747_fms_utc_min(),
+        local m, un, d = B747_rta_model.speed(st.active, {mach = st.mach, base = base, now = B747_fms_utc_min(),
           t_fix = p.t, t_cruise = tc, lo = lo, hi = hi})
-        unable = un
+        unable, rtaD = un, d
         local moved = st.mach == nil or math.abs(m - st.mach) > 0.001
         st.mach = m
         if k == RTA_ITER or not moved then break end
         s.crzspd = {mach = m}
         r = B747_pred_model.predict(s)
       end
+      -- (step 11c2a) UNABLE FLXXX AT RTA FIX: its ETA within the
+      -- tolerance (the suffix's side free), its crossing under its
+      -- constraint
+      local c = s.legs[i] and s.legs[i].con
+      local want = c and c.kind ~= "B" and (c.kind == "W" and c.b or c.a) or nil
+      local p = r.pts[i]
+      local suf, tol = st.active.suffix, B747_rta_model.TOL_MIN
+      local within = rtaD ~= nil and not ((suf ~= "A" and rtaD > tol) or (suf ~= "B" and rtaD < -tol))
+      if want and p and within and p.h < want - UNABLE_TOL_FT then
+        flText = string.format("UNABLE FL%03d AT RTA FIX", math.floor(want / 100))
+      end
     end
   end
   if not st.active then st.mach = nil end
+  rtaFlText = fmc_alt_message(rtaFlText, flText)
   B747DR_fmc_notifications[48] = unable and 1 or 0
   B747DR_fmc_notifications[39] = deleted and 1 or 0
   return r
@@ -1418,6 +1481,7 @@ function update_preds()
   predResult = rta_update(s, predResult)
   put_profile(s, predResult)
   vnav_geo_set(s, predResult)
+  predUnableNext = unable_next(s, predResult)
 end
 
 -- VNAV (6-1/6-2 step 9b; notes/ATA-34-61-FMC.md §56): the FMC's vertical
@@ -1532,6 +1596,16 @@ function vnav_geo_set(s, r)
       if l.p1 then g.rem[l.p1] = rem end
       rem = rem + l.dist
     end
+  end
+  -- (step 11c2a) DESCENT PATH DELETED (an event): VNAV engaged, the path
+  -- gone with the last constraint defining it (no E/D left), not after the
+  -- approach's runway nor in a missed approach
+  if vnavGeo and vnavGeo.path and not g.path and not s.ed and B747DR_ap_vnav_state == 2 and vnavMissed == nil then
+    local landed = false
+    for _, l in ipairs(B747_fmc_route.rte.passed) do
+      if l.proc == "APPR" and l.fix and l.fix.kind == "RWY" then landed = true end
+    end
+    if not landed then B747DR_fmc_notifications[6] = 1 end
   end
   vnavGeo = g
 end
@@ -1924,6 +1998,14 @@ local function update_vnav()
     if td and td / inp.gs * 60 <= 2 then reset = 1 end
   end
   if B747DR_fmc_notifications[33] ~= reset then B747DR_fmc_notifications[33] = reset end
+  -- (step 11c2a) UNABLE NEXT ALT (flag 47, written when it changes), LIMIT
+  -- ALT FLXXX
+  local un = (inp.engaged and out.phase == "CLB" and predUnableNext) and 1 or 0
+  if vnavUnableFlag ~= un then
+    vnavUnableFlag = un
+    B747DR_fmc_notifications[47] = un
+  end
+  update_limit_alt(inp)
   -- (step 9c) PERF INIT's gross weight and cost index, and CRZ ALT, entered
   local perfIn = inp.kg and inp.crz_alt and tonumber(fmsModules["data"].costindex)
   B747DR_fms_vnav_perf = perfIn and 1 or 0

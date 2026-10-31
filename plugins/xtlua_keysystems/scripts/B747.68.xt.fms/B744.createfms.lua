@@ -56,7 +56,8 @@ end
 -- come again. FCOM's advisories among them (p.1435); the rest are alerts
 -- (p.1431-1434)
 local FMC_EVENT = {["PERF/VNAV UNAVAILABLE"] = true, ["TAKEOFF SPEEDS DELETED"] = true,
-  ["ILS TUNE INHIBITED - MCP"] = true}  -- (6-1/6-2 step 10c: FCOM p.1432, an attempt)
+  ["ILS TUNE INHIBITED - MCP"] = true,  -- (6-1/6-2 step 10c: FCOM p.1432, an attempt)
+  ["DESCENT PATH DELETED"] = true}      -- (step 11c2a: FCOM p.1431, the deletion)
 local FMC_ADVISORY = {["TAKEOFF SPEEDS DELETED"] = true}
 function B747_cdu_sync_fmc_messages(flags)
   for i = 1, 55 do
