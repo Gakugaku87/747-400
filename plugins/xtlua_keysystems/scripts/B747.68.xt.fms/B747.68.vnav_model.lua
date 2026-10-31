@@ -6,7 +6,8 @@
 --   T/D, where the descent path here comes down to the airplane, from the
 --   cruise or a climb without a T/C, with the MCP altitude set below; or
 --   DES NOW's early descent before it: step 9d2a); in the cruise a cruise
---   climb or descent to a new CRZ ALT (step 9d2a);
+--   climb or descent to a new CRZ ALT (step 9d2a); the climb again at a
+--   missed approach (the glue's: step 9e3);
 --   the sub-mode asked for: VNAV SPD in the climb (the target speed on the
 --   elevator, the A/T on thrust: THR REF), VNAV PTH in the cruise (the FMC
 --   altitude on the elevator, the A/T on speed: SPD) and the descent (the
@@ -20,6 +21,9 @@
 --   within the flap placard less 5 kt and the minimum maneuvering speed
 --   plus 5 kt (FCOM p.663, p.1255: the FMC's margin); after takeoff V2 +
 --   10 to V2 + 25 until the acceleration height (FCOM p.1255; step 9c);
+--   in the cruise after a missed approach the most restrictive of the
+--   speed transition, the best holding speed and ECON cruise (FCOM
+--   p.1262; step 9e3);
 --   the FMC altitude: the climb's next AT or AT OR BELOW constraint (the
 --   glue's), CRZ ALT, the descent's next constraint or the E/D's;
 --   the descent path: the trajectory predictions' (B747.68.pred_model.lua),
@@ -104,6 +108,15 @@ function M.des_now(s)
     if s.phase == "DES" then return false end
     s.phase, s.early, s.early_below, s.crz_chg = "DES", true, false, nil
     return true
+end
+
+-- (step 9e3) the missed approach (FCOM p.1262, p.1264): the climb phase
+-- to the new CRZ ALT (VNAV SPD, then VNAV PTH at it), the descent's states
+-- gone. The glue asks it at the AFDS's go-around in the descent or on
+-- approach (ATA34_2 p.472)
+function M.missed(s)
+    s.phase, s.early, s.early_below, s.crz_chg = "CLB", false, false, nil
+    s.drag, s.rev, s.rev_cas, s.slow = false, nil, nil, false
 end
 
 -- the descent path at e NM to go to the E/D: its altitude, gradient (ft a
@@ -266,6 +279,7 @@ end
 --   spd_int      the MCP speed in speed intervention ({cas} or {mach})
 --   on_app       on approach (the glue's: FCOM p.1261; step 9e2); end_des
 --                the E/D passed (END OF DES: FCOM p.1391; step 9e2)
+--   missed       after a missed approach, its CRZ ALT still (step 9e3)
 --   takeoff      {v2 (nil: none), accel_alt (the acceleration height's
 --                altitude, ft), flaps (the handle's ratio)}; ias the
 --                airspeed (kt); engaged VNAV engaged (the AFDS's)
@@ -347,6 +361,19 @@ function M.update(s, inp)
     -- economy cruise)
     local spd_ph = s.crz_chg and "CRZ" or ph
     out.cas, out.mach, out.mach_mode = target_speed(P, inp.sched, inp.crz, inp, spd_ph, takeoff_speed(s, inp))
+    -- (step 9e3) the cruise after a missed approach (FCOM p.1262): the most
+    -- restrictive of the speed transition (the descent's, the destination
+    -- airport's, below its altitude: estimate, p.1262 names none), the best
+    -- holding speed and ECON cruise; not under the minimum maneuvering
+    -- speed plus 5
+    if inp.missed and ph == "CRZ" and not inp.spd_int and out.cas then
+        local cas = out.cas
+        local d = inp.des
+        if d and d.trans_cas and inp.alt < (d.trans_alt or 10000) then cas = math.min(cas, d.trans_cas) end
+        if inp.hold_cas then cas = math.min(cas, inp.hold_cas) end
+        if inp.vmin and inp.vmin > 0 then cas = math.max(cas, inp.vmin + M.VMIN_MARGIN) end
+        if cas < out.cas then out.cas, out.mach, out.mach_mode = cas, P.cas_to_mach(cas, inp.alt), false end
+    end
     out.path_alt, out.path_dev, out.vs, out.msg = nil, nil, nil, nil
     -- (step 9e2) on approach speed intervention keeps the path; END OF DES
     local int = inp.spd_int and not inp.on_app

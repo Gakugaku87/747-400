@@ -583,7 +583,117 @@ T.check(line(1):find("ACT END OF DES"), "the DES page: ACT END OF DES (FCOM p.13
 frames(11)
 T.check(fms.ns.B747_fms_end_des() and rt:get(VN .. "valid") == 1, "after the predictions again: END OF DES kept, VNAV valid")
 fms.ns.B747_fms_vnav_td = realTd
+-- (step 9e3) the missed approach (FCOM p.1261-1262, p.1264; ATA34_2 p.472):
+-- the AFDS's G/A in the air (the FMA's pitch TO/GA) at END OF DES at
+-- 1,500 ft: the climb, VNAV SPD with THR REF, CRZ ALT the missed
+-- approach's highest altitude (ZZV's hold at 4,000 A over the CA's 1,000),
+-- END OF DES over, VNAV valid
+local FMAP = "laminar/B747/autopilot/FMA/active_pitch_mode"
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 1500)
+rt:set(FMAP, 6)
+frames(0.5)
+T.check(fms.ns.B747_fms_end_des() and rt:get(VN .. "phase") == 3, "1,500 ft, VNAV PTH: END OF DES")
+rt:set(FMAP, 1)
+frames(0.5)
+T.equal(rt:get(CRZA), 4000, "G/A: CRZ ALT the missed approach's highest 4,000 (FCOM p.1262)")
+T.check(rt:get(VN .. "phase") == 1 and rt:get(VN .. "mode") == 1 and rt:get(VN .. "at") == 5 and rt:get(VN .. "alt") == 4000,
+    "the climb: VNAV SPD with THR REF to 4,000")
+T.check(not fms.ns.B747_fms_end_des() and rt:get(VN .. "valid") == 1, "END OF DES over, VNAV valid")
+-- the approach again after it (its legs anew before the missed approach's,
+-- as the ARRIVALS page puts them): the first approach's legs passed no
+-- longer on approach, the new one's first point passed on approach; at
+-- 3,500 ft with the MCP at 1,000 the descent on its path; G/A there: on
+-- approach over, the climb at once and on (its path gone: s150 went back
+-- to the descent past the old T/D in the same frame, the MCP 255 ft
+-- below), the descent's constraints below the airplane deleted (the legs
+-- kept), those above and the missed approach's kept, its runway ahead no
+-- E/D
+local again = {}
+for _, l in ipairs(st.rte.passed) do
+    if l.proc == "APPR" and not l.missed then
+        local c = {}
+        for k, v in pairs(l) do c[k] = v end
+        c.orig = nil
+        again[#again + 1] = c
+    end
+end
+T.check(#again >= 3 and again[1].fix and again[2].fix, "the approach's legs again: " .. #again)
+for k = #again, 1, -1 do table.insert(st.rte.legs, 1, again[k]) end
+fms.ns.B747_fmc_route_changed()
+-- (the airplane between its first two points: LNAV's sequencing leaves
+-- the legs ahead of it)
+local lat0, lon0 = rt:get("sim/flightmodel/position/latitude"), rt:get("sim/flightmodel/position/longitude")
+rt:set("sim/flightmodel/position/latitude", (again[1].fix.lat + again[2].fix.lat) / 2)
+rt:set("sim/flightmodel/position/longitude", (again[1].fix.lon + again[2].fix.lon) / 2)
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 3500)
+rt:set(MCPA, 1000)
+rt:set(FMAP, 6)
+frames(0.5)
+T.equal(rt:get(ONAPP), 0, "the first approach's legs passed: not on approach")
+T.check(pass_to(function(l) return l.proc == "APPR" and l.fix ~= nil end), "the new approach's first point passed")
+frames(0.5)
+T.equal(rt:get(ONAPP), 1, "on approach (its own legs)")
+T.check(rt:get(VN .. "phase") == 3 and fms.ns.B747_fms_vnav_dist() ~= nil,
+    "the descent on its path (the MCP at 1,000 ft): " .. rt:get(VN .. "phase"))
+local cons = {}
+for _, l in ipairs(st.rte.legs) do
+    if l.alt and not l.altterm then cons[#cons + 1] = {l = l, alt = l.alt, hi = math.max(l.alt, l.alt2 or l.alt), ma = l.missed} end
+end
+rt:set(FMAP, 1)
+rt:frame(1 / 30)
+T.equal(rt:get(VN .. "phase"), 1, "G/A: the climb at once")
+frames(0.5)
+T.equal(rt:get(ONAPP), 0, "on approach over (FCOM p.1261)")
+T.check(rt:get(VN .. "phase") == 1 and rt:get(VN .. "valid") == 1, "the climb on, VNAV valid")
+local gone, kept = 0, 0
+for _, c in ipairs(cons) do
+    if not c.ma and c.hi < 3500 then
+        T.check(c.l.alt == nil, "below 3,500 ft: " .. c.alt .. " deleted")
+        gone = gone + 1
+    else
+        T.equal(c.l.alt, c.alt, (c.ma and "the missed approach's " or "above: ") .. c.alt .. " kept")
+        kept = kept + 1
+    end
+end
+T.check(gone >= 1, "constraints deleted: " .. gone .. ", kept: " .. kept)
+local nRwy = nil
+for i, l in ipairs(st.rte.legs) do
+    if not nRwy and l.fix and l.fix.kind == "RWY" then nRwy = i end
+end
+T.check(nRwy ~= nil, "its runway ahead still (the waypoint kept)")
+T.equal(fms.ns.B747_fms_pred_input(4000).ed, nil, "no E/D at it (FCOM p.1262: the climb to CRZ ALT)")
+-- the runway passed: no END OF DES; at 4,000 ft the cruise, VNAV PTH, the
+-- target the most restrictive of the descent's speed transition, the best
+-- holding speed and ECON cruise (p.1262)
+T.check(pass_to(function(l) return l.fix ~= nil and l.fix.kind == "RWY" end), "the runway passed")
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 3990)
+frames(11)
+T.check(not fms.ns.B747_fms_end_des() and rt:get(ONAPP) == 0, "no END OF DES, not on approach")
+T.check(rt:get(VN .. "phase") == 2 and rt:get(VN .. "mode") == 2 and rt:get(VN .. "at") == 3 and rt:get(VN .. "alt") == 4000,
+    "the cruise at 4,000: VNAV PTH with SPD")
+local perf = fms.ns.B747_fms_perf()
+local _, desS = fms.ns.B747_fms_schedules(perf)
+local holdKt = fms.ns.B747_perf_db.hold(perf, fms.ns.B747_fms_gw_kg(), 3990)
+local want = math.min(desS.trans_cas or 999, holdKt)
+T.near(rt:get(VN .. "cas"), want, 0.5, string.format("the target %.0f kt (SPD TRANS %s, best holding %.0f)",
+    want, tostring(desS.trans_cas), holdKt))
+rt:set(FMAP, 6)
+frames(0.2)
+rt:set(FMAP, 1)
+frames(0.5)
+T.check(rt:get(VN .. "phase") == 2 and rt:get(CRZA) == 4000, "G/A again in the cruise (not the descent nor on approach): nothing")
+-- on the ground: over (in the air again at 4,000: ECON cruise)
 rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 100)
+frames(0.2)
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 3990)
+rt:set(FMAP, 6)
+frames(0.5)
+T.check(rt:get(VN .. "phase") == 2 and rt:get(VN .. "cas") > want + 20, "on the ground it ended: ECON cruise again " .. math.floor(rt:get(VN .. "cas")))
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 100)
+rt:set("sim/flightmodel/position/latitude", lat0)
+rt:set("sim/flightmodel/position/longitude", lon0)
 frames(0.2)
 T.done()

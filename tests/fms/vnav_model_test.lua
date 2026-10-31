@@ -405,4 +405,39 @@ V.update(s24, inp{alt = 35000, mcp_alt = 1000, d_ed = 110, gs = 480})
 o = V.update(s24, inp{alt = 120, mcp_alt = 3000, path = nil, d_ed = nil, gs = 140, ias = 145, end_des = true})
 T.check(o.phase == "DES" and o.end_des and o.valid, "the E/D passed: END OF DES, VNAV valid without a path")
 T.check(o.mode == "PTH" and o.at == V.AT_SPD and (o.vs == nil or o.vs == 0), "level with the A/T on speed")
+
+-- (step 9e3) the missed approach (FCOM p.1262, p.1264): from END OF DES
+-- the climb phase, VNAV SPD with THR REF to the new CRZ ALT (the missed
+-- approach's 3,000 ft), VNAV PTH at it; in the cruise after it the most
+-- restrictive of the speed transition (the descent's 240 below 10,000 ft),
+-- the best holding speed and ECON cruise, not under the minimum
+-- maneuvering speed plus 5; speed intervention the MCP's; without the
+-- glue's missed (a new CRZ ALT) ECON cruise
+V.missed(s24)
+local ma = {alt = 1500, crz_alt = 3000, mcp_alt = 3000, path = nil, d_ed = nil, gs = 150, ias = 160}
+local function ma_inp(t)
+    local i = inp(ma)
+    for k, v in pairs(t) do i[k] = v end
+    return i
+end
+o = V.update(s24, ma_inp{flaps_placard = 230})
+T.check(o.phase == "CLB" and o.mode == "SPD" and o.at == V.AT_THR_REF and o.alt == 3000 and o.valid and not o.end_des,
+    "the missed approach: the climb, VNAV SPD with THR REF to CRZ ALT 3,000, valid, END OF DES over")
+T.near(o.cas, 225, 1e-6, "the climb's target within the flap placard 230 less 5")
+o = V.update(s24, ma_inp{alt = 2960, ias = 220, missed = true, hold_cas = 228})
+T.check(o.phase == "CRZ" and o.mode == "PTH" and o.at == V.AT_SPD and o.alt == 3000,
+    "at 3,000 ft: the cruise, VNAV PTH (p.1264) with the A/T on speed")
+T.check(math.abs(o.cas - 228) < 1e-6 and not o.mach_mode, "the best holding 228 kt (under the transition's 240 and ECON cruise)")
+o = V.update(s24, ma_inp{alt = 2960, ias = 220, missed = true, hold_cas = 255})
+T.near(o.cas, 240, 1e-6, "the best holding 255 kt: the speed transition's 240 below 10,000 ft")
+o = V.update(s24, ma_inp{alt = 2960, ias = 220, missed = true, hold_cas = 220, vmin = 230})
+T.near(o.cas, 235, 1e-6, "the best holding 220 under the minimum maneuvering 230: 235")
+o = V.update(s24, ma_inp{alt = 2960, ias = 220, missed = true, hold_cas = 228, spd_int = {cas = 250}})
+T.near(o.cas, 250, 1e-6, "speed intervention: the MCP's 250 kt")
+o = V.update(s24, ma_inp{alt = 2960, ias = 220, hold_cas = 228})
+T.check(o.mach_mode and math.abs(o.mach - 0.85) < 1e-9, "not after a missed approach: ECON cruise's M.85")
+local s26 = V.new()
+V.update(s26, inp{alt = 12000, crz_alt = 12000, mcp_alt = 12000})
+o = V.update(s26, inp{alt = 12000, crz_alt = 12000, mcp_alt = 12000, path = nil, d_ed = nil, missed = true, hold_cas = 255})
+T.check(o.phase == "CRZ" and math.abs(o.cas - 255) < 1e-6, "above the transition's 10,000 ft: the best holding 255 kt")
 T.done()
