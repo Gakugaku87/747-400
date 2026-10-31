@@ -412,10 +412,11 @@ function fmsFunctions.setpage_no(fmsO,valueA)
     simCMD_FMS_key[fmsO.id]["L6"]:once()
 	simCMD_FMS_key[fmsO.id]["L2"]:once()
   elseif value=="PROGRESS" then
-	fmsModules[fmsO.id].targetCustomFMC=false
-    simCMD_FMS_key[fmsO.id]["prog"]:once()
-    fmsModules[fmsO.id].targetPage="PROGRESS"
-	fmsModules[fmsO.id].targetpgNo=1
+    -- (6-1/6-2 step 9h5a) the FMC's own PROGRESS pages (the PROG key's) at
+    -- the page given: the CRZ page's <RTA PROGRESS to 3/3 (before, X-Plane's
+    -- CDU's PROGRESS at its page 1)
+    fmsO["targetCustomFMC"]=true
+    fmsO["targetPage"]="PROGRESS"
   elseif value=="VHFCONTROL" then
     fmsO["targetCustomFMC"]=false
     fmsO["targetPage"]="VHFCONTROL"

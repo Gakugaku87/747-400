@@ -5,6 +5,133 @@ local function progress_title()
   if fltno=="" or string.find(fltno,"^%-+$") then return "        PROGRESS        " end
   return string.format("%-24s",string.format("%8s PROGRESS",fltno))
 end
+-- (6-1/6-2 step 9h5a) the pages: the 109's three with RTA PROGRESS 3/3,
+-- the 570's two (FCOM p.1375's PROGRESS 1/2: no RTA)
+local function prog_pages() return B747DR_fms_engine_type == 1 and 2 or 3 end
+local function lr(l, r) return l .. string.rep(" ", math.max(1, 24 - string.len(l) - string.len(r))) .. r end
+-- a title centred in the 22 columns before the page number (as the other
+-- pages': s158's 24 ran ACT RTA PROGRESS into 3/3)
+local function centre(t)
+  local pad = math.floor((22 - string.len(t)) / 2)
+  return string.rep(" ", pad) .. t .. string.rep(" ", 24 - pad - string.len(t))
+end
+-- (step 9h5a) RTA PROGRESS (FCOM p.1383-1385; FMSPG p.3.4-52~55; before,
+-- fixed text): ACT, MOD or no word in the title; 1L FIX (boxes with a
+-- route, blank with ENG OUT), 1R RTA (boxes after the FIX, its title
+-- then), 2R ALT/ETA (the predictions' at the FIX in the active route),
+-- 3L MAX SPD (.880 small by default), 6L <ERASE with a modification, 6R
+-- PRIOR RTA>; 2L RTA SPD's speed with step 9h5b. Its large lines or
+-- (small) its small ones; the keys' functions set with the large
+local function rta_page(small)
+  local R = B747_rta_model
+  local s = B747_fms_rta()
+  local avail = B747_fms_rta_avail()
+  local r = avail and R.shown(s) or nil
+  local L, S = {}, {}
+  for i = 1, 13 do L[i], S[i] = string.rep(" ", 24), string.rep(" ", 24) end
+  local word = (avail and s.mod) and "MOD " or ((avail and s.active) and "ACT " or "")
+  L[1] = centre(word .. "RTA PROGRESS")
+  S[1] = "                    3/3 "
+  local route = B747_fmc_route.active or B747_fmc_route.mod ~= nil
+  S[2] = lr(" FIX", r and "RTA" or "")
+  L[3] = lr(r and r.fix or ((avail and route) and "*****" or ""),
+    r and (r.time and R.time_text(r.time, r.suffix) or "*******") or "")
+  -- ALT/ETA: the predictions' altitude (FL at or above the transition
+  -- altitude) and ETA (a tenth of a minute) at the FIX
+  local altEta = ""
+  local pred = B747_fms_preds()
+  local i = r and B747_fms_rta_leg(r.fix)
+  local p = (pred and i) and pred.pts[i] or nil
+  if p then
+    local _, h, m, frac = get_ETA_for_Distance(0, p.t)
+    local ta = tonumber(fmsModules["data"]["transalt"]) or 18000
+    local alt = p.h >= ta - 1 and string.format("FL%03d", math.floor(p.h / 100 + 0.5))
+      or string.format("%d", math.floor(p.h / 10 + 0.5) * 10)
+    altEta = string.format("%s/%02d%02d.%dz", alt, h, m, math.min(9, math.floor(frac * 10)))
+  end
+  S[4] = lr(" RTA SPD", r and "ALT/ETA" or "")
+  L[5] = lr("", altEta)
+  S[6] = lr(" MAX SPD", "")
+  local mach = string.format(".%03d", math.floor(R.max(s) * 1000 + 0.5))
+  if s.max then L[7] = lr(mach, "") else S[7] = lr(mach, "") end
+  L[12] = "------------------------"
+  local erase = B747_fmc_route.mod ~= nil or B747_fms_eo().mod ~= nil or s.mod ~= nil
+  local prior = avail and R.prior_shown(s, B747_fms_rta_in_route)
+  L[13] = lr(erase and "<ERASE" or "", prior and "PRIOR RTA>" or "")
+  if not small then
+    local defs = fmsFunctionsDefs["PROGRESS"]
+    defs["L1"], defs["R1"], defs["L3"] = {"rtafix", ""}, {"rtatime", ""}, {"rtamax", ""}
+    defs["L6"] = erase and {"rteerase", ""} or nil
+    defs["R6"] = prior and {"rtaprior", ""} or nil
+  end
+  return small and S or L
+end
+-- (step 9h5a) RTA PROGRESS's entries (FCOM p.1383-1384): FIX a waypoint
+-- in the route (INVALID ENTRY else, an estimate; and with ENG OUT), the
+-- time after a FIX, MAX SPD .100-.990; DELETE: an active RTA ended (FIX,
+-- time), a modification's FIX dropped or its time boxes, MAX SPD .880
+local function rta_done(fmsO)
+  fmsO["scratchpad"] = ""
+  B747_fms_preds_now()
+end
+function fmsFunctions.rtafix(fmsO, value)
+  local sp = fmsO["scratchpad"]
+  local R, s = B747_rta_model, B747_fms_rta()
+  if sp == "" then return end
+  if not B747_fms_rta_avail() then fmsO["notify"] = "INVALID ENTRY" return end
+  if sp == "DELETE" then
+    if not R.shown(s) then fmsO["notify"] = "INVALID DELETE" return end
+    R.delete_fix(s)
+  elseif B747_fms_rta_in_route(sp) then
+    R.enter_fix(s, sp)
+  else
+    fmsO["notify"] = "INVALID ENTRY"
+    return
+  end
+  rta_done(fmsO)
+end
+function fmsFunctions.rtatime(fmsO, value)
+  local sp = fmsO["scratchpad"]
+  local R, s = B747_rta_model, B747_fms_rta()
+  if sp == "" then return end
+  if not (B747_fms_rta_avail() and R.shown(s)) then fmsO["notify"] = sp == "DELETE" and "INVALID DELETE" or "INVALID ENTRY" return end
+  if sp == "DELETE" then
+    R.delete_time(s)
+  else
+    local t, suffix = R.parse_time(sp)
+    if not t then fmsO["notify"] = "INVALID ENTRY" return end
+    R.enter_time(s, t, suffix)
+  end
+  rta_done(fmsO)
+end
+function fmsFunctions.rtamax(fmsO, value)
+  local sp = fmsO["scratchpad"]
+  local R, s = B747_rta_model, B747_fms_rta()
+  if sp == "" then return end
+  if sp == "DELETE" then
+    R.set_max(s, nil)
+  else
+    local d = string.match(sp, "^%.(%d%d?%d?)$")
+    local mach = d and tonumber(d) / 10 ^ string.len(d)
+    if not (mach and mach >= R.MAX_LO - 1e-9 and mach <= R.MAX_HI + 1e-9) then fmsO["notify"] = "INVALID ENTRY" return end
+    R.set_max(s, mach)
+  end
+  rta_done(fmsO)
+end
+function fmsFunctions.rtaprior(fmsO, value)
+  if B747_rta_model.prior(B747_fms_rta(), B747_fms_rta_in_route) then rta_done(fmsO) end
+end
+-- (step 9h5a) NEXT and PREV within the pages, the last's NEXT the first and
+-- the first's PREV the last (FMSPG p.3.4-52: RTA PROGRESS by PREV from 1/3;
+-- before, X-Plane's own CDU's keys, PREV from 1/3 to a page 0)
+function fmsFunctions.progpage(fmsO, value)
+  local n = prog_pages()
+  if value == "next" then
+    fmsO["targetpgNo"] = fmsO["pgNo"] < n and fmsO["pgNo"] + 1 or 1
+  else
+    fmsO["targetpgNo"] = fmsO["pgNo"] > 1 and fmsO["pgNo"] - 1 or n
+  end
+end
 fmsPages["PROGRESS"]=createPage("PROGRESS")
 --[[
 fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
@@ -142,6 +269,12 @@ fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
     if simConfigData["data"].SIM.weight_display_units == "LBS" then
       mult=simConfigData["data"].SIM.kgs_to_lbs
     end
+  -- (step 9h5a) RTA PROGRESS's keys on page 3 only
+  if pgNo~=3 then
+    fmsFunctionsDefs["PROGRESS"]["L1"]=nil
+    fmsFunctionsDefs["PROGRESS"]["R1"]=nil
+    fmsFunctionsDefs["PROGRESS"]["L3"]=nil
+  end
   if pgNo==1 then
     fmsFunctionsDefs["PROGRESS"]["L6"]={"setpage","POSREPORT"}
     fmsFunctionsDefs["PROGRESS"]["R6"]={"setpage","POSINIT_2"}
@@ -284,25 +417,9 @@ fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
     lastPageNum[fmsID]=2
     return lastPage[fmsID]
   elseif pgNo==3 then
-    fmsFunctionsDefs["PROGRESS"]["L6"]=nil
-    fmsFunctionsDefs["PROGRESS"]["R6"]=nil
-    lastPage[fmsID]= {
-    "  ACT RTA PROGRESS      ",
-    "                        ",
-    "-----           ----.-z ",
-    "                        ",
-    ".***      FL***/****.*z ",
-    "                        ",
-    "                        ",
-    "                        ",
-    "                        ",
-    "                        ",
-	  ".890                    ",
-    "------------------------", 
-    "                        "
-    }
-    lastPageNum[fmsID]=3
-    return lastPage[fmsID]
+    -- (step 9h5a) RTA PROGRESS, made again each time (its entries at once)
+    lastPageNum[fmsID]=nil
+    return rta_page(false)
   end
 end
 
@@ -326,7 +443,7 @@ fmsPages["PROGRESS"].getSmallPage=function(self,pgNo,fmsID)
     local toPart=(toText=="" and "") or (toText=="LEVEL AT" and toText) or "TO "..toText
     local label=progSpdLabel..string.rep(" ",math.max(1,24-#progSpdLabel-#toPart))..toPart
     return {
-"                    1/3 ",
+string.format("                    1/%d ", prog_pages()),
 " LAST   ALT   ATA   FUEL",
 string.format("%-5s", B747DR_last_waypoint).."        "..string.sub(B747DR_waypoint_ata,1,4).."z "..fuel_ata ,
 " TO      DTG  ETA       ",
@@ -346,7 +463,7 @@ elseif pgNo==2 then
   local tWind=" H/WIND"
   if B747DR_ND_Wind_Bearing>-90 and B747DR_ND_Wind_Bearing<90 then tWind=" T/WIND" end
   return {
-    "                    2/3 ",
+    string.format("                    2/%d ", prog_pages()),
     tWind.."   WIND    X/WIND",
     "                        ",
     " XTK ERROR     VTK ERROR",
@@ -360,32 +477,18 @@ elseif pgNo==2 then
     " TOTALIZER    CALCULATED", 
     "                        "
     } 
-	elseif pgNo==3 then return {
-    "                    3/3 ",
-    " FIX                 RTA",
-    "                        ",
-    " RTA SPD         ALT/ETA",
-    "                        ",
-    "                        ",
-    "                        ",
-    "                        ",
-    " MAX SPD                ",
-    "                        ",
-	  "                        ",
-    "                        ", 
-    "                        "
-    }
+	elseif pgNo==3 then return rta_page(true)
 end
 end
 fmsPages["PROGRESS"].getNumPages=function(self)
-
-  return 3
+  return prog_pages()
 end
 
 fmsFunctionsDefs["PROGRESS"]={}
-fmsFunctionsDefs["PROGRESS"]["next"]={"custom2fmc","next"}
-fmsFunctionsDefs["PROGRESS"]["prev"]={"custom2fmc","prev"}
-fmsFunctionsDefs["PROGRESS"]["exec"]={"custom2fmc","exec"}
+-- (step 9h5a) the FMC's NEXT, PREV and EXEC (before, X-Plane's CDU's)
+fmsFunctionsDefs["PROGRESS"]["next"]={"progpage","next"}
+fmsFunctionsDefs["PROGRESS"]["prev"]={"progpage","prev"}
+fmsFunctionsDefs["PROGRESS"]["exec"]={"rteexec",""}
 --[[
 fmsFunctionsDefs["PROGRESS"]["L1"]={"setdata",""}
 fmsFunctionsDefs["PROGRESS"]["L2"]={"setdata",""}
