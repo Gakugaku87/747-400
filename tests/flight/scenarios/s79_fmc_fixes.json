@@ -70,8 +70,11 @@
     { "do": "check", "note": "THRUST LIM の空中の形（<GA）", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "<GA" },
     { "do": "cmd", "note": "<GA（L2）", "name": "laminar/B747/fms1/ls_key/L2" },
     { "do": "sleep", "seconds": 0.5 },
-    { "do": "check", "note": "KEY/FUNCTION INOP（推力管理 6-4 まで）", "dref": "laminar/B747/fms3/Line14_L", "op": "contains", "value": "KEY/FUNCTION INOP" },
-    { "do": "check", "note": "推力制限は空中開始の CLB のまま（段 9g1 から FMC の推力制限。前はこのキーが TO を選び、TO 1・TO 2 なら GA 推力を 10・20 % 下げていた。<GA の選択は段 9g2）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "CLB" },
+    { "do": "check", "note": "空中の <GA で GA（段 9g2：FCOM p.1339。前は KEY/FUNCTION INOP、その前は離陸の derate が動いた）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "GA" },
+    { "do": "check", "note": "<SEL> が <GA に", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "<GA   <SEL>" },
+    { "do": "cmd", "note": "CLB>（R2）", "name": "laminar/B747/fms1/ls_key/R2" },
+    { "do": "sleep", "seconds": 0.5 },
+    { "do": "check", "note": "CLB> で CLB（段 9g1 から FMC の推力制限）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "CLB" },
     { "do": "cmd", "note": "CLR", "name": "laminar/B747/fms1/key/clear" },
 
     { "do": "mark", "note": "APPROACH REF の FLAP/SPEED（CDU-28）" },

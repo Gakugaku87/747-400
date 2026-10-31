@@ -1363,3 +1363,15 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - AP：THR スイッチの押しを数える `laminar/B747/autopilot/thr_pushes`（init にも）。EEC：`ecc_mode_set`（flightPhase からのモード）を外した。
 - 推定：空中開始（離陸を経ない）は CLB から。T/C の CRZ（整備の設定）。FLCH の上昇は「FLCH で MCP 高度が機体より上」。VNAV の段階は変わったとき（と engage のとき）だけ見る（乗員の選択は次の変化まで残る）。FMSPG p.105 の「A/T も engage」の条件は使っていない（FCOM p.667 に無い）。
 - 試験：`thrlim_model_test.lua` 36 件（地上の選択と上昇の自動選択、乗員の上書き。フラップ 5 と VNAV、1,500 ft の高さ、VNAV なしは TO のまま、THR は FLCH で 400 ft より上、TO/GA で derate が外れる。T/C の CRZ、cruise climb の CLB、FLCH の上昇、CON と CLB 2 の選択。空中開始の CLB、フラップ 1 の GA、THR で CLB、着陸フラップと G/S で固定、フラップ 20 の THR で CLB・CON を選んでいれば CON。進入の GA は VNAV の engage でも、FMC の上昇の段階の VNAV で CLB）、`takeoff_ref_test.lua` 44 件（CDU の TO 1 で「TO 1」と CLB 1 の待機、空中のフラップ 20 の VNAV で TO 1、フラップ 5 で CLB 1、UP から 1 で GA、THR で CLB 1、地上で TO 1）、`fmc_fixes_test.lua` 41 件（TO 1 をモデルで）。全 135 本。シナリオ：s79 は空中開始の CLB を見る形に、s141 に推力制限の確認を足した。X-Plane：起動し直した後の 4〜6 回目の読み直し（21:52〜22:03）で、s141 40/40（RJAA 34L の VNAV の離陸：VNAV の engage の後も TO、フラップ 5 にして 0.6 秒で CLB、フラップ UP でも CLB）、s79 31/31（空中開始の CLB が、空中の <GA（INOP）の後も CLB）、s142 31/31（A/T の離陸：TO）。Log.txt に Lua の誤りなし
+
+## 74. 段 9g2 の実装（2026-10-31：THRUST LIM のページ）
+
+- 資料：FCOM p.1313–1316（地上の THRUST LIM：SEL と OAT、見出しの右にモード（D- は assumed temp）と制限の値、<TO、TO 1・TO 2 の derate の %、<SEL>・<ARM>、CLB・CLB 1・CLB 2、INDEX、TAKEOFF）、p.1338–1340（空中：有効なモードと値、<GA・<CON・<CRZ、CLB・CLB 1・CLB 2、<SEL>、INDEX、APPROACH）、ATA34_2 p.535–536（地上か TO のモードのあいだは地上の形。CLB の選択は TO のあいだは待機）。
+- 前：見出しは「TO-1」の形で D も出ず、値は A/T の target の印（降下では 0.90）。空中はモードも値も無く OAT だけ。<GA・<CON・<CRZ は離陸の TO 系のキーにつながり、段 1 から KEY/FUNCTION INOP（ATHR-02、CDU-10）。TO 1・TO 2 は「10%」「20%」の固定の表示。
+- 作ったもの：
+  - 地上か、離陸の制限（TO のモード）のあいだ：SEL（大きい字）、見出しの行の「SEL  OAT」と右に「TO 1 EPR」（GE は N1）、その下に OAT と制限の値（小さい字：段 3b のまま）。行は「<TO   <SEL> <ARM>   CLB>」「<-8 % <SEL> <ARM> CLB 1>」の形（FCOM p.1314：小さい字の見出し TO 1・TO 2 の下に derate の %、`B747_fms_thrlim_pct`）。<SEL> は選んだ離陸の rating、<ARM> は待機中の上昇。キーは L1 SEL、L2〜L4 TO・TO 1・TO 2（空中は INOP：CDU-10）、R2〜R4 CLB・CLB 1・CLB 2、R6 TAKEOFF。
+  - 空中でそれより後：見出しの右に有効なモードと「EPR」、その下に値。行は「<GA  …  CLB>」「<CON  … CLB 1>」「<CRZ  … CLB 2>」で、<SEL> は有効なものに。キーは L2〜L4 GA・CON・CRZ（段 9g1 のモデルの選択：GA の固定の間は何もしない）、R2〜R4 CLB 系、R6 APPROACH。
+  - 値は EEC の reference（`laminar/B747/engines/display_EPR_ref`・`display_N1_ref` の 1 番：FMC のモードの制限の値）。前の target の印ではない。
+  - モデル：TO のモードのあいだの CLB 系の選択は待機（ATA34_2 p.536。段 9g1 では空中なら有効にしていた）。
+- 推定：OAT と値の字の大きさ（段 3b の小さい字のまま）。TO 2 を選んだときの「<-20 %<SEL>」の詰まり（幅 24 字に収めた）。
+- 試験：`takeoff_ref_test.lua` 51 件（地上の見出しの「TO 1 EPR」、「<-8 % <SEL> <ARM> CLB 1>」と見出し TO 1・TO 2、空中の「CLB 1 EPR」と「<CON        <SEL> CLB 1>」、<CON・<CRZ で選び、CLB 1> で戻る）、`thrlim_model_test.lua` 37 件（TO のあいだの CLB 2 は待機し、フラップ 5 で CLB 2）、`fmc_fixes_test.lua` 41 件（空中の <GA で GA）。全 135 本。シナリオ：s79 は空中の <GA で GA・CLB> で CLB、s141 に地上と空中の THRUST LIM の確認を足した。X-Plane：起動し直した後（22:10）の s128（捨て）に続いて、s141 46/46（地上の THRUST LIM は見出し「SEL OAT TO EPR」、OAT と値「15`C 1.52」、「<TO   <SEL> <ARM>   CLB>」、見出し TO 1 の下の「<-8 %」。フラップ 5 の CLB の後は空中の形「CLB EPR」と「<GA         <SEL>   CLB>」）、s79 32/32（空中の <GA で GA「<GA   <SEL>」、CLB> で CLB）。Log.txt に Lua の誤りなし

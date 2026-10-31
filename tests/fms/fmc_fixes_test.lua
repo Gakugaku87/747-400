@@ -91,7 +91,8 @@ key("ls_key/L6")  -- <INDEX: INIT/REF INDEX (the INIT REF key goes by context: s
 key("ls_key/L4")
 T.check(line(5):find("<GA"), "THRUST LIM in the air: <GA: " .. line(5))
 key("ls_key/L2")
-T.equal(line(14):gsub("%s+$", ""), "KEY/FUNCTION INOP", "<GA in the air: KEY/FUNCTION INOP (the thrust management's, 6-4)")
+T.check(fms.ns.B747_fms_thrlim().mode == "GA" and line(14):gsub("%s+$", "") == "" and line(5):find("^<GA   <SEL>"),
+    "<GA in the air: GA selected (step 9g2; FCOM p.1339): " .. line(5))
 T.equal(rt:get("laminar/B747/engine/derate/TO"), 1, "the takeoff derate stays TO 1 (before: TO, and TO 1/TO 2 cut the GA thrust)")
 clear_all()
 rt:set("sim/flightmodel/failures/onground_any", 1)

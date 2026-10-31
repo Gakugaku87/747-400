@@ -73,10 +73,11 @@ function M.select_to(s, n, pct, ground)
     return true
 end
 
--- CLB, CLB 1 or CLB 2: on the ground armed (over the automatic one), in
--- the air active (FCOM p.1316, p.1339); not while GA is held
+-- CLB, CLB 1 or CLB 2: on the ground or while the takeoff's limit is
+-- active armed (over the automatic one: ATA34_2 p.536, step 9g2), else
+-- active (FCOM p.1316, p.1339); not while GA is held
 function M.select_clb(s, n, ground)
-    if ground then
+    if ground or s.mode == "TO" then
         s.clb, s.clb_manual = n, true
         return true
     end

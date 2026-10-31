@@ -44,7 +44,9 @@ s = L.new()
 L.select_to(s, 1, 8, true)
 L.update(s, inp{ground = true, flaps = F10})
 T.equal(L.update(s, inp{alt_agl = 500, ra = 500, flaps = F10, vnav = true}), "TO 1", "400 ft with VNAV, flaps 10: TO 1")
-T.equal(L.update(s, inp{alt_agl = 1500, ra = 1500, flaps = F5, vnav = true}), "CLB 1", "the flaps at 5 with VNAV: CLB 1")
+T.check(L.select_clb(s, 2, false) and s.clb == 2 and L.update(s, inp{alt_agl = 600, ra = 600, flaps = F10, vnav = true}) == "TO 1",
+    "(step 9g2) CLB 2 in the air while TO 1 is active: armed (ATA34_2 p.536)")
+T.equal(L.update(s, inp{alt_agl = 1500, ra = 1500, flaps = F5, vnav = true}), "CLB 2", "the flaps at 5 with VNAV: the armed CLB 2")
 -- THR REDUCTION 1,500 ft: at 1,500 ft above the airport with VNAV
 s = L.new()
 L.update(s, inp{ground = true, flaps = F10})

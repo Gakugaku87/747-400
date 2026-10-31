@@ -399,7 +399,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 3 台が X-Plane 標準の CDU 1 つを共有する（X-Plane のページ：CDU-02。HOLD は段 7b、FIX は段 7e3b、RTE 2 は段 7e4 で FMC のページに。残りは性能・データリンクのページなど）。
 - 性能のページ（CLB・CRZ・DES など）に MOD・EXEC・ERASE が無く、即時に効く（CDU-03。RTE・LEGS は段 5b・5c で MOD・EXEC・ERASE を持った。EXEC 灯は 2026-10-27 から、経路の修正と ACTIVATE、X-Plane のページ（FIX）の実行待ちで点く）。題名、大字と小字（CDU-04・05）。機能キーで開くページの選び方は実機どおり（CDU-06：INIT REF は段 3a、DEP ARR は段 5d、HOLD は段 7b、VNAV は 2026-10-31 から。VNAV は空中では有効な CLB・CRZ・DES のページ、地上では CLB：ATA34_2 p.552。前は VNAV がいつも CLB）。
 - 入力の検査が不正確（CDU-07〜09）。
-- 空中の THRUST LIM の GA・CON・CRZ は選べない（KEY/FUNCTION INOP。推力管理 6-4 で。前は離陸の derate が動いた：CDU-10）。VNAV・PROGRESS・NAV RADIO のページの不足（CDU-14〜16）。
+- THRUST LIM のページは段 9g2 から実機の形：地上（と離陸の制限のあいだ）は SEL・OAT と、見出しの右にモードと制限（「TO 1 EPR」と値）、TO 1・TO 2 の derate の %（P&W は例の −8・−20 %）、<SEL>・<ARM>。空中は有効なモードと制限、<GA・<CON・<CRZ と CLB・CLB 1・CLB 2 の選択、<SEL>（FCOM p.1313–1316、p.1338–1340。前は見出しが TO-1 の形で D も出ず、値は A/T の target の印、空中はモードも値も無く、<GA・<CON・<CRZ は選べなかった：ATHR-02、CDU-10）。VNAV・PROGRESS・NAV RADIO のページの不足（CDU-14〜16）。
 - 無いページ（DESCENT FORECAST など。CDU-18。REF NAV DATA と RTE 2 は 2026-10-27 から）。故障の扱い（CDU-19）。MSG・DSPY・OFST・FAIL の灯（3D に無い：CDU-22）。
 - データリンク：アップリンクの処理が無い（CDU-34〜38）。
 - 実機に合わせた点（LEGS の PLAN の CTR と STEP、2026-10-29）：その CDU の側の ND（右の CDU は副操縦士、ほかは機長）が PLN のとき、LEGS の PLAN の中心の点に <CTR>、6R に STEP>、区切り線の端に小字の MAP CTR。STEP で中心が次の点へ進み、LEGS キー・NEXT PAGE・PREV PAGE では表示したページの最初の点が中心になって、ND の PLAN の中心が移る（FCOM p.1333 の 9・10、p.1330 の図；FMSPG p.124。前は <CTR> も STEP も無く、PLAN の中心は X-Plane の FMS のまま動かなかった）。
