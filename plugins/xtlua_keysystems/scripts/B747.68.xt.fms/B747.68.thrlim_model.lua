@@ -119,11 +119,13 @@ end
 --   to_red       the takeoff's thrust reduction (%: the EEC's) or nil
 --   eo           (step 9h3) the engines inoperative (their number)
 --   ias, vref    the airspeed and VREF 30 (kt)
+--   eo_vnav      (step 9h4a) the engine-out VNAV active (ENG OUT executed:
+--                CON kept as with an engine inoperative; not in TO)
 -- returns the mode's text
 function M.update(s, inp)
     local flaps = inp.flaps or 0
     local landing = flaps >= M.FLAPS_LAND - 0.01
-    local eo = (inp.eo or 0) >= 1
+    local eo = (inp.eo or 0) >= 1 or (s.mode ~= "TO" and inp.eo_vnav == true)
     local flchPush = inp.flch_up and not s.flch_prev
     s.flch_prev = inp.flch_up and true or false
     if inp.ground then

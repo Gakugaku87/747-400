@@ -52,14 +52,18 @@ local function vnav(page)
     for _ = 2, page do key("func_key/next_pg") end
 end
 
--- the CLB and CRZ pages' 5R: nothing
+-- the CLB and CRZ pages' 5R: ENG OUT> (6-1/6-2 step 9h4a; before, nothing),
+-- its modification dropped by ERASE (6L)
 vnav(1)
 key("ls_key/R5")
-T.check(line(1):find("CLB"), "CLB 5R: still CLB: " .. line(1))
+T.check(line(1):find("MOD E/O CLB"), "CLB 5R: ENG OUT>'s MOD E/O CLB: " .. line(1))
+key("ls_key/L6")
+T.check(line(1):find("CLB") and not line(1):find("E/O"), "ERASE: the all-engine CLB again: " .. line(1))
 vnav(2)
 key("ls_key/R5")
-T.check(line(1):find("CRZ"), "CRZ 5R: still CRZ: " .. line(1))
-T.equal(pad(), "KEY/FUNCTION INOP", "KEY/FUNCTION INOP")
+T.check(line(1):find("MOD E/O") and line(1):find("CRZ"), "CRZ 5R: MOD E/O ... CRZ: " .. line(1))
+key("ls_key/L6")
+T.check(not line(1):find("E/O"), "ERASE: " .. line(1))
 clear()
 -- the DES page's FORECAST> (FCOM p.1393)
 vnav(3)

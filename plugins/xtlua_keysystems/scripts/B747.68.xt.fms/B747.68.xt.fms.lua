@@ -1030,6 +1030,86 @@ function update_econ()
   end
 end
 
+-- (step 9h4a) the engine-out mode (B747.68.eo_model.lua; notes/
+-- ATA-34-61-FMC.md §81; FCOM p.1266, p.1341-1342, p.1350-1353; FMSPG
+-- p.3.3-4, p.3.3-6, p.3.4-5): ENG OUT> and ALL ENG> on the VNAV CLB and CRZ
+-- pages as modifications for EXEC; the data for the engines sensed
+-- inoperative (one if none); executed, CRZ ALT lowered to the engine-out
+-- maximum, the reference thrust limit CON, the engine-out speeds VNAV's
+dofile("B747.68.eo_model.lua")
+local eoState = B747_eo_model.new()
+B747DR_fms_eo_nai = find_dataref("laminar/B747/antiice/nacelle/valve_pos")
+B747DR_fms_eo_wai = find_dataref("laminar/B747/antiice/wing/valve_pos")
+function B747_fms_eo() return eoState end
+-- the anti-ice for the engine-out maximum altitude: 0 off, 1 engine, 2
+-- engine and wing (PI.13.3, PI.23.4)
+local function eo_ai()
+  local nai = false
+  for i = 0, 3 do
+    if B747DR_fms_eo_nai[i] > 0.5 then nai = true end
+  end
+  if not nai then return 0 end
+  if B747DR_fms_eo_wai[0] > 0.5 or B747DR_fms_eo_wai[1] > 0.5 then return 2 end
+  return 1
+end
+-- the engine-out maximum altitude (ft) at the FMC's weight: at E/O LRC
+-- ("LRC"), at the minimum drag speed ("EO"), or the lower ("CLB": FCOM
+-- p.1342); the optimum at E/O LRC (estimate: perf_db's)
+function B747_fms_eo_max(kind)
+  local lrc, dd = B747_perf_db.eo_max_alt(B747_fms_perf(), B747_eo_model.engines(eoState), B747_fms_gw_kg(),
+    B747_fms_isa_dev(), eo_ai())
+  if kind == "EO" then return dd end
+  if kind == "LRC" then return lrc end
+  return math.min(lrc, dd)
+end
+function B747_fms_eo_crz_max() return B747_fms_eo_max(eoState.crz == "EO" and "EO" or "LRC") end
+function B747_fms_eo_opt()
+  return B747_perf_db.eo_opt_alt(B747_fms_perf(), B747_eo_model.engines(eoState), B747_fms_gw_kg(), B747_fms_isa_dev(), eo_ai())
+end
+-- the E/O climb speed and <E/O SPD's (kt): the minimum drag speed
+-- (estimate: FCOM p.1342's engine out climb speed as the best gradient's)
+function B747_fms_eo_min_drag()
+  return B747_perf_db.eo_min_drag(B747_fms_perf(), B747_eo_model.engines(eoState), B747_fms_gw_kg())
+end
+-- E/O LRC at an altitude (ft): Mach and KIAS
+function B747_fms_eo_lrc(ft)
+  local m, k = B747_perf_db.eo_lrc(B747_fms_perf(), B747_eo_model.engines(eoState), B747_fms_gw_kg(), ft)
+  return m, k
+end
+-- the thrust setting (EPR or N1) for engine-out level flight
+function B747_fms_eo_setting(ft, mach)
+  return B747_perf_db.eo_level_setting(B747_fms_perf(), B747_eo_model.engines(eoState), B747_fms_gw_kg(), ft, mach,
+    B747_fms_isa_dev())
+end
+-- the pages' ENG OUT> and ALL ENG>
+function B747_fms_eo_eng_out()
+  if B747_eo_model.eng_out(eoState, B747_fms_eng_out()) then B747_fms_preds_now() end
+end
+function B747_fms_eo_all_eng()
+  if B747_eo_model.all_eng(eoState) then B747_fms_preds_now() end
+end
+-- EXEC: ENG OUT's CRZ ALT at most the engine-out maximum (the CLB page's
+-- lower one, else E/O LRC's: FMSPG p.3.3-4, p.3.4-5), CON (FCOM p.1266,
+-- p.1350); ALL ENG's the all-engine data back. True when there was one
+function B747_fms_eo_exec()
+  local kind = eoState.mod
+  local maxFt = (kind == "ENG OUT") and B747_fms_eo_max(B747_fms_vnav_page() == 1 and "CLB" or "LRC") or nil
+  if not B747_eo_model.exec(eoState) then return false end
+  if maxFt then
+    local crz = B747BR_cruiseAlt
+    if crz and crz > maxFt then
+      B747BR_cruiseAlt = math.floor(maxFt / 100) * 100
+      monitorCRZALT()
+      setFMSData("stepalt", "")
+    end
+    B747_fms_thrlim_sel("CON")
+  end
+  B747_fms_econ_now()
+  B747_fms_preds_now()
+  return true
+end
+function B747_fms_eo_erase() return B747_eo_model.erase(eoState) end
+
 -- the trajectory predictions (6-1/6-2 step 8c; notes/ATA-34-61-FMC.md
 -- §47): every 10 s (at once after an entry) along the active route's legs
 -- ahead, with their great circle distances and altitude constraints, by
@@ -1059,6 +1139,26 @@ function B747_fms_schedules(perf)
     crzspd = {fn = function(h, kg) return (B747_perf_db.lrc(perf, kg, h)) end}
   else
     crzspd = {mach = (pred_num("crzspd") or 810) / 1000}
+  end
+  -- (step 9h4a) engine out: the E/O climb speed or the crew's, no SPD
+  -- TRANS nor SPD REST (the E/O CLB page has none: estimate); E/O LRC, the
+  -- minimum drag speed or the crew's (FCOM p.1342, p.1350-1353)
+  if eoState.active then
+    local n, gw = eoState.n, B747_fms_gw_kg()
+    local sel = eoState.clb
+    if sel then
+      clb = {cas = sel.cas or 400, mach = sel.mach}
+    else
+      clb = {cas = B747_perf_db.eo_min_drag(perf, n, gw)}
+    end
+    local c = eoState.crz
+    if c == "LRC" then
+      crzspd = {fn = function(h, kg) return (B747_perf_db.eo_lrc(perf, n, kg, h)) end}
+    elseif c == "EO" then
+      crzspd = {cas = B747_perf_db.eo_min_drag(perf, n, gw)}
+    else
+      crzspd = c.mach and {mach = c.mach} or {cas = c.cas}
+    end
   end
   return clb, des, crzspd
 end
@@ -1760,6 +1860,10 @@ local function update_thrlim()
   inp.to_red = math.max(B747_fms_thrlim_pct(thrlimState.to), B747DR_fms_to_reduction)
   -- (step 9h3) an engine inoperative: the takeoff's CON at VREF 30 + 98
   inp.eo, inp.ias, inp.vref = B747_fms_eng_out(), simDR_ias_pilot, B747DR_airspeed_Vf30
+  -- (step 9h4a) the engine-out mode: a second engine's data; CON kept
+  -- while it is active
+  B747_eo_model.update(B747_fms_eo(), inp.eo)
+  inp.eo_vnav = B747_fms_eo().active
   local mode = B747_thrlim_model.update(thrlimState, inp)
   if B747DR_fms_thrlim_mode ~= mode then B747DR_fms_thrlim_mode = mode end
   local s = thrlimState
@@ -1938,7 +2042,9 @@ end
 -- CDUs, HOLD and FIX): the left and centre CDUs' light (the 3D cockpit's
 -- "pilot" one) with the left CDU's power, the right CDU's with its own
 function B747_fmc_exec_lights()
+  -- (step 9h4a) the engine-out modification too
   local on=B747_route_model.exec_lit(B747_fmc_route) or B747_route_model.exec_lit(B747_fmc_route2) or simDR_fms_exec_light>0
+    or B747_fms_eo().mod~=nil
   local l=(on and cduPowered("fmsL")) and 1 or 0
   local r=(on and cduPowered("fmsR")) and 1 or 0
   if B747DR_fms_exec_light_pilot~=l then B747DR_fms_exec_light_pilot=l end

@@ -1066,6 +1066,24 @@ function M.eo_level_setting(t, n, kg, ft, mach, isa_dev)
         - setting_at(t, M.eo_drag(t, n, kg, ft, m0) / ne, ft, m0, 0)
 end
 
+-- (step 9h4a) the engine-out optimum altitude (ft) at a weight (kg), the
+-- ISA deviation and anti-ice: the altitude of the most NM a kg at E/O long
+-- range cruise (the tables' Mach and fuel flow) in 500 ft steps up to the
+-- E/O maximum at that speed (estimate: the FCOM gives no engine-out
+-- optimum; p.1353: OPT at the speed line's speed)
+function M.eo_opt_alt(t, n, kg, isa_dev, ai)
+    local maxFt = M.eo_max_alt(t, n, kg, isa_dev, ai)
+    local lo = eo_tables(t, n).LRC_ALT[1] * 1000
+    local ne = 4 - eo_n(n)
+    local best, bestFt = -1, lo
+    for ft = lo, math.max(lo, maxFt), 500 do
+        local m, _, ff = M.eo_lrc(t, n, kg, ft)
+        local r = M.tas(m, ft, isa_dev) / (ne * ff)
+        if r > best then best, bestFt = r, ft end
+    end
+    return bestFt
+end
+
 -- the cost index's place at a weight and cruise altitude, an estimate (no
 -- table): from 0 at the still-air maximum range cruise to 1 where the
 -- still-air economy cruise is the long range cruise (the index CI_L), then
