@@ -3,7 +3,9 @@
 -- B747.68.xt.fms/B747.68.perf_db.lua; 6-1/6-2 step 8a, notes/ATA-34-61-FMC.md
 -- §44) against the FCOM PI tables: PW4056 (PI.11, p.267-273) and
 -- CF6-80C2B1F (the 747-400F's PI.21, p.363-369, in lb): the table's cells,
--- between them, at their ends; RR uses the PW tables (an estimate).
+-- between them, at their ends; RR uses the PW tables (an estimate). Step
+-- 9h2 (§78): the engine-out tables (PI.13-14, PI.23-24) and the engine-out
+-- drag, fuel flow and thrust setting anchored to them.
 local T = dofile("tests/lib/check.lua")("perf_db")
 local P = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.perf_db.lua")
 
@@ -183,4 +185,47 @@ dm, dcas = P.econ_descent(pw, 300000, 35000, 5000)
 T.equal(dcas, 349, "5000: 349 kt (VMO less 16 kt, FCOM p.1258)")
 dm, dcas = P.econ_descent(pw, 300000, 35000, 9999)
 T.equal(dcas, 349, "9999: not above")
+
+-- (step 9h2) engine out, PI.13-14 (p.285-294) and PI.23-24 (p.382-389):
+-- the maximum altitudes (the maximum less 1,000 ft, two out 2,000 ft: the
+-- FMC's logic, PI.18.8), the driftdown speed, long range cruise
+local lrc_alt, dd_alt = P.eo_max_alt(pw, 1, 300000, 0, 0)
+T.near(lrc_alt, 32000, 1e-6, "PW one engine out, 300 t, ISA: long range cruise altitude capability 32,000 ft (PI.13.3)")
+T.near(dd_alt, 33100 - 1500 * 6 / 19, 1e-6, "the driftdown's level off altitude at 300 t: by the level off weights, between 313 and 294 t")
+T.near(P.eo_max_alt(pw, 1, 300000, 12.5, 0), 31950, 1e-6, "ISA+12.5: half way to ISA+15's 31,900")
+T.near(P.eo_max_alt(pw, 1, 300000, 25, 0), 30700, 1e-6, "ISA+25: held at ISA+20's 30,700 (estimate)")
+T.near(P.eo_max_alt(pw, 1, 300000, 0, 1), 32000 - 1800, 1e-6, "engine anti-ice: 1,800 ft less")
+T.near(P.eo_max_alt(pw, 1, 300000, 0, 2), 32000 - 3500, 1e-6, "engine and wing anti-ice: 3,500 ft less")
+T.near(P.eo_max_alt(pw, 1, 395000, 0, 0), (22200 + 23200) / 2, 1e-6, "395 t: between 400 and 390 t")
+T.near(P.eo_max_alt(pw, 1, 180000, 0, 0), 39800, 1e-6, "180 t: held at 200 t's (estimate)")
+local lrc2, dd2 = P.eo_max_alt(pw, 2, 300000, 0, 0)
+T.near(lrc2, 16500, 1e-6, "PW two engines out, 300 t: 16,500 ft (PI.14.3)")
+T.near(dd2, 19400, 1e-6, "two out, the level off weight 300 t: 19,400 ft (PI.14.1)")
+T.near(P.eo_max_alt(pw, 3, 300000, 0, 0), 16500, 1e-6, "three out: the two engine tables")
+T.near(P.eo_max_alt(ge, 1, 600 * KLB, 0, 0), 35000, 1e-6, "GE one out, 600,000 lb: 35,000 ft (PI.23.4)")
+T.near(P.eo_max_alt(ge, 1, 600 * KLB, 0, 1), 35000 - 1300, 1e-6, "GE engine anti-ice: 1,300 ft less")
+T.near(P.eo_max_alt(ge, 2, 900 * KLB, 17.5, 0), 1150, 1e-6, "GE two out, 900,000 lb, ISA+17.5: half way to ISA+20's blank (no altitude)")
+T.near(P.eo_min_drag(pw, 1, 300000), 267, 1e-9, "PW one out, 300 t: optimum driftdown speed 267 kt")
+T.near(P.eo_min_drag(pw, 1, 290000), 263, 1e-9, "290 t: between, 263 kt")
+T.near(P.eo_min_drag(pw, 2, 300000), 259, 1e-9, "two out: 259 kt (PI.14.1)")
+T.near(P.eo_min_drag(ge, 1, 600 * KLB), 255, 1e-9, "GE one out, 600,000 lb: 255 kt")
+local m, k, ff, set = P.eo_lrc(pw, 1, 300000, 25000)
+T.check(m == .743 and k == 312 and math.abs(ff - 3593) < 1e-9 and set == 1.25, "PW one out LRC, 300 t, 25,000 ft: .743, 312 kt, 3593 kg/h, EPR 1.25 (PI.13.4)")
+m = P.eo_lrc(pw, 1, 290000, 26000)
+T.near(m, ((.743 + .768) / 2 + (.719 + .749) / 2) / 2, 1e-9, "290 t, 26,000 ft: between the cells")
+m, k = P.eo_lrc(pw, 1, 400000, 25000)
+T.check(m == .765 and k == 356, "400 t at 25,000 ft: held at its highest altitude, 20,000 ft")
+m, k, ff = P.eo_lrc(pw, 2, 300000, 14000)
+T.check(m == .589 and k == 304 and math.abs(ff - 5334) < 1e-9, "PW two out, 300 t, 14,000 ft: .589, 304 kt, 5334 kg/h (PI.14.4)")
+local gm, gk, gff, gn1 = P.eo_lrc(ge, 1, 600 * KLB, 25000)
+T.check(math.abs(gm - .701) < 1e-9 and math.abs(gk - 293) < 1e-9 and math.abs(gff - 6604 * P.LB) < 1e-6 and math.abs(gn1 - 89.7) < 1e-9, "GE one out, 600,000 lb, 25,000 ft: .701, 293 kt, 6604 lb/h, 89.7 % N1 (PI.23.5)")
+T.check(P.eo_drag(pw, 1, 300000, 25000, .743) > P.drag(pw, 300000, 25000, .743), "the engine-out drag: the polar's and the windmilling and trim drag")
+T.near(P.eo_drag(pw, 2, 300000, 25000, .743) - P.drag(pw, 300000, 25000, .743),
+    0.7 * P.atmos(25000) * .743 ^ 2 * P.S * 0.00156, 1e-6, "two out: DCD 0.00156")
+T.near(P.eo_cruise_ff(pw, 1, 300000, 25000, .743, 0), 3593, 1e-6, "the engine-out fuel flow at E/O LRC: the table's 3593 kg/h an engine")
+T.check(P.eo_cruise_ff(pw, 1, 300000, 25000, .80, 0) > 3593, "faster: more fuel")
+T.near(P.eo_cruise_ff(ge, 1, 600 * KLB, 25000, .701, 0), 6604 * P.LB, 1e-6, "GE: the table's")
+T.near(P.eo_level_setting(pw, 1, 300000, 25000, .743, 0), 1.25, 1e-9, "the setting at E/O LRC: the table's EPR 1.25")
+T.check(P.eo_level_setting(pw, 1, 300000, 25000, .78, 0) > 1.25, "faster: a higher EPR")
+T.near(P.eo_level_setting(ge, 2, 520 * KLB, 25000, .657, 0), 98.4, 1e-9, "GE two out: the table's 98.4 % N1 (PI.24.3)")
 T.done()
