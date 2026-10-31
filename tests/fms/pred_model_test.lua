@@ -162,4 +162,40 @@ local r0 = PM.predict(with{field = const_field(0, 0)})
 T.check(rd.dest.t > r0.dest.t + 60 and math.abs(rd.td - r0.td) < 20, string.format("a headwind low in the descent: %.1f min later, the T/D %.1f NM apart",
     (rd.dest.t - r0.dest.t) / 60, rd.td - r0.td))
 
+-- (step 9e4) a leg's glide path angle (FCOM p.1262, p.1405): the path over
+-- the ground at its angle back from the leg's end, two such legs one line
+-- (the FAF's AT OR ABOVE 4,000 under it); an AT constraint at such a leg's
+-- start under the line: level back from where the line meets it (the
+-- level flight until the path, p.1262), thrust on it
+local FT_NM = 1852 / 0.3048
+local G3 = FT_NM * math.tan(math.rad(3))
+local function gp_pred(legs)
+    return PM.predict{P = P, t = pw, gw = 250000, fuel = 20000, alt = 20000, phase = "des", crz = 35000, clb = clb, des = des,
+        crzspd = {mach = 0.85}, legs = legs, ed = #legs}
+end
+-- the path's altitude x NM ahead (its arrays from the E/D back)
+local function dp_h(dp, x)
+    for i = 2, #dp.x do
+        if dp.x[i] <= x + 1e-9 then
+            local f = (x - dp.x[i]) / math.max(dp.x[i - 1] - dp.x[i], 1e-9)
+            return dp.h[i] + (dp.h[i - 1] - dp.h[i]) * f, dp.k[i - 1]
+        end
+    end
+end
+r = gp_pred{{name = "A", dist = 40}, {name = "IF", dist = 10}, {name = "FAF", dist = 6, con = {kind = "A", a = 4000}, gp = 3},
+    {name = "RW", dist = 12.6, con = {kind = "AT", a = 50}, gp = 3}}
+local hFaf = 50 + 12.6 * G3
+T.near(r.pts[3].h, hFaf, 1, string.format("the FAF on the runway's 3-degree line: %.0f ft (over its 4,000 A)", hFaf))
+T.near(r.pts[2].h, hFaf + 6 * G3, 1, string.format("the IF on the FAF's 3-degree line: %.0f ft", hFaf + 6 * G3))
+T.near(dp_h(r.dp, 50 + 6 + 6.3), 50 + 6.3 * G3, 1, "halfway to the runway on the line")
+T.check(r.pts[1].h > r.pts[2].h + 1000, string.format("before the IF the idle path above: %.0f ft at A", r.pts[1].h))
+r = gp_pred{{name = "A", dist = 40}, {name = "IF", dist = 10, con = {kind = "AT", a = 5000}}, {name = "FAF", dist = 6, gp = 3},
+    {name = "RW", dist = 12.6, con = {kind = "AT", a = 50}, gp = 3}}
+local meet = (5000 - hFaf) / G3
+T.near(r.pts[2].h, 5000, 1, "AT 5,000 at the IF under the line: the IF at 5,000")
+local hLevel, kLevel = dp_h(r.dp, 50 + 6 - meet - 1)
+T.check(math.abs(hLevel - 5000) < 1 and kLevel == "spd", string.format("level at 5,000 from the IF until the line, %.1f NM before the FAF (the A/T on speed)", meet))
+T.near(dp_h(r.dp, 50 + 6 - meet + 1), 5000 - G3, 1, "1 NM past the meeting point down the line")
+T.near(r.pts[3].h, hFaf, 1, "the FAF on the line still")
+
 T.done()

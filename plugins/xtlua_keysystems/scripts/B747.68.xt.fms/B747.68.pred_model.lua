@@ -7,7 +7,8 @@
 -- BELOW constraints; the cruise at its speed, with step climbs where the
 -- glue's steps function says; the descent built back from the end of
 -- descent (E/D), straight between the descent's altitude constraints and
--- at idle above the first (FCOM p.1258), with the decelerations to the
+-- at idle above the first (FCOM p.1258), at a leg's glide path angle on its
+-- leg (FCOM p.1262: step 9e4), with the decelerations to the
 -- transition's and restriction's speeds in level flight. T/C, T/D, S/C and
 -- each waypoint's altitude, time and fuel. Estimates: the level
 -- accelerations and decelerations, no wind but each phase's headwind, the
@@ -70,8 +71,14 @@ end
 -- from there to the E/D. Straight from anchor to anchor (the E/D and the
 -- constraints the path has to keep), at idle above the first; level
 -- decelerations to the schedule's speeds (estimates), where each starts in
--- decel {x, h} (step 8d3: the ND's deceleration points, FCOM p.1149)
-local function descent_path(s, kg, cons, xed, hed)
+-- decel {x, h} (step 8d3: the ND's deceleration points, FCOM p.1149).
+-- (step 9e4) gps: the legs with a glide path angle {x0, x1 (the leg's
+-- start and end), tan (the angle's), con (the start's constraint)}: on
+-- such a leg the line over the ground at its angle back from the leg's end
+-- (FCOM p.1262, p.1405), level back to the start from where a lower
+-- constraint there is met (the level flight until the path: p.1262); no
+-- deceleration on it
+local function descent_path(s, kg, cons, xed, hed, gps)
     local P, t, isa0 = s.P, s.t, s.isa or 0
     local hw0 = (s.wind and s.wind.des) or 0
     local xs, hs, ts, fs = {xed}, {hed}, {0}, {0}
@@ -87,6 +94,13 @@ local function descent_path(s, kg, cons, xed, hed)
     local ci = #cons    -- the constraints in route order; going back from the last
     local CEIL = 45100
     local function push() xs[#xs + 1] = x; hs[#hs + 1] = h; ts[#ts + 1] = tt; fs[#fs + 1] = ff; ks[#ks + 1] = kind end
+    -- the glide path angle's leg x is on (its end included), or nil
+    local function gp_at()
+        for _, g in ipairs(gps or {}) do
+            if g.x0 < x - 1e-6 and x <= g.x1 + 1e-6 then return g end
+        end
+        return nil
+    end
     local steps = 0
     while h < CEIL and steps < 20000 do
         steps = steps + 1
@@ -107,7 +121,40 @@ local function descent_path(s, kg, cons, xed, hed)
         if s.field then isa, hw = s.field.isa(x, h), s.field.wind(x, h, "des") end
         local v = P.tas(machMode and m or P.cas_to_mach(cas, h), h, isa) * KT
         local gs = math.max(v - hw * KT, 50)
-        if cas < tgt - 0.5 then
+        local gpl = gp_at()
+        if gpl then
+            -- (step 9e4) a glide path angle's leg: its line back, then level;
+            -- where the line ends going back (the leg's start, or a lower
+            -- constraint's altitude there met) found as it starts
+            cas = tgt
+            if not gpl.xs then
+                local top = h + (x - gpl.x0) * NM / FT * gpl.tan
+                gpl.xs, gpl.hs = gpl.x0, top
+                local a = gpl.con and con_alt(gpl.con, top)
+                if a and a < top and a > h then
+                    gpl.xs, gpl.hs = x - (a - h) * FT / gpl.tan / NM, a
+                end
+            end
+            local need, dt
+            if h < gpl.hs - 1e-6 then
+                local dh = math.min(250, gpl.hs - h)
+                local dxg = dh * FT / gpl.tan               -- m over the ground
+                dt = dxg / gs
+                need = P.drag(t, kg, h, m) - kg * G * (dh * FT / (dt * v)) * energy(P, h, cas, m, machMode, isa)
+                h = h + dh
+                x = x - dxg / NM
+                if h >= gpl.hs - 1e-6 then h, x = gpl.hs, gpl.xs end
+            else
+                dt = (x - gpl.x0) * NM / gs
+                need = P.drag(t, kg, h, m)
+                x = gpl.x0
+            end
+            local f = P.idle_ff(t, h, m, isa)
+            if need > 0 then f = math.max(f, P.thrust_ff(t, need / 4, h, m, isa)) end
+            kind = need > 0 and "spd" or "idle"
+            tt = tt + dt
+            ff = ff + 4 * f * dt / 3600
+        elseif cas < tgt - 0.5 then
             -- (back in time) a level deceleration to cas: idle, the model's
             -- drag (less the idle thrust) slows it
             local mm = P.cas_to_mach(cas, h)
@@ -200,7 +247,8 @@ end
 --               Mach} (ECON, LRC)
 --   legs        the waypoints ahead {name, dist (NM from the one before, the
 --               first from the present position), con = {kind "AT", "A",
---               "B" or "W", a, b (the window's lower)} or nil}
+--               "B" or "W", a, b (the window's lower)} or nil, gp (step
+--               9e4: the leg's glide path angle, degrees down) or nil}
 --   ed          the E/D's index in legs (nil: none, the cruise to the end)
 --   clb_last    the last leg whose constraint the climb keeps to (nil:
 --               those before half the distance to the E/D or the end)
@@ -263,6 +311,19 @@ function M.predict(s)
         end
         return cons
     end
+    -- (step 9e4) the descent's legs with a glide path angle (from the
+    -- waypoint before), to the E/D
+    local function des_gps(xfrom)
+        local gps = {}
+        if not xed then return gps end
+        for i, l in ipairs(legs) do
+            if l.gp and l.gp > 0.5 and i > clbLast and lx[i] > xfrom and lx[i] <= xed + 0.01 then
+                gps[#gps + 1] = {x0 = i > 1 and lx[i - 1] or 0, x1 = lx[i], tan = math.tan(math.rad(l.gp)),
+                    con = i > 1 and legs[i - 1].con or nil}
+            end
+        end
+        return gps
+    end
 
     -- record each waypoint as the state passes it
     local nextLeg = 1
@@ -299,7 +360,7 @@ function M.predict(s)
     -- the descent path (once, at the weight reaching it: two passes)
     local function build_dp(wkg, xfrom)
         if not xed then return nil end
-        return descent_path(s, wkg, des_cons(xfrom), xed, hed)
+        return descent_path(s, wkg, des_cons(xfrom), xed, hed, des_gps(xfrom))
     end
     local estKg = s.gw * 0.85
     local guard = 0
