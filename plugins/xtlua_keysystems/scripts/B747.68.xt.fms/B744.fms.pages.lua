@@ -2549,12 +2549,12 @@ function fmsFunctions.setDref(fmsO,value)
   if (value=="TO" or value=="TO1" or value=="TO2") and simDR_onGround~=1 then fmsO["notify"]="KEY/FUNCTION INOP" return end
   local rating = ({TO = 0, TO1 = 1, TO2 = 2})[value]
   if rating and rating ~= toderate then takeoff_speeds_deleted() end
-  if value=="TO" then toderate=0 clbderate=0 return  end
-  if value=="TO1" then toderate=1 clbderate=1 return  end
-  if value=="TO2" then toderate=2 clbderate=2 return  end
-  if value=="CLB" then clbderate=0 return  end
-  if value=="CLB1" then clbderate=1 return  end
-  if value=="CLB2" then clbderate=2  return end
+  -- (6-1/6-2 step 9g1) the thrust limit's selections: the FMC's mode
+  -- (B747_fms_thrlim_*: the climb armed with a takeoff derate by its
+  -- reduction; before, TO n wrote the derates, CLB n armed)
+  if rating then B747_fms_thrlim_to(rating) return end
+  local clb = ({CLB = 0, CLB1 = 1, CLB2 = 2})[value]
+  if clb then B747_fms_thrlim_clb(clb) return end
   if value=="V1" or value=="VR" or value=="V2" then takeoff_speed_entry(fmsO, value) return end
   if value=="ILS" then 
     if findILS(fmsO["scratchpad"])==false then fmsO["notify"]="INVALID ENTRY" end

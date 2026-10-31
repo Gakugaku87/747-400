@@ -1678,6 +1678,53 @@ local function update_vnav()
   local perfIn = inp.kg and inp.crz_alt and tonumber(fmsModules["data"].costindex)
   B747DR_fms_vnav_perf = perfIn and 1 or 0
 end
+-- (6-1/6-2 step 9g1; notes/ATA-34-61-FMC.md §73) the thrust limit's mode
+-- (B747.68.thrlim_model.lua) into laminar/B747/engines/ref_thr_limit_mode
+-- (before, the EEC's from the AP's flightPhase) and the ratings the EEC
+-- reads (laminar/B747/engine/derate/TO, CLB); the takeoff derates' thrust
+-- reductions (%) FCOM p.1314's examples, the operator's: P&W and RR TO 1
+-- 8, TO 2 20, GE 5 and 15
+dofile("B747.68.thrlim_model.lua")
+B747DR_fms_thrlim_mode = find_dataref("laminar/B747/engines/ref_thr_limit_mode")
+B747DR_fms_thr_pushes = find_dataref("laminar/B747/autopilot/thr_pushes")
+B747DR_fms_toga_pushes = find_dataref("laminar/B747/autopilot/toga_pushes")
+simDR_fms_radio_alt = find_dataref("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
+local thrlimState = B747_thrlim_model.new()
+local thrlimIn = {}
+local thrlimSeen = {}
+function B747_fms_thrlim_pct(n)
+  if n == 0 then return 0 end
+  return (B747DR_fms_engine_type == 1 and {5, 15} or {8, 20})[n]
+end
+-- the THRUST LIM page's selections: TO n on the ground (false in the air),
+-- CLB n, GA, CON or CRZ in the air (false while GA is held)
+function B747_fms_thrlim_to(n) return B747_thrlim_model.select_to(thrlimState, n, B747_fms_thrlim_pct(n), simDR_onGround == 1) end
+function B747_fms_thrlim_clb(n) return B747_thrlim_model.select_clb(thrlimState, n, simDR_onGround == 1) end
+function B747_fms_thrlim_sel(kind) return B747_thrlim_model.select(thrlimState, kind) end
+function B747_fms_thrlim() return thrlimState end
+-- the AFDS's pitch modes (the FMA's numbers) the model looks at
+local THRLIM_PITCH = {[4] = "VNAV", [5] = "VNAV", [6] = "VNAV", [8] = "FLCH"}
+local function update_thrlim()
+  local inp, r = thrlimIn, B747_fmc_route.rte
+  inp.ground = simDR_onGround == 1
+  inp.alt_agl = simDR_pressureAlt1 - ((r and r.origin and r.origin.elev) or 0)
+  inp.thr_red = tonumber(fmsModules["data"].thrred) or 5
+  inp.flaps = simDR_fms_vnav_flaps
+  local pitch = B747DR_fms_afds_pitch
+  inp.pitch, inp.gs = THRLIM_PITCH[pitch], pitch == 2
+  inp.vnav = B747DR_ap_vnav_state == 2
+  inp.phase = vnavState.phase
+  inp.flch_up = pitch == 8 and B747DR_fms_vnav_mcp_alt > simDR_pressureAlt1 + 50
+  local n, g = B747DR_fms_thr_pushes, B747DR_fms_toga_pushes
+  inp.thr = thrlimSeen.thr ~= nil and n ~= thrlimSeen.thr
+  inp.toga = thrlimSeen.toga ~= nil and g ~= thrlimSeen.toga
+  thrlimSeen.thr, thrlimSeen.toga = n, g
+  inp.ra = simDR_fms_radio_alt
+  local mode = B747_thrlim_model.update(thrlimState, inp)
+  if B747DR_fms_thrlim_mode ~= mode then B747DR_fms_thrlim_mode = mode end
+  if toderate ~= thrlimState.to then toderate = thrlimState.to end
+  if clbderate ~= thrlimState.clb then clbderate = thrlimState.clb end
+end
 -- UNABLE CRZ ALT: in the climb, the climb to a cruise altitude meets the
 -- descent path before it (FCOM p.1436; estimate: no minimum cruise time)
 function B747_fms_unable_crz(crz)
@@ -2578,6 +2625,7 @@ function after_physics()
     update_econ()
     update_preds()
     update_vnav()
+    update_thrlim()
     update_navdb()
     update_takeoff()
     B747_fmc_lnav_update()

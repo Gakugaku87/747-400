@@ -16,7 +16,7 @@ for _, cdu in ipairs({"cdu1", "cdu2"}) do
     for n = 0, 15 do types["sim/cockpit2/radios/indicators/fms_" .. cdu .. "_text_line" .. n] = "string" end
 end
 local rt = xtlua.new{types = types}
-rt:load("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.xt.fms.lua")
+local fms = rt:load("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.xt.fms.lua")
 rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_lbs":2.20462},"PLANE":{"thrust_ref":"EPR","engines":"PW4056"}}')
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
@@ -82,7 +82,10 @@ T.check(line(9):find("^%-%-%-/%-%-%-%-%-"), "the DES page's SPD RESTR ---/----- 
 T.check(line(7):find("^240/10000"), "the DES page's SPD TRANS 240/10000: " .. line(7))
 
 -- THRUST LIM in the air (sim/flightmodel/failures/onground_any 0)
-rt:set("laminar/B747/engine/derate/TO", 1)
+-- (TO 1: the FMC's thrust limit's rating since step 9g1, written to
+-- the derate each frame)
+fms.ns.B747_fms_thrlim().to = 1
+frames(0.2)
 key("func_key/index")
 key("ls_key/L6")  -- <INDEX: INIT/REF INDEX (the INIT REF key goes by context: step 3a)
 key("ls_key/L4")

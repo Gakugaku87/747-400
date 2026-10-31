@@ -616,6 +616,9 @@ B747DR_ap_fvn_msg = find_dataref("laminar/B747/fms/vnav/msg")
 B747DR_ap_fvn_perf = find_dataref("laminar/B747/fms/vnav/perf")
 -- (step 9d1) the MCP altitude selector's pushes, counted
 B747DR_ap_alt_sel_pushes = deferred_dataref("laminar/B747/autopilot/alt_sel_pushes", "number")
+-- (step 9g1) the THR switch's pushes, counted for the FMC's thrust limit
+-- (CLB after the takeoff or a go-around: FCOM p.642)
+B747DR_ap_thr_pushes = deferred_dataref("laminar/B747/autopilot/thr_pushes", "number")
 -- (step 9d3) speed intervention for the FMC (B747_ap_ias_mach_mode)
 B747DR_ap_spd_intervention = deferred_dataref("laminar/B747/autopilot/spd_intervention", "number")
 B747DR_afds_pli = find_dataref("laminar/B747/pfd/pli")
@@ -1478,6 +1481,7 @@ function B747_ap_thrust_mode_CMDhandler(phase, duration) -- INOP, NO CORRESPONDI
 		-- a push to the A/T (the FMC's step 9f1: its THR REF; before, it
 		-- disengaged the A/T)
 		atPush.thr = atPush.thr + 1
+		B747DR_ap_thr_pushes = B747DR_ap_thr_pushes + 1
 		B747DR_ap_lastCommand = simDRTime
 		if simDR_radarAlt1 > 400 then
 			B747DR_ap_thrust_mode = 3

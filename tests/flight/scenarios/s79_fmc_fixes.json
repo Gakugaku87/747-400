@@ -61,7 +61,6 @@
     { "do": "shot", "name": "cdu_des" },
 
     { "do": "mark", "note": "空中の THRUST LIM（CDU-10）" },
-    { "do": "set", "note": "離陸の減格を TO 1 にしておく", "dref": "laminar/B747/engine/derate/TO", "value": 1 },
     { "do": "cmd", "note": "INIT REF", "name": "laminar/B747/fms1/func_key/index" },
     { "do": "sleep", "seconds": 1 },
     { "do": "cmd", "note": "<INDEX（INIT REF のキーは状況でページを選ぶ：段 3a）", "name": "laminar/B747/fms1/ls_key/L6" },
@@ -72,9 +71,8 @@
     { "do": "cmd", "note": "<GA（L2）", "name": "laminar/B747/fms1/ls_key/L2" },
     { "do": "sleep", "seconds": 0.5 },
     { "do": "check", "note": "KEY/FUNCTION INOP（推力管理 6-4 まで）", "dref": "laminar/B747/fms3/Line14_L", "op": "contains", "value": "KEY/FUNCTION INOP" },
-    { "do": "check", "note": "離陸の減格は TO 1 のまま（前は TO を選んで 0 に、TO 1・TO 2 なら GA 推力を 10・20 % 下げていた）", "dref": "laminar/B747/engine/derate/TO", "op": "==", "value": 1 },
+    { "do": "check", "note": "推力制限は空中開始の CLB のまま（段 9g1 から FMC の推力制限。前はこのキーが TO を選び、TO 1・TO 2 なら GA 推力を 10・20 % 下げていた。<GA の選択は段 9g2）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "CLB" },
     { "do": "cmd", "note": "CLR", "name": "laminar/B747/fms1/key/clear" },
-    { "do": "set", "note": "減格を戻す", "dref": "laminar/B747/engine/derate/TO", "value": 0 },
 
     { "do": "mark", "note": "APPROACH REF の FLAP/SPEED（CDU-28）" },
     { "do": "cmd", "note": "INIT REF", "name": "laminar/B747/fms1/func_key/index" },
