@@ -203,11 +203,18 @@ local nm = math.floor(hrs * P.tas(m, 35000, 0) + 0.5)
 T.check(small(4):find("AT$") and line(5):find(string.format("z/%4dNM$", nm)), string.format("AT: the step point at %.1f t, %d NM: %s", w / 1000, nm, line(5)))
 local epr = P.level_setting(pw, 270000, 35000, m, 0)
 T.check(small(6):find("^ EPR") and line(7):find("^" .. string.format("%.2f", epr)), "EPR " .. string.format("%.2f", epr) .. " for level flight (PW): " .. small(6) .. "|" .. line(7))
-rt:set("laminar/B747/autopilot/flightPhase", 1)
+-- (step 9d2a) the page active by the FMC's phase (B747_fms_vnav_page;
+-- before, the AP's old flightPhase): here the climb's
+local realPage = fms.ns.B747_fms_vnav_page
+fms.ns.B747_fms_vnav_page = function() return 1 end
 frames(0.1)
 vnav(2)
 T.check(line(7):find("^ "), "not the active page (CLB): no EPR: " .. line(7))
-rt:set("laminar/B747/autopilot/flightPhase", 2)
+T.check(not line(1):find("ACT"), "no ACT: " .. line(1))
+fms.ns.B747_fms_vnav_page = realPage
+frames(0.1)
+vnav(2)
+T.check(line(1):find("ACT ") and line(1):find(" CRZ  "), "the FMC in the cruise: ACT ... CRZ: " .. line(1))
 -- STEP SIZE 2000: CRZ ALT + 2,000 ft over OPT: FL370; DELETE: ICAO
 type_in("2000")
 key("ls_key/L4")
@@ -258,10 +265,17 @@ type_in("430")
 key("ls_key/L1")
 T.check(pad() == string.format("MAX ALT FL%03d", math.floor(max270 / 100)) and line(3):find("^FL430"),
     "CRZ ALT FL430 above MAX FL" .. math.floor(max270 / 100) .. ": taken with MAX ALT: " .. pad() .. "|" .. line(3))
+-- (step 9d2a) a cruise climb to it: ACT ... CRZ CLB (FCOM p.1347)
+T.check(line(1):find("^ *ACT .* CRZ CLB"), "climbing to FL430: CRZ CLB: " .. line(1))
+clear()
+type_in("310")
+key("ls_key/L1")
+T.check(line(1):find("^ *ACT .* CRZ DES"), "FL310 below: CRZ DES: " .. line(1))
 clear()
 type_in("350")
 key("ls_key/L1")
 T.equal(pad(), "", "FL350: no message")
+T.check(line(1):find(" CRZ  ") and not line(1):find("CLB") and not line(1):find(" DES"), "at FL350 again: CRZ: " .. line(1))
 fms.ns.B747_fmc_route.active = false
 rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", ALT)

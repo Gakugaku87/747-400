@@ -21,9 +21,11 @@
 --    5): TO's THR REF, HOLD from 65 kt until VNAV engages or another mode
 --    is selected (FCOM p.667; ATA34_2 p.654); VNAV's the FMC's (SPD when
 --    levelled: FCOM p.645), its IDLE HOLD once the levers reach the aft
---    stop (ATA34_2 p.666); FLCH's THR, G/A's THR then THR REF at a second
---    push (step 9f2; ATA34_2 p.674); from VNAV or FLCH into ALT, V/S or G/S, SPD (ATA34_2
---    p.654; from T/O or G/A not: FCOM p.673); the flare retard's IDLE
+--    stop (ATA34_2 p.666), its THR (the early and the cruise descent) HOLD
+--    at the FMC's V/S (FMSPG p.3.5-5: step 9d2a); FLCH's THR, G/A's THR
+--    then THR REF at a second push (step 9f2; ATA34_2 p.674); from VNAV or
+--    FLCH into ALT, V/S or G/S, SPD (ATA34_2 p.654; from T/O or G/A not:
+--    FCOM p.673); the flare retard's IDLE
 --    (ATA34_2 p.648) through the rollout until the reversers.
 -- Pure: the airplane's state and the switches' pushes in, the A/T out.
 --   local A = B747_at_model                     -- in XTLua, after dofile
@@ -60,6 +62,24 @@ M.K_EPR, M.K_N1 = 0.33, 0.003
 -- fpm (p.674); the speed protection's margin (FCOM p.675)
 M.FLCH_S, M.GA_VS = 125, 2000
 M.LIMIT_MARGIN = 5
+-- (the FMC's step 9d2) VNAV's THR (the early and the cruise descent): the
+-- levers to the FMC's V/S on the energy's rate (the V/S the speed would
+-- give at its target: the elevator trades speed for height, s146's +1,500
+-- fpm slowing 12 kt to the descent's speed was the energy's -100; ATA34_2
+-- p.647's FMC reference thrust in steady flight: estimate), at half FLCH's
+-- K_VS (the engines' lag alone in that loop; a simulation of s146's
+-- engines, 2 s and 4 to 7 s behind: within 100 fpm in 25 s, FLCH's gain
+-- swinging). HOLD with the inertial V/S and the energy's rate within
+-- VS_REACHED of the FMC's and the speed within SPD_REACHED of its target
+-- for REACH_S (FMSPG p.3.5-5: THR HOLD on reaching the 1,250 fpm; the
+-- bands and the time: estimates). In X-Plane: the VSI passing the rate 50
+-- kt slow held a thrust that flew level at the target speed (s144); the
+-- inertial V/S passing it as the pitch levelled a dive held the cruise's
+-- thrust (s145); on the V/S at a quarter of K_VS the levers went on to the
+-- aft stop as the airplane climbed slowing down, then -2,600 fpm at idle
+-- (s146)
+M.VS_REACHED, M.SPD_REACHED, M.REACH_S = 100, 5, 5
+M.K_VS_VNAV = 6e-6
 
 function M.new()
     return {engaged = false, mode = nil, disc = false,
@@ -67,20 +87,31 @@ function M.new()
                             -- from 65 kt, "air" pushed after takeoff
         no_to = false,      -- no push by 50 kt: no engage until 400 ft
         idle_hold = false,  -- VNAV's or the retard's IDLE at the aft stop
+        thr_hold = false,   -- VNAV's THR at its V/S, the aft stop, the hand
+        reach_t = 0,        -- VNAV's THR: the seconds at its V/S
+        vnav_phase = nil,   -- the FMC's phase the update before
         ga = false,         -- G/A's THR (the first push) on
         retard = false,     -- the flare retard's IDLE
         servo = false, cmd = 0,  -- the servo excited, its lever command
         pitch = nil, arm = nil}
 end
 
+-- VNAV's mode: the FMC's, SPD levelled; IDLE's and THR's HOLDs latched
+-- until the FMC asks another (step 9d2a: levelled too; before, IDLE's
+-- latch stayed through a level-off, HOLD at once when the descent went on)
 local function vnav_mode(s, inp)
-    if inp.vnav_level then return M.SPD end
-    local at = inp.vnav_at
+    -- a new FMC phase: THR first again (the early descent after a cruise
+    -- descent: FCOM p.1260)
+    if inp.vnav_phase ~= s.vnav_phase then s.thr_hold = false end
+    s.vnav_phase = inp.vnav_phase
+    local at = inp.vnav_level and M.SPD or inp.vnav_at
+    if at ~= M.IDLE then s.idle_hold = false end
+    if at ~= M.THR then s.thr_hold = false end
     if at == M.IDLE then
         if inp.lever_idle then s.idle_hold = true end
         return s.idle_hold and M.HOLD or M.IDLE
     end
-    s.idle_hold = false
+    if at == M.THR then return s.thr_hold and M.HOLD or M.THR end
     if at and at >= M.HOLD and at <= M.THR_REF then return at end
     return M.SPD
 end
@@ -100,14 +131,15 @@ end
 
 local function disengage(s, latch)
     if s.engaged and latch then s.disc = true end
-    s.engaged, s.mode, s.to, s.idle_hold = false, nil, false, false
+    s.engaged, s.mode, s.to, s.idle_hold, s.thr_hold = false, nil, false, false, false
     s.ga, s.retard = false, false
 end
 
 -- inp: arm, ok, ground, cas, ra, flaps_up, reverse, limit_to, limit_ga,
 -- pitch (the AFDS's: "TO", "GA", "VNAV", "FLCH", "VS", "ALT", "GS",
 -- "FLARE" or nil), retard, vnav_at (the FMC's A/T mode), vnav_level,
--- lever_idle (the levers at the aft stop); the pushes since the last
+-- vnav_phase (the FMC's: step 9d2a), lever_idle (the levers at the aft
+-- stop); the pushes since the last
 -- update: toga, spd, thr, disc (true when pushed)
 function M.update(s, inp)
     local was = s.pitch
@@ -206,10 +238,14 @@ end
 -- servo's rate; excited unless HOLD or off (the command then follows the
 -- levers). inp (beside update's): dt; ias, accel (kt/s), target (the speed
 -- laws' kt), v_max and v_min (the maximum and the minimum maneuvering
--- speeds); vs (fpm), alt, mcp_alt; thrust and thrust_ref (EPR or % N1, n1
--- true for N1); lever (the levers' mean)
+-- speeds); vs (fpm), alt, mcp_alt, vnav_vs (the FMC's V/S for VNAV's THR:
+-- step 9d2), ivs (the inertial V/S for it; vs without), evs (the energy's
+-- rate for it, fpm: the inertial V/S and the TAS's change; ivs without);
+-- thrust and
+-- thrust_ref (EPR or % N1, n1 true for N1); lever (the levers' mean)
 function M.servo(s, inp)
     local mode = s.engaged and s.mode or nil
+    if mode ~= M.THR then s.reach_t = 0 end
     if mode == nil or mode == M.HOLD then
         s.servo, s.cmd = false, inp.lever
         return s
@@ -230,17 +266,29 @@ function M.servo(s, inp)
         rate = speed_rate(inp, tgt)
         if over > 0 then rate = math.min(rate, limit) end
     else
-        -- THR: FLCH's V/S to the MCP altitude in 125 s, G/A's 2,000 fpm;
+        -- THR: FLCH's V/S to the MCP altitude in 125 s, G/A's 2,000 fpm,
+        -- VNAV's the FMC's (step 9d2a: the early and the cruise descent);
         -- climbing not less thrust (ATA34_2 p.646)
-        local want = s.ga and M.GA_VS or (inp.mcp_alt - inp.alt) / M.FLCH_S * 60
-        rate = M.K_VS * (want - inp.vs)
+        local vnav = s.pitch == "VNAV"
+        local want = s.ga and M.GA_VS or (vnav and (inp.vnav_vs or 0)) or (inp.mcp_alt - inp.alt) / M.FLCH_S * 60
+        local vs = (vnav and inp.ivs) or inp.vs
+        local ev = (vnav and inp.evs) or vs
+        rate = (vnav and M.K_VS_VNAV or M.K_VS) * (want - ev)
         if want > 0 and rate < 0 then rate = 0 end
         if over > 0 then rate = math.min(rate, limit) end
-        -- FLCH's descent at the aft stop, or the hand 8 degrees off: HOLD
-        -- (p.648, p.670)
+        -- VNAV's descent at its V/S and the energy's at the target speed
+        -- for REACH_S (FMSPG p.3.5-5)
+        local at_rate = vnav and want < 0 and math.abs(vs - want) <= M.VS_REACHED
+            and math.abs(ev - want) <= M.VS_REACHED
+            and math.abs(inp.ias - inp.target) <= M.SPD_REACHED
+        s.reach_t = at_rate and s.reach_t + inp.dt or 0
+        local reached = s.reach_t >= M.REACH_S
+        -- the descent at the aft stop, or the hand 8 degrees off: HOLD
+        -- (p.648, p.670); VNAV's at its V/S too, latched
         if not s.ga and ((want < 0 and s.cmd <= 0 and rate < 0)
-            or math.abs(inp.lever - s.cmd) > M.OVERRIDE) then
-            s.mode, s.servo, s.cmd = M.HOLD, false, inp.lever
+            or math.abs(inp.lever - s.cmd) > M.OVERRIDE or reached) then
+            s.mode, s.servo, s.cmd, s.reach_t = M.HOLD, false, inp.lever, 0
+            if vnav then s.thr_hold = true end
             return s
         end
     end

@@ -382,6 +382,7 @@ T.equal(rt:get(AT_FMA_ST), 5, "the A/T's THR REF (the FMC's)")
 T.equal(rt:get(WINDOW), 0, "the IAS/MACH window shut")
 T.equal(rt:get(DIAL), 300, "the FMC's 300 kt on the dial")
 T.equal(rt:get("sim/cockpit2/autopilot/airspeed_dial_kts"), 300, "and X-Plane's (the speed law's reference)")
+
 T.equal(rt:get(PHASE), 1, "the climb's phase")
 T.equal(rt:get(AFTER_TOD), 0, "no path pointer in the climb")
 -- 6-1/6-2 step 9a: climbing in VNAV SPD to the MCP altitude, VNAV levels
@@ -444,6 +445,40 @@ T.equal(rt:get(AT_FMA_ST), 3, "the A/T SPD")
 T.equal(rt:get("sim/cockpit2/autopilot/airspeed_is_mach"), 1, "the dial in Mach")
 T.near(rt:get(DIAL), 84.5, 1e-6, "the FMC's .845")
 T.equal(rt:get(PHASE), 2, "the cruise's phase")
+-- (step 9d2a) a cruise descent (the FMC's cruise phase in VNAV SPD with
+-- THR at 1,250 fpm down to a lower CRZ ALT: FCOM p.1261): VNAV SPD, the
+-- A/T's THR on the FMC's V/S (the levers less from level; before, FLCH's
+-- V/S to the MCP altitude); the hand: HOLD; 60 ft above the new CRZ ALT
+-- descending: VNAV PTH, the FMC altitude captured in
+-- VNAV SPD (before, in the climb only), the A/T SPD
+local LEVER_CMD = "laminar/B747/autothrottle/lever_cmd"
+-- the levers where the A/T has them (the EEC puts them at its command;
+-- off it by 8 degrees in THR is the hand: HOLD)
+local c0 = rt:get(LEVER_CMD)
+for e = 0, 3 do rt:set("laminar/B747/engine/throttle", e, c0) end
+rt:set(MCP_ALT, a0 - 4000)
+fvn({mode = 1, alt = a0 - 4000, at = 4, vs = -1250})
+frames(3)
+T.equal(rt:get(PITCH), 4, "the cruise descent: VNAV SPD")
+T.equal(rt:get(AT_FMA_ST), 4, "the A/T's THR")
+T.check(rt:get(LEVER_CMD) < c0, string.format("the levers less for 1,250 fpm down: %.4f from %.4f", rt:get(LEVER_CMD), c0))
+-- the hand 8 degrees off the A/T's command: HOLD (the crew sets the rate:
+-- FCOM p.1260; the settled HOLD at the rate is the A/T model's test's: here
+-- the speed stays 0, a jump of it would read as a dive)
+for e = 0, 3 do rt:set("laminar/B747/engine/throttle", e, rt:get(LEVER_CMD) + 0.2) end
+frames()
+T.equal(rt:get(AT_FMA_ST), 1, "the levers 8 degrees off: HOLD")
+rt:set(VSI, -1200)
+
+fvn({alt = a0 - 60})
+frames(3)
+T.equal(rt:get(PITCH), 6, "60 ft above the new CRZ ALT: VNAV PTH (the FMC altitude captured)")
+T.equal(rt:get(AT_FMA_ST), 3, "the A/T SPD while level")
+rt:set(VSI, 0)
+rt:set("sim/cockpit2/gauges/indicators/vvi_fpm_pilot", 0)
+fvn({mode = 2, alt = a0, at = 3, vs = 0})
+frames(3)
+T.equal(rt:get(PITCH), 6, "the cruise again: VNAV PTH")
 -- the descent (phase 3) on the FMC's path below the MCP altitude 3,000 ft:
 -- VNAV PTH on the path's vertical speed (-2,000 fpm: the pitch law's
 -- command down from level), the A/T IDLE, the FMC's 280 kt in knots
