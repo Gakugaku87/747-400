@@ -55,7 +55,8 @@ end
 -- holds; an event's flag, set once, is posted and cleared so that it can
 -- come again. FCOM's advisories among them (p.1435); the rest are alerts
 -- (p.1431-1434)
-local FMC_EVENT = {["PERF/VNAV UNAVAILABLE"] = true, ["DESTINATION NOT SET"] = true, ["TAKEOFF SPEEDS DELETED"] = true}
+local FMC_EVENT = {["PERF/VNAV UNAVAILABLE"] = true, ["DESTINATION NOT SET"] = true, ["TAKEOFF SPEEDS DELETED"] = true,
+  ["ILS TUNE INHIBITED - MCP"] = true}  -- (6-1/6-2 step 10c: FCOM p.1432, an attempt)
 local FMC_ADVISORY = {["TAKEOFF SPEEDS DELETED"] = true}
 function B747_cdu_sync_fmc_messages(flags)
   for i = 1, 55 do

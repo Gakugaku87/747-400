@@ -37,6 +37,8 @@ function M.new()
         vor = {{}, {}},
         -- each ADF: khz (the entry, tenths), mode ("ADF", "ANT", "BFO")
         adf = {{mode = "ADF"}, {mode = "ADF"}},
+        -- the ILS (step 10c): the crew's (mode "M", st); the FMC's output
+        ils = {}, ils_out = nil,
     }
 end
 
@@ -181,8 +183,101 @@ function M.candidates(proc, nextVor, prevVor, auto)
     return list
 end
 
--- the CDU's texts: a VOR frequency 116.80, an ADF frequency 1304.5
+-- (6-1/6-2 step 10c; notes/ATA-34-61-FMC.md §88) the ILS (FCOM p.1304-1307;
+-- FMSPG p.208; ATA34_2 p.470, p.586): PARK (at power up, and far); the
+-- destination runway's frequency/course small with PARK (STBY: within
+-- 200 nm of the T/D and past halfway, whichever is nearer the
+-- destination); A (within 50 nm of the T/D, 150 nm of the threshold, or
+-- in the descent; not for ten minutes after takeoff); M (XXX.XX/YYY, /YYY
+-- with a frequency shown, the standby line's select; DELETE back to the
+-- FMC). The FCCs' ILS TUNE INHIBIT holds the tuning, an entry then ILS
+-- TUNE INHIBITED - MCP (FCOM p.1432). RW/ILS FREQ ERROR and CRS ERROR
+-- (FCOM p.1434): the tuned ILS not the destination runway's (estimates:
+-- while the FMC would tune it; the course 5 degrees off).
+M.ILS_LO, M.ILS_HI = 10810, 11195           -- 10 kHz, odd tenths
+M.STANDBY_TD_NM, M.AUTO_TD_NM, M.AUTO_THR_NM = 200, 50, 150
+M.TAKEOFF_S = 600
+M.CRS_ERR_DEG = 5
+M.ILS_INHIBITED = "ILS TUNE INHIBITED - MCP"
+
+-- an ILS frequency: 108.10-111.95, odd tenths, 50 kHz channels
+local function ils_freq(text)
+    local int, frac = string.match(text, "^(1%d%d)%.(%d%d?)$")
+    if not int then return nil end
+    if string.len(frac) == 1 then frac = frac .. "0" end
+    local f = tonumber(int) * 100 + tonumber(frac)
+    if f < M.ILS_LO or f > M.ILS_HI or f % 5 ~= 0 or math.floor(f / 10) % 2 ~= 1 then return nil end
+    return f
+end
+M.ils_freq = ils_freq
+
+-- the ILS line's entry (`shown`: the frequency/course shown, `inhibited`:
+-- the FCCs' ILS TUNE INHIBIT)
+function M.ils_entry(s, text, shown, inhibited)
+    if inhibited then return M.ILS_INHIBITED end
+    s.ils = s.ils or {}
+    if text == "DELETE" then
+        if s.ils.mode ~= "M" then return M.INVALID_DELETE end
+        s.ils = {}
+        return M.OK
+    end
+    local fText, cText = string.match(text, "^([%d%.]*)/(%d%d?%d?)$")
+    if not fText then return M.INVALID end
+    local crs = course(cText)
+    if not crs then return M.INVALID end
+    local f
+    if fText == "" then
+        if not (shown and shown.freq) then return M.INVALID end
+        f = shown.freq
+    else
+        f = ils_freq(fText)
+        if not f then return M.INVALID end
+    end
+    s.ils = {mode = "M", st = {freq = f, crs = crs}}
+    return M.OK
+end
+-- the standby line's select: the shown ILS manually tuned (FCOM p.1306)
+function M.ils_select(s, shown, inhibited)
+    if inhibited then return M.ILS_INHIBITED end
+    if not (shown and shown.freq) then return M.INVALID end
+    s.ils = {mode = "M", st = {freq = shown.freq, crs = shown.crs, ident = shown.ident}}
+    return M.OK
+end
+
+-- the FMC's ILS each update: `inp` = {ils (the destination runway's:
+-- {freq, crs, ident}), standby, auto, after_takeoff (the ten minutes),
+-- inhibit (the FCCs')}. The state's out: mode ("PARK", "STBY", "A", "M"),
+-- st (the ILS shown), tune (the receivers': A, M), freq_err, crs_err,
+-- held_change (the destination's ILS changed while inhibited)
+function M.ils_update(s, inp)
+    s.ils = s.ils or {}
+    local o = s.ils_out
+    if not o then o = {mode = "PARK"}; s.ils_out = o end
+    local held = inp.inhibit and o.mode ~= "STBY" and o.mode ~= "PARK"
+    o.held_change = held and o.mode == "A" and inp.ils ~= nil and not same(inp.ils, o.st)
+    if s.ils.mode == "M" then
+        o.mode, o.st = "M", s.ils.st
+    elseif held then
+        -- the tuning held
+    elseif inp.ils and inp.auto and not inp.after_takeoff then
+        o.mode, o.st = "A", inp.ils
+    elseif inp.ils and (inp.standby or inp.auto) then
+        o.mode, o.st = "STBY", inp.ils
+    else
+        o.mode, o.st = "PARK", nil
+    end
+    o.tune = (o.mode == "A" or o.mode == "M") and o.st or nil
+    local check = o.tune ~= nil and inp.ils ~= nil and inp.auto and true or false
+    o.freq_err = check and o.tune.freq ~= inp.ils.freq
+    o.crs_err = check and o.tune.freq == inp.ils.freq
+        and math.abs((o.tune.crs - inp.ils.crs + 180) % 360 - 180) > M.CRS_ERR_DEG
+    return o
+end
+
+-- the CDU's texts: a VOR frequency 116.80, an ADF frequency 1304.5, an ILS
+-- 110.90/130
 function M.freq_text(f) return f and string.format("%6.2f", f / 100) or "" end
 function M.adf_text(khz) return khz and string.format("%.1f", khz) or "" end
+function M.ils_text(st) return st and string.format("%6.2f/%03d", st.freq / 100, math.floor(st.crs + 0.5) % 360) or "" end
 
 return M

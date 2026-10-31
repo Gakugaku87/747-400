@@ -1,6 +1,6 @@
 {
   "name": "s121_afds_ils_inhibit",
-  "description": "AFDS の作り直し 6-3 段 5d（ILS TUNE INHIBIT と RA TEST INHIBIT）の X-Plane での確認、空中。s112 と同じ所（RJAA 34L の進入路の 12 NM、2,500 ft）から CMD L、NAV RADIO で 111.90/337 を同調して APP。LOC を捕まえると ILS TUNE INHIBIT と RA TEST INHIBIT（ATA22 p.212；FCOM p.1305）、NAV RADIO で 110.30 を入れても INVALID ENTRY で周波数は 111.90 のまま。A/P を外すと（F/D だけ、500 ft より上）両方とも消え、同じ入力が通る。機体を読み直す。",
+  "description": "AFDS の作り直し 6-3 段 5d（ILS TUNE INHIBIT と RA TEST INHIBIT）の X-Plane での確認、空中。s112 と同じ所（RJAA 34L の進入路の 12 NM、2,500 ft）から CMD L、NAV RADIO で 111.90/337 を同調して APP。LOC を捕まえると ILS TUNE INHIBIT と RA TEST INHIBIT（ATA22 p.212；FCOM p.1305）、NAV RADIO で 110.30 を入れても ILS TUNE INHIBITED - MCP（FCOM p.1432：6-1・6-2 段 10c から。前は INVALID ENTRY）で周波数は 111.90 のまま。A/P を外すと（F/D だけ、500 ft より上）両方とも消え、同じ入力が通る。機体を読み直す。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.572774, "longitude": 140.512164, "elevation_in_meters": 762.0, "heading_true": 329.6, "speed_in_meters_per_second": 92.6 },
@@ -32,7 +32,7 @@
     { "do": "cmd", "note": "SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
     { "do": "cdu", "note": "NAV RAD、111.90/337 を ILS の行（L4）へ", "keys": ["NAVRAD", "111.90/337", "L4"] },
     { "do": "sleep", "seconds": 5, "note": "受信機が落ち着く" },
-    { "do": "set", "note": "PFD の ILS の表示の同調の印（純正の ils_dots は目的地の 50 NM 以内でしか 1 にならない：DSP-14、5-1 段 3 で作り直すまで）", "dref": "laminar/B747/autopilot/ils_dots", "value": 1 },
+    { "do": "check", "note": "PFD の ILS の目盛の印（6-1・6-2 段 10c から FMC が手動の同調で 1 にする：FCOM p.987。前は目的地の 50 NM 以内だけで、ここで 1 を書いていた）", "dref": "laminar/B747/autopilot/ils_dots", "op": "==", "value": 1 },
     { "do": "check", "note": "NAV2 も G/S の信号", "dref": "sim/cockpit2/radios/indicators/nav2_display_vertical", "op": "==", "value": 1 },
     { "do": "cmd", "note": "APP", "name": "laminar/B747/autopilot/approach" },
     { "do": "wait", "note": "LOC を捕まえる", "dref": "laminar/B747/autopilot/FMA/active_roll_mode", "op": "==", "value": 3, "timeout": 60 },
@@ -42,10 +42,10 @@
     { "do": "check", "note": "NAV 1 は 111.90", "dref": "sim/cockpit/radios/nav1_freq_hz", "op": "==", "value": 11190 },
     { "do": "cdu", "note": "NAV RADIO、110.30 を ILS の行（L4）へ", "keys": ["NAVRAD", "110.30", "L4"] },
     { "do": "sleep", "seconds": 1 },
-    { "do": "check", "note": "手動の同調も止める：INVALID ENTRY（FCOM p.1305）", "dref": "laminar/B747/fms3/Line14_L", "op": "contains", "value": "INVALID ENTRY" },
+    { "do": "check", "note": "手動の同調も止める：ILS TUNE INHIBITED - MCP（FCOM p.1305、p.1432。段 10c の前は INVALID ENTRY）", "dref": "laminar/B747/fms3/Line14_L", "op": "contains", "value": "ILS TUNE INHIBITED" },
     { "do": "check", "note": "NAV 1 は 111.90 のまま", "dref": "sim/cockpit/radios/nav1_freq_hz", "op": "==", "value": 11190 },
     { "do": "check", "note": "NAV 2 も", "dref": "sim/cockpit/radios/nav2_freq_hz", "op": "==", "value": 11190 },
-    { "do": "cmd", "note": "CLR（INVALID ENTRY を消す）", "name": "laminar/B747/fms1/key/clear" },
+    { "do": "cmd", "note": "CLR（通知を消す）", "name": "laminar/B747/fms1/key/clear" },
     { "do": "sleep", "seconds": 2, "note": "AFDS は LOC のまま（周波数が変わっていないのでモード故障も無い）" },
     { "do": "check", "note": "LOC は故障していない", "dref": "laminar/B747/autopilot/FMA/roll_fail", "op": "==", "value": 0 },
 

@@ -2707,6 +2707,90 @@ local function route_vors(r,lat,lon)
   end
   return nextVor,prevVor
 end
+-- (6-1/6-2 step 10c; notes/ATA-34-61-FMC.md §88) the ILS: the active
+-- route's approach runway's localizer at its destination (the FMC's
+-- database), STBY within 200 nm of the T/D and past halfway (the direct
+-- distances from the origin and to the destination: estimate), A within
+-- 50 nm of the T/D, 150 nm of the runway threshold or in the descent, in
+-- the air (estimate), not for ten minutes after lift-off unless the
+-- destination runway changes (FCOM p.1305-1307); held under the FCCs'
+-- ILS TUNE INHIBIT. ILS L, C and R are X-Plane's NAV 1 and 2 (frequency
+-- and course); the PFDs' scales with the frequency tuned (FCOM p.987:
+-- laminar/B747/autopilot/ils_dots; DSP-14: before, within 50 nm of the
+-- destination). Before, the autopilot (B747_fltmgmt_setILS) tuned an ILS
+-- near the destination from X-Plane's flight plan's geometry.
+-- the ILS's messages (B744.notifications.lua's DRindex + 1)
+local TUNE_INHIBITED,RW_ILS_CRS_ERROR=16,40
+local ilsKey,ilsSt=nil,nil
+local ilsLiftoff,ilsLiftoffKey,ilsWasGround=nil,nil,nil
+local ilsIn={}
+local ilsShown={}
+local function dest_ils(db,r)
+  if not (r and r.dest and r.dest.lat and r.appr and r.appr.rwy) then return nil,nil end
+  local key=r.dest.ident.." "..r.appr.rwy
+  if key~=ilsKey then
+    ilsKey,ilsSt=key,nil
+    local N=B747_navdb
+    for _,e in ipairs(N.radio_near(db,r.dest.lat,r.dest.lon,8)) do
+      local i=e.i
+      local rec=db.nav[i]
+      if db.kind[i]==N.LOC and rec.terminal==r.dest.ident and "RW"..(rec.runway or "")==r.appr.rwy and rec.freq then
+        ilsSt={ident=db.ident[i],freq=rec.freq,crs=(rec.crs_mag or 0)%360,lat=db.lat[i],lon=db.lon[i]}
+        break
+      end
+    end
+  end
+  return ilsSt,key
+end
+local function ils_flag(key,on,fn)
+  local v=on and 1 or 0
+  if ilsShown[key]~=v then ilsShown[key]=v fn(on) end
+end
+local function update_ils(db)
+  local N=B747_navdb
+  local now=simDRTime
+  local st=B747_fmc_route
+  local r=st.active and st.rte or nil
+  local il,key=nil,nil
+  if db.ready then il,key=dest_ils(db,r) end
+  local ground=simDR_onGround==1
+  if ilsWasGround==true and not ground then ilsLiftoff,ilsLiftoffKey=now,key end
+  ilsWasGround=ground
+  if ilsLiftoff and (now-ilsLiftoff>=TM.TAKEOFF_S or key~=ilsLiftoffKey or now<ilsLiftoff) then ilsLiftoff=nil end
+  local standby,auto=false,false
+  if il then
+    local lat,lon=simDR_latitude,simDR_longitude
+    local td=B747_fms_vnav_td()
+    local past=r.origin~=nil and r.origin.lat~=nil and N.distance(lat,lon,r.origin.lat,r.origin.lon)>N.distance(lat,lon,r.dest.lat,r.dest.lon)
+    local thrLat,thrLon=il.lat,il.lon
+    local c=N.cifp(db,r.dest.ident)
+    local rw=c and c.runways and c.runways[r.appr.rwy]
+    if rw then thrLat,thrLon=rw.lat,rw.lon end
+    standby=td~=nil and td<TM.STANDBY_TD_NM and past
+    auto=not ground and ((td~=nil and td<TM.AUTO_TD_NM) or N.distance(lat,lon,thrLat,thrLon)<TM.AUTO_THR_NM
+      or B747_fms_vnav_phase()=="DES")
+  end
+  ilsIn.ils,ilsIn.standby,ilsIn.auto=il,standby,auto
+  ilsIn.after_takeoff=ilsLiftoff~=nil
+  ilsIn.inhibit=B747DR_fms_ils_tune_inhibit>0.5
+  local o=TM.ils_update(tuneState,ilsIn)
+  if o.tune and not ilsIn.inhibit then
+    if simDR_nav1Freq~=o.tune.freq then simDR_nav1Freq=o.tune.freq end
+    if simDR_nav2Freq~=o.tune.freq then simDR_nav2Freq=o.tune.freq end
+    for i=0,1 do
+      if math.abs(((simDR_radio_nav_obs_deg[i]-o.tune.crs)+180)%360-180)>0.5 then simDR_radio_nav_obs_deg[i]=o.tune.crs end
+    end
+  end
+  local dots=o.tune and 1 or 0
+  if B747DR_ils_dots~=dots then B747DR_ils_dots=dots end
+  if o.held_change then B747DR_fmc_notifications[TUNE_INHIBITED]=1 end
+  ils_flag("crs",o.crs_err,function(on) B747DR_fmc_notifications[RW_ILS_CRS_ERROR]=on and 1 or 0 end)
+  ils_flag("freq",o.freq_err,function(on) B747_cdu_fmc_condition("RW/ILS FREQ ERROR",on,true) end)
+  return o
+end
+-- NAV RADIO's ILS entry while the FCCs inhibit the tuning: the message
+-- (an event: FCOM p.1432)
+function B747_fms_ils_inhibited() B747DR_fmc_notifications[TUNE_INHIBITED]=1 end
 function update_tuning()
   local now=simDRTime
   if tuneT and now-tuneT<1 and now>=tuneT then return end
@@ -2729,8 +2813,10 @@ function update_tuning()
     end
     TM.choose(s,TM.candidates(proc,nextVor,prevVor,auto))
   end
+  local o=update_ils(db)
   local modes=B747DR_radioModes
   if type(modes)~="string" or string.len(modes)<5 then modes="AAAMM" end
+  modes=replace_char(1,modes,(o.mode=="A" or o.mode=="M") and o.mode or "P")
   for side=1,2 do
     local v,idx=s.vor[side],VOR_IDX[side]
     if v.st and v.st.freq and simDR_radio_nav_freq_hz[idx]~=v.st.freq then simDR_radio_nav_freq_hz[idx]=v.st.freq end
