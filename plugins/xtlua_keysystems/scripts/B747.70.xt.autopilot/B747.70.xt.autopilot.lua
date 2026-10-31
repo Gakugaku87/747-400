@@ -949,12 +949,9 @@ B747DR_at_lever_cmd = deferred_dataref("laminar/B747/autothrottle/lever_cmd", "n
 B747DR_at_TRA = find_dataref("laminar/B747/engines/TRA")
 simDR_at_EPR_bug = find_dataref("sim/cockpit2/engine/actuators/EPR_target_bug")
 simDR_at_N1_bug = find_dataref("sim/cockpit2/engine/actuators/N1_target_bug")
--- (step 9d2) the TAS for VNAV's THR (m/s: X-Plane's, the IRUs' acceleration
--- along the path; the indicated speed lags and falls as the airplane
--- climbs); the energy's rate in fpm from the TAS times its change (m/s and
--- m/s/s: V dV/dt / g in ft/min)
+-- (step 9d2) the TAS (m/s) for VNAV's THR's energy's rate at the target
+-- speed (the A/T model's target_vs)
 simDR_at_tas = find_dataref("sim/flightmodel/position/true_airspeed")
-local AT_EVS_K = 60 / 9.80665 / 0.3048
 -- (2026-10-31) the AFDS's and the A/T's time step at most X-Plane's 0.05 s
 -- a frame: below 20 fps X-Plane's time runs slower while SIM_PERIOD stays
 -- real time (s145: one long frame stepped the F/D's pitch 2.5 degrees and,
@@ -964,7 +961,6 @@ local function afds_dt() return math.min(SIM_PERIOD, AFDS_DT_MAX) end
 local atState = B747_at_model.new()
 local atIn = {}
 local atIas, atAccel = nil, 0
-local atTas, atTasAccel = nil, 0
 local atPush = {spd = 0, thr = 0, disc = 0}
 local atSeen = {spd = 0, thr = 0, disc = 0, toga = nil}
 local function afds_at()
@@ -1017,11 +1013,6 @@ local function afds_at()
 		atAccel = atAccel + ((ias - atIas) / dt - atAccel) * math.min(1, dt)
 	end
 	atIas = ias
-	local tas = simDR_at_tas
-	if atTas and dt > 0 then
-		atTasAccel = atTasAccel + ((tas - atTas) / dt - atTasAccel) * math.min(1, dt)
-	end
-	atTas = tas
 	local n1 = B747DR_ap_engine_type == 1
 	local thr, lev = 0, 0
 	for e = 0, 3 do
@@ -1033,10 +1024,12 @@ local function afds_at()
 	i.v_min = B747DR_afds_vminm > 0 and B747DR_afds_vminm or 0
 	i.vs, i.alt, i.mcp_alt = simDR_vvi_fpm_pilot, simDR_pressureAlt1, B747DR_autopilot_altitude_ft
 	-- (step 9d2a) VNAV's THR to the FMC's V/S (the early and the cruise
-	-- descent) on the energy's rate (the V/S at the target speed), its HOLD
-	-- on that and the inertial V/S (the VSI's lag held the levers early)
+	-- descent) on the V/S at the target speed, its HOLD on that and the
+	-- inertial V/S (the VSI's lag held the levers early)
 	i.vnav_vs, i.ivs = B747DR_ap_fvn_vs, simDR_afds_vs
-	i.evs = simDR_afds_vs + AT_EVS_K * tas * atTasAccel
+	local machMode = simDR_autopilot_airspeed_is_mach == 1
+	i.evs = B747_at_model.target_vs(atState, simDR_afds_vs, simDR_at_tas,
+		machMode and simDR_airspeed_mach or ias, machMode, dt)
 	i.n1, i.thrust = n1, thr
 	i.thrust_ref = n1 and simDR_at_N1_bug[0] or simDR_at_EPR_bug[0]
 	i.lever = lev
