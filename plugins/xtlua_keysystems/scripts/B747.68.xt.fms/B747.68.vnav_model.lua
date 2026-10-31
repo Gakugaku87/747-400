@@ -72,12 +72,27 @@ M.MCP_BELOW = 200
 -- descent for CRZ ALT this far off (the climb's since step 9b)
 M.EARLY_VS, M.EARLY_BELOW = 1250, 100
 M.CRZ_CHG = 500
+-- (step 9e1) the descent's speed on the path (FCOM p.1259-1260): above the
+-- first speed constraint DRAG REQUIRED over VMO/MMO less 16 kt and at most
+-- MAX_ADD_KT more; below it DRAG REQUIRED over the target plus DRAG_LOW_KT,
+-- at most plus MAX_LOW_KT and the transition speed plus 5 (the SPD TRANS's
+-- speed plus TRANS_ADD_KT: it is the transition's less 10); DRAG REQUIRED
+-- gone DRAG_OFF_KT under its speed (estimate). Past them, the path given up
+-- to PATH_TOL ft, SPD_VS fpm a kt of the speed's excess (estimate); further
+-- the speed reversion, the slow side's 5 kt over the higher of the best
+-- holding and the minimum maneuvering speed (REV_SLOW_ADD)
+M.MAX_ADD_KT, M.DRAG_LOW_KT, M.MAX_LOW_KT, M.TRANS_ADD_KT = 5, 10, 15, 15
+M.DRAG_OFF_KT = 2
+M.PATH_TOL, M.SPD_VS = 150, 100
+M.REV_SLOW_ADD = 5
 
 function M.new()
     return {phase = "CLB", out = {},
         early = false, early_below = false,  -- the early descent, under the path in it
         crz_chg = nil,                       -- the cruise climb ("CLB") or descent ("DES")
-        crz_last = nil}                      -- CRZ ALT the update before
+        crz_last = nil,                      -- CRZ ALT the update before
+        drag = false,                        -- DRAG REQUIRED (step 9e1)
+        rev = nil, rev_cas = nil}            -- the speed reversion ("fast", "slow") and its speed
 end
 
 -- DES NOW (step 9d2a; FCOM p.1260, p.1389, p.1393; FMSPG p.3.5-5): the
@@ -183,8 +198,53 @@ local function target_speed(P, sched, crz, inp, phase, to_cas)
     return cas, mach, mm
 end
 
+-- (step 9e1) the descent's speed limits on the path at the target cas:
+-- lo the minimum maneuvering speed, hi the most, drag DRAG REQUIRED's;
+-- above the first speed constraint (the speed transition's altitude here)
+-- or below it (below)
+local function speed_limits(P, inp, cas, below)
+    if not cas then return nil, nil, nil end
+    local lo = (inp.vmin and inp.vmin > 0) and inp.vmin or nil
+    if not below then
+        local _, lim = P.econ_limit(inp.alt)
+        return lo, lim + M.MAX_ADD_KT, lim
+    end
+    local hi = cas + M.MAX_LOW_KT
+    local tc = inp.des and inp.des.trans_cas
+    if tc then hi = math.min(hi, tc + M.TRANS_ADD_KT) end
+    if inp.flaps_placard then hi = math.min(hi, inp.flaps_placard - M.PLACARD_MARGIN) end
+    return lo, hi, cas + M.DRAG_LOW_KT
+end
+
+-- (step 9e1) the speed reversion ("fast" or "slow") and its speed: fast,
+-- VMO/MMO less 16 kt above the first speed constraint, the SPD TRANS's speed
+-- (the transition's less 10) below; slow, REV_SLOW_ADD over the higher of
+-- the best holding speed and the minimum maneuvering speed above, the SPD
+-- TRANS's (not under the minimum maneuvering speed) below
+local function reversion(s, P, inp, kind, tr)
+    if s.rev then return end
+    local below = inp.alt < tr
+    local tc = inp.des and inp.des.trans_cas or 240
+    local vmin = (inp.vmin and inp.vmin > 0) and inp.vmin or 0
+    local cas
+    if kind == "fast" then
+        if below then
+            cas = tc
+        else
+            local _, lim = P.econ_limit(inp.alt)
+            cas = lim
+        end
+    elseif below then
+        cas = math.max(tc, vmin)
+    else
+        cas = math.max(inp.hold_cas or 0, vmin) + M.REV_SLOW_ADD
+    end
+    s.rev, s.rev_cas = kind, cas
+end
+
 -- inp:
---   P            the performance database (cas_to_mach, mach_to_cas)
+--   P            the performance database (cas_to_mach, mach_to_cas,
+--                econ_limit)
 --   sched, crz   B747_pred_model.schedule and crz_mach
 --   alt, vs, gs  the altitude (ft), vertical speed (fpm), ground speed (kt)
 --   ground       on the ground
@@ -193,7 +253,8 @@ end
 --   clb, des     the climb's and descent's schedules (the predictions');
 --                crzspd the cruise speed ({mach}, {cas} or {fn})
 --   flaps_placard  the flap placard speed (kt) or nil (flaps up)
---   vmin         the minimum maneuvering speed (kt) or nil
+--   vmin         the minimum maneuvering speed (kt) or nil; hold_cas the
+--                best holding speed (kt) or nil (step 9e1)
 --   spd_int      the MCP speed in speed intervention ({cas} or {mach})
 --   takeoff      {v2 (nil: none), accel_alt (the acceleration height's
 --                altitude, ft), flaps (the handle's ratio)}; ias the
@@ -207,7 +268,8 @@ end
 --   "CLB" or descent's "DES", else nil), mode ("SPD", "PTH"), cas, mach,
 --   mach_mode, alt (the FMC altitude), vs (PTH's vertical speed, nil level;
 --   THR's in the early and the cruise descent), path_alt, path_dev (ft
---   above the path), at (the A/T mode)
+--   above the path), at (the A/T mode), msg ("DRAG" for DRAG REQUIRED,
+--   "THRUST" for THRUST REQUIRED, else nil: step 9e1)
 function M.update(s, inp)
     local out = s.out
     local P = inp.P
@@ -274,7 +336,10 @@ function M.update(s, inp)
     -- economy cruise)
     local spd_ph = s.crz_chg and "CRZ" or ph
     out.cas, out.mach, out.mach_mode = target_speed(P, inp.sched, inp.crz, inp, spd_ph, takeoff_speed(s, inp))
-    out.path_alt, out.path_dev, out.vs = nil, nil, nil
+    out.path_alt, out.path_dev, out.vs, out.msg = nil, nil, nil, nil
+    -- (step 9e1) DRAG REQUIRED and the speed reversion only in the descent
+    -- on its path (not the early descent's, nor in speed intervention)
+    if ph ~= "DES" or s.early or inp.spd_int then s.drag, s.rev = false, nil end
     if ph == "CLB" then
         out.mode = "SPD"
         out.alt = inp.clb_alt or inp.crz_alt
@@ -306,27 +371,56 @@ function M.update(s, inp)
         out.mode = "PTH"
         out.alt = inp.des_alt
         out.at = M.AT_IDLE
+        local tr = inp.des and inp.des.trans_alt or 10000
+        local ias = inp.ias
+        local lo, hi, drag = speed_limits(P, inp, out.cas, inp.alt < tr)
         if path_h then
             out.path_alt = path_h
             out.path_dev = inp.alt - path_h
+            local dev = out.path_dev
             local rate = -g * math.max(inp.gs or 0, 0) / 60
-            local vs = rate - M.K_PATH * out.path_dev
+            local vs = rate - M.K_PATH * dev
             vs = math.max(math.min(vs, 0), rate - M.VS_STEEPER)
+            -- (step 9e1) past the speed's limits the path given up to
+            -- PATH_TOL (the less steep fast, the steeper slow), further the
+            -- speed reversion
+            if ias and hi and ias > hi then
+                vs = math.min(0, math.max(vs, rate + M.SPD_VS * (ias - hi)))
+                if dev > M.PATH_TOL then reversion(s, P, inp, "fast", tr) end
+            elseif ias and lo and ias < lo then
+                vs = math.min(vs, rate - M.SPD_VS * (lo - ias))
+                if dev < -M.PATH_TOL then reversion(s, P, inp, "slow", tr) end
+            end
             out.vs = vs
             -- a line too shallow for idle, or below the path (levelling to
             -- meet it): the A/T on speed
-            if kind == "spd" or out.path_dev < -M.MCP_BELOW then out.at = M.AT_SPD end
+            if kind == "spd" or dev < -M.MCP_BELOW then out.at = M.AT_SPD end
         end
         -- too slow: the A/T on speed until near the target again
-        if inp.ias and out.cas then
-            local tr = inp.des and inp.des.trans_alt or 10000
+        if ias and out.cas then
             local slow = inp.alt < tr and M.SLOW_KT_LOW or M.SLOW_KT
-            if inp.ias < out.cas - slow then
+            if ias < out.cas - slow then
                 s.slow = true
-            elseif inp.ias >= out.cas - M.SLOW_BACK_KT then
+            elseif ias >= out.cas - M.SLOW_BACK_KT then
                 s.slow = false
             end
             if s.slow then out.at = M.AT_SPD end
+        end
+        -- DRAG REQUIRED over its speed, gone DRAG_OFF_KT under it
+        if ias and drag then
+            if ias > drag then s.drag = true elseif ias < drag - M.DRAG_OFF_KT then s.drag = false end
+        end
+        if s.drag then out.msg = "DRAG" end
+        -- the speed reversion: VNAV SPD at its speed until the path is met
+        -- (the airplane at it from above, fast, or from below, slow)
+        if s.rev then
+            if out.path_dev and ((s.rev == "fast" and out.path_dev <= 0) or (s.rev == "slow" and out.path_dev >= 0)) then
+                s.rev = nil
+            else
+                out.mode, out.at, out.vs = "SPD", M.AT_IDLE, nil
+                out.cas, out.mach, out.mach_mode = s.rev_cas, P.cas_to_mach(s.rev_cas, inp.alt), false
+                out.msg = s.rev == "fast" and "DRAG" or "THRUST"
+            end
         end
     end
     -- valid: an active route, CRZ ALT and the gross weight (ATA34_2 p.621:

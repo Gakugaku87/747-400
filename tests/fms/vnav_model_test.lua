@@ -324,4 +324,61 @@ V.des_now(s19)
 o = V.update(s19, inp{alt = 35000, mcp_alt = 10000, d_ed = 150, spd_int = {cas = 280}})
 T.check(o.mode == "SPD" and o.at == V.AT_THR and o.vs == -V.EARLY_VS, "the early descent in speed intervention: THR to the rate still")
 T.near(o.cas, 280, 1e-6, "at the MCP's 280 kt")
+
+-- (step 9e1) the descent's speed on the path (FCOM p.1259-1260). Above the
+-- speed transition: DRAG REQUIRED over VMO/MMO less 16 kt (349 at FL240),
+-- the path held up to 354; past it the path given up (the less steep), 150
+-- ft above the speed reversion, VNAV SPD at 349 with IDLE and DRAG REQUIRED
+-- until the path is met (FMSPG p.3.5-17)
+local s20 = V.new()
+local gr = (35000 - 3000) / 100
+local rate480 = -gr * 480 / 60
+local p75 = 3000 + gr * (75 - 10)
+V.update(s20, inp{alt = 35000, mcp_alt = 3000, d_ed = 110, gs = 480})
+o = V.update(s20, inp{alt = p75, mcp_alt = 3000, d_ed = 75, gs = 480, ias = 345})
+T.check(o.phase == "DES" and o.mode == "PTH" and o.msg == nil, "345 kt on the path: VNAV PTH, no message")
+o = V.update(s20, inp{alt = p75, mcp_alt = 3000, d_ed = 75, gs = 480, ias = 351})
+T.equal(o.msg, "DRAG", "351 kt, over VMO/MMO less 16 (349): DRAG REQUIRED (FCOM p.1259)")
+T.near(o.vs, rate480, 1, "the path held at 351 (up to 354)")
+o = V.update(s20, inp{alt = p75 + 50, mcp_alt = 3000, d_ed = 75, gs = 480, ias = 358})
+T.check(o.mode == "PTH" and math.abs(o.vs - (rate480 + V.SPD_VS * 4)) < 1,
+    string.format("358 kt, 4 over the most, 50 ft above: VNAV PTH less steep by SPD_VS a kt (%.0f)", o.vs))
+o = V.update(s20, inp{alt = p75 + 200, mcp_alt = 3000, d_ed = 75, gs = 480, ias = 358})
+T.check(o.mode == "SPD" and o.at == V.AT_IDLE and math.abs(o.cas - 349) < 0.5 and o.msg == "DRAG",
+    string.format("200 ft above at 358: the speed reversion, VNAV SPD at %.1f with IDLE, DRAG REQUIRED", o.cas))
+o = V.update(s20, inp{alt = p75 + 100, mcp_alt = 3000, d_ed = 75, gs = 480, ias = 350})
+T.equal(o.mode, "SPD", "100 ft above: VNAV SPD still, until the path")
+o = V.update(s20, inp{alt = p75 - 10, mcp_alt = 3000, d_ed = 75, gs = 480, ias = 340})
+T.check(o.mode == "PTH" and math.abs(o.cas - 290) < 1e-6 and o.msg == nil, "the path met at 340 kt: VNAV PTH at the schedule's 290, no message")
+-- below the transition (the target 240): DRAG REQUIRED over 250, the most
+-- the transition speed plus 5 (255); the reversion at the SPD TRANS's 240
+local s21 = V.new()
+local p30 = 3000 + gr * (30 - 10)
+V.update(s21, inp{alt = 35000, mcp_alt = 1000, d_ed = 110, gs = 480})
+o = V.update(s21, inp{alt = p30, mcp_alt = 1000, d_ed = 30, gs = 300, ias = 245})
+T.check(o.mode == "PTH" and o.msg == nil and math.abs(o.cas - 240) < 1e-6, "9,400 ft at 245 for 240: no message")
+o = V.update(s21, inp{alt = p30, mcp_alt = 1000, d_ed = 30, gs = 300, ias = 251})
+T.equal(o.msg, "DRAG", "251, over the target plus 10: DRAG REQUIRED (FCOM p.1260)")
+o = V.update(s21, inp{alt = p30 + 200, mcp_alt = 1000, d_ed = 30, gs = 300, ias = 258})
+T.check(o.mode == "SPD" and math.abs(o.cas - 240) < 1e-6, "258, over 255, 200 ft above: VNAV SPD at 240 (the transition's less 10)")
+-- slow under the minimum maneuvering speed (the A/T off: the A/T's SPD
+-- did not catch it): the steeper by SPD_VS a kt, 150 ft below the
+-- reversion at 5 kt over the higher of the best holding speed and the
+-- minimum maneuvering, THRUST REQUIRED; the path met from below: PTH
+local s22 = V.new()
+V.update(s22, inp{alt = 35000, mcp_alt = 3000, d_ed = 110, gs = 480})
+o = V.update(s22, inp{alt = p75 - 50, mcp_alt = 3000, d_ed = 75, gs = 480, ias = 215, vmin = 220, hold_cas = 230})
+T.check(o.mode == "PTH" and math.abs(o.vs - (rate480 - V.SPD_VS * 5)) < 1 and o.at == V.AT_SPD,
+    string.format("215 kt, 5 under the minimum maneuvering, 50 ft below: the steeper (%.0f), the A/T on speed", o.vs))
+o = V.update(s22, inp{alt = p75 - 200, mcp_alt = 3000, d_ed = 75, gs = 480, ias = 215, vmin = 220, hold_cas = 230})
+T.check(o.mode == "SPD" and math.abs(o.cas - 235) < 1e-6 and o.msg == "THRUST",
+    "200 ft below: the speed reversion at 235 (the best holding 230 plus 5), THRUST REQUIRED")
+o = V.update(s22, inp{alt = p75 + 5, mcp_alt = 3000, d_ed = 75, gs = 480, ias = 236, vmin = 220, hold_cas = 230})
+T.equal(o.mode, "PTH", "the path met from below: VNAV PTH")
+-- the reversion gone with the descent (the early descent, speed
+-- intervention, another phase)
+V.update(s20, inp{alt = p75 + 200, mcp_alt = 3000, d_ed = 75, gs = 480, ias = 358})
+T.equal(s20.rev, "fast", "reverted again")
+o = V.update(s20, inp{alt = p75 + 200, mcp_alt = 3000, d_ed = 75, gs = 480, ias = 358, spd_int = {cas = 300}})
+T.check(s20.rev == nil and o.msg == nil, "speed intervention: the reversion and DRAG REQUIRED gone")
 T.done()

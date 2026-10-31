@@ -145,6 +145,9 @@ B747DR_fms_vnav_alt						= deferred_dataref("laminar/B747/fms/vnav/alt", "number
 B747DR_fms_vnav_vs						= deferred_dataref("laminar/B747/fms/vnav/vs", "number")
 B747DR_fms_vnav_path_dev				= deferred_dataref("laminar/B747/fms/vnav/path_dev", "number")
 B747DR_fms_vnav_at						= deferred_dataref("laminar/B747/fms/vnav/at", "number")
+-- (step 9e1) the descent's speed message (1 THRUST REQUIRED, 2 DRAG
+-- REQUIRED, else 0)
+B747DR_fms_vnav_msg						= deferred_dataref("laminar/B747/fms/vnav/msg", "number")
 -- (step 9c) the performance data VNAV needs entered: gross weight, cost
 -- index, CRZ ALT (1; else the VNAV switch's PERF/VNAV UNAVAILABLE, FCOM
 -- p.1433)

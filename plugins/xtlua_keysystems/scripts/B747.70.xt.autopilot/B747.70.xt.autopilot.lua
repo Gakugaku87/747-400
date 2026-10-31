@@ -611,6 +611,8 @@ B747DR_ap_fvn_alt = find_dataref("laminar/B747/fms/vnav/alt")
 B747DR_ap_fvn_vs = find_dataref("laminar/B747/fms/vnav/vs")
 B747DR_ap_fvn_path_dev = find_dataref("laminar/B747/fms/vnav/path_dev")
 B747DR_ap_fvn_at = find_dataref("laminar/B747/fms/vnav/at")
+-- (step 9e1) the FMC's descent message: 1 THRUST REQUIRED, 2 DRAG REQUIRED
+B747DR_ap_fvn_msg = find_dataref("laminar/B747/fms/vnav/msg")
 B747DR_ap_fvn_perf = find_dataref("laminar/B747/fms/vnav/perf")
 -- (step 9d1) the MCP altitude selector's pushes, counted
 B747DR_ap_alt_sel_pushes = deferred_dataref("laminar/B747/autopilot/alt_sel_pushes", "number")
@@ -1044,10 +1046,16 @@ local function afds_at()
 	local fma = B747_at_model.fma(atState)
 	if B747DR_ap_FMA_autothrottle_mode ~= fma then B747DR_ap_FMA_autothrottle_mode = fma end
 	-- THRUST REQUIRED (step 9f3; FCOM p.1259, p.1434: flag 45, DRindex 44
-	-- + 1): VNAV's descent asking the A/T for speed with the A/T off
-	local tr = (afds.pitch == "VNAV" and B747DR_ap_fvn_phase == 3 and B747DR_ap_fvn_at == B747_at_model.SPD
-		and not atState.engaged) and 1 or 0
+	-- + 1): VNAV's descent asking the A/T for speed with the A/T off, or the
+	-- FMC's slow speed reversion (step 9e1); DRAG REQUIRED (FCOM p.1431:
+	-- flag 9, DRindex 8 + 1) the FMC's (step 9e1; before, the old one's:
+	-- 10 kt over the dial and gaining with the levers at idle)
+	local vnav = afds.pitch == "VNAV"
+	local tr = (vnav and ((B747DR_ap_fvn_phase == 3 and B747DR_ap_fvn_at == B747_at_model.SPD
+		and not atState.engaged) or B747DR_ap_fvn_msg == 1)) and 1 or 0
 	if B747DR_fmc_notifications[45] ~= tr then B747DR_fmc_notifications[45] = tr end
+	local dr = (vnav and B747DR_ap_fvn_msg == 2) and 1 or 0
+	if B747DR_fmc_notifications[9] ~= dr then B747DR_fmc_notifications[9] = dr end
 	-- (TO's state for the old readers: 0.9 its THR REF, 1 its HOLD)
 	local to = atState.engaged and (atState.to == "thr" and 0.9 or (atState.to == "hold" and 1)) or 0
 	if B747DR_engine_TOGA_mode ~= to then B747DR_engine_TOGA_mode = to end
@@ -3401,7 +3409,6 @@ function B747_ap_all_cmd_modes_off()
 	B747DR_switching_servos_on = simDRTime
 end
 
-local last_airspeed = 0
 local last_target_heading = 0
 function B747_interpolate_value(current_value, target, min, max, speed)--speed in sex min->max
 
@@ -3629,22 +3636,7 @@ function B747_ap_EICAS_msg()
 	local disc = atState.disc and 1 or 0
 	if B747DR_CAS_caution_status[5] ~= disc then B747DR_CAS_caution_status[5] = disc end
 
-	if
-		B747DR_speedbrake_lever < 0.3 and simDR_ind_airspeed_kts_pilot > (simDR_autopilot_airspeed_kts + 10) and
-			simDR_ind_airspeed_kts_pilot > last_airspeed and
-			-- (step 9c: VNAV on the FMC's descent path)
-			(simDR_autopilot_vs_status >= 1 or B747DR_ap_inDescent == 1) and
-			B747DR_ap_vnav_state > 0
-	 then
-		if
-			simDR_allThrottle < 0.01 and simDR_radarAlt1 > 1000
-		 then
-			B747DR_fmc_notifications[9] = 1 --DRAG REQUIRED
-		end
-	elseif simDR_ind_airspeed_kts_pilot ~= last_airspeed then --dont turn it off if airspeed didn't update
-		B747DR_fmc_notifications[9] = 0
-	end
-	last_airspeed = simDR_ind_airspeed_kts_pilot
+	-- DRAG REQUIRED: the FMC's (the FMC's step 9e1: afds_at)
 end
 
 ----- MONITOR AI FOR AUTO-BOARD CALL ----------------------------------------------------
