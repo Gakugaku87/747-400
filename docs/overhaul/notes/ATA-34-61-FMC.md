@@ -1211,3 +1211,13 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - 回帰：`at_model_test.lua` 64 件（servo を足した）、`eec_module_test.lua` 66 件（servo の受け渡しと手の入力）、`vnav_model_test.lua` 56 件（遅いときの SPD）。全 134 本。
   - X-Plane（09:35 と 10:08 に起動し直した）：`s01_ap_basic` 14/0・WARN 1（空中開始の高度：前から）、`s140_vnav_descent` 16/16（IDLE で 10°/s に後ろの stop、HOLD）、`s101_afds_pitch` 33/33（初めのゲインの回では V/S の +1,500 fpm で 800 fpm に 30 秒で届かなかった）、`s142_at_takeoff` 31/31（TO の THR REF を TRA で）、`s114_autoland` 20/0・WARN 1（flare retard は 5°/s。WARN は flare の浮き：回により出る）。Lua の誤りなし。
 - 残り：SPD の速さの戻りが遅い（s01：空中開始の 288 kt から 250 kt へ、2 分で 5 kt の内、3 分で 3 kt。もっと速くするとエンジンの遅れで揺れる）。アイドル近くの不感帯は EEC のレバーと推力の関係（段 9g の推力制限と一緒に見る）。ハードウェアのスロットルで FLCH の 8° の override を確かめていない。
+
+## 61. 段 9f3 の実装（2026-10-31：A/T の interlock と THRUST REQUIRED）
+
+- 資料：ATA34_2 p.450（電源）、p.644–645（engage の条件）、FCOM p.666、p.1259、p.1434。
+- 作ったもの（AP のつなぎ `afds_at`）：
+  - engage の interlock に電源を足した：servo の励磁の F/O transfer bus（FMC R の電源でもあるので、これがあれば FMC も 1 台は動く）と、駆動の DC bus 1 か 2（どちらか：推定。資料は bus 1・bus 2）。失えば外れて >AUTOTHROT DISC（engage から外れたとき：段 9f1 のとおり）、戻るまで engage しない。3 発以上の運転と EEC の ALTN（`autothrottle_fail`：P&W は全部 NORM、GE は全部 ALTN で戻す規則は EEC のモデル）は段 9f1 から。
+  - THRUST REQUIRED（FMC のメッセージの旗 45）：VNAV の降下で FMC が A/T に SPD を求め（浅い区間、経路の下、15 kt 遅い）、A/T が engage していないとき（FCOM p.1259、p.1434）。
+- 推定：DC はどちらか 1 本で足りること。
+- 残り：FMC の両方の故障と FMC の master の切り替え（FMC の故障の模型が無い）、servo loop monitor（閾値が資料に無い）。SPD・THR スイッチの条件は段 9f1 から（400 ft、TO の limit、ピッチのモード）。THR スイッチの推力制限の機能と DRAG REQUIRED の作り直しは段 9e・9g。
+- 試験：`afds_glue_test.lua` 230 件（F/O transfer bus を失うと外れ >AUTOTHROT DISC、SPD スイッチも効かない、戻すと SPD で engage しメッセージが消える、THRUST REQUIRED が A/T OFF の SPD の求めで出て IDLE の求めで消える）。全 134 本。X-Plane：Web API で F/O transfer bus・APU standby bus・DC bus が 1（電源の入った機体で engage を妨げない）。
