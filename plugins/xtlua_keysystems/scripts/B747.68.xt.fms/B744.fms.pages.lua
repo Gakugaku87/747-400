@@ -232,78 +232,15 @@ fmsFunctionsDefs["INITREF"]["R1"]={"refnavdata",""}
 local navAids
 simDR_variation=find_dataref("sim/flightmodel/position/magnetic_variation")
 B747DR_ils_dots           	= deferred_dataref("laminar/B747/autopilot/ils_dots", "number")
--- the AFDS's ILS TUNE INHIBIT (6-3 step 5d; FCOM p.1305: "manual-tuning
--- [is] inhibited" with it): no entry or deletion then (INVALID ENTRY: an
--- estimate of the CDU's answer)
+-- the AFDS's ILS TUNE INHIBIT (6-3 step 5d; FCOM p.1305): the FMC holds the
+-- ILS's tuning, NAV RADIO's ILS entry ILS TUNE INHIBITED - MCP (6-1/6-2 step
+-- 10c: B747.68.xt.fms.lua's update_ils; before, findILS here tuned an ILS
+-- of X-Plane's navaids list by frequency or identifier)
 B747DR_fms_ils_tune_inhibit	= find_dataref("laminar/B747/autopilot/ils_tune_inhibit")
-function findILS(value)
-
-  local modes=B747DR_radioModes
-  if B747DR_fms_ils_tune_inhibit > 0.5 then return false end
-  if navAidsJSON==nil or string.len(navAidsJSON)<5 then return false end
-  if value=="DELETE" then 
-    B747DR_radioModes=replace_char(1,modes," ")
-	ilsData=""
-	B747DR_ils_dots=0
-    return true
-  end
-  B747DR_radioModes=replace_char(1,modes,"M")
-  navAids=json.decode(navAidsJSON)
-  local direction=nil
-  local valueSO=split(value,"/")
-  --print(value)
-  if table.getn(valueSO) > 1 then
-    value=valueSO[1]
-     --print(value)
-    direction=tonumber(valueSO[2])
-    --print(value.." and " .. direction)
-  else
-    --print(value)
-  end
-  --print(" in " .. navAidsJSON)
-  local val=tonumber(value)
-  if val~=nil then val=val*100 end
-  local found=false
-  local bestDist=360
-  for n=table.getn(navAids),1,-1 do
-      if navAids[n][2] == 8 then
-	  --print("navaid "..n.."->".. navAids[n][1].." ".. navAids[n][2].." ".. navAids[n][3].." ".. navAids[n][4].." ".. navAids[n][5].." ".. navAids[n][6].." ".. navAids[n][7].." ".. navAids[n][8])
-	  
-	 if (value==navAids[n][8] or (val~=nil and val==navAids[n][3])) and (direction==nil or getHeadingDifferenceM(direction,navAids[n][4])<bestDist) then
-	    found=true
-		ilsData=json.encode(navAids[n])
-		local course=(navAids[n][4]+simDR_variation)
-	    print("68 - Tuning ILSs ".. ilsData)
-	    if direction ~=nil then
-		  bestDist=getHeadingDifferenceM(direction,navAids[n][4])
-		  --course=direction
-		end
-		if course<0 then
-			course=course+360
-		elseif course>360 then
-			course=course-360
-  		end
-	    simDR_nav1Freq=navAids[n][3]
-	    simDR_nav2Freq=navAids[n][3] 	
-	    simDR_radio_nav_obs_deg[0]=course
-		simDR_radio_nav_obs_deg[1]=course
-	    print("68 - Tuned ILS "..course)
-	    print("68 - useThis "..bestDist)
-	  end
-      end
-   end
-
-   return found
-end
 
 
 
 fmsPages["NAVRAD"]=createPage("NAVRAD")
-
-ils_line1 = ""
-ils_line2 = ""
-park = "PARK"
-original_distance = -1
 
 -- (6-1/6-2 step 10b) VOR L and R, CRS and RADIAL, ADF L and R (FCOM
 -- p.1303-1304; FMSPG p.206-207; B747.68.tune_model.lua through
@@ -353,37 +290,24 @@ function navrad_vor_adf()
   adfSmall=adfSmall..string.rep(" ",24-string.len(adfSmall)-string.len(mAR))..mAR
   return large,small,crsLine,adfLarge,adfSmall
 end
-fmsPages["NAVRAD"].getPage=function(self,pgNo,fmsID)
-  local ils1="                        "
-  local ils2="                        "
-  local modes=B747DR_radioModes
-  local dist_to_TOD = B747BR_totalDistance - B747BR_tod
-  if string.len(ilsData)>1 then
-    local ilsNav=json.decode(ilsData)
-    ils2= ilsNav[7]
-	ils_line2 = "   "..ils2
-    if original_distance == -1 then
-		original_distance = B747BR_totalDistance  --capture original flightplan distance
-	end
-  --print("Dist to TOD = "..dist_to_tod)	
-	local course = ilsNav[4]+simDR_variation
-	if course<0 then
-		course=course+360
-	end
-
-		if (dist_to_TOD >= 50 and dist_to_TOD < 200) then
-			--ils2= string.format("%6.2f/%03d%s %4s          .", ilsNav[3]*0.01,(ilsNav[4]+simDR_variation), "˚", park)
-			ils1 = "            "..park
-			ils_line1 = string.format("<%6.2f/%03d%s           ", ilsNav[3]*0.01,((simDR_radio_nav_obs_deg[0])), "˚")
-		elseif (dist_to_TOD < 50) then
-			ils1= string.format("%6.2f/%03d%s          ", ilsNav[3]*0.01,((simDR_radio_nav_obs_deg[0])), "`"..modes:sub(1, 1))
-			ils_line1 = ""
-		end
-  else
-    ils1 = park
-	ils_line1 = ""
-	ils_line2 = ""
+-- (6-1/6-2 step 10c) the ILS line (FCOM p.1306; B747.68.tune_model.lua's
+-- ILS through B747_fms_tune): PARK; the destination runway's ILS small
+-- with a caret and PARK; the tuned frequency/course large with A or M
+-- small
+function navrad_ils()
+  local TM,o=B747_tune_model,B747_fms_tune().ils_out
+  local mode=o and o.mode or "PARK"
+  if mode=="STBY" then
+    local t=TM.ils_text(o.st)
+    return "<"..string.rep(" ",string.len(t)).." PARK"," "..t
+  elseif mode=="A" or mode=="M" then
+    local t=TM.ils_text(o.st)
+    return t,string.rep(" ",string.len(t))..mode
   end
+  return "PARK",""
+end
+fmsPages["NAVRAD"].getPage=function(self,pgNo,fmsID)
+  local ilsL=navrad_ils()
   local vorL,vorS,crsL,adfL,adfS=navrad_vor_adf()
   local page={
     "        NAV RADIO       ",
@@ -394,8 +318,7 @@ fmsPages["NAVRAD"].getPage=function(self,pgNo,fmsID)
     "                        ",
     adfL,
     "                        ",
-    ils1,
---    ils2,
+    ilsL,
     "                        ",	
     "                        ", 
 --    "--------         -------",
@@ -406,6 +329,7 @@ fmsPages["NAVRAD"].getPage=function(self,pgNo,fmsID)
 end
 fmsPages["NAVRAD"].getSmallPage=function(self,pgNo,fmsID)
   local vorL,vorS,crsL,adfL,adfS=navrad_vor_adf()
+  local _,ilsS=navrad_ils()
   return{
   "                        ",
   " VOR L             VOR R",
@@ -414,13 +338,9 @@ fmsPages["NAVRAD"].getSmallPage=function(self,pgNo,fmsID)
   "                        ",
   " ADF L             ADF R",
   adfS,
---  " ILS ".. modes:sub(1, 1) .."                  ",
-  " ILS - MLS              ",  
---  "                        ",
-  ils_line1,
-  ils_line2,
---  ,
---  "                        ",
+  " ILS                    ",
+  ilsS,
+  "                        ",
   "                        ",
   "        PRESELECT       ",
   "                        ",
@@ -432,16 +352,35 @@ fmsFunctionsDefs["NAVRAD"]["L3"]={"navrad","adf1"}
 fmsFunctionsDefs["NAVRAD"]["R1"]={"navrad","vor2"}
 fmsFunctionsDefs["NAVRAD"]["R2"]={"navrad","crs2"}
 fmsFunctionsDefs["NAVRAD"]["R3"]={"navrad","adf2"}
+fmsFunctionsDefs["NAVRAD"]["L4"]={"navrad","ils0"}
 -- (step 10b) NAV RADIO's VOR, CRS and ADF entries (FCOM p.1304; FMSPG
 -- p.206-207): B747.68.tune_model.lua's, the radio tuned at once (the
 -- VOR's frequency and course, the ADF's), the message its answer
 function fmsFunctions.navrad(fmsO,value)
   local TM,s=B747_tune_model,B747_fms_tune()
   local sp=fmsO["scratchpad"]
-  if sp=="" then return end
   local kind,side=string.match(value,"^(%a+)(%d)$")
   side=tonumber(side)
   local r
+  if kind=="ils" then
+    -- (step 10c) the ILS (FCOM p.1305-1306): the standby line's select with
+    -- nothing typed, an entry or DELETE; held by the FCCs' inhibit
+    local o=s.ils_out or {}
+    local shown=(o.mode=="STBY" or o.mode=="A" or o.mode=="M") and o.st or nil
+    local inhibited=B747DR_fms_ils_tune_inhibit>0.5
+    if sp=="" then
+      if o.mode~="STBY" then return end
+      r=TM.ils_select(s,shown,inhibited)
+    else
+      r=TM.ils_entry(s,sp,shown,inhibited)
+    end
+    if r==TM.ILS_INHIBITED then B747_fms_ils_inhibited() return end
+    if r~=TM.OK then fmsO["notify"]=r return end
+    fmsO["scratchpad"]=""
+    B747_fms_tune_now()
+    return
+  end
+  if sp=="" then return end
   if kind=="vor" then
     r=TM.vor_entry(s,side,sp,B747_fms_tune_find)
   elseif kind=="crs" then
@@ -463,7 +402,6 @@ function fmsFunctions.navrad(fmsO,value)
   end
   B747_fms_tune_now()
 end
-fmsFunctionsDefs["NAVRAD"]["L4"]={"setDref","ILS"}
 fmsFunctionsDefs["NAVRAD"]["L6"]={"setdata","preselectLeft"}
 fmsFunctionsDefs["NAVRAD"]["R6"]={"setdata","preselectRight"}
 --fmsFunctionsDefs["NAVRAD"]["L6"]={"setpage","ACARS"}
@@ -2638,11 +2576,6 @@ function fmsFunctions.setDref(fmsO,value)
     return
   end
   if value=="V1" or value=="VR" or value=="V2" then takeoff_speed_entry(fmsO, value) return end
-  if value=="ILS" then 
-    if findILS(fmsO["scratchpad"])==false then fmsO["notify"]="INVALID ENTRY" end
-    fmsO["scratchpad"]="" 
-    return 
-  end
   -- (6-1/6-2 step 10b) NAV RADIO's VOR, CRS and ADF: fmsFunctions.navrad
    if val==nil then
      fmsO["notify"]="INVALID ENTRY"

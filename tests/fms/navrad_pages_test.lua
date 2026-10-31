@@ -141,4 +141,54 @@ T.check(rt:get(MODES):sub(4, 4) == "M" and not small(7):find("ANT", 1, true), "D
 delete("L3")
 T.equal(pad(), "INVALID DELETE", "DELETE in ADF: INVALID DELETE")
 clear()
+
+-- (step 10c) the ILS (FCOM p.1304-1307): the arrival ILS16R (IZA 109.50,
+-- 157); on the ground PARK, after the lift-off ten minutes the ILS shown
+-- with PARK, then A; manual, RW/ILS FREQ ERROR and CRS ERROR, ILS TUNE
+-- INHIBITED - MCP
+key("func_key/clb")              -- DEPARTURES (the ground, an active route)
+key("ls_key/L6")                 -- INDEX
+key("ls_key/R2")                 -- ZZAA ARRIVALS
+key("ls_key/R1")                 -- ILS16R
+key("key/execute")
+frames(1.2)
+T.equal(fms.ns.B747_fmc_route.rte.appr and fms.ns.B747_fmc_route.rte.appr.rwy, "RW16R", "the approach to RW16R active")
+key("func_key/navrad")
+T.equal(small(8), " ILS                    ", "the ILS title")
+T.check(line(9):find("^PARK") ~= nil and rt:get("laminar/B747/autopilot/ils_dots") == 0, "on the ground: PARK, no PFD scales: " .. line(9))
+T.equal(rt:get(MODES):sub(1, 1), "P", "the tuning modes' ILS letter P")
+rt:set("sim/flightmodel/failures/onground_any", 0)
+frames(1.2)
+T.check(line(9):find("^<           PARK") ~= nil and small(9):find("^ 109%.50/157") ~= nil,
+    "the lift-off's ten minutes: the ILS small with PARK (FCOM p.1306): " .. line(9) .. "|" .. small(9))
+T.equal(rt:get("laminar/B747/autopilot/ils_dots"), 0, "not tuned yet")
+for _ = 1, 600 do rt:frame(1) end
+frames(1.2)
+T.check(line(9):find("^109%.50/157") ~= nil and small(9):find("^          A") ~= nil, "ten minutes on: A: " .. line(9) .. "|" .. small(9))
+T.check(rt:get("sim/cockpit/radios/nav1_freq_hz") == 10950 and rt:get("sim/cockpit/radios/nav2_freq_hz") == 10950
+    and rt:get(OBS, 0) == 157, "ILS L and R on 109.50, the course 157")
+T.equal(rt:get("laminar/B747/autopilot/ils_dots"), 1, "the PFDs' scales with the frequency tuned (FCOM p.987)")
+T.equal(rt:get(MODES):sub(1, 1), "A", "the ILS letter A")
+enter("110.30/120", "L4")
+frames(1.2)
+T.check(line(9):find("^110%.30/120") ~= nil and small(9):find("^          M") ~= nil and rt:get("sim/cockpit/radios/nav1_freq_hz") == 11030,
+    "110.30/120: M: " .. line(9))
+T.equal(pad(), "RW/ILS FREQ ERROR", "not the destination runway's: RW/ILS FREQ ERROR (FCOM p.1434)")
+delete("L4")
+frames(1.2)
+T.check(line(9):find("^109%.50/157") ~= nil and small(9):find("A$") ~= nil, "DELETE: A again")
+T.check(pad() ~= "RW/ILS FREQ ERROR", "the message gone")
+enter("/150", "L4")
+frames(1.2)
+T.check(line(9):find("^109%.50/150") ~= nil and rt:get("laminar/B747/fms/notification", 40) == 1, "/150: M 109.50/150, RW/ILS CRS ERROR")
+delete("L4")
+frames(1.2)
+T.equal(rt:get("laminar/B747/fms/notification", 40), 0, "DELETE: the CRS ERROR gone")
+rt:set("laminar/B747/autopilot/ils_tune_inhibit", 1)
+enter("110.30/120", "L4")
+frames(0.3)
+T.equal(pad(), "ILS TUNE INHIBITED - MCP", "under the FCCs' inhibit: ILS TUNE INHIBITED - MCP (FCOM p.1432)")
+T.check(line(9):find("^109%.50/157") ~= nil and rt:get("sim/cockpit/radios/nav1_freq_hz") == 10950, "the tuning held")
+rt:set("laminar/B747/autopilot/ils_tune_inhibit", 0)
+clear()
 T.done()
