@@ -355,7 +355,9 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["L3"]=nil
       fmsFunctionsDefs["VNAV"]["L4"]={"setdata","stepsize"}
       fmsFunctionsDefs["VNAV"]["L5"]=fmsModules["data"]["crzspdmode"]~="E" and {"vnavspd","crz"} or nil
-      fmsFunctionsDefs["VNAV"]["L6"]={"setpage","PROGRESS"}
+      -- (step 9h5a) <RTA PROGRESS: PROGRESS 3/3, the 109's (FCOM p.1354,
+      -- p.1383; before, PROGRESS 1/3); none on the 570
+      fmsFunctionsDefs["VNAV"]["L6"]=B747DR_fms_engine_type ~= 1 and {"setpage_no","PROGRESS_3"} or nil
       fmsFunctionsDefs["VNAV"]["R1"]={"setdata","stepalt"}
       fmsFunctionsDefs["VNAV"]["R3"]=nil
       fmsFunctionsDefs["VNAV"]["R5"]=nil
@@ -504,7 +506,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
           "------------------------",
           lr(eo.crz ~= "EO" and "<E/O SPD" or "", "ALL ENG>"),
           "                        ",
-          lr(vnav_6l("<RTA PROGRESS"), eo.crz ~= "LRC" and "LRC>" or "")
+          lr(vnav_6l(B747DR_fms_engine_type ~= 1 and "<RTA PROGRESS" or ""), eo.crz ~= "LRC" and "LRC>" or "")
         }
       end
       fmsFunctionsDefs["VNAV"]["R5"]={"eoeng","out"}
@@ -522,7 +524,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       "------------------------",
       lr(mode~="E" and "<ECON" or "", "ENG OUT>"),
       "                        ",
-      lr(vnav_6l("<RTA PROGRESS"), mode~="L" and "LRC>" or "")
+      lr(vnav_6l(B747DR_fms_engine_type ~= 1 and "<RTA PROGRESS" or ""), mode~="L" and "LRC>" or "")
       }
     elseif pgNo==3 then 
       --ref FCOM Virgin p.1023, Lease p.822

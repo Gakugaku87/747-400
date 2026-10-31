@@ -16,7 +16,7 @@ for _, cdu in ipairs({"cdu1", "cdu2"}) do
     for n = 0, 15 do types["sim/cockpit2/radios/indicators/fms_" .. cdu .. "_text_line" .. n] = "string" end
 end
 local rt = xtlua.new{types = types}
-rt:load("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.xt.fms.lua")
+local fms = rt:load("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.xt.fms.lua")
 rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_lbs":2.20462},"PLANE":{"thrust_ref":"EPR","engines":"PW4056"}}')
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
@@ -139,13 +139,19 @@ local EMPTY = "[" .. string.rep(" ", 22) .. "]"
 rt:set(NATIVE, EMPTY)
 key("L", "func_key/prog")
 type_in("L", "AB")
+-- (6-1/6-2 step 9h5a: PROGRESS's NEXT the FMC's own now) a page's key
+-- through custom2fmc, as PROGRESS's NEXT was (here only)
+local defs = fms.ns.fmsFunctionsDefs["PROGRESS"]
+local own = defs["next"]
+defs["next"] = {"custom2fmc", "next"}
 key("L", "func_key/next_pg")
+defs["next"] = own
 rt:set(NATIVE, "[DELETE                ]")
 frames(0.05)
 rt:set(NATIVE, "[AB                    ]")
 frames(0.05)
 type_in("L", "C")
-T.equal(pad("L"), "C", "the keys going into X-Plane's CDU (PROGRESS's NEXT: DEL, CLR, NEXT): no message, the typing goes on")
+T.equal(pad("L"), "C", "the keys going into X-Plane's CDU (custom2fmc's NEXT: DEL, CLR, NEXT): no message, the typing goes on")
 frames(1)
 T.equal(pad("L"), "C", "the text typed left in X-Plane's CDU: no message")
 rt:set(NATIVE, "[NOT IN DATABASE       ]")

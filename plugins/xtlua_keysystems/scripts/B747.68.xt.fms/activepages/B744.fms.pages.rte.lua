@@ -352,17 +352,20 @@ end
 function fmsFunctions.rteerase(fmsO, value)
   R.erase(st_of(fmsO))
   -- (6-1/6-2 step 9d2b) the VNAV pages' 6R's part too; (step 9h4a) the
-  -- engine-out modification
+  -- engine-out modification; (step 9h5a) RTA's
   B747_fms_vnav_erase()
   B747_fms_eo_erase()
+  B747_fms_rta_erase()
   B747_fmc_route_changed()
 end
 -- EXEC: the active route's modification or activation, else the other
 -- route's activation (step 7e4: it becomes the active one); (step 9d2b)
 -- the VNAV pages' 6R's part with it (DES NOW's early descent); (step
--- 9h4a) the engine-out modification (a performance one, no route's)
+-- 9h4a) the engine-out modification (a performance one, no route's);
+-- (step 9h5a) RTA's
 function fmsFunctions.rteexec(fmsO, value)
   B747_fms_eo_exec()
+  B747_fms_rta_exec()
   -- the airplane's position: a direct-to's start (step 5e)
   if R.exec_both(B747_fmc_route, B747_fmc_route2, {lat = simDR_latitude, lon = simDR_longitude}) then
     B747_fms_vnav_exec()

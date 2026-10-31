@@ -1095,6 +1095,8 @@ function B747_fms_eo_exec()
   local kind = eoState.mod
   local maxFt = (kind == "ENG OUT") and B747_fms_eo_max(B747_fms_vnav_page() == 1 and "CLB" or "LRC") or nil
   if not B747_eo_model.exec(eoState) then return false end
+  -- (step 9h5a) RTA not with ENG OUT (FCOM p.1269): an active one ended
+  if kind == "ENG OUT" then B747_rta_model.terminate(B747_fms_rta()) end
   if maxFt then
     local crz = B747BR_cruiseAlt
     if crz and crz > maxFt then
@@ -1109,6 +1111,39 @@ function B747_fms_eo_exec()
   return true
 end
 function B747_fms_eo_erase() return B747_eo_model.erase(eoState) end
+
+-- (step 9h5a) the required time of arrival (B747.68.rta_model.lua; notes/
+-- ATA-34-61-FMC.md §84; FCOM p.1269, p.1383-1385): the RTA PROGRESS page's
+-- modification for EXEC and ERASE beside the route's and the engine-out
+-- one; the 109's and 405's only (none on the 570: laminar/B747/engines/type
+-- 1), not with ENG OUT active (FCOM p.1269: its execution ends one)
+dofile("B747.68.rta_model.lua")
+local rtaState = B747_rta_model.new()
+function B747_fms_rta() return rtaState end
+function B747_fms_rta_avail() return B747DR_fms_engine_type ~= 1 and not eoState.active end
+-- the FIX in the route the pages show (the modification's, else the
+-- active one's) ahead
+function B747_fms_rta_in_route(fix)
+  for _, l in ipairs(B747_route_model.shown(B747_fmc_route).legs) do
+    if l.fix and l.fix.ident == fix then return true end
+  end
+  return false
+end
+-- the FIX's leg in the active route ahead (the predictions' index), or nil
+function B747_fms_rta_leg(fix)
+  for i, l in ipairs(B747_fmc_route.rte.legs) do
+    if l.fix and l.fix.ident == fix then return i end
+  end
+  return nil
+end
+function B747_fms_rta_exec()
+  if not B747_rta_model.exec(rtaState) then return false end
+  B747_fms_preds_now()
+  return true
+end
+function B747_fms_rta_erase() return B747_rta_model.erase(rtaState) end
+-- the time now (minutes of the day, UTC)
+function B747_fms_utc_min() return hh * 60 + mm + ss / 60 end
 
 -- the trajectory predictions (6-1/6-2 step 8c; notes/ATA-34-61-FMC.md
 -- §47): every 10 s (at once after an entry) along the active route's legs
@@ -2076,9 +2111,10 @@ end
 -- CDUs, HOLD and FIX): the left and centre CDUs' light (the 3D cockpit's
 -- "pilot" one) with the left CDU's power, the right CDU's with its own
 function B747_fmc_exec_lights()
-  -- (step 9h4a) the engine-out modification too
+  -- (step 9h4a) the engine-out modification too; (step 9h5a) RTA's, once
+  -- complete
   local on=B747_route_model.exec_lit(B747_fmc_route) or B747_route_model.exec_lit(B747_fmc_route2) or simDR_fms_exec_light>0
-    or B747_fms_eo().mod~=nil
+    or B747_fms_eo().mod~=nil or B747_rta_model.ready(B747_fms_rta())
   local l=(on and cduPowered("fmsL")) and 1 or 0
   local r=(on and cduPowered("fmsR")) and 1 or 0
   if B747DR_fms_exec_light_pilot~=l then B747DR_fms_exec_light_pilot=l end
