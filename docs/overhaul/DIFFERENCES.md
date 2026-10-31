@@ -30,7 +30,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | FMC | 作り直し中（段取り：経路を自前で持ち、12 段で。notes/ATA-34-61-FMC.md §10。段 1：小修正、段 4：航法データベース、段 5a〜5e：経路のモデル、RTE・LEGS・DEP/ARR、現用点と X-Plane の FMS。段 6a〜6d：経路の形と LNAV、ND の線。段 7a〜7d：ホールド、オフセット。段 7e1〜7f：REF NAV DATA、ABEAM PTS、自分で作る点、FIX INFO、RTE 2、procedure turn の形（推定）。LEGS の PLAN の CTR と STEP。段 8a〜8e：性能 DB・ECON・軌跡の予測・予測の表示・風。段 9a〜9c：VNAV（AFDS と A/T が FMC の VNAV で飛ぶ）） | ND の fly-by の旋回の曲線とオフセットの線、FIX INFO の円と方位線、ND の PLAN の中心が両席で 1 つ、VNAV の許容・速度の逆戻り・MCP のノブ・進入（段 9d・9e）、推力管理（段 9f・9g） |
 | CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み、段 3：地上準備のページ、段 4：航法データベース、段 5：経路（RTE・LEGS・DEP/ARR）、段 7：HOLD・OFFSET・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO・RTE 2、LEGS の PLAN の CTR と STEP） | 3 台が X-Plane の CDU 1 つを共有（性能・データリンクなど、残りの X-Plane のページ）、性能のページの MOD/EXEC、入力の検査、データリンク |
 | 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）、段 4a：multi-channel の arm と engage、LAND 3・LAND 2・NO AUTOLAND、段 4b：FLARE と NOSE LETDOWN、A/T の IDLE、段 4c：ROLLOUT、段 4d：runway align と片発、段 5a：電源と engage のインターロック、段 5b：NO LAND 3・NO AUTOLAND と AUTOPILOT DISC の音、段 5c：モード故障と AUTOPILOT caution、F/D のバー、段 5d：ILS TUNE INHIBIT と RA TEST INHIBIT、段 6a：ヨーダンパーのモード（試験・地上の待機・fade・fault INOP と自動復帰）。段 3a〜3c：ピッチの則（V/S・ALT とその捕捉、速度を昇降舵で保つ則（FLCH・T/O・G/A・前の VNAV の速度）と速度の保護、G/S とその捕捉）、A/P の姿勢のループ（自動トリムの帯、スタビライザーの差し引き、姿勢の変化率、入るときの舵面への同期、速度によるゲイン）。LNAV のロールは FMC の指令：6-1 段 6c） | VNAV のサブモードは前の VNAV |
-| オートスロットル・推力管理 | 作り直し中（FMC の段 9f1：モードの論理と engage・disconnect、>AUTOTHROT DISC） | 推力制限のモード、assumed temperature、THR とその則、servo と操縦者の override |
+| オートスロットル・推力管理 | 作り直し中（FMC の段 9f1：モードの論理と engage・disconnect、>AUTOTHROT DISC。段 9f2：制御則と servo、THR、override） | 推力制限のモード、assumed temperature、SPD の速さの戻り、EICAS の基準 |
 | 通信（ATA 23） | 未着手 | VHF の電源、ACP の連動、VHF C と HF が無い |
 | 照明（ATA 33） | 未着手（P5 の灯の入力は各系統で移し中） | 外部灯の電源、非常灯、毎フレームの完全 GC |
 | ドア（ATA 52） | 未着手 | L1 と上部デッキ L 以外のドアが無い |
@@ -542,16 +542,17 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - ヨーダンパーの則、A/P 中のトリム（AFDS-17・19・20）。
 - 空中開始では FMS が F/D L・A/T・ALT HOLD・CMD L を入れる（試験のための初期化。段 1a から ALT HOLD は F/D の既定のモードの 1 秒後、飛行の開始のたびに、何度走っても同じ）。前は機体の読み込み方で動きが変わった。
 
-### オートスロットル・推力管理：作り直し中（6-4：FMC の段 9f1 のモードの論理と engage・disconnect）
+### オートスロットル・推力管理：作り直し中（6-4：FMC の段 9f1 のモードの論理と engage・disconnect、段 9f2 の制御則と servo）
+
+- 実機に合わせた点（段 9f2、2026-10-31）：A/T の制御則と servo を A/T のモデルに移した（前は EEC がモードごとに 1 フレームずつ刻み、速さがフレームに依った）。各則がレバーの速さを出し、servo が 10°/s（flare retard は 5°/s）までで積分する（ATA34_2 p.648）。FLCH と G/A の 1 回目は THR（V/S の則：FLCH は 125 秒で MCP 高度、G/A は 2,000 fpm、上昇で V/S が多くても推力を減らさない：p.646、p.670、p.674。前は THR を出さず THR REF で上昇推力まで）、G/A の 2 回目は THR REF。FLCH の降下はレバーが後ろの stop で HOLD、FLCH でレバーが指令から 8° 離れると HOLD（p.648）。THR REF は推力の基準へ、限界の速さを越えない（p.672）。SPD は増が速く減が遅い（FCTM p.43）、thrust limit と速度の保護（Vmax − 5、最小 + 5：FCOM p.675）。操縦者の override：A/T の間でも手のレバー（ハードウェアか 3D）が動けばそれに従い、止まって 1 秒で指令に戻る（ATHR-09）。VNAV の降下で目標より 15 kt（速度の遷移の下で 10 kt）遅いと A/T は SPD（FCOM p.1259）。推定：ゲイン、手が止まってから戻るまでの 1 秒、戻りの 5 kt。
 
 - 実機に合わせた点（段 9f1、2026-10-31）：A/T の状態とモードを 1 つのモデル（`B747.70.at_model.lua`）が持つ（前は 7 か所から書かれ、FMA は毎フレームの if の連鎖）。A/T はモードで engage する：VNAV・FLCH の engage、TO/GA（地上は 50 kt 未満・フラップ UP でない・TO の limit、空中はフラップ UP でないか G/S）、SPD・THR スイッチ（400 ft の上、ピッチのモードの条件）、VNAV・FLCH の間の ARM の ON（FCOM p.641–642、p.656）。前は V/S・ALT・G/S や A/P の解除の後に勝手に active になり、TO/GA は ARM OFF でも active にした。TO の THR REF は 65 kt で HOLD、VNAV の engage か別のモードまで HOLD（前は 50 ft で THR REF に戻った）。50 kt までに押さなければ 400 ft まで engage しない。VNAV・FLCH から ALT・V/S・G/S で SPD、T/O・G/A からの水平では変えない（FCOM p.673）。VNAV の IDLE はレバーが後ろの stop に着くと HOLD（ATA34_2 p.666）。>AUTOTHROT DISC は engage から外れたときだけ（ARM OFF、disconnect、interlock）、地上の reverse では出さない、disconnect の 2 回目か次の engage で消える（FCOM p.657、p.677。前は A/T の fail そのもので、reverse の着陸のたび、外れていても disconnect を押すと出た）。SPD の 25 ft の IDLE は autoland の flare retard だけ（ATHR-12。前は手の着陸でも）。推定：運転中のエンジンの判定（N1 15 %）、地上で 30 kt 未満で 50 kt の禁止を解くこと。
 
 - VNAV の間の A/T のモードは 2026-10-31（FMC の段 9c）から FMC の要求（上昇 THR REF、巡航 SPD、降下 IDLE、経路の下と浅い区間は SPD、水平は SPD）で、VNAV の engage の時に A/T ARM なら active になる（FCOM p.645）。推力の基準（TO・CLB・CRZ）は FMC の段階から（離陸の TO は電波高度 1,000 ft まで：推定）。A/T そのもの（モードの状態機械、servo、HOLD、THR）は前のまま（段 9f で作り直す）。
 - 推力制限のモードが「飛行段階」の値だけから作られ、それを多くの操作が書く（ATHR-01）。
 - assumed temperature が推力に効かない（ATHR-03）。CLB の基準が定格でなく固定の上昇率から（ATHR-04）。
-- THR モードを出さない（FLCH と G/A の 1 回目は THR REF のまま：段 9f2。ATHR-06）。FLCH の降下の IDLE・HOLD（ATHR-07 の残り）。
+- FLCH の降下で IDLE を見せず THR から stop の HOLD へ（推定）。SPD の速さの戻りが遅い（空中開始の 38 kt の速すぎから 2 分で 5 kt の内：アイドル近くでエンジンがレバーに 7 秒ほど遅れ、レバー 0〜0.1 で推力がほぼ変わらない EEC の関係と合わせて段 9g で見る）。
 - 操縦者の override が無い（A/T 作動中はレバーの入力を無視。ATHR-09）。
-- サーボの動き（EEC のまま。速さがフレームに依る）、SPD で制限を守らない（ATHR-10・11：段 9f2）。
 - インターロックの残り（電源、EEC の ALTN からの再 engage の規則：ATHR-15）、THR スイッチの推力制限の機能、EICAS の基準の数字（ATHR-17）。
 
 ### 通信（ATA 23）：未着手
