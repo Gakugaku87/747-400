@@ -39,6 +39,10 @@ for i = 0, 3 do
     T.near(get("laminar/B747/engine/throttle", i), LEVERS[i + 1], 0.01, "P&W: lever " .. (i + 1) .. " follows the user's throttle")
 end
 T.near(get(ENG .. "display_EPR_max", 0), 1.51, 0.005, "P&W: max EPR line is the EEC's rating (go-around EPR, sea level, 15 °C)")
+-- (the FMC's step 9g3) the reference: the FMC's mode's (TO: the takeoff
+-- rating, the go-around table's), the A/T's target the same
+T.near(get(ENG .. "display_EPR_ref", 0), 1.51, 0.005, "P&W: TO's reference 1.51 (B747.42.ref_thrust_model.lua)")
+T.near(get("sim/cockpit2/engine/actuators/EPR_target_bug", 0), 1.51, 0.005, "the target bug the same")
 T.near(get(ENG .. "TRA", 0), 1.51, 0.005, "P&W: full forward commands the max EPR")
 T.near(get(ENG .. "TRA", 3), 1.51, 0.005, "P&W: 48° TLA commands the max EPR")
 -- the idle end the EPR of no net thrust at the Mach (2026-10-31; before
@@ -68,6 +72,17 @@ frames(3)
 T.near(get(ENG .. "display_EPR_max", 1), 1.57, 0.005, "P&W: max climb EPR at 30,000 ft, TAT -20")
 T.near(get(ENG .. "display_EPR_max", 0), 1.53, 0.005, "P&W: engine 1's anti-ice lowers its max EPR")
 T.near(get(ENG .. "TRA", 1), 1.57, 0.005, "P&W: 35° TLA commands the climb rating above 25,000 ft")
+-- (step 9g3) CLB's reference the maximum climb table's; CLB 2 at 30,000 ft
+-- still 4 % less thrust (the 109's washout to 35,000 ft)
+rt:set(ENG .. "ref_thr_limit_mode", "CLB")
+frames(0.2)
+T.near(get(ENG .. "display_EPR_ref", 1), 1.57, 0.005, "P&W: CLB's reference 1.57 at 30,000 ft, TAT -20")
+T.near(get("sim/cockpit2/engine/actuators/EPR_target_bug", 1), 1.57, 0.005, "its target bug the same")
+rt:set(ENG .. "ref_thr_limit_mode", "CLB 2")
+frames(0.2)
+T.check(get(ENG .. "display_EPR_ref", 1) < 1.565 and get(ENG .. "display_EPR_ref", 1) > 1.53,
+    string.format("CLB 2 at 30,000 ft: a little less, %.3f", get(ENG .. "display_EPR_ref", 1)))
+rt:set(ENG .. "ref_thr_limit_mode", "")
 rt:set("laminar/B747/antiice/nacelle/valve_pos", 0, 0)
 
 -- idle: X-Plane's one idle setting is approach idle while any engine selects

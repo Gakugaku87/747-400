@@ -58,6 +58,11 @@ type_in("26")
 key("ls_key/L1")
 T.check(line(3):find("^26`C"), "SEL 26 C, large: " .. line(3))
 T.check(small(3):find("15`C"), "the OAT 15 C, small: " .. small(3))
+-- (step 9g3) SEL over the OAT: D-TO (FCOM p.1314), the SEL for the EEC
+frames(0.2)
+T.equal(rt:get("laminar/B747/engines/ref_thr_limit_mode"), "D-TO", "SEL 26 over the OAT 15: D-TO")
+T.check(small(2):find("D%-TO EPR$"), "the title: D-TO EPR: " .. small(2))
+T.equal(rt:get("laminar/B747/fms/thrlim/sel"), 26, "the SEL for the EEC: 26 C")
 type_in("75F")
 key("ls_key/L1")
 T.check(line(3):find("^75`F") and small(3):find("59`F"), "SEL 75 F: the OAT in F (FCOM p.1315): " .. line(3) .. "|" .. small(3))
@@ -70,6 +75,9 @@ invalid("SEL 250 F: INVALID ENTRY (32 to 210)")
 key("key/del")
 key("ls_key/L1")
 T.check(not line(3):find("%d"), "SEL deleted: blank: " .. line(3))
+frames(0.2)
+T.check(rt:get("laminar/B747/engines/ref_thr_limit_mode") == "TO" and rt:get("laminar/B747/fms/thrlim/sel") == -99,
+    "SEL deleted: TO, no SEL for the EEC")
 T.check(small(3):find("15`C"), "the OAT back in C")
 
 -- TAKEOFF REF's defaults

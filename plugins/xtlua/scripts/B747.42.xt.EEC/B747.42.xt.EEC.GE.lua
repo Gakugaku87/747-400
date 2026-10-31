@@ -557,7 +557,17 @@ function GE(altitude_ft_in)
     takeoff_thrust_n1 = 105.0
     takeoff_TOGA_n1 = 105.0
   end
-  
+
+  --(the FMC's step 9g3) the reference thrust limit for the FMC's mode
+  --(B747_eec_reference: the PI tables, the derates, the assumed temperature)
+  --for the A/T's target and the EICAS's reference; the branches above no
+  --longer set them
+  for i = 0, 3 do
+    local ref = B747_eec_reference(i)
+    N1_target_bug[i] = ref
+    display_N1_ref[i] = math.min(ref, 117.5)
+  end
+
   for i = 0, 3 do
     if B747DR_ap_FMA_autothrottle_mode==5 and B747DR_ap_flightPhase>2 then
       simDR_N1_target_bug[i]=25

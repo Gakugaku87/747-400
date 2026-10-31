@@ -332,6 +332,13 @@ local function adjustment(t, inp, alt, nai)
     return d
 end
 
+-- (the FMC's step 9g3) a table's rating with its bleed adjustments at a TAT
+-- and pressure altitude: the reference thrust limit's (B747.42.
+-- ref_thrust_model.lua); inp as M.inputs's (packs_on, wai)
+function M.rating(t, inp, tat, alt, nai)
+    return M.lookup(t, tat, alt) + adjustment(t, inp, alt, nai)
+end
+
 function M.inputs()
     return {
         type = "PW",                         -- "PW" or "GE" (anything else: P&W)

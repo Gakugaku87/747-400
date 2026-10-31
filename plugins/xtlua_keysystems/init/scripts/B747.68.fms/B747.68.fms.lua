@@ -150,6 +150,10 @@ B747DR_fms_vnav_at						= deferred_dataref("laminar/B747/fms/vnav/at", "number")
 B747DR_fms_vnav_msg						= deferred_dataref("laminar/B747/fms/vnav/msg", "number")
 -- (step 9e2) on approach (1: FCOM p.1261)
 B747DR_fms_vnav_on_app					= deferred_dataref("laminar/B747/fms/vnav/on_app", "number")
+-- (step 9g3) the thrust limit's assumed temperature (°C, -99 none) and the
+-- takeoff derate (%) for the EEC's reference (B747.42.ref_thrust_model.lua)
+B747DR_fms_thrlim_sel					= deferred_dataref("laminar/B747/fms/thrlim/sel", "number")
+B747DR_fms_thrlim_to_pct				= deferred_dataref("laminar/B747/fms/thrlim/to_pct", "number")
 -- (step 9c) the performance data VNAV needs entered: gross weight, cost
 -- index, CRZ ALT (1; else the VNAV switch's PERF/VNAV UNAVAILABLE, FCOM
 -- p.1433)
