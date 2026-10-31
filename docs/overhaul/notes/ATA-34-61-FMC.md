@@ -1400,3 +1400,26 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - カスタム acf のパネル（ACF_DIFF.md §5）：紫のカーソル 12 個の「FMA が THR REF」の条件を外した（紫の旗だけで緑と切り替え）。モードの文字の部品の DATAREF を `fms/thrlim/eicas` に。バックアップ `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261031_before_thrust_display`、書き換えは `docs/overhaul/tools/panel_thrust_ref.lua`。
 - 推定：アイドルの降下の紫のカーソルの位置（アイドルの端）。A/T OFF の紫のカーソルの位置（推力制限：FMC が手の推力に出す target の作り方は資料に無い）。
 - 試験：`eec_module_test.lua` 79 件（モードの符号 22 で EEC の CLB 2、A/T ARM が OFF で紫、ARM で VNAV なしは緑、VNAV の上昇で紫、アイドルの降下は防氷なしで緑・ありで紫でカーソルはアイドル、印は reference のまま、降下の THR REF でも印は reference）、`takeoff_ref_test.lua` 59 件（EICAS の行の D-TO +26C と TO、符号 110 と 11）。全 136 本。新設の X-Plane の `s152_eicas_thrust_ref` と、s141 に VNAV の上昇の紫：起動し直した後（23:02）の s128（捨て）に続き、初めの s152 は 12 件中 11 件（D-TO でも reference が TO の 1.51：EEC が FMS のモードの文字を読めていなかった。上の訂正）、s141 47/47（VNAV の上昇でカーソルが紫）。数の符号で渡した後（23:19〜23:27）は s152 12/12（SEL 50 の D-TO：reference 1.41、減り方 16.6 %、最大の線は 1.513 のまま、THRUST LIM は「D-TO EPR」と 1.41、A/T ARM OFF で紫・ARM で緑、TO 1 で「D-TO 1 +50C」、SEL を消すと「TO 1」で 8 % 推力の分低い。写真で EICAS の「TAT +15c D-TO +50C」、数字 1.41、紫のカーソルとその上の琥珀の最大の線）、s141 47/47（フラップ 5 の CLB の後の reference は 1.276：最大上昇の表、最大の線 1.552 とは別）。Log.txt に Lua の誤りなし
+
+## 77. 段 9h の段取りと 9h1 の実装（2026-10-31：最大連続の表）
+
+- 段 9h（E/O の VNAV と RTA：FMC-26・27）の資料：FCOM p.1265–1269（離陸と上昇の E/O：V2+10、E/O の加速高度かフラップ上げで VREF+100、VREF+98 で CON、ENG OUT> で E/O CLB、E/O MAX ALT の上は driftdown、E/O CRZ と CRZ DES、RTA は E/O では使えない）、p.1272（VNAV・エンジン故障・フラップ上げで VREF+98 で CON、推力の切り替え点は禁止）、p.1341–1342（E/O CLB のページ）、p.1350–1353（CRZ の ENG OUT>、E/O CRZ のページと題、2E/O）、p.1354、p.1383–1385（RTA）、FMSPG p.3.3-2〜3.3-7・3.4-1〜3.4-5・3.4-19・3.4-52〜3.4-55、PI.13・14（PW）・PI.23・24（GE）、PI.18.8–18.9（本文：表の最大高度から 1,000 ft（2 発停止は 2,000 ft）引いた値は FMC の論理と同じ）、ATA70_80 p.208–209（CF6 の全開の定格）。エンジン故障の検知の条件は FMC の資料に無い（ENG FAIL の条件 N2 52 % を使う：推定、段 9h3）。
+- 小分け：
+
+| 段 | 内容 | GAP |
+|---|---|---|
+| 9h1 | 最大連続の表：CON の reference の値、EEC の全開の最大連続の帯 | ATHR-03 の残り |
+| 9h2 | E/O の性能のデータ（PI の表：driftdown の速さと level off の高度、LRC の高度の能力、LRC の Mach・KIAS・EPR/N1・燃料流量。1 発・2 発停止） | FMC-26 |
+| 9h3 | エンジン故障の検知と離陸の E/O（V2+10、E/O ACCEL HT かフラップ上げで VREF+100、VREF+98 で CON、CLB のページの題） | FMC-26 |
+| 9h4 | E/O の CLB・CRZ のページと誘導（ENG OUT> の MOD、ALL ENG>、E/O SPD、E/O MAX ALT、CRZ ALT を下げる、CON、driftdown、E/O CRZ と CRZ DES、PROGRESS の LEVEL AT、2E/O） | FMC-26 |
+| 9h5 | RTA（109） | FMC-27 |
+
+- 9h1 の資料：PI.13.1–13.2（PW4056 の最大連続の EPR、1 発停止・パック 3 つ：高度ごとに KIAS 5 列と Mach 5 列の EPR・MAX TAT・EPR CORR、MAX TAT を 10 °C 超えるごとに EPR CORR を引く、抽気の補正）、PI.23.1–23.3（CF6 の %N1：5,000〜39,000 ft の高度ごとに KIAS の行と TAT の列）、PI.18.8（最大連続は主に非常用で、続けて使える最大）、ATA70_80 p.208–209（CF6 の全開の定格：18,000〜22,000 ft か 293 kt を超えると最大連続、25,000 ft より上はレバー 35° を越えて最大上昇。図では CLIMB の位置から全開までが最大連続〜最大上昇の移り変わり）。
+- 前：CON の reference は最大上昇の表（段 9g3 の推定）。EEC の全開の最大連続の帯も最大上昇の表（推定）で、E/O で CON にしても A/T がそこまで出せなかった（20,000 ft・280 KIAS で最大連続 1.51 に対し 1.43）。
+- 作ったもの：
+  - EEC のモデル（`B747.42.eec_model.lua`）：最大連続の表（`TABLE.PW.mct`・`TABLE.GE.mct`）と引き方 `M.lookup_mct`・`M.rating_mct`。P&W は高度ごとに KIAS の列と Mach の列（その高度の CAS に直す）を速さの順に並べ、各セルの EPR から MAX TAT を超えた分の補正を引いて速さで補間し、高度で補間。GE は KIAS の行ごとに TAT で補間して KIAS で補間。表の外は端の値（GE は 5,000 ft より下も 5,000 ft の値：推定）。抽気：P&W はパック 1 つ・2 つ止め（3 つ止めは 2 つの値：推定）と防氷、GE は「PACKS OFF」を 3 つとも止めたときに（推定）と防氷。
+  - CON の reference（`B747.42.ref_thrust_model.lua`）：最大連続の表をそのときの KIAS で（1 発停止の表を全発でも：推定）。つなぎ（`B747_eec_reference`）が KIAS を渡す。CRZ は最大上昇の表のまま（推定）。
+  - EEC の全開の定格：最大連続の帯（22,000 ft まで、25,000 ft で 0 へ。293 kt を超えた所も）を最大連続の表の値に（最大上昇の表より下にはしない：推定。表は 1 発停止で 1 発あたりの抽気が多い）。25,000 ft より上は最大上昇のまま（ATA70_80 p.208–209）。
+- 推定：全発の CON にも 1 発停止の表、GE の 5,000 ft より下、パックの補正の当てはめ方、帯で最大上昇の表を下限にすること。
+- 残り：25,000 ft より上では EEC の全開が最大上昇の表（340 KIAS・M.84 の値で速さの影響なし）なので、遅い速さの CON（最大連続の表の方が高い）に届かないことがある（高い所の driftdown：段 9h4 で見る）。
+- 試験：`eec_model_test.lua` 151 件（PW の表：25,000 ft・300 KIAS・TAT 0 で 1.53、MAX TAT を 10 °C 超えて 1.44、高度の間 1.545、速さの間 1.512、M.85 の列、海面。GE の表：35,000 ft・240 KIAS・TAT −30 で 104.7、KIAS の間、寒い端、5,000 ft の下。抽気：防氷 −0.035、パック 1 つ止め +0.01、3 つ +0.02、GE のパック止め +0.5、1 つは 0、防氷と翼の防氷 −2.1。全開の定格：GE の 17,500 ft は TO と最大連続の半分、23,500 ft は最大連続と最大上昇の半分、26,000 ft は最大上昇、PW の 20,000 ft・280 KIAS は最大連続の 1.512、360 KIAS は最大上昇（最大連続の方が低い））、`ref_thrust_model_test.lua` 29 件（CON は 25,000 ft・300 KIAS で 1.53、250 KIAS・TAT −5 で 1.62、TAT 0 で 1.611、防氷 1.495、パック 1 つ止め 1.54、GE は 103.85）、`eec_module_test.lua` 79 件。全 136 本。新設の X-Plane の `s153_eicas_con_ref`：17/17（起動し直した後の 6 回目の読み直し、23:50。成田の近くの空中 17,000 ft から VNAV の上昇と速度介入 250 kt、18,738 ft・250 KIAS・TAT −7.7 °C で CLB の reference 1.420・EPR 1.419。<CON で FMS の符号 40、EEC のモードと EICAS の行は CON、reference 1.552（表で約 1.55）、EEC の全開の最大も 1.552（前の作りでは CLB の値で頭打ち）、A/T THR REF で EPR 1.545・毎分 3,270 ft。CLB> で符号 20 に戻る。EICAS の写真で CON、緑の 1.55、紫のカーソル。N1 の読みの枠が赤かったのは超過の記憶（今の赤は 0、記録の N1 は赤線 111.4 % より十分下：記録の前の空中開始のときとみて、次の起動で確かめる）。Log.txt に Lua の誤りなし）

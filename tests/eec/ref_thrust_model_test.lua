@@ -6,8 +6,9 @@
 -- example), D-TO at the assumed temperature above the TAT, at most 25 % less
 -- thrust than the (derated) rating (FCOM p.1273), CLB the maximum climb
 -- table, CLB 1 and CLB 2 washed out from 10,000 ft to 30,000 and 35,000 ft
--- (the 109; GE 15,000 ft), GA the go-around table, CRZ and CON the maximum
--- climb's (estimates), the packs' adjustment as the EEC's maximum.
+-- (the 109; GE 15,000 ft), GA the go-around table, CRZ the maximum climb's
+-- (estimate), CON the maximum continuous table at the airspeed (step 9h1),
+-- the packs' adjustment as the EEC's maximum.
 local T = dofile("tests/lib/check.lua")("ref_thrust_model")
 local E = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua")
 local P = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.epr_model.lua")
@@ -60,11 +61,17 @@ T.near(tr(clb20, R.reference(inp{mode = "CLB 2", alt = 20000, tat = -5, mach = 0
 T.near(R.reference(inp{mode = "CLB 1", alt = 30000, tat = -20, mach = 0.8}), clb30, 1e-9, "CLB 1 at 30,000 ft: CLB's")
 T.near(R.reference(inp{type = "GE", mode = "CLB 1", alt = 20000, tat = -5, mach = 0.7}), E.lookup(GE.clb, -5, 20000), 1e-9,
     "GE's CLB 1 at 20,000 ft: CLB's (washed out at 15,000 ft: the 570)")
--- GA the go-around table (held above 10,000 ft); CRZ and CON the maximum climb's
+-- GA the go-around table (held above 10,000 ft); CRZ the maximum climb's;
+-- CON (step 9h1) the maximum continuous table at the airspeed
 T.near(R.reference(inp{mode = "GA", alt = 2000, tat = 20}), E.lookup(PW.ga, 20, 2000), 1e-9, "GA: the go-around table")
 T.near(R.reference(inp{mode = "GA", alt = 15000, tat = 0}), E.lookup(PW.ga, 0, 10000), 1e-9, "GA above 10,000 ft: held at 10,000")
 T.near(R.reference(inp{mode = "CRZ", alt = 30000, tat = -20, mach = 0.8}), clb30, 1e-9, "CRZ: the maximum climb's (estimate)")
-T.near(R.reference(inp{mode = "CON", alt = 30000, tat = -20, mach = 0.8}), clb30, 1e-9, "CON: the maximum climb's (estimate, step 9h)")
+T.near(R.reference(inp{mode = "CON", alt = 25000, tat = 0, mach = 0.7, kias = 300}), 1.53, 1e-9, "CON at 25,000 ft, 300 KIAS, TAT 0: the maximum continuous table's 1.53")
+T.near(R.reference(inp{mode = "CON", alt = 25000, tat = -5, mach = 0.6, kias = 250}), 1.62, 1e-9, "CON at 250 KIAS, TAT -5: 1.62")
+T.near(R.reference(inp{mode = "CON", alt = 25000, tat = 0, mach = 0.6, kias = 250}), 1.611, 1e-9, "CON at 250 KIAS, TAT 0: 1 °C over its MAX TAT -1, 1.611")
+T.near(R.reference(inp{mode = "CON", alt = 25000, tat = 0, mach = 0.7, kias = 300, nai = true}), 1.495, 1e-9, "CON with engine anti-ice: -0.035")
+T.near(R.reference(inp{mode = "CON", alt = 25000, tat = 0, mach = 0.7, kias = 300, packs_on = 2}), 1.54, 1e-9, "CON with a pack off: +0.01")
+T.near(R.reference(inp{type = "GE", mode = "CON", alt = 35000, tat = -30, mach = 0.75, kias = 260}), 103.85, 1e-9, "GE CON at 35,000 ft, 260 KIAS, TAT -30: 103.85 % N1")
 -- GE in N1: TO 1 at 5 % less thrust as N1 x 0.95^(1/3)
 local ge = R.reference(inp{type = "GE"})
 T.near(R.reference(inp{type = "GE", mode = "TO 1", to_pct = 5}), ge * 0.95 ^ (1 / 3), 1e-9, string.format("GE TO 1: %.1f %% N1 from %.1f", ge * 0.95 ^ (1 / 3), ge))
