@@ -6,8 +6,8 @@
 -- EXEC makes it active; deleting the FIX or the time ends an active RTA
 -- (ECON again) or drops a modification's FIX; ERASE drops the
 -- modification; PRIOR RTA> the last active RTA again as a modification;
--- MAX SPD the crew's Mach (.100-.990) or .880. The speed it flies: step
--- 9h5b.
+-- MAX SPD the crew's Mach (.100-.990) or .880. (Step 9h5b) the cruise
+-- Mach for its time (speed).
 --
 --   local R = B747_rta_model
 --   local s = R.new()
@@ -122,5 +122,31 @@ end
 -- MAX SPD: the crew's Mach, nil for the default
 function M.set_max(s, mach) s.max = mach end
 function M.max(s) return s.max or M.DEFAULT_MAX end
+
+-- (step 9h5b) the time's tolerance (FCOM p.1269: within 30 s) and the
+-- cruise Mach for an RTA r. inp: mach (the Mach the predictions flew, nil
+-- the base's), base (the cruise's Mach without RTA: ECON, LRC or the
+-- crew's), now (minutes of the day), t_fix (s to the FIX), t_cruise (s of
+-- that in the cruise at the Mach: only the cruise's speed is RTA's, FCOM
+-- p.1383), lo and hi (the Mach's bounds). The new Mach: the cruise's time
+-- scaled for the error (a time inversely as the speed: one step a call),
+-- A no faster than the base (at or after), B no slower (at or before),
+-- within lo and hi; unable: more than the tolerance off with the Mach at
+-- the bound it cannot pass, or no cruise left; and the error (minutes,
+-- late positive)
+M.TOL_MIN = 0.5
+function M.speed(r, inp)
+    local m = inp.mach or inp.base
+    local d = ((inp.now + inp.t_fix / 60) - r.time + 720) % 1440 - 720
+    local need = m
+    local tc = inp.t_cruise / 60
+    if tc > 0 then need = m * tc / math.max(tc - d, 0.1 * tc) end
+    if r.suffix == "A" then need = math.min(need, inp.base) end
+    if r.suffix == "B" then need = math.max(need, inp.base) end
+    local new = math.max(inp.lo, math.min(inp.hi, need))
+    local unable = (d > M.TOL_MIN and r.suffix ~= "A" and (tc <= 0 or m >= inp.hi - 1e-4))
+        or (d < -M.TOL_MIN and r.suffix ~= "B" and (tc <= 0 or m <= inp.lo + 1e-4))
+    return new, unable and true or false, d
+end
 
 return M

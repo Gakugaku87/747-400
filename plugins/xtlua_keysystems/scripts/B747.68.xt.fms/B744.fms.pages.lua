@@ -963,6 +963,9 @@ function fmsFunctions.setdata(fmsO,value)
     if mach then setFMSData("crzspd", string.format("%03d", mach)) end
     setFMSData("crzcas", cas and string.format("%3d", cas) or "")
     setFMSData("crzspdmode", "S")
+    -- (6-1/6-2 step 9h5b) a crew's speed ends an active RTA (estimate)
+    B747_rta_model.terminate(B747_fms_rta())
+    B747_fms_preds_now()
   elseif value=="stepalt" then
     -- STEP TO (6-1/6-2 step 8b2; FCOM p.1348, FMSPG p.133): a crew's entry
     -- above CRZ ALT, FLXXX, XXX or XXXXX, kept until a new CRZ ALT; DELETE
