@@ -39,16 +39,24 @@ for _, M in ipairs({0, 0.2, 0.438, 0.6, 0.8, 0.85}) do
     local ok, mono, prev = true, true, -1
     for f = 20, 300, 10 do
         local e = P.epr(f, 1, M)
-        if e > P.IDLE_EPR + 0.001 then ok = ok and math.abs(P.thrust(e, 1, M) - f) < 0.05 end
+        if e > P.zero(M) + 0.001 then ok = ok and math.abs(P.thrust(e, 1, M) - f) < 0.05 end
         mono = mono and e >= prev
         prev = e
     end
     T.check(ok, string.format("thrust from EPR undoes EPR from thrust at M%.2f", M))
     T.check(mono, string.format("EPR rises with thrust at M%.2f", M))
 end
-T.equal(P.epr(0, 1, 0.5), P.IDLE_EPR, "EPR: no thrust shows the idle EPR")
-T.equal(P.epr(-15, 0.3, 0.8), P.IDLE_EPR, "EPR: negative thrust (idle descent) shows the idle EPR")
-T.check(P.epr(30, 0.3, 0.8) == P.IDLE_EPR, "EPR: held at the idle EPR at little thrust high and fast")
+-- (2026-10-31) the least EPR that of no net thrust at the Mach (NPR 1;
+-- before, 0.97 at any Mach: at FL300, M.78 no thrust under 34 kN an engine
+-- but X-Plane's idle could be set)
+T.near(P.epr(0, 1, 0.5), 1 / (1 + 0.2 * 0.25) ^ 3.5, 1e-9, "EPR: no thrust, the exhaust at the ambient pressure (0.843 at M.5)")
+T.equal(P.epr(-15, 0.3, 0.8), P.zero(0.8), "EPR: negative thrust (idle descent) the same")
+local dl300 = delta(30000)
+T.check(P.epr(2, dl300, 0.78) < 0.70 and P.epr(26, dl300, 0.78) > 0.85 and P.epr(26, dl300, 0.78) < 0.90
+    and P.epr(34, dl300, 0.78) > 0.95,
+    string.format("FL300, M.78: X-Plane's idle 2 kN %.3f, 26 kN %.3f, 34 kN %.3f (before 0.97 for all)",
+        P.epr(2, dl300, 0.78), P.epr(26, dl300, 0.78), P.epr(34, dl300, 0.78)))
+T.near(P.epr(10.3, 1, 0), 1.01, 0.001, "ground idle 10.3 kN: 1.01 still")
 -- the takeoff run at EPR 1.51 (no figures: the interpolation, estimate)
 local lapse = P.thrust(1.51, 1, 0.2) / P.thrust(1.51, 1, 0)
 T.check(lapse > 0.90 and lapse < 0.97, string.format("takeoff: thrust at EPR 1.51 and M.2 is %.1f %% of standing", lapse * 100))

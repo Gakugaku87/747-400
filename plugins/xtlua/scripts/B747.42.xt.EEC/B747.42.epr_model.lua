@@ -38,11 +38,19 @@ M.STATIONS = {
     {0.830, 196.3, 0.6685},   -- LRC 33,000 ft: 166.7 / 1.135; the same
     {0.843, 201.0, 0.5915},   -- LRC 35,000 ft: 186.2 / 1.18; climb 35,000 ft (.84) 266.5 / 1.64
 }
--- the least EPR shown, near idle (the previous code's, estimate: the FCOM
--- gives no idle EPR)
-M.IDLE_EPR = 0.97
-
 local function ram(mach) return (1 + 0.2 * mach * mach) ^ 3.5 end
+
+-- the least EPR: that of no net thrust at the Mach (the exhaust at the
+-- ambient pressure, NPR 1). X-Plane's idle reads a little above it: 0.68 at
+-- FL300, M.78 (2 kN an engine), 1.01 at ground idle (estimate: the FCOM
+-- gives no idle EPR). Before (2026-10-31), 0.97 at any Mach (the previous
+-- code's): the EEC's thrust control holds this EPR, and at FL300, M.78 it
+-- could set no thrust between X-Plane's idle and 34 kN an engine, the 0.97's
+-- (the FMC's step 9d2: the early descent's 1,250 fpm needs 26 kN)
+function M.zero(mach)
+    if mach < 0 then mach = 0 end
+    return 1 / ram(mach)
+end
 
 -- k and q at a Mach (held beyond the first and last)
 local function kq(mach)
@@ -62,9 +70,9 @@ end
 function M.epr(thrust_kn, delta, mach)
     if mach < 0 then mach = 0 end
     local f = thrust_kn / math.max(delta, 0.05)
-    if f <= 0 then return M.IDLE_EPR end
+    if f <= 0 then return M.zero(mach) end
     local k, q = kq(mach)
-    return math.max(M.IDLE_EPR, (1 + (f / k) ^ (1 / q)) / ram(mach))
+    return (1 + (f / k) ^ (1 / q)) / ram(mach)
 end
 
 -- the other way: the net thrust (kN) an EPR gives (for the tests and tools)

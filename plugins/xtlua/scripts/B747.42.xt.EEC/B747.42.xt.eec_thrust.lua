@@ -21,8 +21,17 @@ B747DR_eec_CAS_caution          = find_dataref("laminar/B747/CAS/caution_status"
 
 -- the lever's idle end commands less than any idle, so that the thrust
 -- control always comes back to X-Plane's idle there (the previous mapping's
--- values, estimate): N1 25 % (GE), EPR 0.95 (P&W, RR)
+-- values, estimate): N1 25 % (GE), EPR 0.95 (RR). P&W: the EPR of no net
+-- thrust at the Mach (B747_epr_model.zero), so that the lever's travel
+-- spans the EPRs from X-Plane's idle up (FCOM p.876: the EEC calculates an
+-- EPR between idle and the maximum). Before (2026-10-31), 0.95 at any Mach
+-- with the shown EPR held at 0.97: at FL300, M.78 no thrust between
+-- X-Plane's idle (2 kN an engine) and 34 kN
 local IDLE_COMMAND = {GE = 25, PW = 0.95}
+local function idle_command(key)
+    if key == "PW" and B747DR_engineType == 0 then return B747_epr_model.zero(simDR_epr_mach) end
+    return IDLE_COMMAND[key]
+end
 -- the flap lever's detents (0, 1, 5, 10, 20, 25, 30 at even steps of
 -- sim/cockpit2/controls/flap_ratio) as trailing edge flap degrees
 local FLAP_DETENTS = {0, 1, 5, 10, 20, 25, 30}
@@ -74,7 +83,7 @@ function B747_eec_update()
     for n = 1, 4 do
         inp.nai[n] = B747DR_nacelle_ai_valve_pos[n - 1] > 0.5
         inp.lever[n] = B747DR_throttle[n - 1]
-        inp.idle[n] = IDLE_COMMAND[inp.type]
+        inp.idle[n] = idle_command(inp.type)
         inp.reverser[n] = simDR_reverser_deploy_ratio[n - 1] > 0.01
         inp.altn[n] = B747DR_button_switch_position[6 + n] < 0.5    -- EEC MODE switches: [7]-[10]
         inp.n1[n] = B747DR_display_N1[n - 1]
@@ -139,7 +148,7 @@ function B747_eec_throttle(engine)
     local actual = B747DR_display_EPR[engine]
     if key == "GE" then actual = B747DR_display_N1[engine] end
     local n = engine + 1
-    return E.thrust_control(eec_state, key, n, eec_out.target[n], actual, simDR_engn_thro_use[engine], IDLE_COMMAND[key], math.min(SIM_PERIOD, EEC_DT_MAX))
+    return E.thrust_control(eec_state, key, n, eec_out.target[n], actual, simDR_engn_thro_use[engine], idle_command(key), math.min(SIM_PERIOD, EEC_DT_MAX))
 end
 
 function B747_eec_reset_throttle(engine)

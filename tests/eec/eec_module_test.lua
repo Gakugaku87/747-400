@@ -41,8 +41,15 @@ end
 T.near(get(ENG .. "display_EPR_max", 0), 1.51, 0.005, "P&W: max EPR line is the EEC's rating (go-around EPR, sea level, 15 °C)")
 T.near(get(ENG .. "TRA", 0), 1.51, 0.005, "P&W: full forward commands the max EPR")
 T.near(get(ENG .. "TRA", 3), 1.51, 0.005, "P&W: 48° TLA commands the max EPR")
-T.near(get(ENG .. "TRA", 1), 0.95 + (1.51 - 0.95) * 0.5, 0.01, "P&W: 24° TLA commands half way from the idle end")
-T.near(get(ENG .. "TRA", 2), 0.95, 0.005, "P&W: idle lever commands the idle end")
+-- the idle end the EPR of no net thrust at the Mach (2026-10-31; before
+-- 0.95 at any Mach): standing, 1.00
+T.near(get(ENG .. "TRA", 1), 1.0 + (1.51 - 1.0) * 0.5, 0.01, "P&W: 24° TLA commands half way from the idle end")
+T.near(get(ENG .. "TRA", 2), 1.0, 0.005, "P&W: idle lever commands the idle end (no net thrust standing: 1.00)")
+rt:set("sim/flightmodel/misc/machno", 0.78)
+frames(0.2)
+T.near(get(ENG .. "TRA", 2), 0.669, 0.002, "P&W: at M.78 the idle end 0.669 (the lever's travel from X-Plane's idle up)")
+rt:set("sim/flightmodel/misc/machno", 0)
+frames(0.2)
 
 -- packs off and engine anti-ice on engine 1
 rt:set("laminar/B747/air/packs_operating", 0)
