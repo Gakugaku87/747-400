@@ -102,6 +102,7 @@
     { "do": "sleep", "seconds": 0.5 },
     { "do": "check", "note": "THRUST LIM は空中の形：CLB EPR（FCOM p.1339：段 9g2）", "dref": "laminar/B747/fms3/Line02_S", "op": "contains", "value": "CLB EPR" },
     { "do": "check", "note": "<SEL> は CLB に", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "<SEL>   CLB>" },
+    { "do": "snapshot", "note": "推力の reference（段 9g3：CLB は最大上昇の表）", "drefs": [ "laminar/B747/engines/display_EPR_ref[0]", "sim/cockpit2/engine/actuators/EPR_target_bug[0]", "laminar/B747/engines/display_EPR_max[0]", "laminar/B747/engines/display_EPR[0]", "sim/flightmodel2/position/pressure_altitude", "sim/cockpit2/temperature/outside_air_LE_temp_degc", "sim/flightmodel/position/vh_ind_fpm" ] },
     { "do": "wait", "note": "235 kt", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 235, "timeout": 60 },
     { "do": "set", "note": "フラップ 1", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.168 },
     { "do": "wait", "note": "243 kt", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 243, "timeout": 60 },

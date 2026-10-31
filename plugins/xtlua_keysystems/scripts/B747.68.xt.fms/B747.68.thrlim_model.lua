@@ -46,13 +46,15 @@ function M.new()
         to = 0, clb = 0,                -- the takeoff's and the climb's ratings (0, 1, 2)
         clb_manual = false,             -- the climb's chosen on the ground
         con = false,                    -- CON selected (the THR switch after GA)
+        d = false,                      -- (step 9g3) the assumed temperature's D- on TO
+        no_sel = false,                 -- the assumed temperature removed (a TO/GA push)
         locked = false,                 -- GA held (the landing flaps, G/S)
         flaps_prev = nil, phase_prev = nil, vnav_prev = false}
 end
 
 -- the mode's text
 function M.label(s)
-    if s.mode == "TO" then return TO_LABEL[s.to + 1] end
+    if s.mode == "TO" then return (s.d and "D-" or "") .. TO_LABEL[s.to + 1] end
     if s.mode == "CLB" then return CLB_LABEL[s.clb + 1] end
     return s.mode
 end
@@ -104,16 +106,22 @@ end
 --   flch_up      FLCH to an MCP altitude above the airplane
 --   thr, toga    the THR switch, a TO/GA switch pushed since the last update
 --   ra           the radio altitude (ft)
+--   sel_up       (step 9g3) an assumed temperature above the OAT (FCOM p.1273)
+--   to_red       the takeoff's thrust reduction (%: the EEC's) or nil
 -- returns the mode's text
 function M.update(s, inp)
     local flaps = inp.flaps or 0
     local landing = flaps >= M.FLAPS_LAND - 0.01
     if inp.ground then
-        -- on the ground TO, the selections kept (ATA34_2 p.535)
-        s.mode, s.locked, s.con = "TO", false, false
+        -- on the ground TO, the selections kept (ATA34_2 p.535); the climb's
+        -- by the takeoff's whole reduction unless chosen (FCOM p.1273)
+        s.mode, s.locked, s.con, s.no_sel = "TO", false, false, false
         s.flaps_prev, s.phase_prev, s.vnav_prev = flaps, inp.phase, inp.vnav
+        if not s.clb_manual and inp.to_red then s.clb = M.auto_clb(inp.to_red) end
+        s.d = inp.sel_up == true
         return M.label(s)
     end
+    s.d = inp.sel_up == true and not s.no_sel
     -- an air start (no takeoff before): the climb's (estimate)
     if s.flaps_prev == nil then s.mode = "CLB" end
     local extended = s.flaps_prev ~= nil and s.flaps_prev <= 0.01 and flaps > 0.01
@@ -126,8 +134,9 @@ function M.update(s, inp)
     s.phase_prev, s.vnav_prev = inp.phase, inp.vnav
     local thr = inp.thr and (inp.ra or 0) > M.THR_RA
     if s.mode == "TO" then
-        -- a TO/GA push before the climb's: the takeoff's derate gone
-        if inp.toga then s.to = 0 end
+        -- a TO/GA push before the climb's: the takeoff's derate and assumed
+        -- temperature gone (FCOM p.667)
+        if inp.toga then s.to, s.no_sel, s.d = 0, true, false end
         local red = inp.thr_red or 5
         local atRed = (red == 5 and flaps <= M.FLAPS5 + 0.01) or (red >= 400 and (inp.alt_agl or 0) >= red)
         if (inp.vnav and atRed) or (thr and (inp.pitch == "VNAV" or inp.pitch == "FLCH")) then s.mode = "CLB" end

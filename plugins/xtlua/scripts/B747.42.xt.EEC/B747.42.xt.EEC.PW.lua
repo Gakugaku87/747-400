@@ -587,6 +587,18 @@ function engine_idle_control_PW(altitude_ft_in)
       end
     end
 
+    --(the FMC's step 9g3) the reference thrust limit for the FMC's mode
+    --(B747_eec_reference: the PI tables, the derates, the assumed temperature)
+    --for the A/T's target and the EICAS's reference; the branches above (the
+    --takeoff's old cubic frozen after the liftoff, a design climb rate's
+    --thrust, the M.85 cruise table, a fitted go-around formula) no longer
+    --set them
+    for i = 0, 3 do
+      local ref = B747_eec_reference(i)
+      EPR_target_bug[i] = ref
+      display_EPR_ref[i] = math.min(ref, 1.71)
+    end
+
     --Handle minor engine thrust differences where calculated (requested) thrust is less than the defined XP engine model can produce
     --Boost engine output as necessary: an engine at full throttle still short of the EEC's target
     if B747_eec_thrust_short() then

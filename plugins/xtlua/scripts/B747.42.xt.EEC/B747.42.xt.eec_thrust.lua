@@ -136,6 +136,29 @@ function B747_eec_max(engine)
     return eec_out.max[engine + 1]
 end
 
+-- (the FMC's step 9g3; notes/ATA-34-61-FMC.md §75) engine 0-3: the
+-- reference thrust limit for the FMC's mode (B747.42.ref_thrust_model.lua)
+-- with the FMS's takeoff derate (%) and assumed temperature (°C, -99 none);
+-- the takeoff's thrust reduction (%) back for the FMC's climb derate
+dofile("B747.42.ref_thrust_model.lua")
+B747DR_eec_thrlim_sel = find_dataref("laminar/B747/fms/thrlim/sel")
+B747DR_eec_thrlim_to_pct = find_dataref("laminar/B747/fms/thrlim/to_pct")
+B747DR_eec_to_reduction = find_dataref("laminar/B747/engines/to_reduction")
+local refIn = {}
+function B747_eec_reference(engine)
+    local inp = eec_inputs
+    refIn.type, refIn.alt, refIn.tat = inp.type, inp.alt, inp.tat
+    refIn.packs_on, refIn.wai, refIn.nai = inp.packs_on, inp.wai, inp.nai[engine + 1]
+    refIn.mach = simDR_epr_mach
+    refIn.mode = B747DR_ref_thr_limit_mode
+    refIn.to_pct = B747DR_eec_thrlim_to_pct
+    local sel = B747DR_eec_thrlim_sel
+    refIn.sel = sel > -90 and sel or nil
+    local v, red = B747_ref_thrust_model.reference(refIn)
+    if engine == 0 and B747DR_eec_to_reduction ~= red then B747DR_eec_to_reduction = red end
+    return v
+end
+
 -- engine 0-3: X-Plane's throttle from the EEC's thrust control (GE and P&W,
 -- forward thrust, engine running); ecc_spd in B747.42.xt.EEC.lua sets it
 -- after the displays are worked out, and resets it otherwise. Its time step

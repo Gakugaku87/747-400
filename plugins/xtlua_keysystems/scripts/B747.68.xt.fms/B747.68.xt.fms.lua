@@ -1689,6 +1689,12 @@ B747DR_fms_thrlim_mode = find_dataref("laminar/B747/engines/ref_thr_limit_mode")
 B747DR_fms_thr_pushes = find_dataref("laminar/B747/autopilot/thr_pushes")
 B747DR_fms_toga_pushes = find_dataref("laminar/B747/autopilot/toga_pushes")
 simDR_fms_radio_alt = find_dataref("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
+-- (step 9g3) the assumed temperature (°C, -99 none) and the takeoff derate
+-- (%) for the EEC's reference, the takeoff's thrust reduction (%) back
+B747DR_fms_thrlim_sel = find_dataref("laminar/B747/fms/thrlim/sel")
+B747DR_fms_thrlim_to_pct = find_dataref("laminar/B747/fms/thrlim/to_pct")
+B747DR_fms_to_reduction = find_dataref("laminar/B747/engines/to_reduction")
+simDR_fms_thrlim_oat = find_dataref("sim/weather/temperature_ambient_c")
 local thrlimState = B747_thrlim_model.new()
 local thrlimIn = {}
 local thrlimSeen = {}
@@ -1720,8 +1726,18 @@ local function update_thrlim()
   inp.toga = thrlimSeen.toga ~= nil and g ~= thrlimSeen.toga
   thrlimSeen.thr, thrlimSeen.toga = n, g
   inp.ra = simDR_fms_radio_alt
+  -- (step 9g3) SEL above the OAT: D- (FCOM p.1273, p.1314)
+  local sel = tonumber(fmsModules["data"]["thrustsel"])
+  inp.sel_up = sel ~= nil and sel > simDR_fms_thrlim_oat
+  -- (the derate's own %, or the EEC's whole reduction with the assumed
+  -- temperature's)
+  inp.to_red = math.max(B747_fms_thrlim_pct(thrlimState.to), B747DR_fms_to_reduction)
   local mode = B747_thrlim_model.update(thrlimState, inp)
   if B747DR_fms_thrlim_mode ~= mode then B747DR_fms_thrlim_mode = mode end
+  local selOut = (sel and not thrlimState.no_sel) and sel or -99
+  if B747DR_fms_thrlim_sel ~= selOut then B747DR_fms_thrlim_sel = selOut end
+  local pct = B747_fms_thrlim_pct(thrlimState.to)
+  if B747DR_fms_thrlim_to_pct ~= pct then B747DR_fms_thrlim_to_pct = pct end
   if toderate ~= thrlimState.to then toderate = thrlimState.to end
   if clbderate ~= thrlimState.clb then clbderate = thrlimState.clb end
 end

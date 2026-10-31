@@ -46,6 +46,9 @@ B747DR_display_N3				= deferred_dataref("laminar/B747/engines/display_N3", "arra
 B747DR_display_EPR				= deferred_dataref("laminar/B747/engines/display_EPR", "array[4]")
 B747DR_display_EPR_ref			= deferred_dataref("laminar/B747/engines/display_EPR_ref", "array[4]")
 B747DR_display_EPR_max			= deferred_dataref("laminar/B747/engines/display_EPR_max", "array[4]")
+-- (the FMC's step 9g3) the takeoff's thrust reduction (%: the derate and the
+-- assumed temperature) for the FMC's climb derate (FCOM p.1273)
+B747DR_eec_to_reduction			= deferred_dataref("laminar/B747/engines/to_reduction", "number")
 B747DR_display_GE_EGT			= deferred_dataref("laminar/B747/engines/display_GE_EGT", "array[4]")
 B747DR_display_EGT				= deferred_dataref("laminar/B747/engines/display_EGT", "array[4]")
 B747DR_ref_line_magenta 		= deferred_dataref("laminar/B747/engines/display_ref_line_magenta", "number")
