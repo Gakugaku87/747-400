@@ -614,6 +614,8 @@ B747DR_ap_fvn_at = find_dataref("laminar/B747/fms/vnav/at")
 B747DR_ap_fvn_perf = find_dataref("laminar/B747/fms/vnav/perf")
 -- (step 9d1) the MCP altitude selector's pushes, counted
 B747DR_ap_alt_sel_pushes = deferred_dataref("laminar/B747/autopilot/alt_sel_pushes", "number")
+-- (step 9d3) speed intervention for the FMC (B747_ap_ias_mach_mode)
+B747DR_ap_spd_intervention = deferred_dataref("laminar/B747/autopilot/spd_intervention", "number")
 B747DR_afds_pli = find_dataref("laminar/B747/pfd/pli")
 B747DR_afds_pli_show = find_dataref("laminar/B747/pfd/pli_show")
 B747DR_afds_windshear = find_dataref("laminar/B747/gpws/windshear")
@@ -1516,12 +1518,12 @@ function B747_ap_switch_vnavspeed_mode_CMDhandler(phase, duration)
 			return
 		end
 		B747_ap_button_switch_position_target[15] = 1 -- SET THE SPEED KNOB ANIMATION TO "IN"
+		-- with VNAV, the window opened or shut: speed intervention (FCOM
+		-- p.643; step 9d3: the FMC told by laminar/B747/autopilot/
+		-- spd_intervention, the window shut on the FMC's speed again by
+		-- afds_fmc_vnav; before, the old VNAV's speed set once)
 		if B747DR_ap_vnav_state == 2 and B747DR_switchingIASMode==0 then
 			setVNAVState("manualVNAVspd", 1 - getVNAVState("manualVNAVspd"))
-			if getVNAVState("manualVNAVspd") == 0 then
-				setVNAVState("gotVNAVSpeed", false)
-				B747_vnav_speed()
-			end
 		end
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[15] = 0 -- SET THE SPEED KNOB ANIMATION TO "OUT"
@@ -2568,6 +2570,12 @@ function B747_ap_ias_mach_mode()
 	else
 		B747DR_ap_ias_mach_window_open = 0
 	end
+	-- (6-1/6-2 step 9d3) speed intervention for the FMC (ATA34_2 p.623: a
+	-- discrete to the FMC): the window opened with VNAV engaged; not dropped
+	-- while the IAS/MACH units switch (the window shut for that quarter
+	-- second)
+	local spdInt = (B747DR_ap_vnav_state == 2 and getVNAVState("manualVNAVspd") == 1) and 1 or 0
+	if B747DR_ap_spd_intervention ~= spdInt then B747DR_ap_spd_intervention = spdInt end
 	local ap_dial_airspeed = simDR_autopilot_airspeed_kts -- READ THE CURRENT AIRSPEED SETTING
 	local ap_simDR_autopilot_airspeed_is_mach = simDR_autopilot_airspeed_is_mach -- READ THE CURRENT mach SETTING
 

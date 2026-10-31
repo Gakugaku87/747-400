@@ -215,6 +215,23 @@ fms.ns.B747_fms_vnav_page = realPage
 frames(0.1)
 vnav(2)
 T.check(line(1):find("ACT ") and line(1):find(" CRZ  "), "the FMC in the cruise: ACT ... CRZ: " .. line(1))
+-- (step 9d3) speed intervention: the active page's title MCP SPD (ATA34_2
+-- p.557, p.563; FCOM p.1327, p.1347, p.1391); the others their own
+rt:set("laminar/B747/autopilot/spd_intervention", 1)
+frames(0.1)
+vnav(2)
+T.check(line(1):find("^ *ACT MCP SPD CRZ "), "speed intervention: ACT MCP SPD CRZ: " .. line(1))
+vnav(1)
+T.check(not line(1):find("MCP SPD"), "the CLB page, not active: its own: " .. line(1))
+fms.ns.B747_fms_vnav_page = function() return 1 end
+frames(0.1)
+vnav(1)
+T.check(line(1):find("^ *ACT MCP SPD CLB "), "in the climb: ACT MCP SPD CLB: " .. line(1))
+fms.ns.B747_fms_vnav_page = realPage
+rt:set("laminar/B747/autopilot/spd_intervention", 0)
+frames(0.1)
+vnav(2)
+T.check(line(1):find("ACT ") and not line(1):find("MCP SPD"), "the window shut: the cruise's title again: " .. line(1))
 -- STEP SIZE 2000: CRZ ALT + 2,000 ft over OPT: FL370; DELETE: ICAO
 type_in("2000")
 key("ls_key/L4")

@@ -81,7 +81,9 @@ local function progress_pred(pred, mult)
   local destRow = string.format("%-4s    %4d %s  %5.1f", dest and dest.ident or "", math.floor(pred.dest.x + 0.5),
     eta(pred.dest.t), pred.dest.fuel * mult / 1000)
   local ex, et
-  if pred.tc and B747DR_ap_flightPhase < 2 then
+  -- TO T/C on the ground and in the climb, by the FMC's phase (step 9d3;
+  -- before, the AP's old flightPhase)
+  if pred.tc and (B747_fms_vnav_page()) < 2 then
     progEvent, ex, et = "T/C", pred.tc, pred.tc_t
   elseif pred.sc[1] then
     progEvent, ex, et = "STEP CLB", pred.sc[1], pred.sc_t[1]
@@ -91,10 +93,12 @@ local function progress_pred(pred, mult)
     progEvent, ex, et = "E/D", pred.ed, pred.ed_t
   end
   local evText = ex and string.format("%sz/%dNM", eta(et), math.floor(ex + 0.5)) or ""
-  -- the speed: the A/P's target, its mode's label by the phase
-  local modeId = ({[1] = "clbspdmode", [2] = "crzspdmode", [3] = "desspdmode"})[B747DR_ap_flightPhase] or "clbspdmode"
+  -- the speed: the A/P's target, its mode's label by the FMC's phase (step
+  -- 9d3; before, the AP's old flightPhase), MCP SPD in speed intervention
+  -- (ATA34_2 p.568)
+  local modeId = ({[1] = "clbspdmode", [2] = "crzspdmode", [3] = "desspdmode"})[(B747_fms_vnav_page())] or "clbspdmode"
   local mode = fmsModules["data"][modeId]
-  progSpdLabel = mode == "S" and " SEL SPD" or mode == "L" and " LRC SPD" or " ECON SPD"
+  progSpdLabel = B747_fms_spd_int() and " MCP SPD" or mode == "S" and " SEL SPD" or mode == "L" and " LRC SPD" or " ECON SPD"
   local selSpd=string.format("%3dkt ",simDR_autopilot_airspeed_kts)
   if simDR_autopilot_airspeed_is_mach==1 then
     selSpd=string.format("%-5.3f ",simDR_autopilot_airspeed_kts_mach)

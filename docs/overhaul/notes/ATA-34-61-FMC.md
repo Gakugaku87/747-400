@@ -1270,3 +1270,16 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - CDU（`B744.fms.pages.vnav.lua`）：6R の表示と押し、修正の間は見出しが MOD（そのページの 6R の修正：CLB のページは CLB DIR、DES のページは DES NOW・DES DIR）、6L は ERASE（3 ページとも：修正が待っている間）、VNAV のページの EXEC は経路の EXEC（前は X-Plane の FMS へ）。`B744.fms.pages.rte.lua` の EXEC と ERASE が VNAV の分も扱う。
 - 推定：DES DIR の後の誘導は、制限が消えた予測の経路をふつうの降下で飛ぶ（FMSPG p.3.5-5 の図の「MCP の高度へまっすぐ降りる、スロットルは HOLD」は作らない）。修正の間の MOD の見出しは、6R で作ったページだけ（経路だけの修正では ACT のまま）。
 - 試験：`pred_glue_test.lua` 130 件（CLB DIR：MCP の上と MCP の高度の制限は残り、間のものが修正の上で消え、ERASE で戻り、EXEC で有効な経路に。DES NOW：DES のページの DES NOW>、押すと MOD ... DES と EXEC の灯、EXEC の前は巡航、EXEC で降下段階の VNAV SPD・THR。DES DIR：降下段階で DES DIR>、EXEC で MCP の高度より上の制限が消え下は残る）。全 134 本。新設の X-Plane の `s146_vnav_des_now`。
+
+## 66. 段 9d3 の実装（2026-10-31：速度介入）
+
+- 資料：FCOM p.643（IAS/MACH のノブ：VNAV のとき押すごとに窓を開け閉めする。閉じれば FMC の目標速度、開けば速度介入で、ノブの速さが目標。VNAV PTH の降下中ならピッチのモードが VNAV SPD になり、高度の制限を捕捉して VNAV PTH になるまでピッチで速さを保つ。進入中は VNAV PTH のまま A/T が速さを取る。窓が開くのは FLCH SPD・V/S・TO/GA・ALT・G/S のとき）、p.1255（上昇で低い速さにして急な上昇）、p.1327・p.1347・p.1391（CLB・CRZ・DES のページの見出しの MCP SPD）。ATA34_2 p.623（ノブの押しは FMC への discrete。窓が開いて今の FMC の目標速度を示し、FMC はその速さを目標にする。もう一度押すと普段に戻る）、p.557・p.563（ACT MCP SPD CRZ・DES）、p.568（PROGRESS の 5L の MCP SPD）。
+- 今まで：ノブの押しで AP の前の `manualVNAVspd` が切り替わり、窓が開いて MCP の速さで飛ぶが、FMC は知らない（ピッチのモードも見出しも変わらない）。閉じるとき前の VNAV の速さを一度書いていた。
+- 作ったもの：
+  - AP：VNAV で窓が開いている間 `laminar/B747/autopilot/spd_intervention` を 1 に（init で作る。ATA34_2 p.623 の discrete。IAS/MACH の切り替えで窓が 0.25 秒閉じる間も落とさない）。閉じるときの前の VNAV の速さの書き込みはやめた（FMC の目標速度は `afds_fmc_vnav` が書く）。
+  - FMS：介入の間、MCP の速さ（`autopilot/ias_dial_value`：kt、Mach は ×100）を VNAV のモデルの `spd_int` に（目標速度は前からそれを使う）。`B747_fms_spd_int` をページに。
+  - VNAV のモデル：降下段階で介入なら VNAV SPD（ノブの速さをピッチで）、A/T は IDLE（その後 HOLD）、FMC の高度は次の制限（AFDS が VNAV SPD で捕捉して VNAV PTH で水平、制限の先で FMC の高度が下がると VNAV SPD に戻る）。経路の偏差は ND のために出す。窓を閉じれば経路の降下（VNAV PTH）に戻る。早期降下と cruise descent は介入でも THR のまま（目標がノブの速さ）。上昇・巡航は目標速度が替わるだけ（前から）。
+  - CDU：有効なページの見出しを MCP SPD に（ACT MCP SPD CLB・CRZ・DES）。PROGRESS の 5L は介入で MCP SPD、ほかは FMC の段階の速さの型（前は AP の前の `flightPhase`）。PROGRESS の TO T/C も FMC の段階で。
+- 試験の道具で分かったこと：ノブの押しの処理は、ノブの絵が押し込みのままなら次の押しを離しとして捨てる（前からの守り：高度のノブも同じ）。Web API の長さ 0 のコマンドでは離し（phase 2）が XTLua に届かず、s147 の初めの版は 2 回目の押しが捨てられた。実際の押し（マウス・ボタン）は押しと離しが別に来るので起きない。シナリオではノブを 0.2 秒押して離す。
+- 推定・残り：進入中（on approach：FCOM p.1261 の条件）の VNAV PTH のままの介入は段 9e。介入の間の予測（DES のページの速さの行、T/D や E/D の時刻）はまだ FMC の予定の速さ。PROGRESS の予測の無いときの古い経路は前の `flightPhase` のまま。
+- 試験：`vnav_model_test.lua` 110 件（降下の介入で VNAV SPD・IDLE、ノブの 270 kt と M.82、FMC の高度は次の制限、40 kt 遅くても IDLE のまま、閉じれば VNAV PTH、早期降下は THR のまま）、`afds_glue_test.lua` 251 件（VNAV でノブを押すと `spd_intervention` 1・窓が開いて FMC の 300 kt、ノブを 280 に、もう一度押すと 0・窓が閉じて FMC の 300 kt）、`pred_glue_test.lua` 137 件（介入で FMC の目標がノブの 270 kt・M.805、ACT MCP SPD DES、PROGRESS の 5L の MCP SPD、閉じれば FMC の目標と ECON）、`vnav_pages_test.lua` 79 件（ACT MCP SPD CRZ・CLB、有効でないページはそのまま）。全 134 本。新設の X-Plane の `s147_vnav_spd_intervention`。
