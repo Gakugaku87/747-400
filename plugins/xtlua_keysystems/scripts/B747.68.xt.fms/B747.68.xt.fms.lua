@@ -2447,7 +2447,7 @@ local navperfState=NP.new()
 navperfState.brg=false
 local navperfIn=NP.inputs()
 local navperfT,ddT=nil,nil
-local ddPair=nil
+local ddPair,ddCands=nil,{}
 local navperfFlags={}
 B747DR_CAS_caution_status=find_dataref("laminar/B747/CAS/caution_status")
 local UNABLE_RNP_CAUTION,UNABLE_RNP_ADVISORY=66,295
@@ -2516,7 +2516,7 @@ local function dd_scan(db,lat,lon,alt)
       if k==N.VOR then la,lo,el=rec.dme_lat or la,rec.dme_lon or lo,rec.dme_elev or el end
       local brg,d=B747_route_model.course(lat,lon,la,lo)
       if NP.dme_ok(d,rec.range,alt,el) then
-        cands[#cands+1]={ident=db.ident[i],lat=la,lon=lo,elev=el,range=rec.range,dist=d,brg=brg}
+        cands[#cands+1]={ident=db.ident[i],freq=rec.freq,lat=la,lon=lo,elev=el,range=rec.range,dist=d,brg=brg}
       end
     end
   end
@@ -2597,9 +2597,8 @@ function update_navperf()
   if db.ready then
     if not ddT or now-ddT>=10 or now<ddT then
       ddT=now
-      local cands
-      cands,inp.navaid_near=dd_scan(db,lat,lon,alt)
-      ddPair=NP.dd_pair(cands,alt)
+      ddCands,inp.navaid_near=dd_scan(db,lat,lon,alt)
+      ddPair=NP.dd_pair(ddCands,alt)
     elseif ddPair then
       ddPair=dd_refresh(ddPair,lat,lon,alt)
       if not ddPair then ddT=nil end
@@ -2630,12 +2629,125 @@ function update_navperf()
   navperf_flag("verify",B747DR_fmc_notifications,VERIFY_RNP,out.verify)
   navperf_flag("split",B747DR_fmc_notifications,SPLIT_IRS_OPERATION,out.polar)
 end
+-- (6-1/6-2 step 10b) the VOR and ADF tuning (B747.68.tune_model.lua;
+-- notes/ATA-34-61-FMC.md §87). Once a second the FMC's stations for VOR
+-- L and R (X-Plane's NAV 3 and 4) not manual: the active leg's procedure
+-- navaid (a SID's, a STAR's, the approach's once on it with the final
+-- course: FCOM p.1304), the active route's downpath and previous VORs
+-- within 250 nm, the DME-DME pair's stations, else the nearest in reach;
+-- NAV RADIO's entries for the manual ones and the ADFs. The tuning modes
+-- (laminar/B747/radio/tuningmodes: ILS, VOR L, VOR R, ADF L, ADF R): P, R,
+-- A, M for the VORs (the ND and the displays take any but M as
+-- autotuned), M, A (ANT), B (BFO) for the ADFs (no ADF bearing in ANT:
+-- B747.60.xt.displays.lua). Before, irs/rnav_system.lua tuned the two
+-- nearest VORs every 10 s.
+dofile("B747.68.tune_model.lua")
+local TM=B747_tune_model
+local tuneState=TM.new()
+local tuneT=nil
+function B747_fms_tune() return tuneState end
+local VOR_IDX={2,3}
+local function tune_station(p)
+  return {ident=p.ident,freq=p.freq,lat=p.lat,lon=p.lon}
+end
+-- NAV RADIO's identifier: the nearest VOR or DME not an ILS's; false when
+-- only another kind of point has it, nil when none
+function B747_fms_tune_find(ident)
+  local db,N=B747_fmc_navdb,B747_navdb
+  if not db.ready then return nil end
+  local best,bd,other=nil,nil,false
+  local i=db.first[ident]
+  while i do
+    local k,rec=db.kind[i],db.nav[i]
+    local ils=rec~=nil and rec.name~=nil and (string.find(rec.name,"ILS") or string.find(rec.name,"LOC"))
+    if (k==N.VOR or k==N.DME) and rec and rec.freq and not ils then
+      local d=N.distance(simDR_latitude,simDR_longitude,db.lat[i],db.lon[i])
+      if not bd or d<bd then best,bd=i,d end
+    else
+      other=true
+    end
+    i=db.nxt[i]
+  end
+  if best then return {ident=db.ident[best],freq=db.nav[best].freq,lat=db.lat[best],lon=db.lon[best]} end
+  if other or db.apt[ident] then return false end
+  return nil
+end
+-- the procedure's navaid: the active leg's in a SID or STAR, or in the
+-- approach once on it, a VOR or DME; the approach's runway leg's course
+local function proc_navaids(r)
+  local N=B747_navdb
+  local l=r.legs[1]
+  if not (l and l.proc) then return {} end
+  if l.proc=="APPR" and not on_approach() then return {} end
+  local nav=l.navaid
+  if not (nav and (nav.kind==N.VOR or nav.kind==N.DME) and nav.freq) then return {} end
+  local crs=nil
+  if l.proc=="APPR" then
+    for _,a in ipairs(r.legs) do
+      if a.proc=="APPR" and a.fix and a.fix.kind=="RWY" and a.crs then crs=math.floor(a.crs+0.5)%360 break end
+    end
+  end
+  return {{st=tune_station(nav),crs=crs}}
+end
+-- the route's VORs: the first downpath one within 250 nm, the previous one
+-- (the last passed) within 250 nm
+local function route_vors(r,lat,lon)
+  local N=B747_navdb
+  local nextVor,prevVor=nil,nil
+  for j=1,math.min(#r.legs,40) do
+    local f=r.legs[j].fix
+    if f and f.kind==N.VOR and f.freq and N.distance(lat,lon,f.lat,f.lon)<=TM.ROUTE_NM then nextVor=tune_station(f) break end
+  end
+  for j=#r.passed,1,-1 do
+    local f=r.passed[j].fix
+    if f and f.kind==N.VOR and f.freq then
+      if N.distance(lat,lon,f.lat,f.lon)<=TM.ROUTE_NM then prevVor=tune_station(f) end
+      break
+    end
+  end
+  return nextVor,prevVor
+end
+function update_tuning()
+  local now=simDRTime
+  if tuneT and now-tuneT<1 and now>=tuneT then return end
+  tuneT=now
+  local db=B747_fmc_navdb
+  local s=tuneState
+  if db.ready then
+    local st=B747_fmc_route
+    local r=st.active and st.rte or nil
+    local proc,nextVor,prevVor={},nil,nil
+    if r then
+      proc=proc_navaids(r)
+      nextVor,prevVor=route_vors(r,simDR_latitude,simDR_longitude)
+    end
+    local auto={}
+    if ddPair then
+      auto={tune_station(ddPair.a),tune_station(ddPair.b)}
+    else
+      for j=1,math.min(2,#ddCands) do auto[j]=tune_station(ddCands[j]) end
+    end
+    TM.choose(s,TM.candidates(proc,nextVor,prevVor,auto))
+  end
+  local modes=B747DR_radioModes
+  if type(modes)~="string" or string.len(modes)<5 then modes="AAAMM" end
+  for side=1,2 do
+    local v,idx=s.vor[side],VOR_IDX[side]
+    if v.st and v.st.freq and simDR_radio_nav_freq_hz[idx]~=v.st.freq then simDR_radio_nav_freq_hz[idx]=v.st.freq end
+    if v.crs and math.abs(((simDR_radio_nav_obs_deg[idx]-v.crs)+180)%360-180)>0.5 then simDR_radio_nav_obs_deg[idx]=v.crs end
+    modes=replace_char(side+1,modes,v.mode or "A")
+    local a=s.adf[side].mode
+    modes=replace_char(side+3,modes,a=="ANT" and "A" or (a=="BFO" and "B" or "M"))
+  end
+  if B747DR_radioModes~=modes then B747DR_radioModes=modes end
+end
+-- an entry's tuning at once
+function B747_fms_tune_now() tuneT=nil update_tuning() end
 dofile("B744.notifications.lua")
 dofile("irs/irs_system.lua")
 dofile("B744.fms.baro.lua")
 dofile("B744.fms.pages.lua")
 
-dofile("irs/rnav_system.lua")
 dofile("B744.createfms.lua")
 
 fmsC = {}
@@ -3137,7 +3249,7 @@ function after_physics()
     if simDR_bus_volts[0]>22 then
       irsSystem.update()
       update_navperf()
-      B747_setNAVRAD()
+      update_tuning()
     end
     if acarsSystem.provider.online() then
       B747DR_CAS_memo_status[40]=0 --for CAS

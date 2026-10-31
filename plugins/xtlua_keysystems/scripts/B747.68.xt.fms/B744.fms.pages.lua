@@ -305,6 +305,54 @@ ils_line2 = ""
 park = "PARK"
 original_distance = -1
 
+-- (6-1/6-2 step 10b) VOR L and R, CRS and RADIAL, ADF L and R (FCOM
+-- p.1303-1304; FMSPG p.206-207; B747.68.tune_model.lua through
+-- B747_fms_tune): a VOR's frequency, its tuning status (P, R, A, M) small,
+-- the station's identifier (the FMC's, else the received one); CRS blank
+-- when the FMC tunes, dashes or the course when manual (or the
+-- procedure's); RADIAL the received VOR's from the station (X-Plane's
+-- bearing to it + 180: before, the bearing shown); an ADF's frequency
+-- (the entry's tenths while the radio has it) and ANT or BFO small,
+-- dashes without one. The ILS line is step 10c's.
+function navrad_vor_adf()
+  local TM,s=B747_tune_model,B747_fms_tune()
+  local function vor(side)
+    local v,idx=s.vor[side],side+1
+    local ident=v.st and v.st.ident
+    if not ident and simDR_radio_nav_horizontal[idx]==1 then
+      local rx=side==1 and simDR_radio_nav03_ID or simDR_radio_nav04_ID
+      ident=type(rx)=="string" and string.match(rx,"^%s*(%w+)") or nil
+    end
+    return TM.freq_text(simDR_radio_nav_freq_hz[idx]),ident or "",v.mode or "A"
+  end
+  local fL,iL,mL=vor(1)
+  local fR,iR,mR=vor(2)
+  local large=string.format("%6s %-4s",fL,iL).."  "..string.format("%4s %6s",iR,fR)
+  local small="      "..mL.."          "..mR.."      "
+  local function crs(v)
+    if v.crs then return string.format("%03d",v.crs) end
+    if v.mode=="M" then return "---" end
+    return "   "
+  end
+  local function radial(idx)
+    if simDR_radio_nav_horizontal[idx]~=1 then return "   " end
+    return string.format("%03d",math.floor(simDR_radio_nav_radial[idx]+180.5)%360)
+  end
+  local crsLine=crs(s.vor[1]).."     "..radial(2).."   "..radial(3).."    "..crs(s.vor[2])
+  local function adf(side)
+    local khz=side==1 and simDR_radio_adf1_freq_hz or simDR_radio_adf2_freq_hz
+    local a=s.adf[side]
+    if not khz or khz<=0 then return "------","" end
+    local t=(a.khz and math.floor(a.khz)==khz) and TM.adf_text(a.khz) or TM.adf_text(khz)
+    return t,(a.mode=="ADF" and "" or a.mode)
+  end
+  local aL,mAL=adf(1)
+  local aR,mAR=adf(2)
+  local adfLarge=aL..string.rep(" ",24-string.len(aL)-string.len(aR)-string.len(mAR))..aR..string.rep(" ",string.len(mAR))
+  local adfSmall=string.rep(" ",string.len(aL))..mAL
+  adfSmall=adfSmall..string.rep(" ",24-string.len(adfSmall)-string.len(mAR))..mAR
+  return large,small,crsLine,adfLarge,adfSmall
+end
 fmsPages["NAVRAD"].getPage=function(self,pgNo,fmsID)
   local ils1="                        "
   local ils2="                        "
@@ -336,23 +384,15 @@ fmsPages["NAVRAD"].getPage=function(self,pgNo,fmsID)
 	ils_line1 = ""
 	ils_line2 = ""
   end
-  local modes=B747DR_radioModes
-  local vorL_radial="---"
-  local vorR_radial="---"
-  local vorL_obs="---"
-  local vorR_obs="---"
-  if simDR_radio_nav_horizontal[2]==1 then vorL_radial=string.format("%03d",simDR_radio_nav_radial[2]) end
-  if simDR_radio_nav_horizontal[3]==1 then vorR_radial=string.format("%03d",simDR_radio_nav_radial[3]) end
-  if modes:sub(2, 2)=="M" then vorL_obs=string.format("%03d",simDR_radio_nav_obs_deg[2]) end
-  if modes:sub(3, 3)=="M" then vorR_obs=string.format("%03d",simDR_radio_nav_obs_deg[3]) end
+  local vorL,vorS,crsL,adfL,adfS=navrad_vor_adf()
   local page={
     "        NAV RADIO       ",
     "                        ",
-    string.format("%6.2f %4s  %4s %6.2f", simDR_radio_nav_freq_hz[2]*0.01, simDR_radio_nav03_ID, simDR_radio_nav04_ID, simDR_radio_nav_freq_hz[3]*0.01),
-    string.format("                        ", ""),
-    string.format("%3s      %3s  %3s    %3s", vorL_obs, vorL_radial,vorR_radial, vorR_obs),
+    vorL,
     "                        ",
-    string.format("%06.1f           %06.1f ", simDR_radio_adf1_freq_hz, simDR_radio_adf2_freq_hz),
+    crsL,
+    "                        ",
+    adfL,
     "                        ",
     ils1,
 --    ils2,
@@ -365,15 +405,15 @@ fmsPages["NAVRAD"].getPage=function(self,pgNo,fmsID)
   return page
 end
 fmsPages["NAVRAD"].getSmallPage=function(self,pgNo,fmsID)
-  local modes=B747DR_radioModes
+  local vorL,vorS,crsL,adfL,adfS=navrad_vor_adf()
   return{
   "                        ",
   " VOR L             VOR R",
-  "      ".. modes:sub(2, 2) .."          ".. modes:sub(3, 3) .."      ",
+  vorS,
   " CRS      RADIAL     CRS",
   "                        ",
   " ADF L             ADF R",
-  "      M                M",
+  adfS,
 --  " ILS ".. modes:sub(1, 1) .."                  ",
   " ILS - MLS              ",  
 --  "                        ",
@@ -386,12 +426,43 @@ fmsPages["NAVRAD"].getSmallPage=function(self,pgNo,fmsID)
   "                        ",
   }
 end
-fmsFunctionsDefs["NAVRAD"]["L1"]={"setDref","VORL"}
-fmsFunctionsDefs["NAVRAD"]["L2"]={"setDref","CRSL"}
-fmsFunctionsDefs["NAVRAD"]["L3"]={"setDref","ADFL"}
-fmsFunctionsDefs["NAVRAD"]["R1"]={"setDref","VORR"}
-fmsFunctionsDefs["NAVRAD"]["R2"]={"setDref","CRSR"}
-fmsFunctionsDefs["NAVRAD"]["R3"]={"setDref","ADFR"}
+fmsFunctionsDefs["NAVRAD"]["L1"]={"navrad","vor1"}
+fmsFunctionsDefs["NAVRAD"]["L2"]={"navrad","crs1"}
+fmsFunctionsDefs["NAVRAD"]["L3"]={"navrad","adf1"}
+fmsFunctionsDefs["NAVRAD"]["R1"]={"navrad","vor2"}
+fmsFunctionsDefs["NAVRAD"]["R2"]={"navrad","crs2"}
+fmsFunctionsDefs["NAVRAD"]["R3"]={"navrad","adf2"}
+-- (step 10b) NAV RADIO's VOR, CRS and ADF entries (FCOM p.1304; FMSPG
+-- p.206-207): B747.68.tune_model.lua's, the radio tuned at once (the
+-- VOR's frequency and course, the ADF's), the message its answer
+function fmsFunctions.navrad(fmsO,value)
+  local TM,s=B747_tune_model,B747_fms_tune()
+  local sp=fmsO["scratchpad"]
+  if sp=="" then return end
+  local kind,side=string.match(value,"^(%a+)(%d)$")
+  side=tonumber(side)
+  local r
+  if kind=="vor" then
+    r=TM.vor_entry(s,side,sp,B747_fms_tune_find)
+  elseif kind=="crs" then
+    r=TM.crs_entry(s,side,sp)
+  else
+    r=TM.adf_entry(s,side,sp,side==1 and simDR_radio_adf1_freq_hz or simDR_radio_adf2_freq_hz)
+  end
+  if r~=TM.OK then fmsO["notify"]=r return end
+  fmsO["scratchpad"]=""
+  local idx=side+1
+  local v=s.vor[side]
+  if kind~="adf" and v.mode=="M" then
+    if v.st and v.st.freq then simDR_radio_nav_freq_hz[idx]=v.st.freq end
+    if v.crs then simDR_radio_nav_obs_deg[idx]=v.crs end
+  end
+  local a=s.adf[side]
+  if kind=="adf" and a.khz then
+    if side==1 then simDR_radio_adf1_freq_hz=math.floor(a.khz) else simDR_radio_adf2_freq_hz=math.floor(a.khz) end
+  end
+  B747_fms_tune_now()
+end
 fmsFunctionsDefs["NAVRAD"]["L4"]={"setDref","ILS"}
 fmsFunctionsDefs["NAVRAD"]["L6"]={"setdata","preselectLeft"}
 fmsFunctionsDefs["NAVRAD"]["R6"]={"setdata","preselectRight"}
@@ -2572,20 +2643,11 @@ function fmsFunctions.setDref(fmsO,value)
     fmsO["scratchpad"]="" 
     return 
   end
-  local modes=B747DR_radioModes
-  if value=="VORL" and val==nil then B747DR_radioModes=replace_char(2,modes,"A") fmsO["scratchpad"]="" return end
-  if value=="VORR" and val==nil then B747DR_radioModes=replace_char(3,modes,"A") fmsO["scratchpad"]="" return end
-   if val==nil or (value=="CRSL" and modes:sub(2, 2)=="A") or (value=="CRSR" and modes:sub(3, 3)=="A") then
+  -- (6-1/6-2 step 10b) NAV RADIO's VOR, CRS and ADF: fmsFunctions.navrad
+   if val==nil then
      fmsO["notify"]="INVALID ENTRY"
-     return 
+     return
    end
- --print(val)
-  if value=="VORL" then B747DR_radioModes=replace_char(2,modes,"M") simDR_radio_nav_freq_hz[2]=val*100  end
-  if value=="VORR" then B747DR_radioModes=replace_char(3,modes,"M") simDR_radio_nav_freq_hz[3]=val*100  end
-  if value=="CRSL" then simDR_radio_nav_obs_deg[2]=val end
-  if value=="CRSR" then simDR_radio_nav_obs_deg[3]=val end
-  if value=="ADFL" then simDR_radio_adf1_freq_hz=val end
-  if value=="ADFR" then simDR_radio_adf2_freq_hz=val end
   if value=="V1" then
 	if val<100 or val>200 then
 		fmsO["notify"]="INVALID ENTRY"
