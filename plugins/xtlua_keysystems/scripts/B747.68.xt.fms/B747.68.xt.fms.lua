@@ -1208,6 +1208,10 @@ B747DR_fms_vnav_at = find_dataref("laminar/B747/fms/vnav/at")
 B747DR_fms_vnav_perf = find_dataref("laminar/B747/fms/vnav/perf")
 B747DR_fms_vnav_dist = find_dataref("laminar/B747/fms/vnav/dist")
 B747DR_fms_alt_sel_pushes = find_dataref("laminar/B747/autopilot/alt_sel_pushes")
+-- (step 9d3) speed intervention (the AP's: the IAS/MACH window opened with
+-- VNAV) and the MCP's speed (kt, a Mach as Mach x 100)
+B747DR_fms_spd_int = find_dataref("laminar/B747/autopilot/spd_intervention")
+B747DR_fms_ias_dial = find_dataref("laminar/B747/autopilot/ias_dial_value")
 B747DR_fms_vnav_mcp_alt = find_dataref("laminar/B747/autopilot/heading/altitude_dial_ft")
 B747DR_fms_vnav_vmax = find_dataref("laminar/B747/airspeed/Vmax")
 B747DR_fms_vnav_vminm = find_dataref("laminar/B747/airspeed/Vminm")
@@ -1216,6 +1220,7 @@ local vnavState = B747_vnav_model.new()
 function B747_fms_vnav_phase() return vnavState.phase end
 local vnavIn = {P = B747_perf_db, sched = B747_pred_model.schedule, crz = B747_pred_model.crz_mach}
 local vnavTakeoff = {}
+local vnavSpdInt = {}
 -- the distance to go to the E/D VNAV's path is looked up with (NM; nil
 -- without a path)
 function B747_fms_vnav_dist() return vnavIn.d_ed end
@@ -1307,6 +1312,10 @@ function B747_fms_vnav_page()
   if vnavState.crz_chg then return 2, vnavState.crz_chg end
   return VNAV_PHASE[vnavState.phase] or 0, nil
 end
+-- (step 9d3) speed intervention: the FMC's target the MCP speed, the active
+-- page's title MCP SPD and PROGRESS's 5L (FCOM p.643; ATA34_2 p.557, p.563,
+-- p.568, p.623)
+function B747_fms_spd_int() return B747DR_fms_spd_int == 1 end
 -- the descent's highest altitude constraint ahead (ft) or nil
 function B747_fms_des_top()
   local top = nil
@@ -1486,6 +1495,15 @@ local function update_vnav()
   inp.clb, inp.des, inp.crzspd = B747_fms_schedules(perf)
   inp.flaps_placard = simDR_fms_vnav_flaps > 0.01 and B747DR_fms_vnav_vmax > 0 and B747DR_fms_vnav_vmax or nil
   inp.vmin = B747DR_fms_vnav_vminm > 0 and B747DR_fms_vnav_vminm or nil
+  -- (step 9d3) speed intervention: the MCP's speed (FCOM p.643)
+  if B747_fms_spd_int() then
+    local v, mach = B747DR_fms_ias_dial, simDR_autopilot_airspeed_is_mach == 1
+    vnavSpdInt.mach = mach and v / 100 or nil
+    vnavSpdInt.cas = (not mach) and v or nil
+    inp.spd_int = vnavSpdInt
+  else
+    inp.spd_int = nil
+  end
   -- the takeoff (step 9c; FCOM p.1255): V2 selected on TAKEOFF REF (999
   -- none), ACCEL HT above the origin, the flap handle; the airspeed, VNAV
   -- engaged (the AFDS's)

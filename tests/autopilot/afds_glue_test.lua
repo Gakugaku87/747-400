@@ -382,6 +382,28 @@ T.equal(rt:get(AT_FMA_ST), 5, "the A/T's THR REF (the FMC's)")
 T.equal(rt:get(WINDOW), 0, "the IAS/MACH window shut")
 T.equal(rt:get(DIAL), 300, "the FMC's 300 kt on the dial")
 T.equal(rt:get("sim/cockpit2/autopilot/airspeed_dial_kts"), 300, "and X-Plane's (the speed law's reference)")
+-- (step 9d3) speed intervention (FCOM p.643; ATA34_2 p.623): the IAS/MACH
+-- selector pushed with VNAV engaged opens the window on the FMC's speed and
+-- tells the FMC (laminar/B747/autopilot/spd_intervention); the dial the
+-- crew's; pushed again, shut on the FMC's speed (before, the old VNAV's
+-- speed set once)
+local SPD_INT = "laminar/B747/autopilot/spd_intervention"
+T.equal(rt:get(SPD_INT), 0, "no speed intervention")
+rt:command("laminar/B747/button_switch/press_airspeed")
+frames(3)
+T.equal(rt:get(SPD_INT), 1, "the selector pushed with VNAV: speed intervention")
+T.equal(rt:get(WINDOW), 1, "the window open")
+T.equal(rt:get(DIAL), 300, "on the FMC's 300 kt (ATA34_2 p.623)")
+rt:set(DIAL, 280)
+fvn({cas = 280})
+frames(3)
+T.equal(rt:get(DIAL), 280, "the crew's 280 kt kept (the FMC's target the MCP's)")
+rt:command("laminar/B747/button_switch/press_airspeed")
+fvn({cas = 300})
+frames(3)
+T.equal(rt:get(SPD_INT), 0, "pushed again: none")
+T.equal(rt:get(WINDOW), 0, "the window shut")
+T.equal(rt:get(DIAL), 300, "the FMC's 300 kt again")
 
 T.equal(rt:get(PHASE), 1, "the climb's phase")
 T.equal(rt:get(AFTER_TOD), 0, "no path pointer in the climb")

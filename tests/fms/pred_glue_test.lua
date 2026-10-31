@@ -528,6 +528,36 @@ T.check(st.mod ~= nil and line(1):find("MOD .* DES"), "DES DIR: MOD ... DES: " .
 key("key/execute")
 T.check(above(rt:get(MCPA)) == 0, "EXEC: none above the MCP altitude left")
 T.equal(above(0), below0, "those below it kept: " .. below0)
+-- (step 9d3) speed intervention (FCOM p.643; ATA34_2 p.623): the AP's
+-- laminar/B747/autopilot/spd_intervention with the MCP's speed (a Mach as
+-- Mach x 100 on the dial): the FMC's target the MCP's; the active page's
+-- title MCP SPD (ATA34_2 p.563) and PROGRESS's 5L (p.568); shut, the FMC's
+-- own again
+local SPDINT, DIAL, ISMACH = "laminar/B747/autopilot/spd_intervention", "laminar/B747/autopilot/ias_dial_value",
+    "sim/cockpit2/autopilot/airspeed_is_mach"
+local cas0 = rt:get(VN .. "cas")
+rt:set(DIAL, 270)
+rt:set(ISMACH, 0)
+rt:set(SPDINT, 1)
+frames(0.5)
+T.near(rt:get(VN .. "cas"), 270, 1e-6, "speed intervention: the FMC's target the MCP's 270 kt")
+T.check(line(1):find("ACT MCP SPD DES"), "the DES page: ACT MCP SPD DES (ATA34_2 p.563): " .. line(1))
+key("func_key/prog")
+frames(1.2)
+T.check(small(10):find("^ MCP SPD"), "PROGRESS 5L: MCP SPD (ATA34_2 p.568): " .. small(10))
+rt:set(DIAL, 80.5)
+rt:set(ISMACH, 1)
+frames(0.5)
+T.check(rt:get(VN .. "mach_mode") == 1 and math.abs(rt:get(VN .. "mach") - 0.805) < 1e-6, "the MCP in Mach: M.805")
+rt:set(SPDINT, 0)
+rt:set(ISMACH, 0)
+frames(1.2)
+T.near(rt:get(VN .. "cas"), cas0, 0.5, "shut: the FMC's own target again")
+T.check(small(10):find("^ ECON SPD"), "PROGRESS 5L: ECON SPD again: " .. small(10))
+key("func_key/des")
+key("func_key/next_pg")
+key("func_key/next_pg")
+T.check(line(1):find("ACT ECON DES"), "the DES page: ACT ECON DES again: " .. line(1))
 fms.ns.B747_fms_vnav_td = realTd
 rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 100)

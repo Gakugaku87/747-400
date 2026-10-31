@@ -13,7 +13,8 @@
 --   path on the elevator, the A/T at IDLE, or SPD where a line between
 --   constraints is too shallow for idle: FCOM p.1258); VNAV SPD with THR
 --   at about 1,250 fpm in the early descent until the path and in the
---   cruise descent (FCOM p.1260-1261);
+--   cruise descent (FCOM p.1260-1261); VNAV SPD with IDLE in the descent in
+--   speed intervention (FCOM p.643: step 9d3);
 --   the target speed: the climb's, the cruise's or the descent's schedule
 --   (B747.68.pred_model.lua's), the crew's MCP speed in speed intervention,
 --   within the flap placard less 5 kt and the minimum maneuvering speed
@@ -289,6 +290,16 @@ function M.update(s, inp)
         -- the early descent: VNAV SPD, the A/T's THR to the rate (speed/
         -- thrust: ATA34_2 p.615)
         out.mode, out.at, out.vs = "SPD", M.AT_THR, -M.EARLY_VS
+        out.alt = inp.des_alt
+        if path_h then out.path_alt, out.path_dev = path_h, inp.alt - path_h end
+    elseif inp.spd_int then
+        -- (step 9d3) speed intervention in the descent (FCOM p.643): VNAV
+        -- SPD, the MCP speed on the elevator and the A/T at IDLE, down to the
+        -- next constraint, where the AFDS levels in VNAV PTH (its FMC
+        -- altitude captured in VNAV SPD); the path's deviation for the ND.
+        -- On approach VNAV PTH stays with the A/T on speed (p.643, p.1261:
+        -- step 9e)
+        out.mode, out.at = "SPD", M.AT_IDLE
         out.alt = inp.des_alt
         if path_h then out.path_alt, out.path_dev = path_h, inp.alt - path_h end
     else

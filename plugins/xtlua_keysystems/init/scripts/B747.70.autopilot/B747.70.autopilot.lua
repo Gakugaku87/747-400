@@ -126,6 +126,9 @@ B747DR_ap_autothrottle_armed        	= deferred_dataref("laminar/B747/autothrott
 B747DR_ap_alt_sel_pushes            	= deferred_dataref("laminar/B747/autopilot/alt_sel_pushes", "number")
 B747DR_at_servo                     	= deferred_dataref("laminar/B747/autothrottle/servo", "number")
 B747DR_at_lever_cmd                 	= deferred_dataref("laminar/B747/autothrottle/lever_cmd", "number")
+-- (the FMC's step 9d3) speed intervention (1: the IAS/MACH selector pushed
+-- with VNAV engaged, the window open: the FMC's target the MCP speed)
+B747DR_ap_spd_intervention          	= deferred_dataref("laminar/B747/autopilot/spd_intervention", "number")
 B747DR_ap_mach_decimal_visibiilty	    = deferred_dataref("laminar/B747/autopilot/mach_dec_vis", "number")
 B747DR_ap_fpa	    = deferred_dataref("laminar/B747/autopilot/navadata/fpa", "number")
 B747DR_ap_vb	    = deferred_dataref("laminar/B747/autopilot/navadata/vb", "number")

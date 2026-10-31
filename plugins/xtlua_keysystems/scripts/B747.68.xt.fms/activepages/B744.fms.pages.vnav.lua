@@ -51,6 +51,12 @@ local function spd_title(mode, cas, mach)
   if mach and (cas == nil or simDR_mach_pilot >= mach / 1000 - 0.0005) then return string.format("M.%03d", mach) end
   return string.format("%dKT", cas)
 end
+-- (step 9d3) the active page's title in speed intervention: MCP SPD
+-- (ATA34_2 p.557, p.563; FCOM p.1327, p.1347, p.1391)
+local function int_title(active, title)
+  if active and B747_fms_spd_int() then return "MCP SPD" end
+  return title
+end
 -- a line of a left and a right part
 local function lr(l, r) return l .. string.rep(" ", math.max(1, 24 - string.len(l) - string.len(r))) .. r end
 -- the page active (6-1/6-2 step 9d2a): the FMC's phase (B747.68.xt.fms.lua's
@@ -222,6 +228,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       elseif active and transSpd and transAlt and simDR_pressureAlt1 < transAlt then
         title = string.format("%dKT", transSpd)
       end
+      title = int_title(active, title)
       -- ECON SPD or SEL SPD: CAS/Mach (FMSPG p.113: 358/.853), a selected
       -- CAS alone without the Mach
       local spdText = vnav_text("clbspd")
@@ -333,7 +340,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       -- ECON, LRC or SEL SPD: a Mach, or a selected CAS
       local spdText = cas and string.format("%3d", cas) or "." .. vnav_text("crzspd")
       return{
-        vnav_title(spd_title(mode, cas, (not cas) and mach or nil) .. " CRZ" .. (crzChg and " " .. crzChg or ""), crzActive),
+        vnav_title(int_title(crzActive, spd_title(mode, cas, (not cas) and mach or nil)) .. " CRZ" .. (crzChg and " " .. crzChg or ""), crzActive),
       "                        ",
       lr(fmsModules["data"]["crzalt"], stepTo and string.format("FL%03d", math.floor(stepTo / 100 + 0.5)) or ""),
       "                        ",
@@ -448,7 +455,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       end
       local mode = vnav_text("desspdmode")
       return{
-        vnav_title(spd_title(mode, tonumber(fmsModules["data"]["desspd"]), tonumber(fmsModules["data"]["desspdmach"])) .. " DES", (vnav_active(3)), B747_fms_vnav_mod() == "DES NOW" or B747_fms_vnav_mod() == "DES DIR"),
+        vnav_title(int_title((vnav_active(3)), spd_title(mode, tonumber(fmsModules["data"]["desspd"]), tonumber(fmsModules["data"]["desspdmach"]))) .. " DES", (vnav_active(3)), B747_fms_vnav_mod() == "DES NOW" or B747_fms_vnav_mod() == "DES DIR"),
       "                        ",
       --"  **** *****    ***/****",
       " "..edaltText.." "..string.format("%5s",eodWpt).."    "..nextAltText,
