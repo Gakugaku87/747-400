@@ -53,7 +53,7 @@ B747_FMCAlertMsg   = {
     {DRindex = 50, name = "VERIFY POSITION",data="", status = 0},
     {DRindex = 51, name = "VERIFY RNP - POS REF 2",data="", status = 0},
     {DRindex = 52, name = "WIND DATA UPLINK READY",data="", status = 0},
-    {DRindex = 53, name = "DESTINATION NOT SET",data="", status = 0},
+    {DRindex = 53, name = "DESTINATION NOT SET",data="", status = 0},   -- not the FMC's (FCOM p.1431-1435): never set (6-1/6-2 step 11c1)
     {DRindex = 54, name = "NAV DATA OUT OF DATE",data="", status = 0}
 }
 function getAdvisoryMessages()

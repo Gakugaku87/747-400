@@ -55,7 +55,7 @@ end
 -- holds; an event's flag, set once, is posted and cleared so that it can
 -- come again. FCOM's advisories among them (p.1435); the rest are alerts
 -- (p.1431-1434)
-local FMC_EVENT = {["PERF/VNAV UNAVAILABLE"] = true, ["DESTINATION NOT SET"] = true, ["TAKEOFF SPEEDS DELETED"] = true,
+local FMC_EVENT = {["PERF/VNAV UNAVAILABLE"] = true, ["TAKEOFF SPEEDS DELETED"] = true,
   ["ILS TUNE INHIBITED - MCP"] = true}  -- (6-1/6-2 step 10c: FCOM p.1432, an attempt)
 local FMC_ADVISORY = {["TAKEOFF SPEEDS DELETED"] = true}
 function B747_cdu_sync_fmc_messages(flags)
@@ -77,6 +77,11 @@ function B747_cdu_sync_fmc_messages(flags)
 end
 function B747_cdu_fmc_alert()
   return C.fmc_alert(fmcMsgs)
+end
+-- (6-1/6-2 step 11c1) the alerts held below 500 ft AGL on the approach
+-- (the FMS's update_msg_inhibit; ATA34_2 p.635)
+function B747_cdu_fmc_inhibit(on)
+  C.fmc_inhibit(fmcMsgs, on)
 end
 -- a condition's FMC message by its text, for the messages not among the
 -- flags (6-1/6-2 step 6c: LNAV's NOT ON INTERCEPT HEADING, an advisory:

@@ -2886,6 +2886,40 @@ function update_ldgalt()
   if B747DR_fms_landing_alt_valid~=valid then B747DR_fms_landing_alt_valid=valid end
   if ft and B747DR_fms_landing_alt~=ft then B747DR_fms_landing_alt=ft end
 end
+-- (6-1/6-2 step 11c1; notes/ATA-34-61-FMC.md §93) the FMC's alerts held
+-- below 500 ft AGL in the approach phase with a runway in the active
+-- route, shown again after climbing through 1,000 ft AGL or at the flight
+-- completion (ATA34_2 p.635; B747_cdu_fmc_inhibit). The approach phase
+-- (FCOM p.1236): the approach's first waypoint sequenced, or the runway
+-- the active waypoint within 25 NM. Estimate: the runway an approach's or
+-- a runway waypoint.
+local MSG_INHIBIT_FT,MSG_RELEASE_FT,APPR_RWY_NM=500,1000,25
+local msgInhibit=false
+local function route_runway(r)
+  if r.appr and r.appr.rwy then return true end
+  for _,l in ipairs(r.legs) do
+    if l.fix and l.fix.kind=="RWY" then return true end
+  end
+  return false
+end
+local function approach_phase(r)
+  for _,l in ipairs(r.passed) do
+    if l.proc=="APPR" then return true end
+  end
+  local f=r.legs[1] and r.legs[1].fix
+  return f~=nil and f.kind=="RWY" and B747_navdb.distance(simDR_latitude,simDR_longitude,f.lat,f.lon)<APPR_RWY_NM
+end
+function update_msg_inhibit()
+  local ra=simDR_fms_radio_alt
+  local air=simDR_onGround==0
+  if msgInhibit then
+    if air and ra>MSG_RELEASE_FT then msgInhibit=false end
+  elseif air and ra<MSG_INHIBIT_FT then
+    local st=B747_fmc_route
+    if st.active and route_runway(st.rte) and approach_phase(st.rte) then msgInhibit=true end
+  end
+  B747_cdu_fmc_inhibit(msgInhibit)
+end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after
 -- a flight (all four's N2 under the ENG FAIL speed: laminar/B747/engines/
@@ -2919,6 +2953,7 @@ function B747_fms_flight_complete()
   renew(eoState,B747_eo_model.new())
   renew(thrlimState,B747_thrlim_model.new())
   renew(ldgState,LA.new())
+  msgInhibit=false
   local inh=B747_fmc_nav_inhibits and B747_fmc_nav_inhibits()
   if inh then inh.navaid,inh.vor,inh.vordme={},{},false end
   navperfState.gps_inhibit,navperfState.rnp_man=false,nil
@@ -3340,6 +3375,7 @@ function do_flight_start()
 	B747DR_last_waypoint_fuel=simDR_fueL_tank_weight_total_kg
 	systemsWarmedUp=false
 	renew(ldgState,LA.new())
+	msgInhibit=false
 	local difLat=simDR_latitude
   	local difLon=simDR_longitude
   if simDR_startup_running == 0 then
@@ -3495,6 +3531,7 @@ function after_physics()
     update_flight_complete()
     update_fuel()
     update_ldgalt()
+    update_msg_inhibit()
     B747_fmc_lnav_update()
     B747_fmc_route_sync()
     B747_fmc_plan_ctr_sync()

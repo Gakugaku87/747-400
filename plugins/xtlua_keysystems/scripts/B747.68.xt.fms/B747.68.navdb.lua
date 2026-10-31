@@ -308,8 +308,10 @@ function M.terminal(db, icao, ident)
 end
 
 -- every record with this identifier: waypoints, navaids, the airport, and
--- the terminal waypoints of the airports listed in `airports` (the origin's
--- and the destination's: estimated). With lat and lon, nearest first.
+-- the terminal waypoints and runways (RW34L at its threshold, as the
+-- procedures' runway points: FMSPG p.82) of the airports listed in
+-- `airports` (the origin's and the destination's: estimated). With lat and
+-- lon, nearest first.
 function M.find(db, ident, lat, lon, airports)
     local list = {}
     local i = db.first[ident]
@@ -319,8 +321,12 @@ function M.find(db, ident, lat, lon, airports)
     end
     local a = M.airport(db, ident)
     if a then list[#list + 1] = a end
+    local rwy = match(ident, "^RW%d%d[LRC]?$")
     for _, icao in ipairs(airports or {}) do
         for _, r in ipairs(M.terminal(db, icao, ident) or {}) do list[#list + 1] = r end
+        local c = rwy and M.cifp(db, icao)
+        local rw = c and c.runways[ident]
+        if rw then list[#list + 1] = {kind = "RWY", ident = ident, lat = rw.lat, lon = rw.lon, elev = rw.elev} end
     end
     if lat and lon then
         for _, r in ipairs(list) do r.dist = M.distance(lat, lon, r.lat, r.lon) end
