@@ -145,6 +145,8 @@ function fmsFunctions.refnavident(fmsO, value)
     fmsO["scratchpad"] = ""
     return
   end
+  -- another runway (the origin's, which the route's lookup finds too)
+  if string.match(sp, "^RW%d%d[LCR]?$") then fmsO["notify"] = "NOT IN DATA BASE" return end
   if not string.match(sp, "^%w%w?%w?%w?%w?$") then fmsO["notify"] = "NOT IN DATA BASE" return end
   -- the database's points, not the crew's waypoints of the route (step 7e3a)
   local list = R.candidates(B747_fmc_route, sp, simDR_latitude, simDR_longitude, true)

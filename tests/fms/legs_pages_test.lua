@@ -207,4 +207,14 @@ T.equal(pad(), "INVALID ENTRY", "radials that do not meet: INVALID ENTRY")
 clear()
 key("ls_key/L6")
 
+-- (6-1/6-2 step 11c1) a runway of the route's airports as a waypoint
+-- (FMSPG p.82): DIRECT TO ZZBB's RW09
+key("func_key/legs")
+enter("RW09", "L1")
+T.check(line(1):find("MOD RTE 1 LEGS") and line(3):sub(1, 4) == "RW09", "DIRECT TO RW09, the destination's runway: " .. line(3))
+key("ls_key/L6")                 -- ERASE
+enter("RW27", "L1")
+T.equal(pad(), "NOT IN DATA BASE", "a runway the airports do not have: NOT IN DATA BASE")
+clear()
+
 T.done()

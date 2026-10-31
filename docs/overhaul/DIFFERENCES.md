@@ -395,6 +395,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - flight complete（段 10d、2026-11-01）：飛行の後、4 発のエンジンが止まって 30 秒で、有効な経路・FLT NO・PERF INIT・TAKEOFF REF・REF NAV DATA の抑止などを消し、GPS NAV を戻す（FCOM p.1236、p.1290、p.1307、p.1356–1357、p.1369）。前は飛行の後も残っていた。何を既定に戻すかの一部は推定。X-Plane の飛行計画（ND の線）は残る。
 - 燃料の監視（段 11a、2026-11-01）：PERF INIT の FUEL は FMC の量（CALC は始動から燃料流量で減る、MANUAL も減る、PROGRESS 2 の <USE で SENSED）、PROGRESS 2 の TOTALIZER と CALCULATED が別の値に、FUEL USED は始動から、4,080 kg の差で FUEL DISAGREE - PROG 2 と <USE・USE>、予測の目的地の燃料が RESERVES を下回ると INSUFFICIENT FUEL（FCOM p.1273–1274、p.1377–1382）。前は二つとも計量値で、MANUAL は減らなかった。PROGRESS 2 の VTK ERROR は VNAV の経路からの偏差（前は「+**FT」の固定）。計量値は X-Plane の燃料の合計（推定）。
 - メッセージは 55 件のうち 8 件だけ（FMC-32。段 3b-1 で TAKEOFF SPEEDS DELETED、段 4 で NAV DATA OUT OF DATE を足した。出し方は段 2 で直した）。RW/ILS CRS ERROR の使い方の誤り、Boeing に無い DESTINATION NOT SET、進入中 500 ft 未満の抑止の無さは残る。
+- RTE・LEGS に出発地・目的地の滑走路（RW34L）を点として入れられる（2026-11-01、FMSPG p.82。前は NOT IN DATA BASE）。
 - 経路の管理は FMC 自身になった（段 5b・5c）。RTE 2 と RTE COPY は 2026-10-27 から（段 7e4）。性能の変更の MOD/EXEC はまだ（FMC-34）。ND の経路線は FMC が流し込んだ X-Plane の FMS が描く。段 6d から条件の脚の終わりと弧も描くが、fly-by の旋回の曲線、オフセットの線、FIX INFO の記号は描かない（FMC-35 の残り）。FMC 2 台の扱いが無い（FMC-36）。
 - 実機に合わせた点（段 1）：上昇は SPD TRANS の高度まで SPD TRANS の速度（制限速度と VREF30+100 の大きい方）、その上は ECON（前は取り違え）。SPD RESTR は入れるまでダッシュ。遷移高度で気圧を自動で STD にしない。XTK による UNABLE RNP の誤警報をやめた。RESET MCP ALT は T/D の 2 分前。ETA の速度の下限の単位の誤り。VOR の自動同調の 2 番目の局。AP の毎フレームの完全な GC と decode をやめた。
 

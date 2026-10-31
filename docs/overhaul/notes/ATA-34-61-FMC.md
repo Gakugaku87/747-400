@@ -1593,3 +1593,10 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 推定：経路の半分は出発地からと目的地までの直線距離で比べる（§88 の ILS の待機と同じ）。切替は空中で有効な経路のときだけ見て、flight complete か新しい飛行まで保つ。要る空港が無ければ値なし（LANDING ALT）。滑走路で終わらない進入（周回進入）は空港の標高。
 - 試験：新しい `ldgalt_model_test.lua`（19 件）と `ldgalt_glue_test.lua`（16 件：経路なしで値なし、ZZAA の 100 ft から DEPARTURES の RW34L で 98 ft、離陸の後もそのまま、半分を過ぎて ZZBB の 50 ft、進入 R09 で滑走路の 42 ft（試験の中で閾値を空港と別の値にした）、出発地の近くに戻っても保つ、flight complete で値なし、新しい経路で出発側に戻る）。`press_model_test.lua` と `air_module_test.lua` は FMC の値を入力にした（切替の試験は FMS 側へ移した。試験用の空港の一覧 `tests/air/data/aptmeta_test.dat` は消した）。全 151 本。X-Plane：新しい `s165_ldg_alt_dep` と `s166_ldg_alt_dest`：s165 12/12・s166 14/14（2026-11-01）。s165（RJAA 34L の地上）：経路なしは FMC の値なし・与圧系 2,000 ft・LANDING ALT、RJAA→RJBB の EXEC で 135 ft（与圧系も 135、LANDING ALT は消える）、DEPARTURES の 34L で 139 ft。s166（RJAA の西南西 40 NM の FL150）：経路なしは同じ、RJBB→RJAA の EXEC で 135 ft、ARRIVALS の ILS34L で 139 ft。EICAS の data block に LDG ALT 139 AUTO（画像で確認）。Log.txt に Lua の誤りなし
 - GAP：FMC-37 は済。AIR-03 の残り（進入の滑走路の標高）も済。
+
+## 92. 経路の点としての滑走路（2026-11-01）
+
+- 資料：FMSPG p.82（表 4.1-1：航法データベースの点として RTE と LEGS に入れられるものに滑走路。例 RW30R）。
+- 前は、出発地や目的地の滑走路の識別子（RW34L）を RTE・LEGS に入れると NOT IN DATA BASE だった（航法データの検索が、空港については terminal の点しか見ていなかった）。11c1 の X-Plane 試験（s167）で、進入の滑走路へ DIRECT TO しようとして分かった。
+- 作ったもの：`B747.68.navdb.lua` の `find` が、経路の出発地と目的地（どの空港を見るかは前から推定）の滑走路を、CIFP の閾値の位置と標高で返す。手続きの滑走路の点と同じ形なので、経路の中の同じ滑走路と一致し、そこへの DIRECT TO になる。
+- 試験：`navdb_test.lua`（空港を渡さなければ無い、渡せば ZZBB の RW09 を閾値の位置で、無い滑走路は無い）、`legs_pages_test.lua`（RW09 へ DIRECT TO、RW27 は NOT IN DATA BASE）。X-Plane：s167（2026-11-01）で、RJBB→RJAA の ILS34L の経路に LEGS の 1L から RW34L を入れて DIRECT TO にでき、現用点が RW34L（19 NM）になった。直す前の s167 の 1 回目は NOT IN DATA BASE で、現用点は GIINA のままだった。Log.txt に Lua の誤りなし
