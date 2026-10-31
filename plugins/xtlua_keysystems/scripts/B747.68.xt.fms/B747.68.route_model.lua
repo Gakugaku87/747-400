@@ -1302,6 +1302,20 @@ M.same_leg = same_leg
 -- active leg starts (LNAV, step 6b: the airplane's position after a leg
 -- ending at a condition, else nil: the passed leg's fix). True when it
 -- sequenced
+-- the MCP altitude selector's push deleting the active route's leg `i`'s
+-- altitude constraint itself (6-1/6-2 step 9d1; FCOM p.649: no
+-- modification to execute), the modification's same leg's too; its speed
+-- constraint stays
+function M.delete_alt_active(st, i)
+    local l = st.rte.legs[i]
+    if not (l and l.alt) then return false end
+    l.alt, l.alt2, l.akind = nil, nil, nil
+    for _, ml in ipairs(st.mod and st.mod.legs or {}) do
+        if same_leg(ml, l) then ml.alt, ml.alt2, ml.akind = nil, nil, nil break end
+    end
+    return true
+end
+
 function M.sequence(st, n, start)
     local r, m = st.rte, st.mod
     if not st.active then return false end

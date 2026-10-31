@@ -398,7 +398,16 @@ T.equal(rt:get(PITCH), 5, string.format("climbing 60 ft below the MCP altitude: 
 T.equal(rt:get(AT_FMA_ST), 3, "the A/T SPD while level (FCOM p.645)")
 rt:set(MCP_ALT, a0 + 3000)
 frames(3)
-T.equal(rt:get(PITCH), 4, "a new MCP altitude above: VNAV SPD again")
+-- (step 9d1) a new MCP altitude alone: VNAV ALT still; the selector's
+-- push: VNAV SPD again (FCOM p.645, p.1256; before, the new altitude
+-- alone), the push counted for the FMC
+T.equal(rt:get(PITCH), 5, "a new MCP altitude above, no push: VNAV ALT still")
+local PUSHES = "laminar/B747/autopilot/alt_sel_pushes"
+local np = rt:get(PUSHES)
+rt:command("laminar/B747/button_switch/press_altitude")
+frames(3)
+T.equal(rt:get(PUSHES), np + 1, "the push counted")
+T.equal(rt:get(PITCH), 4, "the selector pushed: VNAV SPD again")
 T.equal(rt:get(AT_FMA_ST), 5, "THR REF again")
 -- (step 9c) the climb's FMC altitude below the MCP's (a constraint): VNAV
 -- PTH level there (ATA22 p.280); the next FMC altitude, VNAV SPD again
@@ -410,6 +419,20 @@ T.equal(rt:get(AT_FMA_ST), 3, "the A/T SPD while level")
 fvn({alt = 35000})
 frames(3)
 T.equal(rt:get(PITCH), 4, "the next FMC altitude: VNAV SPD again")
+-- (step 9d1) the FMC altitude the MCP's too (s139's cruise climb to CRZ
+-- ALT FL190 with the MCP at FL190): VNAV PTH, no conflict (FCOM p.645;
+-- before, VNAV ALT); the FMC's next above, the MCP's then: VNAV ALT
+rt:set(MCP_ALT, a0 + 60)
+fvn({alt = a0 + 60})
+frames(3)
+T.equal(rt:get(PITCH), 6, "the FMC and the MCP altitude both 60 ft above: VNAV PTH")
+fvn({alt = 35000})
+frames(3)
+T.equal(rt:get(PITCH), 5, "the FMC's next above: the MCP altitude's VNAV ALT")
+rt:set(MCP_ALT, mcp0)
+rt:command("laminar/B747/button_switch/press_altitude")
+frames(3)
+T.equal(rt:get(PITCH), 4, "the MCP set back and pushed: VNAV SPD")
 -- the cruise (the FMC's phase 2): VNAV PTH at CRZ ALT, the A/T SPD, the
 -- FMC's Mach on the dial in Mach (.845: 84.5) with the units changed, the
 -- cruise's phase (the EEC's CRZ)

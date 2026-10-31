@@ -345,4 +345,31 @@ T.near(fms.ns.B747_fms_vnav_dist(), m2 + rem2, 0.01,
 rt:set("sim/flightmodel/position/latitude", lat)
 rt:set("sim/flightmodel/position/longitude", lon)
 
+-- (step 9d1) the MCP altitude selector's push (FCOM p.649): in the climb
+-- (on the ground) the next climb constraint between the airplane and the
+-- MCP altitude goes from the active route itself (no modification), one a
+-- push; none left, CRZ ALT the MCP altitude above it
+frames(11)
+local PUSHES = "laminar/B747/autopilot/alt_sel_pushes"
+local MCPA = "laminar/B747/autopilot/heading/altitude_dial_ft"
+local CRZA = "laminar/B747/autopilot/dist/cruise_alt"
+local function cons()
+    local n = 0
+    for _, l in ipairs(st.rte.legs) do if l.alt then n = n + 1 end end
+    return n
+end
+local function push() rt:set(PUSHES, rt:get(PUSHES) + 1) frames(0.2) end
+rt:set(MCPA, 37000)
+frames(0.2)
+local n0 = cons()
+T.check(n0 > 0, "constraints on the route: " .. n0)
+push()
+T.equal(cons(), n0 - 1, "a push: one constraint less")
+T.check(st.mod == nil, "no modification to execute")
+T.equal(rt:get(CRZA), 35000, "CRZ ALT kept while a constraint goes")
+local n = 1
+while rt:get(CRZA) == 35000 and n < 12 do push() n = n + 1 end
+T.equal(rt:get(CRZA), 37000, string.format("none left in the climb: CRZ ALT the MCP's 37,000 ft (%d pushes)", n))
+T.check(cons() > 0, "the descent's constraints kept: " .. cons())
+
 T.done()

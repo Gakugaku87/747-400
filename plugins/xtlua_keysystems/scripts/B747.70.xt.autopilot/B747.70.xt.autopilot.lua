@@ -612,6 +612,8 @@ B747DR_ap_fvn_vs = find_dataref("laminar/B747/fms/vnav/vs")
 B747DR_ap_fvn_path_dev = find_dataref("laminar/B747/fms/vnav/path_dev")
 B747DR_ap_fvn_at = find_dataref("laminar/B747/fms/vnav/at")
 B747DR_ap_fvn_perf = find_dataref("laminar/B747/fms/vnav/perf")
+-- (step 9d1) the MCP altitude selector's pushes, counted
+B747DR_ap_alt_sel_pushes = deferred_dataref("laminar/B747/autopilot/alt_sel_pushes", "number")
 B747DR_afds_pli = find_dataref("laminar/B747/pfd/pli")
 B747DR_afds_pli_show = find_dataref("laminar/B747/pfd/pli_show")
 B747DR_afds_windshear = find_dataref("laminar/B747/gpws/windshear")
@@ -690,12 +692,29 @@ local function afds_vnav_level(p)
 	local mcp, tgt = B747DR_autopilot_altitude_ft, B747DR_ap_fvn_alt
 	if vnavLevel then
 		local now = vnavLevel.fma == 5 and mcp or tgt
-		if math.abs(now - vnavLevel.alt) > 50 then vnavLevel = nil end
+		local moved = math.abs(now - vnavLevel.alt) > 50
+		-- VNAV ALT goes on with a new MCP altitude and the selector's push,
+		-- or, levelled below the descent path with the MCP altitude lower,
+		-- once the path comes down to it (FCOM p.645, p.1256: step 9d1;
+		-- before, with any new MCP altitude); VNAV PTH with the FMC's next
+		if moved and vnavLevel.fma == 5 then
+			local pushed = B747DR_ap_alt_sel_pushes ~= vnavLevel.pushes
+			local path = vnavLevel.below and B747DR_ap_fvn_phase == 3 and B747DR_ap_fvn_path_dev >= 0
+			moved = pushed or path
+		end
+		if moved then vnavLevel = nil end
 	end
 	if not vnavLevel and p.vnav_law ~= "ALT" then
-		if B747_afds_pitch_model.capture(p, mcp) then
-			vnavLevel = {alt = mcp, fma = 5}
-		elseif B747DR_ap_fvn_phase == 1 and tgt ~= mcp and B747_afds_pitch_model.capture(p, tgt) then
+		-- the FMC altitude the MCP's too: no conflict, VNAV PTH (FCOM p.645:
+		-- VNAV ALT for a conflict; step 9d1: s139's cruise climb to CRZ ALT
+		-- FL190 with the MCP at FL190 levelled in VNAV ALT)
+		local fmc = B747DR_ap_fvn_phase == 1 and B747_afds_pitch_model.capture(p, tgt)
+		if fmc and math.abs(tgt - mcp) <= 50 then
+			vnavLevel = {alt = tgt, fma = 6}
+		elseif B747_afds_pitch_model.capture(p, mcp) then
+			vnavLevel = {alt = mcp, fma = 5, pushes = B747DR_ap_alt_sel_pushes,
+				below = B747DR_ap_fvn_phase == 3 and B747DR_ap_fvn_path_dev < 0}
+		elseif fmc then
 			vnavLevel = {alt = tgt, fma = 6}
 		end
 	end
@@ -1489,89 +1508,21 @@ function B747_ap_switch_vnavspeed_mode_CMDhandler(phase, duration)
 	end
 end
 
-function update_new_crzalt()
-	print("doing set new cruise to "..B747BR_cruiseAlt)
-	if simDR_autopilot_alt_hold_status==2 and B747DR_ap_vnav_state>1 then
-		B747DR_mcp_hold = 0
-		simDR_autopilot_alt_hold_status=0
-		if B747DR_autopilot_altitude_ft > simDR_pressureAlt1 then
-			B747DR_ap_flightPhase = 1
-		else
-			B747DR_ap_flightPhase = 3
-		end
-		B747DR_mcp_hold_pressed = simDRTime
-		setVNAVState("vnavcalcwithTargetAlt", 0)
-		if getVNAVState("manualVNAVspd") == 0 then
-			setVNAVState("gotVNAVSpeed", false)
-			B747_vnav_speed()
-		end
-
-		if B747DR_ap_vnav_state == 2 then
-			B747DR_ap_vnav_state = 3 --resume
-		end
-		if B747BR_totalDistance - B747BR_tod <= 50 then
-			B747DR_ap_inVNAVdescent = 1
-			B747DR_ap_flightPhase = 3
-			setDescent(true)
-			print("Begin descent 1")
-			getDescentTarget()
-		end
-	end
-end
-
+-- the MCP altitude selector's push (6-1/6-2 step 9d1; FCOM p.649): counted
+-- for the FMC (laminar/B747/autopilot/alt_sel_pushes: the next constraint
+-- between the airplane and the MCP altitude deleted, CRZ ALT reset in the
+-- climb and the cruise) and the AFDS (VNAV ALT continued: afds_vnav_level).
+-- Before, the old VNAV's: CRZ ALT from the MCP above it, its resume
 function B747_ap_switch_vnavalt_mode_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747CMD_fdr_log_altmod:once()
 		B747DR_ap_lastCommand = simDRTime
-		print("vnav alt button")
-
 		if B747_ap_button_switch_position_target[16] == 1 then
 			B747_ap_button_switch_position_target[16] = 0
 			return
 		end
-
 		B747_ap_button_switch_position_target[16] = 1 -- SET THE ALT KNOB ANIMATION TO "IN"
-
-		if B747DR_autopilot_altitude_ft > B747BR_cruiseAlt then
-			B747BR_cruiseAlt = B747DR_autopilot_altitude_ft
-			print("set new cruise to "..B747BR_cruiseAlt)
-			if is_timer_scheduled(update_new_crzalt) then
-				stop_timer(update_new_crzalt)
-			end
-			run_after_time(update_new_crzalt, 2.0)
-			B747DR_mcp_hold_pressed = simDRTime
-			return
-		end
-
-		if simDR_autopilot_alt_hold_status==2 and B747DR_ap_vnav_state>1 then
-			simDR_autopilot_altitude_ft=B747DR_autopilot_altitude_ft
-
-			if B747DR_autopilot_altitude_ft > simDR_pressureAlt1 then
-
-				B747DR_ap_flightPhase = 1
-			else
-				B747DR_ap_flightPhase = 3
-			end
-			B747DR_mcp_hold = 0
-			simDR_autopilot_alt_hold_status=0
-			B747DR_mcp_hold_pressed = simDRTime
-			setVNAVState("vnavcalcwithTargetAlt", 0)
-			if getVNAVState("manualVNAVspd") == 0 then
-				setVNAVState("gotVNAVSpeed", false)
-				B747_vnav_speed()
-			end
-
-			if B747DR_ap_vnav_state == 2 then
-				B747DR_ap_vnav_state = 3 --resume
-			end
-			if B747BR_totalDistance - B747BR_tod <= 50 then
-				B747DR_ap_inVNAVdescent = 1
-				B747DR_ap_flightPhase = 3
-				setDescent(true)
-				print("Begin descent 2")
-				getDescentTarget()
-			end
-		end
+		B747DR_ap_alt_sel_pushes = B747DR_ap_alt_sel_pushes + 1
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[16] = 0 -- SET THE ALT KNOB ANIMATION TO "OUT"
 	end

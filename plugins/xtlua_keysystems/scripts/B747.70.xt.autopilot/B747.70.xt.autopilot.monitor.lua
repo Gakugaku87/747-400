@@ -468,10 +468,9 @@ function VNAV_modeSwitch(fmsO)
     -- VNAV engaged: the FMC's VNAV flies it (6-1/6-2 step 9c;
     -- B747.70.xt.autopilot.lua's afds_pitch_inputs, afds_fmc_vnav), the old
     -- VNAV's climb, cruise and descent below (VNAV_CLB, VNAV_CRZ, VNAV_DES)
-    -- no longer run; the old RESET MCP ALT kept until step 9d. Armed, as
+    -- no longer run (RESET MCP ALT is the FMC's from step 9d1). Armed, as
     -- off (the old VNAV engaged itself from its arm)
     if B747DR_ap_vnav_state >= 2 then
-        if B747DR_ap_flightPhase >= 2 then checkMCPAlt(B747BR_totalDistance-B747BR_tod) end
         return
     end
     if B747DR_ap_vnav_state <= 1 then

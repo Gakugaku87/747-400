@@ -1207,6 +1207,7 @@ B747DR_fms_vnav_path_dev = find_dataref("laminar/B747/fms/vnav/path_dev")
 B747DR_fms_vnav_at = find_dataref("laminar/B747/fms/vnav/at")
 B747DR_fms_vnav_perf = find_dataref("laminar/B747/fms/vnav/perf")
 B747DR_fms_vnav_dist = find_dataref("laminar/B747/fms/vnav/dist")
+B747DR_fms_alt_sel_pushes = find_dataref("laminar/B747/autopilot/alt_sel_pushes")
 B747DR_fms_vnav_mcp_alt = find_dataref("laminar/B747/autopilot/heading/altitude_dial_ft")
 B747DR_fms_vnav_vmax = find_dataref("laminar/B747/airspeed/Vmax")
 B747DR_fms_vnav_vminm = find_dataref("laminar/B747/airspeed/Vminm")
@@ -1237,6 +1238,9 @@ function vnav_geo_set(s, r)
     clbLast = 0
     for i = 1, #s.legs do if lx[i] <= half then clbLast = i end end
   end
+  -- (step 9d1) the climb's last point, for the altitude selector's push
+  g.clb_end = clbLast > 0 and s.legs[clbLast] and s.legs[clbLast].p1 or nil
+  g.clb_none = clbLast == 0
   for i, l in ipairs(s.legs) do
     local c = l.con
     if c and (not s.ed or i < s.ed) then
@@ -1278,8 +1282,47 @@ function vnav_geo_set(s, r)
   end
   vnavGeo = g
 end
+-- the MCP altitude selector's push (step 9d1; FCOM p.649): in the climb or
+-- the descent the next altitude constraint between the airplane and the
+-- MCP altitude deleted from the active route; without one, in the climb
+-- with the MCP above CRZ ALT, or in the cruise above it, CRZ ALT the MCP
+-- altitude (the cruise's lower one: step 9d2)
+local vnavPushSeen = nil
+function B747_fms_alt_sel_push()
+  local st = B747_fmc_route
+  local alt, mcp, ph = simDR_pressureAlt1, B747DR_fms_vnav_mcp_alt, vnavState.phase
+  if st.active and ph ~= "CRZ" then
+    local up = mcp > alt
+    -- the climb's legs (to the predictions' climb's last point) in the
+    -- climb, the others in the descent
+    local g = vnavGeo
+    local inClimb = not (g and g.clb_none)
+    for i, l in ipairs(st.rte.legs) do
+      local clb = inClimb
+      if g and g.clb_end and l.fix == g.clb_end then inClimb = false end
+      if l.alt and not l.altterm and (not g or clb == (ph == "CLB")) then
+        local lo, hi = l.alt, l.alt
+        if l.akind == "AB" then lo, hi = math.min(l.alt, l.alt2 or l.alt), math.max(l.alt, l.alt2 or l.alt) end
+        local a = up and hi or lo
+        if (up and a > alt and a < mcp) or (not up and a < alt and a > mcp) then
+          B747_route_model.delete_alt_active(st, i)
+          B747_fmc_route_changed()
+          return
+        end
+      end
+    end
+  end
+  local crz = B747BR_cruiseAlt
+  if crz and crz > 0 and (ph == "CLB" or ph == "CRZ") and mcp > crz + 50 then
+    B747BR_cruiseAlt = mcp
+    B747_fms_preds_now()
+  end
+end
 local function update_vnav()
   local inp, g = vnavIn, vnavGeo
+  local pushes = B747DR_fms_alt_sel_pushes
+  if vnavPushSeen ~= nil and pushes ~= vnavPushSeen then B747_fms_alt_sel_push() end
+  vnavPushSeen = pushes
   local perf = B747_fms_perf()
   inp.alt = simDR_pressureAlt1
   inp.vs = simDR_vvi_fpm_pilot
@@ -1338,6 +1381,18 @@ local function update_vnav()
   B747DR_fms_vnav_path_dev = out.path_dev or 0
   B747DR_fms_vnav_at = out.at or 0
   B747DR_fms_vnav_dist = inp.d_ed or 0
+  -- RESET MCP ALT (step 9d1; FCOM p.665, p.1433: flag 33, DRindex 32 + 1;
+  -- before, the old VNAV's T/D): VNAV in the cruise within two minutes of
+  -- the T/D (where the path reaches CRZ ALT) or past it with the MCP
+  -- altitude not below CRZ ALT (past it: estimate)
+  local reset = 0
+  if B747DR_ap_vnav_state == 2 and out.phase == "CRZ" and inp.path and inp.d_ed and inp.crz_alt
+      and inp.gs > 100 and inp.mcp_alt >= inp.crz_alt - 50 then
+    local etd = B747_vnav_model.path_e_at(inp.path, inp.crz_alt)
+    local min = etd and (inp.d_ed - etd) / inp.gs * 60
+    if min and min <= 2 then reset = 1 end
+  end
+  if B747DR_fmc_notifications[33] ~= reset then B747DR_fmc_notifications[33] = reset end
   -- (step 9c) PERF INIT's gross weight and cost index, and CRZ ALT, entered
   local perfIn = inp.kg and inp.crz_alt and tonumber(fmsModules["data"].costindex)
   B747DR_fms_vnav_perf = perfIn and 1 or 0
