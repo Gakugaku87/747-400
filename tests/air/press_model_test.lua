@@ -58,7 +58,7 @@ T.near(C.ft_of_p(C.p_of_ft(41000)), 41000, 0.5, "atmosphere: the inverse above t
 T.near(C.ft_of_p(C.p_of_ft(-1000)), -1000, 0.5, "atmosphere: the inverse below sea level")
 
 -- ======== a flight with FMC data: RJAA (135 ft) to a field at 1,000 ft, FL370
-local f = flight(135, {fmc_crz_ft = 37000, fmc_dep_ft = 135, fmc_dest_ft = 1000, from_dep_nm = 0, to_dest_nm = 3000})
+local f = flight(135, {fmc_crz_ft = 37000, fmc_ldg_ft = 135})
 local out = f:run(30, 0, true)
 T.equal(out.mode, C.GROUND, "ground: ground mode")
 T.check(out.valve[1] == 1 and out.valve[2] == 1, "ground: outflow valves fully open (ATA21 p.412)")
@@ -82,6 +82,7 @@ out = f:run(15, 0, true)
 out = f:to(10000, 2500)
 T.equal(out.mode, C.CLIMB, "airborne: climb mode")
 out = f:to(37000, 2000)
+f.inp.fmc_ldg_ft = 1000     -- past the T/C the FMC sends the destination (its switch: FCOM p.1400)
 T.check(f.worst.climb <= 600.5, "FMC climb: the cabin climbs 600 sea-level fpm at most (ATA21 p.428): " .. f.worst.climb)
 T.check(f.worst.dp <= 8.9, "FMC climb: ΔP 8.9 at most: " .. f.worst.dp)
 out = f:run(5, 0, false)
@@ -90,7 +91,7 @@ T.near(out.dp, C.CRUISE_DP, 0.03, "cruise: ΔP 8.8 (estimate: FCOM p.585's examp
 T.check(out.cabin_ft > 5400 and out.cabin_ft < 5900, "cruise at FL370: the cabin about 5,600 ft: " .. out.cabin_ft)
 T.check(out.cruise_clamp, "cruise above 25,000 ft: the ECS card's cruise clamp (ATA21 p.382)")
 T.check(out.valve[1] > 0 and out.valve[1] < 0.15, "cruise: the valves nearly closed")
-T.equal(out.ldg_ft, 1000, "after T/C the FMC sends the destination (FCOM p.1400)")
+T.equal(out.ldg_ft, 1000, "the FMC's destination value")
 out = f:run(60, 0, false)
 local held = out.cabin_ft
 out = f:run(600, 0, false)
@@ -148,9 +149,9 @@ T.check(f.worst.descent <= C.DESCENT_INT_FPM + 0.5 and f.worst.descent > 250, "i
 
 -- ======== the landing altitude: MAN from the knob, 50 ft steps, -1,000 to
 -- 14,000 ft, from the AUTO value (estimate) (FCOM p.573, p.608)
-f = flight(0, {fmc_dest_ft = 1234})
+f = flight(0, {fmc_ldg_ft = 1234})
 out = f:run(1, 0, true)
-T.equal(out.ldg_ft, 1234, "AUTO: the FMC's value (no departure: the destination)")
+T.equal(out.ldg_ft, 1234, "AUTO: the FMC's value")
 f.inp.ldg_auto = false
 out = f:run(DT, 0, true)
 T.equal(out.ldg_ft, 1250, "MAN: starts from the AUTO value, on a 50 ft step")
@@ -169,16 +170,8 @@ f.inp.ldg_steps, f.inp.ldg_auto = 0, true
 out = f:run(DT, 0, true)
 T.equal(out.ldg_ft, 1234, "AUTO again: the FMC's value")
 
--- the FMC switches to the destination 400 NM out or half way
-f = flight(0, {fmc_dep_ft = 100, fmc_dest_ft = 5000, from_dep_nm = 399, to_dest_nm = 900})
-out = f:run(DT, 0, true)
-T.equal(out.ldg_ft, 100, "399 NM out: the departure field")
-f.inp.from_dep_nm = 401
-out = f:run(DT, 0, true)
-T.equal(out.ldg_ft, 5000, "401 NM out: the destination (FCOM p.1400)")
-f.inp.from_dep_nm, f.inp.to_dest_nm = 200, 150
-out = f:run(DT, 0, true)
-T.equal(out.ldg_ft, 5000, "past half way: the destination")
+-- (the FMC's switch from the departure to the destination: tests/fms/
+-- ldgalt_model_test.lua)
 
 -- ======== controllers: DC bus 1 lost for 2 s hands over to B; both lost:
 -- CABIN ALT AUTO; power back on both: A (ATA21 p.426, p.436-437; FCOM p.619)

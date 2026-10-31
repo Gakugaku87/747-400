@@ -1,0 +1,62 @@
+{
+  "name": "s166_ldg_alt_dest",
+  "description": "6-1/6-2 段 11b（FMC から与圧系への着陸高度）の X-Plane での確認、到着側。空中、RJAA の西南西 40 NM の FL150（RJBB から 220 NM：経路の半分を過ぎた所。機体を読み直す）。経路なしでは与圧系は 2,000 ft と LANDING ALT（FCOM p.608）。RJBB→RJAA を ACTIVATE・EXEC すると切替点の後なので目的地空港の標高 135 ft（FCOM p.1400）、ARRIVALS で ILS34L を入れて EXEC すると滑走路の閾値の標高 139 ft。与圧系の着陸高度も同じ。ECS の synoptic で EICAS の data block を出して撮る。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.55, "longitude": 139.6, "elevation_in_meters": 4572, "heading_true": 70, "speed_in_meters_per_second": 150 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れを待つ" },
+    { "do": "wait", "note": "FMS の空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 30 },
+    { "do": "sleep", "seconds": 5, "note": "初期化の残りを待つ" },
+    { "do": "record_start" },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
+    { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
+    { "do": "sleep", "seconds": 2 },
+
+    { "do": "mark", "note": "経路なし" },
+    { "do": "check", "note": "FMC の着陸高度なし", "dref": "laminar/B747/fms/landing_alt_valid", "op": "==", "value": 0 },
+    { "do": "check", "note": "与圧系は 2,000 ft（FCOM p.608）", "dref": "laminar/B747/air/landing_altitude", "op": "==", "value": 2000 },
+    { "do": "check", "note": "LANDING ALT（advisory 240）", "dref": "laminar/B747/CAS/advisory_status[240]", "op": "==", "value": 1 },
+
+    { "do": "mark", "note": "RJBB→RJAA、進入なし" },
+    { "do": "cdu", "note": "RTE：RJBB→RJAA、ACTIVATE、EXEC", "keys": ["RTE", "RJBB", "L1", "RJAA", "R1", "R6", "EXEC"] },
+    { "do": "wait", "note": "FMC の着陸高度", "dref": "laminar/B747/fms/landing_alt_valid", "op": "==", "value": 1, "timeout": 5 },
+    { "do": "check", "note": "半分を過ぎているので目的地空港の標高 135 ft（FCOM p.1400）", "dref": "laminar/B747/fms/landing_alt", "op": "==", "value": 135 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "与圧系も 135 ft", "dref": "laminar/B747/air/landing_altitude", "op": "==", "value": 135 },
+    { "do": "check", "note": "LANDING ALT は消える", "dref": "laminar/B747/CAS/advisory_status[240]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "ARRIVALS で ILS34L" },
+    { "do": "cdu", "note": "CLR（書き込み行のメッセージを消す）、DEP ARR（空中の有効な経路：ARRIVALS）", "keys": ["CLR", "CLR", "CLR", "DEPARR"] },
+    { "do": "check", "note": "RJAA ARRIVALS", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "RJAA ARRIVALS" },
+    { "do": "cdu", "note": "NEXT（進入の 6〜10 番目）", "keys": ["NEXT"] },
+    { "do": "check", "note": "3R が ILS34L", "dref": "laminar/B747/fms3/Line07_L", "op": "contains", "value": "ILS34L" },
+    { "do": "cdu", "note": "ILS34L（R3）、EXEC", "keys": ["R3", "EXEC"] },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "34L の閾値の標高 139 ft（CIFP）", "dref": "laminar/B747/fms/landing_alt", "op": "==", "value": 139 },
+    { "do": "check", "note": "与圧系も 139 ft", "dref": "laminar/B747/air/landing_altitude", "op": "==", "value": 139 },
+    { "do": "cmd", "note": "ECS の synoptic（EICAS の data block も出る）", "name": "laminar/B747/dsp/ecs_switch", "duration": 0.2 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "data block が出る", "dref": "laminar/B747/air/pressurization/EICAS1_display_status", "op": "==", "value": 1 },
+    { "do": "view", "name": "eicas" },
+    { "do": "shot", "name": "eicas_ldg_alt_139" },
+    { "do": "cmd", "note": "ECS の synoptic を消す", "name": "laminar/B747/dsp/ecs_switch", "duration": 0.2 },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" },
+    { "do": "record_stop" }
+  ]
+}

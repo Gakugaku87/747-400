@@ -2835,6 +2835,57 @@ function update_tuning()
 end
 -- an entry's tuning at once
 function B747_fms_tune_now() tuneT=nil update_tuning() end
+-- (6-1/6-2 step 11b; notes/ATA-34-61-FMC.md §91) the landing altitude for
+-- the cabin pressure controllers (B747.68.ldgalt_model.lua; FCOM p.1400,
+-- p.993; ATA34_2 p.477): the active route's, once a second, into
+-- laminar/B747/fms/landing_alt (ft) and landing_alt_valid (1 with one);
+-- the pressurization (B747.55.xt.press.lua) reads them. The departure
+-- runway's or the origin's elevation, from the arrivals page's switch point
+-- the active approach's runway threshold or the destination's (the
+-- runways' from the CIFP, the airports' from earth_aptmeta.dat). Before,
+-- the pressurization took the route's airports from laminar/B747/fms/data
+-- and their elevations, and switched at its own cruise.
+dofile("B747.68.ldgalt_model.lua")
+local LA=B747_ldgalt_model
+local ldgState=LA.new()
+local ldgIn={}
+local ldgT=nil
+B747DR_fms_landing_alt=find_dataref("laminar/B747/fms/landing_alt")
+B747DR_fms_landing_alt_valid=find_dataref("laminar/B747/fms/landing_alt_valid")
+local function rwy_ft(icao,id)
+  if not (icao and id) then return nil end
+  local c=B747_navdb.cifp(B747_fmc_navdb,icao)
+  local rw=c and c.runways[id]
+  return rw and rw.elev or nil
+end
+function update_ldgalt()
+  local now=simDRTime
+  if ldgT and now>=ldgT and now-ldgT<1 then return end
+  ldgT=now
+  local st=B747_fmc_route
+  local r=st.active and st.rte or nil
+  local ft=nil
+  if r then
+    local N=B747_navdb
+    local inp=ldgIn
+    local o,d=r.origin,r.dest
+    local lat,lon=simDR_latitude,simDR_longitude
+    inp.origin_ft=o and o.elev or nil
+    inp.dep_rwy_ft=o and r.runway and r.runway.elev or nil
+    inp.dest_ft=d and d.elev or nil
+    inp.appr_rwy_ft=d and r.appr and rwy_ft(d.ident,r.appr.rwy) or nil
+    inp.from_nm=o and o.lat and N.distance(o.lat,o.lon,lat,lon) or nil
+    inp.to_nm=d and d.lat and N.distance(lat,lon,d.lat,d.lon) or nil
+    inp.phase=vnavState.phase
+    inp.td_nm=B747_fms_vnav_td()
+    inp.gs_kt=simDR_groundspeed*1.94384
+    inp.air=simDR_onGround==0
+    ft=LA.update(ldgState,inp)
+  end
+  local valid=ft and 1 or 0
+  if B747DR_fms_landing_alt_valid~=valid then B747DR_fms_landing_alt_valid=valid end
+  if ft and B747DR_fms_landing_alt~=ft then B747DR_fms_landing_alt=ft end
+end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after
 -- a flight (all four's N2 under the ENG FAIL speed: laminar/B747/engines/
@@ -2867,6 +2918,7 @@ function B747_fms_flight_complete()
   renew(rtaState,B747_rta_model.new())
   renew(eoState,B747_eo_model.new())
   renew(thrlimState,B747_thrlim_model.new())
+  renew(ldgState,LA.new())
   local inh=B747_fmc_nav_inhibits and B747_fmc_nav_inhibits()
   if inh then inh.navaid,inh.vor,inh.vordme={},{},false end
   navperfState.gps_inhibit,navperfState.rnp_man=false,nil
@@ -3287,6 +3339,7 @@ end
 function do_flight_start()
 	B747DR_last_waypoint_fuel=simDR_fueL_tank_weight_total_kg
 	systemsWarmedUp=false
+	renew(ldgState,LA.new())
 	local difLat=simDR_latitude
   	local difLon=simDR_longitude
   if simDR_startup_running == 0 then
@@ -3441,6 +3494,7 @@ function after_physics()
     update_takeoff()
     update_flight_complete()
     update_fuel()
+    update_ldgalt()
     B747_fmc_lnav_update()
     B747_fmc_route_sync()
     B747_fmc_plan_ctr_sync()

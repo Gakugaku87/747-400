@@ -44,7 +44,6 @@ M.HOLD_EXIT_FT = 500            -- and out of it 500 ft away (ATA21 p.387, p.431
 M.LANDED_FPM, M.LANDED_S, M.LANDED_FAST_FPM = 500, 60, 2000   -- after touchdown (FCOM p.608; ATA21 p.432)
 M.LDG_MIN_FT, M.LDG_MAX_FT, M.LDG_STEP_FT = -1000, 14000, 50   -- LDG ALT knob (FCOM p.573, p.608)
 M.LDG_DEFAULT_FT = 2000         -- AUTO without an FMC landing altitude (FCOM p.608)
-M.FMC_SWITCH_NM = 400           -- the FMC sends the destination after 400 NM, half way, T/C or T/D (FCOM p.1400)
 M.CLAMP_FT = 25000              -- the cruise clamp for the packs only above 25,000 ft (ATA21 p.382)
 M.TRANSFER_FPM, M.TRANSFER_DP = 2000, 9.07  -- the other controller takes over (ATA21 p.436),
 M.POWER_LOSS_S = 2              -- or after 2 s without power
@@ -136,10 +135,8 @@ function M.inputs()
         baro_inhg = 29.92,              -- the captain's altimeter setting (FCOM p.608)
         -- the FMC (nil: none)
         fmc_crz_ft = nil,               -- cruise altitude
-        fmc_dep_ft = nil,               -- departure and destination field elevations
-        fmc_dest_ft = nil,
-        from_dep_nm = 0,                -- distance flown from the departure and left to the destination
-        to_dest_nm = 0,
+        fmc_ldg_ft = nil,               -- landing altitude: the departure's, then the destination's
+                                        -- (the FMC's switch: FCOM p.1400, p.993)
         -- CABIN ALTITUDE panel (M181)
         ldg_auto = true,                -- LDG ALT AUTO (false: MAN)
         ldg_steps = 0,                  -- LDG ALT knob steps (50 ft) turned since the last frame
@@ -168,7 +165,7 @@ function M.new()
         -- the schedule's anchors
         p_start = P0, p_cab_start = P0, crz_ft = M.INT_CRUISE_FT, use_fmc = false, max_alt = 0,
         p_hold = P0, crz_ref = 0, p_des = P0, p_cab_des = P0, dp_des = 0, min_alt = 0,
-        level_t = 0, hold = false, hold_alt = 0, hold_t = 0, landed_t = 0, reached_cruise = false,
+        level_t = 0, hold = false, hold_alt = 0, hold_t = 0, landed_t = 0,
         limiter = false, clamp = false, ldg_man = M.LDG_DEFAULT_FT, was_auto = true, last_gs = 0,
         air_start = false}
     s.out = {p_cab = P0, cabin_ft = 0, rate_fpm = 0, dp = 0, valve = {1, 1}, mode = M.GROUND,
@@ -177,20 +174,6 @@ function M.new()
         cabin_alert = false, auto_alert = false, outflow_alert = {false, false},
         ldg_alert = false, relief_alert = false, cpc_alert = {false, false}}
     return s
-end
-
--- the FMC's landing altitude: the departure field until 400 NM from it, half
--- way, T/C (the cruise reached) or T/D (the descent), then the destination
--- (FCOM p.1400, p.993). No approach is selected in this FMC, so the
--- destination is its field elevation.
-local function fmc_landing(s, inp)
-    if inp.fmc_dest_ft == nil then return inp.fmc_dep_ft end
-    if inp.fmc_dep_ft == nil then return inp.fmc_dest_ft end
-    if inp.from_dep_nm > M.FMC_SWITCH_NM or inp.from_dep_nm > inp.to_dest_nm
-        or s.reached_cruise or s.mode == M.DESCENT then
-        return inp.fmc_dest_ft
-    end
-    return inp.fmc_dep_ft
 end
 
 -- the cabin pressure of the cruise: the schedule's ΔP at the cruise
@@ -228,7 +211,7 @@ function M.update(s, inp, dt)
     -- ======== landing altitude: AUTO from the FMC (2,000 ft without it),
     -- MAN from the knob in 50 ft steps; the knob starts from the AUTO value
     -- (estimate) (FCOM p.573, p.608)
-    local fmc_ldg = fmc_landing(s, inp)
+    local fmc_ldg = inp.fmc_ldg_ft
     if inp.ldg_auto then
         s.was_auto = true
         if fmc_ldg ~= nil then out.ldg_ft = fmc_ldg else out.ldg_ft = M.LDG_DEFAULT_FT end
@@ -277,11 +260,11 @@ function M.update(s, inp, dt)
     end
     if s.first then
         if inp.agl_ft < M.INIT_AGL_FT then
-            s.p_cab, s.mode, s.reached_cruise, s.clamp, s.air_start = pa, M.GROUND, false, false, false
+            s.p_cab, s.mode, s.clamp, s.air_start = pa, M.GROUND, false, false
         else
             -- a flight started in the air: the cabin as in cruise here (estimate)
             s.p_cab = math.min(cruise_cabin(alt, p_land), pa + M.CRUISE_DP)
-            s.mode, s.crz_ref, s.p_hold, s.reached_cruise = M.CRUISE, alt, s.p_cab, true
+            s.mode, s.crz_ref, s.p_hold = M.CRUISE, alt, s.p_cab
             s.clamp, s.air_start = alt > M.CLAMP_FT, true
         end
     end
@@ -305,14 +288,13 @@ function M.update(s, inp, dt)
         s.clamp = false
     else
         if was == M.GROUND or was == M.TAKEOFF or was == M.LANDED then
-            s.reached_cruise = false
             enter_climb()
         elseif was == M.CLIMB then
             s.max_alt = math.max(s.max_alt, alt)
             local level = (s.use_fmc and math.abs(alt - s.crz_ft) < M.CRUISE_BAND_FT)
                 or (not s.use_fmc and s.level_t >= M.LEVEL_S)
             if level then
-                s.mode, s.crz_ref, s.p_hold, s.reached_cruise = M.CRUISE, alt, s.p_cab, true
+                s.mode, s.crz_ref, s.p_hold = M.CRUISE, alt, s.p_cab
             elseif alt < s.max_alt - M.DESCENT_FT then
                 enter_descent()     -- a descent before the cruise (estimate)
             end

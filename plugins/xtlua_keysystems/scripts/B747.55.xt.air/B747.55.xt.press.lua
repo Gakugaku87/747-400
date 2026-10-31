@@ -1,8 +1,9 @@
 -- The pressurization model (B747.55.press_model.lua) in the aircraft: reads
 -- the outside pressure, the pressure altitude, the vertical and ground
 -- speeds, the air/ground relays, the captain's altimeter setting, the FMC's
--- cruise altitude and route (the field elevations from X-Plane's
--- earth_aptmeta.dat), the CABIN ALTITUDE panel, the buses, the packs' air
+-- cruise altitude and landing altitude (laminar/B747/fms/landing_alt: the
+-- departure's or the destination's, the FMC's choice: B747.68.xt.fms.lua),
+-- the CABIN ALTITUDE panel, the buses, the packs' air
 -- X-Plane's decompression failures and the controllers' failures
 -- (air/fail/cpc: X-Plane has none); writes X-Plane's cabin altitude,
 -- rate, differential pressure and outflow valve (the init script takes
@@ -25,12 +26,11 @@ simDR_press_pressure_alt        = find_dataref("sim/flightmodel2/position/pressu
 simDR_press_groundspeed         = find_dataref("sim/flightmodel/position/groundspeed")
 simDR_press_agl                 = find_dataref("sim/flightmodel/position/y_agl")
 simDR_press_baro_setting        = find_dataref("sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot")
-simDR_press_latitude            = find_dataref("sim/flightmodel/position/latitude")
-simDR_press_longitude           = find_dataref("sim/flightmodel/position/longitude")
 simDR_press_depres_slow         = find_dataref("sim/operation/failures/rel_depres_slow")
 simDR_press_depres_fast         = find_dataref("sim/operation/failures/rel_depres_fast")
 B747DR_press_fmc_crz            = find_dataref("laminar/B747/autopilot/dist/cruise_alt")
-B747DR_press_fms_data           = find_dataref("laminar/B747/fms/data")     -- the FMC's route, JSON
+B747DR_press_fmc_ldg            = find_dataref("laminar/B747/fms/landing_alt")        -- ft
+B747DR_press_fmc_ldg_valid      = find_dataref("laminar/B747/fms/landing_alt_valid")  -- 1: the FMC has one
 B747DR_press_bat_main           = find_dataref("laminar/B747/electrical/bus/bat_main")
 B747DR_press_hot_bat_apu        = find_dataref("laminar/B747/electrical/bus/hot_bat_apu")
 B747DR_press_mode               = find_dataref("laminar/B747/air/press/mode")
@@ -55,47 +55,11 @@ local STATUS_AIR_GND = 35           -- CPCS AIR/GND
 local KT_PER_MS = 1.943844
 local SYN_ENG, SYN_ECS = 1, 5       -- dsp/synoptic_display
 
--- X-Plane's airport list: field elevation (ft) and position
-local APTMETA = B747_AIR_APTMETA or {"Custom Data/earth_aptmeta.dat", "Resources/default data/earth_aptmeta.dat"}
-local airports = {}                 -- ICAO -> {lat, lon, elev}, or false when not found
-
-local function airport(icao)
-    if icao == nil or #icao < 3 then return nil end
-    local a = airports[icao]
-    if a ~= nil then return a or nil end
-    airports[icao] = false
-    for _, path in ipairs(APTMETA) do
-        local f = io.open(path, "r")
-        if f then
-            for line in f:lines() do
-                if line:sub(1, 6):find(icao, 1, true) then
-                    local id, lat, lon, elev = line:match("^%s*(%S+)%s+%S+%s+(%-?[%d%.]+)%s+(%-?[%d%.]+)%s+(%-?%d+)")
-                    if id == icao then
-                        airports[icao] = {lat = tonumber(lat), lon = tonumber(lon), elev = tonumber(elev)}
-                        break
-                    end
-                end
-            end
-            f:close()
-            if airports[icao] then break end
-        end
-    end
-    return airports[icao] or nil
-end
-
-local function nm(lat1, lon1, lat2, lon2)
-    local r = math.pi / 180
-    local a = math.sin((lat2 - lat1) * r / 2) ^ 2
-        + math.cos(lat1 * r) * math.cos(lat2 * r) * math.sin((lon2 - lon1) * r / 2) ^ 2
-    return 2 * 3440.065 * math.asin(math.min(1, math.sqrt(a)))
-end
-
 local press_state = C.new()
 local press_inputs = C.inputs()
 -- for the equipment cooling glue (ΔP): kept as the table itself (a
 -- metatable; B747.55.xt.packs.lua)
 B747_press_out = setmetatable(press_state.out, {})
-local fms_str, fms_dep, fms_dest = nil, nil, nil
 local knob_last = nil
 
 local function flag(v)
@@ -105,15 +69,6 @@ end
 
 local function put(dref, i, v)
     if dref[i] ~= v then dref[i] = v end
-end
-
--- the departure and destination from the FMC's route (fltdep, fltdst)
-local function read_fms()
-    local str = B747DR_press_fms_data
-    if str == fms_str then return end
-    fms_str = str
-    fms_dep = airport(str:match('"fltdep"%s*:%s*"(%w+)"'))
-    fms_dest = airport(str:match('"fltdst"%s*:%s*"(%w+)"'))
 end
 
 function B747_press_flight_start()
@@ -132,19 +87,9 @@ function B747_press()
     inp.agl_ft = simDR_press_agl * 3.28084
     inp.baro_inhg = simDR_press_baro_setting
 
-    -- the FMC
-    read_fms()
+    -- the FMC: the cruise altitude and the landing altitude
     if B747DR_press_fmc_crz > 0 then inp.fmc_crz_ft = B747DR_press_fmc_crz else inp.fmc_crz_ft = nil end
-    local lat, lon = simDR_press_latitude, simDR_press_longitude
-    inp.fmc_dep_ft, inp.fmc_dest_ft = nil, nil
-    if fms_dep then
-        inp.fmc_dep_ft = fms_dep.elev
-        inp.from_dep_nm = nm(fms_dep.lat, fms_dep.lon, lat, lon)
-    end
-    if fms_dest then
-        inp.fmc_dest_ft = fms_dest.elev
-        inp.to_dest_nm = nm(lat, lon, fms_dest.lat, fms_dest.lon)
-    end
+    if B747DR_press_fmc_ldg_valid == 1 then inp.fmc_ldg_ft = B747DR_press_fmc_ldg else inp.fmc_ldg_ft = nil end
 
     -- CABIN ALTITUDE panel. The LDG ALT knob turns 1 degree for each step
     -- of its dataref; a step is 50 ft. It is moved back by whole turns

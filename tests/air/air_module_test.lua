@@ -12,7 +12,6 @@ local T = dofile("tests/lib/check.lua")("air_module")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
 -- made-up airports for the FMC's route (the module reads X-Plane's list)
-B747_AIR_APTMETA = {"tests/air/data/aptmeta_test.dat"}
 
 local rt = xtlua.new()
 local air = rt:load("plugins/xtlua_keysystems/scripts/B747.55.xt.air/B747.55.xt.air.lua")
@@ -115,22 +114,23 @@ rt:set(AIR .. "equip_cooling/sel_dial_pos", 1)
 frames(1)
 T.equal(get("laminar/B747/CAS/caution_status", 27), 0, "NORM again: no EQUIP COOLING")
 
--- the landing altitude: no FMC route, 2,000 AUTO and LANDING ALT; the FMC's
--- departure field (FCOM p.608, p.1400)
-T.equal(get(AIR .. "landing_altitude"), 2000, "no FMC route: 2,000 ft")
-T.equal(get(ADVISORY, 240), 1, "no FMC route: LANDING ALT")
+-- the landing altitude: without the FMC's, 2,000 AUTO and LANDING ALT; the
+-- FMC's (laminar/B747/fms/landing_alt with landing_alt_valid: the
+-- departure's, then the destination's, its choice) (FCOM p.608, p.1400)
+T.equal(get(AIR .. "landing_altitude"), 2000, "no FMC landing altitude: 2,000 ft")
+T.equal(get(ADVISORY, 240), 1, "no FMC landing altitude: LANDING ALT")
 T.equal(get(AIR .. "pressurization/EICAS1_display_status"), 1, "LANDING ALT: the ECS data block (ATA21 p.451)")
-rt:set("sim/flightmodel/position/latitude", 35.0)
-rt:set("sim/flightmodel/position/longitude", 140.0)
-rt:set("laminar/B747/fms/data", '{"fltno":"","fltdep":"ZZZA","fltdst":"ZZB","crzalt":"FL370"}')
+rt:set("laminar/B747/fms/landing_alt", 135)
 frames(0.5)
-T.equal(get(AIR .. "landing_altitude"), 135, "FMC route on the ground: the departure field's elevation")
+T.equal(get(AIR .. "landing_altitude"), 2000, "the FMC's value not valid: still 2,000 ft")
+rt:set("laminar/B747/fms/landing_alt_valid", 1)
+frames(0.5)
+T.equal(get(AIR .. "landing_altitude"), 135, "the FMC's landing altitude (the departure's on the ground)")
 T.equal(get(ADVISORY, 240), 0, "FMC landing altitude: no LANDING ALT")
 T.equal(get(AIR .. "pressurization/EICAS1_display_status"), 0, "nothing to show: no ECS data block")
-rt:set("sim/flightmodel/position/latitude", 37.0)       -- past half way (and the destination's
-rt:set("sim/flightmodel/position/longitude", 141.5)     -- 3-letter ident with a leading space)
+rt:set("laminar/B747/fms/landing_alt", 1234)
 frames(0.2)
-T.equal(get(AIR .. "landing_altitude"), 1234, "past half way: the destination's elevation")
+T.equal(get(AIR .. "landing_altitude"), 1234, "the FMC's switch to the destination: its value")
 
 -- MAN: from the AUTO value in 50 ft steps; the knob's dataref is moved back
 -- by whole turns away from its ends (FCOM p.573)
