@@ -82,7 +82,49 @@ rt:set(ENG .. "ref_thr_limit_mode", "CLB 2")
 frames(0.2)
 T.check(get(ENG .. "display_EPR_ref", 1) < 1.565 and get(ENG .. "display_EPR_ref", 1) > 1.53,
     string.format("CLB 2 at 30,000 ft: a little less, %.3f", get(ENG .. "display_EPR_ref", 1)))
+-- the FMS's mode as a number (the other plugin's string writes do not
+-- reach the EEC: s152, s141): 22 CLB 2, the EEC's text and reference from it
 rt:set(ENG .. "ref_thr_limit_mode", "")
+rt:set("laminar/B747/fms/thrlim/code", 22)
+frames(0.2)
+T.check(get(ENG .. "ref_thr_limit_mode") == "CLB 2" and get(ENG .. "display_EPR_ref", 1) < 1.565,
+    "the number 22: CLB 2 for the EEC, its reference " .. get(ENG .. "display_EPR_ref", 1))
+rt:set("laminar/B747/fms/thrlim/code", 0)
+rt:set(ENG .. "ref_thr_limit_mode", "")
+-- (step 9g4) the target cursor magenta (ATA34_2 p.652): with the A/T arm
+-- switch off; armed, in the climb with VNAV; not without VNAV. In VNAV's
+-- idle descent with anti-ice: magenta at idle, the target bug the
+-- reference still; no 0.90 in a descent's THR REF (ATHR-17)
+local MAG, BUG = ENG .. "display_ref_line_magenta", "sim/cockpit2/engine/actuators/EPR_target_bug"
+rt:set("laminar/B747/antiice/nacelle/valve_pos", 0, 0)
+rt:set("laminar/B747/autothrottle/armed", 0)
+frames(0.2)
+T.equal(get(MAG), 1, "the A/T arm switch off: magenta")
+rt:set("laminar/B747/autothrottle/armed", 1)
+frames(0.2)
+T.equal(get(MAG), 0, "armed, no VNAV: green")
+rt:set("laminar/B747/autopilot/vnav_state", 2)
+rt:set("laminar/B747/fms/vnav/phase", 1)
+frames(0.2)
+T.equal(get(MAG), 1, "VNAV in the climb: magenta")
+rt:set("laminar/B747/fms/vnav/phase", 3)
+rt:set("laminar/B747/fms/vnav/at", 2)
+frames(0.2)
+T.equal(get(MAG), 0, "VNAV's idle descent without anti-ice: green")
+rt:set("laminar/B747/antiice/nacelle/valve_pos", 1, 1)
+frames(0.2)
+T.check(get(MAG) == 1 and get(ENG .. "display_EPR_ref", 1) <= 1.0001 and get(BUG, 1) > 1.4,
+    string.format("with anti-ice: magenta at idle (standing 1.00) %.3f, the bug the reference %.3f", get(ENG .. "display_EPR_ref", 1), get(BUG, 1)))
+rt:set("laminar/B747/antiice/nacelle/valve_pos", 1, 0)
+rt:set("laminar/B747/autopilot/FMA/autothrottle_mode", 5)
+rt:set("laminar/B747/autopilot/flightPhase", 3)
+frames(0.2)
+T.check(get(BUG, 1) > 1.4, string.format("THR REF in a descent: the bug the reference %.3f (before 0.90)", get(BUG, 1)))
+rt:set("laminar/B747/autopilot/FMA/autothrottle_mode", 0)
+rt:set("laminar/B747/autopilot/flightPhase", 0)
+rt:set("laminar/B747/autopilot/vnav_state", 0)
+rt:set("laminar/B747/fms/vnav/phase", 0)
+rt:set("laminar/B747/fms/vnav/at", 0)
 rt:set("laminar/B747/antiice/nacelle/valve_pos", 0, 0)
 
 -- idle: X-Plane's one idle setting is approach idle while any engine selects

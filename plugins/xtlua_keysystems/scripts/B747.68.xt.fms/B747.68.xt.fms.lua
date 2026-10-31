@@ -1695,6 +1695,12 @@ B747DR_fms_thrlim_sel = find_dataref("laminar/B747/fms/thrlim/sel")
 B747DR_fms_thrlim_to_pct = find_dataref("laminar/B747/fms/thrlim/to_pct")
 B747DR_fms_to_reduction = find_dataref("laminar/B747/engines/to_reduction")
 simDR_fms_thrlim_oat = find_dataref("sim/weather/temperature_ambient_c")
+-- (step 9g4) the EICAS's thrust limit line ("D-TO 1 +38C": FCOM p.831)
+B747DR_fms_thrlim_eicas = find_dataref("laminar/B747/fms/thrlim/eicas")
+-- the mode as a number for the EEC (in the other XTLua plugin, which does
+-- not see this one's string writes: s152 and s141's references were TO's)
+B747DR_fms_thrlim_code = find_dataref("laminar/B747/fms/thrlim/code")
+local THRLIM_CODE = {TO = 1, CLB = 2, CRZ = 3, CON = 4, GA = 5}
 local thrlimState = B747_thrlim_model.new()
 local thrlimIn = {}
 local thrlimSeen = {}
@@ -1734,6 +1740,14 @@ local function update_thrlim()
   inp.to_red = math.max(B747_fms_thrlim_pct(thrlimState.to), B747DR_fms_to_reduction)
   local mode = B747_thrlim_model.update(thrlimState, inp)
   if B747DR_fms_thrlim_mode ~= mode then B747DR_fms_thrlim_mode = mode end
+  local s = thrlimState
+  local code = 10 * THRLIM_CODE[s.mode] + ((s.mode == "TO" and s.to) or (s.mode == "CLB" and s.clb) or 0)
+    + ((s.mode == "TO" and s.d) and 100 or 0)
+  if B747DR_fms_thrlim_code ~= code then B747DR_fms_thrlim_code = code end
+  -- (step 9g4) the EICAS's line: with D- the assumed temperature after
+  local eicas = mode
+  if thrlimState.d and sel then eicas = string.format("%s %+dC", mode, math.floor(sel + 0.5)) end
+  if B747DR_fms_thrlim_eicas ~= eicas then B747DR_fms_thrlim_eicas = eicas end
   local selOut = (sel and not thrlimState.no_sel) and sel or -99
   if B747DR_fms_thrlim_sel ~= selOut then B747DR_fms_thrlim_sel = selOut end
   local pct = B747_fms_thrlim_pct(thrlimState.to)

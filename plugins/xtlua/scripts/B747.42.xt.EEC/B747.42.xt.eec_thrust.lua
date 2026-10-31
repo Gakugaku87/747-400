@@ -144,13 +144,33 @@ dofile("B747.42.ref_thrust_model.lua")
 B747DR_eec_thrlim_sel = find_dataref("laminar/B747/fms/thrlim/sel")
 B747DR_eec_thrlim_to_pct = find_dataref("laminar/B747/fms/thrlim/to_pct")
 B747DR_eec_to_reduction = find_dataref("laminar/B747/engines/to_reduction")
+-- the FMS's mode as a number (this plugin does not see the other's string
+-- writes: s152's D-TO and s141's CLB came to the EEC as TO): 10 x TO 1,
+-- CLB 2, CRZ 3, CON 4, GA 5, plus the rating, plus 100 with D-; the mode's
+-- text back, into this plugin's ref_thr_limit_mode too (RR's branches read
+-- it)
+B747DR_eec_thrlim_code = find_dataref("laminar/B747/fms/thrlim/code")
+local THRLIM_BASE = {"TO", "CLB", "CRZ", "CON", "GA"}
+local function thrlim_mode()
+    local c = math.floor(B747DR_eec_thrlim_code + 0.5)
+    local d = c >= 100
+    c = c % 100
+    local base, n = THRLIM_BASE[math.floor(c / 10)], c % 10
+    if not base then return nil end
+    return (d and "D-" or "") .. base .. (n > 0 and (" " .. n) or "")
+end
+function B747_eec_thrlim_mode()
+    local m = thrlim_mode()
+    if m and B747DR_ref_thr_limit_mode ~= m then B747DR_ref_thr_limit_mode = m end
+    return m or B747DR_ref_thr_limit_mode
+end
 local refIn = {}
 function B747_eec_reference(engine)
     local inp = eec_inputs
     refIn.type, refIn.alt, refIn.tat = inp.type, inp.alt, inp.tat
     refIn.packs_on, refIn.wai, refIn.nai = inp.packs_on, inp.wai, inp.nai[engine + 1]
     refIn.mach = simDR_epr_mach
-    refIn.mode = B747DR_ref_thr_limit_mode
+    refIn.mode = B747_eec_thrlim_mode()
     refIn.to_pct = B747DR_eec_thrlim_to_pct
     local sel = B747DR_eec_thrlim_sel
     refIn.sel = sel > -90 and sel or nil
@@ -158,6 +178,27 @@ function B747_eec_reference(engine)
     if engine == 0 and B747DR_eec_to_reduction ~= red then B747DR_eec_to_reduction = red end
     return v
 end
+
+-- (the FMC's step 9g4) the EICAS's target thrust cursor (ATA34_2 p.652):
+-- magenta in the climb with VNAV engaged, in the descent with VNAV at idle
+-- and anti-ice on, and with the A/T arm switch off (the pilots' manual
+-- thrust); green else, at the reference. The second: the cursor at idle
+-- (the descent's target: estimate; the others' targets the reference)
+B747DR_eec_vnav_state = find_dataref("laminar/B747/autopilot/vnav_state")
+B747DR_eec_fvn_phase = find_dataref("laminar/B747/fms/vnav/phase")
+B747DR_eec_fvn_at = find_dataref("laminar/B747/fms/vnav/at")
+B747DR_eec_at_armed = find_dataref("laminar/B747/autothrottle/armed")
+function B747_eec_cursor()
+    local inp = eec_inputs
+    local ai = inp.wai
+    for n = 1, 4 do ai = ai or inp.nai[n] end
+    local vnav = B747DR_eec_vnav_state == 2
+    local idle = vnav and B747DR_eec_fvn_phase == 3 and B747DR_eec_fvn_at == 2 and ai
+    local magenta = (vnav and B747DR_eec_fvn_phase == 1) or idle or B747DR_eec_at_armed == 0
+    return magenta, idle
+end
+-- engine 0-3: its idle command (the lever's idle end)
+function B747_eec_idle(engine) return eec_inputs.idle[engine + 1] end
 
 -- engine 0-3: X-Plane's throttle from the EEC's thrust control (GE and P&W,
 -- forward thrust, engine running); ecc_spd in B747.42.xt.EEC.lua sets it

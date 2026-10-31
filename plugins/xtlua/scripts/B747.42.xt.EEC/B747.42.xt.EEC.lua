@@ -1012,54 +1012,13 @@ function throttle_management()
 	end
 	--print("Flight Phase = ", B747DR_ap_flightPhase)
 
-	--Determine FMA Mode
-	--THR REF Mode
-	if B747DR_ap_autothrottle_armed == 1 and B747DR_ap_FMA_autothrottle_mode == 5
-	and B747DR_ap_flightPhase<2 and EEC_status == 0 then
-		--Take control of the throttles from the user and manage via Thrust Ref targets
-		--hold_mode = 0
-		--ecc_spd()
-
-		--Thrust ref target line should stay GREEN when in TOGA mode
-		if string.match(B747DR_ref_thr_limit_mode, "TO") then
-			B747DR_ref_line_magenta = 0
-		else
-			B747DR_ref_line_magenta = 1
-		end
-
-		if B747DR_log_level >= 1 then
-			print("THR REF MODE")
-			print("Override Throttles = ", simDR_override_throttles)
-		end
-
-	-- HOLD Mode
-	elseif (B747DR_ap_autothrottle_armed == 1  or simDR_override_throttles == 1 ) and B747DR_ap_FMA_autothrottle_mode == 1 and EEC_status == 0 then
-		--Give throttle control back to the user
-		--simDR_override_throttles = 0
-
-		B747DR_ref_line_magenta = 0
-		--hold_mode = 1
-		--ecc_spd()
-		if B747DR_log_level >= 1 then
-			print("HOLD MODE")
-			print("Override REMOVED = ", simDR_override_throttles)
-		end
-
-	--SPEED Mode
-	elseif B747DR_ap_autothrottle_armed == 0 and B747DR_ap_FMA_autothrottle_mode == 3 and EEC_status == 0 then
-		--Give throttle control back to the user
-		--hold_mode = 0
-		--simDR_override_throttles = 0
-		-- (the A/T's state is the A/T model's: the FMC's step 9f1, AP's
-		-- afds_at)
-		B747DR_ref_line_magenta = 0
-		--speed_mode = 1
-		--ecc_spd()
-		if B747DR_log_level >= 1 then
-			print("SPEED MODE")
-			print("Override Throttles = ", simDR_override_throttles)
-		end
-	end
+	--(the FMC's step 9g4) the EICAS's target thrust cursor magenta in the
+	--climb with VNAV, in VNAV's idle descent with anti-ice, with the A/T arm
+	--switch off (B747_eec_cursor: ATA34_2 p.652); before, by the FMA's THR
+	--REF before the cruise only (and the panel's THR REF: none shown else)
+	local magenta = B747_eec_cursor()
+	local flag = magenta and 1 or 0
+	if B747DR_ref_line_magenta ~= flag then B747DR_ref_line_magenta = flag end
 	-- (the A/T off with its fail: the A/T model's, the FMC's step 9f1)
 	ecc_spd() --also handles reverse throttle
 	-- the levers: the A/T's servo while excited (the FMC's step 9f2: the
@@ -1076,7 +1035,6 @@ function throttle_management()
 			    B747DR_throttle[i]=B747_interpolate_value(B747DR_throttle[i],0,0,1.00,1)
 			end
 		end
-		B747DR_ref_line_magenta = 0
 	end
 
 end

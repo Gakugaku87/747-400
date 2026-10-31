@@ -569,3 +569,10 @@
 | 同 | 両席の全周の `GROUP Compass Rose` の `gen_needle Rose:MAP` の後 | 無し | `GROUP Trk Line Ctr`（`SHOW_GREATER 0.5 nd/<席>/trk_line_ctr`）：`gen_rotary Trk Line Ctr`（`EFIS/Maps/Centered/track_line_ctr`、ローズの中心）と、半分の範囲の数字 `gen_LED Range Ctr Up`・`Range Ctr Dn`（拡大の範囲の数字の写し、`nd/range_display_<席>`。上と下の目盛に、拡大の数字と目盛の関係のまま） | FCOM p.1143、p.1009（図） |
 
 上の 4 行は `docs/overhaul/tools/panel_nd_ctr.lua` で書き換えた（2 面で 8 か所）。航跡の線の絵は `docs/overhaul/tools/make_nd_ctr_image.ps1`。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261028_before_nd_ctr`。X-Plane の写真（`s110_nd_map_ctr`、`s61_nd_orientation`）で確かめた：MAP CTR の 10・40・320・640 NM で選んだ範囲がローズまで、経路の線が点の記号を通る、上下の範囲の数字、640 NM の半分の大きさの X-Plane の地図、▽ の先がローズの外縁に触れる、飛行機の記号の頂点が地図の原点に一致。外から見た姿は変わらない（外観の写真）。
+
+| 日付・系統 | 項目 | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-10-31・EICAS の推力の表示（ATHR-17、FMC の段 9g4） | 上の EICAS の紫の reference のカーソル 12 個（`GROUP Engine N REF MAGENT and 2`：EPR の 2 組と N1 の 1 組） | `SHOW_EQUAL 5.000000 laminar/B747/autopilot/FMA/autothrottle_mode`（A/T が THR REF のときだけ） | 条件なし（紫の旗 `display_ref_line_magenta` だけで緑のカーソルと切り替え） | ATA34_2 p.652 |
+| 同 | 推力制限のモードの文字（`GROUP Thrust Limit Mode` の `gen_text Mode`） | `DATAREF laminar/B747/engines/ref_thr_limit_mode` | `DATAREF laminar/B747/fms/thrlim/eicas`（モードと、D- のときは assumed temp：「D-TO 1 +38C」） | FCOM p.831 |
+
+上の 2 行は `docs/overhaul/tools/panel_thrust_ref.lua` で書き換えた（13 か所）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261031_before_thrust_display`。X-Plane の写真（`s152_eicas_thrust_ref` の `eicas_dto_magenta`・`eicas_dto_green`・`eicas_dto1`）で、モードの行と紫・緑のカーソルを確かめた。
