@@ -2829,6 +2829,57 @@ function update_tuning()
 end
 -- an entry's tuning at once
 function B747_fms_tune_now() tuneT=nil update_tuning() end
+-- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
+-- p.1236): thirty seconds after the engines' shutdown on the ground after
+-- a flight (all four's N2 under the ENG FAIL speed: laminar/B747/engines/
+-- inop) the active route and the load data cleared, some preflight data
+-- back to their defaults: RTE 1 (FMSPG p.78), PERF INIT's entries and CRZ
+-- ALT (FCOM p.1307; FMSPG p.97), FLT NO (FCOM p.1290), TAKEOFF REF's
+-- (ATA34_2 p.540: its flaps too), REF NAV DATA's inhibits (FCOM
+-- p.1356-1357), GPS NAV (FCOM p.1369). Estimates: APPROACH REF's flaps and
+-- VREF, THRUST LIM's and the VNAV pages' selections, RTA, ENG OUT, the
+-- RNP entry; X-Plane's flight plan stays (it takes none without a
+-- destination). Before, nothing cleared after a flight.
+local FC_DELAY_S=30
+local fcFlown,fcStop=false,nil
+local FC_KEYS={"fltno","grwt","fuel","zfw","reserves","costindex","crzalt","crzcg","stepsize","fuelman","gwsrc",
+  "toflap","v1","vr","v2","v1sel","vrsel","v2sel","accelht","accelset","eoaccelht","eoaccelset","thrred","thrredset",
+  "towind","toslope","posshift","selunit","thrustsel","thrustself","cg_mac","stab_trim","flapspeed","vref1","vref2",
+  "clbspd","clbspdmach","clbspdmode","clbrestspd","clbrestalt","crzspd","crzcas","crzspdmode","stepalt",
+  "desspd","desspdmach","desspdmode","desrestspd","desrestalt"}
+local function renew(t,fresh)
+  for k in pairs(t) do t[k]=nil end
+  for k,v in pairs(fresh) do t[k]=v end
+end
+function B747_fms_flight_complete()
+  local d=defaultFMSData()
+  for _,k in ipairs(FC_KEYS) do
+    if d[k]~=nil and fmsModules["data"][k]~=d[k] then fmsModules:setData(k,d[k]) end
+  end
+  B747_route_model.clear(B747_fmc_route)
+  B747_fmc_route_changed()
+  renew(rtaState,B747_rta_model.new())
+  renew(eoState,B747_eo_model.new())
+  renew(thrlimState,B747_thrlim_model.new())
+  local inh=B747_fmc_nav_inhibits and B747_fmc_nav_inhibits()
+  if inh then inh.navaid,inh.vor,inh.vordme={},{},false end
+  navperfState.gps_inhibit,navperfState.rnp_man=false,nil
+  if B747DR_airspeed_flapsRef~=0 then B747DR_airspeed_flapsRef=0 end
+  if B747DR_airspeed_VrefFlap~=0 then B747DR_airspeed_VrefFlap=0 end
+end
+function update_flight_complete()
+  if simDR_onGround~=1 then fcFlown,fcStop=true,nil return end
+  if not fcFlown then return end
+  for i=0,3 do
+    if B747DR_fms_eng_inop[i]<0.5 then fcStop=nil return end
+  end
+  local now=simDRTime
+  if not fcStop or now<fcStop then fcStop=now end
+  if now-fcStop>=FC_DELAY_S then
+    fcFlown,fcStop=false,nil
+    B747_fms_flight_complete()
+  end
+end
 dofile("B744.notifications.lua")
 dofile("irs/irs_system.lua")
 dofile("B744.fms.baro.lua")
@@ -3323,6 +3374,7 @@ function after_physics()
     update_thrlim()
     update_navdb()
     update_takeoff()
+    update_flight_complete()
     B747_fmc_lnav_update()
     B747_fmc_route_sync()
     B747_fmc_plan_ctr_sync()
