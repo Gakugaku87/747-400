@@ -115,6 +115,13 @@ function M.erase(st)
     st.mod, st.activating = nil, false
 end
 
+-- (6-1/6-2 step 10d) flight completion: the active route cleared, its
+-- modification gone (FMSPG p.78; FCOM p.1236)
+function M.clear(st)
+    st.rte, st.mod, st.active, st.activating = new_route(), nil, false, false
+    st.edits = (st.edits or 0) + 1
+end
+
 -- RTE 2 (step 7e4; FCOM p.1287-1294; FMSPG p.134-136): two routes, each a
 -- state of its own (`num` 1 or 2); the glue keeps the active one as its
 -- B747_fmc_route. EXEC: the active route's modification or activation,
