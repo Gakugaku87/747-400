@@ -24,6 +24,9 @@ rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
+-- 40 t of fuel (6-1/6-2 step 11a: with none, RESERVES 12.5 below brings
+-- INSUFFICIENT FUEL, rightly)
+rt:set("sim/flightmodel/weight/m_fuel_total", 40000)
 for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
 rt:callout("flight_start")
 for _, cdu in ipairs({"cdu1", "cdu2"}) do

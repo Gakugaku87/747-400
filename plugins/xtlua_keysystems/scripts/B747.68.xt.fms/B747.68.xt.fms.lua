@@ -1556,6 +1556,12 @@ end
 -- placard or the minimum speed limits it, VREF + 100 in the engine-out
 -- takeoff's climb (FCOM p.1265), nil else
 function B747_fms_vnav_title() return vnavState.out.title end
+-- (6-1/6-2 step 11a) PROGRESS 2's VTK ERROR: the VNAV path's deviation
+-- (ft, above +) while the descent is active, else nil (FCOM p.1381)
+function B747_fms_vtk()
+  if not B747_fmc_route.active or vnavState.phase~="DES" then return nil end
+  return vnavState.out.path_dev
+end
 -- (step 9h4b) the engine-out driftdown (FCOM p.1268): VNAV's in it
 function B747_fms_vnav_dd() return vnavState.dd ~= nil end
 -- (step 9d3) speed intervention: the FMC's target the MCP speed, the active
@@ -2867,6 +2873,65 @@ function B747_fms_flight_complete()
   if B747DR_airspeed_flapsRef~=0 then B747DR_airspeed_flapsRef=0 end
   if B747DR_airspeed_VrefFlap~=0 then B747DR_airspeed_VrefFlap=0 end
 end
+-- (6-1/6-2 step 11a; notes/ATA-34-61-FMC.md §90) the fuel monitoring
+-- (B747.68.fuel_model.lua): each frame the FQIS (X-Plane's total fuel:
+-- estimate), the fuel system's totaliser (FUEL USED: laminar/B747/fuel/
+-- totaliser), the engines' fuel flow, a jettison (its nozzle valves open);
+-- the FMC's quantity (perf_fuel_t: PERF INIT, the predictions), PROGRESS 2
+-- read it; FUEL DISAGREE - PROG 2 and INSUFFICIENT FUEL (the predictions'
+-- fuel at the destination under RESERVES, with an active route) when they
+-- change (FCOM p.1273-1274, p.1381-1382, p.1432)
+dofile("B747.68.fuel_model.lua")
+local FM=B747_fuel_model
+local fuelState=FM.new()
+local fuelIn={used={0,0,0,0,0},ff={0,0,0,0}}
+simDR_fms_fuel_total=find_dataref("sim/flightmodel/weight/m_fuel_total")
+simDR_fms_ff=find_dataref("sim/cockpit2/engine/indicators/fuel_flow_kg_sec")
+B747DR_fms_jett_l=find_dataref("laminar/B747/fuel/jett_nozzle_vlv_L_pos")
+B747DR_fms_jett_r=find_dataref("laminar/B747/fuel/jett_nozzle_vlv_R_pos")
+local FUEL_DISAGREE,INSUFFICIENT_FUEL=15,17
+local fuelFlags={}
+function B747_fms_fuel() return fuelState end
+local function fuel_inputs()
+  local inp=fuelIn
+  inp.fqis=simDR_fms_fuel_total
+  for n=1,4 do
+    inp.used[n]=B747DR_engine_used_fuel[n-1]
+    inp.ff[n]=simDR_fms_ff[n-1]
+  end
+  inp.used[5]=B747DR_engine_used_fuel[4]
+  inp.jett=B747DR_fms_jett_l>0.5 or B747DR_fms_jett_r>0.5
+  local pred=B747_fmc_route.active and B747_fms_preds() or nil
+  inp.pred_dest=pred and pred.dest and pred.dest.fuel or nil
+  local rsv=tonumber(fmsModules["data"].reserves)
+  inp.reserves=rsv and rsv*1000 or nil
+  return inp
+end
+local function fuel_flag(i,on)
+  local v=on and 1 or 0
+  if fuelFlags[i]~=v then
+    fuelFlags[i]=v
+    B747DR_fmc_notifications[i]=v
+  end
+end
+function update_fuel()
+  local out=FM.update(fuelState,fuel_inputs())
+  fuel_flag(FUEL_DISAGREE,out.disagree)
+  fuel_flag(INSUFFICIENT_FUEL,out.insufficient)
+end
+-- the FMC's fuel quantity, kg (nil before the first update)
+function B747_fms_fuel_kg() return fuelState.out.fmc end
+-- PERF INIT's FUEL entry (kg) or DELETE (nil): false when not allowed
+function B747_fms_fuel_enter(kg)
+  local inp=fuel_inputs()
+  local ok=FM.enter(fuelState,kg,inp.fqis,inp.used)
+  if ok then update_fuel() end
+  return ok
+end
+-- PROGRESS 2's <USE and USE> (fmsFunctions.fueluse)
+function B747_fms_fuel_choose(which)
+  if FM.choose(fuelState,which) then update_fuel() end
+end
 function update_flight_complete()
   if simDR_onGround~=1 then fcFlown,fcStop=true,nil return end
   if not fcFlown then return end
@@ -3375,6 +3440,7 @@ function after_physics()
     update_navdb()
     update_takeoff()
     update_flight_complete()
+    update_fuel()
     B747_fmc_lnav_update()
     B747_fmc_route_sync()
     B747_fmc_plan_ctr_sync()

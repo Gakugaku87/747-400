@@ -16,9 +16,12 @@ fmsPages["PERFINIT"]=createPage("PERFINIT")
 -- of the display units (kilograms or pounds), kept in thousands of
 -- kilograms. GR WT or ZFW is entered, the other follows from the FUEL line
 -- (an entered GR WT is kept as the ZFW it gives, so that it goes down as
--- the fuel burns); FUEL: the totalizer's (CALC) or an entry (MANUAL, which
--- can be deleted). Entered values in large font, the FMC's in small
--- (estimate for the computed GR WT and ZFW).
+-- the fuel burns); FUEL: the FMC's quantity (6-1/6-2 step 11a:
+-- B747.68.fuel_model.lua through B747_fms_fuel): CALC, MANUAL (an entry,
+-- going down with the fuel flow; it can be deleted) or SENSED (the
+-- totalizer's after PROGRESS 2's USE TOTALIZER: no entry). Entered values
+-- in large font, the FMC's in small (estimate for the computed GR WT and
+-- ZFW).
 function perf_lbs()
 	return simConfigData["data"].SIM.weight_display_units == "LBS"
 end
@@ -31,10 +34,11 @@ function perf_in(v)
 	if perf_lbs() then return v / simConfigData["data"].SIM.kgs_to_lbs end
 	return v
 end
--- the FUEL line in thousands of kilograms: the entry, else the totalizer's
+-- the FUEL line in thousands of kilograms: the FMC's quantity (step 11a),
+-- the totalizer's before its first update
 function perf_fuel_t()
-	local m = tonumber(fmsModules["data"].fuelman)
-	if m then return m end
+	local kg = B747_fms_fuel_kg()
+	if kg then return kg / 1000 end
 	return simDR_fuel / 1000
 end
 -- the zero fuel weight and the gross weight, thousands of kilograms; nil
@@ -98,7 +102,7 @@ fmsPages["PERFINIT"].getSmallPage=function(self,pgNo,fmsID)
 	-- small: the computed one of GR WT and ZFW, FUEL's source
 	local gwS = (src ~= "GW" and gw ~= nil) and weight_text(gw) or "     "
 	local zfwS = (src ~= "ZFW" and zfw ~= nil) and weight_text(zfw) or "     "
-	local fuelSrc = tonumber(fmsModules["data"].fuelman) and "MANUAL" or "CALC  "
+	local fuelSrc = string.format("%-6s", B747_fms_fuel().out.source or "CALC")
 	local lineA=" FUEL                   "
 	if simDR_m_jettison>0 then
 		lineA=" FUEL         RETARDANT "

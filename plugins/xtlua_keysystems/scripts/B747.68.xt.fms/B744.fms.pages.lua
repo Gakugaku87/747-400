@@ -1326,15 +1326,16 @@ function fmsFunctions.setdata(fmsO,value)
 	calc_CGMAC()  --Recalc CG %MAC and TRIM units
 	takeoff_speeds_deleted()
   elseif value == "fuel" then
-	-- FUEL: an entry makes it MANUAL; only that can be deleted (FCOM p.1310)
-	if del then
-		if tonumber(fmsModules["data"].fuelman) == nil then fmsO["notify"]="INVALID DELETE" return end
-		setFMSData("fuelman", "")
-	else
+	-- FUEL: an entry makes it MANUAL, going down with the fuel flow; only
+	-- that can be deleted; none when SENSED (FCOM p.1310; 6-1/6-2 step 11a:
+	-- B747.68.fuel_model.lua)
+	local kg = nil
+	if not del then
 		local v = B747_cdu_model.parse_weight(fmsO["scratchpad"])
 		if v == nil or perf_in(v) > 180 then fmsO["notify"]="INVALID ENTRY" return end
-		setFMSData("fuelman", string.format("%5.1f", perf_in(v)))
+		kg = perf_in(v) * 1000
 	end
+	if not B747_fms_fuel_enter(kg) then fmsO["notify"] = del and "INVALID DELETE" or "INVALID ENTRY" return end
 	update_perf()
   elseif value == "reserves" then
 	-- RESERVES: XXX or XXX.X (FCOM p.1311)
