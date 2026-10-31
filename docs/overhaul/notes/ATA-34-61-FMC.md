@@ -1334,3 +1334,15 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 作ったもの：VNAV キーは、空中で有効な経路があれば FMC の段階のページ（`B747_fms_vnav_page`：CLB 1、CRZ 2（cruise climb・descent も）、DES 3）、地上と有効な経路が無いときは CLB のページ。
 - 推定：空中で有効な経路が無いときを CLB のページとしたこと（FMC の段階が無い）。
 - 試験：`pred_glue_test.lua` 169 件（巡航で VNAV キーと NEXT 1 回で DES のページ、降下では VNAV キーだけで ACT ECON DES・ACT END OF DES、進入復行の後の 4,000 ft の巡航で ACT … CRZ）、`vnav_pages_test.lua` 79 件（補助関数は VNAV キーが開いたページから NEXT で数える）。地上で押す試験（`vnav_pages_test`・`fmc_fixes_test`・`des_forecast_test`）は CLB のページのまま。シナリオ s144〜s147 の VNAV キーの押し方を直した（巡航の CRZ・降下の DES は VNAV だけ、巡航から DES は NEXT 1 回）。X-Plane：s150（20:57〜21:06、起動し直した後の 2 回目の読み直し）33/33。進入復行の後の 3,000 ft の巡航で VNAV キーを押すと ACT ECON CRZ のページ（二つ目の s150 は ECON CLB）。9e3 の残りも確かめた：MCP の 2,000 ft の捕捉の途中の G/A で上昇の段階・CRZ ALT 3,000・on approach を出る、VNAV SPD（A/T は THR REF）から 3,000 ft で VNAV PTH・巡航、目標 235.7 kt を A/T の SPD で、RW06L を過ぎても巡航のまま。Log.txt に Lua の誤りなし
+
+## 72. 段 9e4 の実装（2026-10-31：進入の glide path angle）
+
+- 資料：FCOM p.1262（glide path angle の付いた脚は LEGS に出て、VNAV はその角度で VNAV PTH の誘導。その脚の前の点を過ぎると、経路に乗るまで水平。STAR の脚にもありうる）、p.1405（LEGS の見出しの行の右に「GP 3.00°」。航法データの GP の角度で、ILS・B/C・GPS・LOC・RNV・NDB・VOR の進入。VNAV PTH のときその角度で誘導）。CIFP の欄 29（垂直の角度、0.01 度単位：RJBB の ILS06LY は BOLAL（FAF）と RW06L に −3.00）。
+- 角度の付く脚：ある点の記録の角度は、その点で終わる脚のもの（FCOM p.1405 の図：滑走路 RW32R の角度が RW32R へ入る脚の行に出る）。
+- 作ったもの：
+  - 予測：降下の経路を E/D から後ろへ組むとき、GP の角度のある脚では、その脚の終わりの点（そこまでの経路の高度）から、地面に対してその角度の直線で後ろへ上がる（`descent_path` の `gps`）。脚の始まりの点に、直線より低い AT・AT OR BELOW・窓の上限があれば、直線がその高度に着いた所から始まりの点まで水平にする（FCOM p.1262 の「経路に乗るまで水平」）。その脚では減速しない。直線に推力が要れば A/T は SPD（"spd"）、要らなければ "idle"。
+  - FMS：予測の入力の脚に CIFP の角度（`gp`、下りの度）を渡す。
+  - CDU：LEGS の見出しの行の右（24 桁目まで）に「GP  3.00`」（FCOM p.1405）。
+  - 誘導（VNAV のモデル）は変えない：経路の下では上がらず水平で待つ（`K_PATH` と「上がらない」：段 9b）ので、経路に乗るまで水平になる。
+- 推定：直線の終わりの点の高度は、それより後の脚が作る経路の高度とした（終わりの点の制限がそれより上でも直線を優先。データが整っていれば一致する。試験の ZZAA の I16R は FAF の 3,000 A と 3 度の線が合わないので、予測の FAF は 1,190 ft）。始まりの点の制限が直線より上（AT OR ABOVE など）のときも直線を優先した（資料に無い）。GP の脚の速さは降下の予定の速さとした。
+- 試験：`pred_model_test.lua` 61 件（二つの 3 度の脚は一本の線で、FAF の 4,000 A の上、IF もその線の上、その前はアイドルの経路。IF の AT 5,000 が線より下なら、IF から線に着くまで 5,000 ft の水平（A/T の SPD）、その先は線）、`pred_glue_test.lua` 173 件（ZZAA の I16R の FAF と滑走路の脚に GP 3.00、予測の FAF は滑走路からの 3 度の線の上、LEGS の FAF と滑走路の行の見出しに「GP  3.00`」）。全 134 本。新設の X-Plane の `s151_vnav_gp_angle`：20/20（21:16〜21:24、起動し直した後の 3 回目の読み直し）。LEGS の BOLAL へ入る脚の見出しは「059` 5NM GP 3.00`」、RW06L へは「059` 12NM GP 3.00`」。BOLAL の先の最終進入（2,868 ft）は VNAV PTH で経路から 6 ft、FMC の V/S −1,396 fpm・実際 −1,413 fpm（対地速度 262 kt の 3 度の分 1,390 fpm）、MCP の 1,000 ft で VNAV ALT。Log.txt に Lua の誤りなし

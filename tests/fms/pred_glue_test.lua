@@ -136,6 +136,16 @@ T.check(r.tc and r.td and r.tc < r.td, string.format("FL100: T/C %.0f NM before 
 for i, p in ipairs(r.pts) do
     T.check(p.h <= 10000 + 1, "leg " .. i .. " at or below FL100: " .. math.floor(p.h))
 end
+-- (step 9e4) the approach's glide path angles (the CIFP's -3.00 on the FAF
+-- and the runway, their legs': FCOM p.1262): the FAF predicted on the
+-- runway's 3-degree line
+local faf = nil
+for i, l in ipairs(legs) do if l.proc == "APPR" and l.faf then faf = i end end
+local sFl = fms.ns.B747_fms_pred_input(10000)
+local G3 = 1852 / 0.3048 * math.tan(math.rad(3))
+T.check(faf and sFl.legs[faf].gp == 3 and sFl.legs[rwy].gp == 3, "the FAF's and the runway's legs: their glide path angle 3.00")
+T.near(r.pts[faf].h, r.pts[rwy].h + sFl.legs[rwy].dist * G3, 2,
+    string.format("the FAF on the runway's 3-degree line: %.0f ft, %.1f NM out", r.pts[faf].h, sFl.legs[rwy].dist))
 -- the ND's profile points (step 8d3; FCOM p.1149): T/C, T/D and E/D where
 -- they are on the legs' great circles; no S/C with STEP SIZE 0
 local PR = "laminar/B747/fms/profile/"
@@ -235,6 +245,11 @@ key("func_key/next_pg")
 key("func_key/next_pg")
 T.check(line(5):find("^RW16R") and small(5):find("240"), "the runway (the E/D): its speed: " .. small(5))
 T.equal((small(7):gsub("%s+$", "")), "", "the missed approach after the E/D: none: " .. line(7))
+-- (step 9e4) the glide path angles on the legs into the FAF and the
+-- runway (the CIFP's -3.00 there): GP 3.00 at the right of the title line
+-- (FCOM p.1405)
+T.check(line(3):find("^ZA001") and small(2):find(" GP  3%.00`$"), "the FAF's leg: GP  3.00`: " .. small(2))
+T.check(small(4):find("NM GP  3%.00`$"), "the runway's leg: GP  3.00`: " .. small(4))
 key("func_key/legs")
 
 -- RTE DATA (step 8d2; FCOM p.1360-1363): from the active LEGS page's 6R;

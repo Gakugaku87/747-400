@@ -135,7 +135,8 @@ end
 -- undefined) and the distance (none for a conditional waypoint: FMSPG
 -- p.119), its last character at the 14th place (FCOM p.1330, p.1333 and
 -- FMSPG p.137-139's figures: before step 7e2 at the 17th, under the
--- constraints)
+-- constraints); (step 9e4) a glide path angle's leg its angle at the right
+-- ("GP  3.00`": FCOM p.1405)
 local function leg_title(st, r, i)
   local l = r.legs[i]
   local pt = l.pt or ""
@@ -157,7 +158,12 @@ local function leg_title(st, r, i)
   if not l.fix then dist = "" end
   -- the INTC CRS: the crew's magnetic course
   if l.dto and l.crs then crs = string.format("%03d`", l.crs == 0 and 360 or l.crs) end
-  return pad(string.format(" %-7s%6s", crs, dist))
+  local left = string.format(" %-7s%6s", crs, dist)
+  if l.vangle and l.vangle < 0 then
+    local gp = string.format("GP %5.2f`", -l.vangle)
+    if #left + 1 + #gp <= 24 then return left .. string.rep(" ", 24 - #left - #gp) .. gp end
+  end
+  return pad(left)
 end
 
 local function trans_alt() return tonumber(fmsModules["data"]["transalt"]) or 18000 end

@@ -1104,8 +1104,10 @@ function B747_fms_pred_input(crz)
       con = {kind = "AT", a = (l.fix.elev or 0) + 50}
       rwy = rwy or i
     end
-    -- (p0, p1: the great circle's ends, for the ND's profile points)
-    legs[i] = {name = l.fix and l.fix.ident or "", dist = d, con = con, p0 = p0, p1 = l.fix}
+    -- (p0, p1: the great circle's ends, for the ND's profile points; step
+    -- 9e4: the leg's glide path angle down, the CIFP's: FCOM p.1262)
+    legs[i] = {name = l.fix and l.fix.ident or "", dist = d, con = con, p0 = p0, p1 = l.fix,
+      gp = (l.vangle and l.vangle < 0) and -l.vangle or nil}
     if l.proc == "SID" then clbLast = i end
     if con and not rwy and not (missed and l.proc == "APPR") then lastCon = i end
   end
