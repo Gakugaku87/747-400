@@ -444,7 +444,8 @@ function B747_ap_TOGA_mode_afterCMDhandler(phase, duration)
     print("B747_ap_TOGA_mode_afterCMDhandler "..phase.." "..duration)
 	if phase == 0 then
 		B747DR_ap_ias_mach_window_open = 1
-        B747DR_autothrottle_active = 1
+        -- (the A/T engages from the push count in the A/T model: the FMC's
+        -- step 9f1; before, here even with the ARM switch off)
 	end
 end
 
@@ -1354,16 +1355,10 @@ function B747_autothrottle_arm_switch_CMDhandler(phase, duration)
         B747_toggle_switch_position_target[29] = 1.0 - B747_toggle_switch_position_target[29]
         B747DR_ap_autothrottle_armed = B747_toggle_switch_position_target[29]
 
-        if B747_toggle_switch_position_target[29] == 0 then
-            if B747DR_ap_FMA_autothrottle_mode>0 then
-                print("B747_autothrottle_arm_switch_CMDhandler fail AT")
-                B747DR_autothrottle_fail=1
-            end
-	     	if B747DR_autothrottle_active == 1 then
-	     		--simCMD_autopilot_autothrottle_off:once()
-                 B747DR_autothrottle_active=0
-	     	end
-        else
+        -- (off: the A/T model disengages the A/T with AUTOTHROT DISC: the
+        -- FMC's step 9f1; on: the fail reset, the EECs' A/T inhibit looked
+        -- at again)
+        if B747_toggle_switch_position_target[29] ~= 0 then
             B747DR_autothrottle_fail=0
 	    end
     end
@@ -1382,11 +1377,7 @@ function B747_autothrottle_disarm_CMDhandler(phase, duration)
     if phase == 0 then
         B747_toggle_switch_position_target[29] = 0.0
         B747DR_ap_autothrottle_armed = B747_toggle_switch_position_target[29]
-         if B747DR_autothrottle_active == 1 then
-             --simCMD_autopilot_autothrottle_off:once()
-             B747DR_autothrottle_active=0
-             B747DR_autothrottle_fail=1
-         end
+        -- (the A/T off: the A/T model's, the FMC's step 9f1)
     end
 end
 

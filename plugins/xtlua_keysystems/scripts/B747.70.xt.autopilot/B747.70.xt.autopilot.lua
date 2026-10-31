@@ -909,6 +909,59 @@ local function afds_old_vnav_fma()
 	if B747DR_ap_fvn_mode == 1 then return 4 end
 	return 6
 end
+-- the A/T (6-4, the FMC's step 9f1; notes/ATA-34-61-FMC.md §58): its
+-- engage logic, AUTOTHROT DISC and modes (B747.70.at_model.lua), each
+-- frame after the AFDS, the only writer of the A/T's state (before, the
+-- old FMA's if chain and the A/T flags written in seven places); the
+-- switches' pushes counted for it. The levers are still the EEC's by the
+-- mode (step 9f2)
+dofile("B747.70.at_model.lua")
+simDR_at_rev_deploy = find_dataref("sim/flightmodel2/engines/thrust_reverser_deploy_ratio")
+local atState = B747_at_model.new()
+local atIn = {}
+local atPush = {spd = 0, thr = 0, disc = 0}
+local atSeen = {spd = 0, thr = 0, disc = 0, toga = nil}
+local function afds_at()
+	local i = atIn
+	i.arm = B747DR_ap_autothrottle_armed == 1
+	-- the interlocks: three engines running (N1 over 15 %: the old
+	-- monitor's), the A/T's fail (the EECs' ALTN: B747.42.xt.eec_thrust.lua)
+	local run = 0
+	for e = 0, 3 do
+		if B747DR_display_N1[e] > 15 then run = run + 1 end
+	end
+	i.ok = run >= 3 and B747DR_autothrottle_fail == 0
+	i.ground = simDR_onGround == 1
+	i.cas, i.ra = simDR_ind_airspeed_kts_pilot, simDR_radarAlt1
+	i.flaps_up = simDR_flap_ratio_control < 0.01
+	local rev, idle = false, true
+	for e = 0, 3 do
+		if simDR_at_rev_deploy[e] > 0.01 then rev = true end
+		if B747DR_throttle[e] > 0.01 then idle = false end
+	end
+	i.reverse, i.lever_idle = rev, idle
+	local lim = B747DR_ref_thr_limit_mode
+	i.limit_to = string.find(lim, "TO", 1, true) ~= nil
+	i.limit_ga = lim == "GA"
+	i.pitch = afds.pitch
+	i.retard = afds.retard and true or false
+	i.vnav_at, i.vnav_level = B747DR_ap_fvn_at, vnavLevel ~= nil
+	local n = B747DR_ap_toga_pushes
+	i.toga = atSeen.toga ~= nil and n ~= atSeen.toga
+	atSeen.toga = n
+	for _, k in ipairs({"spd", "thr", "disc"}) do
+		i[k] = atPush[k] ~= atSeen[k]
+		atSeen[k] = atPush[k]
+	end
+	B747_at_model.update(atState, i)
+	local act = atState.engaged and 1 or 0
+	if B747DR_autothrottle_active ~= act then B747DR_autothrottle_active = act end
+	local fma = B747_at_model.fma(atState)
+	if B747DR_ap_FMA_autothrottle_mode ~= fma then B747DR_ap_FMA_autothrottle_mode = fma end
+	-- (TO's state for the old readers: 0.9 its THR REF, 1 its HOLD)
+	local to = atState.engaged and (atState.to == "thr" and 0.9 or (atState.to == "hold" and 1)) or 0
+	if B747DR_engine_TOGA_mode ~= to then B747DR_engine_TOGA_mode = to end
+end
 local function afds_inp()
 	afdsIn.fd.L = B747DR_toggle_switch_position[23] > 0.5
 	afdsIn.fd.R = B747DR_toggle_switch_position[24] > 0.5
@@ -986,10 +1039,8 @@ end
 -- V/S as the V/S switch sets it, synced to the present vertical speed
 -- (ATA22 p.282, p.344: the switch's own sync is step 1c)
 local function afds_vs_default()
-	if B747DR_autothrottle_active == 0 and isATEnabled() and simDR_onGround == 0 then
-		B747DR_autothrottle_active = 1
-	end
-	B747DR_engine_TOGA_mode = 0
+	-- (the A/T is the A/T model's: the FMC's step 9f1; before, V/S made it
+	-- active)
 	simDR_autopilot_altitude_ft = B747DR_autopilot_altitude_ft
 	simDR_autopilot_hold_altitude_ft = simDR_autopilot_altitude_ft
 	simDR_autopilot_alt_hold_status = 0
@@ -1012,7 +1063,6 @@ local function afds_apply(act)
 		B747DR_ap_vnav_state = 0
 		B747DR_ap_lnav_state = 0
 		B747DR_ap_inVNAVdescent = 0
-		B747DR_engine_TOGA_mode = 0
 		B747DR_ap_approach_mode = 0
 		B747DR_autopilot_gs_status = 0
 		B747DR_autopilot_nav_status = 0
@@ -1071,9 +1121,8 @@ local function afds_sync()
 		if B747DR_ap_vnav_state ~= 2 then
 			B747DR_ap_vnav_state = 2
 			-- the IAS/MACH window shut: a speed intervention of before ends
+			-- (the A/T engages with VNAV in the A/T model: step 9f1)
 			setVNAVState("manualVNAVspd", 0)
-			if isATEnabled() and simDR_onGround == 0 then B747DR_autothrottle_active = 1 end
-			B747DR_engine_TOGA_mode = 0
 			B747DR_ap_inVNAVdescent = 0
 			B747DR_mcp_hold = 0
 			simDR_autopilot_vs_status = 0
@@ -1233,10 +1282,6 @@ end
 function B747_afds_vs()
 	local sync = B747_afds_model.vs(afds, afds_inp())
 	if not sync then return end
-	if B747DR_autothrottle_active == 0 and isATEnabled() and simDR_onGround == 0 then
-		B747DR_autothrottle_active = 1
-	end
-	B747DR_engine_TOGA_mode = 0
 	simDR_autopilot_altitude_ft = B747DR_autopilot_altitude_ft
 	B747DR_ap_thrust_mode = 0
 	B747DR_ap_inVNAVdescent = 0
@@ -1247,10 +1292,6 @@ function B747_afds_vs()
 end
 function B747_afds_alt_hold()
 	if not B747_afds_model.alt_hold(afds, afds_inp()) then return end
-	if B747DR_autothrottle_active == 0 and isATEnabled() then
-		B747DR_autothrottle_active = 1
-		B747DR_engine_TOGA_mode = 0
-	end
 	B747DR_ap_thrust_mode = 0
 	B747DR_ap_inVNAVdescent = 0
 	B747DR_ap_flightPhase = 2
@@ -1295,12 +1336,9 @@ local function afds_cmd(ch)
 	afds_apply(B747_afds_model.cmd(afds, ch, afds_inp()))
 	afds_sync()
 end
--- the old code's part of a disengage: the A/T back after its reset,
--- X-Plane's servos
+-- the old code's part of a disengage: X-Plane's servos (the A/T is not
+-- the A/P's: before, a reset and re-engage 0.5 s later)
 local function afds_disengaged()
-	if B747DR_autothrottle_active == 1 then
-		run_after_time(autothrottle_reengage, 0.5)
-	end
 	B747CMD_ap_reset:once()
 	simCMD_autopilot_servos_off:once()
 end
@@ -1336,18 +1374,12 @@ function B747_afds_reset()
 	afdsRoll = B747_afds_roll_model.new()
 	afdsPitch = B747_afds_pitch_model.new()
 end
-function autothrottle_reengage()
-	if B747DR_autothrottle_active == 0 and isATEnabled() and simDR_onGround == 0 then
-		--simCMD_autopilot_autothrottle_on:once()
-		B747DR_autothrottle_active=1
-	end
-end
-
 function B747_ap_thrust_mode_CMDhandler(phase, duration) -- INOP, NO CORRESPONDING FUNCTIONALITY IN X-PLANE
 	if phase == 0 then
 		B747_ap_button_switch_position_target[0] = 1
-		--simCMD_autopilot_autothrottle_off:once()
-		B747DR_autothrottle_active=0
+		-- a push to the A/T (the FMC's step 9f1: its THR REF; before, it
+		-- disengaged the A/T)
+		atPush.thr = atPush.thr + 1
 		B747DR_ap_lastCommand = simDRTime
 		if simDR_radarAlt1 > 400 then
 			B747DR_ap_thrust_mode = 3
@@ -1366,15 +1398,8 @@ function B747_ap_switch_speed_mode_CMDhandler(phase, duration)
 		-- 6-3 step 1c; the old one ended VNAV and FLCH into V/S)
 		if not B747_afds_spd_works() then return end
 		B747DR_ap_lastCommand = simDRTime
-
-		if isATEnabled() and simDR_onGround == 0 then -- AUTOTHROTTLE ""ARM" SWITCH IS "ON"
-
-			B747DR_autothrottle_active=1
-
-			if B747DR_engine_TOGA_mode > 0 then
-				B747DR_engine_TOGA_mode = 0
-			end -- CANX ENGINE TOGA IF ACTIVE
-		end
+		-- a push to the A/T (the FMC's step 9f1: its SPD)
+		atPush.spd = atPush.spd + 1
 		--B747DR_ap_flightPhase = 2
 		if B747DR_autopilot_altitude_ft > simDR_pressureAlt1 then
 			B747DR_ap_flightPhase = 1
@@ -1620,24 +1645,14 @@ function B747_ap_trim_disengage_CMDhandler(phase, duration)
 	end
 end
 
+-- the A/T disconnect switches: a push to the A/T (the FMC's step 9f1:
+-- off with AUTOTHROT DISC, else its reset; before, they flipped its fail)
 function B747_ap_switch_autothrottle_disco_L_CMDhandler(phase, duration)
-	if phase == 0 then
-		if B747DR_autothrottle_fail == 0 then
-			B747DR_autothrottle_fail = 1
-		else
-			B747DR_autothrottle_fail = 0
-		end
-	end
+	if phase == 0 then atPush.disc = atPush.disc + 1 end
 end
 
 function B747_ap_switch_autothrottle_disco_R_CMDhandler(phase, duration)
-	if phase == 0 then
-		if B747DR_autothrottle_fail == 0 then
-			B747DR_autothrottle_fail = 1
-		else
-			B747DR_autothrottle_fail = 0
-		end
-	end
+	if phase == 0 then atPush.disc = atPush.disc + 1 end
 end
 
 function B747_ap_att_mode_CMDhandler(phase, duration)
@@ -1656,8 +1671,7 @@ function B747_ap_reset_CMDhandler(phase, duration)
 	print("B747_ap_reset_CMDhandler")
 	if phase == 0 then
 		--simCMD_autopilot_pitch_sync:once()
-
-		B747DR_engine_TOGA_mode = 0
+		-- (the A/T's TO is the A/T model's: the FMC's step 9f1)
 		B747_ap_all_cmd_modes_off() --B747_ap_reset_CMDhandler
 		B747DR_ap_ias_mach_window_open = 0
 	end
@@ -3147,64 +3161,13 @@ function B747_ap_fma(fms)
 	--B747DR_capt_ap_roll=B747DR_ap_target_roll-simDR_capt_roll
 	--B747DR_fo_ap_roll=B747DR_ap_target_roll-simDR_fo_roll
 	glideSlopeLOCProgress()
-	if B747DR_autothrottle_active==0 then
-		B747DR_ap_FMA_autothrottle_mode = 0
-	elseif B747DR_autothrottle_active==1 and B747DR_ap_FMA_active_pitch_mode==2 and B747DR_ap_FMA_autothrottle_mode ~= 3 then -- SPD
-			B747DR_ap_lastCommand=simDRTime
-			B747DR_ap_FMA_autothrottle_mode=3
-	end
 	-- (the old autoland is gone, 6-3 step 4c: FLARE, NOSE LETDOWN, the
 	-- retard and ROLLOUT are the AFDS model's; before, with LAND 3 or 2 it
 	-- returned here and the FMAs froze at the LAND's engage)
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
-	-- AUTOTHROTTLE
-	-------------------------------------------------------------------------------------
-	-- the AFDS's retard (6-3 step 4b; ATA22 p.294: FLARE at 25 ft RA, kept
-	-- through the touchdown) makes the A/T IDLE (FCOM p.671; before, the old
-	-- autoland's with three channels only)
-	if afds.retard then
-
-		B747DR_ap_FMA_autothrottle_mode = 2 --IDLE
-	elseif B747DR_toggle_switch_position[29] == 0 or B747DR_autothrottle_fail > 0 then
-		B747DR_ap_FMA_autothrottle_mode = 0
-	elseif
-		(B747DR_engine_TOGA_mode > 0 and simDR_ind_airspeed_kts_pilot < 65) or B747DR_ap_autoland < 0 or
-			(B747DR_ap_vnav_state == 0 and B747DR_ap_thrust_mode > 0)
-	 then
-		if B747DR_engine_TOGA_mode == 1 then
-			B747DR_engine_TOGA_mode = 0
-			B747DR_ap_FMA_autothrottle_mode = 0
-		else
-			B747DR_ap_FMA_autothrottle_mode = 5 --THR REF
-		end
-	elseif (B747DR_engine_TOGA_mode > 0 and simDR_radarAlt1 < 50) then
-		B747DR_ap_FMA_autothrottle_mode = 1 --HOLD
-		B747DR_engine_TOGA_mode = 1 --reached hold state
-	elseif afds.pitch == "VNAV" and B747DR_autothrottle_active == 1 then
-		-- VNAV's A/T (step 9c): the FMC's mode (THR REF in the climb, SPD in
-		-- the cruise, IDLE on the descent path, SPD below it), SPD when
-		-- levelled off at the MCP or FMC altitude (FCOM p.645; step 9a);
-		-- before, the old VNAV's THR REF by its flags
-		local at = B747DR_ap_fvn_at
-		B747DR_ap_FMA_autothrottle_mode = (vnavLevel or at < 1 or at > 5) and 3 or at
-	elseif B747DR_autothrottle_active == 1 then
-		if B747DR_ap_vnav_state > 0 and simDR_allThrottle < 0.1 and B747DR_ap_inVNAVdescent > 0 then
-			B747DR_ap_FMA_autothrottle_mode = 2 --IDLE
-		elseif simDR_onGround == 0 and B747DR_ap_FMA_active_pitch_mode==1 then --TOGA
-			B747DR_ap_FMA_autothrottle_mode = 5 --THR REF
-		elseif simDR_onGround == 0 then
-			B747DR_ap_FMA_autothrottle_mode = 3 -- SPD
-		end
-	else
-		if B747DR_ap_vnav_state > 0 and simDR_allThrottle < 0.1 and simDR_onGround == 0 then
-			B747DR_ap_FMA_autothrottle_mode = 2 --IDLE
-		elseif (B747DR_ap_vnav_state > 0 or isATEnabled()) and simDR_onGround == 0  and simDR_radarAlt1 < 50 then
-			B747DR_ap_FMA_autothrottle_mode = 1 --HOLD
-		else
-			B747DR_ap_FMA_autothrottle_mode = 0
-			--simDR_override_throttles = 0
-		end
-	end
+	-- the A/T and its FMA (the FMC's step 9f1: afds_at; before, an if chain
+	-- here over the flags the A/T's writers had left)
+	afds_at()
 
 	-- (LNAV engages in the AFDS model: 6-3 step 1b)
 
@@ -3633,12 +3596,10 @@ function B747_ap_EICAS_msg()
 	-- >AUTOPILOT: the AFDS model's (6-3 step 5c, afds_sync)
 
 	--print("test drag required".. B747DR_speedbrake_lever .. " " .. simDR_all_wheels_on_ground .. " " .. simDR_autopilot_vs_fpm .. " " .. simDR_autopilot_vs_status .. " " )
-	-- >AUTOTHROT DISC
-	if B747DR_autothrottle_fail == 1 then
-		B747DR_CAS_caution_status[5] = 1
-	else
-		B747DR_CAS_caution_status[5] = 0
-	end
+	-- >AUTOTHROT DISC: the A/T's latch (the FMC's step 9f1; before, its
+	-- fail flag: every reverse landing, any disconnect push)
+	local disc = atState.disc and 1 or 0
+	if B747DR_CAS_caution_status[5] ~= disc then B747DR_CAS_caution_status[5] = disc end
 
 	if
 		B747DR_speedbrake_lever < 0.3 and simDR_ind_airspeed_kts_pilot > (simDR_autopilot_airspeed_kts + 10) and
