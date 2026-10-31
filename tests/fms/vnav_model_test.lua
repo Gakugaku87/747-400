@@ -69,6 +69,16 @@ local s2 = V.new()
 V.update(s2, inp{alt = 35000})
 o = V.update(s2, inp{alt = 35000, d_ed = 109})
 T.equal(o.phase, "CRZ", "past the T/D, the MCP at FL350: still the cruise")
+-- (step 9d1) above CRZ ALT (an air start's climb) past the T/D with the
+-- MCP at CRZ ALT and below the airplane: the cruise still (the MCP below
+-- CRZ ALT starts the descent; before, below the airplane: s143 went into
+-- the descent 250 ft above the MCP)
+local s2b = V.new()
+V.update(s2b, inp{alt = 30000, crz_alt = 30000})
+o = V.update(s2b, inp{alt = 31250, crz_alt = 30000, mcp_alt = 31000, d_ed = 90})
+T.equal(o.phase, "CRZ", "past the T/D 1,250 ft above CRZ ALT FL300, the MCP at FL310: the cruise")
+o = V.update(s2b, inp{alt = 31250, crz_alt = 30000, mcp_alt = 29000, d_ed = 90})
+T.equal(o.phase, "DES", "the MCP at FL290 below CRZ ALT: the descent")
 -- the MCP altitude below: the descent on the path
 o = V.update(s2, inp{alt = 35000, mcp_alt = 10000, d_ed = 110, gs = 480})
 T.equal(o.phase, "DES", "past the T/D with the MCP below: the descent")
@@ -170,5 +180,13 @@ o = V.update(s8, inp{alt = 30000, crz_alt = 30000, mcp_alt = 10000, d_ed = 90, g
 T.equal(o.at, V.AT_IDLE, "4 kt slow: IDLE again")
 o = V.update(s8, inp{alt = 8000, crz_alt = 30000, mcp_alt = 3000, d_ed = 30, gs = 300, ias = 240 - 11})
 T.equal(o.at, V.AT_SPD, "below 10,000 ft, 11 kt slow of 240: SPD")
+
+-- (step 9d1) where the path first reaches an altitude (RESET MCP ALT's
+-- T/D at CRZ ALT): 35,000 ft at its top, 110 NM; 3,000 ft at 10 NM;
+-- 19,000 ft half way up the idle line; above its top none
+T.near(V.path_e_at(path, 35000), 110, 1e-6, "35,000 ft: 110 NM (the top)")
+T.near(V.path_e_at(path, 3000), 10, 1e-6, "3,000 ft: 10 NM")
+T.near(V.path_e_at(path, 19000), 60, 1e-6, "19,000 ft: 60 NM")
+T.equal(V.path_e_at(path, 36000), nil, "above the top: none")
 
 T.done()

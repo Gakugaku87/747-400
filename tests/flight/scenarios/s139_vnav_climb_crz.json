@@ -51,6 +51,19 @@
     { "do": "watch", "note": "60 秒：17,000 ft を ±150 ft で保つ", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "max": 17150, "timeout": 60 },
     { "do": "snapshot", "note": "巡航", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "laminar/B747/fms/vnav/cas", "laminar/B747/fms/vnav/mach", "laminar/B747/fms/vnav/mach_mode", "laminar/B747/autopilot/ias_dial_value", "sim/cockpit2/autopilot/airspeed_is_mach", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/misc/machno", "laminar/B747/autopilot/flightPhase", "laminar/B747/engines/ref_thr_limit_mode", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode" ] },
     { "do": "check", "note": "下にも 150 ft まで", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": ">=", "value": 16850 },
+    { "do": "mark", "note": "cruise climb（段 9d1：FCOM p.649、p.1257）" },
+    { "do": "set", "note": "MCP 高度 FL190", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 19000 },
+    { "do": "sleep", "seconds": 4 },
+    { "do": "check", "note": "押す前は巡航（2）のまま", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 2 },
+    { "do": "cmd", "note": "高度のノブを押す", "name": "laminar/B747/button_switch/press_altitude" },
+    { "do": "wait", "note": "CRZ ALT は MCP の FL190", "dref": "laminar/B747/autopilot/dist/cruise_alt", "op": "==", "value": 19000, "timeout": 5 },
+    { "do": "wait", "note": "FMC は上昇（1）、VNAV SPD", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 4, "timeout": 15 },
+    { "do": "check", "note": "FMC の上昇", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 1 },
+    { "do": "wait", "note": "FL190 で VNAV PTH（MCP と同じ高度なので VNAV ALT でない：段 9d1）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 6, "timeout": 240 },
+    { "do": "watch", "note": "60 秒：捕捉の後に FL190 を 300 ft より行き過ぎない（捕捉は 600 ft ほど手前から）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "max": 19300, "timeout": 60 },
+    { "do": "check", "note": "19,000 ft の近く", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [18850, 19150] },
+    { "do": "check", "note": "VNAV PTH のまま", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 6 },
+    { "do": "check", "note": "A/T は SPD", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3 },
     { "do": "record_stop" }
   ]
 }

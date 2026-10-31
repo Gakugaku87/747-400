@@ -105,6 +105,22 @@ local function takeoff_speed(s, inp)
     return to.cas
 end
 
+-- the distance to go to the E/D where the path first reaches altitude h
+-- from the E/D up (its T/D at the cruise altitude: step 9d1's RESET MCP
+-- ALT); nil when it does not
+function M.path_e_at(path, h)
+    if not path or not path.e or #path.e < 2 then return nil end
+    local es, hs = path.e, path.h
+    for i = 2, #es do
+        if hs[i] >= h then
+            local dh = hs[i] - hs[i - 1]
+            if dh <= 1e-9 then return es[i - 1] end
+            return es[i - 1] + (es[i] - es[i - 1]) * (h - hs[i - 1]) / dh
+        end
+    end
+    return nil
+end
+
 -- the target speed: the schedule's (or the MCP's in speed intervention,
 -- the takeoff's), within the margins
 local function target_speed(P, sched, crz, inp, phase, to_cas)
@@ -179,9 +195,13 @@ function M.update(s, inp)
         -- a higher CRZ ALT: the climb again (FCOM p.1257's cruise climb)
         if ph == "CRZ" and inp.crz_alt and inp.crz_alt > inp.alt + 500 then ph = "CLB" end
         -- past the T/D: the descent path here at or below the airplane (the
-        -- T/D where the cruise, or a climb without a T/C, meets it)
+        -- T/D where the cruise, or a climb without a T/C, meets it), the MCP
+        -- altitude below CRZ ALT and the airplane (step 9d1: before, below
+        -- the airplane alone; s143's air start climbed 250 ft over the MCP
+        -- at FL310 past the T/D, the descent at once)
         if ph ~= "DES" then
-            local mcpBelow = inp.mcp_alt and inp.mcp_alt < inp.alt - M.MCP_BELOW
+            local ref = inp.crz_alt and math.min(inp.alt, inp.crz_alt) or inp.alt
+            local mcpBelow = inp.mcp_alt and inp.mcp_alt < ref - M.MCP_BELOW
             if path_h and path_h <= inp.alt + 50 and mcpBelow then ph = "DES" end
         end
     end

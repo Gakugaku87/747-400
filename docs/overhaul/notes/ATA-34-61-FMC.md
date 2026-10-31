@@ -1221,3 +1221,27 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 推定：DC はどちらか 1 本で足りること。
 - 残り：FMC の両方の故障と FMC の master の切り替え（FMC の故障の模型が無い）、servo loop monitor（閾値が資料に無い）。SPD・THR スイッチの条件は段 9f1 から（400 ft、TO の limit、ピッチのモード）。THR スイッチの推力制限の機能と DRAG REQUIRED の作り直しは段 9e・9g。
 - 試験：`afds_glue_test.lua` 230 件（F/O transfer bus を失うと外れ >AUTOTHROT DISC、SPD スイッチも効かない、戻すと SPD で engage しメッセージが消える、THRUST REQUIRED が A/T OFF の SPD の求めで出て IDLE の求めで消える）。全 134 本。X-Plane：Web API で F/O transfer bus・APU standby bus・DC bus が 1（電源の入った機体で engage を妨げない）。
+
+## 62. 段 9d の段取り（2026-10-31：MCP の操作と早期降下）
+
+- 資料：FCOM p.649（MCP の高度のノブの押し）、p.645・p.665・p.1256（VNAV ALT：MCP の高度を変えてノブを押すと続ける、経路の下なら MCP を下げて経路に当たれば続ける）、p.1257（cruise climb・cruise descent と CRZ のページの見出し）、p.1260–1261（早期降下：DES NOW、T/D の 50 NM の内のノブ、50 NM より前は cruise descent）、p.643（IAS/MACH のノブの押し：速度介入。PTH の降下は VNAV SPD に、高度の制限で PTH に戻る。進入中は PTH のまま）、p.665・p.1433（RESET MCP ALT：T/D の 2 分前に MCP が巡航高度のまま）。
+- 今：MCP の高度を 50 ft より動かすと VNAV ALT・PTH の水平を離す（段 9a：押しなし）。ALT のノブは前の VNAV のコード（CRZ ALT より上なら CRZ ALT を MCP に、2 秒後に前の VNAV の再開）。SPD のノブは前の `manualVNAVspd` を切り替え（窓が開いて MCP の速さで飛ぶが、FMC のサブモードは変わらない）。RESET MCP ALT は前の `checkMCPAlt`（前の VNAV の T/D の距離）。早期降下と DES NOW は無い。
+- 段：
+  - 9d1：ALT のノブの押し。AP がノブの押しの数を `laminar/B747/autopilot/alt_sel_pushes` に出し、FMS が押しごとに：上昇・降下で、機体の高度と MCP の高度の間の次の制限を消す（有効な経路の脚の高度の制限）。上昇で制限が無く MCP が CRZ ALT より上なら CRZ ALT を MCP に。巡航で MCP が CRZ ALT と違えば CRZ ALT を MCP に（下で T/D の 50 NM の内なら 9d2 の早期降下）。AFDS の VNAV ALT の水平はノブの押しで離す（MCP の高度の変化だけでは離さない。降下で経路の下は経路に当たれば：p.645）。RESET MCP ALT を FMC で（T/D まで 2 分の内、MCP が CRZ ALT 以上：予測の T/D と対地速度から）。
+  - 9d2：早期降下・cruise descent・DES NOW（DES のページの 6R）。VNAV のモデルに、降下を経路の前に始める型（VNAV SPD で降下の速さ、約 1,250 fpm、A/T は THR から HOLD、経路に当たると PTH：p.1260）と cruise descent（新しい CRZ ALT へ VNAV SPD で降り、水平で巡航：p.1261。降下率は推定）。A/T の THR は VNAV の V/S の目標で。CRZ のページの見出しの CRZ CLB・CRZ DES（p.1257）。2 つに分ける（2026-10-31）：
+    - 9d2a：誘導とノブ。早期降下（ノブで T/D の 50 NM の内か、MCP が降下の最も高い制限より下：p.1389）、cruise climb・descent の誘導、A/T の THR から HOLD（FMSPG p.3.5-5：その率に達すると）、T/D の判定の直し、CDU の ACT の見出しを FMC の段階で（CRZ CLB・CRZ DES）。
+    - 9d2b：DES のページの 6R の DES NOW>（MOD と EXEC：FMSPG p.3.5-5。上昇と巡航の制限も消す）と DES DIR>、CLB のページの CLB DIR>（機体と MCP の高度の間の制限を全部消す、CRZ ALT は変えない：FCOM p.1329、p.1393、FMSPG p.3.5-5 の図）。
+  - 9d3：速度介入の VNAV SPD（PTH の降下で窓を開くと VNAV SPD、高度の制限で PTH：p.643）。
+
+## 63. 段 9d1 の実装（2026-10-31：MCP の高度のノブの押しと RESET MCP ALT）
+
+- 資料：§62（FCOM p.645、p.649、p.665、p.1256–1257、p.1433）。
+- 作ったもの：
+  - AP：高度のノブの押し（`laminar/B747/button_switch/press_altitude`）を `laminar/B747/autopilot/alt_sel_pushes` に数える（前は前の VNAV の CRZ ALT と再開のコード）。AFDS の VNAV ALT（MCP の高度での水平）は、MCP の高度が変わってノブが押されたら続ける（前は変わっただけで続けた：段 9a）。経路の下で水平になっていて MCP を下げたなら、経路が降りてきて当たれば押さずに続ける（p.645）。FMC の高度での VNAV PTH は今までどおり FMC の次の高度で。
+  - FMS（`B747_fms_alt_sel_push`）：押しごとに、上昇（地上を含む）・降下で、機体の高度と MCP の高度の間の次の高度の制限を有効な経路から直接消す（MOD を作らない：経路のモデルの新しい `delete_alt_active`。速度の制限は残す）。上昇は予測の上昇の脚（予測の最後の上昇の点まで）だけ、降下はその先だけを見る。上昇で制限が無く MCP が CRZ ALT より上、か巡航で MCP が CRZ ALT より上なら CRZ ALT を MCP に（cruise climb：p.1257）。巡航で MCP が下（cruise descent と早期降下）は 9d2。
+  - RESET MCP ALT（旗 33）：FMC が、VNAV の巡航で T/D（経路が CRZ ALT に達する所：VNAV のモデルの新しい `path_e_at`）まで 2 分の内か過ぎて、MCP が CRZ ALT から下がっていないとき（前は前の VNAV の T/D の距離で、前の monitor が出した）。過ぎても出し続けるのは推定。
+  - AFDS：FMC の高度（上昇の制限か CRZ ALT）が MCP の高度と同じ（50 ft 以内）なら、水平は VNAV PTH（FCOM p.645：VNAV ALT は経路と MCP の高度が食い違うとき。前は MCP の捕捉が先で VNAV ALT：X-Plane の s139 の巡航上昇で、MCP と同じ CRZ ALT FL190 に VNAV ALT で水平になった）。FMC の高度が先へ動けば離し、MCP の高度に居ればその捕捉（VNAV ALT）に移る。
+  - VNAV のモデル：FMC の降下の始めは、T/D を過ぎて MCP が CRZ ALT（と機体の低い方）より 200 ft 下のとき（FCOM p.665：MCP が巡航高度のままなら RESET MCP ALT で保つ。前は機体より下：X-Plane の s143 で、空中開始の揺れで機体が MCP より 250 ft 上がり、T/D を過ぎた所で FMC が降下に入って戻らなかった）。
+- 試験：
+  - 回帰：`afds_glue_test.lua` 235 件（MCP を上げただけでは VNAV ALT のまま、ノブの押しで VNAV SPD、押しの数、FMC と MCP の高度が同じなら VNAV PTH）、`pred_glue_test.lua` 86 件（地上の上昇で押すと上昇の制限が 1 つずつ有効な経路から消え MOD は無い、CRZ ALT はその間そのまま、上昇の制限が無くなると CRZ ALT が MCP の 37,000 ft に、降下の制限は残る）、`vnav_model_test.lua` 62 件（`path_e_at`、CRZ ALT より上で MCP が CRZ ALT なら巡航のまま）、`cdu_framework_test.lua` 37 件（FMC のメッセージの試験の旗を DRAG REQUIRED の 9 に：33 は FMS が毎フレーム書く）。全 134 本。
+  - X-Plane（11:05 と 12:12 に起動し直した）：`s128` 5/5（起動し直しの後の捨て）、`s137` 13/13（押さなければ VNAV ALT のまま、押すと上昇を続け 15,000 ft で水平）、`s139` 27/27（巡航上昇：MCP FL190 で押すと CRZ ALT が FL190、FMC は上昇、FL190 で VNAV PTH・A/T SPD、行き過ぎなし。捕捉は約 600 ft 手前から）、新設の `s143` 15/15（T/D の 2 分の内に RESET MCP ALT、30 秒後も残る、MCP を 10,000 ft にすると消えて降下）。12:12 の起動し直しの後の最初のフライト（s143）は A/P の CMD L が入らず捨て（空中開始の初期化の CMD L の押し直しが約 5 秒で尽きる：別に直す）。s139 の初めの回も同じく CMD L が入らなかった。

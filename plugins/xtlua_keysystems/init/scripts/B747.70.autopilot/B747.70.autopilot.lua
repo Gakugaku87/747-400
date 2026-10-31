@@ -121,6 +121,9 @@ B747DR_ap_bus_isolate_req    			= deferred_dataref("laminar/B747/autopilot/bus_i
 B747DR_ap_autothrottle_armed        	= deferred_dataref("laminar/B747/autothrottle/armed", "number")
 -- (the FMC's step 9f2) the A/T's servo: excited (1: the EEC puts the
 -- levers at its command), its lever command (0 to 1)
+-- (the FMC's step 9d1) the MCP altitude selector's pushes, counted (the
+-- FMC deletes constraints and resets CRZ ALT on them)
+B747DR_ap_alt_sel_pushes            	= deferred_dataref("laminar/B747/autopilot/alt_sel_pushes", "number")
 B747DR_at_servo                     	= deferred_dataref("laminar/B747/autothrottle/servo", "number")
 B747DR_at_lever_cmd                 	= deferred_dataref("laminar/B747/autothrottle/lever_cmd", "number")
 B747DR_ap_mach_decimal_visibiilty	    = deferred_dataref("laminar/B747/autopilot/mach_dec_vis", "number")
