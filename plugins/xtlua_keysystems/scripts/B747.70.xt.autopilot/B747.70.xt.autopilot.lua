@@ -707,8 +707,10 @@ local function afds_vnav_level(p)
 	if not vnavLevel and p.vnav_law ~= "ALT" then
 		-- the FMC altitude the MCP's too: no conflict, VNAV PTH (FCOM p.645:
 		-- VNAV ALT for a conflict; step 9d1: s139's cruise climb to CRZ ALT
-		-- FL190 with the MCP at FL190 levelled in VNAV ALT)
-		local fmc = B747DR_ap_fvn_phase == 1 and B747_afds_pitch_model.capture(p, tgt)
+		-- FL190 with the MCP at FL190 levelled in VNAV ALT). The FMC
+		-- altitude captured in VNAV SPD (step 9d2a: the cruise descent's
+		-- CRZ ALT, the early descent's constraint; before, the climb's only)
+		local fmc = B747DR_ap_fvn_mode == 1 and B747_afds_pitch_model.capture(p, tgt)
 		if fmc and math.abs(tgt - mcp) <= 50 then
 			vnavLevel = {alt = tgt, fma = 6}
 		elseif B747_afds_pitch_model.capture(p, mcp) then
@@ -947,9 +949,16 @@ B747DR_at_lever_cmd = deferred_dataref("laminar/B747/autothrottle/lever_cmd", "n
 B747DR_at_TRA = find_dataref("laminar/B747/engines/TRA")
 simDR_at_EPR_bug = find_dataref("sim/cockpit2/engine/actuators/EPR_target_bug")
 simDR_at_N1_bug = find_dataref("sim/cockpit2/engine/actuators/N1_target_bug")
+-- (step 9d2) the TAS for VNAV's THR (m/s: X-Plane's, the IRUs' acceleration
+-- along the path; the indicated speed lags and falls as the airplane
+-- climbs); the energy's rate in fpm from the TAS times its change (m/s and
+-- m/s/s: V dV/dt / g in ft/min)
+simDR_at_tas = find_dataref("sim/flightmodel/position/true_airspeed")
+local AT_EVS_K = 60 / 9.80665 / 0.3048
 local atState = B747_at_model.new()
 local atIn = {}
 local atIas, atAccel = nil, 0
+local atTas, atTasAccel = nil, 0
 local atPush = {spd = 0, thr = 0, disc = 0}
 local atSeen = {spd = 0, thr = 0, disc = 0, toga = nil}
 local function afds_at()
@@ -981,6 +990,8 @@ local function afds_at()
 	i.pitch = afds.pitch
 	i.retard = afds.retard and true or false
 	i.vnav_at, i.vnav_level = B747DR_ap_fvn_at, vnavLevel ~= nil
+	-- (step 9d2a) the FMC's phase: THR's HOLD latch gone with a new one
+	i.vnav_phase = B747DR_ap_fvn_phase
 	local n = B747DR_ap_toga_pushes
 	i.toga = atSeen.toga ~= nil and n ~= atSeen.toga
 	atSeen.toga = n
@@ -1000,6 +1011,11 @@ local function afds_at()
 		atAccel = atAccel + ((ias - atIas) / dt - atAccel) * math.min(1, dt)
 	end
 	atIas = ias
+	local tas = simDR_at_tas
+	if atTas and dt > 0 then
+		atTasAccel = atTasAccel + ((tas - atTas) / dt - atTasAccel) * math.min(1, dt)
+	end
+	atTas = tas
 	local n1 = B747DR_ap_engine_type == 1
 	local thr, lev = 0, 0
 	for e = 0, 3 do
@@ -1010,6 +1026,11 @@ local function afds_at()
 	i.v_max = B747DR_afds_vmax > 0 and B747DR_afds_vmax or 365
 	i.v_min = B747DR_afds_vminm > 0 and B747DR_afds_vminm or 0
 	i.vs, i.alt, i.mcp_alt = simDR_vvi_fpm_pilot, simDR_pressureAlt1, B747DR_autopilot_altitude_ft
+	-- (step 9d2a) VNAV's THR to the FMC's V/S (the early and the cruise
+	-- descent) on the energy's rate (the V/S at the target speed), its HOLD
+	-- on that and the inertial V/S (the VSI's lag held the levers early)
+	i.vnav_vs, i.ivs = B747DR_ap_fvn_vs, simDR_afds_vs
+	i.evs = simDR_afds_vs + AT_EVS_K * tas * atTasAccel
 	i.n1, i.thrust = n1, thr
 	i.thrust_ref = n1 and simDR_at_N1_bug[0] or simDR_at_EPR_bug[0]
 	i.lever = lev

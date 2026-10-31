@@ -241,4 +241,111 @@ A.update(s18, inp{pitch = "FLARE", disc = true, ra = 10})
 A.servo(s18, sv{lever = 0.33})
 T.check(not s18.servo and math.abs(s18.cmd - 0.33) < 1e-9, "off: the servo off, the command with the levers")
 
+-- (the FMC's step 9d2a) VNAV's THR in the early and the cruise descent
+-- (FCOM p.1260; FMSPG p.3.5-5): the levers to the FMC's V/S, HOLD on
+-- reaching it at the target speed (the throttles dormant: the crew sets
+-- the rate), kept while the FMC asks THR; the path met, the FMC's IDLE:
+-- IDLE
+local s19 = A.new()
+A.update(s19, inp{pitch = "VNAV", vnav_at = A.SPD})
+A.update(s19, inp{pitch = "VNAV", vnav_at = A.THR})
+T.equal(A.fma(s19), A.THR, "VNAV's THR")
+A.servo(s19, sv{vs = 0, vnav_vs = -1250, mcp_alt = 31000, lever = 0.6})
+T.near(s19.cmd - 0.6, A.K_VS_VNAV * -1250, 1e-9, "level, the FMC's 1,250 fpm down: less at K_VS_VNAV (not FLCH's V/S to the MCP)")
+A.servo(s19, sv{vs = -1100, vnav_vs = -1250, lever = s19.cmd})
+T.equal(A.fma(s19), A.THR, "1,100 fpm down: THR still")
+A.servo(s19, sv{vs = -1160, vnav_vs = -1250, lever = s19.cmd})
+T.equal(A.fma(s19), A.THR, "1,160 fpm down, within VS_REACHED at the target speed: THR until REACH_S")
+for _ = 2, A.REACH_S do A.servo(s19, sv{vs = -1160, vnav_vs = -1250, lever = s19.cmd}) end
+T.equal(A.fma(s19), A.HOLD, "REACH_S within VS_REACHED at the target speed: HOLD (FMSPG p.3.5-5)")
+T.check(not s19.servo, "the servo off: the levers the crew's")
+A.update(s19, inp{pitch = "VNAV", vnav_at = A.THR})
+A.servo(s19, sv{vs = -1500, vnav_vs = -1250, lever = 0.3})
+T.equal(A.fma(s19), A.HOLD, "the FMC still asking THR: HOLD kept")
+A.update(s19, inp{pitch = "VNAV", vnav_at = A.IDLE})
+T.equal(A.fma(s19), A.IDLE, "the path met, the FMC's IDLE: IDLE")
+-- the aft stop and the hand: HOLD too
+local s20 = A.new()
+A.update(s20, inp{pitch = "VNAV", vnav_at = A.THR})
+A.servo(s20, sv{vs = -200, vnav_vs = -1250, lever = 0})
+T.equal(A.fma(s20), A.HOLD, "THR at the aft stop with less asked: HOLD")
+local s21 = A.new()
+A.update(s21, inp{pitch = "VNAV", vnav_at = A.THR})
+A.servo(s21, sv{vs = -200, vnav_vs = -1250, lever = 0.6})
+A.servo(s21, sv{vs = -200, vnav_vs = -1250, lever = 0.6 + A.OVERRIDE + 0.01})
+T.equal(A.fma(s21), A.HOLD, "THR, the levers 8 degrees off: HOLD")
+-- levelled (VNAV ALT, PTH): SPD, the HOLDs' latches gone with it (the
+-- descent on after a level-off: IDLE again; before, HOLD at once)
+local s22 = A.new()
+A.update(s22, inp{pitch = "VNAV", vnav_at = A.IDLE, lever_idle = true})
+T.equal(A.fma(s22), A.HOLD, "IDLE at the aft stop: HOLD")
+A.update(s22, inp{pitch = "VNAV", vnav_at = A.IDLE, vnav_level = true})
+T.equal(A.fma(s22), A.SPD, "levelled at the MCP altitude: SPD")
+A.update(s22, inp{pitch = "VNAV", vnav_at = A.IDLE})
+T.equal(A.fma(s22), A.IDLE, "the descent on: IDLE again")
+A.servo(s19, sv{vs = -1500, vnav_vs = -1250, lever = 0.3})
+A.update(s19, inp{pitch = "VNAV", vnav_at = A.THR})
+T.equal(A.fma(s19), A.THR, "THR asked again after IDLE: THR (the latch gone)")
+
+-- at the V/S but 30 kt slow: THR (the HOLD at the target speed; s144's
+-- levers held 50 kt slow flew level at the target); a new FMC phase: the
+-- HOLD's latch gone, THR again (the early descent after a cruise descent:
+-- FCOM p.1260)
+local s23 = A.new()
+A.update(s23, inp{pitch = "VNAV", vnav_at = A.THR})
+for _ = 1, 8 do A.servo(s23, sv{vs = -1250, vnav_vs = -1250, ias = 220, target = 250, lever = 0.3}) end
+T.equal(A.fma(s23), A.THR, "at 1,250 fpm 30 kt slow: THR still")
+local s24 = A.new()
+A.update(s24, inp{pitch = "VNAV", vnav_at = A.THR, vnav_phase = 2})
+for _ = 1, A.REACH_S do A.servo(s24, sv{vs = -1250, vnav_vs = -1250, lever = 0.3}) end
+T.equal(A.fma(s24), A.HOLD, "the cruise descent's THR at the rate: HOLD")
+A.update(s24, inp{pitch = "VNAV", vnav_at = A.THR, vnav_phase = 2})
+T.equal(A.fma(s24), A.HOLD, "the same phase: HOLD kept")
+A.update(s24, inp{pitch = "VNAV", vnav_at = A.THR, vnav_phase = 3})
+T.equal(A.fma(s24), A.THR, "the early descent (the FMC's descent phase): THR again")
+-- the inertial V/S (ivs) for VNAV's THR when given: the VSI at the rate but
+-- the airplane at 200 fpm: THR still (s144: the VSI's lag held the levers)
+local s25 = A.new()
+A.update(s25, inp{pitch = "VNAV", vnav_at = A.THR})
+for _ = 1, 10 do A.servo(s25, sv{vs = -1250, ivs = -200, vnav_vs = -1250, lever = 0.3}) end
+T.equal(A.fma(s25), A.THR, "the VSI at 1,250 fpm, the inertial V/S at 200: THR still")
+-- the V/S passing the rate (s144, s145: the pitch levelling a dive at the
+-- target speed, the levers at the cruise's thrust): THR, the time from
+-- naught each time it comes back; out of THR the time gone
+local s26 = A.new()
+A.update(s26, inp{pitch = "VNAV", vnav_at = A.THR})
+for _, v in ipairs{-2800, -2000, -1300, -1200, -600, 0} do
+    A.servo(s26, sv{vs = v, vnav_vs = -1250, lever = s26.cmd > 0 and s26.cmd or 0.2})
+end
+T.equal(A.fma(s26), A.THR, "the V/S through the rate in 2 s: THR still")
+T.near(s26.reach_t, 0, 1e-9, "out of the band: the time naught")
+for _ = 1, A.REACH_S - 1 do A.servo(s26, sv{vs = -1250, vnav_vs = -1250, lever = s26.cmd}) end
+A.servo(s26, sv{vs = -1250, vnav_vs = -1250, ias = 240, lever = s26.cmd})
+for _ = 1, A.REACH_S - 1 do A.servo(s26, sv{vs = -1250, vnav_vs = -1250, lever = s26.cmd}) end
+T.equal(A.fma(s26), A.THR, "the speed 10 kt off in between: the time from naught, THR still")
+A.servo(s26, sv{vs = -1250, vnav_vs = -1250, lever = s26.cmd})
+T.equal(A.fma(s26), A.HOLD, "then REACH_S at the rate: HOLD")
+T.near(s26.reach_t, 0, 1e-9, "HOLD: the time naught")
+local s27 = A.new()
+A.update(s27, inp{pitch = "VNAV", vnav_at = A.THR})
+for _ = 1, A.REACH_S - 1 do A.servo(s27, sv{vs = -1250, vnav_vs = -1250, lever = 0.3}) end
+A.update(s27, inp{pitch = "VNAV", vnav_at = A.SPD})
+A.servo(s27, sv{lever = 0.3})
+T.near(s27.reach_t, 0, 1e-9, "SPD between: the time naught")
+A.update(s27, inp{pitch = "VNAV", vnav_at = A.THR})
+A.servo(s27, sv{vs = -1250, vnav_vs = -1250, lever = 0.3})
+T.equal(A.fma(s27), A.THR, "THR again at the rate: THR (the time from naught)")
+-- the energy's rate (evs) when given: the levers by it, the V/S as the
+-- speed would give it at the target (s146: +1,500 fpm slowing 12 kt to the
+-- descent's speed, the energy's -100: before, on the V/S, the levers on to
+-- the aft stop); HOLD with both at the rate
+local s28 = A.new()
+A.update(s28, inp{pitch = "VNAV", vnav_at = A.THR})
+A.servo(s28, sv{vs = 1500, ivs = 1500, evs = -100, vnav_vs = -1250, lever = 0.2})
+T.near(s28.cmd - 0.2, A.K_VS_VNAV * (-1250 + 100), 1e-9, "climbing 1,500 fpm as it slows, the energy's -100: less by the energy's error")
+for _ = 1, 10 do A.servo(s28, sv{vs = -1250, ivs = -1250, evs = -1600, vnav_vs = -1250, lever = s28.cmd}) end
+T.equal(A.fma(s28), A.THR, "the V/S at the rate, the energy's 350 fpm off (slowing): THR still")
+for _ = 1, A.REACH_S do A.servo(s28, sv{vs = -1250, ivs = -1250, evs = -1250, vnav_vs = -1250, lever = s28.cmd}) end
+T.equal(A.fma(s28), A.HOLD, "both at the rate for REACH_S: HOLD")
+
 T.done()

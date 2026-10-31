@@ -189,4 +189,114 @@ T.near(V.path_e_at(path, 3000), 10, 1e-6, "3,000 ft: 10 NM")
 T.near(V.path_e_at(path, 19000), 60, 1e-6, "19,000 ft: 60 NM")
 T.equal(V.path_e_at(path, 36000), nil, "above the top: none")
 
+-- (step 9d2a) the descent from the T/D (FCOM p.1389), where the path
+-- reaches CRZ ALT (this path tops there; the predictions' goes on up:
+-- below): before it, the MCP altitude set below, the cruise still
+local s9 = V.new()
+V.update(s9, inp{alt = 35000})
+o = V.update(s9, inp{alt = 35000, mcp_alt = 10000, d_ed = 150})
+T.equal(o.phase, "CRZ", "40 NM before the T/D, the MCP below: the cruise")
+T.check(o.mode == "PTH" and o.at == V.AT_SPD, "VNAV PTH with SPD until the T/D")
+o = V.update(s9, inp{alt = 35000, mcp_alt = 10000, d_ed = 110})
+T.equal(o.phase, "DES", "at the T/D: the descent")
+
+-- DES NOW (step 9d2a; FCOM p.1260, p.1393; FMSPG p.3.5-5): the descent
+-- phase before the T/D, VNAV SPD at the descent's speeds and about 1,250
+-- fpm by the A/T's THR (speed/thrust: ATA34_2 p.615), until the path comes
+-- down to the airplane: VNAV PTH with IDLE
+local s10 = V.new()
+V.update(s10, inp{alt = 35000})
+T.check(V.des_now(s10), "DES NOW in the cruise")
+o = V.update(s10, inp{alt = 35000, mcp_alt = 10000, d_ed = 160, gs = 480, ias = 270})
+T.equal(o.phase, "DES", "the descent phase at once (FCOM p.1393)")
+T.check(o.mode == "SPD" and o.at == V.AT_THR, "VNAV SPD with THR")
+T.near(o.vs, -V.EARLY_VS, 1e-6, "1,250 fpm down for the A/T")
+T.check(o.mach_mode and math.abs(o.mach - 0.84) < 1e-9, "the descent's M.84 (the active descent schedule)")
+T.equal(o.alt, nil, "the FMC altitude: the descent's next constraint (none here)")
+o = V.update(s10, inp{alt = 30000, mcp_alt = 10000, d_ed = 120, gs = 480, ias = 250})
+T.check(o.mode == "SPD" and o.at == V.AT_THR, "5,000 ft below the path, 40 kt slow: VNAV SPD, THR still (no slow rule)")
+T.near(o.path_dev, -5000, 1e-6, "the path's deviation for the ND")
+o = V.update(s10, inp{alt = 29000, mcp_alt = 10000, d_ed = 100, gs = 470})
+T.equal(o.mode, "SPD", "at 100 NM the path 2,800 ft above: VNAV SPD")
+o = V.update(s10, inp{alt = 28700, mcp_alt = 10000, d_ed = 90, gs = 450})
+T.check(o.mode == "PTH" and o.at == V.AT_IDLE, "the path come down to the airplane: VNAV PTH with IDLE (FCOM p.665)")
+T.check(not V.des_now(s10), "DES NOW in the descent: nothing")
+-- DES NOW in the climb (no T/C yet): the descent too
+local s11 = V.new()
+V.update(s11, inp{alt = 20000})
+T.check(V.des_now(s11), "DES NOW in the climb")
+o = V.update(s11, inp{alt = 20000, mcp_alt = 10000, d_ed = 200})
+T.check(o.phase == "DES" and o.mode == "SPD", "the early descent")
+-- on the ground or without an active route: none (the climb's phase)
+o = V.update(s11, inp{alt = 0, ground = true})
+T.equal(o.phase, "CLB", "on the ground: the climb, the early descent over")
+o = V.update(s11, inp{alt = 20000, mcp_alt = 10000, d_ed = 200})
+T.equal(o.mode, "SPD", "in the air again: the climb's VNAV SPD")
+T.equal(o.at, V.AT_THR_REF, "with THR REF")
+
+-- a lower CRZ ALT in the cruise (the selector's push more than 50 NM
+-- before the T/D: the glue's): the cruise descent (FCOM p.1257, p.1261):
+-- the cruise phase, VNAV SPD at the cruise's speed (economy cruise), down
+-- by the A/T's THR at the early descent's rate (estimate), level at the
+-- new CRZ ALT; the CRZ page's CRZ DES (p.1347)
+local s12 = V.new()
+V.update(s12, inp{alt = 35000})
+o = V.update(s12, inp{alt = 35000, crz_alt = 31000, mcp_alt = 31000, d_ed = 300})
+T.check(o.phase == "CRZ" and o.crz_chg == "DES", "CRZ ALT FL310: the cruise descent (CRZ DES)")
+T.check(o.mode == "SPD" and o.at == V.AT_THR and o.alt == 31000, "VNAV SPD with THR to FL310")
+T.near(o.vs, -V.EARLY_VS, 1e-6, "1,250 fpm down")
+T.check(o.mach_mode and math.abs(o.mach - 0.85) < 1e-9, "the cruise's M.85")
+o = V.update(s12, inp{alt = 31040, crz_alt = 31000, mcp_alt = 31000, d_ed = 280})
+T.check(o.phase == "CRZ" and o.crz_chg == nil, "within 50 ft of FL310: the cruise")
+T.check(o.mode == "PTH" and o.at == V.AT_SPD, "VNAV PTH with SPD")
+-- a higher one: the cruise climb (FCOM p.1257: CRZ CLB), VNAV SPD with THR
+-- REF at the cruise's speed (the climb's phase for the thrust limit:
+-- estimate until step 9g)
+o = V.update(s12, inp{alt = 31000, crz_alt = 35000, mcp_alt = 35000, d_ed = 260})
+T.check(o.phase == "CLB" and o.crz_chg == "CLB", "CRZ ALT FL350: the cruise climb (CRZ CLB)")
+T.check(o.mode == "SPD" and o.at == V.AT_THR_REF and o.alt == 35000, "VNAV SPD with THR REF to FL350")
+T.check(o.mach_mode and math.abs(o.mach - 0.85) < 1e-9, "the cruise's M.85 (not the climb's)")
+o = V.update(s12, inp{alt = 34960, crz_alt = 35000, mcp_alt = 35000, d_ed = 240})
+T.check(o.phase == "CRZ" and o.crz_chg == nil, "at FL350: the cruise")
+-- the climb from the takeoff: no CRZ CLB
+local s13 = V.new()
+o = V.update(s13, inp{alt = 20000})
+T.equal(o.crz_chg, nil, "the climb after takeoff: not a cruise climb")
+
+-- DES NOW past the T/D above the path (the path descending here): the
+-- path at once, VNAV PTH
+local s14 = V.new()
+V.update(s14, inp{alt = 35000})
+V.des_now(s14)
+o = V.update(s14, inp{alt = 35000, mcp_alt = 10000, d_ed = 100, gs = 480})
+T.check(o.phase == "DES" and o.mode == "PTH", "DES NOW past the T/D, 3,200 ft above the path: VNAV PTH at once")
+-- the airplane above CRZ ALT alone (an air start's climb over it: s144),
+-- CRZ ALT not set lower: the cruise in VNAV PTH to it, no CRZ DES
+local s15 = V.new()
+o = V.update(s15, inp{alt = 31300, crz_alt = 30000, mcp_alt = 30000, d_ed = 300})
+T.check(o.phase == "CRZ" and o.crz_chg == nil and o.mode == "PTH",
+    "1,300 ft above CRZ ALT FL300 from the start: the cruise, VNAV PTH (no CRZ DES)")
+o = V.update(s15, inp{alt = 31300, crz_alt = 28000, mcp_alt = 28000, d_ed = 300})
+T.equal(o.crz_chg, "DES", "CRZ ALT then set to FL280: the cruise descent")
+-- the predictions' path goes on above CRZ ALT up to the ceiling: the
+-- planned path level at CRZ ALT before the T/D (where the path reaches
+-- it). Before it the cruise with the MCP below, at it the descent; DES
+-- NOW's early descent meets the path below CRZ ALT after the T/D (s144
+-- kept 13,000 ft under the path above CRZ ALT and never met it)
+local path2 = {e = {0, 10, 110, 200}, h = {1500, 3000, 35000, 45000}, k = {"idle", "spd", "idle", "idle"}}
+local s16 = V.new()
+V.update(s16, inp{alt = 35000, path = path2})
+o = V.update(s16, inp{alt = 35000, mcp_alt = 10000, path = path2, d_ed = 150})
+T.equal(o.phase, "CRZ", "the path 4,400 ft over CRZ ALT 40 NM before the T/D, the MCP below: the cruise")
+o = V.update(s16, inp{alt = 35000, mcp_alt = 10000, path = path2, d_ed = 110})
+T.equal(o.phase, "DES", "at the T/D: the descent")
+local s17 = V.new()
+V.update(s17, inp{alt = 35000, path = path2})
+V.des_now(s17)
+o = V.update(s17, inp{alt = 33000, mcp_alt = 10000, path = path2, d_ed = 130})
+T.near(o.path_dev, -2000, 1e-6, "the early descent 20 NM before the T/D: 2,000 ft under CRZ ALT (the planned path)")
+o = V.update(s17, inp{alt = 32000, mcp_alt = 10000, path = path2, d_ed = 105})
+T.equal(o.mode, "SPD", "past the T/D, the path 1,400 ft above: VNAV SPD")
+o = V.update(s17, inp{alt = 31900, mcp_alt = 10000, path = path2, d_ed = 100})
+T.equal(o.mode, "PTH", "the path met (31,800 ft): VNAV PTH")
 T.done()

@@ -351,13 +351,19 @@ function fmsFunctions.rteactivate(fmsO, value)
 end
 function fmsFunctions.rteerase(fmsO, value)
   R.erase(st_of(fmsO))
+  -- (6-1/6-2 step 9d2b) the VNAV pages' 6R's part too
+  B747_fms_vnav_erase()
   B747_fmc_route_changed()
 end
 -- EXEC: the active route's modification or activation, else the other
--- route's activation (step 7e4: it becomes the active one)
+-- route's activation (step 7e4: it becomes the active one); (step 9d2b)
+-- the VNAV pages' 6R's part with it (DES NOW's early descent)
 function fmsFunctions.rteexec(fmsO, value)
   -- the airplane's position: a direct-to's start (step 5e)
-  if R.exec_both(B747_fmc_route, B747_fmc_route2, {lat = simDR_latitude, lon = simDR_longitude}) then B747_fmc_route_changed() end
+  if R.exec_both(B747_fmc_route, B747_fmc_route2, {lat = simDR_latitude, lon = simDR_longitude}) then
+    B747_fms_vnav_exec()
+    B747_fmc_route_changed()
+  end
 end
 -- RTE COPY (FCOM p.1289, p.1334; FMSPG p.134-136): the active route into
 -- the other, COMPLETE

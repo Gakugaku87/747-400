@@ -37,9 +37,10 @@ local conv = 1.0 --converter (pounds to kilos)
 -- LRC; <ECON (5L) and LRC> (CRZ 6R) choose (FCOM p.1327-1328, p.1347-1350,
 -- p.1391-1392; FMSPG p.112-113, p.131-134, p.192-193)
 local function vnav_text(id) return (string.gsub(fmsModules["data"][id], "%s+$", "")) end
--- a page title centred in the room left of the page number, ACT if active
-local function vnav_title(text, active)
-  local s = (active and "ACT " or "") .. text
+-- a page title centred in the room left of the page number, ACT if active,
+-- MOD if modified (step 9d2b: its 6R's modification to execute)
+local function vnav_title(text, active, mod)
+  local s = (mod and "MOD " or active and "ACT " or "") .. text
   local pad = math.max(0, math.floor((22 - string.len(s)) / 2))
   return string.rep(" ", pad) .. s .. string.rep(" ", math.max(0, 24 - pad - string.len(s)))
 end
@@ -52,6 +53,33 @@ local function spd_title(mode, cas, mach)
 end
 -- a line of a left and a right part
 local function lr(l, r) return l .. string.rep(" ", math.max(1, 24 - string.len(l) - string.len(r))) .. r end
+-- the page active (6-1/6-2 step 9d2a): the FMC's phase (B747.68.xt.fms.lua's
+-- B747_fms_vnav_page: 1 CLB, 2 CRZ with the cruise climb and descent, 3
+-- DES; before, the AP's old flightPhase), the CRZ page's CRZ CLB or CRZ
+-- DES while climbing or descending to a new CRZ ALT (FCOM p.1347)
+local function vnav_active(pg)
+  local p, chg = B747_fms_vnav_page()
+  return p == pg, chg
+end
+-- (step 9d2b) 6R's CLB DIR>, DES NOW> or DES DIR> (B747_fms_vnav_prompt)
+-- and its push (a modification of the active route for EXEC); ERASE at 6L
+-- while a modification waits (ATA34_2 p.558, p.564); EXEC on these pages
+-- the route's (and DES NOW's early descent: B744.fms.pages.rte.lua)
+local function vnav_6r(pg)
+  local p = B747_fms_vnav_prompt(pg)
+  fmsFunctionsDefs["VNAV"]["R6"] = p and {"vnavdir", (string.gsub(p, ">$", ""))} or nil
+  return p or ""
+end
+local function vnav_6l(other)
+  if B747_fmc_route.mod then
+    fmsFunctionsDefs["VNAV"]["L6"] = {"rteerase", ""}
+    return "<ERASE"
+  end
+  return other
+end
+function fmsFunctions.vnavdir(fmsO, value)
+  B747_fms_vnav_select(value)
+end
 -- the CRZ page's labels that change: AT, AVAIL AT or TO T/D; EPR or N1
 local crzAtLabel, crzThrLabel = "AT", "N1"
 function fmsFunctions.vnavspd(fmsO, value)
@@ -69,6 +97,8 @@ function fmsFunctions.vnavspd(fmsO, value)
 end
 
 fmsPages["VNAV"]=createPage("VNAV")
+-- (step 9d2b) EXEC on the VNAV pages: the modification's
+fmsFunctionsDefs["VNAV"]["exec"]={"rteexec", ""}
 fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be this way
   
 
@@ -183,7 +213,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       -- the selected speed
       local mode = vnav_text("clbspdmode")
       local cas, mach = tonumber(fmsModules["data"]["clbspd"]), tonumber(fmsModules["data"]["clbspdmach"])
-      local active = B747DR_ap_flightPhase==1
+      local active = vnav_active(1)
       local title = spd_title(mode, cas, mach)
       local restSpd, restAlt = tonumber(fmsModules["data"]["clbrestspd"]), tonumber(fmsModules["data"]["clbrestalt"])
       local transSpd, transAlt = tonumber(fmsModules["data"]["transpd"]), tonumber(fmsModules["data"]["spdtransalt"])
@@ -199,7 +229,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       if machText == "" and mode ~= "S" then machText = vnav_text("crzspd") end
       if machText ~= "" then spdText = spdText .. "/." .. machText end
       return{
-        vnav_title(title .. " CLB", active),
+        vnav_title(title .. " CLB", active, B747_fms_vnav_mod() == "CLB DIR"),
       "                        ",
       fmsModules["data"]["crzalt"].."         "..spdalt,
       "                        ",
@@ -212,7 +242,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       "------------------------",
       lr(mode=="S" and "<ECON" or "", "ENG OUT>"),
       "                        ",
-      "                CLB DIR>"
+      lr(vnav_6l(""), vnav_6r(1))
       }
     elseif pgNo==2 then 
       --ref pg 1543 fcomm
@@ -285,7 +315,8 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       -- an estimate; before, N1 from the weight alone for every engine)
       local thrText = ""
       crzThrLabel = perf.N1 and "N1" or "EPR"
-      if B747DR_ap_flightPhase==2 and crz > 0 then
+      local crzActive, crzChg = vnav_active(2)
+      if crzActive and crz > 0 then
         local v = B747_perf_db.level_setting(perf, gw, crz, cmdMach, isaDev)
         thrText = perf.N1 and string.format("%.1f%%", v) or string.format("%.2f", v)
       end
@@ -302,7 +333,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       -- ECON, LRC or SEL SPD: a Mach, or a selected CAS
       local spdText = cas and string.format("%3d", cas) or "." .. vnav_text("crzspd")
       return{
-        vnav_title(spd_title(mode, cas, (not cas) and mach or nil) .. " CRZ", B747DR_ap_flightPhase==2),
+        vnav_title(spd_title(mode, cas, (not cas) and mach or nil) .. " CRZ" .. (crzChg and " " .. crzChg or ""), crzActive),
       "                        ",
       lr(fmsModules["data"]["crzalt"], stepTo and string.format("FL%03d", math.floor(stepTo / 100 + 0.5)) or ""),
       "                        ",
@@ -314,7 +345,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       "------------------------",
       lr(mode~="E" and "<ECON" or "", "ENG OUT>"),
       "                        ",
-      lr("<RTA PROGRESS", mode~="L" and "LRC>" or "")
+      lr(vnav_6l("<RTA PROGRESS"), mode~="L" and "LRC>" or "")
       }
     elseif pgNo==3 then 
       --ref FCOM Virgin p.1023, Lease p.822
@@ -417,7 +448,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       end
       local mode = vnav_text("desspdmode")
       return{
-        vnav_title(spd_title(mode, tonumber(fmsModules["data"]["desspd"]), tonumber(fmsModules["data"]["desspdmach"])) .. " DES", B747DR_ap_flightPhase==3),
+        vnav_title(spd_title(mode, tonumber(fmsModules["data"]["desspd"]), tonumber(fmsModules["data"]["desspdmach"])) .. " DES", (vnav_active(3)), B747_fms_vnav_mod() == "DES NOW" or B747_fms_vnav_mod() == "DES DIR"),
       "                        ",
       --"  **** *****    ***/****",
       " "..edaltText.." "..string.format("%5s",eodWpt).."    "..nextAltText,
@@ -430,7 +461,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       "------------------------",
       lr(mode=="S" and "<ECON" or "", "FORECAST>"),
       "                        ",
-      "OFFPATH DES     DES DIR>"
+      lr(vnav_6l("OFFPATH DES"), vnav_6r(3))
       
 
       }

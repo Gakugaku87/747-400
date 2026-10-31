@@ -372,4 +372,164 @@ while rt:get(CRZA) == 35000 and n < 12 do push() n = n + 1 end
 T.equal(rt:get(CRZA), 37000, string.format("none left in the climb: CRZ ALT the MCP's 37,000 ft (%d pushes)", n))
 T.check(cons() > 0, "the descent's constraints kept: " .. cons())
 
+
+-- (step 9d2a) in the air at CRZ ALT FL370: the cruise. The selector's push
+-- with the MCP below CRZ ALT (FCOM p.649): more than 50 NM before the T/D
+-- and above the descent's highest constraint, a cruise descent (CRZ ALT
+-- the MCP's: p.1261) with a SPD RESTR above the MCP deleted (p.1257);
+-- within 50 NM, the early descent (the descent phase, VNAV SPD with THR,
+-- CRZ ALT kept: p.1260); more than 50 NM with the MCP under the highest
+-- descent constraint, the early descent too (p.1389). The T/D's distance
+-- here given (the short route has no cruise at FL370)
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 37000)
+rt:set(MCPA, 37000)
+frames(11)
+T.equal(rt:get(VN .. "phase"), 2, "in the air at CRZ ALT FL370: the cruise")
+local top = fms.ns.B747_fms_des_top()
+T.check(top and top < 29000, "the descent's highest constraint: " .. tostring(top))
+local realTd = fms.ns.B747_fms_vnav_td
+fms.ns.B747_fms_vnav_td = function() return 80 end
+local function data(id) return (fms.ns.fmsModules.data[id]:gsub("%s+$", "")) end
+key("func_key/des")
+key("func_key/next_pg")
+key("func_key/next_pg")
+enter("240/33000", "L4")
+T.equal(data("desrestalt"), "33000", "SPD RESTR 240/33000 on the DES page")
+rt:set(MCPA, 31000)
+frames(0.2)
+push()
+T.equal(rt:get(CRZA), 31000, "80 NM before the T/D, MCP FL310: CRZ ALT FL310 (the cruise descent)")
+T.equal(rt:get(VN .. "phase"), 2, "the cruise phase")
+T.check(rt:get(VN .. "mode") == 1 and rt:get(VN .. "at") == 4, "VNAV SPD with THR")
+T.near(rt:get(VN .. "vs"), -1250, 1e-6, "1,250 fpm down")
+T.check(data("desrestalt") == "-----" and data("desrestspd") == "---", "the SPD RESTR above it deleted")
+T.equal(data("desspdtransalt"), "10000", "SPD TRANS's 10,000 ft below it kept")
+T.check(line(1):find("ACT ECON DES") == nil, "the DES page not active: " .. line(1))
+key("func_key/prev_pg")
+T.check(line(1):find("ACT ECON CRZ DES"), "the CRZ page: ACT ECON CRZ DES (FCOM p.1347): " .. line(1))
+local n0 = cons()
+fms.ns.B747_fms_vnav_td = function() return 30 end
+rt:set(MCPA, 29000)
+frames(0.2)
+push()
+T.equal(rt:get(VN .. "phase"), 3, "30 NM before the T/D, MCP FL290: the early descent (the descent phase)")
+T.check(rt:get(VN .. "mode") == 1 and rt:get(VN .. "at") == 4, "VNAV SPD with THR")
+T.equal(rt:get(CRZA), 31000, "CRZ ALT kept")
+T.equal(cons(), n0, "the descent's constraints kept (those after the T/D)")
+key("func_key/next_pg")
+T.check(line(1):find("ACT ECON DES"), "the DES page active: " .. line(1))
+-- the cruise again (on the ground and up): more than 50 NM, the MCP under
+-- the highest descent constraint: the early descent
+rt:set("sim/flightmodel/failures/onground_any", 1)
+frames(0.2)
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 31000)
+rt:set(MCPA, 31000)
+frames(0.5)
+T.equal(rt:get(VN .. "phase"), 2, "at FL310 in the air: the cruise")
+fms.ns.B747_fms_vnav_td = function() return 120 end
+rt:set(MCPA, math.floor((top - 1000) / 100) * 100)
+frames(0.2)
+push()
+T.equal(rt:get(VN .. "phase"), 3, "120 NM before the T/D, the MCP under the highest constraint: the early descent")
+fms.ns.B747_fms_vnav_td = realTd
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 100)
+frames(0.2)
+
+-- (step 9d2b) the VNAV pages' 6R (FCOM p.1329, p.1393; FMSPG p.116,
+-- p.3.5-4 to 3.5-6). CLB DIR: in the climb at 5,000 ft with a SID
+-- constraint ahead and the MCP at 10,000 ft: CLB DIR> on the active CLB
+-- page. AT 12,000 (above the MCP altitude) and AT 10,000 (at it: FMSPG
+-- p.116) stay on its modification; AT OR BELOW 8,000 (between the
+-- airplane and the MCP altitude) goes. The push makes a modification
+-- (EXEC lit, MOD ... CLB, ERASE at 6L), ERASE drops it, EXEC makes it
+-- the active route's
+local EXEC_L = "laminar/B747/fms/exec_light_pilot"
+local sid = nil
+for i, l in ipairs(st.rte.legs) do
+    if not sid and l.proc == "SID" and l.fix and not l.altterm then sid = i end
+end
+T.check(sid ~= nil, "a SID leg with a point: " .. tostring(sid))
+local c1 = st.rte.legs[sid]
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 5000)
+rt:set(MCPA, 10000)
+local function clb_dir(a, akind)
+    c1.alt, c1.alt2, c1.akind = a, nil, akind
+    fms.ns.B747_fmc_route_changed()
+    frames(11)
+    key("func_key/des")
+    key("ls_key/R6")
+end
+clb_dir(12000, "")
+T.equal(rt:get(VN .. "phase"), 1, "in the air at 5,000 ft: the climb")
+T.check(st.mod ~= nil and st.mod.legs[sid].alt == 12000, "AT 12,000 above the MCP altitude: kept")
+key("ls_key/L6")
+clb_dir(10000, "")
+T.check(st.mod ~= nil and st.mod.legs[sid].alt == 10000, "AT 10,000 at the MCP altitude: kept (FMSPG p.116)")
+key("ls_key/L6")
+clb_dir(8000, "B")
+T.check(st.mod ~= nil and rt:get(EXEC_L) == 1, "CLB DIR: a modification, EXEC lit")
+T.check(line(1):find("MOD .* CLB"), "MOD ... CLB: " .. line(1))
+T.check(line(13):find("^<ERASE"), "ERASE at 6L: " .. line(13))
+T.check(st.mod.legs[sid].alt == nil, "AT OR BELOW 8,000 between the airplane and the MCP altitude: deleted on it")
+T.equal(c1.alt, 8000, "the active route's 8,000 still")
+key("ls_key/L6")
+T.check(st.mod == nil and rt:get(EXEC_L) == 0 and line(1):find("ACT .* CLB"), "ERASE: no modification, ACT ... CLB: " .. line(1))
+T.check(line(13):find("CLB DIR>$"), "CLB DIR> at 6R: " .. line(13))
+key("ls_key/R6")
+key("key/execute")
+-- (EXEC makes the modification the active route: its legs, not c1)
+T.check(st.mod == nil and st.rte.legs[sid].alt == nil, "again with EXEC: the active route's 8,000 deleted")
+T.check(line(1):find("ACT .* CLB") and not line(13):find("CLB DIR>"), "ACT ... CLB, no CLB DIR> (no constraint left): " .. line(1) .. "|" .. line(13))
+-- DES NOW: in the cruise at FL310 with the T/D ahead (here given: 80 NM)
+-- DES NOW> on the DES page; the push: MOD ... DES, EXEC lit; EXEC: the
+-- early descent (the descent phase, VNAV SPD with THR)
+rt:set("sim/flightmodel/failures/onground_any", 1)
+frames(0.2)
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 31000)
+rt:set(MCPA, 10000)
+frames(0.5)
+T.equal(rt:get(VN .. "phase"), 2, "at FL310: the cruise")
+fms.ns.B747_fms_vnav_td = function() return 80 end
+key("func_key/des")
+key("func_key/next_pg")
+key("func_key/next_pg")
+T.check(line(13):find("DES NOW>$") and not line(1):find("ACT"), "the DES page: DES NOW> at 6R, not active: " .. line(13) .. "|" .. line(1))
+key("ls_key/R6")
+T.check(st.mod ~= nil and rt:get(EXEC_L) == 1 and line(1):find("MOD .* DES"), "DES NOW: MOD ... DES, EXEC lit: " .. line(1))
+T.equal(rt:get(VN .. "phase"), 2, "not yet executed: the cruise")
+key("key/execute")
+T.equal(rt:get(VN .. "phase"), 3, "EXEC: the descent phase (the early descent)")
+T.check(rt:get(VN .. "mode") == 1 and rt:get(VN .. "at") == 4, "VNAV SPD with THR")
+T.check(st.mod == nil and line(1):find("ACT .* DES"), "ACT ... DES: " .. line(1))
+-- DES DIR: in the descent with constraints between the airplane and the
+-- E/D: DES DIR> (FMSPG p.3.5-4); the push and EXEC: those between the
+-- airplane and the MCP altitude deleted (FCOM p.1393), those below kept
+local top2 = fms.ns.B747_fms_des_top()
+T.check(top2 ~= nil, "a descent constraint: " .. tostring(top2))
+T.check(line(13):find("DES DIR>$"), "DES DIR> at 6R in the descent: " .. line(13))
+local function above(h)
+    local n = 0
+    for _, l in ipairs(st.rte.legs) do
+        if l.alt and l.proc ~= "SID" and math.max(l.alt, l.alt2 or l.alt) > h then n = n + 1 end
+    end
+    return n
+end
+rt:set(MCPA, math.floor((top2 - 1000) / 100) * 100)
+frames(0.2)
+local below0 = above(0) - above(rt:get(MCPA))
+T.check(above(rt:get(MCPA)) > 0, "constraints above the MCP altitude: " .. above(rt:get(MCPA)))
+key("ls_key/R6")
+T.check(st.mod ~= nil and line(1):find("MOD .* DES"), "DES DIR: MOD ... DES: " .. line(1))
+key("key/execute")
+T.check(above(rt:get(MCPA)) == 0, "EXEC: none above the MCP altitude left")
+T.equal(above(0), below0, "those below it kept: " .. below0)
+fms.ns.B747_fms_vnav_td = realTd
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 100)
+frames(0.2)
 T.done()

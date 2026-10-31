@@ -4,12 +4,16 @@
 -- p.645, p.1253-1262):
 --   the phase: the climb (to CRZ ALT), the cruise, the descent (past the
 --   T/D, where the descent path here comes down to the airplane, from the
---   cruise or a climb without a T/C, with the MCP altitude set below);
+--   cruise or a climb without a T/C, with the MCP altitude set below; or
+--   DES NOW's early descent before it: step 9d2a); in the cruise a cruise
+--   climb or descent to a new CRZ ALT (step 9d2a);
 --   the sub-mode asked for: VNAV SPD in the climb (the target speed on the
 --   elevator, the A/T on thrust: THR REF), VNAV PTH in the cruise (the FMC
 --   altitude on the elevator, the A/T on speed: SPD) and the descent (the
 --   path on the elevator, the A/T at IDLE, or SPD where a line between
---   constraints is too shallow for idle: FCOM p.1258);
+--   constraints is too shallow for idle: FCOM p.1258); VNAV SPD with THR
+--   at about 1,250 fpm in the early descent until the path and in the
+--   cruise descent (FCOM p.1260-1261);
 --   the target speed: the climb's, the cruise's or the descent's schedule
 --   (B747.68.pred_model.lua's), the crew's MCP speed in speed intervention,
 --   within the flap placard less 5 kt and the minimum maneuvering speed
@@ -60,9 +64,30 @@ M.SLOW_KT, M.SLOW_KT_LOW, M.SLOW_BACK_KT = 15, 10, 5
 -- (estimate: FCOM p.665 holds the altitude, RESET MCP ALT, while the MCP
 -- altitude stays at the cruise altitude)
 M.MCP_BELOW = 200
+-- (step 9d2a) the early descent's vertical speed (FCOM p.1393, FMSPG
+-- p.3.5-5: about 1,250 fpm), the cruise descent's the same (estimate: the
+-- sources give none); the early descent's path met once the airplane was
+-- EARLY_BELOW under it and is up to it again (estimate); a cruise climb or
+-- descent for CRZ ALT this far off (the climb's since step 9b)
+M.EARLY_VS, M.EARLY_BELOW = 1250, 100
+M.CRZ_CHG = 500
 
 function M.new()
-    return {phase = "CLB", out = {}}
+    return {phase = "CLB", out = {},
+        early = false, early_below = false,  -- the early descent, under the path in it
+        crz_chg = nil,                       -- the cruise climb ("CLB") or descent ("DES")
+        crz_last = nil}                      -- CRZ ALT the update before
+end
+
+-- DES NOW (step 9d2a; FCOM p.1260, p.1389, p.1393; FMSPG p.3.5-5): the
+-- descent phase before the T/D, an early descent (VNAV SPD at the
+-- descent's speeds, about 1,250 fpm by the A/T's THR, then its HOLD) until
+-- the path comes down to the airplane; false in the descent already. The
+-- glue asks it with a T/D (DES NOW's prompt, the altitude selector's push)
+function M.des_now(s)
+    if s.phase == "DES" then return false end
+    s.phase, s.early, s.early_below, s.crz_chg = "DES", true, false, nil
+    return true
 end
 
 -- the descent path at e NM to go to the E/D: its altitude, gradient (ft a
@@ -177,47 +202,95 @@ end
 --                constraint ahead or the E/D's (ft) or nil
 --   path         the descent path ({e, h, k}: see path_at) or nil;
 --                d_ed the distance to go to the E/D (NM) or nil
--- out: valid, phase ("CLB", "CRZ", "DES"), mode ("SPD", "PTH"), cas,
---   mach, mach_mode, alt (the FMC altitude), vs (PTH's vertical speed, nil
---   level), path_alt, path_dev (ft above the path), at (the A/T mode)
+-- out: valid, phase ("CLB", "CRZ", "DES"), crz_chg (the cruise climb's
+--   "CLB" or descent's "DES", else nil), mode ("SPD", "PTH"), cas, mach,
+--   mach_mode, alt (the FMC altitude), vs (PTH's vertical speed, nil level;
+--   THR's in the early and the cruise descent), path_alt, path_dev (ft
+--   above the path), at (the A/T mode)
 function M.update(s, inp)
     local out = s.out
     local P = inp.P
     local path_h, g, kind = nil, nil, nil
-    if inp.path and inp.d_ed then path_h, g, kind = M.path_at(inp.path, inp.d_ed) end
+    local etd = nil
+    if inp.path and inp.d_ed then
+        path_h, g, kind = M.path_at(inp.path, inp.d_ed)
+        -- (step 9d2a) the T/D where the path reaches CRZ ALT (its top
+        -- without), the path level at CRZ ALT before it: the predictions'
+        -- goes on up to the ceiling (s144's early descent kept 13,000 ft
+        -- under it there and never met it)
+        etd = inp.crz_alt and M.path_e_at(inp.path, inp.crz_alt) or inp.path.e[#inp.path.e]
+        if path_h and inp.crz_alt and path_h > inp.crz_alt then path_h, g = inp.crz_alt, 0 end
+    end
 
     -- the phase
     local ph = s.phase
     if inp.ground or not inp.active then
         ph = "CLB"
+        s.early, s.crz_chg = false, nil
     else
-        if ph == "CLB" and inp.crz_alt and inp.alt >= inp.crz_alt - 50 then ph = "CRZ" end
-        -- a higher CRZ ALT: the climb again (FCOM p.1257's cruise climb)
-        if ph == "CRZ" and inp.crz_alt and inp.crz_alt > inp.alt + 500 then ph = "CLB" end
-        -- past the T/D: the descent path here at or below the airplane (the
-        -- T/D where the cruise, or a climb without a T/C, meets it), the MCP
-        -- altitude below CRZ ALT and the airplane (step 9d1: before, below
-        -- the airplane alone; s143's air start climbed 250 ft over the MCP
-        -- at FL310 past the T/D, the descent at once)
+        if ph == "CLB" and inp.crz_alt and inp.alt >= inp.crz_alt - 50 then ph, s.crz_chg = "CRZ", nil end
+        -- a CRZ ALT above in the cruise, or set lower below the airplane:
+        -- the cruise climb (the climb's phase: its guidance and thrust) or
+        -- descent to it (FCOM p.1257; the CRZ page's CRZ CLB, CRZ DES:
+        -- p.1347; step 9d2a), the descent's over within 50 ft of it. Not
+        -- the airplane above CRZ ALT alone (an air start's climb over it:
+        -- VNAV PTH to it, s144)
+        if ph == "CRZ" and inp.crz_alt then
+            if inp.crz_alt > inp.alt + M.CRZ_CHG then
+                ph, s.crz_chg = "CLB", "CLB"
+            elseif s.crz_last and inp.crz_alt < s.crz_last - 50 and inp.crz_alt < inp.alt - M.CRZ_CHG then
+                s.crz_chg = "DES"
+            elseif s.crz_chg == "DES" and inp.alt <= inp.crz_alt + 50 then
+                s.crz_chg = nil
+            end
+        end
+        -- past the T/D (step 9d2a: the path level at CRZ ALT before it),
+        -- the path here at or below the airplane (the T/D where the cruise,
+        -- or a climb without a T/C, meets it), the MCP altitude below CRZ
+        -- ALT and the airplane (step 9d1: before, below the airplane alone;
+        -- s143's air start climbed 250 ft over the MCP at FL310 past the
+        -- T/D, the descent at once)
         if ph ~= "DES" then
             local ref = inp.crz_alt and math.min(inp.alt, inp.crz_alt) or inp.alt
             local mcpBelow = inp.mcp_alt and inp.mcp_alt < ref - M.MCP_BELOW
-            if path_h and path_h <= inp.alt + 50 and mcpBelow then ph = "DES" end
+            local past = path_h and etd and inp.d_ed <= etd + 1e-6
+            if past and path_h <= inp.alt + 50 and mcpBelow then ph, s.crz_chg = "DES", nil end
+        end
+        -- the early descent until the path comes down to the airplane (at
+        -- once on or above it where it descends: past the T/D)
+        if ph == "DES" and s.early and path_h then
+            local dev = inp.alt - path_h
+            if dev < -M.EARLY_BELOW then s.early_below = true end
+            if dev >= 0 and (s.early_below or g > 0) then s.early = false end
         end
     end
     s.phase = ph
+    s.crz_last = inp.crz_alt
     out.phase = ph
+    out.crz_chg = s.crz_chg
 
-    out.cas, out.mach, out.mach_mode = target_speed(P, inp.sched, inp.crz, inp, ph, takeoff_speed(s, inp))
+    -- the cruise climb's and descent's speed the cruise's (FCOM p.1261:
+    -- economy cruise)
+    local spd_ph = s.crz_chg and "CRZ" or ph
+    out.cas, out.mach, out.mach_mode = target_speed(P, inp.sched, inp.crz, inp, spd_ph, takeoff_speed(s, inp))
     out.path_alt, out.path_dev, out.vs = nil, nil, nil
     if ph == "CLB" then
         out.mode = "SPD"
         out.alt = inp.clb_alt or inp.crz_alt
         out.at = M.AT_THR_REF
     elseif ph == "CRZ" then
-        out.mode = "PTH"
         out.alt = inp.crz_alt
-        out.at = M.AT_SPD
+        if s.crz_chg == "DES" then
+            out.mode, out.at, out.vs = "SPD", M.AT_THR, -M.EARLY_VS
+        else
+            out.mode, out.at = "PTH", M.AT_SPD
+        end
+    elseif s.early then
+        -- the early descent: VNAV SPD, the A/T's THR to the rate (speed/
+        -- thrust: ATA34_2 p.615)
+        out.mode, out.at, out.vs = "SPD", M.AT_THR, -M.EARLY_VS
+        out.alt = inp.des_alt
+        if path_h then out.path_alt, out.path_dev = path_h, inp.alt - path_h end
     else
         out.mode = "PTH"
         out.alt = inp.des_alt
