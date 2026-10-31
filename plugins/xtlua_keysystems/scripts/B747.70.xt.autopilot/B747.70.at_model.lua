@@ -21,7 +21,8 @@
 --    5): TO's THR REF, HOLD from 65 kt until VNAV engages or another mode
 --    is selected (FCOM p.667; ATA34_2 p.654); VNAV's the FMC's (SPD when
 --    levelled: FCOM p.645), its IDLE HOLD once the levers reach the aft
---    stop (ATA34_2 p.666), its THR (the early and the cruise descent) HOLD
+--    stop (ATA34_2 p.666), its THR (the early descent; the driftdown, no
+--    HOLD: the FMC's step 9h4b; the cruise descent's SPD since 9h4c) HOLD
 --    at the FMC's V/S (FMSPG p.3.5-5: step 9d2a); FLCH's THR, G/A's THR
 --    then THR REF at a second push (step 9f2; ATA34_2 p.674); from VNAV or
 --    FLCH into ALT, V/S or G/S, SPD (ATA34_2 p.654; from T/O or G/A not:
@@ -65,7 +66,7 @@ M.K_EPR, M.K_N1 = 0.33, 0.003
 -- fpm (p.674); the speed protection's margin (FCOM p.675)
 M.FLCH_S, M.GA_VS = 125, 2000
 M.LIMIT_MARGIN = 5
--- (the FMC's step 9d2) VNAV's THR (the early and the cruise descent): the
+-- (the FMC's step 9d2) VNAV's THR (the early descent, the driftdown): the
 -- levers to the FMC's V/S on the energy's rate at the target speed (the V/S
 -- the speed would give held at its target, in the target's IAS or Mach: the
 -- elevator trades speed for height, s146's +1,500 fpm slowing 12 kt to the
@@ -315,7 +316,7 @@ function M.servo(s, inp)
         rate = math.min(speed_rate(inp, tgt), cap)
     else
         -- THR: FLCH's V/S to the MCP altitude in 125 s, G/A's 2,000 fpm,
-        -- VNAV's the FMC's (step 9d2a: the early and the cruise descent);
+        -- VNAV's the FMC's (step 9d2a: the early descent; 9h4b: the driftdown);
         -- climbing not less thrust (ATA34_2 p.646)
         local vnav = s.pitch == "VNAV"
         local want = s.ga and M.GA_VS or (vnav and (inp.vnav_vs or 0)) or (inp.mcp_alt - inp.alt) / M.FLCH_S * 60

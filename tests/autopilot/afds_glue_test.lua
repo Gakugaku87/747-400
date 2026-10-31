@@ -468,8 +468,30 @@ T.equal(rt:get(AT_FMA_ST), 3, "the A/T SPD")
 T.equal(rt:get("sim/cockpit2/autopilot/airspeed_is_mach"), 1, "the dial in Mach")
 T.near(rt:get(DIAL), 84.5, 1e-6, "the FMC's .845")
 T.equal(rt:get(PHASE), 2, "the cruise's phase")
--- (step 9d2a) a cruise descent (the FMC's cruise phase in VNAV SPD with
--- THR at 1,250 fpm down to a lower CRZ ALT: FCOM p.1261): VNAV SPD, the
+-- (the FMC's step 9h4c) the cruise descent (the FMC's cruise phase in VNAV
+-- PTH at 1,250 fpm down, the A/T on speed: FCOM p.1268-1269): VNAV PTH on
+-- the V/S law (the command down from level; before 9h4c VNAV SPD with
+-- THR), the A/T SPD; 60 ft above the new CRZ ALT descending: the FMC
+-- altitude captured (the command up), VNAV PTH
+rt:set(MCP_ALT, a0 - 4000)
+fvn({phase = 2, mode = 2, alt = a0 - 4000, at = 3, vs = -1250})
+local p3 = rt:get(PITCH_CMD)
+frames(30)
+T.equal(rt:get(PITCH), 6, "the cruise descent: VNAV PTH")
+T.equal(rt:get(AT_FMA_ST), 3, "the A/T SPD (the cruise speed kept)")
+T.check(rt:get(PITCH_CMD) < p3 - 0.1, string.format("1,250 fpm asked from level: the command down (%.2f from %.2f)", rt:get(PITCH_CMD), p3))
+rt:set(VSI, -1200)
+fvn({alt = a0 - 60})
+frames(3)
+local p4 = rt:get(PITCH_CMD)
+frames(30)
+T.check(rt:get(PITCH) == 6 and rt:get(PITCH_CMD) > p4, string.format("60 ft above CRZ ALT at 1,200 fpm down: captured, VNAV PTH, the command up (%.2f from %.2f)", rt:get(PITCH_CMD), p4))
+rt:set(VSI, 0)
+fvn({mode = 2, alt = a0, at = 3, vs = 0})
+frames(30)
+-- (step 9d2a) VNAV SPD with THR in the cruise phase (9d2a's cruise descent
+-- at 1,250 fpm down to a lower CRZ ALT; since the FMC's step 9h4b the
+-- driftdown's, at 300 fpm): VNAV SPD, the
 -- A/T's THR on the FMC's V/S (the levers less from level; before, FLCH's
 -- V/S to the MCP altitude); the hand: HOLD; 60 ft above the new CRZ ALT
 -- descending: VNAV PTH, the FMC altitude captured in
@@ -482,7 +504,7 @@ for e = 0, 3 do rt:set("laminar/B747/engine/throttle", e, c0) end
 rt:set(MCP_ALT, a0 - 4000)
 fvn({mode = 1, alt = a0 - 4000, at = 4, vs = -1250})
 frames(3)
-T.equal(rt:get(PITCH), 4, "the cruise descent: VNAV SPD")
+T.equal(rt:get(PITCH), 4, "the cruise phase's VNAV SPD with THR: VNAV SPD")
 T.equal(rt:get(AT_FMA_ST), 4, "the A/T's THR")
 T.check(rt:get(LEVER_CMD) < c0, string.format("the levers less for 1,250 fpm down: %.4f from %.4f", rt:get(LEVER_CMD), c0))
 -- (2026-10-31) one long frame (X-Plane below 20 fps: its time slower, the

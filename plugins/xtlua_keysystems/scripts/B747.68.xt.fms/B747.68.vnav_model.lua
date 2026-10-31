@@ -13,9 +13,10 @@
 --   altitude on the elevator, the A/T on speed: SPD) and the descent (the
 --   path on the elevator, the A/T at IDLE, or SPD where a line between
 --   constraints is too shallow for idle: FCOM p.1258); VNAV SPD with THR
---   at about 1,250 fpm in the early descent until the path and in the
---   cruise descent (FCOM p.1260-1261); VNAV SPD with IDLE in the descent in
---   speed intervention (FCOM p.643: step 9d3);
+--   at about 1,250 fpm in the early descent until the path (FCOM
+--   p.1260-1261); VNAV PTH at about 1,250 fpm with SPD in the cruise
+--   descent (FCOM p.1268-1269: step 9h4c); VNAV SPD with IDLE in the
+--   descent in speed intervention (FCOM p.643: step 9d3);
 --   the target speed: the climb's, the cruise's or the descent's schedule
 --   (B747.68.pred_model.lua's), the crew's MCP speed in speed intervention,
 --   within the flap placard less 5 kt and the minimum maneuvering speed
@@ -85,8 +86,8 @@ M.SLOW_KT, M.SLOW_KT_LOW, M.SLOW_BACK_KT = 15, 10, 5
 -- altitude stays at the cruise altitude)
 M.MCP_BELOW = 200
 -- (step 9d2a) the early descent's vertical speed (FCOM p.1393, FMSPG
--- p.3.5-5: about 1,250 fpm), the cruise descent's the same (estimate: the
--- sources give none); the early descent's path met once the airplane was
+-- p.3.5-5: about 1,250 fpm), the cruise descent's the same (FCOM p.1268's
+-- condition 3, p.1269: step 9h4c); the early descent's path met once the airplane was
 -- EARLY_BELOW under it and is up to it again (estimate); a cruise climb or
 -- descent for CRZ ALT this far off (the climb's since step 9b)
 M.EARLY_VS, M.EARLY_BELOW = 1250, 100
@@ -335,8 +336,9 @@ end
 --                d_ed the distance to go to the E/D (NM) or nil
 -- out: valid, phase ("CLB", "CRZ", "DES"), crz_chg (the cruise climb's
 --   "CLB" or descent's "DES", else nil), mode ("SPD", "PTH"), cas, mach,
---   mach_mode, alt (the FMC altitude), vs (PTH's vertical speed, nil level;
---   THR's in the early and the cruise descent), path_alt, path_dev (ft
+--   mach_mode, alt (the FMC altitude), vs (PTH's vertical speed, nil level,
+--   the cruise descent's too; THR's in the early descent and the
+--   driftdown), path_alt, path_dev (ft
 --   above the path), at (the A/T mode), msg ("DRAG" for DRAG REQUIRED,
 --   "THRUST" for THRUST REQUIRED, else nil: step 9e1), end_des (END OF DES:
 --   step 9e2), title ("LIM SPD", "VREF + 100" or nil: step 9h3b), dd (the
@@ -456,7 +458,12 @@ function M.update(s, inp)
             -- down, CON its most (FCOM p.1268)
             out.mode, out.at, out.vs = "SPD", M.AT_THR, -M.EO_DD_VS
         elseif s.crz_chg == "DES" then
-            out.mode, out.at, out.vs = "SPD", M.AT_THR, -M.EARLY_VS
+            -- (step 9h4c) the cruise descent at about 1,250 fpm with the A/T
+            -- keeping the cruise speed (FCOM p.1268's condition 3, p.1269):
+            -- VNAV PTH on that rate with SPD, the AFDS capturing CRZ ALT
+            -- (before, the early descent's VNAV SPD and THR to HOLD: step
+            -- 9d2a's estimate)
+            out.mode, out.at, out.vs = "PTH", M.AT_SPD, -M.EARLY_VS
         else
             out.mode, out.at = "PTH", M.AT_SPD
         end
