@@ -556,6 +556,41 @@ function M.variation(db, lat, lon)
     return best and db.nav[best].var or nil
 end
 
+-- (6-1/6-2 step 10a) the radio navaids (VORs, DMEs, localizers) within
+-- `nm` of a point for the FMC's radio position updating: {i, dist} (the
+-- points' indexes), in 2-degree cells made the first time
+function M.radio_near(db, lat, lon, nm)
+    local grid = db.rgrid
+    if not grid then
+        grid = {}
+        for i = 1, db.n do
+            local k = db.kind[i]
+            if (k == M.VOR or k == M.DME or k == M.LOC) and db.nav[i] then
+                local key = vcell(db.lat[i], db.lon[i])
+                local cell = grid[key]
+                if not cell then cell = {}; grid[key] = cell end
+                cell[#cell + 1] = i
+            end
+        end
+        db.rgrid = grid
+    end
+    local list = {}
+    local dlat = nm / 60
+    local dlon = nm / (60 * math.max(cos(rad(lat)), 0.02))
+    local y0, y1 = math.max(floor((lat - dlat) / 2), -45), math.min(floor((lat + dlat) / 2), 44)
+    local x0, x1 = floor((lon - dlon) / 2), floor((lon + dlon) / 2)
+    if x1 - x0 >= 179 then x0, x1 = 0, 179 end
+    for y = y0, y1 do
+        for x = x0, x1 do
+            for _, i in ipairs(grid[(y + 45) * 1000 + (x + 90) % 180] or {}) do
+                local d = M.distance(lat, lon, db.lat[i], db.lon[i])
+                if d <= nm then list[#list + 1] = {i = i, dist = d} end
+            end
+        end
+    end
+    return list
+end
+
 -- the data cycle: the AIRAC cycle, its first and last day (days since 1970)
 function M.cycle_info(db)
     return db.cycle, db.first_day, db.last_day

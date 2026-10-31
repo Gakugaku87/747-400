@@ -2428,6 +2428,208 @@ function update_navdb()
     setFMSData("irsLon",defaultFMSData().irsLon)
   end
 end
+-- (6-1/6-2 step 10a) the FMC's position updating and navigation
+-- performance (B747.68.navperf_model.lua; notes/ATA-34-61-FMC.md §86).
+-- Once a second the model's inputs: the IRUs (B747_fms_irs_pos), the
+-- GPSs, the DME-DME pair from the FMC's database (its DMEs in reach each
+-- 10 s, not the NAVAID INHIBIT ones nor an ILS's: FCOM p.1356), the tuned
+-- VOR/DME (VOR L, R: not a VOR ONLY INHIBIT one nor with VOR/DME NAV
+-- inhibited: FCOM p.1356-1357), LOC updating with ILS L's localizer, the
+-- RNP's phase. It writes the ND's update lines (FCOM p.1150), UNABLE RNP
+-- (the caution 66 on the approach, else the advisory 295: FCOM p.1430),
+-- VERIFY RNP and SPLIT IRS OPERATION (FCOM p.1434-1435) when they change.
+-- POS REF 2/3 and 3/3 show it (activepages/B744.fms.pages.posinit.lua):
+-- their PURGE (CONFIRM showing) back when no CDU shows page 2, BRG/DIST
+-- (the state's brg) when none shows 2 or 3 (FCOM p.1368-1369).
+dofile("B747.68.navperf_model.lua")
+local NP=B747_navperf_model
+local navperfState=NP.new()
+navperfState.brg=false
+local navperfIn=NP.inputs()
+local navperfT,ddT=nil,nil
+local ddPair=nil
+local navperfFlags={}
+B747DR_CAS_caution_status=find_dataref("laminar/B747/CAS/caution_status")
+local UNABLE_RNP_CAUTION,UNABLE_RNP_ADVISORY=66,295
+local VERIFY_RNP,SPLIT_IRS_OPERATION=52,43
+function B747_fms_navperf() return navperfState end
+-- the IRS position the FMC uses: the three's mix, else one (L or C, then
+-- R; L in polar operation: ATA34_2 p.601-602; FCOM p.1241): latitude,
+-- longitude, ground speed (kt) and "3", "L", "C" or "R"; nil without one
+function B747_fms_irs_pos()
+  local v=B747DR_nav_irs_nav_valid
+  local ok={v[0]==1,v[1]==1,v[2]==1}
+  if ok[1] and ok[2] and ok[3] and not navperfState.polar then
+    local lat0,lon0=B747DR_nav_irs_lat[0],B747DR_nav_irs_lon[0]
+    local la,lo,gs=0,0,0
+    for i=0,2 do
+      la=la+B747DR_nav_irs_lat[i]
+      lo=lo+((B747DR_nav_irs_lon[i]-lon0+180)%360-180)
+      gs=gs+B747DR_nav_irs_gs[i]
+    end
+    return la/3,(lon0+lo/3+180)%360-180,gs/3,"3"
+  end
+  for n,name in ipairs({"L","C","R"}) do
+    if ok[n] then return B747DR_nav_irs_lat[n-1],B747DR_nav_irs_lon[n-1],B747DR_nav_irs_gs[n-1],name end
+  end
+  return nil
+end
+-- an identifier from X-Plane's receivers
+local function rx_ident(s) return type(s)=="string" and string.match(s,"^%s*(%w+)") or nil end
+-- the nearest database point of a kind with this identifier: its index and nm
+local function nearest_kind(db,ident,kind,lat,lon)
+  local best,bd=nil,nil
+  local i=ident and db.first[ident]
+  while i do
+    if db.kind[i]==kind and db.nav[i] then
+      local d=B747_navdb.distance(lat,lon,db.lat[i],db.lon[i])
+      if not bd or d<bd then best,bd=i,d end
+    end
+    i=db.nxt[i]
+  end
+  return best,bd
+end
+-- REF NAV DATA's inhibits (FCOM p.1356-1357): NAVAID INHIBIT for any
+-- updating, VOR ONLY INHIBIT and VOR/DME NAV for VOR/DME's (`vor`)
+local function same_point(p,db,i)
+  return p~=nil and p.ident==db.ident[i] and math.abs(p.lat-db.lat[i])<0.01 and math.abs(p.lon-db.lon[i])<0.01
+end
+local function nav_inhibited(db,i,vor)
+  local inh=B747_fmc_nav_inhibits and B747_fmc_nav_inhibits()
+  if not inh then return false end
+  if same_point(inh.navaid[1],db,i) or same_point(inh.navaid[2],db,i) then return true end
+  return vor and (inh.vordme or same_point(inh.vor[1],db,i) or same_point(inh.vor[2],db,i)) or false
+end
+-- the DMEs in reach (a VOR's DME, a DME alone; not an ILS's: the DME's
+-- channel 5, ATA34_2 p.605), the 30 nearest; and a VOR or DME within the
+-- oceanic distance
+local function dd_scan(db,lat,lon,alt)
+  local N=B747_navdb
+  local cands,near={},false
+  for _,e in ipairs(N.radio_near(db,lat,lon,NP.OCEANIC_NM)) do
+    local i=e.i
+    local k,rec=db.kind[i],db.nav[i]
+    if k==N.VOR or k==N.DME then near=true end
+    local ils=rec.name~=nil and (string.find(rec.name,"ILS") or string.find(rec.name,"LOC"))
+    if (k==N.DME or (k==N.VOR and rec.dme)) and not ils and not nav_inhibited(db,i,false) then
+      local la,lo,el=db.lat[i],db.lon[i],rec.elev
+      if k==N.VOR then la,lo,el=rec.dme_lat or la,rec.dme_lon or lo,rec.dme_elev or el end
+      local brg,d=B747_route_model.course(lat,lon,la,lo)
+      if NP.dme_ok(d,rec.range,alt,el) then
+        cands[#cands+1]={ident=db.ident[i],lat=la,lon=lo,elev=el,range=rec.range,dist=d,brg=brg}
+      end
+    end
+  end
+  table.sort(cands,function(a,b) return a.dist<b.dist end)
+  for j=#cands,31,-1 do cands[j]=nil end
+  return cands,near
+end
+-- the pair between the scans: nil out of reach or of the angles
+local function dd_refresh(p,lat,lon,alt)
+  for _,c in ipairs({p.a,p.b}) do
+    c.brg,c.dist=B747_route_model.course(lat,lon,c.lat,c.lon)
+    if not NP.dme_ok(c.dist,c.range,alt,c.elev) then return nil end
+  end
+  local ang=NP.angle(p.a.brg,p.b.brg)
+  if ang<NP.DD_ANGLE_MIN or ang>NP.DD_ANGLE_MAX then return nil end
+  p.angle,p.anp=ang,NP.anp_dd(p.a.dist,p.b.dist,ang)
+  return p
+end
+-- VOR/DME: VOR L or R (X-Plane's NAV 3, 4) receiving a VOR with its DME,
+-- the database's station in reach within 25 nm; the nearer
+local function vd_find(db,lat,lon,alt)
+  local best=nil
+  for k,idx in ipairs({2,3}) do
+    if simDR_radio_nav_horizontal[idx]==1 and simDR_radio_nav_hasDME[idx]==1 then
+      local ident=rx_ident(k==1 and simDR_radio_nav03_ID or simDR_radio_nav04_ID)
+      local i,d=nearest_kind(db,ident,B747_navdb.VOR,lat,lon)
+      local rec=i and db.nav[i]
+      if rec and rec.dme and d<=NP.VD_MAX_NM and NP.dme_ok(d,rec.range,alt,rec.elev)
+        and not nav_inhibited(db,i,true) and (best==nil or d<best.dist) then
+        best={ident=ident,dist=d,anp=NP.anp_vd(d)}
+      end
+    end
+  end
+  return best
+end
+-- LOC updating: ILS L's localizer (X-Plane's NAV 1) received, the active
+-- route's approach's runway at its destination (FCOM p.1241)
+local function loc_find(db,lat,lon,alt)
+  if simDR_radio_nav_horizontal[0]~=1 then return false end
+  local i,d=nearest_kind(db,rx_ident(simDR_radio_nav01_ID),B747_navdb.LOC,lat,lon)
+  if not i then return false end
+  local rec=db.nav[i]
+  local st=B747_fmc_route
+  local r=st.active and st.rte or nil
+  local dest=r and r.dest and r.dest.ident
+  local rwy=r and r.appr and r.appr.rwy
+  local brg=B747_route_model.course(db.lat[i],db.lon[i],lat,lon)
+  return NP.loc_ok({dest_rwy=dest~=nil and rwy~=nil and rec.terminal==dest and "RW"..(rec.runway or "")==rwy,
+    alt_above=alt-(rec.elev or 0),dist=d,brg_from=brg,crs=rec.crs_true or 0,track=simDR_lnav_trk})
+end
+-- a CDU on POS REF page 2 (or 3)
+local function cdu_on_pos_ref(page3)
+  for _,id in ipairs({"fmsL","fmsC","fmsR"}) do
+    local f=fmsModules[id]
+    if f and f.inCustomFMC and f.currentPage=="POSINIT" and (f.pgNo==2 or (page3 and f.pgNo==3)) then return true end
+  end
+  return false
+end
+local function navperf_flag(key,arr,i,on)
+  local v=on and 1 or 0
+  if navperfFlags[key]~=v then
+    navperfFlags[key]=v
+    arr[i]=v
+  end
+end
+function update_navperf()
+  local now=simDRTime
+  if navperfT and now-navperfT<1 and now>=navperfT then return end
+  local dt=(navperfT and now>navperfT) and math.min(now-navperfT,5) or 0
+  navperfT=now
+  local db,N=B747_fmc_navdb,B747_navdb
+  local inp,s=navperfIn,navperfState
+  local lat,lon,alt=simDR_latitude,simDR_longitude,simDR_pressureAlt1
+  inp.dt,inp.ground,inp.lat=dt,simDR_onGround==1,lat
+  local _,_,_,irs=B747_fms_irs_pos()
+  inp.irs=irs~=nil
+  inp.gps_l,inp.gps_r=B747DR_nav_gps_valid[0]==1,B747DR_nav_gps_valid[1]==1
+  if db.ready then
+    if not ddT or now-ddT>=10 or now<ddT then
+      ddT=now
+      local cands
+      cands,inp.navaid_near=dd_scan(db,lat,lon,alt)
+      ddPair=NP.dd_pair(cands,alt)
+    elseif ddPair then
+      ddPair=dd_refresh(ddPair,lat,lon,alt)
+      if not ddPair then ddT=nil end
+    end
+    inp.dd=ddPair
+    inp.vd=vd_find(db,lat,lon,alt)
+    inp.loc=loc_find(db,lat,lon,alt)
+  end
+  local st=B747_fmc_route
+  local r=st.active and st.rte or nil
+  local dTerm=nil
+  for _,a in ipairs(r and {r.origin or false,r.dest or false} or {}) do
+    if a and a.lat then
+      local d=N.distance(lat,lon,a.lat,a.lon)
+      if not dTerm or d<dTerm then dTerm=d end
+    end
+  end
+  inp.d_term=dTerm
+  inp.approach=on_approach()
+  local out=NP.update(s,inp)
+  if s.purge and not cdu_on_pos_ref(false) then NP.purge_cancel(s) end
+  if s.brg and not cdu_on_pos_ref(true) then s.brg=false end
+  local irsLine=irs and ("IRS ("..irs..")") or ""
+  if B747DR_ND_GPS_Line~=out.nd then B747DR_ND_GPS_Line=out.nd end
+  if B747DR_ND_IRS_Line~=irsLine then B747DR_ND_IRS_Line=irsLine end
+  navperf_flag("caution",B747DR_CAS_caution_status,UNABLE_RNP_CAUTION,out.caution)
+  navperf_flag("advisory",B747DR_CAS_advisory_status,UNABLE_RNP_ADVISORY,out.advisory)
+  navperf_flag("verify",B747DR_fmc_notifications,VERIFY_RNP,out.verify)
+  navperf_flag("split",B747DR_fmc_notifications,SPLIT_IRS_OPERATION,out.polar)
+end
 dofile("B744.notifications.lua")
 dofile("irs/irs_system.lua")
 dofile("B744.fms.baro.lua")
@@ -2934,6 +3136,7 @@ function after_physics()
     fmsR:B747_fms_display()
     if simDR_bus_volts[0]>22 then
       irsSystem.update()
+      update_navperf()
       B747_setNAVRAD()
     end
     if acarsSystem.provider.online() then

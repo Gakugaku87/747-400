@@ -2944,20 +2944,8 @@ function B747_getCurrentWayPoint_function(fmsO)
 			canNew=false
 			--print("In current track "..B747DR_fmscurrentIndex.." "..minPhaseLeg.."->"..maxPhaseLeg)
 		end
-		local maxError=5
-		if dToAP<40 then
-			if B747DR_ap_approach_mode~=0 then
-				maxError=0.3
-			else
-				maxError=1
-			end
-			if B747DR_ap_lnav_xtk_target>=-99 and track[2]>maxError and track[1]>math.min(5,trackLength/5) then
-				B747DR_CAS_caution_status[66]=0 -- not from the cross-track (FMC-29): ANP above RNP, 6-1 step 10
-			else
-				B747DR_CAS_caution_status[66]=0
-			end
-		end
-		
+		-- UNABLE RNP: the FMC's ANP over its RNP (6-1/6-2 step 10a:
+		-- B747.68.xt.fms.lua's update_navperf), not the cross-track
 	end
 	--print("Start Track Data "..minPhaseLeg.."->"..maxPhaseLeg)
 	if canNew then

@@ -220,7 +220,7 @@ end
 
 fmsFunctionsDefs["INITREF"]={}
 fmsFunctionsDefs["INITREF"]["L1"]={"setpage","IDENT"}
-fmsFunctionsDefs["INITREF"]["L2"]={"setpage","POSINIT"}
+fmsFunctionsDefs["INITREF"]["L2"]={"initrefpos",""}
 fmsFunctionsDefs["INITREF"]["L3"]={"setpage","PERFINIT"}
 fmsFunctionsDefs["INITREF"]["L4"]={"setpage","THRUSTLIM"}
 
