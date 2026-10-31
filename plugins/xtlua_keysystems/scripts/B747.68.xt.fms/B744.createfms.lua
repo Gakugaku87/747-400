@@ -131,9 +131,13 @@ local function pageKey(fmsModule,key)
       fmsO.targetpgNo=1
       return
   elseif key=="des" then
+      -- VNAV: in flight the active phase's page (CLB, CRZ, DES: 1 to 3,
+      -- B747_fms_vnav_page's), on the ground or without an active route the
+      -- CLB page (ATA34_2 p.552; before, the CLB page always)
+      local p=B747_fms_vnav_page()
       fmsO.targetCustomFMC=true
       fmsO.targetPage="VNAV"
-      fmsO.targetpgNo=1
+      fmsO.targetpgNo=(p>=1 and p<=3) and p or 1
       return
   elseif key=="dir_intc" then
       -- FIX: the FMC's FIX INFO (6-1/6-2 step 7e3b; before: X-Plane's FIX

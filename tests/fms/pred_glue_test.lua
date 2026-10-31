@@ -391,8 +391,9 @@ T.check(top and top < 29000, "the descent's highest constraint: " .. tostring(to
 local realTd = fms.ns.B747_fms_vnav_td
 fms.ns.B747_fms_vnav_td = function() return 80 end
 local function data(id) return (fms.ns.fmsModules.data[id]:gsub("%s+$", "")) end
+-- (the VNAV key in flight: the active page, here the CRZ page: ATA34_2
+-- p.552; before, the CLB page always)
 key("func_key/des")
-key("func_key/next_pg")
 key("func_key/next_pg")
 enter("240/33000", "L4")
 T.equal(data("desrestalt"), "33000", "SPD RESTR 240/33000 on the DES page")
@@ -495,8 +496,9 @@ rt:set(MCPA, 10000)
 frames(0.5)
 T.equal(rt:get(VN .. "phase"), 2, "at FL310: the cruise")
 fms.ns.B747_fms_vnav_td = function() return 80 end
+-- (the VNAV key in flight: the active page, here the CRZ page: ATA34_2
+-- p.552; before, the CLB page always)
 key("func_key/des")
-key("func_key/next_pg")
 key("func_key/next_pg")
 T.check(line(13):find("DES NOW>$") and not line(1):find("ACT"), "the DES page: DES NOW> at 6R, not active: " .. line(13) .. "|" .. line(1))
 key("ls_key/R6")
@@ -554,9 +556,8 @@ rt:set(ISMACH, 0)
 frames(1.2)
 T.near(rt:get(VN .. "cas"), cas0, 0.5, "shut: the FMC's own target again")
 T.check(small(10):find("^ ECON SPD"), "PROGRESS 5L: ECON SPD again: " .. small(10))
+-- (the VNAV key in flight: the active DES page: ATA34_2 p.552)
 key("func_key/des")
-key("func_key/next_pg")
-key("func_key/next_pg")
 T.check(line(1):find("ACT ECON DES"), "the DES page: ACT ECON DES again: " .. line(1))
 -- (step 9e2) on approach (FCOM p.1261): the approach's first point passed
 -- in the air (laminar/B747/fms/vnav/on_app); END OF DES (p.1391): the E/D
@@ -576,9 +577,8 @@ T.check(rt:get(ONAPP) == 1 and fms.ns.B747_fms_on_app(), "on approach")
 T.check(pass_to(function(l) return l.proc == "APPR" and l.fix ~= nil and l.fix.kind == "RWY" end), "the runway (the E/D) passed")
 frames(0.5)
 T.check(fms.ns.B747_fms_end_des() and rt:get(ONAPP) == 0, "END OF DES; on approach over")
+-- (the VNAV key in flight: the active DES page: ATA34_2 p.552)
 key("func_key/des")
-key("func_key/next_pg")
-key("func_key/next_pg")
 T.check(line(1):find("ACT END OF DES"), "the DES page: ACT END OF DES (FCOM p.1391): " .. line(1))
 frames(11)
 T.check(fms.ns.B747_fms_end_des() and rt:get(VN .. "valid") == 1, "after the predictions again: END OF DES kept, VNAV valid")
@@ -671,6 +671,8 @@ frames(11)
 T.check(not fms.ns.B747_fms_end_des() and rt:get(ONAPP) == 0, "no END OF DES, not on approach")
 T.check(rt:get(VN .. "phase") == 2 and rt:get(VN .. "mode") == 2 and rt:get(VN .. "at") == 3 and rt:get(VN .. "alt") == 4000,
     "the cruise at 4,000: VNAV PTH with SPD")
+key("func_key/des")
+T.check(line(1):find("ACT .*CRZ"), "the VNAV key: the active CRZ page (ATA34_2 p.552): " .. line(1))
 local perf = fms.ns.B747_fms_perf()
 local _, desS = fms.ns.B747_fms_schedules(perf)
 local holdKt = fms.ns.B747_perf_db.hold(perf, fms.ns.B747_fms_gw_kg(), 3990)

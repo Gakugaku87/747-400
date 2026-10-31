@@ -397,7 +397,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 ### CDU：作り直し中（6-2 段 1〜5、段 7 の HOLD・OFFSET・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO・RTE 2、LEGS の PLAN の CTR と STEP）
 
 - 3 台が X-Plane 標準の CDU 1 つを共有する（X-Plane のページ：CDU-02。HOLD は段 7b、FIX は段 7e3b、RTE 2 は段 7e4 で FMC のページに。残りは性能・データリンクのページなど）。
-- 性能のページ（CLB・CRZ・DES など）に MOD・EXEC・ERASE が無く、即時に効く（CDU-03。RTE・LEGS は段 5b・5c で MOD・EXEC・ERASE を持った。EXEC 灯は 2026-10-27 から、経路の修正と ACTIVATE、X-Plane のページ（FIX）の実行待ちで点く）。題名、大字と小字（CDU-04・05）。VNAV のキーで開くページが文脈で変わらない（CDU-06。INIT REF は段 3a、DEP ARR は段 5d、HOLD は段 7b で）。
+- 性能のページ（CLB・CRZ・DES など）に MOD・EXEC・ERASE が無く、即時に効く（CDU-03。RTE・LEGS は段 5b・5c で MOD・EXEC・ERASE を持った。EXEC 灯は 2026-10-27 から、経路の修正と ACTIVATE、X-Plane のページ（FIX）の実行待ちで点く）。題名、大字と小字（CDU-04・05）。機能キーで開くページの選び方は実機どおり（CDU-06：INIT REF は段 3a、DEP ARR は段 5d、HOLD は段 7b、VNAV は 2026-10-31 から。VNAV は空中では有効な CLB・CRZ・DES のページ、地上では CLB：ATA34_2 p.552。前は VNAV がいつも CLB）。
 - 入力の検査が不正確（CDU-07〜09）。
 - 空中の THRUST LIM の GA・CON・CRZ は選べない（KEY/FUNCTION INOP。推力管理 6-4 で。前は離陸の derate が動いた：CDU-10）。VNAV・PROGRESS・NAV RADIO のページの不足（CDU-14〜16）。
 - 無いページ（DESCENT FORECAST など。CDU-18。REF NAV DATA と RTE 2 は 2026-10-27 から）。故障の扱い（CDU-19）。MSG・DSPY・OFST・FAIL の灯（3D に無い：CDU-22）。

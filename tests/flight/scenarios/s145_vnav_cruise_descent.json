@@ -43,7 +43,7 @@
     { "do": "check", "note": "FMC は巡航（2）", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 2 },
     { "do": "wait", "note": "LNAV（ロールの FMA 2）", "dref": "laminar/B747/autopilot/FMA/active_roll_mode", "op": "==", "value": 2, "timeout": 30 },
     { "do": "sleep", "seconds": 20, "note": "巡航の水平が落ち着くのを待つ（空中開始の揺れ）" },
-    { "do": "cdu", "note": "VNAV のページ、NEXT（CRZ）", "keys": ["VNAV", "NEXT"] },
+    { "do": "cdu", "note": "VNAV のページ（空中では有効な CRZ のページ：ATA34_2 p.552）", "keys": ["VNAV"] },
     { "do": "snapshot", "note": "CRZ のページ", "drefs": [ "laminar/B747/fms3/Line01_L", "laminar/B747/fms3/Line04_S", "laminar/B747/fms3/Line05_L", "laminar/B747/fms/vnav/dist", "sim/cockpit2/gauges/indicators/altitude_ft_pilot" ] },
     { "do": "wait", "note": "FL300 に戻る（空中開始の後は約 2,000 ft 上がり、VNAV PTH が 2,000 fpm 余りで戻す）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [29850, 30150], "timeout": 240 },
     { "do": "wait", "note": "水平の巡航（戻る降下の途中で押すと、ピッチが速さを取る間に V/S が率を一瞬で通る：s144・s145 の初めの版は、そこで HOLD になり巡航の推力のまま上がった）", "dref": "sim/flightmodel/position/vh_ind_fpm", "op": "between", "value": [-300, 300], "timeout": 120 },
