@@ -23,11 +23,17 @@
 --    speed, the higher of V2 + 10 and the rotation's speed + 10 (pitch
 --    over 2 degrees), the speed then once above it 5 s (up to V2 + 25),
 --    the MCP's when set higher; V2 the IAS/MACH window's (FCOM's note);
---    not over the PLI. In a windshear as G/A (ATA22 p.344).
+--    not over the PLI. In a windshear as G/A (ATA22 p.344). (The FMC's
+--    step 9h3b) An engine failure (ATA22 p.264; FCOM p.666): the speed
+--    then within V2 and V2 + 10 (failed on the ground, the lift-off's),
+--    the MCP's when set higher, no more raising; the blend from 0 to 600
+--    fpm.
 --  - G/A (FCOM p.664, p.674; ATA22 p.344): the higher of the MCP's and the
 --    speed then, the speed then once above it 5 s (up to MCP + 25, or the
 --    start's speed when it was more); from 600 to 1,200 fpm of climb
 --    from the attitude (15 degrees, or 1 below the PLI) to the speed.
+--    (Step 9h3b) With an engine out up to MCP + 10 and the blend from 0
+--    to 600 fpm (ATA22 p.298).
 --  - VNAV: the old VNAV's laws by its flags (until the FMC's step 9).
 --  - G/S (step 3c; ATA22 p.346): the deviation made a distance from the
 --    beam's centre (G/S DEV ALT) with the distance to the transmitter from
@@ -126,6 +132,10 @@ M.ATT_DEG = 15
 M.ATT_PLI = 1
 M.BLEND_LO = 600
 M.BLEND_HI = 1200
+-- (the FMC's step 9h3b) with an engine out (ATA22 p.264, p.298): G/A up to
+-- MCP + GA_EO_ADD, the blend from EO_BLEND_LO to EO_BLEND_HI fpm
+M.GA_EO_ADD = 10
+M.EO_BLEND_LO, M.EO_BLEND_HI = 0, 600
 M.K_ATT = 0.5
 M.TOGA_RATE = 3
 -- G/S (step 3c): the distance to the transmitter from the radio altitude
@@ -222,6 +232,7 @@ function M.inputs()
         pli = nil,          -- the PLI, degrees above the pitch (nil: none)
         flaps_up = true,
         windshear = false,
+        eo = false,         -- (the FMC's step 9h3b) an engine inoperative
         -- G/S (step 3c)
         gs_dots = 0,        -- the glide slope deviation, dots, plus above the beam
         gs_valid = false,   -- both receivers' glide slope
@@ -312,7 +323,8 @@ local function law_of(s, inp, dt)
     local mode = inp.mode
     if mode ~= s.mode then
         s.mode, s.above = mode, 0
-        if mode ~= "TO" then s.vrot, s.v2, s.to_target = nil, nil, nil end
+        if mode ~= "TO" then s.vrot, s.v2, s.to_target, s.to_eo = nil, nil, nil, nil end
+        s.ga_eo = nil
         if mode == "GA" then
             s.ga_target = math.max(inp.mcp_ias, inp.ias)
             s.ga_cap = math.max(inp.mcp_ias + M.GA_MAX_ADD, inp.ias)
@@ -346,10 +358,22 @@ local function law_of(s, inp, dt)
             s.v2 = v2
             s.to_target = math.max(v2 + M.TO_ADD, (s.vrot or 0) + M.TO_ADD)
         end
-        s.to_target = ratchet(s, inp, s.to_target, s.v2 + M.TO_MAX_ADD, dt)
+        -- (step 9h3b) an engine failure: the speed then (in the air) within
+        -- V2 and V2 + 10, the MCP's when set higher (ATA22 p.264)
+        if inp.eo and not s.to_eo then s.to_eo = clamp(inp.ias, s.v2, s.v2 + M.TO_ADD) end
+        if s.to_eo then
+            s.to_target = math.max(s.to_eo, inp.mcp_ias)
+        else
+            s.to_target = ratchet(s, inp, s.to_target, s.v2 + M.TO_MAX_ADD, dt)
+        end
         return "SPD", M.protect(s.to_target, inp), inp.windshear
     end
     if mode == "GA" then
+        -- (step 9h3b) an engine out: up to MCP + 10 (ATA22 p.298)
+        if inp.eo and not s.ga_eo then
+            s.ga_eo = true
+            s.ga_cap = math.max(inp.mcp_ias + M.GA_EO_ADD, s.ga_target or inp.mcp_ias)
+        end
         s.ga_target = ratchet(s, inp, s.ga_target or inp.mcp_ias, s.ga_cap or inp.mcp_ias + M.GA_MAX_ADD, dt)
         return "SPD", M.protect(s.ga_target, inp), true
     end
@@ -412,7 +436,10 @@ function M.update(s, inp, dt)
             -- from the attitude to the speed between 600 and 1,200 fpm
             local att = M.ATT_DEG
             if inp.pli then att = math.min(att, inp.pitch + inp.pli - M.ATT_PLI) end
-            local w = clamp((inp.vs - M.BLEND_LO) / (M.BLEND_HI - M.BLEND_LO), 0, 1)
+            -- (step 9h3b) with an engine out from 0 to 600 fpm (ATA22 p.264, p.298)
+            local lo, hi = M.BLEND_LO, M.BLEND_HI
+            if inp.eo then lo, hi = M.EO_BLEND_LO, M.EO_BLEND_HI end
+            local w = clamp((inp.vs - lo) / (hi - lo), 0, 1)
             rate = (1 - w) * M.K_ATT * (att - s.cmd) + w * rate
         end
         lim = toga and M.TOGA_RATE or math.deg(M.SPD_G * G / v)

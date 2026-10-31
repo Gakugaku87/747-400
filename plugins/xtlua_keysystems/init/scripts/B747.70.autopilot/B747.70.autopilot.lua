@@ -327,3 +327,6 @@ B747DR_ap_rudder_cmd = deferred_dataref("laminar/B747/autopilot/rudder_cmd", "nu
 -- the old law)
 B747DR_ap_pitch_cmd = deferred_dataref("laminar/B747/autopilot/pitch_cmd", "number")
 B747DR_ap_pitch_law = deferred_dataref("laminar/B747/autopilot/pitch_law", "number")
+-- (the FMC's step 9h3b) the speed law's target (kt; 0 without one: T/O's,
+-- G/A's, FLCH's), for the flight tests
+B747DR_ap_pitch_target = deferred_dataref("laminar/B747/autopilot/pitch_target", "number")

@@ -21,6 +21,11 @@
 --   within the flap placard less 5 kt and the minimum maneuvering speed
 --   plus 5 kt (FCOM p.663, p.1255: the FMC's margin); after takeoff V2 +
 --   10 to V2 + 25 until the acceleration height (FCOM p.1255; step 9c);
+--   (step 9h3b) with an engine failure sensed in the takeoff V2 + 10 until
+--   the E/O acceleration height or the flaps' retraction, then VREF + 100
+--   within the flap placard (FCOM p.1265-1266); the title's LIM SPD while
+--   the flap placard or the minimum speed limits it (FCOM p.1265's note,
+--   FMSPG p.3.3-3), VREF + 100 for that climb;
 --   in the cruise after a missed approach the most restrictive of the
 --   speed transition, the best holding speed and ECON cruise (FCOM
 --   p.1262; step 9e3);
@@ -60,6 +65,8 @@ M.K_PATH, M.VS_STEEPER = 1, 1000
 -- TO_ADD_MAX; the flaps' retraction from the takeoff's by TO_FLAPS of the
 -- handle's ratio (estimate)
 M.TO_ADD_MIN, M.TO_ADD_MAX, M.TO_FLAPS = 10, 25, 0.02
+-- (step 9h3b) the engine-out takeoff's VREF + EO_VREF_ADD (FCOM p.1266)
+M.EO_VREF_ADD = 100
 -- the descent slower than the target by more than SLOW_KT (SLOW_KT_LOW
 -- below the speed transition: the first speed constraint): the A/T from
 -- IDLE or HOLD to SPD until back within SLOW_BACK_KT (FCOM p.1259-1260;
@@ -141,7 +148,12 @@ end
 -- the takeoff (FCOM p.1255): from the ground (with V2 selected) the
 -- target follows the airspeed between V2 + 10 and V2 + 25 until VNAV
 -- engages, then stays there until the acceleration height or the flaps'
--- retraction; nil after it (or an air start: the climb's schedule)
+-- retraction; nil after it (or an air start: the climb's schedule).
+-- (step 9h3b) An engine failure sensed below the E/O acceleration height
+-- (FCOM p.1265-1266; also past the all-engine acceleration height when the
+-- E/O one is higher): V2 + 10 until the E/O acceleration height or the
+-- flaps' retraction, then VREF + 100 on (the second return "VREF + 100")
+-- until the climb ends or ENG OUT (step 9h4)
 local function takeoff_speed(s, inp)
     local t = inp.takeoff
     if inp.ground then
@@ -149,8 +161,21 @@ local function takeoff_speed(s, inp)
     end
     local to = s.to
     if not (to and t) then return nil end
-    if (t.accel_alt and inp.alt >= t.accel_alt) or (t.flaps and to.flaps and t.flaps < to.flaps - M.TO_FLAPS) then
-        s.to = nil
+    local retracting = t.flaps and to.flaps and t.flaps < to.flaps - M.TO_FLAPS
+    if (inp.eo or 0) >= 1 then to.eo = true end
+    if to.eo then
+        if not to.vref100 and ((t.eo_accel_alt and inp.alt >= t.eo_accel_alt) or retracting) then to.vref100 = true end
+        if to.vref100 then
+            if not (inp.vref and inp.vref > 0) then return nil end
+            return inp.vref + M.EO_VREF_ADD, "VREF + 100"
+        end
+        return to.v2 + M.TO_ADD_MIN
+    end
+    if to.accel or (t.accel_alt and inp.alt >= t.accel_alt) or retracting then
+        -- the all-engine takeoff over; kept for an engine failure until the
+        -- E/O acceleration height
+        to.accel = true
+        if not (t.eo_accel_alt and inp.alt < t.eo_accel_alt) then s.to = nil end
         return nil
     end
     if not (inp.engaged and to.cas) then
@@ -176,11 +201,16 @@ function M.path_e_at(path, h)
 end
 
 -- the target speed: the schedule's (or the MCP's in speed intervention,
--- the takeoff's), within the margins
+-- the takeoff's), within the margins; and whether a margin limits it
+-- (step 9h3b: the title's LIM SPD)
 local function target_speed(P, sched, crz, inp, phase, to_cas)
     local cas, mach, mm
     if not inp.spd_int and to_cas and phase == "CLB" then
-        return to_cas, P.cas_to_mach(to_cas, inp.alt), false
+        -- (step 9h3b) within the flap placard less 5 (the engine-out
+        -- takeoff's VREF + 100: FCOM p.1266)
+        local placard = inp.flaps_placard and inp.flaps_placard - M.PLACARD_MARGIN
+        if placard and to_cas > placard then return placard, P.cas_to_mach(placard, inp.alt), false, true end
+        return to_cas, P.cas_to_mach(to_cas, inp.alt), false, false
     end
     if inp.spd_int then
         if inp.spd_int.mach then
@@ -201,14 +231,14 @@ local function target_speed(P, sched, crz, inp, phase, to_cas)
     else
         cas, mach, mm = sched(P, phase == "DES" and inp.des or inp.clb, inp.alt)
     end
-    local lim = nil
+    local lim, limited = nil, false
     if inp.flaps_placard then lim = inp.flaps_placard - M.PLACARD_MARGIN end
-    if lim and cas > lim then cas, mach, mm = lim, P.cas_to_mach(lim, inp.alt), false end
+    if lim and cas > lim then cas, mach, mm, limited = lim, P.cas_to_mach(lim, inp.alt), false, true end
     if inp.vmin and inp.vmin > 0 and cas < inp.vmin + M.VMIN_MARGIN then
-        cas = inp.vmin + M.VMIN_MARGIN
+        cas, limited = inp.vmin + M.VMIN_MARGIN, true
         mach, mm = P.cas_to_mach(cas, inp.alt), false
     end
-    return cas, mach, mm
+    return cas, mach, mm, limited
 end
 
 -- (step 9e1) the descent's speed limits on the path at the target cas:
@@ -281,8 +311,11 @@ end
 --                the E/D passed (END OF DES: FCOM p.1391; step 9e2)
 --   missed       after a missed approach, its CRZ ALT still (step 9e3)
 --   takeoff      {v2 (nil: none), accel_alt (the acceleration height's
---                altitude, ft), flaps (the handle's ratio)}; ias the
+--                altitude, ft), eo_accel_alt (the E/O acceleration
+--                height's), flaps (the handle's ratio)}; ias the
 --                airspeed (kt); engaged VNAV engaged (the AFDS's)
+--   eo, vref     (step 9h3b) the engines inoperative (their number), VREF
+--                30 (kt)
 --   clb_alt      the climb's next AT or AT OR BELOW constraint below CRZ
 --                ALT ahead (ft) or nil; des_alt the descent's next
 --                constraint ahead or the E/D's (ft) or nil
@@ -294,7 +327,7 @@ end
 --   THR's in the early and the cruise descent), path_alt, path_dev (ft
 --   above the path), at (the A/T mode), msg ("DRAG" for DRAG REQUIRED,
 --   "THRUST" for THRUST REQUIRED, else nil: step 9e1), end_des (END OF DES:
---   step 9e2)
+--   step 9e2), title ("LIM SPD", "VREF + 100" or nil: step 9h3b)
 function M.update(s, inp)
     local out = s.out
     local P = inp.P
@@ -360,7 +393,14 @@ function M.update(s, inp)
     -- the cruise climb's and descent's speed the cruise's (FCOM p.1261:
     -- economy cruise)
     local spd_ph = s.crz_chg and "CRZ" or ph
-    out.cas, out.mach, out.mach_mode = target_speed(P, inp.sched, inp.crz, inp, spd_ph, takeoff_speed(s, inp))
+    -- (step 9h3b) the takeoff's over with the climb (the engine-out VREF +
+    -- 100 lasted till then); the title: LIM SPD where a margin limits the
+    -- target (FCOM p.1265's note; FMSPG p.3.3-3), else the VREF + 100 climb's
+    if ph ~= "CLB" then s.to = nil end
+    local to_cas, to_title = takeoff_speed(s, inp)
+    local limited
+    out.cas, out.mach, out.mach_mode, limited = target_speed(P, inp.sched, inp.crz, inp, spd_ph, to_cas)
+    out.title = limited and "LIM SPD" or ((spd_ph == "CLB" and not inp.spd_int) and to_title or nil)
     -- (step 9e3) the cruise after a missed approach (FCOM p.1262): the most
     -- restrictive of the speed transition (the descent's, the destination
     -- airport's, below its altitude: estimate, p.1262 names none), the best
