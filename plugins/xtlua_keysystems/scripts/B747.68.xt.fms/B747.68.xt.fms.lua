@@ -2188,8 +2188,10 @@ B747DR_fms_ap_cmd_L					= find_dataref("laminar/B747/autopilot/cmd_L_mode/status
 -- CMD L again until it engages, INFLIGHT_AP_TRIES times INFLIGHT_AP_S apart:
 -- the engage interlocks (6-3 step 5a) wait for the IRUs and the ADCs, whose
 -- modules start 3 s after the load (their first reads are 0), about when
--- this runs
-local INFLIGHT_AP_TRIES, INFLIGHT_AP_S = 10, 0.5
+-- this runs; for 30 s (2026-10-31: 5 s before, and s139's air start on a
+-- reloaded airplane once went on without the A/P)
+local INFLIGHT_AP_TRIES, INFLIGHT_AP_S = 60, 0.5
+
 local inflightAP_tries = 0
 function retry_inflightAP_cmd()
 	if B747DR_fms_ap_cmd_L > 0.5 or inflightAP_tries >= INFLIGHT_AP_TRIES then return end
