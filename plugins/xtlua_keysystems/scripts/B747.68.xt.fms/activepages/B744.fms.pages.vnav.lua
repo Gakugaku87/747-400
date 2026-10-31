@@ -442,7 +442,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       -- LRC D/D above MAX, E/O CRZ CLB or DES, else the speed's (E/O LRC,
       -- E/O, E/O XXXKT or M.XXX) CRZ; the thrust setting, OPT (estimate)
       -- and MAX the engine-out ones; STEP TO up to MAX; <E/O SPD, ALL
-      -- ENG>, LRC>; AT only TO T/D (the driftdown's: step 9h4b)
+      -- ENG>, LRC>; AT the driftdown's level off (step 9h4b) or TO T/D
       local eo = B747_fms_eo()
       if B747_eo_model.shown(eo) then
         fmsFunctionsDefs["VNAV"]["L2"]={"eospd","crz"}
@@ -466,7 +466,9 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
         end
         local eoActive = crzActive and eo.active and eo.mod == nil
         local title
-        if eo.crz == "LRC" and simDR_pressureAlt1 > maxFt + 200 then
+        -- (step 9h4b) D/D also while VNAV's driftdown goes on (the maximum
+        -- grown over the airplane as the fuel burns)
+        if eo.crz == "LRC" and (simDR_pressureAlt1 > maxFt + 200 or B747_fms_vnav_dd()) then
           title = eo_base(eo) .. " LRC D/D"
         elseif crzChg then
           title = eo_base(eo) .. " CRZ " .. crzChg
@@ -485,13 +487,16 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
             or B747_crz_model.step_to(crzFt, optFt, vnav_text("stepsize"), B747_fms_step_east())
           if eoStep and eoStep > maxFt then eoStep = nil end
         end
-        crzAtLabel = nearTD and "TO T/D" or ""
+        -- (step 9h4b) AT: in the driftdown the predictions' level off at CRZ
+        -- ALT (FCOM p.1268, p.1353), else TO T/D near it
+        local ddAt = (eoActive and pred and pred.lvl_dd and B747_fms_vnav_dd()) and eta_text(pred.lvl_t / 3600, pred.lvl) or nil
+        crzAtLabel = ddAt and "AT" or nearTD and "TO T/D" or ""
         return{
           vnav_title(title, eoActive, eo.mod == "ENG OUT"),
           "                        ",
           lr(crzText, eoStep and string.format("FL%03d", math.floor(eoStep / 100 + 0.5)) or ""),
           "                        ",
-          lr(eoSpd, nearTD and atText or ""),
+          lr(eoSpd, ddAt or (nearTD and atText) or ""),
           "                        ",
           lr(eoThr, etafuel),
           "                        ",

@@ -615,6 +615,8 @@ B747DR_ap_fvn_at = find_dataref("laminar/B747/fms/vnav/at")
 -- (step 9e1) the FMC's descent message: 1 THRUST REQUIRED, 2 DRAG REQUIRED
 B747DR_ap_fvn_msg = find_dataref("laminar/B747/fms/vnav/msg")
 B747DR_ap_fvn_perf = find_dataref("laminar/B747/fms/vnav/perf")
+-- (step 9h4b) the FMC's engine-out driftdown (1): THR without its HOLD
+B747DR_ap_fvn_dd = find_dataref("laminar/B747/fms/vnav/dd")
 -- (step 9d1) the MCP altitude selector's pushes, counted
 B747DR_ap_alt_sel_pushes = deferred_dataref("laminar/B747/autopilot/alt_sel_pushes", "number")
 -- (step 9g1) the THR switch's pushes, counted for the FMC's thrust limit
@@ -964,6 +966,9 @@ B747DR_at_eng_inop = find_dataref("laminar/B747/engines/inop")
 B747DR_at_servo = deferred_dataref("laminar/B747/autothrottle/servo", "number")
 B747DR_at_lever_cmd = deferred_dataref("laminar/B747/autothrottle/lever_cmd", "number")
 B747DR_at_TRA = find_dataref("laminar/B747/engines/TRA")
+-- (the FMC's step 9h4b) the EEC's full-forward rating (EPR, GE's % N1)
+B747DR_at_EPR_max = find_dataref("laminar/B747/engines/display_EPR_max")
+B747DR_at_N1_max = find_dataref("laminar/B747/engines/display_N1_max")
 simDR_at_EPR_bug = find_dataref("sim/cockpit2/engine/actuators/EPR_target_bug")
 simDR_at_N1_bug = find_dataref("sim/cockpit2/engine/actuators/N1_target_bug")
 -- (step 9d2) the TAS (m/s) for VNAV's THR's energy's rate at the target
@@ -1012,8 +1017,10 @@ local function afds_at()
 	i.pitch = afds.pitch
 	i.retard = afds.retard and true or false
 	i.vnav_at, i.vnav_level = B747DR_ap_fvn_at, vnavLevel ~= nil
-	-- (step 9d2a) the FMC's phase: THR's HOLD latch gone with a new one
+	-- (step 9d2a) the FMC's phase: THR's HOLD latch gone with a new one;
+	-- (step 9h4b) its driftdown: THR again, no HOLD at its rate
 	i.vnav_phase = B747DR_ap_fvn_phase
+	i.vnav_dd = B747DR_ap_fvn_dd > 0.5
 	local n = B747DR_ap_toga_pushes
 	i.toga = atSeen.toga ~= nil and n ~= atSeen.toga
 	atSeen.toga = n
@@ -1034,11 +1041,14 @@ local function afds_at()
 	end
 	atIas = ias
 	local n1 = B747DR_ap_engine_type == 1
-	local thr, lev = 0, 0
+	local thr, lev, tmax = 0, 0, 0
 	for e = 0, 3 do
 		thr = math.max(thr, B747DR_at_TRA[e])
 		lev = lev + B747DR_throttle[e] / 4
+		-- (step 9h4b) the full-forward rating, the highest EEC's
+		tmax = math.max(tmax, n1 and B747DR_at_N1_max[e] or B747DR_at_EPR_max[e])
 	end
+	i.thrust_max = tmax > (n1 and 10 or 0.5) and tmax or nil
 	i.dt, i.ias, i.accel, i.target = dt, ias, atAccel, afds_speed_ref()
 	i.v_max = B747DR_afds_vmax > 0 and B747DR_afds_vmax or 365
 	i.v_min = B747DR_afds_vminm > 0 and B747DR_afds_vminm or 0

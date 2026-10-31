@@ -67,6 +67,14 @@ M.K_PATH, M.VS_STEEPER = 1, 1000
 M.TO_ADD_MIN, M.TO_ADD_MAX, M.TO_FLAPS = 10, 25, 0.02
 -- (step 9h3b) the engine-out takeoff's VREF + EO_VREF_ADD (FCOM p.1266)
 M.EO_VREF_ADD = 100
+-- (step 9h4b) the engine-out driftdown (FCOM p.1268; FCTM p.4.11; FMSPG
+-- p.3.4-2): ENG OUT active, the cruise descent with the airplane over the
+-- engine-out maximum by EO_DD_ABOVE (the CRZ page's E/O LRC D/D): VNAV SPD
+-- at the cruise speed at CRZ ALT (the CRZ page's LRC SPD, E/O SPD or SEL
+-- SPD) and the A/T's THR to EO_DD_VS down at least, CON the most (the A/T's
+-- limit); to CRZ ALT or the maximum at its start, below which the cruise
+-- descent's law (E/O CRZ DES: estimate)
+M.EO_DD_VS, M.EO_DD_ABOVE = 300, 200
 -- the descent slower than the target by more than SLOW_KT (SLOW_KT_LOW
 -- below the speed transition: the first speed constraint): the A/T from
 -- IDLE or HOLD to SPD until back within SLOW_BACK_KT (FCOM p.1259-1260;
@@ -103,7 +111,8 @@ function M.new()
         crz_chg = nil,                       -- the cruise climb ("CLB") or descent ("DES")
         crz_last = nil,                      -- CRZ ALT the update before
         drag = false,                        -- DRAG REQUIRED (step 9e1)
-        rev = nil, rev_cas = nil}            -- the speed reversion ("fast", "slow") and its speed
+        rev = nil, rev_cas = nil,            -- the speed reversion ("fast", "slow") and its speed
+        dd = nil}                            -- the driftdown's floor: the maximum at its start (step 9h4b)
 end
 
 -- DES NOW (step 9d2a; FCOM p.1260, p.1389, p.1393; FMSPG p.3.5-5): the
@@ -202,8 +211,9 @@ end
 
 -- the target speed: the schedule's (or the MCP's in speed intervention,
 -- the takeoff's), within the margins; and whether a margin limits it
--- (step 9h3b: the title's LIM SPD)
-local function target_speed(P, sched, crz, inp, phase, to_cas)
+-- (step 9h3b: the title's LIM SPD). The cruise's by its function at crz_ft
+-- (step 9h4b: the driftdown's at CRZ ALT), else here
+local function target_speed(P, sched, crz, inp, phase, to_cas, crz_ft)
     local cas, mach, mm
     if not inp.spd_int and to_cas and phase == "CLB" then
         -- (step 9h3b) within the flap placard less 5 (the engine-out
@@ -225,7 +235,7 @@ local function target_speed(P, sched, crz, inp, phase, to_cas)
             cas = inp.crzspd.cas
             mach, mm = P.cas_to_mach(cas, inp.alt), false
         else
-            mach = crz(P, inp.crzspd or {mach = 0.84}, inp.alt, inp.kg)
+            mach = crz(P, inp.crzspd or {mach = 0.84}, crz_ft or inp.alt, inp.kg)
             cas, mm = P.mach_to_cas(mach, inp.alt), true
         end
     else
@@ -316,6 +326,8 @@ end
 --                airspeed (kt); engaged VNAV engaged (the AFDS's)
 --   eo, vref     (step 9h3b) the engines inoperative (their number), VREF
 --                30 (kt)
+--   eo_max       (step 9h4b) ENG OUT active: the engine-out maximum
+--                altitude (ft; the CRZ page's MAX), else nil
 --   clb_alt      the climb's next AT or AT OR BELOW constraint below CRZ
 --                ALT ahead (ft) or nil; des_alt the descent's next
 --                constraint ahead or the E/D's (ft) or nil
@@ -327,7 +339,8 @@ end
 --   THR's in the early and the cruise descent), path_alt, path_dev (ft
 --   above the path), at (the A/T mode), msg ("DRAG" for DRAG REQUIRED,
 --   "THRUST" for THRUST REQUIRED, else nil: step 9e1), end_des (END OF DES:
---   step 9e2), title ("LIM SPD", "VREF + 100" or nil: step 9h3b)
+--   step 9e2), title ("LIM SPD", "VREF + 100" or nil: step 9h3b), dd (the
+--   driftdown: step 9h4b)
 function M.update(s, inp)
     local out = s.out
     local P = inp.P
@@ -389,6 +402,16 @@ function M.update(s, inp)
     s.crz_last = inp.crz_alt
     out.phase = ph
     out.crz_chg = s.crz_chg
+    -- (step 9h4b) the driftdown: from the cruise descent's start over the
+    -- engine-out maximum (or ENG OUT's execution in it), until CRZ ALT or
+    -- under the maximum at its start
+    if ph == "CRZ" and s.crz_chg == "DES" and inp.eo_max then
+        if not s.dd and inp.alt > inp.eo_max + M.EO_DD_ABOVE then s.dd = inp.eo_max end
+        if s.dd and inp.alt < s.dd - 50 then s.dd = nil end
+    else
+        s.dd = nil
+    end
+    out.dd = s.dd ~= nil
 
     -- the cruise climb's and descent's speed the cruise's (FCOM p.1261:
     -- economy cruise)
@@ -399,7 +422,8 @@ function M.update(s, inp)
     if ph ~= "CLB" then s.to = nil end
     local to_cas, to_title = takeoff_speed(s, inp)
     local limited
-    out.cas, out.mach, out.mach_mode, limited = target_speed(P, inp.sched, inp.crz, inp, spd_ph, to_cas)
+    out.cas, out.mach, out.mach_mode, limited = target_speed(P, inp.sched, inp.crz, inp, spd_ph, to_cas,
+        s.dd and inp.crz_alt or nil)
     out.title = limited and "LIM SPD" or ((spd_ph == "CLB" and not inp.spd_int) and to_title or nil)
     -- (step 9e3) the cruise after a missed approach (FCOM p.1262): the most
     -- restrictive of the speed transition (the descent's, the destination
@@ -427,7 +451,11 @@ function M.update(s, inp)
         out.at = M.AT_THR_REF
     elseif ph == "CRZ" then
         out.alt = inp.crz_alt
-        if s.crz_chg == "DES" then
+        if s.dd then
+            -- (step 9h4b) the driftdown: the A/T's THR to at least EO_DD_VS
+            -- down, CON its most (FCOM p.1268)
+            out.mode, out.at, out.vs = "SPD", M.AT_THR, -M.EO_DD_VS
+        elseif s.crz_chg == "DES" then
             out.mode, out.at, out.vs = "SPD", M.AT_THR, -M.EARLY_VS
         else
             out.mode, out.at = "PTH", M.AT_SPD

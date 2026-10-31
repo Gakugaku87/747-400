@@ -1,6 +1,6 @@
 {
   "name": "s156_eo_pages",
-  "description": "6-1/6-2 段 9h4a（E/O のモードと E/O の CLB・CRZ のページ）の X-Plane での確認。空中、FL350 の巡航（機体を読み直す）、RJAA→RJBB の経路、PERF INIT で ZFW 200・CRZ ALT FL350・COST INDEX 100、VNAV PTH。VNAV の CRZ のページの ENG OUT>（5R）で MOD E/O LRC D/D（重さで E/O の最大高度が FL350 の下）：CRZ ALT は E/O の最大高度、LRC SPD は E/O LRC、OPT・MAX は E/O、ALL ENG>、<ERASE、EXEC の灯（FCOM p.1350–1353、FMSPG p.3.4-5）。EXEC で CRZ ALT が下がり、推力制限は CON（符号 40）、題は ACT E/O LRC D/D、VNAV の目標は E/O LRC。MCP 高度を FL300 にして押すと降下（段 9h4b までは巡航の降下の則）、CON のまま。CLB のページは E/O CLB。ALL ENG> と EXEC で全発に戻る。CDU を撮る。Lua の誤りも確かめる",
+  "description": "6-1/6-2 段 9h4a（E/O のモードと E/O の CLB・CRZ のページ）の X-Plane での確認。空中、FL350 の巡航（機体を読み直す）、RJAA→RJBB の経路、PERF INIT で ZFW 200・CRZ ALT FL350・COST INDEX 100、VNAV PTH。VNAV の CRZ のページの ENG OUT>（5R）で MOD E/O LRC D/D（重さで E/O の最大高度が FL350 の下）：CRZ ALT は E/O の最大高度、LRC SPD は E/O LRC、OPT・MAX は E/O、ALL ENG>、<ERASE、EXEC の灯（FCOM p.1350–1353、FMSPG p.3.4-5）。EXEC で CRZ ALT が下がり、推力制限は CON（符号 40）、題は ACT E/O LRC D/D、VNAV の目標は E/O LRC。MCP 高度を FL300 にして押すと降下（段 9h4b から driftdown：最小 300 fpm）、CON のまま。CLB のページは E/O CLB。ALL ENG> と EXEC で全発に戻る。CDU を撮る。Lua の誤りも確かめる",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 10668, "heading_true": 340, "speed_in_meters_per_second": 245 },
@@ -68,9 +68,10 @@
     { "do": "cmd", "note": "高度のノブを押す", "name": "laminar/B747/button_switch/press_altitude" },
     { "do": "wait", "note": "VNAV SPD で降下", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 4, "timeout": 20 },
     { "do": "sleep", "seconds": 20 },
-    { "do": "snapshot", "note": "降下", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "sim/flightmodel/misc/machno", "laminar/B747/fms/vnav/mach", "laminar/B747/autopilot/FMA/autothrottle_mode", "laminar/B747/engines/ref_thr_limit_mode", "sim/cockpit2/engine/actuators/EPR_target_bug[0]", "laminar/B747/engines/display_EPR[0]", "laminar/B747/fms3/Line01_L" ] },
+    { "do": "snapshot", "note": "降下", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "sim/flightmodel/misc/machno", "laminar/B747/fms/vnav/mach", "laminar/B747/fms/vnav/vs", "laminar/B747/fms/vnav/dd", "laminar/B747/autopilot/FMA/autothrottle_mode", "laminar/B747/engines/ref_thr_limit_mode", "sim/cockpit2/engine/actuators/EPR_target_bug[0]", "laminar/B747/engines/display_EPR[0]", "laminar/B747/fms3/Line01_L" ] },
     { "do": "check", "note": "推力制限は CON のまま", "dref": "laminar/B747/fms/thrlim/code", "op": "==", "value": 40 },
-    { "do": "wait", "note": "降りている（A/T の THR が推力を下げるのに時間がかかる：s145 は落ち着くまで 180 秒待つ）", "dref": "sim/flightmodel/position/vh_ind_fpm", "op": "<", "value": -500, "timeout": 120 },
+    { "do": "check", "note": "段 9h4b：E/O の最大高度の上なので driftdown（FCOM p.1268 の条件 2）", "dref": "laminar/B747/fms/vnav/dd", "op": "==", "value": 1 },
+    { "do": "wait", "note": "降りている（driftdown は最小 300 fpm。全発運転なので A/T の THR が推力を下げて 300 fpm にする。初めの版（2026-11-01 2:01）は空中開始の揺れで上昇中に押し、120 秒で −183 fpm）", "dref": "sim/flightmodel/position/vh_ind_fpm", "op": "<", "value": -200, "timeout": 240 },
 
     { "do": "mark", "note": "E/O CLB のページ" },
     { "do": "cdu", "note": "PREV（CLB のページ）", "keys": ["PREV"] },

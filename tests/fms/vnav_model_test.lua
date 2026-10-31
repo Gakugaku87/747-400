@@ -505,4 +505,53 @@ V.update(s13, inp{alt = 0, ground = true, ias = 150, takeoff = toh})
 V.update(s13, inp{alt = 1600, ias = 200, takeoff = toh, engaged = true})
 o = V.update(s13, inp{alt = 1700, ias = 210, takeoff = toh, engaged = true, eo = 1, vref = 150})
 T.near(o.cas, 250, 1e-6, "a failure above both: the climb's 250 kt")
+
+-- (step 9h4b) the engine-out driftdown (FCOM p.1268; FCTM p.4.11; FMSPG
+-- p.3.4-2): ENG OUT executed at FL350 (CRZ ALT lowered to the E/O MAX
+-- FL320): VNAV SPD, the A/T's THR at 300 fpm down at least, the cruise
+-- speed (E/O LRC) at CRZ ALT as a Mach; to CRZ ALT
+local eoLrc = {fn = function(h, kg) return (P.eo_lrc(P.tables(0), 1, kg, h)) end}
+local s14 = V.new()
+V.update(s14, inp{alt = 35000, crzspd = eoLrc})
+o = V.update(s14, inp{alt = 35000, crz_alt = 32000, mcp_alt = 32000, crzspd = eoLrc, eo_max = 32000})
+T.check(o.phase == "CRZ" and o.crz_chg == "DES" and o.dd, "CRZ ALT FL320 under the airplane, ENG OUT active over its MAX: the driftdown")
+T.check(o.mode == "SPD" and o.at == V.AT_THR and o.alt == 32000, "VNAV SPD with THR to FL320")
+T.near(o.vs, -V.EO_DD_VS, 1e-6, "300 fpm down at least (FCOM p.1268)")
+local m320 = P.eo_lrc(P.tables(0), 1, 300000, 32000)
+T.check(o.mach_mode and math.abs(o.mach - m320) < 1e-9, string.format("E/O LRC at CRZ ALT: M%.3f (the CRZ page's LRC SPD)", m320))
+o = V.update(s14, inp{alt = 33000, crz_alt = 32000, mcp_alt = 32000, crzspd = eoLrc, eo_max = 32300})
+T.check(o.dd and math.abs(o.mach - m320) < 1e-9, "33,000 ft, MAX grown to 32,300 ft: the driftdown still, the same Mach")
+o = V.update(s14, inp{alt = 32040, crz_alt = 32000, mcp_alt = 32000, crzspd = eoLrc, eo_max = 32300})
+T.check(o.crz_chg == nil and not o.dd and o.mode == "PTH" and o.at == V.AT_SPD, "within 50 ft of CRZ ALT: the cruise (E/O LRC CRZ)")
+-- the clearance under the maximum (the selector's push, CRZ ALT FL300:
+-- FCOM p.1268's condition 2): the driftdown down to the maximum at its
+-- start, then the cruise descent's law (E/O CRZ DES: estimate)
+local s15 = V.new()
+V.update(s15, inp{alt = 35000, crzspd = eoLrc})
+o = V.update(s15, inp{alt = 35000, crz_alt = 30000, mcp_alt = 30000, crzspd = eoLrc, eo_max = 32000})
+T.check(o.dd and o.alt == 30000, "CRZ ALT FL300: the driftdown toward it")
+o = V.update(s15, inp{alt = 31980, crz_alt = 30000, mcp_alt = 30000, crzspd = eoLrc, eo_max = 32000})
+T.check(o.dd, "20 ft under the maximum at its start: the driftdown still")
+o = V.update(s15, inp{alt = 31900, crz_alt = 30000, mcp_alt = 30000, crzspd = eoLrc, eo_max = 32000})
+T.check(not o.dd and o.crz_chg == "DES", "100 ft under it: the cruise descent")
+T.near(o.vs, -V.EARLY_VS, 1e-6, "1,250 fpm down")
+o = V.update(s15, inp{alt = 31900, crz_alt = 30000, mcp_alt = 30000, crzspd = eoLrc, eo_max = 31750})
+T.check(not o.dd, "the maximum 150 ft under the airplane (within EO_DD_ABOVE): not back into it")
+o = V.update(s15, inp{alt = 31900, crz_alt = 30000, mcp_alt = 30000, crzspd = eoLrc, eo_max = 30100})
+T.check(o.dd, "engine anti-ice on, the maximum 1,800 ft lower: over it again, the driftdown (FMSPG p.3.4-2)")
+-- condition 3: the cruise descent first, ENG OUT executed in it over the
+-- maximum: the driftdown from there; under the maximum + 200: none
+local s16 = V.new()
+V.update(s16, inp{alt = 35000})
+o = V.update(s16, inp{alt = 35000, crz_alt = 30000, mcp_alt = 30000})
+T.check(o.crz_chg == "DES" and not o.dd and o.vs == -V.EARLY_VS, "all engines: the cruise descent")
+o = V.update(s16, inp{alt = 34000, crz_alt = 30000, mcp_alt = 30000, crzspd = eoLrc, eo_max = 32000})
+T.check(o.dd and o.vs == -V.EO_DD_VS, "ENG OUT executed at 34,000 ft: the driftdown")
+local s17 = V.new()
+V.update(s17, inp{alt = 32150})
+o = V.update(s17, inp{alt = 32150, crz_alt = 30000, mcp_alt = 30000, crzspd = eoLrc, eo_max = 32000})
+T.check(o.crz_chg == "DES" and not o.dd, "150 ft over the maximum (within EO_DD_ABOVE): the cruise descent")
+-- not without ENG OUT active, nor level
+o = V.update(V.new(), inp{alt = 35000, crz_alt = 35000, crzspd = eoLrc, eo_max = 32000})
+T.check(not o.dd and o.mode == "PTH", "level at CRZ ALT over the maximum (CRZ ALT not lowered): no driftdown")
 T.done()
