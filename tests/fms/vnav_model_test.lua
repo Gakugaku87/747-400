@@ -556,4 +556,25 @@ T.check(o.crz_chg == "DES" and not o.dd, "150 ft over the maximum (within EO_DD_
 -- not without ENG OUT active, nor level
 o = V.update(V.new(), inp{alt = 35000, crz_alt = 35000, crzspd = eoLrc, eo_max = 32000})
 T.check(not o.dd and o.mode == "PTH", "level at CRZ ALT over the maximum (CRZ ALT not lowered): no driftdown")
+
+-- (step 11c2b) CHECK ALT TGT (FCOM p.1431): VNAV engaged at 12,000 ft in the
+-- climb, the MCP altitude below (10,000), the FMC's above (CRZ ALT): level
+-- there in VNAV PTH, the A/T on speed; the MCP altitude reset above: the
+-- climb again; below again while engaged: not (at the engagement only)
+local s18 = V.new()
+o = V.update(s18, inp{alt = 12000, mcp_alt = 10000})
+T.check(not o.check_alt, "not engaged: no CHECK ALT TGT")
+o = V.update(s18, inp{alt = 12000, mcp_alt = 10000, engaged = true})
+T.check(o.check_alt and o.mode == "PTH" and o.alt == 12000 and o.vs == nil and o.at == V.AT_SPD,
+    "engaged between them: level, CHECK ALT TGT")
+o = V.update(s18, inp{alt = 12030, mcp_alt = 10000, engaged = true})
+T.check(o.check_alt and o.alt == 12000, "held at the engagement's altitude")
+o = V.update(s18, inp{alt = 12030, mcp_alt = 20000, engaged = true})
+T.check(not o.check_alt and o.mode == "SPD" and o.alt == 35000, "the MCP altitude reset above: the climb again")
+o = V.update(s18, inp{alt = 12030, mcp_alt = 10000, engaged = true})
+T.check(not o.check_alt, "below again while engaged: not CHECK ALT TGT")
+o = V.update(V.new(), inp{alt = 12000, mcp_alt = 20000, engaged = true})
+T.check(not o.check_alt and o.mode == "SPD", "engaged with both above: the climb")
+o = V.update(V.new(), inp{alt = 12000, mcp_alt = 11950, engaged = true})
+T.check(not o.check_alt, "the MCP altitude within the band: not between")
 T.done()
