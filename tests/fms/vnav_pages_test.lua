@@ -50,9 +50,13 @@ local function type_in(text)
 end
 local function clear() for _ = 1, 30 do rt:command("laminar/B747/fms1/key/clear") end frames(0.1) end
 local function data(id) return (fms.ns.fmsModules.data[id]:gsub("%s+$", "")) end
+-- (the VNAV key opens the active phase's page in flight, the CLB page on
+-- the ground: ATA34_2 p.552; NEXT from there)
 local function vnav(page)
     key("func_key/des")
-    for _ = 2, page do key("func_key/next_pg") end
+    local p = fms.ns.B747_fms_vnav_page()
+    local from = (p >= 1 and p <= 3) and p or 1
+    for _ = 1, (page - from) % 3 do key("func_key/next_pg") end
 end
 
 -- before a cost index: the speeds as they were (the defaults)

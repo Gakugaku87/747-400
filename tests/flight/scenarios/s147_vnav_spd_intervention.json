@@ -53,7 +53,7 @@
     { "do": "wait", "note": "VNAV SPD（FCOM p.643：PTH の降下で窓を開くと）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 4, "timeout": 5 },
     { "do": "check", "note": "FMC は VNAV SPD（1）", "dref": "laminar/B747/fms/vnav/mode", "op": "==", "value": 1 },
     { "do": "check", "note": "FMC の A/T は IDLE（2）", "dref": "laminar/B747/fms/vnav/at", "op": "==", "value": 2 },
-    { "do": "cdu", "note": "VNAV のページ、NEXT、NEXT（DES）", "keys": ["VNAV", "NEXT", "NEXT"] },
+    { "do": "cdu", "note": "VNAV のページ（有効な DES のページ：ATA34_2 p.552）", "keys": ["VNAV"] },
     { "do": "check", "note": "ACT MCP SPD DES（ATA34_2 p.563）", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "ACT MCP SPD DES" },
     { "do": "cdu", "note": "PROGRESS", "keys": ["PROG"] },
     { "do": "sleep", "seconds": 1.5 },
@@ -74,7 +74,7 @@
     { "do": "wait", "note": "VNAV PTH（経路へ）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 6, "timeout": 10 },
     { "do": "sleep", "seconds": 3 },
     { "do": "check", "note": "MCP の速さは FMC の目標（降下の速さ）", "dref": "laminar/B747/autopilot/ias_dial_value", "op": "between", "value": [285, 330] },
-    { "do": "cdu", "note": "VNAV のページ、NEXT、NEXT（DES）", "keys": ["VNAV", "NEXT", "NEXT"] },
+    { "do": "cdu", "note": "VNAV のページ（有効な DES のページ：ATA34_2 p.552）", "keys": ["VNAV"] },
     { "do": "check", "note": "ACT ECON DES", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "ACT ECON DES" },
     { "do": "record_stop" }
   ]

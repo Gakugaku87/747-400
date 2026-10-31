@@ -83,6 +83,9 @@
     { "do": "check", "note": "END OF DES にならず巡航のまま", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 2 },
     { "do": "check", "note": "on approach でない", "dref": "laminar/B747/fms/vnav/on_app", "op": "==", "value": 0 },
     { "do": "check", "note": "VNAV PTH のまま", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 6 },
+    { "do": "cdu", "note": "VNAV（空中では有効なページ：ATA34_2 p.552。二つ目の s150 はいつも CLB のページだった）", "keys": ["VNAV"] },
+    { "do": "snapshot", "note": "VNAV のページ", "drefs": [ "laminar/B747/fms3/Line01_L", "laminar/B747/fms3/Line03_L", "laminar/B747/fms3/Line03_S", "laminar/B747/fms3/Line05_L" ] },
+    { "do": "check", "note": "有効な CRZ のページ（END OF DES でない）", "dref": "laminar/B747/fms3/Line01_L", "op": "matches", "value": "ACT .*CRZ" },
     { "do": "check", "note": "3,000 ft の近く", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [2900, 3100] },
     { "do": "record_stop" }
   ]
