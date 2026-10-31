@@ -2555,6 +2555,13 @@ function fmsFunctions.setDref(fmsO,value)
   if rating then B747_fms_thrlim_to(rating) return end
   local clb = ({CLB = 0, CLB1 = 1, CLB2 = 2})[value]
   if clb then B747_fms_thrlim_clb(clb) return end
+  -- (step 9g2) in the air <GA, <CON, <CRZ (FCOM p.1339-1340; nothing while
+  -- GA is held: p.672)
+  if value=="GA" or value=="CON" or value=="CRZ" then
+    if simDR_onGround==1 then fmsO["notify"]="KEY/FUNCTION INOP" return end
+    B747_fms_thrlim_sel(value)
+    return
+  end
   if value=="V1" or value=="VR" or value=="V2" then takeoff_speed_entry(fmsO, value) return end
   if value=="ILS" then 
     if findILS(fmsO["scratchpad"])==false then fmsO["notify"]="INVALID ENTRY" end

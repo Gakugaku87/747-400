@@ -162,6 +162,11 @@ T.equal(rt:get("laminar/B747/engine/derate/TO"), 1, "TO 1 selected")
 -- THR switch: CLB 1 (p.642); on the ground TO 1 again
 local LIM = "laminar/B747/engines/ref_thr_limit_mode"
 frames(0.2)
+-- (step 9g2) the page (FCOM p.1314): the mode and its limit's unit at the
+-- title's right, TO 1's 8 % under its label with <SEL>, CLB 1 <ARM>
+T.check(small(2):find("^ SEL      OAT +TO 1 EPR$"), "SEL, OAT, TO 1 EPR: " .. small(2))
+T.equal(line(7), "<-8 % <SEL> <ARM> CLB 1>", "TO 1's row (FCOM p.1314)")
+T.check(small(6):find("^ TO 1") and small(8):find("^ TO 2") and line(9):find("^<%-20 %%"), "the labels TO 1, TO 2, <-20 %: " .. line(9))
 T.equal(rt:get(LIM), "TO 1", "the thrust limit: TO 1")
 T.equal(rt:get("laminar/B747/engine/derate/CLB"), 1, "CLB 1 armed (TO 1's 8 %)")
 rt:set("sim/flightmodel/failures/onground_any", 0)
@@ -173,6 +178,15 @@ T.equal(rt:get(LIM), "TO 1", "in the air at flaps 20 with VNAV: TO 1")
 rt:set("sim/cockpit2/controls/flap_ratio", 2 / 6)
 frames(0.2)
 T.equal(rt:get(LIM), "CLB 1", "flaps 5 (THR REDUCTION's default) with VNAV: CLB 1")
+-- (step 9g2) the page in the air (FCOM p.1339): the active mode and its
+-- limit, <SEL> at CLB 1; <CON, <CRZ select
+T.check(small(2):find("CLB 1 EPR$") and line(7) == "<CON        <SEL> CLB 1>", "in the air: CLB 1 EPR, <SEL> at CLB 1: " .. small(2) .. "|" .. line(7))
+key("ls_key/L3")
+T.check(rt:get(LIM) == "CON" and line(7) == "<CON  <SEL>       CLB 1>", "<CON: CON: " .. line(7))
+key("ls_key/L4")
+T.check(rt:get(LIM) == "CRZ" and line(9):find("^<CRZ  <SEL>") ~= nil, "<CRZ: CRZ: " .. line(9))
+key("ls_key/R3")
+T.equal(rt:get(LIM), "CLB 1", "CLB 1> again: CLB 1")
 rt:set("sim/cockpit2/controls/flap_ratio", 0)
 frames(0.2)
 rt:set("sim/cockpit2/controls/flap_ratio", 1 / 6)
