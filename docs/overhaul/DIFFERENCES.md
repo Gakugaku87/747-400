@@ -542,8 +542,9 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - ヨーダンパーの則、A/P 中のトリム（AFDS-17・19・20）。
 - 空中開始では FMS が F/D L・A/T・ALT HOLD・CMD L を入れる（試験のための初期化。段 1a から ALT HOLD は F/D の既定のモードの 1 秒後、飛行の開始のたびに、何度走っても同じ）。前は機体の読み込み方で動きが変わった。
 
-### オートスロットル・推力管理：作り直し中（6-4：FMC の段 9f1 のモードの論理と engage・disconnect、段 9f2 の制御則と servo）
+### オートスロットル・推力管理：作り直し中（6-4：FMC の段 9f1 のモードの論理と engage・disconnect、段 9f2 の制御則と servo、段 9f3 の interlock）
 
+- 実機に合わせた点（段 9f3、2026-10-31）：A/T の engage に電源の条件（servo の F/O transfer bus と DC bus 1 か 2：ATA34_2 p.450）を足した（失えば外れて >AUTOTHROT DISC）。VNAV の降下で FMC が A/T に速さを求めるのに A/T が engage していなければ THRUST REQUIRED（FCOM p.1434。前は出す処理が無かった：ATHR-19）。推定：DC はどちらか 1 本で足りること。
 - 実機に合わせた点（段 9f2、2026-10-31）：A/T の制御則と servo を A/T のモデルに移した（前は EEC がモードごとに 1 フレームずつ刻み、速さがフレームに依った）。各則がレバーの速さを出し、servo が 10°/s（flare retard は 5°/s）までで積分する（ATA34_2 p.648）。FLCH と G/A の 1 回目は THR（V/S の則：FLCH は 125 秒で MCP 高度、G/A は 2,000 fpm、上昇で V/S が多くても推力を減らさない：p.646、p.670、p.674。前は THR を出さず THR REF で上昇推力まで）、G/A の 2 回目は THR REF。FLCH の降下はレバーが後ろの stop で HOLD、FLCH でレバーが指令から 8° 離れると HOLD（p.648）。THR REF は推力の基準へ、限界の速さを越えない（p.672）。SPD は増が速く減が遅い（FCTM p.43）、thrust limit と速度の保護（Vmax − 5、最小 + 5：FCOM p.675）。操縦者の override：A/T の間でも手のレバー（ハードウェアか 3D）が動けばそれに従い、止まって 1 秒で指令に戻る（ATHR-09）。VNAV の降下で目標より 15 kt（速度の遷移の下で 10 kt）遅いと A/T は SPD（FCOM p.1259）。推定：ゲイン、手が止まってから戻るまでの 1 秒、戻りの 5 kt。
 
 - 実機に合わせた点（段 9f1、2026-10-31）：A/T の状態とモードを 1 つのモデル（`B747.70.at_model.lua`）が持つ（前は 7 か所から書かれ、FMA は毎フレームの if の連鎖）。A/T はモードで engage する：VNAV・FLCH の engage、TO/GA（地上は 50 kt 未満・フラップ UP でない・TO の limit、空中はフラップ UP でないか G/S）、SPD・THR スイッチ（400 ft の上、ピッチのモードの条件）、VNAV・FLCH の間の ARM の ON（FCOM p.641–642、p.656）。前は V/S・ALT・G/S や A/P の解除の後に勝手に active になり、TO/GA は ARM OFF でも active にした。TO の THR REF は 65 kt で HOLD、VNAV の engage か別のモードまで HOLD（前は 50 ft で THR REF に戻った）。50 kt までに押さなければ 400 ft まで engage しない。VNAV・FLCH から ALT・V/S・G/S で SPD、T/O・G/A からの水平では変えない（FCOM p.673）。VNAV の IDLE はレバーが後ろの stop に着くと HOLD（ATA34_2 p.666）。>AUTOTHROT DISC は engage から外れたときだけ（ARM OFF、disconnect、interlock）、地上の reverse では出さない、disconnect の 2 回目か次の engage で消える（FCOM p.657、p.677。前は A/T の fail そのもので、reverse の着陸のたび、外れていても disconnect を押すと出た）。SPD の 25 ft の IDLE は autoland の flare retard だけ（ATHR-12。前は手の着陸でも）。推定：運転中のエンジンの判定（N1 15 %）、地上で 30 kt 未満で 50 kt の禁止を解くこと。
@@ -553,7 +554,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - assumed temperature が推力に効かない（ATHR-03）。CLB の基準が定格でなく固定の上昇率から（ATHR-04）。
 - FLCH の降下で IDLE を見せず THR から stop の HOLD へ（推定）。SPD の速さの戻りが遅い（空中開始の 38 kt の速すぎから 2 分で 5 kt の内：アイドル近くでエンジンがレバーに 7 秒ほど遅れ、レバー 0〜0.1 で推力がほぼ変わらない EEC の関係と合わせて段 9g で見る）。
 - 操縦者の override が無い（A/T 作動中はレバーの入力を無視。ATHR-09）。
-- インターロックの残り（電源、EEC の ALTN からの再 engage の規則：ATHR-15）、THR スイッチの推力制限の機能、EICAS の基準の数字（ATHR-17）。
+- インターロックの残り（FMC の故障と master の切り替え、servo loop monitor：ATHR-15）、THR スイッチの推力制限の機能、EICAS の基準の数字（ATHR-17）、DRAG REQUIRED の作り直し（前の判定のまま）。
 
 ### 通信（ATA 23）：未着手
 

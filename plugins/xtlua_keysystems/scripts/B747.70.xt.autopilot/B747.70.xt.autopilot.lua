@@ -917,6 +917,10 @@ end
 -- mode (step 9f2)
 dofile("B747.70.at_model.lua")
 simDR_at_rev_deploy = find_dataref("sim/flightmodel2/engines/thrust_reverser_deploy_ratio")
+-- (step 9f3) the A/T's power (ATA34_2 p.450): the servo's excitation on
+-- the F/O transfer bus (FMC R's too; FMC L the APU standby bus), its drive
+-- on DC buses 1 and 2 (either: estimate)
+B747DR_at_bus_xfr_fo = find_dataref("laminar/B747/electrical/bus/xfr_fo")
 -- (step 9f2) the servo's command for the EEC; the thrust and its
 -- reference (the EEC's EPR or N1 bugs) for the laws
 B747DR_at_servo = deferred_dataref("laminar/B747/autothrottle/servo", "number")
@@ -932,13 +936,17 @@ local atSeen = {spd = 0, thr = 0, disc = 0, toga = nil}
 local function afds_at()
 	local i = atIn
 	i.arm = B747DR_ap_autothrottle_armed == 1
-	-- the interlocks: three engines running (N1 over 15 %: the old
-	-- monitor's), the A/T's fail (the EECs' ALTN: B747.42.xt.eec_thrust.lua)
+	-- the interlocks (ATA34_2 p.644-645): three engines running (N1 over
+	-- 15 %: the old monitor's), the A/T's fail (the EECs' ALTN:
+	-- B747.42.xt.eec_thrust.lua), an FMC and the servo powered (step 9f3)
 	local run = 0
 	for e = 0, 3 do
 		if B747DR_display_N1[e] > 15 then run = run + 1 end
 	end
-	i.ok = run >= 3 and B747DR_autothrottle_fail == 0
+	-- (the F/O transfer bus is FMC R's too: with it an FMC is powered)
+	local power = B747DR_at_bus_xfr_fo > 0.5
+		and (B747DR_afds_bus_dc[0] > 0.5 or B747DR_afds_bus_dc[1] > 0.5)
+	i.ok = run >= 3 and B747DR_autothrottle_fail == 0 and power
 	i.ground = simDR_onGround == 1
 	i.cas, i.ra = simDR_ind_airspeed_kts_pilot, simDR_radarAlt1
 	i.flaps_up = simDR_flap_ratio_control < 0.01
@@ -994,6 +1002,11 @@ local function afds_at()
 	if B747DR_autothrottle_active ~= act then B747DR_autothrottle_active = act end
 	local fma = B747_at_model.fma(atState)
 	if B747DR_ap_FMA_autothrottle_mode ~= fma then B747DR_ap_FMA_autothrottle_mode = fma end
+	-- THRUST REQUIRED (step 9f3; FCOM p.1259, p.1434: flag 45, DRindex 44
+	-- + 1): VNAV's descent asking the A/T for speed with the A/T off
+	local tr = (afds.pitch == "VNAV" and B747DR_ap_fvn_phase == 3 and B747DR_ap_fvn_at == B747_at_model.SPD
+		and not atState.engaged) and 1 or 0
+	if B747DR_fmc_notifications[45] ~= tr then B747DR_fmc_notifications[45] = tr end
 	-- (TO's state for the old readers: 0.9 its THR REF, 1 its HOLD)
 	local to = atState.engaged and (atState.to == "thr" and 0.9 or (atState.to == "hold" and 1)) or 0
 	if B747DR_engine_TOGA_mode ~= to then B747DR_engine_TOGA_mode = to end

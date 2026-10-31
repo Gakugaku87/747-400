@@ -46,6 +46,8 @@ for i = 0, 3 do
     rt:set("laminar/B747/electrical/bus/dc", i, 1)
 end
 rt:set("laminar/B747/electrical/bus/bat_main", 1)
+-- (the A/T's servo: the F/O transfer bus, the FMC's step 9f3)
+rt:set("laminar/B747/electrical/bus/xfr_fo", 1)
 for i = 0, 2 do
     rt:set("laminar/B747/irs/att_valid", i, 1)
     rt:set("laminar/B747/airdata/valid", i, 1)
@@ -436,6 +438,17 @@ T.equal(rt:get(AT_FMA_ST), 2, "the A/T IDLE")
 for e = 0, 3 do rt:set(LEVER, e, 0) end
 frames()
 T.equal(rt:get(AT_FMA_ST), 1, "the levers at the aft stop: HOLD")
+-- (step 9f3) THRUST REQUIRED (FCOM p.1434: flag 45): the descent asking
+-- the A/T for speed with the A/T off; not while it asks for idle
+rt:command(CMD .. "autothrottle_disco_L")
+fvn({at = 3})
+frames()
+T.equal(rt:get(NOTIFY, 45), 1, "the A/T off, SPD asked: THRUST REQUIRED")
+fvn({at = 2})
+frames()
+T.equal(rt:get(NOTIFY, 45), 0, "IDLE asked: none")
+rt:command(CMD .. "autothrottle_disco_R")
+frames()
 T.check(rt:get(PITCH_CMD) < p2 - 0.1, "-2,000 fpm asked from level: the command down")
 T.equal(rt:get("sim/cockpit2/autopilot/airspeed_is_mach"), 0, "the dial in knots")
 T.equal(rt:get(DIAL), 280, "the FMC's 280 kt")
@@ -489,6 +502,20 @@ rt:command(CMD .. "speed_mode")
 frames()
 T.equal(rt:get(AT_FMA_ST), 3, "the SPD switch in V/S: SPD")
 T.equal(rt:get(AT_ACTIVE), 1, "active")
+-- (step 9f3) the F/O transfer bus lost (the servo's power: ATA34_2 p.450):
+-- off with >AUTOTHROT DISC; the SPD switch nothing until it is back
+local XFR = "laminar/B747/electrical/bus/xfr_fo"
+rt:set(XFR, 0)
+frames()
+T.equal(rt:get(AT_ACTIVE), 0, "the F/O transfer bus lost: the A/T off")
+T.equal(rt:get(DISC_ST, 5), 1, ">AUTOTHROT DISC")
+rt:command(CMD .. "speed_mode")
+frames()
+T.equal(rt:get(AT_ACTIVE), 0, "the SPD switch unpowered: nothing")
+rt:set(XFR, 1)
+rt:command(CMD .. "speed_mode")
+frames()
+T.check(rt:get(AT_ACTIVE) == 1 and rt:get(DISC_ST, 5) == 0, "powered again: SPD, the message reset")
 -- 1d: the approach modes through the model. APP arms LOC and G/S (with no
 -- ILS too: the old one posted RW/ILS CRS ERROR, flag 40); the captures by
 -- the pitch and roll laws' geometry (steps 2b and 3c: both receivers'
