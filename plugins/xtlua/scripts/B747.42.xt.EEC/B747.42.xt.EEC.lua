@@ -684,45 +684,6 @@ function in_flight_thrust(gw_kg_in, climb_angle_deg_in)
 
 	return total_thrust_required_N, thrust_per_engine_N, corrected_thrust_N, corrected_thrust_lbf
 end
-lastNewTargetModeTime=0
-lastNewTarget=""
-function ecc_mode_set()
-	newTarget=""
-	--Set Specific sub-mode for TO or CLB
-	--if (B747DR_ap_autoland==-2 or B747DR_ap_FMA_active_roll_mode ==3 ) and simDR_flap_ratio_control>0 then
-	--if simDR_altitude>32000 then
-	--	newTarget = "CRZ"
-	--else
-	if B747DR_ap_autoland==-2 or (B747DR_ap_flightPhase >= 2 and simDR_flap_ratio > 0 and simDR_radarAlt1<1500) then
-		newTarget = "GA"
-	elseif B747DR_ap_flightPhase==0 then
-		if B747DR_toderate == 0 then
-			newTarget = "TO"
-		elseif B747DR_toderate == 1 then
-			newTarget = "TO 1"
-		elseif B747DR_toderate == 2 then
-			newTarget = "TO 2"
-		end
-	elseif B747DR_ap_flightPhase==1 then
-		if B747DR_clbderate == 0 then
-			newTarget = "CLB"
-		elseif B747DR_clbderate == 1 then
-			newTarget = "CLB 1"
-		elseif B747DR_clbderate == 2 then
-			newTarget = "CLB 2"
-		end
-	elseif B747DR_ap_flightPhase>=2 then
-		newTarget = "CRZ"
-	end
-	if newTarget~=lastNewTarget then
-		lastNewTarget=newTarget
-		lastNewTargetModeTime=simDRTime
-	end
-
-	if simDRTime-lastNewTargetModeTime>0.25 then
-		B747DR_ref_thr_limit_mode=newTarget
-	end
-end
 function B747_interpolate_value(current_value, target, min, max, speed)--speed in sex min->max
 	local change = ((max-min)/speed)*(SIM_PERIOD)
 	newValue=current_value
@@ -1034,9 +995,8 @@ function throttle_management()
 	--The A/T disconnect for the EEC alternate mode and EEC_status are
 	--B747.42.xt.eec_thrust.lua's (FCOM p.877)
 
-
-
-	ecc_mode_set()
+	--(the FMC's step 9g1) the thrust limit's mode is the FMC's
+	--(B747.68.thrlim_model.lua); before, ecc_mode_set from flightPhase
 
 	--After landing and reversers stowed reset mode to TO
 	--print("-------< ATTEMPTING TO CLEAN-UP GA MODE >-----")

@@ -77,6 +77,7 @@
     { "do": "check", "note": "vnav_state は 2", "dref": "laminar/B747/autopilot/vnav_state", "op": "==", "value": 2 },
     { "do": "check", "note": "FMC の目標速度は V2 + 10〜V2 + 25（FCOM p.1255）", "dref": "laminar/B747/fms/vnav/cas", "op": "between", "value": [10, 25], "rel": "v2" },
     { "do": "check", "note": "A/T は THR REF（engage で A/T ARM から active）", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 5 },
+    { "do": "check", "note": "推力制限は TO のまま（THR REDUCTION のフラップ 5 の前：段 9g1）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "TO" },
     { "do": "remember", "dref": "laminar/B747/fms/vnav/cas", "as": "tocas" },
     { "do": "wait", "note": "加速高度（1,141 ft）の少し下", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": ">", "value": 1050, "timeout": 60 },
     { "do": "check", "note": "加速高度の前は、engage の時の目標速度のまま", "dref": "laminar/B747/fms/vnav/cas", "op": "between", "value": [-0.5, 0.5], "rel": "tocas" },
@@ -91,6 +92,7 @@
     { "do": "set", "note": "フラップ 10", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.5 },
     { "do": "wait", "note": "220 kt", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 220, "timeout": 60 },
     { "do": "set", "note": "フラップ 5", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.34 },
+    { "do": "wait", "note": "THR REDUCTION（既定はフラップ 5）で VNAV のとき、待機中の CLB（FCOM p.667：段 9g1）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "CLB", "timeout": 5 },
     { "do": "wait", "note": "235 kt", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 235, "timeout": 60 },
     { "do": "set", "note": "フラップ 1", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.168 },
     { "do": "wait", "note": "243 kt", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 243, "timeout": 60 },
@@ -99,6 +101,7 @@
     { "do": "snapshot", "note": "フラップ UP", "drefs": [ "laminar/B747/fms/vnav/cas", "laminar/B747/autopilot/ias_dial_value", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "laminar/B747/autopilot/flightPhase", "laminar/B747/engines/ref_thr_limit_mode", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode" ] },
     { "do": "check", "note": "フラップ UP：250 kt（10,000 ft の下の SPD TRANS）", "dref": "laminar/B747/fms/vnav/cas", "op": "between", "value": [249.5, 250.5] },
     { "do": "check", "note": "推力の基準は CLB（1,000 ft の上）", "dref": "laminar/B747/autopilot/flightPhase", "op": "==", "value": 1 },
+    { "do": "check", "note": "推力制限は CLB（フラップ UP で GA にならない）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "CLB" },
 
     { "do": "mark", "note": "9,000 ft の捕捉" },
     { "do": "wait", "note": "9,000 ft で VNAV ALT", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 5, "timeout": 240 },

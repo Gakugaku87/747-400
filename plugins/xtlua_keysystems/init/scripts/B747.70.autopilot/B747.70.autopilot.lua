@@ -124,6 +124,9 @@ B747DR_ap_autothrottle_armed        	= deferred_dataref("laminar/B747/autothrott
 -- (the FMC's step 9d1) the MCP altitude selector's pushes, counted (the
 -- FMC deletes constraints and resets CRZ ALT on them)
 B747DR_ap_alt_sel_pushes            	= deferred_dataref("laminar/B747/autopilot/alt_sel_pushes", "number")
+-- (the FMC's step 9g1) the THR switch's pushes, counted (the FMC's thrust
+-- limit: CLB after the takeoff or a go-around)
+B747DR_ap_thr_pushes                	= deferred_dataref("laminar/B747/autopilot/thr_pushes", "number")
 B747DR_at_servo                     	= deferred_dataref("laminar/B747/autothrottle/servo", "number")
 B747DR_at_lever_cmd                 	= deferred_dataref("laminar/B747/autothrottle/lever_cmd", "number")
 -- (the FMC's step 9d3) speed intervention (1: the IAS/MACH selector pushed

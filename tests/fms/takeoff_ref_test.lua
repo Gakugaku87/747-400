@@ -11,6 +11,7 @@ local types = {}
 for _, cdu in ipairs({"cdu1", "cdu2"}) do
     for n = 0, 15 do types["sim/cockpit2/radios/indicators/fms_" .. cdu .. "_text_line" .. n] = "string" end
 end
+types["laminar/B747/engines/ref_thr_limit_mode"] = "string"
 local rt = xtlua.new{types = types}
 rt:load("plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/B747.60.xt.fltInst.lua")
 rt:load("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.xt.fms.lua")
@@ -154,5 +155,34 @@ key("ls_key/L4")                                       -- THRUST LIM
 key("ls_key/L3")                                       -- <TO 1
 T.equal(pad(), "TAKEOFF SPEEDS DELETED", "TO 1 after the selection: TAKEOFF SPEEDS DELETED (FCOM p.1315)")
 T.equal(rt:get("laminar/B747/engine/derate/TO"), 1, "TO 1 selected")
+-- (step 9g1) the FMC's thrust limit (laminar/B747/engines/
+-- ref_thr_limit_mode): TO 1, CLB 1 armed with its 8 % (FCOM p.1273); in
+-- the air with VNAV at flaps 20 TO 1, at THR REDUCTION's flaps 5 the
+-- armed CLB 1 (FCOM p.667); the flaps up, then out to 1: GA (p.672); the
+-- THR switch: CLB 1 (p.642); on the ground TO 1 again
+local LIM = "laminar/B747/engines/ref_thr_limit_mode"
+frames(0.2)
+T.equal(rt:get(LIM), "TO 1", "the thrust limit: TO 1")
+T.equal(rt:get("laminar/B747/engine/derate/CLB"), 1, "CLB 1 armed (TO 1's 8 %)")
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("sim/cockpit2/controls/flap_ratio", 4 / 6)
+rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 1000)
+rt:set("laminar/B747/autopilot/vnav_state", 2)
+frames(0.2)
+T.equal(rt:get(LIM), "TO 1", "in the air at flaps 20 with VNAV: TO 1")
+rt:set("sim/cockpit2/controls/flap_ratio", 2 / 6)
+frames(0.2)
+T.equal(rt:get(LIM), "CLB 1", "flaps 5 (THR REDUCTION's default) with VNAV: CLB 1")
+rt:set("sim/cockpit2/controls/flap_ratio", 0)
+frames(0.2)
+rt:set("sim/cockpit2/controls/flap_ratio", 1 / 6)
+frames(0.2)
+T.equal(rt:get(LIM), "GA", "the flaps up, then out to 1: GA")
+rt:set("laminar/B747/autopilot/thr_pushes", rt:get("laminar/B747/autopilot/thr_pushes") + 1)
+frames(0.2)
+T.equal(rt:get(LIM), "CLB 1", "the THR switch: CLB 1")
+rt:set("sim/flightmodel/failures/onground_any", 1)
+frames(0.2)
+T.equal(rt:get(LIM), "TO 1", "on the ground: TO 1 again")
 
 T.done()
