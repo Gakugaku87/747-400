@@ -3916,7 +3916,8 @@ end
 -- CDU that showed its VERIFY REQUEST to XXXXZ ATC REQUEST (FMSPG p.326),
 -- the request erased (estimate); none in the logon's ACK_S: NO ACK and
 -- RESEND> while unchanged (FMSPG p.365; the same entry again: estimate);
--- fields not to be changed while SENDING (FMSPG p.300-316)
+-- fields not to be changed while SENDING (FMSPG p.300-316); (step 12g2b)
+-- RTE 1 and RTE 2's text, DEP/ARR's default and its check
 dofile("B747.68.atc_request_model.lua")
 do
   local Q = B747_atc_request_model
@@ -3947,11 +3948,83 @@ do
     if dr.sent and dr.sent.status == "NO ACK" and dr.sent_rev == dr.rev then return "RESEND>", "REQUEST" end
     return "SEND>", "REQUEST"
   end
+  -- (step 12g2b) a route's text for REQUEST ROUTE CLEARANCE: the origin,
+  -- its runway and SID, each segment's airway and TO waypoint (DIRECT: the
+  -- waypoint; not the procedures' legs, the discontinuities, an airway
+  -- without its TO), the STAR, the approach, the destination; the
+  -- modification when there is one (FMSPG p.317); nil without an origin
+  -- and a destination. The form an estimate (the FANS route clearance's
+  -- data as text)
+  local function proc_name(p, name)
+    return name .. ((p.trans and p.trans ~= "") and ("." .. p.trans) or "")
+  end
+  function B747_fms_atc_route_text(n)
+    local R = B747_route_model
+    local r = R.shown(B747_fmc_route_num(n))
+    if not r.origin or not r.dest then return nil end
+    local parts = {r.origin.ident}
+    if r.runway and r.runway.ident then parts[#parts + 1] = r.runway.ident end
+    if r.sid then parts[#parts + 1] = proc_name(r.sid, r.sid.name) end
+    for _, sg in ipairs(R.segments(r)) do
+      local l = r.legs[sg.first]
+      if not sg.disc and sg.to and sg.to ~= "" and not (l and l.proc) then
+        if sg.via and sg.via ~= R.DIRECT then parts[#parts + 1] = sg.via end
+        parts[#parts + 1] = sg.to
+      end
+    end
+    if r.star then parts[#parts + 1] = proc_name(r.star, r.star.name) end
+    if r.appr then parts[#parts + 1] = proc_name(r.appr, B747_proc_model.approach_name(r.appr.id)) end
+    parts[#parts + 1] = r.dest.ident
+    return table.concat(parts, " ")
+  end
+  -- DEP/ARR's default: on the ground the departure selected, in the air
+  -- the arrival (the STAR, else the approach: estimate), with its
+  -- transition (FMSPG p.317); nil without one
+  function B747_fms_atc_deparr_default()
+    local r = B747_route_model.shown(B747_fmc_route)
+    if simDR_onGround == 1 then return r.sid and proc_name(r.sid, r.sid.name) or nil end
+    if r.star then return proc_name(r.star, r.star.name) end
+    if r.appr then return proc_name(r.appr, B747_proc_model.approach_name(r.appr.id)) end
+    return nil
+  end
+  -- an entered procedure: nil, or the message; the active route's origin's
+  -- SIDs, its destination's STARs and approaches (as the CDU names them),
+  -- the transition one of its enroute transitions (the messages: estimate)
+  function B747_fms_atc_proc_check(text)
+    if not Q.proc_form(text) then return Q.INVALID end
+    local name, trans = string.match(text, "^(%w+)%.(%w+)$")
+    name = name or text
+    local P, N, db = B747_proc_model, B747_navdb, B747_fmc_navdb
+    local r = B747_route_model.shown(B747_fmc_route)
+    local function has(icao, kind)
+      local c = icao and N.cifp(db, icao)
+      if not c then return false end
+      local id = nil
+      for _, p in ipairs(c.order[kind] or {}) do
+        if p == name or (kind == P.APPCH and P.approach_name(p) == name) then id = p end
+      end
+      if not id then return false end
+      if not trans then return true end
+      for _, t in ipairs(P.transitions(N, db, icao, kind, id).trans) do
+        if t == trans then return true end
+      end
+      return false
+    end
+    local o, d = r.origin and r.origin.ident, r.dest and r.dest.ident
+    if has(o, P.SID) or has(d, P.STAR) or has(d, P.APPCH) then return nil end
+    return "NOT IN DATA BASE"
+  end
+  -- the selected route's text again (VERIFY, SEND)
+  function B747_fms_atc_refresh_route(kind)
+    local dr = drafts[kind]
+    if dr.rte then Q.update_route(dr, B747_fms_atc_route_text(dr.rte)) end
+  end
   -- SEND> or RESEND> (nothing when not shown)
   function B747_fms_atc_send_request(fmsO, kind)
     local st = B747_fms_atc_req_status(kind)
     if st ~= "SEND>" and st ~= "RESEND>" then return end
     local dr = drafts[kind]
+    B747_fms_atc_refresh_route(kind)
     local text = Q.text(dr)
     fmsFunctions.acarsSystemSendATC(fmsO, json.encode({type = "cpdlc", msg = text, RR = "Y"}))
     local d = (st == "RESEND>") and dr.sent or {kind = "REQUEST"}

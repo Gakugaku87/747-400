@@ -15,8 +15,10 @@
 --   OFFSET    L or R and 1-99 NM, or just the distance (FCOM p.737); OFFSET
 --             AT a position or a time, or DUE TO WEATHER (WEATHER DEVIATION
 --             UP TO: one or the other);
---   ROUTE     DIRECT TO a position, HEADING and GROUND TRACK 000-360 (RTE 1,
---             RTE 2, DEP/ARR: step 12g2b);
+--   ROUTE     DIRECT TO a position, HEADING and GROUND TRACK 000-360;
+--             (step 12g2b) RTE 1 or RTE 2 (one or the other: REQUEST ROUTE
+--             CLEARANCE with the route, the FMS's text of it), DEP/ARR (a
+--             procedure, with its transition: REQUEST [procedure name]);
 -- no more than five elements (MSG LIMIT EXCEEDED: FMSPG p.298); the
 -- CLEARANCE and VOICE requests of ATC INDEX (FMSPG p.298-300). A position
 -- is checked by the FMS (B747_fmc_with_fix) and set here by its name.
@@ -52,6 +54,7 @@ function M.new(kind)
         spd = nil, spd_perf = false, spd_wx = false,
         off = nil, off_at = nil, off_wx = false,
         direct = nil, hdg = nil, trk = nil,
+        rte = nil, route_text = nil, proc = nil,
         free = {"", "", "", ""}, rev = 0}
 end
 -- ERASE REQUEST: everything (its free text too)
@@ -133,6 +136,21 @@ function M.degrees_text(s)
     return string.format("%03d", n)
 end
 
+-- text in lines of `width`, by words
+local function wrap(text, width)
+    local lines, cur = {}, ""
+    for w in string.gmatch(text, "%S+") do
+        if cur == "" then cur = w
+        elseif #cur + 1 + #w <= width then cur = cur .. " " .. w
+        else
+            lines[#lines + 1] = cur
+            cur = w
+        end
+    end
+    if cur ~= "" then lines[#lines + 1] = cur end
+    return lines
+end
+
 -- the elements (nil for CLEARANCE and VOICE's fixed one): each {text, rows}
 local function el(text, rows) return {text = text, rows = rows} end
 local function alt_element(r)
@@ -188,6 +206,16 @@ function M.elements(r)
         if r.spd_wx then out[#out + 1] = due("WEATHER") end
     end
     if r.direct then out[#out + 1] = el("REQUEST DIRECT TO " .. r.direct, {{head = "REQUEST DIRECT TO", data = r.direct}}) end
+    -- (step 12g2b) the route's lines from its header's (estimate)
+    if r.rte and r.route_text then
+        local rows = {}
+        for k, t in ipairs(wrap(r.route_text, 24)) do
+            rows[k] = {head = (k == 1) and "REQUEST ROUTE CLEARANCE" or nil, data = t}
+        end
+        if #rows == 0 then rows[1] = {head = "REQUEST ROUTE CLEARANCE"} end
+        out[#out + 1] = el("REQUEST ROUTE CLEARANCE " .. r.route_text, rows)
+    end
+    if r.proc then out[#out + 1] = el("REQUEST " .. r.proc, {{head = "REQUEST", data = r.proc}}) end
     if r.hdg then out[#out + 1] = el("REQUEST HEADING " .. r.hdg, {{head = "REQUEST HEADING", data = r.hdg}}) end
     if r.trk then out[#out + 1] = el("REQUEST GROUND TRACK " .. r.trk, {{head = "REQUEST GROUND TRACK", data = r.trk}}) end
     return out
@@ -198,7 +226,7 @@ function M.any(r) return r.kind == "REQUEST" and #M.elements(r) > 0 end
 
 -- a change applied unless it makes more than five elements
 local SAVE = {"alt", "alt_dir", "step_at", "pilot_disc", "crz_clb", "own_sep", "alt_perf", "alt_wx", "spd", "spd_perf",
-    "spd_wx", "off", "off_at", "off_wx", "direct", "hdg", "trk"}
+    "spd_wx", "off", "off_at", "off_wx", "direct", "hdg", "trk", "rte", "route_text", "proc"}
 local function apply(r, change)
     local before = {}
     for _, k in ipairs(SAVE) do before[k] = r[k] end
@@ -219,6 +247,9 @@ function M.can(r, field)
     if field == "spd_perf" or field == "spd_wx" then return r.spd ~= nil end
     if field == "off_at" then return r.off ~= nil and not r.off_wx end
     if field == "off_wx" then return r.off ~= nil and not r.off_at end
+    -- (step 12g2b) RTE 1 or RTE 2 (FMSPG p.317-318: the other blank)
+    if field == "rte1" then return r.rte ~= 2 end
+    if field == "rte2" then return r.rte ~= 1 end
     return true
 end
 
@@ -258,6 +289,27 @@ function M.enter(r, field, text, present_ft)
     end
     return M.INVALID
 end
+-- (step 12g2b) RTE n selected with its route's text (nothing when the
+-- other is); the text as the route is at VERIFY and SEND
+function M.select_route(r, n, text)
+    if not M.can(r, "rte" .. n) then return nil end
+    return apply(r, function() r.rte, r.route_text = n, text end)
+end
+function M.update_route(r, text)
+    if r.rte and text and text ~= r.route_text then
+        r.route_text = text
+        r.rev = r.rev + 1
+    end
+end
+-- a procedure's form: its name (a letter first, seven characters at most)
+-- and a transition (five) after a period
+function M.proc_form(s)
+    local a, b = string.match(s or "", "^(%a%w*)%.(%w+)$")
+    if a then return #a <= 7 and #b <= 5 end
+    return string.match(s or "", "^%a%w*$") ~= nil and #s <= 7
+end
+-- DEP/ARR's procedure (checked by the FMS)
+function M.set_proc(r, text) return apply(r, function() r.proc = text end) end
 -- a position checked by the FMS: its name into step_at, off_at, direct
 function M.set_place(r, field, name)
     if not M.can(r, field) then return M.INVALID end
@@ -272,7 +324,7 @@ end
 -- DELETE: a field or a selection, with what depends on it (FMSPG p.302,
 -- p.307, p.310); nil, or INVALID DELETE when there is nothing
 local DEPENDS = {alt = {"alt_dir", "step_at", "pilot_disc", "crz_clb", "own_sep", "alt_perf", "alt_wx"},
-    spd = {"spd_perf", "spd_wx"}, off = {"off_at", "off_wx"}}
+    spd = {"spd_perf", "spd_wx"}, off = {"off_at", "off_wx"}, rte = {"route_text"}}
 local function cleared(v)
     if type(v) == "boolean" then return false end
     return nil

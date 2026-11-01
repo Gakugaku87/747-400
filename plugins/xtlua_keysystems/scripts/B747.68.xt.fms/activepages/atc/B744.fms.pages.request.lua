@@ -12,8 +12,12 @@
 -- text lines, REQUEST SEND> on the last page (SENDING, RESEND>, NO ATC
 -- COMM, DATA LINK NO COMM), CONTINUED before it, 6L <REQUEST or <INDEX.
 -- XXXXZ ATC REQUEST: <UPLINK with ATC's response and the STATUS, the text
--- from line 2, the response's time after it, LOG>. Not here yet: RTE 1,
--- RTE 2 and DEP/ARR (step 12g2b), WHEN CAN WE (step 12g3). Estimates: no
+-- from line 2, the response's time after it, LOG>. (Step 12g2b) 4/4's
+-- REQUEST RTE 1 and RTE 2 (small with the caret, large once selected, the
+-- other blank) and REQUEST DEP/ARR (the departure or arrival selected
+-- with its caret, an entry or the pushed one large, dashes without one:
+-- FCOM p.742-743; FMSPG p.316-318). Not here yet: WHEN CAN WE (step
+-- 12g3). Estimates: no
 -- PRINT (no printer, as the uplink's page); the lines' columns. Before,
 -- the pages wrote and read FMS data fields (acarsREQ*) without the
 -- entries' checks, VERIFY wrote the shared text while drawing (CDU-34).
@@ -76,6 +80,7 @@ local SUBPAGE = {alt = 1, spd = 2, off = 3}
 function fmsFunctions.atcreq(fmsO, value)
   if value == "verify" then
     B747_fms_atc_verify_req(fmsO.id, "REQUEST", "REQUEST")
+    if not B747_fms_atc_req_sending("REQUEST") then B747_fms_atc_refresh_route("REQUEST") end
     fmsFunctions.setpage(fmsO, "ATCVERIFYREQUEST")
     return
   end
@@ -129,6 +134,9 @@ fmsPages["ATCSUBREQUEST"].getPage=function(self,pgNo,fmsID)
   else
     out[3] = right(left(BLANK, r.direct or "-----"), r.hdg or "---")
     out[5] = right(BLANK, r.trk or "---")
+    out[7] = right(r.rte == 1 and left(BLANK, "RTE 1") or BLANK, r.rte == 2 and "RTE 2" or "")
+    if r.proc then out[11] = left(BLANK, r.proc)
+    elseif not B747_fms_atc_deparr_default() then out[11] = left(BLANK, "-----") end
   end
   out[13] = "<REQUEST         VERIFY>"
   return out
@@ -169,6 +177,12 @@ fmsPages["ATCSUBREQUEST"].getSmallPage=function(self,pgNo,fmsID)
   else
     out[2] = right(left(BLANK, " DIRECT TO"), "HEADING")
     out[4] = right(BLANK, "GROUND TRACK")
+    out[6] = right(Q.can(r, "rte1") and left(BLANK, " REQUEST") or BLANK, Q.can(r, "rte2") and "REQUEST" or "")
+    out[7] = right((Q.can(r, "rte1") and r.rte ~= 1) and left(BLANK, "<RTE 1") or BLANK,
+      (Q.can(r, "rte2") and r.rte ~= 2) and "RTE 2>" or "")
+    out[10] = left(BLANK, " REQUEST DEP/ARR")
+    local def = not r.proc and B747_fms_atc_deparr_default()
+    if def then out[11] = left(BLANK, "<" .. def) end
   end
   out[12] = "------------------------"
   return out
@@ -185,7 +199,7 @@ local FIELDS = {
   {L1 = "alt", L2 = "step_at", L4 = "pilot_disc", R1 = "crz_clb", R2 = "own_sep", R3 = "alt_perf", R4 = "alt_wx"},
   {L1 = "spd", R3 = "spd_perf", R4 = "spd_wx"},
   {L1 = "off", L2 = "off_at", R4 = "off_wx"},
-  {L1 = "direct", R1 = "hdg", R2 = "trk"},
+  {L1 = "direct", R1 = "hdg", R2 = "trk", L3 = "rte1", R3 = "rte2", L5 = "proc"},
 }
 local SELECTION = {pilot_disc = true, crz_clb = true, own_sep = true, alt_perf = true, alt_wx = true,
   spd_perf = true, spd_wx = true, off_wx = true}
@@ -200,6 +214,36 @@ function fmsFunctions.atcsubreq(fmsO, value)
   local r = dr()
   local sp = fmsO["scratchpad"]
   local err
+  -- (step 12g2b) RTE 1, RTE 2: the key selects, DELETE deselects
+  local n = (field == "rte1" and 1) or (field == "rte2" and 2) or nil
+  if n then
+    if sp == "DELETE" then
+      if r.rte ~= n then fmsO["notify"] = "INVALID DELETE" return end
+      err = Q.delete(r, "rte")
+    elseif sp ~= "" then
+      err = Q.INVALID
+    else
+      local text = B747_fms_atc_route_text(n)
+      if text then err = Q.select_route(r, n, text) end
+    end
+    if err then fmsO["notify"] = err return end
+    if sp == "DELETE" then fmsO["scratchpad"] = "" end
+    return
+  end
+  -- DEP/ARR: the default pushed, or a procedure entered
+  if field == "proc" then
+    if sp == "DELETE" then
+      err = Q.delete(r, "proc")
+    elseif sp == "" then
+      local def = B747_fms_atc_deparr_default()
+      if def and not r.proc then err = Q.set_proc(r, def) end
+    else
+      err = B747_fms_atc_proc_check(sp) or Q.set_proc(r, sp)
+    end
+    if err then fmsO["notify"] = err return end
+    if sp ~= "" then fmsO["scratchpad"] = "" end
+    return
+  end
   if sp == "DELETE" then
     err = Q.delete(r, field)
   elseif SELECTION[field] then
