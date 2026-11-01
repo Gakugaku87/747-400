@@ -118,4 +118,50 @@ rt:set("laminar/B747/irs/mode", 0, 0)
 frames(0.5)
 T.equal(A("V1_ref"), 999, "no IRU aligned: dashes (FCOM p.1319)")
 
+-- (6-1/6-2 step 3d) the FCOM's minimum control speeds (PI.18.11): 200 t
+-- (ZFW 140 t, fuel 60 t), flaps 20, sea level, 15 C: the tables' 88/102/130
+-- raised to VMCG 121, VRMIN 124 and its V2 146 (PI.10.10)
+rt:set("laminar/B747/irs/mode", 0, 2)
+rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
+rt:set("sim/weather/temperature_ambient_c", 15)
+key("ls_key/L6")                                       -- INIT/REF INDEX
+key("ls_key/L3")                                       -- PERF INIT
+type_in("140")
+key("ls_key/L3")
+clear()
+key("ls_key/L6")
+key("ls_key/L5")                                       -- TAKEOFF REF
+local function refs() return string.format("%d/%d/%d", A("V1_ref"), A("Vr_ref"), A("V2_ref")) end
+T.equal(refs(), "121/124/146", "200 t, flaps 20, 15 C, sea level: VMCG 121, VRMIN 124, its V2 (before 88/102/130)")
+-- THRUST LIM's TO 2 (PW: 20 %, PI.10.33-34), then an assumed temperature
+key("ls_key/L6")
+key("ls_key/L4")                                       -- THRUST LIM
+key("ls_key/L4")                                       -- <-20 % TO 2
+frames(0.2)
+T.equal(refs(), "108/111/130", "TO 2: its minimums 108/111, the table's V2 over its V2 for VRMIN")
+type_in("45")
+key("ls_key/L1")                                       -- SEL 45 C: D-TO 2
+frames(0.2)
+T.equal(rt:get("laminar/B747/fms/thrlim/code"), 112, "D-TO 2")
+T.equal(refs(), "108/111/129", "D-TO 2 at 45 C: region C's V2 129, the minimums still at the actual 15 C (AC 25-13)")
+
+-- (6-1/6-2 step 3d) APPROACH REF: the FMC's 200.0 t, VREF 25 132 and 30
+-- 127 (PI.10.2); an entry shows its own until the page is left
+key("ls_key/L6")                                       -- INIT/REF INDEX
+key("ls_key/L6")                                       -- APPROACH
+T.check(line(3):find("^200%.0") and line(3):find("132%s*$"), "APPROACH REF: the FMC's 200.0 t, VREF 25 132: " .. line(3))
+T.check(line(5):find("127%s*$"), "VREF 30 127: " .. line(5))
+T.near(rt:get("laminar/B747/fms/vref30"), 127, 1e-6, "the PFDs' VREF 30 (laminar/B747/fms/vref30) the FMC's weight's")
+type_in("240.8")
+key("ls_key/L1")
+T.check(line(3):find("^240%.8") and line(3):find("146%s*$") and line(5):find("140%s*$"),
+    "240.8 entered: 146/140 as the FCOM's (p.1409): " .. line(3) .. "|" .. line(5))
+T.near(rt:get("laminar/B747/fms/vref30"), 127, 1e-6, "the PFDs' stay the FMC's weight's")
+key("ls_key/R1")
+T.equal(pad(), "25/146", "1R: 25/146 to the scratchpad")
+clear()
+key("ls_key/L6")                                       -- INIT/REF INDEX: the entry goes
+key("ls_key/L6")
+T.check(line(3):find("^200%.0"), "back on the page: the FMC's weight again (FCOM p.1411): " .. line(3))
+
 T.done()

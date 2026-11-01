@@ -1,7 +1,8 @@
 -- 747-400 PFD speed tape (5-2 step 3a): the flap maneuvering speed bugs
--- (FCOM PI.10.3, p.972), VREF25 (FCOM PI.10.2) and when the minimum
--- maneuvering speed band shows (FCOM p.973). Logic and sources:
--- docs/overhaul/notes/ATA-31.md §13.
+-- (FCOM PI.10.3, p.972) from the FMC's VREF 25 and 30 (6-1/6-2 step 3d:
+-- B747.68.vref_model.lua; before, VREF25 worked out here by the present
+-- altitude) and when the minimum maneuvering speed band shows (FCOM
+-- p.973). Logic and sources: docs/overhaul/notes/ATA-31.md §13.
 --
 --   local S = B747_speedtape_model          -- in XTLua, after dofile
 --   local S = dofile(".../B747.60.speedtape_model.lua")   -- in the tests
@@ -17,11 +18,6 @@ M.UP, M.F1, M.F5, M.F10, M.F20, M.F25, M.F30 = 0, 1, 2, 3, 4, 5, 6
 -- the flap maneuver speeds (FCOM PI.10.3): VREF30 plus these for UP to 20;
 -- 25 is VREF25 and 30 is VREF30
 local VREF30_PLUS = {[0] = 80, 60, 40, 20, 10}
--- VREF25 at sea level (FCOM PI.10.2): 1,000 kg, kt
-local VREF25 = {{200, 132}, {220, 139}, {240, 146}, {260, 152}, {280, 158}, {300, 164},
-    {320, 170}, {340, 176}, {360, 181}, {380, 187}, {400, 192}}
--- "Increase VREF 1 knot/4000 ft above sea level" (FCOM PI.10.2)
-M.VREF_FT_PER_KT = 4000
 -- the landing flaps selected on the CDU (laminar/B747/airspeed/VrefFlap)
 M.LAND_NONE, M.LAND_25, M.LAND_30 = 0, 1, 2
 -- "Not displayed above approximately 20,000 feet altitude" (FCOM p.972)
@@ -29,9 +25,9 @@ M.BUGS_MAX_FT = 20000
 
 function M.inputs()
     return {
-        vref30 = 0,             -- kt: VREF30 for the weight and altitude
-        weight_kg = 0,
-        alt_ft = 0,             -- pressure altitude
+        vref30 = 0,             -- kt: the FMC's VREF 30
+        vref25 = 0,             -- kt: the FMC's VREF 25
+        alt_ft = 0,             -- altitude (the bugs' 20,000 ft)
         flap_ratio = 0,         -- the flap lever
         land_flap = M.LAND_NONE,
         air = false,            -- the PSEU's air mode
@@ -58,30 +54,10 @@ function M.new()
     }
 end
 
--- VREF25 for a weight (held at the table's ends) and an altitude
-function M.vref25(weight_kg, alt_ft)
-    local t = weight_kg / 1000
-    local v
-    if t <= VREF25[1][1] then
-        v = VREF25[1][2]
-    elseif t >= VREF25[#VREF25][1] then
-        v = VREF25[#VREF25][2]
-    else
-        for i = 2, #VREF25 do
-            local a, b = VREF25[i - 1], VREF25[i]
-            if t <= b[1] then
-                v = a[2] + (b[2] - a[2]) * (t - a[1]) / (b[1] - a[1])
-                break
-            end
-        end
-    end
-    return v + math.max(0, alt_ft) / M.VREF_FT_PER_KT
-end
-
 function M.update(s, inp, dt)
     local out = s.out
     local d = math.max(M.UP, math.min(M.F30, math.floor(inp.flap_ratio * 6 + 0.5)))
-    out.vref25 = M.vref25(inp.weight_kg, inp.alt_ft)
+    out.vref25 = inp.vref25
     for k = M.UP, M.F20 do out.vf[k] = inp.vref30 + VREF30_PLUS[k] end
     out.vf[M.F25] = out.vref25
     out.vf[M.F30] = inp.vref30

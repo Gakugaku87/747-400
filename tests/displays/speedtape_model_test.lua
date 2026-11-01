@@ -1,7 +1,7 @@
 -- Run from the repository root with LuaJIT: luajit tests/displays/speedtape_model_test.lua
 -- The PFD speed tape model (plugins/xtlua_keysystems/scripts/
 -- B747.60.xt.fltInst/B747.60.speedtape_model.lua, 5-2 step 3a) without
--- X-Plane: the flap maneuver speeds (FCOM PI.10.3), VREF25 (FCOM PI.10.2),
+-- X-Plane: the flap maneuver speeds (FCOM PI.10.3) from the FMC's VREFs,
 -- which bugs show (FCOM p.972) and when the minimum maneuvering speed band
 -- shows (FCOM p.973).
 local T = dofile("tests/lib/check.lua")("speedtape_model")
@@ -18,15 +18,10 @@ local function shown()
     return table.concat(t, ",")
 end
 
--- VREF25 (FCOM PI.10.2)
-T.near(M.vref25(300000, 0), 164, 1e-9, "300 t: 164 kt")
-T.near(M.vref25(310000, 0), 167, 1e-9, "310 t: halfway between 164 and 170")
-T.near(M.vref25(400000, 4000), 193, 1e-9, "400 t at 4,000 ft: 192 + 1")
-T.near(M.vref25(150000, 0), 132, 1e-9, "below the table: its lightest weight")
-
--- the maneuver speeds (FCOM PI.10.3)
+-- the maneuver speeds (FCOM PI.10.3) from the FMC's VREF 30 and 25 (6-1/6-2
+-- step 3d: the tables in tests/fms/vref_model_test.lua)
 s, inp = M.new(), M.inputs()
-inp.vref30, inp.weight_kg, inp.alt_ft, inp.air = 150, 300000, 0, true
+inp.vref30, inp.vref25, inp.alt_ft, inp.air = 150, 164, 0, true
 run()
 T.equal(out.vf[M.UP], 230, "UP: VREF30 + 80")
 T.equal(out.vf[M.F1], 210, "1: + 60")

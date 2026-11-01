@@ -1,6 +1,7 @@
 -- The PFD speed tape models in the aircraft (notes/ATA-31.md §13, §14):
--- - B747.60.speedtape_model.lua (5-2 step 3a): reads VREF30 (fltInst02's
---   table), the weight, the altitude, the flap lever, the landing flaps
+-- - B747.60.speedtape_model.lua (5-2 step 3a): reads the FMC's VREF 30 and
+--   25 (6-1/6-2 step 3d: laminar/B747/fms/vref25 and vref30), the
+--   altitude, the flap lever, the landing flaps
 --   selected on the CDU and the PSEU's air mode; writes the flap maneuver
 --   speeds (Vf0 to Vf30: Vf25 is VREF25, which the CDU's APPROACH REF page
 --   shows too), which bugs show (airspeed/show_vf[7]; showVf25 and showVf30
@@ -46,6 +47,9 @@ B747DR_spd_vr_r                 = find_dataref("laminar/B747/airspeed/vr_r")
 -- (6-1/6-2 step 12c1) the FMC's MNVR MARGIN (PERF FACTORS): the buffet's
 -- maneuver capability (FCOM p.969, p.973); 1.3 g before the FMC writes it
 B747DR_spd_mnvr_margin          = find_dataref("laminar/B747/fms/mnvr_margin")
+-- (6-1/6-2 step 3d) the FMC's VREF 25 (B747.68.xt.fms.lua): kept until
+-- it has worked one out
+B747DR_spd_fms_vref25           = find_dataref("laminar/B747/fms/vref25")
 -- VR shows "R" within 4 kt of V1 (FCOM p.972)
 local VR_R_KT = 4
 
@@ -72,7 +76,8 @@ end
 function B747_speedtape()
     local inp = spd_inputs
     inp.vref30 = B747DR_airspeed_Vref30
-    inp.weight_kg = simDR_acf_weight_total_kg
+    local v25 = B747DR_spd_fms_vref25
+    if v25 > 0 then inp.vref25 = v25 end
     inp.alt_ft = simDR_altitude_ft_pilot
     inp.flap_ratio = simDR_flap_ratio_control
     inp.land_flap = math.floor(B747DR_airspeed_VrefFlap + 0.5)

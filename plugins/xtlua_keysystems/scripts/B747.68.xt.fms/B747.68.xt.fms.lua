@@ -3217,6 +3217,31 @@ function update_ldgalt()
   if B747DR_fms_landing_alt_valid~=valid then B747DR_fms_landing_alt_valid=valid end
   if ft and B747DR_fms_landing_alt~=ft then B747DR_fms_landing_alt=ft end
 end
+-- (6-1/6-2 step 3d; notes/ATA-34-61-FMC.md §128) VREF 25 and 30 for the
+-- gross weight (the FMC's; before PERF INIT the airplane's: estimate) and
+-- the landing altitude (sea level without one: estimate) into
+-- laminar/B747/fms/vref25 and vref30, for the PFDs' flap maneuver speeds
+-- (B747.60.xt.speedtape.lua: FCOM p.1412 "for the current gross weight");
+-- APPROACH REF works out its own for the weight it shows
+-- (B744.fms.pages.approach.lua). Before, the flight instruments took the
+-- airplane's weight and the present altitude.
+dofile("B747.68.vref_model.lua")
+B747DR_fms_vref25=find_dataref("laminar/B747/fms/vref25")
+B747DR_fms_vref30=find_dataref("laminar/B747/fms/vref30")
+simDR_fms_weight_kg=find_dataref("sim/flightmodel/weight/m_total")
+-- the landing elevation (ft) VREF is for
+function B747_fms_vref_elev()
+  return B747DR_fms_landing_alt_valid==1 and B747DR_fms_landing_alt or 0
+end
+function update_vref()
+  local gw=perf_gw_t()
+  local kg=gw and gw*1000 or simDR_fms_weight_kg
+  local elev=B747_fms_vref_elev()
+  local v25=B747_vref_model.vref(25,kg,elev)
+  local v30=B747_vref_model.vref(30,kg,elev)
+  if B747DR_fms_vref25~=v25 then B747DR_fms_vref25=v25 end
+  if B747DR_fms_vref30~=v30 then B747DR_fms_vref30=v30 end
+end
 -- (6-1/6-2 step 11c1; notes/ATA-34-61-FMC.md §93) the FMC's alerts held
 -- below 500 ft AGL in the approach phase with a runway in the active
 -- route, shown again after climbing through 1,000 ft AGL or at the flight
@@ -5573,6 +5598,8 @@ function after_physics()
   -- the FMCs from the start (6-1/6-2 step 11d2b: fmc_ok for the NDs and the
   -- AFDS before the systems' warm-up)
   update_fmc_link()
+  -- (step 3d) VREF for the PFDs from the start too
+  update_vref()
   if systemsWarmedUp==false and simDR_startup_running == 1 and is_timer_scheduled(alignIRSs) == false then 
 	run_after_time(alignIRSs,1)
 	return
@@ -5606,6 +5633,7 @@ function after_physics()
     update_thrlim()
     update_navdb()
     update_takeoff()
+    update_appr_ref()
     update_flight_complete()
     update_fuel()
     update_ldgalt()
