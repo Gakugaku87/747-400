@@ -4169,10 +4169,248 @@ do
     for _, which in ipairs({"ATC", "COMPANY"}) do
       local s = sends[which]
       if s and s.status == "SENDING" then
-        if acarsSystem.sentMessage >= s.queue then s.status = "SENT"
+        if acarsSystem.sentMessage >= s.queue then
+          s.status = "SENT"
+          -- (step 12g3c) an ATC position report sent: the oldest REQUEST
+          -- POSITION REPORT entry goes (FMSPG p.337)
+          if which == "ATC" and B747_fms_report_posrep_sent then B747_fms_report_posrep_sent() end
         elseif simDRTime - s.sent_t >= B747_atc_logon_model.ACK_S then s.status = "NO ACK" end
       end
     end
+  end
+end
+-- (6-1/6-2 step 12g3c; notes/ATA-34-61-FMC.md §120) ATC reports
+-- (B747.68.atc_report_model.lua): an uplink's report or confirmation
+-- request made a report when first seen (the uplink page's ARM), put on
+-- the ATC REPORT list once the uplink is not pending (up to nine: REPORT
+-- LIST FULL: FMSPG p.328); the FMC's values for the reports; SEND through
+-- the provider (cpdlc, no response, RT the uplink's) and its ATC LOG
+-- entry; acknowledged when the provider sends it (the entry goes, the CDU
+-- on its VERIFY REPORT to ATC REPORT: estimate); an armed LEVEL, REACHING
+-- or PASSING sent when its condition comes (FMSPG p.340); RTE REPORT and
+-- FREE TEXT reports of ATC REPORT's own
+dofile("B747.68.atc_report_model.lua")
+do
+  local A = B747_atc_report_model
+  local list = {}
+  local byUplink = {}
+  local verifyOf = {}
+  local shownRep = {}
+  local seen = 0
+  local function latlon(lat, lon)
+    local function part(v, pos, neg, w)
+      local a = math.abs(v)
+      local d = math.floor(a)
+      return string.format("%s%0" .. w .. "d%04.1f", v < 0 and neg or pos, d, (a - d) * 60)
+    end
+    return part(lat, "N", "S", 2) .. part(lon, "E", "W", 3)
+  end
+  -- the FMC's values for the reports (B747_atc_report_model.elements's `c`)
+  function B747_fms_report_ctx()
+    local d = B747_fms_posrep_defaults()
+    local ta = tonumber(fmsModules["data"]["transalt"]) or 18000
+    local c = {alt = d.alt, next_wpt = d.to, next_eta = d.eta, ensuing = d.nxt, last = d.last, ata = d.ata,
+      spd = d.spd and ((string.sub(d.spd, 1, 1) == ".") and d.spd or (d.spd .. "KT")) or nil}
+    local mcp = B747DR_fms_vnav_mcp_alt
+    c.mcp = B747_cdu_model.format_alt(math.floor(mcp + 0.5), ta)
+    if mcp > simDR_pressureAlt1 + A.LEVEL_FT then c.mcp_dir = "CLIMBING"
+    elseif mcp < simDR_pressureAlt1 - A.LEVEL_FT then c.mcp_dir = "DESCENDING" end
+    if B747_fmc_route.active then
+      c.route = B747_fms_atc_route_text(B747_fmc_route.num or 1)
+      c.rte_name = "RTE " .. (B747_fmc_route.num or 1)
+      local off = B747_route_model.shown(B747_fmc_route).offset
+      if off and off ~= 0 then c.offset_text = string.format("%s%dNM", off < 0 and "L" or "R", math.abs(off)) end
+    end
+    c.ppos = latlon(simDR_latitude, simDR_longitude)
+    c.hdg = string.format("%03d", math.floor(simDR_fms_mag_psi + 0.5) % 360)
+    c.trk = string.format("%03d", math.floor(simDR_lnav_trk - (simDR_fms_true_psi - simDR_fms_mag_psi) + 0.5) % 360)
+    local ff = 0
+    for n = 0, 3 do ff = ff + simDR_fms_ff[n] end
+    if ff > 0.01 then
+      local min = math.min(23 * 60 + 59, math.floor(simDR_fms_fuel_total / ff / 60))
+      c.endurance = string.format("%02d+%02d", math.floor(min / 60), min % 60)
+    end
+    c.now = string.format("%02d%02dZ", hh or 0, mm or 0)
+    return c
+  end
+  -- an uplink's report (nil: no request in it); made when first seen
+  function B747_fms_report_for_uplink(i)
+    if not B747_fms_atc_uplink(i) then return nil end
+    local rep = byUplink[i]
+    if rep == nil then
+      local req = A.parse(B747_fms_atc_msg_field(i, "msg") or "")
+      rep = req and A.new(req) or false
+      if rep then rep.i = i end
+      byUplink[i] = rep
+    end
+    return rep or nil
+  end
+  function B747_fms_report_list() return list end
+  -- the CDUs' VERIFY REPORT (a report) and XXXXZ ATC REPORT (a downlink)
+  function B747_fms_report_verify(fmsID, rep)
+    if rep ~= nil then verifyOf[fmsID] = rep end
+    return verifyOf[fmsID]
+  end
+  function B747_fms_report_show(fmsID, d) shownRep[fmsID] = d end
+  function B747_fms_report_shown(fmsID) return shownRep[fmsID] end
+  -- 5R: the state, "" while an entry is missing
+  function B747_fms_report_status(rep)
+    local d = rep.sent
+    if d and d.status == "SENDING" then return "SENDING" end
+    if not B747_fms_atc_ready() then return "NO COMM" end
+    if not B747_fms_atc_logon().comm then return "NO ATC COMM" end
+    if not A.complete(rep, B747_fms_report_ctx()) or A.text(rep, B747_fms_report_ctx()) == "" then return "" end
+    if d and d.status == "NO ACK" and rep.sent_rev == rep.rev then return "RESEND" end
+    return "SEND"
+  end
+  -- SEND> or RESEND> (or an armed report's condition)
+  function B747_fms_report_send(fmsO, rep)
+    local st = B747_fms_report_status(rep)
+    if st ~= "SEND" and st ~= "RESEND" then return false end
+    local c = B747_fms_report_ctx()
+    local text = A.text(rep, c)
+    local msg = {type = "cpdlc", msg = text, RR = "N"}
+    if rep.i then msg.RT = B747_fms_atc_msg_field(rep.i, "srcID") end
+    fmsFunctions.acarsSystemSendATC(fmsO, json.encode(msg))
+    local d = (st == "RESEND" and rep.sent) or {kind = "REPORT"}
+    d.text, d.rows, d.status, d.sent_t = text, A.rows(rep, c), "SENDING", simDRTime
+    d.time = string.format("%02d%02d", hh or 0, mm or 0)
+    d.id = acarsSystem.provider.messageID - 1
+    d.queue = table.getn(acarsSystem.messageSendQueue.values)
+    d.rep = rep
+    if st ~= "RESEND" then B747_fms_atc_log_add(d) end
+    rep.sent, rep.sent_rev, rep.armed = d, rep.rev, false
+    return true
+  end
+  local function drop(rep)
+    for k, e in ipairs(list) do
+      if e == rep then table.remove(list, k) break end
+    end
+    for _, id in ipairs({"fmsL", "fmsC", "fmsR"}) do
+      local o = fmsModules[id]
+      if verifyOf[id] == rep and o and o.currentPage == "ATCVERIFYREPORT" then fmsFunctions.setpage(o, "ATCREPORT") end
+    end
+  end
+  -- DELETE on its ATC REPORT line
+  function B747_fms_report_delete(rep) drop(rep) end
+  -- POS REPORT's ATC report sent: the oldest REQUEST POSITION REPORT
+  function B747_fms_report_posrep_sent()
+    for _, e in ipairs(list) do
+      if e.posrep then drop(e) return end
+    end
+  end
+  -- each frame: the uplinks' requests to the list, the armed reports, the
+  -- acknowledgements
+  function B747_fms_reports_update()
+    local n = table.getn(acarsSystem.messages.values)
+    if n < seen then list, byUplink, seen = {}, {}, 0 end
+    for i = 1, n do
+      local s = B747_fms_atc_uplink(i)
+      local rep = s and not s.deleted and B747_fms_report_for_uplink(i)
+      if rep and not rep.listed and not B747_atc_uplink_model.pending(s) then
+        rep.listed = true
+        if #list >= A.MAX_LIST then B747_cdu_fmc_event("REPORT LIST FULL", false)
+        else list[#list + 1] = rep end
+      end
+    end
+    seen = n
+    local passed = nil
+    for _, rep in ipairs(list) do
+      local d = rep.sent
+      if d and d.status == "SENDING" then
+        if acarsSystem.sentMessage >= d.queue then
+          d.status = "SENT"
+          drop(rep)
+          break
+        elseif simDRTime - d.sent_t >= B747_atc_logon_model.ACK_S then d.status = "NO ACK" end
+      end
+      if rep.armed then
+        if not passed then
+          passed = {}
+          for _, l in ipairs(B747_fmc_route.rte.passed or {}) do
+            if l.fix then passed[l.fix.ident] = true end
+          end
+        end
+        local _, ft = B747_atc_request_model.alt_text(rep.args[1] or "")
+        if A.triggered(rep, {alt_ft = simDR_pressureAlt1, vs_fpm = simDR_vvi_fpm_pilot, passed = passed}, ft) then
+          B747_fms_report_send(fmsModules["fmsL"], rep)
+        end
+      end
+    end
+  end
+end
+-- (6-1/6-2 step 12g4; notes/ATA-34-61-FMC.md §121) ATC emergency reports
+-- (B747.68.atc_emergency_model.lua): one in the FMC; the FMC's values
+-- (the active destination and route, the MCP altitude, the altitude now,
+-- the position, the fuel in thousands and its time); SEND through the
+-- provider (cpdlc, no response) and its ATC LOG entry; acknowledged when
+-- the provider sends it: the emergency mode with a MAYDAY or PAN report,
+-- its end with CANCEL EMERGENCY or when ATC COMM ends (FMSPG p.345), the
+-- data erased (CANCEL EMERGENCY offered: FCOM p.729); NO ACK after 60 s
+dofile("B747.68.atc_emergency_model.lua")
+do
+  local E = B747_atc_emergency_model
+  local em = E.new()
+  local mode = false
+  local shownEm = {}
+  function B747_fms_emergency() return em end
+  function B747_fms_emergency_mode() return mode end
+  function B747_fms_emergency_ctx()
+    local c = B747_fms_report_ctx()
+    local r = B747_route_model.shown(B747_fmc_route)
+    c.dest = B747_fmc_route.active and r.dest and r.dest.ident or nil
+    c.mcp_ft, c.alt_ft = B747DR_fms_vnav_mcp_alt, simDR_pressureAlt1
+    c.fuel_k = B747_fms_posrep_defaults().fuel_k
+    c.unit = simConfigData["data"].SIM.weight_display_units == "LBS" and "LB" or "KG"
+    return c
+  end
+  local function sending() return em.sent ~= nil and em.sent.status == "SENDING" end
+  function B747_fms_emergency_sending() return sending() end
+  -- 5R: the state and its header
+  function B747_fms_emergency_status()
+    if sending() then return "SENDING", "REPORT" end
+    if not B747_fms_atc_ready() then return "NO COMM", "DATA LINK" end
+    if not B747_fms_atc_logon().comm then return "NO ATC COMM", "REPORT" end
+    if E.text(em, B747_fms_emergency_ctx()) == "" then return "", "" end
+    if em.sent and em.sent.status == "NO ACK" and em.sent_rev == em.rev then return "RESEND>", "REPORT" end
+    return "SEND>", "REPORT"
+  end
+  -- REPORT SEND> or RESEND>: true when sent
+  function B747_fms_emergency_send(fmsO)
+    local st = B747_fms_emergency_status()
+    if st ~= "SEND>" and st ~= "RESEND>" then return false end
+    local c = B747_fms_emergency_ctx()
+    local text = E.text(em, c)
+    fmsFunctions.acarsSystemSendATC(fmsO, json.encode({type = "cpdlc", msg = text, RR = "N"}))
+    local d = (st == "RESEND>" and em.sent) or {kind = "EMERGENCY"}
+    d.text, d.rows, d.status, d.sent_t = text, E.sent_rows(em, c), "SENDING", simDRTime
+    d.time = string.format("%02d%02d", hh or 0, mm or 0)
+    d.id = acarsSystem.provider.messageID - 1
+    d.queue = table.getn(acarsSystem.messageSendQueue.values)
+    d.declares, d.cancels = em.mayday or em.pan, em.cancel
+    if st ~= "RESEND>" then B747_fms_atc_log_add(d) end
+    em.sent, em.sent_rev = d, em.rev
+    return true
+  end
+  function B747_fms_emergency_show(fmsID, d) shownEm[fmsID] = d end
+  function B747_fms_emergency_shown(fmsID) return shownEm[fmsID] end
+  -- each frame: the acknowledgement, the emergency mode
+  local wasComm = false
+  function B747_fms_emergency_update()
+    local d = em.sent
+    if d and d.status == "SENDING" then
+      if acarsSystem.sentMessage >= d.queue then
+        d.status = "SENT"
+        if d.declares then mode = true end
+        if d.cancels then mode = false end
+        E.erase(em)
+      elseif simDRTime - d.sent_t >= B747_atc_logon_model.ACK_S then
+        d.status = "NO ACK"
+      end
+    end
+    local comm = B747_fms_atc_logon().comm
+    if wasComm and not comm then mode = false end
+    wasComm = comm
   end
 end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
@@ -4865,6 +5103,9 @@ function after_physics()
     -- REPORT's
     B747_fms_atc_requests_update()
     B747_fms_posrep_update()
+    -- (step 12g3c) the ATC reports; (step 12g4) the emergency reports
+    B747_fms_reports_update()
+    B747_fms_emergency_update()
 
 	--Display Waypoint ETA on ND
 	waypoint_eta_display()

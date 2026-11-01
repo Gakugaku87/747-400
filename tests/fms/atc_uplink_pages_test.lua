@@ -197,8 +197,14 @@ if found then T.equal(small(found - 1):sub(21, 24), "SENT", "SENT") end
 key("func_key/prev_pg")
 key("ls_key/R1")
 T.check(page("ATC UPLINK"), "the right key: the uplink's page")
+-- (step 12g3c) it asks for a report: 6R REPORT> (FCOM p.759), then back
+-- to the LOG through ATC INDEX
+T.equal(line(13), string.format("%24s", "REPORT>"), "a report request: REPORT>")
 key("ls_key/R6")
-T.check(page("ATC LOG"), "LOG> back")
+T.check(page("ATC REPORT"), "REPORT>: ATC REPORT")
+key("ls_key/L6")
+key("ls_key/L4")
+T.check(page("ATC LOG"), "back to the LOG")
 local first = line(3)
 clear()
 rt:command(K .. "key/del")
