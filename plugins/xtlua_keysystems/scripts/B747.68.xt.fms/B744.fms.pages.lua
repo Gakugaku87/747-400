@@ -1396,7 +1396,11 @@ function fmsFunctions.setdata(fmsO,value)
 	if del then fmsO["notify"] = "INVALID DELETE" return end
 	local sp = fmsO["scratchpad"]
 	if not string.match(sp, "^%w+$") or string.len(sp) > 8 then fmsO["notify"] = "INVALID ENTRY" return end
+	local was = str_trim(getFMSData("fltno"))
 	setFMSData("fltno", sp)
+	-- (step 12e) a new flight number ends ATC COMM and a logon in
+	-- progress (FMSPG p.278)
+	if sp ~= was then B747_fms_atc_new_flight() end
   elseif value == "toflaps" then
 	-- FLAP/ACCEL HT (6-1/6-2 step 3b; FCOM p.1318-1319): XX (10 or 20),
 	-- /YYYY (400 to 9999 ft above the airport) or both; a new flap setting

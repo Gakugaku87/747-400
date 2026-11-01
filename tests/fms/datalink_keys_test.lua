@@ -1,7 +1,7 @@
 -- Run from the repository root with LuaJIT: luajit tests/fms/datalink_keys_test.lua
 -- The FMC's datalink keys (6-1/6-2 step 12a; notes/ATA-34-61-FMC.md §105;
 -- FCOM p.725, p.1211): the 109 (PW, RR) has no FMC datalink, its ATC and
--- FMC COMM keys give KEY/FUNCTION INOP; the 570 (GE) opens the ATC INDEX
+-- FMC COMM keys give KEY/FUNCTION INOP; the 570 (GE) opens the ATC pages
 -- and FMC COMM pages. The simconfig's SIM.fmc_datalink (a sim option)
 -- AUTO, ON or OFF, cycled on SIM CONFIG page 2's 4L.
 B747_NAVDB_FOLDER = "tests/fms/data/navdb/"
@@ -79,7 +79,7 @@ key("key/clear")
 -- the 570 (GE): the datalink's pages
 rt:set(ENGINE, 1)
 key("func_key/crz")
-T.check(page("ATC INDEX"), "GE (570): ATC opens ATC INDEX (FCOM p.1211)")
+T.check(page("ATC LOGON/STATUS"), "GE (570): ATC opens the ATC pages (FCOM p.1211): LOGON/STATUS without ATC COMM (step 12e, FMSPG p.277)")
 T.equal(pad(), "", "no message")
 key("func_key/hold")
 T.check(page("FMC COMM"), "GE: FMC COMM opens its page")
@@ -89,7 +89,7 @@ rt:set(ENGINE, 0)
 simconfig("ON")
 frames(0.5)
 key("func_key/crz")
-T.check(page("ATC INDEX"), "PW with fmc_datalink ON: ATC INDEX")
+T.check(page("ATC LOGON/STATUS"), "PW with fmc_datalink ON: the ATC pages")
 rt:set(ENGINE, 1)
 simconfig("OFF")
 frames(0.5)

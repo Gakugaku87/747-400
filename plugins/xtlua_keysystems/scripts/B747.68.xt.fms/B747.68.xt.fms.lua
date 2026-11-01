@@ -3546,6 +3546,135 @@ do
     put(B747DR_CAS_advisory_status, ADV_DL_AVAIL, (availT and now - availT < DL_AVAIL_S) and 1 or 0)
   end
 end
+-- (6-1/6-2 step 12e; notes/ATA-34-61-FMC.md §113) the ATC logon
+-- (B747.68.atc_logon_model.lua) over the ACARS provider, AutoATC's protocol
+-- kept (acars/autoatcProvider.lua): SEND sends its REQUEST LOGON to the
+-- facility (fmsModules data "atc" its address while a logon or ATC COMM
+-- goes on, "****" otherwise); the network's acknowledgement while the
+-- provider is connected (estimate); its LOGON ACCEPTED the AFN acceptance
+-- and the connection request together (one message there: estimate);
+-- LOGON REJECTED or an UNABLE during a logon the rejection (estimate); its
+-- SERVICE TERMINATED the end of ATC COMM (during its transfer to NEXT CTR,
+-- as before, no message: the new connection's ATC COMM ESTABLISHED); SELECT
+-- OFF its LOGOFF; NEXT CTR its data. No departure or destination needed
+-- (before, DEPARTURE and DESTINATION NOT SET, not Boeing's). The tail
+-- number the FMC's database's (X-Plane's tail number) until one is entered
+-- (VERIFY TAIL NUMBER when it differs: FCOM p.1436); the position valid
+-- with an IRU or a GPS navigating
+dofile("B747.68.atc_logon_model.lua")
+simDR_fms_tailnum = find_dataref("sim/aircraft/view/acf_tailnum")
+B747DR_fms_atc_irs_nav = find_dataref("laminar/B747/irs/nav_valid")
+B747DR_fms_atc_gps_valid = find_dataref("laminar/B747/gps/valid")
+do
+  local A = B747_atc_logon_model
+  local logon = A.new()
+  local tailEntered = nil
+  local seenMsgs = 0
+  local function post(msgs)
+    for _, m in ipairs(msgs) do B747_cdu_fmc_event(m, true) end
+  end
+  local function pending() return logon.status == "SENDING" or logon.status == "SENT" end
+  function B747_fms_atc_logon() return logon end
+  -- the FMC's database's tail number (X-Plane's, its letters and digits)
+  function B747_fms_tail_db()
+    local t = simDR_fms_tailnum
+    if type(t) ~= "string" then return "" end
+    return string.sub((string.gsub(t, "[^%w]", "")), 1, 7)
+  end
+  function B747_fms_tail() return tailEntered or B747_fms_tail_db() end
+  -- TAIL NO's entry, one to seven letters and digits: nil or the message
+  function B747_fms_tail_enter(text)
+    if not string.match(text, "^%w+$") or #text > 7 then return "INVALID ENTRY" end
+    tailEntered = text
+    if text ~= B747_fms_tail_db() then return "VERIFY TAIL NUMBER" end
+    return nil
+  end
+  function B747_fms_flt_ok()
+    local f = str_trim(getFMSData("fltno"))
+    return f ~= "" and not string.find(f, "^%-+$")
+  end
+  function B747_fms_atc_ready() return acarsSystem.provider.online() end
+  local function pos_ok()
+    for i = 0, 2 do if B747DR_fms_atc_irs_nav[i] > 0.5 then return true end end
+    return B747DR_fms_atc_gps_valid[0] > 0.5 or B747DR_fms_atc_gps_valid[1] > 0.5
+  end
+  -- the page's fields (B747_atc_logon_model.view)
+  function B747_fms_atc_view()
+    return A.view(logon, {flt_ok = B747_fms_flt_ok(), ready = B747_fms_atc_ready(), pos_ok = pos_ok(),
+      tail_ok = B747_fms_tail() ~= ""})
+  end
+  -- ATC COMM ended by the crew or with a logon elsewhere: the provider's
+  -- LOGOFF
+  local function logoff(msgs)
+    acarsSystem.provider.logoff()
+    setFMSData("atc", "****")
+    post(msgs)
+  end
+  -- SEND> or RESEND>: false when not shown
+  function B747_fms_atc_send(fmsO)
+    if not A.send(logon, simDRTime, B747_fms_flt_ok(), B747_fms_atc_ready()) then return false end
+    if logon.comm and logon.act ~= logon.sent_ctr then logoff(A.terminate(logon, false)) end
+    setFMSData("atc", logon.sent_ctr)
+    fmsFunctions.acarsSystemSendATC(fmsO, json.encode({type = "cpdlc", msg = "REQUEST LOGON", RR = "Y"}))
+    return true
+  end
+  -- a logon by the other pages and the provider (acarsLogonATC: a four
+  -- letter facility; anything else a logoff)
+  function B747_fms_atc_logon_to(fmsO, ctr)
+    if logon.comm and logon.act == ctr then return end
+    if A.enter_ctr(logon, ctr or "") then B747_fms_atc_off() return end
+    -- the provider's transfer: the old connection already ended there
+    if logon.comm and getFMSData("atc") == "****" then logon.comm, logon.act, logon.next = false, nil, nil end
+    B747_fms_atc_send(fmsO)
+  end
+  -- ATC COMM SELECT OFF
+  function B747_fms_atc_off()
+    if logon.comm then logoff(A.terminate(logon, false)) end
+  end
+  -- a new flight number (RTE, LOGON/STATUS)
+  function B747_fms_atc_new_flight()
+    local was = logon.comm or pending()
+    if logon.comm then acarsSystem.provider.logoff() end
+    local msgs = A.new_flight(logon)
+    if was then setFMSData("atc", "****") end
+    post(msgs)
+  end
+  -- each frame: the provider's ATC messages since the last, the timers
+  function B747_fms_atc_update()
+    local ready = B747_fms_atc_ready()
+    if ready then A.ack(logon) end
+    local n = table.getn(acarsSystem.messages.values)
+    if n < seenMsgs then seenMsgs = 0 end
+    for i = seenMsgs + 1, n do
+      local m = acarsSystem.messages[i]
+      if m["type"] == "cpdlc" then
+        local title = m["title"] or ""
+        if title == "LOGON ACCEPTED" and pending() then
+          local ctr = logon.sent_ctr
+          post(A.response(logon, true))
+          setFMSData("atc", ctr)
+          post({A.connect(logon, ctr)})
+        elseif title == "SERVICE TERMINATED" then
+          if pending() then
+            logon.comm, logon.act, logon.next = false, nil, nil
+          else
+            setFMSData("atc", "****")
+            post(A.terminate(logon, false))
+          end
+        elseif (title == "LOGON REJECTED" or string.find(title, "^UNABLE")) and pending() then
+          setFMSData("atc", "****")
+          post(A.response(logon, false))
+        end
+      end
+    end
+    seenMsgs = n
+    local nx = str_trim(getFMSData("nextCTR"))
+    A.set_next(logon, (string.match(nx, "^%a%a%a%a$") and nx ~= "****") and nx or nil)
+    local msgs = A.update(logon, simDRTime, ready)
+    if not logon.comm and not pending() and getFMSData("atc") ~= "****" then setFMSData("atc", "****") end
+    post(msgs)
+  end
+end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after
 -- a flight (all four's N2 under the ENG FAIL speed: laminar/B747/engines/
@@ -4227,8 +4356,10 @@ function after_physics()
       acars=0 --for radio
     end
     -- (6-1/6-2 step 12d1) the datalink's EICAS messages (before: ACARS
-    -- MESSAGE for any message, the ACARS NO COMM memo offline)
+    -- MESSAGE for any message, the ACARS NO COMM memo offline); (step 12e)
+    -- the ATC logon
     B747_fms_datalink_eicas(acarsOnline)
+    B747_fms_atc_update()
 
 	--Display Waypoint ETA on ND
 	waypoint_eta_display()
