@@ -7,8 +7,8 @@
 -- WIND DIR/SPD, true: the first entry both, later ones either, ddd/ or
 -- /sss; the direction three digits, the speed up to 250 kt).
 -- The 109's 6th line as FCOM p.1396's figure (<OFFPATH DES, DES DIR>: as on
--- the DES page, no functions yet); the 570's DES> at 6R (its datalink's
--- SEND, LOAD and PURGE: none, an estimate as on RTE DATA). The predictions
+-- the DES page, no functions yet); the 570's DES> at 6R, (step 12h2) with the
+-- FMC's datalink REQUEST <SEND, <LOAD and PURGE> (see six_l). The predictions
 -- use the forecast in step 8e3.
 local BLANK = string.rep(" ", 24)
 local function lr(l, r) return l .. string.rep(" ", math.max(1, 24 - #l - #r)) .. r end
@@ -30,8 +30,29 @@ function B747_fms_trans_lvl()
   return 18000
 end
 
--- the 570's layout (the GE airplane; the PW and RR the 109's)
-local function is570() return B747DR_fms_engine_type == 1 end
+-- the 570's layout (the GE airplane; the PW and RR the 109's); (step 12h2)
+-- the FMC's datalink's too (SIM CONFIG's FMC DATALINK ON: step 12a)
+local function is570() return B747DR_fms_engine_type == 1 or B747_fms_datalink() end
+-- (step 12h2; notes/ATA-34-61-FMC.md §124) the datalink's 6L (FCOM p.1395,
+-- p.1397; FMSPG p.379-380): "SEND", "SENDING", "LOAD" (a forecast
+-- uplink, with PURGE> at 6R and FORECAST UPLINK over them) or "" (no
+-- datalink, the descent or on approach)
+local function six_l()
+  if not B747_fms_datalink() then return "", false end
+  local wr, _, fup = B747_fms_company_winds()
+  if fup then return "LOAD", false end
+  if not B747_fms_company_wind_send_shown() then return "", false end
+  if wr and wr.status == "SENDING" then return "SENDING", false end
+  return "SEND", wr ~= nil and wr.status == "SENT"
+end
+-- the 6th line: the 109's (FCOM p.1396's figure), the 570's DES> and
+-- (step 12h2) the datalink's prompts
+local function df_six()
+  if not is570() then return lr("<OFFPATH DES", "DES DIR>") end
+  local l = six_l()
+  if l == "LOAD" then return lr("<LOAD", "PURGE>") end
+  return lr(l == "SEND" and "<SEND" or l, "DES>")
+end
 local function alt_text(ft) return B747_cdu_model.format_alt(ft, B747_fms_trans_lvl()) end
 
 fmsPages["DESFORECAST"] = createPage("DESFORECAST")
@@ -50,21 +71,29 @@ fmsPages["DESFORECAST"].getPage = function(self, pgNo, fmsID)
     BLANK,
     lr(string.format("FL%03d", math.floor(B747_fms_trans_lvl() / 100 + 0.5)), fc.tai and alt_text(fc.tai) or "-----"),
     BLANK, rows[1], BLANK, rows[2], BLANK, rows[3], BLANK, rows[4],
-    "------------------------",
-    is570() and lr("", "DES>") or lr("<OFFPATH DES", "DES DIR>")
+    six_l() == "LOAD" and "---                 ----" or "------------------------",
+    df_six(),
   }
 end
 
 fmsPages["DESFORECAST"].getSmallPage = function(self, pgNo, fmsID)
   local kt = string.rep(" ", 22) .. "KT"
+  -- (step 12h2) FORECAST UPLINK, REQUEST over <SEND, its SENT
+  local title, sent = BLANK, BLANK
+  if is570() then
+    local l, isSent = six_l()
+    if l == "LOAD" then title = "    FORECAST UPLINK     "
+    elseif l ~= "" then title = " REQUEST                " end
+    if isSent then sent = "     SENT               " end
+  end
   return {
     BLANK,
     " TRANS LVL    TAI/ON ALT",
     BLANK,
     " ALT        WIND DIR/SPD",
     kt, BLANK, kt, BLANK, kt, BLANK, kt,
-    BLANK,
-    BLANK
+    title,
+    sent
   }
 end
 
@@ -149,7 +178,15 @@ end
 
 -- the 570's DES> (FCOM p.1397): the DES page
 function fmsFunctions.dfdes(fmsO, value)
+  -- (step 12h2) PURGE> with a forecast uplink (FMSPG p.380)
+  if six_l() == "LOAD" then B747_fms_company_forecast_purge() return end
   if is570() then fmsFunctions.setpage_no(fmsO, "VNAV_3") end
+end
+-- (step 12h2) 6L: REQUEST <SEND or <LOAD (FCOM p.1397)
+function fmsFunctions.dfdatalink(fmsO, value)
+  local l = six_l()
+  if l == "SEND" then B747_fms_company_wind_request() end
+  if l == "LOAD" then B747_fms_company_forecast_load() end
 end
 
 fmsFunctionsDefs["DESFORECAST"] = {}
@@ -160,3 +197,4 @@ for k = 1, 4 do
   fmsFunctionsDefs["DESFORECAST"]["R" .. (k + 1)] = {"dfwind", tostring(k)}
 end
 fmsFunctionsDefs["DESFORECAST"]["R6"] = {"dfdes", ""}
+fmsFunctionsDefs["DESFORECAST"]["L6"] = {"dfdatalink", ""}

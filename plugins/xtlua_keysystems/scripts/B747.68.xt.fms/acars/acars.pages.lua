@@ -1,35 +1,18 @@
+-- a message's lines: its "@" line breaks first, then each line wrapped at
+-- its last space within 24 characters (6-1/6-2 step 12h3: before, the
+-- space was looked for in the 25 characters on past a break, the OFP
+-- text's "CRZ ALT FL250 CI 100" broken before "100"); empty lines left out
 function convertToFMSLines(msg)
   local retVal={}
-  local line=1
-  local start=1
-  local endI=string.len(msg)
-  while start<endI do
-    local cLine=string.sub(msg,start,start+24)
-    local index = string.find(cLine, " [^ ]*$")
-    if index~=nil and index > 10 then
-      cLine=string.sub(msg,start,start+index-1)
-      local atindex = string.find(cLine, "@")
-      if atindex~=nil then
-          cLine=string.sub(msg,start,start+atindex-2)
-          start=start+atindex
-      else
-          start=start+index
-      end
-      retVal[line]=str_trim(cLine)
-      line=line+1
-    else
-      local atindex = string.find(cLine, "@")
-      if atindex~=nil then
-          cLine=string.sub(msg,start,start+atindex-2)
-          start=start+atindex
-      else
-          start=start+24
-      end    
-      retVal[line]=str_trim(cLine)
-      if string.len(retVal[line])>0 then
-          line=line+1
-      end
+  for part in (msg.."@"):gmatch("([^@]*)@") do
+    local rest=str_trim(part)
+    while string.len(rest)>24 do
+      local index=string.find(string.sub(rest,1,25), " [^ ]*$")
+      local cut=(index~=nil and index>10) and index or 25
+      retVal[#retVal+1]=str_trim(string.sub(rest,1,cut-1))
+      rest=str_trim(string.sub(rest,cut))
     end
+    if string.len(rest)>0 then retVal[#retVal+1]=rest end
   end
   return retVal
 end

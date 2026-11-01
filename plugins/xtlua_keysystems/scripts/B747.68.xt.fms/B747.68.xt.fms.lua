@@ -4619,6 +4619,12 @@ do
     local rte, partial = build(u)
     if not rte then B747_cdu_fmc_event("INVALID ROUTE UPLINK", true) return end
     up = {num = r.route, rte = rte, partial = partial, co_route = u.co_route}
+    -- (6-1/6-2 step 12h3; notes/ATA-34-61-FMC.md §125) with the flight
+    -- plan, the OFP's weights, fuel, cruise altitude and step climbs as
+    -- the company's ACARS text, for the crew to enter on PERF INIT (the
+    -- user's choice, 2026-11-01: no automatic fill; FCOM p.1310-1311
+    -- names a performance uplink without its procedure)
+    if ofp then telex("OFP " .. ofp.origin.icao .. "-" .. ofp.dest.icao, S.ofp_text(ofp)) end
   end
   -- the pages' state (one table, no garbage each frame)
   local view = {}
@@ -4682,8 +4688,140 @@ do
     if u.partial then B747_cdu_fmc_event("PARTIAL ROUTE " .. u.num .. " UPLINK", true) end
     B747_fmc_route_changed()
   end
+  -- (6-1/6-2 step 12h2) the winds (FCOM p.771-774, p.1361-1364,
+  -- p.1395-1397, p.1431-1434; FMSPG p.377-380, p.383): WIND REQUEST (FMC
+  -- COMM 2/2's 2L, RTE DATA's 6R, DESCENT FORECAST's 6L; not in the descent
+  -- or on approach), SENDING, SENT; the company's answer from the OFP of
+  -- the active route's airports: the en route winds (WIND DATA UPLINK
+  -- READY; RTE DATA's LOAD> makes the active route's modification with
+  -- them, EXEC or ERASE) and the descent forecast (DES FORECST UPLINK
+  -- READY; DESCENT FORECAST's <LOAD replaces its winds, PURGE> drops
+  -- them); INVALID WIND DATA UPLINK and INVALID FORECAST UPLINK when none
+  -- of their data can be used. Estimates: the times (as the route's), the
+  -- winds at the OFP's cruise altitudes (up to 4: its initial and step
+  -- climbs' altitudes), each waypoint's of the route by its name and place,
+  -- the forecast's 4 altitudes from the top of descent to 5,000 ft, the
+  -- route's earlier winds and temperatures replaced, no OFP for another
+  -- route: the company's ACARS text.
+  -- the winds' state and helpers in one table (the main chunk's locals are
+  -- near Lua's 200): req, up (en route), fup (forecast), shown (the
+  -- messages' key)
+  local wd = {req = nil, up = nil, fup = nil, shown = "",
+    -- the messages' flags (B744.notifications.lua's places, from 1)
+    DES_FORECST = 7, WIND_DATA = 53}
+  function wd.in_descent() return B747DR_fms_vnav_phase == 3 or B747_fms_on_app() end
+  -- the OFP the company has (the plugin's newest .xml) for the active route
+  function wd.ofp_for_route()
+    local folder = folder_of()
+    local list = read_file(folder .. "_newest.txt") or ""
+    local name = string.match(list, "OFP ([^\r\n]+)")
+    local ofp = S.parse_ofp(read_file(name and (folder .. name)))
+    local r = B747_fmc_route.rte
+    if not (ofp and B747_fmc_route.active and r.origin and r.dest) then return nil end
+    if ofp.origin.icao ~= r.origin.ident or ofp.dest.icao ~= r.dest.ident then return nil end
+    return ofp
+  end
+  -- the uplinked points on the active route's legs: {leg index = point}
+  function wd.legs(u)
+    local r = B747_fmc_route.rte
+    local out, n = {}, 0
+    for i, l in ipairs(r.legs) do
+      local f = l.fix
+      if f and f.lat and not l.disc then
+        for _, p in ipairs(u.points) do
+          if p.ident == f.ident and dist_nm(p, f) <= FIX_NM then out[i] = p n = n + 1 break end
+        end
+      end
+    end
+    return out, n
+  end
+  function wd.answer()
+    local ofp = wd.ofp_for_route()
+    if not ofp then
+      telex("NO WIND DATA", {"NO WIND DATA ON FILE", "FOR THE ACTIVE ROUTE"})
+      return
+    end
+    local u = S.wind_uplink(ofp)
+    if u then
+      local _, n = wd.legs(u)
+      if n > 0 then wd.up = u else B747_cdu_fmc_event("INVALID WIND DATA UPLINK", true) end
+    end
+    local f = S.forecast_uplink(ofp)
+    if f and #f.levels > 0 then wd.fup = f elseif u then B747_cdu_fmc_event("INVALID FORECAST UPLINK", true) end
+  end
+  function B747_fms_company_winds()
+    return wd.req, wd.up, wd.fup
+  end
+  function B747_fms_company_wind_send_shown()
+    return B747_fms_company_status() == "READY" and not wd.in_descent()
+  end
+  -- WIND REQUEST's SEND
+  function B747_fms_company_wind_request()
+    if not B747_fms_company_wind_send_shown() or (wd.req and wd.req.status == "SENDING") then return end
+    wd.req = {status = "SENDING", t = simDRTime}
+  end
+  -- RTE DATA's LOAD>: the active route's modification with the uplinked
+  -- winds (FCOM p.1364: "results in a modification"), the legs' earlier
+  -- winds and temperatures replaced (new tables: the modification's legs
+  -- share the active route's)
+  function B747_fms_company_wind_load()
+    local u = wd.up
+    local st = B747_fmc_route
+    if not (u and st.active) then return end
+    local byLeg = wd.legs(u)
+    local r = R.edit(st)
+    local alts = {}
+    for k, a in ipairs(u.alts) do alts[k] = a end
+    r.windAlts = alts
+    for i, l in ipairs(r.legs) do
+      local p = byLeg[i]
+      l.wind, l.oat = nil, nil
+      if p then
+        local w = {}
+        for _, x in ipairs(p.winds) do w[x.alt] = {dir = x.dir % 360, kt = x.spd} end
+        l.wind = w
+        if p.oat then l.oat = {ft = alts[#alts], c = p.oat} end
+      end
+    end
+    wd.up = nil
+    B747_fmc_route_changed()
+  end
+  -- DESCENT FORECAST's <LOAD (FCOM p.1397: shown and kept) and PURGE>
+  function B747_fms_company_forecast_load()
+    if not wd.fup then return end
+    local fc = B747_fms_des_forecast()
+    for k = 1, 4 do
+      local l = wd.fup.levels[k]
+      fc.slots[k] = l and {ft = l.alt, dir = l.dir % 360, kt = l.spd} or {}
+    end
+    wd.fup = nil
+    B747_fms_preds_now()
+  end
+  function B747_fms_company_forecast_purge() wd.fup = nil end
+  function wd.update(now)
+    local q = wd.req
+    if q and q.status == "SENDING" and now - q.t >= ACK_S then
+      q.status, q.t = "SENT", now
+    end
+    if q and q.status == "SENT" and not q.answered and now - q.t >= ANSWER_S then
+      q.answered = true
+      wd.answer()
+    end
+    -- the uplink came: SENT goes (as the route's)
+    if q and q.answered and (wd.up or wd.fup) then wd.req = nil end
+    -- the messages by their flags, as they change (B744.notifications.lua
+    -- has them: B747_cdu_sync_fmc_messages keeps its conditions by the
+    -- flags)
+    local key = (wd.up and "W" or "") .. (wd.fup and "F" or "")
+    if key ~= wd.shown then
+      B747DR_fmc_notifications[wd.WIND_DATA] = wd.up and 1 or 0
+      B747DR_fmc_notifications[wd.DES_FORECST] = wd.fup and 1 or 0
+      wd.shown = key
+    end
+  end
   function B747_fms_company_update()
     local now = simDRTime
+    wd.update(now)
     if req and req.status == "SENDING" and now - req.t >= ACK_S then
       req.status, req.t = "SENT", now
     end

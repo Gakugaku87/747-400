@@ -143,7 +143,7 @@ T.equal(line(7), "FL210         ---`/---  ", "a wind deleted")
 -- the 570 (the GE airplane): DES> at 6R to the DES page
 rt:set("laminar/B747/engines/type", 1)
 frames(0.3)
-T.equal(line(13), lr("", "DES>"), "the 570: DES>")
+T.equal(line(13), lr("<SEND", "DES>"), "the 570: REQUEST <SEND and DES> (step 12h2: FCOM p.1397; before, no SEND)")
 key("ls_key/R6")
 frames(0.6)
 T.check(line(1):find("DES"), "DES>: the DES page: " .. line(1))
