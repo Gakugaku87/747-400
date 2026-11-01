@@ -2002,3 +2002,29 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - ページ：XXXX POS REPORT を作り直した（`activepages/atc/B744.fms.pages.posreport.lua`）。TO・NEXT の入力は RTE と同じ確かめ（B747_fmc_with_fix）。
 - 推定：報告の文の語と並び（FANS の位置通報のデータを文にしたもの）、IAS を 290KT と出す、WIND の列、DATA LINK の見出しを出さない（6 行目の見出しに COMPANY と ATC があるため）、会社への報告は ATC LOG に入れない（FCOM p.768 は COMPANY SEND でも ATC LOG の記録と書くが、会社の通信のため）、TO・NEXT の入力はデータベースの点（FCOM。FMSPG はアクティブな経路の点）、ATC LOG の報告の右の LSK は 12g3c の XXXXZ ATC REPORT で。
 - 試験：新しい `tests/fms/atc_posrep_model_test.lua`（19 件：入力の重ね合わせ、文字、ATC と会社の文、DEVIATING・CLIMBING TO・DESCENDING TO、DELETE、ページを離れたときの SPD）、`tests/fms/atc_request_pages_test.lua` に 19 件（題、見出し、ALT・TO・NEXT、ETA・SPD・TO の入力、データベースに無い NEXT、ATC SEND の文と応答の要らないこと、受け取りで SEND> に戻る、ATC LOG の SENT、DELETE、ページを離れたときの SPD）。全体の試験はすべて通る。X-Plane：新しい `s197_atc_posreport` 13/13（RTE 1 をアクティブに、題の TBC123 POS REPORT、見出し、TO の XAC と NEXT の SPENS、COMPANY と ATC の行、NO COMM、ETA と SPD の入力、ページを離れると SPD が FMC の値。CDU の写真は FCOM p.766 の形で、度の記号も出る）、Log.txt に Lua の誤りなし
+
+## 120. 12g3c の実装（2026-11-01：ATC REPORT・VERIFY REPORT・ARM）
+
+- 前のコード：ATC REPORT は固定の絵（題も ATC INDEX のまま、CONFIRM ALTITUDE などの行は押しても何も無い）、VERIFY REPORT と XXXXZ ATC REPORT は無く、アップリンクのページに REPORT> と ARM> は無かった。
+- 資料：
+  - FCOM p.748–751：ATC REPORT（1L ATC RTE REPORT、1R FREE TEXT>、報告や確認の要求の一覧、長い文は 2 つのピリオド、arm したものは ARMED）、VERIFY REPORT（文と入力の欄、箱は入力が必要、CANNOT ACCEPT、ARM>、FREE TEXT、REPORT SEND>、6L <REPORT）。FCOM p.759–761：アップリンクのページの 6R は報告を求めるなら REPORT>、arm できる報告なら ARM>・ARMED（DELETE で外す）。
+  - FMSPG p.292：アップリンクのページの ARM> は状態が OLD か ACCEPTED のとき。FMSPG p.328–337：報告の一覧（9 件まで、満ちれば REPORT LIST FULL、アップリンクが待ちでなくなってから入る、送ったものは消える、POSITION REPORT を送ると最も古い REQUEST POSITION REPORT が消える）と、要求ごとの報告の文と既定の値・入力（表 8.6-1）、入力の形（表 8.6-2）。FMSPG p.338–340：RTE REPORT（ASSIGNED ROUTE RTE X と経路）、FREE TEXT、CANNOT ACCEPT、ARM（LEVEL・REACHING・PASSING の 3 つ、条件が来たら自動で送る）。
+- 作ったもの：
+  - `B747.68.atc_report_model.lua`（新しい純粋なモデル）：アップリンクの文から要求を見つける（25 種）、報告の要素と行（固定の語は見出し、値は大きい字、入力が要れば箱、CLIMBING・DESCENDING TO、DEVIATING）、入力の形、DELETE、CANNOT ACCEPT、ARM と条件、送る文。
+  - FMS のつなぎ：報告の既定の値（高度、MCP の高度、経路、オフセット、TO・NEXT・ETA、現在位置、最後の点と ATA、速度、磁方位、対地の針路、燃料の残り時間、時刻）、報告の一覧、送信（cpdlc、応答なし、RT はアップリンクの ID）と ATC LOG、受け取りで一覧から消す、arm した報告の条件の確かめ（毎フレーム）、POS REPORT との連携。
+  - ページ：ATC REPORT・VERIFY REPORT・XXXXZ ATC REPORT を作り直した（`activepages/atc/B744.fms.pages.atcreport.lua`）。アップリンクのページに REPORT> と ARM>、ATC LOG の報告の右の LSK で XXXXZ ATC REPORT。
+- 推定：アップリンクの文の形（FANS の語）、arm の条件の幅（REACHING と LEVEL は高度の ±200 ft、LEVEL は昇降率 300 fpm 未満）、行の分け方、ARM と ARMED の字の大きさ、位置の入力はアクティブな経路の点だけ（FMSPG p.336）、送ったら VERIFY REPORT の CDU は ATC REPORT へ、REPORT・CONFIRM・WHEN CAN YOU ACCEPT のアップリンクの応答の種類は 12f のまま（ROGER の後で一覧に入る）。
+- 試験：新しい `tests/fms/atc_report_model_test.lua`（58 件）、`tests/fms/atc_request_pages_test.lua` に 36 件（アップリンクの REPORT>、OPEN では ARM> が無い、ACCEPTED で ARM> と ARMED、ATC REPORT の一覧と ARMED、VERIFY REPORT の行と SEND、上昇で到達して自動で送る、受け取りで一覧から消える、ATC LOG、CONFIRM SQUAWK の箱と入力、WHEN CAN YOU ACCEPT の CANNOT ACCEPT、FREE TEXT）。全体の試験はすべて通る。X-Plane：新しい `s199_atc_report` 13/13（2026-11-01、X-Plane を起動し直した後の 6 便目。RJAA の地上で ATC REPORT の題、<RTE REPORT と FREE TEXT>、空の一覧、FREE TEXT> の VERIFY REPORT（FREE TEXT の見出し、DATA LINK NO COMM）、<RTE REPORT の ASSIGNED ROUTE・RTE 1・経路の文 RJAA XAC SPENS RJBB。CDU の写真 2 枚）。Log.txt に Lua の誤りなし
+
+## 121. 12g4 の実装（2026-11-01：EMERGENCY）
+
+- 前のコード：EMERGENCY REPORT は FMS のデータの欄に書くだけで入力の確かめが無く、VERIFY EMERGENCY は描画のたびに共有の送信文に書いた（CDU-34）。CANCEL EMERGENCY、非常の状態、ATC キーの長押し、XXXXZ EMERGENCY は無かった。
+- 資料：
+  - FCOM p.728–733：EMERGENCY REPORT（<MAYDAY と PAN>、DIVERT TO はアクティブな目的地、OFFSET、DESCEND TO は MCP の高度、<ERASE EMERGENCY と送った後の CANCEL EMERGENCY、SOB、FUEL REMAINING は SOB が入ると FMC の量と時間、<INDEX、VERIFY>）。ATC COMM があれば ATC キーの長押しで EMERGENCY REPORT。VERIFY EMERGENCY（MAYDAY MAYDAY MAYDAY か PAN PAN PAN が 1 行目、/DESCENDING TO 14000FT、/ 04+25 OF FUEL REMAINING AND 395 SOULS ON BOARD、自由文、REPORT SEND で EMERGENCY REPORT へ、6L <EMERGENCY）。
+  - FMSPG p.345–356：非常の状態は非常の報告がネットワークに受け取られてから、CANCEL EMERGENCY が受け取られるか ATC COMM が両方とも終わるまで。要素は 5 つまで。MAYDAY は簡略な POSITION REPORT を伴い、4L の高度より 150 ft 以上上なら DESCENDING TO も。MAYDAY と PAN は一方だけ。DIVERT TO の目的地は経路の続きを含み、入れた位置は含まない。CANCEL EMERGENCY は非常の状態で何も選んでいないとき。SENDING の間は変えられない。
+- 作ったもの：
+  - `B747.68.atc_emergency_model.lua`（新しい純粋なモデル）：選択と入力、DELETE（MAYDAY は POSITION REPORT と DESCENDING TO も）、5 要素の上限、要素の文と VERIFY EMERGENCY の行、自由文、送る文。
+  - FMS のつなぎ：既定の値（アクティブな目的地と経路、MCP の高度、今の高度、位置、燃料の量と時間）、送信（cpdlc、応答なし）と ATC LOG、受け取りで非常の状態の入りと出、データを消す。ATC COMM の終わりで非常の状態は終わる。
+  - ページ：EMERGENCY REPORT・VERIFY EMERGENCY・XXXXZ EMERGENCY を作り直した（`activepages/atc/B744.fms.pages.emergency.lua`）。ATC キーの長押し（1 秒）で EMERGENCY REPORT（B744.createfms.lua）。ATC LOG の非常の報告の右の LSK で XXXXZ EMERGENCY。
+- 推定：POSITION REPORT の要素は送るが表示しない（FCOM p.731 のページに無いため）、その文（位置・高度・時刻）、要素の並び（MAYDAY・PAN、DESCENDING TO、DIVERTING TO、OFFSETTING、燃料と人数、CANCEL EMERGENCY）、フィートの高度に FT、FMC の値は小さい字で入力と選択は大きい字、長押しの 1 秒、MAYDAY の ADS の非常のモードと会社への非常の報告は 12h で。
+- 試験：新しい `tests/fms/atc_emergency_model_test.lua`（35 件）、`tests/fms/atc_request_pages_test.lua` に 30 件（ATC キーの長押し、ページの形、目的地と MCP の既定、SOB と燃料の時間、MAYDAY で VERIFY EMERGENCY、FCOM p.731 の行、CONTINUED、SEND で EMERGENCY REPORT へ、受け取りで非常の状態と CANCEL EMERGENCY、CANCEL EMERGENCY を送って終わる、ATC LOG）。全体の試験はすべて通る。X-Plane：新しい `s200_atc_emergency` 15/15（2026-11-01、X-Plane を起動し直した後の 2 便目。RJAA の地上で EMERGENCY REPORT の <MAYDAY と PAN>、DIVERT TO の <RJBB、DESCEND TO の <10000、SOB 395 と燃料の時間、<MAYDAY の VERIFY EMERGENCY（MAYDAY MAYDAY MAYDAY、燃料と人数の行、CONTINUED）、DATA LINK NO COMM、ERASE EMERGENCY。CDU の写真 2 枚）、`s79_fmc_fixes` 34/34（作り直した EMERGENCY REPORT：RJTT を入れても目的地は変わらない）。Log.txt に Lua の誤りなし

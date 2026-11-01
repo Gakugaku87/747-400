@@ -71,5 +71,13 @@ function fmsFunctions.atclog(fmsO, value)
     -- (step 12g2a) a request's XXXXZ ATC REQUEST (FMSPG p.326)
     B747_fms_atc_show_request(fmsO.id, e.d)
     fmsFunctions.setpage(fmsO, "ATCREQUESTLOG")
+  elseif e.d.kind == "REPORT" and e.d.rows then
+    -- (step 12g3c) a report's XXXXZ ATC REPORT (FMSPG p.343)
+    B747_fms_report_show(fmsO.id, e.d)
+    fmsFunctions.setpage(fmsO, "ATCREPORTLOG")
+  elseif e.d.kind == "EMERGENCY" then
+    -- (step 12g4) an emergency report's XXXXZ EMERGENCY (FMSPG p.353)
+    B747_fms_emergency_show(fmsO.id, e.d)
+    fmsFunctions.setpage(fmsO, "ATCEMERGENCYLOG")
   end
 end

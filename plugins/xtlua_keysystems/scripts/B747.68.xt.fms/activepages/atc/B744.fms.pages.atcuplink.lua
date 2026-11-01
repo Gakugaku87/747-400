@@ -6,8 +6,9 @@
 -- from line 2, CONTINUED while it goes on; the last page STANDBY (4L),
 -- REJECT (5L) and ACCEPT (5R) while a response is due, LOG (6R). Shown,
 -- the uplink is reviewed (NEW to OPEN or OLD); (step 12g2a) 1L <REQUEST
--- when it answers a request. Not here yet: LOAD, ARM, REPORT (step 12g3
--- and after), PRINT (no printer: blank, an estimate).
+-- when it answers a request; (step 12g3c) 6R REPORT> for a report
+-- request, 3R ARM> for LEVEL, REACHING, PASSING. Not here yet: LOAD;
+-- PRINT (no printer: blank, an estimate).
 -- VERIFY RESPONSE: 1L the response (WILCO, ROGER, AFFIRM, UNABLE, NEGATIVE,
 -- STANDBY), the reasons and free text below, RESPONSE SEND> (SENDING,
 -- SENT; NO COMM, NO ATC COMM), STATUS ACCEPTED once acknowledged, 6L
@@ -57,7 +58,15 @@ fmsPages["ATCUPLINK"].getPage=function(self,pgNo,fmsID)
     local acc = U.accept_word(s.resp) and "ACCEPT>" or ""
     out[11] = rej .. string.rep(" ", 24 - #rej - #acc) .. acc
   end
-  out[13] = string.format("%24s", "LOG>")
+  -- (step 12g3c) a report request: 6R REPORT> (FCOM p.759); an armable
+  -- one: 3R ARM> or ARMED on the last page once OLD or ACCEPTED (FCOM
+  -- p.761; FMSPG p.292)
+  local rep = B747_fms_report_for_uplink(i)
+  local st = U.status(s)
+  if rep and rep.armable and pgNo == np and (st == "OLD" or st == "ACCEPTED") then
+    out[7] = string.sub(out[7], 1, 24 - 6) .. string.format("%6s", rep.armed and "ARMED" or "ARM>")
+  end
+  out[13] = string.format("%24s", rep and "REPORT>" or "LOG>")
   return out
 end
 fmsPages["ATCUPLINK"].getSmallPage=function(self,pgNo,fmsID)
@@ -78,10 +87,26 @@ fmsFunctionsDefs["ATCUPLINK"]["L1"]={"atcuplink","REQUEST"}
 fmsFunctionsDefs["ATCUPLINK"]["L4"]={"atcuplink","STANDBY"}
 fmsFunctionsDefs["ATCUPLINK"]["L5"]={"atcuplink","REJECT"}
 fmsFunctionsDefs["ATCUPLINK"]["R5"]={"atcuplink","ACCEPT"}
-fmsFunctionsDefs["ATCUPLINK"]["R6"]={"setpage","ATCLOG"}
+fmsFunctionsDefs["ATCUPLINK"]["R6"]={"atcuplink","LOG"}
+fmsFunctionsDefs["ATCUPLINK"]["R3"]={"atcuplink","ARM"}
 -- STANDBY, REJECT, ACCEPT on the last page while a response is due
 function fmsFunctions.atcuplink(fmsO, value)
   local i = acarsSystem.getCurrentMessage(fmsO.id)
+  -- (step 12g3c) 6R: REPORT> (ATC REPORT) or LOG>; 3R: ARM, DELETE disarms
+  if value == "LOG" then
+    fmsFunctions.setpage(fmsO, B747_fms_report_for_uplink(i) and "ATCREPORT" or "ATCLOG")
+    return
+  end
+  if value == "ARM" then
+    local rep = B747_fms_report_for_uplink(i)
+    local us = B747_fms_atc_uplink(i)
+    local st = us and U.status(us)
+    if not rep or not rep.armable or fmsO.pgNo ~= U.pages(lines_of(i)) then return end
+    if st ~= "OLD" and st ~= "ACCEPTED" then return end
+    local err = B747_atc_report_model.arm(rep, fmsO["scratchpad"] ~= "DELETE")
+    if err then fmsO["notify"] = err elseif fmsO["scratchpad"] == "DELETE" then fmsO["scratchpad"] = "" end
+    return
+  end
   if value == "REQUEST" then
     local d = (fmsO.pgNo or 1) == 1 and B747_fms_atc_uplink_request(i)
     if d then

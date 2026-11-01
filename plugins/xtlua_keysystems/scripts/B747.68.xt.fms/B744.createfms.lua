@@ -137,7 +137,11 @@ function B747_fms_datalink()
   if cfg == "ON" then return true elseif cfg == "OFF" then return false end
   return B747DR_fms_engine_type == 1
 end
-local DATALINK_KEYS = {crz = true, hold = true}
+local DATALINK_KEYS = {crz = true, hold = true, crz_hold = true}
+-- (6-1/6-2 step 12g4) the ATC key held: EMERGENCY REPORT with ATC COMM
+-- (FCOM p.728; FMSPG p.347); held a second (estimate)
+local ATC_HOLD_S = 1.0
+local atcHeld = {}
 -- (6-1/6-2 step 12b) the automatic page changes, each frame before the
 -- CDUs draw: a CDU on the active VNAV page follows the FMC's phase, CLB to
 -- CRZ at the T/C and CRZ to DES at the T/D (FCOM p.1345; CRZ CLB, CRZ DES
@@ -209,6 +213,13 @@ local function pageKey(fmsModule,key)
       return
   elseif key=="clb" then --DEP ARR
       B747_cdu_deparr_page(fmsO)
+      return
+  elseif key=="crz_hold" then
+      if B747_fms_atc_logon().comm then
+        fmsO.targetCustomFMC=true
+        fmsO.targetPage="ATCEMERGENCYREPORT"
+        fmsO.targetpgNo=1
+      end
       return
   elseif key=="crz" then
       -- (6-1/6-2 step 12e) ATC: LOGON/STATUS until ATC COMM is established,
@@ -394,7 +405,13 @@ function create_keypad(fms)
     key_fpln_CMDhandler		=function (phase, duration) if phase ==0 then keyDown(fmsKeyFunc[fms]["funcs"]["parent"], "fpln") end end,
     key_navrad_CMDhandler	=function (phase, duration) if phase ==0 then keyDown(fmsKeyFunc[fms]["funcs"]["parent"], "navrad") end end,
     key_clb_CMDhandler		=function (phase, duration) if phase ==0 then keyDown(fmsKeyFunc[fms]["funcs"]["parent"], "clb") end end,
-    key_crz_CMDhandler		=function (phase, duration) if phase ==0 then keyDown(fmsKeyFunc[fms]["funcs"]["parent"], "crz") end end,
+    key_crz_CMDhandler		=function (phase, duration)
+      if phase ==0 then atcHeld[fms]=false keyDown(fmsKeyFunc[fms]["funcs"]["parent"], "crz") end
+      if phase ==1 and not atcHeld[fms] and duration>=ATC_HOLD_S then
+        atcHeld[fms]=true
+        keyDown(fmsKeyFunc[fms]["funcs"]["parent"], "crz_hold")
+      end
+    end,
     key_des_CMDhandler		=function (phase, duration) if phase ==0 then keyDown(fmsKeyFunc[fms]["funcs"]["parent"], "des") end end,
     key_dir_intc_CMDhandler	=function (phase, duration) if phase ==0 then keyDown(fmsKeyFunc[fms]["funcs"]["parent"], "dir_intc") end end,
     key_legs_CMDhandler		=function (phase, duration) if phase ==0 then keyDown(fmsKeyFunc[fms]["funcs"]["parent"], "legs") end end,
