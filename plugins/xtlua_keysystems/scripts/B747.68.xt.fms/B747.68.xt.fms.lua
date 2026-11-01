@@ -3925,6 +3925,8 @@ function after_physics()
     B747_fmc_exec_lights()
     B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
     --print(B747DR_FMSdata)
+    -- (6-1/6-2 step 12b) the automatic page changes (B744.createfms.lua)
+    B747_cdu_page_changes(B747_fms_vnav_page())
     fmsL:B747_fms_display()
     fmsC:B747_fms_display()
     fmsR:B747_fms_display()

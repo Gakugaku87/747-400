@@ -133,6 +133,40 @@ function B747_fms_datalink()
   return B747DR_fms_engine_type == 1
 end
 local DATALINK_KEYS = {crz = true, hold = true}
+-- (6-1/6-2 step 12b) the automatic page changes, each frame before the
+-- CDUs draw: a CDU on the active VNAV page follows the FMC's phase, CLB to
+-- CRZ at the T/C and CRZ to DES at the T/D (FCOM p.1345; CRZ CLB, CRZ DES
+-- and E/O LRC D/D become CRZ on the same page: p.1350); the 570's TAKEOFF
+-- REF to VNAV CLB as the flap lever starts the retraction in the takeoff
+-- phase (p.1325: in the air, the thrust limit a takeoff one). No others
+-- (a missed approach's DES to CLB is not in FCOM). The DSPY light is not in
+-- the 3D cockpit (CDU-22)
+local VNAV_NEXT = {2, 3}
+local AUTO_CDUS = {"fmsL", "fmsC", "fmsR"}
+local vnavWas, flapsWas = 0, nil
+function B747_cdu_page_changes(active)
+  active = active or 0
+  local flaps = simDR_fms_vnav_flaps
+  local retract = B747DR_fms_engine_type == 1 and simDR_onGround == 0 and flapsWas ~= nil
+    and flaps < flapsWas - 0.001 and B747_fms_thrlim().mode == "TO"
+  flapsWas = flaps
+  local follow = VNAV_NEXT[vnavWas] == active
+  for _, id in ipairs(AUTO_CDUS) do
+    local o = fmsModules[id]
+    if o.currentPage == o.targetPage and o.pgNo == o.targetpgNo then
+      if follow and o.currentPage == "VNAV" and o.pgNo == vnavWas then
+        o.targetpgNo = active
+        switchNow(o)
+      elseif retract and o.currentPage == "TAKEOFF" then
+        o.targetCustomFMC = true
+        o.targetPage = "VNAV"
+        o.targetpgNo = 1
+        switchNow(o)
+      end
+    end
+  end
+  vnavWas = active
+end
 local RETURN_KEY = {}
 -- the page's keys: the function keys, the line select keys, NEXT, PREV,
 -- EXEC, and the keys passed to X-Plane's CDU on its pages

@@ -435,7 +435,8 @@ T.equal(rt:get(VN .. "phase"), 3, "30 NM before the T/D, MCP FL290: the early de
 T.check(rt:get(VN .. "mode") == 1 and rt:get(VN .. "at") == 4, "VNAV SPD with THR")
 T.equal(rt:get(CRZA), 31000, "CRZ ALT kept")
 T.equal(cons(), n0, "the descent's constraints kept (those after the T/D)")
-key("func_key/next_pg")
+-- (step 12b) the CDU on the CRZ page went to the DES page by itself
+-- (FCOM p.1345)
 T.check(line(1):find("ACT ECON DES"), "the DES page active: " .. line(1))
 -- the cruise again (on the ground and up): more than 50 NM, the MCP under
 -- the highest descent constraint: the early descent

@@ -1,0 +1,51 @@
+{
+  "name": "s182_page_auto_tc",
+  "description": "6-1・6-2 段 12b（自動のページ変更）の X-Plane での確認、上昇から巡航。s139 と同じ空中の 10,000 ft・約 290 kt（機体を読み直す）。RJAA→RJBB の経路、PERF INIT で ZFW 200・COST INDEX 100・CRZ ALT FL170、MCP 20,000 ft で VNAV。CDU を VNAV の CLB のページ（有効なページ）にしておくと、T/C で FMC の段階が巡航（2）になったとき CRZ のページに変わる（FCOM p.1345）。右の CDU は LEGS のまま。CDU を撮る。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 3048, "heading_true": 340, "speed_in_meters_per_second": 150 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れを待つ" },
+    { "do": "wait", "note": "FMS の空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 30 },
+    { "do": "sleep", "seconds": 5, "note": "初期化の残りを待つ" },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
+    { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
+    { "do": "cdu", "note": "RTE：RJAA→RJBB、DIRECT XAC・SPENS・BOKJO", "keys": ["RTE", "RJAA", "L1", "RJBB", "R1", "NEXT", "XAC", "R1", "?SEL", "SPENS", "R2", "?SEL", "BOKJO", "R3", "?SEL"] },
+    { "do": "cdu", "note": "ACTIVATE と EXEC", "keys": ["LEGS", "R6", "EXEC"] },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "cdu", "note": "INIT REF、<INDEX、PERF：ZFW 200、CRZ ALT FL170、COST INDEX 100", "keys": ["INITREF", "L6", "L3", "200", "L3", "170", "R1", "100", "L5"] },
+    { "do": "check", "note": "FMC の巡航高度 17,000 ft", "dref": "laminar/B747/autopilot/dist/cruise_alt", "op": "==", "value": 17000 },
+    { "do": "set", "note": "MCP 高度 20,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 20000 },
+    { "do": "sleep", "seconds": 5, "note": "MCP の高度が中へ写るのを待つ（3 秒）と FMC の VNAV" },
+    { "do": "check", "note": "FMC は上昇（1）", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 1 },
+    { "do": "cmd", "note": "VNAV", "name": "laminar/B747/autopilot/button_switch/VNAV" },
+    { "do": "wait", "note": "VNAV SPD で engage", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 4, "timeout": 10 },
+    { "do": "cdu", "note": "VNAV キー：有効な CLB のページ", "keys": ["VNAV"] },
+    { "do": "check", "note": "ACT ... CLB", "dref": "laminar/B747/fms3/Line01_L", "op": "matches", "value": "ACT .*CLB" },
+    { "do": "cdu", "cdu": "fms2", "note": "右の CDU：MENU、<FMC、LEGS", "keys": ["MENU", "L1", "LEGS"] },
+    { "do": "check", "note": "右の CDU は LEGS", "dref": "laminar/B747/fms2/Line01_L", "op": "contains", "value": "LEGS" },
+    { "do": "view", "note": "左の CDU", "the": -34, "psi": 24, "fov": 18 },
+    { "do": "shot", "name": "cdu_clb_before_tc" },
+    { "do": "wait", "note": "T/C：FMC は巡航（2）", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 2, "timeout": 480 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "CDU は CRZ のページへ（FCOM p.1345）", "dref": "laminar/B747/fms3/Line01_L", "op": "matches", "value": "ACT .*CRZ" },
+    { "do": "check", "note": "右の CDU は LEGS のまま", "dref": "laminar/B747/fms2/Line01_L", "op": "contains", "value": "LEGS" },
+    { "do": "shot", "name": "cdu_crz_after_tc" },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" }
+  ]
+}

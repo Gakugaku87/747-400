@@ -1792,3 +1792,17 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - 試験キット：シナリオの `cdu` の手順のキーの名前に ATC と FMCCOMM。
 - 試験：新しい `tests/fms/datalink_keys_test.lua`（18 件：PW・RR で ATC と FMC COMM が KEY/FUNCTION INOP でページはそのまま、GE で ATC INDEX と FMC COMM、PW でも ON なら ATC INDEX、GE でも OFF なら INOP、SIM CONFIG の 2 ページ目の 4L で AUTO・ON・OFF と simconfig の文字、2 ページ目の 1R は何もしない）。ATC・FMC COMM のキーを押す `fmc_fixes_test`（EMERGENCY REPORT）と `rte_pages_test`（FMC COMM の 1L）は、機体を 570 にした。全 162 本。
   - X-Plane：新しい `s181_datalink_keys` 12/12（RJAA の地上、PW の機体。ATC と FMC COMM で KEY/FUNCTION INOP、ページは IDENT のまま。SIM CONFIG の 2 ページ目の 4L は AUTO・小字 INOP、押すと ON・ACTIVE で simconfig に `"fmc_datalink":"ON"`、ATC で ATC INDEX、4L を 2 回で AUTO に戻る。CDU の写真 4 枚）。`s79_fmc_fixes`（EMERGENCY REPORT の前に SIM CONFIG で ON、後で AUTO に戻す手順を足した）34/34。どちらも Log.txt に Lua の誤りなし。
+
+## 106. 12b の実装（2026-11-01：自動のページ変更）
+
+- 資料：
+  - FCOM p.1345：CLB のページは T/C で CRZ に、CRZ CLB と CRZ DES のページは新しい巡航高度で CRZ に、CRZ のページは T/D で DES に変わる。
+  - FCOM p.1350：E/O LRC D/D のページは E/O LRC CRZ のページに変わる（どちらも CRZ のページで、見出しが変わる：段 9h4b）。
+  - FCOM p.1325：570 は、離陸の段階でフラップのレバーを格納のために動かすと、TAKEOFF REF のページが VNAV CLB のページに変わる。離陸の段階は、FMC が上昇の推力を指令すると上昇の段階になる。
+  - FCOM p.1210 の DSPY 灯（表示が有効な脚や性能のモードと関係ないとき）は、3D の操縦席に無いので対象外のまま（CDU-22）。
+- 作ったもの：`B744.createfms.lua` の `B747_cdu_page_changes`（FMS のモジュールが毎フレーム、VNAV と推力制限を更新した後、CDU を描く前に呼ぶ）。
+  - VNAV：FMC の段階のページ（`B747_fms_vnav_page`：1 CLB、2 CRZ、3 DES。地上と有効な経路が無いときは 0）が 1→2（T/C）か 2→3（T/D）に変わったとき、変わる前の有効なページを出している CDU だけが新しいページへ。有効でない VNAV のページや LEGS などはそのまま。CRZ CLB・CRZ DES・E/O の D/D は CRZ のページのまま見出しが変わる。資料に無い変わり方（進入復行の DES→CLB、CLB から直接 DES、0 からの段階）では変えない。
+  - 570（`engines/type` 1）：空中で、推力制限が TO（離陸の段階：THR REDUCTION の前）の間に、フラップのレバー（`sim/cockpit2/controls/flap_ratio`）が上がり始めたら、TAKEOFF REF を出している CDU が VNAV CLB のページへ。109 は変えない。
+- 推定：早期降下（DES NOW など）で CRZ から DES に移るときも T/D と同じに変える（FCOM は「T/D で」とだけ書く）。離陸の段階の終わりを、推力制限が TO でなくなるときとした（FCOM p.1325 の「FMC が上昇の推力を指令すると」）。
+- 試験：新しい `tests/fms/page_auto_test.lua`（24 件：T/C で CLB から CRZ、LEGS の CDU はそのまま、NEXT・PREV、T/D で CRZ から DES、有効でない CLB のページはそのまま、DES→CLB と CLB→DES では変えない、CRZ CLB の間と後は CRZ、0 からは変えない、109 の離陸は TAKEOFF REF のまま、570 はフラップを上げ始めると VNAV CLB、レバーを下げても何もしない。直す前のコードでは 6 つ落ちる）。全 163 本。X-Plane：新しい `s182_page_auto_tc` 10/10（s139 と同じ上昇：T/C で左の CDU が ACT ECON CLB から ACT ECON CRZ へ、右の LEGS はそのまま）、`s183_page_auto_td` 12/12（s140 と同じ巡航：T/D で ACT ECON CRZ から ACT ECON DES へ、右の有効でない CLB はそのまま。1 回目は空中開始のやり直しの後に右の CDU の電源が無く、A/P も経路も入らず 1/12：原因は未確認、記録を足した 2 回目で通った）、`s184_page_auto_570_takeoff` 20/20（GE（Saudia）の離陸：TAKEOFF REF のまま浮き、推力制限 TO の間にフラップを 20 から 10 にすると ACT LIM SPD CLB）。Log.txt に Lua の誤りなし。
+- 見つけたこと：CLB のページの AT XXXXX と ERROR、DES のページの E/D AT と AT XXXXX は、前のコードのまま X-Plane の FMS の脚と高度から作っていて、制限の無い点に FL001、DES では箱を出す（s182・s183・s184 の写真）。12b2 で作り直す（§107）。
