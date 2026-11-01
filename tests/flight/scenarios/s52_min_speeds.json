@@ -29,7 +29,7 @@
     { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
     { "do": "cmd", "note": "SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
     { "do": "set", "note": "レバー 20", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.6667 },
-    { "do": "wait", "note": "フラップ 20", "dref": "sim/flightmodel2/wing/flap1_deg[0]", "op": ">", "value": 19.5, "timeout": 90 },
+    { "do": "wait", "note": "フラップ 20（FCU の detent の番号での位置：X-Plane の翼の角度は揚力の補正で 15.1°、notes/AERO.md §3.12）", "dref": "laminar/B747/flt_ctrls/fcu/flap_pos", "op": ">", "value": 19.5, "timeout": 90 },
     { "do": "wait", "note": "水平飛行", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "between", "value": [-300, 300], "timeout": 60 },
     { "do": "sleep", "seconds": 25, "note": "フラップを出した後の A/P の機首下げ（荷重倍数が 1 より小さく、帯が下がる）が収まるのを待つ" },
     { "do": "snapshot", "note": "速度テープの値", "drefs": [ "sim/flightmodel/weight/m_total", "laminar/B747/airspeed/Vs", "laminar/B747/airspeed/Vminm",

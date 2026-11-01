@@ -130,7 +130,7 @@ B747DR_nd_capt_heading_bug          = find_dataref("laminar/B747/nd/mode/capt/sh
 B747DR_ap_heading_deg               = deferred_dataref("laminar/B747/autopilot/heading/degrees", "number")
 --simDR_acf_weight_payload_kg         = find_dataref("sim/flightmodel/weight/m_fixed")
 simDR_acf_weight_total_kg           = find_dataref("sim/flightmodel/weight/m_total")
-simDR_wing_flap1_deg                = find_dataref("sim/flightmodel2/wing/flap1_deg")
+B747DR_fltinst_flap_pos             = find_dataref("laminar/B747/flt_ctrls/fcu/flap_pos")
 
 simDR_OAT_degC                      = find_dataref("sim/cockpit2/temperature/outside_air_temp_degc")
 simDR_wind_heading_deg              = find_dataref("sim/cockpit2/gauges/indicators/wind_heading_deg_mag")
@@ -402,7 +402,6 @@ B747DR_airspeed_Vmax                            = deferred_dataref("laminar/B747
 B747DR_airspeed_Vmaxm                           = deferred_dataref("laminar/B747/airspeed/Vmaxm", "number")
 B747DR_airspeed_Vs                              = deferred_dataref("laminar/B747/airspeed/Vs", "number")
 simDR_flap_ratio_control                        = find_dataref("sim/cockpit2/controls/flap_ratio")                      -- FLAP HANDLE
-simDR_innerslats_ratio  	= find_dataref("sim/flightmodel2/controls/slat1_deploy_ratio")
 B747DR_airspeed_window_min                      = deferred_dataref("laminar/B747/airspeed_window/min", "number")
 
 B747DR_init_inst_CD                             = deferred_dataref("laminar/B747/inst/init_CD", "number")
@@ -2318,7 +2317,7 @@ function B747_Vspeeds()
     -- Vmc: the old minimum maneuvering approximation for the AFDS and A/T
     -- floors; the PFD's band (Vminm) and its amber box: the minimum speed
     -- model (B747.60.xt.speedtape.lua, 5-2 step 3b)
-    setVmc(simDR_acf_weight_total_kg,simDR_wing_flap1_deg[0])
+    setVmc(simDR_acf_weight_total_kg,B747DR_fltinst_flap_pos)
 
 
     -- Vmo / Mmo (MAXIMUM OPERATING LIMIT SPEED)
@@ -2340,19 +2339,24 @@ function B747_Vspeeds()
 
 
     -- Vmax (MAXIMUM SPEED -  HIGH SPEED RED CHECKER BOX ON ASI
+    -- the flap placards by the flaps' position in the detents' numbers (the
+    -- FCU's; UP to 1 is group A's leading edge flaps). X-Plane's wing flap
+    -- angle is not the flaps' since the lift correction (notes/AERO.md §3.12),
+    -- and flaps 25 was 22 degrees (220 kt instead of 205)
+    local flap_pos = B747DR_fltinst_flap_pos
     local flapSpeed = B747DR_airspeed_Vmo
-    if simDR_innerslats_ratio>0.0 and simDR_wing_flap1_deg[0] < 1.0 then
-        flapSpeed = B747_rescale(0.0, B747DR_airspeed_Vmo, 1.0, B747DR_airspeed_Vfe1, simDR_innerslats_ratio)
-    elseif simDR_wing_flap1_deg[0] > 0.0 and simDR_wing_flap1_deg[0] <= 5.0 then
-        flapSpeed = B747_rescale(0.0, B747DR_airspeed_Vfe1, 5.0, B747DR_airspeed_Vfe5, simDR_wing_flap1_deg[0])
-    elseif simDR_wing_flap1_deg[0] > 5.0 and simDR_wing_flap1_deg[0] <= 10.0 then
-        flapSpeed = B747_rescale(5.0, B747DR_airspeed_Vfe5, 10.0, B747DR_airspeed_Vfe10, simDR_wing_flap1_deg[0])
-    elseif simDR_wing_flap1_deg[0] > 10.0 and simDR_wing_flap1_deg[0] <= 20.0 then
-        flapSpeed = B747_rescale(10.0, B747DR_airspeed_Vfe10, 20.0, B747DR_airspeed_Vfe20, simDR_wing_flap1_deg[0])
-    elseif simDR_wing_flap1_deg[0] > 20.0 and simDR_wing_flap1_deg[0] <= 25.0 then
-        flapSpeed = B747_rescale(20.0, B747DR_airspeed_Vfe20, 25.0, B747DR_airspeed_Vfe25, simDR_wing_flap1_deg[0])
-    elseif simDR_wing_flap1_deg[0] > 25.0 and simDR_wing_flap1_deg[0] <= 30.0 then
-        flapSpeed = B747_rescale(25.0, B747DR_airspeed_Vfe25, 30.0, B747DR_airspeed_Vfe30, simDR_wing_flap1_deg[0])
+    if flap_pos > 0.0 and flap_pos <= 1.0 then
+        flapSpeed = B747_rescale(0.0, B747DR_airspeed_Vmo, 1.0, B747DR_airspeed_Vfe1, flap_pos)
+    elseif flap_pos > 1.0 and flap_pos <= 5.0 then
+        flapSpeed = B747_rescale(1.0, B747DR_airspeed_Vfe1, 5.0, B747DR_airspeed_Vfe5, flap_pos)
+    elseif flap_pos > 5.0 and flap_pos <= 10.0 then
+        flapSpeed = B747_rescale(5.0, B747DR_airspeed_Vfe5, 10.0, B747DR_airspeed_Vfe10, flap_pos)
+    elseif flap_pos > 10.0 and flap_pos <= 20.0 then
+        flapSpeed = B747_rescale(10.0, B747DR_airspeed_Vfe10, 20.0, B747DR_airspeed_Vfe20, flap_pos)
+    elseif flap_pos > 20.0 and flap_pos <= 25.0 then
+        flapSpeed = B747_rescale(20.0, B747DR_airspeed_Vfe20, 25.0, B747DR_airspeed_Vfe25, flap_pos)
+    elseif flap_pos > 25.0 then
+        flapSpeed = B747_rescale(25.0, B747DR_airspeed_Vfe25, 30.0, B747DR_airspeed_Vfe30, flap_pos)
     end
 
     local gearSpeed = B747DR_airspeed_Vmo

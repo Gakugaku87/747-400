@@ -109,6 +109,7 @@ function M.new()
         relief = false,                 -- >FLAP RELIEF
         show = false, expanded = false, moving = false,
         tape = 0, tapes = four(0),      -- the indication's tapes (0 UP .. 1 flaps 30)
+        pos = 0,                        -- the indication as the detents' numbers (0 .. 30)
         flaps_control = false, flaps_drive = false, flaps_primary = false,
         st_te_flaps = false, st_le_single = false, st_le_mult = false,
         st_fcu = three(false), st_load_relief = false,
@@ -145,6 +146,21 @@ local function scale(u)
     return 1
 end
 M.scale = scale
+
+-- the indication's scale (0..1) as the detents' numbers UP 0, 1, 5, 10, 20,
+-- 25, 30 (flaps 1 is group A's leading edge flaps alone, 25 the trailing
+-- edge at 22 degrees; between the marks in proportion): the flaps' position
+-- for what goes by the detents (the speed tape's minimum and maximum speeds,
+-- >CONFIG FLAPS; the indication's slowest group stands for the flaps there:
+-- estimate, the references do not say what they read when the groups
+-- differ). X-Plane's wing flap angles are not it since the lift correction
+-- (B747_xp_flap: notes/AERO.md §3.12): flaps 20 is 15.1 there
+M.DETENT_NUM = {[0] = 0, 1, 5, 10, 20, 25, 30}
+function M.detent_pos(tape)
+    local x = clamp(tape * 6, 0, 6)
+    local i = math.min(5, math.floor(x))
+    return M.DETENT_NUM[i] + (x - i) * (M.DETENT_NUM[i + 1] - M.DETENT_NUM[i])
+end
 
 -- start with the flaps where the lever is (a flight starting with flaps out)
 function M.set_to(s, inp)
@@ -427,6 +443,7 @@ function M.update(s, inp, dt)
     else
         out.tape = scale(slowest)
     end
+    out.pos = M.detent_pos(out.tape)
     -- expanded: each TE panel on its own (0 when up)
     local panels = {te2.pos[1], te1.pos[1], te1.pos[2], te2.pos[2]}
     for i = 1, 4 do

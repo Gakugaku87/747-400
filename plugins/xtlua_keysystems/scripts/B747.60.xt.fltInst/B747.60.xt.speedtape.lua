@@ -37,6 +37,7 @@ B747DR_spd_valid_fo             = find_dataref("laminar/B747/airdata/valid_fo")
 B747DR_spd_ias_fo               = find_dataref("laminar/B747/gauges/indicators/airspeed_kts_copilot")
 simDR_spd_nz                    = find_dataref("sim/flightmodel/forces/g_nrml")
 B747DR_airspeed_Vminm           = find_dataref("laminar/B747/airspeed/Vminm")
+B747DR_spd_flap_pos             = find_dataref("laminar/B747/flt_ctrls/fcu/flap_pos")
 B747DR_spd_tape_capt            = find_dataref("laminar/B747/airspeed/tape_capt")
 B747DR_spd_tape_fo              = find_dataref("laminar/B747/airspeed/tape_fo")
 -- step 4c: the PLI and VR's "R"
@@ -112,7 +113,7 @@ function B747_speedtape()
     mi.mach = capt and B747DR_spd_mach or B747DR_spd_mach_fo
     mi.cas = capt and simDR_airspeed or B747DR_spd_ias_fo
     mi.nz = simDR_spd_nz
-    mi.flap_deg = simDR_wing_flap1_deg[0]
+    mi.flap_pos = B747DR_spd_flap_pos
     mi.vref30 = B747DR_airspeed_Vref30
     mi.vmax = B747DR_airspeed_Vmax
     mi.ra_ft = simDR_radio_alt_height_capt

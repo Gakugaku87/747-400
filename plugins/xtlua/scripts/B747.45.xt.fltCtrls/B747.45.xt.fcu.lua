@@ -34,6 +34,7 @@ B747DR_fcu_te_mode              = find_dataref("laminar/B747/flt_ctrls/fcu/te_mo
 B747DR_fcu_le_mode              = find_dataref("laminar/B747/flt_ctrls/fcu/le_mode")
 B747DR_fcu_te_moving            = find_dataref("laminar/B747/flt_ctrls/fcu/te_moving")
 B747DR_fcu_te_down              = find_dataref("laminar/B747/flt_ctrls/fcu/te_down")
+B747DR_fcu_flap_pos             = find_dataref("laminar/B747/flt_ctrls/fcu/flap_pos")
 B747DR_fcu_fail_fcu             = find_dataref("laminar/B747/flt_ctrls/fail/fcu")
 B747DR_fcu_fail_te_primary      = find_dataref("laminar/B747/flt_ctrls/fail/te_primary")
 B747DR_fcu_fail_te_secondary    = find_dataref("laminar/B747/flt_ctrls/fail/te_secondary")
@@ -139,6 +140,7 @@ function B747_fcu()
     -- has no alternate marks, FCTL-12)
     local tape, t1, t2, t3, t4 = out.tape, out.tapes[1], out.tapes[2], out.tapes[3], out.tapes[4]
     if B747DR_flap_deployed_ratio ~= tape then B747DR_flap_deployed_ratio = tape end
+    if B747DR_fcu_flap_pos ~= out.pos then B747DR_fcu_flap_pos = out.pos end
     if B747DR_flap_deployed_ratio1 ~= t1 then B747DR_flap_deployed_ratio1 = t1 end
     if B747DR_flap_deployed_ratio2 ~= t2 then B747DR_flap_deployed_ratio2 = t2 end
     if B747DR_flap_deployed_ratio3 ~= t3 then B747DR_flap_deployed_ratio3 = t3 end

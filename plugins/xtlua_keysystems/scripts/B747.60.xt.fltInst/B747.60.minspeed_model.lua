@@ -70,7 +70,9 @@ for i = 1, #W_T do
 end
 M.SHAKER_10K = SHAKER
 
--- the trailing edge flap angles of the detents
+-- the detents' numbers: the flaps' position comes in these units (UP 0,
+-- 1 the leading edge group A alone, 5, 10, 20, 25 the trailing edge at 22
+-- degrees, 30: the FCU's laminar/B747/flt_ctrls/fcu/flap_pos)
 M.DETENTS = {0, 1, 5, 10, 20, 25, 30}
 -- the buffet onset at the long range cruise Mach: the FCOM's maximum
 -- operating altitudes for 1.25-1.50 g at LRC (PI.11.1, with PI.11.2's
@@ -114,13 +116,13 @@ local function detent_b(deg, m)
     return math.max(0.2 * l[1], l[1] + l[2] * m)
 end
 
--- B at a trailing edge flap angle (between the detents by the angle: estimate)
-function M.boundary(flap_deg, m)
+-- B at a flap position (between the detents in proportion: estimate)
+function M.boundary(flap_pos, m)
     local d = M.DETENTS
-    if flap_deg <= d[1] then return detent_b(d[1], m) end
+    if flap_pos <= d[1] then return detent_b(d[1], m) end
     for i = 2, #d do
-        if flap_deg <= d[i] then
-            local f = (flap_deg - d[i - 1]) / (d[i] - d[i - 1])
+        if flap_pos <= d[i] then
+            local f = (flap_pos - d[i - 1]) / (d[i] - d[i - 1])
             local lo, hi = detent_b(d[i - 1], m), detent_b(d[i], m)
             return lo + (hi - lo) * f
         end
@@ -142,13 +144,13 @@ end
 -- the Mach on the low speed side where the lift limit is reached: M^2 B(M)
 -- equals req (n W / delta); at most the peak's Mach (flaps up) or the buffet
 -- onset Mach
-local function low_mach(req, flap_deg)
-    local lo, hi = 0.05, flap_deg <= 0 and M.PEAK_MACH or M.BUFFET_MACH
-    if hi * hi * M.boundary(flap_deg, hi) <= req then return hi end
-    if lo * lo * M.boundary(flap_deg, lo) >= req then return lo end
+local function low_mach(req, flap_pos)
+    local lo, hi = 0.05, flap_pos <= 0 and M.PEAK_MACH or M.BUFFET_MACH
+    if hi * hi * M.boundary(flap_pos, hi) <= req then return hi end
+    if lo * lo * M.boundary(flap_pos, lo) >= req then return lo end
     for _ = 1, 22 do
         local mid = 0.5 * (lo + hi)
-        if mid * mid * M.boundary(flap_deg, mid) < req then lo = mid else hi = mid end
+        if mid * mid * M.boundary(flap_pos, mid) < req then lo = mid else hi = mid end
     end
     return 0.5 * (lo + hi)
 end
@@ -175,21 +177,25 @@ M.high_mach = high_mach
 -- parameters): the angle of attack still to go to the shaker. The lift
 -- limit becomes an angle of attack with the custom acf's lift curve,
 -- fitted on the stall tests below the stall break (tests/flight/measure/
--- stall_*.json, about 270 t): per trailing edge flap angle, the zero-lift
--- angle of attack and the degrees of angle of attack per kg of B (CL/B
--- over the lift slope). In the air the margin is that angle times
--- (1 - lift needed / limit), so it is 0 exactly at the shaker; on the
--- ground (the gear carries the weight) the limit's angle minus the present
--- angle of attack. All estimates
-local PLI_CURVE = {{0, -4.84, 4.411e-6}, {10, -8.29, 3.916e-6}, {20, -12.53, 3.815e-6}, {30, -13.99, 3.884e-6}}
+-- stall_*.json, about 270 t; tests/flight/tools/pli_fit.lua): per flap
+-- detent, the zero-lift angle of attack and the degrees of angle of attack
+-- per kg of B (CL/B over the lift slope), on the straight part of the
+-- curve (angles of attack up to 10 degrees, flaps up 9). The runs after
+-- the aero changes of 2026-10-29 and 30 (the wing's incidence, the flaps'
+-- lift and their angles in X-Plane: notes/AERO.md §3.2, §3.12): the zero
+-- lift moved up 0.9 (UP) to 3.3 (20) degrees. In the air the margin is
+-- that angle times (1 - lift needed / limit), so it is 0 exactly at the
+-- shaker; on the ground (the gear carries the weight) the limit's angle
+-- minus the present angle of attack. All estimates
+local PLI_CURVE = {{0, -3.89, 4.283e-6}, {10, -6.35, 3.758e-6}, {20, -9.19, 3.741e-6}, {30, -12.92, 3.740e-6}}
 M.PLI_MIN_KT = 60           -- shown above this airspeed (the angle of attack vanes: estimate)
 M.PLI_MAX_DEG = 30          -- not shown further away (off the attitude display)
-function M.pli_curve(flap_deg)
+function M.pli_curve(flap_pos)
     local t = PLI_CURVE
-    if flap_deg <= t[1][1] then return t[1][2], t[1][3] end
+    if flap_pos <= t[1][1] then return t[1][2], t[1][3] end
     for i = 2, #t do
-        if flap_deg <= t[i][1] then
-            local f = (flap_deg - t[i - 1][1]) / (t[i][1] - t[i - 1][1])
+        if flap_pos <= t[i][1] then
+            local f = (flap_pos - t[i - 1][1]) / (t[i][1] - t[i - 1][1])
             return t[i - 1][2] + (t[i][2] - t[i - 1][2]) * f, t[i - 1][3] + (t[i][3] - t[i - 1][3]) * f
         end
     end
@@ -203,7 +209,7 @@ function M.inputs()
         mach = 0,               -- the captain's air data
         cas = 0,                -- kt
         nz = 1,                 -- the normal load factor
-        flap_deg = 0,           -- the trailing edge flap angle
+        flap_pos = 0,           -- the flaps' position in the detents' numbers (0 UP .. 30)
         vref30 = 0,             -- kt
         vmax = 0,               -- kt, the maximum speed (Vmo/Mmo, gear, flaps)
         ra_ft = 0,
@@ -246,15 +252,15 @@ function M.update(s, inp, dt)
 
     -- the minimum speed: the stick shaker or low speed buffet for the load
     -- factor (FCOM p.973); the SWMC computes the shaker speed (ATA27 p.702)
-    out.vss = M.mach_to_cas(low_mach(s.nz_disp * w / d, inp.flap_deg), d)
+    out.vss = M.mach_to_cas(low_mach(s.nz_disp * w / d, inp.flap_pos), d)
     -- the minimum maneuvering speed (FCOM p.973): 1.3 g to the stick shaker
     -- with flaps down; flaps up below 20,200 ft that or VREF+80 (VREF30:
     -- FCOM PI.10.3), whichever is less; above, 1.3 g to low speed buffet
     -- (or the maneuver capability maintenance preset: step 12c1, the
     -- margin)
-    local flaps_up = inp.flap_deg < 0.5
+    local flaps_up = inp.flap_pos < 0.5
     local high = flaps_up and inp.alt_ft >= 20200
-    local vmm = M.mach_to_cas(low_mach((high and inp.margin or 1.3) * w / d, inp.flap_deg), d)
+    local vmm = M.mach_to_cas(low_mach((high and inp.margin or 1.3) * w / d, inp.flap_pos), d)
     if flaps_up and inp.alt_ft < 20200 then vmm = math.min(vmm, inp.vref30 + 80) end
     out.vmin_man = vmm
     -- the maximum maneuvering speed: 1.3 g (the preset) to high speed
@@ -269,7 +275,7 @@ function M.update(s, inp, dt)
     -- p.701); 2 % hysteresis (estimate). Without valid air data none
     local m = math.max(0.05, inp.mach)
     local need = s.nz_trip * w / d
-    local limit = m * m * M.boundary(inp.flap_deg, m)
+    local limit = m * m * M.boundary(inp.flap_pos, m)
     if not inp.air or not inp.air_data then
         s.shaker = false
     elseif s.shaker then
@@ -286,8 +292,8 @@ function M.update(s, inp, dt)
 
     -- the PLI (109: when the flaps are not up; FCOM p.975, p.977). The lift
     -- needed with the speed tape's load factor (steadier than the shaker's)
-    local a0, per_kg = M.pli_curve(inp.flap_deg)
-    local span = per_kg * M.boundary(inp.flap_deg, m)       -- zero lift to the shaker
+    local a0, per_kg = M.pli_curve(inp.flap_pos)
+    local span = per_kg * M.boundary(inp.flap_pos, m)       -- zero lift to the shaker
     local margin
     if inp.air then
         margin = span * (1 - s.nz_disp * w / d / limit)
