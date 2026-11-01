@@ -73107,7 +73107,7 @@ P acf/_fixed_role/6 0
 P acf/_fixed_role/7 0
 P acf/_fixed_role/8 0
 P acf/_fixed_role/count 9
-P acf/_flap1_cd 0.140000001
+P acf/_flap1_cd 0.200000000
 P acf/_flap1_cl 1.620000000
 P acf/_flap1_cm -0.389999986
 P acf/_flap1_cratR 0.259999990
@@ -73131,7 +73131,7 @@ P acf/_flap1_ptch_above_50 0
 P acf/_flap1_roll 0.000000000
 P acf/_flap1_roll_above_50 0
 P acf/_flap1_type 4
-P acf/_flap2_cd 0.140000001
+P acf/_flap2_cd 0.200000000
 P acf/_flap2_cl 1.620000000
 P acf/_flap2_cm -0.389999986
 P acf/_flap2_cratR 0.259999990
@@ -73821,7 +73821,7 @@ P acf/_sfc_burner 0.000042524
 P acf/_shut_off_fuel_at_min_prop 0
 P acf/_single_axis_ap 0
 P acf/_skid_EQ 0
-P acf/_slat1_cd 0.000000000
+P acf/_slat1_cd 0.020000000
 P acf/_slat1_dn/0 0.000000000
 P acf/_slat1_dn/1 1.000000000
 P acf/_slat1_dn/10 0.000000000
@@ -73838,7 +73838,7 @@ P acf/_slat1_dn/count 12
 P acf/_slat1_dn_max_deg 10.000000000
 P acf/_slat1_inc 4.800000000
 P acf/_slat1_type 0
-P acf/_slat2_cd 0.000000000
+P acf/_slat2_cd 0.020000000
 P acf/_slat2_dn/0 0.000000000
 P acf/_slat2_dn/1 0.000000000
 P acf/_slat2_dn/10 0.000000000

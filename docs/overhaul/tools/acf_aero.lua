@@ -44,6 +44,18 @@ local SET = {
     ["acf/_flap2_dn/6"] = 75,
     ["acf/_flap1_cl"] = 1.62,
     ["acf/_flap2_cl"] = 1.62,
+    -- the flaps' and the leading edge's drag (2026-11-02): against the drag
+    -- from the FCOM's EPR (PI.10.39-10.40 through the EPR model) X-Plane was
+    -- 3-23 % short at flaps 5-30 (LF5 sped up at flaps 5, idle, on the glide
+    -- slope). A unit of the flap coefficient adds CD 0.0082 per degree of
+    -- X-Plane's flap angle, of the slats' 0.53 (aero_flap_drag.json); the
+    -- least squares over 5, 10, 25 and 30. Checked: 5 -7 %, 10 +4 %, 20
+    -- with the gear +11 %, 25 and 30 with the gear within 2 %
+    -- (aero_flap_drag_check.json, notes/AERO.md section 3.13)
+    ["acf/_flap1_cd"] = 0.20,
+    ["acf/_flap2_cd"] = 0.20,
+    ["acf/_slat1_cd"] = 0.02,
+    ["acf/_slat2_cd"] = 0.02,
     ["_body/1/_part_cd"] = 0.03,
     ["_body/21/_part_cd"] = 0.025,
     ["_body/22/_part_cd"] = 0.025,
