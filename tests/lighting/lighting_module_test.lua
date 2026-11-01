@@ -17,9 +17,8 @@ rt:frame(1 / 30)
 T.equal(rt:get(LIGHT_POWER, 63), 1, "new flight without reload: generic light 63 back on")
 
 -- the fuel panel lights come from the fuel model (laminar/B747/fuel/light/*):
--- each to its annunciator (brightness 0.8 with IND LTS BRT and bus power)
-rt:set("sim/flightmodel2/lights/generic_lights_brightness_ratio", 63, 1)
-rt:set("sim/cockpit2/electrical/bus_volts", 0, 28)
+-- each to its annunciator (brightness 0.8 with IND LTS BRT and DC bus 1: 7-2c)
+rt:set("laminar/B747/electrical/bus/dc", 0, 1)
 local ANNUN = "laminar/B747/annunciator/brightness_ratio"
 local PRESS = "laminar/B747/fuel/light/pump_press"
 local function only(name, i)
@@ -213,4 +212,50 @@ T.check(not source("plugins/xtlua_keysystems/scripts/B747.90.xt.lighting/B747.90
     "the lighting module: no collectgarbage(\"collect\")")
 T.check(not source("plugins/xtlua/init/scripts/B747.03.electrical/B747.03.electrical.lua"):find("strobe_lights_on", 1, true),
     "the electrical init script: no strobe writes")
+
+-- (7-2c) the indicator lights by the master dim and test (notes/ATA-33.md
+-- §13): TEST lights the tested lights at BRT and dims them after 10 s
+-- (before, 1.0 while held); not the cabin signs, the radio panels' glass
+-- or the weather radar control's lamps; DIM leaves the cargo FIRE lights;
+-- STORM keeps the lit lights bright on DIM
+local function ind(pos, secs)
+    rt:set(SW, 13, pos)
+    for _ = 1, math.max(1, math.floor(secs * 30 + 0.5)) do rt:frame(1 / 30) end
+end
+rt:set(SW, 0, 1) -- STORM OFF (the mock's switches start at 0, STORM's ON)
+for k = 0, 2 do rt:set("laminar/B747/fire/light/cargo", k, 0) end
+valve_only()
+ind(1, 0.1)
+T.near(rt:get(ANNUN, 80), 0.8, 0.01, "TEST: VALVE CLOSED (WING 1) lit at BRT")
+T.near(rt:get(ANNUN, 2), 0.8, 0.01, "TEST: GND PROX lit at BRT")
+T.near(rt:get(ANNUN, 0), 0.8, 0.01, "TEST: MASTER CAUTION lit at BRT")
+T.near(rt:get(ANNUN, 251), 0, 0.01, "TEST: the NO SMOKING sign light not tested")
+T.near(rt:get(ANNUN, 253), 0.8, 0.01, "TEST: the left radio panel's glass at its BRT glow")
+T.equal(rt:get("laminar/B747/wxr/left/GCS"), 0, "TEST: the weather radar control's GCS lamp not tested")
+ind(1, 10)
+T.near(rt:get(ANNUN, 80), 0.4, 0.01, "TEST held 10 s: dimmed")
+ind(0, 0.1)
+T.near(rt:get(ANNUN, 80), 0, 0.01, "TEST released: VALVE CLOSED out (the valves open)")
+valve_only("wing", 0, 1)
+rt:set("laminar/B747/fire/light/cargo", 0, 1)
+ind(-1, 0.1)
+T.near(rt:get(ANNUN, 80), 0.4, 0.01, "DIM: VALVE CLOSED at 0.4")
+T.near(rt:get(ANNUN, 35), 0.8, 0.01, "DIM: the cargo FIRE light not dimmed (ATA33 p.68)")
+T.near(rt:get(ANNUN, 253), 0.4, 0.01, "DIM: the radio panel's glass dimmed")
+rt:set(SW, 0, 0)
+ind(-1, 0.1)
+T.near(rt:get(ANNUN, 80), 0.8, 0.01, "STORM on DIM: VALVE CLOSED bright (FCOM p.501)")
+rt:set(SW, 0, 1)
+-- the power: the battery bus or DC bus 1 or 3 (before, X-Plane's bus volts)
+rt:set("laminar/B747/electrical/bus/dc", 0, 0)
+ind(0, 0.1)
+T.near(rt:get(ANNUN, 80), 0, 0.01, "no battery bus, DC 1 or DC 3: VALVE CLOSED out")
+rt:set("laminar/B747/electrical/bus/bat_main", 1)
+ind(-1, 0.1)
+T.near(rt:get(ANNUN, 80), 0.8, 0.01, "the battery bus alone, DIM: bright (the dim relays off)")
+rt:set("laminar/B747/electrical/bus/bat_main", 0)
+rt:set("laminar/B747/electrical/bus/dc", 0, 1)
+ind(0, 0.1)
+valve_only()
+rt:set("laminar/B747/fire/light/cargo", 0, 0)
 T.done()

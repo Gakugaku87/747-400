@@ -38,8 +38,7 @@ rt:set("laminar/B747/air/duct_pressure_C", 30)          -- the cargo detectors' 
 for i = 0, 3 do rt:set("sim/flightmodel/engine/ENGN_running", i, 1) end
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 for i = 0, 3 do rt:set("laminar/B747/fuel/fuel_control/toggle_sw_pos", i, 1) end
-rt:set("sim/flightmodel2/lights/generic_lights_brightness_ratio", 63, 1)
-rt:set("sim/cockpit2/electrical/bus_volts", 0, 28)
+rt:set("laminar/B747/electrical/bus/dc", 0, 1)          -- the indicator lights: DC bus 1 (7-2c)
 frames(4)
 T.equal(get(FIRE .. "engine01_02A/ext_bottle/psi"), 600, "bottle L A: 600 psi")
 T.equal(get(FIRE .. "apu/ext_bottle/psi"), 600, "APU bottle: 600 psi")

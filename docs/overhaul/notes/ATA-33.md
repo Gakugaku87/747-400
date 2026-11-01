@@ -370,8 +370,9 @@ GAP ID の接頭辞：`LIGHT`。2026-10-23 作成。コードは `overhaul` ブ�
 |---|---|---|
 | 7-2a | すぐ直せるもの：毎フレームの完全 GC をやめる、ストロボの書き手を照明だけに（電源の初期化スクリプトの点滅をやめる）、STROBE のスイッチの向きを NAV・WING・LOGO と同じに（自動始動のストロボの手順も） | LIGHT-08、05、04（LIGHT-02 は 2026-10-24 に済） |
 | 7-2b | 外部灯を 747 の電源と空地で：灯ごとの母線（§4.4–4.6）、landing の減光（gear lever と INBD スイッチ、70 %）、turnoff と taxi は PSEU の地上だけ、quick start のスイッチの向き | LIGHT-03、09、13、15 |
-| 7-2c | 表示灯と操縦室照明：IND LTS の BRT・DIM と TEST（10 秒で減光、fire handle と FUEL CONTROL は対象外）、STORM（表示灯を最大、flood）、操縦室照明の電源（AC 4 の喪失で standby）、表示灯の 270 行を表に | LIGHT-07、10、11、16（の論理） |
+| 7-2c | 表示灯：IND LTS の BRT・DIM と TEST（10 秒で減光、fire handle と FUEL CONTROL は対象外）、STORM（表示灯を最大、flood）、表示灯の 270 行を表に | LIGHT-10、11 |
 | 7-2d | 非常灯の論理：P5 の OFF/ARMED/ON（3D の操作子が無いので dataref とコマンドだけ）、ARMED で DC bus 4 を失うと自動点灯、>EMER LIGHTS | LIGHT-06 |
+| 7-2e | 操縦室照明の電源（AC 4 の喪失で standby、AC 3 と GSB の喪失）、FLIGHT DECK ACCESS LIGHTS の論理 | LIGHT-07、16 |
 
 - LIGHT-01（ELEC の状態の書き込み）は 1-1（電源）の作り直しで済み（電源モジュールが `ext_pwr*_on`・`apu_pwr*_on` を書く）。LIGHT-14 の酸素の部分も済（2026-10-29）。
 - LIGHT-12（BEACON の LWR と BOTH）は、X-Plane の beacon が 1 つで、分けるには OBJ の灯の index を分ける必要がある（承認事項）。今は残す。
@@ -396,3 +397,20 @@ GAP ID の接頭辞：`LIGHT`。2026-10-23 作成。コードは `overhaul` ブ�
 - quick start（AI）の NAV と LOGO の手順を ON = 0 にした（LIGHT-15）。前は NAV がスイッチを動かさず時間切れになり、LOGO は点いていれば消して成功としていた。
 - BEACON の LWR と BOTH は今も同じ（LIGHT-12、§10）。
 - 試験：`tests/lighting/light_model_test.lua`（減光、母線、空地、スイッチ）、`lighting_module_test.lua`（スイッチと X-Plane の灯の対応 §3.2、gear lever UP の減光、空中の turnoff・taxi、GSB と AC の喪失）。X-Plane：`s208_lights_exterior`（夜の RJAA 34L、エンジン運転中。全部 OFF → 1 つずつ ON で X-Plane の灯の対応、地上の turnoff・taxi、外から撮る → OFF で消える）。lever UP の減光と空中は回帰試験だけ。
+
+## 13. 7-2c（2026-11-01）
+
+- 表示灯（annunciator）の明るさを `B747.90.ind_model.lua`（X-Plane なしの純関数）で決める（LIGHT-10、11）：
+  - BRT 0.8、DIM 0.4（前と同じ値。DIM は 28 V に対する dimmer card の 12 V で、明るさの比は資料に無い：推定）。
+  - TEST：押すとすぐ試験の対象の灯を BRT で点け、10 秒押し続けると time delay relay が dim relay を付勢して、点いている灯ごと DIM にする（ATA33 p.67）。前は押している間ずっと 1.0（BRT より明るい）。
+  - STORM ON：点いている灯は DIM でも BRT（FCOM p.501。§1 の食い違い 1）。前は STORM が表示灯に効かなかった。
+  - 電源：battery bus、DC bus 1、DC bus 3 のどれか（推定：ATA33 p.69 の図に灯ごとの回路が無い）。dim・test・time delay relay は DC bus 1 か 3（推定）で、無ければ BRT で TEST も効かない。前は X-Plane の `bus_volts[0]`・`[2]` と generic light 63。
+- 270 行の同じ三項演算を表（`IND_ANNUN`：添字 → 条件 `annun.<a|b>.<key>`）にした（§6.2）。256 行は機械的に変換し、残りは手で書く：
+  - MASTER WARNING・CAUTION：DIM でさらに 1/8（前のまま。見た目の調整）。
+  - EXT PWR と APU GEN の AVAIL：その電源で点く（機体の電源が無くても BRT か DIM）。ON は機体の母線で（前は APU GEN 1 の ON だけ X-Plane の APU 発電機も見ていた）。
+  - TEST で点けないもの：客室サイン [251]–[252]（推定：操縦室の表示灯でない）、無線パネルのガラス [253]–[256]（表示の glow。BRT・DIM には従う：ATA33 p.52）、気象レーダー操作パネルの灯（推定：操作パネル自身の灯）。前は TEST で全部点いた。
+  - DIM で減光しないもの：cargo の FIRE 灯 [35]–[36]（ATA33 p.68）。DISCH [37] は減光する（推定）。
+  - fire handle と FUEL CONTROL の灯は、3D（`Cockpit_TQ.obj`）が X-Plane の `sim/cockpit2/annunciators/engine_fires` で直接点けていて、この表に無い。TEST で点かず DIM でも減光しないので、資料（ATA33 p.52・68）と合う。p.52 と p.68 で FUEL CONTROL の DIM が逆なのは、灯を作り直すときに決める。
+- STORM の flood をノブの最大と同じにした（R8068 がノブの代わりに固定抵抗を入れる：ATA33 p.72、FCOM p.438）。前は 1.9 で最大の 95 %（LIGHT-11）。
+- エンジン運転中の開始（ER）で、STORM が ON（position 0。操作系の目標の初期値）のまま始まっていた。OFF（1）にした（manipulators の `B747_set_manip_ER`）。cold & dark は前から OFF。
+- 試験：`tests/lighting/ind_model_test.lua`（BRT、DIM、TEST の 10 秒、STORM、電源）、`lighting_module_test.lua`（TEST で点く灯と点かない灯、10 秒の減光、cargo FIRE の DIM、STORM、電源）。X-Plane：`s209_ind_lights`（夜の RJAA 34L、エンジン運転中。STORM が OFF で始まる、DIM・STORM・BRT での明るさ、8 秒の TEST）。10 秒での減光は、Web API がコマンドを 10 秒までしか押し続けられないので回帰試験だけで見る。
