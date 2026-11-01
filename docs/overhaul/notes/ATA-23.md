@@ -327,3 +327,18 @@ GAP ID 接頭辞：`COM`。2026-10-23 調査。コード・acf・obj は変更�
   - 3 枚の RTP の ACTIVE・STANDBY の窓それぞれに、VHF C・HF L・HF R の周波数（COM1 の窓と同じ LED、kHz/1000）と ACARS の絵（中央の ACTIVE 窓の既存のものと同じ画像と位置のずらし）。
   - ACTIVE 窓は `rtp_*/lcd_to_display`（0 COM1、1 COM2、2 VHF C、3 HF L、4 HF R、98 ACARS、90 空白）、STANDBY 窓は新しい `rtp_*/stby_show`（同じ値）で出し分ける。前の INOP の絵（99）は出なくなった（計器は残す）。
 - 試験：`tests/com/radio_model_test.lua`（選択、offside、AM、ノブと transfer、VHF C のデータと音声、OFF、電源）、`tests/com/rtp_module_test.lua`（コマンドから窓と灯、X-Plane のコマンド、109 と 570 の刻み、COM1/2 の通電）。
+
+## 12. 7-1b（2026-11-02）
+
+- ACP（音声パネル）を `B747.15.acp_model.lua`（X-Plane なしの純関数）で持ち、グルー `B747.15.xt.acp.lua`（com モジュールが dofile）がコマンド・灯・X-Plane の音声パネルを受け持つ。前の 3 枚分のハンドラ（約 1,700 行）と `B747_xmt_sel_swap`・`B747_radio_audio_status` を置き換えた。PTT のハンドラ（3D の動きと AutoATC が読む位置）はそのまま残した。
+- 席ごとに独立（FCOM p.683–685、ATA23 p.30–31・p.54）：
+  - 送信選択は席ごとに 1 つ。選ぶとその受信も入る。前は VHF L・R を押すと 3 枚とも同じ選択になった（COM-02）。
+  - 受信は音量ノブを押して ON・OFF。受信灯（緑）は手で入れたものだけ（推定：FCOM p.683・685 の書き方。前は送信選択で入った受信も点いた：COM-13）。送信選択中の系統と、ACTIVE が 121.500 の VHF は OFF にできない（FCOM p.685）。
+  - 121.500 の VHF は全席で聞こえる（ATA23 p.26・64）。
+  - VOR/ADF・APP の選択器とフィルター、音量は席ごと（前は 1 枚を回すと 3 枚とも回った：COM-02、ほかの席のノブを動かす誤り：COM-14）。
+  - 開始時は機長の VHF L の送信（前のまま。ATA23 p.30 では電源投入時は送信選択なし）。
+- X-Plane の音声パネル（§6.1）：機長の ACP を pilot の、副操縦士の ACP を copilot の音声パネルに写す。observer の ACP は聞こえない（X-Plane に 3 枚目が無い）。
+  - 送信：VHF L なら COM1、VHF R なら COM2（`audio_com_selection_man`、受信は X-Plane の自動選択を切って ACP の受信で：`audio_selection_com_auto` = 0）。VHF C・HF・interphone などを選んでいるときは X-Plane の選択を変えない（X-Plane に「なし」が無い）。
+  - 受信：COM1・COM2 は VHF L・R の受信（手、送信選択、121.5）と音量。
+  - 航法：VOR/ADF の受信は選択器の VOR L/R（X-Plane の NAV3/NAV4）か ADF L/R（ADF1/2）、APP の受信は APP L/R（NAV1/NAV2 の ILS。ILS C は X-Plane に無い）か MKR（マーカー）。前は VOR L/R で NAV1/NAV2（ILS）を開き、APP はマーカーだけだった（COM-07）。フィルター V は識別符号を消す（X-Plane の航法音声は識別符号と推定）。MKR はフィルターを通らない（ATA23 p.28・71–72）。
+- 試験：`tests/com/acp_model_test.lua`（送信選択、受信、121.5、航法音声とフィルター）、`tests/com/acp_module_test.lua`（席ごと、受信灯、121.5、pilot と copilot の写像、航法、音量）。X-Plane：`s212_acp`。
