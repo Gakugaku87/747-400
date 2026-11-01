@@ -171,6 +171,10 @@ B747DR_fcu_te_mode              = deferred_dataref("laminar/B747/flt_ctrls/fcu/t
 B747DR_fcu_le_mode              = deferred_dataref("laminar/B747/flt_ctrls/fcu/le_mode", "array[3]")
 B747DR_fcu_te_moving            = deferred_dataref("laminar/B747/flt_ctrls/fcu/te_moving", "number")
 B747DR_fcu_te_down              = deferred_dataref("laminar/B747/flt_ctrls/fcu/te_down", "number")
+-- the flaps' position in the detents' numbers (UP 0, 1, 5, 10, 20, 25, 30)
+-- from the indication: for the speed tape's minimum and maximum speeds and
+-- >CONFIG FLAPS (X-Plane's wing flap angles differ: notes/AERO.md §3.12)
+B747DR_fcu_flap_pos             = deferred_dataref("laminar/B747/flt_ctrls/fcu/flap_pos", "number")
 -- failures X-Plane does not have (1 failed): the FCUs L, C, R; the TE
 -- groups' (IB, OB) hydraulic and electric drives and a broken drive shaft
 -- (the left side stuck: asymmetry); the LE groups' (inboard, midspan,

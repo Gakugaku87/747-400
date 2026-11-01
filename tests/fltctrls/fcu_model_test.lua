@@ -295,4 +295,33 @@ do
     T.check(not out.moving and out.show, "shown, mark green")
 end
 
+-- the flaps' position in the detents' numbers (out.pos): the speed tape's
+-- speeds and >CONFIG FLAPS go by it, not by X-Plane's wing flap angles (the
+-- lift correction: notes/AERO.md §3.12)
+do
+    T.equal(M.detent_pos(0), 0, "pos: UP 0")
+    local want = {1, 5, 10, 20, 25, 30}
+    for k = 1, 6 do T.near(M.detent_pos(k / 6), want[k], 1e-9, "pos: mark " .. k .. " is " .. want[k]) end
+    T.near(M.detent_pos(4.5 / 6), 22.5, 1e-9, "pos: halfway between 20 and 25")
+    T.equal(M.detent_pos(-0.1), 0, "pos: not below UP")
+    T.equal(M.detent_pos(1.2), 30, "pos: not beyond 30")
+    local s, inp = M.new(), M.inputs()
+    local out = run(s, inp, 1)
+    T.equal(out.pos, 0, "all up: 0")
+    inp.lever = 1
+    out = run(s, inp, 4)
+    T.near(out.pos, out.slat_a, 1e-6, "lever 1, group A on its way: its ratio (0 .. 1)")
+    out = run(s, inp, 6)
+    T.near(out.pos, 1, 1e-6, "flaps 1 (the TE up, group A out): 1")
+    for _, c in ipairs({{2, 5}, {3, 10}, {4, 20}, {5, 25}, {6, 30}}) do
+        inp.lever = c[1]
+        out = run(s, inp, PRI_S)
+        T.near(out.pos, c[2], 1e-6, "lever " .. c[2] .. ": " .. c[2])
+    end
+    inp.lever = 5
+    out = run(s, inp, 4 / M.TE_PRI_DEG_S)
+    T.near(out.te_deg[1], 26, 0.3, "30 to 25, halfway: the panels near 26 degrees")
+    T.near(out.pos, 27.5, 0.7, "halfway between 30 and 25")
+end
+
 T.done()

@@ -11,7 +11,7 @@ local M = dofile("plugins/xtlua_keysystems/scripts/B747.60.xt.fltInst/B747.60.mi
 
 local function run(set)
     local s, inp = M.new(), M.inputs()
-    inp.weight_kg, inp.alt_ft, inp.flap_deg, inp.nz, inp.air = 300000, 10000, 0, 1, true
+    inp.weight_kg, inp.alt_ft, inp.flap_pos, inp.nz, inp.air = 300000, 10000, 0, 1, true
     inp.vref30, inp.vmax, inp.ra_ft = 157, 365, 5000
     for k, v in pairs(set or {}) do inp[k] = v end
     local out = M.update(s, inp, 10)        -- a long step settles the smoothing
@@ -32,34 +32,34 @@ local FCTM = {          -- flaps: {weight t, kt}
 }
 for flap, pts in pairs(FCTM) do
     for _, p in ipairs(pts) do
-        local out = run({flap_deg = flap, weight_kg = p[1] * 1000})
+        local out = run({flap_pos = flap, weight_kg = p[1] * 1000})
         T.near(out.vss, p[2], 1.1, string.format("flaps %d, %d t: the FCTM's %.1f kt", flap, p[1], p[2]))
     end
 end
 -- flaps 25: VREF25 / 1.23 at 10,000 ft times the flaps 20-30 ratio (estimate)
-local v20, v25, v30 = run({flap_deg = 20}).vss, run({flap_deg = 25}).vss, run({flap_deg = 30}).vss
+local v20, v25, v30 = run({flap_pos = 20}).vss, run({flap_pos = 25}).vss, run({flap_pos = 30}).vss
 T.check(v25 < v20 and v25 > v30, "flaps 25 between 20 and 30 (" .. v25 .. ")")
 T.near(v25, (164 + 2.5) / 1.23 * 1.04, 1.0, "flaps 25 at 300 t")
 -- between the detents by the flap angle
-local v10, v15 = run({flap_deg = 10}).vss, run({flap_deg = 15}).vss
+local v10, v15 = run({flap_pos = 10}).vss, run({flap_pos = 15}).vss
 T.near(v15, (v10 + v20) / 2, 0.3, "15 deg: halfway between 10 and 20")
 -- a lower altitude: lower (Mach), like VREF's 1 kt per 4,000 ft (FCOM PI.10.2)
-local v30sl = run({flap_deg = 30, alt_ft = 0}).vss
+local v30sl = run({flap_pos = 30, alt_ft = 0}).vss
 T.check(v30sl < v30 and v30 - v30sl < 3, "flaps 30 at sea level 0-3 kt lower (" .. v30 - v30sl .. ")")
 
 -- the load factor raises the minimum speed (about the square root at low Mach)
-local v1 = run({flap_deg = 30}).vss
-local v13 = run({flap_deg = 30, nz = 1.3}).vss
+local v1 = run({flap_pos = 30}).vss
+local v13 = run({flap_pos = 30, nz = 1.3}).vss
 T.near(v13 / v1, math.sqrt(1.3), 0.015, "1.3 g: about sqrt(1.3) higher (the charts' Mach trend adds a little)")
 
 -- the minimum maneuvering speed (FCOM p.973)
-local out = run({flap_deg = 20})
-T.near(out.vmin_man, run({flap_deg = 20, nz = 1.3}).vss, 0.05, "flaps down: 1.3 g to the stick shaker")
-out = run({flap_deg = 0, vref30 = 157})
+local out = run({flap_pos = 20})
+T.near(out.vmin_man, run({flap_pos = 20, nz = 1.3}).vss, 0.05, "flaps down: 1.3 g to the stick shaker")
+out = run({flap_pos = 0, vref30 = 157})
 T.near(out.vmin_man, 237, 1e-9, "flaps up below 20,200 ft: VREF30 + 80 when less than 1.3 g to the shaker")
-out = run({flap_deg = 0, vref30 = 170})
-T.near(out.vmin_man, run({flap_deg = 0, nz = 1.3}).vss, 0.05, "flaps up: 1.3 g to the shaker when less than VREF30 + 80")
-out = run({flap_deg = 0, vref30 = 157, alt_ft = 25000})
+out = run({flap_pos = 0, vref30 = 170})
+T.near(out.vmin_man, run({flap_pos = 0, nz = 1.3}).vss, 0.05, "flaps up: 1.3 g to the shaker when less than VREF30 + 80")
+out = run({flap_pos = 0, vref30 = 157, alt_ft = 25000})
 T.check(out.vmin_man > 237 + 5, "above 20,200 ft: 1.3 g to low speed buffet, no VREF30 + 80 (" .. out.vmin_man .. ")")
 
 -- the buffet onset: the FCOM's maximum operating altitudes (PI.11.1) put
@@ -92,15 +92,15 @@ T.check(o12.vmin_man < o13.vmin_man - 1, "1.20 g above 20,200 ft: the minimum ma
     .. o12.vmin_man .. " < " .. o13.vmin_man .. ")")
 T.check(o12.vmax_man > o13.vmax_man + 1, "1.20 g: the maximum maneuvering speed higher ("
     .. o12.vmax_man .. " > " .. o13.vmax_man .. ")")
-T.near(run({flap_deg = 0, vref30 = 170, margin = 1.2}).vmin_man, run({flap_deg = 0, vref30 = 170}).vmin_man, 1e-9,
+T.near(run({flap_pos = 0, vref30 = 170, margin = 1.2}).vmin_man, run({flap_pos = 0, vref30 = 170}).vmin_man, 1e-9,
     "below 20,200 ft: 1.3 g to the shaker whatever the preset")
-T.near(run({flap_deg = 20, alt_ft = 25000, margin = 1.2}).vmin_man, run({flap_deg = 20, alt_ft = 25000}).vmin_man, 1e-9,
+T.near(run({flap_pos = 20, alt_ft = 25000, margin = 1.2}).vmin_man, run({flap_pos = 20, alt_ft = 25000}).vmin_man, 1e-9,
     "flaps down: 1.3 g to the shaker whatever the preset")
 
 -- the stick shaker: the lift needed above the limit at the present Mach
-local vss = run({flap_deg = 30}).vss
+local vss = run({flap_pos = 30}).vss
 local s, inp
-out, s, inp = run({flap_deg = 30, mach = M.cas_to_mach(vss + 2, M.delta(10000))})
+out, s, inp = run({flap_pos = 30, mach = M.cas_to_mach(vss + 2, M.delta(10000))})
 T.check(not out.shaker, "2 kt above the shaker speed: no shaker")
 inp.mach = M.cas_to_mach(vss - 1, M.delta(10000))
 out = M.update(s, inp, 1)
@@ -124,7 +124,7 @@ T.check(out.shaker, "5 kt above at 1.3 g: the shaker (the angle of attack rises 
 
 -- AIRSPEED LOW and the amber box: below the minimum maneuvering speed with
 -- its band shown, above 100 ft RA
-out, s, inp = run({flap_deg = 20, show_mins = true})
+out, s, inp = run({flap_pos = 20, show_mins = true})
 inp.cas = out.vmin_man - 1
 T.check(M.update(s, inp, 1).airspeed_low, "below the minimum maneuvering speed: AIRSPEED LOW")
 inp.cas = out.vmin_man + 1
@@ -137,7 +137,7 @@ T.check(not M.update(s, inp, 1).airspeed_low, "below 100 ft RA: none")
 -- the pitch limit indication (step 4c; FCOM p.975: the stick shaker point,
 -- 109 with the flaps not up): degrees of angle of attack to the shaker
 local d10 = M.delta(10000)
-out, s, inp = run({flap_deg = 20})
+out, s, inp = run({flap_pos = 20})
 local vss20 = out.vss
 inp.cas = vss20 * 1.3
 inp.mach = M.cas_to_mach(inp.cas, d10)
@@ -156,11 +156,11 @@ inp.nz, inp.cas = 1.3, vss20 * math.sqrt(1.3)
 inp.mach = M.cas_to_mach(inp.cas, d10)
 out = M.update(s, inp, 10)
 T.near(out.pli_deg, 0, 0.5, "1.3 g at sqrt(1.3) Vss: at the airplane symbol (the load factor counts)")
-out, s, inp = run({flap_deg = 0})
+out, s, inp = run({flap_pos = 0})
 inp.cas = out.vss * 1.3
 inp.mach = M.cas_to_mach(inp.cas, d10)
 T.check(not M.update(s, inp, 10).show_pli, "flaps up: no PLI (109)")
-out, s, inp = run({flap_deg = 20, air = false, alt_ft = 0, alpha_deg = 0})
+out, s, inp = run({flap_pos = 20, air = false, alt_ft = 0, alpha_deg = 0})
 inp.cas = 120
 inp.mach = M.cas_to_mach(120, M.delta(0))
 out = M.update(s, inp, 1)

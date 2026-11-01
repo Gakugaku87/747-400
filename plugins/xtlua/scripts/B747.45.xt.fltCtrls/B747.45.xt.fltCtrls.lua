@@ -124,7 +124,7 @@ simDR_flap_deploy_ratio         = find_dataref("laminar/B747/cablecontrols/flap_
 simDR_yaw_damper_on             = find_dataref("sim/cockpit2/switches/yaw_damper_on")
 simDR_gear_vert_defl            = find_dataref("sim/flightmodel2/gear/tire_vertical_deflection_mtr")
 simDR_gear_deploy_ratio         = find_dataref("sim/flightmodel2/gear/deploy_ratio")
-simDR_wing_flap1_deg            = find_dataref("sim/flightmodel2/wing/flap1_deg")
+B747DR_cfg_flap_pos             = find_dataref("laminar/B747/flt_ctrls/fcu/flap_pos")
 B747DR_airspeed_flapsRef        = find_dataref("laminar/B747/airspeed/flapsRef")
 simDR_ind_airspeed_kts_pilot    = find_dataref("laminar/B747/gauges/indicators/airspeed_kts_pilot")
 
@@ -795,18 +795,21 @@ function B747_fltCtrols_EICAS_msg()
         if B747DR_sb_thrust_lever[i] < 0.05 then any_thrust_lever_closed = 1 end
     end
 
-    -- >CONFIG FLAPS
+    -- >CONFIG FLAPS, by the flaps' position in the detents' numbers (the
+    -- FCU's: X-Plane's wing flap angle is not the flaps' since the lift
+    -- correction, notes/AERO.md §3.12: flaps 10 and 20 are 8.2 and 15.1 there)
+    local flap_pos = B747DR_cfg_flap_pos
     local thRef=96
     local unmatchedConfig=false
     if B747DR_airspeed_flapsRef>0 then
-        if simDR_wing_flap1_deg[0]>B747DR_airspeed_flapsRef+0.05 or simDR_wing_flap1_deg[0]<B747DR_airspeed_flapsRef-0.05 then
+        if flap_pos>B747DR_airspeed_flapsRef+0.05 or flap_pos<B747DR_airspeed_flapsRef-0.05 then
             unmatchedConfig=true
         end
         thRef=86
     end
     
 
-    if (simDR_wing_flap1_deg[0] < 9.95 or simDR_wing_flap1_deg[0] > 20.05 or unmatchedConfig==true)
+    if (flap_pos < 9.95 or flap_pos > 20.05 or unmatchedConfig==true)
         and simDR_all_wheels_on_ground == 1
         and simDR_ind_airspeed_kts_pilot < B747DR_airspeed_V1
         and num_fuel_ctrl_sw_on >= 3
