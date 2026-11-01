@@ -297,3 +297,33 @@ GAP ID 接頭辞：`COM`。2026-10-23 調査。コード・acf・obj は変更�
 7. 資料に記載なし：VHF C・VHF R・中央/右 RTP・observer の interphone・ACARS MU・SATCOM の電源バス、OFF 中の RTP 表示、送信選択を外したとき自動で入った受信が切れるか、抑止の解除後にチャイムが鳴るか、VHF/HF の周波数範囲、電源投入時の RTP と無線機の状態、DATA LINK の VOICE の意味、109 の 8.33 kHz の可否（シムは 8.33 kHz のコマンドを使う）。
 8. 資料の食い違い（採った側）：チャイムの音（FCOM「Hi Chime」/ ATA31 の low chime。音は FMOD の範囲で、ロジックは同じ）、抑止の区間（FCOM 400 ft・75 kt を採用 / ATA 800 ft・接地）、CALL の解除（FCOM「MIC/INTERPHONE スイッチ」、ATA は SELCAL は INT を除く PTT・FLT は INT でも可。ATA の区別を採る）、offside の条件 (c) は 405 だけ。
 9. AutoATC を使わない利用者に「ACARS NO COMM」の代わりに >DATALINK LOST を常時出すのか、ACARS 未装備として何も出さないのか（利用者の判断）。
+
+## 10. 段取り（2026-11-01：7-1 通信）
+
+§8 のとおり com の中身を作り直す。INTERFACES.tsv の dataref とコマンドの名前と意味は保つ。段に分ける。
+
+| 段 | 中身 | GAP |
+|---|---|---|
+| 7-1a | 無線機と RTP：VHF L/C/R と HF L/R の active・standby（VHF C のデータモード、HF の AM/USB）、RTP の選択・OFF・offside 灯・窓とノブ・transfer。VHF L/R は X-Plane の COM1/COM2 のまま、VHF C と HF は Lua の中の無線機。RTP の窓に VHF C・HF の周波数と ACARS（カスタム acf のパネル計器）。COM1/2 の通電は電源の母線で | COM-01・03・04・11・12 |
+| 7-1b | ACP の席：席ごとの送信選択・受信・音量、X-Plane の pilot/copilot の audio panel への写像、PTT（R/T・INT）、航法受信の音声、121.5 | COM-02・06・07・13・14 |
+| 7-1c | CALL 灯とチャイム、通信の EICAS、電源 | COM-05・08・09・10 |
+
+## 11. 7-1a（2026-11-01）
+
+- 無線機と RTP を `B747.15.radio_model.lua`（X-Plane なしの純関数）で持ち、グルー `B747.15.xt.rtp.lua`（com モジュールが dofile）が RTP のコマンド・灯・窓を受け持つ。前の RTP の処理（3 枚 × 13 のハンドラ、`B747_lcd_display_status`・`B747_radio_sel_swap`、約 600 行）を置き換えた。
+- 無線機（FCOM p.714–715）：
+  - VHF L・R は X-Plane の COM1・COM2（周波数は X-Plane の dataref、ノブと transfer は X-Plane のコマンド）。109 は 25 kHz、570 は 8.33 kHz（FCOM p.714 の「405, 570」。エンジン型式で選ぶ）。
+  - VHF C と HF L・R はモデルの無線機（`laminar/B747/comm/vhf_C|hf_L|hf_R/active_khz`・`standby_khz`、HF の `am`）。音は出ない（X-Plane に COM3 が無い：§6.1）。HF の範囲 2–29.999 MHz・1 kHz 刻みは推定。VHF C の刻みは 25 kHz（570 も：簡略化）。
+  - VHF C は通常データ（ACARS）で、ACTIVE 窓に ACARS（109）。transfer で音声の周波数と入れ替わり、STANDBY 窓に ACARS が出る（FCOM p.686–687）。MHz のノブを 118 の下へ回すと STANDBY が ACARS（推定。資料は transfer の後だけを書く）。
+- RTP（FCOM p.685–688）：
+  - 押した無線機を選び、その active・standby を窓に出す。どの RTP もどの無線機も選べる。無線機は表示に関係なく動き続ける。
+  - offside 灯：本来の組でない無線機を選んでいる、または本来の組の無線機を他の RTP が選んでいる（L：VHF L・HF L、C：VHF C、R：VHF R・HF R）。405 の「他の RTP が OFF」は 109 に無い。
+  - OFF：無線機から切り離す（選択もノブも効かない）。窓は消す（推定：資料に記載なし）。前は OFF でも一部のノブが同調した（COM-12）。
+  - AM スイッチは選んだ HF の AM・USB の切り替え（前は無線機の選択として扱い、HF の選択が外れた：COM-04）。AM 灯は選んだ HF が AM のとき。
+  - ノブの向き：前は右の RTP の内側のノブを上に保持すると下がった（COM-11）。
+  - 電源：左の RTP は main battery bus（FCOM p.819）、中央・右は資料に記載なし（DC bus 1・2 と推定）。電源が無ければ窓と灯を消す。
+- X-Plane の COM1・COM2 の通電：VHF L は main battery bus（FCOM p.819）、VHF R は DC bus 2（推定）。前はどれかの RTP が表示しているときだけ通電していた（COM-01）。
+- 窓（カスタム acf のパネル計器を 23 個足した。手順：バックアップ `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261101_before_rtp_windows`）：
+  - 3 枚の RTP の ACTIVE・STANDBY の窓それぞれに、VHF C・HF L・HF R の周波数（COM1 の窓と同じ LED、kHz/1000）と ACARS の絵（中央の ACTIVE 窓の既存のものと同じ画像と位置のずらし）。
+  - ACTIVE 窓は `rtp_*/lcd_to_display`（0 COM1、1 COM2、2 VHF C、3 HF L、4 HF R、98 ACARS、90 空白）、STANDBY 窓は新しい `rtp_*/stby_show`（同じ値）で出し分ける。前の INOP の絵（99）は出なくなった（計器は残す）。
+- 試験：`tests/com/radio_model_test.lua`（選択、offside、AM、ノブと transfer、VHF C のデータと音声、OFF、電源）、`tests/com/rtp_module_test.lua`（コマンドから窓と灯、X-Plane のコマンド、109 と 570 の刻み、COM1/2 の通電）。

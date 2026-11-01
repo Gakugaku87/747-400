@@ -170036,6 +170036,75 @@ GROUP Radio Ctrl Panel L
       CLICK_DX 0
       CLICK_DY 0
 
+    gen_LED VHF C
+      POS 329.500000 1205.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/vhf_C/standby_khz
+      SHOW_EQUAL 2.000000 laminar/B747/comm/rtp_L/stby_show
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_LED HF L
+      POS 329.500000 1205.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/hf_L/standby_khz
+      SHOW_EQUAL 3.000000 laminar/B747/comm/rtp_L/stby_show
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_LED HF R
+      POS 329.500000 1205.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/hf_R/standby_khz
+      SHOW_EQUAL 4.000000 laminar/B747/comm/rtp_L/stby_show
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_rotary ACARS
+      POS 348.000000 1207.500000
+      IMAGE Radios/FreqLCD_ACARS
+      DATAREF 
+      SHOW_EQUAL 98.000000 laminar/B747/comm/rtp_L/stby_show
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1.000000 1.000000
+      DIGITS 1
+      ROTARY_TYPE NO_CLICK
+      CLICK_RADIUS 0.000000
+      CLICK_RADIUS_DY 0.000000
+      OFFSET 0.000000
+      STEP1 1.000000
+      STEP2 1.000000
+      CURSOR DEFAULT
+      CLICK_DX 0
+      CLICK_DY 0
+
   END_GROUP
   GROUP Active Frequencies
     gen_LED COM1
@@ -170075,6 +170144,75 @@ GROUP Radio Ctrl Panel L
       IMAGE Radios/FreqLCD_INOP
       DATAREF 
       SHOW_EQUAL 99.000000 laminar/B747/comm/rtp_L/lcd_to_display
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1.000000 1.000000
+      DIGITS 1
+      ROTARY_TYPE NO_CLICK
+      CLICK_RADIUS 0.000000
+      CLICK_RADIUS_DY 0.000000
+      OFFSET 0.000000
+      STEP1 1.000000
+      STEP2 1.000000
+      CURSOR DEFAULT
+      CLICK_DX 0
+      CLICK_DY 0
+
+    gen_LED VHF C
+      POS 109.500000 1205.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/vhf_C/active_khz
+      SHOW_EQUAL 2.000000 laminar/B747/comm/rtp_L/lcd_to_display
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_LED HF L
+      POS 109.500000 1205.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/hf_L/active_khz
+      SHOW_EQUAL 3.000000 laminar/B747/comm/rtp_L/lcd_to_display
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_LED HF R
+      POS 109.500000 1205.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/hf_R/active_khz
+      SHOW_EQUAL 4.000000 laminar/B747/comm/rtp_L/lcd_to_display
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_rotary ACARS
+      POS 128.000000 1207.500000
+      IMAGE Radios/FreqLCD_ACARS
+      DATAREF 
+      SHOW_EQUAL 98.000000 laminar/B747/comm/rtp_L/lcd_to_display
       LIGHT_MODE GLASS_AUTO
       LIGHT_RHEOSTAT 15
       BUS_SRC 4
@@ -170132,6 +170270,75 @@ GROUP Radio Ctrl Panel C
       IMAGE Radios/FreqLCD_INOP
       DATAREF 
       SHOW_EQUAL 99.000000 laminar/B747/comm/rtp_C/lcd_to_display
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1.000000 1.000000
+      DIGITS 1
+      ROTARY_TYPE NO_CLICK
+      CLICK_RADIUS 0.000000
+      CLICK_RADIUS_DY 0.000000
+      OFFSET 0.000000
+      STEP1 1.000000
+      STEP2 1.000000
+      CURSOR DEFAULT
+      CLICK_DX 0
+      CLICK_DY 0
+
+    gen_LED VHF C
+      POS 549.500000 1147.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/vhf_C/standby_khz
+      SHOW_EQUAL 2.000000 laminar/B747/comm/rtp_C/stby_show
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_LED HF L
+      POS 549.500000 1147.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/hf_L/standby_khz
+      SHOW_EQUAL 3.000000 laminar/B747/comm/rtp_C/stby_show
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_LED HF R
+      POS 549.500000 1147.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/hf_R/standby_khz
+      SHOW_EQUAL 4.000000 laminar/B747/comm/rtp_C/stby_show
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_rotary ACARS
+      POS 568.000000 1149.500000
+      IMAGE Radios/FreqLCD_ACARS
+      DATAREF 
+      SHOW_EQUAL 98.000000 laminar/B747/comm/rtp_C/stby_show
       LIGHT_MODE GLASS_AUTO
       LIGHT_RHEOSTAT 15
       BUS_SRC 4
@@ -170224,6 +170431,54 @@ GROUP Radio Ctrl Panel C
       CLICK_DX 0
       CLICK_DY 0
 
+    gen_LED VHF C
+      POS 329.500000 1147.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/vhf_C/active_khz
+      SHOW_EQUAL 2.000000 laminar/B747/comm/rtp_C/lcd_to_display
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_LED HF L
+      POS 329.500000 1147.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/hf_L/active_khz
+      SHOW_EQUAL 3.000000 laminar/B747/comm/rtp_C/lcd_to_display
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_LED HF R
+      POS 329.500000 1147.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/hf_R/active_khz
+      SHOW_EQUAL 4.000000 laminar/B747/comm/rtp_C/lcd_to_display
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
   END_GROUP
 END_GROUP
 GROUP Radio Ctrl Panel R
@@ -170281,6 +170536,75 @@ GROUP Radio Ctrl Panel R
       CLICK_DX 0
       CLICK_DY 0
 
+    gen_LED VHF C
+      POS 109.500000 1147.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/vhf_C/standby_khz
+      SHOW_EQUAL 2.000000 laminar/B747/comm/rtp_R/stby_show
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_LED HF L
+      POS 109.500000 1147.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/hf_L/standby_khz
+      SHOW_EQUAL 3.000000 laminar/B747/comm/rtp_R/stby_show
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_LED HF R
+      POS 109.500000 1147.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/hf_R/standby_khz
+      SHOW_EQUAL 4.000000 laminar/B747/comm/rtp_R/stby_show
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_rotary ACARS
+      POS 128.000000 1149.500000
+      IMAGE Radios/FreqLCD_ACARS
+      DATAREF 
+      SHOW_EQUAL 98.000000 laminar/B747/comm/rtp_R/stby_show
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1.000000 1.000000
+      DIGITS 1
+      ROTARY_TYPE NO_CLICK
+      CLICK_RADIUS 0.000000
+      CLICK_RADIUS_DY 0.000000
+      OFFSET 0.000000
+      STEP1 1.000000
+      STEP2 1.000000
+      CURSOR DEFAULT
+      CLICK_DX 0
+      CLICK_DY 0
+
   END_GROUP
   GROUP Active Frequencies
     gen_LED COM1
@@ -170320,6 +170644,75 @@ GROUP Radio Ctrl Panel R
       IMAGE Radios/FreqLCD_INOP
       DATAREF 
       SHOW_EQUAL 99.000000 laminar/B747/comm/rtp_R/lcd_to_display
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1.000000 1.000000
+      DIGITS 1
+      ROTARY_TYPE NO_CLICK
+      CLICK_RADIUS 0.000000
+      CLICK_RADIUS_DY 0.000000
+      OFFSET 0.000000
+      STEP1 1.000000
+      STEP2 1.000000
+      CURSOR DEFAULT
+      CLICK_DX 0
+      CLICK_DY 0
+
+    gen_LED VHF C
+      POS 549.500000 1205.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/vhf_C/active_khz
+      SHOW_EQUAL 2.000000 laminar/B747/comm/rtp_R/lcd_to_display
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_LED HF L
+      POS 549.500000 1205.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/hf_L/active_khz
+      SHOW_EQUAL 3.000000 laminar/B747/comm/rtp_R/lcd_to_display
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_LED HF R
+      POS 549.500000 1205.500000
+      IMAGE Radios/FreqLCD
+      DATAREF laminar/B747/comm/hf_R/active_khz
+      SHOW_EQUAL 4.000000 laminar/B747/comm/rtp_R/lcd_to_display
+      LIGHT_MODE GLASS_AUTO
+      LIGHT_RHEOSTAT 15
+      BUS_SRC 4
+      KEY_FRAME 0.000000 0.000000 1.000000
+      KEY_FRAME 1000.000000 1.000000
+      DIGITS 6
+      DECIMALS 3
+      PERIOD_WIDTH 4
+      LED_ROWS 1
+      ROUNDING ROUND_ROUND
+
+    gen_rotary ACARS
+      POS 568.000000 1207.500000
+      IMAGE Radios/FreqLCD_ACARS
+      DATAREF 
+      SHOW_EQUAL 98.000000 laminar/B747/comm/rtp_R/lcd_to_display
       LIGHT_MODE GLASS_AUTO
       LIGHT_RHEOSTAT 15
       BUS_SRC 4

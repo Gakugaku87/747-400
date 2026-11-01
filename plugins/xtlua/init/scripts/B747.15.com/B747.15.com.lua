@@ -84,6 +84,19 @@ B747DR_rtp_R_hf_R_status            = deferred_dataref("laminar/B747/comm/rtp_R/
 B747DR_rtp_R_freq_MHz_sel_dial_pos  = deferred_dataref("laminar/B747/comm/rtp_R/freq_MHz/sel_dial_pos", "number")
 B747DR_rtp_R_freq_khz_sel_dial_pos  = deferred_dataref("laminar/B747/comm/rtp_R/freq_khz/sel_dial_pos", "number")
 B747DR_rtp_R_lcd_to_display         = deferred_dataref("laminar/B747/comm/rtp_R/lcd_to_display", "number")
+-- (7-1a; notes/ATA-23.md §11) each panel's standby window (lcd_to_display's values),
+-- VHF C's and the HF's frequencies (kHz; VHF C's 0: ACARS) and the HF's AM
+B747DR_rtp_L_stby_show             = deferred_dataref("laminar/B747/comm/rtp_L/stby_show", "number")
+B747DR_rtp_C_stby_show             = deferred_dataref("laminar/B747/comm/rtp_C/stby_show", "number")
+B747DR_rtp_R_stby_show             = deferred_dataref("laminar/B747/comm/rtp_R/stby_show", "number")
+B747DR_com_vhf_C_active_khz         = deferred_dataref("laminar/B747/comm/vhf_C/active_khz", "number")
+B747DR_com_vhf_C_standby_khz        = deferred_dataref("laminar/B747/comm/vhf_C/standby_khz", "number")
+B747DR_com_hf_L_active_khz          = deferred_dataref("laminar/B747/comm/hf_L/active_khz", "number")
+B747DR_com_hf_L_standby_khz         = deferred_dataref("laminar/B747/comm/hf_L/standby_khz", "number")
+B747DR_com_hf_L_am                  = deferred_dataref("laminar/B747/comm/hf_L/am", "number")
+B747DR_com_hf_R_active_khz          = deferred_dataref("laminar/B747/comm/hf_R/active_khz", "number")
+B747DR_com_hf_R_standby_khz         = deferred_dataref("laminar/B747/comm/hf_R/standby_khz", "number")
+B747DR_com_hf_R_am                  = deferred_dataref("laminar/B747/comm/hf_R/am", "number")
 
 
 -- AUDIO PANEL SWITCHES
