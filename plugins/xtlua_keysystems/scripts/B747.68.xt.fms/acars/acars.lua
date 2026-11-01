@@ -495,35 +495,45 @@ acarsSystem.getMessageLog=function(pgNo)
     }
 
     local messageLog=acarsSystem.getLogMessages(pgNo)
+    -- (6-1/6-2 step 12f) a message's fields read safely: a received one is
+    -- XTLua's namespace table, which cannot read a missing key (an ATC
+    -- uplink without "rr" blanked the page)
+    local function fld(m, k)
+      local v = rawget(m, "values")
+      if type(v) == "table" then return v[k] end
+      return rawget(m, k)
+    end
     line = 2
     for i=1,table.getn(messageLog) do
+      local mi=messageLog[i]
+      local mtime=fld(mi,"time") or ""
       --print("M "..i.." "..messageLog[i]["ud"])
       local ln=""
-      if messageLog[i]["ud"]=="U" then
-        if messageLog[i]["rr"]~="N" then
-          if not messageLog[i]["REPLIED"] then
-            retVal.templateSmall[line]=" "..messageLog[i]["time"].."z    REPLY REQUIRED"
+      if fld(mi,"ud")=="U" then
+        if fld(mi,"rr")~="N" then
+          if not fld(mi,"REPLIED") then
+            retVal.templateSmall[line]=" "..mtime.."z    REPLY REQUIRED"
           else
-            retVal.templateSmall[line]=" "..messageLog[i]["time"].."z        REPLY SENT"
+            retVal.templateSmall[line]=" "..mtime.."z        REPLY SENT"
           end
         else
-          if not messageLog[i]["read"] then
-            retVal.templateSmall[line]=" "..messageLog[i]["time"].."z               NEW"
+          if not fld(mi,"read") then
+            retVal.templateSmall[line]=" "..mtime.."z               NEW"
           else
-            retVal.templateSmall[line]=" "..messageLog[i]["time"].."z               OLD"
+            retVal.templateSmall[line]=" "..mtime.."z               OLD"
           end
         end
-        ln="  "..messageLog[i]["title"]
+        ln="  "..(fld(mi,"title") or fld(mi,"msg") or "")
         
       else
         --messageLog[i]["status"]
         local status="             "
-        if messageLog[i]["status"]~=nil then status=messageLog[i]["status"] end
-        retVal.templateSmall[line]=" "..messageLog[i]["time"].."z     "..status --RESPONSE RCVD"
+        if fld(mi,"status")~=nil then status=fld(mi,"status") end
+        retVal.templateSmall[line]=" "..mtime.."z     "..status --RESPONSE RCVD"
         --print("T "..messageLog[i]["msg"])
-        ln="  "..messageLog[i]["msg"]
+        ln="  "..(fld(mi,"msg") or "")
       end
-      retVal.templateSmall[line+1]=messageLog[i]["ud"].."                       "
+      retVal.templateSmall[line+1]=(fld(mi,"ud") or " ").."                       "
       ln=string.sub(ln,1,21)
       local padding=21-string.len(ln)
       if padding<=0 then 
