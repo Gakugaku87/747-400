@@ -174,6 +174,9 @@ B747DR_fms_thrlim_code					= deferred_dataref("laminar/B747/fms/thrlim/code", "n
 -- (step 12c1) PERF FACTORS' MNVR MARGIN (g, 1.20-1.30) for the PFDs'
 -- buffet maneuvering speeds (B747.60.xt.speedtape.lua: FCOM p.969, p.973)
 B747DR_fms_mnvr_margin					= deferred_dataref("laminar/B747/fms/mnvr_margin", "number")
+-- (step 12d1) the ATC uplink's low chime (1 for a second as an unread one
+-- comes: FCOM p.725; the .snd's cockpit chime)
+B747DR_fms_atc_chime					= deferred_dataref("laminar/B747/fms/atc_chime", "number")
 -- (step 9c) the performance data VNAV needs entered: gross weight, cost
 -- index, CRZ ALT (1; else the VNAV switch's PERF/VNAV UNAVAILABLE, FCOM
 -- p.1433)

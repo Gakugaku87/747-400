@@ -3495,6 +3495,53 @@ do
     return nil
   end
 end
+-- (6-1/6-2 step 12d1; notes/ATA-34-61-FMC.md §111) the datalink's EICAS
+-- messages (FCOM p.725, p.775-776): with the FMC's datalink (405, 570:
+-- B747_fms_datalink) ATC MESSAGE for an unread ATC uplink (cpdlc) and a
+-- low chime as one comes (laminar/B747/fms/atc_chime: the .snd's cockpit
+-- chime, an estimate), ACARS MESSAGE for an unread ACARS message (telex);
+-- without it ACARS MESSAGE for any. >DATALINK LOST while the ACARS
+-- provider is not connected after it was (a loss; nothing before the first
+-- connection: estimate), >DATALINK AVAIL for DL_AVAIL_S when it is again
+-- (estimate). No ACARS NO COMM memo (not the FCOM's); >DATALINK SYS never
+-- (no ACARS failure here)
+B747DR_fms_atc_chime=find_dataref("laminar/B747/fms/atc_chime")
+do
+  local DL_AVAIL_S, CHIME_S = 60, 1
+  local MEMO_ACARS, MEMO_NO_COMM, MEMO_ATC = 0, 40, 46
+  local ADV_DL_AVAIL, ADV_DL_LOST = 55, 56
+  local hadOnline, lost, availT = false, false, nil
+  local atcUnreadWas, chimeT = 0, nil
+  local function put(arr, i, v) if arr[i] ~= v then arr[i] = v end end
+  function B747_fms_datalink_eicas(online)
+    local now = simDRTime
+    -- the unread messages
+    local dl = B747_fms_datalink()
+    local acarsNew, atcNew = 0, 0
+    for i = table.getn(acarsSystem.messages.values), 1, -1 do
+      local m = acarsSystem.messages[i]
+      if not m["read"] then
+        if dl and m["type"] == "cpdlc" then atcNew = atcNew + 1 else acarsNew = acarsNew + 1 end
+      end
+    end
+    put(B747DR_CAS_memo_status, MEMO_ACARS, acarsNew > 0 and 1 or 0)
+    put(B747DR_CAS_memo_status, MEMO_ATC, atcNew > 0 and 1 or 0)
+    put(B747DR_CAS_memo_status, MEMO_NO_COMM, 0)
+    if atcNew > atcUnreadWas then chimeT = now end
+    atcUnreadWas = atcNew
+    local chime = (chimeT and now - chimeT < CHIME_S) and 1 or 0
+    if B747DR_fms_atc_chime ~= chime then B747DR_fms_atc_chime = chime end
+    -- the connection
+    if online then
+      if lost then availT = now end
+      hadOnline, lost = true, false
+    elseif hadOnline then
+      lost, availT = true, nil
+    end
+    put(B747DR_CAS_advisory_status, ADV_DL_LOST, lost and 1 or 0)
+    put(B747DR_CAS_advisory_status, ADV_DL_AVAIL, (availT and now - availT < DL_AVAIL_S) and 1 or 0)
+  end
+end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after
 -- a flight (all four's N2 under the ENG FAIL speed: laminar/B747/engines/
@@ -4165,32 +4212,19 @@ function after_physics()
       update_navperf()
       if B747_fms_master_ok() then update_tuning() end
     end
-    if acarsSystem.provider.online() then
-      B747DR_CAS_memo_status[40]=0 --for CAS
+    local acarsOnline=acarsSystem.provider.online()
+    if acarsOnline then
       acars=1 --for radio
       acarsSystem.provider.receive()
 	  acarsSystem.provider.send()
 	  acarsSystem.remote.receive()
 	  --acarsSystem.remote.send()
-      local hasNew=0
-      for i = table.getn(acarsSystem.messages.values), 1, -1 do
-		--local msgRead="true"
-		if not acarsSystem.messages[i]["read"] then 
-			hasNew=1
-			--msgRead="false"
-		end 
-		--print("acars msg "..i.." "..msgRead)
-      end 
-      B747DR_CAS_memo_status[0]=hasNew --ACARS MESSAGE
     else
-      
-      if B747DR_rtp_C_off==0 then
-		B747DR_CAS_memo_status[40]=1 --for CAS
-      else
-		B747DR_CAS_memo_status[40]=0
-      end
       acars=0 --for radio
     end
+    -- (6-1/6-2 step 12d1) the datalink's EICAS messages (before: ACARS
+    -- MESSAGE for any message, the ACARS NO COMM memo offline)
+    B747_fms_datalink_eicas(acarsOnline)
 
 	--Display Waypoint ETA on ND
 	waypoint_eta_display()
