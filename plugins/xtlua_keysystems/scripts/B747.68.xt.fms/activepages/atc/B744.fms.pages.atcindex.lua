@@ -28,8 +28,10 @@ fmsFunctionsDefs["ATCINDEX"]["L4"]={"setpage","ATCLOG"}  -- (6-1/6-2 step 12g1: 
 fmsFunctionsDefs["ATCINDEX"]["L5"]={"setpage","ATCLOGONSTATUS"} 
 fmsFunctionsDefs["ATCINDEX"]["R1"]={"setpage","POSREPORT"}
 fmsFunctionsDefs["ATCINDEX"]["R2"]={"setpage","WHENCANWE"}
-fmsFunctionsDefs["ATCINDEX"]["R4"]={"setpage","ATCVERIFYREQUEST"}
-fmsFunctionsDefs["ATCINDEX"]["R5"]={"setpage","ATCVERIFYREQUEST"}
+-- (6-1/6-2 step 12g2a) the clearance and voice requests' VERIFY REQUEST
+-- (FMSPG p.298-300; before, the ATC REQUEST pages' text)
+fmsFunctionsDefs["ATCINDEX"]["R4"]={"atcindexreq","CLEARANCE"}
+fmsFunctionsDefs["ATCINDEX"]["R5"]={"atcindexreq","VOICE"}
 --[[
 fmsFunctionsDefs["ATCINDEX"]["L1"]={"setpage",""}
 fmsFunctionsDefs["ATCINDEX"]["L2"]={"setpage",""}

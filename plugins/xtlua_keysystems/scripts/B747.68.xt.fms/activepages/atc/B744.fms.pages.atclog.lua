@@ -2,8 +2,8 @@
 -- uplinks and the downlinks sent from here, newest first, five a page
 -- (B747.68.atc_log_model.lua through B747_fms_atc_log_entries): the header
 -- the time (HHMMZ) and the status, the data line the text's first
--- characters and a caret; the right key opens an uplink's page (a
--- downlink's: none yet, step 12g2 on), the left key with DELETE deletes
+-- characters and a caret; the right key opens an uplink's page or a
+-- request's (step 12g2a; a response's: none), the left key with DELETE deletes
 -- the entry; 6L <INDEX, 6R ERASE LOG> (blank without a non-pending entry)
 -- and then CONFIRM> (erases every non-pending one; leaving the page undoes
 -- ERASE LOG). Estimates: no up and down arrows (the CDU's font); the
@@ -67,5 +67,9 @@ function fmsFunctions.atclog(fmsO, value)
   elseif e.up then
     acarsSystem.setCurrentMessage(fmsO.id, e.i)
     fmsFunctions.setpage(fmsO, "ATCUPLINK")
+  elseif e.d.kind == "REQUEST" then
+    -- (step 12g2a) a request's XXXXZ ATC REQUEST (FMSPG p.326)
+    B747_fms_atc_show_request(fmsO.id, e.d)
+    fmsFunctions.setpage(fmsO, "ATCREQUESTLOG")
   end
 end

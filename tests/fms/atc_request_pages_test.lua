@@ -1,0 +1,368 @@
+-- Run from the repository root with LuaJIT: luajit tests/fms/atc_request_pages_test.lua
+-- The ATC request pages (6-1/6-2 step 12g2a; notes/ATA-34-61-FMC.md §116;
+-- FCOM p.736-747; FMSPG p.298-327) in the FMS module as XTLua runs it
+-- (tests/lib/xtlua.lua), AutoATC mocked and logged on: ATC REQUEST and its
+-- four pages (the entries, the selections, STEP AT and CRZ CLB, OFFSET AT
+-- and WEATHER, a position by the database, MSG LIMIT EXCEEDED, NEXT and
+-- PREV around), VERIFY REQUEST (the rows, CONTINUED, the free text, SEND),
+-- the provider's sending as the acknowledgement (XXXXZ ATC REQUEST, the
+-- request erased), ATC's response (<UPLINK, RESPONSE RCVD, the uplink's
+-- <REQUEST, the ATC LOG), CLEARANCE and VOICE, STANDBY and REQUEST
+-- DEFERRED, ABORTED, NO ATC COMM, NO COMM, NO ACK and RESEND>.
+B747_NAVDB_FOLDER = "tests/fms/data/navdb/"
+local T = dofile("tests/lib/check.lua")("atc_request_pages")
+local xtlua = dofile("tests/lib/xtlua.lua")
+
+local types = {["xtlua/loadtoFMS"] = "string", ["autoatc/acars/in"] = "string", ["autoatc/acars/out"] = "string",
+    ["autoatc/cdu"] = "string", ["autoatc/networking/url"] = "string", ["autoatc/networking/data"] = "string",
+    ["autoatc/networking/urlstatus"] = "number", ["autoatc/acars/online"] = "number", ["autoatc/hasMobile"] = "number",
+    ["autoatc/com_power"] = "number", ["autoatc/com_frequency_override"] = "number",
+    ["autoatc/com_frequency_hz_833"] = "number", ["autoatc/com_standby_frequency_hz_833"] = "number",
+    ["autoatc/comChannel"] = "number"}
+for _, cdu in ipairs({"cdu1", "cdu2"}) do
+    for n = 0, 15 do types["sim/cockpit2/radios/indicators/fms_" .. cdu .. "_text_line" .. n] = "string" end
+end
+local rt = xtlua.new{types = types}
+local fms = rt:load("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.xt.fms.lua")
+rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_lbs":2.20462},'
+    .. '"PLANE":{"thrust_ref":"N1","engines":"CF6-80C2-B1F","model":"747-400"},'
+    .. '"FMC":{"INIT":{"active":"","op_program":"TEST","drag_ff":"+0.0/-0.0"}}}')
+rt:set("laminar/B747/newsimconfig", 1)
+rt:set("laminar/B747/engines/type", 1)
+rt:set("sim/aircraft/view/acf_tailnum", "N747BO")
+rt:set("sim/operation/prefs/startup_running", 1)
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("sim/flightmodel/position/latitude", 35)
+rt:set("sim/flightmodel/position/longitude", 140)
+rt:set("sim/flightmodel/weight/m_total", 300000)
+rt:set("sim/flightmodel/weight/m_fuel_total", 80000)
+rt:set("sim/cockpit2/electrical/bus_volts", 0, 28)
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 30000)
+rt:set("sim/cockpit2/clock_timer/zulu_time_hours", 14)
+rt:set("sim/cockpit2/clock_timer/zulu_time_minutes", 30)
+for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
+for _, b in ipairs({"xfr_capt", "xfr_fo", "stby_apu"}) do rt:set("laminar/B747/electrical/bus/" .. b, 1) end
+for i = 0, 2 do
+    rt:set("laminar/B747/irs/nav_valid", i, 1)
+    rt:set("laminar/B747/irs/lat", i, 35)
+    rt:set("laminar/B747/irs/lon", i, 140)
+end
+rt:callout("flight_start")
+for _, cdu in ipairs({"cdu1", "cdu2"}) do
+    for n = 0, 15 do rt:set("sim/cockpit2/radios/indicators/fms_" .. cdu .. "_text_line" .. n, string.rep(" ", 24)) end
+end
+local function frames(seconds)
+    for _ = 1, math.floor(seconds * 30 + 0.5) do rt:frame(1 / 30) end
+end
+frames(4)
+
+local K, D = "laminar/B747/fms1/", "laminar/B747/fms3/"
+local function line(n) return rt:get(string.format("%sLine%02d_L", D, n)) end
+local function small(n) return rt:get(string.format("%sLine%02d_S", D, n)) end
+local function pad() return (line(14):gsub("%s+$", "")) end
+local function key(k) rt:command(K .. k) frames(0.3) end
+local function clear() for _ = 1, 30 do rt:command(K .. "key/clear") end frames(0.1) end
+local function enter(text, lsk)
+    clear()
+    for ch in text:gmatch(".") do
+        local k = (ch == " " and "key/space") or (ch == "/" and "key/slash") or (ch == "." and "key/period")
+            or "alphanum_key/" .. ch
+        rt:command(K .. k)
+    end
+    frames(0.1)
+    key("ls_key/" .. lsk)
+end
+local function delete(lsk)
+    clear()
+    rt:command(K .. "key/del")
+    frames(0.1)
+    key("ls_key/" .. lsk)
+end
+local function page(text) return line(1):find(text, 1, true) ~= nil end
+local function r24(t) return string.rep(" ", 24 - #t) .. t end
+local function l24(t) return t .. string.rep(" ", 24 - #t) end
+local msgs = fms.ns.acarsSystem.messages
+local nid = 100
+local function uplink(text, ref, time)
+    nid = nid + 1
+    msgs[#msgs.values + 1] = {type = "cpdlc", title = string.sub(text, 1, 19), msg = text, read = false,
+        time = time or "14:31", srcID = nid, messageID = nid, REPLIED = false, rt = ref}
+    frames(0.3)
+    return #msgs.values
+end
+local function sentList() return rawget(fms.ns.acarsSystem.messageSendQueue, "values") end
+local function lastSent() local v = sentList() return v[#v] or "" end
+-- the requests in the ATC LOG, newest first
+local function requests()
+    local out = {}
+    for _, e in ipairs(fms.ns.B747_fms_atc_log_entries()) do
+        if not e.up and e.d.kind == "REQUEST" then out[#out + 1] = e end
+    end
+    table.sort(out, function(a, b) return a.seq > b.seq end)
+    return out
+end
+-- ATC INDEX (the ATC key goes to a pending uplink, the LOG, LOGON/STATUS)
+local function atcIndex()
+    key("func_key/crz")
+    for _ = 1, 3 do
+        if page("ATC INDEX") then return end
+        if page("ATC UPLINK") or page("Z ATC REQUEST") then key("ls_key/R6")
+        elseif page("ATC LOG") or page("LOGON/STATUS") then key("ls_key/L6")
+        else return end
+    end
+end
+local function logon()
+    key("func_key/crz")
+    enter("TBC123", "L2")
+    enter("KZAK", "L1")
+    key("ls_key/R1")
+    msgs[#msgs.values + 1] = {type = "cpdlc", title = "LOGON ACCEPTED", msg = "KZAK", read = true, time = "14:20",
+        messageID = 99}
+    frames(0.3)
+    clear()
+end
+
+rt:set("autoatc/acars/online", 1)
+frames(0.3)
+logon()
+T.check(fms.ns.B747_fms_atc_logon().comm, "logged on to KZAK")
+
+-- ATC REQUEST (FCOM p.736-737; FMSPG p.301)
+key("func_key/crz")
+T.check(page("ATC INDEX"), "the ATC key: ATC INDEX")
+key("ls_key/L2")
+T.equal(line(1), "      ATC REQUEST       ", "ATC REQUEST")
+T.equal(small(2), l24(" ALTITUDE"), "ALTITUDE")
+T.equal(line(3), l24("<-----"), "its dashes")
+T.equal(line(5), l24("<---"), "SPEED's")
+T.equal(line(7), l24("<---"), "OFFSET's")
+T.equal(line(9), l24("<ROUTE REQUEST"), "<ROUTE REQUEST")
+T.equal(line(11), l24(""), "nothing selected: no ERASE REQUEST (FMSPG p.303)")
+T.equal(line(13), "<INDEX           VERIFY>", "<INDEX VERIFY>")
+
+-- ATC ALT REQUEST 1/4 (FCOM p.738-739; FMSPG p.306-309)
+enter("FL350", "L1")
+T.check(page("ATC ALT REQUEST"), "an altitude entered: ATC ALT REQUEST with it (FCOM p.737)")
+T.equal(small(1), r24("1/4 "), "1/4")
+T.equal(line(3), l24("FL350"), "FL350")
+T.equal(small(2), " ALTITUDE        REQUEST", "ALTITUDE, REQUEST")
+T.equal(small(3), r24("CRZ CLB>"), "CRZ CLB> small")
+T.equal(small(4), " STEP AT    MAINTAIN OWN", "STEP AT, MAINTAIN OWN")
+T.equal(line(5), l24("-----"), "STEP AT's dashes")
+T.equal(small(5), r24("SEPARATION/VMC>"), "SEPARATION/VMC>")
+T.equal(small(7), r24("PERFORMANCE>"), "PERFORMANCE>")
+T.equal(small(9), "<AT PILOT DISC  WEATHER>", "<AT PILOT DISC, WEATHER>")
+T.equal(line(13), "<REQUEST         VERIFY>", "<REQUEST VERIFY>")
+key("ls_key/R4")
+T.equal(line(9), r24("WEATHER"), "DUE TO WEATHER selected: large (FCOM p.739)")
+T.equal(small(9), l24("<AT PILOT DISC"), "its prompt gone")
+key("ls_key/L4")
+T.equal(line(9), "AT PILOT DISC    WEATHER", "AT PILOT DISC selected (FMSPG p.306)")
+delete("L4")
+T.equal(small(9), l24("<AT PILOT DISC"), "DELETE: deselected")
+enter("1234", "L2")
+T.equal(line(5), l24("1234Z"), "STEP AT a time")
+key("ls_key/R1")
+T.equal(small(3), r24("CRZ CLB>"), "CRZ CLB with STEP AT: not selected (FMSPG p.308)")
+delete("L2")
+T.equal(line(5), l24("-----"), "STEP AT deleted")
+key("ls_key/R1")
+T.equal(line(3), "FL350            CRZ CLB", "CRZ CLB selected")
+enter("1234", "L2")
+T.equal(pad(), "INVALID ENTRY", "STEP AT after CRZ CLB: INVALID ENTRY")
+clear()
+
+-- ATC SPEED REQUEST 2/4 (FMSPG p.309-311)
+key("func_key/next_pg")
+T.equal(line(1), l24(" ATC SPEED REQUEST"), "NEXT: ATC SPEED REQUEST")
+T.equal(small(1), r24("2/4 "), "2/4")
+T.equal(line(3), l24("---"), "SPEED's dashes")
+T.equal(small(6), l24(""), "no speed: no DUE TO")
+enter("350", "L1")
+T.equal(line(3), l24("350"), "IAS")
+T.equal(small(3), l24("   KT IAS"), "KT IAS (FMSPG p.310)")
+enter(".855", "L1")
+T.equal(line(3), l24(".86"), "Mach to the nearest .01")
+enter(".95", "L1")
+T.equal(pad(), "INVALID ENTRY", "Mach over .91: INVALID ENTRY")
+clear()
+
+-- ATC OFFSET REQUEST 3/4 (FMSPG p.312-314)
+key("func_key/next_pg")
+T.equal(line(1), l24(" ATC OFFSET REQUEST"), "ATC OFFSET REQUEST")
+enter("L10", "L1")
+T.equal(line(3), l24("L10"), "L10")
+T.equal(small(3), l24("   NM"), "NM small")
+T.equal(small(4), l24(" OFFSET AT"), "OFFSET AT")
+T.equal(line(5), l24("-----"), "its dashes")
+T.equal(small(9), r24("WEATHER>"), "DUE TO WEATHER>")
+key("ls_key/R4")
+T.equal(line(9), r24("WEATHER"), "WEATHER selected")
+T.equal(small(4) .. line(5), l24("") .. l24(""), "with WEATHER: no OFFSET AT (FMSPG p.313)")
+delete("R4")
+enter("XYZZY", "L2")
+T.equal(pad(), "NOT IN DATA BASE", "a position not in the database")
+clear()
+enter("BRAVO", "L2")
+T.equal(line(5), l24("BRAVO"), "OFFSET AT a fix")
+T.equal(small(9), l24(""), "with OFFSET AT: no WEATHER")
+
+-- ATC ROUTE REQUEST 4/4 (FMSPG p.316-318)
+key("func_key/next_pg")
+T.equal(line(1), l24(" ATC ROUTE REQUEST"), "ATC ROUTE REQUEST")
+T.equal(small(2), " DIRECT TO       HEADING", "DIRECT TO, HEADING")
+T.equal(line(3), "-----                ---", "the dashes")
+T.equal(small(4), r24("GROUND TRACK"), "GROUND TRACK")
+enter("ALPHA", "L1")
+T.check(page("SELECT DESIRED"), "two ALPHAs: SELECT DESIRED WPT (FMSPG p.316)")
+key("ls_key/L1")
+T.check(page("ATC ROUTE REQUEST"), "back")
+T.equal(line(3), "ALPHA                ---", "DIRECT TO ALPHA")
+enter("270", "R1")
+T.equal(pad(), "MSG LIMIT EXCEEDED", "a sixth element: MSG LIMIT EXCEEDED (FMSPG p.298)")
+T.equal(line(3), "ALPHA                ---", "not taken")
+clear()
+key("func_key/next_pg")
+T.check(page("ATC ALT REQUEST"), "NEXT on 4/4: 1/4")
+key("func_key/prev_pg")
+T.check(page("ATC ROUTE REQUEST"), "PREV on 1/4: 4/4")
+key("ls_key/L6")
+T.equal(line(3), l24("<FL350"), "ATC REQUEST: the altitude")
+T.equal(line(5), l24("<.86"), "the speed")
+T.equal(line(7), l24("<L10"), "the offset")
+T.equal(small(7), l24("    NM"), "NM")
+T.equal(line(11), l24("<ERASE REQUEST"), "<ERASE REQUEST")
+
+-- VERIFY REQUEST (FCOM p.744-745; FMSPG p.324-326)
+key("ls_key/R6")
+T.equal(line(1), l24("   VERIFY REQUEST"), "VERIFY REQUEST")
+T.equal(small(1), r24("1/2 "), "two pages")
+T.equal(small(2) .. "|" .. line(3), l24(" AT") .. "|" .. l24("BRAVO"), "AT BRAVO")
+T.equal(small(4) .. "|" .. line(5), l24(" REQUEST OFFSET") .. "|" .. l24("L10"), "REQUEST OFFSET L10")
+T.equal(small(5), l24("   NM"), "NM")
+T.equal(small(6) .. "|" .. line(7), "/REQUEST CRUISE CLIMB TO|" .. l24("FL350"), "/REQUEST CRUISE CLIMB TO FL350")
+T.equal(small(8) .. "|" .. line(9), l24(" /DUE TO") .. "|" .. l24("WEATHER"), "/DUE TO WEATHER")
+T.equal(small(10) .. "|" .. line(11), l24(" /REQUEST") .. "|" .. l24(".86"), "/REQUEST .86, no SEND before the last page")
+T.equal(small(12), "-------CONTINUED--------", "CONTINUED (FCOM p.744)")
+T.equal(line(13), l24("<REQUEST"), "<REQUEST (from the ATC REQUEST pages)")
+key("func_key/next_pg")
+T.equal(small(2) .. "|" .. line(3), l24(" /REQUEST DIRECT TO") .. "|" .. l24("ALPHA"), "/REQUEST DIRECT TO ALPHA")
+T.equal(small(4) .. "|" .. line(5), l24(" /FREE TEXT") .. "|" .. l24("<"), "/FREE TEXT")
+T.equal(line(9), l24("<"), "free text to line 4")
+T.equal(small(10), r24("REQUEST"), "REQUEST")
+T.equal(line(11), r24("SEND>"), "SEND> on the last page")
+T.equal(small(12), string.rep("-", 24), "the last page: no CONTINUED")
+enter("SMOOTH AIR", "L2")
+T.equal(line(5), l24("SMOOTH AIR"), "free text entered")
+local n0 = #sentList()
+key("ls_key/R5")
+T.equal(#sentList(), n0 + 1, "SEND: a downlink through the provider")
+local sentText = "AT BRAVO REQUEST OFFSET L10NM REQUEST CRUISE CLIMB TO FL350 DUE TO WEATHER REQUEST .86 REQUEST DIRECT TO ALPHA SMOOTH AIR"
+T.check(lastSent():find('"msg":"' .. sentText .. '"', 1, true) and lastSent():find('"RR":"Y"', 1, true),
+    "the request's text, a response required: " .. lastSent())
+local reqID = tonumber(lastSent():match('"messageID":(%d+)'))
+T.equal(line(11), r24("SENDING"), "SENDING")
+T.equal(requests()[1] and requests()[1].status, "SENDING", "its ATC LOG entry SENDING (FCOM p.745)")
+key("func_key/prev_pg")
+key("ls_key/L6")
+key("ls_key/L1")
+T.check(page("ATC REQUEST") and not page("ALT"), "SENDING: ALTITUDE not to be changed (FMSPG p.300)")
+key("ls_key/R6")
+key("func_key/next_pg")
+frames(16)
+T.check(page("1430Z ATC REQUEST"), "the network's acknowledgement: XXXXZ ATC REQUEST (FMSPG p.326)")
+T.equal(small(2), r24("STATUS"), "STATUS")
+T.equal(line(3), r24("OPEN"), "OPEN: a response required (FCOM p.753)")
+T.equal(small(4) .. "|" .. line(5), l24(" AT") .. "|" .. l24("BRAVO"), "the text from line 2 (FCOM p.746)")
+T.equal(small(10) .. "|" .. line(11), l24(" /DUE TO") .. "|" .. l24("WEATHER"), "four lines on page 1")
+T.equal(small(1), r24("1/2 "), "two pages")
+T.equal(line(13), r24("LOG>"), "LOG>")
+key("func_key/crz")
+key("ls_key/L2")
+T.equal(line(3), l24("<-----"), "the request sent: erased (estimate)")
+
+-- ATC's response (FCOM p.746-747, p.759)
+local u = uplink("CLIMB TO AND MAINTAIN FL350", reqID)
+T.equal(requests()[1].status, "RESPONSE RCVD", "answered: RESPONSE RCVD (FCOM p.754)")
+key("func_key/crz")
+T.check(page("ATC UPLINK"), "the ATC key: the uplink")
+T.equal(line(3), "<REQUEST            OPEN", "<REQUEST: the request it answers (FCOM p.759)")
+key("ls_key/L1")
+T.check(page("1430Z ATC REQUEST"), "its XXXXZ ATC REQUEST")
+T.equal(line(3), "<UPLINK    RESPONSE RCVD", "<UPLINK, RESPONSE RCVD (FCOM p.746)")
+key("func_key/next_pg")
+T.equal(small(2) .. "|" .. line(3), l24(" /REQUEST") .. "|" .. l24(".86"), "page 2")
+T.equal(small(6) .. "|" .. line(7), l24(" /FREE TEXT") .. "|" .. l24("SMOOTH AIR"), "the free text sent")
+T.equal(small(8), "---- RESPONSE 1431Z ----", "the response's time after the text (FCOM p.746)")
+key("func_key/prev_pg")
+key("ls_key/L1")
+T.check(page("ATC UPLINK"), "<UPLINK: the uplink")
+key("ls_key/R6")
+T.check(page("ATC LOG"), "LOG>")
+local found = nil
+for n = 3, 11, 2 do
+    if line(n):find("^AT BRAVO REQUEST") then found = n end
+end
+T.check(found, "the request in the ATC LOG")
+if found then
+    T.equal(small(found - 1):sub(12), "RESPONSE RCVD", "its status")
+    key("ls_key/R" .. ((found - 1) / 2))
+    T.check(page("1430Z ATC REQUEST"), "its right key: XXXXZ ATC REQUEST (FMSPG p.326)")
+end
+
+-- CLEARANCE and VOICE (FMSPG p.298-300); STANDBY, REQUEST DEFERRED
+atcIndex()
+key("ls_key/R4")
+T.check(page("VERIFY REQUEST"), "CLEARANCE>: VERIFY REQUEST")
+T.equal(small(2) .. "|" .. line(3), l24(" REQUEST") .. "|" .. l24("CLEARANCE"), "REQUEST CLEARANCE (FMSPG p.299)")
+T.equal(line(5) .. line(7) .. line(9), l24("<") .. l24("<") .. l24("<"), "three free text lines")
+T.equal(line(13), l24("<INDEX"), "<INDEX (FCOM p.745)")
+key("ls_key/L6")
+T.check(page("ATC INDEX"), "<INDEX")
+key("ls_key/R5")
+T.equal(small(2) .. "|" .. line(3), l24(" REQUEST VOICE CONTACT") .. "|" .. l24(""), "REQUEST VOICE CONTACT (FMSPG p.300)")
+key("ls_key/R5")
+T.check(lastSent():find('"msg":"REQUEST VOICE CONTACT"', 1, true), "the voice request sent")
+local voiceID = tonumber(lastSent():match('"messageID":(%d+)'))
+frames(16)
+T.check(page("ATC REQUEST"), "acknowledged: its XXXXZ ATC REQUEST")
+uplink("STANDBY", voiceID)
+T.equal(requests()[1].status, "OPEN", "STANDBY: still OPEN (FCOM p.753)")
+uplink("REQUEST DEFERRED", voiceID)
+T.equal(requests()[1].status, "DEFERRED", "REQUEST DEFERRED: DEFERRED")
+T.check(requests()[1].pending, "pending")
+
+-- ATC COMM ends: the pending ABORTED; NO ATC COMM, NO COMM
+fms.ns.B747_fms_atc_off()
+frames(0.3)
+T.equal(requests()[1].status, "ABORTED", "ATC COMM ended: DEFERRED to ABORTED (FCOM p.754)")
+T.equal(requests()[2] and requests()[2].status, "RESPONSE RCVD", "the answered one stays")
+atcIndex()
+key("ls_key/L2")
+key("ls_key/R6")
+T.equal(line(11), r24("NO ATC COMM"), "no ATC connection: NO ATC COMM (FMSPG p.365)")
+rt:set("autoatc/acars/online", 0)
+frames(0.3)
+T.equal(small(10) .. "|" .. line(11), r24("DATA LINK") .. "|" .. r24("NO COMM"), "DATA LINK NO COMM")
+
+-- NO ACK and RESEND> (FMSPG p.365)
+rt:set("autoatc/acars/online", 1)
+frames(0.3)
+logon()
+atcIndex()
+key("ls_key/L2")
+enter("FL370", "L1")
+key("ls_key/R6")
+key("ls_key/R5")
+local before = #requests()
+rt:set("autoatc/acars/online", 0)
+frames(61)
+T.equal(requests()[1].status, "NO ACK", "no acknowledgement in time: NO ACK (FCOM p.753)")
+T.check(not requests()[1].pending, "non-pending")
+rt:set("autoatc/acars/online", 1)
+frames(0.3)
+T.equal(line(11), r24("RESEND>"), "RESEND> (FMSPG p.365)")
+key("ls_key/R5")
+T.equal(line(11), r24("SENDING"), "RESEND: SENDING")
+T.equal(#requests(), before, "the same ATC LOG entry")
+T.done()

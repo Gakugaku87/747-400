@@ -1942,3 +1942,24 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - ATC LOG のページ（`activepages/atc/B744.fms.pages.atclog.lua`）。ATC INDEX の <LOG、ATC キーの LOG、アップリンクのページの LOG> をこのページへ。
 - 推定：上下の矢印を出さない（CDU の字に無いため）。ダウンリンクは今はここから送った応答だけ（要求・報告は 12g2・12g3 で足す）、その右の LSK はまだどこへも行かない。記録の数の上限と自動の削除は作っていない。
 - 試験：新しい `tests/fms/atc_log_model_test.lua`（13 件：消したものを除く、新しい順、21 文字と 19 文字＋".."、見出しの時刻と状態、ERASE LOG の条件、5 件ずつのページ）、`tests/fms/atc_uplink_pages_test.lua` に 17 件（待ちが多いとき ATC キーで ATC LOG、新しい順、省いた本文と >、時刻と状態、2 ページ、WILCO の応答が SENT のダウンリンク、右の LSK でアップリンクのページと LOG> で戻る、DELETE で 1 件消える、ERASE LOG・CONFIRM、ページを離れると ERASE LOG に戻る、待ちでないものが消え、消すものが無ければ空白）。全 174 本。X-Plane：`s193_atc_uplinks` 6/6（ATC INDEX の <LOG で新しい ATC LOG。起動し直した後の 5 便目）。Log.txt に Lua の誤りなし。
+
+## 116. 12g2 の分け方と 12g2a の実装（2026-11-01：ATC の要求）
+
+- 分け方：12g2（REQUEST）を、12g2a（高度・速度・オフセット・DIRECT TO・HEADING・GROUND TRACK の要求、ATC INDEX の CLEARANCE と VOICE、VERIFY REQUEST、送信、XXXXZ ATC REQUEST）と 12g2b（ROUTE REQUEST の RTE 1・RTE 2 と DEP/ARR）に分ける。WHEN CAN WE の VERIFY REQUEST は 12g3。
+- 前のコード：要求のページは FMS のデータの欄（acarsREQALT など）に書いて読むだけで、入力の確かめが無かった（速度は "." を付けて表示するだけ、高度は上昇か降下かを VERIFY の描画のたびに決めた）。VERIFY REQUEST は描画のたびに共有の送信文 `acarsMessage` に書き、3 台の CDU が毎フレーム描くので、最後に描いた CDU の文が送られた（CDU-34）。ATC INDEX の CLEARANCE> と VOICE> は同じ VERIFY REQUEST（要求のページの文）を開いた。
+- 資料：
+  - FCOM p.736–747：ATC REQUEST（ALTITUDE・SPEED・OFFSET、<ROUTE REQUEST、<ERASE REQUEST、<INDEX、VERIFY>）。ATC ALT/SPEED/OFFSET/ROUTE REQUEST 1/4〜4/4 の欄と選択（押すと大きい字）。VERIFY REQUEST（要素の行と自由文、REQUEST SEND：SENDING、RESEND、DATA LINK の NO COMM、NO ATC COMM。6L は来たページにより REQUEST・INDEX・WHEN CAN WE）。XXXXZ ATC REQUEST（送った時刻、1L <UPLINK、1R STATUS、本文、応答の時刻の行、LOG>）。オフセットは「L（R）XX、または XX だけ」（p.737）。
+  - FMSPG p.298–327：要素は 5 つまで（MSG LIMIT EXCEEDED）。高度の範囲（フィート 0〜25,000、FL030〜最大運用高度、メートル 0〜16,000）、ブロックはフィートか FL。入力の時点の高度との差で水平（150 ft 以内）・CLIMB TO・DESCENT TO・BLOCK の要素を選ぶ。STEP AT は上昇か降下の単一高度で CRZ CLB の前だけ、CRZ CLB は 150 ft より上の単一高度で STEP AT が無いときだけ。高度・速度・オフセットを消すとその理由も消える。速度は IAS 100〜380（10 kt に丸め）か Mach .61〜.91（.01 に丸め）。OFFSET AT と DUE TO WEATHER（WEATHER DEVIATION UP TO）は一方だけ。位置はフィックス・航法援助施設・空港・緯度経度・PBD（重複は SELECT DESIRED WPT）、時刻は hhmm。HEADING・GROUND TRACK は 000〜360。SENDING の間は欄を変えられない。ネットワークの受け取りで VERIFY REQUEST から XXXXZ ATC REQUEST へ。5R の状態の表（p.365：要素が無ければ空白、NO ATC COMM、NO COMM、RESEND>（時間切れで変更なし）、SEND>、SENDING）。図：p.301・306・310・313・324・326、CLEARANCE と VOICE は p.299–300（自由文の行は「<」、要素の後から 4 行目まで、見出し FREE TEXT）。
+  - FCOM p.753–754：ダウンリンクの状態（SENDING、NO ACK、SENT、OPEN、DEFERRED、RESPONSE RCVD、ABORTED）。FCOM p.759：アップリンクのページの 1L <REQUEST（要求への応答のとき）。
+- 作ったもの：
+  - `B747.68.atc_request_model.lua`（新しい純粋なモデル）：要求のデータ（REQUEST・CLEARANCE・VOICE の 3 種）、入力の確かめと丸め、選択と DELETE（従うものも消す）、5 要素の上限、要素の文と行（固定の語は見出しの小さい字、値は大きい字、2 つ目からの要素は "/"）、自由文の行の数、送る文、VERIFY REQUEST と送ったページの行とページ分け。
+  - FMS のつなぎ：要求は FMC に 1 つずつ（どちらの CDU でも同じものを見て変える）。送る文は SEND の時点でデータから組み立てる（CDU-34 の直し）。プロバイダへ cpdlc・RR Y で送り、ATC LOG に記録。ネットワークの受け取りは、プロバイダが実際に送り出したとき（キューは 15 秒に 1 通）。そこで OPEN にし、その要求の VERIFY REQUEST を出している CDU を XXXXZ ATC REQUEST へ、要求のデータは消す。60 秒（ログオンの ACK_S）で受け取りが無ければ NO ACK、変えていなければ RESEND>。ATC の応答（RT が要求の ID）で、STANDBY は OPEN のまま、REQUEST DEFERRED は DEFERRED、ほかは RESPONSE RCVD。ATC COMM の終わりで待ちの要求（SENDING・OPEN・DEFERRED）は ABORTED。
+  - ページ（`activepages/atc/B744.fms.pages.request.lua` を作り直し）：ATC REQUEST、ATC ALT/SPEED/OFFSET/ROUTE REQUEST（NEXT と PREV で回る）、VERIFY REQUEST（CONTINUED、自由文、5R の状態）、XXXXZ ATC REQUEST。ATC INDEX の CLEARANCE> と VOICE> はそれぞれの VERIFY REQUEST（6L <INDEX）。アップリンクのページに 1L <REQUEST、ATC LOG の要求の右の LSK はその XXXXZ ATC REQUEST へ。
+- 推定：
+  - 値の無い要素の行の分け方（AT PILOTS DISCRETION は見出しだけ、MAINTAIN OWN SEPARATION AND VMC は見出し 2 行、WEATHER DEVIATION UP TO は見出し 2 行で値は 2 行目）。ブロックは REQUEST BLOCK と TO の 2 行。
+  - 送る文は要素の語を空白でつないだもの（前の AutoATC 向けの略語 CLB・DES・HDG・TRK はやめた。AutoATC が受け付けるかはこの PC では確かめられない）。速度は IAS が 350KT、Mach が .86。時刻は 1234Z。
+  - ネットワークの受け取りをプロバイダの送り出しとした。送った要求のデータは受け取りで消す。RESEND は同じ ATC LOG の記録を使う。NO ACK の時間はログオンと同じ 60 秒。
+  - 選べないときの CRZ CLB の LSK は何もしない（STEP AT の入力は INVALID ENTRY）。ブロックは低い方が先。自由文は 1 行 24 文字まで、入れた行は「<」を出さない。自由文は 5 要素の数に入れない。
+  - PRINT は出さない（プリンタが無い。アップリンクのページと同じ）。位置は入れた文字のまま送る（緯度経度・PBD も）。
+- まだのもの：RTE 1・RTE 2・DEP/ARR の要求（12g2b）、WHEN CAN WE からの VERIFY REQUEST（12g3）。
+- 試験：新しい `tests/fms/atc_request_model_test.lua`（94 件：入力の形と範囲と丸め、入力の時点の高度による要素、STEP AT と CRZ CLB、OFFSET AT と WEATHER、DELETE で従うものも消える、5 要素の上限、FCOM p.744 と FMSPG p.324 の例の行、CLEARANCE と VOICE、自由文の行の数、送ったページのページ分け）、新しい `tests/fms/atc_request_pages_test.lua`（128 件：4 つのページの表示と入力、データベースの位置と SELECT DESIRED WPT、MSG LIMIT EXCEEDED、NEXT と PREV、VERIFY REQUEST の行と CONTINUED と自由文、SEND とプロバイダの送り出しでの受け取り、XXXXZ ATC REQUEST、応答の RESPONSE RCVD と <UPLINK・<REQUEST、ATC LOG の右の LSK、CLEARANCE と VOICE、STANDBY と REQUEST DEFERRED、ABORTED、NO ATC COMM、NO COMM、NO ACK と RESEND>）。全 176 本が通る。X-Plane の新しい `s194_atc_requests` 23/23（AutoATC の無いこの PC で、ページの表示と入力、VERIFY REQUEST の行と CONTINUED、DATA LINK NO COMM、ERASE REQUEST、VOICE。CDU の写真は FMSPG の図と同じ配置）、Log.txt に Lua の誤りなし。
