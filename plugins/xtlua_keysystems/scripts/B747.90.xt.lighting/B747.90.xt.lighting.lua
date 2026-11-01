@@ -93,7 +93,6 @@ simDR_ai_flies_aircraft				= find_dataref("sim/operation/prefs/ai_flies_aircraft
 simDR_electrical_bus_volts          = find_dataref("sim/cockpit2/electrical/bus_volts")
 
 simDR_aircraft_on_ground            = find_dataref("sim/flightmodel/failures/onground_any")
-simDR_all_wheels_on_ground          = find_dataref("sim/flightmodel/failures/onground_any")
 
 
 simDR_sim_brightness_ratio      = find_dataref("sim/cockpit2/electrical/HUD_brightness_ratio")
@@ -761,125 +760,43 @@ end
 
 
 
------ LANDING LIGHTS --------------------------------------------------------------------
-function B747_landing_light_brightness()
-
-    local gear_handle_factor = 0.5
-    if B747DR_gear_handle < 0.05 then gear_handle_factor = 1.0 else gear_handle_factor = 0.5 end
-
-    simDR_landing_light_switch[0] = (1 - B747DR_toggle_switch_position[1]) * gear_handle_factor
-    simDR_landing_light_switch[1] = (1 - B747DR_toggle_switch_position[3]) * gear_handle_factor
-    simDR_landing_light_switch[2] = (1 - B747DR_toggle_switch_position[4]) * gear_handle_factor
-    simDR_landing_light_switch[3] = (1 - B747DR_toggle_switch_position[2]) * gear_handle_factor
-
-end
-
-
-
-
-
-
-
-
------ TURNOFF LIGHTS --------------------------------------------------------------------
-function B747_turnoff_lights()
-
-    -- LEFT TURNOFF LIGHT
-    if simDR_all_wheels_on_ground == 1 and B747DR_toggle_switch_position[5] < 0.05 then
-        simDR_generic_brightness_switch[0] = 1
-    else
-        simDR_generic_brightness_switch[0] = 0
-    end
-
-    -- RIGHT TURNOFF LIGHT
-    if simDR_all_wheels_on_ground == 1 and B747DR_toggle_switch_position[6] < 0.05 then
-        simDR_generic_brightness_switch[1] = 1
-    else
-        simDR_generic_brightness_switch[1] = 0
-    end
-
-end
-
-
-
-
-
------ TAXI LIGHTS -----------------------------------------------------------------------
-function B747_taxi_lights()
-
-    if simDR_all_wheels_on_ground == 1 and B747DR_toggle_switch_position[7] < 0.05 then
-        simDR_taxi_light_switch_on = 1
-    else
-        simDR_taxi_light_switch_on = 0
-    end
-
-end
-
-
-
-
-
-
------ BEACON LIGHTS ---------------------------------------------------------------------
-function B747_beacon_lights()
-
-   
-    if B747DR_toggle_switch_position[8] > 0.95
-        or B747DR_toggle_switch_position[8] < -0.95
-    then
-        simDR_beacon_lights_switch = 1
-    else
-        simDR_beacon_lights_switch = 0
-    end	 
-
-end
-
-
-
-
------ NAV LIGHTS ------------------------------------------------------------------------
-function B747_nav_lights()
-
-    simDR_nav_lights_switch = 1 - B747DR_toggle_switch_position[9]
-
-end
-
-
-
-
-
------ STROBE LIGHTS ---------------------------------------------------------------------
--- (7-2a, LIGHT-04) the switch the same way as NAV, WING and LOGO (position
--- 0 on: their 3D turns alike, Cockpit_OH1.obj; before, position 1 on, the
--- strobes on with the switch off in cold and dark); the only writer
--- (LIGHT-05: the electrical init script's flashing that wrote it off every
--- frame removed)
-function B747_strobe_lights()
-
-   	simDR_strobe_lights_switch = 1 - B747DR_toggle_switch_position[10]
-
-end
-
-
-
-
-
------ WING LIGHTS -----------------------------------------------------------------------
-function B747_wing_lights()
-
-    simDR_generic_brightness_switch[2] = 1 - B747DR_toggle_switch_position[11]
-
-end
-
-
-
-
-
------ LOGO LIGHTS -----------------------------------------------------------------------
-function B747_logo_lights()
-
-    simDR_generic_brightness_switch[3] = 1 - B747DR_toggle_switch_position[12]
-
+----- EXTERIOR LIGHTS --------------------------------------------------------------------
+-- (7-2b; notes/ATA-33.md §12) the exterior lights by B747.90.light_model.lua:
+-- their switches (position 0 on; the beacon's LWR 1 and BOTH -1), the AC
+-- buses and the ground service bus (laminar/B747/electrical/bus/*), the
+-- PSEU's ground mode and the gear lever (before, X-Plane's onground_any and
+-- no power: on with the batteries alone; the landing lights 50 % with the
+-- lever up). (7-2a, LIGHT-04 and 05) the strobe switch as the others
+-- (before, position 1 on), the strobes' only writer
+dofile("B747.90.light_model.lua")
+B747DR_light_bus_ac = find_dataref("laminar/B747/electrical/bus/ac")
+B747DR_light_bus_gsb = find_dataref("laminar/B747/electrical/bus/gnd_svc")
+B747DR_light_pseu_gnd = find_dataref("laminar/B747/gear/air_ground/pri_gnd")
+local lightIn = {sw = {landing = {}, turnoff = {}}, ac = {}}
+-- X-Plane's landing light i (OUTBD L, INBD L, INBD R, OUTBD R): its switch
+local LANDING_SW = {1, 3, 4, 2}
+function B747_exterior_lights()
+    local p = B747DR_toggle_switch_position
+    local sw = lightIn.sw
+    for i = 1, 4 do sw.landing[i] = p[LANDING_SW[i]] < 0.05 end
+    sw.turnoff[1], sw.turnoff[2] = p[5] < 0.05, p[6] < 0.05
+    sw.taxi = p[7] < 0.05
+    sw.beacon = p[8] > 0.95 or p[8] < -0.95
+    sw.nav, sw.strobe, sw.wing, sw.logo = p[9] < 0.05, p[10] < 0.05, p[11] < 0.05, p[12] < 0.05
+    for i = 1, 4 do lightIn.ac[i] = B747DR_light_bus_ac[i - 1] > 0.5 end
+    lightIn.gsb = B747DR_light_bus_gsb > 0.5
+    lightIn.ground = B747DR_light_pseu_gnd > 0.5
+    lightIn.gear_down = B747DR_gear_handle < 0.05
+    local out = B747_light_model.update(lightIn)
+    for i = 1, 4 do simDR_landing_light_switch[i - 1] = out.landing[i] end
+    simDR_generic_brightness_switch[0] = out.turnoff[1]
+    simDR_generic_brightness_switch[1] = out.turnoff[2]
+    simDR_taxi_light_switch_on = out.taxi
+    simDR_beacon_lights_switch = out.beacon
+    simDR_nav_lights_switch = out.nav
+    simDR_strobe_lights_switch = out.strobe
+    simDR_generic_brightness_switch[2] = out.wing
+    simDR_generic_brightness_switch[3] = out.logo
 end
 
 
@@ -2229,14 +2146,7 @@ function after_physics()
   if debug_lighting>0 then return end
 
     B747_keep_light_power()
-    B747_landing_light_brightness()
-    B747_turnoff_lights()
-    B747_taxi_lights()
-    B747_beacon_lights()
-    B747_nav_lights()
-    B747_strobe_lights()
-    B747_wing_lights()
-    B747_logo_lights()
+    B747_exterior_lights()
     B747_cabin_lights()
 
     B747_spill_lights()

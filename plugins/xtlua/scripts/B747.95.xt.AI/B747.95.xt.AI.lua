@@ -1174,9 +1174,7 @@ function B747_auto_board()
         -- PHASE 1: SET THE SWITCH
         if autoboard.phase[autoboard.step] == 1 then
             B747_print_sequence_status(autoboard.step, autoboard.phase[autoboard.step], "NAV Lights Switch to ON...")  -- PRINT THE START PHASE MESSAGE
-            if simDR_nav_lights_switch == 0 then                                            -- NAV LIGHTS ARE OFF
-                if B747DR_toggle_switch_position[9] < 0.95 then B747CMD_nav_light_switch:once() end     -- TURN THE NAV LIGHT SWITCH ON
-            end
+            if B747DR_toggle_switch_position[9] > 0.95 then B747CMD_nav_light_switch:once() end     -- THE SWITCH OFF (1): TURN IT ON (0; 7-2b, LIGHT-15)
             autoboard.phase[autoboard.step] = 2                                             -- INCREMENT THE PHASE
         end
 
@@ -1188,7 +1186,7 @@ function B747_auto_board()
             if autoboard.sequence_timeout == true then                                      -- PHASE FAILED
                 B747_autoboard_step_failed(autoboard.step, autoboard.phase[autoboard.step])
             --end
-            elseif simDR_nav_lights_switch == 1 then                                            -- PHASE WAS SUCCESSFUL
+            elseif B747DR_toggle_switch_position[9] < 0.05 then                                 -- PHASE WAS SUCCESSFUL (THE SWITCH ON)
                 if is_timer_scheduled(B747_autoboard_phase_timeout) == true then
                     stop_timer(B747_autoboard_phase_timeout)                                -- KILL THE TIMER
                 end
@@ -1248,7 +1246,7 @@ function B747_auto_board()
         -- PHASE 1: SET THE SWITCH
         if autoboard.phase[autoboard.step] == 1 then
             B747_print_sequence_status(autoboard.step, autoboard.phase[autoboard.step], "Logo Lights Switch to ON...")  -- PRINT THE START PHASE MESSAGE
-            if B747DR_toggle_switch_position[12] < 0.95 then                                -- LOGO LIGHTS ARE OFF
+            if B747DR_toggle_switch_position[12] > 0.95 then                                -- THE SWITCH OFF (1; 7-2b, LIGHT-15)
                 B747CMD_logo_light_switch:once()                                            -- LOGO THE CABIN LIGHTS ON
             end
             autoboard.phase[autoboard.step] = 2                                             -- INCREMENT THE PHASE
@@ -1261,7 +1259,7 @@ function B747_auto_board()
         if autoboard.phase[autoboard.step] == 3 then
             if autoboard.sequence_timeout == true then                                      -- PHASE FAILED
                 B747_autoboard_step_failed(autoboard.step, autoboard.phase[autoboard.step])
-            elseif B747DR_toggle_switch_position[12] > 0.95 then                            -- PHASE WAS SUCCESSFUL
+            elseif B747DR_toggle_switch_position[12] < 0.05 then                            -- PHASE WAS SUCCESSFUL (THE SWITCH ON)
                 if is_timer_scheduled(B747_autoboard_phase_timeout) == true then
                     stop_timer(B747_autoboard_phase_timeout)                                -- KILL THE TIMER
                 end

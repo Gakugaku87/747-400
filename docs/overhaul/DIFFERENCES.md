@@ -32,7 +32,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）、段 4a：multi-channel の arm と engage、LAND 3・LAND 2・NO AUTOLAND、段 4b：FLARE と NOSE LETDOWN、A/T の IDLE、段 4c：ROLLOUT、段 4d：runway align と片発、段 5a：電源と engage のインターロック、段 5b：NO LAND 3・NO AUTOLAND と AUTOPILOT DISC の音、段 5c：モード故障と AUTOPILOT caution、F/D のバー、段 5d：ILS TUNE INHIBIT と RA TEST INHIBIT、段 6a：ヨーダンパーのモード（試験・地上の待機・fade・fault INOP と自動復帰）。段 3a〜3c：ピッチの則（V/S・ALT とその捕捉、速度を昇降舵で保つ則（FLCH・T/O・G/A・前の VNAV の速度）と速度の保護、G/S とその捕捉）、A/P の姿勢のループ（自動トリムの帯、スタビライザーの差し引き、姿勢の変化率、入るときの舵面への同期、速度によるゲイン）。LNAV のロールは FMC の指令：6-1 段 6c） | F/D の故障旗、caution の後に解除する FCC・MCP の内部の故障、master FMC の故障のときの FCC の自前の最小・最大速度（FCOM p.675）（VNAV の許容・速度の逆戻り・MCP のノブ・進入は FMC の段 9d・9e で、master FMC の故障のモード故障は段 11d2a で済） |
 | オートスロットル・推力管理 | 作り直し中（FMC の段 9f1：モードの論理と engage・disconnect、>AUTOTHROT DISC。段 9f2：制御則と servo、THR、override。段 9f3：電源の interlock、THRUST REQUIRED。段 9d2：VNAV の THR から HOLD。段 9g1〜9g4：推力制限のモード、THRUST LIM のページ、reference の値、EICAS の推力の表示。段 9h1：CON の値。段 9h3a：エンジン不作動の推力制限と A/T の interlock。段 11d2a：master FMC の故障で切れて ARM スイッチの入れ直しまで戻らない、FMC の選択を回すと切れる） | 推力制限の CRZ の値（推定）、SPD の速さの戻り、servo loop monitor |
 | 通信（ATA 23） | 未着手 | VHF の電源、ACP の連動、VHF C と HF が無い |
-| 照明（ATA 33） | 作り直し中（7-2a：ストロボ、完全 GC） | 外部灯の電源、非常灯、毎フレームの完全 GC |
+| 照明（ATA 33） | 作り直し中（7-2a：ストロボ、完全 GC。7-2b：外部灯の電源と空地） | 外部灯の電源、非常灯、毎フレームの完全 GC |
 | ドア（ATA 52） | 未着手 | L1 と上部デッキ L 以外のドアが無い |
 
 ## 2. 分野ごとの違い
@@ -577,7 +577,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - VHF C と HF L/R の無線機が無い（COM-03）。AM スイッチの扱い（COM-04）。
 - CALL 灯とチャイム、PTT が動かない（COM-05・06）。航法受信の音声の経路（COM-07）。電源への依存が無い（COM-08）。データリンクのメッセージ（COM-09）は、EICAS の ATC MESSAGE・ACARS MESSAGE・>DATALINK LOST・AVAIL を FMC の段 12d1 で作った（2026-11-01、上の CDU）。
 
-### 照明（ATA 33）：作り直し中（7-2a：ストロボ、完全 GC）
+### 照明（ATA 33）：作り直し中（7-2a：ストロボ、完全 GC。7-2b：外部灯の電源と空地）
 
 - 外部灯が 747 のバスに依らない（LIGHT-03）。ストロボのスイッチの向きと二重の書き込み（LIGHT-04・05）。
 - 非常灯が無い（LIGHT-06）。操縦室照明の standby（AC 喪失時）が無い（LIGHT-07）。

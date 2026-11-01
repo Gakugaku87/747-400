@@ -129,15 +129,77 @@ T.check(not l.alt and not l.vs and not l.vnav, "the old G/S captured (a stale AL
 l = pitch_lights(0, 0, 0, 0)
 T.check(not l.vs and not l.alt and not l.flch and not l.vnav, "no pitch mode: all out")
 
+-- (7-2b) the exterior lights by the light model (notes/ATA-33.md §12): the
+-- switches (position 0 on; the beacon's LWR 1 and BOTH -1), the AC buses,
+-- the ground service bus, the PSEU's ground and the gear lever
+local SW = "laminar/B747/toggle_switch/position"
+local BUS = "laminar/B747/electrical/bus/"
+local PSEU_GND = "laminar/B747/gear/air_ground/pri_gnd"
+local LEVER = "laminar/B747/actuator/gear_handle"
+local LAND = "sim/cockpit2/switches/landing_lights_switch"
+local GEN = "sim/cockpit2/switches/generic_lights_switch"
+local TAXI = "sim/cockpit2/switches/taxi_light_on"
+local NAV = "sim/cockpit2/switches/navigation_lights_on"
+local function power(ac, gsb)
+    for i = 0, 3 do rt:set(BUS .. "ac", i, ac and 1 or 0) end
+    rt:set(BUS .. "gnd_svc", gsb and 1 or 0)
+end
+-- positions [1]-[12] as given, the rest off (the beacon's OFF is 0)
+local function switches(p)
+    for i = 1, 12 do rt:set(SW, i, p[i] or (i == 8 and 0 or 1)) end
+    rt:frame(1 / 30)
+end
+power(true, true)
+rt:set(PSEU_GND, 1)
+rt:set(LEVER, 0)
+-- each LANDING switch its light (§3.2): OBL [1], OBR [2], IBL [3], IBR [4]
+for sw, xp in pairs({[1] = 0, [2] = 3, [3] = 1, [4] = 2}) do
+    switches({[sw] = 0})
+    for k = 0, 3 do
+        T.near(rt:get(LAND, k), k == xp and 1 or 0, 1e-6, "LANDING switch " .. sw .. " alone: X-Plane landing light " .. k)
+    end
+end
+switches({[5] = 0, [7] = 0, [12] = 0})
+T.check(rt:get(GEN, 0) == 1 and rt:get(GEN, 1) == 0, "RWY TURNOFF L on, R off: generic lights 0 and 1")
+T.equal(rt:get(TAXI), 1, "TAXI on the ground")
+T.check(rt:get(GEN, 2) == 0 and rt:get(GEN, 3) == 1, "WING off, LOGO on: generic lights 2 and 3")
+for _, c in ipairs({{-1, 1, "BOTH"}, {0, 0, "OFF"}, {1, 1, "LWR"}}) do
+    switches({[8] = c[1]})
+    T.equal(rt:get("sim/cockpit/electrical/beacon_lights_on"), c[2], "BEACON " .. c[3])
+end
+-- the gear lever UP: the INBD switch ON dims its side to 70 % (ATA33 p.328,
+-- p.330; before, all four at 50 %)
+rt:set(LEVER, 2)
+switches({[1] = 0, [2] = 0, [3] = 0})
+T.near(rt:get(LAND, 0), 0.7, 1e-6, "lever UP, INBD L on: OUTBD L at 70 %")
+T.near(rt:get(LAND, 1), 0.7, 1e-6, "lever UP: INBD L at 70 %")
+T.near(rt:get(LAND, 3), 1, 1e-6, "lever UP, INBD R off: OUTBD R bright")
+rt:set(LEVER, 0)
+-- in the air (the PSEU, before X-Plane's onground_any): no turnoff, no taxi
+rt:set(PSEU_GND, 0)
+switches({[5] = 0, [6] = 0, [7] = 0, [9] = 0})
+T.check(rt:get(GEN, 0) == 0 and rt:get(GEN, 1) == 0 and rt:get(TAXI) == 0, "in the air: the turnoff and taxi lights out")
+T.equal(rt:get(NAV), 1, "in the air: NAV on")
+rt:set(PSEU_GND, 1)
+-- the power (before, none: on with the batteries alone)
+power(true, false)
+switches({[1] = 0, [9] = 0})
+T.equal(rt:get(NAV), 0, "no ground service bus: NAV out")
+T.near(rt:get(LAND, 0), 1, 1e-6, "no ground service bus: OUTBD L on (AC bus 3)")
+power(false, false)
+rt:frame(1 / 30)
+T.near(rt:get(LAND, 0), 0, 1e-6, "no AC buses: OUTBD L out")
+power(true, true)
+
 -- (7-2a, LIGHT-04) the STROBE switch the way NAV's is: position 0 on, 1 off
 -- (cold and dark puts [1]-[12] at 1: the strobes were on)
-local SW = "laminar/B747/toggle_switch/position"
 for _, p in ipairs({0, 1}) do
     rt:set(SW, 9, p)
     rt:set(SW, 10, p)
     rt:frame(1 / 30)
-    T.equal(rt:get("sim/cockpit2/switches/strobe_lights_on"), rt:get("sim/cockpit2/switches/navigation_lights_on"),
-        "STROBE and NAV both at " .. p .. ": the strobes as the nav lights (" .. (1 - p) .. ")")
+    T.equal(rt:get("sim/cockpit2/switches/strobe_lights_on"), 1 - p, "STROBE at " .. p)
+    T.equal(rt:get("sim/cockpit2/switches/strobe_lights_on"), rt:get(NAV),
+        "STROBE and NAV both at " .. p .. ": the strobes as the nav lights")
 end
 -- (7-2a, LIGHT-08, LIGHT-05) no full garbage collection in the frame; the
 -- electrical init script writes the strobes no more

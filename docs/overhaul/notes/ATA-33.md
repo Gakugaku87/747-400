@@ -382,3 +382,17 @@ GAP ID の接頭辞：`LIGHT`。2026-10-23 作成。コードは `overhaul` ブ�
 - ストロボの書き手を照明モジュールだけにした（LIGHT-05）。電源の初期化スクリプトの「3 回光って 2 秒消える」点滅と、書き手の無い `fs/lighting/strobes_on` を消した（ELECI:130-161）。点滅は X-Plane の strobe（OBJ の灯の定義）に任せる。
 - STROBE のスイッチの向きを NAV・WING・LOGO と同じ（position 0 が ON）にした（LIGHT-04）。3D の回転は 4 つとも同じ（OH1:136263-136278）で、FCOM p.451 (1.30.17) の図も上 OFF・下 ON。cold & dark（[1]–[12] を 1）でストロボが点いていたのが消える。自動始動（AI）のストロボの手順も ON = 0 にした（AI:2470-2483。前は position 1 にして成功としていた）。
 - 試験：`tests/lighting/lighting_module_test.lua`（STROBE と NAV が同じ位置で同じ点灯、完全 GC が無い、電源の初期化スクリプトがストロボを書かない）。X-Plane：`s207_lights_strobe`（夜の RJAA 34L、エンジン運転中。NAV と STROBE をコマンドで position 0 にして点き、5 秒後も点いたまま、1 で消える）。
+
+## 12. 7-2b（2026-11-01）
+
+- 外部灯を `B747.90.light_model.lua`（X-Plane なしの純関数）で決め、照明モジュールの `B747_exterior_lights()` が X-Plane の灯へ書く。前の 8 個の関数（LIT:751-864）を置き換えた。
+- 入力：スイッチ（position 0 が ON。BEACON は上 +1 が LWR、下 −1 が BOTH）、AC bus 1–4 と GSB（`laminar/B747/electrical/bus/ac`・`gnd_svc`）、PSEU の地上（`laminar/B747/gear/air_ground/pri_gnd`）、gear lever（`actuator/gear_handle` < 0.05 が DOWN）。
+- 灯ごと（LIGHT-03、09、13）：
+  - landing：INBD は AC bus 1、OUTBD は AC bus 3（ATA33 p.330・331。左は右と同じと推定）。gear lever が DOWN でないとき、INBD スイッチが ON の側は INBD と OUTBD が 70 %（R1042：ATA33 p.328・330。左は右と同じと推定）。INBD が OFF なら OUTBD は lever に依らず最大（ATA33 p.330）。前は lever が DOWN でないと 4 灯一律に 50 %。
+  - runway turnoff L/R：GSB、PSEU が地上のときだけ（R7333：ATA33 p.334・335。PSEU の primary の地上を使うのは推定）。前は X-Plane の `onground_any`。
+  - taxi：地上のときだけ（FCOM p.451）。電源は GSB と推定（資料に記載なし）。
+  - nav、beacon（LWR か BOTH）、strobe、wing、logo：GSB（ATA33 p.326・340・348・354・358）。
+  - 前は 747 の母線を見ず、X-Plane の bus 1 で通電していた（バッテリーだけでも点きえた）。
+- quick start（AI）の NAV と LOGO の手順を ON = 0 にした（LIGHT-15）。前は NAV がスイッチを動かさず時間切れになり、LOGO は点いていれば消して成功としていた。
+- BEACON の LWR と BOTH は今も同じ（LIGHT-12、§10）。
+- 試験：`tests/lighting/light_model_test.lua`（減光、母線、空地、スイッチ）、`lighting_module_test.lua`（スイッチと X-Plane の灯の対応 §3.2、gear lever UP の減光、空中の turnoff・taxi、GSB と AC の喪失）。X-Plane：`s208_lights_exterior`（夜の RJAA 34L、エンジン運転中。全部 OFF → 1 つずつ ON で X-Plane の灯の対応、地上の turnoff・taxi、外から撮る → OFF で消える）。lever UP の減光と空中は回帰試験だけ。
