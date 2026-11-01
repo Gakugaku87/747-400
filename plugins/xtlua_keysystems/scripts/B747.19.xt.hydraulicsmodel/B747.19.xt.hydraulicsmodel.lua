@@ -230,6 +230,8 @@ simDR_spoiler3  = find_dataref("sim/flightmodel/controls/wing3l_spo2def")
 simDR_spoiler4  = find_dataref("sim/flightmodel/controls/wing2l_spo1def")
 simDR_spoiler5  = find_dataref("sim/flightmodel/controls/wing1l_spo1def")
 simDR_spoiler67  = find_dataref("sim/flightmodel2/wing/speedbrake1_deg") -- array [0] left, [1] right
+-- the PSEU's air (X-Plane's speedbrake correction in the air: hydraulics_override)
+B747DR_hyd_pseu_air = find_dataref("laminar/B747/gear/air_ground/pri_air")
 simDR_spoiler8  = find_dataref("sim/flightmodel/controls/wing1r_spo1def")
 simDR_spoiler9  = find_dataref("sim/flightmodel/controls/wing2r_spo1def")
 simDR_spoiler10  = find_dataref("sim/flightmodel/controls/wing3r_spo2def")
