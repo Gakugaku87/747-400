@@ -44,18 +44,12 @@ function fmsFunctions.acarsDataReady(fmsO)
   if getFMSData("fltdst")=="****" then fmsO["notify"]="DESTINATION NOT SET" return false end
   return true
 end
+-- (6-1/6-2 step 12e) a logon through the ATC logon (B747_fms_atc_logon_to:
+-- LOGON/STATUS's state, the FMC's messages); a facility of four letters, else
+-- a logoff. Before, the request went at once, needing the departure and
+-- the destination (DEPARTURE and DESTINATION NOT SET, not Boeing's)
 function fmsFunctions.acarsLogonATC(fmsO,value)
-  if not(fmsFunctions.acarsDataReady(fmsO)) then return end
-  if getFMSData("atc")==value then return end
-  acarsSystem.provider.logoff()
-  local atcLogon={}
-  setFMSData("atc",value)
-  if fmsModules["data"]["atc"]=="****" then return end
-	atcLogon["type"]="cpdlc"
-  atcLogon["msg"]="REQUEST LOGON"
-  atcLogon["RR"]="Y"
-  local newInitSend=json.encode(atcLogon)
-  fmsFunctions.acarsSystemSendATC(fmsO,newInitSend)
+  B747_fms_atc_logon_to(fmsO,str_trim(value or ""))
 end
 
 

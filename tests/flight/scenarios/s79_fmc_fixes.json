@@ -157,6 +157,8 @@
     { "do": "check", "note": "FMC DATALINK は ON", "dref": "laminar/B747/fms3/Line09_L", "op": "contains", "value": "FMC DATALINK         ON" },
     { "do": "cmd", "note": "ATC", "name": "laminar/B747/fms1/func_key/crz" },
     { "do": "sleep", "seconds": 1 },
+    { "do": "cmd", "note": "ATC COMM が無いので LOGON/STATUS（段 12e）：<INDEX で ATC INDEX", "name": "laminar/B747/fms1/ls_key/L6" },
+    { "do": "sleep", "seconds": 1 },
     { "do": "cmd", "note": "EMERGENCY（L1）", "name": "laminar/B747/fms1/ls_key/L1" },
     { "do": "sleep", "seconds": 1 },
     { "do": "cmd", "note": "R", "name": "laminar/B747/fms1/alphanum_key/R" },

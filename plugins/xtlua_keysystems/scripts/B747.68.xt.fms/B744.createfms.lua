@@ -87,6 +87,11 @@ end
 -- a condition's FMC message by its text, for the messages not among the
 -- flags (6-1/6-2 step 6c: LNAV's NOT ON INTERCEPT HEADING, an advisory:
 -- FCOM p.1435)
+-- (step 12e) an event's FMC message by its text (the ATC logon's: FCOM
+-- p.1431, p.1433)
+function B747_cdu_fmc_event(text, alert)
+  C.fmc_post(fmcMsgs, text, alert)
+end
 function B747_cdu_fmc_condition(text, on, alert)
   C.fmc_set(fmcMsgs, text, on, alert)
 end
@@ -206,8 +211,10 @@ local function pageKey(fmsModule,key)
       B747_cdu_deparr_page(fmsO)
       return
   elseif key=="crz" then
+      -- (6-1/6-2 step 12e) ATC: LOGON/STATUS until ATC COMM is established,
+      -- then ATC INDEX (FMSPG p.277, p.286; the uplinks' pages: step 12f)
       fmsO.targetCustomFMC=true
-      fmsO.targetPage="ATCINDEX"
+      fmsO.targetPage=B747_fms_atc_logon().comm and "ATCINDEX" or "ATCLOGONSTATUS"
       fmsO.targetpgNo=1
       return
   elseif key=="des" then
