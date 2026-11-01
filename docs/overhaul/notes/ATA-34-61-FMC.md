@@ -1963,3 +1963,15 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - PRINT は出さない（プリンタが無い。アップリンクのページと同じ）。位置は入れた文字のまま送る（緯度経度・PBD も）。
 - まだのもの：RTE 1・RTE 2・DEP/ARR の要求（12g2b）、WHEN CAN WE からの VERIFY REQUEST（12g3）。
 - 試験：新しい `tests/fms/atc_request_model_test.lua`（94 件：入力の形と範囲と丸め、入力の時点の高度による要素、STEP AT と CRZ CLB、OFFSET AT と WEATHER、DELETE で従うものも消える、5 要素の上限、FCOM p.744 と FMSPG p.324 の例の行、CLEARANCE と VOICE、自由文の行の数、送ったページのページ分け）、新しい `tests/fms/atc_request_pages_test.lua`（128 件：4 つのページの表示と入力、データベースの位置と SELECT DESIRED WPT、MSG LIMIT EXCEEDED、NEXT と PREV、VERIFY REQUEST の行と CONTINUED と自由文、SEND とプロバイダの送り出しでの受け取り、XXXXZ ATC REQUEST、応答の RESPONSE RCVD と <UPLINK・<REQUEST、ATC LOG の右の LSK、CLEARANCE と VOICE、STANDBY と REQUEST DEFERRED、ABORTED、NO ATC COMM、NO COMM、NO ACK と RESEND>）。全 176 本が通る。X-Plane の新しい `s194_atc_requests` 23/23（AutoATC の無いこの PC で、ページの表示と入力、VERIFY REQUEST の行と CONTINUED、DATA LINK NO COMM、ERASE REQUEST、VOICE。CDU の写真は FMSPG の図と同じ配置）、Log.txt に Lua の誤りなし。
+
+## 117. 12g2b の実装（2026-11-01：経路の要求）
+
+- 資料：
+  - FCOM p.742–743：ATC ROUTE REQUEST 4/4 の REQUEST RTE 1・RTE 2（保留の修正があればその経路を要求）と DEP/ARR（DEP/ARR のページの選択か入力、押すと大きい字で要素を選ぶ、消せる）。
+  - FMSPG p.315–318：REQUEST ROUTE CLEARANCE（RTE 1 か RTE 2 の飛行計画のデータ）、片方を選ぶともう一方は空白。DEP/ARR は地上では DEPARTURES で選んだ出発の手続き（と遷移）、空中では ARRIVALS で選んだ到着か進入（と遷移）を prompt つきで出し、それを押すか手続きを入れると REQUEST [procedure name]、選んでいなければ dashes。SENDING の間は 3L・5L・3R を変えられない。図は p.316（REQUEST <RTE 1・RTE 2>、REQUEST DEP/ARR）。
+- 作ったもの：
+  - `B747.68.atc_request_model.lua`：RTE 1 と RTE 2 の選択（一方だけ、経路の文を持つ）、DEP/ARR の手続き、手続きの名前の形、要素の文と行（REQUEST ROUTE CLEARANCE の見出しの行に経路の文の 1 行目、続きはその下の行）。
+  - FMS のつなぎ：経路の文（出発地、滑走路、SID と遷移、各区間の航空路と TO の点（DIRECT は点だけ。手続きの脚、不連続、TO の無い航空路は除く）、STAR と遷移、進入（CDU の名前）と遷移、目的地。修正があれば修正の経路）。VERIFY と SEND のときに、選んだ経路の文を今の経路で作り直す。DEP/ARR の既定（地上は SID、空中は STAR、無ければ進入）。入れた手続きの確かめ（アクティブな経路の出発地の SID、目的地の STAR と進入、遷移は enroute の遷移）。
+  - ページ：ATC ROUTE REQUEST 4/4 の 3L・3R（小さい字と caret、選ぶと大きい字、もう一方は見出しごと空白）、5L（既定は小さい字と caret、入れたものと押したものは大きい字、無ければ dashes）。
+- 推定：経路の文の形（FANS の route clearance のデータを文にしたもの。航空路の名前と点を並べ、DIRECT は書かない）、空中で STAR と進入の両方を選んでいるときは STAR、dashes の数（5）、手続きの名前の長さ（7 文字、遷移 5 文字）、出発地と目的地に無い手続きは NOT IN DATA BASE、要素の並び（DIRECT TO、経路、手続き、HEADING、GROUND TRACK）、空の RTE 2 を押しても何もしない。
+- 試験：`tests/fms/atc_request_model_test.lua` に 17 件（RTE 1 と RTE 2 の排他、経路の文と行、今の経路への作り直し、DELETE、手続きの形、REQUEST [procedure name]、要素の並び）、`tests/fms/atc_request_pages_test.lua` に 23 件（4/4 の見出しと prompt、空の RTE 2、RTE 1 の選択と RTE 2 の空白、SID の既定、無い遷移の NOT IN DATA BASE、押して大きい字、VERIFY REQUEST の REQUEST ROUTE CLEARANCE と今の経路の文、/REQUEST ZULU1.ALPHA、送る文、受け取りで消える、手続きの入力と DELETE）。RESEND の受け取りはプロバイダのキュー（15 秒に 1 通）の分だけ遅れるので、試験の待ちを 31 秒にした。全体の試験はすべて通る。X-Plane：新しい `s195_atc_route_request` 15/15（RTE 1 に RJAA から RJBB、4/4 の REQUEST <RTE 1・RTE 2> と DEP/ARR の dashes、RTE 1 の選択と RTE 2 の空白、VERIFY REQUEST の REQUEST ROUTE CLEARANCE と RJAA RJBB、DATA LINK NO COMM、ERASE REQUEST。CDU の写真は FMSPG p.316 の図と同じ配置）、Log.txt に Lua の誤りなし
