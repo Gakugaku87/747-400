@@ -74,7 +74,7 @@
     { "do": "check", "note": "beacon（BOTH）", "dref": "sim/cockpit/electrical/beacon_lights_on", "op": "==", "value": 1 },
     { "do": "check", "note": "nav", "dref": "sim/cockpit2/switches/navigation_lights_on", "op": "==", "value": 1 },
     { "do": "check", "note": "strobe", "dref": "sim/cockpit2/switches/strobe_lights_on", "op": "==", "value": 1 },
-    { "do": "view", "note": "頭上パネルの外部灯のスイッチ（全部 ON）", "name": "overhead" },
+    { "do": "view", "note": "頭上パネルの外部灯のスイッチ（全部 ON。lights：前の overhead は電源パネルを向いていた）", "name": "lights" },
     { "do": "shot", "name": "overhead_all_on" },
     { "do": "view", "name": "forward" },
     { "do": "cmd", "note": "外からの視点", "name": "sim/view/circle" },

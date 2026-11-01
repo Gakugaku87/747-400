@@ -51,10 +51,11 @@
 #   snapshot {drefs: [...]}                      log values
 #   cas                                          log the EICAS message lines
 #   view    {name} | {the, psi, [fov]}           turn the pilot's head: a preset
-#                                                (forward, panel, overhead, eicas, bleed)
+#                                                (forward, panel, overhead, eicas, bleed, lights)
 #                                                or pitch/heading, with a field of view
 #                                                for a close look (bleed: the P5 bleed
-#                                                panel at 25 deg); the user's comes back
+#                                                panel at 25 deg; lights: the P5 exterior
+#                                                light switches at 12 deg); the user's comes back
 #                                                with the next view and at the end
 #   shot    {name}                               screenshot
 #   cdu     {keys: [...], [cdu]}                 keys on a CDU (cdu "fms1", the
@@ -355,7 +356,7 @@ foreach ($step in $spec.steps) {
                 # head pitch/heading in degrees from the captain's eye point, and
                 # a field of view for a close look (back to the user's after)
                 $presets = @{ forward = @(0, 0); panel = @(-28, 20); overhead = @(58, 48); eicas = @(-22, 29)
-                    bleed = @(19, 70, 25) }
+                    bleed = @(19, 70, 25); lights = @(17.3, 62.5, 12) }
                 $v = if ($step.name) { $presets[$step.name] } else { @($step.the, $step.psi, $step.fov) }
                 if (-not $v) { throw "unknown view preset $($step.name)" }
                 $fov = if ($v.Count -gt 2 -and $v[2]) { $v[2] } else { $fov0 }

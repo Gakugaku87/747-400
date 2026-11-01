@@ -25,7 +25,7 @@
     { "do": "check", "note": "ストロボのスイッチが入る（LIGHT-04：前は position 0 で消えていた）", "dref": "sim/cockpit2/switches/strobe_lights_on", "op": "==", "value": 1, "cite": "FCOM p.451" },
     { "do": "sleep", "seconds": 5 },
     { "do": "check", "note": "5 秒後もストロボのスイッチが入ったまま（前は電源の初期化スクリプトが毎フレーム消した：LIGHT-05）", "dref": "sim/cockpit2/switches/strobe_lights_on", "op": "==", "value": 1 },
-    { "do": "view", "note": "頭上パネルの外部灯のスイッチ", "name": "overhead" },
+    { "do": "view", "note": "頭上パネルの外部灯のスイッチ（lights：前の overhead は電源パネルを向いていた）", "name": "lights" },
     { "do": "shot", "name": "overhead_lights_on" },
     { "do": "view", "name": "forward" },
     { "do": "switch", "note": "STROBE を OFF（position 1）", "dref": "laminar/B747/toggle_switch/position[10]", "value": 1, "cmd": "laminar/B747/toggle_switch/strobe_light" },
