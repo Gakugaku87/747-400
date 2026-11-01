@@ -137220,7 +137220,7 @@ GROUP Upper EICAS
 
 
         GROUP Page #
-          SHOW_GREATER 1.000000 laminar/B747/CAS/num_msg_pages
+          SHOW_GREATER 2.000000 laminar/B747/CAS/num_msg_pages
           gen_rotary PG Label
             POS 1976.000000 824.500000
             IMAGE CRT Displays/EICAS Upper/EICAS_cas_pg
