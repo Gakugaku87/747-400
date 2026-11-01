@@ -9,10 +9,13 @@
 -- descent (E/D), straight between the descent's altitude constraints and
 -- at idle above the first (FCOM p.1258), at a leg's glide path angle on its
 -- leg (FCOM p.1262: step 9e4), with the decelerations to the
--- transition's and restriction's speeds in level flight. T/C, T/D, S/C and
--- each waypoint's altitude, time and fuel. Estimates: the level
--- accelerations and decelerations, no wind but each phase's headwind, the
--- descent's weight the predicted one at the T/D.
+-- transition's and restriction's speeds about DECEL_VS down before their
+-- altitudes (FCOM p.1264's descent deceleration phase: step LF1), and at
+-- the T/D level from the cruise speed to the descent's (p.1264's level
+-- deceleration phase: step LF1). T/C, T/D, S/C and each waypoint's
+-- altitude, time and fuel. Estimates: the level accelerations, the
+-- decelerations at idle, no wind but each phase's headwind, the descent's
+-- weight the predicted one at the T/D.
 --
 --   local R = B747_pred_model.predict(s)   -- s: see predict
 --
@@ -27,6 +30,9 @@ local NM = 1852
 -- (step 9h4b) the cruise descent's rate (fpm: VNAV's, B747.68.vnav_model.lua
 -- EARLY_VS) and the engine-out driftdown's least (its EO_DD_VS)
 M.CRZ_DES_VS, M.DD_VS = 1250, 300
+-- (6-1/6-2 step LF1; notes/LINE_FLIGHTS.md §1) the descent deceleration's
+-- rate (fpm: FCOM p.1264, about 500)
+M.DECEL_VS = 500
 
 -- a climb or descent speed schedule at an altitude: the CAS and the Mach
 -- (s: cas, mach, trans_cas below trans_alt, restr_cas below restr_alt; the
@@ -38,6 +44,17 @@ function M.schedule(P, s, ft)
     local m = P.cas_to_mach(cas, ft)
     if s.mach and m > s.mach then return P.mach_to_cas(s.mach, ft), s.mach, true end
     return cas, m, false
+end
+-- (step LF1) the lowest of the schedule's speed limits' altitudes above ft
+-- (the restriction's, the transition's), nil without one
+function M.schedule_limit(s, ft)
+    local lim = nil
+    local function consider(c, a)
+        if c and a and a > ft + 1e-6 and (not lim or a < lim) then lim = a end
+    end
+    consider(s.restr_cas, s.restr_alt)
+    consider(s.trans_cas, s.trans_alt)
+    return lim
 end
 
 -- 1 + (V/g) dV/dh at a constant CAS or Mach: the share of the energy the
@@ -82,9 +99,14 @@ end
 -- the descent path built back from the E/D at weight kg: arrays from the
 -- E/D up to the ceiling of x (NM from now), h, the time (s) and fuel (kg)
 -- from there to the E/D. Straight from anchor to anchor (the E/D and the
--- constraints the path has to keep), at idle above the first; level
--- decelerations to the schedule's speeds (estimates), where each starts in
--- decel {x, h} (step 8d3: the ND's deceleration points, FCOM p.1149).
+-- constraints the path has to keep), at idle above the first; the
+-- decelerations to the schedule's speeds about DECEL_VS down before their
+-- altitudes at idle (step LF1: FCOM p.1264; before, level at the altitude,
+-- which VNAV PTH from an idle descent overshot: s198 at 291 kt through
+-- 10,000 ft), where each starts in decel {x, h} (step 8d3: the ND's
+-- deceleration points, FCOM p.1149); c: each segment's target CAS on a
+-- deceleration (the speed it ends at: FCOM p.1264, the target before the
+-- altitude), 0 elsewhere.
 -- (step 9e4) gps: the legs with a glide path angle {x0, x1 (the leg's
 -- start and end), tan (the angle's), con (the start's constraint)}: on
 -- such a leg the line over the ground at its angle back from the leg's end
@@ -97,17 +119,21 @@ local function descent_path(s, kg, cons, xed, hed, gps)
     local hw0 = (s.wind and s.wind.des) or 0
     local xs, hs, ts, fs = {xed}, {hed}, {0}, {0}
     -- each point's segment (from the point before, back toward the E/D):
-    -- "idle" (the idle path, a level deceleration, a line steeper than
-    -- idle) or "spd" (a line too shallow for idle: the A/T's SPD, FCOM
-    -- p.1258; step 9b)
-    local ks = {"idle"}
+    -- "idle" (the idle path, a line steeper than idle), "spd" (a line too
+    -- shallow for idle: the A/T's SPD, FCOM p.1258; step 9b) or "decel"
+    -- (step LF1: a deceleration, its target in cs)
+    local ks, cs = {"idle"}, {0}
     local kind = "idle"
     local decel = {}
     local x, h, tt, ff = xed, hed, 0, 0
     local cas = M.schedule(P, s.des, h)
+    local decelCas = 0
     local ci = #cons    -- the constraints in route order; going back from the last
     local CEIL = 45100
-    local function push() xs[#xs + 1] = x; hs[#hs + 1] = h; ts[#ts + 1] = tt; fs[#fs + 1] = ff; ks[#ks + 1] = kind end
+    local function push()
+        xs[#xs + 1] = x; hs[#hs + 1] = h; ts[#ts + 1] = tt; fs[#fs + 1] = ff; ks[#ks + 1] = kind
+        cs[#cs + 1] = kind == "decel" and decelCas or 0
+    end
     -- the glide path angle's leg x is on (its end included), or nil
     local function gp_at()
         for _, g in ipairs(gps or {}) do
@@ -169,22 +195,34 @@ local function descent_path(s, kg, cons, xed, hed, gps)
             tt = tt + dt
             ff = ff + ne * f * dt / 3600
         elseif cas < tgt - 0.5 then
-            -- (back in time) a level deceleration to cas: idle, the model's
-            -- drag (less the idle thrust) slows it
+            -- (back in time) a deceleration to cas, DECEL_VS down at idle
+            -- (step LF1: FCOM p.1264): the model's drag (less the idle
+            -- thrust) slows it less the descent's share; level when that
+            -- leaves too little (estimate)
+            if kind ~= "decel" then decelCas = cas end
             local mm = P.cas_to_mach(cas, h)
             local a = drag(kg, h, mm) / kg
             local dt = 5
-            local dv = a * dt / KT                     -- kt TAS
+            local v0 = P.tas(mm, h, isa) * KT          -- m/s
+            local vs = M.DECEL_VS
+            local ae = a - G * (vs * FT / 60) / math.max(v0, 1)
+            if ae < 0.1 then ae, vs = a, 0 end
+            local dv = ae * dt / KT                    -- kt TAS
             local tas = P.tas(mm, h, isa) + dv
             cas = math.min(tgt, P.mach_to_cas(tas / P.tas(1, h, isa), h))
             x = x - gs * dt / NM
+            h = h + vs * dt / 60
             tt = tt + dt
             ff = ff + ne * P.idle_ff(t, h, mm, isa) * dt / 3600
             if cas >= tgt - 0.5 then decel[#decel + 1] = {x = x, h = h} end
-            kind = "idle"
+            kind = "decel"
         else
             cas = tgt
             local dh = 250
+            -- (step LF1) up to the schedule's next speed limit's altitude,
+            -- its deceleration ending there
+            local lim = M.schedule_limit(s.des, h)
+            if lim and h + dh > lim then dh = math.max(lim - h, 1) end
             local sinG
             if anchor then
                 -- straight to the anchor
@@ -214,7 +252,7 @@ local function descent_path(s, kg, cons, xed, hed, gps)
         end
         push()
     end
-    return {x = xs, h = hs, t = ts, f = fs, k = ks, decel = decel}
+    return {x = xs, h = hs, t = ts, f = fs, k = ks, c = cs, decel = decel}
 end
 
 -- on the descent path (index i up, arrays going back from the E/D), the x
@@ -429,6 +467,42 @@ function M.predict(s)
         return "level"
     end
 
+    -- (6-1/6-2 step LF1) the T/D's level deceleration from the cruise speed
+    -- at hc to the descent's (FCOM p.1264's level deceleration phase): its
+    -- distance (NM), time (s) and fuel (kg) at idle; none when the cruise is
+    -- not faster. The T/D that much before where the path reaches hc
+    -- (before, the descent from the T/D at the cruise speed: s198)
+    local function td_decel(hc, xref)
+        local m = crz_mach(P, s.crzspd or {mach = 0.84}, hc, kg)
+        local cas0 = P.mach_to_cas(m, hc)
+        local cas1 = M.schedule(P, s.des, hc)
+        if cas0 <= cas1 + 0.5 then return 0, 0, 0 end
+        -- the wind and temperature at the path's top (step 8e3: the
+        -- field's), else the cruise's headwind and the ISA deviation now
+        local isa, hw = isa, wind.crz or 0
+        if s.field then isa, hw = s.field.isa(xref, hc), s.field.wind(xref, hc, "crz") end
+        local dx, dt, f, c, n = 0, 0, 0, cas0, 0
+        while c > cas1 + 0.5 and n < 400 do
+            n = n + 1
+            local mm = P.cas_to_mach(c, hc)
+            local tas = P.tas(mm, hc, isa)              -- kt
+            local gs = math.max((tas - hw) * KT, 50)
+            local step = 2
+            dx, dt = dx + gs * step / NM, dt + step
+            f = f + ne * P.idle_ff(t, hc, mm, isa) * step / 3600
+            tas = tas - drag(kg, hc, mm) / kg * step / KT
+            c = P.mach_to_cas(tas / P.tas(1, hc, isa), hc)
+        end
+        return dx, dt, f
+    end
+    local tdCache = {}
+    local function td_x(hc)
+        local xp = path_at_h(dp, hc)
+        local d = tdCache[hc]
+        if not d then d = td_decel(hc, xp); tdCache[hc] = d end
+        return xp - d
+    end
+
     local function cruise_until(xstop, hcur)
         -- level at hcur to xstop (or the T/D, a step point)
         while x < xstop - 1e-6 and guard < 200000 do
@@ -442,11 +516,11 @@ function M.predict(s)
             local dt = 60
             local dx = gs * dt / NM
             local lim = xstop
-            if dp then lim = math.min(lim, (path_at_h(dp, hcur))) end
+            if dp then lim = math.min(lim, td_x(hcur)) end
             if x + dx > lim then dx = lim - x; dt = dx * NM / gs end
             if dx <= 0 then break end
             step_state(dx, 0, dt, ff * dt / 3600)
-            if dp and x >= (path_at_h(dp, hcur)) - 1e-6 then return "des" end
+            if dp and x >= td_x(hcur) - 1e-6 then return "des" end
             if s.steps and phase == "crz" then
                 local to, w = s.steps(hcur, kg)
                 local xtd = dp and path_at_h(dp, hcur) or math.huge
@@ -558,8 +632,18 @@ function M.predict(s)
             -- the T/D, then the descent path to the E/D
             if not startDes then
                 local xtd = path_at_h(dp, h)
-                if x < xtd then x = xtd end
+                -- (step LF1) from the cruise: the T/D at the level
+                -- deceleration's start, the deceleration on to where the
+                -- path leaves the cruise altitude
+                local dxd, dtd, fd = 0, 0, 0
+                if math.abs(h - crzAlt) < 50 then dxd, dtd, fd = td_decel(h, xtd) end
+                R.td_decel = dxd
+                if x < xtd - dxd then x = xtd - dxd end
                 td, tdT = x, tt
+                if x < xtd and dxd > 0 then
+                    local frac = (xtd - x) / dxd
+                    step_state(xtd - x, 0, dtd * frac, fd * frac)
+                end
             end
             local _, t0, f0 = path_at_x(dp, x)
             local tbase, bbase = tt, burnt

@@ -2051,3 +2051,19 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - simbrief フォルダの README.txt（置き方と使い方）。中のファイルは .gitignore で git に入れない。試験の筋書きに copy と remove の手順。
 - 推定：会社はシムのもの（データリンクがあれば READY）、時間（受け取り ACK_S 4 秒、答え ANSWER_S 20 秒、読み込み LOAD_S 2 秒）、アップリンクの行き先（地上は要求した経路、空中は無効な経路、FMC COMM からは有効な経路か RTE 1）、CO ROUTE は .fms の名前（英数字 10 字まで）、FLT NO は 8 字まで・同じ便名なら FLT NUMBER UPLINK を出さない、データベースに無い点は緯度経度の点、受け入れ・拒否のダウンリンクは無し、ファイルが無いときの会社の文。
 - 試験：新しい `tests/fms/simbrief_model_test.lua`（44 件：.fms の 1100 と 3、OFP の XML、経路のアップリンクの要素、高度の間の風、巡航の風、降下予報、ACARS の文）と `tests/fms/company_route_test.lua`（67 件：FMC COMM 1/2・2/2、ファイルが無いときの会社の文、SENDING と SENT、ROUTE 1 UPLINK READY と FLT NUMBER UPLINK、UPLINK、ROUTE UPLINK と LOAD・PURGE、LOADING、読み込んだ経路の SID・航空路・進入、有効な経路の MOD と ERASE、CO ROUTE の名前のファイル、PURGE、無いファイル、INVALID ROUTE UPLINK、空中は無効な経路へ）。全体は 181 本すべて通る。X-Plane：新しい `s201_company_route` 26/26（2026-11-01。RJAA の地上で、見本の .fms と OFP を simbrief に写し、プラグインが最新のファイルを見つける、FMC DATALINK ON、FMC COMM 1/2 の <RTE 1・POS REPORT>・DATA LINK READY、2/2 の RTE REQUEST と CO ROUTE、SENDING と SENT、約 20 秒後のアップリンク（RTE REQUEST の見出しが消え、1/2 に UPLINK）、RTE 1 の ROUTE UPLINK と <LOAD・PURGE>、FLT NO JAL123、LOAD の後の RJAA・RJBB・RW34L・CO ROUTE RJAARJBB01、経路 DIRECT XAC・ATMUGA で ATVID・遷移 ATVID で MIBIB・ILS06LZ（不連続なし）、ACTIVATE と EXEC。CDU の写真 6 枚。1・2 回目は XTLua がプラグインの文字の dataref の古い値を使って 12 件が落ち、名前を _newest.txt で渡す形に直した。3 回目の 1 件は筋書きの期待値の誤り：ATMUG から始まる STAR が DIRECT ATMUG に続く）。Log.txt に Lua の誤りなし
+
+## 123. LF1：試験ラインフライト s198 の降下の減速の直し（2026-11-01）
+
+- 見つけたこと（notes/LINE_FLIGHTS.md §1、記録の fvn_* の列）：
+  - 10,000 ft を 291 kt で通過した。目標は 10,000 ft を切るまで 296 kt のままで、15 kt 遅れて A/T が SPD で推力を足し、経路の水平の減速の区間（10,150 ft 付近）は毎分約 1,840 ft で降りてくる機体には短く、乗り越えた。制限の高度を過ぎてから DRAG REQUIRED が出て、9,400 ft で水平にして減速した。
+  - T/D から巡航の 333 kt のまま毎分約 2,700 ft で降り始めた（水平の減速の段が無い）。
+- 資料：FCOM p.1264 の図と説明。2：T/D で FMC は降下の段に移り、ECON の降下速度を命じて、VNAV PATH で高度を保つ（水平の減速）。3：降下速度に近づいたら VNAV PATH で降下。4：速度制限の高度の手前で、FMC は目標の降下速度（制限の速度）を命じ、VNAV PTH のまま約 500 fpm で降りる。p.1263：FMC は速度の遷移の高度での減速を含めて経路を作り、遷移の速度より 10 kt 遅い目標を使う（既存の SPD TRANS の 240）。
+- 直したこと：
+  - `B747.68.pred_model.lua`：降下の経路の減速を、制限の高度で水平に（推定だった）から、制限の高度で終わる約 DECEL_VS（500 fpm）の降下に変えた（アイドルの抗力から降下の分を引いた減速。足りなければ水平：推定）。降下の 250 ft の刻みは、次の速度制限の高度（SPD TRANS・SPD RESTR）で止める（その高度で減速が終わる）。経路の点に区間の種類 "decel" と、その目標の CAS（c：終わりの速度）を持たせた。T/D は、巡航の速度から降下速度までの巡航高度での水平の減速の分だけ手前にし（td_decel、その間はアイドル）、R.td_decel に出す。
+  - `B747.68.vnav_model.lua`：減速の区間では、目標をその区間の速度にする（FCOM p.1264 の 4）。T/D（降下の段に移る所）は経路が巡航高度に着く所と水平の減速の分（td_e）。
+  - FMS のつなぎ：VNAV に渡す経路に c と td_decel を足し、B747_fms_vnav_td（T/D までの距離）も td_e で。
+- 推定：DECEL_VS 500 fpm（FCOM の「約 500 fpm」）、降下で減速が足りないときの水平、T/D の水平の減速を巡航の重量・風・温度で積分。
+- 見つけたことのうち直さないもの（原因の調べ）：
+  - 進入で G/S を捕捉しなかった件：VNAV が MCP の高度で水平になって G/S を下から捕まえる流れは、MCP の高度（乗員）によるもの（FCTM：G/S に乗ってからミスト・アプローチの高度を入れる。それまで MCP は会合高度か許可された高度）。s198 は T/D の前に MCP を 2,000 ft にしたままで、ILS06LY の BERRY と BOLAL は CIFP で「4,000 ft 以上」（J・H）のため、経路は 4,000 ft より上の 3° の直線のまま降りた。筋書きを直した（MCP を STAR の 4,000 ft、ATVID の後に ILS06LZ の会合高度 1,300 ft、G/S の後に 3,000 ft）。VNAV の 3° の経路と X-Plane の G/S の約 0.6 ドットの差は、気圧（標準）と気温（ISA）では説明できず、まだ調べる。
+  - 大きな旋回で E/D までの距離が増えた件：経路そのもの（XAC から ATMUG へ西へ行き STAR で東へ折り返す）が不自然で、2 回目の筋書きも同じ経路。距離を LNAV の経路に沿って測る直しは、次のラインフライトの結果を見てから。
+- 試験：`tests/fms/pred_model_test.lua` に 7 件（減速の区間の目標 250 kt、10,000 ft で終わる、約 500 fpm、M.85 から M.84 の短い水平の減速、FL250 の M.80 から 290 kt の T/D の水平の減速とその始まりの T/D）、`tests/fms/vnav_model_test.lua` に 8 件（T/D の距離、水平の減速の間の降下の段と VNAV PTH・IDLE の水平、減速の区間の目標 240 kt と 500 fpm、その上の 290 kt）。全体は 181 本すべて通る。X-Plane：新しい `s202_vnav_decels` 23/23（2026-11-01、5 回目。T/D で FL250 のまま 335 kt から水平に減速（VNAV の縦の速さ 0、IDLE）、約 50 秒後に 292 kt で降下へ。10,700 ft で目標が 240 kt になり約 460 fpm で降りながら減速し、10,000 ft を 240.5 kt・VNAV PTH・経路の 158 ft 下で通過（s198 は 291 kt）。1〜4 回目は筋書きの不備で無効：空中開始の上昇、FLCH で FL250 へ降りる間に T/D を越えた、X-Plane を起動し直した直後に A/P が入らなかった）。Log.txt に Lua の誤りなし

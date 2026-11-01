@@ -20,3 +20,4 @@
   - STAR ATMUGA は ATVID で終わり、ILS06LY の遷移 GATES とつながらず ROUTE DISCONTINUITY のまま降下した。RJBB の CIFP では ILS06LZ に ATVID の遷移がある（I06LZ）。今回は 17:02 に LEGS で DIRECT TO GATES（乗員の操作）を入れて続けた。
   - A/P を CMD L しか入れておらず、LAND 3 にならない。17:13 に CMD C と CMD R を入れた（FCOM の自動着陸の手順のとおり）。
   - 4. の V/S（17:11）。
+- その後（2026-11-01、LF1：notes/ATA-34-61-FMC.md §123）：1. と 2. を直した（FCOM p.1264 の降下の減速と T/D の水平の減速）。4. は MCP の高度の手順（FCTM：G/S に乗ってからミスト・アプローチの高度。それまで MCP は会合高度か許可された高度）によるもので、VNAV の経路と X-Plane の G/S の約 0.6 ドットの差は、気圧（標準）と気温（ISA）では説明できず、まだ調べる。筋書きを 2 回目に向けて直した：ILS06LZ の遷移 ATVID（STAR とつながる）、MCP を T/D の前に STAR の 4,000 ft、on approach で ILS06LZ の会合高度 1,300 ft、G/S の捕捉でミスト・アプローチの 3,000 ft、APP の後に A/P CMD C・R。
