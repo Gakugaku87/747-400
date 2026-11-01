@@ -712,13 +712,22 @@ local function afds_vnav_level(p)
 		local now = vnavLevel.fma == 5 and mcp or tgt
 		local moved = math.abs(now - vnavLevel.alt) > 50
 		-- VNAV ALT goes on with a new MCP altitude and the selector's push,
-		-- or, levelled below the descent path with the MCP altitude lower,
-		-- once the path comes down to it (FCOM p.645, p.1256: step 9d1;
-		-- before, with any new MCP altitude); VNAV PTH with the FMC's next
-		if moved and vnavLevel.fma == 5 then
-			local pushed = B747DR_ap_alt_sel_pushes ~= vnavLevel.pushes
-			local path = vnavLevel.below and B747DR_ap_fvn_phase == 3 and B747DR_ap_fvn_path_dev >= 0
-			moved = pushed or path
+		-- or, below the descent path when the MCP altitude is reset lower,
+		-- once the path comes down to it (FCOM p.645, p.665, p.1256: step
+		-- 9d1; before, with any new MCP altitude; LF2: below the path when it
+		-- levelled before, s198's second flight on without the push 1,000 ft
+		-- above it); VNAV PTH with the FMC's next
+		if vnavLevel.fma == 5 then
+			if not moved then
+				vnavLevel.reset_below = nil
+			else
+				if vnavLevel.reset_below == nil then
+					vnavLevel.reset_below = B747DR_ap_fvn_phase == 3 and B747DR_ap_fvn_path_dev < 0
+				end
+				local pushed = B747DR_ap_alt_sel_pushes ~= vnavLevel.pushes
+				local path = vnavLevel.reset_below and B747DR_ap_fvn_phase == 3 and B747DR_ap_fvn_path_dev >= 0
+				moved = pushed or path
+			end
 		end
 		if moved then vnavLevel = nil end
 	end
@@ -734,8 +743,7 @@ local function afds_vnav_level(p)
 		if fmc and math.abs(tgt - mcp) <= 50 then
 			vnavLevel = {alt = tgt, fma = 6}
 		elseif B747_afds_pitch_model.capture(p, mcp) then
-			vnavLevel = {alt = mcp, fma = 5, pushes = B747DR_ap_alt_sel_pushes,
-				below = B747DR_ap_fvn_phase == 3 and B747DR_ap_fvn_path_dev < 0}
+			vnavLevel = {alt = mcp, fma = 5, pushes = B747DR_ap_alt_sel_pushes}
 		elseif fmc then
 			vnavLevel = {alt = tgt, fma = 6}
 		end

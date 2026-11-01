@@ -214,6 +214,19 @@ if ($Reload) {
     if ($init.lle_air_start) {
         $t = Start-XPFlight $init
         Add-Result @{ do = 'flight' } 'info' ("the air start again on the reloaded aircraft (sim time {0} s)" -f [math]::Round($t, 1))
+        # Now and then the engines are off after it (2026-11-01: s202's first
+        # four runs, s205 and s206 after a fresh load the runner did not see
+        # in Log.txt and reloaded at once; N2 1 %, no generators, no A/P):
+        # the air start again, twice at most, while engine 1 does not run
+        $run = $init.engine_status
+        if ($run -and $run.all_engines -and $run.all_engines.running) {
+            for ($try = 1; $try -le 2; $try++) {
+                Start-Sleep -Seconds 8
+                if ((Get-XPDataref 'sim/cockpit2/engine/indicators/N2_percent' 0) -gt 40) { break }
+                $t = Start-XPFlight $init
+                Add-Result @{ do = 'flight' } 'warn' ("the engines off after the air start: the air start again (sim time {0} s)" -f [math]::Round($t, 1))
+            }
+        }
     }
 }
 $loaded = Get-XPDataref 'sim/aircraft/view/acf_relative_path'

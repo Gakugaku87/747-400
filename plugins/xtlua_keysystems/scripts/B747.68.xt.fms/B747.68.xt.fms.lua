@@ -1346,6 +1346,10 @@ function B747_fms_pred_input(crz)
     if l.proc == "SID" then clbLast = i end
     if con and not rwy and not (missed and l.proc == "APPR") then lastCon, lastConX = i, total end
   end
+  -- (step LF2; notes/ATA-34-61-FMC.md §127) each leg the longer (a turn
+  -- flown over its fix) or shorter (a fly-by turn) by the turn into it as
+  -- LNAV flies it
+  B747_fms_turns(legs, r)
   -- the E/D: the approach's runway, else the last constraint after the
   -- climb's legs, the SID's or, without one and in the climb, those in the
   -- first half of the route ahead (the predictions' climb,
@@ -1415,7 +1419,8 @@ local function pred_point(legs, x)
   for _, l in ipairs(legs) do
     if l.dist > 0 and x <= acc + l.dist then
       local crs = B747_route_model.course(l.p0.lat, l.p0.lon, l.p1.lat, l.p1.lon)
-      return B747_route_model.course_point(l.p0, crs, x - acc)
+      -- (step LF2) the turn into the leg its first part (at its start)
+      return B747_route_model.course_point(l.p0, crs, math.max(0, x - acc - (l.turn or 0)))
     end
     acc = acc + l.dist
   end
@@ -2131,6 +2136,22 @@ local function update_vnav()
       local _, d1 = B747_route_model.course(simDR_latitude, simDR_longitude, p.lat, p.lon)
       inp.path = g.path
       inp.d_ed = d1 + rem
+      -- (step LF2; notes/ATA-34-61-FMC.md §127) through a turn flown over
+      -- its fix the distance flown taken off, until LNAV is on the leg (or
+      -- not engaged, or TURN_MAX_S on); LNAV's deviations from the new leg
+      -- only after TURN_LNAV_S (LNAV runs after VNAV: a frame on they are
+      -- still the leg before's)
+      local tr = vnavState.turn
+      if tr then
+        local s = B747_fmc_lnav
+        local L, V = B747_lnav_model, B747_vnav_model
+        local age = simDRTime - tr.t1
+        local onLeg = B747DR_fms_ap_lnav_state ~= 2 or age > V.TURN_MAX_S
+          or (age > V.TURN_LNAV_S and math.abs(s.xtk or 0) <= L.FLY_XT and math.abs(s.tae or 0) <= L.FLY_TAE)
+        local d, on = B747_vnav_model.turn_dist(tr, inp.d_ed, inp.gs, simDRTime, onLeg)
+        inp.d_ed = d
+        if not on then vnavState.turn = nil end
+      end
     end
   end
   local out = B747_vnav_model.update(vnavState, inp)
@@ -2294,6 +2315,48 @@ function B747_fms_unable_crz(crz)
 end
 B747_fmc_lnav=B747_lnav_model.new(B747_path_model)
 local lnavPath=nil
+-- (step LF2; notes/ATA-34-61-FMC.md §127) the turn transitions in the
+-- predictions' legs: the turn at the fix before leg i as LNAV flies it
+-- between its path's elements (B747.68.lnav_model.lua's transition) added
+-- to the leg's distance (turn: the NM added, for the ND's points), at the
+-- turns' speed there (LNAV's: the true airspeed, the last predictions' at
+-- the fix else the ground speed now, and the wind now); kept by the fix,
+-- the courses and the speed in 10 kt steps, and by the route's leg for
+-- VNAV's distance through a turn flown over its fix (B747_fms_turn_of)
+do
+  local cache, byRouteLeg = {}, setmetatable({}, {__mode = "k"})
+  function B747_fms_turns(legs, r)
+    local path = lnavPath
+    if not path then return end
+    local byLeg = {}
+    for _, e in ipairs(path) do if e.leg then byLeg[e.leg] = e end end
+    local pts = predResult and predResult.pts
+    local isa = B747_fms_isa_dev()
+    local used = {}
+    for i = 2, #legs do
+      local e1, e2 = byLeg[i - 1], byLeg[i]
+      if e1 and e2 and e1.b then
+        local vt = nil
+        local p = pts and pts[i - 1]
+        if p and p.h then
+          local m = p.machMode and p.mach or (p.cas and B747_perf_db.cas_to_mach(p.cas, p.h)) or p.mach
+          if m then vt = B747_perf_db.tas(m, p.h, isa) end
+        end
+        vt = math.max(vt or simDR_groundspeed * 1.94384, 150) + simDR_wind_speed
+        local key = string.format("%.5f %.5f %.1f %.1f %d", e1.b.lat, e1.b.lon, e1.crs or -1, e2.crs or -1, math.floor(vt / 10 + 0.5))
+        local x = cache[key]
+        if x == nil then x = B747_lnav_model.transition(B747_path_model, e1, e2, math.floor(vt / 10 + 0.5) * 10) end
+        used[key] = x
+        local l = legs[i]
+        l.turn = math.max(x, -l.dist)
+        l.dist = l.dist + l.turn
+        if r.legs[i] then byRouteLeg[r.legs[i]] = x end
+      end
+    end
+    cache = used
+  end
+  function B747_fms_turn_of(leg) return leg and byRouteLeg[leg] or nil end
+end
 -- the active leg the path was built with (a new one not by sequencing:
 -- captured again, FCOM p.644), sequencing now, LNAV engaged a frame ago
 local lnavFirst=nil
@@ -2616,6 +2679,12 @@ function B747_fmc_lnav_update()
     -- after a leg ending at a condition the next starts where the airplane is
     local start=lnavPath[1].term~="fix" and {lat=air.lat,lon=air.lon} or nil
     lnavSequencing=true
+    -- (step LF2) a turn flown over the fix sequenced (the predictions' leg
+    -- after it the longer by more than TURN_MIN_NM): VNAV's distance to
+    -- go through it by the distance flown (B747.68.vnav_model.lua's
+    -- turn_dist)
+    local tx=B747_fms_turn_of(st.rte.legs[2])
+    if tx and tx>B747_vnav_model.TURN_MIN_NM and vnavIn.d_ed then vnavState.turn={d=vnavIn.d_ed,t=simDRTime,t1=simDRTime} end
     if B747_route_model.sequence(st,n,start) then
       B747_fmc_route_changed()
       if routeMap and not routePending then

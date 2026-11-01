@@ -1018,3 +1018,12 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
 - 試験：
   - 回帰（LuaJIT）：油圧モジュール +10（300 ft でもトリム、ROLLOUT で止まる、LAND 2 の 100 ft で full rate、LAND 3 では full rate にしない、A/P を入れ直して姿勢を保つと中立でトリムなし、LAND 2 の 120 ft の下で bias の機首上げ、G/A で取り消し、両方の SRM なら 150 ft では bias なし、1 台なら 190 ft から）。全 122 本。
   - X-Plane（カスタム acf）：新設の `s127_afds_land2_autoland`（s114 の autoland で、1,000 ft で電波高度計 R を故障にして LAND 2 のまま着陸）30/30：LAND 2 の間、120 ft の上は full rate にならず、120 ft の下で bias の機首上げのトリムと full rate（4.9 秒後）、接地の後の ROLLOUT ではトリムしない、安定板は 120 ft の 6.31 units から 7.86 units に。WARN 1：FLARE の間に full rate のトリムが FLARE の機首上げの昇降舵を追って安定板が 50 ft から 1.7 units 動き、接地の直前に 2 ft ほど浮いた（+120 fpm、目安 +100 fpm）。浮き止めが機首を下げて 1.13 g で接地。資料のとおり（FLARE の間もトリムし、LAND 2 は遅れなし）なので直していない。`s114_autoland`（回帰、LAND 3）20/20：接地までトリムするようになり、130 ft から安定板が 1.1 units 機首上げに動き、最大の荷重倍数は 1.67 → 1.50 g（WARN は前からの跳ね）。`s113_afds_multi`（回帰：LAND 2 と 800 ft の G/A）32/32。Lua の誤りなし。
+
+## 42. LF2 の AFDS（2026-11-01：降下の VNAV ALT の続け方）
+
+- 試験ラインフライト 2 回目（notes/LINE_FLIGHTS.md §2）：降下で VNAV の経路（3°）の上にいて MCP 4,000 ft で VNAV ALT になり、経路がその下へ降りていって経路の上 1,020 ft になったところで MCP を 1,300 ft にしたら、高度セレクターを押さずに VNAV が降下を続けた。
+- 資料：FCOM p.665（VNAV ALT：MCP 高度と VNAV の経路がぶつかると水平になって VNAV ALT。降下を続けるには MCP 高度を変えて高度セレクターを押すか、ピッチのモードを変える。VNAV の経路の下にいれば、MCP 高度を直して経路に会えば降下を続ける）、p.645、p.1256。
+- 前のコード（6-1・6-2 段 9d1）：「経路の下」を VNAV ALT に入ったときに決めていた。経路の上で水平になって経路の下へ回る（経路がさらに降りる）のでなく、経路の上に出た場合も、入ったときにわずかに下（-5 ft）なら押し無しで続けた。
+- 作ったもの（`B747.70.xt.autopilot.lua` の afds_vnav_level）：経路の下かどうかを MCP 高度を下げたときに決める（同じ高度に戻すと取り消し）。下なら経路が降りてきて会ったら（経路のずれが 0 以上）押し無しで続ける。上（か経路の上）なら高度セレクターの押しを待つ。
+- 推定：「MCP 高度を下げたとき」の判定を、MCP の窓が水平の高度から 50 ft 以上動いた最初のフレームに取る。
+- 試験：新しい `tests/autopilot/afds_vnav_alt_test.lua`（11 件：経路の上で VNAV ALT、MCP を下げても押すまで VNAV ALT、押して VNAV PTH、経路の下で下げたら経路が降りてきて VNAV PTH、戻して下げ直すと判定し直す。前のコードでは 2 件が失敗）。`afds_glue` はそのまま通る。X-Plane：新しい `s206_vnav_turn_descent` 17/17（2026-11-01、X-Plane を起動し直した後。ATMUG の約 60 NM 東の FL250 から西へ空中開始、s198 と同じ経路で ATMUG へ DIRECT TO、MCP 4,000 ft で VNAV。T/D は ATMUG の約 17 NM 手前（2 回目の試験ラインフライトは約 30 NM 手前：旋回の約 12 NM ぶん遅い）、ATMUG の左 157° の旋回の間の経路のずれは -85〜+84 ft、T/D から 10,000 ft まで最大 336 ft（2 回目は -2,012 ft）、10,000 ft を 244.1 kt（2 回目は 253.5 kt）。MCP 4,000 ft で VNAV ALT、経路が 300 ft 下へ離れてから MCP を 1,300 ft にしても押さなければ VNAV ALT のまま、押して VNAV PTH。1 回目は空中開始の後にエンジンが止まっていて無効：実行器を直した）。Log.txt に Lua の誤りなし
