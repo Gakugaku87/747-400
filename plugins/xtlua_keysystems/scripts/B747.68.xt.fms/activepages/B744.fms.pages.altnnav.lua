@@ -215,10 +215,87 @@ function fmsFunctions.altnprogdest(fmsO, value)
   fmsO["scratchpad"] = ""
 end
 
+-- ALTN NAV RADIO (step 11e3; FCOM p.1427-1428; FMSPG p.252-254; ATA34_2
+-- p.592; B747.68.altn_radio_model.lua through the FMS's
+-- B747_fms_altn_radio): VOR with M, CRS, ADF with ANT or BFO (the three
+-- blank on the centre CDU), ILS-MLS frequency/course or PARK, PRESELECT
+-- 6L and 6R; an entry tunes the CDU's side at once (B747_fms_altn_tune)
+local AR = B747_altn_radio_model
+local TM = B747_tune_model
+fmsPages["ALTNRAD"] = createPage("ALTNRAD")
+fmsPages["ALTNRAD"].getNumPages = function(self) return 1 end
+fmsPages["ALTNRAD"].getPage = function(self, pgNo, fmsID)
+  local s = B747_fms_altn_radio(fmsID)
+  local side = B747_fms_altn_side(fmsID) ~= nil
+  local lines = {pad("     ALTN NAV RADIO"), BLANK}
+  lines[3] = side and pad(s.vor.freq and TM.freq_text(s.vor.freq) or "------") or BLANK
+  lines[4] = BLANK
+  lines[5] = side and pad(s.vor.crs and string.format("%03d", s.vor.crs) or "---") or BLANK
+  lines[6] = BLANK
+  lines[7] = side and pad(s.adf.khz and TM.adf_text(s.adf.khz) or "------") or BLANK
+  lines[8] = BLANK
+  lines[9] = pad(s.ils.freq and TM.ils_text({freq = s.ils.freq, crs = s.ils.crs or 0}) or "PARK")
+  lines[10], lines[11], lines[12] = BLANK, BLANK, BLANK
+  local p1, p2 = s.pre[1] or "------", s.pre[2] or "------"
+  lines[13] = p1 .. string.rep(" ", math.max(1, 24 - #p1 - #p2)) .. p2
+  return lines
+end
+fmsPages["ALTNRAD"].getSmallPage = function(self, pgNo, fmsID)
+  local s = B747_fms_altn_radio(fmsID)
+  local side = B747_fms_altn_side(fmsID) ~= nil
+  local lines = {BLANK}
+  lines[2] = side and pad(" VOR") or BLANK
+  -- the VOR's M after its frequency (FCOM p.1427's figure)
+  lines[3] = (side and s.vor.freq) and pad(string.rep(" ", #TM.freq_text(s.vor.freq)) .. "M") or BLANK
+  lines[4] = side and pad(" CRS") or BLANK
+  lines[5] = BLANK
+  lines[6] = side and pad(" ADF") or BLANK
+  local mode = s.adf.mode ~= "ADF" and s.adf.mode or ""
+  lines[7] = (side and s.adf.khz) and pad(string.rep(" ", #TM.adf_text(s.adf.khz)) .. mode) or BLANK
+  lines[8] = pad(" ILS-MLS")
+  lines[9], lines[10], lines[11] = BLANK, BLANK, BLANK
+  lines[12] = pad("       PRESELECT")
+  lines[13] = BLANK
+  return lines
+end
+fmsFunctionsDefs["ALTNRAD"] = {}
+fmsFunctionsDefs["ALTNRAD"]["L1"] = {"altnrad", "vor"}
+fmsFunctionsDefs["ALTNRAD"]["L2"] = {"altnrad", "crs"}
+fmsFunctionsDefs["ALTNRAD"]["L3"] = {"altnrad", "adf"}
+fmsFunctionsDefs["ALTNRAD"]["L4"] = {"altnrad", "ils"}
+fmsFunctionsDefs["ALTNRAD"]["L6"] = {"altnradpre", "1"}
+fmsFunctionsDefs["ALTNRAD"]["R6"] = {"altnradpre", "2"}
+-- the VOR, CRS and ADF lines: the left and right CDUs only
+local SIDE_ONLY = {vor = true, crs = true, adf = true}
+function fmsFunctions.altnrad(fmsO, value)
+  local sp = fmsO["scratchpad"]
+  if sp == "" then return end
+  if SIDE_ONLY[value] and not B747_fms_altn_side(fmsO.id) then fmsO["notify"] = AR.INVALID return end
+  local s = B747_fms_altn_radio(fmsO.id)
+  local err = AR[value](s, sp, value == "ils" and B747_fms_altn_rwy_crs() or nil)
+  if err then fmsO["notify"] = err return end
+  fmsO["scratchpad"] = ""
+  B747_fms_altn_tune(fmsO.id)
+end
+-- PRESELECT: an entry kept; with an empty scratchpad down-selected into it
+function fmsFunctions.altnradpre(fmsO, value)
+  local k = tonumber(value)
+  local s = B747_fms_altn_radio(fmsO.id)
+  local sp = fmsO["scratchpad"]
+  if sp == "" then
+    if s.pre[k] then fmsO["scratchpad"] = s.pre[k] end
+    return
+  end
+  local err = AR.preselect(s, k, sp)
+  if err then fmsO["notify"] = err return end
+  fmsO["scratchpad"] = ""
+end
+
 -- the keys of a CDU without an FMC to connect to (B744.createfms.lua's
 -- pageKey; FCOM p.1275): LEGS the IRS LEGS page, PROG IRS PROGRESS
--- (step 11e2), EXEC IRS LEGS's modification; true when taken
-local ALTN_PAGE = {legs = "IRSLEGS", prog = "IRSPROG"}
+-- (step 11e2), NAV RAD ALTN NAV RADIO (step 11e3), EXEC IRS LEGS's
+-- modification; true when taken
+local ALTN_PAGE = {legs = "IRSLEGS", prog = "IRSPROG", navrad = "ALTNRAD"}
 function B747_cdu_altn_key(fmsO, key)
   if ALTN_PAGE[key] then
     fmsO.targetCustomFMC = true

@@ -158,6 +158,43 @@ key("func_key/prog", "fmsR")
 T.check(small(10, "fmsR"):find("^ IRS R"), "the right CDU: IRS R")
 T.check(line(5, "fmsR"):find("^ALPHA"), "its TO still ALPHA (its own IRU)")
 
+-- (6-1/6-2 step 11e3) NAV RAD: ALTN NAV RADIO (FCOM p.1427-1428; FMSPG
+-- p.252-254): an entry tunes the left CDU's side at once (FCOM p.1422);
+-- PRESELECT down-selected; the right radios untouched
+local NAVF, OBS = "sim/cockpit2/radios/actuators/nav_frequency_hz", "sim/cockpit2/radios/actuators/nav_obs_deg_mag_pilot"
+local vorR = rt:get(NAVF, 3)
+key("func_key/navrad")
+T.check(line(1):find("ALTN NAV RADIO"), "NAV RAD: ALTN NAV RADIO: " .. line(1))
+T.check(small(2):find("^ VOR") and small(4):find("^ CRS") and small(6):find("^ ADF") and small(8):find("^ ILS%-MLS"), "VOR, CRS, ADF, ILS-MLS")
+T.check(small(12):find("PRESELECT"), "PRESELECT")
+for _ = 1, 3 do key("key/clear") end
+enter("114.50/270", "L1")
+T.equal(rt:get(NAVF, 2), 11450, "VOR L (NAV3) 114.50 at once")
+T.near(rt:get(OBS, 2), 270, 1e-6, "its course 270")
+T.check(line(3):find("^114%.50") and small(3):find("^      M"), "1L 114.50 with M")
+T.check(line(5):find("^270"), "2L 270")
+T.equal(string.sub(rt:get("laminar/B747/radio/tuningmodes"), 2, 2), "M", "VOR L manual")
+enter("109.50/157", "L4")
+T.equal(rt:get(NAVF, 0), 10950, "ILS L (NAV1) 109.50")
+T.near(rt:get(OBS, 0), 157, 1e-6, "its course 157")
+T.equal(rt:get("laminar/B747/autopilot/ils_dots"), 1, "the PFDs' ILS scales")
+T.check(line(9):find("^109%.50/157"), "4L 109.50/157")
+enter("1304.5B", "L3")
+T.equal(rt:get("sim/cockpit2/radios/actuators/adf1_frequency_hz"), 1304, "ADF L 1304")
+T.equal(string.sub(rt:get("laminar/B747/radio/tuningmodes"), 4, 4), "B", "BFO")
+T.check(line(7):find("^1304%.5") and small(7):find("BFO"), "3L 1304.5 BFO")
+enter("110.90/128", "L6")
+T.check(line(13):find("^110%.90/128"), "PRESELECT 6L")
+key("ls_key/L6")
+T.equal(pad(), "110.90/128", "6L down-selected into the scratchpad (FMSPG p.254)")
+key("ls_key/L4")
+T.equal(rt:get(NAVF, 0), 11090, "into 4L: ILS L 110.90")
+key("key/del")
+key("ls_key/L4")
+T.check(line(9):find("^PARK"), "DELETE: PARK")
+T.equal(rt:get("laminar/B747/autopilot/ils_dots"), 0, "no ILS tuned: no scales")
+T.equal(rt:get(NAVF, 3), vorR, "VOR R untouched (the right CDU's)")
+
 -- an FMC back: the copies the FMC's route again
 rt:set(FAIL, 0, 0)
 frames(1.5)
