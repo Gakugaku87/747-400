@@ -3143,6 +3143,10 @@ end
 function B747_fms_fmc_connect(cdu) return FL.connect(fmcLink,cdu,fmcIn) end
 function B747_fms_fmc_available(cdu) return FL.available(fmcLink,cdu,fmcIn) end
 function B747_fms_fmc_linked(cdu) return FL.linked(fmcLink,cdu) end
+-- (6-1/6-2 step 11d2) the FMC the FMC master selector selects working: the
+-- radios' tuning is its (ATA34_2 p.496; ATA34_1 p.332, p.350: held at the
+-- last frequencies without it)
+function B747_fms_master_ok() return fmcLink.ok[fmcIn.master] end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after
 -- a flight (all four's N2 under the ENG FAIL speed: laminar/B747/engines/
@@ -3770,7 +3774,7 @@ function after_physics()
     if simDR_bus_volts[0]>22 then
       irsSystem.update()
       update_navperf()
-      update_tuning()
+      if B747_fms_master_ok() then update_tuning() end
     end
     if acarsSystem.provider.online() then
       B747DR_CAS_memo_status[40]=0 --for CAS

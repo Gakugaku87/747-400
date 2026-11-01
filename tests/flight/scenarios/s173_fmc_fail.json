@@ -1,6 +1,6 @@
 {
   "name": "s173_fmc_fail",
-  "description": "6-1/6-2 段 11d1（FMC 2 台の故障と CDU の接続）の X-Plane での確認。RJAA 34L の地上（機体を読み直す）。左 FMC を故障させる（laminar/B747/fms/fail[0]）と、左と中央の CDU は MENU と TIMEOUT - RESELECT、右の CDU は SINGLE FMC OPERATION（FCOM p.1275, p.1434）、5 秒ほどで EICAS に FMC LEFT（p.1429）。左の CDU の <FMC で右 FMC につながる。左 FMC を戻すと FMC LEFT が消え、機長の NAV ソース選択を FMC R から FMC L に回すと左 FMC につながる（p.1422）。CDU と EICAS を撮る。Lua の誤りも確かめる",
+  "description": "6-1/6-2 段 11d1（FMC 2 台の故障と CDU の接続）の X-Plane での確認。RJAA 34L の地上（機体を読み直す）。左 FMC を故障させる（laminar/B747/fms/fail[0]）と、左と中央の CDU は MENU と TIMEOUT - RESELECT、右の CDU は SINGLE FMC OPERATION（FCOM p.1275, p.1434）、30 秒で EICAS に FMC LEFT（p.1429、LH3460 p.116）。左の CDU の <FMC で右 FMC につながる。左 FMC を戻すと FMC LEFT が消え、機長の NAV ソース選択を FMC R から FMC L に回すと左 FMC につながる（p.1422）。CDU と EICAS を撮る。Lua の誤りも確かめる",
   "reload": true,
   "flight": {
     "runway_start": { "airport_id": "RJAA", "runway": "34L" },
@@ -47,7 +47,7 @@
     { "do": "shot", "name": "cdu_timeout_reselect" },
     { "do": "cdu", "note": "INIT REF（FMC がつながっていないので MENU のまま）", "keys": ["INITREF"] },
     { "do": "check", "note": "MENU のまま", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "MENU" },
-    { "do": "wait", "note": "EICAS に FMC LEFT（遅れて出る：FCOM p.1275）", "dref": "laminar/B747/CAS/advisory_status[144]", "op": "==", "value": 1, "timeout": 15 },
+    { "do": "wait", "note": "EICAS に FMC LEFT（故障から 30 秒：FCOM p.1275、LH3460 p.116）", "dref": "laminar/B747/CAS/advisory_status[144]", "op": "==", "value": 1, "timeout": 45 },
     { "do": "view", "name": "eicas" },
     { "do": "shot", "name": "eicas_fmc_left" },
 

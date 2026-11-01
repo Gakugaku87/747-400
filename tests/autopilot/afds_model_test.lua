@@ -42,7 +42,8 @@ local function inp(o)
         fcc = o.fcc, mcp = o.mcp, stby = o.stby, iru = o.iru, adc = o.adc, trim = o.trim, wheel = o.wheel,
         cap = o.cap, loc_rx = o.loc_rx, gs_rx = o.gs_rx, ra_n = o.ra_n, iru_nav = o.iru_nav,
         iru_hdg = o.iru_hdg, adc_sel = o.adc_sel, pitch_att = o.pitch_att, ils_freq = o.ils_freq,
-        loc_alive = o.loc_alive, loc_hdg_err = o.loc_hdg_err, gs_kt = o.gs_kt, bus_isolated = o.bus_isolated}
+        loc_alive = o.loc_alive, loc_hdg_err = o.loc_hdg_err, gs_kt = o.gs_kt, bus_isolated = o.bus_isolated,
+        fmc_ok = o.fmc_ok}
 end
 
 -- engage with both F/Ds OFF: V/S and HDG HOLD (FCOM p.640; ATA22 p.266)
@@ -1115,6 +1116,50 @@ approach(mn2, {cap = cap(), sensors = 1, loc_rx = 1, gs_rx = 1})
 T.check(A.engaged(mn2) == 3 and mn2.roll_fail and mn2.pitch_fail, "LAND 3, the signal lost: three still engaged, LOC and G/S failed")
 approach(mn2, {cap = cap({ils = 1}), sensors = 1, loc_rx = 1, gs_rx = 1})
 T.check(A.engaged(mn2) == 0 and mn2.disc, "two receivers failed: disengaged (p.320, p.322)")
+-- (6-1/6-2 step 11d2) the master FMC failed (ATA22 p.382, p.338; ATA34_2
+-- p.633): LNAV and VNAV failed while it lasts, their bank and pitch held,
+-- AUTOPILOT; normal again without a new selection when it works; VNAV at
+-- the MCP altitude ALT HOLD; a sensor lost meanwhile stays failed
+local function fmc_inp(o)
+    o = o or {}
+    o.fdL, o.lnav_valid, o.vnav_engaged = true, true, true
+    o.capture_alt = o.capture_alt or 20000
+    return inp(o)
+end
+local mm = A.new()
+A.cmd(mm, "L", fmc_inp())
+A.lnav(mm, fmc_inp())
+A.vnav(mm, fmc_inp())
+A.update(mm, fmc_inp())
+T.check(mm.roll == "LNAV" and mm.pitch == "VNAV", "(LNAV and VNAV)")
+A.update(mm, fmc_inp({fmc_ok = false, bank = 12, pitch_att = 3}))
+T.check(mm.roll_fail and mm.pitch_fail and A.caution(mm), "the master FMC failed: LNAV and VNAV failed, AUTOPILOT (ATA22 p.382)")
+T.check(mm.fail_bank == 12 and mm.fail_pitch == 3, "their bank and pitch held")
+T.check(mm.roll == "LNAV" and mm.pitch == "VNAV", "still LNAV and VNAV (the FMA's lines)")
+A.update(mm, fmc_inp({fmc_ok = false, bank = 5, pitch_att = 1}))
+T.check(mm.roll_fail and mm.pitch_fail and mm.fail_bank == 12, "while it lasts, the bank of its failure")
+A.update(mm, fmc_inp({fmc_ok = true}))
+T.check(not mm.roll_fail and not mm.pitch_fail and not A.caution(mm), "the selector at the operative FMC: normal (ATA34_2 p.633)")
+T.check(mm.roll == "LNAV" and mm.pitch == "VNAV", "LNAV and VNAV without a new selection")
+A.update(mm, fmc_inp({fmc_ok = false}))
+A.hdg_sel(mm, fmc_inp({fmc_ok = false}))
+T.check(mm.roll == "HDG_SEL" and not mm.roll_fail and mm.pitch_fail, "HDG SEL meanwhile: no longer failed (VNAV still)")
+local mc = A.new()
+A.cmd(mc, "L", fmc_inp())
+A.vnav(mc, fmc_inp())
+A.update(mc, fmc_inp({alt = 20000}))
+A.update(mc, fmc_inp({alt = 20060, fmc_ok = false}))
+T.check(mc.pitch == "ALT" and not mc.pitch_fail and mc.hold_alt == 20060, "VNAV at the MCP altitude: ALT HOLD (ATA22 p.338)")
+A.update(mc, fmc_inp({alt = 20060, fmc_ok = true}))
+T.equal(mc.pitch, "ALT", "the FMC back: still ALT HOLD")
+local md = A.new()
+A.cmd(md, "L", fmc_inp())
+A.lnav(md, fmc_inp())
+A.update(md, fmc_inp())
+A.update(md, fmc_inp({fmc_ok = false}))
+A.update(md, fmc_inp({fmc_ok = false, iru_nav = 1}))
+A.update(md, fmc_inp({fmc_ok = true, iru_nav = 1}))
+T.check(md.roll == "LNAV" and md.roll_fail, "the IRUs lost meanwhile: failed until a new mode (step 5c)")
 
 -- 5d: ILS TUNE INHIBIT and RA TEST INHIBIT (ATA22 p.212; FCOM p.1305):
 -- the A/P engaged with LOC or G/S captured; the F/Ds only with them

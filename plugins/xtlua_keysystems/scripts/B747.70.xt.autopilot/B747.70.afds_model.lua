@@ -162,6 +162,11 @@
 --    line on the FMA; AUTOPILOT with the A/P engaged and a mode failed or
 --    a single channel in FLARE. A missing ILS signal is a mode failure,
 --    not the dual failure that disengages multi-channel (step 5a).
+--  - The master FMC failed (6-1/6-2 step 11d2; ATA22 p.382; ATA34_2
+--    p.633; `inp.fmc_ok`, the FMC the FMC master selector selects): LNAV
+--    and VNAV failed as above while it lasts, LNAV and VNAV again (no new
+--    selection) when it works (the selector turned to the operative FMC);
+--    VNAV at the MCP altitude goes to ALT HOLD instead (ATA22 p.338).
 --  - ILS TUNE INHIBIT and RA TEST INHIBIT (step 5d; ATA22 p.212; FCOM
 --    p.1305): with LOC or G/S captured and the A/P engaged, or the F/Ds
 --    only under 500 ft; the ILS's also on the takeoff roll.
@@ -259,6 +264,9 @@ M.INHIBIT_GND_KT = 40
 -- else NO LAND 3 (p.384: the wait an estimate)
 M.ISO_GA_RA = 100
 M.ISO_WAIT_S = 4
+-- VNAV at the MCP altitude when the master FMC fails: within FMC_ALT_FT
+-- (6-1/6-2 step 11d2; ATA22 p.338: the band an estimate)
+M.FMC_ALT_FT = 100
 
 -- the state
 function M.new()
@@ -273,6 +281,7 @@ function M.new()
         letdown = false, retard = false, rwy_align = false,
         alert = nil, alert_level = nil,
         roll_fail = false, pitch_fail = false, fail_bank = 0, fail_pitch = 0, ils_freq = nil,
+        roll_fmc = false, pitch_fmc = false,
         iso_req = false, iso_t = 0}, {})
 end
 
@@ -347,7 +356,7 @@ local function set_roll(s, mode, bank)
     s.roll = mode
     s.hold_hdg, s.level_t = nil, 0
     s.att_bank = mode == "ATT" and bank or 0
-    s.roll_fail = false
+    s.roll_fail, s.roll_fmc = false, false
 end
 
 -- the roll mode by the bank: ATT (PW, RR) above ATT_MIN, held to ATT_MAX,
@@ -378,7 +387,7 @@ local function set_pitch(s, mode, alt)
     s.pitch = mode
     s.hold_alt = mode == "ALT" and alt or nil
     s.flch_near = nil
-    s.pitch_fail = false
+    s.pitch_fail, s.pitch_fmc = false, false
 end
 -- the pitch modes' transitions (table p.335): from G/S only before LOC is
 -- active, from G/A only at 400 ft RA, none from FLARE
@@ -715,12 +724,28 @@ local function mode_failures(s, inp)
     if (s.roll == "LNAV" or s.roll == "LOC") and (inp.iru_nav or 3) < M.SENSORS_MIN then roll_bad = true end
     if (s.roll == "HDG_SEL" or s.roll == "HDG_HOLD") and (inp.iru_hdg or 3) < M.SENSORS_MIN then roll_bad = true end
     if s.pitch == "GA" and M.engaged(s) >= 2 and inp.adc_sel == false then pitch_bad = true end
-    if roll_bad and not s.roll_fail then
+    -- the master FMC failed in LNAV or VNAV (step 11d2): failed while it
+    -- lasts; VNAV at the MCP altitude ALT HOLD at its failure
+    local fmc_bad = inp.fmc_ok == false
+    local fmc_roll = fmc_bad and s.roll == "LNAV"
+    local fmc_pitch = fmc_bad and s.pitch == "VNAV"
+    if fmc_pitch and not s.pitch_fail and inp.alt and inp.capture_alt
+        and math.abs(inp.alt - inp.capture_alt) <= M.FMC_ALT_FT then
+        set_pitch(s, "ALT", inp.alt)
+        fmc_pitch = false
+    end
+    if roll_bad then s.roll_fmc = false end
+    if pitch_bad then s.pitch_fmc = false end
+    if (roll_bad or fmc_roll) and not s.roll_fail then
         s.roll_fail, s.fail_bank = true, math.max(-M.ATT_MAX, math.min(M.ATT_MAX, inp.bank or 0))
+        s.roll_fmc = not roll_bad
     end
-    if pitch_bad and not s.pitch_fail then
+    if (pitch_bad or fmc_pitch) and not s.pitch_fail then
         s.pitch_fail, s.fail_pitch = true, inp.pitch_att or 0
+        s.pitch_fmc = not pitch_bad
     end
+    if s.roll_fail and s.roll_fmc and not fmc_roll then s.roll_fail, s.roll_fmc = false, false end
+    if s.pitch_fail and s.pitch_fmc and not fmc_pitch then s.pitch_fail, s.pitch_fmc = false, false end
     -- the ILS's frequency at the capture
     if s.roll == "LOC" or s.pitch == "GS" then
         s.ils_freq = s.ils_freq or inp.ils_freq
