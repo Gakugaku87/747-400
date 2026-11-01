@@ -128,13 +128,101 @@ function fmsFunctions.altnerase(fmsO, value)
   if s.mod then AN.erase(s) end
 end
 
+-- IRS PROGRESS (step 11e2; FCOM p.1425-1426; FMSPG p.250-251): LAST and
+-- its crossing altitude; TO, NEXT and DEST (MOD, ENROUTE WPT, DIR TO
+-- ALTERNATE) with their distance and time to go at the IRU's ground speed
+-- (blank without it); the CDU's IRU's position and ground speed; XTK
+-- ERROR, DTK and TK by the heading reference (TK X-Plane's ground track:
+-- the F/O's for the right CDU, estimate). 4L takes an alternate, gone
+-- when the page is left
+local function nm_text(d) return d and string.format("%dNM", math.floor(d + 0.5)) or "" end
+local function ttg_text(d, gs)
+  if not d or not gs or gs < 1 then return "" end
+  local m = math.floor(d / gs * 60 + 0.5)
+  return string.format("%02d:%02d", math.floor(m / 60), m % 60)
+end
+-- a true course by the heading reference ("250`M", "248`T")
+local function ref_crs(c)
+  if not c then return "" end
+  local ref = "T"
+  if B747DR_fms_hdg_ref_true <= 0.5 then c, ref = (c + simDR_variation) % 360, "M" end
+  local n = math.floor(c + 0.5) % 360
+  return string.format("%03d`%s", n == 0 and 360 or n, ref)
+end
+local function row(a, b, c) return string.format("%-7s%9s%8s", a or "", b or "", c or "") end
+local function trans_alt() return tonumber(fmsModules["data"]["transalt"]) or 18000 end
+
+fmsPages["IRSPROG"] = createPage("IRSPROG")
+fmsPages["IRSPROG"].getNumPages = function(self) return 1 end
+fmsPages["IRSPROG"].getPage = function(self, pgNo, fmsID)
+  local s = B747_fms_altn(fmsID)
+  -- the page left since its last drawing (not drawn the frame before):
+  -- its alternate gone (FMSPG p.251)
+  local f = B747_fms_frame_no()
+  if s.prog_f and f - s.prog_f > 1 then s.alt = nil end
+  s.prog_f = f
+  local pos = B747_fms_altn_pos(fmsID)
+  local gs = pos and pos.gs or nil
+  local p = AN.progress(s, pos)
+  local lines = {pad("      IRS PROGRESS")}
+  local alt = s.last_alt and B747_cdu_model.format_alt(math.floor(s.last_alt + 0.5), trans_alt()) or ""
+  lines[2], lines[3] = BLANK, row(s.last and s.last.ident or "", alt, "")
+  lines[4], lines[5] = BLANK, p.to and row(p.to.ident, nm_text(p.to.dtg), ttg_text(p.to.dtg, gs)) or BLANK
+  lines[6], lines[7] = BLANK, p.next and row(p.next.ident, nm_text(p.next.dtg), ttg_text(p.next.dtg, gs)) or BLANK
+  lines[8], lines[9] = BLANK, p.dest and row(p.dest.ident, nm_text(p.dest.dtg), ttg_text(p.dest.dtg, gs)) or BLANK
+  lines[10] = BLANK
+  if pos then
+    local at = toDMS(pos.lat, true) .. " " .. toDMS(pos.lon, false)
+    local g = string.format("%dKT", math.floor(gs + 0.5))
+    lines[11] = at .. string.rep(" ", math.max(1, 24 - #at - #g)) .. g
+  else
+    lines[11] = BLANK
+  end
+  lines[12] = BLANK
+  local xtk = p.xtk and string.format("%s %.1fNM", p.xtk < 0 and "L" or "R", math.abs(p.xtk)) or ""
+  local tk = B747_fms_altn_track(fmsID)
+  if tk and B747DR_fms_hdg_ref_true > 0.5 then tk = (tk - simDR_variation) % 360 end
+  local tk_text = ""
+  if tk and pos then
+    local n = math.floor(tk + 0.5) % 360
+    tk_text = string.format("%03d`%s", n == 0 and 360 or n, B747DR_fms_hdg_ref_true > 0.5 and "T" or "M")
+  end
+  lines[13] = string.format("%-10s%6s%8s", xtk, ref_crs(p.dtk), tk_text)
+  return lines
+end
+fmsPages["IRSPROG"].getSmallPage = function(self, pgNo, fmsID)
+  local s = B747_fms_altn(fmsID)
+  local p = AN.progress(s, B747_fms_altn_pos(fmsID))
+  local lines = {BLANK}
+  lines[2], lines[3] = row(" LAST", "ALT", ""), BLANK
+  lines[4], lines[5] = row(" TO", "DTG", "TTG"), BLANK
+  lines[6], lines[7] = pad(" NEXT"), BLANK
+  lines[8], lines[9] = pad(" " .. (p.dest and p.dest.title or "DEST")), BLANK
+  local h = " IRS " .. B747_fms_altn_iru(fmsID)
+  lines[10], lines[11] = h .. string.rep(" ", 24 - #h - 2) .. "GS", BLANK
+  lines[12], lines[13] = string.format("%-10s%6s%8s", " XTK ERROR", "DTK", "TK"), BLANK
+  return lines
+end
+fmsFunctionsDefs["IRSPROG"] = {}
+fmsFunctionsDefs["IRSPROG"]["L4"] = {"altnprogdest", ""}
+function fmsFunctions.altnprogdest(fmsO, value)
+  local s = B747_fms_altn(fmsO.id)
+  local sp = fmsO["scratchpad"]
+  if sp == "" then return end
+  if sp == "DELETE" then fmsO["notify"] = AN.INVALID_DELETE return end
+  local err = AN.set_alternate(s, sp, B747_route_model.parse_latlon(sp))
+  if err then fmsO["notify"] = err return end
+  fmsO["scratchpad"] = ""
+end
+
 -- the keys of a CDU without an FMC to connect to (B744.createfms.lua's
--- pageKey; FCOM p.1275): LEGS the IRS LEGS page, EXEC its modification;
--- true when taken
+-- pageKey; FCOM p.1275): LEGS the IRS LEGS page, PROG IRS PROGRESS
+-- (step 11e2), EXEC IRS LEGS's modification; true when taken
+local ALTN_PAGE = {legs = "IRSLEGS", prog = "IRSPROG"}
 function B747_cdu_altn_key(fmsO, key)
-  if key == "legs" then
+  if ALTN_PAGE[key] then
     fmsO.targetCustomFMC = true
-    fmsO.targetPage = "IRSLEGS"
+    fmsO.targetPage = ALTN_PAGE[key]
     fmsO.targetpgNo = 1
     return true
   end

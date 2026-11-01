@@ -1733,3 +1733,18 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - CDU：`activepages/B744.fms.pages.altnnav.lua`（新）の ACT IRS LEGS（MOD IRS LEGS）：5 点ずつ、小字に針路（現用は方位基準で M か T、以降は T）と距離（現用の脚は無し）、点と座標、不連続の箱と THEN、6L に <ERASE（MOD のとき）、区切りの線。`B744.createfms.lua` の pageKey：つながっていない CDU で、つなげる FMC も無ければ、LEGS で IRS LEGS、IRS LEGS での EXEC は CDU の変更。
 - 推定：順送りは現用の点を横に過ぎたとき。現用の点の削除と不連続の削除は INVALID DELETE。長い識別子（緯度経度の点）では座標の間の空白を詰める。磁方位は X-Plane の磁気偏差で。
 - 試験：新しい `altn_nav_model_test.lua`（43 件）と `altn_nav_glue_test.lua`（28 件）。全 159 本。X-Plane：新しい `s177_irs_legs`：17/17（2026-11-01、立ち上げ直した後の 4 便目）。成田の北の 3,000 ft で RJAA→RJBB（XAC・SPENS・BOKJO）を作り XAC へ DIRECT の後、両方の FMC を故障させると、左の CDU は MENU で <FMC が無く、LEGS で ACT IRS LEGS 1/1：216°M、XAC N34°42.7 E139°24.8、271°T 20NM、SPENS、251°T 32NM、BOKJO、終わりの破線と区切りの線（画像）。2L に N3610.0E14010.0 を入れると MOD IRS LEGS 1/2 で N36E140、THEN と箱、ROUTE DISCONTINUITY、<ERASE、左の EXEC 灯だけが点き（画像）、EXEC で ACT に戻って灯が消えた。右の CDU の IRS LEGS は 2 行目が SPENS のまま。Log.txt に Lua の誤りなし。
+
+## 103. 11e2 の実装（2026-11-01：IRS PROGRESS）
+
+- 資料：
+  - FCOM p.1425–1426（IRS PROGRESS の行：LAST、TO、NEXT、DEST、IRS の位置、XTK ERROR、ALT、TTG、DTG、GS、TK、DTK。DEST の入れ方で ENROUTE WPT と DIR TO ALTERNATE）。
+  - FMSPG p.250–251：
+    - LAST の点と、それを過ぎた時の高度。TO の DTG は経路沿いで、経路を外れていれば真横の点から。TTG は対地速度で、速度や位置が無効なら空白。NEXT の DTG は TO の DTG に二点の大圏の距離を足す。
+    - DEST の見出し：DEST、MOD（変更中は変更した経路で）、DIR TO ALTERNATE（経路に無い点：現在位置から直行。ページを離れるか経路の変更で消える）、ENROUTE WPT（経路の点：経路沿いで、その点を過ぎると目的地に戻る。二度ある点は初めの方）。
+    - IRS の見出しに使う IRU（L・C・R）、GS、XTK ERROR、DTK、TK（方位基準の M か T）。
+- 作ったもの：
+  - `B747.68.altn_nav_model.lua`：`progress`（TO・NEXT・DEST の DTG、横の距離、真横の点での脚の針路）、`set_alternate`（4L の入力：経路の点で ENROUTE WPT、緯度経度で DIR TO ALTERNATE、他は INVALID ENTRY）。経路の変更・EXEC・ERASE と、ENROUTE WPT の点を過ぎたときに代替を消す。
+  - `activepages/B744.fms.pages.altnnav.lua` の IRS PROGRESS：LAST と ALT（遷移高度の上は FL）、TO・NEXT・DEST の距離と時間、IRS L・C・R の位置と GS、XTK ERROR（L・R と NM）、DTK と TK（方位基準）。4L の入力。ページを離れると代替を消す（前のフレームに描かれていなければ離れたとする）。PROG キーでこのページ。
+  - つなぎ：各 CDU の IRU の名前と航跡（`B747_fms_altn_iru`・`B747_fms_altn_track`）、フレームの数（`B747_fms_frame_no`）。FMS の主のチャンクの局所変数が 200 を超えたので、11d と 11e のつなぎを 1 つの `do ... end` にまとめ、`>FMC MESSAGE` で使う `B747_fms_any_fmc` だけを大域にした。
+- 推定：TK は X-Plane の対地航跡（IRS に航跡の dataref が無い。右の CDU は副操縦士側）、TTG は 1 kt 未満で空白、経路の不連続は前後をつないで数える、4L の DELETE は INVALID DELETE。
+- 試験：`altn_nav_model_test.lua`（+20 件：63 件）、`altn_nav_glue_test.lua`（+16 件：44 件）。全 159 本。X-Plane：新しい `s178_irs_progress`：13/13（2026-11-01、立ち上げ直した後の 5 便目）。成田の北の 3,000 ft で RJAA→RJBB（XAC・SPENS・BOKJO）を作り XAC へ DIRECT の後、両方の FMC を故障させると、左の CDU の PROG で IRS PROGRESS：TO XAC 87NM 00:16、NEXT SPENS 107NM 00:20、DEST RJBB 296NM 00:55（321 kt で計算が合う）、IRS L の位置と GS、XTK ERROR R 0.7NM、DTK 216°M、TK 348°M（画像）。4L の SPENS で ENROUTE WPT、LEGS へ行って戻ると DEST。右の CDU は IRS R。Log.txt に Lua の誤りなし。
