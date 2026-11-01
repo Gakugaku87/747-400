@@ -1975,3 +1975,17 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - ページ：ATC ROUTE REQUEST 4/4 の 3L・3R（小さい字と caret、選ぶと大きい字、もう一方は見出しごと空白）、5L（既定は小さい字と caret、入れたものと押したものは大きい字、無ければ dashes）。
 - 推定：経路の文の形（FANS の route clearance のデータを文にしたもの。航空路の名前と点を並べ、DIRECT は書かない）、空中で STAR と進入の両方を選んでいるときは STAR、dashes の数（5）、手続きの名前の長さ（7 文字、遷移 5 文字）、出発地と目的地に無い手続きは NOT IN DATA BASE、要素の並び（DIRECT TO、経路、手続き、HEADING、GROUND TRACK）、空の RTE 2 を押しても何もしない。
 - 試験：`tests/fms/atc_request_model_test.lua` に 17 件（RTE 1 と RTE 2 の排他、経路の文と行、今の経路への作り直し、DELETE、手続きの形、REQUEST [procedure name]、要素の並び）、`tests/fms/atc_request_pages_test.lua` に 23 件（4/4 の見出しと prompt、空の RTE 2、RTE 1 の選択と RTE 2 の空白、SID の既定、無い遷移の NOT IN DATA BASE、押して大きい字、VERIFY REQUEST の REQUEST ROUTE CLEARANCE と今の経路の文、/REQUEST ZULU1.ALPHA、送る文、受け取りで消える、手続きの入力と DELETE）。RESEND の受け取りはプロバイダのキュー（15 秒に 1 通）の分だけ遅れるので、試験の待ちを 31 秒にした。全体の試験はすべて通る。X-Plane：新しい `s195_atc_route_request` 15/15（RTE 1 に RJAA から RJBB、4/4 の REQUEST <RTE 1・RTE 2> と DEP/ARR の dashes、RTE 1 の選択と RTE 2 の空白、VERIFY REQUEST の REQUEST ROUTE CLEARANCE と RJAA RJBB、DATA LINK NO COMM、ERASE REQUEST。CDU の写真は FMSPG p.316 の図と同じ配置）、Log.txt に Lua の誤りなし
+
+## 118. 12g3 の分け方と 12g3a の実装（2026-11-01：WHEN CAN WE EXPECT）
+
+- 分け方：12g3 を 12g3a（WHEN CAN WE EXPECT）、12g3b（POS REPORT）、12g3c（ATC REPORT・VERIFY REPORT・ARM、報告と確認の要求への応答）に分ける。
+- 前のコード：WHEN CAN WE EXPECT のページは FMS のデータの欄（acarsWCW*）に書くだけで入力の確かめが無く、速度は "." を付けて出した。HIGHER ALT・LOWER ALT・BACK ON RTE は押すとすぐ専用の VERIFY のページへ行き、そのページは描画のたびに共有の送信文に書いた（CDU-34）。文の語も CRUISE ALTITUDE・DESCEND TO・HIGHER ALT と FANS の語と違った。
+- 資料：
+  - FCOM p.769–770：1L CRZ CLB TO・2L CLIMB TO・3L DESCENT TO（XXX・FLXXX・XXXXX・XXXXXm の高度）、4L SPEED（IAS か Mach）、5L ERASE WHEN CAN WE、6L INDEX、2R HIGHER ALT、3R LOWER ALT、4R BACK ON RTE、6R VERIFY。FCOM p.745：VERIFY REQUEST の 6L は WHEN CAN WE から来たら <WHEN CAN WE。
+  - FMSPG p.319–323：文は WHEN CAN WE EXPECT CRUISE CLIMB TO [altitude]・CLIMB TO [altitude]・DESCENT TO [altitude]・[speed]・HIGHER ALTITUDE・LOWER ALTITUDE・BACK ON ROUTE。1L〜3L・2R・3R は一つだけで、ほかは空白。高度と速度の範囲は ATC REQUEST と同じ。ERASE WHEN CAN WE は何かあるときだけ。SENDING の間は変えられない。
+- 作ったもの：
+  - `B747.68.atc_request_model.lua`："WCW" の種類（欄、縦の問いの排他、文と VERIFY REQUEST の行）。
+  - FMS のつなぎ：WCW の下書き（FMC に 1 つ、送る文は SEND の時点で組み立てる：CDU-34）。送信・受け取り・応答の状態は ATC の要求と同じ。
+  - ページ：WHEN CAN WE EXPECT を作り直した（`activepages/atc/B744.fms.pages.whencanwe.lua`）。VERIFY REQUEST の 6L を来たページ（REQUEST・INDEX・WHEN CAN WE）に。
+- 推定：VERIFY REQUEST の行の分け方（WHEN CAN WE EXPECT を見出しに、問いをその下の行に、速度は同じ行）、IAS の KT を小さい字で。
+- 試験：`tests/fms/atc_request_model_test.lua` に 13 件（縦の問いの排他、ブロックは不可、文と行、DELETE で戻る、ERASE）、`tests/fms/atc_request_pages_test.lua` に 18 件（ページの形、CLIMB TO で CRZ CLB TO と HIGHER ALT が消える、SPEED と BACK ON RTE、ERASE の prompt、VERIFY REQUEST の行と <WHEN CAN WE、送る文、受け取りで消える、<WHEN CAN WE で戻る）。全体の試験はすべて通る。X-Plane：新しい `s196_atc_whencanwe` 17/17（ATC INDEX の WHEN CAN WE> でページ、CLIMB TO の入力で CRZ CLB TO と HIGHER ALT が消える、SPEED と BACK ON RTE、VERIFY REQUEST の WHEN CAN WE EXPECT と 6L <WHEN CAN WE、DATA LINK NO COMM、ERASE WHEN CAN WE。CDU の写真は FCOM p.769 の形）、Log.txt に Lua の誤りなし

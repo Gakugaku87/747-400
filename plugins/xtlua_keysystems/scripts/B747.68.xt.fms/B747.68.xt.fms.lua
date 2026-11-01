@@ -3921,14 +3921,15 @@ end
 dofile("B747.68.atc_request_model.lua")
 do
   local Q = B747_atc_request_model
-  local KINDS = {"REQUEST", "CLEARANCE", "VOICE"}
-  local drafts = {REQUEST = Q.new("REQUEST"), CLEARANCE = Q.new("CLEARANCE"), VOICE = Q.new("VOICE")}
+  -- (step 12g3a) WHEN CAN WE EXPECT's ("WCW") too
+  local KINDS = {"REQUEST", "CLEARANCE", "VOICE", "WCW"}
+  local drafts = {REQUEST = Q.new("REQUEST"), CLEARANCE = Q.new("CLEARANCE"), VOICE = Q.new("VOICE"), WCW = Q.new("WCW")}
   local verifyOf = {}
   local shownReq = {}
   function B747_fms_atc_draft(kind) return drafts[kind] end
   function B747_fms_atc_present_ft() return simDR_pressureAlt1 end
-  -- a CDU's VERIFY REQUEST: the draft's kind and where from (6L: "REQUEST"
-  -- or "INDEX"); set with a kind
+  -- a CDU's VERIFY REQUEST: the draft's kind and where from (6L: "REQUEST",
+  -- "INDEX" or "WHEN CAN WE"); set with a kind
   function B747_fms_atc_verify_req(fmsID, kind, from)
     if kind then verifyOf[fmsID] = {kind = kind, from = from} end
     return verifyOf[fmsID] or {kind = "REQUEST", from = "REQUEST"}

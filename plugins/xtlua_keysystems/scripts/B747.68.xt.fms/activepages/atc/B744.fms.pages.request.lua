@@ -285,7 +285,8 @@ fmsPages["ATCVERIFYREQUEST"].getPage=function(self,pgNo,fmsID)
   local list, first = Q.page_rows(rows, pgNo)
   for k, row in ipairs(list) do out[1 + 2 * (first + k - 1)] = left(BLANK, row.data) end
   if pgNo == np then out[11] = right(out[11], (B747_fms_atc_req_status(v.kind))) end
-  out[13] = v.from == "INDEX" and "<INDEX                  " or "<REQUEST                "
+  -- 6L: where it came from (FCOM p.745; step 12g3a WHEN CAN WE)
+  out[13] = left(BLANK, "<" .. (v.from or "REQUEST"))
   return out
 end
 fmsPages["ATCVERIFYREQUEST"].getSmallPage=function(self,pgNo,fmsID)
@@ -306,6 +307,7 @@ fmsPages["ATCVERIFYREQUEST"].getSmallPage=function(self,pgNo,fmsID)
   out[12] = pgNo < np and "-------CONTINUED--------" or "------------------------"
   return out
 end
+local BACK = {INDEX = "ATCINDEX", REQUEST = "ATCREQUEST", ["WHEN CAN WE"] = "WHENCANWE"}
 fmsFunctionsDefs["ATCVERIFYREQUEST"]={}
 for k = 1, 5 do fmsFunctionsDefs["ATCVERIFYREQUEST"]["L" .. k]={"atcverifyreq","L" .. k} end
 fmsFunctionsDefs["ATCVERIFYREQUEST"]["R5"]={"atcverifyreq","send"}
@@ -313,7 +315,7 @@ fmsFunctionsDefs["ATCVERIFYREQUEST"]["L6"]={"atcverifyreq","back"}
 function fmsFunctions.atcverifyreq(fmsO, value)
   local rows, d, v = vstate(fmsO.id)
   if value == "back" then
-    fmsFunctions.setpage(fmsO, v.from == "INDEX" and "ATCINDEX" or "ATCREQUEST")
+    fmsFunctions.setpage(fmsO, BACK[v.from] or "ATCREQUEST")
     return
   end
   if value == "send" then
