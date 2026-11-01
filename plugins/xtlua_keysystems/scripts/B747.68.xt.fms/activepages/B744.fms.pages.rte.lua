@@ -44,7 +44,16 @@ local function offset_text(st)
   if not d then return "---" end
   return (d < 0 and "L" or "R") .. tostring(math.abs(d))
 end
+-- (step 12h1) the route's flight plan uplink from the company (FMC COMM:
+-- B747_fms_company), and whether it is being loaded
+local function uplink_of(st)
+  local up = B747_fms_datalink() and B747_fms_company().up
+  return up and up.num == st.num and up or nil
+end
 local function six_right(st)
+  -- blank while an uplink is loaded (FMSPG p.372)
+  local up = uplink_of(st)
+  if up and up.loading then return "", nil end
   if not st.active then return "ACTIVATE>", {"rteactivate", ""} end
   if offset_shown(st) then return offset_text(st), {"rteoffset", ""} end
   if not perf_init_complete() then return "PERF INIT>", {"setpage", "PERFINIT"} end
@@ -86,12 +95,39 @@ local function make_rte(name, num)
       local origin = r.origin and r.origin.ident or "****"
       local dest = r.dest and r.dest.ident or "****"
       local runway = r.runway and r.runway.ident or "-----"
+      -- (step 12h1) the company datalink (405, 570: FCOM p.1288-1291;
+      -- FMSPG p.370-376): REQUEST <SEND (SENDING; blank while a flight
+      -- plan uplink waits), the data link's status when not READY, the
+      -- ROUTE UPLINK line with LOAD and PURGE (an inactive route's, not
+      -- while loading)
+      local send, dashes, load = "", "------------------------", BLANK
+      if B747_fms_datalink() then
+        local c = B747_fms_company()
+        local up = uplink_of(st)
+        local status = B747_fms_company_status()
+        if up then
+          B747_fms_company_reviewed()
+          dashes = "-----              -----"
+          local purge = not st.active and not up.loading
+          load = lr("<LOAD", purge and "PURGE>" or "")
+          defs["L4"] = {"rteload", ""}
+          if purge then defs["R4"] = {"rtepurge", ""} end
+        elseif not c.up then
+          if status ~= "READY" then
+            send = status
+          else
+            local q = c.req
+            send = (q and q.route == num and q.status == "SENDING") and "SENDING" or "<SEND"
+            if send == "<SEND" then defs["L3"] = {"rterequest", ""} end
+          end
+        end
+      end
       return {
         title(st), BLANK,
         lr(origin, dest), BLANK,
         lr(runway, fltno), BLANK,
-        lr("", "----------"), "------------------------",
-        BLANK, BLANK,
+        lr(send, st.co_route or "----------"), dashes,
+        load, BLANK,
         pad(copy), BLANK,
         six
       }
@@ -129,11 +165,25 @@ local function make_rte(name, num)
     local off = offset_shown(st) and "                  OFFSET" or BLANK
     if pgNo == 1 then
       local copied = st.active and R.copy_done(st)
+      -- (step 12h1) REQUEST (DATA LINK when not READY) and its SENT, ROUTE
+      -- UPLINK (FCOM p.1289, p.1291; FMSPG p.372)
+      local co, sent, uplink = "                CO ROUTE", BLANK, BLANK
+      if B747_fms_datalink() then
+        local c = B747_fms_company()
+        if uplink_of(st) then
+          uplink = "      ROUTE UPLINK      "
+        elseif not c.up then
+          local ready = B747_fms_company_status() == "READY"
+          co = (ready and " REQUEST" or " DATA LINK") .. string.sub(co, ready and 9 or 11)
+          local q = c.req
+          if ready and q and q.route == num and q.status == "SENT" then sent = "     SENT               " end
+        end
+      end
       return {
         pn, " ORIGIN             DEST", BLANK,
         " RUNWAY           FLT NO", BLANK,
-        "                CO ROUTE", BLANK,
-        BLANK, BLANK, copied and " RTE COPY               " or BLANK, BLANK, off, BLANK
+        co, sent,
+        uplink, BLANK, copied and " RTE COPY               " or BLANK, BLANK, off, BLANK
       }
     end
     return {pn, " VIA                  TO", BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, off, BLANK}
@@ -298,12 +348,30 @@ function fmsFunctions.rterunway(fmsO, value)
   if not sp then return end
   entry(fmsO, R.set_runway(st, sp))
 end
--- CO ROUTE: no company routes in the database: NOT IN DATA BASE (FCOM
--- p.1290: the entry taken; nothing to load)
+-- CO ROUTE: no company routes in the database: NOT IN DATA BASE, the
+-- entry kept for the company's route request (FCOM p.1290; step 12h1),
+-- DELETE clears it (FCOM p.774)
 function fmsFunctions.rtecoroute(fmsO, value)
-  local sp = copy_or_entry(fmsO, nil)
-  if not sp then return end
-  fmsO["notify"] = "NOT IN DATA BASE"
+  local st = st_of(fmsO)
+  local sp = fmsO["scratchpad"]
+  if sp == "" then
+    if st.co_route then fmsO["scratchpad"] = st.co_route end
+    return
+  end
+  local msg = B747_fms_company_co_route(st.num, sp ~= "DELETE" and sp or nil)
+  if msg == "INVALID ENTRY" then fmsO["notify"] = msg return end
+  fmsO["scratchpad"] = ""
+  if msg then fmsO["notify"] = msg end
+end
+-- (step 12h1) REQUEST <SEND, LOAD and PURGE (FCOM p.1289, p.1291)
+function fmsFunctions.rterequest(fmsO, value)
+  B747_fms_company_request(fmsO, st_of(fmsO).num)
+end
+function fmsFunctions.rteload(fmsO, value)
+  B747_fms_company_load(st_of(fmsO).num)
+end
+function fmsFunctions.rtepurge(fmsO, value)
+  B747_fms_company_purge(st_of(fmsO).num)
 end
 function fmsFunctions.rtevia(fmsO, value)
   local st = st_of(fmsO)

@@ -13,3 +13,6 @@ liveries/British Airways G-CIVX/
 747-400F_vrconfig.txt
 fmod/747-400F.snd
 objects/74F_exterior/
+simbrief/*
+!simbrief/README.txt
+tests/fms/data/simbrief/_newest.txt
