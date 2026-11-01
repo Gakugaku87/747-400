@@ -1989,3 +1989,16 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - ページ：WHEN CAN WE EXPECT を作り直した（`activepages/atc/B744.fms.pages.whencanwe.lua`）。VERIFY REQUEST の 6L を来たページ（REQUEST・INDEX・WHEN CAN WE）に。
 - 推定：VERIFY REQUEST の行の分け方（WHEN CAN WE EXPECT を見出しに、問いをその下の行に、速度は同じ行）、IAS の KT を小さい字で。
 - 試験：`tests/fms/atc_request_model_test.lua` に 13 件（縦の問いの排他、ブロックは不可、文と行、DELETE で戻る、ERASE）、`tests/fms/atc_request_pages_test.lua` に 18 件（ページの形、CLIMB TO で CRZ CLB TO と HIGHER ALT が消える、SPEED と BACK ON RTE、ERASE の prompt、VERIFY REQUEST の行と <WHEN CAN WE、送る文、受け取りで消える、<WHEN CAN WE で戻る）。全体の試験はすべて通る。X-Plane：新しい `s196_atc_whencanwe` 17/17（ATC INDEX の WHEN CAN WE> でページ、CLIMB TO の入力で CRZ CLB TO と HIGHER ALT が消える、SPEED と BACK ON RTE、VERIFY REQUEST の WHEN CAN WE EXPECT と 6L <WHEN CAN WE、DATA LINK NO COMM、ERASE WHEN CAN WE。CDU の写真は FCOM p.769 の形）、Log.txt に Lua の誤りなし
+
+## 119. 12g3b の実装（2026-11-01：POS REPORT）
+
+- 前のコード：POS REPORT のページは描画のたびに共有の送信文に書き（CDU-34）、点は前の ND の dataref から取り、SEND> は ATC REPORT のページへ行くだけで送らなかった。COMPANY の <SEND は無かった。
+- 資料：
+  - FCOM p.766–768：題は便名と POS REPORT。LAST・ATA・ALT・SPD・TO・ETA・NEXT・DEST ETA・TEMP・WIND・FUEL。TO・NEXT・SPD・ETA・DEST ETA は入力で上書きし、DELETE で既定へ、SPD はページを離れても既定へ。ATC SEND と COMPANY SEND（会社へは既定の値）、SENDING・RESEND・NO ATC COMM・DATA LINK の NO COMM。FUEL は LAST の点での CALCULATED と TOTALIZER の小さい方。
+  - FMSPG p.340–343：入力は ATC への報告だけに効く。FUEL は ATC への報告に入らない。SPD は速度テープの Mach の目標。オフセット中は DEVIATING [offset] OF ROUTE、MCP の高度が 150 ft より離れていれば CLIMBING TO か DESCENDING TO [altitude] を足す。
+- 作ったもの：
+  - `B747.68.atc_posrep_model.lua`（新しい純粋なモデル）：入力と既定の重ね合わせ、DELETE、ページを離れたときの SPD、ページの文字、ATC と会社への報告の文。
+  - FMS のつなぎ：既定の値（LAST と ATA は PROGRESS 1/3 と同じ、TO・NEXT とその ETA・DEST ETA はアクティブな経路と予測、ALT は CDU の高度の形、SPD は A/P の速度の目標、TEMP は SAT、WIND は真方位、FUEL は CALCULATED と TOTALIZER の小さい方）。ATC への報告は応答の要らない cpdlc で ATC LOG に記録し、プロバイダが送り出したら SENT。会社への報告は telex（プロバイダが FLT NO などで断ればそのメッセージ）。60 秒で NO ACK と RESEND。
+  - ページ：XXXX POS REPORT を作り直した（`activepages/atc/B744.fms.pages.posreport.lua`）。TO・NEXT の入力は RTE と同じ確かめ（B747_fmc_with_fix）。
+- 推定：報告の文の語と並び（FANS の位置通報のデータを文にしたもの）、IAS を 290KT と出す、WIND の列、DATA LINK の見出しを出さない（6 行目の見出しに COMPANY と ATC があるため）、会社への報告は ATC LOG に入れない（FCOM p.768 は COMPANY SEND でも ATC LOG の記録と書くが、会社の通信のため）、TO・NEXT の入力はデータベースの点（FCOM。FMSPG はアクティブな経路の点）、ATC LOG の報告の右の LSK は 12g3c の XXXXZ ATC REPORT で。
+- 試験：新しい `tests/fms/atc_posrep_model_test.lua`（19 件：入力の重ね合わせ、文字、ATC と会社の文、DEVIATING・CLIMBING TO・DESCENDING TO、DELETE、ページを離れたときの SPD）、`tests/fms/atc_request_pages_test.lua` に 19 件（題、見出し、ALT・TO・NEXT、ETA・SPD・TO の入力、データベースに無い NEXT、ATC SEND の文と応答の要らないこと、受け取りで SEND> に戻る、ATC LOG の SENT、DELETE、ページを離れたときの SPD）。全体の試験はすべて通る。X-Plane：新しい `s197_atc_posreport` 13/13（RTE 1 をアクティブに、題の TBC123 POS REPORT、見出し、TO の XAC と NEXT の SPENS、COMPANY と ATC の行、NO COMM、ETA と SPD の入力、ページを離れると SPD が FMC の値。CDU の写真は FCOM p.766 の形で、度の記号も出る）、Log.txt に Lua の誤りなし

@@ -4067,6 +4067,114 @@ do
     end
   end
 end
+-- (6-1/6-2 step 12g3b; notes/ATA-34-61-FMC.md §119) POS REPORT
+-- (B747.68.atc_posrep_model.lua): the FMC's values (LAST and ATA as
+-- PROGRESS 1's; TO, NEXT and their ETAs, DEST ETA from the predictions;
+-- the altitude as the CDU shows it; the speed target; SAT; the true wind;
+-- the lesser of the calculated and the totalizer fuel: FCOM p.766-768,
+-- FMSPG p.340-343); the ATC report through the provider (cpdlc, no
+-- response: SENT once the provider sends it) and its ATC LOG entry, the
+-- company report (telex) with the FMC's values; NO ACK after the logon's
+-- ACK_S, RESEND. Before, the page wrote the shared text while drawing
+-- (CDU-34) from the old ND's waypoints, with no SEND that sent
+dofile("B747.68.atc_posrep_model.lua")
+do
+  local P = B747_atc_posrep_model
+  local pr = P.new()
+  local sends = {}
+  function B747_fms_posrep() return pr end
+  local function eta(t)
+    local _, h, m = get_ETA_for_Distance(0, t)
+    return string.format("%02d%02dZ", h, m)
+  end
+  -- the FMC's values (B747_atc_posrep_model.values's `d`)
+  function B747_fms_posrep_defaults()
+    local d = {}
+    local last = type(B747DR_last_waypoint) == "string" and str_trim(B747DR_last_waypoint) or ""
+    if last ~= "" and not string.find(last, "^%-") then
+      d.last = last
+      local ata = string.sub(type(B747DR_waypoint_ata) == "string" and B747DR_waypoint_ata or "", 1, 4)
+      if string.match(ata, "^%d%d%d%d$") then d.ata = ata .. "Z" end
+    end
+    d.alt = B747_cdu_model.format_alt(math.floor(simDR_pressureAlt1 + 0.5), tonumber(fmsModules["data"]["transalt"]) or 18000)
+    local legs = B747_fmc_route.rte.legs
+    local pred = B747_fmc_route.active and B747_fms_preds() or nil
+    local to, nxt
+    for i, l in ipairs(legs) do
+      if l.fix and not l.disc then
+        if not to then to = i elseif not nxt then nxt = i break end
+      end
+    end
+    if B747_fmc_route.active and to then
+      d.to = legs[to].fix.ident
+      if pred and pred.pts[to] then d.eta = eta(pred.pts[to].t) end
+      if nxt then d.nxt = legs[nxt].fix.ident end
+      if pred and pred.dest then d.dest_eta = eta(pred.dest.t) end
+    end
+    if simDR_autopilot_airspeed_is_mach == 1 then
+      d.spd = string.format(".%02d", math.floor(simDR_autopilot_airspeed_kts_mach * 100 + 0.5))
+    else
+      d.spd = string.format("%d", math.floor(simDR_autopilot_airspeed_kts + 0.5))
+    end
+    d.temp_c = math.floor(simDR_air_temp + 0.5)
+    d.wind_dir, d.wind_kt = math.floor(B747_fms_wind_true() + 0.5) % 360, math.floor(simDR_wind_speed + 0.5)
+    local fs = B747_fms_fuel()
+    local calc = fs and fs.out and fs.out.calc
+    local kg = calc and math.min(calc, simDR_fms_fuel_total) or simDR_fms_fuel_total
+    local mult = simConfigData["data"].SIM.weight_display_units == "LBS" and simConfigData["data"].SIM.kgs_to_lbs or 1
+    d.fuel_k = kg * mult / 1000
+    return d
+  end
+  -- the page's values
+  function B747_fms_posrep_values() return P.values(pr, B747_fms_posrep_defaults()) end
+  -- a SEND's state: "SEND", "RESEND", "SENDING", "NO ATC COMM", "NO COMM"
+  function B747_fms_posrep_status(which)
+    local s = sends[which]
+    if s and s.status == "SENDING" then return "SENDING" end
+    if not B747_fms_atc_ready() then return "NO COMM" end
+    if which == "ATC" and not B747_fms_atc_logon().comm then return "NO ATC COMM" end
+    if s and s.status == "NO ACK" then return "RESEND" end
+    return "SEND"
+  end
+  -- 6R ATC SEND, 6L COMPANY SEND
+  function B747_fms_posrep_send(fmsO, which)
+    local st = B747_fms_posrep_status(which)
+    if st ~= "SEND" and st ~= "RESEND" then return end
+    local d = B747_fms_posrep_defaults()
+    local s
+    local before = table.getn(acarsSystem.messageSendQueue.values)
+    if which == "ATC" then
+      local text = P.atc_text(P.values(pr, d), {offset = B747_route_model.shown(B747_fmc_route).offset,
+        alt_ft = simDR_pressureAlt1, mcp_ft = B747DR_fms_vnav_mcp_alt,
+        mcp_text = B747_cdu_model.format_alt(math.floor(B747DR_fms_vnav_mcp_alt + 0.5), tonumber(fmsModules["data"]["transalt"]) or 18000)})
+      fmsFunctions.acarsSystemSendATC(fmsO, json.encode({type = "cpdlc", msg = text, RR = "N"}))
+      s = (st == "RESEND" and sends.ATC) or {kind = "REPORT"}
+      s.text, s.id = text, acarsSystem.provider.messageID - 1
+      if st ~= "RESEND" then B747_fms_atc_log_add(s) end
+    else
+      -- the provider refuses without the flight's data (its message: FLT
+      -- NO, DEPARTURE or DESTINATION NOT SET)
+      acarsSystem.provider.sendCompany(json.encode({type = "telex", msg = P.company_text(d)}), fmsO)
+      if table.getn(acarsSystem.messageSendQueue.values) == before then return end
+      s = {}
+    end
+    s.status, s.sent_t = "SENDING", simDRTime
+    s.time = string.format("%02d%02d", hh or 0, mm or 0)
+    s.queue = table.getn(acarsSystem.messageSendQueue.values)
+    sends[which] = s
+  end
+  -- each frame: the acknowledgements (the provider's sending: estimate),
+  -- the time-outs
+  function B747_fms_posrep_update()
+    for _, which in ipairs({"ATC", "COMPANY"}) do
+      local s = sends[which]
+      if s and s.status == "SENDING" then
+        if acarsSystem.sentMessage >= s.queue then s.status = "SENT"
+        elseif simDRTime - s.sent_t >= B747_atc_logon_model.ACK_S then s.status = "NO ACK" end
+      end
+    end
+  end
+end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after
 -- a flight (all four's N2 under the ENG FAIL speed: laminar/B747/engines/
@@ -4753,8 +4861,10 @@ function after_physics()
     B747_fms_datalink_eicas(acarsOnline)
     B747_fms_atc_update()
     B747_fms_atc_uplinks_update()
-    -- (step 12g2a) the requests' acknowledgements
+    -- (step 12g2a) the requests' acknowledgements; (step 12g3b) POS
+    -- REPORT's
     B747_fms_atc_requests_update()
+    B747_fms_posrep_update()
 
 	--Display Waypoint ETA on ND
 	waypoint_eta_display()
