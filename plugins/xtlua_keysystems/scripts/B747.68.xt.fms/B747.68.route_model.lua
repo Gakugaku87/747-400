@@ -22,6 +22,8 @@ B747_route_model = M
 
 M.MAX_WPTS = 120
 M.INVALID_ENTRY, M.NOT_IN_DATA_BASE, M.ROUTE_FULL = "INVALID ENTRY", "NOT IN DATA BASE", "ROUTE FULL"
+-- (6-1/6-2 step 11c4) a runway its SID does not serve (FCOM p.1435; FMSPG p.79)
+M.RUNWAY_NA_SID = "RUNWAY N/A FOR SID"
 M.DIRECT = "DIRECT"
 
 local function new_route()
@@ -265,6 +267,15 @@ function M.set_runway(st, text)
     local c = st.N.cifp(st.db, r.origin.ident)
     local rw = c and c.runways["RW" .. id]
     if not rw then return M.NOT_IN_DATA_BASE end
+    -- (step 11c4) with a SID, one of its runways: else rejected with
+    -- RUNWAY N/A FOR SID (FMSPG p.79)
+    if r.sid then
+        local ok = false
+        for _, sr in ipairs(st.P.runways(st.N, st.db, r.origin.ident, st.P.SID, r.sid.name)) do
+            if sr == "RW" .. id then ok = true break end
+        end
+        if not ok then return M.RUNWAY_NA_SID end
+    end
     M.edit(st).runway = rw
 end
 
