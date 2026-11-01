@@ -53,4 +53,18 @@ function M.update(inp)
     return out
 end
 
+-- the emergency lights (7-2d; notes/ATA-33.md §14): P5's EMER LIGHTS
+-- (OFF, ARMED, ON) and the cabin's switch (door 1L). Lit by the cabin's
+-- switch, by ON, or ARMED when DC bus 4 fails (ATA33 p.264, p.266; FCOM
+-- p.452-453, p.504); >EMER LIGHTS when P5 is not ARMED or the cabin's
+-- switch lit them (FCOM p.547; ATA33 p.268). The packs' 15 minutes and
+-- more (FCOM p.504) are not modelled
+M.EMER_OFF, M.EMER_ARMED, M.EMER_ON = 0, 1, 2
+-- sw: P5's position; cabin: the cabin's switch on; dc4: DC bus 4 powered.
+-- Returns lit, the >EMER LIGHTS advisory
+function M.emer(sw, cabin, dc4)
+    local lit = cabin or sw == M.EMER_ON or (sw == M.EMER_ARMED and not dc4)
+    return lit, sw ~= M.EMER_ARMED or cabin
+end
+
 return M

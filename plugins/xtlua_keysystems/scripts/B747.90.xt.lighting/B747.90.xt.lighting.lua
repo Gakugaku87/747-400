@@ -1839,6 +1839,42 @@ end
 
 
 
+----- EMERGENCY LIGHTS ------------------------------------------------------------------
+-- (7-2d; notes/ATA-33.md §14) P5's EMER LIGHTS switch (0 OFF, 1 ARMED, 2
+-- ON) and the cabin's switch (door 1L) by commands: the 3D has neither
+-- (LIGHT-06). Every flight starts ARMED (FCOM p.104), cold and dark too
+-- (estimate: no switch in the 3D to arm them). Lit and >EMER LIGHTS by
+-- B747.90.light_model.lua
+B747DR_emer_switch = find_dataref("laminar/B747/light/emer/switch")
+B747DR_emer_cabin = find_dataref("laminar/B747/light/emer/cabin")
+B747DR_emer_lit = find_dataref("laminar/B747/light/emer/lit")
+B747DR_emer_bus_dc = find_dataref("laminar/B747/electrical/bus/dc")
+B747DR_emer_CAS_advisory = find_dataref("laminar/B747/CAS/advisory_status")
+function B747_emer_switch_on_CMDhandler(phase, duration)
+    if phase == 0 then B747DR_emer_switch = math.min(B747_light_model.EMER_ON, B747DR_emer_switch + 1) end
+end
+function B747_emer_switch_off_CMDhandler(phase, duration)
+    if phase == 0 then B747DR_emer_switch = math.max(B747_light_model.EMER_OFF, B747DR_emer_switch - 1) end
+end
+-- the cabin's switch: pushed on, pushed again off (FCOM p.453)
+function B747_emer_cabin_CMDhandler(phase, duration)
+    if phase == 0 then B747DR_emer_cabin = 1 - B747DR_emer_cabin end
+end
+B747CMD_emer_switch_on = deferred_command("laminar/B747/light/emer/switch_on", "EMER LIGHTS switch toward ON", B747_emer_switch_on_CMDhandler)
+B747CMD_emer_switch_off = deferred_command("laminar/B747/light/emer/switch_off", "EMER LIGHTS switch toward OFF", B747_emer_switch_off_CMDhandler)
+B747CMD_emer_cabin = deferred_command("laminar/B747/light/emer/cabin", "Cabin EMER LIGHTS switch (door 1L)", B747_emer_cabin_CMDhandler)
+function B747_emergency_lights()
+    local lit, msg = B747_light_model.emer(B747DR_emer_switch, B747DR_emer_cabin > 0.5, B747DR_emer_bus_dc[3] > 0.5)
+    B747DR_emer_lit = lit and 1 or 0
+    B747DR_emer_CAS_advisory[108] = msg and 1 or 0
+end
+
+
+
+
+
+
+
 ----- LIGHTING EICAS MESSAGES -----------------------------------------------------------
 function B747_lighting_EICAS_msg()
 
@@ -1881,6 +1917,9 @@ function B747_set_lighting_all_modes()
 	B747DR_init_lighting_CD = 0
     B747_init_lighting()
     B747_init_light_rheostats()
+    -- (7-2d) EMER LIGHTS ARMED, the cabin's switch off
+    B747DR_emer_switch = B747_light_model.EMER_ARMED
+    B747DR_emer_cabin = 0
 
 end
 
@@ -2089,6 +2128,7 @@ function after_physics()
 
     B747_keep_light_power()
     B747_exterior_lights()
+    B747_emergency_lights()
     B747_cabin_lights()
 
     B747_spill_lights()

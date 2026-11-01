@@ -414,3 +414,17 @@ GAP ID の接頭辞：`LIGHT`。2026-10-23 作成。コードは `overhaul` ブ�
 - STORM の flood をノブの最大と同じにした（R8068 がノブの代わりに固定抵抗を入れる：ATA33 p.72、FCOM p.438）。前は 1.9 で最大の 95 %（LIGHT-11）。
 - エンジン運転中の開始（ER）で、STORM が ON（position 0。操作系の目標の初期値）のまま始まっていた。OFF（1）にした（manipulators の `B747_set_manip_ER`）。cold & dark は前から OFF。
 - 試験：`tests/lighting/ind_model_test.lua`（BRT、DIM、TEST の 10 秒、STORM、電源）、`lighting_module_test.lua`（TEST で点く灯と点かない灯、10 秒の減光、cargo FIRE の DIM、STORM、電源）。X-Plane：`s209_ind_lights`（夜の RJAA 34L、エンジン運転中。STORM が OFF で始まる、DIM・STORM・BRT での明るさ、8 秒の TEST）。10 秒での減光は、Web API がコマンドを 10 秒までしか押し続けられないので回帰試験だけで見る。
+
+## 14. 7-2d（2026-11-01）
+
+- 非常灯の論理を `B747.90.light_model.lua` の `emer` に入れた（LIGHT-06）：
+  - 点灯：客室側のスイッチが ON、P5 の EMER LIGHTS が ON、または ARMED で DC bus 4 が無い（ATA33 p.264・266、FCOM p.452–453・504）。
+  - >EMER LIGHTS（advisory 108。前は定義だけで誰も立てなかった）：P5 が ARMED でない、または ARMED で客室側のスイッチが点けた（FCOM p.547、ATA33 p.268）。
+  - battery pack の 15 分（FCOM p.504）とその先の減衰は作らない（資料に記載なし。今は点灯を描く灯も無い）。
+- 3D に P5 の EMER LIGHTS スイッチも客室側のスイッチも無い（3D の追加は承認事項）ので、dataref とコマンドだけ：
+  - `laminar/B747/light/emer/switch`（0 OFF、1 ARMED、2 ON）、`…/cabin`（客室側のスイッチ、0/1）、`…/lit`（点灯）。
+  - コマンド `laminar/B747/light/emer/switch_on`・`switch_off`（1 段ずつ）、`…/cabin`（押すたびに ON・OFF。FCOM p.453）。
+  - どの飛行も ARMED で始める（preflight の位置：FCOM p.104）。cold & dark も ARMED（推定ではなく割り切り：3D にスイッチが無く、OFF で始めると >EMER LIGHTS を操縦室から消せない。実機の secure は OFF：FCOM p.153）。
+  - 客室側から消せない条件（P5 が ON、または ARMED で電源喪失のとき：ATA33 p.264）は、客室側のスイッチを OFF にしても P5 側の条件で点いたままになるので、そのまま満たす。
+- ドアの mode select lever と連動する点灯（109、FCOM p.504）は、ドアの作り直し（7-3）で。
+- 試験：`light_model_test.lua`（点灯と >EMER LIGHTS の 7 通り）、`lighting_module_test.lua`（コマンド、開始時の ARMED、DC bus 4 の喪失、advisory 108）。X-Plane の確認は、7-2 の残りの試験と一緒に回す（シナリオ s209 に足す）。

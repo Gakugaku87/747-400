@@ -67,4 +67,22 @@ landing(out, {0, 0, 0, 0}, "the landing switches OFF")
 T.check(out.turnoff[1] == 1 and out.turnoff[2] == 0, "turnoff L on, R off")
 T.check(out.taxi == 0 and out.beacon == 0 and out.strobe == 0 and out.logo == 0, "taxi, beacon, strobe, logo off")
 T.check(out.nav == 1 and out.wing == 1, "nav and wing on")
+
+-- (7-2d) the emergency lights (ATA33 p.264-268; FCOM p.452-453, p.547)
+local E = {[L.EMER_OFF] = "OFF", [L.EMER_ARMED] = "ARMED", [L.EMER_ON] = "ON"}
+for _, c in ipairs({
+    -- P5, cabin, DC bus 4 -> lit, >EMER LIGHTS
+    {L.EMER_ARMED, false, true, false, false},
+    {L.EMER_ARMED, false, false, true, false},
+    {L.EMER_OFF, false, false, false, true},
+    {L.EMER_OFF, false, true, false, true},
+    {L.EMER_ON, false, true, true, true},
+    {L.EMER_ARMED, true, true, true, true},
+    {L.EMER_OFF, true, true, true, true},
+}) do
+    local lit, msg = L.emer(c[1], c[2], c[3])
+    local what = E[c[1]] .. (c[2] and ", cabin ON" or "") .. (c[3] and ", DC bus 4" or ", no DC bus 4")
+    T.equal(lit, c[4], what .. ": lit")
+    T.equal(msg, c[5], what .. ": >EMER LIGHTS")
+end
 T.done()
