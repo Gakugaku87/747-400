@@ -20,7 +20,8 @@ fmsPages["IDENT"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be th
  "                        ",
  navId.." "..active,
  "                        ",
- string.format("%-24s",simConfigData["data"].FMC.INIT.drag_ff),
+ -- DRAG/FF: PERF FACTORS' (6-1/6-2 step 12c1; ATA34_2 p.678)
+ string.format("%-24s",B747_perf_factors_model.text(B747_fms_perf_factors()).dragff),
  "                        ",
  simConfigData["data"].FMC.INIT.op_program.."       ",
  "                        ",

@@ -1403,8 +1403,9 @@ function fmsFunctions.setdata(fmsO,value)
 	-- FLAP/ACCEL HT (6-1/6-2 step 3b; FCOM p.1318-1319): XX (10 or 20),
 	-- /YYYY (400 to 9999 ft above the airport) or both; a new flap setting
 	-- after the takeoff speeds are selected deletes them. DELETE: the
-	-- acceleration height's default (estimate)
-	if del then setFMSData("accelset", "") setFMSData("accelht", "1000") return end
+	-- acceleration height's default (estimate; PERF FACTORS' ACCEL HT,
+	-- step 12c1)
+	if del then setFMSData("accelset", "") setFMSData("accelht", B747_fms_perf_to().accelht) return end
 	local sp = fmsO["scratchpad"]
 	local f, h = string.match(sp, "^(%d%d)/(%d+)$")
 	if not f then f = string.match(sp, "^(%d%d)$") end
@@ -1421,15 +1422,17 @@ function fmsFunctions.setdata(fmsO,value)
 	if hv then setFMSData("accelht", string.format("%d", hv)) setFMSData("accelset", "Y") end
   elseif value == "eoaccelht" then
 	-- E/O ACCEL HT: 400 to 9999 ft (FCOM p.1319); DELETE: the default
-	if del then setFMSData("eoaccelset", "") setFMSData("eoaccelht", "1000") return end
+	-- (PERF FACTORS' ACCEL HT's engine-out, step 12c1)
+	if del then setFMSData("eoaccelset", "") setFMSData("eoaccelht", B747_fms_perf_to().eoaccelht) return end
 	local hv = B747_cdu_model.parse_int(fmsO["scratchpad"], 400, 9999)
 	if hv == nil then fmsO["notify"] = "INVALID ENTRY" return end
 	setFMSData("eoaccelht", string.format("%d", hv))
 	setFMSData("eoaccelset", "Y")
   elseif value == "thrred" then
 	-- THR REDUCTION: 5 (flaps 5) or 400 to 9999 ft (FCOM p.1319); DELETE:
-	-- the default, FLAPS 5
-	if del then setFMSData("thrredset", "") setFMSData("thrred", "5") return end
+	-- the default (PERF FACTORS' THR RED, step 12c1: FLAPS 5 without an
+	-- entry)
+	if del then setFMSData("thrredset", "") setFMSData("thrred", B747_fms_perf_to().thrred) return end
 	local sp = fmsO["scratchpad"]
 	local hv = sp == "5" and 5 or B747_cdu_model.parse_int(sp, 400, 9999)
 	if hv == nil then fmsO["notify"] = "INVALID ENTRY" return end

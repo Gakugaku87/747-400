@@ -19,7 +19,13 @@ local M = setmetatable({}, {})
 B747_perf_db = M
 
 M.LB = 0.45359237           -- kg per lb
-M.MARGIN_G = 1.3            -- the maneuver margin the FMC's maximum altitude uses by default (an estimate: 1.20-1.30, FMC notes §2)
+-- (step 12c1) PERF FACTORS (B747.68.perf_factors_model.lua; ATA34_2
+-- p.678): the maneuver margin the maximum altitude uses by default (MNVR
+-- MARGIN, 1.20-1.30: 1.30 without an entry); DRAG/F-F's factors, 1 + %/100:
+-- every fuel flow by F-F's, the level flight's (thrust = drag) also by the
+-- drag's; the climb's and descent's paths without the drag's (estimate)
+M.MARGIN_G = 1.3
+M.DRAG_F, M.FF_F = 1, 1
 
 -- a value's place in a list sorted either way: i, j and the fraction from
 -- list[i] to list[j], within the list's ends
@@ -908,12 +914,12 @@ end
 function M.thrust_ff(t, f, ft, mach, isa_dev)
     local c = t.POLAR
     local p, temp = M.atmos(ft, isa_dev)
-    return (c.t0 + c.t1 * mach) * (1 + c.t2 * 1e5 / (f / (p / P0))) * math.sqrt(temp / T0K) * f
+    return (c.t0 + c.t1 * mach) * (1 + c.t2 * 1e5 / (f / (p / P0))) * math.sqrt(temp / T0K) * f * M.FF_F
 end
 
 -- the fuel flow per engine (kg/h) in level flight there
 function M.cruise_ff(t, kg, ft, mach, isa_dev)
-    return M.thrust_ff(t, M.drag(t, kg, ft, mach) / 4, ft, mach, isa_dev)
+    return M.thrust_ff(t, M.drag(t, kg, ft, mach) / 4, ft, mach, isa_dev) * M.DRAG_F
 end
 
 -- the max climb thrust (N, all engines) at a pressure altitude (ft), an
@@ -955,7 +961,7 @@ end
 function M.idle_ff(t, ft, mach, isa_dev)
     local p, temp = M.atmos(ft, isa_dev)
     local k = 1 + 0.2 * mach * mach
-    return t.FF_IDLE_SL * 3600 * (p / P0) * k ^ 3.5 * math.sqrt(temp / T0K * k)
+    return t.FF_IDLE_SL * 3600 * (p / P0) * k ^ 3.5 * math.sqrt(temp / T0K * k) * M.FF_F
 end
 
 -- the x in [a, b] where f is least (golden section: f unimodal there)
@@ -1066,7 +1072,8 @@ function M.eo_cruise_ff(t, n, kg, ft, mach, isa_dev)
     local ne = 4 - eo_n(n)
     local f1 = M.thrust_ff(t, M.eo_drag(t, n, kg, ft, mach) / ne, ft, mach, isa_dev)
     local f0 = M.thrust_ff(t, M.eo_drag(t, n, kg, ft, m0) / ne, ft, m0, 0)
-    return ff0 * f1 / f0
+    -- (step 12c1) the table's by PERF FACTORS' (the model's cancel)
+    return ff0 * f1 / f0 * M.DRAG_F * M.FF_F
 end
 
 -- the thrust setting (EPR or %N1) in engine-out level flight: the tables'

@@ -1826,3 +1826,26 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 資料：FCOM p.1392（E/D は降下の段階の最も低い高度の制限の点）。上昇と降下の制限の分け方は資料に無い。
 - 直したこと：SID が無く上昇の段階のときは、経路の先の距離の半分より後の制限だけを E/D の候補にする（予測のモデルの上昇の分け方と同じ：推定）。巡航と降下の段階では前と同じく先のどの制限でも。SID がある経路、進入の滑走路は前のまま。
 - 試験：新しい `tests/fms/pred_ed_test.lua`（12 件：合成のデータの ZZAA→ZZBB を BRAVO・CHARL・DELTA で、上昇中に BRAVO（約 18 NM 先、前半）の 30000A は E/D でなく T/C は BRAVO の後・T/D 無し、CLB のページに AT BRAVO と /FL300A と ERROR、巡航（FL350）では BRAVO の制限が E/D、後半の DELTA の 10000 は E/D。直す前のコードでは 6 つ落ちる）。全 165 本。X-Plane：`s185_vnav_wpts_clb` 13/13（上の巡航・降下の場合分けを足す前のコード：上昇の段階なので同じ）。CLB のページに AT SULPU、/FL300A、ERROR「13710LO 75LONG」（10,800 ft から FL300 に SULPU の 75 NM 先で届く）。Log.txt に Lua の誤りなし。
+
+## 109. 12c1 の実装（2026-11-01：MAINTENANCE INDEX と PERF FACTORS）
+
+- 前のコード：保守のページは固定の文字。MAINTENANCE INDEX の <INDEX は ACMS を開き、プロンプトは「<CROS LOAD」「<PERF FACTOR」。PERF FACTORS は値が固定（R/C CLB 300、TO-1/TO-2 10/20、MNVR MARGIN 1.3、THR RED 1500、ACCEL HT 1500 など）で入力できず、TAKEOFF REF・THRUST LIM の値とも別だった。
+- 資料：
+  - FCOM p.1239：MAINTENANCE INDEX のプロンプトは地上でだけ使う。<CROSS LOAD・BITE>・<PERF FACTORS・<IRS MONITOR、<INDEX（INIT/REF INDEX へ）の上に線。
+  - FMSPG p.263–268：保守のページは地上だけ。PERF FACTORS の形（PERF CODE 1111、OPTION CODE、DRAG/F-F、TO 1/TO 2、MNVR MARGIN、MIN CRZ TIME、R/C CLB、THR/CRZ、THR RED、ACCEL HT、6R の ---）。6R にコードを入れるまで静的で、ページを出るとコードは消える。各欄の形と範囲、何も入れていない FMC の値（1.20、1、100、CLB/100、1500、1500/1500）。
+  - ATA34_2 p.678–679：入力は性能の係数を変え、関係する値は飛行の終わりか長い電源断の後に TAKEOFF REF に出る。DRAG/F-F は性能の予測に使い、IDENT にも出る。TO 1/TO 2 は 0–30 % の derate で、THRUST LIMIT にも出る。MNVR MARGIN は包囲線とバンクの制限の計算、MIN CRZ TIME は最適高度、R/C CLB・THR/CRZ（CLB か CRZ。入力が無ければ CLB）は最大高度に使う。6R は ARM を書き込み行に入れて押す（H/W と S/W の option code 以外を変えられる）。p.681 の図の機体：MNVR MARGIN 1.30、R/C CLB 300、THR/CRZ CRZ/100、THR RED FLAPS 5、MIN CRZ TIME 5、ACCEL HT 1000 / 1000、6R に ARM。
+  - FCOM p.969・p.973：PFD の最大機動速度と、20,200 ft より上の最小機動速度は、buffet まで 1.3 g（または整備が設定した値）。p.1272：TO 1・TO 2 は運航者の %（1 % 刻み）。p.1273：巡航の推力の基準は整備の設定で CLB か CRZ。p.1314：TO 1 −8 %・TO 2 −20 %（109）、570 は −5・−15 %。p.1317–1318：TAKEOFF REF の既定は FLAPS 5・1000FT・1000FT。p.1350：MAX の残余上昇率は航空会社の設定（0–500 fpm、既定 100）。
+- 作ったもの：
+  - `B747.68.perf_factors_model.lua`（新しい純粋なモデル）：値（入力が無ければ ATA34_2 p.681 の機体の値。FCOM の TAKEOFF REF の既定、1.3 g、100 fpm と合う。derate はエンジン型式ごとの FCOM の値）、入力の形と範囲、ページの文字。
+  - FMS のつなぎ（`B747.68.xt.fms.lua`）：値はリバリーの simconfig の `FMC.PERF`（SIM CONFIG の保存で残る。FMC が最後の入力を覚えることに当たる）。読むのは simconfig の JSON の文字列から（XTLua の名前空間の表の無いキーを読まないため）。
+    - DRAG/F-F → IDENT の DRAG/FF（`FMC.INIT.drag_ff` も合わせる）と、性能のデータの燃料流量（`B747_perf_db.FF_F` はすべての燃料流量、`DRAG_F` は水平飛行の燃料流量に掛ける）。
+    - TO 1/TO 2 → THRUST LIM の derate（`B747_fms_thrlim_pct`。EEC の reference へ）。
+    - MNVR MARGIN → 最大高度の buffet の余裕（`B747_perf_db.MARGIN_G`）と、PFD の buffet の機動速度（新しい `laminar/B747/fms/mnvr_margin` を `B747.60.xt.speedtape.lua` が読み、`B747.60.minspeed_model.lua` の最大機動速度と、20,200 ft より上のフラップ上げの最小機動速度に使う。下と、フラップを出したときは 1.3 g のまま）。
+    - THR/CRZ → CLB なら T/C で CLB のまま（CLB 1・2 は外す）、CRZ なら前のとおり CRZ（`B747.68.thrlim_model.lua` の `crz_clb`）。
+    - THR RED・ACCEL HT → TAKEOFF REF の既定。飛行の始まり（`do_flight_start`）と flight complete で取り込み、乗員が入れていない欄に入れる。TAKEOFF REF の DELETE で戻る値も（前は 1000 と FLAPS 5 の決め打ち）。
+    - MIN CRZ TIME・R/C CLB・R/C CRZ は表示と保存だけ（FCOM の表の最大高度は 100 fpm で、短い飛行の最適高度は FMC に無い）。
+  - ページ：MAINTENANCE INDEX（FCOM の見出しと線、地上だけプロンプト、<INDEX は INIT/REF INDEX）。PERF FACTORS（FMSPG の形。6R は ARM の前 ---、後 ARM。ARM の前の入力は INVALID ENTRY、DELETE は INVALID DELETE、PERF CODE と OPTION CODE は入力できない）。ARM は CDU ごとで、ページを出ると消える。
+  - CDU の枠組み（`B744.createfms.lua`）：CDU が描くページが変わったら、前のページの `onLeave` を呼ぶ。`createPage` が全ページに空の `onLeave` を持たせる（XTLua の名前空間の表は無いキーを読むとスタックがあふれる）。
+- 推定：空中の MAINTENANCE INDEX はプロンプトを出さない。ARM の後の 6R の表示（ATA34_2 の図は ARM、FMSPG の図は --- なので、入力の前と後と読んだ）。DELETE はすべての欄で INVALID DELETE（資料は TO 1/TO 2 だけ）。DRAG の係数は水平飛行の燃料流量だけに掛け、上昇と降下の経路は変えない。derate の変更はすぐに THRUST LIM へ（飛行の終わりを待つのは TAKEOFF REF の値と読んだ）。OPTION CODE の値は FMSPG の図のもの。
+- 使わないもの：MNVR MARGIN のバンクの制限の計算（ATA34_2 p.678）は、この FMC の LNAV にバンクの制限の計算が無いので使わない。
+- 試験：新しい `tests/fms/perf_factors_model_test.lua`（125 件：入力の無いときの値とエンジン型式の derate、保存した値と型の違う値、各欄の形と範囲、文字）、新しい `tests/fms/perf_factors_pages_test.lua`（61 件：INIT/REF INDEX の MAINT> で MAINTENANCE INDEX と <INDEX、PERF FACTORS の FMSPG の形と値、ARM の前の INVALID ENTRY、ARM、各欄の入力と simconfig の FMC.PERF・drag_ff、性能のデータの係数と `fms/mnvr_margin`、PERF CODE・OPTION CODE・DELETE、ページを出ると ---、IDENT の DRAG/FF、THRUST LIM の <-25 %、TAKEOFF REF は飛行の終わりまで FLAPS 5 と 1000FT で、終わると 1200FT・800FT・/1500FT、DELETE で 1200FT、空中のプロンプト）、`perf_db_test.lua` +6（係数と既定の余裕）、`thrlim_model_test.lua` +4（THR/CRZ CLB の T/C）、`minspeed_model_test.lua` +4（1.20 g で 20,200 ft より上の帯が動き、下とフラップは 1.3 g のまま）、`speedtape_module_test.lua` +2（`fms/mnvr_margin` の 1.20 で最大機動速度が上がる、範囲の外は 1.3 g）、`navdb_fmc_test.lua` の IDENT の DRAG/FF の期待値を +0.0/+0.0 に（前は simconfig の +0.0/-0.0）。全 167 本。X-Plane：新しい `s188_perf_factors` 28/28（2026-11-01、X-Plane を起動し直した後の 2 便目。RJAA の地上で MAINTENANCE INDEX と <INDEX、PERF FACTORS の形と値、ARM の前の INVALID ENTRY、ARM、MNVR MARGIN 1.25 と `fms/mnvr_margin`、TO 2 25、DRAG/F-F +1.5/-2.0 と simconfig の FMC.PERF、IDENT の DRAG/FF、THRUST LIM の <-25 %、元の値へ戻す。CDU の写真 5 枚）。1 回目（起動し直す前の 6 便目）は 19/28：試験の作りの誤りで、INVALID ENTRY の後の CLR が 2 回だけで書き込み行に「1.2」が残り、ARM が入らなかった。Log.txt に Lua の誤りなし。
