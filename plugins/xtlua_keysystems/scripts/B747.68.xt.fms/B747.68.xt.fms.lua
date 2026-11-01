@@ -3692,9 +3692,12 @@ do
   local due = {}
   local wasComm, lastN = false, 0
   -- (step 12g1) the ATC LOG's order (each uplink when first seen, each
-  -- downlink when sent) and the downlinks sent from here
+  -- downlink when sent) and the downlinks sent from here; (step 12g2a) the
+  -- downlinks' pending states (FCOM p.753-754)
   local seq = 0
   local down = {}
+  local scanned = 0
+  local DOWN_PENDING = {SENDING = true, OPEN = true, DEFERRED = true}
   local function msg(i) return acarsSystem.messages[i] end
   -- a message's field (its namespace table cannot read a missing key)
   local function field(m, k)
@@ -3742,10 +3745,41 @@ do
     for _, d in ipairs(down) do
       if not d.deleted then
         out[#out + 1] = {seq = d.seq, up = false, d = d, time = d.time, text = d.text, status = d.status,
-          pending = d.status == "SENDING"}
+          pending = DOWN_PENDING[d.status] == true}
       end
     end
     return out
+  end
+  -- (step 12g2a) a downlink sent elsewhere (a request): its ATC LOG entry
+  function B747_fms_atc_log_add(d)
+    seq = seq + 1
+    d.seq, d.deleted = seq, false
+    down[#down + 1] = d
+    return d
+  end
+  -- the uplink answering a downlink (its RT the downlink's ID; the newest,
+  -- not deleted): its place, nil without
+  local function rt(m)
+    local v = field(m, "rt") or field(m, "RT")
+    return tonumber(v)
+  end
+  function B747_fms_atc_response_to(id)
+    if not id then return nil end
+    for i = table.getn(acarsSystem.messages.values), 1, -1 do
+      local s = B747_fms_atc_uplink(i)
+      if s and not s.deleted and rt(msg(i)) == id then return i end
+    end
+    return nil
+  end
+  -- the request an uplink answers (nil: none)
+  function B747_fms_atc_uplink_request(i)
+    if not B747_fms_atc_uplink(i) then return nil end
+    local id = rt(msg(i))
+    if not id then return nil end
+    for _, d in ipairs(down) do
+      if d.kind == "REQUEST" and d.id == id and not d.deleted then return d end
+    end
+    return nil
   end
   -- an entry deleted (DELETE on its left key); every non-pending one (ERASE
   -- LOG's CONFIRM)
@@ -3838,19 +3872,126 @@ do
         if v.down then v.down.status = "SENT" end
       end
     end
+    -- (step 12g2a) ATC's response to a request: STANDBY keeps it OPEN,
+    -- REQUEST DEFERRED makes it DEFERRED, any other RESPONSE RCVD (FCOM
+    -- p.753-754)
+    if n < scanned then scanned = 0 end
+    for i = scanned + 1, n do
+      local id = B747_fms_atc_uplink(i) and rt(msg(i))
+      if id then
+        for _, d in ipairs(down) do
+          if d.kind == "REQUEST" and d.id == id and DOWN_PENDING[d.status] == true then
+            local t = str_trim(string.upper(field(msg(i), "msg") or ""))
+            if t == "STANDBY" then d.status = "OPEN"
+            elseif t == "REQUEST DEFERRED" then d.status = "DEFERRED"
+            else d.status = "RESPONSE RCVD" end
+          end
+        end
+      end
+    end
+    scanned = n
     local comm = B747_fms_atc_logon().comm
     if wasComm and not comm then
       for i, s in pairs(ul) do
         if U.pending(B747_fms_atc_uplink(i) or s) then s.aborted = true end
       end
+      -- (step 12g2a) the pending downlinks: a request OPEN or DEFERRED too
       for _, d in ipairs(down) do
-        if d.status == "SENDING" then d.status = "ABORTED" end
+        if DOWN_PENDING[d.status] == true then d.status = "ABORTED" end
       end
     end
     wasComm = comm
   end
   -- the message list cleared (ACARS's clear)
-  function B747_fms_atc_uplinks_clear() ul, verify, due, down = {}, {}, {}, {} end
+  function B747_fms_atc_uplinks_clear() ul, verify, due, down, scanned = {}, {}, {}, {}, 0 end
+end
+-- (6-1/6-2 step 12g2a; notes/ATA-34-61-FMC.md §116) the ATC requests
+-- (B747.68.atc_request_model.lua): the ATC REQUEST pages' request and ATC
+-- INDEX's CLEARANCE and VOICE, one each in the FMC (each CDU shows and
+-- changes them), the text sent built at SEND (before, the pages wrote one
+-- shared text while drawing and the last CDU drawn's went: CDU-34); SEND
+-- through the provider as before (cpdlc, RR Y) and its ATC LOG entry (FCOM
+-- p.745); the network's acknowledgement the provider's sending it (one
+-- message each 15 s: estimate): OPEN (a request needs a response), the
+-- CDU that showed its VERIFY REQUEST to XXXXZ ATC REQUEST (FMSPG p.326),
+-- the request erased (estimate); none in the logon's ACK_S: NO ACK and
+-- RESEND> while unchanged (FMSPG p.365; the same entry again: estimate);
+-- fields not to be changed while SENDING (FMSPG p.300-316)
+dofile("B747.68.atc_request_model.lua")
+do
+  local Q = B747_atc_request_model
+  local KINDS = {"REQUEST", "CLEARANCE", "VOICE"}
+  local drafts = {REQUEST = Q.new("REQUEST"), CLEARANCE = Q.new("CLEARANCE"), VOICE = Q.new("VOICE")}
+  local verifyOf = {}
+  local shownReq = {}
+  function B747_fms_atc_draft(kind) return drafts[kind] end
+  function B747_fms_atc_present_ft() return simDR_pressureAlt1 end
+  -- a CDU's VERIFY REQUEST: the draft's kind and where from (6L: "REQUEST"
+  -- or "INDEX"); set with a kind
+  function B747_fms_atc_verify_req(fmsID, kind, from)
+    if kind then verifyOf[fmsID] = {kind = kind, from = from} end
+    return verifyOf[fmsID] or {kind = "REQUEST", from = "REQUEST"}
+  end
+  -- a CDU's XXXXZ ATC REQUEST: the downlink
+  function B747_fms_atc_show_request(fmsID, d) shownReq[fmsID] = d end
+  function B747_fms_atc_shown_request(fmsID) return shownReq[fmsID] end
+  local function sending(dr) return dr.sent ~= nil and dr.sent.status == "SENDING" end
+  function B747_fms_atc_req_sending(kind) return sending(drafts[kind]) end
+  -- 5R's text and its header (FMSPG p.365: blank with nothing to send)
+  function B747_fms_atc_req_status(kind)
+    local dr = drafts[kind]
+    if sending(dr) then return "SENDING", "REQUEST" end
+    if not B747_fms_atc_ready() then return "NO COMM", "DATA LINK" end
+    if not B747_fms_atc_logon().comm then return "NO ATC COMM", "REQUEST" end
+    if not Q.sendable(dr) then return "", "" end
+    if dr.sent and dr.sent.status == "NO ACK" and dr.sent_rev == dr.rev then return "RESEND>", "REQUEST" end
+    return "SEND>", "REQUEST"
+  end
+  -- SEND> or RESEND> (nothing when not shown)
+  function B747_fms_atc_send_request(fmsO, kind)
+    local st = B747_fms_atc_req_status(kind)
+    if st ~= "SEND>" and st ~= "RESEND>" then return end
+    local dr = drafts[kind]
+    local text = Q.text(dr)
+    fmsFunctions.acarsSystemSendATC(fmsO, json.encode({type = "cpdlc", msg = text, RR = "Y"}))
+    local d = (st == "RESEND>") and dr.sent or {kind = "REQUEST"}
+    d.req, d.text, d.status, d.sent_t = Q.copy(dr), text, "SENDING", simDRTime
+    d.time = string.format("%02d%02d", hh or 0, mm or 0)
+    d.id = acarsSystem.provider.messageID - 1
+    d.queue = table.getn(acarsSystem.messageSendQueue.values)
+    if st ~= "RESEND>" then B747_fms_atc_log_add(d) end
+    dr.sent, dr.sent_rev = d, dr.rev
+  end
+  -- acknowledged (or answered first): the CDUs on its VERIFY REQUEST to
+  -- XXXXZ ATC REQUEST, the request erased
+  local function finish(kind, dr, d)
+    for _, id in ipairs({"fmsL", "fmsC", "fmsR"}) do
+      local o = fmsModules[id]
+      local v = verifyOf[id]
+      if o and o.currentPage == "ATCVERIFYREQUEST" and v and v.kind == kind then
+        shownReq[id] = d
+        fmsFunctions.setpage(o, "ATCREQUESTLOG")
+      end
+    end
+    Q.erase(dr)
+  end
+  -- each frame: the acknowledgements, the time-outs
+  function B747_fms_atc_requests_update()
+    for _, kind in ipairs(KINDS) do
+      local dr = drafts[kind]
+      local d = dr.sent
+      if d and d.status == "SENDING" then
+        if acarsSystem.sentMessage >= d.queue then
+          d.status = "OPEN"
+          finish(kind, dr, d)
+        elseif simDRTime - d.sent_t >= B747_atc_logon_model.ACK_S then
+          d.status = "NO ACK"
+        end
+      elseif d and d.status ~= "NO ACK" and d.status ~= "ABORTED" then
+        finish(kind, dr, d)
+      end
+    end
+  end
 end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after
@@ -4538,6 +4679,8 @@ function after_physics()
     B747_fms_datalink_eicas(acarsOnline)
     B747_fms_atc_update()
     B747_fms_atc_uplinks_update()
+    -- (step 12g2a) the requests' acknowledgements
+    B747_fms_atc_requests_update()
 
 	--Display Waypoint ETA on ND
 	waypoint_eta_display()

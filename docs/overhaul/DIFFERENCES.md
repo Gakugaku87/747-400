@@ -407,7 +407,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 入力の検査が不正確（CDU-07〜09）。
 - THRUST LIM のページは段 9g2 から実機の形：地上（と離陸の制限のあいだ）は SEL・OAT と、見出しの右にモードと制限（「TO 1 EPR」と値）、TO 1・TO 2 の derate の %（P&W は例の −8・−20 %）、<SEL>・<ARM>。空中は有効なモードと制限、<GA・<CON・<CRZ と CLB・CLB 1・CLB 2 の選択、<SEL>（FCOM p.1313–1316、p.1338–1340。前は見出しが TO-1 の形で D も出ず、値は A/T の target の印、空中はモードも値も無く、<GA・<CON・<CRZ は選べなかった：ATHR-02、CDU-10）。VNAV・PROGRESS・NAV RADIO のページの不足（CDU-14〜16）。
 - 無いページ（DESCENT FORECAST など。CDU-18。REF NAV DATA と RTE 2 は 2026-10-27 から）。故障の扱い（CDU-19）。MSG・DSPY・OFST・FAIL の灯（3D に無い：CDU-22）。
-- データリンク：アップリンクの処理が無い（CDU-34〜38）。
+- データリンク（段 12）：ATC のログオン（12e）、ATC のアップリンクと応答（12f）、ATC LOG（12g1）、ATC の要求（12g2a：ATC REQUEST と高度・速度・オフセット・経路の 4 つのページ、VERIFY REQUEST、送信と状態、XXXXZ ATC REQUEST、ATC INDEX の CLEARANCE・VOICE）は実機の形になった（前はアップリンクの処理が無く、送る文は CDU 3 台で 1 本を共有して、最後に描いた CDU の文が送られた：CDU-34〜39）。残りは RTE 1・RTE 2・DEP/ARR の要求（12g2b）、REPORT・POS REPORT・WHEN CAN WE（12g3）、EMERGENCY（12g4）、会社のデータリンクと ADS（12h）。送る文は FANS の語を空白でつないだもの（推定。前は AutoATC 向けの略語）で、AutoATC の無いこの PC では送受信を X-Plane で確かめられない（試験はモック）。
 - 実機に合わせた点（LEGS の PLAN の CTR と STEP、2026-10-29）：その CDU の側の ND（右の CDU は副操縦士、ほかは機長）が PLN のとき、LEGS の PLAN の中心の点に <CTR>、6R に STEP>、区切り線の端に小字の MAP CTR。STEP で中心が次の点へ進み、LEGS キー・NEXT PAGE・PREV PAGE では表示したページの最初の点が中心になって、ND の PLAN の中心が移る（FCOM p.1333 の 9・10、p.1330 の図；FMSPG p.124。前は <CTR> も STEP も無く、PLAN の中心は X-Plane の FMS のまま動かなかった）。
   - 推定：STEP でページがついていくこと、最後の点で動かないこと、点の無いページ（経路の終わりの破線だけ）で中心を動かさないこと、PLN にしたときの中心（表示中の LEGS のページの最初の点、無ければアクティブな経路の最初の点）、中心の点が通過や削除で消えたらその位置からの次の点、DIRECT TO の INTC CRS の間は STEP> を出さないこと、FL のある block の制約の点に <CTR> を出さないこと。
   - 違い：中心は両席で 1 つ（上の FMC）。進入復行の点と、終点を予測していない条件の脚に <CTR> を移しても、ND の PLAN の中心は前の点のまま（X-Plane の計画にその点が無い）。

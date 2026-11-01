@@ -5,9 +5,9 @@
 -- ATC UPLINK: the title the receipt time, page 1 STATUS at 1R and the text
 -- from line 2, CONTINUED while it goes on; the last page STANDBY (4L),
 -- REJECT (5L) and ACCEPT (5R) while a response is due, LOG (6R). Shown,
--- the uplink is reviewed (NEW to OPEN or OLD). Not here yet: <REQUEST,
--- LOAD, ARM, REPORT (step 12g and after), PRINT (no printer: blank, an
--- estimate).
+-- the uplink is reviewed (NEW to OPEN or OLD); (step 12g2a) 1L <REQUEST
+-- when it answers a request. Not here yet: LOAD, ARM, REPORT (step 12g3
+-- and after), PRINT (no printer: blank, an estimate).
 -- VERIFY RESPONSE: 1L the response (WILCO, ROGER, AFFIRM, UNABLE, NEGATIVE,
 -- STANDBY), the reasons and free text below, RESPONSE SEND> (SENDING,
 -- SENT; NO COMM, NO ATC COMM), STATUS ACCEPTED once acknowledged, 6L
@@ -43,7 +43,12 @@ fmsPages["ATCUPLINK"].getPage=function(self,pgNo,fmsID)
   local lines = lines_of(i)
   local np = U.pages(lines)
   out[1] = centre(hhmm(i) .. "Z ATC UPLINK")
-  if pgNo == 1 then out[3] = string.format("%24s", U.status(s)) end
+  if pgNo == 1 then
+    -- (step 12g2a) <REQUEST: the request it answers (FCOM p.759)
+    local req = B747_fms_atc_uplink_request(i) and "<REQUEST" or ""
+    local st = U.status(s)
+    out[3] = req .. string.rep(" ", 24 - #req - #st) .. st
+  end
   local first, text, more = U.page_lines(lines, pgNo)
   for k, t in ipairs(text) do out[first + k - 1] = string.format("%-24s", t) end
   if pgNo == np and U.awaiting(s) then
@@ -69,6 +74,7 @@ fmsPages["ATCUPLINK"].getSmallPage=function(self,pgNo,fmsID)
   return out
 end
 fmsFunctionsDefs["ATCUPLINK"]={}
+fmsFunctionsDefs["ATCUPLINK"]["L1"]={"atcuplink","REQUEST"}
 fmsFunctionsDefs["ATCUPLINK"]["L4"]={"atcuplink","STANDBY"}
 fmsFunctionsDefs["ATCUPLINK"]["L5"]={"atcuplink","REJECT"}
 fmsFunctionsDefs["ATCUPLINK"]["R5"]={"atcuplink","ACCEPT"}
@@ -76,6 +82,14 @@ fmsFunctionsDefs["ATCUPLINK"]["R6"]={"setpage","ATCLOG"}
 -- STANDBY, REJECT, ACCEPT on the last page while a response is due
 function fmsFunctions.atcuplink(fmsO, value)
   local i = acarsSystem.getCurrentMessage(fmsO.id)
+  if value == "REQUEST" then
+    local d = (fmsO.pgNo or 1) == 1 and B747_fms_atc_uplink_request(i)
+    if d then
+      B747_fms_atc_show_request(fmsO.id, d)
+      fmsFunctions.setpage(fmsO, "ATCREQUESTLOG")
+    end
+    return
+  end
   local s = B747_fms_atc_uplink(i)
   if not s or not U.awaiting(s) then return end
   if fmsO.pgNo ~= U.pages(lines_of(i)) then return end
