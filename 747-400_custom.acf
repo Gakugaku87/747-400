@@ -92844,6 +92844,7 @@ GROUP First Officer ND
           GROUP_HEIGHT 602
           DATAREF laminar/B747/nd/up/fo
           POS 1022.000000 55.000000
+          CLIP
           KEY_FRAME 10.000000 -10.000000 1.000000
           KEY_FRAME 0.000000 0.000000 1.000000
           KEY_FRAME -10.000000 10.000000
