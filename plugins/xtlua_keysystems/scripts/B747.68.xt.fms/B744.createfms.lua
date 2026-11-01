@@ -90,6 +90,11 @@ end
 function B747_cdu_fmc_condition(text, on, alert)
   C.fmc_set(fmcMsgs, text, on, alert)
 end
+-- (6-1/6-2 step 11d1) the FMC's messages on the CDUs connected to an FMC
+-- (the FMS's B747_fms_fmc_linked): one without shows its own only
+local function cduFmc(fmsModule)
+  return B747_fms_fmc_linked(fmsModule) and fmcMsgs or nil
+end
 -- the scratchpad's keys, by B747.68.cdu_model.lua's names
 local SP_KEYS = {space = "SP", slash = "/", ["."] = ".", ["-"] = "+/-", del = "DEL", clear = "CLR"}
 -- a CDU's page now: the custom pages at once (no blank half second:
@@ -113,6 +118,9 @@ local RETURN_KEY = {}
 -- EXEC, and the keys passed to X-Plane's CDU on its pages
 local function pageKey(fmsModule,key)
   local fmsO=fmsModules[fmsModule]
+  -- (6-1/6-2 step 11d1) no FMC pages nor EXEC without an FMC connected:
+  -- MENU's <FMC connects one (FCOM p.1275)
+  if (FMC_KEYS[key] or key=="exec") and not B747_fms_fmc_linked(fmsModule) then return end
   if FMC_KEYS[key] then inFmc[fmsModule]=true end
   if key=="index" then
       fmsO.targetCustomFMC=true
@@ -208,9 +216,12 @@ local function pageKey(fmsModule,key)
     fmsO.notify="KEY/FUNCTION INOP"
   end
 end
--- MENU's <FMC: the FMC's last page, IDENT the first time (FCOM p.1323)
+-- MENU's <FMC: the FMC's last page, IDENT the first time (FCOM p.1323);
+-- the CDU connected to an FMC again, nothing without one (6-1/6-2 step
+-- 11d1: FCOM p.1275)
 function B747_cdu_menu_fmc(fmsO)
   local id=fmsO.id
+  if not B747_fms_fmc_connect(id) then return end
   local last=lastFmcPage[id]
   inFmc[id]=true
   if last==nil then
@@ -224,6 +235,19 @@ function B747_cdu_menu_fmc(fmsO)
     fmsO.targetPage=last[1]
     fmsO.targetpgNo=last[2] or 1
   end
+end
+-- (6-1/6-2 step 11d1) the CDU's FMC gone (the FMS's update_fmc_link): the
+-- MENU page and TIMEOUT - RESELECT (FCOM p.1275, p.1422; ATA34_2 p.629),
+-- the FMC's page kept for <FMC
+function B747_cdu_fmc_lost(fmsModule)
+  local fmsO=fmsModules[fmsModule]
+  if inFmc[fmsModule] then lastFmcPage[fmsModule]={fmsO.currentPage, fmsO.pgNo} end
+  inFmc[fmsModule]=false
+  fmsO.targetCustomFMC=true
+  fmsO.targetPage="INDEX"
+  fmsO.targetpgNo=1
+  switchNow(fmsO)
+  C.error(cduState[fmsModule], B747_fmc_link_model.TIMEOUT)
 end
 function keyDown(fmsModule,key,phase,duration)
   phase=phase or 0
@@ -242,12 +266,13 @@ function keyDown(fmsModule,key,phase,duration)
   -- the scratchpad's keys on the custom pages, and CLR on a message on any
   -- page (FCOM p.1212-1213; FMSPG p.39-43)
   local k=SP_KEYS[key] or (string.len(key)==1 and key) or nil
-  if k and (fmsO.targetCustomFMC or (k=="CLR" and C.message(st, fmcMsgs))) then
+  local msgs=cduFmc(fmsModule)
+  if k and (fmsO.targetCustomFMC or (k=="CLR" and C.message(st, msgs))) then
     if k=="CLR" and phase==0 and fmsO.targetCustomFMC then
       simCMD_FMS_key[fmsModule]["clear"]:once() -- X-Plane's CDU's message (RTE, LEGS entries)
     end
     st.sp=fmsO.scratchpad
-    C.key(st, fmcMsgs, k, phase, duration)
+    C.key(st, msgs, k, phase, duration)
     fmsO.scratchpad=st.sp
     return
   end
@@ -645,7 +670,7 @@ function fms:B747_fms_display()
 	      B747DR_fms[thisID][i]=cleanFMSLine(B747DR_srcfms[thisID][i])
 	      B747DR_fms_s[thisID][i]=BLANK
       end
-      B747DR_fms[thisID][14]=C.message(st, fmcMsgs) or cleanFMSLine(native)
+      B747DR_fms[thisID][14]=C.message(st, cduFmc(thisID)) or cleanFMSLine(native)
       B747DR_fms_s[thisID][14]=BLANK
     else
       -- the page drawn under pcall: an error blanks it and goes to the log
@@ -668,6 +693,6 @@ function fms:B747_fms_display()
 	      B747DR_fms_s[thisID][i]=fmsPagesmall[i] or BLANK
       end
       st.sp=self.scratchpad or ""
-      B747DR_fms[thisID][14]=C.line(st, fmcMsgs)
+      B747DR_fms[thisID][14]=C.line(st, cduFmc(thisID))
     end
 end

@@ -31,6 +31,7 @@ rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
 for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
+for _, b in ipairs({"xfr_capt", "xfr_fo", "stby_apu"}) do rt:set("laminar/B747/electrical/bus/" .. b, 1) end -- the FMCs' power
 local CAPT, FO = "laminar/B747/nd/mode/capt/sel_dial_pos", "laminar/B747/nd/mode/fo/sel_dial_pos"
 local MAP, PLN = 2, 3
 rt:set(CAPT, MAP)

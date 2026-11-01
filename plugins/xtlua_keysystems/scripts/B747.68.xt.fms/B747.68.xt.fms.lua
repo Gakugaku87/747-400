@@ -3077,6 +3077,72 @@ function update_nav_msgs()
   end
   navInvalidText=fmc_alt_message(navInvalidText,text)
 end
+-- (6-1/6-2 step 11d1; notes/ATA-34-61-FMC.md §98) the two FMCs
+-- (B747.68.fmc_link_model.lua): each frame their power (the left on the
+-- Captain's transfer bus or the APU standby bus, the right on the F/O's:
+-- FCOM p.800, p.804) and failure (laminar/B747/fms/fail[0], [1]: the
+-- failure injection), the CDUs' power, the NAV source selectors and the
+-- FMC master selector; fmc_ok and cdu_link out. A CDU whose FMC goes: the
+-- MENU page and TIMEOUT - RESELECT (B744.createfms.lua's
+-- B747_cdu_fmc_lost); SINGLE FMC OPERATION while one works (FCOM p.1275,
+-- p.1434); FMC LEFT, RIGHT on the EICAS after a delay (p.1275, p.1429).
+-- Before, one FMC that could not fail
+dofile("B747.68.fmc_link_model.lua")
+local FL=B747_fmc_link_model
+local fmcLink=FL.new()
+local fmcIn={power={true,true},fail={false,false},src={},cdu_power={},master=FL.L,ground=true}
+B747DR_fms_fail=find_dataref("laminar/B747/fms/fail")
+B747DR_fms_fmc_ok=find_dataref("laminar/B747/fms/fmc_ok")
+B747DR_fms_cdu_link=find_dataref("laminar/B747/fms/cdu_link")
+B747DR_fms_bus_xfr_capt=find_dataref("laminar/B747/electrical/bus/xfr_capt")
+B747DR_fms_bus_xfr_fo=find_dataref("laminar/B747/electrical/bus/xfr_fo")
+B747DR_fms_bus_stby_apu=find_dataref("laminar/B747/electrical/bus/stby_apu")
+B747DR_fms_nav_src_capt=find_dataref("laminar/B747/flt_inst/nav_src/capt/sel_dial_pos")
+B747DR_fms_nav_src_fo=find_dataref("laminar/B747/flt_inst/nav_src/fo/sel_dial_pos")
+B747DR_fms_fmc_master=find_dataref("laminar/B747/flt_inst/fmc_master_src/ctr_pnl/sel_dial_pos")
+-- the NAV source selectors' FMC positions (FCOM p.1043; B747.60.xt.displays.lua):
+-- Captain FMC L, FMC R, CDU L, CDU C; F/O CDU C, CDU R, FMC L, FMC R
+local NAV_SRC_CAPT={[0]=FL.L,[1]=FL.R}
+local NAV_SRC_FO={[2]=FL.L,[3]=FL.R}
+local SINGLE_FMC=42
+local ADV_FMC_LEFT,ADV_FMC_RIGHT=144,146
+local CDU_LINK_INDEX={fmsL=0,fmsC=1,fmsR=2}
+local singleFMC=nil
+local function anyFMC() return fmcLink.ok[FL.L] or fmcLink.ok[FL.R] end
+function update_fmc_link()
+  local inp=fmcIn
+  inp.power[FL.L]=B747DR_fms_bus_xfr_capt>0.5 or B747DR_fms_bus_stby_apu>0.5
+  inp.power[FL.R]=B747DR_fms_bus_xfr_fo>0.5
+  inp.fail[FL.L]=B747DR_fms_fail[0]>0.5
+  inp.fail[FL.R]=B747DR_fms_fail[1]>0.5
+  inp.src.fmsL=NAV_SRC_CAPT[math.floor(B747DR_fms_nav_src_capt+0.5)]
+  inp.src.fmsR=NAV_SRC_FO[math.floor(B747DR_fms_nav_src_fo+0.5)]
+  inp.master=B747DR_fms_fmc_master>0.5 and FL.R or FL.L
+  inp.ground=simDR_onGround==1
+  for _,cdu in ipairs(FL.CDUS) do inp.cdu_power[cdu]=cduPowered(cdu) end
+  local out=FL.update(fmcLink,inp,SIM_PERIOD)
+  for i=1,2 do
+    local v=out.ok[i] and 1 or 0
+    if B747DR_fms_fmc_ok[i-1]~=v then B747DR_fms_fmc_ok[i-1]=v end
+  end
+  for cdu,k in pairs(CDU_LINK_INDEX) do
+    local v=fmcLink.link[cdu] or 0
+    if B747DR_fms_cdu_link[k]~=v then B747DR_fms_cdu_link[k]=v end
+    if out.lost[cdu] then B747_cdu_fmc_lost(cdu) end
+  end
+  if out.single~=singleFMC then
+    singleFMC=out.single
+    B747DR_fmc_notifications[SINGLE_FMC]=out.single and 1 or 0
+  end
+  local l,r=out.eicas[FL.L] and 1 or 0,out.eicas[FL.R] and 1 or 0
+  if B747DR_CAS_advisory_status[ADV_FMC_LEFT]~=l then B747DR_CAS_advisory_status[ADV_FMC_LEFT]=l end
+  if B747DR_CAS_advisory_status[ADV_FMC_RIGHT]~=r then B747DR_CAS_advisory_status[ADV_FMC_RIGHT]=r end
+end
+-- MENU's <FMC (B744.createfms.lua): the FMC it connects the CDU to, nil
+-- without one; the FMC it would; the CDU connected
+function B747_fms_fmc_connect(cdu) return FL.connect(fmcLink,cdu,fmcIn) end
+function B747_fms_fmc_available(cdu) return FL.available(fmcLink,cdu,fmcIn) end
+function B747_fms_fmc_linked(cdu) return FL.linked(fmcLink,cdu) end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after
 -- a flight (all four's N2 under the ENG FAIL speed: laminar/B747/engines/
@@ -3559,7 +3625,8 @@ fms_style = find_dataref("sim/cockpit2/radios/indicators/fms_cdu1_style_line2")
 -- ten seconds, any message, and CLR cleared the flag)
 function setNotifications()
   B747_cdu_sync_fmc_messages(B747DR_fmc_notifications)
-  B747DR_CAS_advisory_status[145] = B747_cdu_fmc_alert() and 1 or 0
+  -- (6-1/6-2 step 11d1) none without an FMC
+  B747DR_CAS_advisory_status[145] = (B747_cdu_fmc_alert() and anyFMC()) and 1 or 0
 end
 B747DR_ap_target_speed               	= find_dataref("laminar/B747/autopilot/speed/target")
 B747DR_ap_target_heading_deg               	= find_dataref("laminar/B747/autopilot/heading/target")
@@ -3676,6 +3743,7 @@ function after_physics()
 	local cM=hh
 	cM=mm
 	cM=ss
+    update_fmc_link()
     setNotifications()
     update_spd_trans()
     update_perf()

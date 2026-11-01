@@ -50,6 +50,13 @@ fmsPages["INDEX"].getPage=function(self,pgNo,fmsID)
   local gs1="                        "
   local efisS=B744_cdu_efis_cp_available(fmsID) and "SELECT>" or "       "
   local eicasS=B744_cdu_eicas_cp_available() and "SELECT>" or "       "
+  -- (6-1/6-2 step 11d1) <ACT> while the CDU is connected to an FMC, <FMC
+  -- without the prompt when there is none to connect to (FCOM p.1275;
+  -- ATA34_2 p.629)
+  local fmcS="<FMC    <ACT>    "
+  if not B747_fms_fmc_linked(fmsID) then
+    fmcS=B747_fms_fmc_available(fmsID) and "<FMC             " or "                 "
+  end
 
   if simDR_onGround ==1 then
     gs1="                 SELECT>"
@@ -65,7 +72,7 @@ return {
 
 "          MENU          ",
 "                        ",
-"<FMC    <ACT>    "..efisS,
+fmcS..efisS,
 "                        ",
 acarsS.."    "..eicasS,
 "                        ",

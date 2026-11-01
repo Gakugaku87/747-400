@@ -17,6 +17,7 @@ rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 -- the CDUs' power (no keys without it: 6-1/6-2 step 2)
 for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
+for _, b in ipairs({"xfr_capt", "xfr_fo", "stby_apu"}) do rt:set("laminar/B747/electrical/bus/" .. b, 1) end -- the FMCs' power
 rt:callout("flight_start")
 local function frames(seconds)
     for _ = 1, math.floor(seconds * 30 + 0.5) do rt:frame(1 / 30) end
