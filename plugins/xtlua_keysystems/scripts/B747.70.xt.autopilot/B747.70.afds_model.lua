@@ -953,10 +953,15 @@ function M.update(s, inp)
         s.rollout_arm = false
     end
     if s.roll == "ROLLOUT" and M.engaged(s) == 0 then s.roll = nil end
-    -- on the ground the approach modes end (ROLLOUT and NOSE LETDOWN go on)
-    if inp.ground and (s.loc_arm or s.gs_arm or s.roll == "LOC" or s.pitch == "GS") then
+    -- on the ground the approach modes end (ROLLOUT and NOSE LETDOWN go on).
+    -- LOC with ROLLOUT armed stays for ROLLOUT under ROLLOUT_RA (LF4,
+    -- 2026-11-02: a nose-first touchdown came with 6.7 ft of RA, the ground
+    -- ended LOC first and the rollout had no mode; the FCC's ground in the
+    -- flare is the radio altitude under 5 ft: ATA22 p.348)
+    local keepLoc = s.rollout_arm and s.roll == "LOC"
+    if inp.ground and (s.loc_arm or s.gs_arm or (s.roll == "LOC" and not keepLoc) or s.pitch == "GS") then
         s.loc_arm, s.gs_arm = false, false
-        if s.roll == "LOC" then s.roll = nil end
+        if s.roll == "LOC" and not keepLoc then s.roll = nil end
         if s.pitch == "GS" then s.pitch = nil end
     end
     -- LOC captured (`inp.loc_detect`: the old detector until step 2) with the
