@@ -5541,7 +5541,10 @@ function activate_inflightAP()
 	-- only when OFF (its switch toggles), the A/T by its arm command
 	if B747DR_fms_toggle_sw[23] < 0.5 then B747CMD_flight_dir_switch_L:once() end
 	B747CMD_autothrottle_arm:once()
-	B747DR_ap_target_speed=math.floor(math.min(simDR_ias_pilot,B747DR_airspeed_Vmc+10))
+	-- the MCP's speed the airspeed now, not below the old minimum (Vmc +
+	-- 10); before (min) any faster air start wound the window down to
+	-- Vmc + 10, about 214 kt flaps up (2026-11-02, notes/ATA-22.md)
+	B747DR_ap_target_speed=math.floor(math.max(simDR_ias_pilot,B747DR_airspeed_Vmc+10))
 	B747DR_ap_target_heading_deg=math.floor(simDR_aircraft_hdg)
 	local ref1=B747DR_CAS_advisory_status[233]
 	local ref2=B747DR_pfd_mode_capt
