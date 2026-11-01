@@ -39,6 +39,19 @@ end
 local B747_pressureDRs={}
 local controlRatios={}
 local spoiler_command={}
+-- X-Plane's spoilers in the air: the speedbrake program's share at SB_XP of
+-- its angle (補正, estimate: X-Plane's flight spoilers give the speedbrake
+-- about 2.6 times the drag FCTM p.138's descent rates ask, and the acf's
+-- spoilers do the roll too, so the acf cannot take it: notes/AERO.md
+-- §3.15); the roll's share and the ground spoilers in full. The 3D and the
+-- indication keep the real angles (B747DR_spoilers). 0.36 to SB_XP_KT from
+-- a sweep at 240 kt (25 to 100 %: the drag about in proportion), FCTM
+-- p.138's 1,900 fpm against its 1,200 clean; faster, less as 1 / IAS: its
+-- 340 kt (4,300 against 2,800) asks 0.25 (X-Plane's spoiler drag
+-- coefficient keeps with the speed, the FCTM's falls, as a spoiler's
+-- blowdown would)
+local SB_XP, SB_XP_KT = 0.36, 240
+local spoiler_xp={}
 controlRatios[0]=0
 B747_pressureDRs[0]=0
 local computeRate=0.0333 -- handle low FPS
@@ -217,17 +230,28 @@ function pressure_output()
     for i=1,12,1 do
         B747DR_spoilers[i]=B747_animate_value(B747DR_spoilers[i],controlRatios[i+10],-100,100,10)
     end
-    -- X-Plane's spoilers (the acf's wing elements: B747.19.xt.hydraulicsmodel.lua)
-    simDR_spoiler12=(B747DR_spoilers[1]+B747DR_spoilers[2])/2
-    simDR_spoiler3=B747DR_spoilers[3]
-    simDR_spoiler4=B747DR_spoilers[4]
-    simDR_spoiler5=B747DR_spoilers[5]
-    simDR_spoiler67[0]=B747DR_spoilers[6]
-    simDR_spoiler67[1]=B747DR_spoilers[7]
-    simDR_spoiler8=B747DR_spoilers[8]
-    simDR_spoiler9=B747DR_spoilers[9]
-    simDR_spoiler10=B747DR_spoilers[10]
-    simDR_spoiler1112=(B747DR_spoilers[11]+B747DR_spoilers[12])/2
+    -- X-Plane's spoilers (the acf's wing elements: B747.19.xt.hydraulicsmodel.lua),
+    -- in the air with the speedbrake's share at SB_XP (above)
+    local k = 1
+    if B747DR_hyd_pseu_air == 1 then
+        k = SB_XP * math.min(1, SB_XP_KT / math.max(simDR_ias_pilot, 1))
+    end
+    local sbdeg = B747_lateral_model.lever_deg(B747DR_speedbrake_lever)
+    local xp = spoiler_xp
+    for n=1,12,1 do
+        local sb = B747_lateral_model.program(B747_lateral_model.GROUP[n], sbdeg)
+        xp[n] = math.max(0, B747DR_spoilers[n] - (1 - k) * sb)
+    end
+    simDR_spoiler12=(xp[1]+xp[2])/2
+    simDR_spoiler3=xp[3]
+    simDR_spoiler4=xp[4]
+    simDR_spoiler5=xp[5]
+    simDR_spoiler67[0]=xp[6]
+    simDR_spoiler67[1]=xp[7]
+    simDR_spoiler8=xp[8]
+    simDR_spoiler9=xp[9]
+    simDR_spoiler10=xp[10]
+    simDR_spoiler1112=(xp[11]+xp[12])/2
     --spoiler stat: the position transmitters on spoilers 4 and 12 (ATA27 p.200;
     --the in-flight speedbrake shows on the left wing only, FCOM p.939)
     B747DR_outer_spoilers[0]=B747_animate_value(B747DR_outer_spoilers[0],B747DR_spoilers[4],-100,100,10)

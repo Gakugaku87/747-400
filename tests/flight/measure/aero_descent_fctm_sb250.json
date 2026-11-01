@@ -1,0 +1,51 @@
+{
+  "name": "aero_descent_fctm_sb250",
+  "description": "測定（合否なし、全シナリオの実行に入れない）：FCTM p.138 のアイドルの降下率の 250 kt と VREF30 + 100（クリーン、重量の記載なし：スピードブレーキで 2,100・1,900 fpm、なしで 1,300・1,200）。銚子沖の海上 15,000 ft・250 KIAS・東向きで開始（機体を読み直す）、空中開始の初期化を待ってから FLCH（MCP 3,000 ft）・A/T OFF のアイドル、スピードブレーキ FLT DETENT で 250 kt と 240 kt（270 t で VREF30 約 140 + 100）を mark、スピードブレーキを DN にして 240 kt を mark、A/T を戻す（notes/AERO.md §3.15）",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 4572, "heading_true": 90, "speed_in_meters_per_second": 160 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 5, "note": "空中開始の揺れ" },
+    { "do": "wait", "note": "空中開始の初期化が A/P を入れる（FMS：IRS の方位の後に F/D・A/T・ALT HOLD・CMD L。先に MCP を変えると初期化が上書きする：2026-11-02）", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 40 },
+    { "do": "wait", "note": "初期化の MCP の速度の巻き取りが終わる", "dref": "laminar/B747/autopilot/speed/target", "op": "==", "value": -1, "timeout": 20 },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "set", "note": "MCP 方位 097（東向き）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 97 },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "set", "note": "レバー UP", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0 },
+    { "do": "set", "note": "MCP 速度 250 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 250 },
+    { "do": "set", "note": "MCP 高度 3,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 3000 },
+    { "do": "cmd", "note": "FLCH（速度は昇降舵）", "name": "laminar/B747/autopilot/button_switch/flch_mode" },
+    { "do": "cmd", "note": "A/T OFF", "name": "laminar/B747/authrottle_disarm" },
+    { "do": "set", "note": "アイドル", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
+    { "do": "switch", "note": "スピードブレーキを FLT DETENT", "dref": "laminar/B747/flt_ctrls/speedbrake_lever", "value": 0.53, "cmd": "sim/flight_controls/speed_brakes_down_one", "cmd_down": "sim/flight_controls/speed_brakes_up_one" },
+    { "do": "snapshot", "note": "開始の状態", "drefs": [ "sim/flightmodel/weight/m_total", "sim/weather/aircraft/temperature_ambient_deg_c", "laminar/B747/airspeed/Vref30", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode", "laminar/B747/flt_ctrls/stab_trim/units" ] },
+    { "do": "record_start" },
+    { "do": "wait", "note": "250 kt", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [246, 254], "timeout": 120 },
+    { "do": "sleep", "seconds": 15, "note": "降下に落ち着く" },
+    { "do": "mark", "note": "3：250 kt のアイドルの降下、スピードブレーキ" },
+    { "do": "sleep", "seconds": 30 },
+    { "do": "set", "note": "MCP 速度 240 kt（VREF30 + 100）", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 240 },
+    { "do": "wait", "note": "240 kt", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [237, 243], "timeout": 120 },
+    { "do": "sleep", "seconds": 15, "note": "降下に落ち着く" },
+    { "do": "mark", "note": "4：VREF30 + 100 のアイドルの降下、スピードブレーキ" },
+    { "do": "sleep", "seconds": 30 },
+    { "do": "switch", "note": "スピードブレーキを DN", "dref": "laminar/B747/flt_ctrls/speedbrake_lever", "value": 0, "cmd": "sim/flight_controls/speed_brakes_down_one", "cmd_down": "sim/flight_controls/speed_brakes_up_one" },
+    { "do": "sleep", "seconds": 20, "note": "降下に落ち着く" },
+    { "do": "mark", "note": "5：VREF30 + 100 のアイドルの降下、スピードブレーキなし" },
+    { "do": "sleep", "seconds": 30 },
+    { "do": "cmd", "note": "A/T ARM（FLCH では THR/HOLD で入る）", "name": "laminar/B747/authrottle_arm" },
+    { "do": "record_stop" }
+  ]
+}
