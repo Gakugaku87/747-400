@@ -2467,9 +2467,7 @@ function B747_auto_start()
         -- PHASE 1: SET THE SWITCH
         if autostart.phase[autostart.step] == 1 then
             B747_print_sequence_status(autostart.step, autostart.phase[autostart.step], "Strobe Light Switch to ON...")  -- PRINT THE START PHASE MESSAGE
-            if simDR_strobe_lights_switch == 0 then                                        -- STROBE LIGHTS ARE OFF
-                if B747DR_toggle_switch_position[10] < 0.95 then B747CMD_strobe_light_switch:once() end     -- TURN THE STROBE LIGHT SWITCH ON
-            end
+            if B747DR_toggle_switch_position[10] > 0.95 then B747CMD_strobe_light_switch:once() end     -- THE SWITCH OFF (1): TURN IT ON (0; 7-2a, LIGHT-04)
             autostart.phase[autostart.step] = 2                                             -- INCREMENT THE PHASE
         end
 
@@ -2480,7 +2478,7 @@ function B747_auto_start()
         if autostart.phase[autostart.step] == 3 then
             if autostart.sequence_timeout == true then                                      -- PHASE FAILED
                 B747_autostart_step_failed(autostart.step, autostart.phase[autostart.step])
-            elseif B747DR_toggle_switch_position[10] > 0.95 then                           	-- PHASE WAS SUCCESSFUL
+            elseif B747DR_toggle_switch_position[10] < 0.05 then                           	-- PHASE WAS SUCCESSFUL (THE SWITCH ON)
                 if is_timer_scheduled(B747_autostart_phase_timeout) == true then
                     stop_timer(B747_autostart_phase_timeout)                                -- KILL THE TIMER
                 end	            

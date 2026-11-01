@@ -361,3 +361,24 @@ GAP ID の接頭辞：`LIGHT`。2026-10-23 作成。コードは `overhaul` ブ�
   - `objects/747_cockpit/Cockpit_Pedestal1.obj:40255` の `annunciator/brightness_ratio[126z`（添字の書き誤り）で RTP L の OFFSIDE TUNING 灯が点かない可能性。
   - annunciator の [251]–[256]（客室サイン、無線のガラス）と `laminar/B747/wxr/*` の灯を読む OBJ が見つからない（ローカルに無い OBJ が使っているかもしれない）。
 - `fs/lighting/strobes_on`（ELECI:130）の用途。外部から書く想定か。
+
+## 10. 段取り（2026-11-01：7-2 照明）
+
+§8 の進め方のとおり、段に分けて進める。他系統の表示灯の点灯条件は、各系統の作り直しで済んでいるもの（燃料・防氷・空圧など）をそのまま読む。
+
+| 段 | 中身 | GAP |
+|---|---|---|
+| 7-2a | すぐ直せるもの：毎フレームの完全 GC をやめる、ストロボの書き手を照明だけに（電源の初期化スクリプトの点滅をやめる）、STROBE のスイッチの向きを NAV・WING・LOGO と同じに（自動始動のストロボの手順も） | LIGHT-08、05、04（LIGHT-02 は 2026-10-24 に済） |
+| 7-2b | 外部灯を 747 の電源と空地で：灯ごとの母線（§4.4–4.6）、landing の減光（gear lever と INBD スイッチ、70 %）、turnoff と taxi は PSEU の地上だけ、quick start のスイッチの向き | LIGHT-03、09、13、15 |
+| 7-2c | 表示灯と操縦室照明：IND LTS の BRT・DIM と TEST（10 秒で減光、fire handle と FUEL CONTROL は対象外）、STORM（表示灯を最大、flood）、操縦室照明の電源（AC 4 の喪失で standby）、表示灯の 270 行を表に | LIGHT-07、10、11、16（の論理） |
+| 7-2d | 非常灯の論理：P5 の OFF/ARMED/ON（3D の操作子が無いので dataref とコマンドだけ）、ARMED で DC bus 4 を失うと自動点灯、>EMER LIGHTS | LIGHT-06 |
+
+- LIGHT-01（ELEC の状態の書き込み）は 1-1（電源）の作り直しで済み（電源モジュールが `ext_pwr*_on`・`apu_pwr*_on` を書く）。LIGHT-14 の酸素の部分も済（2026-10-29）。
+- LIGHT-12（BEACON の LWR と BOTH）は、X-Plane の beacon が 1 つで、分けるには OBJ の灯の index を分ける必要がある（承認事項）。今は残す。
+
+## 11. 7-2a（2026-11-01）
+
+- 毎フレームの `collectgarbage("collect")`（完全 GC）を消した（LIGHT-08）。XTLua の増分 GC に任せる。
+- ストロボの書き手を照明モジュールだけにした（LIGHT-05）。電源の初期化スクリプトの「3 回光って 2 秒消える」点滅と、書き手の無い `fs/lighting/strobes_on` を消した（ELECI:130-161）。点滅は X-Plane の strobe（OBJ の灯の定義）に任せる。
+- STROBE のスイッチの向きを NAV・WING・LOGO と同じ（position 0 が ON）にした（LIGHT-04）。3D の回転は 4 つとも同じ（OH1:136263-136278）で、FCOM p.451 (1.30.17) の図も上 OFF・下 ON。cold & dark（[1]–[12] を 1）でストロボが点いていたのが消える。自動始動（AI）のストロボの手順も ON = 0 にした（AI:2470-2483。前は position 1 にして成功としていた）。
+- 試験：`tests/lighting/lighting_module_test.lua`（STROBE と NAV が同じ位置で同じ点灯、完全 GC が無い、電源の初期化スクリプトがストロボを書かない）。X-Plane：`s207_lights_strobe`（夜の RJAA 34L、エンジン運転中。NAV と STROBE をコマンドで position 0 にして点き、5 秒後も点いたまま、1 で消える）。

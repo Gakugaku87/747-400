@@ -849,9 +849,14 @@ end
 
 
 ----- STROBE LIGHTS ---------------------------------------------------------------------
+-- (7-2a, LIGHT-04) the switch the same way as NAV, WING and LOGO (position
+-- 0 on: their 3D turns alike, Cockpit_OH1.obj; before, position 1 on, the
+-- strobes on with the switch off in cold and dark); the only writer
+-- (LIGHT-05: the electrical init script's flashing that wrote it off every
+-- frame removed)
 function B747_strobe_lights()
 
-   	simDR_strobe_lights_switch = B747DR_toggle_switch_position[10]
+   	simDR_strobe_lights_switch = 1 - B747DR_toggle_switch_position[10]
 
 end
 
@@ -2218,8 +2223,9 @@ function B747_keep_light_power()
     if simDR_generic_brightness_switch[63] ~= 1.0 then simDR_generic_brightness_switch[63] = 1.0 end
 end
 
+-- (7-2a, LIGHT-08) no full garbage collection each frame (before, at the
+-- start of every frame: Lua's own incremental collector does it)
 function after_physics()
-    collectgarbage("collect")
   if debug_lighting>0 then return end
 
     B747_keep_light_power()

@@ -128,4 +128,27 @@ l = pitch_lights(0, 2, 2, 0, 2)
 T.check(not l.alt and not l.vs and not l.vnav, "the old G/S captured (a stale ALT flag): out")
 l = pitch_lights(0, 0, 0, 0)
 T.check(not l.vs and not l.alt and not l.flch and not l.vnav, "no pitch mode: all out")
+
+-- (7-2a, LIGHT-04) the STROBE switch the way NAV's is: position 0 on, 1 off
+-- (cold and dark puts [1]-[12] at 1: the strobes were on)
+local SW = "laminar/B747/toggle_switch/position"
+for _, p in ipairs({0, 1}) do
+    rt:set(SW, 9, p)
+    rt:set(SW, 10, p)
+    rt:frame(1 / 30)
+    T.equal(rt:get("sim/cockpit2/switches/strobe_lights_on"), rt:get("sim/cockpit2/switches/navigation_lights_on"),
+        "STROBE and NAV both at " .. p .. ": the strobes as the nav lights (" .. (1 - p) .. ")")
+end
+-- (7-2a, LIGHT-08, LIGHT-05) no full garbage collection in the frame; the
+-- electrical init script writes the strobes no more
+local function source(path)
+    local f = assert(io.open(path, "rb"))
+    local s = f:read("*a")
+    f:close()
+    return s
+end
+T.check(not source("plugins/xtlua_keysystems/scripts/B747.90.xt.lighting/B747.90.xt.lighting.lua"):find('collectgarbage%("collect"%)'),
+    "the lighting module: no collectgarbage(\"collect\")")
+T.check(not source("plugins/xtlua/init/scripts/B747.03.electrical/B747.03.electrical.lua"):find("strobe_lights_on", 1, true),
+    "the electrical init script: no strobe writes")
 T.done()
