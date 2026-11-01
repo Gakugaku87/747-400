@@ -113,7 +113,7 @@
     { "do": "sleep", "seconds": 30 },
     { "do": "snapshot", "note": "巡航", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/gauges/indicators/mach_pilot", "laminar/B747/fms/vnav/mach", "laminar/B747/fms/vnav/cas", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/active_roll_mode", "laminar/B747/autopilot/FMA/autothrottle_mode", "laminar/B747/engines/ref_thr_limit_mode", "sim/flightmodel/weight/m_fuel_total" ] },
     { "do": "check", "note": "A/T は SPD", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3 },
-    { "do": "check", "note": "推力制限は CRZ", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "CRZ" },
+    { "do": "check", "note": "推力制限は CLB（PERF FACTORS の THR/CRZ の既定：2026-11-02 の利用者の決定。前は CRZ）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "CLB" },
     { "do": "cdu", "note": "PROG（TO・NEXT・DEST と T/D）", "keys": ["PROG"] },
     { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
     { "do": "view", "note": "機長の PFD：巡航", "the": -24, "psi": -1, "fov": 24 },

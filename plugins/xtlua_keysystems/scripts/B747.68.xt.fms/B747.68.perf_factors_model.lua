@@ -16,12 +16,15 @@
 --   ACCEL HT      the engine-out (the inner field) and the all-engine
 --                 heights, 400 to 9999 ft, both together.
 -- Without an entry the values of the airplane on ATA34_2 p.681's figure
--- (MNVR MARGIN 1.30, R/C CLB 300, THR/CRZ CRZ/100, THR RED FLAPS 5,
--- ACCEL HT 1000/1000, MIN CRZ TIME 5): the FCOM's airplane agrees where it
--- shows them (TAKEOFF REF's FLAPS 5 and 1000 FT, p.1317-1318; 1.3 g,
--- p.969, p.973; 100 fpm, p.1350). FMSPG p.266-268's are an FMC without
--- entries (1.20, 100, CLB/100, 1500, 1500/1500, 1). The derates the
--- FCOM's operator's (p.1314: -8/-20 %; the 570 -5/-15 %).
+-- (MNVR MARGIN 1.30, R/C CLB 300, THR RED FLAPS 5, ACCEL HT 1000/1000,
+-- MIN CRZ TIME 5): the FCOM's airplane agrees where it shows them (TAKEOFF
+-- REF's FLAPS 5 and 1000 FT, p.1317-1318; 1.3 g, p.969, p.973; 100 fpm,
+-- p.1350). FMSPG p.266-268's are an FMC without entries (1.20, 100,
+-- CLB/100, 1500, 1500/1500, 1). THR/CRZ CLB/100, FMSPG's, not p.681's
+-- CRZ/100 (the user, 2026-11-02: no source gives the maximum cruise
+-- thrust, the CRZ limit's estimate is the maximum climb table's; the
+-- cruise's reference CLB or CRZ as set by maintenance, FMSPG p.33). The
+-- derates the FCOM's operator's (p.1314: -8/-20 %; the 570 -5/-15 %).
 --
 --   local F = B747_perf_factors_model
 --   local v = F.values(stored, engine_type)    -- stored: the simconfig's FMC.PERF or nil
@@ -31,7 +34,7 @@
 local M = setmetatable({}, {})
 B747_perf_factors_model = M
 
-M.DEFAULTS = {drag = 0, ff = 0, mnvr = 1.30, mincrz = 5, rc_clb = 300, thr_crz = "CRZ", rc_crz = 100,
+M.DEFAULTS = {drag = 0, ff = 0, mnvr = 1.30, mincrz = 5, rc_clb = 300, thr_crz = "CLB", rc_crz = 100,
     thr_red = 5, accel = 1000, eo_accel = 1000}
 -- TO 1 and TO 2 by laminar/B747/engines/type (0 PW, 1 GE, 2 RR)
 M.DERATES = {[0] = {8, 20}, [1] = {5, 15}, [2] = {8, 20}}
