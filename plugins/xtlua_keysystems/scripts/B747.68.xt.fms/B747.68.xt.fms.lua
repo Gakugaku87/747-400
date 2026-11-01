@@ -3088,6 +3088,8 @@ end
 -- B747_cdu_fmc_lost); SINGLE FMC OPERATION while one works (FCOM p.1275,
 -- p.1434); FMC LEFT, RIGHT on the EICAS after a delay (p.1275, p.1429).
 -- Before, one FMC that could not fail
+-- (in a block: the main chunk's 200 locals; B747_fms_any_fmc for the rest)
+do
 dofile("B747.68.fmc_link_model.lua")
 local FL=B747_fmc_link_model
 local fmcLink=FL.new()
@@ -3111,6 +3113,8 @@ local ADV_FMC_LEFT,ADV_FMC_RIGHT=144,146
 local CDU_LINK_INDEX={fmsL=0,fmsC=1,fmsR=2}
 local singleFMC,resyncingFMC,resyncFailFMC=nil,nil,nil
 local function anyFMC() return fmcLink.ok[FL.L] or fmcLink.ok[FL.R] end
+-- an FMC working (>FMC MESSAGE: setNotifications)
+function B747_fms_any_fmc() return anyFMC() end
 function update_fmc_link()
   local inp=fmcIn
   inp.power[FL.L]=B747DR_fms_bus_xfr_capt>0.5 or B747DR_fms_bus_stby_apu>0.5
@@ -3178,7 +3182,18 @@ function B747_fms_altn_pos(cdu)
 end
 -- a CDU's IRS LEGS modification waiting (its EXEC light)
 function B747_fms_altn_mod(cdu) return altnNav[cdu]~=nil and altnNav[cdu].mod~=nil end
+-- (step 11e2) IRS PROGRESS: that CDU's IRU ("L", "C", "R") and track
+-- (magnetic: X-Plane's ground track, the F/O's for the right CDU: estimate)
+simDR_altn_trk_pilot=find_dataref("sim/cockpit2/gauges/indicators/ground_track_mag_pilot")
+simDR_altn_trk_copilot=find_dataref("sim/cockpit2/gauges/indicators/ground_track_mag_copilot")
+local ALTN_IRU_NAME={fmsL="L",fmsC="C",fmsR="R"}
+function B747_fms_altn_iru(cdu) return ALTN_IRU_NAME[cdu] or "L" end
+function B747_fms_altn_track(cdu) return cdu=="fmsR" and simDR_altn_trk_copilot or simDR_altn_trk_pilot end
+-- the frames (step 11e2: IRS PROGRESS's page left when it missed one)
+local altnFrame=0
+function B747_fms_frame_no() return altnFrame end
 function update_altn_nav()
+  altnFrame=altnFrame+1
   local now=simDRTime
   if altnT and now>=altnT and now-altnT<1 then return end
   altnT=now
@@ -3199,6 +3214,7 @@ end
 -- radios' tuning is its (ATA34_2 p.496; ATA34_1 p.332, p.350: held at the
 -- last frequencies without it)
 function B747_fms_master_ok() return fmcLink.ok[fmcIn.master] end
+end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after
 -- a flight (all four's N2 under the ENG FAIL speed: laminar/B747/engines/
@@ -3682,7 +3698,7 @@ fms_style = find_dataref("sim/cockpit2/radios/indicators/fms_cdu1_style_line2")
 function setNotifications()
   B747_cdu_sync_fmc_messages(B747DR_fmc_notifications)
   -- (6-1/6-2 step 11d1) none without an FMC
-  B747DR_CAS_advisory_status[145] = (B747_cdu_fmc_alert() and anyFMC()) and 1 or 0
+  B747DR_CAS_advisory_status[145] = (B747_cdu_fmc_alert() and B747_fms_any_fmc()) and 1 or 0
 end
 B747DR_ap_target_speed               	= find_dataref("laminar/B747/autopilot/speed/target")
 B747DR_ap_target_heading_deg               	= find_dataref("laminar/B747/autopilot/heading/target")

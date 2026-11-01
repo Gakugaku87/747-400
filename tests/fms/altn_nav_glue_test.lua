@@ -132,6 +132,32 @@ T.equal(fms.ns.B747_fms_altn("fmsL").last.ident, "ALPHA", "LAST ALPHA")
 key("func_key/legs", "fmsR")
 T.check(line(3, "fmsR"):find("^ALPHA"), "the right CDU on its own IRU: still ALPHA")
 
+-- (6-1/6-2 step 11e2) PROG: IRS PROGRESS (FCOM p.1425-1426; FMSPG
+-- p.250-251) on the left CDU's own route and IRU
+key("func_key/prog")
+T.check(line(1):find("IRS PROGRESS"), "PROG: IRS PROGRESS: " .. line(1))
+T.check(line(3):find("^ALPHA"), "LAST ALPHA: " .. line(3))
+T.check(small(2):find("^ LAST%s+ALT"), "LAST and ALT")
+T.check(line(5):find("^N35E140%s+%d+NM%s+%d%d:%d%d$"), "TO N35E140, its DTG and TTG at 250 kt: " .. line(5))
+T.check(small(4):find("^ TO%s+DTG%s+TTG$"), "the TO line's titles")
+T.check(line(9):find("^ZZBB%s+%d+NM%s+%d%d:%d%d$"), "DEST ZZBB along the route: " .. line(9))
+T.check(small(8):find("^ DEST"), "DEST")
+T.check(small(10):find("^ IRS L%s+GS$"), "IRS L (the left CDU's IRU) and GS: " .. small(10))
+T.check(line(11):find("^N3%d`%d%d%.%d E14%d`%d%d%.%d%s+250KT$"), "its position and ground speed: " .. line(11))
+T.check(line(13):find("^[LR] %d+%.%dNM"), "XTK ERROR: " .. line(13))
+T.check(small(12):find("XTK ERROR%s+DTK%s+TK"), "the last line's titles")
+-- 4L: a route waypoint ENROUTE WPT; the page left and shown again: DEST
+for _ = 1, 3 do key("key/clear") end      -- (DELETE left from above)
+enter(second, "L4")
+T.check(small(8):find("^ ENROUTE WPT"), "a route waypoint on 4L: ENROUTE WPT (FMSPG p.251)")
+T.check(line(9):find("^" .. second), "its distance and time")
+key("func_key/legs")
+key("func_key/prog")
+T.check(small(8):find("^ DEST"), "the page left: DEST again (FMSPG p.251)")
+key("func_key/prog", "fmsR")
+T.check(small(10, "fmsR"):find("^ IRS R"), "the right CDU: IRS R")
+T.check(line(5, "fmsR"):find("^ALPHA"), "its TO still ALPHA (its own IRU)")
+
 -- an FMC back: the copies the FMC's route again
 rt:set(FAIL, 0, 0)
 frames(1.5)

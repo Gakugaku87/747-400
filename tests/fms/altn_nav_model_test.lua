@@ -101,4 +101,43 @@ T.equal(idents(s), "BBB,*,CCC,DDD", "the active route sequenced")
 M.copy(s, route, R.is_hold, nil)
 T.check(s.mod == nil and idents(s) == "AAA,BBB,*,CCC,DDD", "copied again: the FMC's route")
 
+-- (6-1/6-2 step 11e2) IRS PROGRESS (FCOM p.1425-1426; FMSPG p.250-251):
+-- the leg ORG to AAA northbound, the airplane 0.1 degree short of AAA
+-- and 0.05 degree east
+s = M.new()
+M.copy(s, route, R.is_hold, nil)
+local here = {lat = 34.9, lon = 140.05}
+local pp = M.progress(s, here)
+T.equal(pp.to.ident, "AAA", "TO AAA")
+T.near(pp.to.dtg, 6.0, 0.05, "its DTG from the abeam point: 6 nm (FMSPG p.250)")
+T.check(pp.xtk > 2.4 and pp.xtk < 2.5, "XTK ERROR: about 2.46 nm right: " .. pp.xtk)
+T.near(pp.dtk, 0, 0.01, "DTK: north")
+T.equal(pp.next.ident, "BBB", "NEXT BBB")
+T.near(pp.next.dtg, 36.0, 0.1, "NEXT's DTG: TO's and AAA to BBB")
+local total = 6 + M.distance(A, B) + M.distance(B, C) + M.distance(C, Dd) + M.distance(Dd, route.dest)
+T.check(pp.dest.ident == "DST" and pp.dest.title == "DEST", "DEST DST")
+T.near(pp.dest.dtg, total, 0.2, "along the route (the discontinuity's waypoints joined: estimate)")
+-- 4L: a route waypoint ENROUTE WPT, a latitude/longitude DIR TO ALTERNATE
+T.equal(M.set_alternate(s, "CCC", nil), nil, "CCC on 4L")
+pp = M.progress(s, here)
+T.equal(pp.dest.title, "ENROUTE WPT", "ENROUTE WPT (FMSPG p.251)")
+T.near(pp.dest.dtg, 6 + M.distance(A, B) + M.distance(B, C), 0.2, "along the route to CCC")
+local alt_ll = R.parse_latlon("N3700.0E14100.0")
+T.equal(M.set_alternate(s, "N3700.0E14100.0", alt_ll), nil, "a latitude/longitude on 4L")
+pp = M.progress(s, here)
+T.equal(pp.dest.title, "DIR TO ALTERNATE", "DIR TO ALTERNATE")
+T.near(pp.dest.dtg, M.distance(here, alt_ll), 0.01, "direct from the airplane")
+T.equal(M.set_alternate(s, "ZZZ", nil), M.INVALID_ENTRY, "another: INVALID ENTRY")
+-- a route change drops it; MOD while modified
+M.enter(s, 2, "CCC", nil, pos)
+T.check(s.alt == nil, "a route change: the alternate gone (FMSPG p.251)")
+T.equal(M.progress(s, here).dest.title, "MOD", "MOD with a modification (FMSPG p.250)")
+M.erase(s)
+T.equal(M.progress(s, here).dest.title, "DEST", "ERASE: DEST again")
+-- an enroute alternate passed: DEST again
+M.set_alternate(s, "AAA", nil)
+M.sequence(s, {lat = 35.01, lon = 140.0}, 5000)
+T.check(s.alt == nil, "the enroute alternate passed: DEST again (FMSPG p.251)")
+T.equal(M.progress(s, nil).to, nil, "no position: no data")
+
 T.done()

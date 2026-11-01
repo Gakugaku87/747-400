@@ -21,6 +21,15 @@
 --    (closed by entering the waypoint after it) or the active waypoint
 --    (estimates, as the FMC's LEGS). A change is a modification (MOD IRS
 --    LEGS), EXEC makes it active, ERASE drops it.
+--  - IRS PROGRESS (step 11e2; FCOM p.1425-1426; FMSPG p.250-251): the TO
+--    waypoint's distance along the leg from the airplane's abeam point,
+--    NEXT's that and the great circle between them, the destination's
+--    along the route (MOD during a modification); an alternate entered on
+--    4L: a route waypoint ENROUTE WPT (along the route to its first
+--    time), another DIR TO ALTERNATE (direct from the airplane), gone with
+--    a route change or once the enroute one is passed (the page's glue
+--    drops it when the page is left); the cross track error and the
+--    desired track (the leg's course at the abeam point).
 --
 --   local M = B747_altn_nav_model          -- in XTLua, after dofile
 --   local s = M.new()
@@ -60,8 +69,16 @@ function M.along_cross(a, b, p)
     return at * NM, xt * NM
 end
 
+-- the point `d` nm from `a` on the true course `crs`
+function M.course_point(a, crs, d)
+    local lat1, lon1, t, x = a.lat * D, a.lon * D, crs * D, d / NM
+    local lat2 = math.asin(math.sin(lat1) * math.cos(x) + math.cos(lat1) * math.sin(x) * math.cos(t))
+    local lon2 = lon1 + math.atan2(math.sin(t) * math.sin(x) * math.cos(lat1), math.cos(x) - math.sin(lat1) * math.sin(lat2))
+    return {lat = lat2 / D, lon = (lon2 / D + 540) % 360 - 180}
+end
+
 function M.new()
-    return {legs = {}, from = nil, dest = nil, last = nil, last_alt = nil, mod = nil}
+    return {legs = {}, from = nil, dest = nil, last = nil, last_alt = nil, mod = nil, alt = nil}
 end
 -- the route the pages show: the modification, else the active one
 function M.shown(s)
@@ -104,6 +121,8 @@ function M.sequence(s, pos, alt)
     s.last, s.last_alt = l, alt
     s.from = {lat = l.lat, lon = l.lon}
     table.remove(s.legs, 1)
+    -- an enroute alternate passed: the destination again (FMSPG p.251)
+    if s.alt and s.alt.enroute and s.alt.ident == l.ident then s.alt = nil end
     -- the modification too when it starts with the same waypoint
     local m = s.mod
     if m and m.legs[1] == l then
@@ -115,8 +134,10 @@ function M.sequence(s, pos, alt)
     return true
 end
 
--- the modification, made from the active route when there is none
+-- the modification, made from the active route when there is none (a
+-- route change drops IRS PROGRESS's alternate: FMSPG p.251)
 local function edit(s)
+    s.alt = nil
     if not s.mod then
         local legs = {}
         for i, l in ipairs(s.legs) do legs[i] = l end
@@ -163,11 +184,67 @@ end
 
 function M.exec(s)
     if not s.mod then return false end
-    s.legs, s.from, s.mod = s.mod.legs, s.mod.from, nil
+    s.legs, s.from, s.mod, s.alt = s.mod.legs, s.mod.from, nil, nil
     return true
 end
 function M.erase(s)
-    s.mod = nil
+    s.mod, s.alt = nil, nil
+end
+
+-- IRS PROGRESS's 4L: a waypoint of the route shown (ENROUTE WPT) or a
+-- latitude/longitude `ll` (DIR TO ALTERNATE: FMSPG p.251)
+function M.set_alternate(s, text, ll)
+    for _, l in ipairs(M.shown(s).legs) do
+        if not l.disc and l.ident == text then
+            s.alt = {ident = l.ident, lat = l.lat, lon = l.lon, enroute = true}
+            return nil
+        end
+    end
+    if ll then
+        s.alt = {ident = ll.ident, lat = ll.lat, lon = ll.lon, enroute = false}
+        return nil
+    end
+    return M.INVALID_ENTRY
+end
+
+-- IRS PROGRESS from the airplane's position `pos`: {to = {ident, dtg},
+-- next, dest = {ident, dtg, title}, xtk (nm, right positive), dtk (true)};
+-- the parts without data nil
+function M.progress(s, pos)
+    local r = M.shown(s)
+    local out = {}
+    local l = r.legs[1]
+    if not pos or not l or l.disc then return out end
+    local a = r.from or pos
+    local leg = M.distance(a, l)
+    local along, cross = M.along_cross(a, l, pos)
+    local to_dtg = math.max(0, leg - along)
+    out.to = {ident = l.ident, dtg = to_dtg}
+    out.xtk = cross
+    local abeam = M.course_point(a, M.course(a, l), math.max(0, math.min(leg, along)))
+    out.dtk = M.distance(abeam, l) > 0.01 and M.course(abeam, l) or M.course(a, l)
+    local n = r.legs[2]
+    if n and not n.disc then out.next = {ident = n.ident, dtg = to_dtg + M.distance(l, n)} end
+    -- along the route (a discontinuity's waypoints joined: estimate)
+    local total, prev, alt_dtg = to_dtg, l, nil
+    if s.alt and s.alt.enroute and l.ident == s.alt.ident then alt_dtg = to_dtg end
+    for i = 2, #r.legs do
+        local p = r.legs[i]
+        if not p.disc then
+            total = total + M.distance(prev, p)
+            prev = p
+            if s.alt and s.alt.enroute and not alt_dtg and p.ident == s.alt.ident then alt_dtg = total end
+        end
+    end
+    if s.dest then
+        out.dest = {ident = s.dest.ident, dtg = total + M.distance(prev, s.dest), title = s.mod and "MOD" or "DEST"}
+    end
+    if s.alt and s.alt.enroute and alt_dtg then
+        out.dest = {ident = s.alt.ident, dtg = alt_dtg, title = "ENROUTE WPT"}
+    elseif s.alt and not s.alt.enroute then
+        out.dest = {ident = s.alt.ident, dtg = M.distance(pos, s.alt), title = "DIR TO ALTERNATE"}
+    end
+    return out
 end
 
 -- the IRS LEGS rows from leg `first` on (FCOM p.1423): {ident, lat, lon,
