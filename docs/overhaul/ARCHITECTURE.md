@@ -558,6 +558,7 @@ EEC のモデル（`plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua`�
   - 書いた値は X-Plane に非同期で反映されるので、同じフレームで読み直して判定しない。
   - X-Plane 自身の dataref（`sim/…`）に書くときは、毎フレーム読んでから、違うときだけ書く。XTLua は前に書いた値と同じ値を X-Plane に渡さないので、X-Plane が自分で値を変えた後（フライトの読み込みなど）は、読まない限り直らない（XTLua の xpmtdatarefs.cpp。TESTING.md §1.2）。
 - **時間**：経過時間は dt として受け取り、フレームレートに頼らない（例：「1 フレームに 0.005 動かす」は使わない）。
+- **タイマー**：`run_after_time` の関数の中で、同じ関数を `run_after_time` し直さない。XTLua は関数の後でそのタイマーを止めるので、二度と走らない（`xptimers.cpp`。TESTING.md §1.2）。繰り返すなら `run_at_interval` か `run_timer(f, 遅れ, 間隔)` で回し、終わりに `stop_timer`。
 
 ## 9. 開発・試験の環境（2026-10-23 時点）
 

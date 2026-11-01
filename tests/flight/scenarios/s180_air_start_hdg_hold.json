@@ -1,0 +1,37 @@
+{
+  "name": "s180_air_start_hdg_hold",
+  "description": "空中開始で F/D が IRU の方位を待つことの X-Plane での確認（2026-11-01、s179 で HDG HOLD にモード故障の線が残った件）。空中、成田の北の 3,000 ft、250 kt（機体を読み直す）。FMS の空中の初期化は、IRU の方位が 2 つ以上有効になってから F/D L を入れ、A/T を ARM、ALT HOLD、CMD L。HDG HOLD と ALT に故障の線が無いこと（AFDS のモード故障、6-3 段 5c、ATA22 p.382、FCOM p.660）。待ちは一定の間隔のタイマーで回す（XTLua は run_after_time を関数の後で止めるので、自分を予約し直す待ちは 1 回で止まる）。機長の PFD を撮る。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 914, "heading_true": 340, "speed_in_meters_per_second": 128.6 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れを待つ" },
+    { "do": "wait", "note": "FMS の空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 30 },
+    { "do": "sleep", "seconds": 5, "note": "初期化の残りを待つ" },
+    { "do": "check", "note": "IRU L の方位が有効", "dref": "laminar/B747/irs/hdg_valid[0]", "op": "==", "value": 1 },
+    { "do": "check", "note": "IRU C の方位が有効", "dref": "laminar/B747/irs/hdg_valid[1]", "op": "==", "value": 1 },
+    { "do": "check", "note": "IRU R の方位が有効", "dref": "laminar/B747/irs/hdg_valid[2]", "op": "==", "value": 1 },
+    { "do": "check", "note": "F/D L は ON", "dref": "laminar/B747/toggle_switch/position[23]", "op": "==", "value": 1 },
+    { "do": "check", "note": "ロールは F/D の既定の HDG HOLD", "dref": "laminar/B747/autopilot/FMA/active_roll_mode", "op": "==", "value": 7 },
+    { "do": "check", "note": "ピッチは ALT HOLD の ALT", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9 },
+    { "do": "check", "note": "HDG HOLD に故障の線が無い", "dref": "laminar/B747/autopilot/FMA/roll_fail", "op": "==", "value": 0 },
+    { "do": "check", "note": "ALT に故障の線が無い", "dref": "laminar/B747/autopilot/FMA/pitch_fail", "op": "==", "value": 0 },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "view", "note": "機長の PFD", "the": -24, "psi": -1, "fov": 24 },
+    { "do": "shot", "name": "pfd_air_start" },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" }
+  ]
+}
