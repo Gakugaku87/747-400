@@ -740,6 +740,11 @@ B747DR_fltInst_fo_clock_utc_minutes = deferred_dataref("laminar/B747/fltInst/fo/
 B747DR_fltInst_fo_clock_day = deferred_dataref("laminar/B747/fltInst/fo/clock_day", "number")
 B747DR_fltInst_fo_clock_month = deferred_dataref("laminar/B747/fltInst/fo/clock_month", "number")
 B747DR_fltInst_fo_clock_et_show = deferred_dataref("laminar/B747/fltInst/fo/clock_et_show", "number")
+-- (6-1/6-2 step 11c3) each clock's UTC less X-Plane's (s) and 1 while it runs, for the FMC
+B747DR_fltInst_capt_clock_utc_offset = deferred_dataref("laminar/B747/fltInst/capt/clock_utc_offset", "number")
+B747DR_fltInst_capt_clock_valid = deferred_dataref("laminar/B747/fltInst/capt/clock_valid", "number")
+B747DR_fltInst_fo_clock_utc_offset = deferred_dataref("laminar/B747/fltInst/fo/clock_utc_offset", "number")
+B747DR_fltInst_fo_clock_valid = deferred_dataref("laminar/B747/fltInst/fo/clock_valid", "number")
 B747DR_glrshld_captain_chrono_switch_pos = deferred_dataref("laminar/B747/glareshiled/captain/chrono_switch_pos", "number")
 B747DR_glrshld_fo_chrono_switch_pos = deferred_dataref("laminar/B747/glareshiled/fo/chrono_switch_pos", "number")
 -- the EICAS formats (5-2 step 6b, B747.60.xt.displays.lua,

@@ -1,0 +1,54 @@
+{
+  "name": "s170_nav_msgs_gnd",
+  "description": "6-1/6-2 段 11c3（航法の警告）の X-Plane での確認、地上。RJAA 34L でエンジン運転中に始める（機体を読み直す）。出発地を RJBB にした経路を ACTIVATE・EXEC すると、IRS の位置が出発地から 300 NM 離れているので IRS POS/ORIGIN DISAGREE（FCOM p.1433）。出発地を RJAA に入れ直すと消える。機長の時計の SET を HLD に 20 秒置いて RUN に戻すと、時計が GPS の UTC から 12 秒より多くずれるので SET CLOCK TO UTC TIME（FCOM p.1434）。CDU を撮る。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10 },
+    { "do": "record_start" },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
+    { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
+    { "do": "check", "note": "IRS L は航法（位置が有効）", "dref": "laminar/B747/irs/nav_valid[0]", "op": "==", "value": 1 },
+
+    { "do": "mark", "note": "IRS POS/ORIGIN DISAGREE" },
+    { "do": "cdu", "note": "RTE：RJBB→RJAA、ACTIVATE、EXEC", "keys": ["RTE", "RJBB", "L1", "RJAA", "R1", "R6", "EXEC"] },
+    { "do": "wait", "note": "IRS POS/ORIGIN DISAGREE の旗（DRindex 22）", "dref": "laminar/B747/fms/notification[23]", "op": "==", "value": 1, "timeout": 5 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "書き込み行に IRS POS/ORIGIN DISAGREE（FCOM p.1433）", "dref": "laminar/B747/fms3/Line14_L", "op": "contains", "value": "IRS POS/ORIGIN DISAGREE" },
+    { "do": "view", "note": "左の CDU", "the": -34, "psi": 24, "fov": 18 },
+    { "do": "shot", "name": "cdu_irs_origin" },
+    { "do": "cdu", "note": "CLR、出発地を RJAA に入れ直す、目的地 RJBB、EXEC（有効な経路の変更：6R は PERF INIT> なので押さない）", "keys": ["CLR", "CLR", "RTE", "RJAA", "L1", "RJBB", "R1", "EXEC"] },
+    { "do": "wait", "note": "旗は消える", "dref": "laminar/B747/fms/notification[23]", "op": "==", "value": 0, "timeout": 5 },
+
+    { "do": "mark", "note": "SET CLOCK TO UTC TIME" },
+    { "do": "check", "note": "GPS L は有効", "dref": "laminar/B747/gps/valid[0]", "op": "==", "value": 1 },
+    { "do": "check", "note": "機長の時計は動いている", "dref": "laminar/B747/fltInst/capt/clock_valid", "op": "==", "value": 1 },
+    { "do": "check", "note": "まだ出ていない", "dref": "laminar/B747/fms/notification[41]", "op": "==", "value": 0 },
+    { "do": "set", "note": "機長の時計の SET を HLD（秒を 0 にして止まる）", "dref": "laminar/B747/fltInst/capt/clock_set_sel_pos", "value": 1 },
+    { "do": "sleep", "seconds": 20 },
+    { "do": "set", "note": "RUN に戻す（そこから動く）", "dref": "laminar/B747/fltInst/capt/clock_set_sel_pos", "value": 0 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "時計は GPS の UTC から 12 秒より多く遅れる", "dref": "laminar/B747/fltInst/capt/clock_utc_offset", "op": "<", "value": -12 },
+    { "do": "wait", "note": "SET CLOCK TO UTC TIME の旗（DRindex 40）", "dref": "laminar/B747/fms/notification[41]", "op": "==", "value": 1, "timeout": 5 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "書き込み行に SET CLOCK TO UTC TIME（FCOM p.1434）", "dref": "laminar/B747/fms3/Line14_L", "op": "contains", "value": "SET CLOCK TO UTC TIME" },
+    { "do": "shot", "name": "cdu_set_clock" },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" },
+    { "do": "record_stop" }
+  ]
+}

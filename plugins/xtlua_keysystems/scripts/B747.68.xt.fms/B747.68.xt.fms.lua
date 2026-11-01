@@ -3010,6 +3010,73 @@ function update_msg_inhibit()
   end
   B747_cdu_fmc_inhibit(msgInhibit)
 end
+-- (6-1/6-2 step 11c3; notes/ATA-34-61-FMC.md §96) the navigation alerts
+-- (FCOM p.1433-1434), once a second: SET CLOCK TO UTC TIME (flag 41: a GPS
+-- valid and its UTC, X-Plane's, more than 12 s off the Captain's clock,
+-- the F/O's while the Captain's has no power: fltInst/<side>/
+-- clock_utc_offset, clock_valid), IRS POS/ORIGIN DISAGREE (flag 23: on the
+-- ground the IRS position valid and more than ORIGIN_NM from the active
+-- route's origin), NAV INVALID-TUNE AAA (on approach the approach's VOR,
+-- its legs' recommended navaid, received by neither VOR receiver for
+-- NAV_INVALID_S). Estimates: ORIGIN_NM (the sources give none), the IRS
+-- position the FMC's mix (B747_fms_irs_pos), NAV_INVALID_S. VERIFY
+-- POSITION and PURGE UPDATES - POS 2 not made: the FMC's position here is
+-- X-Plane's, no updating sensor disagrees with it.
+local CLOCK_TOL_S,ORIGIN_NM,NAV_INVALID_S=12,10,5
+local SET_CLOCK,IRS_ORIGIN=41,23
+B747DR_fms_clock_capt_offset=find_dataref("laminar/B747/fltInst/capt/clock_utc_offset")
+B747DR_fms_clock_capt_valid=find_dataref("laminar/B747/fltInst/capt/clock_valid")
+B747DR_fms_clock_fo_offset=find_dataref("laminar/B747/fltInst/fo/clock_utc_offset")
+B747DR_fms_clock_fo_valid=find_dataref("laminar/B747/fltInst/fo/clock_valid")
+local navMsgFlags,navMsgT={},nil
+local navInvalidText,navInvalidSince=nil,nil
+local function nav_msg_flag(i,on)
+  local v=on and 1 or 0
+  if navMsgFlags[i]~=v then
+    navMsgFlags[i]=v
+    B747DR_fmc_notifications[i]=v
+  end
+end
+-- the approach's VOR on approach: its legs' recommended navaid ahead
+local function approach_vor(r)
+  local N=B747_navdb
+  if not on_approach() then return nil end
+  for _,l in ipairs(r.legs) do
+    local nav=l.proc=="APPR" and not l.missed and l.navaid or nil
+    if nav and (nav.kind==N.VOR or nav.kind==N.DME) and nav.ident then return nav end
+  end
+  return nil
+end
+function update_nav_msgs()
+  local now=simDRTime
+  if navMsgT and now>=navMsgT and now-navMsgT<1 then return end
+  navMsgT=now
+  -- SET CLOCK TO UTC TIME
+  local gps=B747DR_nav_gps_valid[0]==1 or B747DR_nav_gps_valid[1]==1
+  local off=nil
+  if B747DR_fms_clock_capt_valid==1 then off=B747DR_fms_clock_capt_offset
+  elseif B747DR_fms_clock_fo_valid==1 then off=B747DR_fms_clock_fo_offset end
+  nav_msg_flag(SET_CLOCK,gps and off~=nil and math.abs(off)>CLOCK_TOL_S)
+  -- IRS POS/ORIGIN DISAGREE
+  local st=B747_fmc_route
+  local o=st.active and st.rte.origin or nil
+  local far=false
+  if simDR_onGround==1 and o and o.lat then
+    local lat,lon=B747_fms_irs_pos()
+    far=lat~=nil and B747_navdb.distance(lat,lon,o.lat,o.lon)>ORIGIN_NM
+  end
+  nav_msg_flag(IRS_ORIGIN,far)
+  -- NAV INVALID-TUNE AAA
+  local nav=st.active and approach_vor(st.rte) or nil
+  local text=nil
+  if nav and rx_ident(simDR_radio_nav03_ID)~=nav.ident and rx_ident(simDR_radio_nav04_ID)~=nav.ident then
+    navInvalidSince=navInvalidSince or now
+    if now-navInvalidSince>=NAV_INVALID_S then text="NAV INVALID-TUNE "..nav.ident end
+  else
+    navInvalidSince=nil
+  end
+  navInvalidText=fmc_alt_message(navInvalidText,text)
+end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after
 -- a flight (all four's N2 under the ENG FAIL speed: laminar/B747/engines/
@@ -3622,6 +3689,7 @@ function after_physics()
     update_fuel()
     update_ldgalt()
     update_msg_inhibit()
+    update_nav_msgs()
     B747_fmc_lnav_update()
     B747_fmc_route_sync()
     B747_fmc_plan_ctr_sync()
