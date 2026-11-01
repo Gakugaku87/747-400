@@ -9,7 +9,10 @@
 -- reference VOR (§25: ATA34_1 p.356-369, FCOM p.1144-1146): its flag,
 -- deviation, course, TO/FROM, frequency or identifier and DME; the VOR and
 -- ADF bearing pointers and the lower corner blocks (§26: FCOM p.1038-1040,
--- p.1144-1146, p.1034).
+-- p.1144-1146, p.1034). The FMC its NAV source selector selects failed
+-- (6-1/6-2 step 11d2b; notes/ATA-34-61-FMC.md §100; ATA34_2 p.630, p.633;
+-- LH3460 p.114): the VTK flag at once, the MAP flag after MAP_FLAG_S, the
+-- active waypoint's ETA and distance gone (`wpt_data`).
 --
 --   local N = B747_nd_model                -- in XTLua, after dofile
 --   local N = dofile(".../B747.60.nd_model.lua")   -- in the tests
@@ -21,6 +24,9 @@ local M = setmetatable({}, {})
 B747_nd_model = M
 
 M.CAPT, M.FO = 1, 2
+-- the MAP flag this long after the FMC the NAV source selector selects
+-- fails (6-1/6-2 step 11d2b; ATA34_2 p.630; LH3460 p.114)
+M.MAP_FLAG_S = 30
 -- the ND mode selector (laminar/B747/nd/mode/<side>/sel_dial_pos)
 M.APP, M.VOR, M.MAP, M.PLN = 0, 1, 2, 3
 -- X-Plane's map modes (sim/cockpit2/EFIS/map_mode): APP heading up, MAP
@@ -93,6 +99,7 @@ local function side_in()
         pos = false,        -- POS selected on that side's EFIS control panel
         range_nm = 40,      -- that side's selected range
         roll_deg = 0,       -- that side's bank angle, right wing down positive
+        fmc_ok = true,      -- the FMC its NAV source selector selects working (at a CDU: true)
     }
 end
 
@@ -134,6 +141,7 @@ local function side_out()
         hdg_flag = false,
         map_flag = false,
         vtk_flag = false,
+        wpt_data = true,    -- the active waypoint's ETA and distance (6-1/6-2 step 11d2b)
         hdg_ptr = false,    -- the current heading pointer (APP, VOR, MAP)
         hdg_ptr_pln = false, -- the PLN one, on the north-up rose
         hdg_bug = false,    -- the selected heading bug
@@ -207,7 +215,8 @@ function M.trend(o, on, gs_kt, roll_deg, range_nm, dir_deg, px_per_range)
 end
 
 function M.new()
-    return {out = {side_out(), side_out()}, line_t = M.HDG_LINE_S, last_sel = nil, last_roll = nil}
+    return {out = {side_out(), side_out()}, line_t = M.HDG_LINE_S, last_sel = nil, last_roll = nil,
+        fmc_t = {0, 0}}
 end
 
 local function wrap(a) return (a + 180) % 360 - 180 end
@@ -261,9 +270,13 @@ function M.update(s, inp, dt)
         o.trk_flag = by_trk and not i.trk_valid
         o.hdg_flag = not by_trk and not i.hdg_valid
         -- the map and vertical track flags: the FMC's map data (estimate:
-        -- its position, which needs an IRU in NAV)
-        o.map_flag = map_modes and not inp.map_valid
-        o.vtk_flag = mode == M.MAP and not inp.map_valid
+        -- its position, which needs an IRU in NAV); the FMC the NAV source
+        -- selector selects failed: VTK at once, MAP after MAP_FLAG_S, the
+        -- active waypoint's ETA and distance gone (step 11d2b)
+        s.fmc_t[p] = i.fmc_ok and 0 or s.fmc_t[p] + dt
+        o.map_flag = map_modes and (not inp.map_valid or s.fmc_t[p] >= M.MAP_FLAG_S)
+        o.vtk_flag = mode == M.MAP and (not inp.map_valid or not i.fmc_ok)
+        o.wpt_data = inp.map_valid and i.fmc_ok
         -- the current heading pointer (FCOM p.1142): MAP, MAP CTR, PLAN; in
         -- VOR and APP it stays under the heading box (FCOM p.1024's figures)
         o.hdg_ptr = mode ~= M.PLN and o.rose and i.hdg_valid

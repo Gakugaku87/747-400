@@ -66,6 +66,36 @@ c.mode = M.APP
 run()
 T.check(not oc.map_flag, "APP: no MAP flag")
 inp.map_valid = true
+-- (6-1/6-2 step 11d2b) the FMC the NAV source selector selects failed
+-- (ATA34_2 p.630, p.633; LH3460 p.114): VTK at once, MAP after 30 s, the
+-- active waypoint's ETA and distance gone; the other side's not
+c.mode, f.mode = M.MAP, M.MAP
+run()
+T.check(not oc.map_flag and not oc.vtk_flag and oc.wpt_data, "(normal: no MAP or VTK flag, the ETA and distance)")
+c.fmc_ok = false
+run()
+T.check(oc.vtk_flag and not oc.map_flag and not oc.wpt_data, "the Captain's FMC failed: VTK at once, the ETA and distance gone")
+T.check(not of.vtk_flag and of.wpt_data, "the F/O's ND (its own FMC): unchanged")
+run(29.8)
+T.check(not oc.map_flag, "29.8 s: no MAP flag yet")
+run(0.4)
+T.check(oc.map_flag and oc.vtk_flag, "30 s: the MAP flag too")
+c.mode = M.PLN
+run()
+T.check(oc.map_flag and not oc.vtk_flag and not oc.wpt_data, "PLN: the MAP flag, no VTK, no ETA")
+c.fmc_ok = true
+c.mode = M.MAP
+run()
+T.check(not oc.map_flag and not oc.vtk_flag and oc.wpt_data, "the selector at a working FMC: normal at once (FCOM p.1422)")
+c.fmc_ok = false
+run(10)
+c.fmc_ok = true
+run()
+c.fmc_ok = false
+run(25)
+T.check(not oc.map_flag, "the time restarts after it worked again")
+c.fmc_ok = true
+run()
 
 -- the heading pointer (FCOM p.1142) and the selected heading bug
 c.mode = M.MAP

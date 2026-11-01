@@ -576,3 +576,11 @@
 | 同 | 推力制限のモードの文字（`GROUP Thrust Limit Mode` の `gen_text Mode`） | `DATAREF laminar/B747/engines/ref_thr_limit_mode` | `DATAREF laminar/B747/fms/thrlim/eicas`（モードと、D- のときは assumed temp：「D-TO 1 +38C」） | FCOM p.831 |
 
 上の 2 行は `docs/overhaul/tools/panel_thrust_ref.lua` で書き換えた（13 か所）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261031_before_thrust_display`。X-Plane の写真（`s152_eicas_thrust_ref` の `eicas_dto_magenta`・`eicas_dto_green`・`eicas_dto1`）で、モードの行と紫・緑のカーソルを確かめた。
+
+FMC（6-1・6-2 段 11d2b、2026-11-01：FMC の故障の ND の現用点の ETA と距離）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-11-01・FMC（FMC-36） | 両 ND の `GROUP Waypoints FO CENTER`・`Waypoints FO EXPAND`・`Waypoints CAPT CENT`・`Waypoints CAPT EXPA`（MAP と PLAN の現用点）の `gen_text Waypoint ETA …` と `gen_text Waypoint Distance …` | グループの条件（ND のモード）だけで出る | 2 つを新しい入れ子のグループ（`GROUP Wpt Data FO CEN` など。`SHOW_GREATER 0.5 laminar/B747/nd/capt/wpt_data`、副操縦士は `nd/fo/wpt_data`）に入れた。NAV ソース選択で選んだ FMC が落ちている間は消える | ATA34_2 p.633 |
+
+上の 1 行は `docs/overhaul/tools/panel_nd_wpt_data.lua` で書き換えた（4 か所で 16 行を足し、中の 2 つの計器を 2 字下げた）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261101_before_wpt_data`。X-Plane の写真（`s175_nd_fmc_fail`、2026-11-01 10:16〜10:17）で、平常は機長の ND の現用点（XAC）の下に ETA と距離が出て、左 FMC の故障で消え（VTK 旗、約 32 秒で MAP 旗）、NAV ソース選択を FMC R に回すと戻ることを確かめた。外から見た姿は変わらない（パネルの計器だけの変更）。
