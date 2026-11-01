@@ -113,6 +113,26 @@ local lastFmcPage = {}
 local inFmc = {}
 local FMC_KEYS = {index = true, fpln = true, clb = true, crz = true, des = true, dir_intc = true,
   legs = true, dep_arr = true, hold = true, navrad = true, prog = true}
+-- (6-1/6-2 step 12a) the FMC's datalink (the ATC and FMC COMM keys and
+-- their pages): the 570's (GE), not the 109's (PW, RR: KEY/FUNCTION INOP,
+-- FCOM p.725, p.1211; laminar/B747/engines/type). The simconfig's
+-- SIM.fmc_datalink, a sim option: AUTO (the airplane's), ON or OFF; read
+-- from the JSON text, which a livery's file may lack
+local datalinkText, datalinkCfg = nil, "AUTO"
+function B747_fms_datalink_cfg()
+  local s = B747DR_simconfig_data
+  if s ~= datalinkText then
+    datalinkText = s
+    datalinkCfg = type(s) == "string" and s:match('"fmc_datalink"%s*:%s*"(%u+)"') or "AUTO"
+  end
+  return datalinkCfg
+end
+function B747_fms_datalink()
+  local cfg = B747_fms_datalink_cfg()
+  if cfg == "ON" then return true elseif cfg == "OFF" then return false end
+  return B747DR_fms_engine_type == 1
+end
+local DATALINK_KEYS = {crz = true, hold = true}
 local RETURN_KEY = {}
 -- the page's keys: the function keys, the line select keys, NEXT, PREV,
 -- EXEC, and the keys passed to X-Plane's CDU on its pages
@@ -126,6 +146,10 @@ local function pageKey(fmsModule,key)
     if not B747_fms_fmc_available(fmsModule) and B747_cdu_altn_key(fmsO, key) then
       inFmc[fmsModule]=false
     end
+    return
+  end
+  if DATALINK_KEYS[key] and not B747_fms_datalink() then
+    fmsO.notify="KEY/FUNCTION INOP"
     return
   end
   if FMC_KEYS[key] then inFmc[fmsModule]=true end

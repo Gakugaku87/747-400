@@ -2356,7 +2356,12 @@ function fmsFunctions.setdata(fmsO,value)
 			B747DR_acarsProvider = 0
 		end
 		simConfigData["data"].SIM.acarsProvider = fmsO.scratchpad
-		pushSimConfig(simConfigData["data"]["values"])	
+		pushSimConfig(simConfigData["data"]["values"])
+	elseif value=="fmcDatalink" then
+		-- (6-1/6-2 step 12a) the FMC's datalink: AUTO, ON, OFF in turn
+		local nxt = {AUTO = "ON", ON = "OFF", OFF = "AUTO"}
+		simConfigData["data"].SIM.fmc_datalink = nxt[B747_fms_datalink_cfg()] or "AUTO"
+		pushSimConfig(simConfigData["data"]["values"])
 	elseif value=="simConfigSave" then
 			local file_location = simDR_livery_path.."B747-400_simconfig.dat"
 			--print("File = "..file_location)

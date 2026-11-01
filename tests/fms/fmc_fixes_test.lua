@@ -159,7 +159,8 @@ key("key/del")
 key("ls_key/R4")
 T.check(small(9):find("20%.0%%"), "DELETE: the default 20.0 % in small font: " .. small(9))
 
--- the EMERGENCY REPORT's DIVERT TO
+-- the EMERGENCY REPORT's DIVERT TO (the 570's ATC datalink: step 12a)
+rt:set("laminar/B747/engines/type", 1)
 key("func_key/crz")
 key("ls_key/L1")
 T.check(line(1):find("EMERGENCY REPORT"), "EMERGENCY REPORT: " .. line(1))

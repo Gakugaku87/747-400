@@ -58,7 +58,8 @@
 #                                                select key L1..R6; a key by its name
 #                                                (RTE, LEGS, DEPARR, HOLD, MENU,
 #                                                INITREF, PROG, NAVRAD, VNAV, PREV,
-#                                                NEXT, EXEC, DEL, CLR); ?SEL: on SELECT DESIRED WPT the
+#                                                NEXT, EXEC, DEL, CLR, ATC,
+#                                                FMCCOMM); ?SEL: on SELECT DESIRED WPT the
 #                                                first (the nearest) candidate, else
 #                                                nothing (the Captain's CDU); else text
 #                                                typed on its keyboard (A-Z, 0-9,
@@ -338,7 +339,8 @@ foreach ($step in $spec.steps) {
                 $id = if ($step.cdu) { $step.cdu } else { 'fms1' }
                 $names = @{ RTE = 'func_key/fpln'; LEGS = 'func_key/legs'; DEPARR = 'func_key/clb'; HOLD = 'func_key/dep_arr'; MENU = 'func_key/fix'
                     INITREF = 'func_key/index'; PROG = 'func_key/prog'; NAVRAD = 'func_key/navrad'; VNAV = 'func_key/des'
-                    PREV = 'func_key/prev_pg'; NEXT = 'func_key/next_pg'; EXEC = 'key/execute'; DEL = 'key/del'; CLR = 'key/clear' }
+                    PREV = 'func_key/prev_pg'; NEXT = 'func_key/next_pg'; EXEC = 'key/execute'; DEL = 'key/del'; CLR = 'key/clear'
+                    ATC = 'func_key/crz'; FMCCOMM = 'func_key/hold' }
                 $chars = @{ '/' = 'key/slash'; '.' = 'key/period'; '-' = 'key/minus'; ' ' = 'key/space' }
                 foreach ($k in @($step.keys)) {
                     $k = [string]$k
