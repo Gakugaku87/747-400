@@ -220,6 +220,23 @@ function B747_eec_reset_throttle(engine)
     E.reset_thrust_control(eec_state, engine + 1)
 end
 
+-- (ENG-31) GE in reverse with both cowls deployed: X-Plane's reverse
+-- throttle the ECU's (B747_eec_model.reverse_throttle: 90 % of the maximum
+-- rated thrust at full reverse), the share as the source gives it (in
+-- thrust), not a control on the N1
+function B747_eec_reverse_throttle(engine)
+    return E.reverse_throttle(-B747DR_throttle_reversor[engine])
+end
+-- X-Plane's maximum reverse throttle (sim/aircraft/engine/acf_throtmax_REV):
+-- GE 1, the ECU's share above giving the thrust; P&W the custom acf's 0.8
+-- as before (no sources for the PW4000's reverse); RR its own
+-- (B747.42.xt.EEC.RR.lua)
+local REV_MAX = {[0] = 0.8, [1] = 1.0}
+function B747_eec_reverse_max()
+    local want = REV_MAX[B747DR_engineType]
+    if want and math.abs(simDR_reverser_max - want) > 1e-6 then simDR_reverser_max = want end
+end
+
 -- an engine at full throttle still short of its target by more than this
 -- (N1 % or EPR): X-Plane's engine cannot give the thrust, and the GE and P&W
 -- files raise X-Plane's maximum thrust a little each frame (the previous

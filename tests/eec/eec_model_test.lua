@@ -429,4 +429,13 @@ do
     T.check(above, "idle ratio: approach idle above minimum idle in the air, that above the ground's, at every height")
 end
 
+-- (ENG-31) the CF6's reverse thrust (ATA70_80 p.206, p.208-209): straight
+-- with the reverse lever, 90 % of the maximum rated thrust at full reverse
+-- (X-Plane's throttle as the share of the maximum thrust: estimate)
+T.near(E.reverse_throttle(1), 0.9, 1e-9, "reverse: full reverse 90 % of the maximum rated thrust")
+T.near(E.reverse_throttle(0), 0, 1e-9, "reverse idle: none")
+T.near(E.reverse_throttle(0.5), 0.45, 1e-9, "half the reverse lever: half (a direct function of TLA)")
+T.near(E.reverse_throttle(1.4), 0.9, 1e-9, "past full reverse: 90 %")
+T.near(E.reverse_throttle(-0.2), 0, 1e-9, "a forward lever value: none")
+
 T.done()

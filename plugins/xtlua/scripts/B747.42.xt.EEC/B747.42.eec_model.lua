@@ -693,6 +693,19 @@ function M.reset_thrust_control(s, n)
     s.throttle[n], s.err[n], s.ref[n] = nil, nil, nil
 end
 
+-- (ENG-31) the CF6's reverse thrust: with the reverser not stowed the ECU
+-- commands reverse thrust as a direct function of TLA, at full reverse with
+-- both cowls deployed 90 % of the maximum rated thrust; idle while they
+-- move (ATA70_80 p.206, p.208-209: N1 straight up from REV IDLE to MAX
+-- REV). As X-Plane's throttle, the share of the engine's maximum thrust
+-- (the maximum rated, B747_setMaxThrust): REV_SHARE at full reverse,
+-- straight with `lever` (0 reverse idle, 1 full) (estimate: X-Plane's
+-- thrust as its throttle). P&W and RR: no sources (X-Plane's as before)
+M.REV_SHARE = 0.9
+function M.reverse_throttle(lever)
+    return M.REV_SHARE * clamp(lever, 0, 1)
+end
+
 -- approach idle of each engine, and the idle messages: ENG n LOW IDLE
 -- (approach idle selected, not reached) and >IDLE DISAGREE (an engine at
 -- approach idle with minimum idle selected) (FCOM p.900, p.902; ATA70_80
