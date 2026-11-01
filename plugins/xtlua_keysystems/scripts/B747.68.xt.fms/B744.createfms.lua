@@ -120,7 +120,14 @@ local function pageKey(fmsModule,key)
   local fmsO=fmsModules[fmsModule]
   -- (6-1/6-2 step 11d1) no FMC pages nor EXEC without an FMC connected:
   -- MENU's <FMC connects one (FCOM p.1275)
-  if (FMC_KEYS[key] or key=="exec") and not B747_fms_fmc_linked(fmsModule) then return end
+  if (FMC_KEYS[key] or key=="exec") and not B747_fms_fmc_linked(fmsModule) then
+    -- (step 11e1) none to connect to: the alternate navigation's pages
+    -- (FCOM p.1275, p.1422; activepages/B744.fms.pages.altnnav.lua)
+    if not B747_fms_fmc_available(fmsModule) and B747_cdu_altn_key(fmsO, key) then
+      inFmc[fmsModule]=false
+    end
+    return
+  end
   if FMC_KEYS[key] then inFmc[fmsModule]=true end
   if key=="index" then
       fmsO.targetCustomFMC=true

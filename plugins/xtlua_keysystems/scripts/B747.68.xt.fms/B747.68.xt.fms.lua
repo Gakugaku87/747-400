@@ -2278,8 +2278,9 @@ function B747_fmc_exec_lights()
   -- complete
   local on=B747_route_model.exec_lit(B747_fmc_route) or B747_route_model.exec_lit(B747_fmc_route2) or simDR_fms_exec_light>0
     or B747_fms_eo().mod~=nil or B747_rta_model.ready(B747_fms_rta())
-  local l=(on and cduPowered("fmsL")) and 1 or 0
-  local r=(on and cduPowered("fmsR")) and 1 or 0
+  -- (step 11e1) a CDU's IRS LEGS modification its own
+  local l=((on or B747_fms_altn_mod("fmsL")) and cduPowered("fmsL")) and 1 or 0
+  local r=((on or B747_fms_altn_mod("fmsR")) and cduPowered("fmsR")) and 1 or 0
   if B747DR_fms_exec_light_pilot~=l then B747DR_fms_exec_light_pilot=l end
   if B747DR_fms_exec_light_copilot~=r then B747DR_fms_exec_light_copilot=r end
 end
@@ -3158,6 +3159,42 @@ function B747_fms_fmc_linked(cdu) return FL.linked(fmcLink,cdu) end
 -- (step 11d3) the CDU's FMC being resynchronized: its display frozen, no
 -- keys (FCOM p.1277)
 function B747_fms_fmc_frozen(cdu) return FL.frozen(fmcLink,cdu) end
+-- (6-1/6-2 step 11e1; notes/ATA-34-61-FMC.md §102) the CDUs' alternate
+-- navigation (B747.68.altn_nav_model.lua): each second, while an FMC
+-- works, each CDU's copy of the active route (the FMC sends it at each
+-- change: FMSPG p.248); with both failed each CDU's route sequenced on its
+-- own IRU (left, centre, right: FCOM p.1421)
+dofile("B747.68.altn_nav_model.lua")
+local AN=B747_altn_nav_model
+local altnNav={fmsL=AN.new(),fmsC=AN.new(),fmsR=AN.new()}
+local ALTN_IRU={fmsL=0,fmsC=1,fmsR=2}
+local altnT=nil
+function B747_fms_altn(cdu) return altnNav[cdu] or altnNav.fmsL end
+-- that CDU's IRU position and ground speed, nil without one
+function B747_fms_altn_pos(cdu)
+  local n=ALTN_IRU[cdu] or 0
+  if B747DR_nav_irs_nav_valid[n]~=1 then return nil end
+  return {lat=B747DR_nav_irs_lat[n],lon=B747DR_nav_irs_lon[n],gs=B747DR_nav_irs_gs[n]}
+end
+-- a CDU's IRS LEGS modification waiting (its EXEC light)
+function B747_fms_altn_mod(cdu) return altnNav[cdu]~=nil and altnNav[cdu].mod~=nil end
+function update_altn_nav()
+  local now=simDRTime
+  if altnT and now>=altnT and now-altnT<1 then return end
+  altnT=now
+  local st=B747_fmc_route
+  for cdu,s in pairs(altnNav) do
+    if anyFMC() then
+      if st.active then
+        AN.copy(s,st.rte,B747_route_model.is_hold,B747_fms_altn_pos(cdu))
+      else
+        s.legs,s.dest,s.mod=AN.new().legs,nil,nil
+      end
+    else
+      AN.sequence(s,B747_fms_altn_pos(cdu),simDR_pressureAlt1)
+    end
+  end
+end
 -- (6-1/6-2 step 11d2) the FMC the FMC master selector selects working: the
 -- radios' tuning is its (ATA34_2 p.496; ATA34_1 p.332, p.350: held at the
 -- last frequencies without it)
@@ -3779,6 +3816,7 @@ function after_physics()
     update_ldgalt()
     update_msg_inhibit()
     update_nav_msgs()
+    update_altn_nav()
     B747_fmc_lnav_update()
     B747_fmc_route_sync()
     B747_fmc_plan_ctr_sync()
