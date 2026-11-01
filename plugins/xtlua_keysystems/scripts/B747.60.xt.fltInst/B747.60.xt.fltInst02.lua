@@ -2160,149 +2160,30 @@ end
 
 ----- V-SPEEDS --------------------------------------------------------------------------
 
--- V1 / Vr / V2 - TEMPERATURE/ALTITUDE REGIONS
-local regions = {}
-local tempAltRegion = 0
-
-function B747_getTempAltRegions()
-
-    local regTop = {0, 0, 0, 0, 0}
-    for region = 1, 5 do
-        local lowTempIndex = 1
-        for index = 1, #VtempAltRegionData[region] do
-            if VtempAltRegionData[region][index].temp <= simDR_OAT_degC then
-                lowTempIndex = index
-            end
-        end
-        regTop[region] = B747_rescale(VtempAltRegionData[region][lowTempIndex].temp, VtempAltRegionData[region][lowTempIndex].alt , VtempAltRegionData[region][math.min(#VtempAltRegionData[region], lowTempIndex+1)].temp, VtempAltRegionData[region][math.min(#VtempAltRegionData[region], lowTempIndex+1)].alt, simDR_OAT_degC)
-    end
-    local regBottom = {-2000, regTop[1], regTop[2], regTop[3], regTop[4]}
-
-
-    regions = {
-
-        {-- REGION A
-
-            -- DEFINE THE REGION
-            l=-60, b=regBottom[1], t=regTop[1], r=46.29,
-
-            -- SET THE CURRENT TEMPERATURE/ALTITUDE REGION
-            f = function()
-                tempAltRegion = 1
-            end,
-
-        },
-
-        {-- REGION B
-
-            -- DEFINE THE REGION
-            l=-60.0, b=regBottom[2], t=regTop[2], r=50.16,
-
-            -- SET THE CURRENT TEMPERATURE/ALTITUDE REGION
-            f = function()
-                tempAltRegion = 2
-            end,
-
-        },
-
-        {-- REGION C
-
-            -- DEFINE THE REGION
-            l=-60.0, b=regBottom[3], t=regTop[3], r=55.53,
-
-            -- SET THE CURRENT TEMPERATURE/ALTITUDE REGION
-            f = function()
-                tempAltRegion = 3
-            end,
-
-        },
-
-        {-- REGION D
-
-            -- DEFINE THE REGION
-            l=-60.0, b=regBottom[4], t=regTop[4], r=60.31,
-
-            -- SET THE CURRENT TEMPERATURE/ALTITUDE REGION
-            f = function()
-                tempAltRegion = 4
-            end,
-
-        },
-
-        {-- REGION E
-
-            -- DEFINE THE REGION
-            l=-60.0, b=regBottom[5], t=regTop[5], r=64.80,
-
-            -- SET THE CURRENT TEMPERATURE/ALTITUDE REGION
-            f = function()
-                tempAltRegion = 5
-            end,
-
-        }
-
-    }
-
-end
-
-function B747_setTempAltRegion()
-
-    B747_getTempAltRegions()
-
-    local num_regions = #regions
-
-    for i=1, num_regions do
-
-        local r = regions[i]
-
-        if (simDR_OAT_degC > r.l) and (simDR_OAT_degC < r.r) then
-
-            if (simDR_altitude_ft_pilot > r.b) and (simDR_altitude_ft_pilot < r.t) then
-
-                r.f()
-
-                return true
-
-            end -- ALTITUDE TEST
-        end -- TEMPERATURE TEST
-    end -- LOOP ALL REGIONS
-
-    return false
-
-end
-
-
-
-
 -- the FMC's takeoff speeds (6-1/6-2 step 3b; FCOM p.1319-1320): computed
 -- into airspeed/V1_ref, Vr_ref and V2_ref from the TAKEOFF REF flaps (10 or
--- 20), the FMC's gross weight (PERF INIT), the temperature and altitude
--- region and the TAKEOFF REF wind (none entered: calm); 999 (dashes) when
--- the flaps or the weight are missing or no IRU is aligned. The FMC selects
--- them for the PFD (airspeed/V1, Vr, V2: B744.fms.pages.takeoff.lua).
--- Before: the airplane's weight and X-Plane's wind, straight to the PFD
--- when the flaps were entered. V1 not above VR (estimate).
+-- 20), the FMC's gross weight (PERF INIT), the TAKEOFF REF wind (none
+-- entered: calm), the OAT, the pressure altitude, THRUST LIM's rating and
+-- assumed temperature and the engine type (B747.60.to_speeds_model.lua: the
+-- takeoff speed tables, then the FCOM's minimum control speeds). Before:
+-- the tables alone, entered with the captain's altimeter and the actual
+-- OAT, no speeds outside the tables' regions. 999 (dashes) when the flaps
+-- or the weight are missing or no IRU is aligned. The FMC selects them for
+-- the PFD (airspeed/V1, Vr, V2: B744.fms.pages.takeoff.lua).
+dofile("B747.60.to_speeds_model.lua")
 B747DR_airspeed_V1_ref = find_dataref("laminar/B747/airspeed/V1_ref")
 B747DR_airspeed_Vr_ref = find_dataref("laminar/B747/airspeed/Vr_ref")
 B747DR_airspeed_V2_ref = find_dataref("laminar/B747/airspeed/V2_ref")
 B747DR_fltinst_fms_data = find_dataref("laminar/B747/fms/data")
 B747DR_fltinst_irs_mode = find_dataref("laminar/B747/irs/mode")
-local V1_WIND_KEYS = {-15, -10, -5, 0, 10, 20, 30, 40}
--- the V1 wind adjustment between the table's weights and headwinds (kg, kt)
-local function v1_wind_adjustment(weight, hw)
-    local w1 = math.max(200000, math.min(400000, math.floor(weight / 20000) * 20000))
-    local w2 = w1 + 20000
-    hw = math.max(-15, math.min(40, hw))
-    local h1, h2 = -15, -10
-    for i = 1, #V1_WIND_KEYS - 1 do
-        if hw >= V1_WIND_KEYS[i] and hw <= V1_WIND_KEYS[i + 1] then
-            h1, h2 = V1_WIND_KEYS[i], V1_WIND_KEYS[i + 1]
-            break
-        end
-    end
-    local function at(h) return B747_rescale(w1, V1windAdj[h][w1], w2, V1windAdj[h][w2], weight) end
-    return B747_rescale(h1, at(h1), h2, at(h2), hw)
-end
+simDR_to_press_alt = find_dataref("sim/flightmodel2/position/pressure_altitude")
+B747DR_to_engine_type = find_dataref("laminar/B747/engines/type")
+-- THRUST LIM's assumed temperature (C, -99 none), the thrust limit's code
+-- (100 and over with D-, the assumed temperature above the OAT) and the
+-- selected takeoff rating's thrust reduction (%, 0 TO) (B747.68.xt.fms.lua)
+B747DR_to_thrlim_sel = find_dataref("laminar/B747/fms/thrlim/sel")
+B747DR_to_thrlim_code = find_dataref("laminar/B747/fms/thrlim/code")
+B747DR_to_thrlim_pct = find_dataref("laminar/B747/fms/thrlim/to_pct")
 -- the FMC's gross weight (kg; nil before PERF INIT) and the TAKEOFF REF
 -- headwind (kt; a tailwind negative)
 local function fms_takeoff_data()
@@ -2314,9 +2195,8 @@ local function fms_takeoff_data()
     if dir == "T" then hw = -hw end
     return gw and gw * 1000 or nil, hw
 end
-function B747_V1_wind_adjustment()
-end
 B747DR_airspeed_flapsRef                              = find_dataref("laminar/B747/airspeed/flapsRef")
+local toIn = {}
 -- V1 / Vr / V2: the FMC's
 function B747_setV1VrV2()
 
@@ -2330,16 +2210,14 @@ function B747_setV1VrV2()
         if B747DR_fltinst_irs_mode[i] == 2 then aligned = true end
     end
     local v1, vr, v2 = 999, 999, 999
-    if (flaps == 10 or flaps == 20) and gw ~= nil and aligned and tempAltRegion > 0 then
-        local weight = math.max(200000, math.min(420000, gw))
-        local weight_max = math.max(220000, math.min(420000, roundUpToIncrement(weight, 20000)))
-        local weight_min = weight_max - 20000
-        local function speed(t)
-            return B747_rescale(weight_min, t[flaps][tempAltRegion][weight_min], weight_max, t[flaps][tempAltRegion][weight_max], weight)
-        end
-        vr = math.floor(speed(B747_Vr) + 0.5)
-        v2 = math.floor(speed(B747_V2) + 0.5)
-        v1 = math.min(vr, math.floor(speed(B747_V1) + v1_wind_adjustment(weight, hw) + 0.5))
+    if (flaps == 10 or flaps == 20) and gw ~= nil and aligned then
+        local inp = toIn
+        inp.flaps, inp.weight_kg, inp.hw = flaps, gw, hw
+        inp.oat_c, inp.pa_ft = simDR_OAT_degC, simDR_to_press_alt
+        local sel = B747DR_to_thrlim_sel
+        inp.sel_c = (B747DR_to_thrlim_code >= 100 and sel > -99) and sel or nil
+        inp.engine, inp.pct = B747DR_to_engine_type, B747DR_to_thrlim_pct
+        v1, vr, v2 = B747_to_speeds_model.speeds(inp)
     end
     if B747DR_airspeed_V1_ref ~= v1 then B747DR_airspeed_V1_ref = v1 end
     if B747DR_airspeed_Vr_ref ~= vr then B747DR_airspeed_Vr_ref = vr end
@@ -2369,29 +2247,14 @@ end
 
 
 
--- the table's weights that bracket the gross weight (rounding to the nearest
--- 20 t took the lower weight's value in the first half of each step: VREF30
--- up to 3 kt low, the stall speed up to 4 kt; 5-2 step 3b)
-local function bracket_weights()
-    local w = math.max(200000, math.min(400000, simDR_acf_weight_total_kg))
-    local weight_min = math.min(380000, math.floor(w / 20000) * 20000)
-    return weight_min, weight_min + 20000
-end
-
--- Vref30
+-- VREF 30: the FMC's for the gross weight and the landing altitude
+-- (laminar/B747/fms/vref30, the FCOM's table: 6-1/6-2 step 3d), kept
+-- until the FMC has worked one out. Before, Laminar's table (Vref30data) by
+-- the airplane's weight and the present altitude in bands.
+B747DR_fltinst_fms_vref30 = find_dataref("laminar/B747/fms/vref30")
 function B747_setVref30()
-
-    local weight_min, weight_max = bracket_weights()
-
-    local speed = {}
-    if simDR_altitude_ft_pilot <= -2000 then speed = Vref30data.speedMinus2k
-        elseif simDR_altitude_ft_pilot <= 0 then speed = Vref30data.speed0k
-        elseif simDR_altitude_ft_pilot <= 2000 then speed = Vref30data.speed2k
-        elseif simDR_altitude_ft_pilot <= 6000 then speed = Vref30data.speed6k
-        else speed = Vref30data.speed10k
-    end
-    B747DR_airspeed_Vref30 = B747_rescale(weight_min, speed[weight_min], weight_max, speed[weight_max], simDR_acf_weight_total_kg)
-
+    local v = B747DR_fltinst_fms_vref30
+    if v > 0 and B747DR_airspeed_Vref30 ~= v then B747DR_airspeed_Vref30 = v end
 end
 
 
@@ -2534,8 +2397,6 @@ end
 -- INIT V1 / Vr / V2
 function B747_initV1VrV2()
 
-    B747_setTempAltRegion()
-    B747_V1_wind_adjustment()
     B747_setV1VrV2()
 
 end
@@ -2831,8 +2692,6 @@ function after_physics()
     B747_Vspeeds()
     B747_speedtape()
 
-    B747_setTempAltRegion()
-    B747_V1_wind_adjustment()
     B747_setV1VrV2()
 
     B747_fltInst_EICAS_msg()

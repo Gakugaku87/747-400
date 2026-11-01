@@ -17,6 +17,9 @@ local A = "laminar/B747/airspeed/"
 local BUS = "laminar/B747/electrical/bus/"
 for _, b in ipairs({"stby_apu", "stby_main", "xfr_capt", "xfr_fo", "any_ac"}) do rt:set(BUS .. b, 1) end
 rt:set("sim/flightmodel/weight/m_total", 300000)
+-- the FMC's VREF 30 and 25 at 300 t (6-1/6-2 step 3d; FCOM PI.10.2)
+rt:set("laminar/B747/fms/vref30", 157)
+rt:set("laminar/B747/fms/vref25", 164)
 rt:set("sim/flightmodel/forces/g_nrml", 1)                         -- 1 g (the minimum speeds)
 rt:set("laminar/B747/airdata/valid_capt", 1)                      -- the captain's air data valid
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 0)
@@ -31,9 +34,9 @@ local function bugs()
     return table.concat(t, ",")
 end
 local vref30 = rt:get(A .. "Vref30")
-T.check(vref30 > 150 and vref30 < 165, "VREF30 at 300 t near FCOM PI.10.2's 157 (" .. vref30 .. ")")
+T.equal(vref30, 157, "VREF30: the FMC's (before, Laminar's table by the airplane's weight)")
 T.near(rt:get(A .. "Vf0"), vref30 + 80, 1e-6, "UP: VREF30 + 80 (FCOM PI.10.3)")
-T.near(rt:get(A .. "Vf25"), 164, 1e-6, "25: VREF25 at 300 t (FCOM PI.10.2)")
+T.near(rt:get(A .. "Vf25"), 164, 1e-6, "25: the FMC's VREF25")
 T.equal(bugs(), "3,4", "flaps 20: the 20 and 10 bugs (FCOM p.972)")
 T.equal(rt:get("laminar/B747/pfd/show_mins"), 0, "on the ground: no minimum maneuvering band")
 rt:set("laminar/B747/gear/air_ground/pri_air", 1)

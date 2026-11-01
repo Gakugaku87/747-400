@@ -1288,11 +1288,16 @@ function fmsFunctions.setdata(fmsO,value)
 	else
 		fmsO["notify"]="INVALID ENTRY"
  	end
-  elseif value == "vref1" then
-	fmsO["scratchpad"]=string.format("25/%3d", B747DR_airspeed_Vf25)
+  elseif value == "vref1" or value == "vref2" then
+	-- APPROACH REF's VREF for the weight it shows (6-1/6-2 step 3d; FCOM
+	-- p.1412): flaps/VREF to the scratchpad, nothing without a weight
+	local flaps = value == "vref1" and 25 or 30
+	local v = B747_fms_appr_vref(fmsO, flaps)
+	if v then fmsO["scratchpad"]=string.format("%d/%3d", flaps, v) end
 	return
-  elseif value == "vref2" then
-	fmsO["scratchpad"]=string.format("30/%3d", B747DR_airspeed_Vf30)
+  elseif value == "grosswt" then
+	-- APPROACH REF's GROSS WT (FCOM p.1411)
+	B747_fms_appr_gw_entry(fmsO, del)
 	return
   elseif value == "flapspeed" then
 	-- XX/YYY, /YYY or YYY; the empty scratchpad copies the value; DELETE
