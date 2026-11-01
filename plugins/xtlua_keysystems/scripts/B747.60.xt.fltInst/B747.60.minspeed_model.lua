@@ -211,6 +211,7 @@ function M.inputs()
         air_data = true,        -- mach and cas valid
         show_mins = false,      -- the minimum maneuvering speed band shown (the speed tape model)
         alpha_deg = 0,          -- the angle of attack (for the PLI on the ground)
+        margin = 1.3,           -- (step 12c1) the buffet's maneuver margin, g: the FMC's PERF FACTORS' MNVR MARGIN
     }
 end
 
@@ -249,13 +250,16 @@ function M.update(s, inp, dt)
     -- the minimum maneuvering speed (FCOM p.973): 1.3 g to the stick shaker
     -- with flaps down; flaps up below 20,200 ft that or VREF+80 (VREF30:
     -- FCOM PI.10.3), whichever is less; above, 1.3 g to low speed buffet
-    local vmm = M.mach_to_cas(low_mach(1.3 * w / d, inp.flap_deg), d)
+    -- (or the maneuver capability maintenance preset: step 12c1, the
+    -- margin)
     local flaps_up = inp.flap_deg < 0.5
+    local high = flaps_up and inp.alt_ft >= 20200
+    local vmm = M.mach_to_cas(low_mach((high and inp.margin or 1.3) * w / d, inp.flap_deg), d)
     if flaps_up and inp.alt_ft < 20200 then vmm = math.min(vmm, inp.vref30 + 80) end
     out.vmin_man = vmm
-    -- the maximum maneuvering speed: 1.3 g to high speed buffet, shown when
-    -- below the maximum speed (FCOM p.969)
-    local mh = flaps_up and high_mach(1.3 * w / d) or nil
+    -- the maximum maneuvering speed: 1.3 g (the preset) to high speed
+    -- buffet, shown when below the maximum speed (FCOM p.969)
+    local mh = flaps_up and high_mach(inp.margin * w / d) or nil
     local vmx = mh and M.mach_to_cas(mh, d) or nil
     out.show_vmax_man = vmx ~= nil and vmx < inp.vmax
     out.vmax_man = out.show_vmax_man and vmx or inp.vmax

@@ -43,6 +43,9 @@ simDR_spd_alpha                 = find_dataref("sim/flightmodel/position/alpha")
 B747DR_spd_pli                  = find_dataref("laminar/B747/pfd/pli")
 B747DR_spd_pli_show             = find_dataref("laminar/B747/pfd/pli_show")
 B747DR_spd_vr_r                 = find_dataref("laminar/B747/airspeed/vr_r")
+-- (6-1/6-2 step 12c1) the FMC's MNVR MARGIN (PERF FACTORS): the buffet's
+-- maneuver capability (FCOM p.969, p.973); 1.3 g before the FMC writes it
+B747DR_spd_mnvr_margin          = find_dataref("laminar/B747/fms/mnvr_margin")
 -- VR shows "R" within 4 kt of V1 (FCOM p.972)
 local VR_R_KT = 4
 
@@ -111,6 +114,8 @@ function B747_speedtape()
     mi.air = inp.air
     mi.show_mins = out.show_mins
     mi.alpha_deg = simDR_spd_alpha
+    local mg = B747DR_spd_mnvr_margin
+    mi.margin = (mg >= 1.195 and mg <= 1.305) and mg or 1.3
     local ms = MS.update(ms_state, mi, SIM_PERIOD)
     if B747DR_airspeed_Vs ~= ms.vss then B747DR_airspeed_Vs = ms.vss end
     if B747DR_airspeed_Vminm ~= ms.vmin_man then B747DR_airspeed_Vminm = ms.vmin_man end

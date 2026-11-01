@@ -867,6 +867,9 @@ function createPage(page)
   retVal.getPage=function(self,pgNo) return self.template end
   retVal.getSmallPage=function(self,pgNo) return self.templateSmall end
   retVal.getNumPages=function(self) return 1 end
+  -- (step 12c1) a CDU left the page (B744.createfms.lua; a missing key
+  -- of XTLua's namespace table cannot be read)
+  retVal.onLeave=function(self,fmsID) end
   fmsFunctionsDefs[page]={}
   return retVal
 end
@@ -963,6 +966,91 @@ function B747_fms_gw_kg()
   local gw = perf_gw_t()
   if gw then return gw * 1000 end
   return simDR_GRWT
+end
+-- (6-1/6-2 step 12c1; notes/ATA-34-61-FMC.md §109) PERF FACTORS
+-- (B747.68.perf_factors_model.lua; the maintenance page in
+-- B744.fms.pages.maintperffactor.lua), kept in the livery's simconfig
+-- (FMC.PERF, saved with SIM CONFIG's save: the FMC keeps the last
+-- entries). DRAG/F-F the IDENT page's and the performance data's fuel
+-- flows (B747_perf_db.DRAG_F, FF_F); TO 1/TO 2 THRUST LIM's derates
+-- (B747_fms_thrlim_pct); MNVR MARGIN the maximum altitude's buffet margin
+-- (B747_perf_db.MARGIN_G) and the PFDs' maneuvering speeds' (laminar/
+-- B747/fms/mnvr_margin: FCOM p.969, p.973); THR/CRZ the thrust limit at
+-- the T/C (FCOM p.1273); THR RED and ACCEL HT TAKEOFF REF's defaults,
+-- taken at the flight's start and at its completion (ATA34_2 p.678: at
+-- the end of each flight or after a long term power interrupt). MIN CRZ
+-- TIME, R/C CLB and R/C CRZ are kept and shown only: the FCOM's tables
+-- give the maximum altitude at 100 fpm (PI.11.1), no short trip's optimum
+-- altitude
+dofile("B747.68.perf_factors_model.lua")
+B747DR_fms_mnvr_margin = find_dataref("laminar/B747/fms/mnvr_margin")
+do
+  local PF = B747_perf_factors_model
+  local cfgText, cfgPerf = nil, nil
+  local values, valuesType, applied = nil, nil, nil
+  local toDefaults = nil
+  -- the simconfig's FMC.PERF, decoded again when the simconfig changes (a
+  -- plain table: simConfigData is XTLua's namespace)
+  local function stored()
+    local s = B747DR_simconfig_data
+    if s ~= cfgText then
+      cfgText, cfgPerf, values = s, nil, nil
+      local ok, t = pcall(json.decode, s)
+      if ok and type(t) == "table" and type(t.FMC) == "table" and type(t.FMC.PERF) == "table" then
+        cfgPerf = t.FMC.PERF
+      end
+    end
+    return cfgPerf
+  end
+  -- the values (B747_perf_factors_model.values)
+  function B747_fms_perf_factors()
+    local st = stored()
+    local et = B747DR_fms_engine_type
+    if values == nil or valuesType ~= et then values, valuesType = PF.values(st, et), et end
+    return values
+  end
+  -- an entry into a field (B747_perf_factors_model.enter): nil, or the
+  -- CDU's message
+  function B747_fms_perf_factors_enter(field, text)
+    local new, err = PF.enter(field, text)
+    if not new then return err end
+    local fmc = simConfigData["data"].FMC
+    if type(fmc.PERF) ~= "table" then fmc.PERF = {} end
+    for k, x in pairs(new) do fmc.PERF[k] = x end
+    if (new.drag or new.ff) and type(fmc.INIT) == "table" then
+      fmc.INIT.drag_ff = PF.text(PF.values(fmc.PERF, B747DR_fms_engine_type)).dragff
+    end
+    pushSimConfig(simConfigData["data"]["values"])
+    return nil
+  end
+  -- each frame: the performance data's factors and the PFDs' margin
+  function B747_fms_perf_factors_update()
+    local v = B747_fms_perf_factors()
+    if v == applied then return end
+    applied = v
+    B747_perf_db.DRAG_F, B747_perf_db.FF_F = 1 + v.drag / 100, 1 + v.ff / 100
+    B747_perf_db.MARGIN_G = v.mnvr
+    B747DR_fms_mnvr_margin = v.mnvr
+  end
+  -- TAKEOFF REF's defaults (THR REDUCTION, ACCEL HT, E/O ACCEL HT: the
+  -- FMC's data), taken at the flight's start and its completion; with
+  -- apply into those the crew has not entered
+  local TO_SET = {thrred = "thrredset", accelht = "accelset", eoaccelht = "eoaccelset"}
+  function B747_fms_perf_to_take(apply)
+    local v = B747_fms_perf_factors()
+    toDefaults = {thrred = string.format("%d", v.thr_red), accelht = string.format("%d", v.accel),
+      eoaccelht = string.format("%d", v.eo_accel)}
+    if not apply then return end
+    for k, set in pairs(TO_SET) do
+      if str_trim(fmsModules["data"][set]) == "" and str_trim(fmsModules["data"][k]) ~= toDefaults[k] then
+        setFMSData(k, toDefaults[k])
+      end
+    end
+  end
+  function B747_fms_perf_to()
+    if toDefaults == nil then B747_fms_perf_to_take(false) end
+    return toDefaults
+  end
 end
 -- the measured wind's direction (true; X-Plane's indicated one magnetic)
 function B747_fms_wind_true()
@@ -2126,9 +2214,12 @@ end
 local thrlimState = B747_thrlim_model.new()
 local thrlimIn = {}
 local thrlimSeen = {}
+-- TO 1's and TO 2's derates, %: PERF FACTORS' (step 12c1; before, the
+-- FCOM's operator's fixed here)
 function B747_fms_thrlim_pct(n)
   if n == 0 then return 0 end
-  return (B747DR_fms_engine_type == 1 and {5, 15} or {8, 20})[n]
+  local v = B747_fms_perf_factors()
+  return n == 1 and v.to1 or v.to2
 end
 -- the THRUST LIM page's selections: TO n on the ground (false in the air),
 -- CLB n, GA, CON or CRZ in the air (false while GA is held)
@@ -2166,6 +2257,8 @@ local function update_thrlim()
   -- while it is active
   B747_eo_model.update(B747_fms_eo(), inp.eo)
   inp.eo_vnav = B747_fms_eo().active
+  -- (step 12c1) PERF FACTORS' THR/CRZ: the cruise's limit CLB or CRZ
+  inp.crz_clb = B747_fms_perf_factors().thr_crz == "CLB"
   local mode = B747_thrlim_model.update(thrlimState, inp)
   if B747DR_fms_thrlim_mode ~= mode then B747DR_fms_thrlim_mode = mode end
   local s = thrlimState
@@ -3385,6 +3478,8 @@ function B747_fms_flight_complete()
   navperfState.gps_inhibit,navperfState.rnp_man=false,nil
   if B747DR_airspeed_flapsRef~=0 then B747DR_airspeed_flapsRef=0 end
   if B747DR_airspeed_VrefFlap~=0 then B747DR_airspeed_VrefFlap=0 end
+  -- (step 12c1) TAKEOFF REF's defaults from PERF FACTORS again
+  B747_fms_perf_to_take(true)
 end
 -- (6-1/6-2 step 11a; notes/ATA-34-61-FMC.md §90) the fuel monitoring
 -- (B747.68.fuel_model.lua): each frame the FQIS (X-Plane's total fuel:
@@ -3817,7 +3912,10 @@ function do_flight_start()
 	simDR_cg_adjust = 0  --reset CG slider to begin current flight
 	
 	--Ensure that CG location gets updated periodically so that the CG slider repositions automatically as fuel is burned during flight
-	run_at_interval(inflight_update_CG, 60)	
+	run_at_interval(inflight_update_CG, 60)
+	-- (6-1/6-2 step 12c1) the FMC's start: TAKEOFF REF's defaults from PERF
+	-- FACTORS
+	B747_fms_perf_to_take(true)
 end
 
 debug_fms     = find_dataref("laminar/B747/debug/fms")
@@ -3995,6 +4093,8 @@ function after_physics()
     B747_fmc_exec_lights()
     B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
     --print(B747DR_FMSdata)
+    -- (6-1/6-2 step 12c1) PERF FACTORS' factors and margin
+    B747_fms_perf_factors_update()
     -- (6-1/6-2 step 12b) the automatic page changes (B744.createfms.lua)
     B747_cdu_page_changes(B747_fms_vnav_page())
     fmsL:B747_fms_display()

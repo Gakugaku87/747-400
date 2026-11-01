@@ -127,4 +127,23 @@ rt:set(A .. "V1", 999)
 frames(0.1)
 T.equal(rt:get(A .. "vr_r"), 0, "no V speeds selected: VR")
 
+-- (6-1/6-2 step 12c1) the FMC's MNVR MARGIN (laminar/B747/fms/mnvr_margin):
+-- 400 t at FL325, flaps up, the maximum maneuvering speed shown; 1.20 g
+-- raises it; 0 (the FMC not yet written) or out of range: 1.3 g
+local D325 = MS.delta(32500)
+rt:set("sim/flightmodel/weight/m_total", 400000)
+rt:set("sim/flightmodel2/position/pressure_altitude", 32500)
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 32500)
+rt:set("laminar/B747/airdata/mach_capt", MS.cas_to_mach(280, D325))
+rt:set("laminar/B747/gauges/indicators/airspeed_kts_pilot", 280)
+frames(10)
+local vmaxm13 = rt:get(A .. "Vmaxm")
+rt:set("laminar/B747/fms/mnvr_margin", 1.2)
+frames(1)
+T.check(rt:get(A .. "Vmaxm") > vmaxm13 + 1, "MNVR MARGIN 1.20: the maximum maneuvering speed higher ("
+    .. rt:get(A .. "Vmaxm") .. " > " .. vmaxm13 .. ")")
+rt:set("laminar/B747/fms/mnvr_margin", 5)
+frames(1)
+T.near(rt:get(A .. "Vmaxm"), vmaxm13, 1e-6, "out of range: 1.3 g")
+
 T.done()

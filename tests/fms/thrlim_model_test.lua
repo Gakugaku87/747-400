@@ -79,6 +79,16 @@ T.check(L.select(s, "CON"), "CON selected")
 T.equal(L.update(s, inp{alt_agl = 30000, phase = "CRZ"}), "CON", "CON")
 T.check(L.select_clb(s, 2, false) and L.update(s, inp{alt_agl = 30000, phase = "CRZ"}) == "CLB 2", "CLB 2 selected in the air: active")
 
+-- (step 12c1) PERF FACTORS' THR/CRZ CLB: the T/C in CLB, the full climb's
+-- (FMSPG p.267; FCOM p.1273)
+s = L.new()
+L.select_clb(s, 1, true)
+L.update(s, inp{ground = true, flaps = F10})
+T.equal(L.update(s, inp{alt_agl = 1500, flaps = F5, vnav = true, crz_clb = true}), "CLB 1", "THR/CRZ CLB: the climb's CLB 1 as before")
+T.equal(L.update(s, inp{alt_agl = 30000, vnav = true, phase = "CRZ", crz_clb = true}), "CLB", "THR/CRZ CLB: the T/C CLB, not CLB 1")
+T.equal(L.update(s, inp{alt_agl = 30000, vnav = true, phase = "CRZ", crz_clb = true}), "CLB", "kept in the cruise")
+T.equal(L.update(s, inp{alt_agl = 30000, phase = "CRZ", flch_up = true, crz_clb = true}), "CLB", "FLCH up: CLB still")
+
 -- GA: the flaps extended out of UP (FCOM p.672); the THR switch: CLB; the
 -- landing flaps, G/S: GA held (the THR switch, a selection nothing);
 -- flaps 20 again: the THR switch CLB, CON if CON was selected (p.642)

@@ -664,6 +664,8 @@ end
 local BLANK = "                        "
 local pageError = {}
 local lastNativeMsg = {}
+-- (step 12c1) each CDU's page drawn last ("FMC": X-Plane's)
+local shownPage = {}
 -- the keys the FMC typed into X-Plane's CDU last (custom2fmc, key2fmc):
 -- the text, how many keys, when and the frames since; its scratchpad
 -- shows them going in for a moment, and keeps the text when its page
@@ -709,6 +711,14 @@ function fms:B747_fms_display()
 
     local inCustomFMC=self.inCustomFMC
     local page=self.currentPage
+    -- (6-1/6-2 step 12c1) a page left: its onLeave (the maintenance pages'
+    -- code word: FMSPG p.268, ATA34_2 p.676)
+    local shown=inCustomFMC and page or "FMC"
+    local was=shownPage[thisID]
+    if was~=shown then
+      shownPage[thisID]=shown
+      if was and was~="FMC" then fmsPages[was]:onLeave(thisID) end
+    end
 
     if B747DR_srcfms[thisID][14]=="[NAV DATA OUT OF DATE  ]" then simCMD_FMS_key[thisID]["clear"]:once() return end
     -- X-Plane's CDU's scratchpad message (its pages' entries) as this CDU's,

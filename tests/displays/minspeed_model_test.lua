@@ -84,6 +84,19 @@ T.check(out.vmax_man > out.vmin_man and out.vmax_man < 340, "between the minimum
 out = run({weight_kg = 400000, alt_ft = 36000, vmax = 340})
 T.near(out.vmax_man, out.vmin_man, 12, "above the 1.3 g ceiling: the two bands meet")
 
+-- (step 12c1) the maneuver capability maintenance presets (PERF FACTORS'
+-- MNVR MARGIN: FCOM p.969, p.973): the buffet's bands only
+local o13 = run({weight_kg = 400000, alt_ft = 32500, vmax = 340})
+local o12 = run({weight_kg = 400000, alt_ft = 32500, vmax = 340, margin = 1.2})
+T.check(o12.vmin_man < o13.vmin_man - 1, "1.20 g above 20,200 ft: the minimum maneuvering speed lower ("
+    .. o12.vmin_man .. " < " .. o13.vmin_man .. ")")
+T.check(o12.vmax_man > o13.vmax_man + 1, "1.20 g: the maximum maneuvering speed higher ("
+    .. o12.vmax_man .. " > " .. o13.vmax_man .. ")")
+T.near(run({flap_deg = 0, vref30 = 170, margin = 1.2}).vmin_man, run({flap_deg = 0, vref30 = 170}).vmin_man, 1e-9,
+    "below 20,200 ft: 1.3 g to the shaker whatever the preset")
+T.near(run({flap_deg = 20, alt_ft = 25000, margin = 1.2}).vmin_man, run({flap_deg = 20, alt_ft = 25000}).vmin_man, 1e-9,
+    "flaps down: 1.3 g to the shaker whatever the preset")
+
 -- the stick shaker: the lift needed above the limit at the present Mach
 local vss = run({flap_deg = 30}).vss
 local s, inp

@@ -239,4 +239,21 @@ local opt = P.eo_opt_alt(pw, 1, 300000, 0, 0)
 T.check(opt >= 28000 and opt <= 32000, "PW one out, 300 t: OPT " .. opt .. " ft, under MAX 32,000")
 T.check(P.eo_opt_alt(pw, 1, 200000, 0, 0) > opt, "lighter: higher")
 T.check(P.eo_opt_alt(pw, 2, 300000, 0, 0) <= 16500, "two out: under their MAX 16,500")
+
+-- (step 12c1) PERF FACTORS: DRAG/F-F's factors (every fuel flow by the
+-- fuel flow's, the level flight's also by the drag's), MNVR MARGIN the
+-- maximum altitude's default margin
+local crz0, idle0 = P.cruise_ff(pw, 300000, 35000, .84, 0), P.idle_ff(pw, 35000, .84, 0)
+local thr0, eo0 = P.thrust_ff(pw, 50000, 35000, .84, 0), P.eo_cruise_ff(pw, 1, 300000, 25000, .743, 0)
+local max0 = P.max_alt(pw, 300000, 0)
+P.DRAG_F, P.FF_F = 1.02, 1.05
+T.near(P.cruise_ff(pw, 300000, 35000, .84, 0), crz0 * 1.02 * 1.05, 1e-6, "DRAG +2 %, F-F +5 %: the level flight's by both")
+T.near(P.idle_ff(pw, 35000, .84, 0), idle0 * 1.05, 1e-6, "idle by F-F's")
+T.near(P.thrust_ff(pw, 50000, 35000, .84, 0), thr0 * 1.05, 1e-6, "a thrust's by F-F's")
+T.near(P.eo_cruise_ff(pw, 1, 300000, 25000, .743, 0), eo0 * 1.02 * 1.05, 1e-6, "engine-out level flight by both")
+P.DRAG_F, P.FF_F = 1, 1
+P.MARGIN_G = 1.2
+T.check(P.max_alt(pw, 300000, 0) > max0, "MNVR MARGIN 1.20: the maximum altitude higher than 1.30's")
+T.near(P.max_alt(pw, 300000, 0), P.max_alt(pw, 300000, 0, 1.2), 1e-9, "the default margin 1.20 as given")
+P.MARGIN_G = 1.3
 T.done()

@@ -12,9 +12,9 @@
 --   p.105, p.111), or by the THR switch above 400 ft with VNAV or FLCH
 --   (FCOM p.642); a TO/GA push before it: the takeoff's derate removed
 --   (FCOM p.667);
---   with VNAV the FMC's phase's as it changes: CLB, at the T/C CRZ (CLB or
---   CRZ as set by maintenance: CRZ here, ATA34_2 p.536's PERF FACTORS,
---   FCOM p.1273); FLCH to a higher altitude from CRZ CLB (FCOM p.646);
+--   with VNAV the FMC's phase's as it changes: CLB, at the T/C CRZ or CLB
+--   as set by maintenance (step 12c1: PERF FACTORS' THR/CRZ, ATA34_2
+--   p.536, FCOM p.1273); FLCH to a higher altitude from CRZ CLB (FCOM p.646);
 --   GA in the air with the flaps extended out of UP, at the landing flaps or
 --   with G/S captured, held at the landing flaps or with G/S (FCOM p.672);
 --   from GA the THR switch CLB (CON if CON was selected: FCOM p.642), VNAV
@@ -121,6 +121,7 @@ end
 --   ias, vref    the airspeed and VREF 30 (kt)
 --   eo_vnav      (step 9h4a) the engine-out VNAV active (ENG OUT executed:
 --                CON kept as with an engine inoperative; not in TO)
+--   crz_clb      (step 12c1) PERF FACTORS' THR/CRZ CLB: CLB at the T/C
 -- returns the mode's text
 function M.update(s, inp)
     local flaps = inp.flaps or 0
@@ -146,6 +147,10 @@ function M.update(s, inp)
     local byPhase = nil
     if inp.vnav and (not s.vnav_prev or inp.phase ~= s.phase_prev) then
         if inp.phase == "CLB" then byPhase = "CLB" elseif inp.phase == "CRZ" then byPhase = "CRZ" end
+        -- (step 12c1) PERF FACTORS' THR/CRZ CLB: the cruise in the full
+        -- climb's (FMSPG p.267: maximum climb thrust; the climb's derates
+        -- gone by then, FCOM p.1273)
+        if byPhase == "CRZ" and inp.crz_clb then byPhase, s.clb = "CLB", 0 end
     end
     s.phase_prev, s.vnav_prev = inp.phase, inp.vnav
     local thr = inp.thr and (inp.ra or 0) > M.THR_RA
