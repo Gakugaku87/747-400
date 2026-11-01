@@ -5917,6 +5917,14 @@ BEGIN_SOUND_ATTACHMENT
     EVENT_START_COND sim/cockpit2/electrical/bus_volts[0] == 28
 END_SOUND_ATTACHMENT
 
+# (6-1/6-2 step 12d1) the ATC uplink's low chime (FCOM p.725): the FMC's
+# laminar/B747/fms/atc_chime, 1 for a second as an unread ATC uplink comes
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/ding_cockpit
+    VEH_XYZ 0 4.9 -26
+    EVENT_START_COND laminar/B747/fms/atc_chime == 1
+END_SOUND_ATTACHMENT
+
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/ding
     VEH_XYZ 0 5.1 -25.5

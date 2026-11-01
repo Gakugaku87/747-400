@@ -573,6 +573,7 @@ B747_CASmemoMsg   = {
     {DRindex = 43, name = "ACARS ALERT", status = 0},
     {DRindex = 44, name = "ACARS VOICE BUSY", status = 0},
     {DRindex = 45, name = "SPEEDBRAKE ARMED", status = 0},
+    {DRindex = 46, name = "ATC MESSAGE", status = 0},          -- (6-1/6-2 step 12d1) 405, 570: an unread ATC uplink (FCOM p.776)
 }
 
 -- STATUS messages, on the secondary EICAS STATUS page (FCOM p.1545, p.1549).

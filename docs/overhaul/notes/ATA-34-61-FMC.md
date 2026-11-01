@@ -1865,3 +1865,19 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - BITE REPORT：題は CDU の FMC（<FMC がつなぐもの。無ければ L）、data loader は無いので「DATA LOADER」にキャレットを付けず、1L は何もしない。
 - 推定：IRU が離陸か飛行の終わりのどちらかで航法のモードでなければ、その IRU は空白。FMC の電源の入れ直しを「FMC が両方とも動かない」とした。転送の時間（30 秒）、状態の文字を行の中ほどに。キャレットの無い DATA LOADER の位置。この機体の FMC は X-Plane の航法データを共有するので、転送で何も写さない。IRU の位置の誤差は整列ごとに小さく固定（`B747.34.xt.irs.lua`）で時間で増えないので、率はふつう 0.0。
 - 試験：新しい `tests/fms/maint_pages_test.lua`（30 件：飛行の前の IRS MONITOR の見出しと空白の率、1 時間の飛行の後に IRU L が 2 NM 北・C が 1 NM 東で 2.0 と 1.0（小字の NM/HR）、R は航法のモードでないので空白、flight complete の 30 秒ではまだ出ない、空中で消える。BITE REPORT の FMC L・FMC R と DATA LOADER、1L は何もしない。CROSSLOAD の識別と見出し、ARM の無い TRANSMIT と RECEIVE は何もしない、ARM、両方の CDU に TRANSFER IN PROGRESS、30 秒で COMPLETE、ページを出ると ---、右の FMC の故障で ABORTED）。全 168 本。X-Plane：新しい `s189_maint_pages` 19/19（2026-11-01、X-Plane を起動し直した後の 3 便目。RJAA の地上で IRS MONITOR の見出しと空白、左 FMC L・右 FMC R の BITE REPORT、CROSSLOAD の AIRAC 2610・ARM・TRANSMIT・RECEIVE で両方に TRANSFER IN PROGRESS、31 秒後に TRANSFER COMPLETE。CDU の写真 4 枚）。Log.txt に Lua の誤りなし。
+
+## 111. 12d の分け方と 12d1 の実装（2026-11-01：データリンクの EICAS の表示）
+
+- 分け方：12d を 12d1（EICAS のデータリンクの表示：CDU-37）と 12d2（送信文を CDU ごとに：CDU-34、CDU-42 の残り、VERIFY TAIL NUMBER）に分けた。DESTINATION NOT SET（ACARS のページが自分の入力の確かめに使う文字）の見直しは、ATC のログオンを作り直す 12e で行う（ログオンの前提の確かめと一緒に）。
+- 前のコード：ACARS のプロバイダーがつながっている間、未読のメッセージ（ATC のアップリンクも会社の ACARS も）があれば ACARS MESSAGE のメモ。つながっていないときは、中央の RTP が ON なら ACARS NO COMM のメモ（FCOM に無い。この PC のように AutoATC が無いと常に出ていた）。ATC MESSAGE のメモ、チャイム、>DATALINK の advisory は無かった。
+- 資料：
+  - FCOM p.725：ATC のアップリンクは、EICAS のメモ ATC MESSAGE と低い音のチャイムで知らせる。
+  - FCOM p.775–776：advisory の >DATALINK AVAIL（一時的な喪失の後に ACARS の能力が戻った）、>DATALINK LOST（通信の喪失で ACARS が使えない）、>DATALINK SYS（ACARS の系統の故障）。メモの ACARS MESSAGE（ACARS を CDU で見る必要があるか、CDU で見るメッセージが来た）、405・570 の ATC MESSAGE（ATC のアップリンクが来た）。ACARS NO COMM は無い。
+  - ATA23 の手元の資料は ACARS の EICAS の表示を扱っていない。
+- 作ったもの：
+  - FMS のつなぎ（`B747.68.xt.fms.lua` の `B747_fms_datalink_eicas`）：毎フレーム、ACARS の受信の一覧の未読を数える。FMC のデータリンクがある機体（12a の `B747_fms_datalink`：570 か simconfig の ON）では、ATC のアップリンク（`cpdlc`）を ATC MESSAGE（新しい memo_status[46]）、会社の ACARS（`telex`）を ACARS MESSAGE に。未読の ATC のアップリンクが増えたとき、新しい `laminar/B747/fms/atc_chime` を 1 秒 1 にする。データリンクの無い機体（109）は、前のとおりどの未読も ACARS MESSAGE。ACARS NO COMM のメモ（[40]）は出さない。
+  - >DATALINK LOST（advisory_status[56]）：プロバイダーが一度つながった後に切れている間。>DATALINK AVAIL（[55]）：切れた後につながり直してから 60 秒。
+  - EICAS の一覧（`B747.87.warning.lua`（init）と `B747.87.xt.warning.lua`）：メモに ATC MESSAGE（46）。init の一覧に無かった SPEEDBRAKE ARMED（45）も足し、配列の大きさを xt と同じにした。
+  - 音（`fmod/747-400_custom.snd` と手元の `747-400.snd`、同じ内容）：`atc_chime` が 1 で操縦室のチャイム（`Warnings/ding_cockpit`、外部電源などと同じ音）を鳴らす。変更の前のバックアップは `D:\747-400-local-assets\backup_20261101_atc_chime\`。
+- 推定：チャイムの音（資料は「低い音のチャイム」だけ）。>DATALINK LOST を一度つながった後の喪失に限った（つながる前の起動直後や、AutoATC の無い X-Plane で常に出ないように。FCOM は「通信の喪失で使えない」とだけ書く）。>DATALINK AVAIL の 60 秒。>DATALINK SYS は出さない（ACARS の故障の模型が無い）。
+- 試験：新しい `tests/fms/datalink_eicas_test.lua`（22 件：AutoATC の dataref を模す。一度もつながっていなければ >DATALINK LOST なし、ACARS NO COMM はいつも 0。570 の未読の ATC のアップリンクで ATC MESSAGE とチャイム（1 秒）、ACARS MESSAGE は出ない、会社の ACARS で ACARS MESSAGE（チャイムなし）、読むと消える。109 は ATC のメッセージも ACARS MESSAGE で ATC MESSAGE とチャイムなし。つながってから切れると >DATALINK LOST、戻ると消えて >DATALINK AVAIL が 60 秒）。全 169 本。X-Plane：新しい `s190_datalink_eicas` 7/7（2026-11-01、X-Plane を起動し直した後の 4 便目。AutoATC の無いこの PC で、中央の RTP が ON でも ACARS NO COMM が出ない、>DATALINK LOST・AVAIL、ACARS MESSAGE、ATC MESSAGE、チャイムはどれも 0。上の EICAS の写真でもメモは PARK BRAKE SET だけ）。Log.txt に Lua と音の誤りなし。AutoATC が無いので、つながる側（ATC MESSAGE、チャイムの音、>DATALINK の advisory）は X-Plane で確かめていない。
