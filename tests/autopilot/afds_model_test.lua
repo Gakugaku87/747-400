@@ -359,6 +359,17 @@ A.disengage(mf)
 A.update(mf, app_inp({ground = true, ra = 0}))
 T.check(not mf.letdown and not mf.retard, "the A/P disengaged: NOSE LETDOWN and the retard end")
 T.check(mf.roll ~= "ROLLOUT", "the A/P disengaged: ROLLOUT ends")
+-- a nose-first touchdown with 6.7 ft of RA (LF4, 2026-11-02): LOC stays for
+-- ROLLOUT, which engages under 5 ft (before, the ground ended LOC and no
+-- roll mode was left for the rollout)
+local mn = landing_in()
+approach(mn, {ra = 54, gear_alt = 49, vs = -800})
+approach(mn, {ra = 25, gear_alt = 20, vs = -500})
+approach(mn, {ra = 6.7, gear_alt = 3, vs = -500, ground = true})
+T.check(mn.roll == "LOC" and mn.rollout_arm, "on the ground at 6.7 ft RA: LOC kept, ROLLOUT armed")
+T.check(mn.pitch == nil and mn.letdown, "FLARE off, NOSE LETDOWN")
+approach(mn, {ra = 3, gear_alt = 0, vs = -100, ground = true})
+T.equal(mn.roll, "ROLLOUT", "3 ft: ROLLOUT")
 -- a low sink rate flares lower: 6 ft/s at 45 ft not yet, 39 ft FLARE
 local ml = landing_in()
 approach(ml, {ra = 50, gear_alt = 45, vs = -360})
