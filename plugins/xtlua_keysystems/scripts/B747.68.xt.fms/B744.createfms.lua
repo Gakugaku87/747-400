@@ -218,7 +218,7 @@ local function pageKey(fmsModule,key)
       fmsO.targetCustomFMC=true
       if r=="LOGON" then fmsO.targetPage="ATCLOGONSTATUS"
       elseif r=="INDEX" then fmsO.targetPage="ATCINDEX"
-      elseif r=="LOG" then fmsO.targetPage="VIEWACARSLOG"
+      elseif r=="LOG" then fmsO.targetPage="ATCLOG"
       else
         acarsSystem.setCurrentMessage(fmsO.id,r)
         fmsO.targetPage="ATCUPLINK"

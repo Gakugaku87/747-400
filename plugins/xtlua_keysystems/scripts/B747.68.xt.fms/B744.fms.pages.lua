@@ -150,6 +150,8 @@ dofile("activepages/atc/B744.fms.pages.atclogonstatus.lua")
 -- (6-1/6-2 step 12f) XXXXZ ATC UPLINK, VERIFY RESPONSE, REJECT DUE TO
 dofile("activepages/atc/B744.fms.pages.atcuplink.lua")
 dofile("activepages/atc/B744.fms.pages.atcrejectdueto.lua")
+-- (step 12g1) the ATC LOG
+dofile("activepages/atc/B744.fms.pages.atclog.lua")
 dofile("activepages/atc/B744.fms.pages.emergency.lua")
 dofile("activepages/atc/B744.fms.pages.atcreport.lua")
 dofile("activepages/atc/B744.fms.pages.posreport.lua")

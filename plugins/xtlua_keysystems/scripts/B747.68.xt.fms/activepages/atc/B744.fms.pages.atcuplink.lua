@@ -72,7 +72,7 @@ fmsFunctionsDefs["ATCUPLINK"]={}
 fmsFunctionsDefs["ATCUPLINK"]["L4"]={"atcuplink","STANDBY"}
 fmsFunctionsDefs["ATCUPLINK"]["L5"]={"atcuplink","REJECT"}
 fmsFunctionsDefs["ATCUPLINK"]["R5"]={"atcuplink","ACCEPT"}
-fmsFunctionsDefs["ATCUPLINK"]["R6"]={"setpage","VIEWACARSLOG"}
+fmsFunctionsDefs["ATCUPLINK"]["R6"]={"setpage","ATCLOG"}
 -- STANDBY, REJECT, ACCEPT on the last page while a response is due
 function fmsFunctions.atcuplink(fmsO, value)
   local i = acarsSystem.getCurrentMessage(fmsO.id)

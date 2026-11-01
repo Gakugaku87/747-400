@@ -176,6 +176,49 @@ T.equal(line(9):sub(1, 8) ~= "<STANDBY" and "none" or "standby", "none", "no res
 key("func_key/next_pg")
 T.equal(line(9), "<STANDBY                ", "the last page: STANDBY")
 
+-- (step 12g1) the ATC LOG: newest first, the uplinks and the responses
+-- sent, the right key to an uplink, DELETE, ERASE LOG and CONFIRM
+key("ls_key/L6")
+key("func_key/crz")
+T.check(page("ATC LOG"), "the ATC key with several pending: ATC LOG")
+T.equal(line(1), "        ATC LOG         ", "the title")
+T.equal(line(3):sub(1, 19), "PROCEED DIRECT TO S", "the newest first: the long uplink")
+T.equal(line(3):sub(20, 24), "..  >", "cut with two periods, the caret")
+T.equal(small(2):sub(1, 6), " 1428Z", "its time")
+T.equal(small(2):sub(21, 24), "OPEN", "OPEN (its pages seen above)")
+T.equal(small(1):gsub("%s+$", ""), "                    1/2", "eleven entries over two pages")
+key("func_key/next_pg")
+local found = false
+for n = 3, 11, 2 do
+    if line(n):find("^WILCO") then found = n end
+end
+T.check(found, "the WILCO response sent: a downlink entry (FCOM p.765)")
+if found then T.equal(small(found - 1):sub(21, 24), "SENT", "SENT") end
+key("func_key/prev_pg")
+key("ls_key/R1")
+T.check(page("ATC UPLINK"), "the right key: the uplink's page")
+key("ls_key/R6")
+T.check(page("ATC LOG"), "LOG> back")
+local first = line(3)
+clear()
+rt:command(K .. "key/del")
+frames(0.1)
+key("ls_key/L1")
+T.check(line(3) ~= first, "DELETE on the left key: the entry gone")
+T.equal(line(13), "<INDEX        ERASE LOG>", "ERASE LOG>")
+key("ls_key/R6")
+T.equal(line(13), "<INDEX          CONFIRM>", "CONFIRM>")
+key("ls_key/L6")
+key("ls_key/L4")
+T.equal(line(13), "<INDEX        ERASE LOG>", "leaving the page: ERASE LOG again (FMSPG p.358)")
+key("ls_key/R6")
+key("ls_key/R6")
+local pend = 0
+for _, e in ipairs(fms.ns.B747_fms_atc_log_entries()) do
+    if not e.pending then pend = pend + 1 end
+end
+T.equal(pend, 0, "CONFIRM: every non-pending entry erased")
+T.equal(line(13), "<INDEX                  ", "nothing to erase: blank")
 -- ATC COMM ends: the pending ones ABORTED
 key("ls_key/L6")
 fms.ns.B747_fms_atc_off()
