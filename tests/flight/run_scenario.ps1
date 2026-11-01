@@ -177,8 +177,13 @@ if (-not $NoFlight) {
     $init | Add-Member -NotePropertyName aircraft -NotePropertyValue $aircraft -Force
     Write-Host "starting flight: $acfPath"
     $loadsBefore = Get-XPAircraftLoads
+    $startWatch = [Diagnostics.Stopwatch]::StartNew()
     $t = Start-XPFlight $init
-    $freshLoad = (Get-XPAircraftLoads) -gt $loadsBefore
+    # a load in Log.txt, or a start this slow: the 747's load takes 60-120 s
+    # and a flight on the loaded aircraft 10-15 s (2026-11-01: fresh loads
+    # with no new "Loading airplane" line, reloaded at once, the engines then
+    # off after the air start)
+    $freshLoad = ((Get-XPAircraftLoads) -gt $loadsBefore) -or ($startWatch.Elapsed.TotalSeconds -gt 45)
     Add-Result @{ do = 'flight' } 'info' ("flight running (sim time {0} s){1}" -f [math]::Round($t, 1), $(if ($freshLoad) { ', aircraft loaded' } else { '' }))
 }
 if ($spec.reload -eq $true -and -not $NoFlight) { $Reload = $true }
