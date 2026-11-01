@@ -3439,6 +3439,62 @@ end
 -- last frequencies without it)
 function B747_fms_master_ok() return fmcLink.ok[fmcIn.master] end
 end
+-- (6-1/6-2 step 12c2; notes/ATA-34-61-FMC.md §110) IRS MONITOR (FMSPG
+-- p.269; ATA34_2 p.682): each IRU's position error rate for the flight,
+-- NM/HR: the change of the IRU's position from the FMC's (X-Plane's
+-- position: the FMC's here) between the liftoff and the flight's
+-- completion, over the time between; shown about 45 s after the engines'
+-- shutdown (the completion's 30 s and 15 more), cleared in the air and
+-- when no FMC works (its power cycled: estimate). An IRU not navigating
+-- at either end: none (estimate)
+do
+  local IRS_MON_SHOW_S = 15
+  local liftT, liftOff = nil, nil
+  local monShow, monRates = nil, nil
+  local wasGround = nil
+  -- each IRU's position from the FMC's: {NM north, NM east}, or false
+  local function irs_offsets()
+    local out = {}
+    local k = math.cos(math.rad(simDR_latitude))
+    for i = 0, 2 do
+      if B747DR_nav_irs_nav_valid[i] > 0.5 then
+        out[i + 1] = {(B747DR_nav_irs_lat[i] - simDR_latitude) * 60,
+          ((B747DR_nav_irs_lon[i] - simDR_longitude + 540) % 360 - 180) * 60 * k}
+      else
+        out[i + 1] = false
+      end
+    end
+    return out
+  end
+  -- each frame: the liftoff
+  function B747_fms_irs_monitor_update()
+    local g = simDR_onGround == 1
+    if wasGround and not g then
+      liftT, liftOff = simDRTime, irs_offsets()
+      monShow, monRates = nil, nil
+    end
+    wasGround = g
+    if monRates and not B747_fms_any_fmc() then monShow, monRates = nil, nil end
+  end
+  -- the flight's completion
+  function B747_fms_irs_monitor_complete()
+    if not liftT then return end
+    local hrs = (simDRTime - liftT) / 3600
+    local now = irs_offsets()
+    local rates = {}
+    for i = 1, 3 do
+      local a, b = liftOff[i], now[i]
+      rates[i] = (a and b and hrs > 0) and math.sqrt((b[1] - a[1]) ^ 2 + (b[2] - a[2]) ^ 2) / hrs or false
+    end
+    monShow, monRates = simDRTime + IRS_MON_SHOW_S, rates
+    liftT, liftOff = nil, nil
+  end
+  -- the rates (NM/HR; false: none) once shown, else nil
+  function B747_fms_irs_monitor()
+    if monRates and simDRTime >= monShow then return monRates end
+    return nil
+  end
+end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after
 -- a flight (all four's N2 under the ENG FAIL speed: laminar/B747/engines/
@@ -3480,6 +3536,8 @@ function B747_fms_flight_complete()
   if B747DR_airspeed_VrefFlap~=0 then B747DR_airspeed_VrefFlap=0 end
   -- (step 12c1) TAKEOFF REF's defaults from PERF FACTORS again
   B747_fms_perf_to_take(true)
+  -- (step 12c2) IRS MONITOR's rates
+  B747_fms_irs_monitor_complete()
 end
 -- (6-1/6-2 step 11a; notes/ATA-34-61-FMC.md §90) the fuel monitoring
 -- (B747.68.fuel_model.lua): each frame the FQIS (X-Plane's total fuel:
@@ -4093,8 +4151,10 @@ function after_physics()
     B747_fmc_exec_lights()
     B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
     --print(B747DR_FMSdata)
-    -- (6-1/6-2 step 12c1) PERF FACTORS' factors and margin
+    -- (6-1/6-2 step 12c1) PERF FACTORS' factors and margin; (step 12c2)
+    -- IRS MONITOR's liftoff
     B747_fms_perf_factors_update()
+    B747_fms_irs_monitor_update()
     -- (6-1/6-2 step 12b) the automatic page changes (B744.createfms.lua)
     B747_cdu_page_changes(B747_fms_vnav_page())
     fmsL:B747_fms_display()
