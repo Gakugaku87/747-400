@@ -177,14 +177,37 @@ if (-not $NoFlight) {
     if ($spec.livery) { $aircraft.livery = $spec.livery }
     $init | Add-Member -NotePropertyName aircraft -NotePropertyValue $aircraft -Force
     Write-Host "starting flight: $acfPath"
+    # A fresh load: the aircraft's native plugin's option (0 or 1, from its
+    # preferences when it loads; a write does not save it) turned over
+    # before the start stays turned over on an aircraft not loaded again.
+    # Before, a load in Log.txt or a start slower than 45 s; 2026-11-02 a
+    # start slow for its scenery (161 s) was taken for a load and s213 ran
+    # the old code. Without the 747 loaded (no such dataref) the old rule.
+    $markRef = 'laminar/B747/options/auto_step_climb'
+    $markWas = $null
+    $mark = $null
+    try {
+        $markWas = [int](Get-XPDataref $markRef)
+        $mark = 1 - $markWas
+        Set-XPDataref $markRef $mark
+        if ([int](Get-XPDataref $markRef) -ne $mark) { $markWas = $null }
+    } catch { $markWas = $null }
     $loadsBefore = Get-XPAircraftLoads
     $startWatch = [Diagnostics.Stopwatch]::StartNew()
     $t = Start-XPFlight $init
-    # a load in Log.txt, or a start this slow: the 747's load takes 60-120 s
-    # and a flight on the loaded aircraft 10-15 s (2026-11-01: fresh loads
-    # with no new "Loading airplane" line, reloaded at once, the engines then
-    # off after the air start)
-    $freshLoad = ((Get-XPAircraftLoads) -gt $loadsBefore) -or ($startWatch.Elapsed.TotalSeconds -gt 45)
+    if ($null -ne $markWas) {
+        $script:XPDrefs.Remove($markRef)
+        $now = $null
+        try { $now = [int](Get-XPDataref $markRef) } catch { $now = $null }
+        $freshLoad = ($now -ne $mark) -or ((Get-XPAircraftLoads) -gt $loadsBefore)
+        if (-not $freshLoad) { Set-XPDataref $markRef $markWas }
+        if ($freshLoad) { $script:XPDrefs = @{}; $script:XPCmds = @{} }
+    } else {
+        # a load in Log.txt, or a start this slow: the 747's load takes
+        # 60-120 s and a flight on the loaded aircraft 10-15 s (2026-11-01:
+        # fresh loads with no new "Loading airplane" line)
+        $freshLoad = ((Get-XPAircraftLoads) -gt $loadsBefore) -or ($startWatch.Elapsed.TotalSeconds -gt 45)
+    }
     Add-Result @{ do = 'flight' } 'info' ("flight running (sim time {0} s){1}" -f [math]::Round($t, 1), $(if ($freshLoad) { ', aircraft loaded' } else { '' }))
 }
 if ($spec.reload -eq $true -and -not $NoFlight) { $Reload = $true }
