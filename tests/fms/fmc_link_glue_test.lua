@@ -95,8 +95,10 @@ key("fmsL", "func_key/index")
 T.check(page("fmsL", "MENU"), "INIT REF without an FMC: still MENU")
 key("fmsL", "func_key/legs")
 T.check(page("fmsL", "MENU"), "LEGS without an FMC: still MENU")
+frames(25)
+T.equal(rt:get(CAS, 144), 0, "26 s: no FMC LEFT yet")
 frames(5)
-T.equal(rt:get(CAS, 144), 1, "FMC LEFT on the EICAS after the delay (p.1275, p.1429)")
+T.equal(rt:get(CAS, 144), 1, "31 s: FMC LEFT on the EICAS (p.1275, p.1429; LH3460 p.116)")
 T.equal(rt:get(CAS, 146), 0, "no FMC RIGHT")
 
 -- CLR and <FMC: the right FMC, its last page

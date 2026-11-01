@@ -191,6 +191,14 @@ B747DR_fms_xp_current = find_dataref("laminar/B747/fms/xp/current")
 B747DR_fms_lnav_valid = find_dataref("laminar/B747/fms/lnav/valid")
 B747DR_fms_lnav_roll = find_dataref("laminar/B747/fms/lnav/roll")
 B747DR_fms_lnav_route = find_dataref("laminar/B747/fms/lnav/route")
+-- (6-1/6-2 step 11d2; notes/ATA-34-61-FMC.md §99) the FMCs working
+-- (B747.68.xt.fms.lua's update_fmc_link) and the FMC master selector (0 L,
+-- 1 R): the AFDS's LNAV and VNAV and the A/T are the master FMC's (ATA22
+-- p.202, p.206; ATA34_2 p.496)
+B747DR_ap_fmc_ok = find_dataref("laminar/B747/fms/fmc_ok")
+B747DR_ap_fmc_master_sel = find_dataref("laminar/B747/flt_inst/fmc_master_src/ctr_pnl/sel_dial_pos")
+local function fmc_master() return B747DR_ap_fmc_master_sel > 0.5 and 1 or 0 end
+local function fmc_master_ok() return B747DR_ap_fmc_ok[fmc_master()] > 0.5 end
 -- X-Plane's FMS's current entry (from 1): through the FMS bridge plugin when
 -- it is there (X-Plane's thread), else XTLua's currentFMSID (XTLua's own
 -- thread with no lock against X-Plane's: 6-1/6-2 step 5e)
@@ -988,6 +996,9 @@ local atIn = {}
 local atIas, atAccel = nil, 0
 local atPush = {spd = 0, thr = 0, disc = 0}
 local atSeen = {spd = 0, thr = 0, disc = 0, toga = nil}
+-- the FMC master selector and its FMC working last frame, and the master
+-- FMC's failure waiting for the ARM switch (step 11d2)
+local atMaster, atMasterOK, atFmcLatch = nil, false, false
 local function afds_at()
 	local i = atIn
 	i.arm = B747DR_ap_autothrottle_armed == 1
@@ -1004,7 +1015,16 @@ local function afds_at()
 	-- (the F/O transfer bus is FMC R's too: with it an FMC is powered)
 	local power = B747DR_at_bus_xfr_fo > 0.5
 		and (B747DR_afds_bus_dc[0] > 0.5 or B747DR_afds_bus_dc[1] > 0.5)
-	i.ok = run >= 3 and B747DR_autothrottle_fail == 0 and power
+	-- the master FMC's thrust management (6-1/6-2 step 11d2; ATA34_2 p.629,
+	-- p.633; FCOM p.666): its failure disconnects the A/T, which needs its
+	-- ARM switch off and on again with an FMC at work; the FMC master
+	-- selector turned disconnects it, again at once (FCOM p.1215)
+	local master, masterOK = fmc_master(), fmc_master_ok()
+	if atMasterOK and not masterOK then atFmcLatch = true end
+	if not i.arm and masterOK then atFmcLatch = false end
+	local turned = atMaster ~= nil and master ~= atMaster
+	atMaster, atMasterOK = master, masterOK
+	i.ok = run >= 3 and B747DR_autothrottle_fail == 0 and power and masterOK and not atFmcLatch and not turned
 	i.ground = simDR_onGround == 1
 	i.cas, i.ra = simDR_ind_airspeed_kts_pilot, simDR_radarAlt1
 	i.flaps_up = simDR_flap_ratio_control < 0.01
@@ -1106,7 +1126,10 @@ local function afds_inp()
 	afdsIn.hdg = simDR_ap_mag_psi
 	-- HDG SEL valid (step 2a): no heading in NORM's polar areas (FCOM p.1046)
 	afdsIn.hdg_valid = not (B747DR_ap_hdg_ref_true > 0.5 and B747DR_ap_toggle_sw[30] < 0.5)
-	afdsIn.lnav_valid = B747DR_fms_lnav_valid == 1
+	-- the master FMC's steering only (step 11d2): LNAV and VNAV fail with it
+	-- (the AFDS model's mode failures)
+	afdsIn.fmc_ok = fmc_master_ok()
+	afdsIn.lnav_valid = B747DR_fms_lnav_valid == 1 and afdsIn.fmc_ok
 	-- the autoland status's redundancy (step 4a), the engage interlocks
 	-- (step 5a: the FCCs' power after afds_power)
 	afdsIn.power = afds_power()
@@ -1146,7 +1169,8 @@ local function afds_inp()
 	-- VNAV engages from its arm above 400 ft (FCOM p.645) on the FMC's valid
 	-- (ATA22 p.341: FMC DATA VALID), stays while valid (step 9c; before,
 	-- the old VNAV's state)
-	afdsIn.vnav_engaged = B747DR_ap_fvn_valid == 1 and (afds.pitch == "VNAV" or (simDR_onGround == 0 and simDR_radarAlt1 > 400))
+	afdsIn.vnav_engaged = B747DR_ap_fvn_valid == 1 and (afds.pitch == "VNAV"
+		or (afdsIn.fmc_ok and simDR_onGround == 0 and simDR_radarAlt1 > 400))
 	afdsIn.vnav_fma = afds_old_vnav_fma()
 	if afds.pitch == "VNAV" then
 		-- VNAV lost (the FMC's valid gone): ALT HOLD at the altitude (ATA22

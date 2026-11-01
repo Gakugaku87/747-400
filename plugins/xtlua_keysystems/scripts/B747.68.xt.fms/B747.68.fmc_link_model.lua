@@ -16,12 +16,12 @@
 --    after the selected FMC's loss the CDUs wait for the selector). The
 --    MENU page has no <FMC without one (p.1275; ATA34_2 p.629).
 --  - SINGLE FMC OPERATION while one FMC works (p.1275, p.1434); FMC LEFT,
---    RIGHT on the EICAS after a delay (p.1275, p.1429).
+--    RIGHT on the EICAS 30 s after its failure (p.1275, p.1429; LH3460
+--    p.114, p.116: step 11d2, 5 s an estimate before).
 -- Estimates: the centre CDU on the right FMC while the left one fails; a
 -- CDU without power reconnects to its FMC by itself when both have power
 -- (no TIMEOUT - RESELECT: the MENU page at power-up, as before); SINGLE
--- FMC OPERATION on every connected CDU (FCOM: in flight on one); the
--- EICAS delay EICAS_DELAY_S.
+-- FMC OPERATION on every connected CDU (FCOM: in flight on one).
 --
 --   local M = B747_fmc_link_model          -- in XTLua, after dofile
 --   local s = M.new()
@@ -32,7 +32,7 @@ B747_fmc_link_model = M
 
 M.L, M.R = 1, 2
 M.CDUS = {"fmsL", "fmsC", "fmsR"}
-M.EICAS_DELAY_S = 5
+M.EICAS_DELAY_S = 30
 M.TIMEOUT = "TIMEOUT - RESELECT"
 
 function M.new()

@@ -46,11 +46,11 @@ T.check(out.single, "left FMC fails: SINGLE FMC OPERATION (FCOM p.1434)")
 T.check(not out.eicas[L], "left FMC fails: no FMC LEFT yet (the delay: FCOM p.1275)")
 out = M.update(s, i, 0.1)
 T.equal(lost(out), "", "lost once: the next frame nothing")
-for _ = 1, 47 do out = M.update(s, i, 0.1) end
-T.check(not out.eicas[L], "4.9 s: no FMC LEFT")
+for _ = 1, 297 do out = M.update(s, i, 0.1) end
+T.check(not out.eicas[L], "29.9 s: no FMC LEFT")
 out = M.update(s, i, 0.1)
 out = M.update(s, i, 0.1)
-T.check(out.eicas[L] and not out.eicas[R], "5.1 s: FMC LEFT on the EICAS (p.1429)")
+T.check(out.eicas[L] and not out.eicas[R], "30.1 s: FMC LEFT on the EICAS (p.1429; LH3460 p.116)")
 T.equal(M.available(s, "fmsL", i), R, "the ground: <FMC offers the right FMC")
 T.check(not M.linked(s, "fmsL"), "not connected before <FMC")
 

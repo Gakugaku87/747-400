@@ -1667,3 +1667,22 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - CDU（`B744.createfms.lua`）：切れた CDU は MENU と TIMEOUT - RESELECT（その FMC のページを <FMC のために覚える）、FMC の機能キーと EXEC は何もしない、FMC のメッセージは出さず自分の入力のメッセージだけ。MENU の 1 行目は、つながっていれば <FMC <ACT>、つなげる FMC があれば <FMC だけ、無ければ空白。<FMC はつないでから前の FMC のページへ。
 - 推定：中央の CDU は左 FMC が落ちている間は右 FMC、電源の無い CDU は FMC と電源がそろえば自分の FMC に自然につながる（電源投入は今までどおり MENU で、TIMEOUT - RESELECT は出さない）、SINGLE FMC OPERATION はつながっている全部の CDU に出す（FCOM は飛行中は 1 台）、EICAS の遅れ 5 秒、NAV ソース選択が CDU の位置なら CDU のいつもの FMC。CDU の FAIL 灯は 3D に無いので作らない。
 - 試験：新しい `fmc_link_model_test.lua`（59 件）と `fmc_link_glue_test.lua`（51 件：地上で左 FMC の故障、左と中央の CDU は MENU と TIMEOUT - RESELECT、<FMC に <ACT> なし、INIT REF・LEGS は効かない、右の CDU に SINGLE FMC OPERATION と >FMC MESSAGE、5 秒で FMC LEFT、<FMC で右 FMC の IDENT、左 FMC を戻すとメッセージが消え CDU はそのまま、機長の NAV ソース選択で左 FMC、飛行中の左（選択）FMC の故障で 3 台とも切れ <FMC が無く、FMC の選択を R にすると <FMC、電源を落として入れ直すと MENU でつながり TIMEOUT - RESELECT なし）。CDU を使う既存の 36 本に、CDU の電源と並べて FMC の母線の電源を入れた（入れないと FMC が動かず CDU が切れる）。全 157 本。X-Plane：新しい `s173_fmc_fail`：23/23（2026-11-01）。RJAA 34L の地上で左 FMC を故障させると、1 秒で左と中央の CDU が MENU と TIMEOUT - RESELECT、左の MENU は <ACT> の無い <FMC、右の CDU は IDENT のまま SINGLE FMC OPERATION、>FMC MESSAGE が出た（画像）。INIT REF では MENU のまま。故障から 5.3 秒で EICAS に FMC LEFT（画像）。CLR と <FMC で右 FMC の IDENT と SINGLE FMC OPERATION（画像）。左 FMC を戻すと FMC LEFT が消えて CDU は右 FMC のまま、機長の NAV ソース選択を FMC R から FMC L に回すと左 FMC につながった。Log.txt に Lua の誤りなし。
+
+## 99. 11d2 の段取りと 11d2a の実装（2026-11-01：master FMC の故障の AFDS・A/T・無線）
+
+- 段取り：11d2 を 11d2a（AFDS の LNAV・VNAV、A/T、無線の自動同調、FMC LEFT・RIGHT の遅れの訂正）と 11d2b（ND の VTK・MAP の旗と現用点の ETA・DTG。パネルの変更を含む）に分けた。
+- 資料：
+  - ATA22 p.202・p.206（三つの FCC は、FMC の選択で選んだ FMC の LNAV・VNAV を使う。選んだ方が落ちても、もう一方には切り替えない）、p.382（master FMC が LNAV・VNAV の間に落ちると、作動中のモードに線と AUTOPILOT の caution）、p.338（VNAV で MCP 高度にいて master FMC が落ちると ALT HOLD）。
+  - ATA34_2 p.633（master の左 FMC の故障の図）：両 PFD のロールとピッチの FMA がモード故障、A/T の FMA が空白、>A/T DISC、F/D バーが消える、VNAV は MCP 高度の近くなら ALT HOLD。FMC の選択を R にすると、LNAV と VNAV が普通に戻り、F/D バーも戻る。A/T DISC は残り、A/T のスイッチを切って入れると戻る。
+  - ATA34_2 p.629（FMC の故障で、A/T が engage なら >AUTOTHROT DISC）、p.496（FMC の選択が、FCC の操舵・A/T・無線の同調・EEC の調整の FMC を選ぶ）。FCOM p.666（両方の FMC が落ちると A/T は切れて戻らない。FMC の選択を回すと切れるが、戻せる）、p.1215（同じ）。
+  - ATA34_1 p.332・p.350（master FMC が落ちると VOR・ILS は最後の周波数のまま、選択を回すと自動同調が戻る）。
+  - LH3460 p.114・p.116（FMC LEFT・RIGHT の advisory は、FMC が内部の故障を見つけて 30 秒後）。
+- 作ったもの：
+  - AFDS（`B747.70.afds_model.lua` の `mode_failures`）：`inp.fmc_ok`（FMC の選択で選んだ FMC が動いている）が偽の間、LNAV と VNAV はモード故障（その時のバンクとピッチを保ち、FMA の線、AUTOPILOT、F/D バーを消す：段 5c の仕組み）。センサーの故障（新しいモードまで残る）と違い、FMC が戻れば新しいモードを選ばなくても LNAV と VNAV に戻る。VNAV で MCP 高度から 100 ft 内なら ALT HOLD。間にセンサーも落ちれば、新しいモードまで残る。
+  - つなぎ（`B747.70.xt.autopilot.lua`）：`fms/fmc_ok` と FMC の選択から master FMC の動作（`fmc_master_ok`）。LNAV の捕捉と、arm からの VNAV の engage は master FMC が動いているときだけ。
+  - A/T：連動条件に master FMC の動作を足した。master FMC の故障で切れて AUTOTHROT DISC、FMC が戻っても ARM スイッチを切って入れるまで engage しない。FMC の選択を回すと 1 フレームだけ条件を外して切る（すぐ戻せる）。
+  - 無線：master FMC が動いていない間は自動同調（`update_tuning`）を止め、周波数を保つ。
+  - FMC LEFT・RIGHT の遅れを、5 秒（11d1 の推定）から 30 秒（LH3460 p.116）に直した。
+- 推定：MCP 高度の「近く」を 100 ft にした。A/T の ARM スイッチの入れ直しは、故障の時に engage していなくても要るとした。
+- 作らないもの：EEC の調整（PW は資料に無い）、FCC の自前の最小・最大速度（FCOM p.675）。PFD の NO V SPD・SPD LIM は両方の故障（11e）で扱う。
+- 試験：`afds_model_test.lua`（+11 件：LNAV と VNAV の故障と戻り、バンクとピッチの保持、HDG SEL で解ける、MCP 高度で ALT HOLD、間に IRU が落ちれば残る）、`afds_glue_test.lua`（+12 件：LNAV の故障と R での戻り、A/T の切断と ARM の入れ直し、選択を回しての切断）。自動操縦のモジュールだけを読む `afds_glue_test.lua` に FMC の動作を入れた。`fmc_link_model_test.lua`・`fmc_link_glue_test.lua`・`s173_fmc_fail` の遅れを 30 秒に。全 157 本。X-Plane：新しい `s174_fmc_master_fail`：26/26（2026-11-01、2 回目。1 回目も 26/26 だったが、視点が ND で PFD が写っていなかったので撮り直した）。成田の北の 3,100 ft で、LNAV・VNAV SPD・A/T（THR REF）の上昇中に左 FMC を故障させると、1 秒で LNAV と VNAV SPD に琥珀の線、A/T の FMA が空白、F/D バーが消え（画像）、>AUTOPILOT と >AUTOTHROT DISC、3 台の CDU に TIMEOUT - RESELECT、右の MENU に <FMC なし。故障から約 32 秒で FMC LEFT。FMC の選択を R にすると線が消えて LNAV と VNAV SPD のまま、A/T は切れたまま。ARM スイッチを切って入れると THR REF で戻り、F/D バーも戻った（画像）。右の CDU の <FMC で右 FMC につながり SINGLE FMC OPERATION。Log.txt に Lua の誤りなし。
