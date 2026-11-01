@@ -1686,3 +1686,18 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 推定：MCP 高度の「近く」を 100 ft にした。A/T の ARM スイッチの入れ直しは、故障の時に engage していなくても要るとした。
 - 作らないもの：EEC の調整（PW は資料に無い）、FCC の自前の最小・最大速度（FCOM p.675）。PFD の NO V SPD・SPD LIM は両方の故障（11e）で扱う。
 - 試験：`afds_model_test.lua`（+11 件：LNAV と VNAV の故障と戻り、バンクとピッチの保持、HDG SEL で解ける、MCP 高度で ALT HOLD、間に IRU が落ちれば残る）、`afds_glue_test.lua`（+12 件：LNAV の故障と R での戻り、A/T の切断と ARM の入れ直し、選択を回しての切断）。自動操縦のモジュールだけを読む `afds_glue_test.lua` に FMC の動作を入れた。`fmc_link_model_test.lua`・`fmc_link_glue_test.lua`・`s173_fmc_fail` の遅れを 30 秒に。全 157 本。X-Plane：新しい `s174_fmc_master_fail`：26/26（2026-11-01、2 回目。1 回目も 26/26 だったが、視点が ND で PFD が写っていなかったので撮り直した）。成田の北の 3,100 ft で、LNAV・VNAV SPD・A/T（THR REF）の上昇中に左 FMC を故障させると、1 秒で LNAV と VNAV SPD に琥珀の線、A/T の FMA が空白、F/D バーが消え（画像）、>AUTOPILOT と >AUTOTHROT DISC、3 台の CDU に TIMEOUT - RESELECT、右の MENU に <FMC なし。故障から約 32 秒で FMC LEFT。FMC の選択を R にすると線が消えて LNAV と VNAV SPD のまま、A/T は切れたまま。ARM スイッチを切って入れると THR REF で戻り、F/D バーも戻った（画像）。右の CDU の <FMC で右 FMC につながり SINGLE FMC OPERATION。Log.txt に Lua の誤りなし。
+
+## 100. 11d2b の実装（2026-11-01：FMC の故障の ND の旗）
+
+- 資料：
+  - ATA34_2 p.630（FMC の故障で、ND の VTK 旗はすぐ、MAP 旗は 30 秒後）。
+  - ATA34_2 p.633（master の左 FMC の故障の図）：機長の ND（NAV ソース選択が左 FMC）に VTK 旗、現用点の ETA と DTG が消える。再同期に 35 秒で失敗すると MAP 旗。NAV ソース選択を右 FMC にすると普通の表示。
+  - LH3460 p.114（ND の MAP・VTK 旗は 30 秒後）、FCOM p.1422（NAV ソース選択を動いている FMC に回すと CDU と ND が戻る）、p.1033–1034（MAP 旗は MAP と PLAN、VTK は MAP モード）。
+- 作ったもの：
+  - ND のモデル（`B747.60.nd_model.lua`）：各側の入力に `fmc_ok`（NAV ソース選択で選んだ FMC が動いている。CDU の位置なら真）。落ちていれば、VTK 旗はすぐ（MAP モード）、MAP 旗は 30 秒後（MAP と PLAN）、現用点の ETA と距離（`wpt_data`）を消す。動いている FMC に回すとすぐ戻る。
+  - つなぎ（`B747.60.xt.displays.lua`）：`fms/fmc_ok` と NAV ソース選択から各側の `fmc_ok`。新設の `nd/capt/wpt_data`・`nd/fo/wpt_data`（init `B747.60.fltInst`）。
+  - パネル（カスタム acf）：両 ND の現用点の ETA と距離を、`wpt_data` の入れ子のグループに入れた（ACF_DIFF.md §5）。
+  - FMS は `update_fmc_link` を systems の warm-up の前から回す（読み込みの直後から `fmc_ok` を出して、旗が一瞬出ないように）。
+- 推定：現用点の ETA と距離は、FMC の位置（IRU の NAV）が無いときも消す。MAP 旗の 30 秒は、再同期を作るまで（11d3）は故障からの時間。
+- 作らないもの：MAP 旗の後の経路や点の消去（X-Plane の地図の層は気象レーダーや TFC と一緒なので、FMC の分だけは消せない）。両方の故障の CDU の地図（11e）。
+- 試験：`nd_model_test.lua`（+9 件）、`display_module_test.lua`（+9 件。FMC の動作を入れた）。全 157 本。X-Plane：新しい `s175_nd_fmc_fail`：17/17（2026-11-01、X-Plane を立ち上げ直した後の 2 便目。1 便目の s128 は捨て、5/5）。成田の北の 3,000 ft で XAC へ DIRECT の後、機長の ND（MAP、FMC L）の右上に XAC・0116.7Z・86.9NM。左 FMC を故障させると、1 秒で VTK 旗が出て ETA と距離が消え（XAC は残る）、副操縦士の ND（FMC R）はそのまま。故障から約 32 秒で MAP 旗（画像）。機長の NAV ソース選択を FMC R にすると、旗が消えて ETA と距離が戻り（0116.2Z・89.2NM）、左の CDU も右 FMC につながった。Log.txt に Lua とパネルの誤りなし。

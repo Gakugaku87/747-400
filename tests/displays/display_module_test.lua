@@ -22,6 +22,10 @@ local FI, D = "laminar/B747/flt_inst/", "laminar/B747/flt_inst/display/"
 local POWER = "laminar/B747/electrical/display_has_power"
 local BUS = "laminar/B747/electrical/bus/"
 for _, b in ipairs({"stby_apu", "stby_main", "xfr_capt", "xfr_fo", "any_ac"}) do rt:set(BUS .. b, 1) end
+-- (6-1/6-2 step 11d2b: the FMCs working, the NDs' map data)
+local FMC_OK = "laminar/B747/fms/fmc_ok"
+rt:set(FMC_OK, 0, 1)
+rt:set(FMC_OK, 1, 1)
 local function selectors(ci, cl, fi, fl)
     rt:set(FI .. "capt_inbd_display/sel_dial_pos", ci)
     rt:set(FI .. "capt_lwr_display/sel_dial_pos", cl)
@@ -426,6 +430,28 @@ T.equal(rt:get(NDP .. "capt/trk_flag"), 1, "no track either: TRK")
 T.equal(rt:get(NDP .. "capt/rose"), 0, "no rose")
 T.equal(rt:get(NDP .. "fo/hdg_flag"), 0, "the F/O's VOR: the heading still good (IRU R in ATT)")
 for i = 0, 2 do rt:set(IRS .. "nav_valid", i, 1) end
+-- (6-1/6-2 step 11d2b) the FMC the NAV source selector selects: the
+-- Captain's at FMC L failed: VTK at once, the ETA and distance gone, MAP
+-- after 30 s; the F/O's (FMC R) unchanged; the selector at FMC R: normal
+rt:set(FI .. "nav_src/capt/sel_dial_pos", 0)                       -- FMC L
+frames(0.1)
+T.equal(rt:get(NDP .. "capt/vtk_flag") + rt:get(NDP .. "capt/map_flag"), 0, "(FMC L working: no VTK or MAP flag)")
+T.equal(rt:get(NDP .. "capt/wpt_data"), 1, "the ETA and distance shown")
+rt:set(FMC_OK, 0, 0)
+frames(0.1)
+T.equal(rt:get(NDP .. "capt/vtk_flag"), 1, "FMC L failed: the VTK flag at once (ATA34_2 p.630)")
+T.equal(rt:get(NDP .. "capt/wpt_data"), 0, "the ETA and distance gone (ATA34_2 p.633)")
+T.equal(rt:get(NDP .. "capt/map_flag"), 0, "no MAP flag yet")
+T.equal(rt:get(NDP .. "fo/wpt_data"), 1, "the F/O's ND on FMC R: its ETA and distance")
+frames(30)
+T.equal(rt:get(NDP .. "capt/map_flag"), 1, "30 s: the MAP flag (LH3460 p.114)")
+rt:set(FI .. "nav_src/capt/sel_dial_pos", 1)                       -- FMC R
+frames(0.1)
+T.equal(rt:get(NDP .. "capt/vtk_flag") + rt:get(NDP .. "capt/map_flag"), 0, "the selector at FMC R: normal (FCOM p.1422)")
+T.equal(rt:get(NDP .. "capt/wpt_data"), 1, "the ETA and distance again")
+rt:set(FMC_OK, 0, 1)
+rt:set(FI .. "nav_src/capt/sel_dial_pos", 2)                       -- CDU L again
+frames(0.1)
 rt:set(NDP .. "mode/capt/sel_dial_pos", 3)                         -- PLN
 frames(0.1)
 T.equal(rt:get("sim/cockpit2/EFIS/map_mode"), 4, "PLN: X-Plane's 4")

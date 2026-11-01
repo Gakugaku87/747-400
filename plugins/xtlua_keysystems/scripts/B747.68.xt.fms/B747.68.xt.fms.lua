@@ -3727,6 +3727,9 @@ function after_physics()
 	do_flight_start()
 	end
 	flightInit=true
+  -- the FMCs from the start (6-1/6-2 step 11d2b: fmc_ok for the NDs and the
+  -- AFDS before the systems' warm-up)
+  update_fmc_link()
   if systemsWarmedUp==false and simDR_startup_running == 1 and is_timer_scheduled(alignIRSs) == false then 
 	run_after_time(alignIRSs,1)
 	return
@@ -3747,7 +3750,6 @@ function after_physics()
 	local cM=hh
 	cM=mm
 	cM=ss
-    update_fmc_link()
     setNotifications()
     update_spd_trans()
     update_perf()

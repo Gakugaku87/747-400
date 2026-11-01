@@ -314,6 +314,10 @@ B747DR_nd_trk_flag_fo                           = deferred_dataref("laminar/B747
 B747DR_nd_hdg_flag_fo                           = deferred_dataref("laminar/B747/nd/fo/hdg_flag", "number")
 B747DR_nd_map_flag_fo                           = deferred_dataref("laminar/B747/nd/fo/map_flag", "number")
 B747DR_nd_vtk_flag_fo                           = deferred_dataref("laminar/B747/nd/fo/vtk_flag", "number")
+-- 6-1/6-2 step 11d2b: the active waypoint's ETA and distance shown (1; the
+-- FMC the NAV source selector selects working: B747.60.xt.displays.lua)
+B747DR_nd_wpt_data_capt                         = deferred_dataref("laminar/B747/nd/capt/wpt_data", "number")
+B747DR_nd_wpt_data_fo                           = deferred_dataref("laminar/B747/nd/fo/wpt_data", "number")
 B747DR_nd_hdg_ptr_fo                            = deferred_dataref("laminar/B747/nd/fo/hdg_ptr", "number")
 B747DR_nd_hdg_ptr_pln_fo                        = deferred_dataref("laminar/B747/nd/fo/hdg_ptr_pln", "number")
 B747DR_nd_hdg_bug_fo                            = deferred_dataref("laminar/B747/nd/fo/hdg_bug", "number")

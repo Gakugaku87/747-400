@@ -360,6 +360,11 @@ B747DR_dsp_nd_hdg_ptr_fo        = find_dataref("laminar/B747/nd/fo/hdg_ptr")
 B747DR_dsp_nd_hdg_ptr_pln_fo    = find_dataref("laminar/B747/nd/fo/hdg_ptr_pln")
 B747DR_dsp_nd_hdg_bug_fo        = find_dataref("laminar/B747/nd/fo/hdg_bug")
 B747DR_dsp_nd_hdg_line_fo       = find_dataref("laminar/B747/nd/fo/hdg_line")
+-- (6-1/6-2 step 11d2b) the FMCs working, and the active waypoint's ETA and
+-- distance shown on each ND (the panel's groups)
+B747DR_dsp_fmc_ok               = find_dataref("laminar/B747/fms/fmc_ok")
+B747DR_dsp_nd_wpt_data_capt     = find_dataref("laminar/B747/nd/capt/wpt_data")
+B747DR_dsp_nd_wpt_data_fo       = find_dataref("laminar/B747/nd/fo/wpt_data")
 B747DR_dsp_nd_wind_fo           = find_dataref("laminar/B747/nd/fo/wind")
 B747DR_dsp_nd_wind_deg_fo       = find_dataref("laminar/B747/nd/fo/wind_deg")
 B747DR_dsp_nd_trk_line_capt     = find_dataref("laminar/B747/nd/capt/trk_line")
@@ -719,6 +724,12 @@ local function nd_sources(c, f, nav_valid)
     inp.gps_ok = B747DR_dsp_gps_valid[0] > 0.5 or B747DR_dsp_gps_valid[1] > 0.5
     inp.vor_dme_nm[1], inp.vor_dme_nm[2] = simDR_dsp_nav_dme_nm[VOR_IDX[1]], simDR_dsp_nav_dme_nm[VOR_IDX[2]]
     inp.map_valid = nav_valid[1] or nav_valid[2] or nav_valid[3]
+    -- (6-1/6-2 step 11d2b) each side's FMC by its NAV source selector
+    -- working (B747.68.xt.fms.lua's fms/fmc_ok; at a CDU position true)
+    local fc = knob(B747DR_flt_inst_nav_src_capt_dial_pos, NAV_CAPT)
+    local ff = knob(B747DR_flt_inst_nav_src_fo_dial_pos, NAV_FO)
+    inp.side[NM.CAPT].fmc_ok = fc == 0 or B747DR_dsp_fmc_ok[fc - 1] > 0.5
+    inp.side[NM.FO].fmc_ok = ff == 0 or B747DR_dsp_fmc_ok[ff - 1] > 0.5
     inp.wind_from = HR.heading(simDR_dsp_wind_from, hr_mag_diff, hr_ref)
     inp.hdg_sel = B747DR_dsp_hdg_sel
     inp.roll_mode = B747DR_dsp_fma_roll
@@ -772,6 +783,10 @@ local function nd_sources(c, f, nav_valid)
     if B747DR_dsp_nd_map_flag_fo ~= v then B747DR_dsp_nd_map_flag_fo = v end
     v = of.vtk_flag and 1 or 0
     if B747DR_dsp_nd_vtk_flag_fo ~= v then B747DR_dsp_nd_vtk_flag_fo = v end
+    v = oc.wpt_data and 1 or 0
+    if B747DR_dsp_nd_wpt_data_capt ~= v then B747DR_dsp_nd_wpt_data_capt = v end
+    v = of.wpt_data and 1 or 0
+    if B747DR_dsp_nd_wpt_data_fo ~= v then B747DR_dsp_nd_wpt_data_fo = v end
     v = of.hdg_ptr and 1 or 0
     if B747DR_dsp_nd_hdg_ptr_fo ~= v then B747DR_dsp_nd_hdg_ptr_fo = v end
     v = of.hdg_ptr_pln and 1 or 0
