@@ -30,6 +30,7 @@ rt:set("sim/flightmodel/weight/m_fuel_total", 80000)
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 100)
 rt:set("sim/cockpit2/electrical/bus_volts", 0, 28)
 for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
+for _, b in ipairs({"xfr_capt", "xfr_fo", "stby_apu"}) do rt:set("laminar/B747/electrical/bus/" .. b, 1) end -- the FMCs' power
 for i = 0, 2 do
     rt:set("laminar/B747/irs/nav_valid", i, 1)
     rt:set("laminar/B747/irs/lat", i, 35)
