@@ -86,6 +86,18 @@ B747_afds_pitch_model = M
 -- g, ATA22 p.286, for all: estimate)
 M.K_PATH = 0.25
 M.G_LIMIT = 0.05
+-- (2026-11-02) the path laws' K_PATH falls above PATH_HI_KT as
+-- (PATH_HI_KT / IAS) ^ PATH_HI_POW (0.61 at 334 kt, 0.45 at 365 kt;
+-- estimate): at FL250 and 334 KIAS the line flights' altitude hold swung
+-- every 9.6 s by 140 fpm and 0.95 to 1.05 g after each turn, the command
+-- at the G_LIMIT rate; in X-Plane 0.6 of K_PATH there held within 2 fpm
+-- after the same turn, while the attitude loop's gains lower made it worse
+-- (notes/ATA-22.md §44). The speed laws climbed steadily at 340 kt
+M.PATH_HI_KT, M.PATH_HI_POW = 290, 3.5
+function M.path_gain(ias)
+    if ias and ias > M.PATH_HI_KT then return (M.PATH_HI_KT / ias) ^ M.PATH_HI_POW end
+    return 1
+end
 -- ALT: the altitude error's vertical speed, K_ALT of the error a second
 -- (estimate), at most the capture's level-off
 M.K_ALT = 0.1
@@ -491,7 +503,7 @@ function M.update(s, inp, dt)
             want = beam - clamp(M.GS_K * s.gs_d, -M.GS_VS_MAX, M.GS_VS_MAX)
         end
         local flown = inp.vs + (s.vs_rate or 0) * (law == "FLARE" and M.FLARE_LEAD_S or M.LEAD_S)
-        rate = (law == "FLARE" and M.K_FLARE or M.K_PATH) * (path(want, v) - path(flown, v)) + ff
+        rate = (law == "FLARE" and M.K_FLARE or M.K_PATH * M.path_gain(inp.ias)) * (path(want, v) - path(flown, v)) + ff
         if law == "FLARE" and (inp.gear_alt or 0) < M.FLARE_HOLD_FT then
             rate = math.min(rate, 0)
             if -flown / 60 < M.TD_SINK then

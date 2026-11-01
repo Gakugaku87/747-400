@@ -35,7 +35,7 @@
   - xt スクリプトの `deferred_dataref` は `find_dataref` と同じ → init スクリプトで作っていないと存在しない。
   - メタテーブルの無い global テーブルの、無い添字を読むとスタックが溢れる。
   - チャンクをまたいで local は見えない。XTLua 独自の `dofile` の戻り値。1 回だけのコマンドには phase 2 が来ない。
-  - Web API で XTLua の double 型 dataref に小数を書くと HTTP 400 になる。
+  - Web API で XTLua の double 型 dataref に小数を書くと HTTP 400 になる（incompatible_data。float の配列の要素も、配列ごとも同じ。整数は書ける：2026-11-02）。走行中に小数の値を試すときは、百分率などの整数で書いてコードで割るか、FlyWithLua で書く。
   - `run_after_time` のタイマーは、関数を呼んだ後で止まる（XTLua の `xptimers.cpp`：繰り返しの無いタイマーは、関数の後で次の時刻を消す）。関数の中で自分を `run_after_time` し直しても、二度と走らない。繰り返すなら `run_at_interval`（初めの遅れが別なら `run_timer(f, 遅れ, 間隔)`）で回し、終わりに自分で `stop_timer`（関数の中でも効く）。X-Plane なしの試験（`tests/lib/xtlua.lua`）も 2026-11-01 から同じにした。前は呼ぶ前に外していたので予約し直しが効いて見え、FMS の空中開始の待ち（F/D と CMD L の押し直し）が X-Plane では 1 回しか走らないのを見逃した。
   - X-Plane の dataref に、前に書いたのと同じ値を書いても X-Plane には渡らない。X-Plane が値を変えた後は、そのモジュールが読み直すまで直らない（XTLua の xpmtdatarefs.cpp：書くとキャッシュと比べ、違うときだけ次のフレームで 1 回渡す。読むと次のフレームで X-Plane から読み直す。2026-10-23 に、Web API で cross tie を書き換えると、毎フレーム書いている電源のグルーが元に戻さないことを確かめた）→ X-Plane の dataref は毎フレーム読んで、違うときだけ書く。X-Plane なしの試験（`tests/lib/xtlua.lua`）はこれを再現しない。
 
