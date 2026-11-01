@@ -1,0 +1,36 @@
+{
+  "name": "s191_menu_acars",
+  "description": "6-1・6-2 段 12d2（MENU の <ACARS と ACARS の小さな直し）の X-Plane での確認、地上。RJAA 34L でエンジン運転中に始める（機体を読み直す）。AutoATC の無いこの PC でも MENU に <ACARS が出る（FCOM p.1323。前はつながっていて中央の RTP が ON のときだけ）、未読が無いので <REQ> は無い。<ACARS で ACARS-MAIN MENU、<POSTFLIGHT の 1L（前は小文字の l1 でキーが効かなかった）で ATC LOGON/STATUS。CDU を撮る。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10 },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "cdu", "note": "MENU", "keys": ["MENU"] },
+    { "do": "check", "note": "MENU", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "MENU" },
+    { "do": "check", "note": "<ACARS が出る（未読なしで <REQ> なし）", "dref": "laminar/B747/fms3/Line05_L", "op": "matches", "value": "^<ACARS {7}" },
+    { "do": "view", "note": "左の CDU", "the": -34, "psi": 24, "fov": 18 },
+    { "do": "shot", "name": "cdu_menu_acars" },
+    { "do": "cdu", "note": "<ACARS", "keys": ["L2"] },
+    { "do": "check", "note": "ACARS-MAIN MENU", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "ACARS-MAIN MENU" },
+    { "do": "cdu", "note": "<POSTFLIGHT、1L", "keys": ["L3", "L1"] },
+    { "do": "check", "note": "POSTFLIGHT の 1L で ATC LOGON/STATUS", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "LOGON" },
+    { "do": "shot", "name": "cdu_logon_status" },
+    { "do": "cdu", "note": "MENU、<FMC に戻す", "keys": ["MENU", "L1"] },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" }
+  ]
+}

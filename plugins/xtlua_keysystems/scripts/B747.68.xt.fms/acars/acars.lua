@@ -168,7 +168,7 @@ function fmsFunctions.acarsSystemSend(fmsO,value)
     if string.len(msgToSend) <5 then fmsO["notify"]="EMPTY MESSAGE" return end
     
     
-    acarsSystem.provider.sendCompany(json.encode(tMSG))
+    acarsSystem.provider.sendCompany(json.encode(tMSG),fmsO)
     fmsO["targetCustomFMC"]=true
     run_after_time(switchCustomMode, 0.5)
     --fmsO["currentPage"]="ACARS" 

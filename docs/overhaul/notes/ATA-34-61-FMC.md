@@ -1881,3 +1881,15 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - 音（`fmod/747-400_custom.snd` と手元の `747-400.snd`、同じ内容）：`atc_chime` が 1 で操縦室のチャイム（`Warnings/ding_cockpit`、外部電源などと同じ音）を鳴らす。変更の前のバックアップは `D:\747-400-local-assets\backup_20261101_atc_chime\`。
 - 推定：チャイムの音（資料は「低い音のチャイム」だけ）。>DATALINK LOST を一度つながった後の喪失に限った（つながる前の起動直後や、AutoATC の無い X-Plane で常に出ないように。FCOM は「通信の喪失で使えない」とだけ書く）。>DATALINK AVAIL の 60 秒。>DATALINK SYS は出さない（ACARS の故障の模型が無い）。
 - 試験：新しい `tests/fms/datalink_eicas_test.lua`（22 件：AutoATC の dataref を模す。一度もつながっていなければ >DATALINK LOST なし、ACARS NO COMM はいつも 0。570 の未読の ATC のアップリンクで ATC MESSAGE とチャイム（1 秒）、ACARS MESSAGE は出ない、会社の ACARS で ACARS MESSAGE（チャイムなし）、読むと消える。109 は ATC のメッセージも ACARS MESSAGE で ATC MESSAGE とチャイムなし。つながってから切れると >DATALINK LOST、戻ると消えて >DATALINK AVAIL が 60 秒）。全 169 本。X-Plane：新しい `s190_datalink_eicas` 7/7（2026-11-01、X-Plane を起動し直した後の 4 便目。AutoATC の無いこの PC で、中央の RTP が ON でも ACARS NO COMM が出ない、>DATALINK LOST・AVAIL、ACARS MESSAGE、ATC MESSAGE、チャイムはどれも 0。上の EICAS の写真でもメモは PARK BRAKE SET だけ）。Log.txt に Lua と音の誤りなし。AutoATC が無いので、つながる側（ATC MESSAGE、チャイムの音、>DATALINK の advisory）は X-Plane で確かめていない。
+
+## 112. 12d2 の実装（2026-11-01：MENU の <ACARS と ACARS の小さな直し）と段取りの直し
+
+- 段取りの直し：12d2 に予定した残りは、作り直すページと一緒にやる方が二度手間にならないので移した。送信文を CDU ごとに（CDU-34）は、REQUEST・REPORT・EMERGENCY・POS REPORT のページを作り直す 12g へ。VERIFY TAIL NUMBER（LOGON/STATUS の TAIL NO）は 12e へ。CDU-42 のうち FMC COMM 2/2 の 1L と、AutoATC の接続中に ACP の MIC の選択を書き換える件は、会社のデータリンクの 12h へ。
+- 資料：FCOM p.1323（MENU の <ACARS <REQ>：条件の印は無い）。
+- 前のコード：MENU の <ACARS（と <REQ>）は ACARS がつながっていて中央の RTP が ON のときだけ出て、L2 もそのときだけ効いた（AutoATC の無いこの PC では出なかった）。POSTFLIGHT の LOGON のキーの名前が小文字の "l1" で、1L が効かなかった。AutoATC の `sendCompany` は未定義の大域の `fmsO` を使い、FLT NO などが無いと Lua の誤りになっていた。
+- 作ったもの：
+  - MENU（`B744.fms.pages.lua`）：<ACARS をいつも出し、L2 で ACARS のページ。<REQ> は未読の会社の ACARS のメッセージがあるとき（12d1 の ACARS MESSAGE のメモと同じ条件：`B747_fms_acars_unread`）。
+  - POSTFLIGHT（`acars/acars.pages.lua`）：LOGON のキーを "L1" に。
+  - `sendCompany`（`acars/autoatcProvider.lua`）：送る CDU を引数で受ける（`acars/acars.lua` の `acarsSystemSend` が渡す）。
+- 推定：<REQ> の条件（FCOM は図に出すだけ）。
+- 試験：`tests/fms/datalink_eicas_test.lua` に 8 件（MENU の <ACARS がつながっていなくても出る、未読の ACARS で <REQ>、読むと消える、<ACARS で ACARS-MAIN MENU、POSTFLIGHT の 1L で LOGON/STATUS、FLT NO の無い送信で誤りにならず NOT SET のメッセージ）。全 169 本。X-Plane：新しい `s191_menu_acars` 4/4（2026-11-01、X-Plane を起動し直した後の 5 便目。MENU に <ACARS で <REQ> なし、<ACARS で ACARS-MAIN MENU、POSTFLIGHT の 1L で ATC LOGON/STATUS。CDU の写真 2 枚）。Log.txt に Lua の誤りなし。
