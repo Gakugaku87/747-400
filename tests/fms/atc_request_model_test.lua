@@ -211,4 +211,28 @@ for _, e in ipairs(Q.elements(r)) do order[#order + 1] = e.text end
 T.equal(table.concat(order, "|"), "REQUEST ROUTE CLEARANCE RJAA RJBB|REQUEST SXC5.VAMPS", "the route, then the procedure")
 Q.delete(r, "proc")
 T.equal(r.proc, nil, "DEP/ARR deleted")
+
+-- (step 12g3a) WHEN CAN WE EXPECT (FCOM p.769-770; FMSPG p.319-323)
+local w = Q.new("WCW")
+T.equal(Q.enter(w, "wcw_clb", "FL370", 35000), nil, "CLIMB TO")
+T.check(not Q.can(w, "wcw_crz") and not Q.can(w, "wcw_des") and not Q.can(w, "wcw_higher")
+    and not Q.can(w, "wcw_lower"), "one vertical query: the others blank (FMSPG p.320-322)")
+T.equal(Q.enter(w, "wcw_des", "FL300", 35000), Q.INVALID, "another one: invalid")
+T.equal(Q.enter(w, "wcw_clb", "FL350/FL370", 35000), Q.INVALID, "no block (FCOM p.769)")
+T.equal(Q.enter(w, "wcw_spd", ".84", 35000), nil, "SPEED")
+T.equal(Q.select(w, "wcw_back"), nil, "BACK ON RTE")
+local wt = {}
+for _, e in ipairs(Q.elements(w)) do wt[#wt + 1] = e.text end
+T.equal(table.concat(wt, "|"), "WHEN CAN WE EXPECT CLIMB TO FL370|WHEN CAN WE EXPECT .84|WHEN CAN WE EXPECT BACK ON ROUTE",
+    "the queries (FMSPG p.319)")
+rows = Q.verify_rows(w, true)
+T.equal(rows[1].head .. "|" .. rows[2].head .. "=" .. rows[2].data, "WHEN CAN WE EXPECT|CLIMB TO=FL370", "its lines")
+T.equal(rows[3].head .. "=" .. rows[3].data, "/WHEN CAN WE EXPECT=.84", "the speed's")
+Q.delete(w, "wcw_clb")
+T.check(Q.can(w, "wcw_higher") and Q.can(w, "wcw_crz"), "deleted: the others back")
+Q.select(w, "wcw_higher")
+T.equal(Q.elements(w)[1].text, "WHEN CAN WE EXPECT HIGHER ALTITUDE", "HIGHER ALTITUDE")
+T.check(Q.any(w), "something: ERASE WHEN CAN WE (FMSPG p.322)")
+Q.erase(w)
+T.check(not Q.any(w) and w.kind == "WCW", "ERASE WHEN CAN WE")
 T.done()

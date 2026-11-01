@@ -20,7 +20,10 @@
 --             CLEARANCE with the route, the FMS's text of it), DEP/ARR (a
 --             procedure, with its transition: REQUEST [procedure name]);
 -- no more than five elements (MSG LIMIT EXCEEDED: FMSPG p.298); the
--- CLEARANCE and VOICE requests of ATC INDEX (FMSPG p.298-300). A position
+-- CLEARANCE and VOICE requests of ATC INDEX (FMSPG p.298-300); (step 12g3a)
+-- WHEN CAN WE EXPECT's (kind "WCW": FCOM p.769-770; FMSPG p.319-323): CRZ
+-- CLB TO, CLIMB TO, DESCENT TO (an altitude, no block), HIGHER ALT, LOWER
+-- ALT (one of these five), SPEED, BACK ON RTE. A position
 -- is checked by the FMS (B747_fmc_with_fix) and set here by its name.
 -- VERIFY REQUEST's rows: each element's lines, the fixed words small in
 -- the header and the values large (FCOM p.744; FMSPG p.299-300, p.324),
@@ -47,7 +50,8 @@ M.MAX_FL = 451            -- the maximum certified altitude, 45,100 ft (FCOM p.1
 M.FREE_LINES = 4
 M.ROWS = 5                -- a page's rows (lines 1-5)
 
--- kind: "REQUEST" (the ATC REQUEST pages), "CLEARANCE", "VOICE" (ATC INDEX)
+-- kind: "REQUEST" (the ATC REQUEST pages), "CLEARANCE", "VOICE" (ATC INDEX),
+-- "WCW" (WHEN CAN WE EXPECT)
 function M.new(kind)
     return {kind = kind or "REQUEST", alt = nil, alt_dir = nil, step_at = nil, pilot_disc = false,
         crz_clb = false, own_sep = false, alt_perf = false, alt_wx = false,
@@ -55,6 +59,8 @@ function M.new(kind)
         off = nil, off_at = nil, off_wx = false,
         direct = nil, hdg = nil, trk = nil,
         rte = nil, route_text = nil, proc = nil,
+        wcw_crz = nil, wcw_clb = nil, wcw_des = nil, wcw_spd = nil, wcw_higher = false, wcw_lower = false,
+        wcw_back = false,
         free = {"", "", "", ""}, rev = 0}
 end
 -- ERASE REQUEST: everything (its free text too)
@@ -178,6 +184,25 @@ end
 function M.elements(r)
     if r.kind == "CLEARANCE" then return {el("REQUEST CLEARANCE", {{head = "REQUEST", data = "CLEARANCE"}})} end
     if r.kind == "VOICE" then return {el("REQUEST VOICE CONTACT", {{head = "REQUEST VOICE CONTACT"}})} end
+    -- (step 12g3a) WHEN CAN WE EXPECT: its words in the header, the
+    -- query's under them (estimate), the speed beside them
+    if r.kind == "WCW" then
+        local out = {}
+        local W = "WHEN CAN WE EXPECT"
+        local function q(words, rows) out[#out + 1] = el(W .. " " .. words, rows) end
+        if r.wcw_crz then q("CRUISE CLIMB TO " .. r.wcw_crz, {{head = W}, {head = "CRUISE CLIMB TO", data = r.wcw_crz}}) end
+        if r.wcw_clb then q("CLIMB TO " .. r.wcw_clb, {{head = W}, {head = "CLIMB TO", data = r.wcw_clb}}) end
+        if r.wcw_des then q("DESCENT TO " .. r.wcw_des, {{head = W}, {head = "DESCENT TO", data = r.wcw_des}}) end
+        if r.wcw_higher then q("HIGHER ALTITUDE", {{head = W}, {head = "HIGHER ALTITUDE"}}) end
+        if r.wcw_lower then q("LOWER ALTITUDE", {{head = W}, {head = "LOWER ALTITUDE"}}) end
+        if r.wcw_spd then
+            local rows, words = speed_rows(r.wcw_spd)
+            rows[1].head = W
+            q(words, rows)
+        end
+        if r.wcw_back then q("BACK ON ROUTE", {{head = W}, {head = "BACK ON ROUTE"}}) end
+        return out
+    end
     local out = {}
     if r.off then
         if r.off_wx then
@@ -222,11 +247,12 @@ function M.elements(r)
 end
 -- anything entered or selected on the ATC REQUEST pages (ERASE REQUEST
 -- shown: FMSPG p.303)
-function M.any(r) return r.kind == "REQUEST" and #M.elements(r) > 0 end
+function M.any(r) return (r.kind == "REQUEST" or r.kind == "WCW") and #M.elements(r) > 0 end
 
 -- a change applied unless it makes more than five elements
 local SAVE = {"alt", "alt_dir", "step_at", "pilot_disc", "crz_clb", "own_sep", "alt_perf", "alt_wx", "spd", "spd_perf",
-    "spd_wx", "off", "off_at", "off_wx", "direct", "hdg", "trk", "rte", "route_text", "proc"}
+    "spd_wx", "off", "off_at", "off_wx", "direct", "hdg", "trk", "rte", "route_text", "proc", "wcw_crz", "wcw_clb",
+    "wcw_des", "wcw_spd", "wcw_higher", "wcw_lower", "wcw_back"}
 local function apply(r, change)
     local before = {}
     for _, k in ipairs(SAVE) do before[k] = r[k] end
@@ -240,6 +266,7 @@ local function apply(r, change)
 end
 
 -- what may be entered or selected now
+local VERTICAL = {wcw_crz = true, wcw_clb = true, wcw_des = true, wcw_higher = true, wcw_lower = true}
 function M.can(r, field)
     if field == "step_at" then return r.alt ~= nil and (r.alt_dir == "CLIMB" or r.alt_dir == "DESCENT") and not r.crz_clb end
     if field == "crz_clb" then return r.alt ~= nil and r.alt_dir == "CLIMB" and not r.step_at end
@@ -250,6 +277,14 @@ function M.can(r, field)
     -- (step 12g2b) RTE 1 or RTE 2 (FMSPG p.317-318: the other blank)
     if field == "rte1" then return r.rte ~= 2 end
     if field == "rte2" then return r.rte ~= 1 end
+    -- (step 12g3a) WHEN CAN WE's vertical ones: one at a time, the others
+    -- blank (FMSPG p.320-322)
+    if VERTICAL[field] then
+        for k in pairs(VERTICAL) do
+            if k ~= field and r[k] then return false end
+        end
+        return true
+    end
     return true
 end
 
@@ -274,10 +309,15 @@ function M.enter(r, field, text, present_ft)
         local t = M.time_text(text)
         if not t or not M.can(r, field) then return M.INVALID end
         return apply(r, function() r[field] = t end)
-    elseif field == "spd" then
+    elseif field == "spd" or field == "wcw_spd" then
         local t = M.speed_text(text)
         if not t then return M.INVALID end
-        return apply(r, function() r.spd = t end)
+        return apply(r, function() r[field] = t end)
+    elseif field == "wcw_crz" or field == "wcw_clb" or field == "wcw_des" then
+        -- (step 12g3a) one altitude (FCOM p.769-770: no block)
+        local t = not string.find(text, "/", 1, true) and M.alt_text(text)
+        if not t or not M.can(r, field) then return M.INVALID end
+        return apply(r, function() r[field] = t end)
     elseif field == "off" then
         local t = M.offset_text(text)
         if not t then return M.INVALID end
