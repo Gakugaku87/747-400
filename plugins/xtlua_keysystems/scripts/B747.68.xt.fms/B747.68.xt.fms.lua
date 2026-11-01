@@ -3684,12 +3684,17 @@ end
 -- the pending ones ABORTED when ATC COMM ends; the CDUs' VERIFY RESPONSE
 -- (the response chosen) and REJECT DUE TO (the reasons, the free text)
 dofile("B747.68.atc_uplink_model.lua")
+dofile("B747.68.atc_log_model.lua")
 do
   local U = B747_atc_uplink_model
   local ul = {}
   local verify = {}
   local due = {}
   local wasComm, lastN = false, 0
+  -- (step 12g1) the ATC LOG's order (each uplink when first seen, each
+  -- downlink when sent) and the downlinks sent from here
+  local seq = 0
+  local down = {}
   local function msg(i) return acarsSystem.messages[i] end
   -- a message's field (its namespace table cannot read a missing key)
   local function field(m, k)
@@ -3708,20 +3713,49 @@ do
     if field(m, "type") ~= "cpdlc" or CONNECTION[field(m, "title") or ""] then return nil end
     local s = ul[i]
     if not s then
-      s = {resp = U.response(field(m, "msg") or ""), sent = nil, acked = nil, aborted = false}
+      seq = seq + 1
+      s = {resp = U.response(field(m, "msg") or ""), sent = nil, acked = nil, aborted = false,
+        seq = seq, deleted = false}
       ul[i] = s
     end
     s.read = field(m, "read") == true
     return s
   end
-  -- the uplinks in order: {i = place, s = state}
+  -- the uplinks in order, not deleted: {i = place, s = state}
   local function uplinks()
     local out = {}
     for i = 1, table.getn(acarsSystem.messages.values) do
       local s = B747_fms_atc_uplink(i)
-      if s then out[#out + 1] = {i = i, s = s} end
+      if s and not s.deleted then out[#out + 1] = {i = i, s = s} end
     end
     return out
+  end
+  -- (step 12g1) the ATC LOG's entries (B747.68.atc_log_model.lua): {seq,
+  -- up, time, text, status, pending, i (an uplink's place), d (a
+  -- downlink's)}
+  function B747_fms_atc_log_entries()
+    local out = {}
+    for _, u in ipairs(uplinks()) do
+      out[#out + 1] = {seq = u.s.seq, up = true, i = u.i, time = string.gsub(field(msg(u.i), "time") or "", ":", ""),
+        text = field(msg(u.i), "msg") or "", status = U.status(u.s), pending = U.pending(u.s)}
+    end
+    for _, d in ipairs(down) do
+      if not d.deleted then
+        out[#out + 1] = {seq = d.seq, up = false, d = d, time = d.time, text = d.text, status = d.status,
+          pending = d.status == "SENDING"}
+      end
+    end
+    return out
+  end
+  -- an entry deleted (DELETE on its left key); every non-pending one (ERASE
+  -- LOG's CONFIRM)
+  function B747_fms_atc_log_delete(e)
+    if e.up then ul[e.i].deleted = true else e.d.deleted = true end
+  end
+  function B747_fms_atc_log_erase()
+    for _, e in ipairs(B747_fms_atc_log_entries()) do
+      if not e.pending then B747_fms_atc_log_delete(e) end
+    end
   end
   -- the ATC key's page: "LOGON", "INDEX", "LOG", or an uplink's place
   function B747_fms_atc_route()
@@ -3782,6 +3816,11 @@ do
     s.sent = v.kind
     v.state = "SENDING"
     if v.kind ~= "STANDBY" then m["REPLIED"] = true end
+    -- (step 12g1) its ATC LOG entry (FCOM p.765)
+    seq = seq + 1
+    v.down = {seq = seq, time = string.format("%02d%02d", hh or 0, mm or 0), text = reply.msg, status = "SENDING",
+      deleted = false}
+    down[#down + 1] = v.down
     return nil
   end
   -- each frame: the acknowledgements, ATC COMM's end
@@ -3795,6 +3834,8 @@ do
         v.state = "SENT"
         local s = ul[v.i]
         if s and v.kind ~= "STANDBY" then s.acked = v.kind end
+        -- a response needs none: SENT (FCOM p.754)
+        if v.down then v.down.status = "SENT" end
       end
     end
     local comm = B747_fms_atc_logon().comm
@@ -3802,11 +3843,14 @@ do
       for i, s in pairs(ul) do
         if U.pending(B747_fms_atc_uplink(i) or s) then s.aborted = true end
       end
+      for _, d in ipairs(down) do
+        if d.status == "SENDING" then d.status = "ABORTED" end
+      end
     end
     wasComm = comm
   end
   -- the message list cleared (ACARS's clear)
-  function B747_fms_atc_uplinks_clear() ul, verify, due = {}, {}, {} end
+  function B747_fms_atc_uplinks_clear() ul, verify, due, down = {}, {}, {}, {} end
 end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after

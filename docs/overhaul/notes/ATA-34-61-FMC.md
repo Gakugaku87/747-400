@@ -1927,3 +1927,18 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - 前の ATC LOG（`acars/acars.lua`）：メッセージの欄を安全に読むように（"rr" の無い ATC のアップリンクでページが空白になっていた）。ATC LOG の作り直しは 12g。
 - 推定：応答の種類の言葉、ページの行の割り付け、STATUS ACCEPTED の位置、PRINT は出さない（プリンターの模型が無い）、新着 1 通とほかの待ちがあるときは新着のページ。まだ作っていないもの：<REQUEST、LOAD、ARM、REPORT（12g の後）。
 - 試験：新しい `tests/fms/atc_uplink_model_test.lua`（49 件：応答の種類、ACCEPT と REJECT の言葉、状態の移り、STANDBY は OPEN のまま、折り返し、ページ割り、ATC キーの行き先）、新しい `tests/fms/atc_uplink_pages_test.lua`（47 件：AutoATC を模してログオンし、CLIMB TO の新着で ATC MESSAGE、ATC キーで 1428Z ATC UPLINK、STATUS OPEN、本文、STANDBY・REJECT・ACCEPT、LOG>、見ると ATC MESSAGE が消える。ACCEPT で VERIFY RESPONSE の WILCO と SEND>、SEND でプロバイダーへ WILCO と RT、SENT と STATUS ACCEPTED、アップリンクは ACCEPTED で応答なし、ATC キーで ATC INDEX。CAN YOU の REJECT で REJECT DUE TO、PERFORMANCE と自由文、VERIFY で NEGATIVE と理由、送ると REJECTED。EXPECT は ROGER だけ、STANDBY で OPEN のまま。新着 2 通で ATC LOG。長い本文は 1/2 と CONTINUED、2 ページ目に応答。ATC COMM が終わると ABORTED）。全 173 本。X-Plane：新しい `s193_atc_uplinks` 6/6（2026-11-01、起動し直した後の 4 便目。AutoATC の無いこの PC で、FMC DATALINK ON のとき ATC キーで LOGON/STATUS、ATC INDEX の <LOG で ATC LOG が描ける、<INDEX で ATC INDEX）。Log.txt に Lua の誤りなし。アップリンクが届く側は X-Plane で確かめていない（AutoATC が無い）。
+
+## 115. 12g の分け方と 12g1 の実装（2026-11-01：ATC LOG）
+
+- 分け方：12g（ATC の残り）を、12g1（ATC LOG）、12g2（REQUEST のページ：要素、VERIFY REQUEST、送信）、12g3（REPORT・POS REPORT・ARM・WHEN CAN WE）、12g4（EMERGENCY）に分ける。送信文を CDU ごとに（CDU-34）は、それぞれのページを作り直すときに入れる。
+- 前のコード：ATC INDEX の <LOG と ATC キーの LOG は ACARS の一覧（会社のメッセージも、送ったものも混ぜ、状態は REPLY REQUIRED・NEW・OLD など）を開いた。
+- 資料：
+  - FCOM p.752–754：ATC LOG は記録したアップリンクとダウンリンク。本文は長ければ 2 つのピリオドで省く。左の LSK の DELETE でその記録を消す。題（見出し）は受信か送信の時刻。状態はアップリンク 6 つ・ダウンリンク 7 つ。ERASE LOG で閉じた（待ちでない）記録を消す準備をして CONFIRM、離れると取り消す。
+  - FMSPG p.357–362：新しい順に 1 ページ目の 1 行目から。時刻は左の見出し、上か下の矢印、本文の先頭 19〜21 文字、状態は右の見出し。右の LSK で対応するページ。6L <INDEX、6R ERASE LOG>・CONFIRM>（閉じた記録が無いか印刷中なら空白）。記録はアップリンク 10 通（待ち 5・待ちでない 5）とダウンリンク 5 通まで、満ちれば古いものから消える。
+  - FCOM p.765：RESPONSE SEND は送った応答を ATC LOG に記録する。
+- 作ったもの：
+  - `B747.68.atc_log_model.lua`（新しい純粋なモデル）：消したものを除いた新しい順、5 件ずつのページ、データ行（21 文字まで、長ければ 19 文字と ".."、右端に >）、見出し（時刻 HHMMZ と状態）、ERASE LOG の出る条件。
+  - FMS のつなぎ（12f のアップリンクのつなぎ）：アップリンクは初めて見た順、ダウンリンク（ここから送った応答）は送った順の番号を持ち、ATC LOG の記録にする。応答の状態は SENDING から、ネットワークの応答で SENT（応答の要らないダウンリンク：FCOM p.754）、ATC COMM の終わりで送りかけは ABORTED。記録の削除と、待ちでないものの消去。消したアップリンクは ATC キーの行き先からも除く。
+  - ATC LOG のページ（`activepages/atc/B744.fms.pages.atclog.lua`）。ATC INDEX の <LOG、ATC キーの LOG、アップリンクのページの LOG> をこのページへ。
+- 推定：上下の矢印を出さない（CDU の字に無いため）。ダウンリンクは今はここから送った応答だけ（要求・報告は 12g2・12g3 で足す）、その右の LSK はまだどこへも行かない。記録の数の上限と自動の削除は作っていない。
+- 試験：新しい `tests/fms/atc_log_model_test.lua`（13 件：消したものを除く、新しい順、21 文字と 19 文字＋".."、見出しの時刻と状態、ERASE LOG の条件、5 件ずつのページ）、`tests/fms/atc_uplink_pages_test.lua` に 17 件（待ちが多いとき ATC キーで ATC LOG、新しい順、省いた本文と >、時刻と状態、2 ページ、WILCO の応答が SENT のダウンリンク、右の LSK でアップリンクのページと LOG> で戻る、DELETE で 1 件消える、ERASE LOG・CONFIRM、ページを離れると ERASE LOG に戻る、待ちでないものが消え、消すものが無ければ空白）。全 174 本。X-Plane：`s193_atc_uplinks` 6/6（ATC INDEX の <LOG で新しい ATC LOG。起動し直した後の 5 便目）。Log.txt に Lua の誤りなし。
