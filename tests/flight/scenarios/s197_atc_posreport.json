@@ -1,0 +1,53 @@
+{
+  "name": "s197_atc_posreport",
+  "description": "6-1・6-2 段 12g3b（POS REPORT）の X-Plane での確認、地上。RJAA 34L でエンジン運転中に始める（機体を読み直す）。P&W の機体なので SIM CONFIG の FMC DATALINK を ON にする（最後に AUTO に戻す、保存はしない）。RTE 1（RJAA、XAC、SPENS、RJBB）を入れてアクティブにし、LOGON/STATUS で FLT NO に TBC123、ATC INDEX の POS REPORT> で XXXX POS REPORT の題、LAST・ATA などの見出し、TO の XAC と NEXT の SPENS、COMPANY と ATC の行、AutoATC の無いこの PC の NO COMM、ETA と SPD の入力、ページを離れると SPD が FMC の値に戻ることを確かめる。CDU を撮る。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10 },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
+    { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
+    { "do": "cdu", "note": "MENU、6R の SIM CONFIG、NEXT、4L で FMC DATALINK を ON", "keys": ["MENU", "R6", "NEXT", "L4"] },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "FMC DATALINK は ON", "dref": "laminar/B747/fms3/Line09_L", "op": "contains", "value": "FMC DATALINK         ON" },
+    { "do": "cdu", "note": "RTE：RJAA から RJBB、XAC と SPENS", "keys": ["RTE", "RJAA", "L1", "RJBB", "R1", "NEXT", "XAC", "R1", "?SEL", "SPENS", "R2", "?SEL"] },
+    { "do": "cdu", "note": "LEGS、ACTIVATE、EXEC", "keys": ["LEGS", "R6", "EXEC"] },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "cdu", "note": "ATC キー（LOGON/STATUS）、FLT NO に TBC123、<INDEX、POS REPORT>", "keys": ["ATC", "TBC123", "L2", "L6", "R1"] },
+    { "do": "check", "note": "題は便名と POS REPORT（FCOM p.766）", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "TBC123 POS REPORT" },
+    { "do": "check", "note": "LAST と ATA", "dref": "laminar/B747/fms3/Line02_S", "op": "contains", "value": " LAST                ATA" },
+    { "do": "check", "note": "TO はアクティブな点 XAC", "dref": "laminar/B747/fms3/Line07_L", "op": "contains", "value": "XAC" },
+    { "do": "check", "note": "NEXT はその次の SPENS", "dref": "laminar/B747/fms3/Line09_L", "op": "contains", "value": "SPENS" },
+    { "do": "check", "note": "COMPANY と ATC", "dref": "laminar/B747/fms3/Line12_S", "op": "contains", "value": "COMPANY--------------ATC" },
+    { "do": "check", "note": "AutoATC が無いので NO COMM", "dref": "laminar/B747/fms3/Line13_L", "op": "contains", "value": "NO COMM" },
+    { "do": "cdu", "note": "3R に 1600、2R に 290", "keys": ["1600", "R3", "290", "R2"] },
+    { "do": "check", "note": "ETA の入力", "dref": "laminar/B747/fms3/Line07_L", "op": "contains", "value": "1600Z" },
+    { "do": "check", "note": "SPD の入力", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "290KT" },
+    { "do": "view", "note": "左の CDU", "the": -34, "psi": 24, "fov": 18 },
+    { "do": "shot", "name": "cdu_pos_report" },
+    { "do": "cdu", "note": "ATC キー（LOGON/STATUS）、<INDEX、POS REPORT> でページを出し直す", "keys": ["ATC", "L6", "R1"] },
+    { "do": "check", "note": "ページを離れると SPD は FMC の値（FCOM p.767）", "dref": "laminar/B747/fms3/Line05_L", "op": "matches", "value": "^(?!.*290KT).*$" },
+    { "do": "check", "note": "ETA の入力は残る", "dref": "laminar/B747/fms3/Line07_L", "op": "contains", "value": "1600Z" },
+    { "do": "cdu", "note": "MENU、6R、NEXT、4L を 2 回で AUTO に戻す（保存しない）", "keys": ["MENU", "R6", "NEXT", "L4"] },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "cdu", "keys": ["L4"] },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "AUTO に戻る", "dref": "laminar/B747/fms3/Line09_L", "op": "contains", "value": "FMC DATALINK       AUTO" },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" }
+  ]
+}
