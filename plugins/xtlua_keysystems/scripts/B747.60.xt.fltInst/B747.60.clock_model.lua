@@ -155,7 +155,7 @@ function M.update(s, inp, dt)
     local o = s.out
     if not inp.hot then
         if s.alive then s.alive = false end
-        o.on = false
+        o.on, o.valid = false, false
         return o
     end
     if s.alive == false then
@@ -186,6 +186,9 @@ function M.update(s, inp, dt)
         s.slew_t = 0
     end
     local t = s.held or (inp.utc + s.offset)
+    -- (6-1/6-2 step 11c3) for the FMC's SET CLOCK TO UTC TIME: the
+    -- clock's UTC less X-Plane's (the GPS's), seconds; valid while powered
+    o.utc_offset, o.valid = t - inp.utc, true
     local z = floor(t / M.DAY)
     local tod = t - z * M.DAY
     o.hours, o.minutes = floor(tod / 3600), floor(tod % 3600 / 60)

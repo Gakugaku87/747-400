@@ -1,0 +1,63 @@
+{
+  "name": "s171_nav_invalid_tune",
+  "description": "6-1/6-2 段 11c3（NAV INVALID-TUNE）の X-Plane での確認。空中、RJAA の VOR16R の進入（D16R：NRE を使う）の KONAN の 4 NM 手前、3,000 ft、180 kt、フラップ 20（機体を読み直す）。RJBB→RJAA に VOR16R を入れて ACTIVATE・EXEC し、LNAV で KONAN を過ぎると進入の段階（その手続きの最初の点を通過）で、FMC は NRE を VOR L・R に同調する（P）。NAV RADIO で VOR L・R を両方 XAC にして NRE を受からなくすると、5 秒で NAV INVALID-TUNE NRE（FCOM p.1433）。VOR L の手動を消すと NRE に戻り、メッセージは消える。CDU を撮る。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 36.0237, "longitude": 140.1874, "elevation_in_meters": 914, "heading_true": 150, "speed_in_meters_per_second": 92.6 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 5, "note": "空中開始の揺れ、FMC の航法データ" },
+    { "do": "record_start" },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "set", "note": "MCP 高度 3,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 3000 },
+    { "do": "set", "note": "MCP 方位 157（コース）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 157 },
+    { "do": "set", "note": "MCP 速度 180 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 180 },
+    { "do": "set", "note": "レバー 20", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.6667 },
+    { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "note": "A/P のサーボ", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "cmd", "note": "ALT HOLD", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "cmd", "note": "SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
+    { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
+
+    { "do": "mark", "note": "経路と VOR16R、LNAV" },
+    { "do": "cdu", "note": "RTE：RJBB→RJAA", "keys": ["RTE", "RJBB", "L1", "RJAA", "R1"] },
+    { "do": "cmd", "note": "DEP ARR", "name": "laminar/B747/fms1/func_key/clb" },
+    { "do": "sleep", "seconds": 0.5 },
+    { "do": "cdu", "note": "ARR>（R2：目的地）", "keys": ["R2"] },
+    { "do": "check", "note": "1R が VOR16R", "dref": "laminar/B747/fms3/Line03_L", "op": "contains", "value": "VOR16R" },
+    { "do": "cdu", "note": "VOR16R（R1）、RTE、ACTIVATE、EXEC", "keys": ["R1", "RTE", "R6", "EXEC"] },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "cdu", "note": "CLR、LEGS", "keys": ["CLR", "CLR", "CLR", "LEGS"] },
+    { "do": "check", "note": "現用点は KONAN", "dref": "laminar/B747/fms3/Line03_L", "op": "contains", "value": "KONAN" },
+    { "do": "cmd", "note": "LNAV", "name": "laminar/B747/autopilot/button_switch/LNAV" },
+    { "do": "wait", "note": "KONAN を過ぎて TENAG が現用点（進入の段階）", "dref": "laminar/B747/fms3/Line03_L", "op": "contains", "value": "TENAG", "timeout": 150 },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "check", "note": "NAV INVALID は出ていない（NRE を受けている）", "dref": "laminar/B747/fms3/Line14_L", "op": "matches", "value": "^(?!NAV INVALID)" },
+
+    { "do": "mark", "note": "VOR L・R を XAC に：NRE が受からない" },
+    { "do": "cdu", "note": "NAV RAD、XAC を 1L と 1R", "keys": ["NAVRAD", "XAC", "L1", "XAC", "R1"] },
+    { "do": "wait", "note": "NAV INVALID-TUNE NRE（FCOM p.1433）", "dref": "laminar/B747/fms3/Line14_L", "op": "contains", "value": "NAV INVALID-TUNE NRE", "timeout": 15 },
+    { "do": "view", "note": "左の CDU", "the": -34, "psi": 24, "fov": 18 },
+    { "do": "shot", "name": "cdu_nav_invalid_tune" },
+    { "do": "cdu", "note": "CLR、1L の手動を消す（FMC の同調に戻る）", "keys": ["CLR", "DEL", "L1"] },
+    { "do": "sleep", "seconds": 4 },
+    { "do": "check", "note": "NAV INVALID-TUNE は消える", "dref": "laminar/B747/fms3/Line14_L", "op": "matches", "value": "^(?!NAV INVALID)" },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" },
+    { "do": "record_stop" }
+  ]
+}

@@ -5,7 +5,9 @@
 -- the clock's own UTC and date, the ET and the chronograph come back for
 -- the panel (new: fltInst/<side>/clock_on, clock_utc_hours,
 -- clock_utc_minutes, clock_day, clock_month, clock_et_show), the sweep
--- second hand (clock_chr_seconds) for the 3D cockpit. The ET selector's
+-- second hand (clock_chr_seconds) for the 3D cockpit; (6-1/6-2 step 11c3)
+-- the clock's UTC less X-Plane's in seconds and 1 while it runs
+-- (clock_utc_offset, clock_valid) for the FMC's SET CLOCK TO UTC TIME. The ET selector's
 -- commands follow its face (RUN, HLD, RESET): up turns towards RUN, down
 -- from HLD to RESET, which springs back to HLD. The F/O's clock likewise
 -- (fltInst04, the old copy for it, folded in here). The 3D's two CHR
@@ -47,6 +49,8 @@ local function bind(t, side, glareshield)
     t.day = find_dataref(p .. "day")
     t.month = find_dataref(p .. "month")
     t.et_show = find_dataref(p .. "et_show")
+    t.utc_offset = find_dataref(p .. "utc_offset")
+    t.valid = find_dataref(p .. "valid")
     t.glare_sw = find_dataref("laminar/B747/glareshiled/" .. glareshield .. "/chrono_switch_pos")
 end
 bind(clockCapt, "capt", "captain")
@@ -152,6 +156,8 @@ local function clock(t, s, r, dt)
     t.et_chr, t.et_show = o.et_chr, o.et_show and 1 or 0
     t.et_seconds, t.et_hours, t.et_minutes = o.et_seconds, o.et_hours, o.et_minutes
     t.chr_minutes, t.chr_seconds = o.chr_minutes, o.chr_seconds
+    t.valid = o.valid and 1 or 0
+    if o.valid then t.utc_offset = o.utc_offset end
 end
 
 function B747_clocks()

@@ -35,6 +35,7 @@ end
 o = CM.update(s, inp, 0)
 T.check(o.on and o.hours == 12 and o.minutes == 34 and o.day == 26 and o.month == 10 and o.year == 26,
     "powered: X-Plane's UTC and date (12:34, 26 10 26)")
+T.check(o.valid and o.utc_offset == 0, "(step 11c3) for the FMC: valid, on X-Plane's UTC (offset 0)")
 T.check(o.utc_display == 0 and not o.et_show and o.et_chr == 0, "UTC shown, the ET blank at zero")
 run(4)
 T.equal(o.minutes, 35, "runs with X-Plane's UTC")
@@ -61,6 +62,7 @@ T.check(o.hours == 12 and o.minutes == 34, "HLD: the time stands (12:34 two minu
 inp.set = CM.SET_RUN
 run(59.5)
 T.equal(o.minutes, 34, "RUN: from 12:34:00")
+T.near(o.utc_offset, -176, 1, "the FMC's offset: 12:34:00 run on from about 12:36:56, about 176 s behind X-Plane's UTC")
 run(1)
 T.equal(o.minutes, 35, "a minute later 12:35")
 -- the slews: one a second, from a second after the selector gets there
@@ -185,7 +187,7 @@ run(0.5)
 T.check(o.on and o.minutes == 35 and math.abs(o.chr_seconds - 40.5) < 1e-9, "back: the clock and the chronograph ran on")
 inp.hot = false
 run(5)
-T.check(not o.on, "no main hot battery bus: everything stops")
+T.check(not o.on and not o.valid, "no main hot battery bus: everything stops, not valid for the FMC (step 11c3)")
 CM.date_push(s)
 CM.chr_push(s)
 inp.hot = true
