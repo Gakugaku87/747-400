@@ -602,4 +602,49 @@ function M.update(s, path, air, armed, engaged)
     return s.seq
 end
 
+-- (step LF2; notes/ATA-34-61-FMC.md §127) the turn transitions in the
+-- distance VNAV flies (the FMC's path joins the legs with its turns: ATA34_2
+-- p.615, p.626): how much longer the flown path is than the legs' great
+-- circles through the fix between element e1 and e2, at vt kt (the turns'
+-- speed). A fly-by turn's arc against the two tangents it cuts (the path
+-- model's turn: shorter, negative); a turn flown over the fix (more than the
+-- path model's MAX_FLYBY, a fly-over fix) as LNAV steers it from the fix on
+-- e1's course, a second at a time at the bank it asks for, until on e2
+-- (within FLY_XT nm and FLY_TAE degrees): the distance flown and e2's
+-- distance to go then against e2's length. 0 for the others (a hold, a
+-- procedure turn, a discontinuity, a conditional leg's end).
+M.FLY_STEP = 1
+M.FLY_MAX_S = 600
+M.FLY_XT = 0.1
+M.FLY_TAE = 3
+function M.flyover(P, e2, from, c1, vt)
+    local s = M.new(P)
+    local p = {lat = from.lat, lon = from.lon}
+    local trk, flown = c1, 0
+    local nm = vt / 3600 * M.FLY_STEP
+    for _ = 1, M.FLY_MAX_S / M.FLY_STEP do
+        local air = {lat = p.lat, lon = p.lon, trk = trk, hdg = trk, gs = vt, tas = vt, wind = 0, alt = 0, var = 0,
+            ground = false}
+        M.update(s, {e2}, air, false, true)
+        if s.dtk and math.abs(s.xtk) <= M.FLY_XT and math.abs(s.tae) <= M.FLY_TAE then return flown, s.dtg end
+        trk = (trk + G * math.tan(s.roll * RAD) / (vt * KT) / RAD * M.FLY_STEP) % 360
+        p = P.point(p, trk, nm)
+        flown = flown + nm
+    end
+    return nil
+end
+function M.transition(P, e1, e2, vt)
+    if not (e1 and e2 and e1.b and e1.term == "fix") then return 0 end
+    if e1.kind ~= "line" and e1.kind ~= "arc" then return 0 end
+    local tr = P.turn(e1, e2, vt)
+    if tr then return tr.r * math.abs(tr.delta) * RAD - 2 * tr.d end
+    if (e2.kind ~= "line" and e2.kind ~= "course") or not (e2.a and e2.len) then return 0 end
+    local _, gap = P.course(e1.b, e2.a)
+    local c1, c2 = P.end_course(e1), P.start_course(e2)
+    if gap > 0.1 or not (c1 and c2) or math.abs(wrap180(c2 - c1)) < 1 then return 0 end
+    local flown, dtg = M.flyover(P, e2, e1.b, c1, vt)
+    if not (flown and dtg) then return 0 end
+    return flown + dtg - e2.len
+end
+
 return M

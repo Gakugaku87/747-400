@@ -225,6 +225,33 @@ function M.path_e_at(path, h)
     return nil
 end
 
+-- (step LF2; notes/ATA-34-61-FMC.md §127) the distance to go through a
+-- turn flown over its fix (the predictions count the turn's path in the
+-- leg after it: B747.68.lnav_model.lua's transition; the great circles from
+-- the airplane to the next fix do not while it turns): tr = {d (NM to go
+-- as the fix was sequenced), t (s)}, the distance flown since taken off it
+-- at the ground speed gs (kt) until the great circles' distance d_geo is
+-- back up to it or LNAV is on the leg (on_leg); then the difference left
+-- blended out over TURN_BLEND_S (estimate). Returns the distance to go and
+-- whether the turn still counts. The glue counts turns adding more than
+-- TURN_MIN_NM, TURN_MAX_S at most, LNAV on the leg from TURN_LNAV_S on
+-- (estimates)
+M.TURN_BLEND_S = 30
+M.TURN_MIN_NM = 0.5
+M.TURN_MAX_S = 600
+M.TURN_LNAV_S = 2
+function M.turn_dist(tr, d_geo, gs, now, on_leg)
+    if not tr.off then
+        tr.d = tr.d - math.max(gs, 0) * (now - tr.t) / 3600
+        tr.t = now
+        if d_geo < tr.d and not on_leg then return tr.d, true end
+        tr.off, tr.t0 = tr.d - d_geo, now
+    end
+    local k = 1 - (now - tr.t0) / M.TURN_BLEND_S
+    if k <= 0 then return d_geo, false end
+    return d_geo + tr.off * k, true
+end
+
 -- the target speed: the schedule's (or the MCP's in speed intervention,
 -- the takeoff's), within the margins; and whether a margin limits it
 -- (step 9h3b: the title's LIM SPD). The cruise's by its function at crz_ft

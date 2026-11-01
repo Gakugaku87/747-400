@@ -158,14 +158,17 @@ end
 T.check(prof[1] and prof[3] and prof[4] and not prof[2], "FL100, STEP SIZE 0: T/C, T/D and E/D, no S/C")
 local rwFix = legs[rwy].fix
 T.check(math.abs(prof[4].lat - rwFix.lat) < 1e-4 and math.abs(prof[4].lon - rwFix.lon) < 1e-4, "the E/D at the runway's threshold")
+-- (step LF2: a leg's distance with the turn into it, the ND's point that
+-- far less along its great circle)
 local function on_leg(p, x)
     local RM = fms.ns.B747_route_model
     local acc = 0
     for _, l in ipairs(fms.ns.B747_fms_pred_input(10000).legs) do
         if l.dist > 0 and x <= acc + l.dist then
+            local turn = l.turn or 0
             local _, d0 = RM.course(l.p0.lat, l.p0.lon, p.lat, p.lon)
             local _, d1 = RM.course(p.lat, p.lon, l.p1.lat, l.p1.lon)
-            return math.abs(d0 - (x - acc)) < 0.05 and math.abs(d0 + d1 - l.dist) < 0.05
+            return math.abs(d0 - math.max(0, x - acc - turn)) < 0.05 and math.abs(d0 + d1 - (l.dist - turn)) < 0.05
         end
         acc = acc + l.dist
     end
