@@ -1522,6 +1522,67 @@ B747DR_fms_vnav_vminm = find_dataref("laminar/B747/airspeed/Vminm")
 simDR_fms_vnav_flaps = find_dataref("sim/cockpit2/controls/flap_ratio")
 local vnavState = B747_vnav_model.new()
 function B747_fms_vnav_phase() return vnavState.phase end
+-- (6-1/6-2 step 12b2; notes/ATA-34-61-FMC.md §107) the VNAV pages'
+-- waypoints from the active route and the predictions (before: X-Plane's
+-- FMS legs and their altitudes, FL001 at a point without a constraint):
+-- clb, the next waypoint with a speed or altitude constraint before the
+-- T/C (CLB's AT XXXXX: FCOM p.1328), with err_ft and err_nm where the
+-- prediction there is under an AT, AT OR ABOVE or window's lower by more
+-- than UNABLE_TOL_FT: the feet low and how far past it the climb reaches
+-- that altitude (ERROR: p.1329); des, the next one after the T/D (DES's AT
+-- XXXXX: p.1392); ed, the E/D's waypoint and altitude (E/D AT: p.1392).
+-- Without predictions by the FMC's phase. {i, name, leg} each, or nil
+function B747_fms_vnav_wpts()
+  local st = B747_fmc_route
+  local out = {}
+  if not st.active then return out end
+  local legs, p = st.rte.legs, B747_fms_preds()
+  local ph = vnavState.phase
+  for i, l in ipairs(legs) do
+    if l.fix and (l.alt or l.spd) then
+      local x = p and p.pts[i] and p.pts[i].x
+      local clb, des
+      if p then
+        clb = p.tc ~= nil and x ~= nil and x < p.tc
+        -- the descent's: after the T/D; without one, in the descent or
+        -- with the descent from here to an E/D (the predictions' start of
+        -- the descent where the airplane is: no T/C, no T/D)
+        des = x ~= nil and ((p.td ~= nil and x >= p.td)
+          or (p.td == nil and (ph == "DES" or (p.tc == nil and p.ed ~= nil))))
+      else
+        clb, des = ph == "CLB", ph == "DES"
+      end
+      if clb and not out.clb then out.clb = {i = i, name = l.fix.ident, leg = l} end
+      if des and not out.des then out.des = {i = i, name = l.fix.ident, leg = l} end
+    end
+  end
+  local c = out.clb
+  if c and p and p.pts[c.i] then
+    local l = c.leg
+    local want = l.alt and l.akind ~= "B" and (l.akind == "AB" and math.min(l.alt, l.alt2 or l.alt) or l.alt) or nil
+    local h, x0 = p.pts[c.i].h, p.pts[c.i].x
+    if want and h < want - UNABLE_TOL_FT then
+      c.err_ft = want - h
+      local px, phh = x0, h
+      for j = c.i + 1, #legs do
+        local q = p.pts[j]
+        if q and q.h >= want then
+          c.err_nm = px + (want - phh) / math.max(q.h - phh, 1) * (q.x - px) - x0
+          break
+        elseif q then
+          px, phh = q.x, q.h
+        end
+      end
+    end
+  end
+  local e = p and p.ed_i and legs[p.ed_i]
+  if e and e.fix then
+    local alt = e.fix.kind == "RWY" and (e.fix.elev or 0) + 50
+      or (e.akind == "AB" and math.min(e.alt, e.alt2 or e.alt) or e.alt)
+    if alt then out.ed = {i = p.ed_i, name = e.fix.ident, alt = alt} end
+  end
+  return out
+end
 local vnavIn = {P = B747_perf_db, sched = B747_pred_model.schedule, crz = B747_pred_model.crz_mach}
 local vnavTakeoff = {}
 local vnavSpdInt = {}

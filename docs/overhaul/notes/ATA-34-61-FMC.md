@@ -1806,3 +1806,16 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 推定：早期降下（DES NOW など）で CRZ から DES に移るときも T/D と同じに変える（FCOM は「T/D で」とだけ書く）。離陸の段階の終わりを、推力制限が TO でなくなるときとした（FCOM p.1325 の「FMC が上昇の推力を指令すると」）。
 - 試験：新しい `tests/fms/page_auto_test.lua`（24 件：T/C で CLB から CRZ、LEGS の CDU はそのまま、NEXT・PREV、T/D で CRZ から DES、有効でない CLB のページはそのまま、DES→CLB と CLB→DES では変えない、CRZ CLB の間と後は CRZ、0 からは変えない、109 の離陸は TAKEOFF REF のまま、570 はフラップを上げ始めると VNAV CLB、レバーを下げても何もしない。直す前のコードでは 6 つ落ちる）。全 163 本。X-Plane：新しい `s182_page_auto_tc` 10/10（s139 と同じ上昇：T/C で左の CDU が ACT ECON CLB から ACT ECON CRZ へ、右の LEGS はそのまま）、`s183_page_auto_td` 12/12（s140 と同じ巡航：T/D で ACT ECON CRZ から ACT ECON DES へ、右の有効でない CLB はそのまま。1 回目は空中開始のやり直しの後に右の CDU の電源が無く、A/P も経路も入らず 1/12：原因は未確認、記録を足した 2 回目で通った）、`s184_page_auto_570_takeoff` 20/20（GE（Saudia）の離陸：TAKEOFF REF のまま浮き、推力制限 TO の間にフラップを 20 から 10 にすると ACT LIM SPD CLB）。Log.txt に Lua の誤りなし。
 - 見つけたこと：CLB のページの AT XXXXX と ERROR、DES のページの E/D AT と AT XXXXX は、前のコードのまま X-Plane の FMS の脚と高度から作っていて、制限の無い点に FL001、DES では箱を出す（s182・s183・s184 の写真）。12b2 で作り直す（§107）。
+
+## 107. 12b2 の実装（2026-11-01：VNAV のページの点）
+
+- 見つけたこと：CLB のページの AT XXXXX と ERROR、DES のページの E/D AT と AT XXXXX は、旧フォークのコードのまま X-Plane の FMS の脚と高度（`fms_route()`）と前の AP の E/D（`autopilot/dist/eod_index`）から作っていた。制限の無い点に FL001 や箱が出ていた（s182・s183・s184 の写真）。
+- 資料：
+  - FCOM p.1328：CLB のページの AT XXXXX は、点 XXXXX の次の速度と高度の制限（HOLD AT XXXXX のこともある）。
+  - FCOM p.1329：ERROR は、点での高度の差と、その高度に達するまでに点を過ぎる距離。誤差が無ければ空白。p.1327 の図は「350LO 2LONG」。
+  - FCOM p.1392：DES のページの E/D AT は降下の終わりの高度と点（降下の段階の最も低い高度の制限の点。無ければ空白）、AT XXXXX は RTE LEGS の次の点の制限。p.1391 の図は「2800 PELLY」「240/ 6000」。
+- 作ったもの：
+  - FMS のつなぎ（`B747.68.xt.fms.lua`）の `B747_fms_vnav_wpts`：有効な経路の脚（`B747_fmc_route.rte.legs`）と予測（`predResult`、脚と同じ番号）から、clb＝T/C より前の、点のある脚で速度か高度の制限のある最初の脚、des＝T/D より後の最初の脚（予測に T/D が無いときは、降下の段階か、T/C も無く E/D がある（予測がここから降下を始める）ならすぐ先の。s186 の 1 回目は T/D のすぐ手前で予測の T/D が無く、空白だった）、ed＝予測の E/D の脚（`ed_i`）の点と高度（滑走路は閾値の 50 ft 上：FCOM p.1258、窓は下の高度）。予測が無いときは FMC の段階（CLB・DES）で決める。clb の ERROR：その脚で予測の高度が AT・AT OR ABOVE・窓の下の高度より 10 ft（UNABLE NEXT ALT と同じ）を超えて低いとき、低い ft と、予測でその高度に達する所（次の脚との間を直線で）までの NM。
+  - VNAV のページ（`activepages/B744.fms.pages.vnav.lua`）：CLB の 1R に制限（LEGS の表示と同じ書き方で、高度は 5 けた：FCOM の「250/ 2500」。CLB のページの TRANS ALT の上は FL）、小字に AT と点の名前、2R に ERROR（ft は 10 単位、NM は 1 単位で最小 1：推定）と小字の ERROR（誤差のあるときだけ）。DES の 1L に E/D の高度と点、1R に次の制限（TRANS LVL の上は FL）、小字に E/D AT（E/D のあるときだけ）と AT と点の名前。前のコード（`fms_route()` の読み、前の AP の E/D、使わなくなった変数）は外した。E/O の CLB のページも同じ。
+- 推定：制限の高度の 5 けたの書き方は A・B・窓でも LEGS と同じ（FCOM の図は AT の制限だけ）。HOLD AT XXXXX は作っていない（経路のホールドは点の名前で出る）。ERROR の丸め。
+- 試験：新しい `tests/fms/vnav_wpts_test.lua`（23 件：pred_glue_test と同じ ZZAA の経路で、地上の CLB のページが AT ZZV と 230/3000A で ERROR なし、DES のページの E/D AT が滑走路と閾値の 50 ft 上、AT ALPHA と窓（TRANS LVL の上は FL）、LEGS で ZZV に 20000A を入れると FL200A と ERROR の xxxLO yyLONG（予測から計算した値と同じ）、予測に T/C も T/D も無く E/D があれば DES の AT はすぐ先の制限、有効な経路が無ければ空白）。全 164 本。X-Plane：新しい `s186_vnav_wpts_des` 14/14（2 回目。DES のページに E/D AT「59 RW06L」と AT ATVID「/4000A」。1 回目は T/D のすぐ手前で予測に T/D が無く AT が空白だったので、上の「T/C も T/D も無く E/D がある」を足した）、新しい `s185_vnav_wpts_clb` は 9/13：制限の無い経路で CLB の AT と ERROR が空白（前の AT XAC FL001 は消えた）は合格。制限を入れた後の AT・ERROR は出なかった：1・2 回目は XAC（大島、約 85 NM 先）が予測の T/C の後で上昇の制限でなく（正しい）、3・4 回目（約 20 NM 先の SULPU に 30000A）は、SID の無い経路なので予測の入力がその制限を E/D にしていた（PROGRESS の TO T/D 15NM、ND の点に T/C が無い）。前からの予測の誤りで、次のコミットで直す（§108）。Log.txt に Lua の誤りなし。

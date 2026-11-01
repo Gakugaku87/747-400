@@ -21,14 +21,11 @@ fmsJson = find_dataref("xtlua/fms") -- fmsJSON is nil
 --fob_kg = find_dataref("sim/flightmodel/weight/m_fuel_total") -- fuel weight total, kg
 -- ======================================================================================
 
-local nxWpt = "*****"
-local eodWpt = "*****"
-local eodAlt =0
+-- (step 12b2) the CLB or DES page's AT XXXXX waypoint (nil: none) and
+-- whether the DES page has an E/D, for the small-font labels
+local nxWpt = nil
+local edShown = false
 local dICAO = "****"
-local dLat = 0 --destination latitude
-local dLon = 0 --destination longitude
-local dNM = -1 --distance to destination, this is currently assigned and used on Pg1 and also used on Pg2
---dNM = find_dataref("laminar/B747/autopilot/dist/remaining_distance") -- this is too inconsistent to use right now
 
 local conv = 1.0 --converter (pounds to kilos)
 
@@ -113,6 +110,22 @@ function fmsFunctions.eospd(fmsO, value)
 end
 -- a line of a left and a right part
 local function lr(l, r) return l .. string.rep(" ", math.max(1, 24 - string.len(l) - string.len(r))) .. r end
+-- (step 12b2) a waypoint's constraint as the VNAV pages show it: the LEGS
+-- pages' (B747_route_model.constraint_text) with the altitude in five
+-- places (FCOM p.1327: 250/ 2500; p.1391: 240/ 6000)
+local function wpt_text(l, trans)
+  local t = B747_route_model.constraint_text(l, trans) or ""
+  local spd, alt = t:match("^(.-)/(.*)$")
+  if not spd then return t end
+  return ((spd .. "/" .. string.format("%5s", alt)):gsub("%s+$", ""))
+end
+-- the CLB page's ERROR (FCOM p.1327: 350LO 2LONG): the feet low to the
+-- nearest 10, the NM long to the nearest one (at least 1; estimates)
+local function err_text(w)
+  local ft = math.floor(w.err_ft / 10 + 0.5) * 10
+  if not w.err_nm then return string.format("%dLO", ft) end
+  return string.format("%dLO %dLONG", ft, math.max(1, math.floor(w.err_nm + 0.5)))
+end
 -- the page active (6-1/6-2 step 9d2a): the FMC's phase (B747.68.xt.fms.lua's
 -- B747_fms_vnav_page: 1 CLB, 2 CRZ with the cruise climb and descent, 3
 -- DES; before, the AP's old flightPhase), the CRZ page's CRZ CLB or CRZ
@@ -187,85 +200,17 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["R5"]=nil
       fmsFunctionsDefs["VNAV"]["R6"]=nil
 
-      spdalt = "     -----"
-      error_line = "                 "
-
-      
-      --print(" --------------------- ")
-      --print(simDR_RA_Min)
-      --print("--------------------------------------"..B747DR_FMSdata)
-
-      --if(simDR_onGround~=1) then
-      if(string.len(fmsJson) > 2) then
-        local fms2 = fms_route()
-        if(fms2 ~= nil and fmsModules["data"]["crzalt"]~="*****") then
---          print("fmsJson")
---          print(fmsJson)
-          --print("----------------------------------------")
-          -- Determine cruise alt from FMC based on max altitude set -------- start
-          maxalt = -999 -- this will be cruise altitude when we're done
-          maxidx = 0 --place in fms where first occurence of cruise is found
-          for i=1,table.getn(fms2),1 do
-            if(tonumber(fms2[i][9]) > maxalt) then 
-              maxalt = tonumber(fms2[i][9])
-              maxidx = i
-            end
-          end
-          -- ------------------------- ---------------------------------------- end
-          nfms2 = table.getn(fms2)
-          dICAO = fms2[nfms2][8] -- desintation icao (used on page2)
-          dLat = fms2[nfms2][5]
-          dLon = fms2[nfms2][6]
-          dNM = getDistance(simDR_latitude, simDR_longitude, dLat, dLon)
-          for i=1,nfms2,1 do
-            if(fms2[i][10] == true) then -- find the next waypoint
-
-              -- increment through the fms to find valid waypoint
-              while((i==1 or string.len(fms2[i][8])>5 or tonumber(fms2[i][8])~=nil) and ((i+1)<nfms2) ) do
-                i = i + 1
-              end
-
-              nxWpt = fms2[i][8] -- used on small page
-              alt = tonumber(fms2[i][9]) --altitude at the waypoint
-              if(alt == 0) then alt = maxalt end --default to max alt if zero
-              --spdalt = " ***/*****"
-              spdalt = "     FL"..string.format("%03d",alt/100)
-              if(i <= maxidx and math.abs(maxalt-simDR_pressureAlt1) > 500) then -- climb phase
-                -- no SPD RESTR (dashes) or SPD TRANS (deleted): none (6-1 step 1)
-                local restSpd = tonumber(fmsModules["data"]["clbrestspd"])
-                local restAlt = tonumber(fmsModules["data"]["clbrestalt"]) or -99999
-                local transSpd = tonumber(fmsModules["data"]["transpd"])
-                local transAlt = tonumber(fmsModules["data"]["spdtransalt"]) or 10000
-                local econSpd = tonumber(fmsModules["data"]["clbspd"]) or 340
-                if(restSpd and alt < restAlt) then
-                  spdalt = restSpd.."/"..alt
-                elseif(transSpd and alt < transAlt) then
-                  spdalt = transSpd.."/"..alt
-                else
-                  spdalt = econSpd.."/"..alt
-                end
-                
-                local altdif = math.abs(simDR_pressureAlt1 - alt) --diff actual vs cruise altitude
-                -- Error at Waypoint (FCOM p.974)
-                if(altdif > 500 and  simDR_onGround ~= 1) then -- still in climb phase
-                  wlat = tonumber(fms2[i][5])
-                  wlon = tonumber(fms2[i][6])
-                  walt = tonumber(fms2[i][9])
-                  dist_to_wpt = getDistance(simDR_latitude,simDR_longitude,wlat,wlon)
-                  alt_at_wpt = simDR_pressureAlt1 + (60*(dist_to_wpt/gsKTS))*simDR_vvi_fpm_pilot
-    
-                  dist_to_alt = dist_to_wpt - ((((walt-simDR_pressureAlt1)/simDR_vvi_fpm_pilot)/60)*gsKTS)
-                  alt_discrep = alt_at_wpt - walt
-                  if(alt_discrep < 0) then
-                    error_line = string.format("%.0f LO  %.0f LONG",-alt_discrep, -dist_to_alt)
-                  end
-                end
-              end
-            end
-          end
-        end
-      end        
-      --end
+      -- (step 12b2) the next speed or altitude constraint before the T/C
+      -- (AT XXXXX: FCOM p.1328) and its ERROR (p.1329) from the active route
+      -- and the predictions (B747_fms_vnav_wpts; before, X-Plane's FMS legs
+      -- and their altitudes: FL001 at a point without a constraint)
+      local w = B747_fms_vnav_wpts().clb
+      spdalt, error_line, nxWpt = "", "", nil
+      if w then
+        spdalt = wpt_text(w.leg, tonumber(fmsModules["data"]["transalt"]) or 18000)
+        nxWpt = w.name
+        if w.err_ft then error_line = err_text(w) end
+      end
 
       -- MAX ANGLE: the minimum drag speed at the weight and altitude (the
       -- cruise model, 6-1/6-2 step 8b: an estimate; before, V2 + 80 or 100)
@@ -338,7 +283,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       return{
         vnav_title(title .. " CLB", active, B747_fms_vnav_mod() == "CLB DIR" or eo.mod == "ALL ENG"),
       "                        ",
-      fmsModules["data"]["crzalt"].."         "..spdalt,
+      lr(fmsModules["data"]["crzalt"], spdalt),
       "                        ",
       lr(spdText, (string.gsub(error_line, "%s+$", ""))),
                                         --**** LO  ** LONG
@@ -558,80 +503,19 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
 	      fmsModules["data"]["vs"]="****"
       end
 
-      local nxtwpt = ""
-      local nxtalt = 0
-      local lowwpt = ""
-      local lowalt = 99999
-
-      if(string.len(fmsJson) > 2) then
-        local fms = fms_route()
-        if(fms ~= nil and fmsModules["data"]["crzalt"]~="*****" ) then
-          n = table.getn(fms)
-          
-          local currentWP=0
-          for i=1,n,1 do
-            if(fms[i][10] == true) then -- this is the next waypoint
-              -- increment through the fms to find valid waypoint
-              currentWP=i
-              while((i==1 or string.len(fms[i][8])>5 or tonumber(fms[i][8])~=nil or fms[i][9]>=B747BR_cruiseAlt-500) and ((i+1)<n) ) do
-                i = i + 1
-              end
-              if(nxtwpt == "") then
-                nxtwpt = fms[i][8] -- next waypoint from legs page
-                nxWpt = nxtwpt
-                nxtalt = fms[i][9] -- next waypoint altitude
-                nxtspd = "---" --fms[i][4] -- next waypoint speed                
-              end
-              if(i ~= n and trim1(fms[i][8])~="latlon") then
-                lowwpt = fms[i][8] -- waypoint with lowest alt constraint
-                lowalt = fms[i][9] -- altitude constraint of that waypoint
-              end
-            else
-              --if(nxtwpt ~= "") then
-          
-              if( i ~= n and trim1(fms[i][8]) ~= "latlon") then
-                x = math.floor(fms[i][9]) 
-                if(x > 1 and x < lowalt) then
-                  lowwpt = fms[i][8] 
-                  lowalt = x
-                end
-              end
-            end
-
-          end
-
-          if B747BR_eod_index>0 and currentWP<=B747BR_eod_index then
-            eodWpt=fms[B747BR_eod_index][8]
-            eodAlt=fms[B747BR_eod_index][9]
-          else
-            eodWpt = "*****"
-            eodAlt = 0
-          end
-        end
+      -- (step 12b2) E/D AT, the E/D's altitude and waypoint, and AT XXXXX,
+      -- the next constraint after the T/D (FCOM p.1392), from the active route
+      -- and the predictions (B747_fms_vnav_wpts; before, X-Plane's FMS legs
+      -- and the old AP's E/D: boxes without them); blank without them
+      local wp = B747_fms_vnav_wpts()
+      local edText, atText = "", ""
+      nxWpt, edShown = nil, wp.ed ~= nil
+      if wp.ed then
+        edText = B747_cdu_model.format_alt(wp.ed.alt, B747_fms_trans_lvl()) .. " " .. wp.ed.name
       end
-
-      if(lowalt == 99999) then lowalt = " " end
-
-      nxtspd = tonumber(fmsModules["data"]["desspd"])
-      local dtransalt = tonumber(fmsModules["data"]["desspdtransalt"])
-      local dtransspd = tonumber(fmsModules["data"]["destranspd"])
-      -- no SPD RESTR (dashes): none (6-1 step 1)
-      local drestalt  = tonumber(fmsModules["data"]["desrestalt"]) or -99999
-      local drestspd  = tonumber(fmsModules["data"]["desrestspd"]) or dtransspd
-
-      if(nxtalt < dtransalt) then
-        nxtspd = dtransspd
-      end
-      if(nxtalt < drestalt) then
-        nxtspd = drestspd
-      end
-      local edaltText="****"
-      local nextAltText="***/*****"
-      if eodAlt>0 then
-        edaltText=string.format("%4d",eodAlt)
-      end
-      if nxtalt>0 then
-        nextAltText=string.format("%3d",nxtspd).."/"..string.format("%5d",nxtalt)
+      if wp.des then
+        atText = wpt_text(wp.des.leg, B747_fms_trans_lvl())
+        nxWpt = wp.des.name
       end
       local mode = vnav_text("desspdmode")
       -- (step 9e2) END OF DES past the E/D (FCOM p.1391)
@@ -642,7 +526,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
         vnav_title(desTitle, desActive, B747_fms_vnav_mod() == "DES NOW" or B747_fms_vnav_mod() == "DES DIR"),
       "                        ",
       --"  **** *****    ***/****",
-      " "..edaltText.." "..string.format("%5s",eodWpt).."    "..nextAltText,
+      lr(edText, atText),
       "                        ",
       ".".. fmsModules["data"]["desspdmach"].."/"..fmsModules["data"]["desspd"].."                ",
       "                        ",
@@ -672,9 +556,9 @@ fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
     if pgNo==1 and eoShown then
       return{
       "                    1/3 ",
-      " CRZ ALT        AT "..nxWpt,
+      lr(" CRZ ALT", nxWpt and ("AT " .. nxWpt) or ""),
       "                        ",
-      lr(" E/O SPD", "ERROR"),
+      lr(" E/O SPD", error_line ~= "" and "ERROR" or ""),
       "                        ",
       "               TRANS ALT",
       "                        ",
@@ -707,9 +591,9 @@ fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
 
       return{
       "                    1/3 ",
-      " CRZ ALT        AT "..nxWpt,
+      lr(" CRZ ALT", nxWpt and ("AT " .. nxWpt) or ""),
       "                        ",
-      spd_label("clbspdmode") .. "          ERROR",
+      lr(spd_label("clbspdmode"), error_line ~= "" and "ERROR" or ""),
       "                        ",
       " SPD TRANS     TRANS ALT",
       "                        ",
@@ -740,8 +624,7 @@ fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
     elseif pgNo==3 then 
       return{
       "                    3/3 ",
-      --" E/D AT         AT *****",
-      " E/D AT         AT "..nxWpt,
+      lr(edShown and " E/D AT" or "", nxWpt and ("AT " .. nxWpt) or ""),
       "                        ",
       spd_label("desspdmode") .. "               ",
       "                        ",
