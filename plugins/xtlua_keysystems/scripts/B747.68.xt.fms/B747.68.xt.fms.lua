@@ -3105,16 +3105,18 @@ B747DR_fms_fmc_master=find_dataref("laminar/B747/flt_inst/fmc_master_src/ctr_pnl
 local NAV_SRC_CAPT={[0]=FL.L,[1]=FL.R}
 local NAV_SRC_FO={[2]=FL.L,[3]=FL.R}
 local SINGLE_FMC=42
+local RESYNC_FAIL_FMC,RESYNCING_FMC=35,36
 local ADV_FMC_LEFT,ADV_FMC_RIGHT=144,146
 local CDU_LINK_INDEX={fmsL=0,fmsC=1,fmsR=2}
-local singleFMC=nil
+local singleFMC,resyncingFMC,resyncFailFMC=nil,nil,nil
 local function anyFMC() return fmcLink.ok[FL.L] or fmcLink.ok[FL.R] end
 function update_fmc_link()
   local inp=fmcIn
   inp.power[FL.L]=B747DR_fms_bus_xfr_capt>0.5 or B747DR_fms_bus_stby_apu>0.5
   inp.power[FL.R]=B747DR_fms_bus_xfr_fo>0.5
-  inp.fail[FL.L]=B747DR_fms_fail[0]>0.5
-  inp.fail[FL.R]=B747DR_fms_fail[1]>0.5
+  -- (step 11d3: 2 and 3 an internal test's failure and the resync)
+  inp.fail[FL.L]=math.floor(B747DR_fms_fail[0]+0.5)
+  inp.fail[FL.R]=math.floor(B747DR_fms_fail[1]+0.5)
   inp.src.fmsL=NAV_SRC_CAPT[math.floor(B747DR_fms_nav_src_capt+0.5)]
   inp.src.fmsR=NAV_SRC_FO[math.floor(B747DR_fms_nav_src_fo+0.5)]
   inp.master=B747DR_fms_fmc_master>0.5 and FL.R or FL.L
@@ -3134,6 +3136,16 @@ function update_fmc_link()
     singleFMC=out.single
     B747DR_fmc_notifications[SINGLE_FMC]=out.single and 1 or 0
   end
+  -- (step 11d3) RESYNCING OTHER FMC, RESYNC FAIL - SINGLE FMC (FCOM
+  -- p.1433-1434)
+  if out.resyncing~=resyncingFMC then
+    resyncingFMC=out.resyncing
+    B747DR_fmc_notifications[RESYNCING_FMC]=out.resyncing and 1 or 0
+  end
+  if out.resync_fail~=resyncFailFMC then
+    resyncFailFMC=out.resync_fail
+    B747DR_fmc_notifications[RESYNC_FAIL_FMC]=out.resync_fail and 1 or 0
+  end
   local l,r=out.eicas[FL.L] and 1 or 0,out.eicas[FL.R] and 1 or 0
   if B747DR_CAS_advisory_status[ADV_FMC_LEFT]~=l then B747DR_CAS_advisory_status[ADV_FMC_LEFT]=l end
   if B747DR_CAS_advisory_status[ADV_FMC_RIGHT]~=r then B747DR_CAS_advisory_status[ADV_FMC_RIGHT]=r end
@@ -3143,6 +3155,9 @@ end
 function B747_fms_fmc_connect(cdu) return FL.connect(fmcLink,cdu,fmcIn) end
 function B747_fms_fmc_available(cdu) return FL.available(fmcLink,cdu,fmcIn) end
 function B747_fms_fmc_linked(cdu) return FL.linked(fmcLink,cdu) end
+-- (step 11d3) the CDU's FMC being resynchronized: its display frozen, no
+-- keys (FCOM p.1277)
+function B747_fms_fmc_frozen(cdu) return FL.frozen(fmcLink,cdu) end
 -- (6-1/6-2 step 11d2) the FMC the FMC master selector selects working: the
 -- radios' tuning is its (ATA34_2 p.496; ATA34_1 p.332, p.350: held at the
 -- last frequencies without it)
