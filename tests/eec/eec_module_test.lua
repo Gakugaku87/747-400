@@ -242,6 +242,45 @@ T.equal(get(ADV, RPM_LIM + 2), 1, ">ENG 3 RPM LIM: GE from the EEC")
 rt:frame(1 / 30)
 T.equal(get(ADV, RPM_LIM + 2), 0, "GE: RPM LIM goes with N2 back below its limit")
 
+-- (ENG-31) GE in reverse: X-Plane's maximum reverse throttle 1, the
+-- reverse throttle the ECU's share of the maximum rated thrust (0.9 at full
+-- reverse, half at half), none at reverse idle or with the reverser moving
+local REVL, DEPLOY = "laminar/B747/engine/throttle_reversor", "sim/flightmodel2/engines/thrust_reverser_deploy_ratio"
+local REVMAX = "sim/aircraft/engine/acf_throtmax_REV"
+for i = 0, 3 do
+    rt:set("sim/flightmodel/engine/ENGN_running", i, 1)
+    rt:set("sim/cockpit2/engine/actuators/prop_mode", i, 1)
+end
+rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 3)       -- engine 2 in reverse
+rt:set(DEPLOY, 1, 1)
+rt:set(REVL, 1, -1)                                             -- full reverse
+frames(3)
+T.near(get(REVMAX), 1.0, 1e-6, "GE: X-Plane's maximum reverse throttle 1")
+T.near(get(THRO, 1), 0.9, 1e-6, "GE: full reverse: 90 % of the maximum rated thrust (ATA70_80 p.208)")
+rt:set(REVL, 1, -0.5)
+frames(0.2)
+T.near(get(THRO, 1), 0.45, 1e-6, "GE: half the reverse lever: half of it (a direct function of TLA)")
+rt:set(REVL, 1, 0)                                              -- reverse idle
+frames(1)
+T.equal(get(THRO, 1), 0, "GE: reverse idle: throttle 0")
+rt:set(REVL, 1, -1)
+rt:set(DEPLOY, 1, 0.5)                                          -- the cowls moving
+frames(0.2)
+T.equal(get(THRO, 1), 0, "GE: the reverser in transit: idle (p.208)")
+rt:set(DEPLOY, 1, 1)
+-- P&W: the lever as before, X-Plane's maximum 0.8 (the custom acf's)
+rt:set("laminar/B747/engines/type", 0)
+rt:set(REVL, 1, -0.6)
+frames(0.5)
+T.near(get(REVMAX), 0.8, 1e-6, "P&W: X-Plane's maximum reverse throttle back to the acf's 0.8")
+T.near(get(THRO, 1), 0.6, 1e-6, "P&W: the reverse throttle the lever's (no sources)")
+rt:set("laminar/B747/engines/type", 1)
+rt:set(REVL, 1, 0)
+rt:set(DEPLOY, 1, 0)
+rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 1)
+for i = 0, 3 do rt:set("sim/flightmodel/engine/ENGN_running", i, 0) end
+frames(0.2)
+
 -- the engine type strings: CF6-80C2-B1F1 is not taken for the B1F (ENG-30)
 rt:set("laminar/B747/simconfig", '{"PLANE":{"engines":"CF6-80C2-B1F1"}}')
 frames(0.2)

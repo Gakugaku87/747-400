@@ -761,6 +761,8 @@ function ecc_spd()
 			lastCompute=simDRTime
 
         end
+		-- (ENG-31) X-Plane's maximum reverse throttle by the engine type
+		B747_eec_reverse_max()
 		for i = 0, 3 do
 			if eccPid[i].output~=nil then
 				local tValue=round(eccPid[i].output*100)/100
@@ -773,7 +775,14 @@ function ecc_spd()
 					else
 						B747_eec_reset_throttle(i)
 						if simDR_reverser_deploy_ratio[i] >0.98 then
-							simDR_engn_thro_use[i]=B747DR_throttle_reversor[i]*-1
+							-- (ENG-31) GE: the ECU's reverse thrust, 90 % of the
+							-- maximum rated at full reverse (ATA70_80 p.206,
+							-- p.208-209); P&W and RR the lever as before
+							if B747DR_engineType==1 then
+								simDR_engn_thro_use[i]=B747_eec_reverse_throttle(i)
+							else
+								simDR_engn_thro_use[i]=B747DR_throttle_reversor[i]*-1
+							end
 						else
 							simDR_engn_thro_use[i]=0
 						end

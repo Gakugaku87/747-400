@@ -1,0 +1,46 @@
+{
+  "name": "s187_reverse_ge",
+  "description": "GE（570：Saudia、CF6-80C2B1F）の逆推力の EEC（ENG-31）の X-Plane での確認、地上。RJAA 34L でエンジン運転中、パーキング・ブレーキをかけて始め（機体を読み直す）、逆推力のコマンド（全エンジン）を 12 秒引く。X-Plane の逆推力の上限は 1、展開し切ると逆推力のスロットルは最大定格推力の 90 %（0.9：ATA70_80 p.206、p.208）、N1 が上がる。放すと reverse idle（2026-10-25 利用者）。EICAS を撮る。Lua の誤りも確かめる",
+  "reload": true,
+  "livery": "Saudia",
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 10 },
+    { "do": "check", "note": "GE の機体（570）", "dref": "laminar/B747/engines/type", "op": "==", "value": 1 },
+    { "do": "set", "note": "パーキング・ブレーキ", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
+    { "do": "check", "note": "X-Plane の逆推力の上限は 1（GE：EEC が割合を決める）", "dref": "sim/aircraft/engine/acf_throtmax_REV", "op": "==", "value": 1 },
+    { "do": "cmd", "note": "逆推力を引く（全エンジン、10 秒：Web API の上限。押している間に次へ）", "name": "sim/engines/thrust_reverse_hold", "duration": 10, "async": true },
+    { "do": "wait", "note": "逆推力 1 が展開", "dref": "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]", "op": ">", "value": 0.98, "timeout": 8 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "全開の逆推力のスロットルは 0.9（最大定格推力の 90 %）", "dref": "sim/flightmodel/engine/ENGN_thro_use[0]", "op": "between", "value": [0.89, 0.91] },
+    { "do": "sleep", "seconds": 3, "note": "N1 が上がるのを待つ（放す前に）" },
+    { "do": "snapshot", "note": "全開の逆推力", "drefs": [
+      "sim/flightmodel/engine/ENGN_thro_use[0]", "sim/flightmodel/engine/ENGN_N1_[0]", "sim/flightmodel/engine/ENGN_N1_[3]",
+      "laminar/B747/engines/display_N1[0]", "sim/cockpit2/engine/indicators/thrust_dry_n[0]", "laminar/B747/engine/throttle_reversor[0]",
+      "sim/aircraft/engine/acf_throtmax_REV" ] },
+    { "do": "check", "note": "N1 は 70 % を超える（放す前で、まだ上がっている）", "dref": "sim/flightmodel/engine/ENGN_N1_[0]", "op": ">", "value": 70 },
+    { "do": "view", "name": "eicas" },
+    { "do": "shot", "name": "eicas_reverse_ge" },
+    { "do": "sleep", "seconds": 8, "note": "放す（reverse idle）" },
+    { "do": "snapshot", "note": "reverse idle", "drefs": [ "sim/flightmodel/engine/ENGN_thro_use[0]", "sim/flightmodel/engine/ENGN_N1_[0]", "laminar/B747/engine/throttle_reversor[0]" ] },
+    { "do": "check", "note": "reverse idle のスロットル（逆推力のレバー -0.01 の 0.9 倍）", "dref": "sim/flightmodel/engine/ENGN_thro_use[0]", "op": "<", "value": 0.02 },
+    { "do": "set", "note": "推力レバーを前のアイドルへ（逆推力のレバーを下げきる）", "dref": "sim/cockpit2/engine/actuators/throttle_jet_rev_ratio_all", "value": 0 },
+    { "do": "wait", "note": "格納", "dref": "sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]", "op": "<", "value": 0.01, "timeout": 20 },
+    { "do": "view", "name": "forward" },
+    { "do": "record_stop" }
+  ]
+}
