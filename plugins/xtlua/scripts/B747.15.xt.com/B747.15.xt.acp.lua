@@ -43,6 +43,54 @@ local function held121()
     }
 end
 
+-- (7-1c) the panels' power: the Captain's audio on the main battery bus,
+-- the F/O's on the APU battery bus (FCOM p.819-820): X-Plane's pilot's and
+-- copilot's audio panels silent without it
+B747DR_acp_bus_bat_main = find_dataref("laminar/B747/electrical/bus/bat_main")
+B747DR_acp_bus_bat_apu = find_dataref("laminar/B747/electrical/bus/bat_apu")
+local function seat_powered(seat)
+    if seat == "L" then return B747DR_acp_bus_bat_main > 0.5 end
+    return B747DR_acp_bus_bat_apu > 0.5
+end
+
+-- (7-1c) the CALL chime (laminar/B747/comm/call_chime, 1 for a second: the
+-- .snd's cockpit chime) as a call comes, not from takeoff thrust to 400 ft
+-- RA nor from 800 ft RA to 75 kt (FCOM p.1588, p.1599-1601: the attendant
+-- call's; for SELCAL and ACARS the same, ATA31 p.218). Takeoff thrust: a
+-- thrust lever at 0.6 or more (estimate); no chime afterwards for a call
+-- that came inhibited (estimate)
+B747DR_acp_call_chime = find_dataref("laminar/B747/comm/call_chime")
+simDR_acp_time = find_dataref("sim/time/total_running_time_sec")
+simDR_acp_ra = find_dataref("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
+simDR_acp_ias = find_dataref("sim/cockpit2/gauges/indicators/airspeed_kts_pilot")
+simDR_acp_vs = find_dataref("sim/flightmodel/position/vh_ind_fpm")
+simDR_acp_throttle = find_dataref("sim/cockpit2/engine/actuators/throttle_ratio")
+B747DR_acp_pseu_gnd = find_dataref("laminar/B747/gear/air_ground/pri_gnd")
+local CHIME_S = 1
+local chimeT = nil
+local function chime_inhibited()
+    if B747DR_acp_pseu_gnd > 0.5 then
+        if simDR_acp_ias > 75 then return true end
+        for i = 0, 3 do if simDR_acp_throttle[i] >= 0.6 then return true end end
+        return false
+    end
+    if simDR_acp_vs >= 0 then return simDR_acp_ra < 400 end
+    return simDR_acp_ra < 800
+end
+-- a call raised (the sim's entry: commands laminar/B747/comm/call/<channel>)
+function B747_acp_call(ch)
+    if AM.call(acpState, ch, simDR_acp_time) and not chime_inhibited() then chimeT = simDR_acp_time end
+end
+for _, ch in ipairs(AM.CALLS) do
+    deferred_command("laminar/B747/comm/call/" .. ch, "Raise a " .. ch .. " call (CALL light and chime)", function(phase, duration)
+        if phase == 0 then B747_acp_call(ch) end
+    end)
+end
+-- a PTT keyed (the com module's PTT handlers): R/T or INT resets a call
+function B747_acp_ptt(seat, kind)
+    AM.ptt(acpState, seat, kind)
+end
+
 -- the volume knobs' animation (30 to 330, as before) as X-Plane's ratio
 local VOL_MIN, VOL_MAX = 30, 330
 local function ratio(v) return math.max(0, math.min(1, (v - VOL_MIN) / (VOL_MAX - VOL_MIN))) end
@@ -101,18 +149,22 @@ local function flag(v) return v and 1 or 0 end
 local sel = {}
 function B747_acp_update()
     local held = held121()
+    AM.calls_update(acpState, simDR_acp_time)
     for _, seat in ipairs(AM.SEATS) do
         local p = acpState.seat[seat]
         local dr = "B747DR_ap_" .. seat .. "_"
         for _, ch in ipairs(AM.XMT) do NS[dr .. ch .. "_xmt_status"] = flag(p.xmt == ch) end
         for _, ch in ipairs(AM.RCV) do NS[dr .. ch .. "_audio_status"] = flag(p.man[ch]) end
+        for _, ch in ipairs(AM.CALLS) do NS[dr .. ch .. "_call_status"] = flag(acpState.call[ch]) end
     end
+    B747DR_acp_call_chime = flag(chimeT and simDR_acp_time - chimeT < CHIME_S)
     for seat in pairs(XP_SIDE) do
         local x = "simDR_acp_" .. seat .. "_"
         local dr = "B747DR_ap_" .. seat .. "_"
+        local on = seat_powered(seat)
         NS[x .. "audio_selection_com_auto"] = 0
-        NS[x .. "audio_selection_com1"] = flag(AM.hears(acpState, seat, "vhf_L", held.vhf_L))
-        NS[x .. "audio_selection_com2"] = flag(AM.hears(acpState, seat, "vhf_R", held.vhf_R))
+        NS[x .. "audio_selection_com1"] = flag(on and AM.hears(acpState, seat, "vhf_L", held.vhf_L))
+        NS[x .. "audio_selection_com2"] = flag(on and AM.hears(acpState, seat, "vhf_R", held.vhf_R))
         NS[x .. "audio_volume_com1"] = ratio(NS[dr .. "vhf_L_audio_vol"])
         NS[x .. "audio_volume_com2"] = ratio(NS[dr .. "vhf_R_audio_vol"])
         local xmt = acpState.seat[seat].xmt
@@ -121,7 +173,7 @@ function B747_acp_update()
         sel.vor_adf = NS[dr .. "vor_adf_rcvr_sel_dial_pos"]
         sel.app = NS[dr .. "app_rcvr_sel_dial_pos"]
         sel.filter = NS[dr .. "nav_filter_sel_dial_pos"]
-        local na = AM.nav_audio(acpState, seat, sel)
+        local na = on and AM.nav_audio(acpState, seat, sel) or {}
         for rcv, xp in pairs(XP_NAV) do
             local ch = na[rcv]
             NS[x .. "audio_selection_" .. xp] = flag(ch)

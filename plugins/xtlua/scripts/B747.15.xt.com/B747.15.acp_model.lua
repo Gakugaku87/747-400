@@ -11,6 +11,12 @@
 --    transmitter, or a VHF's active frequency is 121.500 (FCOM p.685)
 --  - the VOR/ADF and APP receiver selectors and the navigation filter per
 --    seat (before, one panel's turned all three: COM-02)
+--  - (7-1c) the CALL lights, on every panel: a call on a channel (SELCAL,
+--    ACARS voice, the cabin, the ground crew, SATCOM: the sim gives none,
+--    commands raise them) lights its CALL; pushing that transmitter
+--    selector resets it, or with it selected (MIC lit) the seat's R/T;
+--    FLT's by INT too (ATA23 p.31, p.68, p.112, p.118; FCOM p.684); the
+--    ground crew's FLT call out after 30 s (FCOM p.719). PA has no CALL
 -- Pure: the glue gives the 121.5 VHF and maps the seats to X-Plane's
 -- audio panels (the Captain's the pilot's, the F/O's the copilot's).
 --   local A = B747_acp_model                     -- in XTLua, after dofile
@@ -25,16 +31,44 @@ M.RCV = {"vhf_L", "vhf_C", "vhf_R", "flt", "cab", "pa", "hf_L", "hf_R", "sat_L",
 M.VOR_ADF = {[0] = "vor_L", "vor_R", "adf_L", "adf_R"}
 M.APP = {[0] = "ils_L", "ils_C", "ils_R", "mkr"}
 M.FILTER = {[0] = "V", "B", "R"} -- voice, both, range (the identifier)
+M.CALLS = {"vhf_L", "vhf_C", "vhf_R", "flt", "cab", "hf_L", "hf_R", "sat_L", "sat_R"}
+M.FLT_CALL_S = 30
 
 function M.new()
     local s = {seat = {}}
     for _, seat in ipairs(M.SEATS) do s.seat[seat] = {xmt = nil, man = {}} end
+    s.call = {}
     return s
 end
 
--- a transmitter selector pushed
+-- a transmitter selector pushed (its call reset, unless already selected)
 function M.xmt(s, seat, ch)
-    s.seat[seat].xmt = ch
+    local p = s.seat[seat]
+    if p.xmt ~= ch then s.call[ch] = nil end
+    p.xmt = ch
+end
+
+-- (7-1c) a call on a channel at time now: true when it is new
+function M.call(s, ch, now)
+    if s.call[ch] then return false end
+    s.call[ch] = now
+    return true
+end
+
+-- (7-1c) a PTT keyed: R/T ("rt") resets the call of the seat's
+-- transmitter, INT ("int") FLT's
+function M.ptt(s, seat, kind)
+    if kind == "rt" then
+        local x = s.seat[seat].xmt
+        if x then s.call[x] = nil end
+    elseif kind == "int" then
+        s.call.flt = nil
+    end
+end
+
+-- (7-1c) the calls with time: FLT's out after FLT_CALL_S
+function M.calls_update(s, now)
+    if s.call.flt and now - s.call.flt >= M.FLT_CALL_S then s.call.flt = nil end
 end
 
 -- a receiver pushed: on, or off unless it is the seat's transmitter or held

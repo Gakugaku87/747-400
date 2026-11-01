@@ -429,6 +429,8 @@ function clear_PTT()
 end
 
 function B747_ap_L_ptt_sel_switch_up_CMDhandler(phase, duration)
+    -- (7-1c) R/T or INT keyed: a call reset (notes/ATA-23.md §13)
+    if phase == 0 then B747_acp_ptt("L", "rt") end
     print("B747_ap_L_ptt_sel_switch_up_CMDhandler "..phase)
     if phase <= 1 then
         --if B747_ap_toggle_switch_position_target[0] == 0 then
@@ -444,6 +446,8 @@ function B747_ap_L_ptt_sel_switch_up_CMDhandler(phase, duration)
 end
 
 function B747_ap_L_ptt_sel_switch_dn_CMDhandler(phase, duration)
+    -- (7-1c) R/T or INT keyed: a call reset (notes/ATA-23.md §13)
+    if phase == 0 then B747_acp_ptt("L", "int") end
     print("B747_ap_L_ptt_sel_switch_dn_CMDhandler "..phase)
     if phase <= 1 then
         --if B747_ap_toggle_switch_position_target[0] == 0 then
@@ -459,6 +463,8 @@ function B747_ap_L_ptt_sel_switch_dn_CMDhandler(phase, duration)
 end
 
 function B747_ap_C_ptt_sel_switch_up_CMDhandler(phase, duration)
+    -- (7-1c) R/T or INT keyed: a call reset (notes/ATA-23.md §13)
+    if phase == 0 then B747_acp_ptt("C", "rt") end
     if phase == 0 then
         if B747_ap_toggle_switch_position_target[1] == 0 then
             B747_ap_toggle_switch_position_target[1] = 1
@@ -469,6 +475,8 @@ function B747_ap_C_ptt_sel_switch_up_CMDhandler(phase, duration)
 end
 
 function B747_ap_C_ptt_sel_switch_dn_CMDhandler(phase, duration)
+    -- (7-1c) R/T or INT keyed: a call reset (notes/ATA-23.md §13)
+    if phase == 0 then B747_acp_ptt("C", "int") end
     if phase == 0 then
         if B747_ap_toggle_switch_position_target[1] == 0 then
             B747_ap_toggle_switch_position_target[1] = -1
@@ -479,6 +487,8 @@ function B747_ap_C_ptt_sel_switch_dn_CMDhandler(phase, duration)
 end
 
 function B747_ap_R_ptt_sel_switch_up_CMDhandler(phase, duration)
+    -- (7-1c) R/T or INT keyed: a call reset (notes/ATA-23.md §13)
+    if phase == 0 then B747_acp_ptt("R", "rt") end
     if phase == 0 then
         if B747_ap_toggle_switch_position_target[2] == 0 then
             B747_ap_toggle_switch_position_target[2] = 1
@@ -489,6 +499,8 @@ function B747_ap_R_ptt_sel_switch_up_CMDhandler(phase, duration)
 end
 
 function B747_ap_R_ptt_sel_switch_dn_CMDhandler(phase, duration)
+    -- (7-1c) R/T or INT keyed: a call reset (notes/ATA-23.md §13)
+    if phase == 0 then B747_acp_ptt("R", "int") end
     if phase == 0 then
         if B747_ap_toggle_switch_position_target[2] == 0 then
             B747_ap_toggle_switch_position_target[2] = -1

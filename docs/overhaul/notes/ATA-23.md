@@ -342,3 +342,12 @@ GAP ID 接頭辞：`COM`。2026-10-23 調査。コード・acf・obj は変更�
   - 受信：COM1・COM2 は VHF L・R の受信（手、送信選択、121.5）と音量。
   - 航法：VOR/ADF の受信は選択器の VOR L/R（X-Plane の NAV3/NAV4）か ADF L/R（ADF1/2）、APP の受信は APP L/R（NAV1/NAV2 の ILS。ILS C は X-Plane に無い）か MKR（マーカー）。前は VOR L/R で NAV1/NAV2（ILS）を開き、APP はマーカーだけだった（COM-07）。フィルター V は識別符号を消す（X-Plane の航法音声は識別符号と推定）。MKR はフィルターを通らない（ATA23 p.28・71–72）。
 - 試験：`tests/com/acp_model_test.lua`（送信選択、受信、121.5、航法音声とフィルター）、`tests/com/acp_module_test.lua`（席ごと、受信灯、121.5、pilot と copilot の写像、航法、音量）。X-Plane：`s212_acp`。
+
+## 13. 7-1c（2026-11-02）
+
+- CALL 灯（ATA23 p.31・p.68・p.112・p.118、FCOM p.684・p.719）：呼び出し（SELCAL、ACARS の音声、客室、地上の整備員、SATCOM）で、全部の ACP のその系統の CALL 灯が点く。シムには呼び出しが無いので、コマンド `laminar/B747/comm/call/<系統>`（vhf_L・vhf_C・vhf_R・flt・cab・hf_L・hf_R・sat_L・sat_R）で立てる。PA には CALL が無い。
+  - 消えるのは、その系統の送信選択を押したとき（すでに選んでいれば消えない）、選んでいる系統で R/T の PTT を押したとき、FLT は INT の PTT か 30 秒（地上の整備員の呼び出し：FCOM p.719）。どの席の操作でも全部の ACP で消える。
+- チャイム：呼び出しが来たら `laminar/B747/comm/call_chime` を 1 秒 1 にする。音は `.snd` の hi chime（FCOM p.1588・p.1599–1601：客室の呼び出しは hi chime）。離陸推力から 400 ft RA まで、800 ft RA から 75 kt までは鳴らさない（同じ表の抑止。SELCAL・ACARS も同じとした：ATA31 p.218）。離陸推力は推力レバー 0.6 以上（推定）。抑止の間に来た呼び出しは後で鳴らさない（推定）。
+- ACP の電源（FCOM p.819–820）：機長の ACP は main battery bus、副操縦士の ACP は APU battery bus。電源が無いと、その席の X-Plane の音声パネル（pilot・copilot）を聞こえなくする。
+- memo VHF DATA OFF（FCOM p.776、109）：VHF C が音声のとき。570 の「全部の VHF が音声」は、VHF L・R が音声だけなので VHF C で決まる。
+- 試験：`tests/com/acp_model_test.lua` と `acp_module_test.lua` に呼び出し（全部の ACP の CALL 灯、チャイム 1 秒、送信選択で消える・すでに選んでいれば消えない、R/T・INT で消える、FLT の 30 秒、離陸の滑走中は鳴らない）、ACP の電源、VHF DATA OFF。

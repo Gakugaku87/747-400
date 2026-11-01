@@ -5925,6 +5925,15 @@ BEGIN_SOUND_ATTACHMENT
     EVENT_START_COND laminar/B747/fms/atc_chime == 1
 END_SOUND_ATTACHMENT
 
+# (7-1c) a call's chime: the hi chime (the attendant call's: FCOM p.1588,
+# p.1599-1601) as the communications' laminar/B747/comm/call_chime is 1 for
+# a second (a call on an ACP channel: notes/ATA-23.md section 13)
+BEGIN_SOUND_ATTACHMENT
+    EVENT_NAME /Boeing/747/-400/Warnings/hi_chime
+    VEH_XYZ 0 4.9 -26
+    EVENT_START_COND laminar/B747/comm/call_chime == 1
+END_SOUND_ATTACHMENT
+
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/ding
     VEH_XYZ 0 5.1 -25.5

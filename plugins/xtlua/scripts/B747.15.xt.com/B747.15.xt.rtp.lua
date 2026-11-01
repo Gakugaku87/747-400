@@ -27,6 +27,9 @@ B747DR_com_hf_R_am                  = find_dataref("laminar/B747/comm/hf_R/am")
 B747DR_rtp_bus_dc                   = find_dataref("laminar/B747/electrical/bus/dc")
 B747DR_rtp_bus_bat_main             = find_dataref("laminar/B747/electrical/bus/bat_main")
 B747DR_rtp_engine_type              = find_dataref("laminar/B747/engines/type")
+-- (7-1c) the memo VHF DATA OFF: VHF C in voice mode, not for ACARS (FCOM
+-- p.776, the 109; the 570's "all VHF in voice": VHF L and R here voice only)
+B747DR_rtp_CAS_memo                 = find_dataref("laminar/B747/CAS/memo_status")
 -- X-Plane's 25 kHz knob (the 109; the 8.33 kHz ones: simCMD_com*_stby_fine_*)
 simCMD_com1_stby_fine_up_25         = find_command("sim/radios/stby_com1_fine_up")
 simCMD_com1_stby_fine_dn_25         = find_command("sim/radios/stby_com1_fine_down")
@@ -169,6 +172,7 @@ function B747_rtp_update()
     B747DR_com_hf_R_active_khz, B747DR_com_hf_R_standby_khz, B747DR_com_hf_R_am = r.hf_R.active, r.hf_R.standby, flag(r.hf_R.am)
     -- VHF L on the main battery bus (FCOM p.819); VHF R's bus not in the
     -- sources (estimate: DC bus 2)
+    B747DR_rtp_CAS_memo[37] = flag(not RM.vhf_c_data(s))
     simDR_audio_com1_power = flag(B747DR_rtp_bus_bat_main > 0.5)
     simDR_audio_com2_power = flag(B747DR_rtp_bus_dc[1] > 0.5)
 end

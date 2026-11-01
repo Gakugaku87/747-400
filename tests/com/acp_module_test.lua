@@ -10,6 +10,7 @@ local rt = xtlua.new()
 rt:load("plugins/xtlua/scripts/B747.15.xt.com/B747.15.xt.com.lua")
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("laminar/B747/electrical/bus/bat_main", 1)
+rt:set("laminar/B747/electrical/bus/bat_apu", 1)
 for i = 0, 3 do rt:set("laminar/B747/electrical/bus/dc", i, 1) end
 rt:set("sim/cockpit2/radios/actuators/com1_frequency_hz_833", 118100)
 rt:set("sim/cockpit2/radios/actuators/com2_frequency_hz_833", 128800)
@@ -86,4 +87,49 @@ cmd("laminar/B747/comm/ap_L/vhf_L_audio/vol_up")
 T.equal(get(L .. "vhf_L/audio_vol"), v0 + 1, "L's VHF L volume up")
 T.equal(get("laminar/B747/ap_C/vhf_L/audio_vol"), c0, "C's VHF L volume stays (before, linked)")
 T.near(get(XA .. "audio_volume_com1"), (v0 + 1 - 30) / 300, 1e-6, "pilot: COM1's volume from L's knob")
+
+-- (7-1c) the CALL lights (ATA23 p.31, p.68; FCOM p.684, p.719): on every
+-- panel, the chime; reset by the transmitter selector, or (selected) R/T;
+-- FLT by INT, or after 30 s
+local C = "laminar/B747/comm/"
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+cmd(C .. "call/vhf_C")
+T.check(ap("L", "vhf_C", "call_status") == 1 and ap("R", "vhf_C", "call_status") == 1 and ap("C", "vhf_C", "call_status") == 1,
+    "a VHF C call: the CALL light on every panel")
+T.equal(get(C .. "call_chime"), 1, "the chime")
+rt:frame(1.1)
+T.equal(get(C .. "call_chime"), 0, "the chime a second")
+cmd("laminar/B747/ap_R/vhf_C/xmt_sel_switch")
+T.check(ap("L", "vhf_C", "call_status") == 0 and ap("R", "vhf_C", "call_status") == 0, "the F/O selects VHF C: the call reset on every panel")
+cmd(C .. "call/vhf_C")
+cmd("laminar/B747/ap_R/vhf_C/xmt_sel_switch")
+T.equal(ap("L", "vhf_C", "call_status"), 1, "VHF C already selected: its selector does not reset")
+cmd("laminar/B747/ap_R/ptt/sel_switch_up")
+T.equal(ap("L", "vhf_C", "call_status"), 0, "R/T keyed with VHF C selected: reset")
+cmd(C .. "call/flt")
+cmd("laminar/B747/ap_L/ptt/sel_switch_dn")
+T.equal(ap("L", "flt", "call_status"), 0, "a FLT call: INT resets it")
+cmd(C .. "call/flt")
+for _ = 1, 31 * 30 do rt:frame(1 / 30) end
+T.equal(ap("L", "flt", "call_status"), 0, "a FLT call: out after 30 s (FCOM p.719)")
+-- the chime inhibited on the takeoff roll (FCOM p.1588)
+rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 100)
+cmd(C .. "call/cab")
+T.check(ap("L", "cab", "call_status") == 1 and get(C .. "call_chime") == 0, "a cabin call at 100 kt on the ground: the light, no chime")
+rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 0)
+
+-- (7-1c) the panels' power: the Captain's audio on the main battery bus
+rt:set("laminar/B747/electrical/bus/bat_main", 0)
+rt:frame(1 / 30)
+T.equal(get(XA .. "audio_selection_com1"), 0, "no main battery bus: the pilot's audio panel silent")
+rt:set("laminar/B747/electrical/bus/bat_main", 1)
+rt:frame(1 / 30)
+
+-- (7-1c) the memo VHF DATA OFF (FCOM p.776)
+local MEMO = "laminar/B747/CAS/memo_status"
+T.equal(get(MEMO, 37), 0, "VHF C in data mode: no VHF DATA OFF")
+cmd("laminar/B747/rtp_C/freq_txfr/sel_switch")
+T.equal(get(MEMO, 37), 1, "VHF C in voice mode: VHF DATA OFF")
+cmd("laminar/B747/rtp_C/freq_txfr/sel_switch")
+T.equal(get(MEMO, 37), 0, "VHF C back in data mode: gone")
 T.done()

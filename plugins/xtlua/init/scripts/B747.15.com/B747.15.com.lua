@@ -97,6 +97,11 @@ B747DR_com_hf_L_am                  = deferred_dataref("laminar/B747/comm/hf_L/a
 B747DR_com_hf_R_active_khz          = deferred_dataref("laminar/B747/comm/hf_R/active_khz", "number")
 B747DR_com_hf_R_standby_khz         = deferred_dataref("laminar/B747/comm/hf_R/standby_khz", "number")
 B747DR_com_hf_R_am                  = deferred_dataref("laminar/B747/comm/hf_R/am", "number")
+-- (7-1c) the CALL chime and the calls' entry commands (notes/ATA-23.md §13)
+B747DR_acp_call_chime               = deferred_dataref("laminar/B747/comm/call_chime", "number")
+for _, ch in ipairs({"vhf_L", "vhf_C", "vhf_R", "flt", "cab", "hf_L", "hf_R", "sat_L", "sat_R"}) do
+    deferred_command("laminar/B747/comm/call/" .. ch, "Raise a " .. ch .. " call (CALL light and chime)", nil)
+end
 
 
 -- AUDIO PANEL SWITCHES
