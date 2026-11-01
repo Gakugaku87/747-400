@@ -23,9 +23,15 @@ B747_eec_model = M
 -- 300 kt, maximum continuous from 18,000 to 22,000 ft or above 293 kt,
 -- maximum climb above 25,000 ft with the levers past 35° (the normal climb
 -- position). Between them the logic blends (bands from those figures,
--- estimate). P&W: no source, as the CF6 (estimate). The maximum continuous
--- rating is its table's (the FMC's step 9h1; before, the maximum climb's),
--- not under the maximum climb's (estimate: the table is for one engine
+-- estimate). P&W: no source, as the CF6 but for the maximum climb: its
+-- full-forward rating stays the maximum continuous above 22,000 ft
+-- (estimate, 2026-11-02: the P&W's EPR turns red at the maximum EPR, FCOM
+-- p.834, and with the CF6's maximum climb above 25,000 ft every climb at
+-- CLB thrust showed red; maximum thrust is the full forward lever's in any
+-- phase, p.876; the PW4056's maximum continuous EPR is over its maximum
+-- climb's to 35,000 ft, PI.13.1, PI.10.36). The maximum continuous rating
+-- is its table's (the FMC's step 9h1; before, the maximum climb's), not
+-- under the maximum climb's (estimate: the table is for one engine
 -- inoperative, more bleed on each engine).
 M.TO_ALT, M.MCT_ALT = 17000, 18000
 M.TO_KIAS, M.MCT_KIAS = 300, 293
@@ -748,8 +754,9 @@ function M.update(s, inp, dt)
     local ga = M.lookup(tables.ga, inp.tat, ga_alt)
     local clb = M.lookup(tables.clb, inp.tat, inp.alt)
     -- (the FMC's step 9h1) the maximum continuous band: the table's to
-    -- 22,000 ft, not under the maximum climb's, gone by 25,000 ft
-    local mct_share = clamp((M.CLB_ALT - inp.alt) / (M.CLB_ALT - M.MCT_ALT_TOP), 0, 1)
+    -- 22,000 ft, not under the maximum climb's, gone by 25,000 ft (the CF6;
+    -- the P&W's at every altitude: see the top)
+    local mct_share = inp.type == "GE" and clamp((M.CLB_ALT - inp.alt) / (M.CLB_ALT - M.MCT_ALT_TOP), 0, 1) or 1
     local mct = (mct_share > 0 and to_share < 1) and M.lookup_mct(tables.mct, inp.tat, inp.alt, inp.kias) or nil
     -- the alternate mode's schedule: the corner point rating, no bleed adjustments
     local altn_max = to_share * M.lookup_max(tables.ga, ga_alt) + (1 - to_share) * M.lookup_max(tables.clb, inp.alt)

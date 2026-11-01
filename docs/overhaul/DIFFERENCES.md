@@ -31,7 +31,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | CDU | 作り直し中（FMC と 1 本の段取り。段 1：小修正、段 2：枠組み、段 3：地上準備のページ、段 4：航法データベース、段 5：経路（RTE・LEGS・DEP/ARR）、段 7：HOLD・OFFSET・REF NAV DATA・ABEAM PTS・自分で作る点・FIX INFO・RTE 2、LEGS の PLAN の CTR と STEP。段 8〜11：CRZ・CLB・DES・THRUST LIM・E/O・RTA PROGRESS・WIND・DESCENT FORECAST・RTE DATA のページ、POS REF 2/3・3/3、NAV RADIO、PROGRESS 2、FMC のメッセージの規則と残り、FMC 2 台との接続（MENU と TIMEOUT - RESELECT、再同期）。段 12a〜12h3：データリンクの有無、ページの自動の切り替え、VNAV のページの点、保守のページ、データリンクの EICAS、MENU の <ACARS、ATC のログオン・アップリンク・ATC LOG・要求） | 3 台が X-Plane の CDU 1 つを共有（性能のページなど、残りの X-Plane のページ）、性能のページの MOD/EXEC、入力の検査、データリンクの残り（会社のデータリンクと ADS、アップリンクの LOAD） |
 | 自動操縦・FD | 作り直し中（6-3。段取り：notes/ATA-22.md §10。段 1a：engage と解除、AUTOPILOT DISC、F/D と既定のモード、段 1b：ロールのモード、段 1c：ピッチのモード、段 1d：進入のモード、段 1e：TO/GA、段 2a・2b：ロールの則（HDG SEL・HDG HOLD・ATT・LNAV・TO/GA・LOC、bank limit）、段 4a：multi-channel の arm と engage、LAND 3・LAND 2・NO AUTOLAND、段 4b：FLARE と NOSE LETDOWN、A/T の IDLE、段 4c：ROLLOUT、段 4d：runway align と片発、段 5a：電源と engage のインターロック、段 5b：NO LAND 3・NO AUTOLAND と AUTOPILOT DISC の音、段 5c：モード故障と AUTOPILOT caution、F/D のバー、段 5d：ILS TUNE INHIBIT と RA TEST INHIBIT、段 6a：ヨーダンパーのモード（試験・地上の待機・fade・fault INOP と自動復帰）。段 3a〜3c：ピッチの則（V/S・ALT とその捕捉、速度を昇降舵で保つ則（FLCH・T/O・G/A・前の VNAV の速度）と速度の保護、G/S とその捕捉）、A/P の姿勢のループ（自動トリムの帯、スタビライザーの差し引き、姿勢の変化率、入るときの舵面への同期、速度によるゲイン）。LNAV のロールは FMC の指令：6-1 段 6c） | F/D の故障旗、caution の後に解除する FCC・MCP の内部の故障、master FMC の故障のときの FCC の自前の最小・最大速度（FCOM p.675）（VNAV の許容・速度の逆戻り・MCP のノブ・進入は FMC の段 9d・9e で、master FMC の故障のモード故障は段 11d2a で済） |
 | オートスロットル・推力管理 | 作り直し中（FMC の段 9f1：モードの論理と engage・disconnect、>AUTOTHROT DISC。段 9f2：制御則と servo、THR、override。段 9f3：電源の interlock、THRUST REQUIRED。段 9d2：VNAV の THR から HOLD。段 9g1〜9g4：推力制限のモード、THRUST LIM のページ、reference の値、EICAS の推力の表示。段 9h1：CON の値。段 9h3a：エンジン不作動の推力制限と A/T の interlock。段 11d2a：master FMC の故障で切れて ARM スイッチの入れ直しまで戻らない、FMC の選択を回すと切れる） | 推力制限の CRZ の値（推定）、SPD の速さの戻り、servo loop monitor |
-| 通信（ATA 23） | 未着手 | VHF の電源、ACP の連動、VHF C と HF が無い |
+| 通信（ATA 23） | 作り直し済み（7-1a：無線機と RTP、7-1b：ACP の席、7-1c：CALL 灯とチャイム・電源） | VHF C と HF は音が出ない（X-Plane に COM3 が無い）、呼び出しはコマンドで立てる、interphone・PA・呼出パネル、X-Plane の送信（PTT） |
 | 照明（ATA 33） | 作り直し中（7-2a：ストロボ、完全 GC。7-2b：外部灯の電源と空地。7-2c：表示灯の BRT・DIM・TEST と STORM。7-2d：非常灯の論理） | 操縦室照明の standby（AC 喪失時）、FLIGHT DECK ACCESS LIGHTS、BEACON の LWR と BOTH の区別 |
 | ドア（ATA 52） | 軽く（7-3。3D が追いついていない） | L1 と上部デッキ L 以外のドアの開閉と表示、cargo・E/E door、操縦室ドアのロックが無い |
 
@@ -149,7 +149,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 
 残っている違い：
 
-- 最大連続の定格は FMC の段 9h1 から FCOM の表（PI.13.1–13.2、PI.23.1–23.3：高度・速度・TAT）で、全開の定格の 18,000〜22,000 ft の帯（25,000 ft で最大上昇へ）と 293 kt を超えた所に使う（最大上昇の表より下にはしない：推定。前は最大上昇の値）。25,000 ft より上の全開は最大上昇の表（ATA70_80 p.208–209）で速さの影響が無い。離陸の定格は着陸復行の表で代用（通常モードの離陸の表が FCOM に無い）。P&W の EEC の論理は資料に無く CF6 と同じとした。RR は前の推力の論理のまま（資料が無い）。
+- 最大連続の定格は FMC の段 9h1 から FCOM の表（PI.13.1–13.2、PI.23.1–23.3：高度・速度・TAT）で、全開の定格の 18,000〜22,000 ft の帯（25,000 ft で最大上昇へ）と 293 kt を超えた所に使う（最大上昇の表より下にはしない：推定。前は最大上昇の値）。25,000 ft より上の全開は最大上昇の表（ATA70_80 p.208–209）で速さの影響が無い。離陸の定格は着陸復行の表で代用（通常モードの離陸の表が FCOM に無い）。P&W の EEC の論理は資料に無く CF6 と同じとした。ただし P&W の全開は 22,000 ft より上も最大連続（2026-11-02、推定：25,000 ft より上の最大上昇を当てると、CLB の上昇で EPR の数字が赤くなった。FCOM p.834）。RR は前の推力の論理のまま（資料が無い）。
 - 推力の制御は X-Plane のスロットルを燃料の計量とみなした作りで、加速・減速の速さ（P&W 0.15 EPR/秒、GE は上げ 15・下げ 5 %N1/秒）とゲインは推定。X-Plane のエンジンが指令に届かないとき（GE の空中の高い定格など）は、前の仕組みで X-Plane の最大推力を少しずつ足す（ENG-03）。P&W の赤線（111.4 %）は資料に無く、表示が赤くなる値（ENG-03・04）。
 - ALTN は手動だけ（EEC の故障と自動の移行が無い）。P&W の制御量は EPR のまま（実機は N1 に替わる）。代替モードの指令の上限は推定（ENG-05）。
 - >ENG SHUTDOWN で master CAUTION の灯を点けない扱いがまだ（ENG-09）。シムの AUTOSTART スイッチは 1 個（109 は 4 個）。PW の始動の値（燃料投入の N2、EGT の限界）は資料に無く推定。
@@ -572,11 +572,12 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - インターロックの残り（servo loop monitor：ATHR-15）。FMC の故障と master の切り替えは FMC の段 11d2a（2026-11-01）から：master FMC の故障で切れて AUTOTHROT DISC、ARM スイッチを切って入れるまで戻らない、FMC の選択を回すと切れる（ATA34_2 p.633、FCOM p.666）。
 - EICAS の推力の表示は段 9g4 から：数字はいつも推力制限（前は降下の THR REF・IDLE で 0.90、GE は 25）、紫のカーソルは VNAV の上昇・VNAV のアイドルの降下で防氷・A/T ARM OFF（ATA34_2 p.652。前は THR REF のときだけで、ほかではカーソルが消えた：ATHR-17）、モードの行に D-TO の assumed temp（「D-TO 1 +38C」：FCOM p.831）。
 
-### 通信（ATA 23）：未着手
+### 通信（ATA 23）：作り直し済み（7-1a〜7-1c、notes/ATA-23.md §10〜§13）
 
-- VHF の電源が RTP の表示で決まる（COM-01）。ACP 3 枚が連動する（COM-02）。
-- VHF C と HF L/R の無線機が無い（COM-03）。AM スイッチの扱い（COM-04）。
-- CALL 灯とチャイム、PTT が動かない（COM-05・06）。航法受信の音声の経路（COM-07）。電源への依存が無い（COM-08）。データリンクのメッセージ（COM-09）は、EICAS の ATC MESSAGE・ACARS MESSAGE・>DATALINK LOST・AVAIL を FMC の段 12d1 で作った（2026-11-01、上の CDU）。
+- 実機に合わせた点（7-1a、2026-11-02）：VHF L・R は X-Plane の COM1・COM2（109 は 25 kHz、570 は 8.33 kHz）、VHF C と HF L・R は Lua の中の無線機（VHF C は通常 ACARS のデータ、transfer で音声と入れ替わる）。RTP はどの無線機も選べ、offside 灯、OFF で切り離し、AM は選んだ HF の AM・USB。RTP の窓に VHF C・HF の周波数と ACARS（カスタム acf のパネル計器）。COM1・COM2 は母線で通電（前は RTP の表示で決まった：COM-01）。
+- 実機に合わせた点（7-1b、2026-11-02）：ACP は席ごと（前は 3 枚が連動：COM-02）。受信の ON・OFF と受信灯、121.5 は全席で聞こえる、航法受信の音声は VOR L/R が NAV3/4・APP が ILS とマーカー（COM-07）、フィルター。機長の ACP を X-Plane の pilot、副操縦士を copilot の音声パネルに写す。
+- 実機に合わせた点（7-1c、2026-11-02）：CALL 灯は全部の ACP に点き hi chime（離陸と着陸の抑止つき）、送信選択・R/T・INT で消える、FLT は 30 秒。ACP の電源（機長 main battery bus、副操縦士 APU battery bus）。memo VHF DATA OFF。
+- 残る違い：VHF C と HF は音が出ない（X-Plane に COM3 が無い）。シムには呼び出し（SELCAL・客室・地上の整備員）が無く、コマンド `laminar/B747/comm/call/<系統>` で立てる。observer の ACP は聞こえない（X-Plane に 3 枚目の音声パネルが無い）。interphone・PA・呼出パネル（COM-15）、PTT の X-Plane の送信と flight interphone（COM-06）。RTP の中央・右と COM2 の電源の母線は推定。
 
 ### 照明（ATA 33）：作り直し中（7-2a：ストロボ、完全 GC。7-2b：外部灯の電源と空地。7-2c：表示灯の BRT・DIM・TEST と STORM。7-2d：非常灯の論理）
 

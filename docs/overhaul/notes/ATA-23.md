@@ -297,3 +297,57 @@ GAP ID 接頭辞：`COM`。2026-10-23 調査。コード・acf・obj は変更�
 7. 資料に記載なし：VHF C・VHF R・中央/右 RTP・observer の interphone・ACARS MU・SATCOM の電源バス、OFF 中の RTP 表示、送信選択を外したとき自動で入った受信が切れるか、抑止の解除後にチャイムが鳴るか、VHF/HF の周波数範囲、電源投入時の RTP と無線機の状態、DATA LINK の VOICE の意味、109 の 8.33 kHz の可否（シムは 8.33 kHz のコマンドを使う）。
 8. 資料の食い違い（採った側）：チャイムの音（FCOM「Hi Chime」/ ATA31 の low chime。音は FMOD の範囲で、ロジックは同じ）、抑止の区間（FCOM 400 ft・75 kt を採用 / ATA 800 ft・接地）、CALL の解除（FCOM「MIC/INTERPHONE スイッチ」、ATA は SELCAL は INT を除く PTT・FLT は INT でも可。ATA の区別を採る）、offside の条件 (c) は 405 だけ。
 9. AutoATC を使わない利用者に「ACARS NO COMM」の代わりに >DATALINK LOST を常時出すのか、ACARS 未装備として何も出さないのか（利用者の判断）。
+
+## 10. 段取り（2026-11-01：7-1 通信）
+
+§8 のとおり com の中身を作り直す。INTERFACES.tsv の dataref とコマンドの名前と意味は保つ。段に分ける。
+
+| 段 | 中身 | GAP |
+|---|---|---|
+| 7-1a | 無線機と RTP：VHF L/C/R と HF L/R の active・standby（VHF C のデータモード、HF の AM/USB）、RTP の選択・OFF・offside 灯・窓とノブ・transfer。VHF L/R は X-Plane の COM1/COM2 のまま、VHF C と HF は Lua の中の無線機。RTP の窓に VHF C・HF の周波数と ACARS（カスタム acf のパネル計器）。COM1/2 の通電は電源の母線で | COM-01・03・04・11・12 |
+| 7-1b | ACP の席：席ごとの送信選択・受信・音量、X-Plane の pilot/copilot の audio panel への写像、PTT（R/T・INT）、航法受信の音声、121.5 | COM-02・06・07・13・14 |
+| 7-1c | CALL 灯とチャイム、通信の EICAS、電源 | COM-05・08・09・10 |
+
+## 11. 7-1a（2026-11-01）
+
+- 無線機と RTP を `B747.15.radio_model.lua`（X-Plane なしの純関数）で持ち、グルー `B747.15.xt.rtp.lua`（com モジュールが dofile）が RTP のコマンド・灯・窓を受け持つ。前の RTP の処理（3 枚 × 13 のハンドラ、`B747_lcd_display_status`・`B747_radio_sel_swap`、約 600 行）を置き換えた。
+- 無線機（FCOM p.714–715）：
+  - VHF L・R は X-Plane の COM1・COM2（周波数は X-Plane の dataref、ノブと transfer は X-Plane のコマンド）。109 は 25 kHz、570 は 8.33 kHz（FCOM p.714 の「405, 570」。エンジン型式で選ぶ）。
+  - VHF C と HF L・R はモデルの無線機（`laminar/B747/comm/vhf_C|hf_L|hf_R/active_khz`・`standby_khz`、HF の `am`）。音は出ない（X-Plane に COM3 が無い：§6.1）。HF の範囲 2–29.999 MHz・1 kHz 刻みは推定。VHF C の刻みは 25 kHz（570 も：簡略化）。
+  - VHF C は通常データ（ACARS）で、ACTIVE 窓に ACARS（109）。transfer で音声の周波数と入れ替わり、STANDBY 窓に ACARS が出る（FCOM p.686–687）。MHz のノブを 118 の下へ回すと STANDBY が ACARS（推定。資料は transfer の後だけを書く）。
+- RTP（FCOM p.685–688）：
+  - 押した無線機を選び、その active・standby を窓に出す。どの RTP もどの無線機も選べる。無線機は表示に関係なく動き続ける。
+  - offside 灯：本来の組でない無線機を選んでいる、または本来の組の無線機を他の RTP が選んでいる（L：VHF L・HF L、C：VHF C、R：VHF R・HF R）。405 の「他の RTP が OFF」は 109 に無い。
+  - OFF：無線機から切り離す（選択もノブも効かない）。窓は消す（推定：資料に記載なし）。前は OFF でも一部のノブが同調した（COM-12）。
+  - AM スイッチは選んだ HF の AM・USB の切り替え（前は無線機の選択として扱い、HF の選択が外れた：COM-04）。AM 灯は選んだ HF が AM のとき。
+  - ノブの向き：前は右の RTP の内側のノブを上に保持すると下がった（COM-11）。
+  - 電源：左の RTP は main battery bus（FCOM p.819）、中央・右は資料に記載なし（DC bus 1・2 と推定）。電源が無ければ窓と灯を消す。
+- X-Plane の COM1・COM2 の通電：VHF L は main battery bus（FCOM p.819）、VHF R は DC bus 2（推定）。前はどれかの RTP が表示しているときだけ通電していた（COM-01）。
+- 窓（カスタム acf のパネル計器を 23 個足した。手順：バックアップ `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261101_before_rtp_windows`）：
+  - 3 枚の RTP の ACTIVE・STANDBY の窓それぞれに、VHF C・HF L・HF R の周波数（COM1 の窓と同じ LED、kHz/1000）と ACARS の絵（中央の ACTIVE 窓の既存のものと同じ画像と位置のずらし）。
+  - ACTIVE 窓は `rtp_*/lcd_to_display`（0 COM1、1 COM2、2 VHF C、3 HF L、4 HF R、98 ACARS、90 空白）、STANDBY 窓は新しい `rtp_*/stby_show`（同じ値）で出し分ける。前の INOP の絵（99）は出なくなった（計器は残す）。
+- 試験：`tests/com/radio_model_test.lua`（選択、offside、AM、ノブと transfer、VHF C のデータと音声、OFF、電源）、`tests/com/rtp_module_test.lua`（コマンドから窓と灯、X-Plane のコマンド、109 と 570 の刻み、COM1/2 の通電）。
+
+## 12. 7-1b（2026-11-02）
+
+- ACP（音声パネル）を `B747.15.acp_model.lua`（X-Plane なしの純関数）で持ち、グルー `B747.15.xt.acp.lua`（com モジュールが dofile）がコマンド・灯・X-Plane の音声パネルを受け持つ。前の 3 枚分のハンドラ（約 1,700 行）と `B747_xmt_sel_swap`・`B747_radio_audio_status` を置き換えた。PTT のハンドラ（3D の動きと AutoATC が読む位置）はそのまま残した。
+- 席ごとに独立（FCOM p.683–685、ATA23 p.30–31・p.54）：
+  - 送信選択は席ごとに 1 つ。選ぶとその受信も入る。前は VHF L・R を押すと 3 枚とも同じ選択になった（COM-02）。
+  - 受信は音量ノブを押して ON・OFF。受信灯（緑）は手で入れたものだけ（推定：FCOM p.683・685 の書き方。前は送信選択で入った受信も点いた：COM-13）。送信選択中の系統と、ACTIVE が 121.500 の VHF は OFF にできない（FCOM p.685）。
+  - 121.500 の VHF は全席で聞こえる（ATA23 p.26・64）。
+  - VOR/ADF・APP の選択器とフィルター、音量は席ごと（前は 1 枚を回すと 3 枚とも回った：COM-02、ほかの席のノブを動かす誤り：COM-14）。
+  - 開始時は機長の VHF L の送信（前のまま。ATA23 p.30 では電源投入時は送信選択なし）。
+- X-Plane の音声パネル（§6.1）：機長の ACP を pilot の、副操縦士の ACP を copilot の音声パネルに写す。observer の ACP は聞こえない（X-Plane に 3 枚目が無い）。
+  - 送信：VHF L なら COM1、VHF R なら COM2（`audio_com_selection_man`、受信は X-Plane の自動選択を切って ACP の受信で：`audio_selection_com_auto` = 0）。VHF C・HF・interphone などを選んでいるときは X-Plane の選択を変えない（X-Plane に「なし」が無い）。
+  - 受信：COM1・COM2 は VHF L・R の受信（手、送信選択、121.5）と音量。
+  - 航法：VOR/ADF の受信は選択器の VOR L/R（X-Plane の NAV3/NAV4）か ADF L/R（ADF1/2）、APP の受信は APP L/R（NAV1/NAV2 の ILS。ILS C は X-Plane に無い）か MKR（マーカー）。前は VOR L/R で NAV1/NAV2（ILS）を開き、APP はマーカーだけだった（COM-07）。フィルター V は識別符号を消す（X-Plane の航法音声は識別符号と推定）。MKR はフィルターを通らない（ATA23 p.28・71–72）。
+- 試験：`tests/com/acp_model_test.lua`（送信選択、受信、121.5、航法音声とフィルター）、`tests/com/acp_module_test.lua`（席ごと、受信灯、121.5、pilot と copilot の写像、航法、音量）。X-Plane：`s212_acp`。
+
+## 13. 7-1c（2026-11-02）
+
+- CALL 灯（ATA23 p.31・p.68・p.112・p.118、FCOM p.684・p.719）：呼び出し（SELCAL、ACARS の音声、客室、地上の整備員、SATCOM）で、全部の ACP のその系統の CALL 灯が点く。シムには呼び出しが無いので、コマンド `laminar/B747/comm/call/<系統>`（vhf_L・vhf_C・vhf_R・flt・cab・hf_L・hf_R・sat_L・sat_R）で立てる。PA には CALL が無い。
+  - 消えるのは、その系統の送信選択を押したとき（すでに選んでいれば消えない）、選んでいる系統で R/T の PTT を押したとき、FLT は INT の PTT か 30 秒（地上の整備員の呼び出し：FCOM p.719）。どの席の操作でも全部の ACP で消える。
+- チャイム：呼び出しが来たら `laminar/B747/comm/call_chime` を 1 秒 1 にする。音は `.snd` の hi chime（FCOM p.1588・p.1599–1601：客室の呼び出しは hi chime）。離陸推力から 400 ft RA まで、800 ft RA から 75 kt までは鳴らさない（同じ表の抑止。SELCAL・ACARS も同じとした：ATA31 p.218）。離陸推力は推力レバー 0.6 以上（推定）。抑止の間に来た呼び出しは後で鳴らさない（推定）。
+- ACP の電源（FCOM p.819–820）：機長の ACP は main battery bus、副操縦士の ACP は APU battery bus。電源が無いと、その席の X-Plane の音声パネル（pilot・copilot）を聞こえなくする。
+- memo VHF DATA OFF（FCOM p.776、109）：VHF C が音声のとき。570 の「全部の VHF が音声」は、VHF L・R が音声だけなので VHF C で決まる。
+- 試験：`tests/com/acp_model_test.lua` と `acp_module_test.lua` に呼び出し（全部の ACP の CALL 灯、チャイム 1 秒、送信選択で消える・すでに選んでいれば消えない、R/T・INT で消える、FLT の 30 秒、離陸の滑走中は鳴らない）、ACP の電源、VHF DATA OFF。

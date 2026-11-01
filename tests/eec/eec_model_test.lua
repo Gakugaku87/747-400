@@ -100,22 +100,31 @@ inp.alt, inp.tat, inp.kias = 30000, -20, 280
 inp.nai = {true, false, false, false}
 inp.lever = {0.7, 0.7, 0.35, 1.0}
 out = E.update(s, inp, DT)
-T.near(out.max[2], 1.57, 1e-9, "PW max climb EPR at 30,000 ft, TAT -20")
-T.near(out.max[1], 1.53, 1e-9, "engine anti-ice on engine 1: -0.04 at 30,000 ft")
-T.near(out.command[2], 1.57, 1e-9, "35° TLA reaches the climb rating above 25,000 ft")
-T.near(out.command[4], 1.57, 1e-9, "full forward gives the climb rating above 25,000 ft")
-T.near(out.command[3], 1.285, 1e-9, "17.5° TLA commands half way from idle")
+-- (2026-11-02) the P&W's full-forward rating above 25,000 ft: the maximum
+-- continuous, not the climb's (before, 1.57: its EPR at CLB thrust was the
+-- maximum EPR and turned red, FCOM p.834)
+local clb30 = E.lookup(PW.clb, -20, 30000)
+local mct30 = E.rating_mct(PW.mct, inp, -20, 30000, 280, false)
+T.near(clb30, 1.57, 1e-9, "PW max climb EPR at 30,000 ft, TAT -20")
+T.check(mct30 > clb30 + 0.01, "PW at 30,000 ft: the maximum continuous over the climb's (PI.13.1, PI.10.36): " .. mct30)
+T.near(out.max[2], mct30, 1e-9, "PW max EPR at 30,000 ft: the maximum continuous")
+T.near(out.max[1], math.max(E.rating(PW.clb, inp, -20, 30000, true), E.rating_mct(PW.mct, inp, -20, 30000, 280, true)), 1e-9,
+    "engine anti-ice on engine 1: the maximum continuous's own adjustment")
+T.near(out.command[2], mct30, 1e-9, "35° TLA reaches the maximum EPR above 25,000 ft")
+T.near(out.command[4], mct30, 1e-9, "full forward gives the maximum continuous above 25,000 ft")
+T.near(out.command[3], (1.0 + mct30) / 2, 1e-9, "17.5° TLA commands half way from idle")
 inp.wai = true
 out = E.update(s, inp, DT)
-T.near(out.max[1], 1.50, 1e-9, "engine and wing anti-ice: -0.07 at 30,000 ft")
-T.near(out.max[2], 1.57, 1e-9, "wing anti-ice alone does not change an engine without engine anti-ice")
+T.near(out.max[1], math.max(E.rating(PW.clb, inp, -20, 30000, true), E.rating_mct(PW.mct, inp, -20, 30000, 280, true)), 1e-9,
+    "engine and wing anti-ice: their adjustments at 30,000 ft")
+T.near(out.max[2], mct30, 1e-9, "wing anti-ice alone does not change an engine without engine anti-ice")
 inp.wai, inp.nai = false, {false, false, false, false}
 
 -- a type the model does not know runs on the P&W data (the glue keeps RR,
 -- which has no source, on its previous thrust logic)
 inp.type = "RR"
 out = E.update(s, inp, DT)
-T.near(out.max[1], 1.57, 1e-9, "an unknown type falls back to the P&W tables")
+T.near(out.max[1], mct30, 1e-9, "an unknown type falls back to the P&W tables")
 
 -- GE at sea level, 15 °C, then climbing through the blend to the climb rating
 inp.type, inp.alt, inp.tat, inp.kias = "GE", 0, 15, 150
