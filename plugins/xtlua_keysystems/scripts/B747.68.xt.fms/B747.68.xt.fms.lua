@@ -3675,6 +3675,139 @@ do
     post(msgs)
   end
 end
+-- (6-1/6-2 step 12f; notes/ATA-34-61-FMC.md §114) the ATC uplinks
+-- (B747.68.atc_uplink_model.lua): the provider's ATC messages (cpdlc) in
+-- its received list, each one's response state kept here by its place in
+-- the list (reviewed: the message's read, as the ATC MESSAGE memo's);
+-- the responses through the provider as before (cpdlc, RT the uplink's
+-- ID), the network's acknowledgement while it is connected (estimate);
+-- the pending ones ABORTED when ATC COMM ends; the CDUs' VERIFY RESPONSE
+-- (the response chosen) and REJECT DUE TO (the reasons, the free text)
+dofile("B747.68.atc_uplink_model.lua")
+do
+  local U = B747_atc_uplink_model
+  local ul = {}
+  local verify = {}
+  local due = {}
+  local wasComm, lastN = false, 0
+  local function msg(i) return acarsSystem.messages[i] end
+  -- a message's field (its namespace table cannot read a missing key)
+  local function field(m, k)
+    local v = rawget(m, "values")
+    if type(v) == "table" then return v[k] end
+    return rawget(m, k)
+  end
+  -- a message's field by its place (the pages)
+  function B747_fms_atc_msg_field(i, k) return field(msg(i), k) end
+  -- the provider's connection messages (step 12e: the logon's), not uplinks
+  local CONNECTION = {["LOGON ACCEPTED"] = true, ["LOGON REJECTED"] = true, ["SERVICE TERMINATED"] = true}
+  -- an uplink's state by its place (nil: not an ATC uplink)
+  function B747_fms_atc_uplink(i)
+    if type(i) ~= "number" or i < 1 or i > table.getn(acarsSystem.messages.values) then return nil end
+    local m = msg(i)
+    if field(m, "type") ~= "cpdlc" or CONNECTION[field(m, "title") or ""] then return nil end
+    local s = ul[i]
+    if not s then
+      s = {resp = U.response(field(m, "msg") or ""), sent = nil, acked = nil, aborted = false}
+      ul[i] = s
+    end
+    s.read = field(m, "read") == true
+    return s
+  end
+  -- the uplinks in order: {i = place, s = state}
+  local function uplinks()
+    local out = {}
+    for i = 1, table.getn(acarsSystem.messages.values) do
+      local s = B747_fms_atc_uplink(i)
+      if s then out[#out + 1] = {i = i, s = s} end
+    end
+    return out
+  end
+  -- the ATC key's page: "LOGON", "INDEX", "LOG", or an uplink's place
+  function B747_fms_atc_route()
+    local list = uplinks()
+    local states = {}
+    for k, u in ipairs(list) do states[k] = u.s end
+    local r = U.route(B747_fms_atc_logon().comm, states)
+    if type(r) == "number" then return list[r].i end
+    return r
+  end
+  -- an uplink reviewed (its page shown)
+  function B747_fms_atc_review(i)
+    if B747_fms_atc_uplink(i) then msg(i)["read"] = true end
+  end
+  -- VERIFY RESPONSE's response on a CDU: {i, kind ("ACCEPT", "REJECT",
+  -- "STANDBY"), word, state (nil, "SENDING", "SENT")}
+  function B747_fms_atc_verify(fmsID) return verify[fmsID] end
+  function B747_fms_atc_choose(fmsID, i, kind)
+    local s = B747_fms_atc_uplink(i)
+    if not s then return false end
+    local word = kind == "STANDBY" and "STANDBY"
+      or (kind == "ACCEPT" and U.accept_word(s.resp) or U.reject_word(s.resp))
+    if not word then return false end
+    verify[fmsID] = {i = i, kind = kind, word = word, state = nil}
+    return true
+  end
+  -- REJECT DUE TO on a CDU: perf, wx, free (four lines)
+  function B747_fms_atc_due(fmsID)
+    if not due[fmsID] then due[fmsID] = {perf = false, wx = false, free = {"", "", "", ""}} end
+    return due[fmsID]
+  end
+  -- the response's text: the word, with REJECT the reasons and free text
+  function B747_fms_atc_response_text(fmsID)
+    local v = verify[fmsID]
+    if not v then return "" end
+    local t = v.word
+    if v.kind == "REJECT" then
+      local d = B747_fms_atc_due(fmsID)
+      if d.perf then t = t .. " DUE TO AIRCRAFT PERFORMANCE" end
+      if d.wx then t = t .. " DUE TO WEATHER" end
+      for _, f in ipairs(d.free) do
+        if f ~= "" then t = t .. " " .. f end
+      end
+    end
+    return t
+  end
+  -- RESPONSE SEND: nil, or the message (no ATC COMM, the datalink's)
+  function B747_fms_atc_send_response(fmsO)
+    local v = verify[fmsO.id]
+    if not v or v.state then return nil end
+    if not B747_fms_atc_ready() then return "NO COMM" end
+    if not B747_fms_atc_logon().comm then return "NO ATC COMM" end
+    local m = msg(v.i)
+    local reply = {type = "cpdlc", msg = B747_fms_atc_response_text(fmsO.id), RR = "N", status = "SENDING",
+      RT = field(m, "srcID")}
+    fmsFunctions.acarsSystemSendATC(fmsO, json.encode(reply))
+    local s = B747_fms_atc_uplink(v.i)
+    s.sent = v.kind
+    v.state = "SENDING"
+    if v.kind ~= "STANDBY" then m["REPLIED"] = true end
+    return nil
+  end
+  -- each frame: the acknowledgements, ATC COMM's end
+  function B747_fms_atc_uplinks_update()
+    local n = table.getn(acarsSystem.messages.values)
+    if n < lastN then ul, verify, due = {}, {}, {} end
+    lastN = n
+    local ready = B747_fms_atc_ready()
+    for _, v in pairs(verify) do
+      if v.state == "SENDING" and ready then
+        v.state = "SENT"
+        local s = ul[v.i]
+        if s and v.kind ~= "STANDBY" then s.acked = v.kind end
+      end
+    end
+    local comm = B747_fms_atc_logon().comm
+    if wasComm and not comm then
+      for i, s in pairs(ul) do
+        if U.pending(B747_fms_atc_uplink(i) or s) then s.aborted = true end
+      end
+    end
+    wasComm = comm
+  end
+  -- the message list cleared (ACARS's clear)
+  function B747_fms_atc_uplinks_clear() ul, verify, due = {}, {}, {} end
+end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after
 -- a flight (all four's N2 under the ENG FAIL speed: laminar/B747/engines/
@@ -4360,6 +4493,7 @@ function after_physics()
     -- the ATC logon
     B747_fms_datalink_eicas(acarsOnline)
     B747_fms_atc_update()
+    B747_fms_atc_uplinks_update()
 
 	--Display Waypoint ETA on ND
 	waypoint_eta_display()

@@ -212,9 +212,17 @@ local function pageKey(fmsModule,key)
       return
   elseif key=="crz" then
       -- (6-1/6-2 step 12e) ATC: LOGON/STATUS until ATC COMM is established,
-      -- then ATC INDEX (FMSPG p.277, p.286; the uplinks' pages: step 12f)
+      -- then ATC INDEX (FMSPG p.277, p.286); (step 12f) the uplink's page
+      -- with only one new or pending, ATC LOG with more (FCOM p.752, p.758)
+      local r=B747_fms_atc_route()
       fmsO.targetCustomFMC=true
-      fmsO.targetPage=B747_fms_atc_logon().comm and "ATCINDEX" or "ATCLOGONSTATUS"
+      if r=="LOGON" then fmsO.targetPage="ATCLOGONSTATUS"
+      elseif r=="INDEX" then fmsO.targetPage="ATCINDEX"
+      elseif r=="LOG" then fmsO.targetPage="VIEWACARSLOG"
+      else
+        acarsSystem.setCurrentMessage(fmsO.id,r)
+        fmsO.targetPage="ATCUPLINK"
+      end
       fmsO.targetpgNo=1
       return
   elseif key=="des" then

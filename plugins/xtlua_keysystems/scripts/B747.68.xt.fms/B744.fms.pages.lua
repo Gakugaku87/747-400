@@ -147,6 +147,9 @@ dofile("activepages/B744.fms.pages.maintsimconfig.lua")
 dofile("activepages/B744.fms.pages.identpage.lua")
 dofile("activepages/atc/B744.fms.pages.atcindex.lua")
 dofile("activepages/atc/B744.fms.pages.atclogonstatus.lua")
+-- (6-1/6-2 step 12f) XXXXZ ATC UPLINK, VERIFY RESPONSE, REJECT DUE TO
+dofile("activepages/atc/B744.fms.pages.atcuplink.lua")
+dofile("activepages/atc/B744.fms.pages.atcrejectdueto.lua")
 dofile("activepages/atc/B744.fms.pages.emergency.lua")
 dofile("activepages/atc/B744.fms.pages.atcreport.lua")
 dofile("activepages/atc/B744.fms.pages.posreport.lua")
@@ -2655,6 +2658,12 @@ function fmsFunctions.sendACARSmessage(fmsO,value)
 end
 function fmsFunctions.showmessage(fmsO,value)
   acarsSystem.setCurrentMessage(fmsO.id,value)
+  -- (6-1/6-2 step 12f) an ATC uplink with the FMC's datalink: its XXXXZ
+  -- ATC UPLINK page (FMSPG p.289: from the ATC LOG)
+  if B747_fms_datalink() and B747_fms_atc_uplink(value) then
+    fmsFunctions.setpage(fmsO,"ATCUPLINK")
+    return
+  end
   fmsO["inCustomFMC"]=true
   fmsO["targetPage"]="VIEWACARSMSG"
   fmsO["pgNo"]=1
