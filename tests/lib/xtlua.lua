@@ -261,12 +261,14 @@ local function c_functions(rt, module)
         rt.commands[cmd.name] = {before = before, after = after, module = module}
     end
     c.XTLuaCreateTimer = function(func) return {func = func} end
+    -- as XTLua's xtlua_run_timer (XTLua/src/xptimers.cpp): the repeat always
+    -- (-1: once), the next time unless the delay is -1 (stop_timer)
     c.XTLuaRunTimer = function(timer, delay, rep)
-        if delay < 0 then
+        timer.rep = rep
+        if delay == -1 then
             module.timers[timer] = nil
         else
             timer.due = rt.time + delay
-            timer.rep = rep
             module.timers[timer] = true
         end
     end
@@ -330,10 +332,15 @@ function Runtime:frame(dt)
         for timer in pairs(module.timers) do
             if timer.due <= self.time + 1e-9 then due[#due + 1] = timer end
         end
+        -- as xtlua_do_timers_for_time (xptimers.cpp): the function first,
+        -- then a timer without a repeat stops, so a run_after_time set again
+        -- from its own function is lost (2026-11-01: the in-flight start's
+        -- waits never ran again in X-Plane); one with a repeat goes on from
+        -- its due time (stop_timer inside it ends it)
         for _, timer in ipairs(due) do
-            if timer.rep and timer.rep > 0 then timer.due = timer.due + timer.rep
-            else module.timers[timer] = nil end
             timer.func()
+            if timer.rep == -1 then module.timers[timer] = nil
+            elseif module.timers[timer] then timer.due = timer.due + timer.rep end
         end
     end
     self:callout("before_physics")

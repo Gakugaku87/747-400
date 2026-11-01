@@ -3770,19 +3770,28 @@ B747CMD_ap_switch_alt_hold_mode			= find_command("laminar/B747/autopilot/button_
 B747CMD_ap_switch_cmd_L					= find_command("laminar/B747/autopilot/button_switch/cmd_L")
 B747DR_ap_target_altitude               	= find_dataref("laminar/B747/autopilot/altitude/target")
 B747DR_fms_ap_cmd_L					= find_dataref("laminar/B747/autopilot/cmd_L_mode/status")
--- CMD L again until it engages, INFLIGHT_AP_TRIES times INFLIGHT_AP_S apart:
--- the engage interlocks (6-3 step 5a) wait for the IRUs and the ADCs, whose
--- modules start 3 s after the load (their first reads are 0), about when
--- this runs; for 30 s (2026-10-31: 5 s before, and s139's air start on a
--- reloaded airplane once went on without the A/P)
+B747DR_fms_irs_hdg_valid				= find_dataref("laminar/B747/irs/hdg_valid")
+-- The in-flight start (a sim convenience) waits for the IRUs and the ADCs,
+-- whose modules start 3 s after the load (their first reads are 0), about
+-- when it runs: F/D L for two IRUs' headings (its HDG HOLD with fewer fails
+-- until a new mode: the mode failures, 6-3 step 5c; 2026-11-01: s179's air
+-- start kept HDG HOLD failed), CMD L pressed again until it engages (the
+-- engage interlocks, 6-3 step 5a); each INFLIGHT_AP_TRIES times
+-- INFLIGHT_AP_S apart. At an interval that stops itself: XTLua ends a
+-- run_after_time after its function, so one set again from its own
+-- function never ran again (XTLua/src/xptimers.cpp; 2026-11-01: s180
+-- without the F/D, and CMD L was never pressed again)
 local INFLIGHT_AP_TRIES, INFLIGHT_AP_S = 60, 0.5
+local INFLIGHT_IRU_HDG = 2
 
 local inflightAP_tries = 0
 function retry_inflightAP_cmd()
-	if B747DR_fms_ap_cmd_L > 0.5 or inflightAP_tries >= INFLIGHT_AP_TRIES then return end
+	if B747DR_fms_ap_cmd_L > 0.5 or inflightAP_tries >= INFLIGHT_AP_TRIES then
+		stop_timer(retry_inflightAP_cmd)
+		return
+	end
 	inflightAP_tries = inflightAP_tries + 1
 	B747CMD_ap_switch_cmd_L:once()
-	run_after_time(retry_inflightAP_cmd, INFLIGHT_AP_S)
 end
 function fin_activate_inflightAP()
 	-- ALT HOLD after the F/D's default V/S and HDG HOLD (the AFDS model,
@@ -3790,12 +3799,24 @@ function fin_activate_inflightAP()
 	B747CMD_ap_switch_alt_hold_mode:once()
 	B747CMD_ap_switch_cmd_L:once()
 	inflightAP_tries = 0
-	run_after_time(retry_inflightAP_cmd, INFLIGHT_AP_S)
+	run_at_interval(retry_inflightAP_cmd, INFLIGHT_AP_S)
 	B747DR_ap_target_altitude=math.floor(simDR_pressureAlt1/100)*100
 	
 	B747DR_CAS_advisory_status[233] = 0
 	B747DR_pfd_mode_capt		 = 1
 	B747DR_pfd_mode_fo		 = 1
+end
+function wait_inflightAP()
+	local hdg = 0
+	for i = 0, 2 do
+		if B747DR_fms_irs_hdg_valid[i] > 0.5 then hdg = hdg + 1 end
+	end
+	if hdg < INFLIGHT_IRU_HDG and inflightAP_tries < INFLIGHT_AP_TRIES then
+		inflightAP_tries = inflightAP_tries + 1
+		return
+	end
+	stop_timer(wait_inflightAP)
+	activate_inflightAP()
 end
 function activate_inflightAP()
 	-- idempotent (it may run twice around an air start re-done): F/D L ON
@@ -3867,8 +3888,12 @@ function after_physics()
   local refreshmins=B747DR_airspeed_Vmc
   if didFlightInit==false and simDR_startup_running == 1 and simDR_onGround==0 then
 	print("activate AP stuff")
-	
-	run_after_time(activate_inflightAP,1)
+	-- a second on, then each INFLIGHT_AP_S until the IRUs' headings; an
+	-- in-flight start not yet over (an air start re-done) stops
+	stop_timer(retry_inflightAP_cmd)
+	stop_timer(fin_activate_inflightAP)
+	inflightAP_tries = 0
+	run_timer(wait_inflightAP, 1, INFLIGHT_AP_S)
   end
   --print("FMS j="..fmsJSON)
   didFlightInit=true;
