@@ -33,7 +33,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 | オートスロットル・推力管理 | 作り直し中（FMC の段 9f1：モードの論理と engage・disconnect、>AUTOTHROT DISC。段 9f2：制御則と servo、THR、override。段 9f3：電源の interlock、THRUST REQUIRED。段 9d2：VNAV の THR から HOLD。段 9g1〜9g4：推力制限のモード、THRUST LIM のページ、reference の値、EICAS の推力の表示。段 9h1：CON の値。段 9h3a：エンジン不作動の推力制限と A/T の interlock。段 11d2a：master FMC の故障で切れて ARM スイッチの入れ直しまで戻らない、FMC の選択を回すと切れる） | 推力制限の CRZ の値（推定）、SPD の速さの戻り、servo loop monitor |
 | 通信（ATA 23） | 未着手 | VHF の電源、ACP の連動、VHF C と HF が無い |
 | 照明（ATA 33） | 作り直し中（7-2a：ストロボ、完全 GC。7-2b：外部灯の電源と空地。7-2c：表示灯の BRT・DIM・TEST と STORM。7-2d：非常灯の論理） | 操縦室照明の standby（AC 喪失時）、FLIGHT DECK ACCESS LIGHTS、BEACON の LWR と BOTH の区別 |
-| ドア（ATA 52） | 未着手 | L1 と上部デッキ L 以外のドアが無い |
+| ドア（ATA 52） | 軽く（7-3。3D が追いついていない） | L1 と上部デッキ L 以外のドアの開閉と表示、cargo・E/E door、操縦室ドアのロックが無い |
 
 ## 2. 分野ごとの違い
 
@@ -589,10 +589,14 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 残り：操縦室照明の standby（AC 喪失時。LIGHT-07）、FLIGHT DECK ACCESS LIGHTS（LIGHT-16）。BEACON の LWR と BOTH の区別（LIGHT-12。OBJ の灯の index を分ける必要があり、承認事項）。
 - 推定・割り切り：左の landing light の母線と減光、taxi light の電源、DIM の明るさ（0.4）、表示灯の電源の母線、非常灯の battery pack の時間。非常灯は cold & dark でも ARMED で始める（3D にスイッチが無く、OFF で始めると >EMER LIGHTS を操縦室から消せないため）。
 
-### ドア（ATA 52）：未着手
+### ドア（ATA 52）：軽く済ませた（7-3。3D が追いついていない）
 
-- entry door は L1、upper deck door は L だけ。残りのドアに状態・メッセージ・synoptic が無い（DOOR-01）。
-- 貨物室ドアと E/E ドアが無い（DOOR-02）。
+- 3D のドア（客室と機外）が追いついていないので、軽く済ませた（2026-11-01、利用者の判断。notes/ATA-52.md §11）。
+- 直した点：
+  - entry door 10 枚と upper deck door 2 枚の mode（AUTOMATIC＝ARMED / MANUAL）。3D にレバーが無いので、CDU の GND HANDLING → DOORS ページの L4（<ARM・<DISARM）か、全部まとめてのコマンドで変える。cold & dark は MANUAL、エンジン運転中の開始は AUTOMATIC。
+  - mode の memo（DOORS AUTO・DOORS AUTO/MAN・DOORS MANUAL）。E&M の構成のもので FCOM 109 には無いが、利用者の希望で入れた（ATA38_51_52_56 p.304）。離陸推力の判定（推力レバー 0.6 以上）は推定。
+  - DOORS ページの plug door（L1、上階 L）は地上でだけ開く（前は飛行中でも開いた）。
+- 残り（3D ができてから）：L1 と上部デッキ L 以外のドアの開閉と表示（DOOR-01）、cargo door と E/E door（DOOR-02）、まとめのメッセージ（DOOR-04）、上階のドアの flight lock（DOOR-05）、操縦室ドアのロック（DOOR-06）、DRS の箱と A・M の表示（DOOR-07）。
 
 ## 3. X-Plane の上で作ることによる違い
 

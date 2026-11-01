@@ -47,6 +47,11 @@ B747DR_sfty_no_smoke_sel_dial_pos   = deferred_dataref("laminar/B747/safety/no_s
 B747DR_sfty_seat_belts_sel_dial_pos = deferred_dataref("laminar/B747/safety/seat_belts/sel_dial_pos", "number")
 
 B747DR_init_safety_CD               = deferred_dataref("laminar/B747/safety/init_CD", "number")
+-- (7-3) the entry doors L1-L5, R1-R5 and the upper deck doors L, R: 1
+-- AUTOMATIC (armed), 0 MANUAL; all at once by commands (no 3D levers)
+B747DR_door_mode                    = deferred_dataref("laminar/B747/door/mode", "array[12]")
+B747CMD_door_mode_auto_all          = deferred_command("laminar/B747/door/mode_auto_all", "Entry and upper deck doors to AUTOMATIC (armed)", B747_door_mode_auto_all_CMDhandler)
+B747CMD_door_mode_manual_all        = deferred_command("laminar/B747/door/mode_manual_all", "Entry and upper deck doors to MANUAL (disarmed)", B747_door_mode_manual_all_CMDhandler)
 
 
 
