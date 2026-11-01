@@ -1231,6 +1231,7 @@ function B747_fms_pred_input(crz)
   -- for the first), across a conditional leg or a discontinuity too (an
   -- estimate; a conditional leg itself none)
   local from = {lat = simDR_latitude, lon = simDR_longitude}
+  local total, lastConX = 0, 0
   for i, l in ipairs(r.legs) do
     local d, p0 = 0, from
     if l.fix then
@@ -1238,6 +1239,7 @@ function B747_fms_pred_input(crz)
       d = dd
       from = l.fix
     end
+    total = total + d
     local con = nil
     if l.alt then
       if l.akind == "A" then con = {kind = "A", a = l.alt}
@@ -1254,10 +1256,17 @@ function B747_fms_pred_input(crz)
     legs[i] = {name = l.fix and l.fix.ident or "", dist = d, con = con, p0 = p0, p1 = l.fix,
       gp = (l.vangle and l.vangle < 0) and -l.vangle or nil}
     if l.proc == "SID" then clbLast = i end
-    if con and not rwy and not (missed and l.proc == "APPR") then lastCon = i end
+    if con and not rwy and not (missed and l.proc == "APPR") then lastCon, lastConX = i, total end
   end
+  -- the E/D: the approach's runway, else the last constraint after the
+  -- climb's legs, the SID's or, without one and in the climb, those in the
+  -- first half of the route ahead (the predictions' climb,
+  -- B747.68.pred_model.lua's clb_last: an estimate); in the cruise and the
+  -- descent any. Before, without a SID the last constraint anywhere: one
+  -- 20 NM out on the climb was the E/D, the T/D before it (2026-11-01, s185)
   local ed = rwy
-  if not ed and lastCon and lastCon > (clbLast or 0) then ed = lastCon end
+  if not ed and lastCon and lastCon > (clbLast or 0)
+    and (clbLast or lastConX > total / 2 or B747_fms_vnav_phase() ~= "CLB") then ed = lastCon end
   local perf, isa = B747_fms_perf(), B747_fms_isa_dev()
   local clb, des, crzspd = B747_fms_schedules(perf)
   -- (step 9h4b) ENG OUT active: the engine-out data (no step climbs:
