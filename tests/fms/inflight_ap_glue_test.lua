@@ -53,6 +53,9 @@ local AT = "laminar/B747/authrottle_arm"
 local ALT = "laminar/B747/autopilot/button_switch/alt_hold_mode"
 local CMD = "laminar/B747/autopilot/button_switch/cmd_L"
 
+-- the airspeed now and the old minimum (Vmc + 10 = 214.6 kt)
+rt:set("laminar/B747/gauges/indicators/airspeed_kts_pilot", 334)
+rt:set("laminar/B747/airspeed/Vmc", 204.6)
 -- the IRUs' headings late, as the IRS module 3 s after the load
 headings(0, 0, 0)
 rt:callout("flight_start")
@@ -67,6 +70,7 @@ headings(1, 0, 1)
 frames(0.6)
 T.equal(count(FD), 1, "two IRUs' headings: F/D L on")
 T.equal(count(AT), 1, "the A/T armed")
+T.equal(rt:get("laminar/B747/autopilot/speed/target"), 334, "the MCP's speed: the airspeed now (before: min with Vmc + 10, 214)")
 T.equal(count(ALT), 0, "ALT HOLD a second later")
 frames(1.1)
 T.equal(count(ALT), 1, "then ALT HOLD")
@@ -77,8 +81,10 @@ frames(2)
 T.equal(count(CMD), cmd1, "CMD L engaged: not pressed again")
 T.equal(count(FD), 1, "F/D L once")
 
--- a new flight in the air, the IRUs never valid: on after 30 s
+-- a new flight in the air, the IRUs never valid: on after 30 s (slow:
+-- the MCP's speed not below Vmc + 10)
 rt:set("laminar/B747/autopilot/cmd_L_mode/status", 0)
+rt:set("laminar/B747/gauges/indicators/airspeed_kts_pilot", 180)
 headings(0, 0, 0)
 local fd0, cmd0 = count(FD), count(CMD)
 rt:callout("flight_start")
@@ -87,6 +93,7 @@ T.equal(count(FD), fd0, "20 s without the headings: F/D L not on")
 T.equal(count(CMD), cmd0, "nor CMD L")
 frames(14)
 T.equal(count(FD), fd0 + 1, "after 30 s: F/D L on anyway")
+T.equal(rt:get("laminar/B747/autopilot/speed/target"), 214, "180 kt: the MCP's speed Vmc + 10")
 T.check(count(CMD) > cmd0, "and CMD L")
 
 -- on the ground: none of it

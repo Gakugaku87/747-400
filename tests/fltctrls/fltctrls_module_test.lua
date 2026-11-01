@@ -487,4 +487,24 @@ T.near(get(FCU .. "flap_pos"), 25, 1e-6, "lever 25 (the panels at 22 degrees): 2
 T.equal(get(WARNING, 2), 1, "flaps 25: CONFIG FLAPS")
 for i = 0, 3 do rt:set("laminar/B747/engines/display_N1", i, 0) end
 rt:set("laminar/B747/airspeed/V1", 0)
+
+-- an air start: the stabilizer for level flight at the speed (estimate:
+-- 3.78 + 154,400 / IAS^2 units, 4.5 to 7.5), not the 7.5 units of before
+-- (a 334 kt start pitched up to 13 degrees before the A/P came on)
+rt:set("sim/flightmodel/failures/onground_any", 0)
+for _, c in ipairs({{334, 3.78 + 154400 / 334 ^ 2}, {231, 3.78 + 154400 / 231 ^ 2}, {150, 7.5}}) do
+    rt:set("sim/flightmodel/position/indicated_airspeed", c[1])
+    rt:callout("flight_start")
+    frames(1)
+    T.near(units(), c[2], 0.01, "air start at " .. c[1] .. " kt: " .. string.format("%.2f", c[2]) .. " units")
+    T.near(get(TRIM), units() / 7.5 - 1, 1e-6, "X-Plane's trim written (" .. c[1] .. " kt)")
+end
+rt:set("sim/flightmodel/position/indicated_airspeed", 334)
+rt:callout("flight_start")
+frames(4)
+local u = units()
+rt:set("sim/flightmodel/position/indicated_airspeed", 250)
+frames(1)
+T.near(units(), u, 1e-6, "after the start's 3 s the speed no longer sets it")
+rt:set("sim/flightmodel/failures/onground_any", 1)
 T.done()

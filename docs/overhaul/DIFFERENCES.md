@@ -562,6 +562,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 作動のインターロックのうち操縦士の override（detent と camout：AFDS-15 の残り。電源・センサー・操縦輪の 25° と AFDS-16 の電源は段 5a、NO LAND 3・NO AUTOLAND（AFDS-13）と AUTOPILOT DISC の音の型式（AFDS-14）は段 5b、AUTOPILOT caution とモード故障（AFDS-12）は段 5c で済）。
 - ヨーダンパーの則、A/P 中のトリム（AFDS-17・19・20）。
 - 空中開始では FMS が F/D L・A/T・ALT HOLD・CMD L を入れる（試験のための初期化。段 1a から ALT HOLD は F/D の既定のモードの 1 秒後、飛行の開始のたびに、何度走っても同じ）。前は機体の読み込み方で動きが変わった。
+  - MCP の速さは今の速さ（下限 Vmc + 10）、安定板は速さから決めた値で始める（2026-11-02、notes/ATA-22.md §45・ATA-27.md §18。前は MCP の速さが約 214 kt に下がり、安定板 7.5 units で速い開始は機首が上がって数千 ft 上昇した）。
 
 ### オートスロットル・推力管理：作り直し中（6-4：FMC の段 9f1 のモードの論理と engage・disconnect、段 9f2 の制御則と servo、段 9f3 の interlock、段 9g の推力制限、段 9h の E/O、段 11d2a の master FMC の故障）
 

@@ -43,6 +43,8 @@ simDR_srm_trim_fail             = find_dataref("sim/operation/failures/rel_trim_
 -- X-Plane's flight start on the ground or in the air (its flight load, not
 -- the airplane's air/ground logic: the PSEU can still say ground then)
 simDR_srm_xp_on_ground          = find_dataref("sim/flightmodel/failures/onground_any")
+-- and its airspeed then (the air data's comes a little later)
+simDR_srm_xp_ias                = find_dataref("sim/flightmodel/position/indicated_airspeed")
 B747DR_srm_hyd_2                = find_dataref("laminar/B747/hydraulics/pressure_2")
 B747DR_srm_hyd_3                = find_dataref("laminar/B747/hydraulics/pressure_3")
 B747DR_srm_all_gear_down        = find_dataref("laminar/B747/gear/air_ground/all_gear_down")
@@ -140,6 +142,16 @@ B747CMD_stab_cutout_3_dn        = deferred_command("laminar/B747/flt_ctrls/stab_
 
 local function units(trim) return 7.5 * (trim + 1) end
 local function trim_of(u) return u / 7.5 - 1 end
+-- an air start's stabilizer: level flight with the flaps up at the speed
+-- (estimate, from the custom acf's steady trims with the A/P at 260-270 t,
+-- 2026-11-02: 6.7 units at 231 kt, 5.0-5.2 at 305-351 kt; aero_flap_drag_
+-- check, s215, LF5): 3.78 + 154,400 / IAS^2, from 4.5 to the 7.5 units an
+-- air start had before, which pitched a 334 kt start up to 13 degrees and
+-- 9,800 fpm before the A/P came on (notes/ATA-27.md)
+local function air_start_units(ias)
+    if ias < 100 then return 7.5 end
+    return math.max(4.5, math.min(7.5, 3.78 + 154400 / (ias * ias)))
+end
 -- one switch pair from two sources: either, or both the same way
 local function either(a, b)
     if a == 0 then return b end
@@ -211,10 +223,10 @@ function B747_srm()
 
     -- X-Plane's trim: followed at a start on the ground; afterwards a value
     -- that is not one we wrote (allowing for XTLua's one-frame lag) is an
-    -- outside change. An air start keeps the model's stabilizer (7.5 units):
-    -- X-Plane trims the airplane there for its own trim, not for the
-    -- stabilizer this aircraft drives (0.5 at FL350, 45 degrees nose up
-    -- without the A/P: 2026-10-26; the 7.5 units an estimate)
+    -- outside change. An air start sets the stabilizer for its speed
+    -- (air_start_units): X-Plane trims the airplane there for its own trim,
+    -- not for the stabilizer this aircraft drives (0.5 at FL350, 45 degrees
+    -- nose up without the A/P: 2026-10-26)
     local xp = simDR_srm_elevator_trim
     srm_t = srm_t + SIM_PERIOD
     local starting = srm_t < STAB_INIT_S
@@ -222,6 +234,8 @@ function B747_srm()
         and math.abs(xp - trim_w1) > TRIM_SAME and math.abs(xp - (trim_w2 or trim_w1)) > TRIM_SAME
         and not xp_runaway) then
         S.stab_set(srm_state, units(xp))
+    elseif starting then
+        S.stab_set(srm_state, air_start_units(simDR_srm_xp_ias))
     end
 
     local out = S.update(srm_state, inp, math.min(SIM_PERIOD, SRM_DT_MAX))
