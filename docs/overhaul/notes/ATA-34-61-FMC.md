@@ -1701,3 +1701,17 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 推定：現用点の ETA と距離は、FMC の位置（IRU の NAV）が無いときも消す。MAP 旗の 30 秒は、再同期を作るまで（11d3）は故障からの時間。
 - 作らないもの：MAP 旗の後の経路や点の消去（X-Plane の地図の層は気象レーダーや TFC と一緒なので、FMC の分だけは消せない）。両方の故障の CDU の地図（11e）。
 - 試験：`nd_model_test.lua`（+9 件）、`display_module_test.lua`（+9 件。FMC の動作を入れた）。全 157 本。X-Plane：新しい `s175_nd_fmc_fail`：17/17（2026-11-01、X-Plane を立ち上げ直した後の 2 便目。1 便目の s128 は捨て、5/5）。成田の北の 3,000 ft で XAC へ DIRECT の後、機長の ND（MAP、FMC L）の右上に XAC・0116.7Z・86.9NM。左 FMC を故障させると、1 秒で VTK 旗が出て ETA と距離が消え（XAC は残る）、副操縦士の ND（FMC R）はそのまま。故障から約 32 秒で MAP 旗（画像）。機長の NAV ソース選択を FMC R にすると、旗が消えて ETA と距離が戻り（0116.2Z・89.2NM）、左の CDU も右 FMC につながった。Log.txt に Lua とパネルの誤りなし。
+
+## 101. 11d3 の実装（2026-11-01：FMC の再同期）
+
+- 資料：
+  - FCOM p.1277（再同期は約 15 秒。その間、その FMC の CDU は故障の表示で、もう一方の CDU に RESYNCHING OTHER FMC。キーを押さない）。
+  - FCOM p.1433（RESYNC FAIL - SINGLE FMC：再同期が失敗して FMC が 1 台止まった）、p.1434（RESYNCING OTHER FMC：同期中。どちらも alert の一覧）。
+  - ATA34_2 p.632（再同期は、二つの FMC の計算が合わないとき master が他方を、または FMC が内部の試験に落ちて再起動したとき。内部の試験に落ちると出力のバスが止まり、再起動の後に再同期が要る。slave が master を再同期できる。約 15 秒、その間 master は普通に働く。master の再同期で LNAV・VNAV・A/T が engage なら、EICAS・PFD・ND は master を失った表示）。
+  - ATA34_2 p.633（master の左 FMC が内部の試験に落ちた図：左の CDU は表示が止まり、右の CDU は SINGLE FMC OPERATION の後 RESYNCING OTHER FMC。35 秒で再同期に失敗すると、左の CDU は MENU と FAIL 灯、>FMC-L、MAP 旗）。
+- 作ったもの：
+  - `B747.68.fmc_link_model.lua`：FMC の状態を「動作」「再同期」「故障」に分けた。故障の注入（`laminar/B747/fms/fail`）に 2（内部の試験の失敗：再同期して戻る）と 3（再同期の失敗：35 秒で止まる）を足した。再同期の間、その FMC の出力は止まる（`fmc_ok` 0：AFDS・A/T・ND は 11d2 の故障の扱い）。つながっている CDU は切れずに表示が止まる。もう一方の FMC が動いていれば 15 秒で戻る。3 は 35 秒で故障になり、その CDU は MENU と TIMEOUT - RESELECT（飛行中の master なら全部の CDU：FCOM p.1275）。
+  - メッセージ：RESYNCING OTHER FMC（旗 36、再同期の 2 フレーム目から：SINGLE FMC OPERATION の後に出す）、RESYNC FAIL - SINGLE FMC（旗 35、再同期に失敗して止まっている間）。
+  - CDU（`B744.createfms.lua`）：再同期中の FMC の CDU は描き直さず（表示が止まる）、キーを受けない。
+- 推定：再同期は、もう一方の FMC が動いていないと待つ。電源の回復や故障（1）からの戻りでは再同期しない（資料は内部の試験の後の再起動と、計算の食い違いだけを書く）。FMC LEFT・RIGHT は再同期の間も 30 秒で出る（15 秒で戻る 2 では出ない）。
+- 試験：`fmc_link_model_test.lua`（+25 件）、`fmc_link_glue_test.lua`（+18 件）。全 157 本。X-Plane：新しい `s176_fmc_resync`：29/29（2026-11-01、立ち上げ直した後の 3 便目）。成田の北の 3,100 ft で、LNAV・VNAV SPD・A/T の上昇中に master の左 FMC が内部の試験に落ちる（注入 2）と、1 秒で fmc_ok[0] 0、左の CDU はつながったまま LEGS で止まり RTE が効かず、右の CDU に RESYNCING OTHER FMC、LNAV と VNAV SPD に琥珀の線、A/T の FMA が空白、F/D バーが消えた（画像）。約 16 秒で戻り、LNAV・VNAV SPD のまま線が消え、RESYNCING も消え、左の CDU の RTE が効いた。A/T は ARM スイッチの入れ直しで戻った。次に右 FMC の再同期の失敗（注入 3）で、左の CDU に RESYNCING OTHER FMC（AFDS はそのまま）、約 32 秒で FMC RIGHT、約 37 秒で右の CDU が MENU と TIMEOUT - RESELECT、左の CDU に RESYNC FAIL - SINGLE FMC（画像）。Log.txt に Lua の誤りなし。

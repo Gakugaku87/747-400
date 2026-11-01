@@ -167,4 +167,46 @@ end
 T.equal(line("fmsL", 3):sub(1, 17), FMC_ACT, "power-up: <FMC <ACT>")
 T.equal(rt:get(CAS, 144) + rt:get(CAS, 146), 0, "power-up: no FMC LEFT, RIGHT")
 
+-- (6-1/6-2 step 11d3) an internal test failed on the left FMC (2): the left
+-- and centre CDUs frozen (the page kept, keys not taken), the right CDU
+-- RESYNCING OTHER FMC over SINGLE FMC OPERATION (FCOM p.1277, p.1434;
+-- ATA34_2 p.633); back at work after 15 s
+for _, cdu in ipairs({"fmsL", "fmsR"}) do key(cdu, "ls_key/L1") end
+local before = line("fmsL", 1)
+T.check(not page("fmsL", "MENU"), "(the left CDU on an FMC page)")
+rt:set(FAIL, 0, 2)
+frames(0.2)
+T.equal(rt:get(OK, 0), 0, "the left FMC resynchronizing: fmc_ok[0] 0")
+T.equal(links(), "1,1,2", "the CDUs still connected")
+T.equal(pad("fmsR"), "RESYNCING OTHER FMC", "the right CDU: RESYNCING OTHER FMC (FCOM p.1434)")
+key("fmsL", "func_key/index")
+key("fmsL", "func_key/legs")
+T.equal(line("fmsL", 1), before, "the left CDU frozen: its page kept, keys not taken (FCOM p.1277)")
+key("fmsR", "key/clear")
+T.equal(pad("fmsR"), "SINGLE FMC OPERATION", "CLR: SINGLE FMC OPERATION under it")
+frames(15)
+T.equal(rt:get(OK, 0), 1, "15 s: the left FMC back at work")
+T.equal(pad("fmsR"), "", "the messages gone")
+key("fmsL", "func_key/fpln")
+T.check(line("fmsL", 1) ~= before, "the left CDU's keys taken again (RTE)")
+T.equal(rt:get(CAS, 144), 0, "no FMC LEFT")
+rt:set(FAIL, 0, 0)
+-- the right FMC's resynchronization failed (3): FMC RIGHT at 30 s, shut
+-- down at 35 s: the right CDU MENU and TIMEOUT - RESELECT, the left
+-- RESYNC FAIL - SINGLE FMC (FCOM p.1433; ATA34_2 p.633)
+rt:set(FAIL, 1, 3)
+frames(0.2)
+T.equal(pad("fmsL"), "RESYNCING OTHER FMC", "the left CDU: RESYNCING OTHER FMC")
+frames(30)
+T.equal(rt:get(CAS, 146), 1, "30 s: FMC RIGHT")
+T.check(not page("fmsR", "MENU"), "still frozen")
+frames(5)
+T.check(page("fmsR", "MENU"), "35 s: the right CDU on MENU")
+T.equal(pad("fmsR"), "TIMEOUT - RESELECT", "TIMEOUT - RESELECT")
+T.equal(pad("fmsL"), "RESYNC FAIL - SINGLE FMC", "the left CDU: RESYNC FAIL - SINGLE FMC (FCOM p.1433)")
+T.equal(rt:get(OK, 1), 0, "the right FMC shut down")
+rt:set(FAIL, 1, 0)
+frames(0.2)
+T.equal(rt:get(OK, 1), 1, "the injection back at 0: working")
+
 T.done()

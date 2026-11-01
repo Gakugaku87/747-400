@@ -254,6 +254,8 @@ function keyDown(fmsModule,key,phase,duration)
   local fmsO=fmsModules[fmsModule]
   local st=cduState[fmsModule]
   if not cduPowered(fmsModule) then return end
+  -- (6-1/6-2 step 11d3) its FMC being resynchronized: no keys (FCOM p.1277)
+  if B747_fms_fmc_frozen(fmsModule) then return end
   if phase==0 then
     print(fmsModule.. " do " .. key)
     if(string.len(lastKeyDown) > 2) then
@@ -618,6 +620,9 @@ function fms:B747_fms_display()
     end
     cduWasPowered[thisID]=powered
     if not powered then return end
+    -- (6-1/6-2 step 11d3) its FMC being resynchronized: the display frozen
+    -- (FCOM p.1277: a failed condition; ATA34_2 p.633)
+    if B747_fms_fmc_frozen(thisID) then return end
     -- a message a page set while drawing (notify): this CDU's
     if self.notify~=nil and self.notify~="" then
       C.error(st, self.notify)

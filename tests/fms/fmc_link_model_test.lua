@@ -183,4 +183,84 @@ i.cdu_power.fmsC = true
 M.update(s, i, 0.1)
 T.equal(s.link.fmsC, R, "the centre CDU's power-up with the left FMC failed: the right FMC")
 
+-- (6-1/6-2 step 11d3) the resynchronization (FCOM p.1277, p.1433-1434;
+-- ATA34_2 p.632-633), 0.5 s frames: an internal test failed (2): the
+-- FMC's outputs shut down, its CDUs frozen, SINGLE FMC OPERATION then
+-- RESYNCING OTHER FMC, back at work after 15 s
+local function run(n) for _ = 1, n do out = M.update(s, i, 0.5) end return out end
+s = M.new()
+i = inp()
+run(1)
+i.fail[L] = M.TEST_RESYNC
+run(1)
+T.check(not out.ok[L] and out.ok[R], "an internal test failed: the left FMC's outputs shut down (ATA34_2 p.632)")
+T.equal(lost(out), "", "its CDUs not lost")
+T.check(out.frozen.fmsL and out.frozen.fmsC and not out.frozen.fmsR, "the left and centre CDUs frozen (FCOM p.1277)")
+T.check(M.frozen(s, "fmsL") and M.linked(s, "fmsL"), "frozen, still connected")
+T.check(out.single and not out.resyncing, "SINGLE FMC OPERATION first (ATA34_2 p.633)")
+run(1)
+T.check(out.resyncing and out.single, "then RESYNCING OTHER FMC (FCOM p.1434)")
+run(27)
+T.check(not out.ok[L] and out.frozen.fmsL, "14.5 s: still resynchronizing")
+run(1)
+T.check(out.ok[L] and not out.frozen.fmsL and not out.resyncing and not out.single, "15 s: back at work (FCOM p.1277)")
+T.equal(links(s), "1,1,2", "the CDUs as before")
+T.check(not out.eicas[L], "no FMC LEFT")
+run(10)
+T.check(out.ok[L], "the injection left at 2: working")
+
+-- 3: the resynchronization fails: frozen 35 s, FMC LEFT at 30 s, then the
+-- FMC shut down: its CDUs lost, RESYNC FAIL - SINGLE FMC (ATA34_2 p.633;
+-- FCOM p.1433)
+s = M.new()
+i = inp()
+run(1)
+i.fail[L] = M.TEST_RESYNC_FAIL
+run(59)
+T.check(out.frozen.fmsL and not out.eicas[L], "29.5 s: frozen, no FMC LEFT")
+run(1)
+T.check(out.eicas[L], "30 s: FMC LEFT")
+run(9)
+T.check(out.frozen.fmsL and out.resyncing and not out.resync_fail, "34.5 s: still resynchronizing")
+run(1)
+T.equal(lost(out), "fmsL,fmsC", "35 s: shut down, the left and centre CDUs lost (TIMEOUT - RESELECT)")
+T.check(out.resync_fail and not out.resyncing and out.single, "RESYNC FAIL - SINGLE FMC, SINGLE FMC OPERATION")
+run(10)
+T.check(not out.ok[L] and out.resync_fail, "stays shut down")
+i.fail[L] = 0
+run(1)
+T.check(out.ok[L] and not out.resync_fail and not out.single, "the injection back at 0: working")
+
+-- in flight the master FMC resynchronizing: the other CDU not lost; its
+-- resync failing: every CDU (FCOM p.1275)
+s = M.new()
+i = inp({ground = false})
+run(1)
+i.fail[L] = M.TEST_RESYNC
+run(2)
+T.equal(lost(out), "", "in flight the master resynchronizing: no CDU lost (ATA34_2 p.633)")
+T.check(out.frozen.fmsL and not out.frozen.fmsR and s.link.fmsR == R, "the left CDU frozen, the right on its FMC")
+run(30)
+T.check(out.ok[L] and not out.frozen.fmsL, "back at work")
+s = M.new()
+i = inp({ground = false})
+run(1)
+i.fail[L] = M.TEST_RESYNC_FAIL
+run(69)
+T.equal(lost(out), "", "34.5 s: nothing lost")
+run(1)
+T.equal(lost(out), "fmsL,fmsC,fmsR", "35 s: the master shut down in flight: every CDU (FCOM p.1275)")
+
+-- the other FMC not working: the resync waits (estimate)
+s = M.new()
+i = inp()
+run(1)
+i.fail[R] = M.FAILED
+i.fail[L] = M.TEST_RESYNC
+run(40)
+T.check(not out.ok[L] and not out.resyncing, "the right FMC failed: the left one waits, no RESYNCING OTHER FMC")
+i.fail[R] = 0
+run(2)
+T.check(out.ok[L], "the right FMC back: the resync completes")
+
 T.done()

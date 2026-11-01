@@ -18,10 +18,21 @@
 --  - SINGLE FMC OPERATION while one FMC works (p.1275, p.1434); FMC LEFT,
 --    RIGHT on the EICAS 30 s after its failure (p.1275, p.1429; LH3460
 --    p.114, p.116: step 11d2, 5 s an estimate before).
+--  - The resynchronization (step 11d3; notes §101; FCOM p.1277, p.1433-1434;
+--    ATA34_2 p.632-633): an FMC failing an internal test (`inp.fail` 2, 3)
+--    shuts its outputs down, restarts and is resynchronized by the other
+--    one, about RESYNC_S; meanwhile its CDUs' displays frozen (FCOM p.1277:
+--    a failed condition; keys not taken), RESYNCING OTHER FMC on the other's
+--    (after SINGLE FMC OPERATION: ATA34_2 p.633). 2: back at work; 3: the
+--    resynchronization failed, the FMC shut down at RESYNC_FAIL_S (ATA34_2
+--    p.633): RESYNC FAIL - SINGLE FMC, its CDUs as a failure's.
 -- Estimates: the centre CDU on the right FMC while the left one fails; a
 -- CDU without power reconnects to its FMC by itself when both have power
 -- (no TIMEOUT - RESELECT: the MENU page at power-up, as before); SINGLE
--- FMC OPERATION on every connected CDU (FCOM: in flight on one).
+-- FMC OPERATION on every connected CDU (FCOM: in flight on one); a
+-- resynchronization waits while the other FMC does not work; none after a
+-- power loss or a failure (`inp.fail` 1) ends (the sources name the
+-- internal test's restart only).
 --
 --   local M = B747_fmc_link_model          -- in XTLua, after dofile
 --   local s = M.new()
@@ -34,11 +45,17 @@ M.L, M.R = 1, 2
 M.CDUS = {"fmsL", "fmsC", "fmsR"}
 M.EICAS_DELAY_S = 30
 M.TIMEOUT = "TIMEOUT - RESELECT"
+-- the failure injection's values (laminar/B747/fms/fail)
+M.FAILED, M.TEST_RESYNC, M.TEST_RESYNC_FAIL = 1, 2, 3
+-- the resynchronization's time; its failure's shutdown (ATA34_2 p.633)
+M.RESYNC_S = 15
+M.RESYNC_FAIL_S = 35
 
 function M.new()
-    return {ok = {true, true}, link = {fmsL = M.L, fmsC = M.L, fmsR = M.R}, src = {}, auto = {},
-        down_t = {0, 0},
-        out = {ok = {true, true}, lost = {}, eicas = {false, false}, single = false}}
+    return {ok = {true, true}, state = {"ok", "ok"}, link = {fmsL = M.L, fmsC = M.L, fmsR = M.R},
+        src = {}, auto = {}, down_t = {0, 0}, fail = {0, 0}, sync = {}, sync_t = {0, 0}, sync_n = {0, 0},
+        out = {ok = {true, true}, lost = {}, frozen = {}, eicas = {false, false}, single = false,
+            resyncing = false, resync_fail = false}}
 end
 
 -- the CDU's FMC by its NAV source selector (src: the FMC it selects, nil
@@ -59,14 +76,61 @@ local function pick(s, cdu, inp)
     return s.ok[inp.master] and inp.master or nil
 end
 
--- inp: power {L, R}, fail {L, R}, src {fmsL = 1|2|nil, fmsR = ...} (the
--- NAV source selectors), cdu_power {fmsL, fmsC, fmsR}, master (1|2), ground
+-- the injection's value (true as FAILED)
+local function fail_value(v)
+    if v == true then return M.FAILED end
+    return tonumber(v) or 0
+end
+
+-- each FMC's state: "ok", "resync" (its outputs shut down, being
+-- resynchronized) or "failed"
+local function fmc_states(s, inp, dt)
+    for i = 1, 2 do
+        local f = fail_value(inp.fail[i])
+        -- an internal test's failure from work: its restart and resync
+        if f ~= s.fail[i] then
+            s.sync[i] = (f == M.TEST_RESYNC or f == M.TEST_RESYNC_FAIL) and s.fail[i] == 0 and f or nil
+            s.sync_t[i] = 0
+            s.fail[i] = f
+        end
+    end
+    local was = {s.state[1], s.state[2]}
+    for i = 1, 2 do
+        local st
+        if not inp.power[i] or s.fail[i] == M.FAILED then
+            st = "failed"
+        elseif s.sync[i] then
+            s.sync_t[i] = s.sync_t[i] + (dt or 0)
+            if s.sync[i] == M.TEST_RESYNC_FAIL and s.sync_t[i] >= M.RESYNC_FAIL_S then
+                st = "failed"
+            elseif s.sync[i] == M.TEST_RESYNC and s.sync_t[i] >= M.RESYNC_S and was[3 - i] == "ok" then
+                s.sync[i] = nil
+                st = "ok"
+            else
+                st = "resync"
+            end
+        elseif s.fail[i] == M.TEST_RESYNC_FAIL then
+            st = "failed"
+        else
+            st = "ok"
+        end
+        s.state[i] = st
+        s.sync_n[i] = st == "resync" and s.sync_n[i] + 1 or 0
+    end
+    return was
+end
+
+-- inp: power {L, R}, fail {L, R} (0, FAILED, TEST_RESYNC,
+-- TEST_RESYNC_FAIL), src {fmsL = 1|2|nil, fmsR = ...} (the NAV source
+-- selectors), cdu_power {fmsL, fmsC, fmsR}, master (1|2), ground
 function M.update(s, inp, dt)
     local out = s.out
     local m = inp.master
-    local master_lost = not inp.ground and s.ok[m] and not (inp.power[m] and not inp.fail[m])
+    local was = fmc_states(s, inp, dt)
+    -- in flight the master FMC's loss takes every CDU (its resync not)
+    local master_lost = not inp.ground and was[m] ~= "failed" and s.state[m] == "failed"
     for i = 1, 2 do
-        s.ok[i] = inp.power[i] and not inp.fail[i] and true or false
+        s.ok[i] = s.state[i] == "ok"
         out.ok[i] = s.ok[i]
         s.down_t[i] = s.ok[i] and 0 or s.down_t[i] + (dt or 0)
         out.eicas[i] = s.down_t[i] >= M.EICAS_DELAY_S
@@ -89,14 +153,22 @@ function M.update(s, inp, dt)
                 local f = own(cdu, src, s.ok)
                 if s.ok[f] then s.link[cdu] = f end
             end
+            -- its FMC failed (not resynchronizing): lost
             local f = s.link[cdu]
-            if f and (not s.ok[f] or master_lost) then
+            if f and (s.state[f] == "failed" or master_lost) then
                 s.link[cdu] = nil
                 out.lost[cdu] = true
             end
         end
+        local f = s.link[cdu]
+        out.frozen[cdu] = f ~= nil and s.state[f] == "resync" or nil
     end
     out.single = s.ok[M.L] ~= s.ok[M.R]
+    -- (after SINGLE FMC OPERATION, from the resync's second frame: ATA34_2
+    -- p.633's order)
+    out.resyncing = (s.sync_n[M.L] >= 2 and s.ok[M.R]) or (s.sync_n[M.R] >= 2 and s.ok[M.L])
+    out.resync_fail = (s.fail[M.L] == M.TEST_RESYNC_FAIL and s.state[M.L] == "failed" and s.ok[M.R])
+        or (s.fail[M.R] == M.TEST_RESYNC_FAIL and s.state[M.R] == "failed" and s.ok[M.L])
     return out
 end
 
@@ -114,9 +186,15 @@ function M.available(s, cdu, inp)
     return s.link[cdu] or pick(s, cdu, inp)
 end
 
--- the CDU connected to a working FMC
+-- the CDU connected to a working FMC (or one being resynchronized: frozen)
 function M.linked(s, cdu)
     return s.link[cdu] ~= nil
+end
+
+-- the CDU's FMC being resynchronized: its display frozen, no keys
+function M.frozen(s, cdu)
+    local f = s.link[cdu]
+    return f ~= nil and s.state[f] == "resync"
 end
 
 return M
