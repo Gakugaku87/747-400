@@ -1715,3 +1715,21 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - CDU（`B744.createfms.lua`）：再同期中の FMC の CDU は描き直さず（表示が止まる）、キーを受けない。
 - 推定：再同期は、もう一方の FMC が動いていないと待つ。電源の回復や故障（1）からの戻りでは再同期しない（資料は内部の試験の後の再起動と、計算の食い違いだけを書く）。FMC LEFT・RIGHT は再同期の間も 30 秒で出る（15 秒で戻る 2 では出ない）。
 - 試験：`fmc_link_model_test.lua`（+25 件）、`fmc_link_glue_test.lua`（+18 件）。全 157 本。X-Plane：新しい `s176_fmc_resync`：29/29（2026-11-01、立ち上げ直した後の 3 便目）。成田の北の 3,100 ft で、LNAV・VNAV SPD・A/T の上昇中に master の左 FMC が内部の試験に落ちる（注入 2）と、1 秒で fmc_ok[0] 0、左の CDU はつながったまま LEGS で止まり RTE が効かず、右の CDU に RESYNCING OTHER FMC、LNAV と VNAV SPD に琥珀の線、A/T の FMA が空白、F/D バーが消えた（画像）。約 16 秒で戻り、LNAV・VNAV SPD のまま線が消え、RESYNCING も消え、左の CDU の RTE が効いた。A/T は ARM スイッチの入れ直しで戻った。次に右 FMC の再同期の失敗（注入 3）で、左の CDU に RESYNCING OTHER FMC（AFDS はそのまま）、約 32 秒で FMC RIGHT、約 37 秒で右の CDU が MENU と TIMEOUT - RESELECT、左の CDU に RESYNC FAIL - SINGLE FMC（画像）。Log.txt に Lua の誤りなし。
+
+## 102. 11e の段取りと 11e1 の実装（2026-11-01：代替航法と IRS LEGS）
+
+- 段取り：
+  - 11e1：CDU の経路の写しと IRS LEGS（つなげる FMC が無いときの LEGS キー、CDU ごとの順送り、入力・削除・MOD・EXEC）。
+  - 11e2：IRS PROGRESS（LAST・TO・NEXT・DEST、IRS の位置、GS、XTK ERROR、DTK、TK）。
+  - 11e3：ALTN NAV RADIO と CDU ごとの無線の同調（左の CDU は左の VOR・DME・ADF・ILS、右は右、中央は ILS C）。
+  - 両方の FMC の故障の ND の地図（CDU L・C・R の表示、MAP RANGE DISAGREE：FCOM p.1151、p.1421–1422）は、パネルの変更が要るので、11e3 の後で考える。
+- 資料：
+  - FCOM p.1275（MENU の 1 行目に <FMC が無ければ、LEGS で ALTN NAV LEGS、PROG で ALTN NAV PROGRESS、NAV RAD で ALTN NAV RADIO）。
+  - FCOM p.1421–1424（両方の FMC が落ちると CDU が代替航法をする：LNAV・VNAV・A/T は無い。CDU は自分の IRU で計算し、性能と航法のデータベースを持たない。FMC の有効な経路を写し続け、条件の点・オフセット・ホールドは残さない。新しい点は緯度経度だけ。経路の変更は FMC とほぼ同じ。点の間は大圏。現用の点を変えると現在位置から直行。1 台の CDU の変更は他を変えない。IRS LEGS の行：針路（M か T、現用の脚は磁方位も、以降は真方位）、点、距離、座標）。
+  - FMSPG p.247–249（FMC は有効な経路の変更（順送り、ACTIVATE、EXEC）のたびに CDU へ送る。1L–5L に入れられるのは経路の点と緯度経度だけ：無ければ INVALID ENTRY。現用の針路は MAG/TRUE の選択に従い、以降は真方位。距離は前の点からで、現用の脚には無い）。ATA34_2 p.589（IRS LEGS と IRS PROGRESS のページの出し方）。
+- 作ったもの：
+  - `B747.68.altn_nav_model.lua`（新）：CDU の経路の写し（FMC の有効な経路の点と不連続。条件の点とホールドを除き、オフセットは写さない。目的地）。大圏の針路・距離・沿う距離と横の距離。順送り（現用の点を横に過ぎたら：推定）と LAST の点と高度。IRS LEGS の入力（後の経路の点：その前の点を消して DIRECT、緯度経度：その行の前に入れて後に不連続、1 行目は現在位置から直行）、削除（点は前後をつなぐ、不連続と現用の点は INVALID DELETE：推定、FMC の LEGS と同じ）、MOD・EXEC・ERASE。
+  - つなぎ（`B747.68.xt.fms.lua` の `update_altn_nav`、1 秒ごと）：FMC が動いている間は 3 台の CDU の写しを有効な経路から作り直す。両方が落ちていれば、各 CDU の経路を自分の IRU（左・中央・右）の位置で順送り。`B747_fms_altn`・`B747_fms_altn_pos`。CDU の IRS LEGS の変更でその CDU の EXEC 灯（左・右）。
+  - CDU：`activepages/B744.fms.pages.altnnav.lua`（新）の ACT IRS LEGS（MOD IRS LEGS）：5 点ずつ、小字に針路（現用は方位基準で M か T、以降は T）と距離（現用の脚は無し）、点と座標、不連続の箱と THEN、6L に <ERASE（MOD のとき）、区切りの線。`B744.createfms.lua` の pageKey：つながっていない CDU で、つなげる FMC も無ければ、LEGS で IRS LEGS、IRS LEGS での EXEC は CDU の変更。
+- 推定：順送りは現用の点を横に過ぎたとき。現用の点の削除と不連続の削除は INVALID DELETE。長い識別子（緯度経度の点）では座標の間の空白を詰める。磁方位は X-Plane の磁気偏差で。
+- 試験：新しい `altn_nav_model_test.lua`（43 件）と `altn_nav_glue_test.lua`（28 件）。全 159 本。X-Plane：新しい `s177_irs_legs`：17/17（2026-11-01、立ち上げ直した後の 4 便目）。成田の北の 3,000 ft で RJAA→RJBB（XAC・SPENS・BOKJO）を作り XAC へ DIRECT の後、両方の FMC を故障させると、左の CDU は MENU で <FMC が無く、LEGS で ACT IRS LEGS 1/1：216°M、XAC N34°42.7 E139°24.8、271°T 20NM、SPENS、251°T 32NM、BOKJO、終わりの破線と区切りの線（画像）。2L に N3610.0E14010.0 を入れると MOD IRS LEGS 1/2 で N36E140、THEN と箱、ROUTE DISCONTINUITY、<ERASE、左の EXEC 灯だけが点き（画像）、EXEC で ACT に戻って灯が消えた。右の CDU の IRS LEGS は 2 行目が SPENS のまま。Log.txt に Lua の誤りなし。
