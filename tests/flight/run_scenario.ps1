@@ -44,6 +44,10 @@
 #   remember {dref, as}                          keep a value: a wait or check with
 #                                                "rel": "<as>" adds it to its value(s)
 #   sleep   {seconds}
+#   copy    {from, to}                           copy a file, paths relative to the
+#                                                aircraft folder (SimBrief's files for
+#                                                the company datalink: simbrief\)
+#   remove  {path}                               delete such a file (none: nothing)
 #   snapshot {drefs: [...]}                      log values
 #   cas                                          log the EICAS message lines
 #   view    {name} | {the, psi, [fov]}           turn the pilot's head: a preset
@@ -311,6 +315,18 @@ foreach ($step in $spec.steps) {
                 Add-Result $step 'info' ("{0} = {1} = {2}" -f $step.as, $step.dref, $v) $v
             }
             'sleep' { Start-Sleep -Milliseconds ([int]([double]$step.seconds * 1000)); Add-Result $step 'info' "slept $($step.seconds) s" }
+            'copy' {
+                $acfRoot = Join-Path $PSScriptRoot '..\..'
+                $dst = Join-Path $acfRoot $step.to
+                New-Item -ItemType Directory -Force (Split-Path $dst) | Out-Null
+                Copy-Item -Force (Join-Path $acfRoot $step.from) $dst
+                Add-Result $step 'info' "copied $($step.from) to $($step.to)"
+            }
+            'remove' {
+                $p = Join-Path (Join-Path $PSScriptRoot '..\..') $step.path
+                if (Test-Path $p) { Remove-Item -Force $p }
+                Add-Result $step 'info' "removed $($step.path)"
+            }
             'snapshot' {
                 $vals = [ordered]@{}
                 foreach ($d in $step.drefs) { try { $vals[$d] = Get-XPDataref $d } catch { $vals[$d] = 'ERROR' } }

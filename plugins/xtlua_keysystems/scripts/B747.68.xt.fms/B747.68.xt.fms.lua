@@ -4413,6 +4413,300 @@ do
     wasComm = comm
   end
 end
+-- (6-1/6-2 step 12h1; notes/ATA-34-61-FMC.md §122) the company datalink's
+-- flight plan (FCOM p.771-774, p.1288-1291; FMSPG p.367-376, p.382): RTE
+-- REQUEST (FMC COMM 2/2's 1L, a RTE page's 3L) with its CO ROUTE, SENDING
+-- until the network's acknowledgement, then SEND with SENT; the company's
+-- flight plan uplink: ROUTE n UPLINK READY, ROUTE UPLINK with LOAD and
+-- PURGE on the route's page, LOAD (ROUTE n UPLINK LOADING; the inactive
+-- route replaced, the active route's a modification), PURGE; the flight
+-- number uplinked (FLT NUMBER UPLINK); INVALID ROUTE UPLINK, PARTIAL ROUTE
+-- n UPLINK. The company is the sim's airline operations (B747.68.
+-- simbrief_model.lua): SimBrief's .fms (the CO ROUTE's file, else the
+-- newest) and OFP (the newest .xml, its flight number; its navigation log
+-- without an .fms) in the aircraft folder's simbrief folder, whose newest
+-- files' names the native plugin b747_fms_bridge writes into its
+-- _newest.txt (XTLua cannot list a folder, and its copy of another
+-- plugin's text dataref can stay old: s201, 2026-11-01); its link the
+-- sim's own, READY with the FMC's datalink (no AutoATC needed).
+-- Estimates: the times (the acknowledgement ACK_S, the answer ANSWER_S,
+-- the loading LOAD_S), the route an uplink goes to (the request's route
+-- on the ground, the inactive one in the air; FMC COMM's: the active one
+-- on the ground, else RTE 1), the CO ROUTE the .fms's name, a point not in
+-- the database a latitude/longitude point at its place (PARTIAL), no
+-- accept or reject downlinks, the company's ACARS text without a flight
+-- plan.
+dofile("B747.68.simbrief_model.lua")
+simDR_acf_relative_path=find_dataref("sim/aircraft/view/acf_relative_path")
+do
+  local S = B747_simbrief_model
+  local R = B747_route_model
+  local ACK_S, ANSWER_S, LOAD_S = 4, 20, 2
+  local CO_ROUTE_LEN, FLT_NO_LEN, FIX_NM = 10, 8, 5
+  -- the route request: {status ("SENDING", "SENT"), t, num (the route
+  -- asked from; nil: FMC COMM's), route (the route its uplink goes to),
+  -- co_route}
+  local req = nil
+  local commCoRoute = nil   -- FMC COMM 2/2's CO ROUTE
+  -- the uplink: {num, rte (the route built), partial, co_route, loading
+  -- (the time LOAD was pushed)}
+  local up = nil
+  local fltUnreviewed = false
+  local shownMsg = ""
+  local function read_file(path)
+    if type(path) ~= "string" or path == "" then return nil end
+    local f = io.open(path, "rb")
+    if not f then return nil end
+    local s = f:read("*a")
+    f:close()
+    return s
+  end
+  local function base_name(path)
+    return path and (string.match(path, "([^/\\]+)%.[Ff][Mm][Ss]$")) or nil
+  end
+  -- the company's ACARS text (a telex)
+  local function telex(title, lines)
+    local m = {type = "telex", title = title, msg = table.concat(lines, "@"), from = "COMPANY", read = false, rr = "N",
+      time = string.format("%02d:%02d", hh or 0, mm or 0), messageID = acarsSystem.provider.messageID}
+    acarsSystem.provider.messageID = acarsSystem.provider.messageID + 1
+    acarsSystem.messages[table.getn(acarsSystem.messages.values) + 1] = m
+  end
+  function B747_fms_company_telex(title, lines) telex(title, lines) end
+  -- the link: the FMC's datalink (FCOM p.772: READY, NO COMM, VOICE, FAIL)
+  function B747_fms_company_status()
+    if not B747_fms_datalink() then return "NO COMM" end
+    return "READY"
+  end
+  -- the route an uplink goes to (estimate)
+  local function target(asked)
+    local act = B747_fmc_route.active and B747_fmc_route.num or nil
+    local n = asked or act or 1
+    if simDR_onGround == 0 and act == n then n = 3 - n end
+    return n
+  end
+  local function dist_nm(a, b)
+    local dlat = math.rad(b.lat - a.lat)
+    local dlon = math.rad(b.lon - a.lon) * math.cos(math.rad((a.lat + b.lat) / 2))
+    return math.sqrt(dlat * dlat + dlon * dlon) * 3440.065
+  end
+  local function ll_fix(p)
+    return {kind = "LL", ident = string.format("%s%02d%s%03d", p.lat >= 0 and "N" or "S", math.floor(math.abs(p.lat)),
+      p.lon >= 0 and "E" or "W", math.floor(math.abs(p.lon))), lat = p.lat, lon = p.lon}
+  end
+  -- a point of the uplink in the database (the nearest of its name within
+  -- FIX_NM), else a latitude/longitude point at its place (the second
+  -- value true: not the database's)
+  local function find_fix(st, p)
+    if p.kind == "ltlg" then return ll_fix(p) end
+    local best = R.candidates(st, p.ident, p.lat, p.lon, true)[1]
+    if best and dist_nm(best, p) <= FIX_NM then return best end
+    return ll_fix(p), true
+  end
+  local function last_fix(st)
+    local l = st.rte.legs[#st.rte.legs]
+    return l and l.fix
+  end
+  local function drop_pending(st)
+    local legs = st.rte.legs
+    if legs[#legs] and legs[#legs].pending then legs[#legs] = nil end
+  end
+  local function same_name(a, b)
+    return a and b and string.gsub(string.upper(a), "[^%w]", "") == string.gsub(string.upper(b), "[^%w]", "")
+  end
+  -- the destination's STAR or approach of an uplinked name (the approach
+  -- by its identifier or its CDU name: I06L or ILS06L)
+  local function proc_name(dest, kind, name)
+    local P = B747_proc_model
+    for _, id in ipairs(P.list(B747_navdb, B747_fmc_navdb, dest, kind)) do
+      if same_name(id, name) or (kind == P.APPCH and same_name(P.approach_name(id), name)) then return id end
+    end
+    return nil
+  end
+  -- the uplink's route built as the crew would enter it: ORIGIN, DEST,
+  -- RUNWAY, the SID, the route's elements (an airway to its point, else
+  -- DIRECT to each point), the STAR and the approach; nil when the origin
+  -- or the destination is not in the database (INVALID ROUTE UPLINK)
+  local function build(u)
+    local st = R.new(B747_navdb, B747_fmc_navdb)
+    st.P = B747_proc_model
+    if not u.origin or not u.dest or R.set_origin(st, u.origin) or R.set_dest(st, u.dest) then return nil end
+    local partial = false
+    if u.runway and R.set_runway(st, u.runway) then partial = true end
+    if u.sid then
+      local rwy = st.rte.runway and st.rte.runway.ident
+      if R.set_departure(st, u.sid, rwy, u.sidtrans) and (not u.sidtrans or R.set_departure(st, u.sid, rwy, nil)) then
+        partial = true
+      end
+    end
+    for _, e in ipairs(u.elements or {}) do
+      local done = false
+      if e.via ~= "DIRECT" and not R.add_via(st, e.via) then
+        local f, other = find_fix(st, e.fix)
+        if not other and not R.add_to(st, f) then done = true else drop_pending(st) end
+      end
+      if not done then
+        for _, p in ipairs(e.points) do
+          local f, other = find_fix(st, p)
+          if other then partial = true end
+          local l = last_fix(st)
+          if not (l and l.ident == f.ident and dist_nm(l, f) < 1) and R.add_to(st, f) then partial = true end
+        end
+      end
+    end
+    local P = B747_proc_model
+    if u.star then
+      local name = proc_name(u.dest, P.STAR, u.star)
+      if not name or (R.set_arrival(st, {name = name, trans = u.startrans}, nil)
+          and (not u.startrans or R.set_arrival(st, {name = name}, nil))) then
+        partial = true
+      end
+    end
+    if u.app then
+      local id = proc_name(u.dest, P.APPCH, u.app)
+      if not id or (R.set_arrival(st, nil, {id = id, trans = u.apptrans})
+          and (not u.apptrans or R.set_arrival(st, nil, {id = id}))) then
+        partial = true
+      end
+    end
+    return st.rte, partial
+  end
+  -- the company's answer to a route request: the flight plan uplink, its
+  -- flight number at once (FCOM p.1433: FLT NUMBER UPLINK)
+  -- a text dataref up to its terminating 0
+  local function text_of(v)
+    return type(v) == "string" and (string.match(v, "^[^%z]*")) or ""
+  end
+  -- the simbrief folder: by the aircraft's .acf (relative to X-Plane's
+  -- folder, where XTLua opens files), B747_COMPANY_FOLDER in the tests
+  local function folder_of()
+    if B747_COMPANY_FOLDER then return B747_COMPANY_FOLDER end
+    return (string.match(text_of(simDR_acf_relative_path), "^(.*[/\\])") or "") .. "simbrief/"
+  end
+  local function answer(r)
+    local folder = folder_of()
+    -- the plugin's list: "FMS name" and "OFP name"
+    local list = read_file(folder .. "_newest.txt") or ""
+    local fmsName, ofpName = string.match(list, "FMS ([^\r\n]+)"), string.match(list, "OFP ([^\r\n]+)")
+    local path = fmsName and (folder .. fmsName)
+    if r.co_route and r.co_route ~= "" then path = folder .. r.co_route .. ".fms" end
+    local plan = S.parse_fms(read_file(path))
+    local ofp = S.parse_ofp(read_file(ofpName and (folder .. ofpName)))
+    -- another flight's OFP: not this plan's
+    if plan and ofp and (ofp.origin.icao ~= plan.origin or ofp.dest.icao ~= plan.dest) then ofp = nil end
+    if not plan and r.co_route and r.co_route ~= "" then ofp = nil end
+    local co = r.co_route
+    if not co or co == "" then co = plan and base_name(path) or (ofp and (ofp.origin.icao .. ofp.dest.icao)) end
+    local u = S.route_uplink(plan, ofp, co and string.sub(string.upper(co), 1, CO_ROUTE_LEN))
+    if not u then
+      telex("NO FLIGHT PLAN", {r.co_route and r.co_route ~= "" and ("CO ROUTE " .. r.co_route .. " NOT ON FILE") or "NO FLIGHT PLAN ON FILE",
+        "SIMBRIEF FOLDER:", "AIRCRAFT/SIMBRIEF"})
+      return
+    end
+    if u.flt_no then
+      if #u.flt_no <= FLT_NO_LEN and string.match(u.flt_no, "^%w+$") then
+        -- (the same number again: no message, estimate)
+        if fms_text("fltno") ~= u.flt_no then
+          setFMSData("fltno", u.flt_no)
+          fltUnreviewed = true
+          B747_cdu_fmc_event("FLT NUMBER UPLINK", true)
+        end
+      else
+        B747_cdu_fmc_event("INVALID FLT NO UPLINK", true)
+      end
+    end
+    local rte, partial = build(u)
+    if not rte then B747_cdu_fmc_event("INVALID ROUTE UPLINK", true) return end
+    up = {num = r.route, rte = rte, partial = partial, co_route = u.co_route}
+  end
+  -- the pages' state (one table, no garbage each frame)
+  local view = {}
+  function B747_fms_company()
+    view.req, view.up, view.comm_co_route, view.flt_unreviewed = req, up, commCoRoute, fltUnreviewed
+    return view
+  end
+  -- RTE REQUEST's SEND (FCOM p.773, p.1289): from RTE page `num` or FMC
+  -- COMM (nil); blank while an uplink waits to be loaded
+  function B747_fms_company_request(fmsO, num)
+    if B747_fms_company_status() ~= "READY" or (req and req.status == "SENDING") or up then return end
+    local co
+    if num then
+      co = B747_fmc_route_num(num).co_route
+    else
+      co = commCoRoute
+      -- FMC COMM's CO ROUTE to the RTE page (FMSPG p.382)
+      if co then B747_fmc_route_num(target(nil)).co_route = co end
+    end
+    req = {status = "SENDING", t = simDRTime, num = num, route = target(num), co_route = co}
+  end
+  -- CO ROUTE (FCOM p.774, p.1290): any identifier (NOT IN DATA BASE: no
+  -- company routes in the database); DELETE clears it and the request's
+  -- status back to SEND
+  function B747_fms_company_co_route(num, value)
+    if value == nil then
+      if num then B747_fmc_route_num(num).co_route = nil else commCoRoute = nil end
+      if req and req.status == "SENT" then req = nil end
+      return nil
+    end
+    if #value < 1 or #value > CO_ROUTE_LEN or not string.match(value, "^%w+$") then return "INVALID ENTRY" end
+    if num then B747_fmc_route_num(num).co_route = value else commCoRoute = value end
+    if req and req.status == "SENT" then req = nil end
+    return "NOT IN DATA BASE"
+  end
+  -- LOAD (FCOM p.1291; FMSPG p.374-376): the inactive route replaced, the
+  -- active route's modification (ERASE and EXEC)
+  function B747_fms_company_load(num)
+    if not up or up.num ~= num or up.loading then return end
+    up.loading = simDRTime
+  end
+  -- PURGE: the uplink dropped (an inactive route's only)
+  function B747_fms_company_purge(num)
+    if not up or up.num ~= num or up.loading or B747_fmc_route_num(num).active then return end
+    up = nil
+  end
+  -- the RTE page reviewed: the flight number uplink's UPLINK goes (FMSPG
+  -- p.368)
+  function B747_fms_company_reviewed() fltUnreviewed = false end
+  local function loaded(u)
+    local st = B747_fmc_route_num(u.num)
+    local rte = u.rte
+    rte.passed = {}
+    if st.active then
+      st.mod = rte
+    else
+      st.rte, st.mod, st.activating = rte, nil, false
+    end
+    st.co_route = u.co_route
+    st.edits = (st.edits or 0) + 1
+    if u.partial then B747_cdu_fmc_event("PARTIAL ROUTE " .. u.num .. " UPLINK", true) end
+    B747_fmc_route_changed()
+  end
+  function B747_fms_company_update()
+    local now = simDRTime
+    if req and req.status == "SENDING" and now - req.t >= ACK_S then
+      req.status, req.t = "SENT", now
+    end
+    if req and req.status == "SENT" and not req.answered and now - req.t >= ANSWER_S then
+      req.answered = true
+      answer(req)
+    end
+    -- the uplink came: the request's SENT goes (FMSPG p.372)
+    if up and req and req.answered then req = nil end
+    if up and up.loading and now - up.loading >= LOAD_S then
+      local u = up
+      up = nil
+      loaded(u)
+    end
+    -- the messages as they change
+    local key = up and ((up.loading and "LOADING" or "READY") .. up.num) or ""
+    if key ~= shownMsg then
+      for n = 1, 2 do
+        B747_cdu_fmc_condition("ROUTE " .. n .. " UPLINK READY", key == "READY" .. n, true)
+        B747_cdu_fmc_condition("ROUTE " .. n .. " UPLINK LOADING", key == "LOADING" .. n, true)
+      end
+      shownMsg = key
+    end
+  end
+end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after
 -- a flight (all four's N2 under the ENG FAIL speed: laminar/B747/engines/
@@ -5106,6 +5400,8 @@ function after_physics()
     -- (step 12g3c) the ATC reports; (step 12g4) the emergency reports
     B747_fms_reports_update()
     B747_fms_emergency_update()
+    -- (step 12h1) the company's flight plan uplink
+    B747_fms_company_update()
 
 	--Display Waypoint ETA on ND
 	waypoint_eta_display()
