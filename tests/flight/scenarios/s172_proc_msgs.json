@@ -1,0 +1,55 @@
+{
+  "name": "s172_proc_msgs",
+  "description": "6-1/6-2 段 11c4（手続きの advisory）の X-Plane での確認。RJAA 34L の地上（機体を読み直す）。RJAA→RJBB の DEPARTURES で AKAGI4（16R と 34L だけ）を選び、RTE の RUNWAY に 34R を入れると RUNWAY N/A FOR SID で捨てられ（FMSPG p.79）、34L は入る。RJBB→RJAA の ARRIVALS で VOR16R を選んでから BINKSA（34L だけ）を選ぶと ARR N/A FOR RUNWAY で捨てられる（FCOM p.1435）。CDU を撮る。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10 },
+    { "do": "record_start" },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
+    { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
+
+    { "do": "mark", "note": "RUNWAY N/A FOR SID" },
+    { "do": "cdu", "note": "RTE：RJAA→RJBB", "keys": ["RTE", "RJAA", "L1", "RJBB", "R1"] },
+    { "do": "cmd", "note": "DEP ARR（経路が有効でない：DEP/ARR INDEX）", "name": "laminar/B747/fms1/func_key/clb" },
+    { "do": "sleep", "seconds": 0.5 },
+    { "do": "cdu", "note": "<DEP（RJAA DEPARTURES）", "keys": ["L1"] },
+    { "do": "check", "note": "1L が AKAGI4", "dref": "laminar/B747/fms3/Line03_L", "op": "contains", "value": "AKAGI4" },
+    { "do": "cdu", "note": "AKAGI4、RTE、RUNWAY に 34R", "keys": ["L1", "RTE", "34R", "L2"] },
+    { "do": "check", "note": "RUNWAY N/A FOR SID（FMSPG p.79）", "dref": "laminar/B747/fms3/Line14_L", "op": "contains", "value": "RUNWAY N/A FOR SID" },
+    { "do": "view", "note": "左の CDU", "the": -34, "psi": 24, "fov": 18 },
+    { "do": "shot", "name": "cdu_runway_na_for_sid" },
+    { "do": "check", "note": "RUNWAY は空のまま", "dref": "laminar/B747/fms3/Line05_L", "op": "matches", "value": "^-----" },
+    { "do": "cdu", "note": "CLR（メッセージと、捨てられた 34R の 3 文字）、34L", "keys": ["CLR", "CLR", "CLR", "CLR", "34L", "L2"] },
+    { "do": "check", "note": "34L は入る", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "34L" },
+
+    { "do": "mark", "note": "ARR N/A FOR RUNWAY" },
+    { "do": "cdu", "note": "CLR、RTE：RJBB→RJAA（出発地を変えると経路が新しくなる）", "keys": ["CLR", "CLR", "CLR", "CLR", "CLR", "CLR", "RTE", "RJBB", "L1", "RJAA", "R1"] },
+    { "do": "cmd", "note": "DEP ARR", "name": "laminar/B747/fms1/func_key/clb" },
+    { "do": "sleep", "seconds": 0.5 },
+    { "do": "cdu", "note": "ARR>（R2：目的地）", "keys": ["R2"] },
+    { "do": "check", "note": "RJAA ARRIVALS", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "RJAA ARRIVALS" },
+    { "do": "check", "note": "1L が BINKSA、1R が VOR16R", "dref": "laminar/B747/fms3/Line03_L", "op": "matches", "value": "^BINKSA.*VOR16R$" },
+    { "do": "cdu", "note": "VOR16R、BINKSA", "keys": ["R1", "L1"] },
+    { "do": "check", "note": "ARR N/A FOR RUNWAY（FCOM p.1435）", "dref": "laminar/B747/fms3/Line14_L", "op": "contains", "value": "ARR N/A FOR RUNWAY" },
+    { "do": "check", "note": "BINKSA は選ばれない", "dref": "laminar/B747/fms3/Line03_L", "op": "matches", "value": "^(?!BINKSA<SEL>)" },
+    { "do": "shot", "name": "cdu_arr_na_for_runway" },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" },
+    { "do": "record_stop" }
+  ]
+}

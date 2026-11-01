@@ -267,6 +267,21 @@ end
 fmsFunctionsDefs["ARRIVALS"]={}
 fmsFunctionsDefs["ARRIVALS"]["exec"]={"rteexec", ""}
 
+-- (6-1/6-2 step 11c4) whether the STAR serves the approach's runway: its
+-- legs' runway, else its name's (D16R's MAP is the VOR NRE: 16R); an
+-- approach to no runway (circling) any STAR (estimate)
+local function star_serves(icao, star, appr)
+  local _, rwy = P.approach_legs(B747_navdb, B747_fmc_navdb, icao, appr)
+  if not rwy then
+    local d = appr:match("^%u(%d%d[LCR]?)")
+    rwy = d and "RW" .. d or nil
+  end
+  if not rwy then return true end
+  for _, id in ipairs(P.runways(B747_navdb, B747_fmc_navdb, icao, P.STAR, star)) do
+    if id == rwy then return true end
+  end
+  return false
+end
 function fmsFunctions.arrsel(fmsO, value)
   use(fmsO.id)
   local st = st_cur()
@@ -277,6 +292,13 @@ function fmsFunctions.arrsel(fmsO, value)
   local r = route()
   local a = item.act
   local err
+  -- (step 11c4) a STAR and an approach that do not go together: rejected
+  -- with ARR N/A FOR RUNWAY (FCOM p.1435)
+  if a[1] == "star" or a[1] == "appr" then
+    local star = a[1] == "star" and a[2] or (r.star and r.star.name)
+    local appr = a[1] == "appr" and a[2] or (r.appr and r.appr.id)
+    if star and appr and not star_serves(r.dest.ident, star, appr) then fmsO["notify"] = "ARR N/A FOR RUNWAY" return end
+  end
   if a[1] == "star" then
     err = R.set_arrival(st, {name = a[2]}, nil)
   elseif a[1] == "startrans" then

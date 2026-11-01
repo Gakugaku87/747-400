@@ -20,12 +20,14 @@ end
 
 -- the lists
 local sids = P.list(N, db, "ZZAA", P.SID)
-T.check(#sids == 1 and sids[1] == "ZULU1", "ZZAA's SIDs: ZULU1")
+T.check(#sids == 2 and sids[1] == "ZULU1" and sids[2] == "YANKE1", "ZZAA's SIDs: ZULU1, YANKE1 (16R only)")
 local tr = P.transitions(N, db, "ZZAA", P.SID, "ZULU1")
 T.equal(table.concat(tr.rwy, " "), "RW16R RW34L", "its runway transitions")
 T.equal(table.concat(tr.trans, " "), "ALPHA", "its enroute transition")
 T.equal(table.concat(P.runways(N, db, "ZZAA", P.SID, "ZULU1"), " "), "RW16R RW34L", "the runways it serves")
-T.equal(table.concat(P.list(N, db, "ZZAA", P.STAR), " "), "ALPHA1", "the STARs")
+T.equal(table.concat(P.list(N, db, "ZZAA", P.STAR), " "), "ALPHA1 BRAVO1", "the STARs (BRAVO1: 34L only)")
+T.equal(table.concat(P.runways(N, db, "ZZAA", P.SID, "YANKE1"), " "), "RW16R", "YANKE1 serves 16R only")
+T.equal(table.concat(P.runways(N, db, "ZZAA", P.STAR, "BRAVO1"), " "), "RW34L", "BRAVO1 serves 34L only")
 T.equal(table.concat(P.transitions(N, db, "ZZAA", P.STAR, "ALPHA1").trans, " "), "DELTA", "ALPHA1's enroute transition")
 T.equal(table.concat(P.list(N, db, "ZZAA", P.APPCH), " "), "I16R", "the approaches")
 T.equal(P.approach_name("I16R"), "ILS16R", "I16R shown ILS16R (FCOM p.1401)")
