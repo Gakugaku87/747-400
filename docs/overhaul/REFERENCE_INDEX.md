@@ -38,6 +38,8 @@
 | ATA34_2 | 同：ATA 34 Navigation（2）：TCAS、RA、GPWS、IRS、GPS、FMCS | 736 | 410 | FMCS（34-61）が 310 ページある |
 | ATA38_51_52_56 | 同：ATA 38 Water/Waste、51 Structures、52 Doors、56 Windows | 614 | 327 | |
 | ATA70_80 | 同：ATA 71〜80 Powerplant | 576 | 298 | CF6-80C2 |
+| QRH_CA | 中国国際航空 B747-400 QRH（2008-10-01、中国語と英語。2026-11-02 に利用者がくれた） | 444 | 180 | PW4056、重量はポンド。非常・非正規のチェックリスト、空中性能（PI-QRH 章：p.347 の目次、VREF は p.353 の PI-QRH.10.5、正常・非正規形態の着陸距離 p.355〜、一発不作動 p.363〜）。離陸速度の表は無い |
+| ACAP | Boeing 747-400 Airplane Characteristics for Airport Planning（D6-58326-1 Rev F、2024-12。2026-11-02 に利用者がくれた） | 224 | 157 | 寸法、重量（MTW・MLW など）、離陸・着陸の滑走路長の図（3.3 節〜、エンジン型式ごと）、旋回半径。V 速度は無い |
 | ICAO_EEDB | ICAO Aircraft Engine Emissions Databank のデータシート（`_ref/ICAO_EEDB/`、1 エンジン 1 枚、テキストは `_ref/text/ICAO_EEDB/`。2026-10-30 に利用者が置いた） | 20 枚 | — | PW4056（1PW041・1PW042）、PW4062、CF6-80C2B1F（1GE023・1GE024・2GE045 ほか）、CF6-80C2B5F、RB211-524G・H（-T を含む）。定格推力 F00・バイパス比・全体圧力比、海面静止の LTO の 4 つの推力（100・85・30・7 %）の燃料流量。引用は `ICAO_EEDB 1PW041` の形 |
 
 - APU（ATA 49）の整備資料は無い。APU は FCOM 7.14・7.30・7.40 を基準にする。
