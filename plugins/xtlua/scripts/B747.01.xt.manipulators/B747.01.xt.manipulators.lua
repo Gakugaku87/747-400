@@ -2111,6 +2111,11 @@ function B747_set_manip_ER()
     if simDR_percent_lights_on > 0.1 then
         B747_toggle_switch_position_target[13] = -1
     end
+
+    -- STORM OFF (7-2c): its ON is 0, where the targets start; STORM on
+    -- keeps the lit indicator lights bright on DIM (FCOM p.501)
+    B747_toggle_switch_position_target[0] = 1
+    B747DR_toggle_switch_position[0] = 1
 end
 
 

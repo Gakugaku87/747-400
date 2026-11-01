@@ -1,0 +1,36 @@
+{
+  "name": "s207_lights_strobe",
+  "description": "照明の 7-2a（notes/ATA-33.md §11）の X-Plane での確認、地上。RJAA 34L でエンジン運転中に始める（機体を読み直す。夜）。STROBE と NAV のスイッチをコマンドで同じ position 0 にして、ストロボが NAV と同じく点き（X-Plane の strobe_lights_on が 1）、5 秒後も点いたまま（電源の初期化スクリプトが毎フレーム消さない：LIGHT-05）、position 1 で消えること（LIGHT-04。前は逆）。スイッチの位置は操作系が毎フレーム目標に戻すので、dataref でなくコマンドで動かす。頭上パネルの外部灯のスイッチを撮る。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 22.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10 },
+    { "do": "switch", "note": "NAV を ON（position 0）", "dref": "laminar/B747/toggle_switch/position[9]", "value": 0, "cmd": "laminar/B747/toggle_switch/nav_light" },
+    { "do": "switch", "note": "STROBE を ON（NAV と同じ position 0）", "dref": "laminar/B747/toggle_switch/position[10]", "value": 0, "cmd": "laminar/B747/toggle_switch/strobe_light" },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "NAV が点く", "dref": "sim/cockpit2/switches/navigation_lights_on", "op": "==", "value": 1 },
+    { "do": "check", "note": "ストロボのスイッチが入る（LIGHT-04：前は position 0 で消えていた）", "dref": "sim/cockpit2/switches/strobe_lights_on", "op": "==", "value": 1, "cite": "FCOM p.451" },
+    { "do": "sleep", "seconds": 5 },
+    { "do": "check", "note": "5 秒後もストロボのスイッチが入ったまま（前は電源の初期化スクリプトが毎フレーム消した：LIGHT-05）", "dref": "sim/cockpit2/switches/strobe_lights_on", "op": "==", "value": 1 },
+    { "do": "view", "note": "頭上パネルの外部灯のスイッチ（lights：前の overhead は電源パネルを向いていた）", "name": "lights" },
+    { "do": "shot", "name": "overhead_lights_on" },
+    { "do": "view", "name": "forward" },
+    { "do": "switch", "note": "STROBE を OFF（position 1）", "dref": "laminar/B747/toggle_switch/position[10]", "value": 1, "cmd": "laminar/B747/toggle_switch/strobe_light" },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "ストロボが消える", "dref": "sim/cockpit2/switches/strobe_lights_on", "op": "==", "value": 0 },
+    { "do": "check", "note": "NAV は点いたまま", "dref": "sim/cockpit2/switches/navigation_lights_on", "op": "==", "value": 1 }
+  ]
+}

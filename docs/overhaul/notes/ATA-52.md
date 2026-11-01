@@ -244,3 +244,20 @@ GAP ID の接頭辞：`DOOR`。2026-10-23 作成。コードは `overhaul` ブ�
 
 - 操縦室の窓は 6 枚（1L/1R が windshield、2・3 が側窓）で、すべて固定。開けられない（ATA38_51_52_56 p.568・570）。現コードにも窓を開ける処理は無く、食い違いは無い。
 - 窓の加熱（導電膜、サーモスタット）は ATA 30（ATA38_51_52_56 p.572・584・588）。flight deck door の覗き窓は p.594（構造のみ）。実装は不要。
+
+## 11. 7-3（2026-11-01：軽く）
+
+- 利用者の判断（2026-11-01）：ドアは 3D（客室と機外のドアの模型）が追いついていないので軽く済ませる。資料に mode（armed）の EICAS 表示があれば入れる。CDU の GND HANDLING → DOORS ページから ARM できるようにする。
+  - 後回し：DRS synoptic の箱（DOOR-07）、cargo door と E/E door（DOOR-02）、flight deck door の access system（DOOR-06）、まとめのメッセージ（DOOR-04）、flight lock（DOOR-05）。3D ができてから。
+- entry door 10 枚と upper deck door 2 枚の mode（`laminar/B747/door/mode[12]`：L1–L5、R1–R5、上階 L・R。1 が AUTOMATIC（ARMED）、0 が MANUAL）を安全のモジュールに持たせた。
+  - 3D にレバーが無いので、全部まとめてのコマンド `laminar/B747/door/mode_auto_all`・`mode_manual_all` と、DOORS ページの L4（<ARM・<DISARM。状態は小さい字で (ARMED)・(DISARMED)・(MIXED)。表記はドアの mode select lever の ARM・DISARM：FCOM p.473–474）。
+  - cold & dark は MANUAL、エンジン運転中の開始は AUTOMATIC。
+  - mode を扉が閉じているときだけ変えられること（FCOM p.473）、mode と slide・非常灯（FCOM p.504）の連動は作らない。
+- mode の memo（E&M の構成。FCOM 109 には無い：ATA38_51_52_56 p.304）：
+  - DOORS AUTO：全部 AUTOMATIC。離陸推力を出してから着陸後 1 分まで抑止。
+  - DOORS AUTO/MAN：混在。
+  - DOORS MANUAL：全部 MANUAL。地上だけ。
+  - 離陸推力は「地上で推力レバーのどれかが 0.6 以上」（推定）か「空中に 10 秒」（air start）。抑止は、地上でレバーが 0.6 未満のまま 60 秒で解ける（着陸後と離陸中止の後。逆推力も推力に数える：推定）。新しい飛行は抑止なしで始める。
+  - DRS synoptic の A・M（ATA38_51_52_56 p.306）はパネル計器の追加が要るので作らない。
+- DOORS ページの plug door（L1、上階 L）を地上でだけ開けられるようにした（DOOR-08。与圧と flight lock：FCOM p.529・534、ATA38_51_52_56 p.342）。閉めるのと flight deck door はいつでも。前は飛行中でも開いた。
+- 試験：`tests/safety/safety_module_test.lua`（memo の 3 つと抑止）、`tests/fms/doors_page_test.lua`（地上だけ開く、L4 の ARM・DISARM）。X-Plane：`s210_doors_mode`（エンジン運転中の開始で DOORS AUTO、CDU の L4 で DISARM → DOORS MANUAL、ARM → DOORS AUTO、1 枚だけ MANUAL → DOORS AUTO/MAN）。

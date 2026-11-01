@@ -361,3 +361,70 @@ GAP ID の接頭辞：`LIGHT`。2026-10-23 作成。コードは `overhaul` ブ�
   - `objects/747_cockpit/Cockpit_Pedestal1.obj:40255` の `annunciator/brightness_ratio[126z`（添字の書き誤り）で RTP L の OFFSIDE TUNING 灯が点かない可能性。
   - annunciator の [251]–[256]（客室サイン、無線のガラス）と `laminar/B747/wxr/*` の灯を読む OBJ が見つからない（ローカルに無い OBJ が使っているかもしれない）。
 - `fs/lighting/strobes_on`（ELECI:130）の用途。外部から書く想定か。
+
+## 10. 段取り（2026-11-01：7-2 照明）
+
+§8 の進め方のとおり、段に分けて進める。他系統の表示灯の点灯条件は、各系統の作り直しで済んでいるもの（燃料・防氷・空圧など）をそのまま読む。
+
+| 段 | 中身 | GAP |
+|---|---|---|
+| 7-2a | すぐ直せるもの：毎フレームの完全 GC をやめる、ストロボの書き手を照明だけに（電源の初期化スクリプトの点滅をやめる）、STROBE のスイッチの向きを NAV・WING・LOGO と同じに（自動始動のストロボの手順も） | LIGHT-08、05、04（LIGHT-02 は 2026-10-24 に済） |
+| 7-2b | 外部灯を 747 の電源と空地で：灯ごとの母線（§4.4–4.6）、landing の減光（gear lever と INBD スイッチ、70 %）、turnoff と taxi は PSEU の地上だけ、quick start のスイッチの向き | LIGHT-03、09、13、15 |
+| 7-2c | 表示灯：IND LTS の BRT・DIM と TEST（10 秒で減光、fire handle と FUEL CONTROL は対象外）、STORM（表示灯を最大、flood）、表示灯の 270 行を表に | LIGHT-10、11 |
+| 7-2d | 非常灯の論理：P5 の OFF/ARMED/ON（3D の操作子が無いので dataref とコマンドだけ）、ARMED で DC bus 4 を失うと自動点灯、>EMER LIGHTS | LIGHT-06 |
+| 7-2e | 操縦室照明の電源（AC 4 の喪失で standby、AC 3 と GSB の喪失）、FLIGHT DECK ACCESS LIGHTS の論理 | LIGHT-07、16 |
+
+- LIGHT-01（ELEC の状態の書き込み）は 1-1（電源）の作り直しで済み（電源モジュールが `ext_pwr*_on`・`apu_pwr*_on` を書く）。LIGHT-14 の酸素の部分も済（2026-10-29）。
+- LIGHT-12（BEACON の LWR と BOTH）は、X-Plane の beacon が 1 つで、分けるには OBJ の灯の index を分ける必要がある（承認事項）。今は残す。
+
+## 11. 7-2a（2026-11-01）
+
+- 毎フレームの `collectgarbage("collect")`（完全 GC）を消した（LIGHT-08）。XTLua の増分 GC に任せる。
+- ストロボの書き手を照明モジュールだけにした（LIGHT-05）。電源の初期化スクリプトの「3 回光って 2 秒消える」点滅と、書き手の無い `fs/lighting/strobes_on` を消した（ELECI:130-161）。点滅は X-Plane の strobe（OBJ の灯の定義）に任せる。
+- STROBE のスイッチの向きを NAV・WING・LOGO と同じ（position 0 が ON）にした（LIGHT-04）。3D の回転は 4 つとも同じ（OH1:136263-136278）で、FCOM p.451 (1.30.17) の図も上 OFF・下 ON。cold & dark（[1]–[12] を 1）でストロボが点いていたのが消える。自動始動（AI）のストロボの手順も ON = 0 にした（AI:2470-2483。前は position 1 にして成功としていた）。
+- 試験：`tests/lighting/lighting_module_test.lua`（STROBE と NAV が同じ位置で同じ点灯、完全 GC が無い、電源の初期化スクリプトがストロボを書かない）。X-Plane：`s207_lights_strobe`（夜の RJAA 34L、エンジン運転中。NAV と STROBE をコマンドで position 0 にして点き、5 秒後も点いたまま、1 で消える）。
+
+## 12. 7-2b（2026-11-01）
+
+- 外部灯を `B747.90.light_model.lua`（X-Plane なしの純関数）で決め、照明モジュールの `B747_exterior_lights()` が X-Plane の灯へ書く。前の 8 個の関数（LIT:751-864）を置き換えた。
+- 入力：スイッチ（position 0 が ON。BEACON は上 +1 が LWR、下 −1 が BOTH）、AC bus 1–4 と GSB（`laminar/B747/electrical/bus/ac`・`gnd_svc`）、PSEU の地上（`laminar/B747/gear/air_ground/pri_gnd`）、gear lever（`actuator/gear_handle` < 0.05 が DOWN）。
+- 灯ごと（LIGHT-03、09、13）：
+  - landing：INBD は AC bus 1、OUTBD は AC bus 3（ATA33 p.330・331。左は右と同じと推定）。gear lever が DOWN でないとき、INBD スイッチが ON の側は INBD と OUTBD が 70 %（R1042：ATA33 p.328・330。左は右と同じと推定）。INBD が OFF なら OUTBD は lever に依らず最大（ATA33 p.330）。前は lever が DOWN でないと 4 灯一律に 50 %。
+  - runway turnoff L/R：GSB、PSEU が地上のときだけ（R7333：ATA33 p.334・335。PSEU の primary の地上を使うのは推定）。前は X-Plane の `onground_any`。
+  - taxi：地上のときだけ（FCOM p.451）。電源は GSB と推定（資料に記載なし）。
+  - nav、beacon（LWR か BOTH）、strobe、wing、logo：GSB（ATA33 p.326・340・348・354・358）。
+  - 前は 747 の母線を見ず、X-Plane の bus 1 で通電していた（バッテリーだけでも点きえた）。
+- quick start（AI）の NAV と LOGO の手順を ON = 0 にした（LIGHT-15）。前は NAV がスイッチを動かさず時間切れになり、LOGO は点いていれば消して成功としていた。
+- BEACON の LWR と BOTH は今も同じ（LIGHT-12、§10）。
+- 試験：`tests/lighting/light_model_test.lua`（減光、母線、空地、スイッチ）、`lighting_module_test.lua`（スイッチと X-Plane の灯の対応 §3.2、gear lever UP の減光、空中の turnoff・taxi、GSB と AC の喪失）。X-Plane：`s208_lights_exterior`（夜の RJAA 34L、エンジン運転中。全部 OFF → 1 つずつ ON で X-Plane の灯の対応、地上の turnoff・taxi、外から撮る → OFF で消える）。lever UP の減光と空中は回帰試験だけ。
+
+## 13. 7-2c（2026-11-01）
+
+- 表示灯（annunciator）の明るさを `B747.90.ind_model.lua`（X-Plane なしの純関数）で決める（LIGHT-10、11）：
+  - BRT 0.8、DIM 0.4（前と同じ値。DIM は 28 V に対する dimmer card の 12 V で、明るさの比は資料に無い：推定）。
+  - TEST：押すとすぐ試験の対象の灯を BRT で点け、10 秒押し続けると time delay relay が dim relay を付勢して、点いている灯ごと DIM にする（ATA33 p.67）。前は押している間ずっと 1.0（BRT より明るい）。
+  - STORM ON：点いている灯は DIM でも BRT（FCOM p.501。§1 の食い違い 1）。前は STORM が表示灯に効かなかった。
+  - 電源：battery bus、DC bus 1、DC bus 3 のどれか（推定：ATA33 p.69 の図に灯ごとの回路が無い）。dim・test・time delay relay は DC bus 1 か 3（推定）で、無ければ BRT で TEST も効かない。前は X-Plane の `bus_volts[0]`・`[2]` と generic light 63。
+- 270 行の同じ三項演算を表（`IND_ANNUN`：添字 → 条件 `annun.<a|b>.<key>`）にした（§6.2）。256 行は機械的に変換し、残りは手で書く：
+  - MASTER WARNING・CAUTION：DIM でさらに 1/8（前のまま。見た目の調整）。
+  - EXT PWR と APU GEN の AVAIL：その電源で点く（機体の電源が無くても BRT か DIM）。ON は機体の母線で（前は APU GEN 1 の ON だけ X-Plane の APU 発電機も見ていた）。
+  - TEST で点けないもの：客室サイン [251]–[252]（推定：操縦室の表示灯でない）、無線パネルのガラス [253]–[256]（表示の glow。BRT・DIM には従う：ATA33 p.52）、気象レーダー操作パネルの灯（推定：操作パネル自身の灯）。前は TEST で全部点いた。
+  - DIM で減光しないもの：cargo の FIRE 灯 [35]–[36]（ATA33 p.68）。DISCH [37] は減光する（推定）。
+  - fire handle と FUEL CONTROL の灯は、3D（`Cockpit_TQ.obj`）が X-Plane の `sim/cockpit2/annunciators/engine_fires` で直接点けていて、この表に無い。TEST で点かず DIM でも減光しないので、資料（ATA33 p.52・68）と合う。p.52 と p.68 で FUEL CONTROL の DIM が逆なのは、灯を作り直すときに決める。
+- STORM の flood をノブの最大と同じにした（R8068 がノブの代わりに固定抵抗を入れる：ATA33 p.72、FCOM p.438）。前は 1.9 で最大の 95 %（LIGHT-11）。
+- エンジン運転中の開始（ER）で、STORM が ON（position 0。操作系の目標の初期値）のまま始まっていた。OFF（1）にした（manipulators の `B747_set_manip_ER`）。cold & dark は前から OFF。
+- 試験：`tests/lighting/ind_model_test.lua`（BRT、DIM、TEST の 10 秒、STORM、電源）、`lighting_module_test.lua`（TEST で点く灯と点かない灯、10 秒の減光、cargo FIRE の DIM、STORM、電源）。X-Plane：`s209_ind_lights`（夜の RJAA 34L、エンジン運転中。STORM が OFF で始まる、DIM・STORM・BRT での明るさ、8 秒の TEST）。10 秒での減光は、Web API がコマンドを 10 秒までしか押し続けられないので回帰試験だけで見る。
+
+## 14. 7-2d（2026-11-01）
+
+- 非常灯の論理を `B747.90.light_model.lua` の `emer` に入れた（LIGHT-06）：
+  - 点灯：客室側のスイッチが ON、P5 の EMER LIGHTS が ON、または ARMED で DC bus 4 が無い（ATA33 p.264・266、FCOM p.452–453・504）。
+  - >EMER LIGHTS（advisory 108。前は定義だけで誰も立てなかった）：P5 が ARMED でない、または ARMED で客室側のスイッチが点けた（FCOM p.547、ATA33 p.268）。
+  - battery pack の 15 分（FCOM p.504）とその先の減衰は作らない（資料に記載なし。今は点灯を描く灯も無い）。
+- 3D に P5 の EMER LIGHTS スイッチも客室側のスイッチも無い（3D の追加は承認事項）ので、dataref とコマンドだけ：
+  - `laminar/B747/light/emer/switch`（0 OFF、1 ARMED、2 ON）、`…/cabin`（客室側のスイッチ、0/1）、`…/lit`（点灯）。
+  - コマンド `laminar/B747/light/emer/switch_on`・`switch_off`（1 段ずつ）、`…/cabin`（押すたびに ON・OFF。FCOM p.453）。
+  - どの飛行も ARMED で始める（preflight の位置：FCOM p.104）。cold & dark も ARMED（推定ではなく割り切り：3D にスイッチが無く、OFF で始めると >EMER LIGHTS を操縦室から消せない。実機の secure は OFF：FCOM p.153）。
+  - 客室側から消せない条件（P5 が ON、または ARMED で電源喪失のとき：ATA33 p.264）は、客室側のスイッチを OFF にしても P5 側の条件で点いたままになるので、そのまま満たす。
+- ドアの mode select lever と連動する点灯（109、FCOM p.504）は、ドアの作り直し（7-3）で。
+- 試験：`light_model_test.lua`（点灯と >EMER LIGHTS の 7 通り）、`lighting_module_test.lua`（コマンド、開始時の ARMED、DC bus 4 の喪失、advisory 108）。X-Plane の確認は、7-2 の残りの試験と一緒に回す（シナリオ s209 に足す）。

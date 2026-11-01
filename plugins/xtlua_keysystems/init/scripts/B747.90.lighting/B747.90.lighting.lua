@@ -159,6 +159,15 @@ B747DR_flood_light_rheo_overhead        = deferred_dataref("laminar/B747/light/f
 ----- SPILL LIGHTS ----------------------------------------------------------------------
 B747DR_fmc_spill_lights			= deferred_dataref("laminar/B747/fmc/spill_lights", "number") --silvereagle
 
+-- (7-2d) the emergency lights: P5's EMER LIGHTS (0 OFF, 1 ARMED, 2 ON), the
+-- cabin's switch (door 1L), lit; the 3D has no switch for them
+B747DR_emer_switch                      = deferred_dataref("laminar/B747/light/emer/switch", "number")
+B747DR_emer_cabin                       = deferred_dataref("laminar/B747/light/emer/cabin", "number")
+B747DR_emer_lit                         = deferred_dataref("laminar/B747/light/emer/lit", "number")
+B747CMD_emer_switch_on                  = deferred_command("laminar/B747/light/emer/switch_on", "EMER LIGHTS switch toward ON", B747_emer_switch_on_CMDhandler)
+B747CMD_emer_switch_off                 = deferred_command("laminar/B747/light/emer/switch_off", "EMER LIGHTS switch toward OFF", B747_emer_switch_off_CMDhandler)
+B747CMD_emer_cabin                      = deferred_command("laminar/B747/light/emer/cabin", "Cabin EMER LIGHTS switch (door 1L)", B747_emer_cabin_CMDhandler)
+
 B747CMD_cockpitLightsOn		= deferred_command("laminar/B747/light/cockpit_lightsOn", "cockpit lights On", B747CMD_cockpitLightsOn_CMDhandler)
 B747CMD_cockpitLightsOff		= deferred_command("laminar/B747/light/cockpit_lightsOff", "cockpit lights Off", B747CMD_cockpitLightsOff_CMDhandler)
 

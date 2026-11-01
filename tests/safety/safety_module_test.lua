@@ -60,4 +60,46 @@ T.equal(get(SEAT_BELTS), 1, "passenger oxygen: FASTEN SEAT BELTS signs on with t
 ns, ps, sb = memos()
 T.check(ns == 0 and ps == 0 and sb == 0, "passenger oxygen: no sign memo")
 
+-- (7-3) the doors' mode memos of the E&M's configuration (ATA38_51_52_56
+-- p.304): DOORS AUTO (all AUTOMATIC, inhibited from takeoff power to 1
+-- minute after landing), DOORS AUTO/MAN (mixed), DOORS MANUAL (all
+-- MANUAL, on the ground)
+local MODE = "laminar/B747/door/mode"
+local GND = "laminar/B747/gear/air_ground/pri_gnd"
+local THR = "sim/cockpit2/engine/actuators/throttle_ratio"
+local function door_memos() return get(MEMO, 9), get(MEMO, 10), get(MEMO, 11) end
+rt:set(GND, 1)
+frames(0.2)
+local auto, mixed, manual = door_memos()
+T.check(get(MODE, 0) == 0 and get(MODE, 11) == 0, "cold and dark: the doors MANUAL")
+T.check(auto == 0 and mixed == 0 and manual == 1, "all MANUAL on the ground: DOORS MANUAL")
+rt:command("laminar/B747/door/mode_auto_all")
+frames(0.2)
+auto, mixed, manual = door_memos()
+T.check(auto == 1 and mixed == 0 and manual == 0, "all AUTOMATIC: DOORS AUTO")
+rt:set(MODE, 4, 0)
+frames(0.2)
+auto, mixed, manual = door_memos()
+T.check(auto == 0 and mixed == 1 and manual == 0, "door L5 MANUAL, the rest AUTOMATIC: DOORS AUTO/MAN")
+rt:set(MODE, 4, 1)
+rt:set(THR, 0, 0.9)
+frames(0.2)
+T.equal(get(MEMO, 9), 0, "takeoff power: DOORS AUTO inhibited")
+rt:set(GND, 0)
+rt:set(THR, 0, 0.5)
+frames(0.2)
+T.equal(get(MEMO, 9), 0, "in the air: DOORS AUTO inhibited")
+rt:set(GND, 1)
+rt:set(THR, 0, 0)
+frames(59)
+T.equal(get(MEMO, 9), 0, "59 s after landing: DOORS AUTO inhibited")
+frames(2)
+T.equal(get(MEMO, 9), 1, "61 s after landing: DOORS AUTO")
+rt:command("laminar/B747/door/mode_manual_all")
+rt:set(GND, 0)
+frames(0.2)
+auto, mixed, manual = door_memos()
+T.check(auto == 0 and mixed == 0 and manual == 0, "all MANUAL in the air: no memo (DOORS MANUAL on the ground only)")
+rt:set(GND, 1)
+
 T.done()

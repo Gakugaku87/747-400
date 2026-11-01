@@ -93,7 +93,6 @@ simDR_ai_flies_aircraft				= find_dataref("sim/operation/prefs/ai_flies_aircraft
 simDR_electrical_bus_volts          = find_dataref("sim/cockpit2/electrical/bus_volts")
 
 simDR_aircraft_on_ground            = find_dataref("sim/flightmodel/failures/onground_any")
-simDR_all_wheels_on_ground          = find_dataref("sim/flightmodel/failures/onground_any")
 
 
 simDR_sim_brightness_ratio      = find_dataref("sim/cockpit2/electrical/HUD_brightness_ratio")
@@ -761,120 +760,43 @@ end
 
 
 
------ LANDING LIGHTS --------------------------------------------------------------------
-function B747_landing_light_brightness()
-
-    local gear_handle_factor = 0.5
-    if B747DR_gear_handle < 0.05 then gear_handle_factor = 1.0 else gear_handle_factor = 0.5 end
-
-    simDR_landing_light_switch[0] = (1 - B747DR_toggle_switch_position[1]) * gear_handle_factor
-    simDR_landing_light_switch[1] = (1 - B747DR_toggle_switch_position[3]) * gear_handle_factor
-    simDR_landing_light_switch[2] = (1 - B747DR_toggle_switch_position[4]) * gear_handle_factor
-    simDR_landing_light_switch[3] = (1 - B747DR_toggle_switch_position[2]) * gear_handle_factor
-
-end
-
-
-
-
-
-
-
-
------ TURNOFF LIGHTS --------------------------------------------------------------------
-function B747_turnoff_lights()
-
-    -- LEFT TURNOFF LIGHT
-    if simDR_all_wheels_on_ground == 1 and B747DR_toggle_switch_position[5] < 0.05 then
-        simDR_generic_brightness_switch[0] = 1
-    else
-        simDR_generic_brightness_switch[0] = 0
-    end
-
-    -- RIGHT TURNOFF LIGHT
-    if simDR_all_wheels_on_ground == 1 and B747DR_toggle_switch_position[6] < 0.05 then
-        simDR_generic_brightness_switch[1] = 1
-    else
-        simDR_generic_brightness_switch[1] = 0
-    end
-
-end
-
-
-
-
-
------ TAXI LIGHTS -----------------------------------------------------------------------
-function B747_taxi_lights()
-
-    if simDR_all_wheels_on_ground == 1 and B747DR_toggle_switch_position[7] < 0.05 then
-        simDR_taxi_light_switch_on = 1
-    else
-        simDR_taxi_light_switch_on = 0
-    end
-
-end
-
-
-
-
-
-
------ BEACON LIGHTS ---------------------------------------------------------------------
-function B747_beacon_lights()
-
-   
-    if B747DR_toggle_switch_position[8] > 0.95
-        or B747DR_toggle_switch_position[8] < -0.95
-    then
-        simDR_beacon_lights_switch = 1
-    else
-        simDR_beacon_lights_switch = 0
-    end	 
-
-end
-
-
-
-
------ NAV LIGHTS ------------------------------------------------------------------------
-function B747_nav_lights()
-
-    simDR_nav_lights_switch = 1 - B747DR_toggle_switch_position[9]
-
-end
-
-
-
-
-
------ STROBE LIGHTS ---------------------------------------------------------------------
-function B747_strobe_lights()
-
-   	simDR_strobe_lights_switch = B747DR_toggle_switch_position[10]
-
-end
-
-
-
-
-
------ WING LIGHTS -----------------------------------------------------------------------
-function B747_wing_lights()
-
-    simDR_generic_brightness_switch[2] = 1 - B747DR_toggle_switch_position[11]
-
-end
-
-
-
-
-
------ LOGO LIGHTS -----------------------------------------------------------------------
-function B747_logo_lights()
-
-    simDR_generic_brightness_switch[3] = 1 - B747DR_toggle_switch_position[12]
-
+----- EXTERIOR LIGHTS --------------------------------------------------------------------
+-- (7-2b; notes/ATA-33.md §12) the exterior lights by B747.90.light_model.lua:
+-- their switches (position 0 on; the beacon's LWR 1 and BOTH -1), the AC
+-- buses and the ground service bus (laminar/B747/electrical/bus/*), the
+-- PSEU's ground mode and the gear lever (before, X-Plane's onground_any and
+-- no power: on with the batteries alone; the landing lights 50 % with the
+-- lever up). (7-2a, LIGHT-04 and 05) the strobe switch as the others
+-- (before, position 1 on), the strobes' only writer
+dofile("B747.90.light_model.lua")
+B747DR_light_bus_ac = find_dataref("laminar/B747/electrical/bus/ac")
+B747DR_light_bus_gsb = find_dataref("laminar/B747/electrical/bus/gnd_svc")
+B747DR_light_pseu_gnd = find_dataref("laminar/B747/gear/air_ground/pri_gnd")
+local lightIn = {sw = {landing = {}, turnoff = {}}, ac = {}}
+-- X-Plane's landing light i (OUTBD L, INBD L, INBD R, OUTBD R): its switch
+local LANDING_SW = {1, 3, 4, 2}
+function B747_exterior_lights()
+    local p = B747DR_toggle_switch_position
+    local sw = lightIn.sw
+    for i = 1, 4 do sw.landing[i] = p[LANDING_SW[i]] < 0.05 end
+    sw.turnoff[1], sw.turnoff[2] = p[5] < 0.05, p[6] < 0.05
+    sw.taxi = p[7] < 0.05
+    sw.beacon = p[8] > 0.95 or p[8] < -0.95
+    sw.nav, sw.strobe, sw.wing, sw.logo = p[9] < 0.05, p[10] < 0.05, p[11] < 0.05, p[12] < 0.05
+    for i = 1, 4 do lightIn.ac[i] = B747DR_light_bus_ac[i - 1] > 0.5 end
+    lightIn.gsb = B747DR_light_bus_gsb > 0.5
+    lightIn.ground = B747DR_light_pseu_gnd > 0.5
+    lightIn.gear_down = B747DR_gear_handle < 0.05
+    local out = B747_light_model.update(lightIn)
+    for i = 1, 4 do simDR_landing_light_switch[i - 1] = out.landing[i] end
+    simDR_generic_brightness_switch[0] = out.turnoff[1]
+    simDR_generic_brightness_switch[1] = out.turnoff[2]
+    simDR_taxi_light_switch_on = out.taxi
+    simDR_beacon_lights_switch = out.beacon
+    simDR_nav_lights_switch = out.nav
+    simDR_strobe_lights_switch = out.strobe
+    simDR_generic_brightness_switch[2] = out.wing
+    simDR_generic_brightness_switch[3] = out.logo
 end
 
 
@@ -1038,7 +960,9 @@ function B747_spill_lights()
 		-- TODO:  ADD BUS POWER LOGIC ?
 
 		-- BRIGHTNESS LEVEL FOR STORM LIGHTS
-		local storm_light_brt_level = 1.9 * lightMod 
+		-- (7-2c) the knobs' maximum: R8068 puts a fixed resistor for them
+		-- (ATA33 p.72; FCOM p.438). Before, 1.9: 95 %
+		local storm_light_brt_level = 2.0 * lightMod
         local lightLevel = simDR_generic_brightness_ratio[63] * lightMod *2
 		local storm_light_level = storm_light_brt_level * simDR_generic_brightness_ratio[63]
 
@@ -1529,444 +1453,420 @@ end
 
 
 ----- ANNUNCIATORS (IND LTS) -----------------------------------------------------
-function B747_ind_lights()
-
-    --[[ USE THE GENERIC LIGHT INDEX [63] TO PROVIDE SMOOTH CHANGES OF THE IND LIGHTS BRIGHTNESS (ON/OFF) ]]--
-
-    -- IND LTS SWITCH SETS ANNUNCIATOR BRIGHTNESS LEVEL
-    local ind_lts_brt_level = 0.8                           -- BRIGHT
-    local bright_dimmer =1.0
-    if B747DR_toggle_switch_position[13] < -0.95 then
-        ind_lts_brt_level = 0.4 
-        bright_dimmer = 0.125                     -- DIM
-    elseif B747DR_toggle_switch_position[13] > 0.95 then
-        ind_lts_brt_level = 1.0                             -- TEST
-    end
-
-    local bus1Power = B747_rescale(0.0, 0.0, 28.0, 1.0, simDR_electrical_bus_volts[0] )
-    local bus3Power = B747_rescale(0.0, 0.0, 28.0, 1.0, simDR_electrical_bus_volts[2])
-    local busPower  = math.max(bus1Power, bus3Power)
-    local brightness_level  = ind_lts_brt_level * simDR_generic_brightness_ratio[63] * busPower
-    -- EXTERNAL POWER BRIGHTNESS
-    local ext_pwr_avail_brightness_level  = ind_lts_brt_level
-
-    -- APU BUTTON BRIGHTNESS
-    local apu_avail_brightness_level  = ind_lts_brt_level
-    local apu_on_brightness_level     = ind_lts_brt_level * (simDR_apu_gen_on * 0.8)
-    
-   
-
-
-    -- BUTTON SWITCHES ----------------------------------------------------------
-
-
-    ------ GLARESHIELD -----
-
-    -- MASTER CAUTION
-    B747DR_annun_brightness_ratio[0]    = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level*bright_dimmer, (annun.b.master_caution * brightness_level*bright_dimmer))
-
-    -- MASTER WARNING
-    B747DR_annun_brightness_ratio[1]    = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level*bright_dimmer, (annun.b.master_warning * brightness_level*bright_dimmer))
-
-
-
+-- (7-2c; notes/ATA-33.md §13) each indicator light: its condition (annun.a
+-- and annun.b from B747_annunciators) or the TEST, times the master dim and
+-- test's level (B747.90.ind_model.lua: BRT, DIM, TEST bright and dimmed
+-- after 10 s, STORM bright, its power from the battery bus or DC bus 1 or
+-- 3). Before, 270 lines of one expression: TEST 1.0 while held, STORM left
+-- the lights dim, the power X-Plane's bus volts and generic light 63
+dofile("B747.90.ind_model.lua")
+B747DR_ind_bus_dc = find_dataref("laminar/B747/electrical/bus/dc")
+B747DR_ind_bus_bat = find_dataref("laminar/B747/electrical/bus/bat_main")
+simDR_ind_time = find_dataref("sim/time/total_running_time_sec")
+-- annunciator -> its condition: annun.<a or b>.<key>
+local IND_ANNUN = {
     ----- MAIN PANEL -----
-
     -- GROUND PROXIMITY
-    B747DR_annun_brightness_ratio[2]    = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.gpws * brightness_level))
-
+    [2] = "b.gpws",
     -- GLIDESLOPE INHIBIT
-    B747DR_annun_brightness_ratio[3]    = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.gs_inhibit * brightness_level))
-
-
-
+    [3] = "b.gs_inhibit",
     ----- OVERHEAD PANEL -----
-
     -- ELECTRONIC ENGING CONTROL
-    B747DR_annun_brightness_ratio[4]    = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.el_eng_ctrl_01 * brightness_level))
-    B747DR_annun_brightness_ratio[5]    = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.el_eng_ctrl_02 * brightness_level))
-    B747DR_annun_brightness_ratio[6]    = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.el_eng_ctrl_03 * brightness_level))
-    B747DR_annun_brightness_ratio[7]    = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.el_eng_ctrl_04 * brightness_level))
-
+    [4] = "b.el_eng_ctrl_01",
+    [5] = "b.el_eng_ctrl_02",
+    [6] = "b.el_eng_ctrl_03",
+    [7] = "b.el_eng_ctrl_04",
     -- ELECTRIC UTILITY POWER
-    B747DR_annun_brightness_ratio[8]    = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.util_power_L * brightness_level))
-    B747DR_annun_brightness_ratio[9]    = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.util_power_R * brightness_level))
-
+    [8] = "b.util_power_L",
+    [9] = "b.util_power_R",
     -- BATTERY
-    B747DR_annun_brightness_ratio[10]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.battery_off * brightness_level))
-
-    -- EXTERNAL POWER
-    B747DR_annun_brightness_ratio[11]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ext_pwr_avail_01 * ext_pwr_avail_brightness_level))
-    B747DR_annun_brightness_ratio[12]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (B747DR_elec_ext_pwr1_on * brightness_level))
-    B747DR_annun_brightness_ratio[13]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ext_pwr_avail_02 * ext_pwr_avail_brightness_level))
-    B747DR_annun_brightness_ratio[14]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (B747DR_elec_ext_pwr2_on * brightness_level))
-
-    -- APU GENERATOR
-    B747DR_annun_brightness_ratio[15]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.apu_gen_avail_01 * apu_avail_brightness_level))
-    B747DR_annun_brightness_ratio[16]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (B747DR_elec_apu_pwr1_on * apu_on_brightness_level))
-    B747DR_annun_brightness_ratio[17]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.apu_gen_avail_02 * apu_avail_brightness_level))
-    B747DR_annun_brightness_ratio[18]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (B747DR_elec_apu_pwr2_on * brightness_level))
-
+    [10] = "b.battery_off",
     -- BUS TIE
-    B747DR_annun_brightness_ratio[19]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.bus_tie_01 * brightness_level))
-    B747DR_annun_brightness_ratio[20]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.bus_tie_02 * brightness_level))
-    B747DR_annun_brightness_ratio[21]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.bus_tie_03 * brightness_level))
-    B747DR_annun_brightness_ratio[22]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.bus_tie_04 * brightness_level))
-
+    [19] = "b.bus_tie_01",
+    [20] = "b.bus_tie_02",
+    [21] = "b.bus_tie_03",
+    [22] = "b.bus_tie_04",
     -- GENERATOR CONTROL
-    B747DR_annun_brightness_ratio[23]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.gen_ctrl_off_01 * brightness_level))
-    B747DR_annun_brightness_ratio[24]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.gen_ctrl_off_02 * brightness_level))
-    B747DR_annun_brightness_ratio[25]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.gen_ctrl_off_03 * brightness_level))
-    B747DR_annun_brightness_ratio[26]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.gen_ctrl_off_04 * brightness_level))
-
+    [23] = "b.gen_ctrl_off_01",
+    [24] = "b.gen_ctrl_off_02",
+    [25] = "b.gen_ctrl_off_03",
+    [26] = "b.gen_ctrl_off_04",
     -- GENERATOR DRIVE DISC
-    B747DR_annun_brightness_ratio[27]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.gen_drive_disc_01 * brightness_level))
-    B747DR_annun_brightness_ratio[28]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.gen_drive_disc_02 * brightness_level))
-    B747DR_annun_brightness_ratio[29]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.gen_drive_disc_03 * brightness_level))
-    B747DR_annun_brightness_ratio[30]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.gen_drive_disc_04 * brightness_level))
-
+    [27] = "b.gen_drive_disc_01",
+    [28] = "b.gen_drive_disc_02",
+    [29] = "b.gen_drive_disc_03",
+    [30] = "b.gen_drive_disc_04",
     -- HYDRAULIC PUMP
-    B747DR_annun_brightness_ratio[31]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.hyd_pump_01 * brightness_level))
-    B747DR_annun_brightness_ratio[32]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.hyd_pump_02 * brightness_level))
-    B747DR_annun_brightness_ratio[33]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.hyd_pump_03 * brightness_level))
-    B747DR_annun_brightness_ratio[34]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.hyd_pump_04 * brightness_level))
-
+    [31] = "b.hyd_pump_01",
+    [32] = "b.hyd_pump_02",
+    [33] = "b.hyd_pump_03",
+    [34] = "b.hyd_pump_04",
     -- CARGO FIRE
-    B747DR_annun_brightness_ratio[35]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.cargo_fire_fwd * brightness_level))
-    B747DR_annun_brightness_ratio[36]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.cargo_fire_aft * brightness_level))
-    B747DR_annun_brightness_ratio[37]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.cargo_fire_disch * brightness_level))
-
+    [35] = "b.cargo_fire_fwd",
+    [36] = "b.cargo_fire_aft",
+    [37] = "b.cargo_fire_disch",
     -- FUEL JETTISON VALVE
-    B747DR_annun_brightness_ratio[38]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_jett_valve_L * brightness_level))
-    B747DR_annun_brightness_ratio[39]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_jett_valve_R * brightness_level))
-
+    [38] = "b.fuel_jett_valve_L",
+    [39] = "b.fuel_jett_valve_R",
     -- FUEL SYSTEM
-    B747DR_annun_brightness_ratio[40]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_xfeed_01 * brightness_level))
-    B747DR_annun_brightness_ratio[41]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_xfeed_02 * brightness_level))
-    B747DR_annun_brightness_ratio[42]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_xfeed_03 * brightness_level))
-    B747DR_annun_brightness_ratio[43]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_xfeed_04 * brightness_level))
-    B747DR_annun_brightness_ratio[44]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_center_L * brightness_level))
-    B747DR_annun_brightness_ratio[45]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_center_R * brightness_level))
-    B747DR_annun_brightness_ratio[46]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_stab_L * brightness_level))
-    B747DR_annun_brightness_ratio[47]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_stab_R * brightness_level))
-    B747DR_annun_brightness_ratio[48]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_main_fwd_01 * brightness_level))
-    B747DR_annun_brightness_ratio[49]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_main_fwd_02 * brightness_level))
-    B747DR_annun_brightness_ratio[50]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_main_fwd_03 * brightness_level))
-    B747DR_annun_brightness_ratio[51]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_main_fwd_04 * brightness_level))
-    B747DR_annun_brightness_ratio[52]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_main_aft_01 * brightness_level))
-    B747DR_annun_brightness_ratio[53]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_main_aft_02 * brightness_level))
-    B747DR_annun_brightness_ratio[54]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_main_aft_03 * brightness_level))
-    B747DR_annun_brightness_ratio[55]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_main_aft_04 * brightness_level))
-    B747DR_annun_brightness_ratio[56]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_main_ovrd_fwd_02 * brightness_level))
-    B747DR_annun_brightness_ratio[57]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_main_ovrd_fwd_03 * brightness_level))
-    B747DR_annun_brightness_ratio[58]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_main_ovrd_aft_02 * brightness_level))
-    B747DR_annun_brightness_ratio[59]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.fuel_pump_main_ovrd_aft_03 * brightness_level))
-
+    [40] = "b.fuel_xfeed_01",
+    [41] = "b.fuel_xfeed_02",
+    [42] = "b.fuel_xfeed_03",
+    [43] = "b.fuel_xfeed_04",
+    [44] = "b.fuel_pump_center_L",
+    [45] = "b.fuel_pump_center_R",
+    [46] = "b.fuel_pump_stab_L",
+    [47] = "b.fuel_pump_stab_R",
+    [48] = "b.fuel_pump_main_fwd_01",
+    [49] = "b.fuel_pump_main_fwd_02",
+    [50] = "b.fuel_pump_main_fwd_03",
+    [51] = "b.fuel_pump_main_fwd_04",
+    [52] = "b.fuel_pump_main_aft_01",
+    [53] = "b.fuel_pump_main_aft_02",
+    [54] = "b.fuel_pump_main_aft_03",
+    [55] = "b.fuel_pump_main_aft_04",
+    [56] = "b.fuel_pump_main_ovrd_fwd_02",
+    [57] = "b.fuel_pump_main_ovrd_fwd_03",
+    [58] = "b.fuel_pump_main_ovrd_aft_02",
+    [59] = "b.fuel_pump_main_ovrd_aft_03",
     -- ANTI-ICE
-    B747DR_annun_brightness_ratio[60]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.anti_ice_nacelle_heat_01 * brightness_level))
-    B747DR_annun_brightness_ratio[61]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.anti_ice_nacelle_heat_02 * brightness_level))
-    B747DR_annun_brightness_ratio[62]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.anti_ice_nacelle_heat_03 * brightness_level))
-    B747DR_annun_brightness_ratio[63]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.anti_ice_nacelle_heat_04 * brightness_level))
-    B747DR_annun_brightness_ratio[64]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.anti_ice_wing_heat * brightness_level))
-    B747DR_annun_brightness_ratio[65]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.anti_ice_window_heat_L * brightness_level))
-    B747DR_annun_brightness_ratio[66]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.anti_ice_window_heat_R * brightness_level))
-
+    [60] = "b.anti_ice_nacelle_heat_01",
+    [61] = "b.anti_ice_nacelle_heat_02",
+    [62] = "b.anti_ice_nacelle_heat_03",
+    [63] = "b.anti_ice_nacelle_heat_04",
+    [64] = "b.anti_ice_wing_heat",
+    [65] = "b.anti_ice_window_heat_L",
+    [66] = "b.anti_ice_window_heat_R",
     -- YAW DAMPER
-    B747DR_annun_brightness_ratio[67]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.yaw_damper_upper * brightness_level))
-    B747DR_annun_brightness_ratio[68]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.yaw_damper_lower * brightness_level))
-
+    [67] = "b.yaw_damper_upper",
+    [68] = "b.yaw_damper_lower",
     -- TEMPERATURE
-    B747DR_annun_brightness_ratio[69]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.temp_zone_reset * brightness_level))
-    B747DR_annun_brightness_ratio[70]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.temp_aft_cargo_heat * brightness_level))
-    B747DR_annun_brightness_ratio[71]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.temp_pack_reset * brightness_level))
-
+    [69] = "b.temp_zone_reset",
+    [70] = "b.temp_aft_cargo_heat",
+    [71] = "b.temp_pack_reset",
     -- BLEED AIR
-    B747DR_annun_brightness_ratio[72]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.bleed_air_isolation_L * brightness_level))
-    B747DR_annun_brightness_ratio[73]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.bleed_air_isolation_R * brightness_level))
-    B747DR_annun_brightness_ratio[74]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.apu_bleed_air * brightness_level))
-    B747DR_annun_brightness_ratio[75]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.engine_bleed_air_01 * brightness_level))
-    B747DR_annun_brightness_ratio[76]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.engine_bleed_air_02 * brightness_level))
-    B747DR_annun_brightness_ratio[77]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.engine_bleed_air_03 * brightness_level))
-    B747DR_annun_brightness_ratio[78]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.engine_bleed_air_04 * brightness_level))
-
-
-
-
-
+    [72] = "b.bleed_air_isolation_L",
+    [73] = "b.bleed_air_isolation_R",
+    [74] = "b.apu_bleed_air",
+    [75] = "b.engine_bleed_air_01",
+    [76] = "b.engine_bleed_air_02",
+    [77] = "b.engine_bleed_air_03",
+    [78] = "b.engine_bleed_air_04",
     -- FIXED  -------------------------------------------------------------------
-
     ----- MAIN PANEL -----
-
     -- BRAKE SOURCE LOW PRESS
-    B747DR_annun_brightness_ratio[79]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.brake_source * brightness_level))
-
-
+    [79] = "a.brake_source",
     ----- OVERHEAD PANEL -----
-
     -- FLIGHT CONTROL HYDRAULIC VALVES
-    B747DR_annun_brightness_ratio[80]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.flt_ctl_hyd_vlv_wing_01 * brightness_level))
-    B747DR_annun_brightness_ratio[81]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.flt_ctl_hyd_vlv_wing_02 * brightness_level))
-    B747DR_annun_brightness_ratio[82]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.flt_ctl_hyd_vlv_wing_03 * brightness_level))
-    B747DR_annun_brightness_ratio[83]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.flt_ctl_hyd_vlv_wing_04 * brightness_level))
-    B747DR_annun_brightness_ratio[84]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.flt_ctl_hyd_vlv_tail_01 * brightness_level))
-    B747DR_annun_brightness_ratio[85]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.flt_ctl_hyd_vlv_tail_02 * brightness_level))
-    B747DR_annun_brightness_ratio[86]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.flt_ctl_hyd_vlv_tail_03 * brightness_level))
-    B747DR_annun_brightness_ratio[87]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.flt_ctl_hyd_vlv_tail_04 * brightness_level))
-
+    [80] = "a.flt_ctl_hyd_vlv_wing_01",
+    [81] = "a.flt_ctl_hyd_vlv_wing_02",
+    [82] = "a.flt_ctl_hyd_vlv_wing_03",
+    [83] = "a.flt_ctl_hyd_vlv_wing_04",
+    [84] = "a.flt_ctl_hyd_vlv_tail_01",
+    [85] = "a.flt_ctl_hyd_vlv_tail_02",
+    [86] = "a.flt_ctl_hyd_vlv_tail_03",
+    [87] = "a.flt_ctl_hyd_vlv_tail_04",
     -- GEN FIELD
-    B747DR_annun_brightness_ratio[88]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.eng_gen_field_01 * brightness_level))
-    B747DR_annun_brightness_ratio[89]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.eng_gen_field_02 * brightness_level))
-    B747DR_annun_brightness_ratio[90]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.eng_gen_field_03 * brightness_level))
-    B747DR_annun_brightness_ratio[91]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.eng_gen_field_04 * brightness_level))
-    B747DR_annun_brightness_ratio[92]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.apu_gen_field_01 * brightness_level))
-    B747DR_annun_brightness_ratio[93]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.apu_gen_field_02 * brightness_level))
-    B747DR_annun_brightness_ratio[94]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.split_sys_breaker * brightness_level))
-
+    [88] = "a.eng_gen_field_01",
+    [89] = "a.eng_gen_field_02",
+    [90] = "a.eng_gen_field_03",
+    [91] = "a.eng_gen_field_04",
+    [92] = "a.apu_gen_field_01",
+    [93] = "a.apu_gen_field_02",
+    [94] = "a.split_sys_breaker",
     -- SQUIB TEST
-    B747DR_annun_brightness_ratio[95]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.squib_test_eng_01 * brightness_level))
-    B747DR_annun_brightness_ratio[96]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.squib_test_eng_02 * brightness_level))
-    B747DR_annun_brightness_ratio[97]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.squib_test_eng_03 * brightness_level))
-    B747DR_annun_brightness_ratio[98]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.squib_test_eng_04 * brightness_level))
-    B747DR_annun_brightness_ratio[99]   = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.squib_test_apu * brightness_level))
-    B747DR_annun_brightness_ratio[100]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.squib_test_cargo_A * brightness_level))
-    B747DR_annun_brightness_ratio[101]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.squib_test_cargo_B * brightness_level))
-    B747DR_annun_brightness_ratio[102]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.squib_test_cargo_C * brightness_level))
-    B747DR_annun_brightness_ratio[103]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.squib_test_cargo_D * brightness_level))
-
+    [95] = "a.squib_test_eng_01",
+    [96] = "a.squib_test_eng_02",
+    [97] = "a.squib_test_eng_03",
+    [98] = "a.squib_test_eng_04",
+    [99] = "a.squib_test_apu",
+    [100] = "a.squib_test_cargo_A",
+    [101] = "a.squib_test_cargo_B",
+    [102] = "a.squib_test_cargo_C",
+    [103] = "a.squib_test_cargo_D",
     -- IRS
-    B747DR_annun_brightness_ratio[104]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.irs_on_bat * brightness_level))
-
+    [104] = "a.irs_on_bat",
     -- HYDRAULIC SYSTEM FAULT
-    B747DR_annun_brightness_ratio[105]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.hyd_sys_fault_01 * brightness_level))
-    B747DR_annun_brightness_ratio[106]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.hyd_sys_fault_02 * brightness_level))
-    B747DR_annun_brightness_ratio[107]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.hyd_sys_fault_03 * brightness_level))
-    B747DR_annun_brightness_ratio[108]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.hyd_sys_fault_04 * brightness_level))
-
+    [105] = "a.hyd_sys_fault_01",
+    [106] = "a.hyd_sys_fault_02",
+    [107] = "a.hyd_sys_fault_03",
+    [108] = "a.hyd_sys_fault_04",
     -- HYDRAULIC DEMAND PUMP PRESS LOW
-    B747DR_annun_brightness_ratio[109]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.demand_pump_press_01 * brightness_level))
-    B747DR_annun_brightness_ratio[110]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.demand_pump_press_02 * brightness_level))
-    B747DR_annun_brightness_ratio[111]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.demand_pump_press_03 * brightness_level))
-    B747DR_annun_brightness_ratio[112]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.demand_pump_press_04 * brightness_level))
-
+    [109] = "a.demand_pump_press_01",
+    [110] = "a.demand_pump_press_02",
+    [111] = "a.demand_pump_press_03",
+    [112] = "a.demand_pump_press_04",
     -- FIRE EXTINGUISHER BOTTLE DISCHARGE
-    B747DR_annun_brightness_ratio[113]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.fire_bottle_0102A_disch * brightness_level))
-    B747DR_annun_brightness_ratio[114]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.fire_bottle_0102B_disch * brightness_level))
-    B747DR_annun_brightness_ratio[115]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.fire_bottle_0304A_disch * brightness_level))
-    B747DR_annun_brightness_ratio[116]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.fire_bottle_0304B_disch * brightness_level))
-    B747DR_annun_brightness_ratio[117]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.fire_bottle_APU_disch * brightness_level))
-
+    [113] = "a.fire_bottle_0102A_disch",
+    [114] = "a.fire_bottle_0102B_disch",
+    [115] = "a.fire_bottle_0304A_disch",
+    [116] = "a.fire_bottle_0304B_disch",
+    [117] = "a.fire_bottle_APU_disch",
     -- ENGINE BLEED AIR SYS FAULT
-    B747DR_annun_brightness_ratio[118]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.eng_bleed_air_sys_fault_01 * brightness_level))
-    B747DR_annun_brightness_ratio[119]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.eng_bleed_air_sys_fault_02 * brightness_level))
-    B747DR_annun_brightness_ratio[120]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.eng_bleed_air_sys_fault_03 * brightness_level))
-    B747DR_annun_brightness_ratio[121]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.eng_bleed_air_sys_fault_04 * brightness_level))
-
+    [118] = "a.eng_bleed_air_sys_fault_01",
+    [119] = "a.eng_bleed_air_sys_fault_02",
+    [120] = "a.eng_bleed_air_sys_fault_03",
+    [121] = "a.eng_bleed_air_sys_fault_04",
     -- START SWITCH (START VALVE OPEN)
-    B747DR_annun_brightness_ratio[122]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.start_vlv_open_01 * brightness_level))
-    B747DR_annun_brightness_ratio[123]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.start_vlv_open_02 * brightness_level))
-    B747DR_annun_brightness_ratio[124]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.start_vlv_open_03 * brightness_level))
-    B747DR_annun_brightness_ratio[125]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.start_vlv_open_04 * brightness_level))
-
-
+    [122] = "a.start_vlv_open_01",
+    [123] = "a.start_vlv_open_02",
+    [124] = "a.start_vlv_open_03",
+    [125] = "a.start_vlv_open_04",
     ----- PEDESTAL PANEL -----
-
     -- RADIO TUNING PANEL LEFT
-    B747DR_annun_brightness_ratio[126]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_L_offside_tuning * brightness_level))
-    B747DR_annun_brightness_ratio[127]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_L_off * brightness_level))
-    B747DR_annun_brightness_ratio[128]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_L_vhf_L * brightness_level))
-    B747DR_annun_brightness_ratio[129]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_L_vhf_C * brightness_level))
-    B747DR_annun_brightness_ratio[130]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_L_vhf_R * brightness_level))
-    B747DR_annun_brightness_ratio[131]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_L_hf_L * brightness_level))
-    B747DR_annun_brightness_ratio[132]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_L_am * brightness_level))
-    B747DR_annun_brightness_ratio[133]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_L_hf_R * brightness_level))
-
+    [126] = "a.rtp_L_offside_tuning",
+    [127] = "a.rtp_L_off",
+    [128] = "a.rtp_L_vhf_L",
+    [129] = "a.rtp_L_vhf_C",
+    [130] = "a.rtp_L_vhf_R",
+    [131] = "a.rtp_L_hf_L",
+    [132] = "a.rtp_L_am",
+    [133] = "a.rtp_L_hf_R",
     -- RADIO TUNING PANEL RIGHT
-    B747DR_annun_brightness_ratio[134]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_R_offside_tuning * brightness_level))
-    B747DR_annun_brightness_ratio[135]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_R_off * brightness_level))
-    B747DR_annun_brightness_ratio[136]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_R_vhf_L * brightness_level))
-    B747DR_annun_brightness_ratio[137]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_R_vhf_C * brightness_level))
-    B747DR_annun_brightness_ratio[138]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_R_vhf_R * brightness_level))
-    B747DR_annun_brightness_ratio[139]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_R_hf_L * brightness_level))
-    B747DR_annun_brightness_ratio[140]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_R_am * brightness_level))
-    B747DR_annun_brightness_ratio[141]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_R_hf_R * brightness_level))
-
+    [134] = "a.rtp_R_offside_tuning",
+    [135] = "a.rtp_R_off",
+    [136] = "a.rtp_R_vhf_L",
+    [137] = "a.rtp_R_vhf_C",
+    [138] = "a.rtp_R_vhf_R",
+    [139] = "a.rtp_R_hf_L",
+    [140] = "a.rtp_R_am",
+    [141] = "a.rtp_R_hf_R",
     -- RADIO TUNING PANEL CENTER
-    B747DR_annun_brightness_ratio[142]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_C_offside_tuning * brightness_level))
-    B747DR_annun_brightness_ratio[143]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_C_off * brightness_level))
-    B747DR_annun_brightness_ratio[144]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_C_vhf_L * brightness_level))
-    B747DR_annun_brightness_ratio[145]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_C_vhf_C * brightness_level))
-    B747DR_annun_brightness_ratio[146]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_C_vhf_R * brightness_level))
-    B747DR_annun_brightness_ratio[147]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_C_hf_L * brightness_level))
-    B747DR_annun_brightness_ratio[148]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_C_am * brightness_level))
-    B747DR_annun_brightness_ratio[149]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.rtp_C_hf_R * brightness_level))
-
+    [142] = "a.rtp_C_offside_tuning",
+    [143] = "a.rtp_C_off",
+    [144] = "a.rtp_C_vhf_L",
+    [145] = "a.rtp_C_vhf_C",
+    [146] = "a.rtp_C_vhf_R",
+    [147] = "a.rtp_C_hf_L",
+    [148] = "a.rtp_C_am",
+    [149] = "a.rtp_C_hf_R",
     -- AUDIO PANEL LEFT
-    B747DR_annun_brightness_ratio[150]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_vhf_L_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[151]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_vhf_C_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[152]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_vhf_R_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[153]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_flt_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[154]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_cab_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[155]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_pa_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[156]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_hf_L_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[157]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_hf_R_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[158]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_sat_L_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[159]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_sat_R_xmt * brightness_level))
-
-    B747DR_annun_brightness_ratio[160]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_vhf_L_audio * brightness_level))
-    B747DR_annun_brightness_ratio[161]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_vhf_C_audio * brightness_level))
-    B747DR_annun_brightness_ratio[162]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_vhf_R_audio * brightness_level))
-    B747DR_annun_brightness_ratio[163]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_flt_audio * brightness_level))
-    B747DR_annun_brightness_ratio[164]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_cab_audio * brightness_level))
-    B747DR_annun_brightness_ratio[165]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_pa_audio * brightness_level))
-    B747DR_annun_brightness_ratio[166]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_hf_L_audio * brightness_level))
-    B747DR_annun_brightness_ratio[167]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_hf_R_audio * brightness_level))
-    B747DR_annun_brightness_ratio[168]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_sat_L_audio * brightness_level))
-    B747DR_annun_brightness_ratio[169]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_sat_R_audio * brightness_level))
-    B747DR_annun_brightness_ratio[170]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_spkr_audio * brightness_level))
-    B747DR_annun_brightness_ratio[171]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_vor_adf_audio * brightness_level))
-    B747DR_annun_brightness_ratio[172]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_app_mkr_audio * brightness_level))
-
-    B747DR_annun_brightness_ratio[173]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_vhf_L_call * brightness_level))
-    B747DR_annun_brightness_ratio[174]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_vhf_C_call * brightness_level))
-    B747DR_annun_brightness_ratio[175]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_vhf_R_call * brightness_level))
-    B747DR_annun_brightness_ratio[176]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_flt_call * brightness_level))
-    B747DR_annun_brightness_ratio[177]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_cab_call * brightness_level))
-    B747DR_annun_brightness_ratio[178]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_hf_L_call * brightness_level))
-    B747DR_annun_brightness_ratio[179]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_hf_R_call * brightness_level))
-    B747DR_annun_brightness_ratio[180]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_sat_L_call * brightness_level))
-    B747DR_annun_brightness_ratio[181]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_L_sat_R_call * brightness_level))
-
+    [150] = "a.ap_L_vhf_L_xmt",
+    [151] = "a.ap_L_vhf_C_xmt",
+    [152] = "a.ap_L_vhf_R_xmt",
+    [153] = "a.ap_L_flt_xmt",
+    [154] = "a.ap_L_cab_xmt",
+    [155] = "a.ap_L_pa_xmt",
+    [156] = "a.ap_L_hf_L_xmt",
+    [157] = "a.ap_L_hf_R_xmt",
+    [158] = "a.ap_L_sat_L_xmt",
+    [159] = "a.ap_L_sat_R_xmt",
+    [160] = "a.ap_L_vhf_L_audio",
+    [161] = "a.ap_L_vhf_C_audio",
+    [162] = "a.ap_L_vhf_R_audio",
+    [163] = "a.ap_L_flt_audio",
+    [164] = "a.ap_L_cab_audio",
+    [165] = "a.ap_L_pa_audio",
+    [166] = "a.ap_L_hf_L_audio",
+    [167] = "a.ap_L_hf_R_audio",
+    [168] = "a.ap_L_sat_L_audio",
+    [169] = "a.ap_L_sat_R_audio",
+    [170] = "a.ap_L_spkr_audio",
+    [171] = "a.ap_L_vor_adf_audio",
+    [172] = "a.ap_L_app_mkr_audio",
+    [173] = "a.ap_L_vhf_L_call",
+    [174] = "a.ap_L_vhf_C_call",
+    [175] = "a.ap_L_vhf_R_call",
+    [176] = "a.ap_L_flt_call",
+    [177] = "a.ap_L_cab_call",
+    [178] = "a.ap_L_hf_L_call",
+    [179] = "a.ap_L_hf_R_call",
+    [180] = "a.ap_L_sat_L_call",
+    [181] = "a.ap_L_sat_R_call",
     -- AUDIO PANEL CENTER
-    B747DR_annun_brightness_ratio[182]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_vhf_L_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[183]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_vhf_C_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[184]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_vhf_R_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[185]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_flt_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[186]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_cab_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[187]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_pa_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[188]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_hf_L_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[189]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_hf_R_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[190]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_sat_L_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[191]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_sat_R_xmt * brightness_level))
-
-    B747DR_annun_brightness_ratio[192]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_vhf_L_audio * brightness_level))
-    B747DR_annun_brightness_ratio[193]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_vhf_C_audio * brightness_level))
-    B747DR_annun_brightness_ratio[194]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_vhf_R_audio * brightness_level))
-    B747DR_annun_brightness_ratio[195]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_flt_audio * brightness_level))
-    B747DR_annun_brightness_ratio[196]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_cab_audio * brightness_level))
-    B747DR_annun_brightness_ratio[197]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_pa_audio * brightness_level))
-    B747DR_annun_brightness_ratio[198]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_hf_L_audio * brightness_level))
-    B747DR_annun_brightness_ratio[199]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_hf_R_audio * brightness_level))
-    B747DR_annun_brightness_ratio[200]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_sat_L_audio * brightness_level))
-    B747DR_annun_brightness_ratio[201]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_sat_R_audio * brightness_level))
-    B747DR_annun_brightness_ratio[202]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_spkr_audio * brightness_level))
-    B747DR_annun_brightness_ratio[203]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_vor_adf_audio * brightness_level))
-    B747DR_annun_brightness_ratio[204]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_app_mkr_audio * brightness_level))
-
-    B747DR_annun_brightness_ratio[205]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_vhf_L_call * brightness_level))
-    B747DR_annun_brightness_ratio[206]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_vhf_C_call * brightness_level))
-    B747DR_annun_brightness_ratio[207]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_vhf_R_call * brightness_level))
-    B747DR_annun_brightness_ratio[208]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_flt_call * brightness_level))
-    B747DR_annun_brightness_ratio[209]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_cab_call * brightness_level))
-    B747DR_annun_brightness_ratio[210]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_hf_L_call * brightness_level))
-    B747DR_annun_brightness_ratio[211]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_hf_R_call * brightness_level))
-    B747DR_annun_brightness_ratio[212]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_sat_L_call * brightness_level))
-    B747DR_annun_brightness_ratio[213]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_C_sat_R_call * brightness_level))
-
+    [182] = "a.ap_C_vhf_L_xmt",
+    [183] = "a.ap_C_vhf_C_xmt",
+    [184] = "a.ap_C_vhf_R_xmt",
+    [185] = "a.ap_C_flt_xmt",
+    [186] = "a.ap_C_cab_xmt",
+    [187] = "a.ap_C_pa_xmt",
+    [188] = "a.ap_C_hf_L_xmt",
+    [189] = "a.ap_C_hf_R_xmt",
+    [190] = "a.ap_C_sat_L_xmt",
+    [191] = "a.ap_C_sat_R_xmt",
+    [192] = "a.ap_C_vhf_L_audio",
+    [193] = "a.ap_C_vhf_C_audio",
+    [194] = "a.ap_C_vhf_R_audio",
+    [195] = "a.ap_C_flt_audio",
+    [196] = "a.ap_C_cab_audio",
+    [197] = "a.ap_C_pa_audio",
+    [198] = "a.ap_C_hf_L_audio",
+    [199] = "a.ap_C_hf_R_audio",
+    [200] = "a.ap_C_sat_L_audio",
+    [201] = "a.ap_C_sat_R_audio",
+    [202] = "a.ap_C_spkr_audio",
+    [203] = "a.ap_C_vor_adf_audio",
+    [204] = "a.ap_C_app_mkr_audio",
+    [205] = "a.ap_C_vhf_L_call",
+    [206] = "a.ap_C_vhf_C_call",
+    [207] = "a.ap_C_vhf_R_call",
+    [208] = "a.ap_C_flt_call",
+    [209] = "a.ap_C_cab_call",
+    [210] = "a.ap_C_hf_L_call",
+    [211] = "a.ap_C_hf_R_call",
+    [212] = "a.ap_C_sat_L_call",
+    [213] = "a.ap_C_sat_R_call",
     -- AUDIO PANEL RIGHT
-    B747DR_annun_brightness_ratio[214]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_vhf_L_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[215]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_vhf_C_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[216]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_vhf_R_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[217]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_flt_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[218]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_cab_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[219]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_pa_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[220]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_hf_L_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[221]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_hf_R_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[222]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_sat_L_xmt * brightness_level))
-    B747DR_annun_brightness_ratio[223]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_sat_R_xmt * brightness_level))
-
-    B747DR_annun_brightness_ratio[224]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_vhf_L_audio * brightness_level))
-    B747DR_annun_brightness_ratio[225]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_vhf_C_audio * brightness_level))
-    B747DR_annun_brightness_ratio[226]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_vhf_R_audio * brightness_level))
-    B747DR_annun_brightness_ratio[227]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_flt_audio * brightness_level))
-    B747DR_annun_brightness_ratio[228]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_cab_audio * brightness_level))
-    B747DR_annun_brightness_ratio[229]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_pa_audio * brightness_level))
-    B747DR_annun_brightness_ratio[230]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_hf_L_audio * brightness_level))
-    B747DR_annun_brightness_ratio[231]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_hf_R_audio * brightness_level))
-    B747DR_annun_brightness_ratio[232]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_sat_L_audio * brightness_level))
-    B747DR_annun_brightness_ratio[233]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_sat_R_audio * brightness_level))
-    B747DR_annun_brightness_ratio[234]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_spkr_audio * brightness_level))
-    B747DR_annun_brightness_ratio[235]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_vor_adf_audio * brightness_level))
-    B747DR_annun_brightness_ratio[236]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_app_mkr_audio * brightness_level))
-
-    B747DR_annun_brightness_ratio[237]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_vhf_L_call * brightness_level))
-    B747DR_annun_brightness_ratio[238]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_vhf_C_call * brightness_level))
-    B747DR_annun_brightness_ratio[239]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_vhf_R_call * brightness_level))
-    B747DR_annun_brightness_ratio[240]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_flt_call * brightness_level))
-    B747DR_annun_brightness_ratio[241]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_cab_call * brightness_level))
-    B747DR_annun_brightness_ratio[242]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_hf_L_call * brightness_level))
-    B747DR_annun_brightness_ratio[243]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_hf_R_call * brightness_level))
-    B747DR_annun_brightness_ratio[244]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_sat_L_call * brightness_level))
-    B747DR_annun_brightness_ratio[245]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.ap_R_sat_R_call * brightness_level))
-
-    B747DR_annun_brightness_ratio[246]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.call_pnl_ud_call * brightness_level))
-    B747DR_annun_brightness_ratio[247]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.call_pnl_crw_rst_L_call * brightness_level))
-    B747DR_annun_brightness_ratio[248]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.call_pnl_crw_rst_R_call * brightness_level))
-    B747DR_annun_brightness_ratio[249]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.call_pnl_cargo_call * brightness_level))
-    B747DR_annun_brightness_ratio[250]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.call_pnl_grnd_call * brightness_level))
-
+    [214] = "a.ap_R_vhf_L_xmt",
+    [215] = "a.ap_R_vhf_C_xmt",
+    [216] = "a.ap_R_vhf_R_xmt",
+    [217] = "a.ap_R_flt_xmt",
+    [218] = "a.ap_R_cab_xmt",
+    [219] = "a.ap_R_pa_xmt",
+    [220] = "a.ap_R_hf_L_xmt",
+    [221] = "a.ap_R_hf_R_xmt",
+    [222] = "a.ap_R_sat_L_xmt",
+    [223] = "a.ap_R_sat_R_xmt",
+    [224] = "a.ap_R_vhf_L_audio",
+    [225] = "a.ap_R_vhf_C_audio",
+    [226] = "a.ap_R_vhf_R_audio",
+    [227] = "a.ap_R_flt_audio",
+    [228] = "a.ap_R_cab_audio",
+    [229] = "a.ap_R_pa_audio",
+    [230] = "a.ap_R_hf_L_audio",
+    [231] = "a.ap_R_hf_R_audio",
+    [232] = "a.ap_R_sat_L_audio",
+    [233] = "a.ap_R_sat_R_audio",
+    [234] = "a.ap_R_spkr_audio",
+    [235] = "a.ap_R_vor_adf_audio",
+    [236] = "a.ap_R_app_mkr_audio",
+    [237] = "a.ap_R_vhf_L_call",
+    [238] = "a.ap_R_vhf_C_call",
+    [239] = "a.ap_R_vhf_R_call",
+    [240] = "a.ap_R_flt_call",
+    [241] = "a.ap_R_cab_call",
+    [242] = "a.ap_R_hf_L_call",
+    [243] = "a.ap_R_hf_R_call",
+    [244] = "a.ap_R_sat_L_call",
+    [245] = "a.ap_R_sat_R_call",
+    [246] = "a.call_pnl_ud_call",
+    [247] = "a.call_pnl_crw_rst_L_call",
+    [248] = "a.call_pnl_crw_rst_R_call",
+    [249] = "a.call_pnl_cargo_call",
+    [250] = "a.call_pnl_grnd_call",
     -- SAFETY                                                                           -- TODO:  CHANGE ATTR_light_level ON CABIN SIGNS IN BLENDER and ADD TRIGGER FOR XP SMOKE/SEAT BELT
-    B747DR_annun_brightness_ratio[251]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.no_smoking * brightness_level))
-    B747DR_annun_brightness_ratio[252]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.a.seat_belts * brightness_level))
-
-    -- RADIO LCD
-    B747DR_annun_brightness_ratio[253]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, brightness_level * (1.0 - B747DR_rtp_L_off_status))            -- LEFT RADIO PANEL GLASS (GLOW)
-    B747DR_annun_brightness_ratio[254]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, brightness_level * (1.0 - B747DR_rtp_C_off_status))            -- CENTER RADIO PANEL GLASS (GLOW)
-    B747DR_annun_brightness_ratio[255]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, brightness_level * (1.0 - B747DR_rtp_R_off_status))            -- RIGHT RADIO PANEL GLASS (GLOW)
-    B747DR_annun_brightness_ratio[256]  = brightness_level                                              -- TRANSPONDER RADIO PANEL GLASS (GLOW)
-    simDR_instrument_brightness_switch[15] = B747_ternary((brightness_level>0), 1.0, 0)                                           -- RADIO LCDs
-
-
-
-
+    [251] = "a.no_smoking",
+    [252] = "a.seat_belts",
     ----- MCP -----
-
     -- AUTOPILOT BUTTON SWITCHES
-    B747DR_annun_brightness_ratio[257]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_thrust * brightness_level))
-    B747DR_annun_brightness_ratio[258]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_speed * brightness_level))
-    B747DR_annun_brightness_ratio[259]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_lnav * brightness_level))
-    B747DR_annun_brightness_ratio[260]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_vnav * brightness_level))
-    B747DR_annun_brightness_ratio[261]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_fl_ch * brightness_level))
-    B747DR_annun_brightness_ratio[262]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_hdg_hold * brightness_level))
-    B747DR_annun_brightness_ratio[263]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_vs * brightness_level))
-    B747DR_annun_brightness_ratio[264]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_alt_hold * brightness_level))
-    B747DR_annun_brightness_ratio[265]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_loc * brightness_level))
-    B747DR_annun_brightness_ratio[266]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_app * brightness_level))
-    B747DR_annun_brightness_ratio[267]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_CMD_L * brightness_level))
-    B747DR_annun_brightness_ratio[268]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_CMD_C * brightness_level))
-    B747DR_annun_brightness_ratio[269]  = B747_ternary((B747DR_toggle_switch_position[13] == 1), brightness_level, (annun.b.ap_CMD_R * brightness_level))
+    [257] = "b.ap_thrust",
+    [258] = "b.ap_speed",
+    [259] = "b.ap_lnav",
+    [260] = "b.ap_vnav",
+    [261] = "b.ap_fl_ch",
+    [262] = "b.ap_hdg_hold",
+    [263] = "b.ap_vs",
+    [264] = "b.ap_alt_hold",
+    [265] = "b.ap_loc",
+    [266] = "b.ap_app",
+    [267] = "b.ap_CMD_L",
+    [268] = "b.ap_CMD_C",
+    [269] = "b.ap_CMD_R",
+}
+-- the lights the TEST leaves: the cabin signs (estimate: not the flight
+-- deck's lights; ATA33 p.52, p.67)
+local IND_NO_TEST = {[251] = true, [252] = true}
+-- the lights DIM leaves: the cargo FIRE lights (ATA33 p.68)
+local IND_NO_DIM = {[35] = true, [36] = true}
+local indLights = {}
+for i, k in pairs(IND_ANNUN) do
+    local g, key = k:match("^(%a)%.(.+)$")
+    indLights[#indLights + 1] = {i = i, group = annun[g], key = key, test = not IND_NO_TEST[i], dim = not IND_NO_DIM[i]}
+end
+local indState = B747_ind_model.new()
+local indIn = {}
+function B747_ind_lights()
+    local p = B747DR_toggle_switch_position
+    indIn.sel, indIn.storm, indIn.t = p[13], p[0] < 0.05, simDR_ind_time
+    indIn.bat = B747DR_ind_bus_bat > 0.5
+    indIn.dc1, indIn.dc3 = B747DR_ind_bus_dc[0] > 0.5, B747DR_ind_bus_dc[2] > 0.5
+    local lv = B747_ind_model.update(indState, indIn)
+    local lit, test = lv.lit, lv.test
+    local bright = lit > 0 and B747_ind_model.BRT or 0
+    for _, l in ipairs(indLights) do
+        local on = (test and l.test) and 1 or l.group[l.key]
+        B747DR_annun_brightness_ratio[l.i] = on * (l.dim and lit or bright)
+    end
+    local t = test and 1
+
+    -- MASTER CAUTION and WARNING: darker still on DIM (as before)
+    local master = lit * (lv.dim and 0.125 or 1)
+    B747DR_annun_brightness_ratio[0] = (t or annun.b.master_caution) * master
+    B747DR_annun_brightness_ratio[1] = (t or annun.b.master_warning) * master
+
+    -- EXT PWR and APU GEN AVAIL on their sources' power (as before); the ON
+    -- lights on the buses (before, APU GEN 1 ON also took X-Plane's APU
+    -- generator)
+    B747DR_annun_brightness_ratio[11] = (t or annun.b.ext_pwr_avail_01) * lv.own
+    B747DR_annun_brightness_ratio[12] = (t or B747DR_elec_ext_pwr1_on) * lit
+    B747DR_annun_brightness_ratio[13] = (t or annun.b.ext_pwr_avail_02) * lv.own
+    B747DR_annun_brightness_ratio[14] = (t or B747DR_elec_ext_pwr2_on) * lit
+    B747DR_annun_brightness_ratio[15] = (t or annun.b.apu_gen_avail_01) * lv.own
+    B747DR_annun_brightness_ratio[16] = (t or B747DR_elec_apu_pwr1_on) * lit
+    B747DR_annun_brightness_ratio[17] = (t or annun.b.apu_gen_avail_02) * lv.own
+    B747DR_annun_brightness_ratio[18] = (t or B747DR_elec_apu_pwr2_on) * lit
+
+    -- RADIO LCD: the panels' glass glows BRT or DIM, not by the TEST (the
+    -- aisle stand's displays: ATA33 p.52; before, the TEST lit them)
+    B747DR_annun_brightness_ratio[253] = lit * (1.0 - B747DR_rtp_L_off_status)     -- LEFT RADIO PANEL GLASS (GLOW)
+    B747DR_annun_brightness_ratio[254] = lit * (1.0 - B747DR_rtp_C_off_status)     -- CENTER RADIO PANEL GLASS (GLOW)
+    B747DR_annun_brightness_ratio[255] = lit * (1.0 - B747DR_rtp_R_off_status)     -- RIGHT RADIO PANEL GLASS (GLOW)
+    B747DR_annun_brightness_ratio[256] = lit                                        -- TRANSPONDER RADIO PANEL GLASS (GLOW)
+    simDR_instrument_brightness_switch[15] = lit > 0 and 1 or 0                     -- RADIO LCDs
 
     --wxr panel: the lamps of the weather radar control (B747.34.xt.wxr.lua);
-    -- before, they followed X-Plane's radar modes and LR/T was always lit
-    local wxr_lt = (B747DR_toggle_switch_position[13] == 1)
-    B747DR_wxr_left_GCS             = wxr_lamp(wxr_lt, B747DR_wxr_lamp_gcs[0] > 0.5, brightness_level)
-    B747DR_wxr_left_TFR             = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[0] == 4, brightness_level)
-    B747DR_wxr_left_WX              = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[0] == 1, brightness_level)
-    B747DR_wxr_left_WX_T            = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[0] == 2, brightness_level)
-    B747DR_wxr_left_MAP             = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[0] == 3, brightness_level)
-    B747DR_wxr_right_GCS            = wxr_lamp(wxr_lt, B747DR_wxr_lamp_gcs[1] > 0.5, brightness_level)
-    B747DR_wxr_right_TFR            = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[1] == 4, brightness_level)
-    B747DR_wxr_right_WX             = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[1] == 1, brightness_level)
-    B747DR_wxr_right_WX_T           = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[1] == 2, brightness_level)
-    B747DR_wxr_right_MAP            = wxr_lamp(wxr_lt, B747DR_wxr_lamp_sel[1] == 3, brightness_level)
-    B747DR_wxr_test                 = wxr_lamp(wxr_lt, B747DR_wxr_lamp_test > 0.5, brightness_level)
-    B747DR_wxr_LR                   = wxr_lamp(wxr_lt, B747DR_wxr_lamp_rt == 1, brightness_level)
-    B747DR_wxr_RR                   = wxr_lamp(wxr_lt, B747DR_wxr_lamp_rt == 2, brightness_level)
-    --wxr lighting
-    
+    -- before, they followed X-Plane's radar modes and LR/T was always lit.
+    -- (7-2c) BRT or DIM; the TEST leaves them (estimate: the control's own
+    -- lamps, not the master dim and test's; before, the TEST lit them)
+    B747DR_wxr_left_GCS             = wxr_lamp(false, B747DR_wxr_lamp_gcs[0] > 0.5, lit)
+    B747DR_wxr_left_TFR             = wxr_lamp(false, B747DR_wxr_lamp_sel[0] == 4, lit)
+    B747DR_wxr_left_WX              = wxr_lamp(false, B747DR_wxr_lamp_sel[0] == 1, lit)
+    B747DR_wxr_left_WX_T            = wxr_lamp(false, B747DR_wxr_lamp_sel[0] == 2, lit)
+    B747DR_wxr_left_MAP             = wxr_lamp(false, B747DR_wxr_lamp_sel[0] == 3, lit)
+    B747DR_wxr_right_GCS            = wxr_lamp(false, B747DR_wxr_lamp_gcs[1] > 0.5, lit)
+    B747DR_wxr_right_TFR            = wxr_lamp(false, B747DR_wxr_lamp_sel[1] == 4, lit)
+    B747DR_wxr_right_WX             = wxr_lamp(false, B747DR_wxr_lamp_sel[1] == 1, lit)
+    B747DR_wxr_right_WX_T           = wxr_lamp(false, B747DR_wxr_lamp_sel[1] == 2, lit)
+    B747DR_wxr_right_MAP            = wxr_lamp(false, B747DR_wxr_lamp_sel[1] == 3, lit)
+    B747DR_wxr_test                 = wxr_lamp(false, B747DR_wxr_lamp_test > 0.5, lit)
+    B747DR_wxr_LR                   = wxr_lamp(false, B747DR_wxr_lamp_rt == 1, lit)
+    B747DR_wxr_RR                   = wxr_lamp(false, B747DR_wxr_lamp_rt == 2, lit)
+end
 
-   --[[simDR_wxrMode_cpt = find_dataref("sim/cockpit2/EFIS/EFIS_weather_mode")
-    simDR_wxrMode_fo = find_dataref("sim/cockpit2/EFIS/EFIS_weather_mode_copilot")]]--
 
+
+
+
+
+
+----- EMERGENCY LIGHTS ------------------------------------------------------------------
+-- (7-2d; notes/ATA-33.md §14) P5's EMER LIGHTS switch (0 OFF, 1 ARMED, 2
+-- ON) and the cabin's switch (door 1L) by commands: the 3D has neither
+-- (LIGHT-06). Every flight starts ARMED (FCOM p.104), cold and dark too
+-- (estimate: no switch in the 3D to arm them). Lit and >EMER LIGHTS by
+-- B747.90.light_model.lua
+B747DR_emer_switch = find_dataref("laminar/B747/light/emer/switch")
+B747DR_emer_cabin = find_dataref("laminar/B747/light/emer/cabin")
+B747DR_emer_lit = find_dataref("laminar/B747/light/emer/lit")
+B747DR_emer_bus_dc = find_dataref("laminar/B747/electrical/bus/dc")
+B747DR_emer_CAS_advisory = find_dataref("laminar/B747/CAS/advisory_status")
+function B747_emer_switch_on_CMDhandler(phase, duration)
+    if phase == 0 then B747DR_emer_switch = math.min(B747_light_model.EMER_ON, B747DR_emer_switch + 1) end
+end
+function B747_emer_switch_off_CMDhandler(phase, duration)
+    if phase == 0 then B747DR_emer_switch = math.max(B747_light_model.EMER_OFF, B747DR_emer_switch - 1) end
+end
+-- the cabin's switch: pushed on, pushed again off (FCOM p.453)
+function B747_emer_cabin_CMDhandler(phase, duration)
+    if phase == 0 then B747DR_emer_cabin = 1 - B747DR_emer_cabin end
+end
+B747CMD_emer_switch_on = deferred_command("laminar/B747/light/emer/switch_on", "EMER LIGHTS switch toward ON", B747_emer_switch_on_CMDhandler)
+B747CMD_emer_switch_off = deferred_command("laminar/B747/light/emer/switch_off", "EMER LIGHTS switch toward OFF", B747_emer_switch_off_CMDhandler)
+B747CMD_emer_cabin = deferred_command("laminar/B747/light/emer/cabin", "Cabin EMER LIGHTS switch (door 1L)", B747_emer_cabin_CMDhandler)
+function B747_emergency_lights()
+    local lit, msg = B747_light_model.emer(B747DR_emer_switch, B747DR_emer_cabin > 0.5, B747DR_emer_bus_dc[3] > 0.5)
+    B747DR_emer_lit = lit and 1 or 0
+    B747DR_emer_CAS_advisory[108] = msg and 1 or 0
 end
 
 
@@ -2017,6 +1917,9 @@ function B747_set_lighting_all_modes()
 	B747DR_init_lighting_CD = 0
     B747_init_lighting()
     B747_init_light_rheostats()
+    -- (7-2d) EMER LIGHTS ARMED, the cabin's switch off
+    B747DR_emer_switch = B747_light_model.EMER_ARMED
+    B747DR_emer_cabin = 0
 
 end
 
@@ -2218,19 +2121,14 @@ function B747_keep_light_power()
     if simDR_generic_brightness_switch[63] ~= 1.0 then simDR_generic_brightness_switch[63] = 1.0 end
 end
 
+-- (7-2a, LIGHT-08) no full garbage collection each frame (before, at the
+-- start of every frame: Lua's own incremental collector does it)
 function after_physics()
-    collectgarbage("collect")
   if debug_lighting>0 then return end
 
     B747_keep_light_power()
-    B747_landing_light_brightness()
-    B747_turnoff_lights()
-    B747_taxi_lights()
-    B747_beacon_lights()
-    B747_nav_lights()
-    B747_strobe_lights()
-    B747_wing_lights()
-    B747_logo_lights()
+    B747_exterior_lights()
+    B747_emergency_lights()
     B747_cabin_lights()
 
     B747_spill_lights()
