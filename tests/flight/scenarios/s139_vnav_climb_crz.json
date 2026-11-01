@@ -48,6 +48,7 @@
     { "do": "check", "note": "VNAV PTH（6）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 6 },
     { "do": "check", "note": "FMC は巡航（2）", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 2 },
     { "do": "check", "note": "A/T は SPD（3）", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3 },
+    { "do": "check", "note": "T/C の後も推力制限は CLB（PERF FACTORS の THR/CRZ の既定 CLB/100：2026-11-02 の利用者の決定、FMSPG p.33、p.266–268）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "CLB" },
     { "do": "watch", "note": "60 秒：17,000 ft を ±150 ft で保つ", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "max": 17150, "timeout": 60 },
     { "do": "snapshot", "note": "巡航", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "laminar/B747/fms/vnav/cas", "laminar/B747/fms/vnav/mach", "laminar/B747/fms/vnav/mach_mode", "laminar/B747/autopilot/ias_dial_value", "sim/cockpit2/autopilot/airspeed_is_mach", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/misc/machno", "laminar/B747/autopilot/flightPhase", "laminar/B747/engines/ref_thr_limit_mode", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode" ] },
     { "do": "check", "note": "下にも 150 ft まで", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": ">=", "value": 16850 },
