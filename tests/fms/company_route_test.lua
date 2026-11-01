@@ -114,6 +114,22 @@ for _ = 1, 3 do
 end
 T.check(msgs["ROUTE 1 UPLINK READY"] and msgs["FLT NUMBER UPLINK"], "ROUTE 1 UPLINK READY and FLT NUMBER UPLINK (FCOM p.1433)")
 T.equal(data("fltno"), "JAL123", "the flight number from the OFP, at once (FCOM p.1433)")
+-- (step 12h3) the OFP's ACARS text with it: the weights, fuel, cruise
+-- altitude and step climbs for the crew to enter
+do
+    local m = fms.ns.acarsSystem.messages
+    local last = m[#m.values]
+    T.equal(last.title, "OFP ZZAA-ZZBB", "the company's OFP text: " .. tostring(last.title))
+    T.check(last.msg:find("CRZ ALT FL250 CI 100", 1, true) and last.msg:find("STEP FL270 AT CHARL", 1, true)
+        and last.msg:find("ZFW 225.0", 1, true) and not last.read, "its CRZ ALT, step climb and ZFW, unread")
+    -- the ACARS message page's lines (acars.pages.lua's convertToFMSLines):
+    -- each text line one (s203: "CRZ ALT FL250 CI" and "100" before)
+    local ls = fms.ns.convertToFMSLines(last.msg)
+    T.equal(ls[2], "CRZ ALT FL250 CI 100", "the page's second line whole")
+    local long = fms.ns.convertToFMSLines("NO WIND DATA ON FILE FOR THE ACTIVE ROUTE@OK")
+    T.check(#long == 3 and long[1] == "NO WIND DATA ON FILE FOR" and long[2] == "THE ACTIVE ROUTE" and long[3] == "OK",
+        "a line over 24 characters wrapped at a space, then the next: " .. table.concat(long, "|"))
+end
 T.equal(line(3):gsub("%s+$", ""), "              ----------", "RTE REQUEST blank while the uplink waits (FMSPG p.382)")
 T.equal(small(2), "                CO ROUTE", "and its title")
 key("func_key/prev_pg")

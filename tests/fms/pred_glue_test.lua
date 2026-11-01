@@ -272,7 +272,7 @@ T.equal(small(9), "-- ROUTE DISCONTINUITY -", "the discontinuity (leg 9) on page
 T.check(line(3):find("^      DELTA"), "page 2 from leg 6, DELTA: " .. line(3))
 rt:set("laminar/B747/engines/type", 1)
 frames(0.3)
-T.check(line(13):find("^<LEGS +$"), "the 570: <LEGS at 6L, no SEND> without an uplink: " .. line(13))
+T.check(line(13):find("^<LEGS +SEND>$"), "the 570: <LEGS at 6L, REQUEST SEND> at 6R (step 12h2: FCOM p.1363; before, no SEND): " .. line(13))
 key("ls_key/R6")
 T.check(line(1):find("ACT RTE 1 DATA"), "the 570: 6R nothing: " .. line(1))
 key("ls_key/L6")

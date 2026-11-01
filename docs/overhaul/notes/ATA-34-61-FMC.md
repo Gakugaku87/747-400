@@ -2067,3 +2067,42 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - 進入で G/S を捕捉しなかった件：VNAV が MCP の高度で水平になって G/S を下から捕まえる流れは、MCP の高度（乗員）によるもの（FCTM：G/S に乗ってからミスト・アプローチの高度を入れる。それまで MCP は会合高度か許可された高度）。s198 は T/D の前に MCP を 2,000 ft にしたままで、ILS06LY の BERRY と BOLAL は CIFP で「4,000 ft 以上」（J・H）のため、経路は 4,000 ft より上の 3° の直線のまま降りた。筋書きを直した（MCP を STAR の 4,000 ft、ATVID の後に ILS06LZ の会合高度 1,300 ft、G/S の後に 3,000 ft）。VNAV の 3° の経路と X-Plane の G/S の約 0.6 ドットの差は、気圧（標準）と気温（ISA）では説明できず、まだ調べる。
   - 大きな旋回で E/D までの距離が増えた件：経路そのもの（XAC から ATMUG へ西へ行き STAR で東へ折り返す）が不自然で、2 回目の筋書きも同じ経路。距離を LNAV の経路に沿って測る直しは、次のラインフライトの結果を見てから。
 - 試験：`tests/fms/pred_model_test.lua` に 7 件（減速の区間の目標 250 kt、10,000 ft で終わる、約 500 fpm、M.85 から M.84 の短い水平の減速、FL250 の M.80 から 290 kt の T/D の水平の減速とその始まりの T/D）、`tests/fms/vnav_model_test.lua` に 8 件（T/D の距離、水平の減速の間の降下の段と VNAV PTH・IDLE の水平、減速の区間の目標 240 kt と 500 fpm、その上の 290 kt）。全体は 181 本すべて通る。X-Plane：新しい `s202_vnav_decels` 23/23（2026-11-01、5 回目。T/D で FL250 のまま 335 kt から水平に減速（VNAV の縦の速さ 0、IDLE）、約 50 秒後に 292 kt で降下へ。10,700 ft で目標が 240 kt になり約 460 fpm で降りながら減速し、10,000 ft を 240.5 kt・VNAV PTH・経路の 158 ft 下で通過（s198 は 291 kt）。1〜4 回目は筋書きの不備で無効：空中開始の上昇、FLCH で FL250 へ降りる間に T/D を越えた、X-Plane を起動し直した直後に A/P が入らなかった）。Log.txt に Lua の誤りなし
+
+## 124. 12h2 の実装（2026-11-01：会社の風のアップリンク）
+
+- 前のコード：WIND REQUEST は表示だけで何もしなかった。RTE DATA は 570 で 6L の <LEGS だけ（データリンクの REQUEST SEND・LOAD は出さない：推定）、DESCENT FORECAST は 6R の DES> だけ（SEND・LOAD・PURGE は無し：推定）。
+- 資料：
+  - FCOM p.773：WIND REQUEST <SEND は経路の風と降下予報の要求。SENDING、網の受け取りで SEND と SENT。
+  - FCOM p.1361、p.1363–1364：RTE DATA の 6R（405・570）は REQUEST SEND>（データリンクが使えて降下・進入の相でないとき）、風のアップリンクがあれば WIND DATA の LOAD>。LOAD は経路の風を入れて修正（MOD）にし、ERASE と SEND を出す。6L の ERASE は風を捨てて LEGS に戻る。
+  - FCOM p.1395–1397：DESCENT FORECAST の 405・570 は、6L の REQUEST <SEND（降下予報の要求）か <LOAD、6R は予報のアップリンクがあれば PURGE>、無ければ DES>。LOAD は受け入れて表示し、SEND に戻り、PURGE を DES に戻す。「--- FORECAST UPLINK ----」の線。
+  - FMSPG p.377–380、p.383：WIND REQUEST の SEND は降下・進入の相では出さない。RTE DATA の LOAD は MOD RTE DATA（ERASE・EXEC）、WIND DATA UPLINK READY を消す。DESCENT FORECAST の LOAD は前のデータを置き換え、DES FORECST UPLINK READY を消す。PURGE は前の予報を残す。
+  - FCOM p.1431–1434：WIND DATA UPLINK READY、DES FORECST UPLINK READY、INVALID WIND DATA UPLINK、INVALID FORECAST UPLINK。
+  - FMSPG p.368–369：FMC COMM 1/2 の <DES FORECAST と <RTE DATA の上に UPLINK。
+- 作ったもの：
+  - FMS のつなぎ（会社のデータリンクの中、状態は 1 つの局所表：メインの局所変数が Lua の 200 に近いため）：風の要求（SENDING、4 秒で SENT、20 秒で答え）。会社の答えは、プラグインの _newest.txt の OFP が有効な経路と同じ出発地・目的地のときだけ。経路の風（`S.wind_uplink`：OFP の巡航の点の、巡航高度ごとの風。経路の点に名前と位置で当てる。1 つも当たらなければ INVALID WIND DATA UPLINK）、降下予報（`S.forecast_uplink`）。OFP が無いか別の経路のものなら会社から ACARS の文（NO WIND DATA ON FILE）。LOAD は有効な経路の修正に、巡航高度を風の高度に、各点の風と気温を入れる（前の風と気温は置き換え、修正の脚には新しい表）。EXEC で有効、ERASE で捨てる。降下予報の LOAD は 4 つの高度と風を置き換えて予測をやり直す。メッセージは B744.notifications.lua の旗で（表に同じ文言があり、毎フレームの同期がその旗で条件のメッセージを消すため）。
+  - ページ：FMC COMM 1/2 の UPLINK、2/2 の WIND REQUEST <SEND・SENDING・SENT（降下・進入では出さない）。RTE DATA は修正中なら MOD RTE n DATA で修正の経路を出し、データリンクがあれば 6L に <LEGS か <ERASE、6R に SEND> か LOAD>（その上に REQUEST か WIND DATA、SEND の左に SENT）、EXEC で修正を有効に。DESCENT FORECAST はデータリンクがあれば 6L に <SEND か <LOAD、6R に PURGE> か DES>、その上に REQUEST か FORECAST UPLINK の線。データリンクがある P&W（SIM CONFIG の FMC DATALINK ON）は 570 の形（RTE DATA の <LEGS、DESCENT FORECAST の DES>）。
+- 推定：時間（経路の要求と同じ）、風の高度は OFP の巡航高度（最初の高度とステップクライムの高度、4 つまで）、OFP の巡航の段の点だけ、点ごとの気温は最も低い巡航高度のもの、降下予報の高度（T/D の高度から 5,000 ft まで 4 つ）、前の風と気温の置き換え、別の経路の OFP には答えない、RTE DATA の見出しと SENT の位置、DESCENT FORECAST の REQUEST の見出しの位置。
+- 試験：新しい `tests/fms/company_winds_test.lua`（32 件：WIND REQUEST の SENDING と SENT、2 つのメッセージ、FMC COMM 1/2 の UPLINK、RTE DATA の LOAD と MOD・ERASE と SEND・巡航高度の風の高度・BRAVO の FL250 の 283°/59 kt・EXEC で有効、ERASE で捨てる、DESCENT FORECAST の LOAD と PURGE・4 つの高度と風、進入では SEND を出さない、OFP が無いときの会社の文）、`des_forecast` と `pred_glue` の 570 の 6 行目を SEND を出す形に（前は推定で出さなかった）。全体は 182 本すべて通る。X-Plane：新しい `s203_company_winds` 26/26（2026-11-01、X-Plane を起動し直した後の 2 便目。RJAA の地上で見本の .fms と OFP を simbrief に写し、FMC DATALINK ON、経路を受けて ACTIVATE・EXEC、会社の OFP の文で EICAS の ACARS MESSAGE と ACARS の UPLINK の一覧の OFP RJAA-RJBB、WIND REQUEST の SENDING・SENT・約 20 秒で FMC COMM 1/2 の 2 つの UPLINK、RTE DATA の LOAD> で MOD RTE 1 DATA と <ERASE・SEND>、EXEC で ATMUG に W>、DESCENT FORECAST の <LOAD で FL250・FL180・12000・5000 の風、REQUEST <SEND と DES> に戻る。CDU の写真 7 枚）。写真で ACARS のページが OFP の文の行を割っていた（「CRZ ALT FL250 CI」と「100」：古い折り返しが「@」の行の区切りの先の空白で切っていた）ので、`acars.pages.lua` の convertToFMSLines を直した（「@」で先に分け、各行を 24 文字以内の最後の空白で折る。`company_route_test` に 2 件）。Log.txt に Lua の誤りなし
+
+## 125. 12h3 の実装（2026-11-01：OFP の ACARS の文）
+
+- 利用者の決め（2026-11-01）：SimBrief の重量・巡航高度・ステップクライムは ACARS の文で送り、乗員が手で PERF INIT などに入れる（自動では入れない）。FCOM p.1310–1311 は 405・570 の PERF INIT の ZFW・RESERVES・COST INDEX・CRZ ALT もアップリンクで入ると書く（待ちの値は入力の横に小さい字）が、受け入れの手順の記述が無いので作らない。
+- 作ったもの：会社が経路のアップリンクを答えるとき、同じ出発地・目的地の OFP があれば、その文（題「OFP 出発地-目的地」：便名、巡航高度と COST INDEX、巡航高度と違うステップクライムとその点、重量と燃料は OFP の単位の 1000 で ZFW、TOW・LDW、RAMP FUEL、TO FUEL、TRIP・RSV、ALTN、PAX）を会社の ACARS の文で送る（EICAS の ACARS MESSAGE、ACARS の UPLINK の一覧。`S.ofp_text`）。
+- 推定：送る時（経路の答えといっしょ）、文の形と言葉、重量の単位の書き方。
+- 試験：`tests/fms/company_route_test.lua` に 2 件（OFP の文の題と、巡航高度・ステップクライム・ZFW、未読）。X-Plane：12h2 と同じ s203。
+
+## 126. シムの便利機能（2026-11-01：オートステップクライムと T/D 前の一時停止）
+
+- 利用者の決め（2026-11-01）：機体フォルダのプラグインで、X-Plane の Plugins のプルダウンメニューからシムの便利機能（オートステップクライム、T/D での一時停止など）をオン・オフする。Windows だけ（Mac・Linux は使わないので作らない）。CDU には出さない。機能は実機に無いので自作する（利用者も了承）。
+- 実機の機能ではない。乗員の操作をシムが代わりにする便利機能として作り、FMC と AFDS の働きは変えない。
+- メニューと設定（`plugins/b747_fms_bridge`、ネイティブのプラグイン：XTLua にはメニューの関数が無い）：
+  - Plugins → 747-400 に「Auto step climb」と「Pause 2 min before T/D」。選ぶたびにオン・オフし、チェックの印が付く。
+  - 選んだ状態は X-Plane の `Output/preferences/B747-400_options.prf` に保存し、次に機体を読むときに戻す（無ければ両方オフ）。
+  - dataref：`laminar/B747/options/auto_step_climb`、`laminar/B747/options/pause_at_td`（int、書ける。書いても保存しない：試験のため）。コマンド：`laminar/B747/options/auto_step_climb_toggle`、`laminar/B747/options/pause_at_td_toggle`（キーに割り当てられる。保存する）。
+- 動き（FMC の XTLua：`B747.68.simopts_model.lua` とつなぎ、0.5 秒ごと）：
+  - オートステップクライム：CRZ のページの STEP TO の AT が NOW（ステップの点に来た：FCOM p.1348–1349）で、VNAV が engage して巡航（巡航上昇・降下中でない）のとき、乗員がする巡航上昇の操作（FCOM p.649、p.1257：MCP 高度を STEP TO にして高度セレクターを押す）を代わりにする。MCP の窓と AFDS の高度を STEP TO にし、1 秒後に高度セレクターのコマンド（`laminar/B747/button_switch/press_altitude`）。押しで CRZ ALT が STEP TO になり、VNAV が巡航上昇する（これまでの FMC と AFDS の働き）。MCP 高度が CRZ ALT より下（降下の準備）のとき、T/D の 200 NM 以内（STEP TO が出ない）、STEP SIZE 0 で乗員の STEP TO も無いときはしない。押しが効かなければ 30 秒後にもう一度。
+  - STEP TO と NOW は CRZ のページと同じ計算（`B747_fms_crz_step`：CRZ のページの計算を関数に出した）。
+  - T/D 前の一時停止：FMC の巡航の段で、T/D まで 2 分（FMC の RESET MCP ALT が出る時：FCOM p.1433）になったら X-Plane を一時停止（`sim/operation/pause_on`）。一度止めたら、T/D が 3 分より遠くなる（CRZ ALT や経路が変わる）か着陸するまで、もう止めない。T/D を過ぎても巡航のまま（MCP 高度を下げていない）なら止める。
+- 自分で決めたこと（資料が無い）：一時停止の 2 分は RESET MCP ALT に合わせた。押しまでの 1 秒（XTLua のモジュールが別のモジュールの書き込みを読むのは次のフレーム）、やり直しの 30 秒、再び止める 3 分。
+- 高度セレクターの押しで CRZ ALT が変わったとき（巡航上昇・巡航降下）も、CDU で CRZ ALT を入れたときと同じく乗員の STEP TO を消す（6-1・6-2 段 8b2 の「新しい CRZ ALT まで残す」のとおり。前は残り、s204 の 1 回目でステップの後に STEP TO FL350（CRZ ALT と同じ）と出ていた）。
+- 試験：新しい `tests/fms/simopts_model_test.lua`（38 件：NOW で MCP、1 秒後に押し、押しが効かなければ 30 秒後にもう一度、しない条件、新しい STEP TO、一時停止の 2 分、もう止めない、3 分で再び、着陸で再び、オフ、巡航でない、対地速度）、新しい `tests/fms/simopts_glue_test.lua`（25 件：FMS のモジュールで CRZ のページの STEP TO FL390 NOW、乗員の STEP TO FL390、オフと VNAV なしでは何もしない、VNAV で MCP の窓と AFDS の高度、1 秒後に高度セレクターのコマンド 1 回、押しで CRZ ALT FL390・乗員の STEP TO が消える・巡航上昇、MCP を下げていれば何もしない、T/D の 2 分前に X-Plane の一時停止のコマンド 1 回、3.9 分に遠のいてからもう一度、オフでは止めない）。CRZ のページの試験（vnav_pages）はそのまま通る。全体は 184 本すべて通る。X-Plane：新しい `s204_auto_step_climb` 20/20（2026-11-01、X-Plane を起動し直した後の 6 便目。FL310・310 kt で RJAA の東から空中開始、RTE RJAA→PHNL、乗員の STEP TO FL350 で AT NOW、オプションの dataref を ON で 1.1 秒後に MCP 35,000 ft、さらに 1.1 秒後に高度セレクターの押しで CRZ ALT FL350、VNAV SPD・THR REF の巡航上昇（CDU は ACT ECON CRZ CLB）、41 秒で 31,500 ft、130 秒で FL350、VNAV PTH と巡航の段階、STEP TO は空白（乗員の STEP TO が消えた）。1 回目は 15/18：空中開始の後に MCP の既定の 200 kt で減速していて、254 kt からの巡航上昇が加速で遅れ、捕捉中に確かめた筋書きの誤り）、新しい `s205_pause_at_td` 22/22（同じく 5 便目。s202 と同じ FL250 の空中開始、オプションの dataref を ON で約 40 秒後に一時停止、そのとき CRZ のページの TO T/D は 13 NM（対地 399 kt で約 2 分）、FMC は巡航の段階、解いた後 10 秒で止まらず、T/D で降下。1 回目は空中開始の後に A/P が入らず経路を入れられなかった：s202 の 1〜4 回目と同じ不安定さ）。Log.txt に Lua の誤りなし。Plugins → 747-400 のメニューの印と保存は利用者の目視

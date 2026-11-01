@@ -48,33 +48,46 @@ fmsPages["FMCCOMM"].getPage=function(self,pgNo,fmsID)
     if send == "<SEND" then defs["L1"] = {"fmccommreq", "rte"} end
   end
   defs["R1"] = {"fmccommco", ""}
+  -- (step 12h2) WIND REQUEST: not in the descent or on approach (FMSPG
+  -- p.383)
+  local wsend = ""
+  if B747_fms_company_wind_send_shown() then
+    local wr = B747_fms_company_winds()
+    wsend = (wr and wr.status == "SENDING") and "SENDING" or "<SEND"
+    if wsend == "<SEND" then defs["L2"] = {"fmccommreq", "wind"} end
+  end
   return {
     "        FMC COMM        ", BLANK,
     lr(send, c.comm_co_route or "----------"), BLANK,
-    "<SEND                   ", BLANK,
+    pad(wsend), BLANK,
     BLANK, BLANK, BLANK, BLANK, BLANK, BLANK,
     lr("", status),
   }
 end
 fmsPages["FMCCOMM"].getSmallPage=function(self,pgNo,fmsID)
   local c = B747_fms_company()
+  local wr, wup, fup = B747_fms_company_winds()
   if pgNo == 1 then
     local uplink = (c.up and not c.up.loading) or c.flt_unreviewed
+    -- (step 12h2) UPLINK over <DES FORECAST and <RTE DATA (FMSPG
+    -- p.368-369)
     return {
       "                    1/2 ",
       uplink and " UPLINK                 " or BLANK, BLANK,
-      BLANK, BLANK,
-      BLANK, BLANK,
+      fup and " UPLINK                 " or BLANK, BLANK,
+      (wup and B747_fmc_route.active) and " UPLINK                 " or BLANK, BLANK,
       BLANK, BLANK, BLANK, BLANK,
       "               DATA LINK", BLANK,
     }
   end
   local r = c.req
+  local wshown = B747_fms_company_wind_send_shown()
   return {
     "                    2/2 ",
     c.up and "                CO ROUTE" or " RTE REQUEST    CO ROUTE",
     (not c.up and r and r.status == "SENT") and "     SENT               " or BLANK,
-    " WIND REQUEST           ", BLANK,
+    wshown and " WIND REQUEST           " or BLANK,
+    (wshown and wr and wr.status == "SENT") and "     SENT               " or BLANK,
     BLANK, BLANK, BLANK, BLANK, BLANK, BLANK,
     "               DATA LINK", BLANK,
   }
@@ -88,9 +101,10 @@ function fmsFunctions.fmccommrte(fmsO, value)
   fmsO.targetPage = "RTE" .. value
   fmsO.targetpgNo = 1
 end
--- RTE REQUEST <SEND
+-- RTE REQUEST <SEND; (step 12h2) WIND REQUEST <SEND
 function fmsFunctions.fmccommreq(fmsO, value)
   if value == "rte" then B747_fms_company_request(fmsO, nil) end
+  if value == "wind" then B747_fms_company_wind_request() end
 end
 -- CO ROUTE: an empty scratchpad copies it; DELETE clears it
 function fmsFunctions.fmccommco(fmsO, value)
