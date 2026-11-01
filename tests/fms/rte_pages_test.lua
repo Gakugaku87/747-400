@@ -160,7 +160,9 @@ key("L", "ls_key/R6")
 T.check(line("L", 1):find("TAKEOFF REF"), "TAKEOFF>: TAKEOFF REF: " .. line("L", 1))
 T.check(line("L", 13):find("THRUST LIM>$"), "the route activated and PERF INIT complete: PRE-FLT done: " .. line("L", 13))
 T.check(line("L", 11):find("RW16R %-%-00M"), "POS SHIFT: RTE 1's runway (FCOM p.1321): " .. line("L", 11))
--- a prompt to RTE (FMC COMM's L1) presses no X-Plane key either
+-- a prompt to RTE (FMC COMM's L1) presses no X-Plane key either (the
+-- 570's FMC COMM: step 12a)
+rt:set("laminar/B747/engines/type", 1)
 key("L", "func_key/hold")
 key("L", "ls_key/L1")
 T.check(line("L", 1):find("RTE 1"), "FMC COMM's L1: the RTE page: " .. line("L", 1))

@@ -51,6 +51,11 @@ fmsPages["MAINTSIMCONFIG"].getPage=function(self,pgNo,fmsID)
 		fmsFunctionsDefs["MAINTSIMCONFIG"]["L1"]={"setdata","spillLights"}
 		fmsFunctionsDefs["MAINTSIMCONFIG"]["L2"]={"setdata","cockpitSeatsHide"}
 		fmsFunctionsDefs["MAINTSIMCONFIG"]["L3"]={"setdata","setacarsprovider"}
+		-- (6-1/6-2 step 12a) the FMC's datalink: AUTO, ON, OFF; page 1's
+		-- other keys off here
+		fmsFunctionsDefs["MAINTSIMCONFIG"]["L4"]={"setdata","fmcDatalink"}
+		fmsFunctionsDefs["MAINTSIMCONFIG"]["L5"]=nil
+		for _, k in ipairs({"R1", "R2", "R3", "R4", "R5"}) do fmsFunctionsDefs["MAINTSIMCONFIG"][k]=nil end
 		fmsFunctionsDefs["MAINTSIMCONFIG"]["R6"]={"setdata","simConfigSave"}
 		local lineA = ""
 		if B747DR_fmc_spill_lights==0 then
@@ -81,7 +86,7 @@ fmsPages["MAINTSIMCONFIG"].getPage=function(self,pgNo,fmsID)
 		"                        ",
 		"<ACARS           "..lineC,
 		"                        ",
-		"                        ",
+		string.format("<FMC DATALINK%11s", B747_fms_datalink_cfg()),
 		"                        ",
 		"                        ",
 		"------------------------",
@@ -273,7 +278,7 @@ fmsPages["MAINTSIMCONFIG"].getSmallPage=function(self,pgNo,fmsID)
 		lineB,
 		"                        ",
 		"                        ",
-		"                        ",
+		string.format(" ATC, FMC COMM%10s", B747_fms_datalink() and "ACTIVE" or "INOP"),
 		"                        ",
 		"                        ",
 		"                        ",

@@ -1767,3 +1767,28 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - CDU：`activepages/B744.fms.pages.altnnav.lua` の ALTN NAV RADIO（1L VOR と小字の M、2L CRS、3L ADF と小字の ANT・BFO、4L ILS-MLS か PARK、6L・6R の PRESELECT）。VOR・CRS・ADF は中央の CDU では空白で入力も受けない。つなげる FMC の無い CDU の NAV RAD キーでこのページ。
 - 推定：中央の CDU の ILS C は X-Plane に無いので同調しない（入力は持つ）。ILS の周波数だけのときの針路は FMC の ILS の同調が持っていた目的地の滑走路の ILS の針路。VOR の行の針路だけの入力は INVALID ENTRY。PRESELECT の DELETE で消す。
 - 試験：新しい `altn_radio_model_test.lua`（54 件）、`altn_nav_glue_test.lua`（+21 件：65 件）。全 160 本。X-Plane：新しい `s179_altn_nav_radio`：15/15（2026-11-01、立ち上げ直した後の 6 便目）。成田の北の 3,000 ft で両方の FMC を故障させると、左の CDU の NAV RAD で ALTN NAV RADIO。1L の 114.50/270 で VOR L（NAV3）が 11450 に、4L の 109.50/157 で ILS L（NAV1）が 10950 と PFD の ILS の目盛（ils_dots 1）、3L の 1304.5B で ADF L 1304 と BFO、6L に 110.90/128 を入れて書き込み行へ下ろし 4L へ入れると ILS L が 11090（CDU の画像：VOR 114.50M、CRS 270、ADF 1304.5BFO、ILS-MLS 109.50/157、PRESELECT 110.90/128）。PFD の画像では ILS の識別子（ITJ）と DME が出た。Log.txt に Lua の誤りなし。同じ PFD の画像で FMA の HDG HOLD にモード故障の線が出ていた（FMC を戻しても残る。IRS の方位は有効）。FMC の故障は LNAV・VNAV しか故障にしないので、空中開始の直後に IRU の方位が有効になる前に A/P が HDG HOLD で入った競合とみられ、別に調べる。
+
+## 105. 段 12 の段取りと 12a の実装（2026-11-01：FMC のデータリンクの有無）
+
+- 段取り（段 12：残りのページとデータリンク。CDU-30〜42、FCOM p.725–776、p.1211、FMSPG 7〜9 章）：
+  - 12a：FMC のデータリンクの有無（CDU-32）。109（PW・RR）は ATC と FMC COMM のキーが KEY/FUNCTION INOP、570（GE）はデータリンクのページ。simconfig の新しい項目で入切（シムの機能）。
+  - 12b：自動のページ変更（CDU-30）。VNAV の CLB→CRZ（T/C）、CRZ CLB・CRZ DES→CRZ（新しい巡航高度）、CRZ→DES（T/D）、E/O の D/D→E/O CRZ（FCOM p.1345、p.1350）、570 の TAKEOFF REF→VNAV CLB（フラップを上げ始めたとき：FCOM p.1325）。DSPY 灯は 3D に無いので対象外（CDU-22）。
+  - 12c：保守のページ（CDU-31）。地上だけ（FMSPG p.263）、MAINTENANCE INDEX の <INDEX は INIT/REF INDEX（FCOM p.1239）、PERF FACTORS（6R にコードを入れてから入力。DRAG/F-F は予測と性能へ、TO 1/TO 2・MNVR MARGIN・MIN CRZ TIME・THR RED・ACCEL HT：FMSPG p.265–269）、IRS MONITOR、CROSS LOAD・BITE。
+  - 12d：データリンクの小さな直し：送信文を CDU ごとに（CDU-34）、EICAS（405・570 の ATC MESSAGE のメモとチャイム、ACARS MESSAGE は ACARS だけ、FCOM に無い ACARS NO COMM のメモをやめる、>DATALINK LOST・AVAIL・SYS：CDU-37、FCOM p.775–776）、CDU-42 の残り、DESTINATION NOT SET の見直し（§97 の後始末）、VERIFY TAIL NUMBER（LOGON/STATUS の TAIL NO と FMC の登録記号：FCOM p.757、p.1436）。
+  - 12e：ATC のログオン（CDU-36）：ATC キーの振り分け、LOGON/STATUS の手順（SEND・SENT・ACCEPTED・REJECTED・RESEND、SELECT OFF、ATC COMM ESTABLISHED・TERMINATED：FCOM p.752–758、p.1431、p.1433、FMSPG p.277–285）。
+  - 12f：ATC のアップリンク（CDU-35）：XXXXz ATC UPLINK、ACCEPT・REJECT・STANDBY、VERIFY RESPONSE、REJECT DUE TO、LOAD（経路の MOD）、UNABLE TO LOAD・PARTIAL CLEARANCE LOADED（FCOM p.753–765、FMSPG p.288–297）。
+  - 12g：ATC の残り（CDU-39）：ATC LOG、REQUEST の要素と制限、REPORT と ARM、POS REPORT、EMERGENCY（CANCEL、FUEL REMAINING）（FCOM p.728–754、p.766–770、FMSPG p.298–363）。
+  - 12h：会社のデータリンク（CDU-40）、ADS（CDU-41）、Hoppie（CDU-38）。範囲は 12g の後で決める。
+  - データリンクは AutoATC か Hoppie のプロバイダーを通る。この PC の X-Plane には AutoATC が無いので、X-Plane では切れている側（NO COMM）しか試せない。プロバイダーの dataref は X-Plane なしの試験で模す。
+  - 11e の残り（両方の FMC が落ちたときの ND の地図：CDU L・C・R、MAP RANGE DISAGREE：FCOM p.1151、p.1421–1422）はパネルの変更が要るので、段 12 の後で。
+- 資料（12a）：
+  - FCOM p.1211：109 は ATC と FMC COMM のキーで CDU に KEY/FUNCTION INOP。405・570 は ATC で ATC のページ、FMC COMM でデータリンクのページと状態。
+  - FCOM p.725：ATC のデータリンクの章（5.33）は 405・570 だけ。
+  - ACARS（MENU の <ACARS：FCOM p.714、p.1323）は型式の印が無く全機にあるので、変えない。
+- 作ったもの：
+  - `B744.createfms.lua`：`B747_fms_datalink()`：simconfig の `SIM.fmc_datalink` が ON なら有り、OFF なら無し、AUTO（か項目が無い）なら型式で、`laminar/B747/engines/type` が 1（GE、570）なら有り、0（PW）・2（RR）なら無し（RR は PW と同じ 109：推定、RR の資料は無い）。`B747_fms_datalink_cfg()` は設定を simconfig の JSON の文字から読む（リバリーのファイルにはこの項目が無いので、表を引かない）。ATC（`func_key/crz`）と FMC COMM（`func_key/hold`）のキーは、無ければ KEY/FUNCTION INOP でページはそのまま。
+  - simconfig の既定に `fmc_datalink = "AUTO"`（`B747.05.xt.simconfig.lua`）。
+  - SIM CONFIG の 2 ページ目（MENU の 6R、NEXT）の 4L：<FMC DATALINK と設定（押すたびに AUTO→ON→OFF→AUTO）、小字に今の有無（ATC, FMC COMM の ACTIVE か INOP）。リバリーへの保存は 6R の SAVE（今までどおり）。2 ページ目では 1 ページ目の 5L・1R〜5R を外した（前は押すと 1 ページ目の項目が変わった）。
+  - 試験キット：シナリオの `cdu` の手順のキーの名前に ATC と FMCCOMM。
+- 試験：新しい `tests/fms/datalink_keys_test.lua`（18 件：PW・RR で ATC と FMC COMM が KEY/FUNCTION INOP でページはそのまま、GE で ATC INDEX と FMC COMM、PW でも ON なら ATC INDEX、GE でも OFF なら INOP、SIM CONFIG の 2 ページ目の 4L で AUTO・ON・OFF と simconfig の文字、2 ページ目の 1R は何もしない）。ATC・FMC COMM のキーを押す `fmc_fixes_test`（EMERGENCY REPORT）と `rte_pages_test`（FMC COMM の 1L）は、機体を 570 にした。全 162 本。
+  - X-Plane：新しい `s181_datalink_keys` 12/12（RJAA の地上、PW の機体。ATC と FMC COMM で KEY/FUNCTION INOP、ページは IDENT のまま。SIM CONFIG の 2 ページ目の 4L は AUTO・小字 INOP、押すと ON・ACTIVE で simconfig に `"fmc_datalink":"ON"`、ATC で ATC INDEX、4L を 2 回で AUTO に戻る。CDU の写真 4 枚）。`s79_fmc_fixes`（EMERGENCY REPORT の前に SIM CONFIG で ON、後で AUTO に戻す手順を足した）34/34。どちらも Log.txt に Lua の誤りなし。

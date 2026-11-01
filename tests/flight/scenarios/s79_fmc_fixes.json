@@ -152,6 +152,9 @@
     { "do": "check", "note": "DELETE で既定の 20.0 %（小さい字：FCOM p.1311）", "dref": "laminar/B747/fms3/Line09_S", "op": "contains", "value": "20.0%" },
 
     { "do": "mark", "note": "EMERGENCY REPORT の DIVERT TO（CDU-33）" },
+    { "do": "cdu", "note": "FMC のデータリンクを ON に（6-1・6-2 段 12a：PW の 109 では ATC が KEY/FUNCTION INOP）：MENU、6R の SIM CONFIG、NEXT、4L", "keys": ["MENU", "R6", "NEXT", "L4"] },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "FMC DATALINK は ON", "dref": "laminar/B747/fms3/Line09_L", "op": "contains", "value": "FMC DATALINK         ON" },
     { "do": "cmd", "note": "ATC", "name": "laminar/B747/fms1/func_key/crz" },
     { "do": "sleep", "seconds": 1 },
     { "do": "cmd", "note": "EMERGENCY（L1）", "name": "laminar/B747/fms1/ls_key/L1" },
@@ -170,6 +173,11 @@
     { "do": "cmd", "note": "DELETE を DIVERT TO へ", "name": "laminar/B747/fms1/ls_key/L2" },
     { "do": "sleep", "seconds": 1 },
     { "do": "check", "note": "DELETE で目的地の表示へ（目的地なし：****）", "dref": "laminar/B747/fms3/Line05_S", "op": "contains", "value": "****" },
+    { "do": "cdu", "note": "FMC のデータリンクを AUTO に戻す（保存しない）：MENU、6R、NEXT、4L を 2 回", "keys": ["MENU", "R6", "NEXT", "L4"] },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "cdu", "keys": ["L4"] },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "FMC DATALINK は AUTO", "dref": "laminar/B747/fms3/Line09_L", "op": "contains", "value": "FMC DATALINK       AUTO" },
 
     { "do": "mark", "note": "VOR の自動同調（FMC-30）と ETA（FMC-21）" },
     { "do": "route", "note": "経路：北へ 40 NM の点（現用点、7000 ft）と RJAA", "entries": ["NORTH1 36.07 141.30 7000 ACTIVE", "RJAA 35.765 140.386 0"] },

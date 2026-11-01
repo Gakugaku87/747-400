@@ -101,6 +101,7 @@ function simconfig_values()
 					 fo_lwr = "NORM",  --ND = 0, NORM = 1, EICAS PRI = 2
 					 spill_lights = "NORM", --HI = 1, NORM = 0 --silvereagle
 					 cockpit_seats_hide = "SHOW", --SHOW = 0 (default), HIDE = 1, (Useful to hide cockpit seats when using 3 monitors and the seats are in the way of viewing the instrument panel.) --silvereagle
+					 fmc_datalink = "AUTO",  --the FMC's datalink (ATC, FMC COMM): AUTO = the airplane's (the 570, GE, has it; the 109, PW and RR, not: FCOM p.1211), ON, OFF
 			},
 			PLANE = {
 						model = "747-400",  --747-400, 747-400ER, 747-400F
