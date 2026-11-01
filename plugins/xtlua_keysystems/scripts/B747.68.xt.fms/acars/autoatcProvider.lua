@@ -122,7 +122,7 @@ sendATC=function(value)
   acarsSystem.messageSendQueue[table.getn(acarsSystem.messageSendQueue.values)+1]=json.encode(newMessage)
   --sleep(3)
 end,
-sendCompany=function(value)
+sendCompany=function(value,fmsO)  -- (6-1/6-2 step 12d2) the sending CDU (before, an undefined global: an error when the data were not ready)
   print("LUA send ACARS message:"..value)
   if not(fmsFunctions.acarsDataReady(fmsO)) then return end
   local newMessage=json.decode(value)--check json value or fail

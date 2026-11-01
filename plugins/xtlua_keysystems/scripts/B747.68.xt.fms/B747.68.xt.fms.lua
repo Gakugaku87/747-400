@@ -3512,7 +3512,10 @@ do
   local ADV_DL_AVAIL, ADV_DL_LOST = 55, 56
   local hadOnline, lost, availT = false, false, nil
   local atcUnreadWas, chimeT = 0, nil
+  local acarsUnread = false
   local function put(arr, i, v) if arr[i] ~= v then arr[i] = v end end
+  -- (step 12d2) an unread ACARS message: MENU's <REQ>
+  function B747_fms_acars_unread() return acarsUnread end
   function B747_fms_datalink_eicas(online)
     local now = simDRTime
     -- the unread messages
@@ -3524,6 +3527,7 @@ do
         if dl and m["type"] == "cpdlc" then atcNew = atcNew + 1 else acarsNew = acarsNew + 1 end
       end
     end
+    acarsUnread = acarsNew > 0
     put(B747DR_CAS_memo_status, MEMO_ACARS, acarsNew > 0 and 1 or 0)
     put(B747DR_CAS_memo_status, MEMO_ATC, atcNew > 0 and 1 or 0)
     put(B747DR_CAS_memo_status, MEMO_NO_COMM, 0)

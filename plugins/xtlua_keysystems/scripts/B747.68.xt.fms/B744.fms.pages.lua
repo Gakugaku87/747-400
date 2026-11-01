@@ -46,7 +46,10 @@ end
 
 fmsPages["INDEX"]=createPage("INDEX")
 fmsPages["INDEX"].getPage=function(self,pgNo,fmsID)
-  local acarsS="             "
+  -- (6-1/6-2 step 12d2) <ACARS always (FCOM p.1323; before, only while
+  -- connected with the centre RTP on), <REQ> with an unread ACARS message
+  -- (the ACARS MESSAGE memo's: estimate)
+  local acarsS=B747_fms_acars_unread() and "<ACARS  <REQ>" or "<ACARS       "
   local gs1="                        "
   local efisS=B744_cdu_efis_cp_available(fmsID) and "SELECT>" or "       "
   local eicasS=B744_cdu_eicas_cp_available() and "SELECT>" or "       "
@@ -62,12 +65,7 @@ fmsPages["INDEX"].getPage=function(self,pgNo,fmsID)
     gs1="                 SELECT>"
 
   end
-  if acars==1 and B747DR_rtp_C_off==0 then 
-	acarsS="<ACARS  <REQ>" 
-	fmsFunctionsDefs["INDEX"]["L2"]={"setpage","ACARS"}
-  else
-	fmsFunctionsDefs["INDEX"]["L2"]=nil
-	end
+  fmsFunctionsDefs["INDEX"]["L2"]={"setpage","ACARS"}
 return {
 
 "          MENU          ",

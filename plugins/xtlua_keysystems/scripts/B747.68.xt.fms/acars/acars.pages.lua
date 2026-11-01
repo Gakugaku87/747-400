@@ -85,7 +85,7 @@ fmsPages["POSTFLIGHT"].getPage=function(self,pgNo,fmsID)
   
   if fmsModules["data"]["atc"]=="****" then
     l1text="<LOGON                  "
-    fmsFunctionsDefs["POSTFLIGHT"]["l1"]={"setpage","ATCLOGONSTATUS"} 
+    fmsFunctionsDefs["POSTFLIGHT"]["L1"]={"setpage","ATCLOGONSTATUS"} -- (6-1/6-2 step 12d2: before "l1", no key)
   else
     fmsFunctionsDefs["POSTFLIGHT"]["L1"]={"setdata","atc"}
   end

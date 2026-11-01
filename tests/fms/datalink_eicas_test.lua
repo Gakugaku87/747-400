@@ -111,4 +111,33 @@ T.equal(adv(DL_AVAIL), 1, "back after a loss: >DATALINK AVAIL")
 seconds(60)
 T.equal(adv(DL_AVAIL), 0, "a minute on: >DATALINK AVAIL gone (estimate)")
 T.equal(memo(NO_COMM), 0, "never ACARS NO COMM")
+
+-- (step 12d2) MENU's <ACARS always (FCOM p.1323), <REQ> with an unread
+-- ACARS message; the ACARS pages offline
+rt:set(ONLINE, 0)
+local K, D = "laminar/B747/fms1/", "laminar/B747/fms3/"
+local function line(n) return rt:get(string.format("%sLine%02d_L", D, n)) end
+local function key(k) rt:command(K .. k) frames(0.3) end
+key("func_key/fix")
+T.equal(line(5):sub(1, 13), "<ACARS       ", "MENU: <ACARS offline too")
+local d = add("telex")
+frames(0.2)
+T.equal(line(5):sub(1, 13), "<ACARS  <REQ>", "an unread ACARS message: <REQ> (estimate)")
+msgs[d]["read"] = true
+frames(0.2)
+T.equal(line(5):sub(1, 13), "<ACARS       ", "read: no <REQ>")
+key("ls_key/L2")
+T.check(line(1):find("ACARS-MAIN MENU", 1, true) ~= nil, "<ACARS offline: the ACARS page")
+key("ls_key/L3")
+T.check(line(1):find("POSTFLIGHT", 1, true) ~= nil, "POSTFLIGHT")
+key("ls_key/L1")
+T.check(line(1):find("LOGON", 1, true) ~= nil, "POSTFLIGHT's L1 (before l1, no key): LOGON/STATUS: " .. line(1))
+-- a company message with the data not ready: the message, no error (before,
+-- an undefined global)
+rt:set(ONLINE, 1)
+frames(0.2)
+local fmsL = fms.ns.fmsL
+local ok = pcall(fms.ns.fmsFunctions.acarsSystemSend, fmsL, '{"type":"telex","msg":"TEST MESSAGE"}')
+T.check(ok, "sendCompany without FLT NO: no error")
+T.check(fmsL.notify ~= nil and fmsL.notify:find("NOT SET", 1, true) ~= nil, "its message: " .. tostring(fmsL.notify))
 T.done()
