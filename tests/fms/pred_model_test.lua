@@ -89,11 +89,48 @@ T.check(r.tc_t > r.pts[2].t - 1e-6 and r.tc_t < r.pts[3].t, "the T/C between C2 
 -- point, FCOM p.1149): one, after the T/D, just before D2 (AT 10,000)
 T.check(#r.decel == 1 and r.decel[1] > r.td and r.decel[1] < 1100 and r.decel[1] > 1100 - 15,
     string.format("one deceleration point, %.1f NM before D2", 1100 - (r.decel[1] or 0)))
+-- (step LF1) the deceleration about 500 fpm down before 10,000 ft (FCOM
+-- p.1264's descent deceleration phase; before, level at 10,000), its
+-- target the 250 kt it ends at
+do
+    local dp = r.dp
+    local lo, hi, ok = nil, nil, true
+    for i = 2, #dp.x do
+        if dp.k[i] == "decel" then
+            lo = lo or i
+            hi = i
+            if dp.c[i] ~= 250 then ok = false end
+        end
+    end
+    T.check(lo ~= nil and ok, "the deceleration's segments with their target 250 kt")
+    if lo then
+        T.near(dp.h[lo - 1], 10000, 1, "it ends at 10,000 ft")
+        local fpm = (dp.h[hi] - dp.h[lo - 1]) / (dp.t[hi] - dp.t[lo - 1]) * 60
+        T.near(fpm, 500, 1, string.format("about 500 fpm down: %.0f fpm over %.1f NM", fpm, dp.x[lo - 1] - dp.x[hi]))
+        T.check(dp.h[hi] > 10200 and dp.h[hi] < 11500, string.format("from %.0f ft", dp.h[hi]))
+    end
+end
+T.check(r.td_decel < 1.5, string.format("M.85 at FL350 to the descent's M.84: a short level deceleration (%.1f NM)", r.td_decel))
 -- each waypoint's speed: the climb's, the cruise's Mach, the descent's
 T.check(r.pts[1].cas == 340 and not r.pts[1].machMode, "C1 in the climb: 340 kt")
 T.check(r.pts[3].machMode and r.pts[3].mach == 0.85, "MID in the cruise: M.85")
 T.check(r.pts[5].cas == 290 and not r.pts[5].machMode, "D2 in the descent at 10,000 ft: 290 kt")
 T.check(r.pts[6].cas == 250, "the runway below 10,000 ft: 250 kt")
+
+-- (step LF1) the T/D's level deceleration (FCOM p.1264): cruising at M.80
+-- at FL250 (about 333 kt, s198's) to the descent's 290 kt, idle at FL250
+-- before the path leaves it, the T/D at its start
+do
+    local legsL = {{name = "A", dist = 200}, {name = "RW", dist = 120, con = {kind = "AT", a = 50}}}
+    local rl = PM.predict{P = P, t = pw, gw = 300000, fuel = 80000, alt = 25000, phase = "crz", crz = 25000, clb = clb, des = des,
+        crzspd = {mach = 0.80}, legs = legsL, ed = 2}
+    local dp = rl.dp
+    local top
+    for i = 1, #dp.x do if dp.h[i] >= 25000 - 1 then top = dp.x[i] break end end
+    T.check(rl.td_decel and rl.td_decel > 3 and rl.td_decel < 10, string.format("a level deceleration of %.1f NM", rl.td_decel or -1))
+    T.check(top and math.abs(rl.td - (top - rl.td_decel)) < 0.05,
+        string.format("the T/D at its start: %.1f NM, the path leaving FL250 at %.1f", rl.td or -1, top or -1))
+end
 
 -- step climbs where the steps function says: at 300 t to FL350, at 280 t to
 -- FL390

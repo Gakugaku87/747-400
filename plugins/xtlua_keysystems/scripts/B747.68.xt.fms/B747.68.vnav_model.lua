@@ -141,8 +141,10 @@ function M.missed(s)
 end
 
 -- the descent path at e NM to go to the E/D: its altitude, gradient (ft a
--- NM) and the segment's kind ("idle" or "spd"); nil without a path.
--- path = {e = {...}, h = {...}, k = {...}} with e rising from the E/D's 0
+-- NM), the segment's kind ("idle", "spd" or "decel") and (step LF1) a
+-- deceleration's target CAS; nil without a path.
+-- path = {e = {...}, h = {...}, k = {...}, c = {...}} with e rising from
+-- the E/D's 0
 function M.path_at(path, e)
     if not path or not path.e or #path.e < 2 then return nil end
     local es, hs = path.e, path.h
@@ -156,7 +158,8 @@ function M.path_at(path, e)
     end
     local de = es[hi] - es[lo]
     local g = de > 1e-9 and (hs[hi] - hs[lo]) / de or 0
-    return hs[lo] + g * (e - es[lo]), g, path.k[hi] or "idle"
+    local c = path.c and path.c[hi]
+    return hs[lo] + g * (e - es[lo]), g, path.k[hi] or "idle", (c and c > 0) and c or nil
 end
 
 -- the takeoff (FCOM p.1255): from the ground (with V2 selected) the
@@ -196,6 +199,14 @@ local function takeoff_speed(s, inp)
         to.cas = math.max(to.v2 + M.TO_ADD_MIN, math.min(to.v2 + M.TO_ADD_MAX, inp.ias or 0))
     end
     return to.cas
+end
+
+-- (step LF1) the T/D's distance to go to the E/D: where the path reaches
+-- the cruise altitude and the level deceleration before it (FCOM p.1264;
+-- path.td_decel NM: B747.68.pred_model.lua)
+function M.td_e(path, crz_alt)
+    local e = M.path_e_at(path, crz_alt)
+    return e and e + (path.td_decel or 0) or nil
 end
 
 -- the distance to go to the E/D where the path first reaches altitude h
@@ -350,15 +361,16 @@ end
 function M.update(s, inp)
     local out = s.out
     local P = inp.P
-    local path_h, g, kind = nil, nil, nil
+    local path_h, g, kind, decelCas = nil, nil, nil, nil
     local etd = nil
     if inp.path and inp.d_ed then
-        path_h, g, kind = M.path_at(inp.path, inp.d_ed)
+        path_h, g, kind, decelCas = M.path_at(inp.path, inp.d_ed)
         -- (step 9d2a) the T/D where the path reaches CRZ ALT (its top
         -- without), the path level at CRZ ALT before it: the predictions'
         -- goes on up to the ceiling (s144's early descent kept 13,000 ft
-        -- under it there and never met it)
-        etd = inp.crz_alt and M.path_e_at(inp.path, inp.crz_alt) or inp.path.e[#inp.path.e]
+        -- under it there and never met it); (step LF1) the level
+        -- deceleration before it (FCOM p.1264)
+        etd = inp.crz_alt and M.td_e(inp.path, inp.crz_alt) or inp.path.e[#inp.path.e]
         if path_h and inp.crz_alt and path_h > inp.crz_alt then path_h, g = inp.crz_alt, 0 end
     end
 
@@ -430,6 +442,13 @@ function M.update(s, inp)
     local limited
     out.cas, out.mach, out.mach_mode, limited = target_speed(P, inp.sched, inp.crz, inp, spd_ph, to_cas,
         s.dd and inp.crz_alt or nil)
+    -- (step LF1) on a deceleration of the path before a speed limit's
+    -- altitude, its speed the target (FCOM p.1264: "Before the speed
+    -- restriction altitude, FMC commands the target descent airspeed";
+    -- before, the target changed only below it: s198)
+    if ph == "DES" and kind == "decel" and decelCas and not inp.spd_int and out.cas and decelCas < out.cas then
+        out.cas, out.mach, out.mach_mode = decelCas, P.cas_to_mach(decelCas, inp.alt), false
+    end
     out.title = limited and "LIM SPD" or ((spd_ph == "CLB" and not inp.spd_int) and to_title or nil)
     -- (step 9e3) the cruise after a missed approach (FCOM p.1262): the most
     -- restrictive of the speed transition (the descent's, the destination

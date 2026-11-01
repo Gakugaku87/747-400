@@ -1728,7 +1728,9 @@ function vnav_geo_set(s, r)
   end
   if r.dp and r.ed then
     local dp = r.dp
-    g.path = {e = {}, h = dp.h, k = dp.k}
+    -- (step LF1) the decelerations' targets (c) and the T/D's level
+    -- deceleration (td_decel NM)
+    g.path = {e = {}, h = dp.h, k = dp.k, c = dp.c, td_decel = r.td_decel or 0}
     for i = 1, #dp.x do g.path.e[i] = r.ed - dp.x[i] end
     g.hed = dp.h[1]
     -- (step 9e2) the E/D's point, for END OF DES
@@ -1774,7 +1776,7 @@ end
 function B747_fms_vnav_td()
   local inp = vnavIn
   if not (inp.path and inp.d_ed) then return nil end
-  local e = inp.crz_alt and B747_vnav_model.path_e_at(inp.path, inp.crz_alt) or inp.path.e[#inp.path.e]
+  local e = inp.crz_alt and B747_vnav_model.td_e(inp.path, inp.crz_alt) or inp.path.e[#inp.path.e]
   return inp.d_ed - e
 end
 -- the VNAV page active (1 CLB, 2 CRZ, 3 DES; 0 on the ground or without an

@@ -577,4 +577,28 @@ o = V.update(V.new(), inp{alt = 12000, mcp_alt = 20000, engaged = true})
 T.check(not o.check_alt and o.mode == "SPD", "engaged with both above: the climb")
 o = V.update(V.new(), inp{alt = 12000, mcp_alt = 11950, engaged = true})
 T.check(not o.check_alt, "the MCP altitude within the band: not between")
+
+-- (step LF1; notes/LINE_FLIGHTS.md §1) FCOM p.1264: the T/D's level
+-- deceleration and the deceleration before 10,000 ft. A path from the E/D
+-- (1,500 ft) to 10,000 ft at 40 NM, the deceleration to 240 kt from 10,700
+-- ft at 47 NM (100 ft a NM: 500 fpm at 300 kt), idle to FL350 at 147 NM,
+-- 6 NM of level deceleration before it
+do
+    local pathL = {e = {0, 40, 47, 147}, h = {1500, 10000, 10700, 35000}, k = {"idle", "idle", "decel", "idle"},
+        c = {0, 0, 240, 0}, td_decel = 6}
+    T.near(V.td_e(pathL, 35000), 153, 1e-9, "the T/D: the path's top and the level deceleration")
+    local sA = V.new()
+    V.update(sA, inp{alt = 35000, path = pathL})
+    o = V.update(sA, inp{alt = 35000, mcp_alt = 10000, path = pathL, d_ed = 154, gs = 480})
+    T.equal(o.phase, "CRZ", "154 NM to go: the cruise")
+    o = V.update(sA, inp{alt = 35000, mcp_alt = 10000, path = pathL, d_ed = 152, gs = 480})
+    T.equal(o.phase, "DES", "152 NM: the descent, its level deceleration (before, at 147 NM)")
+    T.check(o.mode == "PTH" and o.at == V.AT_IDLE and o.vs == 0, "VNAV PTH level at FL350 with IDLE (FCOM p.1264's 2)")
+    o = V.update(sA, inp{alt = 10350, mcp_alt = 3000, path = pathL, d_ed = 43.5, gs = 300})
+    T.equal(o.cas, 240, "on the deceleration before 10,000 ft: its 240 kt the target (p.1264's 4; before, 290 to 10,000 ft)")
+    T.check(o.mode == "PTH" and o.at == V.AT_IDLE, "VNAV PTH with IDLE")
+    T.near(o.vs, -500, 1, "500 fpm down on it")
+    o = V.update(sA, inp{alt = 20000, mcp_alt = 3000, path = pathL, d_ed = 90, gs = 400})
+    T.equal(o.cas, 290, "above it: the descent's 290 kt")
+end
 T.done()
