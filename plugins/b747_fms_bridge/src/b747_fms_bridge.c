@@ -38,15 +38,30 @@
  *                                       if none (read only)
  *   laminar/B747/fms/company/ofp_file  (data) the newest .xml's (read only)
  *
+ * The sim's options (2026-11-01 the user; notes/ATA-34-61-FMC.md §126):
+ * the sim's conveniences, not the airplane's, in X-Plane's Plugins >
+ * 747-400 menu (XTLua has no menus), kept in X-Plane's Output/preferences/
+ * B747-400_options.prf; the FMC (XTLua) does them:
+ *
+ *   laminar/B747/options/auto_step_climb  (int) 1: the automatic step climb
+ *                                          at the CRZ page's step point
+ *   laminar/B747/options/pause_at_td      (int) 1: the pause two minutes
+ *                                          before the T/D
+ *
+ * the menu's and the commands' choices kept (.../auto_step_climb_toggle,
+ * .../pause_at_td_toggle), a dataref's write (a test's) not.
+ *
  * Built with docs/overhaul/tools/build_fms_bridge.sh (MinGW-w64, the X-Plane
  * SDK 4.3.0) into ../64/win.xpl. Windows only (2026-11-01 the user).
  */
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
 #include "XPLMDefs.h"
 #include "XPLMDataAccess.h"
+#include "XPLMMenus.h"
 #include "XPLMNavigation.h"
 #include "XPLMPlanes.h"
 #include "XPLMPlugin.h"
@@ -236,6 +251,84 @@ static float loop(float since_call, float since_loop, int counter, void *ref)
     return -1.0f;
 }
 
+/* the sim's options: their file's names, the menu's items */
+#define NOPTS 2
+static const char *opt_key[NOPTS] = {"auto_step_climb", "pause_at_td"};
+static const char *opt_label[NOPTS] = {"Auto step climb", "Pause 2 min before T/D"};
+static const char *opt_desc[NOPTS] = {"Toggle the automatic step climb",
+    "Toggle the pause two minutes before the top of descent"};
+static int opts[NOPTS];
+static XPLMDataRef opt_ref[NOPTS];
+static XPLMCommandRef opt_cmd[NOPTS];
+static XPLMMenuID menu = NULL;
+static int menu_item = -1;
+
+/* Output/preferences/B747-400_options.prf, by X-Plane's preferences file */
+static void opts_path(char *out, size_t n)
+{
+    char prefs[PATH_LEN];
+    prefs[0] = 0;
+    XPLMGetPrefsPath(prefs);
+    char *a = strrchr(prefs, '\\'), *b = strrchr(prefs, '/');
+    if (b > a) a = b;
+    if (a) a[1] = 0; else prefs[0] = 0;
+    snprintf(out, n, "%sB747-400_options.prf", prefs);
+}
+
+/* "<name> <0 or 1>" lines; none: all off */
+static void opts_load(void)
+{
+    char p[PATH_LEN], line[128], key[64];
+    int v;
+    opts_path(p, sizeof p);
+    FILE *f = fopen(p, "rb");
+    if (!f) return;
+    while (fgets(line, sizeof line, f)) {
+        if (sscanf(line, "%63s %d", key, &v) != 2) continue;
+        for (int i = 0; i < NOPTS; i++) {
+            if (strcmp(key, opt_key[i]) == 0) opts[i] = v ? 1 : 0;
+        }
+    }
+    fclose(f);
+}
+
+static void opts_save(void)
+{
+    char p[PATH_LEN];
+    opts_path(p, sizeof p);
+    FILE *f = fopen(p, "wb");
+    if (!f) return;
+    for (int i = 0; i < NOPTS; i++) fprintf(f, "%s %d\n", opt_key[i], opts[i]);
+    fclose(f);
+}
+
+/* an option on or off, the menu's check mark with it, kept if `keep` */
+static void opt_set(int i, int v, int keep)
+{
+    if (i < 0 || i >= NOPTS) return;
+    opts[i] = v ? 1 : 0;
+    if (menu) XPLMCheckMenuItem(menu, i, opts[i] ? xplm_Menu_Checked : xplm_Menu_Unchecked);
+    if (keep) opts_save();
+}
+
+static void menu_handler(void *menu_ref, void *item_ref)
+{
+    (void)menu_ref;
+    int i = (int)(intptr_t)item_ref;
+    if (i >= 0 && i < NOPTS) opt_set(i, !opts[i], 1);
+}
+
+static int opt_toggle(XPLMCommandRef cmd, XPLMCommandPhase phase, void *ref)
+{
+    (void)cmd;
+    int i = (int)(intptr_t)ref;
+    if (phase == xplm_CommandBegin && i >= 0 && i < NOPTS) opt_set(i, !opts[i], 1);
+    return 0;
+}
+
+static int opt_get(void *ref) { return opts[(int)(intptr_t)ref]; }
+static void opt_write(void *ref, int v) { opt_set((int)(intptr_t)ref, v, 0); }
+
 /* an int dataref: its getter and setter (NULL: read only) */
 static XPLMDataRef int_ref(const char *name, XPLMGetDatai_f get, XPLMSetDatai_f set)
 {
@@ -266,7 +359,7 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc)
 {
     strcpy(name, "B747 FMS bridge");
     strcpy(sig, "sparky744.b747.fmsbridge");
-    strcpy(desc, "The B747's FMC flight plan to X-Plane's FMS from X-Plane's thread.");
+    strcpy(desc, "The B747's FMC flight plan to X-Plane's FMS, the company's files, the sim's options.");
     refs[0] = XPLMRegisterDataAccessor("laminar/B747/fms/xp/plan", xplmType_Data, 1,
         NULL, NULL,         /* int */
         NULL, NULL,         /* float */
@@ -284,6 +377,29 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc)
     refs[7] = text_ref("laminar/B747/fms/company/ofp_file", ofp_file_get);
     XPLMRegisterFlightLoopCallback(loop, -1.0f, NULL);
     XPLMRegisterFlightLoopCallback(scan, 1.0f, NULL);
+    /* the sim's options: Plugins > 747-400, their datarefs and commands */
+    opts_load();
+    XPLMMenuID plugins = XPLMFindPluginsMenu();
+    menu_item = XPLMAppendMenuItem(plugins, "747-400", NULL, 0);
+    menu = XPLMCreateMenu("747-400", plugins, menu_item, menu_handler, NULL);
+    for (int i = 0; i < NOPTS; i++) {
+        char dname[128], cname[128];
+        void *ref = (void *)(intptr_t)i;
+        XPLMAppendMenuItem(menu, opt_label[i], ref, 0);
+        snprintf(dname, sizeof dname, "laminar/B747/options/%s", opt_key[i]);
+        opt_ref[i] = XPLMRegisterDataAccessor(dname, xplmType_Int, 1,
+            opt_get, opt_write, /* int */
+            NULL, NULL,         /* float */
+            NULL, NULL,         /* double */
+            NULL, NULL,         /* int array */
+            NULL, NULL,         /* float array */
+            NULL, NULL,         /* data */
+            ref, ref);          /* refcons */
+        snprintf(cname, sizeof cname, "laminar/B747/options/%s_toggle", opt_key[i]);
+        opt_cmd[i] = XPLMCreateCommand(cname, opt_desc[i]);
+        XPLMRegisterCommandHandler(opt_cmd[i], opt_toggle, 1, ref);
+        opt_set(i, opts[i], 0);
+    }
     return 1;
 }
 
@@ -292,6 +408,14 @@ PLUGIN_API void XPluginStop(void)
     XPLMUnregisterFlightLoopCallback(loop, NULL);
     XPLMUnregisterFlightLoopCallback(scan, NULL);
     for (int i = 0; i < NREFS; i++) XPLMUnregisterDataAccessor(refs[i]);
+    for (int i = 0; i < NOPTS; i++) {
+        XPLMUnregisterCommandHandler(opt_cmd[i], opt_toggle, 1, (void *)(intptr_t)i);
+        XPLMUnregisterDataAccessor(opt_ref[i]);
+    }
+    if (menu) XPLMDestroyMenu(menu);
+    if (menu_item >= 0) XPLMRemoveMenuItem(XPLMFindPluginsMenu(), menu_item);
+    menu = NULL;
+    menu_item = -1;
 }
 
 PLUGIN_API int XPluginEnable(void) { return 1; }

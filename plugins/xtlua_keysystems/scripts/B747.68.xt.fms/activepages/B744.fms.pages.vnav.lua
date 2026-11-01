@@ -34,6 +34,39 @@ local conv = 1.0 --converter (pounds to kilos)
 -- LRC; <ECON (5L) and LRC> (CRZ 6R) choose (FCOM p.1327-1328, p.1347-1350,
 -- p.1391-1392; FMSPG p.112-113, p.131-134, p.192-193)
 local function vnav_text(id) return (string.gsub(fmsModules["data"][id], "%s+$", "")) end
+-- the CRZ page's STEP TO and its step point (step 8b2; FCOM p.1257,
+-- p.1348-1349, FMSPG p.133; also the sim's automatic step climb's: notes/
+-- ATA-34-61-FMC.md §126): a crew's STEP TO or the FMC's by the step size,
+-- none without an active route and within 200 NM of the T/D (the
+-- predictions': step 8c); the optimum step point, where OPT is halfway to
+-- STEP TO, AVAIL AT where MAX reaches STEP TO when that comes later.
+-- Returns {to (ft) or nil, td (NM) or nil, near_td, avail (AVAIL AT), w
+-- (the step point's weight, kg), now (AT NOW: w at least the gross
+-- weight)}; the CRZ page passes its own performance data, weight and OPT
+function B747_fms_crz_step(perf, isaDev, gw, optFt)
+  perf = perf or B747_fms_perf()
+  isaDev = isaDev or B747_fms_isa_dev()
+  gw = gw or B747_fms_gw_kg()
+  optFt = optFt or B747_perf_db.opt_alt(perf, gw)
+  local crz = B747BR_cruiseAlt
+  local pred = B747_fms_preds()
+  local s = {td = pred and pred.td or nil}
+  s.near_td = s.td ~= nil and s.td < 200
+  if crz > 0 and B747_fmc_route.active and not s.near_td then
+    s.to = B747_cdu_model.parse_alt(vnav_text("stepalt"))
+      or B747_crz_model.step_to(crz, optFt, vnav_text("stepsize"), B747_fms_step_east())
+  end
+  if s.to then
+    local light = perf.MAX_ALT_W[#perf.MAX_ALT_W] * 1000 * perf.wf
+    local w = B747_crz_model.step_weight(crz, s.to, function(kg) return B747_perf_db.opt_alt(perf, kg) end, light, gw)
+    if B747_perf_db.max_alt(perf, w, isaDev) < s.to then
+      s.avail = true
+      w = math.min(w, B747_perf_db.max_alt_weight(perf, s.to, isaDev))
+    end
+    s.w, s.now = w, w >= gw
+  end
+  return s
+end
 -- a page title centred in the room left of the page number, ACT if active,
 -- MOD if modified (step 9d2b: its 6R's modification to execute)
 local function vnav_title(text, active, mod)
@@ -334,13 +367,8 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       local cmdMach = (cas and crz > 0) and B747_perf_db.cas_to_mach(cas, crz) or (mach or 810) / 1000
       if rtaMach then cmdMach = rtaMach end
       local pred = B747_fms_preds()
-      local tdNM = pred and pred.td or nil
-      local nearTD = tdNM ~= nil and tdNM < 200
-      local stepTo = nil
-      if crz > 0 and B747_fmc_route.active and not nearTD then
-        stepTo = B747_cdu_model.parse_alt(vnav_text("stepalt"))
-          or B747_crz_model.step_to(crz, optFt, vnav_text("stepsize"), B747_fms_step_east())
-      end
+      local step = B747_fms_crz_step(perf, isaDev, gw, optFt)
+      local tdNM, nearTD, stepTo = step.td, step.near_td, step.to
       local atText = ""
       crzAtLabel = "AT"
       local function eta_text(hours, nm)
@@ -351,18 +379,12 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
         crzAtLabel = "TO T/D"
         atText = eta_text(tdNM / math.max(gsKTS, 100), tdNM)
       elseif stepTo then
-        -- the optimum step point, where OPT is halfway to STEP TO; AVAIL AT
-        -- where MAX reaches STEP TO when that comes later
-        local light = perf.MAX_ALT_W[#perf.MAX_ALT_W] * 1000 * perf.wf
-        local w = B747_crz_model.step_weight(crz, stepTo, function(kg) return B747_perf_db.opt_alt(perf, kg) end, light, gw)
-        if B747_perf_db.max_alt(perf, w, isaDev) < stepTo then
-          crzAtLabel = "AVAIL AT"
-          w = math.min(w, B747_perf_db.max_alt_weight(perf, stepTo, isaDev))
-        end
-        if w >= gw then
+        if step.avail then crzAtLabel = "AVAIL AT" end
+        if step.now then
           atText = "NOW"
         else
           -- the fuel down to it at the cruise model's flow at the mean weight
+          local w = step.w
           local hrs = (gw - w) / (4 * B747_perf_db.cruise_ff(perf, (gw + w) / 2, crz, cmdMach, isaDev))
           atText = eta_text(hrs, hrs * (B747_perf_db.tas(cmdMach, crz, isaDev) - B747_fms_crz_headwind()))
         end

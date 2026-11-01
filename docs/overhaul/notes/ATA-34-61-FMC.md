@@ -2090,3 +2090,19 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 作ったもの：会社が経路のアップリンクを答えるとき、同じ出発地・目的地の OFP があれば、その文（題「OFP 出発地-目的地」：便名、巡航高度と COST INDEX、巡航高度と違うステップクライムとその点、重量と燃料は OFP の単位の 1000 で ZFW、TOW・LDW、RAMP FUEL、TO FUEL、TRIP・RSV、ALTN、PAX）を会社の ACARS の文で送る（EICAS の ACARS MESSAGE、ACARS の UPLINK の一覧。`S.ofp_text`）。
 - 推定：送る時（経路の答えといっしょ）、文の形と言葉、重量の単位の書き方。
 - 試験：`tests/fms/company_route_test.lua` に 2 件（OFP の文の題と、巡航高度・ステップクライム・ZFW、未読）。X-Plane：12h2 と同じ s203。
+
+## 126. シムの便利機能（2026-11-01：オートステップクライムと T/D 前の一時停止）
+
+- 利用者の決め（2026-11-01）：機体フォルダのプラグインで、X-Plane の Plugins のプルダウンメニューからシムの便利機能（オートステップクライム、T/D での一時停止など）をオン・オフする。Windows だけ（Mac・Linux は使わないので作らない）。CDU には出さない。機能は実機に無いので自作する（利用者も了承）。
+- 実機の機能ではない。乗員の操作をシムが代わりにする便利機能として作り、FMC と AFDS の働きは変えない。
+- メニューと設定（`plugins/b747_fms_bridge`、ネイティブのプラグイン：XTLua にはメニューの関数が無い）：
+  - Plugins → 747-400 に「Auto step climb」と「Pause 2 min before T/D」。選ぶたびにオン・オフし、チェックの印が付く。
+  - 選んだ状態は X-Plane の `Output/preferences/B747-400_options.prf` に保存し、次に機体を読むときに戻す（無ければ両方オフ）。
+  - dataref：`laminar/B747/options/auto_step_climb`、`laminar/B747/options/pause_at_td`（int、書ける。書いても保存しない：試験のため）。コマンド：`laminar/B747/options/auto_step_climb_toggle`、`laminar/B747/options/pause_at_td_toggle`（キーに割り当てられる。保存する）。
+- 動き（FMC の XTLua：`B747.68.simopts_model.lua` とつなぎ、0.5 秒ごと）：
+  - オートステップクライム：CRZ のページの STEP TO の AT が NOW（ステップの点に来た：FCOM p.1348–1349）で、VNAV が engage して巡航（巡航上昇・降下中でない）のとき、乗員がする巡航上昇の操作（FCOM p.649、p.1257：MCP 高度を STEP TO にして高度セレクターを押す）を代わりにする。MCP の窓と AFDS の高度を STEP TO にし、1 秒後に高度セレクターのコマンド（`laminar/B747/button_switch/press_altitude`）。押しで CRZ ALT が STEP TO になり、VNAV が巡航上昇する（これまでの FMC と AFDS の働き）。MCP 高度が CRZ ALT より下（降下の準備）のとき、T/D の 200 NM 以内（STEP TO が出ない）、STEP SIZE 0 で乗員の STEP TO も無いときはしない。押しが効かなければ 30 秒後にもう一度。
+  - STEP TO と NOW は CRZ のページと同じ計算（`B747_fms_crz_step`：CRZ のページの計算を関数に出した）。
+  - T/D 前の一時停止：FMC の巡航の段で、T/D まで 2 分（FMC の RESET MCP ALT が出る時：FCOM p.1433）になったら X-Plane を一時停止（`sim/operation/pause_on`）。一度止めたら、T/D が 3 分より遠くなる（CRZ ALT や経路が変わる）か着陸するまで、もう止めない。T/D を過ぎても巡航のまま（MCP 高度を下げていない）なら止める。
+- 自分で決めたこと（資料が無い）：一時停止の 2 分は RESET MCP ALT に合わせた。押しまでの 1 秒（XTLua のモジュールが別のモジュールの書き込みを読むのは次のフレーム）、やり直しの 30 秒、再び止める 3 分。
+- 高度セレクターの押しで CRZ ALT が変わったとき（巡航上昇・巡航降下）も、CDU で CRZ ALT を入れたときと同じく乗員の STEP TO を消す（6-1・6-2 段 8b2 の「新しい CRZ ALT まで残す」のとおり。前は残り、s204 の 1 回目でステップの後に STEP TO FL350（CRZ ALT と同じ）と出ていた）。
+- 試験：新しい `tests/fms/simopts_model_test.lua`（38 件：NOW で MCP、1 秒後に押し、押しが効かなければ 30 秒後にもう一度、しない条件、新しい STEP TO、一時停止の 2 分、もう止めない、3 分で再び、着陸で再び、オフ、巡航でない、対地速度）、新しい `tests/fms/simopts_glue_test.lua`（25 件：FMS のモジュールで CRZ のページの STEP TO FL390 NOW、乗員の STEP TO FL390、オフと VNAV なしでは何もしない、VNAV で MCP の窓と AFDS の高度、1 秒後に高度セレクターのコマンド 1 回、押しで CRZ ALT FL390・乗員の STEP TO が消える・巡航上昇、MCP を下げていれば何もしない、T/D の 2 分前に X-Plane の一時停止のコマンド 1 回、3.9 分に遠のいてからもう一度、オフでは止めない）。CRZ のページの試験（vnav_pages）はそのまま通る。全体は 184 本すべて通る。X-Plane：新しい `s204_auto_step_climb` 20/20（2026-11-01、X-Plane を起動し直した後の 6 便目。FL310・310 kt で RJAA の東から空中開始、RTE RJAA→PHNL、乗員の STEP TO FL350 で AT NOW、オプションの dataref を ON で 1.1 秒後に MCP 35,000 ft、さらに 1.1 秒後に高度セレクターの押しで CRZ ALT FL350、VNAV SPD・THR REF の巡航上昇（CDU は ACT ECON CRZ CLB）、41 秒で 31,500 ft、130 秒で FL350、VNAV PTH と巡航の段階、STEP TO は空白（乗員の STEP TO が消えた）。1 回目は 15/18：空中開始の後に MCP の既定の 200 kt で減速していて、254 kt からの巡航上昇が加速で遅れ、捕捉中に確かめた筋書きの誤り）、新しい `s205_pause_at_td` 22/22（同じく 5 便目。s202 と同じ FL250 の空中開始、オプションの dataref を ON で約 40 秒後に一時停止、そのとき CRZ のページの TO T/D は 13 NM（対地 399 kt で約 2 分）、FMC は巡航の段階、解いた後 10 秒で止まらず、T/D で降下。1 回目は空中開始の後に A/P が入らず経路を入れられなかった：s202 の 1〜4 回目と同じ不安定さ）。Log.txt に Lua の誤りなし。Plugins → 747-400 のメニューの印と保存は利用者の目視

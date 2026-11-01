@@ -1936,6 +1936,11 @@ function B747_fms_alt_sel_push()
   local crz = B747BR_cruiseAlt
   if crz and crz > 0 and (ph == "CLB" or ph == "CRZ") and mcp > crz + 50 then
     B747BR_cruiseAlt = mcp
+    -- (the sim's options, notes/ATA-34-61-FMC.md §126: the automatic step
+    -- climb's) a crew's STEP TO kept until a new CRZ ALT, as CRZ ALT
+    -- entered on the CDU (step 8b2; before, kept: STEP TO FL350 at FL350
+    -- after the step, s204)
+    setFMSData("stepalt", "")
     B747_fms_preds_now()
   elseif crz and crz > 0 and ph == "CRZ" and mcp < crz - 50 then
     -- (step 9d2a) below CRZ ALT: within 50 NM of the T/D or under the
@@ -1951,6 +1956,7 @@ function B747_fms_alt_sel_push()
       return
     end
     B747BR_cruiseAlt = mcp
+    setFMSData("stepalt", "")
     local d = fmsModules["data"]
     local ta, ra = tonumber(d.desspdtransalt), tonumber(d.desrestalt)
     if ta and mcp < ta then setFMSData("destranspd", "---") setFMSData("desspdtransalt", "-----") end
@@ -4847,6 +4853,46 @@ do
     end
   end
 end
+-- the sim's options (2026-11-01 the user; notes/ATA-34-61-FMC.md §126):
+-- the sim's conveniences, not the airplane's, from X-Plane's Plugins >
+-- 747-400 menu (plugins/b747_fms_bridge: Windows): the automatic step
+-- climb (at the CRZ page's AT NOW the MCP altitude STEP TO, then the
+-- altitude selector's push) and the pause two minutes before the T/D
+-- (B747.68.simopts_model.lua), every half second
+dofile("B747.68.simopts_model.lua")
+B747DR_opt_step_climb = find_dataref("laminar/B747/options/auto_step_climb")
+B747DR_opt_pause_td = find_dataref("laminar/B747/options/pause_at_td")
+B747DR_opt_ap_alt = find_dataref("laminar/B747/autopilot/altitude_dial_ft")
+simCMD_pause_on = find_command("sim/operation/pause_on")
+B747CMD_fms_press_altitude = find_command("laminar/B747/button_switch/press_altitude")
+do
+  local O = B747_simopts_model
+  local s, nextT = O.new(), 0
+  function B747_fms_simopts_update()
+    local now = simDRTime
+    if now < nextT then return end
+    nextT = now + 0.5
+    local air = simDR_onGround ~= 1
+    local page, chg = B747_fms_vnav_page()
+    local crz = page == 2 and chg == nil
+    local on = B747DR_opt_step_climb == 1
+    local step = (on and air and crz) and B747_fms_crz_step() or {}
+    local act, alt = O.step(s, {on = on, air = air, vnav = B747DR_ap_vnav_state == 2, crz = crz,
+      crz_alt = B747BR_cruiseAlt, mcp = B747DR_fms_vnav_mcp_alt, to = step.to, now = step.now, t = now})
+    if act == "mcp" then
+      -- the window and the AFDS's altitude, as the knob sets them (the
+      -- second 3 s later: B747.70.xt.autopilot.lua's setSimAlt)
+      B747DR_fms_vnav_mcp_alt = alt
+      B747DR_opt_ap_alt = alt
+    elseif act == "push" then
+      B747CMD_fms_press_altitude:once()
+    end
+    if O.pause(s, {on = B747DR_opt_pause_td == 1, air = air, crz = page == 2, td = B747_fms_vnav_td(),
+        gs = simDR_groundspeed * 1.94384}) then
+      simCMD_pause_on:once()
+    end
+  end
+end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
 -- p.1236): thirty seconds after the engines' shutdown on the ground after
 -- a flight (all four's N2 under the ENG FAIL speed: laminar/B747/engines/
@@ -5542,6 +5588,8 @@ function after_physics()
     B747_fms_emergency_update()
     -- (step 12h1) the company's flight plan uplink
     B747_fms_company_update()
+    -- the sim's options: the automatic step climb, the pause before the T/D
+    B747_fms_simopts_update()
 
 	--Display Waypoint ETA on ND
 	waypoint_eta_display()
