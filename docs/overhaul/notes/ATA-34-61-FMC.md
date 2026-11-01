@@ -1748,3 +1748,22 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - つなぎ：各 CDU の IRU の名前と航跡（`B747_fms_altn_iru`・`B747_fms_altn_track`）、フレームの数（`B747_fms_frame_no`）。FMS の主のチャンクの局所変数が 200 を超えたので、11d と 11e のつなぎを 1 つの `do ... end` にまとめ、`>FMC MESSAGE` で使う `B747_fms_any_fmc` だけを大域にした。
 - 推定：TK は X-Plane の対地航跡（IRS に航跡の dataref が無い。右の CDU は副操縦士側）、TTG は 1 kt 未満で空白、経路の不連続は前後をつないで数える、4L の DELETE は INVALID DELETE。
 - 試験：`altn_nav_model_test.lua`（+20 件：63 件）、`altn_nav_glue_test.lua`（+16 件：44 件）。全 159 本。X-Plane：新しい `s178_irs_progress`：13/13（2026-11-01、立ち上げ直した後の 5 便目）。成田の北の 3,000 ft で RJAA→RJBB（XAC・SPENS・BOKJO）を作り XAC へ DIRECT の後、両方の FMC を故障させると、左の CDU の PROG で IRS PROGRESS：TO XAC 87NM 00:16、NEXT SPENS 107NM 00:20、DEST RJBB 296NM 00:55（321 kt で計算が合う）、IRS L の位置と GS、XTK ERROR R 0.7NM、DTK 216°M、TK 348°M（画像）。4L の SPENS で ENROUTE WPT、LEGS へ行って戻ると DEST。右の CDU は IRS R。Log.txt に Lua の誤りなし。
+
+## 104. 11e3 の実装（2026-11-01：ALTN NAV RADIO）
+
+- 資料：
+  - FCOM p.1422：代替航法では無線を各 CDU で手で同調する。左の CDU は左の VOR・DME・ADF・ILS、右は右、中央は ILS C。
+  - FCOM p.1427–1428、FMSPG p.252–254（ALTN NAV RADIO の行。自動同調は無い）：
+    - VOR：周波数か周波数/針路で M。DME も同調する。DELETE で破線。中央の CDU では空白。
+    - CRS：針路か周波数/針路。DELETE で消える。
+    - ADF：周波数、A（ANT）か B（BFO）を後ろに、またはそれだけ。DELETE で破線。
+    - ILS-MLS：周波数、周波数/針路、針路だけ（周波数があるとき）。周波数だけなら針路は有効な経路の滑走路の針路、無ければ前の針路か 000。DELETE で PARK。自動同調だった ILS は FMC の故障の時に写る。
+    - PRESELECT：どの行の入力も入れておけ、書き込み行に下ろしてから入れる。
+    - FMC は同調を変えるたびに CDU へ送るので、CDU は FMC が同調していた局から始まる。
+  - ATA34_2 p.592（地上で両方の FMC が落ちたとき、または空中で master FMC が落ちたとき、NAV RAD キーでこのページ。ADF も中央の CDU では空白）。
+- 作ったもの：
+  - `B747.68.altn_radio_model.lua`（新）：CDU ごとの VOR（周波数・針路）、ADF（周波数・ANT/BFO）、ILS（周波数・針路、PARK）、PRESELECT 2 つ、FMC の同調の写し。入力の解析は FMC の同調のモデル（`B747.68.tune_model.lua`）の VOR・ILS の周波数と針路の関数を使う。
+  - つなぎ（`B747.68.xt.fms.lua`）：master FMC が動いている間は、毎秒、各 CDU の側の同調を写す（VOR は X-Plane の周波数と FMC の針路、ADF は周波数と ANT/BFO、ILS は FMC が A か M で同調していればその周波数/針路）。`B747_fms_altn_tune`：CDU の入力でその側の無線をすぐ同調する（左：NAV3・ADF 1・NAV1、右：NAV4・ADF 2・NAV2）。同調のモードの文字（`radio/tuningmodes`：ILS・VOR の M、ADF の A・B・M）と、PFD の ILS の目盛（`autopilot/ils_dots`）も。
+  - CDU：`activepages/B744.fms.pages.altnnav.lua` の ALTN NAV RADIO（1L VOR と小字の M、2L CRS、3L ADF と小字の ANT・BFO、4L ILS-MLS か PARK、6L・6R の PRESELECT）。VOR・CRS・ADF は中央の CDU では空白で入力も受けない。つなげる FMC の無い CDU の NAV RAD キーでこのページ。
+- 推定：中央の CDU の ILS C は X-Plane に無いので同調しない（入力は持つ）。ILS の周波数だけのときの針路は FMC の ILS の同調が持っていた目的地の滑走路の ILS の針路。VOR の行の針路だけの入力は INVALID ENTRY。PRESELECT の DELETE で消す。
+- 試験：新しい `altn_radio_model_test.lua`（54 件）、`altn_nav_glue_test.lua`（+21 件：65 件）。全 160 本。X-Plane：新しい `s179_altn_nav_radio`：15/15（2026-11-01、立ち上げ直した後の 6 便目）。成田の北の 3,000 ft で両方の FMC を故障させると、左の CDU の NAV RAD で ALTN NAV RADIO。1L の 114.50/270 で VOR L（NAV3）が 11450 に、4L の 109.50/157 で ILS L（NAV1）が 10950 と PFD の ILS の目盛（ils_dots 1）、3L の 1304.5B で ADF L 1304 と BFO、6L に 110.90/128 を入れて書き込み行へ下ろし 4L へ入れると ILS L が 11090（CDU の画像：VOR 114.50M、CRS 270、ADF 1304.5BFO、ILS-MLS 109.50/157、PRESELECT 110.90/128）。PFD の画像では ILS の識別子（ITJ）と DME が出た。Log.txt に Lua の誤りなし。同じ PFD の画像で FMA の HDG HOLD にモード故障の線が出ていた（FMC を戻しても残る。IRS の方位は有効）。FMC の故障は LNAV・VNAV しか故障にしないので、空中開始の直後に IRU の方位が有効になる前に A/P が HDG HOLD で入った競合とみられ、別に調べる。

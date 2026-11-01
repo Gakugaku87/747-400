@@ -3182,6 +3182,65 @@ function B747_fms_altn_pos(cdu)
 end
 -- a CDU's IRS LEGS modification waiting (its EXEC light)
 function B747_fms_altn_mod(cdu) return altnNav[cdu]~=nil and altnNav[cdu].mod~=nil end
+-- (step 11e3) ALTN NAV RADIO (B747.68.altn_radio_model.lua): while the
+-- master FMC works each CDU's copy of its side's tuning (FMSPG p.252);
+-- with no FMC to connect to, its entries tune its side's radios at once
+-- (FCOM p.1422): the left CDU VOR L (NAV3) with its DME, ADF L, ILS L
+-- (NAV1); the right CDU VOR R (NAV4), ADF R, ILS R (NAV2); the centre
+-- CDU's centre ILS X-Plane does not have (not tuned: estimate)
+dofile("B747.68.altn_radio_model.lua")
+local AR=B747_altn_radio_model
+local altnRadio={fmsL=AR.new(),fmsC=AR.new(),fmsR=AR.new()}
+local RADIO_SIDE={fmsL=1,fmsR=2}
+function B747_fms_altn_radio(cdu) return altnRadio[cdu] or altnRadio.fmsL end
+function B747_fms_altn_side(cdu) return RADIO_SIDE[cdu] end
+-- the FMC's ILS's course (the active route's runway's: estimate), nil
+-- without one
+function B747_fms_altn_rwy_crs()
+  local o=B747_fms_tune().ils_out
+  return o and o.st and o.st.crs or nil
+end
+local function altn_radio_copy(cdu,s)
+  local side=RADIO_SIDE[cdu] or 1
+  local t=B747_fms_tune()
+  local khz=side==1 and simDR_radio_adf1_freq_hz or simDR_radio_adf2_freq_hz
+  local o=t.ils_out
+  local ils=o and (o.mode=="A" or o.mode=="M") and o.st or nil
+  AR.copy(s,{vor_freq=simDR_radio_nav_freq_hz[side+1],vor_crs=t.vor[side].crs,
+    adf_khz=(khz and khz>0) and khz or nil,adf_mode=t.adf[side].mode,
+    ils_freq=ils and ils.freq or nil,ils_crs=ils and ils.crs or nil})
+end
+function B747_fms_altn_radio_copy()
+  for cdu,s in pairs(altnRadio) do altn_radio_copy(cdu,s) end
+end
+-- a CDU's ALTN NAV RADIO into its side's radios
+function B747_fms_altn_tune(cdu)
+  local side=RADIO_SIDE[cdu]
+  if not side then return end
+  local s=altnRadio[cdu]
+  local vidx,iidx=side+1,side-1
+  if s.vor.freq and simDR_radio_nav_freq_hz[vidx]~=s.vor.freq then simDR_radio_nav_freq_hz[vidx]=s.vor.freq end
+  if s.vor.crs then simDR_radio_nav_obs_deg[vidx]=s.vor.crs end
+  if s.adf.khz then
+    local k=math.floor(s.adf.khz)
+    if side==1 then simDR_radio_adf1_freq_hz=k else simDR_radio_adf2_freq_hz=k end
+  end
+  if s.ils.freq then
+    if simDR_radio_nav_freq_hz[iidx]~=s.ils.freq then simDR_radio_nav_freq_hz[iidx]=s.ils.freq end
+    simDR_radio_nav_obs_deg[iidx]=s.ils.crs or 0
+  end
+  local modes=B747DR_radioModes
+  if type(modes)~="string" or string.len(modes)<5 then modes="AAAMM" end
+  local ilsOn=altnRadio.fmsL.ils.freq~=nil or altnRadio.fmsR.ils.freq~=nil
+  modes=replace_char(1,modes,ilsOn and "M" or "P")
+  modes=replace_char(side+1,modes,"M")
+  local a=s.adf.mode
+  modes=replace_char(side+3,modes,a=="ANT" and "A" or (a=="BFO" and "B" or "M"))
+  if B747DR_radioModes~=modes then B747DR_radioModes=modes end
+  -- the PFDs' ILS scales with an ILS tuned (step 10c's)
+  local dots=ilsOn and 1 or 0
+  if B747DR_ils_dots~=dots then B747DR_ils_dots=dots end
+end
 -- (step 11e2) IRS PROGRESS: that CDU's IRU ("L", "C", "R") and track
 -- (magnetic: X-Plane's ground track, the F/O's for the right CDU: estimate)
 simDR_altn_trk_pilot=find_dataref("sim/cockpit2/gauges/indicators/ground_track_mag_pilot")
@@ -3198,6 +3257,8 @@ function update_altn_nav()
   if altnT and now>=altnT and now-altnT<1 then return end
   altnT=now
   local st=B747_fmc_route
+  -- (step 11e3) the radios' tuning from the master FMC
+  if B747_fms_master_ok() then B747_fms_altn_radio_copy() end
   for cdu,s in pairs(altnNav) do
     if anyFMC() then
       if st.active then
