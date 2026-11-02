@@ -566,6 +566,8 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 
 ### オートスロットル・推力管理：作り直し中（6-4：FMC の段 9f1 のモードの論理と engage・disconnect、段 9f2 の制御則と servo、段 9f3 の interlock、段 9g の推力制限、段 9h の E/O、段 11d2a の master FMC の故障）
 
+- 実機に合わせた点（G/A の THR、2026-11-02、notes/ATA-34-61-FMC.md §130）：2,000 fpm に「制御する」（ATA34_2 p.675）ので、超えたら推力を戻す。エネルギーの率（速さの変化の分を含む）で、前より速くレバーを進める（前は FLCH の則のままで、200 ft の着陸復行で 2,000 fpm まで 37 秒、その間に速さを 14 kt 失った）。残り（推定）：ゲイン 3e-5。
+
 - 実機に合わせた点（段 9f3、2026-10-31）：A/T の engage に電源の条件（servo の F/O transfer bus と DC bus 1 か 2：ATA34_2 p.450）を足した（失えば外れて >AUTOTHROT DISC）。VNAV の降下で FMC が A/T に速さを求めるのに A/T が engage していなければ THRUST REQUIRED（FCOM p.1434。前は出す処理が無かった：ATHR-19）。推定：DC はどちらか 1 本で足りること。
 - 実機に合わせた点（FMC の段 9d2、2026-10-31）：VNAV の THR（早期降下、段 9h4b からは driftdown も。cruise descent は段 9h4c から VNAV PTH と A/T の SPD：FCOM p.1268–1269）はレバーを FMC の V/S（約 1,250 fpm）へ動かす。見るのは目標の速さでのエネルギーの率（慣性の V/S と目標の IAS か Mach の変化から、速さを目標に保てば出る V/S）で、効きは FLCH の 1/2、慣性の V/S とエネルギーの率がその率の 100 fpm 以内で速さが目標の 5 kt 以内に 5 秒とどまれば HOLD、aft stop か手の 8° でも HOLD（どれも推定。ATA34_2 p.647：VNAV の推力は FMC の基準推力へ。FMSPG p.3.5-5：その率に達すると THR HOLD。V/S で見ると、降下の速さへ減速しながら上昇する間にレバーを aft stop まで絞り、アイドルで −2,600 fpm になった。計器の V/S が率を一度越えただけで HOLD にすると、X-Plane のエンジンと速さの遅れで率を大きく越え、目標の速さでは水平か上昇になった。率に達した瞬間に HOLD にすると、降下の途中で押した時にピッチが速さを取る間に V/S が率を一瞬で通り、巡航の推力のまま HOLD になって上昇に戻った。FMC の段階が変われば THR から。前は VNAV が THR を求めることが無く、THR の則は FLCH の 125 秒の則と G/A だけ）。VNAV の水平（VNAV ALT・PTH）の後に降下を続けると IDLE からやり直す（前は IDLE の HOLD の掛け金が残り、すぐ HOLD）。
 
