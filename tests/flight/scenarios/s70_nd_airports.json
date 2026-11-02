@@ -1,9 +1,9 @@
 {
   "name": "s70_nd_airports",
-  "description": "ND の出発・到着空港と滑走路（5-2 段 5c-3b）の X-Plane での確認、空中。ミュンヘン（EDDM）26R の進入路の上 14 NM・5,000 ft・160 kt・263° で開始。CDU で FMC に経路（EDDF の 25C から EDDM、ARRIVALS で ILS26R）を入れ、空中で ACTIVATE と EXEC（6-1・6-2 段 5f：前は試験キットの `route` で X-Plane の FMS に EDDF・RW25C・RW26R（現用点）・EDDM を直接入れた。CDU の入力が X-Plane の FMS のメッセージで弾かれることは、FMC が経路を持つようになって無くなった）。FMC は出発と到着の滑走路を、X-Plane の DEP ARR と同じく閾値の名前つきの位置（標高つき）で流す。40・20 NM は 26R を縮尺どおり、両端から 14.2 NM の破線、閾値に 26R（FCOM p.1149）。10 NM は滑走路は表示の外で、こちらへ延びる破線だけ。80 NM は EDDM の空港記号と 26R・滑走路に沿う線、320 NM は EDDF の記号と 25C。ARPT に関わらない。MAP CTR、VOR（出さない）、副操縦士の ND。ND を撮る。",
+  "description": "ND の出発・到着空港と滑走路（5-2 段 5c-3b）の X-Plane での確認、空中。ミュンヘン（EDDM）26R の進入路の上 14 NM・5,000 ft・真 243 kt（指示 約 225 kt、フラップ上げ。2026-11-02 まで 160 kt：10-25 に FCTM に合わせた失速より遅く、エンジンの一部に火が付かない開始では失速して地面に落ちた）・263° で開始。CDU で FMC に経路（EDDF の 25C から EDDM、ARRIVALS で ILS26R）を入れ、空中で ACTIVATE と EXEC（6-1・6-2 段 5f：前は試験キットの `route` で X-Plane の FMS に EDDF・RW25C・RW26R（現用点）・EDDM を直接入れた。CDU の入力が X-Plane の FMS のメッセージで弾かれることは、FMC が経路を持つようになって無くなった）。FMC は出発と到着の滑走路を、X-Plane の DEP ARR と同じく閾値の名前つきの位置（標高つき）で流す。40・20 NM は 26R を縮尺どおり、両端から 14.2 NM の破線、閾値に 26R（FCOM p.1149）。10 NM は滑走路は表示の外で、こちらへ延びる破線だけ。80 NM は EDDM の空港記号と 26R・滑走路に沿う線、320 NM は EDDF の記号と 25C。ARPT に関わらない。MAP CTR、VOR（出さない）、副操縦士の ND。ND を撮る。",
   "reload": true,
   "flight": {
-    "lle_air_start": { "latitude": 48.393705, "longitude": 12.170053, "elevation_in_meters": 1524.0, "heading_true": 263.4, "speed_in_meters_per_second": 82.3 },
+    "lle_air_start": { "latitude": 48.393705, "longitude": 12.170053, "elevation_in_meters": 1524.0, "heading_true": 263.4, "speed_in_meters_per_second": 125.0 },
     "engine_status": { "all_engines": { "running": true } },
     "local_time": { "day_of_year": 295, "time_in_24_hours": 12.0 },
     "weather": {
@@ -22,7 +22,7 @@
     { "do": "remember", "dref": "sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot", "as": "hdg0" },
     { "do": "set", "note": "MCP 高度は今の高度", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 0, "rel": "alt0", "round": 100 },
     { "do": "set", "note": "MCP 方位は今の方位", "dref": "laminar/B747/autopilot/heading/degrees", "value": 0, "rel": "hdg0", "round": 1 },
-    { "do": "set", "note": "MCP 速度 160 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 160 },
+    { "do": "set", "note": "MCP 速度 220 kt（フラップ上げ）", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 220 },
     { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
     { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
     { "do": "wait", "note": "A/P のサーボ", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },

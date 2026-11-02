@@ -1,9 +1,9 @@
 {
   "name": "s110_nd_map_ctr",
-  "description": "ND の MAP CTR を実機どおりに（5-2 の残り、2026-10-28 の利用者の決定「NDのMAP CTRのレンジの件は実機通りの仕様で」）の X-Plane での確認、空中。ミュンヘン（EDDM）26R の進入路の上 14 NM・5,000 ft・160 kt・263° で開始（s70 と同じ）。CDU で EDDF の 25C から EDDM・ILS26R の経路を入れて EXEC。MAP 40 NM（X-Plane の地図の範囲 2、拡大の航跡線）から CTR：選んだ範囲が全周のローズの円まで（FCOM p.1009 の図：半分の範囲の目盛がローズの半径の半分）。X-Plane の地図は 1 段上の 3（縮尺が半分）、地図の記号も拡大の半分の縮尺（26R は 2.15 NM で 12 px の 3 コマ目）、MAP CTR の航跡線と範囲の目盛（半分の範囲 20 の数字が上と下に：FCOM p.1143）、方位の印 ▽ の先がローズの外縁に触れる（FCOM p.1142：前は 9 px 外に浮いていた）。範囲のつまみで 10 NM（X-Plane は 1）、つまみの dataref を直接書いて 320 NM（X-Plane は 6、全体の大きさ）と 640 NM（X-Plane は 6 のまま、パネルの半分の大きさの地図）。VOR CTR は選んだ範囲のまま。拡大の MAP に戻すと X-Plane の範囲も戻る。副操縦士の ND も MAP CTR で 1 段上。ND を撮る（経路の線が点の記号を通ること、ローズ、航跡線と数字、▽）。",
+  "description": "ND の MAP CTR を実機どおりに（5-2 の残り、2026-10-28 の利用者の決定「NDのMAP CTRのレンジの件は実機通りの仕様で」）の X-Plane での確認、空中。ミュンヘン（EDDM）26R の進入路の上 14 NM・5,000 ft・真 243 kt（指示 約 225 kt、フラップ上げ。2026-11-02 まで 160 kt：10-25 に FCTM に合わせた失速より遅く、エンジンの一部に火が付かない開始では失速して地面に落ちた）・263° で開始（s70 と同じ）。CDU で EDDF の 25C から EDDM・ILS26R の経路を入れて EXEC。MAP 40 NM（X-Plane の地図の範囲 2、拡大の航跡線）から CTR：選んだ範囲が全周のローズの円まで（FCOM p.1009 の図：半分の範囲の目盛がローズの半径の半分）。X-Plane の地図は 1 段上の 3（縮尺が半分）、地図の記号も拡大の半分の縮尺（26R は 2.15 NM で 12 px の 3 コマ目）、MAP CTR の航跡線と範囲の目盛（半分の範囲 20 の数字が上と下に：FCOM p.1143）、方位の印 ▽ の先がローズの外縁に触れる（FCOM p.1142：前は 9 px 外に浮いていた）。範囲のつまみで 10 NM（X-Plane は 1）、つまみの dataref を直接書いて 320 NM（X-Plane は 6、全体の大きさ）と 640 NM（X-Plane は 6 のまま、パネルの半分の大きさの地図）。VOR CTR は選んだ範囲のまま。拡大の MAP に戻すと X-Plane の範囲も戻る。副操縦士の ND も MAP CTR で 1 段上。ND を撮る（経路の線が点の記号を通ること、ローズ、航跡線と数字、▽）。",
   "reload": true,
   "flight": {
-    "lle_air_start": { "latitude": 48.393705, "longitude": 12.170053, "elevation_in_meters": 1524.0, "heading_true": 263.4, "speed_in_meters_per_second": 82.3 },
+    "lle_air_start": { "latitude": 48.393705, "longitude": 12.170053, "elevation_in_meters": 1524.0, "heading_true": 263.4, "speed_in_meters_per_second": 125.0 },
     "engine_status": { "all_engines": { "running": true } },
     "local_time": { "day_of_year": 295, "time_in_24_hours": 12.0 },
     "weather": {
@@ -22,7 +22,7 @@
     { "do": "remember", "dref": "sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot", "as": "hdg0" },
     { "do": "set", "note": "MCP 高度は今の高度", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 0, "rel": "alt0", "round": 100 },
     { "do": "set", "note": "MCP 方位は今の方位", "dref": "laminar/B747/autopilot/heading/degrees", "value": 0, "rel": "hdg0", "round": 1 },
-    { "do": "set", "note": "MCP 速度 160 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 160 },
+    { "do": "set", "note": "MCP 速度 220 kt（フラップ上げ）", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 220 },
     { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
     { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
     { "do": "wait", "note": "A/P のサーボ", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },

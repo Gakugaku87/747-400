@@ -1,9 +1,9 @@
 {
   "name": "s111_legs_plan_ctr",
-  "description": "LEGS の PLAN の CTR と STEP（6-1・6-2、notes/ATA-34-61-FMC.md §42；FCOM p.1333 の 9・10；FMSPG p.124）の X-Plane での確認、空中。ミュンヘン（EDDM）26R の進入路の上 14 NM・5,000 ft・160 kt・263° で開始（s110 と同じ）。CDU で EDDF の 25C から EDDM・ILS26R の経路を入れて EXEC、LEGS。MAP では <CTR> も STEP> も無い。機長の ND を PLN にすると、X-Plane の地図は PLN（北が上）、左の CDU の ACT RTE 1 LEGS の 1 ページ目の最初の点に <CTR>（9 桁目から）、6R に STEP>、区切り線は 17 桁目までで MAP CTR の小さい字（FCOM p.1330 の図）、X-Plane の表示中の点（FMS ブリッジの laminar/B747/fms/xp/displayed、1 から）は現用点と同じ行。STEP で <CTR> が次の点へ進み、表示中の点も 1 行進む（ND の PLAN の中心が移る）。もう一度の STEP で進入復行の点：X-Plane の計画に無いので表示中の点は前のまま。NEXT・PREV PAGE と LEGS キーでは、表示したページの最初の点が中心（FMSPG p.124。この経路の 2 ページ目は終わりの破線だけで、中心は動かない：推定）。副操縦士の ND も PLN にすると右の CDU にも <CTR> と STEP>、右の STEP で両方の CDU の <CTR> が進む（中心は FMC に 1 つ：X-Plane の表示中の点が 1 つだから。実機は CDU ごと）。ND を MAP に戻すと STEP> は消える。ND の PLAN と CDU を撮る（中心の点・機体の記号・X-Plane の地図がそろうこと）。",
+  "description": "LEGS の PLAN の CTR と STEP（6-1・6-2、notes/ATA-34-61-FMC.md §42；FCOM p.1333 の 9・10；FMSPG p.124）の X-Plane での確認、空中。ミュンヘン（EDDM）26R の進入路の上 14 NM・5,000 ft・真 243 kt（指示 約 225 kt、フラップ上げ。2026-11-02 まで 160 kt：10-25 に FCTM に合わせた失速より遅く、エンジンの一部に火が付かない開始では失速して地面に落ちた）・263° で開始（s110 と同じ）。CDU で EDDF の 25C から EDDM・ILS26R の経路を入れて EXEC、LEGS。MAP では <CTR> も STEP> も無い。機長の ND を PLN にすると、X-Plane の地図は PLN（北が上）、左の CDU の ACT RTE 1 LEGS の 1 ページ目の最初の点に <CTR>（9 桁目から）、6R に STEP>、区切り線は 17 桁目までで MAP CTR の小さい字（FCOM p.1330 の図）、X-Plane の表示中の点（FMS ブリッジの laminar/B747/fms/xp/displayed、1 から）は現用点と同じ行。STEP で <CTR> が次の点へ進み、表示中の点も 1 行進む（ND の PLAN の中心が移る）。もう一度の STEP で進入復行の点：X-Plane の計画に無いので表示中の点は前のまま。NEXT・PREV PAGE と LEGS キーでは、表示したページの最初の点が中心（FMSPG p.124。この経路の 2 ページ目は終わりの破線だけで、中心は動かない：推定）。副操縦士の ND も PLN にすると右の CDU にも <CTR> と STEP>、右の STEP で両方の CDU の <CTR> が進む（中心は FMC に 1 つ：X-Plane の表示中の点が 1 つだから。実機は CDU ごと）。ND を MAP に戻すと STEP> は消える。ND の PLAN と CDU を撮る（中心の点・機体の記号・X-Plane の地図がそろうこと）。",
   "reload": true,
   "flight": {
-    "lle_air_start": { "latitude": 48.393705, "longitude": 12.170053, "elevation_in_meters": 1524.0, "heading_true": 263.4, "speed_in_meters_per_second": 82.3 },
+    "lle_air_start": { "latitude": 48.393705, "longitude": 12.170053, "elevation_in_meters": 1524.0, "heading_true": 263.4, "speed_in_meters_per_second": 125.0 },
     "engine_status": { "all_engines": { "running": true } },
     "local_time": { "day_of_year": 295, "time_in_24_hours": 12.0 },
     "weather": {
@@ -22,7 +22,7 @@
     { "do": "remember", "dref": "sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot", "as": "hdg0" },
     { "do": "set", "note": "MCP 高度は今の高度", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 0, "rel": "alt0", "round": 100 },
     { "do": "set", "note": "MCP 方位は今の方位", "dref": "laminar/B747/autopilot/heading/degrees", "value": 0, "rel": "hdg0", "round": 1 },
-    { "do": "set", "note": "MCP 速度 160 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 160 },
+    { "do": "set", "note": "MCP 速度 220 kt（フラップ上げ）", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 220 },
     { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
     { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
     { "do": "wait", "note": "A/P のサーボ", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
