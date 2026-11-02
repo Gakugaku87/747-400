@@ -207,6 +207,35 @@ T.check(s.loc_track and c > c2 + 0.5, ("LOC TRACK, the track a degree off for 10
 s = R.new()
 run(s, loc_inp({mode = "LOC", loc_dots = 1.0, tas = 180, bank = 0}), 3)
 T.check(not s.loc_track and s.loc_int == 0, "the capture: no integral")
+T.check(s.loc_bias == 0, "nor the course's bias")
+-- (2026-11-02) the course given 0.3 degree off the beam's (the FMC's ILS
+-- course, the database's): on a point mass (the bank a second behind the
+-- command, the track turning at g tan(bank) / V) from the centreline at
+-- 1,500 ft, 150 kt over the ground; the old law flew parallel 12 m off
+-- (gs x LOOK_S x tan 0.3); the beam's distance integrated takes it back
+local function course_bias(ky)
+    local saved = R.LOC_KY
+    R.LOC_KY = ky
+    local sb, ib = R.new(), loc_inp({mode = "LOC", tas = 152, gs = 150, ra = 1500, bank = 0, course = 337.3})
+    local v, y, trk, bank, worst = 150 * 1852 / 3600, 0, 337.0, 0, 0
+    local dist = R.loc_distance(1500)
+    for n = 1, math.floor(300 / DT) do
+        ib.trk_mag, ib.bank = trk, bank
+        ib.loc_dots = -math.deg(math.atan(y / dist)) / R.LOC_DOT_DEG
+        local cmd = R.update(sb, ib, DT)
+        bank = bank + (cmd - bank) * DT / 1.0
+        trk = trk + math.deg(9.80665 * math.tan(math.rad(bank)) / v) * DT
+        y = y + v * math.sin(math.rad(trk - 337.0)) * DT
+        if n * DT > 240 then worst = math.max(worst, math.abs(y)) end
+    end
+    R.LOC_KY = saved
+    return worst, sb.loc_bias
+end
+local off_old = course_bias(0)
+T.check(off_old > 9 and off_old < 15, ("the course 0.3 off, no bias integral: parallel %.1f m off (about 12)"):format(off_old))
+local off_new, bias = course_bias(R.LOC_KY)
+T.check(off_new < 2, ("with it: within 2 m of the beam from 240 to 300 s (%.2f)"):format(off_new))
+T.near(bias, -0.3, 0.1, ("its bias the course's error, -0.3 (%.2f)"):format(bias))
 -- NORM's polar areas: NCD
 s = R.new()
 c = run(s, loc_inp({mode = "LOC", hdg_valid = false, bank = 4}), 1)
