@@ -95,6 +95,22 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 $recDir = Join-Path $script:XPRoot 'Output\B747_flighttest'
 New-Item -ItemType Directory -Force -Path $recDir | Out-Null
 $logPath = Join-Path $script:XPRoot 'Log.txt'
+# XTLua's callouts' Lua errors: each plugin's init.lua appends them to
+# Output/B747_xtlua_errors.txt (XTLua prints them to no log and stops all
+# the plugin's modules: s150, 2026-11-02); a new one stops the scenario
+$xtErrPath = Join-Path $script:XPRoot 'Output\B747_xtlua_errors.txt'
+$xtErrSize0 = if (Test-Path $xtErrPath) { (Get-Item $xtErrPath).Length } else { 0 }
+$script:xtluaError = $null
+function Get-XTLuaErrors {
+    if (-not (Test-Path $xtErrPath)) { return @() }
+    $fs = [IO.File]::Open($xtErrPath, 'Open', 'Read', 'ReadWrite')
+    try {
+        if ($fs.Length -le $xtErrSize0) { return @() }
+        [void]$fs.Seek($xtErrSize0, 'Begin')
+        $text = (New-Object IO.StreamReader($fs, [Text.Encoding]::UTF8)).ReadToEnd()
+    } finally { $fs.Dispose() }
+    return @($text -split "`r?`n" | Where-Object { $_ -ne '' })
+}
 
 $results = New-Object System.Collections.ArrayList
 $wall = [Diagnostics.Stopwatch]::StartNew()
@@ -139,6 +155,11 @@ function Get-Expected($step) {
 # Test-XPStuck says so once the clock has not moved for 30 s of wall time.
 $script:clock = @{ sim = $null; wall = 0.0 }
 function Test-XPStuck {
+    if ($null -eq $script:xtluaError) {
+        $e = @(Get-XTLuaErrors)
+        if ($e.Count -gt 0) { $script:xtluaError = $e[0] }
+    }
+    if ($null -ne $script:xtluaError) { return $true }
     $t = Get-XPDataref 'sim/time/total_running_time_sec'
     $now = $wall.Elapsed.TotalSeconds
     if ($null -eq $script:clock.sim -or $t -ne $script:clock.sim) {
@@ -149,6 +170,7 @@ function Test-XPStuck {
     return ($now - $script:clock.wall) -gt 30
 }
 function Get-StuckMessage {
+    if ($null -ne $script:xtluaError) { return "XTLua stopped the plugin's modules on a Lua error: $($script:xtluaError)" }
     $p = Get-Process -Name 'X-Plane' -ErrorAction SilentlyContinue | Select-Object -First 1
     return "X-Plane stopped: the sim clock has not moved for {0:N0} s (process responding: {1})" -f `
         ($wall.Elapsed.TotalSeconds - $script:clock.wall), $(if ($p) { $p.Responding } else { 'no process' })
@@ -471,6 +493,11 @@ if (Test-Path $logPath) {
     $log[$logStart..($log.Count - 1)] | Out-File -Encoding utf8 (Join-Path $out 'log_full.txt')
     $log[$logStart..($log.Count - 1)] | Where-Object { $_ -match '(?i)\bE/|error|LUA|xtlua|fail|missing|cannot|unable|replaced' } |
         Out-File -Encoding utf8 (Join-Path $out 'log_errors.txt')
+}
+$xtErrors = @(Get-XTLuaErrors)
+if ($xtErrors.Count -gt 0) {
+    $xtErrors | Out-File -Encoding utf8 (Join-Path $out 'xtlua_errors.txt')
+    if ($null -eq $script:xtluaError) { Add-Result @{ do = 'xtlua' } 'fail' ("XTLua error: " + $xtErrors[0]) }
 }
 
 $summary = [ordered]@{

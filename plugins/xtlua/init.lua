@@ -480,12 +480,24 @@ function setup_callback_var(var_name,var_value)
 	n[var_name] = var_value
 end
 
+-- (747-400 overhaul) a callout's Lua error: XTLua prints it only to its
+-- console, in no log, and stops every module of this plugin. It also goes
+-- to Output/B747_xtlua_errors.txt with its traceback, then on to XTLua as
+-- before (tests/flight/run_scenario.ps1 fails a scenario on it)
 function do_callout(fname)
 	func=n[fname]
 	if func ~= nil then
 		if STP ~= nil then
 			STP.add_known_function(func, fname)
 		end
-		func()
+		local ok, err = xpcall(func, debug and debug.traceback or tostring)
+		if not ok then
+			local log = io and io.open("Output/B747_xtlua_errors.txt", "a")
+			if log then
+				log:write((os and os.date and os.date("%Y-%m-%d %H:%M:%S ")) or "", tostring(fname), ": ", tostring(err), "\n")
+				log:close()
+			end
+			error(err, 0)
+		end
 	end
 end
