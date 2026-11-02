@@ -301,7 +301,9 @@ local function nd_bearing(isCapt,abs_heading)
   end
   local mag_diff=getHeadingDifference(simDR_true_heading,simDR_mag_heading)
   if mode==2 and nd_track_map() then return getHeadingDifference(trk-mag_diff,abs_heading) end
-  if mode==3 then return abs_heading+simDR_variation end
+  -- PLN true north up (FCOM p.1110; 6-1/6-2 step 6d2: before, plus the
+  -- variation, magnetic north up as X-Plane's PLN map drew the route)
+  if mode==3 then return abs_heading end
   return getHeadingDifference(hdg-mag_diff,abs_heading)
 end
 
@@ -1042,6 +1044,10 @@ function newIcons()
   --flightplan
   local start=B747DR_fmscurrentIndex-1
   if start<1 then start=1 end
+  -- the active waypoint: the FMC's (fmscurrentIndex; 6-1/6-2 step 6d2:
+  -- X-Plane's current waypoint is its plan's last row, before the active
+  -- one: xtlua/fms's [10])
+  local active=B747DR_fmscurrentIndex
 
   for n=start,table.getn(fmsTable),1 do
     -- a direct-to's start (DTOPOS in the FMC's flight plan, 6-1/6-2 step
@@ -1052,7 +1058,7 @@ function newIcons()
     --Captain flightplan
     if wpt and distance < ranges[simDR_range_dial_capt + 1] and (simDR_map_mode==2 or simDR_map_mode==4) then
 
-      if fmsTable[n][10]==true then
+      if n==active then
 	      makeIcon(iconTextDataCapt,3003,fmsTable[n][8],fmsTable[n][5],fmsTable[n][6],distance,n)
       else
 	      makeIcon(iconTextDataCapt,3005,fmsTable[n][8],fmsTable[n][5],fmsTable[n][6],distance,n)
@@ -1062,7 +1068,7 @@ function newIcons()
     distance = getDistance(display_latitude_fo,display_longitude_fo,fmsTable[n][5],fmsTable[n][6])
     if wpt and distance < ranges[simDR_range_dial_fo + 1] and (backport_map_mode_copilot==2 or backport_map_mode_copilot==4) then
 
-      if fmsTable[n][10]==true then
+      if n==active then
 	      makeIcon(iconTextDataFO,3003,fmsTable[n][8],fmsTable[n][5],fmsTable[n][6],distance,n)
       else
 	      makeIcon(iconTextDataFO,3005,fmsTable[n][8],fmsTable[n][5],fmsTable[n][6],distance,n)
@@ -1249,20 +1255,56 @@ function aircraft_unload()
   end
 end
 
+-- (6-1/6-2 step 6d2; notes/ATA-34-61-FMC.md §132) each ND's map for the
+-- route line the FMS bridge plugin draws (laminar/B747/nd/line/view), as
+-- the route's symbols are placed: the view (none without that side's IRS
+-- (newIcons), in APP and VOR: FCOM p.1147 the route in MAP, MAP CTR and
+-- PLAN), the map's centre (the airplane, PLAN's centre waypoint), the true
+-- direction up (nd_bearing's), the pixels per NM (map_scale's units, 640
+-- for 465 pixels)
+B747DR_nd_line_view = find_dataref("laminar/B747/nd/line/view")
+function updateNDLineView()
+  for side = 0, 1 do
+    local isCapt = side == 0
+    local mode = isCapt and B747DR_nd_mode_capt or B747DR_nd_mode_fo
+    local irs = isCapt and captIRS or foIRS
+    local center = isCapt and B747_nd_map_center_capt or B747_nd_map_center_fo
+    local view = 0
+    if irs ~= 0 then
+      if mode == 2 then view = center > 0 and 2 or 1 elseif mode == 3 then view = 3 end
+    end
+    local b = side * 5
+    B747DR_nd_line_view[b] = view
+    B747DR_nd_line_view[b + 1] = isCapt and display_latitude_cpt or display_latitude_fo
+    B747DR_nd_line_view[b + 2] = isCapt and display_longitude_cpt or display_longitude_fo
+    B747DR_nd_line_view[b + 3] = -nd_bearing(isCapt, 0)
+    B747DR_nd_line_view[b + 4] = map_scale(isCapt) / UNITS_PER_PX
+  end
+end
+
+-- PLAN's centre: the FMC's row (laminar/B747/fms/plan_ctr_row; 6-1/6-2
+-- step 6d2: X-Plane keeps its displayed waypoint at or after its current
+-- one, its plan's last row now), else X-Plane's displayed waypoint
+B747DR_fms_plan_ctr_row = find_dataref("laminar/B747/fms/plan_ctr_row")
 function updateNDLatLong()
   display_latitude_cpt=simDR_latitude
   display_longitude_cpt=simDR_longitude
   display_latitude_fo=simDR_latitude
   display_longitude_fo=simDR_longitude
-  if string.len(xpFMSDataJSON) <3 then
-    return
+  local dV=B747DR_fms_plan_ctr_row
+  local n=table.getn(fmsTable)
+  if dV<1 then
+    if string.len(xpFMSDataJSON) <3 then
+      return
+    end
+    --simDR_latitude, simDR_longitude
+    --print("xpFMSDataJSON"..xpFMSDataJSON)
+    local displayJSON=json.decode(xpFMSDataJSON)
+    --print("displayJSON="..displayJSON[1])
+    dV=displayJSON[1]
+    n=n-1
   end
-  --simDR_latitude, simDR_longitude
-  --print("xpFMSDataJSON"..xpFMSDataJSON)
-  local displayJSON=json.decode(xpFMSDataJSON)
-  --print("displayJSON="..displayJSON[1])
-  local dV=displayJSON[1]
-  if dV<table.getn(fmsTable) then
+  if dV>=1 and dV<=n then
     --print("display Lat Long="..fmsTable[dV][5].." "..fmsTable[dV][6])
     if simDR_map_mode==4 then
       display_latitude_cpt=fmsTable[dV][5]
@@ -1303,6 +1345,7 @@ function after_physics()
   end
 
   updateNDLatLong()
+  updateNDLineView()
 
   --force new icons if range dial changes (stop bleed into other displays)
   if simDR_range_dial_capt~=last_range_dial then

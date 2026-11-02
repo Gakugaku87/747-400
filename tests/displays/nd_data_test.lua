@@ -47,6 +47,9 @@ local function run(rt, seconds)
 end
 run(fmc, 2)
 fmc:set("xtlua/fms", ROUTE)
+-- the active waypoint's row: the FMC's (6-1/6-2 step 6d2; before, X-Plane's
+-- current waypoint, [10])
+fmc:set("laminar/B747/autopilot/ap_monitor/fmscurrentIndex", 2)
 fmc:set("sim/flightmodel/position/latitude", 35.0)
 fmc:set("sim/flightmodel/position/longitude", 140.0)
 fmc:set("sim/flightmodel2/position/groundspeed", 300)                 -- 583 kt

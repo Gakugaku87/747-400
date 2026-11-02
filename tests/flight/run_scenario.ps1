@@ -166,6 +166,30 @@ function Get-CasLines {
     return $lines
 }
 
+# An air start with the engines running leaves some of them unlit now and
+# then (2026-11-01: s202's first four runs, s205 and s206, N2 1 %, no
+# generators, no A/P; 2026-11-02: s111 twice and the s219 runs, engines 3
+# and 4 windmilling while 1 and 2 ran, s111's 148 kt clean then stalled and
+# flew into the ground: X-Plane's crash set every engine on fire and
+# seized). An engine whose fuel was cut a few seconds after the start still
+# turned above 40 % N2 at 8 s and seemed to stop 20-30 s on, so 8 s after
+# it every engine burning fuel, else the air start again, twice at most
+# (before, engine 1's N2 alone and only after a reload)
+function Confirm-AirStartEngines($init) {
+    $run = $init.engine_status
+    if (-not ($init.lle_air_start -and $run -and $run.all_engines -and $run.all_engines.running)) { return }
+    $n = 4
+    try { $n = [int](Get-XPDataref 'sim/aircraft/engine/acf_num_engines') } catch { $n = 4 }
+    for ($try = 1; $try -le 2; $try++) {
+        Start-Sleep -Seconds 8
+        $burning = @(Get-XPDataref 'sim/flightmodel2/engines/engine_is_burning_fuel')
+        $off = @(0..($n - 1) | Where-Object { [int]$burning[$_] -ne 1 } | ForEach-Object { $_ + 1 })
+        if ($off.Count -eq 0) { return }
+        $t = Start-XPFlight $init
+        Add-Result @{ do = 'flight' } 'warn' ("engines {0} off after the air start: the air start again (sim time {1} s)" -f ($off -join ','), [math]::Round($t, 1))
+    }
+}
+
 # the first Log.txt line of this run, for the excerpt at the end
 $logStart = if (Test-Path $logPath) { (Get-Content $logPath).Count } else { 0 }
 
@@ -243,20 +267,10 @@ if ($Reload) {
     if ($init.lle_air_start) {
         $t = Start-XPFlight $init
         Add-Result @{ do = 'flight' } 'info' ("the air start again on the reloaded aircraft (sim time {0} s)" -f [math]::Round($t, 1))
-        # Now and then the engines are off after it (2026-11-01: s202's first
-        # four runs, s205 and s206 after a fresh load the runner did not see
-        # in Log.txt and reloaded at once; N2 1 %, no generators, no A/P):
-        # the air start again, twice at most, while engine 1 does not run
-        $run = $init.engine_status
-        if ($run -and $run.all_engines -and $run.all_engines.running) {
-            for ($try = 1; $try -le 2; $try++) {
-                Start-Sleep -Seconds 8
-                if ((Get-XPDataref 'sim/cockpit2/engine/indicators/N2_percent' 0) -gt 40) { break }
-                $t = Start-XPFlight $init
-                Add-Result @{ do = 'flight' } 'warn' ("the engines off after the air start: the air start again (sim time {0} s)" -f [math]::Round($t, 1))
-            }
-        }
+        Confirm-AirStartEngines $init
     }
+} elseif (-not $NoFlight) {
+    Confirm-AirStartEngines $init
 }
 $loaded = Get-XPDataref 'sim/aircraft/view/acf_relative_path'
 Add-Result @{ do = 'aircraft' } 'info' $loaded

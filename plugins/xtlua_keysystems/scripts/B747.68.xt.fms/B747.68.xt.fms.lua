@@ -954,6 +954,7 @@ simDR_fms_exec_light=find_dataref("sim/cockpit2/radios/indicators/fms_exec_light
 -- the AFDS
 dofile("B747.68.path_model.lua")
 dofile("B747.68.lnav_model.lua")
+dofile("B747.68.nd_line_model.lua")
 -- the FMC's performance database (6-1/6-2 step 8a; notes/ATA-34-61-FMC.md
 -- §44): the FCOM PI tables for the engine type, and the outside air's ISA
 -- deviation (degrees C) at the pressure altitude for the maximum altitude
@@ -2367,6 +2368,14 @@ end
 local lnavFirst=nil
 local lnavSequencing=false
 local lnavWasEngaged=false
+-- (step 6d2) the ND's line to draw anew (B747_fmc_nd_line), the element
+-- LNAV sequenced last (its turn into the active leg drawn while flown)
+B747_nd_line_dirty=true
+do
+  local prev=nil
+  function B747_fmc_nd_line_prev(e) prev=e end
+  function B747_fmc_nd_line_prev_of() return prev end
+end
 B747DR_fms_lnav_valid=find_dataref("laminar/B747/fms/lnav/valid")
 B747DR_fms_lnav_roll=find_dataref("laminar/B747/fms/lnav/roll")
 B747DR_fms_lnav_mode=find_dataref("laminar/B747/fms/lnav/mode")
@@ -2427,11 +2436,15 @@ local function lnav_pturn()
   if e1 and e1.kind=="pturn" and h and h.leg==e1.leg then return h end
   return nil
 end
-local function lnav_hold_sizes()
+-- the sizes for the path model's shape, marked drawn ((step 6d2) not for
+-- the ND's line: `keep`)
+local function lnav_hold_sizes(keep)
   local i,t=lnav_to_hold()
-  holdDrawn=i and {i=i,r=t.r,l=t.l} or nil
   local h=lnav_pturn()
-  ptDrawn=h
+  if not keep then
+    holdDrawn=i and {i=i,r=t.r,l=t.l} or nil
+    ptDrawn=h
+  end
   if not i and not h then return nil end
   local out={}
   if i then out[i]={r=t.r,l=t.l} end
@@ -2457,7 +2470,10 @@ function B747_fmc_lnav_build()
   routePath=B747_path_model.build(r.legs,B747_route_model.leg_from(r,1),{var=lnav_var,alt=simDR_pressureAlt1})
   if not st.active then lnavPath,lnavFirst=nil,nil return end
   local key=lnav_leg_key(r.legs[1])
-  if key~=lnavFirst and not lnavSequencing then B747_lnav_model.reset(B747_fmc_lnav) end
+  if key~=lnavFirst and not lnavSequencing then
+    B747_lnav_model.reset(B747_fmc_lnav)
+    B747_fmc_nd_line_prev(nil)
+  end
   lnavFirst=key
   lnavPath=routePath
   -- the lateral offset (step 7d): LNAV's path its lines; the ND's line the
@@ -2469,6 +2485,7 @@ local function fms_text(id) return (string.gsub(fmsModules["data"][id],"%s+$",""
 local crsReversal=false
 function B747_fmc_route_changed()
   B747_fmc_lnav_build()
+  B747_nd_line_dirty=true
   -- the predictions for the new legs at once (step 8d: the pages read them
   -- by the legs' places)
   B747_fms_preds_now()
@@ -2499,10 +2516,11 @@ function B747_fmc_route_changed()
     if fms~=routePending then routePending,routePendingT=fms,simDRTime end
     routePendingMap=map
   end
-  -- the activation in flight: X-Plane's current waypoint and the AFDS's to
-  -- the active one (with a new plan: once it is loaded)
+  -- the activation in flight: X-Plane's current waypoint looked at again
+  -- (with a new plan: once it is loaded; the AFDS's the active one's row
+  -- each frame: B747_fmc_route_sync)
   if active and not routeWasActive and simDR_onGround==0 and routePending==nil then
-    routeSync=B747_route_model.active_row(r,map)
+    routeSync=map.n
     routeSyncT,routeSyncWrites=simDRTime,0
   end
   routeWasActive=active
@@ -2525,10 +2543,14 @@ function B747_fmc_exec_lights()
 end
 
 -- each frame (6-1/6-2 step 5e): a new plan to X-Plane once the route has
--- stayed the same a second; in flight on the active route, X-Plane's
--- current waypoint and the AFDS's to the active one once X-Plane has the
--- plan, then the route sequenced as the AFDS's current waypoint moves on
--- (its best track, until LNAV's own sequencing: step 6)
+-- stayed the same a second. (step 6d2; notes/ATA-34-61-FMC.md §132)
+-- X-Plane's current waypoint its plan's last row: X-Plane's map (kept for
+-- the weather radar) draws the legs from its current waypoint on, none so
+-- (the ND's line is the FMS bridge's); before, the active one in flight.
+-- The AFDS's, the ND's and the FMC's own current waypoint (fmscurrentIndex,
+-- xtlua/fms's rows) the active route's active one's row, an inactive
+-- route's first, once X-Plane has the plan; X-Plane's looked at again every
+-- 5 s (LNAV sequences the route itself since step 6c)
 function B747_fmc_route_sync()
   -- read every frame: XTLua passes a write on only when it differs from
   -- the value it last read
@@ -2540,73 +2562,136 @@ function B747_fmc_route_sync()
   if routePending and simDRTime-routePendingT>=1 then
     routeLoadT,routeLoadOld=simDRTime,fmsJSON
     routeLoaded,routeMap=routePending,routePendingMap
-    -- X-Plane starts a new plan at its first waypoint: in flight the
-    -- active one current again (the bridge right after the load)
-    local k=nil
-    if st.active and simDR_onGround==0 then k=B747_route_model.active_row(st.rte,routeMap) end
+    -- X-Plane starts a new plan at its first waypoint: its last current
+    -- (the bridge right after the load)
     if bridge then
-      B747DR_xp_plan=(k and string.format("CURRENT %d\n",k) or "")..routePending
+      B747DR_xp_plan=string.format("CURRENT %d\n",routeMap.n)..routePending
     else
       fmsLoadDref=routePending
     end
     routePending=nil
-    routeSync=k
+    routeSync=routeMap.n
     routeSyncT,routeSyncWrites=simDRTime,0
     return
   end
-  if not (st.active and routeMap) or simDR_onGround==1 or routePending then routeSync=nil return end
+  if not routeMap or routePending then routeSync=nil return end
   local fms=fms_route()
-  -- X-Plane's plan the one loaded last
+  -- X-Plane's plan the one loaded last: not before xtlua/fms shows it (the
+  -- old one, with as many rows, a second)
   if table.getn(fms)~=routeMap.n then return end
+  if fmsJSON==routeLoadOld and simDRTime-routeLoadT<1 then return end
+  local k=st.active and B747_route_model.active_row(st.rte,routeMap) or 1
+  if cur~=k then B747DR_fmscurrentIndex=k end
+  local last=routeMap.n
   if routeSync then
-    local k=routeSync
-    -- not before xtlua/fms shows the plan loaded last (the old one, with
-    -- as many rows, could show the active waypoint current already, and a
-    -- write before X-Plane takes the plan is lost to it: the activation
-    -- right after a load); a second: the same as before
-    if fmsJSON==routeLoadOld and simDRTime-routeLoadT<1 then return end
-    if fms[k]==nil or simDRTime-routeSyncT>10 then routeSync=nil return end
-    if fms[k][8]~=routeMap.ident[k] then return end
-    if fms[k][10]==true and cur==k then routeSync=nil return end
+    if simDRTime-routeSyncT>10 or fms[last][10]==true then routeSync=nil return end
     if bridge then
       -- X-Plane's thread: until X-Plane shows it
-      if xpcur~=k then B747DR_xp_current=k end
+      if xpcur~=last then B747DR_xp_current=last end
     elseif routeSyncWrites<2 and simDRTime-routeSyncT>=2*routeSyncWrites then
       -- XTLua's: now, and once more after two seconds
-      B747DR_fms_currentID=k
+      B747DR_fms_currentID=last
       routeSyncWrites=routeSyncWrites+1
     end
-    if cur~=k then B747DR_fmscurrentIndex=k end
     return
   end
-  -- X-Plane's current waypoint and the AFDS's after the FMC's active one
-  -- (LNAV sequences the route itself since step 6c), looked at again
-  -- every 5 s
   if simDRTime-routeSyncT<5 then return end
   routeSyncT=simDRTime
-  local k=B747_route_model.active_row(st.rte,routeMap)
-  if not k then return end
-  local xk=nil
-  for i=1,table.getn(fms) do
-    if fms[i][10]==true then xk=i break end
-  end
-  if cur~=k or xk~=k then
-    routeSync=k
-    routeSyncT,routeSyncWrites=simDRTime,0
+  if fms[last][10]~=true then
+    routeSync=last
+    routeSyncWrites=0
   end
 end
 
+-- (6-1/6-2 step 6d2; notes/ATA-34-61-FMC.md §132) the ND's route line for
+-- the FMS bridge plugin (B747.68.nd_line_model.lua; FCOM p.1147-1148): RTE
+-- 1's path (the active route, else an inactive one), the lateral offset's
+-- lines beside it, the modification's path; anew each ND_LINE_S seconds
+-- (the turns' speeds, LNAV's turn) and when the route changes, the points
+-- that changed written. The turns' speed: LNAV's now (the true airspeed and
+-- the wind) at the active waypoint and the fix sequenced last, the
+-- predictions' true airspeed at the others' fixes with the wind now
+-- (B747_fms_turns')
+B747DR_nd_line_n=find_dataref("laminar/B747/nd/line/n")
+B747DR_nd_line_lat=find_dataref("laminar/B747/nd/line/lat")
+B747DR_nd_line_lon=find_dataref("laminar/B747/nd/line/lon")
+B747DR_nd_line_pen=find_dataref("laminar/B747/nd/line/pen")
+do
+local ND_LINE_S=1
+local ndLineT=-100
+local ndLineCache={}
+local ndLineOld={n=0,lat={},lon={},pen={}}
+local function nd_line_kt(i)
+  local air=lnavAir
+  local now=air and ((air.tas or air.gs)+(air.wind or 0)) or (simDR_groundspeed*1.94384+simDR_wind_speed)
+  if i<=1 then return now end
+  local p=predResult and predResult.pts and predResult.pts[i]
+  local vt=nil
+  if p and p.h then
+    local m=p.machMode and p.mach or (p.cas and B747_perf_db.cas_to_mach(p.cas,p.h)) or p.mach
+    if m then vt=B747_perf_db.tas(m,p.h,B747_fms_isa_dev()) end
+  end
+  if not vt then return now end
+  return math.max(vt,150)+simDR_wind_speed
+end
+function B747_fmc_nd_line()
+  if not B747_nd_line_dirty and simDRTime-ndLineT<ND_LINE_S then return end
+  B747_nd_line_dirty,ndLineT=false,simDRTime
+  local D,P=B747_nd_line_model,B747_path_model
+  local st=B747_fmc_route
+  local r=st.rte
+  local used={}
+  local o={P=P,L=B747_lnav_model,cache=ndLineCache,used=used,kt=nd_line_kt}
+  local pts={}
+  if routePath and #r.legs>0 then
+    o.style=st.active and D.ACTIVE or D.INACTIVE
+    o.shape=P.shape(routePath,HOLD_SYMBOL_KT,(lnav_hold_sizes(true)))
+    o.prev=st.active and B747_fmc_nd_line_prev_of() or nil
+    D.route(routePath,o,pts)
+    -- the lateral offset's lines (step 7d; FCOM p.1148: dashed beside the
+    -- route)
+    if st.active and r.offset and lnavPath then
+      local off={}
+      for _,e in ipairs(lnavPath) do
+        if e.offset then off[#off+1]=e else break end
+      end
+      o.style,o.prev,o.shape=D.OFFSET,nil,nil
+      D.route(off,o,pts)
+    end
+  end
+  local m=st.active and st.mod or nil
+  if m and #m.legs>0 then
+    local mp=P.build(m.legs,B747_route_model.leg_from(m,1),{var=lnav_var,alt=simDR_pressureAlt1})
+    o.style,o.prev,o.shape=D.MOD,nil,P.shape(mp,HOLD_SYMBOL_KT)
+    D.route(mp,o,pts)
+  end
+  ndLineCache=used
+  local lat,lon,pen,n=D.pack(pts)
+  local old=ndLineOld
+  for k=1,n do
+    if old.lat[k]~=lat[k] then B747DR_nd_line_lat[k-1]=lat[k] old.lat[k]=lat[k] end
+    if old.lon[k]~=lon[k] then B747DR_nd_line_lon[k-1]=lon[k] old.lon[k]=lon[k] end
+    if old.pen[k]~=pen[k] then B747DR_nd_line_pen[k-1]=pen[k] old.pen[k]=pen[k] end
+  end
+  if old.n~=n then
+    old.n=n
+    B747DR_nd_line_n=n
+  end
+end
+end
+
 -- each frame (6-1/6-2; notes/ATA-34-61-FMC.md §42; FCOM p.1333; FMSPG
--- p.124): with an ND in PLN, X-Plane's displayed waypoint (the ND's PLAN
--- centre, the FMS bridge's from 1) the row of the LEGS pages' centre
--- (B744.fms.pages.legs.lua) in X-Plane's flight plan: its leg's, else the
--- same waypoint's in the route X-Plane has (a modification's, the other
--- route's); none there (a modification's new waypoint, a conditional leg
--- not predicted): as it was. One row written again after a second at most
-local planCtrRow,planCtrT=nil,-10
+-- p.124): with an ND in PLN, the ND's PLAN centre (plan_ctr_row, from 1;
+-- step 6d2: before, X-Plane's displayed waypoint through the FMS bridge,
+-- which X-Plane keeps at or after its current one, its plan's last row now)
+-- the row of the LEGS pages' centre (B744.fms.pages.legs.lua) in X-Plane's
+-- flight plan: its leg's, else the same waypoint's in the route X-Plane has
+-- (a modification's, the other route's); none there (a modification's new
+-- waypoint, a conditional leg not predicted): as it was
+B747DR_fms_plan_ctr_row=find_dataref("laminar/B747/fms/plan_ctr_row")
 function B747_fmc_plan_ctr_sync()
   if not B747_cdu_plan_ctr_update() then return end
-  if B747DR_xp_bridge~=1 or not routeMap or routePending then return end
+  if not routeMap or routePending then return end
   local st,r,i=B747_cdu_plan_ctr()
   if not st then return end
   local act=B747_fmc_route
@@ -2621,10 +2706,7 @@ function B747_fmc_plan_ctr_sync()
   end
   -- X-Plane's plan the one loaded last
   if not k or table.getn(fms_route())~=routeMap.n then return end
-  if B747DR_xp_displayed~=k and (k~=planCtrRow or simDRTime-planCtrT>=1) then
-    B747DR_xp_displayed=k
-    planCtrRow,planCtrT=k,simDRTime
-  end
+  if B747DR_fms_plan_ctr_row~=k then B747DR_fms_plan_ctr_row=k end
 end
 
 -- each frame (6-1/6-2 step 6c; notes/ATA-34-61-FMC.md §29): LNAV on the
@@ -2690,13 +2772,11 @@ function B747_fmc_lnav_update()
     -- turn_dist)
     local tx=B747_fms_turn_of(st.rte.legs[2])
     if tx and tx>B747_vnav_model.TURN_MIN_NM and vnavIn.d_ed then vnavState.turn={d=vnavIn.d_ed,t=simDRTime,t1=simDRTime} end
-    if B747_route_model.sequence(st,n,start) then
-      B747_fmc_route_changed()
-      if routeMap and not routePending then
-        routeSync=B747_route_model.active_row(st.rte,routeMap)
-        routeSyncT,routeSyncWrites=simDRTime,0
-      end
-    end
+    -- (step 6d2) the ND's line keeps the turn at its fix (the route's
+    -- element: the line is the route's, an offset's beside it)
+    B747_fmc_nd_line_prev(routePath and routePath[n])
+    -- (the AFDS's and the ND's current waypoint the next row: route sync)
+    if B747_route_model.sequence(st,n,start) then B747_fmc_route_changed() end
     lnavSequencing=false
   end
   local valid=s.valid and 1 or 0
@@ -5177,27 +5257,24 @@ fmsModules.fmsR=fmsR;
 B747DR_CAS_memo_status          = find_dataref("laminar/B747/CAS/memo_status")
 
 --Marauder28
+-- the current waypoint (or the next): the FMC's active one's row in
+-- xtlua/fms (6-1/6-2 step 6d2: fmscurrentIndex; before, X-Plane's current
+-- waypoint, now its plan's last row)
 function getCurrentWayPoint(fms,usenext)
-	--print("FMS j="..fmsJSON)
-	for i=1,table.getn(fms),1 do
-     --print("FMS j="..fmsJSON)
-
-		if fms[i][10] == true then
-				--print("Found TRUE = "..fms[i][1].." "..fms[i][2].." "..fms[i][8])
-				if usenext==false then
-				if fms[i][8] == "latlon" then
-					return simDR_navID, fms[i][5], fms[i][6]
-				else
-					return fms[i][8], fms[i][5], fms[i][6]
-				end
-				elseif i+1<table.getn(fms) then
-				  if fms[i+1][8] == "latlon" then
-					return "-----", fms[i+1][5], fms[i+1][6]
-				else
-					return fms[i+1][8], fms[i+1][5], fms[i+1][6]
-				end
-				end
-		end		
+	local i=B747DR_fmscurrentIndex
+	if i<1 or i>table.getn(fms) or (i<=1 and not B747_fmc_route.active) then return "" end  --NOT FOUND
+	if usenext==false then
+		if fms[i][8] == "latlon" then
+			return simDR_navID, fms[i][5], fms[i][6]
+		else
+			return fms[i][8], fms[i][5], fms[i][6]
+		end
+	elseif i+1<table.getn(fms) then
+		if fms[i+1][8] == "latlon" then
+			return "-----", fms[i+1][5], fms[i+1][6]
+		else
+			return fms[i+1][8], fms[i+1][5], fms[i+1][6]
+		end
 	end
 	return ""  --NOT FOUND
 end
@@ -5269,10 +5346,11 @@ function B747_route_eta(fms, airborne)
 	if simDRTime - route_eta_t < 1 and simDRTime >= route_eta_t then return end
 	route_eta_t = simDRTime
 	local out = {}
+	-- the active waypoint's row (step 6d2: the FMC's, not X-Plane's current
+	-- waypoint, its plan's last row now)
 	local active = nil
-	for i = 1, table.getn(fms) do
-		if active == nil and fms[i][10] == true then active = i end
-	end
+	local k = B747DR_fmscurrentIndex
+	if k >= 1 and k <= table.getn(fms) then active = k end
 	local dist, lat, lon = 0, simDR_latitude, simDR_longitude
 	for i = 1, table.getn(fms) do
 		local v = -1
@@ -5677,6 +5755,7 @@ function after_physics()
     update_altn_nav()
     B747_fmc_lnav_update()
     B747_fmc_route_sync()
+    B747_fmc_nd_line()
     B747_fmc_plan_ctr_sync()
     B747_fmc_exec_lights()
     B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules

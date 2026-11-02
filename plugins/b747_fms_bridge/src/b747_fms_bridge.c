@@ -17,8 +17,10 @@
  *                                   the load (X-Plane starts a plan at its
  *                                   first entry)
  *   laminar/B747/fms/xp/current    (int)  the entry the FMS flies to, from 1
- *   laminar/B747/fms/xp/displayed  (int)  the entry the FMS shows (the ND's
- *                                   PLAN centre), from 1
+ *   laminar/B747/fms/xp/displayed  (int)  the entry the FMS shows, from 1
+ *                                   (the ND's PLAN centre until 6-1/6-2 step
+ *                                   6d2: X-Plane keeps it at or after the
+ *                                   current one, the plan's last row now)
  *   laminar/B747/fms/xp/loads      (int)  plans loaded (read only)
  *   laminar/B747/fms/xp/bridge     (int)  1: this plugin is here (read only)
  *
@@ -71,6 +73,9 @@
  *                                              SimBrief's refusal (no OFP),
  *                                              6 the OFP without an X-Plane
  *                                              plan, 7 not saved (read only)
+ *
+ * The ND's route line (6-1/6-2 step 6d2; notes/ATA-34-61-FMC.md §132): the
+ * FMC's path drawn on each ND in the panel's gauges phase (nd_line.c).
  *
  * Built with docs/overhaul/tools/build_fms_bridge.sh (MinGW-w64, the X-Plane
  * SDK 4.3.0) into ../64/win.xpl. Windows only (2026-11-01 the user).
@@ -239,6 +244,7 @@ static float scan(float since_call, float since_loop, int counter, void *ref)
 /* SimBrief's latest OFP by the Pilot ID (simbrief_fetch.c, no X-Plane
    calls): the request, the thread's job */
 #include "simbrief_fetch.c"
+#include "nd_line.c"
 static int sb_id = 0, sb_req = 0, sb_taken = 0, sb_done = 0, sb_status = SBF_NONE;
 static HANDLE sb_thread = NULL;
 static struct { int id; char folder[PATH_LEN / 2]; } sb_job;
@@ -472,6 +478,7 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc)
     refs[11] = int_ref("laminar/B747/fms/company/simbrief_status", sb_status_get, NULL);
     XPLMRegisterFlightLoopCallback(loop, -1.0f, NULL);
     XPLMRegisterFlightLoopCallback(scan, 1.0f, NULL);
+    ndl_start();
     XPLMMenuID plugins = XPLMFindPluginsMenu();
     menu_item = XPLMAppendMenuItem(plugins, "747-400", NULL, 0);
     menu = XPLMCreateMenu("747-400", plugins, menu_item, menu_handler, NULL);
@@ -500,6 +507,7 @@ PLUGIN_API void XPluginStop(void)
 {
     XPLMUnregisterFlightLoopCallback(loop, NULL);
     XPLMUnregisterFlightLoopCallback(scan, NULL);
+    ndl_stop();
     /* a fetch under way: told to stop, waited for (its code goes with us) */
     if (sb_thread) {
         InterlockedExchange(&sb_cancel, 1);

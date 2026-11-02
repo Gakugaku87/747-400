@@ -91410,35 +91410,39 @@ GROUP First Officer ND
         GROUP Map/Rose
           SHOW_GREATER 0.500000 laminar/B747/nd/fo/rose
           HIDE
-          GROUP XP Map Full
-            SHOW_LESS 0.500000 laminar/B747/nd/fo/xp_map_half
-            EFIS_map_s_HM map_s_HM.png
-              POS 1023.000000 78.000000
-              DATAREF 
-              SIZE 3.500000
-              COPILOT
-              HIDE
-              LIGHT_MODE MECHANICAL
-              LIGHT_RHEOSTAT 3
-              BUS_SRC 4
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 1.000000
+          GROUP XP Map not PLAN
+            SHOW_LESS 2.500000 laminar/B747/nd/mode/fo/sel_dial_pos
+            HIDE
+            GROUP XP Map Full
+              SHOW_LESS 0.500000 laminar/B747/nd/fo/xp_map_half
+              EFIS_map_s_HM map_s_HM.png
+                POS 1023.000000 78.000000
+                DATAREF 
+                SIZE 3.500000
+                COPILOT
+                HIDE
+                LIGHT_MODE MECHANICAL
+                LIGHT_RHEOSTAT 3
+                BUS_SRC 4
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
 
-          END_GROUP
-          GROUP XP Map Half
-            SHOW_GREATER 0.500000 laminar/B747/nd/fo/xp_map_half
-            EFIS_map_s_HM map_s_HM.png
-              POS 1023.000000 78.000000
-              DATAREF 
-              SIZE 1.750000
-              COPILOT
-              HIDE
-              LIGHT_MODE MECHANICAL
-              LIGHT_RHEOSTAT 3
-              BUS_SRC 4
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 1.000000
+            END_GROUP
+            GROUP XP Map Half
+              SHOW_GREATER 0.500000 laminar/B747/nd/fo/xp_map_half
+              EFIS_map_s_HM map_s_HM.png
+                POS 1023.000000 78.000000
+                DATAREF 
+                SIZE 1.750000
+                COPILOT
+                HIDE
+                LIGHT_MODE MECHANICAL
+                LIGHT_RHEOSTAT 3
+                BUS_SRC 4
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
 
+            END_GROUP
           END_GROUP
           gen_rotary Mask:Centered:0:1:2
             POS 1023.500000 95.000000
@@ -114295,33 +114299,37 @@ GROUP Captain ND
         GROUP Map/Rose 2
           SHOW_GREATER 0.500000 laminar/B747/nd/capt/rose
           HIDE
-          GROUP XP Map Full
-            SHOW_LESS 0.500000 laminar/B747/nd/capt/xp_map_half
-            EFIS_map_s_HM map_s_HM.png 2
-              POS 336.000000 78.000000
-              DATAREF 
-              SIZE 3.500000
-              HIDE
-              LIGHT_MODE MECHANICAL
-              LIGHT_RHEOSTAT 0
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 1.000000
+          GROUP XP Map not PLAN
+            SHOW_LESS 2.500000 laminar/B747/nd/mode/capt/sel_dial_pos
+            HIDE
+            GROUP XP Map Full
+              SHOW_LESS 0.500000 laminar/B747/nd/capt/xp_map_half
+              EFIS_map_s_HM map_s_HM.png 2
+                POS 336.000000 78.000000
+                DATAREF 
+                SIZE 3.500000
+                HIDE
+                LIGHT_MODE MECHANICAL
+                LIGHT_RHEOSTAT 0
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
 
-          END_GROUP
-          GROUP XP Map Half
-            SHOW_GREATER 0.500000 laminar/B747/nd/capt/xp_map_half
-            EFIS_map_s_HM map_s_HM.png 2
-              POS 336.000000 78.000000
-              DATAREF 
-              SIZE 1.750000
-              HIDE
-              LIGHT_MODE MECHANICAL
-              LIGHT_RHEOSTAT 0
-              BUS_SRC 2
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 1.000000 1.000000
+            END_GROUP
+            GROUP XP Map Half
+              SHOW_GREATER 0.500000 laminar/B747/nd/capt/xp_map_half
+              EFIS_map_s_HM map_s_HM.png 2
+                POS 336.000000 78.000000
+                DATAREF 
+                SIZE 1.750000
+                HIDE
+                LIGHT_MODE MECHANICAL
+                LIGHT_RHEOSTAT 0
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 1.000000
 
+            END_GROUP
           END_GROUP
           gen_rotary Mask:Centered:0:1:2
             POS 336.500000 95.000000
