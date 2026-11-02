@@ -25,3 +25,5 @@ lighting     = deferred_dataref("laminar/B747/debug/lighting", "number")
 ecc     = deferred_dataref("laminar/B747/debug/ecc", "number")
 ai     = deferred_dataref("laminar/B747/debug/ai", "number")
 fd     = deferred_dataref("laminar/B747/debug/flight_directors", "number")
+-- 1: no drag corrections (B747.45.xt.aero_corr.lua), for comparing in X-Plane
+aero_corr_off     = deferred_dataref("laminar/B747/debug/aero_corr_off", "number")

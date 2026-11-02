@@ -1037,6 +1037,8 @@ dofile("B747.45.xt.fcu.lua")
 dofile("B747.45.xt.srm.lua")
 dofile("B747.45.greenband_model.lua")
 dofile("B747.45.xt.speedbrake.lua")
+-- the gear's drag X-Plane lacks, on the fuselage's drag figure (補正, notes/AERO.md §3.16)
+dofile("B747.45.xt.aero_corr.lua")
 
 --*************************************************************************************--
 --** 				                  EVENT CALLBACKS           	    			 **--
@@ -1082,6 +1084,7 @@ function after_physics()
     B747_flap_transition_status()
     B747_fcu()
     B747_srm()
+    B747_aero_corr()
 
     B747_fltCtrols_EICAS_msg()
 
