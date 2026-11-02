@@ -402,7 +402,12 @@ simDR_engine_has_fuel               = find_dataref("sim/flightmodel2/engines/has
 B747DR_engine_used_fuel               = deferred_dataref("laminar/B747/fuel/totaliser","array[5]")
 function aircraft_load()
 
-    simDR_override_fuel_system = 1
+    -- (2026-11-02) X-Plane's own fuel system until the fuel module (scripts/
+    -- B747.25.xt.fuel) has settled after the flight's start: XTLua loads that
+    -- module tens of seconds after the flight starts, and with the override
+    -- set here no one gave the engines fuel meanwhile (an engines-running
+    -- start flamed out)
+    simDR_override_fuel_system = 0
 
 end
 

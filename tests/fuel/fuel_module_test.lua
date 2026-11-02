@@ -178,6 +178,29 @@ do
     T.equal(rt2:get("laminar/B747/fuel/fuel_control/toggle_sw_pos", 0), 1, "air start: FUEL CONTROL RUN")
 end
 
+-- (2026-11-02) the settling in X-Plane's time: XTLua's frames run on while
+-- X-Plane still loads the flight (its clock still), and X-Plane's own fuel
+-- system feeds the engines until 2 s of X-Plane's time, then this module's
+-- (the override: set at the load before, the engines of an engines-running
+-- start had no fuel at its start and flamed out)
+do
+    local OVERRIDE = "sim/operation/override/override_fuel_system"
+    local rt4 = aircraft({0, 9000, 20000, 20000, 9000, 3000, 3000, 0}, 1)
+    engines_run(rt4, 1)
+    rt4:callout("aircraft_load")                -- as XTLua: the load, then the flight's start
+    rt4:callout("flight_start")
+    local t0 = rt4.time
+    for _ = 1, 90 do rt4.time = t0 rt4:frame(1 / 30) end
+    T.equal(rt4:get(OVERRIDE), 0, "3 s of XTLua's frames with X-Plane loading (its clock still): X-Plane's own fuel system")
+    frames(rt4, 1.5)
+    T.equal(rt4:get(OVERRIDE), 0, "1.5 s of X-Plane's time: still settling")
+    frames(rt4, 0.7)
+    T.equal(rt4:get(OVERRIDE), 1, "2 s of X-Plane's time: this module's (the override)")
+    for n = 0, 3 do T.equal(rt4:get(HAS_FUEL, n), 1, "then engine " .. (n + 1) .. " fed by the module") end
+    rt4:callout("flight_start")
+    T.equal(rt4:get(OVERRIDE), 0, "a new flight: X-Plane's own again while it settles")
+end
+
 -- the FUEL CONTROL switches bring up the secondary engine display only when
 -- moved to CUTOFF in flight (FCOM p.843, p.872; ENG-23)
 do

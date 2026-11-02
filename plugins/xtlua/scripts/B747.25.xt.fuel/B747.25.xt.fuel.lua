@@ -1154,6 +1154,15 @@ local fuel_state = F.new()
 local fuel_inputs = F.inputs()
 local fuel_written = {}             -- what we last wrote to m_fuel, by X-Plane index
 local fuel_settle_left = SETTLE_S   -- seconds of settling left after a flight start
+-- (2026-11-02) X-Plane's time at the last settling frame: the settling counts
+-- X-Plane's time, not XTLua's frames (SIM_PERIOD), which run on while X-Plane
+-- still loads the flight; X-Plane's own fuel system feeds the engines until it
+-- ends (the override after it). Before, the settling ended during the load and
+-- the override was set at the aircraft's load: X-Plane gave the engines no fuel
+-- at the start, a stale read of it kept this module from writing it, and an
+-- engines-running start flamed out (a fresh load: relit by the igniters in
+-- about 3 s on the ground; in the air not: the flight tests' second air start)
+local fuel_settle_t = nil
 local fuel_age = 0                  -- seconds since the flight start
 
 local function flag(v)
@@ -1336,7 +1345,9 @@ end
 function B747_fuel_system_start()
     fuel_state = F.new()
     fuel_settle_left = SETTLE_S
+    fuel_settle_t = nil
     fuel_age = 0
+    simDR_override_fuel_system = 0
 end
 
 -- every frame
@@ -1352,8 +1363,11 @@ function B747_fuel_system()
     if fuel_settle_left > 0 then
         -- after a flight start: take X-Plane's quantities (in XTLua the first
         -- reads of a dataref give 0), put the valves where they are
-        -- commanded, keep the running engines fed and burn nothing
-        fuel_settle_left = fuel_settle_left - dt
+        -- commanded, keep the running engines fed and burn nothing; in
+        -- X-Plane's time (fuel_settle_t)
+        local now = simDR_time_now
+        fuel_settle_left = fuel_settle_left - (fuel_settle_t and math.max(0, math.min(1, now - fuel_settle_t)) or 0)
+        fuel_settle_t = now
         read_capacities()
         sync_tanks(true)
         F.settle(fuel_state, inp)
@@ -1361,6 +1375,7 @@ function B747_fuel_system()
         if fuel_settle_left <= 0 then
             if simDR_all_wheels_on_ground == 1 then initial_load() end
             write_tanks()
+            simDR_override_fuel_system = 1
         end
         return
     end
@@ -1666,7 +1681,8 @@ end
 
 function aircraft_load()
 
-    simDR_override_fuel_system = 1
+    -- X-Plane's own fuel system until the start has settled (B747_fuel_system)
+    simDR_override_fuel_system = 0
 end
 
 function aircraft_unload()
