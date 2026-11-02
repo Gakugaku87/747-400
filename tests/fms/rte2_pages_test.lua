@@ -195,4 +195,26 @@ T.check(rt:get("laminar/B747/fms/exec_light_pilot") == 1, "the EXEC light")
 pieces = nd_pieces()
 T.check(pieces:find("^5") and pieces:find("1"), "the ND: RTE 1 activated, under the active RTE 2: " .. pieces)
 
+-- (step 6d2) the ND's turn at the fix sequenced last only near it: RTE 1
+-- executed in flight 20 nm past its first fix on its first leg (from the
+-- runway) has LNAV sequence that fix at once; no turn kept there (s219's
+-- RTE 2 from RJAA past SAKVA: the ND drew a hook at SAKVA far from the
+-- airplane)
+key("key/execute")
+local st1 = route(1)
+local f1 = st1.rte.legs[1].fix
+local c1 = fms.ns.B747_path_model.course(fms.ns.B747_route_model.leg_from(st1.rte, 1), f1)
+local p20 = fms.ns.B747_path_model.point(f1, c1, 20)
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("sim/flightmodel/position/latitude", p20.lat)
+rt:set("sim/flightmodel/position/longitude", p20.lon)
+rt:set("sim/flightmodel/position/hpath", c1)
+rt:set("sim/flightmodel/position/psi", c1)
+rt:set("sim/flightmodel2/position/groundspeed", 128.6)
+rt:set("sim/flightmodel/position/true_airspeed", 128.6)
+rt:set("laminar/B747/autopilot/lnav_state", 2)
+frames(1)
+T.check(st1.active and st1.rte.legs[1].fix ~= f1, "RTE 1 active, its first fix sequenced at once 20 nm past it")
+T.equal(fms.ns.B747_fmc_nd_line_prev_of(), nil, "no turn kept at it for the ND's line (far from the airplane)")
+
 T.done()

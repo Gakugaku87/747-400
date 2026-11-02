@@ -17,7 +17,7 @@ for _, cdu in ipairs({"cdu1", "cdu2"}) do
     for n = 0, 15 do types["sim/cockpit2/radios/indicators/fms_" .. cdu .. "_text_line" .. n] = "string" end
 end
 local rt = xtlua.new{types = types}
-rt:load("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.xt.fms.lua")
+local fms = rt:load("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.xt.fms.lua")
 rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_lbs":2.20462},'
     .. '"PLANE":{"thrust_ref":"EPR","engines":"PW4056","model":"747-400"},'
     .. '"FMC":{"INIT":{"active":"","op_program":"TEST","drag_ff":"+0.0/-0.0"}}}')
@@ -141,6 +141,7 @@ local ZZD = {lat = 35.3, lon = 140.3}
 local c2 = P.course(ALPHA, ZZD)
 at(P.point(ALPHA, c1, 1), c1)
 T.equal(line(3), "ZZD                     ", "past ALPHA: ALPHA sequenced")
+T.check(fms.ns.B747_fmc_nd_line_prev_of() ~= nil, "1 nm past it: its turn kept for the ND's line (step 6d2)")
 at(P.point(ZZD, c2, 1), c2)
 T.check(line(3):find("^%*%*%*%*%*") ~= nil, "past ZZD: ZZD sequenced, the discontinuity first: " .. line(3))
 T.equal(lnav("mode"), 3, "the heading held (mode 3)")
