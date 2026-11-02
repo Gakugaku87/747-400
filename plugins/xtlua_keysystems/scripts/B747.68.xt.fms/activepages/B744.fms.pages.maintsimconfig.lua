@@ -54,7 +54,9 @@ fmsPages["MAINTSIMCONFIG"].getPage=function(self,pgNo,fmsID)
 		-- (6-1/6-2 step 12a) the FMC's datalink: AUTO, ON, OFF; page 1's
 		-- other keys off here
 		fmsFunctionsDefs["MAINTSIMCONFIG"]["L4"]={"setdata","fmcDatalink"}
-		fmsFunctionsDefs["MAINTSIMCONFIG"]["L5"]=nil
+		-- (§131) SimBrief's Pilot ID: the company's flight plan fetched
+		-- from SimBrief (the FMS bridge keeps it)
+		fmsFunctionsDefs["MAINTSIMCONFIG"]["L5"]={"setdata","simbriefId"}
 		for _, k in ipairs({"R1", "R2", "R3", "R4", "R5"}) do fmsFunctionsDefs["MAINTSIMCONFIG"][k]=nil end
 		fmsFunctionsDefs["MAINTSIMCONFIG"]["R6"]={"setdata","simConfigSave"}
 		local lineA = ""
@@ -88,7 +90,7 @@ fmsPages["MAINTSIMCONFIG"].getPage=function(self,pgNo,fmsID)
 		"                        ",
 		string.format("<FMC DATALINK%11s", B747_fms_datalink_cfg()),
 		"                        ",
-		"                        ",
+		string.format("%-24s", (B747DR_simbrief_id or 0) > 0 and tostring(B747DR_simbrief_id) or "--------"),
 		"------------------------",
 		"<MENU              SAVE>"
 		}
@@ -280,7 +282,7 @@ fmsPages["MAINTSIMCONFIG"].getSmallPage=function(self,pgNo,fmsID)
 		"                        ",
 		string.format(" ATC, FMC COMM%10s", B747_fms_datalink() and "ACTIVE" or "INOP"),
 		"                        ",
-		"                        ",
+		" SIMBRIEF PILOT ID      ",
 		"                        ",
 		"                        ",
 		"                        "

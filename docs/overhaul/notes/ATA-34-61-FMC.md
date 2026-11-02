@@ -2171,3 +2171,17 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - 途中の試し：V/S のまま 5e-5 では、推力は 8 秒で N1 95 % に上がって速さも保ったが、昇降率が 3,300 fpm まで行き過ぎてから 200 fpm まで戻り、レバーが行き来した（エンジンの遅れ。速さが増えている間も V/S だけを見ていた）。
 - 試験：`at_model_test` +3 件（G/A の 2,600 fpm で戻す、1,500 fpm でも速さが増えてエネルギーの率が 2,600 なら戻す、FLCH の上昇は戻さない）、G/A の 1,000 fpm の速さの期待を K_VS_GA に。
 - X-Plane（`aero_go_around`、2026-11-02 09:37）：TO/GA から 2 秒でレバー 0.62、5 秒で 0.85、8 秒で 0.93（N1 56 → 73 → 88 %）。44 ft 下がって 4 秒で上昇に移り（FCTM 約 40 ft）、速さは 147〜159 kt、昇降率は 11 秒で 1,730、23〜29 秒で 2,040〜2,110、その後 1,800〜1,960 fpm（2,000 fpm の付近に落ち着き、行き来しない）。
+
+## 131. SimBrief の最新の OFP を Pilot ID で取る（2026-11-02：利用者の依頼「SimBrief の Pilot ID を使って最新 OFP を取得するようにできない？」）
+
+- 前（段 12h1、§122）：利用者がブラウザで SimBrief の OFP（XML）と X-Plane の .fms を保存して simbrief フォルダに置き、RTE REQUEST で FMC が最新のファイルを使った。シムの便利のための機能（実機の会社の運航管理の代わり）で、資料に照らすものではない。
+- 作ったもの：
+  - FMS ブリッジ（`plugins/b747_fms_bridge`、C、Windows のみ）：FMC が要求の番号（`laminar/B747/fms/company/simbrief_fetch`）を書くと、別のスレッド（WinHTTP）で SimBrief の `https://www.simbrief.com/api/xml.fetcher.php?userid=<Pilot ID>`（SimBrief の公開の取得口。最新の OFP の XML）を取り、`<fetch><status>` が Success なら、その `<fms_downloads>` の `<directory>` と `<xpe>`（X-Plane 11/12）の `<link>` から飛行計画を取り（SimBrief は 1 回転送する。WinHTTP がたどる）、simbrief フォルダに `<出発地><目的地>.fms` と `.xml` で置く（.fms が先。それぞれ .part に書いてから名前を変える：2 秒ごとのフォルダの見回りが書きかけを拾わない）。終わるとフォルダをすぐ見直して `_newest.txt` を書き、`simbrief_done` に要求の番号、`simbrief_status` に結果（2 取れた、3 Pilot ID なし、4 応答なし、5 SimBrief が OFP を返さない、6 OFP に X-Plane の飛行計画なし、7 保存できない）。取得の部分は X-Plane を呼ばない `simbrief_fetch.c` に分け、`simbrief_fetch_test.c`（コマンドラインの同じ取得）で X-Plane なしに試せる。ビルドは `-lwinhttp` を足した。
+  - Pilot ID：`laminar/B747/options/simbrief_id`（int、0 は無し）。ブリッジが X-Plane の `Output/preferences/B747-400_options.prf` に `simbrief_id` で残す（シムの設定と同じ所。リバリーごとの simconfig ではない）。
+  - CDU：SIM CONFIG の 2 ページ目の 5L に SIMBRIEF PILOT ID（数字 1〜9 桁、DELETE で消す、ほかは INVALID ENTRY。無ければダッシュ）。
+  - FMC（`B747.68.xt.fms.lua`）：RTE REQUEST <SEND で、ブリッジがいて Pilot ID があり、CO ROUTE が無ければ（CO ROUTE はフォルダのファイルの名前）、要求の番号を 1 つ増やす。答え（20 秒、§122）は取り終えるまで待ち、60 秒（`FETCH_MAX_S`：推定。ブリッジの WinHTTP の待ちはそれより短い）で打ち切る。取れなかったら会社の ACARS の文（SIMBRIEF: NO ANSWER、NO OFP FOR THE PILOT ID、OFP WITHOUT X-PLANE FLIGHT PLAN、FILES NOT SAVED）を送り、フォルダの最新のファイルで答える。
+- 推定：待ちの上限 60 秒、取ったファイルの名前（`<出発地><目的地>`：CO ROUTE に使える英数字 8 字）、同じ名前のファイルは上書き。
+- 試験：
+  - コマンドライン（`simbrief_fetch_test.exe 262051 <フォルダ>`、利用者の Pilot ID）：3.9 秒で結果 2、`RJFFPANC.fms`（2,326 バイト、curl で取ったものと同じ）と `RJFFPANC.xml`（1.85 MB）。
+  - 回帰（LuaJIT）：`company_simbrief_test` 23 件（新設：5L の入力・INVALID ENTRY・DELETE、要求の番号、取り終えるまで答えない、取り終えたらすぐ答える、状態 4 で SIMBRIEF の文とフォルダのファイル、60 秒で打ち切り、CO ROUTE では取らない、ブリッジが無ければ取らない）。全 197 本。
+  - X-Plane（カスタム acf、X-Plane を起動し直して新しいブリッジ、捨ての s128 のあと、2026-11-02 12:01）：`s218_simbrief_fetch` 15/15。CDU で 5L に 262051 を入れ（ブリッジの dataref と 5L の表示）、RTE REQUEST <SEND で要求の番号が 1 つ増え、ブリッジは 2.7 秒で取り終えた（状態 2、最新の .fms と .xml は RJFFPANC）。約 20 秒でアップリンクし、RTE 1 の <LOAD で ORIGIN RJFF・RUNWAY RW16R・DEST PANC・FLT NO GTI8118（OFP の便名）・CO ROUTE RJFFPANC、FLT NUMBER UPLINK（写真で確かめた）。取ったファイルは最後に消した（Pilot ID は利用者の設定として残した）。Lua の誤りなし。

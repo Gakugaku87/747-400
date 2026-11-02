@@ -51,6 +51,27 @@
  * the menu's and the commands' choices kept (.../auto_step_climb_toggle,
  * .../pause_at_td_toggle), a dataref's write (a test's) not.
  *
+ * SimBrief's latest OFP by the Pilot ID (2026-11-02 the user; notes/
+ * ATA-34-61-FMC.md §131): when the FMC writes a new request number, the OFP
+ * (SimBrief's https://www.simbrief.com/api/xml.fetcher.php?userid=N) and its
+ * X-Plane 11/12 flight plan (the OFP's fms_downloads: directory and xpe
+ * link) are downloaded on a thread of their own (WinHTTP) into the simbrief
+ * folder as <origin><destination>.fms and .xml, the plan first; the folder
+ * looked at again at once, then the request done:
+ *
+ *   laminar/B747/options/simbrief_id          (int) the Pilot ID, 0 none;
+ *                                              kept in the options' file
+ *                                              (the CDU's SIM CONFIG)
+ *   laminar/B747/fms/company/simbrief_fetch   (int) the FMC's request
+ *                                              number: a new one fetches
+ *   laminar/B747/fms/company/simbrief_done    (int) the request finished
+ *                                              (read only)
+ *   laminar/B747/fms/company/simbrief_status  (int) 1 fetching, 2 done, 3 no
+ *                                              Pilot ID, 4 no answer, 5
+ *                                              SimBrief's refusal (no OFP),
+ *                                              6 the OFP without an X-Plane
+ *                                              plan, 7 not saved (read only)
+ *
  * Built with docs/overhaul/tools/build_fms_bridge.sh (MinGW-w64, the X-Plane
  * SDK 4.3.0) into ../64/win.xpl. Windows only (2026-11-01 the user).
  */
@@ -83,8 +104,9 @@ static int loads = 0;
 static char folder[PATH_LEN / 2];
 static char fms_file[PATH_LEN];
 static char ofp_file[PATH_LEN];
+static char sb_abs[PATH_LEN / 2];     /* the simbrief folder, absolute */
 
-#define NREFS 8
+#define NREFS 12
 static XPLMDataRef refs[NREFS];
 
 /* the plan as last written */
@@ -210,8 +232,62 @@ static float scan(float since_call, float since_loop, int counter, void *ref)
     newest(abs, folder, "fms", fms_file);
     newest(abs, folder, "xml", ofp_file);
     write_list(abs);
+    snprintf(sb_abs, sizeof sb_abs, "%s", abs);
     return 2.0f;
 }
+
+/* SimBrief's latest OFP by the Pilot ID (simbrief_fetch.c, no X-Plane
+   calls): the request, the thread's job */
+#include "simbrief_fetch.c"
+static int sb_id = 0, sb_req = 0, sb_taken = 0, sb_done = 0, sb_status = SBF_NONE;
+static HANDLE sb_thread = NULL;
+static struct { int id; char folder[PATH_LEN / 2]; } sb_job;
+
+/* the thread: the fetch, its result the exit code */
+static DWORD WINAPI sb_fetch(LPVOID arg)
+{
+    (void)arg;
+    return (DWORD)sb_fetch_ofp(sb_job.id, sb_job.folder);
+}
+
+/* every frame: a new request starts the thread; a finished thread's files
+   looked for at once, then the request done */
+static void sb_poll(void)
+{
+    if (sb_thread) {
+        if (WaitForSingleObject(sb_thread, 0) != WAIT_OBJECT_0) return;
+        DWORD code = SBF_NO_ANSWER;
+        GetExitCodeThread(sb_thread, &code);
+        CloseHandle(sb_thread);
+        sb_thread = NULL;
+        scan(0.0f, 0.0f, 0, NULL);
+        sb_status = (int)code;
+        sb_done = sb_taken;
+        return;
+    }
+    if (sb_req == sb_taken) return;
+    sb_taken = sb_req;
+    if (sb_id <= 0 || !sb_abs[0]) {
+        sb_status = sb_id <= 0 ? SBF_NO_ID : SBF_NOT_SAVED;
+        sb_done = sb_taken;
+        return;
+    }
+    sb_job.id = sb_id;
+    snprintf(sb_job.folder, sizeof sb_job.folder, "%s", sb_abs);
+    CreateDirectoryA(sb_job.folder, NULL);
+    sb_status = SBF_FETCHING;
+    sb_thread = CreateThread(NULL, 0, sb_fetch, NULL, 0, NULL);
+    if (!sb_thread) {
+        sb_status = SBF_NO_ANSWER;
+        sb_done = sb_taken;
+    }
+}
+
+static int sb_id_get(void *ref) { (void)ref; return sb_id; }
+static int sb_req_get(void *ref) { (void)ref; return sb_req; }
+static void sb_req_set(void *ref, int v) { (void)ref; sb_req = v; }
+static int sb_done_get(void *ref) { (void)ref; return sb_done; }
+static int sb_status_get(void *ref) { (void)ref; return sb_status; }
 
 /* an entry from 1 to the FMS's, when it has it */
 static void set_entry(void (*set)(int), int n)
@@ -248,6 +324,7 @@ static float loop(float since_call, float since_loop, int counter, void *ref)
         displayed_new = 0;
         set_entry(XPLMSetDisplayedFMSEntry, displayed);
     }
+    sb_poll();
     return -1.0f;
 }
 
@@ -275,7 +352,7 @@ static void opts_path(char *out, size_t n)
     snprintf(out, n, "%sB747-400_options.prf", prefs);
 }
 
-/* "<name> <0 or 1>" lines; none: all off */
+/* "<name> <0 or 1>" lines and "simbrief_id <n>"; none: all off */
 static void opts_load(void)
 {
     char p[PATH_LEN], line[128], key[64];
@@ -288,6 +365,7 @@ static void opts_load(void)
         for (int i = 0; i < NOPTS; i++) {
             if (strcmp(key, opt_key[i]) == 0) opts[i] = v ? 1 : 0;
         }
+        if (strcmp(key, "simbrief_id") == 0) sb_id = v > 0 ? v : 0;
     }
     fclose(f);
 }
@@ -299,7 +377,18 @@ static void opts_save(void)
     FILE *f = fopen(p, "wb");
     if (!f) return;
     for (int i = 0; i < NOPTS; i++) fprintf(f, "%s %d\n", opt_key[i], opts[i]);
+    fprintf(f, "simbrief_id %d\n", sb_id);
     fclose(f);
+}
+
+/* the Pilot ID (the CDU's): kept */
+static void sb_id_set(void *ref, int v)
+{
+    (void)ref;
+    if (v < 0) v = 0;
+    if (v == sb_id) return;
+    sb_id = v;
+    opts_save();
 }
 
 /* an option on or off, the menu's check mark with it, kept if `keep` */
@@ -375,10 +464,14 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc)
     refs[5] = text_ref("laminar/B747/fms/company/folder", folder_get);
     refs[6] = text_ref("laminar/B747/fms/company/fms_file", fms_file_get);
     refs[7] = text_ref("laminar/B747/fms/company/ofp_file", ofp_file_get);
-    XPLMRegisterFlightLoopCallback(loop, -1.0f, NULL);
-    XPLMRegisterFlightLoopCallback(scan, 1.0f, NULL);
     /* the sim's options: Plugins > 747-400, their datarefs and commands */
     opts_load();
+    refs[8] = int_ref("laminar/B747/options/simbrief_id", sb_id_get, sb_id_set);
+    refs[9] = int_ref("laminar/B747/fms/company/simbrief_fetch", sb_req_get, sb_req_set);
+    refs[10] = int_ref("laminar/B747/fms/company/simbrief_done", sb_done_get, NULL);
+    refs[11] = int_ref("laminar/B747/fms/company/simbrief_status", sb_status_get, NULL);
+    XPLMRegisterFlightLoopCallback(loop, -1.0f, NULL);
+    XPLMRegisterFlightLoopCallback(scan, 1.0f, NULL);
     XPLMMenuID plugins = XPLMFindPluginsMenu();
     menu_item = XPLMAppendMenuItem(plugins, "747-400", NULL, 0);
     menu = XPLMCreateMenu("747-400", plugins, menu_item, menu_handler, NULL);
@@ -407,6 +500,13 @@ PLUGIN_API void XPluginStop(void)
 {
     XPLMUnregisterFlightLoopCallback(loop, NULL);
     XPLMUnregisterFlightLoopCallback(scan, NULL);
+    /* a fetch under way: told to stop, waited for (its code goes with us) */
+    if (sb_thread) {
+        InterlockedExchange(&sb_cancel, 1);
+        WaitForSingleObject(sb_thread, 60000);
+        CloseHandle(sb_thread);
+        sb_thread = NULL;
+    }
     for (int i = 0; i < NREFS; i++) XPLMUnregisterDataAccessor(refs[i]);
     for (int i = 0; i < NOPTS; i++) {
         XPLMUnregisterCommandHandler(opt_cmd[i], opt_toggle, 1, (void *)(intptr_t)i);

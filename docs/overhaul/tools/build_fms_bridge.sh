@@ -17,5 +17,5 @@ mkdir -p "$(dirname "$OUT")"
     -DIBM=1 -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM400=1 -DXPLM410=1 \
     -I"$XPSDK/CHeaders/XPLM" \
     -o "$OUT" plugins/b747_fms_bridge/src/b747_fms_bridge.c \
-    "$XPSDK/Libraries/Win/XPLM_64.lib" -static-libgcc -s -Wl,--disable-auto-image-base
+    "$XPSDK/Libraries/Win/XPLM_64.lib" -lwinhttp -static-libgcc -s -Wl,--disable-auto-image-base
 ls -l "$OUT"

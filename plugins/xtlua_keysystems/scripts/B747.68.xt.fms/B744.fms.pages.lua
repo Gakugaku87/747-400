@@ -2377,6 +2377,18 @@ function fmsFunctions.setdata(fmsO,value)
 		local nxt = {AUTO = "ON", ON = "OFF", OFF = "AUTO"}
 		simConfigData["data"].SIM.fmc_datalink = nxt[B747_fms_datalink_cfg()] or "AUTO"
 		pushSimConfig(simConfigData["data"]["values"])
+	elseif value=="simbriefId" then
+		-- (notes/ATA-34-61-FMC.md §131) SimBrief's Pilot ID, 1 to 9 digits
+		-- (DELETE clears it); the FMS bridge keeps it in its options
+		local sp = fmsO["scratchpad"]
+		if del then
+			B747DR_simbrief_id = 0
+		elseif string.match(sp, "^%d+$") and #sp <= 9 and tonumber(sp) > 0 then
+			B747DR_simbrief_id = tonumber(sp)
+			fmsO["scratchpad"] = ""
+		else
+			fmsO["notify"] = "INVALID ENTRY"
+		end
 	elseif value=="simConfigSave" then
 			local file_location = simDR_livery_path.."B747-400_simconfig.dat"
 			--print("File = "..file_location)
