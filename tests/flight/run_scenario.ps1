@@ -196,7 +196,13 @@ function Get-CasLines {
 # seized). An engine whose fuel was cut a few seconds after the start still
 # turned above 40 % N2 at 8 s and seemed to stop 20-30 s on, so 8 s after
 # it every engine burning fuel, else the air start again, twice at most
-# (before, engine 1's N2 alone and only after a reload)
+# (before, engine 1's N2 alone and only after a reload). With every engine
+# burning, the air start once more, not checked: the 8 s on X-Plane's start
+# throttle (about 0.8) left the scenario's start behind (2026-11-03, the
+# full run: s112 at 223 kt and some 470 ft low at its first step, not 180
+# kt true at 2,500 ft; s108's speed); no engine has stayed unlit since the
+# fuel's fix of 2026-11-02 (X-Plane's own fuel system until the fuel module
+# has settled: 25 runs with no warn)
 function Confirm-AirStartEngines($init) {
     $run = $init.engine_status
     if (-not ($init.lle_air_start -and $run -and $run.all_engines -and $run.all_engines.running)) { return }
@@ -206,7 +212,11 @@ function Confirm-AirStartEngines($init) {
         Start-Sleep -Seconds 8
         $burning = @(Get-XPDataref 'sim/flightmodel2/engines/engine_is_burning_fuel')
         $off = @(0..($n - 1) | Where-Object { [int]$burning[$_] -ne 1 } | ForEach-Object { $_ + 1 })
-        if ($off.Count -eq 0) { return }
+        if ($off.Count -eq 0) {
+            $t = Start-XPFlight $init
+            Add-Result @{ do = 'flight' } 'info' ("every engine burning fuel 8 s after the air start: the air start once more for the scenario's start (sim time {0} s)" -f [math]::Round($t, 1))
+            return
+        }
         $t = Start-XPFlight $init
         Add-Result @{ do = 'flight' } 'warn' ("engines {0} off after the air start: the air start again (sim time {1} s)" -f ($off -join ','), [math]::Round($t, 1))
     }

@@ -28,10 +28,16 @@ started=0
 
 xp_mem() { powershell -NoProfile -ExecutionPolicy Bypass -File "$RESTART_PS" -Mem 2>/dev/null | tr -d '\r' | tail -1; }
 
+# (up to three starts: X-Plane sometimes stays on its menus after the load,
+# paused at time 0; a new start got past it)
 restart() {
-  local why=$1 t0=$SECONDS state
-  state=$(powershell -NoProfile -ExecutionPolicy Bypass -File "$RESTART_PS" 2>/dev/null | tr -d '\r' | tail -1)
-  echo "# restart ($why) $(date +%H:%M:%S): X-Plane ${state:-down}, $((SECONDS - t0)) s" | tee -a "$OUT"
+  local why=$1 t0 state try
+  for try in 1 2 3; do
+    t0=$SECONDS
+    state=$(powershell -NoProfile -ExecutionPolicy Bypass -File "$RESTART_PS" 2>/dev/null | tr -d '\r' | tail -1)
+    echo "# restart ($why, try $try) $(date +%H:%M:%S): X-Plane ${state:-down}, $((SECONDS - t0)) s" | tee -a "$OUT"
+    [ "$state" = "up" ] && break
+  done
   since=0
   [ "$state" = "up" ]
 }
