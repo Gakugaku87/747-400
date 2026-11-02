@@ -273,4 +273,96 @@ local pts = sh[1] and sh[1].pts
 T.check(pts and pts[1] == nil or (pts[1].lat == M.pturn(pe, 220).o.lat), "the ND's points from the outbound leg's end")
 T.check(pts and #pts == 9 and math.abs(pts[#pts].lat - g.x.lat) < 1e-9, "o, p, five points round the turn, q, x: " .. (pts and #pts or 0))
 
+-- (step 6d3) the turns flown over the point before a heading or course leg
+-- or a DF: with the turns' speeds the leg starts where the turn ends (25
+-- degrees of bank at 250 kt: r 1.953 nm). s91: CF 337 into D337F flown
+-- over, a right turn onto heading 100 to NRE's radial 001 (7 W: 330 and
+-- 093 true, 123 degrees)
+local kt250 = {var = env.var, alt = 3000, kt = function() return 250 end}
+local R250 = (250 * 1852 / 3600) ^ 2 / (9.80665 * math.tan(25 * rad)) / 1852
+local D337F = {lat = 35.9, lon = 140.3}
+local NRE = {ident = "NRE", lat = 35.8, lon = 140.4}
+local sid = {
+    {pt = "CF", fix = D337F, crs = 337, dist = 5, flyover = true},
+    {pt = "VR", crs = 100, navaid = NRE, theta = 1, turn = "R", name = "NRE001"},
+}
+local plain = M.build(sid, nil, {var = env.var, alt = 3000})
+path = M.build(sid, nil, kt250)
+local vr = path[2]
+local ti = vr.turn_in
+T.check(plain[2].turn_in == nil, "no turns' speeds: no turn, as before")
+T.check(ti and ti.from == D337F and ti.dir == "R", "s91: the turn from D337F, right")
+T.near(ti and ti.sweep or 0, 123, 1e-6, "123 degrees")
+T.near(ti and ti.r or 0, R250, 1e-6, "r at 250 kt and 25 degrees")
+T.near(ti and ti.len or 0, R250 * 123 * rad, 1e-6, "its length along the arc")
+T.near(ti and dist(ti.center, vr.a) or 0, R250, 1e-6, "the leg from the turn's end on its circle")
+T.check(on_line(vr.a, 93, vr.b), "heading 093 true from there")
+T.near((M.course(NRE, vr.b)), 354, 0.05, "to NRE's radial 001 (354 true)")
+T.check(dist(vr.b, plain[2].b) > 1, string.format("the radial crossed %.1f nm from where it was without the turn", dist(vr.b, plain[2].b)))
+-- the departure above: VA 337 to 600 ft, VI 045 (right) to intercept the
+-- course 090 into ZZV: the turn after the altitude
+path = M.build({
+    {pt = "VA", crs = 337, alt = 600, altterm = true, name = "(600)"},
+    {pt = "VI", crs = 45, turn = "R", name = "(INTC)"},
+    {pt = "CF", fix = ZZV, crs = 90, dist = 8},
+}, RWY, {var = env.var, alt = 98, kt = function() return 180 end})
+va, vi, cf = path[1], path[2], path[3]
+T.check(va.turn_in == nil, "the first leg: nothing before it")
+T.check(vi.turn_in and vi.turn_in.from == va.b and vi.turn_in.dir == "R", "VI: the turn from the altitude's point")
+T.near(vi.turn_in and vi.turn_in.sweep or 0, 68, 1e-6, "330 to 038 true: 68 degrees right")
+T.check(vi.b and on_line(vi.a, 38, vi.b) and on_line(ZZV, 83, vi.b), "the intercept from the turn's end, on the course into ZZV")
+T.check(dist(cf.a, vi.b) < 0.02, "the CF from abeam it")
+-- a course leg after a fly-by fix: the fly-by turn (no turn of its own)
+path = M.build({{via = "DIRECT", fix = B}, {pt = "CA", crs = 97, alt = 9000, altterm = true}}, A, kt250)
+T.check(path[2].turn_in == nil and M.turn(path[1], path[2], 250) ~= nil, "a CA after a fly-by fix: the fly-by turn")
+-- a heading after it: flown over (no fly-by onto a heading)
+path = M.build({{via = "DIRECT", fix = B}, {pt = "VA", crs = 97, alt = 9000, altterm = true}}, A, kt250)
+T.check(path[2].turn_in and path[2].turn_in.from == B and path[2].turn_in.dir == "R", "a VA after a fly-by fix: the turn from the fix")
+-- a DF after the altitude: round towards its fix until the track meets
+-- the course to it (left: the procedure's way)
+path = M.build({
+    {pt = "VA", crs = 337, alt = 2000, altterm = true, name = "(2000)"},
+    {pt = "DF", fix = ZZV, turn = "L"},
+}, RWY, {var = env.var, alt = 98, kt = function() return 220 end})
+local df = path[2]
+T.check(df.turn_in and df.turn_in.dir == "L" and df.turn_in.from == path[1].b, "DF: the turn from the altitude's point, left")
+T.check(df.direct and df.b == ZZV and df.kind == "line", "the line to ZZV, direct")
+T.near(dist(df.turn_in.center, df.a), df.turn_in.r, 1e-6, "from where the turn ends")
+local tangent = (M.course(df.turn_in.center, df.a) - 90) % 360
+T.near(M.wrap180(df.crs - tangent), 0, 0.2, "on the turn's track there (left: 90 degrees before the radius)")
+T.check(df.turn_in.sweep > 180, string.format("the long way round, left: %.0f degrees", df.turn_in.sweep))
+-- the condition met in the turn: the leg ends on the arc where it is
+-- (LNAV sequences it there), the next turn from the track there
+path = M.build({
+    {pt = "VA", crs = 337, alt = 1500, altterm = true, name = "(1500)"},
+    {pt = "VA", crs = 157, alt = 1600, altterm = true, turn = "R", name = "(1600)"},
+    {pt = "VA", crs = 247, alt = 5000, altterm = true, turn = "R", name = "(5000)"},
+}, RWY, {var = env.var, alt = 98, kt = function() return 250 end})
+local cut = path[2].turn_in
+T.check(cut and path[2].len == 0 and path[2].a == path[2].b, "1,600 ft reached in the turn: the leg ends on its arc")
+T.near(cut and cut.len or 0, 100 / 500, 0.01, "100 ft into the turn at 500 ft/nm: 0.2 nm round")
+T.near(cut and dist(cut.center, path[2].b) or 0, R250, 1e-6, "on the turn's circle")
+T.near(M.wrap180(M.end_course(path[2]) - (330 + (cut and cut.sweep or 0))), 0, 0.05, "the track there: 330 true and the turn so far")
+T.check(path[3].turn_in and path[3].turn_in.from == path[2].b, "the next turn from there")
+-- s91's own D337F and NRE (X-Plane's navigation data: NRE 337/6) with a
+-- fast turn (300 kt): radial 001 crossed in the turn, the leg ended on the
+-- arc (before, back to no turn: NRE001 3 nm off again; the turn's speed
+-- in X-Plane, about 260-270 kt, sits by that edge)
+local NRE91 = {ident = "NRE", lat = 35.782344444, lon = 140.362536111}
+local D337F91 = {ident = "D337F", lat = 35.869058333, lon = 140.301013889}
+local sid91 = {
+    {pt = "CF", fix = D337F91, crs = 337, dist = 7, flyover = true},
+    {pt = "VR", crs = 100, navaid = NRE91, theta = 1, turn = "R", name = "NRE001"},
+}
+local slow = M.build(sid91, nil, {var = env.var, alt = 3000, kt = function() return 260 end})
+path = M.build(sid91, nil, {var = env.var, alt = 3000, kt = function() return 300 end})
+T.check(slow[2].turn_in and slow[2].len > 0, "260 kt: the heading leg after the turn")
+T.check(path[2].turn_in and path[2].len == 0, "300 kt: radial 001 crossed in the turn, the leg ended on its arc")
+T.near((M.course(NRE91, path[2].b)), 354, 0.05, "on NRE's radial 001 (354 true)")
+T.check(dist(NRE91, path[2].b) > dist(NRE91, slow[2].b), string.format("%.2f nm from NRE, on from 260 kt's %.2f (no jump back)",
+    dist(NRE91, path[2].b), dist(NRE91, slow[2].b)))
+-- the first leg: the element before it (LNAV's last sequenced)
+path = M.build({sid[2]}, D337F, {var = env.var, alt = 3000, kt = function() return 250 end, prev = plain[1]})
+T.check(path[1].turn_in and path[1].turn_in.from == D337F, "the first leg after the fix sequenced: the turn from it")
+
 T.done()

@@ -2,8 +2,9 @@
 -- The turn transitions in VNAV's distance (step LF2; notes/
 -- ATA-34-61-FMC.md §127; the FMC's path joins the legs with its turns:
 -- ATA34_2 p.615, p.626): B747.68.lnav_model.lua's transition (a fly-by
--- turn's arc against the tangents it cuts, a turn flown over its fix as
--- LNAV steers it), B747.68.vnav_model.lua's turn_dist (the distance flown
+-- turn's arc against the tangents it cuts, a turn flown over its fix or
+-- (step 6d3) a conditional leg's end as LNAV steers it, the path model's
+-- turn into a leg), B747.68.vnav_model.lua's turn_dist (the distance flown
 -- through a turn flown over its fix), and in the FMS module as XTLua runs
 -- it (tests/lib/xtlua.lua): the predictions' leg after a turn the longer or
 -- shorter by it, the ND's points on the great circles, VNAV's distance to
@@ -46,7 +47,20 @@ T.equal(L.transition(P, {kind = "hold", b = ATMUG, term = "fix"}, e2, 370), 0, "
 T.equal(L.transition(P, e1, {kind = "disc"}, 370), 0, "into a discontinuity: none")
 local fo = line(XAC, ATMUG)
 fo.term = "alt"
-T.equal(L.transition(P, fo, e2, 370), 0, "a conditional leg's end: none")
+T.near(L.transition(P, fo, e2, 370), x370, 1e-9, "a conditional leg's end: as a fly-over fix (step 6d3)")
+fo.term = "intc"
+T.equal(L.transition(P, fo, e2, 370), 0, "an intercept's end: none (its turn begins before it)")
+-- (step 6d3) the path model's turn into a heading leg: its arc (3 NM) and
+-- the leg from its end (10 NM) against the great circle from the turn's
+-- start to the leg's end
+local tA = P.point(ATMUG, 90, 2)
+local hB = P.point(tA, 180, 10)
+local _, ab = P.course(ATMUG, hB)
+local hd = {kind = "heading", a = tA, b = hB, hdg = 180, len = 10, term = "radial",
+    turn_in = {from = ATMUG, len = 3}}
+T.near(L.transition(P, e1, hd, 370), 3 + 10 - ab, 1e-9, "a turn into a leg: its arc and the leg against the great circle")
+hd.b = nil
+T.equal(L.transition(P, e1, hd, 370), 0, "no end: none")
 
 -- turn_dist: 20 NM to go as the fix is sequenced, 360 kt (0.1 NM a second)
 local t = {d = 20, t = 0}

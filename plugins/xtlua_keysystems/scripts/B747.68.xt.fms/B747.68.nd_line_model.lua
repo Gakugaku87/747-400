@@ -16,6 +16,12 @@
 --  - an intercept's end (a CI's or VI's) as a fly-by turn's arc: LNAV
 --    begins the turn onto the next leg where it brings the airplane onto
 --    that leg's course (the LNAV model's `ended`), not at the corner;
+--  - (step 6d3) the turn the path model put before a heading or course
+--    leg or a DF (its `turn_in`: flown over the point before it) round its
+--    arc; after a conditional leg's end (an altitude, a DME distance, a
+--    radial, a distance) the turn onto a line or course as LNAV steers it
+--    (flyover_path, as after a fly-over fix), the active leg's from where
+--    the condition was met;
 --  - a hold's racetrack and a procedure turn's shape (the path model's
 --    shape, `shape[i]`);
 --  - no line across a discontinuity or into a leg with no path, nor the
@@ -42,6 +48,8 @@ M.TURN_STEP = 5
 
 local RAD = math.pi / 180
 local function wrap180(a) return (a + 180) % 360 - 180 end
+-- the conditional legs' ends LNAV turns after (not an intercept's)
+local COND = {alt = true, dme = true, radial = true, dist = true}
 
 -- the points of an arc around c of radius r from bearing b0 sweeping
 -- `sweep` degrees (dir "R" clockwise), its ends left out
@@ -53,18 +61,19 @@ local function arc(add, P, c, r, b0, sweep, dir)
     end
 end
 
--- the turn flown over e1's fix onto e2 (the LNAV model's flyover_path at
--- `vt` kt), kept in `cache` by the fix, the courses and the speed: {pts,
--- cap (where LNAV is on e2)} or false
+-- the turn flown over e1's fix (or a conditional leg's end) onto e2 (the
+-- LNAV model's flyover_path at `vt` kt; e2's line need not start there: a
+-- CF's from abeam it), kept in `cache` by the point, the courses, e2's end
+-- and the speed: {pts, cap (where LNAV is on e2)} or false
 local function flyover(o, e1, e2, vt)
     local P, L = o.P, o.L
     if not (L and e2 and e1.b and e2.a) then return nil end
     if e2.kind ~= "line" and e2.kind ~= "course" then return nil end
-    local _, gap = P.course(e1.b, e2.a)
     local c1, c2 = P.end_course(e1), P.start_course(e2)
-    if gap > 0.1 or not (c1 and c2) or math.abs(wrap180(c2 - c1)) < 1 then return nil end
+    if not (c1 and c2) or math.abs(wrap180(c2 - c1)) < 1 then return nil end
     local v = math.floor(vt / 10 + 0.5) * 10
-    local key = string.format("%.5f %.5f %.1f %.1f %d", e1.b.lat, e1.b.lon, c1, c2, v)
+    local b2 = e2.b or e2.a
+    local key = string.format("%.5f %.5f %.1f %.1f %.5f %.5f %d", e1.b.lat, e1.b.lon, c1, c2, b2.lat, b2.lon, v)
     local cache = o.cache or {}
     local f = cache[key]
     if f == nil then
@@ -100,10 +109,12 @@ function M.route(path, o, out)
         local v = type(o.kt) == "function" and o.kt(i) or o.kt
         return v or 250
     end
-    -- the turn at e1's fix (or intercept) into e2: a fly-by turn's arc (the
-    -- line on e2 from its end) or a turn flown over the fix; where e2's line
-    -- starts
+    -- the turn at e1's fix (or intercept, or conditional end) into e2: a
+    -- fly-by turn's arc (the line on e2 from its end) or a turn flown over
+    -- the point; where e2's line starts
     local function turn(e1, e2, vt)
+        -- the path model's turn into e2 (drawn with e2)
+        if e2.turn_in then add(e1.b) return nil end
         local tr = P.turn(e1.term == "intc" and intc_fix(e1) or e1, e2, vt)
         if tr then
             add(tr.t1)
@@ -113,18 +124,30 @@ function M.route(path, o, out)
             return tr.t2
         end
         add(e1.b)
-        if e1.term ~= "fix" or e1.missed or (e1.kind ~= "line" and e1.kind ~= "arc") then return nil end
+        if e1.missed then return nil end
+        if e1.term == "fix" then
+            if e1.kind ~= "line" and e1.kind ~= "arc" then return nil end
+        elseif not COND[e1.term] then
+            return nil
+        end
         local f = flyover(o, e1, e2, vt)
         if not f then return nil end
         for _, q in ipairs(f.pts) do add(q) end
         return f.cap
     end
     local start = nil
-    -- the turn into the active leg at the fix sequenced last, while flown
+    -- the turn into the active leg at the fix sequenced last, while flown;
+    -- at a conditional leg's end from where its condition was met (the
+    -- active leg's start), not where it was predicted
     local e0, e1 = o.prev, path and path[1]
-    if e0 and e1 and e0.b and e1.a and (e1.kind == "line" or e1.kind == "course") then
-        local _, gap = P.course(e0.b, e1.a)
-        if gap <= 0.1 then start = turn(e0, e1, kt(0)) end
+    local s1 = e1 and (e1.start or e1.a)
+    if e0 and e1 and e0.b and s1 and e1.a and not e1.turn_in and (e1.kind == "line" or e1.kind == "course") then
+        local _, gap = P.course(e0.b, s1)
+        if gap <= 0.1 then
+            start = turn(e0, e1, kt(0))
+        elseif COND[e0.term] then
+            start = turn(setmetatable({b = s1}, {__index = e0}), e1, kt(0))
+        end
     end
     for i, e in ipairs(path or {}) do
         local nxt = path[i + 1]
@@ -138,6 +161,12 @@ function M.route(path, o, out)
             if not a then
                 open = false
             else
+                -- (step 6d3) round the turn into it to where it starts
+                local ti = e.turn_in
+                if ti then
+                    add(ti.from)
+                    arc(add, P, ti.center, ti.r, P.course(ti.center, ti.from), ti.sweep, ti.dir)
+                end
                 add(a)
                 if k == "arc" and e.center and e.r and e.len then
                     local s0 = P.course(e.center, e.a)
@@ -153,7 +182,7 @@ function M.route(path, o, out)
                     -- a vectors leg: no line on to the next leg
                     add(b)
                     open = false
-                elseif nxt and (e.term == "fix" or e.term == "intc") then
+                elseif nxt and (e.term == "fix" or e.term == "intc" or COND[e.term]) then
                     start = turn(e, nxt, kt(i))
                 else
                     add(b)
