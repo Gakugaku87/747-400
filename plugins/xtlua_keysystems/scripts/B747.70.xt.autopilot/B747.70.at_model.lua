@@ -61,6 +61,12 @@ M.REF_NEAR_EPR, M.REF_NEAR_N1 = 0.05, 2.5
 -- first run; a lagged loop's simulation the same), 0.002 and 0.06 settle
 M.K_SPD, M.K_ACC, M.SPD_DOWN = 0.002, 0.06, 0.5
 M.K_VS = 1.2e-5
+-- G/A's THR on the energy's rate (evs, as VNAV's: the speed's change
+-- counts) and faster (estimate: on the V/S at K_VS the levers took 37 s
+-- from the approach's thrust to 2,000 fpm and the speed fell 14 kt; at
+-- 5e-5 the V/S went past to 3,300 fpm and back to 200 with the engines'
+-- lag: aero_go_around, 2026-11-02, notes/AERO.md §3.15)
+M.K_VS_GA = 3e-5
 M.K_EPR, M.K_N1 = 0.33, 0.003
 -- FLCH's V/S: the altitude change in 125 s (ATA34_2 p.670); G/A's 2,000
 -- fpm (p.674); the speed protection's margin (FCOM p.675)
@@ -317,13 +323,14 @@ function M.servo(s, inp)
     else
         -- THR: FLCH's V/S to the MCP altitude in 125 s, G/A's 2,000 fpm,
         -- VNAV's the FMC's (step 9d2a: the early descent; 9h4b: the driftdown);
-        -- climbing not less thrust (ATA34_2 p.646)
+        -- climbing not less thrust (ATA34_2 p.646), but G/A controls to its
+        -- V/S (p.675: above it, less)
         local vnav = s.pitch == "VNAV"
         local want = s.ga and M.GA_VS or (vnav and (inp.vnav_vs or 0)) or (inp.mcp_alt - inp.alt) / M.FLCH_S * 60
         local vs = (vnav and inp.ivs) or inp.vs
-        local ev = (vnav and inp.evs) or vs
-        rate = (vnav and M.K_VS_VNAV or M.K_VS) * (want - ev)
-        if want > 0 and rate < 0 then rate = 0 end
+        local ev = ((vnav or s.ga) and inp.evs) or vs
+        rate = (vnav and M.K_VS_VNAV or s.ga and M.K_VS_GA or M.K_VS) * (want - ev)
+        if want > 0 and rate < 0 and not s.ga then rate = 0 end
         rate = math.min(rate, cap)
         -- VNAV's descent at its V/S and the energy's at the target speed
         -- for REACH_S (FMSPG p.3.5-5)
