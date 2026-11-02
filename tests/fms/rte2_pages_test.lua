@@ -162,4 +162,14 @@ T.equal(line(9), lr("        ZZBB", "ARR>"), "and ARR")
 key("ls_key/R2")
 T.equal(small(2), " STARS   RTE 1  APPROACH", "RTE 1's ARR: its ARRIVALS")
 
+-- ACTIVATE> on the inactive route's LEGS page (FCOM p.1332): that route
+-- (before, the RTE pages' rteactivate took the active one: INVALID ENTRY;
+-- X-Plane, s219 2026-11-02)
+key("func_key/legs")
+key("ls_key/L6")
+T.check(line(1):find("RTE 1 LEGS") and line(13):find("ACTIVATE>$"), "RTE 1 LEGS, inactive: ACTIVATE>: " .. line(1))
+key("ls_key/R6")
+T.check(route(1).activating and pad() == "", "ACTIVATE> on RTE 1 LEGS: RTE 1 activated, no INVALID ENTRY: [" .. pad() .. "]")
+T.check(rt:get("laminar/B747/fms/exec_light_pilot") == 1, "the EXEC light")
+
 T.done()

@@ -2220,3 +2220,9 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 試験：
   - 回帰（LuaJIT）：`path_model_test` 165 件（s91 の形：radial を越える点が 3.05 NM 先へ、X-Plane の航法データの D337F で 260 kt と 300 kt（旋回の中で radial を越え、弧の上で終える：予測の点は飛ばない）、旋回の円の上の始まり、VA の後の VI、fly-by の後の CA（fly-by のまま）と VA（旋回）、DF の後の左の長い旋回、旋回の中で 1,600 ft に届く：弧の上で終え、次の旋回はそこの航跡から、最初の脚）、`lnav_model_test` +2 件（弧の上で終わった脚の radial の側を旋回の始まりで見る）、`nd_line_model_test` 47 件（旋回の弧とその向き、VA の後の CF への旋回、現用の脚の条件を満たした所から）、`vnav_turns_test` 32 件（条件の脚の終わり、迎えの脚は無し、旋回の余分）、`pred_glue_test`（ZZAA の SID：(600) の後の旋回で (INTC) が手前に動き、ZZV までの CF が長くなって ZZV の fly-by の旋回 −0.03 NM が数えられる。順送りの後の残りの距離は、ZZV の旋回を含む脚の長さで出す。固定点の無い脚の中の目印はその始まり +3 件）。全 199 本。
   - X-Plane（2026-11-02、起動し直した後）：`s91` 29 項目すべて合格（D337F を飛び越えた後、NRE001 の予測の点へ 2 NM 未満まで近づき、そのときまだ現用点。18:00 の回は旋回なしの線のままで外れた）。`s150` 33 項目すべて合格（G/A の後に VNAV SPD・LNAV・THR REF、3,000 ft で VNAV PTH と水平、巡航の段階で 236 kt）。直す前の `s150`（18:24・19:07）は、上の目印の Lua エラーで XTLua が FMC・AFDS などを止め、G/A の 2 フレーム後から F/D・FMA・CDU が動かなかった。
+
+## 134. LEGS のページの ACTIVATE は表示中の経路を ACTIVATE する（2026-11-02：`s219` の RTE 2 の確かめで見つけた不具合）
+
+- 見つけたこと：`s219` で RTE COPY の後、RTE 2 LEGS の 6R（ACTIVATE>）を押すと INVALID ENTRY になり、ACTIVATE されなかった。LEGS のページの 6R（`legsr6`）は RTE のページの `rteactivate` を呼んでいたが、それはページの名前から経路を決めていて（RTE1・RTE2 のページだけを知る）、LEGS・LEGS2 のページではアクティブな経路（`B747_fmc_route`）を選び、アクティブなので INVALID ENTRY にしていた。経路が 2 つとも非アクティブのときは、RTE 2 LEGS の ACTIVATE が RTE 1 を ACTIVATE していた（段 7e4 からの不具合）。
+- 直したこと（`B744.fms.pages.legs.lua`）：LEGS のページの 6R は、そのページが表示している経路を ACTIVATE する（FCOM p.1332：ACTIVATE は非アクティブの経路を ACTIVATE して EXEC を待つ）。
+- 試験：`rte2_pages_test` +3 件（ACT RTE 2 のときの RTE 1 LEGS の ACTIVATE>：RTE 1 が ACTIVATE、INVALID ENTRY なし、EXEC の灯）。X-Plane：`s219`（段 6d4 の確かめの中で。2026-11-02 19:32 の回は 28 項目すべて合格：RTE 2 LEGS の ACTIVATE> で EXEC の灯がつき、INVALID ENTRY は出ない）。
