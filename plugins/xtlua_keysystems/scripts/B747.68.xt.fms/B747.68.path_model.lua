@@ -10,7 +10,9 @@
 --    predicted; nil when it cannot be), len (nm), term (how it ends:
 --    "fix", "alt", "dme", "radial", "intc", "dist", "manual"), alt (ft),
 --    dme (nm), navaid, radial (true degrees), flyover, turn (the
---    procedure's turn direction into it: "L", "R"), missed}
+--    procedure's turn direction into it: "L", "R"), missed, start (step
+--    6d3: the point before it, where the leg before ended; a CF's line
+--    from abeam it)}
 --      "disc": a discontinuity or a pending airway, no path
 --      "line": the great circle from a to b, crs its course at a (true
 --        degrees): TF, DF, IF, CF and the FMC's own legs (DIRECT, airways,
@@ -36,6 +38,18 @@
 --    before the fix, at most half of either leg; turns of more than
 --    MAX_FLYBY degrees, against the procedure's turn direction, onto a
 --    heading or onto a leg not starting at the fix flown over the fix.
+--  - (step 6d3) A turn flown over the point before a heading or course
+--    leg or a DF (a conditional leg's end: LNAV turns once its condition
+--    is met, FCOM p.1249; a fly-over fix; a fix with no fly-by turn into
+--    the leg): with the turns' speeds (env.kt(i), the turn into leg i)
+--    the leg starts where the turn ends, its end predicted from there
+--    (ATA34_2 p.615: curved transitions between the path's segments).
+--    The turn as LNAV's (estimate): BANK degrees at that speed, the
+--    procedure's way else the shorter, from the point itself (no roll-in),
+--    a DF's until its track meets the course to the fix (LNAV's direct).
+--    turn_in = {from, center, r, dir, sweep (degrees), len (nm)}; none
+--    when the condition is met in the turn. The first leg's with env.prev,
+--    the element before it (LNAV's last sequenced).
 -- Pure.
 --   local P = B747_path_model                      -- in XTLua, after dofile
 --   local P = dofile(".../B747.68.path_model.lua") -- in the tests
@@ -144,6 +158,8 @@ end
 
 -- the course an element ends on and the one it starts on (true degrees)
 function M.end_course(e)
+    -- (step 6d3) a leg ended in its turn: the track there
+    if e.end_crs then return e.end_crs end
     if e.kind == "line" then
         if e.len < 0.01 then return e.crs end
         return (M.course(e.b, e.a) + 180) % 360
@@ -230,11 +246,110 @@ local function line(e, a, b)
     return e
 end
 
+-- (step 6d3) the turns flown over the point before a leg (the header's
+-- last item). The radius of a turn at kt (LNAV's: at least 60 kt)
+local function radius(kt)
+    return (math.max(kt, 60) * KT) ^ 2 / (G * math.tan(M.BANK * RAD)) / 1852
+end
+local COND = {alt = true, dme = true, radial = true, dist = true}
+-- whether the turn from element pe into e (from pe's end) is flown over
+-- pe's end: a conditional leg's (an intercept's turn begins before it,
+-- vectors have no line on), else a fix with no fly-by turn into e
+local function turn_over(pe, e, kt)
+    if not (pe and pe.b and e.a) then return false end
+    if COND[pe.term] then return true end
+    if pe.term ~= "fix" or (pe.kind ~= "line" and pe.kind ~= "arc") then return false end
+    return M.turn(pe, e, kt) == nil
+end
+-- a heading or course leg's start moved to the turn's end: from its start
+-- on pe's end course round onto its own, `dir` the procedure's way
+local function turn_into(e, from, dir)
+    local pe = from.pe
+    if not turn_over(pe, e, from.kt) then return false end
+    local c1, c2 = M.end_course(pe), e.crs or e.hdg
+    if not (c1 and c2) then return false end
+    local delta = wrap180(c2 - c1)
+    if dir == "R" and delta < 0 then delta = delta + 360 elseif dir == "L" and delta > 0 then delta = delta - 360 end
+    if math.abs(delta) < 1 then return false end
+    local r, sgn, a = radius(from.kt), delta > 0 and 1 or -1, e.a
+    local c = M.point(a, (c1 + 90 * sgn) % 360, r)
+    e.turn_in = {from = a, center = c, r = r, dir = sgn > 0 and "R" or "L", sweep = math.abs(delta),
+        len = r * math.abs(delta) * RAD}
+    e.a = M.point(c, (c2 - 90 * sgn) % 360, r)
+    return true
+end
+-- a DF's: from its start on pe's end course round towards the fix (the
+-- procedure's way, else the fix's side) until the track meets the course
+-- to it, the line from there
+local function turn_onto(e, from, dir, fix)
+    local pe = from.pe
+    if not turn_over(pe, e, from.kt) then return false end
+    local c1, a = M.end_course(pe), e.a
+    if not c1 then return false end
+    local rel = wrap180(M.course(a, fix) - c1)
+    if math.abs(rel) < 1 and not dir then return false end
+    dir = dir or (rel > 0 and "R" or "L")
+    local r, sgn = radius(from.kt), dir == "R" and 1 or -1
+    local c = M.point(a, (c1 + 90 * sgn) % 360, r)
+    local phi, dc = M.course(c, fix)
+    if dc <= r + 0.01 then return false end
+    local th0 = (c1 - 90 * sgn) % 360
+    local th = (phi - sgn * math.acos(r / dc) / RAD) % 360
+    local sweep = sgn > 0 and (th - th0) % 360 or (th0 - th) % 360
+    if sweep < 1 or sweep > 359 then return false end
+    e.turn_in = {from = a, center = c, r = r, dir = dir, sweep = sweep, len = r * sweep * RAD}
+    line(e, M.point(c, th, r), fix)
+    return true
+end
+-- e's condition met in its turn (an altitude reached, a DME distance or a
+-- radial crossed between the turn's start and its end; `alt` at the
+-- turn's start): a test of the arc's point `deg` degrees round, else nil
+local function met_in_turn(e, alt, grad)
+    local t = e.turn_in
+    local a0 = t.from
+    if e.term == "alt" and e.alt then
+        if alt + t.len * grad < e.alt then return nil end
+        return function(_, deg) return alt + t.r * deg * RAD * grad >= e.alt end
+    elseif e.term == "dme" and e.navaid and e.dme then
+        local _, d0 = M.course(e.navaid, a0)
+        local _, d1 = M.course(e.navaid, e.a)
+        if (d0 < e.dme) == (d1 < e.dme) then return nil end
+        return function(p) local _, d = M.course(e.navaid, p) return (d < e.dme) ~= (d0 < e.dme) end
+    elseif e.term == "radial" and e.navaid and e.radial then
+        local x0, at0 = M.track(e.navaid, e.radial, a0)
+        local x1, at1 = M.track(e.navaid, e.radial, e.a)
+        if not ((at0 > 0 or at1 > 0) and (x0 >= 0) ~= (x1 >= 0)) then return nil end
+        return function(p) local x = M.track(e.navaid, e.radial, p) return (x >= 0) ~= (x0 >= 0) end
+    end
+    return nil
+end
+-- the leg ended on its turn's arc where `met` first holds (LNAV sequences
+-- it there and turns on into the next leg): the arc cut there, no line
+-- after it, end_crs the track there (M.end_course)
+local function end_in_turn(e, met)
+    local t = e.turn_in
+    local sgn = t.dir == "R" and 1 or -1
+    local b0 = M.course(t.center, t.from)
+    local function at(deg) return M.point(t.center, (b0 + sgn * deg) % 360, t.r) end
+    local lo, hi = 0, t.sweep
+    if met(at(0), 0) then hi = 0 end
+    for _ = 1, 30 do
+        if hi - lo < 0.01 then break end
+        local mid = (lo + hi) / 2
+        if met(at(mid), mid) then hi = mid else lo = mid end
+    end
+    local p = at(hi)
+    t.sweep, t.len = hi, t.r * hi * RAD
+    e.a, e.b, e.len = p, p, 0
+    e.end_crs = (b0 + sgn * hi + 90 * sgn) % 360
+end
+
 -- one leg's element: `l` the route's leg `i`, `prev` where it starts (the
 -- leg before's end; nil when unknown), `nxt` the leg after it, `alt` the
--- altitude at `prev` (ft)
-function M.element(l, i, prev, nxt, env, alt)
-    local e = {leg = i, flyover = l.flyover, turn = l.turn, missed = l.missed, term = "fix"}
+-- altitude at `prev` (ft); `from` (step 6d3) {pe = the element before, kt
+-- = the turn's speed} for a turn flown over `prev`
+function M.element(l, i, prev, nxt, env, alt, from)
+    local e = {leg = i, flyover = l.flyover, turn = l.turn, missed = l.missed, term = "fix", start = prev}
     local pt = l.pt
     if l.dto and l.from then
         -- a DIRECT TO (not one with an INTC CRS): flown from where the
@@ -266,7 +381,21 @@ function M.element(l, i, prev, nxt, env, alt)
         else
             e.kind, e.hdg, e.mag = "heading", true_of(env, l.crs, prev), l.crs
         end
-        predict(e, l, nxt, env, alt)
+        -- (step 6d3) from the turn's end, climbing in the turn
+        local a0 = alt
+        if from and turn_into(e, from, l.turn) then a0 = alt + e.turn_in.len * (env.grad or M.GRAD) end
+        predict(e, l, nxt, env, a0)
+        if e.turn_in then
+            local met = met_in_turn(e, alt, env.grad or M.GRAD)
+            if met then
+                -- the condition met in the turn: the leg ends on its arc
+                end_in_turn(e, met)
+            elseif not e.b and e.term ~= "manual" then
+                -- no end from the turn's end: from the point itself
+                e.a, e.turn_in = prev, nil
+                predict(e, l, nxt, env, alt)
+            end
+        end
         return e
     elseif FROM_FIX[pt] then
         local a = l.from_fix or prev
@@ -316,6 +445,8 @@ function M.element(l, i, prev, nxt, env, alt)
         end
         line(e, prev, l.fix)
         e.direct = pt == "DF"
+        -- (step 6d3) a DF from the turn towards its fix
+        if e.direct and from then turn_onto(e, from, l.turn, l.fix) end
         return e
     else
         e.kind = "none"
@@ -331,20 +462,23 @@ end
 -- the elements of a route's legs (the route model's legs): `start` where
 -- the first one starts (the route model's leg_from), env = {var =
 -- function(lat, lon) (the magnetic variation there, degrees east, or nil),
--- alt (ft, the altitude at the start), grad (ft/nm)}. elements[i] for
--- legs[i]
+-- alt (ft, the altitude at the start), grad (ft/nm); (step 6d3) kt =
+-- function(i) (the speed of the turn into leg i, kt; none: no turns
+-- flown over a point), prev (the element before the first leg)}.
+-- elements[i] for legs[i]
 function M.build(legs, start, env)
     local out = {}
-    local prev, alt = start, env.alt or 0
+    local prev, alt, pe = start, env.alt or 0, env.prev
     for i, l in ipairs(legs) do
         if l.disc or l.pending then
             out[i] = {leg = i, kind = "disc"}
-            prev = nil
+            prev, pe = nil, nil
         else
-            local e = M.element(l, i, prev, legs[i + 1], env, alt)
+            local from = env.kt and pe and {pe = pe, kt = env.kt(i)} or nil
+            local e = M.element(l, i, prev, legs[i + 1], env, alt, from)
             out[i] = e
             if e.term == "alt" and e.alt then alt = math.max(alt, e.alt) end
-            prev = e.b
+            prev, pe = e.b, e
         end
     end
     return out

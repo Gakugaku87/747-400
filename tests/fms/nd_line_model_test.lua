@@ -144,6 +144,54 @@ local vh = {kind = "heading", a = B, b = C, hdg = 0, len = dist(B, C), term = "i
 pts = D.route({vr, vh}, {P = P, L = L, kt = 250})
 T.equal(#pts, 3, "a radial's end: A, the crossing, C")
 T.check(same(pts[2], B), "the corner at the crossing")
+-- (step 6d3) the path model's turn before a leg (turn_in): s91's D337F
+-- flown over, round the turn onto heading 100 to NRE's radial 001
+local var7 = function() return -7 end
+local D337F = {lat = 35.9, lon = 140.3}
+local NRE_ = {ident = "NRE", lat = 35.8, lon = 140.4}
+path = P.build({
+    {pt = "CF", fix = D337F, crs = 337, dist = 5, flyover = true},
+    {pt = "VR", crs = 100, navaid = NRE_, theta = 1, turn = "R", name = "NRE001"},
+}, nil, {var = var7, alt = 3000, kt = function() return 250 end})
+local ti = path[2].turn_in
+pts = D.route(path, {P = P, L = L, kt = 250})
+local k_from, k_a = nil, nil
+for k, p in ipairs(pts) do
+    if same(p, D337F) then k_from = k end
+    if same(p, path[2].a) then k_a = k end
+end
+T.check(ti and k_from and k_a and k_a - k_from > 20, "D337F, round the turn (123 degrees), then the heading from its end")
+local round = true
+for k = (k_from or 1) + 1, (k_a or 1) - 1 do
+    if math.abs(dist(ti.center, pts[k]) - ti.r) > 0.01 then round = false end
+end
+T.check(round, "on the turn's circle")
+local steps = true
+for k = (k_from or 1) + 1, k_a or 1 do
+    if dist(pts[k - 1], pts[k]) > ti.r * 6 * math.pi / 180 then steps = false end
+end
+T.check(steps, "round its way in steps of 5 degrees, to the turn's end")
+T.check(same(pts[#pts], path[2].b) and pens(pts) == 1, "to the radial's crossing, one piece")
+-- a conditional leg's end into a CF (from abeam it): the turn onto its
+-- course as LNAV steers it, then on to the fix (F2 15 nm on, its course
+-- 083 true 4.4 nm right of the altitude's point)
+local VA2 = {pt = "VA", crs = 337, alt = 2000, altterm = true, name = "(2000)"}
+local F2 = P.point(P.build({VA2}, D337F, {var = var7, alt = 100})[1].b, 100, 15)
+local CF2 = {pt = "CF", fix = F2, crs = 90, dist = 10}
+path = P.build({VA2, CF2}, D337F, {var = var7, alt = 100, kt = function() return 220 end})
+local va2 = path[1]
+pts = D.route(path, {P = P, L = L, kt = 220, cache = {}})
+local k_va = nil
+for k, p in ipairs(pts) do if same(p, va2.b) then k_va = k end end
+T.check(k_va and #pts - k_va > 4 and same(pts[#pts], F2), "from the altitude's point round the turn to the fix")
+local cap2 = pts[#pts - 1]
+T.check(math.abs(P.track(F2, 263, cap2)) < L.FLY_XT + 0.01, "on the course into it where LNAV is on it")
+-- the active leg after the altitude met where it was not predicted: from
+-- there (its start), not from the prediction
+local met = P.point(va2.b, 330, 1)
+local cf_now = P.build({CF2}, met, {var = var7, alt = 2000})
+pts = D.route(cf_now, {P = P, L = L, kt = 220, cache = {}, prev = va2})
+T.check(same(pts[1], met) and #pts > 4 and same(pts[#pts], F2), "the active leg's turn from where the altitude was met")
 -- a hold at B: round its racetrack and back to B
 local hold = {kind = "hold", a = B, b = B, len = 0, inbd = 90, dir = "R", term = "fix"}
 path = {line(A, B), hold}
@@ -155,6 +203,8 @@ T.equal(pens(pts), 1, "one piece")
 -- the styles
 pts = D.route({line(A, B)}, {P = P, L = L, style = D.MOD})
 T.equal(pts[1].pen, D.MOD, "a modification's piece")
+pts = D.route({line(A, B)}, {P = P, L = L, style = D.ACTIVATING})
+T.equal(pts[1].pen, 5, "(step 6d4) an activation not executed: style 5 (FCOM p.1251)")
 
 -- the arrays: at most MAXP, a piece's last start left out
 local many = {}

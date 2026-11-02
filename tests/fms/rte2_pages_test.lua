@@ -61,6 +61,17 @@ local function idents(st)
     return table.concat(out, " ")
 end
 local function route(n) return fms.ns.B747_fmc_route_num(n) end
+-- (step 6d4) the ND's line: its pieces' styles in order (1 active, 3
+-- inactive, 5 activated not executed: B747.68.nd_line_model.lua)
+local function nd_pieces()
+    frames(1.2)
+    local out = {}
+    for k = 0, rt:get("laminar/B747/nd/line/n") - 1 do
+        local p = rt:get("laminar/B747/nd/line/pen", k)
+        if p ~= 0 then out[#out + 1] = string.format("%d", p) end
+    end
+    return table.concat(out, " ")
+end
 
 -- RTE 1, inactive: ZZAA RW16R, ALPHA, Z1 to CHARL, ZZBB
 key("func_key/fpln")
@@ -89,6 +100,9 @@ key("func_key/next_pg")
 enter("DELTA", "R1")
 T.equal(line(3), lr("DIRECT", "DELTA"), "RTE 2: DIRECT DELTA")
 T.check(idents(route(2)) == "DELTA" and idents(route(1)) == "ALPHA BRAVO CHARL", "RTE 1 as it was")
+local pieces = nd_pieces()
+T.check(pieces:find("^3") and not pieces:find("[15]"), "the ND: both routes inactive, long cyan dashes (FCOM p.1148): " .. pieces)
+T.check(select(2, pieces:gsub("3", "")) >= 2, "RTE 2's line and RTE 1's")
 key("func_key/legs")
 T.check(line(1):find("^%s+RTE 1 LEGS%s+$"), "the LEGS key: RTE 1 LEGS, none active: " .. line(1))
 T.equal(line(13), lr("<RTE 2 LEGS", "ACTIVATE>"), "<RTE 2 LEGS (FCOM p.1330's figure)")
@@ -109,6 +123,8 @@ T.equal(line(11), "COMPLETE                ", "COMPLETE")
 T.equal(small(10), " RTE COPY               ", "under RTE COPY (estimate)")
 T.equal(idents(route(2)), "ALPHA BRAVO CHARL", "RTE 2 a copy of the active route, DELTA gone (FMSPG p.134)")
 T.check(not route(2).active and route(2).rte.origin.ident == "ZZAA", "inactive, with its origin")
+pieces = nd_pieces()
+T.check(pieces:find("^3") and pieces:find("1"), "the ND: RTE 2 inactive under the active RTE 1: " .. pieces)
 
 -- RTE 2 changed on its own and activated (FCOM p.1290)
 key("ls_key/L6")
@@ -118,12 +134,17 @@ enter("DELTA", "R3")
 T.check(idents(route(2)) == "ALPHA BRAVO CHARL DELTA" and idents(route(1)) == "ALPHA BRAVO CHARL", "DELTA on RTE 2 alone")
 key("ls_key/R6")
 T.check(rt:get("laminar/B747/fms/exec_light_pilot") == 1, "ACTIVATE: the EXEC light (FCOM p.1238)")
+pieces = nd_pieces()
+T.check(pieces:find("^5") and pieces:find("1") and not pieces:find("3"),
+    "the ND: RTE 2 activated, not executed: cyan and white dashes (FCOM p.1251): " .. pieces)
 key("key/execute")
 T.check(fms.ns.B747_fmc_route.num == 2 and fms.ns.B747_fmc_route.active and not route(1).active,
     "EXEC: RTE 2 the active route, RTE 1 inactive")
 T.check(line(1):find("ACT RTE 2"), "ACT RTE 2: " .. line(1))
 T.check(rt:get("laminar/B747/fms/exec_light_pilot") == 0, "the EXEC light off")
 T.check(xpfms():find("\n11 DELTA DRCT "), "X-Plane's flight plan: RTE 2's, with DELTA")
+pieces = nd_pieces()
+T.check(pieces:find("^3") and pieces:find("1") and not pieces:find("5"), "the ND: RTE 1 inactive under the active RTE 2: " .. pieces)
 key("ls_key/L6")
 T.check(line(1):find("^%s+RTE 1%s+$") and line(13):find("ACTIVATE>$"), "RTE 1 inactive: ACTIVATE>")
 key("func_key/fpln")
@@ -161,5 +182,17 @@ T.equal(line(7), lr("<DEP    ZZAA", ""), "RTE 2's DEP")
 T.equal(line(9), lr("        ZZBB", "ARR>"), "and ARR")
 key("ls_key/R2")
 T.equal(small(2), " STARS   RTE 1  APPROACH", "RTE 1's ARR: its ARRIVALS")
+
+-- ACTIVATE> on the inactive route's LEGS page (FCOM p.1332): that route
+-- (before, the RTE pages' rteactivate took the active one: INVALID ENTRY;
+-- X-Plane, s219 2026-11-02)
+key("func_key/legs")
+key("ls_key/L6")
+T.check(line(1):find("RTE 1 LEGS") and line(13):find("ACTIVATE>$"), "RTE 1 LEGS, inactive: ACTIVATE>: " .. line(1))
+key("ls_key/R6")
+T.check(route(1).activating and pad() == "", "ACTIVATE> on RTE 1 LEGS: RTE 1 activated, no INVALID ENTRY: [" .. pad() .. "]")
+T.check(rt:get("laminar/B747/fms/exec_light_pilot") == 1, "the EXEC light")
+pieces = nd_pieces()
+T.check(pieces:find("^5") and pieces:find("1"), "the ND: RTE 1 activated, under the active RTE 2: " .. pieces)
 
 T.done()

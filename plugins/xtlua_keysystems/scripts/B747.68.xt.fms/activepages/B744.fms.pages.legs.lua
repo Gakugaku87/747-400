@@ -427,7 +427,9 @@ function fmsFunctions.legsr6(fmsO, value)
   elseif plan_mode(fmsO.id) then
     legs_step(fmsO)
   elseif not st.active and not st.activating then
-    fmsFunctions.rteactivate(fmsO, value)
+    -- the route this page shows (FCOM p.1332); the RTE pages' rteactivate
+    -- knows their pages only and took the active route (INVALID ENTRY)
+    B747_fmc_route_entry(fmsO, R.activate(st))
   elseif st.active and not st.mod then
     fmsFunctions.setpage(fmsO, "RTEDATA")
   else

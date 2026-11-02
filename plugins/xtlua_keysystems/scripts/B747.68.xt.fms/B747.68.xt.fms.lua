@@ -1419,11 +1419,16 @@ B747DR_fms_profile_kind = find_dataref("laminar/B747/fms/profile/kind")
 B747DR_fms_profile_lat = find_dataref("laminar/B747/fms/profile/lat")
 B747DR_fms_profile_lon = find_dataref("laminar/B747/fms/profile/lon")
 local PROFILE_N = 8
--- the point x NM along the prediction's legs, nil beyond them
-local function pred_point(legs, x)
+-- the point x NM along the prediction's legs, nil beyond them; in a leg
+-- with no fix (a conditional leg: its distance the turn into it alone,
+-- B747_fms_turns since step 6d3) at its start (estimate). Before, such a
+-- leg's point read its missing end: the error stopped every module of the
+-- XTLua plugin (s150's G/A, 2026-11-02)
+function B747_fms_pred_point(legs, x)
   local acc = 0
   for _, l in ipairs(legs) do
     if l.dist > 0 and x <= acc + l.dist then
+      if not l.p1 then return l.p0 end
       local crs = B747_route_model.course(l.p0.lat, l.p0.lon, l.p1.lat, l.p1.lon)
       -- (step LF2) the turn into the leg its first part (at its start)
       return B747_route_model.course_point(l.p0, crs, math.max(0, x - acc - (l.turn or 0)))
@@ -1444,7 +1449,7 @@ local function put_profile(s, r)
   end
   for k = 0, PROFILE_N - 1 do
     local p = pts[k + 1]
-    local q = p and pred_point(s.legs, p.x)
+    local q = p and B747_fms_pred_point(s.legs, p.x)
     if q then
       B747DR_fms_profile_lat[k] = q.lat
       B747DR_fms_profile_lon[k] = q.lon
@@ -2349,7 +2354,9 @@ do
           if m then vt = B747_perf_db.tas(m, p.h, isa) end
         end
         vt = math.max(vt or simDR_groundspeed * 1.94384, 150) + simDR_wind_speed
-        local key = string.format("%.5f %.5f %.1f %.1f %d", e1.b.lat, e1.b.lon, e1.crs or -1, e2.crs or -1, math.floor(vt / 10 + 0.5))
+        local a2, b2 = e2.a or e1.b, e2.b or e1.b
+        local key = string.format("%.5f %.5f %.1f %.1f %.5f %.5f %.5f %.5f %d", e1.b.lat, e1.b.lon, e1.crs or e1.hdg or -1,
+          e2.crs or e2.hdg or -1, a2.lat, a2.lon, b2.lat, b2.lon, math.floor(vt / 10 + 0.5))
         local x = cache[key]
         if x == nil then x = B747_lnav_model.transition(B747_path_model, e1, e2, math.floor(vt / 10 + 0.5) * 10) end
         used[key] = x
@@ -2372,9 +2379,14 @@ local lnavWasEngaged=false
 -- LNAV sequenced last (its turn into the active leg drawn while flown)
 B747_nd_line_dirty=true
 do
-  local prev=nil
-  function B747_fmc_nd_line_prev(e) prev=e end
+  local prev,prevKt=nil,nil
+  function B747_fmc_nd_line_prev(e)
+    prev=e
+    prevKt=e and B747_fmc_turn_kt(0) or nil
+  end
   function B747_fmc_nd_line_prev_of() return prev end
+  -- (step 6d3) the speed when it was sequenced (the active leg's turn)
+  function B747_fmc_nd_line_prev_kt() return prevKt end
 end
 B747DR_fms_lnav_valid=find_dataref("laminar/B747/fms/lnav/valid")
 B747DR_fms_lnav_roll=find_dataref("laminar/B747/fms/lnav/roll")
@@ -2464,15 +2476,42 @@ local function lnav_hold_changed()
   if lnav_pturn()~=ptDrawn then changed=true end
   return changed
 end
+-- (step 6d2) the speed of the turn at the fix ending leg i (the ND's line,
+-- the path's turns): LNAV's now (the true airspeed and the wind) at the
+-- active waypoint and the fix sequenced last (i<=1), the predictions' true
+-- airspeed at the others' fixes with the wind now (B747_fms_turns')
+function B747_fmc_turn_kt(i)
+  local air=lnavAir
+  local now=air and ((air.tas or air.gs)+(air.wind or 0)) or (simDR_groundspeed*1.94384+simDR_wind_speed)
+  if i<=1 then return now end
+  local p=predResult and predResult.pts and predResult.pts[i]
+  local vt=nil
+  if p and p.h then
+    local m=p.machMode and p.mach or (p.cas and B747_perf_db.cas_to_mach(p.cas,p.h)) or p.mach
+    if m then vt=B747_perf_db.tas(m,p.h,B747_fms_isa_dev()) end
+  end
+  if not vt then return now end
+  return math.max(vt,150)+simDR_wind_speed
+end
+-- (step 6d3; notes/ATA-34-61-FMC.md §133) the speed of the turn into leg i
+-- flown over the point before it (the path model's turn_in): at the fix
+-- before it, the active leg's at the speed when its leg before was
+-- sequenced; at least 150 kt (B747_fms_turns')
+function B747_fmc_turn_kt_into(i)
+  local v=(i<=1 and B747_fmc_nd_line_prev_kt()) or B747_fmc_turn_kt(i-1)
+  return math.max(v or 150,150)
+end
 function B747_fmc_lnav_build()
   local st=B747_fmc_route
   local r=st.rte
-  routePath=B747_path_model.build(r.legs,B747_route_model.leg_from(r,1),{var=lnav_var,alt=simDR_pressureAlt1})
+  -- a new active leg not by sequencing: no leg before it (its turn)
+  local key=st.active and lnav_leg_key(r.legs[1]) or nil
+  if st.active and key~=lnavFirst and not lnavSequencing then B747_fmc_nd_line_prev(nil) end
+  routePath=B747_path_model.build(r.legs,B747_route_model.leg_from(r,1),{var=lnav_var,alt=simDR_pressureAlt1,
+    kt=B747_fmc_turn_kt_into,prev=st.active and B747_fmc_nd_line_prev_of() or nil})
   if not st.active then lnavPath,lnavFirst=nil,nil return end
-  local key=lnav_leg_key(r.legs[1])
   if key~=lnavFirst and not lnavSequencing then
     B747_lnav_model.reset(B747_fmc_lnav)
-    B747_fmc_nd_line_prev(nil)
   end
   lnavFirst=key
   lnavPath=routePath
@@ -2606,7 +2645,9 @@ end
 -- (6-1/6-2 step 6d2; notes/ATA-34-61-FMC.md §132) the ND's route line for
 -- the FMS bridge plugin (B747.68.nd_line_model.lua; FCOM p.1147-1148): RTE
 -- 1's path (the active route, else an inactive one), the lateral offset's
--- lines beside it, the modification's path; anew each ND_LINE_S seconds
+-- lines beside it, the modification's path, (step 6d4) the other route's
+-- under them (inactive: FCOM p.1148; an activation not yet executed:
+-- p.1251); anew each ND_LINE_S seconds
 -- (the turns' speeds, LNAV's turn) and when the route changes, the points
 -- that changed written. The turns' speed: LNAV's now (the true airspeed and
 -- the wind) at the active waypoint and the fix sequenced last, the
@@ -2621,19 +2662,6 @@ local ND_LINE_S=1
 local ndLineT=-100
 local ndLineCache={}
 local ndLineOld={n=0,lat={},lon={},pen={}}
-local function nd_line_kt(i)
-  local air=lnavAir
-  local now=air and ((air.tas or air.gs)+(air.wind or 0)) or (simDR_groundspeed*1.94384+simDR_wind_speed)
-  if i<=1 then return now end
-  local p=predResult and predResult.pts and predResult.pts[i]
-  local vt=nil
-  if p and p.h then
-    local m=p.machMode and p.mach or (p.cas and B747_perf_db.cas_to_mach(p.cas,p.h)) or p.mach
-    if m then vt=B747_perf_db.tas(m,p.h,B747_fms_isa_dev()) end
-  end
-  if not vt then return now end
-  return math.max(vt,150)+simDR_wind_speed
-end
 function B747_fmc_nd_line()
   if not B747_nd_line_dirty and simDRTime-ndLineT<ND_LINE_S then return end
   B747_nd_line_dirty,ndLineT=false,simDRTime
@@ -2641,10 +2669,10 @@ function B747_fmc_nd_line()
   local st=B747_fmc_route
   local r=st.rte
   local used={}
-  local o={P=P,L=B747_lnav_model,cache=ndLineCache,used=used,kt=nd_line_kt}
+  local o={P=P,L=B747_lnav_model,cache=ndLineCache,used=used,kt=B747_fmc_turn_kt}
   local pts={}
   if routePath and #r.legs>0 then
-    o.style=st.active and D.ACTIVE or D.INACTIVE
+    o.style=st.active and D.ACTIVE or (st.activating and D.ACTIVATING or D.INACTIVE)
     o.shape=P.shape(routePath,HOLD_SYMBOL_KT,(lnav_hold_sizes(true)))
     o.prev=st.active and B747_fmc_nd_line_prev_of() or nil
     D.route(routePath,o,pts)
@@ -2661,9 +2689,28 @@ function B747_fmc_nd_line()
   end
   local m=st.active and st.mod or nil
   if m and #m.legs>0 then
-    local mp=P.build(m.legs,B747_route_model.leg_from(m,1),{var=lnav_var,alt=simDR_pressureAlt1})
+    local mp=P.build(m.legs,B747_route_model.leg_from(m,1),{var=lnav_var,alt=simDR_pressureAlt1,
+      kt=B747_fmc_turn_kt_into,prev=B747_fmc_nd_line_prev_of()})
     o.style,o.prev,o.shape=D.MOD,nil,P.shape(mp,HOLD_SYMBOL_KT)
     D.route(mp,o,pts)
+  end
+  -- (step 6d4) the other route (B747_fmc_route2: never the active one),
+  -- under these (its points first, as many as they leave); its turns at
+  -- the speed now (no predictions of its own), in the air from its first
+  -- waypoint (a copy has no legs passed: not from the origin; estimate)
+  local st2=B747_fmc_route2
+  local r2=st2.rte
+  if #r2.legs>0 and #pts<D.MAXP then
+    local kt2=math.max(B747_fmc_turn_kt(0),150)
+    local p2=P.build(r2.legs,simDR_onGround==1 and B747_route_model.leg_from(r2,1) or nil,{var=lnav_var,alt=simDR_pressureAlt1,
+      kt=function() return kt2 end})
+    local under={}
+    o.style=st2.activating and D.ACTIVATING or D.INACTIVE
+    o.prev,o.shape,o.kt=nil,P.shape(p2,HOLD_SYMBOL_KT),kt2
+    D.route(p2,o,under)
+    for k=#under,D.MAXP-#pts+1,-1 do under[k]=nil end
+    for _,p in ipairs(pts) do under[#under+1]=p end
+    pts=under
   end
   ndLineCache=used
   local lat,lon,pen,n=D.pack(pts)

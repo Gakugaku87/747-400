@@ -422,18 +422,21 @@ local function capture(s, e, air, p, vt)
     return math.abs(xt) <= turn_in(air, vt, theta) + 0.1, true
 end
 
--- whether conditional element e has ended (FCOM p.1249)
+-- whether conditional element e has ended (FCOM p.1249); (step 6d3) the
+-- side it started on from its turn's start (a leg ended in its turn starts
+-- on the radial or the DME circle)
 local function ended(s, e, path, air, p, vt)
     local P = s.P
+    local a0 = e.turn_in and e.turn_in.from or e.a
     if e.term == "alt" then
         return air.alt >= (e.alt or 0)
     elseif e.term == "dme" and e.navaid and e.dme then
         local _, d = P.course(e.navaid, p)
-        local _, d0 = P.course(e.navaid, e.a)
+        local _, d0 = P.course(e.navaid, a0)
         if d0 < e.dme then return d >= e.dme end
         return d <= e.dme
     elseif e.term == "radial" and e.navaid and e.radial then
-        local x0 = P.track(e.navaid, e.radial, e.a)
+        local x0 = P.track(e.navaid, e.radial, a0)
         local x, at = P.track(e.navaid, e.radial, p)
         return at > 0 and (x0 >= 0) ~= (x >= 0)
     elseif e.term == "dist" then
@@ -611,8 +614,12 @@ end
 -- path model's MAX_FLYBY, a fly-over fix) as LNAV steers it from the fix on
 -- e1's course, a second at a time at the bank it asks for, until on e2
 -- (within FLY_XT nm and FLY_TAE degrees): the distance flown and e2's
--- distance to go then against e2's length. 0 for the others (a hold, a
--- procedure turn, a discontinuity, a conditional leg's end).
+-- distance to go then against e2's length. (step 6d3) A conditional leg's
+-- end (an altitude, a DME distance, a radial, a distance) as a fly-over
+-- fix; a turn the path model put before e2 (its turn_in) its arc and e2
+-- from its end against the great circle from the turn's start to e2's end.
+-- 0 for the others (a hold, a procedure turn, a discontinuity, an
+-- intercept).
 M.FLY_STEP = 1
 M.FLY_MAX_S = 600
 M.FLY_XT = 0.1
@@ -654,10 +661,19 @@ function M.flyover_path(P, e2, from, c1, vt)
     if not flown then return nil end
     return pts, cap
 end
+local COND = {alt = true, dme = true, radial = true, dist = true}
 function M.transition(P, e1, e2, vt)
-    if not (e1 and e2 and e1.b and e1.term == "fix") then return 0 end
-    if e1.kind ~= "line" and e1.kind ~= "arc" then return 0 end
-    local tr = P.turn(e1, e2, vt)
+    if not (e1 and e2 and e1.b) then return 0 end
+    local ti = e2.turn_in
+    if ti then
+        if not e2.b then return 0 end
+        local _, ab = P.course(ti.from, e2.b)
+        return ti.len + (e2.len or 0) - ab
+    end
+    local cond = COND[e1.term]
+    if e1.term ~= "fix" and not cond then return 0 end
+    if not cond and e1.kind ~= "line" and e1.kind ~= "arc" then return 0 end
+    local tr = not cond and P.turn(e1, e2, vt)
     if tr then return tr.r * math.abs(tr.delta) * RAD - 2 * tr.d end
     if (e2.kind ~= "line" and e2.kind ~= "course") or not (e2.a and e2.len) then return 0 end
     local _, gap = P.course(e1.b, e2.a)

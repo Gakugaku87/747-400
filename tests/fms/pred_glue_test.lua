@@ -338,12 +338,16 @@ T.check(fms.ns.B747_fms_preds() ~= nil, "FL350: the predictions")
 local st, RM = fms.ns.B747_fmc_route, fms.ns.B747_route_model
 local d0 = fms.ns.B747_fms_vnav_dist()
 T.check(d0 ~= nil, "a distance to go to the E/D: " .. tostring(d0))
-local n1, f1, f2 = nil, nil, nil
+local n1, f1, f2, n2 = nil, nil, nil, nil
 for i, l in ipairs(st.rte.legs) do
     if l.fix then
-        if not f1 then n1, f1 = i, l.fix elseif not f2 then f2 = l.fix end
+        if not f1 then n1, f1 = i, l.fix elseif not f2 then n2, f2 = i, l.fix end
     end
 end
+-- the leg into the next point as the predictions have it: its great
+-- circle and the turn at the point before (step 6d3: the SID's turn after
+-- (600) moves (INTC), the CF to ZZV longer, ZZV's fly-by turn there)
+local d12x = fms.ns.B747_fms_pred_input(35000).legs[n2].dist
 local lat, lon = rt:get("sim/flightmodel/position/latitude"), rt:get("sim/flightmodel/position/longitude")
 local _, a1 = RM.course(lat, lon, f1.lat, f1.lon)
 local _, a2 = RM.course(lat, lon, f2.lat, f2.lon)
@@ -357,7 +361,7 @@ rt:set("sim/flightmodel/position/longitude", mlon)
 frames(0.1)
 local _, m1 = RM.course(mlat, mlon, f1.lat, f1.lon)
 local _, m2 = RM.course(mlat, mlon, f2.lat, f2.lon)
-local rem2 = d0 - a1 - d12
+local rem2 = d0 - a1 - d12x
 T.near(fms.ns.B747_fms_vnav_dist(), m2 + rem2, 0.01,
     string.format("%s sequenced: on from %s (%.1f NM; from %s %.1f)", f1.ident, f2.ident, fms.ns.B747_fms_vnav_dist(),
         f1.ident, m1 + d12 + rem2))
@@ -719,4 +723,17 @@ rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 100)
 rt:set("sim/flightmodel/position/latitude", lat0)
 rt:set("sim/flightmodel/position/longitude", lon0)
 frames(0.2)
+
+-- (step 6d3) the ND's profile point in a leg with no fix (a conditional
+-- leg after a turn: its distance the turn into it alone): at its start.
+-- Before, it read the leg's missing end and the error stopped every module
+-- of the XTLua plugin (s150: the T/C after the G/A in the missed
+-- approach's VI)
+local PA, PB = {lat = 35, lon = 140}, {lat = 35.1, lon = 140}
+local pl = {{dist = 6, p0 = PA, p1 = PB}, {dist = 4, p0 = PB, turn = 4}}
+local q = fms.ns.B747_fms_pred_point(pl, 8)
+T.check(q ~= nil and q.lat == PB.lat and q.lon == PB.lon, "a point in the leg with no fix: at its start")
+q = fms.ns.B747_fms_pred_point(pl, 3)
+T.check(q ~= nil and math.abs(q.lat - 35.05) < 0.001 and math.abs(q.lon - 140) < 0.001, "3 nm along the first leg")
+T.equal(fms.ns.B747_fms_pred_point(pl, 11), nil, "beyond the legs: none")
 T.done()

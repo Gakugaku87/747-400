@@ -59,6 +59,8 @@
     { "do": "wait", "note": "右へ回り始める（手続きの R）", "dref": "sim/flightmodel/position/phi", "op": ">", "value": 10, "timeout": 15 },
     { "do": "wait", "note": "ヘディング 100（磁）", "dref": "sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot", "op": "between", "value": [97, 103], "timeout": 120 },
     { "do": "shot", "name": "nd_heading_100" },
+    { "do": "wait", "note": "（段 6d3）NRE001 の予測の点は旋回の後のヘディングの線の上：そこへ 2 NM 未満まで近づく（前は D337F からの線の上で、旋回の膨らみの分 約 3 NM 横にずれたまま radial を越えた）", "dref": "laminar/B747/nd/waypoint_distance", "op": "matches", "value": "^ *[01][.][0-9]nm$", "timeout": 120 },
+    { "do": "check", "note": "そのとき現用点はまだ NRE001", "dref": "laminar/B747/nd/current_waypoint", "op": "==", "value": "NRE001" },
     { "do": "wait", "note": "NRE の radial 001 と 036 を越えて (INTC) へ", "dref": "laminar/B747/fms3/Line03_L", "op": "contains", "value": "(INTC)", "timeout": 300 },
     { "do": "wait", "note": "ND の現用点 (INTC)", "dref": "laminar/B747/nd/current_waypoint", "op": "==", "value": "(INTC)", "timeout": 10 },
     { "do": "wait", "note": "ヘディング 160（磁）", "dref": "sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot", "op": "between", "value": [157, 163], "timeout": 90 },

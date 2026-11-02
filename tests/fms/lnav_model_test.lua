@@ -276,4 +276,24 @@ s = L.new(P)
 L.update(s, nil, state(plane({lat = 35, lon = 140, hdg = 0, tas = 250})), true, false)
 T.check(not s.valid and s.roll == 0, "no active route: no steering")
 
+-- (step 6d3) a radial's leg ended in its turn (the path model's
+-- end_in_turn: it starts on the radial): the side it started on from its
+-- turn's start (s91's NRE radial 001, 354 true, the turn from D337F west
+-- of it)
+local NRE6 = {lat = 35.782344444, lon = 140.362536111}
+local D6 = {lat = 35.869058333, lon = 140.301013889}
+local onr = P.point(NRE6, 354, 8.6)
+local e6 = {kind = "heading", term = "radial", a = onr, b = onr, len = 0, hdg = 93, mag = 100, navaid = NRE6,
+    radial = 354, turn_in = {from = D6}}
+local n6 = {kind = "heading", term = "radial", a = onr, b = P.point(onr, 93, 3), len = 3, hdg = 93, mag = 100,
+    navaid = NRE6, radial = 29}
+local west = P.point(onr, 270, 0.5)
+s = L.new(P)
+L.update(s, {e6, n6}, state(plane({lat = west.lat, lon = west.lon, hdg = 60, tas = 260, alt = 3000})), true, true)
+T.equal(s.seq, 0, "a leg ended in its turn: west of the radial (the turn's side) not ended")
+local east = P.point(onr, 90, 0.3)
+s = L.new(P)
+L.update(s, {e6, n6}, state(plane({lat = east.lat, lon = east.lon, hdg = 90, tas = 260, alt = 3000})), true, true)
+T.equal(s.seq, 1, "past the radial: ended")
+
 T.done()
