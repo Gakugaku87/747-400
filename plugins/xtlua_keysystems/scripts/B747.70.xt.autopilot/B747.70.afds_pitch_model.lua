@@ -196,6 +196,11 @@ M.GS_DOTS_MAX = 2.45
 -- estimate): rising to it from under it is not limited. Without it, after
 -- a 3 ft float the float's rate took the nose to 0.0 degree at the
 -- touchdown (s114, 2026-11-02), and after LF6's 14.6 ft float to -0.2.
+-- Under FLARE_HOLD_FT the command no more than HOLD_LEAD over the attitude
+-- (2026-11-02, estimate): the nose stops coming up there. In X-Plane it
+-- went on rising 0.9 degree past 5 ft (the command a degree ahead on the
+-- A/P's lag, 4.46 to 5.36 degrees) and the 747 met the runway still
+-- pulling 1.14 g: it rose 6 ft and floated (s114, 2026-11-02 11:14).
 -- NOSE LETDOWN: the
 -- nose lowered LETDOWN_RATE degrees a second from LETDOWN_STEP under the
 -- attitude (from the attitude
@@ -210,6 +215,7 @@ M.FLARE_LEAD_S = 0.8
 M.FLARE_HOLD_FT = 5
 M.K_FLOAT = 2
 M.FLARE_FLOOR = 2
+M.HOLD_LEAD = 0.2
 M.LETDOWN_RATE = 1
 M.LETDOWN_STEP = 1
 M.LETDOWN_PITCH = -1
@@ -526,6 +532,10 @@ function M.update(s, inp, dt)
     -- FLARE: not down under the landing attitude (FLARE_FLOOR)
     if law == "FLARE" and cmd < s.cmd then
         cmd = math.max(cmd, math.min(s.cmd, s.flare_pitch + M.FLARE_FLOOR))
+    end
+    -- FLARE under FLARE_HOLD_FT: no more than HOLD_LEAD over the attitude
+    if law == "FLARE" and (inp.gear_alt or 0) < M.FLARE_HOLD_FT and M.HOLD_LEAD then
+        cmd = math.min(cmd, math.max(inp.pitch + M.HOLD_LEAD, s.flare_pitch + M.FLARE_FLOOR))
     end
     s.cmd = clamp(cmd, M.PITCH_MIN, M.PITCH_MAX)
     -- T/O and G/A not over the PLI (FCOM p.664)
