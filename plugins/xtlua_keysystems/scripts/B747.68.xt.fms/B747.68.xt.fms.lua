@@ -940,6 +940,11 @@ B747DR_xp_bridge=find_dataref("laminar/B747/fms/xp/bridge")
 B747DR_xp_plan=find_dataref("laminar/B747/fms/xp/plan")
 B747DR_xp_current=find_dataref("laminar/B747/fms/xp/current")
 B747DR_xp_displayed=find_dataref("laminar/B747/fms/xp/displayed")
+-- (§131) SimBrief's latest OFP by the Pilot ID: the FMS bridge's
+B747DR_simbrief_id=find_dataref("laminar/B747/options/simbrief_id")
+B747DR_simbrief_fetch=find_dataref("laminar/B747/fms/company/simbrief_fetch")
+B747DR_simbrief_done=find_dataref("laminar/B747/fms/company/simbrief_done")
+B747DR_simbrief_status=find_dataref("laminar/B747/fms/company/simbrief_status")
 B747DR_fms_exec_light_pilot=find_dataref("laminar/B747/fms/exec_light_pilot")
 B747DR_fms_exec_light_copilot=find_dataref("laminar/B747/fms/exec_light_copilot")
 simDR_fms_exec_light=find_dataref("sim/cockpit2/radios/indicators/fms_exec_light_pilot")
@@ -4545,6 +4550,22 @@ do
   local R = B747_route_model
   local ACK_S, ANSWER_S, LOAD_S = 4, 20, 2
   local CO_ROUTE_LEN, FLT_NO_LEN, FIX_NM = 10, 8, 5
+  -- (§131) SimBrief's latest OFP by the Pilot ID, fetched by the FMS
+  -- bridge on a request without a CO ROUTE (that names a file of the
+  -- folder's): the answer waits for it FETCH_MAX_S at most (the bridge's
+  -- own timeouts are shorter); a failed fetch said in the company's ACARS
+  -- text, the folder's newest files used
+  local FETCH_MAX_S = 60
+  local FETCH_FAIL = {
+    [3] = {"SIMBRIEF PILOT ID", "NOT SET"},
+    [4] = {"SIMBRIEF: NO ANSWER", "FOLDER FILES USED"},
+    [5] = {"SIMBRIEF: NO OFP FOR", "THE PILOT ID", "FOLDER FILES USED"},
+    [6] = {"SIMBRIEF OFP WITHOUT", "X-PLANE FLIGHT PLAN"},
+    [7] = {"SIMBRIEF FILES", "NOT SAVED", "FOLDER FILES USED"},
+  }
+  local function fetch_wanted(co)
+    return B747DR_xp_bridge == 1 and B747DR_simbrief_id > 0 and not (co and co ~= "")
+  end
   -- the route request: {status ("SENDING", "SENT"), t, num (the route
   -- asked from; nil: FMC COMM's), route (the route its uplink goes to),
   -- co_route}
@@ -4745,6 +4766,10 @@ do
       if co then B747_fmc_route_num(target(nil)).co_route = co end
     end
     req = {status = "SENDING", t = simDRTime, num = num, route = target(num), co_route = co}
+    if fetch_wanted(co) then
+      req.fetch = B747DR_simbrief_fetch + 1
+      B747DR_simbrief_fetch = req.fetch
+    end
   end
   -- CO ROUTE (FCOM p.774, p.1290): any identifier (NOT IN DATA BASE: no
   -- company routes in the database); DELETE clears it and the request's
@@ -4926,8 +4951,15 @@ do
       req.status, req.t = "SENT", now
     end
     if req and req.status == "SENT" and not req.answered and now - req.t >= ANSWER_S then
-      req.answered = true
-      answer(req)
+      local waiting = req.fetch and B747DR_simbrief_done < req.fetch
+      if not waiting or now - req.t >= FETCH_MAX_S then
+        req.answered = true
+        if req.fetch then
+          local st = waiting and 4 or B747DR_simbrief_status
+          if FETCH_FAIL[st] then telex("SIMBRIEF", FETCH_FAIL[st]) end
+        end
+        answer(req)
+      end
     end
     -- the uplink came: the request's SENT goes (FMSPG p.372)
     if up and req and req.answered then req = nil end
