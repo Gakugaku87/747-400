@@ -108,6 +108,9 @@ local m = line(B, C)
 m.missed = true
 pts = D.route({line(A, B), m}, {P = P, L = L, kt = 250})
 T.equal(#pts, 2, "the missed approach left out: A, B")
+-- (step 6d5) drawn when o.shown says so (the one flown after a G/A)
+pts = D.route({line(A, B), m}, {P = P, L = L, kt = 250, shown = function(e) return e == m end})
+T.check(#pts >= 3, "the missed approach shown: on to its end (" .. #pts .. " points)")
 -- s91's (INTC): heading 160 until the course 283 into NRE, a right turn
 -- of 123 degrees at 250 kt. LNAV begins it where the turn brings the
 -- airplane onto the course (its `ended`: r (1 - cos 123) off the course,

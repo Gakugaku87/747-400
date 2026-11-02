@@ -618,12 +618,36 @@ rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 1500)
 rt:set(FMAP, 6)
 frames(0.5)
 T.check(fms.ns.B747_fms_end_des() and rt:get(VN .. "phase") == 3, "1,500 ft, VNAV PTH: END OF DES")
+-- (step 6d5) X-Plane's plan and the ND's line end at the runway before the
+-- G/A (the missed approach left out)
+local function after_rwy()
+    frames(1.2)
+    local n, last = 0, nil
+    for row in (rt:get("xtlua/loadtoFMS") or ""):gmatch("[^\r\n]+") do
+        if row:find(" ADES ") then break end
+        n = n + 1
+        if row:match("^28 RW") then last = n end
+    end
+    return last and n - last or -1
+end
+local function nd_end()
+    local k = rt:get("laminar/B747/nd/line/n") - 1
+    return {lat = rt:get("laminar/B747/nd/line/lat", k), lon = rt:get("laminar/B747/nd/line/lon", k)}
+end
+local function near(p, lat, lon) return math.abs(p.lat - lat) < 1e-4 and math.abs(p.lon - lon) < 1e-4 end
+T.equal(after_rwy(), 0, "before the G/A: no row after the runway in X-Plane's plan")
+T.check(near(nd_end(), 35.01, 140.005), "before the G/A: the ND's line ends at RW16R")
 rt:set(FMAP, 1)
 frames(0.5)
 T.equal(rt:get(CRZA), 4000, "G/A: CRZ ALT the missed approach's highest 4,000 (FCOM p.1262)")
 T.check(rt:get(VN .. "phase") == 1 and rt:get(VN .. "mode") == 1 and rt:get(VN .. "at") == 5 and rt:get(VN .. "alt") == 4000,
     "the climb: VNAV SPD with THR REF to 4,000")
 T.check(not fms.ns.B747_fms_end_des() and rt:get(VN .. "valid") == 1, "END OF DES over, VNAV valid")
+-- (step 6d5) after it the missed approach in X-Plane's plan ((1000), ZZV,
+-- its hold) and on the ND's line, to the hold's fix (FCOM p.147: the
+-- missed approach route tracked)
+T.check(after_rwy() >= 3, "after the G/A: the missed approach's rows after the runway")
+T.check(near(nd_end(), 35.2, 140.2), "after the G/A: the ND's line round ZZV's hold")
 -- the approach again after it (its legs anew before the missed approach's,
 -- as the ARRIVALS page puts them): the first approach's legs passed no
 -- longer on approach, the new one's first point passed on approach; at

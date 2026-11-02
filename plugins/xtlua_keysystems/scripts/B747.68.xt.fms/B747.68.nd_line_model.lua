@@ -27,7 +27,9 @@
 --  - a hold's racetrack and a procedure turn's shape (the path model's
 --    shape, `shape[i]`);
 --  - no line across a discontinuity or into a leg with no path, nor the
---    missed approach (X-Plane's flight plan left it out too: estimate).
+--    missed approach (X-Plane's flight plan left it out too: estimate)
+--    but its elements `o.shown(e)` is true for (step 6d5: the one flown
+--    after a G/A, FCOM p.147: the missed approach route tracked).
 -- `prev`: the element sequenced last (the leg before the active one): the
 -- turn at its fix into the active leg stays in the line while it is flown
 -- (FCOM p.1147: the path's transitions; estimate).
@@ -97,6 +99,7 @@ end
 -- the line's points for the path's elements: {lat, lon, pen} with pen the
 -- style at a piece's first point, 0 after it; appended to `out`
 function M.route(path, o, out)
+    local function hidden(e) return e.missed and not (o.shown and o.shown(e)) end
     out = out or {}
     local P = o.P
     local style = o.style or M.ACTIVE
@@ -127,7 +130,7 @@ function M.route(path, o, out)
             return tr.t2
         end
         add(e1.b)
-        if e1.missed then return nil end
+        if hidden(e1) then return nil end
         if e1.term == "fix" then
             if e1.kind ~= "line" and e1.kind ~= "arc" then return nil end
         elseif not COND[e1.term] then
@@ -154,9 +157,9 @@ function M.route(path, o, out)
     end
     for i, e in ipairs(path or {}) do
         local nxt = path[i + 1]
-        if nxt and nxt.missed then nxt = nil end
+        if nxt and hidden(nxt) then nxt = nil end
         local k = e.kind
-        if e.missed then
+        if hidden(e) then
             open, start = false, nil
         elseif k == "line" or k == "course" or k == "heading" or k == "arc" then
             local a = start or e.a
