@@ -163,7 +163,7 @@
     { "do": "set", "note": "オートブレーキ 2", "dref": "laminar/B747/gear/autobrakes/sel_dial_pos", "value": 4 },
     { "do": "cmd", "note": "スピードブレーキを ARM", "name": "sim/flight_controls/speed_brakes_down_one" },
     { "do": "wait", "note": "G/S を捕まえる（FMA のピッチ 2）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 2, "timeout": 600 },
-    { "do": "check", "note": "（3 回目）G/S の 1 ドット以内で捕まえた（偽の G/S でない。4 回目は捕捉のとき -0.94 ドットで、0.5 ドットの確かめは狭すぎた）", "dref": "sim/cockpit2/radios/indicators/nav1_vdef_dots_pilot", "op": "between", "value": [-1.0, 1.0] },
+    { "do": "check", "note": "（3 回目）G/S の 2 ドット以内で捕まえた（偽の G/S でない。捕捉はビームからの距離と寄る速さで決まる：ATA22 p.292。4 回目は -0.94 ドット、6 回目は 212 kt でわずかに上昇していて -1.48 ドット（寄る速さ約 25 ft/s）。7 回目から 1 ドットを 2 ドットに：G/S alive の 2 ドット）", "dref": "sim/cockpit2/radios/indicators/nav1_vdef_dots_pilot", "op": "between", "value": [-2.0, 2.0] },
     { "do": "snapshot", "note": "（5 回目）G/S の捕捉：速度とフラップ", "drefs": [ "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/controls/flap_ratio", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "laminar/B747/fms/vref30" ] },
     { "do": "set", "note": "フラップ 30", "dref": "sim/cockpit2/controls/flap_ratio", "value": 1.0 },
     { "do": "set", "note": "（5 回目）MCP 速度 151 kt：VREF 30 + 5（FCTM p.161。4 回目は 155 kt）", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 151 },

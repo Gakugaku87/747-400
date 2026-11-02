@@ -517,18 +517,51 @@ local h3 = P.update(sh, hi, DT)
 T.check(h3 <= h2, "under 5 ft: the command not raised")
 -- under 5 ft not sinking any more (the ground effect's float, s116): the
 -- command down at K_FLOAT a second of the path error to TD_SINK's, more
--- than K_FLARE's; sinking at TD_SINK or more, no more than K_FLARE's
-local function settle(vs, steps)
+-- than K_FLARE's; sinking at TD_SINK or more, no more than K_FLARE's.
+-- FLARE begins at 50 ft at 2.5 degrees (its landing attitude 4.5), then
+-- the float at 1.5 ft with the nose at 6.5
+local function floated(vs)
     local sf2, fl = P.new(), P.inputs()
-    fl.active, fl.mode, fl.tas, fl.ias, fl.pitch, fl.vs, fl.gear_alt = true, "FLARE", 150, 150, 6.5, vs, 1.5
+    fl.active, fl.mode, fl.tas, fl.ias, fl.pitch, fl.vs, fl.gear_alt = true, "FLARE", 150, 150, 2.5, -780, 50
+    P.update(sf2, fl, DT)
+    fl.pitch, fl.vs, fl.gear_alt = 6.5, vs, 1.5
+    -- the command where the flare had raised it, the vertical speed's
+    -- filter started again (no jump from the 50 ft step)
+    sf2.cmd, sf2.last_vs, sf2.vs_rate = 6.5, nil, 0
+    return sf2, fl
+end
+local function settle(vs, steps)
+    local sf2, fl = floated(vs)
     local c, last = nil, nil
     for _ = 1, steps do last = c; c = P.update(sf2, fl, DT) end
-    return (c - last) / DT
+    return (c - last) / DT, c
 end
 local v150 = 150 * 1852 / 3600
 local want = -(math.deg(math.atan((P.TD_SINK * 0.3048) / v150)))
-T.near(settle(0, 30), P.K_FLOAT * want, 0.05, ("level at 1.5 ft: down at K_FLOAT (%.2f a second)"):format(P.K_FLOAT * want))
-T.check(settle(-150, 30) > P.K_FLOAT * want, "sinking 2.5 ft/s at 1.5 ft: not the float's rate")
+T.near(settle(0, 20), P.K_FLOAT * want, 0.05, ("level at 1.5 ft: down at K_FLOAT (%.2f a second)"):format(P.K_FLOAT * want))
+T.check(settle(-150, 20) > P.K_FLOAT * want, "sinking 2.5 ft/s at 1.5 ft: not the float's rate")
+-- the landing attitude (FCTM p.222-223): a float takes the nose down to
+-- FLARE_FLOOR over FLARE's first attitude and no further (s114 2026-11-02
+-- touched down at 0.0 degree after a 3 ft float)
+local _, c_end = settle(0, 100)
+T.near(c_end, 2.5 + P.FLARE_FLOOR, 1e-9, "a float for 10 s: down to the landing attitude, 4.5, and no further")
+local up_s, up_i = floated(1500)
+up_i.gear_alt = 12
+local up_c
+for _ = 1, 100 do up_c = P.update(up_s, up_i, DT) end
+T.near(up_c, 2.5 + P.FLARE_FLOOR, 1e-9, "climbing at 12 ft (LF6's 14.6 ft float): no lower than the landing attitude either")
+-- under it, rising to it is not limited: FLARE begins at 2.5 and the
+-- first command is not the landing attitude's
+local sr, ri = P.new(), P.inputs()
+ri.active, ri.mode, ri.tas, ri.ias, ri.pitch, ri.vs, ri.gear_alt = true, "FLARE", 150, 150, 2.5, -780, 50
+local r1 = P.update(sr, ri, DT)
+T.check(r1 < 2.5 + 0.5, ("FLARE's first command near the attitude, not the landing attitude (%.2f)"):format(r1))
+-- under the landing attitude and asked down (sinking less than the
+-- profile): held where it is, not lowered
+ri.vs, ri.gear_alt = -60, 30
+local r2 = P.update(sr, ri, DT)
+local r3 = P.update(sr, ri, DT)
+T.check(r3 >= r2 - 1e-9 and r2 >= r1 - 1e-9, "under the landing attitude: not lowered")
 -- NOSE LETDOWN on the ground after FLARE: from a degree under the attitude
 -- (FLARE's last command higher), down a degree a second, the nose held down
 -- at -1 under 2 degrees (ATA22 p.332)

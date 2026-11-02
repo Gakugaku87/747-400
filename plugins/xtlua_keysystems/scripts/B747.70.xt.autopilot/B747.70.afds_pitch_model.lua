@@ -188,7 +188,15 @@ M.GS_DOTS_MAX = 2.45
 -- error (the ground effect's float, estimate: in a 20 kt crosswind's decrab
 -- X-Plane's 747 stopped sinking at 1.4 ft of gear altitude with the nose
 -- at 6.9 degrees, rose to 11 ft as K_FLARE took the nose down 0.6 degree a
--- second, and came down at 2.2 g: s116, 2026-10-30). NOSE LETDOWN: the
+-- second, and came down at 2.2 g: s116, 2026-10-30). FLARE never takes
+-- the nose down under a landing attitude, FLARE_FLOOR degrees over the
+-- attitude where it began (FCTM p.222-223: about 2 degrees on the approach,
+-- 4 to 5 at the touchdown; a float or a bounce: "hold or re-establish a
+-- normal landing attitude", fly it onto the runway; the 2 degrees an
+-- estimate): rising to it from under it is not limited. Without it, after
+-- a 3 ft float the float's rate took the nose to 0.0 degree at the
+-- touchdown (s114, 2026-11-02), and after LF6's 14.6 ft float to -0.2.
+-- NOSE LETDOWN: the
 -- nose lowered LETDOWN_RATE degrees a second from LETDOWN_STEP under the
 -- attitude (from the attitude
 -- the nose went on up and the airplane skipped 2 s), held down at
@@ -201,6 +209,7 @@ M.K_FLARE = 0.5
 M.FLARE_LEAD_S = 0.8
 M.FLARE_HOLD_FT = 5
 M.K_FLOAT = 2
+M.FLARE_FLOOR = 2
 M.LETDOWN_RATE = 1
 M.LETDOWN_STEP = 1
 M.LETDOWN_PITCH = -1
@@ -400,7 +409,7 @@ function M.update(s, inp, dt)
         law, target, blend = law_of(s, inp, dt)
     end
     if law ~= "GS" then s.gs_d = nil end
-    if law ~= "FLARE" then s.flare_s = nil end
+    if law ~= "FLARE" then s.flare_s, s.flare_pitch = nil, nil end
     if law == nil then
         s.cmd, s.law, s.target, s.cap_vs, s.last_vs, s.vs_rate = nil, nil, nil, nil, nil, 0
         s.last_ias, s.ias_rate, s.mode = nil, 0, inp.active and inp.mode or nil
@@ -475,7 +484,7 @@ function M.update(s, inp, dt)
             -- deceleration of FLARE_DECEL to TD_SINK at the touchdown asks
             -- for less; the deceleration's change of path fed forward
             local sink = -inp.vs / 60
-            if s.flare_s == nil then s.flare_s = math.max(sink, M.TD_SINK) end
+            if s.flare_s == nil then s.flare_s, s.flare_pitch = math.max(sink, M.TD_SINK), inp.pitch end
             local a = M.FLARE_DECEL * G / FT
             local prof = math.sqrt(M.TD_SINK * M.TD_SINK + 2 * a * math.max(inp.gear_alt or 0, 0))
             if prof < s.flare_s then
@@ -513,7 +522,12 @@ function M.update(s, inp, dt)
     end
     s.law, s.target = law, target
     if law == "FLARE" then lim = math.deg(M.FLARE_G * G / v) end
-    s.cmd = clamp(s.cmd + clamp(rate, -lim, lim) * dt, M.PITCH_MIN, M.PITCH_MAX)
+    local cmd = s.cmd + clamp(rate, -lim, lim) * dt
+    -- FLARE: not down under the landing attitude (FLARE_FLOOR)
+    if law == "FLARE" and cmd < s.cmd then
+        cmd = math.max(cmd, math.min(s.cmd, s.flare_pitch + M.FLARE_FLOOR))
+    end
+    s.cmd = clamp(cmd, M.PITCH_MIN, M.PITCH_MAX)
     -- T/O and G/A not over the PLI (FCOM p.664)
     if (inp.mode == "TO" or inp.mode == "GA") and inp.pli then
         s.cmd = math.min(s.cmd, inp.pitch + inp.pli)
