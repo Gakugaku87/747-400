@@ -6,9 +6,10 @@
 -- the separator's end), the other CDU as it was; STEP, NEXT and PREV PAGE
 -- and the LEGS key move the centre; a direct-to's INTC CRS stays; the
 -- centre through a modification and the active waypoint's sequencing; and
--- X-Plane's displayed waypoint (the FMS bridge's laminar/B747/fms/xp/
--- displayed, from 1) the centre's row in the plan. The test plays X-Plane
--- and the plugin.
+-- the ND's PLAN centre (laminar/B747/fms/plan_ctr_row, from 1; step 6d2:
+-- before, the PLAN centre through the FMS bridge, which
+-- X-Plane keeps at or after its current one, its plan's last row now) the
+-- centre's row in the plan. The test plays X-Plane and the plugin.
 B747_NAVDB_FOLDER = "tests/fms/data/navdb/"
 local T = dofile("tests/lib/check.lua")("legs_plan_ctr")
 local xtlua = dofile("tests/lib/xtlua.lua")
@@ -63,7 +64,7 @@ local function enter(c, text, lsk) type_in(c, text) key(c, "ls_key/" .. lsk) end
 local function lr(l, r) return l .. string.rep(" ", math.max(1, 24 - #l - #r)) .. r end
 local function ctr(name) return lr(name .. string.rep(" ", 8 - #name) .. "<CTR>", "") end
 local function mode(dref, v) rt:set(dref, v) frames(0.3) end
-local DISP = "laminar/B747/fms/xp/displayed"
+local DISP = "laminar/B747/fms/plan_ctr_row"
 local function shown() return rt:get(DISP) or 0 end
 local CUR = "laminar/B747/autopilot/ap_monitor/fmscurrentIndex"
 local XCUR = "laminar/B747/fms/xp/current"
@@ -109,16 +110,16 @@ loaded()
 T.equal(rows(), "ZZAA RW16R ALPHA BRAVO CHARL DELTA N37E141 ZZD ZZBB", "the plan: leg i the row i + 2")
 xplane(1)
 
--- no ND in PLN: the page as before, X-Plane's displayed waypoint left alone
+-- no ND in PLN: the page as before, the PLAN centre left alone
 T.equal(line("L", 3), lr("ALPHA", ""), "MAP: no <CTR>")
 T.equal(line("L", 13), lr("<RTE 2 LEGS", "ACTIVATE>"), "MAP: ACTIVATE> (FCOM p.1332; FMSPG p.124)")
 T.equal(small("L", 12), string.rep(" ", 24), "no MAP CTR")
-T.equal(shown(), 0, "X-Plane's displayed waypoint not written")
+T.equal(shown(), 0, "the PLAN centre not written")
 
 -- the F/O's ND in PLN with no LEGS page up: the active route's first
 -- waypoint the centre (estimate)
 mode(FO, PLN)
-T.equal(shown(), 3, "F/O's PLN, the right CDU on its MENU: ALPHA (row 3) X-Plane's displayed waypoint")
+T.equal(shown(), 3, "F/O's PLN, the right CDU on its MENU: ALPHA (row 3) the PLAN centre")
 mode(FO, MAP)
 
 -- the captain's ND to PLN with the left CDU on LEGS page 1
@@ -203,8 +204,8 @@ T.equal(line("L", 13), lr("<RTE 2 LEGS", "STEP>"), "the left CDU: STEP>")
 key("R", "ls_key/R6")
 key("R", "key/execute")
 T.check(line("R", 1):find("ACT RTE 1 LEGS"), "the right CDU's ACTIVATE and EXEC: " .. line("R", 1))
-T.equal(rt:get(XCUR), 3, "the plugin's current waypoint ALPHA")
-xplane(3)
+T.equal(rt:get(CUR), 3, "the AFDS's current waypoint ALPHA (X-Plane's its plan's last row: step 6d2)")
+xplane(rt:get(XCUR))
 T.equal(line("L", 13), lr("<RTE 2 LEGS", "STEP>"), "the active route: STEP> for RTE DATA (FCOM p.1333 item 10)")
 key("L", "ls_key/R6")
 key("L", "ls_key/R6")

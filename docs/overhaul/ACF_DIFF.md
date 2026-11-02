@@ -585,3 +585,11 @@ FMC（6-1・6-2 段 11d2b、2026-11-01：FMC の故障の ND の現用点の ETA
 | 2026-11-01・FMC（FMC-36） | 両 ND の `GROUP Waypoints FO CENTER`・`Waypoints FO EXPAND`・`Waypoints CAPT CENT`・`Waypoints CAPT EXPA`（MAP と PLAN の現用点）の `gen_text Waypoint ETA …` と `gen_text Waypoint Distance …` | グループの条件（ND のモード）だけで出る | 2 つを新しい入れ子のグループ（`GROUP Wpt Data FO CEN` など。`SHOW_GREATER 0.5 laminar/B747/nd/capt/wpt_data`、副操縦士は `nd/fo/wpt_data`）に入れた。NAV ソース選択で選んだ FMC が落ちている間は消える | ATA34_2 p.633 |
 
 上の 1 行は `docs/overhaul/tools/panel_nd_wpt_data.lua` で書き換えた（4 か所で 16 行を足し、中の 2 つの計器を 2 字下げた）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261101_before_wpt_data`。X-Plane の写真（`s175_nd_fmc_fail`、2026-11-01 10:16〜10:17）で、平常は機長の ND の現用点（XAC）の下に ETA と距離が出て、左 FMC の故障で消え（VTK 旗、約 32 秒で MAP 旗）、NAV ソース選択を FMC R に回すと戻ることを確かめた。外から見た姿は変わらない（パネルの計器だけの変更）。
+
+ND（6-1・6-2 段 6d2、2026-11-02：PLAN の X-Plane の地図）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-11-02・ND（段 6d2） | 両 ND の `GROUP Map:Centered`（MAP CTR と PLAN）の中の X-Plane の地図 `GROUP XP Map Full`・`GROUP XP Map Half`（`EFIS_map_s_HM`） | `GROUP Map/Rose` の条件の下にそのまま | 新しい `GROUP XP Map not PLAN`（`SHOW_LESS 2.500000 laminar/B747/nd/mode/<席>/sel_dial_pos`：ND のモードの切替が PLN でないとき）の中に入れた | FCOM p.1039（PLN では気象レーダーと TCAS を出さない）。段 6d2 から X-Plane の FMS の表示中の点は計画の最後の行なので、X-Plane の地図は目的地を中心に自機の記号を描き、PLAN にもう一つの飛行機が出ていた（`s111`、17:05：EDDM の東 15 NM の所） |
+
+上の 1 行は `docs/overhaul/tools/panel_nd_plan_xpmap.lua` で書き換えた（2 か所で 8 行を足し、中の 2 つのグループを 2 字下げた）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261102_before_plan_xpmap`。見た目の変わるのは PLAN の ND だけ（X-Plane の写真：`s111` の PLAN）。

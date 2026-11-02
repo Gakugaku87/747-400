@@ -3,13 +3,15 @@
 -- 5e; notes/ATA-34-61-FMC.md §22): the FMC module
 -- (plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.xt.fms.lua) on the
 -- synthetic navigation data. X-Plane starts a new flight plan at its first
--- waypoint: after the activation in flight, a modification's EXEC and a
--- DIRECT TO, the FMC makes X-Plane's current waypoint (xtlua/currentFMSID,
--- from 1) and the AFDS's (fmscurrentIndex) the active one; as LNAV
--- sequences the route (step 6c: the airplane past a waypoint; before, the
--- AFDS's best track), the legs before it are passed (FMSPG p.119: they
--- leave the LEGS pages; FCOM p.1331), the flight plan stays the same and
--- X-Plane's current waypoint and the AFDS's follow. The test plays
+-- waypoint: the FMC makes X-Plane's current waypoint (xtlua/currentFMSID,
+-- from 1) its plan's last row (step 6d2: X-Plane's map draws the legs from
+-- its current waypoint on, none so; the ND's line is the FMS bridge's;
+-- before, the active one), and the AFDS's and the ND's (fmscurrentIndex)
+-- the active one: after the activation in flight, a modification's EXEC
+-- and a DIRECT TO; as LNAV sequences the route (step 6c: the airplane past
+-- a waypoint; before, the AFDS's best track), the legs before it are passed
+-- (FMSPG p.119: they leave the LEGS pages; FCOM p.1331), the flight plan
+-- stays the same and the AFDS's current waypoint follows. The test plays
 -- X-Plane: xtlua/fms from the rows the FMC loaded, [10] the current
 -- waypoint (XTLua's xpmtdatarefs.cpp).
 B747_NAVDB_FOLDER = "tests/fms/data/navdb/"
@@ -96,9 +98,10 @@ loaded()
 T.equal(rows(), "ZZAA RW16R ALPHA BRAVO CHARL ZZBB", "X-Plane's flight plan")
 xplane(1)
 
--- airborne: the activation makes ALPHA X-Plane's current waypoint and the
--- AFDS's; right after a load (a constraint at ALPHA) not before xtlua/fms
--- shows the new plan (a write before X-Plane takes it is lost)
+-- airborne: the activation makes ALPHA the AFDS's current waypoint,
+-- X-Plane's the last row; right after a load (a constraint at ALPHA) not
+-- before xtlua/fms shows the new plan (a write before X-Plane takes it is
+-- lost)
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set("sim/flightmodel/position/latitude", 35.3)
 rt:set("sim/flightmodel/position/longitude", 140.3)
@@ -110,25 +113,24 @@ T.check(xpfms():find("\n11 ALPHA DRCT 5000%.000000 "), "ALPHA's 5000 loaded")
 key("ls_key/R6")
 key("key/execute")
 T.check(line(1):find("ACT RTE 1 LEGS"), "ACT RTE 1 LEGS: " .. line(1))
-T.equal(xpcur(), 0, "the activation right after the load: xtlua/fms not showing the new plan yet, nothing written")
 xplane(1)
-T.equal(xpcur(), 3, "X-Plane's current waypoint: ALPHA, the third (from 1)")
-T.equal(rt:get(CUR), 3, "the AFDS's: ALPHA")
+T.equal(xpcur(), 6, "X-Plane's current waypoint: its plan's last row, ZZBB (from 1)")
+T.equal(rt:get(CUR), 3, "the AFDS's: ALPHA, the third")
 -- X-Plane does not take it: written once more after two seconds, no more
 rt:set("xtlua/currentFMSID", "")
 frames(1)
 T.equal(xpcur(), 0, "not every frame")
 frames(1.2)
-T.equal(xpcur(), 3, "once more after two seconds")
+T.equal(xpcur(), 6, "once more after two seconds")
 rt:set("xtlua/currentFMSID", "")
 frames(3)
 T.equal(xpcur(), 0, "twice at most (XTLua calls X-Plane's FMS from its own thread)")
-xplane(3)
+xplane(6)
 frames(0.5)
 T.equal(xpcur(), 0, "once X-Plane has it, written no more")
 
 -- past ALPHA's turn on the way to BRAVO, north at 250 kt: LNAV sequences
--- ALPHA (step 6c), X-Plane's current waypoint and the AFDS's follow
+-- ALPHA (step 6c), the AFDS's current waypoint follows, X-Plane's stays
 rt:set("sim/flightmodel/position/latitude", 35.5333)
 rt:set("sim/flightmodel/position/longitude", 140.5)
 rt:set("sim/flightmodel/position/hpath", 0)
@@ -138,16 +140,17 @@ rt:set("sim/flightmodel/position/true_airspeed", 128.6)
 frames(0.3)
 T.equal(line(3), "BRAVO                   ", "BRAVO the active waypoint, the first line (FCOM p.1331; FMSPG p.119)")
 T.equal(line(5), "CHARL                   ", "then CHARL")
-T.equal(xpcur(), 4, "X-Plane's current waypoint: BRAVO, the fourth")
-T.equal(rt:get(CUR), 4, "and the AFDS's")
-xplane(4)
+T.equal(xpcur(), 0, "X-Plane's current waypoint not written: the last row still")
+T.equal(rt:get(CUR), 4, "the AFDS's: BRAVO, the fourth")
+xplane(6)
 rt:set("xtlua/currentFMSID", "")
 loaded()
 T.equal(rows(), "ZZAA RW16R ALPHA BRAVO CHARL ZZBB", "X-Plane's flight plan the same")
 T.equal(xpcur(), 0, "nothing written once X-Plane shows it")
 
 -- a modification: CHARL deleted; after the EXEC X-Plane starts the new
--- plan at ZZAA, the FMC makes BRAVO current again
+-- plan at ZZAA, the FMC makes its last row X-Plane's current waypoint, BRAVO
+-- the AFDS's
 key("key/del")
 key("ls_key/L2")
 T.check(line(1):find("MOD RTE 1 LEGS"), "MOD RTE 1 LEGS: " .. line(1))
@@ -156,19 +159,19 @@ loaded()
 T.equal(rows(), "ZZAA RW16R ALPHA BRAVO ZZBB", "the new plan")
 T.equal(xpcur(), 0, "not before X-Plane has it")
 xplane(1)
-T.equal(xpcur(), 4, "BRAVO X-Plane's current waypoint again")
-T.equal(rt:get(CUR), 4, "and the AFDS's")
-xplane(4)
+T.equal(xpcur(), 5, "X-Plane's current waypoint: the new plan's last row, ZZBB")
+T.equal(rt:get(CUR), 4, "the AFDS's: BRAVO")
+xplane(5)
 rt:set("xtlua/currentFMSID", "")
 frames(0.5)
 
 -- a modification with as many rows and BRAVO in the same row (DELTA after
 -- BRAVO, then CHARL in its place): xtlua/fms still shows the old plan,
--- BRAVO current, until X-Plane has the new one at ZZAA
+-- its last row current, until X-Plane has the new one at ZZAA
 enter("DELTA", "L2")
 key("key/execute")
 loaded()
-xplane(4)
+xplane(6)
 rt:set("xtlua/currentFMSID", "")
 frames(0.5)
 T.equal(rows(), "ZZAA RW16R ALPHA BRAVO DELTA ZZBB", "DELTA after BRAVO")
@@ -178,10 +181,11 @@ enter("CHARL", "L2")
 key("key/execute")
 loaded()
 T.equal(rows(), "ZZAA RW16R ALPHA BRAVO CHARL ZZBB", "CHARL in DELTA's place: as many rows")
-T.equal(xpcur(), 0, "the old plan in xtlua/fms (BRAVO current): nothing yet")
+T.equal(xpcur(), 0, "the old plan in xtlua/fms (its last row current): nothing yet")
 xplane(1)
-T.equal(xpcur(), 4, "the new plan from ZZAA: BRAVO current again")
-xplane(4)
+T.equal(xpcur(), 6, "the new plan from ZZAA: its last row current")
+T.equal(rt:get(CUR), 4, "BRAVO the AFDS's")
+xplane(6)
 rt:set("xtlua/currentFMSID", "")
 frames(0.5)
 
@@ -196,13 +200,13 @@ T.equal(rows(), "ZZAA RW16R ALPHA DTOPOS ZZD BRAVO CHARL ZZBB",
     "ALPHA passed, the direct-to's start DTOPOS, ZZD (the discontinuity after it not in X-Plane's plan)")
 T.check(xpfms():find("\n28 DTOPOS DRCT 0%.000000 35%.400000 140%.350000\n"), "DTOPOS where the airplane was at EXEC (estimate)")
 xplane(1)
-T.equal(xpcur(), 5, "ZZD X-Plane's current waypoint")
-T.equal(rt:get(CUR), 5, "and the AFDS's (its best track takes the leg from DTOPOS)")
+T.equal(xpcur(), 8, "X-Plane's current waypoint: the last row")
+T.equal(rt:get(CUR), 5, "ZZD the AFDS's")
 T.equal(line(3), "ZZD                     ", "ZZD the active waypoint")
 
 -- on the ground nothing sequences, past ZZD too
 rt:set("sim/flightmodel/failures/onground_any", 1)
-xplane(5)
+xplane(8)
 rt:set("sim/flightmodel/position/latitude", 35.32)
 rt:set("sim/flightmodel/position/longitude", 140.32)
 frames(0.3)

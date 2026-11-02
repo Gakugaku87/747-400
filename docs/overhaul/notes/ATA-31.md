@@ -748,3 +748,10 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - 原因：拡大の ND の `GROUP Heading Offset`（目盛と一緒に回る、航跡の線・ILS・VOR の針・選択方位のバグ）に、機長側（`GROUP Heading Offset 2`）にある `CLIP` が F/O 側だけ無い。機長の ND では目盛の外のバグはグループの枠で切られて見えない。
 - 直したこと（カスタム acf のパネル、1 行）：F/O 側の `GROUP Heading Offset` の `POS 1022.000000 55.000000` の次に `CLIP`（機長側と同じ）。バックアップ `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261102_before_fo_nd_clip`。目盛の外の選択方位のバグの出し方（縁に止めるか）は FCOM・ATA に書かれていないので、機長の ND と同じ（出さない）にそろえた。
 - 試験：`s214_epr_climb` の終わりに、HDG HOLD で MCP の方位を目盛の内（右へ 20°）と外（左へ約 100°）にし、機長席から F/O の ND と、機長の ND を撮る。X-Plane（2026-11-02 02:54）：目盛の内（MCP 027、航跡 002）では選択方位のバグが目盛の 027 の位置に、目盛の外（MCP 270、航跡 005）では左下の四角が出ない（点線の選択方位の線だけ）。HDG HOLD のコマンド名を誤っていて（404）HDG SEL のまま回したが、写真は回してから 1 秒で、曲がり始める前。コマンドを他の AFDS の筋書きと同じ `sim/autopilot/heading_hold` に直した。Log.txt に Lua の誤りなし。
+
+## 43. ND の PLAN は真北が上（2026-11-02：ND の経路の線を自前で描くのに合わせて）
+
+- FCOM p.1110：「PLN mode displays true north up」。
+- 前の作り：PLAN の記号（経路の点、空港）の方位に磁気偏差を足し、磁北を上にしていた（X-Plane の PLN の地図が描く経路の線に合わせていた）。
+- 直したこと（`B747.61.xt.nd.lua` の `nd_bearing`）：PLAN の記号の方位は真方位のまま（真北が上）。経路の線は FMS ブリッジが同じ投影で描く（notes/ATA-34-61-FMC.md §132）ので、X-Plane の地図に合わせる必要は無くなった。PLAN の機体の記号（FCOM p.1147：位置と航跡）も FMS ブリッジが描く。PLAN では X-Plane の地図を出さない（FCOM p.1039：PLN では気象レーダーと TCAS を出さない。X-Plane の地図は目的地を中心に自機の記号を描いていた：カスタム acf のパネル、ACF_DIFF.md §5）。
+- 試験：`nd_line_view_test`（PLAN の上は真北の 0°）。X-Plane：`s219_nd_route_line` の PLAN の写真で、線が SAKVA・ATVID・MIBIB・OGABA の星を通る。

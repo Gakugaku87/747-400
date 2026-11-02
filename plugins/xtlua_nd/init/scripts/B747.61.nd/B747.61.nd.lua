@@ -777,3 +777,8 @@ B747DR_nd_fo_crs_text0 = deferred_dataref("laminar/B747/nd/fo/crs/text0", "strin
 B747DR_nd_fo_crs_text1 = deferred_dataref("laminar/B747/nd/fo/crs/text1", "string")
 B747DR_nd_fo_crs_text2 = deferred_dataref("laminar/B747/nd/fo/crs/text2", "string")
 B747DR_nd_fo_crs_text3 = deferred_dataref("laminar/B747/nd/fo/crs/text3", "string")
+-- (6-1/6-2 step 6d2) each ND's map for the route line the FMS bridge plugin
+-- draws (laminar/B747/nd/line/*), the Captain's [0] to [4], the F/O's [5]
+-- to [9]: the view (0 none, 1 MAP expanded, 2 MAP CTR, 3 PLAN), the map's
+-- centre's latitude and longitude, the true direction up, pixels per NM
+B747DR_nd_line_view = deferred_dataref("laminar/B747/nd/line/view", "array[10]")

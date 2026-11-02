@@ -139,6 +139,20 @@ B747DR_fms_ofst_light					= deferred_dataref("laminar/B747/fms/ofst_light", "num
 B747DR_fms_profile_kind					= deferred_dataref("laminar/B747/fms/profile/kind", "array[8]")
 B747DR_fms_profile_lat					= deferred_dataref("laminar/B747/fms/profile/lat", "array[8]")
 B747DR_fms_profile_lon					= deferred_dataref("laminar/B747/fms/profile/lon", "array[8]")
+-- the ND's route line (6-1/6-2 step 6d2; FCOM p.1147-1148) for the FMS
+-- bridge plugin, which draws it on each ND (B747.68.nd_line_model.lua): its
+-- points (n of them), their latitudes and longitudes, and each one's pen (a
+-- piece's first point its style: 1 the active route, 2 the modification, 3
+-- an inactive route, 4 the lateral offset's path; 0 a line to it from the
+-- point before)
+B747DR_nd_line_n						= deferred_dataref("laminar/B747/nd/line/n", "number")
+B747DR_nd_line_lat						= deferred_dataref("laminar/B747/nd/line/lat", "array[600]")
+B747DR_nd_line_lon						= deferred_dataref("laminar/B747/nd/line/lon", "array[600]")
+B747DR_nd_line_pen						= deferred_dataref("laminar/B747/nd/line/pen", "array[600]")
+-- the ND's PLAN centre (6-1/6-2 step 6d2; the LEGS pages' CTR): its row in
+-- X-Plane's flight plan (xtlua/fms, from 1), 0 none. X-Plane keeps its
+-- displayed waypoint at or after its current one, its plan's last row now
+B747DR_fms_plan_ctr_row					= deferred_dataref("laminar/B747/fms/plan_ctr_row", "number")
 -- VNAV (6-1/6-2 step 9b): the FMC's vertical guidance for the AFDS and the
 -- A/T: valid (1: VNAV may engage), the phase (1 climb, 2 cruise, 3
 -- descent), the sub-mode asked for (1 VNAV SPD, 2 VNAV PTH), the target

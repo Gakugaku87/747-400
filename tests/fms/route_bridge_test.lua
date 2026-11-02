@@ -2,9 +2,11 @@
 -- The FMC's flight plan through the FMS bridge plugin (6-1/6-2 step 5e;
 -- notes/ATA-34-61-FMC.md §23; plugins/b747_fms_bridge): with the plugin
 -- there (laminar/B747/fms/xp/bridge 1), the FMC writes the plan to
--- laminar/B747/fms/xp/plan, in flight with a first line "CURRENT n" (the
--- active row: the plugin makes it current right after the load, on
--- X-Plane's thread), and the current waypoint to laminar/B747/fms/xp/current;
+-- laminar/B747/fms/xp/plan with a first line "CURRENT n" (the plan's last
+-- row, step 6d2: X-Plane's map draws the legs from its current waypoint on,
+-- none so; before, the active row in flight; the plugin makes it current
+-- right after the load, on X-Plane's thread), and the current waypoint to
+-- laminar/B747/fms/xp/current; the AFDS's (fmscurrentIndex) the active row;
 -- never XTLua's xtlua/loadtoFMS or xtlua/currentFMSID (they call X-Plane's
 -- FMS from XTLua's own thread). The test plays X-Plane and the plugin.
 B747_NAVDB_FOLDER = "tests/fms/data/navdb/"
@@ -76,7 +78,7 @@ local function xplane(active)
     frames(0.2)
 end
 
--- the route on the ground: the plan through the plugin, no CURRENT line
+-- the route on the ground: the plan through the plugin, its last row current
 key("func_key/fpln")
 enter("ZZAA", "L1")
 enter("ZZBB", "R1")
@@ -88,41 +90,42 @@ enter("Z1", "L2")
 enter("CHARL", "R2")
 loaded()
 T.equal(rows(), "ZZAA RW16R ALPHA BRAVO CHARL ZZBB", "the plan to the plugin")
-T.check(bridged():find("^I\n1100 Version\n"), "on the ground: no CURRENT line")
+T.check(bridged():find("^CURRENT 6\nI\n1100 Version\n"), "on the ground too: CURRENT 6, the last row (ZZBB)")
 T.equal(rt:get("xtlua/loadtoFMS") or "", "", "not XTLua's loadtoFMS")
-xplane(1)
+xplane(6)
 
--- airborne: the activation through the plugin's current waypoint
+-- airborne: the activation; the AFDS's current waypoint the active one
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set(CUR, 2)
 key("func_key/legs")
 key("ls_key/R6")
 key("key/execute")
 T.check(line(1):find("ACT RTE 1 LEGS"), "ACT RTE 1 LEGS: " .. line(1))
-T.equal(rt:get(XCUR), 3, "the plugin's current waypoint: ALPHA, the third")
-T.equal(rt:get(CUR), 3, "the AFDS's: ALPHA")
-xplane(3)
+T.equal(rt:get(XCUR), 6, "the plugin's current waypoint: the last row")
+T.equal(rt:get(CUR), 3, "the AFDS's: ALPHA, the third")
+xplane(6)
 frames(0.5)
 
 -- LNAV sequences ALPHA (step 6c: past its turn on the way to BRAVO): the
--- plugin's current waypoint BRAVO
+-- AFDS's current waypoint BRAVO, the plugin's stays
 rt:set("sim/flightmodel/position/latitude", 35.5333)
 rt:set("sim/flightmodel/position/longitude", 140.5)
 rt:set("sim/flightmodel2/position/groundspeed", 128.6)
 rt:set("sim/flightmodel/position/true_airspeed", 128.6)
 frames(0.3)
 T.equal(line(3), "BRAVO                   ", "ALPHA passed: BRAVO the active waypoint")
-T.equal(rt:get(XCUR), 4, "the plugin's current waypoint BRAVO, the fourth")
-T.equal(rt:get(CUR), 4, "and the AFDS's")
-xplane(4)
+T.equal(rt:get(XCUR), 6, "the plugin's current waypoint the last row still")
+T.equal(rt:get(CUR), 4, "the AFDS's: BRAVO, the fourth")
+xplane(6)
 -- a modification's EXEC: the plan with CURRENT, the plugin sets it after the load
 key("key/del")
 key("ls_key/L2")
 key("key/execute")
 loaded()
-T.check(bridged():find("^CURRENT 4\nI\n"), "CURRENT 4 (BRAVO) before the plan: " .. bridged():sub(1, 12))
+T.check(bridged():find("^CURRENT 5\nI\n"), "CURRENT 5 (the new last row) before the plan: " .. bridged():sub(1, 12))
 T.equal(rows(), "ZZAA RW16R ALPHA BRAVO ZZBB", "CHARL deleted")
-xplane(4)
+xplane(5)
+T.equal(rt:get(CUR), 4, "the AFDS's: BRAVO")
 frames(0.5)
 
 -- DIRECT TO: DTOPOS and the target current
@@ -131,9 +134,9 @@ rt:set("sim/flightmodel/position/latitude", 35.4)
 rt:set("sim/flightmodel/position/longitude", 140.35)
 key("key/execute")
 loaded()
-T.check(bridged():find("^CURRENT 5\n"), "CURRENT 5 (ZZD)")
+T.check(bridged():find("^CURRENT 7\n"), "CURRENT 7 (the last row)")
 T.equal(rows(), "ZZAA RW16R ALPHA DTOPOS ZZD BRAVO ZZBB", "the direct-to's start DTOPOS")
-xplane(5)
+xplane(7)
 T.equal(rt:get(CUR), 5, "the AFDS's: ZZD, once X-Plane shows the plan")
 T.equal(rt:get("xtlua/currentFMSID") or "", "", "never XTLua's currentFMSID")
 

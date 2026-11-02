@@ -617,21 +617,42 @@ M.FLY_STEP = 1
 M.FLY_MAX_S = 600
 M.FLY_XT = 0.1
 M.FLY_TAE = 3
-function M.flyover(P, e2, from, c1, vt)
+-- (step 6d2) the ND's line through the turn: a point each FLY_PTS_DEG
+-- degrees of turn, or FLY_PTS_S seconds on (estimate)
+M.FLY_PTS_DEG = 5
+M.FLY_PTS_S = 15
+local function fly(P, e2, from, c1, vt, pts)
     local s = M.new(P)
     local p = {lat = from.lat, lon = from.lon}
     local trk, flown = c1, 0
     local nm = vt / 3600 * M.FLY_STEP
-    for _ = 1, M.FLY_MAX_S / M.FLY_STEP do
+    local last_trk, last_k = trk, 0
+    for k = 1, M.FLY_MAX_S / M.FLY_STEP do
         local air = {lat = p.lat, lon = p.lon, trk = trk, hdg = trk, gs = vt, tas = vt, wind = 0, alt = 0, var = 0,
             ground = false}
         M.update(s, {e2}, air, false, true)
-        if s.dtk and math.abs(s.xtk) <= M.FLY_XT and math.abs(s.tae) <= M.FLY_TAE then return flown, s.dtg end
+        if s.dtk and math.abs(s.xtk) <= M.FLY_XT and math.abs(s.tae) <= M.FLY_TAE then return flown, s.dtg, p end
         trk = (trk + G * math.tan(s.roll * RAD) / (vt * KT) / RAD * M.FLY_STEP) % 360
         p = P.point(p, trk, nm)
         flown = flown + nm
+        if pts and (math.abs(wrap180(trk - last_trk)) >= M.FLY_PTS_DEG or (k - last_k) * M.FLY_STEP >= M.FLY_PTS_S) then
+            pts[#pts + 1] = p
+            last_trk, last_k = trk, k
+        end
     end
     return nil
+end
+function M.flyover(P, e2, from, c1, vt)
+    local flown, dtg = fly(P, e2, from, c1, vt)
+    return flown, dtg
+end
+-- the same turn's path for the ND's line (step 6d2): its points from the
+-- fix on (the fix left out) and where LNAV is on e2; nil if never
+function M.flyover_path(P, e2, from, c1, vt)
+    local pts = {}
+    local flown, _, cap = fly(P, e2, from, c1, vt, pts)
+    if not flown then return nil end
+    return pts, cap
 end
 function M.transition(P, e1, e2, vt)
     if not (e1 and e2 and e1.b and e1.term == "fix") then return 0 end

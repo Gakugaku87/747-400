@@ -3626,13 +3626,11 @@ function after_physics()
 	end
 	local fms = lastFMS
 	-- the FMC sequences its active route and sets the current waypoints
-	-- itself (6-1/6-2 step 6c): X-Plane's FMS does not advance; the best
-	-- track only without the FMC's
-	if B747DR_fms_lnav_route == 1 then
-		if simDR_override_fms_progress ~= 1 then simDR_override_fms_progress = 1 end
-	else
-		B747_getCurrentWayPoint(fms)
-	end
+	-- itself (6-1/6-2 step 6c): X-Plane's FMS does not advance. (step 6d2)
+	-- Without an active route too: X-Plane's current waypoint is its plan's
+	-- last row (its map draws no line) and fmscurrentIndex the FMC's; the
+	-- old best track (B747_getCurrentWayPoint) took it from X-Plane's
+	if simDR_override_fms_progress ~= 1 then simDR_override_fms_progress = 1 end
 	B747_monitorAP(fms)
 	B747_ap_fma(fms)
 	B747_ap_button_switch_animation()
