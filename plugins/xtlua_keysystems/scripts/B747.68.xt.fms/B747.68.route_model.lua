@@ -1204,7 +1204,8 @@ end
 -- X-Plane's DEP ARR puts them: the ND finds them there); no procedure
 -- headers (the FMC's own legs: X-Plane would expand its own, and the
 -- procedures' legs go DRCT); discontinuities, pending airways, the
--- conditional legs (no fix) and the missed approach left out. The passed
+-- conditional legs (no fix) and the missed approach left out (step 6d5:
+-- but the legs `shown(l)` is true for: the one flown after a G/A). The passed
 -- legs before the route's (step 5e: the active leg starts at the last of
 -- them); a direct-to's start as a position DTOPOS before its waypoint (no
 -- fix's name; not X-Plane's own direct-to's PPOS: after a PPOS the AFDS
@@ -1226,8 +1227,9 @@ M.DTO_START = "DTOPOS"
 M.ARC_POINT = "~"
 M.MAX_XP_ROWS = 100
 local FMS_TYPE = {VOR = 3, DME = 3, NDB = 2, LL = 28, RWY = 28, PBD = 28}
-local function fms_rows(r, shape, arcs, first_passed)
+local function fms_rows(r, shape, arcs, first_passed, shown)
     local rows, map = {}, {leg = {}, row = {}, ident = {}}
+    local function out(l) return not l.missed or (shown ~= nil and shown(l)) end
     local function row(t, ident, via, alt, lat, lon)
         rows[#rows + 1] = string.format("%d %s %s %.6f %.6f %.6f", t, ident, via, alt or 0, lat, lon)
         map.ident[#rows] = ident
@@ -1236,7 +1238,7 @@ local function fms_rows(r, shape, arcs, first_passed)
         if l.dto and l.from then row(28, M.DTO_START, "DRCT", 0, l.from.lat, l.from.lon) end
         local sh = i and shape and shape[i]
         local hold = M.is_hold(l)
-        if l.fix and not l.missed then
+        if l.fix and out(l) then
             if arcs and sh and sh.pts and not hold and l.pt ~= "PI" then
                 for _, p in ipairs(sh.pts) do row(28, M.ARC_POINT, "DRCT", 0, p.lat, p.lon) end
             end
@@ -1262,7 +1264,7 @@ local function fms_rows(r, shape, arcs, first_passed)
             if l.pt == "PI" and arcs and sh and sh.pts then
                 for _, p in ipairs(sh.pts) do row(28, M.ARC_POINT, "DRCT", 0, p.lat, p.lon) end
             end
-        elseif not l.fix and not l.missed and l.name and l.name ~= "" then
+        elseif not l.fix and out(l) and l.name and l.name ~= "" then
             -- a conditional leg's end (no altitude: not a constraint for
             -- the AFDS's VNAV)
             local at = (sh and sh.at) or (not i and l.end_at)
@@ -1280,10 +1282,10 @@ local function fms_rows(r, shape, arcs, first_passed)
     map.n = #rows
     return rows, map
 end
-function M.to_fms(r, cycle, shape)
-    local rows, map = fms_rows(r, shape, true, 1)
-    if map.n > M.MAX_XP_ROWS then rows, map = fms_rows(r, shape, false, 1) end
-    if map.n > M.MAX_XP_ROWS then rows, map = fms_rows(r, shape, false, math.max(1, #r.passed)) end
+function M.to_fms(r, cycle, shape, shown)
+    local rows, map = fms_rows(r, shape, true, 1, shown)
+    if map.n > M.MAX_XP_ROWS then rows, map = fms_rows(r, shape, false, 1, shown) end
+    if map.n > M.MAX_XP_ROWS then rows, map = fms_rows(r, shape, false, math.max(1, #r.passed), shown) end
     local head = {"I", "1100 Version", "CYCLE " .. (cycle or "0000")}
     if r.origin then head[#head + 1] = "ADEP " .. r.origin.ident end
     if r.runway then head[#head + 1] = "DEPRWY " .. r.runway.ident end

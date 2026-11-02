@@ -1876,9 +1876,15 @@ function B747_fms_missed_approach()
   -- it (s150's G/A 255 ft above the MCP altitude in its capture went back
   -- to the descent past the old T/D in the same frame)
   vnavGeo = nil
-  if changed then B747_fmc_route_changed() end
-  B747_fms_preds_now()
+  -- (step 6d5) the route changed or not, X-Plane's plan and the ND's line
+  -- anew with the missed approach's legs (B747_fms_missed_shown); the
+  -- predictions with them
+  B747_fmc_route_changed()
 end
+-- (step 6d5) whether route leg l is the missed approach flown after a G/A
+-- (its legs in X-Plane's plan and on the ND then: FCOM p.147, the missed
+-- approach route tracked; before, never)
+function B747_fms_missed_shown(l) return l.missed == true and missed_leg(l) end
 -- the descent's highest altitude constraint ahead (ft) or nil
 function B747_fms_des_top()
   local top = nil
@@ -2089,7 +2095,10 @@ local function update_vnav()
   if B747DR_fms_vnav_on_app ~= onApp then B747DR_fms_vnav_on_app = onApp end
   -- (step 9e3) after a missed approach while its CRZ ALT stays; over on the
   -- ground
-  if inp.ground then vnavMissed, vnavMissedCrz = nil, nil end
+  if inp.ground and vnavMissed ~= nil then
+    vnavMissed, vnavMissedCrz = nil, nil
+    B747_fmc_route_changed()
+  end
   inp.missed = vnavMissed ~= nil and inp.crz_alt ~= nil and vnavMissedCrz == inp.crz_alt
   -- (step 9e1) the best holding speed for the descent's slow speed
   -- reversion (FCOM p.1259; PI.11.6), in the descent only; (step 9e3) the
@@ -2543,7 +2552,8 @@ function B747_fmc_route_changed()
   -- X-Plane takes a flight plan with a destination only (without, an error
   -- message on the screen): none before the DEST
   if r.dest==nil then return end
-  local fms,map=B747_route_model.to_fms(r,(B747_navdb.cycle_info(B747_fmc_navdb)),B747_path_model.shape(routePath,HOLD_SYMBOL_KT,lnav_hold_sizes()))
+  local fms,map=B747_route_model.to_fms(r,(B747_navdb.cycle_info(B747_fmc_navdb)),B747_path_model.shape(routePath,HOLD_SYMBOL_KT,lnav_hold_sizes()),
+    B747_fms_missed_shown)
   local active=B747_fmc_route.active
   if fms==routeLoaded then
     -- the plan X-Plane has: its rows' legs as the route is now (sequencing
@@ -2671,7 +2681,12 @@ function B747_fmc_nd_line()
   local used={}
   local o={P=P,L=B747_lnav_model,cache=ndLineCache,used=used,kt=B747_fmc_turn_kt}
   local pts={}
+  -- (step 6d5) the missed approach flown after a G/A drawn as the route's
+  local function shown_in(legs)
+    return function(e) local l=legs[e.leg] return l~=nil and B747_fms_missed_shown(l) end
+  end
   if routePath and #r.legs>0 then
+    o.shown=st.active and shown_in(r.legs) or nil
     o.style=st.active and D.ACTIVE or (st.activating and D.ACTIVATING or D.INACTIVE)
     o.shape=P.shape(routePath,HOLD_SYMBOL_KT,(lnav_hold_sizes(true)))
     o.prev=st.active and B747_fmc_nd_line_prev_of() or nil
@@ -2691,7 +2706,7 @@ function B747_fmc_nd_line()
   if m and #m.legs>0 then
     local mp=P.build(m.legs,B747_route_model.leg_from(m,1),{var=lnav_var,alt=simDR_pressureAlt1,
       kt=B747_fmc_turn_kt_into,prev=B747_fmc_nd_line_prev_of()})
-    o.style,o.prev,o.shape=D.MOD,nil,P.shape(mp,HOLD_SYMBOL_KT)
+    o.style,o.prev,o.shape,o.shown=D.MOD,nil,P.shape(mp,HOLD_SYMBOL_KT),shown_in(m.legs)
     D.route(mp,o,pts)
   end
   -- (step 6d4) the other route (B747_fmc_route2: never the active one),
@@ -2706,7 +2721,7 @@ function B747_fmc_nd_line()
       kt=function() return kt2 end})
     local under={}
     o.style=st2.activating and D.ACTIVATING or D.INACTIVE
-    o.prev,o.shape,o.kt=nil,P.shape(p2,HOLD_SYMBOL_KT),kt2
+    o.prev,o.shape,o.kt,o.shown=nil,P.shape(p2,HOLD_SYMBOL_KT),kt2,nil
     D.route(p2,o,under)
     for k=#under,D.MAXP-#pts+1,-1 do under[k]=nil end
     for _,p in ipairs(pts) do under[#under+1]=p end
