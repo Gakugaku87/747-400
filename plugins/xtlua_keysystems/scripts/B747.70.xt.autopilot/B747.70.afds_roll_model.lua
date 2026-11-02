@@ -124,6 +124,17 @@ M.ROLL_DOWN_FT = 5
 -- out's sideslip) leaves no distance off the centreline (estimates)
 M.LOC_KI = 0.1
 M.LOC_INT = 5
+-- LOC TRACK's distance from the beam integrated too, into the track wanted
+-- (2026-11-02): the course the law is given (NAV 1's, the FMC's tuning of
+-- the database's ILS course since its step 10c) can be some tenths of a
+-- degree off the beam's own, and the law above then flies parallel to the
+-- beam off it (s114, s116: 0.16-0.25 dot, some 7 m, from 2026-11-02; 0.03-
+-- 0.05 before). LOC_KY a second of the track wanted (the beam's distance
+-- over LOOK_S), within LOC_BIAS degrees; ROLLOUT goes on with it
+-- (estimates: a 60 s time constant, some 6 % overshoot with LOOK_S's 30 s;
+-- the cross runway velocity on the course less the bias too)
+M.LOC_KY = 1 / 60
+M.LOC_BIAS = 2
 -- ROLLOUT (step 4c; estimates: the sources give the inputs, ATA22 p.362):
 -- the cross runway velocity asked to close the distance in ROLLOUT_T_S,
 -- the track within ROLLOUT_DEG of the course; the rudder RUDDER_K a degree
@@ -176,7 +187,7 @@ local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
 function M.new()
     return {cmd = nil, mode = nil, err = nil, hold = nil, trk_ref = nil, valid = false,
         last_sel = nil, last_hdg = nil, ref_true = nil, loc_y = nil, loc_track = false,
-        rudder = nil, ro_dist = nil, last_trk = nil, ro_int = nil, loc_int = 0,
+        rudder = nil, ro_dist = nil, last_trk = nil, ro_int = nil, loc_int = 0, loc_bias = 0,
         al_stage = 0, al_crab0 = nil, al_tgt = nil, al_int = 0, al_eo = 0, al_last = nil, al_slip = 0}
 end
 
@@ -223,7 +234,8 @@ function M.loc_dev(inp) return -inp.loc_dots * M.LOC_DOT_DEG end
 function M.loc_lateral(inp) return M.loc_distance(inp.ra) * math.tan(math.rad(M.loc_dev(inp))) end
 -- the track's angle to the course (right plus), the cross runway velocity
 local function loc_angle(inp) return wrap(inp.trk_mag - inp.course) end
-local function cross_velocity(inp) return inp.gs * KT * math.sin(math.rad(loc_angle(inp))) end
+-- (less the course's bias LOC TRACK has found, when given)
+local function cross_velocity(inp, bias) return inp.gs * KT * math.sin(math.rad(loc_angle(inp) - (bias or 0))) end
 
 -- LOC's capture (ATA22 p.290: by the ground speed, the intercept angle and
 -- the deviation): closing on the beam with no more distance left than the
@@ -332,13 +344,13 @@ function M.update(s, inp, dt)
     end
     if not M.LAW[mode] then
         s.mode, s.cmd, s.valid, s.err, s.hold, s.trk_ref = mode, nil, false, nil, nil, nil
-        s.loc_y, s.loc_track, s.loc_int = nil, false, 0
+        s.loc_y, s.loc_track, s.loc_int, s.loc_bias = nil, false, 0, 0
         s.last_sel, s.last_hdg, s.ref_true = inp.sel, inp.hdg, inp.ref_true
         return nil
     end
     if mode ~= s.mode then
-        -- (ROLLOUT goes on from LOC's distance)
-        if not (mode == "ROLLOUT" and s.mode == "LOC") then s.loc_y, s.loc_track = nil, false end
+        -- (ROLLOUT goes on from LOC's distance and its course's bias)
+        if not (mode == "ROLLOUT" and s.mode == "LOC") then s.loc_y, s.loc_track, s.loc_bias = nil, false, 0 end
         s.loc_int = 0
         s.mode, s.err, s.hold, s.trk_ref = mode, nil, nil, nil
         if mode == "GA" and not inp.ground then s.trk_ref = inp.trk end
@@ -369,11 +381,16 @@ function M.update(s, inp, dt)
         valid = inp.hdg_valid
         local th = loc_angle(inp)
         if s.loc_y == nil then s.loc_y = M.loc_lateral(inp) end
-        s.loc_y = s.loc_y + cross_velocity(inp) * dt
+        s.loc_y = s.loc_y + cross_velocity(inp, s.loc_bias) * dt
         if inp.loc_valid then s.loc_y = s.loc_y + (M.loc_lateral(inp) - s.loc_y) * math.min(1, dt / M.BLEND_S) end
         if not s.loc_track and math.abs(s.loc_y) < M.TRACK_M and math.abs(th) < M.TRACK_DEG then s.loc_track = true end
         if not inp.ground and inp.ra >= M.ROLL_DOWN_FT then
             local want = -math.deg(math.atan(s.loc_y / (math.max(inp.gs, 100) * KT * M.LOOK_S)))
+            -- the course's bias: the beam's distance integrated in LOC TRACK
+            if s.loc_track then
+                s.loc_bias = clamp((s.loc_bias or 0) + M.LOC_KY * want * dt, -M.LOC_BIAS, M.LOC_BIAS)
+            end
+            want = want + (s.loc_bias or 0)
             local e = wrap(want - th)
             local lim = s.loc_track and M.TRACK_LIMIT or M.LOC_LIMIT
             local p = M.bank_for(e, inp, lim)
@@ -397,14 +414,14 @@ function M.update(s, inp, dt)
         if s.ro_dist == nil then s.ro_dist = M.loc_distance(inp.ra) end
         s.ro_dist = math.max(s.ro_dist - inp.gs * KT * dt, M.ROLLOUT_MIN_M)
         if s.loc_y == nil then s.loc_y = s.ro_dist * math.tan(math.rad(M.loc_dev(inp))) end
-        s.loc_y = s.loc_y + cross_velocity(inp) * dt
+        s.loc_y = s.loc_y + cross_velocity(inp, s.loc_bias) * dt
         if inp.loc_valid then
             local y = s.ro_dist * math.tan(math.rad(M.loc_dev(inp)))
             s.loc_y = s.loc_y + (y - s.loc_y) * math.min(1, dt / M.BLEND_S)
         end
         local v = math.max(inp.gs, 20) * KT
         local lim = math.sin(math.rad(M.ROLLOUT_DEG))
-        local want = -math.deg(math.asin(clamp(s.loc_y / M.ROLLOUT_T_S / v, -lim, lim)))
+        local want = -math.deg(math.asin(clamp(s.loc_y / M.ROLLOUT_T_S / v, -lim, lim))) + (s.loc_bias or 0)
         local rate = (s.last_trk and dt > 0) and wrap(inp.trk_mag - s.last_trk) / dt or 0
         s.last_trk = inp.trk_mag
         local err = wrap(want - th)
