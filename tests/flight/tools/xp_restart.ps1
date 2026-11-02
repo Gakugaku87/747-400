@@ -26,21 +26,22 @@ while (-not $up -and (Get-Date) -lt $deadline) {
     try { Invoke-RestMethod -Uri 'http://localhost:8086/api/capabilities' -TimeoutSec 3 | Out-Null; $up = $true } catch { }
 }
 if (-not $up) { 'down'; return }
+# X-Plane loads its last flight behind the main menu at its start; a load
+# sent right as the Web API answers sometimes left the menus up (below):
+# some time for that first (estimate)
+Start-Sleep -Seconds 30
 . (Join-Path $PSScriptRoot '..\xp.ps1')
 $init = @{
     aircraft = @{ path = 'Aircraft/747-400-master/747-400_custom.acf' }
     runway_start = @{ airport_id = 'RJAA'; runway = '34L' }
     engine_status = @{ all_engines = @{ running = $true } }
 } | ConvertTo-Json -Depth 5
-# (2026-11-02: once the flight loaded but X-Plane stayed on its Flight
-# Configuration screen, paused at time 0, and pause_off did not help: a new
-# flight's load is sent again)
-foreach ($try in 1..2) {
-    try {
-        [void](Start-XPFlight $init 420)
-        Start-Sleep -Seconds 20
-        'up'
-        return
-    } catch { }
-}
-'down'
+# (2026-11-02/03: twice of four the flight loaded but X-Plane stayed on its
+# Flight Configuration screen and main menu, paused at time 0: neither
+# pause_off, close_windows, toggle_main_menu nor a second load moved it, only
+# a click on Resume. "down" then: run_all.sh starts X-Plane again)
+try {
+    [void](Start-XPFlight $init 300)
+    Start-Sleep -Seconds 20
+    'up'
+} catch { 'down' }
