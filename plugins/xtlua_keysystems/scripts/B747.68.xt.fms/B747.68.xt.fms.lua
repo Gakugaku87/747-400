@@ -2820,8 +2820,19 @@ function B747_fmc_lnav_update()
     local tx=B747_fms_turn_of(st.rte.legs[2])
     if tx and tx>B747_vnav_model.TURN_MIN_NM and vnavIn.d_ed then vnavState.turn={d=vnavIn.d_ed,t=simDRTime,t1=simDRTime} end
     -- (step 6d2) the ND's line keeps the turn at its fix (the route's
-    -- element: the line is the route's, an offset's beside it)
-    B747_fmc_nd_line_prev(routePath and routePath[n])
+    -- element: the line is the route's, an offset's beside it); none when
+    -- the airplane is farther from the fix than the fly-by turn's start and
+    -- LNAV's 2.5 nm (FCOM p.644; estimate): a route executed in flight with
+    -- the airplane past its first fix on its first leg (from the origin)
+    -- sequences it at once, and the ND drew that fix's turn far from the
+    -- airplane (s219's RTE 2)
+    local pe=routePath and routePath[n]
+    if pe and pe.term=="fix" and pe.b then
+      local t=B747_path_model.turn(pe,routePath[n+1],B747_fmc_turn_kt(0))
+      local _,d=B747_path_model.course(air,pe.b)
+      if d>(t and t.d or 0)+2.5 then pe=nil end
+    end
+    B747_fmc_nd_line_prev(pe)
     -- (the AFDS's and the ND's current waypoint the next row: route sync)
     if B747_route_model.sequence(st,n,start) then B747_fmc_route_changed() end
     lnavSequencing=false
