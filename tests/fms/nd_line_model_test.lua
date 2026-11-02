@@ -203,6 +203,8 @@ T.equal(pens(pts), 1, "one piece")
 -- the styles
 pts = D.route({line(A, B)}, {P = P, L = L, style = D.MOD})
 T.equal(pts[1].pen, D.MOD, "a modification's piece")
+pts = D.route({line(A, B)}, {P = P, L = L, style = D.ACTIVATING})
+T.equal(pts[1].pen, 5, "(step 6d4) an activation not executed: style 5 (FCOM p.1251)")
 
 -- the arrays: at most MAXP, a piece's last start left out
 local many = {}

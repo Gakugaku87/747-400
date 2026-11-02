@@ -2197,7 +2197,7 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 作り方：
   - FMC（`B747.68.xt.fms.lua` の `B747_fmc_route_sync`）：X-Plane の FMS の現用点は、地上でも空中でも、計画の最後の行（ブリッジへは計画の前の「CURRENT n」、5 秒ごとに見直す）。AFDS・ND・FMC 自身の現用点は `fmscurrentIndex`（xtlua/fms の行）に、アクティブな経路の現用点の行（非アクティブの経路は 1）を、X-Plane が計画を持ってから毎フレーム書く。前は X-Plane の現用点を空中でアクティブな点にして、xtlua/fms の [10] から読んでいた。[10] を読んでいた所を `fmscurrentIndex` に替えた：ND の現用点の記号（マゼンタ）、ND の右上の現用点・距離・ETA（`getCurrentWayPoint`）、DATA の ETA（`B747_route_eta`）。AFDS の古い best track（X-Plane の現用点から `fmscurrentIndex` を決めていた。アクティブな経路では動いていなかった）は、アクティブな経路が無くても動かさない（X-Plane の FMS は進めない）。
   - FMC の線（`B747.68.nd_line_model.lua`、新設）：経路の形の要素から線の点を作る。脚の直線（大圏）、fly-by の旋回の弧（経路の形のモデルの `turn`。5° ごと）、点を飛び越える旋回は LNAV が操る形（LNAV のモデルの `flyover_path`：`flyover` と同じ 1 秒刻みの模擬で、5° 回るごとか 15 秒ごとの点。LNAV が次の脚に乗った所から次の脚の線）、迎えの脚（CI・VI）の終わりも fly-by の弧（LNAV は、次の脚のコースに旋回で乗れる所から回り始める：LNAV のモデルの `ended`。`s91` の (INTC) の 123° の旋回は、初めは角で描いていた）、ほかの条件の脚の終わり（高度・DME・radial）は角（LNAV はそこで順送りしてから回る）、DME・RF の弧、ホールドの周回とプロシージャーターンの形（`shape`）、条件の脚は予測した終わりまで（VECTORS は 10 NM で、次の脚へはつながない）。不連続と、点への経路の無い脚の前で線を切る。進入復行は描かない（X-Plane の計画にも入れていない：推定）。旋回の速さは LNAV と同じ（真対気速度と風）：現用点と、直前に順送りした点の旋回は今の速さ、その先の点は予測の真対気速度（`B747_fms_turns` と同じ）。順送りした点の旋回は、その旋回を飛んでいる間も線に残す（直前に順送りした要素を覚えておく：推定）。
-  - 線の種類（FCOM p.1148）：現用の経路はマゼンタの実線、修正（EXEC 前）は白の短い破線、非アクティブの経路はシアンの長い破線、横のオフセットの線はマゼンタの短い破線（経路の実線はそのまま）。RTE 2 の非アクティブの経路はまだ描かない。
+  - 線の種類（FCOM p.1148）：現用の経路はマゼンタの実線、修正（EXEC 前）は白の短い破線、非アクティブの経路はシアンの長い破線、横のオフセットの線はマゼンタの短い破線（経路の実線はそのまま）。RTE 2 の非アクティブの経路と、ACTIVATE の後で EXEC の前の線は §135。
   - FMC のグルー（`B747_fmc_nd_line`）：1 秒ごとと経路が変わったときに点を作り直し、変わった点だけ `laminar/B747/nd/line/lat`・`lon`・`pen`（600 点）と `n` に書く（`pen` は区切りの最初の点にその線の種類、続きの点に 0）。主チャンクのローカル変数が 200 を超えたので、状態は `do` の中に置き、順送りの要素は関数で渡す（XTLua の大域の表の件）。
   - ND（`B747.61.xt.nd.lua` の `updateNDLineView`）：各 ND の地図の投影を `laminar/B747/nd/line/view`（席ごとに表示の型：0 なし・1 拡大の MAP・2 MAP CTR・3 PLAN、中心の緯度経度、上の真方位、1 NM あたりの画素）に、経路の記号と同じ計算（`nd_bearing`・`map_scale`）で毎フレーム書く。IRS が無いときと APP・VOR では描かない（FCOM p.1147：経路は MAP・MAP CTR・PLAN）。
   - PLAN は真北が上にした（FCOM p.1110）。前は記号の方位に磁気偏差を足して磁北が上（X-Plane の PLN の地図の線に合わせていた）。
@@ -2226,3 +2226,12 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 見つけたこと：`s219` で RTE COPY の後、RTE 2 LEGS の 6R（ACTIVATE>）を押すと INVALID ENTRY になり、ACTIVATE されなかった。LEGS のページの 6R（`legsr6`）は RTE のページの `rteactivate` を呼んでいたが、それはページの名前から経路を決めていて（RTE1・RTE2 のページだけを知る）、LEGS・LEGS2 のページではアクティブな経路（`B747_fmc_route`）を選び、アクティブなので INVALID ENTRY にしていた。経路が 2 つとも非アクティブのときは、RTE 2 LEGS の ACTIVATE が RTE 1 を ACTIVATE していた（段 7e4 からの不具合）。
 - 直したこと（`B744.fms.pages.legs.lua`）：LEGS のページの 6R は、そのページが表示している経路を ACTIVATE する（FCOM p.1332：ACTIVATE は非アクティブの経路を ACTIVATE して EXEC を待つ）。
 - 試験：`rte2_pages_test` +3 件（ACT RTE 2 のときの RTE 1 LEGS の ACTIVATE>：RTE 1 が ACTIVATE、INVALID ENTRY なし、EXEC の灯）。X-Plane：`s219`（段 6d4 の確かめの中で。2026-11-02 19:32 の回は 28 項目すべて合格：RTE 2 LEGS の ACTIVATE> で EXEC の灯がつき、INVALID ENTRY は出ない）。
+
+## 135. もう一つの経路（RTE 2）と、ACTIVATE の後で EXEC の前の経路の線（段 6d4、2026-11-02）
+
+- 資料：FCOM p.1148（非アクティブの経路はシアンの長い破線。ホールドとプロシージャーターンも同じ色）、FCOM p.1251（非アクティブの経路はシアンの破線、ACTIVATE して EXEC していない経路はシアンと白の交互の破線）、ATA34_2 p.505（非アクティブの経路はシアンの破線）、FMSPG p.50-51。いつ出すかの条件は資料に無いので、経路があればいつも出す。
+- 前の作り（§132）：FMC は RTE 1 の側（`B747_fmc_route`：アクティブの経路、無ければ RTE 1）の線だけを作り、もう一つの経路は描かなかった。ACTIVATE の後で EXEC の前もシアンの長い破線。
+- 直したこと：
+  - FMC（`B747_fmc_nd_line`）：もう一つの経路（`B747_fmc_route2`：アクティブにはならない側）の形を毎秒作り、アクティブの経路の線の下に描く（その点を先に、残りの点の数だけ：600 点）。旋回はそのときの速さ（その経路の予測は無い：推定）。ACTIVATE して EXEC していない経路は、新しい線の種類 5（`B747.68.nd_line_model.lua` の ACTIVATING）。
+  - FMS ブリッジ（`nd_line.c`）：線の種類 5 はシアンと白の破線を交互に（12 px と間 6 px：推定）。
+- 試験：回帰 `rte2_pages_test` +5 件（両方非アクティブで RTE 2 の線が先、RTE COPY の後は RTE 2 が下、ACTIVATE の後で EXEC の前は 5、EXEC の後は RTE 1 が下）。X-Plane：`s219` の終わりに RTE COPY、RTE 2 の点を 1 つ消す、ACTIVATE、EXEC（写真 3 枚）。2026-11-02 19:32 の `s219` は 28 項目すべて合格：線の最初は RTE 2 の 3（シアンの長い破線、アクティブの線の下）、ACTIVATE の後で 5（写真ではシアンと白の交互の破線）、EXEC の後は RTE 1 の 3。EXEC の後の写真で SAKVA に旋回の鉤が出たのは §136。

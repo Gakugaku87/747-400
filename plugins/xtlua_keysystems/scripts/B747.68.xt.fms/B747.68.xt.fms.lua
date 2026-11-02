@@ -2645,7 +2645,9 @@ end
 -- (6-1/6-2 step 6d2; notes/ATA-34-61-FMC.md §132) the ND's route line for
 -- the FMS bridge plugin (B747.68.nd_line_model.lua; FCOM p.1147-1148): RTE
 -- 1's path (the active route, else an inactive one), the lateral offset's
--- lines beside it, the modification's path; anew each ND_LINE_S seconds
+-- lines beside it, the modification's path, (step 6d4) the other route's
+-- under them (inactive: FCOM p.1148; an activation not yet executed:
+-- p.1251); anew each ND_LINE_S seconds
 -- (the turns' speeds, LNAV's turn) and when the route changes, the points
 -- that changed written. The turns' speed: LNAV's now (the true airspeed and
 -- the wind) at the active waypoint and the fix sequenced last, the
@@ -2670,7 +2672,7 @@ function B747_fmc_nd_line()
   local o={P=P,L=B747_lnav_model,cache=ndLineCache,used=used,kt=B747_fmc_turn_kt}
   local pts={}
   if routePath and #r.legs>0 then
-    o.style=st.active and D.ACTIVE or D.INACTIVE
+    o.style=st.active and D.ACTIVE or (st.activating and D.ACTIVATING or D.INACTIVE)
     o.shape=P.shape(routePath,HOLD_SYMBOL_KT,(lnav_hold_sizes(true)))
     o.prev=st.active and B747_fmc_nd_line_prev_of() or nil
     D.route(routePath,o,pts)
@@ -2691,6 +2693,24 @@ function B747_fmc_nd_line()
       kt=B747_fmc_turn_kt_into,prev=B747_fmc_nd_line_prev_of()})
     o.style,o.prev,o.shape=D.MOD,nil,P.shape(mp,HOLD_SYMBOL_KT)
     D.route(mp,o,pts)
+  end
+  -- (step 6d4) the other route (B747_fmc_route2: never the active one),
+  -- under these (its points first, as many as they leave); its turns at
+  -- the speed now (no predictions of its own), in the air from its first
+  -- waypoint (a copy has no legs passed: not from the origin; estimate)
+  local st2=B747_fmc_route2
+  local r2=st2.rte
+  if #r2.legs>0 and #pts<D.MAXP then
+    local kt2=math.max(B747_fmc_turn_kt(0),150)
+    local p2=P.build(r2.legs,simDR_onGround==1 and B747_route_model.leg_from(r2,1) or nil,{var=lnav_var,alt=simDR_pressureAlt1,
+      kt=function() return kt2 end})
+    local under={}
+    o.style=st2.activating and D.ACTIVATING or D.INACTIVE
+    o.prev,o.shape,o.kt=nil,P.shape(p2,HOLD_SYMBOL_KT),kt2
+    D.route(p2,o,under)
+    for k=#under,D.MAXP-#pts+1,-1 do under[k]=nil end
+    for _,p in ipairs(pts) do under[#under+1]=p end
+    pts=under
   end
   ndLineCache=used
   local lat,lon,pen,n=D.pack(pts)

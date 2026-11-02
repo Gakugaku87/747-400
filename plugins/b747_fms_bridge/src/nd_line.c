@@ -13,7 +13,9 @@
  *       module: B747.68.nd_line_model.lua), each piece from a point whose
  *       pen is its style: 1 the active route (magenta, continuous), 2 the
  *       modification (white, short dashes), 3 an inactive route (cyan, long
- *       dashes), 4 the lateral offset's path (magenta, short dashes)
+ *       dashes), 4 the lateral offset's path (magenta, short dashes), 5
+ *       an activated route not yet executed (step 6d4, FCOM p.1251: cyan
+ *       and white dashes in turn)
  *   laminar/B747/nd/line/view   each ND's map (the ND module, as it places
  *       the route's symbols): the view (0 none, 1 MAP, 2 MAP CTR, 3 PLAN),
  *       the centre's latitude and longitude, the true direction up, pixels
@@ -77,10 +79,18 @@ static const float ndl_pos_dx[2][3] = {{0.0f, 1366.0f, 1366.0f}, {0.0f, 683.0f, 
 static const float ndl_pos_dy[3] = {0.0f, 0.0f, 683.0f};
 static const int ndl_power_index[2] = {3, 2};
 static const int ndl_rheostat[2] = {2, 3};
-/* the styles' colours and dashes (pixels: a dash, a gap; 0 continuous) */
-static const float ndl_rgb[5][3] = {
-    {0.0f, 0.0f, 0.0f}, {1.0f, 0.42f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.85f, 1.0f}, {1.0f, 0.42f, 1.0f}};
-static const float ndl_dash[5][2] = {{0, 0}, {0, 0}, {12, 10}, {24, 12}, {12, 10}};
+/* the styles' colours and dashes (pixels: a dash, a gap; 0 continuous);
+   ACTIVATING's dashes cyan and white in turn (its first cyan; the dashes'
+   length: estimate) */
+#define NDL_STYLES 6
+#define NDL_ACTIVATING 5
+static const float ndl_rgb[NDL_STYLES][3] = {
+    {0.0f, 0.0f, 0.0f}, {1.0f, 0.42f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.85f, 1.0f}, {1.0f, 0.42f, 1.0f},
+    {0.0f, 0.85f, 1.0f}};
+static const float ndl_dash[NDL_STYLES][2] = {{0, 0}, {0, 0}, {12, 10}, {24, 12}, {12, 10}, {12, 6}};
+/* the side being drawn: its brightness, its colours (not the test's) */
+static float ndl_cur_bright = 1.0f;
+static int ndl_cur_colours = 1;
 
 static float ndl_get_f(void *ref) { return *(float *)ref; }
 static void ndl_set_f(void *ref, float v) { *(float *)ref = v; }
@@ -235,6 +245,10 @@ static void ndl_segment(int view, int style, float ax, float ay, float bx, float
     for (float k = floorf(u0 / p) * p; k < u1; k += p) {
         float a = fmaxf(k, u0), b = fminf(k + dash, u1);
         if (a >= b) continue;
+        if (style == NDL_ACTIVATING && ndl_cur_colours) {
+            const float *c = ((long)floorf(k / p + 0.5f) & 1) ? ndl_rgb[2] : ndl_rgb[NDL_ACTIVATING];
+            glColor4f(c[0] * ndl_cur_bright, c[1] * ndl_cur_bright, c[2] * ndl_cur_bright, 1.0f);
+        }
         float ta = (a - s) / len, tb = (b - s) / len;
         ndl_quad(ox + ax + ta * dx, oy + ay + ta * dy, ox + ax + tb * dx, oy + ay + tb * dy, w * 0.8f);
     }
@@ -290,11 +304,13 @@ static void ndl_side(int side, int n, float bright)
     }
     int style = 0;
     float px = 0.0f, py = 0.0f, s = 0.0f;
+    ndl_cur_bright = bright;
+    ndl_cur_colours = !((ndl_test >> side) & 1);
     glBegin(GL_QUADS);
     for (int k = 0; k < n; k++) {
         int pen = (int)(ndl_pen[k] + 0.5f);
         if (pen != 0) {
-            style = (pen >= 1 && pen <= 4) ? pen : 0;
+            style = (pen >= 1 && pen < NDL_STYLES) ? pen : 0;
             ndl_proj(v, ndl_lat[k], ndl_lon[k], &px, &py);
             s = 0.0f;
             const float *c = ((ndl_test >> side) & 1) ? (const float[3]){0.0f, 1.0f, 0.0f} : ndl_rgb[style];

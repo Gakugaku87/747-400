@@ -2,7 +2,9 @@
 -- FMC's path as LNAV flies it (FCOM p.1147-1148: the active route a
 -- continuous magenta line, a modification short white dashes, an inactive
 -- route long cyan dashes, a lateral offset's path dashed beside the route;
--- the holds and procedure turns in the line), as points the FMS bridge
+-- the holds and procedure turns in the line; (step 6d4) FCOM p.1251: an
+-- activated route not yet executed alternating cyan and white dashes), as
+-- points the FMS bridge
 -- plugin draws on each ND (X-Plane's map drew straight lines between the
 -- flight plan's rows with its own turns: a turn of more than 135 degrees
 -- broke up on the ND, s198's ATMUG). From the path model's elements (the
@@ -38,8 +40,9 @@
 local M = setmetatable({}, {})
 B747_nd_line_model = M
 
--- the pieces' styles (the plugin's colours and dashes: FCOM p.1148)
-M.ACTIVE, M.MOD, M.INACTIVE, M.OFFSET = 1, 2, 3, 4
+-- the pieces' styles (the plugin's colours and dashes: FCOM p.1148; step
+-- 6d4: ACTIVATING, FCOM p.1251)
+M.ACTIVE, M.MOD, M.INACTIVE, M.OFFSET, M.ACTIVATING = 1, 2, 3, 4, 5
 -- the points the datarefs hold (laminar/B747/nd/line/*)
 M.MAXP = 600
 -- a turn's or an arc's points every TURN_STEP degrees (estimate: smooth at
