@@ -562,6 +562,25 @@ ri.vs, ri.gear_alt = -60, 30
 local r2 = P.update(sr, ri, DT)
 local r3 = P.update(sr, ri, DT)
 T.check(r3 >= r2 - 1e-9 and r2 >= r1 - 1e-9, "under the landing attitude: not lowered")
+-- under FLARE_HOLD_FT the command no more than HOLD_LEAD over the attitude
+-- (the nose stops coming up: in X-Plane it went on 0.9 degree past 5 ft on
+-- the A/P's lag and the 747 floated 6 ft at 1.14 g, s114 2026-11-02), not
+-- under the landing attitude
+local sc, ci = P.new(), P.inputs()
+ci.active, ci.mode, ci.tas, ci.ias, ci.pitch, ci.vs, ci.gear_alt = true, "FLARE", 150, 150, 2.0, -780, 50
+P.update(sc, ci, DT)
+sc.cmd, sc.last_vs, sc.vs_rate = 6.0, nil, 0
+ci.pitch, ci.vs, ci.gear_alt = 5.0, -300, 4
+local cc = P.update(sc, ci, DT)
+T.near(cc, 5.0 + P.HOLD_LEAD, 1e-9, ("4 ft, the command a degree over the attitude: down to it + HOLD_LEAD (%.2f)"):format(cc))
+ci.pitch = 3.0
+sc.cmd = 6.0
+cc = P.update(sc, ci, DT)
+T.near(cc, 2.0 + P.FLARE_FLOOR, 1e-9, "the attitude under the landing attitude: the landing attitude, 4.0")
+ci.gear_alt, ci.pitch = 8, 5.0
+sc.cmd = 6.0
+cc = P.update(sc, ci, DT)
+T.check(cc > 5.0 + P.HOLD_LEAD + 0.5, ("8 ft: not limited (%.2f)"):format(cc))
 -- NOSE LETDOWN on the ground after FLARE: from a degree under the attitude
 -- (FLARE's last command higher), down a degree a second, the nose held down
 -- at -1 under 2 degrees (ATA22 p.332)
