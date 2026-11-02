@@ -507,4 +507,29 @@ rt:set("sim/flightmodel/position/indicated_airspeed", 250)
 frames(1)
 T.near(units(), u, 1e-6, "after the start's 3 s the speed no longer sets it")
 rt:set("sim/flightmodel/failures/onground_any", 1)
+
+-- the gear's drag (補正, B747.45.xt.aero_corr.lua): X-Plane's fuselage drag
+-- coefficient from the acf's own value, read on the first frame it is
+-- there, and the gear's mean extension; laminar/B747/debug/aero_corr_off 1
+-- leaves the correction out
+local FUSE = "sim/aircraft/bodies/acf_fuse_cd"
+local GEAR = "sim/flightmodel2/gear/deploy_ratio"
+T.equal(get(FUSE), 0, "no fuselage drag figure yet: nothing written")
+for i = 0, 4 do rt:set(GEAR, i, 1) end
+rt:set(FUSE, 0.085)
+frames(0.1)
+local added = 0.0044 / 0.0664
+T.near(get(FUSE), 0.085 + added, 1e-6, "gear down: the acf's 0.085 + 0.066")
+frames(0.5)
+T.near(get(FUSE), 0.085 + added, 1e-6, "the frames after: the same, not added again")
+for i = 0, 1 do rt:set(GEAR, i, 0) end
+frames(0.1)
+T.near(get(FUSE), 0.085 + 0.6 * added, 1e-6, "three legs of five down: 0.6")
+rt:set("laminar/B747/debug/aero_corr_off", 1)
+frames(0.1)
+T.near(get(FUSE), 0.085, 1e-6, "aero_corr_off 1: the acf's own")
+rt:set("laminar/B747/debug/aero_corr_off", 0)
+for i = 0, 4 do rt:set(GEAR, i, 0) end
+frames(0.1)
+T.near(get(FUSE), 0.085, 1e-6, "gear up: the acf's own")
 T.done()
