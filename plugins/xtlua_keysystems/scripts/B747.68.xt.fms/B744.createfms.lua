@@ -340,7 +340,16 @@ function B747_cdu_fmc_lost(fmsModule)
   switchNow(fmsO)
   C.error(cduState[fmsModule], B747_fmc_link_model.TIMEOUT)
 end
-function keyDown(fmsModule,key,phase,duration)
+-- the keys one after another, each on the page the keys before it left
+-- (2026-11-03): after a line select, function, NEXT, PREV or EXEC key the
+-- next keys wait until its page has been drawn (a page's line select keys
+-- get their functions while it draws: getPage), then go on. X-Plane gives
+-- XTLua the commands of a pause or a slow frame in one frame (the full
+-- run's s110: DEP ARR, R2 and R4 0.5 s apart, R4 lost on ARRIVALS not yet
+-- drawn)
+local keyWait = {}   -- [CDU] true: a page key done, its page not drawn yet
+local keyQueue = {}  -- [CDU] the keys waiting: {key, phase, duration}
+local function doKey(fmsModule,key,phase,duration)
   phase=phase or 0
   local fmsO=fmsModules[fmsModule]
   local st=cduState[fmsModule]
@@ -378,7 +387,29 @@ function keyDown(fmsModule,key,phase,duration)
     C.error(st, fmsO.notify)
     fmsO.notify=""
   end
+  keyWait[fmsModule]=true
   if fmsO.targetCustomFMC then switchNow(fmsO) else run_after_time(switchCustomMode, 0.5) end
+end
+function keyDown(fmsModule,key,phase,duration)
+  local q=keyQueue[fmsModule]
+  if keyWait[fmsModule] or (q and q[1]) then
+    q=q or {}
+    keyQueue[fmsModule]=q
+    q[#q+1]={key,phase,duration}
+    return
+  end
+  doKey(fmsModule,key,phase,duration)
+end
+-- a CDU's page drawn: the keys that waited, up to the next page key; none
+-- without power or with its FMC frozen (no keys then)
+local function keysAfterDrawing(id, drop)
+  keyWait[id]=nil
+  local q=keyQueue[id]
+  if drop then keyQueue[id]=nil return end
+  while q and q[1] and not keyWait[id] do
+    local e=table.remove(q,1)
+    doKey(id,e[1],e[2],e[3])
+  end
 end
 
 fmsKeyFunc={}
@@ -718,10 +749,10 @@ function fms:B747_fms_display()
       switchNow(self)
     end
     cduWasPowered[thisID]=powered
-    if not powered then return end
+    if not powered then keysAfterDrawing(thisID, true) return end
     -- (6-1/6-2 step 11d3) its FMC being resynchronized: the display frozen
     -- (FCOM p.1277: a failed condition; ATA34_2 p.633)
-    if B747_fms_fmc_frozen(thisID) then return end
+    if B747_fms_fmc_frozen(thisID) then keysAfterDrawing(thisID, true) return end
     -- a message a page set while drawing (notify): this CDU's
     if self.notify~=nil and self.notify~="" then
       C.error(st, self.notify)
@@ -807,4 +838,5 @@ function fms:B747_fms_display()
       st.sp=self.scratchpad or ""
       B747DR_fms[thisID][14]=C.line(st, cduFmc(thisID))
     end
+    keysAfterDrawing(thisID)
 end
