@@ -19,7 +19,7 @@
 --   FlyWithLua/B747_flighttest/mark    add a "mark" row to events.csv
 -- Does nothing unless the 747-400 is the user aircraft.
 
-local VERSION = "9"
+local VERSION = "10"
 
 if not string.find(AIRCRAFT_PATH or "", "747-400", 1, true)
     or XPLMFindDataRef("laminar/B747/engines/type") == nil then
@@ -117,6 +117,11 @@ local COLUMNS = {
     -- the servo's command, excited
     {"lever_1", "laminar/B747/engine/throttle", 0}, {"at_cmd", "laminar/B747/autothrottle/lever_cmd"},
     {"at_servo", "laminar/B747/autothrottle/servo"},
+    -- the FMC's LNAV (2026-11-03: v10): the cross-track error (nm, right
+    -- positive), the desired track, the roll it asks for, the procedure
+    -- turn's phase
+    {"lnav_xtk", "laminar/B747/fms/lnav/xtk"}, {"lnav_dtk", "laminar/B747/fms/lnav/dtk"},
+    {"lnav_roll", "laminar/B747/fms/lnav/roll"}, {"pturn_phase", "laminar/B747/fms/lnav/pturn_phase"},
 }
 -- the four engines' thrust, for the "thrust" column
 local THRUST = {{"sim/flightmodel/engine/POINT_thrust", 0}, {"sim/flightmodel/engine/POINT_thrust", 1},
