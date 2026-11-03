@@ -49,6 +49,9 @@ local function fly_pt(turn, limit)
             seen.far = math.max(seen.far, d)
             local ph = s2.ptn.phase
             if seen.phases[#seen.phases] ~= ph then seen.phases[#seen.phases + 1] = ph end
+            local k = path[1] and path[1].kind
+            if ph == "back" and k == "line" then seen.back_line = true end
+            if ph == "end" and k == "line" then seen.end_line = true end
             if ph == "turn" and math.abs(s2.roll) > 5 then seen.roll_sign = s2.roll > 0 and 1 or -1 end
             -- the outbound leg settled first (from 2 nm past the fix)
             if (ph == "out" and d > 2) or ph == "corner" or ph == "leg45" then
@@ -73,7 +76,12 @@ local function fly_pt(turn, limit)
 end
 
 local seen, st = fly_pt("R", 10)
-T.check(table.concat(seen.phases, " ") == "out corner leg45 turn back", "the phases in turn: " .. table.concat(seen.phases, " "))
+T.check(table.concat(seen.phases, " ") == "out corner leg45 turn back end", "the phases in turn: " .. table.concat(seen.phases, " "))
+-- (2026-11-03) its end where the guidance goes on to the inbound course
+-- (the CF line), not when the route is sequenced after it: "back" never
+-- with the CF line ahead, "end" with it
+T.check(not seen.back_line and seen.end_line, "the end as the guidance goes on to the next leg (back with the CF: "
+    .. tostring(seen.back_line) .. ", end with it: " .. tostring(seen.end_line) .. ")")
 T.check(seen.xt_out < 0.2, "out, round the corner and on the 45 degree leg within 0.2 nm: " .. fmt(seen.xt_out))
 T.check(seen.xt_turn < 0.2, "in the 180 degree turn within 0.2 nm: " .. fmt(seen.xt_turn))
 T.check(seen.far <= 10 and seen.far > 8, "within 10 nm of the fix (the procedure's distance), " .. fmt(seen.far))

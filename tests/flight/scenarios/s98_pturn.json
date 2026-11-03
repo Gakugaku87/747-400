@@ -17,6 +17,7 @@
     }
   },
   "steps": [
+    { "do": "record_start" },
     { "do": "sleep", "seconds": 10, "note": "空中開始の揺れが収まるのを待つ" },
     { "do": "set", "note": "MCP 速度 200 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 200 },
     { "do": "set", "note": "MCP 高度 4,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 4000 },
@@ -62,11 +63,12 @@
     { "do": "shot", "name": "nd_proc_turn_turning" },
     { "do": "view", "name": "forward" },
     { "do": "watch", "note": "旋回を 0.3 nm 以内で", "dref": "laminar/B747/fms/lnav/xtk", "abs": true, "max": 0.3, "until": { "dref": "laminar/B747/fms/lnav/pturn_phase", "op": "==", "value": 4 }, "timeout": 180 },
-    { "do": "watch", "note": "戻りの脚から入航コースへ（procedure turn の終わりで段階 0）", "dref": "laminar/B747/fms/lnav/xtk", "abs": true, "max": 0.5, "until": { "dref": "laminar/B747/fms/lnav/pturn_phase", "op": "==", "value": 0 }, "timeout": 240 },
+    { "do": "watch", "note": "戻りの脚から入航コースへ（procedure turn の終わりで段階 0。2026-11-03 から、段階 0 は案内が入航コースの脚に移る時：前は経路の順送りの時で、その間の入航コースへ寄る途中の入航コースからの距離（約 0.6 nm）を戻りの脚のずれとして測っていた。全シナリオの回と再試験で 0.666・0.655・0.679 nm、オフラインの閉ループも 0.63 nm）", "dref": "laminar/B747/fms/lnav/xtk", "abs": true, "max": 0.5, "until": { "dref": "laminar/B747/fms/lnav/pturn_phase", "op": "==", "value": 0 }, "timeout": 240 },
     { "do": "sleep", "seconds": 40 },
     { "do": "watch", "note": "入航コースの上（0.3 nm 以内）", "dref": "laminar/B747/fms/lnav/xtk", "abs": true, "max": 0.3, "timeout": 20 },
     { "do": "check", "note": "入航コース 283（磁）＝真 274 ほど", "dref": "laminar/B747/fms/lnav/dtk", "op": "between", "value": [270, 279] },
     { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
-    { "do": "view", "name": "forward" }
+    { "do": "view", "name": "forward" },
+    { "do": "record_stop" }
   ]
 }

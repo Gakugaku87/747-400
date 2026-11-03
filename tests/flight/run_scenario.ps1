@@ -377,10 +377,15 @@ foreach ($step in $spec.steps) {
                     if (Test-XPStuck) { throw 'stuck' }
                     $v = [double](Get-XPDataref $step.dref)
                     if ($step.abs) { $v = [math]::Abs($v) }
+                    # the sample at which the until condition is seen is not
+                    # the watched stretch's: the two reads are two requests
+                    # and the value may be the next frame's (2026-11-04: s98
+                    # took the next leg's cross-track error, 0.68 nm, read
+                    # in the frame the procedure turn ended)
+                    if ($u -and (Test-Op (Get-XPDataref $u.dref) $u.op $uwant)) { $met = $true; break }
                     if ($null -eq $hi -or $v -gt $hi) { $hi = $v }
                     if ($null -eq $lo -or $v -lt $lo) { $lo = $v }
                     $n++
-                    if ($u -and (Test-Op (Get-XPDataref $u.dref) $u.op $uwant)) { $met = $true; break }
                     Start-Sleep -Milliseconds 250
                 }
                 $ok = $met -or -not $u
