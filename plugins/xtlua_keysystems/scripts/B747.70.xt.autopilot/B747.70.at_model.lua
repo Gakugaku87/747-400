@@ -64,8 +64,14 @@ M.REF_NEAR_EPR, M.REF_NEAR_N1 = 0.05, 2.5
 -- took the speed down too slowly (2026-11-03: the levers held for 18 s
 -- while the flaps took the speed off, s112's balloon at the G/S capture;
 -- 220 to 216 kt in 20 s, s43; a simulation 137 s for FCTM p.139's 90 s);
--- 0.004 with the full rate far from the target: 99 s
-M.K_SPD, M.K_ACC, M.SPD_DOWN = 0.004, 0.06, 0.5
+-- 0.004 and 0.06 with the full rate far from the target took 340 to 250
+-- kt in 97 s (s220) but swung the levers every 20 s at flaps 20 and 170
+-- kt, settling in some 100 s (s112, at_hold_f20: 46 to 106 kN): there a
+-- lever's tenth changes the acceleration some 0.6 kt/s and the loop was
+-- too strong for the engines' lag. 0.003 and 0.045, the acceleration
+-- over 0.5 s (the glue's), settle in 40 s (2026-11-04; K_ACC / K_SPD,
+-- the approach's 15 s, kept)
+M.K_SPD, M.K_ACC, M.SPD_DOWN = 0.003, 0.045, 0.5
 M.SPD_DOWN_KT = {5, 15}
 M.K_VS = 1.2e-5
 -- G/A's THR on the energy's rate (evs, as VNAV's: the speed's change
