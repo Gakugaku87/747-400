@@ -1061,14 +1061,16 @@ local function afds_at()
 	end
 	B747_at_model.update(atState, i)
 	-- the servo (step 9f2): the laws' inputs, the command out. The speed's
-	-- acceleration filtered over a second (estimate); the thrust the
+	-- acceleration filtered over half a second (estimate; a second before
+	-- 2026-11-04: its lag kept SPD's levers swinging at flaps 20 and 170
+	-- kt, B747.70.at_model.lua's K_SPD); the thrust the
 	-- levers' command, the EEC's TRA (EPR for P&W and RR, N1 for GE: type
 	-- 1; the highest), its reference the EEC's bug; the speed laws' target
 	-- X-Plane's dial (afds_speed_ref)
 	local dt = afds_dt()
 	local ias = simDR_ind_airspeed_kts_pilot
 	if atIas and dt > 0 then
-		atAccel = atAccel + ((ias - atIas) / dt - atAccel) * math.min(1, dt)
+		atAccel = atAccel + ((ias - atIas) / dt - atAccel) * math.min(1, dt / 0.5)
 	end
 	atIas = ias
 	local n1 = B747DR_ap_engine_type == 1

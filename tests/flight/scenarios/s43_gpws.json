@@ -17,6 +17,7 @@
     }
   },
   "steps": [
+    { "do": "record_start" },
     { "do": "sleep", "seconds": 5, "note": "空中開始の揺れ" },
     { "do": "set", "note": "MCP 高度 2,500 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 2500 },
     { "do": "set", "note": "MCP 方位 337（34L の LOC）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 337 },
@@ -29,11 +30,11 @@
     { "do": "cmd", "note": "A/T の SPD（2026-11-03 から：A/T は 10-31 の段 9f1 からモードを押して engage する：FCOM p.641–642。前は ALT などの後に勝手に active になったので、この版は SPD を押していなかった。全シナリオの回では A/T が入らず、500 ft で 278 kt のまま TOO LOW TERRAIN になった）", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
     { "do": "sleep", "seconds": 10 },
     { "do": "set", "note": "フラップ 10", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.5 },
-    { "do": "set", "note": "MCP 速度 180 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 180 },
+    { "do": "set", "note": "MCP 速度 170 kt（2026-11-04 から。前は 180 kt：−1,500 fpm の降下はフラップ 10・脚上げのアイドルでも速度が上がり、500 ft で 190 kt を超えた）", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 170 },
     { "do": "set", "note": "NAV 1 を IYQ 111.90（34L の ILS）", "dref": "sim/cockpit2/radios/actuators/nav1_frequency_hz", "value": 11190 },
     { "do": "set", "note": "機長の DH 400 ft", "dref": "sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_pilot", "value": 400 },
     { "do": "set", "note": "副操縦士の DH 450 ft", "dref": "sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_copilot", "value": 450 },
-    { "do": "sleep", "seconds": 20, "note": "減速とフラップ" },
+    { "do": "wait", "note": "フラップ 10 で 170 kt 付近へ落ち着く（178 kt 以下。2026-11-04 から待つ：前は 20 秒の後に 216〜218 kt で降下を始め、−1,500 fpm ではほとんど減速せず、500 ft で 190 kt を切るかがきわどかった：TOO LOW GEAR の代わりに TOO LOW TERRAIN）", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [160, 178], "timeout": 150 },
     { "do": "snapshot", "note": "開始：電源、X-Plane の RA と高度、ILS の偏位", "drefs": [ "laminar/B747/electrical/bus/ac", "sim/operation/failures/rel_pil_radalt", "sim/operation/failures/rel_cop_radalt",
       "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_copilot", "sim/flightmodel/position/elevation", "sim/flightmodel/position/y_agl",
       "laminar/B747/ra/capt/value", "laminar/B747/ra/fo/value", "laminar/B747/efis/radio_altitude", "laminar/B747/efis/radio_altitude_fo",
@@ -52,11 +53,11 @@
     { "do": "shot", "name": "pfd_start" },
 
     { "do": "mark", "note": "descent to 500 ft" },
-    { "do": "set", "note": "MCP 高度 500 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 500 },
+    { "do": "set", "note": "MCP 高度 400 ft（気圧高度。2026-11-04 から：500 ft では水平になる所の地形で電波高度が 347〜450 ft とばらつき、450 ft の回は機長の DH 400 ft の下に入らなかった。400 ft で電波高度 約 250〜350 ft）", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 400 },
     { "do": "cmd", "note": "V/S", "name": "laminar/B747/autopilot/button_switch/vs_mode" },
     { "do": "sleep", "seconds": 0.5 },
-    { "do": "set", "note": "V/S −1,500 fpm", "dref": "sim/cockpit2/autopilot/vvi_dial_fpm", "value": -1500 },
-    { "do": "set", "dref": "laminar/B747/cockpit2/autopilot/vvi_dial_fpm", "value": -1500 },
+    { "do": "set", "note": "V/S −1,000 fpm（2026-11-04 から。前は −1,500：フラップ 10・脚上げはアイドルでもその降下で約 18 kt 速くなり、500 ft で 190 kt を超えて、TOO LOW GEAR が水平になってからになった）", "dref": "sim/cockpit2/autopilot/vvi_dial_fpm", "value": -1000 },
+    { "do": "set", "dref": "laminar/B747/cockpit2/autopilot/vvi_dial_fpm", "value": -1000 },
     { "do": "wait", "note": "RA 2,500 ft 未満で機長の RA を表示", "dref": "laminar/B747/ra/capt/show", "op": "==", "value": 1, "timeout": 60 },
     { "do": "check", "note": "副操縦士の RA も", "dref": "laminar/B747/ra/fo/show", "op": "==", "value": 1 },
     { "do": "wait", "note": "RA 1,000 ft の ONE THOUSAND（405：FCOM p.1578）", "dref": "laminar/B747/gpws/last_callout", "op": "==", "value": 1000, "timeout": 120 },
@@ -73,7 +74,7 @@
     { "do": "sleep", "seconds": 4, "note": "点滅は 3 秒、そのあと点灯（ATA34_2 p.95）" },
     { "do": "check", "note": "3 秒後は琥珀の点灯（1）", "dref": "laminar/B747/dec_height/display_status", "op": "==", "value": 1 },
     { "do": "shot", "name": "pfd_dh_alert" },
-    { "do": "sleep", "seconds": 8, "note": "500 ft で水平に" },
+    { "do": "sleep", "seconds": 8, "note": "400 ft で水平に" },
     { "do": "snapshot", "note": "500 ft", "drefs": [ "laminar/B747/ra/capt/value", "laminar/B747/efis/radio_altitude", "laminar/B747/gpws/voice",
       "laminar/B747/CAS/warning_status[3]", "laminar/B747/warning/master_warning", "sim/cockpit2/engine/actuators/throttle_ratio_all" ] },
     { "do": "check", "note": "まだ TOO LOW GEAR", "dref": "laminar/B747/gpws/voice", "op": "==", "value": 5 },
@@ -82,7 +83,7 @@
 
     { "do": "mark", "note": "GND PROX panel" },
     { "do": "cmd", "note": "GEAR OVRD", "name": "laminar/B747/button_switch/gnd_prox_gear_ovrd" },
-    { "do": "wait", "note": "脚下げ扱い、フラップ 10、180 kt（159 kt 超）：4B の高速側（RA 419 ft 未満）で TOO LOW TERRAIN（voice 7）", "dref": "laminar/B747/gpws/voice", "op": "==", "value": 7, "timeout": 5, "level": "warn" },
+    { "do": "wait", "note": "脚下げ扱い、フラップ 10、約 170 kt（159 kt 超）：4B の高速側（RA 419 ft 未満）で TOO LOW TERRAIN（voice 7）", "dref": "laminar/B747/gpws/voice", "op": "==", "value": 7, "timeout": 5, "level": "warn" },
     { "do": "check", "note": "CONFIG GR OVRD で CONFIG GEAR なし（FCOM p.1538）", "dref": "laminar/B747/CAS/warning_status[3]", "op": "==", "value": 0 },
     { "do": "cmd", "note": "FLAP OVRD", "name": "laminar/B747/button_switch/gnd_prox_flap_ovrd" },
     { "do": "wait", "note": "着陸形態扱い：声なし", "dref": "laminar/B747/gpws/voice", "op": "==", "value": 0, "timeout": 5 },
@@ -139,7 +140,8 @@
     { "do": "wait", "note": "SINK RATE（voice 1：mode 1 の注意、p.144）", "dref": "laminar/B747/gpws/voice", "op": "==", "value": 1, "timeout": 40, "level": "warn" },
     { "do": "snapshot", "note": "SINK RATE", "drefs": [ "laminar/B747/ra/gpwc", "sim/flightmodel/position/vh_ind_fpm", "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "laminar/B747/gpws/gnd_prox_light" ] },
     { "do": "wait", "note": "PULL UP（PFD）", "dref": "laminar/B747/gpws/pull_up", "op": "==", "value": 1, "timeout": 30, "level": "warn" },
-    { "do": "snapshot", "note": "PULL UP", "drefs": [ "laminar/B747/ra/gpwc", "sim/flightmodel/position/vh_ind_fpm", "laminar/B747/gpws/voice", "laminar/B747/warning/master_warning" ] },
+    { "do": "snapshot", "note": "PULL UP", "drefs": [ "laminar/B747/ra/gpwc", "sim/flightmodel/position/vh_ind_fpm", "laminar/B747/gpws/voice", "laminar/B747/warning/master_warning", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot" ] },
+    { "do": "cas", "note": "PULL UP のとき（2026-11-04：PULL UP が出ないのに master WARNING が点いていた回の原因を見る）" },
     { "do": "check", "note": "master WARNING（FCOM p.1532）", "dref": "laminar/B747/warning/master_warning", "op": "==", "value": 1, "level": "warn" },
     { "do": "shot", "name": "pfd_pull_up" },
     { "do": "wait", "note": "引き起こしで PULL UP が消える", "dref": "laminar/B747/gpws/pull_up", "op": "==", "value": 0, "timeout": 40 },
@@ -166,6 +168,7 @@
     { "do": "sleep", "seconds": 0.5 },
     { "do": "set", "note": "V/S +1,500 fpm", "dref": "sim/cockpit2/autopilot/vvi_dial_fpm", "value": 1500 },
     { "do": "set", "dref": "laminar/B747/cockpit2/autopilot/vvi_dial_fpm", "value": 1500 },
-    { "do": "cas", "note": "終わり" }
+    { "do": "cas", "note": "終わり" },
+    { "do": "record_stop" }
   ]
 }
