@@ -1,9 +1,9 @@
 {
   "name": "s144_vnav_early_descent",
-  "description": "6-1/6-2 段 9d2a（早期降下）の X-Plane での確認。s140 と同じ経路・LNAV・ZFW 200・CI 100・FL300 で、その始めより約 40 NM 西（T/D の約 40 NM 手前）から東へ空中開始（機体を読み直す）。MCP 高度 FL300（巡航高度）で VNAV PTH の巡航にしてから、MCP を 10,000 ft にしてノブを押す：T/D の 50 NM の内なので早期降下（FCOM p.649、p.1260、p.1389）。FMC は降下段階（3）、VNAV SPD、A/T は THR から約 1,250 fpm で HOLD（FMSPG p.3.5-5）、CRZ ALT は FL300 のまま、DES のページが ACT。経路が下がってきて機体に当たると VNAV PTH（FCOM p.665）。Lua の誤りも確かめる。",
+  "description": "6-1/6-2 段 9d2a（早期降下）の X-Plane での確認。s140 と同じ経路・LNAV・ZFW 200・CI 100・FL300 で、その始めより約 70 NM 西（T/D の約 97 NM 手前。2026-11-03 から 60 NM 下げ（FL300 に戻るのに 240 秒を超えた回があり、待ちを 420 秒に）、T/D まで 45 NM の内になるのを待って押す：前は約 40 NM 手前からで、FL300 に戻るのに 205 秒かかった回は T/D の約 9 NM 手前で押し、30 秒で経路に当たった）から東へ空中開始（機体を読み直す）。MCP 高度 FL300（巡航高度）で VNAV PTH の巡航にしてから、MCP を 10,000 ft にしてノブを押す：T/D の 50 NM の内なので早期降下（FCOM p.649、p.1260、p.1389）。FMC は降下段階（3）、VNAV SPD、A/T は THR から約 1,250 fpm で HOLD（FMSPG p.3.5-5）、CRZ ALT は FL300 のまま、DES のページが ACT。経路が下がってきて機体に当たると VNAV PTH（FCOM p.665）。Lua の誤りも確かめる。",
   "reload": true,
   "flight": {
-    "lle_air_start": { "latitude": 34.70, "longitude": 132.72, "elevation_in_meters": 9144, "heading_true": 97, "speed_in_meters_per_second": 250 },
+    "lle_air_start": { "latitude": 34.822, "longitude": 131.512, "elevation_in_meters": 9144, "heading_true": 97, "speed_in_meters_per_second": 250 },
     "engine_status": { "all_engines": { "running": true } },
     "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
     "weather": {
@@ -45,9 +45,10 @@
     { "do": "cdu", "note": "VNAV のページ（空中では有効な CRZ のページ：ATA34_2 p.552）", "keys": ["VNAV"] },
     { "do": "snapshot", "note": "CRZ のページの TO T/D（2R）", "drefs": [ "laminar/B747/fms3/Line01_L", "laminar/B747/fms3/Line04_S", "laminar/B747/fms3/Line05_L", "laminar/B747/fms/vnav/dist", "sim/cockpit2/gauges/indicators/altitude_ft_pilot" ] },
     { "do": "check", "note": "CRZ のページが ACT", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "ACT" },
-    { "do": "wait", "note": "FL300 に戻る（空中開始の後は約 2,000 ft 上がり、VNAV PTH が 2,000 fpm 余りで戻す）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [29850, 30150], "timeout": 240 },
+    { "do": "wait", "note": "FL300 に戻る（空中開始の後は 1,000〜2,000 ft 上がり、VNAV PTH が戻す。2026-11-02 から 290 kt の上では経路の則のゲインが低く、約 250 fpm で 200 秒ほど）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [29850, 30150], "timeout": 420 },
     { "do": "wait", "note": "水平の巡航（戻る降下の途中で押すと、ピッチが速さを取る間に V/S が率を一瞬で通る：s144・s145 の初めの版は、そこで HOLD になり巡航の推力のまま上がった）", "dref": "sim/flightmodel/position/vh_ind_fpm", "op": "between", "value": [-300, 300], "timeout": 120 },
     { "do": "wait", "note": "巡航の速さの近く（空中開始の揺れで上がって遅くなるのを A/T の SPD が戻す。THR は速さを目標へ取る間も推力を合わせるが、その分だけ長くかかる）", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": ">=", "value": 285, "timeout": 180 },
+    { "do": "wait", "note": "T/D まで 20 NM の内（CRZ のページの TO T/D、2R）：押してから 30 秒より長く経路の下を降りる（2026-11-03 の 2 回目の再試験は 45 NM の内で押し、T/D で経路の下 3,000 ft を超え、経路が約 740 fpm で追いつくのに約 16 分：後の 600 秒の待ちに入らなかった。元の版は 40 NM 手前の空中開始から FL300 に戻る間に進み、押したのは T/D の 10 NM 前後）", "dref": "laminar/B747/fms3/Line05_L", "op": "matches", "value": "/ *([0-9]|1[0-9]|20)NM *$", "timeout": 900 },
     { "do": "set", "note": "MCP 高度 10,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 10000 },
     { "do": "sleep", "seconds": 3, "note": "MCP の高度が中へ写るのを待つ" },
     { "do": "check", "note": "押す前は巡航（2）のまま（T/D の手前：段 9d2a から）", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 2 },
