@@ -175,9 +175,19 @@ T.check(s11.servo and math.abs(s11.cmd - 0.5) < 1e-9, "SPD on target: the servo 
 A.servo(s11, sv{ias = 240})
 local up = s11.cmd - 0.5
 T.near(up, A.K_SPD * 10, 1e-9, "10 kt slow: up at K_SPD a kt")
-A.servo(s11, sv{ias = 260})
-T.near(s11.cmd - (0.5 + up), -A.K_SPD * 10 * A.SPD_DOWN, 1e-9, "10 kt fast: down at half (FCTM p.43)")
 local c0 = s11.cmd
+A.servo(s11, sv{ias = 254})
+T.near(s11.cmd - c0, -A.K_SPD * 4 * A.SPD_DOWN, 1e-9, "4 kt fast: down at half (FCTM p.43: the gusts)")
+c0 = s11.cmd
+A.servo(s11, sv{ias = 260})
+T.near(s11.cmd - c0, -A.K_SPD * 10 * (A.SPD_DOWN + 1) / 2, 1e-9, "10 kt fast: between")
+c0 = s11.cmd
+A.servo(s11, sv{ias = 270})
+T.near(s11.cmd - c0, -A.K_SPD * 20, 1e-9, "20 kt fast: down at the full rate (FCTM p.139: a reduction at idle)")
+c0 = s11.cmd
+A.servo(s11, sv{ias = 270, accel = -1.2})
+T.near(s11.cmd - c0, -A.K_SPD * 20 + A.K_ACC * 1.2, 1e-9, "20 kt fast, slowing 1.2 kt/s: the acceleration's term")
+c0 = s11.cmd
 A.servo(s11, sv{ias = 100})
 T.near(s11.cmd - c0, A.SERVO_RATE, 1e-9, "150 kt slow: at most 10 degrees a second")
 c0 = s11.cmd
@@ -203,7 +213,7 @@ T.near(s13.cmd - 0.5, A.K_VS * (want - 1000), 1e-9, string.format("FLCH 5,000 ft
 c0 = s13.cmd
 A.servo(s13, sv{mcp_alt = 15000, vs = 4000, lever = c0})
 T.near(s13.cmd, c0, 1e-9, "climbing faster than wanted: not less (ATA34_2 p.646)")
--- (2026-11-03) the V/S from where the change began, held to its end: the
+-- (2026-11-02) the V/S from where the change began, held to its end: the
 -- change in 125 s (ATA34_2 p.670; before, the change left each frame:
 -- s07's 400 ft down took 440 s to the capture); a new MCP altitude: from
 -- there
