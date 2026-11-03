@@ -66,7 +66,7 @@
     { "do": "cmd", "name": "laminar/B747/fms1/alphanum_key/0" },
     { "do": "cmd", "note": "コース 330 を CRS R（R2）へ", "name": "laminar/B747/fms1/ls_key/R2" },
     { "do": "sleep", "seconds": 1 },
-    { "do": "check", "note": "VOR L・R とも手動", "dref": "laminar/B747/radio/tuningmodes", "op": "==", "value": "AMMMM" },
+    { "do": "check", "note": "VOR L・R とも手動（文字は ILS・VOR L・VOR R・ADF L・ADF R。1 字目の ILS は 2026-11-01 の FMC 段 10c から、自動で同調しない間は PARK の P：見ない。前は A）", "dref": "laminar/B747/radio/tuningmodes", "op": "matches", "value": "^.MMMM$" },
     { "do": "wait", "note": "識別符号 NRE", "dref": "laminar/B747/nd/capt/vor_ref", "op": "==", "value": "NRE", "timeout": 20 },
     { "do": "wait", "note": "偏位のバーと目盛", "dref": "laminar/B747/nd/capt/vor_dev", "op": "==", "value": 1, "timeout": 20 },
     { "do": "check", "note": "コース", "dref": "laminar/B747/nd/capt/vor_crs", "op": "==", "value": 2 },

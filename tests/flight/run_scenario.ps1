@@ -408,6 +408,11 @@ foreach ($step in $spec.steps) {
                 $dst = Join-Path $acfRoot $step.to
                 New-Item -ItemType Directory -Force (Split-Path $dst) | Out-Null
                 Copy-Item -Force (Join-Path $acfRoot $step.from) $dst
+                # the copy is the newest file there (2026-11-03): the FMC takes
+                # the simbrief folder's newest .fms and OFP, and the copy kept
+                # its source's date (11-01) under the user's plan fetched at
+                # 10:06 (s203: its OFP not used, no winds)
+                (Get-Item $dst).LastWriteTime = Get-Date
                 Add-Result $step 'info' "copied $($step.from) to $($step.to)"
             }
             'remove' {
@@ -464,12 +469,17 @@ foreach ($step in $spec.steps) {
                         }
                     } else {
                         $text = if ($k.StartsWith('=')) { $k.Substring(1) } else { $k }
+                        $prev = $null
                         foreach ($ch in $text.ToCharArray()) {
                             $c = [string]$ch
                             $cmd = if ($chars.ContainsKey($c)) { $chars[$c] } elseif ($c -cmatch '^[A-Z0-9]$') { "alphanum_key/$c" } else { throw "cdu: no key for '$c'" }
+                            # a key twice in one frame is taken once (EDDF typed
+                            # EDF): the same key again a while later (2026-11-03:
+                            # RJAA typed RJA in a slow frame at 70 ms, s14)
+                            if ($c -ceq $prev) { Start-Sleep -Milliseconds 250 }
                             Invoke-XPCommand "laminar/B747/$id/$cmd"
-                            # a key twice in one frame is taken once (EDDF typed EDF)
                             Start-Sleep -Milliseconds 70
+                            $prev = $c
                         }
                         Start-Sleep -Milliseconds 100
                     }
@@ -493,10 +503,13 @@ foreach ($step in $spec.steps) {
 }
 if (-not $stopped) { try { Set-XPDataref 'sim/graphics/view/field_of_view_deg' $fov0 } catch { } }
 
-# collect the recorder output and the Log.txt lines of this run
+# collect the recorder output and the Log.txt lines of this run: only what
+# this run wrote (2026-11-03: a scenario without record_start got the
+# recording of the last scenario that had one)
+$runStart = (Get-Date).AddSeconds(-$wall.Elapsed.TotalSeconds)
 foreach ($f in 'session.csv', 'events.csv', 'summary.txt') {
     $p = Join-Path $recDir $f
-    if (Test-Path $p) { Copy-Item $p (Join-Path $out $f) -Force }
+    if ((Test-Path $p) -and (Get-Item $p).LastWriteTime -ge $runStart) { Copy-Item $p (Join-Path $out $f) -Force }
 }
 if (Test-Path $logPath) {
     $log = Get-Content $logPath
