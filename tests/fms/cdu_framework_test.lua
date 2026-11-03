@@ -173,6 +173,28 @@ T.check(line("L", 1):find("DES"), "the third page: " .. line("L", 1))
 key("L", "func_key/next_pg")
 T.equal(line("L", 1), first, "NEXT on the last page: the first (FMSPG p.42)")
 
+-- keys in one frame (X-Plane's pause or slow frame: the full run's s110,
+-- 2026-11-03): each on the page the keys before it left. In the air INIT
+-- REF shows APPROACH REF, its THRUST LIM> (R6) THRUST LIM, whose <CON (L3)
+-- gets its function as the page draws
+local function burst(...)
+    for _, k in ipairs({...}) do rt:command(CDU.L.keys .. k) end
+end
+burst("func_key/index", "ls_key/R6", "ls_key/L3")
+frames(0.3)
+T.check(line("L", 1):find("THRUST LIM"), "INIT REF and R6 in one frame: THRUST LIM: " .. line("L", 1))
+T.check(line("L", 7):find("^<CON%s+<SEL>"), "L3 in the same frame: CON (before: lost on THRUST LIM not yet drawn): " .. line("L", 7))
+T.equal(pad("L"), "", "no message")
+-- keys waiting when the CDU's power goes: none of them (no keys without
+-- power), MENU when it comes
+key("L", "func_key/fix")
+burst("func_key/index", "ls_key/R6")
+rt:set("laminar/B747/electrical/display_has_power", 8, 0)
+frames(0.2)
+rt:set("laminar/B747/electrical/display_has_power", 8, 6)
+frames(0.3)
+T.check(line("L", 1):find("MENU"), "INIT REF and R6, the power gone before a frame: MENU when it comes: " .. line("L", 1))
+
 -- the CDU's power: no keys without it; MENU when it comes
 rt:set("laminar/B747/electrical/display_has_power", 8, 0)
 frames(0.2)

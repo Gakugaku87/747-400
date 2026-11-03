@@ -218,6 +218,7 @@ function M.update(s, inp)
         end
     end
     s.pitch = inp.pitch
+    if s.pitch ~= "FLCH" then s.flch_vs, s.flch_mcp = nil, nil end
     -- the MCP's SPD and THR switches
     local air = not inp.ground and inp.ra > M.MIN_RA
     local p = inp.pitch
@@ -326,7 +327,15 @@ function M.servo(s, inp)
         -- climbing not less thrust (ATA34_2 p.646), but G/A controls to its
         -- V/S (p.675: above it, less)
         local vnav = s.pitch == "VNAV"
-        local want = s.ga and M.GA_VS or (vnav and (inp.vnav_vs or 0)) or (inp.mcp_alt - inp.alt) / M.FLCH_S * 60
+        -- FLCH's: the V/S that completes the altitude change in 125 s from
+        -- where it began, held to its end (ATA34_2 p.670); a new MCP
+        -- altitude from where the airplane is then. Before, the change left
+        -- each frame: an approach that never ended (s07's 400 ft took 440 s
+        -- to the capture)
+        if not (vnav or s.ga) and (s.flch_vs == nil or s.flch_mcp ~= inp.mcp_alt) then
+            s.flch_mcp, s.flch_vs = inp.mcp_alt, (inp.mcp_alt - inp.alt) / M.FLCH_S * 60
+        end
+        local want = s.ga and M.GA_VS or (vnav and (inp.vnav_vs or 0)) or s.flch_vs
         local vs = (vnav and inp.ivs) or inp.vs
         local ev = ((vnav or s.ga) and inp.evs) or vs
         rate = (vnav and M.K_VS_VNAV or s.ga and M.K_VS_GA or M.K_VS) * (want - ev)
