@@ -201,6 +201,49 @@ T.equal(get(ADV, RPM_LIM + 1), 0, "no >ENG 2 RPM LIM")
 rt:frame(1 / 30)
 T.equal(get(ADV, RPM_LIM), 0, "RPM LIM goes with N2 back below its limit")
 
+-- (2026-11-03) the display's N1 at high power from the EPR (the FCOM's Alt
+-- Mode %N1, B747_epr_model.n1): at the go-around rating's thrust on a 30 °C
+-- day's takeoff run (M.25) and at max EPR at 10,600 ft (the full run's s10)
+-- N1 and N2 stay under the N2 limit's band (111.4 - 0.5 - 2), no RPM LIM.
+-- Before, the regression on thrust / density ratio: N1 112 and 109, N2 121
+-- and 116, the EEC held the thrust with RPM LIM
+local P = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.epr_model.lua")
+local SCALARS = {"sim/flightmodel/failures/onground_any", "sim/flightmodel2/position/pressure_altitude",
+    "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/weather/aircraft/barometer_current_pas",
+    "sim/flightmodel/misc/machno", "sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot",
+    "sim/cockpit2/temperature/outside_air_temp_degc", "sim/cockpit2/temperature/outside_air_LE_temp_degc"}
+local ARRAYS = {"sim/flightmodel/engine/ENGN_running", "sim/cockpit2/engine/indicators/engine_speed_rpm",
+    "sim/cockpit2/engine/indicators/thrust_dry_n"}
+local saved = {}
+for _, n in ipairs(SCALARS) do saved[n] = get(n) end
+for _, n in ipairs(ARRAYS) do saved[n] = {} for i = 0, 3 do saved[n][i] = get(n, i) end end
+local function high_power(alt_ft, mach, oat, tat, epr, what)
+    local d = (1 - 6.87559e-6 * alt_ft) ^ 5.25588
+    rt:set("sim/flightmodel/failures/onground_any", alt_ft == 0 and 1 or 0)
+    rt:set("sim/flightmodel2/position/pressure_altitude", alt_ft)
+    rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", alt_ft)
+    rt:set("sim/weather/aircraft/barometer_current_pas", 101325 * d)
+    rt:set("sim/flightmodel/misc/machno", mach)
+    rt:set("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot", mach * math.sqrt(1.4 * 287 * (oat + 273.15)) * 1.943844)
+    rt:set("sim/cockpit2/temperature/outside_air_temp_degc", oat)
+    rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", tat)
+    for i = 0, 3 do
+        rt:set("sim/flightmodel/engine/ENGN_running", i, 1)
+        rt:set("sim/cockpit2/engine/indicators/engine_speed_rpm", i, 3500)
+        rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", i, P.thrust(epr, d, mach) * 1000)
+    end
+    frames(1)
+    local n1, n2 = get(ENG .. "display_N1", 0), get(ENG .. "display_N2", 0)
+    T.check(n1 > 101 and n1 < 106, string.format("%s: N1 %.1f (the EPR's)", what, n1))
+    T.check(n2 < 108.9, string.format("%s: N2 %.1f under the N2 limit's band", what, n2))
+    for i = 0, 3 do T.equal(get(ADV, RPM_LIM + i), 0, what .. ": no >ENG " .. (i + 1) .. " RPM LIM") end
+end
+high_power(0, 0.25, 30, 34, 1.51, "the takeoff run at EPR 1.51, 30 °C")
+high_power(10600, 0.45, 18, 28, 1.573, "max EPR at 10,600 ft, M.45, TAT 28 °C")
+for _, n in ipairs(SCALARS) do rt:set(n, saved[n]) end
+for _, n in ipairs(ARRAYS) do for i = 0, 3 do rt:set(n, i, saved[n][i]) end end
+frames(1)
+
 -- the thrust control drives X-Plane's throttle (ecc_spd): engines running,
 -- forward thrust, in the air; the stand-in engine gives no thrust, so the
 -- EPR stays low and full forward opens the throttle fully, idle closes it

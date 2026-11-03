@@ -84,4 +84,28 @@ function M.thrust(epr, delta, mach)
     return k * y ^ q * delta
 end
 
+-- The N1 (ENG-33, 2026-11-03): the corrected N1 (N1 / sqrt(theta_t2)) from
+-- the EPR and the Mach, fitted to the FCOM's Alt Mode %N1 (Flight With
+-- Unreliable Airspeed, PI.10.38-10.40 p.264-266: 70 points of level flight,
+-- holding, the terminal area and the 3 degree approach, Mach 0.21-0.84, EPR
+-- 0.96-1.43, ISA taken) and the takeoff standing at sea level (EPR 1.51:
+-- 100.6 %, the previous regression's there, which fits those points within
+-- about 2 %: estimate). At the same EPR the N1 is higher the faster (the
+-- ram); that fades out by EPR 1.35 (estimate: M.77 and M.84 lie on one line
+-- from 1.13 up). rms 1.55 %, at most 4.3 (low power). Above the points'
+-- 1.43 the form's extension (estimate).
+M.N1C = {41.3982, 108.5855, -41.8211, 163.6207, -85.8962, -65.9078}
+M.N1C_FADE = {0.95, 1.35}   -- EPR: the Mach's part whole to none
+function M.n1c(epr, mach)
+    if mach < 0 then mach = 0 end
+    local c, f = M.N1C, M.N1C_FADE
+    local v = math.sqrt(math.max(epr - 0.9, 0))
+    local r = math.max(0, math.min(1, (f[2] - epr) / (f[2] - f[1])))
+    return math.max(0, c[1] + c[2] * v + c[3] * v * v + r * (c[4] * mach + c[5] * mach * mach + c[6]))
+end
+-- the N1 (%) at a total air temperature (deg C)
+function M.n1(epr, mach, tat_c)
+    return M.n1c(epr, mach) * math.sqrt((tat_c + 273.15) / 288.15)
+end
+
 return M

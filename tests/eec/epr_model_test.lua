@@ -61,4 +61,57 @@ T.near(P.epr(10.3, 1, 0), 1.01, 0.001, "ground idle 10.3 kN: 1.01 still")
 local lapse = P.thrust(1.51, 1, 0.2) / P.thrust(1.51, 1, 0)
 T.check(lapse > 0.90 and lapse < 0.97, string.format("takeoff: thrust at EPR 1.51 and M.2 is %.1f %% of standing", lapse * 100))
 
+-- (2026-11-03) the N1 from the EPR against the FCOM's Alt Mode %N1 (PW4056,
+-- Flight With Unreliable Airspeed, PI.10.38-10.40 p.264-266), ISA: pressure
+-- altitude ft, KIAS (M.84 above 30,000 ft: the lower of the two), EPR, N1
+local N1_POINTS = {
+    -- cruise .84/290, level (PI.10.38)
+    {40000, 290, 1.16, 83.2}, {40000, 290, 1.31, 88.0},
+    {35000, 290, 1.08, 80.6}, {35000, 290, 1.14, 83.0}, {35000, 290, 1.24, 86.3}, {35000, 290, 1.43, 92.2},
+    {30000, 290, 1.02, 77.3}, {30000, 290, 1.07, 79.8}, {30000, 290, 1.13, 82.6}, {30000, 290, 1.21, 85.7}, {30000, 290, 1.32, 89.3},
+    {20000, 290, 0.97, 70.5}, {20000, 290, 0.99, 72.7}, {20000, 290, 1.03, 75.3}, {20000, 290, 1.07, 78.1}, {20000, 290, 1.11, 80.8},
+    {10000, 290, 0.96, 64.3}, {10000, 290, 0.98, 66.3}, {10000, 290, 1.00, 68.7}, {10000, 290, 1.02, 71.1}, {10000, 290, 1.04, 73.3},
+    {0, 290, 0.97, 55.6}, {0, 290, 0.98, 57.8}, {0, 290, 0.99, 60.4}, {0, 290, 1.00, 63.2}, {0, 290, 1.01, 65.7},
+    -- holding, 10,000 ft (PI.10.39)
+    {10000, 208, 1.01, 55.9}, {10000, 224, 1.02, 61.4}, {10000, 242, 1.03, 66.5}, {10000, 266, 1.04, 70.5}, {10000, 283, 1.04, 73.3},
+    -- terminal area, 5,000 ft, flaps up, 1, 5, 10, 20 (PI.10.39)
+    {5000, 208, 1.01, 51.4}, {5000, 224, 1.03, 57.5}, {5000, 239, 1.04, 62.5}, {5000, 253, 1.06, 67.1}, {5000, 266, 1.07, 70.8}, {5000, 269, 1.08, 71.5},
+    {5000, 188, 1.03, 53.9}, {5000, 204, 1.05, 60.2}, {5000, 219, 1.06, 64.8}, {5000, 233, 1.08, 68.9}, {5000, 246, 1.10, 72.7}, {5000, 249, 1.10, 73.4},
+    {5000, 168, 1.06, 57.9}, {5000, 184, 1.08, 63.6}, {5000, 199, 1.10, 68.4}, {5000, 213, 1.12, 72.7}, {5000, 226, 1.15, 76.5}, {5000, 229, 1.15, 77.2},
+    {5000, 148, 1.07, 57.8}, {5000, 164, 1.09, 63.8}, {5000, 179, 1.11, 68.8}, {5000, 193, 1.14, 73.1}, {5000, 206, 1.16, 77.0}, {5000, 209, 1.17, 77.7},
+    {5000, 138, 1.10, 64.0}, {5000, 154, 1.13, 69.9}, {5000, 169, 1.17, 75.2}, {5000, 183, 1.21, 79.9}, {5000, 196, 1.25, 83.7}, {5000, 199, 1.26, 84.4},
+    -- final approach, 1,500 ft, flaps 25 and 30 (PI.10.40)
+    {1500, 143, 1.05, 48.8}, {1500, 159, 1.06, 54.8}, {1500, 175, 1.07, 59.7}, {1500, 189, 1.08, 63.7}, {1500, 203, 1.10, 67.2}, {1500, 205, 1.10, 67.9},
+    {1500, 138, 1.07, 55.8}, {1500, 154, 1.09, 61.8}, {1500, 168, 1.11, 66.8},
+}
+local function mach_of(h, kias)
+    local qc = (1 + 0.2 * (kias / 661.4786) ^ 2) ^ 3.5 - 1
+    return math.min(0.84, math.sqrt(5 * ((qc / delta(h) + 1) ^ (1 / 3.5) - 1)))
+end
+local s2, worst = 0, 0
+for _, p in ipairs(N1_POINTS) do
+    local m = mach_of(p[1], p[2])
+    local tat = (288.15 - 0.0019812 * p[1]) * (1 + 0.2 * m * m) - 273.15
+    local r = P.n1(p[3], m, tat) - p[4]
+    s2, worst = s2 + r * r, math.max(worst, math.abs(r))
+end
+T.equal(#N1_POINTS, 70, "N1: the FCOM's 70 points")
+T.check(math.sqrt(s2 / #N1_POINTS) < 1.6 and worst < 4.5,
+    string.format("N1: the FCOM's Alt Mode %%N1 within rms %.2f, at most %.1f (low power)", math.sqrt(s2 / #N1_POINTS), worst))
+T.near(P.n1(1.51, 0, 15), 100.6, 0.3, "N1: takeoff standing at sea level, 15 C (the previous regression's 100.6, estimate)")
+T.near(P.n1(1.51, 0, 30) / P.n1(1.51, 0, 15), math.sqrt(303.15 / 288.15), 1e-9, "N1: the temperature once (the square root of theta_t2)")
+local mono = true
+for _, m in ipairs({0, 0.2, 0.45, 0.6, 0.84, 0.9}) do
+    local prev = -math.huge
+    for e = 0.9, 1.8, 0.01 do local n = P.n1c(e, m) mono = mono and n >= prev prev = n end
+end
+T.check(mono, "N1: rises with the EPR at every Mach")
+T.near(P.n1c(1.4, 0), P.n1c(1.4, 0.84), 1e-9, "N1: no Mach effect from EPR 1.35 up")
+-- the full run's s10 (2026-11-03): max EPR 1.573 at 10,600 ft, M.45, TAT
+-- 28 C under the N2 limit's band (the display's N2 of N1, 111.4 - 0.5 - 2)
+local n1_s10 = P.n1(1.573, 0.45, 28)
+local n2_s10 = (0.000798 * n1_s10 ^ 2 - 0.154 * n1_s10 + 10.2) * n1_s10 * (3600 / 9900)
+T.check(n1_s10 > 102 and n1_s10 < 107 and n2_s10 < 108.9,
+    string.format("N1: max EPR at 10,600 ft, M.45, TAT 28 C: N1 %.1f, N2 %.1f under the limit's band (before 109 / 116)", n1_s10, n2_s10))
+
 T.done()

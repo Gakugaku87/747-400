@@ -301,6 +301,17 @@ function engine_idle_control_PW(altitude_ft_in)
 
     N1_pct = N1_corrected_rpm / 3600 * 100 * math.sqrt(temperature_K / 288.15)
 
+    --(ENG-33, 2026-11-03) from 60 to 70 % over to the N1 from the EPR
+    --(B747_epr_model.n1: the FCOM's Alt Mode %N1, the TAT once). The
+    --regression above (thrust / density ratio, then the temperature again)
+    --rose without end at high corrected thrust: 106 % and N2 110 % on a
+    --30 C sea level takeoff, 122 % at max EPR at 10,600 ft; the EEC's N2
+    --limit then held the thrust under max EPR with RPM LIM (the full run's
+    --s10). Below 60 % it stays (the idle logic below works on it)
+    local N1_epr = B747_epr_model.n1(B747_epr_model.epr(thrust_N_in / 1000, simDR_epr_ambient_pa / 101325, simDR_epr_mach), simDR_epr_mach, simDR_TAT)
+    local w = math.max(0, math.min(1, (N1_pct - 60) / 10))
+    N1_pct = N1_pct + w * (N1_epr - N1_pct)
+
     --Engine Idle Logic (Minimum / Approach)
     N1_low_idle = engine_idle_control_PW(altitude_ft_in)
     N1_idle_capture = -43.988 * mach^2 + 63.256 * mach + 28.896 + 0.7
