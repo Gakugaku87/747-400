@@ -203,6 +203,23 @@ T.near(s13.cmd - 0.5, A.K_VS * (want - 1000), 1e-9, string.format("FLCH 5,000 ft
 c0 = s13.cmd
 A.servo(s13, sv{mcp_alt = 15000, vs = 4000, lever = c0})
 T.near(s13.cmd, c0, 1e-9, "climbing faster than wanted: not less (ATA34_2 p.646)")
+-- (2026-11-03) the V/S from where the change began, held to its end: the
+-- change in 125 s (ATA34_2 p.670; before, the change left each frame:
+-- s07's 400 ft down took 440 s to the capture); a new MCP altitude: from
+-- there
+local s13b = A.new()
+A.update(s13b, inp{pitch = "FLCH"})
+A.servo(s13b, sv{alt = 35400, mcp_alt = 35000, vs = -192})
+T.near(s13b.cmd, 0.5, 1e-9, "FLCH 400 ft down at 192 fpm: the thrust held")
+A.servo(s13b, sv{alt = 35100, mcp_alt = 35000, vs = -192})
+T.near(s13b.cmd, 0.5, 1e-9, "100 ft left at 192 fpm: still held (before, 48 fpm wanted: more thrust)")
+A.servo(s13b, sv{alt = 35100, mcp_alt = 34000, vs = -192})
+T.near(s13b.cmd - 0.5, A.K_VS * (-528 + 192), 1e-9, "a new MCP altitude 1,100 ft below: 528 fpm wanted from there")
+local c2 = s13b.cmd
+A.update(s13b, inp{pitch = "ALT"})
+A.update(s13b, inp{pitch = "FLCH"})
+A.servo(s13b, sv{alt = 34500, mcp_alt = 34000, vs = -240, lever = c2})
+T.near(s13b.cmd, c2, 1e-9, "FLCH again: 500 ft from there at 240 fpm, the thrust held")
 -- descending: less, the aft stop: HOLD (p.670)
 local s14 = A.new()
 A.update(s14, inp{pitch = "FLCH"})
