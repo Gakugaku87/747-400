@@ -66,6 +66,21 @@ local OBS = "sim/cockpit2/radios/actuators/nav_obs_deg_mag_pilot"
 local MODES = "laminar/B747/radio/tuningmodes"
 local function freq(i) return rt:get(FREQ, i) end
 
+-- (2026-11-03) no TACAN alone on a VOR receiver (FCOM p.1303: A, a navaid
+-- for the position's orientation; s69: VOR R on Wiesbaden's TACAN, no
+-- station received): near the far ZZT (a TACAN), ZZU (a VOR/DME) and ZZQ
+-- (a DME) the DME-DME pair is ZZT and ZZU (105 degrees apart); the VORs on
+-- ZZU and the nearest other, ZZQ
+rt:set("sim/flightmodel/position/latitude", 40.1)
+rt:set("sim/flightmodel/position/longitude", 150.1)
+frames(11)
+local f2, f3 = freq(2), freq(3)
+T.check(f2 ~= 11410 and f3 ~= 11410, "near the TACAN ZZT: neither VOR on it (" .. f2 .. " " .. f3 .. ")")
+T.check((f2 == 11560 and f3 == 11620) or (f2 == 11620 and f3 == 11560), "the VOR/DME ZZU and the DME ZZQ instead")
+rt:set("sim/flightmodel/position/latitude", 35)
+rt:set("sim/flightmodel/position/longitude", 140)
+frames(11)
+
 -- no route: A, the DME-DME pair's stations (ZZV and ZZD lie in line; ZZW
 -- 107 degrees off them)
 frames(1.2)
