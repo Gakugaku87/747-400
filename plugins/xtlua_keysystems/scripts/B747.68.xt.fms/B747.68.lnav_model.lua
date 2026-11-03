@@ -387,7 +387,12 @@ local function pturn_step(s, e, air, p, vt)
     local xt, at = P.track(t.q, t.back, p)
     local _, len = P.course(t.q, t.x)
     local lead = radius(vt, M.BANK) * math.tan(22.5 * RAD) + roll
-    return (at >= len - lead) and 1 or 0, xt, P.course_at(t.q, t.back, at), 0, nil
+    -- its end where the turn onto the inbound course begins: "end" (no
+    -- phase: laminar/B747/fms/lnav/pturn_phase 0) as the guidance goes on
+    -- to the next leg, not when the route is sequenced after it (2026-11-03:
+    -- s98 read the inbound course's distance in that turn as "back")
+    if at >= len - lead then h.phase = "end" return 1, xt, P.course_at(t.q, t.back, at), 0, nil end
+    return 0, xt, P.course_at(t.q, t.back, at), 0, nil
 end
 
 -- how far off a path the turn onto it at `theta` degrees (up to 150: an
