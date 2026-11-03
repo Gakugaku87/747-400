@@ -27,7 +27,7 @@
     { "do": "cmd", "note": "ALT HOLD（今の高度で落ち着かせる）", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
     { "do": "cmd", "note": "SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
     { "do": "sleep", "seconds": 25 },
-    { "do": "check", "note": "250 kt で水平（±6 kt）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [244, 256] },
+    { "do": "wait", "note": "250 kt で水平（±6 kt）。2026-11-03 から待つ（前は 25 秒の後の check：空中開始の後の 8 秒の確かめで速く始まった回に 258 kt）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [244, 256], "timeout": 60 },
 
     { "do": "mark", "note": "FLCH で 15,000 ft へ上昇（速度は昇降舵：ATA22 p.344）" },
     { "do": "set", "note": "MCP 高度 15,000 ft（前の則の目標にも）", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 15000 },

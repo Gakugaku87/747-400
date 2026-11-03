@@ -52,7 +52,7 @@
     { "do": "wait", "note": "120 ft の下", "dref": "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", "op": "<", "value": 120, "timeout": 120 },
     { "do": "remember", "note": "120 ft の安定板（units）", "dref": "laminar/B747/flt_ctrls/stab_trim/units", "as": "stab120" },
     { "do": "wait", "note": "LAND 2 の 120 ft の下：trim bias の機首上げで full rate（ATA22 p.147）", "dref": "laminar/B747/flt_ctrls/stab_trim/frat", "op": "==", "value": 1, "timeout": 6 },
-    { "do": "check", "note": "機首上げのトリム", "dref": "laminar/B747/flt_ctrls/stab_trim/autotrim_cmd", "op": "==", "value": 1 },
+    { "do": "wait", "note": "機首上げのトリム。2026-11-03 から待つ（前は check：full rate のトリムは昇降舵の指令を 1 秒ほどで戻して切れ、また入るので、frat の 80 ms 後に切れ目に当たった）", "dref": "laminar/B747/flt_ctrls/stab_trim/autotrim_cmd", "op": "==", "value": 1, "timeout": 5 },
 
     { "do": "mark", "note": "FLARE" },
     { "do": "wait", "note": "FLARE（FMA のピッチ 3）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 3, "timeout": 200 },

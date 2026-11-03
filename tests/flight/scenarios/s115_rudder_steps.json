@@ -33,7 +33,7 @@
     { "do": "sleep", "seconds": 10 },
     { "do": "set", "note": "レバー 30", "dref": "sim/cockpit2/controls/flap_ratio", "value": 1.0 },
     { "do": "set", "note": "MCP 速度 150 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 150 },
-    { "do": "wait", "note": "150 kt に近づく", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "<", "value": 152, "timeout": 120 },
+    { "do": "wait", "note": "150 kt に近づく。A/T は最小機動速度 + 5 kt より下げない（FCOM p.675）ので、この重さのフラップ 30 では約 152 kt で止まる（2026-11-03 から 155 kt 未満を待つ。前は 152 未満）", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "<", "value": 155, "timeout": 150 },
     { "do": "sleep", "seconds": 15, "note": "落ち着く" },
     { "do": "cmd", "note": "HDG HOLD（3D のボタンは X-Plane のコマンド）", "name": "sim/autopilot/heading_hold" },
     { "do": "remember", "note": "ALT HOLD の高度（空中開始の揺れで 2,000 ft 付近まで下がってから保つ）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "as": "alt0" },
