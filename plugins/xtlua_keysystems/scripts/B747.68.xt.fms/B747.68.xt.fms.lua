@@ -2995,6 +2995,12 @@ local function nav_inhibited(db,i,vor)
   if same_point(inh.navaid[1],db,i) or same_point(inh.navaid[2],db,i) then return true end
   return vor and (inh.vordme or same_point(inh.vor[1],db,i) or same_point(inh.vor[2],db,i)) or false
 end
+-- a TACAN alone (the navigation data's VOR record named "... TACAN"; a
+-- VORTAC is "... VORTAC"): its DME for the DME-DME updating, no VOR for
+-- the VOR receivers
+local function tacan_only(rec)
+  return rec~=nil and rec.name~=nil and string.match(rec.name,"TACAN$")~=nil
+end
 -- the DMEs in reach (a VOR's DME, a DME alone; not an ILS's: the DME's
 -- channel 5, ATA34_2 p.605), the 30 nearest; and a VOR or DME within the
 -- oceanic distance
@@ -3011,7 +3017,8 @@ local function dd_scan(db,lat,lon,alt)
       if k==N.VOR then la,lo,el=rec.dme_lat or la,rec.dme_lon or lo,rec.dme_elev or el end
       local brg,d=B747_route_model.course(lat,lon,la,lo)
       if NP.dme_ok(d,rec.range,alt,el) then
-        cands[#cands+1]={ident=db.ident[i],freq=rec.freq,lat=la,lon=lo,elev=el,range=rec.range,dist=d,brg=brg}
+        cands[#cands+1]={ident=db.ident[i],freq=rec.freq,lat=la,lon=lo,elev=el,range=rec.range,dist=d,brg=brg,
+          tacan=k==N.VOR and tacan_only(rec)}
       end
     end
   end
@@ -3175,7 +3182,7 @@ local function proc_navaids(r)
   if not (l and l.proc) then return {} end
   if l.proc=="APPR" and not on_approach() then return {} end
   local nav=l.navaid
-  if not (nav and (nav.kind==N.VOR or nav.kind==N.DME) and nav.freq) then return {} end
+  if not (nav and (nav.kind==N.VOR or nav.kind==N.DME) and nav.freq) or tacan_only(nav) then return {} end
   local crs=nil
   if l.proc=="APPR" then
     for _,a in ipairs(r.legs) do
@@ -3191,11 +3198,11 @@ local function route_vors(r,lat,lon)
   local nextVor,prevVor=nil,nil
   for j=1,math.min(#r.legs,40) do
     local f=r.legs[j].fix
-    if f and f.kind==N.VOR and f.freq and N.distance(lat,lon,f.lat,f.lon)<=TM.ROUTE_NM then nextVor=tune_station(f) break end
+    if f and f.kind==N.VOR and f.freq and not tacan_only(f) and N.distance(lat,lon,f.lat,f.lon)<=TM.ROUTE_NM then nextVor=tune_station(f) break end
   end
   for j=#r.passed,1,-1 do
     local f=r.passed[j].fix
-    if f and f.kind==N.VOR and f.freq then
+    if f and f.kind==N.VOR and f.freq and not tacan_only(f) then
       if N.distance(lat,lon,f.lat,f.lon)<=TM.ROUTE_NM then prevVor=tune_station(f) end
       break
     end
@@ -3300,12 +3307,21 @@ function update_tuning()
       proc=proc_navaids(r)
       nextVor,prevVor=route_vors(r,simDR_latitude,simDR_longitude)
     end
+    -- the position's stations: the DME-DME pair's, else (and in place of
+    -- a TACAN of it) the nearest in reach; no TACAN alone (FCOM p.1303:
+    -- A, a navaid for the position's orientation; a VOR receiver gets no
+    -- bearing from a TACAN, X-Plane's NAV radio no identifier either:
+    -- 2026-11-03, s69's VOR R on Wiesbaden's TACAN 114.10, the ND showing
+    -- the frequency and no station)
     local auto={}
-    if ddPair then
-      auto={tune_station(ddPair.a),tune_station(ddPair.b)}
-    else
-      for j=1,math.min(2,#ddCands) do auto[j]=tune_station(ddCands[j]) end
+    local function add(c)
+      if c and not c.tacan and #auto<2 then
+        for _,a in ipairs(auto) do if a.ident==c.ident and a.freq==c.freq then return end end
+        auto[#auto+1]=tune_station(c)
+      end
     end
+    if ddPair then add(ddPair.a) add(ddPair.b) end
+    for j=1,#ddCands do add(ddCands[j]) end
     TM.choose(s,TM.candidates(proc,nextVor,prevVor,auto))
   end
   local o=update_ils(db)
