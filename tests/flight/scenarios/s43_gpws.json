@@ -26,6 +26,7 @@
     { "do": "wait", "note": "A/P のサーボが入る", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
     { "do": "cmd", "note": "ALT HOLD", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
     { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "cmd", "note": "A/T の SPD（2026-11-03 から：A/T は 10-31 の段 9f1 からモードを押して engage する：FCOM p.641–642。前は ALT などの後に勝手に active になったので、この版は SPD を押していなかった。全シナリオの回では A/T が入らず、500 ft で 278 kt のまま TOO LOW TERRAIN になった）", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
     { "do": "sleep", "seconds": 10 },
     { "do": "set", "note": "フラップ 10", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.5 },
     { "do": "set", "note": "MCP 速度 180 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 180 },

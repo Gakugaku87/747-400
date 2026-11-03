@@ -65,7 +65,7 @@
     { "do": "check", "note": ">YAW DAMPER UPR（FCOM p.958）", "dref": "laminar/B747/CAS/advisory_status[301]", "op": "==", "value": 1 },
     { "do": "cmd", "note": "YAW DAMPER UPPER スイッチ ON", "name": "laminar/B747/button_switch/yaw_damper_upr" },
     { "do": "sleep", "seconds": 2 },
-    { "do": "check", "note": "戻る", "dref": "laminar/B747/flt_ctrls/yaw_damper_upr_on", "op": "==", "value": 1 },
+    { "do": "wait", "note": "戻る（2026-11-03 から待つ：入れると電源の自己試験の間 INOP のまま、最長 5 秒：ATA22 p.83、6-3 段 6a）", "dref": "laminar/B747/flt_ctrls/yaw_damper_upr_on", "op": "==", "value": 1, "timeout": 8 },
     { "do": "set", "note": "下のヨーダンパーのモジュールの故障", "dref": "laminar/B747/flt_ctrls/fail/yaw_damper[1]", "value": 1 },
     { "do": "sleep", "seconds": 1 },
     { "do": "check", "note": "下のヨーダンパーは INOP", "dref": "laminar/B747/flt_ctrls/yaw_damper_lwr_on", "op": "==", "value": 0 },
@@ -74,6 +74,6 @@
     { "do": "cas", "note": ">YAW DAMPER LWR" },
     { "do": "set", "note": "故障を戻す", "dref": "laminar/B747/flt_ctrls/fail/yaw_damper[1]", "value": 0 },
     { "do": "sleep", "seconds": 1 },
-    { "do": "check", "note": "戻る", "dref": "laminar/B747/flt_ctrls/yaw_damper_lwr_on", "op": "==", "value": 1 }
+    { "do": "wait", "note": "戻る（2026-11-03 から待つ：入れると電源の自己試験の間 INOP のまま、最長 5 秒：ATA22 p.83、6-3 段 6a）", "dref": "laminar/B747/flt_ctrls/yaw_damper_lwr_on", "op": "==", "value": 1, "timeout": 8 }
   ]
 }

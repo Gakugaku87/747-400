@@ -53,13 +53,20 @@ M.OVERRIDE = 0.16
 M.REF_NEAR_EPR, M.REF_NEAR_N1 = 0.05, 2.5
 -- the laws' gains (estimates: the sources give none). SPD: the lever's
 -- rate a kt of the speed's error and a kt/s of its acceleration, less when
--- reducing (FCTM p.43: up fast, down slowly); THR: a fpm of the V/S
--- error; THR REF and the thrust limit: an EPR's (PW, RR) or a % N1's (GE)
--- error of the levers' command (the EEC's TRA: no spool lag). In X-Plane
--- the engines' thrust lags the levers some 7 s near idle: 0.006 and 0.05
--- had SPD's levers swing idle to 0.3 every 30 s at 250 kt (s01, 9f2's
--- first run; a lagged loop's simulation the same), 0.002 and 0.06 settle
-M.K_SPD, M.K_ACC, M.SPD_DOWN = 0.002, 0.06, 0.5
+-- reducing within SPD_DOWN_KT of the target (FCTM p.43: in gusts up fast,
+-- down slowly), full from its far end (FCTM p.139: 340 to 250 kt level in
+-- about 90 s, at idle nearly all the way); THR: a fpm of the V/S error;
+-- THR REF and the thrust limit: an EPR's (PW, RR) or a % N1's (GE) error
+-- of the levers' command (the EEC's TRA: no spool lag). In X-Plane the
+-- engines' thrust lags the levers some 7 s near idle: 0.006 and 0.05 had
+-- SPD's levers swing idle to 0.3 every 30 s at 250 kt (s01, 9f2's first
+-- run; a lagged loop's simulation the same), 0.002 and 0.06 settled but
+-- took the speed down too slowly (2026-11-03: the levers held for 18 s
+-- while the flaps took the speed off, s112's balloon at the G/S capture;
+-- 220 to 216 kt in 20 s, s43; a simulation 137 s for FCTM p.139's 90 s);
+-- 0.004 with the full rate far from the target: 99 s
+M.K_SPD, M.K_ACC, M.SPD_DOWN = 0.004, 0.06, 0.5
+M.SPD_DOWN_KT = {5, 15}
 M.K_VS = 1.2e-5
 -- G/A's THR on the energy's rate (evs, as VNAV's: the speed's change
 -- counts) and faster (estimate: on the V/S at K_VS the levers took 37 s
@@ -266,10 +273,15 @@ function M.target_vs(s, ivs, tas, x, mach, dt)
 end
 
 -- the speed law's lever rate to a speed: the error and the acceleration,
--- less when reducing
+-- less when reducing near the target
 local function speed_rate(inp, tgt)
-    local r = M.K_SPD * (tgt - inp.ias) - M.K_ACC * inp.accel
-    if r < 0 then r = r * M.SPD_DOWN end
+    local e = tgt - inp.ias
+    local r = M.K_SPD * e - M.K_ACC * inp.accel
+    if r < 0 then
+        local b = M.SPD_DOWN_KT
+        local x = clamp((-e - b[1]) / (b[2] - b[1]), 0, 1)
+        r = r * (M.SPD_DOWN + (1 - M.SPD_DOWN) * x)
+    end
     return r
 end
 

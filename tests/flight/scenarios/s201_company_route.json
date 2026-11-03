@@ -38,7 +38,7 @@
     { "do": "check", "note": "RTE REQUEST と CO ROUTE（FCOM p.773）", "dref": "laminar/B747/fms3/Line02_S", "op": "contains", "value": "RTE REQUEST    CO ROUTE" },
     { "do": "check", "note": "<SEND と CO ROUTE のダッシュ", "dref": "laminar/B747/fms3/Line03_L", "op": "contains", "value": "<SEND         ----------" },
     { "do": "shot", "name": "cdu_fmc_comm_2" },
-    { "do": "cdu", "note": "RTE REQUEST <SEND", "keys": ["L1"] },
+    { "do": "cdu", "note": "CO ROUTE に RJAARJBB01（1R）、RTE REQUEST <SEND。2026-11-03 から CO ROUTE を入れる：SIMBRIEF PILOT ID が入っていると、CO ROUTE なしの要求は利用者の SimBrief のいちばん新しい計画を取ってきて使う（simbrief/README.txt。全シナリオの回では RJFF→PANC が来た）", "keys": ["RJAARJBB01", "R1", "L1"] },
     { "do": "check", "note": "SENDING", "dref": "laminar/B747/fms3/Line03_L", "op": "contains", "value": "SENDING" },
     { "do": "wait", "note": "網の受け取りで SENT（小さい字）", "dref": "laminar/B747/fms3/Line03_S", "op": "contains", "value": "SENT", "timeout": 15 },
     { "do": "wait", "note": "約 20 秒後にアップリンク：RTE REQUEST は空白に（FMSPG p.382）", "dref": "laminar/B747/fms3/Line02_S", "op": "matches", "value": "^ +CO ROUTE$", "timeout": 40 },

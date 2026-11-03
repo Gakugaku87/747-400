@@ -26,7 +26,7 @@
     { "do": "cdu", "note": "MENU、6R の SIM CONFIG、NEXT、4L で FMC DATALINK を ON", "keys": ["MENU", "R6", "NEXT", "L4"] },
     { "do": "sleep", "seconds": 2 },
     { "do": "check", "note": "FMC DATALINK は ON", "dref": "laminar/B747/fms3/Line09_L", "op": "contains", "value": "FMC DATALINK         ON" },
-    { "do": "cdu", "note": "FMC COMM、NEXT、RTE REQUEST <SEND", "keys": ["FMCCOMM", "NEXT", "L1"] },
+    { "do": "cdu", "note": "FMC COMM、NEXT、CO ROUTE に RJAARJBB01（1R）、RTE REQUEST <SEND。2026-11-03 から CO ROUTE を入れる：SIMBRIEF PILOT ID が入っていると、CO ROUTE なしの要求は利用者の SimBrief のいちばん新しい計画を取ってきて使う（simbrief/README.txt。全シナリオの回の s201 で RJFF→PANC が来た）", "keys": ["FMCCOMM", "NEXT", "RJAARJBB01", "R1", "L1"] },
     { "do": "wait", "note": "経路のアップリンク（RTE REQUEST の見出しが消える）", "dref": "laminar/B747/fms3/Line02_S", "op": "matches", "value": "^ +CO ROUTE$", "timeout": 45 },
     { "do": "cdu", "note": "PREV、<RTE 1、<LOAD", "keys": ["PREV", "L1", "L4"] },
     { "do": "sleep", "seconds": 4 },
