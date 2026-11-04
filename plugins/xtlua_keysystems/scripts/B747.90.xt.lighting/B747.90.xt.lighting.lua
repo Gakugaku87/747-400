@@ -90,8 +90,6 @@ simDR_startup_running               = find_dataref("sim/operation/prefs/startup_
 simDR_percent_lights_on             = find_dataref("sim/graphics/scenery/percent_lights_on")
 simDR_ai_flies_aircraft				= find_dataref("sim/operation/prefs/ai_flies_aircraft")
 
-simDR_electrical_bus_volts          = find_dataref("sim/cockpit2/electrical/bus_volts")
-
 simDR_aircraft_on_ground            = find_dataref("sim/flightmodel/failures/onground_any")
 
 
@@ -110,16 +108,10 @@ simDR_beacon_lights_switch          = find_dataref("sim/cockpit/electrical/beaco
 simDR_nav_lights_switch             = find_dataref("sim/cockpit2/switches/navigation_lights_on")
 simDR_strobe_lights_switch          = find_dataref("sim/cockpit2/switches/strobe_lights_on")
 
-simDR_gpu_on                        = find_dataref("sim/cockpit/electrical/gpu_on")
-
 simDR_apu_running                   = find_dataref("sim/cockpit2/electrical/APU_running")
 simDR_apu_N1_pct                    = find_dataref("sim/cockpit2/electrical/APU_N1_percent")
-simDR_apu_gen_on                    = find_dataref("sim/cockpit2/electrical/APU_generator_on")
 
-simDR_cross_tie                     = find_dataref("sim/cockpit2/electrical/cross_tie")
-simDR_engine_running                = find_dataref("sim/flightmodel/engine/ENGN_running")
 simDR_aircraft_groundspeed          = find_dataref("sim/flightmodel/position/groundspeed")
-simDR_generator_on                  = find_dataref("sim/cockpit2/electrical/generator_on")
 
 simDR_hyd_press_01                  = find_dataref("laminar/B747/hydraulics/pressure_1")
 simDR_hyd_press_02                  = find_dataref("laminar/B747/hydraulics/pressure_2")
@@ -784,6 +776,8 @@ local lightIn = {sw = {landing = {}, turnoff = {}}, ac = {}}
 -- sources say only "fixed")
 B747DR_light_bus_stby = find_dataref("laminar/B747/electrical/bus/stby_main")
 B747DR_light_bus_bat = find_dataref("laminar/B747/electrical/bus/bat_main")
+-- (1-1) any AC bus: the cabin lights (B747_cabin_lights)
+B747DR_light_bus_any_ac = find_dataref("laminar/B747/electrical/bus/any_ac")
 local cockpitIn = {ac = {false, false, false, false}}
 local cockpit_mode = B747_light_model.cockpit(cockpitIn)
 local FIXED_PANEL, FIXED_FLOOD, FIXED_AISLE, FIXED_DOME = 0.3, 0.5, 0.3, 0.4
@@ -911,21 +905,10 @@ function B747_cabin_lights()
          end
          simDR_instrument_brightness_switch[i] = B747_animate_value(simDR_instrument_brightness_switch[i], target, 0, 1, brightnessRate[i])
      end
-    local power = B747_ternary(
-        (simDR_apu_gen_on == 1                                                          -- APU IS RUNNING
-        or
-        simDR_gpu_on == 1                                                               -- GPU IS ON
-        or
-        (simDR_generator_on[0] == 1 and simDR_engine_running[0] == 1)                   -- ENGINE #1 GENERATOR IS ON
-        or
-        (simDR_generator_on[1] == 1 and simDR_engine_running[1] == 1)                   -- ENGINE #2 GENERATOR IS ON
-        or
-        (simDR_generator_on[2] == 1 and simDR_engine_running[2] == 1)                   -- ENGINE #3 GENERATOR IS ON
-        or
-        (simDR_generator_on[3] == 1 and simDR_engine_running[3] == 1))                  -- ENGINE #4 GENERATOR IS ON
-        and
-        simDR_cross_tie == 1                                                            -- CROSS-TIE IS ON
-        , 1, 0)
+    -- (1-1) the cabin lights from the 747's AC buses: any of AC buses 1-4
+    -- (the cabin lighting's buses not in the sources: estimate). Before,
+    -- X-Plane's APU generator, GPU, engine generators and cross tie
+    local power = B747DR_light_bus_any_ac > 0.5 and 1 or 0
 
 
 
@@ -1982,7 +1965,8 @@ end
 
 ----- SET STATE TO COLD & DARK ----------------------------------------------------------
 --simDR_window_ice                    = find_dataref("sim/flightmodel/failures/window_ice")
-simDR_OAT=find_dataref("sim/weather/temperature_ambient_c")
+-- (1-1) the second simDR_OAT binding removed: XTLua took it for a write of
+-- 0 to X-Plane's read-only temperature (PROGRESS.md, 2026-10-24)
 function B747_set_lighting_CD()
     --[[if simDR_OAT<-1 then
         simDR_window_ice                    = 1

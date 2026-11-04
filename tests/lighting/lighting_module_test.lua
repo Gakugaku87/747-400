@@ -344,4 +344,28 @@ rt:frame(1 / 30)
 T.near(rt:get(SPILL .. "aisle_stand", 3), aisle_fixed, 1e-6, "no ground service bus: its knob does nothing (fixed resistor)")
 rt:set(BUS .. "gnd_svc", 1)
 T.check(aisle_knob >= 0, "(the knob level before)")
+
+-- (1-1) the cabin lights (X-Plane's generic light 25) at night from the
+-- 747's AC buses (laminar/B747/electrical/bus/any_ac; the bus not in the
+-- sources: estimate). Before, X-Plane's generators, APU generator, GPU and
+-- cross tie
+local CABIN = "sim/cockpit2/switches/generic_lights_switch"
+rt:set("sim/graphics/scenery/percent_lights_on", 1)
+rt:set("sim/flightmodel/position/groundspeed", 0)
+rt:set("sim/operation/prefs/ai_flies_aircraft", 0)
+rt:set("laminar/B747/electrical/bus/any_ac", 1)
+for _, k in ipairs({"sim/cockpit2/electrical/APU_generator_on", "sim/cockpit/electrical/gpu_on",
+    "sim/cockpit2/electrical/cross_tie"}) do rt:set(k, 0) end
+for i = 0, 3 do rt:set("sim/cockpit2/electrical/generator_on", i, 0) end
+rt:frame(1 / 30)
+T.near(rt:get(CABIN, 25), 0.25, 1e-6, "night, an AC bus: the cabin lights on (X-Plane's generators off)")
+rt:set("laminar/B747/electrical/bus/any_ac", 0)
+rt:set("sim/cockpit2/electrical/APU_generator_on", 1)
+rt:set("sim/cockpit2/electrical/cross_tie", 1)
+rt:frame(1 / 30)
+T.equal(rt:get(CABIN, 25), 0, "no AC bus: the cabin lights off (X-Plane's APU generator on)")
+rt:set("laminar/B747/electrical/bus/any_ac", 1)
+rt:set("sim/graphics/scenery/percent_lights_on", 0)
+rt:frame(1 / 30)
+T.equal(rt:get(CABIN, 25), 0, "day: the cabin lights off")
 T.done()

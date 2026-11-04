@@ -39,6 +39,7 @@
     { "do": "check", "note": "全部のバス：dome はつまみの 0", "dref": "sim/cockpit2/switches/panel_brightness_ratio[0]", "op": "<", "value": 0.01 },
     { "do": "check", "note": "機長の計器盤照明はつまみの 0", "dref": "sim/cockpit2/switches/instrument_brightness_ratio[6]", "op": "<", "value": 0.02 },
     { "do": "check", "note": "F/O の計器盤照明はつまみの 1（AC バス 3）", "dref": "sim/cockpit2/switches/instrument_brightness_ratio[8]", "op": ">", "value": 0.95 },
+    { "do": "check", "note": "客室灯（generic 25）：夜、地上、747 の AC バスあり（2026-11-04 から 747 の母線。前は X-Plane の発電機）", "dref": "sim/cockpit2/switches/generic_lights_switch[25]", "op": "between", "value": [0.24, 0.26] },
     { "do": "view", "note": "操縦室の前方", "the": -15, "psi": 15, "fov": 75 },
     { "do": "shot", "name": "lighting_knobs_off" },
 

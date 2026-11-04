@@ -85,7 +85,6 @@ B747DR_CAS_memo_status          = find_dataref("laminar/B747/CAS/memo_status")
 
 -- crazytimtimtim
 B747DR_IRS_dial_pos             = find_dataref("laminar/B747/flt_mgmt/iru/mode_sel_dial_pos")
-B747DR_ELEC_BATT                = find_dataref("sim/cockpit/electrical/battery_array_on")
 -- crazytimtimtim end
 --*************************************************************************************--
 --** 				               FIND CUSTOM COMMANDS              			     **--

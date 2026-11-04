@@ -44,6 +44,7 @@
     { "do": "check", "note": "AC が無い：>IRS AC LEFT", "dref": "laminar/B747/CAS/advisory_status[226]", "op": "==", "value": 1 },
     { "do": "wait", "note": "DC で 10 秒、地上、ground service bus なし：ON BAT", "dref": "laminar/B747/irs/on_bat", "op": "==", "value": 1, "timeout": 15 },
     { "do": "cas", "note": "電池だけで IRS NAV" },
+    { "do": "check", "note": "電池だけ（APU standby bus がインバーターで通電し、左 FMC の母線がある）：ND の TIME TO ALIGN（2026-11-04 から FMC の母線で更新。前は X-Plane の bus 0）", "dref": "laminar/B747/irs/line1", "op": "contains", "value": "TIME TO ALIGN", "cite": "FCOM p.800, p.804" },
 
     { "do": "mark", "note": "APU の発電機" },
     { "do": "cmd", "note": "APU selector ON", "name": "laminar/B747/electrical/apu/sel_dial_up", "duration": 0.2 },
@@ -55,6 +56,7 @@
     { "do": "check", "note": "ON BAT が消える", "dref": "laminar/B747/irs/on_bat", "op": "==", "value": 0 },
     { "do": "check", "note": "C もアライン中（電池の 5 分の前に AC が来た）", "dref": "laminar/B747/flt_mgmt/iru/status[1]", "op": "==", "value": 4 },
     { "do": "check", "note": "PFD の ATT・HDG の旗", "dref": "laminar/B747/pfd/capt/irs", "op": "==", "value": 0 },
+    { "do": "check", "note": "AC：ND の TIME TO ALIGN", "dref": "laminar/B747/irs/line1", "op": "contains", "value": "TIME TO ALIGN" },
     { "do": "view", "note": "機長の ND", "the": -22, "psi": 12, "fov": 28 },
     { "do": "shot", "name": "nd_time_to_align" },
 
