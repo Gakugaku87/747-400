@@ -45,6 +45,12 @@ c.trk_valid = false
 run()
 T.check(oc.trk_flag and not oc.rose, "MAP without a track: the TRK flag, no rose")
 T.check(not oc.hdg_flag, "no HDG flag in MAP")
+-- (2026-11-05) PLAN has no track box (FCOM p.1142, p.1027): no TRK flag
+c.mode = M.PLN
+run()
+T.check(not oc.trk_flag and not oc.hdg_flag, "PLN without a track: no TRK or HDG flag")
+c.mode = M.MAP
+run()
 c.mode = M.VOR
 run()
 T.check(oc.rose and not oc.trk_flag, "VOR without a track but with a heading: the rose")
@@ -60,7 +66,9 @@ T.check(oc.map_flag and oc.vtk_flag, "no FMC position in MAP: MAP and VTK flags 
 T.check(oc.rose, "the rose stays (the track is good)")
 c.mode = M.PLN
 run()
-T.check(oc.map_flag and not oc.vtk_flag, "PLN: the MAP flag, no VTK flag (MAP mode only)")
+-- (2026-11-05) PLAN needs no position (ATA31 p.34): no flag without an IRU
+-- in NAV (before, MAP in the middle until the IRS aligned: the user's report)
+T.check(not oc.map_flag and not oc.vtk_flag, "PLN without a position: no MAP flag, no VTK flag")
 T.check(oc.rose, "PLN's rose is fixed")
 c.mode = M.APP
 run()
@@ -97,8 +105,10 @@ T.check(not oc.map_flag, "the time restarts after it worked again")
 c.fmc_ok = true
 run()
 
--- the heading pointer (FCOM p.1142) and the selected heading bug
+-- the heading pointer (FCOM p.1142) and the selected heading bug (the MCP's
+-- 110, near the track 106)
 c.mode = M.MAP
+inp.hdg_sel = 110
 run()
 T.check(oc.hdg_ptr and not oc.hdg_ptr_pln, "MAP: the current heading pointer")
 T.check(oc.hdg_bug, "the selected heading bug")
@@ -127,6 +137,36 @@ T.check(not oc.hdg_line, "and removed 10 s later")
 c.mode = M.VOR
 run()
 T.check(oc.hdg_line, "VOR: the line regardless of LNAV")
+
+-- (2026-11-05) the expanded rose's bug and line within 50 degrees of the
+-- display's top only (the panel's geometry: beyond, they showed on the
+-- other ND, the user's report); the centred rose all round
+c.mode = M.MAP
+inp.roll_mode = 6
+inp.hdg_sel = 106 + 49
+run()
+T.check(oc.hdg_bug and oc.hdg_line, "MAP, 49 degrees right of the track: the bug and the line")
+inp.hdg_sel = 106 + 51
+run()
+T.check(not oc.hdg_bug and not oc.hdg_line, "51 degrees right: neither (off the expanded rose)")
+inp.hdg_sel = 106 - 51
+run()
+T.check(not oc.hdg_bug, "51 degrees left: no bug")
+inp.hdg_sel = (106 + 180) % 360
+run()
+T.check(not oc.hdg_bug, "behind: no bug")
+c.center = true
+run()
+T.check(oc.hdg_bug and oc.hdg_line, "MAP CTR (the rose all round): the bug and the line behind too")
+c.center = false
+c.mode = M.VOR
+inp.hdg_sel = 100 + 45
+run()
+T.check(oc.hdg_bug, "VOR (heading up, 100): 45 degrees right shown")
+inp.hdg_sel = 100 + 55
+run()
+T.check(not oc.hdg_bug, "VOR: 55 degrees right not")
+inp.hdg_sel = 90
 
 -- the wind arrow, with respect to the display orientation (FCOM p.1142)
 inp.wind_from = 350

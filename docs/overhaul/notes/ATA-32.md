@@ -413,3 +413,12 @@ X-Plane の `sim/flightmodel/failures/onground_any`（どれか 1 輪が接地�
 - 作らないもの：NOSE A/G DISAGREE（前脚の圧縮の検知の片系統の故障：p.338、p.341）は、片系統の前脚の検知がどの系統の論理に効くか資料に無いので作っていない。PARK BRK VALVE の STATUS は資料に見つからない。
 - 試験：新しい回帰 `pseu_fail_test`（15 件）、`pseu_module_test` 20、`gear_act_module_test` 32。
 - X-Plane（カスタム acf、2026-11-04）：新しい `s233_gear_failures` 17/17（成田でエンジン運転中：前脚の位置の検知の片系統で STATUS GEAR MONITOR、表示は DN のまま。alternate の固着で alternate だけ空中、AIR/GND SYSTEM、10 秒で STATUS A/G DISAGREE（SPEEDBRAKE AUTO と CPCS AIR/GND も、それぞれの系統の不一致の判定で出る）。primary も固着すると両方が空中で A/G DISAGREE は消え、与圧は飛行のモード、ANTISKID OFF・BRAKE LIMITER・>FUEL LOW CTR などが空中の論理で出る。上の EICAS と STATUS ページの写真）、回帰の `s35_gear` 29/29、`s36_gear_lock` 11/11。Log.txt に Lua の誤りなし。
+
+## 18. tiller の軸を X-Plane の割り当てからも読む（2026-11-05：利用者の報告、別の PC のラインフライト）
+
+- 報告：tiller の軸を割り当てたはずなのに効かず、ペダルでしか曲がらなかった。§13 の `joy_mapped_axis_avail`・`value` の 37 番（X-Plane の開発者のページの割り当ての表の「Nosewheel tiller」）は、軸を持たないので試していなかった。
+- 利用者の Log.txt（X-Plane 12.4.4）の機器：Honeycomb Alpha（2 軸）、Thrustmaster T.16000M（X・Y・スライダー・Rz）、CH Throttle Quadrant（6 軸）、Saitek のラダーペダル（3 軸）。どの軸を何に割り当てたかは Log.txt に出ない（`Output/preferences/X-Plane Joystick Settings.prf` の `_joy_AXIS_use` の行）。この PC には軸が無く（`has_joystick` 0）、X-Plane で確かめられない。
+- 足したこと（`B747.10.xt.steering.lua`）：`joy_mapped_axis` が何も出さないときは、ハードの軸の割り当て（`joystick_axis_assignments`）が 37 の軸を探し（2 秒ごと。500 本を毎フレームは見ない）、その生の値（`joystick_axis_values`）を、見た範囲（`joystick_axis_minimum`・`maximum`）と反転（`joystick_axis_reverse`）で -1〜1 にし、中立の ±5 % を無感帯にして使う（X-Plane の無感帯と感度の処理を通らないので自前）。`joy_mapped_axis` が動いていればそちらを先に使う。軸が見つかると、ペダルを tiller の代わりにする手当ては切れる（tiller の軸がある利用者と同じ）。ハードの軸の割り当て（「軸=割り当て」の並び）と tiller の軸の番号を、変わったときに `Output/B747_steering.txt` に 1 行書く（XTLua の print はどのログにも出ない）。tiller の割り当てが 37 でなくても、この行で利用者の割り当ての番号が分かる。
+- 割り当ての番号そのものが 37 でない（X-Plane 12 の割り当ての表が変わった）なら、どちらでも見つからない。利用者の prf の行で確かめる。
+- 試験：`steering_module_test` 35（軸 6 に割り当てた生の軸：中立でペダル 7°、範囲の上端で 70°、4 分の 1 で左へ半分から無感帯の分を引いた角度、反転、中立の近くは無感帯、`joy_mapped_axis` が動けばそちら）。
+- X-Plane（カスタム acf、2026-11-05。この PC には軸が無い）：`s39_steering` 23/23（ペダルと tiller の dataref の回帰）。`Output/B747_steering.txt` に「joystick axes (axis=assignment): 0=2 1=1 3=4; the tiller (37) on axis nil; joy_mapped_axis_avail[37] 0」と書かれた（XTLua から io で書ける。この PC の割り当ては横 2・縦 1・推力 4）。

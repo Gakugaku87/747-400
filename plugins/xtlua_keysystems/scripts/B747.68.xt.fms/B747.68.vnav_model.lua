@@ -625,4 +625,27 @@ function M.update(s, inp)
     return out
 end
 
+-- (2026-11-05) the climb's next AT, AT OR BELOW or block constraint, VNAV's
+-- target (`clb_alt` above): `list` the climb's constraints in route order
+-- ({a = feet, p = its waypoint or nil}), `passed(p)` true once a waypoint
+-- is passed. Its waypoint not passed, and kept up to CLB_HOLD_FT under the
+-- airplane (a level-off's overshoot; estimate): VNAV PTH remains within the
+-- departure's constraints (FCOM p.1255). One without a waypoint 100 ft
+-- under, as before. Under CRZ ALT; nil without one. Before, any constraint
+-- 100 ft under the airplane was taken as passed: s253 (GE, FAOR's EXOB1C)
+-- went 104 ft over FL090B short of OR390 in the level-off, the target became
+-- the next constraint, and VNAV SPD climbed on to the MCP's 15,000 ft (the
+-- user's report there, "LNAV and VNAV in a mess", flew the GE: perhaps
+-- this)
+M.CLB_HOLD_FT = 300
+function M.clb_target(list, alt, crz_alt, passed)
+    for _, e in ipairs(list) do
+        if e.a > alt - (e.p and M.CLB_HOLD_FT or 100) and (not crz_alt or e.a < crz_alt)
+                and not (e.p and passed(e.p)) then
+            return e.a
+        end
+    end
+    return nil
+end
+
 return M

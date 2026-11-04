@@ -152,6 +152,27 @@ local r1 = PM.predict{P = P, t = pw, gw = 320000, fuel = 110000, alt = 31000, ph
 local extra = r0.pts[1].fuel - r1.pts[1].fuel
 T.check(extra > 100 and extra < 500, string.format("a 4,000 ft step's extra fuel, 50 NM after it: %.0f kg (FCTM: 225-300)", extra))
 
+-- (2026-11-05) the crew's planned step climbs (RTE LEGS "XXXS": FCOM
+-- p.1332) at their waypoints, overriding the FMC's steps (FCOM p.1257):
+-- FL350 at A (1,000 NM), FL370 at B; the steps function's points not used
+do
+    local legsP = {{name = "A", dist = 1000, step = 35000}, {name = "B", dist = 1500, step = 37000},
+        {name = "RW", dist = 500, con = {kind = "AT", a = 50}}}
+    local rp = PM.predict{P = P, t = pw, gw = 320000, fuel = 110000, alt = 31000, phase = "crz", crz = 31000, clb = clb, des = des,
+        crzspd = {mach = 0.85}, legs = legsP, ed = 3, steps = steps}
+    T.equal(#rp.sc, 2, "two planned steps")
+    T.near(rp.sc[1], 1000, 0.01, "the first at A (1,000 NM)")
+    T.near(rp.sc[2], 2500, 0.01, "the second at B (2,500 NM)")
+    T.equal(rp.pts[1].h, 31000, "A still at FL310 (the step starts there)")
+    T.equal(rp.crz, 37000, "to FL370 (not the steps function's FL390)")
+    T.check(rp.pts[2].h > 35000 - 1, "B at FL350 or above")
+    -- a planned step below the cruise altitude: none
+    local rl = PM.predict{P = P, t = pw, gw = 320000, fuel = 110000, alt = 31000, phase = "crz", crz = 31000, clb = clb, des = des,
+        crzspd = {mach = 0.85}, legs = {{name = "A", dist = 500, step = 29000}, {name = "RW", dist = 500, con = {kind = "AT", a = 50}}},
+        ed = 2}
+    T.equal(#rl.sc, 0, "a step below FL310: none")
+end
+
 -- a short flight: the climb meets the descent below CRZ ALT
 local legs2 = {{name = "X", dist = 60}, {name = "RW", dist = 60, con = {kind = "AT", a = 50}}}
 r = PM.predict{P = P, t = pw, gw = 300000, fuel = 50000, alt = 1500, phase = "clb", crz = 35000, clb = clb, des = des,

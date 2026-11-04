@@ -42,7 +42,10 @@ local function vnav_text(id) return (string.gsub(fmsModules["data"][id], "%s+$",
 -- STEP TO, AVAIL AT where MAX reaches STEP TO when that comes later.
 -- Returns {to (ft) or nil, td (NM) or nil, near_td, avail (AVAIL AT), w
 -- (the step point's weight, kg), now (AT NOW: w at least the gross
--- weight)}; the CRZ page passes its own performance data, weight and OPT
+-- weight)}; the CRZ page passes its own performance data, weight and OPT.
+-- (2026-11-05) A planned step: also planned (its waypoint) and nm (the
+-- distance to it)
+local STEP_NOW_NM = 1
 function B747_fms_crz_step(perf, isaDev, gw, optFt)
   perf = perf or B747_fms_perf()
   isaDev = isaDev or B747_fms_isa_dev()
@@ -52,6 +55,32 @@ function B747_fms_crz_step(perf, isaDev, gw, optFt)
   local pred = B747_fms_preds()
   local s = {td = pred and pred.td or nil}
   s.near_td = s.td ~= nil and s.td < 200
+  -- (2026-11-05) the crew's planned step climb (RTE LEGS "XXXS": FCOM
+  -- p.1332) overrides a STEP TO entry and the FMC's steps (FCOM p.1257):
+  -- STEP TO its altitude, the step point its waypoint `nm` along the route
+  -- (now: the predictions' S/C comes every 10 s, 1.3 NM at 480 kt), NOW
+  -- within STEP_NOW_NM of it and once it is passed (the waypoint just
+  -- sequenced: a turn's sequences it early) (estimate)
+  if crz > 0 and B747_fmc_route.active and not s.near_td then
+    local r = B747_fmc_route.rte
+    local lp = r.passed[#r.passed]
+    if lp and lp.step and lp.step > crz + 1 then
+      s.to, s.planned, s.nm, s.now = lp.step, lp.fix and lp.fix.ident or "", 0, true
+      return s
+    end
+    local from, nm = {lat = simDR_latitude, lon = simDR_longitude}, 0
+    for _, l in ipairs(r.legs) do
+      if l.fix then
+        local _, d = B747_route_model.course(from.lat, from.lon, l.fix.lat, l.fix.lon)
+        nm, from = nm + d, l.fix
+      end
+      if l.step and l.step > crz + 1 then
+        s.to, s.planned, s.nm = l.step, l.fix and l.fix.ident or "", nm
+        s.now = nm <= STEP_NOW_NM
+        return s
+      end
+    end
+  end
   if crz > 0 and B747_fmc_route.active and not s.near_td then
     s.to = B747_cdu_model.parse_alt(vnav_text("stepalt"))
       or B747_crz_model.step_to(crz, optFt, vnav_text("stepsize"), B747_fms_step_east())
@@ -382,6 +411,9 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
         if step.avail then crzAtLabel = "AVAIL AT" end
         if step.now then
           atText = "NOW"
+        elseif step.planned then
+          -- (2026-11-05) a planned step: the time and distance to its point
+          atText = step.nm and eta_text(step.nm / math.max(gsKTS, 100), step.nm) or ""
         else
           -- the fuel down to it at the cruise model's flow at the mean weight
           local w = step.w

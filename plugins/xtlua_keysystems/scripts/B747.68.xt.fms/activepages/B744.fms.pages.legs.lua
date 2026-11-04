@@ -312,7 +312,7 @@ local function pred_text(st, r, i)
     spd = p.machMode and string.format(".%03d", math.floor(p.mach * 1000 + 0.5)) or string.format("%3d", math.floor(p.cas + 0.5))
     alt = p.h > fl_above(st, r, i) and string.format("FL%03d", math.floor(p.h / 100 + 0.5)) or string.format("%5d", math.floor(p.h / 10 + 0.5) * 10)
   end
-  if l.alt then
+  if l.alt or l.step then
     local cons = R.constraint_text(l, fl_above(st, r, i)) or ""
     return string.rep(" ", 24 - #cons - #spd) .. spd .. string.rep(" ", #cons)
   end
@@ -537,7 +537,8 @@ local function parse_alt_kind(s)
     if not (lo and hi) or lo >= hi then return nil end
     return lo, hi, "AB"
   end
-  local a, k = s:match("^(%-?F?L?%d+)([AB]?)$")
+  -- (2026-11-05) S: a planned step climb (FCOM p.1332)
+  local a, k = s:match("^(%-?F?L?%d+)([ABS]?)$")
   local ft = a and B747_cdu_model.parse_alt(a)
   if not ft then return nil end
   return ft, nil, k
@@ -575,6 +576,12 @@ function fmsFunctions.legscons(fmsO, value)
   end
   local c = parse_constraint(sp)
   if not c then fmsO["notify"] = "INVALID ENTRY" return end
+  -- (2026-11-05) "XXXS": a planned step climb, no speed with it
+  if c.akind == "S" then
+    if c.spd then fmsO["notify"] = "INVALID ENTRY" return end
+    B747_fmc_route_entry(fmsO, R.set_step(st, i, c.alt, crz_alt()))
+    return
+  end
   B747_fmc_route_entry(fmsO, R.set_constraint(st, i, c, crz_alt()))
 end
 

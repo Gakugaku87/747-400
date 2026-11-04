@@ -18,6 +18,11 @@ simDR_strg_override             = find_dataref("sim/operation/override/override_
 simDR_strg_command              = find_dataref("sim/flightmodel2/gear/tire_steer_command_deg")
 simDR_strg_axis_avail           = find_dataref("sim/joystick/joy_mapped_axis_avail")
 simDR_strg_axis_value           = find_dataref("sim/joystick/joy_mapped_axis_value")
+simDR_strg_hw_assign            = find_dataref("sim/joystick/joystick_axis_assignments")
+simDR_strg_hw_value             = find_dataref("sim/joystick/joystick_axis_values")
+simDR_strg_hw_min               = find_dataref("sim/joystick/joystick_axis_minimum")
+simDR_strg_hw_max               = find_dataref("sim/joystick/joystick_axis_maximum")
+simDR_strg_hw_reverse           = find_dataref("sim/joystick/joystick_axis_reverse")
 simDR_strg_gs                   = find_dataref("sim/flightmodel/position/groundspeed")
 B747DR_strg_rudder_input        = find_dataref("laminar/B747/flt_ctrls/rudder_input")
 B747DR_strg_tiller              = find_dataref("laminar/B747/gear/steering/tiller")
@@ -29,8 +34,16 @@ B747DR_strg_status              = find_dataref("laminar/B747/CAS/status_status")
 
 -- X-Plane's joystick axis assignment "Nosewheel tiller", which
 -- joy_mapped_axis_avail/value are indexed by (developer.x-plane.com,
--- "joystick datarefs"; estimate: not tried, the user's joystick has none)
+-- "joystick datarefs")
 local AXIS_TILLER = 37
+-- (2026-11-05) the user's tiller axis (another PC, X-Plane 12.4.4) did not
+-- steer, the pedals did: also the hardware axis assigned the nosewheel
+-- tiller (joystick_axis_assignments), its raw value over the range seen
+-- (joystick_axis_minimum/maximum), reversed as set, with its own null zone
+-- (X-Plane's processing not applied), when joy_mapped_axis gives nothing.
+-- The assignments looked through every RAW_SCAN_S (500 of them), not each
+-- frame
+local RAW_AXES, RAW_SCAN_S, RAW_NULL = 500, 2, 0.05
 -- EICAS slots (B747.87.xt.warning.lua)
 local ADV_BODY_GEAR_STRG = 43
 local STATUS_BODY_GR_STRG_SYS, STATUS_PEDAL_STEERING = 95, 96
@@ -39,6 +52,7 @@ local XP_NOSE, XP_RB, XP_LB, XP_RW, XP_LW = 0, 1, 2, 3, 4
 
 local strg_state = S.new()
 local strg_inputs = S.inputs()
+local raw_axis, raw_scan_t, raw_logged = nil, 0, nil
 
 local function flag(v)
     if v then return 1 end
@@ -47,6 +61,44 @@ end
 
 local function put(dref, i, v)
     if dref[i] ~= v then dref[i] = v end
+end
+
+-- the hardware axis assigned the nosewheel tiller, nil without one. The
+-- assignments ("axis=assignment") go to Output/B747_steering.txt when they
+-- change, for the users' reports (XTLua's print reaches no log)
+local function find_raw_axis()
+    local found, parts = nil, {}
+    for i = 0, RAW_AXES - 1 do
+        local a = simDR_strg_hw_assign[i]
+        if a ~= 0 then
+            parts[#parts + 1] = i .. "=" .. a
+            if a == AXIS_TILLER and not found then found = i end
+        end
+    end
+    local text = table.concat(parts, " ")
+    if text ~= raw_logged then
+        raw_logged = text
+        local f = io and io.open("Output/B747_steering.txt", "a")
+        if f then
+            f:write((os and os.date and os.date("%Y-%m-%d %H:%M:%S ")) or "",
+                "joystick axes (axis=assignment): ", text, "; the tiller (37) on axis ", tostring(found),
+                "; joy_mapped_axis_avail[37] ", tostring(simDR_strg_axis_avail[AXIS_TILLER]), "\n")
+            f:close()
+        end
+    end
+    return found
+end
+
+-- the tiller from the raw axis: -1 .. 1, + right
+local function raw_tiller(i)
+    local v = simDR_strg_hw_value[i]
+    local lo, hi = simDR_strg_hw_min[i], simDR_strg_hw_max[i]
+    if hi - lo > 0.1 then v = (v - lo) / (hi - lo) end
+    v = math.min(1, math.max(0, v))
+    if simDR_strg_hw_reverse[i] == 1 then v = 1 - v end
+    local t = v * 2 - 1
+    if math.abs(t) <= RAW_NULL then return 0 end
+    return (t - (t > 0 and RAW_NULL or -RAW_NULL)) / (1 - RAW_NULL)
 end
 
 function B747_steering_aircraft_load()
@@ -61,8 +113,16 @@ end
 
 function B747_steering()
     local inp = strg_inputs
-    inp.tiller_avail = simDR_strg_axis_avail[AXIS_TILLER] == 1
-    if inp.tiller_avail then inp.tiller = simDR_strg_axis_value[AXIS_TILLER] else inp.tiller = B747DR_strg_tiller end
+    raw_scan_t = raw_scan_t - SIM_PERIOD
+    if raw_scan_t <= 0 then
+        raw_scan_t = RAW_SCAN_S
+        raw_axis = find_raw_axis()
+    end
+    local mapped = simDR_strg_axis_avail[AXIS_TILLER] == 1
+    local t = mapped and simDR_strg_axis_value[AXIS_TILLER] or 0
+    if raw_axis and math.abs(t) <= S.TILLER_DEADBAND then t = raw_tiller(raw_axis) end
+    inp.tiller_avail = mapped or raw_axis ~= nil
+    if inp.tiller_avail then inp.tiller = t else inp.tiller = B747DR_strg_tiller end
     inp.pedal = B747DR_strg_rudder_input
     inp.pedal_tiller = B747DR_strg_pedal_tiller > 0.5
     inp.down_psi = B747DR_gear_handle < 0.5 and B747DR_pseu_hyd_pressure_1 or 0

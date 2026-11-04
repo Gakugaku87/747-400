@@ -2327,3 +2327,31 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - 電池だけの地上（STANDBY POWER AUTO）では APU standby bus がインバーターで通電するので、今までどおり IRS の整列が見える。APU の始動中の 65 秒（APU のインバーターが止まる：1-1）は止まる。
 - 試験：新しい回帰 `fms_power_test`（X-Plane の bus 0 が無くても FMC の母線で TIME TO ALIGN、母線が全部無いと更新しない、APU standby bus だけで更新、左 FMC の故障でも右の母線で更新）。
 - X-Plane（カスタム acf、2026-11-04）：`s42_irs` 48/48（電池だけの整列中（APU standby bus はインバーター）と、APU の発電機で AC が来た後に、ND の TIME TO ALIGN（`laminar/B747/irs/line1`）を足した）、`s173_fmc_fail` 23/23（左 FMC の故障）。Log.txt に Lua の誤りなし。
+
+## 145. 3 本の平行滑走路の「B」と、DEP/ARR INDEX の桁（2026-11-05：利用者の報告、別の PC のラインフライト）
+
+- VHHH の STAR CANT3B で ILS25C を選べなかった：CIFP の CANT3B は滑走路の遷移が「RW25B」。ARINC 424 の「B」は同じ番号の平行滑走路すべてで、VHHH（2026 年のデータで 07L/25R・07C/25C・07R/25L の 3 本）では 25C も入る。FMC（`B747.68.proc_model.lua` の `rwy_matches`）は B を L と R にしか広げず、ARRIVALS で CANT3B と 25C の進入を組み合わせられなかった。C も入れた（DEPARTURES の SID も同じ）。Navigraph の AIRAC 2610 で、CANT3B が 25C・25L・25R を受け持つことを確かめた。なお X-Plane に付いてくるデータ（AIRAC 2406）の VHHH には 25C が無い。
+- DEP/ARR INDEX の空港コードが少し左にずれていた：FCOM p.1299 の絵（24 桁）では、題「DEP/ARR INDEX」は 7 桁目、小さい「RTE 1」は 9 桁目と「(ACT)」は 16 桁目、出発と到着の空港コードは 10 桁目から。前は題が 6 桁目、RTE が 11 桁目、空港コードが 9 桁目だった。絵に合わせた（ARRIVALS・DEPARTURES の題は前から FCOM p.1343 と同じ 4 桁目）。
+- 試験：`proc_model_test` 64（B の 3 本）、`deparr_pages_test` 40、`rte2_pages_test` 57。
+- X-Plane（カスタム acf、2026-11-05）：新しい `s250_user_report_nd` の DEP/ARR INDEX の部分（RJAA→RJBB で、題が 7 桁目、RJAA と RJBB が 10 桁目。CDU の写真）。VHHH の 25C は、X-Plane に付いてくるデータに無いので試せない（Navigraph のデータで回帰試験と同じ組み合わせになることは確かめた）。
+
+## 146. LEGS の「XXXS」：乗員の計画ステップクライム（2026-11-05：利用者の報告「LEGS の高度欄に〇〇S と入れてもステップクライムを設定できない」）
+
+- 資料：LEGS の高度の後ろの文字の一つが「S：計画ステップクライム」（FCOM p.1332）。乗員が LEGS に入れた計画ステップは、FMC のステップクライムの予測と CRZ の STEP TO に優先する（FCOM p.1257 の Step Climb）。前は S を受け付けず INVALID ENTRY だった。
+- 作ったこと：
+  - `B747.68.route_model.lua` の `set_step`：経路の途中の地点（SID・STAR・進入の地点とホールドを除く）に、CRZ ALT より上で 45,100 ft 以下のステップ高度を持たせる（入れられる条件は資料に無く、推定）。地点の高度欄は 1 つなので、高度の制限（とその速度）と置き換え合う（推定）。DELETE で消える。表示は「/FL350S」（他の制限と同じ書き方）。
+  - LEGS のページ：「350S」「FL350S」「/FL350S」を受け付ける。速度つき（「250/370S」）は INVALID ENTRY（推定）。ホールドの SPD/TGT ALT では S を受け付けない。予測の小さい字は速度だけ。
+  - 予測（`B747.68.pred_model.lua`）：巡航中、その地点で次のステップ高度へ上がる。計画ステップが 1 つでもあれば、FMC の最適なステップは使わない（FCOM p.1257）。
+  - CRZ のページ（`B744.fms.pages.vnav.lua` の `B747_fms_crz_step`）：CRZ ALT より上の最初の計画ステップを STEP TO に出し、AT はその地点までの時刻と経路沿いの距離。距離は表示のたびに機体の位置から計算する（予測は 10 秒ごとで、480 kt では 1.3 NM 進むため）。地点の 1 NM 手前から NOW、その地点が順送りされた後も（旋回では手前で順送りされる）次の地点まで NOW（推定）。計画ステップがあるあいだ、乗員の STEP TO の入力より計画ステップを出す。
+  - シムの便利機能のオートステップクライム（§126）は、この STEP TO と NOW で動く。
+- 試験：`route_model_test` 264、`legs_pages_test` 72、`pred_model_test` 101、`vnav_pages_test` 84。
+- X-Plane（カスタム acf、2026-11-05）：新しい `s252_legs_planned_step` 23/23（FL310 で成田の東から空中開始、約 60 NM 東の緯度経度の地点へ DIRECT、LNAV・VNAV PTH）。LEGS の 1R に 290S（CRZ ALT の下）と 250/370S は INVALID ENTRY、350S で MOD、EXEC の後も `N35E141 /FL350S`（予測の .839 が小さい字で横に）、次の地点の予測は FL350（写真）。CRZ のページは STEP TO FL350、AT `0107z/ 45NM`（写真）。Auto step climb を ON にすると、地点の 0.9 NM 手前で MCP が 35,000 ft、CRZ ALT が FL350、VNAV SPD の巡航上昇で上がり始めた。1 回目は「CRZ ALT の下」のつもりの 330S が FL310 の上で受け付けられ、試験の誤りで 22/23 だった。
+
+## 147. 上昇の高度制限を、オーバーシュートで次へ送らない（2026-11-05：利用者の報告「FAOR 03L から EXOB1C で LNAV/VNAV がめちゃめちゃ」）
+
+- 再現：利用者の機体は GE（South African Airways ZS-SBK）だった。PW の `s251_faor_exob1c` 33/33 では崩れなかったが、GE のリバリー（Qantas VH-OEJ、CF6-80C2）の新しい `s253_faor_exob1c_ge` で、EXOB1C の OR390 の「FL090B」（以下）の手前で FL090 を越えて 15,000 ft（MCP）まで上がった（31/33）。
+- 記録（`session.csv`）：GE は推力が大きく、約 3,600 fpm で上がりながら 7,900 ft で VNAV PTH の捕捉に入り、9,000 ft を越えて 9,104 ft になったところで FMA が VNAV PTH から VNAV SPD（THR REF）に変わり、上がり続けた。PW は約 60 ft の行き過ぎで 9,000 ft に留まった。
+- 原因（`B747.68.xt.fms.lua`）：上昇の目標の高度制限を「機体の高度 −100 ft より上の最初のもの」で選んでいた。100 ft を越えて行き過ぎると、OR390 の手前でも FL090 を通過したものとして次の FL110 を目標にし、AFDS は FMC の目標が動いたので VNAV PTH の水平を外した。FCOM p.1255：VNAV は VNAV PTH で出発や地点の制限の内に留まる。
+- 直したこと：`B747.68.vnav_model.lua` の `clb_target`。上昇の制限（AT・AT OR BELOW・ブロックの上）を地点つきで持ち、その地点を過ぎる（順送り）まで、機体の 300 ft 下までは目標のまま（`CLB_HOLD_FT`：捕捉の行き過ぎの幅。推定）。それより下に離れたら前と同じく次へ。地点の無い制限は前と同じ 100 ft。目標が動かないので、AFDS の VNAV PTH の高度保持が 9,000 ft に戻す。
+- 試験：`vnav_model_test` 200（9,104 ft でも FL090、290 ft 上まで、500 ft 上は FL110、OR390 を過ぎたら FL110、地点なしは 100 ft、CRZ ALT の上は無し）。
+- X-Plane（カスタム acf、2026-11-05）：`s253_faor_exob1c_ge` 33/33（直す前は 31/33）。捕捉の行き過ぎは今も最大 9,141 ft（VNAV PTH のまま）あるが、目標が FL090 のままなので 9,000 ft に戻り、旋回の後から OR390 までは 8,996〜9,023 ft、OR390 で VNAV SPD に戻って上昇し、15,000 ft（MCP）で VNAV ALT。PW の `s251_faor_exob1c` も 33/33（OR390 まで 8,995〜9,010 ft）。GE の捕捉の行き過ぎ（PW の約 2 倍）は AFDS の捕捉の則の課題として残る。

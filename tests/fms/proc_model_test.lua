@@ -28,6 +28,15 @@ T.equal(table.concat(P.runways(N, db, "ZZAA", P.SID, "ZULU1"), " "), "RW16R RW34
 T.equal(table.concat(P.list(N, db, "ZZAA", P.STAR), " "), "ALPHA1 BRAVO1", "the STARs (BRAVO1: 34L only)")
 T.equal(table.concat(P.runways(N, db, "ZZAA", P.SID, "YANKE1"), " "), "RW16R", "YANKE1 serves 16R only")
 T.equal(table.concat(P.runways(N, db, "ZZAA", P.STAR, "BRAVO1"), " "), "RW34L", "BRAVO1 serves 34L only")
+-- (2026-11-05) a "B" runway transition: all the parallel runways of the
+-- number, the centre one too (ARINC 424; VHHH's CANT3B, RW25B, serves 25L,
+-- 25C and 25R: the user's report)
+T.check(P.rwy_matches("RW25B", "RW25L") and P.rwy_matches("RW25B", "RW25C") and P.rwy_matches("RW25B", "RW25R"),
+    "RW25B: 25L, 25C and 25R")
+T.check(not P.rwy_matches("RW25B", "RW07C") and not P.rwy_matches("RW25B", "RW26L") and not P.rwy_matches("RW25B", "RW25"),
+    "RW25B: not 07C, 26L or a single 25")
+T.check(P.rwy_matches("ALL", "RW07C") and P.rwy_matches("RW25C", "RW25C") and not P.rwy_matches("RW25C", "RW25L"),
+    "ALL any runway; RW25C itself only")
 T.equal(table.concat(P.transitions(N, db, "ZZAA", P.STAR, "ALPHA1").trans, " "), "DELTA", "ALPHA1's enroute transition")
 T.equal(table.concat(P.list(N, db, "ZZAA", P.APPCH), " "), "I16R", "the approaches")
 T.equal(P.approach_name("I16R"), "ILS16R", "I16R shown ILS16R (FCOM p.1401)")

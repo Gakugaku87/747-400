@@ -1374,7 +1374,7 @@ function B747_fms_pred_input(crz)
     -- (p0, p1: the great circle's ends, for the ND's profile points; step
     -- 9e4: the leg's glide path angle down, the CIFP's: FCOM p.1262)
     legs[i] = {name = l.fix and l.fix.ident or "", dist = d, con = con, p0 = p0, p1 = l.fix,
-      gp = (l.vangle and l.vangle < 0) and -l.vangle or nil}
+      gp = (l.vangle and l.vangle < 0) and -l.vangle or nil, step = l.step}
     if l.proc == "SID" then clbLast = i end
     if con and not rwy and not (missed and l.proc == "APPR") then lastCon, lastConX = i, total end
   end
@@ -1767,7 +1767,8 @@ function vnav_geo_set(s, r)
     local c = l.con
     if c and (not s.ed or i < s.ed) then
       if i <= clbLast then
-        if c.kind == "AT" or c.kind == "B" or c.kind == "W" then g.clb[#g.clb + 1] = c.a end
+        -- (2026-11-05) with its waypoint, for the target's choice below
+        if c.kind == "AT" or c.kind == "B" or c.kind == "W" then g.clb[#g.clb + 1] = {a = c.a, p = l.p1} end
       else
         g.des[#g.des + 1] = c.kind == "W" and c.b or c.a
       end
@@ -2169,9 +2170,11 @@ local function update_vnav()
   inp.engaged = B747DR_ap_vnav_state == 2
   inp.clb_alt, inp.des_alt, inp.path, inp.d_ed = nil, nil, nil, nil
   if g then
-    for _, a in ipairs(g.clb) do
-      if a > inp.alt - 100 and (not inp.crz_alt or a < inp.crz_alt) then inp.clb_alt = a break end
-    end
+    -- the climb's next AT, AT OR BELOW or block constraint: (2026-11-05)
+    -- kept through a level-off's overshoot while its waypoint is ahead
+    -- (B747_vnav_model.clb_target; before, 100 ft over it went on to the
+    -- next: s253)
+    inp.clb_alt = B747_vnav_model.clb_target(g.clb, inp.alt, inp.crz_alt, point_passed)
     inp.des_alt = g.des[1] or g.hed
     if g.path and g.first then
       -- the distance to go: to the active route's first point the

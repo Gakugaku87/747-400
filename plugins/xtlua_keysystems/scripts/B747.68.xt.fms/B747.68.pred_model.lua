@@ -339,6 +339,13 @@ function M.predict(s)
     for i, l in ipairs(legs) do acc = acc + (l.dist or 0); lx[i] = acc end
     local xEnd = acc
     local R = {pts = {}, sc = {}}
+    -- (2026-11-05) the crew's planned step climbs (RTE LEGS "XXXS": FCOM
+    -- p.1332), at their waypoints; they override the FMC's step climb
+    -- predictions (FCOM p.1257): `steps` not used while there is one
+    local plan = {}
+    for i, l in ipairs(legs) do
+        if l.step then plan[#plan + 1] = {x = lx[i], to = l.step} end
+    end
 
     -- the E/D and the descent's constraints: those after the highest
     -- constraint at or above the cruise altitude ... and before the E/D
@@ -505,6 +512,11 @@ function M.predict(s)
 
     local function cruise_until(xstop, hcur)
         -- level at hcur to xstop (or the T/D, a step point)
+        -- the next planned step ahead above hcur (2026-11-05)
+        local pnext = nil
+        for _, p in ipairs(plan) do
+            if p.x > x + 1e-6 and p.to > hcur + 1 then pnext = p break end
+        end
         while x < xstop - 1e-6 and guard < 200000 do
             guard = guard + 1
             local m = crz_mach(P, s.crzspd, hcur, kg)
@@ -517,11 +529,13 @@ function M.predict(s)
             local dx = gs * dt / NM
             local lim = xstop
             if dp then lim = math.min(lim, td_x(hcur)) end
+            if pnext and phase == "crz" then lim = math.min(lim, pnext.x) end
             if x + dx > lim then dx = lim - x; dt = dx * NM / gs end
             if dx <= 0 then break end
             step_state(dx, 0, dt, ff * dt / 3600)
             if dp and x >= td_x(hcur) - 1e-6 then return "des" end
-            if s.steps and phase == "crz" then
+            if pnext and phase == "crz" and x >= pnext.x - 1e-6 then return "step", pnext.to end
+            if s.steps and phase == "crz" and #plan == 0 then
                 local to, w = s.steps(hcur, kg)
                 local xtd = dp and path_at_h(dp, hcur) or math.huge
                 if to and to > hcur and w and kg <= w and xtd - x > 200 then return "step", to end
