@@ -5856,14 +5856,14 @@ END_SOUND_ATTACHMENT
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/stall
     VEH_XYZ 0 4.85 -26.2
-        EVENT_START_COND sim/cockpit2/annunciators/stall_warning == 1
-    EVENT_END_COND sim/cockpit2/annunciators/stall_warning != 1
+        EVENT_START_COND laminar/B747/warning/stick_shaker > 0.5
+    EVENT_END_COND laminar/B747/warning/stick_shaker < 0.5
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT
     EVENT_NAME /Boeing/747/-400/Warnings/stall_end
     VEH_XYZ 0 4.85 -26.2
-        EVENT_START_COND sim/cockpit2/annunciators/stall_warning != 1
+        EVENT_START_COND laminar/B747/warning/stick_shaker < 0.5
 END_SOUND_ATTACHMENT
 
 BEGIN_SOUND_ATTACHMENT

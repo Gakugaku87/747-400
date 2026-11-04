@@ -3043,6 +3043,7 @@ laminar/B747/vsi/fpm	dataref	panel,snd	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/warning/master_caution	dataref	snd	B747.01.manipulators
 laminar/B747/warning/master_caution_audio	dataref	snd	B747.01.manipulators
 laminar/B747/warning/master_warning	dataref	snd	B747.01.manipulators
+laminar/B747/warning/stick_shaker	dataref	snd	B747.60.fltInst
 laminar/B747/window_shade/up_down_front/front_capt	command	obj	B747.01.manipulators,B747.01.xt.manipulators
 laminar/B747/window_shade/up_down_front/front_fo	command	obj	B747.01.manipulators,B747.01.xt.manipulators
 laminar/B747/window_shade/up_down_rear/capt	command	obj	B747.01.manipulators,B747.01.xt.manipulators
