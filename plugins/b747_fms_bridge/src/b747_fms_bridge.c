@@ -77,6 +77,10 @@
  * The ND's route line (6-1/6-2 step 6d2; notes/ATA-34-61-FMC.md §132): the
  * FMC's path drawn on each ND in the panel's gauges phase (nd_line.c).
  *
+ * The failure window (2026-11-04 the user; docs/overhaul/notes/FAILURES.md):
+ * Plugins > 747-400 > Failures..., the airplane's failures by ATA chapter
+ * from the list failures.txt (failures_window.c).
+ *
  * Built with docs/overhaul/tools/build_fms_bridge.sh (MinGW-w64, the X-Plane
  * SDK 4.3.0) into ../64/win.xpl. Windows only (2026-11-01 the user).
  */
@@ -406,11 +410,16 @@ static void opt_set(int i, int v, int keep)
     if (keep) opts_save();
 }
 
+/* the failure window's menu item (failures_window.c) */
+#define FWN_MENU_REF 100
+static void fw_menu_pick(void);
+
 static void menu_handler(void *menu_ref, void *item_ref)
 {
     (void)menu_ref;
     int i = (int)(intptr_t)item_ref;
     if (i >= 0 && i < NOPTS) opt_set(i, !opts[i], 1);
+    if (i == FWN_MENU_REF) fw_menu_pick();
 }
 
 static int opt_toggle(XPLMCommandRef cmd, XPLMCommandPhase phase, void *ref)
@@ -449,6 +458,8 @@ static XPLMDataRef text_ref(const char *name, XPLMGetDatab_f get)
         get, NULL,          /* data */
         NULL, NULL);        /* refcons */
 }
+
+#include "failures_window.c"
 
 PLUGIN_API int XPluginStart(char *name, char *sig, char *desc)
 {
@@ -500,6 +511,7 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc)
         XPLMRegisterCommandHandler(opt_cmd[i], opt_toggle, 1, ref);
         opt_set(i, opts[i], 0);
     }
+    fw_start(menu);
     return 1;
 }
 
@@ -520,6 +532,7 @@ PLUGIN_API void XPluginStop(void)
         XPLMUnregisterCommandHandler(opt_cmd[i], opt_toggle, 1, (void *)(intptr_t)i);
         XPLMUnregisterDataAccessor(opt_ref[i]);
     }
+    fw_stop();
     if (menu) XPLMDestroyMenu(menu);
     if (menu_item >= 0) XPLMRemoveMenuItem(XPLMFindPluginsMenu(), menu_item);
     menu = NULL;
@@ -532,5 +545,6 @@ PLUGIN_API void XPluginDisable(void) {}
 
 PLUGIN_API void XPluginReceiveMessage(XPLMPluginID from, int msg, void *param)
 {
-    (void)from; (void)msg; (void)param;
+    (void)from; (void)param;
+    fw_message(msg);
 }
