@@ -21,6 +21,7 @@ rt:set("sim/operation/prefs/startup_running", 1)
 for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
 for _, b in ipairs({"xfr_capt", "xfr_fo", "stby_apu"}) do rt:set("laminar/B747/electrical/bus/" .. b, 1) end
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/weight/m_fuel_total", 100000)
 rt:set("sim/flightmodel/weight/m_total", 300000)
 for _, v in ipairs({"V1", "Vr", "V2"}) do rt:set("laminar/B747/airspeed/" .. v, 999) end
@@ -48,6 +49,7 @@ for _, c in ipairs({"L", "R"}) do key(c, "ls_key/L1") end
 
 -- in the air, the climb: the VNAV key opens CLB, the active page
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 phase(1)
 key("L", "func_key/des")
 T.equal(shown("L"), "VNAV 1", "the climb: the VNAV key's CLB page")
@@ -96,6 +98,7 @@ local FLAPS = "sim/cockpit2/controls/flap_ratio"
 local function takeoff(engine)
     rt:set("laminar/B747/engines/type", engine)
     rt:set("sim/flightmodel/failures/onground_any", 1)
+    rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
     rt:set(FLAPS, 0.5)
     phase(0)
     key("L", "func_key/index")
@@ -104,6 +107,7 @@ local function takeoff(engine)
     T.equal(shown("L"), "TAKEOFF 1", "on the ground: TAKEOFF REF")
     T.equal(fms.ns.B747_fms_thrlim().mode, "TO", "the thrust limit TO")
     rt:set("sim/flightmodel/failures/onground_any", 0)
+    rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
     frames(0.5)
     rt:set(FLAPS, 0.333)
     frames(0.2)

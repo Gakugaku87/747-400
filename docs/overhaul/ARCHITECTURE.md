@@ -184,7 +184,8 @@ Lua が作る名前の数：dataref 1617 個、コマンド 628 個。静的に�
 | `all_gear_down`・`nose_not_down` | ALL GR DN（5 本ともダウンロック）・前脚がダウンロックでない |
 | `lever_unlock` | LG LVR UNLK（主脚トラック 4 本とも傾き、かつ胴体脚ステアリングがロック：FCOM p.1512） |
 
-- 乗り換え済み：電源の BCU（air mode・APU 発電機・地上ハンドリングバス）、脚レバーのロック。ほかの系統は、それぞれの作り直しで乗り換える（PROGRESS.md）。
+- 乗り換え：系統の論理は全部ここを読む（2026-11-04 に autopilot・fms・計器・操縦系統・EEC の残りも。notes/ATA-32.md §16）。X-Plane の `onground_any` は、飛行の始まりの状態づくりと物理の手当て（シムの都合）だけに残す。
+- 機体の読み込みと各飛行の始まりには、init スクリプト `B747.10.gear` が X-Plane の接地から air・ground を入れておく（XTLua がモジュールを動かすまでのつなぎ）。
 
 ### 4.3 乗員への警報（1-3）
 

@@ -379,3 +379,25 @@ GAP ID の接頭辞：`GEAR`。2026-10-23 作成。コードは `overhaul` ブ�
 - 離陸の抑止（FCOM p.1594–1595、notes/ATA-31-warning.md §4.4.5）：リフトオフ（PSEU の地上から空中）から、電波高度 800 ft か 140 秒の早い方まで出さない（その間は保持も立てない）。空中開始では抑止しない。ATA31 p.180 は脚上げから 140 秒と書くが、乗員に見える FCOM のリフトオフに従った。
 - 資料の食い違い：ATA31 p.209–214 はスラストレバーの方を「800 ft を超えても消える」とするが、FCOM p.1558 は「レバーを進めるか脚が下りるまで」。FCOM に従った。
 - GEAR-22 の残り（AIR/GND SYSTEM、GEAR MONITOR、A/G DISAGREE、PARK BRK VALVE）は、PSEU や表示の片系の故障で出るもので、故障の入口が要る。故障の窓のときに作る。
+
+## 16. 空地判定の乗り換え（1-2 の残り、2026-11-04）
+
+X-Plane の `sim/flightmodel/failures/onground_any`（どれか 1 輪が接地）を読んでいた所のうち、系統の論理は PSEU（§4.1、`laminar/B747/gear/air_ground/*`）に替え、シムの都合（飛行の始まりの状態づくり、物理の手当て）は X-Plane のまま残した。前から PSEU を読んでいた系統（電源、燃料、油圧、防氷、火災、エンジンの逆推力、EEC の推力、FCU、スピードブレーキ、ヨーダンパー、航法（エアデータ・IRS・GPWS・TCAS）、通信（ACP）、安全、警報）はそのまま。
+
+| モジュール | 使い道 | 今 | 理由 |
+|---|---|---|---|
+| autopilot | A/T の地上、AFDS の地上（モード、ロール・ピッチの則）、VNAV の engage（空中で 400 ft より上）、FMA（地上は TO/GA だけ）、VNAV の速さの選び直し | PSEU の primary の地上 | AFDS は PRI・GND の relay（R7332・R330・R627：ATA29_32 p.299・303） |
+| fms | FMC の地上・空中（推力制限、段階、経路、同調、位置の更新、flight complete、ページの入力の可否など） | PSEU の primary の地上 | FMC の relay は表に primary と alternate の両方（R121・R183・R628・R768・R769）。primary にしたのは推定 |
+| fms | 空中で始めたときの A/P などの立ち上げ（`didFlightInit`） | X-Plane のまま（`simDR_xp_onGround`） | シムの都合 |
+| fltInst02 | DH の reset、V1・VR の音 | PSEU の primary の地上 | 表示と音の論理 |
+| fltCtrls | スピードブレーキのレバーの止め（空中で電波高度 15 ft より上） | PSEU の primary の地上 | 系統の論理 |
+| fltCtrls | エンジン運転中の開始のパーキングブレーキ | X-Plane のまま | シムの都合 |
+| EEC | 離陸の derate（地上か TO のモード）、着陸の後の段階の戻し | PSEU の primary の地上 | 系統の論理（R228・R628・R768・R769） |
+| EEC | 止まったエンジンを地上で止めておく、低い N2 の PID、A/T のレバーの動きの速さ、型式ごとの推力と表示の式 | X-Plane のまま | X-Plane のエンジンの物理の手当てと絡む |
+| manipulators・fuel・engines・srm・fltMgmt | 開始の状態（スイッチ、燃料の積み込み、安定板、トランスポンダ） | X-Plane のまま | シムの都合 |
+| FDR（xtlua_fdr） | 飛行中の記録をファイルに書く | X-Plane のまま | シムの道具（機体の DFDR ではない） |
+| lighting | STROBE LIGHT OFF の memo（どちらの枝も 0。資料の memo の一覧に無い） | 読むのをやめた | 不要 |
+| hydraulicsmodel・autopilot・warning02（init）・electrical | bind だけで読んでいない | bind を消した | 不要 |
+
+- 飛行の始まり：XTLua はモジュールを機体の読み込みの数十秒後に動かすので、gear の init スクリプトが、機体の読み込みと各飛行の始まりに、PSEU の air・ground を X-Plane の接地から入れておく（gear のモジュールが毎フレーム計算するまでのつなぎ）。地上の開始で FMC や AFDS が空中と取り違えないため。
+- 回帰試験：モジュールを単独で読む試験は gear のモジュールが PSEU を計算しないので、`onground_any` を書く所で `laminar/B747/gear/air_ground/pri_gnd` も同じ値にした（autopilot・fms・displays・fltctrls・eec の 59 本、機械的に）。

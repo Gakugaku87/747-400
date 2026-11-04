@@ -28,6 +28,7 @@ rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_l
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
 for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
@@ -96,6 +97,7 @@ xplane(6)
 
 -- airborne: the activation; the AFDS's current waypoint the active one
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set(CUR, 2)
 key("func_key/legs")
 key("ls_key/R6")

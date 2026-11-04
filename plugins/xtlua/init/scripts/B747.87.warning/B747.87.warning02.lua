@@ -95,7 +95,6 @@ local B747_CASmemo      = {}
 --*************************************************************************************--
 
 simDR_startup_running               = find_dataref("sim/operation/prefs/startup_running")
-simDR_all_wheels_on_ground          = find_dataref("sim/flightmodel/failures/onground_any")
 simDR_ind_airspeed_kts_pilot        = find_dataref("laminar/B747/gauges/indicators/airspeed_kts_pilot")
 
 

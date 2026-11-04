@@ -207,5 +207,21 @@ B747CMD_ai_gear_quick_start			= deferred_command("laminar/B747/ai/gear_quick_sta
 
 simDR_aircraft_on_ground    = find_dataref("sim/flightmodel/failures/onground_any")
 
+-- (1-2) the PSEU's air and ground from X-Plane's ground (a wheel on it) at
+-- the aircraft's load and each flight's start, until the gear module
+-- (scripts/B747.10.xt.gear, B747.10.xt.pseu.lua) computes them every frame:
+-- XTLua starts the modules tens of seconds after the load, and the systems
+-- that read the PSEU (the FMC, the AFDS, ...) must not take a ground start
+-- for the air meanwhile (notes/ATA-32.md §16)
+local function B747_pseu_from_xplane()
+    local g = simDR_aircraft_on_ground == 1 and 1 or 0
+    B747DR_pseu_pri_gnd = g
+    B747DR_pseu_alt_gnd = g
+    B747DR_pseu_pri_air = 1 - g
+    B747DR_pseu_alt_air = 1 - g
+end
+function aircraft_load() B747_pseu_from_xplane() end
+function flight_start() B747_pseu_from_xplane() end
+
 
 

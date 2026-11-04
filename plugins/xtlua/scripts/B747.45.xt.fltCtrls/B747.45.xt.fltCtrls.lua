@@ -107,6 +107,10 @@ simDR_outerslats_ratio  	= find_dataref("sim/flightmodel2/controls/slat2_deploy_
 simDR_autoslats_ratio  		= find_dataref("sim/aircraft/parts/acf_slatEQ")
 simDR_prop_mode                 = find_dataref("sim/cockpit2/engine/actuators/prop_mode")
 simDR_all_wheels_on_ground      = find_dataref("sim/flightmodel/failures/onground_any")
+-- (1-2) the speedbrake lever's stop in the air: the PSEU's primary ground
+-- (notes/ATA-32.md §16). Before, X-Plane's onground_any, which stays for the
+-- engines-running start's parking brake (the sim's set-up)
+B747DR_fltctrls_pri_gnd         = find_dataref("laminar/B747/gear/air_ground/pri_gnd")
 B747DR_reverser_lockout            = deferred_dataref("laminar/B747/engines/reverser_lockout", "number")
 simDR_speedbrake_ratio_control  = find_dataref("sim/cockpit2/controls/speedbrake_ratio")
 simDR_flap_handle_deploy_ratio  = find_dataref("sim/cockpit2/controls/flap_handle_deploy_ratio")
@@ -609,7 +613,7 @@ end--]]
 ----- SPEEDBRAKE LEVER STOP -------------------------------------------------------------
 function B747_speedbrake_lever_stop()
 
-    if simDR_all_wheels_on_ground < 1 and simDR_radarAlt1>15 then
+    if B747DR_fltctrls_pri_gnd < 1 and simDR_radarAlt1>15 then
         B747_speedbrake_stop = 1
         B747DR__gear_chocked=0
     else

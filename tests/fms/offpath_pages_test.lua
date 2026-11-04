@@ -26,6 +26,7 @@ rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_l
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
 for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
@@ -77,6 +78,7 @@ T.check(st.active and #st.rte.legs == 3, "the active route ALPHA, BRAVO, CHARL")
 -- in the air at FL300 (the predictions' input a stub: the DES page's
 -- speeds, 250 t, no wind)
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 30000)
 local s = {P = P, t = P.tables(0), isa = 0, gw = 250000, des = {cas = 290, mach = 0.84, trans_cas = 240, trans_alt = 10000},
     wind = {des = 0}}

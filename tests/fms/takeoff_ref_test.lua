@@ -22,6 +22,7 @@ rt:set("sim/operation/prefs/startup_running", 1)
 for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
 for _, b in ipairs({"xfr_capt", "xfr_fo", "stby_apu"}) do rt:set("laminar/B747/electrical/bus/" .. b, 1) end -- the FMCs' power
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/weight/m_fuel_total", 100000)
 rt:set("sim/weather/temperature_ambient_c", 15)
 rt:set("laminar/B747/irs/mode", 0, 2)
@@ -184,6 +185,7 @@ T.equal(rt:get(LIM), "TO 1", "the thrust limit: TO 1")
 T.equal(rt:get("laminar/B747/fms/thrlim/code"), 11, "its number for the EEC: 11")
 T.equal(rt:get("laminar/B747/engine/derate/CLB"), 1, "CLB 1 armed (TO 1's 8 %)")
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set("sim/cockpit2/controls/flap_ratio", 4 / 6)
 rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 1000)
 rt:set("laminar/B747/autopilot/vnav_state", 2)
@@ -210,6 +212,7 @@ rt:set("laminar/B747/autopilot/thr_pushes", rt:get("laminar/B747/autopilot/thr_p
 frames(0.2)
 T.equal(rt:get(LIM), "CLB 1", "the THR switch: CLB 1")
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 frames(0.2)
 T.equal(rt:get(LIM), "TO 1", "on the ground: TO 1 again")
 

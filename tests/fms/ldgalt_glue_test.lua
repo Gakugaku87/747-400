@@ -23,6 +23,7 @@ rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_l
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
 rt:set("sim/flightmodel/weight/m_total", 300000)
@@ -88,6 +89,7 @@ frames(1.2)
 T.equal(fms.ns.B747_fmc_route.rte.runway and fms.ns.B747_fmc_route.rte.runway.ident, "RW34L", "the runway 34L active")
 T.equal(rt:get(ALT), 98, "the departure runway's threshold elevation")
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 at(35.2, 140.2)                  -- 15 NM from ZZAA, 62 to ZZBB
 T.equal(rt:get(ALT), 98, "after the takeoff near the origin: still the departure's (a return)")
 

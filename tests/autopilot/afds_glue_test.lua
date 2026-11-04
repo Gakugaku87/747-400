@@ -37,6 +37,7 @@ rt:set("xtlua/fms", "[]")
 rt:set("sim/time/total_running_time_sec", 10)
 -- in the air at 10,000 ft, the hydraulics up, climbing 1,234 fpm
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 9000)
 for i = 1, 3 do rt:set("laminar/B747/hydraulics/pressure_" .. i, 3000) end
 -- the engage interlocks (6-3 step 5a) satisfied: the FCCs' AC and DC buses,
@@ -903,6 +904,8 @@ rt:set("sim/cockpit2/gauges/indicators/ground_track_mag_pilot", 336)
 -- autoland froze the pitch FMA and the A/T's at the LAND's engage
 local AT_FMA = "laminar/B747/autopilot/FMA/autothrottle_mode"
 local ONGND = "sim/flightmodel/failures/onground_any"
+-- (1-2) the AFDS's and the A/T's ground: the PSEU's primary ground
+local PRIGND = "laminar/B747/gear/air_ground/pri_gnd"
 rt:set("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot", 3.3)
 rt:set("sim/flightmodel/position/vh_ind_fpm", -790)
 rt:set("laminar/B747/gauges/indicators/airspeed_kts_pilot", 145)  -- (the old autoland's disconnect is under 65 kt on the ground)
@@ -929,6 +932,7 @@ rt:set(RA, 20)
 frames()
 T.equal(rt:get(AT_FMA), 2, "20 ft: the A/T's IDLE")
 rt:set(ONGND, 1)
+rt:set(PRIGND, 1)
 rt:set(RA, 3)
 frames()
 T.equal(rt:get(PITCH), 0, "on the ground: FLARE off")
@@ -952,6 +956,7 @@ rt:set(RI .. "nav1_hdef_dots_pilot", 0)
 rt:set(RI .. "nav1_flag_glideslope", 0)
 rt:set(RI .. "nav2_flag_glideslope", 0)
 rt:set(ONGND, 0)
+rt:set(PRIGND, 0)
 rt:command(CMD .. "yoke_disengage_capt")
 rt:command(CMD .. "yoke_disengage_capt")
 rt:set(FD, 23, 0)
@@ -1008,6 +1013,7 @@ rt:set(FD, 24, 0)
 frames()
 T.check(rt:get(ROLL) == 0 and rt:get(SHOWN_C) == 0 and rt:get(SHOWN_F) == 0, "and OFF: everything off, nothing shown")
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set(RA, 0)
 frames()
 rt:set(FD, 23, 1)
@@ -1018,6 +1024,7 @@ T.equal(rt:get(PITCH_CMD), 8, "8 degrees (FCOM p.666)")
 rt:set(FD, 23, 0)
 frames()
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set(RA, 9000)
 
 -- 6-3 step 5c: a mode failure through the glue (ATA22 p.382; FCOM p.660).

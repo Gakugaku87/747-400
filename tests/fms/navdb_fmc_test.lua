@@ -26,6 +26,7 @@ rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_l
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
 for _, b in ipairs({"xfr_capt", "xfr_fo", "stby_apu"}) do rt:set("laminar/B747/electrical/bus/" .. b, 1) end -- the FMCs' power
 local function clock(side, on, y, m, d)
@@ -127,9 +128,11 @@ type_in("L", "ZZBB")
 key("L", "ls_key/L2")
 T.equal(fmsdata("airportpos"), "ZZBB", "REF AIRPORT ZZBB")
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 frames(0.5)
 T.equal(fmsdata("airportpos"), "----", "blank at lift-off (FCOM p.1285)")
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 frames(0.3)
 
 -- TRANS ALT from the origin (RTE's ORIGIN; FCOM p.1329); X-Plane's CDU on

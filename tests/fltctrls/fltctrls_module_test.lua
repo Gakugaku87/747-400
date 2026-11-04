@@ -327,11 +327,13 @@ fly(0, 0, 1)
 -- the flight's start: X-Plane's trim followed on the ground; an air start
 -- keeps 7.5 units (X-Plane trims for its own trim there: 0.5 at FL350)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:callout("flight_start")
 rt:set(TRIM, 0.2)
 frames(1)
 T.near(units(), 9, 1e-6, "a start on the ground: the stabilizer follows X-Plane's trim (9 units)")
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:callout("flight_start")
 rt:set(TRIM, 0.5)
 frames(1)
@@ -340,6 +342,7 @@ T.near(get(TRIM), 0, 1e-6, "X-Plane's trim written back to 0")
 frames(4)
 T.near(units(), 7.5, 1e-6, "after the start's 3 s: still 7.5 units")
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 
 -- the takeoff greenband (B747.45.greenband_model.lua, step 2c): the FMC's
 -- takeoff trim selects the band; the indicator shows it on the ground
@@ -375,6 +378,7 @@ local MEMO = "laminar/B747/CAS/memo_status"
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set("laminar/B747/gear/air_ground/alt_gnd", 0)
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 5000)
 rt:set(SB, 0.125)
 frames(0.2)
@@ -417,6 +421,7 @@ frames(0.2)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("laminar/B747/gear/air_ground/alt_gnd", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 0)
 frames(2.5)
 T.equal(get(SB), 1, "touchdown, thrust levers idle: driven to UP")
@@ -474,6 +479,7 @@ T.equal(get(ADVISORY, 300), 0, "both engaged: none")
 -- module's steering), on the ground under V1, three fuel control switches in
 -- RUN, engine 2 or 3 in the takeoff range (FCOM p.1603)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("laminar/B747/airspeed/V1", 150)
 rt:set(IAS, 0)
 for i = 0, 3 do rt:set("laminar/B747/fuel/fuel_control/toggle_sw_pos", i, 1) end
@@ -499,6 +505,7 @@ local RA = "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot"
 local THROTTLE = "laminar/B747/engine/throttle"
 local GEAR_OVRD = 5                    -- button_switch/position: GND PROX GEAR OVRD
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 for i = 0, 3 do rt:set(THROTTLE, i, 0.5) end
 rt:set(RA, 300)
 frames(0.2)
@@ -553,6 +560,7 @@ frames(0.2)
 T.equal(get(WARNING, 3), 0, "gear down: gone")
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set(IAS, 0)
 for i = 0, 3 do rt:set(THROTTLE, i, 0) end
 rt:set(RA, 0)
@@ -600,6 +608,7 @@ rt:set("laminar/B747/engines/display_N1", 1, 0)
 -- 3.78 + 154,400 / IAS^2 units, 4.5 to 7.5), not the 7.5 units of before
 -- (a 334 kt start pitched up to 13 degrees before the A/P came on)
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 for _, c in ipairs({{334, 3.78 + 154400 / 334 ^ 2}, {231, 3.78 + 154400 / 231 ^ 2}, {150, 7.5}}) do
     rt:set("sim/flightmodel/position/indicated_airspeed", c[1])
     rt:callout("flight_start")
@@ -615,6 +624,7 @@ rt:set("sim/flightmodel/position/indicated_airspeed", 250)
 frames(1)
 T.near(units(), u, 1e-6, "after the start's 3 s the speed no longer sets it")
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 
 -- the gear's drag (補正, B747.45.xt.aero_corr.lua): X-Plane's fuselage drag
 -- coefficient from the acf's own value, read on the first frame it is

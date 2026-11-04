@@ -24,6 +24,7 @@ rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_l
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
 for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
@@ -206,6 +207,7 @@ local f1 = st1.rte.legs[1].fix
 local c1 = fms.ns.B747_path_model.course(fms.ns.B747_route_model.leg_from(st1.rte, 1), f1)
 local p20 = fms.ns.B747_path_model.point(f1, c1, 20)
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set("sim/flightmodel/position/latitude", p20.lat)
 rt:set("sim/flightmodel/position/longitude", p20.lon)
 rt:set("sim/flightmodel/position/hpath", c1)

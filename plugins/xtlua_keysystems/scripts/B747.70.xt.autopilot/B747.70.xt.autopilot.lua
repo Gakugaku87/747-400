@@ -279,8 +279,10 @@ simDR_override_throttles = find_dataref("sim/operation/override/override_throttl
 simDR_override_fms_progress = find_dataref("sim/operation/override/override_fms_advance")
 simDR_descent = find_dataref("sim/cockpit2/autopilot/des_adjust")
 simDR_pitch = find_dataref("sim/cockpit2/autopilot/sync_hold_pitch_deg")
-simDR_touchGround = find_dataref("sim/flightmodel/failures/onground_any")
-simDR_onGround = find_dataref("sim/flightmodel/failures/onground_any")
+-- (1-2) the air/ground of the AFDS and the A/T: the PSEU's primary
+-- ground (the AFDS's relays R7332, R330, R627: ATA29_32 p.299, p.303;
+-- notes/ATA-32.md §16). Before, X-Plane's onground_any (any wheel)
+simDR_onGround = find_dataref("laminar/B747/gear/air_ground/pri_gnd")
 --simDR_pitch2           	= find_dataref("sim/cockpit2/autopilot/fpa")
 B744_fpm = find_dataref("laminar/B747/vsi/fpm")
 B747BR_showFMA				= deferred_dataref("laminar/B747/autopilot/FMA/showFMA", "number")

@@ -22,6 +22,7 @@ rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_l
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
 rt:set("sim/cockpit2/clock_timer/zulu_time_hours", 16)
@@ -78,6 +79,7 @@ T.check(fms.ns.B747_fmc_route.active, "the route active")
 
 -- after the takeoff, 2,000 ft, VNAV engaged in the climb
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set("sim/flightmodel/position/latitude", 35.02)
 rt:set("sim/flightmodel/position/longitude", 140.02)
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 2000)

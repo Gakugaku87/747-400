@@ -23,6 +23,7 @@ rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_l
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
 rt:set("sim/flightmodel/weight/m_total", 300000)
@@ -117,6 +118,7 @@ clear()
 -- NAV INVALID-TUNE (FCOM p.1433): on approach (its first leg sequenced),
 -- the approach's VOR ZZV
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 2000)   -- (not the approach's 500 ft hold)
 local st = fms.ns.B747_fmc_route
 T.check(fms.ns.B747_route_model.sequence(st, 1), "the approach's first leg sequenced")

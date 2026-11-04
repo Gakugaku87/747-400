@@ -21,6 +21,7 @@ rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_l
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
 rt:set("sim/flightmodel/weight/m_total", 300000)
@@ -80,9 +81,11 @@ T.equal(line("L", 13), "<INDEX                  ", "<INDEX")
 -- a flight of an hour: at the liftoff the IRUs at the airplane's position;
 -- at the landing IRU L 2 NM north of it, C 1 NM east, R not navigating
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 frames(1)
 for _ = 1, 360 do rt:frame(10) end
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set(IRS .. "lat", 0, 35 + 2 / 60)
 rt:set(IRS .. "lon", 1, 140 + 1 / 60 / math.cos(math.rad(35)))
 rt:set(IRS .. "nav_valid", 2, 0)
@@ -97,9 +100,11 @@ T.equal(line("L", 7), "1.0                     ", "IRS C 1.0")
 T.equal(line("L", 9), "                        ", "IRS R not navigating: blank (estimate)")
 -- cleared in the air
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 frames(1)
 T.equal(line("L", 5), "                        ", "airborne: cleared (FMSPG p.269)")
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 frames(1)
 for i = 0, 2 do
     rt:set(IRS .. "nav_valid", i, 1)

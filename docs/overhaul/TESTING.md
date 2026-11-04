@@ -112,6 +112,7 @@
   - init.lua が呼ぶ C の関数（`XTLuaFindDataRef`・`XTLuaGetNumber` など）は、メモリ上の dataref の表で置き換える。関数名は XTLua の本体（`64/win.xpl`）の文字列と照合した（`XlLuaReplaceCommand` の綴りも本体どおり）。
   - dataref の型：`laminar/…` は init スクリプトを実際に走らせ、作られた型を集める（`"array[" .. NUM_BTN_SW .. "]"` のように実行時に組み立てる型もとれる）。`sim/…` は X-Plane の `Resources/plugins/DataRefs.txt`（場所は環境変数 `XPLANE_ROOT` で変えられる）。どちらにも無い名前は、X-Plane と同じく読むと 0、書いても消える。試験の側から無い名前に書こうとすると誤りにする。
   - `int` の dataref は、書いた値を切り捨てる。数値の dataref に数値でないものを書くと 0 になる（同じ global を 2 回 `find_dataref` すると起きる）。
+  - 空地：系統の論理は PSEU（`laminar/B747/gear/air_ground/*`）を読む（2026-11-04、notes/ATA-32.md §16）。PSEU は gear のモジュールが計算するので、それを読み込まない試験は `sim/flightmodel/failures/onground_any` と一緒に `laminar/B747/gear/air_ground/pri_gnd` も書く。
   - X-Plane との違い：読み書きはすぐ反映する（X-Plane ではフレームごとに同期し、最初の読みは 0）。dataref を動かすのは試験だけ。手元の LuaJIT は表の `__len`・`__pairs`・`__ipairs` を無視するので、名前空間がコピーした表（ARCHITECTURE.md §9a）の `#` は 0 になる（XTLua の本体でどうなるかは未確認）。
   - 1 フレームでは、時計（`sim/time/total_running_time_sec`）を進め、タイマーを回し、`before_physics`・`after_physics` を読み込んだ順に呼ぶ。コマンドは phase 0・1・2 で呼べる。
   - controlObject（`xtlua/controlObject`）：モジュールが書いた行を記録する。`rt:apply_control_objects()` を呼んだ試験だけ、XTLua の `updateCommands`（`xpmtdatarefs.cpp`）と同じ規則で 1 回回す：入力を [minin, maxin] に収めて [minout, maxout] に写し、scale をかける（scaledref があればその値で置き換える）。同じ宛先の 2 行目からは足して、その行の出力範囲（それまでの和で広げる）か `min`・`max` に収める。

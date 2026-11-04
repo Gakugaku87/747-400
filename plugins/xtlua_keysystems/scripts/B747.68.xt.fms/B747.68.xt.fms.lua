@@ -7,7 +7,12 @@ fmsLoadDref=find_dataref("xtlua/loadtoFMS")
 simDR_inReplay              = find_dataref("sim/time/is_in_replay")
 B747DR_fdr_log_json     = find_dataref("laminar/B747/fdr/json")
 simDRTime=find_dataref("sim/time/total_running_time_sec")
-simDR_onGround=find_dataref("sim/flightmodel/failures/onground_any")
+-- (1-2) the FMC's air/ground: the PSEU's primary ground (the FMCs' relays
+-- in the table of ATA29_32 p.299, p.303 are of both systems: the primary,
+-- estimate; notes/ATA-32.md §16). Before, X-Plane's onground_any (any
+-- wheel). X-Plane's own for the sim's set-up of an in-flight start
+simDR_onGround=find_dataref("laminar/B747/gear/air_ground/pri_gnd")
+simDR_xp_onGround=find_dataref("sim/flightmodel/failures/onground_any")
 simDR_vvi_fpm_pilot = find_dataref("sim/cockpit2/gauges/indicators/vvi_fpm_pilot")
 simDR_pressureAlt1	= find_dataref("sim/cockpit2/gauges/indicators/altitude_ft_pilot")
 simDR_eng_fuel_flow_kg_sec = find_dataref("sim/cockpit2/engine/indicators/fuel_flow_kg_sec")
@@ -316,7 +321,6 @@ simDR_empty_weight			= find_dataref("sim/aircraft/weight/acf_m_empty")
 simDR_fuel_qty				= find_dataref("sim/flightmodel/weight/m_fuel")
 simDR_cg_adjust				= find_dataref("sim/flightmodel/misc/cgz_ref_to_default")
 simDR_livery_path			= find_dataref("sim/aircraft/view/acf_livery_path")
-simDR_onground				= find_dataref("sim/flightmodel/failures/onground_any")
 simDR_payload_weight		= find_dataref("sim/flightmodel/weight/m_fixed")
 simDR_fuel_totalizer_kg		= find_dataref("sim/cockpit2/fuel/fuel_totalizer_init_kg")
 --Marauder28
@@ -5915,7 +5919,7 @@ function after_physics()
   end
   if systemsWarmedUp==false then return end
   local refreshmins=B747DR_airspeed_Vmc
-  if didFlightInit==false and simDR_startup_running == 1 and simDR_onGround==0 then
+  if didFlightInit==false and simDR_startup_running == 1 and simDR_xp_onGround==0 then
 	print("activate AP stuff")
 	-- a second on, then each INFLIGHT_AP_S until the IRUs' headings; an
 	-- in-flight start not yet over (an air start re-done) stops
