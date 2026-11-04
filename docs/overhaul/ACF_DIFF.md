@@ -617,3 +617,9 @@ ND（6-1・6-2 段 6d2、2026-11-02：PLAN の X-Plane の地図）：
 | 同 | 主 EICAS の `GROUP Gear Expanded`（脚の拡大表示）の 21 個 | 例：胴体脚の箱の POS の y 695、前脚 782 | y を 25 上へ（胴体脚 720、前脚 807）。前縁の箱の場所を空ける | ATA27 p.321（脚は帯の上に十分離れる） |
 
 上の 4 行は `docs/overhaul/tools/panel_flap_expanded.lua` で書き換えた（33 の変更：条件を足した計器 12 とグループ 3、写し 20 個と、数字 7 つの写しのグループ 1、新しい計器 8、位置を変えた計器 21）。新しい絵は `docs/overhaul/tools/make_flap_images.ps1`（前縁の箱は白・緑・琥珀の 7 コマで線は 1.6 px、琥珀の帯と枠は純正の帯の色だけを変えたもの、目盛りの数字は純正のレバーの数字の形を白に）。色は純正の白、緑（0, 255, 0）、琥珀（255, 179, 0）。2 つの dataref を見る計器とグループの数は 96 のまま。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261104_before_flap_expanded`。X-Plane の写真（`s223_flap_expanded`）で、前縁の箱の緑・琥珀の斜線、後縁の帯の琥珀と琥珀の X、緑とマゼンタのレバーの線と数字、代替表示の目盛り、脚の拡大表示と重ならないことを確かめた。外から見た姿は変わらない（パネルの計器だけの変更）。
+
+| 日付・系統 | 変えた所 | 前 | 後 | 根拠 |
+|---|---|---|---|---|
+| 2026-11-04・警報（STATUS の PG。利用者の質問「Lower EICAS の PG 1 は常に出る仕様なの？」） | 下の EICAS の STATUS ページの `GROUP Page #`（`PG` の字と `laminar/B747/STAT/msg_page` の数字） | `SHOW_GREATER 1.000000 laminar/B747/STAT/num_msg_pages`（X-Plane の GREATER は境の値を含むので、1 ページでも PG 1 が出た） | `SHOW_GREATER 2.000000 laminar/B747/STAT/num_msg_pages`（2 ページ以上のときだけ。上の EICAS の PG と同じ書き方） | FCOM p.1545（15.10.19：PG 番号はステータスメッセージの次のページがあるとき） |
+
+変更前のファイルは `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261104_before_status_pg`。sed で 1 行を書き換えたとき、作業ツリーの改行が CRLF から LF になった（git の中身は前から LF。X-Plane はどちらも読む）。

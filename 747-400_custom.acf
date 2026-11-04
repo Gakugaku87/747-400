@@ -159055,7 +159055,7 @@ GROUP LOWER EICAS POWER
 
           END_GROUP
           GROUP Page #
-            SHOW_GREATER 1.000000 laminar/B747/STAT/num_msg_pages
+            SHOW_GREATER 2.000000 laminar/B747/STAT/num_msg_pages
             gen_rotary PG Label
               POS 1690.000000 -157.000000
               IMAGE CRT Displays/EICAS Upper/EICAS_cas_pg
