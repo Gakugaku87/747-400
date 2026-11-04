@@ -398,3 +398,14 @@ GAP ID 接頭辞：`WARN`。2026-10-23 調査。コード・acf・snd は変更�
 10. 着陸時の CONFIG GEAR が GND PROX GEAR OVRD で消えるか（FCOM は消える、ATA31 は残る）。FCOM を採ったが、実機の版の違いの可能性がある。
 11. 失速警報の地上での扱い、過回転シェーカーの条件（資料に記載なし）。
 12. パネルの CAS 行と `gen_*_msg_022〜109` を外部（他のプラグイン、AutoATC など）が読んでいないか。
+
+## 10. 離陸形態警報の作り直し（WARN-11、2026-11-04）
+
+- モデル `plugins/xtlua/scripts/B747.45.xt.fltCtrls/B747.45.tocw_model.lua`（configuration warning card）、つなぎは操縦系統のモジュール（`B747.45.xt.fltCtrls.lua`）。§4.5 の資料どおり：
+  - 地上（PSEU）、V1 未満、FUEL CONTROL 3 本以上 RUN、エンジン 2 **または** 3 が離陸推力（N1 表示が P&W 66.5、RR 66.7、GE 75.0 を超える：ATA27 p.730。型式は `laminar/B747/engines/type`）で武装。
+  - V1 が無いとき（FMC の 999、または 0）は、ピッチ 5° を超えるまで（ATA31 p.180・188 の enable と抑止の、V1 が無効なときの代わり）。
+  - 各メッセージは形態が誤っている間。直せばすぐ消え、離陸推力を外すと 10 秒残る（ATA27 p.730）。
+  - CONFIG FLAPS：後縁が 10 か 20（FCU の位置の detent の数字）、前縁 6 群が全部展開、レバーもその位置（ATA27 p.730、ATA31 p.193）でないとき。CONFIG GEAR CTR・PARK BRK・SPOILERS（地上の分）・STAB は前と同じ入力（胴体脚のロック、パーキング・ブレーキのレバー、スピードブレーキのレバーが DN でない、グリーンバンド）。
+- 前のコード：N1 90（CONFIG FLAPS は 96、FMC のフラップがあれば 86）、FLAPS・SPOILERS・STAB はエンジン 2 と 3 の**両方**、空地は X-Plane の車輪、10 秒の保持なし、CONFIG FLAPS は FMC の離陸フラップとの一致も求めていた（資料に無い）。
+- 推定：逆推力が出ていれば離陸推力にしない（資料に無いが、RTO の逆推力で鳴らないように前のまま）。
+- 作らないもの：enable inop と CONFIG WARN SY（故障の窓のとき）、試験（MAWEA・CMC）、siren のリセット不可（警報の音の側）。

@@ -557,9 +557,13 @@ rt:set(IAS, 0)
 for i = 0, 3 do rt:set(THROTTLE, i, 0) end
 rt:set(RA, 0)
 
--- CONFIG FLAPS (FCOM p.1603): by the FCU's flap position in the detents'
--- numbers; X-Plane's wing flap angles differ since the lift correction
--- (flaps 20 is 15.1 degrees there: notes/AERO.md §3.12)
+-- CONFIG FLAPS (WARN-11; FCOM p.1603, ATA27 p.730, ATA31 p.193): the
+-- trailing edge at 10 or 20 by the FCU's flap position in the detents'
+-- numbers (X-Plane's wing flap angles differ since the lift correction:
+-- flaps 20 is 15.1 degrees there, notes/AERO.md §3.12), all leading edge
+-- groups out and the lever there too; armed by engine 2 or 3 at takeoff
+-- thrust (N1 66.5 on the P&W), also without a V1 (until 5 degrees of
+-- pitch); the FMC's takeoff flaps are not compared (no source)
 rt:set("laminar/B747/hydraulics/pressure_1", 3000)
 rt:set("laminar/B747/hydraulics/pressure_4", 3000)
 rt:set(LEVER, F20)
@@ -567,23 +571,30 @@ frames(90)
 T.near(get(FCU .. "flap_pos"), 20, 1e-6, "lever 20: the flaps' position 20")
 rt:set("sim/flightmodel2/wing/flap1_deg", 0, 15.1)
 rt:set("laminar/B747/airspeed/V1", 150)
-for i = 0, 3 do rt:set("laminar/B747/engines/display_N1", i, 98) end
-rt:set("laminar/B747/airspeed/flapsRef", 20)
+rt:set("laminar/B747/engines/display_N1", 1, 70)
+rt:set("laminar/B747/airspeed/flapsRef", 10)
 frames(0.2)
-T.equal(get(WARNING, 2), 0, "flaps 20, the FMC's 20 (X-Plane's wing at 15.1 degrees): no CONFIG FLAPS")
+T.equal(get(WARNING, 2), 0, "flaps 20 (X-Plane's wing at 15.1 degrees), engine 2 at N1 70: no CONFIG FLAPS (the FMC's 10 not compared)")
 rt:set(LEVER, 0.5)
+frames(2)
+T.equal(get(WARNING, 2), 1, "the lever at 10, the flaps still near 20: CONFIG FLAPS (lever and flaps apart)")
 frames(60)
 T.near(get(FCU .. "flap_pos"), 10, 1e-6, "lever 10: 10")
-T.equal(get(WARNING, 2), 1, "flaps 10, the FMC's 20: CONFIG FLAPS")
+T.equal(get(WARNING, 2), 0, "flaps 10: none")
 rt:set("laminar/B747/airspeed/flapsRef", 0)
-frames(0.2)
-T.equal(get(WARNING, 2), 0, "flaps 10, no FMC flaps: none")
 rt:set(LEVER, F25)
 frames(60)
 T.near(get(FCU .. "flap_pos"), 25, 1e-6, "lever 25 (the panels at 22 degrees): 25")
 T.equal(get(WARNING, 2), 1, "flaps 25: CONFIG FLAPS")
-for i = 0, 3 do rt:set("laminar/B747/engines/display_N1", i, 0) end
 rt:set("laminar/B747/airspeed/V1", 0)
+frames(0.2)
+T.equal(get(WARNING, 2), 1, "no V1: still armed (ATA31 p.188)")
+rt:set("laminar/B747/engines/display_N1", 1, 30)
+frames(9)
+T.equal(get(WARNING, 2), 1, "the takeoff thrust gone: CONFIG FLAPS stays 10 s (ATA27 p.730)")
+frames(1.5)
+T.equal(get(WARNING, 2), 0, "10 s after: gone")
+rt:set("laminar/B747/engines/display_N1", 1, 0)
 
 -- an air start: the stabilizer for level flight at the speed (estimate:
 -- 3.78 + 154,400 / IAS^2 units, 4.5 to 7.5), not the 7.5 units of before

@@ -1,0 +1,62 @@
+{
+  "name": "s225_takeoff_config",
+  "description": "WARN-11（離陸形態警報）の X-Plane での確認、地上。RJAA 34L でエンジン運転中に始め、FMC の V1 なし（999）、フラップ 10、パーキング・ブレーキをかけたまま推力を上げる。エンジン 2・3 の N1 が 66.5（P&W）を超えると CONFIG PARK BRK（前は N1 90 で、エンジン 2 か 3）、推力を戻すと 10 秒残って消える（ATA27 p.730）。フラップ 25 で CONFIG FLAPS、エンジン 3 だけの推力でも出る（2 か 3：FCOM p.1603）、スピードブレーキ ARM で CONFIG SPOILERS。主 EICAS を撮る。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 10 },
+    { "do": "set", "note": "パーキング・ブレーキ", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
+    { "do": "set", "note": "V1 なし（FMC の 999）", "dref": "laminar/B747/airspeed/V1", "value": 999 },
+    { "do": "set", "note": "フラップ 10", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.5 },
+    { "do": "wait", "note": "フラップ 10、前縁も展開", "dref": "laminar/B747/flt_ctrls/flap/transition_status", "op": "==", "value": 0, "timeout": 40 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "アイドル：離陸形態警報なし", "dref": "laminar/B747/CAS/warning_status[5]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "推力を上げる（パーキング・ブレーキのまま）" },
+    { "do": "set", "note": "推力レバー 4 本を 0.6", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0.6 },
+    { "do": "wait", "note": "エンジン 2 の N1 が 66.5 を超えて CONFIG PARK BRK（ATA27 p.730、V1 なしでも：ATA31 p.188）", "dref": "laminar/B747/CAS/warning_status[5]", "op": "==", "value": 1, "timeout": 30 },
+    { "do": "snapshot", "note": "N1", "drefs": [ "laminar/B747/engines/display_N1[1]", "laminar/B747/engines/display_N1[2]", "laminar/B747/airspeed/V1", "laminar/B747/gear/air_ground/pri_gnd" ] },
+    { "do": "check", "note": "CONFIG FLAPS は出ない（フラップ 10）", "dref": "laminar/B747/CAS/warning_status[2]", "op": "==", "value": 0 },
+    { "do": "cas", "note": "CONFIG PARK BRK" },
+    { "do": "set", "note": "推力レバーをアイドル", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
+    { "do": "wait", "note": "N1 が下がる", "dref": "laminar/B747/engines/display_N1[1]", "op": "<", "value": 60, "timeout": 20 },
+    { "do": "sleep", "seconds": 4 },
+    { "do": "check", "note": "推力を戻しても 10 秒は残る（ATA27 p.730）", "dref": "laminar/B747/CAS/warning_status[5]", "op": "==", "value": 1 },
+    { "do": "wait", "note": "10 秒で消える", "dref": "laminar/B747/CAS/warning_status[5]", "op": "==", "value": 0, "timeout": 9 },
+
+    { "do": "mark", "note": "フラップ 25、エンジン 3 だけ推力" },
+    { "do": "set", "note": "フラップ 25", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.833333 },
+    { "do": "wait", "note": "フラップ 25", "dref": "laminar/B747/flt_ctrls/flap/transition_status", "op": "==", "value": 0, "timeout": 40 },
+    { "do": "set", "note": "エンジン 3 の推力レバーだけ 0.6", "dref": "sim/cockpit2/engine/actuators/throttle_ratio[2]", "value": 0.6 },
+    { "do": "wait", "note": "エンジン 3 だけで CONFIG FLAPS（2 か 3：FCOM p.1603）", "dref": "laminar/B747/CAS/warning_status[2]", "op": "==", "value": 1, "timeout": 30 },
+    { "do": "check", "note": "パーキング・ブレーキもまだ：CONFIG PARK BRK", "dref": "laminar/B747/CAS/warning_status[5]", "op": "==", "value": 1 },
+    { "do": "check", "note": "エンジン 2 はアイドルのまま", "dref": "laminar/B747/engines/display_N1[1]", "op": "<", "value": 60 },
+    { "do": "cmd", "note": "スピードブレーキのレバーを 1 段（DN から ARM）", "name": "sim/flight_controls/speed_brakes_down_one" },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "スピードブレーキが DOWN でない：CONFIG SPOILERS（FCOM p.1604）", "dref": "laminar/B747/CAS/warning_status[6]", "op": "==", "value": 1 },
+    { "do": "cas", "note": "3 つの形態警報" },
+    { "do": "view", "note": "主 EICAS", "the": -18, "psi": 29, "fov": 16 },
+    { "do": "shot", "name": "eicas_takeoff_config" },
+    { "do": "cmd", "note": "スピードブレーキのレバーを DN", "name": "sim/flight_controls/speed_brakes_up_all" },
+    { "do": "set", "note": "フラップ 10", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.5 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "形態を直すとすぐ消える：CONFIG SPOILERS", "dref": "laminar/B747/CAS/warning_status[6]", "op": "==", "value": 0 },
+    { "do": "set", "note": "推力レバーをアイドル", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
+    { "do": "view", "name": "forward" },
+    { "do": "record_stop" }
+  ]
+}
