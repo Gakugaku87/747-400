@@ -177,4 +177,34 @@ do
     T.check(a.pass_on_status == b.pass_on_status, "20 and 60 fps: the same STATUS")
 end
 
+-- (2026-11-04) a leaking cylinder (the failure window, notes/ATA-35.md
+-- §11): full to empty in M.LEAK_S, >CREW OXY LOW at 500 psi, empty the
+-- masks give nothing (the crew feel the cabin); repaired, full again
+do
+    local s, inp = M.new(), M.inputs()
+    inp.cabin_alt_ft = 8000
+    inp.crew_leak = true
+    local t500 = (1850 - 500) / 1850 * M.LEAK_S
+    local out = run(s, inp, t500 - 2)
+    T.check(not out.crew_low_alert, "just above 500 psi: no >CREW OXY LOW")
+    out = run(s, inp, 3)
+    T.check(out.crew_low_alert, "500 psi: >CREW OXY LOW")
+    T.near(out.pass_psi, 1850, 0.5, "only the crew cylinder leaks")
+    out = run(s, inp, M.LEAK_S)
+    T.equal(out.crew_psi, 0, "empty")
+    inp.crew_masks = true
+    out = run(s, inp, 0.1)
+    T.check(not out.crew_flow and out.felt_alt_ft == 8000, "empty: the masks give nothing")
+    inp.crew_leak, inp.crew_masks = false, false
+    out = run(s, inp, 0.1)
+    T.near(out.crew_psi, 1850, 0.5, "repaired: a full crew cylinder")
+    T.check(not out.crew_low_alert, "repaired: no >CREW OXY LOW")
+    inp.pass_leak = true
+    out = run(s, inp, M.LEAK_S / 2)
+    T.near(out.pass_psi, 925, 2, "the passenger cylinders: half in half the time")
+    inp.pass_leak = false
+    out = run(s, inp, 0.1)
+    T.near(out.pass_psi, 1850, 0.5, "repaired: full")
+end
+
 T.done()

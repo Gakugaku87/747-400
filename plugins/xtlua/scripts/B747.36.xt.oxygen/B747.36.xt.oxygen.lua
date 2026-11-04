@@ -67,6 +67,8 @@ B747DR_oxy_therap_sw_pos            = deferred_dataref("laminar/B747/oxygen/ther
 B747DR_oxy_crew_mask_on             = deferred_dataref("laminar/B747/oxygen/crew_mask_on", "number")
 B747DR_oxy_pass_on                  = deferred_dataref("laminar/B747/oxygen/pass_oxy_on", "number")
 B747DR_oxy_therap_on                = deferred_dataref("laminar/B747/oxygen/therap_oxy_on", "number")
+B747DR_oxy_fail_crew_leak           = deferred_dataref("laminar/B747/oxygen/fail/crew_leak", "number")
+B747DR_oxy_fail_pass_leak           = deferred_dataref("laminar/B747/oxygen/fail/pass_leak", "number")
 
 
 --*************************************************************************************--
@@ -166,6 +168,8 @@ local function read_inputs(inp)
         or B747DR_oxy_elec_dc[3] > 0.5
     inp.cylinder_c = B747DR_oxy_cargo_temp[0]   -- the cylinders are in the forward cargo compartment
     inp.pass_failed_on = simDR_fail_pass_o2_on == 6
+    inp.crew_leak = B747DR_oxy_fail_crew_leak > 0.5
+    inp.pass_leak = B747DR_oxy_fail_pass_leak > 0.5
 end
 
 -- datarefs: read first, write when different (TESTING.md §1.2)
