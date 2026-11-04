@@ -482,6 +482,10 @@ B747DR_airspeed_Vs                              = deferred_dataref("laminar/B747
 -- the minimum maneuvering speed (5-2 step 3b; Vmc keeps the old formula for
 -- the AFDS, A/T and VNAV speed floors until their rebuild)
 B747DR_airspeed_Vminm                           = deferred_dataref("laminar/B747/airspeed/Vminm", "number")
+-- the stick shaker (1 on), from the minimum speed model: the sound's
+-- (fmod/747-400*.snd) condition. X-Plane's own stall warning goes by the
+-- acf's angle of attack and fought the plugin's (2026-11-04, notes/ATA-31.md §44)
+B747DR_stick_shaker                             = deferred_dataref("laminar/B747/warning/stick_shaker", "number")
 -- the speed tape's bands minus each PFD's airspeed, kt (5-2 step 3b): [0]
 -- the minimum speed, [1] the minimum maneuvering speed, [2] the maximum
 -- maneuvering speed, [3] the maximum speed; the panel's band groups stay put

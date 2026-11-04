@@ -51,6 +51,10 @@ B747DR_spd_mnvr_margin          = find_dataref("laminar/B747/fms/mnvr_margin")
 -- (6-1/6-2 step 3d) the FMC's VREF 25 (B747.68.xt.fms.lua): kept until
 -- it has worked one out
 B747DR_spd_fms_vref25           = find_dataref("laminar/B747/fms/vref25")
+-- the stick shaker for its sound (fmod/747-400*.snd; notes/ATA-31.md §44):
+-- X-Plane's own stall warning (sim/cockpit2/annunciators/stall_warning, by
+-- the acf's 15 degrees of angle of attack) fought the plugin's write
+B747DR_spd_stick_shaker         = find_dataref("laminar/B747/warning/stick_shaker")
 -- VR shows "R" within 4 kt of V1 (FCOM p.972)
 local VR_R_KT = 4
 
@@ -131,6 +135,7 @@ function B747_speedtape()
     tape_put(B747DR_spd_tape_fo, B747DR_spd_ias_fo, ms.vss, ms.vmin_man, ms.vmax_man, B747DR_airspeed_Vmax)
     v = flag(ms.shaker)
     if simDR_stall_warning ~= v then simDR_stall_warning = v end
+    if B747DR_spd_stick_shaker ~= v then B747DR_spd_stick_shaker = v end
     v = flag(ms.airspeed_low)
     if B747DR_CAS_caution_status[0] ~= v then B747DR_CAS_caution_status[0] = v end
     if B747DR_airspeed_window_min ~= v then B747DR_airspeed_window_min = v end

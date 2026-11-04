@@ -755,3 +755,19 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - 前の作り：PLAN の記号（経路の点、空港）の方位に磁気偏差を足し、磁北を上にしていた（X-Plane の PLN の地図が描く経路の線に合わせていた）。
 - 直したこと（`B747.61.xt.nd.lua` の `nd_bearing`）：PLAN の記号の方位は真方位のまま（真北が上）。経路の線は FMS ブリッジが同じ投影で描く（notes/ATA-34-61-FMC.md §132）ので、X-Plane の地図に合わせる必要は無くなった。PLAN の機体の記号（FCOM p.1147：位置と航跡）も FMS ブリッジが描く。PLAN では X-Plane の地図を出さない（FCOM p.1039：PLN では気象レーダーと TCAS を出さない。X-Plane の地図は目的地を中心に自機の記号を描いていた：カスタム acf のパネル、ACF_DIFF.md §5）。
 - 試験：`nd_line_view_test`（PLAN の上は真北の 0°）。X-Plane：`s219_nd_route_line` の PLAN の写真で、線が SAKVA・ATVID・MIBIB・OGABA の星を通る。
+
+## 44. 速度の警報とスティックシェーカーの音（2026-11-04：利用者の質問）
+
+- 利用者の質問：「赤テープ速度域に入っても一切警報が鳴っていないのは正常？」「フラップ出してる状態で赤帯入っても鳴らないんや」。
+- 資料：
+  - 上の赤と黒の帯（最大速度）は Vmo/Mmo・脚を出した制限速度・フラップの制限速度のどれか（FCOM p.673、p.675：A/T と AFDS の速度保護も同じ 3 つで、FMC は 5 kt の余裕を取る）。
+  - OVERSPEED（警告、サイレン）は Vmo/Mmo を越えたときだけ（FCOM p.1557、p.1605）。109 の SB 前はサイレンをリセットできない（p.1551）。フラップや脚の制限速度を越えても警報は無い。
+  - フラップ 25・30 で制限速度を越えると、FCU のロードリリーフがフラップを 20 まで（30 は 25、さらに 20）戻し、>FLAP RELIEF（advisory、音なし）。速さが下がると選んだ位置に戻る（FCOM p.954、p.957）。前からある（FCTL、`B747.45.fcu_model.lua`）。
+  - 下の赤と黒の帯はスティックシェーカーの速さ。失速警報はシェーカー（とそのガタガタの音）だけで、その手前の琥珀の帯で AIRSPEED LOW（caution、beeper：FCOM p.1556）。
+- X-Plane で確かめたこと（`s227` の 1 回目）：OVERSPEED は 367 kt で出てサイレンの音の条件（`laminar/B747/warning/warning_siren`）も立ち、360 kt を切ると消えた。シェーカーの瞬間に、.snd の音の条件の `sim/cockpit2/annunciators/stall_warning`（X-Plane が自分で計算する。読み取り専用）が 1 と 0 にちらついた。カスタム acf の失速警報は迎え角 15°（`_stall_warn_aoa`）で、この機体のシェーカー（最小速度のモデル、§14）は迎え角 14° 付近で立つ。プラグインが書く `sim/flightmodel/failures/stallwarning` を X-Plane が自分の判定で書き直すため、とみる。
+- 直したこと：
+  - 新しい `laminar/B747/warning/stick_shaker`（1 で鳴る。速度テープのグルー `B747.60.xt.speedtape.lua` が最小速度のモデルのシェーカーから書く）。X-Plane の失速警報にも今までどおり書く。
+  - .snd（`fmod/747-400_custom.snd` と手元の `747-400.snd`。警報音の結線は PLAN §3 の承認の範囲）の stall と stall_end の音の条件を、`sim/cockpit2/annunciators/stall_warning` からこれに替えた。前の 2 つは `D:\747-400-local-assets\backup_20261104_stick_shaker\`。
+  - 3D の操縦輪にシェーカーの動きは無い（操縦室の OBJ に無い）。
+- 試験：`speedtape_module_test` 49（シェーカーの 5 か所で音の条件も見る）。X-Plane：新しい `s227_speed_warnings`（Vmo の超過、フラップ 20 の制限での帯（A/T を切って手で推力）、レバー 25 のロードリリーフ、シェーカーの音の条件が 3 秒ちらつかない）。
+- X-Plane（カスタム acf、2026-11-04）：`s227_speed_warnings` 23/23。OVERSPEED は 367 kt で出てサイレンの条件も立ち、360 kt を切ると消えた。フラップ 20・236.7 kt（帯の下端 230 kt）で OVERSPEED もサイレンも出ない（A/T の SPD は制限を越えないので、A/T を切って手で推力）。レバー 25 を 220 kt で選ぶとフラップは 20 のままで >FLAP RELIEF、195 kt を切ると 25 まで出て消えた。シェーカーの音の条件は 3 秒ずっと 1（迎え角 16.7°、125 kt、帯の上端 129 kt）。PFD の写真 3 枚。音そのものは耳で確かめていない。Log.txt に Lua の誤りなし。
