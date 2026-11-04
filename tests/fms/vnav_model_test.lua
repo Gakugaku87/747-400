@@ -601,4 +601,24 @@ do
     o = V.update(sA, inp{alt = 20000, mcp_alt = 3000, path = pathL, d_ed = 90, gs = 400})
     T.equal(o.cas, 290, "above it: the descent's 290 kt")
 end
+
+-- (2026-11-05) the climb's target constraint (V.clb_target): kept through
+-- a level-off's overshoot while its waypoint is ahead (FCOM p.1255: VNAV
+-- PTH remains within the constraints; s253: the GE 104 ft over FL090B short
+-- of OR390 took FL110 as the target and climbed on to the MCP's 15,000 ft)
+do
+    local OR390, OR414 = {ident = "OR390"}, {ident = "OR414"}
+    local passed = {}
+    local function was(p) return passed[p] == true end
+    local list = {{a = 9000, p = OR390}, {a = 11000, p = OR414}}
+    T.equal(V.clb_target(list, 7000, 35000, was), 9000, "7,000 ft: FL090 at OR390")
+    T.equal(V.clb_target(list, 9104, 35000, was), 9000, "104 ft over it, OR390 ahead: still FL090 (before: FL110)")
+    T.equal(V.clb_target(list, 9000 + V.CLB_HOLD_FT - 10, 35000, was), 9000, "290 ft over: still FL090")
+    T.equal(V.clb_target(list, 9500, 35000, was), 11000, "500 ft over: taken as missed, FL110 (as before; estimate)")
+    passed[OR390] = true
+    T.equal(V.clb_target(list, 9000, 35000, was), 11000, "OR390 passed: FL110")
+    T.equal(V.clb_target({{a = 9000}, {a = 11000}}, 9104, 35000, was), 11000, "no waypoint: 100 ft over, the next (as before)")
+    T.equal(V.clb_target(list, 9000, 10000, was), nil, "FL110 not under CRZ ALT 10,000: none")
+    T.equal(V.clb_target({}, 9000, 35000, was), nil, "no constraint: none")
+end
 T.done()

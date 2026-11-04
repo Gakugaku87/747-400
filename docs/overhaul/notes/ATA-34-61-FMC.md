@@ -2346,3 +2346,12 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - シムの便利機能のオートステップクライム（§126）は、この STEP TO と NOW で動く。
 - 試験：`route_model_test` 264、`legs_pages_test` 72、`pred_model_test` 101、`vnav_pages_test` 84。
 - X-Plane（カスタム acf、2026-11-05）：新しい `s252_legs_planned_step` 23/23（FL310 で成田の東から空中開始、約 60 NM 東の緯度経度の地点へ DIRECT、LNAV・VNAV PTH）。LEGS の 1R に 290S（CRZ ALT の下）と 250/370S は INVALID ENTRY、350S で MOD、EXEC の後も `N35E141 /FL350S`（予測の .839 が小さい字で横に）、次の地点の予測は FL350（写真）。CRZ のページは STEP TO FL350、AT `0107z/ 45NM`（写真）。Auto step climb を ON にすると、地点の 0.9 NM 手前で MCP が 35,000 ft、CRZ ALT が FL350、VNAV SPD の巡航上昇で上がり始めた。1 回目は「CRZ ALT の下」のつもりの 330S が FL310 の上で受け付けられ、試験の誤りで 22/23 だった。
+
+## 147. 上昇の高度制限を、オーバーシュートで次へ送らない（2026-11-05：利用者の報告「FAOR 03L から EXOB1C で LNAV/VNAV がめちゃめちゃ」）
+
+- 再現：利用者の機体は GE（South African Airways ZS-SBK）だった。PW の `s251_faor_exob1c` 33/33 では崩れなかったが、GE のリバリー（Qantas VH-OEJ、CF6-80C2）の新しい `s253_faor_exob1c_ge` で、EXOB1C の OR390 の「FL090B」（以下）の手前で FL090 を越えて 15,000 ft（MCP）まで上がった（31/33）。
+- 記録（`session.csv`）：GE は推力が大きく、約 3,600 fpm で上がりながら 7,900 ft で VNAV PTH の捕捉に入り、9,000 ft を越えて 9,104 ft になったところで FMA が VNAV PTH から VNAV SPD（THR REF）に変わり、上がり続けた。PW は約 60 ft の行き過ぎで 9,000 ft に留まった。
+- 原因（`B747.68.xt.fms.lua`）：上昇の目標の高度制限を「機体の高度 −100 ft より上の最初のもの」で選んでいた。100 ft を越えて行き過ぎると、OR390 の手前でも FL090 を通過したものとして次の FL110 を目標にし、AFDS は FMC の目標が動いたので VNAV PTH の水平を外した。FCOM p.1255：VNAV は VNAV PTH で出発や地点の制限の内に留まる。
+- 直したこと：`B747.68.vnav_model.lua` の `clb_target`。上昇の制限（AT・AT OR BELOW・ブロックの上）を地点つきで持ち、その地点を過ぎる（順送り）まで、機体の 300 ft 下までは目標のまま（`CLB_HOLD_FT`：捕捉の行き過ぎの幅。推定）。それより下に離れたら前と同じく次へ。地点の無い制限は前と同じ 100 ft。目標が動かないので、AFDS の VNAV PTH の高度保持が 9,000 ft に戻す。
+- 試験：`vnav_model_test` 200（9,104 ft でも FL090、290 ft 上まで、500 ft 上は FL110、OR390 を過ぎたら FL110、地点なしは 100 ft、CRZ ALT の上は無し）。
+- X-Plane（カスタム acf、2026-11-05）：`s253_faor_exob1c_ge` 33/33（直す前は 31/33）。捕捉の行き過ぎは今も最大 9,141 ft（VNAV PTH のまま）あるが、目標が FL090 のままなので 9,000 ft に戻り、旋回の後から OR390 までは 8,996〜9,023 ft、OR390 で VNAV SPD に戻って上昇し、15,000 ft（MCP）で VNAV ALT。PW の `s251_faor_exob1c` も 33/33（OR390 まで 8,995〜9,010 ft）。GE の捕捉の行き過ぎ（PW の約 2 倍）は AFDS の捕捉の則の課題として残る。
