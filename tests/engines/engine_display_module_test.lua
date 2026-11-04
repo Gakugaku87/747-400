@@ -169,4 +169,16 @@ T.equal(rt:get(ENG .. "oil_qty_magenta", 2), 0, "CF6: engine 3 white")
 v = rt:get(ENG .. "vib_source", 0)
 T.check(v >= 2 and v <= 4, "CF6: vibration label FAN, LPT or N2 (" .. v .. ")")
 
+-- (2026-11-04) the scavenge oil filter (laminar/B747/engines/fail/oil_filter;
+-- notes/ATA-70-80.md §11): the CF6's ENG 3 OIL FILT (advisory 326) and its
+-- STATUS (144)
+rt:set(ENG .. "fail/oil_filter", 2, 1)
+frames(0.2)
+T.equal(rt:get(ADV, 326), 1, "CF6 filter clogging: ENG 3 OIL FILT")
+T.equal(rt:get("laminar/B747/CAS/status_status", 144), 1, "CF6 filter clogging: STATUS ENG 3 OIL FILT")
+T.equal(rt:get(ADV, 324), 0, "no ENG 1 OIL FILT")
+rt:set(ENG .. "fail/oil_filter", 2, 0)
+frames(0.2)
+T.equal(rt:get(ADV, 326) + rt:get("laminar/B747/CAS/status_status", 144), 0, "repaired: no OIL FILT")
+
 T.done()
