@@ -197,4 +197,14 @@ frames(1)
 rt:command("laminar/B747/air/ground_air/connect", 0.1)
 frames(1)
 T.equal(get(AIR .. "ground_air/connected"), 0, "the command again: removed")
+
+-- (2026-11-04) a start valve failed open (laminar/B747/air/fail/
+-- start_valve_open; notes/ATA-36.md §12): engine 2's valve opens with no
+-- start (the engines' STARTER CUTOUT reads it)
+rt:set(AIR .. "fail/start_valve_open", 1, 1)
+frames(3)
+T.equal(get(AIR .. "engine2/bleed_start_valve_pos"), 1, "start valve 2 failed open: open")
+rt:set(AIR .. "fail/start_valve_open", 1, 0)
+frames(3)
+T.equal(get(AIR .. "engine2/bleed_start_valve_pos"), 0, "repaired: closed")
 T.done()

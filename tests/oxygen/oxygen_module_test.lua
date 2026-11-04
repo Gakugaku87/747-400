@@ -169,6 +169,23 @@ frames(0.1)
 T.equal(get(OXY .. "crew_press_psi"), 1850, "new flight: crew cylinder full")
 T.equal(get(OXY .. "crew_mask_on"), 0, "new flight: masks stowed")
 
+-- (2026-11-04) the cylinders leak (the failure window, notes/ATA-35.md
+-- §11): the crew cylinder at 500 psi in about 3 min 40 s, >CREW OXY LOW;
+-- the passenger cylinders' pressure falls; repaired, full cylinders
+rt:set(OXY .. "fail/crew_leak", 1)
+rt:set(OXY .. "fail/pass_leak", 1)
+frames(200)
+T.equal(get(ADVISORY, 53), 0, "200 s: no >CREW OXY LOW yet")
+T.check(get(OXY .. "pass_press_psi") < 700, "200 s: the passenger cylinders below 700 psi")
+frames(30)
+T.equal(get(ADVISORY, 53), 1, "the crew cylinder leaked: >CREW OXY LOW")
+rt:set(OXY .. "fail/crew_leak", 0)
+rt:set(OXY .. "fail/pass_leak", 0)
+frames(0.2)
+T.equal(get(ADVISORY, 53), 0, "repaired: no >CREW OXY LOW")
+T.equal(get(OXY .. "crew_press_psi"), 1850, "repaired: a full crew cylinder")
+T.equal(get(OXY .. "pass_press_psi"), 1850, "repaired: full passenger cylinders")
+
 -- every X-Plane dataref the oxygen module wrote is writable (DataRefs.txt;
 -- the lighting module's own writes are not checked here)
 local writable = {}

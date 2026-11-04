@@ -38,6 +38,10 @@ B747DR_oxy_crew_mask_on             = deferred_dataref("laminar/B747/oxygen/crew
 -- the passenger and therapeutic oxygen actuated (1; the lighting module's signs read it)
 B747DR_oxy_pass_on                  = deferred_dataref("laminar/B747/oxygen/pass_oxy_on", "number")
 B747DR_oxy_therap_on                = deferred_dataref("laminar/B747/oxygen/therap_oxy_on", "number")
+-- (2026-11-04) the failure window's (notes/ATA-35.md §11): the crew and the
+-- passenger cylinders leak (1)
+B747DR_oxy_fail_crew_leak           = deferred_dataref("laminar/B747/oxygen/fail/crew_leak", "number")
+B747DR_oxy_fail_pass_leak           = deferred_dataref("laminar/B747/oxygen/fail/pass_leak", "number")
 
 B747CMD_oxy_pass_sw_on              = deferred_command("laminar/B747/oxygen/pass_oxy_sw_on", "Passenger Oxygen Switch ON (hold)", B747_oxy_pass_sw_on_CMDhandler)
 B747CMD_oxy_pass_sw_reset           = deferred_command("laminar/B747/oxygen/pass_oxy_sw_reset", "Passenger Oxygen Switch RESET (hold)", B747_oxy_pass_sw_reset_CMDhandler)

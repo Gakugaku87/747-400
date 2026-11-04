@@ -735,3 +735,12 @@
 - パネル（道具 `docs/overhaul/tools/panel_nd_wxr.lua`。ACF_DIFF.md §5）：各 ND の 2 行の青の文字の表示条件を `wxr_color[0]`・`[1]` が 1 に、同じ位置に琥珀の写し（`wxr_color` が 2）、チルトの 20 px 下に 3 行目（青と琥珀）。
 - 試験：モデル 80 件（故障の源と WXR FAIL、TEST、WEAK と ATT、CAL と VAR）、モジュール 67 件。X-Plane の新しいシナリオ `s50_wxr_faults`（30/30）：WX のモードとチルトの青、MAP の CAL と VAR、アンテナの故障で WXR FAIL（琥珀、反射なし：故障を入れた直後は前の走査の画が少し残る）と TEST の ANT、操作盤の故障で WXR FAIL、ゲイン制御の故障で WEAK、IRU L の故障で ATT（WEAK が先）、X-Plane のレーダーの故障で WXR FAIL とパネルの灯の消灯。ND を撮った。外から見た写真で機体の見た目が変わらないことを確かめた。Log.txt に Lua の誤りなし。
 - 残り：WXR RANGE DISAGREE・MAP/WXR RANGE DISAGREE・RSTR INOP（§3.11）、PWS、ND ごとの交互の更新。
+
+## 22. ILS アンテナの切替の故障（2026-11-04：故障の窓のため）
+
+- 新しいモデル `B747.34.ils_ant_model.lua` とグルー `B747.34.xt.ils.lua`（航法のモジュールが読む）。新しい dataref（1 で故障。init `B747.34.nav`）：`laminar/B747/ils/fail/loc_antenna[3]`・`fail/gs_antenna[3]`（受信機 L・C・R の VOR/LOC と G/S の relay が動かない）。
+- relay の指令（ATA34_1 p.482–492）：VOR/LOC の relay は、空中で FCC が APP/LOC でないとき尾翼の VOR アンテナ、それ以外は機首の LOC アンテナ。G/S の relay は、前脚が down & locked でないとき capture アンテナ、down & locked で track アンテナ。FCC の APP/LOC は FMA（LOC の arm か engage、ROLLOUT）で、3 台の FCC に同じ（シムの AFDS は 1 つ：推定）。
+- EIU は relay の位置と指令を比べ、食い違えば STATUS LOC ANTENNA L/C/R・G/S ANTENNA L/C/R（新しい 148〜153）、同じ種類で 2 つ以上なら ILS ANTENNA（caution 47、beeper）（ATA34_1 p.478、FCOM p.1429）。固着した relay はその位置のままなので、巡航で入れると、進入で LOC を arm するか脚を下ろしたときに出る。
+- 受信機はもう一方のアンテナで受け続ける。どれだけ悪くなるかは資料に無いので、信号には何もしない（推定）。
+- 試験：新しい回帰 `ils_ant_model_test`（18 件）、`ils_ant_module_test`（21 件）。
+- X-Plane（カスタム acf、2026-11-04）：新しい `s248_ils_antenna` 15/15（成田の南東 3,000 ft の空中：G/S の relay L・C と LOC の relay R を固着させても、脚上げのままでは何も出ない。脚を下ろすと前脚の down & locked（16 秒）で STATUS G/S ANTENNA L・C と caution ILS ANTENNA、LOC を押すと STATUS LOC ANTENNA R、直すと消える。主 EICAS の写真）。Log.txt に Lua の誤りなし。

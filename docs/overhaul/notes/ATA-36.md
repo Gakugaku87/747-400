@@ -334,3 +334,12 @@ ACF_DIFF.md との関係: 抽気に関わる acf 値（`_has_full_bleed_air`、`
 - APU とエンジンが止まっていてダクトに空気があれば ECS synoptic の EXT AIR（前からの論理：FCOM p.578）。
 - 試験：`bleed_module_test` 69（コマンドでつなぐ、APU とエンジンなしでダクトに空気と EXT AIR、動くと外れる、もう一度で外す）。
 - X-Plane（カスタム acf、2026-11-04）：新しい `s238_ground_air` 19/19（成田でエンジン運転中：CDU の MENU → GND HANDLING → GROUND SERVICES の R3 に GROUND AIR の CONNECT>、押すとつながり REMOVE>。ENGINE BLEED を 4 つとも切ると、3 パックのままでは空気車の出せる量いっぱいで 28 psi、FCOM p.184 のとおりパックを 1 つにすると 35.8 psi（始動に要る 30 psi 以上）。R3 で外すとダクトが空。CDU の写真）、回帰の `s05_bleed` 64/64。Log.txt に Lua の誤りなし。
+
+## 12. start valve の固着（2026-11-04：故障の窓のため）
+
+- 新しい dataref（1 で故障。init `B747.55.air`）：`laminar/B747/air/fail/start_valve_open[4]`（開のまま）、`fail/start_valve_closed[4]`（閉のまま。両方なら閉）。
+- 抽気のモデル（`B747.55.bleed_model.lua`）が、指令の代わりに弁の位置を決める。始動のモデルは弁の位置を読むので、前からの論理がそのまま働く：
+  - 開のまま：エンジンが回った後も starter に空気が流れる。N2 54 % 超が 5 秒で STARTER CUTOUT n（caution）、指令との不一致 8 秒で ENG n START VLV（advisory）（ATA70_80 p.558–559）。
+  - 閉のまま：始動で starter に空気が来ず、エンジンが回らない。8 秒で ENG n START VLV。
+- 試験：`bleed_fail_test` 61、`bleed_module_test` 71（`engine2/bleed_start_valve_pos` が 1）。
+- X-Plane（カスタム acf、2026-11-04）：`s247_failures_more` 38/38（エンジン運転中に start valve 3 の開固着：5.4 秒で STARTER CUTOUT 3、そのあと ENG 3 START VLV。`engine3/bleed_start_valve_pos` は 1）。Log.txt に Lua の誤りなし。

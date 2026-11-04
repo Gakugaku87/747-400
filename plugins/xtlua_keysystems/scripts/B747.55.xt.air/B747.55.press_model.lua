@@ -155,6 +155,9 @@ function M.inputs()
         depres_slow = false,            -- X-Plane's decompression failures
         depres_fast = false,
         cpc_failed = {false, false},    -- failure: CPC A, B
+        -- (2026-11-04) failures for the failure window (notes/ATA-21.md §11)
+        auto_failed = {false, false},   -- the outflow valve L, R's automatic (AC) drive
+        relief_failed = {false, false}, -- the positive relief valve UPR, LWR stuck open
     }
 end
 
@@ -172,6 +175,7 @@ function M.new()
         active = 1, ldg_ft = M.LDG_DEFAULT_FT, ldg_fmc = false, ldg_shown = true, relief_open = false,
         neg_relief_open = false, cruise_clamp = false, limiter = false,
         cabin_alert = false, auto_alert = false, outflow_alert = {false, false},
+        relief_valve = {false, false},
         ldg_alert = false, relief_alert = false, cpc_alert = {false, false}}
     return s
 end
@@ -185,18 +189,21 @@ local function cruise_cabin(crz_ft, p_floor)
 end
 
 -- the cabin's net outflow (kg/s) at cabin pressure pc, with the valves at
--- their areas, the leaks and the relief valves; the relief areas come back
+-- their areas, the leaks and the relief valves (stuck_m2: the relief
+-- valves stuck open, at least that much open); the relief areas come back
 -- in rel (positive, negative)
-local function outflow(pc, pa, valve_m2, leak_m2, extra, rel)
+local function outflow(pc, pa, valve_m2, leak_m2, extra, rel, stuck_m2)
     local dp = pc - pa
     local pos = M.RELIEF_M2 * clamp((dp - M.RELIEF_DP) / M.RELIEF_FULL_DP, 0, 1)
+    if rel then rel[3] = pos end
+    if stuck_m2 and stuck_m2 > pos then pos = stuck_m2 end
     local neg = M.NEG_RELIEF_M2 * clamp((-dp - M.NEG_RELIEF_DP[1]) / (M.NEG_RELIEF_DP[2] - M.NEG_RELIEF_DP[1]), 0, 1)
     if rel then rel[1], rel[2] = pos, neg end
     if dp <= 0 then extra = 0 end
     return orifice(valve_m2 + leak_m2 + pos + neg, pc, pa) + extra
 end
 
-local relief = {0, 0}
+local relief = {0, 0, 0}     -- positive, negative, positive without the stuck valves
 
 function M.update(s, inp, dt)
     local out = s.out
@@ -383,6 +390,10 @@ function M.update(s, inp, dt)
     if inp.depres_slow then leak_m2 = leak_m2 + M.DEPRES_SLOW_M2 end
     if inp.depres_fast then leak_m2 = leak_m2 + M.DEPRES_FAST_M2 end
     local m_in = inp.pack_flow * M.PACK_KG_S
+    -- (2026-11-04) a positive relief valve stuck open (the failure window,
+    -- notes/ATA-21.md §11): half the two valves' area each (estimate)
+    local stuck_m2 = 0
+    for v = 1, 2 do if inp.relief_failed[v] then stuck_m2 = stuck_m2 + M.RELIEF_M2 / 2 end end
     local man_m2, n_auto = 0, 0
     for v = 1, 2 do
         s.man_on[v] = inp.bat and inp.man[v]
@@ -390,6 +401,11 @@ function M.update(s, inp, dt)
             if inp.apu_hot_bat and inp.man_cmd ~= 0 then
                 s.valve[v] = travel(s.valve[v], inp.man_cmd > 0 and 1 or 0, M.MAN_TRAVEL_S, dt)
             end
+            man_m2 = man_m2 + s.valve[v] * M.VALVE_M2
+        elseif inp.auto_failed[v] then
+            -- (2026-11-04) its automatic drive failed (the failure window,
+            -- notes/ATA-21.md §11): it stays where it is, the other valve
+            -- works around it (OUTFLOW VLV; MAN, the DC motor, still drives it)
             man_m2 = man_m2 + s.valve[v] * M.VALVE_M2
         else
             n_auto = n_auto + 1
@@ -404,13 +420,13 @@ function M.update(s, inp, dt)
         else
             -- the outflow the rate needs, less what goes out elsewhere, over
             -- what one square metre of valve passes
-            local need = m_in - vol * want_rate * PSI - outflow(s.p_cab, pa, man_m2, leak_m2, inp.extra_out_kg_s)
+            local need = m_in - vol * want_rate * PSI - outflow(s.p_cab, pa, man_m2, leak_m2, inp.extra_out_kg_s, nil, stuck_m2)
             local per_m2 = orifice(1, s.p_cab, pa)
             if math.abs(per_m2) < 1e-6 then pos = (need > 0) and 1 or 0
             else pos = clamp(need / per_m2 / (n_auto * M.VALVE_M2), 0, 1) end
         end
         for v = 1, 2 do
-            if not s.man_on[v] then
+            if not s.man_on[v] and not inp.auto_failed[v] then
                 if s.first then s.valve[v] = pos else s.valve[v] = travel(s.valve[v], pos, M.AUTO_TRAVEL_S, dt) end
             end
         end
@@ -426,13 +442,16 @@ function M.update(s, inp, dt)
     local lo, hi = math.min(p_old, pa) - 1.5, math.max(p_old, pa) + 1.5
     for _ = 1, 30 do
         local mid = 0.5 * (lo + hi)
-        local f = mid - p_old - k * (m_in - outflow(mid, pa, valve_m2, leak_m2, inp.extra_out_kg_s))
+        local f = mid - p_old - k * (m_in - outflow(mid, pa, valve_m2, leak_m2, inp.extra_out_kg_s, nil, stuck_m2))
         if f > 0 then hi = mid else lo = mid end
     end
     s.p_cab = 0.5 * (lo + hi)
-    outflow(s.p_cab, pa, valve_m2, leak_m2, inp.extra_out_kg_s, relief)
+    outflow(s.p_cab, pa, valve_m2, leak_m2, inp.extra_out_kg_s, relief, stuck_m2)
     out.relief_open = relief[1] > 0
     out.neg_relief_open = relief[2] > 0
+    -- each valve open (STATUS UPR, LWR PRESS RELIEF): both together by the
+    -- pressure (estimate), or the one stuck open
+    for v = 1, 2 do out.relief_valve[v] = relief[3] > 0 or inp.relief_failed[v] end
 
     local new_ft = M.ft_of_p(s.p_cab)
     if dt > 0 then
@@ -469,7 +488,7 @@ function M.update(s, inp, dt)
     out.cabin_alert = new_ft > M.CABIN_WARN_FT                       -- CABIN ALTITUDE
     out.auto_alert = s.active == 0 or both_man                       -- CABIN ALT AUTO
     for v = 1, 2 do                                                  -- OUTFLOW VLV L, R
-        out.outflow_alert[v] = s.man_on[v] or s.active == 0 or not inp.any_ac
+        out.outflow_alert[v] = s.man_on[v] or s.active == 0 or not inp.any_ac or inp.auto_failed[v]
     end
     out.ldg_alert = not inp.ldg_auto or fmc_ldg == nil               -- LANDING ALT
     out.relief_alert = out.relief_open and inp.packs_selected == 3   -- PRESS RELIEF

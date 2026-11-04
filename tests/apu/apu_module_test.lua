@@ -135,6 +135,19 @@ rt:set("laminar/B747/apu/fail/duct_leak", 0)
 rt:command("laminar/B747/electrical/apu/sel_dial_dn", 0.1)
 frames(1)
 T.equal(get(ADVISORY, 13), 0, "the leak repaired, selector OFF: no APU advisory")
+-- the inlet door jammed closed (notes/ATA-49.md §12): no start, APU DOOR
+rt:set("laminar/B747/apu/fail/door", 1)
+for _ = 1, 2 do rt:command("laminar/B747/electrical/apu/sel_dial_up", 0) end
+frames(25)
+T.equal(get(STARTER), 0, "the inlet door jammed: no start")
+T.equal(get(ADVISORY, 14), 1, "the inlet door jammed: APU DOOR")
+rt:set("laminar/B747/apu/fail/door", 0)
+frames(14)
+T.equal(get(ADVISORY, 14), 0, "freed: no APU DOOR")
+frames(80)
+T.equal(get(STARTER), 1, "freed: the APU started")
+rt:command("laminar/B747/electrical/apu/sel_dial_dn", 0.1)
+frames(100)
 
 -- (2026-11-04; APU-09) the starter's power from the electrical model (FCOM
 -- p.895-896): the APU battery run down, a P&W start does not begin; a GE's

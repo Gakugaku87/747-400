@@ -58,6 +58,10 @@ M.ADP_DUCT_MIN_PSI, M.ADP_DUCT_FULL_PSI = 5, 15
 M.PRESS_UP_S, M.PRESS_DOWN_S = 0.5, 4
 M.ACC_CHARGE_S = 1
 M.TEMP_LAG_S, M.TEMP_RISE_C = 600, 30     -- FCOM p.1485 shows 50 °C
+-- (2026-11-04) the overheat failure: the fluid towards OVHT_FAIL_C over
+-- OVHT_FAIL_S while a pump runs (past OVHT_C in about 70 s from 50 °C;
+-- estimates: notes/ATA-29.md §11)
+M.OVHT_FAIL_C, M.OVHT_FAIL_S = 130, 60
 M.RSVR_DECAY_S = 300
 
 -- DC buses: HYDIM n, and the demand pump control (ATA29_32 p.63, p.71;
@@ -102,6 +106,10 @@ function M.inputs()
         -- §10): an engine pump, a demand pump gives no flow
         edp_failed = {false, false, false, false},
         dem_failed = {false, false, false, false},
+        -- (2026-11-04) the fluid overheating (the cooling not modelled:
+        -- notes/ATA-29.md §11): while a pump runs, the case drain fluid
+        -- goes to OVHT_FAIL_C
+        overheat = {false, false, false, false},
     }
 end
 
@@ -273,8 +281,10 @@ function M.update(s, inp, dt)
         o.lo = ss.qty <= M.QTY_LO
         o.rf = inp.on_ground and ss.qty <= M.QTY_RF
         local heat = (edp_gpm + dem_gpm + aux_gpm > 0) and M.TEMP_RISE_C or 0
-        if s.first then ss.temp = inp.oat + heat
-        else ss.temp = lag(ss.temp, inp.oat + heat, M.TEMP_LAG_S, dt) end
+        local target, tau = inp.oat + heat, M.TEMP_LAG_S
+        if inp.overheat[n] and heat > 0 then target, tau = M.OVHT_FAIL_C, M.OVHT_FAIL_S end
+        if s.first then ss.temp = target
+        else ss.temp = lag(ss.temp, target, tau, dt) end
         o.temp = ss.temp
         o.rsvr_low = s.rsvr_psi < M.RSVR_LOW_PSI
 

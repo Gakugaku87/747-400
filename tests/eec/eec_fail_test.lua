@@ -94,4 +94,25 @@ do
     T.check(not o.controls_alert and not o.control_alert[1], "in flight: >ENG CONTROLS and >ENG 1 CONTROL inhibited")
 end
 
+-- (2026-11-04) the idle selection's faults (notes/ATA-70-80.md §12): flaps
+-- for landing select approach idle; engine 3 stuck at minimum idle gives
+-- ENG 3 LOW IDLE; with minimum idle selected, engine 2 stuck at approach
+-- idle gives >IDLE DISAGREE
+do
+    local st, i = cruise("PW")
+    i.flaps_deg = 30
+    i.idle_min[3] = true
+    local o = E.update(st, i, DT)
+    T.check(o.approach[3] and o.low_idle[3] and not o.low_idle[1], "idle_min 3: ENG 3 LOW IDLE with approach idle selected")
+    T.check(not o.idle_disagree, "idle_min 3: no >IDLE DISAGREE")
+    i.idle_min[3] = false
+    o = E.update(st, i, DT)
+    T.check(not o.low_idle[3], "idle_min 3 repaired: no LOW IDLE")
+    i.flaps_deg = 0
+    for _ = 1, 100 do o = E.update(st, i, DT) end   -- the 5 s hold over
+    i.idle_approach[2] = true
+    o = E.update(st, i, DT)
+    T.check(not o.approach[2] and o.idle_disagree, "idle_approach 2: >IDLE DISAGREE with minimum idle selected")
+end
+
 T.done()

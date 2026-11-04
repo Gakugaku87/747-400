@@ -410,3 +410,10 @@ HYD OVHT SYS       = TEMP > 104 °C
 - 漏れは 120 秒で空（推定。資料に漏れの速さは無い）。0.34 で >HYD QTY LOW と SYS FAULT（§4.8）。故障を消すと満タン（1.00）に戻る（窓の「修理」。実機では整備で補給）。
 - 試験：`hyd_model_test` 168、`hyd_module_test` 260。
 - X-Plane（カスタム acf、2026-11-04）：新しい `s241_hyd_failures` 25/25（成田でエンジン運転中：EDP 1 で ENGINE PRESS 1・HYD PRESS ENG 1、ADP 1 が AUTO で引き継いで系統 1 は 2,997 psi、synoptic の EDP 1 は ON 琥珀。DEMAND 2 を ON にして故障で DEMAND PRESS 2・HYD PRESS DEM 2、系統 2 は EDP 2 のまま。系統 3 の漏れで量が減り、約 80 秒で 0.34 になって >HYD QTY LOW 3、直すと 1.00。下の EICAS の HYD synoptic の写真）、回帰の `s04_hydraulics` 29/29。Log.txt に Lua の誤りなし。
+
+## 11. 作動油の過熱（2026-11-04：故障の窓のため）
+
+- 新しい dataref（1 で故障。init `B747.19.hydraulicsmodel`）：`laminar/B747/hydraulics/fail/overheat[4]`（系統 1〜4 の作動油の過熱）。
+- 過熱の原因（燃料タンクの中の熱交換器の冷却不足、ポンプの内部漏れ）はモデルに無い。油温は外気温にポンプの熱を足した値を 600 秒で追うだけ（HYD-17 の作り直し）。そこで故障の間は、ポンプが回って熱が出ていれば、油温を 130 °C に向けて時定数 60 秒で上げる（推定：資料に過熱の速さは無い）。50 °C から約 70 秒で case drain の 104 °C を超え、前からの論理で HYD OVHT SYS n（advisory 202〜205）と SYS FAULT 灯（FCOM p.1495、ATA29_32 p.100）。ポンプを止めるか故障を消すと、前からの 600 秒で冷える。
+- 試験：`hyd_model_test` 173、`hyd_module_test` 263（dataref から HYD OVHT SYS 2 と SYS FAULT 2 まで）。
+- X-Plane（カスタム acf、2026-11-04）：新しい `s247_failures_more` 38/38（成田でエンジン運転中：系統 2 の過熱で 69 秒後に HYD OVHT SYS 2、油温は約 3 分で 127 °C）、回帰の `s241_hyd_failures` 25/25。Log.txt に Lua の誤りなし。

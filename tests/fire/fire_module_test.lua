@@ -253,6 +253,30 @@ T.equal(get(FIRE .. "init_CD"), 2, "init_CD done")
 T.equal(get(FIRE .. "engine01_02A/ext_bottle/psi"), 600, "init_CD: bottle L A full")
 T.near(get(FIRE .. "engine01/ext_switch/pos_arm"), 0, 0.01, "init_CD: fire switch 1 in")
 
+-- (2026-11-04) a bottle leaks (the failure window, notes/ATA-26.md §13):
+-- R ENG B (fire/fail/bottle_leak[3]) below its 225 psi switch within 2
+-- min, BTL DISCH R B, >BTL LO R ENG B, STATUS BTL LOW R ENG B; repaired, a
+-- full bottle
+rt:set(FIRE .. "fail/bottle_leak", 3, 1)
+frames(60)
+T.equal(get(FIRE .. "light/btl_disch", 3), 0, "1 min: still above the switch")
+frames(30)
+T.equal(get(FIRE .. "light/btl_disch", 3), 1, "the leak: BTL DISCH R B")
+T.equal(get(ADVISORY, 322), 1, "the leak: >BTL LO R ENG B")
+T.equal(get(STATUS, 62), 1, "the leak: STATUS BTL LOW R ENG B")
+T.equal(get(FIRE .. "light/btl_disch", 2), 0, "R A not leaking")
+rt:set(FIRE .. "fail/bottle_leak", 3, 0)
+frames(0.5)
+T.equal(get(FIRE .. "light/btl_disch", 3), 0, "repaired: a full bottle, no BTL DISCH")
+T.equal(get(ADVISORY, 322), 0, "repaired: no >BTL LO")
+-- the APU bottle (fire/fail/bottle_leak[4]): >BOTTLE LOW APU
+rt:set(FIRE .. "fail/bottle_leak", 4, 1)
+frames(121)
+T.equal(get(ADVISORY, 44), 1, "the APU bottle leaked: >BOTTLE LOW APU")
+rt:set(FIRE .. "fail/bottle_leak", 4, 0)
+frames(0.5)
+T.equal(get(ADVISORY, 44), 0, "repaired: no >BOTTLE LOW APU")
+
 -- every X-Plane dataref the fire module wrote is writable (DataRefs.txt)
 local writable = {}
 local file = assert(io.open(xtlua.xplane_root .. "/Resources/plugins/DataRefs.txt", "rb"))

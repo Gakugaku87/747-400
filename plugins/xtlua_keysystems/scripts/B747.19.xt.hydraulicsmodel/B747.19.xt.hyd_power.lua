@@ -49,6 +49,7 @@ B747DR_hyd_engine_type          = find_dataref("laminar/B747/engines/type")
 B747DR_hyd_fail_edp_in          = find_dataref("laminar/B747/hydraulics/fail/edp")
 B747DR_hyd_fail_demand_in       = find_dataref("laminar/B747/hydraulics/fail/demand_pump")
 B747DR_hyd_fail_leak_in         = find_dataref("laminar/B747/hydraulics/fail/leak")
+B747DR_hyd_fail_overheat_in     = find_dataref("laminar/B747/hydraulics/fail/overheat")
 local LEAK_FAIL_S = 120             -- the leak failure drains its system in 120 s (estimate)
 local hyd_leaked = {false, false, false, false}   -- the leak failure on last frame
 
@@ -121,6 +122,7 @@ local function read_inputs(inp, dt)
         -- (2026-11-04) the failures: the pumps, a leak in this system
         inp.edp_failed[n] = B747DR_hyd_fail_edp_in[n - 1] > 0.5
         inp.dem_failed[n] = B747DR_hyd_fail_demand_in[n - 1] > 0.5
+        inp.overheat[n] = B747DR_hyd_fail_overheat_in[n - 1] > 0.5
         local leaking = B747DR_hyd_fail_leak_in[n - 1] > 0.5
         if leaking then inp.qty_use[n] = inp.qty_use[n] + dt / LEAK_FAIL_S
         elseif hyd_leaked[n] then hyd_state.sys[n].qty = 1.0 end   -- repaired: refilled (the window's repair)

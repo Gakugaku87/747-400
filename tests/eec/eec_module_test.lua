@@ -153,6 +153,23 @@ T.near(get(IDLE), 4.6, 0.001, "idle: engine 3's anti-ice selects approach idle (
 rt:set("laminar/B747/antiice/nacelle/valve_pos", 2, 0)
 for n = 0, 3 do T.equal(get(ADV, 309 + n), 0, "idle: no ENG " .. (n + 1) .. " LOW IDLE") end
 T.equal(get(ADV, 223), 0, "idle: no >IDLE DISAGREE")
+-- (2026-11-04) the idle faults (laminar/B747/engines/fail/idle_min,
+-- idle_approach; notes/ATA-70-80.md §12): landing flaps, engine 2 stuck at
+-- minimum idle: ENG 2 LOW IDLE (310)
+rt:set(ENG .. "fail/idle_min", 1, 1)
+rt:set("sim/cockpit2/controls/flap_ratio", 5 / 6)
+frames(0.5)
+T.equal(get(ADV, 310), 1, "idle_min 2, landing flaps: ENG 2 LOW IDLE")
+T.equal(get(ADV, 309), 0, "no ENG 1 LOW IDLE")
+rt:set(ENG .. "fail/idle_min", 1, 0)
+rt:set("sim/cockpit2/controls/flap_ratio", 0)
+frames(6)
+rt:set(ENG .. "fail/idle_approach", 3, 1)
+frames(0.5)
+T.equal(get(ADV, 223), 1, "idle_approach 4, minimum idle selected: >IDLE DISAGREE")
+rt:set(ENG .. "fail/idle_approach", 3, 0)
+frames(0.5)
+T.equal(get(ADV, 223), 0, "repaired: no >IDLE DISAGREE")
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
 rt:set("sim/cockpit2/controls/flap_ratio", 0)

@@ -142,6 +142,8 @@ B747DR_hyd_syn_inop_set         = deferred_dataref("laminar/B747/hydraulics/syno
 B747DR_hyd_fail_edp             = deferred_dataref("laminar/B747/hydraulics/fail/edp", "array[4]")
 B747DR_hyd_fail_demand          = deferred_dataref("laminar/B747/hydraulics/fail/demand_pump", "array[4]")
 B747DR_hyd_fail_leak            = deferred_dataref("laminar/B747/hydraulics/fail/leak", "array[4]")
+-- (2026-11-04) the fluid overheat of system 1-4 (notes/ATA-29.md §11)
+B747DR_hyd_fail_overheat        = deferred_dataref("laminar/B747/hydraulics/fail/overheat", "array[4]")
 B747DR_rudder_ratio   = deferred_dataref("laminar/B747/flt_ctrls/rudder_ratio", "number")
 -- the SRMs' rudder ratio changers (B747.45.xt.srm.lua, 4-1 step 2a): the
 -- upper and lower rudders' authority (1 = 32 degrees); rudder_ratio is the

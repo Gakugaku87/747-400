@@ -31,4 +31,14 @@ T.equal(G.indicator(G.NOSE_DOWN, true), 0, "nose down band: as low as the 3D goe
 T.near(G.indicator(G.NOSE_UP, false), G.indicator(G.MID, true), 1e-9,
     "lights out (above V1, in the air): the painted mid band")
 
+-- the nose gear pressure switch against the band (ATA27 p.510, ATA31
+-- p.201-202): nil or 0 reads what the band needs (not failed)
+T.equal(G.disagree(G.NOSE_UP, 0), false, "not failed: agrees")
+T.equal(G.disagree(G.NOSE_UP, G.SW_FWD), false, "nose up band, FWD CG: agrees")
+T.equal(G.disagree(G.NOSE_UP, G.SW_AFT), true, "nose up band, AFT CG: disagrees")
+T.equal(G.disagree(G.NOSE_DOWN, G.SW_AFT), false, "nose down band, AFT CG: agrees")
+T.equal(G.disagree(G.NOSE_DOWN, G.SW_FWD), true, "nose down band, FWD CG: disagrees")
+T.equal(G.disagree(G.MID, G.SW_FWD), false, "mid band: not compared")
+T.equal(G.disagree(G.MID, G.SW_AFT), false, "mid band: not compared (AFT)")
+
 T.done()

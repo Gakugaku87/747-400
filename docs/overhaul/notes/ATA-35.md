@@ -167,3 +167,11 @@ ACF_DIFF.md との関係: 酸素に関わる acf の差分は無い（STAT ペ�
 - §6 の低酸素：X-Plane の `override_oxygen_system` を 1 にし、`pilot_felt_altitude_ft` を書く（マスクなしは客室高度、乗員マスクを出していれば 10,000 ft を上限（推定））。X-Plane で上書きが効き、マスクで 10,000 ft になることを確かめた（`s20_oxygen`）。カスタム acf の `_o2_bottle_liter` は 0 なので、上書きしないと X-Plane の乗員酸素は使えない。
 - STATUS ページ：カスタム acf の 2 つの LED を新しい dataref と 4 桁にした（ACF_DIFF.md §5。GAP_ANALYSIS.md §4 の承認済みの項目）。
 - 試験：`tests/oxygen/oxygen_model_test.lua`（47 件）、`tests/oxygen/oxygen_module_test.lua`（照明のモジュールと一緒に読み込む）、X-Plane の `s20_oxygen`。
+
+## 11. ボンベの漏れ（2026-11-04：故障の窓のため）
+
+- 新しい dataref（1 で故障。init `B747.36.oxygen`）：`laminar/B747/oxygen/fail/crew_leak`（乗員のボンベ）、`fail/pass_leak`（乗客のボンベ）。
+- ボンベの圧は前から使用でしか下がらなかった（§10 の推定の使用量）。故障の間、満タンから 300 秒で 0 になる速さで下げる（推定：資料に漏れの速さは無い）。乗員は約 220 秒で 500 psi を下回り、前からの論理で >CREW OXY LOW（ATA30_32_35_36 p.340）。空になるとマスクから酸素が出ず、乗員の感じる高度は客室高度のまま（X-Plane の低酸素）。乗客は STATUS ページの圧が下がるだけ（>PASS OXY LOW は FCOM に無いので使わない：§10）。
+- 故障を消すと満タンのボンベに戻る（窓の「修理」）。
+- 試験：`oxygen_model_test` 56、`oxygen_module_test` 69。
+- X-Plane（カスタム acf、2026-11-04）：`s247_failures_more` 38/38（窓の章 35 の行を押して乗員ボンベの漏れ：230 秒で 498 psi、>CREW OXY LOW。REPAIR ALL で満タン、消えた）。Log.txt に Lua の誤りなし。

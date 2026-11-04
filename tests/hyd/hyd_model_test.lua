@@ -393,4 +393,27 @@ do
     out = run(s, inp, 30)
     T.check(not out.sys[1].dem_running and out.sys[1].press_dem, "demand pump 1 failed, ON: HYD PRESS DEM 1")
 end
+
+-- (2026-11-04) the overheat failure (notes/ATA-29.md §11): with a pump
+-- running the case drain fluid passes 104 °C in about 70 s (estimate):
+-- HYD OVHT SYS, SYS FAULT; its pumps off, it cools (the normal lag)
+do
+    local s, inp = parked()
+    engines_running(inp)
+    local out = run(s, inp, 600)
+    T.check(not out.sys[3].ovht and out.sys[3].temp < 60, "overheat: system 3 normal at " .. out.sys[3].temp)
+    inp.overheat[3] = true
+    out = run(s, inp, 40)
+    T.check(not out.sys[3].ovht, "overheat: not yet after 40 s (" .. out.sys[3].temp .. ")")
+    out = run(s, inp, 50)
+    T.check(out.sys[3].ovht and out.sys[3].light_sys_fault and out.sys[3].status_ovht,
+        "overheat: past 104 °C after 90 s, SYS FAULT (" .. out.sys[3].temp .. ")")
+    T.check(not out.sys[2].ovht, "overheat: system 2 untouched")
+    -- no pump running: no heat, the fluid cools
+    inp.engine_pump[3] = false
+    inp.demand_sel[3] = 0
+    out = run(s, inp, 600)
+    T.check(not out.sys[3].ovht, "overheat: pumps off, cooled below 104 °C (" .. out.sys[3].temp .. ")")
+    inp.overheat[3] = false
+end
 T.done()

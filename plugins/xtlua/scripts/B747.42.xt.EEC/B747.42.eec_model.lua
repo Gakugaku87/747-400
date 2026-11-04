@@ -639,6 +639,11 @@ function M.inputs()
         -- EEC system fault (degraded, without its full redundancy)
         fail_altn = {false, false, false, false},
         fault = {false, false, false, false},
+        -- (2026-11-04) the idle selection's faults (notes/ATA-70-80.md §12):
+        -- the engine stays at minimum idle (ENG n LOW IDLE when approach
+        -- idle is selected) or at approach idle (>IDLE DISAGREE)
+        idle_min = {false, false, false, false},
+        idle_approach = {false, false, false, false},
         n1 = {0, 0, 0, 0},                   -- the engines' N1 and N2, %
         n2 = {0, 0, 0, 0},
         actual = {0, 0, 0, 0},               -- the controlled value now: N1 (GE) or EPR (P&W)
@@ -721,7 +726,9 @@ end
 -- approach idle of each engine, and the idle messages: ENG n LOW IDLE
 -- (approach idle selected, not reached) and >IDLE DISAGREE (an engine at
 -- approach idle with minimum idle selected) (FCOM p.900, p.902; ATA70_80
--- p.230). The sim has no idle faults: without at_approach they stay off.
+-- p.230). The sim has no idle faults of its own: at_approach, or (2026-11-04)
+-- the failure window's idle_min and idle_approach. X-Plane's idle is one
+-- for all engines: the faults give the messages only.
 local function idle_selection(s, inp, dt, out)
     local con = inp.con and (inp.type == "GE" or inp.freighter)
     local landing = inp.air and (inp.flaps_deg > M.LANDING_FLAPS_DEG or con)
@@ -736,6 +743,7 @@ local function idle_selection(s, inp, dt, out)
         end
         local at = s.approach[n]
         if inp.at_approach then at = inp.at_approach[n] end
+        if inp.idle_min[n] then at = false elseif inp.idle_approach[n] then at = true end
         out.approach[n] = s.approach[n]
         out.low_idle[n] = s.approach[n] and not at
         out.idle_disagree = out.idle_disagree or (at and not s.approach[n])

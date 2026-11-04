@@ -50,6 +50,8 @@ M.CGO_DET_ENGINES = 2       -- >CARGO DET AIR needs two engines running (ATA26_2
 -- estimates (no value in the sources)
 M.DISCH_S = 1.5             -- a squib empties its bottle in 1.5 s (the cargo bottles A and B
                             -- "instantly": ATA26_28 p.170)
+M.LEAK_S = 120              -- (2026-11-04) a leaking bottle (the failure window) loses its charge in
+                            -- 2 min (notes/ATA-26.md §13)
 
 local function four(v) return {v, v, v, v} end
 local function list(n, v)
@@ -73,7 +75,8 @@ function M.inputs()
         rest_smoke = false,             -- smoke in the door 5 crew rest (failure input)
         loop_failed_a = list(M.ZONES, false),   -- failure: a zone's loop A (M.ZONES order)
         loop_failed_b = list(M.ZONES, false),
-        det_power = true,               -- the detection cards: APU battery bus (FCOM p.820)
+        btl_leak = list(M.BOTTLES, false),      -- (2026-11-04) failure: a bottle leaks (M.BOTTLES order)
+        det_power = true,              -- the detection cards: APU battery bus (FCOM p.820)
         wheel_well_power = true,        -- its card: AC bus 2 (ATA26_28 p.273)
         duct_power = true,              -- the leading edge loops: DC bus 2 or the battery bus (ATA26_28 p.285)
         hot_bat = true,                 -- the switches' unlock solenoids and the squibs: main hot
@@ -111,7 +114,7 @@ function M.new()
         lp_t = {a = list(M.ZONES, 0), b = list(M.ZONES, 0)}, power_off_t = 0, apu_disch_t = 0,
         cargo_cfg = list(4, "dual"), det_power_was = false, cargo_latch = 0, cargo_t = 0,
         cargo_cd_fired = false, cargo_disch_was = false, cgo_det_t = {0, 0}, cgo_air_t = 0,
-        duct_t = {0, 0}, leak_hot_t = {0, 0, 0}}
+        duct_t = {0, 0}, leak_hot_t = {0, 0, 0}, btl_leaked = list(M.BOTTLES, false)}
     for b = 1, M.BOTTLES do
         s.btl[b] = full(b)
         s.squib[b] = {}
@@ -377,6 +380,20 @@ function M.update(s, inp, dt)
     for n = 1, 4 do out.extinguish[n] = false end
     out.apu_extinguish = false
     for b = 1, M.BOTTLES do
+        -- (2026-11-04) a leaking bottle (the failure window, notes/ATA-26.md
+        -- §13): the charge goes overboard, not into an outlet, so a squib
+        -- then has nothing to discharge; repaired, the bottle is replaced
+        -- full (the failure window's repair: maintenance)
+        if inp.btl_leak[b] then
+            s.btl_leaked[b] = true
+            if s.disch_t[b] == 0 then s.btl[b] = math.max(0, s.btl[b] - full(b) * dt / M.LEAK_S) end
+        elseif s.btl_leaked[b] then
+            s.btl_leaked[b] = false
+            if s.disch_t[b] == 0 then
+                s.btl[b] = full(b)
+                s.squib[b] = {}
+            end
+        end
         if s.disch_t[b] > 0 then
             local step = math.min(s.disch_t[b], dt)
             s.btl[b] = math.max(0, s.btl[b] - full(b) * step / s.disch_s[b])

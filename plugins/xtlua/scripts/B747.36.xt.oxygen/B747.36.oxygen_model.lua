@@ -28,6 +28,8 @@ M.PASS_USE_PSI_S = 1.0      -- the passenger cylinders while the flow control un
                             -- full to empty in about 30 min
 M.MASK_FELT_FT = 10000      -- on the crew masks the crew feel no more than 10,000 ft
 M.CREW_MIN_PSI = 50         -- the masks get no oxygen below this pressure
+M.LEAK_S = 300              -- (2026-11-04) a leaking cylinder (the failure window): full to empty
+                            -- in 5 min (notes/ATA-35.md §11)
 
 function M.inputs()
     return {
@@ -38,12 +40,15 @@ function M.inputs()
         dc = true,              -- power for the flow control units' solenoids (estimate: any DC bus)
         cylinder_c = 21.1,      -- the cylinders' temperature (forward cargo compartment)
         pass_failed_on = false, -- failure: the passenger oxygen actuated by itself
+        crew_leak = false,      -- (2026-11-04) failure: the crew cylinder leaks
+        pass_leak = false,      -- (2026-11-04) failure: the passenger cylinders leak
     }
 end
 
 function M.new()
     -- the cylinders' contents as their pressure at 70°F
-    local s = {crew = M.FULL_PSI, pass = M.FULL_PSI, pass_on = false, therap_on = false, pass_t = 0}
+    local s = {crew = M.FULL_PSI, pass = M.FULL_PSI, pass_on = false, therap_on = false, pass_t = 0,
+        crew_leaked = false, pass_leaked = false}
     s.out = {crew_psi = M.FULL_PSI, pass_psi = M.FULL_PSI, pass_on = false, therap_on = false,
         crew_flow = false, felt_alt_ft = 0, crew_low_alert = false, pass_on_alert = false,
         pass_on_status = false, therap_memo = false}
@@ -85,6 +90,19 @@ function M.update(s, inp, dt)
     if s.pass_on then s.pass = math.max(0, s.pass - M.PASS_USE_PSI_S * dt) end
     out.crew_flow = inp.crew_masks and s.crew > M.CREW_MIN_PSI
     if inp.crew_masks then s.crew = math.max(0, s.crew - M.CREW_USE_PSI_S * dt) end
+    -- (2026-11-04) a leaking cylinder (the failure window, notes/ATA-35.md
+    -- §11): >CREW OXY LOW at 500 psi, the STATUS page's pressures fall;
+    -- repaired, the cylinders are replaced full (maintenance)
+    if inp.crew_leak then
+        s.crew, s.crew_leaked = math.max(0, s.crew - M.FULL_PSI * dt / M.LEAK_S), true
+    elseif s.crew_leaked then
+        s.crew, s.crew_leaked = M.FULL_PSI, false
+    end
+    if inp.pass_leak then
+        s.pass, s.pass_leaked = math.max(0, s.pass - M.FULL_PSI * dt / M.LEAK_S), true
+    elseif s.pass_leaked then
+        s.pass, s.pass_leaked = M.FULL_PSI, false
+    end
     out.crew_psi = at_temperature(s.crew, inp.cylinder_c)
     out.pass_psi = at_temperature(s.pass, inp.cylinder_c)
 

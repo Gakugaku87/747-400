@@ -604,6 +604,71 @@ frames(1.5)
 T.equal(get(WARNING, 2), 0, "10 s after: gone")
 rt:set("laminar/B747/engines/display_N1", 1, 0)
 
+-- the configuration warning card failed (the failure window, notes/
+-- ATA-27.md §20; FCOM p.1558, p.1604, ATA31 p.270): no CONFIG warnings,
+-- >CONFIG WARN SY and the STATUS CONFIG WARN SY, the greenband lamps out
+local CFG_FAIL = "laminar/B747/flt_ctrls/fail/config_warn"
+rt:set("laminar/B747/engines/display_N1", 1, 70)
+rt:set("laminar/B747/fmc/elevator_trim", 9.2)
+frames(0.2)
+T.equal(get(WARNING, 2), 1, "flaps 25 at takeoff thrust: CONFIG FLAPS")
+T.equal(get(ADVISORY, 52), 0, "the card working: no >CONFIG WARN SY")
+T.near(get(IND), G.indicator(G.NOSE_UP, true), 1e-6, "the nose up band lit")
+rt:set(CFG_FAIL, 1)
+frames(0.2)
+T.equal(get(WARNING, 2), 0, "the card failed: no CONFIG FLAPS")
+T.equal(get(ADVISORY, 52), 1, "the card failed: >CONFIG WARN SY")
+T.equal(get(STATUS, 146), 1, "the STATUS CONFIG WARN SY")
+T.near(get(IND), G.indicator(G.MID, false), 1e-6, "the card failed: the lamps out, the painted mid band")
+rt:set(CFG_FAIL, 0)
+frames(0.2)
+T.equal(get(WARNING, 2), 1, "repaired: CONFIG FLAPS again")
+T.equal(get(ADVISORY, 52), 0, "repaired: no >CONFIG WARN SY")
+T.equal(get(STATUS, 146), 0, "repaired: no STATUS")
+T.near(get(IND), G.indicator(G.NOSE_UP, true), 1e-6, "repaired: the nose up band lit again")
+rt:set("laminar/B747/engines/display_N1", 1, 0)
+frames(11)
+T.equal(get(WARNING, 2), 0, "the thrust gone 10 s: CONFIG FLAPS gone")
+
+-- the greenband nose gear pressure switch failed (ATA27 p.510, ATA31
+-- p.201-202, FCOM p.958): reading AFT CG against the nose up band or FWD
+-- CG against the nose down band, >STAB GREENBAND and its STATUS; the mid
+-- band is not compared, nor in the air
+local GB_SW = "laminar/B747/flt_ctrls/fail/greenband_switch"
+rt:set(GB_SW, 1)
+frames(0.2)
+T.equal(get(ADVISORY, 273), 0, "the nose up band, the switch reading FWD: agree, none")
+rt:set(GB_SW, 2)
+frames(0.2)
+T.equal(get(ADVISORY, 273), 1, "the nose up band, the switch reading AFT: >STAB GREENBAND")
+T.equal(get(STATUS, 147), 1, "the STATUS STAB GREENBAND")
+rt:set("laminar/B747/fmc/elevator_trim", 6.0)
+frames(0.2)
+T.equal(get(ADVISORY, 273), 0, "the mid band: not compared")
+rt:set("laminar/B747/fmc/elevator_trim", 2.6)
+frames(0.2)
+T.equal(get(ADVISORY, 273), 0, "the nose down band, the switch reading AFT: agree")
+rt:set(GB_SW, 1)
+frames(0.2)
+T.equal(get(ADVISORY, 273), 1, "the nose down band, the switch reading FWD: >STAB GREENBAND")
+rt:set(CFG_FAIL, 1)
+frames(0.2)
+T.equal(get(ADVISORY, 273), 0, "the card failed too: nothing compared")
+rt:set(CFG_FAIL, 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+frames(0.2)
+T.equal(get(ADVISORY, 273), 0, "in the air: not compared")
+T.equal(get(STATUS, 147), 0, "in the air: no STATUS")
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+frames(0.2)
+T.equal(get(ADVISORY, 273), 1, "on the ground again: >STAB GREENBAND")
+rt:set(GB_SW, 0)
+frames(0.2)
+T.equal(get(ADVISORY, 273), 0, "repaired: none")
+T.equal(get(STATUS, 147), 0, "repaired: no STATUS")
+rt:set("laminar/B747/fmc/elevator_trim", 0)
+frames(0.2)
+
 -- an air start: the stabilizer for level flight at the speed (estimate:
 -- 3.78 + 154,400 / IAS^2 units, 4.5 to 7.5), not the 7.5 units of before
 -- (a 334 kt start pitched up to 13 degrees before the A/P came on)

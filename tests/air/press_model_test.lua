@@ -333,4 +333,42 @@ T.near(out.dp, C.CRUISE_DP, 0.03, "air start with a drop: the schedule's ΔP")
 out = f:run(60, 0, false)
 T.equal(out.mode, C.CRUISE, "air start with a drop: still cruise a minute later")
 
+-- ======== (2026-11-04) the failure window's (notes/ATA-21.md §11): an
+-- outflow valve's automatic drive fails: it stays where it is, OUTFLOW VLV,
+-- the other valve holds the schedule; MAN still drives it. A positive
+-- relief valve stuck open: PRESS RELIEF, its STATUS only, the cabin climbs
+f = flight(35000)
+out = f:run(30, 0, false)
+local v1 = out.valve[1]
+f.inp.auto_failed[1] = true
+out = f:run(1, 0, false)
+T.check(out.outflow_alert[1] and not out.outflow_alert[2], "auto drive L failed: OUTFLOW VLV L only")
+f:to(31000, -1500)
+out = f:run(30, 0, false)
+T.near(out.valve[1], v1, 1e-9, "auto drive L failed: valve L stays where it was")
+T.check(math.abs(out.valve[2] - v1) > 0.001, "valve R moves on its own")
+T.check(math.abs(out.rate_fpm) < 600, "the cabin under control: " .. out.rate_fpm)
+f.inp.man[1], f.inp.man_cmd = true, 1
+out = f:run(2, 0, false)
+T.check(out.valve[1] > v1, "MAN L: the DC motor still opens it")
+f.inp.man[1], f.inp.man_cmd = false, 0
+f.inp.auto_failed[1] = false
+out = f:run(30, 0, false)
+T.check(not out.outflow_alert[1], "repaired: no OUTFLOW VLV L")
+T.near(out.valve[1], out.valve[2], 1e-6, "repaired: both valves together again")
+
+f = flight(35000)
+out = f:run(30, 0, false)
+T.check(not out.relief_open, "cruise: the relief valves shut")
+f.inp.relief_failed[2] = true
+out = f:run(1, 0, false)
+T.check(out.relief_open and out.relief_alert, "LWR relief stuck open: PRESS RELIEF (FCOM p.620)")
+T.check(not out.relief_valve[1] and out.relief_valve[2], "its STATUS only (LWR PRESS RELIEF)")
+local dp0 = out.dp
+out = f:run(120, 0, false)
+T.check(out.dp < dp0 - 1, "stuck open: the cabin climbs (ΔP " .. dp0 .. " to " .. out.dp .. ")")
+f.inp.relief_failed[2] = false
+out = f:run(1, 0, false)
+T.check(not out.relief_open and not out.relief_valve[2], "repaired: shut")
+
 T.done()
