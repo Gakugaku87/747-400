@@ -85,4 +85,45 @@ for _, c in ipairs({
     T.equal(lit, c[4], what .. ": lit")
     T.equal(msg, c[5], what .. ": >EMER LIGHTS")
 end
+
+-- (7-2e) the flight deck lighting's power (ATA33 p.20-50, p.70-78; FCOM
+-- p.438-441, p.501)
+local function power(ac, stby, gsb, bat, storm)
+    return L.cockpit({ac = ac, stby = stby, gsb = gsb, bat = bat, storm = storm})
+end
+local ALL = {true, true, true, true}
+local c = power(ALL, true, true, true, false)
+for _, k in ipairs({"capt_panel", "overhead", "fo_panel", "capt_flood", "fo_flood", "glareshield_flood",
+    "aisle_flood", "dome", "maps"}) do
+    T.equal(c[k], L.KNOB, "all buses: " .. k .. " by its knob")
+end
+c = power(ALL, true, true, true, true)
+T.equal(c.capt_flood, L.MAX, "STORM: the captain's flood at its maximum")
+T.equal(c.aisle_flood, L.MAX, "STORM: the aisle stand flood at its maximum")
+T.equal(c.dome, L.MAX, "STORM: the dome past its knob")
+T.equal(c.capt_panel, L.KNOB, "STORM: the panel lighting by its knob")
+c = power({true, true, true, false}, true, true, true, false)
+T.equal(c.capt_panel, L.FIXED, "AC bus 4 lost: the captain's panel fixed from the standby bus")
+T.equal(c.overhead, L.FIXED, "AC bus 4 lost: the overhead fixed")
+T.equal(c.capt_flood, L.FIXED, "AC bus 4 lost: the captain's flood fixed (R7734)")
+T.equal(c.fo_panel, L.KNOB, "AC bus 4 lost: the F/O's panel by its knob (AC bus 3)")
+c = power({true, true, true, false}, false, true, true, true)
+T.equal(c.capt_panel, L.OFF, "AC bus 4 and the standby bus lost: the captain's panel off")
+c = power({true, true, false, true}, true, true, true, true)
+T.equal(c.fo_panel, L.OFF, "AC bus 3 lost: the F/O's panel off")
+T.equal(c.fo_flood, L.OFF, "AC bus 3 lost: the F/O's flood off, STORM or not")
+T.equal(c.maps, L.OFF, "AC bus 3 lost: the map lights off")
+c = power(ALL, true, false, true, false)
+T.equal(c.aisle_flood, L.FIXED, "the ground service bus lost: the aisle stand flood dim (fixed resistor)")
+T.equal(c.dome, L.FIXED, "the ground service bus lost: the domes fixed from the battery bus")
+c = power(ALL, true, false, true, true)
+T.equal(c.dome, L.FIXED, "no ground service bus: STORM does not brighten the dome")
+c = power({false, false, false, false}, true, false, true, true)
+T.equal(c.capt_panel, L.FIXED, "the batteries and the standby bus alone: the standby panel lighting")
+T.equal(c.aisle_flood, L.MAX, "the batteries alone, STORM: the aisle stand flood at its maximum")
+T.equal(c.capt_flood, L.FIXED, "the batteries alone: the captain's flood fixed from the standby bus")
+c = power({false, false, false, false}, false, false, false, true)
+for _, k in ipairs({"capt_panel", "capt_flood", "aisle_flood", "dome", "maps"}) do
+    T.equal(c[k], L.OFF, "no power: " .. k .. " off")
+end
 T.done()

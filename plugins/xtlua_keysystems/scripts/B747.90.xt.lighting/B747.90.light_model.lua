@@ -67,4 +67,52 @@ function M.emer(sw, cabin, dc4)
     return lit, sw ~= M.EMER_ARMED or cabin
 end
 
+-- the flight deck lighting's power (7-2e, LIGHT-07; notes/ATA-33.md §2.1,
+-- §4.1; ATA33 p.20-50, p.70-78; FCOM p.438-441, p.501). Each group's mode:
+-- M.KNOB (its knob), M.FIXED (a fixed brightness from the standby or the
+-- battery bus), M.MAX (STORM) or M.OFF.
+--  - the captain's panel, overhead, glareshield and aisle stand integral
+--    lighting on AC bus 4; without it the main standby bus lights a fixed
+--    set (ATA33 p.24, p.36, p.42, p.50);
+--  - the F/O's panel on AC bus 3 (ATA33 p.28-30; on its loss: not in the
+--    sources, off);
+--  - the captain's and centre floods: their dimmer on AC bus 3 through
+--    R7734, which AC bus 4 energises; without AC bus 4 the standby bus,
+--    fixed (ATA33 p.20, p.26; without AC bus 3 alone: estimate, off);
+--  - the F/O's and glareshield floods on AC bus 3 (ATA33 p.30, p.36);
+--  - STORM (the battery bus's R236 and R8068) puts the floods at their
+--    maximum (ATA33 p.20, p.28, p.32, p.72; FCOM p.438);
+--  - the aisle stand flood on the main battery bus: its knob through the
+--    ground service bus, a fixed resistor (dim) without it, STORM straight
+--    from the battery bus (ATA33 p.46, p.72; FCOM p.501);
+--  - the dome on the ground service bus, STORM past its knob; without the
+--    bus the captain's and F/O's domes from the battery bus, fixed (ATA33
+--    p.70-73; STORM then not at the maximum: estimate);
+--  - the map, chart and observer's lights on AC bus 3 (ATA33 p.74-78).
+M.OFF, M.KNOB, M.FIXED, M.MAX = 0, 1, 2, 3
+-- inp: ac = {AC buses 1-4 powered}, stby (the main standby bus), gsb (the
+-- ground service bus), bat (the main battery bus), storm (STORM on)
+function M.cockpit(inp)
+    local ac3, ac4 = inp.ac[3], inp.ac[4]
+    local storm = inp.storm and inp.bat
+    local out = {}
+    local integral = ac4 and M.KNOB or (inp.stby and M.FIXED or M.OFF)
+    out.capt_panel, out.overhead, out.glareshield, out.aisle_stand = integral, integral, integral, integral
+    out.fo_panel = ac3 and M.KNOB or M.OFF
+    if not ac4 then out.capt_flood = inp.stby and M.FIXED or M.OFF
+    elseif not ac3 then out.capt_flood = M.OFF
+    else out.capt_flood = storm and M.MAX or M.KNOB end
+    local ac3_flood = ac3 and (storm and M.MAX or M.KNOB) or M.OFF
+    out.fo_flood, out.glareshield_flood = ac3_flood, ac3_flood
+    if not inp.bat then out.aisle_flood = M.OFF
+    elseif storm then out.aisle_flood = M.MAX
+    elseif inp.gsb then out.aisle_flood = M.KNOB
+    else out.aisle_flood = M.FIXED end
+    if inp.gsb then out.dome = storm and M.MAX or M.KNOB
+    elseif inp.bat then out.dome = M.FIXED
+    else out.dome = M.OFF end
+    out.maps = ac3 and M.KNOB or M.OFF
+    return out
+end
+
 return M

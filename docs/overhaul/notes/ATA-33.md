@@ -95,6 +95,7 @@ GAP ID の接頭辞：`LIGHT`。2026-10-23 作成。コードは `overhaul` ブ�
 | IND LTS | CKPT:23920 | `toggle_switch/position[13]`：1 = TEST（押している間）、0 = BRT、-1 = DIM | MAN:1097-1118、LIT:1682-1689 |
 
 - 非常灯スイッチ、FLIGHT DECK ACCESS LIGHTS の操作子は 3D に無い（CKPT に該当の manipulator が無い）。
+- 7-2e（§15）から、計器盤照明の [6]–[8]、flood、dome、map は generic[63] でなく操縦室照明の電源（群ごとのノブ・固定・STORM・消灯）で決まる。
 
 ### 3.2 外部灯スイッチと現コードの対応
 
@@ -428,3 +429,25 @@ GAP ID の接頭辞：`LIGHT`。2026-10-23 作成。コードは `overhaul` ブ�
   - 客室側から消せない条件（P5 が ON、または ARMED で電源喪失のとき：ATA33 p.264）は、客室側のスイッチを OFF にしても P5 側の条件で点いたままになるので、そのまま満たす。
 - ドアの mode select lever と連動する点灯（109、FCOM p.504）は、ドアの作り直し（7-3）で。
 - 試験：`light_model_test.lua`（点灯と >EMER LIGHTS の 7 通り）、`lighting_module_test.lua`（コマンド、開始時の ARMED、DC bus 4 の喪失、advisory 108）。X-Plane の確認は、7-2 の残りの試験と一緒に回す（シナリオ s209 に足す）。
+
+## 15. 7-2e（2026-11-04）
+
+- 操縦室照明の電源を `B747.90.light_model.lua` の `cockpit` に入れた（LIGHT-07）。入力は AC bus 1–4、main standby bus、GSB、main battery bus、STORM（`toggle_switch/position[0]` が 0）。群ごとに「ノブ（KNOB）・固定（FIXED）・最大（MAX、STORM）・消灯（OFF）」を返し、照明モジュールが X-Plane の灯へ書く（§2.1・§4.1・§4.2）：
+  - 機長の panel、overhead、glareshield、aisle stand の integral：AC bus 4 でノブ。無ければ main standby bus から固定（ATA33 p.24・36・42・50）。両方無ければ消灯。
+  - F/O の panel：AC bus 3 でノブ。無ければ消灯（喪失時は資料に記載なし：推定）。
+  - 機長と center の flood：dimmer は AC bus 3（R7734 経由。R7734 は AC 4 で付勢）。AC 4 が無ければ standby bus から固定、AC 3 だけ無ければ消灯（推定）。STORM で最大（ATA33 p.20・26）。
+  - F/O と glareshield の flood：AC bus 3 でノブ、STORM で最大（ATA33 p.28・30・36）。
+  - aisle stand の flood：main battery bus。GSB があればノブ、無ければ固定抵抗（減光）、STORM は battery bus 直結で最大（ATA33 p.46・72、FCOM p.501）。
+  - dome：GSB でノブ、STORM はノブを迂回して最大。GSB が無ければ battery bus から固定（ATA33 p.70–73）。GSB が無いときは STORM でも固定のまま（§4.2 の推定）。
+  - map・chart・observer の map：AC bus 3（ATA33 p.74–78）。
+  - STORM は battery bus が要る（R236・R8068：ATA33 p.20・72）。前は電源に依らず STORM が効いた。
+- 照明モジュールでの扱い：
+  - 計器盤照明は X-Plane の `instrument_brightness` の 6（機長）・7（overhead）・8（F/O）。固定は 0.3（推定。資料は「固定の明るさ」とだけ書く）。前はノブ × generic light 63。
+  - flood は spill の明るさ（`laminar/B747/light/spill/ratio/*` の [3]）。ノブの最大は 2 × lightMod（前と同じ）、固定は flood が 0.5 × ノブの最大、aisle stand が 0.3 × ノブの最大（推定）、STORM はノブの最大（§13）。dome は `panel_brightness_ratio[0]` で、固定は 0.4（推定）。前は generic light 63 を掛けていた（電源の代わり）。SPILL LIGHTS HI（FMC の SIM CONFIG）の側は、電源の無い群を消すだけ。
+  - glareshield・aisle stand・observer の integral（X-Plane の `panel_brightness_ratio` の 3・2・1）は、3D のノブが X-Plane のスイッチを直接動かし、X-Plane の panel 照明の通電で点く。プラグインの書き手が無いので、今は電源の扱いを入れない（AC 4 の喪失で固定にならない）。
+  - standby で消える「非必須」灯（R7736・R7737・R8098 の先）と、standby で点き続ける灯の一覧（§2.1）は、X-Plane の計器盤照明が群ごとに 1 つの明るさしか持たないので分けない。群ごと固定にする。
+- FLIGHT DECK ACCESS LIGHTS（LIGHT-16）は見送り：3D に操作子が無く（§3.1）、点ける灯（main equipment center、door 2 と upper deck の天井灯：FCOM p.444）も操縦室の外で描かれていない。3D の追加は承認事項。
+- 試験：`light_model_test.lua`（全部のバス、STORM、AC 4・AC 3・GSB・standby bus の喪失、battery だけ、電源なし）、`lighting_module_test.lua`（機長の flood と map、F/O の計器盤照明、STORM、AC 4 の喪失で固定・ノブが効かない、standby bus も無くて消灯、AC 3 の喪失、GSB の喪失で aisle stand flood が固定）。X-Plane：`s226_cockpit_lighting`（夜の RJAA 34L、エンジン運転中。ノブを 0 → STORM で最大 → GEN CONT 4 と BUS TIE 4 で AC 4 を失い、機長の計器盤照明と flood が固定 → GEN CONT 1 と BUS TIE 1 で GSB を失い、aisle stand flood と dome が固定。操縦室を撮る）。
+- X-Plane（カスタム acf、2026-11-04）：`s226` 38/38。ノブ 0 で機長の flood 0・計器盤照明 0、F/O の計器盤照明 1.0。STORM で flood 0 → 0.027（aisle stand と dome も）、写真で計器盤とグレアシールドに flood が当たる。AC 4 の喪失で機長の計器盤照明 0.30・overhead 0.30・機長の flood 0.014（STORM の約半分）、F/O の計器盤照明は 1.0 のまま、EICAS に ELEC AC BUS 4（写真で機長側の lightplate と standby の計器が点く）。GSB の喪失で aisle stand の flood 0.0074、dome 0.40。回帰の `s209` 23/23。Log.txt に Lua の誤りなし。
+  - 夜の flood の明るさは X-Plane の `HUD_brightness_ratio`（前からの lightMod。この夜は 0.010〜0.014）に比例するので、試験は点いたかどうかと STORM との大小だけを見る（最初は 0.1 などの絶対値で落とした）。
+  - 走らせる道具が 2 回続けて結果なしで止まった（s209 の後と X-Plane の再起動の後。機体の読み直しの段）。シナリオを直接走らせると通った。
