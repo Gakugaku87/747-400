@@ -11,10 +11,20 @@
  * screen; N/A (grey) a dataref not there. A click on a failure fails or
  * repairs it at once; REPAIR ALL repairs every one in the list.
  *
+ * (F2) A normal failure's ARM opens the arm bar at the bottom: IN TIME (so
+ * many minutes from now, the sim's time: paused, it waits), AT ALTITUDE, AT
+ * SPEED (the Captain's indicated, crossed from where it is when armed: at or
+ * above from below, at or below from above), RANDOM (a random time within
+ * so many minutes, not told), the value by - and +, ARM or CANCEL. An armed
+ * failure shows ARMED (cyan) and its trigger (the time left); a click
+ * disarms it; it fails when the trigger is met, the window shown or not
+ * (b747_fms_bridge.c's loop: fw_poll). REPAIR ALL disarms them too.
+ *
  * The list: failures.txt in this plugin's folder (its format there), read
- * when the plugin starts and whenever the window is shown. A failure's
- * dataref is looked for when first needed (XTLua makes the airplane's after
- * the plugins start), again each second while it is not there.
+ * when the plugin starts and when the window is shown if the file changed
+ * (the armed failures kept). A failure's dataref is looked for when first
+ * needed (XTLua makes the airplane's after the plugins start), again each
+ * second while it is not there.
  *
  *   laminar/B747/failures/window_open   (int) 0 hidden, 1 shown in X-Plane's
  *                                        window, 2 popped out, 3 in VR; 1 or
@@ -28,11 +38,21 @@
  *                                        through the window's click handler:
  *                                        1000 + n chapter n (from 0), 2000 + n
  *                                        the shown chapter's row n (from 0,
- *                                        its groups counted), 3000 REPAIR ALL;
+ *                                        its groups counted), 3000 REPAIR ALL,
+ *                                        4000 + n row n's ARM, 5000 + k the
+ *                                        arm bar's trigger k (1 time, 2
+ *                                        altitude, 3 speed, 4 random), 6000
+ *                                        -, 6001 +, 6002 ARM, 6003 CANCEL;
  *                                        reads back the value clicked, -1
  *                                        none drawn
+ *   laminar/B747/failures/armed         (int) (F2) failures armed (read only)
+ *   laminar/B747/failures/arm_value     (int) (F2) the arm bar's value
+ *                                        (minutes, feet, knots), -1 no bar
+ *                                        (read only)
  */
 #include <math.h>
+#include <sys/stat.h>
+#include <time.h>
 #include <GL/gl.h>
 #include "XPLMDisplay.h"
 #include "XPLMGraphics.h"
@@ -46,7 +66,11 @@
 
 enum { FWN_GROUP = 1, FWN_FAIL = 2 };
 enum { FWN_NA = 0, FWN_NORMAL, FWN_FAILED, FWN_ARMED };
-enum { FWN_HIT_CHAP = 1, FWN_HIT_ROW, FWN_HIT_REPAIR };
+enum { FWN_HIT_CHAP = 1, FWN_HIT_ROW, FWN_HIT_REPAIR, FWN_HIT_ARM, FWN_HIT_KIND, FWN_HIT_BAR };
+/* (F2) our triggers: a time, an altitude, a speed, a random time */
+enum { FWN_ARM_NONE = 0, FWN_ARM_TIME, FWN_ARM_ALT, FWN_ARM_SPEED, FWN_ARM_RANDOM };
+/* the arm bar's buttons (FWN_HIT_BAR) */
+enum { FWN_BAR_MINUS = 0, FWN_BAR_PLUS, FWN_BAR_ARM, FWN_BAR_CANCEL };
 
 typedef struct {
     int type;               /* FWN_GROUP, FWN_FAIL */
@@ -58,6 +82,9 @@ typedef struct {
     XPLMDataRef ref;
     int types;
     float next_look;        /* when to look for it again */
+    int arm;                /* (F2) our trigger, FWN_ARM_* */
+    float arm_at;           /* the flight time it fails at (s), the feet, the knots */
+    int arm_dir;            /* altitude, speed: 1 at or above, -1 at or below */
 } fw_row_t;
 
 typedef struct {
@@ -65,6 +92,7 @@ typedef struct {
     char title[40];
     int first, count;       /* its rows */
     int failed;             /* failed at the last count */
+    int armed;              /* (F2) armed by us at the last count */
 } fw_chap_t;
 
 typedef struct { int l, b, r, t, kind, id; } fw_hit_t;
@@ -86,6 +114,15 @@ static int fw_hover_x = 0, fw_hover_y = 0, fw_hover_frame = -100, fw_frame = 0;
 static XPLMWindowID fw_win = NULL;
 static XPLMCommandRef fw_cmd_toggle = NULL, fw_cmd_repair = NULL;
 static XPLMDataRef fw_ref_open = NULL, fw_ref_active = NULL, fw_ref_vr = NULL;
+/* (F2) arming: the row being armed (the arm bar), its trigger and value
+   (minutes, feet, knots), the armed count; the trigger's inputs */
+static int fw_sel = -1, fw_sel_kind = FWN_ARM_TIME, fw_narmed = 0;
+static int fw_sel_val[5] = {0, 5, 10000, 100, 30};
+static float fw_poll_next = 0.0f;
+static XPLMDataRef fw_ref_ftime = NULL, fw_ref_alt = NULL, fw_ref_ias = NULL, fw_ref_armed = NULL, fw_ref_armval = NULL;
+static const int FWN_MINUTES[] = {1, 2, 3, 5, 10, 15, 20, 30, 45, 60, 90, 120};
+#define FWN_NMINUTES ((int)(sizeof FWN_MINUTES / sizeof FWN_MINUTES[0]))
+static const char *FWN_KIND_WORD[5] = {"", "IN TIME", "AT ALTITUDE", "AT SPEED", "RANDOM"};
 
 /* EICAS-like: dark, white words, green normal, amber failed, cyan headings */
 static const float FWN_BG[4] = {0.055f, 0.06f, 0.075f, 1.0f};
@@ -136,14 +173,39 @@ static void fw_list_path(char *out, size_t n)
     snprintf(out, n, "%s\\failures.txt", p);
 }
 
-/* the list: "C <chapter> <title>", "G <title>", "F <dataref>[i] <kind> <label>" */
+/* (F2) the armed triggers kept across a reload of the list */
+typedef struct { char name[128]; int index; float failed; int arm; float arm_at; int arm_dir; } fw_keep_t;
+static fw_keep_t fw_keep[FWN_ROWS];
+static time_t fw_list_mtime = 0;
+static int fw_list_loaded = 0;
+
+/* the list: "C <chapter> <title>", "G <title>", "F <dataref>[i] <kind> <label>";
+   (F2) read again only when the file changed, the armed triggers kept */
 static void fw_load(void)
 {
     char path[PATH_LEN], line[320];
+    fw_list_path(path, sizeof path);
+    struct stat st;
+    int have = stat(path, &st) == 0;
+    if (fw_list_loaded && have && st.st_mtime == fw_list_mtime) return;
+    if (have) fw_list_mtime = st.st_mtime;
+    fw_list_loaded = 1;
+    int nkeep = 0;
+    for (int i = 0; i < fw_nrows; i++) {
+        fw_row_t *r = &fw_rows[i];
+        if (r->type != FWN_FAIL || !r->arm) continue;
+        fw_keep_t *k = &fw_keep[nkeep++];
+        fw_copy(k->name, sizeof k->name, r->name);
+        k->index = r->index;
+        k->failed = r->failed;
+        k->arm = r->arm;
+        k->arm_at = r->arm_at;
+        k->arm_dir = r->arm_dir;
+    }
     fw_nrows = 0;
     fw_nchaps = 0;
     fw_note[0] = 0;
-    fw_list_path(path, sizeof path);
+    fw_sel = -1;
     FILE *f = fopen(path, "rb");
     if (!f) {
         fw_copy(fw_note, sizeof fw_note, "The list failures.txt is not in the plugin's folder.");
@@ -198,6 +260,19 @@ static void fw_load(void)
     fclose(f);
     if (fw_chap >= fw_nchaps) fw_chap = 0;
     if (!fw_nchaps) fw_copy(fw_note, sizeof fw_note, "The list failures.txt has no chapters.");
+    fw_narmed = 0;
+    for (int k = 0; k < nkeep; k++) {
+        for (int i = 0; i < fw_nrows; i++) {
+            fw_row_t *r = &fw_rows[i];
+            if (r->type != FWN_FAIL || r->arm || r->index != fw_keep[k].index || r->failed != fw_keep[k].failed ||
+                strcmp(r->name, fw_keep[k].name) != 0) continue;
+            r->arm = fw_keep[k].arm;
+            r->arm_at = fw_keep[k].arm_at;
+            r->arm_dir = fw_keep[k].arm_dir;
+            fw_narmed++;
+            break;
+        }
+    }
     fw_count_age = 1000;
 }
 
@@ -259,27 +334,44 @@ static void fw_write(fw_row_t *r, float v)
     else if (t & xplmType_Int) XPLMSetDatai(r->ref, (int)lroundf(v));
 }
 
+/* NORMAL, FAILED, ARMED (ours, or X-Plane's own 1-5), N/A */
 static int fw_state(fw_row_t *r)
 {
     float v = 0.0f;
     if (!fw_read(r, &v)) return FWN_NA;
+    int s;
     if (r->xp) {
         int x = (int)lroundf(v);
-        if (x == 6) return FWN_FAILED;
-        return x == 0 ? FWN_NORMAL : FWN_ARMED;
+        s = x == 6 ? FWN_FAILED : x == 0 ? FWN_NORMAL : FWN_ARMED;
+    } else if (r->failed == 1.0f) {
+        s = v > 0.5f ? FWN_FAILED : FWN_NORMAL;
+    } else {
+        s = fabsf(v - r->failed) < 0.25f ? FWN_FAILED : FWN_NORMAL;
     }
-    if (r->failed == 1.0f) return v > 0.5f ? FWN_FAILED : FWN_NORMAL;
-    return fabsf(v - r->failed) < 0.25f ? FWN_FAILED : FWN_NORMAL;
+    if (s == FWN_NORMAL && r->arm) s = FWN_ARMED;
+    return s;
 }
 
-/* a click: failed now, or repaired */
+static void fw_disarm(fw_row_t *r)
+{
+    if (!r->arm) return;
+    r->arm = FWN_ARM_NONE;
+    if (fw_narmed > 0) fw_narmed--;
+}
+
+/* a click: failed now, or repaired; an armed one disarmed */
 static void fw_toggle_row(int i)
 {
     if (i < 0 || i >= fw_nrows || fw_rows[i].type != FWN_FAIL) return;
     fw_row_t *r = &fw_rows[i];
     int s = fw_state(r);
     if (s == FWN_NA) return;
-    fw_write(r, s == FWN_FAILED ? 0.0f : r->failed);
+    if (s == FWN_ARMED) {
+        if (r->arm) fw_disarm(r);
+        else fw_write(r, 0.0f);         /* X-Plane's own arming */
+    } else {
+        fw_write(r, s == FWN_FAILED ? 0.0f : r->failed);
+    }
     fw_count_age = 1000;
 }
 
@@ -288,21 +380,133 @@ static void fw_repair_all(void)
     for (int i = 0; i < fw_nrows; i++) {
         fw_row_t *r = &fw_rows[i];
         if (r->type != FWN_FAIL) continue;
+        fw_disarm(r);
         int s = fw_state(r);
         if (s == FWN_FAILED || s == FWN_ARMED) fw_write(r, 0.0f);
     }
+    fw_narmed = 0;
+    fw_sel = -1;
     fw_count_age = 1000;
+}
+
+/* (F2) the sim's time (stops when paused), the altitude and the speed */
+static float fw_now(void) { return fw_ref_ftime ? XPLMGetDataf(fw_ref_ftime) : XPLMGetElapsedTime(); }
+static float fw_alt(void) { return fw_ref_alt ? XPLMGetDataf(fw_ref_alt) : 0.0f; }
+static float fw_ias(void) { return fw_ref_ias ? XPLMGetDataf(fw_ref_ias) : 0.0f; }
+
+/* arm a failure: in so many minutes, at an altitude or a speed (crossed
+   from where it is now), at a random time within so many minutes */
+static void fw_arm(int i, int kind, int val)
+{
+    if (i < 0 || i >= fw_nrows || fw_rows[i].type != FWN_FAIL) return;
+    fw_row_t *r = &fw_rows[i];
+    if (fw_state(r) != FWN_NORMAL || kind < FWN_ARM_TIME || kind > FWN_ARM_RANDOM) return;
+    r->arm = kind;
+    if (kind == FWN_ARM_TIME) {
+        r->arm_at = fw_now() + (float)val * 60.0f;
+    } else if (kind == FWN_ARM_RANDOM) {
+        r->arm_at = fw_now() + (float)rand() / (float)RAND_MAX * (float)val * 60.0f;
+    } else {
+        float v = kind == FWN_ARM_ALT ? fw_alt() : fw_ias();
+        r->arm_at = (float)val;
+        r->arm_dir = v < (float)val ? 1 : -1;
+    }
+    fw_narmed++;
+    fw_count_age = 1000;
+}
+
+/* every frame (b747_fms_bridge.c's loop), five times a second: the armed
+   failures whose condition is met fail */
+static void fw_poll(void)
+{
+    if (fw_narmed <= 0) return;
+    float t = XPLMGetElapsedTime();
+    if (t < fw_poll_next) return;
+    fw_poll_next = t + 0.2f;
+    float now = fw_now(), alt = fw_alt(), ias = fw_ias();
+    int n = 0;
+    for (int i = 0; i < fw_nrows; i++) {
+        fw_row_t *r = &fw_rows[i];
+        if (r->type != FWN_FAIL || !r->arm) continue;
+        int hit;
+        if (r->arm == FWN_ARM_TIME || r->arm == FWN_ARM_RANDOM) {
+            hit = now >= r->arm_at;
+        } else {
+            float v = r->arm == FWN_ARM_ALT ? alt : ias;
+            hit = r->arm_dir > 0 ? v >= r->arm_at : v <= r->arm_at;
+        }
+        if (hit) {
+            r->arm = FWN_ARM_NONE;
+            fw_write(r, r->failed);
+            fw_count_age = 1000;
+        } else {
+            n++;
+        }
+    }
+    fw_narmed = n;
+}
+
+/* the arm bar's value: one step down or up */
+static void fw_step(int up)
+{
+    int k = fw_sel_kind, *v = &fw_sel_val[k];
+    if (k == FWN_ARM_TIME || k == FWN_ARM_RANDOM) {
+        int j = 0;
+        while (j < FWN_NMINUTES - 1 && FWN_MINUTES[j] < *v) j++;
+        j += up ? 1 : -1;
+        if (j < 0) j = 0;
+        if (j >= FWN_NMINUTES) j = FWN_NMINUTES - 1;
+        *v = FWN_MINUTES[j];
+    } else if (k == FWN_ARM_ALT) {
+        *v += up ? 1000 : -1000;
+        if (*v < 0) *v = 0;
+        if (*v > 45000) *v = 45000;
+    } else if (k == FWN_ARM_SPEED) {
+        *v += up ? 10 : -10;
+        if (*v < 40) *v = 40;
+        if (*v > 400) *v = 400;
+    }
+}
+
+/* the arm bar's value in words */
+static void fw_value_words(int kind, int v, char *out, size_t n)
+{
+    if (kind == FWN_ARM_TIME) snprintf(out, n, "%d MIN", v);
+    else if (kind == FWN_ARM_ALT) snprintf(out, n, "%d FT", v);
+    else if (kind == FWN_ARM_SPEED) snprintf(out, n, "%d KT", v);
+    else snprintf(out, n, "WITHIN %d MIN", v);
+}
+
+/* an armed row's trigger in words (the random one's time not told) */
+static void fw_arm_words(const fw_row_t *r, char *out, size_t n)
+{
+    if (r->arm == FWN_ARM_TIME) {
+        int s = (int)(r->arm_at - fw_now());
+        if (s < 0) s = 0;
+        snprintf(out, n, "IN %d:%02d", s / 60, s % 60);
+    } else if (r->arm == FWN_ARM_ALT) {
+        snprintf(out, n, "%s %d FT", r->arm_dir > 0 ? "ABOVE" : "BELOW", (int)r->arm_at);
+    } else if (r->arm == FWN_ARM_SPEED) {
+        snprintf(out, n, "%s %d KT", r->arm_dir > 0 ? "ABOVE" : "BELOW", (int)r->arm_at);
+    } else if (r->arm == FWN_ARM_RANDOM) {
+        snprintf(out, n, "RANDOM");
+    } else {
+        out[0] = 0;
+    }
 }
 
 static int fw_count(void)
 {
     int total = 0;
     for (int c = 0; c < fw_nchaps; c++) {
-        int n = 0;
+        int n = 0, a = 0;
         for (int i = fw_chaps[c].first; i < fw_chaps[c].first + fw_chaps[c].count; i++) {
-            if (fw_rows[i].type == FWN_FAIL && fw_state(&fw_rows[i]) == FWN_FAILED) n++;
+            if (fw_rows[i].type != FWN_FAIL) continue;
+            if (fw_state(&fw_rows[i]) == FWN_FAILED) n++;
+            if (fw_rows[i].arm) a++;
         }
         fw_chaps[c].failed = n;
+        fw_chaps[c].armed = a;
         total += n;
     }
     fw_total = total;
@@ -390,7 +594,13 @@ static void fw_draw_body(XPLMWindowID w)
         snprintf(buf, sizeof buf, "%d FAILED", fw_total);
         fw_text(l + pad, ty, FWN_AMBER, buf);
     } else {
-        fw_text(l + pad, ty, FWN_GREEN, "ALL NORMAL");
+        fw_copy(buf, sizeof buf, "ALL NORMAL");
+        fw_text(l + pad, ty, FWN_GREEN, buf);
+    }
+    if (fw_narmed > 0) {                /* (F2) and the armed ones */
+        int x = l + pad + fw_width(buf) + 18;
+        snprintf(buf, sizeof buf, "%d ARMED", fw_narmed);
+        fw_text(x, ty, FWN_CYAN, buf);
     }
     {
         int bx1 = r - pad, bb = hb + 6, bt = t - 6;
@@ -400,11 +610,47 @@ static void fw_draw_body(XPLMWindowID w)
         fw_hit(bx0, bb, bx1, bt, FWN_HIT_REPAIR, 0);
     }
 
-    /* the bottom: how to use it, or the list's trouble */
+    /* the bottom: how to use it, or the list's trouble; (F2) arming a
+       failure: its name, the triggers, the value, ARM and CANCEL */
     int fb = b, ft = b + rowh;
-    fw_rect(l, fb, r, ft, FWN_PANE);
-    fw_text(l + pad, fb + (rowh - fh) / 2 + 2, fw_note[0] ? FWN_AMBER : FWN_GREY, fw_note[0] ? fw_note :
-        "Click a failure to fail it now, again to repair it. Mouse wheel scrolls.");
+    if (fw_sel >= 0 && fw_sel < fw_nrows) {
+        ft = b + 2 * rowh + 8;
+        fw_rect(l, fb, r, ft, FWN_PANE);
+        int y1 = fb + rowh + 4;
+        fw_text(l + pad, y1 + (rowh - fh) / 2 + 2, FWN_CYAN, "ARM");
+        fw_text(l + pad + fw_width("ARM") + 12, y1 + (rowh - fh) / 2 + 2, FWN_WHITE, fw_rows[fw_sel].label);
+        int x = l + pad, y0 = fb + 4, y2 = fb + rowh;
+        for (int k = FWN_ARM_TIME; k <= FWN_ARM_RANDOM; k++) {
+            int w = fw_width(FWN_KIND_WORD[k]) + 16, on = k == fw_sel_kind;
+            if (on) fw_rect(x, y0, x + w, y2, FWN_CYAN_BOX);
+            fw_button(x, y0, x + w, y2, FWN_KIND_WORD[k], on ? FWN_DARK : FWN_CYAN, FWN_CYAN_BOX,
+                !on && hover && fw_in(hx, hy, x, y0, x + w, y2));
+            fw_hit(x, y0, x + w, y2, FWN_HIT_KIND, k);
+            x += w + 6;
+        }
+        x += 10;
+        int sw = fw_width("-") + 18;
+        fw_button(x, y0, x + sw, y2, "-", FWN_WHITE, FWN_BUTTON, hover && fw_in(hx, hy, x, y0, x + sw, y2));
+        fw_hit(x, y0, x + sw, y2, FWN_HIT_BAR, FWN_BAR_MINUS);
+        x += sw + 6;
+        fw_value_words(fw_sel_kind, fw_sel_val[fw_sel_kind], buf, sizeof buf);
+        int vw = fw_width("WITHIN 120 MIN") + 8;
+        fw_text(x + (vw - fw_width(buf)) / 2, fb + 4 + (rowh - 4 - fh) / 2 + 2, FWN_WHITE, buf);
+        x += vw + 6;
+        fw_button(x, y0, x + sw, y2, "+", FWN_WHITE, FWN_BUTTON, hover && fw_in(hx, hy, x, y0, x + sw, y2));
+        fw_hit(x, y0, x + sw, y2, FWN_HIT_BAR, FWN_BAR_PLUS);
+        int cx1 = r - pad, cx0 = cx1 - fw_width("CANCEL") - 20;
+        fw_button(cx0, y0, cx1, y2, "CANCEL", FWN_LIGHT, FWN_BUTTON, hover && fw_in(hx, hy, cx0, y0, cx1, y2));
+        fw_hit(cx0, y0, cx1, y2, FWN_HIT_BAR, FWN_BAR_CANCEL);
+        int ax1 = cx0 - 8, ax0 = ax1 - fw_width("ARM") - 28;
+        fw_rect(ax0, y0, ax1, y2, FWN_CYAN_BOX);
+        fw_button(ax0, y0, ax1, y2, "ARM", FWN_DARK, FWN_CYAN_BOX, 0);
+        fw_hit(ax0, y0, ax1, y2, FWN_HIT_BAR, FWN_BAR_ARM);
+    } else {
+        fw_rect(l, fb, r, ft, FWN_PANE);
+        fw_text(l + pad, fb + (rowh - fh) / 2 + 2, fw_note[0] ? FWN_AMBER : FWN_GREY, fw_note[0] ? fw_note :
+            "Click: fail now / repair.  ARM: fail later (time, altitude, speed, random).  Wheel: scroll.");
+    }
 
     /* the chapters */
     int top = hb - 1, bottom = ft + 1;
@@ -428,11 +674,19 @@ static void fw_draw_body(XPLMWindowID w)
         int tyc = yb + (ch - fh) / 2 + 2;
         fw_text(cl + 12, tyc, FWN_CYAN, fw_chaps[c].num);
         fw_text(cl + 12 + numw, tyc, sel ? FWN_WHITE : FWN_LIGHT, fw_chaps[c].title);
+        int x1 = cr - 10;
         if (fw_chaps[c].failed > 0) {
             snprintf(buf, sizeof buf, "%d", fw_chaps[c].failed);
-            int bw = fw_width(buf) + 12, x1 = cr - 10, x0 = x1 - bw;
+            int x0 = x1 - fw_width(buf) - 12;
             fw_rect(x0, yb + 4, x1, yt - 4, FWN_AMBER_BOX);
             fw_text(x0 + 6, tyc, FWN_DARK, buf);
+            x1 = x0 - 4;
+        }
+        if (fw_chaps[c].armed > 0) {    /* (F2) armed: cyan */
+            snprintf(buf, sizeof buf, "%d", fw_chaps[c].armed);
+            int x0 = x1 - fw_width(buf) - 12;
+            fw_outline(x0, yb + 4, x1, yt - 4, FWN_CYAN_BOX);
+            fw_text(x0 + 6, tyc, FWN_CYAN, buf);
         }
         fw_hit(cl, yb, cr, yt, FWN_HIT_CHAP, c);
         y -= ch;
@@ -477,6 +731,18 @@ static void fw_draw_body(XPLMWindowID w)
                 fw_text(wx, tyr, FWN_GREEN, word);
             } else {
                 fw_text(wx, tyr, FWN_GREY, word);
+            }
+            /* (F2) left of it: ARM (a normal one), or the trigger (armed) */
+            int ax1 = x0 - 8;
+            if (s == FWN_NORMAL) {
+                int ax0 = ax1 - fw_width("ARM") - 20;
+                int on = hover && fw_in(hx, hy, ax0, y0, ax1, y1);
+                fw_button(ax0, y0, ax1, y1, "ARM", on || i == fw_sel ? FWN_CYAN : FWN_GREY,
+                    on || i == fw_sel ? FWN_CYAN_BOX : FWN_BUTTON, on);
+                fw_hit(ax0, y0, ax1, y1, FWN_HIT_ARM, i);
+            } else if (s == FWN_ARMED && R->arm) {
+                fw_arm_words(R, buf, sizeof buf);
+                fw_text(ax1 - fw_width(buf), tyr, FWN_CYAN, buf);
             }
             if (s != FWN_NA) fw_hit(cr, yb, r, yt, FWN_HIT_ROW, i);
         }
@@ -525,6 +791,17 @@ static int fw_click(XPLMWindowID w, int x, int y, XPLMMouseStatus st, void *ref)
             fw_toggle_row(h->id);
         } else if (h->kind == FWN_HIT_REPAIR) {
             fw_repair_all();
+        } else if (h->kind == FWN_HIT_ARM) {          /* (F2) the arm bar for it */
+            fw_sel = h->id;
+        } else if (h->kind == FWN_HIT_KIND) {
+            fw_sel_kind = h->id;
+        } else if (h->kind == FWN_HIT_BAR) {
+            if (h->id == FWN_BAR_MINUS || h->id == FWN_BAR_PLUS) {
+                fw_step(h->id == FWN_BAR_PLUS);
+            } else {
+                if (h->id == FWN_BAR_ARM) fw_arm(fw_sel, fw_sel_kind, fw_sel_val[fw_sel_kind]);
+                fw_sel = -1;
+            }
         }
         return 1;
     }
@@ -639,7 +916,7 @@ static void fw_test_set(void *ref, int v)
     fw_test_last = -1;
     if (!fw_shown() || v < 1000) return;
     int kind = v / 1000, id = v % 1000;
-    if (kind == FWN_HIT_ROW && fw_chap < fw_nchaps) id += fw_chaps[fw_chap].first;
+    if ((kind == FWN_HIT_ROW || kind == FWN_HIT_ARM) && fw_chap < fw_nchaps) id += fw_chaps[fw_chap].first;
     for (int k = 0; k < fw_nhits; k++) {
         fw_hit_t *h = &fw_hits[k];
         if (h->kind != kind || h->id != id) continue;
@@ -649,6 +926,10 @@ static void fw_test_set(void *ref, int v)
     }
 }
 static XPLMDataRef fw_ref_test = NULL;
+
+/* (F2) the armed count; the arm bar's value (-1 no bar) */
+static int fw_armed_get(void *ref) { (void)ref; return fw_narmed; }
+static int fw_armval_get(void *ref) { (void)ref; return fw_sel >= 0 ? fw_sel_val[fw_sel_kind] : -1; }
 
 /* the menu's item */
 static void fw_menu_pick(void)
@@ -675,6 +956,12 @@ static void fw_start(XPLMMenuID m)
     fw_ref_open = int_ref("laminar/B747/failures/window_open", fw_open_get, fw_open_set);
     fw_ref_active = int_ref("laminar/B747/failures/active", fw_active_get, NULL);
     fw_ref_test = int_ref("laminar/B747/failures/test_click", fw_test_get, fw_test_set);
+    fw_ref_armed = int_ref("laminar/B747/failures/armed", fw_armed_get, NULL);
+    fw_ref_armval = int_ref("laminar/B747/failures/arm_value", fw_armval_get, NULL);
+    fw_ref_ftime = XPLMFindDataRef("sim/time/total_running_time_sec");
+    fw_ref_alt = XPLMFindDataRef("sim/cockpit2/gauges/indicators/altitude_ft_pilot");
+    fw_ref_ias = XPLMFindDataRef("sim/cockpit2/gauges/indicators/airspeed_kts_pilot");
+    srand((unsigned)GetTickCount());
     fw_cmd_toggle = XPLMCreateCommand("laminar/B747/failures/window_toggle", "Show or hide the failure window");
     fw_cmd_repair = XPLMCreateCommand("laminar/B747/failures/repair_all", "Repair every failure in the failure window's list");
     XPLMRegisterCommandHandler(fw_cmd_toggle, fw_command, 1, (void *)1);
@@ -692,6 +979,8 @@ static void fw_stop(void)
     XPLMUnregisterDataAccessor(fw_ref_open);
     XPLMUnregisterDataAccessor(fw_ref_active);
     XPLMUnregisterDataAccessor(fw_ref_test);
+    XPLMUnregisterDataAccessor(fw_ref_armed);
+    XPLMUnregisterDataAccessor(fw_ref_armval);
     if (fw_win) XPLMDestroyWindow(fw_win);
     fw_win = NULL;
 }

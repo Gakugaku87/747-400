@@ -305,6 +305,8 @@ static void set_entry(void (*set)(int), int n)
     if (n >= 1 && n <= XPLMCountFMSEntries()) set(n - 1);
 }
 
+static void fw_poll(void);   /* the failure window's armed failures (failures_window.c) */
+
 static float loop(float since_call, float since_loop, int counter, void *ref)
 {
     (void)since_call; (void)since_loop; (void)counter; (void)ref;
@@ -335,6 +337,7 @@ static float loop(float since_call, float since_loop, int counter, void *ref)
         set_entry(XPLMSetDisplayedFMSEntry, displayed);
     }
     sb_poll();
+    fw_poll();
     return -1.0f;
 }
 

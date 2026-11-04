@@ -21,7 +21,7 @@
 | `plugins/xtlua_keysystems` | XTLua（2つめ） | 油圧、air（空調・抽気・与圧）、飛行計器、FMC/CDU、AFDS・autothrottle、照明 |
 | `plugins/xtlua_nd` | XTLua（3つめ） | ND の地図データ |
 | `plugins/xtlua_fdr` | XTLua（4つめ） | flight data recorder（解析用の記録） |
-| `plugins/b747_fms_bridge` | C（MinGW-w64、Windows の `64/win.xpl`） | FMC の計画・現用点・表示中の点を X-Plane の FMS に、X-Plane のスレッドで（`laminar/B747/fms/xp/*`。2026-10-27：notes/ATA-34-61-FMC.md §23）。ほかに Plugins → 747-400 のメニュー（シムの便利機能、§126）、SimBrief の取得、ND の経路の線、故障の窓（2026-11-04：`src/failures_window.c` と一覧 `failures.txt`、`laminar/B747/failures/*`。notes/FAILURES.md） |
+| `plugins/b747_fms_bridge` | C（MinGW-w64、Windows の `64/win.xpl`） | FMC の計画・現用点・表示中の点を X-Plane の FMS に、X-Plane のスレッドで（`laminar/B747/fms/xp/*`。2026-10-27：notes/ATA-34-61-FMC.md §23）。ほかに Plugins → 747-400 のメニュー（シムの便利機能、§126）、SimBrief の取得、ND の経路の線、故障の窓（2026-11-04：`src/failures_window.c` と一覧 `failures.txt`、`laminar/B747/failures/*`。F2 の arm は毎フレームの `loop` から `fw_poll`。notes/FAILURES.md） |
 | `plugins/AutoATC` | 設定のみ | AutoATC の音声コマンド定義（`voice commands/voice_control.json`）。AutoATC 本体は別途インストール |
 
 - XTLua の各インスタンスは同じ構成になっている。
