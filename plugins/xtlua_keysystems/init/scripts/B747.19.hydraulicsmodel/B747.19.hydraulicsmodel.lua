@@ -136,6 +136,12 @@ B747DR_hyd_syn_sov              = deferred_dataref("laminar/B747/hydraulics/syno
 B747DR_hyd_syn_rsvr_press       = deferred_dataref("laminar/B747/hydraulics/synoptic/rsvr_press", "array[4]")
 B747DR_hyd_syn_inop             = deferred_dataref("laminar/B747/hydraulics/synoptic/inop", "array[4]")
 B747DR_hyd_syn_inop_set         = deferred_dataref("laminar/B747/hydraulics/synoptic/inop_set", "array[6]")
+-- (2026-11-04) the failures for the failure window (1 failed; the model's
+-- inputs: docs/overhaul/notes/ATA-29.md §10): engine pump 1-4, demand pump
+-- 1-4 (no flow), a leak in system 1-4 (its fluid drains in 120 s)
+B747DR_hyd_fail_edp             = deferred_dataref("laminar/B747/hydraulics/fail/edp", "array[4]")
+B747DR_hyd_fail_demand          = deferred_dataref("laminar/B747/hydraulics/fail/demand_pump", "array[4]")
+B747DR_hyd_fail_leak            = deferred_dataref("laminar/B747/hydraulics/fail/leak", "array[4]")
 B747DR_rudder_ratio   = deferred_dataref("laminar/B747/flt_ctrls/rudder_ratio", "number")
 -- the SRMs' rudder ratio changers (B747.45.xt.srm.lua, 4-1 step 2a): the
 -- upper and lower rudders' authority (1 = 32 degrees); rudder_ratio is the

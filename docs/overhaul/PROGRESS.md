@@ -151,7 +151,7 @@
 13. 7-2（照明）：段取りを決めた（2026-11-01、notes/ATA-33.md §10：7-2a〜7-2e）。7-2a〜7-2e は済（§11〜§15。7-2e は 2026-11-04）。FLIGHT DECK ACCESS LIGHTS（LIGHT-16）は見送り（3D に操作子も、点ける灯も無い）、BEACON の LWR と BOTH（LIGHT-12）は残す（承認事項）。
 14. 7-3（ドア）：軽く済ませた（2026-11-01、利用者の判断。notes/ATA-52.md §11）。DRS の箱、cargo・E/E door、flight deck door のロック、まとめのメッセージ、flight lock は 3D ができてから。
 15. 故障の窓（2026-11-04 に決めた：系統の残りを仕上げてから。メモ：Plugins → 747-400 から開く浮動ウィンドウで、ATA の章と系統図から、この機体のモデルの故障と X-Plane の故障を入れる。見た目は EICAS 風か明るい EFB 風のどちらでも、色と言葉で状態が分かること）。段取り：
-   - F0：各モデルに故障の入力を足す（無いもの）。電源は 2026-11-04 に済（`laminar/B747/electrical/fail/*`：発電機・load bus・IDG・TRU・充電器・SSB。notes/ATA-24.md §11）。燃料も済（`laminar/B747/fuel/fail/*`：ポンプ・弁・温度計・FJCC。notes/ATA-28.md §11）。空圧も済（`laminar/B747/air/fail/*`：過熱・過圧・HPSOV と PRV の閉・開のまま・APU の空気。notes/ATA-36.md §10）とダクトリークの抽気への影響（PNEU-03 の残り）も済。空調も済（`laminar/B747/air/fail/*`：パックの過熱・PTC・再循環ファン・機器冷却・ZTC とトリム空気の弁。notes/ATA-21.md §10。>E/E CLNG CARD も）。脚も済（`laminar/B747/gear/fail/air_gnd[2]`・`position_sensor[5]`：AIR/GND SYSTEM、A/G DISAGREE、GEAR MONITOR。notes/ATA-32.md §17）。EEC も済（`laminar/B747/engines/fail/eec_altn[4]`・`eec_fault[4]`：notes/ATA-70-80.md §10）。F0 はこれで済（2026-11-04）。次は F1（窓とメニューと一覧）。いまある故障の入力は 56（`laminar/B747/**/fail*`）と、モデルが読む X-Plane の故障。
+   - F0：各モデルに故障の入力を足す（無いもの）。電源は 2026-11-04 に済（`laminar/B747/electrical/fail/*`：発電機・load bus・IDG・TRU・充電器・SSB。notes/ATA-24.md §11）。燃料も済（`laminar/B747/fuel/fail/*`：ポンプ・弁・温度計・FJCC。notes/ATA-28.md §11）。空圧も済（`laminar/B747/air/fail/*`：過熱・過圧・HPSOV と PRV の閉・開のまま・APU の空気。notes/ATA-36.md §10）とダクトリークの抽気への影響（PNEU-03 の残り）も済。空調も済（`laminar/B747/air/fail/*`：パックの過熱・PTC・再循環ファン・機器冷却・ZTC とトリム空気の弁。notes/ATA-21.md §10。>E/E CLNG CARD も）。脚も済（`laminar/B747/gear/fail/air_gnd[2]`・`position_sensor[5]`：AIR/GND SYSTEM、A/G DISAGREE、GEAR MONITOR。notes/ATA-32.md §17）。EEC も済（`laminar/B747/engines/fail/eec_altn[4]`・`eec_fault[4]`：notes/ATA-70-80.md §10）。油圧も済（`laminar/B747/hydraulics/fail/edp[4]`・`demand_pump[4]`・`leak[4]`：notes/ATA-29.md §10。F1 に入る前に足りないと気づいた）。F0 はこれで済（2026-11-04）。いまある故障の入力は 59（`laminar/B747/**/fail*`）と、モデルが読む X-Plane の故障。
    - F1：窓・メニュー・章ごとの一覧と、すぐ入れる・直す（ネイティブの `b747_fms_bridge` に窓を足す）。
    - F2：発動の条件（時刻・高度・速度・MTBF）、arm・disarm、全部直す。
    - F3：系統図（油圧・電源・燃料・抽気から）。
@@ -422,6 +422,7 @@ PLAN.md §3 に書いた。要点：
   - ブレーキ源の系統 2 の切替圧 1500 psi。accumulator の計器は予圧 750 psi より下がらない。HYD CONTROL 1・4 は HYDIM 1・4 の電源喪失で出す。
   - 組み込み（`B747.19.xt.hyd_power.lua`）：舵面が差し引いた圧（前からの作り）を流量に直す係数 0.03 gpm／(psi/s)、パーキングブレーキを 1 回掛けるのに accumulator から使う作動油 20 in³、フラップが「動いている」「出ている」とみなす角度 0.2°・0.5°。
   - エンジン始動中、EDP の圧は N2 が 10 % 前後で立ち、ENGINE PRESS 灯が消える（上の推定「流量は N2 に比例」「漏れ 0.5 gpm」の結果。どの回転で消えるかは資料に無い）。
+  - 漏れの故障（故障の窓：`hydraulics/fail/leak`）で系統の作動油が 120 秒で空になる（2026-11-04、notes/ATA-29.md §10。資料に漏れの速さは無い）。
 - 空圧（1-5。`B747.55.bleed_model.lua` に「estimate」と書いてある。資料に式も値も無い部分）：
   - 流量は「パック 1 台＝1」の単位。エンジン 1 基が出せる量は N2 50 % で 0、90 % で 4.0（idle の 65 % で 1.5、70 % で 2.0。FCOM p.183 の「クロスブリード始動は供給側を 70 % N2 に」に合わせた）。APU は 42 psi・3.2（3 パックは賄えるが 3 パックと始動は賄えない：FCOM p.895）。地上空気 3.0。使う側はスターター 1.8、主翼防氷 0.5、ADP 0.3。
   - ダクト圧は、使う量が出せる量いっぱいのとき 30 % 下がり、超えると（出せる量／使う量）² で下がる。ダクト圧の遅れ 1 秒。
@@ -651,6 +652,7 @@ PLAN.md §3 に書いた。要点：
 | HYD-21 スタンドパイプ | 済 |
 | HYD-22 FLT CONTROL HYD POWER | 済（操縦系統 4-1 段 4 で FCTL-20 として：遮断弁 8 個、VALVE CLOSED、>FLT CONT VLVS、舵面の門から系統を外す） |
 | HYD-23 カスタム acf の舵面別割り当て | 未（要確認） |
+| HYD-24 故障の入力 | 済（2026-11-04、故障の窓の F0：EDP・demand pump・系統の漏れ。notes/ATA-29.md §10） |
 
 ## 空圧（1-5）の GAP の状態
 
@@ -1605,3 +1607,4 @@ X-Plane（カスタム acf）：`s07_cruise_ff`（FL350 の ALT HOLD：最後の
 - 2026-11-04：地上空気（notes/ATA-36.md §11、PNEU-07）。空気車をつなぐ操作を FMC の GROUND SERVICES ページの R3（GROUND AIR：CONNECT> と REMOVE>）と新しいコマンド `laminar/B747/air/ground_air/connect`（新しい `air/ground_air/connected`）に。地上で止まっているときだけつながり、動くか空中で外れる（推定）。中央の区画に 40 psi（FCOM p.183 SP.7.1 の始動に要る 30 psi 以上、ATA70_80 p.549–550 の 30〜45 psi の間：推定）。APU とエンジンが止まっていれば EXT AIR。回帰：`bleed_module_test` 69、全 209 本。X-Plane：新しい `s238_ground_air` 19/19（成田でエンジン運転中：CDU の MENU → GND HANDLING → GROUND SERVICES の R3 に GROUND AIR の CONNECT>、押すとつながり REMOVE>。ENGINE BLEED を 4 つとも切ると、3 パックのままでは空気車の出せる量いっぱいで 28 psi、FCOM p.184 のとおりパックを 1 つにすると 35.8 psi（始動に要る 30 psi 以上）。R3 で外すとダクトが空。CDU の写真）、回帰の `s05_bleed` 64/64。Log.txt に Lua の誤りなし。
 - 2026-11-04：GE の表示の N2 の開始の手当て（ENG-33 の一部）。GE の表示の N2（`B747.42.xt.EEC.GE.lua` の `N2_display_GE`）は、エンジン運転中で始めたときも 0 から 10 秒の時定数でゆっくり上がっていた（開始から 10 秒で 45 %）。抽気のモデルはこの表示の N2 を読むので、始まりの十数秒はダクトが空で、パックが止まり >CARGO DET AIR が出ていた（`s237` の開始の CAS で気づいた）。運転中（X-Plane の N2 50 % 超）なのに表示が 0 のときは今の値から始めるようにした（実際の始動では表示は 0 から回転について上がるので当たらない）。X-Plane：`s237_oil_filter_ge` の開始の確かめ（開始から 10 秒で表示の N2 67.8 %、中央のダクト 39 psi、>CARGO DET AIR なし）、`s13_oil_ge` 11/11。Log.txt に Lua の誤りなし。
 - 2026-11-04：エンジンの scavenge のオイルフィルタ（notes/ATA-70-80.md §11、ENG-28）。新しい `laminar/B747/engines/fail/oil_filter[4]`：差圧スイッチが閉じてオイルが流れている（N2 10 % 超：推定）と、CF6 の ENG n OIL FILT（新しい advisory 324〜327。init と xt の警報の表の両方）と STATUS ENG n OIL FILT（142〜145）（ATA70_80 p.522、FCOM p.891 の 570）。P&W の FCOM には無いので出さない。回帰：`engine_display_model_test` 93、`engine_display_module_test` 51、全 209 本。X-Plane：新しい `s237_oil_filter_ge` 7/7（GE の Saudia、成田でエンジン運転中：エンジン 3 のフィルタで ENG 3 OIL FILT と STATUS、ほかのエンジンは出ない、故障を消すと消える）、回帰の `s13_oil_ge` 11/11。Log.txt に Lua の誤りなし。
+- 2026-11-04：故障の窓の F0、油圧（notes/ATA-29.md §10、HYD-24）。F1 に入る前に、油圧に故障の入力が無いと気づいて足した。新しい `laminar/B747/hydraulics/fail/edp[4]`・`demand_pump[4]`・`leak[4]`。ポンプの故障は流量 0 で、前からの論理（ENGINE PRESS・DEMAND PRESS 灯、HYD PRESS ENG・DEM・SYS、AUTO の demand pump の引き継ぎ）がそのまま働く。漏れは 120 秒で空（推定）、0.34 で >HYD QTY LOW、直すと 1.00 に戻る（窓の修理）。回帰：`hyd_model_test` 168、`hyd_module_test` 260、全 209 本。X-Plane：新しい `s241_hyd_failures` 25/25（成田でエンジン運転中：EDP 1 で ENGINE PRESS 1・HYD PRESS ENG 1、ADP 1 が引き継いで系統 1 は 2,997 psi。DEMAND 2 を ON にして故障で DEMAND PRESS 2・HYD PRESS DEM 2。系統 3 の漏れで約 80 秒で 0.34 になり >HYD QTY LOW 3、直すと 1.00。HYD synoptic の写真）、回帰の `s04_hydraulics` 29/29。Log.txt に Lua の誤りなし。

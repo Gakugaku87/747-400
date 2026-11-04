@@ -82,14 +82,14 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 
 ### 油圧（ATA 29）：作り直し済み（1-4）
 
-実機に合わせた点：EDP は圧力補償型、demand pump の AUTO（1400/1600 psi、タイマー、CUTOFF、系統 1・4 のフラップ）、ポンプの電源と抽気、AUX、火災スイッチ（SOV 閉・EDP 減圧・demand pump 起動）、舵面の系統の組の誤り 3 か所を修正、accumulator（系統 4 だけで充圧）、X-Plane の故障を書き換えない、P5 の灯、EICAS、作動油量（乱数をやめた）、リザーバの与圧と RSVR PRESS、STATUS、スタンドパイプ。カスタム acf の HYD synoptic（ポンプの記号を状態の色で、各系統と系統の組の不作動項目。P&W は THRUST REV つき）。
+実機に合わせた点：EDP は圧力補償型、demand pump の AUTO（1400/1600 psi、タイマー、CUTOFF、系統 1・4 のフラップ）、ポンプの電源と抽気、AUX、火災スイッチ（SOV 閉・EDP 減圧・demand pump 起動）、舵面の系統の組の誤り 3 か所を修正、accumulator（系統 4 だけで充圧）、X-Plane の故障を書き換えない、P5 の灯、EICAS、作動油量（乱数をやめた）、リザーバの与圧と RSVR PRESS、STATUS、スタンドパイプ、FLT CONTROL HYD POWER（系統ごとの遮断弁、4-1 段 4）。カスタム acf の HYD synoptic（ポンプの記号を状態の色で、各系統と系統の組の不作動項目。P&W は THRUST REV つき）。
 
 残っている違い：
 - 系統の圧による制限：ステアリング（4-2 段 4：系統 1 の脚 DOWN 圧。HYD-12 は済）、脚（4-2 段 1：前脚・胴体脚は系統 1、翼脚は系統 4）、安定板トリム（4-1 段 2b：系統 2・3）、ヨーダンパー（4-1 段 4：上は系統 3、下は系統 2）は済。P&W の逆推力は、エンジン 2-3 で系統 n の圧が 1,000 psi 未満なら動かないようにした。
 - ブレーキの効きは源（系統 4、1、2、accumulator）の圧で決まる（4-2 段 2。HYD-09 は済）。
 - 油温に燃料の熱交換が無い（HYD-17）。
 - 純正 acf の HYD synoptic は前のまま（色の付かない記号、組の中身が合わない不作動項目の絵）。
-- FLT CONTROL HYD POWER（系統ごとの遮断弁）が無い（HYD-22）。
+- 故障は 2026-11-04 から dataref（`laminar/B747/hydraulics/fail/edp[4]`・`demand_pump[4]`：ポンプが流量を出さない、`fail/leak[4]`：系統の漏れ）で入れられ、灯・EICAS・demand pump の引き継ぎは前からの論理で出る。漏れの速さ（120 秒で空）は推定で、直すと満タンに戻る（実機は整備で補給。notes/ATA-29.md §10）。
 - 推定：舵面が動く圧 1000 psi、漏れ量、圧の立ち上がり、油温の上がり方、synoptic の不作動項目の組（1+2+4 の BRAKES）と RR の THRUST REV など。
 
 ### 空圧（ATA 36）：作り直し済み（1-5）
