@@ -62,6 +62,13 @@ B747DR_elec_bus_isolate_req     = find_dataref("laminar/B747/autopilot/bus_isola
 simDR_elec_radio_alt            = find_dataref("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
 B747DR_elec_bus_isolated        = find_dataref("laminar/B747/electrical/bus_isolated")
 B747DR_elec_synoptic_inhibit    = find_dataref("laminar/B747/electrical/synoptic_inhibit")
+-- (2026-11-04) the failures (notes/ATA-24.md §11)
+B747DR_elec_fail_gen            = find_dataref("laminar/B747/electrical/fail/gen")
+B747DR_elec_fail_bus            = find_dataref("laminar/B747/electrical/fail/bus")
+B747DR_elec_fail_drive          = find_dataref("laminar/B747/electrical/fail/drive")
+B747DR_elec_fail_tru            = find_dataref("laminar/B747/electrical/fail/tru")
+B747DR_elec_fail_charger        = find_dataref("laminar/B747/electrical/fail/charger")
+B747DR_elec_fail_ssb            = find_dataref("laminar/B747/electrical/fail/ssb")
 
 local elec_state = E.new()
 local elec_inputs = E.inputs()
@@ -84,6 +91,9 @@ local ADV_UTIL_BUS = 105           -- ELEC UTIL BUS L/R: 105-106
 local ADV_STBY_BUS_APU, ADV_STBY_BUS_MAIN = 276, 277
 -- STATUS slots (laminar/B747/CAS/status_status, B747.87.xt.warning.lua)
 local STATUS_DRIVE_DISC = 25        -- DRIVE DISC 1-4: 25-28 (LH24 p.64)
+local STATUS_ELEC_DRIVE = 100       -- ELEC DRIVE 1-4: 100-103 (LH24 p.72-73)
+local STATUS_BAT_CHARGER_MAIN, STATUS_BAT_CHARGER_APU = 104, 105    -- LH24 p.196
+local STATUS_TR_UNIT = 106          -- ELEC TR UNIT (LH24 p.184)
 
 local function read_inputs(inp)
     inp.engine_type = B747DR_elec_engine_type
@@ -115,6 +125,17 @@ local function read_inputs(inp)
     inp.on_ground = B747DR_elec_pseu_air == 0               -- PSEU air relays, ATA29_32 p.299
     inp.autoland_req = B747DR_elec_bus_isolate_req > 0.5
     inp.ra = simDR_elec_radio_alt
+    -- (2026-11-04) the failures
+    local f = inp.fail
+    for n = 1, 4 do
+        f.gen[n] = B747DR_elec_fail_gen[n - 1] > 0.5
+        f.bus[n] = B747DR_elec_fail_bus[n - 1] > 0.5
+        f.drive[n] = B747DR_elec_fail_drive[n - 1] > 0.5
+        f.tru[n] = B747DR_elec_fail_tru[n - 1] > 0.5
+    end
+    f.charger[1] = B747DR_elec_fail_charger[0] > 0.5
+    f.charger[2] = B747DR_elec_fail_charger[1] > 0.5
+    f.ssb = B747DR_elec_fail_ssb > 0.5
 end
 
 local function write_buses(out)
@@ -215,7 +236,11 @@ local function write_cas(out)
         -- the EIUs keep DRIVE DISC n until the CMC erases it; here it goes
         -- with the drive reset (simplified: there is no CMC erase)
         B747DR_elec_CAS_status[STATUS_DRIVE_DISC + n - 1] = flag(cas.drive_disc[n])
+        B747DR_elec_CAS_status[STATUS_ELEC_DRIVE + n - 1] = flag(out.status.drive[n])
     end
+    B747DR_elec_CAS_status[STATUS_BAT_CHARGER_MAIN] = flag(out.status.bat_charger_main)
+    B747DR_elec_CAS_status[STATUS_BAT_CHARGER_APU] = flag(out.status.bat_charger_apu)
+    B747DR_elec_CAS_status[STATUS_TR_UNIT] = flag(out.status.tr_unit)
     B747DR_CAS_advisory_status[ADV_SSB_OPEN] = flag(cas.ssb_open)
     B747DR_CAS_advisory_status[ADV_UTIL_BUS] = flag(cas.util_bus[1])
     B747DR_CAS_advisory_status[ADV_UTIL_BUS + 1] = flag(cas.util_bus[2])

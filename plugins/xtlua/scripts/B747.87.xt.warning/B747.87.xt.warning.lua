@@ -680,6 +680,13 @@ local B747_CASstatusMsg = {
     {DRindex = 97, name = "BRAKE TEMP SYS"},      -- ATA29_32 p.428 (4-2 step 5)
     {DRindex = 98, name = "TIRE PRESS SYS"},      -- ATA29_32 p.376
     {DRindex = 99, name = "FLAP SYS MONITOR"},    -- ATA27 p.320 (FCTL-12)
+    {DRindex = 100, name = "ELEC DRIVE 1"},       -- LH24 p.72-73 (2026-11-04: the electrical failures)
+    {DRindex = 101, name = "ELEC DRIVE 2"},
+    {DRindex = 102, name = "ELEC DRIVE 3"},
+    {DRindex = 103, name = "ELEC DRIVE 4"},
+    {DRindex = 104, name = "BAT CHARGER MAIN"},   -- LH24 p.196
+    {DRindex = 105, name = "BAT CHARGER APU"},
+    {DRindex = 106, name = "ELEC TR UNIT"},       -- LH24 p.184
 }
 
 

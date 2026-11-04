@@ -141,4 +141,37 @@ T.equal(get(ADVISORY, 276), 1, "STBY OFF: >STBY BUS APU")
 T.equal(get(ADVISORY, 277), 1, "STBY OFF: >STBY BUS MAIN")
 T.equal(get("laminar/B747/electrical/capt_display_power"), 6, "STBY OFF: captain's displays off")
 
+-- (2026-11-04) the failures through their datarefs (notes/ATA-24.md §11),
+-- STANDBY POWER AUTO again: TRU 2 (STATUS ELEC TR UNIT, LH24 p.184), drive 3
+-- (ELEC DRIVE 3 and its STATUS, p.72-73), the SSB failed open (>ELEC SSB
+-- OPEN, FCOM p.822), the APU charger (BAT CHARGER APU after the EIUs' delay,
+-- p.196), generator 4 (ELEC GEN OFF 4, AC bus 4 from the sync bus: p.102)
+rt:set("laminar/B747/electrical/standby_power/sel_dial_pos", 1)
+local FAIL = "laminar/B747/electrical/fail/"
+local STATUS = "laminar/B747/CAS/status_status"
+rt:set(FAIL .. "tru", 1, 1)
+rt:set(FAIL .. "drive", 2, 1)
+rt:set(FAIL .. "ssb", 1)
+rt:set(FAIL .. "charger", 1, 1)
+rt:set(FAIL .. "gen", 3, 1)
+frames(11)
+T.equal(get(STATUS, 106), 1, "TRU 2 failed: STATUS ELEC TR UNIT")
+T.equal(get(ADVISORY, 98), 1, "drive 3: ELEC DRIVE 3")
+T.equal(get(STATUS, 102), 1, "drive 3: STATUS ELEC DRIVE 3")
+T.equal(get("laminar/B747/electrical/light/drive", 2), 1, "drive 3: DRIVE 3 light")
+T.equal(get(ADVISORY, 104), 1, "SSB failed: >ELEC SSB OPEN")
+T.equal(get("laminar/B747/electrical/breaker/ssb"), 0, "SSB failed: open")
+T.equal(get(STATUS, 105), 1, "APU charger: STATUS BAT CHARGER APU")
+T.equal(get(STATUS, 104), 0, "no BAT CHARGER MAIN")
+T.equal(get(ADVISORY, 103), 1, "generator 4: ELEC GEN OFF 4")
+T.equal(get("laminar/B747/electrical/breaker/gcb", 3), 0, "generator 4: GCB 4 open")
+T.equal(get("laminar/B747/electrical/bus/ac", 3), 1, "generator 4: AC bus 4 from generator 3 (the BTBs)")
+for _, k in ipairs({"tru", "drive", "charger", "gen"}) do
+    for i = 0, (k == "charger") and 1 or 3 do rt:set(FAIL .. k, i, 0) end
+end
+rt:set(FAIL .. "ssb", 0)
+frames(1)
+T.equal(get(ADVISORY, 104), 0, "the failures cleared: no >ELEC SSB OPEN")
+T.equal(get(STATUS, 106), 0, "the failures cleared: no ELEC TR UNIT")
+
 T.done()

@@ -4,8 +4,11 @@
 -- Logic and sources: docs/overhaul/notes/ATA-24.md (FCOM 6.10-6.30 and the
 -- Lufthansa B1 ATA 24 manual, "LH24"). Reference airplane: FCOM 109.
 -- Simplified as the notes §6 allow: no voltages or frequencies (a source is
--- good or not), paralleling is instant, no protective trips (no failures yet),
--- load shedding from the generator count instead of currents.
+-- good or not), paralleling is instant, load shedding from the generator
+-- count instead of currents. Failures (2026-11-04, notes §11): a generator
+-- power fault, a load bus fault, the IDG drive, a TRU, the battery chargers
+-- and the SSB, each as a flag; the protective trips they cause follow LH24
+-- p.102-108, p.184 and p.196.
 --
 --   local E = B747_elec_model            -- in XTLua, after dofile
 --   local E = dofile(".../B747.03.elec_model.lua")   -- in the tests
@@ -46,6 +49,9 @@ M.SHED_ORDER = {{"galley", 1}, {"galley", 4}, {"galley", 2}, {"galley", 3},
 M.ISO_OPEN = {A = {1, 2, 3}, B = {2, 3}, C = {1, 3}, D = {1, 2}, E = {1, 2}}
 M.ISO_CONFIG = {"B", "C", "D", "E"}
 M.ISO_HOLD_RA = 200            -- below it a second channel lost keeps the BTBs open, LH24 p.244
+-- the EIUs' delay before BAT CHARGER MAIN/APU (LH24 p.196 says only that
+-- they delay it: estimate)
+M.CHARGER_MSG_S = 10
 
 local L, R = 1, 2
 local SIDE = {L, L, R, R}             -- sync bus side of AC bus / IDG 1-4
@@ -85,6 +91,13 @@ function M.inputs()
         fire_handle = flags(4, false),   -- engine fire switch pulled: trips the GCR, LH24 p.108
         autoland_req = false,            -- the FCCs' bus isolation request (laminar/B747/autopilot/bus_isolate_req)
         ra = 9999,                       -- radio altitude, ft
+        -- (2026-11-04) failures, true failed (laminar/B747/electrical/fail/*;
+        -- notes §11): a generator power fault (the GCR trips: LH24 p.106), a
+        -- load bus fault (the BTB latched open: p.102), the IDG drive (low
+        -- oil pressure or high oil temperature: p.72-73), a TRU (p.184), the
+        -- main and APU battery chargers (p.196), the SSB failed open
+        fail = {gen = flags(4, false), bus = flags(4, false), drive = flags(4, false),
+            tru = flags(4, false), charger = {false, false}, ssb = false},
     }
 end
 
@@ -106,6 +119,9 @@ function M.new()
         iso = {config = nil, hold = false, done = false},
         apu_start_prev = false, apu_start_relay = 0,
         bat = {main = bat(), apu = bat()},
+        -- (2026-11-04) the BTB's fault latch of a load bus fault (LH24 p.102),
+        -- the SSB's close command, the chargers' failed signals' time
+        btb_fault = flags(4, false), ssb_cmd = false, charger_t = {0, 0},
         out = nil,
     }
 end
@@ -213,13 +229,16 @@ end
 -- SSB after the sources have settled (LH24 p.120; FCOM p.796-797): closed when
 -- one side feeds both, or both sides have IDGs (paralleled); open when the
 -- sides have separate EXT/APU sources or different kinds, and with no source.
-local function settle_ssb(s, good)
+-- (2026-11-04) Failed open, it stays open under a close command (>ELEC SSB
+-- OPEN: FCOM p.822).
+local function settle_ssb(s, good, failed)
     local a, b = side_source(s, L, good), side_source(s, R, good)
     if a and b then
-        s.ssb = (a == "idg" and b == "idg")
+        s.ssb_cmd = (a == "idg" and b == "idg")
     else
-        s.ssb = (a ~= nil or b ~= nil)
+        s.ssb_cmd = (a ~= nil or b ~= nil)
     end
+    s.ssb = s.ssb_cmd and not failed
 end
 
 -- Autoland bus isolation (ELEC-18; LH24 p.242-247, logic figure p.245;
@@ -302,9 +321,16 @@ function M.update(s, inp, dt)
     -- It is a latching relay: after the fire switch, GEN CONT OFF and ON
     -- closes it again (LH24 p.108). Good power: GCR closed and no underspeed
     -- (LH24 p.66, p.102).
+    local fail = inp.fail
     local good = {}
     for n = 1, 4 do
-        if inp.fire_handle[n] then s.gcr_trip[n] = true elseif not inp.gen_cont[n] then s.gcr_trip[n] = false end
+        -- (2026-11-04) a generator power fault trips the GCR too (LH24
+        -- p.106: voltage, frequency, differential, open phase); so does a
+        -- fault on its load bus (estimate: the sources give the BTB's trip
+        -- only, and the generator would feed the fault). GEN CONT OFF and
+        -- ON resets it; it trips again while the fault stays (p.106).
+        local trip = inp.fire_handle[n] or fail.gen[n] or fail.bus[n]
+        if trip then s.gcr_trip[n] = true elseif not inp.gen_cont[n] then s.gcr_trip[n] = false end
         local gcr = inp.gen_cont[n] and s.idg_connected[n] and not s.gcr_trip[n]
         good[n] = gcr and speed[n]
     end
@@ -312,9 +338,18 @@ function M.update(s, inp, dt)
     local ext_ok = {inp.ext_available[1] and true or false, inp.ext_available[2] and true or false}
 
     -- breakers -------------------------------------------------------------
-    local iso_open = isolation(s, inp, good)
+    -- the generator channels for the autoland isolation: a generator and its
+    -- TRU (LH24 p.244)
+    local channel = {}
+    for n = 1, 4 do channel[n] = good[n] and not fail.tru[n] end
+    local iso_open = isolation(s, inp, channel)
     for n = 1, 4 do
-        s.btb[n] = inp.bus_tie[n] and not iso_open.btb[n]           -- FCOM p.785, LH24 p.104
+        -- (2026-11-04) a load bus fault latches the BTB open until BUS TIE
+        -- OFF and back to AUTO, without the auto reclose (LH24 p.102). A
+        -- generator power fault trips the BTB and then the GCB, and the BTB
+        -- recloses (the auto reclose, p.102; FCOM p.798): closed here.
+        if fail.bus[n] then s.btb_fault[n] = true elseif not inp.bus_tie[n] then s.btb_fault[n] = false end
+        s.btb[n] = inp.bus_tie[n] and not iso_open.btb[n] and not s.btb_fault[n]   -- FCOM p.785, LH24 p.104
         s.dcir[n] = inp.bus_tie[n] and not iso_open.dcir[n]         -- FCOM p.819
         if s.gcb[n] and not good[n] then s.gcb[n] = false end       -- GEN CONT OFF, underspeed, GCR trip
     end
@@ -346,7 +381,7 @@ function M.update(s, inp, dt)
             idg_online(s, n, out)
         end
     end
-    settle_ssb(s, good)
+    settle_ssb(s, good, fail.ssb)
 
     -- EXT/APU switch pushed to connect (FCOM p.783-784): a new request, taken
     -- only when available and not in air mode (LH24 p.218, p.148). A request
@@ -372,21 +407,23 @@ function M.update(s, inp, dt)
         s.ext_request_prev[k] = inp.ext_request[k]
         s.apu_request_prev[k] = inp.apu_request[k]
     end
-    settle_ssb(s, good)
+    settle_ssb(s, good, fail.ssb)
 
     -- AC buses ---------------------------------------------------------------
     local own = {side_source(s, L, good) ~= nil, side_source(s, R, good) ~= nil}
     local sync = {own[L] or (s.ssb and own[R]), own[R] or (s.ssb and own[L])}
     local ac = {}
     for n = 1, 4 do
-        ac[n] = (s.gcb[n] and good[n]) or (s.btb[n] and sync[SIDE[n]])
+        -- (2026-11-04) a load bus with a fault carries no power
+        ac[n] = not fail.bus[n] and ((s.gcb[n] and good[n]) or (s.btb[n] and sync[SIDE[n]]))
     end
 
-    -- DC: TRU n on AC n; DCIR to the DC tie bus (FCOM p.819, LH24 p.166)
+    -- DC: TRU n on AC n; DCIR to the DC tie bus (FCOM p.819, LH24 p.166). A
+    -- failed TRU (2026-11-04) gives nothing: its DC bus from the tie bus
     local tru = {}
     local tie = false
     for n = 1, 4 do
-        tru[n] = ac[n]
+        tru[n] = ac[n] and not fail.tru[n]
         if tru[n] and s.dcir[n] then tie = true end
     end
     local dc = {}
@@ -405,8 +442,9 @@ function M.update(s, inp, dt)
     -- p.155, p.182, p.192-196)
     local bm, ba = s.bat.main, s.bat.apu
     local stby = inp.stby_power
-    local main_charger = gsb and stby ~= 2
-    local apu_charger = gsb and stby ~= 2 and not inp.apu_start
+    -- (2026-11-04) a failed charger stops (LH24 p.196)
+    local main_charger = gsb and stby ~= 2 and not fail.charger[1]
+    local apu_charger = gsb and stby ~= 2 and not inp.apu_start and not fail.charger[2]
     local hot_main = main_charger or bm.ah > 0
     local hot_apu = apu_charger or ba.ah > 0
     local r7224 = dc[3] and stby ~= 2 and ac[3] and not single_tru
@@ -519,8 +557,12 @@ function M.update(s, inp, dt)
         lt.isln[n] = not s.btb[n] and not (autoland and n <= 3)
         lt.gen_off[n] = not s.gcb[n]
         -- IDG oil pressure builds with input speed: estimate, low below the
-        -- on-line speed (DRIVE lights on before start, FCOM p.104 NP.21.10)
-        drive_low[n] = not (s.idg_connected[n] and speed[n])
+        -- on-line speed (DRIVE lights on before start, FCOM p.104 NP.21.10).
+        -- (2026-11-04) A drive failure: low oil pressure or high oil
+        -- temperature (LH24 p.72-73). The 109 before the SB keeps its
+        -- generator on line (FCOM p.821); the thermal disconnect at 213 °C
+        -- (p.797) is not modelled (no oil temperature)
+        drive_low[n] = not (s.idg_connected[n] and speed[n]) or fail.drive[n]
         lt.drive[n] = drive_low[n]
     end
     lt.battery_off = not inp.battery
@@ -536,11 +578,12 @@ function M.update(s, inp, dt)
         cas.gen_off[n] = not s.gcb[n] and ac[n]
         cas.bus_isln[n] = not s.btb[n] and ac[n] and not (autoland and n <= 3)
         -- ELEC DRIVE: DRIVE light with the engine running and the IDG
-        -- connected (LH24 p.72-73); never in normal operation here
+        -- connected (LH24 p.72-73); in normal operation only by a failure
         cas.drive[n] = drive_low[n] and speed[n] and s.idg_connected[n]
         cas.drive_disc[n] = not s.idg_connected[n]
     end
-    cas.ssb_open = false
+    -- >ELEC SSB OPEN: the SSB open under a close command (FCOM p.822)
+    cas.ssb_open = s.ssb_cmd and not s.ssb
     cas.util_bus = {}
     for k = 1, 2 do cas.util_bus[k] = not inp.utility[k] and s.shed == 0 end
     cas.stby_bus_main = not stby_main
@@ -549,6 +592,27 @@ function M.update(s, inp, dt)
     cas.bat_disch_apu = discharging(ba, inp.apu_start, dt)
     cas.battery_off = not inp.battery
     out.cas = cas
+
+    -- (2026-11-04) STATUS messages (the EIUs' maintenance messages):
+    -- ELEC DRIVE n as the advisory (LH24 p.72-73); ELEC TR UNIT for a TRU
+    -- failed with its AC bus powered (p.184); BAT CHARGER MAIN/APU for a
+    -- charger's failed signal with the GSB powered, not with STANDBY POWER
+    -- at BAT, after the EIUs' delay (p.196)
+    local st = {drive = {}, tr_unit = false}
+    for n = 1, 4 do
+        st.drive[n] = cas.drive[n]
+        if fail.tru[n] and ac[n] then st.tr_unit = true end
+    end
+    for k = 1, 2 do
+        if fail.charger[k] and gsb and stby ~= 2 then
+            s.charger_t[k] = s.charger_t[k] + dt
+        else
+            s.charger_t[k] = 0
+        end
+    end
+    st.bat_charger_main = s.charger_t[1] >= M.CHARGER_MSG_S
+    st.bat_charger_apu = s.charger_t[2] >= M.CHARGER_MSG_S
+    out.status = st
 
     -- X-Plane stand-ins (notes §6): X-Plane's electrics only serve its own
     -- instruments, autopilot and sounds; cross tie stays closed
