@@ -108,6 +108,7 @@ B747DR_fire_fail_wheel_well                 = deferred_dataref("laminar/B747/fir
 B747DR_fire_fail_duct_leak                  = deferred_dataref("laminar/B747/fire/fail/duct_leak", "array[3]")
 B747DR_fire_fail_lav_smoke                  = deferred_dataref("laminar/B747/fire/fail/lav_smoke", "number")
 B747DR_fire_fail_rest_smoke                 = deferred_dataref("laminar/B747/fire/fail/rest_smoke", "number")
+B747DR_fire_fail_bottle_leak                = deferred_dataref("laminar/B747/fire/fail/bottle_leak", "array[9]")
 B747DR_fire_cargo_ext_bottle_psi            = deferred_dataref("laminar/B747/fire/cargo/ext_bottle/psi", "array[4]")
 B747DR_fire_light_cargo                     = deferred_dataref("laminar/B747/fire/light/cargo", "array[3]")
 B747DR_fire_light_squib                     = deferred_dataref("laminar/B747/fire/light/squib", "array[9]")
@@ -319,6 +320,7 @@ local function read_inputs(inp)
     inp.duct_power = B747DR_fire_bus_dc[1] > 0.5 or B747DR_fire_bus_bat_main > 0.5
     inp.lav_smoke = B747DR_fire_fail_lav_smoke > 0.5
     inp.rest_smoke = B747DR_fire_fail_rest_smoke > 0.5
+    for b = 1, F.BOTTLES do inp.btl_leak[b] = B747DR_fire_fail_bottle_leak[b - 1] > 0.5 end
     inp.squib_test[1] = B747DR_fire_squib_test_pos[0] > 0.5
     inp.squib_test[2] = B747DR_fire_squib_test_pos[1] > 0.5
     inp.cargo_arm[1] = B747DR_button_switch_position[SW_CARGO_ARM_FWD] > 0.5

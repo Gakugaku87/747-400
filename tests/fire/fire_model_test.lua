@@ -444,4 +444,34 @@ do
     T.check(not out.squib_light[3], "no main hot battery bus: no squib light")
 end
 
+-- (2026-11-04) a leaking bottle (the failure window, notes/ATA-26.md §13):
+-- its charge goes in M.LEAK_S; below the switch BTL DISCH; then a fire
+-- finds it empty (nothing into the engine); repaired, a full bottle whose
+-- squib fires again
+do
+    local s, inp = M.new(), M.inputs()
+    inp.btl_leak[1] = true
+    local out = run(s, inp, M.LEAK_S / 2)
+    T.near(out.btl_psi[1], 300, 1, "half the time: half the charge")
+    T.check(not out.btl_low[1], "300 psi: above the 225 psi switch")
+    out = run(s, inp, M.LEAK_S / 2 + 1)
+    T.equal(out.btl_psi[1], 0, "the leak: empty")
+    T.check(out.btl_low[1] and not out.btl_low[2], "BTL DISCH L A, not L B")
+    T.check(not out.extinguish[1], "leaked overboard: not into engine 1")
+    inp.eng_fire_heat[1] = true
+    inp.eng_toggle[1] = true
+    out = run(s, inp, 0.1)
+    inp.eng_rotate[1] = -1
+    out = run(s, inp, 0.1)
+    T.check(not out.extinguish[1], "a fire, rotated to A: the leaked bottle has nothing")
+    inp.btl_leak[1] = false
+    out = run(s, inp, 0.1)
+    T.equal(out.btl_psi[1], 600, "repaired: a full bottle")
+    inp.eng_rotate[1] = 1           -- back to the centre, then to A again
+    out = run(s, inp, 0.1)
+    inp.eng_rotate[1] = -1
+    out = run(s, inp, 0.1)
+    T.check(out.extinguish[1], "repaired: its squib fires again into engine 1")
+end
+
 T.done()

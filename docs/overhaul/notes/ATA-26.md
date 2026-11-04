@@ -379,3 +379,11 @@ bell の断続: 2 s 鳴る / 3 s 休む（570 は 1 s / 10 s）
 - BLD DUCT LEAK L・C・R は、リークの区画のダクト圧（`laminar/B747/air/duct_pressure_L`・`C`・`R`）が 5 psi 以上のあいだ出る。温度スイッチは破れたダクトの熱い空気で閉じる（ATA26_28 p.284）ので、区画に空気が無ければ出ない。空気が無くなってから（乗員の隔離：QRH 2.2）、または故障が消えてから 30 秒でスイッチが開いて消え、status も一緒に消える（30 秒と 5 psi は推定：資料に冷える時間が無い）。
 - 漏れが区画の空気を取るのは抽気のモデル（notes/ATA-36.md §10）。
 - 試験：`fire_model_test` 131、`fire_module_test` 90。X-Plane（カスタム acf、2026-11-04）：新しい `s231_duct_leak` 17/17（成田でエンジン運転中：左のダクトのリークで BLD DUCT LEAK L と beeper、ダクト圧 39.6 → 38.8 psi。QRH 2.2 の隔離（ISOLATION L、ENGINE BLEED 1・2 OFF）で左のダクトが 3 秒で空になり、BLD DUCT LEAK L はその 30 秒後に消える。右のダクトは 37.9 psi のまま。上の EICAS の写真）、回帰の `s230_bleed_failures` 38/38（抽気パネルの SYS FAULT 2 の写真も撮れた）、`s23_fire_cargo` 27/27。Log.txt に Lua の誤りなし。
+
+## 13. 消火ボトルの漏れ（2026-11-04：故障の窓のため）
+
+- 新しい dataref（1 で故障。init `B747.35.fire`）：`laminar/B747/fire/fail/bottle_leak[9]`（L ENG A、L ENG B、R ENG A、R ENG B、APU、CARGO A〜D）。
+- ボトルの圧は前から放出でしか下がらなかった。故障の間、圧を 120 秒で 0 まで下げる（推定：資料に漏れの速さは無い）。薬剤は外へ出るので、消火には使われない。圧スイッチ（エンジンと APU は 225 psi、貨物は 300 psi）を下回ると、前からの論理で BTL DISCH 灯、>BTL LO L/R ENG A/B、STATUS BTL LOW …、>BOTTLE LOW APU、>CGO BTL DISCH（ATA26_28 p.62–78、p.130、p.178）。漏れた後で火災スイッチを回しても、ボトルは空なので何も出ない。
+- 故障を消すと満タンのボトル（と新しい squib）に戻る（窓の「修理」：整備でボトルを替える）。
+- 試験：`fire_model_test` 139、`fire_module_test` 99。
+- X-Plane（カスタム acf、2026-11-04）：`s247_failures_more` 38/38（R ENG B の漏れで 79 秒後に >BTL LO R ENG B と BTL DISCH R B の灯、ボトルの圧 0。REPAIR ALL で満タン、メッセージが消えた）。Log.txt に Lua の誤りなし。

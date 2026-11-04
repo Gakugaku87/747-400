@@ -77,6 +77,9 @@ B747DR_fire_fail_wheel_well                 = deferred_dataref("laminar/B747/fir
 B747DR_fire_fail_duct_leak                  = deferred_dataref("laminar/B747/fire/fail/duct_leak", "array[3]")
 B747DR_fire_fail_lav_smoke                  = deferred_dataref("laminar/B747/fire/fail/lav_smoke", "number")
 B747DR_fire_fail_rest_smoke                 = deferred_dataref("laminar/B747/fire/fail/rest_smoke", "number")
+-- (2026-11-04) a bottle leaks (1 = failed; notes/ATA-26.md §13): L ENG A,
+-- L ENG B, R ENG A, R ENG B, APU, CARGO A-D
+B747DR_fire_fail_bottle_leak                = deferred_dataref("laminar/B747/fire/fail/bottle_leak", "array[9]")
 -- the cargo bottles A-D, the CARGO FIRE FWD, AFT and DISCH lights, the squib
 -- test lights (engines 1-4, APU, cargo A-D) and buttons 1, 2
 B747DR_fire_cargo_ext_bottle_psi            = deferred_dataref("laminar/B747/fire/cargo/ext_bottle/psi", "array[4]")
