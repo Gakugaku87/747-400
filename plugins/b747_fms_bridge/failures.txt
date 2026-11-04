@@ -1,0 +1,425 @@
+# The 747-400's failure window's list (b747_fms_bridge: failures_window.c;
+# docs/overhaul/notes/FAILURES.md). Read when the window opens.
+#
+#   C <chapter> <title>                  an ATA chapter
+#   G <title>                            a group in it
+#   F <dataref>[<index>] <kind> <label>  a failure: kind
+#        on   our model's failure: 1 failed, 0 normal
+#        xp   X-Plane's failure: 6 failed now, 0 working (1-5, armed by
+#             X-Plane's own failure screen, shown ARMED)
+#        <n>  that value failed, 0 normal (the stabilizer trim's runaway:
+#             -1 nose down, 1 nose up)
+#
+# Our models' failures where our models make the system; X-Plane's only where
+# X-Plane makes it, or our models read X-Plane's (each checked in X-Plane:
+# the notes' sections). Labels in ASCII (X-Plane's font), at most 40 letters.
+
+C 21 AIR CONDITIONING
+G PACKS
+F laminar/B747/air/fail/pack_ovht[0] on PACK 1 OVERHEAT
+F laminar/B747/air/fail/pack_ovht[1] on PACK 2 OVERHEAT
+F laminar/B747/air/fail/pack_ovht[2] on PACK 3 OVERHEAT
+F laminar/B747/air/fail/ptc[0] on PACK TEMP CONTROLLER A
+F laminar/B747/air/fail/ptc[1] on PACK TEMP CONTROLLER B
+G RECIRCULATION FANS
+F laminar/B747/air/fail/recirc_fan[1] on RECIRC FAN UPPER LEFT
+F laminar/B747/air/fail/recirc_fan[0] on RECIRC FAN UPPER RIGHT
+F laminar/B747/air/fail/recirc_fan[2] on RECIRC FAN LOWER LEFT
+F laminar/B747/air/fail/recirc_fan[3] on RECIRC FAN LOWER RIGHT
+G ZONE TEMPERATURE
+F laminar/B747/air/fail/ztc on ZONE TEMP CONTROLLER
+F laminar/B747/air/fail/trim_valve on MASTER TRIM AIR VALVE (CLOSED)
+F laminar/B747/air/fail/zone_valve[0] on TRIM VALVE FLIGHT DECK (OPEN)
+F laminar/B747/air/fail/zone_valve[1] on TRIM VALVE UPPER DECK (OPEN)
+F laminar/B747/air/fail/zone_valve[2] on TRIM VALVE ZONE A (OPEN)
+F laminar/B747/air/fail/zone_valve[3] on TRIM VALVE ZONE B (OPEN)
+F laminar/B747/air/fail/zone_valve[4] on TRIM VALVE ZONE C (OPEN)
+F laminar/B747/air/fail/zone_valve[5] on TRIM VALVE ZONE D (OPEN)
+F laminar/B747/air/fail/zone_valve[6] on TRIM VALVE ZONE E (OPEN)
+G EQUIPMENT COOLING
+F laminar/B747/air/fail/eq_fan[0] on E/E COOLING SUPPLY FAN
+F laminar/B747/air/fail/eq_fan[1] on E/E COOLING EXHAUST FAN
+F laminar/B747/air/fail/eq_ovht on EQUIPMENT OVERHEAT
+F laminar/B747/air/fail/eq_low_flow on EQUIPMENT LOW FLOW
+F laminar/B747/air/fail/fd_low_flow on FLIGHT DECK LOW FLOW
+F laminar/B747/air/fail/eq_smoke on EQUIPMENT COOLING SMOKE
+F laminar/B747/air/fail/eq_card on E/E COOLING CARD
+G PRESSURIZATION
+F laminar/B747/air/fail/cpc[0] on CABIN PRESSURE CONTROLLER A
+F laminar/B747/air/fail/cpc[1] on CABIN PRESSURE CONTROLLER B
+F sim/operation/failures/rel_depres_fast xp RAPID DECOMPRESSION
+
+C 24 ELECTRICAL
+G GENERATORS
+F laminar/B747/electrical/fail/gen[0] on GENERATOR 1
+F laminar/B747/electrical/fail/gen[1] on GENERATOR 2
+F laminar/B747/electrical/fail/gen[2] on GENERATOR 3
+F laminar/B747/electrical/fail/gen[3] on GENERATOR 4
+G IDG DRIVES
+F laminar/B747/electrical/fail/drive[0] on IDG DRIVE 1
+F laminar/B747/electrical/fail/drive[1] on IDG DRIVE 2
+F laminar/B747/electrical/fail/drive[2] on IDG DRIVE 3
+F laminar/B747/electrical/fail/drive[3] on IDG DRIVE 4
+G AC BUSES
+F laminar/B747/electrical/fail/bus[0] on AC BUS 1 FAULT
+F laminar/B747/electrical/fail/bus[1] on AC BUS 2 FAULT
+F laminar/B747/electrical/fail/bus[2] on AC BUS 3 FAULT
+F laminar/B747/electrical/fail/bus[3] on AC BUS 4 FAULT
+F laminar/B747/electrical/fail/ssb on SPLIT SYSTEM BREAKER (OPEN)
+G DC
+F laminar/B747/electrical/fail/tru[0] on TRU 1
+F laminar/B747/electrical/fail/tru[1] on TRU 2
+F laminar/B747/electrical/fail/tru[2] on TRU 3
+F laminar/B747/electrical/fail/tru[3] on TRU 4
+F laminar/B747/electrical/fail/charger[0] on MAIN BATTERY CHARGER
+F laminar/B747/electrical/fail/charger[1] on APU BATTERY CHARGER
+
+C 26 FIRE PROTECTION
+G ENGINES
+F sim/operation/failures/rel_engfir0 xp ENGINE 1 FIRE
+F sim/operation/failures/rel_engfir1 xp ENGINE 2 FIRE
+F sim/operation/failures/rel_engfir2 xp ENGINE 3 FIRE
+F sim/operation/failures/rel_engfir3 xp ENGINE 4 FIRE
+F laminar/B747/fire/fail/eng_ovht[0] on ENGINE 1 NACELLE OVERHEAT
+F laminar/B747/fire/fail/eng_ovht[1] on ENGINE 2 NACELLE OVERHEAT
+F laminar/B747/fire/fail/eng_ovht[2] on ENGINE 3 NACELLE OVERHEAT
+F laminar/B747/fire/fail/eng_ovht[3] on ENGINE 4 NACELLE OVERHEAT
+G APU, CARGO, CABIN
+F sim/operation/failures/rel_apu_fire xp APU FIRE
+F laminar/B747/fire/fail/cargo_smoke[0] on FWD CARGO SMOKE (ZONE 1)
+F laminar/B747/fire/fail/cargo_smoke[1] on FWD CARGO SMOKE (ZONE 2)
+F laminar/B747/fire/fail/cargo_smoke[2] on AFT CARGO SMOKE
+F laminar/B747/fire/fail/cargo_smoke[3] on BULK CARGO SMOKE
+F laminar/B747/fire/fail/wheel_well on MAIN WHEEL WELL FIRE
+F laminar/B747/fire/fail/lav_smoke on LAVATORY SMOKE
+F laminar/B747/fire/fail/rest_smoke on CREW REST SMOKE (DOOR 5)
+G DETECTOR LOOPS A
+F laminar/B747/fire/fail/loop_a[0] on LOOP A ENGINE 1 FIRE
+F laminar/B747/fire/fail/loop_a[1] on LOOP A ENGINE 2 FIRE
+F laminar/B747/fire/fail/loop_a[2] on LOOP A ENGINE 3 FIRE
+F laminar/B747/fire/fail/loop_a[3] on LOOP A ENGINE 4 FIRE
+F laminar/B747/fire/fail/loop_a[4] on LOOP A ENGINE 1 OVERHEAT
+F laminar/B747/fire/fail/loop_a[5] on LOOP A ENGINE 2 OVERHEAT
+F laminar/B747/fire/fail/loop_a[6] on LOOP A ENGINE 3 OVERHEAT
+F laminar/B747/fire/fail/loop_a[7] on LOOP A ENGINE 4 OVERHEAT
+F laminar/B747/fire/fail/loop_a[8] on LOOP A APU
+F laminar/B747/fire/fail/loop_a[9] on LOOP A CARGO 1
+F laminar/B747/fire/fail/loop_a[10] on LOOP A CARGO 2
+F laminar/B747/fire/fail/loop_a[11] on LOOP A CARGO 3
+F laminar/B747/fire/fail/loop_a[12] on LOOP A CARGO 4
+G DETECTOR LOOPS B
+F laminar/B747/fire/fail/loop_b[0] on LOOP B ENGINE 1 FIRE
+F laminar/B747/fire/fail/loop_b[1] on LOOP B ENGINE 2 FIRE
+F laminar/B747/fire/fail/loop_b[2] on LOOP B ENGINE 3 FIRE
+F laminar/B747/fire/fail/loop_b[3] on LOOP B ENGINE 4 FIRE
+F laminar/B747/fire/fail/loop_b[4] on LOOP B ENGINE 1 OVERHEAT
+F laminar/B747/fire/fail/loop_b[5] on LOOP B ENGINE 2 OVERHEAT
+F laminar/B747/fire/fail/loop_b[6] on LOOP B ENGINE 3 OVERHEAT
+F laminar/B747/fire/fail/loop_b[7] on LOOP B ENGINE 4 OVERHEAT
+F laminar/B747/fire/fail/loop_b[8] on LOOP B APU
+F laminar/B747/fire/fail/loop_b[9] on LOOP B CARGO 1
+F laminar/B747/fire/fail/loop_b[10] on LOOP B CARGO 2
+F laminar/B747/fire/fail/loop_b[11] on LOOP B CARGO 3
+F laminar/B747/fire/fail/loop_b[12] on LOOP B CARGO 4
+
+C 27 FLIGHT CONTROLS
+G FLAP CONTROL
+F laminar/B747/flt_ctrls/fail/fcu[0] on FLAP CONTROL UNIT L
+F laminar/B747/flt_ctrls/fail/fcu[1] on FLAP CONTROL UNIT C
+F laminar/B747/flt_ctrls/fail/fcu[2] on FLAP CONTROL UNIT R
+G TRAILING EDGE FLAPS
+F laminar/B747/flt_ctrls/fail/te_primary[0] on TE INBOARD PRIMARY DRIVE (HYD)
+F laminar/B747/flt_ctrls/fail/te_primary[1] on TE OUTBOARD PRIMARY DRIVE (HYD)
+F laminar/B747/flt_ctrls/fail/te_secondary[0] on TE INBOARD SECONDARY DRIVE (ELEC)
+F laminar/B747/flt_ctrls/fail/te_secondary[1] on TE OUTBOARD SECONDARY DRIVE (ELEC)
+F laminar/B747/flt_ctrls/fail/te_stuck[0] on TE INBOARD DRIVE SHAFT (STUCK)
+F laminar/B747/flt_ctrls/fail/te_stuck[1] on TE OUTBOARD DRIVE SHAFT (STUCK)
+G LEADING EDGE FLAPS
+F laminar/B747/flt_ctrls/fail/le_primary[0] on LE INBOARD PRIMARY DRIVE (PNEU)
+F laminar/B747/flt_ctrls/fail/le_primary[1] on LE MIDSPAN PRIMARY DRIVE (PNEU)
+F laminar/B747/flt_ctrls/fail/le_primary[2] on LE OUTBOARD PRIMARY DRIVE (PNEU)
+F laminar/B747/flt_ctrls/fail/le_secondary[0] on LE INBOARD SECONDARY DRIVE (ELEC)
+F laminar/B747/flt_ctrls/fail/le_secondary[1] on LE MIDSPAN SECONDARY DRIVE (ELEC)
+F laminar/B747/flt_ctrls/fail/le_secondary[2] on LE OUTBOARD SECONDARY DRIVE (ELEC)
+G FLAP POSITION SENSORS
+F laminar/B747/flt_ctrls/fail/te_sensor[0] on TE SENSOR LEFT OUTBOARD
+F laminar/B747/flt_ctrls/fail/te_sensor[1] on TE SENSOR LEFT INBOARD
+F laminar/B747/flt_ctrls/fail/te_sensor[2] on TE SENSOR RIGHT INBOARD
+F laminar/B747/flt_ctrls/fail/te_sensor[3] on TE SENSOR RIGHT OUTBOARD
+F laminar/B747/flt_ctrls/fail/le_sensor[0] on LE SENSOR LEFT OUTBOARD
+F laminar/B747/flt_ctrls/fail/le_sensor[1] on LE SENSOR LEFT MIDSPAN
+F laminar/B747/flt_ctrls/fail/le_sensor[2] on LE SENSOR LEFT INBOARD
+F laminar/B747/flt_ctrls/fail/le_sensor[3] on LE SENSOR RIGHT INBOARD
+F laminar/B747/flt_ctrls/fail/le_sensor[4] on LE SENSOR RIGHT MIDSPAN
+F laminar/B747/flt_ctrls/fail/le_sensor[5] on LE SENSOR RIGHT OUTBOARD
+G STABILIZER TRIM
+F laminar/B747/flt_ctrls/fail/stab_actuator[0] on STAB TRIM MODULE (SYS 2)
+F laminar/B747/flt_ctrls/fail/stab_actuator[1] on STAB TRIM MODULE (SYS 3)
+F laminar/B747/flt_ctrls/fail/stab_runaway[0] 1 STAB TRIM RUNAWAY SYS 2 NOSE UP
+F laminar/B747/flt_ctrls/fail/stab_runaway[0] -1 STAB TRIM RUNAWAY SYS 2 NOSE DOWN
+F laminar/B747/flt_ctrls/fail/stab_runaway[1] 1 STAB TRIM RUNAWAY SYS 3 NOSE UP
+F laminar/B747/flt_ctrls/fail/stab_runaway[1] -1 STAB TRIM RUNAWAY SYS 3 NOSE DOWN
+F laminar/B747/flt_ctrls/fail/srm[0] on STAB TRIM/RUDDER RATIO MODULE L
+F laminar/B747/flt_ctrls/fail/srm[1] on STAB TRIM/RUDDER RATIO MODULE R
+G RUDDER, AILERONS, SPEEDBRAKES
+F laminar/B747/flt_ctrls/fail/rrc[0] on UPPER RUDDER RATIO CHANGER
+F laminar/B747/flt_ctrls/fail/rrc[1] on LOWER RUDDER RATIO CHANGER
+F laminar/B747/flt_ctrls/fail/yaw_damper[0] on YAW DAMPER UPPER
+F laminar/B747/flt_ctrls/fail/yaw_damper[1] on YAW DAMPER LOWER
+F laminar/B747/flt_ctrls/fail/lockout_actuator on OUTBD AILERON LOCKOUT ACTUATOR
+F laminar/B747/flt_ctrls/fail/auto_speedbrake on AUTO SPEEDBRAKE ACTUATOR
+
+C 28 FUEL
+G MAIN TANK PUMPS
+F laminar/B747/fuel/fail/pump[0] on MAIN 1 FWD PUMP
+F laminar/B747/fuel/fail/pump[1] on MAIN 1 AFT PUMP
+F laminar/B747/fuel/fail/pump[2] on MAIN 2 FWD PUMP
+F laminar/B747/fuel/fail/pump[3] on MAIN 2 AFT PUMP
+F laminar/B747/fuel/fail/pump[4] on MAIN 3 FWD PUMP
+F laminar/B747/fuel/fail/pump[5] on MAIN 3 AFT PUMP
+F laminar/B747/fuel/fail/pump[6] on MAIN 4 FWD PUMP
+F laminar/B747/fuel/fail/pump[7] on MAIN 4 AFT PUMP
+G OVERRIDE/JETTISON, CENTER, STAB PUMPS
+F laminar/B747/fuel/fail/pump[8] on OVRD/JETT 2 FWD PUMP
+F laminar/B747/fuel/fail/pump[9] on OVRD/JETT 2 AFT PUMP
+F laminar/B747/fuel/fail/pump[10] on OVRD/JETT 3 FWD PUMP
+F laminar/B747/fuel/fail/pump[11] on OVRD/JETT 3 AFT PUMP
+F laminar/B747/fuel/fail/pump[12] on CENTER L PUMP
+F laminar/B747/fuel/fail/pump[13] on CENTER R PUMP
+F laminar/B747/fuel/fail/pump[14] on STAB L PUMP
+F laminar/B747/fuel/fail/pump[15] on STAB R PUMP
+G VALVES (STUCK WHERE THEY ARE)
+F laminar/B747/fuel/fail/valve[0] on CROSSFEED VALVE 1
+F laminar/B747/fuel/fail/valve[1] on CROSSFEED VALVE 2
+F laminar/B747/fuel/fail/valve[2] on CROSSFEED VALVE 3
+F laminar/B747/fuel/fail/valve[3] on CROSSFEED VALVE 4
+F laminar/B747/fuel/fail/valve[4] on ENGINE 1 SPAR VALVE
+F laminar/B747/fuel/fail/valve[5] on ENGINE 2 SPAR VALVE
+F laminar/B747/fuel/fail/valve[6] on ENGINE 3 SPAR VALVE
+F laminar/B747/fuel/fail/valve[7] on ENGINE 4 SPAR VALVE
+F laminar/B747/fuel/fail/valve[8] on RESERVE TRANSFER VALVE 2A
+F laminar/B747/fuel/fail/valve[9] on RESERVE TRANSFER VALVE 2B
+F laminar/B747/fuel/fail/valve[10] on RESERVE TRANSFER VALVE 3A
+F laminar/B747/fuel/fail/valve[11] on RESERVE TRANSFER VALVE 3B
+F laminar/B747/fuel/fail/valve[12] on MAIN 1 TRANSFER VALVE
+F laminar/B747/fuel/fail/valve[13] on MAIN 4 TRANSFER VALVE
+F laminar/B747/fuel/fail/valve[14] on JETTISON VALVE CENTER L
+F laminar/B747/fuel/fail/valve[15] on JETTISON VALVE CENTER R
+F laminar/B747/fuel/fail/valve[16] on JETTISON VALVE MAIN 2
+F laminar/B747/fuel/fail/valve[17] on JETTISON VALVE MAIN 3
+F laminar/B747/fuel/fail/valve[18] on JETTISON NOZZLE VALVE L
+F laminar/B747/fuel/fail/valve[19] on JETTISON NOZZLE VALVE R
+F laminar/B747/fuel/fail/valve[20] on APU FUEL VALVE
+G INDICATION, JETTISON CONTROL
+F laminar/B747/fuel/fail/temp on FUEL TEMPERATURE SENSOR
+F laminar/B747/fuel/fail/fjcc[0] on FUEL JETTISON CONTROL CARD A
+F laminar/B747/fuel/fail/fjcc[1] on FUEL JETTISON CONTROL CARD B
+
+C 29 HYDRAULICS
+G ENGINE DRIVEN PUMPS
+F laminar/B747/hydraulics/fail/edp[0] on ENGINE PUMP 1
+F laminar/B747/hydraulics/fail/edp[1] on ENGINE PUMP 2
+F laminar/B747/hydraulics/fail/edp[2] on ENGINE PUMP 3
+F laminar/B747/hydraulics/fail/edp[3] on ENGINE PUMP 4
+G DEMAND PUMPS
+F laminar/B747/hydraulics/fail/demand_pump[0] on DEMAND PUMP 1 (AIR)
+F laminar/B747/hydraulics/fail/demand_pump[1] on DEMAND PUMP 2 (ELEC)
+F laminar/B747/hydraulics/fail/demand_pump[2] on DEMAND PUMP 3 (ELEC)
+F laminar/B747/hydraulics/fail/demand_pump[3] on DEMAND PUMP 4 (AIR)
+G LEAKS
+F laminar/B747/hydraulics/fail/leak[0] on SYSTEM 1 LEAK
+F laminar/B747/hydraulics/fail/leak[1] on SYSTEM 2 LEAK
+F laminar/B747/hydraulics/fail/leak[2] on SYSTEM 3 LEAK
+F laminar/B747/hydraulics/fail/leak[3] on SYSTEM 4 LEAK
+
+C 30 ICE AND RAIN
+G ENGINES AND WINGS
+F sim/operation/failures/rel_ice_inlet_heat xp NACELLE ANTI-ICE 1
+F sim/operation/failures/rel_ice_inlet_heat2 xp NACELLE ANTI-ICE 2
+F sim/operation/failures/rel_ice_inlet_heat3 xp NACELLE ANTI-ICE 3
+F sim/operation/failures/rel_ice_inlet_heat4 xp NACELLE ANTI-ICE 4
+F sim/operation/failures/rel_ice_surf_heat xp WING ANTI-ICE LEFT
+F sim/operation/failures/rel_ice_surf_heat2 xp WING ANTI-ICE RIGHT
+F sim/operation/failures/rel_ice_detect xp ICE DETECTORS
+G WINDOWS AND PROBES
+F sim/operation/failures/rel_ice_window_heat xp WINDOW HEAT LEFT
+F sim/operation/failures/rel_ice_window_heat_cop xp WINDOW HEAT RIGHT
+F sim/operation/failures/rel_ice_pitot_heat1 xp PROBE HEAT P/S CAPT
+F sim/operation/failures/rel_ice_pitot_heat2 xp PROBE HEAT P/S F/O
+F sim/operation/failures/rel_ice_pitot_heat_stby xp PROBE HEAT P/S L AUX
+F sim/operation/failures/rel_ice_static_heat_stby xp PROBE HEAT P/S R AUX
+F sim/operation/failures/rel_ice_AOA_heat xp PROBE HEAT L AOA
+F sim/operation/failures/rel_ice_AOA_heat2 xp PROBE HEAT R AOA
+F sim/operation/failures/rel_ice_TAT_heat xp PROBE HEAT L TAT
+F sim/operation/failures/rel_ice_TAT_heat2 xp PROBE HEAT R TAT
+
+C 31 INDICATING
+G DISPLAY UNITS
+F laminar/B747/displays/fail[0] on DISPLAY UNIT CAPT OUTBOARD
+F laminar/B747/displays/fail[1] on DISPLAY UNIT CAPT INBOARD
+F laminar/B747/displays/fail[2] on DISPLAY UNIT UPPER CENTER
+F laminar/B747/displays/fail[3] on DISPLAY UNIT LOWER CENTER
+F laminar/B747/displays/fail[4] on DISPLAY UNIT F/O INBOARD
+F laminar/B747/displays/fail[5] on DISPLAY UNIT F/O OUTBOARD
+G EIUS AND CONTROL PANELS
+F laminar/B747/eiu/fail[0] on EIU LEFT
+F laminar/B747/eiu/fail[1] on EIU CENTER
+F laminar/B747/eiu/fail[2] on EIU RIGHT
+F laminar/B747/efis/fail[0] on EFIS CONTROL PANEL LEFT
+F laminar/B747/efis/fail[1] on EFIS CONTROL PANEL RIGHT
+F laminar/B747/dsp/fail on EICAS DISPLAY SELECT PANEL
+
+C 32 LANDING GEAR
+G GEAR ACTUATION
+F laminar/B747/gear/fail/actuator[0] on NOSE GEAR ACTUATOR
+F laminar/B747/gear/fail/actuator[1] on LEFT BODY GEAR ACTUATOR
+F laminar/B747/gear/fail/actuator[2] on RIGHT BODY GEAR ACTUATOR
+F laminar/B747/gear/fail/actuator[3] on LEFT WING GEAR ACTUATOR
+F laminar/B747/gear/fail/actuator[4] on RIGHT WING GEAR ACTUATOR
+F laminar/B747/gear/fail/door[0] on NOSE GEAR DOOR
+F laminar/B747/gear/fail/door[1] on LEFT BODY GEAR DOOR
+F laminar/B747/gear/fail/door[2] on RIGHT BODY GEAR DOOR
+F laminar/B747/gear/fail/door[3] on LEFT WING GEAR DOOR
+F laminar/B747/gear/fail/door[4] on RIGHT WING GEAR DOOR
+G INDICATION AND SENSORS
+F laminar/B747/gear/fail/indication[0] on NOSE GEAR INDICATION
+F laminar/B747/gear/fail/indication[1] on LEFT BODY GEAR INDICATION
+F laminar/B747/gear/fail/indication[2] on RIGHT BODY GEAR INDICATION
+F laminar/B747/gear/fail/indication[3] on LEFT WING GEAR INDICATION
+F laminar/B747/gear/fail/indication[4] on RIGHT WING GEAR INDICATION
+F laminar/B747/gear/fail/position_sensor[0] on NOSE GEAR POSITION SENSOR
+F laminar/B747/gear/fail/position_sensor[1] on LEFT BODY GEAR POSITION SENSOR
+F laminar/B747/gear/fail/position_sensor[2] on RIGHT BODY GEAR POSITION SENSOR
+F laminar/B747/gear/fail/position_sensor[3] on LEFT WING GEAR POSITION SENSOR
+F laminar/B747/gear/fail/position_sensor[4] on RIGHT WING GEAR POSITION SENSOR
+F laminar/B747/gear/fail/truck_tilt[1] on LEFT BODY GEAR TRUCK TILT
+F laminar/B747/gear/fail/truck_tilt[2] on RIGHT BODY GEAR TRUCK TILT
+F laminar/B747/gear/fail/truck_tilt[3] on LEFT WING GEAR TRUCK TILT
+F laminar/B747/gear/fail/truck_tilt[4] on RIGHT WING GEAR TRUCK TILT
+F laminar/B747/gear/fail/air_gnd[0] on AIR/GND PRIMARY (STUCK IN AIR)
+F laminar/B747/gear/fail/air_gnd[1] on AIR/GND ALTERNATE (STUCK IN AIR)
+G BRAKES AND STEERING
+F laminar/B747/gear/fail/antiskid[0] on ANTISKID PRIMARY
+F laminar/B747/gear/fail/antiskid[1] on ANTISKID ALTERNATE
+F laminar/B747/gear/fail/brake_limiter on BRAKE TORQUE LIMITERS
+F laminar/B747/gear/fail/autobrake on AUTOBRAKES
+F laminar/B747/gear/fail/park_valve on PARKING BRAKE VALVE (STUCK)
+F laminar/B747/gear/fail/btms on BRAKE TEMP MONITORING
+F laminar/B747/gear/fail/tpis on TIRE PRESSURE INDICATION
+F laminar/B747/gear/fail/pedal_steering on RUDDER PEDAL STEERING
+F laminar/B747/gear/fail/body_steering on BODY GEAR STEERING
+G TIRES
+F sim/operation/failures/rel_tire1 xp NOSE GEAR TIRE BURST
+F sim/operation/failures/rel_tire3 xp LEFT BODY GEAR TIRE BURST
+F sim/operation/failures/rel_tire2 xp RIGHT BODY GEAR TIRE BURST
+F sim/operation/failures/rel_tire5 xp LEFT WING GEAR TIRE BURST
+F sim/operation/failures/rel_tire4 xp RIGHT WING GEAR TIRE BURST
+
+C 34 NAVIGATION
+G AIR DATA AND INERTIAL
+F laminar/B747/airdata/fail/adc[0] on AIR DATA COMPUTER LEFT
+F laminar/B747/airdata/fail/adc[1] on AIR DATA COMPUTER CENTER
+F laminar/B747/airdata/fail/adc[2] on AIR DATA COMPUTER RIGHT
+F laminar/B747/irs/fail/iru[0] on IRU LEFT
+F laminar/B747/irs/fail/iru[1] on IRU CENTER
+F laminar/B747/irs/fail/iru[2] on IRU RIGHT
+G PROBES AND SENSORS
+F sim/operation/failures/rel_pitot xp PITOT CAPT BLOCKED
+F sim/operation/failures/rel_pitot2 xp PITOT F/O BLOCKED
+F sim/operation/failures/rel_static xp STATIC CAPT BLOCKED
+F sim/operation/failures/rel_static2 xp STATIC F/O BLOCKED
+F sim/operation/failures/rel_AOA xp AOA SENSOR LEFT
+F sim/operation/failures/rel_cop_AOA xp AOA SENSOR RIGHT
+F laminar/B747/ra/fail[0] on RADIO ALTIMETER LEFT
+F laminar/B747/ra/fail[1] on RADIO ALTIMETER CENTER
+F laminar/B747/ra/fail[2] on RADIO ALTIMETER RIGHT
+G RADIOS
+F sim/operation/failures/rel_nav1 xp NAV RECEIVER 1
+F sim/operation/failures/rel_nav2 xp NAV RECEIVER 2
+F sim/operation/failures/rel_loc xp LOCALIZER (ALL)
+F sim/operation/failures/rel_gls xp GLIDESLOPE (ALL)
+F sim/operation/failures/rel_dme xp DME
+F sim/operation/failures/rel_adf1 xp ADF 1
+F sim/operation/failures/rel_adf2 xp ADF 2
+F laminar/B747/gps/fail[0] on GPS LEFT
+F laminar/B747/gps/fail[1] on GPS RIGHT
+G SURVEILLANCE
+F laminar/B747/gpws/fail on GPWS COMPUTER
+F laminar/B747/tcas/fail on TCAS COMPUTER
+F laminar/B747/xpdr/fail[0] on TRANSPONDER LEFT
+F laminar/B747/xpdr/fail[1] on TRANSPONDER RIGHT
+F laminar/B747/wxr/fail[0] on WEATHER RADAR ANTENNA
+F laminar/B747/wxr/fail[1] on WEATHER RADAR CONTROL PANEL
+F laminar/B747/wxr/fail[2] on WEATHER RADAR CALIBRATION (WEAK)
+G FLIGHT MANAGEMENT
+F laminar/B747/fms/fail[0] on FMC LEFT
+F laminar/B747/fms/fail[1] on FMC RIGHT
+
+C 36 PNEUMATIC
+G ENGINE 1 BLEED
+F laminar/B747/air/fail/bleed_ovht[0] on BLEED 1 OVERHEAT
+F laminar/B747/air/fail/bleed_ovpress[0] on BLEED 1 OVERPRESSURE
+F laminar/B747/air/fail/hpsov_closed[0] on HP VALVE 1 FAILED CLOSED
+F laminar/B747/air/fail/hpsov_open[0] on HP VALVE 1 FAILED OPEN
+F laminar/B747/air/fail/prv_closed[0] on PRV 1 FAILED CLOSED
+F laminar/B747/air/fail/prv_open[0] on PRV 1 FAILED OPEN
+G ENGINE 2 BLEED
+F laminar/B747/air/fail/bleed_ovht[1] on BLEED 2 OVERHEAT
+F laminar/B747/air/fail/bleed_ovpress[1] on BLEED 2 OVERPRESSURE
+F laminar/B747/air/fail/hpsov_closed[1] on HP VALVE 2 FAILED CLOSED
+F laminar/B747/air/fail/hpsov_open[1] on HP VALVE 2 FAILED OPEN
+F laminar/B747/air/fail/prv_closed[1] on PRV 2 FAILED CLOSED
+F laminar/B747/air/fail/prv_open[1] on PRV 2 FAILED OPEN
+G ENGINE 3 BLEED
+F laminar/B747/air/fail/bleed_ovht[2] on BLEED 3 OVERHEAT
+F laminar/B747/air/fail/bleed_ovpress[2] on BLEED 3 OVERPRESSURE
+F laminar/B747/air/fail/hpsov_closed[2] on HP VALVE 3 FAILED CLOSED
+F laminar/B747/air/fail/hpsov_open[2] on HP VALVE 3 FAILED OPEN
+F laminar/B747/air/fail/prv_closed[2] on PRV 3 FAILED CLOSED
+F laminar/B747/air/fail/prv_open[2] on PRV 3 FAILED OPEN
+G ENGINE 4 BLEED
+F laminar/B747/air/fail/bleed_ovht[3] on BLEED 4 OVERHEAT
+F laminar/B747/air/fail/bleed_ovpress[3] on BLEED 4 OVERPRESSURE
+F laminar/B747/air/fail/hpsov_closed[3] on HP VALVE 4 FAILED CLOSED
+F laminar/B747/air/fail/hpsov_open[3] on HP VALVE 4 FAILED OPEN
+F laminar/B747/air/fail/prv_closed[3] on PRV 4 FAILED CLOSED
+F laminar/B747/air/fail/prv_open[3] on PRV 4 FAILED OPEN
+G DUCTS AND APU AIR
+F laminar/B747/fire/fail/duct_leak[0] on BLEED DUCT LEAK LEFT
+F laminar/B747/fire/fail/duct_leak[1] on BLEED DUCT LEAK CENTER
+F laminar/B747/fire/fail/duct_leak[2] on BLEED DUCT LEAK RIGHT
+F laminar/B747/air/fail/apu_air on APU BLEED AIR (NO AIR)
+
+C 49 APU
+G APU
+F laminar/B747/apu/fail/limit on APU LIMIT EXCEEDED (SHUTDOWN)
+F laminar/B747/apu/fail/duct_leak on APU BLEED DUCT LEAK
+
+C 70-80 ENGINES
+G ENGINE CONTROL (EEC)
+F laminar/B747/engines/fail/eec_altn[0] on EEC 1 REVERTS TO ALTN
+F laminar/B747/engines/fail/eec_altn[1] on EEC 2 REVERTS TO ALTN
+F laminar/B747/engines/fail/eec_altn[2] on EEC 3 REVERTS TO ALTN
+F laminar/B747/engines/fail/eec_altn[3] on EEC 4 REVERTS TO ALTN
+F laminar/B747/engines/fail/eec_fault[0] on EEC 1 SYSTEM FAULT
+F laminar/B747/engines/fail/eec_fault[1] on EEC 2 SYSTEM FAULT
+F laminar/B747/engines/fail/eec_fault[2] on EEC 3 SYSTEM FAULT
+F laminar/B747/engines/fail/eec_fault[3] on EEC 4 SYSTEM FAULT
+G OIL
+F sim/operation/failures/rel_oilpmp0 xp ENGINE 1 OIL PUMP
+F sim/operation/failures/rel_oilpmp1 xp ENGINE 2 OIL PUMP
+F sim/operation/failures/rel_oilpmp2 xp ENGINE 3 OIL PUMP
+F sim/operation/failures/rel_oilpmp3 xp ENGINE 4 OIL PUMP
+F laminar/B747/engines/fail/oil_filter[0] on ENGINE 1 OIL FILTER (GE)
+F laminar/B747/engines/fail/oil_filter[1] on ENGINE 2 OIL FILTER (GE)
+F laminar/B747/engines/fail/oil_filter[2] on ENGINE 3 OIL FILTER (GE)
+F laminar/B747/engines/fail/oil_filter[3] on ENGINE 4 OIL FILTER (GE)
+G IGNITION AND REVERSERS
+F sim/operation/failures/rel_ignitr0 xp ENGINE 1 IGNITERS
+F sim/operation/failures/rel_ignitr1 xp ENGINE 2 IGNITERS
+F sim/operation/failures/rel_ignitr2 xp ENGINE 3 IGNITERS
+F sim/operation/failures/rel_ignitr3 xp ENGINE 4 IGNITERS
+F sim/operation/failures/rel_revers0 xp THRUST REVERSER 1
+F sim/operation/failures/rel_revers1 xp THRUST REVERSER 2
+F sim/operation/failures/rel_revers2 xp THRUST REVERSER 3
+F sim/operation/failures/rel_revers3 xp THRUST REVERSER 4

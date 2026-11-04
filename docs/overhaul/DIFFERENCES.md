@@ -12,13 +12,13 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 
 | 分野 | 状態 | 残っている主な違い |
 |---|---|---|
-| 電源（ATA 24） | 作り直し済み（1-1。autoland のバス分離も。2026-11-04 に故障の入力） | 3.5 秒の break power transfer と last source on、故障を入れる窓（故障の dataref はある） |
+| 電源（ATA 24） | 作り直し済み（1-1。autoland のバス分離も。2026-11-04 に故障の入力） | 3.5 秒の break power transfer と last source on |
 | 空地判定（PSEU） | 作り直し済み（1-2。2026-11-04 に全系統が乗り換え） | 傾きと前脚の圧縮のセンサーは推定（X-Plane に無い）、故障が無い |
 | 乗員への警報 | 枠組みは作り直し済み（1-3） | 形態警報・失速警報など、各系統の警報の中身 |
 | 油圧（ATA 29） | 作り直し済み（1-4） | 油温に燃料の熱交換が無い（系統の圧による制限は、脚・ブレーキ・ステアリングは 4-2、安定板トリムとヨーダンパーは 4-1、逆推力は 2-3 で済） |
-| 空圧（ATA 36） | 作り直し済み（1-5） | 故障を入れる窓が無い、空気車の圧は推定 |
+| 空圧（ATA 36） | 作り直し済み（1-5） | 空気車の圧は推定 |
 | APU（ATA 49） | 作り直し済み（2-1） | 油の消費と RF/LO、ダクト過熱の停止の入力、エンジン始動時の増風要求、570 の APU START SOURCE と TR の過熱 |
-| 燃料（ATA 28） | 作り直し済み（2-2。2026-11-04 に故障の入力） | 燃料温度、給油の配分、故障を入れる窓（故障の dataref はある。FMC の燃料の計算は FMC の段 11a で済） |
+| 燃料（ATA 28） | 作り直し済み（2-2。2026-11-04 に故障の入力） | 燃料温度、給油の配分（FMC の燃料の計算は FMC の段 11a で済） |
 | エンジン（ATA 71〜80） | 一部（2-3 段 1：始動・点火・燃料弁、段 2：EEC の定格・レバーの指令・推力の制御・オーバースピード保護・アイドルの選択・ALTN、段 3：EGT の色・抑止・始動限界の線、逆推力の動力・地上・ENG REVERSER、オイルと振動の値・赤・メッセージ、超過の赤い枠と色） | 表示の値、GE の油圧の目盛り、partial・compact 形式、逆推力の推力の制限 |
 | 空調・与圧・機器冷却（ATA 21） | 作り直し済み（3-1：パック、与圧の CPC と客室、着陸高度、機器冷却、温度制御、貨物室の温度と暖房、メッセージ、ECS synoptic） | 温度の ALTN・FLT DECK の MAN（3D のノブがその位置まで回らない）、客室乗務員の温度パネル（3D に無い）、故障の入れ方、data block の LDG ALT の消去と客室高度の赤い数字の桁（パネル、未承認） |
 | 防氷・防雨（ATA 30） | 作り直し済み（3-2：NAI・WAI の弁、窓とプローブの加熱、氷検知、ワイパー、メッセージと P5 の灯） | 防氷の推力補正、逆推力中の NAI 弁の閉、ウォッシャー・防雨剤・WSHLD AIR、ワイパーの速さ（X-Plane の最大） |
@@ -43,7 +43,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 実機に合わせた点：バス単位のモデル（AC 1〜4、同期バス、SSB、transfer bus、standby、ground service・ground handling、DC 1〜4、バッテリー母線）、電源の切替（LH24 の表と FCOM）、GCB・BTB の許可、standby 電源、ELEC GEN OFF・ELEC AC BUS・ELEC BUS ISLN、DRIVE 灯と DRIVE DISC、ELCU の load shed（簡略）、バッテリーの表示と BAT DISCH、air mode。P5 の灯、EICAS、表示器と CDU の電源もモデルから。カスタム acf の ELEC synoptic（ISLN・DRIVE の枠、UTILITY と GALLEY を母線ごとの色で）と STAT のバッテリー値・CHG/DIS。autoland の母線の分離（ELEC-18、2026-10-30）：APP で multi-channel が arm すると FCC が分離を求め、BCU が発電機の数で構成 A〜E に BTB と DCIR を開く（LH24 p.244–247）。分離の間は ISLN 1〜3 の灯と ELEC BUS ISLN 1〜3 を出さず、カスタム acf の ELEC synoptic は「ELECTRICAL SYNOPTIC INHIBITED FOR AUTOLAND」だけ（FCOM p.789、p.802）。分離の完了（BUS ISOLATED）が LAND 3 の条件で、分離しなければ NO LAND 3（ATA22 p.192、p.384）。
 
 残っている違い：
-- 3.5 秒の break power transfer、last source on が無い（ELEC-04）。故障は 2026-11-04 から dataref（`laminar/B747/electrical/fail/*`：発電機・AC の load bus・IDG・TRU・充電器・SSB）で入れられ、保護トリップ（GCR、BTB の auto reclose とラッチ）、ELEC GEN OFF・ELEC AC BUS・ELEC DRIVE・>ELEC SSB OPEN、STATUS の ELEC DRIVE・BAT CHARGER・ELEC TR UNIT が出る（notes/ATA-24.md §11）。入れる窓はまだ無い（故障の窓で）。load bus の故障で GCB も開くこと、BAT CHARGER の遅れ 10 秒は推定。
+- 3.5 秒の break power transfer、last source on が無い（ELEC-04）。故障は 2026-11-04 から dataref（`laminar/B747/electrical/fail/*`：発電機・AC の load bus・IDG・TRU・充電器・SSB）で入れられ、保護トリップ（GCR、BTB の auto reclose とラッチ）、ELEC GEN OFF・ELEC AC BUS・ELEC DRIVE・>ELEC SSB OPEN、STATUS の ELEC DRIVE・BAT CHARGER・ELEC TR UNIT が出る（notes/ATA-24.md §11）。Plugins → 747-400 → Failures... の故障の窓から入れられる（notes/FAILURES.md）。load bus の故障で GCB も開くこと、BAT CHARGER の遅れ 10 秒は推定。
 - 手動の SSB スイッチ・OPEN 灯、GEN FIELD MAN RESET・FIELD OFF 灯が無い（3D にも操作子が無い。ELEC-05・22）。
 - 客室側の ground service switch が無い（ELEC-13）。
 - autoland のバス分離：TRU の故障が無いので、構成を選ぶのは発電機だけ。分離は瞬時（実機は 4 秒以内）。4 秒で分離しなければ NO LAND 3 の、4 秒は推定。
@@ -97,7 +97,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 実機に合わせた点：需要と供給からのダクト圧（区画ごと）、エンジンの HPSOV・PRV・PRSOV、逆流防止、始動弁の条件（クロスブリードは供給側 70 % N2）、過熱ラッチとスイッチでのリセット、ISLN 弁の移動時間と VALVE 灯・BLEED ISLN（10 秒の不一致）、APU 弁（RUNNING ＋ 2 秒、OFF で閉）、ISLN の電源、STATUS の BLEED ASCTU。2026-11-04 から：故障を dataref（`laminar/B747/air/fail/*`：過熱、過圧、HPSOV・PRV が閉・開のまま、APU の空気）で入れられ、ASCTU の監視で BLEED n、BLEED HP ENG n（beeper）、BLD n OVHT/PRV、SYS FAULT 灯、STATUS の BLEED HP ENG・BLEED OVPRESS・BLEED PRV ENG・BLEED n OVHT が出る（FCOM p.575、p.619、ATA30_32_35_36 p.58、p.72、p.90。前は X-Plane に相当する故障が無く、つながっていなかった）。
 
 残っている違い：
-- 故障を入れる窓はまだ無い（dataref だけ）。弁の不一致の 5 秒と、HPSOV が閉のままのときの IP 段だけの圧は推定。HPSOV が開のままでも、127 psig を超える圧は作らない。
+- 故障は Plugins → 747-400 → Failures... の故障の窓から入れられる（notes/FAILURES.md）。弁の不一致の 5 秒と、HPSOV が閉のままのときの IP 段だけの圧は推定。HPSOV が開のままでも、127 psig を超える圧は作らない。
 - ダクトリーク（火災の故障）は区画の空気を取り、BLD DUCT LEAK はリークの区画に空気がある間だけ出て、QRH の隔離で消える（2026-11-04。前は隔離しても消えず、ダクト圧も下がらなかった）。漏れの量（パック半分）と、隔離から消えるまでの 30 秒は推定。
 - 地上空気（エアカート）は 2026-11-04 から FMC の GROUND SERVICES の R3 でつなぐ（PNEU-07）。40 psi と、動くと外れることは推定。実機は地上の作業員がつなぐ。
 - スターターの回り方：X-Plane のエアスターターはダクト圧で回る（3-1 で与圧を上書きしたので、X-Plane のダクトの空気にこちらのダクト圧を書いている）。圧と回り方の関係は X-Plane のもので、資料に無い（PNEU-08）。
@@ -133,7 +133,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 
 残っている違い：
 - 消費は X-Plane の燃料流量で、acf の燃費（SFC）がそのまま効く。カスタム acf の SFC は巡航の測定で約 25 % 少なかったので、純正と同じ値にした（FL350・269 t で 1 発 2,134 kg/h。FCOM PI.11.2 の長距離巡航は 260 t で 2,211、280 t で 2,378 kg/h）。離陸と上昇の燃料流量はまだ資料と比べていない（エンジン 2-3 で）。2026-10-30 に燃費の 4 点を合わせ直し（0.300・0.440・0.470・0.535）、長距離巡航（FL290〜350）は FCOM と −2〜0 %、待機（PI.11.6）は +2〜3 %、離陸滑走は ICAO の 100 % と 1 % になった（上昇の燃料は FCOM に表が無く比べていない）。
-- 故障は 2026-11-04 から dataref（`laminar/B747/fuel/fail/*`：ポンプ 16、弁 21 の固着、温度計、FJCC A・B）で入れられ、FUEL PUMP・吸引供給の FUEL PRESS ENG・FUEL X FEED などの前からの論理、FUEL TEMP SYS、>FUEL JETT A・B、FUEL JETT SYS が出る（notes/ATA-28.md §11）。入れる窓はまだ無い。FUEL TEMP SYS のとき EICAS の燃料温度の数字は消えない。選択器で故障した FJCC を選ぶと武装しないのは推定。
+- 故障は 2026-11-04 から dataref（`laminar/B747/fuel/fail/*`：ポンプ 16、弁 21 の固着、温度計、FJCC A・B）で入れられ、FUEL PUMP・吸引供給の FUEL PRESS ENG・FUEL X FEED などの前からの論理、FUEL TEMP SYS、>FUEL JETT A・B、FUEL JETT SYS が出る（notes/ATA-28.md §11）。故障の窓（Plugins → 747-400 → Failures...）から入れられる。FUEL TEMP SYS のとき EICAS の燃料温度の数字は消えない。選択器で故障した FJCC を選ぶと武装しないのは推定。
 - 燃料温度は TAT への一次遅れで、根拠が無い（FUEL-20）。
 - 地上で 100 t を超えて始めたときの固定の配分と給油の順序は前のコードのまま（資料で確かめられない。FUEL-21）。
 - synoptic：xfeed 弁の緑（燃料あり）は無い（FCOM p.1448 は緑を挙げるが「燃料あり」の定義が無く、ATA26_28 p.422 は白と琥珀だけ）。EICAS が 1 面のときのコンパクト表示は無い（表示故障と一緒に）。FTR の白の点滅の速さ（2 Hz）は推定。
@@ -183,7 +183,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 残っている違い：
 - 3D の PASS TEMP・FLT DECK TEMP のノブは C〜W の範囲しか回らず、客室乗務員の温度パネル（door 2R）は 3D に無いので、PASS TEMP の ALTN（ゾーン A の専用 controller、125°F の過熱スイッチ）、FLT DECK の MAN、ゾーンごとの ±10°F は作っていない。温度の表示は ℃（ATA21 の会社の表示。FCOM 109 の図は °F）。EXT AIR は地上空気をつなぐ操作が無いので出ない（PNEU-07）。
 - 推定：ゾーンと貨物室の熱のつり合い（熱の負荷 70 kW、スキン、熱容量、ゾーンごとの配分、トリム空気の強さ、ZTC の効き、パックの出口の遅れ）、エンジン停止で始めたときは外気温・エンジン運転中か空中で始めたときは target から始めること、後方貨物室の選択温度（40°F。選択スイッチは bulk 貨物室の中）とサーモスタットの幅、PASS TEMP を回すと comfort correction をその便では止めること、中央ダクトが無いときのメッセージ（出さない）、ZTC・トリム空気の弁の電源。backup で APU に最大流量を求めること（ATA21 p.368）は作っていない。
-- 故障は 2026-11-04 から dataref（`laminar/B747/air/fail/*`：パックの過熱・PTC・再循環ファン・機器冷却のファン・過熱・低流量・煙・カード・ZTC・トリム空気の弁）で入れられ、STATUS の PACK n・PACK CONTROL・RECIRC FAN・EE CLNG・EQUIPMENT・E/E CLNG CARD と >E/E CLNG CARD が出る（notes/ATA-21.md §10）。入れる窓はまだ無い。弁ごとの STATUS（EE CLNG SUPPLY V ほか）、ECS MISC CARD、カードの故障での弁の動き、clean mode と後方の lav/galley fan は無い。
+- 故障は 2026-11-04 から dataref（`laminar/B747/air/fail/*`：パックの過熱・PTC・再循環ファン・機器冷却のファン・過熱・低流量・煙・カード・ZTC・トリム空気の弁）で入れられ、STATUS の PACK n・PACK CONTROL・RECIRC FAN・EE CLNG・EQUIPMENT・E/E CLNG CARD と >E/E CLNG CARD が出る（notes/ATA-21.md §10）。故障の窓（Plugins → 747-400 → Failures...）から入れられる。弁ごとの STATUS（EE CLNG SUPPLY V ほか）、ECS MISC CARD、カードの故障での弁の動き、clean mode と後方の lav/galley fan は無い。
 - 純正 acf の data block は、客室高度の赤い数字が 4 桁（10,000 ft 以上で先頭の桁が欠ける）で、LDG ALT も両 CPC 故障・両方 MAN で消えない（直したのはカスタム acf のパネルだけ：AIR-18）。
 - FMC の T/C・T/D・上昇時間を使わない（FMC にその出力が無い）。上昇は機体の上昇に比例、降下は降下に比例させた。進入を選んだときの滑走路の標高も使わない（FMC に到着ページが無い）。
 - 推定：巡航の客室高度（ΔP 8.8。FCOM の表示例から）、客室の容積・パックの流量・弁の面積・漏れ・リリーフ弁の開き方、弁の速さ（自動 6 秒、手動 20 秒）、FMC なしで空中で始めたときの客室。
@@ -639,6 +639,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 与圧は X-Plane の与圧に値を書いている（空調 3-1 まで）。
 - X-Plane が 20 fps を切るとシムの時刻は 1 フレーム 0.05 秒しか進まない。AFDS のピッチ・ロール、A/T のサーボ、SRM のトリム、EEC の推力の制御もそれに合わせて 1 フレーム 0.05 秒までしか進めない（2026-10-31。前は XTLua の実時間の刻みで、長いフレームで何秒分も一度に進み、s145 で F/D のピッチの指令が −2.5°、スタビライザーが一度に動いた）。
 - シムの便利機能（2026-11-01、実機に無い。Windows だけ）：X-Plane の Plugins → 747-400 で、オートステップクライム（CRZ のページの STEP TO が NOW で、VNAV の巡航なら MCP 高度と高度セレクターの押しをシムが代わりにする）と T/D の 2 分前の一時停止を選べる。選んだ状態は X-Plane の設定のフォルダに残る。
+- 故障の窓（2026-11-04、シムの機能で実機に無い。Windows だけ）：X-Plane の Plugins → 747-400 → Failures... かコマンド `laminar/B747/failures/window_toggle` で開く浮動ウィンドウ（POP OUT で別の窓、VR の中にも）。ATA の章ごとの一覧（336 項目）から、この機体のモデルの故障と X-Plane の故障をクリックですぐ入れ、もう一度で直す。REPAIR ALL で全部直る（notes/FAILURES.md）。発動の条件（時刻・高度・速度・MTBF）と系統図からの入れ方はまだ（F2・F3）。
 - 経路は FMC 自身が持ち、ND の経路の線は機体のネイティブプラグイン（FMS ブリッジ）が描く（2026-11-02 から。前は X-Plane 標準の FMS とその地図の線）。X-Plane の FMS には計画を渡すだけ（気象レーダーの地図と、古い読み手のため）。
 - XTLua は、飛行が動き出してから 30 秒余り後に機体のモジュールを読み込む（その間 X-Plane の時間は 0.4 秒ほどしか進まない）。エンジン運転中の開始では、その間 X-Plane 自身の燃料系がエンジンに燃料を送り、燃料モジュールが X-Plane の時間で 2 秒落ち着いてから引き継ぐ（2026-11-02 から。前は読み込みの直後に 4 発とも消え、地上では数秒後に再点火、空中では止まったままだった：notes/ATA-28.md §6）。
 - XTLua のモジュールで Lua の実行時エラーが出ると、XTLua はそのプラグインの全モジュールを止める（A/P・FMC・CDU などが止まったまま X-Plane は飛び続ける）。エラーの文は X-Plane の `Output/B747_xtlua_errors.txt` に残る（2026-11-02 から。前は見えなかった：TESTING.md §4.6）。
