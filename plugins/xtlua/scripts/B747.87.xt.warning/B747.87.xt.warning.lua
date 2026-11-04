@@ -933,10 +933,9 @@ end
 
 ----- SET STATE TO ENGINES RUNNING ------------------------------------------------------
 function B747_set_warning_ER()
-	
-    B747DR_sfty_no_smoke_sel_dial_pos = 1
-    B747DR_sfty_seat_belts_sel_dial_pos = 1
-	
+    -- (WARN-23) the NO SMOKING and SEAT BELTS selectors are the safety
+    -- module's (B747_set_safety_ER sets them to AUTO); the assignments here
+    -- went to globals this module never bound
 end
 
 

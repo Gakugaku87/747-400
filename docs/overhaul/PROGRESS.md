@@ -576,7 +576,10 @@ PLAN.md §3 に書いた。要点：
 | ELEC-14 ELCU と load shed | 済（発電機の台数で決める簡略版） |
 | ELEC-15 DC とバッテリー母線 | 済 |
 | ELEC-16 バッテリーの表示 | 済（カスタム acf）。APU バッテリーと BAT DISCH、STAT の V-DC・A-DC（モデルの値。APU BATT の A-DC は前は APU 発電機の電流だった）、CHG/DIS（2026-10-23 夕方。背景の固定の "DIS" を消した画像に替え、白の CHG・DIS を電流の向きで出す。0 A のときは空白）。純正 acf の STAT は X-Plane の値のまま |
-| ELEC-17、21〜22、24 | 未 |
+| ELEC-17 外部電源の available | 未（XP12 の GPU 電圧と FMC の GRND POWER の確認が要る） |
+| ELEC-21 Avionics.lua の puOn | 済（2026-11-04、gpuOn に直した。出力の Ext_Power_Av・Eng_Gen_on はどこも使っていない） |
+| ELEC-22 GEN FIELD MAN RESET・SSB スイッチ | 未（3D に操作部が無い） |
+| ELEC-24 electrical/oil | 対応不要（電源のモジュールが作るようになった。どこも使っていない） |
 | ELEC-18 autoland の母線の分離 | 済（2026-10-30、notes/ATA-24.md §10・ATA-22.md §38。構成 A〜E、200 ft の上下の戻し方、ISLN と ELEC BUS ISLN の抑止、カスタム acf の ELEC synoptic の抑止の文言、BUS ISOLATED と LAND 3・NO LAND 3。TRU の故障と分離の時間は無い） |
 | ELEC synoptic の ISLN・GALLEY | 済（カスタム acf）。ISLN は BTB 開で（前はスイッチ位置）。UTILITY と GALLEY（109）は 2026-10-23 夕方に画像を分け、それぞれの母線の通電で緑・琥珀（前は 1 枚の画像で utility bus の色）。GALLEY には FCOM の図のように母線までの自分の線を描いた。freighter（570）の galley 無しは電源モデルにまだ無い |
 | ELEC-23 EICAS status | 一部。DRIVE DISC n は済（IDG が切り離されている間。実機は CMC で消すまで残る）。ELEC DRIVE、BAT CHARGER、ELEC TR UNIT、ELEC IDG VALVE は故障の仕組みが要る |
@@ -608,7 +611,7 @@ PLAN.md §3 に書いた。要点：
 | WARN-21 チャイム | 済（7-1c：CALL 灯とチャイム、COM-05） |
 | WARN-17 STATUS | 済。STATUS メッセージ（新しい順、11 行ずつ、STAT でページ送り）と STATUS cue（エンジン始動からリフトオフ 30 分後まで、着陸の RA 800 ft〜75 kt は出さない）。カスタム acf の STATUS ページにメッセージ行と PG、主 EICAS に cue（ACF_DIFF.md §5）。メッセージは資料に出てくる分から（油圧・空圧・電源）。secondary engine exceedance cue での抑止は未（その cue が無い） |
 | WARN-22 警報系統の電源 | 一部。EIU は新しい電源のバス（1-1）。MAWEA とスピーカーの電源は分けていない |
-| WARN-23 quick start の未定義の global | 未 |
+| WARN-23 quick start の未定義の global | 済（2026-11-04。NO SMOKING・SEAT BELTS は安全のモジュールがエンジン運転中の開始で AUTO にしている。警報のモジュールの、束ねていない global への代入を消した） |
 | WARN-24 新しい advisory の位置 | 済（2026-10-24。新しいメッセージを見ているページの先頭に入れていたので、新しい advisory が古い caution の上に出た。caution はページの先頭、advisory は caution の下に入れる：FCOM p.1548。4-1 段 2b の s28 の写真で見つけた） |
 
 ## 油圧（1-4）の GAP の状態
