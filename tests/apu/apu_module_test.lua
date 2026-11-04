@@ -113,4 +113,26 @@ rt:command("laminar/B747/electrical/apu/sel_dial_dn", 0.1)
 frames(0.2)
 T.equal(get(ADVISORY, 13), 0, "fire: selector OFF clears the APU advisory")
 
+-- (2026-11-04; APU-09) the starter's power from the electrical model (FCOM
+-- p.895-896): the APU battery run down, a P&W start does not begin; a GE's
+-- runs on the APU start TR while utility bus 4 is powered
+local real = nil
+for _, m in ipairs(rt.modules or {}) do if m.ns and m.ns.B747_elec_last_out then real = m end end
+if real then
+    local fake = {battery = {main = {ah = 30}, apu = {ah = 0}}, util = {true, true, true, false}}
+    real.ns.B747_elec_last_out = function() return fake end
+    rt:set("laminar/B747/engines/type", 0)
+    frames(30)
+    rt:command("laminar/B747/electrical/apu/sel_dial_up", 0.1)
+    rt:command("laminar/B747/electrical/apu/sel_dial_up", 0.1)
+    frames(20)
+    T.equal(get(STARTER), 0, "P&W, the APU battery run down: no start (FCOM p.896: both batteries)")
+    rt:set("laminar/B747/engines/type", 1)
+    fake.util[4] = true
+    frames(2)
+    T.equal(get(STARTER), 2, "GE, utility bus 4 powered: the start on the APU start TR (FCOM p.895)")
+else
+    T.check(false, "the electrical module's namespace for the stub")
+end
+
 T.done()

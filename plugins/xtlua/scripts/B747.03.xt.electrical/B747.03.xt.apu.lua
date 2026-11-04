@@ -53,6 +53,21 @@ function B747_apu()
     inp.running = simDR_apu_running == 1
     inp.fire = B747DR_apu_fire_shutdown > 0.5
     inp.fuel = simDR_apu_fuel_tank_kg[MAIN2_TANK] > 0
+    -- (2026-11-04; APU-09) the starter's power (FCOM p.895-896): the 109 and
+    -- 405 (P&W, RR) need both batteries charged, the 570 (GE) the main
+    -- battery and the APU start TR on utility bus 4 or the APU battery (the
+    -- electrical model's last frame: the batteries' charge, the buses)
+    local eo = B747_elec_last_out and B747_elec_last_out()
+    local sp = true
+    if eo and eo.battery then
+        local main, apub = eo.battery.main.ah > 0, eo.battery.apu.ah > 0
+        if B747DR_elec_engine_type == 1 then
+            sp = main and (apub or (eo.util ~= nil and eo.util[4] == true))
+        else
+            sp = main and apub
+        end
+    end
+    inp.start_power = sp
     local out = A.update(apu_state, inp, SIM_PERIOD)
 
     -- X-Plane's APU spins as the model commands (read every frame, written

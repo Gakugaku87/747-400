@@ -36,6 +36,10 @@ M.ENG_CAP_MAX = 4.0             -- 1.5 at idle (65 %), 2.0 at 70 %: a crossbleed
                                 -- donor at about 70 % N2 (FCOM p.183)
 M.APU_PSI, M.APU_CAP = 42, 3.2  -- the APU runs all three packs, not three packs and a start
                                 -- (FCOM p.895)
+-- (2026-11-04; APU-10) the APU's air in flight: one pack, up to 15,000 ft
+-- (FCOM p.895: "APU bleed air is available in flight for one pack up to
+-- 15,000 feet"); none above it (estimate: the sources give no fall-off)
+M.APU_AIR_CAP, M.APU_AIR_ALT = 1.0, 15000
 M.GND_CAP = 3.0                 -- ground air cart
 M.STARTER_FLOW = 1.8
 M.WAI_FLOW, M.ADP_FLOW = 0.5, 0.3
@@ -73,6 +77,7 @@ function M.inputs()
         wai = {false, false},                      -- wing anti-ice valves L, R
         adp = {false, false},                      -- demand pumps 1 (left) and 4 (right)
         altitude = 0,                              -- ft
+        air = false,                               -- (2026-11-04) in flight (the PSEU)
     }
 end
 
@@ -197,8 +202,12 @@ function M.update(s, inp, dt)
                 end
             end
             if sect == 2 then
-                if s.apu_pos > 0.5 and inp.apu_n1 > 0 and not inp.apu_air_failed then
-                    apu_cap = M.APU_CAP * s.apu_pos
+                -- the APU's air: all the packs on the ground, one pack in
+                -- flight up to 15,000 ft, none above (FCOM p.895)
+                local apu_max = M.APU_CAP
+                if inp.air then apu_max = (inp.altitude <= M.APU_AIR_ALT) and M.APU_AIR_CAP or 0 end
+                if s.apu_pos > 0.5 and inp.apu_n1 > 0 and not inp.apu_air_failed and apu_max > 0 then
+                    apu_cap = apu_max * s.apu_pos
                     cap = cap + apu_cap
                     psi = math.max(psi, M.APU_PSI)
                 end
