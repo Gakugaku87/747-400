@@ -30,6 +30,8 @@ local CAUTION = "laminar/B747/CAS/caution_status"
 local ADVISORY = "laminar/B747/CAS/advisory_status"
 local STATUS = "laminar/B747/CAS/status_status"
 local DISPLAY = "laminar/B747/flt_ctrls/flaps/EICAS1_display_status"
+local LE_BOX, TE_TAPE = "laminar/B747/flt_ctrls/flaps/le_box", "laminar/B747/flt_ctrls/flaps/te_tape"
+local ALTN_DISPLAY = "laminar/B747/flt_ctrls/flaps/altn_display"
 local TRANS = "laminar/B747/flt_ctrls/flap/transition_status"
 local F20, F25, F30 = 4 / 6, 5 / 6, 1.0
 
@@ -126,6 +128,13 @@ frames(31)
 T.equal(get(FCU .. "le_mode", 2), 1, "outboard LE pneumatic drive failed: electric")
 T.equal(get(CAUTION, 30), 1, "FLAPS PRIMARY")
 T.equal(get(STATUS, 82), 1, "STATUS LE SINGLE DRIVE")
+-- the expanded display (FCTL-12): the outboard boxes striped while the
+-- electric drive moves them, the inboard ones green
+T.equal(get(DISPLAY), 2, "outboard LE electric: expanded indication")
+T.equal(get(LE_BOX, 0), 1, "L outboard LE box striped (in transit)")
+T.equal(get(LE_BOX, 5), 1, "R outboard LE box striped")
+T.equal(get(LE_BOX, 2), 2, "L inboard LE box green (extended)")
+T.equal(get(TE_TAPE, 0), 0, "TE tapes white")
 rt:set(FCU:gsub("fcu/$", "fail/") .. "le_primary", 2, 0)
 rt:set(FCU:gsub("fcu/$", "fail/") .. "fcu", 0, 1)
 frames(1)
@@ -138,6 +147,7 @@ rt:set(FCU:gsub("fcu/$", "fail/") .. "fcu", 0, 0)
 rt:set("laminar/B747/button_switch/position", 0, 1)
 frames(1)
 T.equal(get(CAUTION, 28), 1, "ALTN ARM: FLAPS CONTROL")
+T.equal(get(ALTN_DISPLAY), 1, "ALTN ARM: the alternate display (no lever mark, the flap scale)")
 T.equal(get(DISPLAY), 2, "expanded indication")
 local was = get(FCU .. "te_deg", 1)
 rt:set(LEVER, F30)
@@ -150,6 +160,27 @@ rt:set("laminar/B747/flt_ctrls/alt_flaps/sel_dial_pos", 0)
 rt:set("laminar/B747/button_switch/position", 0, 0)
 frames(1)
 T.equal(get(CAUTION, 28), 0, "disarmed: no FLAPS CONTROL")
+T.equal(get(ALTN_DISPLAY), 0, "disarmed: no alternate display")
+
+-- a TE position sensor without data: its tape's amber X, STATUS FLAP SYS
+-- MONITOR; the standby power system alone: the left wing's tapes (ATA27 p.320)
+rt:set("laminar/B747/flt_ctrls/fail/te_sensor", 2, 1)
+frames(1)
+T.equal(get(TE_TAPE, 2), 2, "R IB sensor failed: amber X")
+T.equal(get(STATUS, 99), 1, "STATUS FLAP SYS MONITOR")
+T.equal(get(DISPLAY), 2, "expanded indication")
+rt:set("laminar/B747/flt_ctrls/fail/te_sensor", 2, 0)
+frames(1)
+T.equal(get(STATUS, 99), 0, "data back: no FLAP SYS MONITOR")
+for i = 0, 3 do rt:set("laminar/B747/electrical/bus/ac", i, 0) end
+rt:set("laminar/B747/electrical/bus/stby_main", 1)
+frames(1)
+T.equal(get(TE_TAPE, 0), 2, "standby power alone: L OB tape amber X")
+T.equal(get(TE_TAPE, 1), 2, "L IB tape amber X")
+T.equal(get(TE_TAPE, 3), 0, "R OB tape white")
+for i = 0, 3 do rt:set("laminar/B747/electrical/bus/ac", i, 1) end
+frames(1)
+T.equal(get(TE_TAPE, 0), 0, "AC back: L OB tape white")
 
 -- the SRMs (B747.45.xt.srm.lua, 4-1 step 2a): the outboard aileron
 -- lockout and the rudder ratio changers from the airspeed, Mach and the

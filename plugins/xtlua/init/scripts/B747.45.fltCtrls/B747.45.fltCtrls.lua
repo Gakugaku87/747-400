@@ -73,6 +73,14 @@ B747DR_rudder_trim_switch_pos   = deferred_dataref("laminar/B747/flt_ctrls/ailer
 B747DR_speedbrake_lever_pos     = deferred_dataref("laminar/B747/flt_ctrls/speedbrake/lever_pos", "number")
 B747DR_flap_trans_status        = deferred_dataref("laminar/B747/flt_ctrls/flap/transition_status", "number")
 B747DR_EICAS1_flap_display_status = deferred_dataref("laminar/B747/flt_ctrls/flaps/EICAS1_display_status", "number")
+-- the expanded display (B747.45.fcu_model.lua, FCTL-12): each LE box (L OB,
+-- L MID, L IB, R IB, R MID, R OB: 0 retracted, 1 in transit, 2 extended,
+-- 3-5 the same amber, 6 amber X), each TE tape (L OB, L IB, R IB, R OB: 0
+-- white, 1 amber, 2 amber X), and the alternate display (1: no lever mark,
+-- the flap scale)
+B747DR_fcu_le_box               = deferred_dataref("laminar/B747/flt_ctrls/flaps/le_box", "array[6]")
+B747DR_fcu_te_tape              = deferred_dataref("laminar/B747/flt_ctrls/flaps/te_tape", "array[4]")
+B747DR_fcu_altn_display         = deferred_dataref("laminar/B747/flt_ctrls/flaps/altn_display", "number")
 B747DR_elevator_trim_mid_ind    = deferred_dataref("laminar/B747/flt_ctrls/elevator_trim/mid/indicator", "number")
 
 B747DR_init_fltctrls_CD         = deferred_dataref("laminar/B747/fltctrls/init_CD", "number")
@@ -185,6 +193,10 @@ B747DR_fcu_fail_te_secondary    = deferred_dataref("laminar/B747/flt_ctrls/fail/
 B747DR_fcu_fail_te_stuck        = deferred_dataref("laminar/B747/flt_ctrls/fail/te_stuck", "array[2]")
 B747DR_fcu_fail_le_primary      = deferred_dataref("laminar/B747/flt_ctrls/fail/le_primary", "array[3]")
 B747DR_fcu_fail_le_secondary    = deferred_dataref("laminar/B747/flt_ctrls/fail/le_secondary", "array[3]")
+-- position data lost (1): each TE panel's sensor (L OB, L IB, R IB, R OB)
+-- and each LE box's (L OB, L MID, L IB, R IB, R MID, R OB)
+B747DR_fcu_fail_te_sensor       = deferred_dataref("laminar/B747/flt_ctrls/fail/te_sensor", "array[4]")
+B747DR_fcu_fail_le_sensor       = deferred_dataref("laminar/B747/flt_ctrls/fail/le_sensor", "array[6]")
 -- the SRMs (B747.45.xt.srm.lua; 4-1 step 2a): failures X-Plane does not
 -- have (1 failed): SRM L, R; the outboard aileron lockout actuator stuck;
 -- the upper, lower rudder ratio changer actuators stuck

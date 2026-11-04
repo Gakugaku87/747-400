@@ -606,3 +606,14 @@ ND（6-1・6-2 段 6d2、2026-11-02：PLAN の X-Plane の地図）：
 | 同 | 主 EICAS の `GROUP Jettison` の FTR（`gen_LED LED`、magenta） | `DATAREF laminar/B747/fuel/fuel_to_remain/rheostat`（LBS 表示でも t） | `DATAREF laminar/B747/fuel/fuel_to_remain/display`（表示の単位）と `SHOW_EQUAL 0.000000 laminar/B747/fuel/fuel_to_remain/state`、その後に白の写し（`LED White`：`LED_3.26B.xx###0.white`、`SHOW_EQUAL 1.000000 …state`：完了から選択器 OFF まで、最初の 5 秒は点滅） | FCOM p.1449 |
 
 上の 5 行は `docs/overhaul/tools/panel_fuel_synoptic.lua` で書き換えた（137 の変更：グループの条件 38 行を消し、81 行を置き換え、条件 9 行と写し 9 個を足した）。新しい絵（`engine_amber`、`flow_std/MnToEng_amber`）は `docs/overhaul/tools/make_fuel_images.ps1` で純正の白のエンジン記号と緑の線の色だけを琥珀（255, 179, 0：純正の synoptic の琥珀）に変えて作った。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261104_before_fuel_synoptic`。X-Plane の写真（`s222_fuel_synoptic`）で、ポンプの白・cyan・緑・琥珀・magenta、不均衡で主 1 と主 4 の琥珀、吸引供給のエンジン 1 と流れ線の琥珀、主 EICAS の FTR の magenta と完了後の白を確かめた。外から見た姿は変わらない（パネルの計器だけの変更）。
+
+操縦系統（FCTL-12、2026-11-04：フラップの拡大表示と代替表示）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-11-04・操縦系統（FCTL-12） | 主 EICAS の `GROUP Flaps Disagree`（拡大表示）の `GROUP Tape` の後縁の帯 4 本（`Ind Bgnd`・`Ind Tape`） | 条件なし（いつも白） | 白に `SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flaps/te_tape[n]`、写し 4 つずつ：琥珀の帯（`flaps_tape_bgnd_amber`・`flaps_tape_amber`、`== 1`）、枠だけ（`flaps_tape_frame`）と琥珀の X（`flaps_te_x`、`== 2`）。16 個 | ATA27 p.320、FCOM p.937 |
+| 同 | 同 `GROUP Ind Labels`・`GROUP Selected(magenta)`（レバーの数字）と `GROUP Ind Line` の `gen_pointer Line: In Transit 1`〜`4`（レバーの線） | いつもマゼンタ | `Ind Labels` と `Ind Line` に `SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flaps/altn_display`、マゼンタに `SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flap/transition_status`、緑の写し（`GROUP Selected(green)` の 7 つと `Line: Selected 1`〜`4`、`== 0`） | FCOM p.937、ATA27 p.320・322 |
+| 同 | 同 `GROUP Flaps Disagree` の最後 | なし | 前縁の箱 6 個（`LE Box L OB` 1825.5, 686・`L MID` 1855.5, 689・`L IB` 1885.5, 692・`R IB` 1945.5, 692・`R MID` 1975.5, 689・`R OB` 2005.5, 686。`flaps_le_box_L`・`_R` の 7 コマを `laminar/B747/flt_ctrls/flaps/le_box[i]` で選ぶ）と代替表示の目盛り 2 個（`Altn Scale L` 1827, 604・`R` 2004, 604、`SHOW_EQUAL 1.000000 …altn_display`） | FCOM p.937–938、ATA27 p.399–400 |
+| 同 | 主 EICAS の `GROUP Gear Expanded`（脚の拡大表示）の 21 個 | 例：胴体脚の箱の POS の y 695、前脚 782 | y を 25 上へ（胴体脚 720、前脚 807）。前縁の箱の場所を空ける | ATA27 p.321（脚は帯の上に十分離れる） |
+
+上の 4 行は `docs/overhaul/tools/panel_flap_expanded.lua` で書き換えた（33 の変更：条件を足した計器 12 とグループ 3、写し 20 個と、数字 7 つの写しのグループ 1、新しい計器 8、位置を変えた計器 21）。新しい絵は `docs/overhaul/tools/make_flap_images.ps1`（前縁の箱は白・緑・琥珀の 7 コマで線は 1.6 px、琥珀の帯と枠は純正の帯の色だけを変えたもの、目盛りの数字は純正のレバーの数字の形を白に）。色は純正の白、緑（0, 255, 0）、琥珀（255, 179, 0）。2 つの dataref を見る計器とグループの数は 96 のまま。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261104_before_flap_expanded`。X-Plane の写真（`s223_flap_expanded`）で、前縁の箱の緑・琥珀の斜線、後縁の帯の琥珀と琥珀の X、緑とマゼンタのレバーの線と数字、代替表示の目盛り、脚の拡大表示と重ならないことを確かめた。外から見た姿は変わらない（パネルの計器だけの変更）。

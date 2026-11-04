@@ -1323,6 +1323,9 @@ laminar/B747/flt_ctrls/flaps	dataref	obj	B747.19.hydraulicsmodel,B747.19.xt.hydr
 laminar/B747/flt_ctrls/flaps/EICAS1_display_status	dataref	panel	B747.45.fltCtrls,B747.45.xt.fltCtrls
 laminar/B747/flt_ctrls/flaps/alt_flaps/sel_dial_dn	command	obj	B747.45.fltCtrls,B747.45.xt.fltCtrls
 laminar/B747/flt_ctrls/flaps/alt_flaps/sel_dial_up	command	obj	B747.45.fltCtrls,B747.45.xt.fltCtrls
+laminar/B747/flt_ctrls/flaps/altn_display	dataref	panel	B747.45.fltCtrls
+laminar/B747/flt_ctrls/flaps/le_box	dataref	panel	B747.45.fltCtrls
+laminar/B747/flt_ctrls/flaps/te_tape	dataref	panel	B747.45.fltCtrls
 laminar/B747/flt_ctrls/l_aileron_inner	dataref	obj,panel	B747.19.hydraulicsmodel,B747.19.xt.hydraulicsmodel
 laminar/B747/flt_ctrls/l_aileron_outer	dataref	obj,panel	B747.19.hydraulicsmodel,B747.19.xt.hydraulicsmodel
 laminar/B747/flt_ctrls/l_elev_inner	dataref	obj	B747.19.hydraulicsmodel,B747.19.xt.hydraulicsmodel

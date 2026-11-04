@@ -57,6 +57,17 @@ M.RELIEF = {
     [5] = {up = {203}, down = {195}},               -- lever 25: 25->20 at 203; back at 195
 }
 M.SHOW_S = 10               -- the indication goes 10 s after all flaps are up (FCOM p.954)
+-- the expanded and alternate display's symbols (FCOM p.937-938; ATA27
+-- p.320-322, p.398-400). Each LE box (L OB, L MID, L IB, R IB, R MID, R OB):
+-- retracted (white outline), in transit (white stripes), extended (green),
+-- the same three amber with its drive unit inoperative, an amber X without
+-- position data. Each TE tape (L OB, L IB, R IB, R OB): white, amber
+-- (asymmetry or drive failure in its group), an amber X without position
+-- data (STATUS FLAP SYS MONITOR).
+M.LE_UP, M.LE_TRANSIT, M.LE_DOWN, M.LE_AMBER, M.LE_X = 0, 1, 2, 3, 6
+M.TE_WHITE, M.TE_AMBER, M.TE_X = 0, 1, 2
+M.LE_BOXES = {{M.LE_OB, M.L}, {M.LE_MID, M.L}, {M.LE_IB, M.L}, {M.LE_IB, M.R}, {M.LE_MID, M.R}, {M.LE_OB, M.R}}
+M.TE_TAPES = {{M.OB, M.L}, {M.IB, M.L}, {M.IB, M.R}, {M.OB, M.R}}
 -- estimates (no value in the sources)
 M.TE_PRI_DEG_S = 30 / 45    -- primary: the stock rate, 30 degrees in 45 s
 M.TE_SEC_DEG_S = M.TE_PRI_DEG_S / 10   -- secondary and alternate: "much slower" (FCOM p.953;
@@ -86,6 +97,9 @@ function M.inputs()
         te_stuck = two(false),          -- the left side of a group stuck (broken drive shaft: asymmetry)
         le_pri_fail = three(false),     -- the LE groups' pneumatic drives
         le_sec_fail = three(false),     -- their electric drives
+        te_sensor_fail = four(false),   -- a TE panel's position sensor gives no data (L OB, L IB, R IB, R OB)
+        le_sensor_fail = {false, false, false, false, false, false},  -- an LE box's position data (L OB .. R OB)
+        sensor_power = two(true),       -- the TE position sensors' excitation, left and right wing
     }
 end
 
@@ -114,6 +128,10 @@ function M.new()
         st_te_flaps = false, st_le_single = false, st_le_mult = false,
         st_fcu = three(false), st_load_relief = false,
         te_moving = false, te_down = false,    -- to the hydraulic demand pumps (ATA-29 §4.2)
+        le_box = {0, 0, 0, 0, 0, 0},    -- the expanded display's LE boxes (M.LE_*)
+        te_tape = four(0),              -- its TE tapes (M.TE_*)
+        alternate = false,              -- the alternate display (no lever mark, the flap scale)
+        st_sys_monitor = false,         -- STATUS FLAP SYS MONITOR
     }
     return s
 end
@@ -425,8 +443,28 @@ function M.update(s, inp, dt)
     for g = 1, 2 do if s.te[g].pos[1] > 0 or s.te[g].pos[2] > 0 then all_up = false end end
     for g = 1, 3 do if s.le[g].pos[1] > 0 or s.le[g].pos[2] > 0 then all_up = false end end
     if all_up then s.up_t = s.up_t + dt else s.up_t = 0 end
-    out.show = lever > 0 or not all_up or s.up_t < M.SHOW_S
-    local odd = altn or te_sec or te_off or le_sec > 0
+    -- the expanded display's symbols; a flap without position data shows
+    -- the expanded display (ATA27 p.320: on the standby power system alone
+    -- the left wing's TE tapes show the X)
+    local te_no_data, le_no_data = false, false
+    for i, b in ipairs(M.LE_BOXES) do
+        local l = s.le[b[1]]
+        local p = l.pos[b[2]]
+        local v = (p <= 0.001 and M.LE_UP) or (p >= 0.999 and M.LE_DOWN) or M.LE_TRANSIT
+        if l.stall then v = v + M.LE_AMBER end
+        if inp.le_sensor_fail[i] then v, le_no_data = M.LE_X, true end
+        out.le_box[i] = v
+    end
+    for i, t in ipairs(M.TE_TAPES) do
+        local g = s.te[t[1]]
+        local v = (g.asym or g.stall) and M.TE_AMBER or M.TE_WHITE
+        if inp.te_sensor_fail[i] or not inp.sensor_power[t[2]] then v, te_no_data = M.TE_X, true end
+        out.te_tape[i] = v
+    end
+    out.alternate = altn
+    out.st_sys_monitor = te_no_data
+    out.show = lever > 0 or not all_up or s.up_t < M.SHOW_S or te_no_data or le_no_data
+    local odd = altn or te_sec or te_off or le_sec > 0 or te_no_data or le_no_data
     for g = 1, 2 do if math.abs(s.te[g].pos[1] - s.te[g].pos[2]) > 0.5 then odd = true end end
     for g = 1, 3 do if math.abs(s.le[g].pos[1] - s.le[g].pos[2]) > 0.05 then odd = true end end
     out.expanded = odd

@@ -149516,7 +149516,7 @@ GROUP Upper EICAS
       GROUP Gear Expanded
         SHOW_EQUAL 2.000000 laminar/B747/gear/EICAS1_display_status
         gen_rotary Gear Expanded Label
-          POS 1916.000000 739.000000
+          POS 1916.000000 764.000000
           IMAGE CRT Displays/EICAS Upper/EICAS_gear_bgnd
           DATAREF 
           LIGHT_MODE GLASS_AUTO
@@ -149536,7 +149536,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear nose up
-          POS 1916.000000 782.000000
+          POS 1916.000000 807.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_up
           DATAREF 
           SHOW_EQUAL 0.000000 laminar/B747/gear/gear_position/annun_gear[0]
@@ -149557,7 +149557,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear nose dn
-          POS 1916.000000 782.000000
+          POS 1916.000000 807.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_dn
           DATAREF 
           SHOW_EQUAL 1.000000 laminar/B747/gear/gear_position/annun_gear[0]
@@ -149578,7 +149578,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear nose transit
-          POS 1916.000000 782.000000
+          POS 1916.000000 807.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_transit
           DATAREF 
           SHOW_EQUAL 2.000000 laminar/B747/gear/gear_position/annun_gear[0]
@@ -149599,7 +149599,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear nose x
-          POS 1916.000000 782.000000
+          POS 1916.000000 807.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_x
           DATAREF 
           SHOW_EQUAL 3.000000 laminar/B747/gear/gear_position/annun_gear[0]
@@ -149620,7 +149620,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear left body up
-          POS 1865.000000 695.000000
+          POS 1865.000000 720.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_up
           DATAREF 
           SHOW_EQUAL 0.000000 laminar/B747/gear/gear_position/annun_gear[1]
@@ -149641,7 +149641,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear left body dn
-          POS 1865.000000 695.000000
+          POS 1865.000000 720.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_dn
           DATAREF 
           SHOW_EQUAL 1.000000 laminar/B747/gear/gear_position/annun_gear[1]
@@ -149662,7 +149662,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear left body transit
-          POS 1865.000000 695.000000
+          POS 1865.000000 720.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_transit
           DATAREF 
           SHOW_EQUAL 2.000000 laminar/B747/gear/gear_position/annun_gear[1]
@@ -149683,7 +149683,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear left body x
-          POS 1865.000000 695.000000
+          POS 1865.000000 720.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_x
           DATAREF 
           SHOW_EQUAL 3.000000 laminar/B747/gear/gear_position/annun_gear[1]
@@ -149704,7 +149704,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear right body up
-          POS 1967.000000 695.000000
+          POS 1967.000000 720.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_up
           DATAREF 
           SHOW_EQUAL 0.000000 laminar/B747/gear/gear_position/annun_gear[2]
@@ -149725,7 +149725,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear right body dn
-          POS 1967.000000 695.000000
+          POS 1967.000000 720.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_dn
           DATAREF 
           SHOW_EQUAL 1.000000 laminar/B747/gear/gear_position/annun_gear[2]
@@ -149746,7 +149746,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear right body transit
-          POS 1967.000000 695.000000
+          POS 1967.000000 720.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_transit
           DATAREF 
           SHOW_EQUAL 2.000000 laminar/B747/gear/gear_position/annun_gear[2]
@@ -149767,7 +149767,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear right body x
-          POS 1967.000000 695.000000
+          POS 1967.000000 720.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_x
           DATAREF 
           SHOW_EQUAL 3.000000 laminar/B747/gear/gear_position/annun_gear[2]
@@ -149788,7 +149788,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear left wing up
-          POS 1843.000000 739.000000
+          POS 1843.000000 764.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_up
           DATAREF 
           SHOW_EQUAL 0.000000 laminar/B747/gear/gear_position/annun_gear[3]
@@ -149809,7 +149809,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear left wing dn
-          POS 1843.000000 739.000000
+          POS 1843.000000 764.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_dn
           DATAREF 
           SHOW_EQUAL 1.000000 laminar/B747/gear/gear_position/annun_gear[3]
@@ -149830,7 +149830,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear left wing transit
-          POS 1843.000000 739.000000
+          POS 1843.000000 764.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_transit
           DATAREF 
           SHOW_EQUAL 2.000000 laminar/B747/gear/gear_position/annun_gear[3]
@@ -149851,7 +149851,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear left wing x
-          POS 1843.000000 739.000000
+          POS 1843.000000 764.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_x
           DATAREF 
           SHOW_EQUAL 3.000000 laminar/B747/gear/gear_position/annun_gear[3]
@@ -149872,7 +149872,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear right wing up
-          POS 1989.000000 739.000000
+          POS 1989.000000 764.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_up
           DATAREF 
           SHOW_EQUAL 0.000000 laminar/B747/gear/gear_position/annun_gear[4]
@@ -149893,7 +149893,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear right wing dn
-          POS 1989.000000 739.000000
+          POS 1989.000000 764.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_dn
           DATAREF 
           SHOW_EQUAL 1.000000 laminar/B747/gear/gear_position/annun_gear[4]
@@ -149914,7 +149914,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear right wing transit
-          POS 1989.000000 739.000000
+          POS 1989.000000 764.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_transit
           DATAREF 
           SHOW_EQUAL 2.000000 laminar/B747/gear/gear_position/annun_gear[4]
@@ -149935,7 +149935,7 @@ GROUP Upper EICAS
           CLICK_DY 0
 
         gen_rotary gear right wing x
-          POS 1989.000000 739.000000
+          POS 1989.000000 764.000000
           IMAGE CRT Displays/EICAS Upper/gear_box_x
           DATAREF 
           SHOW_EQUAL 3.000000 laminar/B747/gear/gear_position/annun_gear[4]
@@ -149983,6 +149983,7 @@ GROUP Upper EICAS
             POS 1975.500000 604.000000
             IMAGE CRT Displays/EICAS Upper/flaps_tape_bgnd
             DATAREF 
+            SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flaps/te_tape[3]
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -150003,6 +150004,7 @@ GROUP Upper EICAS
             POS 1975.500000 604.000000
             IMAGE CRT Displays/EICAS Upper/flaps_tape
             DATAREF laminar/B747/gauges/indicators/flap_deployed_ratio4
+            SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flaps/te_tape[3]
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -150014,10 +150016,90 @@ GROUP Upper EICAS
             KEY_FRAME 0.166667 63.000000 1.000000
             KEY_FRAME 0.000000 68.000000
 
+          gen_rotary Ind Bgnd Amber
+            POS 1975.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_tape_bgnd_amber
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flaps/te_tape[3]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_tape Ind Tape Amber
+            POS 1975.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_tape_amber
+            DATAREF laminar/B747/gauges/indicators/flap_deployed_ratio4
+            SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flaps/te_tape[3]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 1.000000 -68.000000 1.000000
+            KEY_FRAME 0.833333 -44.000000 1.000000
+            KEY_FRAME 0.666666 -22.000000 1.000000
+            KEY_FRAME 0.500000 24.000000 1.000000
+            KEY_FRAME 0.333333 46.000000 1.000000
+            KEY_FRAME 0.166667 63.000000 1.000000
+            KEY_FRAME 0.000000 68.000000
+
+          gen_rotary Ind Frame No Data
+            POS 1975.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_tape_frame
+            DATAREF 
+            SHOW_EQUAL 2.000000 laminar/B747/flt_ctrls/flaps/te_tape[3]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary Ind X No Data
+            POS 1975.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_te_x
+            DATAREF 
+            SHOW_EQUAL 2.000000 laminar/B747/flt_ctrls/flaps/te_tape[3]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
           gen_rotary Ind Bgnd
             POS 1945.500000 604.000000
             IMAGE CRT Displays/EICAS Upper/flaps_tape_bgnd
             DATAREF 
+            SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flaps/te_tape[2]
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -150038,6 +150120,7 @@ GROUP Upper EICAS
             POS 1945.500000 604.000000
             IMAGE CRT Displays/EICAS Upper/flaps_tape
             DATAREF laminar/B747/gauges/indicators/flap_deployed_ratio3
+            SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flaps/te_tape[2]
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -150049,10 +150132,90 @@ GROUP Upper EICAS
             KEY_FRAME 0.166667 63.000000 1.000000
             KEY_FRAME 0.000000 68.000000
 
+          gen_rotary Ind Bgnd Amber
+            POS 1945.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_tape_bgnd_amber
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flaps/te_tape[2]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_tape Ind Tape Amber
+            POS 1945.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_tape_amber
+            DATAREF laminar/B747/gauges/indicators/flap_deployed_ratio3
+            SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flaps/te_tape[2]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 1.000000 -68.000000 1.000000
+            KEY_FRAME 0.833333 -44.000000 1.000000
+            KEY_FRAME 0.666666 -22.000000 1.000000
+            KEY_FRAME 0.500000 24.000000 1.000000
+            KEY_FRAME 0.333333 46.000000 1.000000
+            KEY_FRAME 0.166667 63.000000 1.000000
+            KEY_FRAME 0.000000 68.000000
+
+          gen_rotary Ind Frame No Data
+            POS 1945.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_tape_frame
+            DATAREF 
+            SHOW_EQUAL 2.000000 laminar/B747/flt_ctrls/flaps/te_tape[2]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary Ind X No Data
+            POS 1945.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_te_x
+            DATAREF 
+            SHOW_EQUAL 2.000000 laminar/B747/flt_ctrls/flaps/te_tape[2]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
           gen_rotary Ind Bgnd
             POS 1885.500000 604.000000
             IMAGE CRT Displays/EICAS Upper/flaps_tape_bgnd
             DATAREF 
+            SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flaps/te_tape[1]
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -150073,6 +150236,7 @@ GROUP Upper EICAS
             POS 1885.500000 604.000000
             IMAGE CRT Displays/EICAS Upper/flaps_tape
             DATAREF laminar/B747/gauges/indicators/flap_deployed_ratio2
+            SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flaps/te_tape[1]
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -150084,10 +150248,90 @@ GROUP Upper EICAS
             KEY_FRAME 0.166667 63.000000 1.000000
             KEY_FRAME 0.000000 68.000000
 
+          gen_rotary Ind Bgnd Amber
+            POS 1885.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_tape_bgnd_amber
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flaps/te_tape[1]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_tape Ind Tape Amber
+            POS 1885.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_tape_amber
+            DATAREF laminar/B747/gauges/indicators/flap_deployed_ratio2
+            SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flaps/te_tape[1]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 1.000000 -68.000000 1.000000
+            KEY_FRAME 0.833333 -44.000000 1.000000
+            KEY_FRAME 0.666666 -22.000000 1.000000
+            KEY_FRAME 0.500000 24.000000 1.000000
+            KEY_FRAME 0.333333 46.000000 1.000000
+            KEY_FRAME 0.166667 63.000000 1.000000
+            KEY_FRAME 0.000000 68.000000
+
+          gen_rotary Ind Frame No Data
+            POS 1885.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_tape_frame
+            DATAREF 
+            SHOW_EQUAL 2.000000 laminar/B747/flt_ctrls/flaps/te_tape[1]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary Ind X No Data
+            POS 1885.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_te_x
+            DATAREF 
+            SHOW_EQUAL 2.000000 laminar/B747/flt_ctrls/flaps/te_tape[1]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
           gen_rotary Ind Bgnd
             POS 1855.500000 604.000000
             IMAGE CRT Displays/EICAS Upper/flaps_tape_bgnd
             DATAREF 
+            SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flaps/te_tape[0]
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -150108,6 +150352,7 @@ GROUP Upper EICAS
             POS 1855.500000 604.000000
             IMAGE CRT Displays/EICAS Upper/flaps_tape
             DATAREF laminar/B747/gauges/indicators/flap_deployed_ratio1
+            SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flaps/te_tape[0]
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -150119,8 +150364,89 @@ GROUP Upper EICAS
             KEY_FRAME 0.166667 63.000000 1.000000
             KEY_FRAME 0.000000 68.000000
 
+          gen_rotary Ind Bgnd Amber
+            POS 1855.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_tape_bgnd_amber
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flaps/te_tape[0]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_tape Ind Tape Amber
+            POS 1855.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_tape_amber
+            DATAREF laminar/B747/gauges/indicators/flap_deployed_ratio1
+            SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flaps/te_tape[0]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 1.000000 -68.000000 1.000000
+            KEY_FRAME 0.833333 -44.000000 1.000000
+            KEY_FRAME 0.666666 -22.000000 1.000000
+            KEY_FRAME 0.500000 24.000000 1.000000
+            KEY_FRAME 0.333333 46.000000 1.000000
+            KEY_FRAME 0.166667 63.000000 1.000000
+            KEY_FRAME 0.000000 68.000000
+
+          gen_rotary Ind Frame No Data
+            POS 1855.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_tape_frame
+            DATAREF 
+            SHOW_EQUAL 2.000000 laminar/B747/flt_ctrls/flaps/te_tape[0]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary Ind X No Data
+            POS 1855.500000 604.000000
+            IMAGE CRT Displays/EICAS Upper/flaps_te_x
+            DATAREF 
+            SHOW_EQUAL 2.000000 laminar/B747/flt_ctrls/flaps/te_tape[0]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
           GROUP Ind Labels
+            SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flaps/altn_display
             GROUP Selected(magenta)
+              SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flap/transition_status
               gen_rotary 30
                 POS 2004.000000 535.500000
                 IMAGE CRT Displays/EICAS Upper/flaps30_magenta
@@ -150274,12 +150600,188 @@ GROUP Upper EICAS
                 CLICK_DY 0
 
             END_GROUP
+            GROUP Selected(green)
+              SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flap/transition_status
+              gen_rotary 30
+                POS 2004.000000 535.500000
+                IMAGE CRT Displays/EICAS Upper/flaps30_green
+                DATAREF 
+                SHOW_GREATER 0.990000 sim/cockpit2/controls/flap_ratio
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_rotary 25
+                POS 2005.000000 560.500000
+                IMAGE CRT Displays/EICAS Upper/flaps25_green
+                DATAREF 
+                SHOW_LESS 0.840000 sim/cockpit2/controls/flap_ratio
+                SHOW_GREATER 0.820000 sim/cockpit2/controls/flap_ratio
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_rotary 20
+                POS 2005.000000 582.500000
+                IMAGE CRT Displays/EICAS Upper/flaps20_green
+                DATAREF 
+                SHOW_LESS 0.680000 sim/cockpit2/controls/flap_ratio
+                SHOW_GREATER 0.660000 sim/cockpit2/controls/flap_ratio
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_rotary 10
+                POS 2002.000000 628.500000
+                IMAGE CRT Displays/EICAS Upper/flaps10_green
+                DATAREF 
+                SHOW_LESS 0.510000 sim/cockpit2/controls/flap_ratio
+                SHOW_GREATER 0.490000 sim/cockpit2/controls/flap_ratio
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_rotary 5
+                POS 2007.000000 649.500000
+                IMAGE CRT Displays/EICAS Upper/flaps05_green
+                DATAREF 
+                SHOW_LESS 0.340000 sim/cockpit2/controls/flap_ratio
+                SHOW_GREATER 0.320000 sim/cockpit2/controls/flap_ratio
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_rotary 1
+                POS 1995.000000 667.500000
+                IMAGE CRT Displays/EICAS Upper/flaps01_green
+                DATAREF 
+                SHOW_LESS 0.170000 sim/cockpit2/controls/flap_ratio
+                SHOW_GREATER 0.150000 sim/cockpit2/controls/flap_ratio
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+              gen_rotary 0
+                POS 1997.000000 671.500000
+                IMAGE CRT Displays/EICAS Upper/flaps00_green
+                DATAREF 
+                SHOW_LESS 0.010000 sim/cockpit2/controls/flap_ratio
+                LIGHT_MODE GLASS_AUTO
+                LIGHT_RHEOSTAT 9
+                BUS_SRC 2
+                KEY_FRAME 0.000000 0.000000 1.000000
+                KEY_FRAME 1.000000 6.000000
+                DIGITS 1
+                ROTARY_TYPE NO_CLICK
+                CLICK_RADIUS 0.000000
+                CLICK_RADIUS_DY 0.000000
+                OFFSET 0.000000
+                STEP1 1.000000
+                STEP2 1.000000
+                CURSOR DEFAULT
+                CLICK_DX 0
+                CLICK_DY 0
+
+            END_GROUP
           END_GROUP
           GROUP Ind Line
+            SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flaps/altn_display
             gen_pointer Line: In Transit 4
               POS 1975.500000 604.000000
               IMAGE CRT Displays/EICAS Upper/flaps_indLine_magenta
               DATAREF sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flap/transition_status
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 9
+              BUS_SRC 2
+              KEY_FRAME 0.000000 68.000000 1.000000
+              KEY_FRAME 0.166667 63.000000 1.000000
+              KEY_FRAME 0.333333 46.000000 1.000000
+              KEY_FRAME 0.500000 24.000000 1.000000
+              KEY_FRAME 0.666666 -22.000000 1.000000
+              KEY_FRAME 0.833333 -44.000000 1.000000
+              KEY_FRAME 1.000000 -68.000000
+              IS_DRAGGABLE 0
+              IS_VERTICAL 1
+              OFFSET 0.000000
+
+            gen_pointer Line: Selected 4
+              POS 1975.500000 604.000000
+              IMAGE CRT Displays/EICAS Upper/flaps_indLine_green
+              DATAREF sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flap/transition_status
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -150298,6 +150800,26 @@ GROUP Upper EICAS
               POS 1945.500000 604.000000
               IMAGE CRT Displays/EICAS Upper/flaps_indLine_magenta
               DATAREF sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flap/transition_status
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 9
+              BUS_SRC 2
+              KEY_FRAME 0.000000 68.000000 1.000000
+              KEY_FRAME 0.166667 63.000000 1.000000
+              KEY_FRAME 0.333333 46.000000 1.000000
+              KEY_FRAME 0.500000 24.000000 1.000000
+              KEY_FRAME 0.666666 -22.000000 1.000000
+              KEY_FRAME 0.833333 -44.000000 1.000000
+              KEY_FRAME 1.000000 -68.000000
+              IS_DRAGGABLE 0
+              IS_VERTICAL 1
+              OFFSET 0.000000
+
+            gen_pointer Line: Selected 3
+              POS 1945.500000 604.000000
+              IMAGE CRT Displays/EICAS Upper/flaps_indLine_green
+              DATAREF sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flap/transition_status
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -150316,6 +150838,26 @@ GROUP Upper EICAS
               POS 1885.500000 604.000000
               IMAGE CRT Displays/EICAS Upper/flaps_indLine_magenta
               DATAREF sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flap/transition_status
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 9
+              BUS_SRC 2
+              KEY_FRAME 0.000000 68.000000 1.000000
+              KEY_FRAME 0.166667 63.000000 1.000000
+              KEY_FRAME 0.333333 46.000000 1.000000
+              KEY_FRAME 0.500000 24.000000 1.000000
+              KEY_FRAME 0.666666 -22.000000 1.000000
+              KEY_FRAME 0.833333 -44.000000 1.000000
+              KEY_FRAME 1.000000 -68.000000
+              IS_DRAGGABLE 0
+              IS_VERTICAL 1
+              OFFSET 0.000000
+
+            gen_pointer Line: Selected 2
+              POS 1885.500000 604.000000
+              IMAGE CRT Displays/EICAS Upper/flaps_indLine_green
+              DATAREF sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flap/transition_status
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -150334,6 +150876,26 @@ GROUP Upper EICAS
               POS 1855.500000 604.000000
               IMAGE CRT Displays/EICAS Upper/flaps_indLine_magenta
               DATAREF sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flap/transition_status
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 9
+              BUS_SRC 2
+              KEY_FRAME 0.000000 68.000000 1.000000
+              KEY_FRAME 0.166667 63.000000 1.000000
+              KEY_FRAME 0.333333 46.000000 1.000000
+              KEY_FRAME 0.500000 24.000000 1.000000
+              KEY_FRAME 0.666666 -22.000000 1.000000
+              KEY_FRAME 0.833333 -44.000000 1.000000
+              KEY_FRAME 1.000000 -68.000000
+              IS_DRAGGABLE 0
+              IS_VERTICAL 1
+              OFFSET 0.000000
+
+            gen_pointer Line: Selected 1
+              POS 1855.500000 604.000000
+              IMAGE CRT Displays/EICAS Upper/flaps_indLine_green
+              DATAREF sim/cockpit2/controls/flap_ratio
+              SHOW_EQUAL 0.000000 laminar/B747/flt_ctrls/flap/transition_status
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
@@ -150350,6 +150912,168 @@ GROUP Upper EICAS
 
           END_GROUP
         END_GROUP
+
+        gen_rotary LE Box L OB
+          POS 1825.500000 686.000000
+          IMAGE CRT Displays/EICAS Upper/flaps_le_box_L
+          DATAREF laminar/B747/flt_ctrls/flaps/le_box[0]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 7
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary LE Box L MID
+          POS 1855.500000 689.000000
+          IMAGE CRT Displays/EICAS Upper/flaps_le_box_L
+          DATAREF laminar/B747/flt_ctrls/flaps/le_box[1]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 7
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary LE Box L IB
+          POS 1885.500000 692.000000
+          IMAGE CRT Displays/EICAS Upper/flaps_le_box_L
+          DATAREF laminar/B747/flt_ctrls/flaps/le_box[2]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 7
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary LE Box R IB
+          POS 1945.500000 692.000000
+          IMAGE CRT Displays/EICAS Upper/flaps_le_box_R
+          DATAREF laminar/B747/flt_ctrls/flaps/le_box[3]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 7
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary LE Box R MID
+          POS 1975.500000 689.000000
+          IMAGE CRT Displays/EICAS Upper/flaps_le_box_R
+          DATAREF laminar/B747/flt_ctrls/flaps/le_box[4]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 7
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary LE Box R OB
+          POS 2005.500000 686.000000
+          IMAGE CRT Displays/EICAS Upper/flaps_le_box_R
+          DATAREF laminar/B747/flt_ctrls/flaps/le_box[5]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 1.000000
+          DIGITS 7
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary Altn Scale L
+          POS 1827.000000 604.000000
+          IMAGE CRT Displays/EICAS Upper/flaps_altn_scale_L
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flaps/altn_display
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+        gen_rotary Altn Scale R
+          POS 2004.000000 604.000000
+          IMAGE CRT Displays/EICAS Upper/flaps_altn_scale_R
+          DATAREF 
+          SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flaps/altn_display
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
       END_GROUP
       GROUP Flaps
         SHOW_EQUAL 1.000000 laminar/B747/flt_ctrls/flaps/EICAS1_display_status
