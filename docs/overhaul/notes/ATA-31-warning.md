@@ -153,6 +153,7 @@ GAP ID 接頭辞：`WARN`。2026-10-23 調査。コード・acf・snd は変更�
 - 例として FCOM 15.20 が挙げるもの：燃料・油圧の個別ポンプ圧メッセージは系統圧メッセージで抑止（FCOM p.1582 (15.20.36)）。
 - 各章の表にある組合せ：ELEC BUS ISLN・ELEC GEN OFF ← ELEC AC BUS、ELEC DRIVE ← DRIVE DISC 押下、ELEC UTIL BUS ← 負荷制限中、FUEL PUMP ← FUEL PRESS ENG、HYD PRESS ENG・HYD PRESS DEM ← HYD PRESS SYS、JETT NOZ ON L/R ← JETT NOZ ON、FUEL JETT A/B ← FUEL JETT SYS、FUEL PMP STB ← FUEL STAB XFR、CON IGNITION ON ← ENG IGNITION、GEAR DOOR ← 代替脚下げ、FUEL LOW CTR・FUEL TANK/ENG ← ジェティソン中、ENG CONTROL・ENG CONTROLS・EIU LEFT・E/E CLNG CARD ← 飛行中（EICAS-MESSAGES.md の条件欄）。
 - 実装は警報モジュールの表に「抑止元」を書く方式が扱いやすい（推定）。
+- 2026-11-04 の確認（WARN-05）：上の組は、警報モジュールの表ではなく、各系統のモデルがメッセージを出す条件に入っている。燃料のモデル（`B747.28.fuel_model.lua`）：FUEL PUMP ← FUEL PRESS ENG、FUEL PMP STB ← FUEL STAB XFR、JETT NOZ ON L/R ← JETT NOZ ON、FUEL LOW CTR・FUEL TANK/ENG ← ジェティソンの武装。油圧（`B747.19.hyd_model.lua`）：HYD PRESS ENG・DEM ← HYD PRESS SYS。電源（`B747.03.elec_model.lua`）：GEN OFF・BUS ISLN ← AC BUS、DRIVE ← DRIVE DISC、UTIL BUS ← 負荷制限。点火（`B747.40.engine_start_model.lua`）：CON IGNITION ON ← ENG IGNITION。脚（`B747.10.gear_model.lua`）：GEAR DOOR ← 代替脚下げ。表示（`B747.60.display_model.lua`）：>EIU LEFT は地上だけ。>FUEL JETT A, B（FCOM p.1474）・>E/E CLNG CARD・ENG CONTROL・ENG CONTROLS は、つなぐ故障のモデルが無いので今は出ない（故障の窓で）。
 
 #### 4.4.2 時間遅れ
 

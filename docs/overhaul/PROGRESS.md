@@ -596,7 +596,7 @@ PLAN.md §3 に書いた。要点：
 | WARN-02 サイレンの結線 | 済。サイレンは `warning_siren`（リセットの可否つき）で鳴る（`747-400_custom.snd` と手元の `747-400.snd`）。音そのものは利用者が耳で確かめる |
 | WARN-03 bell | 一部。ベルは `warning_bell` で鳴り、master リセットで止まる。FIRE/OVHT TEST のベルは試験ボタンのまま（火災の試験は火災 3-4 で警報モデルに入れる）。FIRE APU・CARGO などのメッセージ自体も火災（3-4）で |
 | WARN-04 caution ごとの beeper | 一部。caution ごとの 1 秒の `master_caution_audio` は済（`747-400_XP11.snd` が使う）。beeper のある advisory（BLEED ISLN L・R、BLEED HP ENG。FCOM p.619）も同じ合図を出す（master CAUTION は点けない）。`.snd` の beeper もこの合図で鳴る（master CAUTION が点いたままでも次の caution で鳴る） |
-| WARN-05 抑止 | 一部。始動前・始動中・離陸・着陸は済。他のメッセージによる抑止（notes/ATA-31-warning.md §4.4.1）と時間遅れは各系統で。STATUS cue はパネルが要る |
+| WARN-05 抑止 | 済（2026-11-04 に確かめた）。始動前・始動中・離陸・着陸は警報のモデル。他のメッセージによる抑止（notes/ATA-31-warning.md §4.4.1）は、各系統のモデルがメッセージを出す条件に入っている（燃料・油圧・電源・点火・脚・表示）。>FUEL JETT A, B・>E/E CLNG CARD・ENG CONTROL は故障のモデルが無いので出ない（故障の窓で）。時間遅れは各系統のモデル。STATUS cue は 1-3 で済 |
 | WARN-06 表のレベル | 済（表の `level`） |
 | WARN-07 文言・添字 | 一部。文言は済。memo の添字の重複（41）と init 側の表（配列の大きさを決めている）は残した |
 | WARN-08 足りないメッセージ | 未（各系統の作り直しで） |
