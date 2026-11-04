@@ -351,6 +351,13 @@ function N2_display_GE(engine_N1_in, engine_in)
     N2_display = B747_rescale(35.0, 35.0, 65.0, 48.0, simDR_N2[engine_in])
   end]]--
   if last_N2[engine_in] == nil then last_N2[engine_in] = 0.0 end
+  -- (2026-11-04) a flight that starts with the engines running: the display
+  -- starts at the running N2 (before, it rose from 0 with its 10 s lag, and
+  -- the bleed air, which reads it, stayed empty for the first 15 s: no packs,
+  -- >CARGO DET AIR). A real start never gets here with the display at 0
+  if last_N2[engine_in] < 1 and simDR_engine_running[engine_in] == 1 and simDR_N2[engine_in] > 50 then
+    last_N2[engine_in] = simDR_N2[engine_in]
+  end
     if (simDR_engine_running[engine_in] == 0 or simDR_N2[engine_in]<35) then
       N2_display = B747_animate_value(last_N2[engine_in],simDR_N2[engine_in],0,115,0.1) 
     elseif N2_display < simDR_N2[engine_in] then --and N2_display < 30.0 then
