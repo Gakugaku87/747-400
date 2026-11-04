@@ -733,6 +733,12 @@ local B747_CASstatusMsg = {
     {DRindex = 145, name = "ENG 4 OIL FILT"},
     {DRindex = 146, name = "CONFIG WARN SY"},     -- ATA31 p.270 (2026-11-04: the failure window)
     {DRindex = 147, name = "STAB GREENBAND"},     -- ATA31 p.202, p.270
+    {DRindex = 148, name = "G/S ANTENNA L"},      -- ATA34_1 p.478 (2026-11-04: the failure window)
+    {DRindex = 149, name = "G/S ANTENNA C"},
+    {DRindex = 150, name = "G/S ANTENNA R"},
+    {DRindex = 151, name = "LOC ANTENNA L"},
+    {DRindex = 152, name = "LOC ANTENNA C"},
+    {DRindex = 153, name = "LOC ANTENNA R"},
 }
 
 

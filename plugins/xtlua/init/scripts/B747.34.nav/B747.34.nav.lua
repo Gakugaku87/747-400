@@ -184,4 +184,9 @@ B747DR_wxr_fail                 = deferred_dataref("laminar/B747/wxr/fail", "arr
 B747DR_wxr_nd_fail              = deferred_dataref("laminar/B747/wxr/nd_fail", "array[2]")
 B747DR_wxr_nd_fault             = deferred_dataref("laminar/B747/wxr/nd_fault", "array[2]")
 B747DR_wxr_nd_msg               = deferred_dataref("laminar/B747/wxr/nd_msg", "array[2]")
+-- (2026-11-04) the ILS receivers L, C, R's antenna relays stuck (1; the
+-- failure window, B747.34.ils_ant_model.lua: notes/ATA-34.md §22): the
+-- VOR/LOC relay, the G/S relay
+B747DR_ils_fail_loc_antenna     = deferred_dataref("laminar/B747/ils/fail/loc_antenna", "array[3]")
+B747DR_ils_fail_gs_antenna      = deferred_dataref("laminar/B747/ils/fail/gs_antenna", "array[3]")
 B747DR_wxr_nd_gain              = deferred_dataref("laminar/B747/wxr/nd_gain", "array[2]")

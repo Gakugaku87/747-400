@@ -54,6 +54,8 @@ dofile("B747.34.xt.gpws.lua")
 dofile("B747.34.xt.tcas.lua")
 -- the weather radar control: the 570 panel, the R/T, X-Plane's radar for each ND
 dofile("B747.34.xt.wxr.lua")
+-- the ILS antenna relays: their failures, G/S and LOC ANTENNA, ILS ANTENNA
+dofile("B747.34.xt.ils.lua")
 
 
 --*************************************************************************************--
@@ -68,6 +70,7 @@ function flight_start()
     B747_gpws_flight_start()
     B747_tcas_flight_start()
     B747_wxr_flight_start()
+    B747_ils_flight_start()
 end
 
 function after_physics()
@@ -78,4 +81,5 @@ function after_physics()
     B747_gpws()
     B747_tcas()
     B747_wxr()
+    B747_ils()
 end
