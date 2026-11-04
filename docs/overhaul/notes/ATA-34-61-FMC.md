@@ -2327,3 +2327,10 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - 電池だけの地上（STANDBY POWER AUTO）では APU standby bus がインバーターで通電するので、今までどおり IRS の整列が見える。APU の始動中の 65 秒（APU のインバーターが止まる：1-1）は止まる。
 - 試験：新しい回帰 `fms_power_test`（X-Plane の bus 0 が無くても FMC の母線で TIME TO ALIGN、母線が全部無いと更新しない、APU standby bus だけで更新、左 FMC の故障でも右の母線で更新）。
 - X-Plane（カスタム acf、2026-11-04）：`s42_irs` 48/48（電池だけの整列中（APU standby bus はインバーター）と、APU の発電機で AC が来た後に、ND の TIME TO ALIGN（`laminar/B747/irs/line1`）を足した）、`s173_fmc_fail` 23/23（左 FMC の故障）。Log.txt に Lua の誤りなし。
+
+## 145. 3 本の平行滑走路の「B」と、DEP/ARR INDEX の桁（2026-11-05：利用者の報告、別の PC のラインフライト）
+
+- VHHH の STAR CANT3B で ILS25C を選べなかった：CIFP の CANT3B は滑走路の遷移が「RW25B」。ARINC 424 の「B」は同じ番号の平行滑走路すべてで、VHHH（2026 年のデータで 07L/25R・07C/25C・07R/25L の 3 本）では 25C も入る。FMC（`B747.68.proc_model.lua` の `rwy_matches`）は B を L と R にしか広げず、ARRIVALS で CANT3B と 25C の進入を組み合わせられなかった。C も入れた（DEPARTURES の SID も同じ）。Navigraph の AIRAC 2610 で、CANT3B が 25C・25L・25R を受け持つことを確かめた。なお X-Plane に付いてくるデータ（AIRAC 2406）の VHHH には 25C が無い。
+- DEP/ARR INDEX の空港コードが少し左にずれていた：FCOM p.1299 の絵（24 桁）では、題「DEP/ARR INDEX」は 7 桁目、小さい「RTE 1」は 9 桁目と「(ACT)」は 16 桁目、出発と到着の空港コードは 10 桁目から。前は題が 6 桁目、RTE が 11 桁目、空港コードが 9 桁目だった。絵に合わせた（ARRIVALS・DEPARTURES の題は前から FCOM p.1343 と同じ 4 桁目）。
+- 試験：`proc_model_test` 64（B の 3 本）、`deparr_pages_test` 40、`rte2_pages_test` 57。
+- X-Plane（カスタム acf、2026-11-05）：新しい `s250_user_report_nd` の DEP/ARR INDEX の部分（RJAA→RJBB で、題が 7 桁目、RJAA と RJBB が 10 桁目。CDU の写真）。VHHH の 25C は、X-Plane に付いてくるデータに無いので試せない（Navigraph のデータで回帰試験と同じ組み合わせになることは確かめた）。

@@ -324,20 +324,23 @@ fmsPages["DEPARRINDEX"].getPage=function(self,pgNo,fmsID)
     local r = R.shown(B747_fmc_route_num(n))
     defs[dep_key] = r.origin and {"deparrgo", "DEPARTURES:" .. n} or nil
     defs[arr_key] = r.dest and {"deparrgo", "ARRIVALS:" .. n} or nil
-    return lr(r.origin and ("<DEP    " .. r.origin.ident) or "", ""),
-      lr(r.dest and ("        " .. r.dest.ident) or "", r.dest and "ARR>" or "")
+    -- (2026-11-05) the columns of FCOM p.1299's figure: the airports from
+    -- the 10th column (before, the 9th: "slightly left", the user's report)
+    return lr(r.origin and ("<DEP     " .. r.origin.ident) or "", ""),
+      lr(r.dest and ("         " .. r.dest.ident) or "", r.dest and "ARR>" or "")
   end
   local a1, a2 = rows(1, "L1", "R2")
   local b1, b2 = rows(2, "L3", "R4")
   return {
-    pad("     DEP/ARR INDEX"), BLANK, a1, BLANK, a2, BLANK, b1, BLANK, b2,
+    pad("      DEP/ARR INDEX"), BLANK, a1, BLANK, a2, BLANK, b1, BLANK, b2,
     BLANK, BLANK, BLANK, BLANK,
   }
 end
 fmsPages["DEPARRINDEX"].getSmallPage=function(self,pgNo,fmsID)
   local function status(n) return B747_fmc_route_num(n).active and "(ACT)" or "" end
-  return {"                    1/1 ", pad("          RTE 1 " .. status(1)), BLANK, BLANK, BLANK,
-    pad("          RTE 2 " .. status(2)), BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK}
+  -- RTE n from the 9th column, (ACT) from the 16th (FCOM p.1299)
+  return {"                    1/1 ", pad("        RTE 1  " .. status(1)), BLANK, BLANK, BLANK,
+    pad("        RTE 2  " .. status(2)), BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK}
 end
 fmsFunctionsDefs["DEPARRINDEX"]={}
 function fmsFunctions.deparrgo(fmsO, value)

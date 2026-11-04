@@ -53,15 +53,18 @@ local function alt_field(s)
     return tonumber(s)
 end
 
--- a runway designator in a transition's name: RW16R, RW16B (16L and 16R),
--- ALL
+-- a runway designator in a transition's name: RW16R, RW16B (all the
+-- parallel runways of that number: 16L and 16R, and 16C where there are
+-- three: ARINC 424's "B". (2026-11-05) Before, only L and R: VHHH's
+-- CANT3B (RW25B) left out 25C and its ILS, the user's report), ALL
 local function rwy_matches(trans, rwy)
     if trans == "ALL" or trans == "" then return true end
     if not rwy then return false end
     if trans == rwy then return true end
     local base = trans:match("^(RW%d%d)B$")
-    return base ~= nil and (rwy == base .. "L" or rwy == base .. "R")
+    return base ~= nil and (rwy == base .. "L" or rwy == base .. "C" or rwy == base .. "R")
 end
+M.rwy_matches = rwy_matches
 
 -- the procedures of an airport: their names in the file's order
 function M.list(N, db, icao, kind)
