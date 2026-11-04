@@ -15,6 +15,9 @@ B747DR_apu_fire_shutdown        = find_dataref("laminar/B747/fire/apu_shutdown")
 simDR_apu_fuel_tank_kg          = find_dataref("sim/flightmodel/weight/m_fuel")
 B747DR_apu_n2_display           = find_dataref("laminar/B747/apu/n2")
 B747DR_apu_oil_display          = find_dataref("laminar/B747/apu/oil")
+-- (2026-11-04) the failures (notes/ATA-49.md §11)
+B747DR_apu_fail_limit_in        = find_dataref("laminar/B747/apu/fail/limit")
+B747DR_apu_fail_duct_leak_in    = find_dataref("laminar/B747/apu/fail/duct_leak")
 
 local MAIN2_TANK = 2                -- main tank 2 in X-Plane's tank list (B747.25.xt.fuel.lua)
 local BATTERY_SWITCH = 13           -- button_switch/position[13]
@@ -53,6 +56,8 @@ function B747_apu()
     inp.running = simDR_apu_running == 1
     inp.fire = B747DR_apu_fire_shutdown > 0.5
     inp.fuel = simDR_apu_fuel_tank_kg[MAIN2_TANK] > 0
+    inp.limit_fail = B747DR_apu_fail_limit_in > 0.5
+    inp.duct_leak = B747DR_apu_fail_duct_leak_in > 0.5
     -- (2026-11-04; APU-09) the starter's power (FCOM p.895-896): the 109 and
     -- 405 (P&W, RR) need both batteries charged, the 570 (GE) the main
     -- battery and the APU start TR on utility bus 4 or the APU battery (the

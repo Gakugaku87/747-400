@@ -113,6 +113,29 @@ rt:command("laminar/B747/electrical/apu/sel_dial_dn", 0.1)
 frames(0.2)
 T.equal(get(ADVISORY, 13), 0, "fire: selector OFF clears the APU advisory")
 
+-- (2026-11-04) the failures (laminar/B747/apu/fail/*; notes/ATA-49.md §11):
+-- the APU running again, a limit exceeded stops it with APU; the bleed duct
+-- leak stops it and keeps it from starting again
+for _ = 1, 2 do rt:command("laminar/B747/electrical/apu/sel_dial_up", 0) end
+frames(80)
+T.equal(get(STARTER), 1, "failures: the APU running again")
+rt:set("laminar/B747/apu/fail/limit", 1)
+frames(0.2)
+T.equal(get(STARTER), 0, "a limit exceeded: X-Plane's APU shut down")
+T.equal(get(ADVISORY, 13), 1, "a limit exceeded: APU advisory")
+rt:set("laminar/B747/apu/fail/limit", 0)
+rt:command("laminar/B747/electrical/apu/sel_dial_dn", 0.1)
+frames(30)
+rt:set("laminar/B747/apu/fail/duct_leak", 1)
+for _ = 1, 2 do rt:command("laminar/B747/electrical/apu/sel_dial_up", 0) end
+frames(20)
+T.equal(get(STARTER), 0, "the bleed duct leak: no start (FCOM p.613)")
+T.equal(get(ADVISORY, 13), 1, "the bleed duct leak, selector ON: APU advisory")
+rt:set("laminar/B747/apu/fail/duct_leak", 0)
+rt:command("laminar/B747/electrical/apu/sel_dial_dn", 0.1)
+frames(1)
+T.equal(get(ADVISORY, 13), 0, "the leak repaired, selector OFF: no APU advisory")
+
 -- (2026-11-04; APU-09) the starter's power from the electrical model (FCOM
 -- p.895-896): the APU battery run down, a P&W start does not begin; a GE's
 -- runs on the APU start TR while utility bus 4 is powered
