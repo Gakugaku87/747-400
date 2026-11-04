@@ -15,8 +15,14 @@
 -- start plus KI of the error integrated, plus KP of the error, less KD per
 -- degree a second of pitch rate, at most RATE of the travel a second.
 -- Gains: estimates (a steady pilot), not from the sources.
+-- v3 (2026-11-05, PROGRESS.md's next item 16): the error integrated only
+-- within I_BAND degrees of the bar. Before, the rotation's lag (about 3
+-- degrees for 6 s) wound KI's part up by about half the column's travel,
+-- and the airplane went 3.5 degrees over the bar (s109, 20261104_151822: 17.9
+-- for 14.4 at 334 ft); the A/P took over from that column and swung it back
+-- while the speed went 5 kt over V2 + 25.
 
-local VERSION = "2"
+local VERSION = "3"
 
 if not string.find(AIRCRAFT_PATH or "", "747-400", 1, true) then
     logMsg("B747 F/D follow: not the 747-400, inactive")
@@ -25,6 +31,7 @@ end
 
 local KP, KI, KD = 0.10, 0.03, 0.20
 local RATE = 0.5
+local I_BAND = 1.5
 dataref("B747FF_theta", "sim/flightmodel/position/theta", "readonly")
 dataref("B747FF_q", "sim/flightmodel/position/Q", "readonly")
 dataref("B747FF_fd", "laminar/B747/autopilot/flight_director_pitch_deg", "readonly")
@@ -53,7 +60,7 @@ function B747FF_frame()
     last = now
     local err = B747FF_fd - B747FF_theta
     B747FF_err = err
-    hold = math.max(-1, math.min(1, hold + KI * err * dt))
+    if math.abs(err) <= I_BAND then hold = math.max(-1, math.min(1, hold + KI * err * dt)) end
     local want = math.max(-1, math.min(1, hold + KP * err - KD * B747FF_q))
     local step = RATE * dt
     out = out + math.max(-step, math.min(step, want - out))
