@@ -21,6 +21,14 @@ B747DR_bleed_light_sys_fault    = find_dataref("laminar/B747/air/light/sys_fault
 B747DR_bleed_light_isln_valve   = find_dataref("laminar/B747/air/light/isln_valve")
 B747DR_bleed_light_apu_valve    = find_dataref("laminar/B747/air/light/apu_valve")
 simDR_bleed_fail_apu_press      = find_dataref("sim/operation/failures/rel_APU_press")
+-- (2026-11-04) the failures (notes/ATA-36.md §10)
+B747DR_bleed_fail_ovht          = find_dataref("laminar/B747/air/fail/bleed_ovht")
+B747DR_bleed_fail_ovpress       = find_dataref("laminar/B747/air/fail/bleed_ovpress")
+B747DR_bleed_fail_hpsov_closed  = find_dataref("laminar/B747/air/fail/hpsov_closed")
+B747DR_bleed_fail_hpsov_open    = find_dataref("laminar/B747/air/fail/hpsov_open")
+B747DR_bleed_fail_prv_closed    = find_dataref("laminar/B747/air/fail/prv_closed")
+B747DR_bleed_fail_prv_open      = find_dataref("laminar/B747/air/fail/prv_open")
+B747DR_bleed_fail_apu_air       = find_dataref("laminar/B747/air/fail/apu_air")
 B747DR_bleed_CAS_status         = find_dataref("laminar/B747/CAS/status_status")
 B747DR_bleed_start_valve_cmd    = find_dataref("laminar/B747/engines/start_valve_cmd")
 B747DR_bleed_ext_air            = find_dataref("laminar/B747/air/ext_air")
@@ -44,10 +52,15 @@ local ADV_OVHT = 22             -- BLD 1-4 OVHT/PRV: 22-25
 local ADV_ISLN_APU = 34         -- >BLEED ISLN APU
 local ADV_ISLN = 35             -- BLEED ISLN L, R: 35-36
 local ADV_OFF = 39              -- >BLEED 1-4 OFF: 39-42
+local ADV_BLEED = 26            -- (2026-11-04) BLEED 1-4: 26-29
+local ADV_HP_ENG = 30           -- (2026-11-04) BLEED HP ENG 1-4: 30-33
 -- STATUS slots (laminar/B747/CAS/status_status, B747.87.xt.warning.lua)
 local STATUS_ASCTU = 20         -- BLEED ASCTU A, B: 20-21
 local STATUS_ISLN = 22          -- BLEED ISLN L, R: 22-23
 local STATUS_ISLN_APU = 24      -- BLEED ISLN APU
+-- (2026-11-04) BLEED HP ENG 1-4: 107-110, BLEED OVPRESS 1-4: 111-114,
+-- BLEED PRV ENG 1-4: 115-118, BLEED 1-4 OVHT: 119-122
+local STATUS_HP_ENG, STATUS_OVPRESS, STATUS_PRV_ENG, STATUS_OVHT = 107, 111, 115, 119
 
 local bleed_state = B.new()
 local bleed_inputs = B.inputs()
@@ -90,7 +103,18 @@ local function read_inputs(inp)
     inp.apu_bleed_on = B747DR_button_switch_position[81] > 0.95
     inp.apu_selector = B747DR_bleed_apu_sel_pos
     inp.apu_n1 = simDR_apu_N1_pct
-    inp.apu_air_failed = simDR_bleed_fail_apu_press == 6     -- X-Plane failure: inoperative
+    -- the APU's air: X-Plane's failure (inoperative) or the aircraft's
+    -- (2026-11-04); the engines' failures
+    inp.apu_air_failed = simDR_bleed_fail_apu_press == 6 or B747DR_bleed_fail_apu_air > 0.5
+    local f = inp.fail
+    for n = 1, 4 do
+        inp.overheat[n] = B747DR_bleed_fail_ovht[n - 1] > 0.5
+        f.ovpress[n] = B747DR_bleed_fail_ovpress[n - 1] > 0.5
+        f.hpsov_closed[n] = B747DR_bleed_fail_hpsov_closed[n - 1] > 0.5
+        f.hpsov_open[n] = B747DR_bleed_fail_hpsov_open[n - 1] > 0.5
+        f.prv_closed[n] = B747DR_bleed_fail_prv_closed[n - 1] > 0.5
+        f.prv_open[n] = B747DR_bleed_fail_prv_open[n - 1] > 0.5
+    end
     for p = 1, 3 do inp.pack_flow[p] = B747_pack_out.flow[p] end      -- the pack model, last frame
     inp.wai[1] = B747DR_bleed_wing_ai_valve_pos[0] > 0.5
     inp.wai[2] = B747DR_bleed_wing_ai_valve_pos[1] > 0.5
@@ -113,6 +137,13 @@ local function write_outputs(out)
         B747DR_bleed_light_sys_fault[n - 1] = flag(o.sys_fault)
         B747DR_CAS_advisory_status[ADV_OVHT + n - 1] = flag(o.ovht_alert)
         B747DR_CAS_advisory_status[ADV_OFF + n - 1] = flag(o.off_alert)
+        -- (2026-11-04) the failures' messages
+        B747DR_CAS_advisory_status[ADV_BLEED + n - 1] = flag(o.bleed_alert)
+        B747DR_CAS_advisory_status[ADV_HP_ENG + n - 1] = flag(o.hp_alert)
+        B747DR_bleed_CAS_status[STATUS_HP_ENG + n - 1] = flag(o.st_hp)
+        B747DR_bleed_CAS_status[STATUS_OVPRESS + n - 1] = flag(o.st_ovpress)
+        B747DR_bleed_CAS_status[STATUS_PRV_ENG + n - 1] = flag(o.st_prv)
+        B747DR_bleed_CAS_status[STATUS_OVHT + n - 1] = flag(o.st_ovht)
     end
     B747bleedAir.isolation_valve_L.pos = out.isln_pos[1]
     B747bleedAir.isolation_valve_R.pos = out.isln_pos[2]

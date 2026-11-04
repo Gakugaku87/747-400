@@ -44,6 +44,15 @@ T.check(get(AIR .. "duct_pressure_L") > 25 and get(AIR .. "duct_pressure_R") > 2
 T.check(get(AIR .. "duct_pressure_C") > 25, "APU, three packs: centre duct")
 T.equal(get("sim/cockpit2/pressurization/actuators/bleed_air_mode"), 5, "APU: X-Plane bleed air auto (its valves open)")
 T.equal(get(AIR .. "light/apu_valve"), 0, "APU: no VALVE light")
+-- (2026-11-04) the APU's air failed (laminar/B747/air/fail/apu_air): the
+-- valve stays open, the ducts empty (notes/ATA-36.md §10)
+rt:set(AIR .. "fail/apu_air", 1)
+frames(4)
+T.check(get(AIR .. "duct_pressure_C") < 5, "APU air failed: centre duct empty")
+T.equal(get(AIR .. "apu/bleed_valve_pos"), 1, "APU air failed: valve stays open")
+rt:set(AIR .. "fail/apu_air", 0)
+frames(4)
+T.check(get(AIR .. "duct_pressure_C") > 25, "APU air back")
 
 -- START 4 with three packs on: not enough air; packs 2 and 3 OFF: it starts
 -- (FCOM p.123, p.895)
@@ -103,5 +112,53 @@ frames(21)
 T.equal(get(STATUS, 23), 0, "ISLN R as commanded again: STATUS gone")
 T.equal(get(STATUS, 20), 1, "DC bus 1 lost 20 s: STATUS BLEED ASCTU A")
 T.equal(get(STATUS, 21), 0, "DC bus 1 lost: no BLEED ASCTU B")
+
+-- (2026-11-04) the failures of engine 4 (laminar/B747/air/fail/*, index 3;
+-- notes/ATA-36.md §10), the engine at idle with its bleed ON. The HPSOV
+-- failed closed: BLEED HP ENG 4 (FCOM p.619)
+local FAIL = AIR .. "fail/"
+rt:set(FAIL .. "hpsov_closed", 3, 1)
+frames(6)
+T.equal(get(ADVISORY, 33), 1, "HPSOV 4 failed closed: BLEED HP ENG 4")
+T.equal(get(AIR .. "light/sys_fault", 3), 0, "HPSOV 4 failed closed: no SYS FAULT")
+rt:set(FAIL .. "hpsov_closed", 3, 0)
+-- the HPSOV failed open at high power: BLEED 4, SYS FAULT, after 60 s STATUS
+-- BLEED HP ENG 4 (ATA30_32_35_36 p.58)
+rt:set("laminar/B747/engines/display_N2", 3, 90)
+rt:set(FAIL .. "hpsov_open", 3, 1)
+frames(62)
+T.equal(get(ADVISORY, 33), 0, "HPSOV 4 repaired: no BLEED HP ENG 4")
+T.equal(get(ADVISORY, 29), 1, "HPSOV 4 failed open: BLEED 4")
+T.equal(get(AIR .. "light/sys_fault", 3), 1, "HPSOV 4 failed open: SYS FAULT")
+T.equal(get(STATUS, 110), 1, "HPSOV 4 failed open: STATUS BLEED HP ENG 4")
+rt:set(FAIL .. "hpsov_open", 3, 0)
+rt:set("laminar/B747/engines/display_N2", 3, 65)
+-- the PRV failed closed: BLD 4 OVHT/PRV; after 125 s STATUS BLEED PRV ENG 4
+-- (ATA30_32_35_36 p.72)
+rt:set(FAIL .. "prv_closed", 3, 1)
+frames(127)
+T.equal(get(ADVISORY, 29), 0, "HPSOV 4 repaired: no BLEED 4")
+T.equal(get(STATUS, 110), 0, "HPSOV 4 repaired: no STATUS BLEED HP ENG 4")
+T.equal(get(ADVISORY, 25), 1, "PRV 4 failed closed: BLD 4 OVHT/PRV")
+T.equal(get(STATUS, 118), 1, "PRV 4 failed closed: STATUS BLEED PRV ENG 4")
+rt:set(FAIL .. "prv_closed", 3, 0)
+-- the overpressure: BLEED 4, SYS FAULT, STATUS BLEED OVPRESS 4 (p.72)
+rt:set(FAIL .. "bleed_ovpress", 3, 1)
+frames(7)
+T.equal(get(ADVISORY, 25), 0, "PRV 4 repaired: no BLD 4 OVHT/PRV")
+T.equal(get(STATUS, 118), 0, "PRV 4 repaired: no STATUS BLEED PRV ENG 4")
+T.equal(get(ADVISORY, 29), 1, "overpressure 4: BLEED 4")
+T.equal(get(AIR .. "light/sys_fault", 3), 1, "overpressure 4: SYS FAULT")
+T.equal(get(STATUS, 114), 1, "overpressure 4: STATUS BLEED OVPRESS 4")
+rt:set(FAIL .. "bleed_ovpress", 3, 0)
+-- the overheat: BLD 4 OVHT/PRV, after 60 s STATUS BLEED 4 OVHT (p.90)
+rt:set(FAIL .. "bleed_ovht", 3, 1)
+frames(67)
+T.equal(get(STATUS, 114), 0, "overpressure gone: no STATUS BLEED OVPRESS 4")
+T.equal(get(ADVISORY, 25), 1, "overheat 4: BLD 4 OVHT/PRV")
+T.equal(get(STATUS, 122), 1, "overheat 4: STATUS BLEED 4 OVHT")
+for i = 107, 121 do
+    if i ~= 122 then T.equal(get(STATUS, i), 0, "overheat 4: no other bleed STATUS " .. i) end
+end
 
 T.done()

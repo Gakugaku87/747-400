@@ -308,3 +308,20 @@ ACF_DIFF.md との関係: 抽気に関わる acf 値（`_has_full_bleed_air`、`
 - ATA30_32_35_36 の 36 章が CF6 機の資料かどうか（14th stage と TR の記述からの推定）。
 - INTERFACES.tsv が acf の SHOW_* 条件の dataref を拾っていない件（全系統に関わる。175 個）。
 - `sim/cockpit2/annunciators/bleed_air_fail` の 4 発機での割り当て（どの故障で何番が立つか）。
+
+## 10. 故障の入力（2026-11-04：故障の窓の F0、PNEU-03）
+
+- 新しい dataref（1 で故障、`[4]` はエンジン 1〜4）：`laminar/B747/air/fail/bleed_ovht[4]`（過熱）、`fail/bleed_ovpress[4]`（過圧：PRV の調圧の故障）、`fail/hpsov_closed[4]`・`fail/hpsov_open[4]`（HPSOV が閉・開のまま）、`fail/prv_closed[4]`・`fail/prv_open[4]`（PRV が閉・開のまま）、`fail/apu_air`（APU の空気が出ない。X-Plane の `rel_APU_press` も今までどおり効く）。ダクトリークは火災の `laminar/B747/fire/fail/duct_leak[3]`（FIRE-15）。
+- 監視は ASCTU。エンジンが回っている（N2 50 % 超：弁を動かす空気がある）ときだけで、そのエンジンの ASCTU の DC bus が無いと監視しない。
+- 振る舞い（advisory は FCOM p.619、SYS FAULT は FCOM p.575、STATUS は ATA30_32_35_36 p.58、p.72、p.90）：
+  - 過熱：前からのラッチ（5 秒、LH36 p.100）で HPSOV と PRV を閉じ、SYS FAULT と BLD n OVHT/PRV。60 秒で STATUS BLEED n OVHT。故障が消えてもラッチしたままで、ENGINE BLEED スイッチの OFF・ON で戻る（FCOM p.612）。閉じた弁は指令どおりなので、弁の故障のメッセージは出ない。
+  - 過圧：PRV が開いているあいだ 5 秒（76 psig の過圧スイッチと 5 秒：LH36 p.96）で BLEED n、SYS FAULT、STATUS BLEED OVPRESS n（遅れなし：ATA30_32_35_36 p.72、p.116）。弁は閉じない（LH36 p.96、p.102）。ENGINE BLEED を OFF にすると PRV が閉じて止む。
+  - HPSOV が閉のまま：HP 段を使う低出力（N2 85 % 未満：前からの推定）で、5 秒で BLEED HP ENG n（beeper あり：FCOM p.619。警報モデルの `ADVISORY_BEEPER`）。SYS FAULT は点かない。空気は IP 段だけになり、アイドルで圧が下がる（N2 45〜85 % で 0 から全圧：推定）。高出力（指令が閉）では何も出ない。
+  - HPSOV が開のまま：指令が閉の高出力で、5 秒で BLEED n と SYS FAULT、60 秒で STATUS BLEED HP ENG n。STATUS の BLEED HP ENG n は advisory と同じ名前で条件が違う（advisory は閉のまま：FCOM p.619、STATUS は開のまま：ATA30_32_35_36 p.58）。資料のとおりにした。127 psig を超える圧は作らない（推定の圧の範囲に無い）。
+  - PRV が閉のまま：5 秒で BLD n OVHT/PRV（SYS FAULT は点かない）。そのエンジンの空気は来ない。125 秒で STATUS BLEED PRV ENG n（「PRV failure to close when commanded or PRV closed when bleed pressure < 65 psig」を、指令と弁の不一致 125 秒とした）。
+  - PRV が開のまま：指令が閉（スイッチ OFF、火災スイッチ、過熱、始動中とその後 15 秒）のとき、5 秒で BLEED n と SYS FAULT、125 秒で STATUS BLEED PRV ENG n。PRSOV はスイッチで閉じるので、スイッチ OFF なら >BLEED n OFF も出たまま。
+  - APU の空気：弁は開いたまま、空気が来ない（ダクト C が空になる）。
+- STATUS の番号（`laminar/B747/CAS/status_status`）：107〜110 BLEED HP ENG 1〜4、111〜114 BLEED OVPRESS 1〜4、115〜118 BLEED PRV ENG 1〜4、119〜122 BLEED 1〜4 OVHT。advisory は前からの 22〜25（BLD n OVHT/PRV）、26〜29（BLEED n）、30〜33（BLEED HP ENG n）。
+- 推定：弁の不一致の 5 秒（資料に値が無い）、IP 段だけのときの圧の範囲。
+- 試験：新しい回帰 `bleed_fail_test`（53 件）、`bleed_module_test` 61（dataref から advisory・STATUS・SYS FAULT 灯まで、APU の空気の故障）。
+- X-Plane（カスタム acf、2026-11-04）：新しい `s230_bleed_failures` 38/38（成田でエンジン運転中のアイドル：HPSOV 1 の閉で 5 秒後に BLEED HP ENG 1 と beeper、SYS FAULT なし、エンジン 1 の圧は 36 psi（IP 段だけ）。エンジン 2 の過圧で BLEED 2・SYS FAULT・STATUS BLEED OVPRESS 2、弁は開いたまま、ENGINE BLEED 2 OFF で消えて >BLEED 2 OFF。PRV 3 の閉で BLD 3 OVHT/PRV、空気 0、右のダクトはエンジン 4 が保つ。エンジン 4 の過熱で BLD 4 OVHT/PRV・SYS FAULT・弁が閉、STATUS BLEED 4 OVHT と BLEED PRV ENG 3、故障を消してもラッチ、スイッチの OFF・ON で戻る。上の EICAS と STATUS ページの写真）、回帰の `s05_bleed` 64/64。Log.txt に Lua の誤りなし。頭上の SYS FAULT 灯の写真は視点が電源パネルを向いていたので、抽気パネルの視点（`bleed`）に直した（次の回で撮る）。

@@ -137,6 +137,17 @@ B747DR_press_ldg_alt_shown          = deferred_dataref("laminar/B747/air/press/l
 -- failures X-Plane does not have (1 failed): the cabin pressure
 -- controllers A, B
 B747DR_air_fail_cpc                 = deferred_dataref("laminar/B747/air/fail/cpc", "array[2]")
+-- (2026-11-04) the bleed air failures (1 failed; the bleed model's inputs,
+-- for the failure window: docs/overhaul/notes/ATA-36.md §10): each engine's
+-- bleed overheat, overpressure (the PRV's regulation), HPSOV failed closed
+-- or open, PRV failed closed or open; the APU gives no air
+B747DR_air_fail_bleed_ovht          = deferred_dataref("laminar/B747/air/fail/bleed_ovht", "array[4]")
+B747DR_air_fail_bleed_ovpress       = deferred_dataref("laminar/B747/air/fail/bleed_ovpress", "array[4]")
+B747DR_air_fail_hpsov_closed        = deferred_dataref("laminar/B747/air/fail/hpsov_closed", "array[4]")
+B747DR_air_fail_hpsov_open          = deferred_dataref("laminar/B747/air/fail/hpsov_open", "array[4]")
+B747DR_air_fail_prv_closed          = deferred_dataref("laminar/B747/air/fail/prv_closed", "array[4]")
+B747DR_air_fail_prv_open            = deferred_dataref("laminar/B747/air/fail/prv_open", "array[4]")
+B747DR_air_fail_apu_air             = deferred_dataref("laminar/B747/air/fail/apu_air", "number")
 -- the temperature model (B747.55.xt.temp.lua), °C: the zones F/D, U/D,
 -- A-E actual and target, the targets shown (1: a pack operating and no
 -- backup, FCOM p.577), MASTER (the PASS TEMP setting), the cargo FWD, AFT,
