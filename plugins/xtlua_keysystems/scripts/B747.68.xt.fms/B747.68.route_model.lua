@@ -842,6 +842,7 @@ end
 function M.set_constraint(st, i, c, crz_alt)
     local l = M.shown(st).legs[i]
     if not l or l.disc or l.pending or l.altterm then return M.INVALID_ENTRY end
+    if c.akind == "S" then return M.INVALID_ENTRY end     -- a step: M.set_step
     if c.spd and (c.spd < 100 or c.spd > 400) then return M.INVALID_ENTRY end
     if not c.alt then
         if not (c.spd and l.alt) then return M.INVALID_ENTRY end
@@ -851,22 +852,40 @@ function M.set_constraint(st, i, c, crz_alt)
     end
     l = M.edit(st).legs[i]
     l.spd = c.spd
-    if c.alt then l.alt, l.alt2, l.akind = c.alt, c.alt2, c.akind or "" end
+    if c.alt then l.alt, l.alt2, l.akind, l.step = c.alt, c.alt2, c.akind or "", nil end
+end
+
+-- (2026-11-05) a planned step climb at a waypoint: "XXXS" on RTE LEGS
+-- (FCOM p.1332's suffixes: "S - planned step climb"; p.1257 "Step
+-- Climb": it overrides the FMC's step climb predictions and a CRZ STEP
+-- TO). An enroute waypoint (not a procedure's or a hold's), above the
+-- cruise altitude and at most the 747's 45,100 ft (estimate: the sources
+-- give no checks; before, "S" was an INVALID ENTRY: the user's report).
+-- The waypoint's one altitude entry: it replaces an altitude constraint
+-- and its speed, and a constraint replaces it (estimate)
+M.STEP_MAX_FT = 45100
+function M.set_step(st, i, ft, crz_alt)
+    local l = M.shown(st).legs[i]
+    if not l or l.disc or l.pending or not l.fix or l.proc or M.is_hold(l) then return M.INVALID_ENTRY end
+    if not (ft and crz_alt and crz_alt > 0) or ft <= crz_alt or ft > M.STEP_MAX_FT then return M.INVALID_ENTRY end
+    l = M.edit(st).legs[i]
+    l.step, l.spd, l.alt, l.alt2, l.akind = ft, nil, nil, nil, nil
 end
 
 -- DELETE over a constraint: the speed and the altitude both go (FMSPG
--- p.128); INVALID DELETE where there is none
+-- p.128), a planned step too; INVALID DELETE where there is none
 function M.delete_constraint(st, i)
     local l = M.shown(st).legs[i]
-    if not (l and (l.alt or l.spd)) or l.altterm then return M.INVALID_DELETE end
+    if not (l and (l.alt or l.spd or l.step)) or l.altterm then return M.INVALID_DELETE end
     l = M.edit(st).legs[i]
-    l.spd, l.alt, l.alt2, l.akind = nil, nil, nil, nil
+    l.spd, l.alt, l.alt2, l.akind, l.step = nil, nil, nil, nil, nil
 end
 
 -- a constraint as the LEGS pages show it: "250/10000A", "/FL240",
--- "220A240B" (the speed's slash also alone: FCOM p.1332)
+-- "220A240B" (the speed's slash also alone: FCOM p.1332); a planned step
+-- "/FL370S" (FCOM p.1332)
 function M.constraint_text(l, trans_alt)
-    if not l.alt and not l.spd then return nil end
+    if not l.alt and not l.spd and not l.step then return nil end
     local function ft(a) return a > (trans_alt or 18000) and string.format("FL%03d", math.floor(a / 100 + 0.5)) or tostring(a) end
     local alt = ""
     if l.alt then
@@ -875,6 +894,8 @@ function M.constraint_text(l, trans_alt)
         else
             alt = ft(l.alt) .. (l.akind or "")
         end
+    elseif l.step then
+        alt = ft(l.step) .. "S"
     end
     return (l.spd and tostring(l.spd) or "") .. "/" .. alt
 end

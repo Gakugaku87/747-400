@@ -2334,3 +2334,15 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - DEP/ARR INDEX の空港コードが少し左にずれていた：FCOM p.1299 の絵（24 桁）では、題「DEP/ARR INDEX」は 7 桁目、小さい「RTE 1」は 9 桁目と「(ACT)」は 16 桁目、出発と到着の空港コードは 10 桁目から。前は題が 6 桁目、RTE が 11 桁目、空港コードが 9 桁目だった。絵に合わせた（ARRIVALS・DEPARTURES の題は前から FCOM p.1343 と同じ 4 桁目）。
 - 試験：`proc_model_test` 64（B の 3 本）、`deparr_pages_test` 40、`rte2_pages_test` 57。
 - X-Plane（カスタム acf、2026-11-05）：新しい `s250_user_report_nd` の DEP/ARR INDEX の部分（RJAA→RJBB で、題が 7 桁目、RJAA と RJBB が 10 桁目。CDU の写真）。VHHH の 25C は、X-Plane に付いてくるデータに無いので試せない（Navigraph のデータで回帰試験と同じ組み合わせになることは確かめた）。
+
+## 146. LEGS の「XXXS」：乗員の計画ステップクライム（2026-11-05：利用者の報告「LEGS の高度欄に〇〇S と入れてもステップクライムを設定できない」）
+
+- 資料：LEGS の高度の後ろの文字の一つが「S：計画ステップクライム」（FCOM p.1332）。乗員が LEGS に入れた計画ステップは、FMC のステップクライムの予測と CRZ の STEP TO に優先する（FCOM p.1257 の Step Climb）。前は S を受け付けず INVALID ENTRY だった。
+- 作ったこと：
+  - `B747.68.route_model.lua` の `set_step`：経路の途中の地点（SID・STAR・進入の地点とホールドを除く）に、CRZ ALT より上で 45,100 ft 以下のステップ高度を持たせる（入れられる条件は資料に無く、推定）。地点の高度欄は 1 つなので、高度の制限（とその速度）と置き換え合う（推定）。DELETE で消える。表示は「/FL350S」（他の制限と同じ書き方）。
+  - LEGS のページ：「350S」「FL350S」「/FL350S」を受け付ける。速度つき（「250/370S」）は INVALID ENTRY（推定）。ホールドの SPD/TGT ALT では S を受け付けない。予測の小さい字は速度だけ。
+  - 予測（`B747.68.pred_model.lua`）：巡航中、その地点で次のステップ高度へ上がる。計画ステップが 1 つでもあれば、FMC の最適なステップは使わない（FCOM p.1257）。
+  - CRZ のページ（`B744.fms.pages.vnav.lua` の `B747_fms_crz_step`）：CRZ ALT より上の最初の計画ステップを STEP TO に出し、AT はその地点までの時刻と経路沿いの距離。距離は表示のたびに機体の位置から計算する（予測は 10 秒ごとで、480 kt では 1.3 NM 進むため）。地点の 1 NM 手前から NOW、その地点が順送りされた後も（旋回では手前で順送りされる）次の地点まで NOW（推定）。計画ステップがあるあいだ、乗員の STEP TO の入力より計画ステップを出す。
+  - シムの便利機能のオートステップクライム（§126）は、この STEP TO と NOW で動く。
+- 試験：`route_model_test` 264、`legs_pages_test` 72、`pred_model_test` 101、`vnav_pages_test` 84。
+- X-Plane（カスタム acf、2026-11-05）：新しい `s252_legs_planned_step` 23/23（FL310 で成田の東から空中開始、約 60 NM 東の緯度経度の地点へ DIRECT、LNAV・VNAV PTH）。LEGS の 1R に 290S（CRZ ALT の下）と 250/370S は INVALID ENTRY、350S で MOD、EXEC の後も `N35E141 /FL350S`（予測の .839 が小さい字で横に）、次の地点の予測は FL350（写真）。CRZ のページは STEP TO FL350、AT `0107z/ 45NM`（写真）。Auto step climb を ON にすると、地点の 0.9 NM 手前で MCP が 35,000 ft、CRZ ALT が FL350、VNAV SPD の巡航上昇で上がり始めた。1 回目は「CRZ ALT の下」のつもりの 330S が FL310 の上で受け付けられ、試験の誤りで 22/23 だった。

@@ -281,6 +281,43 @@ vnav(2)
 T.check(small(4):find("TO T/D$") and line(5):find("z/ 150NM$") and (line(3):gsub("%s+$", "")) == "FL350",
     "150 NM to the T/D: TO T/D, 150 NM, no STEP TO: " .. small(4) .. "|" .. line(5) .. "|" .. line(3))
 T.check(line(7):find("0230z/30%.0$"), "the destination's ETA and fuel: 0230z/30.0 (2.5 h, 30 t): " .. line(7))
+-- (2026-11-05) a planned step climb (RTE LEGS "XXXS": FCOM p.1332) over
+-- the FMC's (p.1257): STEP TO its altitude, AT its waypoint's distance
+-- along the route (from the airplane, now), NOW within 1 NM of it and
+-- once it is passed
+local rte = fms.ns.B747_fmc_route.rte
+local realLegs, realPassed = rte.legs, rte.passed
+local LAT, LON = "sim/flightmodel/position/latitude", "sim/flightmodel/position/longitude"
+local lat0, lon0 = rt:get(LAT), rt:get(LON)
+rt:set(LAT, 35)
+rt:set(LON, 140)
+rte.legs = {{fix = {ident = "ZZSTP", lat = 35, lon = 141}}, {fix = {ident = "ZZST2", lat = 35, lon = 144}, step = 41000}}
+local RM = fms.ns.B747_route_model
+local _, d1 = RM.course(35, 140, 35, 141)
+local _, d2 = RM.course(35, 141, 35, 144)
+fms.ns.B747_fms_preds = function() return {td = 900, dest = {t = 2.5 * 3600, fuel = 30000}} end
+frames(0.1)
+vnav(2)
+T.check(line(3):find("FL410$") and small(4):find(" AT$") and line(5):find(string.format("z/%4dNM$", math.floor(d1 + d2 + 0.5))),
+    string.format("a planned step at ZZST2, %.0f NM: STEP TO FL410, AT: ", d1 + d2) .. line(3) .. "|" .. small(4) .. "|" .. line(5))
+local st = fms.ns.B747_fms_crz_step()
+T.check(st.to == 41000 and st.planned == "ZZST2" and not st.now, "B747_fms_crz_step: FL410 at ZZST2, not now")
+rte.legs = {{fix = {ident = "ZZST2", lat = 35, lon = 140.01}, step = 41000}}
+frames(0.1)
+vnav(2)
+T.check(line(5):find("NOW$") and fms.ns.B747_fms_crz_step().now, "0.5 NM from it: NOW (the auto step climb's cue): " .. line(5))
+rte.passed = {{fix = {ident = "ZZST2", lat = 35, lon = 139.9}, step = 41000}}
+rte.legs = {{fix = {ident = "ZZST3", lat = 35, lon = 141}}}
+frames(0.1)
+vnav(2)
+T.check(line(3):find("FL410$") and line(5):find("NOW$"), "ZZST2 passed (a turn sequences it early): still NOW: " .. line(5))
+rte.passed = {{fix = {ident = "ZZST2", lat = 35, lon = 139.9}, step = 41000}, {fix = {ident = "ZZST3", lat = 35, lon = 139.95}}}
+frames(0.1)
+vnav(2)
+T.check(not line(3):find("FL410$"), "the next waypoint passed too: the planned step dropped: " .. line(3))
+rte.legs, rte.passed = realLegs, realPassed
+rt:set(LAT, lat0)
+rt:set(LON, lon0)
 fms.ns.B747_fms_preds = realPreds
 -- CRZ ALT above MAX: taken, MAX ALT FLXXX (FMSPG p.131)
 rt:set("sim/flightmodel/weight/m_total", 270000)
