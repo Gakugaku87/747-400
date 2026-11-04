@@ -247,7 +247,7 @@ GAP ID 接頭辞：`FUEL`。2026-10-23 調査。コード・acf は変更して�
 - タンク容量は acf（比率×381,552 lb）と揃える。今は定数がずれている（§2.1）。GE は主 1・4 が 13,287 kg。HST は機体仕様（109 型の旅客機）のときだけ有効にし、`laminar/B747/freighter`（simconfig の aircraft_type）と連動させる。
 - **パネルの制約（acf は純正を変えない）**：
   - synoptic は `SHOW_EQUAL/LESS/GREATER` で燃料 dataref を読む（`engine1–4_status`、`gen/xfeed_vlv1–4_status`、`gen_XFmfld_status`、`oj_pump2/3_status`、`jett/*`、`jett_vlv_status`、`res2/res3/stab_xfr_status`、`ctr_scvg_L/R_status`、`*_pump_*_on`、`main1/4_tank/main_xfr_vlv_pos`、`center_tank/jett_vlv_L/R_pos`、`jett_nozzle_vlv_L/R_pos`、`refuel`、`fuel_display_units_eicas`、`fuel_jettison/sel_dial_pos`、`temperature`）。**これらは INTERFACES.tsv に載っていない**（DATAREF 行だけを拾っている）。作り直しでも名前と値の意味（0/1/2 などの状態コード）を残す。
-  - ポンプの amber は acf 側で `sim/flightmodel/weight/m_fuel[i] < 10`（O/J も < 10）、主タンクの amber は < 900 kg だけで、不均衡の amber は無い（`747-400_custom.acf:122861`、`123098-123160`、`123306`）。故障や無電源の低圧を synoptic に出すには acf の変更（カスタムのみ、要承認）が要る。
+  - ポンプの amber は acf 側で `sim/flightmodel/weight/m_fuel[i] < 10`（O/J も < 10）、主タンクの amber は < 900 kg だけで、不均衡の amber は無い（`747-400_custom.acf:122861`、`123098-123160`、`123306`）。故障や無電源の低圧を synoptic に出すには acf の変更（カスタムのみ、要承認）が要る。→ 2026-11-04、モデルの状態で描くようにした（§10）。
   - 状態コードとの組み合わせ（`SHOW_GREATER 2 ... status` と `SHOW_GREATER 1 ... status` の対）から、SHOW_GREATER/LESS は「以上／以下」と推定。そうなら FTR は A・B で、温度は OFF で表示される（`747-400_custom.acf:114845`、`114883`）。
   - FTR（`fuel_to_remain/rheostat`、1000 kg 単位、ノブの範囲 9–173、`747-400_cockpit.obj:22182`）は LBS 表示でも換算されない。
 - 照明モジュールが頭上灯を独自に判定しているので、燃料側で「ポンプ出口圧低」「弁の不一致」を dataref として出し、照明はそれを読むように分担を変える（新しい dataref の追加は可、既存名は残す）。
@@ -316,3 +316,14 @@ GAP ID 接頭辞：`FUEL`。2026-10-23 調査。コード・acf は変更して�
 8. 資料に記載なし：ジェティソン流量、重力移送（予備→主、主 1・4→2・3）の流量、HST 移送流量、HST ポンプ自動停止の「短い遅延」の秒数、主ポンプの AC バス割り当て、FSMC のフラップ入力がレバーか実位置か、給油の配分表、地上でスイッチ OFF のとき FUEL PUMP メッセージが出るか。
 9. 資料間の食い違い（FCOM を採用）：HST 移送開始 CWT 36,470 kg（FCOM）と 10,000 gal（ATA26_28）、O/J 2・3 の下限 3,200 kg（FCOM）と 4,800 kg（ATA の地上抜き取り）、FUEL PMP STB の 500 kg（FCOM）と FJCC の HST 500 lb（ATA）、予備移送の ATA 本文中の 3,000 gal の記述（p.496、図と他の頁は 6,000 gal）。
 10. CWT のパイロットフロート弁（13,000 gal、ATA26_28 p.335・368）が HST→CWT 移送で CWT の上限を決めるか（推定、資料は試験の記述だけ）。CWT の crossflow compensator（ATA26_28 p.557 の図の名称のみ）の働き。
+
+## 10. FUEL synoptic の色と FTR（FUEL-24、2026-11-04）
+
+燃料モデル（`B747.28.fuel_model.lua`）が synoptic の状態を出し、パネル（カスタム acf）はそれを読むだけにした。
+
+- `laminar/B747/fuel/synoptic/pump[16]`（`light/pump_press` と同じ順）：0 白（OFF）、1 cyan（O/J・STAB ポンプが論理の待機）、2 緑（圧力あり）、3 amber（スイッチ ON か論理が回しているのに低圧。自分で止まった STAB ポンプも）、4 magenta（ジェティソン中、圧力なし）、5 magenta と流れ（ジェティソン中、圧力あり）。ジェティソン中に magenta になるのは CWT・O/J・HST のポンプで、主ポンプは普段の色のまま（FCOM p.1447–1449、ATA26_28 p.421）。
+- `synoptic/main_amber[4]`：主タンクが 900 kg 未満（LBS 表示の機体は 2,000 lb 未満）、または向かい合うタンクの不均衡（1–4 は 1,360 kg、2–3 は 2,720 kg。EICAS の FUEL IMBAL と同じ判定とヒステリシス）で、その組の両方を amber（FCOM p.1448、ATA26_28 p.421）。
+- `synoptic/suction[4]`：吸引供給（spar valve が開き、自タンクのポンプ圧も他からの供給も無い）。エンジン記号と、主タンクからエンジンへの流れ線を amber にする（ATA26_28 p.422）。amber の絵は純正の白いエンジン記号と緑の線の色だけを変えて作った（`docs/overhaul/tools/make_fuel_images.ps1`）。
+- `fuel_to_remain/display`：主 EICAS の FTR を表示の単位で出す（LBS なら ×2.20462。前は LBS 表示でも kg）。`fuel_to_remain/state`：0 magenta、1 白（ジェティソン完了から選択器 OFF まで）、2 点滅の消えている側（完了から 5 秒。2 Hz は推定）（FCOM p.1449）。
+- 前のパネルの条件：ポンプの amber はタンク量 < 10 kg だけ、主 2 O/J AFT のジェティソン表示が `blaminar/...` の誤記、その低圧の記号は `< -10.01 kg` で出ることが無かった、主タンクの amber は < 900 kg だけ、CWT ポンプからマニフォールドへの緑の流れは CWT > 900 kg。全部モデルの状態に置き換えた（`docs/overhaul/tools/panel_fuel_synoptic.lua`、ACF_DIFF.md §5）。
+- 残り：xfeed 弁の緑（燃料あり）は作らない。FCOM p.1448 は緑を挙げるが「燃料あり」の定義が無く、ATA26_28 p.422 は白と amber だけ。コンパクト表示（EICAS が 1 面のとき、FCOM p.1445–1446）は表示故障と一緒に作る。570 でも STAB タンクとポンプが出たまま（型式ごとの出し分けはしていない）。

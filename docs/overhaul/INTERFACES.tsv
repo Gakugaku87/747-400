@@ -1741,7 +1741,9 @@ laminar/B747/fuel/fuel_jett/el_dial_up	command	obj	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/fuel_jett/sel_dial_dn	command	obj	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/fuel_jettison/sel_dial_pos	dataref	obj,panel,snd	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/fuel_tank_display_qty	dataref	panel	B747.25.fuel,B747.25.xt.fuel
+laminar/B747/fuel/fuel_to_remain/display	dataref	panel	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/fuel_to_remain/rheostat	dataref	obj,panel	B747.25.fuel,B747.25.xt.fuel
+laminar/B747/fuel/fuel_to_remain/state	dataref	panel	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/fuel_total_display_qty	dataref	panel	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/gen/xfeed_vlv1_status	dataref	panel	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/gen/xfeed_vlv2_status	dataref	panel	B747.25.fuel,B747.25.xt.fuel
@@ -1787,6 +1789,9 @@ laminar/B747/fuel/res3_xfr_status	dataref	panel	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/stab_tank/xfr_jett_pump_L_on	dataref	panel,snd	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/stab_tank/xfr_jett_pump_R_on	dataref	panel,snd	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/stab_xfr_status	dataref	panel	B747.25.fuel,B747.25.xt.fuel
+laminar/B747/fuel/synoptic/main_amber	dataref	panel	B747.25.fuel,B747.25.xt.fuel
+laminar/B747/fuel/synoptic/pump	dataref	panel	B747.25.fuel,B747.25.xt.fuel
+laminar/B747/fuel/synoptic/suction	dataref	panel	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/temperature	dataref	panel	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/gauges/indicators/airspeed_kts_copilot	dataref	panel,snd	B747.60.fltInst
 laminar/B747/gauges/indicators/airspeed_kts_pilot	dataref	obj,panel	B747.42.xt.EEC,B747.60.fltInst

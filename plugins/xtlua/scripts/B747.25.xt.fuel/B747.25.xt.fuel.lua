@@ -1100,6 +1100,13 @@ B747DR_engine04_fire_ext_switch_pos_arm = find_dataref("laminar/B747/fire/engine
 B747DR_fuel_light_pump_press    = find_dataref("laminar/B747/fuel/light/pump_press")
 B747DR_fuel_light_xfeed_valve   = find_dataref("laminar/B747/fuel/light/xfeed_valve")
 B747DR_fuel_light_nozzle_valve  = find_dataref("laminar/B747/fuel/light/nozzle_valve")
+B747DR_fuel_syn_pump            = find_dataref("laminar/B747/fuel/synoptic/pump")
+B747DR_fuel_syn_main_amber      = find_dataref("laminar/B747/fuel/synoptic/main_amber")
+B747DR_fuel_syn_suction         = find_dataref("laminar/B747/fuel/synoptic/suction")
+B747DR_fuel_ftr_state           = find_dataref("laminar/B747/fuel/fuel_to_remain/state")
+B747DR_fuel_ftr_display         = find_dataref("laminar/B747/fuel/fuel_to_remain/display")
+-- the weights shown in pounds (simconfig; set by B747_calculate_fuel_display_units)
+local display_lbs, LBS_PER_KG = false, 2.20462
 
 -- X-Plane's tanks (m_fuel, acf_tank_rat)
 local TANK_OF_INDEX = {[0] = "ctr", "m1", "m2", "m3", "m4", "r2", "r3", "stab"}
@@ -1239,6 +1246,9 @@ local function read_inputs(inp)
     inp.nozzle[2] = B747DR_button_switch_position[NOZZLE_SWITCH + 1] > 0.5
     inp.jett_sel = B747DR_fuel_jettison_sel_dial_pos
     inp.ftr = B747DR_fuel_to_remain_rheo * 1000.0
+    -- the synoptic's low main tank: 900 kg, or 2,000 lb on an airplane in
+    -- pounds (FCOM p.1448: 109 and 405, 570)
+    inp.syn_low_kg = display_lbs and 2000 / LBS_PER_KG or F.SYN_LOW_KG
     inp.main_bat = B747DR_elec_bus_bat_main > 0.5
     inp.hot_bat = B747DR_elec_bus_hot_bat_main > 0.5
     inp.apu_bat = B747DR_elec_bus_bat_apu > 0.5
@@ -1307,6 +1317,16 @@ local function write_outputs(out, settling)
     for n = 1, 4 do B747DR_fuel_light_xfeed_valve[n - 1] = flag(out.light["x" .. n]) end
     B747DR_fuel_light_nozzle_valve[0] = flag(out.light.noz_l)
     B747DR_fuel_light_nozzle_valve[1] = flag(out.light.noz_r)
+    -- the synoptic (FCOM p.1447-1449): pump symbols in the order of the
+    -- model's PUMPS, the main tank boxes and the engines in suction feed;
+    -- the fuel to remain's colour on the primary EICAS
+    local syn = out.syn
+    for i = 1, #F.PUMPS do B747DR_fuel_syn_pump[i - 1] = syn.pump[i] end
+    for n = 1, 4 do
+        B747DR_fuel_syn_main_amber[n - 1] = flag(syn.main[n])
+        B747DR_fuel_syn_suction[n - 1] = flag(syn.suction[n])
+    end
+    B747DR_fuel_ftr_state = out.ftr_state
     local c = out.cas
     for key, i in pairs(CAUTION) do B747DR_CAS_caution_status[i] = flag(c[key] and not settling) end
     for key, i in pairs(ADVISORY) do B747DR_CAS_advisory_status[i] = flag(c[key] and not settling) end
@@ -1620,8 +1640,11 @@ function B747_calculate_fuel_display_units ()
 	if simConfigData["data"].SIM.weight_display_units == "LBS" then
 		fuel_calculation_factor = simConfigData["data"].SIM.kgs_to_lbs
 	end
+	display_lbs = simConfigData["data"].SIM.weight_display_units == "LBS"
 
 	B747DR_fuel_total_display_qty = simDR_fueL_tank_weight_total_kg * fuel_calculation_factor
+	-- the fuel to remain (tonnes) in the display's units (FCOM p.1449)
+	B747DR_fuel_ftr_display = B747DR_fuel_to_remain_rheo * fuel_calculation_factor
 
 	B747DR_fuel_preselect = B747DR_fuel_preselect_temp * fuel_calculation_factor
 

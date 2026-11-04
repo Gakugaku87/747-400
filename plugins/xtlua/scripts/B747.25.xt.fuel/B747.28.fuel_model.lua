@@ -46,6 +46,13 @@ M.QTY_LOW = 900
 M.TANK_ENG_GROUND = 500          -- on the ground, FQIS BLK B (FCOM p.1478)
 M.CLIMB_PITCH = 5                -- climb or cruise by pitch (FCOM NP p.133-134)
 M.TEMP_LOW = -37
+-- the synoptic (FCOM p.1447-1449; ATA26_28 p.421-422): the pump symbols'
+-- states, white (off), cyan (armed for the logic), green (pressure), amber
+-- (pressure low), magenta (jettison) and magenta with flow
+M.SYN_OFF, M.SYN_ARMED, M.SYN_ON, M.SYN_LOW, M.SYN_JETT, M.SYN_JETT_FLOW = 0, 1, 2, 3, 4, 5
+M.SYN_LOW_KG = 900               -- a main tank's box amber below this (109, 405; 570: 2,000 lb)
+M.FTR_FLASH_S = 5                -- the fuel to remain flashes white after the jettison (FCOM p.1449)
+M.FTR_FLASH_HZ = 2               -- estimate (the ND's TRU box flashes at this rate too)
 -- the flap lever range of flaps 10 and 20 (7.5-22.5 units: ATA26_28 p.461;
 -- as flap_ratio, where 10 = 0.5 and 20 = 0.667: estimate)
 M.FLAP_TO_MIN, M.FLAP_TO_MAX = 0.42, 0.75
@@ -117,6 +124,7 @@ function M.inputs()
         running = {false, false, false, false},  -- engine running
         apu_fuel = false,                      -- the APU wants fuel (starting or running)
         temp = 15,                             -- fuel temperature, °C
+        syn_low_kg = M.SYN_LOW_KG,             -- the synoptic's low main tank (570: 2,000 lb)
     }
 end
 
@@ -125,13 +133,15 @@ function M.new()
         xfeed_to_t = 0, xfeed_close = false, disagree_t = {}, res_open = false,
         stab_low_t = {stab_l = 0, stab_r = 0}, stab_tripped = {stab_l = false, stab_r = false},
         ctr_low_t = {0, 0}, imbal = {}, tank_eng_reached = false,
-        jett_active = false, jett_done = false, jett_t = 0, jett_start_qty = 0,
+        jett_active = false, jett_done = false, jett_done_t = 0, jett_t = 0, jett_start_qty = 0,
         ovrd_after_jett = flags(M.OJ, false)}
     for _, t in ipairs(M.TANKS) do s.qty[t] = 0 end
     for _, v in ipairs(M.VALVES) do s.valve[v], s.disagree_t[v] = 0, 0 end
     s.out = {qty = s.qty, valve = s.valve, cmd = s.cmd, pump = {}, low = {}, feed = {{}, {}, {}, {}},
         suction = {false, false, false, false}, has_fuel = {false, false, false, false},
-        cas = {}, light = {}, flow = {}, total = 0}
+        cas = {}, light = {}, flow = {}, total = 0,
+        syn = {pump = {}, main = {false, false, false, false}, suction = {false, false, false, false}},
+        ftr_state = 0}
     return s
 end
 
@@ -182,8 +192,10 @@ function M.update(s, inp, dt)
     elseif s.jett_active and total <= inp.ftr then
         -- terminated at the fuel to remain: the pumps that ran keep their
         -- FUEL OVRD until the selector is OFF (FCOM p.1469)
-        s.jett_done = true
+        s.jett_done, s.jett_done_t = true, 0
         for _, id in ipairs(M.OJ) do if out.pump[id] then s.ovrd_after_jett[id] = true end end
+    elseif s.jett_done then
+        s.jett_done_t = s.jett_done_t + dt
     end
     local jett = armed and nozzle_on and not s.jett_done and total > inp.ftr
     s.jett_active = jett
@@ -463,6 +475,44 @@ function M.update(s, inp, dt)
     for n = 1, 4 do l["x" .. n] = s.valve["x" .. n] ~= (s.cmd["x" .. n] and 1 or 0) end
     l.noz_l = s.valve.noz_l ~= (inp.nozzle[1] and 1 or 0)
     l.noz_r = s.valve.noz_r ~= (inp.nozzle[2] and 1 or 0)
+
+    -- ======== the synoptic (FCOM p.1447-1449; ATA26_28 p.421-422)
+    -- pumps: magenta while they run for the jettison (the CWT and override/
+    -- jettison pumps, the stabilizer's); green with pressure; amber low with
+    -- the switch ON or the logic running it (a stabilizer pump that stopped
+    -- itself too); cyan the override/jettison and stabilizer pumps armed for
+    -- the logic; white off
+    local syn = out.syn
+    for i, p in ipairs(M.PUMPS) do
+        local id, armable = p.id, (p.kind == "oj" or p.kind == "stab")
+        local v = M.SYN_OFF
+        if jett and s.cmd[id] and p.kind ~= "main" then
+            v = low[id] and M.SYN_JETT or M.SYN_JETT_FLOW
+        elseif not low[id] then
+            v = M.SYN_ON
+        elseif s.cmd[id] or (sw[id] and (not armable or s.stab_tripped[id])) then
+            v = M.SYN_LOW
+        elseif sw[id] then
+            v = M.SYN_ARMED
+        end
+        syn.pump[i] = v
+    end
+    -- main tank boxes: amber when low, and both of an imbalanced pair
+    for n, t in ipairs(M.MAIN) do
+        local pair = c.imbal23
+        if n == 1 or n == 4 then pair = c.imbal14 end
+        syn.main[n] = q[t] < inp.syn_low_kg or pair
+    end
+    -- the engine and its tank's flow amber in suction feed (spar valve open)
+    for n = 1, 4 do syn.suction[n] = out.suction[n] and s.valve["s" .. n] > 0.5 end
+    -- the fuel to remain on the primary EICAS: 0 magenta; once the jettison
+    -- has completed 1 white, flashing (2 dark) for its first 5 s
+    out.ftr_state = 0
+    if s.jett_done then
+        out.ftr_state = 1
+        local period = 1 / M.FTR_FLASH_HZ
+        if s.jett_done_t < M.FTR_FLASH_S and s.jett_done_t % period >= period / 2 then out.ftr_state = 2 end
+    end
 
     out.total = total
     out.jett, out.jett_done, out.armed = jett, s.jett_done, armed

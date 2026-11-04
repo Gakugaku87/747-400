@@ -296,6 +296,18 @@ B747DR_fuel_light_pump_press            = deferred_dataref("laminar/B747/fuel/li
 B747DR_fuel_light_xfeed_valve           = deferred_dataref("laminar/B747/fuel/light/xfeed_valve", "array[4]")
 B747DR_fuel_light_nozzle_valve          = deferred_dataref("laminar/B747/fuel/light/nozzle_valve", "array[2]")
 
+-- the synoptic from the fuel model (FCOM p.1447-1449, ATA26_28 p.421-422),
+-- read by the panel: each pump's symbol in the order above (0 white, 1 cyan
+-- armed, 2 green, 3 amber low, 4 magenta jettison, 5 magenta with flow);
+-- main tanks 1-4 amber (1); engines 1-4 in suction feed (1); the fuel to
+-- remain on the primary EICAS (state 0 magenta, 1 white after the jettison,
+-- 2 its flash's dark half; display in the display's units x 1000)
+B747DR_fuel_syn_pump                    = deferred_dataref("laminar/B747/fuel/synoptic/pump", "array[16]")
+B747DR_fuel_syn_main_amber              = deferred_dataref("laminar/B747/fuel/synoptic/main_amber", "array[4]")
+B747DR_fuel_syn_suction                 = deferred_dataref("laminar/B747/fuel/synoptic/suction", "array[4]")
+B747DR_fuel_ftr_state                   = deferred_dataref("laminar/B747/fuel/fuel_to_remain/state", "number")
+B747DR_fuel_ftr_display                 = deferred_dataref("laminar/B747/fuel/fuel_to_remain/display", "number")
+
 B747DR_stab_xfr_status                  = deferred_dataref("laminar/B747/fuel/stab_xfr_status", "number")
 B747DR_res2_xfr_status                  = deferred_dataref("laminar/B747/fuel/res2_xfr_status", "number")
 B747DR_res3_xfr_status                  = deferred_dataref("laminar/B747/fuel/res3_xfr_status", "number")
