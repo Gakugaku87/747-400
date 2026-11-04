@@ -67,7 +67,7 @@ function Ext_Power_Available(phase, duration)
 	local gpuOn=false
 
 	if simDR_version>=120012 then
-		puOn=(Generator_on_gpu == 1) and (simDR_gpuvolts>=24)
+		gpuOn=(Generator_on_gpu == 1) and (simDR_gpuvolts>=24)   -- (ELEC-21) was puOn
 	else
 		gpuOn=(Generator_on_gpu == 1)
 	end
