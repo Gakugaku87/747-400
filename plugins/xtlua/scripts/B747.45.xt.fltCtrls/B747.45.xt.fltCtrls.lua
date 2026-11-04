@@ -125,6 +125,7 @@ simDR_yaw_damper_on             = find_dataref("sim/cockpit2/switches/yaw_damper
 simDR_gear_vert_defl            = find_dataref("sim/flightmodel2/gear/tire_vertical_deflection_mtr")
 simDR_gear_deploy_ratio         = find_dataref("sim/flightmodel2/gear/deploy_ratio")
 B747DR_cfg_flap_pos             = find_dataref("laminar/B747/flt_ctrls/fcu/flap_pos")
+B747DR_cfg_all_gear_down        = find_dataref("laminar/B747/gear/air_ground/all_gear_down")
 B747DR_airspeed_flapsRef        = find_dataref("laminar/B747/airspeed/flapsRef")
 simDR_ind_airspeed_kts_pilot    = find_dataref("laminar/B747/gauges/indicators/airspeed_kts_pilot")
 
@@ -779,6 +780,10 @@ end
 
 
 
+-- >CONFIG GEAR's two latches, and the time since the liftoff while its
+-- takeoff inhibit lasts (nil: none) (below)
+local config_gear_thrust, config_gear_flaps = false, false
+local config_gear_after_lo = nil
 function B747_fltCtrols_EICAS_msg()
     
     -- FUEL CONTROL SWITCH STATUS
@@ -835,24 +840,43 @@ function B747_fltCtrols_EICAS_msg()
 	    B747DR_CAS_warning_status[4] = 0
     end
 
-    -- >CONFIG GEAR; the GND PROX CONFIG GR OVRD switch inhibits it (FCOM
-    -- p.1538, ATA34_2 p.207)
-    if B747DR_button_switch_position[5] < 0.5 and ((simDR_gear_deploy_ratio[0] < 0.99
-        or simDR_gear_deploy_ratio[1] < 0.99
-        or simDR_gear_deploy_ratio[2] < 0.99
-        or simDR_gear_deploy_ratio[3] < 0.99
-        or simDR_gear_deploy_ratio[4] < 0.99)
-
-        and
-
-        ((simDR_radio_alt_height_capt < 800.0 and any_thrust_lever_closed == 1)
-        or
-        math.min(B747DR_fcu_te_deg[0], B747DR_fcu_te_deg[1], B747DR_fcu_te_deg[2], B747DR_fcu_te_deg[3]) >= 21))   -- flaps 25 (22 degrees) or 30
-
-    then
+    -- >CONFIG GEAR (FCOM p.1557-1558, p.1603): in flight (the PSEU), any
+    -- gear not down and locked (the PSEU's ALL GR DN: ATA29_32 p.320), and
+    -- any thrust lever closed below 800 ft radio altitude, or the flaps in a
+    -- landing position (25 or more: 22 degrees). Shown for a closed thrust
+    -- lever it stays until the thrust levers are advanced or the gear is
+    -- down; shown for the flaps, until the gear is down or the GND PROX GEAR
+    -- OVRD switch is pushed. (Before: on the ground too, by X-Plane's gear
+    -- ratios, no latch, and the switch took both away.) From the liftoff
+    -- the message is inhibited until 800 ft radio altitude or 140 s, the
+    -- earlier (FCOM p.1594-1595; an air start has none).
+    local landing_flaps = math.min(B747DR_fcu_te_deg[0], B747DR_fcu_te_deg[1],
+        B747DR_fcu_te_deg[2], B747DR_fcu_te_deg[3]) >= 21
+    local cfg_on_ground = B747DR_fcu_pri_gnd == 1
+    if cfg_on_ground then
+        config_gear_after_lo = 0
+    elseif config_gear_after_lo ~= nil then
+        config_gear_after_lo = config_gear_after_lo + SIM_PERIOD
+        if config_gear_after_lo >= 140 or simDR_radio_alt_height_capt > 800.0 then config_gear_after_lo = nil end
+    end
+    if cfg_on_ground or B747DR_cfg_all_gear_down == 1 or config_gear_after_lo ~= nil then
+        config_gear_thrust, config_gear_flaps = false, false
+    else
+        if any_thrust_lever_closed == 1 and simDR_radio_alt_height_capt < 800.0 then
+            config_gear_thrust = true
+        elseif any_thrust_lever_closed == 0 then
+            config_gear_thrust = false
+        end
+        if B747DR_button_switch_position[5] > 0.5 then
+            config_gear_flaps = false
+        elseif landing_flaps then
+            config_gear_flaps = true
+        end
+    end
+    if config_gear_thrust or config_gear_flaps then
         B747DR_CAS_warning_status[3] = 1
     else
-	B747DR_CAS_warning_status[3] = 0
+        B747DR_CAS_warning_status[3] = 0
     end
 
     -- >CONFIG PARK BRK: the parking brake lever set (the parking brake
