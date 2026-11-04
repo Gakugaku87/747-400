@@ -681,7 +681,7 @@ PLAN.md §3 に書いた。要点：
 | FUEL-10 水平安定板タンク | 済（移送の条件、低圧で止まる、ジェティソンでは機外へ、FUEL STAB XFR・FUEL PRES STB・>FUEL PMP STB。貨物機の設定では使わない） |
 | FUEL-11 予備移送 | 済（主 2 か 3 が 18,200 kg で 4 弁とも、空中だけ、接地で閉、FUEL RES XFR 2・3） |
 | FUEL-12 ジェティソン | 済（FTR で停止、主 2・3 の均衡、主 1・4 の移送、CWT は約 1,185 kg まで、ノズル弁はスイッチ直結、時間の 90 秒後の更新、終了後の FUEL OVRD）。>FUEL JETT A・B は FJCC の故障が無いので出ない |
-| FUEL-13 FMC の燃料 | 未（FMC で。FUEL USED の [4] はエンジンだけにした） |
+| FUEL-13 FMC の燃料 | 済（2026-11-01、FMC の段 11a：notes/ATA-34-61-FMC.md §90。CALC・MANUAL・SENSED、始動からの FUEL USED、TOTALIZER と CALCULATED、FUEL DISAGREE - PROG 2 と USE の選択、INSUFFICIENT FUEL。燃料系の側は FUEL USED の [4] をエンジンだけにした。この行は 2026-11-04 に直した） |
 | FUEL-14 スカベンジ | 済（ジェットポンプ 4 本で合計約 1,200 lb/h、主 2・3 のポンプで動く。>SCAV PUMP ON は 405 だけなので出さない） |
 | FUEL-15 故障と不一致 | 一部。不一致（FUEL X FEED、>JETT NOZZLE、FUEL RES XFR）は済。ポンプ・弁の故障、FUEL TEMP SYS は未 |
 | FUEL-16 FUEL OVRD | 済 |

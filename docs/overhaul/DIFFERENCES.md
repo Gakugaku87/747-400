@@ -126,10 +126,10 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 弁はバスごとの電源で 4 秒かけて動き、電源が無いとその位置に留まる。不一致のメッセージ（FUEL X FEED、FUEL RES XFR、>JETT NOZZLE）。
 - 頭上の灯（主ポンプの PRESS は低圧ならいつでも、CTR はスイッチ ON のとき、O/J と STAB は論理が動かしているとき、X FEED と NOZZLE の VALVE 灯）。EICAS の閾値を FCOM に。
 - APU の DC 燃料ポンプと APU FUEL、spar valve が火災スイッチで閉じる、タンク容量を acf から、FUEL USED はエンジンの流量だけ。
+- FMC の燃料の監視（TOTALIZER と CALCULATED、FUEL DISAGREE - PROG 2、始動からの FUEL USED：FUEL-13）は FMC の段 11a で済（下の FMC の節）。
 
 残っている違い：
 - 消費は X-Plane の燃料流量で、acf の燃費（SFC）がそのまま効く。カスタム acf の SFC は巡航の測定で約 25 % 少なかったので、純正と同じ値にした（FL350・269 t で 1 発 2,134 kg/h。FCOM PI.11.2 の長距離巡航は 260 t で 2,211、280 t で 2,378 kg/h）。離陸と上昇の燃料流量はまだ資料と比べていない（エンジン 2-3 で）。2026-10-30 に燃費の 4 点を合わせ直し（0.300・0.440・0.470・0.535）、長距離巡航（FL290〜350）は FCOM と −2〜0 %、待機（PI.11.6）は +2〜3 %、離陸滑走は ICAO の 100 % と 1 % になった（上昇の燃料は FCOM に表が無く比べていない）。
-- FMC の側：TOTALIZER と CALCULATED が同じ、FUEL DISAGREE が無い、FUEL USED がエンジン始動で消えない（FUEL-13。FMC で）。
 - ポンプ・弁の故障が無い（FUEL-15）。FUEL TEMP SYS、>FUEL JETT A/B は無い。
 - 燃料温度は TAT への一次遅れで、根拠が無い（FUEL-20）。
 - 地上で 100 t を超えて始めたときの固定の配分と給油の順序は前のコードのまま（資料で確かめられない。FUEL-21）。
