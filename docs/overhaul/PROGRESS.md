@@ -598,7 +598,14 @@ PLAN.md §3 に書いた。要点：
 | WARN-09 ページ割り | 済。カスタム acf のパネルは 2 ページ目から PG を出し、10 ページまで描く（ACF_DIFF.md §5）。純正 acf は 2 ページまでのまま |
 | WARN-10 更新の遅れ | 済（0.1 秒ごと） |
 | WARN-11 離陸形態警報 | 済（2026-11-04、notes/ATA-31-warning.md §10：エンジン 2 か 3、N1 は型式ごと（ATA27 p.730）、V1 が無ければピッチ 5° まで、推力を外して 10 秒、CONFIG FLAPS は後縁 10・20 と前縁全展開とレバー。FMC のフラップとの比べは外した） |
-| WARN-12〜16、18〜21 | 未（速度・高度警報・失速・GPWS などは、それぞれの作り直しで） |
+| WARN-12 CONFIG GEAR のレバー | 済（4-1 段 3 でレバーを 1 本ずつ、2026-11-04 に保持と GND PROX GEAR OVRD：GEAR-17。この行は 2026-11-04 に直した） |
+| WARN-13 SPEEDBRAKES EXT | 済（4-1 段 3、スピードブレーキのモデル：FCOM p.958、ATA27 p.740） |
+| WARN-14 グリーンバンド | 一部（4-1 段 2c：3 帯と CONFIG STAB。>STAB GREENBAND は前脚の圧の設定値が資料に無く未：FCTL-10 の残り） |
+| WARN-15 OVERSPEED | 済（5-1 段 1：ADC の Vmo/Mmo だけ、フラップ・脚の制限では出さない） |
+| WARN-16 高度警報 | 済（5-1 段 1：ALTITUDE ALERT と PFD の枠） |
+| WARN-19 GPWS の警報 | 済（5-1 段 4：PULL UP・WINDSHEAR で master WARNING） |
+| WARN-20 PILOT RESPONSE | 未（405/570 と SB 後の 109 の機能。FMC 側で操作の監視が要る） |
+| WARN-21 チャイム | 済（7-1c：CALL 灯とチャイム、COM-05） |
 | WARN-17 STATUS | 済。STATUS メッセージ（新しい順、11 行ずつ、STAT でページ送り）と STATUS cue（エンジン始動からリフトオフ 30 分後まで、着陸の RA 800 ft〜75 kt は出さない）。カスタム acf の STATUS ページにメッセージ行と PG、主 EICAS に cue（ACF_DIFF.md §5）。メッセージは資料に出てくる分から（油圧・空圧・電源）。secondary engine exceedance cue での抑止は未（その cue が無い） |
 | WARN-22 警報系統の電源 | 一部。EIU は新しい電源のバス（1-1）。MAWEA とスピーカーの電源は分けていない |
 | WARN-23 quick start の未定義の global | 未 |
