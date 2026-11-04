@@ -451,3 +451,9 @@ GAP ID の接頭辞：`LIGHT`。2026-10-23 作成。コードは `overhaul` ブ�
 - X-Plane（カスタム acf、2026-11-04）：`s226` 38/38。ノブ 0 で機長の flood 0・計器盤照明 0、F/O の計器盤照明 1.0。STORM で flood 0 → 0.027（aisle stand と dome も）、写真で計器盤とグレアシールドに flood が当たる。AC 4 の喪失で機長の計器盤照明 0.30・overhead 0.30・機長の flood 0.014（STORM の約半分）、F/O の計器盤照明は 1.0 のまま、EICAS に ELEC AC BUS 4（写真で機長側の lightplate と standby の計器が点く）。GSB の喪失で aisle stand の flood 0.0074、dome 0.40。回帰の `s209` 23/23。Log.txt に Lua の誤りなし。
   - 夜の flood の明るさは X-Plane の `HUD_brightness_ratio`（前からの lightMod。この夜は 0.010〜0.014）に比例するので、試験は点いたかどうかと STORM との大小だけを見る（最初は 0.1 などの絶対値で落とした）。
   - 走らせる道具が 2 回続けて結果なしで止まった（s209 の後と X-Plane の再起動の後。機体の読み直しの段）。シナリオを直接走らせると通った。
+
+## 16. 客室灯の電源（2026-11-04：1-1 の残り）
+
+- 客室灯（X-Plane の generic light 25。夜に地上か 10,000 ft より上で 0.25、その間の飛行中は 0.001、自動始動・自動搭乗のときは客室灯のスイッチで）は、X-Plane の APU 発電機・GPU・エンジンの発電機と cross tie で電源を見ていた。747 の AC bus 1–4 のどれかに電源があれば点くようにした（`laminar/B747/electrical/bus/any_ac`）。客室灯の母線は資料に無い（ATA33 p.94–100 の ACESS は制御だけ）ので推定。
+- 照明モジュールが読まずに残していた X-Plane の電源の dataref（`bus_volts`、発電機、GPU、cross tie）の bind も消した。2 回目の `simDR_OAT` の bind（読み取り専用の気温に書いていた：PROGRESS の「気づいたこと」）も消した。
+- 試験：`lighting_module_test`（夜に AC があれば点く、X-Plane の APU 発電機が入っていても AC が無ければ消える、昼は消える）。X-Plane（2026-11-04）：`s226` に客室灯の確認を足して 39/39（夜の地上で 0.25）。

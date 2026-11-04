@@ -154,7 +154,6 @@ dofile("json/json.lua")
 hh=find_dataref("sim/cockpit2/clock_timer/zulu_time_hours")
 mm=find_dataref("sim/cockpit2/clock_timer/zulu_time_minutes")
 ss=find_dataref("sim/cockpit2/clock_timer/zulu_time_seconds")
-simDR_bus_volts               = find_dataref("sim/cockpit2/electrical/bus_volts")
 simDR_startup_running               = find_dataref("sim/operation/prefs/startup_running")
 
 simDR_instrument_brightness_switch  = find_dataref("sim/cockpit2/switches/instrument_brightness_ratio")
@@ -3658,6 +3657,10 @@ local singleFMC,resyncingFMC,resyncFailFMC=nil,nil,nil
 local function anyFMC() return fmcLink.ok[FL.L] or fmcLink.ok[FL.R] end
 -- an FMC working (>FMC MESSAGE: setNotifications)
 function B747_fms_any_fmc() return anyFMC() end
+-- (1-1) an FMC's bus powered, the FMC failed or not: the left FMC's the
+-- Captain's transfer bus or the APU standby bus, the right FMC's the F/O's
+-- transfer bus (FCOM p.800, p.804; update_fmc_link)
+function B747_fms_bus_powered() return fmcIn.power[FL.L] or fmcIn.power[FL.R] end
 function update_fmc_link()
   local inp=fmcIn
   inp.power[FL.L]=B747DR_fms_bus_xfr_capt>0.5 or B747DR_fms_bus_stby_apu>0.5
@@ -5962,8 +5965,12 @@ function after_physics()
     fmsL:B747_fms_display()
     fmsC:B747_fms_display()
     fmsR:B747_fms_display()
-    if simDR_bus_volts[0]>22 then
-      irsSystem.update()
+    -- (1-1) by the 747's buses (notes/ATA-34-61-FMC.md §144): the IRUs'
+    -- status for the CDU and the ND while an FMC's bus is powered, failed
+    -- FMC or not; the navigation while an FMC works; the tuning by the
+    -- selected FMC. Before, all three while X-Plane's bus 0 was above 22 V
+    if B747_fms_bus_powered() then irsSystem.update() end
+    if B747_fms_any_fmc() then
       update_navperf()
       if B747_fms_master_ok() then update_tuning() end
     end

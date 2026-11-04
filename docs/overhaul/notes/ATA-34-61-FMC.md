@@ -2316,3 +2316,14 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 試験：
   - 回帰（LuaJIT）：`pred_model_test` 94（形、距離での高度と時刻、高度と時刻の点）、`fixinfo_pages_test` 73（ETA・ALT の桁、PRED の距離と NM、過ぎたらダッシュ、ND への出力と dataref）、新しい `nd_fixinfo_test` 9（記号 12 と名前、PRED の円、範囲、PLAN、VOR）、新しい `offpath_pages_test` 34（DES の 6L、ページの行、DES TO と箱、SPD/ALT、CLEAN・DRAG、ND の円、150 ft、DELETE、<DES、DESCENT FORECAST の 6L）。全部で 201 本。
   - X-Plane（カスタム acf、2026-11-04）：`s96_fixinfo` 33/33（予測のために COST INDEX と CRZ ALT FL250 を足した）：`360/22  0104z  21 FL176`、`029/30  0101z  4 11310`、ABEAM `007/22  0104z  18 FL165`、ND に KOUGA の記号と名前、360 の放射線、30 NM の円（写真）。新しい `s221_offpath_des` 17/17：FL359 で DES TO AKAGI（47 NM）・/5000、CLEAN −57・DRAG −19（半径 104 と 66 NM）、ND に clean の青と drag の白の破線の円（写真）、SELECT OFF で消える。Lua の誤りなし。
+
+## 144. FMC 側の IRS・航法・同調の更新を 747 の母線で（2026-11-04：1-1 の残り）
+
+- 見つけたこと：FMC のモジュールが、IRS の状態の写し（CDU の POS INIT・POS REF・IRS MONITOR と ND の TIME TO ALIGN の行）、航法の性能（ANP、位置の更新の行）、無線の自動同調を、X-Plane の `bus_volts[0]` が 22 V を超えるときだけ回していた（`B747.68.xt.fms.lua` の毎フレームの関数）。747 の電源のモデル（1-1）とは別の判定。
+- 資料：左 FMC は機長側の transfer bus か APU standby bus、右 FMC は副操縦士側の transfer bus（FCOM p.800、p.804）。同調は FMC の選択で選んだ FMC（ATA34_2 p.496。§98・§101 で済）。
+- 直したこと（`B747.68.xt.fms.lua`）：
+  - IRS の状態の写しは、FMC の母線（機長側 transfer、APU standby、副操縦士側 transfer）のどれかに電源があれば回す。FMC が故障していても止めない（ND の TIME TO ALIGN は FMC の故障に依らない：推定。この機体ではこの行を FMC のモジュールが作っている）。
+  - 航法の性能は、FMC が 1 台でも動いていれば回す。同調は今までどおり選んだ FMC が動いているとき。
+  - 電池だけの地上（STANDBY POWER AUTO）では APU standby bus がインバーターで通電するので、今までどおり IRS の整列が見える。APU の始動中の 65 秒（APU のインバーターが止まる：1-1）は止まる。
+- 試験：新しい回帰 `fms_power_test`（X-Plane の bus 0 が無くても FMC の母線で TIME TO ALIGN、母線が全部無いと更新しない、APU standby bus だけで更新、左 FMC の故障でも右の母線で更新）。
+- X-Plane（カスタム acf、2026-11-04）：`s42_irs` 48/48（電池だけの整列中（APU standby bus はインバーター）と、APU の発電機で AC が来た後に、ND の TIME TO ALIGN（`laminar/B747/irs/line1`）を足した）、`s173_fmc_fail` 23/23（左 FMC の故障）。Log.txt に Lua の誤りなし。

@@ -6,7 +6,7 @@
 
 ## いまどこか
 
-- **最新（2026-11-04 午後）**：APU の始動電源と空中の抽気（APU-09・10、e7f85c1d）、燃料 synoptic の色と FTR（FUEL-24、fbbb358f）、フラップの拡大・代替表示（FCTL-12、25b10bdb）、CONFIG GEAR の保持と GEAR OVRD（GEAR-17、daa7f422）、離陸形態警報（WARN-11、6afe535e）、操縦室照明の電源（照明 7-2e、LIGHT-07。LIGHT-16 は見送り）を済ませた。利用者の方針（「再現しきれていない系統を先に仕上げ、故障の窓はその後」）どおり、次は残りの系統の項目：電源と PSEU の乗り換え（下の「次にやること」9・10。fms の IRS の更新が X-Plane の bus 0 の電圧で止まる所も）。故障で出るメッセージ（GEAR-22、FUEL-15、PNEU-03 など）は故障の窓で作る。
+- **最新（2026-11-04 午後）**：APU の始動電源と空中の抽気（APU-09・10、e7f85c1d）、燃料 synoptic の色と FTR（FUEL-24、fbbb358f）、フラップの拡大・代替表示（FCTL-12、25b10bdb）、CONFIG GEAR の保持と GEAR OVRD（GEAR-17、daa7f422）、離陸形態警報（WARN-11、6afe535e）、操縦室照明の電源（照明 7-2e、LIGHT-07。LIGHT-16 は見送り）を済ませた。利用者の方針（「再現しきれていない系統を先に仕上げ、故障の窓はその後」）どおり、電源の乗り換えの残り（下の「次にやること」9：fms の IRS の更新と客室灯）も済。次は残りの系統の項目：PSEU の乗り換え（「次にやること」10）。故障で出るメッセージ（GEAR-22、FUEL-15、PNEU-03 など）は故障の窓で作る。
 - フェーズ0-A：完了。
 - フェーズ0-B：完了。資料索引・コード構成・acf の比較・ATA 章ごとの notes（20 本）・GAP_ANALYSIS・PLAN・試験の方針・CLAUDE.md を書いた。
 - フェーズ1：利用者の許可（2026-10-23 就寝前、「承認は自動でよい、X-Plane での試験も自由に」）により、PLAN.md を私（Claude）が承認して開始した。
@@ -144,7 +144,7 @@
    - 済：表示器（fltInst02。機長 PFD・ND は APU standby、upper EICAS は main standby、ほかは F/O transfer）、EICAS の計算（warning。EIU のどれかに電源）、時計の計時（fltInst03。main hot battery bus、表示は APU battery bus：5-2 段 6a）、ELEC パネルの灯（lighting）。
    - 表示灯の輝度も 7-2c で乗り換えた（battery bus と DC bus 1・3：notes/ATA-33.md §13）。
    - 燃料のポンプと弁も 2-2 で乗り換えた（AC・utility・main battery・hot battery・DC・APU battery・ground service bus）。
-   - 残り：IRS と NAV RAD（fms）、客室灯（lighting）、ヨーダンパー（fltCtrls：`battery_array_on`）。STAT ページのバッテリーはカスタム acf だけ済（純正 acf は X-Plane の値のまま）。
+   - 2026-11-04 に残りも済：FMC 側の IRS の状態・航法・同調（fms：FMC の母線。notes/ATA-34-61-FMC.md §144）、客室灯（lighting：AC bus 1–4 のどれか。推定。notes/ATA-33.md §16）。読まずに残っていた X-Plane の母線・電池の bind（fltCtrls の `battery_array_on`、fltInst02・lighting の `bus_volts`、lighting の発電機など）も消した。X-Plane の `bus_volts` を読む所は無くなった。STAT ページのバッテリーはカスタム acf だけ済（純正 acf は X-Plane の値のまま。直さない）。
 10. 1-2（空地判定）の残り：`onground_any` を読んでいるモジュール（autopilot、fms、fltInst02、fltCtrls、EEC、engines、fuel、hydraulicsmodel、gear のタイヤ圧とリプレイ、manipulators、fdr、lighting など）を、PSEU の dataref（ARCHITECTURE.md §4.2）に乗り換える。どの信号（pri/alt の AIR・GND、前脚圧縮）を使うかは notes/ATA-32.md §4.1 の表。各系統の作り直しのときに行う。防氷（3-2）は乗り換えた（`pri_gnd`）。
 11. 1-3 の残り：他のメッセージによる抑止（notes/ATA-31-warning.md §4.4.1）と時間遅れは、各系統の作り直しで表に足す。音（`.snd`）とパネル（PG・3 ページ目以降・STATUS）は済。
 12. R-3 は、作り直しが先になる系統の害の大きい誤りだけ、合間に入れる。
@@ -1208,7 +1208,7 @@ PLAN.md §3 に書いた。要点：
 - **FMC の RTE で出発地を変えると目的地が消える**（`s14`）。経路を入れ直す試験では目的地も入れ直す。
 - **FMC のデータ文字列（`laminar/B747/fms/data`）は FMC が全体を書き直す**ので、Web API で書いてもすぐ戻る。試験で経路を入れるときは CDU のキー（`laminar/B747/fms1/alphanum_key/*`・`ls_key/*`）で入れる。
 - **シナリオにリバリーの指定が無いと、前に使ったリバリー（エンジン型式）のまま**になる。`s13_oil_ge`（Saudia、GE）の後に `s00` を流すと GE で走る。始動の時間などを比べるときは注意。
-- **照明のモジュールが X-Plane の読み取り専用の dataref に書いている**（2026-10-24、酸素のモジュールの試験で見つけた）：`simDR_OAT` を 2 回 `find_dataref` していて（B747.90.xt.lighting.lua の 163 行と 2010 行）、2 回目で `sim/weather/temperature_ambient_c` に 0 を書く（XTLua はグローバルへの代入を dataref への書き込みにする）。読み取り専用なので X-Plane は受け付けず、害は無い。照明（7-2）で直す。
+- **照明のモジュールが X-Plane の読み取り専用の dataref に書いている**（2026-10-24、酸素のモジュールの試験で見つけた。2026-11-04 に 2 回目の bind を消した：notes/ATA-33.md §16）：`simDR_OAT` を 2 回 `find_dataref` していて（B747.90.xt.lighting.lua の 163 行と 2010 行）、2 回目で `sim/weather/temperature_ambient_c` に 0 を書く（XTLua はグローバルへの代入を dataref への書き込みにする）。読み取り専用なので X-Plane は受け付けず、害は無い。照明（7-2）で直す。
 
 - **FUEL CONTROL の赤灯は自前の検知に合わせられない**（2026-10-24、火災防護の段 1）：3D（`Cockpit_TQ.obj`）が X-Plane の読み取り専用の `sim/cockpit2/annunciators/engine_fires` に付いている。書き込める旧い `sim/cockpit/warnings/annunciators/engine_fires` に書いても X-Plane が毎フレーム上書きした。X-Plane のエンジン火災では点くが、FIRE/OVHT TEST やループの故障・単ループ運用には合わない。直すには OBJ の付け替え（3D は対象外）。
 
@@ -1580,3 +1580,4 @@ X-Plane（カスタム acf）：`s07_cruise_ff`（FL350 の ALT HOLD：最後の
 - 2026-11-04：CONFIG GEAR（GEAR-17 の残り、notes/ATA-32.md §15）。FCOM p.1557–1558 のとおり、空中（PSEU）で脚が PSEU の ALL GR DN でないとき、スラストレバーの閉（800 ft 未満）とフラップの着陸位置を別々に保持し、前者はレバーを進めるか脚が下りるまで、後者は脚が下りるか GND PROX GEAR OVRD を押すまで残す。リフトオフから 800 ft か 140 秒の早い方までは出さない（FCOM p.1594–1595）。前は地上でも出し、保持が無く、GEAR OVRD が両方を消していた。GEAR-22 の残りは故障の窓のときに。回帰 201 本（fltctrls_module 171 件）。X-Plane：新しい `s224_config_gear` 11/11（フラップ 25 で CONFIG GEAR、GEAR OVRD で消えて戻すとまた出る、フラップ 20 でも残る、脚下げで消える。写真で主 EICAS の赤の >CONFIG GEAR を確かめた）、`s43_gpws` 47/47（WARN 3 は前と同じ mode 1 の降下）、Lua の誤りなし。
 - 2026-11-04：離陸形態警報（WARN-11、notes/ATA-31-warning.md §10）。新しいモデル `B747.45.tocw_model.lua`：エンジン 2 か 3 が離陸推力（N1 が P&W 66.5、RR 66.7、GE 75.0：ATA27 p.730）、地上（PSEU）、V1 未満（V1 が無ければピッチ 5° まで：ATA31 p.180・188）、FUEL CONTROL 3 本で武装し、推力を外して 10 秒残る。CONFIG FLAPS は後縁 10 か 20、前縁全展開、レバーの一致（ATA31 p.193）。前は N1 90〜96 を 2 と 3 の両方、FMC のフラップとの比べ（資料に無い）、保持なし。回帰 202 本。X-Plane：新しい `s225_takeoff_config` 13/13（V1 なし、パーキング・ブレーキで推力を上げると N1 73 で CONFIG PARK BRK、推力を戻して 10 秒で消える、エンジン 3 だけで CONFIG FLAPS、スピードブレーキ ARM で CONFIG SPOILERS。写真で主 EICAS の 3 つを確かめた）、`s29_greenband` 8/8、`s39_steering` 23/23、Lua の誤りなし。
 - 2026-11-04：照明 7-2e（notes/ATA-33.md §15）。操縦室照明の電源を `B747.90.light_model.lua` の `cockpit` で：機長の計器盤照明・overhead・glareshield・aisle stand の integral は AC bus 4 でノブ、無ければ main standby bus から固定（ATA33 p.24・36・42・50）。機長と center の flood は AC bus 3 の dimmer（R7734 は AC 4 で付勢）、AC 4 が無ければ standby の固定（p.20・26）。F/O の計器盤照明と flood、glareshield の flood、map は AC bus 3。aisle stand の flood は battery bus で、GSB が無いと固定抵抗、dome は GSB でノブ、無ければ battery bus から固定（p.46・70–73、FCOM p.501）。STORM は battery bus が要る（p.20・72）。固定の明るさは推定。前は generic light 63 を掛けるだけで、ノブはいつも効いた（LIGHT-07）。FLIGHT DECK ACCESS LIGHTS（LIGHT-16）は見送り（3D に操作子も、点ける灯も無い：FCOM p.444）。回帰：`light_model_test` 109、`lighting_module_test` 144。X-Plane：新しい `s226_cockpit_lighting` 38/38（夜の flood は X-Plane の HUD_brightness_ratio に比例するので、点いたかと STORM との大小で見る）、`s209` 23/23。
+- 2026-11-04：1-1 の残り（電源の乗り換え）。FMC 側の IRS の状態の写し（CDU と ND の TIME TO ALIGN）を FMC の母線（機長側 transfer・APU standby・副操縦士側 transfer）のどれかで、航法の性能を FMC が 1 台でも動いていれば、同調は選んだ FMC で回す（前は 3 つとも X-Plane の bus 0 が 22 V より上のとき。FCOM p.800、p.804。notes/ATA-34-61-FMC.md §144）。客室灯（generic light 25）を 747 の AC bus 1–4 のどれかで（推定。前は X-Plane の発電機・APU 発電機・GPU と cross tie。notes/ATA-33.md §16）。読まずに残っていた X-Plane の母線・電池・発電機の bind と、照明の 2 回目の `simDR_OAT` の bind（読み取り専用の気温に 0 を書いていた）を消した。回帰：新しい `fms_power_test` 5（直す前は 4 件落ちる）、`lighting_module_test` 147、全 203 本。X-Plane：`s226` 39/39（客室灯 0.25 を足した）、`s173_fmc_fail` 23/23、`s42_irs` 48/48（電池だけの整列中と AC が来た後の ND の TIME TO ALIGN を足した）。Log.txt に Lua の誤りなし。

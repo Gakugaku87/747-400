@@ -153,7 +153,6 @@ simDR_hsi_vdef_dots_pilot           = find_dataref("sim/cockpit2/radios/indicato
 simDR_hsi_hdef_dots_copilot         = find_dataref("sim/cockpit2/radios/indicators/hsi_hdef_dots_copilot")
 simDR_hsi_vdef_dots_copilot         = find_dataref("sim/cockpit2/radios/indicators/hsi_vdef_dots_copilot")
 
-simDR_elec_bus_volts				= find_dataref("sim/cockpit2/electrical/bus_volts")		
 simDR_time_now						= find_dataref("sim/time/total_running_time_sec")
 
 simDR_autopilot_TOGA_pitch_deg      	= find_dataref("sim/cockpit2/autopilot/TOGA_pitch_deg")
