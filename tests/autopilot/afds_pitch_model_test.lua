@@ -581,9 +581,11 @@ ci.gear_alt, ci.pitch = 8, 5.0
 sc.cmd = 6.0
 cc = P.update(sc, ci, DT)
 T.check(cc > 5.0 + P.HOLD_LEAD + 0.5, ("8 ft: not limited (%.2f)"):format(cc))
--- NOSE LETDOWN on the ground after FLARE: from a degree under the attitude
--- (FLARE's last command higher), down a degree a second, the nose held down
--- at -1 under 2 degrees (ATA22 p.332)
+-- NOSE LETDOWN on the ground after FLARE: from the attitude (FLARE's last
+-- command higher), down a degree a second to the pitch-down command of -1
+-- that holds the nose gear down (ATA22 p.294, p.332); no step at the
+-- touchdown, no jump under 2 degrees (2026-11-04: the main gear lifted off
+-- and the nose gear came down 3 to 4 degrees a second: s114, s117)
 local sl = P.new()
 local li = P.inputs()
 li.active, li.mode, li.tas, li.ias, li.pitch, li.vs, li.gear_alt = true, "FLARE", 140, 140, 5, -90, 0
@@ -591,7 +593,7 @@ sl.cmd, sl.law = 6, "FLARE"
 P.update(sl, li, DT)
 li.mode, li.ground, li.letdown = nil, true, true
 local l1 = P.update(sl, li, DT)
-T.near(l1, 5 - P.LETDOWN_STEP - P.LETDOWN_RATE * DT, 1e-9, "NOSE LETDOWN: from a degree under the attitude (5), not FLARE's command (6)")
+T.near(l1, 5 - P.LETDOWN_RATE * DT, 1e-9, "NOSE LETDOWN: from the attitude (5), not FLARE's command (6), no step")
 local l2 = P.update(sl, li, 1)
 T.near(l1 - l2, P.LETDOWN_RATE, 1e-9, "NOSE LETDOWN: the command down LETDOWN_RATE a second")
 li.pitch = 3
@@ -601,7 +603,30 @@ local sl2 = P.new()
 li.pitch = 4
 P.update(sl2, li, DT)
 li.pitch = 1.9
-T.equal(P.update(sl2, li, DT), P.LETDOWN_PITCH, "under 2 degrees on the ground: the nose held down at once")
+local l3 = P.update(sl2, li, DT)
+T.near(l3, 4 - 2 * P.LETDOWN_RATE * DT, 1e-9, ("under 2 degrees: the command on down at LETDOWN_RATE, no jump to LETDOWN_PITCH (%.3f)"):format(l3))
+li.pitch = 0.5
+for _ = 1, 6 do l3 = P.update(sl2, li, 1) end
+T.equal(l3, P.LETDOWN_PITCH, "under 2 degrees: then held at LETDOWN_PITCH")
+local sl3 = P.new()
+sl3.cmd, sl3.law = 4.4, "FLARE"
+li.pitch = 4.3
+T.near(P.update(sl3, li, DT), 4.3 - P.LETDOWN_RATE * DT, 1e-9, "FLARE's command HOLD_LEAD over the attitude: from the attitude")
+-- off the runway again (a skip): the command held, on down once the gear
+-- is back on it (FCTM p.222-223: hold or re-establish a normal landing
+-- attitude; 2026-11-04: lowered on in the air, the nose gear met the
+-- runway at 4 degrees a second, s114, s117)
+local sl4 = P.new()
+sl4.cmd, sl4.law = 5.5, "FLARE"
+li.pitch, li.ground, li.letdown = 5.5, true, true
+local b1 = P.update(sl4, li, 0.4)
+T.near(b1, 5.5 - 0.4 * P.LETDOWN_RATE, 1e-9, "on the runway: down LETDOWN_RATE a second")
+li.ground = false
+local b2 = P.update(sl4, li, 1)
+T.near(b2, b1, 1e-9, ("skipped off the runway: the command held (%.2f)"):format(b2))
+li.ground = true
+local b3 = P.update(sl4, li, 0.5)
+T.near(b3, b1 - 0.5 * P.LETDOWN_RATE, 1e-9, "back on the runway: on down")
 li.letdown = false
 T.check(P.update(sl, li, DT) == nil, "NOSE LETDOWN's end: no law on the ground")
 

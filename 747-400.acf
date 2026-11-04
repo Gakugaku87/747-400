@@ -29414,8 +29414,8 @@ P _gear/1/_steerdeg_lospeed 15.000000000
 P _gear/1/_strut_comp 0.000000000
 P _gear/1/_strut_max_wgt_def 2.200000048
 P _gear/1/_strut_max_wgt_frc 1.9187952E5
-P _gear/1/_strut_preload_def 1.200000048
-P _gear/1/_strut_preload_frc 1.6051E5
+P _gear/1/_strut_preload_def 1.146600000
+P _gear/1/_strut_preload_frc 100000.000000000
 P _gear/1/_strut_s1 0.000000000
 P _gear/1/_strut_s2 0.015625000
 P _gear/1/_strut_t1 0.128906250
@@ -29446,8 +29446,8 @@ P _gear/2/_steerdeg_lospeed 15.000000000
 P _gear/2/_strut_comp 0.000000000
 P _gear/2/_strut_max_wgt_def 2.200000048
 P _gear/2/_strut_max_wgt_frc 1.9187952E5
-P _gear/2/_strut_preload_def 1.200000048
-P _gear/2/_strut_preload_frc 1.6051E5
+P _gear/2/_strut_preload_def 1.146600000
+P _gear/2/_strut_preload_frc 100000.000000000
 P _gear/2/_strut_s1 0.000000000
 P _gear/2/_strut_s2 0.015625000
 P _gear/2/_strut_t1 0.128906250
@@ -29478,8 +29478,8 @@ P _gear/3/_steerdeg_lospeed 0.000000000
 P _gear/3/_strut_comp 0.000000000
 P _gear/3/_strut_max_wgt_def 2.200000048
 P _gear/3/_strut_max_wgt_frc 1.9187952E5
-P _gear/3/_strut_preload_def 1.200000048
-P _gear/3/_strut_preload_frc 1.50692E5
+P _gear/3/_strut_preload_def 1.146600000
+P _gear/3/_strut_preload_frc 100000.000000000
 P _gear/3/_strut_s1 0.000000000
 P _gear/3/_strut_s2 0.015625000
 P _gear/3/_strut_t1 0.128906250
@@ -29510,8 +29510,8 @@ P _gear/4/_steerdeg_lospeed 0.000000000
 P _gear/4/_strut_comp 0.000000000
 P _gear/4/_strut_max_wgt_def 2.200000048
 P _gear/4/_strut_max_wgt_frc 1.9187952E5
-P _gear/4/_strut_preload_def 1.200000048
-P _gear/4/_strut_preload_frc 1.50692E5
+P _gear/4/_strut_preload_def 1.146600000
+P _gear/4/_strut_preload_frc 100000.000000000
 P _gear/4/_strut_s1 0.000000000
 P _gear/4/_strut_s2 0.015625000
 P _gear/4/_strut_t1 0.128906250

@@ -19,6 +19,8 @@
   "steps": [
     { "do": "record_start" },
     { "do": "sleep", "seconds": 20, "note": "空中開始の揺れが収まるのを待つ（空中開始では A/P が機首を上げて高度が上がることがある）" },
+    { "do": "wait", "note": "空中開始の上昇が終わる（上昇中に .84 Mach を超えると、IAS/MACH の窓は自動で Mach に変わる：FCOM p.643）", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "<", "value": 200, "timeout": 60 },
+    { "do": "set", "note": "窓を IAS に（2026-11-04：Mach のまま 294 を書いて、IAS 277 kt（Mach .81）を保っていた。窓の値は Mach では Mach×100）", "dref": "sim/cockpit2/autopilot/airspeed_is_mach", "value": 0 },
     { "do": "set", "note": "MCP 速度 294 kt（PI.11.2 の 280〜300 t、FL350 の LRC）", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 294 },
     { "do": "set", "note": "MCP 高度 35,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 35000 },
     { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
