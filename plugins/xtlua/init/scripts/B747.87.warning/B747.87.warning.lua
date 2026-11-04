@@ -446,7 +446,11 @@ B747_CASadvisoryMsg   = {
     {DRindex = 320, name = "ENG 4 OIL PRESS", status = 0},
     {DRindex = 321, name = ">BTL LO R ENG A", status = 0},     -- ATA26_28 p.78 (3-4)
     {DRindex = 322, name = ">BTL LO R ENG B", status = 0},
-    {DRindex = 323, name = ">ENG CONTROLS", status = 0}        -- FCOM p.899 (2026-11-04: the EEC failures)
+    {DRindex = 323, name = ">ENG CONTROLS", status = 0},       -- FCOM p.899 (2026-11-04: the EEC failures)
+    {DRindex = 324, name = "ENG 1 OIL FILT", status = 0},      -- ATA70_80 p.522, FCOM p.891 (2026-11-04)
+    {DRindex = 325, name = "ENG 2 OIL FILT", status = 0},
+    {DRindex = 326, name = "ENG 3 OIL FILT", status = 0},
+    {DRindex = 327, name = "ENG 4 OIL FILT", status = 0}
 }
 
 B747_CASmemoMsg   = {

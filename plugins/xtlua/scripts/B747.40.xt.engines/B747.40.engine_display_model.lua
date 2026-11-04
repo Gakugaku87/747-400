@@ -71,6 +71,7 @@ M.OIL_QTY_L = {33, 37}
 M.OIL_GULP_L = {7, 11}
 M.OIL_GULP_N1 = 15
 M.QUARTS_PER_LITRE = 1 / 0.946353
+M.OIL_FILT_N2 = 10             -- (2026-11-04) the oil flows above it (estimate)
 -- Operating limits (red lines) of N1, N2 and N3, % (FCOM p.833-836,
 -- p.843-844, p.873): the readout and the tape turn red there. CF6-80C2:
 -- ATA70_80 p.395. PW4056 and RB211: no source, the panel's previous values
@@ -123,6 +124,9 @@ function M.inputs()
         epr = four(1),                      -- the displayed EPR and the EEC's max EPR (0: none)
         epr_max = four(0),
         oil_psi = four(0),                  -- X-Plane's oil pressure, psi
+        -- (2026-11-04) failure: the scavenge oil filter clogging, its
+        -- differential pressure switch closed (33 psid: ATA70_80 p.522)
+        oil_filter = four(false),
         oil_degc = four(15),                -- X-Plane's oil temperature, °C
         oil_ratio = four(1),                -- X-Plane's oil quantity ratio
         cruise = false,                     -- in the air with the flaps up (the CF6's oil differential)
@@ -150,6 +154,7 @@ function M.new(random)
         inhibit = false,
         oil_psi = four(0), oil_red = four(false), oil_amber = four(false), oil_press_msg = four(false),
         oil_degc = four(15), oil_temp_msg = four(false),
+        oil_filt_msg = four(false),         -- (2026-11-04) ENG n OIL FILT
         oil_qty = four(0), oil_qty_magenta = four(false),
         vib = four(0), vib_source = four(0),
         n1_red = four(false), n2_red = four(false), n3_red = four(false), epr_red = four(false),
@@ -195,6 +200,10 @@ local function oil(s, inp, out)
         local t = inp.oil_degc[n] + s.temp_spread[n] * f
         out.oil_degc[n] = t
         out.oil_temp_msg[n] = t > lim.temp_amber
+        -- (2026-11-04) ENG n OIL FILT: the scavenge filter's switch, with the
+        -- oil flowing (the engine turning: estimate); the CF6 only (ATA70_80
+        -- p.522; the FCOM shows it for the 570, p.891)
+        out.oil_filt_msg[n] = inp.type == "GE" and inp.oil_filter[n] and inp.n2[n] > M.OIL_FILT_N2
         local litres = (s.qty_l[n] - s.gulp_l[n] * clamp(inp.n1[n] / M.OIL_GULP_N1, 0, 1)) * inp.oil_ratio[n]
         litres = math.max(0, litres)
         if lim.quarts then out.oil_qty[n] = litres * M.QUARTS_PER_LITRE else out.oil_qty[n] = litres end

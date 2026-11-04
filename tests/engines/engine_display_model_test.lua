@@ -330,4 +330,22 @@ do
     T.equal(D.VIB_HIGH, 4.0, "the vibration's high band: 4.0 units (ATA70_80 p.395)")
 end
 
+
+-- (2026-11-04) the scavenge oil filter (notes/ATA-70-80.md §11): ENG n OIL
+-- FILT with its switch closed and the engine turning, the CF6 only
+-- (ATA70_80 p.522; FCOM p.891, the 570)
+do
+    local s, inp = D.new(), D.inputs()
+    inp.type = "GE"
+    for n = 1, 4 do inp.n2[n], inp.cutoff[n], inp.running[n] = 65, false, true end
+    inp.oil_filter[3] = true
+    local o = D.update(s, inp, DT)
+    T.check(o.oil_filt_msg[3] and not o.oil_filt_msg[1], "CF6 filter clogging: ENG 3 OIL FILT")
+    inp.n2[3] = 0
+    o = D.update(s, inp, DT)
+    T.check(not o.oil_filt_msg[3], "engine 3 not turning: no oil flow, no ENG 3 OIL FILT")
+    inp.type, inp.n2[3] = "PW", 65
+    o = D.update(s, inp, DT)
+    T.check(not o.oil_filt_msg[3], "P&W: no ENG OIL FILT (not in its FCOM)")
+end
 T.done()
