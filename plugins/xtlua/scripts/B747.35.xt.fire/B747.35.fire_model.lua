@@ -33,6 +33,11 @@ M.A_DIR = {-1, 1, -1, 1}
 M.TEST_S = 5                -- >TEST IN PROG, then >FIRE TEST PASS/FAIL (FCOM p.919; ATA26_28 p.30)
 M.STATUS_S = 20             -- the loop, CARGO DET and FIRE/OVHT SYS status (ATA26_28 p.34, p.46, p.164)
 M.STATUS_LONG_S = 60        -- CARGO DET AIR, BLD DUCT LEAK status (ATA26_28 p.164, p.286)
+-- (2026-11-04; PNEU-03) a duct leak is seen by the hot air it blows into the
+-- leading edge and strut cavities (ATA26_28 p.284): while its section has
+-- air (5 psi, as "ducts pressurized" for EXT AIR), and the switches open
+-- again 30 s after (estimates: the sources give no cooling time)
+M.LEAK_HOT_PSI, M.LEAK_COOL_S = 5, 30
 M.APU_DISCH_S = 10          -- the APU bottle discharges by itself on the ground (ATA26_28 p.124)
 M.APU_DISCH_N1 = 95         -- once the APU is below 95 %
 M.BTL_PSI = 600             -- engine and APU bottles: 600 psig at 21°C (ATA26_28 p.60-76, p.116)
@@ -63,6 +68,7 @@ function M.inputs()
         engines_running = 4,
         wheel_well_heat = false,        -- fire in a main wheel well (failure input)
         duct_leak = {false, false, false},  -- a bleed duct leak L, C, R (failure input)
+        duct_psi = {40, 40, 40},        -- (2026-11-04) the duct pressures L, C, R (the bleed model)
         lav_smoke = false,              -- smoke in a lavatory (failure input)
         rest_smoke = false,             -- smoke in the door 5 crew rest (failure input)
         loop_failed_a = list(M.ZONES, false),   -- failure: a zone's loop A (M.ZONES order)
@@ -105,7 +111,7 @@ function M.new()
         lp_t = {a = list(M.ZONES, 0), b = list(M.ZONES, 0)}, power_off_t = 0, apu_disch_t = 0,
         cargo_cfg = list(4, "dual"), det_power_was = false, cargo_latch = 0, cargo_t = 0,
         cargo_cd_fired = false, cargo_disch_was = false, cgo_det_t = {0, 0}, cgo_air_t = 0,
-        duct_t = {0, 0}}
+        duct_t = {0, 0}, leak_hot_t = {0, 0, 0}}
     for b = 1, M.BOTTLES do
         s.btl[b] = full(b)
         s.squib[b] = {}
@@ -232,7 +238,13 @@ function M.update(s, inp, dt)
     local ww_alarm = inp.wheel_well_power and (inp.wheel_well_heat or test)
     out.wheel_well_fire = inp.wheel_well_power and inp.wheel_well_heat
     if not inp.wheel_well_power then all_ok = false end
-    for d = 1, 3 do out.duct_leak[d] = inp.duct_power and inp.duct_leak[d] end
+    for d = 1, 3 do
+        -- the leak's hot air closes the thermal switches; they cool once the
+        -- section has no air (isolated: QRH 2.2) or the leak is gone
+        if inp.duct_leak[d] and inp.duct_psi[d] >= M.LEAK_HOT_PSI then s.leak_hot_t[d] = M.LEAK_COOL_S
+        else s.leak_hot_t[d] = math.max(0, s.leak_hot_t[d] - dt) end
+        out.duct_leak[d] = inp.duct_power and s.leak_hot_t[d] > 0
+    end
     if not inp.duct_power then all_ok = false end
     s.duct_t[1] = timer(s.duct_t[1], out.duct_leak[1], dt)
     s.duct_t[2] = timer(s.duct_t[2], out.duct_leak[3], dt)

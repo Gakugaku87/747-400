@@ -1,0 +1,62 @@
+{
+  "name": "s231_duct_leak",
+  "description": "ダクトリークの抽気への影響（2026-11-04、PNEU-03 の残り：notes/ATA-36.md §10、ATA-26 の FIRE-15）の X-Plane での確認。成田 34L でエンジン運転中（アイドル）に開始。左のダクトのリークで BLD DUCT LEAK L と beeper（ATA26_28 p.284–286）、漏れの分だけダクト圧が下がる（推定）。QRH 2.2 の隔離（ISOLATION L OFF、ENGINE BLEED 1・2 OFF）で左のダクトの空気が無くなると、熱い空気が止まって温度スイッチが冷え、30 秒（推定）で BLD DUCT LEAK L が消える。上の EICAS を撮る",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 10 },
+    { "do": "snapshot", "note": "リークの前", "drefs": [
+      "laminar/B747/air/duct_pressure_L", "laminar/B747/air/duct_pressure_C", "laminar/B747/air/duct_pressure_R",
+      "laminar/B747/air/pack_ctrl/sel_dial_pos[0]", "laminar/B747/air/pack_ctrl/sel_dial_pos[1]", "laminar/B747/air/pack_ctrl/sel_dial_pos[2]" ] },
+    { "do": "check", "note": "左のダクトに空気がある", "dref": "laminar/B747/air/duct_pressure_L", "op": ">", "value": 20 },
+    { "do": "check", "note": "BLD DUCT LEAK L は出ていない", "dref": "laminar/B747/CAS/caution_status[7]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "左のダクトのリーク" },
+    { "do": "set", "note": "左のダクトのリーク", "dref": "laminar/B747/fire/fail/duct_leak[0]", "value": 1 },
+    { "do": "wait", "note": "BLD DUCT LEAK L（ATA26_28 p.286）", "dref": "laminar/B747/CAS/caution_status[7]", "op": "==", "value": 1, "timeout": 3, "cite": "ATA26_28 p.286" },
+    { "do": "wait", "note": "beeper（caution）", "dref": "laminar/B747/warning/master_caution_audio", "op": "==", "value": 1, "timeout": 2 },
+    { "do": "sleep", "seconds": 4 },
+    { "do": "snapshot", "note": "リーク中（漏れの分だけダクト圧が下がる：推定）", "drefs": [
+      "laminar/B747/air/duct_pressure_L", "laminar/B747/air/duct_pressure_C", "laminar/B747/air/duct_pressure_R" ] },
+    { "do": "check", "note": "ダクトの空気はまだある", "dref": "laminar/B747/air/duct_pressure_L", "op": ">", "value": 20 },
+    { "do": "cas", "note": "BLD DUCT LEAK L" },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "view", "note": "上の EICAS", "the": -22, "psi": 29, "fov": 30 },
+    { "do": "shot", "name": "eicas_duct_leak_l" },
+
+    { "do": "mark", "note": "QRH 2.2 の隔離" },
+    { "do": "switch", "note": "ISOLATION L OFF（QRH 2.2 の 11）", "dref": "laminar/B747/button_switch/position[75]", "value": 0, "cmd": "laminar/B747/button_switch/bleed_air_isln_vlv_L" },
+    { "do": "switch", "note": "ENGINE BLEED 1 OFF（QRH 2.2 の 13）", "dref": "laminar/B747/button_switch/position[77]", "value": 0, "cmd": "laminar/B747/button_switch/bleed_air_vlv_engine_1" },
+    { "do": "switch", "note": "ENGINE BLEED 2 OFF（QRH 2.2 の 13）", "dref": "laminar/B747/button_switch/position[78]", "value": 0, "cmd": "laminar/B747/button_switch/bleed_air_vlv_engine_2" },
+    { "do": "wait", "note": "左のダクトの空気が無くなる", "dref": "laminar/B747/air/duct_pressure_L", "op": "<", "value": 1, "timeout": 15 },
+    { "do": "check", "note": "温度スイッチはまだ熱い：BLD DUCT LEAK L は残る", "dref": "laminar/B747/CAS/caution_status[7]", "op": "==", "value": 1 },
+    { "do": "check", "note": "右のダクトは空気がある（隔離されていない側）", "dref": "laminar/B747/air/duct_pressure_R", "op": ">", "value": 20 },
+    { "do": "wait", "note": "熱い空気が止まり、30 秒（推定）で BLD DUCT LEAK L が消える（ATA26_28 p.284）", "dref": "laminar/B747/CAS/caution_status[7]", "op": "==", "value": 0, "timeout": 40 },
+    { "do": "cas", "note": "隔離のあと" },
+
+    { "do": "set", "note": "故障を消す", "dref": "laminar/B747/fire/fail/duct_leak[0]", "value": 0 },
+    { "do": "switch", "note": "ISOLATION L ON", "dref": "laminar/B747/button_switch/position[75]", "value": 1, "cmd": "laminar/B747/button_switch/bleed_air_isln_vlv_L" },
+    { "do": "switch", "note": "ENGINE BLEED 1 ON", "dref": "laminar/B747/button_switch/position[77]", "value": 1, "cmd": "laminar/B747/button_switch/bleed_air_vlv_engine_1" },
+    { "do": "switch", "note": "ENGINE BLEED 2 ON", "dref": "laminar/B747/button_switch/position[78]", "value": 1, "cmd": "laminar/B747/button_switch/bleed_air_vlv_engine_2" },
+    { "do": "wait", "note": "左のダクトに空気が戻る", "dref": "laminar/B747/air/duct_pressure_L", "op": ">", "value": 20, "timeout": 25 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "故障が無いので BLD DUCT LEAK L は出ない", "dref": "laminar/B747/CAS/caution_status[7]", "op": "==", "value": 0 },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" },
+    { "do": "record_stop" }
+  ]
+}

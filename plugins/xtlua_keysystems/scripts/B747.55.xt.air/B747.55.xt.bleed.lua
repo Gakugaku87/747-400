@@ -29,6 +29,8 @@ B747DR_bleed_fail_hpsov_open    = find_dataref("laminar/B747/air/fail/hpsov_open
 B747DR_bleed_fail_prv_closed    = find_dataref("laminar/B747/air/fail/prv_closed")
 B747DR_bleed_fail_prv_open      = find_dataref("laminar/B747/air/fail/prv_open")
 B747DR_bleed_fail_apu_air       = find_dataref("laminar/B747/air/fail/apu_air")
+-- a duct leak L, C, R (the fire module's failure: BLD DUCT LEAK)
+B747DR_bleed_fail_duct_leak     = find_dataref("laminar/B747/fire/fail/duct_leak")
 B747DR_bleed_CAS_status         = find_dataref("laminar/B747/CAS/status_status")
 B747DR_bleed_start_valve_cmd    = find_dataref("laminar/B747/engines/start_valve_cmd")
 B747DR_bleed_ext_air            = find_dataref("laminar/B747/air/ext_air")
@@ -115,6 +117,7 @@ local function read_inputs(inp)
         f.prv_closed[n] = B747DR_bleed_fail_prv_closed[n - 1] > 0.5
         f.prv_open[n] = B747DR_bleed_fail_prv_open[n - 1] > 0.5
     end
+    for p = 1, 3 do inp.leak[p] = B747DR_bleed_fail_duct_leak[p - 1] > 0.5 end
     for p = 1, 3 do inp.pack_flow[p] = B747_pack_out.flow[p] end      -- the pack model, last frame
     inp.wai[1] = B747DR_bleed_wing_ai_valve_pos[0] > 0.5
     inp.wai[2] = B747DR_bleed_wing_ai_valve_pos[1] > 0.5

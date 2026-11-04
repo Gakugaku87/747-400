@@ -58,6 +58,10 @@ M.ST_HP_S, M.ST_PRV_S, M.ST_OVHT_S = 60, 125, 60
 -- higher N2 (estimate: the sources give the switching pressures only)
 M.IP_PSI_N2 = {45, 85}
 M.HP_N2 = 85                    -- the HP port used below it (the existing estimate)
+-- (2026-11-04; PNEU-03) a ruptured duct (BLD DUCT LEAK L, C, R) takes air
+-- from its section: half a pack (estimate: the sources give no leak flow).
+-- Nothing isolates it but the crew (notes/ATA-36.md §4.7)
+M.LEAK_FLOW = 0.5
 
 -- sections: 1 left (engines 1, 2, pack 1), 2 centre (APU, ground air,
 -- pack 2), 3 right (engines 3, 4, pack 3) (FCOM p.611-615)
@@ -95,6 +99,7 @@ function M.inputs()
         fail = {ovpress = {false, false, false, false}, hpsov_closed = {false, false, false, false},
             hpsov_open = {false, false, false, false}, prv_closed = {false, false, false, false},
             prv_open = {false, false, false, false}},
+        leak = {false, false, false},              -- (2026-11-04) a duct leak in section L, C, R
     }
 end
 
@@ -206,6 +211,7 @@ function M.update(s, inp, dt)
     if inp.wai[2] then demand[3] = demand[3] + M.WAI_FLOW end
     if inp.adp[1] then demand[1] = demand[1] + M.ADP_FLOW end
     if inp.adp[2] then demand[3] = demand[3] + M.ADP_FLOW end
+    for p = 1, 3 do if inp.leak[p] then demand[p] = demand[p] + M.LEAK_FLOW end end
     for n = 1, 4 do
         if s.eng[n].start_open then
             demand[M.ENGINE_SECTION[n]] = demand[M.ENGINE_SECTION[n]] + M.STARTER_FLOW

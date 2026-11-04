@@ -161,4 +161,14 @@ for i = 107, 121 do
     if i ~= 122 then T.equal(get(STATUS, i), 0, "overheat 4: no other bleed STATUS " .. i) end
 end
 
+-- (2026-11-04; PNEU-03) a leak in the right duct (the fire module's failure
+-- laminar/B747/fire/fail/duct_leak[2]) takes some of its air (estimate)
+local before_r = get(AIR .. "duct_pressure_R")
+rt:set("laminar/B747/fire/fail/duct_leak", 2, 1)
+frames(5)
+T.check(get(AIR .. "duct_pressure_R") < before_r - 1, "duct leak R: the right duct lower")
+rt:set("laminar/B747/fire/fail/duct_leak", 2, 0)
+frames(5)
+T.check(math.abs(get(AIR .. "duct_pressure_R") - before_r) < 0.2, "duct leak R gone: the right duct as before")
+
 T.done()

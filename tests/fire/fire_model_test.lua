@@ -383,6 +383,40 @@ do
     T.check(out.cargo_light[1] and out.cargo_light[2], "test: the cargo FWD and AFT lights")
     T.check(not out.wheel_well_fire and not out.cargo_fire[1], "test: no FIRE WHEEL WELL, no FIRE CARGO")
 end
+-- (2026-11-04; PNEU-03) a duct leak is seen by the hot air it blows: the
+-- thermal switches close while the leaking section has air (ATA26_28
+-- p.284) and open again 30 s after it has none (the cooling: estimate);
+-- the STATUS goes with the caution. Isolating the leak (QRH 2.2) ends it
+do
+    local s, inp = M.new(), M.inputs()
+    inp.duct_leak[3] = true
+    local out = run(s, inp, 0.1)
+    T.check(out.duct_leak[3], "duct R leaking with air: BLD DUCT LEAK R")
+    out = run(s, inp, 61)
+    T.check(out.duct_leak_status[2], "duct R leaking: STATUS BLD DUCT LEAK R")
+    inp.duct_psi[3] = 0
+    out = run(s, inp, 25)
+    T.check(out.duct_leak[3] and out.duct_leak_status[2], "duct R isolated: still hot for a while")
+    out = run(s, inp, 6)
+    T.check(not out.duct_leak[3] and not out.duct_leak_status[2], "duct R isolated 30 s: BLD DUCT LEAK R and STATUS gone")
+    inp.duct_psi[3] = 40
+    out = run(s, inp, 0.1)
+    T.check(out.duct_leak[3], "air back on the leak: BLD DUCT LEAK R again")
+    inp.duct_leak[3] = false
+    out = run(s, inp, 25)
+    T.check(out.duct_leak[3], "leak repaired: the switches still hot")
+    out = run(s, inp, 6)
+    T.check(not out.duct_leak[3], "leak repaired: BLD DUCT LEAK R gone after the cooling")
+    -- a leak in a section without air is not seen
+    local s2, inp2 = M.new(), M.inputs()
+    inp2.duct_leak[2], inp2.duct_psi[2] = true, 0
+    out = run(s2, inp2, 1)
+    T.check(not out.duct_leak[2], "leak in an unpressurised centre duct: no BLD DUCT LEAK C")
+    inp2.duct_psi[2] = 30
+    out = run(s2, inp2, 0.1)
+    T.check(out.duct_leak[2] and not out.duct_leak[1] and not out.duct_leak[3], "air in the centre duct: BLD DUCT LEAK C")
+end
+
 -- the squib test (FCOM p.187-188; ATA26_28 p.80-82, p.132-134, p.196-198)
 do
     local s, inp = M.new(), M.inputs()
