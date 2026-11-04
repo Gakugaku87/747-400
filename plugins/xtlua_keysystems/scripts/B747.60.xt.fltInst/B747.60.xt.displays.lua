@@ -360,6 +360,15 @@ B747DR_dsp_nd_hdg_ptr_fo        = find_dataref("laminar/B747/nd/fo/hdg_ptr")
 B747DR_dsp_nd_hdg_ptr_pln_fo    = find_dataref("laminar/B747/nd/fo/hdg_ptr_pln")
 B747DR_dsp_nd_hdg_bug_fo        = find_dataref("laminar/B747/nd/fo/hdg_bug")
 B747DR_dsp_nd_hdg_line_fo       = find_dataref("laminar/B747/nd/fo/hdg_line")
+-- (2026-11-05) PLAN's picture and the map centred (B747.60.nd_model.lua);
+-- the GE (engines/type 1) with CRT displays (the livery's nd/style 0)
+-- draws PLAN as the CRT 570 (FCOM p.1029)
+B747DR_dsp_nd_pln_style_capt    = find_dataref("laminar/B747/nd/capt/pln_style")
+B747DR_dsp_nd_pln_style_fo      = find_dataref("laminar/B747/nd/fo/pln_style")
+B747DR_dsp_nd_centred_capt      = find_dataref("laminar/B747/nd/capt/centred")
+B747DR_dsp_nd_centred_fo        = find_dataref("laminar/B747/nd/fo/centred")
+B747DR_dsp_engine_type          = find_dataref("laminar/B747/engines/type")
+B747DR_dsp_nd_style             = find_dataref("laminar/B747/nd/style")
 -- (6-1/6-2 step 11d2b) the FMCs working, and the active waypoint's ETA and
 -- distance shown on each ND (the panel's groups)
 B747DR_dsp_fmc_ok               = find_dataref("laminar/B747/fms/fmc_ok")
@@ -736,8 +745,16 @@ local function nd_sources(c, f, nav_valid)
     -- the trend vector (step 5e): the ground speed and each side's bank
     inp.gs_kt = simDR_dsp_gs * 3600 / 1852
     inp.side[NM.CAPT].roll_deg, inp.side[NM.FO].roll_deg = simDR_dsp_roll_pilot, simDR_dsp_roll_copilot
+    -- (2026-11-05) PLAN as the CRT 570 (FCOM p.1029): the GE with CRT displays
+    inp.pln_crt = B747DR_dsp_engine_type == 1 and B747DR_dsp_nd_style < 0.5
     local out = NM.update(nd_state, inp, SIM_PERIOD)
     local oc, of = out[NM.CAPT], out[NM.FO]
+    if B747DR_dsp_nd_pln_style_capt ~= oc.pln_style then B747DR_dsp_nd_pln_style_capt = oc.pln_style end
+    if B747DR_dsp_nd_pln_style_fo ~= of.pln_style then B747DR_dsp_nd_pln_style_fo = of.pln_style end
+    local cv = oc.centred and 1 or 0
+    if B747DR_dsp_nd_centred_capt ~= cv then B747DR_dsp_nd_centred_capt = cv end
+    cv = of.centred and 1 or 0
+    if B747DR_dsp_nd_centred_fo ~= cv then B747DR_dsp_nd_centred_fo = cv end
     -- X-Plane's own map layer turns with its map mode: read it, write when
     -- it differs (TESTING.md §1.2)
     if simDR_dsp_map_mode ~= oc.xp_mode then simDR_dsp_map_mode = oc.xp_mode end

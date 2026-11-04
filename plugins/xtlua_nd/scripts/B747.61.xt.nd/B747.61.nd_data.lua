@@ -99,7 +99,12 @@ M.CTR_PX_PER_RANGE = M.PX_PER_RANGE / 2
 M.EXP_ARC_PX, M.EXP_LEFT_PX, M.EXP_RIGHT_PX = 465, 329, 348
 M.CTR_PX = 225
 M.PLAN_PX = 450 / 640 * 465
-M.EXPANDED, M.CENTRED, M.PLAN = 1, 2, 3
+-- (2026-11-05) PLAN's range circles centred (FCOM p.1027-1028): the symbols
+-- within this circle about the display's centre, the selected range's
+-- circle (232.5) and the display's half height (about 301) between
+-- (estimate: the figures draw the route out to the display's edges)
+M.PLAN_CTR_PX = 290
+M.EXPANDED, M.CENTRED, M.PLAN, M.PLAN_CTR = 1, 2, 3, 4
 
 local FT_PER_NM = 6076.12
 
@@ -186,12 +191,12 @@ function M.runway(lat1, lon1, d1, lat2, lon2, d2)
     return mlat, mlon, len + f1 + f2, math.deg(math.atan2(-ux, -uy)) % 360
 end
 
--- a point on the map's visible part (view: EXPANDED, CENTRED, PLAN)
+-- a point on the map's visible part (view: EXPANDED, CENTRED, PLAN, PLAN_CTR)
 function M.inside(x, y, view)
     if view == M.EXPANDED then
         return y >= 0 and x >= -M.EXP_LEFT_PX and x <= M.EXP_RIGHT_PX and x * x + y * y <= M.EXP_ARC_PX * M.EXP_ARC_PX
     end
-    local r = view == M.CENTRED and M.CTR_PX or M.PLAN_PX
+    local r = (view == M.CENTRED and M.CTR_PX) or (view == M.PLAN_CTR and M.PLAN_CTR_PX) or M.PLAN_PX
     return x * x + y * y <= r * r
 end
 

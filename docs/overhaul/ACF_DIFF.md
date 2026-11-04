@@ -623,3 +623,14 @@ ND（6-1・6-2 段 6d2、2026-11-02：PLAN の X-Plane の地図）：
 | 2026-11-04・警報（STATUS の PG。利用者の質問「Lower EICAS の PG 1 は常に出る仕様なの？」） | 下の EICAS の STATUS ページの `GROUP Page #`（`PG` の字と `laminar/B747/STAT/msg_page` の数字） | `SHOW_GREATER 1.000000 laminar/B747/STAT/num_msg_pages`（X-Plane の GREATER は境の値を含むので、1 ページでも PG 1 が出た） | `SHOW_GREATER 2.000000 laminar/B747/STAT/num_msg_pages`（2 ページ以上のときだけ。上の EICAS の PG と同じ書き方） | FCOM p.1545（15.10.19：PG 番号はステータスメッセージの次のページがあるとき） |
 
 変更前のファイルは `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261104_before_status_pg`。sed で 1 行を書き換えたとき、作業ツリーの改行が CRLF から LF になった（git の中身は前から LF。X-Plane はどちらも読む）。
+
+ND（2026-11-05：PLAN の絵を FCOM の 3 通りに。利用者の依頼「NDの修正して」。notes/ATA-31.md §46）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-11-05・ND（PLAN） | 両 ND の `GROUP Map:Centered`・`Map:Expanded` の条件、`GROUP ND Text Center`・`TCAS Alerts` の上下の動き（4 行ずつ） | `laminar/B747/nd/map_center/<席>`（CTR のスイッチ） | `laminar/B747/nd/<席>/centred`（CTR か、PLAN の距離の円） | FCOM p.1027–1028（PLAN の中心の地点は画面の中央） |
+| 同 | `GROUP Waypoints CAPT EXPA`・`Waypoints FO EXPAND`（拡大の現用点の情報） | `SHOW_EQUAL 2.000000 laminar/B747/nd/mode/<席>/sel_dial_pos`（MAP） | `SHOW_GREATER 1.500000 …`（MAP と、拡大の PLN：CRT の GE） | FCOM p.1029 |
+| 同 | 中央の群の株の N↑（`gen_rotary North Pointer 2`・`North Pointer`） | `SHOW_EQUAL 3.000000 …/sel_dial_pos`（PLN で右下に） | `SHOW_EQUAL 9.000000 laminar/B747/nd/<席>/pln_style`（出さない） | 円の PLAN の N↑ は上の中央（FCOM p.1028） |
+| 同 | 両 ND の `GROUP ND Text Center` の前 | なし | 新しい `GROUP PLN Plan`（`pln_style` が 0 より上）：`GROUP PLN Circles`（`pln_style` 1）に円の絵 `EFIS/Maps/plan_circles`（中心：機長 335.25, 78.5、F/O 1022.25, 78.5）と数字 4 つ（`range_display_<席>` の 2 倍と 1 倍、円の上下）、`PLN North CRT`（`pln_style` 2：株の `NorthArrow` を機長 635, 9、F/O 1322, 9） | FCOM p.1027–1029、p.1151（N↑ は緑） |
+
+上の 4 行は `docs/overhaul/tools/panel_nd_plan_circles.lua` で書き換えた（12 行の書き換えと、2 か所に 111 行ずつ）。新しい絵は `docs/overhaul/tools/make_plan_circles.ps1`。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261105_before_nd_plan`。見た目の変わるのは PLN の ND だけ（X-Plane の写真：`s254_nd_plan_circles`・`s255_nd_plan_crt`、外から見た写真も `s254`）。

@@ -69,7 +69,7 @@ run()
 -- (2026-11-05) PLAN needs no position (ATA31 p.34): no flag without an IRU
 -- in NAV (before, MAP in the middle until the IRS aligned: the user's report)
 T.check(not oc.map_flag and not oc.vtk_flag, "PLN without a position: no MAP flag, no VTK flag")
-T.check(oc.rose, "PLN's rose is fixed")
+T.check(not oc.rose, "PLN's range circles: no compass rose (FCOM p.1027-1028)")
 c.mode = M.APP
 run()
 T.check(not oc.map_flag, "APP: no MAP flag")
@@ -114,7 +114,7 @@ T.check(oc.hdg_ptr and not oc.hdg_ptr_pln, "MAP: the current heading pointer")
 T.check(oc.hdg_bug, "the selected heading bug")
 c.mode = M.PLN
 run()
-T.check(oc.hdg_ptr_pln and not oc.hdg_ptr, "PLN: the north-up rose's pointer")
+T.check(not oc.hdg_ptr_pln and not oc.hdg_ptr, "PLN's range circles: no heading pointer (no compass)")
 T.check(not oc.hdg_bug and not oc.hdg_line, "PLN: no selected heading (FCOM p.1142)")
 
 -- the dashed line: in MAP with LNAV, LOC or ROLLOUT, removed 10 s after the
@@ -402,11 +402,49 @@ T.check(oc.hdg_flag and not oc.rose and not oc.trk_flag, "405 MAP without a head
 c.hdg_valid = true
 c.mode = M.PLN
 run()
-T.equal(oc.box, 3, "405 PLAN: HDG in PLAN's box")
+T.equal(oc.box, 0, "405 PLAN's circles (LCD): no box")
 inp.track_map = true
 run()
-T.equal(oc.box, 4, "570 PLAN: TRK in PLAN's box")
+T.equal(oc.box, 0, "570 PLAN's circles: no box")
 c.mode = M.VOR
 run()
 T.equal(oc.box, 1, "VOR: HDG")
+
+-- (2026-11-05) PLAN's pictures (FCOM p.1027-1029): the range circles
+-- (the 109; the LCD 405 and 570) centred whatever CTR; the CRT 570's MAP
+-- top portion (track up, TRK box, heading pointer, wind arrow) expanded
+s, inp = M.new(), M.inputs()
+c = inp.side[M.CAPT]
+c.hdg, c.trk, c.mode, c.ias = 100, 106, M.PLN, 250
+inp.hdg_sel = 110
+run()
+oc = out[M.CAPT]
+T.check(oc.pln_style == 1 and oc.centred, "the 109's PLAN: the circles, centred (CTR off)")
+T.check(oc.up == 0 and not oc.rose and oc.box == 0, "north up, no compass, no box")
+T.check(not oc.hdg_ptr and not oc.hdg_bug and not oc.wind, "no heading pointer, bug or wind arrow (p.1142: none in the LCD's PLAN)")
+c.trk_valid = false
+run()
+T.check(not oc.trk_flag, "no TRK flag (no box)")
+c.trk_valid = true
+inp.pln_crt = true
+run()
+T.check(oc.pln_style == 2 and not oc.centred, "the CRT 570's PLAN: the MAP top portion, expanded")
+T.check(oc.up == 106 and oc.rose and oc.box == 2, "track up, the compass, TRK in the box (p.1029)")
+T.check(oc.hdg_ptr and not oc.hdg_bug and oc.wind, "the heading pointer and the wind arrow; no selected heading (p.1142)")
+c.trk_valid = false
+run()
+T.check(oc.trk_flag and not oc.rose, "its TRK box's flag without a track")
+c.trk_valid = true
+c.center = true
+run()
+T.check(oc.pln_style == 2 and not oc.centred, "CTR on: the CRT's PLAN stays expanded")
+inp.pln_crt = false
+run()
+T.check(oc.pln_style == 1 and oc.centred, "the circles' PLAN centred")
+c.mode = M.MAP
+run()
+T.check(oc.pln_style == 0 and oc.centred, "MAP CTR: centred, no PLAN")
+c.center = false
+run()
+T.check(not oc.centred, "MAP: expanded")
 T.done()

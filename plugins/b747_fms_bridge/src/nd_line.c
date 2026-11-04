@@ -32,14 +32,16 @@
  * cockpit's objects, in front of the panel), in the panel's coordinates:
  * the bearing and distance from the map's centre as the ND module's
  * getHeading and getDistance (the earth 3440 NM), from the airplane symbol
- * (MAP) or the display's centre (MAP CTR, PLAN) at the panel's positions of
+ * (MAP; the CRT's PLAN from its centre waypoint there) or the display's
+ * centre (MAP CTR, PLAN's range circles: laminar/B747/nd/<side>/centred,
+ * 2026-11-05: FCOM p.1027-1029; before, the CTR switch) at the panel's positions of
  * the ND's course lines and trend vector (the acf's groups: the Captain's
  * 335.25, the F/O's 1022.25; -95 expanded, 173.5 up centred; moved with the
  * display's position laminar/B747/flt_inst/display/<side>/nd_pos; the gauges
  * phase's coordinates NDL_PANEL_DY above the acf's: measured), clipped
  * to the map's visible part (B747.61.nd_data.lua's inside: expanded the
  * range arc ahead within the display's sides, MAP CTR the centred mask's
- * circle, PLAN the symbols' circle). A leg's great circle in pieces of at
+ * circle, PLAN the symbols' circle, NDL_PLAN_CTR_R centred). A leg's great circle in pieces of at
  * most NDL_SUB_PX pixels. Drawn on the display's power (the ND groups'
  * laminar/B747/electrical/display_has_power), at its brightness (the
  * glass's rheostat: the Captain's 2, the F/O's 3), in the panel passes of
@@ -80,6 +82,9 @@ static float ndl_lat[NDL_MAXP], ndl_lon[NDL_MAXP], ndl_pen[NDL_MAXP], ndl_view[1
    on X-Plane's own route line on an EFIS map; the panel's bottom as the
    drawing sees it: laminar/B747/nd/line/pnl_b) */
 #define NDL_PANEL_DY 259.0f
+/* (2026-11-05) PLAN centred (its range circles): the symbols' circle about
+   the display's centre (B747.61.nd_data.lua's PLAN_CTR_PX: estimate) */
+#define NDL_PLAN_CTR_R 290.0f
 static const float ndl_ox[2] = {335.25f, 1022.25f};
 static const float ndl_oy_exp = -95.0f + NDL_PANEL_DY, ndl_oy_ctr = 78.5f + NDL_PANEL_DY;
 static const float ndl_pos_dx[2][3] = {{0.0f, 1366.0f, 1366.0f}, {0.0f, 683.0f, 683.0f}};
@@ -149,8 +154,10 @@ static int ndl_found(void)
     if (!ndl_pos_ref[1]) ndl_pos_ref[1] = XPLMFindDataRef("laminar/B747/flt_inst/display/fo/nd_pos");
     if (!ndl_pnl_ref[0]) ndl_pnl_ref[0] = XPLMFindDataRef("sim/graphics/view/panel_total_pnl_l");
     if (!ndl_pnl_ref[1]) ndl_pnl_ref[1] = XPLMFindDataRef("sim/graphics/view/panel_total_pnl_b");
-    if (!ndl_ctr_ref[0]) ndl_ctr_ref[0] = XPLMFindDataRef("laminar/B747/nd/map_center/capt");
-    if (!ndl_ctr_ref[1]) ndl_ctr_ref[1] = XPLMFindDataRef("laminar/B747/nd/map_center/fo");
+    /* (2026-11-05) the map centred: B747.60.nd_model.lua's, CTR or PLAN's
+       range circles (FCOM p.1027-1028); before, the CTR switch */
+    if (!ndl_ctr_ref[0]) ndl_ctr_ref[0] = XPLMFindDataRef("laminar/B747/nd/capt/centred");
+    if (!ndl_ctr_ref[1]) ndl_ctr_ref[1] = XPLMFindDataRef("laminar/B747/nd/fo/centred");
     if (!ndl_cn_ref) ndl_cn_ref = XPLMFindDataRef("laminar/B747/nd/circle/n");
     if (!ndl_clat_ref) ndl_clat_ref = XPLMFindDataRef("laminar/B747/nd/circle/lat");
     if (!ndl_clon_ref) ndl_clon_ref = XPLMFindDataRef("laminar/B747/nd/circle/lon");
@@ -217,7 +224,7 @@ static int ndl_clip(int view, float ax, float ay, float bx, float by, float *t0,
         if (!ndl_half(ax, dx, 348.0f, -1.0f, &lo, &hi)) return 0;
         r = 465.0f;
     } else {
-        r = view == 2 ? 225.0f : 450.0f / 640.0f * 465.0f;
+        r = view == 2 ? 225.0f : (view == 4 ? NDL_PLAN_CTR_R : 450.0f / 640.0f * 465.0f);
     }
     float A = dx * dx + dy * dy, B = 2.0f * (ax * dx + ay * dy), C = ax * ax + ay * ay - r * r;
     if (A < 1e-9f) {
@@ -297,7 +304,7 @@ static void ndl_circles(const float *v, int view, float ox, float oy, float brig
         if (style < 1 || style >= NDL_STYLES || ndl_cr[c] <= 0.0f) continue;
         /* the energy management circles in MAP and MAP CTR only (FCOM
            p.1150; FIX INFO's in PLAN too) */
-        if (view == 3 && style != 6) continue;
+        if (view >= 3 && style != 6) continue;
         const float *rgb = ndl_rgb[style];
         glColor4f(rgb[0] * bright, rgb[1] * bright, rgb[2] * bright, 1.0f);
         float px = 0.0f, py = 0.0f, s = 0.0f;
@@ -324,7 +331,7 @@ static const float ndl_plane[][2] = {
     {8.5f, -21}, {0, -18}, {-8.5f, -21}, {-8.5f, -18.5f}, {-2.6f, -13}, {-2.6f, -2.5f}, {-20, -8.5f},
     {-20, -5}, {-2.6f, 5}, {-2.6f, 17}};
 #define NDL_PLANE_N ((int)(sizeof ndl_plane / sizeof ndl_plane[0]))
-static void ndl_airplane(const float *v, float ox, float oy, float bright)
+static void ndl_airplane(const float *v, int view, float ox, float oy, float bright)
 {
     double lat = XPLMGetDatad(ndl_plat_ref), lon = XPLMGetDatad(ndl_plon_ref);
     float gs = XPLMGetDataf(ndl_gs_ref);
@@ -332,7 +339,7 @@ static void ndl_airplane(const float *v, float ox, float oy, float bright)
     float trk = gs > 15.0f ? XPLMGetDataf(ndl_trk_ref) : XPLMGetDataf(ndl_psi_ref);
     float x, y;
     ndl_proj(v, lat, lon, &x, &y);
-    float r = 450.0f / 640.0f * 465.0f;
+    float r = view == 4 ? NDL_PLAN_CTR_R : 450.0f / 640.0f * 465.0f;
     if (x * x + y * y > r * r) return;
     double a = (trk - v[3]) * NDL_D2R;
     float c = (float)cos(a), s = (float)sin(a);
@@ -353,15 +360,17 @@ static void ndl_side(int side, int n, float bright)
     int pos = ndl_pos_ref[side] ? (int)(XPLMGetDataf(ndl_pos_ref[side]) + 0.5f) : 0;
     if (pos < 0) pos = 0;
     if (pos > 2) pos = 2;
-    /* the origin as the panel's: up with MAP CTR (PLAN's, as the mode
-       selector sets it) */
+    /* the origin as the panel's: up with MAP CTR and PLAN's range circles
+       (2026-11-05: the displays' centred; the CRT's PLAN expanded: FCOM
+       p.1027-1029); PLAN centred is view 4 here (its symbols' circle) */
     int ctr = view == 2;
     if (view == 3) ctr = ndl_ctr_ref[side] ? ndl_num(ndl_ctr_ref[side]) > 0.5 : 1;
+    if (view == 3 && ctr) view = 4;
     float ox = ndl_ox[side] + ndl_pos_dx[side][pos] + ndl_cal_dx;
     float oy = (ctr ? ndl_oy_ctr : ndl_oy_exp) + ndl_pos_dy[pos] + ndl_cal_dy;
-    if (view == 3 && ndl_plat_ref) {
+    if (view >= 3 && ndl_plat_ref) {
         glBegin(GL_QUADS);
-        ndl_airplane(v, ox, oy, bright);
+        ndl_airplane(v, view, ox, oy, bright);
         glEnd();
     }
     int style = 0;
