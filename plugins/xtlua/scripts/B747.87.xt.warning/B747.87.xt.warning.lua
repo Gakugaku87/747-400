@@ -687,6 +687,22 @@ local B747_CASstatusMsg = {
     {DRindex = 104, name = "BAT CHARGER MAIN"},   -- LH24 p.196
     {DRindex = 105, name = "BAT CHARGER APU"},
     {DRindex = 106, name = "ELEC TR UNIT"},       -- LH24 p.184
+    {DRindex = 107, name = "BLEED HP ENG 1"},     -- ATA30_32_35_36 p.58 (2026-11-04: the bleed air failures)
+    {DRindex = 108, name = "BLEED HP ENG 2"},
+    {DRindex = 109, name = "BLEED HP ENG 3"},
+    {DRindex = 110, name = "BLEED HP ENG 4"},
+    {DRindex = 111, name = "BLEED OVPRESS 1"},    -- ATA30_32_35_36 p.72
+    {DRindex = 112, name = "BLEED OVPRESS 2"},
+    {DRindex = 113, name = "BLEED OVPRESS 3"},
+    {DRindex = 114, name = "BLEED OVPRESS 4"},
+    {DRindex = 115, name = "BLEED PRV ENG 1"},    -- ATA30_32_35_36 p.72
+    {DRindex = 116, name = "BLEED PRV ENG 2"},
+    {DRindex = 117, name = "BLEED PRV ENG 3"},
+    {DRindex = 118, name = "BLEED PRV ENG 4"},
+    {DRindex = 119, name = "BLEED 1 OVHT"},       -- ATA30_32_35_36 p.90
+    {DRindex = 120, name = "BLEED 2 OVHT"},
+    {DRindex = 121, name = "BLEED 3 OVHT"},
+    {DRindex = 122, name = "BLEED 4 OVHT"},
 }
 
 

@@ -48,6 +48,16 @@ M.DUCT_LAG_S = 1.0
 M.ISLN_TRAVEL_S, M.APU_TRAVEL_S = 2, 2    -- motor valves (no value in the sources)
 M.EXT_AIR_PSI = 5               -- EXT AIR: "ducts pressurized"
 M.EXT_AIR_HOLD_S = 5            -- and "momentarily" after the air goes (FCOM p.578)
+-- (2026-11-04) failures (notes/ATA-36.md §10): the ASCTU's delays. The
+-- overpressure's 5 s is LH36 p.96; the valves' advisories have none in the
+-- sources (5 s: estimate); the STATUS messages' time delays are
+-- ATA30_32_35_36 p.58 (HP ENG 60 s), p.72 (PRV ENG 125 s), p.90 (OVHT 60 s)
+M.OVPRESS_DELAY_S, M.FAULT_DELAY_S = 5, 5
+M.ST_HP_S, M.ST_PRV_S, M.ST_OVHT_S = 60, 125, 60
+-- with the HPSOV failed closed the IP stage alone: full pressure from a
+-- higher N2 (estimate: the sources give the switching pressures only)
+M.IP_PSI_N2 = {45, 85}
+M.HP_N2 = 85                    -- the HP port used below it (the existing estimate)
 
 -- sections: 1 left (engines 1, 2, pack 1), 2 centre (APU, ground air,
 -- pack 2), 3 right (engines 3, 4, pack 3) (FCOM p.611-615)
@@ -78,6 +88,13 @@ function M.inputs()
         adp = {false, false},                      -- demand pumps 1 (left) and 4 (right)
         altitude = 0,                              -- ft
         air = false,                               -- (2026-11-04) in flight (the PSEU)
+        -- (2026-11-04) failures, true failed (laminar/B747/air/fail/*;
+        -- notes/ATA-36.md §10): each engine's overpressure (the PRV's
+        -- regulation), HPSOV failed closed or open, PRV failed closed or
+        -- open. The overheat (above) and the APU's air too
+        fail = {ovpress = {false, false, false, false}, hpsov_closed = {false, false, false, false},
+            hpsov_open = {false, false, false, false}, prv_closed = {false, false, false, false},
+            prv_open = {false, false, false, false}},
     }
 end
 
@@ -94,10 +111,15 @@ function M.new()
         ext_air = false}
     for n = 1, 4 do
         s.eng[n] = {ovht_t = 0, ovht_latch = false, last_on = true, start_closed_t = M.PRV_START_DELAY_S,
-            start_open = false, hpsov_cmd = true, prv_cmd = true, prsov_cmd = true}
+            start_open = false, hpsov_cmd = true, prv_cmd = true, prsov_cmd = true,
+            -- (2026-11-04) the failures' timers
+            ovp_t = 0, hpc_t = 0, hpo_t = 0, prvc_t = 0, prvo_t = 0, st_hp_t = 0, st_prv_t = 0, st_ovht_t = 0}
         out.eng[n] = {psi = 0, prsov_open = false, prv_open = false, hpsov_open = false,
             start_valve_open = false, start_cmd = false, off_alert = false, sys_fault = false,
-            ovht_alert = false, forward = false, flow = 0}
+            ovht_alert = false, forward = false, flow = 0,
+            -- (2026-11-04) BLEED n, BLEED HP ENG n; the STATUS messages
+            bleed_alert = false, hp_alert = false,
+            st_hp = false, st_ovpress = false, st_prv = false, st_ovht = false}
     end
     s.out = out
     return s
@@ -110,6 +132,12 @@ local function clamp(x, lo, hi)
 end
 
 local function ramp(x, from, to) return clamp((x - from) / (to - from), 0, 1) end
+
+-- a condition's time in t[key], 0 when it is false; returns the time
+local function tick(t, key, cond, dt)
+    if cond then t[key] = t[key] + dt else t[key] = 0 end
+    return t[key]
+end
 
 local function travel(pos, target, seconds, dt, powered)
     if not powered then return pos end
@@ -295,10 +323,17 @@ function M.update(s, inp, dt)
             se.prv_cmd = ok and (on or inp.nai_on[n]) and se.start_closed_t >= M.PRV_START_DELAY_S
             se.prsov_cmd = on and not fire
         end
-        oe.hpsov_open = se.hpsov_cmd and inp.n2[n] < 85  -- HP port at low power (estimate)
+        local f = inp.fail
+        local hp_cmd = se.hpsov_cmd and inp.n2[n] < M.HP_N2  -- HP port at low power (estimate)
+        -- (2026-11-04) the HPSOV and PRV failed closed or open
+        oe.hpsov_open = hp_cmd
+        if f.hpsov_closed[n] then oe.hpsov_open = false elseif f.hpsov_open[n] then oe.hpsov_open = true end
         oe.prv_open = se.prv_cmd
+        if f.prv_closed[n] then oe.prv_open = false elseif f.prv_open[n] then oe.prv_open = true end
         if oe.prv_open then
-            oe.psi = M.ENG_FULL_PSI * ramp(inp.n2[n], M.ENG_PSI_N2[1], M.ENG_PSI_N2[2])
+            -- the HP stage's air missing at low power: the IP stage alone (estimate)
+            local band = (hp_cmd and not oe.hpsov_open) and M.IP_PSI_N2 or M.ENG_PSI_N2
+            oe.psi = M.ENG_FULL_PSI * ramp(inp.n2[n], band[1], band[2])
         else
             oe.psi = 0
         end
@@ -309,8 +344,34 @@ function M.update(s, inp, dt)
             and math.min(M.PRSOV_REG_PSI, oe.psi) + 0.13 >= s.duct[sect]
         oe.prsov_open = oe.forward or se.reverse
         oe.off_alert = not on and inp.n2[n] > M.N2_RUNNING and not oe.prsov_open
-        oe.sys_fault = se.ovht_latch
-        oe.ovht_alert = se.ovht_latch
+        -- (2026-11-04) the ASCTU's monitoring of the valves and the
+        -- pressure, with the engine running (air to work the valves): the
+        -- HPSOV or PRV not where commanded, the overpressure (the PRV's
+        -- regulation failed: valves unchanged, LH36 p.96, p.102). Without
+        -- its DC bus the ASCTU does not monitor
+        local running = asctu and inp.n2[n] > M.N2_RUNNING
+        local hp_closed = tick(se, "hpc_t", running and hp_cmd and not oe.hpsov_open, dt) >= M.FAULT_DELAY_S
+        local hp_open = tick(se, "hpo_t", running and not hp_cmd and oe.hpsov_open, dt) >= M.FAULT_DELAY_S
+        local prv_closed = tick(se, "prvc_t", running and se.prv_cmd and not oe.prv_open, dt) >= M.FAULT_DELAY_S
+        local prv_open = tick(se, "prvo_t", running and not se.prv_cmd and oe.prv_open, dt) >= M.FAULT_DELAY_S
+        local ovp = tick(se, "ovp_t", running and f.ovpress[n] and oe.prv_open, dt) >= M.OVPRESS_DELAY_S
+        -- SYS FAULT: overheat, overpressure, the HPSOV or PRV open when
+        -- commanded closed (FCOM p.575); BLD n OVHT/PRV: overheat or the
+        -- PRV failed closed; BLEED n: overpressure or the HPSOV or PRV
+        -- failed to close; BLEED HP ENG n: the HPSOV failed closed (FCOM
+        -- p.619). The STATUS messages (ATA30_32_35_36 p.58, p.72, p.90):
+        -- BLEED HP ENG n the HPSOV open when commanded closed (60 s; the
+        -- same name as the advisory, another condition), BLEED OVPRESS n,
+        -- BLEED PRV ENG n the PRV not where commanded (125 s), BLEED n
+        -- OVHT the overheat (60 s)
+        oe.sys_fault = se.ovht_latch or ovp or hp_open or prv_open
+        oe.ovht_alert = se.ovht_latch or prv_closed
+        oe.bleed_alert = ovp or hp_open or prv_open
+        oe.hp_alert = hp_closed
+        oe.st_hp = tick(se, "st_hp_t", running and not hp_cmd and oe.hpsov_open, dt) >= M.ST_HP_S
+        oe.st_ovpress = ovp
+        oe.st_prv = tick(se, "st_prv_t", running and se.prv_cmd ~= oe.prv_open, dt) >= M.ST_PRV_S
+        oe.st_ovht = tick(se, "st_ovht_t", se.ovht_latch, dt) >= M.ST_OVHT_S
     end
 
     -- VALVE lights: moving or not where commanded (FCOM p.576; LH36 p.78);

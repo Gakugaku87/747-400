@@ -236,8 +236,9 @@ Lua が作る名前の数：dataref 1617 個、コマンド 628 個。静的に�
 - 書く dataref（名前と意味は前と同じ）：`air/engineN/bleed_air_psi`（PRV の下流の圧。ナセル防氷とピトー加熱が読む）、`engineN/bleed_valve_pos`（PRSOV。ENGINE BLEED の OFF 灯と synoptic）、`engineN/bleed_start_valve_pos`（始動弁。エンジンが読んでスターターを回す）、`isolation_valve_L_pos`・`R_pos`、`apu/bleed_valve_pos`、`duct_pressure_L`・`C`・`R`（主翼防氷、ADP、EICAS のダクト圧）。
 - X-Plane へ（3-1 で変えた）：X-Plane の与圧を上書きした（§4.11）ので、X-Plane は自分のダクトと抽気の損失を計算しない。代わりに `bleedair/indicators/bleed_available_left`・`center`・`right` にダクト圧 ÷ 27.5（上限 1.5）を書く（X-Plane のエアスターターはこれで回る。上書き前の X-Plane 自身の値に合わせた推定）。`engine_loss_from_bleed_air_ratio[n]` にそのエンジンが出す流量 × 1 ℃、`APU_loss_from_bleed_air_ratio` に APU の流量 × 15 ℃（推定）。`bleed_air_mode`（ダクトに空気があれば 5 auto、無ければ 0 off）は前のまま書く（`.snd` のパックの音が `sim/cockpit/pressure/bleed_air_on` を見る）。
 - 新設（1-5、init スクリプト `B747.55.air`）：`laminar/B747/air/light/sys_fault`（[0]〜[3]）、`light/isln_valve`（[0] L、[1] R）、`light/apu_valve`。照明モジュールが P5 の SYS FAULT・VALVE 灯に使う（`brightness_ratio` の [118]〜[121]、[72]・[73]、[74]）。3-1 段 3 で `air/ext_air`（ECS synoptic の EXT AIR：APU とエンジンが止まっているのに、パックが運転かダクトに 5 psi 以上、消えて 5 秒まで。FCOM p.578）を足した。
-- EICAS（advisory）：22〜25（BLD n OVHT/PRV）、34（>BLEED ISLN APU）、35・36（BLEED ISLN L・R）、39〜42（>BLEED n OFF）。
-- 流量は「high flow のパック 1 台＝1」の単位で数え（normal は 2/3）、ダクト圧は源の圧から使う量に応じて下げる。値の多くは推定（PROGRESS.md「推定で作った部分」）。過熱の入力はモデルにあるが、つなぐ故障がまだ無い。
+- EICAS（advisory）：22〜25（BLD n OVHT/PRV）、26〜29（BLEED n）、30〜33（BLEED HP ENG n）、34（>BLEED ISLN APU）、35・36（BLEED ISLN L・R）、39〜42（>BLEED n OFF）。STATUS：20・21（BLEED ASCTU A・B）、22・23（BLEED ISLN L・R）、24（BLEED ISLN APU）、107〜110（BLEED HP ENG n）、111〜114（BLEED OVPRESS n）、115〜118（BLEED PRV ENG n）、119〜122（BLEED n OVHT）。
+- 故障の入力（2026-11-04、init `B747.55.air`、1 で故障。故障の窓の入口：notes/ATA-36.md §10）：`air/fail/bleed_ovht[4]`（過熱）、`fail/bleed_ovpress[4]`（過圧）、`fail/hpsov_closed[4]`・`fail/hpsov_open[4]`、`fail/prv_closed[4]`・`fail/prv_open[4]`（弁が閉・開のまま）、`fail/apu_air`（X-Plane の `rel_APU_press` と同じく APU が空気を出さない）。
+- 流量は「high flow のパック 1 台＝1」の単位で数え（normal は 2/3）、ダクト圧は源の圧から使う量に応じて下げる。値の多くは推定（PROGRESS.md「推定で作った部分」）。
 
 ### 4.6 APU（2-1）
 
