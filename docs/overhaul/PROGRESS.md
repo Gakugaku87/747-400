@@ -574,6 +574,7 @@ PLAN.md §3 に書いた。要点：
   - relief valve の開固着（`B747.55.press_model.lua`）：2 つの弁の面積の半分ずつ（notes/ATA-21.md §11）。
   - 離陸警報カードの故障（`B747.45.xt.fltCtrls.lua`）：CONFIG の警報を出さない（FCOM は出ることも出ないことも）。greenband の前脚圧スイッチは、故障でなければ帯の要るとおりに読む（設定圧は資料に無い）（notes/ATA-27.md §20）。
   - ILS アンテナ（`B747.34.ils_ant_model.lua`）：FCC の APP/LOC は 3 台に同じ（シムの AFDS は 1 つ）、固着しても受信機の信号は変えない（notes/ATA-34.md §22）。
+- ND の PLAN の MAP の旗（2026-11-05、`B747.60.nd_model.lua`、notes/ATA-31.md §45）：FMC の故障（30 秒）のときだけ。位置が無いだけでは出さない（旗の出る条件は資料に無い。PLAN は位置が要らないので）。拡大の ND の選択方位のバグと破線は、画面の上から 50° の内だけ（目盛の外の出し方は資料に無い）。
 
 ## 電源（1-1）の GAP の状態
 

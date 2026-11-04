@@ -36,6 +36,13 @@ M.XP_APP, M.XP_MAP, M.XP_PLN = 0, 2, 4
 -- ROLLOUT engaged, removed 10 s after the selected heading moved (FCOM
 -- p.1142)
 M.HDG_LINE_S = 10
+-- (2026-11-05) the expanded rose's selected heading bug and dashed line
+-- only within this of the display's top: there they reach the display's
+-- sides (the panel: 442 and 440 pixels from the airplane symbol, the
+-- display 677 wide). Beyond, the panel's clipping turns with the rose and
+-- they showed on the other ND (the user's report: the Captain's bug on
+-- the F/O's ND with the selected heading well to the right)
+M.HDG_BUG_ARC_DEG = 50
 -- the wind arrow from 100 kt (the stock's IAS threshold, kept: estimate)
 M.WIND_KT = 100
 -- the EFIS control panel's VOR/ADF switches, left (VOR L, ADF L) and right
@@ -267,22 +274,36 @@ function M.update(s, inp, dt)
         local by_trk = map_modes and track_map
         o.box = (mode == M.PLN and 2 or 0) + (by_trk and 2 or 1)
         o.rose = mode == M.PLN or (by_trk and i.trk_valid) or (not by_trk and i.hdg_valid)
-        o.trk_flag = by_trk and not i.trk_valid
+        -- (2026-11-05) PLAN has no heading/track box (FCOM p.1142: all
+        -- modes but PLAN; p.1027's figure: the north arrow), so no TRK flag
+        -- there either (before, an amber TRK at the top of PLAN until the
+        -- IRS aligned: the user's report)
+        o.trk_flag = by_trk and not i.trk_valid and mode ~= M.PLN
         o.hdg_flag = not by_trk and not i.hdg_valid
         -- the map and vertical track flags: the FMC's map data (estimate:
         -- its position, which needs an IRU in NAV); the FMC the NAV source
         -- selector selects failed: VTK at once, MAP after MAP_FLAG_S, the
         -- active waypoint's ETA and distance gone (step 11d2b)
         s.fmc_t[p] = i.fmc_ok and 0 or s.fmc_t[p] + dt
-        o.map_flag = map_modes and (not inp.map_valid or s.fmc_t[p] >= M.MAP_FLAG_S)
+        -- (2026-11-05) PLAN draws the route about the STEP point and needs no
+        -- position (ATA31 p.34: flight planning on the ground and in the
+        -- air): without an IRU in NAV only MAP flags; PLAN's flag (ATA31
+        -- p.37) the FMC's failure only (estimate: when it shows is not in
+        -- the sources). Before, MAP stayed in the middle of PLAN until the
+        -- IRS aligned (the user's report)
+        o.map_flag = (mode == M.MAP and not inp.map_valid) or (map_modes and s.fmc_t[p] >= M.MAP_FLAG_S)
         o.vtk_flag = mode == M.MAP and (not inp.map_valid or not i.fmc_ok)
         o.wpt_data = inp.map_valid and i.fmc_ok
         -- the current heading pointer (FCOM p.1142): MAP, MAP CTR, PLAN; in
         -- VOR and APP it stays under the heading box (FCOM p.1024's figures)
         o.hdg_ptr = mode ~= M.PLN and o.rose and i.hdg_valid
         o.hdg_ptr_pln = mode == M.PLN and o.rose and i.hdg_valid
-        -- the selected heading: all modes but PLAN (FCOM p.1142)
-        o.hdg_bug = mode ~= M.PLN and o.rose
+        -- the selected heading: all modes but PLAN (FCOM p.1142); on the
+        -- expanded rose within HDG_BUG_ARC_DEG of the top (above), the
+        -- centred rose all round
+        local rel = ((inp.hdg_sel - o.up + 540) % 360) - 180
+        local on_rose = i.center or math.abs(rel) <= M.HDG_BUG_ARC_DEG
+        o.hdg_bug = mode ~= M.PLN and o.rose and on_rose
         o.hdg_line = o.hdg_bug and not (mode == M.MAP and lnav_loc and s.line_t >= M.HDG_LINE_S)
         -- the expanded track line (FCOM p.1143, 109): MAP; VOR and APP with
         -- WXR or TFC on (the stock's rule); with a track
