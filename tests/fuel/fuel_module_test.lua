@@ -254,4 +254,28 @@ do
     T.equal(rt5:get(SYN_MAIN, 0), 0, "KGS: main 1 at 905 kg white on the synoptic (900 kg)")
 end
 
+-- (2026-11-04) the failures through their datarefs (notes/ATA-28.md §11):
+-- pump 1 FWD (index 0 of the model's PUMPS) with its switch ON: the PRESS
+-- light; FJCC A: >FUEL JETT A (advisory 151); the temperature sensor:
+-- FUEL TEMP SYS (173); X FEED 1 stuck (valve index 0) with its switch OFF:
+-- still open
+do
+    local rt6 = aircraft({0, 10000, 20000, 20000, 10000, 0, 0, 0})
+    for _, x in ipairs(MAIN_SWITCHES) do rt6:set(SWITCH, x, 1) end
+    frames(rt6, 3)
+    T.equal(rt6:get(PRESS, 0), 0, "(main 1 FWD ON: no PRESS light)")
+    local FAIL = "laminar/B747/fuel/fail/"
+    rt6:set(FAIL .. "pump", 0, 1)
+    rt6:set(FAIL .. "fjcc", 0, 1)
+    rt6:set(FAIL .. "temp", 1)
+    rt6:set(FAIL .. "valve", 0, 1)
+    rt6:set(SWITCH, 48, 0)                                          -- X FEED 1 OFF
+    frames(rt6, 2)
+    T.equal(rt6:get(PRESS, 0), 1, "pump 1 FWD failed: its PRESS light")
+    T.equal(rt6:get(ADVISORY, 151), 1, "FJCC A failed: >FUEL JETT A")
+    T.equal(rt6:get(ADVISORY, 152), 0, "no >FUEL JETT B")
+    T.equal(rt6:get(ADVISORY, 173), 1, "the temperature sensor: FUEL TEMP SYS")
+    T.equal(rt6:get("laminar/B747/fuel/light/xfeed_valve", 0), 1, "X FEED 1 stuck open with its switch OFF: its VALVE light")
+end
+
 T.done()

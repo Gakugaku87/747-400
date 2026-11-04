@@ -288,6 +288,18 @@ B747DR_fuel_control_toggle_switch_pos   = deferred_dataref("laminar/B747/fuel/fu
 B747DR_stab_fuel_pump_press_low_L       = deferred_dataref("laminar/B747/fuel/stab_pump_L/pressure_low", "number")
 B747DR_stab_fuel_pump_press_low_R       = deferred_dataref("laminar/B747/fuel/stab_pump_R/pressure_low", "number")
 
+-- (2026-11-04) failures, 1 failed (the fuel model's inputs, for the failure
+-- window; docs/overhaul/notes/ATA-28.md §11): each pump in the order of
+-- B747_fuel_model.PUMPS (below), each valve stuck in the order of
+-- B747_fuel_model.VALVES (X FEED 1-4, the spar valves 1-4, the reserve
+-- transfer valves 2A, 2B, 3A, 3B, the main 1 and 4 transfer valves, the
+-- jettison valves CTR L, CTR R, main 2, main 3, the nozzle valves L, R, the
+-- APU fuel valve), the temperature sensor, FJCC A and B
+B747DR_fuel_fail_pump                   = deferred_dataref("laminar/B747/fuel/fail/pump", "array[16]")
+B747DR_fuel_fail_valve                  = deferred_dataref("laminar/B747/fuel/fail/valve", "array[21]")
+B747DR_fuel_fail_temp                   = deferred_dataref("laminar/B747/fuel/fail/temp", "number")
+B747DR_fuel_fail_fjcc                   = deferred_dataref("laminar/B747/fuel/fail/fjcc", "array[2]")
+
 -- overhead panel lights from the fuel model (1 on), read by the lighting
 -- module: PRESS in the order of B747_fuel_model.PUMPS (MAIN 1 FWD, 1 AFT,
 -- 2 FWD, 2 AFT, 3 FWD, 3 AFT, 4 FWD, 4 AFT, OVRD 2 FWD, 2 AFT, 3 FWD, 3 AFT,
