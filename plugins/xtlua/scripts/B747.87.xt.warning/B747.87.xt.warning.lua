@@ -719,6 +719,9 @@ local B747_CASstatusMsg = {
     {DRindex = 136, name = "FLT DK LOW FLOW"},
     {DRindex = 137, name = "EQUIPMENT SMOKE"},
     {DRindex = 138, name = "E/E CLNG CARD"},      -- ATA21 p.510
+    {DRindex = 139, name = "A/G DISAGREE"},       -- ATA29_32 p.338, p.341 (2026-11-04: the gear failures)
+    {DRindex = 140, name = "GEAR MONITOR"},       -- ATA29_32 p.666
+    {DRindex = 141, name = "GEAR TILT"},          -- ATA29_32 p.341
 }
 
 

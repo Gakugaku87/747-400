@@ -36,6 +36,10 @@ B747DR_gact_fail_actuator       = find_dataref("laminar/B747/gear/fail/actuator"
 B747DR_gact_fail_door           = find_dataref("laminar/B747/gear/fail/door")
 B747DR_gact_fail_indication     = find_dataref("laminar/B747/gear/fail/indication")
 B747DR_gact_fail_tilt           = find_dataref("laminar/B747/gear/fail/truck_tilt")
+-- (2026-11-04) one subsystem's position sensing failed (notes/ATA-32.md
+-- §17); STATUS GEAR MONITOR and GEAR TILT
+B747DR_gact_fail_sensor         = find_dataref("laminar/B747/gear/fail/position_sensor")
+B747DR_gact_status              = find_dataref("laminar/B747/CAS/status_status")
 
 -- X-Plane's gear index of the nose, left body, right body, left wing and
 -- right wing gear (acf: 0 nose, 1 right body, 2 left body, 3 right wing,
@@ -44,6 +48,7 @@ local XP = {0, 2, 1, 4, 3}
 local ALTN_NOSE_BODY, ALTN_WING = 1, 2      -- button_switch/position
 -- EICAS slots (B747.87.xt.warning.lua)
 local CAUT_GEAR_DISAGREE, CAUT_GEAR_TILT, ADV_GEAR_DOOR = 38, 39, 180
+local STATUS_GEAR_MONITOR, STATUS_GEAR_TILT = 140, 141
 local INIT_S = 3                    -- the first reads of X-Plane's values are 0: the
                                     -- gear stays where X-Plane has it meanwhile
 
@@ -105,6 +110,7 @@ function B747_gear_act()
         inp.stuck[i] = act or gact_rel[x + 1] == 6 or B747DR_gact_fail_actuator[i - 1] > 0.5
         inp.door_stuck[i] = B747DR_gact_fail_door[i - 1] > 0.5
         inp.ind_fail[i] = ind or B747DR_gact_fail_indication[i - 1] > 0.5
+        inp.sensor_fail[i] = B747DR_gact_fail_sensor[i - 1] > 0.5
     end
 
     local out
@@ -133,4 +139,8 @@ function B747_gear_act()
     put(B747DR_gact_caution, CAUT_GEAR_DISAGREE, flag(out.gear_disagree))
     put(B747DR_gact_caution, CAUT_GEAR_TILT, flag(out.gear_tilt))
     put(B747DR_gact_advisory, ADV_GEAR_DOOR, flag(out.gear_door))
+    -- (2026-11-04) the STATUS messages: GEAR MONITOR (ATA29_32 p.666), GEAR
+    -- TILT as the caution (p.341)
+    put(B747DR_gact_status, STATUS_GEAR_MONITOR, flag(out.gear_monitor))
+    put(B747DR_gact_status, STATUS_GEAR_TILT, flag(out.gear_tilt))
 end

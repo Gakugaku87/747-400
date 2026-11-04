@@ -401,3 +401,15 @@ X-Plane の `sim/flightmodel/failures/onground_any`（どれか 1 輪が接地�
 
 - 飛行の始まり：XTLua はモジュールを機体の読み込みの数十秒後に動かすので、gear の init スクリプトが、機体の読み込みと各飛行の始まりに、PSEU の air・ground を X-Plane の接地から入れておく（gear のモジュールが毎フレーム計算するまでのつなぎ）。地上の開始で FMC や AFDS が空中と取り違えないため。
 - 回帰試験：モジュールを単独で読む試験は gear のモジュールが PSEU を計算しないので、`onground_any` を書く所で `laminar/B747/gear/air_ground/pri_gnd` も同じ値にした（autopilot・fms・displays・fltctrls・eec の 59 本、機械的に）。
+
+## 17. 故障の入力（2026-11-04：故障の窓の F0、GEAR-22 の残り）
+
+- 新しい dataref（1 で故障。init `B747.10.gear`）：`laminar/B747/gear/fail/air_gnd[2]`（[0] primary、[1] alternate の landing gear subsystem が空中の位置に固着）、`fail/position_sensor[5]`（その脚の位置の検知の片系統の故障。順は前脚、左胴体、右胴体、左翼、右翼）。前からの `fail/actuator`・`door`・`indication`・`truck_tilt`、ブレーキ・ステアリング・BTMS の故障はそのまま。
+- 空中に固着した subsystem は、センサーに関係なく AIR を出す（GND は出さない）。地上では、それを読む系統が空中として動く。両方なら QRH 14.1 のとおり、逆推力・自動のスピードブレーキ・オートブレーキが働かず、手動のスピードブレーキは飛行の位置まで（各系統の論理が PSEU を読む結果：§16）。
+- AIR/GND SYSTEM（advisory 5）：どちらかの subsystem が空中に固着（FCOM p.1521）。PSEU の監視（ATA29_32 p.325–328 の BITE）が見つけるとして、地上でも空中でもすぐ出す（片系統でも出すことと、すぐ出すことは推定）。
+- STATUS A/G DISAGREE（139）：primary と alternate の出力の不一致が 10 秒。main battery bus・AC bus 2・AC bus 4 のどれかが無いと出さない（ATA29_32 p.338、p.341）。両方が固着すると一致するので消える。
+- STATUS GEAR MONITOR（140）：位置の検知の片系統の故障（primary と alternate の位置の表示の不一致を PSEU の BITE が見つける）。表示はもう片方の系統で出たまま、MULTIPLE GEAR の表示にはしない（ATA29_32 p.666）。遅れは資料に無いのですぐ。
+- STATUS GEAR TILT（141）：caution の GEAR TILT と同じ条件（ATA29_32 p.341。系統 1・4 の低圧で抑止）。
+- 作らないもの：NOSE A/G DISAGREE（前脚の圧縮の検知の片系統の故障：p.338、p.341）は、片系統の前脚の検知がどの系統の論理に効くか資料に無いので作っていない。PARK BRK VALVE の STATUS は資料に見つからない。
+- 試験：新しい回帰 `pseu_fail_test`（15 件）、`pseu_module_test` 20、`gear_act_module_test` 32。
+- X-Plane（カスタム acf、2026-11-04）：新しい `s233_gear_failures` 17/17（成田でエンジン運転中：前脚の位置の検知の片系統で STATUS GEAR MONITOR、表示は DN のまま。alternate の固着で alternate だけ空中、AIR/GND SYSTEM、10 秒で STATUS A/G DISAGREE（SPEEDBRAKE AUTO と CPCS AIR/GND も、それぞれの系統の不一致の判定で出る）。primary も固着すると両方が空中で A/G DISAGREE は消え、与圧は飛行のモード、ANTISKID OFF・BRAKE LIMITER・>FUEL LOW CTR などが空中の論理で出る。上の EICAS と STATUS ページの写真）、回帰の `s35_gear` 29/29、`s36_gear_lock` 11/11。Log.txt に Lua の誤りなし。

@@ -61,6 +61,9 @@ function M.inputs()
         stuck = five(false),                -- the gear does not move
         door_stuck = five(false),           -- its door does not move
         ind_fail = five(false),             -- its position indication lost (primary and alternate)
+        -- (2026-11-04) one subsystem's position sensing of the gear failed:
+        -- the other keeps the indication; GEAR MONITOR (ATA29_32 p.666)
+        sensor_fail = five(false),
     }
 end
 
@@ -75,6 +78,7 @@ function M.new()
         annun = M.IND_DOWN,                 -- the normal display
         display = M.DISPLAY_NORMAL,
         gear_disagree = false, gear_door = false, gear_tilt = false,
+        gear_monitor = false,               -- (2026-11-04) STATUS GEAR MONITOR
     }
     return s
 end
@@ -182,6 +186,12 @@ function M.update(s, inp, dt)
     end
     out.all_down, out.all_up, out.moving = all_down, all_up, moving
     out.gear_disagree = any_disagree
+    -- (2026-11-04) GEAR MONITOR: the primary and alternate position
+    -- indication disagree, found by the PSEU's BITE; no MULTIPLE GEAR
+    -- display (ATA29_32 p.666)
+    local monitor = false
+    for i = 1, 5 do if inp.sensor_fail[i] then monitor = true end end
+    out.gear_monitor = monitor
     -- GEAR DOOR: a door not closed; not with an alternate extension selected
     -- or used (ATA29_32 p.664, p.673)
     if any_door and not any_altn then s.door_t = s.door_t + dt else s.door_t = 0 end
