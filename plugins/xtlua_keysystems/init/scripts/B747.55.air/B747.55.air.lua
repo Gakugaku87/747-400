@@ -148,6 +148,25 @@ B747DR_air_fail_hpsov_open          = deferred_dataref("laminar/B747/air/fail/hp
 B747DR_air_fail_prv_closed          = deferred_dataref("laminar/B747/air/fail/prv_closed", "array[4]")
 B747DR_air_fail_prv_open            = deferred_dataref("laminar/B747/air/fail/prv_open", "array[4]")
 B747DR_air_fail_apu_air             = deferred_dataref("laminar/B747/air/fail/apu_air", "number")
+-- (2026-11-04) the air conditioning failures (1 failed; the models' inputs,
+-- for the failure window: docs/overhaul/notes/ATA-21.md §10): a pack
+-- overheat (trips it), PTC A and B, the recirculation fans (1 upper right,
+-- 2 upper left, 3 lower left, 4 lower right); equipment cooling's supply
+-- and exhaust fans, its overheat, low flow, flight deck low flow, smoke and
+-- card; a critical ZTC failure, the master trim air valve failed closed, a
+-- zone trim air valve failed open (F/D, U/D, A-E)
+B747DR_air_fail_pack_ovht           = deferred_dataref("laminar/B747/air/fail/pack_ovht", "array[3]")
+B747DR_air_fail_ptc                 = deferred_dataref("laminar/B747/air/fail/ptc", "array[2]")
+B747DR_air_fail_recirc_fan          = deferred_dataref("laminar/B747/air/fail/recirc_fan", "array[4]")
+B747DR_air_fail_eq_fan              = deferred_dataref("laminar/B747/air/fail/eq_fan", "array[2]")
+B747DR_air_fail_eq_ovht             = deferred_dataref("laminar/B747/air/fail/eq_ovht", "number")
+B747DR_air_fail_eq_low_flow         = deferred_dataref("laminar/B747/air/fail/eq_low_flow", "number")
+B747DR_air_fail_fd_low_flow         = deferred_dataref("laminar/B747/air/fail/fd_low_flow", "number")
+B747DR_air_fail_eq_smoke            = deferred_dataref("laminar/B747/air/fail/eq_smoke", "number")
+B747DR_air_fail_eq_card             = deferred_dataref("laminar/B747/air/fail/eq_card", "number")
+B747DR_air_fail_ztc                 = deferred_dataref("laminar/B747/air/fail/ztc", "number")
+B747DR_air_fail_trim_valve          = deferred_dataref("laminar/B747/air/fail/trim_valve", "number")
+B747DR_air_fail_zone_valve          = deferred_dataref("laminar/B747/air/fail/zone_valve", "array[7]")
 -- the temperature model (B747.55.xt.temp.lua), °C: the zones F/D, U/D,
 -- A-E actual and target, the targets shown (1: a pack operating and no
 -- backup, FCOM p.577), MASTER (the PASS TEMP setting), the cargo FWD, AFT,

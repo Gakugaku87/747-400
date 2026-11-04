@@ -22,6 +22,12 @@ B747DR_temp_pack_outlet         = find_dataref("laminar/B747/air/temp/pack_outle
 B747DR_temp_trim_air_valve      = find_dataref("laminar/B747/air/temp/trim_air_valve")
 B747DR_temp_light_zone_fault    = find_dataref("laminar/B747/air/light/zone_sys_fault")
 B747DR_temp_light_aft_cargo     = find_dataref("laminar/B747/air/light/aft_cargo_temp")
+-- (2026-11-04) the failures (notes/ATA-21.md §10): a critical ZTC failure,
+-- the master trim air valve failed closed, a zone trim air valve failed
+-- open (F/D, U/D, A-E)
+B747DR_air_fail_ztc             = find_dataref("laminar/B747/air/fail/ztc")
+B747DR_air_fail_trim_valve      = find_dataref("laminar/B747/air/fail/trim_valve")
+B747DR_air_fail_zone_valve      = find_dataref("laminar/B747/air/fail/zone_valve")
 
 local SW_ZONE_RST, SW_TRIM_AIR, SW_AFT_CARGO_HT, SW_CARGO_ARM_AFT = 36, 37, 40, 85
 -- EICAS slots (B747.87.xt.warning.lua)
@@ -73,6 +79,9 @@ function B747_temp()
     inp.alt_ft = simDR_press_pressure_alt
     inp.agl_ft = simDR_press_agl * 3.28084
     inp.on_ground = B747DR_pack_pseu_pri_gnd == 1
+    inp.ztc_failed = B747DR_air_fail_ztc > 0.5
+    inp.trim_valve_failed = B747DR_air_fail_trim_valve > 0.5
+    for z = 1, 7 do inp.zone_valve_open[z] = B747DR_air_fail_zone_valve[z - 1] > 0.5 end
     inp.cruise_clamp = B747_press_out.cruise_clamp
     inp.descent = B747_press_out.mode == B747_press_model.DESCENT
     inp.skin_c = simDR_temp_tat

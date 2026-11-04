@@ -19,6 +19,11 @@ B747DR_recirc_fan               = find_dataref("laminar/B747/air/recirc_fan")
 B747DR_pack_light_sys_fault     = find_dataref("laminar/B747/air/light/pack_sys_fault")
 B747DR_pack_pseu_pri_gnd        = find_dataref("laminar/B747/gear/air_ground/pri_gnd")
 B747DR_pack_elec_any_ac         = find_dataref("laminar/B747/electrical/bus/any_ac")
+-- (2026-11-04) the failures (notes/ATA-21.md §10) and the STATUS messages
+B747DR_air_fail_pack_ovht       = find_dataref("laminar/B747/air/fail/pack_ovht")
+B747DR_air_fail_ptc             = find_dataref("laminar/B747/air/fail/ptc")
+B747DR_air_fail_recirc_fan      = find_dataref("laminar/B747/air/fail/recirc_fan")
+B747DR_pack_status              = find_dataref("laminar/B747/CAS/status_status")
 
 local SW_TRIM_AIR, SW_RECIRC_UPR, SW_RECIRC_LWR, SW_HI_FLOW, SW_PACK_RST = 37, 38, 39, 41, 42
 local SW_CARGO_ARM_FWD, SW_CARGO_ARM_AFT = 84, 85
@@ -26,6 +31,10 @@ local SW_CARGO_ARM_FWD, SW_CARGO_ARM_AFT = 84, 85
 local ADV_PACK_CONTROL, ADV_PACK = 251, 252          -- PACK 1-3: 252-254
 local MEMO_PACK_OFF, MEMO_PACKS_12, MEMO_PACKS_13, MEMO_PACKS_23 = 18, 21, 22, 23
 local MEMO_HIGH_FLOW, MEMO_PACKS_OFF = 24, 25
+-- STATUS (2026-11-04): PACK 1-3 123-125, PACK CONTROL A, B 126-127, RECIRC
+-- FAN UPR L, UPR R, LWR L, LWR R 128-131 (the fans 2, 1, 3, 4)
+local STATUS_PACK, STATUS_PTC = 123, 126
+local STATUS_FAN = {129, 128, 130, 131}             -- by fan: 1 upper right, 2 upper left, 3 lower left, 4 lower right
 
 local pack_state = P.new()
 local pack_inputs = P.inputs()
@@ -74,6 +83,9 @@ function B747_packs()
         inp.ac[i] = B747DR_bleed_elec_ac[i - 1] > 0.5
     end
     inp.any_ac = B747DR_pack_elec_any_ac > 0.5
+    for p = 1, 3 do inp.overheat[p] = B747DR_air_fail_pack_ovht[p - 1] > 0.5 end
+    for c = 1, 2 do inp.ptc_failed[c] = B747DR_air_fail_ptc[c - 1] > 0.5 end
+    for f = 1, 4 do inp.fan_failed[f] = B747DR_air_fail_recirc_fan[f - 1] > 0.5 end
     local out = P.update(pack_state, inp, SIM_PERIOD)
 
     for p = 1, 3 do
@@ -84,6 +96,9 @@ function B747_packs()
         put(B747DR_CAS_advisory_status, ADV_PACK + i, flag(out.pack_alert[p]))
     end
     for f = 1, 4 do put(B747DR_recirc_fan, f - 1, flag(out.fan[f])) end
+    for p = 1, 3 do put(B747DR_pack_status, STATUS_PACK + p - 1, flag(out.st_pack[p])) end
+    for c = 1, 2 do put(B747DR_pack_status, STATUS_PTC + c - 1, flag(out.st_ptc[c])) end
+    for f = 1, 4 do put(B747DR_pack_status, STATUS_FAN[f], flag(out.st_fan[f])) end
     local n, fault = out.packs_operating, flag(out.sys_fault)
     if B747DR_packs_operating ~= n then B747DR_packs_operating = n end
     if B747DR_pack_light_sys_fault ~= fault then B747DR_pack_light_sys_fault = fault end
