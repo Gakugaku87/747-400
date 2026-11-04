@@ -49,6 +49,10 @@ function M.inputs()
         -- does not reset it)
         limit_fail = false,
         duct_leak = false,
+        -- the inlet door's actuator jammed: the door stays where it is (APU
+        -- DOOR once commanded elsewhere, FCOM p.902; closed, the starter
+        -- never engages, p.896)
+        door_stuck = false,
     }
 end
 
@@ -142,7 +146,7 @@ function M.update(s, inp, dt)
     -- the inlet door: open with the selector on (the door needs battery
     -- power: estimate) and while the APU turns; closed once it has run down
     local door_cmd = (on and inp.battery and not s.fault and not s.leak_fault) or turning
-    if inp.battery then s.door = step(s.door, door_cmd and 1 or 0, 1 / M.DOOR_TRAVEL_S, dt) end
+    if inp.battery and not inp.door_stuck then s.door = step(s.door, door_cmd and 1 or 0, 1 / M.DOOR_TRAVEL_S, dt) end
     local at_cmd = (door_cmd and s.door >= 1) or (not door_cmd and s.door <= 0)
     if at_cmd or door_cmd ~= s.door_cmd then
         s.door_disagree_t = 0                       -- in place, or a new command starts the travel

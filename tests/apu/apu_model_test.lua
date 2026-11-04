@@ -266,4 +266,32 @@ do
     out = run(s, inp, 100)
     T.equal(out.state, A.RUNNING, "the leak repaired and OFF: it starts again")
 end
+
+-- the inlet door jammed (the failure window, notes/ATA-49.md §12): closed,
+-- the starter never engages and APU DOOR comes 20 s after the command
+-- (FCOM p.896, p.902); freed, the start goes on. Jammed open with the APU
+-- running: after the shutdown APU DOOR
+do
+    local s, inp = fresh()
+    inp.door_stuck = true
+    start(inp)
+    local out = run(s, inp, 15)
+    T.check(out.door == 0 and out.starter == 0 and out.state == A.OFF, "door jammed closed: no starter")
+    T.check(not out.adv_door, "15 s: no APU DOOR yet")
+    out = run(s, inp, 6)
+    T.check(out.adv_door, "past 20 s: APU DOOR")
+    inp.door_stuck = false
+    out = run(s, inp, 13)
+    T.check(not out.adv_door and out.door == 1, "freed: the door open, no APU DOOR")
+    out = run(s, inp, 100)
+    T.equal(out.state, A.RUNNING, "freed: the start goes on (the latch kept)")
+    inp.door_stuck = true
+    inp.selector = 0
+    out = run(s, inp, 100)
+    T.check(out.state == A.OFF and out.door == 1, "jammed open: stopped, the door still open")
+    T.check(out.adv_door, "jammed open after the shutdown: APU DOOR")
+    inp.door_stuck = false
+    out = run(s, inp, 13)
+    T.check(not out.adv_door and out.door == 0, "freed: closed, no APU DOOR")
+end
 T.done()

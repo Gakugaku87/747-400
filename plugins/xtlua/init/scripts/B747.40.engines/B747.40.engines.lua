@@ -87,6 +87,8 @@ B747DR_engine_apu_n2      	        = deferred_dataref("laminar/B747/apu/n2", "nu
 -- APU bleed duct's leak
 B747DR_apu_fail_limit               = deferred_dataref("laminar/B747/apu/fail/limit", "number")
 B747DR_apu_fail_duct_leak           = deferred_dataref("laminar/B747/apu/fail/duct_leak", "number")
+-- the inlet door's actuator jammed (APU DOOR: notes/ATA-49.md §12)
+B747DR_apu_fail_door                = deferred_dataref("laminar/B747/apu/fail/door", "number")
 -- (2026-11-04) the engines' scavenge oil filter clogging (1 failed; ENG n
 -- OIL FILT on the CF6: docs/overhaul/notes/ATA-70-80.md §11)
 B747DR_engine_fail_oil_filter       = deferred_dataref("laminar/B747/engines/fail/oil_filter", "array[4]")

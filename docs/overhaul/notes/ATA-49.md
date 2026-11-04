@@ -187,3 +187,10 @@
 - 抽気ダクトの漏れ：停止して再始動できない（FCOM p.613）。selector OFF でもこの fault は戻らない（p.867）。漏れがある間は START にしても始動せず、吸気ドアも開かず、selector ON で APU。故障の窓で漏れを消して selector を OFF にすると戻る（窓の「修理」。実機では整備）。漏れで止まるのは始動中・運転中・cooldown 中（止まっているときの漏れは次の始動で）。
 - 試験：`apu_model_test` 64、`apu_module_test` 36。
 - X-Plane（カスタム acf、2026-11-04）：新しい `s236_apu_failures` 10/10（成田でエンジン運転中に APU を始動：限界の超過で即停止して APU、回り終わって OFF で消える。抽気ダクトの漏れでは START にしても始動せず、吸気ドアも閉じたまま APU。漏れを消して OFF で消える）、回帰の `s22_fire_engine_apu` 45/45。Log.txt に Lua の誤りなし。
+
+## 12. 吸気ドアの固着（2026-11-04：故障の窓のため）
+
+- 新しい dataref（1 で故障。init `B747.40.engines`）：`laminar/B747/apu/fail/door`（吸気ドアのアクチュエータの固着：ドアがその位置のまま）。
+- 前からの論理がそのまま働く：閉で固着すると、selector を START にしてもドアが全開にならず starter が入らない（FCOM p.896）。指令の位置に無い時間が 20 秒で APU DOOR（FCOM p.902）。開で固着すると、停止の後に APU DOOR。故障を消すとドアが動き、START の latch が残っていれば始動が続く。
+- 試験：`apu_model_test` 72、`apu_module_test` 40。
+- X-Plane（カスタム acf、2026-11-04）：`s247_failures_more` 38/38（成田で窓の章 49 の行を押してドアを固着、APU を START：20.4 秒で APU DOOR、N1 は 0 のまま。REPAIR ALL でドアが開き、START の latch が残っていて 15 秒で N1 10 % 超、APU DOOR は消えた。窓の写真）。Log.txt に Lua の誤りなし。
