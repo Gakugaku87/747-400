@@ -681,7 +681,7 @@ PLAN.md §3 に書いた。要点：
 | FUEL-10 水平安定板タンク | 済（移送の条件、低圧で止まる、ジェティソンでは機外へ、FUEL STAB XFR・FUEL PRES STB・>FUEL PMP STB。貨物機の設定では使わない） |
 | FUEL-11 予備移送 | 済（主 2 か 3 が 18,200 kg で 4 弁とも、空中だけ、接地で閉、FUEL RES XFR 2・3） |
 | FUEL-12 ジェティソン | 済（FTR で停止、主 2・3 の均衡、主 1・4 の移送、CWT は約 1,185 kg まで、ノズル弁はスイッチ直結、時間の 90 秒後の更新、終了後の FUEL OVRD）。>FUEL JETT A・B は FJCC の故障が無いので出ない |
-| FUEL-13 FMC の燃料 | 未（FMC で。FUEL USED の [4] はエンジンだけにした） |
+| FUEL-13 FMC の燃料 | 済（2026-11-01、FMC の段 11a：notes/ATA-34-61-FMC.md §90。CALC・MANUAL・SENSED、始動からの FUEL USED、TOTALIZER と CALCULATED、FUEL DISAGREE - PROG 2 と USE の選択、INSUFFICIENT FUEL。燃料系の側は FUEL USED の [4] をエンジンだけにした。この行は 2026-11-04 に直した） |
 | FUEL-14 スカベンジ | 済（ジェットポンプ 4 本で合計約 1,200 lb/h、主 2・3 のポンプで動く。>SCAV PUMP ON は 405 だけなので出さない） |
 | FUEL-15 故障と不一致 | 一部。不一致（FUEL X FEED、>JETT NOZZLE、FUEL RES XFR）は済。ポンプ・弁の故障、FUEL TEMP SYS は未 |
 | FUEL-16 FUEL OVRD | 済 |
@@ -692,7 +692,7 @@ PLAN.md §3 に書いた。要点：
 | FUEL-21 開始時の配分と給油 | 一部。前の配分（地上で 100 t 超）と給油の順序は残した（資料で確かめられない）。配分で 1,428 kg 失われていたのと、給油が X-Plane の量と食い違うのは直した |
 | FUEL-22 APU の消費 | 済（主 2 から。150 kg/h は推定） |
 | FUEL-23 タンク 7 の役割 | 対応不要（override 中） |
-| FUEL-24 synoptic の制約 | 未（パネル。ポンプの琥珀・主タンクの琥珀の条件、FTR の単位） |
+| FUEL-24 synoptic の制約 | 済（2026-11-04、notes/ATA-28.md §10：燃料モデルが synoptic の状態を出し、パネルはそれを読む。ポンプは白・cyan・緑・琥珀・magenta、主タンクは 900 kg（LBS の機体は 2,000 lb）未満と向かい合うタンクの不均衡で両方琥珀、吸引供給のエンジンと流れ線は琥珀（新しい絵）、主 EICAS の FTR は表示の単位で、完了で白（5 秒の点滅の 2 Hz は推定）。`blaminar` の誤記も消えた。xfeed 弁の緑は「燃料あり」の定義が資料に無いので作らない。コンパクト表示は表示故障と一緒に） |
 | FUEL-25 EICAS の文言 | 済（1-3 で）。>FUEL WING ISOL はこの FCOM に無いので出さない |
 
 ## エンジン（2-3）の GAP の状態
@@ -1562,3 +1562,4 @@ X-Plane（カスタム acf）：`s07_cruise_ff`（FL350 の ALT HOLD：最後の
 - 2026-11-04：autoland の接地（notes/ATA-22.md §51）。記録 v11（AFDS のピッチの指令、飛行モデルの昇降率、スピードブレーキ、PSEU、脚の力）と `tests/flight/tools/touchdown.awk` を足した。NOSE LETDOWN は接地の時の姿勢から毎秒 2° で機首下げの指令まで、段と 2° での飛びはなし、跳ねて地上を離れている間は保つ（FCTM p.222–223）。カスタム acf の主脚の strut の低い方の点を総重量の点への直線に（利用者の承認、ACF_DIFF.md §5、測定 `gear_exterior_ground`）。s114・s116・s117 は合格（WARN 1：接地の後の 0.7〜0.9 秒の小さな浮き、s116 は FLARE の途中の浮き上がり）。前脚は毎秒約 2° で接地（前は 3〜4°）。s07 はシナリオを直して 7/7（IAS/MACH の窓を IAS に戻す）。利用者の決定：故障の窓（APU・燃料などを仕上げてから）、主脚の strut、始動の空気のスターターの回り方は詰めない（上の「決まったこと（2026-11-04、利用者の回答）」）。ND の FMC の記号の残り（FIX の基準点・方位線・距離の円、OFFPATH DES のページとエネルギー管理の円）は作る（利用者：「作れるなら作ってね」）：次に行う。
 - 2026-11-04：ND の FMC の記号の残り（DSP-23、notes/ATA-34-61-FMC.md §143。利用者：「作れるなら作ってね」）。FIX INFO：交点の ETA と予測の高度、PRED ETA-ALT の経路に沿った距離（予測の形 `pred_model.profile`）。ND：FIX の基準点（記号の絵の 12 番、緑の名前）、方位の放射線と距離の円（緑の破線）、PRED ETA-ALT の点（緑の profile の円と入れた値）。FMS ブリッジに円の描き方（`laminar/B747/nd/circle/*`）と形 6〜8 を足した（プラグインを作り直した）。新しい OFFPATH DES のページ（DES のページと 109 の DESCENT FORECAST の <OFFPATH DES から）と ND のエネルギー管理の円（clean は青、drag は白：速度ブレーキの抵抗 1.58 倍は推定）。回帰 201 本。X-Plane：`s96_fixinfo` 33/33（写真で ND の記号・線・円を確かめた）、新しい `s221_offpath_des` 17/17（ND の clean と drag の円を写真で確かめた）。
 - 2026-11-04：APU（notes/ATA-49.md §10）。始動電源（APU-09：109・405 は主と APU のバッテリー、570 は主バッテリーと APU start TR（utility bus 4）か APU バッテリー、電源が無いと始動が始まらない、570 の TR 始動は APU バッテリーに starter の電流なし：FCOM p.895–896）と空中の APU 抽気（APU-10：1 パック分・15,000 ft まで：FCOM p.895）。始動回数の制限は乗員の制限なので作らない。油の消費（APU-02）と CF6 の増風要求（APU-12）は値が資料に無いので作らない。回帰 201 本。X-Plane：`s00_baseline_start` 69/69、`s02_elec_panel` 63/63、`s05_bleed` 64/64、`s08_autostart` 56/56、`s14_press_ground` 67/67、Lua の誤りなし。
+- 2026-11-04：FUEL-13 の行を直した（FMC の段 11a で済んでいた：notes/ATA-34-61-FMC.md §90）。FUEL-24（燃料 synoptic の色と主 EICAS の FTR、notes/ATA-28.md §10）：燃料モデルが synoptic の状態（ポンプごとの白・cyan・緑・琥珀・magenta、主タンクの琥珀、吸引供給、FTR の色）を出し、カスタム acf のパネルはそれを読む（`panel_fuel_synoptic.lua`、137 の変更、ACF_DIFF.md §5）。新しい dataref は `laminar/B747/fuel/synoptic/pump`・`main_amber`・`suction` と `fuel_to_remain/display`・`state`（INTERFACES.tsv）。琥珀のエンジン記号と流れ線の絵は純正の絵の色だけを変えた（`make_fuel_images.ps1`）。推定は FTR の点滅の速さ（2 Hz）だけ。xfeed 弁の緑とコンパクト表示は作らない（上の行）。回帰 201 本。X-Plane：新しい `s222_fuel_synoptic` 55/55（写真で色を確かめた）、`s06_fuel` 42/42、Lua の誤りなし。

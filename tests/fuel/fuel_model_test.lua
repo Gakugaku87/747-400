@@ -352,4 +352,129 @@ do
     T.check(out.cas.apu_fuel, "APU FUEL: the valve not open after 10 s")
 end
 
+-- the synoptic (FCOM p.1447-1449, ATA26_28 p.421-422): pump symbols white
+-- off, cyan armed (override/jettison, stabilizer), green with pressure,
+-- amber low, magenta in the jettison; main tank boxes amber when low or in
+-- an imbalance (both tanks of the pair); engines amber in suction feed
+local SYN = {}
+for i, p in ipairs(F.PUMPS) do SYN[p.id] = i end
+local function pump_syn(out, id) return out.syn.pump[SYN[id]] end
+do
+    -- preflight, every switch OFF: all white, tanks white, no suction feed
+    local s, inp = aircraft(FULL)
+    local out = run(s, inp, 2)
+    for _, p in ipairs(F.PUMPS) do T.equal(pump_syn(out, p.id), F.SYN_OFF, "synoptic preflight: " .. p.id .. " white") end
+    for n = 1, 4 do T.check(not out.syn.main[n], "synoptic preflight: main " .. n .. " white") end
+    for n = 1, 4 do T.check(not out.syn.suction[n], "synoptic preflight: engine " .. n .. " not in suction feed (spar valve closed)") end
+    -- main, override and CTR switches ON with fuel in the CWT: mains and CTR
+    -- green, override/jettison cyan (held off by the CWT pumps), STAB white
+    pumps_on(inp, MAINS); pumps_on(inp, OJS); pumps_on(inp, {"ctr_l", "ctr_r"})
+    out = run(s, inp, 2)
+    for _, id in ipairs(MAINS) do T.equal(pump_syn(out, id), F.SYN_ON, "synoptic: " .. id .. " green") end
+    T.equal(pump_syn(out, "ctr_l"), F.SYN_ON, "synoptic: CTR L green")
+    for _, id in ipairs(OJS) do T.equal(pump_syn(out, id), F.SYN_ARMED, "synoptic: " .. id .. " cyan (armed for the logic)") end
+    T.equal(pump_syn(out, "stab_l"), F.SYN_OFF, "synoptic: STAB L white (switch OFF)")
+    -- STAB switches ON on the ground: armed, not running (cyan)
+    pumps_on(inp, {"stab_l", "stab_r"})
+    out = run(s, inp, 1)
+    T.equal(pump_syn(out, "stab_r"), F.SYN_ARMED, "synoptic: STAB R cyan on the ground (armed)")
+    -- CTR L's bus lost: CTR L amber (switch ON, low); the override/jettison
+    -- pumps take over: green
+    inp.util[2] = false
+    out = run(s, inp, 2)
+    T.equal(pump_syn(out, "ctr_l"), F.SYN_LOW, "synoptic: CTR L amber, its pressure low")
+    T.equal(pump_syn(out, "oj2_aft"), F.SYN_ON, "synoptic: OVRD 2 AFT green once the logic runs it")
+    T.equal(pump_syn(out, "oj3_fwd"), F.SYN_ON, "synoptic: OVRD 3 FWD green once the logic runs it")
+    -- OVRD 3 FWD's bus (utility 4: estimate) lost too: run by the logic, low
+    inp.util[4] = false
+    out = run(s, inp, 1)
+    T.equal(pump_syn(out, "oj3_fwd"), F.SYN_LOW, "synoptic: OVRD 3 FWD amber, run by the logic without pressure")
+    -- a main pump's bus lost with its switch ON: amber
+    inp.ac[1] = false
+    out = run(s, inp, 1)
+    T.equal(pump_syn(out, "m1_fwd"), F.SYN_LOW, "synoptic: MAIN 1 FWD amber (switch ON, no pressure)")
+end
+do
+    -- suction feed: main 1's pumps lost, crossfeed 1 closed, engine 1 running
+    local q = {ctr = 0, m1 = 9000, m2 = 9000, m3 = 9000, m4 = 9000, r2 = 0, r3 = 0, stab = 0}
+    local s, inp = aircraft(q)
+    pumps_on(inp, MAINS)
+    engines_running(inp)
+    inp.xfeed[1], inp.xfeed[4] = false, false
+    inp.ac[1] = false
+    local out = run(s, inp, 6)
+    T.check(out.syn.suction[1], "synoptic: engine 1 amber in suction feed")
+    T.check(not out.syn.suction[2], "synoptic: engine 2 white (its pumps)")
+    inp.fuel_control[1] = false
+    out = run(s, inp, 6)
+    T.check(not out.syn.suction[1], "synoptic: engine 1 shut down (spar valve closed): no suction feed shown")
+end
+do
+    -- main tanks: amber below 900 kg (2,000 lb on 570), and both tanks of an
+    -- imbalanced pair (1,360 kg for 1-4, 2,720 kg for 2-3: ATA26_28 p.421)
+    local q = {ctr = 0, m1 = 9000, m2 = 20000, m3 = 20000, m4 = 9000, r2 = 0, r3 = 0, stab = 0}
+    local s, inp = aircraft(q)
+    local out = run(s, inp, 1)
+    for n = 1, 4 do T.check(not out.syn.main[n], "synoptic: main " .. n .. " white") end
+    s.qty.m4 = 7600
+    out = run(s, inp, 1)
+    T.check(out.syn.main[1] and out.syn.main[4], "synoptic: 1-4 imbalance, mains 1 and 4 amber")
+    T.check(not out.syn.main[2] and not out.syn.main[3], "synoptic: 1-4 imbalance, mains 2 and 3 white")
+    s.qty.m4 = 9000
+    s.qty.m3 = 17000
+    out = run(s, inp, 1)
+    T.check(out.syn.main[2] and out.syn.main[3] and not out.syn.main[1], "synoptic: 2-3 imbalance, mains 2 and 3 amber")
+    s.qty.m3 = 20000
+    s.qty.m1, s.qty.m4 = 850, 850
+    out = run(s, inp, 1)
+    T.check(out.syn.main[1] and out.syn.main[4] and not out.syn.main[2], "synoptic: mains 1 and 4 amber under 900 kg")
+    s.qty.m1, s.qty.m4 = 905, 905
+    out = run(s, inp, 1)
+    T.check(not out.syn.main[1], "synoptic: 905 kg is white in kilograms")
+    inp.syn_low_kg = 2000 / 2.20462
+    out = run(s, inp, 1)
+    T.check(out.syn.main[1], "synoptic: 905 kg is amber in pounds (under 2,000 lb)")
+end
+do
+    -- jettison: the running CWT and override/jettison pumps magenta with flow;
+    -- the fuel to remain magenta, white after the completion, flashing for 5 s
+    local q = copy(FULL); q.stab = 0
+    local s, inp = aircraft(q)
+    pumps_on(inp, MAINS); pumps_on(inp, OJS); pumps_on(inp, {"ctr_l", "ctr_r"})
+    engines_running(inp)
+    inp.on_ground = false
+    inp.jett_sel, inp.ftr = 1, 125000
+    local out = run(s, inp, 2)
+    T.equal(pump_syn(out, "oj2_fwd"), F.SYN_ARMED, "synoptic: armed, nozzles OFF: override/jettison cyan")
+    T.equal(out.ftr_state, 0, "fuel to remain magenta while armed")
+    inp.nozzle[1], inp.nozzle[2] = true, true
+    out = run(s, inp, 10)
+    T.equal(pump_syn(out, "oj2_fwd"), F.SYN_JETT_FLOW, "synoptic: jettison, OVRD 2 FWD magenta with flow")
+    T.equal(pump_syn(out, "ctr_r"), F.SYN_JETT_FLOW, "synoptic: jettison, CTR R magenta with flow")
+    T.equal(pump_syn(out, "m1_fwd"), F.SYN_ON, "synoptic: jettison, MAIN 1 FWD stays green")
+    -- to 1,000 kg above the fuel to remain in 10 s steps, then frame by frame
+    for _ = 1, 2000 do
+        if out.total < inp.ftr + 1000 then break end
+        out = run(s, inp, 10)
+    end
+    for _ = 1, 3000 do
+        out = F.update(s, inp, DT)
+        if out.jett_done then break end
+    end
+    T.check(out.jett_done, "jettison completed")
+    T.equal(out.ftr_state, 1, "fuel to remain white at the completion")
+    local seen_dark, seen_lit = false, false
+    for _ = 1, math.floor(4.5 / DT) do
+        out = F.update(s, inp, DT)
+        if out.ftr_state == 2 then seen_dark = true elseif out.ftr_state == 1 then seen_lit = true end
+    end
+    T.check(seen_dark and seen_lit, "fuel to remain flashes white for 5 s after the completion")
+    out = run(s, inp, 1)
+    T.equal(out.ftr_state, 1, "fuel to remain steady white after 5 s")
+    T.equal(pump_syn(out, "oj2_fwd"), F.SYN_ARMED, "synoptic: jettison done, OVRD 2 FWD back to cyan")
+    inp.jett_sel = 0
+    out = run(s, inp, 1)
+    T.equal(out.ftr_state, 0, "selector OFF: the fuel to remain's state reset")
+end
+
 T.done()

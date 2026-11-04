@@ -14,6 +14,7 @@ local SWITCH = "laminar/B747/button_switch/position"
 local CAUTION = "laminar/B747/CAS/caution_status"
 local ADVISORY = "laminar/B747/CAS/advisory_status"
 local PRESS = "laminar/B747/fuel/light/pump_press"
+local SYN_PUMP, SYN_MAIN, SYN_SUCTION = "laminar/B747/fuel/synoptic/pump", "laminar/B747/fuel/synoptic/main_amber", "laminar/B747/fuel/synoptic/suction"
 local RATIO = {0.3, 0.078, 0.22, 0.22, 0.078, 0.023, 0.023, 0.058}   -- both acfs, from index 0
 
 -- powered on the ground, the tanks as given (X-Plane index 0-7)
@@ -86,6 +87,8 @@ T.equal(rt:get(ADVISORY, 157), 1, "preflight: FUEL OVRD 2 FWD (switch OFF before
 T.equal(rt:get("laminar/B747/fuel/main1_tank/main_pump_fwd_on"), 0, "preflight: main 1 FWD pump off")
 T.equal(rt:get("laminar/B747/fuel/gen/xfeed_vlv1_status"), 1, "preflight: crossfeed 1 open (synoptic)")
 T.equal(rt:get("laminar/B747/fuel/engine1/xfeed_vlv_pos"), 1, "preflight: crossfeed 1 valve open")
+T.equal(rt:get(SYN_PUMP, 0), 0, "preflight: MAIN 1 FWD white on the synoptic")
+T.equal(rt:get(SYN_MAIN, 0), 0, "preflight: main 1 white on the synoptic")
 
 -- before start: main, override and CTR pumps ON (NP p.119)
 for _, x in ipairs(MAIN_SWITCHES) do rt:set(SWITCH, x, 1) end
@@ -99,6 +102,9 @@ T.equal(rt:get("laminar/B747/fuel/main2_tank/ovrd_jett_pump_fwd_on"), 0,
 T.equal(rt:get(PRESS, 0), 0, "pumps ON: MAIN 1 FWD PRESS light off")
 T.equal(rt:get(ADVISORY, 165), 0, "pumps ON: no FUEL PUMP 1 FWD")
 T.equal(rt:get(ADVISORY, 153), 0, "pumps ON: no >FUEL OVD CTR L")
+T.equal(rt:get(SYN_PUMP, 0), 2, "pumps ON: MAIN 1 FWD green on the synoptic")
+T.equal(rt:get(SYN_PUMP, 8), 1, "pumps ON: OVRD 2 FWD cyan on the synoptic (armed)")
+T.equal(rt:get(SYN_PUMP, 12), 2, "pumps ON: CTR L green on the synoptic")
 
 -- engines running: the CWT feeds all four through the open crossfeeds
 engines_run(rt, 0.6)
@@ -118,6 +124,9 @@ T.equal(rt:get(CAUTION, 32), 0, "running: no FUEL PRESS ENG 1")
 rt:set(FUEL, 4, 9000)
 frames(rt, 1)
 T.near(rt:get(FUEL, 4), 9000, 0.5, "outside change: main 4 at 9,000 kg kept")
+T.equal(rt:get(SYN_MAIN, 0), 1, "main 1 2,000 kg above main 4: main 1 amber on the synoptic (imbalance)")
+T.equal(rt:get(SYN_MAIN, 3), 1, "main 4 amber on the synoptic (imbalance)")
+T.equal(rt:get(SYN_MAIN, 1), 0, "main 2 white on the synoptic")
 
 -- suction feed: main 1 pumps OFF and crossfeed 1 closed (FCOM p.1455)
 rt:set(SWITCH, 56, 0)
@@ -132,6 +141,8 @@ T.equal(rt:get(CAUTION, 32), 1, "suction feed: FUEL PRESS ENG 1")
 T.equal(rt:get(HAS_FUEL, 0), 1, "suction feed: engine 1 still has fuel")
 T.equal(rt:get("laminar/B747/fuel/engine1_status"), 1, "suction feed: engine 1 from its own tank (synoptic)")
 T.equal(rt:get(ADVISORY, 165), 0, "suction feed: FUEL PUMP 1 FWD inhibited by FUEL PRESS ENG 1")
+T.equal(rt:get(SYN_SUCTION, 0), 1, "suction feed: engine 1 amber on the synoptic")
+T.equal(rt:get(SYN_SUCTION, 2), 0, "engine 3 not in suction feed")
 
 -- the fire switch closes the spar valve (ATA26_28 p.466)
 rt:set("laminar/B747/fire/engine02/ext_switch/pos_arm", 1)
@@ -152,6 +163,8 @@ T.check(rt:get("laminar/B747/fuel/jettison_time") > 0, "jettison: time shown")
 T.equal(rt:get(ADVISORY, 235), 1, "jettison: >JETT NOZ ON")
 T.equal(rt:get("laminar/B747/fuel/center_tank/jett_vlv_L_pos"), 1, "jettison: CWT jettison valve open")
 T.equal(rt:get("laminar/B747/fuel/light/nozzle_valve", 0), 0, "nozzle L open: VALVE light off")
+T.equal(rt:get(SYN_PUMP, 12), 5, "jettison: CTR L magenta with flow on the synoptic")
+T.equal(rt:get("laminar/B747/fuel/fuel_to_remain/state"), 0, "jettison: fuel to remain magenta")
 
 -- the APU: fuel valve open, main 2 AFT runs on the ground service bus (FCOM p.1465)
 rt:set("sim/cockpit2/electrical/APU_starter_switch", 2)
@@ -221,6 +234,24 @@ do
     rt3:command(CONTROL)                                    -- RUN to CUTOFF in flight
     frames(rt3, 0.5)
     T.equal(rt3:get(SYN), 1, "in flight, to CUTOFF: the secondary engine display")
+end
+
+-- the weights in pounds (simconfig): the fuel to remain in pounds x 1000 on
+-- the primary EICAS, the synoptic's low main tank at 2,000 lb (FCOM p.1448, 570)
+do
+    local rt5 = aircraft({20000, 905, 25000, 25000, 905, 3000, 3000, 0})
+    rt5:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"LBS","kgs_to_lbs":2.20462,"auto_fuel_mgmt":"NO"}}')
+    rt5:set("laminar/B747/newsimconfig", 1)
+    frames(rt5, 3)
+    T.near(rt5:get("laminar/B747/fuel/fuel_to_remain/display"), rt5:get("laminar/B747/fuel/fuel_to_remain/rheostat") * 2.20462,
+        0.001, "LBS: fuel to remain in pounds x 1000")
+    T.equal(rt5:get(SYN_MAIN, 0), 1, "LBS: main 1 at 905 kg amber on the synoptic (under 2,000 lb)")
+    rt5:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_lbs":2.20462,"auto_fuel_mgmt":"NO"}}')
+    rt5:set("laminar/B747/newsimconfig", 1)
+    frames(rt5, 1)
+    T.near(rt5:get("laminar/B747/fuel/fuel_to_remain/display"), rt5:get("laminar/B747/fuel/fuel_to_remain/rheostat"),
+        0.001, "KGS: fuel to remain in kilograms x 1000")
+    T.equal(rt5:get(SYN_MAIN, 0), 0, "KGS: main 1 at 905 kg white on the synoptic (900 kg)")
 end
 
 T.done()

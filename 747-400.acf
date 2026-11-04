@@ -151223,7 +151223,24 @@ GROUP Upper EICAS
           gen_LED LED
             POS 1929.000000 467.000000
             IMAGE CRT Displays/LED/LED_3.26B.xx###0.magenta
-            DATAREF laminar/B747/fuel/fuel_to_remain/rheostat
+            DATAREF laminar/B747/fuel/fuel_to_remain/display
+            SHOW_EQUAL 0.000000 laminar/B747/fuel/fuel_to_remain/state
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 9
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 1.000000
+            DIGITS 4
+            DECIMALS 1
+            PERIOD_WIDTH 7
+            LED_ROWS 4
+            ROUNDING ROUND_ROUND
+
+          gen_LED LED White
+            POS 1929.000000 467.000000
+            IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
+            DATAREF laminar/B747/fuel/fuel_to_remain/display
+            SHOW_EQUAL 1.000000 laminar/B747/fuel/fuel_to_remain/state
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -159849,6 +159866,28 @@ GROUP LOWER EICAS POWER
                   POS 1416.500000 138.500000
                   IMAGE CRT Displays/EICAS Lower/FUEL/flow_std/MnToEng
                   DATAREF 
+                  SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/suction[0]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 10
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 10.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Flow Bar Suction
+                  POS 1416.500000 138.500000
+                  IMAGE CRT Displays/EICAS Lower/FUEL/flow_std/MnToEng_amber
+                  DATAREF 
+                  SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/suction[0]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -159872,6 +159911,28 @@ GROUP LOWER EICAS POWER
                   POS 1591.500000 215.500000
                   IMAGE CRT Displays/EICAS Lower/FUEL/flow_std/MnToEng
                   DATAREF 
+                  SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/suction[1]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 10
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 10.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Flow Bar Suction
+                  POS 1591.500000 215.500000
+                  IMAGE CRT Displays/EICAS Lower/FUEL/flow_std/MnToEng_amber
+                  DATAREF 
+                  SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/suction[1]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -159895,6 +159956,28 @@ GROUP LOWER EICAS POWER
                   POS 1805.500000 215.500000
                   IMAGE CRT Displays/EICAS Lower/FUEL/flow_std/MnToEng
                   DATAREF 
+                  SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/suction[2]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 10
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 10.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Flow Bar Suction
+                  POS 1805.500000 215.500000
+                  IMAGE CRT Displays/EICAS Lower/FUEL/flow_std/MnToEng_amber
+                  DATAREF 
+                  SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/suction[2]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -159918,6 +160001,28 @@ GROUP LOWER EICAS POWER
                   POS 1980.500000 138.500000
                   IMAGE CRT Displays/EICAS Lower/FUEL/flow_std/MnToEng
                   DATAREF 
+                  SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/suction[3]
+                  LIGHT_MODE GLASS_AUTO
+                  LIGHT_RHEOSTAT 10
+                  BUS_SRC 2
+                  KEY_FRAME 0.000000 0.000000 1.000000
+                  KEY_FRAME 1.000000 6.000000
+                  DIGITS 1
+                  ROTARY_TYPE NO_CLICK
+                  CLICK_RADIUS 10.000000
+                  CLICK_RADIUS_DY 0.000000
+                  OFFSET 0.000000
+                  STEP1 1.000000
+                  STEP2 1.000000
+                  CURSOR DEFAULT
+                  CLICK_DX 0
+                  CLICK_DY 0
+
+                gen_rotary Flow Bar Suction
+                  POS 1980.500000 138.500000
+                  IMAGE CRT Displays/EICAS Lower/FUEL/flow_std/MnToEng_amber
+                  DATAREF 
+                  SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/suction[3]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -159987,7 +160092,7 @@ GROUP LOWER EICAS POWER
               GROUP Normal Feed
                 SHOW_LESS 0.040000 laminar/B747/fuel/center_tank/jett_vlv_L_pos
                 GROUP Normal Pressure
-                  SHOW_GREATER 900.010010 sim/flightmodel/weight/m_fuel[0]
+                  SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[12]
                   gen_rotary Flow Bar
                     POS 1673.500000 313.000000
                     IMAGE CRT Displays/EICAS Lower/FUEL/flow_std/CtrOJPump
@@ -160016,7 +160121,7 @@ GROUP LOWER EICAS POWER
               GROUP Normal Feed 2
                 SHOW_LESS 0.040000 laminar/B747/fuel/center_tank/jett_vlv_R_pos
                 GROUP Normal Pressure 2
-                  SHOW_GREATER 900.010010 sim/flightmodel/weight/m_fuel[0]
+                  SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[13]
                   gen_rotary Flow Bar
                     POS 1719.500000 313.000000
                     IMAGE CRT Displays/EICAS Lower/FUEL/flow_std/CtrOJPump
@@ -161540,7 +161645,7 @@ GROUP LOWER EICAS POWER
               POS 1416.000000 -28.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/main_OB_tank_amber
               DATAREF 
-              SHOW_LESS 900.000000 sim/flightmodel/weight/m_fuel[1]
+              SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/main_amber[0]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -161561,7 +161666,7 @@ GROUP LOWER EICAS POWER
               POS 1416.000000 -28.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/main_OB_tank
               DATAREF 
-              SHOW_GREATER 900.010010 sim/flightmodel/weight/m_fuel[1]
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/main_amber[0]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -161584,7 +161689,7 @@ GROUP LOWER EICAS POWER
               POS 1555.500000 20.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/main_IB_tank_amber
               DATAREF 
-              SHOW_LESS 900.000000 sim/flightmodel/weight/m_fuel[2]
+              SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/main_amber[1]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -161605,7 +161710,7 @@ GROUP LOWER EICAS POWER
               POS 1555.500000 20.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/main_IB_tank
               DATAREF 
-              SHOW_GREATER 900.010010 sim/flightmodel/weight/m_fuel[2]
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/main_amber[1]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -161628,7 +161733,7 @@ GROUP LOWER EICAS POWER
               POS 1842.500000 20.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/main_IB_tank_amber
               DATAREF 
-              SHOW_LESS 900.000000 sim/flightmodel/weight/m_fuel[3]
+              SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/main_amber[2]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -161649,7 +161754,7 @@ GROUP LOWER EICAS POWER
               POS 1842.500000 20.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/main_IB_tank
               DATAREF 
-              SHOW_GREATER 900.010010 sim/flightmodel/weight/m_fuel[3]
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/main_amber[2]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -161672,7 +161777,7 @@ GROUP LOWER EICAS POWER
               POS 1980.000000 -28.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/main_OB_tank_amber
               DATAREF 
-              SHOW_LESS 900.000000 sim/flightmodel/weight/m_fuel[4]
+              SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/main_amber[3]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -161693,7 +161798,7 @@ GROUP LOWER EICAS POWER
               POS 1980.000000 -28.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/main_OB_tank
               DATAREF 
-              SHOW_GREATER 900.010010 sim/flightmodel/weight/m_fuel[4]
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/main_amber[3]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -161775,12 +161880,11 @@ GROUP LOWER EICAS POWER
         GROUP Pumps
           GROUP Main1 FWD
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/main1_tank/main_pump_fwd_on
               gen_rotary Pressure
                 POS 1416.500000 74.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_green
                 DATAREF 
-                SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[1]
+                SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[0]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -161801,7 +161905,7 @@ GROUP LOWER EICAS POWER
                 POS 1416.500000 74.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_amber
                 DATAREF 
-                SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[1]
+                SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[0]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -161823,7 +161927,7 @@ GROUP LOWER EICAS POWER
               POS 1416.500000 74.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/pump-OFF_white
               DATAREF 
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/main1_tank/main_pump_fwd_on
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[0]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -161843,12 +161947,11 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Main 1 Aft
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/main1_tank/main_pump_aft_on
               gen_rotary Pressure
                 POS 1416.500000 34.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_green
                 DATAREF 
-                SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[1]
+                SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[1]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -161869,7 +161972,7 @@ GROUP LOWER EICAS POWER
                 POS 1416.500000 34.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_amber
                 DATAREF 
-                SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[1]
+                SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[1]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -161891,7 +161994,7 @@ GROUP LOWER EICAS POWER
               POS 1416.500000 34.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/pump-OFF_white
               DATAREF 
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/main1_tank/main_pump_aft_on
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[1]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -161911,14 +162014,12 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Main 2 OJ FWD
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/main2_tank/ovrd_jett_pump_fwd_on
               GROUP Jettison
-                SHOW_EQUAL 1.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary ON No FLow
                   POS 1519.000000 150.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magenta
                   DATAREF 
-                  SHOW_LESS 3200.000000 sim/flightmodel/weight/m_fuel[2]
+                  SHOW_EQUAL 4.000000 laminar/B747/fuel/synoptic/pump[8]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -161939,7 +162040,7 @@ GROUP LOWER EICAS POWER
                   POS 1519.000000 150.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magentaF
                   DATAREF 
-                  SHOW_GREATER 3200.010010 sim/flightmodel/weight/m_fuel[2]
+                  SHOW_EQUAL 5.000000 laminar/B747/fuel/synoptic/pump[8]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -161958,12 +162059,11 @@ GROUP LOWER EICAS POWER
 
               END_GROUP
               GROUP Normal Feed
-                SHOW_EQUAL 0.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary Pressure
                   POS 1519.000000 150.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-ON_green
                   DATAREF 
-                  SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[2]
+                  SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[8]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -161984,7 +162084,7 @@ GROUP LOWER EICAS POWER
                   POS 1519.000000 150.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-LP_amber
                   DATAREF 
-                  SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[2]
+                  SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[8]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162004,12 +162104,11 @@ GROUP LOWER EICAS POWER
               END_GROUP
             END_GROUP
             GROUP OFF/STANDBY
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/main2_tank/ovrd_jett_pump_fwd_on
               gen_rotary STBY - Switch ON
                 POS 1519.000000 150.000000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-STBY_cyan
                 DATAREF 
-                SHOW_GREATER 0.500000 laminar/B747/button_switch/position[64]
+                SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/pump[8]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162030,7 +162129,7 @@ GROUP LOWER EICAS POWER
                 POS 1519.000000 150.000000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-OFF_white
                 DATAREF 
-                SHOW_LESS 0.490000 laminar/B747/button_switch/position[64]
+                SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[8]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162051,14 +162150,12 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Main 2 OJ AFT
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/main2_tank/ovrd_jett_pump_aft_on
               GROUP Jettison
-                SHOW_EQUAL 1.000000 blaminar/B747/fuel/jett_vlv_status
                 gen_rotary ON No Flow
                   POS 1519.000000 104.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magenta
                   DATAREF 
-                  SHOW_LESS 3200.000000 sim/flightmodel/weight/m_fuel[2]
+                  SHOW_EQUAL 4.000000 laminar/B747/fuel/synoptic/pump[9]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162079,7 +162176,7 @@ GROUP LOWER EICAS POWER
                   POS 1519.000000 104.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magentaF
                   DATAREF 
-                  SHOW_GREATER 3200.010010 sim/flightmodel/weight/m_fuel[2]
+                  SHOW_EQUAL 5.000000 laminar/B747/fuel/synoptic/pump[9]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162098,12 +162195,11 @@ GROUP LOWER EICAS POWER
 
               END_GROUP
               GROUP Normal Feed
-                SHOW_EQUAL 0.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary Pressure
                   POS 1519.000000 104.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-ON_green
                   DATAREF 
-                  SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[2]
+                  SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[9]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162124,7 +162220,7 @@ GROUP LOWER EICAS POWER
                   POS 1519.000000 104.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-LP_amber
                   DATAREF 
-                  SHOW_LESS -10.010000 sim/flightmodel/weight/m_fuel[2]
+                  SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[9]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162144,12 +162240,11 @@ GROUP LOWER EICAS POWER
               END_GROUP
             END_GROUP
             GROUP OFF/STANDBY
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/main2_tank/ovrd_jett_pump_aft_on
               gen_rotary STBY - Switch ON
                 POS 1519.000000 104.000000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-STBY_cyan
                 DATAREF 
-                SHOW_GREATER 0.500000 laminar/B747/button_switch/position[66]
+                SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/pump[9]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162170,7 +162265,7 @@ GROUP LOWER EICAS POWER
                 POS 1519.000000 104.000000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-OFF_white
                 DATAREF 
-                SHOW_LESS 0.490000 laminar/B747/button_switch/position[66]
+                SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[9]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162191,12 +162286,11 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Main 2 FWD
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/main2_tank/main_pump_fwd_on
               gen_rotary Pressure
                 POS 1592.500000 150.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_green
                 DATAREF 
-                SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[2]
+                SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[2]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162217,7 +162311,7 @@ GROUP LOWER EICAS POWER
                 POS 1592.500000 150.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_amber
                 DATAREF 
-                SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[2]
+                SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[2]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162239,7 +162333,7 @@ GROUP LOWER EICAS POWER
               POS 1592.500000 150.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/pump-OFF_white
               DATAREF 
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/main2_tank/main_pump_fwd_on
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[2]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -162259,12 +162353,11 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Main 2 AFT
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/main2_tank/main_pump_aft_on
               gen_rotary Pressure
                 POS 1592.500000 110.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_green
                 DATAREF 
-                SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[2]
+                SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[3]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162285,7 +162378,7 @@ GROUP LOWER EICAS POWER
                 POS 1592.500000 110.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_amber
                 DATAREF 
-                SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[2]
+                SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[3]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162307,7 +162400,7 @@ GROUP LOWER EICAS POWER
               POS 1592.500000 110.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/pump-OFF_white
               DATAREF 
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/main2_tank/main_pump_aft_on
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[3]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -162327,14 +162420,12 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Center OJ Left
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/center_tank/ovrd_jett_pump_L_on
               GROUP Jettison
-                SHOW_EQUAL 1.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary ON No Flow
                   POS 1672.000000 282.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magenta
                   DATAREF 
-                  SHOW_LESS 3200.000000 sim/flightmodel/weight/m_fuel[0]
+                  SHOW_EQUAL 4.000000 laminar/B747/fuel/synoptic/pump[12]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162355,7 +162446,7 @@ GROUP LOWER EICAS POWER
                   POS 1672.000000 282.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magentaF
                   DATAREF 
-                  SHOW_GREATER 3200.010010 sim/flightmodel/weight/m_fuel[0]
+                  SHOW_EQUAL 5.000000 laminar/B747/fuel/synoptic/pump[12]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162374,12 +162465,11 @@ GROUP LOWER EICAS POWER
 
               END_GROUP
               GROUP Normal Feed
-                SHOW_EQUAL 0.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary Pressure
                   POS 1673.000000 282.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-ON_green
                   DATAREF 
-                  SHOW_GREATER 900.010010 sim/flightmodel/weight/m_fuel[0]
+                  SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[12]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162400,7 +162490,7 @@ GROUP LOWER EICAS POWER
                   POS 1673.000000 282.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-LP_amber
                   DATAREF 
-                  SHOW_LESS 900.000000 sim/flightmodel/weight/m_fuel[0]
+                  SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[12]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162423,7 +162513,7 @@ GROUP LOWER EICAS POWER
               POS 1672.000000 282.000000
               IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-OFF_white
               DATAREF 
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/center_tank/ovrd_jett_pump_L_on
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[12]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -162443,14 +162533,12 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Center OJ RIght
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/center_tank/ovrd_jett_pump_R_on
               GROUP Jettison
-                SHOW_EQUAL 1.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary ON No Flow
                   POS 1719.000000 282.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magenta
                   DATAREF 
-                  SHOW_LESS 3200.000000 sim/flightmodel/weight/m_fuel[0]
+                  SHOW_EQUAL 4.000000 laminar/B747/fuel/synoptic/pump[13]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162471,7 +162559,7 @@ GROUP LOWER EICAS POWER
                   POS 1719.000000 282.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magentaF
                   DATAREF 
-                  SHOW_GREATER 3200.010010 sim/flightmodel/weight/m_fuel[0]
+                  SHOW_EQUAL 5.000000 laminar/B747/fuel/synoptic/pump[13]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162490,12 +162578,11 @@ GROUP LOWER EICAS POWER
 
               END_GROUP
               GROUP Normal Feed
-                SHOW_EQUAL 0.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary Pressure
                   POS 1719.000000 282.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-ON_green
                   DATAREF 
-                  SHOW_GREATER 900.010010 sim/flightmodel/weight/m_fuel[0]
+                  SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[13]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162516,7 +162603,7 @@ GROUP LOWER EICAS POWER
                   POS 1719.000000 282.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-LP_amber
                   DATAREF 
-                  SHOW_LESS 900.000000 sim/flightmodel/weight/m_fuel[0]
+                  SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[13]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162539,7 +162626,7 @@ GROUP LOWER EICAS POWER
               POS 1719.000000 282.000000
               IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-OFF_white
               DATAREF 
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/center_tank/ovrd_jett_pump_R_on
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[13]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -162559,12 +162646,11 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Main 3 FWD
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/main3_tank/main_pump_fwd_on
               gen_rotary Pressure
                 POS 1805.500000 150.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_green
                 DATAREF 
-                SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[3]
+                SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[4]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162585,7 +162671,7 @@ GROUP LOWER EICAS POWER
                 POS 1805.500000 150.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_amber
                 DATAREF 
-                SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[3]
+                SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[4]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162607,7 +162693,7 @@ GROUP LOWER EICAS POWER
               POS 1805.500000 150.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/pump-OFF_white
               DATAREF 
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/main3_tank/main_pump_fwd_on
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[4]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -162627,12 +162713,11 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Main 3 Aft
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/main3_tank/main_pump_aft_on
               gen_rotary Pressure
                 POS 1805.500000 110.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_green
                 DATAREF 
-                SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[3]
+                SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[5]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162653,7 +162738,7 @@ GROUP LOWER EICAS POWER
                 POS 1805.500000 110.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_amber
                 DATAREF 
-                SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[3]
+                SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[5]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162675,7 +162760,7 @@ GROUP LOWER EICAS POWER
               POS 1805.500000 110.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/pump-OFF_white
               DATAREF 
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/main3_tank/main_pump_aft_on
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[5]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -162695,14 +162780,12 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Main 3 OJ FWD
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/main3_tank/ovrd_jett_pump_fwd_on
               GROUP Jettison
-                SHOW_EQUAL 1.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary ON No Flow
                   POS 1876.000000 150.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magenta
                   DATAREF 
-                  SHOW_LESS 3200.000000 sim/flightmodel/weight/m_fuel[3]
+                  SHOW_EQUAL 4.000000 laminar/B747/fuel/synoptic/pump[10]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162723,7 +162806,7 @@ GROUP LOWER EICAS POWER
                   POS 1876.000000 150.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magentaF
                   DATAREF 
-                  SHOW_GREATER 3200.010010 sim/flightmodel/weight/m_fuel[3]
+                  SHOW_EQUAL 5.000000 laminar/B747/fuel/synoptic/pump[10]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162742,12 +162825,11 @@ GROUP LOWER EICAS POWER
 
               END_GROUP
               GROUP Normal Feed
-                SHOW_EQUAL 0.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary Pressure
                   POS 1876.000000 150.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-ON_green
                   DATAREF 
-                  SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[3]
+                  SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[10]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162768,7 +162850,7 @@ GROUP LOWER EICAS POWER
                   POS 1876.000000 150.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-LP_amber
                   DATAREF 
-                  SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[3]
+                  SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[10]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162788,12 +162870,11 @@ GROUP LOWER EICAS POWER
               END_GROUP
             END_GROUP
             GROUP OFF/STANDBY
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/main3_tank/ovrd_jett_pump_fwd_on
               gen_rotary STBY - Switch ON
                 POS 1876.000000 150.000000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-STBY_cyan
                 DATAREF 
-                SHOW_GREATER 0.500000 laminar/B747/button_switch/position[65]
+                SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/pump[10]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162814,7 +162895,7 @@ GROUP LOWER EICAS POWER
                 POS 1876.000000 150.000000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-OFF_white
                 DATAREF 
-                SHOW_LESS 0.490000 laminar/B747/button_switch/position[65]
+                SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[10]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162835,14 +162916,12 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Main 3 OJ AFT
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/main3_tank/ovrd_jett_pump_aft_on
               GROUP Jettison
-                SHOW_EQUAL 1.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary ON No Flow
                   POS 1876.000000 104.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magenta
                   DATAREF 
-                  SHOW_LESS 3200.000000 sim/flightmodel/weight/m_fuel[3]
+                  SHOW_EQUAL 4.000000 laminar/B747/fuel/synoptic/pump[11]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162863,7 +162942,7 @@ GROUP LOWER EICAS POWER
                   POS 1876.000000 104.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magentaF
                   DATAREF 
-                  SHOW_GREATER 3200.010010 sim/flightmodel/weight/m_fuel[3]
+                  SHOW_EQUAL 5.000000 laminar/B747/fuel/synoptic/pump[11]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162882,12 +162961,11 @@ GROUP LOWER EICAS POWER
 
               END_GROUP
               GROUP Normal Feed
-                SHOW_EQUAL 0.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary Pressure
                   POS 1876.000000 104.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-ON_green
                   DATAREF 
-                  SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[3]
+                  SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[11]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162908,7 +162986,7 @@ GROUP LOWER EICAS POWER
                   POS 1876.000000 104.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-LP_amber
                   DATAREF 
-                  SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[3]
+                  SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[11]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -162928,12 +163006,11 @@ GROUP LOWER EICAS POWER
               END_GROUP
             END_GROUP
             GROUP OFF/STANDBY
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/main3_tank/ovrd_jett_pump_aft_on
               gen_rotary STBY - Switch ON
                 POS 1876.000000 104.000000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-STBY_cyan
                 DATAREF 
-                SHOW_GREATER 0.500000 laminar/B747/button_switch/position[67]
+                SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/pump[11]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162954,7 +163031,7 @@ GROUP LOWER EICAS POWER
                 POS 1876.000000 104.000000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-OFF_white
                 DATAREF 
-                SHOW_LESS 0.490000 laminar/B747/button_switch/position[67]
+                SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[11]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -162975,12 +163052,11 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Main 4 FWD
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/main4_tank/main_pump_fwd_on
               gen_rotary Pressure
                 POS 1981.500000 74.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_green
                 DATAREF 
-                SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[4]
+                SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[6]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -163001,7 +163077,7 @@ GROUP LOWER EICAS POWER
                 POS 1981.500000 74.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_amber
                 DATAREF 
-                SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[4]
+                SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[6]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -163023,7 +163099,7 @@ GROUP LOWER EICAS POWER
               POS 1981.500000 74.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/pump-OFF_white
               DATAREF 
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/main4_tank/main_pump_fwd_on
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[6]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -163043,12 +163119,11 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Main 4 AFT
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/main4_tank/main_pump_aft_on
               gen_rotary Pressure
                 POS 1981.500000 34.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_green
                 DATAREF 
-                SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[4]
+                SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[7]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -163069,7 +163144,7 @@ GROUP LOWER EICAS POWER
                 POS 1981.500000 34.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pump-ON_amber
                 DATAREF 
-                SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[4]
+                SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[7]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -163091,7 +163166,7 @@ GROUP LOWER EICAS POWER
               POS 1981.500000 34.500000
               IMAGE CRT Displays/EICAS Lower/FUEL/pump-OFF_white
               DATAREF 
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/main4_tank/main_pump_aft_on
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[7]
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 10
               BUS_SRC 2
@@ -163111,14 +163186,12 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Stabilizer XJ Left
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/stab_tank/xfr_jett_pump_L_on
               GROUP Jettison
-                SHOW_EQUAL 1.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary ON No FLow
                   POS 1675.000000 -134.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magenta
                   DATAREF 
-                  SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[7]
+                  SHOW_EQUAL 4.000000 laminar/B747/fuel/synoptic/pump[14]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -163139,7 +163212,7 @@ GROUP LOWER EICAS POWER
                   POS 1675.000000 -134.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magentaF
                   DATAREF 
-                  SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[7]
+                  SHOW_EQUAL 5.000000 laminar/B747/fuel/synoptic/pump[14]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -163158,12 +163231,11 @@ GROUP LOWER EICAS POWER
 
               END_GROUP
               GROUP Transfer
-                SHOW_EQUAL 0.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary Pressure
                   POS 1675.000000 -134.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-ON_green
                   DATAREF 
-                  SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[7]
+                  SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[14]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -163184,7 +163256,7 @@ GROUP LOWER EICAS POWER
                   POS 1675.000000 -134.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-LP_amber
                   DATAREF 
-                  SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[7]
+                  SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[14]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -163204,12 +163276,11 @@ GROUP LOWER EICAS POWER
               END_GROUP
             END_GROUP
             GROUP OFF/STANDBY
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/stab_tank/xfr_jett_pump_L_on
               gen_rotary STBY - Switch ON
                 POS 1675.000000 -134.000000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-STBY_cyan
                 DATAREF 
-                SHOW_GREATER 0.500000 laminar/B747/button_switch/position[54]
+                SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/pump[14]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -163230,7 +163301,7 @@ GROUP LOWER EICAS POWER
                 POS 1675.000000 -134.000000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-OFF_white
                 DATAREF 
-                SHOW_LESS 0.490000 laminar/B747/button_switch/position[54]
+                SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[14]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -163251,14 +163322,12 @@ GROUP LOWER EICAS POWER
           END_GROUP
           GROUP Stabilizer XJ Right
             GROUP ON
-              SHOW_EQUAL 1.000000 laminar/B747/fuel/stab_tank/xfr_jett_pump_R_on
               GROUP Jettison
-                SHOW_EQUAL 1.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary ON No Flow
                   POS 1721.000000 -134.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magenta
                   DATAREF 
-                  SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[7]
+                  SHOW_EQUAL 4.000000 laminar/B747/fuel/synoptic/pump[15]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -163279,7 +163348,7 @@ GROUP LOWER EICAS POWER
                   POS 1721.000000 -134.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-JETT_magentaF
                   DATAREF 
-                  SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[7]
+                  SHOW_EQUAL 5.000000 laminar/B747/fuel/synoptic/pump[15]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -163298,12 +163367,11 @@ GROUP LOWER EICAS POWER
 
               END_GROUP
               GROUP Transfer
-                SHOW_EQUAL 0.000000 laminar/B747/fuel/jett_vlv_status
                 gen_rotary Pressure
                   POS 1721.000000 -134.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-ON_green
                   DATAREF 
-                  SHOW_GREATER 10.010000 sim/flightmodel/weight/m_fuel[7]
+                  SHOW_EQUAL 2.000000 laminar/B747/fuel/synoptic/pump[15]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -163324,7 +163392,7 @@ GROUP LOWER EICAS POWER
                   POS 1721.000000 -134.000000
                   IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-LP_amber
                   DATAREF 
-                  SHOW_LESS 10.000000 sim/flightmodel/weight/m_fuel[7]
+                  SHOW_EQUAL 3.000000 laminar/B747/fuel/synoptic/pump[15]
                   LIGHT_MODE GLASS_AUTO
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
@@ -163344,12 +163412,11 @@ GROUP LOWER EICAS POWER
               END_GROUP
             END_GROUP
             GROUP OFF/STANDBY
-              SHOW_EQUAL 0.000000 laminar/B747/fuel/stab_tank/xfr_jett_pump_R_on
               gen_rotary STBY - Switch ON
                 POS 1721.000000 -134.000000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-STBY_cyan
                 DATAREF 
-                SHOW_GREATER 0.500000 laminar/B747/button_switch/position[55]
+                SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/pump[15]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -163370,7 +163437,7 @@ GROUP LOWER EICAS POWER
                 POS 1721.000000 -134.000000
                 IMAGE CRT Displays/EICAS Lower/FUEL/pumpOJ-OFF_white
                 DATAREF 
-                SHOW_LESS 0.490000 laminar/B747/button_switch/position[55]
+                SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/pump[15]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 10
                 BUS_SRC 2
@@ -163475,6 +163542,28 @@ GROUP LOWER EICAS POWER
             POS 1592.000000 289.500000
             IMAGE CRT Displays/EICAS Lower/FUEL/engine
             DATAREF 
+            SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/suction[1]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 10
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary #2 Suction
+            POS 1592.000000 289.500000
+            IMAGE CRT Displays/EICAS Lower/FUEL/engine_amber
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/suction[1]
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10
             BUS_SRC 2
@@ -163495,6 +163584,28 @@ GROUP LOWER EICAS POWER
             POS 1806.000000 289.500000
             IMAGE CRT Displays/EICAS Lower/FUEL/engine
             DATAREF 
+            SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/suction[2]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 10
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary #3 Suction
+            POS 1806.000000 289.500000
+            IMAGE CRT Displays/EICAS Lower/FUEL/engine_amber
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/suction[2]
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10
             BUS_SRC 2
@@ -163515,6 +163626,28 @@ GROUP LOWER EICAS POWER
             POS 1980.000000 211.500000
             IMAGE CRT Displays/EICAS Lower/FUEL/engine
             DATAREF 
+            SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/suction[3]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 10
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary #4 Suction
+            POS 1980.000000 211.500000
+            IMAGE CRT Displays/EICAS Lower/FUEL/engine_amber
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/suction[3]
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10
             BUS_SRC 2
@@ -163535,6 +163668,28 @@ GROUP LOWER EICAS POWER
             POS 1416.000000 211.500000
             IMAGE CRT Displays/EICAS Lower/FUEL/engine
             DATAREF 
+            SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/suction[0]
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 10
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_rotary #1 Suction
+            POS 1416.000000 211.500000
+            IMAGE CRT Displays/EICAS Lower/FUEL/engine_amber
+            DATAREF 
+            SHOW_EQUAL 1.000000 laminar/B747/fuel/synoptic/suction[0]
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10
             BUS_SRC 2
