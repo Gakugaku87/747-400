@@ -477,3 +477,12 @@ STAB TRIM UNSCHD = (autotrim/speed trim/default mode で有効な指令なしに
 - パネル（カスタム acf、`docs/overhaul/tools/panel_flap_expanded.lua`、絵は `make_flap_images.ps1`、ACF_DIFF.md §5）：後縁の帯は状態ごとに白・琥珀・枠と X、レバーの線と数字は移動中マゼンタ・位置で緑（前はマゼンタだけ）で代替表示では出さない、前縁の箱は帯の上に 1 つの計器で 7 コマ、代替表示の目盛りは外側の帯の外（UP・5・10・20・25・30 の目盛りに 5 と 25 の数字：純正の帯の目盛りの位置）。前縁の箱は胴体側へ 1 箱 3 px ずつ上がる（FCOM の図の前縁の形）。
 - 脚の拡大表示（代替下げで出る）を 25 px 上へずらした。純正のパネルでは脚の表示が帯の上 48 px にあり、胴体脚の箱が前縁の箱の場所にあった（ATA27 p.321 の図では脚は帯の高さの約 0.85 倍上）。前脚の箱の上端は EICAS のメッセージの最下行より下のまま。
 - 作らないもの：位置センサーの故障そのものの原因（RVDT、インターフェース。故障の窓で入口の dataref から入れる）。
+
+## 20. 離陸警報カードと greenband の前脚圧スイッチの故障（2026-11-04：故障の窓のため）
+
+- 新しい dataref（init `B747.45.fltCtrls`）：`laminar/B747/flt_ctrls/fail/config_warn`（1：MAWEA の configuration warning card の故障）、`fail/greenband_switch`（1：前脚圧スイッチが CG に関わらず FWD を読む、2：AFT を読む）。
+- カードの故障：FCOM は「CONFIG の警報は出ることも出ないこともあり、出ても正しくないことがある」とする（FCOM p.1558）。ここでは出さない（推定）：離陸の CONFIG FLAPS・GEAR CTR・PARK BRK・SPOILERS・STAB と、着陸の CONFIG GEAR（カードは離陸と着陸の両方：ATA27 p.724）。>CONFIG WARN SY（advisory 52：FCOM p.1604）と STATUS CONFIG WARN SY（新しい 146：ATA31 p.270）。greenband もカードが選んで点けるので、灯は消え（塗装の mid 帯）、比較もしない（ATA31 p.200–202）。
+- 前脚圧スイッチ：圧が高い（前方 CG）と接地＝FWD、開＝AFT。nose up 帯は FWD、nose down 帯は AFT を要し、mid 帯は比べない（ATA27 p.510、ATA31 p.201–202、§4.6）。帯の機能が働く地上で takeoff inhibit（V1）の前に、食い違えば >STAB GREENBAND（advisory 273：FCOM p.958）と STATUS STAB GREENBAND（新しい 147：ATA31 p.202、p.270）。選んだ帯はそのまま CONFIG STAB に使う（ATA31 p.202）。スイッチの設定圧は資料に無いので、故障でなければ帯の要るとおりに読む。FMC に CG を入れない（mid 帯）と、故障でもメッセージは出ない。
+- 作らないもの：CDU で入れた CG が範囲外（8.5〜33 % MAC）のときの >STAB GREENBAND と灯の消灯（ATA31 p.202）。
+- 試験：`greenband_model_test` 21、`fltctrls_module_test` 198。
+- X-Plane（カスタム acf、2026-11-04）：`s247_failures_more` 38/38（成田でエンジン運転中：カードの故障で >CONFIG WARN SY と STATUS がすぐ出る。FMC の離陸トリム 9（nose up 帯：指示器の帯が 0.93 に動く）でスイッチが AFT を読むと >STAB GREENBAND と STATUS、直すと消える）、回帰の `s224_config_gear` 11/11。Log.txt に Lua の誤りなし。

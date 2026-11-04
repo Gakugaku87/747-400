@@ -39,6 +39,19 @@ function M.within(band, units)
     return units >= b[1] and units <= b[2]
 end
 
+-- the nose gear pressure switch against the selected band (ATA27 p.510,
+-- ATA31 p.201-202): closed (high pressure, FWD CG) for the nose up band,
+-- open (AFT CG) for the nose down band; the mid band is not compared.
+-- Its set pressure is not in the sources: it reads what the band needs
+-- unless failed (the failure window: switch SW_FWD or SW_AFT whatever
+-- the CG; notes/ATA-27.md §20)
+M.SW_FWD, M.SW_AFT = 1, 2
+function M.disagree(band, switch)
+    if band == M.NOSE_UP then return switch == M.SW_AFT end
+    if band == M.NOSE_DOWN then return switch == M.SW_FWD end
+    return false
+end
+
 -- the indicators: the selected band's lights while the takeoff enable is
 -- active, out above V1 (ATA27 p.514); otherwise the painted mid band. The
 -- 3D's one band is shorter than the nose up and nose down bands: it shows

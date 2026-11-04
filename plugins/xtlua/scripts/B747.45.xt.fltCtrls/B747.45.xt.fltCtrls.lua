@@ -77,6 +77,12 @@ B747DR_fuel_control_toggle_switch_pos   = find_dataref("laminar/B747/fuel/fuel_c
 B747DR_CAS_warning_status       = find_dataref("laminar/B747/CAS/warning_status")
 B747DR_CAS_caution_status       = find_dataref("laminar/B747/CAS/caution_status")
 B747DR_CAS_advisory_status      = find_dataref("laminar/B747/CAS/advisory_status")
+B747DR_CAS_status_status        = find_dataref("laminar/B747/CAS/status_status")
+-- the failure window's (notes/ATA-27.md §20): the MAWEA configuration
+-- warning card fails (1); the greenband nose gear pressure switch reads
+-- FWD CG (1) or AFT CG (2) whatever the CG
+B747DR_cfg_warn_fail_in         = find_dataref("laminar/B747/flt_ctrls/fail/config_warn")
+B747DR_greenband_sw_fail_in     = find_dataref("laminar/B747/flt_ctrls/fail/greenband_switch")
 
 B747DR_airspeed_V1              = find_dataref("laminar/B747/airspeed/V1")
 B747DR_parking_brake_ratio = find_dataref("laminar/B747/flt_ctrls/parking_brake_ratio")
@@ -739,10 +745,22 @@ function B747_elevator_trim()
     local G = B747_greenband_model
     local band = G.select(tonumber(B747DR_elevator_trim) or 0)
     B747_greenband_sel = band
-    local lit = B747DR_fcu_pri_gnd == 1
+    -- the configuration warning card selects and lights the band: failed
+    -- (the failure window), the lamps go out (the painted mid band) and
+    -- nothing is compared (ATA31 p.200-202, p.270)
+    local card_ok = B747DR_cfg_warn_fail_in < 0.5
+    local active = B747DR_fcu_pri_gnd == 1
         and (B747DR_airspeed_V1 <= 0 or simDR_ind_airspeed_kts_pilot < B747DR_airspeed_V1)
-    local ind = G.indicator(band, lit)
+    local ind = G.indicator(band, card_ok and active)
     if B747DR_elevator_trim_mid_ind ~= ind then B747DR_elevator_trim_mid_ind = ind end
+    -- >STAB GREENBAND (advisory) and STAB GREENBAND (STATUS): the nose gear
+    -- pressure switch disagrees with the selected band, while the band's
+    -- function is active (on the ground until the takeoff inhibit: ATA31
+    -- p.200-202; FCOM p.958)
+    local sw = math.floor(B747DR_greenband_sw_fail_in + 0.5)
+    local gb = (card_ok and active and G.disagree(band, sw)) and 1 or 0
+    if B747DR_CAS_advisory_status[273] ~= gb then B747DR_CAS_advisory_status[273] = gb end
+    if B747DR_CAS_status_status[147] ~= gb then B747DR_CAS_status_status[147] = gb end
 end
 
 
@@ -843,10 +861,18 @@ function B747_fltCtrols_EICAS_msg()
     tw.stab_in_band = B747_greenband_model.within(B747_greenband_sel,
         B747_rescale(-1.0, 0.0, 1.0, 15.0, simDR_elevator_trim))
     local tocw = B747_tocw_model.update(tocw_state, tw, SIM_PERIOD)
-    B747DR_CAS_warning_status[2] = tocw.flaps and 1 or 0        -- >CONFIG FLAPS
-    B747DR_CAS_warning_status[4] = tocw.gear_ctr and 1 or 0     -- >CONFIG GEAR CTR
-    B747DR_CAS_warning_status[5] = tocw.park_brk and 1 or 0     -- >CONFIG PARK BRK
-    B747DR_CAS_warning_status[7] = tocw.stab and 1 or 0         -- >CONFIG STAB
+    -- the configuration warning card failed (the failure window, notes/
+    -- ATA-27.md §20): its takeoff and landing CONFIG messages "may or may
+    -- not be displayed" (FCOM p.1558): none here (estimate); >CONFIG WARN
+    -- SY (FCOM p.1604) and the STATUS CONFIG WARN SY (ATA31 p.270)
+    local card_ok = B747DR_cfg_warn_fail_in < 0.5
+    local card_fail = card_ok and 0 or 1
+    if B747DR_CAS_advisory_status[52] ~= card_fail then B747DR_CAS_advisory_status[52] = card_fail end
+    if B747DR_CAS_status_status[146] ~= card_fail then B747DR_CAS_status_status[146] = card_fail end
+    B747DR_CAS_warning_status[2] = (card_ok and tocw.flaps) and 1 or 0        -- >CONFIG FLAPS
+    B747DR_CAS_warning_status[4] = (card_ok and tocw.gear_ctr) and 1 or 0     -- >CONFIG GEAR CTR
+    B747DR_CAS_warning_status[5] = (card_ok and tocw.park_brk) and 1 or 0     -- >CONFIG PARK BRK
+    B747DR_CAS_warning_status[7] = (card_ok and tocw.stab) and 1 or 0         -- >CONFIG STAB
 
     -- >CONFIG GEAR (FCOM p.1557-1558, p.1603): in flight (the PSEU), any
     -- gear not down and locked (the PSEU's ALL GR DN: ATA29_32 p.320), and
@@ -881,7 +907,7 @@ function B747_fltCtrols_EICAS_msg()
             config_gear_flaps = true
         end
     end
-    if config_gear_thrust or config_gear_flaps then
+    if card_ok and (config_gear_thrust or config_gear_flaps) then
         B747DR_CAS_warning_status[3] = 1
     else
         B747DR_CAS_warning_status[3] = 0
@@ -893,10 +919,10 @@ function B747_fltCtrols_EICAS_msg()
     -- climb thrust or more on two or more thrust levers, until it is at ARM
     -- or DN or three are below climb thrust (FCOM p.1558; the 109 has
     -- >SPEEDBRAKES EXT only, B747.45.xt.speedbrake.lua)
-    if tocw.spoilers
+    if card_ok and (tocw.spoilers
         or (B747DR_sb_freighter == 1 and B747DR_fcu_pri_gnd ~= 1
         and B747DR_speedbrake_lever > B747_speedbrake_model.ABOVE_ARM
-        and B747DR_engines_numLeverClimb >= 2)
+        and B747DR_engines_numLeverClimb >= 2))
     then
         B747DR_CAS_warning_status[6] = 1
     else

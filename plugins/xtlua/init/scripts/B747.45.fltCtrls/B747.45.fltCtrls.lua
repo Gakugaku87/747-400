@@ -222,6 +222,11 @@ B747DR_srm_fail_stab_runaway    = deferred_dataref("laminar/B747/flt_ctrls/fail/
 B747DR_sb_fail                  = deferred_dataref("laminar/B747/flt_ctrls/fail/auto_speedbrake", "number")
 -- the yaw dampers (step 4): a module fault, upper and lower (1)
 B747DR_yd_fail                  = deferred_dataref("laminar/B747/flt_ctrls/fail/yaw_damper", "array[2]")
+-- the failure window's (notes/ATA-27.md §20): the MAWEA configuration
+-- warning card fails (1: no CONFIG warnings, >CONFIG WARN SY); the greenband
+-- nose gear pressure switch reads FWD CG (1) or AFT CG (2) whatever the CG
+B747DR_cfg_warn_fail            = deferred_dataref("laminar/B747/flt_ctrls/fail/config_warn", "number")
+B747DR_greenband_sw_fail        = deferred_dataref("laminar/B747/flt_ctrls/fail/greenband_switch", "number")
 B747CMD_altn_stab_trim_up       = deferred_command("laminar/B747/flt_ctrls/altn_stab_trim_up", "Alternate Stabilizer Trim Nose Up", B747_altn_stab_trim_up_CMDhandler)
 B747CMD_altn_stab_trim_dn       = deferred_command("laminar/B747/flt_ctrls/altn_stab_trim_dn", "Alternate Stabilizer Trim Nose Down", B747_altn_stab_trim_dn_CMDhandler)
 B747CMD_stab_cutout_2_up        = deferred_command("laminar/B747/flt_ctrls/stab_trim/cutout_2_up", "Stab Trim Cutout 2 toward ON", B747_stab_cutout_2_up_CMDhandler)

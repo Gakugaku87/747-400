@@ -731,6 +731,8 @@ local B747_CASstatusMsg = {
     {DRindex = 143, name = "ENG 2 OIL FILT"},
     {DRindex = 144, name = "ENG 3 OIL FILT"},
     {DRindex = 145, name = "ENG 4 OIL FILT"},
+    {DRindex = 146, name = "CONFIG WARN SY"},     -- ATA31 p.270 (2026-11-04: the failure window)
+    {DRindex = 147, name = "STAB GREENBAND"},     -- ATA31 p.202, p.270
 }
 
 
