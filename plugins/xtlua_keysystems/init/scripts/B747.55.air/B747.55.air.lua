@@ -167,6 +167,10 @@ B747DR_air_fail_eq_card             = deferred_dataref("laminar/B747/air/fail/eq
 B747DR_air_fail_ztc                 = deferred_dataref("laminar/B747/air/fail/ztc", "number")
 B747DR_air_fail_trim_valve          = deferred_dataref("laminar/B747/air/fail/trim_valve", "number")
 B747DR_air_fail_zone_valve          = deferred_dataref("laminar/B747/air/fail/zone_valve", "array[7]")
+-- (2026-11-04; PNEU-07) the ground air cart: connected (1), by the FMC's
+-- GROUND SERVICES page or the command (docs/overhaul/notes/ATA-36.md §11)
+B747DR_air_ground_air               = deferred_dataref("laminar/B747/air/ground_air/connected", "number")
+deferred_command("laminar/B747/air/ground_air/connect", "Connect or disconnect the ground air cart", nil)
 -- the temperature model (B747.55.xt.temp.lua), °C: the zones F/D, U/D,
 -- A-E actual and target, the targets shown (1: a pack operating and no
 -- backup, FCOM p.577), MASTER (the PASS TEMP setting), the cargo FWD, AFT,

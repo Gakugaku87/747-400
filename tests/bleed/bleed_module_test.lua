@@ -171,4 +171,30 @@ rt:set("laminar/B747/fire/fail/duct_leak", 2, 0)
 frames(5)
 T.check(math.abs(get(AIR .. "duct_pressure_R") - before_r) < 0.2, "duct leak R gone: the right duct as before")
 
+
+-- (2026-11-04; PNEU-07) the ground air cart (notes/ATA-36.md §11): the APU
+-- and the engines stopped, the cart connected by its command (the FMC's
+-- GROUND SERVICES page) pressurizes the ducts (EXT AIR); moving takes it
+-- away
+rt:set("sim/cockpit2/electrical/APU_N1_percent", 0)
+rt:set("laminar/B747/electrical/apu/sel_dial_pos", 0)
+for i = 0, 3 do rt:set("laminar/B747/engines/display_N2", i, 0) end
+rt:set(SW, 75, 1)
+rt:set("sim/flightmodel/position/groundspeed", 0)
+frames(10)
+T.check(get(AIR .. "duct_pressure_C") < 1, "no APU, no engines: the ducts empty")
+rt:command("laminar/B747/air/ground_air/connect", 0.1)
+frames(5)
+T.equal(get(AIR .. "ground_air/connected"), 1, "the ground air cart connected")
+T.check(get(AIR .. "duct_pressure_C") > 30 and get(AIR .. "duct_pressure_L") > 30, "the cart pressurizes the ducts")
+T.equal(get(AIR .. "ext_air"), 1, "the cart: EXT AIR (FCOM p.578)")
+rt:set("sim/flightmodel/position/groundspeed", 3)
+frames(1)
+T.equal(get(AIR .. "ground_air/connected"), 0, "moving: the cart taken away")
+rt:set("sim/flightmodel/position/groundspeed", 0)
+rt:command("laminar/B747/air/ground_air/connect", 0.1)
+frames(1)
+rt:command("laminar/B747/air/ground_air/connect", 0.1)
+frames(1)
+T.equal(get(AIR .. "ground_air/connected"), 0, "the command again: removed")
 T.done()
