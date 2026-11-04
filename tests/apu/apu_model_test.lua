@@ -197,4 +197,28 @@ do
     T.check(out.gen_ready and out.starter == 1, "taken over: generators ready, kept running")
 end
 
+-- (2026-11-04; APU-09) the starter's power (FCOM p.895-896): without it the
+-- start does not begin (the door opens, the latch waits); with it, it
+-- begins; lost in the start, the starter stops and the start's time limit
+-- shuts the APU down with the APU message
+do
+    local s, inp = fresh()
+    inp.start_power = false
+    start(inp)
+    local out = run(s, inp, 20)
+    T.equal(out.door, 1, "no start power: the door opens")
+    T.equal(out.state, A.OFF, "no start power: no start")
+    T.equal(out.starter, 0, "no start power: no starter")
+    inp.start_power = true
+    out = run(s, inp, 1)
+    T.equal(out.state, A.STARTING, "the power back: the start begins (the latch kept)")
+    T.equal(out.starter, 2, "the starter")
+    out = run(s, inp, 10)
+    inp.start_power = false
+    out = run(s, inp, 1)
+    T.equal(out.starter, 0, "the power lost in the start: no starter")
+    out = run(s, inp, A.START_LIMIT_S)
+    T.check(out.adv_apu and out.state ~= A.RUNNING, "the start not finished in time: shut down, APU")
+end
+
 T.done()

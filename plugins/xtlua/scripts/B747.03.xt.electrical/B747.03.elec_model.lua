@@ -67,6 +67,7 @@ end
 function M.inputs()
     return {
         engine_type = 0,
+        apu_start_tr = false,            -- (2026-11-04) the 570's APU start TR (FCOM p.895: GE)
         battery = false,                 -- BATTERY switch ON
         stby_power = 1,                  -- STANDBY POWER selector: 0 OFF, 1 AUTO, 2 BAT
         utility = {false, false},        -- L, R UTILITY ON
@@ -437,7 +438,10 @@ function M.update(s, inp, dt)
     local apu_load = 0
     if not r7224 and inp.battery then apu_load = apu_load + A.apu_battery_bus end
     if apu_inv_on then apu_load = apu_load + A.apu_inverter end
-    if inp.apu_start and inp.battery then apu_load = apu_load + A.apu_starter end
+    -- (2026-11-04) the 570's APU start TR turns the starter while utility
+    -- bus 4 is powered (FCOM p.895; last frame's bus): not the APU battery
+    local tr_start = inp.apu_start_tr and prev.util ~= nil and prev.util[4]
+    if inp.apu_start and inp.battery and not tr_start then apu_load = apu_load + A.apu_starter end
     battery_step(bm, main_charger, main_load, M.CHARGE_AMPS[1], dt)
     battery_step(ba, apu_charger, apu_load, M.CHARGE_AMPS[2], dt)
 

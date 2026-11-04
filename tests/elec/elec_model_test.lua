@@ -397,6 +397,21 @@ do
     T.check(all(out.ac, 4, true) and out.battery.apu.amps <= 0, "APU running: AC power, APU battery charging")
 end
 
+-- (2026-11-04) the 570's APU start TR (FCOM p.895: GE): with utility bus 4
+-- powered the starter does not run on the APU battery
+do
+    local s, inp = powered_up()
+    inp.ext_available = {true, true}
+    inp.ext_request[1] = true
+    inp.ext_request[2] = true
+    inp.apu_start_tr = true
+    run(s, inp, 5)
+    inp.apu_start = true
+    local out = run(s, inp, 5)
+    T.check(out.util[4], "570: utility bus 4 powered")
+    T.check(out.battery.apu.amps < 100, ("570 with the TR: no starter load on the APU battery (%.0f A)"):format(out.battery.apu.amps))
+end
+
 -- X-Plane stand-ins follow the breakers (notes §6)
 do
     local s, inp = powered_up()

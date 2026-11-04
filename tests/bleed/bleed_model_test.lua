@@ -284,4 +284,24 @@ do
     T.check(not out.ext_air, "engines running: no EXT AIR")
 end
 
+-- (2026-11-04; APU-10) the APU's air in flight (FCOM p.895): one pack up to
+-- 15,000 ft, none above it; all three packs on the ground
+do
+    local s, inp = apu_air()
+    inp.pack_flow = {1.0, 1.0, 1.0}
+    local out = run(s, inp, 10)
+    T.near(out.apu_flow, 3.0, 1e-6, "on the ground: the APU gives the three packs")
+    inp.air, inp.altitude = true, 10000
+    out = run(s, inp, 2)
+    T.near(out.apu_flow, 1.0, 1e-6, "in flight at 10,000 ft: one pack's air")
+    T.check(out.duct[2] < 20, ("three packs on it in flight: the duct falls (%.0f psi)"):format(out.duct[2]))
+    inp.pack_flow = {0, 1.0, 0}
+    out = run(s, inp, 5)
+    T.check(out.duct[2] > 25, ("one pack in flight: the duct holds (%.0f psi)"):format(out.duct[2]))
+    inp.altitude = 17000
+    out = run(s, inp, 5)
+    T.equal(out.apu_flow, 0, "in flight above 15,000 ft: no APU air")
+    T.check(out.duct[2] < 1, ("above 15,000 ft: the duct empty (%.1f psi)"):format(out.duct[2]))
+end
+
 T.done()

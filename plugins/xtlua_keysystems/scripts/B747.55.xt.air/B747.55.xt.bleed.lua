@@ -97,6 +97,9 @@ local function read_inputs(inp)
     inp.adp[1] = B747DR_bleed_adp_1_psi > 0
     inp.adp[2] = B747DR_bleed_adp_4_psi > 0
     inp.altitude = simDR_indicated_altitude_pilot
+    -- (2026-11-04) in flight by the PSEU (the pack glue's binding: one
+    -- binding of it in this module)
+    inp.air = B747DR_pack_pseu_pri_gnd ~= nil and B747DR_pack_pseu_pri_gnd ~= 1
 end
 
 local function write_outputs(out)

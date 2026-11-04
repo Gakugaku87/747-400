@@ -12,6 +12,9 @@ local xtlua = dofile("tests/lib/xtlua.lua")
 local rt = xtlua.new()
 rt:load("plugins/xtlua_keysystems/scripts/B747.55.xt.air/B747.55.xt.air.lua")
 rt:set("sim/operation/prefs/startup_running", 0)
+-- on the ground by the PSEU (2026-11-04: the APU's air in flight is one
+-- pack's, FCOM p.895)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:callout("flight_start")
 
 local function frames(seconds)

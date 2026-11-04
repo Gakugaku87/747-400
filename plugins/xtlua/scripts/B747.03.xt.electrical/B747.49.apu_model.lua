@@ -38,6 +38,10 @@ function M.inputs()
         running = false,           -- X-Plane's APU running
         fire = false,              -- APU fire detected (X-Plane failure)
         fuel = true,               -- fuel in main tank 2
+        -- (2026-11-04; APU-09) the starter's power (FCOM p.895-896, the
+        -- glue's: the 109 and 405 both batteries, the 570 the main battery
+        -- and the APU start TR on utility bus 4 or the APU battery)
+        start_power = true,
     }
 end
 
@@ -91,9 +95,15 @@ function M.update(s, inp, dt)
         s.state, s.start_latch = M.STOPPING, false
     end
 
-    -- the sequence (FCOM p.896-897)
+    -- the sequence (FCOM p.896-897). (2026-11-04; APU-09) the start begins
+    -- with the starter's power only (FCOM p.896: a start requires both the
+    -- main and APU batteries; p.895: the 570's TR or APU battery), the
+    -- latch kept until it comes (estimate: the sources give the power, not
+    -- what the controller does without it). The start cycle restrictions
+    -- (p.896: the waits between starts) are the crew's, not the
+    -- controller's: none here
     if s.state == M.OFF then
-        if on and s.start_latch and s.door >= 1 and inp.battery then
+        if on and s.start_latch and s.door >= 1 and inp.battery and inp.start_power then
             s.state, s.start_t, s.start_latch = M.STARTING, 0, false
         end
     elseif s.state == M.STARTING then
@@ -134,8 +144,10 @@ function M.update(s, inp, dt)
         s.off_high_t = 0
     end
 
-    -- X-Plane's APU: 2 starts it, 1 keeps it running, 0 shuts it down
-    if s.state == M.STARTING then out.starter = 2
+    -- X-Plane's APU: 2 starts it, 1 keeps it running, 0 shuts it down; the
+    -- starter without its power (a battery run down in the start) lets the
+    -- APU run down, the start's time limit then shuts it down
+    if s.state == M.STARTING then out.starter = inp.start_power and 2 or 0
     elseif s.state == M.RUNNING or s.state == M.COOLDOWN then out.starter = 1
     else out.starter = 0 end
 

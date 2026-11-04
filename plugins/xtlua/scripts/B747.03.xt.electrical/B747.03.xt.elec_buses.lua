@@ -110,6 +110,8 @@ local function read_inputs(inp)
     inp.apu_n1 = simDR_apu_N1_pct
     inp.apu_gen_ok = B747_apu_gen_ready()                   -- the APU model (B747.03.xt.apu.lua)
     inp.apu_start = simDR_apu_start_switch_mode == 2 and simDR_apu_N1_pct < E.APU_READY_N1
+    -- (2026-11-04) the 570 (GE: FCOM p.895) has the APU start TR
+    inp.apu_start_tr = B747DR_elec_engine_type == 1
     inp.on_ground = B747DR_elec_pseu_air == 0               -- PSEU air relays, ATA29_32 p.299
     inp.autoland_req = B747DR_elec_bus_isolate_req > 0.5
     inp.ra = simDR_elec_radio_alt
@@ -257,6 +259,10 @@ local function write_switch_feedback(out, inp)
         end
     end
 end
+
+-- (2026-11-04) the model's last outputs, nil before its first frame (the
+-- APU glue's start power: the batteries' charge, utility bus 4)
+function B747_elec_last_out() return elec_state.out end
 
 function B747_elec_buses()
     read_inputs(elec_inputs)
