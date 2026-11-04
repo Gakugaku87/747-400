@@ -72,6 +72,10 @@ M.OIL_GULP_L = {7, 11}
 M.OIL_GULP_N1 = 15
 M.QUARTS_PER_LITRE = 1 / 0.946353
 M.OIL_FILT_N2 = 10             -- (2026-11-04) the oil flows above it (estimate)
+-- (2026-11-04) the oil temperature failure (notes/ATA-70-80.md §12): with
+-- the oil flowing, OIL_HOT_ADD_C more over OIL_HOT_S (past the amber band in
+-- about 100 s from 80 °C; estimates: no sources give a rate)
+M.OIL_HOT_ADD_C, M.OIL_HOT_S = 100, 60
 -- Operating limits (red lines) of N1, N2 and N3, % (FCOM p.833-836,
 -- p.843-844, p.873): the readout and the tape turn red there. CF6-80C2:
 -- ATA70_80 p.395. PW4056 and RB211: no source, the panel's previous values
@@ -127,6 +131,7 @@ function M.inputs()
         -- (2026-11-04) failure: the scavenge oil filter clogging, its
         -- differential pressure switch closed (33 psid: ATA70_80 p.522)
         oil_filter = four(false),
+        oil_hot = four(false),              -- (2026-11-04) failure: the oil overheating
         oil_degc = four(15),                -- X-Plane's oil temperature, °C
         oil_ratio = four(1),                -- X-Plane's oil quantity ratio
         cruise = false,                     -- in the air with the flaps up (the CF6's oil differential)
@@ -142,6 +147,7 @@ function M.new(random)
     s.vib_units = {}                        -- [n][source name]: level at 100 % of the rotor
     s.switch = four(true)                   -- the CF6's low oil pressure switch closed
     s.epr_red = four(false)
+    s.oil_hot_c = four(0)                   -- (2026-11-04) the overheat failure's degrees
     for n = 1, 4 do
         s.press_spread[n] = draw(M.OIL_PRESS_SPREAD, random)
         s.temp_spread[n] = draw(M.OIL_TEMP_SPREAD, random)
@@ -178,7 +184,7 @@ local function rpm(s, inp, out)
 end
 
 -- oil pressure, temperature and quantity (FCOM p.846-849, p.890, p.901)
-local function oil(s, inp, out)
+local function oil(s, inp, out, dt)
     local lim = M.OIL[inp.type] or M.OIL.PW
     for n = 1, 4 do
         local n2 = inp.n2[n]
@@ -197,7 +203,9 @@ local function oil(s, inp, out)
         else
             out.oil_press_msg[n] = p < along(lim.press_red, n2)
         end
-        local t = inp.oil_degc[n] + s.temp_spread[n] * f
+        local hot = (inp.oil_hot[n] and inp.n2[n] > M.OIL_FILT_N2) and M.OIL_HOT_ADD_C or 0
+        s.oil_hot_c[n] = s.oil_hot_c[n] + (hot - s.oil_hot_c[n]) * clamp((dt or 0) / M.OIL_HOT_S, 0, 1)
+        local t = inp.oil_degc[n] + s.temp_spread[n] * f + s.oil_hot_c[n]
         out.oil_degc[n] = t
         out.oil_temp_msg[n] = t > lim.temp_amber
         -- (2026-11-04) ENG n OIL FILT: the scavenge filter's switch, with the
@@ -256,7 +264,7 @@ function M.update(s, inp, dt)
         out.amber[n] = not out.red[n] and egt >= lim.amber and not out.inhibit
         out.white[n] = not out.red[n] and not out.amber[n]
     end
-    oil(s, inp, out)
+    oil(s, inp, out, dt)
     vibration(s, inp, out)
     rpm(s, inp, out)
     -- the secondary engine exceedances of any engine, which bring up the

@@ -92,6 +92,8 @@ B747DR_apu_fail_duct_leak           = deferred_dataref("laminar/B747/apu/fail/du
 B747DR_engine_fail_oil_filter       = deferred_dataref("laminar/B747/engines/fail/oil_filter", "array[4]")
 B747DR_EPR_max_limit                = deferred_dataref("laminar/B747/engines/EPR/max_limit", "array[4)")
 B747DR_EGT_amber_inhibit            = deferred_dataref("laminar/B747/engines/EGT/amber_inhibit", "array[4)")
+-- (2026-11-04) the oil overheating (ENG n OIL TEMP: notes/ATA-70-80.md §12)
+B747DR_engine_fail_oil_temp         = deferred_dataref("laminar/B747/engines/fail/oil_temp", "array[4]")
 B747DR_EGT_amber_on                 = deferred_dataref("laminar/B747/engines/EGT/amber_on", "array[4)")
 B747DR_EGT_white_on                 = deferred_dataref("laminar/B747/engines/EGT/white_on", "array[4)")
 B747DR_EGT_red_on                   = deferred_dataref("laminar/B747/engines/EGT/red_on", "array[4]")

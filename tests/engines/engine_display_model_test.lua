@@ -348,4 +348,24 @@ do
     o = D.update(s, inp, DT)
     T.check(not o.oil_filt_msg[3], "P&W: no ENG OIL FILT (not in its FCOM)")
 end
+
+-- (2026-11-04) the oil overheating (notes/ATA-70-80.md §12): with the oil
+-- flowing, past the amber band (ENG n OIL TEMP) in about 100 s from 80 °C;
+-- repaired, it cools back
+do
+    local s, inp = D.new(fixed(0)), D.inputs()
+    inp.type = "PW"
+    running(inp, 65)
+    for n = 1, 4 do inp.oil_degc[n] = 80 end
+    local o = run(s, inp, 10)
+    T.check(not o.oil_temp_msg[2], "oil 80 °C: no ENG 2 OIL TEMP")
+    inp.oil_hot[2] = true
+    o = run(s, inp, 60)
+    T.check(not o.oil_temp_msg[2], "oil overheat 2 after 60 s: not yet (" .. o.oil_degc[2] .. " °C)")
+    o = run(s, inp, 60)
+    T.check(o.oil_temp_msg[2] and not o.oil_temp_msg[1], "oil overheat 2 after 120 s: ENG 2 OIL TEMP (" .. o.oil_degc[2] .. " °C)")
+    inp.oil_hot[2] = false
+    o = run(s, inp, 240)
+    T.check(not o.oil_temp_msg[2], "repaired: cooled, no ENG 2 OIL TEMP (" .. o.oil_degc[2] .. " °C)")
+end
 T.done()

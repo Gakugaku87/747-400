@@ -75,4 +75,8 @@ B747DR_pidepr_eccP = deferred_dataref("laminar/B747/flt_ctrls/pid/ecc/epr/p", "n
 -- in the alternate mode, for the ALTN lights (1)
 B747DR_eec_fail_altn = deferred_dataref("laminar/B747/engines/fail/eec_altn", "array[4]")
 B747DR_eec_fail_fault = deferred_dataref("laminar/B747/engines/fail/eec_fault", "array[4]")
+-- (2026-11-04) the idle selection stuck at minimum or at approach idle
+-- (ENG n LOW IDLE, >IDLE DISAGREE: notes/ATA-70-80.md §12)
+B747DR_eec_fail_idle_min = deferred_dataref("laminar/B747/engines/fail/idle_min", "array[4]")
+B747DR_eec_fail_idle_approach = deferred_dataref("laminar/B747/engines/fail/idle_approach", "array[4]")
 B747DR_eec_altn_light = deferred_dataref("laminar/B747/engines/eec/altn_light", "array[4]")

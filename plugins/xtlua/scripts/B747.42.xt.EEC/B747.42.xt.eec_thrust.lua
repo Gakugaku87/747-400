@@ -21,6 +21,8 @@ B747DR_eec_CAS_caution          = find_dataref("laminar/B747/CAS/caution_status"
 -- (2026-11-04) the failures and the ALTN lights (notes/ATA-70-80.md §10)
 B747DR_eec_fail_altn_in         = find_dataref("laminar/B747/engines/fail/eec_altn")
 B747DR_eec_fail_fault_in        = find_dataref("laminar/B747/engines/fail/eec_fault")
+B747DR_eec_fail_idle_min_in     = find_dataref("laminar/B747/engines/fail/idle_min")
+B747DR_eec_fail_idle_app_in     = find_dataref("laminar/B747/engines/fail/idle_approach")
 B747DR_eec_altn_light_out       = find_dataref("laminar/B747/engines/eec/altn_light")
 
 -- the lever's idle end commands less than any idle, so that the thrust
@@ -94,6 +96,8 @@ function B747_eec_update()
         inp.altn[n] = B747DR_button_switch_position[6 + n] < 0.5    -- EEC MODE switches: [7]-[10]
         inp.fail_altn[n] = B747DR_eec_fail_altn_in[n - 1] > 0.5
         inp.fault[n] = B747DR_eec_fail_fault_in[n - 1] > 0.5
+        inp.idle_min[n] = B747DR_eec_fail_idle_min_in[n - 1] > 0.5
+        inp.idle_approach[n] = B747DR_eec_fail_idle_app_in[n - 1] > 0.5
         inp.n1[n] = B747DR_display_N1[n - 1]
         inp.n2[n] = rotor_n2[n]
         if inp.type == "GE" then inp.actual[n] = B747DR_display_N1[n - 1]

@@ -181,4 +181,12 @@ rt:set(ENG .. "fail/oil_filter", 2, 0)
 frames(0.2)
 T.equal(rt:get(ADV, 326) + rt:get("laminar/B747/CAS/status_status", 144), 0, "repaired: no OIL FILT")
 
+-- (2026-11-04) the oil overheating (laminar/B747/engines/fail/oil_temp;
+-- notes/ATA-70-80.md §12): ENG 2 OIL TEMP (advisory 119) after 2 to 3 min
+rt:set(ENG .. "fail/oil_temp", 1, 1)
+frames(180)
+T.equal(rt:get(ADV, 119), 1, "oil overheat 2: ENG 2 OIL TEMP")
+T.equal(rt:get(ADV, 118), 0, "no ENG 1 OIL TEMP")
+rt:set(ENG .. "fail/oil_temp", 1, 0)
+
 T.done()

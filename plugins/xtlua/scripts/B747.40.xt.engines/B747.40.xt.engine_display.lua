@@ -44,6 +44,7 @@ B747DR_vib_source               = find_dataref("laminar/B747/engines/vib_source"
 B747DR_sec_exceed               = find_dataref("laminar/B747/engines/sec_exceed")
 -- (2026-11-04) the oil filter's failure and the STATUS (notes/ATA-70-80.md §11)
 B747DR_display_fail_oil_filter  = find_dataref("laminar/B747/engines/fail/oil_filter")
+B747DR_display_fail_oil_temp    = find_dataref("laminar/B747/engines/fail/oil_temp")
 B747DR_display_status           = find_dataref("laminar/B747/CAS/status_status")
 -- the panel's vibration source labels: 0 BB, 1 N1, 2 N2, 3 FAN, 4 LPT
 local VIB_LABEL = {N1 = 1, N2 = 2, FAN = 3, LPT = 4}
@@ -107,6 +108,7 @@ function B747_engine_display()
         inp.epr_max[n] = B747DR_engines_display_EPR_max[i]
         inp.oil_psi[n] = simDR_engine_oil_pressure[i]
         inp.oil_filter[n] = B747DR_display_fail_oil_filter[i] > 0.5
+        inp.oil_hot[n] = B747DR_display_fail_oil_temp[i] > 0.5
         inp.oil_degc[n] = simDR_engine_oil_temp[i]
         inp.oil_ratio[n] = simDR_engine_oil_qty_ratio[i]
     end
