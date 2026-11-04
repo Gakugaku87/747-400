@@ -19,7 +19,7 @@
 --   FlyWithLua/B747_flighttest/mark    add a "mark" row to events.csv
 -- Does nothing unless the 747-400 is the user aircraft.
 
-local VERSION = "10"
+local VERSION = "11"
 
 if not string.find(AIRCRAFT_PATH or "", "747-400", 1, true)
     or XPLMFindDataRef("laminar/B747/engines/type") == nil then
@@ -122,6 +122,13 @@ local COLUMNS = {
     -- turn's phase
     {"lnav_xtk", "laminar/B747/fms/lnav/xtk"}, {"lnav_dtk", "laminar/B747/fms/lnav/dtk"},
     {"lnav_roll", "laminar/B747/fms/lnav/roll"}, {"pturn_phase", "laminar/B747/fms/lnav/pturn_phase"},
+    -- the flare and the touchdown (2026-11-04: v11): the AFDS's pitch
+    -- command (degrees), the flight model's vertical speed (fpm; the "vs"
+    -- column is the VSI's, which lags), the speedbrakes' deployment, the
+    -- PSEU's primary ground, the gear's normal force (N)
+    {"pitch_cmd", "laminar/B747/autopilot/pitch_cmd"}, {"vs_i", "sim/flightmodel/position/vh_ind_fpm"},
+    {"sb_ratio", "sim/flightmodel2/controls/speedbrake_ratio"}, {"pri_gnd", "laminar/B747/gear/air_ground/pri_gnd"},
+    {"fnrml_gear", "sim/flightmodel/forces/fnrml_gear"},
 }
 -- the four engines' thrust, for the "thrust" column
 local THRUST = {{"sim/flightmodel/engine/POINT_thrust", 0}, {"sim/flightmodel/engine/POINT_thrust", 1},
