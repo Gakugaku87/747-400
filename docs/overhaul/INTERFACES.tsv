@@ -1057,18 +1057,27 @@ laminar/B747/comm/ap_R/vhf_R_audio/vol_dn	command	obj	B747.15.com,B747.15.xt.com
 laminar/B747/comm/ap_R/vhf_R_audio/vol_up	command	obj	B747.15.com,B747.15.xt.com
 laminar/B747/comm/ap_R/vor_adf_audio/vol_dn	command	obj	B747.15.com,B747.15.xt.com
 laminar/B747/comm/ap_R/vor_adf_audio/vol_up	command	obj	B747.15.com,B747.15.xt.com
+laminar/B747/comm/hf_L/active_khz	dataref	panel	B747.15.com
+laminar/B747/comm/hf_L/standby_khz	dataref	panel	B747.15.com
+laminar/B747/comm/hf_R/active_khz	dataref	panel	B747.15.com
+laminar/B747/comm/hf_R/standby_khz	dataref	panel	B747.15.com
 laminar/B747/comm/rtp_C/freq_MHz/sel_dial_pos	dataref	obj,snd	B747.15.com,B747.15.xt.com
 laminar/B747/comm/rtp_C/freq_khz/sel_dial_pos	dataref	obj,snd	B747.15.com,B747.15.xt.com
 laminar/B747/comm/rtp_C/hf_sens_ctrl/rheostat	dataref	obj	B747.15.com,B747.15.xt.com
 laminar/B747/comm/rtp_C/lcd_to_display	dataref	panel	B747.15.com,B747.15.xt.com
+laminar/B747/comm/rtp_C/stby_show	dataref	panel	B747.15.com
 laminar/B747/comm/rtp_L/freq_MHz/sel_dial_pos	dataref	obj,snd	B747.15.com,B747.15.xt.com
 laminar/B747/comm/rtp_L/freq_khz/sel_dial_pos	dataref	obj,snd	B747.15.com,B747.15.xt.com
 laminar/B747/comm/rtp_L/hf_sens_ctrl/rheostat	dataref	obj	B747.15.com,B747.15.xt.com
 laminar/B747/comm/rtp_L/lcd_to_display	dataref	panel	B747.15.com,B747.15.xt.com
+laminar/B747/comm/rtp_L/stby_show	dataref	panel	B747.15.com
 laminar/B747/comm/rtp_R/freq_MHz/sel_dial_pos	dataref	obj,snd	B747.15.com,B747.15.xt.com
 laminar/B747/comm/rtp_R/freq_khz/sel_dial_pos	dataref	obj,snd	B747.15.com,B747.15.xt.com
 laminar/B747/comm/rtp_R/hf_sens_ctrl/rheostat	dataref	obj	B747.15.com,B747.15.xt.com
 laminar/B747/comm/rtp_R/lcd_to_display	dataref	panel	B747.15.com,B747.15.xt.com
+laminar/B747/comm/rtp_R/stby_show	dataref	panel	B747.15.com
+laminar/B747/comm/vhf_C/active_khz	dataref	panel	B747.15.com
+laminar/B747/comm/vhf_C/standby_khz	dataref	panel	B747.15.com
 laminar/B747/dec_height/display_status	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/dec_height/display_status_fo	dataref	panel	B747.60.fltInst
 laminar/B747/dsp/canc/switch_pos	dataref	obj,snd	B747.60.fltInst,B747.60.xt.fltInst02
@@ -1409,6 +1418,7 @@ laminar/B747/fmod/callouts/appDH	dataref	snd	B747.60.fltInst,B747.60.xt.fltInst0
 laminar/B747/fmod/callouts/v1	dataref	snd	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/fms/exec_light_copilot	dataref	obj	B747.68.fms,B747.68.xt.fms
 laminar/B747/fms/exec_light_pilot	dataref	obj	B747.68.fms,B747.68.xt.fms
+laminar/B747/fms/thrlim/eicas	dataref	panel	B747.68.fms
 laminar/B747/fms1/Line01_L	dynamic	panel	
 laminar/B747/fms1/Line01_S	dynamic	panel	
 laminar/B747/fms1/Line02_L	dynamic	panel	
