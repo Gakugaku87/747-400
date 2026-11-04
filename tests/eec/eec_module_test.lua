@@ -371,4 +371,28 @@ rt:set("laminar/B747/autothrottle/servo", 0)
 frames(1)
 T.near(get(LEV, 0), l0 + 0.4, 0.01, "the servo off: the levers stay (no hand)")
 
+-- (2026-11-04) the failures (laminar/B747/engines/fail/*; notes/ATA-70-80.md
+-- §10): EEC 2 reverts by itself: ENG 2 EEC MODE (advisory 314), the ALTN
+-- light's dataref; EEC faults on the ground: >ENG n CONTROL (110-113), three
+-- of them >ENG CONTROLS (323)
+local ADV = "laminar/B747/CAS/advisory_status"
+for i = 0, 3 do rt:set("laminar/B747/engines/display_N2", i, 70) end
+rt:set(ENG .. "fail/eec_altn", 1, 1)
+frames(0.5)
+T.equal(get(ADV, 314), 1, "EEC 2 reverted by itself: ENG 2 EEC MODE")
+T.equal(get(ENG .. "eec/altn_light", 1), 1, "EEC 2 reverted: the ALTN light's dataref")
+T.equal(get(ENG .. "eec/altn_light", 0), 0, "EEC 1 normal: no ALTN light")
+T.equal(get(ADV, 111), 1, "EEC 2 reverted on the ground: >ENG 2 CONTROL")
+rt:set(ENG .. "fail/eec_fault", 0, 1)
+rt:set(ENG .. "fail/eec_fault", 2, 1)
+frames(0.5)
+T.equal(get(ADV, 110) + get(ADV, 112), 2, "EEC 1, 3 faults: >ENG 1, 3 CONTROL")
+T.equal(get(ADV, 323), 1, "three EECs degraded: >ENG CONTROLS")
+rt:set(ENG .. "fail/eec_altn", 1, 0)
+rt:set(ENG .. "fail/eec_fault", 0, 0)
+rt:set(ENG .. "fail/eec_fault", 2, 0)
+frames(0.5)
+T.equal(get(ADV, 314) + get(ADV, 111) + get(ADV, 323), 0, "repaired: no messages")
+T.equal(get(ENG .. "eec/altn_light", 1), 0, "repaired: no ALTN light")
+
 T.done()

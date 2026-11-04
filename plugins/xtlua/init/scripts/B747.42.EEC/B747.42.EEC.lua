@@ -68,3 +68,11 @@ B747DR_pideccP = deferred_dataref("laminar/B747/flt_ctrls/pid/ecc/N1/p", "number
 B747DR_pidepr_eccI = deferred_dataref("laminar/B747/flt_ctrls/pid/ecc/epr/i", "number")
 B747DR_pidepr_eccD = deferred_dataref("laminar/B747/flt_ctrls/pid/ecc/epr/d", "number")
 B747DR_pidepr_eccP = deferred_dataref("laminar/B747/flt_ctrls/pid/ecc/epr/p", "number")
+
+-- (2026-11-04) the failures for the failure window (1 failed; the EEC
+-- model's inputs: docs/overhaul/notes/ATA-70-80.md §10): the EEC reverts to
+-- the alternate mode by itself; an EEC system fault (degraded). The EECs
+-- in the alternate mode, for the ALTN lights (1)
+B747DR_eec_fail_altn = deferred_dataref("laminar/B747/engines/fail/eec_altn", "array[4]")
+B747DR_eec_fail_fault = deferred_dataref("laminar/B747/engines/fail/eec_fault", "array[4]")
+B747DR_eec_altn_light = deferred_dataref("laminar/B747/engines/eec/altn_light", "array[4]")
