@@ -402,3 +402,11 @@ HYD OVHT SYS       = TEMP > 104 °C
   - 各リザーバの容量（gal）。
 - 実機の構成差：本 FCOM（109/405/570）は AUX が系統 4 のみ。E&M（Config ALL）は 1・4。採用は FCOM。
 - 本ノートで INTERFACES.tsv の漏れ（§6.2）を見つけた。INTERFACES.tsv の生成方法（`SHOW_*` 条件を拾っていない）を見直す必要がある。
+
+## 10. 故障の入力（2026-11-04：故障の窓の F0）
+
+- 新しい dataref（1 で故障。init `B747.19.hydraulicsmodel`）：`laminar/B747/hydraulics/fail/edp[4]`（エンジン駆動ポンプ 1〜4 が流量を出さない）、`fail/demand_pump[4]`（demand pump 1〜4：1・4 は ADP、2・3 は ACMP が流量を出さない）、`fail/leak[4]`（系統 1〜4 の漏れ）。モデル（`B747.19.hyd_model.lua`）の入力 `inp.edp_failed`・`inp.dem_failed`。漏れはグルー（`B747.19.xt.hyd_power.lua`）が作動油量を減らす（X-Plane の `rel_hydleak*` と同じ形）。
+- ポンプの故障は流量 0 なので、前からの論理がそのまま働く：EDP なら ENGINE PRESS 灯と HYD PRESS ENG n、AUTO の demand pump が引き継ぐ（§4.2・§4.3）。demand pump なら DEMAND PRESS 灯と HYD PRESS DEM n（selector が ON か、AUTO で運転を求められたとき）。両方なら HYD PRESS SYS n（FCOM p.1483–1484、p.1495）。
+- 漏れは 120 秒で空（推定。資料に漏れの速さは無い）。0.34 で >HYD QTY LOW と SYS FAULT（§4.8）。故障を消すと満タン（1.00）に戻る（窓の「修理」。実機では整備で補給）。
+- 試験：`hyd_model_test` 168、`hyd_module_test` 260。
+- X-Plane（カスタム acf、2026-11-04）：新しい `s241_hyd_failures` 25/25（成田でエンジン運転中：EDP 1 で ENGINE PRESS 1・HYD PRESS ENG 1、ADP 1 が AUTO で引き継いで系統 1 は 2,997 psi、synoptic の EDP 1 は ON 琥珀。DEMAND 2 を ON にして故障で DEMAND PRESS 2・HYD PRESS DEM 2、系統 2 は EDP 2 のまま。系統 3 の漏れで量が減り、約 80 秒で 0.34 になって >HYD QTY LOW 3、直すと 1.00。下の EICAS の HYD synoptic の写真）、回帰の `s04_hydraulics` 29/29。Log.txt に Lua の誤りなし。

@@ -98,6 +98,10 @@ function M.inputs()
         qty_use = {0, 0, 0, 0},                   -- quantity the loads took this frame (ratio)
         brake_use_in3 = 0,                        -- fluid the brakes took from the accumulator
         oat = 15,                                 -- °C
+        -- (2026-11-04) failures for the failure window (notes/ATA-29.md
+        -- §10): an engine pump, a demand pump gives no flow
+        edp_failed = {false, false, false, false},
+        dem_failed = {false, false, false, false},
     }
 end
 
@@ -198,7 +202,7 @@ function M.update(s, inp, dt)
         o.sov_open = not inp.fire_out[n]
         local depress = inp.dc[n] and (not inp.engine_pump[n] or inp.fire_out[n])
         local edp_gpm = 0
-        if not depress and o.sov_open and ss.qty > 0 then
+        if not depress and o.sov_open and ss.qty > 0 and not inp.edp_failed[n] then
             edp_gpm = M.EDP_GPM * clamp(inp.n2[n] / 100, 0, 1)   -- flow with N2 (estimate, FCTM p.286)
         end
         o.edp_on = edp_gpm > 0
@@ -217,7 +221,7 @@ function M.update(s, inp, dt)
             local demand = run_on_demand(ss, auto and ss.edp_low, dt)
             local auto_run = hydim and auto and (flaps or inp.fuel_cutoff[n] or demand)
             commanded = control and (on or auto_run)
-            if commanded then
+            if commanded and not inp.dem_failed[n] then
                 local d = inp.duct_psi[M.ADP_DUCT[n]]
                 dem_gpm = M.ADP_GPM * clamp((d - M.ADP_DUCT_MIN_PSI) / (M.ADP_DUCT_FULL_PSI - M.ADP_DUCT_MIN_PSI), 0, 1)
             end
@@ -228,7 +232,7 @@ function M.update(s, inp, dt)
             local demand = run_on_demand(ss, auto and ready and ss.edp_low, dt)
             local auto_run = hydim and auto and ready and (inp.fuel_cutoff[n] or demand)
             commanded = control and ((on and ready) or auto_run)   -- the ELCU closes
-            if commanded and inp.ac[n] then dem_gpm = M.ACMP_GPM end
+            if commanded and inp.ac[n] and not inp.dem_failed[n] then dem_gpm = M.ACMP_GPM end
             o.control = false
         end
         o.dem_commanded = commanded

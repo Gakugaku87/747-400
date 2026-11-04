@@ -226,7 +226,7 @@ Lua が作る名前の数：dataref 1617 個、コマンド 628 個。静的に�
 - 新設（1-4、init スクリプト `B747.19.hydraulicsmodel`）：`laminar/B747/hydraulics/light/eng_press`・`dem_press`・`sys_fault`（[0]〜[3]＝系統 1〜4）、`light/brake_source`。照明モジュールが P5 の ENGINE PRESS・DEMAND PRESS・SYS FAULT と機長側の BRAKE SOURCE の灯に使う。
 - EICAS：caution 9（>BRAKE SOURCE）、40〜43（HYD PRESS SYS）、advisory 200・201（HYD CONTROL 1・4）、202〜205（HYD OVHT SYS）、206〜209（HYD PRESS DEM）、210〜213（HYD PRESS ENG）、218〜221（>HYD QTY LOW）。
 - カスタム acf の HYD synoptic 用（HYD-18・19、2026-10-23、init スクリプト `B747.19.hydraulicsmodel`）：`hydraulics/synoptic/edp`・`dem`（[0]〜[3]。記号の状態 0 ON（空の記号）、1 ON 琥珀、2 AUTO 琥珀、3 AUTO シアン、4 OFF 琥珀。EDP は 0・1・4 だけ）、`synoptic/aux`（0 OFF 白、1 待機（シアン）、2 運転（白）、3 琥珀）、`synoptic/sov`（[0]〜[3]、1＝開）、`synoptic/rsvr_press`（[0]〜[3]、1＝RSVR PRESS）、`synoptic/inop`（[0]〜[3]、不作動項目の一覧。0 なし、1 一覧、2 THRUST REV つきの一覧（P&W））、`synoptic/inop_set`（[0]〜[5]、`M.SYN_SETS` の組 1+2・1+3・2+3・2+4・3+4・1+2+4 の共通項目、1＝出す）。状態はモデルの `M.SYN_*`。系統を失ったとは、系統圧低（HYD PRESS SYS と同じ条件）。純正 acf は前からの `valve_n`・`dem_mode_n`・`pressure_13` などを使い続ける。パネルの画像は `docs/overhaul/tools/make_synoptic_images.ps1` で作る（ACF_DIFF.md §5）。
-- X-Plane の油圧は「常に加圧、故障を書かない」（notes/ATA-29.md §6.1）。`B747.20` はポンプの故障（`rel_hydpmp*`）を書かなくなった。X-Plane の漏れ故障（`rel_hydleak*`）は、グルーが作動油量を減らす形で受ける。
+- X-Plane の油圧は「常に加圧、故障を書かない」（notes/ATA-29.md §6.1）。`B747.20` はポンプの故障（`rel_hydpmp*`）を書かなくなった。X-Plane の漏れ故障（`rel_hydleak*`）は、グルーが作動油量を減らす形で受ける。2026-11-04 から、故障の窓の入力（init `B747.19.hydraulicsmodel`）`hydraulics/fail/edp[4]`・`demand_pump[4]`（モデルの `inp.edp_failed`・`dem_failed`：流量 0）と `fail/leak[4]`（グルーが 120 秒で空にし、直すと満タン）も読む（notes/ATA-29.md §10）。
 
 ### 4.5 空圧（1-5）
 

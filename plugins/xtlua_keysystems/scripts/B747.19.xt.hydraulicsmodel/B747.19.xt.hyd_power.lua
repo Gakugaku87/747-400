@@ -45,6 +45,12 @@ B747DR_hyd_syn_rsvr_press       = find_dataref("laminar/B747/hydraulics/synoptic
 B747DR_hyd_syn_inop             = find_dataref("laminar/B747/hydraulics/synoptic/inop")
 B747DR_hyd_syn_inop_set         = find_dataref("laminar/B747/hydraulics/synoptic/inop_set")
 B747DR_hyd_engine_type          = find_dataref("laminar/B747/engines/type")
+-- (2026-11-04) the failures (notes/ATA-29.md §10)
+B747DR_hyd_fail_edp_in          = find_dataref("laminar/B747/hydraulics/fail/edp")
+B747DR_hyd_fail_demand_in       = find_dataref("laminar/B747/hydraulics/fail/demand_pump")
+B747DR_hyd_fail_leak_in         = find_dataref("laminar/B747/hydraulics/fail/leak")
+local LEAK_FAIL_S = 120             -- the leak failure drains its system in 120 s (estimate)
+local hyd_leaked = {false, false, false, false}   -- the leak failure on last frame
 
 -- estimates: flow for the pressure the flight controls take (their old
 -- pressure budget, B747.19.xt.hydraulics_override.lua), and the brake
@@ -112,6 +118,13 @@ local function read_inputs(inp, dt)
         inp.ac[n] = B747DR_hyd_elec_ac[n - 1] > 0.5
         inp.demand_gpm[n] = took_psi[n] / math.max(dt, 0.001) * GPM_PER_PSI_S
         if leak_s[n] > 0 then inp.qty_use[n] = dt / leak_s[n] else inp.qty_use[n] = 0 end
+        -- (2026-11-04) the failures: the pumps, a leak in this system
+        inp.edp_failed[n] = B747DR_hyd_fail_edp_in[n - 1] > 0.5
+        inp.dem_failed[n] = B747DR_hyd_fail_demand_in[n - 1] > 0.5
+        local leaking = B747DR_hyd_fail_leak_in[n - 1] > 0.5
+        if leaking then inp.qty_use[n] = inp.qty_use[n] + dt / LEAK_FAIL_S
+        elseif hyd_leaked[n] then hyd_state.sys[n].qty = 1.0 end   -- repaired: refilled (the window's repair)
+        hyd_leaked[n] = leaking
     end
     inp.fire_out[1] = B747DR_hyd_fire_handle_1 > 0.5
     inp.fire_out[2] = B747DR_hyd_fire_handle_2 > 0.5

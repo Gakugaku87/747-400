@@ -366,4 +366,31 @@ do
     end
 end
 
+
+-- (2026-11-04) the pump failures (notes/ATA-29.md §10): engine pump 2
+-- failed: no flow, HYD PRESS ENG 2, the demand pump (AUTO) takes over and
+-- the system keeps its pressure; its demand pump failed too: HYD PRESS SYS 2
+do
+    local s, inp = parked()
+    engines_running(inp)
+    local out = run(s, inp, 30)
+    T.check(out.sys[2].powered and not out.sys[2].press_eng, "pumps failures: system 2 normal")
+    inp.edp_failed[2] = true
+    out = run(s, inp, 30)
+    T.check(not out.sys[2].edp_on and out.sys[2].edp_psi == 0, "engine pump 2 failed: no flow")
+    T.check(out.sys[2].press_eng, "engine pump 2 failed: HYD PRESS ENG 2")
+    T.check(out.sys[2].dem_running and out.sys[2].powered, "the demand pump (AUTO) runs: system 2 keeps its pressure")
+    inp.dem_failed[2] = true
+    out = run(s, inp, 30)
+    T.check(not out.sys[2].dem_running and not out.sys[2].powered, "demand pump 2 failed too: system 2 without pressure")
+    T.check(out.sys[2].press_sys, "both pumps failed: HYD PRESS SYS 2")
+    inp.edp_failed[2], inp.dem_failed[2] = false, false
+    out = run(s, inp, 30)
+    T.check(out.sys[2].powered and not out.sys[2].press_sys and not out.sys[2].press_eng, "repaired: system 2 normal")
+    -- demand pump 1 (air driven) failed with the selector ON: HYD PRESS DEM 1
+    inp.demand_sel[1] = 2
+    inp.dem_failed[1] = true
+    out = run(s, inp, 30)
+    T.check(not out.sys[1].dem_running and out.sys[1].press_dem, "demand pump 1 failed, ON: HYD PRESS DEM 1")
+end
 T.done()
