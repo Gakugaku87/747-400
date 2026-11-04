@@ -50,9 +50,8 @@
 --    FLARE_DECEL down to TD_SINK ft/s at the touchdown asks for less (the
 --    deceleration's change of path fed forward), followed at K_FLARE
 --    within FLARE_G, not raised under FLARE_HOLD_FT; then NOSE LETDOWN
---    on the ground (p.294, p.332): the command down LETDOWN_RATE degrees
---    a second from LETDOWN_STEP under the attitude, at LETDOWN_PITCH
---    under LETDOWN_DOWN degrees.
+--    on the ground (p.294, p.332): the command from the attitude down
+--    LETDOWN_RATE degrees a second to LETDOWN_PITCH.
 -- A vertical speed asks for its flight path; the command moves at
 -- K_PATH times the flight path's error a second, the path flown taken
 -- LEAD_S ahead on the inertial vertical acceleration (damping: ATA22
@@ -203,12 +202,25 @@ M.GS_DOTS_MAX = 2.45
 -- went on rising 0.9 degree past 5 ft (the command a degree ahead on the
 -- A/P's lag, 4.46 to 5.36 degrees) and the 747 met the runway still
 -- pulling 1.14 g: it rose 6 ft and floated (s114, 2026-11-02 11:14).
--- NOSE LETDOWN: the
--- nose lowered LETDOWN_RATE degrees a second from LETDOWN_STEP under the
--- attitude (from the attitude
--- the nose went on up and the airplane skipped 2 s), held down at
--- LETDOWN_PITCH under LETDOWN_DOWN degrees (ATA22 p.332: on the ground and
--- under 2); the rate, the step and the pitch estimates
+-- NOSE LETDOWN: the command from the attitude at the touchdown down
+-- LETDOWN_RATE degrees a second to LETDOWN_PITCH, the pitch-down command
+-- that holds the nose gear firmly on the runway once under 2 degrees
+-- (ATA22 p.294: under 5 ft of RA after the flare's command is under 2
+-- degrees; p.332: on the ground under 2 degrees of pitch); the rate and
+-- the pitch estimates. 2026-11-04: no more a step of a degree under the
+-- attitude at the touchdown, nor a jump to LETDOWN_PITCH under 2 degrees.
+-- The step (from 2026-10-30, while FLARE still raised the nose to the
+-- touchdown) pushed the elevator 0.3 to 0.5 down as the main gear met the
+-- runway; the nose came down 1.5 to 2.4 degrees a second, the main gear
+-- lifted off for 0.2 to 0.8 s (s114, s117), and the jump under 2 degrees
+-- brought the nose gear down at 3 to 4 degrees a second (s117). Since
+-- FLARE_HOLD_FT and HOLD_LEAD the elevator is near 0 at the touchdown.
+-- The rate 2 (1 at first: the nose gear came down 4.3 s after the main
+-- gear and in a 20 kt crosswind the rollout went 0.25 dot off the LOC,
+-- s116). Lowered only on the ground: off the runway again (a skip) the
+-- command is held (FCTM p.222-223: hold or re-establish a normal landing
+-- attitude); lowered on in the air, the gear came back at 1.7 degrees and
+-- the nose gear met the runway at 4 degrees a second (s114, s117).
 M.TD_SINK = 1.5
 M.FLARE_DECEL = 0.045
 M.FLARE_G = 0.2
@@ -218,10 +230,8 @@ M.FLARE_HOLD_FT = 5
 M.K_FLOAT = 2
 M.FLARE_FLOOR = 2
 M.HOLD_LEAD = 0.2
-M.LETDOWN_RATE = 1
-M.LETDOWN_STEP = 1
+M.LETDOWN_RATE = 2
 M.LETDOWN_PITCH = -1
-M.LETDOWN_DOWN = 2
 
 local G = 9.80665
 local FT = 0.3048
@@ -431,15 +441,12 @@ function M.update(s, inp, dt)
     if s.last_ias and dt > 0 then s.ias_rate = s.ias_rate + ((inp.ias - s.last_ias) / dt - s.ias_rate) * k end
     s.last_vs, s.last_ias = inp.vs, inp.ias
     if law == "LETDOWN" then
-        -- the nose lowered to the runway from under the attitude at the
-        -- touchdown (FCOM p.671), then held down under LETDOWN_DOWN degrees
-        -- (ATA22 p.294, p.332)
-        if s.law ~= "LETDOWN" then s.cmd = math.min(s.cmd or inp.pitch, inp.pitch) - M.LETDOWN_STEP end
-        if inp.pitch < M.LETDOWN_DOWN then
-            s.cmd = M.LETDOWN_PITCH
-        else
-            s.cmd = math.max(s.cmd - M.LETDOWN_RATE * dt, M.LETDOWN_PITCH)
-        end
+        -- the nose lowered to the runway from the attitude at the
+        -- touchdown (FCOM p.671), on to the pitch-down command that holds
+        -- it there (ATA22 p.294, p.332); held while the airplane is off
+        -- the runway again (FCTM p.222-223)
+        if s.law ~= "LETDOWN" then s.cmd = math.min(s.cmd or inp.pitch, inp.pitch) end
+        if inp.ground then s.cmd = math.max(s.cmd - M.LETDOWN_RATE * dt, M.LETDOWN_PITCH) end
         s.law, s.target = law, nil
         return s.cmd
     end
