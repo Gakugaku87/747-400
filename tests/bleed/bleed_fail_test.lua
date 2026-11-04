@@ -203,4 +203,26 @@ do
     T.check(out.duct[1] > 30 and out.duct[2] > 30, "leak R isolated: the left and centre keep their air")
 end
 
+
+-- (2026-11-04) a start valve failed open or closed (notes/ATA-36.md §12):
+-- open with no start command (it takes the starter's air), closed with one
+do
+    local s, inp = idle()
+    inp.fail.start_open[2] = true
+    local out = run(s, inp, 2)
+    T.check(out.eng[2].start_valve_open and not out.eng[1].start_valve_open, "start valve 2 failed open: open without a command")
+    inp.fail.start_open[2] = false
+    out = run(s, inp, 1)
+    T.check(not out.eng[2].start_valve_open, "repaired: closed")
+    -- engine 3 stopped, its start pulled and FUEL CONTROL RUN (AUTOSTART):
+    -- the valve stays closed
+    inp.n2[3], inp.fuel_run[3] = 0, true
+    inp.fail.start_closed[3] = true
+    inp.start_pulled[3] = true
+    out = run(s, inp, 5)
+    T.check(not out.eng[3].start_valve_open, "start valve 3 failed closed: closed with START pulled")
+    inp.fail.start_closed[3] = false
+    out = run(s, inp, 2)
+    T.check(out.eng[3].start_valve_open, "repaired: it opens on the command")
+end
 T.done()

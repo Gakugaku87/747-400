@@ -148,6 +148,9 @@ B747DR_air_fail_hpsov_open          = deferred_dataref("laminar/B747/air/fail/hp
 B747DR_air_fail_prv_closed          = deferred_dataref("laminar/B747/air/fail/prv_closed", "array[4]")
 B747DR_air_fail_prv_open            = deferred_dataref("laminar/B747/air/fail/prv_open", "array[4]")
 B747DR_air_fail_apu_air             = deferred_dataref("laminar/B747/air/fail/apu_air", "number")
+-- (2026-11-04) a start valve failed open or closed (notes/ATA-36.md §12)
+B747DR_air_fail_start_open          = deferred_dataref("laminar/B747/air/fail/start_valve_open", "array[4]")
+B747DR_air_fail_start_closed        = deferred_dataref("laminar/B747/air/fail/start_valve_closed", "array[4]")
 -- (2026-11-04) the air conditioning failures (1 failed; the models' inputs,
 -- for the failure window: docs/overhaul/notes/ATA-21.md §10): a pack
 -- overheat (trips it), PTC A and B, the recirculation fans (1 upper right,

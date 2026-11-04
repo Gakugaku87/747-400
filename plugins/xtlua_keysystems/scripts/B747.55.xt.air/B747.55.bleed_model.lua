@@ -98,7 +98,10 @@ function M.inputs()
         -- open. The overheat (above) and the APU's air too
         fail = {ovpress = {false, false, false, false}, hpsov_closed = {false, false, false, false},
             hpsov_open = {false, false, false, false}, prv_closed = {false, false, false, false},
-            prv_open = {false, false, false, false}},
+            prv_open = {false, false, false, false},
+            -- (2026-11-04) a start valve failed open or closed (STARTER
+            -- CUTOUT, ENG n START VLV: notes/ATA-36.md §12)
+            start_open = {false, false, false, false}, start_closed = {false, false, false, false}},
         leak = {false, false, false},              -- (2026-11-04) a duct leak in section L, C, R
     }
 end
@@ -312,6 +315,8 @@ function M.update(s, inp, dt)
         else
             se.start_open = false
         end
+        if inp.fail.start_closed[n] then se.start_open = false
+        elseif inp.fail.start_open[n] then se.start_open = true end
         oe.start_valve_open = se.start_open
         if se.start_open then se.start_closed_t = 0 else se.start_closed_t = se.start_closed_t + dt end
 
