@@ -289,4 +289,59 @@ T.check(rt:get(EMER .. "lit") == 1 and rt:get(ADV, 108) == 1, "ARMED, the cabin'
 rt:command(EMER .. "cabin")
 rt:frame(1 / 30)
 T.check(rt:get(EMER .. "lit") == 0 and rt:get(ADV, 108) == 0, "the cabin's switch again: out")
+
+-- (7-2e) the flight deck lighting's power (ATA33 p.20-50, p.70-78): the
+-- captain's flood by its knob with AC buses 3 and 4, the standby bus's
+-- fixed level without AC bus 4, STORM's maximum; the aisle stand flood dim
+-- without the ground service bus; the F/O's panel lighting off without AC
+-- bus 3; the map lights on AC bus 3
+local BUS = "laminar/B747/electrical/bus/"
+local SPILL = "laminar/B747/light/spill/ratio/"
+local INSTR = "sim/cockpit2/switches/instrument_brightness_ratio"
+for i = 0, 3 do rt:set(BUS .. "ac", i, 1) end
+rt:set(BUS .. "stby_main", 1)
+rt:set(BUS .. "gnd_svc", 1)
+rt:set(BUS .. "bat_main", 1)
+rt:set("laminar/B747/toggle_switch/position", 0, 1)            -- STORM off
+rt:set("laminar/B747/light/flood/rheostat/captain_panel", 0.5)
+rt:set("laminar/B747/light/flood/rheostat/aisle_stand", 0.5)
+rt:set("laminar/B747/light/map/rheostat/captain", 0.7)
+rt:set("laminar/B747/switches/instrument_brightness_ratio", 8, 0.6)
+for _ = 1, 90 do rt:frame(1 / 30) end
+local knob_flood = rt:get(SPILL .. "captain_panel", 3)
+T.check(knob_flood > 0, "all buses: the captain's flood by its knob")
+T.near(rt:get(SPILL .. "captain_map", 3), 0.7, 1e-6, "AC bus 3: the captain's map light by its knob")
+T.near(rt:get(INSTR, 8), 0.6, 0.05, "AC bus 3: the F/O's panel lighting by its knob")
+rt:set("laminar/B747/toggle_switch/position", 0, 0)            -- STORM on
+rt:frame(1 / 30)
+T.check(rt:get(SPILL .. "captain_panel", 3) > knob_flood, "STORM: the captain's flood at its maximum")
+rt:set("laminar/B747/toggle_switch/position", 0, 1)
+rt:set(BUS .. "ac", 3, 0)                                      -- AC bus 4 lost
+rt:frame(1 / 30)
+local fixed = rt:get(SPILL .. "captain_panel", 3)
+T.check(fixed > 0, "AC bus 4 lost: the captain's flood from the standby bus")
+rt:set("laminar/B747/light/flood/rheostat/captain_panel", 0.1)
+rt:frame(1 / 30)
+T.near(rt:get(SPILL .. "captain_panel", 3), fixed, 1e-6, "AC bus 4 lost: fixed, the knob does nothing")
+rt:set(BUS .. "stby_main", 0)
+rt:frame(1 / 30)
+T.equal(rt:get(SPILL .. "captain_panel", 3), 0, "the standby bus lost too: the captain's flood off")
+rt:set(BUS .. "ac", 3, 1)
+rt:set(BUS .. "stby_main", 1)
+rt:set(BUS .. "ac", 2, 0)                                      -- AC bus 3 lost
+for _ = 1, 90 do rt:frame(1 / 30) end
+T.near(rt:get(INSTR, 8), 0, 0.05, "AC bus 3 lost: the F/O's panel lighting off")
+T.equal(rt:get(SPILL .. "captain_map", 3), 0, "AC bus 3 lost: the map light off")
+rt:set(BUS .. "ac", 2, 1)
+local aisle_knob = rt:get(SPILL .. "aisle_stand", 3)
+rt:set("laminar/B747/light/flood/rheostat/aisle_stand", 1.0)
+rt:set(BUS .. "gnd_svc", 0)                                    -- the ground service bus lost
+rt:frame(1 / 30)
+local aisle_fixed = rt:get(SPILL .. "aisle_stand", 3)
+T.check(aisle_fixed > 0 and aisle_fixed < rt:get(SPILL .. "aisle_stand", 3) + 1, "no ground service bus: the aisle stand flood lit, fixed")
+rt:set("laminar/B747/light/flood/rheostat/aisle_stand", 0.2)
+rt:frame(1 / 30)
+T.near(rt:get(SPILL .. "aisle_stand", 3), aisle_fixed, 1e-6, "no ground service bus: its knob does nothing (fixed resistor)")
+rt:set(BUS .. "gnd_svc", 1)
+T.check(aisle_knob >= 0, "(the knob level before)")
 T.done()

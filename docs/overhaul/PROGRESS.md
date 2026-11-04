@@ -6,7 +6,7 @@
 
 ## いまどこか
 
-- **最新（2026-11-04 午後）**：APU の始動電源と空中の抽気（APU-09・10、e7f85c1d）、燃料 synoptic の色と FTR（FUEL-24、fbbb358f）、フラップの拡大・代替表示（FCTL-12、25b10bdb）、CONFIG GEAR の保持と GEAR OVRD（GEAR-17、daa7f422）、離陸形態警報（WARN-11、6afe535e）を済ませた。利用者の方針（「再現しきれていない系統を先に仕上げ、故障の窓はその後」）どおり、次は残りの系統の項目：照明 7-2e（操縦室照明の電源、LIGHT-07・16）、電源と PSEU の乗り換え（下の「次にやること」9・10。fms の IRS の更新が X-Plane の bus 0 の電圧で止まる所も）。故障で出るメッセージ（GEAR-22、FUEL-15、PNEU-03 など）は故障の窓で作る。
+- **最新（2026-11-04 午後）**：APU の始動電源と空中の抽気（APU-09・10、e7f85c1d）、燃料 synoptic の色と FTR（FUEL-24、fbbb358f）、フラップの拡大・代替表示（FCTL-12、25b10bdb）、CONFIG GEAR の保持と GEAR OVRD（GEAR-17、daa7f422）、離陸形態警報（WARN-11、6afe535e）、操縦室照明の電源（照明 7-2e、LIGHT-07。LIGHT-16 は見送り）を済ませた。利用者の方針（「再現しきれていない系統を先に仕上げ、故障の窓はその後」）どおり、次は残りの系統の項目：電源と PSEU の乗り換え（下の「次にやること」9・10。fms の IRS の更新が X-Plane の bus 0 の電圧で止まる所も）。故障で出るメッセージ（GEAR-22、FUEL-15、PNEU-03 など）は故障の窓で作る。
 - フェーズ0-A：完了。
 - フェーズ0-B：完了。資料索引・コード構成・acf の比較・ATA 章ごとの notes（20 本）・GAP_ANALYSIS・PLAN・試験の方針・CLAUDE.md を書いた。
 - フェーズ1：利用者の許可（2026-10-23 就寝前、「承認は自動でよい、X-Plane での試験も自由に」）により、PLAN.md を私（Claude）が承認して開始した。
@@ -148,7 +148,7 @@
 10. 1-2（空地判定）の残り：`onground_any` を読んでいるモジュール（autopilot、fms、fltInst02、fltCtrls、EEC、engines、fuel、hydraulicsmodel、gear のタイヤ圧とリプレイ、manipulators、fdr、lighting など）を、PSEU の dataref（ARCHITECTURE.md §4.2）に乗り換える。どの信号（pri/alt の AIR・GND、前脚圧縮）を使うかは notes/ATA-32.md §4.1 の表。各系統の作り直しのときに行う。防氷（3-2）は乗り換えた（`pri_gnd`）。
 11. 1-3 の残り：他のメッセージによる抑止（notes/ATA-31-warning.md §4.4.1）と時間遅れは、各系統の作り直しで表に足す。音（`.snd`）とパネル（PG・3 ページ目以降・STATUS）は済。
 12. R-3 は、作り直しが先になる系統の害の大きい誤りだけ、合間に入れる。
-13. 7-2（照明）：段取りを決めた（2026-11-01、notes/ATA-33.md §10：7-2a〜7-2e）。7-2a〜7-2d は済（§11〜§14）。残りは 7-2e（操縦室照明の電源、FLIGHT DECK ACCESS LIGHTS）。
+13. 7-2（照明）：段取りを決めた（2026-11-01、notes/ATA-33.md §10：7-2a〜7-2e）。7-2a〜7-2e は済（§11〜§15。7-2e は 2026-11-04）。FLIGHT DECK ACCESS LIGHTS（LIGHT-16）は見送り（3D に操作子も、点ける灯も無い）、BEACON の LWR と BOTH（LIGHT-12）は残す（承認事項）。
 14. 7-3（ドア）：軽く済ませた（2026-11-01、利用者の判断。notes/ATA-52.md §11）。DRS の箱、cargo・E/E door、flight deck door のロック、まとめのメッセージ、flight lock は 3D ができてから。
 
 ## 段階 T の状態
@@ -555,6 +555,7 @@ PLAN.md §3 に書いた。要点：
   - エルロントリムの速さは X-Plane の acf の値のまま（カスタム 12 秒・純正 10 秒で 6 units）。
   - FLT CONTROL HYD POWER（段 4 の後半。`B747.19.xt.hydraulics_override.lua`）：弁を動かす DC バスは系統と同じ番号、弁の時間 2 秒、半分を超えて閉じた弁の系統を舵面の門から外すこと。
   - ヨーダンパーの電源のうち、上の電池バスと下の DC 1（ATA27 p.20–22 は PSM の監視の電源と「FCE の電源から 28V DC」と書く）。IRU は 1 台でも整列して NAV か ATT なら働く（FCOM は「IRUs off or in align」）。
+- 照明（7-2b〜7-2e。`B747.90.light_model.lua`・`B747.90.ind_model.lua`・照明モジュールに「estimate」）：左の landing light の母線と減光（右と同じ）、taxi light の電源（GSB）、turnoff に PSEU の primary の地上を使うこと、表示灯の DIM の明るさ（0.4）と電源の母線、操縦室照明の固定の明るさ（計器盤照明 0.3、flood はノブの最大の半分、aisle stand flood は 0.3 倍、dome 0.4：資料は「固定」とだけ書く）、AC bus 3 を失ったときの F/O の計器盤照明と機長の flood（消灯）、GSB が無いときの dome が STORM でも固定のままのこと。
 
 
 ## 電源（1-1）の GAP の状態
@@ -1098,7 +1099,7 @@ PLAN.md §3 に書いた。要点：
 | LIGHT-04 STROBE の向き | 済（7-2a。自動始動の手順も） |
 | LIGHT-05 ストロボの二重の書き込み | 済（7-2a） |
 | LIGHT-06 非常灯 | 済（7-2d：論理と >EMER LIGHTS。3D のスイッチは無いのでコマンド。どの飛行も ARMED で始める） |
-| LIGHT-07 操縦室照明の電源 | 未（7-2e） |
+| LIGHT-07 操縦室照明の電源 | 済（7-2e：群ごとにノブ・standby や battery bus からの固定・STORM の最大・消灯。glareshield・aisle stand・observer の integral は X-Plane のスイッチのまま） |
 | LIGHT-08 毎フレームの完全 GC | 済（7-2a） |
 | LIGHT-09 landing の減光 | 済（7-2b：INBD スイッチの側を 70 %） |
 | LIGHT-10 IND LTS の TEST・DIM | 済（7-2c：TEST は BRT で 10 秒後に DIM、試験しない灯と減光しない灯） |
@@ -1107,7 +1108,7 @@ PLAN.md §3 に書いた。要点：
 | LIGHT-13 turnoff と taxi の空地 | 済（7-2b：PSEU の地上） |
 | LIGHT-14 サインの乗客酸素 | 済（2026-10-29、3-3） |
 | LIGHT-15 quick start のスイッチの向き | 済（7-2b） |
-| LIGHT-16 FLIGHT DECK ACCESS LIGHTS | 未（7-2e） |
+| LIGHT-16 FLIGHT DECK ACCESS LIGHTS | 見送り（3D に操作子が無く、点ける灯（main equipment center、door 2 と upper deck の天井灯：FCOM p.444）も描かれていない。3D の追加は承認事項） |
 
 ## ドア（7-3）の GAP の状態
 
@@ -1578,3 +1579,4 @@ X-Plane（カスタム acf）：`s07_cruise_ff`（FL350 の ALT HOLD：最後の
 - 2026-11-04：フラップの拡大表示と代替表示（FCTL-12、notes/ATA-27.md §19）。FCU のモデルが前縁の 6 箱（白枠・斜線・緑、駆動停止で琥珀、位置データ無しで X）と後縁の 4 本（白、群の非対称か駆動停止で琥珀、位置データ無しで X）、代替表示を出す。位置データが無いと拡大表示と STATUS FLAP SYS MONITOR（99 番、ATA27 p.320）。standby 電源だけでは左翼の後縁の 2 本が X（励磁のバスは推定）。故障の入口 `flt_ctrls/fail/te_sensor`・`le_sensor`。カスタム acf のパネル（`panel_flap_expanded.lua`、33 の変更、ACF_DIFF.md §5）と絵（`make_flap_images.ps1`）。レバーの線と数字は位置で緑（前は拡大表示でいつもマゼンタ）、代替表示では出さない。脚の拡大表示を 25 px 上へ。回帰 201 本。X-Plane：新しい `s223_flap_expanded` 28/28（写真で前縁の箱・琥珀・X・代替の目盛り・脚の拡大表示と重ならないことを確かめた）、`s26_flaps` 54/54、Lua の誤りなし。
 - 2026-11-04：CONFIG GEAR（GEAR-17 の残り、notes/ATA-32.md §15）。FCOM p.1557–1558 のとおり、空中（PSEU）で脚が PSEU の ALL GR DN でないとき、スラストレバーの閉（800 ft 未満）とフラップの着陸位置を別々に保持し、前者はレバーを進めるか脚が下りるまで、後者は脚が下りるか GND PROX GEAR OVRD を押すまで残す。リフトオフから 800 ft か 140 秒の早い方までは出さない（FCOM p.1594–1595）。前は地上でも出し、保持が無く、GEAR OVRD が両方を消していた。GEAR-22 の残りは故障の窓のときに。回帰 201 本（fltctrls_module 171 件）。X-Plane：新しい `s224_config_gear` 11/11（フラップ 25 で CONFIG GEAR、GEAR OVRD で消えて戻すとまた出る、フラップ 20 でも残る、脚下げで消える。写真で主 EICAS の赤の >CONFIG GEAR を確かめた）、`s43_gpws` 47/47（WARN 3 は前と同じ mode 1 の降下）、Lua の誤りなし。
 - 2026-11-04：離陸形態警報（WARN-11、notes/ATA-31-warning.md §10）。新しいモデル `B747.45.tocw_model.lua`：エンジン 2 か 3 が離陸推力（N1 が P&W 66.5、RR 66.7、GE 75.0：ATA27 p.730）、地上（PSEU）、V1 未満（V1 が無ければピッチ 5° まで：ATA31 p.180・188）、FUEL CONTROL 3 本で武装し、推力を外して 10 秒残る。CONFIG FLAPS は後縁 10 か 20、前縁全展開、レバーの一致（ATA31 p.193）。前は N1 90〜96 を 2 と 3 の両方、FMC のフラップとの比べ（資料に無い）、保持なし。回帰 202 本。X-Plane：新しい `s225_takeoff_config` 13/13（V1 なし、パーキング・ブレーキで推力を上げると N1 73 で CONFIG PARK BRK、推力を戻して 10 秒で消える、エンジン 3 だけで CONFIG FLAPS、スピードブレーキ ARM で CONFIG SPOILERS。写真で主 EICAS の 3 つを確かめた）、`s29_greenband` 8/8、`s39_steering` 23/23、Lua の誤りなし。
+- 2026-11-04：照明 7-2e（notes/ATA-33.md §15）。操縦室照明の電源を `B747.90.light_model.lua` の `cockpit` で：機長の計器盤照明・overhead・glareshield・aisle stand の integral は AC bus 4 でノブ、無ければ main standby bus から固定（ATA33 p.24・36・42・50）。機長と center の flood は AC bus 3 の dimmer（R7734 は AC 4 で付勢）、AC 4 が無ければ standby の固定（p.20・26）。F/O の計器盤照明と flood、glareshield の flood、map は AC bus 3。aisle stand の flood は battery bus で、GSB が無いと固定抵抗、dome は GSB でノブ、無ければ battery bus から固定（p.46・70–73、FCOM p.501）。STORM は battery bus が要る（p.20・72）。固定の明るさは推定。前は generic light 63 を掛けるだけで、ノブはいつも効いた（LIGHT-07）。FLIGHT DECK ACCESS LIGHTS（LIGHT-16）は見送り（3D に操作子も、点ける灯も無い：FCOM p.444）。回帰：`light_model_test` 109、`lighting_module_test` 144。X-Plane：新しい `s226_cockpit_lighting` 38/38（夜の flood は X-Plane の HUD_brightness_ratio に比例するので、点いたかと STORM との大小で見る）、`s209` 23/23。

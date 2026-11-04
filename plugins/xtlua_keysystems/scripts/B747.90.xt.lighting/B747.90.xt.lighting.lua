@@ -773,6 +773,41 @@ B747DR_light_bus_ac = find_dataref("laminar/B747/electrical/bus/ac")
 B747DR_light_bus_gsb = find_dataref("laminar/B747/electrical/bus/gnd_svc")
 B747DR_light_pseu_gnd = find_dataref("laminar/B747/gear/air_ground/pri_gnd")
 local lightIn = {sw = {landing = {}, turnoff = {}}, ac = {}}
+-- (7-2e, LIGHT-07) the flight deck lighting's power by the same model
+-- (M.cockpit): the AC buses, the main standby bus, the ground service bus,
+-- the main battery bus and STORM (toggle switch 0 at 0). The plugin's own
+-- channels only: the captain's, overhead and F/O's panel lighting
+-- (instrument_brightness 6-8), the floods, the dome (panel_brightness 0) and
+-- the map lights. The glareshield's, aisle stand's and observer's panel
+-- lighting are X-Plane's switches (panel_brightness 1-3) the 3D's knobs move
+-- themselves: left to X-Plane. The fixed brightnesses: estimates (the
+-- sources say only "fixed")
+B747DR_light_bus_stby = find_dataref("laminar/B747/electrical/bus/stby_main")
+B747DR_light_bus_bat = find_dataref("laminar/B747/electrical/bus/bat_main")
+local cockpitIn = {ac = {false, false, false, false}}
+local cockpit_mode = B747_light_model.cockpit(cockpitIn)
+local FIXED_PANEL, FIXED_FLOOD, FIXED_AISLE, FIXED_DOME = 0.3, 0.5, 0.3, 0.4
+local function B747_cockpit_power()
+    for i = 1, 4 do cockpitIn.ac[i] = B747DR_light_bus_ac[i - 1] > 0.5 end
+    cockpitIn.stby = B747DR_light_bus_stby > 0.5
+    cockpitIn.gsb = B747DR_light_bus_gsb > 0.5
+    cockpitIn.bat = B747DR_light_bus_bat > 0.5
+    cockpitIn.storm = B747DR_toggle_switch_position[0] <= 0.05
+    cockpit_mode = B747_light_model.cockpit(cockpitIn)
+end
+-- a group's level from its mode: its knob's, a fixed one, the maximum or none
+local function cockpit_level(mode, knob, fixed, max)
+    if mode == B747_light_model.KNOB then return knob
+    elseif mode == B747_light_model.FIXED then return fixed
+    elseif mode == B747_light_model.MAX then return max end
+    return 0
+end
+local function cockpit_on(mode)
+    if mode == B747_light_model.OFF then return 0 end
+    return 1
+end
+-- instrument_brightness channels of the panel lighting
+local PANEL_GROUP = {[6] = "capt_panel", [7] = "overhead", [8] = "fo_panel"}
 -- X-Plane's landing light i (OUTBD L, INBD L, INBD R, OUTBD R): its switch
 local LANDING_SW = {1, 3, 4, 2}
 function B747_exterior_lights()
@@ -863,9 +898,18 @@ function B747_cabin_lights()
          local u = B747DR_light_content_unit[c - 1]
          knob_of[DISPLAY_RHEOSTAT[c]] = UNIT_KNOB[u] or DISPLAY_RHEOSTAT[c]
      end
+     -- (7-2e) the panel lighting (6-8) by the flight deck lighting's power
+     B747_cockpit_power()
      for i = 0, 32 do
 -- 	--print(i)
-         simDR_instrument_brightness_switch[i] = B747_animate_value(simDR_instrument_brightness_switch[i],B747DR_instrument_brightness_ratio[knob_of[i]]* simDR_generic_brightness_ratio[63]*brightnessPower[i],0,1,brightnessRate[i])
+         local target
+         local group = PANEL_GROUP[i]
+         if group then
+             target = cockpit_level(cockpit_mode[group], B747DR_instrument_brightness_ratio[i], FIXED_PANEL, 1)
+         else
+             target = B747DR_instrument_brightness_ratio[knob_of[i]] * simDR_generic_brightness_ratio[63] * brightnessPower[i]
+         end
+         simDR_instrument_brightness_switch[i] = B747_animate_value(simDR_instrument_brightness_switch[i], target, 0, 1, brightnessRate[i])
      end
     local power = B747_ternary(
         (simDR_apu_gen_on == 1                                                          -- APU IS RUNNING
@@ -934,20 +978,22 @@ function B747_spill_lights()
 		local storm_light_brt_level = 16.0 * lightMod 
 		local storm_light_level = storm_light_brt_level * simDR_generic_brightness_ratio[63]
 
-		-- SET THE SPILL LIGHT LEVELS
-		B747DR_spill_light_capt_panel_flood[3]      = storm_light_level * 3
-		B747DR_spill_light_center_panel_flood[3]    = storm_light_level * 3
-		B747DR_spill_light_capt_map[3]              = B747DR_map_light_rheo_capt * simDR_generic_brightness_ratio[63]
-		B747DR_spill_light_capt_chart[3]            = B747DR_chart_light_rheo_capt * simDR_generic_brightness_ratio[63]
-		B747DR_spill_light_fo_panel_flood[3]        = storm_light_level * 3
-		B747DR_spill_light_fo_map[3]                = B747DR_map_light_rheo_fo * simDR_generic_brightness_ratio[63]
-		B747DR_spill_light_fo_chart[3]              = B747DR_chart_light_rheo_fo * simDR_generic_brightness_ratio[63]
-		B747DR_spill_light_observer_map[3]          = B747DR_map_light_rheo_observer * simDR_generic_brightness_ratio[63]
-		B747DR_spill_light_mcp_flood[3]             = storm_light_level
-		B747DR_spill_light_aisle_stand_flood[3]     = storm_light_level * 3
+		-- SET THE SPILL LIGHT LEVELS ((7-2e) none where the group has no power)
+		local m = cockpit_mode
+		local maps = cockpit_on(m.maps)
+		B747DR_spill_light_capt_panel_flood[3]      = storm_light_level * 3 * cockpit_on(m.capt_flood)
+		B747DR_spill_light_center_panel_flood[3]    = storm_light_level * 3 * cockpit_on(m.capt_flood)
+		B747DR_spill_light_capt_map[3]              = B747DR_map_light_rheo_capt * maps
+		B747DR_spill_light_capt_chart[3]            = B747DR_chart_light_rheo_capt * maps
+		B747DR_spill_light_fo_panel_flood[3]        = storm_light_level * 3 * cockpit_on(m.fo_flood)
+		B747DR_spill_light_fo_map[3]                = B747DR_map_light_rheo_fo * maps
+		B747DR_spill_light_fo_chart[3]              = B747DR_chart_light_rheo_fo * maps
+		B747DR_spill_light_observer_map[3]          = B747DR_map_light_rheo_observer * maps
+		B747DR_spill_light_mcp_flood[3]             = storm_light_level * cockpit_on(m.glareshield_flood)
+		B747DR_spill_light_aisle_stand_flood[3]     = storm_light_level * 3 * cockpit_on(m.aisle_flood)
 
 		--SET THE OVERHEAD FLOOD BRIGHTNESS LEVEL
-		simDR_panel_brightness_switch[0]            = storm_light_level
+		simDR_panel_brightness_switch[0]            = storm_light_level * cockpit_on(m.dome)
 
 		-- SET THE MAG COMPASS SPILL LIGHT LEVEL
 		B747DR_spill_light_mag_compass_flood[3]     = simDR_panel_brightness_ratio[3] * lightMod *2
@@ -963,23 +1009,30 @@ function B747_spill_lights()
 		-- (7-2c) the knobs' maximum: R8068 puts a fixed resistor for them
 		-- (ATA33 p.72; FCOM p.438). Before, 1.9: 95 %
 		local storm_light_brt_level = 2.0 * lightMod
-        local lightLevel = simDR_generic_brightness_ratio[63] * lightMod *2
-		local storm_light_level = storm_light_brt_level * simDR_generic_brightness_ratio[63]
+		-- (7-2e) each group's power from the flight deck lighting's model
+		-- (B747_cockpit_power): its knob, a fixed level (estimates), STORM's
+		-- maximum or none. Before, every flood followed X-Plane's generic
+		-- light 63 and STORM worked without the battery bus
+        local lightLevel = lightMod * 2
+		local storm_light_level = storm_light_brt_level
+		local m = cockpit_mode
+		local fixed_flood = FIXED_FLOOD * lightLevel
+		local maps = cockpit_on(m.maps)
 
 		-- SET THE SPILL LIGHT LEVELS
-		B747DR_spill_light_capt_panel_flood[3]      = B747_ternary((B747DR_toggle_switch_position[0] <= 0.05), storm_light_level, (B747DR_flood_light_rheo_capt_panel * lightLevel))
-		B747DR_spill_light_center_panel_flood[3]    = B747_ternary((B747DR_toggle_switch_position[0] <= 0.05), storm_light_level, (B747DR_flood_light_rheo_capt_panel * lightLevel))
-		B747DR_spill_light_capt_map[3]              = B747DR_map_light_rheo_capt * simDR_generic_brightness_ratio[63]
-		B747DR_spill_light_capt_chart[3]            = B747DR_chart_light_rheo_capt * simDR_generic_brightness_ratio[63]
-		B747DR_spill_light_fo_panel_flood[3]        = B747_ternary((B747DR_toggle_switch_position[0] <= 0.05), storm_light_level, (B747DR_flood_light_rheo_fo_panel * lightLevel))
-		B747DR_spill_light_fo_map[3]                = B747DR_map_light_rheo_fo * simDR_generic_brightness_ratio[63]
-		B747DR_spill_light_fo_chart[3]              = B747DR_chart_light_rheo_fo * simDR_generic_brightness_ratio[63]
-		B747DR_spill_light_observer_map[3]          = B747DR_map_light_rheo_observer * simDR_generic_brightness_ratio[63]
-		B747DR_spill_light_mcp_flood[3]             = B747_ternary((B747DR_toggle_switch_position[0] <= 0.05), storm_light_level, (B747DR_flood_light_rheo_mcp * lightLevel))
-		B747DR_spill_light_aisle_stand_flood[3]     = B747_ternary((B747DR_toggle_switch_position[0] <= 0.05), storm_light_level, (B747DR_flood_light_rheo_aisle_stand * lightLevel))
+		B747DR_spill_light_capt_panel_flood[3]      = cockpit_level(m.capt_flood, B747DR_flood_light_rheo_capt_panel * lightLevel, fixed_flood, storm_light_level)
+		B747DR_spill_light_center_panel_flood[3]    = cockpit_level(m.capt_flood, B747DR_flood_light_rheo_capt_panel * lightLevel, fixed_flood, storm_light_level)
+		B747DR_spill_light_capt_map[3]              = B747DR_map_light_rheo_capt * maps
+		B747DR_spill_light_capt_chart[3]            = B747DR_chart_light_rheo_capt * maps
+		B747DR_spill_light_fo_panel_flood[3]        = cockpit_level(m.fo_flood, B747DR_flood_light_rheo_fo_panel * lightLevel, fixed_flood, storm_light_level)
+		B747DR_spill_light_fo_map[3]                = B747DR_map_light_rheo_fo * maps
+		B747DR_spill_light_fo_chart[3]              = B747DR_chart_light_rheo_fo * maps
+		B747DR_spill_light_observer_map[3]          = B747DR_map_light_rheo_observer * maps
+		B747DR_spill_light_mcp_flood[3]             = cockpit_level(m.glareshield_flood, B747DR_flood_light_rheo_mcp * lightLevel, fixed_flood, storm_light_level)
+		B747DR_spill_light_aisle_stand_flood[3]     = cockpit_level(m.aisle_flood, B747DR_flood_light_rheo_aisle_stand * lightLevel, FIXED_AISLE * lightLevel, storm_light_level)
 
-		--SET THE OVERHEAD FLOOD BRIGHTNESS LEVEL
-		simDR_panel_brightness_switch[0]            = B747_ternary((B747DR_toggle_switch_position[0] <= 0.05), storm_light_level, B747DR_flood_light_rheo_overhead)
+		--SET THE OVERHEAD FLOOD BRIGHTNESS LEVEL (the dome)
+		simDR_panel_brightness_switch[0]            = cockpit_level(m.dome, B747DR_flood_light_rheo_overhead, FIXED_DOME, storm_light_level)
         simDR_panel_brightness_switch[0]            = simDR_panel_brightness_switch[0]
         simDR_panel_brightness_switch[1]            = simDR_panel_brightness_switch[1]
         simDR_panel_brightness_switch[2]            = simDR_panel_brightness_switch[2]
