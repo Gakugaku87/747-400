@@ -103,4 +103,15 @@ T.equal(rt:get(G .. "lever_lock"), 1, "on the ground: the lever locked")
 rt:set(LEVER, 2)
 run(20)
 T.equal(rt:get(ACF, 0), 1, "lever UP anyway (LOCK OVRD): a gear carrying weight stays down")
+
+-- (2026-11-04) one subsystem's position sensing of the nose gear failed
+-- (laminar/B747/gear/fail/position_sensor[0]; notes/ATA-32.md §17): STATUS
+-- GEAR MONITOR (140); the indication stays
+rt:set("laminar/B747/gear/fail/position_sensor", 0, 1)
+run(0.2)
+T.equal(rt:get("laminar/B747/CAS/status_status", 140), 1, "a position sensor failed: STATUS GEAR MONITOR")
+T.equal(rt:get(G .. "gear_position/annun_gear", 0), 1, "a position sensor failed: the nose gear still DOWN")
+rt:set("laminar/B747/gear/fail/position_sensor", 0, 0)
+run(0.2)
+T.equal(rt:get("laminar/B747/CAS/status_status", 140), 0, "repaired: no GEAR MONITOR")
 T.done()

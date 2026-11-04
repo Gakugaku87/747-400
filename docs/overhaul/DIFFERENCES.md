@@ -274,12 +274,12 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 - 残る違い：
   - 脚とドアの動く時間は推定（脚は acf の 12・9・7 秒、ドアは資料の約 2 秒・5 秒）。レバー OFF や圧の喪失で動いている途中の脚はその場で止まる（推定。実機は重さで落ちうる）。代替下げをした脚は、そのフライトの間は通常の系統で動かさない（推定）。
   - 外から見えるドアは X-Plane の脚の位置で動く（3D は対象外）。ドアの開閉の状態はロジックと表示だけ。
-  - PSEU の primary と alternate は 1 つのモデル（片系の故障、AIR/GND SYSTEM、GEAR MONITOR などの status は無い：GEAR-22）。
+  - PSEU の primary と alternate は同じ式で、センサーは共通（片系統のセンサーの故障は無い）。2026-11-04 から、subsystem の空中への固着（`gear/fail/air_gnd[2]`：AIR/GND SYSTEM、A/G DISAGREE）と位置の検知の片系統の故障（`gear/fail/position_sensor[5]`：GEAR MONITOR）を入れられる。AIR/GND SYSTEM を片系統でもすぐ出すのは推定。NOSE A/G DISAGREE は無い。
   - ブレーキの効きは圧に比例（推定）。代替のブレーキの 2 輪ずつの antiskid、torque limiter の働き、de-spin は無い。パーキングブレーキはペダルを踏まずにレバーだけで入る。X-Plane の toe brake の軸は、軸の割り当ての番号（左 6、右 7）で読む（推定で、試していない）。
   - ステアリング：tiller の軸が無いときは、ペダルを tiller の代わりにする（10 kt まで 70°、30 kt で 7°。実機ではない手当てで、`laminar/B747/gear/steering/pedal_tiller` を 0 にすると実機どおりペダル 7° だけ）。X-Plane の tiller の軸の番号（37）は推定で、試していない。推定は、前輪と胴体脚の速さ、胴体脚の角度の比例、圧が無いときにその場にとどまること、車輪速を対地速度で代えること。モジュールの圧力スイッチ、arm A・B の不一致、shimmy damper は無い。3D に tiller は無い。
   - ブレーキ温度の熱容量・冷却・熱電対の遅れは、FCOM PI.12.8 の表に合わせた推定（表は比例でないので、20・27 百万 ft-lb では表より 1 段高い）。ヒューズプラグの溶融（タイヤの空気が抜ける）は無い。タイヤ圧は整備の値の乱数と荷重の分だけで、温度では変わらない。X-Plane のタイヤ故障は脚ごと（4 本まとめて）。
   - オートブレーキの推定：車輪のスピンアップと RTO の 85 kt は IRS の対地速度で見る（前側 8 輪の車輪速の代わり）、減速の制御のゲイン（カスタム acf に合わせた）、disarm の後に圧が抜ける時間（2 秒）、推力レバーのアイドルと前進の角度。AUTOBRAKES のうち、セレクター OFF なのに遮断弁の下流が高圧のときと、RTO の開始での故障・手動の override は無い。
-- 残り：AIR/GND SYSTEM、GEAR MONITOR・A/G DISAGREE・PARK BRK VALVE の STATUS（GEAR-22 の残り。片系の故障で出るもので、故障の窓のときに作る）、ドアの箱の空箱。CONFIG GEAR の保持と GND PROX GEAR OVRD（GEAR-17）は 2026-11-04 に済。
+- 残り：ドアの箱の空箱、NOSE A/G DISAGREE（前脚の片系統の検知の効き方が資料に無い）、PARK BRK VALVE の STATUS（資料に見つからない）。AIR/GND SYSTEM、A/G DISAGREE・GEAR MONITOR・GEAR TILT の STATUS は 2026-11-04 に済（GEAR-22）。CONFIG GEAR の保持と GND PROX GEAR OVRD（GEAR-17）は 2026-11-04 に済。
 
 ### 表示（PFD・ND・EICAS）：作り直し中（5-2 段 1：表示器と EIU、段 2：ソース選択の比較、段 3：速度テープ、段 4a：PFD の姿勢・方位・昇降率の旗、段 4b：気圧、段 4c：PLI と VR の R、段 4d：FPV と旗、段 4e：ILS の表示、段 5a：ND の向きと旗、段 5b-1a：PFD の ILS の受信機、段 5b-1b：ND の APP、段 5b-2a：ND の VOR、段 5b-2b：VOR・ADF の針、段 5c-1：CDU の EFIS 操作とパネルの故障、段 5c-2a：ND の DATA、段 5c-2b：ND の POS、段 5c-3a：ND の地図の記号、段 5c-3b：ND の出発・到着空港と滑走路、段 5c-3c：手動同調の VOR のコースの線、段 5d：HDG REF、段 5e：ND のトレンドベクトル、段 6a：時計、段 6b：EICAS の部分表示と compact、段 7：パネルの SHOW の条件の重なりは済）
 - 実機に合わせた点（2026-10-27、ND の方位の印と上の枠）：拡大の方位の印 ▽ は、目盛と同じ中心で回り、先が目盛の外縁に触れる（前は航跡によって目盛に食い込んだり浮いたり、左右にずれたりした）。機長の拡大の目盛が航跡の線より 5.5 px 右にずれていたのを直した。上の枠（TRK・HDG）は、モードのつまみではなく ND のモデルの向きの源で出す（MAP・MAP CTR・PLAN は TRK、VOR・APP は HDG：FCOM p.1141）。同じ日にいったん P&W の機体を 405（全モードで方位が上、枠は HDG）にしたが、109 に戻した（GE の 570 と同じく MAP は航跡が上）。

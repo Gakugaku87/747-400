@@ -119,6 +119,12 @@ B747DR_gear_fail_actuator      = deferred_dataref("laminar/B747/gear/fail/actuat
 B747DR_gear_fail_door          = deferred_dataref("laminar/B747/gear/fail/door", "array[5]")
 B747DR_gear_fail_indication    = deferred_dataref("laminar/B747/gear/fail/indication", "array[5]")
 B747DR_gear_fail_truck_tilt    = deferred_dataref("laminar/B747/gear/fail/truck_tilt", "array[5]")
+-- (2026-11-04) failures for the failure window (notes/ATA-32.md §17): the
+-- primary [0] and alternate [1] landing gear subsystem failed to the air
+-- position (AIR/GND SYSTEM, A/G DISAGREE); one subsystem's position sensing
+-- of a gear failed (GEAR MONITOR; the gear order above)
+B747DR_gear_fail_air_gnd       = deferred_dataref("laminar/B747/gear/fail/air_gnd", "array[2]")
+B747DR_gear_fail_position_sensor = deferred_dataref("laminar/B747/gear/fail/position_sensor", "array[5]")
 -- The wheel brakes (4-2 step 2, B747.10.brake_model.lua): the parking brake
 -- valve (0 open .. 1 closed); failures (no X-Plane equivalents): the normal
 -- and the alternate antiskid, the torque limiters, the parking brake valve

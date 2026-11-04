@@ -47,4 +47,25 @@ gear(false, {0, 0, 0, 0})
 T.equal(ag("pri_air"), 0, "both main gears down: not air")
 T.equal(ag("pri_gnd"), 1, "both main gears down: ground")
 
+
+-- (2026-11-04) the alternate subsystem failed to air (laminar/B747/gear/
+-- fail/air_gnd[1]; notes/ATA-32.md §17): on the ground the alternate goes
+-- air, AIR/GND SYSTEM (advisory 5), STATUS A/G DISAGREE (139) after 10 s
+-- with the battery bus and AC buses 2 and 4
+rt:set("laminar/B747/electrical/bus/bat_main", 1)
+rt:set("laminar/B747/electrical/bus/ac", 1, 1)
+rt:set("laminar/B747/electrical/bus/ac", 3, 1)
+rt:set("laminar/B747/gear/fail/air_gnd", 1, 1)
+gear(true, {0, 0, 0, 0})
+T.equal(ag("pri_gnd"), 1, "alternate failed to air: the primary ground")
+T.equal(ag("alt_air"), 1, "alternate failed to air: the alternate air")
+T.equal(ag("alt_gnd"), 0, "alternate failed to air: the alternate not ground")
+T.equal(rt:get("laminar/B747/CAS/advisory_status", 5), 1, "alternate failed to air: AIR/GND SYSTEM")
+for _ = 1, 300 do rt:frame(1 / 30) end
+T.equal(rt:get("laminar/B747/CAS/status_status", 139), 1, "10 s: STATUS A/G DISAGREE")
+rt:set("laminar/B747/gear/fail/air_gnd", 1, 0)
+gear(true, {0, 0, 0, 0})
+T.equal(ag("alt_gnd"), 1, "repaired: the alternate ground")
+T.equal(rt:get("laminar/B747/CAS/advisory_status", 5), 0, "repaired: no AIR/GND SYSTEM")
+T.equal(rt:get("laminar/B747/CAS/status_status", 139), 0, "repaired: no A/G DISAGREE")
 T.done()

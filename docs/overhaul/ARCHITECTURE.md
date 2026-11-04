@@ -181,7 +181,7 @@ Lua が作る名前の数：dataref 1617 個、コマンド 628 個。静的に�
 | 名前 `laminar/B747/gear/air_ground/…` | 中身 |
 |---|---|
 | `pri_air`・`pri_gnd` | primary の AIR・GND（ATA29_32 p.322 の式。片側の主脚だけの接地では AIR のまま、左右とも接地で GND） |
-| `alt_air`・`alt_gnd` | alternate の AIR・GND（故障を入れるまでは primary と同じ） |
+| `alt_air`・`alt_gnd` | alternate の AIR・GND（故障を入れるまでは primary と同じ。2026-11-04 から故障 `gear/fail/air_gnd[2]`（[0] primary、[1] alternate）で、その側がセンサーに関係なく AIR になる：AIR/GND SYSTEM（advisory 5）、STATUS A/G DISAGREE（139）。位置の検知の片系統の故障 `gear/fail/position_sensor[5]` は脚のモデルの STATUS GEAR MONITOR（140）。GEAR TILT の STATUS は 141：notes/ATA-32.md §17） |
 | `ng_compressed` | 前脚圧縮（主脚とは別の信号。ペダルのステアリング、離陸警報、失速警報が使う） |
 | `all_gear_down`・`nose_not_down` | ALL GR DN（5 本ともダウンロック）・前脚がダウンロックでない |
 | `lever_unlock` | LG LVR UNLK（主脚トラック 4 本とも傾き、かつ胴体脚ステアリングがロック：FCOM p.1512） |
