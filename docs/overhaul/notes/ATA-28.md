@@ -327,3 +327,15 @@ GAP ID 接頭辞：`FUEL`。2026-10-23 調査。コード・acf は変更して�
 - `fuel_to_remain/display`：主 EICAS の FTR を表示の単位で出す（LBS なら ×2.20462。前は LBS 表示でも kg）。`fuel_to_remain/state`：0 magenta、1 白（ジェティソン完了から選択器 OFF まで）、2 点滅の消えている側（完了から 5 秒。2 Hz は推定）（FCOM p.1449）。
 - 前のパネルの条件：ポンプの amber はタンク量 < 10 kg だけ、主 2 O/J AFT のジェティソン表示が `blaminar/...` の誤記、その低圧の記号は `< -10.01 kg` で出ることが無かった、主タンクの amber は < 900 kg だけ、CWT ポンプからマニフォールドへの緑の流れは CWT > 900 kg。全部モデルの状態に置き換えた（`docs/overhaul/tools/panel_fuel_synoptic.lua`、ACF_DIFF.md §5）。
 - 残り：xfeed 弁の緑（燃料あり）は作らない。FCOM p.1448 は緑を挙げるが「燃料あり」の定義が無く、ATA26_28 p.422 は白と amber だけ。コンパクト表示（EICAS が 1 面のとき、FCOM p.1445–1446）は表示故障と一緒に作る。570 でも STAB タンクとポンプが出たまま（型式ごとの出し分けはしていない）。
+
+## 11. 故障の入力（2026-11-04：故障の窓の F0、FUEL-15 の残り）
+
+- 新しい dataref（1 で故障）：`laminar/B747/fuel/fail/pump[16]`（`B747_fuel_model.PUMPS` の順：MAIN 1 FWD、1 AFT、2 FWD、2 AFT、3 FWD、3 AFT、4 FWD、4 AFT、OVRD 2 FWD、2 AFT、3 FWD、3 AFT、CTR L、CTR R、STAB L、STAB R）、`fail/valve[21]`（`VALVES` の順：X FEED 1〜4、spar 弁 1〜4、予備移送 2A・2B・3A・3B、主 1・4 の移送、ジェティソン CTR L・CTR R・主 2・主 3、ノズル L・R、APU の燃料弁）、`fail/temp`（温度計）、`fail/fjcc[2]`（FJCC A・B）。燃料のモデル（`B747.28.fuel_model.lua`）の入力 `inp.fail`。
+- 振る舞い：
+  - ポンプ：動かず低圧になる。あとは前からの論理がそのまま働く：FUEL PUMP、FUEL OVRD、FUEL PRESS CTR、FUEL PRES STB、PRESS 灯、synoptic の色。主タンクの 2 台とも止まり xfeed が閉じていれば吸引供給で FUEL PRESS ENG（FUEL PUMP は抑止：FCOM p.1477、p.1582）。
+  - 弁：その場所で止まる（電源が無いときと同じ）。指令との不一致で前からの FUEL X FEED、>JETT NOZZLE、FUEL RES XFR と VALVE 灯（FCOM p.1477、p.1479）。spar 弁が開いたままならエンジンは止まらない、閉じたままなら燃料が来ない（エンジンの側の振る舞いは X-Plane の燃料の供給による）。
+  - 温度計：FUEL TEMP SYS（FCOM p.1478）。測れない温度では FUEL TEMP LOW を出さない（推定）。EICAS の燃料温度の数字は消していない（パネルの変更が要る：残り）。
+  - FJCC：A か B の故障で >FUEL JETT A・B、両方で FUEL JETT SYS（A・B は抑止：FCOM p.1474）。選択器で故障した側を選ぶとジェティソンが武装しない（推定：資料は「制御系の故障」とだけ書く）。
+- 残り：FUEL TEMP SYS のときの燃料温度の表示、燃料温度の変化のモデル（FUEL-20）、給油系の故障。
+- 試験：新しい回帰 `fuel_fail_test`（30 件）、`fuel_module_test` 96（dataref から PRESS 灯・>FUEL JETT A・FUEL TEMP SYS・X FEED の VALVE 灯まで）。
+- X-Plane（カスタム acf、2026-11-04）：新しい `s229_fuel_failures` 21/21（10,000 ft の空中：主 2 AFT のポンプで FUEL PUMP 2 AFT と PRESS 灯、2 台とも故障で X FEED 2 を閉じると吸引供給の FUEL PRESS ENG 2 で FUEL PUMP は抑止、エンジン 2 は回り続ける。X FEED 1 の固着でスイッチ OFF でも開いたまま FUEL X FEED 1 と VALVE 灯。温度計で FUEL TEMP SYS、FJCC A で >FUEL JETT A、両方で FUEL JETT SYS。写真）、回帰の `s222_fuel_synoptic` 55/55。Log.txt に Lua の誤りなし。

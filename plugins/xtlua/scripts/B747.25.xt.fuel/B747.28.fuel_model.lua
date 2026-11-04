@@ -125,6 +125,11 @@ function M.inputs()
         apu_fuel = false,                      -- the APU wants fuel (starting or running)
         temp = 15,                             -- fuel temperature, °C
         syn_low_kg = M.SYN_LOW_KG,             -- the synoptic's low main tank (570: 2,000 lb)
+        -- (2026-11-04) failures, true failed (laminar/B747/fuel/fail/*;
+        -- notes/ATA-28.md §11): each pump (M.PUMPS), each valve stuck
+        -- (M.VALVES), the temperature sensor, FJCC A and B
+        fail = {pump = flags(PUMP_IDS, false), valve = flags(M.VALVES, false), temp = false,
+            fjcc = {false, false}},
     }
 end
 
@@ -146,10 +151,11 @@ function M.new()
 end
 
 -- a motor-driven valve moves only with power and holds its place without
--- (ATA26_28 p.454, p.464)
+-- (ATA26_28 p.454, p.464); (2026-11-04) a failed valve holds its place too
+-- (its disagreement message follows: FUEL X FEED, >JETT NOZZLE, FUEL RES XFR)
 local function move(s, name, open, powered, dt)
     s.cmd[name] = open
-    if powered then
+    if powered and not (s.fail_valve and s.fail_valve[name]) then
         local step = dt / M.VALVE_TRAVEL_S
         if open then s.valve[name] = math.min(1, s.valve[name] + step)
         else s.valve[name] = math.max(0, s.valve[name] - step) end
@@ -183,8 +189,15 @@ function M.update(s, inp, dt)
     local flaps_to = inp.flap_lever >= M.FLAP_TO_MIN and inp.flap_lever <= M.FLAP_TO_MAX
     local total = total_of(q)
 
+    -- (2026-11-04) failures (notes/ATA-28.md §11): the valves stuck where
+    -- they are (move), the pumps (below), the FJCCs, the temperature sensor
+    local fail = inp.fail
+    s.fail_valve = fail.valve
+
     -- ======== jettison control (FJCC; FCOM p.1441, p.1468-1470; ATA26_28 p.538-546)
-    local armed = inp.jett_sel > 0
+    -- the selector picks FJCC A or B; a failed one does not arm (estimate:
+    -- >FUEL JETT A, B say only that the channel failed, FCOM p.1474)
+    local armed = inp.jett_sel > 0 and not fail.fjcc[inp.jett_sel]
     local nozzle_on = inp.nozzle[1] or inp.nozzle[2]
     if not armed then
         s.jett_done = false
@@ -248,7 +261,9 @@ function M.update(s, inp, dt)
                 and ((stab_enable and q.ctr < cap.ctr) or jett)
         end
         s.cmd[id] = cmd
-        local run = cmd and bus_on(inp, p)
+        -- (2026-11-04) a failed pump does not run: its low pressure (FUEL
+        -- PUMP, FUEL OVRD, FUEL PRESS CTR, FUEL PRES STB, PRESS lights)
+        local run = cmd and bus_on(inp, p) and not fail.pump[id]
         local minimum = 0
         if p.kind == "oj" then minimum = M.STANDPIPE_OJ elseif p.kind == "ctr" then minimum = M.CTR_PUMP_MIN end
         pump[id] = run or false
@@ -463,7 +478,16 @@ function M.update(s, inp, dt)
     c.jett_nozzle_l = s.disagree_t.noz_l >= M.DISAGREE_S
     c.jett_nozzle_r = s.disagree_t.noz_r >= M.DISAGREE_S
     c.jett_sys = armed and total < inp.ftr and (s.valve.noz_l > 0.5 or s.valve.noz_r > 0.5)
-    c.temp_low = inp.temp <= M.TEMP_LOW
+    -- (2026-11-04) FJCC A and B failed: FUEL JETT SYS; one: >FUEL JETT A or
+    -- B, not with FUEL JETT SYS (FCOM p.1474)
+    c.jett_sys = c.jett_sys or (fail.fjcc[1] and fail.fjcc[2])
+    c.jett_a = fail.fjcc[1] and not c.jett_sys
+    c.jett_b = fail.fjcc[2] and not c.jett_sys
+    -- (2026-11-04) the temperature sensor failed: FUEL TEMP SYS, and no
+    -- FUEL TEMP LOW from a temperature it cannot measure (FCOM p.1478;
+    -- the latter an estimate)
+    c.temp_sys = fail.temp
+    c.temp_low = inp.temp <= M.TEMP_LOW and not fail.temp
 
     -- ======== overhead lights (FCOM p.1439-1441, p.1465; ATA26_28 p.414)
     local l = out.light

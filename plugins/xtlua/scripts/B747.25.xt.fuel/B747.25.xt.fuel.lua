@@ -1105,6 +1105,12 @@ B747DR_fuel_syn_main_amber      = find_dataref("laminar/B747/fuel/synoptic/main_
 B747DR_fuel_syn_suction         = find_dataref("laminar/B747/fuel/synoptic/suction")
 B747DR_fuel_ftr_state           = find_dataref("laminar/B747/fuel/fuel_to_remain/state")
 B747DR_fuel_ftr_display         = find_dataref("laminar/B747/fuel/fuel_to_remain/display")
+-- (2026-11-04) the failures (notes/ATA-28.md §11): pumps and valves in the
+-- model's orders
+B747DR_fuel_fail_pump           = find_dataref("laminar/B747/fuel/fail/pump")
+B747DR_fuel_fail_valve          = find_dataref("laminar/B747/fuel/fail/valve")
+B747DR_fuel_fail_temp           = find_dataref("laminar/B747/fuel/fail/temp")
+B747DR_fuel_fail_fjcc           = find_dataref("laminar/B747/fuel/fail/fjcc")
 -- the weights shown in pounds (simconfig; set by B747_calculate_fuel_display_units)
 local display_lbs, LBS_PER_KG = false, 2.20462
 
@@ -1121,6 +1127,7 @@ local CAUTION = {jett_sys = 31, press_eng1 = 32, press_eng2 = 33, press_eng3 = 3
 local ADVISORY = {apu_fuel = 15, imbalance = 148, imbal14 = 149, imbal23 = 150, ovd_ctr_l = 153, ovd_ctr_r = 154,
     oj2_aft = 155, oj3_aft = 156, oj2_fwd = 157, oj3_fwd = 158, pmp_stab_l = 159, pmp_stab_r = 160,
     m1_aft = 161, m2_aft = 162, m3_aft = 163, m4_aft = 164, m1_fwd = 165, m2_fwd = 166, m3_fwd = 167, m4_fwd = 168,
+    jett_a = 151, jett_b = 152, temp_sys = 173,     -- (2026-11-04) the failures
     res_xfr2 = 169, res_xfr3 = 170, tank_eng = 171, temp_low = 172, xfeed1 = 175, xfeed2 = 176, xfeed3 = 177,
     xfeed4 = 178, xfer14 = 179, jett_noz = 235, jett_noz_l = 236, jett_noz_r = 237, jett_nozzle_l = 238,
     jett_nozzle_r = 239, xfeed_config = 299, low_ctr_l = 302, low_ctr_r = 303}
@@ -1260,6 +1267,13 @@ local function read_inputs(inp)
     inp.temp = B747DR_fuel_temperature
     -- the stabilizer tank: airplane 109, the passenger airplane (FCOM p.1453, p.1456)
     inp.has_stab = simDR_tank_ratio[7] > 0 and B747DR_is_freighter == 0
+    -- (2026-11-04) the failures
+    local f = inp.fail
+    for i, p in ipairs(F.PUMPS) do f.pump[p.id] = B747DR_fuel_fail_pump[i - 1] > 0.5 end
+    for i, v in ipairs(F.VALVES) do f.valve[v] = B747DR_fuel_fail_valve[i - 1] > 0.5 end
+    f.temp = B747DR_fuel_fail_temp > 0.5
+    f.fjcc[1] = B747DR_fuel_fail_fjcc[0] > 0.5
+    f.fjcc[2] = B747DR_fuel_fail_fjcc[1] > 0.5
 end
 
 -- the synoptic's engine feed: 1 from its own tank (suction feed too), 2
