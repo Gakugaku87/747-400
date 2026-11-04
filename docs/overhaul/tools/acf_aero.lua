@@ -75,6 +75,24 @@ local SET = {
     -- from 23 kt, 0.015 holds 26 kt and does not start from a stop, 0.012
     -- starts from a stop
     ["acf/_roll_co"] = 0.015,
+    -- the main gears' struts (2026-11-04, the user allowed it for the
+    -- autoland's skip off the runway). X-Plane 12's strut is a curve through
+    -- two load/deflection points (the X-Plane 12 Flight Model Report, Gear
+    -- and Tires): here a low one, 160,510 lb (the body gears 150,692) at
+    -- 1.2 ft, and the gross weight's, 191,880 lb at 2.2 ft. Stiff up to the
+    -- low one, over the about 138,000 lb a main strut holds at 270 t: a
+    -- touchdown met little but the tyres, 0.57 MN on the gear for 0.4 s,
+    -- then the airplane off the runway for 0.7 to 0.9 s (s114, s117,
+    -- 2026-11-04). The low point moved onto the straight line to the gross
+    -- weight's (estimate: an oleo strut sits well compressed at its static
+    -- load, ATA29_32 p.164's quick check asking only for 2 in of chrome):
+    -- 100,000 lb at 1.1466 ft. At 270 t a strut sits 1.58 ft compressed,
+    -- not 1.03 (the 3D gear's animation runs to 0.70 m, 2.3 ft:
+    -- objects/747_exterior/Exterior_Gear1.obj, Exterior_Gear2.obj)
+    ["_gear/1/_strut_preload_frc"] = 100000, ["_gear/1/_strut_preload_def"] = 1.1466,
+    ["_gear/2/_strut_preload_frc"] = 100000, ["_gear/2/_strut_preload_def"] = 1.1466,
+    ["_gear/3/_strut_preload_frc"] = 100000, ["_gear/3/_strut_preload_def"] = 1.1466,
+    ["_gear/4/_strut_preload_frc"] = 100000, ["_gear/4/_strut_preload_def"] = 1.1466,
     -- the engines' fuel per thrust (lb/lbf/h) at X-Plane's four points
     -- (2026-10-30): the FCOM's holding (PI.11.6) and Long Range
     -- Cruise (PI.11.2) fuel flows at the thrust the custom acf needs there
