@@ -1,0 +1,63 @@
+{
+  "name": "s245_xp_failures_check",
+  "description": "故障の窓にまだ載せていない X-Plane の故障が、この機体でどう効くかを確かめる（notes/FAILURES.md §3）。成田 34L でエンジン運転中：rel_fuel_block0（燃料フィルタ：ENG 1 FUEL FILT は出るか、エンジンは回り続けるか）、rel_pass_o2_on（乗客の酸素が自分で出る：PASS OXYGEN ON）、rel_engfla0（エンジン 1 の flameout）、rel_engfai1（エンジン 2 の故障）。結果で一覧に足すか決める",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 10 },
+
+    { "do": "mark", "note": "燃料フィルタ（rel_fuel_block0）" },
+    { "do": "set", "note": "rel_fuel_block0 = 6", "dref": "sim/operation/failures/rel_fuel_block0", "value": 6 },
+    { "do": "wait", "note": "ENG 1 FUEL FILT（advisory 114）", "dref": "laminar/B747/CAS/advisory_status[114]", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "sleep", "seconds": 15 },
+    { "do": "snapshot", "note": "15 秒後のエンジン 1", "drefs": [ "sim/flightmodel/engine/ENGN_running[0]", "sim/flightmodel/engine/ENGN_N2_[0]",
+      "sim/cockpit2/engine/indicators/fuel_flow_kg_sec[0]", "laminar/B747/CAS/advisory_status[114]" ] },
+    { "do": "check", "note": "エンジン 1 は回り続ける（実機はフィルタの bypass）", "dref": "sim/flightmodel/engine/ENGN_running[0]", "op": "==", "value": 1 },
+    { "do": "cas", "note": "燃料フィルタ" },
+    { "do": "set", "note": "戻す", "dref": "sim/operation/failures/rel_fuel_block0", "value": 0 },
+    { "do": "wait", "note": "ENG 1 FUEL FILT が消える", "dref": "laminar/B747/CAS/advisory_status[114]", "op": "==", "value": 0, "timeout": 10 },
+
+    { "do": "mark", "note": "乗客の酸素（rel_pass_o2_on）" },
+    { "do": "set", "note": "rel_pass_o2_on = 6", "dref": "sim/operation/failures/rel_pass_o2_on", "value": 6 },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "snapshot", "note": "乗客の酸素", "drefs": [ "laminar/B747/CAS/advisory_status[256]", "laminar/B747/CAS/memo_status[39]" ] },
+    { "do": "cas", "note": "乗客の酸素" },
+    { "do": "set", "note": "戻す", "dref": "sim/operation/failures/rel_pass_o2_on", "value": 0 },
+
+    { "do": "mark", "note": "エンジン 1 の flameout（rel_engfla0）" },
+    { "do": "set", "note": "rel_engfla0 = 6", "dref": "sim/operation/failures/rel_engfla0", "value": 6 },
+    { "do": "wait", "note": "エンジン 1 が止まる", "dref": "sim/flightmodel/engine/ENGN_running[0]", "op": "==", "value": 0, "timeout": 20 },
+    { "do": "sleep", "seconds": 5 },
+    { "do": "snapshot", "note": "flameout の後", "drefs": [ "sim/flightmodel/engine/ENGN_running[0]", "sim/flightmodel/engine/ENGN_N2_[0]",
+      "laminar/B747/fuel/fuel_control/toggle_sw_pos[0]", "sim/cockpit2/engine/actuators/mixture_ratio[0]" ] },
+    { "do": "cas", "note": "flameout" },
+    { "do": "set", "note": "戻す", "dref": "sim/operation/failures/rel_engfla0", "value": 0 },
+    { "do": "sleep", "seconds": 15 },
+    { "do": "snapshot", "note": "戻して 15 秒（自分で点くか）", "drefs": [ "sim/flightmodel/engine/ENGN_running[0]", "sim/flightmodel/engine/ENGN_N2_[0]" ] },
+
+    { "do": "mark", "note": "エンジン 2 の故障（rel_engfai1）" },
+    { "do": "set", "note": "rel_engfai1 = 6", "dref": "sim/operation/failures/rel_engfai1", "value": 6 },
+    { "do": "wait", "note": "エンジン 2 が止まる", "dref": "sim/flightmodel/engine/ENGN_running[1]", "op": "==", "value": 0, "timeout": 20 },
+    { "do": "sleep", "seconds": 5 },
+    { "do": "snapshot", "note": "故障の後", "drefs": [ "sim/flightmodel/engine/ENGN_running[1]", "sim/flightmodel/engine/ENGN_N2_[1]" ] },
+    { "do": "cas", "note": "エンジン 2 の故障" },
+    { "do": "set", "note": "戻す", "dref": "sim/operation/failures/rel_engfai1", "value": 0 },
+    { "do": "sleep", "seconds": 5 },
+    { "do": "snapshot", "note": "戻した後", "drefs": [ "sim/flightmodel/engine/ENGN_running[1]", "sim/flightmodel/engine/ENGN_N2_[1]" ] },
+    { "do": "record_stop" }
+  ]
+}

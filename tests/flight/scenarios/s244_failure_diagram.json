@@ -74,7 +74,7 @@
     { "do": "check", "note": "正常", "dref": "laminar/B747/fuel/fail/valve[1]", "op": "==", "value": 0 },
 
     { "do": "mark", "note": "空圧の図" },
-    { "do": "set", "note": "章 36 PNEUMATIC（11 番目：1010）", "dref": "laminar/B747/failures/test_click", "value": 1010 },
+    { "do": "set", "note": "章 36 PNEUMATIC（12 番目：1011）", "dref": "laminar/B747/failures/test_click", "value": 1011 },
     { "do": "sleep", "seconds": 1 },
     { "do": "set", "note": "箱 13：LEAK C", "dref": "laminar/B747/failures/test_click", "value": 7013 },
     { "do": "sleep", "seconds": 1 },
