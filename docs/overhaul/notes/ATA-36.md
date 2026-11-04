@@ -322,6 +322,7 @@ ACF_DIFF.md との関係: 抽気に関わる acf 値（`_has_full_bleed_air`、`
   - PRV が開のまま：指令が閉（スイッチ OFF、火災スイッチ、過熱、始動中とその後 15 秒）のとき、5 秒で BLEED n と SYS FAULT、125 秒で STATUS BLEED PRV ENG n。PRSOV はスイッチで閉じるので、スイッチ OFF なら >BLEED n OFF も出たまま。
   - APU の空気：弁は開いたまま、空気が来ない（ダクト C が空になる）。
 - STATUS の番号（`laminar/B747/CAS/status_status`）：107〜110 BLEED HP ENG 1〜4、111〜114 BLEED OVPRESS 1〜4、115〜118 BLEED PRV ENG 1〜4、119〜122 BLEED 1〜4 OVHT。advisory は前からの 22〜25（BLD n OVHT/PRV）、26〜29（BLEED n）、30〜33（BLEED HP ENG n）。
-- 推定：弁の不一致の 5 秒（資料に値が無い）、IP 段だけのときの圧の範囲。
+- ダクトリーク（2026-11-04、PNEU-03 の残り）：故障は火災の `laminar/B747/fire/fail/duct_leak[3]`（L・C・R）。漏れはその区画の空気を取る（パック半分の 0.5：推定）。BLD DUCT LEAK は、リークの区画に空気がある（5 psi 以上）あいだ出る：前縁とストラットの温度スイッチは、破れたダクトの熱い空気で閉じる（ATA26_28 p.284）。自動の隔離は無い（§4.7）。乗員が QRH 2.2 のとおり ISLN とエンジンの抽気を閉じて区画の空気が無くなると、スイッチが冷えて 30 秒（推定）で消える。故障を消したときも同じ 30 秒。
+- 推定：弁の不一致の 5 秒（資料に値が無い）、IP 段だけのときの圧の範囲、リークの流量 0.5、熱い空気とみなす 5 psi、冷える 30 秒。
 - 試験：新しい回帰 `bleed_fail_test`（53 件）、`bleed_module_test` 61（dataref から advisory・STATUS・SYS FAULT 灯まで、APU の空気の故障）。
 - X-Plane（カスタム acf、2026-11-04）：新しい `s230_bleed_failures` 38/38（成田でエンジン運転中のアイドル：HPSOV 1 の閉で 5 秒後に BLEED HP ENG 1 と beeper、SYS FAULT なし、エンジン 1 の圧は 36 psi（IP 段だけ）。エンジン 2 の過圧で BLEED 2・SYS FAULT・STATUS BLEED OVPRESS 2、弁は開いたまま、ENGINE BLEED 2 OFF で消えて >BLEED 2 OFF。PRV 3 の閉で BLD 3 OVHT/PRV、空気 0、右のダクトはエンジン 4 が保つ。エンジン 4 の過熱で BLD 4 OVHT/PRV・SYS FAULT・弁が閉、STATUS BLEED 4 OVHT と BLEED PRV ENG 3、故障を消してもラッチ、スイッチの OFF・ON で戻る。上の EICAS と STATUS ページの写真）、回帰の `s05_bleed` 64/64。Log.txt に Lua の誤りなし。頭上の SYS FAULT 灯の写真は視点が電源パネルを向いていたので、抽気パネルの視点（`bleed`）に直した（次の回で撮る）。

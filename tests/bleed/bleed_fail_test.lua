@@ -185,4 +185,22 @@ do
     T.check(out.eng[3].bleed_alert, "DC bus 3 back: BLEED 3")
 end
 
+-- (2026-11-04; PNEU-03) a duct leak takes air from its section (estimate:
+-- M.LEAK_FLOW); isolated as QRH 2.2 (ISLN R OFF, ENGINE BLEED 3 and 4 OFF)
+-- the right duct has no air left to blow out, the left side keeps its own
+do
+    local s, inp = idle()
+    inp.pack_flow = {2 / 3, 2 / 3, 2 / 3}
+    local before = run(s, inp, 5).duct[3]
+    inp.leak[3] = true
+    local out = run(s, inp, 5)
+    T.check(out.duct[3] < before - 0.5, "leak R: the ducts a little lower")
+    T.check(out.duct[3] > 25, "leak R: the packs still have air")
+    inp.isln_on[2] = false
+    inp.bleed_on[3], inp.bleed_on[4] = false, false
+    out = run(s, inp, 10)
+    T.check(out.duct[3] < 1, "leak R isolated: no air in the right duct")
+    T.check(out.duct[1] > 30 and out.duct[2] > 30, "leak R isolated: the left and centre keep their air")
+end
+
 T.done()

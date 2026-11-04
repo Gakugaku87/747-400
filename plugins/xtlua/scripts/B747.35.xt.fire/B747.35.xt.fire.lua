@@ -68,6 +68,8 @@ B747DR_fire_bus_bat_main                    = find_dataref("laminar/B747/electri
 B747DR_fire_bus_ac                          = find_dataref("laminar/B747/electrical/bus/ac")
 B747DR_fire_bus_dc                          = find_dataref("laminar/B747/electrical/bus/dc")
 B747DR_fire_duct_pressure_C                 = find_dataref("laminar/B747/air/duct_pressure_C")
+B747DR_fire_duct_pressure_L                 = find_dataref("laminar/B747/air/duct_pressure_L")  -- (2026-11-04) the leak's hot air
+B747DR_fire_duct_pressure_R                 = find_dataref("laminar/B747/air/duct_pressure_R")
 B747DR_button_switch_position               = find_dataref("laminar/B747/button_switch/position")
 B747DR_CAS_memo_status                      = find_dataref("laminar/B747/CAS/memo_status")
 
@@ -312,6 +314,8 @@ local function read_inputs(inp)
     inp.wheel_well_heat = B747DR_fire_fail_wheel_well > 0.5
     inp.wheel_well_power = B747DR_fire_bus_ac[1] > 0.5
     for d = 1, 3 do inp.duct_leak[d] = B747DR_fire_fail_duct_leak[d - 1] > 0.5 end
+    inp.duct_psi[1], inp.duct_psi[2], inp.duct_psi[3] =
+        B747DR_fire_duct_pressure_L, B747DR_fire_duct_pressure_C, B747DR_fire_duct_pressure_R
     inp.duct_power = B747DR_fire_bus_dc[1] > 0.5 or B747DR_fire_bus_bat_main > 0.5
     inp.lav_smoke = B747DR_fire_fail_lav_smoke > 0.5
     inp.rest_smoke = B747DR_fire_fail_rest_smoke > 0.5

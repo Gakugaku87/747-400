@@ -367,9 +367,15 @@ bell の断続: 2 s 鳴る / 3 s 休む（570 は 1 s / 10 s）
 - モデルとグルーは段 1 と同じファイル。ゾーンに CARGO 1–4（前方 1・2、後方 3、bulk 4）を足し、ボトルに貨物 A–D（360 psi、低圧 300 psi）を足した。
 - 下部貨物室（§4.5）：煙は新しい失敗の dataref `laminar/B747/fire/fail/cargo_smoke[4]`。検知器は 2 ループの AND で、組替えは電源投入時と手動試験の完了時だけ（飛行中にループが故障すると、次の試験までそのゾーンは検知できない）。煙は venturi の吸引が無いと届かない（推定）。吸引は中央ダクトの圧が 5 psi を超えるとき（推定：資料は venturi の水柱 7/11 in）、エンジン 2 基以上の運転で >CARGO DET AIR。FIRE CARGO FWD・AFT と FWD・AFT の灯（試験でも点く）。ARM・DISCH はマニピュレータのスイッチ位置（`button_switch/position[84–86]`）を読む。DISCH で ARM した区画へ A・B を即時に、ARM が 1 区画なら lock-in して、空中では 30 分後、30 分前に接地すれば接地で、地上では即時に C・D を調圧弁経由（約 2 時間）で出す。2 区画とも ARM したときは A・B を両方へ出し、C・D は出さない（推定：§4.5 の 5）。剤が出た区画の煙の失敗は 0 に戻す（推定：X-Plane のエンジン火災と同じ扱い）。DISCH の灯は A か B の低圧、>CGO BTL DISCH は地上ならどれかの低圧、空中なら A と B の放出。status：FWD CARGO 1/2・AFT CARGO 3/4 LP A/B、CARGO DET FWD・AFT（20 秒）、CARGO DET AIR（60 秒）、BTL LOW CARGO A–D。
 - 車輪格納部（§4.6）：単ループ（AC bus 2）、失敗の dataref `fail/wheel_well`。FIRE WHEEL WELL。消火設備は無い。
-- 主翼前縁・ストラットの過熱：失敗の dataref `fail/duct_leak[3]`（L・C・R）、電源は DC bus 2 か main battery bus。BLD DUCT LEAK L・C・R（C の検知元は資料に無い）、status BLD DUCT LEAK L・R（60 秒）。抽気の系統へのリークの影響（ダクト圧の低下）は抽気（PNEU-03）の残り。
+- 主翼前縁・ストラットの過熱：失敗の dataref `fail/duct_leak[3]`（L・C・R）、電源は DC bus 2 か main battery bus。BLD DUCT LEAK L・C・R（C の検知元は資料に無い）、status BLD DUCT LEAK L・R（60 秒）。抽気の系統へのリークの影響（2026-11-04 に足した：§12）（ダクト圧の低下）は抽気（PNEU-03）の残り。
 - 化粧室・door 5 クルーレストの煙：失敗の dataref `fail/lav_smoke`・`fail/rest_smoke`。>SMOKE LAVATORY（advisory 264。caution 53 の同じ名前は使わない）、SMOKE DR 5 REST（caution 52）。クルーレストの給気弁とファンの停止（空調）は無い。
 - FIRE/OVHT TEST：貨物の検知器・車輪格納部のループ・ダクトの電源も含めて PASS/FAIL を決める。試験の完了で貨物の検知器を組み替える。FIRE WHEEL WELL・FIRE CARGO のメッセージは出さない。
 - スクイブ試験：新しいコマンド `laminar/B747/fire/squib_test_1`・`_2`（押している間。0.3 秒の余裕で戻す）。TEST 1 はボトル A（貨物は前方用）、TEST 2 はボトル B（貨物は後方用）の squib を通して灯を点ける。発火済みの squib の灯は点かない。貨物を ARM すると A・B の試験は抑止。灯は `fire/light/squib[9]`（エンジン 1–4、APU、貨物 A–D。照明が annunciator 95–103 に出す）。APU の squib は TEST 1・2 のどちらでも。
 - 表示：`fire/light/cargo[3]`（FWD、AFT、DISCH。照明が annunciator 35–37 に出す）、`fire/cargo/ext_bottle/psi[4]`。警報の表に STATUS 64–80 を足した。
 - 試験：`tests/fire/fire_model_test.lua`（段 1 と合わせて 122 件）、`tests/fire/fire_module_test.lua`（87 件）、X-Plane の `s23_fire_cargo`。
+
+## 12. ダクトリークの熱い空気（2026-11-04、PNEU-03 の残り）
+
+- BLD DUCT LEAK L・C・R は、リークの区画のダクト圧（`laminar/B747/air/duct_pressure_L`・`C`・`R`）が 5 psi 以上のあいだ出る。温度スイッチは破れたダクトの熱い空気で閉じる（ATA26_28 p.284）ので、区画に空気が無ければ出ない。空気が無くなってから（乗員の隔離：QRH 2.2）、または故障が消えてから 30 秒でスイッチが開いて消え、status も一緒に消える（30 秒と 5 psi は推定：資料に冷える時間が無い）。
+- 漏れが区画の空気を取るのは抽気のモデル（notes/ATA-36.md §10）。
+- 試験：`fire_model_test` 131、`fire_module_test` 90。X-Plane（カスタム acf、2026-11-04）：新しい `s231_duct_leak` 17/17（成田でエンジン運転中：左のダクトのリークで BLD DUCT LEAK L と beeper、ダクト圧 39.6 → 38.8 psi。QRH 2.2 の隔離（ISOLATION L、ENGINE BLEED 1・2 OFF）で左のダクトが 3 秒で空になり、BLD DUCT LEAK L はその 30 秒後に消える。右のダクトは 37.9 psi のまま。上の EICAS の写真）、回帰の `s230_bleed_failures` 38/38（抽気パネルの SYS FAULT 2 の写真も撮れた）、`s23_fire_cargo` 27/27。Log.txt に Lua の誤りなし。
