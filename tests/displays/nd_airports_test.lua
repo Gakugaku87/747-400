@@ -174,6 +174,7 @@ T.equal(get("sym", 1), 1, "the destination whatever ARPT (FCOM p.1149)")
 -- destination's 18 NM ahead within the circle
 rt:set("laminar/B747/nd/range/capt/sel_dial_pos", 2)
 rt:set("laminar/B747/nd/map_center/capt", 1)
+rt:set("laminar/B747/nd/capt/centred", 1)    -- (2026-11-05) the ND module reads the displays' centred
 run(0.5)
 T.check(get("rwy_show", 0) == 1 and rt:get(A .. "rwy0") == "09", "MAP CTR: ZZAA's runway 09 behind")
 T.check(near(math.abs(get("rwy_heading", 0)), 180, 1) and near(get("dir", 0), -90, 1),
@@ -196,6 +197,7 @@ T.check(slot("WPT1") ~= nil, "and the route's waypoints")
 -- VOR: none, not the route's waypoints either
 rt:set("laminar/B747/nd/mode/capt/sel_dial_pos", 1)
 rt:set("laminar/B747/nd/map_center/capt", 0)
+rt:set("laminar/B747/nd/capt/centred", 0)    -- (2026-11-05) the ND module reads the displays' centred
 rt:set("sim/cockpit2/EFIS/map_mode", 2)                              -- as the mode selector sets it in VOR
 run(0.5)
 T.check(get("rwy_show", 0) == 0 and get("rwy_show", 1) == 0 and get("sym", 0) == 0 and get("sym", 1) == 0,

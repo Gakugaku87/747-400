@@ -455,9 +455,26 @@ frames(0.1)
 rt:set(NDP .. "mode/capt/sel_dial_pos", 3)                         -- PLN
 frames(0.1)
 T.equal(rt:get("sim/cockpit2/EFIS/map_mode"), 4, "PLN: X-Plane's 4")
-T.equal(rt:get(NDP .. "capt/box"), 4, "PLN: TRK in PLAN's box (FCOM p.1141)")
-T.equal(rt:get(NDP .. "capt/hdg_ptr_pln"), 1, "PLN's heading pointer")
+-- (2026-11-05) PLAN's pictures (FCOM p.1027-1029): the range circles
+-- centred (the 109; the LCD 570), the CRT 570's MAP top portion expanded
+T.check(rt:get(NDP .. "capt/pln_style") == 1 and rt:get(NDP .. "capt/centred") == 1,
+    "the 109's PLN: the range circles, centred (CTR off)")
+T.equal(rt:get(NDP .. "capt/box"), 0, "no box (FCOM p.1028)")
+T.equal(rt:get(NDP .. "capt/hdg_ptr") + rt:get(NDP .. "capt/hdg_ptr_pln") + rt:get(NDP .. "capt/rose"), 0,
+    "no compass, no heading pointer")
 T.equal(rt:get(NDP .. "capt/hdg_bug"), 0, "no selected heading in PLN")
+rt:set("laminar/B747/engines/type", 1)
+rt:set(NDP .. "style", 0)                                          -- CRT
+frames(0.1)
+T.check(rt:get(NDP .. "capt/pln_style") == 2 and rt:get(NDP .. "capt/centred") == 0,
+    "the CRT GE's PLN: the MAP top portion, expanded (p.1029)")
+T.check(rt:get(NDP .. "capt/box") == 2 and rt:get(NDP .. "capt/rose") == 1 and rt:get(NDP .. "capt/hdg_ptr") == 1,
+    "TRK in the box, the compass, the heading pointer")
+rt:set(NDP .. "style", 1)                                          -- LCD
+frames(0.1)
+T.equal(rt:get(NDP .. "capt/pln_style"), 1, "the LCD GE's PLN: the range circles (p.1027)")
+rt:set("laminar/B747/engines/type", 0)
+frames(0.1)
 
 -- the VOR mode's reference VOR (step 5b): the Captain's VOR L (NAV3), the
 -- F/O's VOR R (NAV4); autotuned unless the CDU tuned it
@@ -645,7 +662,7 @@ T.check(rt:get(PC .. "tv_show", 0) == 1 and math.abs(rt:get(PC .. "tv_rot", 0)) 
     "the trend vector straight up the track")
 rt:set(ND .. "mode/capt/sel_dial_pos", 3)
 frames(0.1)
-T.equal(rt:get(PC .. "box"), 4, "PW's PLN: TRK in PLAN's box")
+T.check(rt:get(PC .. "box") == 0 and rt:get(PC .. "pln_style") == 1, "PW's PLN: the range circles, no box (FCOM p.1028)")
 rt:set(ND .. "mode/capt/sel_dial_pos", 2)
 
 -- MAP CTR (2026-10-28, the real airplane's): the selected range the compass

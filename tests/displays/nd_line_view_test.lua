@@ -34,6 +34,7 @@ rt:set(ND .. "mode/fo/sel_dial_pos", 2)
 rt:set(ND .. "range/capt/sel_dial_pos", 1)                         -- 20 NM
 rt:set(ND .. "range/fo/sel_dial_pos", 2)                           -- 40 NM
 rt:set(ND .. "map_center/fo", 1)                                   -- MAP CTR
+rt:set(ND .. "fo/centred", 1)                                       -- (2026-11-05) the displays' centred
 rt:callout("flight_start")
 frames(0.5)
 T.equal(view(0), 1, "the Captain's MAP: expanded")

@@ -149,9 +149,11 @@ frames(1)
 T.equal(rt:get(ND .. "capt/text/wxr"), " ", "PLN: no weather radar annunciations")
 rt:set("laminar/B747/nd/mode/capt/sel_dial_pos", 1)               -- VOR
 rt:set("laminar/B747/nd/map_center/capt", 1)
+rt:set("laminar/B747/nd/capt/centred", 1)    -- (2026-11-05) the ND module reads the displays' centred
 frames(1)
 T.equal(rt:get(ND .. "capt/text/wxr"), " ", "VOR centred: none (ATA34_1 p.244)")
 rt:set("laminar/B747/nd/map_center/capt", 0)
+rt:set("laminar/B747/nd/capt/centred", 0)    -- (2026-11-05) the ND module reads the displays' centred
 frames(1)
 T.equal(rt:get(ND .. "capt/text/wxr"), "MAP", "VOR expanded: MAP")
 T.equal(rt:get(ND .. "capt/text/wxr_color", 0), 1, "the mode in cyan")

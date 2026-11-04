@@ -91405,7 +91405,7 @@ GROUP First Officer ND
       IS_VERTICAL 1
       OFFSET 0.000000
       GROUP Map:Centered
-        SHOW_EQUAL 1.000000 laminar/B747/nd/map_center/fo
+        SHOW_EQUAL 1.000000 laminar/B747/nd/fo/centred
         HIDE
         GROUP Map/Rose
           SHOW_GREATER 0.500000 laminar/B747/nd/fo/rose
@@ -92392,7 +92392,7 @@ GROUP First Officer ND
           POS 1322.000000 9.000000
           IMAGE EFIS/Maps/NorthArrow
           DATAREF 
-          SHOW_EQUAL 3.000000 laminar/B747/nd/mode/fo/sel_dial_pos
+          SHOW_EQUAL 9.000000 laminar/B747/nd/fo/pln_style
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 3
@@ -92597,7 +92597,7 @@ GROUP First Officer ND
         END_GROUP
       END_GROUP
       GROUP Map:Expanded
-        SHOW_EQUAL 0.000000 laminar/B747/nd/map_center/fo
+        SHOW_EQUAL 0.000000 laminar/B747/nd/fo/centred
         HIDE
         GROUP Map/Rose
           SHOW_GREATER 0.500000 laminar/B747/nd/fo/rose
@@ -93255,7 +93255,7 @@ GROUP First Officer ND
           CLICK_DY 0
 
         GROUP Waypoints FO EXPAND
-          SHOW_EQUAL 2.000000 laminar/B747/nd/mode/fo/sel_dial_pos
+          SHOW_GREATER 1.500000 laminar/B747/nd/mode/fo/sel_dial_pos
           LOCKED
           gen_text Active Waypoint FO 
             POS 1273.500000 398.000000
@@ -93487,11 +93487,122 @@ GROUP First Officer ND
 
         END_GROUP
       END_GROUP
+      GROUP PLN Plan
+        SHOW_GREATER 0.500000 laminar/B747/nd/fo/pln_style
+        HIDE
+        GROUP PLN Circles
+          SHOW_EQUAL 1.000000 laminar/B747/nd/fo/pln_style
+          HIDE
+          gen_rotary PLN Circles
+            POS 1022.250000 78.500000
+            IMAGE EFIS/Maps/plan_circles
+            DATAREF 
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 3
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_LED PLN Range Out Up
+            POS 1004.250000 302.000000
+            IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+            DATAREF laminar/B747/nd/range_display_fo
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 3
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 999.000000 1998.000000
+            DIGITS 3
+            DECIMALS 0
+            PERIOD_WIDTH 0
+            LED_ROWS 4
+            ROUNDING ROUND_ROUND
+          gen_LED PLN Range Out Dn
+            POS 1004.250000 -163.000000
+            IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+            DATAREF laminar/B747/nd/range_display_fo
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 3
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 999.000000 1998.000000
+            DIGITS 3
+            DECIMALS 0
+            PERIOD_WIDTH 0
+            LED_ROWS 4
+            ROUNDING ROUND_ROUND
+          gen_LED PLN Range In Up
+            POS 1004.250000 185.750000
+            IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+            DATAREF laminar/B747/nd/range_display_fo
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 3
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 999.000000 999.000000
+            DIGITS 3
+            DECIMALS 0
+            PERIOD_WIDTH 0
+            LED_ROWS 4
+            ROUNDING ROUND_ROUND
+          gen_LED PLN Range In Dn
+            POS 1004.250000 -46.750000
+            IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+            DATAREF laminar/B747/nd/range_display_fo
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 3
+            BUS_SRC 4
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 999.000000 999.000000
+            DIGITS 3
+            DECIMALS 0
+            PERIOD_WIDTH 0
+            LED_ROWS 4
+            ROUNDING ROUND_ROUND
+        END_GROUP
+        gen_rotary PLN North CRT
+          POS 1322.000000 9.000000
+          IMAGE EFIS/Maps/NorthArrow
+          DATAREF 
+          SHOW_EQUAL 2.000000 laminar/B747/nd/fo/pln_style
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 3
+          BUS_SRC 4
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+      END_GROUP
       GROUP ND Text Center
         GROUP_ANIMATE_MODE TRANSLATE
         GROUP_WIDTH 0
         GROUP_HEIGHT 0
-        DATAREF laminar/B747/nd/map_center/fo
+        DATAREF laminar/B747/nd/fo/centred
         POS 0.000000 0.000000
         KEY_FRAME 0.000000 0.000000 1.000000
         KEY_FRAME 1.000000 173.500000
@@ -112850,7 +112961,7 @@ GROUP First Officer ND
           GROUP_ANIMATE_MODE TRANSLATE
           GROUP_WIDTH 0
           GROUP_HEIGHT 0
-          DATAREF laminar/B747/nd/map_center/fo
+          DATAREF laminar/B747/nd/fo/centred
           POS 0.000000 0.000000
           KEY_FRAME 0.000000 0.000000 1.000000
           KEY_FRAME 1.000000 173.500000
@@ -114294,7 +114405,7 @@ GROUP Captain ND
       IS_VERTICAL 1
       OFFSET 0.000000
       GROUP Map:Centered 2
-        SHOW_EQUAL 1.000000 laminar/B747/nd/map_center/capt
+        SHOW_EQUAL 1.000000 laminar/B747/nd/capt/centred
         HIDE
         GROUP Map/Rose 2
           SHOW_GREATER 0.500000 laminar/B747/nd/capt/rose
@@ -115279,7 +115390,7 @@ GROUP Captain ND
           POS 635.000000 9.000000
           IMAGE EFIS/Maps/NorthArrow
           DATAREF 
-          SHOW_EQUAL 3.000000 laminar/B747/nd/mode/capt/sel_dial_pos
+          SHOW_EQUAL 9.000000 laminar/B747/nd/capt/pln_style
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 0
@@ -115484,7 +115595,7 @@ GROUP Captain ND
         END_GROUP
       END_GROUP
       GROUP Map:Expanded 2
-        SHOW_EQUAL 0.000000 laminar/B747/nd/map_center/capt
+        SHOW_EQUAL 0.000000 laminar/B747/nd/capt/centred
         HIDE
         GROUP Map/Rose 2
           SHOW_GREATER 0.500000 laminar/B747/nd/capt/rose
@@ -116141,7 +116252,7 @@ GROUP Captain ND
           CLICK_DY 0
 
         GROUP Waypoints CAPT EXPA
-          SHOW_EQUAL 2.000000 laminar/B747/nd/mode/capt/sel_dial_pos
+          SHOW_GREATER 1.500000 laminar/B747/nd/mode/capt/sel_dial_pos
           LOCKED
           gen_text Active Waypoint 2
             POS 593.500000 398.000000
@@ -116373,11 +116484,122 @@ GROUP Captain ND
 
         END_GROUP
       END_GROUP
+      GROUP PLN Plan 2
+        SHOW_GREATER 0.500000 laminar/B747/nd/capt/pln_style
+        HIDE
+        GROUP PLN Circles 2
+          SHOW_EQUAL 1.000000 laminar/B747/nd/capt/pln_style
+          HIDE
+          gen_rotary PLN Circles 2
+            POS 335.250000 78.500000
+            IMAGE EFIS/Maps/plan_circles
+            DATAREF 
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 0
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          gen_LED PLN Range Out Up 2
+            POS 317.250000 302.000000
+            IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+            DATAREF laminar/B747/nd/range_display_capt
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 0
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 999.000000 1998.000000
+            DIGITS 3
+            DECIMALS 0
+            PERIOD_WIDTH 0
+            LED_ROWS 4
+            ROUNDING ROUND_ROUND
+          gen_LED PLN Range Out Dn 2
+            POS 317.250000 -163.000000
+            IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+            DATAREF laminar/B747/nd/range_display_capt
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 0
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 999.000000 1998.000000
+            DIGITS 3
+            DECIMALS 0
+            PERIOD_WIDTH 0
+            LED_ROWS 4
+            ROUNDING ROUND_ROUND
+          gen_LED PLN Range In Up 2
+            POS 317.250000 185.750000
+            IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+            DATAREF laminar/B747/nd/range_display_capt
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 0
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 999.000000 999.000000
+            DIGITS 3
+            DECIMALS 0
+            PERIOD_WIDTH 0
+            LED_ROWS 4
+            ROUNDING ROUND_ROUND
+          gen_LED PLN Range In Dn 2
+            POS 317.250000 -46.750000
+            IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
+            DATAREF laminar/B747/nd/range_display_capt
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 0
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 999.000000 999.000000
+            DIGITS 3
+            DECIMALS 0
+            PERIOD_WIDTH 0
+            LED_ROWS 4
+            ROUNDING ROUND_ROUND
+        END_GROUP
+        gen_rotary PLN North CRT 2
+          POS 635.000000 9.000000
+          IMAGE EFIS/Maps/NorthArrow
+          DATAREF 
+          SHOW_EQUAL 2.000000 laminar/B747/nd/capt/pln_style
+          HIDE
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 0
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
+      END_GROUP
       GROUP ND Text Center
         GROUP_ANIMATE_MODE TRANSLATE
         GROUP_WIDTH 0
         GROUP_HEIGHT 0
-        DATAREF laminar/B747/nd/map_center/capt
+        DATAREF laminar/B747/nd/capt/centred
         POS 0.000000 0.000000
         KEY_FRAME 0.000000 0.000000 1.000000
         KEY_FRAME 1.000000 173.500000
@@ -135736,7 +135958,7 @@ GROUP Captain ND
           GROUP_ANIMATE_MODE TRANSLATE
           GROUP_WIDTH 0
           GROUP_HEIGHT 0
-          DATAREF laminar/B747/nd/map_center/capt
+          DATAREF laminar/B747/nd/capt/centred
           POS 0.000000 0.000000
           KEY_FRAME 0.000000 0.000000 1.000000
           KEY_FRAME 1.000000 173.500000

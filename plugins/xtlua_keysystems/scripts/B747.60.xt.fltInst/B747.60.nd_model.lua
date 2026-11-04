@@ -132,6 +132,10 @@ function M.inputs()
         -- 570 (GE: the user's choice, 2026-10-27); false is a 405's heading
         -- up, which no airplane uses
         track_map = true,
+        -- (2026-11-05) PLAN as the CRT 405 and 570's (FCOM p.1029: the MAP's
+        -- top portion): the GE with the livery's CRT displays; else the
+        -- range circles (the 109's p.1028, the LCD 405 and 570's p.1027)
+        pln_crt = false,
         gs_kt = 0,          -- the ground speed
     }
 end
@@ -139,18 +143,24 @@ end
 local function side_out()
     return {
         up = 0,             -- the display's top: heading, track or 0 (north)
+        -- (2026-11-05) PLAN's picture: 0 not PLAN, 1 the range circles
+        -- (centred), 2 the MAP's top portion (expanded); the map centred
+        -- (the panel's centred groups, the symbols and the route line):
+        -- CTR, or PLAN's circles
+        pln_style = 0,
+        centred = false,
         xp_mode = M.XP_MAP, -- X-Plane's map mode
         xp_range = 2,       -- X-Plane's map range, 0 to 6 (10 to 640 NM)
         xp_half = false,    -- X-Plane's map drawn at half size (MAP CTR at 640 NM)
         rose = false,       -- the compass rose and the digital heading or track
-        box = 1,            -- the box at the top: 1 HDG, 2 TRK; in PLAN 3 HDG, 4 TRK
+        box = 1,            -- the box at the top: 1 HDG, 2 TRK; 0 none (PLAN's circles)
         trk_flag = false,
         hdg_flag = false,
         map_flag = false,
         vtk_flag = false,
         wpt_data = true,    -- the active waypoint's ETA and distance (6-1/6-2 step 11d2b)
         hdg_ptr = false,    -- the current heading pointer (APP, VOR, MAP)
-        hdg_ptr_pln = false, -- the PLN one, on the north-up rose
+        hdg_ptr_pln = false, -- the old PLN one on a north-up rose: none since 2026-11-05
         hdg_bug = false,    -- the selected heading bug
         hdg_line = false,   -- its dashed line
         trk_line = false,   -- the expanded track line
@@ -263,7 +273,18 @@ function M.update(s, inp, dt)
         local i, o = inp.side[p], s.out[p]
         local mode = i.mode
         local track_map = inp.track_map
-        o.up = M.orientation(mode, i.hdg, i.trk, track_map)
+        -- (2026-11-05) PLAN's picture (FCOM p.1027-1029; before, the
+        -- expanded MAP's rose turned north up with an empty box, the centre
+        -- waypoint at the expanded airplane symbol unless CTR was on, as no
+        -- figure has it): the range circles centred, no compass, no box, no
+        -- wind arrow (p.1142: none in the LCD's PLAN; the 109's figure has
+        -- none); the CRT's MAP top portion (track up on the 570) over the
+        -- route north up from the expanded centre (p.1029's figure), its
+        -- route's scale MAP's
+        o.pln_style = mode == M.PLN and (inp.pln_crt and 2 or 1) or 0
+        local pln_top = o.pln_style == 2
+        o.centred = o.pln_style == 1 or (mode ~= M.PLN and i.center)
+        o.up = M.orientation(pln_top and M.MAP or mode, i.hdg, i.trk, track_map)
         o.xp_mode = (mode == M.MAP and (track_map and M.XP_MAP or M.XP_APP)) or (mode == M.PLN and M.XP_PLN) or M.XP_APP
         -- the box at the top and the orientation's source: MAP and PLAN the
         -- track (the 109 and the 570, FCOM p.1141: TRK), else the heading
@@ -272,13 +293,15 @@ function M.update(s, inp, dt)
         -- in VOR and APP; a 405's HDG)
         local map_modes = mode == M.MAP or mode == M.PLN
         local by_trk = map_modes and track_map
-        o.box = (mode == M.PLN and 2 or 0) + (by_trk and 2 or 1)
-        o.rose = mode == M.PLN or (by_trk and i.trk_valid) or (not by_trk and i.hdg_valid)
-        -- (2026-11-05) PLAN has no heading/track box (FCOM p.1142: all
-        -- modes but PLAN; p.1027's figure: the north arrow), so no TRK flag
-        -- there either (before, an amber TRK at the top of PLAN until the
-        -- IRS aligned: the user's report)
-        o.trk_flag = by_trk and not i.trk_valid and mode ~= M.PLN
+        local circles = o.pln_style == 1
+        o.box = circles and 0 or (by_trk and 2 or 1)
+        o.rose = not circles and ((by_trk and i.trk_valid) or (not by_trk and i.hdg_valid))
+        -- (2026-11-05) the circles' PLAN has no heading/track box (FCOM
+        -- p.1142: all modes but PLAN; p.1027-1028's figures: the north
+        -- arrow), so no TRK flag there either (before, an amber TRK at the
+        -- top of PLAN until the IRS aligned: the user's report); the CRT's
+        -- MAP top portion has MAP's box and flag (p.1029)
+        o.trk_flag = by_trk and not i.trk_valid and not circles
         o.hdg_flag = not by_trk and not i.hdg_valid
         -- the map and vertical track flags: the FMC's map data (estimate:
         -- its position, which needs an IRU in NAV); the FMC the NAV source
@@ -294,10 +317,11 @@ function M.update(s, inp, dt)
         o.map_flag = (mode == M.MAP and not inp.map_valid) or (map_modes and s.fmc_t[p] >= M.MAP_FLAG_S)
         o.vtk_flag = mode == M.MAP and (not inp.map_valid or not i.fmc_ok)
         o.wpt_data = inp.map_valid and i.fmc_ok
-        -- the current heading pointer (FCOM p.1142): MAP, MAP CTR, PLAN; in
-        -- VOR and APP it stays under the heading box (FCOM p.1024's figures)
-        o.hdg_ptr = mode ~= M.PLN and o.rose and i.hdg_valid
-        o.hdg_ptr_pln = mode == M.PLN and o.rose and i.hdg_valid
+        -- the current heading pointer (FCOM p.1142): MAP, MAP CTR, PLAN (the
+        -- CRT's MAP top portion: the circles' PLAN has no compass); in VOR
+        -- and APP it stays under the heading box (FCOM p.1024's figures)
+        o.hdg_ptr = (mode ~= M.PLN or pln_top) and o.rose and i.hdg_valid
+        o.hdg_ptr_pln = false
         -- the selected heading: all modes but PLAN (FCOM p.1142); on the
         -- expanded rose within HDG_BUG_ARC_DEG of the top (above), the
         -- centred rose all round

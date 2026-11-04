@@ -326,6 +326,14 @@ B747DR_nd_wind_fo                               = deferred_dataref("laminar/B747
 B747DR_nd_wind_deg_fo                           = deferred_dataref("laminar/B747/nd/fo/wind_deg", "number")
 B747DR_nd_trk_line_capt                         = deferred_dataref("laminar/B747/nd/capt/trk_line", "number")
 B747DR_nd_trk_line_fo                           = deferred_dataref("laminar/B747/nd/fo/trk_line", "number")
+-- (2026-11-05) PLAN's picture (0 not PLAN, 1 the range circles, 2 the CRT's
+-- MAP top portion: FCOM p.1027-1029) and the map centred (CTR, or PLAN's
+-- circles: the panel's centred groups, the ND module's symbols, the FMS
+-- bridge's route line); B747.60.nd_model.lua
+B747DR_nd_pln_style_capt                        = deferred_dataref("laminar/B747/nd/capt/pln_style", "number")
+B747DR_nd_pln_style_fo                          = deferred_dataref("laminar/B747/nd/fo/pln_style", "number")
+B747DR_nd_centred_capt                          = deferred_dataref("laminar/B747/nd/capt/centred", "number")
+B747DR_nd_centred_fo                            = deferred_dataref("laminar/B747/nd/fo/centred", "number")
 -- MAP CTR (2026-10-28): its track line and range scale, and X-Plane's map
 -- drawn at half size at 640 NM (the display glue)
 B747DR_nd_trk_line_ctr_capt                     = deferred_dataref("laminar/B747/nd/capt/trk_line_ctr", "number")

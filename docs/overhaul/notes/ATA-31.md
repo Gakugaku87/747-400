@@ -780,3 +780,20 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - MCP の方位を航跡の右へ大きく回すと、機長の選択方位のバグが F/O の ND に出た：拡大の ND のバグと破線は、自機の記号のあたりを中心に半径 442 と 440 px で回る（パネル：画面の幅 677 px、半分 338.5 px）。50° で画面の端に着き、その先は隣の ND の側に出る。目盛と一緒に回るグループに CLIP はあるが、切り抜きの枠も一緒に回るので、航跡によっては枠の角が隣の画面まで届いて防げなかった（§42 の F/O 側の CLIP は 0° 近くの航跡で確かめていた）。バグと破線を、画面の上から 50° の内だけで出すことにした（`B747.60.nd_model.lua` の `HDG_BUG_ARC_DEG`。中心を出すモードは全周の目盛なので今のまま）。目盛の外のバグの出し方は資料に無いので、§42 と同じく出さない。破線も目盛の外では出なくなった（前は自分の画面に一部が見えた）。
 - 試験：`nd_model_test` 134（PLAN の MAP と TRK の旗、50° の境目、MAP CTR、VOR）。
 - X-Plane（カスタム acf、2026-11-05）：新しい `s250_user_report_nd` 12/12（成田 34L でエンジン運転中。MCP の方位 060（航跡 337 の右 83°）で機長と F/O のバグと破線なし、F/O の ND の写真にも機長のバグは無い。007（右 30°）で両方にバグ。IRS を OFF から ALIGN にして MAP では MAP の旗、PLN では MAP の旗も TRK の旗も無く、TIME TO ALIGN の行だけ（写真））。PLAN の絵が FCOM p.1027 と違う（北の矢印・距離の円が無く、方位の目盛と空の枠が出る）のは前からで、別に直す。
+
+## 46. ND の PLAN の絵を FCOM の 3 通りに（2026-11-05：利用者の依頼「NDの修正して」、PROGRESS の次にやること 17）
+
+- 資料：FCOM の PLAN の絵は 3 通り。
+  - 109（p.1028）と LCD の 405・570（p.1027）：方位の目盛も HDG/TRK の枠も無い。上の中央に真北の矢印（緑：p.1151）。画面の中央の中心の地点のまわりに 2 つの距離の円（外が選んだ距離、内がその半分：図の 320 と 160）とその数字、円の外に N・E・S・W。風の矢印は無い（p.1142：LCD の PLAN は矢印なし。109 の図にも無い）。
+  - CRT の 405・570（p.1029）：上の部分は MAP と同じ（570 は航跡が上の目盛と TRK の枠）。経路は真北が上、右の中ほどに N↑。
+- 前は：MAP の拡大の目盛を北が上で出し、空の枠（box 3・4）と MAG。中心の地点は、CTR を入れていないと拡大の機体の記号の位置（画面の下の方）。CTR を入れると中央で、北が上の大きい目盛（`rose_L`）。どの図とも違った。
+- 型の見分け：GE（`laminar/B747/engines/type` 1）でリバリーの表示が CRT（`laminar/B747/nd/style` 0）なら p.1029、ほかは p.1027・p.1028（PW と RR は 109）。
+- 直したこと：
+  - `B747.60.nd_model.lua`：`pln_style`（0 PLN でない、1 円、2 CRT）と `centred`（CTR か、PLN の円）。円の PLN は目盛・枠・指針・選択方位・風の矢印なしで北が上、CTR に依らず中央。CRT の PLN は MAP の上の部分（航跡が上、TRK の枠とその旗、機首方位の指針、風の矢印）で、CTR に依らず拡大。§45 の「PLAN に TRK の旗なし」は円の PLN のこと。
+  - 新しい dataref `laminar/B747/nd/<side>/pln_style`・`centred`（INTERFACES.tsv に足した）。
+  - パネル（カスタム acf、バックアップ `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261105_before_nd_plan`）：`Map:Centered`・`Map:Expanded` の群、記号の `ND Text Center`、`TCAS Alerts` を `map_center` から `centred` に。新しい群 `PLN Plan`（両 ND）：円の絵 `EFIS/Maps/plan_circles`（新しく描いた。白い 2 つの円に数字の切れ目、W・E・S、緑の N↑）と数字 4 つ（`range_display` の 2 倍と 1 倍）、CRT の N↑（株の `NorthArrow` を右に）。拡大の現用点の情報（右上）を PLN でも出す。中央の群の株の N↑（右下）は出さない。
+  - ND のモジュール（`xtlua_nd`）：`centred` を読む。中央の PLN の縮尺は MAP CTR と同じ（選んだ距離が 232.5 px）、記号は中央から 290 px の円の内（`PLAN_CTR_PX`）。目盛の向き（`laminar/B747/nd/up/<席>`）は CRT の PLN で MAP と同じ航跡（`nd_up`。経路と記号は北が上のまま）。
+  - FMS ブリッジ（`nd_line.c`）：経路の線と PLAN の機体の記号の原点を `centred` で決め、中央の PLAN は 290 px の円で切る（作り直した）。
+- 推定：記号と線の円の 290 px（画面の半分の高さ約 301 px の内。図は経路を画面の端まで描く）、数字と文字の位置と大きさ、CRT の N↑ の位置（株のまま）。
+- 試験：`nd_model_test` 146（円と CRT、CTR、MAP）、`display_module_test` 255（PW の円、CRT の GE、LCD の GE）、`nd_orientation_test` 10（CRT の PLN は航跡が上）。`nd_airports_test`・`nd_line_view_test`・`wxr_module_test` は `centred` を立てるように。
+- X-Plane（カスタム acf、2026-11-05）：新しい `s254_nd_plan_circles` 16/16（PW、成田で RJAA→RJBB を XAC・SPENS・BOKJO。機長の PLN 80 NM：上の中央に緑の N↑、円の数字 80 と 40、W・E・S、XAC を中央に経路と RJAA の機体の記号が北が上（写真）。F/O の 160 NM も（写真）。LEGS の STEP 2 回で BOKJO が中央（写真）。CTR を入れても同じ、MAP に戻すと前のとおり（写真））。新しい `s255_nd_plan_crt` 10/10（Qantas VH-OEJ の GE、CRT：TRK 337 MAG の枠、目盛は航跡が上、機首方位の指針、経路は XAC から北が上、右に N↑（写真））。1 回目は CRT の目盛が北が上だった（`nd_up` が PLN を北にしていた）のと、S が下の 80 に触れていたのを直した。Lua の誤りなし。

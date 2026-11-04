@@ -38,6 +38,14 @@ T.equal(rt:get(ND .. "up/fo"), 107, "the F/O's MAP: the copilot track")
 rt:set(ND .. "mode/capt/sel_dial_pos", 3)                          -- PLN
 frames(0.1)
 T.equal(rt:get(ND .. "up/capt"), 0, "PLN: north up")
+-- (2026-11-05) the CRT's PLN (pln_style 2: FCOM p.1029): MAP's top portion,
+-- its rose track up
+rt:set(ND .. "capt/pln_style", 2)
+frames(0.1)
+T.equal(rt:get(ND .. "up/capt"), 106, "the CRT's PLN: the rose track up as MAP")
+rt:set(ND .. "capt/pln_style", 1)
+frames(0.1)
+T.equal(rt:get(ND .. "up/capt"), 0, "PLN's range circles: north up")
 rt:set(ND .. "mode/capt/sel_dial_pos", 2)                          -- MAP
 rt:set(P .. "capt/trk_deg", 110)                                   -- TRU: the track true
 frames(0.1)

@@ -3054,3 +3054,7 @@ laminar/B747/wxr/buttons/lr	command	obj	B747.34.nav
 laminar/B747/wxr/buttons/rr	command	obj	B747.34.nav
 laminar/B747/wxr/buttons/test	command	obj	B747.34.nav
 laminar/B747/xpdr/panel_on	dataref	panel	B747.34.nav
+laminar/B747/nd/capt/centred	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/nd/capt/pln_style	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/nd/fo/centred	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/nd/fo/pln_style	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst

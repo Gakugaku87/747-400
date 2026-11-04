@@ -180,6 +180,9 @@ simDR_EFIS_wxr_on                   = find_dataref("sim/cockpit2/EFIS/EFIS_weath
 simDR_EFIS_wxr_on_copilot           = find_dataref("sim/cockpit2/EFIS/EFIS_weather_on_copilot")
 B747DR_nd_capt_up                  		= find_dataref("laminar/B747/nd/up/capt")
 B747DR_nd_fo_up                  		= find_dataref("laminar/B747/nd/up/fo")
+-- (2026-11-05) PLAN's picture (B747.60.nd_model.lua's pln_style: 2 the CRT's)
+B747DR_nd_pln_style_capt                = find_dataref("laminar/B747/nd/capt/pln_style")
+B747DR_nd_pln_style_fo                  = find_dataref("laminar/B747/nd/fo/pln_style")
 -- each side's heading and track in the heading reference (5-2 step 5d: the
 -- display glue's, magnetic or true)
 B747DR_nd_hdg_deg_capt                  = find_dataref("laminar/B747/pfd/capt/hdg_deg")
@@ -195,8 +198,11 @@ backport_map_mode_copilot = 0
 backport_map_range_copilot = 0
 simDR_range_dial_capt			= find_dataref("laminar/B747/nd/range/capt/sel_dial_pos")
 simDR_range_dial_fo			= find_dataref("laminar/B747/nd/range/fo/sel_dial_pos")
-B747_nd_map_center_capt                 = find_dataref("laminar/B747/nd/map_center/capt")
-B747_nd_map_center_fo                   = find_dataref("laminar/B747/nd/map_center/fo")
+-- the map centred (2026-11-05: B747.60.nd_model.lua's `centred`, CTR or
+-- PLAN's range circles, FCOM p.1027-1028; before, the CTR switch, which put
+-- PLAN's centre waypoint at the expanded airplane symbol with CTR off)
+B747_nd_map_center_capt                 = find_dataref("laminar/B747/nd/capt/centred")
+B747_nd_map_center_fo                   = find_dataref("laminar/B747/nd/fo/centred")
 B747DR_nd_capt_vor_ndb                  = find_dataref("laminar/B747/nd/data/capt/vor_ndb")
 B747DR_nd_fo_vor_ndb                    = find_dataref("laminar/B747/nd/data/fo/vor_ndb")
 B747DR_nd_capt_wpt                  = find_dataref("laminar/B747/nd/data/capt/wpt")
@@ -235,12 +241,16 @@ local PROFILE_TEXT = {"T/C", "S/C", "T/D", "E/D", "latlong"}
 -- its symbols within the centred mask's circle (CTR_UNITS); PLAN as before
 local UNITS_PER_PX = 640 / ND_DATA.PX_PER_RANGE
 local CTR_UNITS = ND_DATA.CTR_PX * UNITS_PER_PX
+-- (2026-11-05) PLAN's range circles centred: its symbols within ND_DATA.PLAN_CTR_PX
+local PLAN_CTR_UNITS = ND_DATA.PLAN_CTR_PX * UNITS_PER_PX
 local CTR_RANGE_UNITS = ND_DATA.CTR_PX_PER_RANGE * UNITS_PER_PX
 local function map_scale(isCapt)
   local dial, mode, center = simDR_range_dial_capt, B747DR_nd_mode_capt, B747_nd_map_center_capt
   if not isCapt then dial, mode, center = simDR_range_dial_fo, B747DR_nd_mode_fo, B747_nd_map_center_fo end
   local range = ranges[dial + 1] or 40
-  local px = (center > 0 and mode == 2) and ND_DATA.CTR_PX_PER_RANGE or ND_DATA.PX_PER_RANGE
+  -- (2026-11-05) PLAN's range circles centred: the outer circle the
+  -- selected range as MAP CTR's rose (FCOM p.1028's 320 and 160)
+  local px = (center > 0 and (mode == 2 or mode == 3)) and ND_DATA.CTR_PX_PER_RANGE or ND_DATA.PX_PER_RANGE
   return px * UNITS_PER_PX / range, range
 end
 local usedNaviadsTableFO={}
@@ -320,9 +330,11 @@ end
 
 -- each ND's top (5-2 step 5a; the rule of B747.60.nd_model.lua's
 -- orientation, FCOM p.1109-1110): MAP that side's track (the 109 and the
--- 570; a 405's heading); VOR and APP its heading, PLN north
-function nd_up(mode,hdg,trk)
-  if mode==2 and nd_track_map() then return trk end
+-- 570; a 405's heading); VOR and APP its heading, PLN north. (2026-11-05)
+-- The CRT's PLN (pln_style 2: FCOM p.1029) has MAP's top portion, its rose
+-- as MAP's; its route stays north up (nd_bearing)
+function nd_up(mode,hdg,trk,pln_style)
+  if (mode==2 or (mode==3 and pln_style==2)) and nd_track_map() then return trk end
   if mode==3 then return 0 end
   return hdg
 end
@@ -370,7 +382,7 @@ function makeIcon(iconTextData,navtype,text,latitude,longitude,distance,routeInd
     if (heading_diff < -90 or heading_diff > 90) and B747_nd_map_center_capt<1 then return end
     if (heading_diff < -135 or heading_diff > 135) and displayDistance> 160 and B747_nd_map_center_capt<1 then return end
     if displayDistance> CTR_UNITS and B747_nd_map_center_capt>0 and simDR_map_mode~=4 then return end
-    if displayDistance > 450 and simDR_map_mode==4 then return end
+    if displayDistance > (B747_nd_map_center_capt>0 and PLAN_CTR_UNITS or 450) and simDR_map_mode==4 then return end
     if (heading_diff < -45 or heading_diff > 45) and displayDistance> 480 and B747_nd_map_center_capt<1 then return end
     if (heading_diff < -55 or heading_diff > 55) and displayDistance> 400 and B747_nd_map_center_capt<1 then return end
     lastNavaid=lastCaptNavaid
@@ -384,7 +396,7 @@ function makeIcon(iconTextData,navtype,text,latitude,longitude,distance,routeInd
     if (heading_diff < -90 or heading_diff > 90) and B747_nd_map_center_fo<1 then return end
     if (heading_diff < -135 or heading_diff > 135) and displayDistance> 160 and B747_nd_map_center_fo<1 then return end
      if displayDistance> CTR_UNITS and B747_nd_map_center_fo>0 and backport_map_mode_copilot~=4 then return end
-     if displayDistance > 450 and backport_map_mode_copilot==4 then return end
+     if displayDistance > (B747_nd_map_center_fo>0 and PLAN_CTR_UNITS or 450) and backport_map_mode_copilot==4 then return end
      if (heading_diff < -45 or heading_diff > 45) and displayDistance> 480 and B747_nd_map_center_fo<1 then return end
      if (heading_diff < -55 or heading_diff > 55) and displayDistance> 400 and B747_nd_map_center_fo<1 then return end
     lastNavaid=lastFONavaid
@@ -803,7 +815,7 @@ local function aptSide(isCapt, t, last)
   local irs=isCapt and captIRS or foIRS
   local center=(isCapt and B747_nd_map_center_capt or B747_nd_map_center_fo)>0
   local view=ND_DATA.EXPANDED
-  if mode==3 then view=ND_DATA.PLAN elseif center then view=ND_DATA.CENTRED end
+  if mode==3 then view=center and ND_DATA.PLAN_CTR or ND_DATA.PLAN elseif center then view=ND_DATA.CENTRED end
   local units, range=map_scale(isCapt)
   local ppn=units/UNITS_PER_PX
   local cLat, cLon=display_latitude_cpt, display_longitude_cpt
@@ -1379,8 +1391,8 @@ function after_physics()
   -- each ND's top from its own mode and side (step 5a), in the heading
   -- reference (step 5d: the rose's numbers magnetic or true; the map
   -- symbols' bearings stay true, nd_bearing)
-  B747DR_nd_capt_up = nd_up(B747DR_nd_mode_capt, B747DR_nd_hdg_deg_capt, B747DR_nd_trk_deg_capt)
-  B747DR_nd_fo_up = nd_up(B747DR_nd_mode_fo, B747DR_nd_hdg_deg_fo, B747DR_nd_trk_deg_fo)
+  B747DR_nd_capt_up = nd_up(B747DR_nd_mode_capt, B747DR_nd_hdg_deg_capt, B747DR_nd_trk_deg_capt, B747DR_nd_pln_style_capt)
+  B747DR_nd_fo_up = nd_up(B747DR_nd_mode_fo, B747DR_nd_hdg_deg_fo, B747DR_nd_trk_deg_fo, B747DR_nd_pln_style_fo)
   if simDR_version>=120012 then
     backport_map_mode_copilot=simDR_map_mode_copilot
     if B747DR_nd_capt_terr>0 or simDR_EFIS_wxr_on>0 then

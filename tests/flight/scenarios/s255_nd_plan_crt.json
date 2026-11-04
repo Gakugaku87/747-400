@@ -1,0 +1,53 @@
+{
+  "name": "s255_nd_plan_crt",
+  "description": "ND の PLAN の絵（2026-11-05、notes/ATA-31.md §46）の X-Plane での確認、CRT の GE（570：FCOM p.1029）。Qantas VH-OEJ（CF6、表示は CRT）のリバリーで成田 34L、エンジン運転中（機体を読み直す）。RTE RJAA→RJBB を XAC・SPENS・BOKJO で ACTIVATE と EXEC。機長の ND を PLN の 80 NM：上の部分は MAP と同じ（航跡が上の目盛、TRK の枠、現在の機首方位の指針）、経路は真北が上で中心の地点は拡大の機体の記号の位置、右に緑の N↑、右上に現用点の情報。CTR を入れても同じ。撮る。Lua の誤りも確かめる",
+  "reload": true,
+  "livery": "PilotMathews - Qantas VH-OEJ (GE)",
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10 },
+    { "do": "check", "note": "GE（engines/type 1）", "dref": "laminar/B747/engines/type", "op": "==", "value": 1 },
+    { "do": "check", "note": "CRT の表示（nd/style 0）", "dref": "laminar/B747/nd/style", "op": "==", "value": 0 },
+    { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
+    { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
+    { "do": "cdu", "note": "RTE：RJAA→RJBB、DIRECT XAC・SPENS・BOKJO", "keys": ["RTE", "RJAA", "L1", "RJBB", "R1", "NEXT", "XAC", "R1", "?SEL", "SPENS", "R2", "?SEL", "BOKJO", "R3", "?SEL"] },
+    { "do": "cdu", "note": "ACTIVATE と EXEC", "keys": ["LEGS", "R6", "EXEC"] },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "set", "note": "MAP CTR を外す（機長）", "dref": "laminar/B747/nd/map_center/capt", "value": 0 },
+    { "do": "set", "note": "機長の範囲 80 NM", "dref": "laminar/B747/nd/range/capt/sel_dial_pos", "value": 3 },
+    { "do": "set", "note": "機長の ND を PLN", "dref": "laminar/B747/nd/mode/capt/sel_dial_pos", "value": 3 },
+    { "do": "sleep", "seconds": 2 },
+
+    { "do": "mark", "note": "CRT の PLN（FCOM p.1029）" },
+    { "do": "check", "note": "MAP の上の部分の絵", "dref": "laminar/B747/nd/capt/pln_style", "op": "==", "value": 2 },
+    { "do": "check", "note": "拡大", "dref": "laminar/B747/nd/capt/centred", "op": "==", "value": 0 },
+    { "do": "check", "note": "TRK の枠", "dref": "laminar/B747/nd/capt/box", "op": "==", "value": 2 },
+    { "do": "check", "note": "方位の目盛", "dref": "laminar/B747/nd/capt/rose", "op": "==", "value": 1 },
+    { "do": "check", "note": "現在の機首方位の指針", "dref": "laminar/B747/nd/capt/hdg_ptr", "op": "==", "value": 1 },
+    { "do": "check", "note": "目盛は MAP と同じく航跡が上（1 回目は北が上の 0 だった）", "dref": "laminar/B747/nd/up/capt", "op": ">", "value": 300 },
+    { "do": "snapshot", "note": "向きと航跡", "drefs": [ "laminar/B747/nd/up/capt", "laminar/B747/pfd/capt/trk_deg", "laminar/B747/nd/line/view[0]", "laminar/B747/nd/line/view[4]" ] },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "view", "note": "機長の ND", "the": -24, "psi": 9, "fov": 24 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "shot", "name": "capt_nd_pln_crt" },
+    { "do": "set", "note": "CTR を入れる", "dref": "laminar/B747/nd/map_center/capt", "value": 1 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "CRT の PLN は拡大のまま", "dref": "laminar/B747/nd/capt/centred", "op": "==", "value": 0 },
+    { "do": "set", "note": "CTR を外す", "dref": "laminar/B747/nd/map_center/capt", "value": 0 },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" }
+  ]
+}
