@@ -703,6 +703,22 @@ local B747_CASstatusMsg = {
     {DRindex = 120, name = "BLEED 2 OVHT"},
     {DRindex = 121, name = "BLEED 3 OVHT"},
     {DRindex = 122, name = "BLEED 4 OVHT"},
+    {DRindex = 123, name = "PACK 1"},             -- ATA21 p.102 (2026-11-04: the air conditioning failures)
+    {DRindex = 124, name = "PACK 2"},
+    {DRindex = 125, name = "PACK 3"},
+    {DRindex = 126, name = "PACK CONTROL A"},
+    {DRindex = 127, name = "PACK CONTROL B"},
+    {DRindex = 128, name = "RECIRC FAN UPR L"},   -- ATA21 p.144
+    {DRindex = 129, name = "RECIRC FAN UPR R"},
+    {DRindex = 130, name = "RECIRC FAN LWR L"},
+    {DRindex = 131, name = "RECIRC FAN LWR R"},
+    {DRindex = 132, name = "EE CLNG SUP FAN"},    -- ATA21 p.528
+    {DRindex = 133, name = "EE CLNG EXH FAN"},    -- ATA21 p.530
+    {DRindex = 134, name = "EQUIPMENT TEMP"},     -- ATA21 p.578
+    {DRindex = 135, name = "EQUIP LOW FLOW"},
+    {DRindex = 136, name = "FLT DK LOW FLOW"},
+    {DRindex = 137, name = "EQUIPMENT SMOKE"},
+    {DRindex = 138, name = "E/E CLNG CARD"},      -- ATA21 p.510
 }
 
 
@@ -777,7 +793,7 @@ for i = 0, NUM_ALERT_MESSAGES do
 end
 
 
-B747DR_CAS_status_status        = deferred_dataref("laminar/B747/CAS/status_status", "array[128]")
+B747DR_CAS_status_status        = deferred_dataref("laminar/B747/CAS/status_status", "array[256]")  -- 256 since 2026-11-04 (the failures' STATUS messages)
 B747DR_CAS_gen_status_msg = {}
 for i = 0, NUM_ALERT_MESSAGES do
     B747DR_CAS_gen_status_msg[i] = deferred_dataref(string.format("laminar/B747/CAS/gen_status_msg_%03d", i), "string")

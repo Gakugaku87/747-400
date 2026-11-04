@@ -227,4 +227,67 @@ T.check(get(AIR .. "temp/pack_outlet") > get(AIR .. "temp/zone_actual", 2) + 10,
 T.check(get(AIR .. "temp/zone_actual", 2) > 0.5, "the cabin warming: zone A above the outside's 0 °C")
 T.check(get(AIR .. "temp/cargo", 1) < 1, "the aft cargo near the outside's 0 °C")
 
+-- (2026-11-04) the failures (laminar/B747/air/fail/*; notes/ATA-21.md §10;
+-- the models in air_fail_test.lua): the wiring to the EICAS slots
+local FAIL = AIR .. "fail/"
+local CAUTION = "laminar/B747/CAS/caution_status"
+-- pack 2 overheat: PACK 2 (advisory 253) at once, STATUS PACK 2 (124) after 75 s
+rt:set(FAIL .. "pack_ovht", 1, 1)
+frames(1)
+T.equal(get(ADVISORY, 253), 1, "pack 2 overheat: PACK 2")
+T.equal(get(AIR .. "light/pack_sys_fault"), 1, "pack 2 overheat: the PACK RST SYS FAULT light")
+-- PTC A failed, the upper left and lower right fans failed
+rt:set(FAIL .. "ptc", 0, 1)
+rt:set(FAIL .. "recirc_fan", 1, 1)
+rt:set(FAIL .. "recirc_fan", 3, 1)
+frames(76)
+T.equal(get(STATUS, 124), 1, "pack 2 overheat 75 s: STATUS PACK 2")
+T.equal(get(STATUS, 123) + get(STATUS, 125), 0, "no STATUS PACK 1, 3")
+T.equal(get(STATUS, 126), 1, "PTC A failed: STATUS PACK CONTROL A")
+T.equal(get(STATUS, 127), 0, "no STATUS PACK CONTROL B")
+T.equal(get(STATUS, 128), 1, "fan 2 failed: STATUS RECIRC FAN UPR L")
+T.equal(get(STATUS, 131), 1, "fan 4 failed: STATUS RECIRC FAN LWR R")
+T.equal(get(STATUS, 129) + get(STATUS, 130), 0, "no STATUS RECIRC FAN UPR R, LWR L")
+T.equal(get(AIR .. "recirc_fan", 1), 0, "fan 2 failed: not running")
+rt:set(FAIL .. "pack_ovht", 1, 0)
+rt:set(FAIL .. "ptc", 0, 0)
+rt:set(FAIL .. "recirc_fan", 1, 0)
+rt:set(FAIL .. "recirc_fan", 3, 0)
+frames(1)
+for i = 124, 131 do
+    if i ~= 124 then T.equal(get(STATUS, i), 0, "failures cleared: STATUS " .. i) end
+end
+-- equipment cooling: the supply fan (STATUS 132 after 10 s), the smoke
+-- (EQUIP COOLING, caution 27; STATUS 137), the card (>E/E CLNG CARD,
+-- advisory 87, on the ground; STATUS 138)
+rt:set(FAIL .. "eq_fan", 0, 1)
+rt:set(FAIL .. "eq_smoke", 1)
+rt:set(FAIL .. "eq_card", 1)
+frames(11)
+T.equal(get(STATUS, 132), 1, "supply fan failed: STATUS EE CLNG SUP FAN")
+T.equal(get(CAUTION, 27), 1, "smoke: EQUIP COOLING")
+T.equal(get(STATUS, 137), 1, "smoke: STATUS EQUIPMENT SMOKE")
+T.equal(get(ADVISORY, 87), 1, "card failed on the ground: >E/E CLNG CARD")
+T.equal(get(STATUS, 138), 1, "card failed: STATUS E/E CLNG CARD")
+rt:set(FAIL .. "eq_fan", 0, 0)
+rt:set(FAIL .. "eq_smoke", 0)
+rt:set(FAIL .. "eq_card", 0)
+-- the overheat and the flight deck low flow: STATUS 134, 136 after 40 s
+rt:set(FAIL .. "eq_ovht", 1)
+rt:set(FAIL .. "fd_low_flow", 1)
+frames(41)
+T.equal(get(STATUS, 134), 1, "equipment overheat: STATUS EQUIPMENT TEMP")
+T.equal(get(STATUS, 136), 1, "flight deck low flow: STATUS FLT DK LOW FLOW")
+T.equal(get(STATUS, 132) + get(STATUS, 137) + get(STATUS, 138), 0, "fan, smoke, card cleared")
+rt:set(FAIL .. "eq_ovht", 0)
+rt:set(FAIL .. "fd_low_flow", 0)
+-- the zone temperature: a critical ZTC failure closes the master trim air
+-- valve, TEMP ZONE (advisory 287) and STATUS ZONE TEMP (36, after 70 s)
+rt:set(FAIL .. "ztc", 1)
+frames(71)
+T.equal(get(AIR .. "temp/trim_air_valve"), 0, "ZTC failed: the master trim air valve closed")
+T.equal(get(ADVISORY, 287), 1, "ZTC failed: TEMP ZONE")
+T.equal(get(STATUS, 36), 1, "ZTC failed: STATUS ZONE TEMP")
+rt:set(FAIL .. "ztc", 0)
+
 T.done()

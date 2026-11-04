@@ -25,6 +25,11 @@ M.CLAMP_WAIT_S = 1200       -- the cruise clamp's normal flow waits for the cabi
                             -- 20 min (ATA21 p.386)
 M.INIT_S = 3                -- no touchdown in a new flight's first seconds (XTLua's first reads
                             -- are 0; the air/ground can be late)
+-- (2026-11-04) the STATUS messages' time delays: PACK n 75 s, PACK CONTROL
+-- A, B 10 s (ATA21 p.102); RECIRC FAN UPR (fans 1, 2) 10 s, LWR (3, 4)
+-- 60 s (ATA21 p.144)
+M.ST_PACK_S, M.ST_PTC_S = 75, 10
+M.ST_FAN_S = {10, 10, 60, 60}
 -- estimates (no value in the sources)
 M.VALVE_TRAVEL_S = 3        -- the FCSOV, closed to open
 
@@ -64,11 +69,14 @@ function M.new()
         want_high = {true, true, true}, forced_high = {false, false, false}, lost_t = {0, 0, 0},
         fan = {false, false, false, false}, want_fan = {false, false, false, false},
         forced_off = {false, false, false, false}, clamp_t = 0,
-        pack_step_t = M.PACK_STEP_S, fan_step_t = M.FAN_STEP_S}
+        pack_step_t = M.PACK_STEP_S, fan_step_t = M.FAN_STEP_S,
+        st_pack_t = {0, 0, 0}, st_ptc_t = {0, 0}, st_fan_t = {0, 0, 0, 0}}
     s.out = {valve = {0, 0, 0}, flow = {0, 0, 0}, high = {false, false, false},
         operating = {false, false, false}, packs_operating = 0, ptc = {0, 0, 0},
         fan = {false, false, false, false}, sys_fault = false,
-        pack_alert = {false, false, false}, control_alert = false}
+        pack_alert = {false, false, false}, control_alert = false,
+        -- (2026-11-04) STATUS PACK n, PACK CONTROL A, B, RECIRC FAN (fans 1-4)
+        st_pack = {false, false, false}, st_ptc = {false, false}, st_fan = {false, false, false, false}}
     return s
 end
 
@@ -201,6 +209,24 @@ function M.update(s, inp, dt)
     -- PACK CONTROL: no automatic temperature control of any pack (FCOM p.620;
     -- estimate: neither controller for every pack)
     out.control_alert = s.lost_t[1] >= M.PTC_LOST_S and s.lost_t[2] >= M.PTC_LOST_S and s.lost_t[3] >= M.PTC_LOST_S
+
+    -- (2026-11-04) the STATUS messages (ATA21 p.102, p.144): PACK CONTROL
+    -- A, B a controller failed (or without its power); PACK n the pack's
+    -- fault (a trip), not with both controllers failed; RECIRC FAN a fan
+    -- failed
+    for c = 1, 2 do
+        if ptc_ok[c] then s.st_ptc_t[c] = 0 else s.st_ptc_t[c] = s.st_ptc_t[c] + dt end
+        out.st_ptc[c] = s.st_ptc_t[c] >= M.ST_PTC_S
+    end
+    local both_ptc = out.st_ptc[1] and out.st_ptc[2]
+    for p = 1, 3 do
+        if s.tripped[p] then s.st_pack_t[p] = s.st_pack_t[p] + dt else s.st_pack_t[p] = 0 end
+        out.st_pack[p] = s.st_pack_t[p] >= M.ST_PACK_S and not both_ptc
+    end
+    for f = 1, 4 do
+        if inp.fan_failed[f] then s.st_fan_t[f] = s.st_fan_t[f] + dt else s.st_fan_t[f] = 0 end
+        out.st_fan[f] = s.st_fan_t[f] >= M.ST_FAN_S[f]
+    end
 
     s.first = false
     return out

@@ -476,3 +476,18 @@ CAS 番号は `B747.87.xt.warning.lua` の表による（行 74, 118, 135, 273, 
 - コード以外
   14. INTERFACES.tsv の漏れ（6 章）。表を直すかどうか。
   15. LCF（`747-400LCF.acf`）の ECS は貨物機の構成（FCOM 405/570）に寄せるか。今の air モジュールは全型で共通。
+
+## 10. 故障の入力（2026-11-04：故障の窓の F0、AIR-12・AIR-22 の残り）
+
+- 新しい dataref（1 で故障。init `B747.55.air`）：`laminar/B747/air/fail/pack_ovht[3]`（パックの過熱。トリップする）、`fail/ptc[2]`（パックの温度制御器 A・B）、`fail/recirc_fan[4]`（再循環ファン：1 上の右、2 上の左、3 下の左、4 下の右）、機器冷却の `fail/eq_fan[2]`（給気・排気のファン）・`fail/eq_ovht`・`fail/eq_low_flow`・`fail/fd_low_flow`（操縦室の給気の低流量）・`fail/eq_smoke`・`fail/eq_card`、温度制御の `fail/ztc`（ZTC の重大な故障）・`fail/trim_valve`（master trim air valve が閉のまま）・`fail/zone_valve[7]`（ゾーンのトリム空気の弁が開のまま：F/D、U/D、A〜E）。CPC の故障 `fail/cpc[2]` は 3-1 から。
+- モデルにあった入力をつないだだけのもの：パックのトリップと PACK RST、PACK n・SYS FAULT 灯（FCOM p.560、p.620）、PTC の引き継ぎと PACK CONTROL、故障したファンの代わりのファンと high flow（ATA21 p.138–141）、機器冷却のファン故障の closed loop と EQUIP COOLING（ATA21 p.524、p.578）、ZTC・トリム空気の弁の TEMP ZONE・ZONE SYS FAULT・STATUS ZONE TEMP（§4 と 3-1 段 2）。
+- 新しい STATUS（`laminar/B747/CAS/status_status`。配列を 256 に広げた）：
+  - 123〜125 PACK 1〜3：パックのトリップが 75 秒。PTC が両方故障のときは出さない（ATA21 p.102）。
+  - 126・127 PACK CONTROL A・B：PTC の故障か電源なし（電源なしを含めるのは推定）が 10 秒（p.102）。
+  - 128〜131 RECIRC FAN UPR L・UPR R・LWR L・LWR R：ファンの故障が上は 10 秒、下は 60 秒（p.144）。
+  - 132 EE CLNG SUP FAN、133 EE CLNG EXH FAN：ファンの故障が 10 秒（closed loop と同じ判定。p.528、p.530）。
+  - 134 EQUIPMENT TEMP、135 EQUIP LOW FLOW、136 FLT DK LOW FLOW（EQUIP LOW FLOW で抑止）：40 秒。137 EQUIPMENT SMOKE：遅れなし（p.578）。操縦室の低流量も EQUIP COOLING を出す（p.578）。
+  - 138 E/E CLNG CARD：カードの故障（p.510）。advisory の >E/E CLNG CARD（87）は地上だけ（FCOM p.619：in flight inhibited）。
+- 推定・作らないもの：PTC の電源なしを故障とみなすこと。機器冷却の STATUS は選択器の位置で抑止しない（資料に条件が無い）。カードが故障したときの弁とファンの振る舞いは資料に無いので変えない（メッセージだけ）。ECS MISC CARD（p.102）、弁ごとの STATUS（EE CLNG SUPPLY V、INBD EXH、GND EXH、BYPASS V、E6/E9 V、SMOKE/OVRD VLV、EE CLNG OVRD：p.540–598）、clean mode（p.508）は作っていない。
+- 試験：新しい回帰 `air_fail_test`（33 件）、`air_module_test` 112（dataref から EICAS の番号まで）。
+- X-Plane（カスタム acf、2026-11-04）：新しい `s232_air_failures` 23/23（成田でエンジン運転中、3 パック：パック 2 の過熱でトリップし PACK 2 と PACK RST の SYS FAULT 灯、2 パック運転、75 秒で STATUS PACK 2。PTC A の故障で 10 秒後に STATUS PACK CONTROL A、B が引き継ぎ PACK CONTROL は出ない。上の左のファンで STATUS RECIRC FAN UPR L。過熱を消してもトリップはラッチし、PACK RST で 3 パックに戻る。機器冷却の煙で EQUIP COOLING と STATUS EQUIPMENT SMOKE、カードの故障で地上の >E/E CLNG CARD と STATUS。上の EICAS・STATUS ページ・頭上パネルの写真）、回帰の `s17_ecs_synoptic` 15/15、`s16_temp_ground` 36/36。Log.txt に Lua の誤りなし。

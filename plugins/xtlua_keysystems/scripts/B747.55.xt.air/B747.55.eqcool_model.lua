@@ -25,6 +25,10 @@ M.SKIN_C = (45 - 32) * 5 / 9 -- 45°F, 7.2°C: overboard above, into the forward
 M.FAN_FAIL_S = 10            -- a fan not turning for 10 s is failed (ATA21 p.524)
 M.FAN_RESET_S = 30           -- reset: OVRD for 30 s, then back (ATA21 p.524)
 M.OVRD_ALERT_S = 55          -- OVRD without the differential pressure: EQUIP COOLING after 55 s (ATA21 p.594-598)
+-- (2026-11-04) the STATUS messages' time delays: EE CLNG SUP FAN, EXH FAN
+-- 10 s (ATA21 p.528, p.530); EQUIPMENT TEMP, EQUIP LOW FLOW, FLT DK LOW
+-- FLOW 40 s; EQUIPMENT SMOKE and E/E CLNG CARD none (p.510, p.578)
+M.ST_FAN_S, M.ST_FLOW_S = 10, 40
 -- estimates (no value in the sources)
 M.OVRD_DP = 1.0              -- the OVRD differential pressure switch, psi
 M.OVRD_KG_S = 0.25           -- the air OVRD takes overboard, at 8.8 psi (the cabin model)
@@ -44,14 +48,20 @@ function M.inputs()
         overheat = false,               -- failure: equipment cooling overheat (130°F)
         low_flow = false,               -- failure: low flow
         smoke = false,                  -- failure: smoke in the exhaust air
+        fd_low_flow = false,            -- (2026-11-04) failure: low flow in the flight deck supply duct
+        card_failed = false,            -- (2026-11-04) failure: the equipment cooling card
     }
 end
 
 function M.new()
-    local s = {fan_t = {0, 0}, fan_fault = false, reset_t = 0, ovrd_t = 0}
+    local s = {fan_t = {0, 0}, fan_fault = false, reset_t = 0, ovrd_t = 0,
+        st_temp_t = 0, st_low_t = 0, st_fd_t = 0}
     s.out = {config = M.OFF, fans = false, ground_exhaust = false, inboard_exhaust = false,
         inboard_supply = false, bypass = false, smoke_override = false,
-        overboard_kg_s = 0, cargo_warm = false, alert = false, state = 0}
+        overboard_kg_s = 0, cargo_warm = false, alert = false, state = 0,
+        -- (2026-11-04) >E/E CLNG CARD and the STATUS messages
+        card_alert = false, st_sup_fan = false, st_exh_fan = false, st_temp = false,
+        st_low_flow = false, st_fd_low_flow = false, st_smoke = false, st_card = false}
     return s
 end
 
@@ -97,8 +107,25 @@ function M.update(s, inp, dt)
     -- no differential) (FCOM p.619; ATA21 p.530, p.548, p.578, p.594-598)
     if config == M.OVERRIDE and inp.dp < M.OVRD_DP then s.ovrd_t = s.ovrd_t + dt else s.ovrd_t = 0 end
     out.alert = s.ovrd_t >= M.OVRD_ALERT_S
-        or (config ~= M.OVERRIDE and (inp.overheat or inp.low_flow or inp.smoke))
+        or (config ~= M.OVERRIDE and (inp.overheat or inp.low_flow or inp.fd_low_flow or inp.smoke))
     out.state = out.fans and 1 or 0
+
+    -- (2026-11-04) the STATUS messages: a fan failed (as the closed loop
+    -- sees it), the overheat and the low flows after 40 s (FLT DK LOW FLOW
+    -- inhibited by EQUIP LOW FLOW), the smoke; the card: >E/E CLNG CARD on
+    -- the ground only, its STATUS also in flight (ATA21 p.510, p.528-530,
+    -- p.578; FCOM p.619)
+    out.st_sup_fan = s.fan_t[1] >= M.ST_FAN_S
+    out.st_exh_fan = s.fan_t[2] >= M.ST_FAN_S
+    if inp.overheat then s.st_temp_t = s.st_temp_t + dt else s.st_temp_t = 0 end
+    if inp.low_flow then s.st_low_t = s.st_low_t + dt else s.st_low_t = 0 end
+    if inp.fd_low_flow then s.st_fd_t = s.st_fd_t + dt else s.st_fd_t = 0 end
+    out.st_temp = s.st_temp_t >= M.ST_FLOW_S
+    out.st_low_flow = s.st_low_t >= M.ST_FLOW_S
+    out.st_fd_low_flow = s.st_fd_t >= M.ST_FLOW_S and not out.st_low_flow
+    out.st_smoke = inp.smoke
+    out.st_card = inp.card_failed
+    out.card_alert = inp.card_failed and inp.on_ground
     return out
 end
 
