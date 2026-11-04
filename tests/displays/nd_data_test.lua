@@ -54,6 +54,7 @@ fmc:set("sim/flightmodel/position/latitude", 35.0)
 fmc:set("sim/flightmodel/position/longitude", 140.0)
 fmc:set("sim/flightmodel2/position/groundspeed", 300)                 -- 583 kt
 fmc:set("sim/flightmodel/failures/onground_any", 0)
+fmc:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 fmc:set("sim/cockpit2/clock_timer/zulu_time_hours", 8)
 fmc:set("sim/cockpit2/clock_timer/zulu_time_minutes", 0)
 fmc:set("sim/cockpit2/clock_timer/zulu_time_seconds", 0)
@@ -61,6 +62,7 @@ run(fmc, 1.2)
 -- 30 NM at 583 kt: 3.1 min; 60 NM: 6.2 min
 T.equal(fmc:get("laminar/B747/fms/route_eta"), "[-1,483,486]", "the FMC's ETAs: none for AAA (passed), 0803 for BBB, 0806 for CCC")
 fmc:set("sim/flightmodel/failures/onground_any", 1)
+fmc:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 run(fmc, 1.2)
 T.equal(fmc:get("laminar/B747/fms/route_eta"), "[-1,-1,-1]", "on the ground: none (as the active waypoint's ETA)")
 

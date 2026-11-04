@@ -90,7 +90,6 @@ simDR_startup_running               = find_dataref("sim/operation/prefs/startup_
 simDR_percent_lights_on             = find_dataref("sim/graphics/scenery/percent_lights_on")
 simDR_ai_flies_aircraft				= find_dataref("sim/operation/prefs/ai_flies_aircraft")
 
-simDR_aircraft_on_ground            = find_dataref("sim/flightmodel/failures/onground_any")
 
 
 simDR_sim_brightness_ratio      = find_dataref("sim/cockpit2/electrical/HUD_brightness_ratio")
@@ -1916,11 +1915,9 @@ function B747_lighting_EICAS_msg()
 
     -- STROBE LIGHT OFF
     
-    if simDR_strobe_lights_switch < 0.05 and simDR_aircraft_on_ground == 1 then
-        B747DR_CAS_memo_status[35] = 0
-    else
-        B747DR_CAS_memo_status[35] = 0
-    end
+    -- (1-2) off in both branches before (the memo is in none of the sources'
+    -- lists): kept off, without X-Plane's ground
+    B747DR_CAS_memo_status[35] = 0
 
 end
 

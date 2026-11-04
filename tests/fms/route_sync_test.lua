@@ -30,6 +30,7 @@ rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_l
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
 for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
@@ -103,6 +104,7 @@ xplane(1)
 -- before xtlua/fms shows the new plan (a write before X-Plane takes it is
 -- lost)
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set("sim/flightmodel/position/latitude", 35.3)
 rt:set("sim/flightmodel/position/longitude", 140.3)
 rt:set(CUR, 2)
@@ -206,6 +208,7 @@ T.equal(line(3), "ZZD                     ", "ZZD the active waypoint")
 
 -- on the ground nothing sequences, past ZZD too
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 xplane(8)
 rt:set("sim/flightmodel/position/latitude", 35.32)
 rt:set("sim/flightmodel/position/longitude", 140.32)

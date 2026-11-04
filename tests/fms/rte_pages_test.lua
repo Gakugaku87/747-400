@@ -22,6 +22,7 @@ rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_l
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
 -- 40 t of fuel (6-1/6-2 step 11a: with none, RESERVES 12.5 below brings
@@ -171,6 +172,7 @@ T.equal(onces("FMS/fpln"), 0, "no X-Plane RTE key (before: pressed with the prom
 -- OFFSET in the air (step 7d; FCOM p.1298; FMSPG p.155-156)
 local st = rt.modules[1].ns.B747_fmc_route
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 frames(0.5)
 key("L", "func_key/fpln")
 T.check(line("L", 8) == string.rep("-", 24) and line("L", 12) == string.rep(" ", 24), "in the air on page 1: the dashes at line 8 (FCOM p.1293's figure: step 7e4), none over 6L, and")
@@ -193,6 +195,7 @@ key("L", "ls_key/R6")
 T.equal(pad("L"), "INVALID DELETE", "DELETE with none: INVALID DELETE")
 clear("L")
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 frames(0.5)
 key("L", "func_key/prev_pg")
 T.check(line("L", 13):find("THRUST LIM>$") or line("L", 13):find("TAKEOFF>$") or not line("L", 13):find("%-%-%-$"),

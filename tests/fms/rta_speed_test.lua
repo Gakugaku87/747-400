@@ -23,6 +23,7 @@ rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_l
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
 rt:set("sim/flightmodel/weight/m_total", 270000)
@@ -92,6 +93,7 @@ T.check(fms.ns.B747_fmc_route.active, "the route active")
 
 -- in the air at FL350, the cruise
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 35000)
 rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15 - 1.98 * 35)
 rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 280)

@@ -97,6 +97,7 @@ T.check(fms.ns.B747_fms_thrlim().mode == "GA" and line(14):gsub("%s+$", "") == "
 T.equal(rt:get("laminar/B747/engine/derate/TO"), 1, "the takeoff derate stays TO 1 (before: TO, and TO 1/TO 2 cut the GA thrust)")
 clear_all()
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 frames(0.5)
 key("func_key/index")
 key("ls_key/L6")  -- <INDEX: INIT/REF INDEX (the INIT REF key goes by context: step 3a)
@@ -104,6 +105,7 @@ key("ls_key/L4")
 key("ls_key/L2")
 T.equal(rt:get("laminar/B747/engine/derate/TO"), 0, "on the ground <TO selects TO")
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 frames(0.5)
 
 -- APPROACH REF's FLAP/SPEED

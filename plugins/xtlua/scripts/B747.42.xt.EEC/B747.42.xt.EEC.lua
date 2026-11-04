@@ -625,7 +625,9 @@ function take_off_thrust_corrected(altitude_ft_in, temperature_K_in)
 
 	-- the takeoff derate in the takeoff modes only, not on the go-around
 	-- thrust (CDU-10, 6-1 step 1; FCOM p.1314-1316)
-	local takeoff = simDR_onGround == 1 or string.match(B747DR_ref_thr_limit_mode or "", "^TO") ~= nil
+	-- (1-2) the ground: the PSEU's primary (notes/ATA-32.md §16; before,
+	-- X-Plane's onground_any)
+	local takeoff = B747DR_eec_pseu_pri_gnd == 1 or string.match(B747DR_ref_thr_limit_mode or "", "^TO") ~= nil
 	if not takeoff then
 	elseif B747DR_toderate == 1 then
 	  TOGA_corrected_thrust_lbf = TOGA_corrected_thrust_lbf * 0.9
@@ -1013,7 +1015,8 @@ function throttle_management()
 	--print("Speed = ", simDR_ias_pilot)
 	--print("Reverser On = ", simDR_reverser_on[1])
 	--print("Reverser Deployed = ", simDR_reverser_deploy_ratio[1])
-	if simDR_onGround == 1 and simDR_ias_pilot<30 -- B747DR_ref_thr_limit_mode == "GA"
+	-- (1-2) on the ground by the PSEU (before, X-Plane's onground_any)
+	if B747DR_eec_pseu_pri_gnd == 1 and simDR_ias_pilot<30 -- B747DR_ref_thr_limit_mode == "GA"
 		and math.max(simDR_reverser_on[0], simDR_reverser_on[1], simDR_reverser_on[2], simDR_reverser_on[3]) == 0
 		and math.max(simDR_reverser_deploy_ratio[0], simDR_reverser_deploy_ratio[1], simDR_reverser_deploy_ratio[2], simDR_reverser_deploy_ratio[3]) <= 0.1 then
 			--B747DR_ref_thr_limit_mode = "TO"

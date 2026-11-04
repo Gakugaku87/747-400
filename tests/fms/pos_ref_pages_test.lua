@@ -24,6 +24,7 @@ rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_l
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
 rt:set("sim/flightmodel/weight/m_total", 300000)
@@ -163,6 +164,7 @@ T.check(small(6):find("NAV STA$") ~= nil and trim(line(7):sub(13)) == "", "ZZW i
 -- in the air over the ocean: INIT/REF INDEX's <POS to POS REF 2/3; IRS
 -- only, UNABLE RNP (advisory); VERIFY RNP
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set("sim/flightmodel/position/latitude", 20)
 rt:set("sim/flightmodel/position/longitude", 160)
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 35000)

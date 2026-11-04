@@ -24,6 +24,7 @@ rt:set("sim/operation/prefs/startup_running", 1)
 for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
 for _, b in ipairs({"xfr_capt", "xfr_fo", "stby_apu"}) do rt:set("laminar/B747/electrical/bus/" .. b, 1) end -- the FMCs' power
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/weight/m_fuel_total", 100000)
 rt:set("sim/flightmodel/weight/m_total", GW)
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", ALT)
@@ -187,6 +188,7 @@ T.equal(data("clbspd"), k3(c270), "1 t burnt: a change under 2 kt left")
 -- flight, STEP SIZE, a crew's STEP TO, AVAIL AT, TO T/D, MAX ALT FLXXX
 local C = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.crz_model.lua")
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 35000)
 rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15 - 1.98 * 36.089)
 rt:set("sim/cockpit2/gauges/indicators/wind_speed_kts", 0)
@@ -300,6 +302,7 @@ T.equal(pad(), "", "FL350: no message")
 T.check(line(1):find(" CRZ  ") and not line(1):find("CLB") and not line(1):find(" DES"), "at FL350 again: CRZ: " .. line(1))
 fms.ns.B747_fmc_route.active = false
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", ALT)
 rt:set("laminar/B747/autopilot/flightPhase", 0)
 frames(0.2)

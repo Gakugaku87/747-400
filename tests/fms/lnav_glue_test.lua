@@ -24,6 +24,7 @@ rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_l
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
 for i = 6, 8 do rt:set("laminar/B747/electrical/display_has_power", i, 6) end
@@ -83,6 +84,7 @@ local RW = {lat = 35.01, lon = 140.005}
 local ALPHA, BRAVO = {lat = 35.5, lon = 140.5}, {lat = 36.0, lon = 140.5}
 local c1 = P.course(RW, ALPHA)
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 at(P.point(RW, c1, 20), c1)
 rt:set(LNAV, 1)
 frames(0.3)

@@ -24,6 +24,7 @@ rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_l
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel/position/latitude", 35)
 rt:set("sim/flightmodel/position/longitude", 140)
 rt:set("sim/flightmodel/weight/m_total", 300000)
@@ -63,6 +64,7 @@ local NOTE, ALERT = "laminar/B747/fms/notification", "UNABLE NEXT ALT"
 local function fmc_message() return rt:get("laminar/B747/CAS/advisory_status", 145) end
 local function air(ra)
     rt:set("sim/flightmodel/failures/onground_any", 0)
+    rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
     rt:set(RA, ra)
     frames(0.5)
 end
@@ -126,6 +128,7 @@ rt:set(NOTE, 47, 1)
 air(200)
 T.equal(pad(), "", "the next approach below 500 ft: held")
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 frames(0.5)
 T.equal(pad(), "", "landed: still held")
 fms.ns.B747_fms_flight_complete()

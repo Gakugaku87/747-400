@@ -27,6 +27,7 @@ local USER = "sim/cockpit2/engine/actuators/throttle_ratio"
 for i = 7, 10 do rt:set("laminar/B747/button_switch/position", i, 1) end
 rt:set("laminar/B747/engines/type", 0)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel2/position/pressure_altitude", 0)
 rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 15)
 rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
@@ -63,6 +64,7 @@ rt:set("laminar/B747/air/packs_operating", 3)    -- the pack model (B747.55.xt.p
 
 -- in the climb above 25,000 ft the lever reaches the climb rating at 35°
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set("sim/flightmodel2/position/pressure_altitude", 30000)
 rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", -20)
 rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 280)
@@ -208,7 +210,8 @@ T.equal(get(ADV, RPM_LIM), 0, "RPM LIM goes with N2 back below its limit")
 -- Before, the regression on thrust / density ratio: N1 112 and 109, N2 121
 -- and 116, the EEC held the thrust with RPM LIM
 local P = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.epr_model.lua")
-local SCALARS = {"sim/flightmodel/failures/onground_any", "sim/flightmodel2/position/pressure_altitude",
+local SCALARS = {"sim/flightmodel/failures/onground_any", "laminar/B747/gear/air_ground/pri_gnd",
+    "sim/flightmodel2/position/pressure_altitude",
     "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/weather/aircraft/barometer_current_pas",
     "sim/flightmodel/misc/machno", "sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot",
     "sim/cockpit2/temperature/outside_air_temp_degc", "sim/cockpit2/temperature/outside_air_LE_temp_degc"}
@@ -220,6 +223,7 @@ for _, n in ipairs(ARRAYS) do saved[n] = {} for i = 0, 3 do saved[n][i] = get(n,
 local function high_power(alt_ft, mach, oat, tat, epr, what)
     local d = (1 - 6.87559e-6 * alt_ft) ^ 5.25588
     rt:set("sim/flightmodel/failures/onground_any", alt_ft == 0 and 1 or 0)
+    rt:set("laminar/B747/gear/air_ground/pri_gnd", alt_ft == 0 and 1 or 0)
     rt:set("sim/flightmodel2/position/pressure_altitude", alt_ft)
     rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", alt_ft)
     rt:set("sim/weather/aircraft/barometer_current_pas", 101325 * d)
@@ -249,6 +253,7 @@ frames(1)
 -- EPR stays low and full forward opens the throttle fully, idle closes it
 local THRO = "sim/flightmodel/engine/ENGN_thro_use"
 rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 for i = 0, 3 do
     rt:set("sim/flightmodel/engine/ENGN_running", i, 1)
     rt:set("sim/cockpit2/engine/actuators/prop_mode", i, 1)
@@ -265,12 +270,14 @@ frames(0.2)
 T.equal(get(THRO, 1), 0, "thrust control: reverser not deployed: no thrust")
 rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 
 -- GE at sea level, 15 °C
 rt:set("laminar/B747/simconfig", '{"PLANE":{"engines":"CF6-80C2B1F"}}')
 rt:set("laminar/B747/newsimconfig", 1)
 rt:set("laminar/B747/engines/type", 1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/flightmodel2/position/pressure_altitude", 0)
 rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 15)
 rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 0)

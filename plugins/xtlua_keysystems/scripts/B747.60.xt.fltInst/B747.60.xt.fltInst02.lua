@@ -68,7 +68,9 @@ end
 
 simDR_startup_running               = find_dataref("sim/operation/prefs/startup_running")
 simDR_version=find_dataref("sim/version/xplane_internal_version")
-simDR_all_wheels_on_ground          = find_dataref("sim/flightmodel/failures/onground_any")
+-- (1-2) the DH's reset and the V1, VR sounds on the ground: the PSEU's
+-- primary ground (notes/ATA-32.md §16). Before, X-Plane's onground_any
+simDR_all_wheels_on_ground          = find_dataref("laminar/B747/gear/air_ground/pri_gnd")
 
 --simDR_HSI_source_sel                = find_dataref("sim/cockpit2/radios/actuators/HSI_source_select_pilot")
 simDR_autopilot_source              = find_dataref("sim/cockpit2/autopilot/autopilot_source")
