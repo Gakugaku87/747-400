@@ -20,6 +20,12 @@
  * disarms it; it fails when the trigger is met, the window shown or not
  * (b747_fms_bridge.c's loop: fw_poll). REPAIR ALL disarms them too.
  *
+ * (F3) A chapter with a diagram in the list (hydraulics, electrical, fuel,
+ * pneumatic) has LIST and DIAGRAM at the top: the diagram's boxes, one for
+ * a failure each, coloured as the list's states, a click fails or repairs
+ * as on the row; a right click on a normal one's box or row opens the arm
+ * bar for it. The diagram's lines and texts only show the system's shape.
+ *
  * The list: failures.txt in this plugin's folder (its format there), read
  * when the plugin starts and when the window is shown if the file changed
  * (the armed failures kept). A failure's dataref is looked for when first
@@ -42,9 +48,12 @@
  *                                        4000 + n row n's ARM, 5000 + k the
  *                                        arm bar's trigger k (1 time, 2
  *                                        altitude, 3 speed, 4 random), 6000
- *                                        -, 6001 +, 6002 ARM, 6003 CANCEL;
- *                                        reads back the value clicked, -1
- *                                        none drawn
+ *                                        -, 6001 +, 6002 ARM, 6003 CANCEL,
+ *                                        (F3) 7000 + n the diagram's box n
+ *                                        (from 0, the boxes only), 8000 LIST,
+ *                                        8001 DIAGRAM, 9000 + n a right click
+ *                                        on box n; reads back the value
+ *                                        clicked, -1 none drawn
  *   laminar/B747/failures/armed         (int) (F2) failures armed (read only)
  *   laminar/B747/failures/arm_value     (int) (F2) the arm bar's value
  *                                        (minutes, feet, knots), -1 no bar
@@ -59,14 +68,19 @@
 
 #define FWN_ROWS 640
 #define FWN_CHAPS 24
-#define FWN_HITS 160
+#define FWN_HITS 220
+#define FWN_ITEMS 480
+#define FWN_DIA_W 1000         /* (F3) a diagram's canvas */
+#define FWN_DIA_H 700
 #ifndef FWN_MENU_REF
 #define FWN_MENU_REF 100
 #endif
 
 enum { FWN_GROUP = 1, FWN_FAIL = 2 };
 enum { FWN_NA = 0, FWN_NORMAL, FWN_FAILED, FWN_ARMED };
-enum { FWN_HIT_CHAP = 1, FWN_HIT_ROW, FWN_HIT_REPAIR, FWN_HIT_ARM, FWN_HIT_KIND, FWN_HIT_BAR };
+enum { FWN_HIT_CHAP = 1, FWN_HIT_ROW, FWN_HIT_REPAIR, FWN_HIT_ARM, FWN_HIT_KIND, FWN_HIT_BAR, FWN_HIT_BOX, FWN_HIT_VIEW };
+/* (F3) a diagram's items */
+enum { FWN_ITEM_LINE = 1, FWN_ITEM_TEXT, FWN_ITEM_BOX };
 /* (F2) our triggers: a time, an altitude, a speed, a random time */
 enum { FWN_ARM_NONE = 0, FWN_ARM_TIME, FWN_ARM_ALT, FWN_ARM_SPEED, FWN_ARM_RANDOM };
 /* the arm bar's buttons (FWN_HIT_BAR) */
@@ -93,9 +107,16 @@ typedef struct {
     int first, count;       /* its rows */
     int failed;             /* failed at the last count */
     int armed;              /* (F2) armed by us at the last count */
+    int dfirst, dcount;     /* (F3) its diagram's items */
 } fw_chap_t;
 
 typedef struct { int l, b, r, t, kind, id; } fw_hit_t;
+
+/* (F3) a diagram's item: a line, a text (centred), a box for a failure */
+typedef struct { int type, x1, y1, x2, y2, row; char text[64]; } fw_item_t;
+static fw_item_t fw_items[FWN_ITEMS];
+static int fw_nitems = 0;
+static int fw_view = 0;             /* 0 the list, 1 the diagram */
 
 static fw_row_t fw_rows[FWN_ROWS];
 static int fw_nrows = 0;
@@ -134,6 +155,7 @@ static const float FWN_AMBER_BOX[4] = {0.97f, 0.63f, 0.10f, 1.0f};
 static const float FWN_GREEN_BOX[4] = {0.20f, 0.70f, 0.32f, 1.0f};
 static const float FWN_CYAN_BOX[4] = {0.30f, 0.72f, 0.90f, 1.0f};
 static const float FWN_BUTTON[4] = {0.40f, 0.44f, 0.50f, 1.0f};
+static const float FWN_PIPE[4] = {0.52f, 0.57f, 0.64f, 1.0f};     /* (F3) a diagram's lines */
 static float FWN_WHITE[3] = {0.94f, 0.95f, 0.97f};
 static float FWN_LIGHT[3] = {0.78f, 0.81f, 0.86f};
 static float FWN_GREY[3] = {0.50f, 0.53f, 0.58f};
@@ -173,6 +195,28 @@ static void fw_list_path(char *out, size_t n)
     snprintf(out, n, "%s\\failures.txt", p);
 }
 
+/* "<dataref>[i]" and "on", "xp" or a number: the dataref's name, its
+   element (-1 none), the value failed, X-Plane's */
+static void fw_ref_parse(char *spec, const char *how, char *name, size_t nn, int *index, float *failed, int *xp)
+{
+    *index = -1;
+    *xp = 0;
+    char *br = strchr(spec, '[');
+    if (br) {
+        *index = atoi(br + 1);
+        *br = 0;
+    }
+    fw_copy(name, nn, spec);
+    if (strcmp(how, "on") == 0) {
+        *failed = 1.0f;
+    } else if (strcmp(how, "xp") == 0) {
+        *failed = 6.0f;
+        *xp = 1;
+    } else {
+        *failed = (float)atof(how);
+    }
+}
+
 /* (F2) the armed triggers kept across a reload of the list */
 typedef struct { char name[128]; int index; float failed; int arm; float arm_at; int arm_dir; } fw_keep_t;
 static fw_keep_t fw_keep[FWN_ROWS];
@@ -204,8 +248,10 @@ static void fw_load(void)
     }
     fw_nrows = 0;
     fw_nchaps = 0;
+    fw_nitems = 0;
     fw_note[0] = 0;
     fw_sel = -1;
+    int dia = 0;                        /* (F3) in a chapter's diagram */
     FILE *f = fopen(path, "rb");
     if (!f) {
         fw_copy(fw_note, sizeof fw_note, "The list failures.txt is not in the plugin's folder.");
@@ -218,6 +264,7 @@ static void fw_load(void)
         s = fw_trim(s + 1);
         if (kind == 'C') {
             if (fw_nchaps >= FWN_CHAPS) continue;
+            dia = 0;
             fw_chap_t *c = &fw_chaps[fw_nchaps++];
             memset(c, 0, sizeof *c);
             int n = 0;
@@ -235,26 +282,51 @@ static void fw_load(void)
                 char name[160], how[16];
                 int n = 0;
                 if (sscanf(s, "%159s %15s%n", name, how, &n) != 2) continue;
-                char *br = strchr(name, '[');
-                if (br) {
-                    r->index = atoi(br + 1);
-                    *br = 0;
-                }
-                fw_copy(r->name, sizeof r->name, name);
-                if (strcmp(how, "on") == 0) {
-                    r->failed = 1.0f;
-                } else if (strcmp(how, "xp") == 0) {
-                    r->failed = 6.0f;
-                    r->xp = 1;
-                } else {
-                    r->failed = (float)atof(how);
-                }
+                fw_ref_parse(name, how, r->name, sizeof r->name, &r->index, &r->failed, &r->xp);
                 if (r->failed == 0.0f) continue;
                 r->type = FWN_FAIL;
                 fw_copy(r->label, sizeof r->label, fw_trim(s + n));
             }
             fw_nrows++;
             fw_chaps[fw_nchaps - 1].count = fw_nrows - fw_chaps[fw_nchaps - 1].first;
+        } else if (kind == 'D' && fw_nchaps > 0) {
+            /* (F3) the chapter's diagram: its lines, texts and boxes follow */
+            fw_chaps[fw_nchaps - 1].dfirst = fw_nitems;
+            fw_chaps[fw_nchaps - 1].dcount = 0;
+            dia = 1;
+        } else if ((kind == 'L' || kind == 'T' || kind == 'B') && dia && fw_nitems < FWN_ITEMS) {
+            fw_item_t *it = &fw_items[fw_nitems];
+            memset(it, 0, sizeof *it);
+            int n = 0;
+            if (kind == 'L') {
+                if (sscanf(s, "%d %d %d %d", &it->x1, &it->y1, &it->x2, &it->y2) != 4) continue;
+                it->type = FWN_ITEM_LINE;
+            } else if (kind == 'T') {
+                if (sscanf(s, "%d %d%n", &it->x1, &it->y1, &n) != 2) continue;
+                it->type = FWN_ITEM_TEXT;
+                fw_copy(it->text, sizeof it->text, fw_trim(s + n));
+            } else {
+                char spec[160], how[16], name[128];
+                int w = 0, h = 0, index = -1, xp = 0;
+                float failed = 0.0f;
+                if (sscanf(s, "%d %d %d %d %159s %15s%n", &it->x1, &it->y1, &w, &h, spec, how, &n) != 6) continue;
+                fw_ref_parse(spec, how, name, sizeof name, &index, &failed, &xp);
+                it->x2 = it->x1 + w;
+                it->y2 = it->y1 + h;
+                it->row = -1;
+                for (int i = fw_chaps[fw_nchaps - 1].first; i < fw_nrows; i++) {
+                    fw_row_t *r = &fw_rows[i];
+                    if (r->type == FWN_FAIL && r->index == index && r->failed == failed && strcmp(r->name, name) == 0) {
+                        it->row = i;
+                        break;
+                    }
+                }
+                if (it->row < 0) continue;      /* not in the chapter's list */
+                it->type = FWN_ITEM_BOX;
+                fw_copy(it->text, sizeof it->text, fw_trim(s + n));
+            }
+            fw_nitems++;
+            fw_chaps[fw_nchaps - 1].dcount = fw_nitems - fw_chaps[fw_nchaps - 1].dfirst;
         }
     }
     fclose(f);
@@ -566,6 +638,45 @@ static void fw_button(int l, int b, int r, int t, const char *s, float *c, const
     fw_text(l + (r - l - fw_width(s)) / 2, b + (t - b - fh) / 2 + 2, c, s);
 }
 
+/* (F3) a chapter's diagram, its canvas (FWN_DIA_W x FWN_DIA_H, y down)
+   scaled into the pane (l, b, r, t): the lines (horizontal or vertical),
+   the texts (centred), the boxes coloured by their failures' states as in
+   the list (amber failed, green normal, cyan armed); a click on a box as
+   on its row */
+static void fw_draw_diagram(fw_chap_t *C, int l, int b, int r, int t, int fh, int hover, int hx, int hy)
+{
+    int pw = r - l - 32, ph = t - b - 16;
+    if (pw < 50 || ph < 50) return;
+    float sc = (float)pw / FWN_DIA_W;
+    if ((float)ph / FWN_DIA_H < sc) sc = (float)ph / FWN_DIA_H;
+    int ox = l + 16 + (int)((pw - FWN_DIA_W * sc) / 2), oy = t - 8 - (int)((ph - FWN_DIA_H * sc) / 2);
+    for (int k = C->dfirst; k < C->dfirst + C->dcount; k++) {
+        fw_item_t *it = &fw_items[k];
+        int x1 = ox + (int)(it->x1 * sc), y1 = oy - (int)(it->y1 * sc);
+        int x2 = ox + (int)(it->x2 * sc), y2 = oy - (int)(it->y2 * sc);
+        if (it->type == FWN_ITEM_LINE) {
+            int lx = x1 < x2 ? x1 : x2, rx = x1 < x2 ? x2 : x1, by = y1 < y2 ? y1 : y2, ty = y1 < y2 ? y2 : y1;
+            fw_rect(lx - 1, by - 1, rx + 1, ty + 1, FWN_PIPE);
+        } else if (it->type == FWN_ITEM_TEXT) {
+            fw_text(x1 - fw_width(it->text) / 2, y1 - fh / 2 + 2, FWN_LIGHT, it->text);
+        } else {
+            int s = fw_state(&fw_rows[it->row]);
+            int on = hover && fw_in(hx, hy, x1, y2, x2, y1);
+            float *tc;
+            if (s == FWN_FAILED) {
+                fw_rect(x1, y2, x2, y1, FWN_AMBER_BOX);
+                tc = FWN_DARK;
+            } else {
+                fw_rect(x1, y2, x2, y1, on && s != FWN_NA ? FWN_HOVER : FWN_PANE);
+                fw_outline(x1, y2, x2, y1, s == FWN_ARMED ? FWN_CYAN_BOX : s == FWN_NORMAL ? FWN_GREEN_BOX : FWN_RULE);
+                tc = s == FWN_ARMED ? FWN_CYAN : s == FWN_NORMAL ? FWN_WHITE : FWN_GREY;
+            }
+            fw_text((x1 + x2) / 2 - fw_width(it->text) / 2, (y1 + y2) / 2 - fh / 2 + 2, tc, it->text);
+            if (s != FWN_NA) fw_hit(x1, y2, x2, y1, FWN_HIT_BOX, k);
+        }
+    }
+}
+
 static void fw_draw_body(XPLMWindowID w)
 {
     int l, t, r, b;
@@ -605,9 +716,22 @@ static void fw_draw_body(XPLMWindowID w)
     {
         int bx1 = r - pad, bb = hb + 6, bt = t - 6;
         int bx0 = bx1 - fw_width("REPAIR ALL") - 24;
-        fw_button(bx0, bb, bx1, bt, "REPAIR ALL", fw_total > 0 ? FWN_AMBER : FWN_GREY,
-            fw_total > 0 ? FWN_AMBER_BOX : FWN_BUTTON, hover && fw_in(hx, hy, bx0, bb, bx1, bt));
+        fw_button(bx0, bb, bx1, bt, "REPAIR ALL", fw_total > 0 ? FWN_AMBER : fw_narmed > 0 ? FWN_CYAN : FWN_GREY,
+            fw_total > 0 ? FWN_AMBER_BOX : fw_narmed > 0 ? FWN_CYAN_BOX : FWN_BUTTON, hover && fw_in(hx, hy, bx0, bb, bx1, bt));
         fw_hit(bx0, bb, bx1, bt, FWN_HIT_REPAIR, 0);
+        /* (F3) the list or the diagram, for a chapter with one */
+        if (fw_nchaps > 0 && fw_chaps[fw_chap].dcount > 0) {
+            int x1 = bx0 - 16;
+            for (int v = 1; v >= 0; v--) {
+                const char *word = v ? "DIAGRAM" : "LIST";
+                int x0 = x1 - fw_width(word) - 20, on = fw_view == v;
+                if (on) fw_rect(x0, bb, x1, bt, FWN_CYAN_BOX);
+                fw_button(x0, bb, x1, bt, word, on ? FWN_DARK : FWN_CYAN, FWN_CYAN_BOX,
+                    !on && hover && fw_in(hx, hy, x0, bb, x1, bt));
+                fw_hit(x0, bb, x1, bt, FWN_HIT_VIEW, v);
+                x1 = x0 - 4;
+            }
+        }
     }
 
     /* the bottom: how to use it, or the list's trouble; (F2) arming a
@@ -649,7 +773,9 @@ static void fw_draw_body(XPLMWindowID w)
     } else {
         fw_rect(l, fb, r, ft, FWN_PANE);
         fw_text(l + pad, fb + (rowh - fh) / 2 + 2, fw_note[0] ? FWN_AMBER : FWN_GREY, fw_note[0] ? fw_note :
-            "Click: fail now / repair.  ARM: fail later (time, altitude, speed, random).  Wheel: scroll.");
+            fw_view == 1 && fw_nchaps > 0 && fw_chaps[fw_chap].dcount > 0 ?
+            "Click a box: fail now / repair.  Right click: arm (fail later).  The list has every failure." :
+            "Click: fail now / repair.  ARM (or right click): fail later.  Wheel: scroll.");
     }
 
     /* the chapters */
@@ -697,8 +823,12 @@ static void fw_draw_body(XPLMWindowID w)
     }
     if (!fw_nchaps) return;
 
-    /* the chosen chapter's failures */
+    /* the chosen chapter's failures: (F3) its diagram, or the list */
     fw_chap_t *C = &fw_chaps[fw_chap];
+    if (fw_view == 1 && C->dcount > 0) {
+        fw_draw_diagram(C, cr, bottom, r, top, fh, hover, hx, hy);
+        return;
+    }
     int pl = cr + 16, pr = r - 16;
     fit = (top - bottom - 8) / rowh;
     if (fit < 1) fit = 1;
@@ -791,6 +921,10 @@ static int fw_click(XPLMWindowID w, int x, int y, XPLMMouseStatus st, void *ref)
             fw_toggle_row(h->id);
         } else if (h->kind == FWN_HIT_REPAIR) {
             fw_repair_all();
+        } else if (h->kind == FWN_HIT_BOX) {          /* (F3) a diagram's box: as its row */
+            fw_toggle_row(fw_items[h->id].row);
+        } else if (h->kind == FWN_HIT_VIEW) {
+            fw_view = h->id;
         } else if (h->kind == FWN_HIT_ARM) {          /* (F2) the arm bar for it */
             fw_sel = h->id;
         } else if (h->kind == FWN_HIT_KIND) {
@@ -808,9 +942,18 @@ static int fw_click(XPLMWindowID w, int x, int y, XPLMMouseStatus st, void *ref)
     return 1;
 }
 
+/* (F3) a right click on a normal failure's row or box: the arm bar for it */
 static int fw_right_click(XPLMWindowID w, int x, int y, XPLMMouseStatus st, void *ref)
 {
-    (void)w; (void)x; (void)y; (void)st; (void)ref;
+    (void)w; (void)ref;
+    if (st != xplm_MouseDown) return 1;
+    for (int k = 0; k < fw_nhits; k++) {
+        fw_hit_t *h = &fw_hits[k];
+        if (!fw_in(x, y, h->l, h->b, h->r, h->t)) continue;
+        int row = h->kind == FWN_HIT_ROW ? h->id : h->kind == FWN_HIT_BOX ? fw_items[h->id].row : -1;
+        if (row >= 0 && fw_state(&fw_rows[row]) == FWN_NORMAL) fw_sel = row;
+        return 1;
+    }
     return 1;
 }
 
@@ -872,7 +1015,7 @@ static void fw_show(int on)
         fw_win = XPLMCreateWindowEx(&p);
         if (!fw_win) return;
         XPLMSetWindowPositioningMode(fw_win, xplm_WindowPositionFree, -1);
-        XPLMSetWindowResizingLimits(fw_win, 560, 340, 2400, 1800);
+        XPLMSetWindowResizingLimits(fw_win, 700, 400, 2400, 1800);   /* (F2) the arm bar fits from 700 */
         XPLMSetWindowTitle(fw_win, "747-400 Failures");
         fw_place(fw_win);
     }
@@ -915,13 +1058,29 @@ static void fw_test_set(void *ref, int v)
     (void)ref;
     fw_test_last = -1;
     if (!fw_shown() || v < 1000) return;
-    int kind = v / 1000, id = v % 1000;
+    int kind = v / 1000, id = v % 1000, right = 0;
+    if (kind == 9) {                    /* (F3) a right click on a box */
+        kind = FWN_HIT_BOX;
+        right = 1;
+    }
     if ((kind == FWN_HIT_ROW || kind == FWN_HIT_ARM) && fw_chap < fw_nchaps) id += fw_chaps[fw_chap].first;
+    if (kind == FWN_HIT_BOX && fw_chap < fw_nchaps) {   /* the diagram's n-th box */
+        fw_chap_t *C = &fw_chaps[fw_chap];
+        int n = id;
+        id = -1;
+        for (int k = C->dfirst; k < C->dfirst + C->dcount; k++) {
+            if (fw_items[k].type == FWN_ITEM_BOX && n-- == 0) {
+                id = k;
+                break;
+            }
+        }
+    }
     for (int k = 0; k < fw_nhits; k++) {
         fw_hit_t *h = &fw_hits[k];
         if (h->kind != kind || h->id != id) continue;
         fw_test_last = v;
-        fw_click(fw_win, (h->l + h->r) / 2, (h->b + h->t) / 2, xplm_MouseDown, NULL);
+        if (right) fw_right_click(fw_win, (h->l + h->r) / 2, (h->b + h->t) / 2, xplm_MouseDown, NULL);
+        else fw_click(fw_win, (h->l + h->r) / 2, (h->b + h->t) / 2, xplm_MouseDown, NULL);
         return;
     }
 }

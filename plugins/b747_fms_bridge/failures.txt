@@ -1,5 +1,5 @@
 # The 747-400's failure window's list (b747_fms_bridge: failures_window.c;
-# docs/overhaul/notes/FAILURES.md). Read when the window opens.
+# docs/overhaul/notes/FAILURES.md). Read when the window opens, if changed.
 #
 #   C <chapter> <title>                  an ATA chapter
 #   G <title>                            a group in it
@@ -9,6 +9,17 @@
 #             X-Plane's own failure screen, shown ARMED)
 #        <n>  that value failed, 0 normal (the stabilizer trim's runaway:
 #             -1 nose down, 1 nose up)
+#
+# A chapter's diagram (F3), after its failures: a canvas 1000 wide, 700
+# high, y down; drawn in the order written (lines first, under the boxes):
+#
+#   D                                    the diagram begins
+#   L <x1> <y1> <x2> <y2>                a line, horizontal or vertical
+#   T <x> <y> <text>                     a text centred on x, y (63 letters)
+#   B <x> <y> <w> <h> <dataref>[<index>] <kind> <label>
+#                                        a box for the chapter's failure
+#                                        with that dataref and kind (it
+#                                        must be in the chapter's list)
 #
 # Our models' failures where our models make the system; X-Plane's only where
 # X-Plane makes it, or our models read X-Plane's (each checked in X-Plane:
@@ -73,6 +84,48 @@ F laminar/B747/electrical/fail/tru[2] on TRU 3
 F laminar/B747/electrical/fail/tru[3] on TRU 4
 F laminar/B747/electrical/fail/charger[0] on MAIN BATTERY CHARGER
 F laminar/B747/electrical/fail/charger[1] on APU BATTERY CHARGER
+
+D
+L 125 95 125 120
+L 125 175 125 210
+L 125 265 125 320
+L 375 95 375 120
+L 375 175 375 210
+L 375 265 375 320
+L 625 95 625 120
+L 625 175 625 210
+L 625 265 625 320
+L 875 95 875 120
+L 875 175 875 210
+L 875 265 875 320
+L 125 320 440 320
+L 560 320 875 320
+T 125 25 ENGINE 1
+T 375 25 ENGINE 2
+T 625 25 ENGINE 3
+T 875 25 ENGINE 4
+T 500 355 SYNCHRONOUS BUS
+T 500 405 TRANSFORMER-RECTIFIERS (DC)
+T 500 535 BATTERY CHARGERS
+B 55 45 140 50 laminar/B747/electrical/fail/drive[0] on IDG 1
+B 55 120 140 55 laminar/B747/electrical/fail/gen[0] on GEN 1
+B 55 210 140 55 laminar/B747/electrical/fail/bus[0] on AC BUS 1
+B 55 425 140 50 laminar/B747/electrical/fail/tru[0] on TRU 1
+B 305 45 140 50 laminar/B747/electrical/fail/drive[1] on IDG 2
+B 305 120 140 55 laminar/B747/electrical/fail/gen[1] on GEN 2
+B 305 210 140 55 laminar/B747/electrical/fail/bus[1] on AC BUS 2
+B 305 425 140 50 laminar/B747/electrical/fail/tru[1] on TRU 2
+B 555 45 140 50 laminar/B747/electrical/fail/drive[2] on IDG 3
+B 555 120 140 55 laminar/B747/electrical/fail/gen[2] on GEN 3
+B 555 210 140 55 laminar/B747/electrical/fail/bus[2] on AC BUS 3
+B 555 425 140 50 laminar/B747/electrical/fail/tru[2] on TRU 3
+B 805 45 140 50 laminar/B747/electrical/fail/drive[3] on IDG 4
+B 805 120 140 55 laminar/B747/electrical/fail/gen[3] on GEN 4
+B 805 210 140 55 laminar/B747/electrical/fail/bus[3] on AC BUS 4
+B 805 425 140 50 laminar/B747/electrical/fail/tru[3] on TRU 4
+B 440 300 120 40 laminar/B747/electrical/fail/ssb on SSB
+B 270 555 200 50 laminar/B747/electrical/fail/charger[0] on MAIN CHARGER
+B 530 555 200 50 laminar/B747/electrical/fail/charger[1] on APU CHARGER
 
 C 26 FIRE PROTECTION
 G ENGINES
@@ -215,6 +268,53 @@ F laminar/B747/fuel/fail/temp on FUEL TEMPERATURE SENSOR
 F laminar/B747/fuel/fail/fjcc[0] on FUEL JETTISON CONTROL CARD A
 F laminar/B747/fuel/fail/fjcc[1] on FUEL JETTISON CONTROL CARD B
 
+D
+L 125 105 125 355
+L 375 105 375 355
+L 625 105 625 355
+L 875 105 875 355
+L 125 275 875 275
+T 500 20 MAIN TANK PUMPS
+T 125 45 MAIN 1
+T 375 45 MAIN 2
+T 625 45 MAIN 3
+T 875 45 MAIN 4
+T 500 140 OVRD/JETT PUMPS
+T 500 235 CROSSFEED VALVES
+T 500 335 SPAR VALVES
+T 500 440 CENTER AND STAB TANK PUMPS
+T 500 540 JETTISON
+B 30 60 90 45 laminar/B747/fuel/fail/pump[0] on FWD
+B 130 60 90 45 laminar/B747/fuel/fail/pump[1] on AFT
+B 280 60 90 45 laminar/B747/fuel/fail/pump[2] on FWD
+B 380 60 90 45 laminar/B747/fuel/fail/pump[3] on AFT
+B 530 60 90 45 laminar/B747/fuel/fail/pump[4] on FWD
+B 630 60 90 45 laminar/B747/fuel/fail/pump[5] on AFT
+B 780 60 90 45 laminar/B747/fuel/fail/pump[6] on FWD
+B 880 60 90 45 laminar/B747/fuel/fail/pump[7] on AFT
+B 280 155 90 45 laminar/B747/fuel/fail/pump[8] on OVRD F
+B 380 155 90 45 laminar/B747/fuel/fail/pump[9] on OVRD A
+B 530 155 90 45 laminar/B747/fuel/fail/pump[10] on OVRD F
+B 630 155 90 45 laminar/B747/fuel/fail/pump[11] on OVRD A
+B 70 255 110 40 laminar/B747/fuel/fail/valve[0] on X FEED 1
+B 70 355 110 40 laminar/B747/fuel/fail/valve[4] on SPAR 1
+B 320 255 110 40 laminar/B747/fuel/fail/valve[1] on X FEED 2
+B 320 355 110 40 laminar/B747/fuel/fail/valve[5] on SPAR 2
+B 570 255 110 40 laminar/B747/fuel/fail/valve[2] on X FEED 3
+B 570 355 110 40 laminar/B747/fuel/fail/valve[6] on SPAR 3
+B 820 255 110 40 laminar/B747/fuel/fail/valve[3] on X FEED 4
+B 820 355 110 40 laminar/B747/fuel/fail/valve[7] on SPAR 4
+B 140 455 160 45 laminar/B747/fuel/fail/pump[12] on CTR L
+B 320 455 160 45 laminar/B747/fuel/fail/pump[13] on CTR R
+B 520 455 160 45 laminar/B747/fuel/fail/pump[14] on STAB L
+B 700 455 160 45 laminar/B747/fuel/fail/pump[15] on STAB R
+B 10 555 150 45 laminar/B747/fuel/fail/valve[14] on JETT CTR L
+B 175 555 150 45 laminar/B747/fuel/fail/valve[15] on JETT CTR R
+B 340 555 150 45 laminar/B747/fuel/fail/valve[16] on JETT M2
+B 505 555 150 45 laminar/B747/fuel/fail/valve[17] on JETT M3
+B 670 555 150 45 laminar/B747/fuel/fail/valve[18] on NOZZLE L
+B 835 555 150 45 laminar/B747/fuel/fail/valve[19] on NOZZLE R
+
 C 29 HYDRAULICS
 G ENGINE DRIVEN PUMPS
 F laminar/B747/hydraulics/fail/edp[0] on ENGINE PUMP 1
@@ -231,6 +331,61 @@ F laminar/B747/hydraulics/fail/leak[0] on SYSTEM 1 LEAK
 F laminar/B747/hydraulics/fail/leak[1] on SYSTEM 2 LEAK
 F laminar/B747/hydraulics/fail/leak[2] on SYSTEM 3 LEAK
 F laminar/B747/hydraulics/fail/leak[3] on SYSTEM 4 LEAK
+
+D
+L 125 100 125 140
+L 70 140 180 140
+L 70 140 70 170
+L 180 140 180 170
+L 70 225 70 265
+L 180 225 180 265
+L 70 265 180 265
+L 125 265 125 305
+L 375 100 375 140
+L 320 140 430 140
+L 320 140 320 170
+L 430 140 430 170
+L 320 225 320 265
+L 430 225 430 265
+L 320 265 430 265
+L 375 265 375 305
+L 625 100 625 140
+L 570 140 680 140
+L 570 140 570 170
+L 680 140 680 170
+L 570 225 570 265
+L 680 225 680 265
+L 570 265 680 265
+L 625 265 625 305
+L 875 100 875 140
+L 820 140 930 140
+L 820 140 820 170
+L 930 140 930 170
+L 820 225 820 265
+L 930 225 930 265
+L 820 265 930 265
+L 875 265 875 305
+T 125 25 SYSTEM 1
+T 125 330 SYS 1 PRESS
+T 375 25 SYSTEM 2
+T 375 330 SYS 2 PRESS
+T 625 25 SYSTEM 3
+T 625 330 SYS 3 PRESS
+T 875 25 SYSTEM 4
+T 875 330 SYS 4 PRESS
+B 55 50 140 50 laminar/B747/hydraulics/fail/leak[0] on RSVR 1
+B 25 170 90 55 laminar/B747/hydraulics/fail/edp[0] on EDP 1
+B 135 170 90 55 laminar/B747/hydraulics/fail/demand_pump[0] on ADP 1
+B 305 50 140 50 laminar/B747/hydraulics/fail/leak[1] on RSVR 2
+B 275 170 90 55 laminar/B747/hydraulics/fail/edp[1] on EDP 2
+B 385 170 90 55 laminar/B747/hydraulics/fail/demand_pump[1] on ACMP 2
+B 555 50 140 50 laminar/B747/hydraulics/fail/leak[2] on RSVR 3
+B 525 170 90 55 laminar/B747/hydraulics/fail/edp[2] on EDP 3
+B 635 170 90 55 laminar/B747/hydraulics/fail/demand_pump[2] on ACMP 3
+B 805 50 140 50 laminar/B747/hydraulics/fail/leak[3] on RSVR 4
+B 775 170 90 55 laminar/B747/hydraulics/fail/edp[3] on EDP 4
+B 885 170 90 55 laminar/B747/hydraulics/fail/demand_pump[3] on ADP 4
+T 500 420 RSVR: A LEAK.  EDP: ENGINE PUMP.  ADP, ACMP: DEMAND PUMPS.
 
 C 30 ICE AND RAIN
 G ENGINES AND WINGS
@@ -389,6 +544,58 @@ F laminar/B747/fire/fail/duct_leak[0] on BLEED DUCT LEAK LEFT
 F laminar/B747/fire/fail/duct_leak[1] on BLEED DUCT LEAK CENTER
 F laminar/B747/fire/fail/duct_leak[2] on BLEED DUCT LEAK RIGHT
 F laminar/B747/air/fail/apu_air on APU BLEED AIR (NO AIR)
+
+D
+L 75 90 75 120
+L 175 90 175 120
+L 75 120 175 120
+L 125 120 125 150
+L 125 195 125 260
+L 325 90 325 120
+L 425 90 425 120
+L 325 120 425 120
+L 375 120 375 150
+L 375 195 375 260
+L 575 90 575 120
+L 675 90 675 120
+L 575 120 675 120
+L 625 120 625 150
+L 625 195 625 260
+L 825 90 825 120
+L 925 90 925 120
+L 825 120 925 120
+L 875 120 875 150
+L 875 195 875 260
+L 125 260 875 260
+L 250 260 250 290
+L 500 260 500 290
+L 750 260 750 290
+L 500 335 500 400
+T 125 25 ENGINE 1
+T 375 25 ENGINE 2
+T 625 25 ENGINE 3
+T 875 25 ENGINE 4
+T 250 235 LEFT DUCT
+T 750 235 RIGHT DUCT
+T 500 235 CENTER DUCT
+B 30 45 90 45 laminar/B747/air/fail/hpsov_closed[0] on HPSOV 1
+B 130 45 90 45 laminar/B747/air/fail/prv_closed[0] on PRV 1
+B 55 150 140 45 laminar/B747/air/fail/bleed_ovht[0] on BLEED 1
+B 280 45 90 45 laminar/B747/air/fail/hpsov_closed[1] on HPSOV 2
+B 380 45 90 45 laminar/B747/air/fail/prv_closed[1] on PRV 2
+B 305 150 140 45 laminar/B747/air/fail/bleed_ovht[1] on BLEED 2
+B 530 45 90 45 laminar/B747/air/fail/hpsov_closed[2] on HPSOV 3
+B 630 45 90 45 laminar/B747/air/fail/prv_closed[2] on PRV 3
+B 555 150 140 45 laminar/B747/air/fail/bleed_ovht[2] on BLEED 3
+B 780 45 90 45 laminar/B747/air/fail/hpsov_closed[3] on HPSOV 4
+B 880 45 90 45 laminar/B747/air/fail/prv_closed[3] on PRV 4
+B 805 150 140 45 laminar/B747/air/fail/bleed_ovht[3] on BLEED 4
+B 180 290 140 45 laminar/B747/fire/fail/duct_leak[0] on LEAK L
+B 430 290 140 45 laminar/B747/fire/fail/duct_leak[1] on LEAK C
+B 680 290 140 45 laminar/B747/fire/fail/duct_leak[2] on LEAK R
+B 430 400 140 45 laminar/B747/air/fail/apu_air on APU AIR
+T 500 500 HPSOV, PRV: FAILED CLOSED.  BLEED: OVERHEAT.
+T 500 540 THE OTHER WAYS TO FAIL ARE IN THE LIST.
 
 C 49 APU
 G APU
