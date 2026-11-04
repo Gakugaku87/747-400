@@ -174,4 +174,59 @@ frames(1)
 T.equal(get(ADVISORY, 104), 0, "the failures cleared: no >ELEC SSB OPEN")
 T.equal(get(STATUS, 106), 0, "the failures cleared: no ELEC TR UNIT")
 
+-- (2026-11-04) the ground power cart from the FMC (laminar/B747/electrical/
+-- connect_power) on X-Plane 12, without add-ons: where X-Plane cannot call
+-- its truck, a cart alone (the GPU voltage overridden); the chocks first;
+-- where it can, X-Plane's truck (sim/ground_ops/toggle_gpu_request) and EXT
+-- PWR once its voltage comes; moving, nothing
+local ELEC = "laminar/B747/electrical/"
+local function truck_requests()
+    local n = 0
+    for _, c in ipairs(rt.command_log) do
+        if c.name == "sim/ground_ops/toggle_gpu_request" and c.phase == "once" then n = n + 1 end
+    end
+    return n
+end
+rt:set("sim/version/xplane_internal_version", 124418)
+rt:set("laminar/B747/gear/air_ground/pri_air", 0)
+rt:set("sim/flightmodel/position/groundspeed", 0)
+rt:set("laminar/B747/gear/chocked", 0)
+rt:set("sim/cockpit2/electrical/GPU_can_be_called_for", 0)
+frames(0.2)
+T.equal(get(ELEC .. "ext_pwr1_avail"), 0, "XP12, no cart: no EXT PWR")
+rt:command(ELEC .. "connect_power", 0.1)
+frames(0.2)
+T.equal(get("laminar/B747/gear/chocked"), 1, "the cart: the wheels chocked first")
+T.equal(get(ELEC .. "ext_pwr1_avail"), 1, "no X-Plane truck here: the cart alone, EXT PWR available")
+T.equal(get(ELEC .. "ext_pwr2_avail"), 1, "EXT PWR 2 available")
+T.equal(get("sim/cockpit2/electrical/GPU_generator_volts"), 28, "the cart's voltage")
+rt:command(ELEC .. "connect_power", 0.1)
+frames(0.2)
+T.equal(get(ELEC .. "ext_pwr1_avail"), 0, "the command again: the cart removed")
+T.equal(get("sim/operation/override/override_GPU_volts"), 0, "removed: X-Plane's GPU no longer overridden")
+-- X-Plane can call its truck here: requested, EXT PWR when its voltage comes
+local before = truck_requests()
+rt:set("sim/cockpit2/electrical/GPU_can_be_called_for", 1)
+rt:command(ELEC .. "connect_power", 0.1)
+frames(0.2)
+T.equal(truck_requests() - before, 1, "X-Plane's ground power truck called for")
+T.equal(get(ELEC .. "ext_pwr_requested"), 1, "the truck on its way: requested")
+T.equal(get(ELEC .. "ext_pwr1_avail"), 0, "the truck not there yet: no EXT PWR")
+rt:set("sim/cockpit2/electrical/GPU_generator_volts", 28)        -- X-Plane's truck connected
+frames(0.2)
+T.equal(get(ELEC .. "ext_pwr1_avail"), 1, "the truck's power: EXT PWR available")
+T.equal(get(ELEC .. "ext_pwr_requested"), 0, "connected: no longer requested")
+rt:command(ELEC .. "connect_power", 0.1)
+frames(0.2)
+T.equal(truck_requests() - before, 2, "removed: the truck sent away")
+T.equal(get(ELEC .. "ext_pwr1_avail"), 0, "removed: no EXT PWR")
+-- moving: the ground crew does not come
+rt:set("sim/cockpit2/electrical/GPU_generator_volts", 0)
+rt:set("laminar/B747/gear/chocked", 0)
+rt:set("sim/flightmodel/position/groundspeed", 3)
+rt:command(ELEC .. "connect_power", 0.1)
+frames(0.2)
+T.equal(get(ELEC .. "ext_pwr1_avail") + get("laminar/B747/gear/chocked") + get(ELEC .. "ext_pwr_requested"), 0,
+    "moving: no cart, no chocks")
+
 T.done()

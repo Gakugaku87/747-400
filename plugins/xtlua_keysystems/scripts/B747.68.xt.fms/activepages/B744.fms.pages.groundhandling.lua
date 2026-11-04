@@ -64,11 +64,14 @@ fmsFunctionsDefs["GNDHNDL"]["L4"]={"setpage","DOORS"}
 fmsPages["GNDSRV"]=createPage("GNDSRV")
 fmsPages["GNDSRV"].getPage=function(self,pgNo,fmsID)
   local lineA=string.format("%03d",B747DR_fuel_add)
+  -- L2: the ground power cart (2026-11-04: also on X-Plane 12, by X-Plane's
+  -- own ground power truck or a cart without it: B747.03.xt.electrical.lua;
+  -- before, blank there, an add-on or X-Plane's menu had to bring it)
   local lineB="<GROUND POWER           "
-  if simDR_version>=120012 then
-    lineB="                        "
-  elseif B747DR_elec_ext_pwr1_available==1 then
+  if B747DR_elec_ext_pwr1_available==1 then
     lineB="<DISCONNECT GROUND POWER"
+  elseif B747DR_elec_ext_pwr_requested==1 then
+    lineB="<CANCEL GROUND POWER    "
   end
   -- (2026-11-04) R3: the ground air cart
   local air = (B747DR_gndsrv_ground_air > 0.5) and "REMOVE>" or "CONNECT>"

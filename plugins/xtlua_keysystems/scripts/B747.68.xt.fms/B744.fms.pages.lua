@@ -1191,8 +1191,10 @@ function fmsFunctions.setdata(fmsO,value)
      B747DR_payload_weight=numPassengers*120
    elseif value=="services" then
      if simDR_acf_m_jettison==0 then
-		if B747DR_elec_ext_pwr1_available==0 then
-        	fmsModules["cmds"]["laminar/B747/electrical/connect_power"]:once() 
+		-- (2026-11-04) not while X-Plane's truck is on its way (the command
+		-- would send it away)
+		if B747DR_elec_ext_pwr1_available==0 and B747DR_elec_ext_pwr_requested==0 then
+        	fmsModules["cmds"]["laminar/B747/electrical/connect_power"]:once()
 		end
 		fmsModules["cmds"]["sim/ground_ops/service_plane"]:once() 
      end

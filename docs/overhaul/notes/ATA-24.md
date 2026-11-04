@@ -524,3 +524,16 @@
 - 残り（ELEC-04 の故障でない部分）：3.5 秒の break power transfer、last source on、EXT と APU の発電機の故障、バッテリーの故障。
 - 試験：新しい回帰 `elec_fail_test`（44 件：上の 6 つの故障、リセット、autoland の分離の構成 C、STANDBY POWER BAT で BAT CHARGER が出ない）、`elec_module_test` 95（dataref から STATUS と advisory まで）。
 - X-Plane（カスタム acf、2026-11-04）：新しい `s228_elec_failures` 41/41（10,000 ft の空中：発電機 2 の故障で GCB 2 が開き AC bus 2 は同期バスから、ELEC GEN OFF 2、GEN CONT の入れ直しは故障のままでは戻らず故障を消すと戻る。AC bus 3 の故障で BTB 3・GCB 3 が開き ELEC AC BUS 3、DC bus 3 は tie から、BUS TIE と GEN CONT の入れ直しで戻る。IDG 4・TRU 1・SSB・main の充電器で DRIVE 4 灯、ELEC DRIVE 4、>ELEC SSB OPEN、STATUS に BAT CHARGER MAIN・ELEC TR UNIT・ELEC DRIVE 4。ELEC の synoptic と STATUS ページの写真）、回帰の `s02_elec_panel` 63/63。AC bus 3 の故障では左の FCC（AC 3・DC 3）が止まり A/P が外れた（>AUTOPILOT DISC：6-3 段 5a の作りどおり）。ほかに AC bus 3 の機器のメッセージ（>ICE DETECTORS、>TCAS SYSTEM、>NO LAND 3 など）。Log.txt に Lua の誤りなし。
+
+## 12. 地上電源（GPU）を CDU からつなぐ（2026-11-04、ELEC-17。利用者の依頼「アドオンを使わずに GPU を接続できるようにして」）
+
+- 前：CDU の GROUND SERVICES の L2（<GROUND POWER）は、X-Plane 12.0.12 以上では空欄で、押してもつながらなかった。XP12 の外部電源の available は X-Plane の GPU の電圧（24 V 以上）で決めていたので、X-Plane のメニューの地上電源か、電圧を書くアドオン（ジェットブリッジのものなど）が要った。コマンド `laminar/B747/electrical/connect_power` は、押す・離すのたびに切り替わっていた（1 回の操作で元に戻る）。
+- 今：L2 は XP12 でも <GROUND POWER（つながると <DISCONNECT GROUND POWER、電源車を待つ間は <CANCEL GROUND POWER）。押すと（コマンドは押したときだけ）：
+  - PSEU の地上で止まっている（対地速度 1 m/s 以下：推定）ときだけ。輪止めが無ければ先にかける（外部電源は輪止めが要る：前からの作り）。
+  - X-Plane がその場所で電源車を呼べる（`sim/cockpit2/electrical/GPU_can_be_called_for`）なら、X-Plane 自身の電源車を呼ぶ（`sim/ground_ops/toggle_gpu_request`。アドオンではなく X-Plane の機能）。電源車がつながって電圧が来ると EXT PWR 1・2 AVAIL。待つ間は新しい `laminar/B747/electrical/ext_pwr_requested` が 1。
+  - 呼べない場所（滑走路の上など）では、電源車なしで X-Plane の GPU の電圧を 28 V にして（`override_GPU_volts`）、すぐ EXT PWR AVAIL。
+  - もう一度押すと外す（電源車を帰し、電圧の上書きをやめる）。
+- GROUND SERVICES の L1（<REQUEST GROUND SERVICES）も地上電源を呼ぶ（前から）。電源車を待つ間は呼び直さない（呼び直すと帰してしまうので）。
+- EXT PWR 1・2 のボタン、XPC、母線は前からの電源のモデル（§4）。
+- 試験：`elec_module_test` 110（XP12 の版で、電源車なしの場所・電源車を呼べる場所・動いているとき）。
+- X-Plane（カスタム acf、2026-11-04）：新しい `s239_ground_power` 13/13（成田 34L、エンジン停止：滑走路の上では X-Plane が電源車を呼べないので、L2 を押すと輪止めがかかり、電源車なしの 28 V ですぐ EXT PWR 1・2 AVAIL、L2 は <DISCONNECT GROUND POWER。EXT PWR 1・2 を押すと AC バス 1・4 に電気。L2 で外れる）と `s240_ground_power_gate` 17/17（T1 Gate 11：X-Plane が電源車を呼べるので L2 で呼び、待つ間は <CANCEL GROUND POWER、約 148 秒で X-Plane の電源車が着いて 28 V と EXT PWR AVAIL、外の写真に地上電源のケーブル）、回帰の `s02_elec_panel` 63/63。Log.txt に Lua の誤りなし。
