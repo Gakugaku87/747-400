@@ -184,6 +184,12 @@ function fmsFunctions.dfdes(fmsO, value)
 end
 -- (step 12h2) 6L: REQUEST <SEND or <LOAD (FCOM p.1397)
 function fmsFunctions.dfdatalink(fmsO, value)
+  -- (2026-11-04) the 109's <OFFPATH DES (FCOM p.1396's figure, p.1398):
+  -- the OFFPATH DES page
+  if not is570() then
+    fmsFunctions.setpage(fmsO, "OFFPATH")
+    return
+  end
   local l = six_l()
   if l == "SEND" then B747_fms_company_wind_request() end
   if l == "LOAD" then B747_fms_company_forecast_load() end

@@ -202,4 +202,72 @@ T.check(line("R", 3):find("^ALPHA"), "the right CDU: the same fixes (the FMC's)"
 key("R", "func_key/next_pg")
 T.check(line("R", 3):find("^ZZD"), "and its second page")
 
+-- (2026-11-04) the ETA and ALT at a crossing from the predictions (FCOM
+-- p.1358-1359; FMSPG p.168), PRED ETA-ALT's along track distance (FCOM
+-- p.1359's figure: 112NM 2016z; FMSPG p.169) and the fixes for the ND, on
+-- stub predictions: 5,000 ft climbing 100 ft a NM, 30 s a NM, 2000z now
+local ns = fms.ns
+ns.B747_fms_utc_min = function() return 20 * 60 end
+ns.B747_fms_pred_at = function(x) return 5000 + 100 * x, 30 * x end
+ns.B747_fms_pred_alt_x = function(h) if h >= 5000 and h <= 35000 then return (h - 5000) / 100 end end
+ns.B747_fms_pred_time_x = function(t) if t > 0 then return t / 30 end end
+ns.B747_fms_pred_pos = function(x) return {lat = 35 + x / 60, lon = 140} end
+ns.B747_fms_preds = function() return {} end
+key("L", "func_key/dir_intc")
+T.check(line("L", 3):find("^ALPHA"), "FIX INFO 1/2: ALPHA")
+enter("L", "/20", "L2")
+frames(0.3)
+local l5, s5 = line("L", 5), small("L", 5)
+local d5 = tonumber(l5:sub(15, 18))
+T.check(d5 and d5 > 0, "/20 round ALPHA: a crossing ahead, DTG " .. tostring(d5))
+local eta = string.format("%02d%02d", math.floor((1200 + 0.5 * d5) / 60) % 24, math.floor(1200 + 0.5 * d5 + 0.5) % 60)
+T.check(math.abs(tonumber(l5:sub(9, 12)) - tonumber(eta)) <= 1, ("its ETA in cols 9-12: %s (about %s)"):format(l5:sub(9, 12), eta))
+T.equal(s5:sub(13, 13), "z", "the ETA's z in small font")
+local alt5 = tonumber(l5:sub(20, 24))
+T.check(alt5 and math.abs(alt5 - (5000 + 100 * d5)) <= 60 and alt5 % 10 == 0,
+    ("its predicted altitude to col 24, to 10 ft: %s"):format(l5:sub(20, 24)))
+enter("L", "FL190", "R6")
+T.equal(line("L", 13):sub(14, 16), "140", "PRED ETA-ALT FL190: 140 NM along the route")
+T.equal(small("L", 13):sub(17, 18), "NM", "its NM in small font")
+T.equal(line("L", 13):sub(20, 24), "FL190", "the entered FL190 after it")
+enter("L", "2030Z", "R6")
+T.equal(line("L", 13):sub(14, 16), " 60", "2030Z: 30 minutes ahead, 60 NM")
+local nd = ns.B747_fms_fix_nd()
+T.equal(nd[1].fix and nd[1].fix.ident, "ALPHA", "the ND: page 1's fix")
+T.equal(#nd[1].circles, 1, "its distance circle")
+T.equal(nd[1].circles[1], 20, "20 NM")
+T.equal(#nd[1].radials, 0, "no radial")
+T.equal(nd[1].pred and nd[1].pred.text, "2030Z", "the PRED point's text: the entered time")
+T.near(nd[1].pred.lat, 36, 1e-9, "the PRED point on the route 60 NM ahead (stub)")
+T.equal(nd[2].fix and nd[2].fix.ident, "ZZD", "page 2's fix")
+-- the datarefs for the FMS bridge (the radial line, the circle) and the ND
+-- module (the fixes, the PRED point; texts as character codes)
+enter("L", "090", "L3")
+frames(1.5)
+local function text_of(name, base)
+    local s = ""
+    for c = 0, 4 do
+        local b = rt:get(name, base + c)
+        if b and b > 0 then s = s .. string.char(b) end
+    end
+    return s
+end
+T.equal(rt:get("laminar/B747/nd/circle/n"), 1, "one circle for the bridge")
+T.near(rt:get("laminar/B747/nd/circle/radius", 0), 20, 1e-9, "its radius 20 NM")
+T.equal(rt:get("laminar/B747/nd/circle/pen", 0), 6, "its style: FIX's green dashes")
+local ln, radial = rt:get("laminar/B747/nd/line/n"), false
+for k = 0, ln - 1 do if rt:get("laminar/B747/nd/line/pen", k) == 6 then radial = true end end
+T.check(radial, "the 090 radial among the line's points (style 6)")
+T.equal(rt:get("laminar/B747/fms/fix/show", 0), 1, "page 1's fix shown")
+T.equal(text_of("laminar/B747/fms/fix/ident", 0), "ALPHA", "its identifier's codes")
+T.equal(text_of("laminar/B747/fms/fix/ident", 5), "ZZD", "page 2's")
+T.equal(rt:get("laminar/B747/fms/fix/pred_show", 0), 1, "page 1's PRED point shown")
+T.equal(text_of("laminar/B747/fms/fix/pred_text", 0), "2030Z", "its text")
+-- passed: no crossing ahead any more, the entry back to dashes (FMSPG p.169)
+ns.B747_fms_pred_time_x = function() return nil end
+frames(0.3)
+key("L", "func_key/dir_intc")
+T.equal(line("L", 13):sub(20, 24), "-----", "PRED ETA-ALT passed: dashes again")
+T.check(ns.B747_fms_fix_nd()[1].pred == nil, "and no PRED point on the ND")
+
 T.done()

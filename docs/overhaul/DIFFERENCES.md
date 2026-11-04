@@ -352,7 +352,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - PFD の記号：ILS の周波数・コースの不一致の線（同調の作り直しで）、LCD の PFD のバンク 35° 以上の琥珀と横滑りの印の色（既定は CRT）、範囲外の V1・VREF の数字、TDZ（DSP-12）。ILS の同調は目的地の 50 NM 以内だけ（DSP-14：5-1 段 3 の無線の自動同調で）。
   - DH は 109 型の表示（緑の DH と数字、大きな琥珀の DH）。GE の機体（570）の RADIO/BARO の minimums の表示は無い（FCOM p.1539–1540：405・570）。
   - VR・V2 の表の誤記（DSP-08：FMC の作り直しで）。計器のモジュールが BAT DISCH MAIN・BATTERY OFF を書く（DSP-34）。
-  - ND：FMC の記号の残り（待機・PT の記号の形、エネルギー円、FIX の基準点：DSP-23。T/C・S/C・T/D・E/D と減速点は 2026-10-31 から FMC の予測：FMC の段 8d3）、MAP CTR の地図はローズの円の中だけ（DSP-17：上の MAP CTR の残り）、TERR は外部のプラグイン頼み（DSP-19）。
+  - ND：FMC の記号の残り（待機・PT の記号の形：DSP-23。T/C・S/C・T/D・E/D と減速点は 2026-10-31 から FMC の予測：FMC の段 8d3。FIX INFO の基準点・方位線・距離の円と PRED ETA-ALT の点、OFFPATH DES のエネルギー管理の円は 2026-11-04 から：下の FMC と CDU の節）、MAP CTR の地図はローズの円の中だけ（DSP-17：上の MAP CTR の残り）、TERR は外部のプラグイン頼み（DSP-19）。
   - 輝度の周囲光の補正と、WXR の内側のつまみが無い（DSP-30）。
 - 直した点：表示器と CDU の電源（1-1）。同じ機体のまま新しいフライトを始めると表示器と CDU が真っ暗になる不具合（作り直し前から）を直した（2026-10-23）。
 
@@ -424,7 +424,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - 推定：STEP でページがついていくこと、最後の点で動かないこと、点の無いページ（経路の終わりの破線だけ）で中心を動かさないこと、PLN にしたときの中心（表示中の LEGS のページの最初の点、無ければアクティブな経路の最初の点）、中心の点が通過や削除で消えたらその位置からの次の点、DIRECT TO の INTC CRS の間は STEP> を出さないこと、FL のある block の制約の点に <CTR> を出さないこと。
   - 違い：中心は両席で 1 つ（上の FMC）。進入復行の点と、終点を予測していない条件の脚に <CTR> を移しても、ND の PLAN の中心は前の点のまま（X-Plane の計画にその点が無い）。
 - 実機に合わせた点（段 7e4）：RTE 2 は FMC 自身の 2 本目の経路（前は X-Plane の RTE 2 ページ）。RTE・LEGS・DEP/ARR に RTE 2 のページ、<RTE 2・<RTE 1 の行き来、RTE COPY（RTE 1 ページ目の 5L と DIRECT TO の修正の 5R）、もう一つの経路の ACTIVATE と EXEC でアクティブな経路が替わる（FCOM p.1287–1300、p.1334）。RTE ページの 1 ページ目の破線は 8 行目、2 ページ目以降は 6L の上（FCOM の図）。
-- 実機に合わせた点（段 7e3b）：FIX キーは FMC 自身の FIX INFO（2 ページ。前は X-Plane の FIX ページ）。FIX の方位線（512 nm まで）と距離の円がアクティブな経路と交わる点の距離・方位と DTG、<ABEAM、その place/bearing/distance を RTE・LEGS に写して入れる（FCOM p.1358–1359）。ETA・ALT と PRED ETA-ALT の距離は予測（段 8）まで空白。ND に FIX の円と線を描かない。
+- 実機に合わせた点（段 7e3b）：FIX キーは FMC 自身の FIX INFO（2 ページ。前は X-Plane の FIX ページ）。FIX の方位線（512 nm まで）と距離の円がアクティブな経路と交わる点の距離・方位と DTG、<ABEAM、その place/bearing/distance を RTE・LEGS に写して入れる（FCOM p.1358–1359）。2026-11-04 から：交点の ETA と予測の高度、PRED ETA-ALT の経路に沿った距離（予測の点を直線でつないだ形から：推定）。ND に FIX を緑の小円の記号と名前で、方位を放射線、距離を円（緑の破線）で、PRED ETA-ALT の点を緑の profile の円と入れた値で描く（FCOM p.1149–1150；FMSPG p.166–169）。OFFPATH DES のページ（DES TO、DTG、SPD/ALT、CLEAN・DRAG CIRCLE、DISPLAY SELECT ON/OFF）と ND のエネルギー管理の円（clean は青、drag は白：FCOM p.1150、p.1398–1399；FMSPG p.190–194）。前は DES のページの OFFPATH DES は文字だけで押しても何も起きず、ND に FIX の円と線を描かなかった。推定：速度ブレーキ全開の降下は抵抗を 1.58 倍（FCTM p.138–139 の降下率の比）、OFFPATH の降下の風は予測の降下の向かい風、放射線の長さ 512 NM（notes/ATA-34-61-FMC.md §143）。
 - 実機に合わせた点（段 7e3a）：RTE と LEGS で緯度経度（N47W008、N4715.4W00803.4）、place/bearing/distance（SEA330/10）、place bearing/place bearing（SEA240/OLM320）の点を入れられる（前は航法データの点だけ）。名前は N47W008・SEA01（FCOM p.1245、p.1250）。方位の偏差は最寄りの VOR の値（推定）。
 - 実機に合わせた点（段 7e2）：LEGS の各点の見出しの距離は 14 桁目で終わる（前は 17 桁目で、右の制限の列に入っていた）。DIRECT TO の修正の 4R に ABEAM PTS>、押すと SELECTED（FCOM p.1333–1334）。
 - 実機に合わせた点（段 7e1）：INIT/REF INDEX の NAV DATA> は FMC 自身の REF NAV DATA（前は X-Plane の DATABASE ページ）。IDENT にウェイポイント・航法施設・空港・目的地の滑走路を入れると FREQ・緯度と経度・MAG VAR か LENGTH・ELEVATION を出し、NAVAID INHIBIT・VOR ONLY INHIBIT・VOR/DME NAV の入力を持つ（FCOM p.1355–1357）。抑止は段 10a から FMC の DME-DME・VOR/DME の更新に効き、段 10d から flight complete で消える。滑走路の長さは閾値の間から（推定）。緯度と経度の表示は分の 1/10 に四捨五入（前は切り捨て）。

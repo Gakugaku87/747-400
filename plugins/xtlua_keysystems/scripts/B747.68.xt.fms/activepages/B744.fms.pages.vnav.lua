@@ -508,7 +508,10 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["L3"]={"setdata","destrans"}
       fmsFunctionsDefs["VNAV"]["L4"]={"setdata","desrest"}
       fmsFunctionsDefs["VNAV"]["L5"]=fmsModules["data"]["desspdmode"]=="S" and {"vnavspd","des"} or nil
-      fmsFunctionsDefs["VNAV"]["L6"]=nil
+      -- (2026-11-04) <OFFPATH DES: the OFFPATH DES page (FCOM p.1398;
+      -- before, the prompt's text without a page); <ERASE over it with a
+      -- modification (vnav_6l)
+      fmsFunctionsDefs["VNAV"]["L6"]={"setpage","OFFPATH"}
       fmsFunctionsDefs["VNAV"]["R1"]=nil
       fmsFunctionsDefs["VNAV"]["R3"]=nil
       -- FORECAST> (FCOM p.1393; step 8e2): the DESCENT FORECAST page
@@ -558,7 +561,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       "------------------------",
       lr(mode=="S" and "<ECON" or "", "FORECAST>"),
       "                        ",
-      lr(vnav_6l("OFFPATH DES"), vnav_6r(3))
+      lr(vnav_6l("<OFFPATH DES"), vnav_6r(3))
       
 
       }

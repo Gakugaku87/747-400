@@ -1254,8 +1254,30 @@ function B747_fms_utc_min() return hh * 60 + mm + ss / 60 end
 -- after the climb's (the SID's); none, no descent (ATA34_2 p.611)
 dofile("B747.68.pred_model.lua")
 local predNext, predResult = 0, nil
+-- (FIX INFO, 2026-11-04) the predictions' profile along the route
+-- (B747_pred_model.profile) and the legs it was made on
+local predProfile, predLegs, predInput = nil, nil, nil
 function B747_fms_preds() return predResult end
+-- (OFFPATH DES, 2026-11-04) the last predictions' input (B747_fms_pred_input:
+-- the performance database, the DES page's speeds, the weight), nil without
+-- predictions
+function B747_fms_pred_input_last() return predInput end
 function B747_fms_preds_now() predNext = 0 end
+-- the predicted altitude (ft) and time (s from now) x NM along the route,
+-- nil without predictions or past their end
+function B747_fms_pred_at(x)
+  if not predProfile then return nil end
+  return B747_pred_model.profile_at(predProfile, x)
+end
+-- where (NM along the route) the predictions reach an altitude, or a time
+-- (s from now), nil if they do not
+function B747_fms_pred_alt_x(h) return predProfile and B747_pred_model.profile_alt(predProfile, h) or nil end
+function B747_fms_pred_time_x(t) return predProfile and B747_pred_model.profile_time(predProfile, t) or nil end
+-- the place x NM along the predictions' legs, nil beyond them
+function B747_fms_pred_pos(x)
+  if not predLegs or not x then return nil end
+  return B747_fms_pred_point(predLegs, x)
+end
 local function pred_num(id) return tonumber(fmsModules["data"][id]) end
 -- the FMC's climb, descent and cruise speeds as the predictions and VNAV
 -- fly them (the CLB, CRZ and DES pages'); (step 9h5b) an active RTA's
@@ -1594,6 +1616,11 @@ function update_preds()
   predResult = s and B747_pred_model.predict(s) or nil
   -- (step 9h5b) RTA's speed, the predictions with it
   predResult = rta_update(s, predResult)
+  -- (FIX INFO, 2026-11-04) the profile along the route and the legs it is on;
+  -- (OFFPATH DES) the input, its descent's speeds and weight
+  predProfile = predResult and B747_pred_model.profile(predResult, s) or nil
+  predLegs = predResult and s.legs or nil
+  predInput = s
   put_profile(s, predResult)
   vnav_geo_set(s, predResult)
   predUnableNext = unable_next(s, predResult)
@@ -2667,6 +2694,80 @@ B747DR_nd_line_n=find_dataref("laminar/B747/nd/line/n")
 B747DR_nd_line_lat=find_dataref("laminar/B747/nd/line/lat")
 B747DR_nd_line_lon=find_dataref("laminar/B747/nd/line/lon")
 B747DR_nd_line_pen=find_dataref("laminar/B747/nd/line/pen")
+-- (2026-11-04) FIX INFO's and OFFPATH DES's shapes on the ND (FCOM
+-- p.1149-1150, p.1358-1359, p.1398-1399; FMSPG p.166-169): the bearings'
+-- radial lines from the fix (green dashes, RADIAL_NM long: estimate, as far
+-- as FIX INFO looks for their crossings) into the line's points; the
+-- distances' circles round the fix and the energy management circles as
+-- centres and radii for the FMS bridge plugin; the fixes (the ND module
+-- draws them in a small green circle with their identifiers) and PRED
+-- ETA-ALT's points (a green profile circle with the entered time or
+-- altitude) for the ND module, the texts as character codes
+B747DR_nd_circle_n=find_dataref("laminar/B747/nd/circle/n")
+B747DR_nd_circle_lat=find_dataref("laminar/B747/nd/circle/lat")
+B747DR_nd_circle_lon=find_dataref("laminar/B747/nd/circle/lon")
+B747DR_nd_circle_radius=find_dataref("laminar/B747/nd/circle/radius")
+B747DR_nd_circle_pen=find_dataref("laminar/B747/nd/circle/pen")
+B747DR_fms_fix_show=find_dataref("laminar/B747/fms/fix/show")
+B747DR_fms_fix_lat=find_dataref("laminar/B747/fms/fix/lat")
+B747DR_fms_fix_lon=find_dataref("laminar/B747/fms/fix/lon")
+B747DR_fms_fix_ident=find_dataref("laminar/B747/fms/fix/ident")
+B747DR_fms_fix_pred_show=find_dataref("laminar/B747/fms/fix/pred_show")
+B747DR_fms_fix_pred_lat=find_dataref("laminar/B747/fms/fix/pred_lat")
+B747DR_fms_fix_pred_lon=find_dataref("laminar/B747/fms/fix/pred_lon")
+B747DR_fms_fix_pred_text=find_dataref("laminar/B747/fms/fix/pred_text")
+do
+local RADIAL_NM=512
+local function put_if(ref,k,v) if ref[k]~=v then ref[k]=v end end
+local function put_text(ref,base,s)
+  for c=0,4 do put_if(ref,base+c,string.byte(s or "",c+1) or 0) end
+end
+function B747_fmc_nd_fixes(pts)
+  local D=B747_nd_line_model
+  local fx=B747_fms_fix_nd and B747_fms_fix_nd() or {}
+  local circles={}
+  for p=1,2 do
+    local o=fx[p] or {radials={},circles={}}
+    local f=o.fix
+    if f then
+      for _,b in ipairs(o.radials) do
+        if #pts+2<=D.MAXP then
+          local e=B747_route_model.course_point(f,b,RADIAL_NM)
+          pts[#pts+1]={lat=f.lat,lon=f.lon,pen=D.FIX}
+          pts[#pts+1]={lat=e.lat,lon=e.lon,pen=0}
+        end
+      end
+      for _,r in ipairs(o.circles) do circles[#circles+1]={lat=f.lat,lon=f.lon,r=r,pen=D.FIX} end
+    end
+    put_if(B747DR_fms_fix_show,p-1,f and 1 or 0)
+    if f then
+      put_if(B747DR_fms_fix_lat,p-1,f.lat)
+      put_if(B747DR_fms_fix_lon,p-1,f.lon)
+      put_text(B747DR_fms_fix_ident,(p-1)*5,f.ident)
+    end
+    local q=o.pred
+    put_if(B747DR_fms_fix_pred_show,p-1,q and 1 or 0)
+    if q then
+      put_if(B747DR_fms_fix_pred_lat,p-1,q.lat)
+      put_if(B747DR_fms_fix_pred_lon,p-1,q.lon)
+      put_text(B747DR_fms_fix_pred_text,(p-1)*5,q.text)
+    end
+  end
+  -- OFFPATH DES's energy management circles
+  if B747_fms_offpath_nd then
+    for _,c in ipairs(B747_fms_offpath_nd()) do circles[#circles+1]=c end
+  end
+  local n=math.min(#circles,D.MAXC)
+  for k=1,n do
+    local c=circles[k]
+    put_if(B747DR_nd_circle_lat,k-1,c.lat)
+    put_if(B747DR_nd_circle_lon,k-1,c.lon)
+    put_if(B747DR_nd_circle_radius,k-1,c.r)
+    put_if(B747DR_nd_circle_pen,k-1,c.pen)
+  end
+  if B747DR_nd_circle_n~=n then B747DR_nd_circle_n=n end
+end
+end
 do
 local ND_LINE_S=1
 local ndLineT=-100
@@ -2709,6 +2810,9 @@ function B747_fmc_nd_line()
     o.style,o.prev,o.shape,o.shown=D.MOD,nil,P.shape(mp,HOLD_SYMBOL_KT),shown_in(m.legs)
     D.route(mp,o,pts)
   end
+  -- (2026-11-04) FIX INFO's radial lines; the circles, the fixes and the
+  -- PRED points
+  B747_fmc_nd_fixes(pts)
   -- (step 6d4) the other route (B747_fmc_route2: never the active one),
   -- under these (its points first, as many as they leave); its turns at
   -- the speed now (no predictions of its own), in the air from its first

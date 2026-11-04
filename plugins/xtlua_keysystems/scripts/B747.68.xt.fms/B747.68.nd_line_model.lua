@@ -45,8 +45,14 @@ B747_nd_line_model = M
 -- the pieces' styles (the plugin's colours and dashes: FCOM p.1148; step
 -- 6d4: ACTIVATING, FCOM p.1251)
 M.ACTIVE, M.MOD, M.INACTIVE, M.OFFSET, M.ACTIVATING = 1, 2, 3, 4, 5
+-- (2026-11-04) FIX INFO's radial lines and distance circles (green
+-- dashes), OFFPATH DES's clean (blue dashes) and drag (white dashes)
+-- energy management circles (FCOM p.1150)
+M.FIX, M.CLEAN, M.DRAG = 6, 7, 8
 -- the points the datarefs hold (laminar/B747/nd/line/*)
 M.MAXP = 600
+-- the circles (laminar/B747/nd/circle/*: a centre, a radius, a style)
+M.MAXC = 8
 -- a turn's or an arc's points every TURN_STEP degrees (estimate: smooth at
 -- the 10 NM range)
 M.TURN_STEP = 5

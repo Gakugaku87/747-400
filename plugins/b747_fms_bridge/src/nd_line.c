@@ -15,7 +15,14 @@
  *       modification (white, short dashes), 3 an inactive route (cyan, long
  *       dashes), 4 the lateral offset's path (magenta, short dashes), 5
  *       an activated route not yet executed (step 6d4, FCOM p.1251: cyan
- *       and white dashes in turn)
+ *       and white dashes in turn), 6 (2026-11-04) FIX INFO's radial lines
+ *       (green dashes: FCOM p.1150)
+ *   laminar/B747/nd/circle/n, lat, lon, radius, pen   (2026-11-04) the
+ *       FMS module's circles (at most 8; the radius in NM): 6 FIX INFO's
+ *       distances (green dashes, PLAN too), 7 OFFPATH DES's clean energy
+ *       management circle (blue: the ND's cyan, long dashes), 8 its drag
+ *       circle (white, long dashes), the energy circles in MAP and MAP CTR
+ *       only (FCOM p.1150)
  *   laminar/B747/nd/line/view   each ND's map (the ND module, as it places
  *       the route's symbols): the view (0 none, 1 MAP, 2 MAP CTR, 3 PLAN),
  *       the centre's latitude and longitude, the true direction up, pixels
@@ -82,12 +89,25 @@ static const int ndl_rheostat[2] = {2, 3};
 /* the styles' colours and dashes (pixels: a dash, a gap; 0 continuous);
    ACTIVATING's dashes cyan and white in turn (its first cyan; the dashes'
    length: estimate) */
-#define NDL_STYLES 6
+#define NDL_STYLES 9
 #define NDL_ACTIVATING 5
+/* (2026-11-04) 6 FIX INFO's radial lines and distance circles (green
+   dashes), 7 OFFPATH DES's clean energy management circle (blue: the
+   ND's cyan, long dashes), 8 its drag circle (white, long dashes): FCOM
+   p.1150 (the dashes' lengths: estimate) */
 static const float ndl_rgb[NDL_STYLES][3] = {
     {0.0f, 0.0f, 0.0f}, {1.0f, 0.42f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.85f, 1.0f}, {1.0f, 0.42f, 1.0f},
-    {0.0f, 0.85f, 1.0f}};
-static const float ndl_dash[NDL_STYLES][2] = {{0, 0}, {0, 0}, {12, 10}, {24, 12}, {12, 10}, {12, 6}};
+    {0.0f, 0.85f, 1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.85f, 1.0f}, {1.0f, 1.0f, 1.0f}};
+static const float ndl_dash[NDL_STYLES][2] = {{0, 0}, {0, 0}, {12, 10}, {24, 12}, {12, 10}, {12, 6}, {10, 8},
+    {24, 12}, {24, 12}};
+/* the circles (laminar/B747/nd/circle/n, lat, lon, radius (NM), pen: the
+   FMS module's), each drawn as NDL_CIRCLE_N pieces of its great circles
+   from the centre */
+#define NDL_MAXC 8
+#define NDL_CIRCLE_N 72
+static XPLMDataRef ndl_cn_ref, ndl_clat_ref, ndl_clon_ref, ndl_cr_ref, ndl_cpen_ref;
+static float ndl_clat[NDL_MAXC], ndl_clon[NDL_MAXC], ndl_cr[NDL_MAXC], ndl_cpen[NDL_MAXC];
+static int ndl_cn = 0;
 /* the side being drawn: its brightness, its colours (not the test's) */
 static float ndl_cur_bright = 1.0f;
 static int ndl_cur_colours = 1;
@@ -131,6 +151,11 @@ static int ndl_found(void)
     if (!ndl_pnl_ref[1]) ndl_pnl_ref[1] = XPLMFindDataRef("sim/graphics/view/panel_total_pnl_b");
     if (!ndl_ctr_ref[0]) ndl_ctr_ref[0] = XPLMFindDataRef("laminar/B747/nd/map_center/capt");
     if (!ndl_ctr_ref[1]) ndl_ctr_ref[1] = XPLMFindDataRef("laminar/B747/nd/map_center/fo");
+    if (!ndl_cn_ref) ndl_cn_ref = XPLMFindDataRef("laminar/B747/nd/circle/n");
+    if (!ndl_clat_ref) ndl_clat_ref = XPLMFindDataRef("laminar/B747/nd/circle/lat");
+    if (!ndl_clon_ref) ndl_clon_ref = XPLMFindDataRef("laminar/B747/nd/circle/lon");
+    if (!ndl_cr_ref) ndl_cr_ref = XPLMFindDataRef("laminar/B747/nd/circle/radius");
+    if (!ndl_cpen_ref) ndl_cpen_ref = XPLMFindDataRef("laminar/B747/nd/circle/pen");
     if (!ndl_plat_ref) {
         ndl_plat_ref = XPLMFindDataRef("sim/flightmodel/position/latitude");
         ndl_plon_ref = XPLMFindDataRef("sim/flightmodel/position/longitude");
@@ -254,6 +279,43 @@ static void ndl_segment(int view, int style, float ax, float ay, float bx, float
     }
 }
 
+/* the point d NM from (lat, lon) on the true course crs (degrees) */
+static void ndl_course_point(double lat, double lon, double crs, double d, double *la, double *lo)
+{
+    double p1 = lat * NDL_D2R, l1 = lon * NDL_D2R, t = crs * NDL_D2R, a = d / NDL_EARTH_NM;
+    double p2 = asin(sin(p1) * cos(a) + cos(p1) * sin(a) * cos(t));
+    double l2 = l1 + atan2(sin(t) * sin(a) * cos(p1), cos(a) - sin(p1) * sin(p2));
+    *la = p2 / NDL_D2R;
+    *lo = fmod(l2 / NDL_D2R + 540.0, 360.0) - 180.0;
+}
+
+/* (2026-11-04) the circles of the map's side (inside GL_QUADS) */
+static void ndl_circles(const float *v, int view, float ox, float oy, float bright)
+{
+    for (int c = 0; c < ndl_cn; c++) {
+        int style = (int)(ndl_cpen[c] + 0.5f);
+        if (style < 1 || style >= NDL_STYLES || ndl_cr[c] <= 0.0f) continue;
+        /* the energy management circles in MAP and MAP CTR only (FCOM
+           p.1150; FIX INFO's in PLAN too) */
+        if (view == 3 && style != 6) continue;
+        const float *rgb = ndl_rgb[style];
+        glColor4f(rgb[0] * bright, rgb[1] * bright, rgb[2] * bright, 1.0f);
+        float px = 0.0f, py = 0.0f, s = 0.0f;
+        for (int k = 0; k <= NDL_CIRCLE_N; k++) {
+            double la, lo;
+            ndl_course_point(ndl_clat[c], ndl_clon[c], 360.0 * k / NDL_CIRCLE_N, ndl_cr[c], &la, &lo);
+            float x, y;
+            ndl_proj(v, la, lo, &x, &y);
+            if (k > 0) {
+                ndl_segment(view, style, px, py, x, y, s, ox, oy, ndl_width);
+                s += sqrtf((x - px) * (x - px) + (y - py) * (y - py));
+            }
+            px = x;
+            py = y;
+        }
+    }
+}
+
 /* PLAN's airplane symbol (FCOM p.1147: the airplane's position and track,
    white; X-Plane's map drew one): its outline nose up, pixels from the
    position (estimate: the MAP triangle's length, FCOM's figure's shape) */
@@ -338,6 +400,8 @@ static void ndl_side(int side, int n, float bright)
             py = by;
         }
     }
+    /* (2026-11-04) the circles */
+    ndl_circles(v, view, ox, oy, bright);
     glEnd();
 }
 
@@ -358,6 +422,18 @@ static int ndl_draw(XPLMDrawingPhase phase, int before, void *ref)
         XPLMGetDatavf(ndl_pen_ref, ndl_pen, 0, n);
     }
     XPLMGetDatavf(ndl_view_ref, ndl_view, 0, 10);
+    ndl_cn = 0;
+    if (ndl_cn_ref && ndl_clat_ref && ndl_clon_ref && ndl_cr_ref && ndl_cpen_ref) {
+        ndl_cn = (int)(ndl_num(ndl_cn_ref) + 0.5);
+        if (ndl_cn < 0) ndl_cn = 0;
+        if (ndl_cn > NDL_MAXC) ndl_cn = NDL_MAXC;
+        if (ndl_cn > 0) {
+            XPLMGetDatavf(ndl_clat_ref, ndl_clat, 0, ndl_cn);
+            XPLMGetDatavf(ndl_clon_ref, ndl_clon, 0, ndl_cn);
+            XPLMGetDatavf(ndl_cr_ref, ndl_cr, 0, ndl_cn);
+            XPLMGetDatavf(ndl_cpen_ref, ndl_cpen, 0, ndl_cn);
+        }
+    }
     XPLMSetGraphicsState(0, 0, 0, 0, 1, 0, 0);
     for (int side = 0; side < 2; side++) {
         if (ndl_power_ref) {
