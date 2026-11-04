@@ -220,6 +220,8 @@ B747DR_ap_lnav_state                = find_dataref("laminar/B747/autopilot/lnav_
 B747DR_ap_vnav_state                = find_dataref("laminar/B747/autopilot/vnav_state")
 B747DR_button_switch_position       = find_dataref("laminar/B747/button_switch/position")
 B747DR_toggle_switch_position       = find_dataref("laminar/B747/toggle_switch/position")
+-- (2026-11-04) the EECs in the alternate mode, also by themselves (the EEC model)
+B747DR_light_eec_altn               = find_dataref("laminar/B747/engines/eec/altn_light")
 B747DR_engine_TOGA_mode             = find_dataref("laminar/B747/engines/TOGA_mode")
 B747DR_elec_ext_pwr1_available      = find_dataref("laminar/B747/electrical/ext_pwr1_avail")
 B747DR_elec_ext_pwr2_available      = find_dataref("laminar/B747/electrical/ext_pwr2_avail")
@@ -1055,10 +1057,12 @@ function B747_annunciators()
     ----- OVERHEAD PANEL -----
 
     -- ELECTRONIC ENGING CONTROL
-    annun.b.el_eng_ctrl_01 = B747_ternary((B747DR_button_switch_position[7] < 0.5), 1, 0)
-    annun.b.el_eng_ctrl_02 = B747_ternary((B747DR_button_switch_position[8] < 0.5), 1, 0)
-    annun.b.el_eng_ctrl_03 = B747_ternary((B747DR_button_switch_position[9] < 0.5), 1, 0)
-    annun.b.el_eng_ctrl_04 = B747_ternary((B747DR_button_switch_position[10] < 0.5), 1, 0)
+    -- the ALTN lights: the switch at ALTN or (2026-11-04) the EEC reverted by
+    -- itself (FCOM p.865; ATA70_80 p.202-203, p.245)
+    annun.b.el_eng_ctrl_01 = B747_ternary((B747DR_button_switch_position[7] < 0.5 or B747DR_light_eec_altn[0] > 0.5), 1, 0)
+    annun.b.el_eng_ctrl_02 = B747_ternary((B747DR_button_switch_position[8] < 0.5 or B747DR_light_eec_altn[1] > 0.5), 1, 0)
+    annun.b.el_eng_ctrl_03 = B747_ternary((B747DR_button_switch_position[9] < 0.5 or B747DR_light_eec_altn[2] > 0.5), 1, 0)
+    annun.b.el_eng_ctrl_04 = B747_ternary((B747DR_button_switch_position[10] < 0.5 or B747DR_light_eec_altn[3] > 0.5), 1, 0)
 
     -- ELECTRICAL PANEL (P5): the electrical model computes the lights
     -- (B747.03.xt.elec_buses.lua; FCOM p.781-786) and the EXT/APU ON states

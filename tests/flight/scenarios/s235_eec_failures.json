@@ -1,0 +1,60 @@
+{
+  "name": "s235_eec_failures",
+  "description": "EEC の故障の入力（2026-11-04、故障の窓の F0：notes/ATA-70-80.md §10、ENG-36）の X-Plane での確認、空中。銚子沖の 10,000 ft で開始。EEC 2 が自分で alternate に移る（soft reversion）：その時点の推力のまま（N1 が変わらない：FCOM p.876–877）、ENG 2 EEC MODE、A/T は使えない（autothrottle_fail）、ALTN 灯、空中なので >ENG 2 CONTROL は出ない（FCOM p.899）。EEC 1・3・4 の系統の故障も空中では >ENG n CONTROL・>ENG CONTROLS を出さない。上の EICAS を撮る",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 3048.0, "heading_true": 0, "speed_in_meters_per_second": 148.0 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "wait", "note": "空中開始の初期化が A/P を入れる", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 40 },
+    { "do": "sleep", "seconds": 10 },
+    { "do": "snapshot", "note": "故障の前", "drefs": [
+      "laminar/B747/engines/type", "sim/flightmodel/engine/ENGN_N1_[1]", "laminar/B747/engines/TRA[1]",
+      "laminar/B747/engines/autothrottle_active", "laminar/B747/engines/autothrottle_fail", "laminar/B747/engine/throttle[1]" ] },
+    { "do": "check", "note": "ENG 2 EEC MODE は出ていない", "dref": "laminar/B747/CAS/advisory_status[314]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "EEC 2 の自動の alternate" },
+    { "do": "remember", "dref": "laminar/B747/engines/TRA[1]", "as": "tra2" },
+    { "do": "remember", "dref": "sim/flightmodel/engine/ENGN_N1_[1]", "as": "n1_2" },
+    { "do": "set", "note": "EEC 2 が自分で alternate に移る", "dref": "laminar/B747/engines/fail/eec_altn[1]", "value": 1 },
+    { "do": "wait", "note": "ENG 2 EEC MODE（FCOM p.899）", "dref": "laminar/B747/CAS/advisory_status[314]", "op": "==", "value": 1, "timeout": 3, "cite": "FCOM p.899" },
+    { "do": "check", "note": "EEC の指令はその時点のまま（自動移行では推力は変わらない：FCOM p.877）", "dref": "laminar/B747/engines/TRA[1]", "op": "between", "value": [-0.02, 0.02], "rel": "tra2" },
+    { "do": "check", "note": "A/T は使えない（どれかの EEC が alternate：FCOM p.877）", "dref": "laminar/B747/engines/autothrottle_fail", "op": "==", "value": 1 },
+    { "do": "check", "note": "ALTN 灯", "dref": "laminar/B747/engines/eec/altn_light[1]", "op": "==", "value": 1 },
+    { "do": "check", "note": "空中：>ENG 2 CONTROL は出ない（FCOM p.899）", "dref": "laminar/B747/CAS/advisory_status[111]", "op": "==", "value": 0 },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "check", "note": "N1 も変わらない", "dref": "sim/flightmodel/engine/ENGN_N1_[1]", "op": "between", "value": [-2, 2], "rel": "n1_2" },
+    { "do": "cas", "note": "ENG 2 EEC MODE" },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "view", "note": "上の EICAS", "the": -22, "psi": 29, "fov": 30 },
+    { "do": "shot", "name": "eicas_eec_mode" },
+
+    { "do": "mark", "note": "空中の EEC の系統の故障" },
+    { "do": "set", "note": "EEC 1 の系統の故障", "dref": "laminar/B747/engines/fail/eec_fault[0]", "value": 1 },
+    { "do": "set", "note": "EEC 3 の系統の故障", "dref": "laminar/B747/engines/fail/eec_fault[2]", "value": 1 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "空中：>ENG 1 CONTROL は出ない", "dref": "laminar/B747/CAS/advisory_status[110]", "op": "==", "value": 0 },
+    { "do": "check", "note": "空中：>ENG CONTROLS は出ない（FCOM p.899）", "dref": "laminar/B747/CAS/advisory_status[323]", "op": "==", "value": 0 },
+    { "do": "set", "note": "故障を消す", "dref": "laminar/B747/engines/fail/eec_fault[0]", "value": 0 },
+    { "do": "set", "note": "故障を消す", "dref": "laminar/B747/engines/fail/eec_fault[2]", "value": 0 },
+    { "do": "set", "note": "故障を消す", "dref": "laminar/B747/engines/fail/eec_altn[1]", "value": 0 },
+    { "do": "wait", "note": "ENG 2 EEC MODE が消える", "dref": "laminar/B747/CAS/advisory_status[314]", "op": "==", "value": 0, "timeout": 3 },
+    { "do": "check", "note": "ALTN 灯が消える", "dref": "laminar/B747/engines/eec/altn_light[1]", "op": "==", "value": 0 },
+    { "do": "cas", "note": "終わり" },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" },
+    { "do": "record_stop" }
+  ]
+}

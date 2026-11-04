@@ -634,6 +634,11 @@ function M.inputs()
         reverser = {false, false, false, false},   -- the engine's reverser not stowed
         at_approach = nil,                   -- {n} engine at approach idle; nil: as selected
         altn = {false, false, false, false}, -- EEC MODE switch at ALTN
+        -- (2026-11-04) failures (notes/ATA-70-80.md §10): the EEC cannot
+        -- keep the normal mode and reverts to the alternate by itself; an
+        -- EEC system fault (degraded, without its full redundancy)
+        fail_altn = {false, false, false, false},
+        fault = {false, false, false, false},
         n1 = {0, 0, 0, 0},                   -- the engines' N1 and N2, %
         n2 = {0, 0, 0, 0},
         actual = {0, 0, 0, 0},               -- the controlled value now: N1 (GE) or EPR (P&W)
@@ -671,7 +676,8 @@ end
 
 function M.new()
     return {approach = {false, false, false, false}, hold = {0, 0, 0, 0},
-        altn = {false, false, false, false}, throttle = {}, err = {}, ref = {}}
+        altn = {false, false, false, false}, throttle = {}, err = {}, ref = {},
+        soft_top = {}}      -- (2026-11-04) the schedule an automatic reversion keeps
 end
 
 -- engine n's throttle for its target (key "GE" or "PW"; current: X-Plane's
@@ -761,8 +767,10 @@ function M.update(s, inp, dt)
     -- the alternate mode's schedule: the corner point rating, no bleed adjustments
     local altn_max = to_share * M.lookup_max(tables.ga, ga_alt) + (1 - to_share) * M.lookup_max(tables.clb, inp.alt)
     local out = {max = {}, command = {}, altn = {}, lim_prot = {}, to_share = to_share, tla_full = tla_full,
-        at_disconnect = false}
-    local altn_count = 0
+        at_disconnect = false,
+        -- (2026-11-04) the ALTN light, >ENG n CONTROL, >ENG CONTROLS
+        altn_light = {}, control_alert = {}, controls_alert = false}
+    local altn_count, manual_count, degraded = 0, 0, 0
     for n = 1, 4 do
         local nai = inp.nai[n]
         local cont = clb + adjustment(tables.clb, inp, inp.alt, nai)
@@ -771,9 +779,30 @@ function M.update(s, inp, dt)
         end
         local max = to_share * (ga + adjustment(tables.ga, inp, ga_alt, nai)) + (1 - to_share) * cont
         local tla = clamp(inp.lever[n], 0, 1) * M.TLA_STOP
-        local altn = inp.altn[n]
+        local manual = inp.altn[n]
+        local auto = inp.fail_altn[n] and not manual
+        local altn = manual or auto
         local top = max
-        if altn then top = math.max(altn_max, max) end
+        if manual then top = math.max(altn_max, max)
+        elseif auto then
+            -- (2026-11-04) the automatic (soft) reversion keeps the last
+            -- valid schedule: the thrust does not change then, and the
+            -- changes of the ambient are no longer followed (FCOM p.876-877;
+            -- ATA70_80 p.204, p.207). Selecting ALTN makes it the hard one
+            if s.soft_top[n] == nil then s.soft_top[n] = max end
+            top = s.soft_top[n]
+        end
+        if not auto then s.soft_top[n] = nil end
+        if manual then manual_count = manual_count + 1 end
+        -- the ALTN light: the alternate mode, for the GE's automatic one by
+        -- the ECU's reversionary mode contact above 50 % N2 (ATA70_80
+        -- p.202-203, p.245; the P&W's: estimate)
+        out.altn_light[n] = manual or (auto and (inp.type ~= "GE" or inp.n2[n] > 50))
+        -- >ENG n CONTROL: an EEC system fault, also the one that reverted it;
+        -- inhibited in flight (FCOM p.899)
+        local faulty = inp.fault[n] or inp.fail_altn[n]
+        out.control_alert[n] = faulty and not inp.air
+        if faulty then degraded = degraded + 1 end
         local idle = math.min(inp.idle[n], max)
         out.max[n] = max
         out.command[n] = idle + (top - idle) * clamp(tla / tla_full, 0, 1)
@@ -788,10 +817,13 @@ function M.update(s, inp, dt)
         s.altn[n] = altn
         if altn then altn_count = altn_count + 1 end
     end
-    -- the A/T can be used again: GE with all four EECs in the alternate
-    -- mode, P&W with all four back in the normal mode (FCOM p.877)
-    if inp.type == "GE" then out.at_inhibit = altn_count > 0 and altn_count < 4
+    -- the A/T can be used again: GE with all four EECs selected to the
+    -- alternate mode, P&W with all four back in the normal mode (FCOM p.877)
+    if inp.type == "GE" then out.at_inhibit = altn_count > 0 and manual_count < 4
     else out.at_inhibit = altn_count > 0 end
+    -- (2026-11-04) >ENG CONTROLS: three or four EECs degraded; inhibited in
+    -- flight (FCOM p.899)
+    out.controls_alert = degraded >= 3 and not inp.air
     overspeed(inp, out)
     idle_selection(s, inp, dt, out)
     return out

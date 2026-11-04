@@ -18,6 +18,10 @@ simDR_eec_flap_handle           = find_dataref("sim/cockpit2/controls/flap_ratio
 B747DR_eec_freighter            = find_dataref("laminar/B747/freighter")
 B747DR_eec_CAS_advisory         = find_dataref("laminar/B747/CAS/advisory_status")
 B747DR_eec_CAS_caution          = find_dataref("laminar/B747/CAS/caution_status")
+-- (2026-11-04) the failures and the ALTN lights (notes/ATA-70-80.md §10)
+B747DR_eec_fail_altn_in         = find_dataref("laminar/B747/engines/fail/eec_altn")
+B747DR_eec_fail_fault_in        = find_dataref("laminar/B747/engines/fail/eec_fault")
+B747DR_eec_altn_light_out       = find_dataref("laminar/B747/engines/eec/altn_light")
 
 -- the lever's idle end commands less than any idle, so that the thrust
 -- control always comes back to X-Plane's idle there (the previous mapping's
@@ -39,6 +43,8 @@ local FLAP_DETENTS = {0, 1, 5, 10, 20, 25, 30}
 local ADV_IDLE_DISAGREE = 223
 local ADV_LOW_IDLE = 309            -- ENG 1-4 LOW IDLE: 309-312
 local ADV_EEC_MODE = 313            -- ENG 1-4 EEC MODE: 313-316
+local ADV_ENG_CONTROL = 110         -- (2026-11-04) >ENG 1-4 CONTROL: 110-113
+local ADV_ENG_CONTROLS = 323        -- (2026-11-04) >ENG CONTROLS
 local ADV_RPM_LIM = 134             -- >ENG 1-4 RPM LIM: 134-137
 local CAUTION_LIM_PROT = 75         -- >ENG 1-4 LIM PROT: 75-78
 
@@ -86,6 +92,8 @@ function B747_eec_update()
         inp.idle[n] = idle_command(inp.type)
         inp.reverser[n] = simDR_reverser_deploy_ratio[n - 1] > 0.01
         inp.altn[n] = B747DR_button_switch_position[6 + n] < 0.5    -- EEC MODE switches: [7]-[10]
+        inp.fail_altn[n] = B747DR_eec_fail_altn_in[n - 1] > 0.5
+        inp.fault[n] = B747DR_eec_fail_fault_in[n - 1] > 0.5
         inp.n1[n] = B747DR_display_N1[n - 1]
         inp.n2[n] = rotor_n2[n]
         if inp.type == "GE" then inp.actual[n] = B747DR_display_N1[n - 1]
@@ -98,11 +106,14 @@ function B747_eec_update()
         approach = approach or eec_out.approach[n]
         B747DR_eec_CAS_advisory[ADV_LOW_IDLE + n - 1] = flag(eec_out.low_idle[n])
         B747DR_eec_CAS_advisory[ADV_EEC_MODE + n - 1] = flag(eec_out.altn[n])
+        B747DR_eec_CAS_advisory[ADV_ENG_CONTROL + n - 1] = flag(eec_out.control_alert[n])
+        B747DR_eec_altn_light_out[n - 1] = flag(eec_out.altn_light[n])
         B747DR_eec_CAS_caution[CAUTION_LIM_PROT + n - 1] = flag(eec_out.lim_prot[n])
         -- RR keeps its own (B747.40.xt.engines.lua)
         if B747DR_engineType ~= 2 then B747DR_eec_CAS_advisory[ADV_RPM_LIM + n - 1] = flag(eec_out.rpm_lim[n]) end
     end
     B747DR_eec_CAS_advisory[ADV_IDLE_DISAGREE] = flag(eec_out.idle_disagree)
+    B747DR_eec_CAS_advisory[ADV_ENG_CONTROLS] = flag(eec_out.controls_alert)
     -- the A/T: off when an EEC goes to the alternate mode and while it may
     -- not be used; EEC_status gates the A/T modes in throttle_management
     -- (the A/T model disengages the A/T on the fail: the FMC's step 9f1)
