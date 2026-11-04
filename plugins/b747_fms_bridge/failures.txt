@@ -510,6 +510,10 @@ G FLIGHT MANAGEMENT
 F laminar/B747/fms/fail[0] on FMC LEFT
 F laminar/B747/fms/fail[1] on FMC RIGHT
 
+C 35 OXYGEN
+G PASSENGER OXYGEN
+F sim/operation/failures/rel_pass_o2_on xp PASSENGER OXYGEN ON BY ITSELF
+
 C 36 PNEUMATIC
 G ENGINE 1 BLEED
 F laminar/B747/air/fail/bleed_ovht[0] on BLEED 1 OVERHEAT
@@ -630,3 +634,17 @@ F sim/operation/failures/rel_revers0 xp THRUST REVERSER 1
 F sim/operation/failures/rel_revers1 xp THRUST REVERSER 2
 F sim/operation/failures/rel_revers2 xp THRUST REVERSER 3
 F sim/operation/failures/rel_revers3 xp THRUST REVERSER 4
+G ENGINE FAILURES
+F sim/operation/failures/rel_engfla0 xp ENGINE 1 FLAMEOUT
+F sim/operation/failures/rel_engfla1 xp ENGINE 2 FLAMEOUT
+F sim/operation/failures/rel_engfla2 xp ENGINE 3 FLAMEOUT
+F sim/operation/failures/rel_engfla3 xp ENGINE 4 FLAMEOUT
+F sim/operation/failures/rel_engfai0 xp ENGINE 1 FAILURE
+F sim/operation/failures/rel_engfai1 xp ENGINE 2 FAILURE
+F sim/operation/failures/rel_engfai2 xp ENGINE 3 FAILURE
+F sim/operation/failures/rel_engfai3 xp ENGINE 4 FAILURE
+G ENGINE FUEL FILTERS
+F sim/operation/failures/rel_fuel_block0 xp ENGINE 1 FUEL FILTER CLOGGED
+F sim/operation/failures/rel_fuel_block1 xp ENGINE 2 FUEL FILTER CLOGGED
+F sim/operation/failures/rel_fuel_block2 xp ENGINE 3 FUEL FILTER CLOGGED
+F sim/operation/failures/rel_fuel_block3 xp ENGINE 4 FUEL FILTER CLOGGED
