@@ -336,13 +336,49 @@ end
 --*************************************************************************************--
 --** 				                 CUSTOM COMMANDS                			     **--
 --*************************************************************************************--
-function B747_connect_power_CMDhandler()
-    if B747DR_elec_ext_pwr1_available ==0 then
-        B747DR_elec_ext_pwr1_available = 1
-        B747DR_elec_ext_pwr2_available = 1
-    else
+-- (2026-11-04) the ground power cart from the FMC's GROUND SERVICES page
+-- (L2) or this command, without add-ons. X-Plane 12: X-Plane's own ground
+-- power truck where it can be called for (sim/ground_ops/toggle_gpu_request:
+-- its voltage then makes EXT PWR available, B747_external_power), else a
+-- cart without the truck (X-Plane's GPU voltage overridden). Connecting
+-- needs the airplane standing on the ground; the ground crew chocks the
+-- wheels first (EXT PWR needs the chocks: B747_external_power). Before, on
+-- X-Plane 12 only X-Plane's menu or an add-on could bring the voltage, and
+-- the handler toggled on each phase of the command
+simDR_elec_gpu_can_call         = find_dataref("sim/cockpit2/electrical/GPU_can_be_called_for")
+simDR_elec_gpu_generator_on     = find_dataref("sim/cockpit2/electrical/GPU_generator_on")
+simCMD_elec_gpu_request         = find_command("sim/ground_ops/toggle_gpu_request")
+B747DR_elec_ext_pwr_requested   = find_dataref("laminar/B747/electrical/ext_pwr_requested")
+local ELEC_GPU_STANDING_MS = 1          -- standing: below 1 m/s (estimate)
+local elec_gpu_truck = false            -- X-Plane's truck asked for
+function B747_connect_power_CMDhandler(phase, duration)
+    if phase ~= nil and phase ~= 0 then return end      -- once per push
+    local connected = B747DR_elec_ext_pwr1_available == 1
+    if connected or elec_gpu_truck then
+        -- removed: the truck sent away, the cart's power off
+        if simDR_version >= 120012 then
+            if elec_gpu_truck or simDR_elec_gpu_generator_on == 1 then simCMD_elec_gpu_request:once() end
+            simDR_override_gpu = 0
+            simDR_gpuvolts = 0
+        end
+        elec_gpu_truck = false
         B747DR_elec_ext_pwr1_available = 0
         B747DR_elec_ext_pwr2_available = 0
+        B747DR_elec_ext_pwr_requested = 0
+        return
+    end
+    if B747DR_elec_pseu_air == 1 or simDR_aircraft_groundspeed > ELEC_GPU_STANDING_MS then return end
+    if B747DR__gear_chocked == 0 then B747DR__gear_chocked = 1 end
+    if simDR_version < 120012 then
+        B747DR_elec_ext_pwr1_available = 1
+        B747DR_elec_ext_pwr2_available = 1
+    elseif simDR_elec_gpu_can_call == 1 then
+        simCMD_elec_gpu_request:once()      -- X-Plane's truck: EXT PWR once it is connected
+        elec_gpu_truck = true
+        B747DR_elec_ext_pwr_requested = 1
+    else
+        simDR_override_gpu = 1              -- no X-Plane ground service here: the cart alone
+        simDR_gpuvolts = 28
     end
 end
 B747CMD_connect_power          = deferred_command("laminar/B747/electrical/connect_power", "Connect external power", B747_connect_power_CMDhandler)
@@ -450,6 +486,11 @@ function B747_external_power()
 			B747DR_elec_ext_pwr1_available = 1
 	    B747DR_elec_ext_pwr2_available = 1
 		end
+    -- (2026-11-04) the truck asked for: done once it gives power, or given
+    -- up without the chocks
+    if B747DR_elec_ext_pwr_requested == 1 and (B747DR_elec_ext_pwr1_available == 1 or B747DR__gear_chocked == 0) then
+        B747DR_elec_ext_pwr_requested = 0
+    end
     -- connecting it (X-Plane's GPU on) is the electrical model's XPC
 end
 

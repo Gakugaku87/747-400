@@ -74,6 +74,8 @@ B747DR_elec_apu_inlet_door_pos      = deferred_dataref("laminar/B747/electrical/
 B747DR_elec_apu_volts      = deferred_dataref("laminar/B747/electrical/apu_volts", "number")
 B747DR_elec_ext_pwr1_available      = deferred_dataref("laminar/B747/electrical/ext_pwr1_avail", "number")
 B747DR_elec_ext_pwr2_available      = deferred_dataref("laminar/B747/electrical/ext_pwr2_avail", "number")
+-- (2026-11-04) X-Plane's ground power truck asked for, not yet connected (1)
+B747DR_elec_ext_pwr_requested       = deferred_dataref("laminar/B747/electrical/ext_pwr_requested", "number")
 B747DR_elec_apu_pwr1_available      = deferred_dataref("laminar/B747/electrical/apu_pwr1_avail", "number")
 B747DR_elec_apu_pwr2_available      = deferred_dataref("laminar/B747/electrical/apu_pwr2_avail", "number")
 B747DR_elec_ext_pwr1_on      	= deferred_dataref("laminar/B747/electrical/ext_pwr1_on", "number")
