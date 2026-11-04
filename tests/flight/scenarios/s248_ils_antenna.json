@@ -1,0 +1,71 @@
+{
+  "name": "s248_ils_antenna",
+  "description": "ILS アンテナの切替の故障（B747.34.ils_ant_model.lua、notes/ATA-34.md §22）の X-Plane での確認。成田 34L の南東 3,000 ft で空中開始（脚上げ、A/P の ALT HOLD、180 kt）。G/S の relay L と C、LOC の relay R を固着させる。脚上げのままでは何も出ない。脚を下ろすと G/S ANTENNA L と C（STATUS）、2 つで ILS ANTENNA（caution）。LOC を arm すると LOC ANTENNA R（ATA34_1 p.478）。直すと消える。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.52765, "longitude": 140.54647, "elevation_in_meters": 950, "heading_true": 329.6, "speed_in_meters_per_second": 93 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 5, "note": "空中開始の揺れ" },
+    { "do": "set", "note": "MCP 高度 3,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 3000 },
+    { "do": "set", "note": "MCP 方位 337", "dref": "laminar/B747/autopilot/heading/degrees", "value": 337 },
+    { "do": "set", "note": "MCP 速度 180 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 180 },
+    { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "note": "A/P のサーボが入る", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "cmd", "note": "ALT HOLD", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "cmd", "note": "A/T の SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "set", "note": "フラップ 10", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.5 },
+    { "do": "sleep", "seconds": 5 },
+    { "do": "check", "note": "空中（PSEU）", "dref": "laminar/B747/gear/air_ground/pri_gnd", "op": "==", "value": 0 },
+    { "do": "check", "note": "前脚は上", "dref": "laminar/B747/gear/air_ground/nose_not_down", "op": "==", "value": 1 },
+    { "do": "check", "note": "ILS ANTENNA なし", "dref": "laminar/B747/CAS/caution_status[47]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "relay の固着" },
+    { "do": "set", "note": "G/S relay L", "dref": "laminar/B747/ils/fail/gs_antenna[0]", "value": 1 },
+    { "do": "set", "note": "G/S relay C", "dref": "laminar/B747/ils/fail/gs_antenna[1]", "value": 1 },
+    { "do": "set", "note": "LOC relay R", "dref": "laminar/B747/ils/fail/loc_antenna[2]", "value": 1 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "切り替える前：何も出ない", "dref": "laminar/B747/CAS/caution_status[47]", "op": "==", "value": 0 },
+    { "do": "check", "note": "STATUS G/S ANTENNA L なし", "dref": "laminar/B747/CAS/status_status[148]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "脚を下ろす" },
+    { "do": "cmd", "note": "脚下げ", "name": "sim/flight_controls/landing_gear_down" },
+    { "do": "wait", "note": "前脚 down & locked", "dref": "laminar/B747/gear/air_ground/nose_not_down", "op": "==", "value": 0, "timeout": 40 },
+    { "do": "wait", "note": "STATUS G/S ANTENNA L", "dref": "laminar/B747/CAS/status_status[148]", "op": "==", "value": 1, "timeout": 3 },
+    { "do": "check", "note": "STATUS G/S ANTENNA C", "dref": "laminar/B747/CAS/status_status[149]", "op": "==", "value": 1 },
+    { "do": "check", "note": "R は切り替わった", "dref": "laminar/B747/CAS/status_status[150]", "op": "==", "value": 0 },
+    { "do": "check", "note": "2 つ：ILS ANTENNA（caution）", "dref": "laminar/B747/CAS/caution_status[47]", "op": "==", "value": 1 },
+
+    { "do": "mark", "note": "LOC を arm" },
+    { "do": "cmd", "note": "LOC", "name": "laminar/B747/autopilot/button_switch/loc_mode" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "snapshot", "note": "FMA", "drefs": [ "laminar/B747/autopilot/FMA/armed_roll_mode", "laminar/B747/autopilot/FMA/active_roll_mode" ] },
+    { "do": "wait", "note": "STATUS LOC ANTENNA R", "dref": "laminar/B747/CAS/status_status[153]", "op": "==", "value": 1, "timeout": 3 },
+    { "do": "check", "note": "L は切り替わった", "dref": "laminar/B747/CAS/status_status[151]", "op": "==", "value": 0 },
+    { "do": "cas", "note": "ILS ANTENNA" },
+    { "do": "view", "note": "主 EICAS", "the": -18, "psi": 29, "fov": 16 },
+    { "do": "shot", "name": "eicas_ils_antenna" },
+
+    { "do": "mark", "note": "直す" },
+    { "do": "set", "note": "G/S relay L", "dref": "laminar/B747/ils/fail/gs_antenna[0]", "value": 0 },
+    { "do": "set", "note": "G/S relay C", "dref": "laminar/B747/ils/fail/gs_antenna[1]", "value": 0 },
+    { "do": "set", "note": "LOC relay R", "dref": "laminar/B747/ils/fail/loc_antenna[2]", "value": 0 },
+    { "do": "wait", "note": "ILS ANTENNA が消える", "dref": "laminar/B747/CAS/caution_status[47]", "op": "==", "value": 0, "timeout": 3 },
+    { "do": "check", "note": "STATUS も", "dref": "laminar/B747/CAS/status_status[153]", "op": "==", "value": 0 },
+    { "do": "record_stop" }
+  ]
+}

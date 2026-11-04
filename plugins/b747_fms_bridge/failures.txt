@@ -59,6 +59,12 @@ G PRESSURIZATION
 F laminar/B747/air/fail/cpc[0] on CABIN PRESSURE CONTROLLER A
 F laminar/B747/air/fail/cpc[1] on CABIN PRESSURE CONTROLLER B
 F sim/operation/failures/rel_depres_fast xp RAPID DECOMPRESSION
+F laminar/B747/air/fail/outflow_auto[0] on OUTFLOW VALVE L AUTO DRIVE
+F laminar/B747/air/fail/outflow_auto[1] on OUTFLOW VALVE R AUTO DRIVE
+F laminar/B747/air/fail/relief_open[0] on UPPER RELIEF VALVE STUCK OPEN
+F laminar/B747/air/fail/relief_open[1] on LOWER RELIEF VALVE STUCK OPEN
+G HUMIDIFIER
+F laminar/B747/air/fail/humidifier on FLIGHT DECK HUMIDIFIER (P&W, RR)
 
 C 24 ELECTRICAL
 G GENERATORS
@@ -174,6 +180,16 @@ F laminar/B747/fire/fail/loop_b[9] on LOOP B CARGO 1
 F laminar/B747/fire/fail/loop_b[10] on LOOP B CARGO 2
 F laminar/B747/fire/fail/loop_b[11] on LOOP B CARGO 3
 F laminar/B747/fire/fail/loop_b[12] on LOOP B CARGO 4
+G BOTTLES LEAKING
+F laminar/B747/fire/fail/bottle_leak[0] on LEFT ENGINE BOTTLE A LEAK
+F laminar/B747/fire/fail/bottle_leak[1] on LEFT ENGINE BOTTLE B LEAK
+F laminar/B747/fire/fail/bottle_leak[2] on RIGHT ENGINE BOTTLE A LEAK
+F laminar/B747/fire/fail/bottle_leak[3] on RIGHT ENGINE BOTTLE B LEAK
+F laminar/B747/fire/fail/bottle_leak[4] on APU BOTTLE LEAK
+F laminar/B747/fire/fail/bottle_leak[5] on CARGO BOTTLE A LEAK
+F laminar/B747/fire/fail/bottle_leak[6] on CARGO BOTTLE B LEAK
+F laminar/B747/fire/fail/bottle_leak[7] on CARGO BOTTLE C LEAK
+F laminar/B747/fire/fail/bottle_leak[8] on CARGO BOTTLE D LEAK
 
 C 27 FLIGHT CONTROLS
 G FLAP CONTROL
@@ -221,6 +237,9 @@ F laminar/B747/flt_ctrls/fail/yaw_damper[0] on YAW DAMPER UPPER
 F laminar/B747/flt_ctrls/fail/yaw_damper[1] on YAW DAMPER LOWER
 F laminar/B747/flt_ctrls/fail/lockout_actuator on OUTBD AILERON LOCKOUT ACTUATOR
 F laminar/B747/flt_ctrls/fail/auto_speedbrake on AUTO SPEEDBRAKE ACTUATOR
+G STABILIZER GREENBAND
+F laminar/B747/flt_ctrls/fail/greenband_switch 1 NOSE GEAR PRESS SWITCH READS FWD CG
+F laminar/B747/flt_ctrls/fail/greenband_switch 2 NOSE GEAR PRESS SWITCH READS AFT CG
 
 C 28 FUEL
 G MAIN TANK PUMPS
@@ -331,6 +350,11 @@ F laminar/B747/hydraulics/fail/leak[0] on SYSTEM 1 LEAK
 F laminar/B747/hydraulics/fail/leak[1] on SYSTEM 2 LEAK
 F laminar/B747/hydraulics/fail/leak[2] on SYSTEM 3 LEAK
 F laminar/B747/hydraulics/fail/leak[3] on SYSTEM 4 LEAK
+G OVERHEAT
+F laminar/B747/hydraulics/fail/overheat[0] on SYSTEM 1 FLUID OVERHEAT
+F laminar/B747/hydraulics/fail/overheat[1] on SYSTEM 2 FLUID OVERHEAT
+F laminar/B747/hydraulics/fail/overheat[2] on SYSTEM 3 FLUID OVERHEAT
+F laminar/B747/hydraulics/fail/overheat[3] on SYSTEM 4 FLUID OVERHEAT
 
 D
 L 125 100 125 140
@@ -423,6 +447,8 @@ F laminar/B747/eiu/fail[2] on EIU RIGHT
 F laminar/B747/efis/fail[0] on EFIS CONTROL PANEL LEFT
 F laminar/B747/efis/fail[1] on EFIS CONTROL PANEL RIGHT
 F laminar/B747/dsp/fail on EICAS DISPLAY SELECT PANEL
+G CONFIGURATION WARNING
+F laminar/B747/flt_ctrls/fail/config_warn on CONFIG WARNING CARD (MAWEA)
 
 C 32 LANDING GEAR
 G GEAR ACTUATION
@@ -509,10 +535,20 @@ F laminar/B747/wxr/fail[2] on WEATHER RADAR CALIBRATION (WEAK)
 G FLIGHT MANAGEMENT
 F laminar/B747/fms/fail[0] on FMC LEFT
 F laminar/B747/fms/fail[1] on FMC RIGHT
+G ILS ANTENNA RELAYS (STUCK)
+F laminar/B747/ils/fail/loc_antenna[0] on LOC ANTENNA RELAY L
+F laminar/B747/ils/fail/loc_antenna[1] on LOC ANTENNA RELAY C
+F laminar/B747/ils/fail/loc_antenna[2] on LOC ANTENNA RELAY R
+F laminar/B747/ils/fail/gs_antenna[0] on G/S ANTENNA RELAY L
+F laminar/B747/ils/fail/gs_antenna[1] on G/S ANTENNA RELAY C
+F laminar/B747/ils/fail/gs_antenna[2] on G/S ANTENNA RELAY R
 
 C 35 OXYGEN
 G PASSENGER OXYGEN
 F sim/operation/failures/rel_pass_o2_on xp PASSENGER OXYGEN ON BY ITSELF
+G CYLINDERS
+F laminar/B747/oxygen/fail/crew_leak on CREW OXYGEN CYLINDER LEAK
+F laminar/B747/oxygen/fail/pass_leak on PASSENGER OXYGEN CYLINDERS LEAK
 
 C 36 PNEUMATIC
 G ENGINE 1 BLEED
@@ -605,6 +641,7 @@ C 49 APU
 G APU
 F laminar/B747/apu/fail/limit on APU LIMIT EXCEEDED (SHUTDOWN)
 F laminar/B747/apu/fail/duct_leak on APU BLEED DUCT LEAK
+F laminar/B747/apu/fail/door on APU INLET DOOR JAMMED
 
 C 70-80 ENGINES
 G ENGINE CONTROL (EEC)
@@ -648,3 +685,26 @@ F sim/operation/failures/rel_fuel_block0 xp ENGINE 1 FUEL FILTER CLOGGED
 F sim/operation/failures/rel_fuel_block1 xp ENGINE 2 FUEL FILTER CLOGGED
 F sim/operation/failures/rel_fuel_block2 xp ENGINE 3 FUEL FILTER CLOGGED
 F sim/operation/failures/rel_fuel_block3 xp ENGINE 4 FUEL FILTER CLOGGED
+G OIL TEMPERATURE
+F laminar/B747/engines/fail/oil_temp[0] on ENGINE 1 OIL OVERHEAT
+F laminar/B747/engines/fail/oil_temp[1] on ENGINE 2 OIL OVERHEAT
+F laminar/B747/engines/fail/oil_temp[2] on ENGINE 3 OIL OVERHEAT
+F laminar/B747/engines/fail/oil_temp[3] on ENGINE 4 OIL OVERHEAT
+G IDLE SELECTION (MESSAGES ONLY)
+F laminar/B747/engines/fail/idle_min[0] on ENGINE 1 STAYS AT MINIMUM IDLE
+F laminar/B747/engines/fail/idle_min[1] on ENGINE 2 STAYS AT MINIMUM IDLE
+F laminar/B747/engines/fail/idle_min[2] on ENGINE 3 STAYS AT MINIMUM IDLE
+F laminar/B747/engines/fail/idle_min[3] on ENGINE 4 STAYS AT MINIMUM IDLE
+F laminar/B747/engines/fail/idle_approach[0] on ENGINE 1 STAYS AT APPROACH IDLE
+F laminar/B747/engines/fail/idle_approach[1] on ENGINE 2 STAYS AT APPROACH IDLE
+F laminar/B747/engines/fail/idle_approach[2] on ENGINE 3 STAYS AT APPROACH IDLE
+F laminar/B747/engines/fail/idle_approach[3] on ENGINE 4 STAYS AT APPROACH IDLE
+G START VALVES
+F laminar/B747/air/fail/start_valve_open[0] on START VALVE 1 FAILED OPEN
+F laminar/B747/air/fail/start_valve_open[1] on START VALVE 2 FAILED OPEN
+F laminar/B747/air/fail/start_valve_open[2] on START VALVE 3 FAILED OPEN
+F laminar/B747/air/fail/start_valve_open[3] on START VALVE 4 FAILED OPEN
+F laminar/B747/air/fail/start_valve_closed[0] on START VALVE 1 FAILED CLOSED
+F laminar/B747/air/fail/start_valve_closed[1] on START VALVE 2 FAILED CLOSED
+F laminar/B747/air/fail/start_valve_closed[2] on START VALVE 3 FAILED CLOSED
+F laminar/B747/air/fail/start_valve_closed[3] on START VALVE 4 FAILED CLOSED
