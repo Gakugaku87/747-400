@@ -661,4 +661,13 @@ rt:set("laminar/B747/flt_ctrls/fail/yaw_damper", 0, 0)
 frames(0.2)
 T.check(get(YDM, 0) == 3 and get(YD_UPR) == 1, "YD: a short fault: autorecovery, the fade-in")
 
+
+-- (2026-11-04) the overheat failure (notes/ATA-29.md §11): system 2's
+-- fluid past 104 °C: HYD OVHT SYS 2 (advisory 203), SYS FAULT 2
+rt:set(FAIL .. "overheat", 1, 1)
+frames(100)
+T.equal(get(ADVISORY, 203), 1, "fail overheat 2: HYD OVHT SYS 2")
+T.equal(get(HYD .. "light/sys_fault", 1), 1, "fail overheat 2: SYS FAULT 2")
+T.equal(get(ADVISORY, 202), 0, "fail overheat 2: not HYD OVHT SYS 1")
+rt:set(FAIL .. "overheat", 1, 0)
 T.done()
