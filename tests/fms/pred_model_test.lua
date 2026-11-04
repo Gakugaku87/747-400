@@ -288,4 +288,32 @@ local rce = PM.predict{P = P, t = pw, gw = 280000, fuel = 60000, alt = 10000, ph
     des = des, crzspd = {mach = .74}, legs = long, eo = 1}
 T.check(rce.tc > rca.tc * 1.3, string.format("the engine-out climb to FL250: T/C %.0f NM (all engines %.0f)", rce.tc, rca.tc))
 
+-- (FIX INFO, 2026-11-04) the profile along the route: the present position,
+-- the T/C at CRZ ALT, the waypoints, the T/D at the cruise's; the altitude
+-- and time at a distance, where an altitude or a time is reached
+local pr = {pts = {{x = 50, h = 20000, t = 600}, {x = 300, h = 35000, t = 2700}, {x = 500, h = 12000, t = 4500}},
+    tc = 120, tc_t = 1200, td = 380, td_t = 3300, crz = 35000, sc = {}}
+local prof = PM.profile(pr, {alt = 5000, crz = 35000})
+T.equal(#prof, 6, "the profile: start, 3 waypoints, T/C, T/D")
+T.equal(prof[1].x, 0, "it starts at the present position")
+T.equal(prof[3].x, 120, "the T/C in its place")
+local h, t = PM.profile_at(prof, 85)
+T.near(h, 20000 + (35000 - 20000) * 35 / 70, 1e-6, "the altitude between a waypoint and the T/C")
+T.near(t, 600 + 600 * 35 / 70, 1e-6, "the time there")
+T.check(PM.profile_at(prof, 600) == nil, "past the end: nil")
+local xa = PM.profile_alt(prof, 20000)
+T.near(xa, 50, 1e-6, "FL200 reached at the first waypoint (climbing)")
+local xd = PM.profile_alt(prof, 25000)
+T.check(xd and xd < 120, ("25,000 ft: the first crossing, in the climb (%.1f)"):format(xd or -1))
+T.near(PM.profile_alt({{x = 0, h = 35000, t = 0}, {x = 100, h = 35000, t = 900}, {x = 200, h = 15000, t = 2100}}, 25000), 150, 1e-6,
+    "a descent's crossing")
+T.check(PM.profile_alt(prof, 40000) == nil, "an altitude never reached: nil")
+T.near(PM.profile_time(prof, 1200), 120, 1e-6, "20 minutes ahead: the T/C")
+T.check(PM.profile_time(prof, 9999) == nil, "a time past the end: nil")
+T.check(PM.profile_time(prof, -60) == nil, "a time passed: nil")
+local prs = PM.profile({pts = {{x = 100, h = 31000, t = 900}, {x = 400, h = 35000, t = 3500}}, tc = 60, tc_t = 500,
+    sc = {200}, sc_t = {1700}, td = 450, td_t = 4000, crz = 35000}, {alt = 20000, crz = 31000})
+local hs = PM.profile_at(prs, 200)
+T.near(hs, 31000, 1e-6, "an S/C at the altitude of the waypoint before it")
+
 T.done()

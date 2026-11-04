@@ -698,4 +698,110 @@ function M.predict(s)
     return R
 end
 
+-- (FIX INFO's ETA, ALT and PRED ETA-ALT, 2026-11-04: FCOM p.1358-1359,
+-- FMSPG p.168-169) the predictions as a profile along the route: {x, h, t}
+-- (NM from the present position, ft, s from now) by x, from the present
+-- position (s.alt), the T/C at CRZ ALT (s.crz), each S/C at the altitude of
+-- the waypoint before it, the T/D at the last cruise altitude, the E/D and
+-- each waypoint ahead; straight between them (estimate: the climbs and
+-- descents between those points are not straight)
+function M.profile(R, s)
+    local pts = {{x = 0, h = s.alt or 0, t = 0}}
+    local function add(x, h, t) if x and h and t then pts[#pts + 1] = {x = x, h = h, t = t} end end
+    for _, p in pairs(R.pts or {}) do add(p.x, p.h, p.t) end
+    local function h_before(x)
+        local best
+        for _, p in pairs(R.pts or {}) do
+            if p.x <= x and (not best or p.x > best.x) then best = p end
+        end
+        return best and best.h
+    end
+    if R.tc then add(R.tc, s.crz, R.tc_t) end
+    for k, x in ipairs(R.sc or {}) do
+        local h = h_before(x)
+        if R.tc and h and x > R.tc then add(x, h, R.sc_t and R.sc_t[k]) end
+    end
+    if R.td then add(R.td, R.crz, R.td_t) end
+    table.sort(pts, function(a, b) return a.x < b.x end)
+    local out = {}
+    for _, p in ipairs(pts) do
+        local q = out[#out]
+        if not q or p.x > q.x + 1e-6 then out[#out + 1] = p end
+    end
+    return out
+end
+-- the altitude and the time at x along the profile, nil past its end
+function M.profile_at(prof, x)
+    for i = 2, #prof do
+        local a, b = prof[i - 1], prof[i]
+        if x <= b.x then
+            local f = (b.x > a.x) and (x - a.x) / (b.x - a.x) or 1
+            if f < 0 then f = 0 end
+            return a.h + (b.h - a.h) * f, a.t + (b.t - a.t) * f
+        end
+    end
+    return nil
+end
+-- where the profile first reaches altitude h ahead (climbing or
+-- descending), nil if it does not
+function M.profile_alt(prof, h)
+    for i = 2, #prof do
+        local a, b = prof[i - 1], prof[i]
+        if a.h ~= b.h and (a.h - h) * (b.h - h) <= 0 and not (i == 2 and a.h == h) then
+            return a.x + (b.x - a.x) * (h - a.h) / (b.h - a.h)
+        end
+    end
+    return nil
+end
+-- where the profile reaches the time t (s from now) ahead, nil if it does
+-- not
+function M.profile_time(prof, t)
+    if t <= 0 then return nil end
+    for i = 2, #prof do
+        local a, b = prof[i - 1], prof[i]
+        if t <= b.t and b.t > a.t then
+            return a.x + (b.x - a.x) * (t - a.t) / (b.t - a.t)
+        end
+    end
+    return nil
+end
+
+
+-- (OFFPATH DES, 2026-11-04: FCOM p.1398-1399; FMSPG p.191-194) the
+-- distance (NM) an idle descent direct to a fix needs from altitude h0
+-- down to the fix's altitude hf, on the DES page's speeds (s.des: the
+-- schedule, its transition and restriction) with the fix's speed (cas_f)
+-- as the speed below just above it (FMSPG p.193: crossing the fix at its
+-- speed and altitude), in the descent's headwind (s.wind.des; not the
+-- route's winds: the descent is off the route), at weight kg; clean, or
+-- with full speedbrakes (sb: the drag SB_DRAG times, estimate from FCTM
+-- p.138-139's idle descent rates with and without them: 2,800/4,300 fpm at
+-- .83/340 kt, 1,300/2,100 at 250 kt, 1,200/1,900 at VREF30+100, 1.5 to 1.6
+-- times). nil when h0 is not above hf
+M.SB_DRAG = 1.58
+local OFFPATH_X = 2000
+function M.offpath(s, kg, h0, hf, cas_f, sb)
+    if not (s and h0 and hf) or h0 <= hf + 1 then return nil end
+    local o = {}
+    for k, v in pairs(s) do o[k] = v end
+    o.field = nil
+    if sb then
+        local P0 = s.P
+        o.P = setmetatable({
+            drag = function(t, w, h, m) return P0.drag(t, w, h, m) * M.SB_DRAG end,
+            eo_drag = function(t, n, w, h, m) return P0.eo_drag(t, n, w, h, m) * M.SB_DRAG end,
+        }, {__index = P0})
+    end
+    if cas_f and cas_f > 0 and s.des then
+        local d = {}
+        for k, v in pairs(s.des) do d[k] = v end
+        d.restr_cas, d.restr_alt = cas_f, hf + 1
+        o.des = d
+    end
+    local dp = descent_path(o, kg, {}, OFFPATH_X, hf, nil)
+    local x = path_at_h(dp, h0)
+    if not x then return nil end
+    return OFFPATH_X - x
+end
+
 return M

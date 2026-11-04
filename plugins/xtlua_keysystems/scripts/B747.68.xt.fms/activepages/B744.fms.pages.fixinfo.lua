@@ -24,13 +24,16 @@
 -- The fixes are the FMC's (both CDUs show them). The bearings magnetic: a
 -- VOR's own variation, else the nearest VOR's (estimate; true near the
 -- poles comes with step 10).
--- Waiting and estimates: ETA, ALT and PRED ETA-ALT's distance need the
--- predictions (step 8): blank; the ND does not draw the fix, its radials
--- and circles (X-Plane's map draws the route alone); the route's path its
--- waypoints' great circles from the active leg's start to the first
+-- (2026-11-04; notes/ATA-34-61-FMC.md §143) a crossing's ETA and predicted
+-- altitude, PRED ETA-ALT's distance along the route (the predictions'
+-- profile, B747_fms_pred_at and the like), and the ND's fixes, radials,
+-- circles and PRED points (B747_fms_fix_nd). Estimates: the route's path
+-- its waypoints' great circles from the active leg's start to the first
 -- discontinuity (B747.68.route_model.lua); the crossing nearest the
 -- airplane along it; a new fix clears the lines; a distance without a
--- crossing shows no bearing; the lines blank without a fix.
+-- crossing shows no bearing; the lines blank without a fix; a passed
+-- crossing's ETA and ALT blank; the profile straight between the
+-- predictions' points.
 -- Before: X-Plane's FIX page shown through.
 local R = B747_route_model
 local BLANK = "                        "
@@ -85,6 +88,53 @@ local function abeam_point(f, path)
   return {brg = mag_of(f, c), dist = d, dtg = x.dtg}
 end
 
+-- (2026-11-04) the predictions at a crossing ahead (FCOM p.1359; FMSPG
+-- p.168): its ETA (hhmm, UTC) and altitude (ft, to 10 ft), nil without
+-- predictions or once passed (estimate: blank, its DTG negative)
+local function hhmm(min)
+  local m = math.floor(min + 0.5) % 1440
+  return string.format("%02d%02d", math.floor(m / 60), m % 60)
+end
+local function at_crossing(dtg)
+  if not dtg or dtg < 0 or not B747_fms_pred_at then return nil end
+  local h, t = B747_fms_pred_at(dtg)
+  if not h then return nil end
+  return hhmm(B747_fms_utc_min() + t / 60), math.floor(h / 10 + 0.5) * 10
+end
+-- PRED ETA-ALT's point (FCOM p.1359; FMSPG p.169): NM along the route to
+-- where the predictions reach the entered altitude or time, nil if they do
+-- not. A time an hour or more before now counts as the next day's
+-- (estimate)
+local function pred_x(p)
+  if not p or not B747_fms_pred_alt_x then return nil end
+  if p.alt then return B747_fms_pred_alt_x(p.alt) end
+  local h, m = tonumber(string.sub(p.time, 1, 2)), tonumber(string.sub(p.time, 3, 4))
+  local dmin = (h * 60 + m - B747_fms_utc_min()) % 1440
+  return B747_fms_pred_time_x(dmin * 60)
+end
+-- each page's PRED ETA-ALT point, the entry back to dashes once a valid
+-- point is passed (FMSPG p.169: with predictions, no crossing ahead any more)
+local function pred_point(pg)
+  local x = pred_x(pg.pred)
+  if pg.pred then
+    if x then
+      pg.pred.seen = true
+    elseif pg.pred.seen and B747_fms_preds and B747_fms_preds() then
+      pg.pred = nil
+    end
+  end
+  return x
+end
+
+-- a crossing's ETA (cols 9-12, its z small at 13) and ALT (to col 24) on
+-- its line (FCOM p.1358's figure: 130/24 2004z 10 12000)
+local function eta_alt(l, s, dtg)
+  local eta, alt = at_crossing(dtg)
+  if not eta then return l, s end
+  local a = B747_cdu_model.format_alt(alt, trans_alt())
+  return put(put(l, 9, eta), 25 - #a, a), put(s, 13, "z")
+end
+
 -- the page's large and small lines
 local function page_lines(pgNo)
   local pg = fixPages[pgNo]
@@ -110,7 +160,10 @@ local function page_lines(pgNo)
         if e.brg then L[n] = put(L[n], 1, string.format("%03d", e.brg)) elseif x then S[n] = put(S[n], 1, brg3(x.brg)) end
         L[n] = put(L[n], 4, "/")
         if e.dist then L[n] = put(L[n], 5, string.format("%d", e.dist)) elseif x then S[n] = put(S[n], 5, nm(x.dist)) end
-        if x then L[n] = put(L[n], 19 - #nm(x.dtg), nm(x.dtg)) end
+        if x then
+          L[n] = put(L[n], 19 - #nm(x.dtg), nm(x.dtg))
+          L[n], S[n] = eta_alt(L[n], S[n], x.dtg)
+        end
       end
     end
     S[10] = " ABEAM                  "
@@ -118,18 +171,31 @@ local function page_lines(pgNo)
       L[11] = pad("<ABEAM")
     else
       local x = abeam_point(f, path)
-      L[11] = x and put(pad(brg3(x.brg) .. "/" .. nm(x.dist)), 19 - #nm(x.dtg), nm(x.dtg)) or pad("---/---")
+      if x then
+        L[11] = put(pad(brg3(x.brg) .. "/" .. nm(x.dist)), 19 - #nm(x.dtg), nm(x.dtg))
+        L[11], S[11] = eta_alt(L[11], S[11], x.dtg)
+      else
+        L[11] = pad("---/---")
+      end
     end
     L[13] = pad("<ERASE FIX")
   end
+  local px = pred_point(pg)
   local p = pg.pred
   if not p then
     L[13] = put(L[13], 20, "-----")
-  elseif p.time then
-    L[13], S[13] = put(L[13], 20, p.time), put(S[13], 24, "z")
   else
-    local t = B747_cdu_model.format_alt(p.alt, trans_alt())
-    L[13] = put(L[13], 25 - #t, t)
+    -- the predicted along track distance (FCOM p.1359's figure: 112NM)
+    if px then
+      L[13] = put(L[13], 17 - #nm(px), nm(px))
+      S[13] = put(S[13], 17, "NM")
+    end
+    if p.time then
+      L[13], S[13] = put(L[13], 20, p.time), put(S[13], 24, "z")
+    else
+      local t = B747_cdu_model.format_alt(p.alt, trans_alt())
+      L[13] = put(L[13], 25 - #t, t)
+    end
   end
   return L, S
 end
@@ -273,4 +339,34 @@ function fmsFunctions.fixinfopred(fmsO, value)
     pg.pred = {alt = alt}
   end
   fmsO["scratchpad"] = ""
+end
+
+-- (2026-11-04) the fixes for the ND (FCOM p.1149-1150, p.1358-1359; FMSPG
+-- p.166-169): each page's {fix, radials (true bearings), circles (NM),
+-- pred = {lat, lon, text} or nil}: the fix in a small circle with its
+-- identifier, its bearings as radial lines from it, its distances as
+-- circles round it (a bearing and a distance both entered: both; estimate),
+-- PRED ETA-ALT's point on the route with the entered time or altitude
+function B747_fms_fix_nd()
+  local out = {}
+  for pgNo = 1, 2 do
+    local pg = fixPages[pgNo]
+    local o = {radials = {}, circles = {}}
+    if pg.fix then
+      o.fix = pg.fix
+      for k = 1, 3 do
+        local e = pg.lines[k]
+        if e and e.brg then o.radials[#o.radials + 1] = true_of(pg.fix, e.brg) end
+        if e and e.dist then o.circles[#o.circles + 1] = e.dist end
+      end
+    end
+    local px = pred_point(pg)
+    local q = px and B747_fms_pred_pos and B747_fms_pred_pos(px)
+    if q and pg.pred then
+      local text = pg.pred.time and (pg.pred.time .. "Z") or B747_cdu_model.format_alt(pg.pred.alt, trans_alt())
+      o.pred = {lat = q.lat, lon = q.lon, text = text}
+    end
+    out[pgNo] = o
+  end
+  return out
 end

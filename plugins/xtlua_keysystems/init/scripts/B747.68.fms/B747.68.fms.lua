@@ -149,6 +149,27 @@ B747DR_nd_line_n						= deferred_dataref("laminar/B747/nd/line/n", "number")
 B747DR_nd_line_lat						= deferred_dataref("laminar/B747/nd/line/lat", "array[600]")
 B747DR_nd_line_lon						= deferred_dataref("laminar/B747/nd/line/lon", "array[600]")
 B747DR_nd_line_pen						= deferred_dataref("laminar/B747/nd/line/pen", "array[600]")
+-- (2026-11-04) the ND's circles for the FMS bridge plugin: their number,
+-- centres, radii (NM) and styles (6 FIX INFO's distances, green dashes; 7
+-- OFFPATH DES's clean circle, blue dashes; 8 its drag circle, white dashes:
+-- FCOM p.1150)
+B747DR_nd_circle_n						= deferred_dataref("laminar/B747/nd/circle/n", "number")
+B747DR_nd_circle_lat					= deferred_dataref("laminar/B747/nd/circle/lat", "array[8]")
+B747DR_nd_circle_lon					= deferred_dataref("laminar/B747/nd/circle/lon", "array[8]")
+B747DR_nd_circle_radius					= deferred_dataref("laminar/B747/nd/circle/radius", "array[8]")
+B747DR_nd_circle_pen					= deferred_dataref("laminar/B747/nd/circle/pen", "array[8]")
+-- (2026-11-04) FIX INFO's fixes and PRED ETA-ALT points for the ND module
+-- (FCOM p.1149-1150, p.1358-1359): each page's (1, 2) shown (1), latitude,
+-- longitude and identifier (character codes, 5 a page: page 2's from [5]),
+-- its PRED point's the same with its text (the time or the altitude)
+B747DR_fms_fix_show						= deferred_dataref("laminar/B747/fms/fix/show", "array[2]")
+B747DR_fms_fix_lat						= deferred_dataref("laminar/B747/fms/fix/lat", "array[2]")
+B747DR_fms_fix_lon						= deferred_dataref("laminar/B747/fms/fix/lon", "array[2]")
+B747DR_fms_fix_ident					= deferred_dataref("laminar/B747/fms/fix/ident", "array[10]")
+B747DR_fms_fix_pred_show				= deferred_dataref("laminar/B747/fms/fix/pred_show", "array[2]")
+B747DR_fms_fix_pred_lat					= deferred_dataref("laminar/B747/fms/fix/pred_lat", "array[2]")
+B747DR_fms_fix_pred_lon					= deferred_dataref("laminar/B747/fms/fix/pred_lon", "array[2]")
+B747DR_fms_fix_pred_text				= deferred_dataref("laminar/B747/fms/fix/pred_text", "array[10]")
 -- the ND's PLAN centre (6-1/6-2 step 6d2; the LEGS pages' CTR): its row in
 -- X-Plane's flight plan (xtlua/fms, from 1), 0 none. X-Plane keeps its
 -- displayed waypoint at or after its current one, its plan's last row now

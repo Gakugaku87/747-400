@@ -27,6 +27,17 @@ B747DR_fmscurrentIndex      = find_dataref("laminar/B747/autopilot/ap_monitor/fm
 B747DR_fms_profile_kind			= find_dataref("laminar/B747/fms/profile/kind")
 B747DR_fms_profile_lat			= find_dataref("laminar/B747/fms/profile/lat")
 B747DR_fms_profile_lon			= find_dataref("laminar/B747/fms/profile/lon")
+-- (2026-11-04) FIX INFO's fixes and PRED ETA-ALT's points (the FMS
+-- module's: shown, latitude, longitude, the texts as character codes, 5 a
+-- page)
+B747DR_fms_fix_show			= find_dataref("laminar/B747/fms/fix/show")
+B747DR_fms_fix_lat			= find_dataref("laminar/B747/fms/fix/lat")
+B747DR_fms_fix_lon			= find_dataref("laminar/B747/fms/fix/lon")
+B747DR_fms_fix_ident			= find_dataref("laminar/B747/fms/fix/ident")
+B747DR_fms_fix_pred_show		= find_dataref("laminar/B747/fms/fix/pred_show")
+B747DR_fms_fix_pred_lat			= find_dataref("laminar/B747/fms/fix/pred_lat")
+B747DR_fms_fix_pred_lon			= find_dataref("laminar/B747/fms/fix/pred_lon")
+B747DR_fms_fix_pred_text		= find_dataref("laminar/B747/fms/fix/pred_text")
 B747DR_ap_FMA_active_pitch_mode     	= find_dataref("laminar/B747/autopilot/FMA/active_pitch_mode")
 simDR_autopilot_vs_fpm = find_dataref("sim/cockpit2/autopilot/vvi_dial_fpm")
 simDR_autopilot_alt_hold_status = find_dataref("laminar/B747/autopilot/altitude_hold_status")
@@ -402,6 +413,14 @@ function makeIcon(iconTextData,navtype,text,latitude,longitude,distance,routeInd
     if wpt>0 and map and range<=40 then icon, color=13, "blue" end
   elseif navtype==3008 then
     icon, color=8, "green"
+  elseif navtype==3009 then
+    -- (2026-11-04) FIX INFO's fix: the reference symbol, a small green
+    -- circle (FCOM p.1150: MAP, MAP CTR and PLAN; FMSPG p.166)
+    if map or mode==3 then icon, color=12, "green" end
+  elseif navtype==3010 then
+    -- (2026-11-04) PRED ETA-ALT's point: a green profile circle (FCOM
+    -- p.1149, p.1359: MAP and MAP CTR)
+    if map then icon, color=8, "green" end
   elseif bit_and(navtype,4)>0 then
     if map and (text==simDR_radio_nav03_ID or text==simDR_radio_nav04_ID) then
       icon, color=10, "green"
@@ -1092,6 +1111,41 @@ function newIcons()
       if B747DR_nd_mode_fo_sel_dial_pos==2 and d < ranges[simDR_range_dial_fo + 1] then
         makeIcon(iconTextDataFO,3008,text,lat,lon,d)
       end
+    end
+  end
+  -- (2026-11-04) FIX INFO's fixes and PRED ETA-ALT's points (FCOM
+  -- p.1149-1150, p.1359; FMSPG p.166, p.169): the fix in the reference
+  -- symbol with its identifier (no identifier when its own symbol, a route
+  -- waypoint's, shows it already), the PRED point a green profile circle
+  -- with the entered time or altitude
+  local function codes(ref, base)
+    local s=""
+    for c=0,4 do
+      local b=ref[base+c]
+      if b and b>0 and b<128 then s=s..string.char(b) end
+    end
+    return s
+  end
+  for p=0,1 do
+    if B747DR_fms_fix_show[p]==1 then
+      local lat,lon=B747DR_fms_fix_lat[p],B747DR_fms_fix_lon[p]
+      local id=codes(B747DR_fms_fix_ident,p*5)
+      local d=getDistance(display_latitude_cpt,display_longitude_cpt,lat,lon)
+      if d < ranges[simDR_range_dial_capt + 1] then
+        makeIcon(iconTextDataCapt,3009,(id=="" or usedNaviadsTableCapt[id]) and "latlong" or id,lat,lon,d)
+      end
+      d=getDistance(display_latitude_fo,display_longitude_fo,lat,lon)
+      if d < ranges[simDR_range_dial_fo + 1] then
+        makeIcon(iconTextDataFO,3009,(id=="" or usedNaviadsTableFO[id]) and "latlong" or id,lat,lon,d)
+      end
+    end
+    if B747DR_fms_fix_pred_show[p]==1 then
+      local lat,lon=B747DR_fms_fix_pred_lat[p],B747DR_fms_fix_pred_lon[p]
+      local t=codes(B747DR_fms_fix_pred_text,p*5)
+      local d=getDistance(display_latitude_cpt,display_longitude_cpt,lat,lon)
+      if d < ranges[simDR_range_dial_capt + 1] then makeIcon(iconTextDataCapt,3010,t,lat,lon,d) end
+      d=getDistance(display_latitude_fo,display_longitude_fo,lat,lon)
+      if d < ranges[simDR_range_dial_fo + 1] then makeIcon(iconTextDataFO,3010,t,lat,lon,d) end
     end
   end
   -- TCAS traffic has its own slots (updateTCAS)
