@@ -82,6 +82,11 @@ B747DR_engine_oil_temp_degC         = deferred_dataref("laminar/B747/engines/oil
 B747DR_engine_oil_qty_liters        = deferred_dataref("laminar/B747/engines/oil_qty_liters", "array[4)")
 B747DR_elec_apu_oil      			= deferred_dataref("laminar/B747/apu/oil", "number")
 B747DR_engine_apu_n2      	        = deferred_dataref("laminar/B747/apu/n2", "number")
+-- (2026-11-04) the APU's failures for the failure window (1 failed; the APU
+-- model's inputs: docs/overhaul/notes/ATA-49.md §11): a limit exceeded, the
+-- APU bleed duct's leak
+B747DR_apu_fail_limit               = deferred_dataref("laminar/B747/apu/fail/limit", "number")
+B747DR_apu_fail_duct_leak           = deferred_dataref("laminar/B747/apu/fail/duct_leak", "number")
 B747DR_EPR_max_limit                = deferred_dataref("laminar/B747/engines/EPR/max_limit", "array[4)")
 B747DR_EGT_amber_inhibit            = deferred_dataref("laminar/B747/engines/EGT/amber_inhibit", "array[4)")
 B747DR_EGT_amber_on                 = deferred_dataref("laminar/B747/engines/EGT/amber_on", "array[4)")

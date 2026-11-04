@@ -179,3 +179,11 @@
   - 抽気のモデル（`B747.55.bleed_model.lua`）：空中（PSEU の primary ground でない）は APU の空気をパック 1 つ分（`APU_AIR_CAP` 1.0）、15,000 ft より上は 0（推定：落ち方は資料に無い）。地上は今のまま 3.2（3 パック、始動とパックは同時に無理）。
 - 作らなかったもの：始動回数の制限（乗員の制限）、570 の START SOURCE スイッチ（3D に無い）と TR の過熱（故障の入れ方と一緒に）、20,000 ft より上の振る舞い（資料に無い）、油の消費と RF/LO（APU-02：値が無い）、CF6 の増風要求（APU-12：値が無い）。
 - 試験：回帰 `apu_model_test` 53（電源が無いと始まらない、戻ると始まる、途中で失うと打ち切り）、`apu_module_test` 30（P&W で APU バッテリーの残り 0：始まらない、GE で utility bus 4：始まる）、`elec_model_test` 158（GE の TR 始動で APU バッテリーに starter の電流なし）、`bleed_model_test` 88（地上 3 パック、空中 10,000 ft で 1 パック分・3 パックではダクトが落ちる、17,000 ft で 0）、`bleed_module_test` 25（PSEU の地上を足した）。
+
+## 11. 故障の入力（2026-11-04：故障の窓のため、APU-06）
+
+- 新しい dataref（1 で故障。init `B747.40.engines`）：`laminar/B747/apu/fail/limit`（APU の限界の超過）、`apu/fail/duct_leak`（APU の抽気ダクトの漏れ）。火災は前から X-Plane の `rel_apu_fire`（火災防護が検知）。
+- 限界の超過：即停止（FCOM p.897「限界を超えるか火災を探知すると即停止」）。selector ON なら APU（FCOM p.902）、selector OFF で自動停止の fault が戻り（p.867）、故障が消えていればまた始動できる。どの限界か（回転・EGT・油圧など）は資料に無いので、1 つの入力にした。
+- 抽気ダクトの漏れ：停止して再始動できない（FCOM p.613）。selector OFF でもこの fault は戻らない（p.867）。漏れがある間は START にしても始動せず、吸気ドアも開かず、selector ON で APU。故障の窓で漏れを消して selector を OFF にすると戻る（窓の「修理」。実機では整備）。漏れで止まるのは始動中・運転中・cooldown 中（止まっているときの漏れは次の始動で）。
+- 試験：`apu_model_test` 64、`apu_module_test` 36。
+- X-Plane（カスタム acf、2026-11-04）：新しい `s236_apu_failures` 10/10（成田でエンジン運転中に APU を始動：限界の超過で即停止して APU、回り終わって OFF で消える。抽気ダクトの漏れでは START にしても始動せず、吸気ドアも閉じたまま APU。漏れを消して OFF で消える）、回帰の `s22_fire_engine_apu` 45/45。Log.txt に Lua の誤りなし。

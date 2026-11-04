@@ -42,11 +42,19 @@ function M.inputs()
         -- glue's: the 109 and 405 both batteries, the 570 the main battery
         -- and the APU start TR on utility bus 4 or the APU battery)
         start_power = true,
+        -- (2026-11-04) failures for the failure window (notes/ATA-49.md
+        -- §11): a limit exceeded (FCOM p.897: the APU stops at once; which
+        -- limit is not in the sources); the APU bleed duct's leak (FCOM
+        -- p.613: the APU stops and cannot be restarted; p.867: selector OFF
+        -- does not reset it)
+        limit_fail = false,
+        duct_leak = false,
     }
 end
 
 function M.new()
     local s = {state = M.OFF, start_latch = false, fault = false, door = 0, cooldown_t = 0,
+        leak_fault = false,         -- (2026-11-04) the bleed duct leak's shutdown
         start_t = 0, door_disagree_t = 0, door_cmd = false, off_high_t = 0,
         oil = M.OIL_STOPPED, first = true}
     s.out = {state = M.OFF, starter = 0, door = 0, door_cmd = false, gen_ready = false,
@@ -66,12 +74,14 @@ function M.update(s, inp, dt)
     local turning = inp.n1 > M.DOOR_CLOSE_N1
 
     -- the selector: OFF clears a fault and the start; START latches the start
-    -- (FCOM p.867: OFF resets the auto shutdown fault logic; the bleed duct
-    -- leak shutdown, which cannot be reset, has no source here yet)
+    -- (FCOM p.867: OFF resets the auto shutdown fault logic, not the bleed
+    -- duct leak's: (2026-11-04) that one only once the leak is gone, the
+    -- failure window's repair)
     if not on then
         s.fault, s.start_latch = false, false
+        if not inp.duct_leak then s.leak_fault = false end
     elseif inp.start_pushed or inp.selector == 2 then
-        if not s.fault and s.state ~= M.RUNNING then s.start_latch = true end
+        if not s.fault and not s.leak_fault and s.state ~= M.RUNNING then s.start_latch = true end
     end
 
     -- a flight that starts with the APU running, or a start X-Plane made
@@ -82,8 +92,10 @@ function M.update(s, inp, dt)
     -- automatic shutdowns (FCOM p.897: a fire or a limit stops the APU at once)
     local shutdown = false
     if s.state == M.STARTING or s.state == M.RUNNING or s.state == M.COOLDOWN then
-        if inp.fire or not inp.fuel then shutdown = true end
+        if inp.fire or not inp.fuel or inp.limit_fail then shutdown = true end
         if s.state == M.STARTING and s.start_t >= M.START_LIMIT_S then shutdown = true end
+        -- (2026-11-04) the bleed duct leak: stopped, no restart (FCOM p.613)
+        if inp.duct_leak then shutdown, s.leak_fault = true, true end
         if shutdown then
             s.fault = on                            -- the APU advisory waits for selector OFF
             s.start_latch = false
@@ -129,7 +141,7 @@ function M.update(s, inp, dt)
 
     -- the inlet door: open with the selector on (the door needs battery
     -- power: estimate) and while the APU turns; closed once it has run down
-    local door_cmd = (on and inp.battery and not s.fault) or turning
+    local door_cmd = (on and inp.battery and not s.fault and not s.leak_fault) or turning
     if inp.battery then s.door = step(s.door, door_cmd and 1 or 0, 1 / M.DOOR_TRAVEL_S, dt) end
     local at_cmd = (door_cmd and s.door >= 1) or (not door_cmd and s.door <= 0)
     if at_cmd or door_cmd ~= s.door_cmd then
@@ -169,7 +181,7 @@ function M.update(s, inp, dt)
     -- the normal cooldown, and only after OFF_HIGH_S, past the run-down);
     -- APU DOOR when the door is not where it was commanded; APU RUNNING with
     -- the selector ON above 95 %
-    out.adv_apu = (on and s.fault) or s.off_high_t >= M.OFF_HIGH_S
+    out.adv_apu = (on and (s.fault or s.leak_fault)) or s.off_high_t >= M.OFF_HIGH_S
     out.adv_door = s.door_disagree_t >= M.DOOR_ALERT_S
     out.memo_running = on and inp.n1 > M.RUN_N1
     out.n2 = inp.n1 * M.N2_PER_N1

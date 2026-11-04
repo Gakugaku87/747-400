@@ -221,4 +221,49 @@ do
     T.check(out.adv_apu and out.state ~= A.RUNNING, "the start not finished in time: shut down, APU")
 end
 
+
+-- (2026-11-04) the failures (notes/ATA-49.md §11): a limit exceeded stops
+-- the APU at once with APU; selector OFF resets it and, the limit gone, it
+-- starts again (FCOM p.897, p.867). The bleed duct leak stops it, the door
+-- closes, and it cannot be restarted: OFF does not reset it while the leak
+-- is there (FCOM p.613, p.867)
+do
+    local s, inp = fresh()
+    start(inp)
+    local out = run(s, inp, 100)
+    T.equal(out.state, A.RUNNING, "failures: running")
+    inp.limit_fail = true
+    out = run(s, inp, 1)
+    T.check(out.state == A.STOPPING and out.adv_apu and not out.gen_ready, "limit exceeded: shut down at once, APU")
+    out = run(s, inp, 40)
+    inp.limit_fail = false
+    inp.selector = 0
+    out = run(s, inp, 1)
+    T.check(not out.adv_apu, "selector OFF: the fault reset")
+    start(inp)
+    out = run(s, inp, 100)
+    T.equal(out.state, A.RUNNING, "the limit gone: it starts again")
+    inp.duct_leak = true
+    out = run(s, inp, 1)
+    T.check(out.state == A.STOPPING and out.adv_apu, "bleed duct leak: shut down, APU")
+    out = run(s, inp, 40)
+    inp.selector = 0
+    out = run(s, inp, 1)
+    T.check(not out.adv_apu, "selector OFF: no APU (the selector is OFF)")
+    start(inp)
+    out = run(s, inp, 60)
+    T.check(out.state ~= A.STARTING and out.state ~= A.RUNNING and out.starter == 0, "the leak: no restart (FCOM p.613)")
+    T.check(out.adv_apu, "the leak, selector ON: APU")
+    T.equal(out.door, 0, "the leak: the inlet door stays closed")
+    inp.selector = 0
+    out = run(s, inp, 1)
+    inp.duct_leak = false
+    out = run(s, inp, 1)
+    T.check(out.adv_apu == false, "the leak repaired, still OFF")
+    inp.selector = 0
+    out = run(s, inp, 1)
+    start(inp)
+    out = run(s, inp, 100)
+    T.equal(out.state, A.RUNNING, "the leak repaired and OFF: it starts again")
+end
 T.done()
