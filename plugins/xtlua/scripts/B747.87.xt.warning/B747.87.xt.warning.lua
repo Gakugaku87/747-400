@@ -679,6 +679,7 @@ local B747_CASstatusMsg = {
     {DRindex = 96, name = "PEDAL STEERING"},      -- ATA29_32 p.600
     {DRindex = 97, name = "BRAKE TEMP SYS"},      -- ATA29_32 p.428 (4-2 step 5)
     {DRindex = 98, name = "TIRE PRESS SYS"},      -- ATA29_32 p.376
+    {DRindex = 99, name = "FLAP SYS MONITOR"},    -- ATA27 p.320 (FCTL-12)
 }
 
 

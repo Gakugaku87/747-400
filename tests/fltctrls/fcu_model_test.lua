@@ -324,4 +324,82 @@ do
     T.near(out.pos, 27.5, 0.7, "halfway between 30 and 25")
 end
 
+-- the expanded display's symbols (FCOM p.937-938; ATA27 p.320-322,
+-- p.398-400): LE boxes (L OB, L MID, L IB, R IB, R MID, R OB) white
+-- outline, white stripes, green, amber with the drive unit inoperative,
+-- amber X without data; TE tapes (L OB, L IB, R IB, R OB) white, amber with
+-- an asymmetry or a drive failure in the group, amber X without data
+do
+    local s, inp = M.new(), M.inputs()
+    local out = run(s, inp, 1)
+    for i = 1, 6 do T.equal(out.le_box[i], M.LE_UP, "all up: LE box " .. i .. " white outline") end
+    for i = 1, 4 do T.equal(out.te_tape[i], M.TE_WHITE, "all up: TE tape " .. i .. " white") end
+    T.check(not out.alternate and not out.st_sys_monitor, "no alternate display, no FLAP SYS MONITOR")
+    inp.lever = 1
+    out = run(s, inp, 4)
+    T.equal(out.le_box[3], M.LE_TRANSIT, "lever 1, 4 s: L inboard box striped (in transit)")
+    T.equal(out.le_box[2], M.LE_TRANSIT, "L midspan box striped")
+    T.equal(out.le_box[1], M.LE_UP, "L outboard box still white outline (group B)")
+    out = run(s, inp, 6)
+    T.equal(out.le_box[4], M.LE_DOWN, "lever 1, 10 s: R inboard box green")
+    T.equal(out.le_box[6], M.LE_UP, "R outboard box white outline")
+    -- the outboard group's both drives failed: the electric one stops after
+    -- 25 s (FLAPS DRIVE), its boxes amber
+    inp.le_pri_fail[B], inp.le_sec_fail[B] = true, true
+    inp.lever = 2
+    out = run(s, inp, M.LE_DISAGREE_S + M.LE_SEC_STALL_S + 2)
+    T.check(out.flaps_drive, "LE outboard drives failed: FLAPS DRIVE")
+    T.equal(out.le_box[1], M.LE_UP + M.LE_AMBER, "L outboard box amber outline (drive inoperative)")
+    T.equal(out.le_box[6], M.LE_UP + M.LE_AMBER, "R outboard box amber outline")
+    T.equal(out.le_box[3], M.LE_DOWN, "L inboard box still green")
+    T.check(out.expanded, "expanded")
+end
+do
+    -- a TE group's asymmetry: both its tapes amber, the other group's white
+    local s, inp = M.new(), M.inputs()
+    inp.te_stuck[OB] = true
+    inp.lever = 3
+    local out = run(s, inp, 3)
+    T.equal(out.te_tape[1], M.TE_AMBER, "OB asymmetry: L OB tape amber")
+    T.equal(out.te_tape[4], M.TE_AMBER, "R OB tape amber")
+    T.equal(out.te_tape[2], M.TE_WHITE, "L IB tape white")
+end
+do
+    -- position data lost: an amber X, the expanded display, FLAP SYS
+    -- MONITOR (ATA27 p.320); on the standby power system alone the left
+    -- wing's two tapes
+    local s, inp = M.new(), M.inputs()
+    local out = run(s, inp, 12)
+    T.check(not out.show, "flaps up 12 s: no indication")
+    inp.te_sensor_fail[3] = true
+    out = run(s, inp, 1)
+    T.equal(out.te_tape[3], M.TE_X, "R IB sensor failed: its tape's amber X")
+    T.check(out.show and out.expanded, "the expanded display shows")
+    T.check(out.st_sys_monitor, "STATUS FLAP SYS MONITOR")
+    inp.te_sensor_fail[3] = false
+    inp.sensor_power[1] = false
+    out = run(s, inp, 1)
+    T.equal(out.te_tape[1], M.TE_X, "standby power alone: L OB tape amber X")
+    T.equal(out.te_tape[2], M.TE_X, "L IB tape amber X")
+    T.equal(out.te_tape[3], M.TE_WHITE, "R IB tape white (excited by the standby power)")
+    inp.sensor_power[1] = true
+    inp.le_sensor_fail[5] = true
+    out = run(s, inp, 1)
+    T.equal(out.le_box[5], M.LE_X, "R midspan box's data lost: amber X")
+    T.check(out.expanded and not out.st_sys_monitor, "expanded; FLAP SYS MONITOR is the TE's (ATA27 p.320)")
+    inp.le_sensor_fail[5] = false
+    out = run(s, inp, 11)
+    T.check(not out.show, "data back, flaps up: the indication goes after 10 s")
+end
+do
+    -- alternate: the expanded display without the lever mark, with the flap scale
+    local s, inp = M.new(), M.inputs()
+    inp.altn_arm = true
+    local out = run(s, inp, 1)
+    T.check(out.alternate and out.expanded, "ALTN ARM: the alternate display")
+    inp.altn_arm = false
+    out = run(s, inp, 1)
+    T.check(not out.alternate, "disarmed: no alternate display")
+end
+
 T.done()

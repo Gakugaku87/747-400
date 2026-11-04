@@ -41,6 +41,12 @@ B747DR_fcu_fail_te_secondary    = find_dataref("laminar/B747/flt_ctrls/fail/te_s
 B747DR_fcu_fail_te_stuck        = find_dataref("laminar/B747/flt_ctrls/fail/te_stuck")
 B747DR_fcu_fail_le_primary      = find_dataref("laminar/B747/flt_ctrls/fail/le_primary")
 B747DR_fcu_fail_le_secondary    = find_dataref("laminar/B747/flt_ctrls/fail/le_secondary")
+B747DR_fcu_fail_te_sensor       = find_dataref("laminar/B747/flt_ctrls/fail/te_sensor")
+B747DR_fcu_fail_le_sensor       = find_dataref("laminar/B747/flt_ctrls/fail/le_sensor")
+B747DR_fcu_bus_stby_main        = find_dataref("laminar/B747/electrical/bus/stby_main")
+B747DR_fcu_le_box               = find_dataref("laminar/B747/flt_ctrls/flaps/le_box")
+B747DR_fcu_te_tape              = find_dataref("laminar/B747/flt_ctrls/flaps/te_tape")
+B747DR_fcu_altn_display         = find_dataref("laminar/B747/flt_ctrls/flaps/altn_display")
 
 local ALTN_ARM = 0                  -- button_switch/position[0]: ALTN FLAPS ARM
 -- EICAS slots (B747.87.xt.warning.lua)
@@ -49,6 +55,7 @@ local ADV_FLAP_RELIEF = 142
 local STATUS_TE_FLAPS = 81          -- TE FLAPS, LE SINGLE DRIVE, LE MULT DRIVE: 81-83
 local STATUS_FLAP_CONTROL = 84      -- FLAP CONTROL L, C, R: 84-86
 local STATUS_LOAD_RELIEF = 87       -- FLAP LOAD RELIEF
+local STATUS_SYS_MONITOR = 99       -- FLAP SYS MONITOR (ATA27 p.320)
 local INIT_S = 3                    -- the first reads of other modules' values are 0:
                                     -- the flaps start where the lever is meanwhile
 
@@ -112,6 +119,15 @@ function B747_fcu()
         inp.le_pri_fail[g] = B747DR_fcu_fail_le_primary[g - 1] > 0.5
         inp.le_sec_fail[g] = B747DR_fcu_fail_le_secondary[g - 1] > 0.5
     end
+    for i = 1, 4 do inp.te_sensor_fail[i] = B747DR_fcu_fail_te_sensor[i - 1] > 0.5 end
+    for i = 1, 6 do inp.le_sensor_fail[i] = B747DR_fcu_fail_le_sensor[i - 1] > 0.5 end
+    -- the TE position sensors' excitation (ATA27 p.320): the standby power
+    -- system alone excites the right wing's only. Which bus excites the left
+    -- wing's is not given (estimate: any of AC buses 1-4). Not while the
+    -- other modules' first values come in.
+    local any_ac = inp.ac[1] or inp.ac[2] or inp.ac[3] or inp.ac[4]
+    inp.sensor_power[1] = init or any_ac
+    inp.sensor_power[2] = init or any_ac or B747DR_fcu_bus_stby_main > 0.5
 
     if init then F.set_to(fcu_state, inp) end
     local out = F.update(fcu_state, inp, SIM_PERIOD)
@@ -136,8 +152,8 @@ function B747_fcu()
     local cmd = out.cmd_detent / 6
     if B747DR_flap_ratio ~= cmd then B747DR_flap_ratio = cmd end
 
-    -- the indication: 1 normal, 2 expanded (ALTN shows expanded: the panel
-    -- has no alternate marks, FCTL-12)
+    -- the indication: 1 normal, 2 expanded (ALTN too: altn_display below
+    -- takes the lever mark away and shows the flap scale, FCTL-12)
     local tape, t1, t2, t3, t4 = out.tape, out.tapes[1], out.tapes[2], out.tapes[3], out.tapes[4]
     if B747DR_flap_deployed_ratio ~= tape then B747DR_flap_deployed_ratio = tape end
     if B747DR_fcu_flap_pos ~= out.pos then B747DR_fcu_flap_pos = out.pos end
@@ -150,6 +166,12 @@ function B747_fcu()
     local display = 0
     if out.show then display = out.expanded and 2 or 1 end
     if B747DR_EICAS1_flap_display_status ~= display then B747DR_EICAS1_flap_display_status = display end
+    -- the expanded display's LE boxes and TE tapes, and the alternate
+    -- display (FCOM p.937-938; ATA27 p.320-322, p.398-400)
+    for i = 1, 6 do put(B747DR_fcu_le_box, i - 1, out.le_box[i]) end
+    for i = 1, 4 do put(B747DR_fcu_te_tape, i - 1, out.te_tape[i]) end
+    local altn = flag(out.alternate)
+    if B747DR_fcu_altn_display ~= altn then B747DR_fcu_altn_display = altn end
 
     -- messages (FCOM p.957; ATA27 p.133, p.337, p.411)
     put(B747DR_CAS_caution_status, CAUT_FLAPS_CONTROL, flag(out.flaps_control))
@@ -161,4 +183,5 @@ function B747_fcu()
     put(B747DR_fcu_status, STATUS_TE_FLAPS + 2, flag(out.st_le_mult))
     for i = 1, 3 do put(B747DR_fcu_status, STATUS_FLAP_CONTROL + i - 1, flag(out.st_fcu[i])) end
     put(B747DR_fcu_status, STATUS_LOAD_RELIEF, flag(out.st_load_relief))
+    put(B747DR_fcu_status, STATUS_SYS_MONITOR, flag(out.st_sys_monitor))
 end
