@@ -326,3 +326,11 @@ ACF_DIFF.md との関係: 抽気に関わる acf 値（`_has_full_bleed_air`、`
 - 推定：弁の不一致の 5 秒（資料に値が無い）、IP 段だけのときの圧の範囲、リークの流量 0.5、熱い空気とみなす 5 psi、冷える 30 秒。
 - 試験：新しい回帰 `bleed_fail_test`（53 件）、`bleed_module_test` 61（dataref から advisory・STATUS・SYS FAULT 灯まで、APU の空気の故障）。
 - X-Plane（カスタム acf、2026-11-04）：新しい `s230_bleed_failures` 38/38（成田でエンジン運転中のアイドル：HPSOV 1 の閉で 5 秒後に BLEED HP ENG 1 と beeper、SYS FAULT なし、エンジン 1 の圧は 36 psi（IP 段だけ）。エンジン 2 の過圧で BLEED 2・SYS FAULT・STATUS BLEED OVPRESS 2、弁は開いたまま、ENGINE BLEED 2 OFF で消えて >BLEED 2 OFF。PRV 3 の閉で BLD 3 OVHT/PRV、空気 0、右のダクトはエンジン 4 が保つ。エンジン 4 の過熱で BLD 4 OVHT/PRV・SYS FAULT・弁が閉、STATUS BLEED 4 OVHT と BLEED PRV ENG 3、故障を消してもラッチ、スイッチの OFF・ON で戻る。上の EICAS と STATUS ページの写真）、回帰の `s05_bleed` 64/64。Log.txt に Lua の誤りなし。頭上の SYS FAULT 灯の写真は視点が電源パネルを向いていたので、抽気パネルの視点（`bleed`）に直した（次の回で撮る）。
+
+## 11. 地上空気（2026-11-04、PNEU-07）
+
+- 空気車をつなぐ操作：FMC の GROUND SERVICES ページ（MENU → GND HANDLING → GROUND SERVICES）の R3（見出し GROUND AIR、CONNECT> と REMOVE>）か、新しいコマンド `laminar/B747/air/ground_air/connect`（つなぐ・外すの切り替え）。状態は新しい `laminar/B747/air/ground_air/connected`（1 でつながっている）。つなげるのは PSEU の地上で止まっている（対地速度 1 m/s 以下）ときだけ。動き出すか空中になると外れる（地上の作業員：推定）。
+- 空気車は中央の区画（§4.5）に 40 psi を入れる。始動に要るのはダクト圧 30 psi（1,000 ft ごとに 1 psi 少なく：FCOM p.183（SP.7.1））、空気車は 30〜45 psi（ATA70_80 p.549–550）なので、その間の 40 psi（推定）。出せる量はパック 3 台分（前からの推定 `GND_CAP`）。
+- APU とエンジンが止まっていてダクトに空気があれば ECS synoptic の EXT AIR（前からの論理：FCOM p.578）。
+- 試験：`bleed_module_test` 69（コマンドでつなぐ、APU とエンジンなしでダクトに空気と EXT AIR、動くと外れる、もう一度で外す）。
+- X-Plane（カスタム acf、2026-11-04）：新しい `s238_ground_air` 19/19（成田でエンジン運転中：CDU の MENU → GND HANDLING → GROUND SERVICES の R3 に GROUND AIR の CONNECT>、押すとつながり REMOVE>。ENGINE BLEED を 4 つとも切ると、3 パックのままでは空気車の出せる量いっぱいで 28 psi、FCOM p.184 のとおりパックを 1 つにすると 35.8 psi（始動に要る 30 psi 以上）。R3 で外すとダクトが空。CDU の写真）、回帰の `s05_bleed` 64/64。Log.txt に Lua の誤りなし。

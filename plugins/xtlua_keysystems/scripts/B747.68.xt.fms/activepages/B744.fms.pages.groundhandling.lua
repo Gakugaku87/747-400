@@ -5,6 +5,9 @@ registerFMCCommand("sim/ground_ops/pushback_stop","STOP PUSHBACK")
 registerFMCCommand("sim/ground_ops/pushback_left","PUSHBACK LEFT")
 registerFMCCommand("sim/ground_ops/pushback_straight","PUSHBACK STRAIGHT")
 registerFMCCommand("sim/ground_ops/pushback_right","PUSHBACK RIGHT")
+-- (2026-11-04; PNEU-07) the ground air cart (the air module: notes/ATA-36.md §11)
+registerFMCCommand("laminar/B747/air/ground_air/connect","GROUND AIR")
+B747DR_gndsrv_ground_air = find_dataref("laminar/B747/air/ground_air/connected")
 
 fmsPages["GNDHNDL"]=createPage("GNDHNDL")
 fmsPages["GNDHNDL"].getPage=function(self,pgNo,fmsID)
@@ -67,6 +70,9 @@ fmsPages["GNDSRV"].getPage=function(self,pgNo,fmsID)
   elseif B747DR_elec_ext_pwr1_available==1 then
     lineB="<DISCONNECT GROUND POWER"
   end
+  -- (2026-11-04) R3: the ground air cart
+  local air = (B747DR_gndsrv_ground_air > 0.5) and "REMOVE>" or "CONNECT>"
+  lineA = lineA .. string.rep(" ", 23 - #lineA - #air) .. air
   local lineC = "                        "
   if simDR_acf_m_jettison>0 then
 	local jet_weight=simDR_m_jettison
@@ -125,7 +131,7 @@ fmsPages["GNDSRV"].getSmallPage=function(self,pgNo,fmsID)
   "                        ",
   "                        ",
   "                        ",
-  "ADD FUEL                ",
+  "ADD FUEL      GROUND AIR",
   "      "..lineA,
   lineB,
   lineC,
@@ -138,6 +144,7 @@ end
 fmsFunctionsDefs["GNDSRV"]["L1"]={"setdata","services"}
 fmsFunctionsDefs["GNDSRV"]["L2"]={"doCMD","laminar/B747/electrical/connect_power"}
 fmsFunctionsDefs["GNDSRV"]["L3"]={"setdata","fuelpreselect"}
+fmsFunctionsDefs["GNDSRV"]["R3"]={"doCMD","laminar/B747/air/ground_air/connect"}   -- (2026-11-04)
 fmsFunctionsDefs["GNDSRV"]["L6"]={"setpage","GNDHNDL"}
 
 fmsPages["PUSHBACK"]=createPage("PUSHBACK")

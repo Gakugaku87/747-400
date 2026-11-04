@@ -31,6 +31,24 @@ B747DR_bleed_fail_prv_open      = find_dataref("laminar/B747/air/fail/prv_open")
 B747DR_bleed_fail_apu_air       = find_dataref("laminar/B747/air/fail/apu_air")
 -- a duct leak L, C, R (the fire module's failure: BLD DUCT LEAK)
 B747DR_bleed_fail_duct_leak     = find_dataref("laminar/B747/fire/fail/duct_leak")
+-- (2026-11-04; PNEU-07) the ground air cart (notes/ATA-36.md §11)
+B747DR_bleed_ground_air         = find_dataref("laminar/B747/air/ground_air/connected")
+simDR_bleed_groundspeed         = find_dataref("sim/flightmodel/position/groundspeed")
+-- it gives 40 psi: the start needs 30 psi less 1 for each 1,000 ft (FCOM
+-- p.183, SP.7.1) and a cart gives 30 to 45 psi (ATA70_80 p.549-550); 40 is
+-- an estimate. It is taken away when the airplane moves (above 1 m/s) or
+-- flies (estimate: the ground crew's)
+local GROUND_AIR_PSI, GROUND_AIR_MOVING_MS = 40, 1
+function B747_ground_air_connect_CMDhandler(phase, duration)
+    if phase == 0 then
+        if B747DR_bleed_ground_air > 0.5 then B747DR_bleed_ground_air = 0
+        elseif simDR_bleed_groundspeed <= GROUND_AIR_MOVING_MS and B747DR_pack_pseu_pri_gnd == 1 then
+            B747DR_bleed_ground_air = 1
+        end
+    end
+end
+B747CMD_ground_air_connect = deferred_command("laminar/B747/air/ground_air/connect",
+    "Connect or disconnect the ground air cart", B747_ground_air_connect_CMDhandler)
 B747DR_bleed_CAS_status         = find_dataref("laminar/B747/CAS/status_status")
 B747DR_bleed_start_valve_cmd    = find_dataref("laminar/B747/engines/start_valve_cmd")
 B747DR_bleed_ext_air            = find_dataref("laminar/B747/air/ext_air")
@@ -127,6 +145,11 @@ local function read_inputs(inp)
     -- (2026-11-04) in flight by the PSEU (the pack glue's binding: one
     -- binding of it in this module)
     inp.air = B747DR_pack_pseu_pri_gnd ~= nil and B747DR_pack_pseu_pri_gnd ~= 1
+    -- (2026-11-04; PNEU-07) the ground air cart, standing on the ground
+    if B747DR_bleed_ground_air > 0.5 and (inp.air or simDR_bleed_groundspeed > GROUND_AIR_MOVING_MS) then
+        B747DR_bleed_ground_air = 0
+    end
+    inp.ground_air_psi = B747DR_bleed_ground_air > 0.5 and GROUND_AIR_PSI or 0
 end
 
 local function write_outputs(out)
