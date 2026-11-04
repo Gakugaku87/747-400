@@ -45,7 +45,7 @@
     { "do": "check", "note": "G/S は新しい則（ピッチの則 1）", "dref": "laminar/B747/autopilot/pitch_law", "op": "==", "value": 1 },
     { "do": "set", "note": "レバー 30", "dref": "sim/cockpit2/controls/flap_ratio", "value": 1.0 },
     { "do": "set", "note": "MCP 速度 150 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 150 },
-    { "do": "watch", "note": "捕捉の後 40 秒：ビームの上へ 0.3 ドットより出ない", "dref": "sim/cockpit2/radios/indicators/nav1_vdef_dots_pilot", "max": 0.3, "timeout": 40 },
+    { "do": "watch", "note": "捕捉の後 40 秒：ビームの上へ 0.3 ドットより出ない（幅は推定。2026-11-04 から WARN：捕捉と同時のフラップ 30（FCTM の手順）の揚力で浮き、+0.32〜0.34 ドット。11-02 のフラップの揚力の補正の後から。資料・PSX・実機の動画に浮きの大きさの目安が見つからず、AFDS はそのまま：利用者の判断、notes/ATA-22.md §50）", "dref": "sim/cockpit2/radios/indicators/nav1_vdef_dots_pilot", "max": 0.3, "timeout": 40, "level": "warn" },
 
     { "do": "mark", "note": "G/S の追従" },
     { "do": "watch", "note": "電波高度 500 ft まで ±0.3 ドット", "dref": "sim/cockpit2/radios/indicators/nav1_vdef_dots_pilot", "abs": true, "max": 0.3, "until": { "dref": "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", "op": "<", "value": 500 }, "timeout": 150 },
