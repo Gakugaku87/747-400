@@ -167,6 +167,8 @@ Lua が作る名前の数：dataref 1617 個、コマンド 628 個。静的に�
 | `light/ext_avail`・`light/apu_avail`・`light/util_off` | array[2] | P5 の AVAIL・UTILITY OFF 灯 |
 | `light/isln`・`light/gen_off`・`light/drive` | array[4] | P5 の ISLN・GEN CONT OFF・DRIVE 灯 |
 | `bus_isolated`・`synoptic_inhibit` | number | autoland の母線の分離（ELEC-18、2026-10-30）：BCU 2 の BUS ISOLATED（AFDS の LAND 3 の条件）、分離の間（ELEC の synoptic の抑止）。要求は AFDS の `laminar/B747/autopilot/bus_isolate_req` |
+| `fail/gen`・`fail/bus`・`fail/drive`・`fail/tru` | array[4] | 故障の入力（2026-11-04、1 で故障。故障の窓の入口：notes/ATA-24.md §11）：発電機の故障（GCR のトリップ）、AC の load bus の故障、IDG の drive、TRU |
+| `fail/charger`・`fail/ssb` | array[2]・number | 故障の入力：main [0]・APU [1] の充電器、SSB が開いたまま |
 
 - 前からある名前（`bus1hot`〜`bus4hot`、`topleftbus`・`toprightbus`、`ssb`、`utilityleft1/2`・`utilityright1/2`、`ext_pwr1_on`・`apu_pwr1_on` など、`laminar/B747/rel_esys`〜`rel_esys4`、`capt_display_power`・`fo_display_power`、`display_has_power[6-8]`、`apu_volts`）も、同じモデルから意味を保って書く（notes/ATA-24.md §6）。
 - カスタム acf の ELEC synoptic は ISLN の枠を `breaker/btb`、DRIVE の枠を `light/drive`（IDG の油圧低）で、STAT ページのバッテリーは `battery/volts`・`battery/stat_amps` で出す（ACF_DIFF.md §5）。純正 acf は前のまま（スイッチ位置、エンジン滑油圧、X-Plane のバッテリー）。

@@ -120,6 +120,16 @@ B747DR_elec_bus_gnd_svc         = deferred_dataref("laminar/B747/electrical/bus/
 B747DR_elec_bus_gnd_svc_util    = deferred_dataref("laminar/B747/electrical/bus/gnd_svc_util", "number")
 B747DR_elec_bus_gnd_hdlg        = deferred_dataref("laminar/B747/electrical/bus/gnd_hdlg", "number")
 B747DR_elec_bus_gnd_hdlg_dc     = deferred_dataref("laminar/B747/electrical/bus/gnd_hdlg_dc", "number")
+-- (2026-11-04) failures, 1 failed (the electrical model's inputs, for the
+-- failure window; docs/overhaul/notes/ATA-24.md §11): a generator power
+-- fault (GCR trip), an AC load bus fault, the IDG drive, a TRU (1-4 each),
+-- the main and APU battery chargers, the SSB failed open
+B747DR_elec_fail_gen            = deferred_dataref("laminar/B747/electrical/fail/gen", "array[4]")
+B747DR_elec_fail_bus            = deferred_dataref("laminar/B747/electrical/fail/bus", "array[4]")
+B747DR_elec_fail_drive          = deferred_dataref("laminar/B747/electrical/fail/drive", "array[4]")
+B747DR_elec_fail_tru            = deferred_dataref("laminar/B747/electrical/fail/tru", "array[4]")
+B747DR_elec_fail_charger        = deferred_dataref("laminar/B747/electrical/fail/charger", "array[2]")
+B747DR_elec_fail_ssb            = deferred_dataref("laminar/B747/electrical/fail/ssb", "number")
 -- breakers, 1 closed
 B747DR_elec_breaker_gcb         = deferred_dataref("laminar/B747/electrical/breaker/gcb", "array[4]")
 B747DR_elec_breaker_btb         = deferred_dataref("laminar/B747/electrical/breaker/btb", "array[4]")

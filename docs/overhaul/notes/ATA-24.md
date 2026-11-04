@@ -508,3 +508,19 @@
   - 回帰（LuaJIT）：電源のモデル +34（構成 A の BTB・DCIR・全母線・BUS ISOLATED・ISLN と ELEC BUS ISLN・synoptic、2 番が欠けて C、200 ft の上で 2 つ目：元の形、要求の終わり、150 ft で 4 番が欠けて E、2 つ目：DCIR だけ閉じて BTB はそのまま、2 つ欠けた時の要求は無視・1 つ戻っても無視・新しい要求で B、B は SSB を通して AC 1、発電機が戻っても B のまま、BUS TIE 4 OFF の BTB 4 は開いたままで ISLN 4 は点く）、電源のモジュール +5（要求の dataref から BTB・DCIR・BUS ISOLATED・synoptic・ISLN と ELEC BUS ISLN まで）、AFDS のモデル +17、グルー +4。全 121 本。
   - X-Plane（カスタム acf）：新設の `s122_elec_autoland_isolation` 55/55：CMD L で APP を押すと C と R が arm して要求が立ち、2 秒後に BTB と DCIR の 1〜3 が開いて 4 が閉、全母線に電源、BUS ISOLATED、ISLN 1・3 の灯と ELEC BUS ISLN 1・2 は出ず、下の EICAS の ELEC は抑止の文言だけ（写真）。GEN CONT 2 OFF で構成 C（BTB 2・DCIR 2 が閉、AC 2 は同期母線から、R は arm のまま）。そのまま G/S と LAND 3。1,000 ft で GEN CONT 1 も OFF にすると BTB・DCIR が全部閉じて BUS ISOLATED が消え、synoptic が戻り（写真）、LAND 2、5 秒後に >NO LAND 3 の caution（3 チャンネルは入ったまま。上の EICAS の写真）。発電機を戻しても分離しない。TO/GA で要求が終わり NO LAND 3 も消える。`s114_autoland`（回帰）20/20（WARN は前からの接地の後の跳ね 1 つ）：LAND 3 に BUS ISOLATED が要るようになっても、1,345 ft で LAND 3、要求と BUS ISOLATED が立っていた（Web API）。Lua の誤りなし。
 - 作っていないもの：TRU の故障（GC の欠けは発電機だけ）、分離にかかる時間、SSB が開いている時の注 1、BCU の故障。
+
+## 11. 故障の入力（2026-11-04：故障の窓の F0、ELEC-04 の故障の部分・ELEC-23）
+
+- 段取り：利用者の方針（2026-11-04「先に再現しきれてないシステムを完了させた後」）で、故障の窓の前に、各系統のモデルに故障の入力を足す（PROGRESS の「次にやること」15）。電源が最初。
+- 新しい dataref（1 で故障）：`laminar/B747/electrical/fail/gen[4]`・`bus[4]`・`drive[4]`・`tru[4]`・`charger[2]`（main・APU）・`ssb`。電源のモデル（`B747.03.elec_model.lua`）の入力 `inp.fail`。
+- 振る舞い（資料）：
+  - 発電機の故障（過電圧・不足電圧・周波数・差動・開相・GCU の故障：LH24 p.106）：GCR がトリップして GCB が開く。並列運転の故障では BTB が先に開くが、同じ系統の GCB が自動で開くと BTB は閉じ直す（auto reclose：LH24 p.102）ので、AC bus は同期バスから給電され続ける（FCOM p.798）。GEN OFF 灯と ELEC GEN OFF。GCR は GEN CONT を OFF・ON にすると戻るが、故障が続けばまたトリップする（LH24 p.106）。GEN FIELD MAN RESET は 3D に無い（ELEC-22）。
+  - AC の load bus の故障（差動）：BTB がトリップして開いたまま（auto reclose しない。BUS TIE を OFF にして AUTO に戻すまで：LH24 p.102）。その発電機の GCB も開く（推定：資料は BTB のトリップだけを書くが、開かないと発電機が故障の母線に給電し続ける）。AC bus は死に、ELEC AC BUS（GEN OFF と BUS ISLN は抑止）。DC bus は DCIR が閉じていれば DC の tie から。
+  - IDG の drive（油圧低か油温高）：DRIVE 灯、ELEC DRIVE（エンジン運転中かつ IDG 接続中）と STATUS ELEC DRIVE（LH24 p.72-73、FCOM p.821）。109 の SB 前は発電機を落とさない。DRIVE DISC を押すと ELEC DRIVE が >DRIVE DISC に替わる（FCOM p.797）。油温 213 ℃ の熱による切り離し（p.797）は、油温を作っていないので無い。
+  - TRU：出力が無くなり、DC bus は DC の tie から（DCIR が閉なら）。AC bus に電源があるとき STATUS ELEC TR UNIT（LH24 p.184）。autoland の母線の分離では、発電機と TRU の組を一つの系統として数える（LH24 p.244）。
+  - 充電器（main・APU）：止まり、バッテリーは負荷で放電する。GSB に電源があり STANDBY POWER が BAT でないとき、EIU の遅れの後に STATUS BAT CHARGER MAIN・APU（LH24 p.196。遅れの長さは資料に無く 10 秒：推定）。
+  - SSB：開いたまま。閉じる指令の間 >ELEC SSB OPEN（FCOM p.822。前は出す所が無かった）。
+- STATUS の表（`B747.87.xt.warning.lua`）に 100〜106 を足した：ELEC DRIVE 1〜4、BAT CHARGER MAIN・APU、ELEC TR UNIT。
+- 残り（ELEC-04 の故障でない部分）：3.5 秒の break power transfer、last source on、EXT と APU の発電機の故障、バッテリーの故障。
+- 試験：新しい回帰 `elec_fail_test`（44 件：上の 6 つの故障、リセット、autoland の分離の構成 C、STANDBY POWER BAT で BAT CHARGER が出ない）、`elec_module_test` 95（dataref から STATUS と advisory まで）。
+- X-Plane（カスタム acf、2026-11-04）：新しい `s228_elec_failures` 41/41（10,000 ft の空中：発電機 2 の故障で GCB 2 が開き AC bus 2 は同期バスから、ELEC GEN OFF 2、GEN CONT の入れ直しは故障のままでは戻らず故障を消すと戻る。AC bus 3 の故障で BTB 3・GCB 3 が開き ELEC AC BUS 3、DC bus 3 は tie から、BUS TIE と GEN CONT の入れ直しで戻る。IDG 4・TRU 1・SSB・main の充電器で DRIVE 4 灯、ELEC DRIVE 4、>ELEC SSB OPEN、STATUS に BAT CHARGER MAIN・ELEC TR UNIT・ELEC DRIVE 4。ELEC の synoptic と STATUS ページの写真）、回帰の `s02_elec_panel` 63/63。AC bus 3 の故障では左の FCC（AC 3・DC 3）が止まり A/P が外れた（>AUTOPILOT DISC：6-3 段 5a の作りどおり）。ほかに AC bus 3 の機器のメッセージ（>ICE DETECTORS、>TCAS SYSTEM、>NO LAND 3 など）。Log.txt に Lua の誤りなし。

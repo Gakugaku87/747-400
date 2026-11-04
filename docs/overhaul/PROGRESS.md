@@ -6,7 +6,7 @@
 
 ## いまどこか
 
-- **最新（2026-11-04 夕方）**：APU の始動電源と空中の抽気（APU-09・10、e7f85c1d）、燃料 synoptic の色と FTR（FUEL-24、fbbb358f）、フラップの拡大・代替表示（FCTL-12、25b10bdb）、CONFIG GEAR の保持と GEAR OVRD（GEAR-17、daa7f422）、離陸形態警報（WARN-11、6afe535e）、操縦室照明の電源（照明 7-2e、LIGHT-07。LIGHT-16 は見送り）を済ませた。利用者の方針（「再現しきれていない系統を先に仕上げ、故障の窓はその後」）どおり、電源の乗り換えの残り（下の「次にやること」9：fms の IRS の更新と客室灯）も済。PSEU の乗り換え（「次にやること」10、aaad5ab7）も済。メッセージどうしの抑止（WARN-05）は各系統のモデルに入っていると確かめた。利用者の質問から、速度の警報を X-Plane で確かめ、スティックシェーカーの音を直した（a55912ac：notes/ATA-31.md §44）。系統の「一部・未」の残りは、ほとんどが故障の入力の要るもの。次は「次にやること」15（故障の窓の段取り）の F0：各モデルに故障の入力を足す（電源から）。
+- **最新（2026-11-04 夕方）**：APU の始動電源と空中の抽気（APU-09・10、e7f85c1d）、燃料 synoptic の色と FTR（FUEL-24、fbbb358f）、フラップの拡大・代替表示（FCTL-12、25b10bdb）、CONFIG GEAR の保持と GEAR OVRD（GEAR-17、daa7f422）、離陸形態警報（WARN-11、6afe535e）、操縦室照明の電源（照明 7-2e、LIGHT-07。LIGHT-16 は見送り）を済ませた。利用者の方針（「再現しきれていない系統を先に仕上げ、故障の窓はその後」）どおり、電源の乗り換えの残り（下の「次にやること」9：fms の IRS の更新と客室灯）も済。PSEU の乗り換え（「次にやること」10、aaad5ab7）も済。メッセージどうしの抑止（WARN-05）は各系統のモデルに入っていると確かめた。利用者の質問から、速度の警報を X-Plane で確かめ、スティックシェーカーの音を直した（a55912ac：notes/ATA-31.md §44）。系統の「一部・未」の残りは、ほとんどが故障の入力の要るもの。次は「次にやること」15（故障の窓の段取り）の F0：各モデルに故障の入力を足す。電源は済（notes/ATA-24.md §11）、次は燃料。
 - フェーズ0-A：完了。
 - フェーズ0-B：完了。資料索引・コード構成・acf の比較・ATA 章ごとの notes（20 本）・GAP_ANALYSIS・PLAN・試験の方針・CLAUDE.md を書いた。
 - フェーズ1：利用者の許可（2026-10-23 就寝前、「承認は自動でよい、X-Plane での試験も自由に」）により、PLAN.md を私（Claude）が承認して開始した。
@@ -151,7 +151,7 @@
 13. 7-2（照明）：段取りを決めた（2026-11-01、notes/ATA-33.md §10：7-2a〜7-2e）。7-2a〜7-2e は済（§11〜§15。7-2e は 2026-11-04）。FLIGHT DECK ACCESS LIGHTS（LIGHT-16）は見送り（3D に操作子も、点ける灯も無い）、BEACON の LWR と BOTH（LIGHT-12）は残す（承認事項）。
 14. 7-3（ドア）：軽く済ませた（2026-11-01、利用者の判断。notes/ATA-52.md §11）。DRS の箱、cargo・E/E door、flight deck door のロック、まとめのメッセージ、flight lock は 3D ができてから。
 15. 故障の窓（2026-11-04 に決めた：系統の残りを仕上げてから。メモ：Plugins → 747-400 から開く浮動ウィンドウで、ATA の章と系統図から、この機体のモデルの故障と X-Plane の故障を入れる。見た目は EICAS 風か明るい EFB 風のどちらでも、色と言葉で状態が分かること）。段取り：
-   - F0：各モデルに故障の入力を足す（無いもの）。電源（ELEC-04 の保護トリップ・3.5 秒の break power transfer、ELEC-23 の status：notes/ATA-24.md §4.3・§4.4）、燃料（FUEL-15：ポンプ・弁、FUEL TEMP SYS）、空圧（PNEU-03：過熱・過圧・弁の固着・ダクトリーク）、空調（AIR-12・22：パック・ファン・機器冷却）、脚（GEAR-22：AIR/GND SYSTEM ほか）、EEC（ENG-36）、>FUEL JETT A, B・>E/E CLNG CARD。いまある故障の入力は 56（`laminar/B747/**/fail*`）と、モデルが読む X-Plane の故障。
+   - F0：各モデルに故障の入力を足す（無いもの）。電源は 2026-11-04 に済（`laminar/B747/electrical/fail/*`：発電機・load bus・IDG・TRU・充電器・SSB。notes/ATA-24.md §11）。続き：燃料（FUEL-15：ポンプ・弁、FUEL TEMP SYS）、空圧（PNEU-03：過熱・過圧・弁の固着・ダクトリーク）、空調（AIR-12・22：パック・ファン・機器冷却）、脚（GEAR-22：AIR/GND SYSTEM ほか）、EEC（ENG-36）、>FUEL JETT A, B・>E/E CLNG CARD。いまある故障の入力は 56（`laminar/B747/**/fail*`）と、モデルが読む X-Plane の故障。
    - F1：窓・メニュー・章ごとの一覧と、すぐ入れる・直す（ネイティブの `b747_fms_bridge` に窓を足す）。
    - F2：発動の条件（時刻・高度・速度・MTBF）、arm・disarm、全部直す。
    - F3：系統図（油圧・電源・燃料・抽気から）。
@@ -571,7 +571,7 @@ PLAN.md §3 に書いた。要点：
 | ELEC-01 バス単位のモデル | 済（モデル） |
 | ELEC-02 バス単位の公開 | dataref は済。使う側の乗り換えは 1-1 の次の段 |
 | ELEC-03 電源切替 | 済（LH24 p.123 の表と FCOM p.796-797） |
-| ELEC-04 GCB/BTB の自動制御 | 一部。許可ラッチと on line の回転は済。保護トリップ・3.5 秒の break power transfer・last source on は故障を入れるときに |
+| ELEC-04 GCB/BTB の自動制御 | 一部。許可ラッチと on line の回転は済。故障の保護トリップ（発電機の故障の GCR トリップと BTB の auto reclose、load bus の故障の BTB のラッチ）は 2026-11-04 に済（notes/ATA-24.md §11）。3.5 秒の break power transfer・last source on は残り |
 | ELEC-05 SSB | 一部。自動の開閉は済。手動の SSB スイッチと OPEN 灯は無し（3D に無い） |
 | ELEC-06 standby | 済 |
 | ELEC-07 表示器と CDU の電源 | 一部。CDU は済。upper EICAS（main standby）は fltInst02 の乗り換えで |
@@ -590,7 +590,7 @@ PLAN.md §3 に書いた。要点：
 | ELEC-24 electrical/oil | 対応不要（電源のモジュールが作るようになった。どこも使っていない） |
 | ELEC-18 autoland の母線の分離 | 済（2026-10-30、notes/ATA-24.md §10・ATA-22.md §38。構成 A〜E、200 ft の上下の戻し方、ISLN と ELEC BUS ISLN の抑止、カスタム acf の ELEC synoptic の抑止の文言、BUS ISOLATED と LAND 3・NO LAND 3。TRU の故障と分離の時間は無い） |
 | ELEC synoptic の ISLN・GALLEY | 済（カスタム acf）。ISLN は BTB 開で（前はスイッチ位置）。UTILITY と GALLEY（109）は 2026-10-23 夕方に画像を分け、それぞれの母線の通電で緑・琥珀（前は 1 枚の画像で utility bus の色）。GALLEY には FCOM の図のように母線までの自分の線を描いた。freighter（570）の galley 無しは電源モデルにまだ無い |
-| ELEC-23 EICAS status | 一部。DRIVE DISC n は済（IDG が切り離されている間。実機は CMC で消すまで残る）。ELEC DRIVE、BAT CHARGER、ELEC TR UNIT、ELEC IDG VALVE は故障の仕組みが要る |
+| ELEC-23 EICAS status | 一部。DRIVE DISC n は済（IDG が切り離されている間。実機は CMC で消すまで残る）。ELEC DRIVE 1〜4、BAT CHARGER MAIN・APU、ELEC TR UNIT は 2026-11-04 に故障の入力と一緒に済（STATUS の 100〜106）。ELEC IDG VALVE は残り（つなぐ故障が無い） |
 | ELEC-19 air mode | 済 |
 | ELEC-20 故障 dataref の上書き | 済（書くのをやめた） |
 
@@ -1589,3 +1589,4 @@ X-Plane（カスタム acf）：`s07_cruise_ff`（FL350 の ALT HOLD：最後の
 - 2026-11-04：1-1 の残り（電源の乗り換え）。FMC 側の IRS の状態の写し（CDU と ND の TIME TO ALIGN）を FMC の母線（機長側 transfer・APU standby・副操縦士側 transfer）のどれかで、航法の性能を FMC が 1 台でも動いていれば、同調は選んだ FMC で回す（前は 3 つとも X-Plane の bus 0 が 22 V より上のとき。FCOM p.800、p.804。notes/ATA-34-61-FMC.md §144）。客室灯（generic light 25）を 747 の AC bus 1–4 のどれかで（推定。前は X-Plane の発電機・APU 発電機・GPU と cross tie。notes/ATA-33.md §16）。読まずに残っていた X-Plane の母線・電池・発電機の bind と、照明の 2 回目の `simDR_OAT` の bind（読み取り専用の気温に 0 を書いていた）を消した。回帰：新しい `fms_power_test` 5（直す前は 4 件落ちる）、`lighting_module_test` 147、全 203 本。X-Plane：`s226` 39/39（客室灯 0.25 を足した）、`s173_fmc_fail` 23/23、`s42_irs` 48/48（電池だけの整列中と AC が来た後の ND の TIME TO ALIGN を足した）。Log.txt に Lua の誤りなし。
 - 2026-11-04：1-2 の残り（空地判定の乗り換え、notes/ATA-32.md §16）。系統の論理を X-Plane の `onground_any`（どれか 1 輪）から PSEU の primary の地上へ：AFDS と A/T（R7332・R330・R627：ATA29_32 p.299・303）、FMC（primary は推定）、計器の DH の reset と V1・VR の音、スピードブレーキのレバーの止め、EEC の離陸の derate と着陸の後の段階の戻し。開始の状態づくり（manipulators・fuel・engines・srm・fltMgmt・fltCtrls の ER・FMC の空中開始）、FDR のファイル、EEC の推力・表示の式は X-Plane のまま。gear の init スクリプトが、機体の読み込みと飛行の始まりに X-Plane の接地から PSEU を入れておく（XTLua がモジュールを動かすまでのつなぎ）。読まない bind（hydraulicsmodel・autopilot・warning02・electrical）と、照明の働いていない STROBE LIGHT OFF の地上の判定を消した。回帰：模型の試験 59 本で `onground_any` と一緒に PSEU の地上も書く（機械的に）、全 203 本。X-Plane：`s00_baseline_start` 69/69、`s217_air_start` 7/7、`s213_vspeeds` 17/17、`s114_autoland` 20/20（注意 1 は前からの接地後の跳ね）、`s163_flight_complete` 29/29、`s43_gpws` 47/47（注意 3 は前からの mode 1 の SINK RATE が出ない件）、`s109_afds_takeoff` 19/20（落ち 1：1,500 ft の速さ 189.7 kt、上限 189。PSEU の空中は X-Plane の接地が切れてから 0.2 秒後で、AFDS が離陸の速さをつかむのがその分遅い（約 1 kt）。残りは前回 187.8 kt からの上昇の勢いの差。T/O の則の速さの保ち方は別に見る）。PSEU と X-Plane の接地の切り替わりの差は ±0.3 秒（s109 の離陸、s114 の接地と跳ね）。Log.txt に Lua の誤りなし。
 - 2026-11-04：速度の警報（利用者の質問「赤テープ速度域に入っても一切警報が鳴っていないのは正常？」「フラップ出してる状態で赤帯入っても鳴らないんや」、notes/ATA-31.md §44）。OVERSPEED（Vmo/Mmo）とサイレンは X-Plane で鳴る条件まで確かめた。フラップの制限速度の帯には実機でも警報が無い（FCOM p.1557。25・30 はロードリリーフと >FLAP RELIEF：p.954、p.957）。スティックシェーカーの音の条件（.snd の `sim/cockpit2/annunciators/stall_warning`）が、X-Plane の失速警報（acf の迎え角 15°）とプラグインの書き込みの取り合いでちらついていたので、新しい `laminar/B747/warning/stick_shaker`（最小速度のモデルのシェーカー）で鳴らす（.snd 2 つの結線。バックアップ `D:\747-400-local-assets\backup_20261104_stick_shaker`）。回帰：`speedtape_module_test` 49、INTERFACES に 1 行。X-Plane：`s227_speed_warnings` 23/23。OVERSPEED は 367 kt で出てサイレンの条件も立ち、360 kt を切ると消えた。フラップ 20・236.7 kt（帯の下端 230 kt）で OVERSPEED もサイレンも出ない（A/T の SPD は制限を越えないので、A/T を切って手で推力）。レバー 25 を 220 kt で選ぶとフラップは 20 のままで >FLAP RELIEF、195 kt を切ると 25 まで出て消えた。シェーカーの音の条件は 3 秒ずっと 1（迎え角 16.7°、125 kt、帯の上端 129 kt）。PFD の写真 3 枚。音そのものは耳で確かめていない。Log.txt に Lua の誤りなし。
+- 2026-11-04：故障の窓の F0、電源（notes/ATA-24.md §11、ELEC-04 の故障の部分・ELEC-23）。新しい `laminar/B747/electrical/fail/gen[4]`・`bus[4]`・`drive[4]`・`tru[4]`・`charger[2]`・`ssb` を電源のモデルの入力に。発電機の故障は GCR のトリップで GCB が開き、BTB は auto reclose で閉じたまま（LH24 p.102、p.106、FCOM p.798）。load bus の故障は BTB がラッチで開いたまま、GCB も開く（推定）、AC bus が死ぬ（p.102）。IDG は DRIVE 灯と ELEC DRIVE（p.72-73）。TRU は DC の tie から、STATUS ELEC TR UNIT（p.184）。充電器は STATUS BAT CHARGER（p.196、EIU の遅れ 10 秒は推定）。SSB は >ELEC SSB OPEN（FCOM p.822）。STATUS の表に 100〜106。回帰：新しい `elec_fail_test` 44、`elec_module_test` 95、全 204 本。X-Plane：新しい `s228_elec_failures` 41/41（10,000 ft の空中：発電機 2 の故障で GCB 2 が開き AC bus 2 は同期バスから、ELEC GEN OFF 2、GEN CONT の入れ直しは故障のままでは戻らず故障を消すと戻る。AC bus 3 の故障で BTB 3・GCB 3 が開き ELEC AC BUS 3、DC bus 3 は tie から、BUS TIE と GEN CONT の入れ直しで戻る。IDG 4・TRU 1・SSB・main の充電器で DRIVE 4 灯、ELEC DRIVE 4、>ELEC SSB OPEN、STATUS に BAT CHARGER MAIN・ELEC TR UNIT・ELEC DRIVE 4。ELEC の synoptic と STATUS ページの写真）、回帰の `s02_elec_panel` 63/63。AC bus 3 の故障では左の FCC（AC 3・DC 3）が止まり A/P が外れた（>AUTOPILOT DISC：6-3 段 5a の作りどおり）。ほかに AC bus 3 の機器のメッセージ（>ICE DETECTORS、>TCAS SYSTEM、>NO LAND 3 など）。Log.txt に Lua の誤りなし。
