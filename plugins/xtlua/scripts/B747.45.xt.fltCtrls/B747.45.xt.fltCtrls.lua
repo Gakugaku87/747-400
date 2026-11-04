@@ -126,6 +126,8 @@ simDR_gear_vert_defl            = find_dataref("sim/flightmodel2/gear/tire_verti
 simDR_gear_deploy_ratio         = find_dataref("sim/flightmodel2/gear/deploy_ratio")
 B747DR_cfg_flap_pos             = find_dataref("laminar/B747/flt_ctrls/fcu/flap_pos")
 B747DR_cfg_all_gear_down        = find_dataref("laminar/B747/gear/air_ground/all_gear_down")
+simDR_tocw_pitch                = find_dataref("sim/flightmodel/position/theta")
+B747DR_tocw_engine_type         = find_dataref("laminar/B747/engines/type")
 B747DR_airspeed_flapsRef        = find_dataref("laminar/B747/airspeed/flapsRef")
 simDR_ind_airspeed_kts_pilot    = find_dataref("laminar/B747/gauges/indicators/airspeed_kts_pilot")
 
@@ -780,6 +782,9 @@ end
 
 
 
+-- the takeoff configuration warning (B747.45.tocw_model.lua, loaded below)
+local tocw_state, tocw_inputs = nil, nil
+local TOCW_DETENT_POS = {[0] = 0, 1, 5, 10, 20, 25, 30}     -- the flap lever's detents
 -- >CONFIG GEAR's two latches, and the time since the liftoff while its
 -- takeoff inhibit lasts (nil: none) (below)
 local config_gear_thrust, config_gear_flaps = false, false
@@ -800,45 +805,45 @@ function B747_fltCtrols_EICAS_msg()
         if B747DR_sb_thrust_lever[i] < 0.05 then any_thrust_lever_closed = 1 end
     end
 
-    -- >CONFIG FLAPS, by the flaps' position in the detents' numbers (the
-    -- FCU's: X-Plane's wing flap angle is not the flaps' since the lift
-    -- correction, notes/AERO.md §3.12: flaps 10 and 20 are 8.2 and 15.1 there)
+    -- the takeoff configuration warning (B747.45.tocw_model.lua; FCOM
+    -- p.1557, p.1603-1604; ATA27 p.729-730; ATA31 p.180, p.188-194): armed on
+    -- the ground (the PSEU) below V1 (without a V1 until 5 degrees of pitch)
+    -- with three FUEL CONTROL switches in RUN and engine 2 or 3 at takeoff
+    -- thrust (N1 66.5 P&W, 66.7 RR, 75.0 GE); a message stays 10 s after the
+    -- thrust goes and goes at once when put right. Before: N1 90 (CONFIG
+    -- FLAPS 96, or 86 with the FMC's flaps) on engines 2 and 3 both for
+    -- FLAPS, SPOILERS and STAB, X-Plane's wheels on the ground, nothing
+    -- without a V1, and CONFIG FLAPS also against the FMC's takeoff flaps
+    -- (WARN-11). A reverser out is no takeoff thrust (estimate).
+    local tw = tocw_inputs
+    tw.on_ground = B747DR_fcu_pri_gnd == 1
+    tw.ias_kt = simDR_ind_airspeed_kts_pilot
+    tw.v1_kt = B747DR_airspeed_V1
+    tw.pitch_deg = simDR_tocw_pitch
+    tw.fuel_run = num_fuel_ctrl_sw_on
+    for i = 1, 4 do tw.n1[i] = B747DR_display_N1[i - 1] end
+    tw.reverse = simDR_engine_throttle_jet_all < 0
+    tw.engine_type = B747DR_tocw_engine_type
+    -- the flaps in a takeoff position: the trailing edge at 10 or 20 (the
+    -- FCU's position in the detents' numbers: X-Plane's wing flap angles
+    -- differ since the lift correction, notes/AERO.md §3.12), all leading
+    -- edge groups out, and the lever there too (ATA27 p.730, ATA31 p.193)
     local flap_pos = B747DR_cfg_flap_pos
-    local thRef=96
-    local unmatchedConfig=false
-    if B747DR_airspeed_flapsRef>0 then
-        if flap_pos>B747DR_airspeed_flapsRef+0.05 or flap_pos<B747DR_airspeed_flapsRef-0.05 then
-            unmatchedConfig=true
-        end
-        thRef=86
-    end
-    
-
-    if (flap_pos < 9.95 or flap_pos > 20.05 or unmatchedConfig==true)
-        and simDR_all_wheels_on_ground == 1
-        and simDR_ind_airspeed_kts_pilot < B747DR_airspeed_V1
-        and num_fuel_ctrl_sw_on >= 3
-        and simDR_engine_throttle_jet_all >= 0
-        and B747DR_display_N1[1] > thRef and B747DR_display_N1[2] > thRef
-    then
-        B747DR_CAS_warning_status[2] = 1
-    else
-	B747DR_CAS_warning_status[2] = 0
-    end
-
-    -- >CONFIG GEAR CTR: the body gear not centred (the actuators' lock
-    -- switches), engine 2 or 3 in the takeoff range (FCOM p.1603)
-    if B747DR_body_steering_unlocked == 1
-        and simDR_all_wheels_on_ground == 1
-        and simDR_ind_airspeed_kts_pilot < B747DR_airspeed_V1
-        and num_fuel_ctrl_sw_on >= 3
-        and simDR_engine_throttle_jet_all >= 0
-        and (B747DR_display_N1[1] > thRef or B747DR_display_N1[2] > thRef)
-    then
-        B747DR_CAS_warning_status[4] = 1
-    else
-	    B747DR_CAS_warning_status[4] = 0
-    end
+    local te_to = math.abs(flap_pos - 10) < 0.05 or math.abs(flap_pos - 20) < 0.05
+    local le_out = true
+    for i = 0, 5 do if B747DR_fcu_le[i] < 0.999 then le_out = false end end
+    local lever_pos = TOCW_DETENT_POS[math.floor(simDR_flap_ratio_control * 6 + 0.5)] or -1
+    tw.flaps_to = te_to and le_out and math.abs(lever_pos - flap_pos) < 0.05
+    tw.body_unlocked = B747DR_body_steering_unlocked == 1
+    tw.park_brake = B747DR_parking_brake_ratio > 0.9
+    tw.speedbrake_not_down = B747DR_speedbrake_lever > 0.01
+    tw.stab_in_band = B747_greenband_model.within(B747_greenband_sel,
+        B747_rescale(-1.0, 0.0, 1.0, 15.0, simDR_elevator_trim))
+    local tocw = B747_tocw_model.update(tocw_state, tw, SIM_PERIOD)
+    B747DR_CAS_warning_status[2] = tocw.flaps and 1 or 0        -- >CONFIG FLAPS
+    B747DR_CAS_warning_status[4] = tocw.gear_ctr and 1 or 0     -- >CONFIG GEAR CTR
+    B747DR_CAS_warning_status[5] = tocw.park_brk and 1 or 0     -- >CONFIG PARK BRK
+    B747DR_CAS_warning_status[7] = tocw.stab and 1 or 0         -- >CONFIG STAB
 
     -- >CONFIG GEAR (FCOM p.1557-1558, p.1603): in flight (the PSEU), any
     -- gear not down and locked (the PSEU's ALL GR DN: ATA29_32 p.320), and
@@ -879,34 +884,13 @@ function B747_fltCtrols_EICAS_msg()
         B747DR_CAS_warning_status[3] = 0
     end
 
-    -- >CONFIG PARK BRK: the parking brake lever set (the parking brake
-    -- itself is the gear module's: B747.10.xt.brakes.lua) on the ground below
-    -- V1 with three fuel control switches at RUN and engine 2 or 3 in the
-    -- takeoff range (FCOM p.1557, p.1603; N1 above 90 % as before: estimate)
-    if B747DR_parking_brake_ratio > 0.9
-        and simDR_ind_airspeed_kts_pilot < B747DR_airspeed_V1
-        and num_fuel_ctrl_sw_on >= 3
-        and (B747DR_display_N1[1] > 90.0 or B747DR_display_N1[2] > 90.0)
-        and simDR_engine_throttle_jet_all >= 0
-        and simDR_all_wheels_on_ground == 1
-    then
-        B747DR_CAS_warning_status[5] = 1
-    else
-        B747DR_CAS_warning_status[5] = 0
-    end
 
-    -- >CONFIG SPOILERS: the takeoff configuration warning (the conditions as
-    -- before, WARN-11); in flight on the 405 and 570 only, the lever beyond
-    -- ARM with climb thrust or more on two or more thrust levers, until it is
-    -- at ARM or DN or three are below climb thrust (FCOM p.1558; the 109 has
+    -- >CONFIG SPOILERS: the takeoff configuration warning (the model,
+    -- above); in flight on the 405 and 570 only, the lever beyond ARM with
+    -- climb thrust or more on two or more thrust levers, until it is at ARM
+    -- or DN or three are below climb thrust (FCOM p.1558; the 109 has
     -- >SPEEDBRAKES EXT only, B747.45.xt.speedbrake.lua)
-    if (B747DR_speedbrake_lever >0.01 --< 0.99
-        and simDR_all_wheels_on_ground == 1
-        and simDR_ind_airspeed_kts_pilot < B747DR_airspeed_V1
-        and num_fuel_ctrl_sw_on >= 3
-        and B747DR_display_N1[1] > 90.0
-        and B747DR_display_N1[2] > 90.0
-        and simDR_engine_throttle_jet_all >= 0)
+    if tocw.spoilers
         or (B747DR_sb_freighter == 1 and B747DR_fcu_pri_gnd ~= 1
         and B747DR_speedbrake_lever > B747_speedbrake_model.ABOVE_ARM
         and B747DR_engines_numLeverClimb >= 2)
@@ -916,21 +900,6 @@ function B747_fltCtrols_EICAS_msg()
         B747DR_CAS_warning_status[6] = 0
     end
 
-    -- >CONFIG STAB: the stabilizer out of the selected greenband (ATA27
-    -- p.729-730; the thrust and other conditions as before, WARN-11)
-    local curTrim   = B747_rescale(-1.0, 0.0, 1.0, 15.0, simDR_elevator_trim)
-    if not B747_greenband_model.within(B747_greenband_sel, curTrim)
-        and simDR_all_wheels_on_ground == 1
-        and simDR_ind_airspeed_kts_pilot < B747DR_airspeed_V1
-        and num_fuel_ctrl_sw_on >= 3
-        and B747DR_display_N1[1] > 90.0
-        and B747DR_display_N1[2] > 90.0
-        and simDR_engine_throttle_jet_all >= 0
-    then
-        B747DR_CAS_warning_status[7] = 1
-    else
-       B747DR_CAS_warning_status[7] = 0
-    end
 
     -- FLAPS CONTROL, FLAPS DRIVE, FLAPS PRIMARY, >FLAP RELIEF: the flap
     -- control units (B747.45.xt.fcu.lua)
@@ -1060,6 +1029,8 @@ end
 dofile("B747.45.xt.fcu.lua")
 dofile("B747.45.xt.srm.lua")
 dofile("B747.45.greenband_model.lua")
+dofile("B747.45.tocw_model.lua")
+tocw_state, tocw_inputs = B747_tocw_model.new(), B747_tocw_model.inputs()
 dofile("B747.45.xt.speedbrake.lua")
 -- the gear's drag X-Plane lacks, on the fuselage's drag figure (補正, notes/AERO.md §3.16)
 dofile("B747.45.xt.aero_corr.lua")
