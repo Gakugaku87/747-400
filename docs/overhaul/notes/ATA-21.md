@@ -491,3 +491,12 @@ CAS 番号は `B747.87.xt.warning.lua` の表による（行 74, 118, 135, 273, 
 - 推定・作らないもの：PTC の電源なしを故障とみなすこと。機器冷却の STATUS は選択器の位置で抑止しない（資料に条件が無い）。カードが故障したときの弁とファンの振る舞いは資料に無いので変えない（メッセージだけ）。ECS MISC CARD（p.102）、弁ごとの STATUS（EE CLNG SUPPLY V、INBD EXH、GND EXH、BYPASS V、E6/E9 V、SMOKE/OVRD VLV、EE CLNG OVRD：p.540–598）、clean mode（p.508）は作っていない。
 - 試験：新しい回帰 `air_fail_test`（33 件）、`air_module_test` 112（dataref から EICAS の番号まで）。
 - X-Plane（カスタム acf、2026-11-04）：新しい `s232_air_failures` 23/23（成田でエンジン運転中、3 パック：パック 2 の過熱でトリップし PACK 2 と PACK RST の SYS FAULT 灯、2 パック運転、75 秒で STATUS PACK 2。PTC A の故障で 10 秒後に STATUS PACK CONTROL A、B が引き継ぎ PACK CONTROL は出ない。上の左のファンで STATUS RECIRC FAN UPR L。過熱を消してもトリップはラッチし、PACK RST で 3 パックに戻る。機器冷却の煙で EQUIP COOLING と STATUS EQUIPMENT SMOKE、カードの故障で地上の >E/E CLNG CARD と STATUS。上の EICAS・STATUS ページ・頭上パネルの写真）、回帰の `s17_ecs_synoptic` 15/15、`s16_temp_ground` 36/36。Log.txt に Lua の誤りなし。
+
+## 11. outflow valve、relief valve、加湿器の故障（2026-11-04：故障の窓のため）
+
+- 新しい dataref（1 で故障。init `B747.55.air`）：`laminar/B747/air/fail/outflow_auto[2]`（outflow valve L・R の自動の駆動（AC モーター））、`fail/relief_open[2]`（正圧の relief valve UPR・LWR が開いたまま）、`fail/humidifier`（操縦室の加湿器）。
+- outflow valve の自動の駆動：弁はその位置のまま。もう一方の弁が客室の予定を保つ（与圧のモデルは止まった弁の面積を、MAN の弁と同じく差し引いて残りの弁を動かす）。OUTFLOW VLV L/R と STATUS（FCOM p.620：自動の制御ができない）。MAN の DC モーターでは動かせる（ATA21 p.437、p.449）。
+- relief valve の開固着：2 つの弁の面積（推定 0.05 m²）の半分ずつ（推定）が開いたまま。前からの論理で pack 2 が止まり、PRESS RELIEF（FCOM p.620）。STATUS はその弁の UPR/LWR PRESS RELIEF だけ（圧で開くときは前からの推定で両方）。FL350 では客室が初め約 5,000 fpm で昇る（緊急降下の練習になる。弁の大きさが推定なので速さも推定）。
+- 加湿器：>HUMID FLT DK（advisory 197）を 109（P&W、RR）だけで出す（FCOM p.619）。加湿器そのもの、水、HUMID スイッチ（3D に無い：ON とみなす）は作らない。
+- 試験：`press_model_test` 118、`air_module_test` 125。
+- X-Plane（カスタム acf、2026-11-04）：`s247_failures_more` 38/38（成田でエンジン運転中：outflow valve R の自動の駆動で OUTFLOW VLV R と STATUS、P&W なので >HUMID FLT DK、LWR relief valve の開固着で PRESS RELIEF と STATUS LWR PRESS RELIEF だけ。直すと消える）。Log.txt に Lua の誤りなし。

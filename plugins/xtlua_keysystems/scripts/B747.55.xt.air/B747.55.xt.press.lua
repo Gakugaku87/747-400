@@ -40,6 +40,8 @@ B747DR_press_cruise_clamp       = find_dataref("laminar/B747/air/press/cruise_cl
 B747DR_press_valve_man          = find_dataref("laminar/B747/air/press/valve_man")
 B747DR_press_ldg_alt_shown      = find_dataref("laminar/B747/air/press/ldg_alt_shown")
 B747DR_air_fail_cpc             = find_dataref("laminar/B747/air/fail/cpc")
+B747DR_air_fail_outflow_auto_in = find_dataref("laminar/B747/air/fail/outflow_auto")
+B747DR_air_fail_relief_open_in  = find_dataref("laminar/B747/air/fail/relief_open")
 B747DR_press_status             = find_dataref("laminar/B747/CAS/status_status")
 B747DR_press_pseu_alt_gnd       = find_dataref("laminar/B747/gear/air_ground/alt_gnd")
 
@@ -133,6 +135,10 @@ function B747_press()
     inp.depres_fast = simDR_press_depres_fast == 6
     inp.cpc_failed[1] = B747DR_air_fail_cpc[0] > 0.5        -- X-Plane has no such failure
     inp.cpc_failed[2] = B747DR_air_fail_cpc[1] > 0.5
+    for v = 1, 2 do
+        inp.auto_failed[v] = B747DR_air_fail_outflow_auto_in[v - 1] > 0.5
+        inp.relief_failed[v] = B747DR_air_fail_relief_open_in[v - 1] > 0.5
+    end
 
     local out = C.update(press_state, inp, SIM_PERIOD)
     B747_pack_relief_open = out.relief_open
@@ -172,8 +178,8 @@ function B747_press()
     put(B747DR_press_status, STATUS_CABIN_AUTO + 1, flag(out.cpc_alert[2]))
     put(B747DR_press_status, STATUS_OUTFLOW, flag(out.outflow_alert[1]))
     put(B747DR_press_status, STATUS_OUTFLOW + 1, flag(out.outflow_alert[2]))
-    put(B747DR_press_status, STATUS_RELIEF, flag(out.relief_open))         -- both valves open
-    put(B747DR_press_status, STATUS_RELIEF + 1, flag(out.relief_open))     -- together (estimate)
+    put(B747DR_press_status, STATUS_RELIEF, flag(out.relief_valve[1]))     -- both valves open
+    put(B747DR_press_status, STATUS_RELIEF + 1, flag(out.relief_valve[2])) -- together (estimate), or one stuck
     put(B747DR_press_status, STATUS_AIR_GND, flag(B747DR_pack_pseu_pri_gnd ~= B747DR_press_pseu_alt_gnd))
 
     -- the ECS data block on the primary EICAS: LDG ALT MAN, the cabin

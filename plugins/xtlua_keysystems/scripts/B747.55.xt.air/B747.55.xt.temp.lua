@@ -28,10 +28,17 @@ B747DR_temp_light_aft_cargo     = find_dataref("laminar/B747/air/light/aft_cargo
 B747DR_air_fail_ztc             = find_dataref("laminar/B747/air/fail/ztc")
 B747DR_air_fail_trim_valve      = find_dataref("laminar/B747/air/fail/trim_valve")
 B747DR_air_fail_zone_valve      = find_dataref("laminar/B747/air/fail/zone_valve")
+-- (2026-11-04) the flight deck humidifier's fault (notes/ATA-21.md §11):
+-- >HUMID FLT DK on the 109 (P&W, RR) only (FCOM p.619). The humidifier,
+-- its water and its HUMID switch (not in the 3D: ON) are not modelled
+B747DR_air_fail_humidifier      = find_dataref("laminar/B747/air/fail/humidifier")
+B747DR_temp_engine_type         = find_dataref("laminar/B747/engines/type")
 
 local SW_ZONE_RST, SW_TRIM_AIR, SW_AFT_CARGO_HT, SW_CARGO_ARM_AFT = 36, 37, 40, 85
 -- EICAS slots (B747.87.xt.warning.lua)
 local ADV_TEMP_CARGO_HEAT, ADV_TEMP_ZONE, ADV_TRIM_AIR_OFF = 284, 287, 294
+local ADV_HUMID_FLT_DK = 197
+local ENGINE_GE = 1                 -- laminar/B747/engines/type: the 570
 local STATUS_ZONE_TEMP = 36
 
 local temp_state = T.new()
@@ -116,4 +123,6 @@ function B747_temp()
     put(B747DR_CAS_advisory_status, ADV_TEMP_ZONE, flag(out.temp_zone))
     put(B747DR_CAS_advisory_status, ADV_TRIM_AIR_OFF, flag(out.trim_air_off))
     put(B747DR_press_status, STATUS_ZONE_TEMP, flag(out.zone_temp))
+    put(B747DR_CAS_advisory_status, ADV_HUMID_FLT_DK,
+        flag(B747DR_air_fail_humidifier > 0.5 and B747DR_temp_engine_type ~= ENGINE_GE))
 end

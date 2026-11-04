@@ -137,6 +137,13 @@ B747DR_press_ldg_alt_shown          = deferred_dataref("laminar/B747/air/press/l
 -- failures X-Plane does not have (1 failed): the cabin pressure
 -- controllers A, B
 B747DR_air_fail_cpc                 = deferred_dataref("laminar/B747/air/fail/cpc", "array[2]")
+-- (2026-11-04) the outflow valves L, R: the automatic (AC) drive fails, the
+-- valve stays where it is (MAN still drives it); the positive pressure
+-- relief valves UPR, LWR stuck open (notes/ATA-21.md §11)
+B747DR_air_fail_outflow_auto        = deferred_dataref("laminar/B747/air/fail/outflow_auto", "array[2]")
+B747DR_air_fail_relief_open         = deferred_dataref("laminar/B747/air/fail/relief_open", "array[2]")
+-- (2026-11-04) the flight deck humidifier's fault (>HUMID FLT DK, the 109)
+B747DR_air_fail_humidifier          = deferred_dataref("laminar/B747/air/fail/humidifier", "number")
 -- (2026-11-04) the bleed air failures (1 failed; the bleed model's inputs,
 -- for the failure window: docs/overhaul/notes/ATA-36.md §10): each engine's
 -- bleed overheat, overpressure (the PRV's regulation), HPSOV failed closed
