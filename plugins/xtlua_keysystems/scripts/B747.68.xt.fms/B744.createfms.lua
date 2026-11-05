@@ -380,7 +380,23 @@ local function doKey(fmsModule,key,phase,duration)
   end
   if phase~=0 then return end
   fmsO.notify=""
-  pageKey(fmsModule,key)
+  -- (2026-11-05 review) a Lua error in a key's function stopped every
+  -- module of this plugin (FMC, AFDS, displays, air, lighting): the old
+  -- PAX/CARGO, freight and maintenance handlers do arithmetic on
+  -- tonumber() of whatever was typed ("3A", "1/2"). Now the key is
+  -- refused (INVALID ENTRY) and the error goes to
+  -- Output/B747_xtlua_errors.txt like a callout's; under the regression
+  -- tests (B747_TEST_STRICT, tests/lib/xtlua.lua) it is raised as before
+  local ok, err = xpcall(function() pageKey(fmsModule,key) end, debug and debug.traceback or tostring)
+  if not ok then
+    if B747_TEST_STRICT then error(err, 0) end
+    local log = io and io.open("Output/B747_xtlua_errors.txt", "a")
+    if log then
+      log:write((os and os.date and os.date("%Y-%m-%d %H:%M:%S ")) or "", "CDU key ", tostring(fmsModule), " ", tostring(key), ": ", tostring(err), "\n")
+      log:close()
+    end
+    fmsO.notify="INVALID ENTRY"
+  end
   st.sp=fmsO.scratchpad
   -- a message the page set (notify): this CDU's (FMSPG p.39)
   if fmsO.notify~="" then

@@ -22,6 +22,12 @@
 --   print(rt:get("laminar/B747/hydraulics/pressure_1"))
 local source = dofile("tests/lib/source.lua")
 
+-- (2026-11-05) the modules' safety nets (the CDU key's: B744.createfms.lua)
+-- raise the error under the tests instead of refusing the key, so that a
+-- test still fails on a Lua error. A test of a safety net itself sets it
+-- false for its case
+B747_TEST_STRICT = true
+
 local M = {}
 
 -- X-Plane's folder, for Resources/plugins/DataRefs.txt (dataref types)

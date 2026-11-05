@@ -1540,7 +1540,12 @@ function fmsFunctions.setdata(fmsO,value)
 --Marauder28
 --PAX / CARGO page
   elseif value == "paxFirstClassA" then
-	if string.match(fmsO["scratchpad"], "%d") and math.abs(tonumber(fmsO["scratchpad"])) <= 23 then
+	if string.match(fmsO["scratchpad"], "%d") and (tonumber(fmsO["scratchpad"]) == nil or tonumber(fmsO["scratchpad"]) % 1 ~= 0) then
+		-- (2026-11-05 review) whole passengers only: "30.5" made the round
+		-- robin below step past 0 and loop for ever (XTLua's thread stuck),
+		-- "3A" an arithmetic error (the plugin stopped)
+		fmsO["notify"] = "INVALID ENTRY"
+	elseif string.match(fmsO["scratchpad"], "%d") and math.abs(tonumber(fmsO["scratchpad"])) <= 23 then
 		setFMSData(value, math.abs(string.format("%2d", fmsO["scratchpad"])))
 		calc_pax_cargo()
 	elseif fmsO["scratchpad"] == "F" then  --Add FULL PAX
@@ -1611,7 +1616,7 @@ function fmsFunctions.setdata(fmsO,value)
 				paxE = paxE + 1
 				x = x - 1
 			end
-		until (x == 0)
+		until (x <= 0)
 		
 		fmsModules["data"].paxFirstClassA = string.format("%2d", paxA)
 		fmsModules["data"].paxBusClassB = string.format("%2d", paxB)
