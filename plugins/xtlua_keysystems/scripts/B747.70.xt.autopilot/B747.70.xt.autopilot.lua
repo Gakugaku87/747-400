@@ -3556,8 +3556,26 @@ end
 
 --function aircraft_unload() end
 
+-- (2026-11-05 review 3) a new flight: the A/T and this glue's latches anew
+-- with the AFDS. Before, B747_afds_reset made the AFDS only: an A/T engaged
+-- at the end of a flight stayed engaged in the model and, the ARM switch off
+-- in the new flight, disengaged there (AUTOTHROT DISC); its TO/GA, retard,
+-- holds and acceleration filter, VNAV's level-off, the push counts and the
+-- FMC master's latch went on too
+local function B747_at_reset()
+	atState = B747_at_model.new()
+	atIas, atAccel = nil, 0
+	atPush = {spd = 0, thr = 0, disc = 0}
+	atSeen = {spd = 0, thr = 0, disc = 0, toga = nil}
+	atMaster, atMasterOK, atFmcLatch = nil, false, false
+	vnavLevel = nil
+	afdsTogaPushes = nil
+	lastHdgRefSwitch = nil
+end
+
 function flight_start()
 	B747_afds_reset()
+	B747_at_reset()
 	B747_flight_start_autopilot()
 	simDR_elevator = 0
 	simDR_rudder = 0
