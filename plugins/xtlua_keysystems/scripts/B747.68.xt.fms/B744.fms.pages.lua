@@ -1130,16 +1130,16 @@ function fmsFunctions.setdata(fmsO,value)
     if mach then setFMSData("desspdmach", string.format("%03d", mach)) end
     setFMSData("desspdmode", "S")
   elseif value=="destrans" then
-    spd=string.sub(fmsO["scratchpad"],1,3)
-    alt=string.sub(fmsO["scratchpad"],5)
-    if validateSpeed(spd) ==false then 
-      fmsO["notify"]="INVALID ENTRY"
+    -- SPD TRANS: the destination's transition (240/10000: X-Plane's nav
+    -- data has no airport speed limits), deleted only, then ECON or the
+    -- selected speed (FCOM p.1392; as the climb's, FCOM p.1328). (2026-11-05
+    -- review 4: before, an entry and no delete: DELETE gave INVALID ENTRY)
+    if del then
+      setFMSData("destranspd","---")
+      setFMSData("desspdtransalt","-----")
     else
-      setFMSData("destranspd",spd)
-      if validAlt(alt) ~=nil then 
-	setFMSData("desspdtransalt",validAlt(alt))
-      end
-    end 
+      fmsO["notify"]="INVALID ENTRY"
+    end
    elseif value=="desrest" and del then
     setFMSData("desrestspd","---")
     setFMSData("desrestalt","-----")

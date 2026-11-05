@@ -322,11 +322,14 @@ end
 -- (the transition's less 10) below; slow, REV_SLOW_ADD over the higher of
 -- the best holding speed and the minimum maneuvering speed above, the SPD
 -- TRANS's (not under the minimum maneuvering speed) below. On approach
--- (step 9e2) the fast side's the target's (FCOM p.1262 names none: estimate)
+-- (step 9e2) the fast side's the target's (FCOM p.1262 names none: estimate).
+-- SPD TRANS deleted (FCOM p.1392: ECON or the selected speed then), no
+-- transition: above's speeds at every altitude (2026-11-05 review 4:
+-- before, 240 kt below 10,000 ft still)
 local function reversion(s, P, inp, kind, tr, target)
     if s.rev then return end
-    local below = inp.alt < tr
-    local tc = inp.des and inp.des.trans_cas or 240
+    local tc = inp.des and inp.des.trans_cas
+    local below = tc ~= nil and inp.alt < tr
     local vmin = (inp.vmin and inp.vmin > 0) and inp.vmin or 0
     local cas
     if kind == "fast" and inp.on_app then
@@ -545,7 +548,9 @@ function M.update(s, inp)
         out.at = M.AT_IDLE
         local tr = inp.des and inp.des.trans_alt or 10000
         local ias = inp.ias
-        local lo, hi, drag = speed_limits(P, inp, out.cas, inp.alt < tr)
+        -- below the transition only with one (SPD TRANS deleted: none)
+        local below = inp.des ~= nil and inp.des.trans_cas ~= nil and inp.alt < tr
+        local lo, hi, drag = speed_limits(P, inp, out.cas, below)
         if path_h then
             out.path_alt = path_h
             out.path_dev = inp.alt - path_h

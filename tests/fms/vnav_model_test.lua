@@ -362,6 +362,17 @@ o = V.update(s21, inp{alt = p30, mcp_alt = 1000, d_ed = 30, gs = 300, ias = 251}
 T.equal(o.msg, "DRAG", "251, over the target plus 10: DRAG REQUIRED (FCOM p.1260)")
 o = V.update(s21, inp{alt = p30 + 200, mcp_alt = 1000, d_ed = 30, gs = 300, ias = 258})
 T.check(o.mode == "SPD" and math.abs(o.cas - 240) < 1e-6, "258, over 255, 200 ft above: VNAV SPD at 240 (the transition's less 10)")
+-- (2026-11-05 review 4) SPD TRANS deleted (FCOM p.1392: ECON or the
+-- selected speed then): no transition, the schedule's 290 below 10,000 ft
+-- with above's band and reversion (before: the reversion at 240 still)
+local desNoTrans = {cas = 290, mach = 0.84}
+local s21b = V.new()
+V.update(s21b, inp{alt = 35000, mcp_alt = 1000, d_ed = 110, gs = 480, des = desNoTrans})
+o = V.update(s21b, inp{alt = p30, mcp_alt = 1000, d_ed = 30, gs = 300, ias = 295, des = desNoTrans})
+T.check(o.mode == "PTH" and o.msg == nil and math.abs(o.cas - 290) < 1e-6, "SPD TRANS deleted, 9,400 ft at 295 for 290: no message")
+o = V.update(s21b, inp{alt = p30 + 200, mcp_alt = 1000, d_ed = 30, gs = 300, ias = 362, des = desNoTrans})
+T.check(o.mode == "SPD" and o.cas > 300,
+    string.format("SPD TRANS deleted, 362 kt 200 ft above: the reversion at VMO less 16 (%.0f; before 240)", o.cas or 0))
 -- slow under the minimum maneuvering speed (the A/T off: the A/T's SPD
 -- did not catch it): the steeper by SPD_VS a kt, 150 ft below the
 -- reversion at 5 kt over the higher of the best holding speed and the

@@ -813,10 +813,11 @@ function setFMSData(id,value)
 	-- XTLua: removed
    fmsModules:setData(id,value)
 end
--- the climb's SPD TRANS speed: the greater of the transition speed (250 kt;
--- the origin's from the nav DB comes in step 4) and VREF 30 + 100 kt (FCOM
--- p.1328: "272/10000"; VREF 30: estimate); dashes once deleted (FMC-09,
--- 6-1 step 1)
+-- the climb's SPD TRANS speed: the greater of the transition speed and VREF
+-- 30 + 100 kt (FCOM p.1328: "272/10000"; VREF 30: estimate); dashes once
+-- deleted (FMC-09, 6-1 step 1). The transition speed 250 kt for every
+-- origin: X-Plane's nav data (CIFP, apt.dat) has no airport speed limits,
+-- where the real nav DB's come from (2026-11-05 review 4: kept, no source)
 B747DR_airspeed_Vf30 = find_dataref("laminar/B747/airspeed/Vf30")
 function update_spd_trans()
 	local cur = fmsModules["data"]["transpd"]
