@@ -376,6 +376,34 @@ do
     T.check(out.lights.util_off[2] and out.cas.util_bus[2], "R UTILITY OFF: OFF light, ELEC UTIL BUS R")
 end
 
+-- (2026-11-05 review 3) a side's utility buses unpowered for any reason:
+-- AC bus 1 without a source (GEN CONT 1 off, BUS TIE 1 isolated): utility
+-- bus 1 lost, the L UTIL OFF light and ELEC UTIL BUS L (FCOM p.801, p.822:
+-- before, the switch only); the right side not. During the load shedding
+-- nothing, a UTILITY switch OFF neither (FCOM p.801)
+do
+    local s, inp = powered_up()
+    engines(inp, 69)
+    inp.on_ground = false
+    local out = run(s, inp, 1)
+    T.check(not out.cas.util_bus[1] and not out.lights.util_off[1], "4 gens: no ELEC UTIL BUS, no UTIL OFF light")
+    inp.gen_cont[1], inp.bus_tie[1] = false, false
+    out = run(s, inp, 2)
+    T.check(not out.ac[1] and not out.util[1], "AC bus 1 without a source: utility bus 1 unpowered")
+    T.check(not out.load_shed, "three generators: no load shedding")
+    T.check(out.cas.util_bus[1] and out.lights.util_off[1], "ELEC UTIL BUS L and the L UTIL OFF light")
+    T.check(not out.cas.util_bus[2] and not out.lights.util_off[2], "the right side not")
+    inp.gen_cont[1], inp.bus_tie[1] = true, true
+    out = run(s, inp, 2)
+    T.check(not out.cas.util_bus[1] and not out.lights.util_off[1], "AC bus 1 back: none")
+    inp.gen_cont[1], inp.gen_cont[2] = false, false
+    out = run(s, inp, 5)
+    T.check(out.load_shed, "two generators: loads shed")
+    inp.utility[2] = false
+    out = run(s, inp, 1)
+    T.check(not out.cas.util_bus[2] and not out.lights.util_off[2], "shedding: R UTILITY OFF lights nothing (FCOM p.801)")
+end
+
 -- APU start on the batteries (LH24 p.158-159, p.200; FCOM p.804, p.896): the
 -- APU inverter stops for 65 s, so the APU standby bus (captain's PFD and ND)
 -- loses power; BAT DISCH APU is not shown while the APU starts.
