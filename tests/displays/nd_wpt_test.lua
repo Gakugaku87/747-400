@@ -42,6 +42,27 @@ T.equal(near(0.0, 179.95, 40), "EAST WEST", "and from the east side")
 T.equal(near(70.0, 20.0, 40), "NORTH", "at 70N: 1.5 degrees east (31 NM) in, 3.5 degrees (72 NM) out")
 T.equal(near(10.0, 10.0, 40), "", "nothing near: none")
 
+-- the box (also the ND's navaids, 2026-11-05 review): no point within the
+-- range left out, at the equator, at 60N and near the pole
+local function dest(lat, lon, brg, nm)
+    local p1, l1, b, d = math.rad(lat), math.rad(lon), math.rad(brg), nm / 3440
+    local p2 = math.asin(math.sin(p1) * math.cos(d) + math.cos(p1) * math.sin(d) * math.cos(b))
+    local l2 = l1 + math.atan2(math.sin(b) * math.sin(d) * math.cos(p1), math.cos(d) - math.sin(p1) * math.sin(p2))
+    return math.deg(p2), (math.deg(l2) + 540) % 360 - 180
+end
+local missed = 0
+for _, c in ipairs({{0, 10, 40}, {60, 10, 40}, {60, 179.5, 640}, {80, 0, 640}, {-45, -170, 160}}) do
+    local dlat, dlon = D.box(c[1], c[3])
+    for brg = 0, 355, 5 do
+        local la, lo = dest(c[1], c[2], brg, c[3] * 0.999)
+        if not D.in_box(la, lo, c[1], c[2], dlat, dlon) then missed = missed + 1 end
+    end
+end
+T.equal(missed, 0, "every point just inside the range in its box (equator, 60N, across 180, 80N, 45S)")
+local dlat, dlon = D.box(0, 60)
+T.check(math.abs(dlat - 1) < 1e-9 and dlon > 1 and dlon < 1.01, "60 NM at the equator: 1 degree each way")
+T.check(not D.in_box(1.2, 10, 0, 10, dlat, dlon) and not D.in_box(0, 11.2, 0, 10, dlat, dlon), "72 NM north or east: out")
+
 -- the ND module with a small earth_fix.dat round 35N 140E
 local fixfile = (os.getenv("TEMP") or os.getenv("TMP") or ".") .. "/b747_nd_wpt_test_fix.dat"
 local f = assert(io.open(fixfile, "w"))

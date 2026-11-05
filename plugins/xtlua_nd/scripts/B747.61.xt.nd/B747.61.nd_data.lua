@@ -90,13 +90,28 @@ function M.fix_add(grid, lat, lon, id)
     c[n + 1], c[n + 2], c[n + 3] = lat, lon, id
 end
 
+-- a box round a position for range_nm: the differences of latitude and
+-- longitude (degrees) that no point within range_nm exceeds (the
+-- longitude's from the cosine at the box's edge nearest a pole; the whole
+-- circle of longitude near a pole)
+function M.box(lat, range_nm)
+    local dlat = range_nm / 60
+    local c = math.cos(math.rad(math.min(math.abs(lat) + dlat, 90)))
+    local dlon = c > 0.01 and dlat / c or 180
+    return dlat, math.min(dlon, 180)
+end
+-- a point in that box (across 180 degrees too)
+function M.in_box(lat, lon, clat, clon, dlat, dlon)
+    if math.abs(lat - clat) > dlat then return false end
+    local dl = math.abs(lon - clon)
+    if dl > 180 then dl = 360 - dl end
+    return dl <= dlon
+end
+
 -- the waypoints in a box of range_nm round a position, each as fn(id, lat,
 -- lon) (the caller measures the distance); across 180 degrees too
 function M.fixes_near(grid, lat, lon, range_nm, fn)
-    local dlat = range_nm / 60
-    local cl = math.cos(math.rad(lat))
-    local dlon = cl > 0.01 and range_nm / (60 * cl) or 180
-    if dlon > 180 then dlon = 180 end
+    local dlat, dlon = M.box(lat, range_nm)
     local c0, c1 = math.floor(lon - dlon), math.floor(lon + dlon)
     if c1 - c0 >= 359 then c0, c1 = -180, 179 end
     for row = math.max(math.floor(lat - dlat), -90), math.min(math.floor(lat + dlat), 90) do
@@ -105,9 +120,7 @@ function M.fixes_near(grid, lat, lon, range_nm, fn)
             if c then
                 for n = 1, #c, 3 do
                     local flat, flon = c[n], c[n + 1]
-                    local dl = math.abs(flon - lon)
-                    if dl > 180 then dl = 360 - dl end
-                    if math.abs(flat - lat) <= dlat and dl <= dlon then fn(c[n + 2], flat, flon) end
+                    if M.in_box(flat, flon, lat, lon, dlat, dlon) then fn(c[n + 2], flat, flon) end
                 end
             end
         end

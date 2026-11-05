@@ -265,37 +265,55 @@ local nLength=0
 dofile("json/json.lua")
 dofile("numberlua.lua")
 
+-- (2026-11-05 review) the JSON strings decoded when they changed (before:
+-- the navaids when their length changed, the route and its ETAs every 2 s)
+local lastNavaidsJSON, lastFmsJSON, lastEtaJSON=nil, nil, nil
 function decodeNAVAIDS()
-  if string.len(navAidsJSON) ~= nLength then
-      currentNaviadsTable=json.decode(navAidsJSON)
-      nLength=string.len(navAidsJSON)
+  local s=navAidsJSON
+  if s~=lastNavaidsJSON then
+      lastNavaidsJSON=s
+      local t=string.len(s)>1 and json.decode(s)
+      currentNaviadsTable=type(t)=="table" and t or {}
+      nLength=string.len(s)
   end
 end
 
 function decodeFlightPlan()
-  if string.len(fmsJSON) >0 then
-      fmsTable=json.decode(fmsJSON)
+  local f=fmsJSON
+  if f~=lastFmsJSON then
+    lastFmsJSON=f
+    if string.len(f) >0 then
+        local t=json.decode(f)
+        if type(t)=="table" then fmsTable=t end
+    end
+    fmsVersion=fmsVersion+1
   end
-  fmsVersion=fmsVersion+1
   -- the FMC's ETA for each route entry and its transition altitude (step 5c)
   local e=B747DR_nd_fms_route_eta
-  if type(e)=="string" and string.len(e)>1 then routeEta=json.decode(e) else routeEta={} end
+  if e~=lastEtaJSON then
+    lastEtaJSON=e
+    if type(e)=="string" and string.len(e)>1 then routeEta=json.decode(e) else routeEta={} end
+  end
   local d=B747DR_nd_fms_data
   transAlt=(type(d)=="string" and tonumber(d:match('"transalt"%s*:%s*"?(%d+)'))) or ND_DATA.TRANS_ALT_FT
 end
+-- (2026-11-05 review) these three's working values local: as globals each
+-- write went through the module's namespace (a Lua call), for every
+-- symbol in every newIcons, and getHeadingDifference's replaced the
+-- module's error function with a number
 function getHeading(lat1,lon1,lat2,lon2)
-  b10=math.rad(lat1)
-  b11=math.rad(lon1)
-  b12=math.rad(lat2)
-  b13=math.rad(lon2)
-  retVal=math.atan2(math.sin(b13-b11)*math.cos(b12),math.cos(b10)*math.sin(b12)-math.sin(b10)*math.cos(b12)*math.cos(b13-b11))
+  local b10=math.rad(lat1)
+  local b11=math.rad(lon1)
+  local b12=math.rad(lat2)
+  local b13=math.rad(lon2)
+  local retVal=math.atan2(math.sin(b13-b11)*math.cos(b12),math.cos(b10)*math.sin(b12)-math.sin(b10)*math.cos(b12)*math.cos(b13-b11))
   return math.deg(retVal)
 end
 function getHeadingDifference(desireddirection,current_heading)
-	error = current_heading - desireddirection
-	if (error >  180) then error =error- 360 end
-	if (error < -180) then error =error+ 360 end
-	return error
+	local err = current_heading - desireddirection
+	if (err >  180) then err =err- 360 end
+	if (err < -180) then err =err+ 360 end
+	return err
 end
 
 -- a true bearing on that side's ND, from the display's top as nd_up orients
@@ -333,13 +351,13 @@ function nd_up(mode,hdg,trk,pln_style)
 end
 
 function getDistance(lat1,lon1,lat2,lon2)
-  alat=math.rad(lat1)
-  alon=math.rad(lon1)
-  blat=math.rad(lat2)
-  blon=math.rad(lon2)
-  av=math.sin(alat)*math.sin(blat) + math.cos(alat)*math.cos(blat)*math.cos(blon-alon)
+  local alat=math.rad(lat1)
+  local alon=math.rad(lon1)
+  local blat=math.rad(lat2)
+  local blon=math.rad(lon2)
+  local av=math.sin(alat)*math.sin(blat) + math.cos(alat)*math.cos(blat)*math.cos(blon-alon)
   if av > 1 then av=1 end
-  retVal=math.acos(av) * 3440
+  local retVal=math.acos(av) * 3440
   --print(lat1.." "..lon1.." "..lat2.." "..lon2)
   --print("Distance = "..retVal) 
   return retVal
@@ -1193,15 +1211,26 @@ function newIcons()
   end
   -- TCAS traffic has its own slots (updateTCAS)
 
-  --NAVAIDS
+  --NAVAIDS (2026-11-05 review: each side's box first, the great-circle
+  -- distance only inside it; before, the distance of every navaid X-Plane
+  -- listed, for both sides, every 0.2 s)
+  local rC, rF=ranges[simDR_range_dial_capt + 1], ranges[simDR_range_dial_fo + 1]
+  local dlatC, dlonC=ND_DATA.box(display_latitude_cpt, rC)
+  local dlatF, dlonF=ND_DATA.box(display_latitude_fo, rF)
   for n=table.getn(currentNaviadsTable),1,-1 do
-    local distance = getDistance(display_latitude_cpt,display_longitude_cpt,currentNaviadsTable[n][5],currentNaviadsTable[n][6])
-    if distance < ranges[simDR_range_dial_capt + 1] then 
-      makeIcon(iconTextDataCapt,currentNaviadsTable[n][2],currentNaviadsTable[n][8],currentNaviadsTable[n][5],currentNaviadsTable[n][6],distance)
+    local e=currentNaviadsTable[n]
+    local la, lo=e[5], e[6]
+    if ND_DATA.in_box(la, lo, display_latitude_cpt, display_longitude_cpt, dlatC, dlonC) then
+      local distance = getDistance(display_latitude_cpt,display_longitude_cpt,la,lo)
+      if distance < rC then
+        makeIcon(iconTextDataCapt,e[2],e[8],la,lo,distance)
+      end
     end
-    distance = getDistance(display_latitude_fo,display_longitude_fo,currentNaviadsTable[n][5],currentNaviadsTable[n][6])
-    if distance < ranges[simDR_range_dial_fo + 1] then 
-      makeIcon(iconTextDataFO,currentNaviadsTable[n][2],currentNaviadsTable[n][8],currentNaviadsTable[n][5],currentNaviadsTable[n][6],distance)
+    if ND_DATA.in_box(la, lo, display_latitude_fo, display_longitude_fo, dlatF, dlonF) then
+      local distance = getDistance(display_latitude_fo,display_longitude_fo,la,lo)
+      if distance < rF then
+        makeIcon(iconTextDataFO,e[2],e[8],la,lo,distance)
+      end
     end
   end
   --FIXES (WPT)
@@ -1318,6 +1347,9 @@ function updateNDLatLong()
   display_longitude_cpt=simDR_longitude
   display_latitude_fo=simDR_latitude
   display_longitude_fo=simDR_longitude
+  -- (2026-11-05 review) the plan's centre is used in PLAN only: before,
+  -- X-Plane's FMS data was JSON-decoded every frame in every mode
+  if simDR_map_mode~=4 and backport_map_mode_copilot~=4 then return end
   local dV=B747DR_fms_plan_ctr_row
   local n=table.getn(fmsTable)
   if dV<1 then
@@ -1388,6 +1420,15 @@ function after_physics()
   updateTCAS()
   compute_and_show_alt_range_arc()
   if debug_nd<-2 then return end
+  -- (2026-11-05 review) every 2 s the navaids and the route first (decoded
+  -- when they changed), then the symbols once (before, newIcons ran twice
+  -- on the 2 s tick, and both JSON strings were decoded every time)
+  if diff>=2 and debug_nd>=0 then
+    lastUpdate=simDRTime
+    decodeNAVAIDS()
+    decodeFlightPlan()
+    lastUpdateIcon=0
+  end
   local diff2=simDRTime-lastUpdateIcon
   if diff2>0.2 then
     newIcons()
@@ -1397,13 +1438,7 @@ function after_physics()
   read_navclass()
   read_cifp()
   read_fixes()
-  if diff<2 then return end
-  lastUpdate=simDRTime
-  if debug_nd<0 then return end
-  decodeNAVAIDS()
-  decodeFlightPlan()
-  newIcons()
-  
+
   --print("navaids size="..table.getn(currentNaviadsTable))
   --print("fms size="..table.getn(fmsTable))
   
