@@ -341,16 +341,21 @@ function M.servo(s, inp)
     -- within REF_NEAR of it, to none there, so they stop where the thrust
     -- does (s157's driftdown had wound them to the forward stop at CON's
     -- reference: eight minutes back through the band); over it back at the
-    -- limit's rate (none without a reference)
-    local ref = inp.thrust_ref
+    -- limit's rate. Without a reference (0 or less: the EEC's bug not set)
+    -- no limit: THR REF holds the levers, SPD and THR are not capped
+    -- (estimate; 2026-11-05 review 4: before, the whole thrust was over the
+    -- reference and every mode took the levers back to the aft stop)
+    local ref = inp.thrust_ref or 0
     if inp.thrust_max and inp.thrust_max < ref then ref = inp.thrust_max end
-    local over = inp.thrust - ref
-    local limit = -k_thr * over   -- the thrust limit's rate
-    local cap = math.huge
-    if over > 0 then
-        cap = limit
-    elseif ref > 0 then
-        cap = -over * M.SERVO_RATE / (inp.n1 and M.REF_NEAR_N1 or M.REF_NEAR_EPR)
+    local limit, cap = 0, math.huge   -- the thrust limit's rate
+    if ref > 0 then
+        local over = inp.thrust - ref
+        limit = -k_thr * over
+        if over > 0 then
+            cap = limit
+        else
+            cap = -over * M.SERVO_RATE / (inp.n1 and M.REF_NEAR_N1 or M.REF_NEAR_EPR)
+        end
     end
     local vmax = inp.v_max - M.LIMIT_MARGIN
     local rate

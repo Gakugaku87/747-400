@@ -249,6 +249,18 @@ T.near(s12.cmd - 0.5, A.K_EPR * 0.2, 1e-9, "THR REF 0.2 EPR below: up at K_EPR")
 c0 = s12.cmd
 A.servo(s12, sv{thrust = 1.3, thrust_ref = 1.5, ias = 362})
 T.check(s12.cmd < c0, "at the limit speed: down")
+-- (2026-11-05 review 4) no reference thrust (0: the EEC's bug not set): no
+-- limit, THR REF holds the levers, SPD not capped (before: the whole thrust
+-- over the reference, down to the aft stop)
+local s12b = A.new()
+A.update(s12b, inp{pitch = "ALT", thr = true})
+A.servo(s12b, sv{thrust = 1.3, thrust_ref = 0})
+T.near(s12b.cmd, 0.5, 1e-9, "THR REF without a reference: the levers held (before: down)")
+local s12c = A.new()
+A.update(s12c, inp{pitch = "VS", spd = true})
+A.servo(s12c, sv{lever = 0.5, thrust_ref = 0})
+A.servo(s12c, sv{ias = 240, thrust_ref = 0})
+T.near(s12c.cmd - 0.5, A.K_SPD * 10, 1e-9, "SPD 10 kt slow without a reference: up as with one (before: down)")
 -- THR: FLCH's V/S (125 s to the MCP altitude), climbing not less
 local s13 = A.new()
 A.update(s13, inp{pitch = "FLCH"})
