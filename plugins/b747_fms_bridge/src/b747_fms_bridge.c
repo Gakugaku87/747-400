@@ -556,6 +556,7 @@ PLUGIN_API void XPluginStop(void)
     XPLMUnregisterFlightLoopCallback(loop, NULL);
     XPLMUnregisterFlightLoopCallback(scan, NULL);
     ndl_stop();
+    hl_stop();
     /* a fetch under way: told to stop, waited for (its code goes with us) */
     if (sb_thread) {
         InterlockedExchange(&sb_cancel, 1);

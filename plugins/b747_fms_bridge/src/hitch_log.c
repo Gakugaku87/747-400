@@ -9,6 +9,9 @@
  * entries, its folder scan when slow: their times). The XTLua plugins' slow
  * callouts go to the same file (their init.lua). HL_MAX lines a session.
  * For the users' reports: the time of a freeze against what was done then.
+ * (2026-11-05) The frames' gap is laminar/B747/diag/hitch_gap_s (seconds,
+ * HL_GAP_S at the start; written lower for a test by hand: the user's
+ * "freezes when input comes from the 3D cockpit, not the API").
  */
 #define HL_GAP_S 0.25
 #define HL_LONG_S 20.0
@@ -20,7 +23,10 @@ static double hl_prev = 0.0;      /* the last frame's call, wall seconds */
 static float hl_prev_sim = 0.0f;  /* and the sim's time then */
 static int hl_n = 0;
 static char hl_did[200];          /* the bridge's work since the last frame */
-static XPLMDataRef hl_ref_sim = NULL;
+static XPLMDataRef hl_ref_sim = NULL, hl_ref_gap = NULL;
+static float hl_gap = (float)HL_GAP_S;
+static float hl_gap_get(void *ref) { (void)ref; return hl_gap; }
+static void hl_gap_set(void *ref, float v) { (void)ref; if (v >= 0.02f && v <= 5.0f) hl_gap = v; }
 
 static double hl_now(void)
 {
@@ -66,7 +72,7 @@ static void hl_frame(void)
     float sim = hl_ref_sim ? XPLMGetDataf(hl_ref_sim) : 0.0f;
     double gap = hl_prev > 0.0 ? t - hl_prev : 0.0;
     int moving = sim - hl_prev_sim > 0.001f;
-    if (gap > HL_GAP_S && gap < HL_LONG_S && moving) {
+    if (gap > hl_gap && gap < HL_LONG_S && moving) {
         char line[300];
         snprintf(line, sizeof line, "frame %.2f s after the one before%s%s", gap,
             hl_did[0] ? "; the bridge in it: " : "", hl_did);
@@ -81,4 +87,11 @@ static void hl_start(void)
 {
     QueryPerformanceFrequency(&hl_hz);
     hl_ref_sim = XPLMFindDataRef("sim/time/total_running_time_sec");
+    hl_ref_gap = XPLMRegisterDataAccessor("laminar/B747/diag/hitch_gap_s", xplmType_Float, 1,
+        NULL, NULL, hl_gap_get, hl_gap_set, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+}
+
+static void hl_stop(void)
+{
+    XPLMUnregisterDataAccessor(hl_ref_gap);
 }
