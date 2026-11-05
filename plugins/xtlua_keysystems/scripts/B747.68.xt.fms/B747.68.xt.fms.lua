@@ -482,7 +482,11 @@ wb = {
 --Calculate CG %MAC & Trim
 function calc_stab_trim(GW, CG_MAC)
 	local stab_trim = 0
-	
+	-- (2026-11-05 review) numbers only: a weight not entered yet ("***.*")
+	-- leaves the trim as it is (arithmetic on text stopped the whole plugin)
+	GW, CG_MAC = tonumber(GW), tonumber(CG_MAC)
+	if GW == nil or CG_MAC == nil then return end
+
 	GW = GW * simConfigData["data"].SIM.kgs_to_lbs  --Formula uses LBS to calculate Stab TRIM.  GW passed in should always be in KGS.
 	--print("GWin = "..GW.." MACin = "..CG_MAC)
 
@@ -756,22 +760,44 @@ fmsModules["data"]=defaultFMSData()
 
 B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
 
+-- (2026-11-05 review) a field of the FMS data by its name, nil when there
+-- is none: fmsModules["data"] is an XTLua namespace, and reading a name it
+-- lacks overflowed the stack (the whole plugin stopped)
+local function fms_field(id)
+	local t=fmsModules["data"]
+	local vals=rawget(t,"values")
+	if vals~=nil then return vals[id] end
+	return rawget(t,id)
+end
+
 fmsModules["setData"]=function(self,id,value)
+    -- (2026-11-05 review) a name the data lacks, or no value: refused
+    -- (before, a Lua error that stopped the plugin; no caller does it now)
+    if value==nil or fms_field(id)==nil then
+      print("setData: refused " .. tostring(id))
+      return
+    end
     --always retain the same length
-    if value=="" and id~="acarsMessage" then 
+    if value=="" and id~="acarsMessage" then
       local initData=defaultFMSData()
       if initData[id]~=nil then
 		print("default for " .. id .. " is " .. initData[id])
 		value=initData[id]
       else
+		-- (2026-11-05 review) a field without a default is emptied, not
+		-- removed (before, nil: reading it again stopped the plugin)
 		print("default for " .. id .. " is nil")
-		self["data"][id]=nil
+		self["data"][id]=""
 		return
       end
     end
     len=string.len(self["data"][id])
-    if len < string.len(value) and id~="acarsMessage" then 
-      value=string.sub(value,1,3)
+    if len < string.len(value) and id~="acarsMessage" then
+      -- (2026-11-05 review) a value longer than its field is cut to the
+      -- field (before, to 3 characters whatever the field); a field
+      -- shorter than 3 still takes 3 and grows, as the ACARS pages' 2-wide
+      -- speeds rely on
+      value=string.sub(value,1,math.max(len,3))
     end
     --newVal=string.sub(value,1,len)
 	if id~="acarsMessage" then
@@ -782,13 +808,11 @@ fmsModules["setData"]=function(self,id,value)
 	B747DR_FMSdata=json.encode(fmsModules["data"]["values"])--make the fms data available to other modules
 end
 function setFMSData(id,value)
-	if not string.starts(id,"acars") then 
-		print("setting " .. id )
-		print(" to "..value)
-		print(" curently "..fmsModules["data"][id])
-	end
+	-- (2026-11-05 review) the old prints read the field before setData's
+	-- check (a name the data lacks stopped the plugin) and reach no log in
+	-- XTLua: removed
    fmsModules:setData(id,value)
-end  
+end
 -- the climb's SPD TRANS speed: the greater of the transition speed (250 kt;
 -- the origin's from the nav DB comes in step 4) and VREF 30 + 100 kt (FCOM
 -- p.1328: "272/10000"; VREF 30: estimate); dashes once deleted (FMC-09,

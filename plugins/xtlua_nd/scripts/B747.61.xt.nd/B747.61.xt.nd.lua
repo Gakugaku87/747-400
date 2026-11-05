@@ -261,16 +261,9 @@ local lastCaptNavaid=0
 local lastFONavaid=0
 local lastUpdate=0
 local lastUpdateIcon=0
-local lastUpdateFixes=0
 local nLength=0
-local numFixes=0
-local localFixes={}
-local scansize=1000
 dofile("json/json.lua")
 dofile("numberlua.lua")
-function livery_load()
-  scansize=1000
-end
 
 function decodeNAVAIDS()
   if string.len(navAidsJSON) ~= nLength then
@@ -1034,6 +1027,44 @@ function updateCourses()
   crsSide(false, crsDataFO, crsLast[2])
 end
 
+-- (2026-11-05 review) WPT's waypoints (FCOM p.1040, p.1148): read once, a
+-- chunk a frame, from the navigation data X-Plane uses (Custom Data first,
+-- as read_navclass and the CIFP files) into 1-degree cells
+-- (B747.61.nd_data.lua: fix_line, fix_add, fixes_near). Before: the
+-- default data's file only, read again 26 lines a frame without end (a
+-- pass took minutes: the list lagged 20-40 NM behind the airplane), the
+-- longitudes west of 100W read without their sign, short identifiers read
+-- with the next field's letters, and a missing file stopped every module
+-- of this plugin
+local fixGrid=ND_DATA.fix_grid()
+local fixFile, fixDone=nil, false
+function fix_open()
+  return io.open("Custom Data/earth_fix.dat", "r") or io.open("Resources/default data/earth_fix.dat", "r")
+end
+function read_fixes()
+  if fixDone then return end
+  if fixFile==nil then
+    fixFile=fix_open()
+    if fixFile==nil then fixDone=true return end
+  end
+  for n=1,ND_DATA.FIX_LINES do
+    local line=fixFile:read("*line")
+    if line==nil then fixFile:close() fixFile=nil fixDone=true return end
+    local lat, lon, id=ND_DATA.fix_line(line)
+    if lat then ND_DATA.fix_add(fixGrid, lat, lon, id) end
+  end
+end
+-- one side's WPT symbols: the waypoints within the selected range of its
+-- centre, with the switch on at 40 NM and less (makeIcon also gates the
+-- mode and range)
+local function wptIcons(side, lat, lon, range, wpt)
+  if wpt<1 or range==nil or range>40 then return end
+  ND_DATA.fixes_near(fixGrid, lat, lon, range, function(id, flat, flon)
+    local distance=getDistance(lat, lon, flat, flon)
+    if distance < range then makeIcon(side, 3007, id, flat, flon, distance) end
+  end)
+end
+
 function newIcons()
   lastCaptNavaid=0
   lastFONavaid=0
@@ -1173,17 +1204,9 @@ function newIcons()
       makeIcon(iconTextDataFO,currentNaviadsTable[n][2],currentNaviadsTable[n][8],currentNaviadsTable[n][5],currentNaviadsTable[n][6],distance)
     end
   end
-  --FIXES
-  for n=1,numFixes do
-    local distance = getDistance(display_latitude_cpt,display_longitude_cpt,localFixes[n]["lat"],localFixes[n]["long"])
-    if distance < ranges[simDR_range_dial_capt + 1] then 
-      makeIcon(iconTextDataCapt,3007,localFixes[n]["name"],localFixes[n]["lat"],localFixes[n]["long"],distance)
-    end
-    local distance = getDistance(display_latitude_fo,display_longitude_fo,localFixes[n]["lat"],localFixes[n]["long"])
-    if distance < ranges[simDR_range_dial_fo + 1] then 
-      makeIcon(iconTextDataFO,3007,localFixes[n]["name"],localFixes[n]["lat"],localFixes[n]["long"],distance)
-    end
-  end
+  --FIXES (WPT)
+  wptIcons(iconTextDataCapt, display_latitude_cpt, display_longitude_cpt, ranges[simDR_range_dial_capt + 1], B747DR_nd_capt_wpt)
+  wptIcons(iconTextDataFO, display_latitude_fo, display_longitude_fo, ranges[simDR_range_dial_fo + 1], B747DR_nd_fo_wpt)
 
   for n=lastCaptNavaid,59,1 do
     B747DR_text_capt_show[n]=0
@@ -1201,68 +1224,6 @@ end
 
 debug_nd     = find_dataref("laminar/B747/debug/nd")
 
-local fix_data_file=nil
-local nLines=0
-local numTempFixes=0
-local tmplocalFixes={}
-
-
-function read_fixes()
-  if fix_data_file==nil then
-    fix_data_file = io.open( "Resources/default data/earth_fix.dat", "r" )
-    fix_data_file:read( "*line")
-    fix_data_file:read( "*line")
-    fix_data_file:read( "*line") 
-  end
-
-  local line=""
-  local lat=0
-  local long=0
-  local name=""
-  local distance=0
-  --scansize kept low after first pass to ensure time constraints met/no warn:xtlua time overflow during flight
-  for n=0 ,scansize do
-    line=fix_data_file:read( "*line" )
-    if line~=nil then 
-      lat=tonumber(string.sub(line,1,13))
-      long=tonumber(string.sub(line,16,29))
-      if lat~=nil and long~=nil then 
-        distance=getDistance(simDR_latitude,simDR_longitude,lat,long)
-        name=string.sub(line,31,36)
-        i, j = string.find(name, "%d+")
-        if distance<40 and string.sub(name,1,1)~=" " and i==nil then
-          numTempFixes=numTempFixes+1
-          tmplocalFixes[numTempFixes]={}
-          tmplocalFixes[numTempFixes]["name"]=name
-          tmplocalFixes[numTempFixes]["lat"]=lat
-          tmplocalFixes[numTempFixes]["long"]=long
-          
-          --print(name)
-        end
-      end
-      nLines=nLines+1
-    else
-      break
-    end
-  end
-  if line==nil then 
-    fix_data_file:close()
-    fix_data_file=nil
-    localFixes={}
-    scansize=25
-    numFixes=numTempFixes
-    for n=1 ,numTempFixes do
-      localFixes[n]={}
-      localFixes[n]["name"]=tmplocalFixes[n]["name"]
-      localFixes[n]["lat"]=tmplocalFixes[n]["lat"]
-      localFixes[n]["long"]=tmplocalFixes[n]["long"]
-    end
-    tmplocalFixes={}
-    numTempFixes=0
-    nLines=0
-    lastUpdateFixes=simDRTime
-  end
-end
 function compute_and_show_alt_range_arc()
   local meters_per_second_to_kts = 1.94384449
   local actual_speed = simDR_groundspeed * meters_per_second_to_kts
@@ -1433,10 +1394,7 @@ function after_physics()
   if debug_nd<-1 then return end
   read_navclass()
   read_cifp()
-  diff2=simDRTime-lastUpdateFixes
-  if diff2>10 then 
-    read_fixes()
-  end
+  read_fixes()
   if diff<2 then return end
   lastUpdate=simDRTime
   if debug_nd<0 then return end

@@ -92,6 +92,24 @@ rt:set("laminar/B747/fms/thrlim/code", 22)
 frames(0.2)
 T.check(get(ENG .. "ref_thr_limit_mode") == "CLB 2" and get(ENG .. "display_EPR_ref", 1) < 1.565,
     "the number 22: CLB 2 for the EEC, its reference " .. get(ENG .. "display_EPR_ref", 1))
+-- (2026-11-05 review) CRZ, the number 30, for P&W, GE and RR: a reference
+-- in range and no Lua error. A reviewer read P&W's and RR's cruise table
+-- lookups (find_closest_weight/altitude) as raising one every frame; they
+-- do not under XTLua: the table, a global, is a namespace whose pairs()
+-- gives its "values" and "functions" tables first, the level the lookups
+-- skip (tested with the real init.lua). Kept as the CRZ case no test had
+for _, ty in ipairs({0, 1, 2}) do
+    rt:set("laminar/B747/engines/type", ty)
+    rt:set("laminar/B747/fms/thrlim/code", 30)
+    frames(0.5)
+    T.equal(get(ENG .. "ref_thr_limit_mode"), "CRZ", "type " .. ty .. ": the number 30, CRZ for the EEC")
+    local ref = get(ENG .. "display_EPR_ref", 1)
+    T.check(ref > 1.0 and ref <= 1.71, string.format("type %d at CRZ: a reference %.3f, no Lua error", ty, ref))
+end
+T.equal(ns.find_closest_weight(ns.P85M_epr_PW4062, 270), 260, "the cruise table (a namespace): the nearest weight, the lower on a tie: 260 t for 270")
+T.equal(ns.find_closest_altitude(ns.P85M_epr_PW4062, 35), 35, "its nearest altitude: 35 kft")
+T.equal(ns.find_closest_altitude(ns.P85M_epr_PW4062, 36), 35, "on a tie the lower one")
+rt:set("laminar/B747/engines/type", 0)
 rt:set("laminar/B747/fms/thrlim/code", 0)
 rt:set(ENG .. "ref_thr_limit_mode", "")
 -- (step 9g4) the target cursor magenta (ATA34_2 p.652): with the A/T arm

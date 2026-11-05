@@ -59,6 +59,61 @@ function M.nav_near(list, lat, lon)
     return false
 end
 
+-- (2026-11-05 review) WPT's waypoints (FCOM p.1040, p.1148: the
+-- navigation database's waypoints off the route, in MAP and MAP CTR at 10,
+-- 20 and 40 NM): earth_fix.dat read once into 1-degree cells
+-- (B747.61.xt.nd.lua: read_fixes). A line gives the waypoint's position and
+-- identifier, or nil. Identifiers with a digit (terminal points such as
+-- CF34L, coordinates such as 5020N) are left out, as the upstream ND did
+-- (estimate: the sources do not say which of the database's waypoints)
+M.FIX_LINES = 500               -- earth_fix.dat lines read a frame
+function M.fix_line(line)
+    local lat, lon, id = line:match("^%s*(%S+)%s+(%S+)%s+(%S+)")
+    if id == nil or id:find("%d") then return nil end
+    lat, lon = tonumber(lat), tonumber(lon)
+    if not lat or not lon or lat < -90 or lat > 90 or lon < -180 or lon > 180 then return nil end
+    return lat, lon, id
+end
+
+-- the cells: [key] = {lat, lon, id, lat, lon, id, ...}
+local function fix_cell(row, col)
+    return (row + 90) * 360 + (col + 180) % 360
+end
+function M.fix_grid()
+    return {}
+end
+function M.fix_add(grid, lat, lon, id)
+    local k = fix_cell(math.floor(lat), math.floor(lon))
+    local c = grid[k]
+    if c == nil then c = {} grid[k] = c end
+    local n = #c
+    c[n + 1], c[n + 2], c[n + 3] = lat, lon, id
+end
+
+-- the waypoints in a box of range_nm round a position, each as fn(id, lat,
+-- lon) (the caller measures the distance); across 180 degrees too
+function M.fixes_near(grid, lat, lon, range_nm, fn)
+    local dlat = range_nm / 60
+    local cl = math.cos(math.rad(lat))
+    local dlon = cl > 0.01 and range_nm / (60 * cl) or 180
+    if dlon > 180 then dlon = 180 end
+    local c0, c1 = math.floor(lon - dlon), math.floor(lon + dlon)
+    if c1 - c0 >= 359 then c0, c1 = -180, 179 end
+    for row = math.max(math.floor(lat - dlat), -90), math.min(math.floor(lat + dlat), 90) do
+        for col = c0, c1 do
+            local c = grid[fix_cell(row, col)]
+            if c then
+                for n = 1, #c, 3 do
+                    local flat, flon = c[n], c[n + 1]
+                    local dl = math.abs(flon - lon)
+                    if dl > 180 then dl = 360 - dl end
+                    if math.abs(flat - lat) <= dlat and dl <= dlon then fn(c[n + 2], flat, flon) end
+                end
+            end
+        end
+    end
+end
+
 -- a slot's colour and two lines: the altitude, then the ETA; the ETA on the
 -- first line when there is no altitude (estimate: the sources show a
 -- waypoint with both); none without the DATA switch or data

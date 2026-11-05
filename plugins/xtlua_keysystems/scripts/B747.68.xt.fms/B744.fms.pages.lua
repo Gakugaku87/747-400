@@ -1526,13 +1526,26 @@ function fmsFunctions.setdata(fmsO,value)
 	if cg ~= nil and (cg < 0 or cg > 40) then cg = nil end
 	if cg == nil then cg = B747_cdu_model.parse_int(fmsO["scratchpad"], 0, 40) end
 	if cg == nil then fmsO["notify"] = "INVALID ENTRY" return end
-	calc_stab_trim(fmsModules["data"].grwt, string.format("%d", cg))
+	-- (2026-11-05 review) the trim needs the gross weight: before PERF
+	-- INIT's GR WT or ZFW ("***.*") the CG alone, the trim blank (before:
+	-- arithmetic on the boxes' text stopped the whole plugin)
+	local gw = tonumber(fmsModules["data"].grwt)
+	if gw then
+		calc_stab_trim(gw, string.format("%d", cg))
+	else
+		setFMSData("stab_trim", "    ")
+	end
 	setFMSData(value, string.format("%d", cg))
 	cg_lineLg = string.format("%2.0f%%", cg)
 --Marauder28
 --PAX / CARGO page
   elseif value == "paxFirstClassA" then
-	if string.match(fmsO["scratchpad"], "%d") and math.abs(tonumber(fmsO["scratchpad"])) <= 23 then
+	if string.match(fmsO["scratchpad"], "%d") and (tonumber(fmsO["scratchpad"]) == nil or tonumber(fmsO["scratchpad"]) % 1 ~= 0) then
+		-- (2026-11-05 review) whole passengers only: "30.5" made the round
+		-- robin below step past 0 and loop for ever (XTLua's thread stuck),
+		-- "3A" an arithmetic error (the plugin stopped)
+		fmsO["notify"] = "INVALID ENTRY"
+	elseif string.match(fmsO["scratchpad"], "%d") and math.abs(tonumber(fmsO["scratchpad"])) <= 23 then
 		setFMSData(value, math.abs(string.format("%2d", fmsO["scratchpad"])))
 		calc_pax_cargo()
 	elseif fmsO["scratchpad"] == "F" then  --Add FULL PAX
@@ -1603,7 +1616,7 @@ function fmsFunctions.setdata(fmsO,value)
 				paxE = paxE + 1
 				x = x - 1
 			end
-		until (x == 0)
+		until (x <= 0)
 		
 		fmsModules["data"].paxFirstClassA = string.format("%2d", paxA)
 		fmsModules["data"].paxBusClassB = string.format("%2d", paxB)
