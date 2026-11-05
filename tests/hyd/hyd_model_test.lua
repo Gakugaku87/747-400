@@ -246,6 +246,23 @@ do
     out = run(s, inp, 1)
     T.check(not out.sys[3].edp_on, "qty 0.00: the engine pump has no supply")
     T.check(out.sys[3].dem_running and out.sys[3].psi > 2800, "qty 0.00: the demand pump keeps the system")
+    -- (2026-11-05 review 3) the leak goes on: the display stays at 0.00,
+    -- the demand pump takes the reserve below the standpipe (ATA29_32
+    -- p.104), then has none: the pressure goes (before, the quantity went
+    -- negative and the demand pump held 2,850 psi for ever)
+    inp.qty_use[3] = H.RESERVE[3] / 2
+    out = run(s, inp, DT)
+    inp.qty_use[3] = 0
+    out = run(s, inp, 1)
+    T.equal(out.sys[3].qty, 0, "half the reserve used: the display at 0.00, not below")
+    T.check(out.sys[3].dem_running and out.sys[3].psi > 2800, "half the reserve: the demand pump keeps the system")
+    inp.qty_use[3] = H.RESERVE[3]
+    out = run(s, inp, DT)
+    inp.qty_use[3] = 0
+    out = run(s, inp, 10)
+    T.equal(out.sys[3].qty, 0, "the reserve gone: 0.00")
+    T.check(not out.sys[3].dem_running and out.sys[3].psi < 1200, "the reserve gone: no supply, the pressure gone (" .. out.sys[3].psi .. ")")
+    T.check(out.sys[3].press_sys, "and HYD PRESS SYS 3")
 end
 
 -- DC lost: the engine pump cannot be depressurised (estimate, ATA29_32

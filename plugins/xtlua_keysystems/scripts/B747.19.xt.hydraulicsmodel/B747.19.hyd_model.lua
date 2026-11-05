@@ -30,6 +30,12 @@ M.ADP_FLAPS_HOLD_S = 10         -- ADP keeps running in the air after the flaps 
                                 -- p.141 has a 10 s timer whose kind cannot be read)
 M.OVHT_C = 104                  -- case drain temperature (p.100)
 M.QTY_LO, M.QTY_RF = 0.34, 0.75 -- p.116; RF on the ground only (FCOM p.1489)
+-- (2026-11-05 review 3) below the display's 0.00, the engine pump's
+-- standpipe, 1.12 gal stay in the outboard reservoirs (systems 1, 4) and
+-- 1.30 gal in the inboard ones (2, 3), for the demand pumps only (ATA29_32
+-- p.104); in the display's units an estimate (the sources give no gallons
+-- for 1.00), in the same proportion
+M.RESERVE = {0.12, 0.14, 0.14, 0.12}
 M.RSVR_PSI, M.RSVR_LOW_PSI = 45, 6.3      -- reservoir pressurisation (p.38)
 M.ENGINE_RUNNING_N2 = 50        -- HYD PRESS DEM (status) waits for its engine (p.137; the
                                 -- running speed is an estimate: starter cutout is at 50 %)
@@ -122,6 +128,7 @@ function M.new()
     for n = 1, 4 do
         s.sys[n] = {
             psi = 0, qty = 1.0, temp = 15,
+            reserve = M.RESERVE[n],               -- below the standpipe (display units)
             edp_low = true, dem_low = true,       -- pressure switches
             demand_t = 0, demand_run = false,     -- run on demand: time in the new state, output
             ready_t = 0,                          -- ACMP: time since the selector left OFF
@@ -215,7 +222,9 @@ function M.update(s, inp, dt)
         end
         o.edp_on = edp_gpm > 0
 
-        -- demand pump (ATA29_32 p.141, p.143)
+        -- demand pump (ATA29_32 p.141, p.143); it and the AUX pump reach
+        -- the reserve below the standpipe (p.104)
+        local supply = ss.qty > 0 or ss.reserve > 0
         local dem_gpm, commanded = 0, false
         if n == 1 or n == 4 then
             local flaps
@@ -229,7 +238,7 @@ function M.update(s, inp, dt)
             local demand = run_on_demand(ss, auto and ss.edp_low, dt)
             local auto_run = hydim and auto and (flaps or inp.fuel_cutoff[n] or demand)
             commanded = control and (on or auto_run)
-            if commanded and not inp.dem_failed[n] then
+            if commanded and not inp.dem_failed[n] and supply then
                 local d = inp.duct_psi[M.ADP_DUCT[n]]
                 dem_gpm = M.ADP_GPM * clamp((d - M.ADP_DUCT_MIN_PSI) / (M.ADP_DUCT_FULL_PSI - M.ADP_DUCT_MIN_PSI), 0, 1)
             end
@@ -240,7 +249,7 @@ function M.update(s, inp, dt)
             local demand = run_on_demand(ss, auto and ready and ss.edp_low, dt)
             local auto_run = hydim and auto and ready and (inp.fuel_cutoff[n] or demand)
             commanded = control and ((on and ready) or auto_run)   -- the ELCU closes
-            if commanded and inp.ac[n] and not inp.dem_failed[n] then dem_gpm = M.ACMP_GPM end
+            if commanded and inp.ac[n] and not inp.dem_failed[n] and supply then dem_gpm = M.ACMP_GPM end
             o.control = false
         end
         o.dem_commanded = commanded
@@ -252,7 +261,7 @@ function M.update(s, inp, dt)
         local aux_gpm = 0
         if n == 4 then
             out.aux_running = aux and inp.on_ground and inp.gh_ac and inp.gh_dc and ss.edp_low and ss.dem_low
-            if out.aux_running then aux_gpm = M.AUX_GPM end
+            if out.aux_running and supply then aux_gpm = M.AUX_GPM end
         end
 
         -- system pressure: 3000 psi with no flow, lower as the loads take
@@ -275,8 +284,15 @@ function M.update(s, inp, dt)
         ss.edp_low = switch_low(ss.edp_low, o.edp_psi)
         ss.dem_low = switch_low(ss.dem_low, o.dem_psi)
 
-        -- quantity and temperature
-        ss.qty = ss.qty - inp.qty_use[n]
+        -- quantity and temperature: what is used comes from above the
+        -- standpipe, then from the reserve (full while there is fluid above
+        -- it), never below empty (before, the quantity went on below 0.00
+        -- and the demand pump kept the pressure for ever)
+        if ss.qty > 0 then ss.reserve = M.RESERVE[n] end
+        local use = math.max(0, inp.qty_use[n])
+        local above = math.min(use, math.max(ss.qty, 0))
+        ss.qty = math.max(0, ss.qty - above)
+        ss.reserve = math.max(0, ss.reserve - (use - above))
         o.qty = ss.qty
         o.lo = ss.qty <= M.QTY_LO
         o.rf = inp.on_ground and ss.qty <= M.QTY_RF
