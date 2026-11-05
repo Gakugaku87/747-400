@@ -5944,6 +5944,10 @@ function after_physics()
 	do_flight_start()
 	end
 	flightInit=true
+  -- (2026-11-05) the sim's weight and balance window's load (B744.fms.pages.lua):
+  -- from the start, without the FMCs' power or warm-up (the sim's, as the
+  -- CDU's PAX/CARGO data)
+  B747_fms_wb_update()
   -- the FMCs from the start (6-1/6-2 step 11d2b: fmc_ok for the NDs and the
   -- AFDS before the systems' warm-up)
   update_fmc_link()

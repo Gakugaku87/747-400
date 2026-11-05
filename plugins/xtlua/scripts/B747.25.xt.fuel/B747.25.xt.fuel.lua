@@ -1423,14 +1423,12 @@ end
 --Marauder28
 -- The refuelling (FMC ground service: laminar/B747/fuel/refuel). It changes
 -- the model's quantities through fuel_qty (B747_fuel_system writes m_fuel).
-function B747_fuel_balance_check()
-  local total = fuel_total()
-  --Initial check to ensure that this balance function only runs once
-  --(the totaliser is a float dataref: compared within 1 kg)
-  if math.abs(simDR_fuel_totalizer_kg - total) > 1 then
-    return
-  end
-
+-- (2026-11-05) a total's quantities by tank in the load order below
+-- (upstream, no source; estimate: a real-world operator's forum account
+-- gives the same order), split out of B747_fuel_balance_check for the sim's
+-- weight and balance window too: main 1, 2, 3, 4, reserve 2, 3, centre,
+-- stabilizer
+local function fuel_distribution(total)
   --Determine amount for each tank based on existing fuel and load order.
   --Load order is:
   --1) Even distribution in Main1, Main2, Main3, Main4 (Wing)
@@ -1484,11 +1482,64 @@ function B747_fuel_balance_check()
     stab = center - B747.fuel.center_tank.capacity
     center = B747.fuel.center_tank.capacity
   end
-
+  return main1, main2, main3, main4, res2, res3, center, stab
+end
+local function fuel_load(total)
+  local main1, main2, main3, main4, res2, res3, center, stab = fuel_distribution(total)
   fuel_qty[1], fuel_qty[2], fuel_qty[3], fuel_qty[4] = main1, main2, main3, main4
   fuel_qty[5], fuel_qty[6], fuel_qty[0], fuel_qty[7] = res2, res3, center, stab
 end
+
+function B747_fuel_balance_check()
+  local total = fuel_total()
+  --Initial check to ensure that this balance function only runs once
+  --(the totaliser is a float dataref: compared within 1 kg)
+  if math.abs(simDR_fuel_totalizer_kg - total) > 1 then
+    return
+  end
+  fuel_load(total)
+end
 --Marauder28
+
+-- (2026-11-05, the user) the sim's weight and balance window's fuel total
+-- (b747_fms_bridge wb_window.c: laminar/B747/wb/req_field 10, req_value
+-- kg, req_id counted up): at once, in the load order above, within the
+-- tanks' capacities; on the ground only, as the CDU's PAX/CARGO; a
+-- refuelling under way stops; the totaliser set to it, as after a
+-- refuelling
+B747DR_wb_req_id = find_dataref("laminar/B747/wb/req_id")
+B747DR_wb_req_field = find_dataref("laminar/B747/wb/req_field")
+B747DR_wb_req_value = find_dataref("laminar/B747/wb/req_value")
+local WB_FUEL = 10
+local wbSeen, wbWarm, wbPending = 0, 0, false
+function B747_fuel_wb_request()
+  -- XTLua gives a read of another plugin's dataref the value fetched at its
+  -- previous read: the id, field and value read every frame, an entry taken
+  -- the frame after its id moved (as the FMC's, B744.fms.pages.lua); what
+  -- the window asked before this module's first second is taken as done
+  local id, field, value = B747DR_wb_req_id, B747DR_wb_req_field, B747DR_wb_req_value
+  if wbWarm < 30 then
+    wbWarm = wbWarm + 1
+    wbSeen = id
+    return
+  end
+  if not wbPending then
+    -- (after the flight start's settling, which takes X-Plane's quantities)
+    if id ~= wbSeen and fuel_settle_left <= 0 then
+      wbSeen = id
+      wbPending = true
+    end
+    return
+  end
+  wbPending = false
+  if field ~= WB_FUEL or simDR_all_wheels_on_ground ~= 1 then return end
+  local cap = 0
+  for i = 0, 7 do cap = cap + fuel_inputs.cap[TANK_OF_INDEX[i]] end
+  local total = math.max(0, math.min(tonumber(value) or 0, cap))
+  fuel_load(total)
+  B747DR_refuel = 0
+  simDR_fuel_totalizer_kg = fuel_total()
+end
 
 function B747_refueling()
   if B747DR_refuel<=0.0 then
@@ -1765,6 +1816,7 @@ function after_physics()
     if fuel_age >= REFUEL_AFTER_S then
         B747_refueling()
     end
+    B747_fuel_wb_request()
     if hasSimConfig()==false then return end
     --auto tank to engine
     if simConfigData["data"].SIM.auto_fuel_mgmt =="YES" then tank_helper() end

@@ -753,8 +753,131 @@ function calc_pax_cargo()
 	--print("FREIGHT D = "..freight_weightD)
 	--print("FREIGHT E = "..freight_weightE)
 	--print("Freight Tot = "..freight_weight_tot)
+	-- (2026-11-05) X-Plane's CG for the new load now (inflight_update_CG:
+	-- the zones', the cargo's and the tanks' arms, as every 60 s), so that
+	-- the sim's weight and balance window shows it at once
+	inflight_update_CG()
 end
 --Marauder28
+
+-- (2026-11-05, the user) the sim's weight and balance window (Plugins >
+-- 747-400 > Weight and balance..., b747_fms_bridge wb_window.c) shows this
+-- page's load and takes it as this page does: one set of values. The
+-- window writes laminar/B747/wb/req_field and req_value, then counts
+-- req_id up; its entries go through this page's own entries (setdata
+-- below: the same limits, rounding and units), on the ground only as the
+-- page. Fields: 0 the passengers' total (round the zones as L1 above 23),
+-- 1-5 zone A-E (a freighter's main deck freight, kg), 6-8 cargo FWD, AFT,
+-- BULK (kg), 9 kg a passenger (SIM CONFIG's std_pax_weight, which this
+-- page had no entry for), 10 the fuel's total (the fuel module's:
+-- B747.25.xt.fuel.lua)
+B747DR_wb_req_id = find_dataref("laminar/B747/wb/req_id")
+B747DR_wb_req_field = find_dataref("laminar/B747/wb/req_field")
+B747DR_wb_req_value = find_dataref("laminar/B747/wb/req_value")
+B747DR_wb_load_zones = deferred_dataref("laminar/B747/wb/load_zones", "array[5]")
+B747DR_wb_load_cargo = deferred_dataref("laminar/B747/wb/load_cargo", "array[3]")
+B747DR_wb_load_pax_kg = deferred_dataref("laminar/B747/wb/load_pax_kg", "number")
+B747DR_wb_load_freighter = deferred_dataref("laminar/B747/wb/load_freighter", "number")
+local WB_PAX = {"paxFirstClassA", "paxBusClassB", "paxEconClassC", "paxEconClassD", "paxEconClassE"}
+local WB_PAX_MAX = {23, 80, 77, 104, 132}     -- this page's zones (upstream: 416 seats)
+local WB_FREIGHT = {"freightZoneA", "freightZoneB", "freightZoneC", "freightZoneD", "freightZoneE"}
+local WB_CARGO = {"cargoFwd", "cargoAft", "cargoBulk"}
+local WB_PAX_KG_MIN, WB_PAX_KG_MAX = 40, 200  -- kg a passenger with baggage (estimate: a sanity range)
+
+-- a SIM CONFIG section (SIM, PLANE) or nil: simConfigData["data"] is an
+-- XTLua namespace, and reading a section it lacks overflows the stack
+local function wb_section(name)
+	local d = simConfigData["data"]
+	local vals = rawget(d, "values") or d
+	local sec = rawget(vals, name)
+	return type(sec) == "table" and sec or nil
+end
+local function wb_freighter()
+	local p = wb_section("PLANE")
+	return p ~= nil and p.aircraft_type == "FREIGHTER"
+end
+local function wb_units()
+	local sim = wb_section("SIM")
+	if sim and sim.weight_display_units == "LBS" then return tonumber(sim.kgs_to_lbs) or 2.20462 end
+	return 1
+end
+-- a number of passengers round the zones one at a time, each to its
+-- capacity (this page's L1 above 23); whole, 0 to 416
+function B747_fms_pax_spread(total)
+	local n, x = {0, 0, 0, 0, 0}, math.max(0, math.min(416, math.floor(total)))
+	while x > 0 do
+		for z = 1, 5 do
+			if x > 0 and n[z] < WB_PAX_MAX[z] then n[z], x = n[z] + 1, x - 1 end
+		end
+	end
+	return n
+end
+local function wb_set_pax(n)
+	for z = 1, 5 do fmsModules["data"][WB_PAX[z]] = string.format(z <= 3 and "%2d" or "%3d", n[z]) end
+	calc_pax_cargo()
+end
+-- an entry as typed on this page's key, in the page's units
+local function wb_entry(value, text)
+	local o = {id = "fmsL", scratchpad = text, notify = ""}
+	fmsFunctions.setdata(o, value)
+end
+local function wb_request(f, v)
+	v = tonumber(v)
+	if v == nil or v < 0 then return end
+	if f == 0 then
+		if not wb_freighter() then wb_set_pax(B747_fms_pax_spread(v + 0.5)) end
+	elseif f >= 1 and f <= 5 then
+		if wb_freighter() then
+			wb_entry(WB_FREIGHT[f], string.format("%d", math.floor(v * wb_units() + 0.5)))
+		else
+			-- (L1 above 23 is a total: zone A's at most 23 here)
+			wb_entry(WB_PAX[f], string.format("%d", math.min(math.floor(v + 0.5), WB_PAX_MAX[f])))
+		end
+	elseif f >= 6 and f <= 8 then
+		wb_entry(WB_CARGO[f - 5], string.format("%d", math.floor(v * wb_units() + 0.5)))
+	elseif f == 9 then
+		local sim = wb_section("SIM")
+		if sim == nil or v < WB_PAX_KG_MIN or v > WB_PAX_KG_MAX then return end
+		sim.std_pax_weight = math.floor(v * 10 + 0.5) / 10
+		pushSimConfig(simConfigData["data"]["values"])
+		calc_pax_cargo()
+	end
+end
+local wbSeen, wbWarm, wbPending = 0, 0, false
+function B747_fms_wb_update()
+	-- the window's entry. XTLua gives a read of another plugin's dataref the
+	-- value fetched at its previous read: the id, field and value are read
+	-- every frame, and an entry is taken the frame after its id moved, when
+	-- the field and value read are its own (X-Plane, s259: read only when
+	-- the id moved, they were the entry before's). What the window asked
+	-- before this module's first second is taken as done
+	local id, field, value = B747DR_wb_req_id, B747DR_wb_req_field, B747DR_wb_req_value
+	if wbWarm < 30 then
+		wbWarm = wbWarm + 1
+		wbSeen = id
+	elseif wbPending then
+		wbPending = false
+		if simDR_onGround == 1 then wb_request(field, value) end
+	elseif id ~= wbSeen then
+		wbSeen = id
+		wbPending = true
+	end
+	-- the load for the window, written when it changed
+	local fr = wb_freighter()
+	for z = 1, 5 do
+		local v = tonumber(fmsModules["data"][fr and WB_FREIGHT[z] or WB_PAX[z]]) or 0
+		if B747DR_wb_load_zones[z - 1] ~= v then B747DR_wb_load_zones[z - 1] = v end
+	end
+	for c = 1, 3 do
+		local v = tonumber(fmsModules["data"][WB_CARGO[c]]) or 0
+		if B747DR_wb_load_cargo[c - 1] ~= v then B747DR_wb_load_cargo[c - 1] = v end
+	end
+	local sim = wb_section("SIM")
+	local kg = sim and tonumber(sim.std_pax_weight) or 0
+	if B747DR_wb_load_pax_kg ~= kg then B747DR_wb_load_pax_kg = kg end
+	local f = fr and 1 or 0
+	if B747DR_wb_load_freighter ~= f then B747DR_wb_load_freighter = f end
+end
 
 --Marauder28
 timer_start = 0
@@ -1579,52 +1702,9 @@ function fmsFunctions.setdata(fmsO,value)
 		setFMSData(value, "23")
 		calc_pax_cargo()
 	elseif string.match(fmsO["scratchpad"], "%d") and tonumber(fmsO["scratchpad"]) > 23 then  --Add set number of PAX by round-robin through all zones
-		setFMSData("paxFirstClassA", "")
-		setFMSData("paxBusClassB", "")
-		setFMSData("paxEconClassC", "")
-		setFMSData("paxEconClassD", "")
-		setFMSData("paxEconClassE", "")
-
-		local x = tonumber(fmsO["scratchpad"])
-		local paxA = 0
-		local paxB = 0
-		local paxC = 0
-		local paxD = 0
-		local paxE = 0
-		
-		if x > 416 then
-			x = 416
-		end
-		repeat
-			if x > 0 and paxA < 23 then
-				paxA = paxA + 1
-				x = x - 1
-			end
-			if x > 0 and paxB < 80 then
-				paxB = paxB + 1
-				x = x - 1
-			end
-			if x > 0 and paxC < 77 then
-				paxC = paxC + 1
-				x = x - 1
-			end
-			if x > 0 and paxD < 104 then
-				paxD = paxD + 1
-				x = x - 1
-			end
-			if x > 0 and paxE < 132 then
-				paxE = paxE + 1
-				x = x - 1
-			end
-		until (x <= 0)
-		
-		fmsModules["data"].paxFirstClassA = string.format("%2d", paxA)
-		fmsModules["data"].paxBusClassB = string.format("%2d", paxB)
-		fmsModules["data"].paxEconClassC = string.format("%2d", paxC)
-		fmsModules["data"].paxEconClassD = string.format("%3d", paxD)
-		fmsModules["data"].paxEconClassE = string.format("%3d", paxE)
-		
-		calc_pax_cargo()
+		-- (2026-11-05) the same spread as the weight and balance window's
+		-- total (B747_fms_pax_spread above)
+		wb_set_pax(B747_fms_pax_spread(tonumber(fmsO["scratchpad"])))
 	else
 		fmsO["notify"] = "INVALID ENTRY"
 	end
