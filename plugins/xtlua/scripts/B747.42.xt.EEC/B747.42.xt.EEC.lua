@@ -1155,7 +1155,9 @@ function flight_start()
 	B747_eec_flight_start()
 end
 function after_physics()
-	collectgarbage("collect")
+	-- (2026-11-05 review) no full garbage collection every frame: it marked
+	-- and swept this plugin's whole Lua state (every module's tables) each
+	-- frame; Lua's incremental collector runs as memory is allocated
 	if hasSimConfig()==false then return end
 	if debug_ecc>0 then return end
 

@@ -1345,7 +1345,9 @@ function updateNDLatLong()
 end
 
 function after_physics()
-  collectgarbage("collect")
+  -- (2026-11-05 review) no full garbage collection every frame: it marked
+  -- and swept this plugin's whole Lua state (every module's tables) each
+  -- frame; Lua's incremental collector runs as memory is allocated
   
   if debug_nd>0 then return end
   local diff=simDRTime-lastUpdate
