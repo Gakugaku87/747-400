@@ -123,6 +123,9 @@ static char fms_file[PATH_LEN];
 static char ofp_file[PATH_LEN];
 static char sb_abs[PATH_LEN / 2];     /* the simbrief folder, absolute */
 
+/* the hitch log: Output/B747_hitches.txt (hitch_log.c) */
+#include "hitch_log.c"
+
 #define NREFS 12
 static XPLMDataRef refs[NREFS];
 
@@ -226,6 +229,7 @@ static void write_list(const char *abs)
 static float scan(float since_call, float since_loop, int counter, void *ref)
 {
     (void)since_call; (void)since_loop; (void)counter; (void)ref;
+    double hl_t0 = hl_now();
     char name[512], path[PATH_LEN], root[PATH_LEN / 2], abs[PATH_LEN / 2];
     name[0] = 0;
     path[0] = 0;
@@ -250,6 +254,7 @@ static float scan(float since_call, float since_loop, int counter, void *ref)
     newest(abs, folder, "xml", ofp_file);
     write_list(abs);
     snprintf(sb_abs, sizeof sb_abs, "%s", abs);
+    hl_work("folder scan", hl_t0, -1);
     return 2.0f;
 }
 
@@ -318,7 +323,9 @@ static void fw_poll(void);   /* the failure window's armed failures (failures_wi
 static float loop(float since_call, float since_loop, int counter, void *ref)
 {
     (void)since_call; (void)since_loop; (void)counter; (void)ref;
+    hl_frame();
     if (plan_new) {
+        double hl_t0 = hl_now();
         plan_new = 0;
         const char *text = plan;
         unsigned int len = (unsigned int)plan_len;
@@ -335,6 +342,7 @@ static float loop(float since_call, float since_loop, int counter, void *ref)
         XPLMLoadFMSFlightPlan(0, text, len);
         loads++;
         set_entry(XPLMSetDestinationFMSEntry, plan_current);
+        hl_work("X-Plane FMS plan load", hl_t0, XPLMCountFMSEntries());
     }
     if (current_new) {
         current_new = 0;
@@ -486,6 +494,7 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc)
     strcpy(name, "B747 FMS bridge");
     strcpy(sig, "sparky744.b747.fmsbridge");
     strcpy(desc, "The B747's FMC flight plan to X-Plane's FMS, the company's files, the sim's options.");
+    hl_start();
     refs[0] = XPLMRegisterDataAccessor("laminar/B747/fms/xp/plan", xplmType_Data, 1,
         NULL, NULL,         /* int */
         NULL, NULL,         /* float */

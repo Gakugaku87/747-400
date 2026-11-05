@@ -214,21 +214,61 @@ function find_command(name)
 	return make_command_obj(c,name)
 end
 
+-- (747-400 overhaul, 2026-11-05) the user's freezes ("with this airplane
+-- only, an operation now and then freezes the screen for a while"): these
+-- scripts run on X-Plane's main thread (the one that draws). A callout, a
+-- timer's function or a command's handler taking over SLOW_S of wall time
+-- goes to Output/B747_hitches.txt with its module's script, what it was and
+-- its time (the FMS bridge writes X-Plane's long frames to the same file),
+-- SLOW_MAX lines a module a load. os.clock: the wall clock on Windows (the
+-- C library's clock())
+local SLOW_S, SLOW_MAX = 0.2, 60
+local slow_n, module_file = 0, "?"
+local clock = os and os.clock
+local function slow_note(what, dt)
+	if dt <= SLOW_S or slow_n >= SLOW_MAX then return end
+	slow_n = slow_n + 1
+	local log = io and io.open("Output/B747_hitches.txt", "a")
+	if log then
+		log:write((os.date and os.date("%Y-%m-%d %H:%M:%S ")) or "", "init ", module_file, " ", tostring(what),
+			string.format(" %.2f s", dt), "\n")
+		log:close()
+	end
+end
+-- a function's script (its file's name: XLua names a module's chunk by
+-- its path, "@" in front for a file) and line, for the note
+local function fn_where(fn)
+	local i = debug and debug.getinfo and debug.getinfo(fn, "S")
+	if not i then return "?" end
+	local src = string.gsub(tostring(i.source or i.short_src or "?"), "^[@=]", "")
+	return tostring(string.match(src, "[^/\\\r\n]*$")) .. ":" .. tostring(i.linedefined)
+end
+-- a function timed as above (its first result returned)
+local function timed(fn, what)
+	if type(fn) ~= "function" or not clock then return fn end
+	return function(...)
+		local t0 = clock()
+		local r = fn(...)
+		slow_note(what, clock() - t0)
+		return r
+	end
+end
+
 function create_command(name,desc,handler)
 	c = XLuaCreateCommand(name,desc)
-	XlLuaReplaceCommand(c,handler)
+	XlLuaReplaceCommand(c,timed(handler, "command " .. tostring(name)))
 	return make_command_obj(c)
 end
 
 function replace_command(name, func)
 	c = XLuaFindCommand(name)
-	XlLuaReplaceCommand(c,func)
+	XlLuaReplaceCommand(c,timed(func, "command " .. tostring(name)))
 	return make_command_obj(c)
 end	
 
 function wrap_command(name, before, after)
 	c = XLuaFindCommand(name)
-	XLuaWrapCommand(c,before,after)
+	XLuaWrapCommand(c,timed(before, "command " .. tostring(name) .. " before"),timed(after, "command " .. tostring(name) .. " after"))
 	return make_command_obj(c)
 end
 
@@ -239,7 +279,7 @@ end
 function run_timer(func,delay,rep)
 	tobj = all_timers[func]
 	if tobj == nil then
-		tobj = XLuaCreateTimer(func)
+		tobj = XLuaCreateTimer(timed(func, "timer " .. fn_where(func)))
 		all_timers[func] = tobj
 	end
 	XLuaRunTimer(tobj,delay,rep)
@@ -448,6 +488,7 @@ end
 function run_module_in_namespace(fn)
 	n = create_namespace()
 	all_timers = { }
+	module_file = string.match(fn_where(fn), "^(.*):") or "?"
 	
 	n.make_prop = function(name,func)
 		n:create_prop(name,func)
@@ -480,6 +521,8 @@ function do_callout(fname)
 		if STP ~= nil then
 			STP.add_known_function(func, fname)
 		end
+		local t0 = clock and clock()
 		func()
+		if t0 then slow_note(fname, clock() - t0) end
 	end
 end
