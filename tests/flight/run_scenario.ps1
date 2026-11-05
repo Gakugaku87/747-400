@@ -127,6 +127,13 @@ function Add-Result($step, [string]$status, [string]$detail, $value = $null) {
     Write-Host ("[{0,6:N1}s] {1} {2} {3}" -f $wall.Elapsed.TotalSeconds, $mark, $step.do, $detail)
 }
 function Test-Op($actual, [string]$op, $expected) {
+    # (2026-11-05 review 4) an array dataref read without its index: the
+    # comparisons below filter its elements, so one element passed them
+    # all; the element to be named ([n]). "contains" and "matches" read it
+    # as one text, its elements joined by spaces (s258's ND icons)
+    if ($actual -is [array] -and $op -ne 'contains' -and $op -ne 'matches') {
+        throw "an array value for '$op': name its element ([n])"
+    }
     switch ($op) {
         '=='      { return $actual -eq $expected }
         '!='      { return $actual -ne $expected }
@@ -152,7 +159,9 @@ function Get-Expected($step) {
     return $base + $step.value
 }
 # X-Plane can hang with the Web API still answering: the sim clock stops.
-# Test-XPStuck says so once the clock has not moved for 30 s of wall time.
+# Test-XPStuck says so once the clock has not moved for 30 s of wall time,
+# not while the sim is paused (2026-11-05 review 4: before, a pause, such as
+# the sim option's before the T/D, was taken for a hang)
 $script:clock = @{ sim = $null; wall = 0.0 }
 function Test-XPStuck {
     if ($null -eq $script:xtluaError) {
@@ -162,7 +171,9 @@ function Test-XPStuck {
     if ($null -ne $script:xtluaError) { return $true }
     $t = Get-XPDataref 'sim/time/total_running_time_sec'
     $now = $wall.Elapsed.TotalSeconds
-    if ($null -eq $script:clock.sim -or $t -ne $script:clock.sim) {
+    $paused = $false
+    try { $paused = (Get-XPDataref 'sim/time/paused') -eq 1 } catch { }
+    if ($paused -or $null -eq $script:clock.sim -or $t -ne $script:clock.sim) {
         $script:clock.sim = $t
         $script:clock.wall = $now
         return $false
