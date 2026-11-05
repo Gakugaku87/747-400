@@ -2410,9 +2410,14 @@ local lnavPath=nil
 -- turns' speed there (LNAV's: the true airspeed, the last predictions' at
 -- the fix else the ground speed now, and the wind now); kept by the fix,
 -- the courses and the speed in 10 kt steps, and by the route's leg for
--- VNAV's distance through a turn flown over its fix (B747_fms_turn_of)
+-- VNAV's distance through a turn flown over its fix (B747_fms_turn_of).
+-- (2026-11-05 review 4) A turn kept until TURN_KEEP calls have not used it:
+-- the speed with the wind, near a 10 kt step's edge, goes from one step to
+-- the other in gusts (before, the last call's turns alone: each change made
+-- them again)
+local TURN_KEEP = 4
 do
-  local cache, byRouteLeg = {}, setmetatable({}, {__mode = "k"})
+  local cache, age, gen, byRouteLeg = {}, {}, 0, setmetatable({}, {__mode = "k"})
   function B747_fms_turns(legs, r)
     local path = lnavPath
     if not path then return end
@@ -2420,7 +2425,7 @@ do
     for _, e in ipairs(path) do if e.leg then byLeg[e.leg] = e end end
     local pts = predResult and predResult.pts
     local isa = B747_fms_isa_dev()
-    local used = {}
+    gen = gen + 1
     for i = 2, #legs do
       local e1, e2 = byLeg[i - 1], byLeg[i]
       if e1 and e2 and e1.b then
@@ -2435,15 +2440,20 @@ do
         local key = string.format("%.5f %.5f %.1f %.1f %.5f %.5f %.5f %.5f %d", e1.b.lat, e1.b.lon, e1.crs or e1.hdg or -1,
           e2.crs or e2.hdg or -1, a2.lat, a2.lon, b2.lat, b2.lon, math.floor(vt / 10 + 0.5))
         local x = cache[key]
-        if x == nil then x = B747_lnav_model.transition(B747_path_model, e1, e2, math.floor(vt / 10 + 0.5) * 10) end
-        used[key] = x
+        if x == nil then
+          x = B747_lnav_model.transition(B747_path_model, e1, e2, math.floor(vt / 10 + 0.5) * 10)
+          cache[key] = x
+        end
+        age[key] = gen
         local l = legs[i]
         l.turn = math.max(x, -l.dist)
         l.dist = l.dist + l.turn
         if r.legs[i] then byRouteLeg[r.legs[i]] = x end
       end
     end
-    cache = used
+    for k in pairs(cache) do
+      if age[k] <= gen - TURN_KEEP then cache[k], age[k] = nil, nil end
+    end
   end
   function B747_fms_turn_of(leg) return leg and byRouteLeg[leg] or nil end
 end
@@ -2812,7 +2822,11 @@ end
 do
 local ND_LINE_S=1
 local ndLineT=-100
-local ndLineCache={}
+-- the flyover turns kept until TURN_KEEP lines have not used them
+-- (2026-11-05 review 4: their speed with the wind in 10 kt steps goes from
+-- one step to the other in gusts; before, the last line's alone, each
+-- change a turn made again)
+local ndLineCache,ndLineAge,ndLineGen={},{},0
 local ndLineOld={n=0,lat={},lon={},pen={}}
 function B747_fmc_nd_line()
   if not B747_nd_line_dirty and simDRTime-ndLineT<ND_LINE_S then return end
@@ -2872,7 +2886,13 @@ function B747_fmc_nd_line()
     for _,p in ipairs(pts) do under[#under+1]=p end
     pts=under
   end
-  ndLineCache=used
+  -- the turns this line used kept, the others until TURN_KEEP lines
+  -- have gone without them (the model adds new ones to the cache)
+  ndLineGen=ndLineGen+1
+  for k in pairs(used) do ndLineAge[k]=ndLineGen end
+  for k in pairs(ndLineCache) do
+    if (ndLineAge[k] or 0)<=ndLineGen-TURN_KEEP then ndLineCache[k],ndLineAge[k]=nil,nil end
+  end
   local lat,lon,pen,n=D.pack(pts)
   local old=ndLineOld
   for k=1,n do
