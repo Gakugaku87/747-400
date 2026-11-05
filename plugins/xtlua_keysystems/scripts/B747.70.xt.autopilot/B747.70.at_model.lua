@@ -9,9 +9,10 @@
 --    VNAV or FLCH engaging (or the ARM switch put on while they are), a
 --    TO/GA push (on the ground under 50 kt with the flaps out and the TO
 --    limit: TO; in the air with the flaps out or G/S, not the TO limit:
---    G/A; after takeoff on the TO limit: THR REF), the SPD switch (above
---    400 ft, not the TO limit, not in VNAV, FLCH, T/O or G/A), the THR
---    switch (above 400 ft, not the TO or GA limit, not in VNAV or FLCH).
+--    G/A; after takeoff on the TO limit: THR REF), the SPD switch (from
+--    400 ft after takeoff until landing, not the TO limit, not in VNAV,
+--    FLCH, T/O or G/A), the THR switch (the same heights, not the TO or GA
+--    limit, not in VNAV or FLCH).
 --    No TO/GA push by 50 kt on the ground: none until 400 ft (FCOM p.656).
 --  - Disengaged by the ARM switch off, the interlocks lost, a disconnect
 --    switch, the reversers. AUTOTHROT DISC latches when it was engaged
@@ -114,6 +115,7 @@ function M.new()
         to = false,         -- TO: "thr" from the push on the ground, "hold"
                             -- from 65 kt, "air" pushed after takeoff
         no_to = false,      -- no push by 50 kt: no engage until 400 ft
+        air = false,        -- above 400 ft since the takeoff, until the landing
         idle_hold = false,  -- VNAV's or the retard's IDLE at the aft stop
         thr_hold = false,   -- VNAV's THR at its V/S, the aft stop, the hand
         reach_t = 0,        -- VNAV's THR: the seconds at its V/S
@@ -232,8 +234,15 @@ function M.update(s, inp)
     end
     s.pitch = inp.pitch
     if s.pitch ~= "FLCH" then s.flch_vs, s.flch_mcp = nil, nil end
-    -- the MCP's SPD and THR switches
-    local air = not inp.ground and inp.ra > M.MIN_RA
+    -- the MCP's SPD and THR switches: from 400 ft after takeoff until the
+    -- landing (FCOM p.641-642; 2026-11-05 review 3: before, above 400 ft
+    -- radio altitude only, so dead below it on the approach)
+    if inp.ground then
+        s.air = false
+    elseif inp.ra > M.MIN_RA then
+        s.air = true
+    end
+    local air = s.air
     local p = inp.pitch
     if inp.spd and can and air and not inp.limit_to
         and p ~= "VNAV" and p ~= "FLCH" and p ~= "TO" and p ~= "GA" then
