@@ -523,6 +523,16 @@ T.equal(small(2), l24(" REACHING"), "REACHING")
 T.equal(line(3), "FL350              ARMED", "FL350, ARMED (FMSPG p.340)")
 T.equal(small(4) .. line(5), l24(" /FREE TEXT") .. l24("<"), "a free text line")
 T.equal(small(10) .. "|" .. line(11), r24("REPORT") .. "|" .. r24("SEND>"), "REPORT SEND>")
+-- (2026-11-05 review 4) the report's context (the position report's
+-- defaults, the route's text) made once a frame (before, at each look:
+-- the page's three renders and its status's two, 7 a frame here)
+do
+    local defFn, made = fms.ns.B747_fms_posrep_defaults, 0
+    fms.ns.B747_fms_posrep_defaults = function(...) made = made + 1 return defFn(...) end
+    for _ = 1, 30 do rt:frame(1 / 30) end
+    fms.ns.B747_fms_posrep_defaults = defFn
+    T.check(made > 0 and made <= 30, string.format("the report's context made once a frame: %d in 30 frames", made))
+end
 enter("FL330", "L1")
 T.equal(pad(), "INVALID ENTRY", "the uplink's altitude: INVALID ENTRY (FMSPG p.333)")
 clear()

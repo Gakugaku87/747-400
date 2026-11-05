@@ -4651,7 +4651,7 @@ do
     return part(lat, "N", "S", 2) .. part(lon, "E", "W", 3)
   end
   -- the FMC's values for the reports (B747_atc_report_model.elements's `c`)
-  function B747_fms_report_ctx()
+  local function report_ctx_make()
     local d = B747_fms_posrep_defaults()
     local ta = tonumber(fmsModules["data"]["transalt"]) or 18000
     local c = {alt = d.alt, next_wpt = d.to, next_eta = d.eta, ensuing = d.nxt, last = d.last, ata = d.ata,
@@ -4676,6 +4676,17 @@ do
       c.endurance = string.format("%02d+%02d", math.floor(min / 60), min % 60)
     end
     c.now = string.format("%02d%02dZ", hh or 0, mm or 0)
+    return c
+  end
+  -- made once a frame (2026-11-05 review 4: before, at each look: VERIFY
+  -- REPORT's three renders a frame and its status's two looks each made
+  -- it, the position report's defaults and the route's text with it); a
+  -- copy to each caller, the emergency's adds to it
+  local ctxT, ctxC = nil, nil
+  function B747_fms_report_ctx()
+    if ctxC == nil or ctxT ~= simDRTime then ctxC, ctxT = report_ctx_make(), simDRTime end
+    local c = {}
+    for k, v in pairs(ctxC) do c[k] = v end
     return c
   end
   -- an uplink's report (nil: no request in it); made when first seen
