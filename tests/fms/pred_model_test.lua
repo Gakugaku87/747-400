@@ -337,4 +337,23 @@ local prs = PM.profile({pts = {{x = 100, h = 31000, t = 900}, {x = 400, h = 3500
 local hs = PM.profile_at(prs, 200)
 T.near(hs, 31000, 1e-6, "an S/C at the altitude of the waypoint before it")
 
+-- (2026-11-05 review 3) DES NOW before the T/D (the descent phase at the
+-- cruise altitude, the T/D ahead): level to the path, then the path; as the
+-- cruise's prediction (before, the path's altitudes from here: FL451 at the
+-- next waypoint, the destination 13 min early)
+do
+    local legsDN = {{name = "A", dist = 30}, {name = "B", dist = 100}, {name = "C", dist = 70},
+        {name = "RW", dist = 60, con = {kind = "AT", a = 50}}}
+    local function dn(phase)
+        return PM.predict{P = P, t = pw, gw = 250000, fuel = 30000, alt = 35000, phase = phase, crz = 35000,
+            clb = clb, des = des, crzspd = {mach = 0.84}, legs = legsDN, ed = 4}
+    end
+    local rc, rd = dn("crz"), dn("des")
+    T.check(rc.td and rc.td > 100, string.format("the cruise: the T/D %.0f NM ahead", rc.td or -1))
+    T.check(rd.pts[1].h <= 35050, string.format("DES NOW: A (30 NM) at %.0f ft, not above FL350", rd.pts[1].h))
+    T.check(rd.td and math.abs(rd.td - rc.td) < 1, string.format("DES NOW: the T/D where the path meets FL350 (%.0f NM)", rd.td or -1))
+    T.near(rd.dest.t, rc.dest.t, 30, string.format("DES NOW: at the runway in %.1f min, as the cruise's %.1f",
+        rd.dest.t / 60, rc.dest.t / 60))
+end
+
 T.done()
