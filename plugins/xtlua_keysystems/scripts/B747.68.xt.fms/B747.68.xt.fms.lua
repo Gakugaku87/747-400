@@ -1995,12 +1995,16 @@ end
 -- MCP altitude deleted from the active route; without one, in the climb
 -- with the MCP above CRZ ALT, or in the cruise above it, CRZ ALT the MCP
 -- altitude; (step 9d2a) in the cruise below it the early descent or a
--- cruise descent
+-- cruise descent. A cruise climb (the climb's phase, the CRZ page's CRZ
+-- CLB: FCOM p.1347) is the cruise's here (2026-11-05 review 4: before,
+-- the climb's: the MCP below CRZ ALT pushed in it did nothing, the climb
+-- went on to the old CRZ ALT)
 local DES_NOW_NM = 50
 local vnavPushSeen = nil
 function B747_fms_alt_sel_push()
   local st = B747_fmc_route
   local alt, mcp, ph = simDR_pressureAlt1, B747DR_fms_vnav_mcp_alt, vnavState.phase
+  if ph == "CLB" and vnavState.crz_chg == "CLB" then ph = "CRZ" end
   if st.active and ph ~= "CRZ" then
     local up = mcp > alt
     -- the climb's legs in the climb, the others in the descent
