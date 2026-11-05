@@ -50,7 +50,32 @@ end
 -- before, 0.97 at any Mach: at FL300, M.78 no thrust under 34 kN an engine
 -- but X-Plane's idle could be set)
 T.near(P.epr(0, 1, 0.5), 1 / (1 + 0.2 * 0.25) ^ 3.5, 1e-9, "EPR: no thrust, the exhaust at the ambient pressure (0.843 at M.5)")
-T.equal(P.epr(-15, 0.3, 0.8), P.zero(0.8), "EPR: negative thrust (idle descent) the same")
+-- (2026-11-05) under no net thrust (X-Plane's idle in a fast descent) the
+-- law mirrored: on from zero(M) without a step, falling with the thrust,
+-- held at NPR 1 - NEG_NPR. Before, every negative thrust read zero(M)
+T.near(P.epr(-0.001, 1, 0.66), P.zero(0.66), 1e-4, "EPR: a hair under no net thrust, zero(M) still (no step)")
+T.check(P.epr(-5, 1, 0.66) < P.zero(0.66) - 0.005 and P.epr(-15, 1, 0.66) < P.epr(-5, 1, 0.66) - 0.01,
+    string.format("EPR: falls with the thrust under none (M.66: -5 kN %.4f, -15 kN %.4f, zero %.4f)",
+        P.epr(-5, 1, 0.66), P.epr(-15, 1, 0.66), P.zero(0.66)))
+T.near(P.epr(-1000, 1, 0.8), (1 - P.NEG_NPR) * P.zero(0.8), 1e-9, "EPR: held at NPR 1 - NEG_NPR far under none")
+T.near(P.thrust(P.epr(-10, 0.5, 0.7), 0.5, 0.7), -10, 1e-6, "thrust from EPR undoes EPR from thrust under none too")
+-- (2026-11-05) the idle end's command (B747_epr_model.idle_command): under
+-- X-Plane's idle at every Mach the flight tests flew (the most negative
+-- corrected net thrust by Mach, 2026-10-31 to 11-05, POINT_thrust over the
+-- pressure ratio), by at least 0.015; no net thrust under M.3 (standing 1.00)
+for _, p in ipairs({{0.50, 4.4}, {0.55, -0.1}, {0.60, -5.2}, {0.637, -8.5}, {0.70, -12.3},
+        {0.737, -14.2}, {0.75, -13.2}, {0.80, -4.3}}) do
+    local xp, cmd = P.epr(p[2], 1, p[1]), P.idle_command(p[1])
+    T.check(cmd < xp - 0.015, string.format("idle command under X-Plane's idle at M%.3f (%.1f kN): %.4f < %.4f",
+        p[1], p[2], cmd, xp))
+end
+T.near(P.idle_command(0), 1.0, 1e-9, "idle command standing: no net thrust (1.00, under the ground idle's 1.01)")
+T.near(P.idle_command(0.3), P.zero(0.3), 1e-9, "idle command at M.3: no net thrust still")
+T.check(P.idle_command(0.45) < P.zero(0.45) and P.idle_command(0.45) > P.idle_command(0.6),
+    "idle command: faded in between M.3 and M.6")
+T.check(P.idle_command(0.78) < P.epr(2, delta(30000), 0.78) - 0.03,
+    string.format("idle command at FL300, M.78 %.3f under X-Plane's idle (2 kN) %.3f",
+        P.idle_command(0.78), P.epr(2, delta(30000), 0.78)))
 local dl300 = delta(30000)
 T.check(P.epr(2, dl300, 0.78) < 0.70 and P.epr(26, dl300, 0.78) > 0.85 and P.epr(26, dl300, 0.78) < 0.90
     and P.epr(34, dl300, 0.78) > 0.95,

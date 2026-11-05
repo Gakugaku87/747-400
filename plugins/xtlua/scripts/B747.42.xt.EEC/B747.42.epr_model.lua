@@ -40,13 +40,15 @@ M.STATIONS = {
 }
 local function ram(mach) return (1 + 0.2 * mach * mach) ^ 3.5 end
 
--- the least EPR: that of no net thrust at the Mach (the exhaust at the
--- ambient pressure, NPR 1). X-Plane's idle reads a little above it: 0.68 at
--- FL300, M.78 (2 kN an engine), 1.01 at ground idle (estimate: the FCOM
--- gives no idle EPR). Before (2026-10-31), 0.97 at any Mach (the previous
--- code's): the EEC's thrust control holds this EPR, and at FL300, M.78 it
--- could set no thrust between X-Plane's idle and 34 kN an engine, the 0.97's
--- (the FMC's step 9d2: the early descent's 1,250 fpm needs 26 kN)
+-- the EPR of no net thrust at the Mach (the exhaust at the ambient
+-- pressure, NPR 1; the least EPR until 2026-11-05, see M.epr). X-Plane's
+-- idle reads a little above it: 0.68 at FL300, M.78 (2 kN an engine), 1.01
+-- at ground idle; below it where X-Plane's idle pulls back, from about M.55
+-- (estimate: the FCOM gives no idle EPR). Before (2026-10-31), 0.97 at any
+-- Mach (the previous code's): the EEC's thrust control holds this EPR, and
+-- at FL300, M.78 it could set no thrust between X-Plane's idle and 34 kN an
+-- engine, the 0.97's (the FMC's step 9d2: the early descent's 1,250 fpm
+-- needs 26 kN)
 function M.zero(mach)
     if mach < 0 then mach = 0 end
     return 1 / ram(mach)
@@ -66,12 +68,23 @@ local function kq(mach)
     return s[#s][2], s[#s][3]
 end
 
+-- (2026-11-05) below no net thrust the same law mirrored, NPR 1 - (-f/k)^(1/q),
+-- the NPR at least 1 - NEG_NPR (estimate: no real engine's NPR is under 1,
+-- but the EEC holds this EPR and has to tell X-Plane's idle from no net
+-- thrust; X-Plane's idle pulls back from about M.55, in the flight tests
+-- down to -14 kN corrected at M.74, 340 KIAS). Before, every thrust under
+-- none read zero(M): between X-Plane's idle and no net thrust the EEC saw no
+-- change, and a lever a hair above idle had it wind the throttle up until
+-- the net thrust was none (s148, 2026-11-03: the throttle at 0.42, about
+-- 2 kN an engine over X-Plane's idle)
+M.NEG_NPR = 0.2
+
 -- the EPR shown for an engine's net thrust (kN)
 function M.epr(thrust_kn, delta, mach)
     if mach < 0 then mach = 0 end
     local f = thrust_kn / math.max(delta, 0.05)
-    if f <= 0 then return M.zero(mach) end
     local k, q = kq(mach)
+    if f < 0 then return (1 - math.min((-f / k) ^ (1 / q), M.NEG_NPR)) / ram(mach) end
     return (1 + (f / k) ^ (1 / q)) / ram(mach)
 end
 
@@ -80,8 +93,26 @@ function M.thrust(epr, delta, mach)
     if mach < 0 then mach = 0 end
     local k, q = kq(mach)
     local y = epr * ram(mach) - 1
-    if y <= 0 then return 0 end
+    if y < 0 then return -k * math.min(-y, M.NEG_NPR) ^ q * delta end
     return k * y ^ q * delta
+end
+
+-- (2026-11-05) the EPR the EEC commands at the lever's idle end: that of
+-- IDLE_KN corrected net thrust backwards, faded in from IDLE_MACH[1] to
+-- IDLE_MACH[2] (estimate). The FCOM has the EEC calculate an EPR between idle
+-- and the maximum (p.876), the idle its minimum or approach idle (p.877): the
+-- idle end commands no more than X-Plane's idle, so the engine stays at idle
+-- there and a hair above it, and the thrust comes up from X-Plane's idle as
+-- the lever goes forward. Under M.3 no net thrust, as before (standing 1.00,
+-- under the ground idle's 1.01; X-Plane's idle there pushes). Before, no net
+-- thrust at every Mach (2026-10-31): over X-Plane's idle wherever that
+-- pulls back
+M.IDLE_KN = 25
+M.IDLE_MACH = {0.3, 0.6}
+function M.idle_command(mach)
+    if mach < 0 then mach = 0 end
+    local w = (mach - M.IDLE_MACH[1]) / (M.IDLE_MACH[2] - M.IDLE_MACH[1])
+    return M.epr(-M.IDLE_KN * math.max(0, math.min(1, w)), 1, mach)
 end
 
 -- The N1 (ENG-33, 2026-11-03): the corrected N1 (N1 / sqrt(theta_t2)) from
