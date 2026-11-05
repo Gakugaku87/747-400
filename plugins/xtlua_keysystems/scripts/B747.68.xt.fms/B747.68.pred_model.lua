@@ -30,6 +30,9 @@ local NM = 1852
 -- (step 9h4b) the cruise descent's rate (fpm: VNAV's, B747.68.vnav_model.lua
 -- EARLY_VS) and the engine-out driftdown's least (its EO_DD_VS)
 M.CRZ_DES_VS, M.DD_VS = 1250, 300
+-- (2026-11-05 review 4) the T/D's level deceleration made again when the
+-- weight differs this much from the one it was made at (kg; estimate)
+M.TD_KG = 5000
 -- (6-1/6-2 step LF1; notes/LINE_FLIGHTS.md §1) the descent deceleration's
 -- rate (fpm: FCOM p.1264, about 500)
 M.DECEL_VS = 500
@@ -502,12 +505,18 @@ function M.predict(s)
         end
         return dx, dt, f
     end
+    -- the deceleration kept for the altitude and the weight within TD_KG
+    -- (2026-11-05 review 4: before, the first weight's for the whole cruise:
+    -- its drag over the weight)
     local tdCache = {}
     local function td_x(hc)
         local xp = path_at_h(dp, hc)
-        local d = tdCache[hc]
-        if not d then d = td_decel(hc, xp); tdCache[hc] = d end
-        return xp - d
+        local c = tdCache[hc]
+        if not c or math.abs(c.kg - kg) > M.TD_KG then
+            c = {kg = kg, d = (td_decel(hc, xp))}
+            tdCache[hc] = c
+        end
+        return xp - c.d
     end
 
     -- (2026-11-05 review 3) DES NOW below the path: level to the path,

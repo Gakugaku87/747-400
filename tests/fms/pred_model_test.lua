@@ -130,6 +130,17 @@ do
     T.check(rl.td_decel and rl.td_decel > 3 and rl.td_decel < 10, string.format("a level deceleration of %.1f NM", rl.td_decel or -1))
     T.check(top and math.abs(rl.td - (top - rl.td_decel)) < 0.05,
         string.format("the T/D at its start: %.1f NM, the path leaving FL250 at %.1f", rl.td or -1, top or -1))
+    -- (2026-11-05 review 4) after a long cruise (a heavy start, about 80 t
+    -- burnt) too, the cruise flown to the T/D: its time the distance at
+    -- M.86's TAS (no wind). Before, the deceleration kept from the first
+    -- weight (longer: 11.2 NM at 390 t, 10.3 at the T/D's) stopped the
+    -- cruise short and the T/D was moved on without its time and fuel
+    local legsLong = {{name = "A", dist = 4000}, {name = "RW", dist = 120, con = {kind = "AT", a = 50}}}
+    local rlong = PM.predict{P = P, t = pw, gw = 390000, fuel = 150000, alt = 25000, phase = "crz", crz = 25000, clb = clb,
+        des = des, crzspd = {mach = 0.86}, legs = legsLong, ed = 2}
+    local tdWant = rlong.td and rlong.td / P.tas(0.86, 25000) * 3600 or 0
+    T.check(rlong.td_t and math.abs(rlong.td_t - tdWant) < 1,
+        string.format("after 4,000 NM: the T/D at %.1f s, its distance at M.86 %.1f s", rlong.td_t or -1, tdWant))
 end
 
 -- step climbs where the steps function says: at 300 t to FL350, at 280 t to
