@@ -93237,6 +93237,7 @@ GROUP First Officer ND
           POS 1021.500000 -107.000000
           IMAGE EFIS/Maps/aircraft_triangle
           DATAREF 
+          SHOW_LESS 2.500000 laminar/B747/nd/mode/fo/sel_dial_pos
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 3
@@ -116234,6 +116235,7 @@ GROUP Captain ND
           POS 334.500000 -107.000000
           IMAGE EFIS/Maps/aircraft_triangle
           DATAREF 
+          SHOW_LESS 2.500000 laminar/B747/nd/mode/capt/sel_dial_pos
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 0

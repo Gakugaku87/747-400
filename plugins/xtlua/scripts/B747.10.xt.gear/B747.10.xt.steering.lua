@@ -89,16 +89,47 @@ local function find_raw_axis()
     return found
 end
 
--- the tiller from the raw axis: -1 .. 1, + right
+-- the tiller from the raw axis: -1 .. 1, + right. (2026-11-05) The range
+-- seen only when it is a ratio's (X-Plane 12 keeps 9.9e9 and -9.9e9 before
+-- calibrating, and may keep the device's units after: this PC's joystick
+-- settings); reversed when the flag is above 0 (FlyWithLua's sample: it
+-- may be the axis's number)
 local function raw_tiller(i)
     local v = simDR_strg_hw_value[i]
     local lo, hi = simDR_strg_hw_min[i], simDR_strg_hw_max[i]
-    if hi - lo > 0.1 then v = (v - lo) / (hi - lo) end
+    if hi - lo > 0.1 and lo >= -0.5 and hi <= 1.5 then v = (v - lo) / (hi - lo) end
     v = math.min(1, math.max(0, v))
-    if simDR_strg_hw_reverse[i] == 1 then v = 1 - v end
+    if simDR_strg_hw_reverse[i] > 0 then v = 1 - v end
     local t = v * 2 - 1
     if math.abs(t) <= RAW_NULL then return 0 end
     return (t - (t > 0 and RAW_NULL or -RAW_NULL)) / (1 - RAW_NULL)
+end
+
+-- (2026-11-05) the tiller's and the pedals' values to Output/B747_steering.txt
+-- when they move (every DIAG_S, a change over DIAG_STEP; DIAG_MAX lines a
+-- load), for the user's report: with a rudder axis the tiller axis did
+-- nothing, without one it steered (X-Plane giving it as the rudder?)
+local DIAG_S, DIAG_STEP, DIAG_MAX = 0.5, 0.1, 30
+local diag_t, diag_n, diag_last = 0, 0, {}
+local function diag(raw_i, t, pedal, nose)
+    diag_t = diag_t - SIM_PERIOD
+    if diag_n >= DIAG_MAX or diag_t > 0 then return end
+    diag_t = DIAG_S
+    local mv = simDR_strg_axis_value[AXIS_TILLER]
+    local rv = raw_i and simDR_strg_hw_value[raw_i] or 0
+    if diag_n > 0 and math.abs(mv - diag_last[1]) < DIAG_STEP and math.abs(rv - diag_last[2]) < DIAG_STEP
+        and math.abs(pedal - diag_last[3]) < DIAG_STEP then return end
+    diag_last[1], diag_last[2], diag_last[3] = mv, rv, pedal
+    diag_n = diag_n + 1
+    local line = string.format("%s tiller: joy_mapped_axis[37] avail %s value %.3f; raw axis %s value %.3f min %.3f max %.3f reverse %s; tiller used %.3f; pedal %.3f; nose %.1f deg\n",
+        (os and os.date and os.date("%H:%M:%S")) or "", tostring(simDR_strg_axis_avail[AXIS_TILLER]), mv,
+        tostring(raw_i), rv, raw_i and simDR_strg_hw_min[raw_i] or 0, raw_i and simDR_strg_hw_max[raw_i] or 0,
+        raw_i and tostring(simDR_strg_hw_reverse[raw_i]) or "-", t, pedal, nose)
+    local f = io and io.open("Output/B747_steering.txt", "a")
+    if f then
+        f:write(line)
+        f:close()
+    end
 end
 
 function B747_steering_aircraft_load()
@@ -136,6 +167,9 @@ function B747_steering()
     inp.fail_body = B747DR_strg_fail_body > 0.5
     local out = S.update(strg_state, inp, SIM_PERIOD)
 
+    -- the report's diagnostics never stop the gear module (one Lua error
+    -- stops every module of this plugin)
+    pcall(diag, raw_axis, inp.tiller, inp.pedal, out.nose)
     if simDR_strg_override ~= 1 then simDR_strg_override = 1 end
     put(simDR_strg_command, XP_NOSE, out.nose)
     put(simDR_strg_command, XP_LB, out.body[1])

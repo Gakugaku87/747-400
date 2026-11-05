@@ -634,3 +634,9 @@ ND（2026-11-05：PLAN の絵を FCOM の 3 通りに。利用者の依頼「ND�
 | 同 | 両 ND の `GROUP ND Text Center` の前 | なし | 新しい `GROUP PLN Plan`（`pln_style` が 0 より上）：`GROUP PLN Circles`（`pln_style` 1）に円の絵 `EFIS/Maps/plan_circles`（中心：機長 335.25, 78.5、F/O 1022.25, 78.5）と数字 4 つ（`range_display_<席>` の 2 倍と 1 倍、円の上下）、`PLN North CRT`（`pln_style` 2：株の `NorthArrow` を機長 635, 9、F/O 1322, 9） | FCOM p.1027–1029、p.1151（N↑ は緑） |
 
 上の 4 行は `docs/overhaul/tools/panel_nd_plan_circles.lua` で書き換えた（12 行の書き換えと、2 か所に 111 行ずつ）。新しい絵は `docs/overhaul/tools/make_plan_circles.ps1`。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261105_before_nd_plan`。見た目の変わるのは PLN の ND だけ（X-Plane の写真：`s254_nd_plan_circles`・`s255_nd_plan_crt`、外から見た写真も `s254`）。
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-11-05・ND（PLAN、利用者の写真） | 両 ND の `GROUP Map:Expanded` の `gen_rotary Aircraft Triangle`（機長 334.5, -107、F/O 1021.5, -107：拡大の機体の三角） | 条件なし（拡大の群でいつも原点に） | `SHOW_LESS 2.500000 laminar/B747/nd/mode/<席>/sel_dial_pos`（PLN では出さない） | FCOM p.1147（PLAN の機体の記号は機体の位置）、p.1029（CRT の PLAN の原点は中心の地点） |
+
+上の 1 行は `docs/overhaul/tools/panel_nd_plan_triangle.lua` で書き換えた（2 行を足した）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261105_before_plan_triangle`。
