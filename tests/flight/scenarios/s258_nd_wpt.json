@@ -1,0 +1,48 @@
+{
+  "name": "s258_nd_wpt",
+  "description": "2026-11-05 のレビューの 1-4 と 3（ND の WPT）の X-Plane での確認、地上。RJAA 34L でエンジン運転中に開始（機体を読み直す）。ND のモジュールが earth_fix.dat を、X-Plane が使う航法データ（Custom Data が先）から 1 回だけ 1 度の格子に読み込む。機長の ND を MAP・40 NM にして WPT を入れると、ウェイポイント（記号 13、水色）が出る（FCOM p.1040, p.1148）。80 NM では出ない。WPT を切ると消える。ND を撮る。読み込みにかかった時間は WPT の待ちの秒で分かる。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 299, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 5, "note": "システムの準備" },
+    { "do": "set", "note": "範囲 40 NM", "dref": "laminar/B747/nd/range/capt/sel_dial_pos", "value": 2 },
+    { "do": "set", "dref": "sim/cockpit2/EFIS/map_range", "value": 2 },
+    { "do": "check", "note": "機長の ND は MAP", "dref": "laminar/B747/nd/mode/capt/sel_dial_pos", "op": "==", "value": 2 },
+    { "do": "check", "note": "WPT は切ってある", "dref": "laminar/B747/nd/data/capt/wpt", "op": "==", "value": 0 },
+    { "do": "check", "note": "ウェイポイントの記号（13）は無い", "dref": "laminar/B747/nd/capt/text/icon", "op": "matches", "value": "^(?!.*(^| )13([.]0+)?( |$))" },
+    { "do": "cmd", "note": "機長の WPT", "name": "laminar/B747/nd/wpt/capt/switch" },
+    { "do": "wait", "note": "ウェイポイントが出る（記号 13。待ちの秒は、機体の読み込みの後の earth_fix.dat の読み込みの残り）", "dref": "laminar/B747/nd/capt/text/icon", "op": "matches", "value": "(^| )13([.]0+)?( |$)", "timeout": 90 },
+    { "do": "snapshot", "note": "記号と水色の字（最初の 16 枠）", "drefs": ["laminar/B747/nd/capt/text/icon", "laminar/B747/nd/capt/text/bluetext0", "laminar/B747/nd/capt/text/bluetext1", "laminar/B747/nd/capt/text/bluetext2", "laminar/B747/nd/capt/text/bluetext3", "laminar/B747/nd/capt/text/bluetext4", "laminar/B747/nd/capt/text/bluetext5", "laminar/B747/nd/capt/text/bluetext6", "laminar/B747/nd/capt/text/bluetext7", "laminar/B747/nd/capt/text/bluetext8", "laminar/B747/nd/capt/text/bluetext9", "laminar/B747/nd/capt/text/bluetext10", "laminar/B747/nd/capt/text/bluetext11", "laminar/B747/nd/capt/text/bluetext12", "laminar/B747/nd/capt/text/bluetext13", "laminar/B747/nd/capt/text/bluetext14", "laminar/B747/nd/capt/text/bluetext15", "laminar/B747/nd/capt/excess_data"] },
+    { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
+    { "do": "view", "note": "機長の ND", "the": -22, "psi": 12, "fov": 28 },
+    { "do": "shot", "name": "nd_wpt_40" },
+    { "do": "set", "note": "範囲 20 NM", "dref": "laminar/B747/nd/range/capt/sel_dial_pos", "value": 1 },
+    { "do": "set", "dref": "sim/cockpit2/EFIS/map_range", "value": 1 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "20 NM でも出る", "dref": "laminar/B747/nd/capt/text/icon", "op": "matches", "value": "(^| )13([.]0+)?( |$)" },
+    { "do": "shot", "name": "nd_wpt_20" },
+    { "do": "set", "note": "範囲 80 NM", "dref": "laminar/B747/nd/range/capt/sel_dial_pos", "value": 3 },
+    { "do": "set", "dref": "sim/cockpit2/EFIS/map_range", "value": 3 },
+    { "do": "wait", "note": "80 NM では出ない（FCOM p.1040：10、20、40 NM）", "dref": "laminar/B747/nd/capt/text/icon", "op": "matches", "value": "^(?!.*(^| )13([.]0+)?( |$))", "timeout": 5 },
+    { "do": "set", "note": "範囲 40 NM に戻す", "dref": "laminar/B747/nd/range/capt/sel_dial_pos", "value": 2 },
+    { "do": "set", "dref": "sim/cockpit2/EFIS/map_range", "value": 2 },
+    { "do": "wait", "note": "また出る", "dref": "laminar/B747/nd/capt/text/icon", "op": "matches", "value": "(^| )13([.]0+)?( |$)", "timeout": 5 },
+    { "do": "cmd", "note": "WPT を切る", "name": "laminar/B747/nd/wpt/capt/switch" },
+    { "do": "wait", "note": "消える", "dref": "laminar/B747/nd/capt/text/icon", "op": "matches", "value": "^(?!.*(^| )13([.]0+)?( |$))", "timeout": 5 },
+    { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "view", "name": "forward" }
+  ]
+}
