@@ -1243,7 +1243,8 @@ end
 -- the ND's line straight from row to row, through each: the fly-by turns
 -- not as curves, a VECTORS leg's end joined to the next waypoint. At most
 -- MAX_XP_ROWS rows (X-Plane's FMS: 100, XPLMNavigation.h): the arcs'
--- points left out first, then the passed legs but the last
+-- points left out first, then the passed legs but the last, then the far
+-- legs (the destination kept: cap_rows)
 M.DTO_START = "DTOPOS"
 M.ARC_POINT = "~"
 M.MAX_XP_ROWS = 100
@@ -1303,10 +1304,32 @@ local function fms_rows(r, shape, arcs, first_passed, shown)
     map.n = #rows
     return rows, map
 end
+-- (2026-11-05 review 3) a route still over MAX_XP_ROWS rows without the
+-- arcs' points and the passed legs (a long oceanic route): the far legs
+-- left out, the destination kept last; they come in as legs pass (the plan
+-- made again at each change). Before, X-Plane kept 100 of the rows and the
+-- FMC's sync waited for ever for their count (its current waypoint and
+-- PLAN's centre not written)
+local function cap_rows(rows, map, r)
+    local keep = M.MAX_XP_ROWS - (r.dest and 1 or 0)
+    local out, m = {}, {leg = {}, row = {}, ident = {}}
+    for k = 1, keep do
+        out[k], m.ident[k], m.leg[k] = rows[k], map.ident[k], map.leg[k]
+    end
+    for i, k in pairs(map.row) do
+        if k <= keep then m.row[i] = k end
+    end
+    if r.dest then
+        out[keep + 1], m.ident[keep + 1] = rows[#rows], map.ident[#rows]
+    end
+    m.n = #out
+    return out, m
+end
 function M.to_fms(r, cycle, shape, shown)
     local rows, map = fms_rows(r, shape, true, 1, shown)
     if map.n > M.MAX_XP_ROWS then rows, map = fms_rows(r, shape, false, 1, shown) end
     if map.n > M.MAX_XP_ROWS then rows, map = fms_rows(r, shape, false, math.max(1, #r.passed), shown) end
+    if map.n > M.MAX_XP_ROWS then rows, map = cap_rows(rows, map, r) end
     local head = {"I", "1100 Version", "CYCLE " .. (cycle or "0000")}
     if r.origin then head[#head + 1] = "ADEP " .. r.origin.ident end
     if r.runway then head[#head + 1] = "DEPRWY " .. r.runway.ident end

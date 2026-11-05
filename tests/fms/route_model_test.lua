@@ -312,6 +312,19 @@ for k = 1, 50 do st.rte.passed[k] = {via = "DIRECT", fix = {ident = "Q" .. k, ki
 text, map = R.to_fms(st.rte, "2610")
 T.equal(map.n, 63, "112 rows with 50 passed legs: the last passed one kept")
 T.check(text:find("\n11 Q50 DRCT ") and not text:find("\n11 Q49 DRCT "), "Q50, the last passed, kept")
+-- (2026-11-05 review 3) still over 100 rows (150 legs, a long oceanic
+-- route): the far legs left out, the destination last, 100 rows (before,
+-- all: X-Plane kept 100 and the FMC's sync waited for ever)
+many = {}
+for k = 1, 150 do many[k] = {via = "DIRECT", fix = {ident = "W" .. k, kind = "WPT", lat = 35 + k / 100, lon = 141}} end
+st.rte.legs = many
+text, map = R.to_fms(st.rte, "2610")
+T.equal(map.n, 100, "152 rows: 100")
+T.check(text:find("NUMENR 100\n", 1, true) ~= nil, "NUMENR 100")
+T.check(text:find("\n1 ZZBB ADES [^\n]*\n$") ~= nil, "the destination the last row")
+T.equal(map.ident[100], "ZZBB", "and in the map")
+T.check(map.row[1] == 3 and map.row[97] == 99 and map.row[98] == nil, string.format("after ZZAA and Q50, W1 to W97 in (rows %s to %s), W98 on later", tostring(map.row[1]), tostring(map.row[97])))
+T.equal(R.active_row(st.rte, map), map.row[1], "the active row: W1's")
 
 -- INTC CRS: the start on the course into the waypoint, as far from it as
 -- the airplane (estimate)
