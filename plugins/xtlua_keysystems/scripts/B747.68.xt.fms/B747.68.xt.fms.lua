@@ -5734,24 +5734,32 @@ function nd_speed_wind_display()
 	end
 end
 
+-- (2026-11-05 review) POS INIT's LAST POS from the livery's file: read
+-- once per livery (the file changes only when the aircraft unloads).
+-- Before, POS INIT called this in every frame it was drawn, on each CDU (a
+-- file opened and read 60-120 times a second while the page showed, on
+-- the plugin's thread), switched the Lua state's default input and output,
+-- and an empty file put nil in the FMS data (the next read of LAST POS
+-- stopped the plugin)
+local lastPosRead=nil
 function aircraft_last_pos(phase)
-	file_location = simDR_livery_path.."B747-400_lastpos.dat"
-	--print("File = "..file_location)
+	local file_location = simDR_livery_path.."B747-400_lastpos.dat"
 
 	if phase == "LOAD" then
 		--Load FMC last position
+		if lastPosRead == file_location then return end
+		lastPosRead = file_location
 		local file = io.open(file_location, "r")
 		if file ~= nil then
-			io.input(file)
-			fmsModules["data"].lastpos = io.read()
-			io.close(file)
+			local pos = file:read("*l")
+			file:close()
+			if pos ~= nil then fmsModules["data"].lastpos = pos end
 		end
 	else  --UNLOAD
 		local file = io.open(file_location, "w+")
 		if file ~= nil then
-			io.output(file)
-			io.write(irsSystem.getLat("gpsL") .." " .. irsSystem.getLon("gpsL"))
-			io.close(file)
+			file:write(irsSystem.getLat("gpsL") .." " .. irsSystem.getLon("gpsL"))
+			file:close()
 		end
 	end
 end
