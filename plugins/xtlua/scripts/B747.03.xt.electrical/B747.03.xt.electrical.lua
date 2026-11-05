@@ -593,6 +593,7 @@ end
 function B747_flight_start_electric()
 
     -- ALL MODES ------------------------------------------------------------------------
+    B747_elec_reset()
     B747_set_elec_all_modes()
     B747_apu_flight_start()
 
