@@ -84,7 +84,30 @@ local SRM_DT_MAX = 0.05
 local srm_state = S.new()
 local srm_inputs = S.inputs()
 local srm_t = 0
-local trim_w1, trim_w2 = nil, nil   -- the trim written last frame and the one before
+-- (2026-11-05 review 3) the values written the last WRITE_HIST frames, to
+-- tell X-Plane's late read of our own writes from an outside change: XTLua's
+-- read can lag more than a frame (a slow frame), and in a fast move a value
+-- three frames old differed from the last two written by more than the
+-- margin, so it was taken for an outside change (before, the last two only)
+local WRITE_HIST = 8
+local function hist_new() return {n = 0} end
+local function hist_add(h, v)
+    h.n = h.n + 1
+    h[(h.n - 1) % WRITE_HIST + 1] = v
+end
+-- within the band of the values written (true before any)
+local function hist_has(h, v, eps)
+    local m = math.min(h.n, WRITE_HIST)
+    if m == 0 then return true end
+    local lo, hi = math.huge, -math.huge
+    for k = 1, m do
+        local w = h[k]
+        if w < lo then lo = w end
+        if w > hi then hi = w end
+    end
+    return v >= lo - eps and v <= hi + eps
+end
+local trim_hist = hist_new()          -- the trims written
 local altn_held = false
 
 -- the switches the commands hold (B747.45.xt.fltCtrls.lua and below): -1
@@ -111,7 +134,7 @@ end
 function B747_srm_flight_start()
     srm_state = S.new()
     srm_t = 0
-    trim_w1, trim_w2 = nil, nil
+    trim_hist = hist_new()
     -- a new flight: the cutout switches guarded at AUTO, nothing held
     local sw = B747_srm_switches
     sw.capt, sw.fo, sw.xp, sw.altn = 0, 0, 0, 0
@@ -230,9 +253,8 @@ function B747_srm()
     local xp = simDR_srm_elevator_trim
     srm_t = srm_t + SIM_PERIOD
     local starting = srm_t < STAB_INIT_S
-    if (starting and simDR_srm_xp_on_ground == 1) or (not starting and trim_w1
-        and math.abs(xp - trim_w1) > TRIM_SAME and math.abs(xp - (trim_w2 or trim_w1)) > TRIM_SAME
-        and not xp_runaway) then
+    if (starting and simDR_srm_xp_on_ground == 1) or (not starting
+        and not hist_has(trim_hist, xp, TRIM_SAME) and not xp_runaway) then
         S.stab_set(srm_state, units(xp))
     elseif starting then
         S.stab_set(srm_state, air_start_units(simDR_srm_xp_ias))
@@ -243,7 +265,7 @@ function B747_srm()
     -- the stabilizer (X-Plane keeps a float: compare with a margin)
     local trim = trim_of(out.stab_units)
     if math.abs(xp - trim) > 1e-6 then simDR_srm_elevator_trim = trim end
-    trim_w2, trim_w1 = trim_w1, trim
+    hist_add(trim_hist, trim)
     if B747DR_srm_stab_units ~= out.stab_units then B747DR_srm_stab_units = out.stab_units end
     local sp = flag(out.speed_trim)
     if B747DR_srm_speed_trim ~= sp then B747DR_srm_speed_trim = sp end
