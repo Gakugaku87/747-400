@@ -187,6 +187,39 @@ static void ndl_proj(const float *v, double lat, double lon, float *x, float *y)
     *y = (float)(px * cos(rel));
 }
 
+/* (2026-11-05 review) the angle between two points and the initial
+   bearing from the first (radians) */
+static double ndl_ang(double p1, double l1, double p2, double l2)
+{
+    double sp = sin((p2 - p1) / 2), sl = sin((l2 - l1) / 2);
+    return 2.0 * asin(fmin(1.0, sqrt(sp * sp + cos(p1) * cos(p2) * sl * sl)));
+}
+static double ndl_brg(double p1, double l1, double p2, double l2)
+{
+    double dl = l2 - l1;
+    return atan2(sin(dl) * cos(p2), cos(p1) * sin(p2) - sin(p1) * cos(p2) * cos(dl));
+}
+
+/* (2026-11-05 review) whether the great circle from a to b comes within
+   r NM of the map's centre: its ends, or the cross-track distance where
+   the nearest point lies between them. A leg that does not is not cut into
+   pieces nor projected (before, up to NDL_SUB_MAX pieces of every leg,
+   each projected, twice a frame for each side) */
+static int ndl_leg_near(const float *v, double la1, double lo1, double la2, double lo2, double r_nm)
+{
+    double pc = v[1] * NDL_D2R, lc = v[2] * NDL_D2R;
+    double p1 = la1 * NDL_D2R, l1 = lo1 * NDL_D2R, p2 = la2 * NDL_D2R, l2 = lo2 * NDL_D2R;
+    double r = r_nm / NDL_EARTH_NM;
+    double d13 = ndl_ang(p1, l1, pc, lc), d23 = ndl_ang(p2, l2, pc, lc), d12 = ndl_ang(p1, l1, p2, l2);
+    if (d13 <= r || d23 <= r) return 1;
+    if (d12 < 1e-12) return 0;
+    double a = ndl_brg(p1, l1, pc, lc) - ndl_brg(p1, l1, p2, l2);
+    double xt = asin(fmax(-1.0, fmin(1.0, sin(d13) * sin(a))));
+    if (fabs(xt) > r || cos(a) <= 0.0) return 0;
+    double at = acos(fmax(-1.0, fmin(1.0, cos(d13) / cos(xt))));
+    return at <= d12;
+}
+
 /* the great circle from a to b at f (0 to 1) */
 static void ndl_between(double la1, double lo1, double la2, double lo2, double f, double *la, double *lo)
 {
@@ -377,6 +410,10 @@ static void ndl_side(int side, int n, float bright)
     float px = 0.0f, py = 0.0f, s = 0.0f;
     ndl_cur_bright = bright;
     ndl_cur_colours = !((ndl_test >> side) & 1);
+    /* (2026-11-05 review) the visible part's radius as ndl_clip's (MAP's
+       range arc, MAP CTR's mask, PLAN's circles) and a margin, in NM */
+    float r_px = view == 1 ? 465.0f : (view == 2 ? 225.0f : (view == 4 ? NDL_PLAN_CTR_R : 450.0f / 640.0f * 465.0f));
+    double r_nm = (r_px + 40.0) / (v[4] * (ndl_cal_scale > 0.01f ? ndl_cal_scale : 0.01f));
     glBegin(GL_QUADS);
     for (int k = 0; k < n; k++) {
         int pen = (int)(ndl_pen[k] + 0.5f);
@@ -393,6 +430,13 @@ static void ndl_side(int side, int n, float bright)
         float qx, qy;
         ndl_proj(v, ndl_lat[k], ndl_lon[k], &qx, &qy);
         float lpx = sqrtf((qx - px) * (qx - px) + (qy - py) * (qy - py));
+        if (!ndl_leg_near(v, ndl_lat[k - 1], ndl_lon[k - 1], ndl_lat[k], ndl_lon[k], r_nm)) {
+            /* out of sight: its chord for the dashes' phase */
+            s += lpx;
+            px = qx;
+            py = qy;
+            continue;
+        }
         int m = (int)ceilf(lpx / (float)NDL_SUB_PX);
         if (m < 1) m = 1;
         if (m > NDL_SUB_MAX) m = NDL_SUB_MAX;
