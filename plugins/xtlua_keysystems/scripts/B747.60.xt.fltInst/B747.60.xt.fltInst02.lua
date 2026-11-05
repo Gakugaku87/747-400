@@ -2300,7 +2300,7 @@ function B747_Vspeeds()
     -- Va (DESIGN MANEUVERING SPEED)
     B747DR_airspeed_Va = B747_rescale(0.0, 329.31, 10000.0, 334.78, simDR_altitude_ft_pilot)
     if simDR_altitude_ft_pilot > 10000.0 then B747DR_airspeed_Va = B747_rescale(10000.0, 334.78, 20000.0, 343.52, simDR_altitude_ft_pilot) end
-    if simDR_altitude_ft_pilot > 200000.0 then B747DR_airspeed_Va = B747_rescale(20000.0, 343.52, 30000.0, 360.0, simDR_altitude_ft_pilot) end
+    if simDR_altitude_ft_pilot > 20000.0 then B747DR_airspeed_Va = B747_rescale(20000.0, 343.52, 30000.0, 360.0, simDR_altitude_ft_pilot) end
 
 
     -- Vlo / Mlo (MAXIMUM LANDING GEAR OPERATING SPEED)
