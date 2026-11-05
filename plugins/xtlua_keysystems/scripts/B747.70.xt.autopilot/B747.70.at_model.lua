@@ -11,8 +11,10 @@
 --    limit: TO; in the air with the flaps out or G/S, not the TO limit:
 --    G/A; after takeoff on the TO limit: THR REF), the SPD switch (from
 --    400 ft after takeoff until landing, not the TO limit, not in VNAV,
---    FLCH, T/O or G/A), the THR switch (the same heights, not the TO or GA
---    limit, not in VNAV or FLCH).
+--    FLCH, T/O or G/A), the THR switch (the same heights: THR REF on
+--    CLB, CLB 1, CLB 2, CRZ or CON in ALT or V/S, on GA in G/S or FLARE
+--    or in ALT or V/S with the landing flaps, FCOM p.642; its thrust
+--    limit function the FMC's, B747.68.thrlim_model.lua).
 --    No TO/GA push by 50 kt on the ground: none until 400 ft (FCOM p.656).
 --  - Disengaged by the ARM switch off, the interlocks lost, a disconnect
 --    switch, the reversers. AUTOTHROT DISC latches when it was engaged
@@ -171,8 +173,10 @@ local function disengage(s, latch)
     s.ga, s.retard = false, false
 end
 
--- inp: arm, ok, ground, cas, ra, flaps_up, reverse, limit_to, limit_ga,
--- pitch (the AFDS's: "TO", "GA", "VNAV", "FLCH", "VS", "ALT", "GS",
+-- inp: arm, ok, ground, cas, ra, flaps_up, flaps_landing (the handle at 25
+-- or 30), reverse, limit_to, limit_ga, limit_ref (CLB, CLB 1, CLB 2, CRZ or
+-- CON; nil: neither TO nor GA), pitch (the AFDS's: "TO", "GA", "VNAV",
+-- "FLCH", "VS", "ALT", "GS",
 -- "FLARE" or nil), retard, vnav_at (the FMC's A/T mode), vnav_level,
 -- vnav_phase (the FMC's: step 9d2a), vnav_dd (the FMC's driftdown: its step
 -- 9h4b), lever_idle (the levers at the aft stop); the pushes since the last
@@ -249,10 +253,20 @@ function M.update(s, inp)
         s.to = false
         engage(s, M.SPD)
     end
-    if inp.thr and can and air and not inp.limit_to and not inp.limit_ga
-        and p ~= "VNAV" and p ~= "FLCH" then
-        s.to = false
-        engage(s, M.THR_REF)
+    -- the THR switch's A/T mode function (FCOM p.642): THR REF on CLB, CLB
+    -- 1, CLB 2, CRZ or CON in ALT or V/S; on GA in G/S or FLARE, or in ALT
+    -- or V/S with the landing flaps. Elsewhere (VNAV, FLCH, T/O, G/A) its
+    -- thrust limit function only, the FMC's. (2026-11-05 review 4: before,
+    -- THR REF in any pitch mode but VNAV and FLCH, G/S too, and never on GA)
+    if inp.thr and can and air then
+        local ref_limit = inp.limit_ref
+        if ref_limit == nil then ref_limit = not inp.limit_to and not inp.limit_ga end
+        local alt_vs = p == "ALT" or p == "VS"
+        if (ref_limit and alt_vs) or (inp.limit_ga
+            and (p == "GS" or p == "FLARE" or (alt_vs and inp.flaps_landing))) then
+            s.to = false
+            engage(s, M.THR_REF)
+        end
     end
     -- the engaged modes as they go on
     if s.engaged then

@@ -1038,6 +1038,9 @@ local function afds_at()
 	i.ground = simDR_onGround == 1
 	i.cas, i.ra = simDR_ind_airspeed_kts_pilot, simDR_radarAlt1
 	i.flaps_up = simDR_flap_ratio_control < 0.01
+	-- the landing flaps (25 or 30: the handle's detents at sixths) for the
+	-- THR switch on GA (FCOM p.642)
+	i.flaps_landing = simDR_flap_ratio_control >= 5 / 6 - 0.01
 	local rev, idle = false, true
 	for e = 0, 3 do
 		if simDR_at_rev_deploy[e] > 0.01 then rev = true end
@@ -1047,6 +1050,8 @@ local function afds_at()
 	local lim = B747DR_ref_thr_limit_mode
 	i.limit_to = string.find(lim, "TO", 1, true) ~= nil
 	i.limit_ga = lim == "GA"
+	-- CLB, CLB 1, CLB 2, CRZ or CON (FCOM p.642's list; none: no limit)
+	i.limit_ref = lim == "CRZ" or lim == "CON" or string.sub(lim, 1, 3) == "CLB"
 	i.pitch = afds.pitch
 	i.retard = afds.retard and true or false
 	i.vnav_at, i.vnav_level = B747DR_ap_fvn_at, vnavLevel ~= nil
