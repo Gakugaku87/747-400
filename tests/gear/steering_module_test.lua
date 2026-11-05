@@ -163,4 +163,35 @@ for i = 1, 4 do rt:set("sim/flightmodel2/gear/eagle_claw_angle_deg", i, 8) end
 run(5)
 T.equal(rt:get("laminar/B747/gear/air_ground/ng_compressed"), 0, "airborne: the nose gear extended")
 T.near(rt:get(CMD, 0), 0, 1e-6, "airborne: centred, the tiller does nothing (ATA29_32 p.570)")
+-- (2026-11-05) the user's report (Output/B747_steering.txt): the assignments
+-- with X-Plane's mapped functions, then a line when an axis moves
+local report = {}
+local real_open = io.open
+io.open = function(path, mode)
+    if path == "Output/B747_steering.txt" then
+        return {write = function(_, ...) for _, s in ipairs({...}) do report[#report + 1] = s end end,
+            close = function() end}
+    end
+    return real_open(path, mode)
+end
+local rt2 = xtlua.new()
+rt2:load("plugins/xtlua/scripts/B747.10.xt.gear/B747.10.xt.gear.lua")
+rt2:set("sim/joystick/joystick_axis_assignments", 2, 3)
+rt2:set("sim/joystick/joystick_axis_assignments", 28, 37)
+rt2:set("sim/joystick/joy_mapped_axis_avail", 3, 1)
+rt2:set(RAW, 2, 0.5)
+rt2:set(RAW, 28, 0.5)
+rt2:callout("aircraft_load")
+rt2:callout("flight_start")
+for _ = 1, 60 do rt2:frame(1 / 30) end
+rt2:set(RAW, 28, 0.9)
+for _ = 1, 30 do rt2:frame(1 / 30) end
+io.open = real_open
+local text = table.concat(report)
+T.check(text:find("joystick axes (axis=assignment): 2=3 28=37; the tiller (37) on axis 28; X-Plane's mapped functions (joy_mapped_axis_avail 1): 3\n", 1, true) ~= nil,
+    "the report: the assignments, the tiller's axis, X-Plane's mapped functions")
+T.check(text:find("raw axis 28 value 0.500 min 0.000 max 0.000 reverse 0; tiller used 0.000; pedal 0.000; nose 0.0 deg (X-Plane's 0.0, override 0); axes: raw 2 0.500, raw 28 0.500\n", 1, true) ~= nil,
+    "the report's first line: every assigned axis")
+T.check(text:find("moved: raw 28 0.900\n", 1, true) ~= nil, "the tiller moved: its axis")
+T.check(select(2, text:gsub(" tiller: ", "")) == 2, "a line only when something moves")
 T.done()
