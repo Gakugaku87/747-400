@@ -49,6 +49,14 @@
  *                                          at the CRZ page's step point
  *   laminar/B747/options/pause_at_td      (int) 1: the pause two minutes
  *                                          before the T/D
+ *   laminar/B747/options/cdu_sim_values   (int) 1 (on until set off,
+ *                                          2026-11-05 the user): PERF INIT's
+ *                                          GR WT and ZFW and TAKEOFF's CG
+ *                                          from the sim when their key is
+ *                                          pushed with an empty scratchpad
+ *
+ * Plugins > 747-400 > Weight and balance... shows the sim's weights and
+ * CGs (wb_window.c).
  *
  * the menu's and the commands' choices kept (.../auto_step_climb_toggle,
  * .../pause_at_td_toggle), a dataref's write (a test's) not.
@@ -341,13 +349,17 @@ static float loop(float since_call, float since_loop, int counter, void *ref)
     return -1.0f;
 }
 
-/* the sim's options: their file's names, the menu's items */
-#define NOPTS 2
-static const char *opt_key[NOPTS] = {"auto_step_climb", "pause_at_td"};
-static const char *opt_label[NOPTS] = {"Auto step climb", "Pause 2 min before T/D"};
+/* the sim's options: their file's names, the menu's items; on or off before
+   the file has them (2026-11-05: the CDU's weights and CG from the sim on,
+   the user's asking) */
+#define NOPTS 3
+static const char *opt_key[NOPTS] = {"auto_step_climb", "pause_at_td", "cdu_sim_values"};
+static const char *opt_label[NOPTS] = {"Auto step climb", "Pause 2 min before T/D",
+    "CDU: GR WT, ZFW and CG from the sim"};
 static const char *opt_desc[NOPTS] = {"Toggle the automatic step climb",
-    "Toggle the pause two minutes before the top of descent"};
-static int opts[NOPTS];
+    "Toggle the pause two minutes before the top of descent",
+    "Toggle the CDU's GR WT, ZFW and takeoff CG entered from the sim with an empty scratchpad"};
+static int opts[NOPTS] = {0, 0, 1};
 static XPLMDataRef opt_ref[NOPTS];
 static XPLMCommandRef opt_cmd[NOPTS];
 static XPLMMenuID menu = NULL;
@@ -365,7 +377,7 @@ static void opts_path(char *out, size_t n)
     snprintf(out, n, "%sB747-400_options.prf", prefs);
 }
 
-/* "<name> <0 or 1>" lines and "simbrief_id <n>"; none: all off */
+/* "<name> <0 or 1>" lines and "simbrief_id <n>"; one not there: as before */
 static void opts_load(void)
 {
     char p[PATH_LEN], line[128], key[64];
@@ -413,9 +425,12 @@ static void opt_set(int i, int v, int keep)
     if (keep) opts_save();
 }
 
-/* the failure window's menu item (failures_window.c) */
+/* the failure window's and the weight and balance window's menu items
+   (failures_window.c, wb_window.c) */
 #define FWN_MENU_REF 100
+#define WBW_MENU_REF 101
 static void fw_menu_pick(void);
+static void wb_menu_pick(void);
 
 static void menu_handler(void *menu_ref, void *item_ref)
 {
@@ -423,6 +438,7 @@ static void menu_handler(void *menu_ref, void *item_ref)
     int i = (int)(intptr_t)item_ref;
     if (i >= 0 && i < NOPTS) opt_set(i, !opts[i], 1);
     if (i == FWN_MENU_REF) fw_menu_pick();
+    if (i == WBW_MENU_REF) wb_menu_pick();
 }
 
 static int opt_toggle(XPLMCommandRef cmd, XPLMCommandPhase phase, void *ref)
@@ -463,6 +479,7 @@ static XPLMDataRef text_ref(const char *name, XPLMGetDatab_f get)
 }
 
 #include "failures_window.c"
+#include "wb_window.c"
 
 PLUGIN_API int XPluginStart(char *name, char *sig, char *desc)
 {
@@ -515,6 +532,7 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc)
         opt_set(i, opts[i], 0);
     }
     fw_start(menu);
+    wb_start(menu);
     return 1;
 }
 
@@ -536,6 +554,7 @@ PLUGIN_API void XPluginStop(void)
         XPLMUnregisterDataAccessor(opt_ref[i]);
     }
     fw_stop();
+    wb_stop();
     if (menu) XPLMDestroyMenu(menu);
     if (menu_item >= 0) XPLMRemoveMenuItem(XPLMFindPluginsMenu(), menu_item);
     menu = NULL;
@@ -550,4 +569,5 @@ PLUGIN_API void XPluginReceiveMessage(XPLMPluginID from, int msg, void *param)
 {
     (void)from; (void)param;
     fw_message(msg);
+    wb_message(msg);
 }

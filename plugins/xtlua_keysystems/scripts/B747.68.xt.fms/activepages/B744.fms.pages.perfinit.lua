@@ -51,8 +51,36 @@ function perf_gw_t()
 	if z == nil then return nil end
 	return z + perf_fuel_t()
 end
+-- (2026-11-05 the user; not the airplane's) the sim's weights and CG for an
+-- empty scratchpad's GR WT and ZFW (B744.fms.pages.lua) and TAKEOFF's CG
+-- when Plugins > 747-400 > "CDU: GR WT, ZFW and CG from the sim" is on (the
+-- FMS bridge's laminar/B747/options/cdu_sim_values, on until set off): read
+-- every frame by update_perf (an XTLua dataref read now and then gives its
+-- previous read's value, the first read 0)
+B747DR_opt_sim_values = find_dataref("laminar/B747/options/cdu_sim_values")
+simDR_fms_cg_mac = find_dataref("sim/flightmodel2/misc/cg_offset_z_mac")
+local sim_on, sim_gw_kg, sim_fuel_kg, sim_cg_mac = false, 0, 0, 0
+local function sim_values_read()
+	sim_on = B747DR_opt_sim_values == 1
+	sim_gw_kg, sim_fuel_kg, sim_cg_mac = simDR_GRWT, simDR_fuel, simDR_fms_cg_mac
+end
+-- GR WT ("grwt": X-Plane's total weight) or ZFW ("zfw": it less the fuel),
+-- thousands of kilograms to 0.1; nil with the option off
+function B747_fms_sim_weight(value)
+	if not sim_on then return nil end
+	local kg = value == "grwt" and sim_gw_kg or sim_gw_kg - sim_fuel_kg
+	return math.floor(kg / 100 + 0.5) / 10
+end
+-- the CG now (X-Plane's % MAC with the payload and the fuel) to the whole
+-- number; nil with the option off
+function B747_fms_sim_cg()
+	if not sim_on then return nil end
+	return math.floor(sim_cg_mac + 0.5)
+end
+
 -- each frame: the GR WT kept with the fuel (other pages read it)
 function update_perf()
+	sim_values_read()
 	local gw = perf_gw_t()
 	local s = gw and string.format("%5.1f", gw) or "***.*"
 	if string.sub(fmsModules["data"].grwt, 1, 5) ~= s then fmsModules:setData("grwt", s) end

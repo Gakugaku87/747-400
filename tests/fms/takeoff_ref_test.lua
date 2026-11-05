@@ -7,7 +7,7 @@
 local T = dofile("tests/lib/check.lua")("takeoff_ref")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
-local types = {}
+local types = {["laminar/B747/options/cdu_sim_values"] = "number"} -- the FMS bridge's
 for _, cdu in ipairs({"cdu1", "cdu2"}) do
     for n = 0, 15 do types["sim/cockpit2/radios/indicators/fms_" .. cdu .. "_text_line" .. n] = "string" end
 end
@@ -148,6 +148,23 @@ invalid("CG 45: INVALID ENTRY (0 to 40)")
 key("key/del")
 key("ls_key/R4")
 T.check(small(9):find("%-%-%%"), "CG deleted: dashes: " .. small(9))
+-- (2026-11-05 the user; not the airplane's) an empty scratchpad's CG: the
+-- sim's now (X-Plane's % MAC, to the whole number) when Plugins >
+-- 747-400's "CDU: GR WT, ZFW and CG from the sim" is on
+rt:set("sim/flightmodel2/misc/cg_offset_z_mac", 23.6)
+key("ls_key/R4")
+invalid("the option off: an empty scratchpad's CG INVALID ENTRY, as before")
+rt:set("laminar/B747/options/cdu_sim_values", 1)
+frames(0.1)
+key("ls_key/R4")
+T.check(line(9):find("24%%$"), "the option on: the sim's 23.6 % MAC, CG 24 %: " .. line(9))
+rt:set("sim/flightmodel2/misc/cg_offset_z_mac", 45)
+frames(0.1)
+key("ls_key/R4")
+invalid("the sim's 45 %: INVALID ENTRY (0 to 40)")
+key("key/del")
+key("ls_key/R4")
+rt:set("laminar/B747/options/cdu_sim_values", 0)
 type_in("3")
 key("ls_key/R5")
 T.check(line(11):find("%+0300M"), "POS SHIFT 3: +0300M: " .. line(11))
