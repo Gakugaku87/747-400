@@ -27,15 +27,18 @@ B747DR_eec_altn_light_out       = find_dataref("laminar/B747/engines/eec/altn_li
 
 -- the lever's idle end commands less than any idle, so that the thrust
 -- control always comes back to X-Plane's idle there (the previous mapping's
--- values, estimate): N1 25 % (GE), EPR 0.95 (RR). P&W: the EPR of no net
--- thrust at the Mach (B747_epr_model.zero), so that the lever's travel
--- spans the EPRs from X-Plane's idle up (FCOM p.876: the EEC calculates an
--- EPR between idle and the maximum). Before (2026-10-31), 0.95 at any Mach
--- with the shown EPR held at 0.97: at FL300, M.78 no thrust between
--- X-Plane's idle (2 kN an engine) and 34 kN
+-- values, estimate): N1 25 % (GE), EPR 0.95 (RR). P&W: the EPR model's idle
+-- command (B747_epr_model.idle_command: under X-Plane's idle at every Mach,
+-- the lever's travel spanning the EPRs from X-Plane's idle up; FCOM p.876:
+-- the EEC calculates an EPR between idle and the maximum). Before
+-- (2026-10-31), 0.95 at any Mach with the shown EPR held at 0.97: at FL300,
+-- M.78 no thrust between X-Plane's idle (2 kN an engine) and 34 kN. Then
+-- (to 2026-11-05) the EPR of no net thrust: over X-Plane's idle in a fast
+-- descent, where the A/T's HOLD at 0.0013 had the EEC add about 2 kN an
+-- engine (s148)
 local IDLE_COMMAND = {GE = 25, PW = 0.95}
 local function idle_command(key)
-    if key == "PW" and B747DR_engineType == 0 then return B747_epr_model.zero(simDR_epr_mach) end
+    if key == "PW" and B747DR_engineType == 0 then return B747_epr_model.idle_command(simDR_epr_mach) end
     return IDLE_COMMAND[key]
 end
 -- the flap lever's detents (0, 1, 5, 10, 20, 25, 30 at even steps of

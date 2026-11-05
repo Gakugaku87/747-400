@@ -52,7 +52,9 @@ T.near(get(ENG .. "TRA", 1), 1.0 + (1.51 - 1.0) * 0.5, 0.01, "P&W: 24° TLA comm
 T.near(get(ENG .. "TRA", 2), 1.0, 0.005, "P&W: idle lever commands the idle end (no net thrust standing: 1.00)")
 rt:set("sim/flightmodel/misc/machno", 0.78)
 frames(0.2)
-T.near(get(ENG .. "TRA", 2), 0.669, 0.002, "P&W: at M.78 the idle end 0.669 (the lever's travel from X-Plane's idle up)")
+-- (2026-11-05) at M.78 the EPR model's idle command, under X-Plane's idle
+-- (B747_epr_model.idle_command; before, no net thrust's 0.669)
+T.near(get(ENG .. "TRA", 2), 0.634, 0.002, "P&W: at M.78 the idle end 0.634 (under X-Plane's idle, the lever's travel from there up)")
 rt:set("sim/flightmodel/misc/machno", 0)
 frames(0.2)
 
@@ -304,6 +306,68 @@ rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 3)       -- engine 2 in rev
 frames(0.2)
 T.equal(get(THRO, 1), 0, "thrust control: reverser not deployed: no thrust")
 rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 1)
+
+-- (2026-11-05) a fast descent at X-Plane's idle (M.66, 12,600 ft; its net
+-- thrust -3.3 kN an engine, under no net thrust): with the lever a hair
+-- above idle (the A/T's HOLD at 0.0013) the throttle stays closed, the EPR
+-- shown under that of no net thrust. A lever a little further, its command
+-- between X-Plane's idle and no net thrust, opens the throttle: the EEC can
+-- set the thrust in between. Before, the shown EPR stopped at no net
+-- thrust's: the lever at 0.0013 had the throttle wind up to 0.42, 2 kN an
+-- engine over idle (s148, 2026-11-03), and nothing in between could be set
+local d126 = (1 - 6.87559e-6 * 12600) ^ 5.25588
+rt:set("sim/flightmodel2/position/pressure_altitude", 12600)
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 12600)
+rt:set("sim/weather/aircraft/barometer_current_pas", 101325 * d126)
+rt:set("sim/flightmodel/misc/machno", 0.66)
+rt:set("sim/cockpit2/temperature/outside_air_temp_degc", -10)
+rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 13)
+for i = 0, 3 do
+    rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", i, -3300)
+    rt:set("sim/cockpit2/engine/indicators/engine_speed_rpm", i, 3500)   -- running: the display's N1 about 39 %
+end
+-- the A/T's servo brings the levers back to 0.0013 from above and lets go
+-- (HOLD; the user's throttle does not move them under 0.01)
+local LEVER, AT_CMD, AT_SERVO = "laminar/B747/engine/throttle", "laminar/B747/autothrottle/lever_cmd", "laminar/B747/autothrottle/servo"
+rt:set(AT_CMD, 0.05)
+rt:set(AT_SERVO, 1)
+frames(2)
+rt:set(AT_CMD, 0.0013)
+frames(3)
+rt:set(AT_SERVO, 0)
+frames(5)
+T.near(get(LEVER, 0), 0.0013, 1e-4, "fast descent: the A/T's HOLD left the lever at 0.0013")
+local epr_idle = get(ENG .. "display_EPR", 0)
+T.check(epr_idle < P.zero(0.66) - 0.004, string.format("fast descent at X-Plane's idle: EPR %.4f under no net thrust's %.4f",
+    epr_idle, P.zero(0.66)))
+T.equal(get(THRO, 0), 0, "fast descent: the lever at 0.0013 keeps the throttle closed (X-Plane's idle)")
+-- the servo's lever a little further, its command between X-Plane's idle
+-- and no net thrust
+local lever = 0.0013
+rt:set(AT_SERVO, 1)
+while ns.B747_eec_command(0) < epr_idle + 0.002 and lever < 0.3 do
+    lever = lever + 0.002
+    rt:set(AT_CMD, lever)
+    frames(0.5)
+end
+local cmd = ns.B747_eec_command(0)
+T.check(cmd > epr_idle and cmd < P.zero(0.66), string.format("fast descent: the lever at %.4f commands %.4f, between X-Plane's idle and no net thrust",
+    get(LEVER, 0), cmd))
+frames(5)
+T.check(get(THRO, 0) > 0.03, string.format("fast descent: that command opens the throttle (%.3f)", get(THRO, 0)))
+rt:set(AT_CMD, 0)
+frames(3)
+rt:set(AT_SERVO, 0)
+for i = 0, 3 do
+    rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", i, saved["sim/cockpit2/engine/indicators/thrust_dry_n"][i])
+    rt:set("sim/cockpit2/engine/indicators/engine_speed_rpm", i, saved["sim/cockpit2/engine/indicators/engine_speed_rpm"][i])
+end
+for _, n in ipairs({"sim/flightmodel2/position/pressure_altitude", "sim/cockpit2/gauges/indicators/altitude_ft_pilot",
+        "sim/weather/aircraft/barometer_current_pas", "sim/flightmodel/misc/machno",
+        "sim/cockpit2/temperature/outside_air_temp_degc", "sim/cockpit2/temperature/outside_air_LE_temp_degc"}) do
+    rt:set(n, saved[n])
+end
+frames(1)
 rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 
