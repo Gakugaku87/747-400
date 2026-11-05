@@ -2355,3 +2355,13 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 直したこと：`B747.68.vnav_model.lua` の `clb_target`。上昇の制限（AT・AT OR BELOW・ブロックの上）を地点つきで持ち、その地点を過ぎる（順送り）まで、機体の 300 ft 下までは目標のまま（`CLB_HOLD_FT`：捕捉の行き過ぎの幅。推定）。それより下に離れたら前と同じく次へ。地点の無い制限は前と同じ 100 ft。目標が動かないので、AFDS の VNAV PTH の高度保持が 9,000 ft に戻す。
 - 試験：`vnav_model_test` 200（9,104 ft でも FL090、290 ft 上まで、500 ft 上は FL110、OR390 を過ぎたら FL110、地点なしは 100 ft、CRZ ALT の上は無し）。
 - X-Plane（カスタム acf、2026-11-05）：`s253_faor_exob1c_ge` 33/33（直す前は 31/33）。捕捉の行き過ぎは今も最大 9,141 ft（VNAV PTH のまま）あるが、目標が FL090 のままなので 9,000 ft に戻り、旋回の後から OR390 までは 8,996〜9,023 ft、OR390 で VNAV SPD に戻って上昇し、15,000 ft（MCP）で VNAV ALT。PW の `s251_faor_exob1c` も 33/33（OR390 まで 8,995〜9,010 ft）。GE の捕捉の行き過ぎ（PW の約 2 倍）は AFDS の捕捉の則の課題として残る。
+
+## 148. シムの便利機能：CDU の重量と CG をシムから、重量と CG の窓（2026-11-05：利用者の依頼）
+
+- 利用者の依頼（2026-11-05）：「便利機能として PERF INIT ページの GROSS WT や ZFW、TAKEOFF ページの CG TRIM のボタンを押したら自動で現在の値が入力されるようにしてほしい」と「Failure ウインドウを出してくれるプラグインに、現在の各重量の値や各 CG を示すウインドウを追加してほしい」。どちらも実機に無いシムの便利機能（§126 と同じ扱い）。
+- CDU（`B744.fms.pages.lua`、`activepages/B744.fms.pages.perfinit.lua`）：スクラッチパッドが空のまま、PERF INIT の GR WT（L1）を押すと X-Plane の総重量（`sim/flightmodel/weight/m_total`）、ZFW（L3）を押すとそれから燃料（`m_fuel_total`）を引いた値を、千 kg の 0.1 に丸めて入れる。入れた後は手で入れたのと同じ（もう一方は FUEL から、TAKEOFF SPEEDS DELETED も同じ）。TAKEOFF REF の CG（R4）は、X-Plane の今の CG（`sim/flightmodel2/misc/cg_offset_z_mac`、ペイロードと燃料込みの % MAC）を整数に丸めて入れ、トリムはそこから。0〜40 % の外なら前どおり INVALID ENTRY。スクラッチパッドに何かあれば前どおり。
+- 切り替え：Plugins → 747-400 の「CDU: GR WT, ZFW and CG from the sim」（`laminar/B747/options/cdu_sim_values`、コマンド `..._toggle`）。ほかの便利機能と違い、設定ファイルに無ければ入（利用者の依頼なので）。切ると前どおり（空のスクラッチパッドは INVALID ENTRY。実機はその行の値をスクラッチパッドに写すが、ここは作っていない）。
+- X-Plane の値は毎フレーム読む（`update_perf`。XTLua はときどきしか読まない dataref に前の読みの値を返し、最初の読みは 0：TESTING.md）。
+- 重量と CG の窓（`plugins/b747_fms_bridge/src/wb_window.c`）：Plugins → 747-400 → Weight and balance...（コマンド `laminar/B747/wb/window_toggle`、`laminar/B747/wb/window_open`）。故障の窓と同じ X-Plane の枠の浮動ウィンドウで、X-Plane の今の値を kg と lb で：総重量、ZFW（総重量 - 燃料）、燃料、ペイロード（`m_fixed`）、空虚重量と最大重量（acf の値）、CG（% MAC）、ZFW の CG（% MAC）、タンクごとの燃料（X-Plane のタンク 0〜7：CTR、MAIN 1〜4、RES 2、RES 3、STAB）。
+- ZFW の CG：X-Plane には ZFW の CG の % MAC が無い（`zfw_cg_offset_z` は m）。今の CG の % MAC に、ZFW の CG と今の CG の差（m）× 9.537 % / m を足す。9.537 は X-Plane のこの acf の MAC（10.49 m）の値で、2026-11-05 にカスタム acf で測った：安定板タンクに 8 t・3 t 入れると `cg_offset_z` が 0.857・0.257 m 後ろへ動き、`cg_offset_z_mac` が 8.17・2.45 増えた（実機の MAC は 8.33 m。X-Plane は acf の翼から計算する）。`cgz_ref_to_default` と `cg_offset_z` への Web API の書き込みは X-Plane に戻された（測るのに使えなかった）。
+- 試験：`perf_init_test` 38（GR WT・ZFW、ポンド）、`takeoff_ref_test` 62（CG、範囲の外）。X-Plane：`s256_cdu_sim_values`。

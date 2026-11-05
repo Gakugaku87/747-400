@@ -1330,11 +1330,16 @@ function fmsFunctions.setdata(fmsO,value)
   elseif value == "grwt" or value == "zfw" then
 	-- GR WT or ZFW (6-1/6-2 step 3a; FCOM p.1309-1310): XXX or XXX.X; the
 	-- other follows from FUEL; an entry after the takeoff speeds are
-	-- selected deletes them (TAKEOFF SPEEDS DELETED)
+	-- selected deletes them (TAKEOFF SPEEDS DELETED). (2026-11-05 the user,
+	-- not the airplane's) an empty scratchpad: the sim's with the option on
+	-- (perfinit's B747_fms_sim_weight)
 	if del then fmsO["notify"]="INVALID DELETE" return end
-	local v = B747_cdu_model.parse_weight(fmsO["scratchpad"])
-	if v == nil then fmsO["notify"]="INVALID ENTRY" return end
-	local t = perf_in(v)
+	local t = fmsO["scratchpad"] == "" and B747_fms_sim_weight(value) or nil
+	if t == nil then
+		local v = B747_cdu_model.parse_weight(fmsO["scratchpad"])
+		if v == nil then fmsO["notify"]="INVALID ENTRY" return end
+		t = perf_in(v)
+	end
 	local fuel = perf_fuel_t()
 	local zfw = value == "grwt" and t - fuel or t
 	local gw = zfw + fuel
@@ -1508,14 +1513,18 @@ function fmsFunctions.setdata(fmsO,value)
 	takeoff_speeds_deleted()
   elseif value == "cg_mac" then
 	-- CG (FCOM p.1320, 109): whole numbers 0 to 40 % MAC; the trim from
-	-- it. DELETE: dashes (before: no entry until the PAX/CARGO page set one)
+	-- it. DELETE: dashes (before: no entry until the PAX/CARGO page set one).
+	-- (2026-11-05 the user, not the airplane's) an empty scratchpad: the
+	-- sim's CG now with the option on (perfinit's B747_fms_sim_cg)
 	if del then
 		setFMSData(value, "--")
 		setFMSData("stab_trim", "    ")
 		cg_lineLg = ""
 		return
 	end
-	local cg = B747_cdu_model.parse_int(fmsO["scratchpad"], 0, 40)
+	local cg = fmsO["scratchpad"] == "" and B747_fms_sim_cg() or nil
+	if cg ~= nil and (cg < 0 or cg > 40) then cg = nil end
+	if cg == nil then cg = B747_cdu_model.parse_int(fmsO["scratchpad"], 0, 40) end
 	if cg == nil then fmsO["notify"] = "INVALID ENTRY" return end
 	calc_stab_trim(fmsModules["data"].grwt, string.format("%d", cg))
 	setFMSData(value, string.format("%d", cg))

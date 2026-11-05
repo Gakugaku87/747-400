@@ -7,7 +7,7 @@
 local T = dofile("tests/lib/check.lua")("perf_init")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
-local types = {}
+local types = {["laminar/B747/options/cdu_sim_values"] = "number"} -- the FMS bridge's
 for _, cdu in ipairs({"cdu1", "cdu2"}) do
     for n = 0, 15 do types["sim/cockpit2/radios/indicators/fms_" .. cdu .. "_text_line" .. n] = "string" end
 end
@@ -145,5 +145,40 @@ key("ls_key/L3")
 T.check(line(7):find("^500%.0"), "ZFW 500.0 (thousands of pounds): " .. line(7))
 T.check(math.abs((tonumber(rt:get("laminar/B747/fms/data"):match('"zfw":"%s*([%d.]+)')) or 0) - 226.8) < 0.1,
     "kept as 226.8 thousands of kilograms")
+
+-- (2026-11-05 the user; not the airplane's) an empty scratchpad's GR WT or
+-- ZFW: the sim's when Plugins > 747-400's "CDU: GR WT, ZFW and CG from the
+-- sim" is on (the FMS bridge's laminar/B747/options/cdu_sim_values)
+local SIMV = "laminar/B747/options/cdu_sim_values"
+rt = new_rt("KGS")
+key("func_key/index")
+rt:set("sim/flightmodel/weight/m_total", 312345)
+key("ls_key/L3")
+T.equal(pad(), "INVALID ENTRY", "the option off: an empty scratchpad's ZFW INVALID ENTRY, as before")
+clear()
+rt:set(SIMV, 1)
+frames(0.1)
+key("ls_key/L3")
+T.check(line(7):find("^212%.3"), "the option on: ZFW the sim's, 312.345 less 100 t of fuel: 212.3: " .. line(7))
+T.check(small(3):find("^312%.3"), "the GR WT from it and FUEL: " .. small(3))
+rt:set("sim/flightmodel/weight/m_total", 300000)
+frames(0.1)
+key("ls_key/L1")
+T.check(line(3):find("^300%.0"), "GR WT the sim's: 300.0, large: " .. line(3))
+T.check(small(7):find("^200%.0"), "the ZFW from it and FUEL: 200.0: " .. small(7))
+type_in("250")
+key("ls_key/L3")
+T.check(line(7):find("^250%.0"), "an entry in the scratchpad still taken: ZFW 250.0: " .. line(7))
+key("key/del")
+key("ls_key/L1")
+T.equal(pad(), "INVALID DELETE", "DELETE still INVALID DELETE")
+clear()
+rt = new_rt("LBS")
+key("func_key/index")
+rt:set(SIMV, 1)
+rt:set("sim/flightmodel/weight/m_total", 310000)
+frames(0.1)
+key("ls_key/L3")
+T.check(line(7):find("^463%.0"), "in pounds: the sim's 210.0 t, 463.0 thousand pounds: " .. line(7))
 
 T.done()
