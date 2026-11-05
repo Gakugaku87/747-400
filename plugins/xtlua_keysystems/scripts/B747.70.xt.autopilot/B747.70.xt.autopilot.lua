@@ -1444,9 +1444,11 @@ function B747_afds_lnav()
 	B747_afds_model.lnav(afds, afds_inp())
 	afds_sync()
 end
--- the FMA's roll
+-- the FMA's roll: the AFDS's modes only, no inputs made (2026-11-05 review
+-- 4: the FMA's roll and pitch made the whole inputs again each frame, after
+-- B747_afds_update's: three times a frame)
 function B747_afds_roll_fma()
-	return B747_afds_model.roll_fma(afds, afds_inp())
+	return B747_afds_model.roll_fma(afds, nil)
 end
 -- the pitch switches (step 1c): the old code's own parts kept (the A/T,
 -- its flight phase, its targets)
@@ -1491,11 +1493,13 @@ function B747_afds_vnav_lost()
 	B747DR_ap_vnav_state = 0
 end
 function B747_afds_spd_works()
-	return B747_afds_model.spd_works(afds, afds_inp())
+	return B747_afds_model.spd_works(afds, nil)
 end
--- the FMA's pitch
+-- the FMA's pitch: VNAV's own FMA its only input
+local afdsFmaIn = {}
 function B747_afds_pitch_fma()
-	return B747_afds_model.pitch_fma(afds, afds_inp())
+	afdsFmaIn.vnav_fma = afds_old_vnav_fma()
+	return B747_afds_model.pitch_fma(afds, afdsFmaIn)
 end
 -- the roll mode is HDG SEL (the HDG REF switch's default)
 function B747_afds_roll_is(mode)
