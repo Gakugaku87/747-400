@@ -482,7 +482,11 @@ wb = {
 --Calculate CG %MAC & Trim
 function calc_stab_trim(GW, CG_MAC)
 	local stab_trim = 0
-	
+	-- (2026-11-05 review) numbers only: a weight not entered yet ("***.*")
+	-- leaves the trim as it is (arithmetic on text stopped the whole plugin)
+	GW, CG_MAC = tonumber(GW), tonumber(CG_MAC)
+	if GW == nil or CG_MAC == nil then return end
+
 	GW = GW * simConfigData["data"].SIM.kgs_to_lbs  --Formula uses LBS to calculate Stab TRIM.  GW passed in should always be in KGS.
 	--print("GWin = "..GW.." MACin = "..CG_MAC)
 

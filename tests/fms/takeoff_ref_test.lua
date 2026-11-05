@@ -51,6 +51,27 @@ local function invalid(what)
     clear()
 end
 
+-- (2026-11-05 review) TAKEOFF REF's CG before any weight: the CG taken, the
+-- trim blank (before: arithmetic on GR WT's "***.*" stopped the whole plugin,
+-- and the 11-05 convenience made an empty-scratchpad R4 enough)
+key("func_key/index")
+key("ls_key/L6")
+key("ls_key/L5")
+T.check(line(1):find("TAKEOFF"), "INIT/REF INDEX's TAKEOFF before any weight: " .. line(1))
+type_in("24")
+key("ls_key/R4")
+T.check(line(9):find("24%%$"), "CG 24 % taken before any weight: " .. line(9))
+T.check(not small(9):find("%d%.%d"), "no trim without a weight: " .. small(9))
+rt:set("laminar/B747/options/cdu_sim_values", 1)
+rt:set("sim/flightmodel2/misc/cg_offset_z_mac", 26.2)
+frames(0.1)
+key("ls_key/R4")
+T.check(line(9):find("26%%$"), "the sim's CG with an empty scratchpad before any weight: no error: " .. line(9))
+rt:set("laminar/B747/options/cdu_sim_values", 0)
+key("key/del")
+key("ls_key/R4")
+clear()
+
 -- PERF INIT's ZFW, then THRUST LIM
 key("func_key/index")
 type_in("220")

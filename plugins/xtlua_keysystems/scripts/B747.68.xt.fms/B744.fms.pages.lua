@@ -1526,7 +1526,15 @@ function fmsFunctions.setdata(fmsO,value)
 	if cg ~= nil and (cg < 0 or cg > 40) then cg = nil end
 	if cg == nil then cg = B747_cdu_model.parse_int(fmsO["scratchpad"], 0, 40) end
 	if cg == nil then fmsO["notify"] = "INVALID ENTRY" return end
-	calc_stab_trim(fmsModules["data"].grwt, string.format("%d", cg))
+	-- (2026-11-05 review) the trim needs the gross weight: before PERF
+	-- INIT's GR WT or ZFW ("***.*") the CG alone, the trim blank (before:
+	-- arithmetic on the boxes' text stopped the whole plugin)
+	local gw = tonumber(fmsModules["data"].grwt)
+	if gw then
+		calc_stab_trim(gw, string.format("%d", cg))
+	else
+		setFMSData("stab_trim", "    ")
+	end
 	setFMSData(value, string.format("%d", cg))
 	cg_lineLg = string.format("%2.0f%%", cg)
 --Marauder28
