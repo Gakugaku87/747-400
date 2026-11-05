@@ -23,7 +23,11 @@ M.SPINUP_KT, M.SPINUP_S = 60, 3     -- the wheels spun up (p.520-521)
 M.RTO_KT = 85                       -- p.527, FCOM p.1515
 M.PEDAL_DISARM = 750 / 3000         -- the metered pressure switch, 750 psi (p.522)
 M.RTO_PEDAL = 12 / 17               -- the pedals 12 of 17 degrees disable RTO (p.528)
-M.SHORT_FT_S2 = 1                   -- the control pressure low and the decel short by 1 ft/s² (p.523)
+-- (2026-11-05 review 4) the normal brake pressure lost: disarmed at once,
+-- as the crew sees it (FCOM p.1515-1516: "operates only when the normal
+-- brake system is functioning", disarmed by its loss). Before, ATA29_32's
+-- logic: armed, losing system 4 did not trip it (p.518), applying only with
+-- the decel 1 ft/s² short (p.523)
 -- estimates (no values in the sources): the thrust levers retarded and
 -- advanced; the wheels' speed taken as the IRS groundspeed on the ground; the
 -- pressure let go through the orifice after a disarm (p.512); the control
@@ -82,12 +86,10 @@ function M.update(s, inp, dt)
     local pedal = math.max(inp.pedal[1], inp.pedal[2])
     local fault = inp.fail or inp.antiskid_fault or not inp.irs
     local target = 0                    -- the pressure asked for, as X-Plane's ratio
-    local disabled = false
 
     if dial >= 3 then
         -- the latch holds the selector only with its conditions; else the
-        -- spring takes it to DISARM (p.502, p.519). After arming, losing
-        -- system 4 does not trip it (p.518)
+        -- spring takes it to DISARM (p.502, p.519)
         if not s.armed then
             if (inp.air or idle) and inp.irs and pedal < M.PEDAL_DISARM and not inp.fail
                     and not inp.antiskid_fault and inp.normal then
@@ -101,13 +103,12 @@ function M.update(s, inp, dt)
             -- disarm (p.522-523; FCOM p.1515-1516): the pedals, a thrust lever
             -- advanced on the ground after it was at idle, the speedbrakes
             -- stowed after their deployment on the ground, a fault, the normal
-            -- pressure lost while applying with the decel short
+            -- brake pressure lost
             if inp.gnd and idle then s.idle_gnd = true end
             if inp.gnd and inp.speedbrake > 0.5 then s.sb_up = true end
-            local disarm = pedal >= M.PEDAL_DISARM or fault
+            local disarm = pedal >= M.PEDAL_DISARM or fault or not inp.normal
                 or (s.idle_gnd and advanced)
                 or (s.sb_up and inp.speedbrake < 0.1)
-                or (s.applying and not inp.normal and s.decel < M.DECEL[dial] - M.SHORT_FT_S2)
             if disarm then
                 dial = M.DISARM
                 s.armed = false
@@ -119,8 +120,7 @@ function M.update(s, inp, dt)
             if inp.gnd and inp.gs_kt > M.SPINUP_KT then s.spin_t = s.spin_t + dt elseif not s.spun then s.spin_t = 0 end
             if s.spin_t >= M.SPINUP_S then s.spun = true end
             if idle and inp.gnd and s.spun then s.applying = true end
-            disabled = not inp.normal
-            if s.applying and inp.gnd and idle and inp.normal then
+            if s.applying and inp.gnd and idle then
                 local err = M.DECEL[dial] - s.decel
                 local top = M.MAX_PSI[dial] / M.FULL_PSI
                 s.integ = clamp(s.integ + M.KI * err * dt, 0, top)
@@ -133,16 +133,20 @@ function M.update(s, inp, dt)
         -- RTO: armed on the ground (both air/ground systems), trips to OFF in
         -- air mode (p.502, p.525, p.528); latched above 85 kt (p.527);
         -- maximum pressure with the levers retarded, until the pedals, a lever,
-        -- a fault or the speedbrakes stowed disable it (p.528)
+        -- a fault or the speedbrakes stowed disable it (p.528); not without
+        -- the normal brake pressure (FCOM p.1515-1516: 2026-11-05 review 4)
         if inp.air then
             dial = M.OFF
             reset(s)
         else
-            s.armed = inp.gnd_both and not fault
+            s.armed = inp.gnd_both and not fault and inp.normal
             if inp.gs_kt > M.RTO_KT then s.rto_latched = true end
             if s.applying then
                 if inp.speedbrake > 0.5 then s.sb_up = true end
-                if pedal >= M.RTO_PEDAL or advanced or fault or (s.sb_up and inp.speedbrake < 0.1) then s.rto_off = true end
+                if pedal >= M.RTO_PEDAL or advanced or fault or not inp.normal
+                        or (s.sb_up and inp.speedbrake < 0.1) then
+                    s.rto_off = true
+                end
             end
             if s.armed and s.rto_latched and idle and pedal < M.RTO_PEDAL and not s.rto_off then s.applying = true end
             if s.applying and not s.rto_off then target = 1 end
@@ -154,10 +158,13 @@ function M.update(s, inp, dt)
     -- the pressure: up at once, let go through the orifice (p.512)
     if target >= s.cmd then s.cmd = target else s.cmd = math.max(target, s.cmd - dt / M.BLEED_S) end
     out.dial, out.cmd, out.armed, out.decel = dial, s.cmd, s.armed, s.decel
-    -- the memo with the level armed (p.530-531); AUTOBRAKES at DISARM or
-    -- armed but disabled (p.511, p.530)
+    -- the memo with the level armed (p.530-531); AUTOBRAKES at DISARM, or
+    -- RTO on the ground inoperative: a fault, the normal brake pressure
+    -- lost (FCOM p.1521: "disarmed or inoperative"; before, armed but
+    -- disabled, p.511, p.530: with the landing's disarm at the pressure's
+    -- loss no longer so)
     out.memo = (s.armed and (dial >= 3 or dial == M.RTO)) and dial or nil
-    out.autobrakes = dial == M.DISARM or (s.armed and disabled)
+    out.autobrakes = dial == M.DISARM or (dial == M.RTO and not inp.air and (fault or not inp.normal))
     return out
 end
 

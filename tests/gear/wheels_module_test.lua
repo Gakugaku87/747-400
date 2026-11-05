@@ -64,4 +64,19 @@ T.equal(rt:get(STATUS, 97), 1, "BRAKE TEMP SYS (ATA29_32 p.428)")
 T.equal(rt:get(ADV, 46), 0, "no BRAKE TEMP")
 T.equal(rt:get(STATUS, 98), 1, "TIRE PRESS SYS (ATA29_32 p.376)")
 T.equal(rt:get(ADV, 290), 0, "no >TIRE PRESSURE with the channels failed")
+-- (2026-11-05 review 4) the OAT read as XTLua reads it (its first read 0):
+-- the brakes still at the outside air after the start (before, made at the
+-- flight start from the first read: 0 C)
+do
+    local rt2 = xtlua.new{lagged = {"sim/cockpit2/temperature/outside_air_temp_degc"}}
+    rt2:load("plugins/xtlua/scripts/B747.10.xt.gear/B747.10.xt.gear.lua")
+    rt2:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
+    for i = 0, 4 do
+        rt2:set("sim/flightmodel2/gear/on_ground", i, 1)
+        rt2:set("sim/flightmodel2/gear/deploy_ratio", i, 1)
+    end
+    rt2:callout("flight_start")
+    for _ = 1, 150 do rt2:frame(1 / 30) end
+    T.near(rt2:get(TEMP, 0), 15, 0.01, "the OAT's first read 0: the brakes at 15 C after the start (" .. rt2:get(TEMP, 0) .. ")")
+end
 T.done()

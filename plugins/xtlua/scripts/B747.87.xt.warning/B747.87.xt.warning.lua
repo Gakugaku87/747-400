@@ -478,7 +478,7 @@ B747_CASadvisoryMsg   = {
     {DRindex = 275, name = ">STAB TRIM 3", status = 0},
     {DRindex = 276, name = ">STBY BUS APU", status = 0},
     {DRindex = 277, name = ">STBY BUS MAIN", status = 0},
-    {DRindex = 278, name = ">STBY POWER OFF", status = 0},
+    {DRindex = 278, name = ">STBY POWER OFF", status = 0},     -- 405 only (FCOM p.823): never set for the 109 and the 570 (2026-11-05 review 4)
     {DRindex = 279, name = ">TCAS OFF", status = 0},
     {DRindex = 280, name = ">TCAS RA CAPTAIN", status = 0},
     {DRindex = 281, name = ">TCAS RA F/O", status = 0},
@@ -573,8 +573,10 @@ B747_CASmemoMsg   = {
     {DRindex = 39, name = "VMO SPARE ENGINE", status = 0},
     {DRindex = 40, name = "ACARS NO COMM", status = 0},
     {DRindex = 41, name = "ACARS CALL", status = 0},
-    {DRindex = 41, name = "ACARS VOICE", status = 0},
-    {DRindex = 42, name = "PRINTER MESSAGE", status = 0},
+    -- (2026-11-05 review 3) ACARS VOICE its own slot (before, 41 with ACARS
+    -- CALL), PRINTER MESSAGE once (28; before, also 42); this table and the
+    -- init script's the same (B747.87.warning.lua)
+    {DRindex = 42, name = "ACARS VOICE", status = 0},
     {DRindex = 43, name = "ACARS ALERT", status = 0},
     {DRindex = 44, name = "ACARS VOICE BUSY", status = 0},
     {DRindex = 45, name = "SPEEDBRAKE ARMED", status = 0},

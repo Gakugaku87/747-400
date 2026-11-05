@@ -25,6 +25,26 @@
  *                      8.17 and 2.45: 9.537 % a metre, a 10.49 m MAC; the
  *                      airplane's is 8.33 m, X-Plane's from the acf's wings)
  *
+ * (2026-11-05, the user: "passengers' weight and number, cargo and fuel
+ * entered here directly") LOAD: the CDU's PAX/CARGO page's load (MENU >
+ * GROUND HANDLING; the FMC publishes it: laminar/B747/wb/load_zones,
+ * load_cargo, load_pax_kg, load_freighter) and the fuel's total, each
+ * entered here as on that page: a click on a value, digits, Enter (Escape
+ * or a click elsewhere: none). On the ground only, as the page. The entry
+ * goes to the FMC module (and the fuel's to the fuel module) as
+ *
+ *   laminar/B747/wb/req_field  (int) 0 the passengers' total, 1-5 zone A-E
+ *                              (a freighter's main deck freight, kg), 6-8
+ *                              cargo FWD, AFT, BULK (kg), 9 kg a
+ *                              passenger, 10 the fuel's total (kg)
+ *   laminar/B747/wb/req_value  (float) the value entered
+ *   laminar/B747/wb/req_id     (int) counted up after each entry (the
+ *                              three writable: the flight tests, others)
+ *
+ * which go through the page's own entries (B744.fms.pages.lua
+ * B747_fms_wb_update; the fuel: B747.25.xt.fuel.lua by the refuelling's
+ * order).
+ *
  *   laminar/B747/wb/window_open   (int) 0 hidden, 1 shown in X-Plane's
  *                                 window, 2 popped out, 3 in VR; 1 or 0
  *                                 written shows or hides it
@@ -37,6 +57,9 @@
 #define WBW_MAC_PER_M 9.537f
 static const char *WBW_TANK[WBW_TANKS] = {"CTR", "MAIN 1", "MAIN 2", "MAIN 3", "MAIN 4", "RES 2", "RES 3", "STAB"};
 static const float WBW_LB_PER_KG = 2.20462262f;
+/* the load's fields (laminar/B747/wb/req_field) */
+enum { WBF_PAX = 0, WBF_ZONE = 1, WBF_CARGO = 6, WBF_PAX_KG = 9, WBF_FUEL = 10, WBF_N = 11 };
+static const char *WBW_CARGO[3] = {"Cargo FWD", "Cargo AFT", "Cargo BULK"};
 
 static XPLMWindowID wb_win = NULL;
 static XPLMCommandRef wb_cmd_toggle = NULL;
@@ -44,6 +67,16 @@ static XPLMDataRef wb_ref_open = NULL;
 static XPLMDataRef wb_ref_total = NULL, wb_ref_fuel = NULL, wb_ref_tanks = NULL, wb_ref_payload = NULL;
 static XPLMDataRef wb_ref_empty = NULL, wb_ref_max = NULL;
 static XPLMDataRef wb_ref_cg = NULL, wb_ref_cg_mac = NULL, wb_ref_zfw_cg = NULL;
+static XPLMDataRef wb_ref_ground = NULL;
+static XPLMDataRef wb_ref_req_id = NULL, wb_ref_req_field = NULL, wb_ref_req_value = NULL;
+/* the entry asked for */
+static int wb_req_id = 0, wb_req_field = -1;
+static float wb_req_value = 0.0f;
+/* the field being entered (-1 none) and its text; the fields' value boxes
+   as last drawn (l, b, r, t; none when r <= l) */
+static int wb_edit = -1;
+static char wb_buf[12];
+static int wb_box[WBF_N][4];
 
 static float wb_getf(XPLMDataRef r) { return r ? XPLMGetDataf(r) : 0.0f; }
 
@@ -83,6 +116,41 @@ static void wb_row(int l, int x_kg, int x_lb, int y, const char *name, float kg,
     fw_text(x_lb - fw_width(b), y, c, b);
 }
 
+/* the FMC's datarefs (XTLua's: made when its plugin loads, again with each
+   aircraft load): found as drawn */
+static XPLMDataRef wb_fmc(const char *name) { return XPLMFindDataRef(name); }
+
+static int wb_on_ground(void)
+{
+    return wb_ref_ground ? XPLMGetDatai(wb_ref_ground) != 0 : 0;
+}
+
+/* a load's row: its name, the value (kg, or a number with pounds empty)
+   in its box, cyan when it can be entered; the box being entered shows
+   the text typed */
+static void wb_load_row(int l, int x_kg, int x_lb, int y, int fh, int f, const char *name, float v, int is_kg, int decimals, int can)
+{
+    char a[32], b[32];
+    fw_text(l, y, FWN_LIGHT, name);
+    int bl = x_kg - 96, br = x_kg + 4, bb = y - 4, bt = y + fh + 2;
+    wb_box[f][0] = bl; wb_box[f][1] = bb; wb_box[f][2] = br; wb_box[f][3] = bt;
+    if (wb_edit == f) {
+        snprintf(a, sizeof a, "%s_", wb_buf);
+        fw_rect(bl, bb, br, bt, FWN_SEL);
+        fw_text(x_kg - fw_width(a), y, FWN_WHITE, a);
+        return;
+    }
+    if (decimals) snprintf(a, sizeof a, "%.1f", v);
+    else wb_num(a, sizeof a, v);
+    if (can) fw_outline(bl, bb, br, bt, FWN_RULE);
+    fw_text(x_kg - fw_width(a), y, can ? FWN_CYAN : FWN_LIGHT, a);
+    if (is_kg) {
+        if (decimals) snprintf(b, sizeof b, "%.1f", v * WBW_LB_PER_KG);
+        else wb_num(b, sizeof b, v * WBW_LB_PER_KG);
+        fw_text(x_lb - fw_width(b), y, can ? FWN_CYAN : FWN_LIGHT, b);
+    }
+}
+
 static void wb_draw_body(XPLMWindowID w)
 {
     int l = 0, t = 0, r = 0, b = 0;
@@ -93,6 +161,56 @@ static void wb_draw_body(XPLMWindowID w)
     fw_rect(l, b, r, t, FWN_BG);
     int x0 = l + pad, x_kg = l + (r - l) * 62 / 100, x_lb = r - pad;
     int y = t - pad - fh;
+    for (int f = 0; f < WBF_N; f++) wb_box[f][2] = wb_box[f][0];
+
+    /* the load (the PAX/CARGO page's, the fuel's total) */
+    XPLMDataRef zones = wb_fmc("laminar/B747/wb/load_zones"), cargo = wb_fmc("laminar/B747/wb/load_cargo");
+    XPLMDataRef pax_kg = wb_fmc("laminar/B747/wb/load_pax_kg"), freighter = wb_fmc("laminar/B747/wb/load_freighter");
+    int fmc = zones && cargo && pax_kg && freighter;
+    int ground = wb_on_ground();
+    int can = fmc && ground;
+    if (!ground && wb_edit >= 0) {
+        wb_edit = -1;
+        XPLMTakeKeyboardFocus(0);
+    }
+    fw_text(x0, y, FWN_WHITE, "LOAD");
+    fw_text(x_kg - fw_width("KG"), y, FWN_GREY, "KG");
+    fw_text(x_lb - fw_width("LB"), y, FWN_GREY, "LB");
+    y -= lh;
+    if (fmc) {
+        float z[5] = {0}, c[3] = {0};
+        XPLMGetDatavf(zones, z, 0, 5);
+        XPLMGetDatavf(cargo, c, 0, 3);
+        int fr = XPLMGetDataf(freighter) > 0.5f;
+        if (!fr) {
+            float total = z[0] + z[1] + z[2] + z[3] + z[4];
+            wb_load_row(x0, x_kg, x_lb, y, fh, WBF_PAX, "Passengers (total)", total, 0, 0, can);
+            y -= lh;
+        }
+        for (int k = 0; k < 5; k++) {
+            char name[48];
+            snprintf(name, sizeof name, fr ? "  Main deck %c" : "  Zone %c", 'A' + k);
+            wb_load_row(x0, x_kg, x_lb, y, fh, WBF_ZONE + k, name, z[k], fr, 0, can);
+            y -= lh;
+        }
+        if (!fr) {
+            wb_load_row(x0, x_kg, x_lb, y, fh, WBF_PAX_KG, "Weight a passenger", XPLMGetDataf(pax_kg), 1, 1, can);
+            y -= lh;
+        }
+        for (int k = 0; k < 3; k++) {
+            wb_load_row(x0, x_kg, x_lb, y, fh, WBF_CARGO + k, WBW_CARGO[k], c[k], 1, 0, can);
+            y -= lh;
+        }
+    } else {
+        fw_text(x0, y, FWN_GREY, "(the FMC's load: not running)");
+        y -= lh;
+    }
+    wb_load_row(x0, x_kg, x_lb, y, fh, WBF_FUEL, "Fuel (total)", wb_getf(wb_ref_fuel), 1, 0, ground);
+    y -= lh;
+    fw_text(x0, y, FWN_GREY, ground ? "Click a value, type it, Enter (as the CDU's PAX/CARGO)" : "On the ground only");
+    y -= lh / 2;
+    fw_rect(x0, y, x_lb, y + 1, FWN_RULE);
+    y -= lh;
 
     /* the weights */
     fw_text(x0, y, FWN_WHITE, "WEIGHTS");
@@ -160,13 +278,48 @@ static void wb_place(XPLMWindowID w)
 {
     int sl = 0, st = 0, sr = 0, sb = 0;
     XPLMGetScreenBoundsGlobal(&sl, &st, &sr, &sb);
-    int ww = 420, wh = 440, cx = (sl + sr) / 2 - 300, cy = (sb + st) / 2;
+    int ww = 440, wh = 760, cx = (sl + sr) / 2 - 300, cy = (sb + st) / 2;
+    if (wh > st - sb - 40) wh = st - sb - 40;
     XPLMSetWindowGeometry(w, cx - ww / 2, cy + wh / 2, cx + ww / 2, cy - wh / 2);
+}
+
+static void wb_edit_end(void)
+{
+    if (wb_edit < 0) return;
+    wb_edit = -1;
+    if (wb_win && XPLMHasKeyboardFocus(wb_win)) XPLMTakeKeyboardFocus(0);
+}
+
+/* the entry: to the FMC (and the fuel module) through req_field,
+   req_value and req_id */
+static void wb_edit_commit(void)
+{
+    if (wb_edit >= 0 && wb_buf[0]) {
+        char *end = NULL;
+        double v = strtod(wb_buf, &end);
+        if (end && *end == 0 && v >= 0.0) {
+            wb_req_field = wb_edit;
+            wb_req_value = (float)v;
+            wb_req_id++;
+        }
+    }
+    wb_edit_end();
 }
 
 static int wb_click(XPLMWindowID w, int x, int y, XPLMMouseStatus st, void *ref)
 {
-    (void)w; (void)x; (void)y; (void)st; (void)ref;
+    (void)ref;
+    if (st != xplm_MouseDown) return 1;
+    for (int f = 0; f < WBF_N; f++) {
+        int *k = wb_box[f];
+        if (k[2] <= k[0] || !fw_in(x, y, k[0], k[1], k[2], k[3])) continue;
+        if (!wb_on_ground()) break;
+        wb_edit = f;
+        wb_buf[0] = 0;
+        XPLMTakeKeyboardFocus(w);
+        return 1;
+    }
+    wb_edit_end();
     return 1;
 }
 static int wb_wheel(XPLMWindowID w, int x, int y, int wheel, int clicks, void *ref)
@@ -174,9 +327,28 @@ static int wb_wheel(XPLMWindowID w, int x, int y, int wheel, int clicks, void *r
     (void)w; (void)x; (void)y; (void)wheel; (void)clicks; (void)ref;
     return 1;
 }
+/* the value's digits and point, Backspace, Enter; Escape or the focus
+   lost: none */
 static void wb_key(XPLMWindowID w, char key, XPLMKeyFlags flags, char vkey, void *ref, int losing)
 {
-    (void)w; (void)key; (void)flags; (void)vkey; (void)ref; (void)losing;
+    (void)w; (void)ref;
+    if (losing) {
+        wb_edit = -1;
+        return;
+    }
+    if (wb_edit < 0 || !(flags & xplm_DownFlag)) return;
+    unsigned char vk = (unsigned char)vkey;
+    size_t n = strlen(wb_buf);
+    if (vk == XPLM_VK_RETURN || vk == XPLM_VK_ENTER || vk == XPLM_VK_NUMPAD_ENT || key == '\r' || key == '\n') {
+        wb_edit_commit();
+    } else if (vk == XPLM_VK_ESCAPE) {
+        wb_edit_end();
+    } else if (vk == XPLM_VK_BACK || vk == XPLM_VK_DELETE) {
+        if (n > 0) wb_buf[n - 1] = 0;
+    } else if (((key >= '0' && key <= '9') || (key == '.' && !strchr(wb_buf, '.'))) && n + 1 < sizeof wb_buf) {
+        wb_buf[n] = key;
+        wb_buf[n + 1] = 0;
+    }
 }
 static XPLMCursorStatus wb_cursor(XPLMWindowID w, int x, int y, void *ref)
 {
@@ -192,6 +364,7 @@ static int wb_shown(void)
 static void wb_show(int on)
 {
     if (!on) {
+        wb_edit_end();
         if (wb_win) XPLMSetWindowIsVisible(wb_win, 0);
         return;
     }
@@ -200,8 +373,8 @@ static void wb_show(int on)
         memset(&p, 0, sizeof p);
         p.structSize = sizeof p;
         p.left = 100;
-        p.top = 620;
-        p.right = 520;
+        p.top = 860;
+        p.right = 540;
         p.bottom = 100;
         p.visible = 0;
         p.drawWindowFunc = wb_draw;
@@ -216,7 +389,7 @@ static void wb_show(int on)
         wb_win = XPLMCreateWindowEx(&p);
         if (!wb_win) return;
         XPLMSetWindowPositioningMode(wb_win, xplm_WindowPositionFree, -1);
-        XPLMSetWindowResizingLimits(wb_win, 320, 360, 1200, 1400);
+        XPLMSetWindowResizingLimits(wb_win, 340, 420, 1200, 1600);
         XPLMSetWindowTitle(wb_win, "747-400 Weight and Balance");
         wb_place(wb_win);
     }
@@ -246,6 +419,15 @@ static int wb_open_get(void *ref)
     return XPLMWindowIsPoppedOut(wb_win) ? 2 : 1;
 }
 static void wb_open_set(void *ref, int v) { (void)ref; wb_show(v != 0); }
+/* the entry's datarefs: written by this window, and writable for the
+   flight tests and other add-ons (an entry: req_field and req_value, then
+   req_id counted up) */
+static int wb_req_id_get(void *ref) { (void)ref; return wb_req_id; }
+static void wb_req_id_set(void *ref, int v) { (void)ref; wb_req_id = v; }
+static int wb_req_field_get(void *ref) { (void)ref; return wb_req_field; }
+static void wb_req_field_set(void *ref, int v) { (void)ref; wb_req_field = v; }
+static float wb_req_value_get(void *ref) { (void)ref; return wb_req_value; }
+static void wb_req_value_set(void *ref, float v) { (void)ref; wb_req_value = v; }
 
 static void wb_menu_pick(void)
 {
@@ -275,7 +457,12 @@ static void wb_start(XPLMMenuID m)
     wb_ref_cg = XPLMFindDataRef("sim/flightmodel2/misc/cg_offset_z");
     wb_ref_cg_mac = XPLMFindDataRef("sim/flightmodel2/misc/cg_offset_z_mac");
     wb_ref_zfw_cg = XPLMFindDataRef("sim/flightmodel2/misc/zfw_cg_offset_z");
+    wb_ref_ground = XPLMFindDataRef("sim/flightmodel/failures/onground_any");
     wb_ref_open = int_ref("laminar/B747/wb/window_open", wb_open_get, wb_open_set);
+    wb_ref_req_id = int_ref("laminar/B747/wb/req_id", wb_req_id_get, wb_req_id_set);
+    wb_ref_req_field = int_ref("laminar/B747/wb/req_field", wb_req_field_get, wb_req_field_set);
+    wb_ref_req_value = XPLMRegisterDataAccessor("laminar/B747/wb/req_value", xplmType_Float, 1,
+        NULL, NULL, wb_req_value_get, wb_req_value_set, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     wb_cmd_toggle = XPLMCreateCommand("laminar/B747/wb/window_toggle", "Show or hide the weight and balance window");
     XPLMRegisterCommandHandler(wb_cmd_toggle, wb_command, 1, NULL);
     if (m) XPLMAppendMenuItem(m, "Weight and balance...", (void *)(intptr_t)WBW_MENU_REF, 0);
@@ -285,6 +472,9 @@ static void wb_stop(void)
 {
     XPLMUnregisterCommandHandler(wb_cmd_toggle, wb_command, 1, NULL);
     XPLMUnregisterDataAccessor(wb_ref_open);
+    XPLMUnregisterDataAccessor(wb_ref_req_id);
+    XPLMUnregisterDataAccessor(wb_ref_req_field);
+    XPLMUnregisterDataAccessor(wb_ref_req_value);
     if (wb_win) XPLMDestroyWindow(wb_win);
     wb_win = NULL;
 }

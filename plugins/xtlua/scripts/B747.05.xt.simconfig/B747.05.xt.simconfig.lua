@@ -309,12 +309,13 @@ function set_loaded_configs()
 		B747DR_flt_inst_lwr_disp_capt_sel_dial_pos = 2
 	end
 
-	--FO Displays
+	--FO Displays (review 2026-11-05: NORM and EICAS were read from the
+	-- Captain's capt_inbd)
 	if simConfigData["data"].SIM.fo_inbd == "PFD" then
 		B747DR_flt_inst_inbd_disp_fo_sel_dial_pos = 0
-	elseif simConfigData["data"].SIM.capt_inbd == "NORM" then
+	elseif simConfigData["data"].SIM.fo_inbd == "NORM" then
 		B747DR_flt_inst_inbd_disp_fo_sel_dial_pos = 1
-	elseif simConfigData["data"].SIM.capt_inbd == "EICAS" then
+	elseif simConfigData["data"].SIM.fo_inbd == "EICAS" then
 		B747DR_flt_inst_inbd_disp_fo_sel_dial_pos = 2
 	end
 

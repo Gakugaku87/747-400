@@ -542,6 +542,17 @@ function M.update(s, inp, dt)
     out.bus_isolated = autoland and not s.iso.hold
     out.synoptic_inhibit = autoland
 
+    -- (2026-11-05 review 3) a side's utility buses unpowered for any
+    -- reason (a fault, its ELCU, the AC bus lost) or its UTILITY switch OFF:
+    -- the UTIL OFF light and ELEC UTIL BUS, both inhibited while loads are
+    -- shed (FCOM p.801, p.822: "unpowered due to a fault, or the related
+    -- utility power switch is OFF"; during load shedding the messages and
+    -- the lights inhibited). Before, the switch alone
+    local util_lost = {}
+    for k = 1, 2 do
+        local a, b = ON_SIDE[k][1], ON_SIDE[k][2]
+        util_lost[k] = (not inp.utility[k] or not util[a] or not util[b]) and s.shed == 0
+    end
     -- panel lights (FCOM p.781-786)
     local lt = {ext_avail = {}, ext_on = {}, apu_avail = {}, apu_on = {},
         isln = {}, gen_off = {}, drive = {}, util_off = {}}
@@ -550,7 +561,7 @@ function M.update(s, inp, dt)
         lt.ext_on[k] = s.xpc[k]
         lt.apu_avail[k] = apu_ready and not s.apb[k]
         lt.apu_on[k] = s.apb[k]
-        lt.util_off[k] = not inp.utility[k]
+        lt.util_off[k] = util_lost[k]
     end
     local drive_low = {}
     for n = 1, 4 do
@@ -585,7 +596,7 @@ function M.update(s, inp, dt)
     -- >ELEC SSB OPEN: the SSB open under a close command (FCOM p.822)
     cas.ssb_open = s.ssb_cmd and not s.ssb
     cas.util_bus = {}
-    for k = 1, 2 do cas.util_bus[k] = not inp.utility[k] and s.shed == 0 end
+    for k = 1, 2 do cas.util_bus[k] = util_lost[k] end
     cas.stby_bus_main = not stby_main
     cas.stby_bus_apu = not stby_apu
     cas.bat_disch_main = discharging(bm, false, dt)

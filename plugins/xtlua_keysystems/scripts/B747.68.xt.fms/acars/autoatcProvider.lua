@@ -113,7 +113,11 @@ sendATC=function(value)
   print("LUA send ACARS message:"..value)
   
   local newMessage=json.decode(value)--check json value or fail
-  newMessage["to"]=fmsModules["data"]["atc"]
+  -- the ATC logon's facility; an information request's own airport kept
+  -- (2026-11-05 review 4: the WEATHER page's)
+  if not (newMessage["type"]=="inforeq" and newMessage["to"]) then
+    newMessage["to"]=fmsModules["data"]["atc"]
+  end
   newMessage["from"]=getFMSData("fltno")
   newMessage["time"]=string.format("%02d:%02d",hh,mm)
   newMessage["messageID"]=acarsSystem.provider.messageID

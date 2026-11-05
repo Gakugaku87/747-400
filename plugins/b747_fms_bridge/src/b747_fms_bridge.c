@@ -433,12 +433,15 @@ static void opt_set(int i, int v, int keep)
     if (keep) opts_save();
 }
 
-/* the failure window's and the weight and balance window's menu items
-   (failures_window.c, wb_window.c) */
+/* the failure window's, the weight and balance window's and the ground
+   handling window's menu items (failures_window.c, wb_window.c,
+   gh_window.c) */
 #define FWN_MENU_REF 100
 #define WBW_MENU_REF 101
+#define GHW_MENU_REF 102
 static void fw_menu_pick(void);
 static void wb_menu_pick(void);
+static void gh_menu_pick(void);
 
 static void menu_handler(void *menu_ref, void *item_ref)
 {
@@ -447,6 +450,7 @@ static void menu_handler(void *menu_ref, void *item_ref)
     if (i >= 0 && i < NOPTS) opt_set(i, !opts[i], 1);
     if (i == FWN_MENU_REF) fw_menu_pick();
     if (i == WBW_MENU_REF) wb_menu_pick();
+    if (i == GHW_MENU_REF) gh_menu_pick();
 }
 
 static int opt_toggle(XPLMCommandRef cmd, XPLMCommandPhase phase, void *ref)
@@ -488,6 +492,7 @@ static XPLMDataRef text_ref(const char *name, XPLMGetDatab_f get)
 
 #include "failures_window.c"
 #include "wb_window.c"
+#include "gh_window.c"
 
 PLUGIN_API int XPluginStart(char *name, char *sig, char *desc)
 {
@@ -542,6 +547,7 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc)
     }
     fw_start(menu);
     wb_start(menu);
+    gh_start(menu);
     return 1;
 }
 
@@ -550,6 +556,7 @@ PLUGIN_API void XPluginStop(void)
     XPLMUnregisterFlightLoopCallback(loop, NULL);
     XPLMUnregisterFlightLoopCallback(scan, NULL);
     ndl_stop();
+    hl_stop();
     /* a fetch under way: told to stop, waited for (its code goes with us) */
     if (sb_thread) {
         InterlockedExchange(&sb_cancel, 1);
@@ -564,6 +571,7 @@ PLUGIN_API void XPluginStop(void)
     }
     fw_stop();
     wb_stop();
+    gh_stop();
     if (menu) XPLMDestroyMenu(menu);
     if (menu_item >= 0) XPLMRemoveMenuItem(XPLMFindPluginsMenu(), menu_item);
     menu = NULL;
@@ -579,4 +587,5 @@ PLUGIN_API void XPluginReceiveMessage(XPLMPluginID from, int msg, void *param)
     (void)from; (void)param;
     fw_message(msg);
     wb_message(msg);
+    gh_message(msg);
 }

@@ -96,12 +96,14 @@ fmsFunctionsDefs["POSTFLIGHT"]["L6"]={"setpage","ACARS"}
 fmsPages["INITIALIZE"]=createPage("INITIALIZE")
 fmsPages["INITIALIZE"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be this way
   if getFMSData("crzalt")=="*****" then fmsModules[fmsID]["notify"]="CRUISE ALT NOT SET" end
-  if(string.len(fmsJson) > 2) then
-    local fms = json.decode(fmsJson)
-    if (getFMSData("fltdep")=="****" or getFMSData("fltdst")=="****") and table.getn(fms) >= 2 and fms[table.getn(fms)][2] == 1 and fms[1][2] == 1 then
-      setFMSData("fltdep",fms[1][8])
-      setFMSData("fltdst",fms[table.getn(fms)][8])
-    end
+  -- DEP/DES not entered: the FMC's route's origin and destination
+  -- (2026-11-05 review 4: before, X-Plane's flight plan's JSON decoded at
+  -- every draw, through fmsJson, the VNAV pages' binding; an error there,
+  -- or in the decode, left the page blank)
+  local rte = B747_fmc_route and B747_fmc_route.rte
+  if rte and rte.origin and rte.dest and (getFMSData("fltdep")=="****" or getFMSData("fltdst")=="****") then
+    setFMSData("fltdep",rte.origin.ident)
+    setFMSData("fltdst",rte.dest.ident)
   end
 
   fmsPages["INITIALIZE"]["template"]={

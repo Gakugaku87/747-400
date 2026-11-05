@@ -1038,6 +1038,9 @@ local function afds_at()
 	i.ground = simDR_onGround == 1
 	i.cas, i.ra = simDR_ind_airspeed_kts_pilot, simDR_radarAlt1
 	i.flaps_up = simDR_flap_ratio_control < 0.01
+	-- the landing flaps (25 or 30: the handle's detents at sixths) for the
+	-- THR switch on GA (FCOM p.642)
+	i.flaps_landing = simDR_flap_ratio_control >= 5 / 6 - 0.01
 	local rev, idle = false, true
 	for e = 0, 3 do
 		if simDR_at_rev_deploy[e] > 0.01 then rev = true end
@@ -1047,6 +1050,8 @@ local function afds_at()
 	local lim = B747DR_ref_thr_limit_mode
 	i.limit_to = string.find(lim, "TO", 1, true) ~= nil
 	i.limit_ga = lim == "GA"
+	-- CLB, CLB 1, CLB 2, CRZ or CON (FCOM p.642's list; none: no limit)
+	i.limit_ref = lim == "CRZ" or lim == "CON" or string.sub(lim, 1, 3) == "CLB"
 	i.pitch = afds.pitch
 	i.retard = afds.retard and true or false
 	i.vnav_at, i.vnav_level = B747DR_ap_fvn_at, vnavLevel ~= nil
@@ -1439,9 +1444,11 @@ function B747_afds_lnav()
 	B747_afds_model.lnav(afds, afds_inp())
 	afds_sync()
 end
--- the FMA's roll
+-- the FMA's roll: the AFDS's modes only, no inputs made (2026-11-05 review
+-- 4: the FMA's roll and pitch made the whole inputs again each frame, after
+-- B747_afds_update's: three times a frame)
 function B747_afds_roll_fma()
-	return B747_afds_model.roll_fma(afds, afds_inp())
+	return B747_afds_model.roll_fma(afds, nil)
 end
 -- the pitch switches (step 1c): the old code's own parts kept (the A/T,
 -- its flight phase, its targets)
@@ -1486,11 +1493,13 @@ function B747_afds_vnav_lost()
 	B747DR_ap_vnav_state = 0
 end
 function B747_afds_spd_works()
-	return B747_afds_model.spd_works(afds, afds_inp())
+	return B747_afds_model.spd_works(afds, nil)
 end
--- the FMA's pitch
+-- the FMA's pitch: VNAV's own FMA its only input
+local afdsFmaIn = {}
 function B747_afds_pitch_fma()
-	return B747_afds_model.pitch_fma(afds, afds_inp())
+	afdsFmaIn.vnav_fma = afds_old_vnav_fma()
+	return B747_afds_model.pitch_fma(afds, afdsFmaIn)
 end
 -- the roll mode is HDG SEL (the HDG REF switch's default)
 function B747_afds_roll_is(mode)
@@ -3556,8 +3565,26 @@ end
 
 --function aircraft_unload() end
 
+-- (2026-11-05 review 3) a new flight: the A/T and this glue's latches anew
+-- with the AFDS. Before, B747_afds_reset made the AFDS only: an A/T engaged
+-- at the end of a flight stayed engaged in the model and, the ARM switch off
+-- in the new flight, disengaged there (AUTOTHROT DISC); its TO/GA, retard,
+-- holds and acceleration filter, VNAV's level-off, the push counts and the
+-- FMC master's latch went on too
+local function B747_at_reset()
+	atState = B747_at_model.new()
+	atIas, atAccel = nil, 0
+	atPush = {spd = 0, thr = 0, disc = 0}
+	atSeen = {spd = 0, thr = 0, disc = 0, toga = nil}
+	atMaster, atMasterOK, atFmcLatch = nil, false, false
+	vnavLevel = nil
+	afdsTogaPushes = nil
+	lastHdgRefSwitch = nil
+end
+
 function flight_start()
 	B747_afds_reset()
+	B747_at_reset()
 	B747_flight_start_autopilot()
 	simDR_elevator = 0
 	simDR_rudder = 0

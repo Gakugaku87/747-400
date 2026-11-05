@@ -30,6 +30,9 @@ local NM = 1852
 -- (step 9h4b) the cruise descent's rate (fpm: VNAV's, B747.68.vnav_model.lua
 -- EARLY_VS) and the engine-out driftdown's least (its EO_DD_VS)
 M.CRZ_DES_VS, M.DD_VS = 1250, 300
+-- (2026-11-05 review 4) the T/D's level deceleration made again when the
+-- weight differs this much from the one it was made at (kg; estimate)
+M.TD_KG = 5000
 -- (6-1/6-2 step LF1; notes/LINE_FLIGHTS.md §1) the descent deceleration's
 -- rate (fpm: FCOM p.1264, about 500)
 M.DECEL_VS = 500
@@ -502,14 +505,26 @@ function M.predict(s)
         end
         return dx, dt, f
     end
+    -- the deceleration kept for the altitude and the weight within TD_KG
+    -- (2026-11-05 review 4: before, the first weight's for the whole cruise:
+    -- its drag over the weight)
     local tdCache = {}
     local function td_x(hc)
         local xp = path_at_h(dp, hc)
-        local d = tdCache[hc]
-        if not d then d = td_decel(hc, xp); tdCache[hc] = d end
-        return xp - d
+        local c = tdCache[hc]
+        if not c or math.abs(c.kg - kg) > M.TD_KG then
+            c = {kg = kg, d = (td_decel(hc, xp))}
+            tdCache[hc] = c
+        end
+        return xp - c.d
     end
 
+    -- (2026-11-05 review 3) DES NOW below the path: level to the path,
+    -- no step climbs
+    local desNow = false
+    -- (2026-11-05 review 4) a step the airplane could not fly (its climb
+    -- "unable"): no more steps this cruise
+    local noStep = false
     local function cruise_until(xstop, hcur)
         -- level at hcur to xstop (or the T/D, a step point)
         -- the next planned step ahead above hcur (2026-11-05)
@@ -529,13 +544,13 @@ function M.predict(s)
             local dx = gs * dt / NM
             local lim = xstop
             if dp then lim = math.min(lim, td_x(hcur)) end
-            if pnext and phase == "crz" then lim = math.min(lim, pnext.x) end
+            if pnext and phase == "crz" and not desNow then lim = math.min(lim, pnext.x) end
             if x + dx > lim then dx = lim - x; dt = dx * NM / gs end
             if dx <= 0 then break end
             step_state(dx, 0, dt, ff * dt / 3600)
             if dp and x >= td_x(hcur) - 1e-6 then return "des" end
-            if pnext and phase == "crz" and x >= pnext.x - 1e-6 then return "step", pnext.to end
-            if s.steps and phase == "crz" and #plan == 0 then
+            if pnext and phase == "crz" and not desNow and x >= pnext.x - 1e-6 then return "step", pnext.to end
+            if s.steps and phase == "crz" and not desNow and not noStep and #plan == 0 then
                 local to, w = s.steps(hcur, kg)
                 local xtd = dp and path_at_h(dp, hcur) or math.huge
                 if to and to > hcur and w and kg <= w and xtd - x > 200 then return "step", to end
@@ -598,6 +613,21 @@ function M.predict(s)
         guard = 0
         dp = build_dp(estKg, tcPrev)
         startDes = phase == "des" and dp ~= nil
+        -- (2026-11-05 review 3) the descent phase below the path with its
+        -- T/D still ahead (DES NOW before the T/D: the path ahead is above
+        -- the airplane, up to its ceiling): level at the present altitude to
+        -- where the path comes down to it (the T/D), then the path; within
+        -- the descent (the T/D behind) along the path as before. Before, the path's
+        -- altitudes and times from here (FL451 at the next waypoints, the
+        -- destination 13 min early from FL350, T/D 130 NM ahead). DES NOW's
+        -- shallow descent to the path (FCOM: about 1,250 fpm) is not
+        -- modelled: level to the path (estimate)
+        desNow, noStep = false, false
+        if startDes and (path_at_x(dp, 0)) > h + 50 and td_x(h) > 1 then
+            startDes = false
+            phase = "crz"
+            desNow = true
+        end
         if startDes then
             -- on the descent path now: from here to the E/D along it
         else
@@ -627,12 +657,21 @@ function M.predict(s)
             while phase == "crz" and guard < 200000 do
                 local r, to = cruise_until(xEnd, hcur)
                 if r == "step" then
-                    sc[#sc + 1], scT[#sc + 1] = x, tt
+                    local n, h0 = #sc + 1, h
+                    sc[n], scT[n] = x, tt
                     phase = "sc"
                     local rr = climb_to(to)
                     phase = "crz"
                     hcur = h
                     if rr == "des" then phase = "des" break end
+                    -- (2026-11-05 review 4) a step the airplane cannot fly
+                    -- (no climb's thrust left below STEP TO): no more steps
+                    -- this cruise, no S/C where it did not climb. Before,
+                    -- tried again at every minute of the cruise, an S/C each
+                    if rr == "unable" then
+                        noStep = true
+                        if h < h0 + 1 then sc[n], scT[n] = nil, nil end
+                    end
                 elseif r == "des" then
                     phase = "des"
                 else

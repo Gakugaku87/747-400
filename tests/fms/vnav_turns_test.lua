@@ -210,4 +210,20 @@ local d4 = rt:get("laminar/B747/fms/vnav/dist")
 local _, toA = P.course(p5, ALPHA)
 T.near(d4, toA + (d0 - 20 - geo - lD.turn), 0.3, string.format("after the blend the great circles' %.1f NM", d4))
 
+-- (2026-11-05 review 4) the turns kept over gusts: the wind 0 and 10 kt in
+-- turn (the turn speed's 10 kt step one and the next, B747_fms_turns'
+-- key): after the first two, no turn made again (before, every call's: the
+-- last call's turns alone kept)
+local LM = fms.ns.B747_lnav_model
+local transition, made = LM.transition, 0
+LM.transition = function(...) made = made + 1 return transition(...) end
+local WIND = "sim/cockpit2/gauges/indicators/wind_speed_kts"
+for k = 1, 2 do rt:set(WIND, (k - 1) * 10) fms.ns.B747_fms_pred_input(10000) end
+local warm = made
+made = 0
+for k = 1, 4 do rt:set(WIND, (k % 2) * 10) fms.ns.B747_fms_pred_input(10000) end
+T.check(warm > 0 and made == 0, string.format("the wind 0 and 10 kt in turn: no turn made again (%d made; %d in the first two)", made, warm))
+LM.transition = transition
+rt:set(WIND, 0)
+
 T.done()

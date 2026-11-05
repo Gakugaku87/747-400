@@ -1,0 +1,23 @@
+{
+  "name": "s260_cd_hold",
+  "description": "手で操作する試験の土台（2026-11-05、利用者の「3D コックピットからの入力で固まる」の確認）：RJAA 34L に cold & dark で置き（機体を読み直す）、何もしないで終わる。この後、3D コックピットの CDU やオーバーヘッドをマウスでクリックし、Output/B747_hitches.txt を見る。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": false } },
+    "local_time": { "day_of_year": 299, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "システムの準備" },
+    { "do": "snapshot", "note": "cold & dark", "drefs": ["laminar/B747/electrical/bus/bat_main", "sim/cockpit2/electrical/bus_volts[0]", "laminar/B747/button_switch/position[13]"] }
+  ]
+}

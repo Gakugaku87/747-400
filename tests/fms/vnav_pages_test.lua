@@ -156,6 +156,16 @@ key("ls_key/L2")
 T.check(data("desspd") == "280" and data("desspdmach") == "800", "280 alone: the CAS, the Mach kept")
 key("ls_key/L5")
 T.check(line(1):find("ECON DES") and data("desspd") == k3(desCas), "<ECON: ECON DES again")
+-- (2026-11-05 review 4) SPD TRANS (3L) deleted only (FCOM p.1392, as the
+-- climb's, p.1328): an entry INVALID ENTRY, DELETE no transition
+T.check(data("destranspd") == "240" and data("desspdtransalt") == "10000", "SPD TRANS 240/10000 by default")
+type_in("250/10000")
+key("ls_key/L3")
+T.check(pad() == "INVALID ENTRY" and data("destranspd") == "240", "an entry: INVALID ENTRY (before: taken): " .. pad())
+clear()
+key("key/del")
+key("ls_key/L3")
+T.check(data("destranspd") == "---" and data("desspdtransalt") == "-----", "DELETE: no transition (before: INVALID ENTRY)")
 
 -- the cost index changed: ECON at once, faster
 key("func_key/index")

@@ -9,9 +9,12 @@
 --    VNAV or FLCH engaging (or the ARM switch put on while they are), a
 --    TO/GA push (on the ground under 50 kt with the flaps out and the TO
 --    limit: TO; in the air with the flaps out or G/S, not the TO limit:
---    G/A; after takeoff on the TO limit: THR REF), the SPD switch (above
---    400 ft, not the TO limit, not in VNAV, FLCH, T/O or G/A), the THR
---    switch (above 400 ft, not the TO or GA limit, not in VNAV or FLCH).
+--    G/A; after takeoff on the TO limit: THR REF), the SPD switch (from
+--    400 ft after takeoff until landing, not the TO limit, not in VNAV,
+--    FLCH, T/O or G/A), the THR switch (the same heights: THR REF on
+--    CLB, CLB 1, CLB 2, CRZ or CON in ALT or V/S, on GA in G/S or FLARE
+--    or in ALT or V/S with the landing flaps, FCOM p.642; its thrust
+--    limit function the FMC's, B747.68.thrlim_model.lua).
 --    No TO/GA push by 50 kt on the ground: none until 400 ft (FCOM p.656).
 --  - Disengaged by the ARM switch off, the interlocks lost, a disconnect
 --    switch, the reversers. AUTOTHROT DISC latches when it was engaged
@@ -114,6 +117,7 @@ function M.new()
         to = false,         -- TO: "thr" from the push on the ground, "hold"
                             -- from 65 kt, "air" pushed after takeoff
         no_to = false,      -- no push by 50 kt: no engage until 400 ft
+        air = false,        -- above 400 ft since the takeoff, until the landing
         idle_hold = false,  -- VNAV's or the retard's IDLE at the aft stop
         thr_hold = false,   -- VNAV's THR at its V/S, the aft stop, the hand
         reach_t = 0,        -- VNAV's THR: the seconds at its V/S
@@ -169,8 +173,10 @@ local function disengage(s, latch)
     s.ga, s.retard = false, false
 end
 
--- inp: arm, ok, ground, cas, ra, flaps_up, reverse, limit_to, limit_ga,
--- pitch (the AFDS's: "TO", "GA", "VNAV", "FLCH", "VS", "ALT", "GS",
+-- inp: arm, ok, ground, cas, ra, flaps_up, flaps_landing (the handle at 25
+-- or 30), reverse, limit_to, limit_ga, limit_ref (CLB, CLB 1, CLB 2, CRZ or
+-- CON; nil: neither TO nor GA), pitch (the AFDS's: "TO", "GA", "VNAV",
+-- "FLCH", "VS", "ALT", "GS",
 -- "FLARE" or nil), retard, vnav_at (the FMC's A/T mode), vnav_level,
 -- vnav_phase (the FMC's: step 9d2a), vnav_dd (the FMC's driftdown: its step
 -- 9h4b), lever_idle (the levers at the aft stop); the pushes since the last
@@ -232,18 +238,35 @@ function M.update(s, inp)
     end
     s.pitch = inp.pitch
     if s.pitch ~= "FLCH" then s.flch_vs, s.flch_mcp = nil, nil end
-    -- the MCP's SPD and THR switches
-    local air = not inp.ground and inp.ra > M.MIN_RA
+    -- the MCP's SPD and THR switches: from 400 ft after takeoff until the
+    -- landing (FCOM p.641-642; 2026-11-05 review 3: before, above 400 ft
+    -- radio altitude only, so dead below it on the approach)
+    if inp.ground then
+        s.air = false
+    elseif inp.ra > M.MIN_RA then
+        s.air = true
+    end
+    local air = s.air
     local p = inp.pitch
     if inp.spd and can and air and not inp.limit_to
         and p ~= "VNAV" and p ~= "FLCH" and p ~= "TO" and p ~= "GA" then
         s.to = false
         engage(s, M.SPD)
     end
-    if inp.thr and can and air and not inp.limit_to and not inp.limit_ga
-        and p ~= "VNAV" and p ~= "FLCH" then
-        s.to = false
-        engage(s, M.THR_REF)
+    -- the THR switch's A/T mode function (FCOM p.642): THR REF on CLB, CLB
+    -- 1, CLB 2, CRZ or CON in ALT or V/S; on GA in G/S or FLARE, or in ALT
+    -- or V/S with the landing flaps. Elsewhere (VNAV, FLCH, T/O, G/A) its
+    -- thrust limit function only, the FMC's. (2026-11-05 review 4: before,
+    -- THR REF in any pitch mode but VNAV and FLCH, G/S too, and never on GA)
+    if inp.thr and can and air then
+        local ref_limit = inp.limit_ref
+        if ref_limit == nil then ref_limit = not inp.limit_to and not inp.limit_ga end
+        local alt_vs = p == "ALT" or p == "VS"
+        if (ref_limit and alt_vs) or (inp.limit_ga
+            and (p == "GS" or p == "FLARE" or (alt_vs and inp.flaps_landing))) then
+            s.to = false
+            engage(s, M.THR_REF)
+        end
     end
     -- the engaged modes as they go on
     if s.engaged then
@@ -318,16 +341,21 @@ function M.servo(s, inp)
     -- within REF_NEAR of it, to none there, so they stop where the thrust
     -- does (s157's driftdown had wound them to the forward stop at CON's
     -- reference: eight minutes back through the band); over it back at the
-    -- limit's rate (none without a reference)
-    local ref = inp.thrust_ref
+    -- limit's rate. Without a reference (0 or less: the EEC's bug not set)
+    -- no limit: THR REF holds the levers, SPD and THR are not capped
+    -- (estimate; 2026-11-05 review 4: before, the whole thrust was over the
+    -- reference and every mode took the levers back to the aft stop)
+    local ref = inp.thrust_ref or 0
     if inp.thrust_max and inp.thrust_max < ref then ref = inp.thrust_max end
-    local over = inp.thrust - ref
-    local limit = -k_thr * over   -- the thrust limit's rate
-    local cap = math.huge
-    if over > 0 then
-        cap = limit
-    elseif ref > 0 then
-        cap = -over * M.SERVO_RATE / (inp.n1 and M.REF_NEAR_N1 or M.REF_NEAR_EPR)
+    local limit, cap = 0, math.huge   -- the thrust limit's rate
+    if ref > 0 then
+        local over = inp.thrust - ref
+        limit = -k_thr * over
+        if over > 0 then
+            cap = limit
+        else
+            cap = -over * M.SERVO_RATE / (inp.n1 and M.REF_NEAR_N1 or M.REF_NEAR_EPR)
+        end
     end
     local vmax = inp.v_max - M.LIMIT_MARGIN
     local rate

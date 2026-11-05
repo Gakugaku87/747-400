@@ -130,6 +130,17 @@ do
     T.check(rl.td_decel and rl.td_decel > 3 and rl.td_decel < 10, string.format("a level deceleration of %.1f NM", rl.td_decel or -1))
     T.check(top and math.abs(rl.td - (top - rl.td_decel)) < 0.05,
         string.format("the T/D at its start: %.1f NM, the path leaving FL250 at %.1f", rl.td or -1, top or -1))
+    -- (2026-11-05 review 4) after a long cruise (a heavy start, about 80 t
+    -- burnt) too, the cruise flown to the T/D: its time the distance at
+    -- M.86's TAS (no wind). Before, the deceleration kept from the first
+    -- weight (longer: 11.2 NM at 390 t, 10.3 at the T/D's) stopped the
+    -- cruise short and the T/D was moved on without its time and fuel
+    local legsLong = {{name = "A", dist = 4000}, {name = "RW", dist = 120, con = {kind = "AT", a = 50}}}
+    local rlong = PM.predict{P = P, t = pw, gw = 390000, fuel = 150000, alt = 25000, phase = "crz", crz = 25000, clb = clb,
+        des = des, crzspd = {mach = 0.86}, legs = legsLong, ed = 2}
+    local tdWant = rlong.td and rlong.td / P.tas(0.86, 25000) * 3600 or 0
+    T.check(rlong.td_t and math.abs(rlong.td_t - tdWant) < 1,
+        string.format("after 4,000 NM: the T/D at %.1f s, its distance at M.86 %.1f s", rlong.td_t or -1, tdWant))
 end
 
 -- step climbs where the steps function says: at 300 t to FL350, at 280 t to
@@ -171,6 +182,19 @@ do
         crzspd = {mach = 0.85}, legs = {{name = "A", dist = 500, step = 29000}, {name = "RW", dist = 500, con = {kind = "AT", a = 50}}},
         ed = 2}
     T.equal(#rl.sc, 0, "a step below FL310: none")
+end
+
+-- (2026-11-05 review 4) a step the airplane cannot fly (FL490 at 380 t,
+-- above its thrust ceiling): tried once, an S/C only where it climbed, no
+-- more steps; before, tried again at every minute of the cruise, an S/C
+-- each (21 here)
+do
+    local ru = PM.predict{P = P, t = pw, gw = 380000, fuel = 110000, alt = 35000, phase = "crz", crz = 35000, clb = clb,
+        des = des, crzspd = {mach = 0.85}, legs = legs3, ed = 3,
+        steps = function(h, kg) return 49000, 999999 end}
+    T.check(#ru.sc <= 1, string.format("an unflyable step: at most one S/C (before: one a minute): %d", #ru.sc))
+    T.check(ru.crz < 49000 and (#ru.sc == 1) == (ru.crz > 35000 + 1),
+        string.format("the cruise where its climb ended (%.0f ft), an S/C only if it climbed (%d)", ru.crz, #ru.sc))
 end
 
 -- a short flight: the climb meets the descent below CRZ ALT
@@ -336,5 +360,24 @@ local prs = PM.profile({pts = {{x = 100, h = 31000, t = 900}, {x = 400, h = 3500
     sc = {200}, sc_t = {1700}, td = 450, td_t = 4000, crz = 35000}, {alt = 20000, crz = 31000})
 local hs = PM.profile_at(prs, 200)
 T.near(hs, 31000, 1e-6, "an S/C at the altitude of the waypoint before it")
+
+-- (2026-11-05 review 3) DES NOW before the T/D (the descent phase at the
+-- cruise altitude, the T/D ahead): level to the path, then the path; as the
+-- cruise's prediction (before, the path's altitudes from here: FL451 at the
+-- next waypoint, the destination 13 min early)
+do
+    local legsDN = {{name = "A", dist = 30}, {name = "B", dist = 100}, {name = "C", dist = 70},
+        {name = "RW", dist = 60, con = {kind = "AT", a = 50}}}
+    local function dn(phase)
+        return PM.predict{P = P, t = pw, gw = 250000, fuel = 30000, alt = 35000, phase = phase, crz = 35000,
+            clb = clb, des = des, crzspd = {mach = 0.84}, legs = legsDN, ed = 4}
+    end
+    local rc, rd = dn("crz"), dn("des")
+    T.check(rc.td and rc.td > 100, string.format("the cruise: the T/D %.0f NM ahead", rc.td or -1))
+    T.check(rd.pts[1].h <= 35050, string.format("DES NOW: A (30 NM) at %.0f ft, not above FL350", rd.pts[1].h))
+    T.check(rd.td and math.abs(rd.td - rc.td) < 1, string.format("DES NOW: the T/D where the path meets FL350 (%.0f NM)", rd.td or -1))
+    T.near(rd.dest.t, rc.dest.t, 30, string.format("DES NOW: at the runway in %.1f min, as the cruise's %.1f",
+        rd.dest.t / 60, rc.dest.t / 60))
+end
 
 T.done()

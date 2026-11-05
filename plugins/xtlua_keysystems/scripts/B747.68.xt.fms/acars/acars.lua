@@ -90,10 +90,14 @@ function fmsFunctions.acarsRespondATC(fmsO,value) --value=message being replied 
   end
 end
 
-function fmsFunctions.acarsATCRequest(fmsO,value)
+-- an information request (the WEATHER page's METAR and TAF) for the
+-- airport `to` (2026-11-05 review 4: before, always the ATC logon's
+-- facility)
+function fmsFunctions.acarsATCRequest(fmsO,value,to)
   local atcReq={}
 	atcReq["type"]="inforeq"
   atcReq["msg"]=value
+  atcReq["to"]=to
   local newInitSend=json.encode(atcReq)
   fmsFunctions.acarsSystemSendATC(fmsO,newInitSend)
 end
@@ -261,7 +265,11 @@ acarsSystem.getMiscMessages=function(pgNo)
 end
 
 fmsPages["VIEWUPACARS"]=createPage("VIEWUPACARS")
-
+-- (2026-11-05 review 4) L1-L4: the message on that line of the pressing
+-- CDU's page (fmsFunctions.showupmsg); before, bound to messages at each
+-- draw: a shorter last page, or the other CDU on another page, left the
+-- bindings of another page (its empty lines opened other messages)
+for k = 1, 4 do fmsFunctionsDefs["VIEWUPACARS"]["L"..k]={"showupmsg",k} end
 
 
 acarsSystem.getUpMessages=function(pgNo)
@@ -331,7 +339,6 @@ acarsSystem.getUpMessages=function(pgNo)
         end
       --end
       retVal.templateSmall[line+1]="            "..acarsSystem.messages[i]["time"]
-      fmsFunctionsDefs["VIEWUPACARS"]["L"..(startNo-i+1)]={"showmessage",i}
       line = line+2
       
     end  

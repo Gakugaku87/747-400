@@ -81,6 +81,11 @@ function B747_wheels()
     local now = simDR_whl_time
     if whl_t0 == nil then whl_t0 = now end
     local init = now - whl_t0 < INIT_S
+    -- (2026-11-05 review 4) the brakes at the outside air's temperature
+    -- through the start (before, made once at the flight start from
+    -- XTLua's first read of the OAT, 0: 0 C brakes on the first flight,
+    -- warming over 90 minutes)
+    if init then whl_btms = BT.new(simDR_whl_oat) end
 
     -- the brakes: each truck's absorbed energy shared by its four brakes
     local bi = whl_btms_in

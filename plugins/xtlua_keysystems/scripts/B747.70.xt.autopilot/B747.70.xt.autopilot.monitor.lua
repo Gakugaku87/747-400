@@ -474,15 +474,14 @@ function VNAV_modeSwitch(fmsO)
         return
     end
     if B747DR_ap_vnav_state <= 1 then
-        if B747DR_ap_vnav_state == 0 and B747DR_ap_inDescent ==1  and fmsO~=nil then
-            local diff = simDRTime - lastVNAVSwitch
-
-            if diff > 0.2 then
-                setDescentVSpeed(fmsO)
-                lastVNAVSwitch=simDRTime
-            end
-            
-        end
+        -- (2026-11-05 review 4) the old VNAV's descent (setDescentVSpeed) no
+        -- longer runs with VNAV off after the T/D: every 0.2 s it decoded the
+        -- old profile, wrote its V/B and its own path deviation (the FMC's,
+        -- afds_fmc_vnav, written after it in the frame), and below 10 ft
+        -- X-Plane's V/S -250 with "End Descent" in the log. The DES page's
+        -- FPA and V/B (B744.fms.
+        -- pages.vnav.lua) took its values only with VNAV engaged, where it
+        -- did not run
         B747_monitor_THR_REF_AT()
         return
     end --not requested

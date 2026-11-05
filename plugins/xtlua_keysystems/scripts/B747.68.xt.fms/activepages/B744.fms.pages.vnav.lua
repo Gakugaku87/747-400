@@ -438,7 +438,10 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       local etafuel = ""
       if pred then
         local _, eh, em = get_ETA_for_Distance(0, pred.dest.t)
-        etafuel = string.format("%02d%02dz/%.1f", eh, em, perf_out(pred.dest.fuel / 1000))
+        -- the fuel blank with CRZ ALT at or above MAX (ATA34_2 p.611;
+        -- 2026-11-05 review 4)
+        local f = pred.no_fuel and "" or string.format("%.1f", perf_out(pred.dest.fuel / 1000))
+        etafuel = string.format("%02d%02dz/%s", eh, em, f)
       end
       dICAO = (B747_fmc_route.rte.dest and B747_fmc_route.rte.dest.ident) or "****"
       -- ECON, LRC or SEL SPD: a Mach, or a selected CAS; (step 9h5b) RTA

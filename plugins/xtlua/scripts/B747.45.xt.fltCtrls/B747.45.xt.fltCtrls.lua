@@ -1075,6 +1075,11 @@ dofile("B747.45.xt.aero_corr.lua")
 local flightInit=false
 function flight_start()
     flightInit=false
+    -- (2026-11-05 review 4) CONFIG GEAR's latches anew (before, a new
+    -- flight, an air start too, kept the last one's: its 140 s / 800 ft
+    -- inhibit after a liftoff)
+    config_gear_thrust, config_gear_flaps = false, false
+    config_gear_after_lo = nil
     B747_fcu_flight_start()
     B747_srm_flight_start()
     B747_speedbrake_flight_start()

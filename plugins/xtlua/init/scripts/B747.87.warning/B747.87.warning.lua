@@ -102,10 +102,10 @@ B747_CAScautionMsg   = {
     {DRindex = 62, name = "STARTER CUTOUT 2", status = 0},      --
     {DRindex = 63, name = "STARTER CUTOUT 3", status = 0},      --
     {DRindex = 64, name = "STARTER CUTOUT 4", status = 0},      --
-    {DRindex = 65, name = "TIRE PRESSURE", status = 0},
+    {DRindex = 65, name = ">TIRE PRESSURE", status = 0},
     {DRindex = 66, name = "UNABLE RNP", status = 0},
-    {DRindex = 67, name = "FUEL PRES STAB L", status = 0},
-    {DRindex = 68, name = "FUEL PRES STAB L", status = 0},
+    {DRindex = 67, name = "FUEL PRES STB L", status = 0},
+    {DRindex = 68, name = "FUEL PRES STB R", status = 0},
     {DRindex = 69, name = "FUEL PRESS CTR L", status = 0},
     {DRindex = 70, name = "FUEL PRESS CTR R", status = 0},
     {DRindex = 71, name = "ELEC GEN OFF 1", status = 0},
@@ -276,14 +276,14 @@ B747_CASadvisoryMsg   = {
     {DRindex = 150, name = "FUEL IMBAL 2-3", status = 0},       --
     {DRindex = 151, name = ">FUEL JETT A", status = 0},
     {DRindex = 152, name = ">FUEL JETT B", status = 0},
-    {DRindex = 153, name = "FUEL OVRD CTR L", status = 0},      --
-    {DRindex = 154, name = "FUEL OVRD CTR R", status = 0},      --
+    {DRindex = 153, name = ">FUEL OVD CTR L", status = 0},      --
+    {DRindex = 154, name = ">FUEL OVD CTR R", status = 0},      --
     {DRindex = 155, name = "FUEL OVRD 2 AFT", status = 0},      --
     {DRindex = 156, name = "FUEL OVRD 3 AFT", status = 0},      --
     {DRindex = 157, name = "FUEL OVRD 2 FWD", status = 0},      --
     {DRindex = 158, name = "FUEL OVRD 3 FWD", status = 0},      --
-    {DRindex = 159, name = "FUEL PMP STAB L", status = 0},      --
-    {DRindex = 160, name = "FUEL PMP STAB R", status = 0},      --
+    {DRindex = 159, name = ">FUEL PMP STB L", status = 0},      --
+    {DRindex = 160, name = ">FUEL PMP STB R", status = 0},      --
     {DRindex = 161, name = "FUEL PUMP 1 AFT", status = 0},      --
     {DRindex = 162, name = "FUEL PUMP 2 AFT", status = 0},      --
     {DRindex = 163, name = "FUEL PUMP 3 AFT", status = 0},      --
@@ -295,7 +295,7 @@ B747_CASadvisoryMsg   = {
     {DRindex = 169, name = "FUEL RES XFR 2", status = 0},
     {DRindex = 170, name = "FUEL RES XFR 3", status = 0},
     {DRindex = 171, name = ">FUEL TANK/ENG", status = 0},       --
-    {DRindex = 172, name = ">FUEL TEMP LOW", status = 0},       --
+    {DRindex = 172, name = "FUEL TEMP LOW", status = 0},       --
     {DRindex = 173, name = "FUEL TEMP SYS", status = 0},
     {DRindex = 174, name = ">FUEL WING ISOL", status = 0},
     {DRindex = 175, name = "FUEL X FEED 1", status = 0},
@@ -348,11 +348,11 @@ B747_CASadvisoryMsg   = {
     {DRindex = 222, name = ">ICE DETECTORS", status = 0},
     {DRindex = 223, name = ">IDLE DISAGREE", status = 0},
     {DRindex = 224, name = ">IFF MODE 4", status = 0},
-    {DRindex = 225, name = ">IRS AC CENTRE", status = 0},
+    {DRindex = 225, name = ">IRS AC CENTER", status = 0},
     {DRindex = 226, name = ">IRS AC LEFT", status = 0},
     {DRindex = 227, name = ">IRS AC RIGHT", status = 0},
-    {DRindex = 228, name = "IRS CENTRE", status = 0},
-    {DRindex = 229, name = ">IRS DC CENTRE", status = 0},
+    {DRindex = 228, name = "IRS CENTER", status = 0},
+    {DRindex = 229, name = ">IRS DC CENTER", status = 0},
     {DRindex = 230, name = ">IRS DC LEFT", status = 0},
     {DRindex = 231, name = ">IRS DC RIGHT", status = 0},
     {DRindex = 232, name = "IRS LEFT", status = 0},
@@ -401,7 +401,7 @@ B747_CASadvisoryMsg   = {
     {DRindex = 275, name = ">STAB TRIM 3", status = 0},
     {DRindex = 276, name = ">STBY BUS APU", status = 0},
     {DRindex = 277, name = ">STBY BUS MAIN", status = 0},
-    {DRindex = 278, name = ">STBY POWER OFF", status = 0},
+    {DRindex = 278, name = ">STBY POWER OFF", status = 0},     -- 405 only (FCOM p.823): never set for the 109 and the 570 (2026-11-05 review 4)
     {DRindex = 279, name = ">TCAS OFF", status = 0},
     {DRindex = 280, name = ">TCAS RA CAPTAIN", status = 0},
     {DRindex = 281, name = ">TCAS RA F/O", status = 0},
@@ -421,7 +421,7 @@ B747_CASadvisoryMsg   = {
     {DRindex = 295, name = "UNABLE RNP", status = 0},
     {DRindex = 296, name = "WAI VALVE LEFT", status = 0},
     {DRindex = 297, name = "WAI VALVE RIGHT", status = 0},
-    {DRindex = 298, name = ">WINDSHEAR SYS", status = 0},
+    {DRindex = 298, name = "WINDSHEAR SYS", status = 0},
     {DRindex = 299, name = ">X FEED CONFIG", status = 0},       --
     {DRindex = 300, name = ">YAW DAMPER LWR", status = 0},      --
     {DRindex = 301, name = ">YAW DAMPER UPR", status = 0},      --
@@ -468,8 +468,8 @@ B747_CASmemoMsg   = {
     {DRindex = 11, name = "DOORS MANUAL", status = 0},
     {DRindex = 12, name = "HF DATA OFF", status = 0},
     {DRindex = 13, name = "HIGH ALT LDG", status = 0},
-    {DRindex = 14, name = "IRS ALIGN MODE C", status = 0},
-    {DRindex = 15, name = "IRS ALIGN MODE L", status = 0},
+    {DRindex = 14, name = "IRS ALIGN MODE L", status = 0},   -- (2026-11-05 review 3: L 14, C 15 as the xt script's and the IRUs' writes; before, swapped here)
+    {DRindex = 15, name = "IRS ALIGN MODE C", status = 0},
     {DRindex = 16, name = "IRS ALIGN MODE R", status = 0},
     {DRindex = 17, name = "NO SMOKING ON", status = 0},         --
     {DRindex = 18, name = "PACK 1 OFF", status = 0},            --
@@ -496,8 +496,10 @@ B747_CASmemoMsg   = {
     {DRindex = 39, name = "VMO SPARE ENGINE", status = 0},
     {DRindex = 40, name = "ACARS NO COMM", status = 0},
     {DRindex = 41, name = "ACARS CALL", status = 0},
-    {DRindex = 41, name = "ACARS VOICE", status = 0},
-    {DRindex = 42, name = "PRINTER MESSAGE", status = 0},
+    -- (2026-11-05 review 3) ACARS VOICE its own slot (before, 41 with ACARS
+    -- CALL), PRINTER MESSAGE once (28; before, also 42); this table and the
+    -- init script's the same (B747.87.warning.lua)
+    {DRindex = 42, name = "ACARS VOICE", status = 0},
     {DRindex = 43, name = "ACARS ALERT", status = 0},
     {DRindex = 44, name = "ACARS VOICE BUSY", status = 0},
     {DRindex = 45, name = "SPEEDBRAKE ARMED", status = 0},

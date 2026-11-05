@@ -608,13 +608,13 @@ local function byTcas(a, b)
   return a.distance < b.distance
 end
 local function tcasSide(slots, isCaptain)
-  local on, irs, cLat, cLon, mapMode, center
+  local on, irs, cLat, cLon, center
   if isCaptain then
     on, irs = B747DR_nd_capt_tcas_on, captIRS
-    cLat, cLon, mapMode, center = display_latitude_cpt, display_longitude_cpt, simDR_map_mode, B747_nd_map_center_capt
+    cLat, cLon, center = display_latitude_cpt, display_longitude_cpt, B747_nd_map_center_capt
   else
     on, irs = B747DR_nd_fo_tcas_on, foIRS
-    cLat, cLon, mapMode, center = display_latitude_fo, display_longitude_fo, backport_map_mode_copilot, B747_nd_map_center_fo
+    cLat, cLon, center = display_latitude_fo, display_longitude_fo, B747_nd_map_center_fo
   end
   local units, range = map_scale(isCaptain)
   local k = 0
@@ -639,13 +639,11 @@ local function tcasSide(slots, isCaptain)
       local c = tcasCand[n]
       local j = c.j
       local abs_heading = getHeading(cLat, cLon, simDR_tcas_lat[j], simDR_tcas_lon[j])
-      local heading_diff
-      if mapMode == 2 then
-        local mag_diff = getHeadingDifference(simDR_true_heading, simDR_mag_heading)
-        heading_diff = getHeadingDifference(simDR_ground_track - mag_diff, abs_heading)
-      else
-        heading_diff = getHeadingDifference(simDR_true_heading, abs_heading)
-      end
+      -- that ND's own track (MAP) or heading (VOR, APP), as its other
+      -- symbols (review 2026-11-05: the F/O's took the Captain's track in
+      -- MAP and the airplane's true heading in VOR and APP; PLN, VOR CTR
+      -- and APP CTR draw no traffic, tcas_show: FCOM p.1535, p.1039)
+      local heading_diff = nd_bearing(isCaptain, abs_heading)
       local displayDistance = c.distance * units
       local visible = true
       if center < 1 then

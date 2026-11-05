@@ -653,6 +653,7 @@ function defaultFMSData()
   rpttimemm="**",
   acarsAddress="*******",
   atc="****",
+  wxapt="****",   -- (2026-11-05 review 4) the ACARS WEATHER page's airport
   grwt="***.*   ",
   crzalt=string.rep("*", 5),
   acarsMessage="",
@@ -813,10 +814,11 @@ function setFMSData(id,value)
 	-- XTLua: removed
    fmsModules:setData(id,value)
 end
--- the climb's SPD TRANS speed: the greater of the transition speed (250 kt;
--- the origin's from the nav DB comes in step 4) and VREF 30 + 100 kt (FCOM
--- p.1328: "272/10000"; VREF 30: estimate); dashes once deleted (FMC-09,
--- 6-1 step 1)
+-- the climb's SPD TRANS speed: the greater of the transition speed and VREF
+-- 30 + 100 kt (FCOM p.1328: "272/10000"; VREF 30: estimate); dashes once
+-- deleted (FMC-09, 6-1 step 1). The transition speed 250 kt for every
+-- origin: X-Plane's nav data (CIFP, apt.dat) has no airport speed limits,
+-- where the real nav DB's come from (2026-11-05 review 4: kept, no source)
 B747DR_airspeed_Vf30 = find_dataref("laminar/B747/airspeed/Vf30")
 function update_spd_trans()
 	local cur = fmsModules["data"]["transpd"]
@@ -1637,13 +1639,17 @@ function update_preds()
   predNext = simDRTime + 10
   local s = B747_fms_pred_input(B747BR_cruiseAlt)
   predField = s and s.field or nil
-  -- none with CRZ ALT at or above MAX (ATA34_2 p.611); (step 9h4b) with
-  -- ENG OUT active above the engine-out MAX (CRZ ALT set to it: on)
-  if s and s.crz >= B747_perf_db.max_alt(s.t, s.gw, s.isa) then s = nil end
+  -- CRZ ALT at or above MAX: the fuel predictions not shown "to prevent bad
+  -- predictions" (ATA34_2 p.611), the rest made (no_fuel: 2026-11-05 review
+  -- 4; before, none at all: no path, no T/D, no VNAV descent at CRZ ALT =
+  -- MAX); (step 9h4b) with ENG OUT active above the engine-out MAX (CRZ ALT
+  -- set to it: on) none
+  local noFuel = s ~= nil and s.crz >= B747_perf_db.max_alt(s.t, s.gw, s.isa)
   if s and s.eo and s.crz > B747_fms_eo_crz_max() + 1 then s = nil end
   predResult = s and B747_pred_model.predict(s) or nil
   -- (step 9h5b) RTA's speed, the predictions with it
   predResult = rta_update(s, predResult)
+  if predResult then predResult.no_fuel = noFuel or nil end
   -- (FIX INFO, 2026-11-04) the profile along the route and the legs it is on;
   -- (OFFPATH DES) the input, its descent's speeds and weight
   predProfile = predResult and B747_pred_model.profile(predResult, s) or nil
@@ -1990,12 +1996,16 @@ end
 -- MCP altitude deleted from the active route; without one, in the climb
 -- with the MCP above CRZ ALT, or in the cruise above it, CRZ ALT the MCP
 -- altitude; (step 9d2a) in the cruise below it the early descent or a
--- cruise descent
+-- cruise descent. A cruise climb (the climb's phase, the CRZ page's CRZ
+-- CLB: FCOM p.1347) is the cruise's here (2026-11-05 review 4: before,
+-- the climb's: the MCP below CRZ ALT pushed in it did nothing, the climb
+-- went on to the old CRZ ALT)
 local DES_NOW_NM = 50
 local vnavPushSeen = nil
 function B747_fms_alt_sel_push()
   local st = B747_fmc_route
   local alt, mcp, ph = simDR_pressureAlt1, B747DR_fms_vnav_mcp_alt, vnavState.phase
+  if ph == "CLB" and vnavState.crz_chg == "CLB" then ph = "CRZ" end
   if st.active and ph ~= "CRZ" then
     local up = mcp > alt
     -- the climb's legs in the climb, the others in the descent
@@ -2400,9 +2410,14 @@ local lnavPath=nil
 -- turns' speed there (LNAV's: the true airspeed, the last predictions' at
 -- the fix else the ground speed now, and the wind now); kept by the fix,
 -- the courses and the speed in 10 kt steps, and by the route's leg for
--- VNAV's distance through a turn flown over its fix (B747_fms_turn_of)
+-- VNAV's distance through a turn flown over its fix (B747_fms_turn_of).
+-- (2026-11-05 review 4) A turn kept until TURN_KEEP calls have not used it:
+-- the speed with the wind, near a 10 kt step's edge, goes from one step to
+-- the other in gusts (before, the last call's turns alone: each change made
+-- them again)
+local TURN_KEEP = 4
 do
-  local cache, byRouteLeg = {}, setmetatable({}, {__mode = "k"})
+  local cache, age, gen, byRouteLeg = {}, {}, 0, setmetatable({}, {__mode = "k"})
   function B747_fms_turns(legs, r)
     local path = lnavPath
     if not path then return end
@@ -2410,7 +2425,7 @@ do
     for _, e in ipairs(path) do if e.leg then byLeg[e.leg] = e end end
     local pts = predResult and predResult.pts
     local isa = B747_fms_isa_dev()
-    local used = {}
+    gen = gen + 1
     for i = 2, #legs do
       local e1, e2 = byLeg[i - 1], byLeg[i]
       if e1 and e2 and e1.b then
@@ -2425,15 +2440,20 @@ do
         local key = string.format("%.5f %.5f %.1f %.1f %.5f %.5f %.5f %.5f %d", e1.b.lat, e1.b.lon, e1.crs or e1.hdg or -1,
           e2.crs or e2.hdg or -1, a2.lat, a2.lon, b2.lat, b2.lon, math.floor(vt / 10 + 0.5))
         local x = cache[key]
-        if x == nil then x = B747_lnav_model.transition(B747_path_model, e1, e2, math.floor(vt / 10 + 0.5) * 10) end
-        used[key] = x
+        if x == nil then
+          x = B747_lnav_model.transition(B747_path_model, e1, e2, math.floor(vt / 10 + 0.5) * 10)
+          cache[key] = x
+        end
+        age[key] = gen
         local l = legs[i]
         l.turn = math.max(x, -l.dist)
         l.dist = l.dist + l.turn
         if r.legs[i] then byRouteLeg[r.legs[i]] = x end
       end
     end
-    cache = used
+    for k in pairs(cache) do
+      if age[k] <= gen - TURN_KEEP then cache[k], age[k] = nil, nil end
+    end
   end
   function B747_fms_turn_of(leg) return leg and byRouteLeg[leg] or nil end
 end
@@ -2802,7 +2822,11 @@ end
 do
 local ND_LINE_S=1
 local ndLineT=-100
-local ndLineCache={}
+-- the flyover turns kept until TURN_KEEP lines have not used them
+-- (2026-11-05 review 4: their speed with the wind in 10 kt steps goes from
+-- one step to the other in gusts; before, the last line's alone, each
+-- change a turn made again)
+local ndLineCache,ndLineAge,ndLineGen={},{},0
 local ndLineOld={n=0,lat={},lon={},pen={}}
 function B747_fmc_nd_line()
   if not B747_nd_line_dirty and simDRTime-ndLineT<ND_LINE_S then return end
@@ -2862,7 +2886,13 @@ function B747_fmc_nd_line()
     for _,p in ipairs(pts) do under[#under+1]=p end
     pts=under
   end
-  ndLineCache=used
+  -- the turns this line used kept, the others until TURN_KEEP lines
+  -- have gone without them (the model adds new ones to the cache)
+  ndLineGen=ndLineGen+1
+  for k in pairs(used) do ndLineAge[k]=ndLineGen end
+  for k in pairs(ndLineCache) do
+    if (ndLineAge[k] or 0)<=ndLineGen-TURN_KEEP then ndLineCache[k],ndLineAge[k]=nil,nil end
+  end
   local lat,lon,pen,n=D.pack(pts)
   local old=ndLineOld
   for k=1,n do
@@ -4621,7 +4651,7 @@ do
     return part(lat, "N", "S", 2) .. part(lon, "E", "W", 3)
   end
   -- the FMC's values for the reports (B747_atc_report_model.elements's `c`)
-  function B747_fms_report_ctx()
+  local function report_ctx_make()
     local d = B747_fms_posrep_defaults()
     local ta = tonumber(fmsModules["data"]["transalt"]) or 18000
     local c = {alt = d.alt, next_wpt = d.to, next_eta = d.eta, ensuing = d.nxt, last = d.last, ata = d.ata,
@@ -4646,6 +4676,17 @@ do
       c.endurance = string.format("%02d+%02d", math.floor(min / 60), min % 60)
     end
     c.now = string.format("%02d%02dZ", hh or 0, mm or 0)
+    return c
+  end
+  -- made once a frame (2026-11-05 review 4: before, at each look: VERIFY
+  -- REPORT's three renders a frame and its status's two looks each made
+  -- it, the position report's defaults and the route's text with it); a
+  -- copy to each caller, the emergency's adds to it
+  local ctxT, ctxC = nil, nil
+  function B747_fms_report_ctx()
+    if ctxC == nil or ctxT ~= simDRTime then ctxC, ctxT = report_ctx_make(), simDRTime end
+    local c = {}
+    for k, v in pairs(ctxC) do c[k] = v end
     return c
   end
   -- an uplink's report (nil: no request in it); made when first seen
@@ -5400,7 +5441,8 @@ local function fuel_inputs()
   inp.used[5]=B747DR_engine_used_fuel[4]
   inp.jett=B747DR_fms_jett_l>0.5 or B747DR_fms_jett_r>0.5
   local pred=B747_fmc_route.active and B747_fms_preds() or nil
-  inp.pred_dest=pred and pred.dest and pred.dest.fuel or nil
+  -- (2026-11-05 review 4) none with CRZ ALT at or above MAX (ATA34_2 p.611)
+  inp.pred_dest=pred and not pred.no_fuel and pred.dest and pred.dest.fuel or nil
   local rsv=tonumber(fmsModules["data"].reserves)
   inp.reserves=rsv and rsv*1000 or nil
   return inp
@@ -5944,6 +5986,10 @@ function after_physics()
 	do_flight_start()
 	end
 	flightInit=true
+  -- (2026-11-05) the sim's weight and balance window's load (B744.fms.pages.lua):
+  -- from the start, without the FMCs' power or warm-up (the sim's, as the
+  -- CDU's PAX/CARGO data)
+  B747_fms_wb_update()
   -- the FMCs from the start (6-1/6-2 step 11d2b: fmc_ok for the NDs and the
   -- AFDS before the systems' warm-up)
   update_fmc_link()

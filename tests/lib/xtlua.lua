@@ -116,6 +116,10 @@ Runtime.__index = Runtime
 
 -- opts.types: extra name -> type ("number", "string", "array[n]") for
 -- datarefs the scripts' init files and DataRefs.txt do not know.
+-- opts.lagged: names read as XTLua reads another plugin's dataref (2026-11-05,
+-- X-Plane s259): a read gives the value fetched at that dataref's previous
+-- read, fetched at the end of the frame (the first read 0 or ""); a dataref
+-- not read for a while gives an old value. The others as before (at once).
 function M.new(opts)
     opts = opts or {}
     local rt = setmetatable({
@@ -128,7 +132,11 @@ function M.new(opts)
         log = {},         -- print() output
         control_rows = {}, -- the rows written to xtlua/controlObject (apply_control_objects)
         time = 0,
+        lagged = {},      -- opts.lagged: name -> true
+        lag_cache = {},   -- name -> the value fetched at its last read
+        lag_want = {},    -- name -> read this frame (fetched at the frame's end)
     }, Runtime)
+    for _, name in ipairs(opts.lagged or {}) do rt.lagged[name] = true end
     for name, t in pairs(dataref_types()) do rt.types[name] = t end
     for name, t in pairs(opts.types or {}) do rt.types[name] = {type = t} end
     return rt
@@ -212,6 +220,11 @@ local function c_functions(rt, module)
     c.XTLuaFindDataRef = function(name) return name end
     c.XTLuaGetDataRefType = function(name) return rt:type_of(name) end
     c.XTLuaGetNumber = function(name)
+        if rt.lagged[name] then
+            rt.lag_want[name] = true
+            local v = rt.lag_cache[name]
+            return type(v) == "number" and v or 0
+        end
         local v = rt:raw(name)
         if type(v) == "number" then return v end
         return 0
@@ -227,6 +240,11 @@ local function c_functions(rt, module)
         rt.written[name] = true
     end
     c.XTLuaGetString = function(name)
+        if rt.lagged[name] then
+            rt.lag_want[name] = true
+            local v = rt.lag_cache[name]
+            return type(v) == "string" and v or ""
+        end
         local v = rt:raw(name)
         if type(v) == "string" then return v end
         return ""
@@ -351,6 +369,9 @@ function Runtime:frame(dt)
     end
     self:callout("before_physics")
     self:callout("after_physics")
+    -- the lagged reads' fetch: the values now, for their next reads
+    for name in pairs(self.lag_want) do self.lag_cache[name] = self:raw(name) end
+    self.lag_want = {}
 end
 
 -- XTLua's controlObject (xtlua/controlObject): the mock keeps every row a

@@ -289,6 +289,16 @@ end
 -- APU glue's start power: the batteries' charge, utility bus 4)
 function B747_elec_last_out() return elec_state.out end
 
+-- (2026-11-05 review 3) a new flight: the electrical system's state anew,
+-- as at a load (the batteries' charge, the GCRs' trips, the BTBs' faults,
+-- the IDGs' disconnects, the load shedding, the isolation, the APU start
+-- relay, the chargers' timers). Before, made once when the module loaded:
+-- a new flight without a reload kept them (a flat battery after a cold and
+-- dark on the batteries, a GCR tripped by a fire handle)
+function B747_elec_reset()
+    elec_state = E.new()
+end
+
 function B747_elec_buses()
     read_inputs(elec_inputs)
     local out = E.update(elec_state, elec_inputs, SIM_PERIOD)

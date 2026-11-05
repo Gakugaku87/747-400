@@ -32,6 +32,17 @@ B747DR_fms_vref30=deferred_dataref("laminar/B747/fms/vref30", "number")
 B747DR_fms_fail=deferred_dataref("laminar/B747/fms/fail", "array[2]")
 B747DR_fms_fmc_ok=deferred_dataref("laminar/B747/fms/fmc_ok", "array[2]")
 B747DR_fms_cdu_link=deferred_dataref("laminar/B747/fms/cdu_link", "array[3]")
+-- (2026-11-05) the PAX/CARGO page's load for the sim's weight and balance window (b747_fms_bridge wb_window.c; B744.fms.pages.lua B747_fms_wb_update): passengers in zones A-E (a freighter's main deck freight, kg), cargo FWD, AFT, BULK (kg), kg a passenger, 1 a freighter
+B747DR_wb_load_zones=deferred_dataref("laminar/B747/wb/load_zones", "array[5]")
+B747DR_wb_load_cargo=deferred_dataref("laminar/B747/wb/load_cargo", "array[3]")
+B747DR_wb_load_pax_kg=deferred_dataref("laminar/B747/wb/load_pax_kg", "number")
+B747DR_wb_load_freighter=deferred_dataref("laminar/B747/wb/load_freighter", "number")
+-- (2026-11-05) the chocks in or out, as the CDU's GROUND HANDLING L2 (B744.fms.pages.lua B747_fms_toggle_chocks), for the sim's ground handling window (b747_fms_bridge gh_window.c)
+-- (created here as the other init scripts' deferred_command do; the xt script gives the handler)
+local function deferred_command(name, desc)
+	return XLuaCreateCommand(name, desc)
+end
+B747CMD_chocks_toggle=deferred_command("laminar/B747/gear/chocks_toggle", "Chocks in or out")
 B747DR_FMSdata="{}"
 irs_line1=deferred_dataref("laminar/B747/irs/line1", "string")
 irs_line2=deferred_dataref("laminar/B747/irs/line2", "string") 

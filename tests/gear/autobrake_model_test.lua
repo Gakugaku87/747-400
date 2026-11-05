@@ -85,8 +85,10 @@ do
 end
 
 -- the disarms: a thrust lever advanced after idle on the ground; the
--- speedbrakes stowed after their deployment; the normal pressure lost while
--- applying with the decel short; but not losing system 4 armed in the air
+-- speedbrakes stowed after their deployment; (2026-11-05 review 4) the
+-- normal brake pressure lost, armed or applying, at once (FCOM p.1515-1516;
+-- before, ATA29_32's: armed, losing system 4 did not trip it, p.518;
+-- applying, only with the decel 1 ft/s² short, p.523)
 do
     local s, inp = landing(5)
     touchdown(inp)
@@ -103,9 +105,9 @@ do
     T.equal(out.dial, M.DISARM, "speedbrakes stowed on the ground: DISARM")
     s, inp = landing(5)
     inp.normal = false
-    out = run(s, inp, 1)
-    T.equal(out.dial, 5, "system 4 lost in the air: the selector stays armed")
-    T.check(out.autobrakes, "armed but disabled: AUTOBRAKES")
+    out = run(s, inp, 0.1)
+    T.equal(out.dial, M.DISARM, "system 4 lost armed in the air: DISARM at once (before: stayed armed)")
+    T.check(out.autobrakes, "AUTOBRAKES")
     touchdown(inp)
     out = run(s, inp, 5, flight(30))
     T.equal(out.cmd, 0, "no normal brakes: no autobraking")
@@ -113,8 +115,8 @@ do
     touchdown(inp)
     run(s, inp, 5, flight(30))
     inp.normal = false
-    out = run(s, inp, 1, flight(30))
-    T.equal(out.dial, M.DISARM, "the normal pressure lost while applying, the decel short: DISARM")
+    out = run(s, inp, 0.1, flight(30))
+    T.equal(out.dial, M.DISARM, "the normal pressure lost while applying at its decel: DISARM at once (before: kept)")
 end
 
 -- the latch: selected on the ground with thrust above idle, or with the
@@ -163,6 +165,25 @@ do
     out = run(s, inp, 3, flight(20))
     T.equal(out.cmd, 0, "the pedals: RTO disabled")
     T.equal(out.dial, M.RTO, "the selector stays at RTO")
+    -- (2026-11-05 review 4) without the normal brake pressure RTO does not
+    -- work: not armed, AUTOBRAKES (FCOM p.1515, p.1521: inoperative); lost
+    -- while applying, its pressure let go
+    s, inp = M.new(), M.inputs()
+    inp.dial = M.RTO
+    inp.normal = false
+    out = run(s, inp, 0.1)
+    T.check(not out.armed and out.autobrakes and out.memo == nil,
+        "RTO without the normal brakes: not armed, AUTOBRAKES (before: no message)")
+    s, inp = M.new(), M.inputs()
+    inp.dial = M.RTO
+    inp.levers = {0.9, 0.9, 0.9, 0.9}
+    inp.gs_kt = 100
+    run(s, inp, 1)
+    inp.levers = {0, 0, 0, 0}
+    run(s, inp, 0.1, flight(20))
+    inp.normal = false
+    out = run(s, inp, 3, flight(20))
+    T.equal(out.cmd, 0, "the normal pressure lost in the RTO: its pressure let go (before: kept)")
     s, inp = M.new(), M.inputs()
     inp.dial = M.RTO
     run(s, inp, 0.1)

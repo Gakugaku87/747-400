@@ -35,7 +35,30 @@ local RATIO_SAME = 0.01         -- X-Plane's ratio this close to what was writte
 
 local sb_state = B.new()
 local sb_inputs = B.inputs()
-local ratio_w1, ratio_w2 = nil, nil     -- the ratio written last frame and the one before
+-- (2026-11-05 review 3) the values written the last WRITE_HIST frames, to
+-- tell X-Plane's late read of our own writes from an outside change: XTLua's
+-- read can lag more than a frame (a slow frame), and in a fast move a value
+-- three frames old differed from the last two written by more than the
+-- margin, so it was taken for an outside change (before, the last two only)
+local WRITE_HIST = 8
+local function hist_new() return {n = 0} end
+local function hist_add(h, v)
+    h.n = h.n + 1
+    h[(h.n - 1) % WRITE_HIST + 1] = v
+end
+-- within the band of the values written (true before any)
+local function hist_has(h, v, eps)
+    local m = math.min(h.n, WRITE_HIST)
+    if m == 0 then return true end
+    local lo, hi = math.huge, -math.huge
+    for k = 1, m do
+        local w = h[k]
+        if w < lo then lo = w end
+        if w > hi then hi = w end
+    end
+    return v >= lo - eps and v <= hi + eps
+end
+local ratio_hist = hist_new()           -- the ratios written
 local still_t = 0                       -- time since the actuator last moved the lever
 
 local function flag(v)
@@ -62,7 +85,7 @@ end
 
 function B747_speedbrake_flight_start()
     sb_state = B.new()
-    ratio_w1, ratio_w2 = nil, nil
+    ratio_hist = hist_new()
 end
 
 function B747_speedbrake()
@@ -70,7 +93,7 @@ function B747_speedbrake()
     -- X-Plane's ratio changed by something else (a speedbrake axis): the
     -- lever follows (the init script's handler leaves the write alone)
     local xr = simDR_speedbrake_ratio_control
-    if ratio_w1 and math.abs(xr - ratio_w1) > RATIO_SAME and math.abs(xr - (ratio_w2 or ratio_w1)) > RATIO_SAME then
+    if not hist_has(ratio_hist, xr, RATIO_SAME) then
         if B747DR_speedbrake_auto_ext ~= 1 then B747DR_speedbrake_auto_ext = 1 end
         still_t = 0
         B747DR_speedbrake_lever = lever_of(xr)
@@ -108,7 +131,7 @@ function B747_speedbrake()
     -- (a float: 0 and 1 are exact, so a residue near them goes too)
     local r = ratio_of(out.lever)
     if xr ~= r and (math.abs(xr - r) > 1e-4 or r == 0 or r == 1) then simDR_speedbrake_ratio_control = r end
-    ratio_w2, ratio_w1 = ratio_w1, r
+    hist_add(ratio_hist, r)
 
     -- (FCOM p.957-958; ATA27 p.184, p.205, p.740)
     put(B747DR_CAS_advisory_status, ADV_SPEEDBRAKE_AUTO, flag(out.speedbrake_auto))
