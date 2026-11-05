@@ -101,7 +101,9 @@ function B747_fcu()
         inp.on_ground = B747DR_fcu_pri_gnd == 1
     end
     local gear_moving = false
-    for i = 0, 2 do
+    -- (2026-11-05 review 4) all five gears (before, the nose and body
+    -- gears only: 0 to 2)
+    for i = 0, 4 do
         local r = simDR_fcu_gear[i]
         if r > 0.01 and r < 0.99 then gear_moving = true end
     end
