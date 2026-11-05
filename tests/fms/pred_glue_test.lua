@@ -293,14 +293,20 @@ local _, eh, em = fms.ns.get_ETA_for_Distance(0, r.dest.t)
 T.check(line(7):find(string.format("%02d%02dz/%.1f$", eh, em, r.dest.fuel / 1000)), "the destination's ETA and fuel: " .. line(7))
 T.check(small(6):find("ZZAA ETA/FUEL"), "the destination's identifier: " .. small(6))
 
--- CRZ ALT above MAX: no predictions (ATA34_2 p.611)
+-- CRZ ALT above MAX: the fuel predictions not shown (ATA34_2 p.611), the
+-- rest made (2026-11-05 review 4: before, none at all: no path, no T/D, no
+-- VNAV descent at CRZ ALT = MAX)
 rt:set("sim/flightmodel/weight/m_total", 390000)
 key("func_key/index")
 enter("FL410", "R1")
 T.check(pad():find("^MAX ALT FL"), "FL410 at 390 t: MAX ALT: " .. pad())
 clear()
 frames(11)
-T.equal(fms.ns.B747_fms_preds(), nil, "above MAX: no predictions")
+local rMax = fms.ns.B747_fms_preds()
+T.check(rMax ~= nil and rMax.no_fuel == true, "above MAX: the predictions, their fuel not shown (before: none)")
+key("func_key/des")
+key("func_key/next_pg")
+T.check(line(7):find("%d%d%d%dz/$"), "the CRZ page's ETA/FUEL: the ETA alone: " .. line(7))
 
 -- the FMC's VNAV (step 9b; notes §56) on the ground: the climb, VNAV SPD
 -- with THR REF, the FMC altitude CRZ ALT (the SID's constraints at or

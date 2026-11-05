@@ -274,15 +274,21 @@ local function progress_pred(pred, mult)
     local _, h, m = get_ETA_for_Distance(0, t)
     return string.format("%02d%02d", h, m)
   end
+  -- the fuel blank with CRZ ALT at or above MAX (ATA34_2 p.611; 2026-11-05
+  -- review 4)
+  local function fuel(kg)
+    if pred.no_fuel then return "     " end
+    return string.format("%5.1f", kg * mult / 1000)
+  end
   local function row(name, p)
     if not p then return string.format("%-5s", name or "") end
-    return string.format("%-5s   %4d %s  %5.1f", name, math.floor(p.x + 0.5), eta(p.t), p.fuel * mult / 1000)
+    return string.format("%-5s   %4d %s  %s", name, math.floor(p.x + 0.5), eta(p.t), fuel(p.fuel))
   end
   local toRow = to and row(legs[to].fix.ident, pred.pts[to]) or ""
   local nextRow = nxt and row(legs[nxt].fix.ident, pred.pts[nxt]) or ""
   local dest = B747_fmc_route.rte.dest
-  local destRow = string.format("%-4s    %4d %s  %5.1f", dest and dest.ident or "", math.floor(pred.dest.x + 0.5),
-    eta(pred.dest.t), pred.dest.fuel * mult / 1000)
+  local destRow = string.format("%-4s    %4d %s  %s", dest and dest.ident or "", math.floor(pred.dest.x + 0.5),
+    eta(pred.dest.t), fuel(pred.dest.fuel))
   local ex, et
   -- (step 9h4b) LEVEL AT in the engine-out driftdown, its level off (FCOM
   -- p.1373; FMSPG p.3.4-19); TO T/C on the ground and in the climb, by the

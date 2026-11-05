@@ -1638,13 +1638,17 @@ function update_preds()
   predNext = simDRTime + 10
   local s = B747_fms_pred_input(B747BR_cruiseAlt)
   predField = s and s.field or nil
-  -- none with CRZ ALT at or above MAX (ATA34_2 p.611); (step 9h4b) with
-  -- ENG OUT active above the engine-out MAX (CRZ ALT set to it: on)
-  if s and s.crz >= B747_perf_db.max_alt(s.t, s.gw, s.isa) then s = nil end
+  -- CRZ ALT at or above MAX: the fuel predictions not shown "to prevent bad
+  -- predictions" (ATA34_2 p.611), the rest made (no_fuel: 2026-11-05 review
+  -- 4; before, none at all: no path, no T/D, no VNAV descent at CRZ ALT =
+  -- MAX); (step 9h4b) with ENG OUT active above the engine-out MAX (CRZ ALT
+  -- set to it: on) none
+  local noFuel = s ~= nil and s.crz >= B747_perf_db.max_alt(s.t, s.gw, s.isa)
   if s and s.eo and s.crz > B747_fms_eo_crz_max() + 1 then s = nil end
   predResult = s and B747_pred_model.predict(s) or nil
   -- (step 9h5b) RTA's speed, the predictions with it
   predResult = rta_update(s, predResult)
+  if predResult then predResult.no_fuel = noFuel or nil end
   -- (FIX INFO, 2026-11-04) the profile along the route and the legs it is on;
   -- (OFFPATH DES) the input, its descent's speeds and weight
   predProfile = predResult and B747_pred_model.profile(predResult, s) or nil
@@ -5401,7 +5405,8 @@ local function fuel_inputs()
   inp.used[5]=B747DR_engine_used_fuel[4]
   inp.jett=B747DR_fms_jett_l>0.5 or B747DR_fms_jett_r>0.5
   local pred=B747_fmc_route.active and B747_fms_preds() or nil
-  inp.pred_dest=pred and pred.dest and pred.dest.fuel or nil
+  -- (2026-11-05 review 4) none with CRZ ALT at or above MAX (ATA34_2 p.611)
+  inp.pred_dest=pred and not pred.no_fuel and pred.dest and pred.dest.fuel or nil
   local rsv=tonumber(fmsModules["data"].reserves)
   inp.reserves=rsv and rsv*1000 or nil
   return inp

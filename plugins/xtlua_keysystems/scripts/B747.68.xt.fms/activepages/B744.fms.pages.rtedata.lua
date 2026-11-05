@@ -40,7 +40,10 @@ local function rd_rows(pgNo)
       local p = pred and not (pred.ed_i and i > pred.ed_i) and pred.pts[i]
       if p then
         local _, h, m = get_ETA_for_Distance(0, p.t)
-        small[k] = string.format("%02d%02dz         %5.1f     ", h, m, perf_out(p.fuel / 1000))
+        -- the fuel blank with CRZ ALT at or above MAX (ATA34_2 p.611;
+        -- 2026-11-05 review 4)
+        local f = pred.no_fuel and "     " or string.format("%5.1f", perf_out(p.fuel / 1000))
+        small[k] = string.format("%02d%02dz         %s     ", h, m, f)
       end
     end
   end
