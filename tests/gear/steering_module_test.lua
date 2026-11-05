@@ -11,25 +11,35 @@
 local T = dofile("tests/lib/check.lua")("steering_module")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
-local rt = xtlua.new()
-rt:load("plugins/xtlua/scripts/B747.10.xt.gear/B747.10.xt.gear.lua")
+local MAIN = "plugins/xtlua/scripts/B747.10.xt.gear/B747.10.xt.gear.lua"
 local CMD = "sim/flightmodel2/gear/tire_steer_command_deg"
 local PEDAL, TILLER = "laminar/B747/flt_ctrls/rudder_input", "laminar/B747/gear/steering/tiller"
 local PT = "laminar/B747/gear/steering/pedal_tiller"
 local UNLOCKED = "laminar/B747/gear/steering/body_unlocked"
 local GS = "sim/flightmodel/position/groundspeed"
+local AVAIL, VALUE = "sim/joystick/joy_mapped_axis_avail", "sim/joystick/joy_mapped_axis_value"
+local ASSIGN, RAW = "sim/joystick/joystick_axis_assignments", "sim/joystick/joystick_axis_values"
+local REVERSE = "sim/joystick/joystick_axis_reverse"
+
 -- on the ground: the PSEU in ground mode with the nose gear compressed;
 -- system 1 pressurised, the gear lever DN
-rt:set("laminar/B747/hydraulics/pressure_1", 3000)
-rt:set("laminar/B747/hydraulics/pressure_4", 3000)
-for i = 0, 4 do
-    rt:set("sim/flightmodel2/gear/on_ground", i, 1)
-    rt:set("sim/flightmodel2/gear/deploy_ratio", i, 1)
+local function on_ground(r)
+    r:set("laminar/B747/hydraulics/pressure_1", 3000)
+    r:set("laminar/B747/hydraulics/pressure_4", 3000)
+    for i = 0, 4 do
+        r:set("sim/flightmodel2/gear/on_ground", i, 1)
+        r:set("sim/flightmodel2/gear/deploy_ratio", i, 1)
+    end
+    for i = 1, 4 do r:set("sim/flightmodel2/gear/eagle_claw_angle_deg", i, 0.9) end
+    r:callout("aircraft_load")
+    r:callout("flight_start")
 end
-for i = 1, 4 do rt:set("sim/flightmodel2/gear/eagle_claw_angle_deg", i, 0.9) end
-rt:callout("aircraft_load")
-rt:callout("flight_start")
-local function run(seconds) for _ = 1, math.floor(seconds * 30 + 0.5) do rt:frame(1 / 30) end end
+local function run_on(r, seconds) for _ = 1, math.floor(seconds * 30 + 0.5) do r:frame(1 / 30) end end
+
+local rt = xtlua.new()
+rt:load(MAIN)
+on_ground(rt)
+local function run(seconds) run_on(rt, seconds) end
 
 run(1)
 T.equal(rt:get("laminar/B747/gear/air_ground/ng_compressed"), 1, "the PSEU: nose gear compressed")
@@ -58,18 +68,18 @@ T.equal(rt:get(CMD, 3), 0, "the wing gear: none")
 T.equal(rt:get(UNLOCKED), 1, "the trucks unlocked")
 T.equal(rt:get("laminar/B747/CAS/advisory_status", 43), 0, "commanded: no >BODY GEAR STRG")
 -- X-Plane's tiller axis: joy_mapped_axis index 37
-rt:set("sim/joystick/joy_mapped_axis_avail", 37, 1)
-rt:set("sim/joystick/joy_mapped_axis_value", 37, 0.5)
+rt:set(AVAIL, 37, 1)
+rt:set(VALUE, 37, 0.5)
 run(6)
 T.near(rt:get(CMD, 0), 35, 1e-6, "X-Plane's tiller axis at 0.5: 35 degrees")
 T.near(rt:get(CMD, 2), -3.9, 1e-6, "the body gear 3.9 degrees left")
-rt:set("sim/joystick/joy_mapped_axis_value", 37, 0)
+rt:set(VALUE, 37, 0)
 rt:set(PEDAL, 0)
 run(4)
 T.near(rt:get(CMD, 0), 0, 1e-6, "tiller and pedals centred")
 T.equal(rt:get(UNLOCKED), 0, "the trucks centred and locked")
 -- the gear lever not DN: no gear down pressure, no steering
-rt:set("sim/joystick/joy_mapped_axis_value", 37, 1)
+rt:set(VALUE, 37, 1)
 rt:set("laminar/B747/actuator/gear_handle", 1)
 run(2)
 T.near(rt:get(CMD, 0), 0, 1e-6, "lever OFF: no steering (system 1's gear down pressure)")
@@ -78,71 +88,16 @@ rt:set("laminar/B747/hydraulics/pressure_1", 0)
 run(2)
 T.near(rt:get(CMD, 0), 0, 1e-6, "system 1 lost: no steering")
 rt:set("laminar/B747/hydraulics/pressure_1", 3000)
-rt:set("sim/joystick/joy_mapped_axis_value", 37, 0)
+rt:set(VALUE, 37, 0)
 -- over 20 kt: the body gear disarmed
 rt:set(GS, 11)
-rt:set("sim/joystick/joy_mapped_axis_value", 37, 1)
+rt:set(VALUE, 37, 1)
 run(5)
 T.near(rt:get(CMD, 0), 70, 1e-6, "21 kt, full tiller: 70")
 T.equal(rt:get(CMD, 2), 0, "21 kt: no body gear steering (FCOM p.1513)")
-rt:set("sim/joystick/joy_mapped_axis_value", 37, 0)
+rt:set(VALUE, 37, 0)
 rt:set(GS, 0)
 run(4)
--- (2026-11-05) the user's tiller (another PC, X-Plane 12.4.4) did not
--- steer, the pedals did: the hardware axis assigned the nosewheel tiller
--- (joystick_axis_assignments 37) read raw when joy_mapped_axis gives
--- nothing, over the range seen, reversed as set, with a 5 % null zone
-local AX = 6
-local RAW = "sim/joystick/joystick_axis_values"
-rt:set("sim/joystick/joy_mapped_axis_avail", 37, 0)
-rt:set("sim/joystick/joystick_axis_assignments", AX, 37)
-rt:set("sim/joystick/joystick_axis_minimum", AX, 0.1)
-rt:set("sim/joystick/joystick_axis_maximum", AX, 0.9)
-rt:set(RAW, AX, 0.5)
-rt:set(PT, 1)
-rt:set(PEDAL, 1)
-run(6)
-T.near(rt:get(CMD, 0), 7, 1e-6, "a tiller on axis 6, centred: full pedal 7 degrees (a tiller axis: not the pedals as the tiller)")
-rt:set(PEDAL, 0)
-rt:set(RAW, AX, 0.9)
-run(6)
-T.near(rt:get(CMD, 0), 70, 1e-6, "axis 6 at the top of its range: full right, 70")
-rt:set(RAW, AX, 0.3)
-run(6)
-local part = 70 * (0.5 - 0.05) / 0.95
-T.near(rt:get(CMD, 0), -part, 1e-6, "a quarter of its range: half left, less the null zone")
-rt:set("sim/joystick/joystick_axis_reverse", AX, 1)
-run(6)
-T.near(rt:get(CMD, 0), part, 1e-6, "reversed: half right")
--- (2026-11-05) the reverse flag the axis's number (FlyWithLua's sample: above 0)
-rt:set("sim/joystick/joystick_axis_reverse", AX, AX)
-run(6)
-T.near(rt:get(CMD, 0), part, 1e-6, "reversed by the axis's number: half right")
-rt:set("sim/joystick/joystick_axis_reverse", AX, 0)
--- the range seen in the device's units (or X-Plane 12's 9.9e9 before
--- calibrating): not a ratio's, the value as it is
-rt:set("sim/joystick/joystick_axis_minimum", AX, 0)
-rt:set("sim/joystick/joystick_axis_maximum", AX, 16383)
-rt:set(RAW, AX, 0.25)
-run(6)
-T.near(rt:get(CMD, 0), -part, 1e-6, "min/max in device units: the ratio as it is (0.25: half left)")
-rt:set("sim/joystick/joystick_axis_minimum", AX, 0.1)
-rt:set("sim/joystick/joystick_axis_maximum", AX, 0.9)
-rt:set(RAW, AX, 0.52)
-run(6)
-T.near(rt:get(CMD, 0), 0, 1e-6, "just off its centre: the null zone")
-rt:set("sim/joystick/joy_mapped_axis_avail", 37, 1)
-rt:set("sim/joystick/joy_mapped_axis_value", 37, -0.5)
-rt:set(RAW, AX, 0.9)
-run(6)
-T.near(rt:get(CMD, 0), -35, 1e-6, "joy_mapped_axis moving: it first (X-Plane's own null zone and response)")
--- the hardware axis unassigned (X-Plane's axis 37 again, centred, as before)
-rt:set("sim/joystick/joy_mapped_axis_value", 37, 0)
-rt:set("sim/joystick/joystick_axis_assignments", AX, 0)
-rt:set(RAW, AX, 0.5)
-rt:set(PT, 0)
-run(6)
-T.near(rt:get(CMD, 0), 0, 1e-6, "the raw axis gone: centred")
 -- failures
 rt:set("laminar/B747/gear/fail/body_steering", 1)
 run(5.5)
@@ -156,15 +111,19 @@ T.equal(rt:get("laminar/B747/CAS/advisory_status", 43), 0, "locked: no >BODY GEA
 T.equal(rt:get("laminar/B747/CAS/status_status", 96), 1, "PEDAL STEERING (p.600)")
 rt:set("laminar/B747/gear/fail/pedal_steering", 0)
 -- in the air: centred by the cams
-rt:set("sim/joystick/joy_mapped_axis_value", 37, 1)
+rt:set(VALUE, 37, 1)
 run(2)
 for i = 0, 4 do rt:set("sim/flightmodel2/gear/on_ground", i, 0) end
 for i = 1, 4 do rt:set("sim/flightmodel2/gear/eagle_claw_angle_deg", i, 8) end
 run(5)
 T.equal(rt:get("laminar/B747/gear/air_ground/ng_compressed"), 0, "airborne: the nose gear extended")
 T.near(rt:get(CMD, 0), 0, 1e-6, "airborne: centred, the tiller does nothing (ATA29_32 p.570)")
--- (2026-11-05) the user's report (Output/B747_steering.txt): the assignments
--- with X-Plane's mapped functions, then a line when an axis moves
+
+-- (2026-11-05) the user's tiller (another PC, X-Plane 12.4.4): a hardware
+-- axis (28) assigned the nosewheel tiller (37), X-Plane's processed value in
+-- joy_mapped_axis_value[37] with joy_mapped_axis_avail[37] kept at 0. The
+-- raw axis until X-Plane's value moves (a ratio, reversed as set, a 5 % null
+-- zone), then X-Plane's value
 local report = {}
 local real_open = io.open
 io.open = function(path, mode)
@@ -174,24 +133,80 @@ io.open = function(path, mode)
     end
     return real_open(path, mode)
 end
-local rt2 = xtlua.new()
-rt2:load("plugins/xtlua/scripts/B747.10.xt.gear/B747.10.xt.gear.lua")
-rt2:set("sim/joystick/joystick_axis_assignments", 2, 3)
-rt2:set("sim/joystick/joystick_axis_assignments", 28, 37)
-rt2:set("sim/joystick/joy_mapped_axis_avail", 3, 1)
-rt2:set(RAW, 2, 0.5)
-rt2:set(RAW, 28, 0.5)
-rt2:callout("aircraft_load")
-rt2:callout("flight_start")
-for _ = 1, 60 do rt2:frame(1 / 30) end
-rt2:set(RAW, 28, 0.9)
-for _ = 1, 30 do rt2:frame(1 / 30) end
+local AX = 28
+local r2 = xtlua.new()
+r2:load(MAIN)
+r2:set(ASSIGN, 2, 3)
+r2:set(ASSIGN, AX, 37)
+r2:set(RAW, 2, 0.5)
+r2:set(RAW, AX, 0.5)
+on_ground(r2)
+r2:set(PEDAL, 1)
+run_on(r2, 6)
+T.near(r2:get(CMD, 0), 7, 1e-6, "a tiller on axis 28, centred: full pedal 7 degrees (a tiller axis: not the pedals as the tiller)")
+r2:set(PEDAL, 0)
+r2:set(RAW, AX, 1)
+run_on(r2, 6)
+T.near(r2:get(CMD, 0), 70, 1e-6, "axis 28 at its stop, X-Plane's value still: full right, 70")
+r2:set(RAW, AX, 0.25)
+run_on(r2, 6)
+local part = 70 * (0.5 - 0.05) / 0.95
+T.near(r2:get(CMD, 0), -part, 1e-6, "a quarter: half left, less the null zone")
+r2:set(REVERSE, AX, AX)
+run_on(r2, 6)
+T.near(r2:get(CMD, 0), part, 1e-6, "reversed by the axis's number (FlyWithLua's sample: above 0): half right")
+r2:set(REVERSE, AX, 0)
+-- the range seen is not used (a ratio already; 9.9e9 before calibrating)
+r2:set("sim/joystick/joystick_axis_minimum", AX, 9.9e9)
+r2:set("sim/joystick/joystick_axis_maximum", AX, -9.9e9)
+run_on(r2, 6)
+T.near(r2:get(CMD, 0), -part, 1e-6, "min/max not calibrated: the ratio as it is")
+r2:set(RAW, AX, 0.52)
+run_on(r2, 6)
+T.near(r2:get(CMD, 0), 0, 1e-6, "just off its centre: the null zone")
+-- X-Plane's value moving with avail 0 (12.4.4, the user's 0.717 at 0.859)
+r2:set(RAW, AX, 0.859)
+r2:set(VALUE, 37, 0.717)
+run_on(r2, 6)
+T.near(r2:get(CMD, 0), 0.717 * 70, 1e-6, "X-Plane's value moving, avail 0: its 0.717, 50.2 degrees")
+r2:set(RAW, AX, 0.416)
+r2:set(VALUE, 37, -0.078)
+run_on(r2, 6)
+T.near(r2:get(CMD, 0), -0.078 * 70, 1e-6, "then X-Plane's value (its null zone and response), not the raw axis's -0.125")
+r2:set(VALUE, 37, 0)
+r2:set(RAW, AX, 0.9)
+run_on(r2, 6)
+T.near(r2:get(CMD, 0), 0, 1e-6, "X-Plane's value centred: centred, the raw axis no longer read")
+-- the report: the assignments when they change, nothing else
+r2:set(ASSIGN, 2, 0)
+run_on(r2, 3)
 io.open = real_open
 local text = table.concat(report)
-T.check(text:find("joystick axes (axis=assignment): 2=3 28=37; the tiller (37) on axis 28; X-Plane's mapped functions (joy_mapped_axis_avail 1): 3\n", 1, true) ~= nil,
-    "the report: the assignments, the tiller's axis, X-Plane's mapped functions")
-T.check(text:find("raw axis 28 value 0.500 min 0.000 max 0.000 reverse 0; tiller used 0.000; pedal 0.000; nose 0.0 deg (X-Plane's 0.0, override 0); axes: raw 2 0.500, raw 28 0.500\n", 1, true) ~= nil,
-    "the report's first line: every assigned axis")
-T.check(text:find("moved: raw 28 0.900\n", 1, true) ~= nil, "the tiller moved: its axis")
-T.check(select(2, text:gsub(" tiller: ", "")) == 2, "a line only when something moves")
+T.check(text:find("joystick axes (axis=assignment): 2=3 28=37; the tiller (37) on axis 28\n", 1, true) ~= nil,
+    "the report: the assignments and the tiller's axis")
+T.check(text:find("joystick axes (axis=assignment): 28=37; the tiller (37) on axis 28\n", 1, true) ~= nil,
+    "a line when the assignments change")
+T.check(select(2, text:gsub("joystick axes", "")) == 2, "only those two lines")
+
+-- no hardware axis seen (a tiller X-Plane processes from a device the
+-- assignments do not show): the pedals as the tiller until X-Plane's value
+-- moves, then the tiller and the pedals as the aircraft's
+local r3 = xtlua.new()
+r3:load(MAIN)
+on_ground(r3)
+r3:set(PEDAL, 1)
+run_on(r3, 6)
+T.near(r3:get(CMD, 0), 70, 1e-6, "no tiller seen: the pedals as the tiller, 70")
+r3:set(PEDAL, 0)
+r3:set(VALUE, 37, 0.5)
+run_on(r3, 6)
+T.near(r3:get(CMD, 0), 35, 1e-6, "X-Plane's tiller value moving, no axis assigned: 35")
+r3:set(VALUE, 37, 0)
+r3:set(PEDAL, 1)
+run_on(r3, 6)
+T.near(r3:get(CMD, 0), 7, 1e-6, "a tiller seen: the pedals as the aircraft's, 7")
+r3:set(PEDAL, 0)
+r3:set(TILLER, 1)
+run_on(r3, 6)
+T.near(r3:get(CMD, 0), 0, 1e-6, "a tiller seen: the tiller dataref not read")
 T.done()
