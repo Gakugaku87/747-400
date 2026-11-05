@@ -653,6 +653,7 @@ function defaultFMSData()
   rpttimemm="**",
   acarsAddress="*******",
   atc="****",
+  wxapt="****",   -- (2026-11-05 review 4) the ACARS WEATHER page's airport
   grwt="***.*   ",
   crzalt=string.rep("*", 5),
   acarsMessage="",

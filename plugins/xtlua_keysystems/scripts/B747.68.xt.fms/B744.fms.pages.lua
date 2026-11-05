@@ -2623,14 +2623,17 @@ function fmsFunctions.setdata(fmsO,value)
 		--setFMSData(value,fmsO["scratchpad"])
 		
 		fmsFunctions["acarsLogonATC"](fmsO,fmsO["scratchpad"])
-	elseif value=="fltdepatc" then
-		--setFMSData("atc",fmsModules.data["fltdep"])
-		
-		fmsFunctions["acarsLogonATC"](fmsO,fmsModules.data["fltdep"])
-	elseif value=="fltdstatc" then
-		--setFMSData("atc",fmsModules.data["fltdst"])
-		
-		fmsFunctions["acarsLogonATC"](fmsO,fmsModules.data["fltdst"])	
+	elseif value=="wxdep" or value=="wxdst" then
+		-- (2026-11-05 review 4) the ACARS WEATHER page's ORIGIN and
+		-- DESTINATION: the request's airport (before, an ATC logon there)
+		local apt=fmsModules.data[value=="wxdep" and "fltdep" or "fltdst"]
+		if not string.match(apt,"^%u%u%u%u$") then fmsO["notify"]="INVALID ENTRY" return end
+		setFMSData("wxapt",apt)
+	elseif value=="wxapt" and fmsO["scratchpad"]~="" then
+		-- its AIRPORT: an ICAO identifier, else INVALID ENTRY (before, the
+		-- ATC logon's facility: anything else logged ATC off)
+		if not string.match(fmsO["scratchpad"],"^%u%u%u%u$") then fmsO["notify"]="INVALID ENTRY" return end
+		setFMSData("wxapt",fmsO["scratchpad"])
 	elseif value=="acarsEMERSOB" and string.len(fmsO["scratchpad"]) > 0 then
 		tVal=tonumber(fmsO["scratchpad"])
 		if tVal==nil or tVal<1 or tVal>450 then
@@ -2638,9 +2641,13 @@ function fmsFunctions.setdata(fmsO,value)
 		else
 			setFMSData("acarsEMERSOB",fmsO["scratchpad"])
 		end
-	elseif value=="metarreq" then
+	elseif value=="metarreq" or value=="tafreq" then
+		-- (2026-11-05 review 4) for the WEATHER page's airport (before, the
+		-- ATC logon's facility); none chosen: INVALID ENTRY
 		if acarsSystem.provider.loggedOn()~="ACCEPTED" then fmsO["notify"]="RE-LOGON TO ATC COMM" return end
-		fmsFunctions["acarsATCRequest"](fmsO,"REQUEST METAR") --request metar	
+		local apt=fmsModules.data["wxapt"]
+		if not string.match(apt,"^%u%u%u%u$") then fmsO["notify"]="INVALID ENTRY" return end
+		fmsFunctions["acarsATCRequest"](fmsO,value=="metarreq" and "REQUEST METAR" or "REQUEST TAF",apt)
 		fmsFunctions["setpage_no"](fmsO,"VIEWUPACARS_1") --then go to the message page
 	elseif value=="sendarmedacarsnr" then
 		if not(fmsFunctions.acarsDataReady(fmsO)) then return end	
@@ -2656,10 +2663,6 @@ function fmsFunctions.setdata(fmsO,value)
 		fmsFunctions["acarsSendATCMessage"](fmsO,ln,"Y") --send message
 		setFMSData("acarsMessage","")
 		fmsFunctions["setpage_no"](fmsO,"VIEWDOWNACARS_1") --then go to the sent message page
-	elseif value=="tafreq" then	
-		if acarsSystem.provider.loggedOn()~="ACCEPTED" then fmsO["notify"]="RE-LOGON TO ATC COMM" return end
-		fmsFunctions["acarsATCRequest"](fmsO,"REQUEST TAF")	--request metar
-		fmsFunctions["setpage_no"](fmsO,"VIEWUPACARS_1") --then go to the message page
    elseif fmsO["scratchpad"]=="" and del==false then
       cVal=getFMSData(value)
     
@@ -2800,10 +2803,22 @@ function fmsFunctions.showmessage(fmsO,value)
     fmsFunctions.setpage(fmsO,"ATCUPLINK")
     return
   end
-  fmsO["inCustomFMC"]=true
+  -- its page 1 (2026-11-05 review 4: before, pgNo set and switchCustomMode
+  -- put the list's page number back: from the list's page 2, the message
+  -- at its page 2)
+  fmsO["targetCustomFMC"]=true
   fmsO["targetPage"]="VIEWACARSMSG"
-  fmsO["pgNo"]=1
+  fmsO["targetpgNo"]=1
   run_after_time(switchCustomMode, 0.5)
+end
+-- (2026-11-05 review 4) the ACARS uplink list's L1-L4 (acars.lua): the
+-- message on that line of this CDU's page, four a page, the newest first
+-- (acarsSystem.getUpMessages's order); an empty line nothing
+function fmsFunctions.showupmsg(fmsO,value)
+  local n=table.getn(acarsSystem.messages.values)
+  local i=n-((fmsO["pgNo"] or 1)-1)*4-(value-1)
+  if i<1 or i>n then return end
+  fmsFunctions.showmessage(fmsO,i)
 end
 
 function fmsFunctions.doCMD(fmsO,value)
