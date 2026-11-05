@@ -6,7 +6,8 @@
 -- and enters it as that page does (req_field, req_value, req_id): the
 -- passengers' total round the zones as the page's L1, a zone, cargo, kg a
 -- passenger (SIM CONFIG's); X-Plane's payload and CG shift follow; on the
--- ground only.
+-- ground only. The ground handling window's chocks (laminar/B747/gear/
+-- chocks_toggle) as GROUND HANDLING's L2: out, a refuelling stops.
 local T = dofile("tests/lib/check.lua")("wb_window_fmc")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
@@ -97,4 +98,20 @@ rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 req(0, 100)
 T.equal(zones(), 350, "in the air: the passengers kept")
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+
+-- the chocks' command, as GROUND HANDLING's L2
+local ch0 = rt:get("laminar/B747/gear/chocked")
+rt:command("laminar/B747/gear/chocks_toggle")
+frames(0.2)
+T.equal(rt:get("laminar/B747/gear/chocked"), 1 - ch0, "chocks_toggle: the chocks " .. (ch0 == 1 and "out" or "in"))
+if rt:get("laminar/B747/gear/chocked") == 0 then
+    rt:command("laminar/B747/gear/chocks_toggle")
+    frames(0.2)
+end
+T.equal(rt:get("laminar/B747/gear/chocked"), 1, "chocks in")
+rt:set("laminar/B747/fuel/refuel", 5000)
+rt:command("laminar/B747/gear/chocks_toggle")
+frames(0.2)
+T.equal(rt:get("laminar/B747/gear/chocked"), 0, "chocks out")
+T.equal(rt:get("laminar/B747/fuel/refuel"), 0, "and the refuelling stopped, as the CDU's")
 T.done()

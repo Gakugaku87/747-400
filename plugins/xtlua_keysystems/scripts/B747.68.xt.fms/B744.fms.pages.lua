@@ -2671,6 +2671,22 @@ function fmsFunctions.setdata(fmsO,value)
   fmsO["scratchpad"]=""
 end
 
+-- (2026-11-05, the user) the chocks in or out: GROUND HANDLING's L2 below
+-- and the sim's ground handling window's button (b747_fms_bridge
+-- gh_window.c, through laminar/B747/gear/chocks_toggle)
+function B747_fms_toggle_chocks()
+	local chocked = B747DR__gear_chocked == 1 and 0 or 1
+	B747DR__gear_chocked = chocked
+	--Stop refueling operation if CHOCKS are removed
+	if chocked == 0 then
+		B747DR_refuel=0.0
+	end
+end
+function B747_chocks_toggle_CMDhandler(phase, duration)
+	if phase == 0 then B747_fms_toggle_chocks() end
+end
+B747CMD_chocks_toggle = deferred_command("laminar/B747/gear/chocks_toggle", "Chocks in or out", B747_chocks_toggle_CMDhandler)
+
 function fmsFunctions.setDref(fmsO,value)
    local val=tonumber(fmsO["scratchpad"])
   if value=="VNAVS1" and B747DR_ap_vnav_system ~=1.0 then B747DR_ap_vnav_system=1 return elseif value=="VNAVS1" then B747DR_ap_vnav_system=0 return end 
@@ -2684,11 +2700,7 @@ function fmsFunctions.setDref(fmsO,value)
 	return 
 	end 
   if value=="CHOCKS" then
-	B747DR__gear_chocked = 1 - B747DR__gear_chocked
-	--Stop refueling operation if CHOCKS are removed
-	if B747DR__gear_chocked == 0 then
-		B747DR_refuel=0.0
-	end
+	B747_fms_toggle_chocks()
 	return
   end
   if value=="PAUSEVAL" then
