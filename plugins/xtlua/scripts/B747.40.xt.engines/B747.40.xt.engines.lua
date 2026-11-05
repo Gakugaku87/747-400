@@ -490,10 +490,10 @@ function B747_thrust_rev_hold_max_all_CMDhandler(phase, duration)
     callEngineReverse[2]=-1
     callEngineReverse[3]=-1
     -- (the A/T off without AUTOTHROT DISC on the reversers: the A/T model's,
-    -- the FMC's step 9f1; before, its fail here: the message every reverse)
-	B747DR_ap_vnav_state = 0
-	B747DR_ap_inVNAVdescent = 0
-	B747DR_ap_flightPhase = 2
+    -- the FMC's step 9f1; before, its fail here: the message every reverse.
+    -- 2026-11-05 review 3: the old writes of VNAV's state, its descent and
+    -- the flight phase here went to names never bound in this module, so
+    -- did nothing: removed; the AFDS and A/T models own them)
     if phase < 2 then
 	    
 		-- AIRCRAFT MUST BE ON THE GROUND
@@ -770,10 +770,9 @@ function B747_prop_mode()
           -- 
         elseif (callEngineReverse[i]==1 and B747DR_reverser_lockout == 0 and simDR_engine_throttle_jet_all<=0) or simDR_thrust_rev_deploy_ratio[i]>0.01 and not(clearingReverse) then
             simDR_prop_mode[i] = 3
-            -- (the A/T: the A/T model's, the FMC's step 9f1)
-            B747DR_ap_vnav_state = 0
-            B747DR_ap_inVNAVdescent = 0
-            B747DR_ap_flightPhase = 2
+            -- (the A/T: the A/T model's, the FMC's step 9f1; the old
+            -- unbound writes of VNAV's state and the flight phase removed:
+            -- 2026-11-05 review 3)
         end
     end 
     -- AIRCRAFT IS "ON THE GROUND" 
