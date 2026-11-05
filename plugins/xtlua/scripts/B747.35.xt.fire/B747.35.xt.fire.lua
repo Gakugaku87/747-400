@@ -72,6 +72,10 @@ B747DR_fire_duct_pressure_L                 = find_dataref("laminar/B747/air/duc
 B747DR_fire_duct_pressure_R                 = find_dataref("laminar/B747/air/duct_pressure_R")
 B747DR_button_switch_position               = find_dataref("laminar/B747/button_switch/position")
 B747DR_CAS_memo_status                      = find_dataref("laminar/B747/CAS/memo_status")
+-- (2026-11-05 review 4) the smoke evacuation handle (its name as the init
+-- script's and the cockpit's): bound here, so the flight start's reset
+-- reaches it (before, a plain global of this module's)
+B747DR_smoke_evac_handle                    = find_dataref("laminar/B747/fire/snoke_evac/handle")
 
 
 --*************************************************************************************--

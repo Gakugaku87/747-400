@@ -870,12 +870,15 @@ function B747_cabin_lights()
     -- Captain ND 3
     -- Upper EIACAS 4
     -- Lower EICAS 5
-       brightnessPower[3]=B747_animate_value(brightnessPower[3],B747DR_elec_display_power[2],0,1,0.5) --FO ND
-       brightnessPower[5]=B747_animate_value(brightnessPower[5],B747DR_elec_display_power[1],0,1,0.5) --FO PFD
-       brightnessPower[10]=B747_animate_value(brightnessPower[10],B747DR_elec_display_power[5],0,1,0.5) --LOWER EICAS
-       brightnessPower[0]=B747_animate_value(brightnessPower[0],B747DR_elec_display_power[3],0,1,0.5) --C ND
-       brightnessPower[2]=B747_animate_value(brightnessPower[2],B747DR_elec_display_power[0],0,1,0.5) --C PFD
-       brightnessPower[9]=B747_animate_value(brightnessPower[9],B747DR_elec_display_power[4],0,1,0.5) --UPPER EICAS
+       -- (2026-11-05 review 4) toward 1 with power (its value 6), 0
+       -- without: before, toward 6 with a top of 1, a frame at 1.14
+       local function on(k) return B747DR_elec_display_power[k] > 0.5 and 1 or 0 end
+       brightnessPower[3]=B747_animate_value(brightnessPower[3],on(2),0,1,0.5) --FO ND
+       brightnessPower[5]=B747_animate_value(brightnessPower[5],on(1),0,1,0.5) --FO PFD
+       brightnessPower[10]=B747_animate_value(brightnessPower[10],on(5),0,1,0.5) --LOWER EICAS
+       brightnessPower[0]=B747_animate_value(brightnessPower[0],on(3),0,1,0.5) --C ND
+       brightnessPower[2]=B747_animate_value(brightnessPower[2],on(0),0,1,0.5) --C PFD
+       brightnessPower[9]=B747_animate_value(brightnessPower[9],on(4),0,1,0.5) --UPPER EICAS
      if B747DR_simDR_fo_display==6 then --FO Transfer bus
        brightnessPower[13]=0 --FMS R
      else
@@ -895,7 +898,8 @@ function B747_cabin_lights()
      end
      -- (7-2e) the panel lighting (6-8) by the flight deck lighting's power
      B747_cockpit_power()
-     for i = 0, 32 do
+     -- (2026-11-05 review 4) the arrays' 32 entries, 0 to 31 (before, to 32)
+     for i = 0, 31 do
 -- 	--print(i)
          local target
          local group = PANEL_GROUP[i]
