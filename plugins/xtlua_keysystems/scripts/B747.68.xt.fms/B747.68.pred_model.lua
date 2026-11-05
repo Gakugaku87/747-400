@@ -513,6 +513,9 @@ function M.predict(s)
     -- (2026-11-05 review 3) DES NOW below the path: level to the path,
     -- no step climbs
     local desNow = false
+    -- (2026-11-05 review 4) a step the airplane could not fly (its climb
+    -- "unable"): no more steps this cruise
+    local noStep = false
     local function cruise_until(xstop, hcur)
         -- level at hcur to xstop (or the T/D, a step point)
         -- the next planned step ahead above hcur (2026-11-05)
@@ -538,7 +541,7 @@ function M.predict(s)
             step_state(dx, 0, dt, ff * dt / 3600)
             if dp and x >= td_x(hcur) - 1e-6 then return "des" end
             if pnext and phase == "crz" and not desNow and x >= pnext.x - 1e-6 then return "step", pnext.to end
-            if s.steps and phase == "crz" and not desNow and #plan == 0 then
+            if s.steps and phase == "crz" and not desNow and not noStep and #plan == 0 then
                 local to, w = s.steps(hcur, kg)
                 local xtd = dp and path_at_h(dp, hcur) or math.huge
                 if to and to > hcur and w and kg <= w and xtd - x > 200 then return "step", to end
@@ -610,7 +613,7 @@ function M.predict(s)
         -- destination 13 min early from FL350, T/D 130 NM ahead). DES NOW's
         -- shallow descent to the path (FCOM: about 1,250 fpm) is not
         -- modelled: level to the path (estimate)
-        desNow = false
+        desNow, noStep = false, false
         if startDes and (path_at_x(dp, 0)) > h + 50 and td_x(h) > 1 then
             startDes = false
             phase = "crz"
@@ -645,12 +648,21 @@ function M.predict(s)
             while phase == "crz" and guard < 200000 do
                 local r, to = cruise_until(xEnd, hcur)
                 if r == "step" then
-                    sc[#sc + 1], scT[#sc + 1] = x, tt
+                    local n, h0 = #sc + 1, h
+                    sc[n], scT[n] = x, tt
                     phase = "sc"
                     local rr = climb_to(to)
                     phase = "crz"
                     hcur = h
                     if rr == "des" then phase = "des" break end
+                    -- (2026-11-05 review 4) a step the airplane cannot fly
+                    -- (no climb's thrust left below STEP TO): no more steps
+                    -- this cruise, no S/C where it did not climb. Before,
+                    -- tried again at every minute of the cruise, an S/C each
+                    if rr == "unable" then
+                        noStep = true
+                        if h < h0 + 1 then sc[n], scT[n] = nil, nil end
+                    end
                 elseif r == "des" then
                     phase = "des"
                 else

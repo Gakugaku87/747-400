@@ -173,6 +173,19 @@ do
     T.equal(#rl.sc, 0, "a step below FL310: none")
 end
 
+-- (2026-11-05 review 4) a step the airplane cannot fly (FL490 at 380 t,
+-- above its thrust ceiling): tried once, an S/C only where it climbed, no
+-- more steps; before, tried again at every minute of the cruise, an S/C
+-- each (21 here)
+do
+    local ru = PM.predict{P = P, t = pw, gw = 380000, fuel = 110000, alt = 35000, phase = "crz", crz = 35000, clb = clb,
+        des = des, crzspd = {mach = 0.85}, legs = legs3, ed = 3,
+        steps = function(h, kg) return 49000, 999999 end}
+    T.check(#ru.sc <= 1, string.format("an unflyable step: at most one S/C (before: one a minute): %d", #ru.sc))
+    T.check(ru.crz < 49000 and (#ru.sc == 1) == (ru.crz > 35000 + 1),
+        string.format("the cruise where its climb ended (%.0f ft), an S/C only if it climbed (%d)", ru.crz, #ru.sc))
+end
+
 -- a short flight: the climb meets the descent below CRZ ALT
 local legs2 = {{name = "X", dist = 60}, {name = "RW", dist = 60, con = {kind = "AT", a = 50}}}
 r = PM.predict{P = P, t = pw, gw = 300000, fuel = 50000, alt = 1500, phase = "clb", crz = 35000, clb = clb, des = des,
