@@ -23,6 +23,7 @@ simDR_strg_hw_value             = find_dataref("sim/joystick/joystick_axis_value
 simDR_strg_hw_min               = find_dataref("sim/joystick/joystick_axis_minimum")
 simDR_strg_hw_max               = find_dataref("sim/joystick/joystick_axis_maximum")
 simDR_strg_hw_reverse           = find_dataref("sim/joystick/joystick_axis_reverse")
+simDR_strg_actual               = find_dataref("sim/flightmodel2/gear/tire_steer_actual_deg")
 simDR_strg_gs                   = find_dataref("sim/flightmodel/position/groundspeed")
 B747DR_strg_rudder_input        = find_dataref("laminar/B747/flt_ctrls/rudder_input")
 B747DR_strg_tiller              = find_dataref("laminar/B747/gear/steering/tiller")
@@ -44,6 +45,9 @@ local AXIS_TILLER = 37
 -- The assignments looked through every RAW_SCAN_S (500 of them), not each
 -- frame
 local RAW_AXES, RAW_SCAN_S, RAW_NULL = 500, 2, 0.05
+-- joy_mapped_axis_avail/value: 81 functions (DataRefs.txt); the report's
+-- assignment lines at most SCAN_MAX a load
+local MAPPED_AXES, SCAN_MAX = 81, 20
 -- EICAS slots (B747.87.xt.warning.lua)
 local ADV_BODY_GEAR_STRG = 43
 local STATUS_BODY_GR_STRG_SYS, STATUS_PEDAL_STEERING = 95, 96
@@ -52,7 +56,9 @@ local XP_NOSE, XP_RB, XP_LB, XP_RW, XP_LW = 0, 1, 2, 3, 4
 
 local strg_state = S.new()
 local strg_inputs = S.inputs()
-local raw_axis, raw_scan_t, raw_logged = nil, 0, nil
+local raw_axis, raw_scan_t, raw_logged, scan_n = nil, 0, nil, 0
+-- the hardware axes assigned, from the scan (the report's)
+local raw_list = {}
 
 local function flag(v)
     if v then return 1 end
@@ -64,25 +70,32 @@ local function put(dref, i, v)
 end
 
 -- the hardware axis assigned the nosewheel tiller, nil without one. The
--- assignments ("axis=assignment") go to Output/B747_steering.txt when they
--- change, for the users' reports (XTLua's print reaches no log)
+-- assignments ("axis=assignment") and the functions X-Plane says hardware
+-- provides (joy_mapped_axis_avail 1) go to Output/B747_steering.txt when
+-- they change, for the users' reports (XTLua's print reaches no log)
 local function find_raw_axis()
-    local found, parts = nil, {}
+    local found, parts, list, avail = nil, {}, {}, {}
     for i = 0, RAW_AXES - 1 do
         local a = simDR_strg_hw_assign[i]
         if a ~= 0 then
             parts[#parts + 1] = i .. "=" .. a
+            list[#list + 1] = i
             if a == AXIS_TILLER and not found then found = i end
         end
     end
-    local text = table.concat(parts, " ")
-    if text ~= raw_logged then
+    for i = 0, MAPPED_AXES - 1 do
+        if simDR_strg_axis_avail[i] == 1 then avail[#avail + 1] = i end
+    end
+    raw_list = list
+    local text = table.concat(parts, " ") .. "; the tiller (37) on axis " .. tostring(found)
+        .. "; X-Plane's mapped functions (joy_mapped_axis_avail 1): " .. table.concat(avail, " ")
+    if text ~= raw_logged and scan_n < SCAN_MAX then
         raw_logged = text
+        scan_n = scan_n + 1
         local f = io and io.open("Output/B747_steering.txt", "a")
         if f then
             f:write((os and os.date and os.date("%Y-%m-%d %H:%M:%S ")) or "",
-                "joystick axes (axis=assignment): ", text, "; the tiller (37) on axis ", tostring(found),
-                "; joy_mapped_axis_avail[37] ", tostring(simDR_strg_axis_avail[AXIS_TILLER]), "\n")
+                "joystick axes (axis=assignment): ", text, "\n")
             f:close()
         end
     end
@@ -106,25 +119,50 @@ local function raw_tiller(i)
 end
 
 -- (2026-11-05) the tiller's and the pedals' values to Output/B747_steering.txt
--- when they move (every DIAG_S, a change over DIAG_STEP; DIAG_MAX lines a
--- load), for the user's report: with a rudder axis the tiller axis did
--- nothing, without one it steered (X-Plane giving it as the rudder?)
-local DIAG_S, DIAG_STEP, DIAG_MAX = 0.5, 0.1, 30
-local diag_t, diag_n, diag_last = 0, 0, {}
+-- when they move, for the user's report: with a rudder axis the tiller axis
+-- did nothing, without one it steered (X-Plane giving it as the rudder?).
+-- Every DIAG_S, a line when something moved DIAG_STEP or more: the tiller
+-- used, the pedals, the hardware axes assigned ("raw": joystick_axis_values)
+-- and all X-Plane's processed functions ("mapped": joy_mapped_axis_value,
+-- the tiller perhaps under another one), the ones moved since their last
+-- line (the first line: every raw one, the mapped ones off 0); DIAG_MAX
+-- lines a load. The nose wheels: commanded, X-Plane's actual, the override
+-- (another plugin may take it)
+local DIAG_S, DIAG_STEP, DIAG_MAX = 0.5, 0.1, 60
+local diag_t, diag_n, diag_last, diag_raw, diag_map = 0, 0, {}, {}, {}
+
+local function diag_moved(out, name, dref, i, last, all)
+    local v = dref[i]
+    if all or math.abs(v - (last[i] or 0)) >= DIAG_STEP then
+        out[#out + 1] = string.format("%s %d %.3f", name, i, v)
+        last[i] = v
+    end
+end
+
 local function diag(raw_i, t, pedal, nose)
     diag_t = diag_t - SIM_PERIOD
     if diag_n >= DIAG_MAX or diag_t > 0 then return end
     diag_t = DIAG_S
-    local mv = simDR_strg_axis_value[AXIS_TILLER]
-    local rv = raw_i and simDR_strg_hw_value[raw_i] or 0
-    if diag_n > 0 and math.abs(mv - diag_last[1]) < DIAG_STEP and math.abs(rv - diag_last[2]) < DIAG_STEP
-        and math.abs(pedal - diag_last[3]) < DIAG_STEP then return end
-    diag_last[1], diag_last[2], diag_last[3] = mv, rv, pedal
+    local first, ch = diag_n == 0, {}
+    for _, i in ipairs(raw_list) do diag_moved(ch, "raw", simDR_strg_hw_value, i, diag_raw, first) end
+    for i = 0, MAPPED_AXES - 1 do
+        if not first or simDR_strg_axis_value[i] ~= 0 then
+            diag_moved(ch, "mapped", simDR_strg_axis_value, i, diag_map, first)
+        end
+    end
+    if not first and #ch == 0 and math.abs(t - diag_last[1]) < DIAG_STEP
+        and math.abs(pedal - diag_last[2]) < DIAG_STEP then return end
+    diag_last[1], diag_last[2] = t, pedal
     diag_n = diag_n + 1
-    local line = string.format("%s tiller: joy_mapped_axis[37] avail %s value %.3f; raw axis %s value %.3f min %.3f max %.3f reverse %s; tiller used %.3f; pedal %.3f; nose %.1f deg\n",
-        (os and os.date and os.date("%H:%M:%S")) or "", tostring(simDR_strg_axis_avail[AXIS_TILLER]), mv,
-        tostring(raw_i), rv, raw_i and simDR_strg_hw_min[raw_i] or 0, raw_i and simDR_strg_hw_max[raw_i] or 0,
-        raw_i and tostring(simDR_strg_hw_reverse[raw_i]) or "-", t, pedal, nose)
+    local raw = "none"
+    if raw_i then
+        raw = string.format("%d value %.3f min %.3f max %.3f reverse %s", raw_i, simDR_strg_hw_value[raw_i],
+            simDR_strg_hw_min[raw_i], simDR_strg_hw_max[raw_i], tostring(simDR_strg_hw_reverse[raw_i]))
+    end
+    local line = string.format("%s tiller: joy_mapped_axis[37] avail %s value %.3f; raw axis %s; tiller used %.3f; pedal %.3f; nose %.1f deg (X-Plane's %.1f, override %s); %s %s\n",
+        (os and os.date and os.date("%H:%M:%S")) or "", tostring(simDR_strg_axis_avail[AXIS_TILLER]),
+        simDR_strg_axis_value[AXIS_TILLER], raw, t, pedal, nose, simDR_strg_actual[XP_NOSE],
+        tostring(simDR_strg_override), first and "axes:" or "moved:", #ch > 0 and table.concat(ch, ", ") or "-")
     local f = io and io.open("Output/B747_steering.txt", "a")
     if f then
         f:write(line)
