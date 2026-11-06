@@ -431,8 +431,13 @@ static void ndl_side(int side, int n, float bright)
         ndl_proj(v, ndl_lat[k], ndl_lon[k], &qx, &qy);
         float lpx = sqrtf((qx - px) * (qx - px) + (qy - py) * (qy - py));
         if (!ndl_leg_near(v, ndl_lat[k - 1], ndl_lon[k - 1], ndl_lat[k], ndl_lon[k], r_nm)) {
-            /* out of sight: its chord for the dashes' phase */
-            s += lpx;
+            /* out of sight: its great circle's length for the dashes'
+               phase. (2026-11-06 review) Its chord made the dashes of the
+               legs after it jump when it came into sight: the pieces drawn
+               add up to the projected arc, which the great circle's length
+               matches to 0.5 % within 600 NM of the centre */
+            s += (float)(ndl_ang(ndl_lat[k - 1] * NDL_D2R, ndl_lon[k - 1] * NDL_D2R, ndl_lat[k] * NDL_D2R,
+                                 ndl_lon[k] * NDL_D2R) * NDL_EARTH_NM * v[4] * ndl_cal_scale);
             px = qx;
             py = qy;
             continue;
