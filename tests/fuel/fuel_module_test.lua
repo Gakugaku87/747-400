@@ -278,4 +278,41 @@ do
     T.equal(rt6:get("laminar/B747/fuel/light/xfeed_valve", 0), 1, "X FEED 1 stuck open with its switch OFF: its VALVE light")
 end
 
+-- (2026-11-06) the burn on X-Plane's clock, not on XTLua's frames. XTLua's
+-- SIM_PERIOD summed to about 94.5 % of the time flown (the perf kit: the
+-- tanks went down 5.5 % less than the fuel flow), and it neither stops in a
+-- pause nor runs faster with time acceleration; X-Plane's
+-- total_running_time_sec does both (checked in X-Plane on 11-06)
+do
+    local rt7 = aircraft({20000, 11000, 25000, 25000, 11000, 3000, 3000, 0})
+    for _, x in ipairs(MAIN_SWITCHES) do rt7:set(SWITCH, x, 1) end
+    rt7:set(SWITCH, 52, 1)
+    rt7:set(SWITCH, 53, 1)
+    frames(rt7, 3)
+    engines_run(rt7, 1)
+    frames(rt7, 2)
+    -- n of XTLua's frames (SIM_PERIOD 1/30 each), X-Plane's clock moving by
+    -- clock a frame (frame() adds 1/30 to it)
+    local function step(n, clock)
+        for _ = 1, n do
+            rt7.time = rt7.time + clock - 1 / 30
+            rt7:frame(1 / 30)
+        end
+    end
+    local function used() return rt7:get("laminar/B747/fuel/totaliser", 4) end
+    local function ctr() return rt7:get(FUEL, 0) end
+    local u0, c0 = used(), ctr()
+    step(150, 2 / 30)       -- XTLua on every other frame: 5 s of SIM_PERIOD, 10 s of X-Plane's
+    T.near(used() - u0, 40, 0.5, "frames missed: FUEL USED over X-Plane's 10 s (before: 20 kg over SIM_PERIOD's 5 s)")
+    T.near(c0 - ctr(), 40, 1, "frames missed: the CWT down by the same")
+    u0, c0 = used(), ctr()
+    step(90, 0)             -- paused: X-Plane's clock still
+    T.near(used() - u0, 0, 0.01, "paused: no burn (before: 12 kg)")
+    T.near(c0 - ctr(), 0, 0.01, "paused: the CWT the same")
+    u0, c0 = used(), ctr()
+    step(75, 4 / 30)        -- 4 x time acceleration: 10 s of X-Plane's time
+    T.near(used() - u0, 40, 0.5, "4 x: FUEL USED over X-Plane's 10 s (before: 10 kg)")
+    T.near(c0 - ctr(), 40, 1, "4 x: the CWT down by the same")
+end
+
 T.done()

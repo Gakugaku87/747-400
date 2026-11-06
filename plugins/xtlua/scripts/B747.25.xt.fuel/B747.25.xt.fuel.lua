@@ -1178,6 +1178,15 @@ local fuel_settle_left = SETTLE_S   -- seconds of settling left after a flight s
 -- about 3 s on the ground; in the air not: the flight tests' second air start)
 local fuel_settle_t = nil
 local fuel_age = 0                  -- seconds since the flight start
+-- (2026-11-06) X-Plane's time at the last frame: the model runs, and the
+-- engines burn, in X-Plane's time. XTLua's frames (SIM_PERIOD) summed to
+-- about 94.5 % of the time flown, so the tanks went down 5.5 % less than the
+-- fuel flow (the perf kit, PERF_SIMBRIEF phase 0: FUEL USED 0.945 of the
+-- flow at M.85, FL310 and FL350). SIM_PERIOD also runs on in a pause and does
+-- not follow the time acceleration. total_running_time_sec does both: in
+-- X-Plane 12.4.4 on 11-06 it stood still over 5.8 s paused, and ran at 1.00
+-- of the real time at 1 x and 3.49 at 4 x asked (3.2-3.5 achieved).
+local fuel_clock_t = nil
 
 local function flag(v)
     if v then return 1 end
@@ -1380,14 +1389,25 @@ function B747_fuel_system_start()
     fuel_state = F.new()
     fuel_settle_left = SETTLE_S
     fuel_settle_t = nil
+    fuel_clock_t = nil
     fuel_age = 0
     simDR_override_fuel_system = 0
+end
+
+-- the frame's time in X-Plane's time (fuel_clock_t above), at most 1 s:
+-- X-Plane's flight model takes at most 0.05 s a frame, 0.8 s at 16 x; 0 when
+-- paused, and when its clock went back (a replay)
+local function fuel_frame_dt()
+    local now = simDR_time_now
+    local dt = fuel_clock_t and math.max(0, math.min(1, now - fuel_clock_t)) or 0
+    fuel_clock_t = now
+    return dt
 end
 
 -- every frame
 function B747_fuel_system()
     local inp = fuel_inputs
-    local dt = math.max(0, math.min(1, SIM_PERIOD))
+    local dt = fuel_frame_dt()
     fuel_age = fuel_age + dt
     read_inputs(inp)
     if simDR_inReplay == 1 then

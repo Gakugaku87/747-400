@@ -312,7 +312,11 @@ GAP ID 接頭辞：`FUEL`。2026-10-23 調査。コード・acf は変更して�
 4. XP12 の `sim/cockpit2/fuel/fuel_temp_at_fuel_tank[9]`（冷却モデル）が override 中も更新されるか。使えれば燃料温度に流用できる。
 5. パネルの SHOW_GREATER/LESS が「以上／以下」か（FTR が A で出るか、温度が OFF で出るか）。スカラー dataref に index を付けた条件（`ctr_scvg_L_status[0]`、`stab_xfr_status[7]`）と `blaminar/...` の誤記がどう扱われるか。
 6. 現在の ELEC で sim bus 0 がいつ落ちるか（`cross_tie` は常に 1）。落ちたときに全発停止が起きるか。
-7. 一時停止・時間加速・リプレイでの消費の積分（`total_running_time_sec` 差）。
+7. 一時停止・時間加速・リプレイでの消費の積分（`total_running_time_sec` 差）。→ 2026-11-06 に直した。
+   - きっかけ：性能計測のキット（PERF_SIMBRIEF のフェーズ 0）で、タンクの減りが FF 計器の和より約 5.5 % 少なかった。XTLua のフレームの `SIM_PERIOD` の和は、経過時間の約 94.5 % しかなかった。
+   - 今は、燃料のモデルの更新（弁・ポンプ・移送・投棄・タンク）、FUEL USED、給油までの時間を、フレームごとの `total_running_time_sec` の差で進める（1 フレームに 1 s まで。時計が止まるか戻れば 0）。
+   - X-Plane 12.4.4 で測った `total_running_time_sec`：一時停止の 5.8 s で止まったまま、等倍で実時間の 1.00 倍、4 倍を頼んだとき 3.49 倍（実際の倍率は 3.2〜3.5）。
+   - リプレイは前のまま（タンクを X-Plane に合わせ、燃やさない）。
 8. 資料に記載なし：ジェティソン流量、重力移送（予備→主、主 1・4→2・3）の流量、HST 移送流量、HST ポンプ自動停止の「短い遅延」の秒数、主ポンプの AC バス割り当て、FSMC のフラップ入力がレバーか実位置か、給油の配分表、地上でスイッチ OFF のとき FUEL PUMP メッセージが出るか。
 9. 資料間の食い違い（FCOM を採用）：HST 移送開始 CWT 36,470 kg（FCOM）と 10,000 gal（ATA26_28）、O/J 2・3 の下限 3,200 kg（FCOM）と 4,800 kg（ATA の地上抜き取り）、FUEL PMP STB の 500 kg（FCOM）と FJCC の HST 500 lb（ATA）、予備移送の ATA 本文中の 3,000 gal の記述（p.496、図と他の頁は 6,000 gal）。
 10. CWT のパイロットフロート弁（13,000 gal、ATA26_28 p.335・368）が HST→CWT 移送で CWT の上限を決めるか（推定、資料は試験の記述だけ）。CWT の crossflow compensator（ATA26_28 p.557 の図の名称のみ）の働き。
