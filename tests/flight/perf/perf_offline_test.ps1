@@ -358,5 +358,146 @@ Check (-not $rp.within_1_pct) 'the repeat: 1.5 % over 1 %'
 Check ($null -eq (Compare-PerfRepeat $null ([ordered]@{ ff_fuelmass_kgph = 1.0 }))) 'the repeat: none without both windows'
 Remove-Item $csv -ErrorAction SilentlyContinue
 
+# ---------------------------------------------------------------- the climb suite (phase 2)
+
+# the atmosphere: ISA pressure, a CAS's Mach (250 kt at 10,000 ft, the
+# climbs' start; 300 kt's M.78 near 29,300 ft, the schedule 250/300/78)
+Near (Get-IsaPressurePa 0) 101325 0.01 'ISA pressure at sea level (Pa)'
+Near (Get-IsaPressurePa 35000) 23842 5 'ISA pressure at FL350 (Pa)'
+Near (Get-IsaPressurePa (11000 / 0.3048)) 22632 2 'ISA pressure at 11 km (Pa)'
+Near (Get-IsaPressurePa 45000) 14748 5 'ISA pressure at FL450 (Pa)'
+Near (Get-MachFromCas 250 0) (250 / 661.4786) 1e-6 'a CAS''s Mach at sea level (the speed of sound)'
+Near (Get-MachFromCas 250 10000) 0.4522 0.0005 'M of 250 kt at 10,000 ft'
+$lo = 20000.0; $hi = 35000.0
+for ($i = 0; $i -lt 40; $i++) { $mid = ($lo + $hi) / 2; if ((Get-MachFromCas 300 $mid) -lt 0.78) { $lo = $mid } else { $hi = $mid } }
+Near $lo 29300 300 '300 kt reaches M.78 near 29,300 ft'
+
+# the tests: three climbs and three ceilings at the phase 1 weights
+$ct = Get-PerfClimbTests
+Check ($ct.Count -eq 6) "climb: 6 tests (got $($ct.Count))"
+Check (@($ct | ForEach-Object { $_.id } | Sort-Object -Unique).Count -eq 6) 'climb: the ids unique'
+Check ((@($ct | ForEach-Object { $_.kind }) -join ',') -eq 'climb,climb,climb,ceiling,ceiling,ceiling') 'climb: the climbs first, then the ceilings'
+Check ((@($ct | Where-Object { $_.kind -eq 'climb' } | ForEach-Object { $_.top_ft }) -join ',') -eq '35000,35000,33000') 'climb: the tops FL350, FL350, FL330'
+foreach ($t in $ct) {
+    $kind = if ($null -ne $t.fuel_kg) { 'light' } elseif ($t.gw_pct -eq 78) { 'medium' } else { 'heavy' }
+    if ($t.kind -eq 'climb') { Check ($t.top_ft -le $maxFt[$kind]) "climb: $($t.id)'s top below the maximum altitude ($($maxFt[$kind]) ft)" }
+}
+Check (@($ct | Where-Object { $null -ne $_.fuel_kg -and $_.fuel_kg -eq $LightFuelKg }).Count -eq 2 -and @($ct | Where-Object { $_.gw_pct -eq 78 }).Count -eq 2 -and
+    @($ct | Where-Object { $_.gw_pct -eq 90 }).Count -eq 2) 'climb: each weight twice'
+Check ($ClimbStartFt -eq 10000 -and $ClimbStartKias -eq 250 -and $ClimbKias -eq 300 -and $ClimbMach -eq 0.78) 'climb: the schedule 250/300/78 from 10,000 ft'
+Check ((@($ClimbMarksFt) -join ',') -eq '15000,20000,25000,30000') 'climb: the marks every 5,000 ft'
+Check ($CeilingStartFt -eq 31000 -and $CeilingMach -eq 0.85 -and $CeilingRateFpm -eq 300) 'ceiling: from FL310 at M.85 to 300 fpm'
+Check ($CeilingTopFt -le 45100) 'ceiling: the MCP under the maximum operating altitude 45,100 ft (FCOM p.77)'
+Check (@($CeilingMarksFt).Count -eq 13 -and $CeilingMarksFt[0] -eq 32000 -and $CeilingMarksFt[12] -eq 44000) 'ceiling: the marks every 1,000 ft, 32,000-44,000'
+
+# a climb's rows (1 s): the altitude by $Alt, the TAS and ground speed, the
+# fuel going at $FuelRate kg/s by the weight and by the gauges
+function New-ClimbRows([int]$N, [scriptblock]$Alt, [double]$Tas = 250.0, [double]$FuelRate = 3.0) {
+    $out = New-Object System.Collections.ArrayList
+    for ($k = 0; $k -lt $N; $k++) {
+        $r = New-Object double[] ($script:ix['samples'] + 1)
+        $t = [double]$k
+        $r[$script:ix['sim_t']] = 5000 + $t
+        $r[$script:ix['press_alt_ft']] = & $Alt $t
+        $r[$script:ix['alt']] = $r[$script:ix['press_alt_ft']]
+        $r[$script:ix['tas_ms']] = $Tas; $r[$script:ix['gs_ms']] = $Tas
+        $r[$script:ix['fuel_kg']] = 100000 - $FuelRate * $t
+        $r[$script:ix['weight']] = 300000 - $FuelRate * $t
+        foreach ($e in 1..4) { $r[$script:ix["ff_$e"]] = $FuelRate / 4; $r[$script:ix["n1_$e"]] = 95.0 }
+        $r[$script:ix['sim_speed']] = 1; $r[$script:ix['ground_speed_x']] = 1
+        $r[$script:ix['thrlim']] = 2; $r[$script:ix['ias']] = 300; $r[$script:ix['mach']] = 0.78; $r[$script:ix['vminm']] = 230
+        [void]$out.Add($r)
+    }
+    return ,$out.ToArray()
+}
+
+# the marks: 1,950 fpm from 10,000 ft, the crossings between rows
+$rowsC = New-ClimbRows 820 { param($t) [math]::Min(35000.0, 10000 + 32.5 * $t) }
+$mc = Measure-PerfClimb $rowsC 0 $ClimbMarksFt 35000
+Check ($mc.marks.Count -eq 6 -and $mc.top_reached) "climb marks: the start, 4 marks and the top (got $($mc.marks.Count))"
+Check ((@($mc.marks | ForEach-Object { $_.mark }) -join ',') -eq 'start,15000,20000,25000,30000,top 35000') 'climb marks: their names'
+Near $mc.marks[0].t_s 0 1e-9 'climb marks: the start at 0 s'
+Near $mc.marks[1].t_s (5000 / 32.5) 0.001 'climb marks: 15,000 ft between rows (153.85 s)'
+Near $mc.marks[1].fuel_used_kg (3.0 * 5000 / 32.5) 0.01 'climb marks: the fuel used by the weight'
+Near $mc.marks[1].ff_gauge_used_kg (3.0 * 5000 / 32.5) 0.01 'climb marks: the gauges'' integral'
+Near $mc.marks[1].dist_air_nm (250 * 5000 / 32.5 / 1852) 0.0001 'climb marks: the air distance (NM)'
+Near $mc.marks[1].dist_gnd_nm $mc.marks[1].dist_air_nm 1e-9 'climb marks: the ground distance in still air'
+Near $mc.marks[1].press_alt_ft 15000 0.001 'climb marks: the mark''s altitude'
+Near $mc.marks[2].seg_vs_fpm 1950 0.01 'climb marks: the segment''s climb rate'
+Near $mc.marks[5].press_alt_ft (35000 - $ClimbTopMarginFt) 0.001 'climb marks: the top''s mark 30 ft below it'
+Near $mc.marks[5].t_s ((25000 - $ClimbTopMarginFt) / 32.5) 0.001 'climb marks: the top''s time'
+Near $mc.marks[5].gw_kg (300000 - 3.0 * (25000 - $ClimbTopMarginFt) / 32.5) 0.01 'climb marks: the weight there'
+Check ($mc.rows_real_time -eq $mc.rows_to_end -and $mc.rows_to_end -eq 770) "climb marks: 770 rows to the top, all in real time (got $($mc.rows_to_end), $($mc.rows_real_time))"
+Check ($mc.thrlim_clb_only) "climb marks: the thrust limit CLB ($($mc.thrlim_codes))"
+$rowsC[100][$script:ix['thrlim']] = 3; $rowsC[101][$script:ix['sim_speed']] = 2
+$mc2 = Measure-PerfClimb $rowsC 0 $ClimbMarksFt 35000
+Check (-not $mc2.thrlim_clb_only -and $mc2.thrlim_codes -match '3: 1 rows') "climb marks: a row in CRZ ($($mc2.thrlim_codes))"
+Check ($mc2.rows_real_time -eq 769) 'climb marks: a row time-accelerated'
+$rowsC[100][$script:ix['thrlim']] = 2; $rowsC[101][$script:ix['sim_speed']] = 1
+$mc3 = Measure-PerfClimb @($rowsC[0..400]) 0 $ClimbMarksFt 35000
+Check ($mc3.marks.Count -eq 3 -and -not $mc3.top_reached) "climb marks: cut short, the marks reached only (got $($mc3.marks.Count))"
+$mc4 = Measure-PerfClimb $rowsC 200 $ClimbMarksFt 35000
+Check ($mc4.marks[1].mark -eq '20000') 'climb marks: from a later row, the marks below its altitude left out'
+
+# the ceiling: 40 s level, then a climb from 1,500 fpm falling to 0 in 600 s
+# with ALT HOLD's swing (4 ft, 10.5 s: 144 fpm); 300 fpm at 520 s, 38,200 ft
+# (a 60 s window's mean 6.25 ft lower)
+$alt = { param($t) if ($t -lt 40) { 31000.0 } else { $u = $t - 40; 31000 + 25 * ($u - $u * $u / 1200) + 4 * [math]::Sin(2 * [math]::PI * $t / 10.5) } }
+$rowsK = New-ClimbRows 600 $alt
+$rk = Get-PerfClimbRates $rowsK 0 60
+Check ($rk.Count -eq 541) "ceiling: a rate a window (got $($rk.Count))"
+Near $rk[200].rate_fpm (1500 * (1 - (200 + 29.5 - 40) / 600)) 3 'ceiling: a window''s rate (the swing averaged out)'
+$ck = Get-PerfCeiling $rowsK 0 $CeilingRateFpm $CeilingWinS $CeilingArmFpm $CeilingHoldS
+Check ($ck.found -and $ck.armed) 'ceiling: found'
+Near $ck.ceiling_ft 38193.75 10 'ceiling: the altitude where the rate crossed 300 fpm'
+Near $ck.t_s 520 1 'ceiling: its time'
+Near $ck.max_rate_fpm (1500 * (1 - 29.5 / 600)) 3 'ceiling: the most climb rate (the first window all in the climb)'
+$ckEarly = Get-PerfCeiling @($rowsK[0..554]) 0 $CeilingRateFpm $CeilingWinS $CeilingArmFpm $CeilingHoldS
+Check (-not $ckEarly.found -and $ckEarly.armed) 'ceiling: not yet, under 300 fpm for less than 10 s'
+$rowsW = New-ClimbRows 300 { param($t) 31000 + 400 / 60 * $t }
+$ckW = Get-PerfCeiling $rowsW 0 $CeilingRateFpm $CeilingWinS $CeilingArmFpm $CeilingHoldS
+Check (-not $ckW.found -and -not $ckW.armed) 'ceiling: never 600 fpm, never armed'
+Near $ckW.max_rate_fpm 400 1 'ceiling: never armed, its most rate'
+$atK = (Measure-PerfClimb $rowsK 0 @($ck.ceiling_ft) $null).marks[1]
+Near $atK.press_alt_ft $ck.ceiling_ft 0.01 'ceiling: the mark at the ceiling'
+
+# the climb suite's files: a climb done, one stopped, a ceiling done, one at
+# the top, two not run
+$runDir4 = "$tmpBase.run4"; New-Item -ItemType Directory -Path $runDir4 | Out-Null
+$rc1 = [ordered]@{ id = 'clb_l15'; kind = 'climb'; target = $ct[0]; status = 'done'; request = [ordered]@{ gw_kg = 238523.4; gw_pct = 60.44 }
+    checks = [ordered]@{ climb_thrust_clb = [ordered]@{ pass = $true; value = '2: 770 rows'; limit = 'CLB' } }; climb = $mc
+    crossover = [ordered]@{ press_alt_ft = 29310.0; ias_kt = 300.2; mach = 0.7801 }; raw_file = 'raw/clb_l15.csv' }
+$rc2 = [ordered]@{ id = 'clb_078'; kind = 'climb'; target = $ct[1]; status = 'aborted'; error = 'no A/P servos'; checks = [ordered]@{}
+    request = [ordered]@{ gw_kg = 307807.5; gw_pct = 78.0 }; raw_file = 'raw/clb_078.csv' }
+$rk1 = [ordered]@{ id = 'cel_l15'; kind = 'ceiling'; target = $ct[3]; status = 'done'; checks = [ordered]@{}; request = [ordered]@{ gw_kg = 238523.4; gw_pct = 60.44 }
+    ceiling = $ck; climb = (Measure-PerfClimb $rowsK 0 $CeilingMarksFt $null); at_ceiling = $atK; raw_file = 'raw/cel_l15.csv' }
+$rk2 = [ordered]@{ id = 'cel_078'; kind = 'ceiling'; target = $ct[4]; status = 'top'; checks = [ordered]@{}; request = [ordered]@{ gw_kg = 307807.5; gw_pct = 78.0 }
+    ceiling = $ckW; climb = (Measure-PerfClimb $rowsW 0 $CeilingMarksFt $null); at_ceiling = $null; raw_file = 'raw/cel_078.csv' }
+$sum = Write-PerfClimbFiles $runDir4 @($rc1, $rc2, $rk1, $rk2) $meta0 $null $ct "$runDir4\none.txt" 0 "$runDir4\none2.txt" 0
+Check ($sum -eq 'tests: 2 of 6 done') "climb files: the summary ($sum)"
+$cll = @(Get-Content "$runDir4\climb.csv")
+Check ($cll[0] -eq 'test_id,kind,plan,target_gw_pct,gw_start_kg,mark,press_alt_ft,t_s,fuel_used_kg,ff_gauge_used_kg,dist_air_nm,dist_gnd_nm,gw_kg,ias_kt,mach,seg_vs_fpm,n1_avg_pct,thrlim,status,raw_file') 'climb files: climb.csv''s header'
+Check (@($cll | ForEach-Object { ($_ -split ',', -1).Count } | Sort-Object -Unique) -join ',' -eq '20') 'climb files: climb.csv 20 columns in every row'
+Check (@($cll | Where-Object { $_ -match '^clb_l15,' }).Count -eq 6) 'climb files: a climb''s six marks'
+Check ($cll[2] -match '^clb_l15,climb,A,60\.4,238523,15000,15000,153\.8,461\.5,461\.5,20\.77,20\.77,299538,300\.0,0\.7800,1950,95\.00,2,done,raw/clb_l15\.csv$') "climb files: a mark's row ($($cll[2]))"
+Check ($cll[1] -match '^clb_l15,climb,A,60\.4,238523,start,10000,0\.0,0\.0,0\.0,0\.00,0\.00,300000,300\.0,0\.7800,,95\.00,2,done,') "climb files: the start's row, its rate blank ($($cll[1]))"
+Check (@($cll | Where-Object { $_ -match '^clb_078,climb,A,78,307808,(,){13}aborted,raw/clb_078\.csv$' }).Count -eq 1) 'climb files: a stopped climb, its values blank'
+Check (@($cll | Where-Object { $_ -match '^clb_090,climb,A,90,(,){14}not_run,$' }).Count -eq 1) 'climb files: a climb not run'
+Check (@($cll | Where-Object { $_ -match '^cel_l15,ceiling,' }).Count -eq 8) 'climb files: a ceiling''s marks to 38,000 ft'
+$ccl = @(Get-Content "$runDir4\ceiling.csv")
+Check ($ccl.Count -eq 4 -and $ccl[0] -eq 'test_id,plan,target_gw_pct,gw_start_kg,ceiling_ft,t_s,fuel_used_kg,dist_air_nm,gw_kg,mach,ias_kt,vminm_kt,max_rate_fpm,status,raw_file') 'climb files: ceiling.csv a row a ceiling'
+Check (@($ccl | ForEach-Object { ($_ -split ',', -1).Count } | Sort-Object -Unique) -join ',' -eq '15') 'climb files: ceiling.csv 15 columns in every row'
+Check ($ccl[1] -match '^cel_l15,A,60\.4,238523,3819[0-9],5[12][0-9]\.[0-9],15[0-9]{2}\.[0-9],[0-9]+\.[0-9]{2},29[0-9]{4},0\.7800,300\.0,230\.0,142[0-9],done,raw/cel_l15\.csv$') "climb files: a ceiling's row ($($ccl[1]))"
+Check ($ccl[2] -match '^cel_078,A,78,307808,(,){8}400,top,raw/cel_078\.csv$') "climb files: a ceiling at the top, its most rate ($($ccl[2]))"
+Check ($ccl[3] -match '^cel_090,A,90,(,){10}not_run,$') "climb files: a ceiling not run ($($ccl[3]))"
+$mdc = [IO.File]::ReadAllText("$runDir4\check.md")
+Check ($mdc.Contains('| clb_l15 | done | 300.0 | 35000 | 768 | 2305 | 2305 | 103.7 | 103.7 | 29310 |')) 'climb files: check.md the climbs'' table'
+Check ($mdc -match '\| cel_l15 \| done \| 238\.5 \| 3819[0-9] \|') 'climb files: check.md the ceilings'' table'
+Check ($mdc.Contains('Tests: 2 of 6 done; aborted 1, not_run 2, top 1')) 'climb files: check.md the tests'' count'
+Check ($mdc.Contains('| top 35000 | 34970 | 768 |') -and $mdc.Contains('Error: no A/P servos')) 'climb files: check.md a climb''s marks and a stopped one''s error'
+$cjc = Get-Content -Raw "$runDir4\check.json" | ConvertFrom-Json
+Check (@($cjc.tests).Count -eq 4 -and $cjc.suite -eq 'climb') 'climb files: check.json the tests'
+Remove-Item -Recurse -Force $runDir4 -ErrorAction SilentlyContinue
+
 if ($fails.Count -gt 0) { throw ("{0} of {1} checks failed" -f $fails.Count, $count) }
 Write-Host ("perf offline: {0} checks passed" -f $count)
