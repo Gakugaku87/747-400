@@ -1968,11 +1968,48 @@ local target_descentAlt = 0.0
 local target_descentSpeed = 0.0
 local descentSpeedGradient = 0.0
 local switchingIASMode=0]]
+-- (2026-11-06) the standard atmosphere's static pressure over the sea
+-- level's at a pressure altitude (ft), and the CAS (kt) of a Mach there: the
+-- impact pressure over the static, then over the sea level's (M.85 at
+-- FL350: 291 kt, M.90: 310); (2026-11-07) and the Mach of a CAS
+local function ap_isa_delta(ft)
+	if ft <= 36089 then return (1 - 6.87559e-6 * math.max(ft, -2000)) ^ 5.25588 end
+	return 0.22336 * math.exp(-4.80634e-5 * (ft - 36089))
+end
+local function ap_mach_cas(mach, ft)
+	local qc = ap_isa_delta(ft) * ((1 + 0.2 * mach * mach) ^ 3.5 - 1)
+	return 661.4786 * math.sqrt(5 * ((qc + 1) ^ (2 / 7) - 1))
+end
+local function ap_cas_mach(kt, ft)
+	local qc = (1 + 0.2 * (kt / 661.4786) ^ 2) ^ 3.5 - 1
+	return math.sqrt(5 * ((qc / ap_isa_delta(ft) + 1) ^ (2 / 7) - 1))
+end
+-- (2026-11-07) the window after IAS/MACH changes its units, by the switch
+-- or by itself (FCOM p.643, 4.10.4: "Displays selected speed"; in climb from
+-- IAS to Mach at about .840, in descent from Mach to IAS at about 310 kt):
+-- the speed selected before, in the new units, the CAS of the window's Mach
+-- at the pressure altitude or the Mach of its CAS. The original aircraft's
+-- code wrote the speed flown (the IAS or the Mach, cut down), the same only
+-- on speed: after an air start at FL310 with M.85 (318 kt) the descent's
+-- change came in the capture's dip while the A/T still came back from the
+-- set-up's slowdown, and the window and the target became 301 kt (M.81),
+-- held for good (PERF_SIMBRIEF, notes/ATA-22.md §54). A window out of the
+-- MCP's range (FCOM p.643: 100 to 399 kt, .400 to .950) keeps the speed
+-- flown, as before
 function B747_updateIASWindow()
+	local w, ft = B747DR_ap_ias_dial_value, simDR_ap_mach_press_alt
 	if simDR_autopilot_airspeed_is_mach == 0 then
-		B747DR_ap_ias_dial_value = math.floor(simDR_ind_airspeed_kts_pilot)
+		if w >= 40 and w <= 95 then
+			B747DR_ap_ias_dial_value = math.floor(ap_mach_cas(w * 0.01, ft) + 0.5)
+		else
+			B747DR_ap_ias_dial_value = math.floor(simDR_ind_airspeed_kts_pilot)
+		end
 	else
-		B747DR_ap_ias_dial_value = math.floor(simDR_airspeed_mach * 100)
+		if w >= 100 and w <= 399 then
+			B747DR_ap_ias_dial_value = math.floor(ap_cas_mach(w, ft) * 100 + 0.5)
+		else
+			B747DR_ap_ias_dial_value = math.floor(simDR_airspeed_mach * 100)
+		end
 	end
 	simDR_autopilot_airspeed_kts = B747DR_lastap_dial_airspeed
 	B747DR_ap_ias_mach_window_open = 1
@@ -2453,18 +2490,8 @@ function B747_ap_vs_mode()
 	B747DR_ap_vs_show_thousands = B747_ternary(B747DR_ap_vs_window_open == 1 and B747DR_ap_vvi_fpm >= 1000, 1, 0)
 end
 
--- (2026-11-06) the standard atmosphere's static pressure over the sea
--- level's at a pressure altitude (ft), and the CAS (kt) of a Mach there: the
--- impact pressure over the static, then over the sea level's (M.85 at
--- FL350: 291 kt, M.90: 310)
-local function ap_isa_delta(ft)
-	if ft <= 36089 then return (1 - 6.87559e-6 * math.max(ft, -2000)) ^ 5.25588 end
-	return 0.22336 * math.exp(-4.80634e-5 * (ft - 36089))
-end
-local function ap_mach_cas(mach, ft)
-	local qc = ap_isa_delta(ft) * ((1 + 0.2 * mach * mach) ^ 3.5 - 1)
-	return 661.4786 * math.sqrt(5 * ((qc + 1) ^ (2 / 7) - 1))
-end
+-- (the standard atmosphere's CAS of a Mach, ap_mach_cas: above
+-- B747_updateIASWindow)
 
 ----- IAS/MACH MODE ---------------------------------------------------------------------
 function B747_ap_ias_mach_mode()
