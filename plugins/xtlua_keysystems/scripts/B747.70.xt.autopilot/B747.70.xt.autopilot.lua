@@ -272,6 +272,8 @@ simDR_AHARS_roll_deg_pilot = find_dataref("sim/cockpit2/gauges/indicators/roll_A
 simDR_AHARS_heading_deg_pilot = find_dataref("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot")
 simDR_nav1_radio_course_deg = find_dataref("sim/cockpit2/radios/actuators/nav1_course_deg_mag_pilot")
 simDR_pressureAlt1 = find_dataref("sim/cockpit2/gauges/indicators/altitude_ft_pilot")
+-- (2026-11-06) the pressure altitude, for the MCP Mach's CAS (ap_mach_cas)
+simDR_ap_mach_press_alt = find_dataref("sim/flightmodel2/position/pressure_altitude")
 simDR_radarAlt1 = find_dataref("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
 simDR_radarAlt2 = find_dataref("sim/cockpit2/guages/indicators/radio_altimeter_height_ft_copilot")
 simDR_allThrottle = 0 --find_dataref("sim/cockpit2/engine/actuators/throttle_ratio_all")
@@ -2445,6 +2447,19 @@ function B747_ap_vs_mode()
 	B747DR_ap_vs_show_thousands = B747_ternary(B747DR_ap_vs_window_open == 1 and B747DR_ap_vvi_fpm >= 1000, 1, 0)
 end
 
+-- (2026-11-06) the standard atmosphere's static pressure over the sea
+-- level's at a pressure altitude (ft), and the CAS (kt) of a Mach there: the
+-- impact pressure over the static, then over the sea level's (M.85 at
+-- FL350: 291 kt, M.90: 310)
+local function ap_isa_delta(ft)
+	if ft <= 36089 then return (1 - 6.87559e-6 * math.max(ft, -2000)) ^ 5.25588 end
+	return 0.22336 * math.exp(-4.80634e-5 * (ft - 36089))
+end
+local function ap_mach_cas(mach, ft)
+	local qc = ap_isa_delta(ft) * ((1 + 0.2 * mach * mach) ^ 3.5 - 1)
+	return 661.4786 * math.sqrt(5 * ((qc + 1) ^ (2 / 7) - 1))
+end
+
 ----- IAS/MACH MODE ---------------------------------------------------------------------
 function B747_ap_ias_mach_mode()
 	if B747DR_ap_autoland < 0 and (simDR_radarAlt1 > 1500) then
@@ -2547,24 +2562,30 @@ function B747_ap_ias_mach_mode()
 		elseif simDR_autopilot_airspeed_is_mach == 1 and B747DR_ap_ias_dial_value * 0.01 > 0.4 then
 			B747DR_ap_ias_mach_dial_value = B747DR_ap_ias_dial_value * 0.01
 
-			if simDR_autopilot_airspeed_kts >= maxSafeSpeed - 10 then
-				if simDR_autopilot_airspeed_kts < maxSafeSpeed then
-					B747DR_ap_ias_bug_value = maxSafeSpeed - 10 --simDR_autopilot_airspeed_kts
-				end
-
-				if
-					simDR_autopilot_flch_status == 0 and B747DR_ap_inVNAVdescent == 0 and
-						simDR_autopilot_airspeed_kts > maxSafeSpeed - 10
-				 then
-					simDR_autopilot_airspeed_kts = maxSafeSpeed - 10
-					setFMSData("maxkts", simDR_autopilot_airspeed_kts)
-				elseif simDR_autopilot_airspeed_kts > maxSafeSpeed - 20 then
-					simDR_autopilot_airspeed_kts = maxSafeSpeed - 20 --flch/descent overspeed
-					setFMSData("maxkts", simDR_autopilot_airspeed_kts)
-				end
+			-- (2026-11-06) the window's Mach is the command speed, and the
+			-- maximum speed only limits it (FCOM p.642: the A/T holds the IAS
+			-- or Mach in the window "subject to minimum and maximum speed
+			-- limits"; p.675). The original aircraft's code compared the
+			-- target already set: once at the limit (Vmo - 10 kt: M.899 at
+			-- FL310, M.901 at FL350), the window's Mach was never taken again,
+			-- a lower one too, until FLCH or IAS/MACH pushed twice. Every air
+			-- start ended there: the FMC's in-flight set-up winds the window
+			-- in knots, 259 read as M2.59 (the perf kit, PERF_SIMBRIEF).
+			-- The margins (10 kt, 20 in FLCH and VNAV's descent) are the
+			-- original's; FCOM p.675 gives the FMC's as 5 kt. maxkts is no
+			-- longer written: no module reads it, and writing it decoded and
+			-- wrote the FMC's whole data (setFMSData) from this module.
+			local mach = math.min(B747DR_ap_ias_dial_value * 0.01, maxmach - 0.01) ---roundToIncrement(B747DR_ap_ias_dial_value, 1) * 0.01
+			local cap = maxSafeSpeed - 10
+			if simDR_autopilot_flch_status ~= 0 or B747DR_ap_inVNAVdescent ~= 0 then
+				cap = maxSafeSpeed - 20 --flch/descent overspeed
+			end
+			if ap_mach_cas(mach, simDR_ap_mach_press_alt) > cap then
+				B747DR_ap_ias_bug_value = cap
+				simDR_autopilot_airspeed_kts = cap
 			else
 				B747DR_ap_ias_bug_value = simDR_autopilot_airspeed_kts
-				simDR_autopilot_airspeed_kts_mach = math.min(B747DR_ap_ias_dial_value * 0.01, maxmach - 0.01) ---roundToIncrement(B747DR_ap_ias_dial_value, 1) * 0.01
+				simDR_autopilot_airspeed_kts_mach = mach
 			end
 		end
 	end
@@ -3434,11 +3455,23 @@ function B474_ap_target_altitude()
 	end
 end
 
+-- (2026-11-06) the window's value for the in-flight set-up's target (kt):
+-- with the MCP in Mach, that speed's Mach x 100 here. Before, the window
+-- was wound to the knots in either unit: after an air start the MCP had
+-- turned to Mach (the auto switch above M.84), and 259 kt became M2.59
+-- (the perf kit, PERF_SIMBRIEF)
+local function ap_target_dial(kts)
+	if simDR_autopilot_airspeed_is_mach ~= 1 then return kts end
+	local qc = ((1 + 0.2 * (kts / 661.4786) ^ 2) ^ 3.5 - 1) / ap_isa_delta(simDR_ap_mach_press_alt)
+	return math.floor(100 * math.sqrt(5 * ((qc + 1) ^ (2 / 7) - 1)) + 0.5)
+end
+
 function B474_ap_target_speed()
 	if B747DR_ap_target_speed == -1 then
 		return
 	end
-	if B747DR_ap_ias_dial_value == B747DR_ap_target_speed then
+	local target = ap_target_dial(B747DR_ap_target_speed)
+	if B747DR_ap_ias_dial_value == target then
 		B747DR_ap_target_speed = -1
 		return
 	end
@@ -3455,7 +3488,7 @@ function B474_ap_target_speed()
 		return
 	end
 	--B747DR_ap_target_heading_deg = math.floor(B747DR_ap_target_speed)
-	local speed_diff = B747DR_ap_ias_dial_value - B747DR_ap_target_speed
+	local speed_diff = B747DR_ap_ias_dial_value - target
 	print("target speed " .. B747DR_ap_ias_dial_value .. " " .. B747DR_ap_target_speed .. " " .. speed_diff)
 	if speed_diff < 0 then
 		B747DR_ap_ias_dial_value = math.floor(B747DR_ap_ias_dial_value + 1)
