@@ -3,7 +3,7 @@
 # a SimBrief custom airframe on the B744 base. Unattended: one run a script,
 # its files read afterwards.
 #
-#   powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\perf.ps1 -Suite check|cruise [-StartXPlane]
+#   powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\perf.ps1 -Suite check|cruise|climb [-StartXPlane]
 #
 # -StartXPlane starts X-Plane when it is not running (tools\xp_restart.ps1:
 # the custom acf on RJAA 34L once, the throwaway first flight after a start).
@@ -26,6 +26,14 @@
 #          below its Mach with the A/T in SPD), then 180 s averaged. First
 #          the CI 200's economy cruise Mach off the CDU at 78 % and FL350; at
 #          the end 78 % FL350 M.85 again (the flows within 1 %).
+#   climb  phase 2. The same place and air, the same three weights
+#          (Get-PerfClimbTests). Climbs: an air start at 10,000 ft and 250
+#          kt, level there, then FLCH to FL350 (90 %: FL330) on the
+#          schedule 250/300/78 (300 kt, Mach .78 once the Mach reaches it);
+#          the time, fuel and distance at every 5,000 ft and at the top.
+#          Ceilings: an air start at FL310 and M.85, then FLCH to 45,000 ft at
+#          M.85 until the climb rate (60 s of pressure altitude) falls below
+#          300 fpm: that altitude.
 #
 # PERF_SIMBRIEF.md's rules: the custom acf only; no file of the aircraft,
 # X-Plane or a plugin written (a flight's datarefs and commands only); no time
@@ -43,11 +51,13 @@
 #                    WebSocket's samples (about 10 Hz, changed values only,
 #                    each held) in each second of sim time; wall_s, samples
 #   points.csv       a row a point (PERF_SIMBRIEF.md's columns)
+#   climb.csv        (climb) a row a mark: every 5,000 ft of a climb, every
+#                    1,000 ft of a ceiling's; ceiling.csv a row a ceiling
 #   check.json       the checks; check.md the same as tables
 #   events.txt       the run's notes; log_excerpt.txt Log.txt's lines of the
 #                    run that look like errors; xtlua_errors.txt if any
 param(
-    [ValidateSet('check', 'cruise')][string]$Suite = 'check',
+    [ValidateSet('check', 'cruise', 'climb')][string]$Suite = 'check',
     [switch]$StartXPlane,
     [string]$RunsDir
 )
@@ -119,6 +129,45 @@ function Get-PerfLevels {
 function Get-PerfPointId([string]$Level, [double]$Mach) { return ('{0}_m{1:D3}' -f $Level, [int][math]::Round($Mach * 1000)) }
 $levels = @()
 if ($Suite -eq 'cruise') { $levels = Get-PerfLevels }
+
+# PERF_SIMBRIEF.md phase 2 (suite climb). The climbs: the comparison OFPs'
+# schedule 250/300/78 (the user, 2026-11-06): 250 kt below 10,000 ft (the
+# start), 300 kt above, Mach .78 once 300 kt reaches it (about 29,300 ft in
+# ISA). The marks every 5,000 ft and the top: FL350, for 90 % (355.2 t) FL330
+# under its maximum operating altitude 34,590 ft (FCOM PI.11.1 p.267, 1.30 g)
+$ClimbStartFt = 10000
+$ClimbStartKias = 250
+$ClimbKias = 300
+$ClimbMach = 0.78
+$ClimbMarksFt = @(15000, 20000, 25000, 30000)
+# the top's mark this far below it (the capture's last feet left out)
+$ClimbTopMarginFt = 30
+# The ceilings: from FL310 at M.85 in FLCH (the climb thrust) until the climb
+# rate falls below 300 fpm (PERF_SIMBRIEF.md phase 2). The rate: a straight
+# line through 60 s of pressure altitude, at the window's middle (the light
+# weights' ALT HOLD swung 10.5 s, 130 fpm: phase 1), once over 600 fpm and
+# then under 300 for 10 s. The MCP at 45,000 ft, under the FCOM's maximum
+# operating altitude 45,100 ft (p.77, L.10.1). Marks every 1,000 ft.
+$CeilingStartFt = 31000
+$CeilingMach = 0.85
+$CeilingRateFpm = 300
+$CeilingArmFpm = 600
+$CeilingWinS = 60
+$CeilingHoldS = 10
+$CeilingTopFt = 45000
+$CeilingMarksFt = @(32..44 | ForEach-Object { 1000.0 * $_ })
+function Get-PerfClimbTests {
+    $l = New-Object System.Collections.ArrayList
+    [void]$l.Add([ordered]@{ id = 'clb_l15'; kind = 'climb'; fuel_kg = $LightFuelKg; top_ft = 35000 })
+    [void]$l.Add([ordered]@{ id = 'clb_078'; kind = 'climb'; gw_pct = 78; top_ft = 35000 })
+    [void]$l.Add([ordered]@{ id = 'clb_090'; kind = 'climb'; gw_pct = 90; top_ft = 33000 })
+    [void]$l.Add([ordered]@{ id = 'cel_l15'; kind = 'ceiling'; fuel_kg = $LightFuelKg })
+    [void]$l.Add([ordered]@{ id = 'cel_078'; kind = 'ceiling'; gw_pct = 78 })
+    [void]$l.Add([ordered]@{ id = 'cel_090'; kind = 'ceiling'; gw_pct = 90 })
+    return ,$l.ToArray()
+}
+$tests = @()
+if ($Suite -eq 'climb') { $tests = Get-PerfClimbTests }
 
 $wall = [Diagnostics.Stopwatch]::StartNew()
 $events = New-Object System.Collections.ArrayList
@@ -264,6 +313,19 @@ function Get-IsaTempK([double]$Ft) {
     return 216.65
 }
 function Get-IsaC([double]$Ft) { return (Get-IsaTempK $Ft) - 273.15 }
+# ISA pressure (Pa) at a pressure altitude: the troposphere, then the
+# isothermal layer from 11 km
+function Get-IsaPressurePa([double]$Ft) {
+    $h = $Ft * 0.3048
+    if ($h -le 11000) { return 101325 * [math]::Pow(1 - 2.25577e-5 * $h, 5.25588) }
+    return 22632.06 * [math]::Exp(-1.576885e-4 * ($h - 11000))
+}
+# the Mach of a calibrated airspeed (kt) at a pressure altitude (subsonic:
+# the impact pressure at sea level's speed of sound, 661.4786 kt)
+function Get-MachFromCas([double]$Kcas, [double]$Ft) {
+    $qc = 101325 * ([math]::Pow(1 + 0.2 * [math]::Pow($Kcas / 661.4786, 2), 3.5) - 1)
+    return [math]::Sqrt(5 * ([math]::Pow($qc / (Get-IsaPressurePa $Ft) + 1, 1 / 3.5) - 1))
+}
 
 function New-PerfInit($Pt, [double[]]$Payload, [double[]]$Tanks) {
     $ft = [double]$Pt.fl * 100
@@ -407,12 +469,43 @@ function Set-PerfMcpMach([double]$Mach) {
     throw ('the A/P Mach target is {0}, not {1}' -f (Get-Num 'sim/cockpit2/autopilot/airspeed_dial_kts_mach'), $Mach)
 }
 
+# The MCP's speed in IAS (phase 2: the climbs' 250 and 300 kt): out of Mach
+# (the IAS/MACH button, above M.40), the window in knots. In IAS the A/P
+# target is the window's, at least Vmc + 10 kt (B747.70.xt.autopilot.lua
+# 2502, 2526-2532); the AFDS and A/T protections act on their own (the
+# minimum maneuvering speed), so a target other than the window's is noted,
+# not refused. The tries, still so 2 s on.
+function Set-PerfMcpIas([double]$Kias) {
+    $kt = [int][math]::Round($Kias)
+    for ($try = 1; $try -le 3; $try++) {
+        if ((Get-Int 'sim/cockpit2/autopilot/airspeed_is_mach') -eq 1) {
+            Push-Button 'sim/autopilot/knots_mach_toggle'
+            if ($null -eq (Wait-XP { (Get-Int 'sim/cockpit2/autopilot/airspeed_is_mach') -eq 0 } 5 250)) { throw 'the MCP did not change to IAS' }
+            Start-Sleep -Milliseconds 800   # the window follows 0.25 s on (1963-1972)
+        }
+        Set-XPDataref 'laminar/B747/autopilot/ias_dial_value' $kt
+        $hit = { (Get-Int 'sim/cockpit2/autopilot/airspeed_is_mach') -eq 0 -and (Get-Int 'laminar/B747/autopilot/ias_dial_value') -eq $kt }
+        if ($null -ne (Wait-XP $hit 5 250)) {
+            Start-Sleep -Seconds 2
+            if (& $hit) {
+                $tgt = Get-Num 'sim/cockpit2/autopilot/airspeed_dial_kts_mach'
+                if ([math]::Abs($tgt - $kt) -ge 0.5) { Note warn ('the A/P speed target {0} kt with the window''s {1}' -f (F $tgt '0.0'), $kt) }
+                return $try
+            }
+        }
+        Note warn ('the MCP window {0}, IAS mode {1}, after {2} kt (try {3})' -f (Get-Num 'laminar/B747/autopilot/ias_dial_value'),
+            (1 - (Get-Int 'sim/cockpit2/autopilot/airspeed_is_mach')), $kt, $try)
+    }
+    throw ('the MCP is not on {0} kt in IAS' -f $kt)
+}
+
 # The A/P and A/T on a level at $Ft and Mach $Mach: after the FMC's in-flight
 # start (F/D, A/T ARM, the MCP speed wound to the airspeed, ALT HOLD and CMD L:
 # B747.68.xt.fms.lua activate_inflightAP), the MCP in Mach (Set-PerfMcpMach:
 # Mach x 100 in its window, B747.70.xt.autopilot.lua 2547-2567), BARO STD, HDG SEL on the
-# heading, FLCH to the altitude when off it, then SPD.
-function Set-PerfCruise([double]$Ft, [double]$Mach) {
+# heading, FLCH to the altitude when off it, then SPD. With $Kias (phase 2's
+# climbs at 10,000 ft) the MCP in IAS on it instead (Set-PerfMcpIas).
+function Set-PerfCruise([double]$Ft, [double]$Mach, [double]$Kias = 0) {
     $r = [ordered]@{}
     $sw = [Diagnostics.Stopwatch]::StartNew()
     $init = Wait-XP {
@@ -433,7 +526,7 @@ function Set-PerfCruise([double]$Ft, [double]$Mach) {
         $r.fmc_inflight_start = $true
     }
     Set-XPDataref 'laminar/B747/autopilot/heading/altitude_dial_ft' ([int]$Ft)
-    $r.mach_tries = Set-PerfMcpMach $Mach
+    if ($Kias -gt 0) { $r.ias_tries = Set-PerfMcpIas $Kias } else { $r.mach_tries = Set-PerfMcpMach $Mach }
     # BARO STD (the AFDS holds the altimeter's altitude; still ISA air at 1013.25 hPa)
     $baro = Get-Num 'sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot'
     if ([math]::Abs($baro - 29.92) -gt 0.005) {
@@ -475,7 +568,12 @@ function Set-PerfCruise([double]$Ft, [double]$Mach) {
     if ($null -eq (Wait-XP { [math]::Abs((Get-Num 'sim/cockpit2/gauges/indicators/vvi_fpm_pilot')) -lt 150 } 90 500)) {
         Note warn ('not level 90 s after the level change: V/S {0} fpm' -f (F (Get-Num 'sim/cockpit2/gauges/indicators/vvi_fpm_pilot') '0'))
     }
-    if ((Get-Int 'sim/cockpit2/autopilot/airspeed_is_mach') -ne 1 -or
+    if ($Kias -gt 0) {
+        if ((Get-Int 'sim/cockpit2/autopilot/airspeed_is_mach') -ne 0 -or (Get-Int 'laminar/B747/autopilot/ias_dial_value') -ne [int][math]::Round($Kias)) {
+            Note info ('on the level the MCP is not on {0} kt in IAS: again' -f $Kias)
+            $r.ias_tries_level = Set-PerfMcpIas $Kias
+        }
+    } elseif ((Get-Int 'sim/cockpit2/autopilot/airspeed_is_mach') -ne 1 -or
         [math]::Abs((Get-Num 'sim/cockpit2/autopilot/airspeed_dial_kts_mach') - $Mach) -ge 0.0005) {
         Note info ('on the level the MCP is {0} {1}: Mach {2} again' -f $(if ((Get-Int 'sim/cockpit2/autopilot/airspeed_is_mach') -eq 1) { 'Mach' } else { 'IAS' }),
             (F (Get-Num 'sim/cockpit2/autopilot/airspeed_dial_kts_mach') '0.000'), $Mach)
@@ -498,8 +596,9 @@ function Set-PerfCruise([double]$Ft, [double]$Mach) {
     $r.mcp_alt_ft = Get-Num 'laminar/B747/autopilot/heading/altitude_dial_ft'
     $r.mcp_hdg = $hdg
     $r.setup_wall_s = [math]::Round($sw.Elapsed.TotalSeconds, 1)
-    Note info ('A/P set: FMA pitch {0} roll {1} A/T {2}, Mach target {3}, MCP {4} ft, hdg {5} ({6} s)' -f `
-        $r.fma_pitch, $r.fma_roll, $r.fma_at, (F $r.ap_mach_target '0.000'), $r.mcp_alt_ft, $hdg, $r.setup_wall_s)
+    Note info ('A/P set: FMA pitch {0} roll {1} A/T {2}, {3} target {4}, MCP {5} ft, hdg {6} ({7} s)' -f `
+        $r.fma_pitch, $r.fma_roll, $r.fma_at, $(if ($r.is_mach -eq 1) { 'Mach' } else { 'IAS' }), (F $r.ap_mach_target '0.000'),
+        $r.mcp_alt_ft, $hdg, $r.setup_wall_s)
     return $r
 }
 
@@ -634,7 +733,14 @@ $colSpec += @(
     @('fma_roll', 'laminar/B747/autopilot/FMA/active_roll_mode', -1, 'last'),
     @('fma_at', 'laminar/B747/autopilot/FMA/autothrottle_mode', -1, 'last'),
     @('servos_on', 'laminar/B747/autopilot/servos_on', -1, 'last'),
-    @('cmd_l', 'laminar/B747/autopilot/cmd_L_mode/status', -1, 'last')
+    @('cmd_l', 'laminar/B747/autopilot/cmd_L_mode/status', -1, 'last'),
+    # (phase 2) the reference thrust limit (B747.68.xt.fms.lua THRLIM_CODE: TO
+    # 1, CLB 2, CRZ 3, CON 4, GA 5; an air start's CLB, thrlim_model.lua 143)
+    # and the speeds the AFDS and A/T protect (the PFD's amber band's top and
+    # the maximum)
+    @('thrlim', 'laminar/B747/fms/thrlim/code', -1, 'last'),
+    @('vminm', 'laminar/B747/airspeed/Vminm', -1, 'mean'),
+    @('vmax', 'laminar/B747/airspeed/Vmax', -1, 'mean')
 )
 
 # the WebSocket's reader, in a runspace of its own: every update a sample of
@@ -1119,8 +1225,9 @@ function Format-PerfFlows($W) {
 }
 
 # writes by the aircraft from the logger's start (3 s on) to now, and the
-# modes at the end
-function Add-PerfWritesChecks($Res) {
+# modes at the end (the pitch mode, the A/T's modes, their names; phase 2's
+# ceilings end climbing in FLCH)
+function Add-PerfWritesChecks($Res, [int]$Pitch = 9, [int[]]$At = @(3), [string]$Modes = 'ALT, SPD') {
     $rows = Get-PerfRows
     $from = [math]::Min($Res.rows0 + 3, $rows.Count - 1)
     $wr = Measure-PerfWrites @($rows[$from..($rows.Count - 1)])
@@ -1133,9 +1240,9 @@ function Add-PerfWritesChecks($Res) {
     $last = $rows[$rows.Count - 1]
     $Res.end = [ordered]@{ fma_pitch = $last[$script:ix['fma']]; fma_at = $last[$script:ix['fma_at']]; servos_on = $last[$script:ix['servos_on']]
         burning = @(1..4 | ForEach-Object { $last[$script:ix["burning_$_"]] }) }
-    Add-Check $Res 'modes_at_end' (($Res.end.fma_pitch -eq 9) -and ($Res.end.fma_at -eq 3) -and ($Res.end.servos_on -eq 1) -and
+    Add-Check $Res 'modes_at_end' (($Res.end.fma_pitch -eq $Pitch) -and (@($At) -contains [int]$Res.end.fma_at) -and ($Res.end.servos_on -eq 1) -and
         (@($Res.end.burning | Where-Object { $_ -ne 1 }).Count -eq 0)) ('pitch {0}, A/T {1}, servos {2}, burning {3}' -f $Res.end.fma_pitch,
-        $Res.end.fma_at, $Res.end.servos_on, ($Res.end.burning -join '/')) 'ALT, SPD, servos on, all burning'
+        $Res.end.fma_at, $Res.end.servos_on, ($Res.end.burning -join '/')) "$Modes, servos on, all burning"
 }
 
 # A check point (suite check): the flight, the A/P, 60 s level, the window
@@ -1258,6 +1365,354 @@ function Compare-PerfRepeat($First, $Last) {
         gauge_first_kgph = $First.ff_gauge_kgph; gauge_last_kgph = $Last.ff_gauge_kgph
         gauge_diff_pct = ($Last.ff_gauge_kgph / $First.ff_gauge_kgph - 1) * 100
         first_weight_kg = $First.weight; last_weight_kg = $Last.weight; within_1_pct = ([math]::Abs($d) -le 1) }
+}
+
+# ---------------------------------------------------------------- the climbs (phase 2)
+
+# a mark between the rows $K - 1 and $K at the fraction $F (1: the row $K):
+# the values there, the time since $T0 (sim time), the fuel used since $F0
+# (the fuel's weight), the FF gauges' integral and the distances to there
+# ($Ffu, $Air, $Gnd: running sums by row)
+function New-PerfMark($Rows, [int]$K, [double]$F, [string]$Label, [double]$T0, [double]$F0, [double[]]$Air, [double[]]$Gnd, [double[]]$Ffu) {
+    $ix = $script:ix
+    $j = [math]::Max($K - 1, 0)
+    $a = $Rows[$j]; $b = $Rows[$K]
+    $lerp = { param([string]$c) $a[$ix[$c]] + $F * ($b[$ix[$c]] - $a[$ix[$c]]) }
+    $n1a = 0.0; $n1b = 0.0
+    foreach ($e in 1..4) { $n1a += $a[$ix["n1_$e"]]; $n1b += $b[$ix["n1_$e"]] }
+    return [ordered]@{ mark = $Label; row = $K; press_alt_ft = (& $lerp 'press_alt_ft'); t_s = (& $lerp 'sim_t') - $T0
+        fuel_used_kg = $F0 - (& $lerp 'fuel_kg'); ff_gauge_used_kg = $Ffu[$j] + $F * ($Ffu[$K] - $Ffu[$j])
+        dist_air_nm = $Air[$j] + $F * ($Air[$K] - $Air[$j]); dist_gnd_nm = $Gnd[$j] + $F * ($Gnd[$K] - $Gnd[$j])
+        gw_kg = (& $lerp 'weight'); ias_kt = (& $lerp 'ias'); mach = (& $lerp 'mach'); n1_avg_pct = ($n1a + $F * ($n1b - $n1a)) / 4
+        vminm_kt = (& $lerp 'vminm'); thrlim = $b[$ix['thrlim']]; fma = $b[$ix['fma']]; fma_at = $b[$ix['fma_at']]
+        seg_vs_fpm = [double]::NaN }
+}
+
+# A climb's marks from the row $From (the FLCH push; PERF_SIMBRIEF.md phase 2:
+# every 5,000 ft the time, the fuel used and the distance flown): the start
+# row, then the first crossing of each of $MarksFt and, with $TopFt, of the
+# top less $ClimbTopMarginFt, each between its two rows (pressure
+# altitude). The fuel from the fuel's weight, the FF gauges' integral beside
+# it; the air and the ground distance from the TAS and the ground speed (the
+# same in still air); each mark's segment's mean climb rate. The rows to the
+# last mark in real time, and the thrust limit's codes over them.
+function Measure-PerfClimb($Rows, [int]$From, [double[]]$MarksFt, $TopFt) {
+    $ix = $script:ix
+    $n = $Rows.Count
+    $m = [ordered]@{ from = $From; marks = New-Object System.Collections.ArrayList; top_reached = $false
+        rows_to_end = 0; rows_real_time = 0; thrlim_codes = '' }
+    if ($n - $From -lt 2) { return $m }
+    $iT = $ix['sim_t']; $iA = $ix['press_alt_ft']
+    $t0 = $Rows[$From][$iT]; $f0 = $Rows[$From][$ix['fuel_kg']]
+    $air = New-Object double[] $n; $gnd = New-Object double[] $n; $ffu = New-Object double[] $n
+    for ($k = $From + 1; $k -lt $n; $k++) {
+        $dt = $Rows[$k][$iT] - $Rows[$k - 1][$iT]
+        $air[$k] = $air[$k - 1] + ($Rows[$k][$ix['tas_ms']] + $Rows[$k - 1][$ix['tas_ms']]) / 2 * $dt / 1852
+        $gnd[$k] = $gnd[$k - 1] + ($Rows[$k][$ix['gs_ms']] + $Rows[$k - 1][$ix['gs_ms']]) / 2 * $dt / 1852
+        $ffu[$k] = $ffu[$k - 1] + ((Get-FfSum $Rows[$k]) + (Get-FfSum $Rows[$k - 1])) / 2 * $dt
+    }
+    [void]$m.marks.Add((New-PerfMark $Rows $From 1.0 'start' $t0 $f0 $air $gnd $ffu))
+    $targets = New-Object System.Collections.ArrayList
+    foreach ($ft in $MarksFt) { [void]$targets.Add(@([double]$ft, ([string][int]$ft))) }
+    if ($null -ne $TopFt) { [void]$targets.Add(@(([double]$TopFt - $ClimbTopMarginFt), ('top ' + [int]$TopFt))) }
+    $k = $From + 1
+    $lastRow = $From
+    foreach ($tg in $targets) {
+        $ft = [double]$tg[0]
+        if ($Rows[$From][$iA] -ge $ft) { continue }
+        while ($k -lt $n -and $Rows[$k][$iA] -lt $ft) { $k++ }
+        if ($k -ge $n) { break }
+        $a0 = $Rows[$k - 1][$iA]; $a1 = $Rows[$k][$iA]
+        $f = 1.0
+        if ($a1 -gt $a0) { $f = [math]::Min(1.0, [math]::Max(0.0, ($ft - $a0) / ($a1 - $a0))) }
+        $mk = New-PerfMark $Rows $k $f ([string]$tg[1]) $t0 $f0 $air $gnd $ffu
+        $prev = $m.marks[$m.marks.Count - 1]
+        if ($mk.t_s -gt $prev.t_s) { $mk.seg_vs_fpm = ($mk.press_alt_ft - $prev.press_alt_ft) / ($mk.t_s - $prev.t_s) * 60 }
+        [void]$m.marks.Add($mk)
+        $lastRow = $k
+        if (([string]$tg[1]).StartsWith('top')) { $m.top_reached = $true }
+    }
+    $rt = 0
+    $codes = [ordered]@{}
+    for ($j = $From; $j -le $lastRow; $j++) {
+        $r = $Rows[$j]
+        if ($r[$ix['paused']] -eq 0 -and $r[$ix['sim_speed']] -eq 1 -and $r[$ix['ground_speed_x']] -eq 1) { $rt++ }
+        $c = [string][int]$r[$ix['thrlim']]
+        $codes[$c] = 1 + [int]$codes[$c]
+    }
+    $m.rows_to_end = $lastRow - $From + 1
+    $m.rows_real_time = $rt
+    $m.thrlim_codes = (@($codes.Keys | ForEach-Object { '{0}: {1} rows' -f $_, $codes[$_] })) -join ', '
+    $m.thrlim_clb_only = ($codes.Count -eq 1 -and $codes.Contains('2'))
+    return $m
+}
+
+# The climb rate (fpm) of a straight line through each $Win rows of pressure
+# altitude on sim time from the row $From, put at the window's middle row:
+# @{ row; t_s (the window's mean time since the row $From); alt_ft (its mean
+# altitude); rate_fpm } each (running sums, the window sliding a row a time)
+function Get-PerfClimbRates($Rows, [int]$From, [int]$Win) {
+    $ix = $script:ix; $iT = $ix['sim_t']; $iA = $ix['press_alt_ft']
+    $n = $Rows.Count
+    $out = New-Object System.Collections.ArrayList
+    if ($Win -lt 3 -or $n - $From -lt $Win) { return ,$out.ToArray() }
+    $t0 = $Rows[$From][$iT]; $y0 = $Rows[$From][$iA]
+    $st = 0.0; $sy = 0.0; $stt = 0.0; $sty = 0.0
+    for ($k = $From; $k -lt $From + $Win; $k++) {
+        $t = $Rows[$k][$iT] - $t0; $y = $Rows[$k][$iA] - $y0
+        $st += $t; $sy += $y; $stt += $t * $t; $sty += $t * $y
+    }
+    $half = [int][math]::Floor($Win / 2)
+    for ($j = $From; $j + $Win -le $n; $j++) {
+        if ($j -gt $From) {
+            $t = $Rows[$j - 1][$iT] - $t0; $y = $Rows[$j - 1][$iA] - $y0
+            $st -= $t; $sy -= $y; $stt -= $t * $t; $sty -= $t * $y
+            $t = $Rows[$j + $Win - 1][$iT] - $t0; $y = $Rows[$j + $Win - 1][$iA] - $y0
+            $st += $t; $sy += $y; $stt += $t * $t; $sty += $t * $y
+        }
+        $d = $Win * $stt - $st * $st
+        $rate = [double]::NaN
+        if ($d -gt 0) { $rate = ($Win * $sty - $st * $sy) / $d * 60 }
+        [void]$out.Add([ordered]@{ row = $j + $half; t_s = $st / $Win; alt_ft = $y0 + $sy / $Win; rate_fpm = $rate })
+    }
+    return ,$out.ToArray()
+}
+
+# The ceiling (PERF_SIMBRIEF.md phase 2: the climb thrust, M.85, the climb
+# rate under 300 fpm) from the rates (Get-PerfClimbRates): once a rate has
+# been $ArmFpm or more (the climb under way), the first one under $RateFpm
+# that stays under it for the $HoldN rates on; the altitude and time where
+# the rate crossed $RateFpm, between that rate and the one before. found
+# false while there is none (yet).
+function Get-PerfCeiling($Rows, [int]$From, [double]$RateFpm, [int]$Win, [double]$ArmFpm, [int]$HoldN) {
+    $rates = Get-PerfClimbRates $Rows $From $Win
+    $c = [ordered]@{ found = $false; ceiling_ft = [double]::NaN; t_s = [double]::NaN; row = $null; armed = $false
+        max_rate_fpm = [double]::NaN; last_rate_fpm = [double]::NaN; last_alt_ft = [double]::NaN; rates = $rates.Count }
+    if ($rates.Count -eq 0) { return $c }
+    $max = [double]::NegativeInfinity
+    $armed = $false
+    for ($j = 0; $j -lt $rates.Count; $j++) {
+        $r = $rates[$j].rate_fpm
+        if ($r -gt $max) { $max = $r }
+        if (-not $armed) { if ($r -ge $ArmFpm) { $armed = $true }; continue }
+        if ($r -ge $RateFpm) { continue }
+        if ($j + $HoldN -ge $rates.Count) { break }
+        $held = $true
+        for ($h = 1; $h -le $HoldN; $h++) { if ($rates[$j + $h].rate_fpm -ge $RateFpm) { $held = $false; break } }
+        if (-not $held) { continue }
+        # (the rate before is at or over $RateFpm: else it had been held first)
+        $p = $rates[$j - 1]; $q = $rates[$j]
+        $f = 1.0
+        if ($p.rate_fpm -ne $q.rate_fpm) { $f = ($p.rate_fpm - $RateFpm) / ($p.rate_fpm - $q.rate_fpm) }
+        $c.found = $true
+        $c.ceiling_ft = $p.alt_ft + $f * ($q.alt_ft - $p.alt_ft)
+        $c.t_s = $p.t_s + $f * ($q.t_s - $p.t_s)
+        $c.row = $q.row
+        break
+    }
+    $c.armed = $armed
+    $c.max_rate_fpm = $max
+    $c.last_rate_fpm = $rates[$rates.Count - 1].rate_fpm
+    $c.last_alt_ft = $rates[$rates.Count - 1].alt_ft
+    return $c
+}
+
+# level at $Ft for $HoldS rows within 50 ft, 300 fpm and the speed (3 kt of
+# $Kias, else M.005 of $Mach), in $MaxS s of sim time from now (phase 2's
+# starts, wider than phase 1's limits: the climbs begin there)
+function Wait-PerfLevelAt([double]$Ft, [double]$Kias, [double]$Mach, [int]$HoldS, [int]$MaxS) {
+    $ix = $script:ix
+    $from = (Get-PerfRows).Count
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    while ($true) {
+        Start-Sleep -Seconds 2
+        Assert-PerfLogger
+        $rows = Get-PerfRows
+        $since = $rows.Count - $from
+        if ($since -ge $HoldS) {
+            $ok = $true
+            for ($k = $rows.Count - $HoldS; $k -lt $rows.Count; $k++) {
+                $r = $rows[$k]
+                if ([math]::Abs($r[$ix['alt']] - $Ft) -gt 50 -or [math]::Abs($r[$ix['vs']]) -ge 300) { $ok = $false; break }
+                if ($Kias -gt 0) { if ([math]::Abs($r[$ix['ias']] - $Kias) -gt 3) { $ok = $false; break } }
+                elseif ([math]::Abs($r[$ix['mach']] - $Mach) -gt 0.005) { $ok = $false; break }
+            }
+            if ($ok) { return [ordered]@{ ok = $true; row = $rows.Count - 1; after_s = $since; detail = $null } }
+        }
+        if ($since -ge $MaxS -or $sw.Elapsed.TotalSeconds -gt $MaxS + 120) { break }
+    }
+    $rows = Get-PerfRows
+    $r = $rows[$rows.Count - 1]
+    return [ordered]@{ ok = $false; row = $rows.Count - 1; after_s = $rows.Count - $from
+        detail = ('alt {0} ft, IAS {1} kt, Mach {2}, V/S {3} fpm' -f (F $r[$ix['alt']] '0'), (F $r[$ix['ias']] '0.0'), (F $r[$ix['mach']] '0.000'),
+            (F $r[$ix['vs']] '0')) }
+}
+
+# FLCH to the MCP altitude (set first), the pitch in FLCH (8) and the A/T in
+# THR (4) or THR REF (5) 3 s on: the logger's row at the push
+function Start-PerfFlch($Res, [double]$McpFt) {
+    Set-XPDataref 'laminar/B747/autopilot/heading/altitude_dial_ft' ([int]$McpFt)
+    Start-Sleep -Milliseconds 500
+    $from = (Get-PerfRows).Count
+    Push-Button 'laminar/B747/autopilot/button_switch/flch_mode'
+    [void](Wait-XP { (Get-Int 'laminar/B747/autopilot/FMA/active_pitch_mode') -eq 8 } 10 200)
+    Start-Sleep -Seconds 3
+    $pm = Get-Int 'laminar/B747/autopilot/FMA/active_pitch_mode'
+    $atm = Get-Int 'laminar/B747/autopilot/FMA/autothrottle_mode'
+    Add-Check $Res 'flch_engaged' (($pm -eq 8) -and (@(4, 5) -contains $atm)) ('pitch {0}, A/T {1}, MCP {2} ft' -f $pm, $atm,
+        (Get-Num 'laminar/B747/autopilot/heading/altitude_dial_ft')) 'FLCH (8), A/T THR (4) or THR REF (5)'
+    return $from
+}
+
+# the climb's checks on its marks: the rows in real time, the thrust limit CLB
+function Add-PerfClimbChecks($Res) {
+    $c = $Res.climb
+    Add-Check $Res 'climb_real_time' ($c.rows_real_time -eq $c.rows_to_end) ('{0} of {1} rows to the last mark' -f $c.rows_real_time, $c.rows_to_end) 'all (no time acceleration, not paused)'
+    Add-Check $Res 'climb_thrust_clb' $c.thrlim_clb_only $c.thrlim_codes 'the reference thrust CLB (2) all the way'
+}
+
+# A climb (suite climb; PERF_SIMBRIEF.md phase 2): an air start at 10,000 ft
+# and 250 kt, level there (20 s within the limits, in 3 min), then FLCH to
+# the top and 300 kt; the MCP in Mach .78 once the Mach reaches it (the
+# schedule 250/300/78); the marks (Measure-PerfClimb) from the FLCH push to
+# the top; 60 s on for the capture (ALT and SPD at the end). Not at the top
+# in 45 min of sim time: timeout, with the marks reached.
+function Invoke-PerfClimb($T, $Acf, [double[]]$StationKg) {
+    $res = [ordered]@{ id = $T.id; kind = 'climb'; target = $T; status = 'done'; checks = [ordered]@{} }
+    $ix = $script:ix
+    try {
+        $m0 = Get-MachFromCas $ClimbStartKias $ClimbStartFt
+        $pt = [ordered]@{ id = $T.id; fl = $ClimbStartFt / 100; mach = $m0; gw_pct = $T.gw_pct; fuel_kg = $T.fuel_kg }
+        Start-PerfFlight $res $pt $Acf $StationKg
+        $res.setup = Set-PerfCruise $ClimbStartFt $m0 $ClimbStartKias
+        $s = $res.setup
+        Add-Check $res 'ap_alt_spd_ias' (($s.fma_pitch -eq 9) -and ($s.fma_at -eq 3) -and ($s.is_mach -eq 0) -and ($s.servos_on -eq 1)) `
+            ('pitch {0}, A/T {1}, Mach mode {2}, target {3} kt, servos {4}' -f $s.fma_pitch, $s.fma_at, $s.is_mach, (F $s.ap_mach_target '0.0'), $s.servos_on) `
+            'ALT (9), SPD (3), IAS, servos on'
+        $lv = Wait-PerfLevelAt $ClimbStartFt $ClimbStartKias 0 20 180
+        $res.start = $lv
+        Add-Check $res 'level_at_start' $lv.ok $(if ($lv.ok) { '{0} s of sim time after the setup' -f $lv.after_s } else { $lv.detail }) `
+            '50 ft, 3 kt, 300 fpm for 20 s (in 3 min)'
+        # 300 kt in the window (the MCP in IAS since the setup), then FLCH at
+        # once: the climb's start (the A/T in SPD meanwhile, a second)
+        Set-XPDataref 'laminar/B747/autopilot/ias_dial_value' ([int]$ClimbKias)
+        $from = Start-PerfFlch $res $T.top_ft
+        $res.ias_tries = Set-PerfMcpIas $ClimbKias
+        $crossed = $false
+        $top = $null
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        while ($true) {
+            Start-Sleep -Seconds 2
+            Assert-PerfLogger
+            $rows = Get-PerfRows
+            $last = $rows[$rows.Count - 1]
+            if (-not $crossed -and $last[$ix['mach']] -ge $ClimbMach) {
+                $crossed = $true
+                $res.crossover = [ordered]@{ row = $rows.Count - 1; press_alt_ft = $last[$ix['press_alt_ft']]; ias_kt = $last[$ix['ias']]; mach = $last[$ix['mach']] }
+                Note info ('{0}: M{1} at {2} ft and {3} kt: the MCP to M{4}' -f $T.id, (F $last[$ix['mach']] '0.000'), (F $last[$ix['press_alt_ft']] '0'),
+                    (F $last[$ix['ias']] '0'), $ClimbMach)
+                $res.crossover.mach_tries = Set-PerfMcpMach $ClimbMach
+                continue
+            }
+            if ($last[$ix['press_alt_ft']] -ge $T.top_ft - $ClimbTopMarginFt) { $top = $rows.Count - 1; break }
+            if ($last[$ix['servos_on']] -ne 1) { throw 'the A/P servos went off in the climb' }
+            if (($last[$ix['sim_t']] - $rows[$from][$ix['sim_t']]) -gt 2700 -or $sw.Elapsed.TotalSeconds -gt 3300) { break }
+        }
+        if ($null -eq $top) {
+            $res.status = 'timeout'
+            Note warn ('{0}: not at {1} ft in 45 min' -f $T.id, $T.top_ft)
+        } else {
+            # 60 s on: the capture, ALT and SPD
+            $sw2 = [Diagnostics.Stopwatch]::StartNew()
+            while ((Get-PerfRows).Count -lt $top + 60 -and $sw2.Elapsed.TotalSeconds -lt 120) { Start-Sleep -Seconds 2; Assert-PerfLogger }
+        }
+        $rows = Get-PerfRows
+        $res.climb = Measure-PerfClimb $rows $from $ClimbMarksFt $T.top_ft
+        Add-PerfClimbChecks $res
+        # (every top is above 300 kt's M.78, about 29,300 ft: at the top a pass
+        # needs it; short of the top, information)
+        $xPass = if ($null -ne $top) { $crossed } else { $null }
+        Add-Check $res 'crossover' $xPass $(if ($crossed) { 'M{0} at {1} ft and {2} kt' -f (F $res.crossover.mach '0.000'),
+            (F $res.crossover.press_alt_ft '0'), (F $res.crossover.ias_kt '0') } else { 'not reached' }) ('the MCP to M{0} once the Mach reached it' -f $ClimbMach)
+        $mk = $res.climb.marks[$res.climb.marks.Count - 1]
+        Note $(if ($res.climb.top_reached) { 'pass' } else { 'warn' }) ('{0}: {1} at {2} ft: {3} s, fuel {4} kg (gauges {5}), {6} NM in the air ({7} over the ground), {8} t' -f $T.id,
+            $mk.mark, (F $mk.press_alt_ft '0'), (F $mk.t_s '0'), (F $mk.fuel_used_kg '0'), (F $mk.ff_gauge_used_kg '0'), (F $mk.dist_air_nm '0.0'),
+            (F $mk.dist_gnd_nm '0.0'), (F ($mk.gw_kg / 1000) '0.0'))
+        Add-PerfWritesChecks $res
+    } catch {
+        $res.status = 'aborted'
+        $res.error = $_.Exception.Message
+        Note fail "$($T.id): $($res.error)"
+    } finally {
+        $res.raw_file = "raw/$($T.id).csv"
+        if ($null -ne $script:logger) { $res.columns_missing = $script:logger.missing }
+        Stop-PerfLogger
+    }
+    return $res
+}
+
+# A ceiling (suite climb; PERF_SIMBRIEF.md phase 2): an air start at FL310
+# and M.85, level there (30 s within the limits, in 4 min), then FLCH to
+# 45,000 ft at M.85 (the climb thrust: the reference CLB) until the climb
+# rate stays under 300 fpm (Get-PerfCeiling); at most 45,000 ft ("top") and
+# 40 min of sim time ("timeout"). The marks every 1,000 ft, and at the
+# ceiling the time, fuel and distance from FL310 (Measure-PerfClimb).
+function Invoke-PerfCeiling($T, $Acf, [double[]]$StationKg) {
+    $res = [ordered]@{ id = $T.id; kind = 'ceiling'; target = $T; status = 'done'; checks = [ordered]@{} }
+    $ix = $script:ix
+    try {
+        $pt = [ordered]@{ id = $T.id; fl = $CeilingStartFt / 100; mach = $CeilingMach; gw_pct = $T.gw_pct; fuel_kg = $T.fuel_kg }
+        Start-PerfFlight $res $pt $Acf $StationKg
+        $res.setup = Set-PerfCruise $CeilingStartFt $CeilingMach
+        Add-PerfSetupCheck $res $CeilingMach
+        $lv = Wait-PerfLevelAt $CeilingStartFt 0 $CeilingMach 30 240
+        $res.start = $lv
+        Add-Check $res 'level_at_start' $lv.ok $(if ($lv.ok) { '{0} s of sim time after the setup' -f $lv.after_s } else { $lv.detail }) `
+            '50 ft, M.005, 300 fpm for 30 s (in 4 min)'
+        $from = Start-PerfFlch $res $CeilingTopFt
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        while ($true) {
+            Start-Sleep -Seconds 2
+            Assert-PerfLogger
+            $rows = Get-PerfRows
+            $last = $rows[$rows.Count - 1]
+            if ((Get-PerfCeiling $rows $from $CeilingRateFpm $CeilingWinS $CeilingArmFpm $CeilingHoldS).found) { break }
+            if ($last[$ix['press_alt_ft']] -ge $CeilingTopFt - 100) { $res.status = 'top'; break }
+            if ($last[$ix['servos_on']] -ne 1) { throw 'the A/P servos went off in the climb' }
+            if (($last[$ix['sim_t']] - $rows[$from][$ix['sim_t']]) -gt 2400 -or $sw.Elapsed.TotalSeconds -gt 3000) { $res.status = 'timeout'; break }
+        }
+        $rows = Get-PerfRows
+        $c = Get-PerfCeiling $rows $from $CeilingRateFpm $CeilingWinS $CeilingArmFpm $CeilingHoldS
+        $res.ceiling = $c
+        $res.climb = Measure-PerfClimb $rows $from $CeilingMarksFt $null
+        $res.at_ceiling = $null
+        if ($c.found) {
+            $at = Measure-PerfClimb $rows $from @($c.ceiling_ft) $null
+            if ($at.marks.Count -ge 2) { $res.at_ceiling = $at.marks[1] }
+        }
+        $ac = $res.at_ceiling
+        Add-Check $res 'ceiling' $c.found $(if ($c.found -and $null -ne $ac) { '{0} ft after {1} s: {2} t, M{3}, {4} kt (the amber band''s top {5} kt), fuel {6} kg' -f
+            (F $c.ceiling_ft '0'), (F $c.t_s '0'), (F ($ac.gw_kg / 1000) '0.0'), (F $ac.mach '0.000'), (F $ac.ias_kt '0'), (F $ac.vminm_kt '0'),
+            (F $ac.fuel_used_kg '0') } else { '{0}: the rate last {1} fpm at {2} ft, at most {3} fpm' -f $res.status, (F $c.last_rate_fpm '0'),
+            (F $c.last_alt_ft '0'), (F $c.max_rate_fpm '0') }) ('the climb rate under {0} fpm (a {1} s line) for {2} s, once over {3}' -f $CeilingRateFpm,
+            $CeilingWinS, $CeilingHoldS, $CeilingArmFpm)
+        Add-PerfClimbChecks $res
+        # the Mach held (the AFDS's FLCH on the MCP's M.85; its speed protection
+        # would hold the amber band's top above it)
+        $mc = Get-Col @($rows[$from..($rows.Count - 1)]) 'mach'
+        $lo = ($mc | Measure-Object -Minimum).Minimum; $hi = ($mc | Measure-Object -Maximum).Maximum
+        Add-Check $res 'mach_held' $null ('M{0} to M{1} over the climb' -f (F $lo '0.000'), (F $hi '0.000')) ('M{0} (FLCH)' -f $CeilingMach)
+        Add-PerfWritesChecks $res 8 @(4, 5) 'FLCH, THR or THR REF'
+    } catch {
+        $res.status = 'aborted'
+        $res.error = $_.Exception.Message
+        Note fail "$($T.id): $($res.error)"
+    } finally {
+        $res.raw_file = "raw/$($T.id).csv"
+        if ($null -ne $script:logger) { $res.columns_missing = $script:logger.missing }
+        Stop-PerfLogger
+    }
+    return $res
 }
 
 # ---------------------------------------------------------------- the run
@@ -1398,14 +1853,156 @@ function Write-PerfFiles([string]$RunOut, [string]$RunSuite, $RunResults, $RunMe
         [void]$md.Add(('Air start checks (all but the fuel flow agreement): {0}' -f $(if ($planA) { 'all passed -> plan A' } else { 'not all passed -> plan B' })))
     }
     [IO.File]::WriteAllLines((Join-Path $RunOut 'check.md'), [string[]]$md, $utf8)
+    Write-PerfLogFiles $RunOut $LogFile $LogFrom $XtFile $XtFrom
+    if ($RunSuite -eq 'check') { return ('plan: {0}' -f $(if ($planA) { 'A' } else { 'B' })) }
+    return ('points: {0} of {1} done' -f [int]$count['done'], $prow.Count)
+}
 
+# the run's Log.txt lines that look like errors, the XTLua errors if any, the notes
+function Write-PerfLogFiles([string]$RunOut, [string]$LogFile, [long]$LogFrom, [string]$XtFile, [long]$XtFrom) {
     $ex = @(Get-FileTail $LogFile $LogFrom | Where-Object { $_ -match '(?i)error|exception|fail|assert|crash' })
     [IO.File]::WriteAllLines((Join-Path $RunOut 'log_excerpt.txt'), [string[]]$ex, $utf8)
     $xt = @(Get-FileTail $XtFile $XtFrom)
     if ($xt.Count -gt 0) { [IO.File]::WriteAllLines((Join-Path $RunOut 'xtlua_errors.txt'), [string[]]$xt, $utf8) }
     [IO.File]::WriteAllLines((Join-Path $RunOut 'events.txt'), [string[]]$events, $utf8)
-    if ($RunSuite -eq 'check') { return ('plan: {0}' -f $(if ($planA) { 'A' } else { 'B' })) }
-    return ('points: {0} of {1} done' -f [int]$count['done'], $prow.Count)
+}
+
+# a CSV field: a number in the invariant culture, blank for none or NaN
+function Format-PerfCsv($V, [string]$Fmt) {
+    if ($null -eq $V) { return '' }
+    $d = [double]$V
+    if ([double]::IsNaN($d) -or [double]::IsInfinity($d)) { return '' }
+    return $d.ToString($Fmt, $inv)
+}
+
+# The climb suite's files (phase 2): climb.csv a row a mark (each climb's
+# start, every 5,000 ft and its top; each ceiling's start and every 1,000
+# ft), ceiling.csv a row a ceiling, check.json, check.md (the climbs' and the
+# ceilings' tables, then each test's checks and marks), the logs. The
+# summary line back.
+function Write-PerfClimbFiles([string]$RunOut, $RunResults, $RunMeta, $RunAborted, $RunTests,
+        [string]$LogFile, [long]$LogFrom, [string]$XtFile, [long]$XtFrom) {
+    Save-Json (Join-Path $RunOut 'meta.json') $RunMeta
+    Save-Json (Join-Path $RunOut 'check.json') ([ordered]@{ suite = 'climb'; aborted = $RunAborted; tests = @($RunResults) })
+    $byId = @{}
+    foreach ($r in $RunResults) { $byId[$r.id] = $r }
+    $pctOf = {
+        param($T, $R)
+        if ($null -ne $R -and $null -ne $R.request) { return F ([double]$R.request.gw_pct) '0.#' }
+        if ($null -ne $T.gw_pct) { return F ([double]$T.gw_pct) '0.#' }
+        return ''
+    }
+
+    $cl = New-Object System.Collections.ArrayList
+    [void]$cl.Add('test_id,kind,plan,target_gw_pct,gw_start_kg,mark,press_alt_ft,t_s,fuel_used_kg,ff_gauge_used_kg,dist_air_nm,dist_gnd_nm,gw_kg,ias_kt,mach,seg_vs_fpm,n1_avg_pct,thrlim,status,raw_file')
+    $cc = New-Object System.Collections.ArrayList
+    [void]$cc.Add('test_id,plan,target_gw_pct,gw_start_kg,ceiling_ft,t_s,fuel_used_kg,dist_air_nm,gw_kg,mach,ias_kt,vminm_kt,max_rate_fpm,status,raw_file')
+    $count = [ordered]@{}
+    foreach ($t in $RunTests) {
+        $r = $byId[$t.id]
+        $status = if ($null -ne $r) { $r.status } else { 'not_run' }
+        $count[$status] = 1 + [int]$count[$status]
+        $pct = & $pctOf $t $r
+        $gw0 = if ($null -ne $r -and $null -ne $r.request) { Format-PerfCsv $r.request.gw_kg '0' } else { '' }
+        $raw = if ($null -ne $r) { $r.raw_file } else { '' }
+        $marks = @()
+        if ($null -ne $r -and $null -ne $r.climb) { $marks = @($r.climb.marks) }
+        if ($marks.Count -eq 0) {
+            [void]$cl.Add(('{0},{1},A,{2},{3},,,,,,,,,,,,,,{4},{5}' -f $t.id, $t.kind, $pct, $gw0, $status, $raw))
+        }
+        foreach ($mk in $marks) {
+            [void]$cl.Add((@($t.id, $t.kind, 'A', $pct, $gw0, $mk.mark, (Format-PerfCsv $mk.press_alt_ft '0'), (Format-PerfCsv $mk.t_s '0.0'),
+                (Format-PerfCsv $mk.fuel_used_kg '0.0'), (Format-PerfCsv $mk.ff_gauge_used_kg '0.0'), (Format-PerfCsv $mk.dist_air_nm '0.00'),
+                (Format-PerfCsv $mk.dist_gnd_nm '0.00'), (Format-PerfCsv $mk.gw_kg '0'), (Format-PerfCsv $mk.ias_kt '0.0'), (Format-PerfCsv $mk.mach '0.0000'),
+                (Format-PerfCsv $mk.seg_vs_fpm '0'), (Format-PerfCsv $mk.n1_avg_pct '0.00'), (Format-PerfCsv $mk.thrlim '0'), $status, $raw)) -join ',')
+        }
+        if ($t.kind -eq 'ceiling') {
+            $c = if ($null -ne $r) { $r.ceiling } else { $null }
+            $ac = if ($null -ne $r) { $r.at_ceiling } else { $null }
+            if ($null -ne $c -and $c.found -and $null -ne $ac) {
+                [void]$cc.Add((@($t.id, 'A', $pct, $gw0, (Format-PerfCsv $c.ceiling_ft '0'), (Format-PerfCsv $ac.t_s '0.0'), (Format-PerfCsv $ac.fuel_used_kg '0.0'),
+                    (Format-PerfCsv $ac.dist_air_nm '0.00'), (Format-PerfCsv $ac.gw_kg '0'), (Format-PerfCsv $ac.mach '0.0000'), (Format-PerfCsv $ac.ias_kt '0.0'),
+                    (Format-PerfCsv $ac.vminm_kt '0.0'), (Format-PerfCsv $c.max_rate_fpm '0'), $status, $raw)) -join ',')
+            } else {
+                $mx = if ($null -ne $c) { Format-PerfCsv $c.max_rate_fpm '0' } else { '' }
+                [void]$cc.Add(('{0},A,{1},{2},,,,,,,,,{3},{4},{5}' -f $t.id, $pct, $gw0, $mx, $status, $raw))
+            }
+        }
+    }
+    [IO.File]::WriteAllLines((Join-Path $RunOut 'climb.csv'), [string[]]$cl, $utf8)
+    [IO.File]::WriteAllLines((Join-Path $RunOut 'ceiling.csv'), [string[]]$cc, $utf8)
+
+    $md = New-Object System.Collections.ArrayList
+    [void]$md.Add("# Perf climb $(Split-Path -Leaf $RunOut)")
+    [void]$md.Add('')
+    [void]$md.Add(('X-Plane {0}; {1} {2} ({3} tracked files changed); acf SHA-256 {4}' -f $RunMeta.xplane.version, $RunMeta.git.branch, $RunMeta.git.commit,
+        $RunMeta.git.tracked_changes, $RunMeta.acf.sha256))
+    if ($RunAborted) { [void]$md.Add(''); [void]$md.Add("**Stopped:** $RunAborted") }
+    [void]$md.Add('')
+    [void]$md.Add(('Climbs: from {0} ft and {1} kt, FLCH at {2} kt, then M{3} (the schedule {1}/{2}/{4}); the top''s mark {5} ft below it. Ceilings: from {6} ft at M{7}, FLCH until the climb rate (a {8} s line) stays under {9} fpm.' -f
+        $ClimbStartFt, $ClimbStartKias, $ClimbKias, $ClimbMach, [int][math]::Round($ClimbMach * 100), $ClimbTopMarginFt, $CeilingStartFt, $CeilingMach,
+        $CeilingWinS, $CeilingRateFpm))
+    [void]$md.Add('')
+    [void]$md.Add('| climb | status | start t | top ft | time s | fuel kg | gauges kg | air NM | ground NM | M.78 at ft |')
+    [void]$md.Add('|---|---|---|---|---|---|---|---|---|---|')
+    foreach ($t in @($RunTests | Where-Object { $_.kind -eq 'climb' })) {
+        $r = $byId[$t.id]
+        if ($null -eq $r -or $null -eq $r.climb -or $r.climb.marks.Count -eq 0) {
+            [void]$md.Add(('| {0} | {1} | | {2} | | | | | | |' -f $t.id, $(if ($null -ne $r) { $r.status } else { 'not_run' }), $t.top_ft))
+            continue
+        }
+        $m0 = $r.climb.marks[0]; $mk = $r.climb.marks[$r.climb.marks.Count - 1]
+        $x = if ($null -ne $r.crossover) { F $r.crossover.press_alt_ft '0' } else { '' }
+        [void]$md.Add(('| {0} | {1} | {2} | {3} | {4} | {5} | {6} | {7} | {8} | {9} |' -f $t.id, $r.status, (F ($m0.gw_kg / 1000) '0.0'),
+            $(if ($r.climb.top_reached) { $t.top_ft } else { 'not reached (' + $mk.mark + ')' }), (F $mk.t_s '0'), (F $mk.fuel_used_kg '0'),
+            (F $mk.ff_gauge_used_kg '0'), (F $mk.dist_air_nm '0.0'), (F $mk.dist_gnd_nm '0.0'), $x))
+    }
+    [void]$md.Add('')
+    [void]$md.Add('| ceiling | status | start t | ceiling ft | time s | fuel kg | t there | Mach | IAS kt | amber band kt | max rate fpm |')
+    [void]$md.Add('|---|---|---|---|---|---|---|---|---|---|---|')
+    foreach ($t in @($RunTests | Where-Object { $_.kind -eq 'ceiling' })) {
+        $r = $byId[$t.id]
+        $c = if ($null -ne $r) { $r.ceiling } else { $null }
+        $ac = if ($null -ne $r) { $r.at_ceiling } else { $null }
+        $g0 = if ($null -ne $r -and $null -ne $r.request) { F ($r.request.gw_kg / 1000) '0.0' } else { '' }
+        if ($null -eq $c -or -not $c.found -or $null -eq $ac) {
+            [void]$md.Add(('| {0} | {1} | {2} | | | | | | | | {3} |' -f $t.id, $(if ($null -ne $r) { $r.status } else { 'not_run' }), $g0,
+                $(if ($null -ne $c) { F $c.max_rate_fpm '0' } else { '' })))
+            continue
+        }
+        [void]$md.Add(('| {0} | {1} | {2} | {3} | {4} | {5} | {6} | {7} | {8} | {9} | {10} |' -f $t.id, $r.status, $g0, (F $c.ceiling_ft '0'),
+            (F $ac.t_s '0'), (F $ac.fuel_used_kg '0'), (F ($ac.gw_kg / 1000) '0.0'), (F $ac.mach '0.000'), (F $ac.ias_kt '0'), (F $ac.vminm_kt '0'),
+            (F $c.max_rate_fpm '0')))
+    }
+    [void]$md.Add('')
+    [void]$md.Add(('Tests: {0} of {1} done{2}' -f [int]$count['done'], @($RunTests).Count,
+        $(if ($count.Count -gt 1 -or -not $count.Contains('done')) { '; ' + ((@($count.Keys | Where-Object { $_ -ne 'done' }) | ForEach-Object { "$_ $($count[$_])" }) -join ', ') } else { '' })))
+    foreach ($r in $RunResults) {
+        [void]$md.Add('')
+        [void]$md.Add("## $($r.id) ($($r.status))")
+        if ($r.error) { [void]$md.Add(''); [void]$md.Add("Error: $($r.error)") }
+        [void]$md.Add('')
+        [void]$md.Add('| check | pass | value | limit |')
+        [void]$md.Add('|---|---|---|---|')
+        foreach ($k in $r.checks.Keys) {
+            $c = $r.checks[$k]
+            $p = if ($null -eq $c.pass) { '-' } elseif ($c.pass) { 'yes' } else { 'NO' }
+            [void]$md.Add("| $k | $p | $($c.value) | $($c.limit) |")
+        }
+        if ($null -eq $r.climb -or $r.climb.marks.Count -eq 0) { continue }
+        [void]$md.Add('')
+        [void]$md.Add('| mark | press alt ft | time s | fuel kg | gauges kg | air NM | ground NM | gross t | IAS kt | Mach | V/S fpm | N1 % | thrust limit |')
+        [void]$md.Add('|---|---|---|---|---|---|---|---|---|---|---|---|---|')
+        foreach ($mk in $r.climb.marks) {
+            [void]$md.Add(('| {0} | {1} | {2} | {3} | {4} | {5} | {6} | {7} | {8} | {9} | {10} | {11} | {12} |' -f $mk.mark, (F $mk.press_alt_ft '0'), (F $mk.t_s '0'),
+                (F $mk.fuel_used_kg '0'), (F $mk.ff_gauge_used_kg '0'), (F $mk.dist_air_nm '0.0'), (F $mk.dist_gnd_nm '0.0'), (F ($mk.gw_kg / 1000) '0.0'),
+                (F $mk.ias_kt '0'), (F $mk.mach '0.000'), $(if ([double]::IsNaN([double]$mk.seg_vs_fpm)) { '' } else { F $mk.seg_vs_fpm '0' }),
+                (F $mk.n1_avg_pct '0.0'), (F $mk.thrlim '0')))
+        }
+    }
+    [IO.File]::WriteAllLines((Join-Path $RunOut 'check.md'), [string[]]$md, $utf8)
+    Write-PerfLogFiles $RunOut $LogFile $LogFrom $XtFile $XtFrom
+    return ('tests: {0} of {1} done' -f [int]$count['done'], @($RunTests).Count)
 }
 # dot-sourced (tests/flight/perf/perf_offline_test.ps1): the functions only
 if ($MyInvocation.InvocationName -eq '.') { return }
@@ -1418,7 +2015,13 @@ New-Item -ItemType Directory -Force -Path (Join-Path $out 'raw') | Out-Null
 
 $results = New-Object System.Collections.ArrayList
 $meta = [ordered]@{ suite = $Suite; plan = 'A'; started = (Get-Date).ToString('o'); out = $out; points = $points; levels = $levels
-    measure_s = $MeasureS; cruise_ci = $CruiseCi; light_fuel_kg = $LightFuelKg }
+    measure_s = $MeasureS; cruise_ci = $CruiseCi; light_fuel_kg = $LightFuelKg; tests = $tests }
+if ($Suite -eq 'climb') {
+    $meta.climb = [ordered]@{ schedule = ('{0}/{1}/{2}' -f $ClimbStartKias, $ClimbKias, [int][math]::Round($ClimbMach * 100)); start_ft = $ClimbStartFt
+        start_kias = $ClimbStartKias; kias = $ClimbKias; mach = $ClimbMach; marks_ft = $ClimbMarksFt; top_margin_ft = $ClimbTopMarginFt }
+    $meta.ceiling = [ordered]@{ start_ft = $CeilingStartFt; mach = $CeilingMach; rate_fpm = $CeilingRateFpm; arm_fpm = $CeilingArmFpm
+        window_s = $CeilingWinS; hold_s = $CeilingHoldS; mcp_top_ft = $CeilingTopFt; marks_ft = $CeilingMarksFt }
+}
 $xpLog = Join-Path $script:XPRoot 'Log.txt'
 $xtErr = Join-Path $script:XPRoot 'Output\B747_xtlua_errors.txt'
 $aborted = $null
@@ -1457,7 +2060,9 @@ try {
     } catch { }
     if ($null -eq $acf) {
         Note info 'the custom acf is not loaded: an air start without weights loads it first'
-        $p0 = if ($points.Count -gt 0) { $points[0] } else { [ordered]@{ id = 'probe'; fl = $levels[0].fl; mach = $levels[0].machs[0] } }
+        $p0 = if ($points.Count -gt 0) { $points[0] }
+            elseif ($levels.Count -gt 0) { [ordered]@{ id = 'probe'; fl = $levels[0].fl; mach = $levels[0].machs[0] } }
+            else { [ordered]@{ id = 'probe'; fl = $CeilingStartFt / 100; mach = $CeilingMach } }
         $probe = New-PerfInit $p0 (New-Object double[] 9) (New-Object double[] 9)
         $probe.Remove('weight')
         [void](Start-PerfAirStart $probe)
@@ -1475,10 +2080,12 @@ try {
     }
     Save-Json (Join-Path $out 'meta.json') $meta
 
-    $todo = if ($Suite -eq 'check') { $points } else { $levels }
+    $todo = if ($Suite -eq 'check') { $points } elseif ($Suite -eq 'cruise') { $levels } else { $tests }
     foreach ($item in $todo) {
         if ($Suite -eq 'check') { [void]$results.Add((Invoke-PerfCheckPoint $item $acf $stationKg)) }
-        else { [void]$results.Add((Invoke-PerfLevel $item $acf $stationKg)) }
+        elseif ($Suite -eq 'cruise') { [void]$results.Add((Invoke-PerfLevel $item $acf $stationKg)) }
+        elseif ($item.kind -eq 'climb') { [void]$results.Add((Invoke-PerfClimb $item $acf $stationKg)) }
+        else { [void]$results.Add((Invoke-PerfCeiling $item $acf $stationKg)) }
         $e = @(Get-FileTail $xtErr $xtFrom)
         if ($e.Count -gt 0) { Note fail ('XTLua errors: ' + $e[0]); break }
     }
@@ -1495,6 +2102,7 @@ try {
 $meta.finished = (Get-Date).ToString('o')
 $meta.wall_s = [math]::Round($wall.Elapsed.TotalSeconds, 0)
 $meta.aborted = $aborted
-$summary = Write-PerfFiles $out $Suite @($results) $meta $aborted $points $levels $xpLog $logFrom $xtErr $xtFrom
+if ($Suite -eq 'climb') { $summary = Write-PerfClimbFiles $out @($results) $meta $aborted $tests $xpLog $logFrom $xtErr $xtFrom }
+else { $summary = Write-PerfFiles $out $Suite @($results) $meta $aborted $points $levels $xpLog $logFrom $xtErr $xtFrom }
 Write-Host "done: $out"
 Write-Host $summary
