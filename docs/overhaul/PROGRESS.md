@@ -1765,3 +1765,7 @@ X-Plane（カスタム acf）：`s07_cruise_ff`（FL350 の ALT HOLD：最後の
     - X-Plane：`s261_mcp_mach_limit` 9/9（2 回目。1 回目の 6/8 はシナリオの見込みの側を直した）、`s07_cruise_ff` 7/7、`s10_overspeed` 22/22。
     - `s108_afds_flch` は 19/21：FLCH で上昇に入るときの速さが、許容の幅を約 1 kt 超えた（263 kt、幅は 262 kt まで）。IAS の 250 kt なので今回の直しは働かない。11-03 にも 20/21 があった。PERF のフェーズ1の後に流し直す。
   - 気づいたこと：空中の初期化（FMC の `activate_inflightAP`）が MCP に渡す速さが、今の速さより低い。FL350・M.85（約 290 kt）で 253 kt（M.76）、PERF のキットの FL310・M.85（318 kt）で 284 kt。空中スタートの後に A/T がいったん減速する。空中開始の約 1.5 秒後の、まだ上がりきらない IAS の計器を読んでいるとみられる（推定）。利用者の判断で、今は直さない（2026-11-06「今はいい」）。
+- 2026-11-06 夜：利用者の依頼で、custom ブランチから純正 acf の外装のテクスチャ 5 枚（`objects/747_exterior/` の `Exterior_Fuselage.dds`・`Exterior_Fuselage_LIT.dds`・`Exterior_Glass.dds`・`Exterior_HStab.dds`・`Exterior_Fuselage(fornml).png`）を外した。作業ツリーでも消してある（利用者：純正 acf のためのもの）。
+  - カスタム acf の obj（`Exterior_Fuselage`・`Exterior_Glass`・`Exterior_HStab`。非公開リポジトリのものと同じ）は `Exterior_Fuselage.png`・`Exterior_Fuselage_LIT.png`・`Exterior_Glass.png`・`Exterior_HStab.png` を指す。X-Plane は同じ名前の `.dds` を `.png` の代わりに読むので、custom ブランチに 3D 一式を重ねると、純正の 4 枚がカスタム acf の外装に貼られる（その組み合わせの画面では確かめていない）。`Exterior_Fuselage_LIT.png` はどこにも無いので、外した後は胴体の夜間の発光のテクスチャが無い（作業ツリーと同じ）。`Exterior_Fuselage(fornml).png` はどの obj も指さない。
+  - custom は毎回 overhaul の木から作り直すので、`update_custom_branch.sh` で外す（custom の CUSTOM_BRANCH.md と CLAUDE.md にも書いた）。overhaul と master には、純正 acf のために残す。
+  - `Exterior_HStab_LIT.dds` は作業ツリーでも残っているので、custom にも残る（カスタムの水平尾翼の obj が指す `Exterior_HStab_LIT.png` はどこにも無く、これが代わりに読まれる）。
