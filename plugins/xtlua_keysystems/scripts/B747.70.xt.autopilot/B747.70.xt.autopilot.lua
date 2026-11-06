@@ -605,6 +605,11 @@ B747DR_ap_pitch_law = find_dataref("laminar/B747/autopilot/pitch_law")
 B747DR_ap_pitch_target = find_dataref("laminar/B747/autopilot/pitch_target")
 simDR_afds_pitch = find_dataref("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot")
 simDR_afds_vs = find_dataref("sim/flightmodel/position/vh_ind_fpm")
+-- the ALT law's gain by the lift coefficient (2026-11-07, notes/ATA-22.md
+-- §53): the dynamic pressure (Pa; X-Plane's "Ambient Q", labelled psf in
+-- DataRefs.txt but 10,128 Pa at 250 kt and 9,000 ft) and the gross weight
+simDR_afds_q = find_dataref("sim/flightmodel/misc/Qstatic")
+simDR_afds_weight = find_dataref("sim/flightmodel/weight/m_total")
 -- the speed laws' (step 3b): the minimum maneuvering and the maximum speeds
 -- (the speed tape's, for the FMC's of FCOM p.675), the PLI (valid when the
 -- PFDs show it: estimate), GPWS's windshear
@@ -757,6 +762,7 @@ end
 local function afds_pitch_inputs(p)
 	p.pitch = simDR_afds_pitch
 	p.vs = simDR_afds_vs
+	p.q, p.weight = simDR_afds_q, simDR_afds_weight
 	p.tas = simDR_afds_tas
 	p.alt = simDR_pressureAlt1
 	p.vs_sel = simDR_autopilot_vs_fpm

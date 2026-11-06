@@ -85,19 +85,40 @@ B747_afds_pitch_model = M
 -- g, ATA22 p.286, for all: estimate)
 M.K_PATH = 0.25
 M.G_LIMIT = 0.05
--- (2026-11-02) the ALT law's K_PATH falls above PATH_HI_KT as
--- (PATH_HI_KT / IAS) ^ PATH_HI_POW (0.61 at 334 kt, 0.45 at 365 kt;
--- estimate): at FL250 and 334 KIAS the line flights' altitude hold swung
--- every 9.6 s by 140 fpm and 0.95 to 1.05 g after each turn, the command
--- at the G_LIMIT rate; in X-Plane 0.6 of K_PATH there held within 2 fpm
--- after the same turn, while the attitude loop's gains lower made it worse
--- (notes/ATA-22.md §44). The speed laws climbed steadily at 340 kt. The
--- V/S law (V/S, the old VNAV's path) keeps all of it (2026-11-03: with
--- less the high-speed VNAV descent fell 900 ft above its path, s206)
-M.PATH_HI_KT, M.PATH_HI_POW = 290, 3.5
-function M.path_gain(ias)
-    if ias and ias > M.PATH_HI_KT then return (M.PATH_HI_KT / ias) ^ M.PATH_HI_POW end
-    return 1
+-- (2026-11-07) the ALT law's K_PATH by the lift coefficient, CL = W / (q S)
+-- with the dynamic pressure q and the gross weight W (WING_AREA the
+-- 747-400's reference wing area, 5,500 ft2): PATH_K_LO of it up to
+-- PATH_CL_LO, all of it from PATH_CL_HI, between them in proportion
+-- (estimates: the sources give the inputs, not the gains, ATA22 p.330,
+-- p.346). The flight path follows the attitude on the lift slope over the
+-- lift flown, CL_alpha / CL, so the lighter the airplane for its dynamic
+-- pressure the faster the path answers the attitude: the path's lag
+-- against the loop's period (10 to 13 s) grows with CL, and with it the
+-- gain the loop stands; under PATH_CL_LO the lag is short against the
+-- period and the gain the loop stands is the same. (The attitude loop,
+-- B747.19.xt.afds_control.lua, keeps its gains above 250 kt.) At 238 t and
+-- FL350 to FL390 at M.85 (CL 0.38 to 0.46) the altitude hold swung every
+-- 10.5 to 11.5 s by 75 to 140 fpm with all of K_PATH, at 306 t and FL350
+-- (0.49) by 66 fpm, while at 306 t and FL370 (0.51 to 0.53) and at 10,000
+-- ft and 250 kt (0.5 to 0.57, s107, s108) all of it held. Sweeps of the
+-- gain in X-Plane (notes/ATA-22.md §53): at CL 0.31 (FL250, 334 kt, 270 t)
+-- and 0.42 (FL370, 238 t) 0.8 decayed slowly and 0.7 held, at 0.45 (FL310,
+-- 306 t) 0.9 and 0.8, at 0.49 (FL350, 306 t) 0.85 and 0.75. Before
+-- (2026-11-02, §44): (290 / IAS) ^ 3.5 above 290 KIAS, from the same swing
+-- at FL250 and 334 KIAS at 270 t (0.61 there), which left the light, high
+-- cruise under 290 KIAS with all of it. The speed laws climbed steadily at
+-- 340 kt. The V/S law (V/S, the old VNAV's path) keeps all of it
+-- (2026-11-03: with less the high-speed VNAV descent fell 900 ft above its
+-- path, s206)
+M.PATH_CL_LO, M.PATH_CL_HI, M.PATH_K_LO = 0.45, 0.60, 0.7
+M.WING_AREA = 511
+function M.path_gain(inp)
+    local q, w = inp and inp.q, inp and inp.weight
+    if not (q and w and q > 0 and w > 0) then return 1 end
+    local cl = w * 9.80665 / (q * M.WING_AREA)
+    if cl >= M.PATH_CL_HI then return 1 end
+    if cl <= M.PATH_CL_LO then return M.PATH_K_LO end
+    return M.PATH_K_LO + (1 - M.PATH_K_LO) * (cl - M.PATH_CL_LO) / (M.PATH_CL_HI - M.PATH_CL_LO)
 end
 -- ALT: the altitude error's vertical speed, K_ALT of the error a second
 -- (estimate), at most the capture's level-off
@@ -264,6 +285,8 @@ function M.inputs()
         vnav_alt = 0,       -- and altitude
         -- the speed laws (step 3b)
         ias = 0,            -- the indicated airspeed, kt
+        q = nil,            -- the dynamic pressure, Pa (ALT's gain; nil: all of K_PATH)
+        weight = nil,       -- the gross weight, kg (the same)
         spd_sel = 0,        -- FLCH's and the old VNAV's speed, kt
         mcp_ias = 0,        -- the IAS/MACH window (T/O's V2, G/A's), kt
         v_min = 0,          -- the minimum maneuvering speed (0: none)
@@ -527,7 +550,7 @@ function M.update(s, inp, dt)
             want = beam - clamp(M.GS_K * s.gs_d, -M.GS_VS_MAX, M.GS_VS_MAX)
         end
         local flown = inp.vs + (s.vs_rate or 0) * (law == "FLARE" and M.FLARE_LEAD_S or M.LEAD_S)
-        local kp = law == "FLARE" and M.K_FLARE or M.K_PATH * (law == "ALT" and M.path_gain(inp.ias) or 1)
+        local kp = law == "FLARE" and M.K_FLARE or M.K_PATH * (law == "ALT" and M.path_gain(inp) or 1)
         rate = kp * (path(want, v) - path(flown, v)) + ff
         if law == "FLARE" and (inp.gear_alt or 0) < M.FLARE_HOLD_FT then
             rate = math.min(rate, 0)
