@@ -9,3 +9,9 @@ This branch is `overhaul` with the user's custom acf as the main
 The custom acf uses 3D objects and textures that are not in the stock
 master. They are in the private repository `Gakugaku87/747-400-assets`
 (Git LFS): copy its files over this branch's folder, keeping their paths.
+
+The stock acf's exterior textures `Exterior_Fuselage.dds`,
+`Exterior_Fuselage_LIT.dds`, `Exterior_Glass.dds`, `Exterior_HStab.dds`
+and `Exterior_Fuselage(fornml).png` (in `objects/747_exterior/`) are not
+in this branch (2026-11-06). X-Plane loads a .dds in place of the .png of
+the same name, so they would be drawn on the custom acf's objects.

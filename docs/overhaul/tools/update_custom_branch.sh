@@ -10,6 +10,7 @@
 #   747-400.acf       <- 747-400_custom.acf (the stock acf is not there)
 #   fmod/747-400.snd  <- fmod/747-400_custom.snd
 #   747-400_custom.acf, fmod/747-400_custom.snd removed
+#   the stock acf's exterior textures in stock_textures removed (2026-11-06)
 #   CUSTOM_BRANCH.md  added (what this branch is)
 # The first commit has overhaul as its parent; each update is a merge of
 # overhaul into custom with that tree, so the branch only moves forward.
@@ -39,6 +40,21 @@ snd=$(entry fmod/747-400_custom.snd)
 git update-index --cacheinfo "$acf,747-400.acf"
 git update-index --cacheinfo "$snd,fmod/747-400.snd"
 git update-index --force-remove 747-400_custom.acf fmod/747-400_custom.snd
+# The stock acf's exterior textures (the user's request, 2026-11-06; they
+# are deleted in the working tree here too). X-Plane loads a .dds in place
+# of the .png of the same name, and the custom acf's objects name
+# Exterior_Fuselage.png, Exterior_Fuselage_LIT.png, Exterior_Glass.png and
+# Exterior_HStab.png, so these would be drawn on them. Those PNGs are in
+# the assets repository, all but Exterior_Fuselage_LIT.png. No object
+# names Exterior_Fuselage(fornml).png.
+stock_textures=(
+    'objects/747_exterior/Exterior_Fuselage.dds'
+    'objects/747_exterior/Exterior_Fuselage_LIT.dds'
+    'objects/747_exterior/Exterior_Glass.dds'
+    'objects/747_exterior/Exterior_HStab.dds'
+    'objects/747_exterior/Exterior_Fuselage(fornml).png'
+)
+git update-index --force-remove "${stock_textures[@]}"
 note=$(git hash-object -w --stdin <<'EOF'
 # The custom branch
 
@@ -51,6 +67,12 @@ This branch is `overhaul` with the user's custom acf as the main
 The custom acf uses 3D objects and textures that are not in the stock
 master. They are in the private repository `Gakugaku87/747-400-assets`
 (Git LFS): copy its files over this branch's folder, keeping their paths.
+
+The stock acf's exterior textures `Exterior_Fuselage.dds`,
+`Exterior_Fuselage_LIT.dds`, `Exterior_Glass.dds`, `Exterior_HStab.dds`
+and `Exterior_Fuselage(fornml).png` (in `objects/747_exterior/`) are not
+in this branch (2026-11-06). X-Plane loads a .dds in place of the .png of
+the same name, so they would be drawn on the custom acf's objects.
 EOF
 )
 git update-index --add --cacheinfo "100644,$note,CUSTOM_BRANCH.md"
@@ -74,8 +96,8 @@ else
 
 $short: $subject
 
-The tree is $base's with the custom acf as 747-400.acf
-(docs/overhaul/tools/update_custom_branch.sh).
+The tree is $base's with the custom acf as 747-400.acf and without the
+stock acf's exterior textures (docs/overhaul/tools/update_custom_branch.sh).
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     new=$(git -c user.name="$name" -c user.email="$mail" commit-tree "$tree" -p "$old" -p "$base_sha" -m "$msg")
