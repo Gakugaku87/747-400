@@ -94,8 +94,16 @@ end
 
 fmsFunctionsDefs["POSTFLIGHT"]["L6"]={"setpage","ACARS"}
 fmsPages["INITIALIZE"]=createPage("INITIALIZE")
+-- (2026-11-06 review) CRUISE ALT NOT SET once each time the page is shown.
+-- Before, it was posted at every draw: CLR could not clear it, and the
+-- scratchpad took no keys while it showed, so the CDU was unusable on this
+-- page until CRZ ALT was set. A page not drawn for a second was left.
+local initDrawn = {}
 fmsPages["INITIALIZE"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be this way
-  if getFMSData("crzalt")=="*****" then fmsModules[fmsID]["notify"]="CRUISE ALT NOT SET" end
+  local now = simDRTime
+  local last = initDrawn[fmsID]
+  initDrawn[fmsID] = now
+  if (last == nil or now - last > 1) and getFMSData("crzalt")=="*****" then fmsModules[fmsID]["notify"]="CRUISE ALT NOT SET" end
   -- DEP/DES not entered: the FMC's route's origin and destination
   -- (2026-11-05 review 4: before, X-Plane's flight plan's JSON decoded at
   -- every draw, through fmsJson, the VNAV pages' binding; an error there,

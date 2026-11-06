@@ -76,6 +76,23 @@ rte.origin, rte.dest = {ident = "ZZAA"}, {ident = "ZZBB"}
 frames(0.5)
 T.check(line(5):find("^<ZZAA/ZZBB"), "DEP/DES the FMC's route's (before: X-Plane's flight plan's): " .. line(5))
 rte.origin, rte.dest = nil, nil
+-- (2026-11-06 review) CRUISE ALT NOT SET once each time the page is shown.
+-- Before, it was posted at every draw: CLR could not clear it, and the
+-- scratchpad took no keys while it showed.
+T.equal(pad(), "CRUISE ALT NOT SET", "no CRZ ALT: CRUISE ALT NOT SET")
+rt:command(K .. "key/clear")
+frames(1)
+T.equal(pad(), "", "CLR clears it, and it stays cleared")
+rt:command(K .. "alphanum_key/A")
+frames(0.2)
+T.equal(pad(), "A", "the scratchpad takes keys on the page")
+clear()
+key("func_key/fix")
+key("ls_key/L2")
+key("ls_key/L1")
+key("ls_key/L2")
+T.equal(pad(), "CRUISE ALT NOT SET", "shown again when the page is shown again")
+clear()
 
 -- WEATHER REQUEST with ATC COMM established at RJAA (MENU, <ACARS, WXR REQ>)
 rt:set("autoatc/acars/online", 1)
