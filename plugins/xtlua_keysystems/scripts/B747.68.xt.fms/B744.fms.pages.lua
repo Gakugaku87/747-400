@@ -1765,7 +1765,14 @@ function fmsFunctions.setdata(fmsO,value)
 		fmsO["notify"] = "INVALID ENTRY"
 	end
   elseif value == "paxPayload" then
-	if string.match(fmsO["scratchpad"], "%d") then
+	-- (2026-11-06 review) a passenger's weight not above 0 (SIM CONFIG took
+	-- any weight under 500, 0 too, until this review; a saved one still can
+	-- be) made the passengers 0 / 0, NaN: the round robin below never ended
+	-- (XTLua's thread stuck)
+	local paxKg = tonumber(simConfigData["data"].SIM.std_pax_weight)
+	if string.match(fmsO["scratchpad"], "%d") and not (paxKg and paxKg > 0) then
+		fmsO["notify"] = "INVALID ENTRY"
+	elseif string.match(fmsO["scratchpad"], "%d") then
 		local weight_factor = 1
 
 		if simConfigData["data"].SIM.weight_display_units == "LBS" then
@@ -1819,7 +1826,7 @@ function fmsFunctions.setdata(fmsO,value)
 				paxE = paxE + 1
 				pax = pax - 1
 			end
-		until (pax == 0)
+		until not (pax > 0)  -- (2026-11-06 review) a NaN ends it too
 		
 		fmsModules["data"].paxFirstClassA = string.format("%2d", paxA)
 		fmsModules["data"].paxBusClassB = string.format("%2d", paxB)
@@ -2027,7 +2034,7 @@ function fmsFunctions.setdata(fmsO,value)
 				x = x - 1
 			end
 			--print("X = "..x.." ZoneA = "..zoneA.." ZoneB = "..zoneB.." ZoneC = "..zoneC.." ZoneD = "..zoneD.." ZoneE = "..zoneE)
-		until (x == 0)
+		until not (x > 0)  -- (2026-11-06 review) as the passengers' round robin
 		
 		fmsModules["data"].freightZoneA = string.format("%5d", zoneA)
 		fmsModules["data"].freightZoneB = string.format("%5d", zoneB)
@@ -2364,10 +2371,15 @@ function fmsFunctions.setdata(fmsO,value)
 		weight_factor = 1
 	end
 
-	if string.match(fmsO["scratchpad"], "%d") and not string.match(fmsO["scratchpad"], "%u") and tonumber(fmsO["scratchpad"]) < 500.0 then
+	-- (2026-11-06 review) the weight and balance window's range (40-200 kg a
+	-- passenger, WB_PAX_KG_MIN/MAX above: estimate). Before, any weight under
+	-- 500, 0 too, which made the PAX/CARGO page's payload entry loop for ever
+	local entered = tonumber(fmsO["scratchpad"])
+	local kg = entered and entered / weight_factor
+	if string.match(fmsO["scratchpad"], "%d") and not string.match(fmsO["scratchpad"], "%u") and kg and kg >= WB_PAX_KG_MIN and kg <= WB_PAX_KG_MAX then
 		local pax_weight = 0
 
-		pax_weight = string.format("%5.1f", math.abs(tonumber(fmsO["scratchpad"]) / weight_factor))  --store weight in KGS
+		pax_weight = string.format("%5.1f", kg)  --store weight in KGS
 
 		simConfigData["data"].SIM.std_pax_weight = pax_weight
 		pushSimConfig(simConfigData["data"]["values"])		
