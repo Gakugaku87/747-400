@@ -693,16 +693,52 @@ i.eo = true
 P.update(s, i, DT)
 T.equal(s.ga_cap, 160, "an engine failing in G/A: MCP + 10")
 
--- (2026-11-02) the ALT law's K_PATH above 290 KIAS: (290 / IAS) ^ 3.5
--- (the cruise's altitude hold swing at 334 kt: notes/ATA-22.md §44); the
--- V/S law all of it (2026-11-03: the high-speed VNAV descent, s206)
-T.near(P.path_gain(250), 1, 1e-12, "path gain 1 at 250 kt")
-T.near(P.path_gain(290), 1, 1e-12, "path gain 1 at 290 kt")
-T.near(P.path_gain(334), (290 / 334) ^ 3.5, 1e-12, "path gain at 334 kt")
-T.check(P.path_gain(334) > 0.6 and P.path_gain(334) < 0.62, "0.61 at 334 kt (X-Plane: 0.6 held)")
-T.near(P.path_gain(nil), 1, 1e-12, "no IAS: 1")
+-- (2026-11-07) the ALT law's K_PATH by the lift coefficient (the dynamic
+-- pressure and the weight): PATH_K_LO of it up to PATH_CL_LO, all of it
+-- from PATH_CL_HI, between in proportion (the light, high cruise's altitude
+-- hold swing: notes/ATA-22.md §53; before, (290 / IAS) ^ 3.5 above 290
+-- KIAS, §44); the V/S law all of it (2026-11-03: the high-speed VNAV
+-- descent, s206)
+local function at_cl(cl, w)
+    w = w or 250000
+    return {q = w * 9.80665 / (cl * P.WING_AREA), weight = w}
+end
+local LO, HI, KLO = P.PATH_CL_LO, P.PATH_CL_HI, P.PATH_K_LO
+T.check(KLO > 0.5 and KLO < 1 and LO < HI, "the schedule's shape")
+T.near(P.path_gain(at_cl(1.2)), 1, 1e-12, "path gain 1 on the approach (CL 1.2)")
+T.near(P.path_gain(at_cl(HI)), 1, 1e-12, "path gain 1 from PATH_CL_HI")
+T.near(P.path_gain(at_cl(LO)), KLO, 1e-12, "PATH_K_LO at PATH_CL_LO")
+T.near(P.path_gain(at_cl(LO / 2)), KLO, 1e-12, "the same floor below it")
+T.near(P.path_gain(at_cl((LO + HI) / 2)), (1 + KLO) / 2, 1e-12, "halfway between: halfway")
+T.near(P.path_gain(at_cl(LO / 2, 400000)), KLO, 1e-12, "the same CL at another weight: the same")
+T.near(P.path_gain(nil), 1, 1e-12, "no inputs: 1")
+T.near(P.path_gain({ias = 334}), 1, 1e-12, "no q and weight: 1")
+T.near(P.path_gain({q = 0, weight = 250000}), 1, 1e-12, "q 0 (the load): 1")
+-- the perf kit's points (2026-11-06, raw/crz_*.csv), the sweeps and s215
+-- (2026-11-07, §53): the gain X-Plane held at each, not the one that decayed
+-- slowly
+local function at(q, w_t) return {q = q, weight = w_t * 1000} end
+local g238_370 = P.path_gain(at(10987, 237.7))    -- 238 t FL370 M.85: CL 0.415 (0.7 held, 0.8 slow)
+local g238_350 = P.path_gain(at(12083, 237.6))    -- 238 t FL350 M.85: CL 0.378 (93 fpm rms with all of it)
+local g238_390 = P.path_gain(at(9992, 237.7))     -- 238 t FL390 M.85: CL 0.457 (47)
+local g306_350 = P.path_gain(at(11993, 306.9))    -- 306 t FL350 M.85: CL 0.491 (0.75 held, 0.85 slow)
+local g306_310 = P.path_gain(at(13217, 306.6))    -- 306 t FL310 M.81: CL 0.445 (0.8 held, 0.9 slow)
+local g306_370 = P.path_gain(at(11168, 306.8))    -- 306 t FL370 M.85: CL 0.527 (all of it: 1.5 fpm rms)
+local g353_310 = P.path_gain(at(14605, 354.0))    -- 353 t FL310 M.85: CL 0.465 (0.72 before: 3)
+local g215 = P.path_gain(at(16549, 270.0))        -- s215, FL250 334 kt 270 t: CL 0.313 (0.7 held, 0.8 slow; 0.61 before)
+local g10k = P.path_gain(at(10130, 300.0))        -- 10,000 ft 250 kt 300 t: CL 0.569 (all of it held)
+T.check(g238_350 >= 0.65 and g238_350 <= 0.72, "238 t FL350: about 0.7 (" .. g238_350 .. ")")
+T.check(g238_370 >= 0.65 and g238_370 <= 0.72, "238 t FL370: about 0.7 (" .. g238_370 .. ")")
+T.check(g238_390 >= 0.65 and g238_390 <= 0.75, "238 t FL390: about 0.7 (" .. g238_390 .. ")")
+T.check(g306_310 >= 0.65 and g306_310 <= 0.8, "306 t FL310: 0.7 to 0.8 (" .. g306_310 .. ")")
+T.check(g306_350 >= 0.72 and g306_350 <= 0.8, "306 t FL350: 0.72 to 0.8 (" .. g306_350 .. ")")
+T.check(g306_370 >= 0.8 and g306_370 <= 0.9, "306 t FL370: 0.8 to 0.9 (" .. g306_370 .. ")")
+T.check(g215 >= 0.65 and g215 <= 0.72, "FL250 334 kt at 270 t: about 0.7 (" .. g215 .. ")")
+T.check(g353_310 >= 0.65 and g353_310 <= 0.8, "353 t FL310: 0.7 to 0.8 (" .. g353_310 .. ")")
+T.check(g10k >= 0.9, "10,000 ft, 250 kt, 300 t: nearly all of it (" .. g10k .. ")")
+T.check(g238_350 <= g238_370 and g238_370 <= g306_350 and g306_350 <= g306_370, "the lighter for its q, the less")
 -- ALT's first command rate (20 ft below: 120 fpm, under the 0.05 g limit)
--- at 334 kt that share of 288 kt's; V/S's (100 fpm) the same at both
+-- at the floor that share; V/S's (100 fpm) the same at both
 local function first_rate(o)
     local st = P.new()
     local x = inp(o)
@@ -711,37 +747,38 @@ local function first_rate(o)
     P.update(st, x, DT)
     return (st.cmd - c0) / DT
 end
-local function alt_rate(ias)
-    return first_rate({mode = "ALT", hold_alt = 9020, alt = 9000, vs = 0, ias = ias, tas = 470, pitch = 2})
+local HI, LO = at_cl(HI), at_cl(LO / 2)
+local function alt_rate(c)
+    return first_rate({mode = "ALT", hold_alt = 9020, alt = 9000, vs = 0, ias = 290, tas = 470, pitch = 2, q = c.q, weight = c.weight})
 end
-local function vs_rate(ias)
-    return first_rate({mode = "VS", vs_sel = 100, vs = 0, ias = ias, tas = 470, pitch = 2})
+local function vs_rate(c)
+    return first_rate({mode = "VS", vs_sel = 100, vs = 0, ias = 290, tas = 470, pitch = 2, q = c.q, weight = c.weight})
 end
-local a288, a334 = alt_rate(288), alt_rate(334)
-T.check(a288 > 0, "ALT 20 ft below: the command rises (" .. a288 .. ")")
-T.near(a334 / a288, (290 / 334) ^ 3.5, 0.02, "ALT at 334 kt: the rate that share (" .. a334 .. " / " .. a288 .. ")")
-local r288, r334 = vs_rate(288), vs_rate(334)
-T.check(r288 > 0, "V/S up: the command rises (" .. r288 .. ")")
-T.near(r334 / r288, 1, 0.02, "V/S at 334 kt: the full rate (the VNAV descent's path, s206: " .. r334 .. " / " .. r288 .. ")")
-local function vnav_rate(ias)
-    return first_rate({mode = "VNAV", vnav_law = "VS", vnav_vs = -100, vs = 0, ias = ias, tas = 470, pitch = 2})
+local ahi, alo = alt_rate(HI), alt_rate(LO)
+T.check(ahi > 0, "ALT 20 ft below: the command rises (" .. ahi .. ")")
+T.near(alo / ahi, KLO, 0.02, "ALT at the floor: the rate that share (" .. alo .. " / " .. ahi .. ")")
+local rhi, rlo = vs_rate(HI), vs_rate(LO)
+T.check(rhi > 0, "V/S up: the command rises (" .. rhi .. ")")
+T.near(rlo / rhi, 1, 0.02, "V/S at the floor: the full rate (the VNAV descent's path, s206: " .. rlo .. " / " .. rhi .. ")")
+local function vnav_rate(c)
+    return first_rate({mode = "VNAV", vnav_law = "VS", vnav_vs = -100, vs = 0, ias = 290, tas = 470, pitch = 2, q = c.q, weight = c.weight})
 end
-T.near(vnav_rate(334) / vnav_rate(288), 1, 0.02, "the old VNAV's path (V/S) at 334 kt: the full rate")
+T.near(vnav_rate(LO) / vnav_rate(HI), 1, 0.02, "the old VNAV's path (V/S) at the floor: the full rate")
 -- VNAV PTH level at the cruise altitude and VNAV ALT: the ALT law (the
 -- glue's vnav_law "ALT"), the share as ALT HOLD (the line flights' bob was
 -- in the cruise's VNAV PTH)
-local function vnav_alt_rate(ias)
-    return first_rate({mode = "VNAV", vnav_law = "ALT", vnav_alt = 9020, alt = 9000, vs = 0, ias = ias, tas = 470, pitch = 2})
+local function vnav_alt_rate(c)
+    return first_rate({mode = "VNAV", vnav_law = "ALT", vnav_alt = 9020, alt = 9000, vs = 0, ias = 290, tas = 470, pitch = 2, q = c.q, weight = c.weight})
 end
-T.near(vnav_alt_rate(334) / vnav_alt_rate(288), (290 / 334) ^ 3.5, 0.02, "VNAV level (ALT law) at 334 kt: the share as ALT HOLD")
+T.near(vnav_alt_rate(LO) / vnav_alt_rate(HI), KLO, 0.02, "VNAV level (ALT law) at the floor: the share as ALT HOLD")
 -- the speed laws keep theirs (steady at 340 kt in the line flights)
-local function flch_rate(ias)
+local function flch_rate(c)
     local st = P.new()
-    local x = inp({mode = "FLCH", ias = ias, spd_sel = ias - 20, vs = 0, tas = 470, pitch = 2})
+    local x = inp({mode = "FLCH", ias = 300, spd_sel = 280, vs = 0, tas = 470, pitch = 2, q = c.q, weight = c.weight})
     P.update(st, x, DT)
     local c0 = st.cmd
     P.update(st, x, DT)
     return (st.cmd - c0) / DT
 end
-T.near(flch_rate(334), flch_rate(300), 0.05, "FLCH: the same rate at 334 and 300 kt")
+T.near(flch_rate(LO), flch_rate(HI), 0.05, "FLCH: the same rate at both")
 T.done()
