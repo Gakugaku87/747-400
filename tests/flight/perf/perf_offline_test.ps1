@@ -96,6 +96,81 @@ Check ($text -match '"one":\s*\[\s*7\s*\]' -and $text -match '"empty":\s*\[\s*\]
 Check ($back.dict.x -eq 'y' -and $back.custom.a -eq 1 -and (@($back.custom.b) -join ',') -eq '1,2') 'Save-Json: dictionaries and custom objects'
 Remove-Item $tmpTxt, $tmpJson -ErrorAction SilentlyContinue
 
+# ---------------------------------------------------------------- the cruise suite
+
+# PERF_SIMBRIEF.md phase 1: 3 weights x FL310-390 x M.85-.87 below the FCOM's
+# maximum operating altitude (PI.11.1, 1.30 g; B747.68.perf_db.lua max_alt at
+# these weights: 42,933, 37,593 and 34,590 ft), the repeat at the end
+$lvs = Get-PerfLevels
+Check ($lvs.Count -eq 12) "cruise: 12 levels (got $($lvs.Count))"
+$pids = @(foreach ($lv in $lvs) { foreach ($m in $lv.machs) { Get-PerfPointId $lv.id $m } })
+Check ($pids.Count -eq 34) "cruise: 33 points and the repeat (got $($pids.Count))"
+Check (@($pids | Sort-Object -Unique).Count -eq $pids.Count) 'cruise: the points'' ids unique'
+Check ((Get-PerfPointId 'crz_078_fl350' 0.85) -eq 'crz_078_fl350_m850' -and (Get-PerfPointId 'x' 0.87) -eq 'x_m870') 'cruise: a point''s id'
+Check ($lvs[0].id -eq 'crz_078_fl350' -and $lvs[0].ci_check) 'cruise: first 78 % FL350 with the CI''s Mach'
+Check ($lvs[11].id -eq 'rep_078_fl350' -and $lvs[11].repeat_of -eq 'crz_078_fl350_m850' -and @($lvs[11].machs).Count -eq 1) 'cruise: the repeat at the end'
+$maxFt = @{ light = 42933; medium = 37593; heavy = 34590 }
+foreach ($lv in $lvs) {
+    $kind = if ($null -ne $lv.fuel_kg) { 'light' } elseif ($lv.gw_pct -eq 78) { 'medium' } else { 'heavy' }
+    Check ($lv.fl * 100 -le $maxFt[$kind]) "cruise: $($lv.id) below the maximum altitude ($($maxFt[$kind]) ft)"
+    if ($lv.id -ne 'rep_078_fl350') { Check ((@($lv.machs) -join ',') -eq '0.85,0.86,0.87') "cruise: $($lv.id) M.85-.87" }
+}
+Check (@($lvs | Where-Object { $null -ne $_.fuel_kg }).Count -eq 5 -and @($lvs | Where-Object { $null -ne $_.fuel_kg -and $_.fuel_kg -ne 15000 }).Count -eq 0) 'cruise: the light weight at 5 levels, 15 t of fuel'
+Check (@($lvs | Where-Object { $_.gw_pct -eq 90 }).Count -eq 2) 'cruise: 90 % at FL310 and FL330 only'
+Near ((183523.4 + $PayloadKg + $LightFuelKg) / $MtowKg * 100) 60.44 0.01 'cruise: the light weight 60 % of the MTOW'
+
+# ---------------------------------------------------------------- the run's files
+
+# Write-PerfFiles with stand-in results: a cruise run stopped in its second
+# level (the first: M.85 measured, M.86 not held, M.87 so not tried), the repeat
+$points0 = $points   # the check suite's (dot-sourced with its default suite)
+function New-Win([double]$Ff, [double]$Gauge) {
+    return [ordered]@{ rows = 180; rows_real_time = 180; ff_fuelmass_kgph = $Ff; ff_gauge_kgph = $Gauge; ff_diff_pct = ($Ff / $Gauge - 1) * 100
+        weight = 306922.0; press_alt_ft = 35002.0; mach = 0.8522; tas_kt = 489.8; oat_c = -55.63; isa_dev_c = -1.28; n1_avg_pct = 86.05
+        pitch = 2.89; aoa = 3.03; alt_range_ft = 5.0; mach_range = 0.0004; vs_max_abs = 59.0 }
+}
+$meta0 = [ordered]@{ xplane = [ordered]@{ version = '12.4.4' }; git = [ordered]@{ branch = 'overhaul'; commit = 'abc'; tracked_changes = 0 }; acf = [ordered]@{ sha256 = 'f00' } }
+$runDir = "$tmpBase.run"
+New-Item -ItemType Directory -Path $runDir | Out-Null
+$l1 = [ordered]@{ id = 'crz_078_fl350'; target = $lvs[0]; status = 'done'; checks = [ordered]@{}; request = [ordered]@{ gw_pct = 78.0 }
+    ci = [ordered]@{ ci = 200; mach = 0.858; title = 'ACT ECON CRZ'; note = $null }
+    points = @([ordered]@{ id = 'crz_078_fl350_m850'; target_mach = 0.85; status = 'done'; window = (New-Win 10389.0 11000.0); settle = [ordered]@{ after_s = 148 }; raw_file = 'raw/crz_078_fl350_m850.csv' },
+        [ordered]@{ id = 'crz_078_fl350_m860'; target_mach = 0.86; status = 'hold_unable'; detail = 'last 60 s: Mach .855'; settle = [ordered]@{ after_s = 360 }; raw_file = 'raw/crz_078_fl350_m860.csv' },
+        [ordered]@{ id = 'crz_078_fl350_m870'; target_mach = 0.87; status = 'hold_unable'; detail = 'not tried: a slower Mach was not held' }) }
+$l2 = [ordered]@{ id = 'crz_078_fl310'; target = $lvs[1]; status = 'aborted'; error = 'no A/P servos'; checks = [ordered]@{}; request = [ordered]@{ gw_pct = 78.0 }
+    points = @([ordered]@{ id = 'crz_078_fl310_m850'; target_mach = 0.85; status = 'aborted' }) }
+$l12 = [ordered]@{ id = 'rep_078_fl350'; target = $lvs[11]; status = 'done'; checks = [ordered]@{}; request = [ordered]@{ gw_pct = 78.0 }
+    points = @([ordered]@{ id = 'rep_078_fl350_m850'; target_mach = 0.85; status = 'done'; window = (New-Win 10449.0 11010.0); settle = [ordered]@{ after_s = 150 }; raw_file = 'raw/rep_078_fl350_m850.csv' }) }
+$sum = Write-PerfFiles $runDir 'cruise' @($l1, $l2, $l12) $meta0 $null @() $lvs "$runDir\none.txt" 0 "$runDir\none2.txt" 0
+Check ($sum -eq 'points: 2 of 34 done') "files: the summary ($sum)"
+$pcl = @(Get-Content "$runDir\points.csv")
+Check ($pcl.Count -eq 35) "files: points.csv a row a point (got $($pcl.Count - 1))"
+Check ($pcl[1] -match '^crz_078_fl350_m850,A,78,350,0\.85,306922,35002,0\.8522,489\.8,-55\.63,-1\.28,10389\.0,11000\.0,86\.05,2\.89,3\.03,done,raw/crz_078_fl350_m850\.csv$') "files: a measured point's row ($($pcl[1]))"
+Check ($pcl[2] -match '^crz_078_fl350_m860,A,78,350,0\.86(,){12}hold_unable,raw/crz_078_fl350_m860\.csv$') "files: a point not held, its 11 values blank ($($pcl[2]))"
+Check (@($pcl | ForEach-Object { ($_ -split ',', -1).Count } | Sort-Object -Unique) -join ',' -eq '18') 'files: points.csv 18 columns in every row'
+Check ($pcl[4] -match ',aborted,$' -and $pcl[5] -match ',not_run,$') 'files: the stopped level''s point aborted, the next not run'
+Check (@($pcl | Where-Object { $_ -match '^crz_l15_fl310_m850,A,,310,' }).Count -eq 1) 'files: a level not run, the light weight''s percentage blank'
+Check ($pcl[34] -match '^rep_078_fl350_m850,A,78,350,0\.85,') 'files: the repeat last'
+$mdl = [IO.File]::ReadAllText("$runDir\check.md")
+Check ($mdl.Contains('CI 200: the economy cruise Mach 0.858 on the VNAV CRZ page ("ACT ECON CRZ") at 78 % and FL350; the Machs 0.85, 0.86, 0.87')) 'files: check.md the CI''s Mach'
+Check ($mdl -match 'Repeat \(crz_078_fl350_m850, rep_078_fl350_m850\): fuel weight 10389 and 10449 kg/h, 0\.58 %.*: within') 'files: check.md the repeat'
+Check ($mdl.Contains('Points: 2 of 34 done; hold_unable 2, aborted 1, not_run 29')) 'files: check.md the points'' count'
+Check ($mdl.Contains('| crz_078_fl350_m850 | done | 306.9 | 35002 | 0.8522 |') -and $mdl.Contains('- crz_078_fl350_m860: last 60 s: Mach .855')) 'files: check.md a level''s points and details'
+Check ($mdl.Contains('Error: no A/P servos')) 'files: check.md a stopped level''s error'
+$cj = Get-Content -Raw "$runDir\check.json" | ConvertFrom-Json
+Check (@($cj.levels).Count -eq 3 -and $cj.repeat.within_1_pct -eq $true) 'files: check.json the levels and the repeat'
+# a check run: plan A with only the fuel flow failing, B with another check failing
+$c1 = [ordered]@{ id = 'chk_078_fl350_m085'; target = $points0[0]; status = 'done'; window = (New-Win 10389.0 11000.0); settle = [ordered]@{ after_s = 148 }
+    checks = [ordered]@{ readback_payload = [ordered]@{ pass = $true; value = 'x'; limit = 'y' }; fuel_flow_agreement = [ordered]@{ pass = $false; value = '-5.55 %'; limit = '2 %' } } }
+$c2 = [ordered]@{ id = 'chk_090_fl310_m085'; target = $points0[1]; status = 'done'; window = (New-Win 12631.0 13406.0); settle = [ordered]@{ after_s = 184 }; checks = [ordered]@{} }
+$runDir2 = "$tmpBase.run2"; New-Item -ItemType Directory -Path $runDir2 | Out-Null
+Check ((Write-PerfFiles $runDir2 'check' @($c1, $c2) $meta0 $null $points0 @() "$runDir\none.txt" 0 "$runDir\none2.txt" 0) -eq 'plan: A') 'files: a check run, only the fuel flow failing: plan A'
+$c2.checks.engines_running = [ordered]@{ pass = $false; value = 'N2 40 %'; limit = '60 %' }
+$runDir3 = "$tmpBase.run3"; New-Item -ItemType Directory -Path $runDir3 | Out-Null
+Check ((Write-PerfFiles $runDir3 'check' @($c1, $c2) $meta0 $null $points0 @() "$runDir\none.txt" 0 "$runDir\none2.txt" 0) -eq 'plan: B') 'files: a check run, an engine check failing: plan B'
+Check ((@(Get-Content "$runDir2\points.csv"))[1] -match '^chk_078_fl350_m085,A,78,350,0\.85,306922,') 'files: a check run''s points.csv'
+Remove-Item -Recurse -Force $runDir, $runDir2, $runDir3 -ErrorAction SilentlyContinue
+
 # ---------------------------------------------------------------- the logger
 
 $port = 18000 + (Get-Random -Maximum 900)
@@ -236,6 +311,51 @@ Near $wr.payload_range_kg 0 1e-9 'writes: the payload unchanged'
 Near $wr.zfw_range_kg 0 0.05 'writes: the zero fuel weight unchanged'
 Near $wr.fuel_step_residual_max_kg 0 0.01 'writes: the fuel falls as the gauges say'
 Check ($wr.rows_time_accelerated -eq 0) 'writes: no time acceleration'
+
+# a point's rows to a CSV of their own: the logger's header and numbers
+$script:logger = @{ header = $lines[0] }
+$pcsv = "$tmpBase.point.csv"
+Save-PerfRows $pcsv $rows 2 5
+$pl = @(Get-Content $pcsv)
+Check ($pl.Count -eq 5 -and $pl[0] -eq $lines[0]) 'a point''s CSV: the header and rows 2-5'
+Check ($pl[1] -eq $lines[3] -and $pl[4] -eq $lines[6]) 'a point''s CSV: the logger''s rows as the logger wrote them'
+Remove-Item $pcsv -ErrorAction SilentlyContinue
+$script:logger = $null
+
+# not level in 6 min: the thrust could not hold the Mach, or unstable
+function New-Rows([double]$Mach, [double]$Swing, [int]$At) {
+    $out = New-Object System.Collections.ArrayList
+    for ($k = 0; $k -lt 80; $k++) {
+        $r = New-Object double[] ($script:ix['samples'] + 1)
+        $r[$script:ix['sim_t']] = 1000 + $k; $r[$script:ix['alt']] = 35000; $r[$script:ix['vs']] = 0
+        $r[$script:ix['mach']] = $Mach + $Swing * [math]::Sin($k / 3.0); $r[$script:ix['fma_at']] = $At
+        foreach ($e in 1..4) { $r[$script:ix["n1_$e"]] = 92.5 }
+        [void]$out.Add($r)
+    }
+    return ,$out.ToArray()
+}
+$u = Get-PerfUnsettled (New-Rows 0.842 0.0005 3) 35000 0.85
+Check ($u.status -eq 'hold_unable') "below the Mach, A/T SPD, the level held: hold_unable (got $($u.status))"
+Check ($u.detail -match 'Mach 0\.84' -and $u.detail -match 'N1 92\.5') "the detail: $($u.detail)"
+Check ((Get-PerfUnsettled (New-Rows 0.85 0.006 3) 35000 0.85).status -eq 'unstable') 'about the Mach but swinging: unstable'
+Check ((Get-PerfUnsettled (New-Rows 0.842 0.0005 0) 35000 0.85).status -eq 'unstable') 'below the Mach without A/T SPD: unstable'
+Check ((Get-PerfUnsettled (New-Rows 0.842 0.0005 3) 35300 0.85).status -eq 'unstable') 'below the Mach 300 ft off the level: unstable'
+
+# the VNAV CRZ page's speed
+$crz = [string[]]@('     ACT ECON CRZ', '', 'FL350', '', '.858              ', '', '1.25    ', '', '', '', '', '', '', '')
+Near (Get-PerfCrzMach $crz) 0.858 1e-9 'the CRZ page: ECON SPD .858'
+$crz[4] = '310               '
+Check ($null -eq (Get-PerfCrzMach $crz)) 'the CRZ page: a CAS, no Mach'
+$crz[0] = '      ECON CLB'; $crz[4] = '.858'
+Check ($null -eq (Get-PerfCrzMach $crz)) 'not the CRZ page: no Mach'
+
+# the repeat's flows
+$rp = Compare-PerfRepeat ([ordered]@{ ff_fuelmass_kgph = 10000.0; ff_gauge_kgph = 10500.0; weight = 306000.0 }) ([ordered]@{ ff_fuelmass_kgph = 10050.0; ff_gauge_kgph = 10500.0; weight = 306100.0 })
+Near $rp.diff_pct 0.5 1e-9 'the repeat: 0.5 %'
+Check ($rp.within_1_pct) 'the repeat: within 1 %'
+$rp = Compare-PerfRepeat ([ordered]@{ ff_fuelmass_kgph = 10000.0; ff_gauge_kgph = 1.0 }) ([ordered]@{ ff_fuelmass_kgph = 10150.0; ff_gauge_kgph = 1.0 })
+Check (-not $rp.within_1_pct) 'the repeat: 1.5 % over 1 %'
+Check ($null -eq (Compare-PerfRepeat $null ([ordered]@{ ff_fuelmass_kgph = 1.0 }))) 'the repeat: none without both windows'
 Remove-Item $csv -ErrorAction SilentlyContinue
 
 if ($fails.Count -gt 0) { throw ("{0} of {1} checks failed" -f $fails.Count, $count) }
