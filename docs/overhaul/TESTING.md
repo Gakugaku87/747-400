@@ -271,6 +271,13 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
   - 仕様の `python -m perf ...` は、キットの PowerShell に置き換えた（この PC は Python を呼ばない：CLAUDE.md）。
 - 点の総重量は MTOW の百分率。MTOW は FCOM の機番 109 の 394,625 kg（FCOM p.78、L.10.2。利用者 2026-11-06）で、acf の最大重量（850,000 lb ＝ 385,554 kg）ではない。MZFW 244,939 kg・MLW 285,763 kg も同じ表の値（機体に定義が無い。利用者 2026-11-06）。`meta.json` の `weights` に記録し、点の ZFW が MZFW を超えれば警告する。
 - `check`（フェーズ0）：銚子沖の海上（35.40N 141.30E、真方位 090）で、ペイロード 40 t、MTOW の 78 %・FL350 と 90 %・FL310（どちらも M.85）の 2 回の空中スタート。それぞれ、エンジンの燃焼、ペイロードとタンクごとの燃料の読み戻し、エンジン型式（PW4056）、A/P の ALT と A/T の SPD（MCP は Mach）、30 ft・M.003・100 fpm の内に 60 秒（6 分以内）、続く 180 秒の燃料重量の減り方と FF 計器の和の比較（差 2 % 以内）、記録の始めから終わりまでペイロード・ZFW（総重量 − 燃料）・燃料の飛びの監視。
+- `cruise`（フェーズ1、プラン A。`-Suite cruise`）：同じ場所と大気で、重量 × 高度ごとに 1 回の空中スタートをし、Mach を .85 → .86 → .87 とその場で変える（`Get-PerfLevels`：11 の高度で 33 点）。
+  - 重量は 3 段：軽い段 238.5 t（OEW＋ペイロード 40 t＋予備燃料 15 t、MTOW の 60 %）、MTOW の 78 %、90 %。
+  - FCOM の最大運用高度（PI.11.1、p.267。ISA+10 以下、1.30 g ＝ 39°。機体の `perf_db.max_alt` と同じ）を超える組み合わせは測らない：307.8 t は 37,600 ft（FL390 を除く）、355.2 t は 34,600 ft（FL350 から上を除く）、238.5 t は 42,900 ft。
+  - 各点：60 秒の安定（6 分以内）の後、180 秒の平均。6 分で安定しなければ、最後の 60 秒の Mach が目標 − .003 より下で、A/T が SPD・高度が保たれていれば `hold_unable`（推力が足りない）、ほかは `unstable`。`hold_unable` なら、その高度の速い Mach は試さない。
+  - 最初の高度（78 %・FL350）で、CDU の PERF INIT に CI 200（記入欄のふだんの巡航）と CRZ ALT を入れ、VNAV CRZ ページの ECON SPD を読む。FMC の `update_econ` が 5 秒ごとに `perf_db.econ_cruise` で出す値で、X-Plane なしの計算では M.858（238〜355 t・FL310〜390 で M.855〜.861）。
+  - 最後に 78 %・FL350・M.85 をもう一度測り、最初との燃料流量の差を出す（1 % を超えたら報告）。
+  - 記録：点ごとの `raw/<点>.csv`（その Mach にしてから平均の終わりまで）と、高度ごとの通しの `raw/<高度>.csv`。`points.csv` は 34 行（届かなかった点は `not_run`）。1 高度 約 17 分、全体で約 3.5 時間。
 - 空中スタート：`POST /flight` の `lle_air_start`（真の速さ）・`weight`（ペイロードは acf の `_fixed_max` の比で分け、燃料は機体の積み込み順：`B747.25.xt.fuel.lua` の `fuel_distribution`）・`engine_status`・気象のカスタム定義（ISA の 15 ℃・1013.25 hPa、13 層とも無風・乱気流 0、雲なし、`static`）。初期化が HTTP の誤りで断られたら止まる（`xp.ps1` の `Start-XPFlight` は警告だけで、前のフライトが続いて見える）。キットのランナーと同じく、8 秒後に全エンジンの燃焼を確かめて、もう一度かける。
 - 空中スタートの後は、FMC の初期化（F/D・A/T ARM・MCP の速さを今の速さへ巻き取り、ALT HOLD・CMD L：`B747.68.xt.fms.lua` の `activate_inflightAP`）を待ってから MCP を操作する。初期化の終わりは、開始の前に MCP 高度へ 49,000 を書いておき、初期化がそれを今の高度に変えて巻き取りが終わったこと（`altitude/target`・`speed/target` が −1、CMD L、サーボ）で見分ける。2 回目からの空中スタートで、前の点の A/P の状態を初期化の終わりと取り違えないため。MCP は開始の前に IAS に戻す（Mach の窓のまま開始すると、初期化が窓をノットの値へ巻き取る）。
 - MCP の速さ：IAS/MACH の切り替え（`sim/autopilot/knots_mach_toggle`。機体が置き換えた）でいったん IAS にしてから Mach に戻し、`laminar/B747/autopilot/ias_dial_value` に Mach × 100 の整数を書く（Web API で XTLua の dataref に小数は書けない：§4.6）。目標が合わなければ 3 回までやり直す。高度計が 29.92 でなければ BARO STD を押す。高度が 30 ft より離れていれば FLCH で合わせる。
@@ -281,7 +288,7 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
   - FUEL USED（`laminar/B747/fuel/totaliser[4]`）も記録する。機体は各発の流量 × `SIM_PERIOD` を、タンクから燃料を取るのと同じフレームで足す（`B747.25.xt.fuel.lua` 1355–1362、1417–1418）。その PC の時刻への傾きを計器の和で割ると、フレームの `SIM_PERIOD` が PC の時刻のどれだけを覆ったかが分かる（`sim_period_share`）。X-Plane 自身の totalizer（`fuel_totalizer_sum_kg`）は使えない（機体が始めの値をタンクの合計に書き直すので 0 のまま：1550）。
 - 出力 `tests/flight/perf/runs/<日時>_<suite>/`（`.git/info/exclude` で管理外）：`meta.json`（機体のコミット、acf の SHA-256、X-Plane の版、点、重量とその出典の acf の行）、`init_<点>.json`、`raw/`、`points.csv`（仕様の列）、`check.json`・`check.md`、`events.txt`、`log_excerpt.txt`。上書きしない。
 - JSON は、辞書・配列・文字列・数・真偽値だけに直してから書く（`Save-Json` の `ConvertTo-PlainData`。それ以外の物は文字列にする）。PowerShell 5.1 の `ConvertTo-Json` は渡された物の属性を全部たどる。`Get-Content` で読んだ行には PSDrive・PSProvider が付いていて、`-Depth 30` では型の情報を際限なくたどった（2026-11-06 の 1 回目の `check`：`meta.json` を書くところで 3.5 時間止まり、メモリを 79 GB 使った。Log.txt の 1 行目を `Get-Content` で読んでいた）。
-- X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\perf_offline_test.ps1`（acf の行、タンクへの配分、フライトの初期化、JSON の書き出し、模擬の Web API（`HttpListener`）を相手にした記録と集計。108 項目）。
+- X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\perf_offline_test.ps1`（acf の行、タンクへの配分、フライトの初期化、JSON の書き出し、模擬の Web API（`HttpListener`）を相手にした記録と集計、`cruise` の高度の一覧・不安定の分け方・CDU の CRZ ページの読み取り・再現性の比較、結果のファイル（`Write-PerfFiles` に模擬の結果を渡す）。171 項目）。
 
 ## 5. 1 項目ごとの流れ（フェーズ1以降）
 

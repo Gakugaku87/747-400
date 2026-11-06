@@ -3,7 +3,7 @@
 # a SimBrief custom airframe on the B744 base. Unattended: one run a script,
 # its files read afterwards.
 #
-#   powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\perf.ps1 -Suite check [-StartXPlane]
+#   powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\perf.ps1 -Suite check|cruise [-StartXPlane]
 #
 # -StartXPlane starts X-Plane when it is not running (tools\xp_restart.ps1:
 # the custom acf on RJAA 34L once, the throwaway first flight after a start).
@@ -18,6 +18,14 @@
 #          then 180 s of the fuel's weight going down against the FF gauges'
 #          sum; the payload, the zero fuel weight and the fuel watched for
 #          writes by the aircraft from the logger's start to the end.
+#   cruise phase 1 (plan A). The same place and air: an air start for each
+#          weight and level, the Machs .85, .86, .87 in place (Get-PerfLevels:
+#          11 levels, 33 points, the weights 238.5 t, 78 % and 90 % of the
+#          MTOW at FL310-390 below the FCOM's maximum altitude). Each point:
+#          60 s within the limits (in 6 min, else unstable, or hold_unable
+#          below its Mach with the A/T in SPD), then 180 s averaged. First
+#          the CI 200's economy cruise Mach off the CDU at 78 % and FL350; at
+#          the end 78 % FL350 M.85 again (the flows within 1 %).
 #
 # PERF_SIMBRIEF.md's rules: the custom acf only; no file of the aircraft,
 # X-Plane or a plugin written (a flight's datarefs and commands only); no time
@@ -39,7 +47,7 @@
 #   events.txt       the run's notes; log_excerpt.txt Log.txt's lines of the
 #                    run that look like errors; xtlua_errors.txt if any
 param(
-    [ValidateSet('check')][string]$Suite = 'check',
+    [ValidateSet('check', 'cruise')][string]$Suite = 'check',
     [switch]$StartXPlane,
     [string]$RunsDir
 )
@@ -79,6 +87,38 @@ $points = @(switch ($Suite) {
         [ordered]@{ id = 'chk_090_fl310_m085'; gw_pct = 90; fl = 310; mach = 0.85; measure_s = 180 }
     }
 })
+
+# PERF_SIMBRIEF.md phase 1 (suite cruise). The light weight: the empty
+# weight, the typical payload and 15 t of reserve fuel (238.5 t, 60 % of the
+# MTOW); 78 % and 90 % of the MTOW. Each point averaged over 180 s.
+$LightFuelKg = 15000.0
+$MeasureS = 180
+# The fill-in table's usual cruise, CI 200. Its economy cruise Mach, by the
+# FMC's own function (B747.68.perf_db.lua econ_cruise; the FMC's
+# update_econ, B747.68.xt.fms.lua 1133-1155), is M.858 at 307.8 t and FL350
+# and M.855-.861 at 238-355 t and FL310-390: the Machs .85-.87 bracket it
+# (the run reads it off the CDU too).
+$CruiseCi = 200
+$CruiseMachs = @(0.85, 0.86, 0.87)
+# The levels: an air start each, the Machs in place (phase 1: the fuel used
+# meanwhile in each point's own mean weight). Left out above the FCOM's
+# maximum operating altitude (PI.11.1, p.267; ISA+10 and colder, 1.30 g, 39
+# degrees of bank; B747.68.perf_db.lua max_alt the same): 307.8 t 37,600 ft
+# (FL390 out), 355.2 t 34,600 ft (FL350-390 out); 238.5 t 42,900 ft. First
+# 78 % at FL350 with the CI's Mach; at the end its M.85 again, the repeat
+# (phase 1: the two flows within 1 %).
+function Get-PerfLevels {
+    $l = New-Object System.Collections.ArrayList
+    [void]$l.Add([ordered]@{ id = 'crz_078_fl350'; gw_pct = 78; fl = 350; machs = $CruiseMachs; ci_check = $true })
+    foreach ($fl in 310, 330, 370) { [void]$l.Add([ordered]@{ id = "crz_078_fl$fl"; gw_pct = 78; fl = $fl; machs = $CruiseMachs }) }
+    foreach ($fl in 310, 330, 350, 370, 390) { [void]$l.Add([ordered]@{ id = "crz_l15_fl$fl"; fuel_kg = $LightFuelKg; fl = $fl; machs = $CruiseMachs }) }
+    foreach ($fl in 310, 330) { [void]$l.Add([ordered]@{ id = "crz_090_fl$fl"; gw_pct = 90; fl = $fl; machs = $CruiseMachs }) }
+    [void]$l.Add([ordered]@{ id = 'rep_078_fl350'; gw_pct = 78; fl = 350; machs = @(0.85); repeat_of = 'crz_078_fl350_m850' })
+    return ,$l.ToArray()
+}
+function Get-PerfPointId([string]$Level, [double]$Mach) { return ('{0}_m{1:D3}' -f $Level, [int][math]::Round($Mach * 1000)) }
+$levels = @()
+if ($Suite -eq 'cruise') { $levels = Get-PerfLevels }
 
 $wall = [Diagnostics.Stopwatch]::StartNew()
 $events = New-Object System.Collections.ArrayList
@@ -463,6 +503,74 @@ function Set-PerfCruise([double]$Ft, [double]$Mach) {
     return $r
 }
 
+# ---------------------------------------------------------------- the CDU
+
+# The Captain's CDU (keys fms1, lines fms3): the key names and typing of the
+# kit's scenarios (run_scenario.ps1 step cdu: MENU the FIX command, INITREF
+# the INDEX one, VNAV the DES one; the same key again 250 ms on, as a key
+# twice in one frame is taken once)
+function Invoke-PerfCdu([string[]]$Keys) {
+    $names = @{ MENU = 'func_key/fix'; INITREF = 'func_key/index'; VNAV = 'func_key/des'; PREV = 'func_key/prev_pg'
+        NEXT = 'func_key/next_pg'; EXEC = 'key/execute'; CLR = 'key/clear' }
+    foreach ($k in $Keys) {
+        if ($k -cmatch '^[LR][1-6]$') {
+            Invoke-XPCommand "laminar/B747/fms1/ls_key/$k"
+            Start-Sleep -Milliseconds 500
+        } elseif ($names.ContainsKey($k)) {
+            Invoke-XPCommand "laminar/B747/fms1/$($names[$k])" $(if ($k -ceq 'EXEC') { 0.2 } else { 0 })
+            Start-Sleep -Milliseconds 500
+        } else {
+            $prev = $null
+            foreach ($ch in $k.ToCharArray()) {
+                $c = [string]$ch
+                if ($c -cnotmatch '^[A-Z0-9]$') { throw "cdu: no key for '$c'" }
+                if ($c -ceq $prev) { Start-Sleep -Milliseconds 250 }
+                Invoke-XPCommand "laminar/B747/fms1/alphanum_key/$c"
+                Start-Sleep -Milliseconds 70
+                $prev = $c
+            }
+            Start-Sleep -Milliseconds 100
+        }
+    }
+}
+function Get-PerfCduLines { return ,[string[]]@(1..14 | ForEach-Object { [string](Get-XPDataref ('laminar/B747/fms3/Line{0:D2}_L' -f $_)) }) }
+
+# the VNAV CRZ page's speed (B744.fms.pages.vnav.lua 523-538): the title in
+# line 1 (ECON for the economy speed), the speed in line 5 (2L), a Mach .XXX
+function Get-PerfCrzMach([string[]]$Lines) {
+    if ($Lines.Count -lt 5 -or $Lines[0] -notmatch 'CRZ') { return $null }
+    if ($Lines[4] -match '^\s*\.(\d{3})') { return [double]('0.' + $Matches[1]) }
+    return $null
+}
+
+# The economy cruise Mach the FMC flies at a cost index (PERF_SIMBRIEF.md
+# phase 1: before the points, at 78 % and FL350, with the fill-in table's
+# CI): the FMC's IDENT once its data is in (the scenarios' MENU <FMC), PERF
+# INIT's COST INDEX (5L) and CRZ ALT (1R; the gross weight X-Plane's without
+# a ZFW: B747_fms_gw_kg), then the VNAV CRZ page's ECON SPD. The FMC puts
+# the economy speeds every 5 s (update_econ, B747.68.xt.fms.lua 1133-1155).
+function Measure-PerfCiMach([int]$Ci, [double]$Ft) {
+    $r = [ordered]@{ ci = $Ci; crz_alt_ft = $Ft; mach = $null; title = $null; note = $null; lines = $null }
+    Invoke-PerfCdu @('CLR', 'MENU', 'L1')
+    if ($null -eq (Wait-XP { ([string](Get-XPDataref 'laminar/B747/fms3/Line05_L')) -match 'AIRAC' } 120 1000)) {
+        $r.note = 'no AIRAC on the IDENT page within 120 s'
+    }
+    Invoke-PerfCdu @('INITREF', 'L6', 'L3', [string]$Ci, 'L5', [string][int]($Ft / 100), 'R1')
+    Start-Sleep -Seconds 12
+    Invoke-PerfCdu @('VNAV')
+    for ($k = 0; $k -lt 3; $k++) {
+        $lines = Get-PerfCduLines
+        if ($lines[0] -match 'CRZ') { break }
+        Invoke-PerfCdu @('NEXT')
+    }
+    $lines = Get-PerfCduLines
+    $r.lines = $lines
+    $r.title = $lines[0].Trim()
+    $r.mach = Get-PerfCrzMach $lines
+    if ($null -eq $r.mach -and -not $r.note) { $r.note = 'no Mach on the VNAV CRZ page' }
+    return $r
+}
+
 # ---------------------------------------------------------------- the logger
 
 # column, dataref, index (-1 a scalar), 'mean' or 'last' (states) in the second
@@ -680,7 +788,7 @@ function Start-PerfLogger([string]$CsvPath) {
     [void]$ps.AddArgument($CsvPath)
     [void]$ps.AddArgument($header)
     $handle = $ps.BeginInvoke()
-    $script:logger = @{ ps = $ps; handle = $handle; sync = $sync; csv = $CsvPath; missing = @($missing); columns = $n }
+    $script:logger = @{ ps = $ps; handle = $handle; sync = $sync; csv = $CsvPath; missing = @($missing); columns = $n; header = $header }
     if ($missing.Count -gt 0) { Note warn ('datarefs not found, columns left out: ' + ($missing -join ', ')) }
     $ok = Wait-XP { $sync.error -or $sync.rows.Count -ge 2 } 30 250
     if ($sync.error) { throw "logger: $($sync.error)" }
@@ -695,6 +803,23 @@ function Stop-PerfLogger {
     $script:logger = $null
 }
 function Get-PerfRows { return ,($script:logger.sync.rows.ToArray()) }
+# rows $From..$To of the logger to a CSV of their own (a point's: PERF_SIMBRIEF.md
+# raw/*.csv), with the logger's header and number format
+function Save-PerfRows([string]$Path, $Rows, [int]$From, [int]$To) {
+    $lines = New-Object System.Collections.Generic.List[string]
+    $lines.Add([string]$script:logger.header)
+    $sb = New-Object Text.StringBuilder
+    for ($k = [math]::Max(0, $From); $k -le [math]::Min($To, $Rows.Count - 1); $k++) {
+        [void]$sb.Clear()
+        $row = $Rows[$k]
+        for ($i = 0; $i -lt $row.Length; $i++) {
+            if ($i -gt 0) { [void]$sb.Append(',') }
+            [void]$sb.Append(([double]$row[$i]).ToString('R', $inv))
+        }
+        $lines.Add($sb.ToString())
+    }
+    [IO.File]::WriteAllLines($Path, [string[]]$lines.ToArray(), $utf8)
+}
 function Assert-PerfLogger {
     $s = $script:logger.sync
     if ($s.error) { throw "logger: $($s.error)" }
@@ -757,6 +882,27 @@ function Test-Stable($Rows, [double]$Ft, [double]$Mach, [int]$Secs) {
         if ($r[$script:ix['paused']] -ne 0 -or $r[$script:ix['sim_speed']] -ne 1 -or $r[$script:ix['ground_speed_x']] -ne 1) { return $false }
     }
     return $true
+}
+
+# not level within the limits in 6 min (PERF_SIMBRIEF.md phase 1): below its
+# Mach at the end, the A/T in SPD and the level held, the thrust could not
+# hold it ("hold_unable"); else "unstable". Over the last 60 rows.
+function Get-PerfUnsettled($Rows, [double]$Ft, [double]$Mach) {
+    $n = [math]::Min(60, $Rows.Count)
+    if ($n -lt 2) { return [ordered]@{ status = 'unstable'; detail = "$n rows" } }
+    $last = @($Rows[($Rows.Count - $n)..($Rows.Count - 1)])
+    $t = Get-Col $last 'sim_t'
+    $mc = Get-Col $last 'mach'
+    $m = Get-Mean $mc
+    $alt = Get-Mean (Get-Col $last 'alt')
+    $vs = Get-Mean (Get-Col $last 'vs')
+    $at = $last[$last.Count - 1][$script:ix['fma_at']]
+    $n1 = 0.0; foreach ($e in 1..4) { $n1 += Get-Mean (Get-Col $last "n1_$e") }
+    $slope = (Get-Slope $t $mc) * 60
+    $status = if ($m -lt $Mach - 0.003 -and $at -eq 3 -and [math]::Abs($alt - $Ft) -le 100) { 'hold_unable' } else { 'unstable' }
+    $detail = 'last {0} s: alt {1} ft, Mach {2} ({3} a minute), V/S {4} fpm, A/T {5}, N1 {6} %' -f $n, (F $alt '0'), (F $m '0.0000'),
+        (F $slope '+0.0000;-0.0000'), (F $vs '0'), $at, (F ($n1 / 4) '0.0')
+    return [ordered]@{ status = $status; detail = $detail; mach = $m; alt_ft = $alt; vs_fpm = $vs; mach_per_min = $slope }
 }
 
 # a window's means and flows
@@ -850,13 +996,15 @@ function Add-Check($Res, [string]$Name, $Pass, [string]$Value, [string]$Limit) {
 
 # ---------------------------------------------------------------- a point
 
-function Invoke-PerfCheckPoint($Pt, $Acf, [double[]]$StationKg) {
-    $res = [ordered]@{ id = $Pt.id; target = $Pt; status = 'done'; checks = [ordered]@{} }
-    try {
-    $ft = [double]$Pt.fl * 100
-    $gwReq = $MtowKg * $Pt.gw_pct / 100
-    $fuelReq = $gwReq - $Acf.m_empty_kg - $PayloadKg
+# The flight for a check point or a cruise level ($Pt: id, fl, mach, and
+# gw_pct or fuel_kg), into $Res: the weights (the payload by the stations'
+# maximum, the fuel in the aircraft's load order), the flight's init, the MCP
+# back to IAS, the air start, the read-back checks, the logger
+# (raw\<id>.csv), the engines 8 s on and the aircraft's engine type
+function Start-PerfFlight($Res, $Pt, $Acf, [double[]]$StationKg) {
     $cap = [double[]]@(0..8 | ForEach-Object { $Acf.tank_rat[$_] * $Acf.m_fuel_tot_kg })
+    if ($null -ne $Pt.fuel_kg) { $fuelReq = [double]$Pt.fuel_kg }
+    else { $fuelReq = $MtowKg * $Pt.gw_pct / 100 - $Acf.m_empty_kg - $PayloadKg }
     $tanks = Get-FuelByTank $fuelReq $cap
     $sumSt = 0.0
     foreach ($v in $StationKg) { $sumSt += $v }
@@ -866,13 +1014,15 @@ function Invoke-PerfCheckPoint($Pt, $Acf, [double[]]$StationKg) {
     $payReq = 0.0; foreach ($v in $init.weight.payload_weight_in_kilograms) { $payReq += $v }
     $tankReq = [double[]]@($init.weight.fueltank_weight_in_kilograms)
     $fuelReq = 0.0; foreach ($v in $tankReq) { $fuelReq += $v }
-    $res.request = [ordered]@{ gw_kg = $Acf.m_empty_kg + $payReq + $fuelReq; payload_kg = $payReq; fuel_kg = $fuelReq
+    $Res.request = [ordered]@{ gw_kg = $Acf.m_empty_kg + $payReq + $fuelReq; payload_kg = $payReq; fuel_kg = $fuelReq
         tanks_kg = $tankReq; stations_kg = @($init.weight.payload_weight_in_kilograms)
         tas_ms = $init.lle_air_start.speed_in_meters_per_second; elevation_m = $init.lle_air_start.elevation_in_meters }
-    $res.request.zfw_kg = $Acf.m_empty_kg + $payReq
-    if ($res.request.zfw_kg -gt $MzfwKg) { Note warn ('{0}: zero fuel weight {1} kg above the MZFW {2}' -f $Pt.id, (F $res.request.zfw_kg '0'), (F $MzfwKg '0')) }
+    $Res.request.zfw_kg = $Acf.m_empty_kg + $payReq
+    $Res.request.gw_pct = $Res.request.gw_kg / $MtowKg * 100
+    if ($Res.request.zfw_kg -gt $MzfwKg) { Note warn ('{0}: zero fuel weight {1} kg above the MZFW {2}' -f $Pt.id, (F $Res.request.zfw_kg '0'), (F $MzfwKg '0')) }
     Note info ('{0}: gross {1} kg ({2} % of the MTOW {3}), payload {4} kg, fuel {5} kg, FL{6}, M{7} (true {8} m/s)' -f $Pt.id,
-        (F $res.request.gw_kg '0'), $Pt.gw_pct, (F $MtowKg '0'), (F $payReq '0'), (F $fuelReq '0'), $Pt.fl, $Pt.mach, $res.request.tas_ms)
+        (F $Res.request.gw_kg '0'), (F $Res.request.gw_pct '0.#'), (F $MtowKg '0'), (F $payReq '0'), (F $fuelReq '0'), $Pt.fl, $Pt.mach,
+        $Res.request.tas_ms)
 
     # the MCP back to IAS before the start (a Mach window would be wound in knots)
     try {
@@ -884,19 +1034,20 @@ function Invoke-PerfCheckPoint($Pt, $Acf, [double[]]$StationKg) {
     $wStart = $wall.Elapsed.TotalSeconds
     # read back at once (a few seconds of burn since the start)
     $rb = Get-PerfWeights
-    $res.readback = $rb
+    $Res.readback = $rb
     $dPay = $rb.payload_kg - $payReq
     $dTank = New-Object double[] 9
     for ($i = 0; $i -lt 9; $i++) { $dTank[$i] = $rb.tanks_kg[$i] - $tankReq[$i] }
     $dFuel = $rb.fuel_kg - $fuelReq
-    $dGw = $rb.gw_kg - $res.request.gw_kg
-    Add-Check $res 'readback_payload' ([math]::Abs($dPay) -le 1) ('{0} kg, {1} kg off' -f (F $rb.payload_kg '0.0'), (F $dPay '0.0')) '|off| <= 1 kg'
-    Add-Check $res 'readback_tanks' ((Get-MaxAbs $dTank) -le 30) ('largest tank off {0} kg ({1} s after the start)' -f (F (Get-MaxAbs $dTank) '0.0'), (F ($rb.sim_t - $tStart) '0.0')) '<= 30 kg (a few seconds of burn)'
-    Add-Check $res 'readback_fuel' (($dFuel -le 1) -and ($dFuel -ge -60)) ('{0} kg, {1} kg off' -f (F $rb.fuel_kg '0'), (F $dFuel '0.0')) '-60 to +1 kg'
-    Add-Check $res 'readback_gross' ([math]::Abs($dGw) -le 60) ('{0} kg, {1} kg off' -f (F $rb.gw_kg '0'), (F $dGw '0.0')) '|off| <= 60 kg'
+    $dGw = $rb.gw_kg - $Res.request.gw_kg
+    Add-Check $Res 'readback_payload' ([math]::Abs($dPay) -le 1) ('{0} kg, {1} kg off' -f (F $rb.payload_kg '0.0'), (F $dPay '0.0')) '|off| <= 1 kg'
+    Add-Check $Res 'readback_tanks' ((Get-MaxAbs $dTank) -le 30) ('largest tank off {0} kg ({1} s after the start)' -f (F (Get-MaxAbs $dTank) '0.0'),
+        (F ($rb.sim_t - $tStart) '0.0')) '<= 30 kg (a few seconds of burn)'
+    Add-Check $Res 'readback_fuel' (($dFuel -le 1) -and ($dFuel -ge -60)) ('{0} kg, {1} kg off' -f (F $rb.fuel_kg '0'), (F $dFuel '0.0')) '-60 to +1 kg'
+    Add-Check $Res 'readback_gross' ([math]::Abs($dGw) -le 60) ('{0} kg, {1} kg off' -f (F $rb.gw_kg '0'), (F $dGw '0.0')) '|off| <= 60 kg'
 
     Start-PerfLogger (Join-Path $out "raw\$($Pt.id).csv")
-    $rows0 = (Get-PerfRows).Count
+    $Res.rows0 = (Get-PerfRows).Count
 
     # the engines 8 s after the start
     $left = 8 - ($wall.Elapsed.TotalSeconds - $wStart)
@@ -904,76 +1055,111 @@ function Invoke-PerfCheckPoint($Pt, $Acf, [double[]]$StationKg) {
     $burning = @(Get-XPDataref 'sim/flightmodel2/engines/engine_is_burning_fuel')
     $n2 = @(Get-XPDataref 'sim/cockpit2/engine/indicators/N2_percent')
     $off = @(0..3 | Where-Object { [int]$burning[$_] -ne 1 -or [double]$n2[$_] -lt 60 } | ForEach-Object { $_ + 1 })
-    Add-Check $res 'engines_running' ($off.Count -eq 0) ('N2 {0} %; not burning or below 60 % N2: {1}' -f
+    Add-Check $Res 'engines_running' ($off.Count -eq 0) ('N2 {0} %; not burning or below 60 % N2: {1}' -f
         ((@(0..3 | ForEach-Object { F ([double]$n2[$_]) '0.0' })) -join '/'), $(if ($off.Count) { $off -join ',' } else { 'none' })) 'all 4 burning, N2 > 60 %'
 
     $ac = Get-PerfAircraft
-    $res.aircraft = $ac
-    Add-Check $res 'engine_type_pw4056' (($ac.engine_type -eq 0) -and ($ac.simconfig_engines -eq 'PW4056')) `
+    $Res.aircraft = $ac
+    Add-Check $Res 'engine_type_pw4056' (($ac.engine_type -eq 0) -and ($ac.simconfig_engines -eq 'PW4056')) `
         ('engines/type {0}, simconfig "{1}", livery "{2}"' -f $ac.engine_type, $ac.simconfig_engines, $ac.livery_path) 'type 0 (PW), PW4056'
+}
 
-    $res.setup = Set-PerfCruise $ft ([double]$Pt.mach)
-    Add-Check $res 'ap_alt_spd_mach' (($res.setup.fma_pitch -eq 9) -and ($res.setup.fma_at -eq 3) -and ($res.setup.is_mach -eq 1) -and
-        ([math]::Abs($res.setup.ap_mach_target - $Pt.mach) -lt 0.0005) -and ($res.setup.servos_on -eq 1)) `
-        ('pitch {0}, A/T {1}, Mach mode {2}, target {3}, servos {4}' -f $res.setup.fma_pitch, $res.setup.fma_at, $res.setup.is_mach,
-        (F $res.setup.ap_mach_target '0.000'), $res.setup.servos_on) 'ALT (9), SPD (3), Mach, the point''s Mach, servos on'
+# the A/P and A/T after Set-PerfCruise: ALT, SPD, Mach on the point's Mach, servos
+function Add-PerfSetupCheck($Res, [double]$Mach) {
+    $s = $Res.setup
+    Add-Check $Res 'ap_alt_spd_mach' (($s.fma_pitch -eq 9) -and ($s.fma_at -eq 3) -and ($s.is_mach -eq 1) -and
+        ([math]::Abs($s.ap_mach_target - $Mach) -lt 0.0005) -and ($s.servos_on -eq 1)) `
+        ('pitch {0}, A/T {1}, Mach mode {2}, target {3}, servos {4}' -f $s.fma_pitch, $s.fma_at, $s.is_mach,
+        (F $s.ap_mach_target '0.000'), $s.servos_on) 'ALT (9), SPD (3), Mach, the point''s Mach, servos on'
+}
 
-    # level within the limits for 60 s, in 6 min of sim time
-    $rowsSet = (Get-PerfRows).Count
-    $stableAt = $null
+# level within the limits for 60 s, in 6 min of sim time from now
+# (PERF_SIMBRIEF.md phase 1): the row it was so at, or none and why
+# (Get-PerfUnsettled); from the row count now
+function Wait-PerfStable([double]$Ft, [double]$Mach) {
+    $from = (Get-PerfRows).Count
     $sw = [Diagnostics.Stopwatch]::StartNew()
-    while ($null -eq $stableAt) {
+    while ($true) {
         Start-Sleep -Seconds 2
         Assert-PerfLogger
         $rows = Get-PerfRows
-        $since = $rows.Count - $rowsSet
-        if ($since -ge 60 -and (Test-Stable $rows $ft ([double]$Pt.mach) 60)) { $stableAt = $rows.Count; break }
+        $since = $rows.Count - $from
+        if ($since -ge 60 -and (Test-Stable $rows $Ft $Mach 60)) {
+            return [ordered]@{ from = $from; stable_at = $rows.Count; after_s = $since; status = 'stable'; detail = $null }
+        }
         if ($since -ge 360 -or $sw.Elapsed.TotalSeconds -gt 480) { break }
     }
-    if ($null -eq $stableAt) {
-        $rows = Get-PerfRows
-        $last = $rows[$rows.Count - 1]
-        Add-Check $res 'stable_in_6_min' $false ('alt {0} ft, Mach {1}, V/S {2} fpm at the end' -f (F $last[$script:ix['alt']] '0'),
-            (F $last[$script:ix['mach']] '0.000'), (F $last[$script:ix['vs']] '0')) '30 ft, M.003, 100 fpm for 60 s'
-        $res.status = 'unstable'
-    } else {
-        Add-Check $res 'stable_in_6_min' $true ('{0} s of sim time after the setup' -f ($stableAt - $rowsSet)) '30 ft, M.003, 100 fpm for 60 s'
-        # the point: the next measure_s seconds
-        $need = $stableAt + [int]$Pt.measure_s
-        while ((Get-PerfRows).Count -lt $need) { Start-Sleep -Seconds 2; Assert-PerfLogger }
-        $rows = Get-PerfRows
-        $win = @($rows[$stableAt..($need - 1)])
-        $res.window = Measure-PerfWindow $win
-        $w = $res.window
-        if ($null -eq $w.ff_fuelmass_kgph) {
-            Add-Check $res 'held_through_window' $false ('{0} of {1} rows in real time' -f $w.rows_real_time, $w.rows) 'within the limits, no time acceleration'
-            $res.status = 'no_window'
-        } else {
-            Add-Check $res 'held_through_window' (($w.alt_range_ft -le 60) -and ($w.mach_range -le 0.006) -and ($w.vs_max_abs -lt 100) -and ($w.rows_real_time -eq $w.rows)) `
-                ('alt range {0} ft, Mach range {1}, V/S max {2} fpm, real-time rows {3}/{4}' -f (F $w.alt_range_ft '0'), (F $w.mach_range '0.0000'),
-                (F $w.vs_max_abs '0'), $w.rows_real_time, $w.rows) 'within the limits, no time acceleration'
-            Add-Check $res 'fuel_flow_agreement' ([math]::Abs($w.ff_diff_pct) -le 2) ('fuel weight {0} kg/h, gauges {1} kg/h: {2} %; on wall time {3} kg/h ({4} %); FUEL USED {5} kg/h, on wall time {6} kg/h (SIM_PERIOD covered {7} of the wall time); sim/wall {8}, {9} fps' -f
-                (F $w.ff_fuelmass_kgph '0'), (F $w.ff_gauge_kgph '0'), (F $w.ff_diff_pct '0.00'), (F $w.ff_fuelmass_wall_kgph '0'),
-                (F $w.ff_wall_diff_pct '0.00'), (F $w.ff_totaliser_kgph '0'), (F $w.ff_totaliser_wall_kgph '0'), (F $w.sim_period_share '0.0000'),
-                (F $w.sim_per_wall '0.0000'), (F $w.fps '0')) '|diff| <= 2 % (PERF_SIMBRIEF.md phase 0.3)'
-        }
-    }
-    # writes by the aircraft from the logger's start (3 s on) to now
     $rows = Get-PerfRows
-    $from = [math]::Min($rows0 + 3, $rows.Count - 1)
+    $u = Get-PerfUnsettled $rows $Ft $Mach
+    return [ordered]@{ from = $from; stable_at = $null; after_s = $rows.Count - $from; status = $u.status; detail = $u.detail; end = $u }
+}
+
+# the window: the $Secs rows from $StableAt
+function Measure-PerfAt([int]$StableAt, [int]$Secs) {
+    $need = $StableAt + $Secs
+    while ((Get-PerfRows).Count -lt $need) { Start-Sleep -Seconds 2; Assert-PerfLogger }
+    $rows = Get-PerfRows
+    return Measure-PerfWindow @($rows[$StableAt..($need - 1)])
+}
+# the window held within the limits, in real time
+function Test-PerfHeld($W) {
+    return (($null -ne $W.ff_fuelmass_kgph) -and ($W.alt_range_ft -le 60) -and ($W.mach_range -le 0.006) -and
+        ($W.vs_max_abs -lt 100) -and ($W.rows_real_time -eq $W.rows))
+}
+function Format-PerfHeld($W) {
+    if ($null -eq $W.ff_fuelmass_kgph) { return ('{0} of {1} rows in real time' -f $W.rows_real_time, $W.rows) }
+    return ('alt range {0} ft, Mach range {1}, V/S max {2} fpm, real-time rows {3}/{4}' -f (F $W.alt_range_ft '0'), (F $W.mach_range '0.0000'),
+        (F $W.vs_max_abs '0'), $W.rows_real_time, $W.rows)
+}
+function Format-PerfFlows($W) {
+    return ('fuel weight {0} kg/h, gauges {1} kg/h: {2} %; on wall time {3} kg/h ({4} %); FUEL USED {5} kg/h, on wall time {6} kg/h (SIM_PERIOD covered {7} of the wall time); sim/wall {8}, {9} fps' -f
+        (F $W.ff_fuelmass_kgph '0'), (F $W.ff_gauge_kgph '0'), (F $W.ff_diff_pct '0.00'), (F $W.ff_fuelmass_wall_kgph '0'),
+        (F $W.ff_wall_diff_pct '0.00'), (F $W.ff_totaliser_kgph '0'), (F $W.ff_totaliser_wall_kgph '0'), (F $W.sim_period_share '0.0000'),
+        (F $W.sim_per_wall '0.0000'), (F $W.fps '0'))
+}
+
+# writes by the aircraft from the logger's start (3 s on) to now, and the
+# modes at the end
+function Add-PerfWritesChecks($Res) {
+    $rows = Get-PerfRows
+    $from = [math]::Min($Res.rows0 + 3, $rows.Count - 1)
     $wr = Measure-PerfWrites @($rows[$from..($rows.Count - 1)])
-    $res.writes = $wr
-    Add-Check $res 'payload_unchanged' ($wr.payload_range_kg -le 0.5) ('range {0} kg over {1} s' -f (F $wr.payload_range_kg '0.00'), (F $wr.sim_s '0')) '<= 0.5 kg'
-    Add-Check $res 'zfw_unchanged' ($wr.zfw_range_kg -le 1.0) ('range {0} kg' -f (F $wr.zfw_range_kg '0.00')) '<= 1 kg'
-    Add-Check $res 'fuel_no_jumps' ($wr.fuel_step_residual_max_kg -le 5) ('largest second-to-second fall off the gauges {0} kg (mean {1} kg), fastest tank {2} kg/s, used {3} kg' -f
+    $Res.writes = $wr
+    Add-Check $Res 'payload_unchanged' ($wr.payload_range_kg -le 0.5) ('range {0} kg over {1} s' -f (F $wr.payload_range_kg '0.00'), (F $wr.sim_s '0')) '<= 0.5 kg'
+    Add-Check $Res 'zfw_unchanged' ($wr.zfw_range_kg -le 1.0) ('range {0} kg' -f (F $wr.zfw_range_kg '0.00')) '<= 1 kg'
+    Add-Check $Res 'fuel_no_jumps' ($wr.fuel_step_residual_max_kg -le 5) ('largest second-to-second fall off the gauges {0} kg (mean {1} kg), fastest tank {2} kg/s, used {3} kg' -f
         (F $wr.fuel_step_residual_max_kg '0.00'), (F $wr.fuel_step_residual_mean_kg '0.000'), (F $wr.tank_rate_max_kg_s '0.00'), (F $wr.fuel_used_kg '0')) '<= 5 kg a second'
-    Add-Check $res 'no_time_acceleration' ($wr.rows_time_accelerated -eq 0) ('{0} rows with sim_speed or ground_speed not 1' -f $wr.rows_time_accelerated) '0'
+    Add-Check $Res 'no_time_acceleration' ($wr.rows_time_accelerated -eq 0) ('{0} rows with sim_speed or ground_speed not 1' -f $wr.rows_time_accelerated) '0'
     $last = $rows[$rows.Count - 1]
-    $res.end = [ordered]@{ fma_pitch = $last[$script:ix['fma']]; fma_at = $last[$script:ix['fma_at']]; servos_on = $last[$script:ix['servos_on']]
+    $Res.end = [ordered]@{ fma_pitch = $last[$script:ix['fma']]; fma_at = $last[$script:ix['fma_at']]; servos_on = $last[$script:ix['servos_on']]
         burning = @(1..4 | ForEach-Object { $last[$script:ix["burning_$_"]] }) }
-    Add-Check $res 'modes_at_end' (($res.end.fma_pitch -eq 9) -and ($res.end.fma_at -eq 3) -and ($res.end.servos_on -eq 1) -and
-        (@($res.end.burning | Where-Object { $_ -ne 1 }).Count -eq 0)) ('pitch {0}, A/T {1}, servos {2}, burning {3}' -f $res.end.fma_pitch,
-        $res.end.fma_at, $res.end.servos_on, ($res.end.burning -join '/')) 'ALT, SPD, servos on, all burning'
+    Add-Check $Res 'modes_at_end' (($Res.end.fma_pitch -eq 9) -and ($Res.end.fma_at -eq 3) -and ($Res.end.servos_on -eq 1) -and
+        (@($Res.end.burning | Where-Object { $_ -ne 1 }).Count -eq 0)) ('pitch {0}, A/T {1}, servos {2}, burning {3}' -f $Res.end.fma_pitch,
+        $Res.end.fma_at, $Res.end.servos_on, ($Res.end.burning -join '/')) 'ALT, SPD, servos on, all burning'
+}
+
+# A check point (suite check): the flight, the A/P, 60 s level, the window
+function Invoke-PerfCheckPoint($Pt, $Acf, [double[]]$StationKg) {
+    $res = [ordered]@{ id = $Pt.id; target = $Pt; status = 'done'; checks = [ordered]@{} }
+    try {
+        $ft = [double]$Pt.fl * 100
+        Start-PerfFlight $res $Pt $Acf $StationKg
+        $res.setup = Set-PerfCruise $ft ([double]$Pt.mach)
+        Add-PerfSetupCheck $res ([double]$Pt.mach)
+        $st = Wait-PerfStable $ft ([double]$Pt.mach)
+        $res.settle = $st
+        if ($null -eq $st.stable_at) {
+            Add-Check $res 'stable_in_6_min' $false $st.detail '30 ft, M.003, 100 fpm for 60 s'
+            $res.status = $st.status
+        } else {
+            Add-Check $res 'stable_in_6_min' $true ('{0} s of sim time after the setup' -f $st.after_s) '30 ft, M.003, 100 fpm for 60 s'
+            $res.window = Measure-PerfAt $st.stable_at ([int]$Pt.measure_s)
+            $w = $res.window
+            Add-Check $res 'held_through_window' (Test-PerfHeld $w) (Format-PerfHeld $w) 'within the limits, no time acceleration'
+            if ($null -eq $w.ff_fuelmass_kgph) { $res.status = 'no_window' }
+            else { Add-Check $res 'fuel_flow_agreement' ([math]::Abs($w.ff_diff_pct) -le 2) (Format-PerfFlows $w) '|diff| <= 2 % (PERF_SIMBRIEF.md phase 0.3)' }
+        }
+        Add-PerfWritesChecks $res
     } catch {
         $res.status = 'aborted'
         $res.error = $_.Exception.Message
@@ -986,8 +1172,241 @@ function Invoke-PerfCheckPoint($Pt, $Acf, [double[]]$StationKg) {
     return $res
 }
 
+# A cruise level (suite cruise): the flight at its first Mach, the CI's Mach
+# when asked (the CDU), then each Mach in place: 60 s level in 6 min, then
+# $MeasureS s averaged; each point's rows, from its Mach's setting to its
+# window's end, in raw\<point>.csv. A Mach not held (hold_unable) leaves the
+# level's faster ones untried.
+function Invoke-PerfLevel($Lv, $Acf, [double[]]$StationKg) {
+    $res = [ordered]@{ id = $Lv.id; target = $Lv; status = 'done'; checks = [ordered]@{}; points = New-Object System.Collections.ArrayList }
+    try {
+        $ft = [double]$Lv.fl * 100
+        $machs = [double[]]@($Lv.machs)
+        $pt = [ordered]@{ id = $Lv.id; fl = $Lv.fl; mach = $machs[0]; gw_pct = $Lv.gw_pct; fuel_kg = $Lv.fuel_kg }
+        Start-PerfFlight $res $pt $Acf $StationKg
+        $res.setup = Set-PerfCruise $ft $machs[0]
+        Add-PerfSetupCheck $res $machs[0]
+        if ($Lv.ci_check) {
+            $ci = Measure-PerfCiMach $CruiseCi $ft
+            $res.ci = $ci
+            $pass = $null
+            if ($null -ne $ci.mach) { $pass = ($ci.mach -ge $machs[0]) -and ($ci.mach -le $machs[$machs.Length - 1]) }
+            Add-Check $res 'ci_mach' $pass ('CI {0}: {1} on the VNAV CRZ page ("{2}"){3}' -f $ci.ci,
+                $(if ($null -ne $ci.mach) { F $ci.mach '0.000' } else { 'no Mach' }), $ci.title, $(if ($ci.note) { '; ' + $ci.note } else { '' })) `
+                ('within the Machs {0}-{1}' -f (F $machs[0] '0.00'), (F $machs[$machs.Length - 1] '0.00'))
+            # the CDU's entries leave the MCP alone; to be sure
+            if ((Get-Int 'sim/cockpit2/autopilot/airspeed_is_mach') -ne 1 -or
+                [math]::Abs((Get-Num 'sim/cockpit2/autopilot/airspeed_dial_kts_mach') - $machs[0]) -ge 0.0005) {
+                Note warn 'the MCP changed during the CDU entries: its Mach again'
+                [void](Set-PerfMcpMach $machs[0])
+            }
+        }
+        $held = $true
+        foreach ($m in $machs) {
+            # (aborted until it is measured or found unsettled)
+            $p = [ordered]@{ id = (Get-PerfPointId $Lv.id $m); level = $Lv.id; target_mach = $m; status = 'aborted'; detail = $null; raw_file = $null }
+            [void]$res.points.Add($p)
+            if (-not $held) {
+                $p.status = 'hold_unable'
+                $p.detail = 'not tried: a slower Mach was not held'
+                Note warn "$($p.id): $($p.detail)"
+                continue
+            }
+            if ($m -ne $machs[0]) { $p.mach_tries = Set-PerfMcpMach $m }
+            $st = Wait-PerfStable $ft $m
+            $p.settle = $st
+            $to = (Get-PerfRows).Count - 1
+            if ($null -eq $st.stable_at) {
+                $p.status = $st.status
+                $p.detail = $st.detail
+                if ($st.status -eq 'hold_unable') { $held = $false }
+                Note warn ('{0}: {1}, {2}' -f $p.id, $p.status, $p.detail)
+            } else {
+                $p.window = Measure-PerfAt $st.stable_at $MeasureS
+                $to = $st.stable_at + $MeasureS - 1
+                $w = $p.window
+                $p.status = 'done'
+                if (-not (Test-PerfHeld $w)) {
+                    $p.status = $(if ($null -eq $w.ff_fuelmass_kgph) { 'no_window' } else { 'not_held' })
+                    $p.detail = Format-PerfHeld $w
+                }
+                Note $(if ($p.status -eq 'done') { 'pass' } else { 'warn' }) ('{0}: {1} t, {2} ft, M{3}, level after {4} s: {5}' -f $p.id,
+                    (F ($w.weight / 1000) '0.0'), (F $w.press_alt_ft '0'), (F $w.mach '0.0000'), $st.after_s, (Format-PerfFlows $w))
+            }
+            $p.raw_file = "raw/$($p.id).csv"
+            Save-PerfRows (Join-Path $out $p.raw_file) (Get-PerfRows) $st.from $to
+        }
+        Add-PerfWritesChecks $res
+    } catch {
+        $res.status = 'aborted'
+        $res.error = $_.Exception.Message
+        Note fail "$($Lv.id): $($res.error)"
+    } finally {
+        $res.raw_file = "raw/$($Lv.id).csv"
+        if ($null -ne $script:logger) { $res.columns_missing = $script:logger.missing }
+        Stop-PerfLogger
+    }
+    return $res
+}
+
+# the repeat (PERF_SIMBRIEF.md phase 1): the first and the last window of the
+# same point, their flows' difference (report over 1 %)
+function Compare-PerfRepeat($First, $Last) {
+    if ($null -eq $First -or $null -eq $Last -or $null -eq $First.ff_fuelmass_kgph -or $null -eq $Last.ff_fuelmass_kgph) { return $null }
+    $d = ($Last.ff_fuelmass_kgph / $First.ff_fuelmass_kgph - 1) * 100
+    return [ordered]@{ first_kgph = $First.ff_fuelmass_kgph; last_kgph = $Last.ff_fuelmass_kgph; diff_pct = $d
+        gauge_first_kgph = $First.ff_gauge_kgph; gauge_last_kgph = $Last.ff_gauge_kgph
+        gauge_diff_pct = ($Last.ff_gauge_kgph / $First.ff_gauge_kgph - 1) * 100
+        first_weight_kg = $First.weight; last_weight_kg = $Last.weight; within_1_pct = ([math]::Abs($d) -le 1) }
+}
+
 # ---------------------------------------------------------------- the run
 
+# The run's files (the points' rows to points.csv in PERF_SIMBRIEF.md's
+# columns, check.json and check.md, the Log.txt and XTLua error excerpts,
+# events.txt): the summary line back (plan, or the points done)
+function Write-PerfFiles([string]$RunOut, [string]$RunSuite, $RunResults, $RunMeta, $RunAborted, $RunPoints, $RunLevels,
+        [string]$LogFile, [long]$LogFrom, [string]$XtFile, [long]$XtFrom) {
+    # the points' rows (points.csv, PERF_SIMBRIEF.md's columns): each check point,
+    # or each cruise level's Machs (those not reached: not_run)
+    $prow = New-Object System.Collections.ArrayList
+    $items = if ($RunSuite -eq 'check') { @($RunResults) } else { @($RunLevels) }
+    foreach ($it in $items) {
+        if ($RunSuite -eq 'check') {
+            $r = $it
+            [void]$prow.Add([ordered]@{ id = $r.id; gw_pct = $r.target.gw_pct; fl = $r.target.fl; mach = $r.target.mach; w = $r.window
+                status = $r.status; raw = $r.raw_file; after_s = $r.settle.after_s; detail = $null })
+            continue
+        }
+        # a cruise level and its result (none: not run)
+        $r = $null
+        foreach ($x in $RunResults) { if ($x.id -eq $it.id) { $r = $x } }
+        $pct = if ($null -ne $r -and $null -ne $r.request) { $r.request.gw_pct } else { $it.gw_pct }
+        foreach ($m in @($it.machs)) {
+            $p = $null
+            if ($null -ne $r) { foreach ($x in $r.points) { if ([math]::Abs($x.target_mach - $m) -lt 1e-9) { $p = $x } } }
+            if ($null -eq $p) {
+                [void]$prow.Add([ordered]@{ id = (Get-PerfPointId $it.id $m); gw_pct = $pct; fl = $it.fl; mach = $m; w = $null
+                    status = 'not_run'; raw = $null; after_s = $null; detail = $null })
+            } else {
+                [void]$prow.Add([ordered]@{ id = $p.id; gw_pct = $pct; fl = $it.fl; mach = $m; w = $p.window
+                    status = $p.status; raw = $p.raw_file; after_s = $p.settle.after_s; detail = $p.detail })
+            }
+        }
+    }
+
+    # the repeat (suite cruise): the first and the last window of its point
+    $repeat = $null
+    $repLv = $null
+    foreach ($lv in $RunLevels) { if ($lv.repeat_of) { $repLv = $lv } }
+    if ($null -ne $repLv) {
+        $firstW = $null; $lastW = $null
+        $lastId = Get-PerfPointId $repLv.id $repLv.machs[0]
+        foreach ($q in $prow) { if ($q.id -eq $repLv.repeat_of) { $firstW = $q.w }; if ($q.id -eq $lastId) { $lastW = $q.w } }
+        $repeat = Compare-PerfRepeat $firstW $lastW
+        if ($null -ne $repeat) {
+            $repeat.first = $repLv.repeat_of
+            $repeat.last = $lastId
+            Note $(if ($repeat.within_1_pct) { 'pass' } else { 'warn' }) ('repeat {0} and {1}: fuel weight {2} and {3} kg/h ({4} %; over 1 %: to report), gauges {5} %' -f
+                $repeat.first, $repeat.last, (F $repeat.first_kgph '0'), (F $repeat.last_kgph '0'), (F $repeat.diff_pct '0.00'), (F $repeat.gauge_diff_pct '0.00'))
+        }
+    }
+
+    Save-Json (Join-Path $RunOut 'meta.json') $RunMeta
+    if ($RunSuite -eq 'check') { Save-Json (Join-Path $RunOut 'check.json') ([ordered]@{ suite = $RunSuite; aborted = $RunAborted; points = @($RunResults) }) }
+    else { Save-Json (Join-Path $RunOut 'check.json') ([ordered]@{ suite = $RunSuite; aborted = $RunAborted; levels = @($RunResults); repeat = $repeat }) }
+
+    $pc = New-Object System.Collections.ArrayList
+    [void]$pc.Add('point_id,plan,target_gw_pct,target_fl,target_mach,gw_kg,press_alt_ft,mach,tas_kt,oat_c,isa_dev_c,ff_fuelmass_kgph,ff_gauge_kgph,n1_avg_pct,pitch_deg,aoa_deg,status,raw_file')
+    foreach ($q in $prow) {
+        $w = $q.w
+        $pctT = if ($null -ne $q.gw_pct) { F ([double]$q.gw_pct) '0.#' } else { '' }
+        if ($null -eq $w -or $null -eq $w.ff_fuelmass_kgph) {
+            [void]$pc.Add(('{0},A,{1},{2},{3},,,,,,,,,,,,{4},{5}' -f $q.id, $pctT, $q.fl, (F ([double]$q.mach) '0.00'), $q.status, $q.raw))
+            continue
+        }
+        [void]$pc.Add((@($q.id, 'A', $pctT, $q.fl, (F ([double]$q.mach) '0.00'), (F $w.weight '0'), (F $w.press_alt_ft '0'),
+            (F $w.mach '0.0000'), (F $w.tas_kt '0.0'), (F $w.oat_c '0.00'), (F $w.isa_dev_c '0.00'), (F $w.ff_fuelmass_kgph '0.0'),
+            (F $w.ff_gauge_kgph '0.0'), (F $w.n1_avg_pct '0.00'), (F $w.pitch '0.00'), (F $w.aoa '0.00'), $q.status, $q.raw)) -join ',')
+    }
+    [IO.File]::WriteAllLines((Join-Path $RunOut 'points.csv'), [string[]]$pc, $utf8)
+
+    $md = New-Object System.Collections.ArrayList
+    [void]$md.Add("# Perf $RunSuite $(Split-Path -Leaf $RunOut)")
+    [void]$md.Add('')
+    [void]$md.Add(('X-Plane {0}; {1} {2} ({3} tracked files changed); acf SHA-256 {4}' -f $RunMeta.xplane.version, $RunMeta.git.branch, $RunMeta.git.commit,
+        $RunMeta.git.tracked_changes, $RunMeta.acf.sha256))
+    if ($RunAborted) { [void]$md.Add(''); [void]$md.Add("**Stopped:** $RunAborted") }
+    $count = [ordered]@{}
+    foreach ($q in $prow) { $count[$q.status] = 1 + [int]$count[$q.status] }
+    if ($RunSuite -eq 'cruise') {
+        foreach ($r in $RunResults) {
+            if ($null -eq $r.ci) { continue }
+            [void]$md.Add('')
+            [void]$md.Add(('CI {0}: the economy cruise Mach {1} on the VNAV CRZ page ("{2}") at {3} % and FL{4}{5}; the Machs {6}' -f $r.ci.ci,
+                $(if ($null -ne $r.ci.mach) { F $r.ci.mach '0.000' } else { 'not read' }), $r.ci.title, (F ([double]$r.request.gw_pct) '0.#'), $r.target.fl,
+                $(if ($r.ci.note) { ' (' + $r.ci.note + ')' } else { '' }), ((@($r.target.machs) | ForEach-Object { F $_ '0.00' }) -join ', ')))
+        }
+        [void]$md.Add('')
+        if ($null -ne $repeat) {
+            [void]$md.Add(('Repeat ({0}, {1}): fuel weight {2} and {3} kg/h, {4} %; gauges {5} and {6} kg/h, {7} % (over 1 %: to report): {8}' -f
+                $repeat.first, $repeat.last, (F $repeat.first_kgph '0'), (F $repeat.last_kgph '0'), (F $repeat.diff_pct '0.00'),
+                (F $repeat.gauge_first_kgph '0'), (F $repeat.gauge_last_kgph '0'), (F $repeat.gauge_diff_pct '0.00'),
+                $(if ($repeat.within_1_pct) { 'within' } else { 'OVER' })))
+        } else { [void]$md.Add('Repeat: not measured') }
+        [void]$md.Add('')
+        [void]$md.Add(('Points: {0} of {1} done{2}' -f [int]$count['done'], $prow.Count,
+            $(if ($count.Count -gt 1) { '; ' + ((@($count.Keys | Where-Object { $_ -ne 'done' }) | ForEach-Object { "$_ $($count[$_])" }) -join ', ') } else { '' })))
+    }
+    $planA = ($RunSuite -eq 'check') -and ($RunResults.Count -eq $RunPoints.Count)
+    foreach ($r in $RunResults) {
+        [void]$md.Add('')
+        [void]$md.Add("## $($r.id) ($($r.status))")
+        if ($r.error) { [void]$md.Add(''); [void]$md.Add("Error: $($r.error)") }
+        [void]$md.Add('')
+        [void]$md.Add('| check | pass | value | limit |')
+        [void]$md.Add('|---|---|---|---|')
+        foreach ($k in $r.checks.Keys) {
+            $c = $r.checks[$k]
+            $p = if ($null -eq $c.pass) { '-' } elseif ($c.pass) { 'yes' } else { 'NO' }
+            [void]$md.Add("| $k | $p | $($c.value) | $($c.limit) |")
+            if ($k -ne 'fuel_flow_agreement' -and $c.pass -eq $false) { $planA = $false }
+        }
+        if ($r.status -ne 'done') { $planA = $false }
+        if ($RunSuite -ne 'cruise') { continue }
+        [void]$md.Add('')
+        [void]$md.Add('| point | status | gross t | press alt ft | Mach | TAS kt | ISA dev C | FF fuel weight kg/h | FF gauges kg/h | diff % | N1 % | pitch | AoA | level after s |')
+        [void]$md.Add('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|')
+        foreach ($q in $prow) {
+            if (-not $q.id.StartsWith($r.id + '_')) { continue }
+            $w = $q.w
+            if ($null -eq $w -or $null -eq $w.ff_fuelmass_kgph) {
+                [void]$md.Add("| $($q.id) | $($q.status) | | | | | | | | | | | | $($q.after_s) |")
+                continue
+            }
+            [void]$md.Add(('| {0} | {1} | {2} | {3} | {4} | {5} | {6} | {7} | {8} | {9} | {10} | {11} | {12} | {13} |' -f $q.id, $q.status,
+                (F ($w.weight / 1000) '0.0'), (F $w.press_alt_ft '0'), (F $w.mach '0.0000'), (F $w.tas_kt '0.0'), (F $w.isa_dev_c '0.00'),
+                (F $w.ff_fuelmass_kgph '0'), (F $w.ff_gauge_kgph '0'), (F $w.ff_diff_pct '0.00'), (F $w.n1_avg_pct '0.00'), (F $w.pitch '0.00'),
+                (F $w.aoa '0.00'), $q.after_s))
+        }
+        foreach ($q in $prow) {
+            if ($q.id.StartsWith($r.id + '_') -and $q.detail) { [void]$md.Add(''); [void]$md.Add("- $($q.id): $($q.detail)") }
+        }
+    }
+    if ($RunSuite -eq 'check') {
+        [void]$md.Add('')
+        [void]$md.Add(('Air start checks (all but the fuel flow agreement): {0}' -f $(if ($planA) { 'all passed -> plan A' } else { 'not all passed -> plan B' })))
+    }
+    [IO.File]::WriteAllLines((Join-Path $RunOut 'check.md'), [string[]]$md, $utf8)
+
+    $ex = @(Get-FileTail $LogFile $LogFrom | Where-Object { $_ -match '(?i)error|exception|fail|assert|crash' })
+    [IO.File]::WriteAllLines((Join-Path $RunOut 'log_excerpt.txt'), [string[]]$ex, $utf8)
+    $xt = @(Get-FileTail $XtFile $XtFrom)
+    if ($xt.Count -gt 0) { [IO.File]::WriteAllLines((Join-Path $RunOut 'xtlua_errors.txt'), [string[]]$xt, $utf8) }
+    [IO.File]::WriteAllLines((Join-Path $RunOut 'events.txt'), [string[]]$events, $utf8)
+    if ($RunSuite -eq 'check') { return ('plan: {0}' -f $(if ($planA) { 'A' } else { 'B' })) }
+    return ('points: {0} of {1} done' -f [int]$count['done'], $prow.Count)
+}
 # dot-sourced (tests/flight/perf/perf_offline_test.ps1): the functions only
 if ($MyInvocation.InvocationName -eq '.') { return }
 
@@ -998,7 +1417,8 @@ if (Test-Path $out) { throw "the run's folder exists: $out" }
 New-Item -ItemType Directory -Force -Path (Join-Path $out 'raw') | Out-Null
 
 $results = New-Object System.Collections.ArrayList
-$meta = [ordered]@{ suite = $Suite; plan = $Suite; started = (Get-Date).ToString('o'); out = $out; points = $points }
+$meta = [ordered]@{ suite = $Suite; plan = 'A'; started = (Get-Date).ToString('o'); out = $out; points = $points; levels = $levels
+    measure_s = $MeasureS; cruise_ci = $CruiseCi; light_fuel_kg = $LightFuelKg }
 $xpLog = Join-Path $script:XPRoot 'Log.txt'
 $xtErr = Join-Path $script:XPRoot 'Output\B747_xtlua_errors.txt'
 $aborted = $null
@@ -1037,7 +1457,8 @@ try {
     } catch { }
     if ($null -eq $acf) {
         Note info 'the custom acf is not loaded: an air start without weights loads it first'
-        $probe = New-PerfInit $points[0] (New-Object double[] 9) (New-Object double[] 9)
+        $p0 = if ($points.Count -gt 0) { $points[0] } else { [ordered]@{ id = 'probe'; fl = $levels[0].fl; mach = $levels[0].machs[0] } }
+        $probe = New-PerfInit $p0 (New-Object double[] 9) (New-Object double[] 9)
         $probe.Remove('weight')
         [void](Start-PerfAirStart $probe)
         $acf = Get-PerfAircraft
@@ -1054,8 +1475,10 @@ try {
     }
     Save-Json (Join-Path $out 'meta.json') $meta
 
-    foreach ($pt in $points) {
-        [void]$results.Add((Invoke-PerfCheckPoint $pt $acf $stationKg))
+    $todo = if ($Suite -eq 'check') { $points } else { $levels }
+    foreach ($item in $todo) {
+        if ($Suite -eq 'check') { [void]$results.Add((Invoke-PerfCheckPoint $item $acf $stationKg)) }
+        else { [void]$results.Add((Invoke-PerfLevel $item $acf $stationKg)) }
         $e = @(Get-FileTail $xtErr $xtFrom)
         if ($e.Count -gt 0) { Note fail ('XTLua errors: ' + $e[0]); break }
     }
@@ -1072,53 +1495,6 @@ try {
 $meta.finished = (Get-Date).ToString('o')
 $meta.wall_s = [math]::Round($wall.Elapsed.TotalSeconds, 0)
 $meta.aborted = $aborted
-Save-Json (Join-Path $out 'meta.json') $meta
-Save-Json (Join-Path $out 'check.json') ([ordered]@{ suite = $Suite; aborted = $aborted; points = @($results) })
-
-$pc = New-Object System.Collections.ArrayList
-[void]$pc.Add('point_id,plan,target_gw_pct,target_fl,target_mach,gw_kg,press_alt_ft,mach,tas_kt,oat_c,isa_dev_c,ff_fuelmass_kgph,ff_gauge_kgph,n1_avg_pct,pitch_deg,aoa_deg,status,raw_file')
-foreach ($r in $results) {
-    $w = $r.window
-    if ($null -eq $w -or $null -eq $w.ff_fuelmass_kgph) {
-        [void]$pc.Add(('{0},{1},{2},{3},{4},,,,,,,,,,,,{5},{6}' -f $r.id, $Suite, $r.target.gw_pct, $r.target.fl, $r.target.mach, $r.status, $r.raw_file))
-        continue
-    }
-    [void]$pc.Add((@($r.id, $Suite, $r.target.gw_pct, $r.target.fl, (F $r.target.mach '0.00'), (F $w.weight '0'), (F $w.press_alt_ft '0'),
-        (F $w.mach '0.0000'), (F $w.tas_kt '0.0'), (F $w.oat_c '0.00'), (F $w.isa_dev_c '0.00'), (F $w.ff_fuelmass_kgph '0.0'),
-        (F $w.ff_gauge_kgph '0.0'), (F $w.n1_avg_pct '0.00'), (F $w.pitch '0.00'), (F $w.aoa '0.00'), $r.status, $r.raw_file)) -join ',')
-}
-[IO.File]::WriteAllLines((Join-Path $out 'points.csv'), [string[]]$pc, $utf8)
-
-$md = New-Object System.Collections.ArrayList
-[void]$md.Add("# Perf $Suite $stamp")
-[void]$md.Add('')
-[void]$md.Add(('X-Plane {0}; {1} {2} ({3} tracked files changed); acf SHA-256 {4}' -f $meta.xplane.version, $meta.git.branch, $meta.git.commit,
-    $meta.git.tracked_changes, $meta.acf.sha256))
-if ($aborted) { [void]$md.Add(''); [void]$md.Add("**Stopped:** $aborted") }
-$planA = ($results.Count -eq $points.Count)
-foreach ($r in $results) {
-    [void]$md.Add('')
-    [void]$md.Add("## $($r.id) ($($r.status))")
-    if ($r.error) { [void]$md.Add(''); [void]$md.Add("Error: $($r.error)") }
-    [void]$md.Add('')
-    [void]$md.Add('| check | pass | value | limit |')
-    [void]$md.Add('|---|---|---|---|')
-    foreach ($k in $r.checks.Keys) {
-        $c = $r.checks[$k]
-        $p = if ($null -eq $c.pass) { '-' } elseif ($c.pass) { 'yes' } else { 'NO' }
-        [void]$md.Add("| $k | $p | $($c.value) | $($c.limit) |")
-        if ($k -ne 'fuel_flow_agreement' -and $c.pass -eq $false) { $planA = $false }
-    }
-    if ($r.status -ne 'done') { $planA = $false }
-}
-[void]$md.Add('')
-[void]$md.Add(('Air start checks (all but the fuel flow agreement): {0}' -f $(if ($planA) { 'all passed -> plan A' } else { 'not all passed -> plan B' })))
-[IO.File]::WriteAllLines((Join-Path $out 'check.md'), [string[]]$md, $utf8)
-
-$ex = @(Get-FileTail $xpLog $logFrom | Where-Object { $_ -match '(?i)error|exception|fail|assert|crash' })
-[IO.File]::WriteAllLines((Join-Path $out 'log_excerpt.txt'), [string[]]$ex, $utf8)
-$xt = @(Get-FileTail $xtErr $xtFrom)
-if ($xt.Count -gt 0) { [IO.File]::WriteAllLines((Join-Path $out 'xtlua_errors.txt'), [string[]]$xt, $utf8) }
-[IO.File]::WriteAllLines((Join-Path $out 'events.txt'), [string[]]$events, $utf8)
+$summary = Write-PerfFiles $out $Suite @($results) $meta $aborted $points $levels $xpLog $logFrom $xtErr $xtFrom
 Write-Host "done: $out"
-Write-Host ('plan: {0}' -f $(if ($planA) { 'A' } else { 'B' }))
+Write-Host $summary
