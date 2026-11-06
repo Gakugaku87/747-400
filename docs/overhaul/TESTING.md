@@ -263,6 +263,26 @@
 - 記録（`session.csv`・`events.csv`・`summary.txt`）は、その回に書かれたものだけを結果のフォルダに写す（2026-11-03 から。前は `record_start` の無いシナリオに、前に記録したシナリオの記録が写った）。
 - 手順 `watch` の `until`（終わりの条件）：値と条件は別々の要求で読むので、条件が成り立ったのを見た回の値は数えない（2026-11-04 から。前は s98 が、procedure turn の終わりのフレームで読んだ次の脚の横のずれ 0.68 nm を、戻りの脚のずれとして数えていた。記録 v10 では戻りの脚は 0.13〜0.14 nm、段階 0 と次の脚への切り替えは同じフレーム）。
 
+### 4.7 性能計測モード（`tests/flight/perf/`、2026-11-06）
+
+SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタム acf で測る。仕様と記入欄はリポジトリ直下の `PERF_SIMBRIEF.md`（利用者、2026-11-06）。機体は変えずに測るだけ（acf・機体のスクリプト・X-Plane・プラグインのファイルは書かない）。各フェーズの終わりで止まり、利用者の確認を取ってから次へ進む（仕様の決まり。PLAN の項目の進め方とは違う）。
+
+- 実行：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\perf.ps1 -Suite check [-StartXPlane]`。1 本で無人で回し、終わってから結果のファイルだけを読む。`-StartXPlane` は X-Plane が動いていなければ `tools\xp_restart.ps1` で起動する（RJAA 34L の捨てのフライトまで）。
+  - 仕様の `python -m perf ...` は、キットの PowerShell に置き換えた（この PC は Python を呼ばない：CLAUDE.md）。
+- 点の総重量は MTOW の百分率。MTOW は FCOM の機番 109 の 394,625 kg（FCOM p.78、L.10.2。利用者 2026-11-06）で、acf の最大重量（850,000 lb ＝ 385,554 kg）ではない。MZFW 244,939 kg・MLW 285,763 kg も同じ表の値（機体に定義が無い。利用者 2026-11-06）。`meta.json` の `weights` に記録し、点の ZFW が MZFW を超えれば警告する。
+- `check`（フェーズ0）：銚子沖の海上（35.40N 141.30E、真方位 090）で、ペイロード 40 t、MTOW の 78 %・FL350 と 90 %・FL310（どちらも M.85）の 2 回の空中スタート。それぞれ、エンジンの燃焼、ペイロードとタンクごとの燃料の読み戻し、エンジン型式（PW4056）、A/P の ALT と A/T の SPD（MCP は Mach）、30 ft・M.003・100 fpm の内に 60 秒（6 分以内）、続く 180 秒の燃料重量の減り方と FF 計器の和の比較（差 2 % 以内）、記録の始めから終わりまでペイロード・ZFW（総重量 − 燃料）・燃料の飛びの監視。
+- 空中スタート：`POST /flight` の `lle_air_start`（真の速さ）・`weight`（ペイロードは acf の `_fixed_max` の比で分け、燃料は機体の積み込み順：`B747.25.xt.fuel.lua` の `fuel_distribution`）・`engine_status`・気象のカスタム定義（ISA の 15 ℃・1013.25 hPa、13 層とも無風・乱気流 0、雲なし、`static`）。初期化が HTTP の誤りで断られたら止まる（`xp.ps1` の `Start-XPFlight` は警告だけで、前のフライトが続いて見える）。キットのランナーと同じく、8 秒後に全エンジンの燃焼を確かめて、もう一度かける。
+- 空中スタートの後は、FMC の初期化（F/D・A/T ARM・MCP の速さを今の速さへ巻き取り、ALT HOLD・CMD L：`B747.68.xt.fms.lua` の `activate_inflightAP`）を待ってから MCP を操作する。初期化の終わりは、開始の前に MCP 高度へ 49,000 を書いておき、初期化がそれを今の高度に変えて巻き取りが終わったこと（`altitude/target`・`speed/target` が −1、CMD L、サーボ）で見分ける。2 回目からの空中スタートで、前の点の A/P の状態を初期化の終わりと取り違えないため。MCP は開始の前に IAS に戻す（Mach の窓のまま開始すると、初期化が窓をノットの値へ巻き取る）。
+- MCP の速さ：IAS/MACH の切り替え（`sim/autopilot/knots_mach_toggle`。機体が置き換えた）でいったん IAS にしてから Mach に戻し、`laminar/B747/autopilot/ias_dial_value` に Mach × 100 の整数を書く（Web API で XTLua の dataref に小数は書けない：§4.6）。目標が合わなければ 3 回までやり直す。高度計が 29.92 でなければ BARO STD を押す。高度が 30 ft より離れていれば FLCH で合わせる。
+  - IAS を通す理由（2026-11-06 の 2 回目の `check`：FL310 で目標が M.899 のまま止まった）：空中スタートの後は、機体の自動の切り替え（`B747.70.xt.autopilot.lua` 2484–2495）で MCP が Mach になり、FMC の空中の初期化が窓をノットの値で巻き取る（259 を M2.59 と読む）。そのため A/P の目標が上限の Vmo − 10 kt に張り付く（2550–2564。Vmo は 28,620 ft より上で 365 kt から下がる：`B747.60.xt.fltInst02.lua` 2327。FL310 で 338.6 kt ＝ M.899、FL350 で 311 kt ＝ M.901）。張り付いている間は、窓の Mach が目標に入らない（2567）。FL350 の点は FLCH を押したときに外れた。IAS にすると目標は窓の IAS になり（2545）、Mach に戻すと窓は今の Mach を出し（1963–1972）、目標が窓に従う。目標が合ってから 2 秒後にもう一度確かめる。
+  - 高度を合わせた後に、もう一度 Mach にする（2026-11-06 の 3 回目の `check`：FL310 の M.85 は 318 kt で、31,125 ft からの FLCH の降下で MCP が IAS になり、A/P は 305 kt を保った）。機体の自動の切り替えは、降下（V/S が −250 fpm より下）で 310 kt を超えていれば IAS に（2496–2507）、上昇（250 fpm より上）で M.84 を超えれば Mach にする（2484–2495）。ALT の捕捉の後も 15 秒ほどは 250〜670 fpm で降りているので、V/S が 150 fpm より小さくなるのを待ってから（90 秒まで）Mach にする。
+- 記録：Web API の WebSocket（`ws://localhost:8086/api/v3` の `dataref_subscribe_values`。約 10 Hz、変わった値だけが届く）を別の runspace で受け、届くたびに全列の値（保持した値）を 1 標本にして、シムの時刻の 1 秒ごとに平均（状態の列は最後の値）を `raw/<点>.csv` に書く。列は `perf.ps1` の `$colSpec`（84 列）、末尾に `wall_s`（記録の始めからの PC の時刻）と `samples`。
+- 流量：燃料重量（`m_fuel_total`）のシムの時刻への最小二乗の傾き。FF 計器（`fuel_flow_kg_sec` の 4 発の和）の平均を並べ、PC の時刻への傾きも出す（機体の燃料系は XTLua の `SIM_PERIOD` で減らす：`B747.25.xt.fuel.lua` 1390。シムが遅れると、シムの時刻あたりの減りが計器より多くなりうる）。時間加速（`sim_speed`・`ground_speed` が 1 でない）と一時停止の行は平均に入れない。
+  - FUEL USED（`laminar/B747/fuel/totaliser[4]`）も記録する。機体は各発の流量 × `SIM_PERIOD` を、タンクから燃料を取るのと同じフレームで足す（`B747.25.xt.fuel.lua` 1355–1362、1417–1418）。その PC の時刻への傾きを計器の和で割ると、フレームの `SIM_PERIOD` が PC の時刻のどれだけを覆ったかが分かる（`sim_period_share`）。X-Plane 自身の totalizer（`fuel_totalizer_sum_kg`）は使えない（機体が始めの値をタンクの合計に書き直すので 0 のまま：1550）。
+- 出力 `tests/flight/perf/runs/<日時>_<suite>/`（`.git/info/exclude` で管理外）：`meta.json`（機体のコミット、acf の SHA-256、X-Plane の版、点、重量とその出典の acf の行）、`init_<点>.json`、`raw/`、`points.csv`（仕様の列）、`check.json`・`check.md`、`events.txt`、`log_excerpt.txt`。上書きしない。
+- JSON は、辞書・配列・文字列・数・真偽値だけに直してから書く（`Save-Json` の `ConvertTo-PlainData`。それ以外の物は文字列にする）。PowerShell 5.1 の `ConvertTo-Json` は渡された物の属性を全部たどる。`Get-Content` で読んだ行には PSDrive・PSProvider が付いていて、`-Depth 30` では型の情報を際限なくたどった（2026-11-06 の 1 回目の `check`：`meta.json` を書くところで 3.5 時間止まり、メモリを 79 GB 使った。Log.txt の 1 行目を `Get-Content` で読んでいた）。
+- X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\perf_offline_test.ps1`（acf の行、タンクへの配分、フライトの初期化、JSON の書き出し、模擬の Web API（`HttpListener`）を相手にした記録と集計。108 項目）。
+
 ## 5. 1 項目ごとの流れ（フェーズ1以降）
 
 1. 着手前に、変更方針を短く示す。
