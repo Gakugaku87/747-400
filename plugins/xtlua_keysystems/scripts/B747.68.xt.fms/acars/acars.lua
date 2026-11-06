@@ -144,6 +144,17 @@ fmsPages["VIEWMISCACARS"]=createPage("VIEWMISCACARS")
 
 acarsSystem={}
 acarsSystem.messages={}
+-- (2026-11-06 review) a message's field read safely, as the log page's fld
+-- below. A message in acarsSystem.messages is XTLua's namespace table, and
+-- reading a field it lacks overflowed the stack in the draw, leaving the
+-- page blank: for example a provider's telex without a title, or an uplink
+-- without rr.
+function acars_msg_field(m, k)
+  if type(m) ~= "table" then return nil end
+  local v = rawget(m, "values")
+  if type(v) == "table" then return v[k] end
+  return rawget(m, k)
+end
 acarsSystem.messageSendQueue={}
 acarsSystem.sentMessage=0
 --print("have this many "..table.getn(acarsSystem.messages.values).." acars messages")
@@ -255,8 +266,8 @@ acarsSystem.getMiscMessages=function(pgNo)
     endNo=startNo-3
     if endNo <1 then endNo=1 end
     for i = startNo,endNo , -1 do
-      retVal.template[line]="<"..acarsSystem.messages[i]["title"]
-      retVal.templateSmall[line+1]="            "..acarsSystem.messages[i]["time"]
+      retVal.template[line]="<"..(acars_msg_field(acarsSystem.messages[i],"title") or "")
+      retVal.templateSmall[line+1]="            "..(acars_msg_field(acarsSystem.messages[i],"time") or "")
       fmsFunctionsDefs["VIEWMISCACARS"]["L"..(startNo-i+1)]={"showmessage",i}
       line = line+2
       
@@ -314,7 +325,8 @@ acarsSystem.getUpMessages=function(pgNo)
     --print("startNo "..startNo.." endNo "..endNo)
     if endNo <1 then endNo=1 end
     for i = startNo,endNo , -1 do
-      local ln="<"..acarsSystem.messages[i]["title"]
+      local m=acarsSystem.messages[i]
+      local ln="<"..(acars_msg_field(m,"title") or "")
       --local msg=acarsSystem.messages[i]
       --local encodedMSG=json.encode(msg)
       --print("rendering "..encodedMSG)
@@ -330,15 +342,15 @@ acarsSystem.getUpMessages=function(pgNo)
         end
       else]]--
 
-        if acarsSystem.messages[i]["rr"]~="N" and not acarsSystem.messages[i]["REPLIED"] then
+        if acars_msg_field(m,"rr")~="N" and not acars_msg_field(m,"REPLIED") then
           retVal.template[line]=string.sub(ln,1,21) .. string.format("%"..padding.."s","").."  RR"
-        elseif not acarsSystem.messages[i]["read"] then
+        elseif not acars_msg_field(m,"read") then
           retVal.template[line]=string.sub(ln,1,21) .. string.format("%"..padding.."s","").." NEW"
         else
           retVal.template[line]=string.sub(ln,1,21) .. string.format("%"..padding.."s","").." OLD"
         end
       --end
-      retVal.templateSmall[line+1]="            "..acarsSystem.messages[i]["time"]
+      retVal.templateSmall[line+1]="            "..(acars_msg_field(m,"time") or "")
       line = line+2
       
     end  

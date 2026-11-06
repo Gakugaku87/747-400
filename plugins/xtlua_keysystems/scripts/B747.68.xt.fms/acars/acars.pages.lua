@@ -227,14 +227,15 @@ fmsPages["VIEWMISCACARS"].getSmallPage=function(self,pgNo,fmsID)
    -- local start=(pgNo-1)*168
     local lLine="<RETURN                 "
     --if string.find(msg["msg"], "@") then
-    if acarsSystem.messages[currentMessage]["rr"]~="N" and not acarsSystem.messages[currentMessage]["REPLIED"] then  
+    -- (2026-11-06 review) the fields read safely (acars_msg_field, acars.lua)
+    if acars_msg_field(msg,"rr")~="N" and not acars_msg_field(msg,"REPLIED") then
       --print (msg["msg"].." requiresRespond")
       lLine="<RETURN           REPLY>"
       fmsFunctionsDefs["VIEWACARSMSG"]["R6"]={"respondmessage",currentMessage}
     else
       fmsFunctionsDefs["VIEWACARSMSG"]["R6"]=nil
     end
-    local msgLines=convertToFMSLines(msg["msg"])
+    local msgLines=convertToFMSLines(acars_msg_field(msg,"msg") or "")
     local start=(pgNo-1)*7
     local pageLines={}
     for i=1,7 do
@@ -245,10 +246,10 @@ fmsPages["VIEWMISCACARS"].getSmallPage=function(self,pgNo,fmsID)
       end
     end
     fmsPages["VIEWACARSMSG"]["template"]={
-  
+
     "     ACARS-MESSAGE      ",
-    "            "..msg["time"],
-    msg["title"],
+    "            "..(acars_msg_field(msg,"time") or ""),
+    acars_msg_field(msg,"title") or "",
     "                        ",
     pageLines[1],--string.sub(msg["msg"],start+1,start+24),
     pageLines[2],--string.sub(msg["msg"],start+25,start+48),
@@ -265,8 +266,8 @@ fmsPages["VIEWMISCACARS"].getSmallPage=function(self,pgNo,fmsID)
   fmsPages["VIEWACARSMSG"].getNumPages=function(self,fmsID)
     local msg=acarsSystem.messages[acarsSystem.getCurrentMessage(fmsID)]
     noPages=1
-    if msg["msg"]~=nil then
-      local msgLines=convertToFMSLines(msg["msg"])
+    if acars_msg_field(msg,"msg")~=nil then
+      local msgLines=convertToFMSLines(acars_msg_field(msg,"msg"))
       --noPages=math.ceil(string.len(msg["msg"])/168)
       noPages=math.ceil(table.getn(msgLines)/7)
     end
@@ -276,11 +277,11 @@ fmsPages["VIEWMISCACARS"].getSmallPage=function(self,pgNo,fmsID)
 
   fmsPages["VIEWACARSMSG"].getSmallPage=function(self,pgNo,fmsID)--dynamic pages need to be this way
     local msg=acarsSystem.messages[acarsSystem.getCurrentMessage(fmsID)]
-    local msgLines=convertToFMSLines(msg["msg"])
+    local msgLines=convertToFMSLines(acars_msg_field(msg,"msg") or "")
     --noPages=math.ceil(string.len(msg["msg"])/168)
     local noPages=1
-    if msg["msg"]~=nil then
-      local msgLines=convertToFMSLines(msg["msg"])
+    if acars_msg_field(msg,"msg")~=nil then
+      local msgLines=convertToFMSLines(acars_msg_field(msg,"msg"))
       --noPages=math.ceil(string.len(msg["msg"])/168)
       noPages=math.ceil(table.getn(msgLines)/7)
     end
