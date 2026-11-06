@@ -85,7 +85,9 @@ M.K_VS = 1.2e-5
 M.K_VS_GA = 3e-5
 M.K_EPR, M.K_N1 = 0.33, 0.003
 -- FLCH's V/S: the altitude change in 125 s (ATA34_2 p.670); G/A's 2,000
--- fpm (p.674); the speed protection's margin (FCOM p.675)
+-- fpm (p.674); the speed protection's margin (FCOM p.675: the FMC's five
+-- knots against the maximum speeds' overshoots and the flaps extended
+-- minimum speed's undershoot)
 M.FLCH_S, M.GA_VS = 125, 2000
 M.LIMIT_MARGIN = 5
 -- (the FMC's step 9d2) VNAV's THR (the early descent, the driftdown): the
@@ -365,7 +367,12 @@ function M.servo(s, inp)
         -- the reference thrust, the limit speed (ATA34_2 p.672)
         rate = math.min(limit, speed_rate(inp, vmax))
     elseif mode == M.SPD then
-        local tgt = clamp(inp.target, inp.v_min + M.LIMIT_MARGIN, vmax)
+        -- the floor the minimum maneuvering speed, with the margin only
+        -- with the flaps extended (FCOM p.675), as the pitch laws'
+        -- (afds_pitch_model.lua). 2026-11-06: with it flaps up too, the
+        -- A/T held M.858 for the MCP's M.85 at 307 t and FL370
+        -- (PERF_SIMBRIEF phase 1)
+        local tgt = clamp(inp.target, inp.v_min + (inp.flaps_up and 0 or M.LIMIT_MARGIN), vmax)
         rate = math.min(speed_rate(inp, tgt), cap)
     else
         -- THR: FLCH's V/S to the MCP altitude in 125 s, G/A's 2,000 fpm,
