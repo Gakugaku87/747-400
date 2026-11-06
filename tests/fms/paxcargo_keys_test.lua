@@ -79,4 +79,48 @@ key("ls_key/L2")
 T.equal(pax("paxBusClassB"), 12, "the next key works: 12 in zone B")
 frames(1)
 T.check(line(1):find("PAX"), "the FMC still draws its pages")
+
+-- (2026-11-06 review) a passenger's weight of 0: SIM CONFIG (MENU R6)
+-- refuses it now (40-200 kg, the weight and balance window's range); one
+-- saved before made the payload entry (R5) loop for ever on 0 / 0
+local function std_kg() return tonumber(rt:get("laminar/B747/simconfig"):match('"std_pax_weight":"?%s*([%d.]+)')) end
+local function sim_config(kg)
+    rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_lbs":2.20462,"std_pax_weight":' .. kg .. '},"PLANE":{"thrust_ref":"EPR","engines":"PW4056"}}')
+    rt:set("laminar/B747/newsimconfig", 1)
+    frames(0.2)
+    rt:set("laminar/B747/newsimconfig", 0)
+end
+key("func_key/fix")      -- MENU
+key("ls_key/R6")         -- SIM CONFIG (drawn blank here: this test's SIM CONFIG
+                         -- lacks the fields the page shows; its keys work)
+for _, w in ipairs({"0", "30", "300"}) do
+    type_in(w)
+    key("ls_key/R1")
+    T.equal(pad(), "INVALID ENTRY", "SIM CONFIG's weight a passenger " .. w .. " kg: INVALID ENTRY")
+    clear()
+end
+T.equal(std_kg(), 120, "the 120 kg kept")
+type_in("85")
+key("ls_key/R1")
+T.equal(std_kg(), 85, "85 kg taken")
+sim_config(0)            -- as saved before this review
+key("func_key/fix")      -- MENU
+key("ls_key/R4")         -- GROUND HANDLING
+key("ls_key/R3")         -- PAX/CARGO
+type_in("0")
+-- a guard: had the round robin not ended, the hook ends the test
+jit.off()
+jit.flush()
+debug.sethook(function() error("the payload entry's round robin did not end") end, "", 1e8)
+key("ls_key/R5")
+debug.sethook()
+jit.on()
+T.equal(pad(), "INVALID ENTRY", "payload 0 with 0 kg a passenger saved: INVALID ENTRY (before, 0 / 0 looped for ever)")
+clear()
+sim_config(120)
+type_in("12")
+key("ls_key/R5")
+T.equal(pax_total(), 100, "payload 12 t at 120 kg a passenger: 100 passengers")
+frames(1)
+T.check(line(1):find("PAX"), "the FMC still draws its pages")
 T.done()

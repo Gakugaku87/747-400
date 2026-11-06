@@ -389,7 +389,11 @@ static void wb_show(int on)
         wb_win = XPLMCreateWindowEx(&p);
         if (!wb_win) return;
         XPLMSetWindowPositioningMode(wb_win, xplm_WindowPositionFree, -1);
-        XPLMSetWindowResizingLimits(wb_win, 340, 420, 1200, 1600);
+        /* (2026-11-06 review) at least LOAD, WEIGHTS and CENTRE OF GRAVITY
+           high (about 25 rows, 550 at X-Plane's font): only the tanks'
+           rows stop at the bottom. Before, 420: shrunk, the rows above the
+           tanks were drawn below the window */
+        XPLMSetWindowResizingLimits(wb_win, 340, 600, 1200, 1600);
         XPLMSetWindowTitle(wb_win, "747-400 Weight and Balance");
         wb_place(wb_win);
     }

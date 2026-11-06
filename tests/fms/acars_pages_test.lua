@@ -76,6 +76,23 @@ rte.origin, rte.dest = {ident = "ZZAA"}, {ident = "ZZBB"}
 frames(0.5)
 T.check(line(5):find("^<ZZAA/ZZBB"), "DEP/DES the FMC's route's (before: X-Plane's flight plan's): " .. line(5))
 rte.origin, rte.dest = nil, nil
+-- (2026-11-06 review) CRUISE ALT NOT SET once each time the page is shown.
+-- Before, it was posted at every draw: CLR could not clear it, and the
+-- scratchpad took no keys while it showed.
+T.equal(pad(), "CRUISE ALT NOT SET", "no CRZ ALT: CRUISE ALT NOT SET")
+rt:command(K .. "key/clear")
+frames(1)
+T.equal(pad(), "", "CLR clears it, and it stays cleared")
+rt:command(K .. "alphanum_key/A")
+frames(0.2)
+T.equal(pad(), "A", "the scratchpad takes keys on the page")
+clear()
+key("func_key/fix")
+key("ls_key/L2")
+key("ls_key/L1")
+key("ls_key/L2")
+T.equal(pad(), "CRUISE ALT NOT SET", "shown again when the page is shown again")
+clear()
 
 -- WEATHER REQUEST with ATC COMM established at RJAA (MENU, <ACARS, WXR REQ>)
 rt:set("autoatc/acars/online", 1)
@@ -121,4 +138,20 @@ key("ls_key/L1")
 T.equal(cdu.currentPage, "VIEWACARSMSG", "page 2's L1: its message")
 T.equal(fms.ns.acarsSystem.getCurrentMessage("fmsL"), 1, "MSG 1")
 T.equal(cdu.pgNo, 1, "at its page 1 (before: the list's page 2)")
+
+-- (2026-11-06 review) a message without a title or an rr, as a provider's
+-- may arrive: the list and its page are drawn. Before, reading the field
+-- the message (XTLua's namespace table) lacked overflowed the stack, and
+-- the page was blank.
+msgs[#msgs.values + 1] = {type = "telex", msg = "NO TITLE", read = false, time = "10:06"}
+key("func_key/fix")
+key("ls_key/L2")
+key("ls_key/R1")
+key("ls_key/L2")
+T.check(page("ACARS-UPLINK MSG"), "the uplink list with it: " .. line(1))
+T.check(line(3):sub(1, 2) == "< " and line(3):find("RR") ~= nil, "its line: no title, RR (no rr): " .. line(3))
+T.check(line(5):find("^<MSG 5"), "the next line: MSG 5: " .. line(5))
+key("ls_key/L1")
+T.equal(cdu.currentPage, "VIEWACARSMSG", "L1: its page")
+T.check(line(13):find("REPLY>") ~= nil, "its page drawn, with REPLY> (no rr): " .. line(13))
 T.done()

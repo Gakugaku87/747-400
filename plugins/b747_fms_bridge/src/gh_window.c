@@ -29,7 +29,10 @@
 static XPLMWindowID gh_win = NULL;
 static XPLMCommandRef gh_cmd_toggle = NULL;
 static XPLMDataRef gh_ref_open = NULL;
-static int gh_hover_x = -1, gh_hover_y = -1;
+/* (2026-11-06 review) the mouse's place and the frame it was there: X-Plane
+   asks the cursor only while the mouse is over the window, so a button
+   stayed lit after the mouse had left (the failure window's fw_hover_frame) */
+static int gh_hover_x = -1, gh_hover_y = -1, gh_hover_frame = -100, gh_frame = 0;
 /* each row's button as last drawn (l, b, r, t; none when r <= l) */
 static int gh_box[GHW_ROWS][4];
 static const char *GHW_CMD[GHW_ROWS] = {
@@ -53,7 +56,7 @@ static void gh_row(int x0, int x_state, int x_btn, int r, int y, int fh, int k, 
     fw_text(x_state, y, c, state);
     int bl = x_btn, br = r, bb = y - 5, bt = y + fh + 4;
     gh_box[k][0] = bl; gh_box[k][1] = bb; gh_box[k][2] = br; gh_box[k][3] = bt;
-    int hover = fw_in(gh_hover_x, gh_hover_y, bl, bb, br, bt);
+    int hover = gh_frame - gh_hover_frame <= 2 && fw_in(gh_hover_x, gh_hover_y, bl, bb, br, bt);
     fw_button(bl, bb, br, bt, btn, FWN_WHITE, FWN_BUTTON, hover);
 }
 
@@ -100,6 +103,7 @@ static void gh_draw_body(XPLMWindowID w)
 static void gh_draw(XPLMWindowID w, void *ref)
 {
     (void)ref;
+    gh_frame++;
     GLboolean cull = glIsEnabled(GL_CULL_FACE);
     if (cull) glDisable(GL_CULL_FACE);
     gh_draw_body(w);
@@ -144,6 +148,7 @@ static XPLMCursorStatus gh_cursor(XPLMWindowID w, int x, int y, void *ref)
     (void)w; (void)ref;
     gh_hover_x = x;
     gh_hover_y = y;
+    gh_hover_frame = gh_frame;
     return xplm_CursorDefault;
 }
 
