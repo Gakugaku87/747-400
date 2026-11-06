@@ -2014,6 +2014,7 @@ if (Test-Path $out) { throw "the run's folder exists: $out" }
 New-Item -ItemType Directory -Force -Path (Join-Path $out 'raw') | Out-Null
 
 $results = New-Object System.Collections.ArrayList
+$payloadAtStart = $null
 $meta = [ordered]@{ suite = $Suite; plan = 'A'; started = (Get-Date).ToString('o'); out = $out; points = $points; levels = $levels
     measure_s = $MeasureS; cruise_ci = $CruiseCi; light_fuel_kg = $LightFuelKg; tests = $tests }
 if ($Suite -eq 'climb') {
@@ -2039,6 +2040,12 @@ try {
     $caps = Get-XPCapabilities
     $meta.xplane = [ordered]@{ version = $caps.'x-plane'.version; api = @($caps.api.versions)
         log_first_line = (Get-FirstLine $xpLog) }
+    # the payload as the run finds it, put back at the end: the last point's
+    # 40 t stays in X-Plane through a later flight's reload (the fix
+    # session's s108 ran at 310 t after the 2026-11-06 cruise run, its own
+    # 270 t before). The fuel is left: the aircraft's fuel model owns the tanks
+    try { $payloadAtStart = Get-Num 'sim/flightmodel/weight/m_fixed' } catch { $payloadAtStart = $null }
+    $meta.payload_at_start_kg = $payloadAtStart
     $meta.git = Get-GitInfo
     $meta.acf = [ordered]@{ file = '747-400_custom.acf'; sha256 = (Get-FileHash -Algorithm SHA256 $acfFile).Hash.ToLower()
         last_commit = $meta.git.acf_last_commit }
@@ -2095,6 +2102,13 @@ try {
     Stop-PerfLogger
 } finally {
     try { Invoke-XPCommand 'sim/operation/pause_on' } catch { }
+    if ($null -ne $payloadAtStart) {
+        try {
+            Set-XPDataref 'sim/flightmodel/weight/m_fixed' $payloadAtStart
+            $meta.payload_at_end_kg = Get-Num 'sim/flightmodel/weight/m_fixed'
+            Note info ('the payload back to {0} kg, as the run found it (now {1} kg)' -f (F $payloadAtStart '0.0'), (F $meta.payload_at_end_kg '0.0'))
+        } catch { Note warn ('the payload not put back to {0} kg: {1}' -f (F $payloadAtStart '0.0'), $_.Exception.Message) }
+    }
 }
 
 # ---------------------------------------------------------------- the files
