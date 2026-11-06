@@ -241,6 +241,21 @@ T.check(s11.cmd < c0, "slow but above the thrust limit: down (the limit kept)")
 c0 = s11.cmd
 A.servo(s11, sv{ias = 362, target = 400})
 T.check(s11.cmd < c0, "a target over Vmax: Vmax less 5 (360 kt): at 362 kt down (FCOM p.675)")
+-- the minimum speed's margin (FCOM p.675: the FMC's five knots against the
+-- maximum speeds' overshoots and the flaps extended minimum speed's
+-- undershoot only): flaps up the floor is the minimum maneuvering speed
+-- itself, flaps extended it and 5 kt (2026-11-06, PERF_SIMBRIEF phase 1:
+-- at 307 t and FL370 the A/T held M.858, v_min + 5, for the MCP's M.85)
+local s11b = A.new()
+A.update(s11b, inp{pitch = "ALT", spd = true})
+A.servo(s11b, sv{flaps_up = true, ias = 278, target = 278, v_min = 276, lever = 0.5})
+T.near(s11b.cmd, 0.5, 1e-9, "flaps up, the target 2 kt over v_min: held (before: v_min + 5, 3 kt slow)")
+A.servo(s11b, sv{flaps_up = true, ias = 270, target = 260, v_min = 276, lever = 0.5})
+T.near(s11b.cmd - 0.5, A.K_SPD * 6, 1e-9, "flaps up, the target under v_min: up to v_min (6 kt slow)")
+local s11c = A.new()
+A.update(s11c, inp{pitch = "ALT", spd = true, flaps_up = false})
+A.servo(s11c, sv{flaps_up = false, ias = 170, target = 160, v_min = 168, lever = 0.5})
+T.near(s11c.cmd - 0.5, A.K_SPD * 3, 1e-9, "flaps extended, the target under v_min: up to v_min + 5 (3 kt slow)")
 -- THR REF: to the reference thrust, the limit speed (ATA34_2 p.672)
 local s12 = A.new()
 A.update(s12, inp{pitch = "ALT", thr = true})

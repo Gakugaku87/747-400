@@ -2365,3 +2365,15 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 重量と CG の窓（`plugins/b747_fms_bridge/src/wb_window.c`）：Plugins → 747-400 → Weight and balance...（コマンド `laminar/B747/wb/window_toggle`、`laminar/B747/wb/window_open`）。故障の窓と同じ X-Plane の枠の浮動ウィンドウで、X-Plane の今の値を kg と lb で：総重量、ZFW（総重量 - 燃料）、燃料、ペイロード（`m_fixed`）、空虚重量と最大重量（acf の値）、CG（% MAC）、ZFW の CG（% MAC）、タンクごとの燃料（X-Plane のタンク 0〜7：CTR、MAIN 1〜4、RES 2、RES 3、STAB）。
 - ZFW の CG：X-Plane には ZFW の CG の % MAC が無い（`zfw_cg_offset_z` は m）。今の CG の % MAC に、ZFW の CG と今の CG の差（m）× 9.537 % / m を足す。9.537 は X-Plane のこの acf の MAC（10.49 m）の値で、2026-11-05 にカスタム acf で測った：安定板タンクに 8 t・3 t 入れると `cg_offset_z` が 0.857・0.257 m 後ろへ動き、`cg_offset_z_mac` が 8.17・2.45 増えた（実機の MAC は 8.33 m。X-Plane は acf の翼から計算する）。`cgz_ref_to_default` と `cg_offset_z` への Web API の書き込みは X-Plane に戻された（測るのに使えなかった）。
 - 試験：`perf_init_test` 38（GR WT・ZFW、ポンド）、`takeoff_ref_test` 62（CG、範囲の外）。X-Plane：`s256_cdu_sim_values`。
+
+## 149. A/T の SPD の速さの下限：フラップ UP は最小機動速度そのもの（2026-11-07：性能計測のフェーズ1の報告）
+
+- 報告（PERF_SIMBRIEF のフェーズ1、2026-11-06）：307 t・FL370 で MCP を M.85 にしても、A/T は M.858（IAS 約 280 kt）を保ち、6 分たっても下げなかった（`tests/flight/perf/runs/20261106_193826_cruise/raw/crz_078_fl370_m850.csv`）。
+- 原因：A/T の servo（`B747.70.at_model.lua`）の SPD は、目標を `v_min + LIMIT_MARGIN`（最小機動速度 + 5 kt）より下げなかった。この点の最小機動速度は約 276 kt で、M.85 は約 278 kt なので、目標は 281 kt（M.858）になっていた。
+- 資料：FCOM p.675（4.20.17）では、失速の保護は「最小機動速度より下げない」。FMC が 5 kt の余裕を取るのは、最大運用・脚下げ・フラップの制限速度の行き過ぎと、フラップを出したときの最小の速さの下回りに対してだけ。
+- 直したこと：SPD の下限は、フラップ UP では最小機動速度そのもの、フラップを出していれば + 5 kt。AFDS のピッチの速度の則（`afds_pitch_model.lua`）と同じ形。最大の側の 5 kt はそのまま。フラップ UP は、レバーが UP（`flap_ratio_control` < 0.01）で見る。ピッチの則と同じ。
+- 試験：`at_model_test` に 3 件。フラップ UP で目標が v_min の 2 kt 上なら保つ、v_min より下なら v_min まで上げる、フラップを出していれば v_min + 5 kt。前のモデルでは、フラップ UP の 2 件が落ちる。
+- X-Plane：新しい `s262_at_vmin_margin`（フェーズ1の点と同じ初期化：307.8 t・FL370・ISA の無風）。
+  - 空中の初期化は A/T を ARM にするだけなので、SPD を押す。
+  - Mach は .852〜.853（IAS 278.0 kt。窓の M.85 の CAS は 278.2 kt）に落ち着いた。前は M.858。
+  - 最小機動速度は 275.5 kt。
