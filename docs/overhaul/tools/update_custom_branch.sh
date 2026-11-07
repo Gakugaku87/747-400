@@ -11,8 +11,8 @@
 #   fmod/747-400.snd  <- fmod/747-400_custom.snd
 #   747-400_custom.acf, fmod/747-400_custom.snd removed
 #   the stock acf's exterior textures in stock_textures removed (2026-11-06)
-#   the other acf files (XP11, LCF) and the files named after them removed
-#   (other_acf, 2026-11-08)
+#   the other acf files (XP11, LCF), the files named after them and
+#   objects/LCF/ removed (other_acf, 2026-11-08)
 #   CUSTOM_BRANCH.md  added (what this branch is)
 # The first commit has overhaul as its parent; each update is a merge of
 # overhaul into custom with that tree, so the branch only moves forward.
@@ -57,13 +57,14 @@ stock_textures=(
     'objects/747_exterior/Exterior_Fuselage(fornml).png'
 )
 git update-index --force-remove "${stock_textures[@]}"
-# The other acf files, the XP11 one and the LCF, and the files named after
-# them (the user's requests, 2026-11-08): fmod/*.snd, the icons here and in
-# the liveries, terrain_radar_descr, vrconfig. The custom acf as
-# 747-400.acf is the only acf at the root. Read from the tree, so the
-# icons of liveries added later go too.
+# The other acf files, the XP11 one and the LCF, the files named after
+# them and the LCF's 3D objects/LCF/ (the user's requests, 2026-11-08):
+# fmod/*.snd, the icons here and in the liveries, terrain_radar_descr,
+# vrconfig. The custom acf as 747-400.acf is the only acf at the root, and
+# it names nothing in objects/LCF/. Read from the tree, so the icons of
+# liveries added later go too.
 mapfile -d '' -t other_acf < <(git ls-tree -r -z --name-only "$base_sha" |
-    grep -z -E '(^|/)747-400(_XP11|LCF)[._][^/]*$' || true)
+    grep -z -E '(^|/)747-400(_XP11|LCF)[._][^/]*$|^objects/LCF/' || true)
 if [ "${#other_acf[@]}" -gt 0 ]; then
     git update-index --force-remove -- "${other_acf[@]}"
 fi
@@ -86,10 +87,11 @@ and `Exterior_Fuselage(fornml).png` (in `objects/747_exterior/`) are not
 in this branch (2026-11-06). X-Plane loads a .dds in place of the .png of
 the same name, so they would be drawn on the custom acf's objects.
 
-The other acf files, `747-400_XP11.acf` and `747-400LCF.acf`, and the
-files named after them (their sounds in `fmod/`, icons, terrain radar and
-VR files, and their icons in the liveries) are not in this branch either
-(2026-11-08): `747-400.acf` is the only acf here.
+The other acf files, `747-400_XP11.acf` and `747-400LCF.acf`, the files
+named after them (their sounds in `fmod/`, icons, terrain radar and VR
+files, and their icons in the liveries) and the LCF's 3D `objects/LCF/`
+are not in this branch either (2026-11-08): `747-400.acf` is the only acf
+here.
 EOF
 )
 git update-index --add --cacheinfo "100644,$note,CUSTOM_BRANCH.md"
@@ -114,8 +116,8 @@ else
 $short: $subject
 
 The tree is $base's with the custom acf as 747-400.acf, without the
-stock acf's exterior textures and without the other acf files and the
-files named after them (docs/overhaul/tools/update_custom_branch.sh).
+stock acf's exterior textures and without the other acf files, the files
+named after them and objects/LCF/ (docs/overhaul/tools/update_custom_branch.sh).
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     new=$(git -c user.name="$name" -c user.email="$mail" commit-tree "$tree" -p "$old" -p "$base_sha" -m "$msg")
