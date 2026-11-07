@@ -29,8 +29,10 @@ end
 T.check(up, "never less with more altitude")
 
 -- the FCOM's cells (FF/ENG, kg/h) above FL370 against X-Plane's at the
--- correction's drag: each within 0.9 % of the factor (the cells' spread with
--- the thrust), and the cells' mean at each level within 0.15 %
+-- correction's drag: each within 1.0 % of the factor (the cells' spread with
+-- the lift and the thrust: from 2026-11-07 the drag correction v4 leaves
+-- the cells of CL 0.5 and more up to 0.8 % short, 240 t FL430 needs +4.5 %),
+-- and the cells' mean at each level within 0.15 %
 local G, AREA = 9.80665, 541.2
 local function p_isa(ft)
     if ft <= 36089 then return 101325 * (1 - 6.87559e-6 * ft) ^ 5.25588 end
@@ -52,7 +54,7 @@ for _, c in ipairs(cells) do
     local cl = w * 1000 * G / qS
     local t = (0.0171 + 0.055 * cl * cl + A.cd_fcom(m, cl)) * qS / 4
     local need = ff / (sfc_of(t / 1000) / G * t)
-    T.near(S.factor(fl * 1000), need, 0.009,
+    T.near(S.factor(fl * 1000), need, 0.010,
         string.format("FCOM %d t FL%d M%.3f: %.1f %% needed", w, fl * 10, m, (need - 1) * 100))
     sum[fl] = (sum[fl] or 0) + need
     n[fl] = (n[fl] or 0) + 1

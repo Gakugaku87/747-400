@@ -44,25 +44,45 @@ M.CD_PER_FUSE_CD = 0.0664
 -- and 15, 84 and 132 t of fuel: 33, 29.5 and 26 % MAC): perhaps the trim's
 -- drag (estimate).
 --
--- The FCOM's: FCOM PI.11.2 (p.268, the PW4056's long range cruise, fuel
--- flow an engine), its cells from M.835 up at FL270 to FL370 (28), the
--- thrust from the fuel flow at X-Plane's SFC for that thrust (the perf
--- kit's: 0.516 lb/lbf/h to 40 kN an engine, 0.00035 more a kN above): it
--- grows with the Mach and much with the lift, RT_K (M - RT_M0) (CL/0.45)^RT_N
--- (0.0012 at M.861 with CL 0.44, 0.0041 with CL 0.53), within 0.0001 rms.
--- A first form without the lift (0.057 a Mach from M.8368, from five
--- points) took off too much heavy and high: 340 t at FL350, M.860, 7 % less
--- fuel flow than the FCOM's (aero_lrc_check_340t_fl350, 2026-11-07).
+-- The FCOM's (v4, 2026-11-07, notes/AERO.md §3.19): a drag rise growing
+-- exponentially with the Mach from a wall the lift moves earlier (Korn's
+-- CL term), C_A exp((M - C_M0 + C_KC (CL - 0.45)) / C_S), fitted along the
+-- line of each FCOM PI.11.2 cell (p.268, the PW4056's long range cruise)
+-- with its LRC from M.85 (32 cells, FL270-FL450; same weight and level,
+-- M from LRC - 0.015 to + 0.012) to:
+--   * the cell's fuel flow at its LRC Mach, the thrust from it at X-Plane's
+--     SFC for that thrust (the perf kit's: 0.516 lb/lbf/h to 40 kN an
+--     engine, 0.00035 more a kN above) and the FL370+ SFC correction
+--     (B747.42.sfc_corr_model.lua): all 32 within 1 % (rms 0.5 %);
+--   * the fuel a mile around it from FCTM p.129 (4.10): the LRC gives 1 %
+--     less fuel mileage than the best, on the fast side, and 0.01 M above
+--     the scheduled speed takes 2 % more fuel. Both at once make a parabola
+--     around the best 0.0137 M under the LRC: at LRC - 0.01 M -0.93 %, at
+--     + 0.01 M +2.0 %. The fit: -1.0 and +1.9 % on the mean (+0.5 to +3.5 %:
+--     flatter at CL 0.41, steeper at 0.53). X-Plane's fuel per thrust holds
+--     along such a line (the perf kit's records: +-0.3 % from M.85 to .87).
+-- C_KC 0.25 (0.20-0.30 fit about as well: 0.20 is Korn's 0.1 / cos^3 of the
+-- 37.5 deg sweep, 0.30 the least error at the LRC) puts the mean shape on
+-- the FCTM's. Above C_CL_MAX (no cell beyond CL 0.53; high lift devices)
+-- the lift of C_CL_MAX.
+-- v3 (2026-11-07 morning, RT_K (M - 0.820) (CL/0.45)^6.5, 28 cells' fuel
+-- flow at the LRC alone) fitted the LRC's fuel flows within 0.0001 rms but
+-- along a fixed weight and level the CL power goes as M^-13 and cancelled
+-- its own rise: 0.01 M above the LRC -0.2 to +0.8 % of fuel a mile, the
+-- best inside M.85-.87 at heavy, high levels (the perf session's phase 1,
+-- 2026-11-07; the user's "先に直す"). Before it a form without the lift
+-- (0.057 a Mach from M.8368) left 340 t at FL350 7 % short.
 --
--- The difference is taken off, the same above M_TOP (the FCOM's long range
--- cruise stops at M.862). Below RT_CL_MIN (no cell there) the FCOM's
--- onset is later by RT_KORN a unit of CL less, at RT_CL_MIN's CL (Korn's
--- equation's CL term, 0.1 / cos^3 of the 37.5 deg sweep: the perf
--- session's suggestion), so it falls to none, never below. The main
--- wing's airfoils' drag divergence Mach did nothing there from 0.88 to
--- 0.92 (only 0.60 changed the drag): the acf cannot give it. Estimates:
--- the straight lines and the power of the CL, the onsets between and
--- beyond the three weights, M_TOP, RT_CL_MIN and RT_KORN
+-- The difference is taken off (more drag where the FCOM's is more than
+-- X-Plane's: heavy and high near X-Plane's onset), the same above M_TOP
+-- (the FCOM's long range cruise stops at M.862; X-Plane's own rise of
+-- 0.17 a Mach goes on above). Under about M.78 the FCOM's part is nothing
+-- (under 1e-5). The main wing's airfoils' drag divergence Mach did nothing
+-- here from 0.88 to 0.92 (only 0.60 changed the drag): the acf cannot give
+-- it. Estimates: the form, C_KC, C_CL_MAX, M_TOP, the onsets between and
+-- beyond the three weights; the cells with the LRC under M.85 (CL under
+-- 0.41) fit their fuel flow at the LRC but have their best fuel mileage
+-- faster than the FCOM's (X-Plane's polar and fuel per thrust there)
 --
 -- Above FL370 the FCOM's cells take more fuel at the same Mach and CL
 -- (FL390 0.00049 of CD, FL430 0.00113, at M.829 too), but its EPR column
@@ -72,7 +92,7 @@ M.CD_PER_FUSE_CD = 0.0664
 -- and EPR, and lower the thrust's ceiling): notes/AERO.md §3.17
 M.XP_SLOPE = 0.17
 M.XP_M0 = {{237, 0.8373}, {305, 0.8342}, {353, 0.8289}}
-M.RT_K, M.RT_M0, M.RT_N, M.RT_CL_MIN, M.RT_KORN = 0.035, 0.820, 6.5, 0.38, 0.20
+M.C_A, M.C_M0, M.C_KC, M.C_S, M.C_CL_MAX = 0.00146, 0.860, 0.25, 0.0207, 0.65
 M.M_TOP = 0.870
 M.AREA = 541.2
 
@@ -91,21 +111,21 @@ function M.cl(weight, q)
     return weight * 9.80665 / (q * M.AREA)
 end
 
--- the FCOM's part at a Mach and a lift coefficient (nil: RT_CL_MIN), on
--- 541.2 m2
+-- the FCOM's part at a Mach and a lift coefficient, on 541.2 m2 (nil:
+-- none)
 function M.cd_fcom(mach, cl)
-    local m, c = mach, cl or M.RT_CL_MIN
-    if c < M.RT_CL_MIN then m, c = m - M.RT_KORN * (M.RT_CL_MIN - c), M.RT_CL_MIN end
-    return M.RT_K * math.max(m - M.RT_M0, 0) * (c / 0.45) ^ M.RT_N
+    if not (mach and cl) then return 0 end
+    local c = math.min(cl, M.C_CL_MAX)
+    return M.C_A * math.exp((mach - M.C_M0 + M.C_KC * (c - 0.45)) / M.C_S)
 end
 
--- the CD taken off at a Mach, a gross weight (kg) and a lift coefficient
--- (nil: RT_CL_MIN), on 541.2 m2, at least 0
+-- the CD taken off at a Mach, a gross weight (kg) and a lift coefficient,
+-- on 541.2 m2 (nil: none); below 0 adds drag
 function M.cd_mach(mach, weight, cl)
-    if not (mach and weight) then return 0 end
+    if not (mach and weight and cl) then return 0 end
     local m = math.min(mach, M.M_TOP)
     local xp = M.XP_SLOPE * math.max(m - xp_onset(weight / 1000), 0)
-    return math.max(xp - M.cd_fcom(m, cl), 0)
+    return xp - M.cd_fcom(m, cl)
 end
 
 -- The fuselage's drag coefficient for the acf's own one, the gear's mean
