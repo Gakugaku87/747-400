@@ -27,3 +27,6 @@ ai     = deferred_dataref("laminar/B747/debug/ai", "number")
 fd     = deferred_dataref("laminar/B747/debug/flight_directors", "number")
 -- 1: no drag corrections (B747.45.xt.aero_corr.lua), for comparing in X-Plane
 aero_corr_off     = deferred_dataref("laminar/B747/debug/aero_corr_off", "number")
+-- 1: the acf's own SFC figures above FL370 too (B747.42.xt.sfc_corr.lua),
+-- for comparing in X-Plane and for SFC sweeps
+sfc_corr_off     = deferred_dataref("laminar/B747/debug/sfc_corr_off", "number")

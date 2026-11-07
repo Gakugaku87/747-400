@@ -1104,6 +1104,8 @@ dofile("B747.42.xt.EEC.GE.lua")
 dofile("B747.42.xt.EEC.PW.lua")
 dofile("B747.42.xt.EEC.RR.lua")
 dofile("B747.42.xt.eec_thrust.lua")
+-- (2026-11-07) the fuel per thrust above FL370 (補正, notes/AERO.md §3.18)
+dofile("B747.42.xt.sfc_corr.lua")
 
 function set_engines()
 	--Engine Thrust Parameters based on selected engine
@@ -1159,6 +1161,7 @@ function after_physics()
 	-- and swept this plugin's whole Lua state (every module's tables) each
 	-- frame; Lua's incremental collector runs as memory is allocated
 	if hasSimConfig()==false then return end
+	B747_sfc_corr()  --X-Plane's SFC figures by the altitude (B747.42.xt.sfc_corr.lua)
 	if debug_ecc>0 then return end
 
 
