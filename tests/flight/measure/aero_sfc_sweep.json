@@ -1,6 +1,6 @@
 {
   "name": "aero_sfc_sweep",
-  "description": "測定（合否なし、全シナリオの実行に入れない）：acf の燃費の 4 点（`sim/aircraft/overflow/jet_SFC_takeoff`・`_climb`・`_locrz`・`_hicrz`。走行中に書ける）を 1 つずつ +0.1 lb/lbf/h して（dataref は kg/(N·s)：lb/lbf/h × 2.8325e-5。2026-10-30 の 1 回目は lb/lbf/h のまま書いて燃料流量がけた違いになった）、巡航（33,000 ft・.83、FCOM PI.11.2 の長距離巡航。35,000 ft の空中開始では MCP が Mach 表示になり、IAS の数字を Mach と読む）と待機（10,000 ft・231 KIAS、PI.11.6）の燃料流量がどれだけ変わるかを測る（PROGRESS.md 5f のエンジン：燃料流量）。銚子沖の海上 33,000 ft・296 KIAS・東向きで開始（機体を読み直す）。A/P の ALT HOLD・HDG SEL と A/T の SPD。各値で 10 秒待って mark、その後 15 秒を `luajit tests/flight/tools/idle_sweep.lua <記録のフォルダー> 15` で読む（mark 1 と 6 は元の値）。最後に acf の値に戻す。",
+  "description": "測定（合否なし、全シナリオの実行に入れない）：acf の燃費の 4 点（`sim/aircraft/overflow/jet_SFC_takeoff`・`_climb`・`_locrz`・`_hicrz`。走行中に書ける）を 1 つずつ +0.1 lb/lbf/h して（dataref は kg/(N·s)：lb/lbf/h × 2.8325e-5。2026-10-30 の 1 回目は lb/lbf/h のまま書いて燃料流量がけた違いになった）、巡航（33,000 ft・.83、FCOM PI.11.2 の長距離巡航。35,000 ft の空中開始では MCP が Mach 表示になり、IAS の数字を Mach と読む）と待機（10,000 ft・231 KIAS、PI.11.6）の燃料流量がどれだけ変わるかを測る（PROGRESS.md 5f のエンジン：燃料流量）。銚子沖の海上 33,000 ft・296 KIAS・東向きで開始（機体を読み直す）。A/P の ALT HOLD・HDG SEL と A/T の SPD。各値で 10 秒待って mark、その後 15 秒を `luajit tests/flight/tools/idle_sweep.lua <記録のフォルダー> 15` で読む（mark 1 と 6 は元の値）。最後に acf の値に戻す。2026-11-07 から、FL370 から上の燃費の補正（B747.42.xt.sfc_corr.lua）が毎フレームこの 4 つを書くので、始めに `laminar/B747/debug/sfc_corr_off` を 1 にして止める（33,000 ft と 10,000 ft では補正は 1 倍だが、書き続けるので sweep の値が消える）。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 10058.4, "heading_true": 90, "speed_in_meters_per_second": 248.4 },
@@ -18,6 +18,7 @@
   },
   "steps": [
     { "do": "sleep", "seconds": 5, "note": "空中開始の揺れ" },
+    { "do": "set", "note": "燃費の補正を止める（この 4 つを書き続けるため。2026-11-07 から）", "dref": "laminar/B747/debug/sfc_corr_off", "value": 1 },
     { "do": "set", "note": "MCP 高度 33,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 33000 },
     { "do": "set", "note": "MCP 方位 097（東向き）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 97 },
     { "do": "check", "note": "MCP は IAS 表示", "dref": "sim/cockpit2/autopilot/airspeed_is_mach", "op": "==", "value": 0 },
@@ -85,6 +86,7 @@
     { "do": "mark", "note": "10：hicrz +0.1" },
     { "do": "sleep", "seconds": 15 },
     { "do": "set", "note": "hicrz を戻す", "dref": "sim/aircraft/overflow/jet_SFC_hicrz", "value": 1.618765e-05 },
+    { "do": "set", "note": "燃費の補正を戻す", "dref": "laminar/B747/debug/sfc_corr_off", "value": 0 },
     { "do": "record_stop" }
   ]
 }

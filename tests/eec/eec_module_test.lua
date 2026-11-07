@@ -494,4 +494,49 @@ frames(0.5)
 T.equal(get(ADV, 314) + get(ADV, 111) + get(ADV, 323), 0, "repaired: no messages")
 T.equal(get(ENG .. "eec/altn_light", 1), 0, "repaired: no ALTN light")
 
+-- (2026-11-07) the fuel per thrust above FL370 (B747.42.xt.sfc_corr.lua,
+-- 補正, notes/AERO.md §3.18): X-Plane's four jet SFC figures (kg/(N s)),
+-- the acf's own (read once, the first frame they are there) times the
+-- altitude's factor (B747.42.sfc_corr_model.lua), the P&W only
+local SC = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.sfc_corr_model.lua")
+local SFC = "sim/aircraft/overflow/jet_SFC_"
+local KGNS = 1 / 3600 / 9.80665        -- lb/lbf/h to kg/(N s): 2.8325e-5
+local ACF = {takeoff = 0.300, climb = 0.440, locrz = 0.470, hicrz = 0.535}
+local function sfc(k) return get(SFC .. k) end
+rt:set("laminar/B747/engines/type", 0)
+rt:set("sim/flightmodel2/position/pressure_altitude", 39000)
+for k, v in pairs(ACF) do rt:set(SFC .. k, v * KGNS) end
+frames(0.2)
+for k, v in pairs(ACF) do
+    T.near(sfc(k), v * KGNS * 1.018, 1e-12, "P&W at FL390: " .. k .. " the acf's +1.8 %")
+end
+frames(1)
+T.near(sfc("hicrz"), ACF.hicrz * KGNS * 1.018, 1e-12, "the frames after: the same, not compounded")
+rt:set("sim/flightmodel2/position/pressure_altitude", 35000)
+frames(0.2)
+T.near(sfc("hicrz"), ACF.hicrz * KGNS, 1e-12, "FL350: the acf's own")
+rt:set("sim/flightmodel2/position/pressure_altitude", 42000)
+frames(0.2)
+T.near(sfc("climb"), ACF.climb * KGNS * SC.factor(42000), 1e-12, "FL420: between FL410's and FL430's")
+-- GE: the acf's own (the factor is the PW4056's)
+rt:set("laminar/B747/engines/type", 1)
+frames(0.2)
+T.near(sfc("hicrz"), ACF.hicrz * KGNS, 1e-12, "GE at FL420: the acf's own")
+rt:set("laminar/B747/engines/type", 0)
+frames(0.2)
+T.near(sfc("hicrz"), ACF.hicrz * KGNS * SC.factor(42000), 1e-12, "P&W again: corrected")
+-- sfc_corr_off: the acf's own back once, then left alone (an SFC sweep's
+-- writes stay)
+rt:set("laminar/B747/debug/sfc_corr_off", 1)
+frames(0.2)
+T.near(sfc("hicrz"), ACF.hicrz * KGNS, 1e-12, "sfc_corr_off 1: the acf's own back")
+rt:set(SFC .. "hicrz", 0.6 * KGNS)
+frames(0.5)
+T.near(sfc("hicrz"), 0.6 * KGNS, 1e-12, "sfc_corr_off 1: another writer's figure stays")
+rt:set(SFC .. "hicrz", ACF.hicrz * KGNS)
+rt:set("laminar/B747/debug/sfc_corr_off", 0)
+frames(0.2)
+T.near(sfc("hicrz"), ACF.hicrz * KGNS * SC.factor(42000), 1e-12, "sfc_corr_off 0: corrected again from the acf's own")
+rt:set("sim/flightmodel2/position/pressure_altitude", 0)
+
 T.done()
