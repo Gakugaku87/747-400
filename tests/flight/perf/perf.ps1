@@ -637,11 +637,15 @@ function Set-PerfCruise([double]$Ft, [double]$Mach, [double]$Kias = 0) {
     if ([math]::Abs($alt - $Ft) -gt 30) {
         Note info ('FLCH from {0} ft to {1} ft' -f (F $alt '0'), $Ft)
         Push-Button 'laminar/B747/autopilot/button_switch/flch_mode'
-        # FLCH (8) first, unless it captures at once; then ALT (9) near the altitude
+        # FLCH (8) first, unless it captures at once; then ALT (9) near the
+        # altitude. A small change is slow: the A/T's THR holds the V/S that
+        # makes the change in 125 s from where FLCH began (ATA34_2 p.670), so
+        # 89 ft above at 10,000 ft and 250 kt (2026-11-08 clb_078, the air
+        # start's rise to 187 ft above then) took 355 s; within 900 s
         [void](Wait-XP { (Get-Int 'laminar/B747/autopilot/FMA/active_pitch_mode') -eq 8 } 5 200)
         if ($null -eq (Wait-XP { (Get-Int 'laminar/B747/autopilot/FMA/active_pitch_mode') -eq 9 -and
-                [math]::Abs((Get-Num 'sim/cockpit2/gauges/indicators/altitude_ft_pilot') - $Ft) -lt 50 } 420 1000)) {
-            throw "no ALT at $Ft ft within 420 s of FLCH"
+                [math]::Abs((Get-Num 'sim/cockpit2/gauges/indicators/altitude_ft_pilot') - $Ft) -lt 50 } 900 1000)) {
+            throw "no ALT at $Ft ft within 900 s of FLCH"
         }
         $r.flch = $true
     } elseif ((Get-Int 'laminar/B747/autopilot/FMA/active_pitch_mode') -ne 9) {
