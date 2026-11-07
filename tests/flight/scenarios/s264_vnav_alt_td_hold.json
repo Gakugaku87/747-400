@@ -1,9 +1,9 @@
 {
   "name": "s264_vnav_alt_td_hold",
-  "description": "6-1/6-2 段 9i（VNAV の engage とサブモードの作り直し：notes/ATA-34-61-FMC.md §150）の X-Plane での確認、T/D と降下の MCP 高度の食い違い。s143 と同じ経路（FL300 の T/D の手前、ATMUG の約 55 NM 西から東へ空中開始：2026-11-08 から s143 より約 25 NM 西にして、T/D の前に FL300 で落ち着かせる、機体を読み直す、RJAA→RJBB の ATMUGA・ILS06LY、LNAV、ZFW 200・CI 100・FL300、MCP は FL300 のまま VNAV）。T/D の 2 分前に RESET MCP ALT、T/D を過ぎると FMC の td_hold で VNAV ALT（5）・A/T SPD で FL300 を保つ（FMSPG p.34 (2-22)、ATA22 p.280：前は VNAV PTH）。押すだけでは VNAV ALT のまま、MCP を 10,000 ft に下げても経路の上なので押すまで VNAV ALT（FCOM p.645、p.665）、押すと VNAV PTH の降下。降下中に MCP を機体の 2,000 ft 上に上げると、その時の高度で VNAV ALT の水平（FCOM p.665、FMSPG p.227 (4-16)：前は降下を続けた）、MCP を戻して押すと VNAV PTH。Lua の誤りも確かめる。",
+  "description": "6-1/6-2 段 9i（VNAV の engage とサブモードの作り直し：notes/ATA-34-61-FMC.md §150）の X-Plane での確認、T/D と降下の MCP 高度の食い違い。s143 と同じ経路（FL300 の T/D の手前、ATMUG の約 85 NM 西から東へ空中開始：2026-11-08 から s143 より約 55 NM 西にして、T/D（開始から約 7 分）の前に空中開始の揺れを収めて FL300 で落ち着かせる、機体を読み直す、RJAA→RJBB の ATMUGA・ILS06LY、LNAV、ZFW 200・CI 100・FL300、MCP は FL300 のまま VNAV）。T/D の 2 分前に RESET MCP ALT、T/D を過ぎると FMC の td_hold で VNAV ALT（5）・A/T SPD で FL300 を保つ（FMSPG p.34 (2-22)、ATA22 p.280：前は VNAV PTH）。押すだけでは VNAV ALT のまま、MCP を 10,000 ft に下げても経路の上なので押すまで VNAV ALT（FCOM p.645、p.665）、押すと VNAV PTH の降下。降下中に MCP を機体の 2,000 ft 上に上げると、その時の高度で VNAV ALT の水平（FCOM p.665、FMSPG p.227 (4-16)：前は降下を続けた）、MCP を戻して押すと VNAV PTH。Lua の誤りも確かめる。",
   "reload": true,
   "flight": {
-    "lle_air_start": { "latitude": 34.67, "longitude": 133.02, "elevation_in_meters": 9144, "heading_true": 97, "speed_in_meters_per_second": 225 },
+    "lle_air_start": { "latitude": 34.73, "longitude": 132.42, "elevation_in_meters": 9144, "heading_true": 97, "speed_in_meters_per_second": 225 },
     "engine_status": { "all_engines": { "running": true } },
     "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
     "weather": {
@@ -41,7 +41,7 @@
     { "do": "cmd", "note": "VNAV", "name": "laminar/B747/autopilot/button_switch/VNAV" },
     { "do": "wait", "note": "VNAV PTH で engage（巡航）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 6, "timeout": 10 },
     { "do": "wait", "note": "LNAV（ロールの FMA 2）", "dref": "laminar/B747/autopilot/FMA/active_roll_mode", "op": "==", "value": 2, "timeout": 30 },
-    { "do": "wait", "note": "FL300 に戻る（空中開始の揺れの後）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [29800, 30200], "timeout": 120 },
+    { "do": "wait", "note": "FL300 に戻る（空中開始の揺れの後。2026-11-08 には 40〜190 秒かかった）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [29800, 30200], "timeout": 240 },
     { "do": "wait", "note": "FL300 の 50 ft の内（T/D の前に落ち着く：2026-11-08 の 1 回目は T/D が揺れの終わりと重なり、MCP の 30〜140 ft 上で T/D を過ぎた）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [29950, 30050], "timeout": 180 },
     { "do": "wait", "note": "水平（±100 fpm）", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "between", "value": [-100, 100], "timeout": 60 },
     { "do": "check", "note": "まだ T/D の前（td_hold でない）", "dref": "laminar/B747/fms/vnav/td_hold", "op": "==", "value": 0 },

@@ -1587,11 +1587,12 @@ end
 function B747_ap_switch_vnavspeed_mode_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747CMD_fdr_log_spdmod:once()
-		if B747_ap_button_switch_position_target[15] == 1 then
-			B747_ap_button_switch_position_target[15] = 0
-			return
-		end
-		B747_ap_button_switch_position_target[15] = 1 -- SET THE SPEED KNOB ANIMATION TO "IN"
+		-- the knob's animation "IN", or "OUT" for a press while it shows IN
+		-- (a press without its release); the push's own work on each press
+		-- (2026-11-08: before, a press while IN only put the knob OUT, so a
+		-- command once, the Web API's or another plugin's, lost every other
+		-- push)
+		B747_ap_button_switch_position_target[15] = B747_ap_button_switch_position_target[15] == 1 and 0 or 1
 		-- with VNAV, the window opened or shut: speed intervention (FCOM
 		-- p.643; step 9d3: the FMC told by laminar/B747/autopilot/
 		-- spd_intervention, the window shut on the FMC's speed again by
@@ -1614,11 +1615,12 @@ function B747_ap_switch_vnavalt_mode_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747CMD_fdr_log_altmod:once()
 		B747DR_ap_lastCommand = simDRTime
-		if B747_ap_button_switch_position_target[16] == 1 then
-			B747_ap_button_switch_position_target[16] = 0
-			return
-		end
-		B747_ap_button_switch_position_target[16] = 1 -- SET THE ALT KNOB ANIMATION TO "IN"
+		-- the knob's animation "IN", or "OUT" for a press while it shows IN
+		-- (a press without its release); the push counted on each press
+		-- (2026-11-08: before, a press while IN only put the knob OUT, so a
+		-- command once, the Web API's or another plugin's, lost every other
+		-- push: s264's push after the MCP reset, VNAV ALT kept)
+		B747_ap_button_switch_position_target[16] = B747_ap_button_switch_position_target[16] == 1 and 0 or 1
 		B747DR_ap_alt_sel_pushes = B747DR_ap_alt_sel_pushes + 1
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[16] = 0 -- SET THE ALT KNOB ANIMATION TO "OUT"
