@@ -634,6 +634,14 @@ B747DR_ap_fvn_msg = find_dataref("laminar/B747/fms/vnav/msg")
 B747DR_ap_fvn_perf = find_dataref("laminar/B747/fms/vnav/perf")
 -- (step 9h4b) the FMC's engine-out driftdown (1): THR without its HOLD
 B747DR_ap_fvn_dd = find_dataref("laminar/B747/fms/vnav/dd")
+-- (step 9i) VNAV's engage and sub-modes (B747.70.vnav_mode_model.lua;
+-- notes/ATA-34-61-FMC.md §150): the FMC on approach, its cruise kept by the
+-- MCP altitude past the T/D
+dofile("B747.70.vnav_mode_model.lua")
+B747DR_ap_fvn_on_app = find_dataref("laminar/B747/fms/vnav/on_app")
+B747DR_ap_fvn_td_hold = find_dataref("laminar/B747/fms/vnav/td_hold")
+local vnavMode = B747_vnav_mode_model.new()
+local vnavModeIn = {}
 -- (step 9d1) the MCP altitude selector's pushes, counted
 B747DR_ap_alt_sel_pushes = deferred_dataref("laminar/B747/autopilot/alt_sel_pushes", "number")
 -- (step 9g1) the THR switch's pushes, counted for the FMC's thrust limit
@@ -701,64 +709,10 @@ local function afds_gs_inputs(p)
 	p.letdown = afds.letdown
 end
 -- the pitch laws' inputs: the attitude, the inertial vertical speed (ATA22
--- p.344), the TAS, the altitude, the MCP's V/S, the old VNAV's law by its
--- flags and its targets; the speed laws' (step 3b): the IAS, the reference
+-- p.344), the TAS, the altitude, the MCP's V/S, VNAV's law and its target;
+-- the speed laws' (step 3b): the IAS, the reference
 -- (T/O's V2 and G/A's MCP speed too), the speed protection, the PLI, the
 -- flaps, a windshear; G/S's (step 3c)
--- (6-1/6-2 step 9a, until the FMC's VNAV of step 9c) VNAV levels off at
--- the MCP altitude (VNAV ALT: FCOM p.645, ATA22 p.280) and, in the climb,
--- at the FMC altitude (VNAV PTH: ATA22 p.280, the FMC's next constraint or
--- CRZ ALT; step 9c: the FMC's VNAV's, before the old VNAV's target),
--- captured as V/S and FLCH capture theirs (B747.70.afds_pitch_model.lua's
--- capture), and holds it until that altitude moves (a new MCP altitude,
--- the FMC's next). Before, the rebuilt AFDS flew the old VNAV's FLCH and
--- V/S flags through them (s137: on through MCP 13,000 ft to 16,900 ft)
-local vnavLevel = nil
-local function afds_vnav_level(p)
-	if afds.pitch ~= "VNAV" then vnavLevel = nil return end
-	local mcp, tgt = B747DR_autopilot_altitude_ft, B747DR_ap_fvn_alt
-	if vnavLevel then
-		local now = vnavLevel.fma == 5 and mcp or tgt
-		local moved = math.abs(now - vnavLevel.alt) > 50
-		-- VNAV ALT goes on with a new MCP altitude and the selector's push,
-		-- or, below the descent path when the MCP altitude is reset lower,
-		-- once the path comes down to it (FCOM p.645, p.665, p.1256: step
-		-- 9d1; before, with any new MCP altitude; LF2: below the path when it
-		-- levelled before, s198's second flight on without the push 1,000 ft
-		-- above it); VNAV PTH with the FMC's next
-		if vnavLevel.fma == 5 then
-			if not moved then
-				vnavLevel.reset_below = nil
-			else
-				if vnavLevel.reset_below == nil then
-					vnavLevel.reset_below = B747DR_ap_fvn_phase == 3 and B747DR_ap_fvn_path_dev < 0
-				end
-				local pushed = B747DR_ap_alt_sel_pushes ~= vnavLevel.pushes
-				local path = vnavLevel.reset_below and B747DR_ap_fvn_phase == 3 and B747DR_ap_fvn_path_dev >= 0
-				moved = pushed or path
-			end
-		end
-		if moved then vnavLevel = nil end
-	end
-	if not vnavLevel and p.vnav_law ~= "ALT" then
-		-- the FMC altitude the MCP's too: no conflict, VNAV PTH (FCOM p.645:
-		-- VNAV ALT for a conflict; step 9d1: s139's cruise climb to CRZ ALT
-		-- FL190 with the MCP at FL190 levelled in VNAV ALT). The FMC
-		-- altitude captured in VNAV SPD (step 9d2a: the early descent's
-		-- constraint, the driftdown's CRZ ALT; before, the climb's only) and
-		-- in the cruise descent's VNAV PTH (the FMC's step 9h4c)
-		local fmc = (B747DR_ap_fvn_mode == 1 or (B747DR_ap_fvn_phase == 2 and B747DR_ap_fvn_vs ~= 0))
-			and B747_afds_pitch_model.capture(p, tgt)
-		if fmc and math.abs(tgt - mcp) <= 50 then
-			vnavLevel = {alt = tgt, fma = 6}
-		elseif B747_afds_pitch_model.capture(p, mcp) then
-			vnavLevel = {alt = mcp, fma = 5, pushes = B747DR_ap_alt_sel_pushes}
-		elseif fmc then
-			vnavLevel = {alt = tgt, fma = 6}
-		end
-	end
-	if vnavLevel then p.vnav_law, p.vnav_alt = "ALT", vnavLevel.alt end
-end
 local function afds_pitch_inputs(p)
 	p.pitch = simDR_afds_pitch
 	p.vs = simDR_afds_vs
@@ -766,21 +720,14 @@ local function afds_pitch_inputs(p)
 	p.tas = simDR_afds_tas
 	p.alt = simDR_pressureAlt1
 	p.vs_sel = simDR_autopilot_vs_fpm
-	-- VNAV's laws by the FMC's VNAV (6-1/6-2 step 9c; notes/
-	-- ATA-34-61-FMC.md §57): VNAV SPD on the speed law at the FMC's target
-	-- speed (the speed dial: afds_fmc_speed), VNAV PTH level at the FMC
-	-- altitude (the cruise) or on its descent path's vertical speed, (the
-	-- FMC's step 9h4c) the cruise descent's (the cruise phase with a
-	-- vertical speed); before, the old VNAV's flags (FLCH, V/S, ALT)
-	p.vnav_law, p.vnav_vs, p.vnav_alt = nil, 0, simDR_pressureAlt1
-	if B747DR_ap_fvn_mode == 1 then
-		p.vnav_law = "FLCH"
-	elseif B747DR_ap_fvn_phase == 3 or (B747DR_ap_fvn_phase == 2 and B747DR_ap_fvn_vs ~= 0) then
-		p.vnav_law, p.vnav_vs = "VS", B747DR_ap_fvn_vs
-	elseif B747DR_ap_fvn_mode == 2 then
-		p.vnav_law, p.vnav_alt = "ALT", B747DR_ap_fvn_alt
-	end
-	afds_vnav_level(p)
+	-- VNAV's law (the FMC's step 9i: B747.70.vnav_mode_model.lua's, made
+	-- once a frame by afds_vnav_mode after the AFDS model): VNAV SPD on the
+	-- speed law at the FMC's target speed (the speed dial: afds_fmc_vnav),
+	-- VNAV PTH on the V/S law (the descent's path, the cruise descent) or
+	-- the ALT law (the cruise; the levels: VNAV ALT, the FMC altitude
+	-- captured); before, here (afds_vnav_level, steps 9a-9e)
+	local vo = vnavMode.out
+	p.vnav_law, p.vnav_vs, p.vnav_alt = vo.law or nil, vo.law_vs, vo.law_alt
 	local ref = afds_speed_ref()
 	p.ias = simDR_ind_airspeed_kts_pilot
 	p.spd_sel = ref
@@ -967,15 +914,8 @@ B747DR_ap_toga_pushes = find_dataref("laminar/B747/autopilot/toga_pushes")
 B747DR_ap_fd_shown_capt = find_dataref("laminar/B747/autopilot/fd/capt/shown")
 B747DR_ap_fd_shown_fo = find_dataref("laminar/B747/autopilot/fd/fo/shown")
 local afdsTogaPushes = nil
--- VNAV's sub-mode in the FMA (step 9c: the FMC's VNAV's; before, the old
--- VNAV's law's flags): VNAV SPD 4, VNAV ALT 5 (levelled at the MCP
--- altitude), VNAV PTH 6 (levelled at the FMC altitude, the cruise, the
--- descent path)
-local function afds_old_vnav_fma()
-	if vnavLevel then return vnavLevel.fma end
-	if B747DR_ap_fvn_mode == 1 then return 4 end
-	return 6
-end
+-- (VNAV's sub-mode in the FMA, VNAV SPD 4, VNAV ALT 5, VNAV PTH 6: the
+-- VNAV mode model's, the FMC's step 9i; before, afds_old_vnav_fma here)
 -- the A/T (6-4, the FMC's step 9f1; notes/ATA-34-61-FMC.md §58): its
 -- engage logic, AUTOTHROT DISC and modes (B747.70.at_model.lua), each
 -- frame after the AFDS, the only writer of the A/T's state (before, the
@@ -1062,7 +1002,9 @@ local function afds_at()
 	i.limit_ref = lim == "CRZ" or lim == "CON" or string.sub(lim, 1, 3) == "CLB"
 	i.pitch = afds.pitch
 	i.retard = afds.retard and true or false
-	i.vnav_at, i.vnav_level = B747DR_ap_fvn_at, vnavLevel ~= nil
+	-- VNAV's A/T mode (the FMC's step 9i: the VNAV mode model's, SPD while
+	-- levelled: FCOM p.645)
+	i.vnav_at, i.vnav_level = vnavMode.out.at, vnavMode.out.level
 	-- (step 9d2a) the FMC's phase: THR's HOLD latch gone with a new one;
 	-- (step 9h4b) its driftdown: THR again, no HOLD at its rate
 	i.vnav_phase = B747DR_ap_fvn_phase
@@ -1179,8 +1121,8 @@ local function afds_inp()
 	afdsIn.course_err = getHeadingDifference(simDR_radio_nav_obs_deg[0], simDR_afds_track_mag)
 	-- the pitch (step 1c): the vertical speed, the altitude, the speeds, the
 	-- MCP altitude's capture by the pitch laws (step 3a: the 0.05 g level-off;
-	-- before, the old window), the old VNAV (until the FMC's step 9), the old
-	-- law's mode, the old autoland's FLARE arm
+	-- before, the old window), VNAV's engage (the FMC's step 9i), the old
+	-- autoland's FLARE arm
 	afdsIn.vs = simDR_vvi_fpm_pilot
 	afdsIn.alt = simDR_pressureAlt1
 	afdsIn.ias = simDR_ind_airspeed_kts_pilot
@@ -1190,26 +1132,14 @@ local function afds_inp()
 	afds_pitch_inputs(afdsPitchIn)
 	afdsIn.capture = B747_afds_pitch_model.capture(afdsPitchIn, simDR_autopilot_altitude_ft)
 	afdsIn.capture_alt = simDR_autopilot_altitude_ft
-	afdsIn.old_hold_alt = simDR_autopilot_hold_altitude_ft
-	-- VNAV engages from its arm above 400 ft (FCOM p.645) on the FMC's valid
-	-- (ATA22 p.341: FMC DATA VALID), stays while valid (step 9c; before,
-	-- the old VNAV's state)
-	afdsIn.vnav_engaged = B747DR_ap_fvn_valid == 1 and (afds.pitch == "VNAV"
-		or (afdsIn.fmc_ok and simDR_onGround == 0 and simDR_radarAlt1 > 400))
-	afdsIn.vnav_fma = afds_old_vnav_fma()
-	if afds.pitch == "VNAV" then
-		-- VNAV lost (the FMC's valid gone): ALT HOLD at the altitude (ATA22
-		-- p.338's default; the old flags are not VNAV's now)
-		afdsIn.old_law, afdsIn.old_hold_alt = "ALT", simDR_pressureAlt1
-	elseif simDR_autopilot_alt_hold_status == 2 then
-		afdsIn.old_law = "ALT"
-	elseif simDR_autopilot_vs_status == 2 then
-		afdsIn.old_law = "VS"
-	elseif simDR_autopilot_flch_status == 2 then
-		afdsIn.old_law = "FLCH"
-	else
-		afdsIn.old_law = nil
-	end
+	-- VNAV engages from its arm on FMC DATA VALID: the FMC's valid, the
+	-- master FMC, above 400 ft (the FMC's step 9i: B747.70.vnav_mode_model.
+	-- lua's can_engage; ATA22 p.341, ATA34_2 p.621, FCOM p.645); engaged, a
+	-- latch (before, step 9c: it ended into ALT HOLD at the altitude when the
+	-- FMC's valid went, and its arm was cancelled without it)
+	afdsIn.vnav_valid = B747_vnav_mode_model.can_engage(B747DR_ap_fvn_valid == 1, afdsIn.fmc_ok,
+		simDR_onGround == 1, simDR_radarAlt1)
+	afdsIn.vnav_fma = vnavMode.out.fma
 	return afdsIn
 end
 -- V/S as the V/S switch sets it, synced to the present vertical speed
@@ -1490,15 +1420,13 @@ function B747_afds_flch()
 	B747DR_ap_thrust_mode = 2
 	afds_sync()
 end
+-- the VNAV switch: true when the push armed VNAV (the FMC's step 9i: the
+-- FMC's PERF/VNAV UNAVAILABLE then)
 function B747_afds_vnav()
+	local was = afds.vnav_arm
 	B747_afds_model.vnav(afds, afds_inp())
 	afds_sync()
-end
--- VNAV's arm lost: the FMC's VNAV not valid (step 9c; before, no route for
--- the old VNAV)
-function B747_afds_vnav_lost()
-	B747_afds_model.vnav_lost(afds)
-	B747DR_ap_vnav_state = 0
+	return afds.vnav_arm and not was
 end
 function B747_afds_spd_works()
 	return B747_afds_model.spd_works(afds, nil)
@@ -1506,7 +1434,7 @@ end
 -- the FMA's pitch: VNAV's own FMA its only input
 local afdsFmaIn = {}
 function B747_afds_pitch_fma()
-	afdsFmaIn.vnav_fma = afds_old_vnav_fma()
+	afdsFmaIn.vnav_fma = vnavMode.out.fma
 	return B747_afds_model.pitch_fma(afds, afdsFmaIn)
 end
 -- the roll mode is HDG SEL (the HDG REF switch's default)
@@ -1539,6 +1467,55 @@ local function afds_go_around()
 	B747DR_ap_autoland = -2
 	B747DR_ap_lastCommand = simDRTime
 end
+-- (6-1/6-2 step 9i; notes/ATA-34-61-FMC.md §150) VNAV's sub-mode, its law
+-- and the A/T mode it asks for (B747.70.vnav_mode_model.lua), once a frame
+-- after the AFDS model (its engage this frame) and before the pitch law:
+-- the FMC's VNAV (laminar/B747/fms/vnav/*), the MCP altitude, the
+-- selector's pushes, the pitch laws' captures of the MCP and FMC altitudes
+-- (B747.70.afds_pitch_model.lua's capture: the 0.05 g level-off, on this
+-- frame's pitch inputs). Before (steps 9a-9e), afds_vnav_level in the
+-- pitch inputs and afds_old_vnav_fma.
+-- The MCP altitude settled (VNAV's new VNAV ALT and its captures of the MCP
+-- altitude wait for it: the VNAV mode model's `settled`): the window
+-- unchanged VNAV_MCP_SETTLE_S s (real time: SIM_PERIOD), or since the
+-- altitude selector's push (the reset done). The knob's 100 ft steps
+-- through the airplane's altitude: steps 9a-9e captured one of them and held
+-- it, and on approach the missed approach altitude set as FCTM p.187 (5.41)
+-- has it (from DA(H), 300 ft or more below it) levelled the airplane in
+-- VNAV ALT (FCOM p.1261: the descent goes on). Unsettled,
+-- no new level of the MCP altitude (the knob's passing values not the
+-- crew's); the levels held, their ends and the FMC go by the window's value
+-- at once. VNAV_MCP_SETTLE_S as X-Plane's altitude for the V/S and FLCH
+-- captures (setSimAlt, 3 s after the knob); estimate
+local VNAV_MCP_SETTLE_S = 3
+local vnavMcpDial, vnavMcpAge, vnavMcpPushes, vnavMcpSettled = nil, 0, nil, false
+local function afds_vnav_mcp_settled()
+	local dial, n = B747DR_autopilot_altitude_ft, B747DR_ap_alt_sel_pushes
+	if dial ~= vnavMcpDial then
+		vnavMcpDial, vnavMcpAge, vnavMcpSettled = dial, 0, vnavMcpPushes == nil
+	else
+		vnavMcpAge = vnavMcpAge + SIM_PERIOD
+	end
+	if vnavMcpAge >= VNAV_MCP_SETTLE_S or (vnavMcpPushes ~= nil and n ~= vnavMcpPushes) then vnavMcpSettled = true end
+	vnavMcpPushes = n
+	return vnavMcpSettled
+end
+local function afds_vnav_mode()
+	local i, p = vnavModeIn, afdsPitchIn
+	i.engaged = afds.pitch == "VNAV"
+	i.valid = B747DR_ap_fvn_valid == 1
+	i.phase, i.mode = B747DR_ap_fvn_phase, B747DR_ap_fvn_mode
+	i.fmc_alt, i.vs, i.at = B747DR_ap_fvn_alt, B747DR_ap_fvn_vs, B747DR_ap_fvn_at
+	i.path_dev = B747DR_ap_fvn_path_dev
+	i.td_hold = B747DR_ap_fvn_td_hold == 1
+	i.on_app = B747DR_ap_fvn_on_app == 1
+	i.mcp, i.alt = B747DR_autopilot_altitude_ft, simDR_pressureAlt1
+	i.settled = afds_vnav_mcp_settled()
+	i.pushes = B747DR_ap_alt_sel_pushes
+	i.cap_mcp = i.engaged and B747_afds_pitch_model.capture(p, i.mcp)
+	i.cap_fmc = i.engaged and B747_afds_pitch_model.capture(p, i.fmc_alt)
+	B747_vnav_mode_model.update(vnavMode, i)
+end
 -- each frame, first: a TO/GA push (step 1e), the F/Ds, the hydraulics, the
 -- defaults asked for
 function B747_afds_update()
@@ -1547,6 +1524,7 @@ function B747_afds_update()
 	if afdsTogaPushes ~= nil and n ~= afdsTogaPushes and B747_afds_model.toga(afds, inp) then afds_go_around() end
 	afdsTogaPushes = n
 	afds_apply(B747_afds_model.update(afds, inp))
+	afds_vnav_mode()
 	afds_sync()
 	afds_roll_law()
 	afds_pitch_law()
@@ -1556,6 +1534,8 @@ function B747_afds_reset()
 	afds = B747_afds_model.new()
 	afdsRoll = B747_afds_roll_model.new()
 	afdsPitch = B747_afds_pitch_model.new()
+	vnavMode = B747_vnav_mode_model.new()
+	vnavMcpDial, vnavMcpAge, vnavMcpPushes, vnavMcpSettled = nil, 0, nil, false
 end
 function B747_ap_thrust_mode_CMDhandler(phase, duration) -- INOP, NO CORRESPONDING FUNCTIONALITY IN X-PLANE
 	if phase == 0 then
@@ -1607,11 +1587,12 @@ end
 function B747_ap_switch_vnavspeed_mode_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747CMD_fdr_log_spdmod:once()
-		if B747_ap_button_switch_position_target[15] == 1 then
-			B747_ap_button_switch_position_target[15] = 0
-			return
-		end
-		B747_ap_button_switch_position_target[15] = 1 -- SET THE SPEED KNOB ANIMATION TO "IN"
+		-- the knob's animation "IN", or "OUT" for a press while it shows IN
+		-- (a press without its release); the push's own work on each press
+		-- (2026-11-08: before, a press while IN only put the knob OUT, so a
+		-- command once, the Web API's or another plugin's, lost every other
+		-- push)
+		B747_ap_button_switch_position_target[15] = B747_ap_button_switch_position_target[15] == 1 and 0 or 1
 		-- with VNAV, the window opened or shut: speed intervention (FCOM
 		-- p.643; step 9d3: the FMC told by laminar/B747/autopilot/
 		-- spd_intervention, the window shut on the FMC's speed again by
@@ -1627,17 +1608,19 @@ end
 -- the MCP altitude selector's push (6-1/6-2 step 9d1; FCOM p.649): counted
 -- for the FMC (laminar/B747/autopilot/alt_sel_pushes: the next constraint
 -- between the airplane and the MCP altitude deleted, CRZ ALT reset in the
--- climb and the cruise) and the AFDS (VNAV ALT continued: afds_vnav_level).
+-- climb and the cruise) and the AFDS (VNAV ALT continued: the VNAV mode
+-- model's, the FMC's step 9i).
 -- Before, the old VNAV's: CRZ ALT from the MCP above it, its resume
 function B747_ap_switch_vnavalt_mode_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747CMD_fdr_log_altmod:once()
 		B747DR_ap_lastCommand = simDRTime
-		if B747_ap_button_switch_position_target[16] == 1 then
-			B747_ap_button_switch_position_target[16] = 0
-			return
-		end
-		B747_ap_button_switch_position_target[16] = 1 -- SET THE ALT KNOB ANIMATION TO "IN"
+		-- the knob's animation "IN", or "OUT" for a press while it shows IN
+		-- (a press without its release); the push counted on each press
+		-- (2026-11-08: before, a press while IN only put the knob OUT, so a
+		-- command once, the Web API's or another plugin's, lost every other
+		-- push: s264's push after the MCP reset, VNAV ALT kept)
+		B747_ap_button_switch_position_target[16] = B747_ap_button_switch_position_target[16] == 1 and 0 or 1
 		B747DR_ap_alt_sel_pushes = B747DR_ap_alt_sel_pushes + 1
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[16] = 0 -- SET THE ALT KNOB ANIMATION TO "OUT"
@@ -1805,15 +1788,17 @@ function B747_ap_VNAV_mode_CMDhandler(phase, duration)
 	if phase == 0 then
 		B747CMD_fdr_log_vnav:once()
 		B747_ap_button_switch_position_target[3] = 1
-		-- PERF/VNAV UNAVAILABLE without the gross weight, the cost index or
-		-- CRZ ALT (FCOM p.1433; step 9c: the FMC's; before, CRZ ALT only)
-		if B747DR_ap_fvn_perf ~= 1 then
-			B747DR_fmc_notifications[30] = 1
-			return
-		end
 		-- the AFDS model (6-3 step 1c): the arm, the second push; the active
-		-- mode stays while it is armed (the old one forced ALT HOLD)
-		B747_afds_vnav()
+		-- mode stays while it is armed (the old one forced ALT HOLD). (The
+		-- FMC's step 9i) armed without the FMC's data too, waiting for it
+		-- (ATA22 p.340: VNAV ARM until FMC DATA VALID), with PERF/VNAV
+		-- UNAVAILABLE without the gross weight, the cost index or CRZ ALT, or
+		-- in the descent without its path (FCOM p.645, p.1433; before, step
+		-- 9c: no arm then)
+		if B747_afds_vnav() and B747_vnav_mode_model.unavailable(B747DR_ap_fvn_perf == 1,
+				B747DR_ap_fvn_valid == 1, B747DR_ap_fvn_phase) then
+			B747DR_fmc_notifications[30] = 1
+		end
 	elseif phase == 2 then
 		B747_ap_button_switch_position_target[3] = 0
 	end
@@ -2515,7 +2500,10 @@ function B747_ap_ias_mach_mode()
 	local ap_simDR_autopilot_airspeed_is_mach = simDR_autopilot_airspeed_is_mach -- READ THE CURRENT mach SETTING
 
 	----- AUTO-SWITCH AUTOPILOT IAS/MACH WINDOW AIRSPEED MODE
-	if simDR_airspeed_mach < 0.40 and B747DR_switchingIASMode == 0 and B747DR_ap_vnav_state == 0 then
+	-- (2026-11-07, step 9i's review, finding 4) with VNAV off or armed (the
+	-- MCP's speed flown: vnav_state under 2); before, off only, and the arm
+	-- waiting for the FMC's data can last
+	if simDR_airspeed_mach < 0.40 and B747DR_switchingIASMode == 0 and B747DR_ap_vnav_state < 2 then
 		if simDR_vvi_fpm_pilot < -250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 1 then
 				--simDR_autopilot_airspeed_kts = ap_dial_airspeed								-- WRITE THE NEW VALUE TO FORCE CONVERSION TO CORRECT UNITS
@@ -2529,7 +2517,7 @@ function B747_ap_ias_mach_mode()
 		end
 	end
     --D6-30151-481 4.10.4/5
-	if simDR_airspeed_mach > 0.84 and B747DR_switchingIASMode == 0 and B747DR_ap_vnav_state == 0 then
+	if simDR_airspeed_mach > 0.84 and B747DR_switchingIASMode == 0 and B747DR_ap_vnav_state < 2 then
 		if simDR_vvi_fpm_pilot > 250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 0 then
 				B747DR_lastap_dial_airspeed = simDR_autopilot_airspeed_kts
@@ -2541,7 +2529,7 @@ function B747_ap_ias_mach_mode()
 			end
 		end
 	end
-	if simDR_autopilot_airspeed_kts > 310 and B747DR_switchingIASMode == 0 and B747DR_ap_vnav_state == 0 then
+	if simDR_autopilot_airspeed_kts > 310 and B747DR_switchingIASMode == 0 and B747DR_ap_vnav_state < 2 then
 		if simDR_vvi_fpm_pilot < -250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 1 then
 				B747DR_lastap_dial_airspeed = simDR_autopilot_airspeed_kts
@@ -2988,12 +2976,8 @@ function B747_ap_altitude(fms)
 		B747DR_ap_vnav_pause = 0
 		simCMD_pause:once()
 	end
-	-- the FMC's VNAV not valid (step 9c; before, no route for the old
-	-- VNAV): the arm ends (the AFDS model ends VNAV engaged: afds_inp's
-	-- vnav_engaged)
-	if B747DR_ap_vnav_state > 0 and B747DR_ap_fvn_valid ~= 1 then
-		B747_afds_vnav_lost()
-	end
+	-- (the FMC's VNAV not valid no longer cancels VNAV's arm nor ends it:
+	-- the FMC's step 9i, ATA22 p.340-341; before, step 9c, here)
 end
 --OLD button functions
 --[[
@@ -3643,7 +3627,7 @@ local function B747_at_reset()
 	atPush = {spd = 0, thr = 0, disc = 0}
 	atSeen = {spd = 0, thr = 0, disc = 0, toga = nil}
 	atMaster, atMasterOK, atFmcLatch = nil, false, false
-	vnavLevel = nil
+	-- (VNAV's levels: the VNAV mode model's, anew in B747_afds_reset)
 	afdsTogaPushes = nil
 	lastHdgRefSwitch = nil
 end

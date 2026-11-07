@@ -8,7 +8,10 @@
 -- continues it. Below or not is the airplane's when the MCP altitude is
 -- reset (before, when it levelled: s198's second flight levelled on the
 -- path at 4,000 ft, the path went on down, the MCP reset to 1,300 ft took
--- it on in VNAV without the push 1,000 ft above the path).
+-- it on in VNAV without the push 1,000 ft above the path). (The FMC's step
+-- 9i) VNAV's VNAV ALT and its captures go by the MCP altitude settled, 3 s
+-- after the window's last change (or the selector's push): a new MCP
+-- altitude here waited for (settle) before the airplane meets it.
 local T = dofile("tests/lib/check.lua")("afds_vnav_alt")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
@@ -52,6 +55,8 @@ rt:set("laminar/B747/fms/fmc_ok", 1, 1)
 rt:set(ALT_IND, 8000)
 rt:callout("flight_start")
 local function frames(n) for _ = 1, n or 3 do rt:frame(1 / 30) end end
+-- a new MCP altitude settled (VNAV's 3 s)
+local function settle() frames(95) end
 frames(30)
 
 -- CMD C, the FMC's VNAV valid in the descent on its path (VNAV PTH), the
@@ -68,6 +73,7 @@ rt:set("laminar/B747/toggle_switch/position", 29, 1)
 rt:set("laminar/B747/autothrottle/armed", 1)
 rt:set("laminar/B747/airspeed/Vmo", 365)
 rt:set(MCP_ALT, 4000)
+settle()
 rt:command(CMD .. "VNAV")
 frames(30)
 T.equal(rt:get(VNAV_STATE), 2, "VNAV engaged")
@@ -98,6 +104,7 @@ T.equal(rt:get(PITCH), 6, "the selector pushed: VNAV PTH")
 -- lower, VNAV ALT until the path comes down to it, then VNAV PTH without the
 -- push
 rt:set(MCP_ALT, 4000)
+settle()
 rt:set(ALT_IND, 4060)
 rt:set(VSI, -1500)
 fvn({path_dev = -300})
@@ -119,6 +126,7 @@ T.equal(rt:get(PITCH), 6, "the path down to it: VNAV PTH without the push (FCOM 
 -- the MCP set back to the level altitude and lower again: the reset judged
 -- anew (above the path then: the push wanted)
 rt:set(MCP_ALT, 4000)
+settle()
 rt:set(ALT_IND, 4060)
 rt:set(VSI, -1500)
 fvn({path_dev = -300})

@@ -352,14 +352,24 @@ T.equal(rt:get(PITCH), 8, "SPD in FLCH SPD: nothing (FCOM p.642; the old one wen
 -- VNAV (6-1/6-2 step 9c: the FMC's VNAV flies it; laminar/B747/fms/vnav/*
 -- are the FMS module's, set here): PERF/VNAV UNAVAILABLE without the FMC's
 -- gross weight, cost index or CRZ ALT (FCOM p.1433; flag 30:
--- B744.notifications.lua's DRindex + 1; before, CRZ ALT only)
+-- B744.notifications.lua's DRindex + 1; before, CRZ ALT only); (the FMC's
+-- step 9i) armed all the same, waiting for the data (ATA22 p.340: VNAV ARM
+-- until FMC DATA VALID; before, not armed), FLCH SPD still active; the
+-- second push disarms it, no message then. (The frames as before: the
+-- command of the airplane that does not answer it is near its limit at
+-- the G/S law's test below)
 local FVN = "laminar/B747/fms/vnav/"
 local function fvn(t) for k, v in pairs(t) do rt:set(FVN .. k, v) end end
 fvn({perf = 0, valid = 0})
 rt:command(CMD .. "VNAV")
 frames()
 T.equal(rt:get(NOTIFY, 30), 1, "VNAV without the performance data: PERF/VNAV UNAVAILABLE (flag 30)")
-T.equal(rt:get(VNAV_STATE), 0, "not armed")
+T.equal(rt:get(VNAV_STATE), 1, "armed all the same (before: not armed)")
+T.equal(rt:get(PITCH), 8, "FLCH SPD still active")
+rt:set(NOTIFY, 30, 0)
+rt:command(CMD .. "VNAV")
+T.equal(rt:get(VNAV_STATE), 0, "the second push disarms")
+T.equal(rt:get(NOTIFY, 30), 0, "no message for the disarming push")
 -- the data entered, the FMC's VNAV valid: the climb to CRZ ALT FL350 in
 -- VNAV SPD at 300 kt with THR REF; the A/T's ARM switch on (the engines
 -- running: the old monitor fails the A/T with two out), Vmo 365 kt.
@@ -438,6 +448,9 @@ local a0 = rt:get(ALT_IND)
 local mcp0 = rt:get(MCP_ALT)
 rt:set(VSI, 1500)
 rt:set(MCP_ALT, a0 + 60)
+-- (the FMC's step 9i: VNAV goes by the MCP altitude settled, 3 s after the
+-- knob, or at once with the selector's push: here the push; no FMC here)
+rt:command("laminar/B747/button_switch/press_altitude")
 frames(3)
 T.equal(rt:get(PITCH), 5, string.format("climbing 60 ft below the MCP altitude: VNAV ALT (%d)", rt:get(PITCH)))
 T.equal(rt:get(AT_FMA_ST), 3, "the A/T SPD while level (FCOM p.645)")
@@ -468,6 +481,7 @@ T.equal(rt:get(PITCH), 4, "the next FMC altitude: VNAV SPD again")
 -- ALT FL190 with the MCP at FL190): VNAV PTH, no conflict (FCOM p.645;
 -- before, VNAV ALT); the FMC's next above, the MCP's then: VNAV ALT
 rt:set(MCP_ALT, a0 + 60)
+rt:command("laminar/B747/button_switch/press_altitude")
 fvn({alt = a0 + 60})
 frames(3)
 T.equal(rt:get(PITCH), 6, "the FMC and the MCP altitude both 60 ft above: VNAV PTH")
@@ -495,6 +509,7 @@ T.equal(rt:get(PHASE), 2, "the cruise's phase")
 -- THR), the A/T SPD; 60 ft above the new CRZ ALT descending: the FMC
 -- altitude captured (the command up), VNAV PTH
 rt:set(MCP_ALT, a0 - 4000)
+rt:command("laminar/B747/button_switch/press_altitude")
 fvn({phase = 2, mode = 2, alt = a0 - 4000, at = 3, vs = -1250})
 local p3 = rt:get(PITCH_CMD)
 frames(30)
@@ -599,28 +614,36 @@ T.equal(rt:get(DIAL), 280, "the FMC's 280 kt")
 T.equal(rt:get(PHASE), 3, "the descent's phase")
 T.equal(rt:get(AFTER_TOD), 1, "the ND's path pointer shown")
 T.near(rt:get(FPE), 120, 1e-6, "120 ft above the path")
--- the FMC's VNAV not valid: VNAV ends into ALT HOLD at the altitude then
--- (ATA22 p.338), the path pointer off; the arm without it ends at once (no
--- DESTINATION NOT SET, flag 54: the old cancel posted it)
+-- (the FMC's step 9i) the FMC's VNAV not valid (the descent's path gone;
+-- FCOM p.1431's DESCENT PATH DELETED has VNAV active): VNAV stays engaged
+-- (ATA22 p.341's latch; before, it ended into ALT HOLD at the altitude),
+-- level in VNAV PTH at the altitude then (its ALT law), the path pointer
+-- off. V/S ends it; VNAV armed without the FMC's data stays armed (ATA22
+-- p.340; before, its arm ended at once) with PERF/VNAV UNAVAILABLE in the
+-- descent without its path (FCOM p.645), no DESTINATION NOT SET (flag 54:
+-- the old cancel posted it); valid again: engaged from the arm
 fvn({valid = 0})
 frames()
-T.equal(rt:get(VNAV_STATE), 0, "not valid: VNAV ends")
-T.equal(rt:get(PITCH), 9, "into ALT HOLD")
-T.near(rt:get("laminar/B747/autopilot/altitude_hold_ft"), a0, 0.5, "at the altitude then")
+T.equal(rt:get(VNAV_STATE), 2, "not valid: VNAV still engaged (before: into ALT HOLD)")
+T.equal(rt:get(PITCH), 6, "VNAV PTH, level at the altitude then")
+T.equal(rt:get(PITCH_LAW), 1, "on the pitch law")
 T.equal(rt:get(AFTER_TOD), 0, "the path pointer off")
+rt:command(CMD .. "vs_mode")
+T.equal(rt:get(VNAV_STATE), 0, "V/S ends VNAV")
 rt:set(NOTIFY, 54, 0)
+rt:set(NOTIFY, 30, 0)
 rt:command(CMD .. "VNAV")
 frames()
-T.equal(rt:get(VNAV_STATE), 0, "not valid: VNAV's arm ends at once")
-T.equal(rt:get(PITCH_ARMED), 0, "no arm in the FMA")
-T.equal(rt:get(PITCH), 9, "ALT stays")
+T.equal(rt:get(VNAV_STATE), 1, "not valid: VNAV armed, waiting (before: its arm ended at once)")
+T.equal(rt:get(PITCH_ARMED), 4, "the FMA's VNAV armed")
+T.equal(rt:get(PITCH), 7, "V/S stays active")
+T.equal(rt:get(NOTIFY, 30), 1, "the descent without its path: PERF/VNAV UNAVAILABLE (FCOM p.645)")
 T.equal(rt:get(NOTIFY, 54), 0, "no DESTINATION NOT SET")
--- valid again: armed and engaged; a push while engaged does nothing (the
--- old one disengaged it); V/S ends it
+-- valid again: engaged from the arm; a push while engaged does nothing
+-- (the old one disengaged it); V/S ends it
 fvn({valid = 1})
-rt:command(CMD .. "VNAV")
 frames(3)
-T.equal(rt:get(VNAV_STATE), 2, "valid again: armed and engaged")
+T.equal(rt:get(VNAV_STATE), 2, "valid again: engaged from the arm")
 rt:command(CMD .. "VNAV")
 frames()
 T.equal(rt:get(VNAV_STATE), 2, "a push while engaged: nothing")

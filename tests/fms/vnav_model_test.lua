@@ -66,9 +66,11 @@ T.equal(o.phase, "CRZ", "at FL390: the cruise")
 -- past the T/D with the MCP altitude still at the cruise's: the cruise
 -- (VNAV keeps the altitude: FCOM p.665's RESET MCP ALT)
 local s2 = V.new()
-V.update(s2, inp{alt = 35000})
+o = V.update(s2, inp{alt = 35000})
+T.check(not o.td_hold, "(step 9i) before the T/D: no td_hold")
 o = V.update(s2, inp{alt = 35000, d_ed = 109})
 T.equal(o.phase, "CRZ", "past the T/D, the MCP at FL350: still the cruise")
+T.check(o.td_hold, "(step 9i) and td_hold: the descent would begin, held by the MCP (the AFDS's VNAV ALT: FMSPG p.34 (2-22))")
 -- (step 9d1) above CRZ ALT (an air start's climb) past the T/D with the
 -- MCP at CRZ ALT and below the airplane: the cruise still (the MCP below
 -- CRZ ALT starts the descent; before, below the airplane: s143 went into
@@ -82,6 +84,7 @@ T.equal(o.phase, "DES", "the MCP at FL290 below CRZ ALT: the descent")
 -- the MCP altitude below: the descent on the path
 o = V.update(s2, inp{alt = 35000, mcp_alt = 10000, d_ed = 110, gs = 480})
 T.equal(o.phase, "DES", "past the T/D with the MCP below: the descent")
+T.check(not o.td_hold, "no td_hold in the descent")
 T.check(o.mode == "PTH" and o.at == V.AT_IDLE, "VNAV PTH with IDLE (path/idle: ATA34_2 p.616)")
 local g = (35000 - 3000) / 100
 T.near(o.path_alt, 35000, 1, "on the path at its top")
@@ -621,15 +624,66 @@ do
     local OR390, OR414 = {ident = "OR390"}, {ident = "OR414"}
     local passed = {}
     local function was(p) return passed[p] == true end
-    local list = {{a = 9000, p = OR390}, {a = 11000, p = OR414}}
+    -- (step 9i) the SID's (keep: a climb constraint, V.clb_keep)
+    local list = {{a = 9000, p = OR390, keep = true}, {a = 11000, p = OR414, keep = true}}
     T.equal(V.clb_target(list, 7000, 35000, was), 9000, "7,000 ft: FL090 at OR390")
     T.equal(V.clb_target(list, 9104, 35000, was), 9000, "104 ft over it, OR390 ahead: still FL090 (before: FL110)")
-    T.equal(V.clb_target(list, 9000 + V.CLB_HOLD_FT - 10, 35000, was), 9000, "290 ft over: still FL090")
-    T.equal(V.clb_target(list, 9500, 35000, was), 11000, "500 ft over: taken as missed, FL110 (as before; estimate)")
+    T.equal(V.clb_target(list, 9290, 35000, was), 9000, "290 ft over: still FL090")
+    -- (step 9i) a climb constraint at any altitude until its waypoint (FMSPG
+    -- p.128 (3.3-19): a climb constraint below the airplane, VNAV levels until
+    -- the waypoint; the AFDS's "far" level, B747.70.vnav_mode_model.lua)
+    T.equal(V.clb_target(list, 9500, 35000, was), 9000, "500 ft over, OR390 ahead: still FL090 (before: taken as missed, FL110)")
+    T.equal(V.clb_target(list, 15000, 35000, was), 9000, "6,000 ft over, OR390 ahead: still FL090")
     passed[OR390] = true
     T.equal(V.clb_target(list, 9000, 35000, was), 11000, "OR390 passed: FL110")
     T.equal(V.clb_target({{a = 9000}, {a = 11000}}, 9104, 35000, was), 11000, "no waypoint: 100 ft over, the next (as before)")
     T.equal(V.clb_target(list, 9000, 10000, was), nil, "FL110 not under CRZ ALT 10,000: none")
     T.equal(V.clb_target({}, 9000, 35000, was), nil, "no constraint: none")
+    -- (step 9i, a second patch) not a climb constraint (an arrival's in the
+    -- predictions' climb by the half of the way, a short route): kept only
+    -- through CLB_HOLD_FT under the airplane, then the next (as on 11-05; a
+    -- first patch kept it at any altitude: the climb stopped under the
+    -- arrival's AT OR BELOW until its waypoint, in the descent)
+    local STARX = {ident = "STARX"}
+    local arr = {{a = 12000, p = STARX, keep = false}}
+    T.equal(V.clb_target(arr, 11000, 35000, was), 12000, "an arrival's 12000B above the airplane: its cap (as before)")
+    T.equal(V.clb_target(arr, 12200, 35000, was), 12000, "200 ft over: kept (the level-off)")
+    T.equal(V.clb_target(arr, 25000, 35000, was), nil, "13,000 ft over it, its waypoint ahead: not the target, CRZ ALT")
+    -- which constraints are the climb's (V.clb_keep): the SID's; an enroute
+    -- leg's (the crew's: FMSPG p.114, p.128) before the T/C; not an
+    -- arrival's nor an approach's (FCOM p.1258), nor after the T/C or in
+    -- the cruise (FCOM p.1258: a descent one)
+    T.check(V.clb_keep("SID", 40, nil), "the SID's: a climb constraint")
+    T.check(V.clb_keep(nil, 40, 120), "an enroute leg's before the T/C at 120 NM: a climb constraint")
+    T.check(not V.clb_keep(nil, 150, 120), "after the T/C: not")
+    T.check(not V.clb_keep(nil, 40, nil), "no T/C (the cruise): not")
+    T.check(not V.clb_keep("STAR", 40, 120), "an arrival's: not")
+    T.check(not V.clb_keep("APPR", 10, 120), "an approach's: not")
+end
+
+-- (step 9i, a second patch) the descent's FMC altitude (V.des_target): an
+-- AT OR BELOW the lower of it and the path at its point (FMSPG p.227
+-- (4-16)); an AT OR ABOVE, an AT, a window's lower as they are. In the
+-- descent's speed intervention with the AT OR BELOW 24,000 ft ahead, the
+-- path 19,000 ft at its point and the airplane at 20,000 ft: the FMC
+-- altitude 19,000 ft, under the airplane (a first patch gave 24,000 ft
+-- above it: the AFDS levelled under it in VNAV PTH, "far")
+do
+    local p = {e = {0, 100}, h = {0, 30000}, k = {"idle", "idle"}}
+    T.near(V.des_target({des_alt = 24000, des_kind = "B", des_e = 63.333, path = p}), 19000, 1, "an AT OR BELOW 24,000 over the path's 19,000: 19,000")
+    T.equal(V.des_target({des_alt = 15000, des_kind = "B", des_e = 63.333, path = p}), 15000, "an AT OR BELOW 15,000 under the path's 19,000: 15,000")
+    T.equal(V.des_target({des_alt = 24000, des_kind = "A", des_e = 63.333, path = p}), 24000, "an AT OR ABOVE: its altitude")
+    T.equal(V.des_target({des_alt = 24000, des_kind = "AT", des_e = 63.333, path = p}), 24000, "an AT: its altitude")
+    T.equal(V.des_target({des_alt = 24000, des_kind = "B"}), 24000, "an AT OR BELOW without the path: its altitude")
+    T.equal(V.des_target({}), nil, "none")
+    local sB = V.new()
+    V.update(sB, inp{alt = 20000, mcp_alt = 10000, path = p, d_ed = 66.667, gs = 400})
+    local o2 = V.update(sB, inp{alt = 20000, mcp_alt = 10000, path = p, d_ed = 66.667, gs = 400,
+        spd_int = {cas = 300}, des_alt = 24000, des_kind = "B", des_e = 63.333})
+    T.check(o2.phase == "DES" and o2.mode == "SPD", "the descent's speed intervention: VNAV SPD (" .. o2.phase .. ", " .. o2.mode .. ")")
+    T.near(o2.alt, 19000, 1, "its FMC altitude the AT OR BELOW's path: 19,000 ft (before: 24,000)")
+    o2 = V.update(sB, inp{alt = 20000, mcp_alt = 10000, path = p, d_ed = 66.667, gs = 400,
+        des_alt = 24000, des_kind = "B", des_e = 63.333})
+    T.near(o2.alt, 19000, 1, "on the path (VNAV PTH): 19,000 ft too")
 end
 T.done()

@@ -5,7 +5,8 @@
 -- VNAV engaged in the climb after the takeoff: UNABLE NEXT ALT with FL250A
 -- at ALPHA (38 NM out), none with 8000A, none with VNAV off; LIMIT ALT
 -- FLXXX with CRZ ALT over MAX ALT; DESCENT PATH DELETED when BRAVO's
--- 10000, the only constraint and the E/D, is deleted.
+-- 10000, the only constraint and the E/D, is deleted; (step 9i) td_hold at
+-- CRZ ALT past the T/D with the MCP altitude not below.
 B747_NAVDB_FOLDER = "tests/fms/data/navdb/"
 local T = dofile("tests/lib/check.lua")("vnav_msgs")
 local xtlua = dofile("tests/lib/xtlua.lua")
@@ -191,4 +192,28 @@ rt:set("laminar/B747/autopilot/heading/altitude_dial_ft", 20000)
 frames(0.3)
 T.equal(rt:get(NOTE, 4), 0, "the MCP altitude reset above: gone")
 T.check(rt:get("laminar/B747/fms/vnav/alt") ~= 2000, "the climb's FMC altitude again")
+
+-- (step 9i) past the T/D at CRZ ALT with the MCP altitude not below it:
+-- the cruise kept, laminar/B747/fms/vnav/td_hold 1 (the AFDS's VNAV ALT
+-- there: FMSPG p.34 (2-22)); the MCP set below: the descent, 0. BRAVO 10000 the
+-- E/D again, FL350 near ZZAA: inside its T/D
+key("func_key/legs")
+enter("/10000", "R2")
+key("key/execute")
+clear()
+local TDH = "laminar/B747/fms/vnav/td_hold"
+T.equal(rt:get(TDH), 0, "climbing: no td_hold")
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 35000)
+rt:set("sim/flightmodel2/position/pressure_altitude", 35000)
+rt:set("sim/flightmodel/position/elevation", 35000 * 0.3048)
+rt:set("laminar/B747/autopilot/heading/altitude_dial_ft", 35000)
+frames(0.3)
+preds()
+T.check(fms.ns.B747_fms_vnav_td() ~= nil and fms.ns.B747_fms_vnav_td() <= 0,
+    "past the T/D: " .. tostring(fms.ns.B747_fms_vnav_td()))
+T.check(rt:get("laminar/B747/fms/vnav/phase") == 2 and rt:get(TDH) == 1,
+    "the cruise kept by the MCP altitude at FL350: td_hold (" .. rt:get("laminar/B747/fms/vnav/phase") .. ", " .. rt:get(TDH) .. ")")
+rt:set("laminar/B747/autopilot/heading/altitude_dial_ft", 10000)
+frames(0.3)
+T.check(rt:get("laminar/B747/fms/vnav/phase") == 3 and rt:get(TDH) == 0, "the MCP set below: the descent, no td_hold")
 T.done()

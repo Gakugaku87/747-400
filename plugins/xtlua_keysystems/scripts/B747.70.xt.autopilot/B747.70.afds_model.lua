@@ -62,8 +62,12 @@
 --    the present speed, from TO/GA the higher of the present and the
 --    selected (FCOM p.646); VNAV armed by its first push (not with G/S
 --    or FLARE active; from G/A at any height), disarmed by the second
---    push while armed, a push while active does nothing; engaged when the
---    old VNAV engages it (400 ft, its sub-modes: until the FMC's step 9);
+--    push while armed, a push while active does nothing; engaged from the
+--    arm on FMC DATA VALID (the FMC's step 9i: `inp.vnav_valid`, B747.70.
+--    vnav_mode_model.lua's can_engage; ATA22 p.341), a latch only a new
+--    pitch mode resets (p.341's figure: the engage to the laws also needs
+--    VNAV VALID; VNAV kept with the FMC's data lost later, its pitch then
+--    the VNAV mode model's: estimate; its sub-modes the model's);
 --    V/S, ALT and FLCH end it, not its arm (ATA22 p.340: the second push,
 --    an APP request and its engage). The SPD switch does nothing in VNAV,
 --    FLCH SPD and TO/GA (FCOM p.642; the old one ended VNAV and FLCH into
@@ -1022,14 +1026,13 @@ function M.update(s, inp)
             set_pitch(s, "ALT", inp.alt)
         end
     end
-    -- VNAV: engaged by the old VNAV (`inp.vnav_engaged`); ended there (no
-    -- route, its own end) into the old law's mode then (`inp.old_law`, ALT
-    -- at the old law's altitude `inp.old_hold_alt`)
-    if s.vnav_arm and inp.vnav_engaged then
+    -- VNAV (ATA22 p.340-341, figure p.341): engaged from its arm on FMC
+    -- DATA VALID (`inp.vnav_valid`: the FMC's step 9i), a latch only a new
+    -- pitch mode resets (before, the FMC's data lost ended it into ALT HOLD
+    -- and the glue cancelled its arm: "no route, VNAV off")
+    if s.vnav_arm and inp.vnav_valid then
         s.vnav_arm = false
         set_pitch(s, "VNAV")
-    elseif s.pitch == "VNAV" and not inp.vnav_engaged then
-        set_pitch(s, inp.old_law, inp.old_hold_alt or inp.alt)
     end
     -- from a multi-channel G/A into another mode, roll or pitch, the first
     -- channel only (ATA22 p.318)
@@ -1057,14 +1060,9 @@ function M.status(s)
     return 0
 end
 
--- VNAV lost (no route for the old VNAV: until the FMC's step 9): the arm
--- ends; VNAV active ends at the next update (above)
-function M.vnav_lost(s)
-    s.vnav_arm = false
-end
-
 -- the FMA's pitch (the init's numbers): active and armed. T/O and G/A
--- TO/GA; VNAV the old VNAV's sub-mode (`inp.vnav_fma`); FLARE (step 4b);
+-- TO/GA; VNAV its sub-mode (`inp.vnav_fma`: the VNAV mode model's, the
+-- FMC's step 9i); FLARE (step 4b);
 -- the arms G/S, else VNAV, else FLARE (step 4a: with LAND 3 or 2)
 function M.pitch_fma(s, inp)
     local active = 0
