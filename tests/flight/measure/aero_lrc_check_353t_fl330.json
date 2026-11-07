@@ -1,0 +1,64 @@
+{
+  "name": "aero_lrc_check_353t_fl330",
+  "description": "測定（合否なし、全シナリオの実行に入れない、2026-11-07）：M.83 から上の抵抗の補正（B747.45.aero_corr_model.lua の cd_mach、notes/AERO.md §3.17）を、性能計測のキットのフェーズ1の点に重なる FCOM PI.11.2（p.268、PW4056 の LRC）のますで確かめる：353 t・FL330 の LRC は 340 t と 360 t の行の間で M.8614、FF/ENG 3,050 kg/h（ISA）。補正の前のキットの点（crz_090_fl330、2026-11-06）は M.861 で +12.8 %。銚子沖を東へ FL330・ISA の無風、キットの crz_090 と同じ積み方（ペイロード 40 t、燃料 131.6 t）で約 355 t（測るころ約 353 t）。A/P の ALT HOLD・A/T SPD で M.85 と M.86 を各 120 秒の後の 60 秒測り（`luajit tests/flight/tools/idle_sweep.lua <記録のフォルダー> 60`）、LRC の Mach に補間して FCOM と比べる。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.4, "longitude": 141.3, "elevation_in_meters": 10058.4, "heading_true": 90, "speed_in_meters_per_second": 254.33 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10 },
+    "weight": {
+      "payload_weight_in_kilograms": [3901.4, 4106.8, 4928.1, 6365.5, 1232, 10287.5, 9178.6, 0, 0],
+      "fueltank_weight_in_kilograms": [20528.7, 13499.4, 38075.2, 38075.2, 13499.4, 3980.6, 3980.6, 0, 0]
+    },
+    "weather": {
+      "definition": {
+        "latitude_in_degrees": 35.4, "longitude_in_degrees": 141.3, "elevation_in_meters": 0, "visibility_in_kilometers": 40,
+        "temperature_in_degrees_celsius": 15, "altimeter_setting_in_hpa": 1013.25, "precipitation_ratio": 0, "clouds": [],
+        "wind": [
+          { "altitude_in_feet_msl": 0, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 1000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 3000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 6000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 10000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 15000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 20000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 25000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 30000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 34000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 38000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 42000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 46000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 }
+        ]
+      },
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れと FMS の初期化" },
+    { "do": "wait", "note": "FMS の空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 30 },
+    { "do": "sleep", "seconds": 8, "note": "空中の初期化の速さの巻き取り" },
+    { "do": "record_start" },
+    { "do": "snapshot", "note": "重さ", "drefs": [ "sim/flightmodel/weight/m_total", "sim/flightmodel/weight/m_fixed", "sim/flightmodel/weight/m_fuel_total" ] },
+    { "do": "set", "note": "MCP 高度", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 33000 },
+    { "do": "set", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 33000 },
+    { "do": "set", "note": "MCP を Mach に", "dref": "sim/cockpit2/autopilot/airspeed_is_mach", "value": 1 },
+    { "do": "set", "note": "M.85", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 85 },
+    { "do": "cmd", "note": "SPD（空中の初期化は A/T を ARM にするだけ：activate_inflightAP）", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "wait", "note": "A/T は SPD", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3, "timeout": 10 },
+    { "do": "wait", "note": "M.85 の近く", "dref": "sim/flightmodel/misc/machno", "op": "between", "value": [0.846, 0.856], "timeout": 300 },
+    { "do": "sleep", "seconds": 120 },
+    { "do": "mark", "note": "M.85" },
+    { "do": "sleep", "seconds": 60 },
+    { "do": "set", "note": "M.86", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 86 },
+    { "do": "sleep", "seconds": 120 },
+    { "do": "mark", "note": "M.86" },
+    { "do": "sleep", "seconds": 60 },
+    { "do": "snapshot", "note": "終わり", "drefs": [ "sim/flightmodel/misc/machno", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/weight/m_total", "sim/aircraft/bodies/acf_fuse_cd" ] },
+    { "do": "record_stop" }
+  ]
+}

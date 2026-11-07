@@ -1,11 +1,15 @@
 {
   "name": "aero_lrc_cruise",
-  "description": "測定（合否なし、全シナリオの実行に入れない）：エンジンの表示値（ENG-33）と燃料流量を FCOM PI.11.2 (p.268) の Long Range Cruise Control（PW4056：重量と高度ごとの EPR・Mach・KIAS・FF/ENG）と比べる。銚子沖の海上 29,000 ft・307 KIAS（約 270 t の LRC の M.794）・東向きで開始（機体を読み直す）。A/P の ALT HOLD・HDG SEL と A/T の SPD で、29,000 ft（307 KIAS）・31,000 ft（303）・33,000 ft（297）・35,000 ft（290）の水平に落ち着かせ、それぞれ mark（mark の後の 35 秒を `luajit tests/flight/tools/idle_sweep.lua <記録のフォルダー> 35` で読む。表は 270 t で 1.07・2,357、1.10・2,334、1.135・2,312、1.18・2,295 kg/h）。高度の変更は FLCH。",
+  "description": "測定（合否なし、全シナリオの実行に入れない）：エンジンの表示値（ENG-33）と燃料流量を FCOM PI.11.2 (p.268) の Long Range Cruise Control（PW4056：重量と高度ごとの EPR・Mach・KIAS・FF/ENG）と比べる。銚子沖の海上 29,000 ft・307 KIAS（約 270 t の LRC の M.794）・東向きで開始（機体を読み直す）。A/P の ALT HOLD・HDG SEL と A/T の SPD で、29,000 ft（307 KIAS）・31,000 ft（303）・33,000 ft（297）・35,000 ft（290）の水平に落ち着かせ、それぞれ mark（mark の後の 35 秒を `luajit tests/flight/tools/idle_sweep.lua <記録のフォルダー> 35` で読む。表は 270 t で 1.07・2,357、1.10・2,334、1.135・2,312、1.18・2,295 kg/h）。高度の変更は FLCH。重さは初期化で決める（ペイロード 0・燃料 86.5 t で約 270 t。2026-11-07 から：前は X-Plane に残っていた重さのままで、10-30 は 269.5 t）。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 8839.2, "heading_true": 90, "speed_in_meters_per_second": 241.5 },
     "engine_status": { "all_engines": { "running": true } },
     "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weight": {
+      "payload_weight_in_kilograms": [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "fueltank_weight_in_kilograms": [0, 13499.4, 29767.9, 29767.9, 13499.4, 0, 0, 0, 0]
+    },
     "weather": {
       "definition": "vfr_few_clouds",
       "vertical_speed_in_thermal_in_feet_per_minute": 0,
