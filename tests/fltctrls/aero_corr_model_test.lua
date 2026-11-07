@@ -79,8 +79,8 @@ for _, c in ipairs(CELLS) do
 end
 T.check(math.abs(worst[1]) < 0.011, string.format("the FCOM's fuel flow at the LRC: the largest %+.1f %% (%s)", worst[1] * 100, worst[2]))
 T.check(math.sqrt(sse / #CELLS) < 0.006, string.format("and %.2f %% rms over the %d cells", math.sqrt(sse / #CELLS) * 100, #CELLS))
--- the fuel a mile around the LRC (FCTM p.129, 4.10: the LRC 1 % less fuel
--- mileage than the best, on the fast side; 0.01 M above the schedule 2 %
+-- the fuel a mile around the LRC (FCTM p.129, 4.7: the LRC 1 % less fuel
+-- mileage than the best, on the fast side; p.132, 4.10: 0.01 M above the schedule 2 %
 -- more fuel: -0.93 and +2.0 % at 0.01 M under and over): on the mean within
 -- 0.3 %, each 0.01 M over between +0.3 and +4 % (v3: -0.2 to +0.8 %, the
 -- best inside M.85-.87 at heavy, high levels)

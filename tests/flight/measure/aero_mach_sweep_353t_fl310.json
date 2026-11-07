@@ -1,6 +1,6 @@
 {
   "name": "aero_mach_sweep_353t_fl310",
-  "description": "測定（合否なし、全シナリオの実行に入れない、2026-11-07）：巡航の Mach による燃料あたりの距離の形（抵抗の補正 v4、notes/AERO.md §3.19）。PERF_SIMBRIEF のフェーズ1の測り直しで、M.85 から .86 へ燃料あたりの距離が良くなっていた点 crz_090_fl310 と同じ重さ（約 354 t：ペイロード 40 t、燃料 132 t）・ISA の無風で、銚子沖の FL310 を東へ M.83 で空中開始し、A/P ALT HOLD・A/T SPD のまま MCP の Mach を .83・.84・.85・.86・.87 と上げる。各 Mach で 80 秒待ってマークを入れ、その後の 40 秒を `tests/flight/tools/aero_compare.lua <結果のフォルダ> 40`（CL・CD、drag/W と engines/W）と `idle_sweep.lua <結果のフォルダ> 40`（燃料流量）で読む。FCOM PI.11.2 の LRC は 340 t で M.855、360 t で M.861（p.268）。FCTM p.129（4.10）：LRC は最良より燃料あたりの距離が 1 % 少ない速い側、0.01 M 速いと燃料 2 % 増。",
+  "description": "測定（合否なし、全シナリオの実行に入れない、2026-11-07）：巡航の Mach による燃料あたりの距離の形（抵抗の補正 v4、notes/AERO.md §3.19）。PERF_SIMBRIEF のフェーズ1の測り直しで、M.85 から .86 へ燃料あたりの距離が良くなっていた点 crz_090_fl310 と同じ重さ（約 354 t：ペイロード 40 t、燃料 132 t）・ISA の無風で、銚子沖の FL310 を東へ M.83 で空中開始し、A/P ALT HOLD・A/T SPD のまま MCP の Mach を .83・.84・.85・.86・.87 と上げる。各 Mach で 80 秒待ってマークを入れ、その後の 40 秒を `tests/flight/tools/aero_compare.lua <結果のフォルダ> 40`（CL・CD、drag/W と engines/W）と `idle_sweep.lua <結果のフォルダ> 40`（燃料流量）で読む。FCOM PI.11.2 の LRC は 340 t で M.855、360 t で M.861（p.268）。FCTM p.129（4.7）：LRC は最良より燃料あたりの距離が 1 % 少ない速い側。p.132（4.10）：0.01 M 速いと燃料 2 % 増。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.4, "longitude": 141.3, "elevation_in_meters": 9448.8, "heading_true": 90, "speed_in_meters_per_second": 250.6 },
