@@ -471,7 +471,7 @@ function New-ClimbRows([int]$N, [scriptblock]$Alt, [double]$Tas = 250.0, [double
         $r[$script:ix['weight']] = 300000 - $FuelRate * $t
         foreach ($e in 1..4) { $r[$script:ix["ff_$e"]] = $FuelRate / 4; $r[$script:ix["n1_$e"]] = 95.0 }
         $r[$script:ix['sim_speed']] = 1; $r[$script:ix['ground_speed_x']] = 1
-        $r[$script:ix['thrlim']] = 2; $r[$script:ix['ias']] = 300; $r[$script:ix['mach']] = 0.78; $r[$script:ix['vminm']] = 230
+        $r[$script:ix['thrlim']] = 20; $r[$script:ix['ias']] = 300; $r[$script:ix['mach']] = 0.78; $r[$script:ix['vminm']] = 230
         [void]$out.Add($r)
     }
     return ,$out.ToArray()
@@ -495,11 +495,15 @@ Near $mc.marks[5].t_s ((25000 - $ClimbTopMarginFt) / 32.5) 0.001 'climb marks: t
 Near $mc.marks[5].gw_kg (300000 - 3.0 * (25000 - $ClimbTopMarginFt) / 32.5) 0.01 'climb marks: the weight there'
 Check ($mc.rows_real_time -eq $mc.rows_to_end -and $mc.rows_to_end -eq 770) "climb marks: 770 rows to the top, all in real time (got $($mc.rows_to_end), $($mc.rows_real_time))"
 Check ($mc.thrlim_clb_only) "climb marks: the thrust limit CLB ($($mc.thrlim_codes))"
-$rowsC[100][$script:ix['thrlim']] = 3; $rowsC[101][$script:ix['sim_speed']] = 2
+$rowsC[100][$script:ix['thrlim']] = 30; $rowsC[101][$script:ix['sim_speed']] = 2
 $mc2 = Measure-PerfClimb $rowsC 0 $ClimbMarksFt 35000
-Check (-not $mc2.thrlim_clb_only -and $mc2.thrlim_codes -match '3: 1 rows') "climb marks: a row in CRZ ($($mc2.thrlim_codes))"
+Check (-not $mc2.thrlim_clb_only -and $mc2.thrlim_codes -match '(^|, )30: 1 rows') "climb marks: a row in CRZ ($($mc2.thrlim_codes))"
 Check ($mc2.rows_real_time -eq 769) 'climb marks: a row time-accelerated'
-$rowsC[100][$script:ix['thrlim']] = 2; $rowsC[101][$script:ix['sim_speed']] = 1
+# (the FMC's code: 10 x the mode plus the derate, B747.68.xt.fms.lua 2408)
+$rowsC[100][$script:ix['thrlim']] = 21; $rowsC[101][$script:ix['sim_speed']] = 1
+$mc2b = Measure-PerfClimb $rowsC 0 $ClimbMarksFt 35000
+Check (-not $mc2b.thrlim_clb_only -and $mc2b.thrlim_codes -match '(^|, )21: 1 rows') "climb marks: a row in CLB 1, derated ($($mc2b.thrlim_codes))"
+$rowsC[100][$script:ix['thrlim']] = 20
 $mc3 = Measure-PerfClimb @($rowsC[0..400]) 0 $ClimbMarksFt 35000
 Check ($mc3.marks.Count -eq 3 -and -not $mc3.top_reached) "climb marks: cut short, the marks reached only (got $($mc3.marks.Count))"
 $mc4 = Measure-PerfClimb $rowsC 200 $ClimbMarksFt 35000
@@ -563,13 +567,13 @@ $cll = @(Get-Content "$runDir4\climb.csv")
 Check ($cll[0] -eq 'test_id,kind,plan,target_gw_pct,gw_start_kg,mark,press_alt_ft,t_s,fuel_used_kg,ff_gauge_used_kg,dist_air_nm,dist_gnd_nm,gw_kg,ias_kt,mach,seg_vs_fpm,n1_avg_pct,thrlim,status,raw_file') 'climb files: climb.csv''s header'
 Check (@($cll | ForEach-Object { ($_ -split ',', -1).Count } | Sort-Object -Unique) -join ',' -eq '20') 'climb files: climb.csv 20 columns in every row'
 Check (@($cll | Where-Object { $_ -match '^clb_l15,' }).Count -eq 6) 'climb files: a climb''s six marks'
-Check ($cll[2] -match '^clb_l15,climb,A,60\.4,238523,15000,15000,153\.8,461\.5,461\.5,20\.77,20\.77,299538,300\.0,0\.7800,1950,95\.00,2,done,raw/clb_l15\.csv$') "climb files: a mark's row ($($cll[2]))"
-Check ($cll[1] -match '^clb_l15,climb,A,60\.4,238523,start,10000,0\.0,0\.0,0\.0,0\.00,0\.00,300000,300\.0,0\.7800,,95\.00,2,done,') "climb files: the start's row, its rate blank ($($cll[1]))"
+Check ($cll[2] -match '^clb_l15,climb,A,60\.4,238523,15000,15000,153\.8,461\.5,461\.5,20\.77,20\.77,299538,300\.0,0\.7800,1950,95\.00,20,done,raw/clb_l15\.csv$') "climb files: a mark's row ($($cll[2]))"
+Check ($cll[1] -match '^clb_l15,climb,A,60\.4,238523,start,10000,0\.0,0\.0,0\.0,0\.00,0\.00,300000,300\.0,0\.7800,,95\.00,20,done,') "climb files: the start's row, its rate blank ($($cll[1]))"
 Check (@($cll | Where-Object { $_ -match '^clb_078,climb,A,78,307808,(,){13}aborted,raw/clb_078\.csv$' }).Count -eq 1) 'climb files: a stopped climb, its values blank'
 Check (@($cll | Where-Object { $_ -match '^clb_090,climb,A,90,(,){14}not_run,$' }).Count -eq 1) 'climb files: a climb not run'
 Check (@($cll | Where-Object { $_ -match '^cel_l15,ceiling,' }).Count -eq 8) 'climb files: a ceiling''s marks to 38,000 ft'
 Check (@($cll | Where-Object { $_ -match '^des_l15,descent,' }).Count -eq 6) 'climb files: a descent''s six marks'
-Check (@($cll | Where-Object { $_ -match '^des_l15,descent,A,60\.4,238523,30000,30000,121\.5,364\.4,364\.4,16\.40,16\.40,299636,300\.0,0\.7800,-2470,95\.00,2,done,raw/des_l15\.csv$' }).Count -eq 1) 'climb files: a descent mark''s row, its rate down'
+Check (@($cll | Where-Object { $_ -match '^des_l15,descent,A,60\.4,238523,30000,30000,121\.5,364\.4,364\.4,16\.40,16\.40,299636,300\.0,0\.7800,-2470,95\.00,20,done,raw/des_l15\.csv$' }).Count -eq 1) 'climb files: a descent mark''s row, its rate down'
 Check (@($cll | Where-Object { $_ -match '^des_0[79][80],descent,A,[79][80],(,){14}not_run,$' }).Count -eq 2) 'climb files: two descents not run'
 $ccl = @(Get-Content "$runDir4\ceiling.csv")
 Check ($ccl.Count -eq 4 -and $ccl[0] -eq 'test_id,plan,target_gw_pct,gw_start_kg,ceiling_ft,t_s,fuel_used_kg,dist_air_nm,gw_kg,mach,ias_kt,vminm_kt,max_rate_fpm,status,raw_file') 'climb files: ceiling.csv a row a ceiling'
