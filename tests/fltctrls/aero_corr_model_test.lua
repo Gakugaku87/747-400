@@ -74,7 +74,7 @@ for _, c in ipairs(CELLS) do
     local dn = (c[3] - 0.01) * net_cd(c[1], c[2] * 1000, c[3] - 0.01) / g0 - 1
     local upm = (c[3] + 0.01) * net_cd(c[1], c[2] * 1000, c[3] + 0.01) / g0 - 1
     sdn, sup, nup = sdn + dn, sup + upm, nup + 1
-    if upm < 0.003 and not flat then flat = string.format("%d t FL%d %+.1f %%", c[1], c[2] * 10, upm * 100) end
+    if upm < 0.015 and not flat then flat = string.format("%d t FL%d %+.1f %%", c[1], c[2] * 10, upm * 100) end
     if (upm > 0.04 or dn < -0.025) and not steep then steep = string.format("%d t FL%d %+.1f %%", c[1], c[2] * 10, upm * 100) end
 end
 T.check(math.abs(worst[1]) < 0.011, string.format("the FCOM's fuel flow at the LRC: the largest %+.1f %% (%s)", worst[1] * 100, worst[2]))
@@ -82,11 +82,12 @@ T.check(math.sqrt(sse / #CELLS) < 0.006, string.format("and %.2f %% rms over the
 -- the fuel a mile around the LRC (FCTM p.129, 4.7: the LRC 1 % less fuel
 -- mileage than the best, on the fast side; p.132, 4.10: 0.01 M above the schedule 2 %
 -- more fuel: -0.93 and +2.0 % at 0.01 M under and over): on the mean within
--- 0.3 %, each 0.01 M over between +0.3 and +4 % (v3: -0.2 to +0.8 %, the
--- best inside M.85-.87 at heavy, high levels)
+-- 0.3 % under and 0.6 % over (v5: +2.4 %, the lift of 0.5 and more steeper),
+-- each 0.01 M over between +1.5 and +4 % (v3: -0.2 to +0.8 %, the
+-- best inside M.85-.87 at heavy, high levels; v4: +0.5 % at CL 0.41)
 T.near(sdn / nup, -0.0093, 0.003, string.format("0.01 M under the LRC: %+.2f %% fuel a mile on the mean", sdn / nup * 100))
-T.near(sup / nup, 0.020, 0.003, string.format("0.01 M over the LRC: %+.2f %% fuel a mile on the mean", sup / nup * 100))
-T.check(flat == nil, "0.01 M over the LRC never flat (+0.3 % or more)" .. (flat and (": " .. flat) or ""))
+T.check(sup / nup > 0.017 and sup / nup < 0.026, string.format("0.01 M over the LRC: %+.2f %% fuel a mile on the mean", sup / nup * 100))
+T.check(flat == nil, "0.01 M over the LRC never flat (+1.5 % or more)" .. (flat and (": " .. flat) or ""))
 T.check(steep == nil, "and never past +4 %, nor -2.5 % under" .. (steep and (": " .. steep) or ""))
 -- the best fuel mileage under each such cell's LRC, the 99 % of it within
 -- 0.015 M of the FCOM's LRC (v3: 0.02-0.035 under)
@@ -111,14 +112,65 @@ T.check(far == nil, "the best under the LRC, the 99 % within 0.015 M of the FCOM
 for _, p in ipairs(A.XP_M0) do
     T.near(A.cd_mach(p[2], p[1] * 1000, 0.45), -A.cd_fcom(p[2], 0.45), 1e-12, p[1] .. " t at its onset M" .. p[2] .. ": the FCOM's part added")
 end
--- 270 t, the long range cruise of §3.9 (aero_lrc_cruise 2026-11-07: -1.2,
--- 0.0, +0.4 and +1.0 % of the FCOM's fuel flow at M.797, .814, .831, .840
--- at FL290-FL350): within 0.0002 (0.8 % of the drag) of none, 0.0003 to
--- 0.0004 taken off at M.840
-T.near(corr(270, 29000, 0.797), 0, 0.0002, "270 t M.797: about none")
-T.near(corr(270, 31000, 0.814), 0, 0.0002, "270 t M.814: about none")
-T.near(corr(270, 33000, 0.831), 0, 0.0002, "270 t M.831: about none")
+-- 270 t, the long range cruise of §3.9 at FL290-FL350 exactly (M.797,
+-- .814, .831, .840): the FCOM's part and v5's cd_low add 0.0002, 0.0001 and
+-- 0.0002 in all, 0.0003 to 0.0004 taken off at M.840. The points flown
+-- (aero_lrc_cruise, 29,330-33,050 ft) sit on the FCOM's LRC line, where
+-- cd_low adds only 0.00003 to 0.00005: 330 ft (1.4 % of lift) moves it by
+-- 0.00016 there (X-Plane 2026-11-07 evening: -1.3, -0.6, -0.9 % of the
+-- FCOM's fuel flow; notes/AERO.md §3.20)
+T.near(corr(270, 29000, 0.797), -0.0002, 0.0001, "270 t M.797: about 0.0002 added")
+T.near(corr(270, 31000, 0.814), -0.0001, 0.0001, "270 t M.814: about 0.0001 added")
+T.near(corr(270, 33000, 0.831), -0.0002, 0.0001, "270 t M.831: about 0.0002 added")
 T.near(corr(270, 35000, 0.840), 0.00035, 0.0001, "270 t M.840: about 0.00035 (+1.0 % to about 0)")
+-- (v5) the light and low cruise past the FCOM's LRC line (notes/AERO.md
+-- §3.20): on the line little, LOW_K LOW_CAP far past it, none at high lift
+-- and at low Mach
+T.check(A.cd_low(0.808 + A.LOW_OFS, 0.363) < 0.0001, "on the LRC line (CL 0.363, M.808): under 0.0001")
+T.near(A.cd_low(0.86, 0.30), A.LOW_K * A.LOW_CAP, 1e-12, "far past it (CL 0.30, M.86): LOW_K LOW_CAP")
+T.near(A.LOW_K * A.LOW_CAP, 0.000525, 1e-9, "at most CD 0.000525")
+T.equal(A.cd_low(0.86, A.LOW_CL[2]), 0, "from LOW_CL[2]: none (v4's wall)")
+T.equal(A.cd_low(A.LOW_M[1], 0.30), 0, "at LOW_M[1]: none")
+T.near(A.cd_low(0.70, 0.25), 0, 1e-12, "M.70 at CL 0.25 (a light descent): none")
+T.equal(A.cd_low(0.86, nil), 0, "no CL: none")
+T.near(A.cd_low(0.95, 0.30), A.cd_low(A.M_TOP, 0.30), 1e-12, "the same above M_TOP")
+-- the FCOM cells with the LRC from M.745 under M.85 (37): their own LRC
+-- (the fast side's 99 % of the best fuel mileage, FCTM p.129, 4.7) within
+-- 0.006 M of the FCOM's (v4: 0.02-0.06 faster), their LRC's drag at most
+-- 0.5 % more
+local LOW_CELLS = {
+    {380, 27, .844}, {360, 27, .834}, {340, 27, .824}, {340, 29, .840}, {320, 27, .811}, {320, 29, .829},
+    {320, 31, .846}, {300, 27, .797}, {300, 29, .816}, {300, 31, .834}, {280, 27, .782}, {280, 29, .802},
+    {280, 31, .821}, {280, 33, .838}, {260, 27, .765}, {260, 29, .786}, {260, 31, .805}, {260, 33, .825},
+    {260, 35, .842}, {240, 27, .745}, {240, 29, .767}, {240, 31, .788}, {240, 33, .808}, {240, 35, .827},
+    {240, 37, .845}, {220, 29, .746}, {220, 31, .768}, {220, 33, .789}, {220, 35, .810}, {220, 37, .829},
+    {220, 39, .846}, {200, 31, .745}, {200, 33, .767}, {200, 35, .789}, {200, 37, .810}, {200, 39, .829},
+    {200, 41, .846},
+}
+local off, more = nil, nil
+for _, c in ipairs(LOW_CELLS) do
+    local t, ft, ml = c[1], c[2] * 1000, c[3]
+    local best, mb = math.huge, nil
+    for m = 0.70, 0.88, 0.0002 do
+        local v = m * net_cd(t, ft, m)
+        if v < best then best, mb = v, m end
+    end
+    local lrc
+    for m = mb, 0.90, 0.0002 do
+        if m * net_cd(t, ft, m) >= best / 0.99 then lrc = m; break end
+    end
+    if not (lrc and math.abs(lrc - ml) <= 0.006) and not off then
+        off = string.format("%d t FL%d: the 99 %% at M%.4f, the FCOM's M%.3f", t, c[2] * 10, lrc or 0, ml)
+    end
+    local cl = cl_of(t, ml, ft)
+    local add = A.cd_low(ml, cl) / net_cd(t, ft, ml)
+    if add > 0.005 and not more then more = string.format("%d t FL%d: +%.2f %%", t, c[2] * 10, add * 100) end
+end
+T.check(off == nil, "the light and low cells' own LRC within 0.006 M of the FCOM's" .. (off and (": " .. off) or ""))
+T.check(more == nil, "and their LRC's drag at most 0.5 % more" .. (more and (": " .. more) or ""))
+-- FCOM PI.10.38 (p.264) climb at 290/.84, 200 t at 35,000 ft (CL 0.31,
+-- 2,900 fpm): the drag added at most 2.5 % (about 84 fpm)
+T.check(A.cd_low(0.84, cl_of(200, 0.84, 35000)) / net_cd(200, 35000, 0.84) < 0.025, "200 t, 35,000 ft, M.84: at most 2.5 % more drag")
 T.near(A.cd_mach(0.70, 400000, 0.6), 0, 1e-5, "M.70: none (the FCOM's part under 1e-5)")
 T.equal(A.cd_mach(nil, 300000, 0.45), 0, "no Mach: none")
 T.equal(A.cd_mach(0.86, nil, 0.45), 0, "no weight: none")
