@@ -2377,3 +2377,78 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - 空中の初期化は A/T を ARM にするだけなので、SPD を押す。
   - Mach は .852〜.853（IAS 278.0 kt。窓の M.85 の CAS は 278.2 kt）に落ち着いた。前は M.858。
   - 最小機動速度は 275.5 kt。
+
+## 150. 段 9i：VNAV の engage とサブモードの作り直し（2026-11-07：利用者の依頼、順番の入るところで）
+
+- 前の状態（2026-11-07 の HEAD `4d8bfcca` の調べ）。どこが何を決めていたか：
+  - FMC の VNAV のモデル（`B747.68.vnav_model.lua`、段 9b〜9h）：段階（CLB・CRZ・DES、cruise climb・descent、早期降下）、FMC の求めるサブモード（SPD・PTH）、A/T のモード、目標の速さと高度、降下の経路と V/S、THRUST・DRAG REQUIRED、速度の逆戻り、CHECK ALT TGT（engage の時だけ）、valid。T/D を過ぎても MCP が巡航高度なら巡航のまま（推定、RESET MCP ALT）。
+  - 自動操縦のつなぎ（`B747.70.xt.autopilot.lua`）：`afds_vnav_level` が VNAV ALT（MCP 高度の捕捉）と VNAV PTH（FMC 高度の捕捉：VNAV SPD と cruise descent）の水平、その再開（MCP を 50 ft 動かして押す、経路の下なら経路が降りて来て）、`afds_old_vnav_fma` が FMA の 4・5・6、`afds_pitch_inputs` が則（SPD→FLCH の速度の則、降下と cruise descent→V/S の則、PTH→ALT の則）。ピッチの入力を作るたびに走るので 1 フレームに 2 回。
+  - engage（つなぎの `vnav_engaged`）：FMC の valid と、arm からは master FMC・空中・RA 400 ft。engage の後も valid が要り、消えると AFDS のモデルが今の高度の ALT HOLD にした（ATA22 p.338 の「MCP 高度で master FMC が故障」を広げた推定）。`B747_ap_altitude` は FMC の valid が無いと arm を消した（経路が無いと VNAV が外れる：DIFFERENCES の「残り」）。VNAV スイッチは性能のデータが無いと PERF/VNAV UNAVAILABLE を出して arm しなかった。
+  - MCP 高度の食い違いは「捕捉」だけ：MCP 高度に近づくときの VNAV ALT はあったが、上昇で MCP を機体の下に、降下で上にしても VNAV は離れていった。T/D で MCP が巡航高度なら VNAV PTH のまま（FMSPG p.34 (2-22) は VNAV ALT）。上昇の制限が機体の 300 ft より下（点はまだ先）なら飛ばして上がり続けた（`clb_target`）。捕捉はノブを回している途中の MCP 高度（100 ft ごと）でも起きた（V/S・FLCH は 3 秒後に写す X-Plane の高度で捕捉する：`setSimAlt`）。
+  - 前の VNAV のコード：monitor の `VNAV_modeSwitch` は `vnav_state` が 2 以上でも 1 以下でも戻るので、上昇・巡航・降下（`VNAV_CLB`・`VNAV_CRZ`・`VNAV_DES`、`checkMCPAlt`）は段 9c から走らない。`vnav.lua`（`setDescentVSpeed` など）と `vnavspd.lua` の速度の状態機械も呼ばれない。生きているのは `vnavspd.lua` の状態の表（`manualVNAVspd`：速度介入、`recalcAfter`：前の LNAV）と、VNAV でない間の `B747_monitor_THR_REF_AT`（前の flightPhase）だけ。
+- 資料：
+  - engage（FCC）：ATA22 p.340–341（22-12 p.14–15、図：VNAV の要求と TRANS ENABLE で ARM の latch、2 回目・APP の要求・engage で消える。ARM と FMC DATA VALID で ENGAGE の latch、新しいモードで消える。表示はこの latch、則への ENGAGE の出力は latch と VNAV VALID。p.340 は VNAV valid を FMC から来るものとする）、p.279（22-10 p.105：G/S 以外のどのモードからも arm、engage には FMC の縦の profile が要る）。
+  - engage（FMC）：ATA34_2 p.621（34-61 p.195、図：VNAV CONTROL＝software monitor・sensor data・PERF の入力・400 ft の上・VNAV ARM/OPERATE。VNAV SPD は上昇か段の降下、VNAV ALT は MCP 高度を横切るとき、VNAV PTH は有効な経路と巡航か降下）。FCOM p.645（4.10.7：400 ft で activate、データが足りないと PERF/VNAV NOT AVAILABLE。例は総重量と、降下で E/D が無いこと）、p.1433（11.60.5：PERF/VNAV UNAVAILABLE は総重量・CI・巡航高度）。
+  - サブモード：ATA22 p.279–280（22-10 p.105–106：VNAV SPD は上昇・選んだ降下・PTH からの逆戻り、SPD から PTH で FMC 高度の捕捉、VNAV ALT は SPD か PTH の降下で MCP 高度を FMC 高度より先に捕捉したときと、FMC の目標が MCP 高度から離れさせるとき）、ATA34_2 p.615–616（4 つの制御）、p.624（34-61 p.198：profile が MCP 高度を越えるか離れるなら FMC が MCP 高度を捕捉して保つ：VNAV ALT）、ATA22 p.338（22-12 p.12：VNAV の ALT HOLD の既定は、機体が FMC と MCP の高度の間で FMC の目標が MCP から離れる向きに変わったとき、FMC の目標が MCP 高度を越えるか離れさせるとき、MCP 高度で master FMC が故障したとき）、FMSPG p.34（2-22：profile の上昇・降下の始まる所で MCP が今の高度なら VNAV ALT）、FCOM p.1256（11.31.22：FMC に無い MCP 高度で水平なら VNAV ALT）、p.643（4.10.5：降下の VNAV PTH で窓を開けると VNAV SPD、制限を intercept するまで）。
+  - 食い違いの向き：FCOM p.665（4.20.7：VNAV の profile と MCP 高度の食い違いで水平になり VNAV ALT、高度を保つ）、FMSPG p.226–227（4-15、4-16：待機経路の節。上昇の段階で降下の指令を出さない、降下の段階で上昇の指令を出さない。VNAV を engage した時に MCP や制限の向こうにいれば今の高度で水平。降下では上からの MCP 高度をいつも捕捉する。AT OR BELOW は制限と経路の低い方まで、AT OR ABOVE は高い方まで降りる）、p.128（3.3-19：上昇で機体より下の上昇の制限を入れると、VNAV は水平になりその点まで保つ）、FCOM p.1261（11.31.27：on approach では MCP を 300 ft 以上上にしても降下を続ける。それ以外の降下では上の MCP で止まる、と読める）。
+  - 上昇と降下の制限：FCOM p.1255（11.31.21：VNAV PTH で出発（departure）と点の制限の内に）、p.1258（11.31.24：到着・進入の手続きの点は降下の点。巡航で先の点に入れた制限は E/D を作る）、FMSPG p.114（3.3-5：上昇の制限は手続きの選択か乗員の入力）。
+  - 進入の MCP 高度：FCTM p.187（5.41：最終進入の VNAV PTH で、着陸復行の高度の 300 ft 以上下になったら MCP を DA(H) からその高度へ）。
+  - 再開：FCOM p.645、p.665（MCP を直して高度セレクターを押すか、ピッチのモードを変える。経路の下なら MCP を直して経路に会えば続く）、p.649（4.10.11：巡航で押すと cruise climb・descent、50 NM の内の早期降下）。
+  - VNAV の終わり：FCOM p.645（TO/GA・FLCH SPD・V/S・ALT・G/S、FMC 2 台の故障）。engage の後に FMC のデータが無くなったとき：ATA22 p.341 の図では則への ENGAGE が VNAV VALID で消えるが（表示の latch は残る）、そのときのピッチは資料に無い（FCOM p.1431 の DESCENT PATH DELETED は「VNAV active」のまま）。
+- 作ったもの：
+  - 新しい純粋なモデル `B747.70.vnav_mode_model.lua`（`B747_vnav_mode_model`、自動操縦のモジュール）：
+    - `can_engage`：FMC DATA VALID（FMC の valid、master FMC、空中で RA 400 ft の上）。
+    - `unavailable`：VNAV を arm する押しで PERF/VNAV UNAVAILABLE（性能のデータが無い、か降下で FMC の valid が無い）。
+    - `update`（毎フレーム 1 回）：FMC の誘導の則（SPD→速度の則、降下と cruise descent→V/S の則、ほかは ALT の則）とその向き（上昇の SPD は上、ほかの SPD と下向きの V/S は下、ALT の則は 0、ただし `td_hold` は下）に従い、次の水平を持つ：
+      - "fmc"（VNAV PTH、FMC 高度）：VNAV SPD か cruise descent で FMC 高度を MCP 高度より先に捕捉（同じ高度なら MCP の捕捉でも）。FMC 高度が 50 ft より動くか `td_hold` で終わる。降下の経路（V/S の則）では FMC の制限で水平にならない（経路は制限を通って続く：LF2 のとおり VNAV ALT）。
+      - "mcp"（VNAV ALT）：MCP 高度の捕捉（MCP 高度で）、または MCP 高度が FMC の向きの先に無く機体が MCP の 100 ft の内（今の高度で profile が離れる：T/D の `td_hold`、ENG OUT の driftdown の始め＝FCOM p.1268 の条件 2 もここ）。後者は MCP が向きの後ろ 20 ft の内なら MCP 高度、それより後ろならその時の高度（向きに逆らって戻らない：推定）。
+      - "hold"（VNAV ALT、その時の高度）：MCP 高度が FMC の向きの後ろに 100 ft より離れている（上昇で下、降下で上）。on approach の降下で MCP が 300 ft 以上上なら食い違いにしない。
+      - "far"（VNAV PTH、その時の高度）：VNAV SPD・cruise descent で FMC 高度が向きの後ろに 100 ft より離れている（上昇の制限が下：FMSPG p.128。降下の下限が上：FMSPG p.227。降下の FMC 高度は下限で、AT OR BELOW は FMC が経路との低い方にして渡す）。FMC 高度が動く（点を順送り）か向きが変われば終わる。
+      - "invalid"（VNAV PTH、その時の高度）：engage 中に FMC の valid が無い。valid で終わる。ほかの水平は valid が無い間も続く。
+      - VNAV ALT（"mcp"・"hold"）は、押しの時に食い違いが無ければ終わる（MCP を直してから押す。押してから直しても続かない）。経路の下で MCP を直したなら経路が降りて来て終わる（直した時に判定：LF2）。on approach の降下で MCP が 300 ft 以上上になれば押さずに終わる（FCOM p.1261）。FMC がその高度を自分で保つ（ALT の則、向き 0、高度が同じ）と VNAV PTH に。
+      - 降下の経路の水平な所（FMC の V/S が 100 fpm より浅い：向き 0）では、食い違いと FMC 高度の捕捉は無いが、上からの MCP 高度は捕捉する（FMSPG p.227）。MCP が 20 ft より上なら捕捉しない。
+      - 出力：FMA（4・5・6）、則と目標（`p.vnav_law`・`vnav_vs`・`vnav_alt`）、A/T のモード（水平の間は SPD：FCOM p.645）。
+  - つなぎ：`afds_vnav_mode` を AFDS のモデルの後（その frame の engage の後）、ピッチの則の前に 1 回。捕捉は AFDS のピッチの則の `capture`（0.05 g の引き起こし）。MCP 高度の新しい水平（VNAV ALT と MCP 高度の捕捉）は、MCP 高度が落ち着いてから作る（`afds_vnav_mcp_settled` がモデルの `settled` に：窓の値が `VNAV_MCP_SETTLE_S`＝3 秒、実時間の SIM_PERIOD で数えて変わらないか、高度セレクターを押した後。押しは設定の終わり）。持っている水平の終わり方と FMC は窓の値をすぐ使う。`afds_vnav_level`・`afds_old_vnav_fma`・`B747_afds_vnav_lost`・`B747_ap_altitude` の arm の取り消しを外した。A/T には `vnav_at`・`vnav_level` をモデルから（A/T のモデルは変えない）。VNAV スイッチは押しで arm し、arm した押しでだけ PERF/VNAV UNAVAILABLE。
+  - AFDS のモデル（`B747.70.afds_model.lua`）：VNAV は arm と `inp.vnav_valid`（前の `vnav_engaged`）で engage する latch。FMC のデータが無くなっても終わらない（前は `old_law` の ALT HOLD。推定：上の資料）。`vnav_lost` を外した。master FMC の故障（段 11d2）はそのまま（モード故障、MCP 高度なら ALT HOLD）。
+  - FMC（`B747.68.vnav_model.lua`）：
+    - 新しい出力 `td_hold`（T/D を過ぎて、MCP が下でないので巡航を保つ）を `laminar/B747/fms/vnav/td_hold`（FMS の init で作る）に。
+    - `clb_target`：上昇の制限（`keep`）は、点のあるものを高度によらず点を過ぎるまで目標（前は機体の 300 ft より下なら飛ばした：FMSPG p.128。engage の時なら CHECK ALT TGT、後なら AFDS の "far"）。ほかは前のまま（点があれば機体の 300 ft 下まで）。
+    - `clb_keep`：上昇の制限は、SID の脚のもの（FCOM p.1255）と、手続きの無い航路の脚（乗員の入力：FMSPG p.114、p.128）で T/C（短い飛行では上昇が経路に会う T/D）の前のもの。到着・進入の脚（FCOM p.1258：降下の点）、T/C の後、cruise climb の間は上昇の制限にしない（線は推定）。つなぎ（`vnav_geo_set`）が予測の脚の手続き（`B747_fms_pred_input` の脚に `proc` を足した）と予測の T/C で決める。
+    - `des_target`：降下の FMC 高度は、次の制限（AT、AT OR ABOVE、窓の下限）か E/D。AT OR BELOW は、制限とその点の経路の低い方（FMSPG p.227 (4-16)：待機経路の節、ほかでも同じとしたのは推定）。つなぎが次の制限の種類（`des_kind`）とその点から E/D までの距離（`des_e`）を渡す。早期降下・速度介入・経路の降下のどれでも。CHECK ALT TGT の「間」もこの高度で見る。
+- 第 2 の手直し（2026-11-07、同じ日のレビューの指摘）：最初のパッチの次を直した。
+  - 降下の VNAV SPD（速度介入、速度の逆戻り）で、次の制限が AT OR BELOW で機体より上（経路はその下）だと "far" で水平になった（FCOM p.643 は VNAV SPD のまま）。→ `des_target`。
+  - ノブを回している途中の MCP 高度で VNAV ALT が固まった（前から：捕捉。パッチで食い違いの 0〜299 ft も）。進入で FCTM p.187 のとおり着陸復行の高度を DA から回すと、最終進入で VNAV ALT 1,400 ft に水平（つなぎの試験の仕組みで、パッチの前後とも再現）。→ MCP 高度が落ち着くまで MCP 高度の水平を作らないことと、on approach の 300 ft で VNAV ALT を解くこと。
+  - 上昇の制限を高度によらず保つ規則が、SID の無い区間の「E/D までの前半は上昇」という推定と重なり、到着の手続きの制限で上昇が止まり得た（高度セレクターを押しても解けない）。→ `clb_keep`。
+  - 降下の経路の水平な所で MCP 高度を捕捉しなかった、MCP が 100 ft の内の後ろなら向きに逆らって MCP 高度へ戻った、引用と推定の書き方（ATA22 p.341、FMSPG p.226–227）。
+- 第 3 の手直し（2026-11-07、レビューの指摘 4）：IAS/MACH の窓の自動の切り替え（`B747_ap_ias_mach_mode`、notes/ATA-22.md §54）を、VNAV の arm の間も働かせた（`vnav_state < 2`：MCP の速さを飛ぶ間。前は `vnav_state == 0` だけ）。段 9i では arm が FMC のデータを待って長く続きうるので、その間に上昇で M.84 を越えても窓が IAS のままだった（FCOM p.643 (4.10.4)）。試験は `vnav_mode_glue_test` の最後（V/S で arm して待つ間に M.842 で上昇：窓が Mach に）。
+- 推定：
+  - 400 ft は RA のまま（FCOM p.645 は「滑走路の標高の 400 ft 上」、p.1262 の進入復行は RA）。
+  - 「MCP 高度にいる」100 ft（FMC の CHECK_BAND_FT と同じ）、FMC 高度が後ろの 100 ft、降下の向きの V/S 100 fpm、MCP 高度へ戻ってよい 20 ft（ピッチの則の CAPTURE_NEAR と同じ）。
+  - MCP 高度が落ち着くまでの 3 秒（V/S・FLCH の捕捉の `setSimAlt` と同じ）、押しで即。落ち着くまで MCP 高度の新しい水平を作らないこと。
+  - 両方を同じフレームで捕捉したら、向きの先で近い方（前は MCP が先）。
+  - "far" と CHECK ALT TGT の FMA を VNAV PTH にしたこと、"hold"（MCP が後ろ）を VNAV ALT にしたこと（FCOM p.665 の「食い違い」。p.645 の VNAV ALT は MCP 高度を保つ）。
+  - FMC のデータが engage の後に無くなったとき、今の高度の VNAV PTH で待つこと（前は ALT HOLD）。
+  - VNAV ALT が FMC の保つ高度と同じになったら VNAV PTH に戻すこと。
+  - PERF/VNAV UNAVAILABLE の条件に「降下で FMC の valid が無い」を足したこと（FCOM p.645 の E/D の例）。経路が無いだけでは出さない（ATA34_2 p.621 は上昇の VNAV SPD に有効な経路を求めない。FMC の valid は今も有効な経路を求める：前からの簡略）。
+  - 上昇の制限の線（SID と、T/C の前の航路の脚。cruise climb では無し）、AT OR BELOW の経路との低い方を待機経路の外でも使うこと。
+- 利用者に見える変わり（X-Plane で確かめる）：
+  - T/D を過ぎても MCP が巡航高度なら VNAV ALT（前は VNAV PTH）。MCP を下げても、経路の上なので押すまで降りない（前は MCP を下げるだけで降下した）。s148 はそのように直した（押しを足した）。
+  - 降下で MCP を機体より上（on approach で 300 ft 未満も）、上昇で下にすると、その時の高度で VNAV ALT（前は VNAV が離れていった）。MCP を変えてから VNAV ALT になるまで 3 秒（押せばすぐ）。
+  - 進入で着陸復行の高度をノブで回しても VNAV PTH の降下が続く（前は途中の値で VNAV ALT）。VNAV ALT の間に MCP を 300 ft 以上上にすると、押さずに降下を続ける。
+  - 経路と性能のデータの前に VNAV を押すと arm して待つ（前は arm しない）。PERF/VNAV UNAVAILABLE は今までどおり出る。
+  - engage 中に FMC のデータが無くなっても VNAV のまま水平（前は ALT HOLD）。
+  - 上昇で、まだ先の点の上昇の制限が機体より下なら水平で待つ（前は 300 ft より下なら上がり続けた）。到着・進入の制限では止まらない。
+  - 降下の VNAV SPD（速度介入・早期降下）で次が AT OR BELOW の制限なら、制限とその点の経路の低い方で VNAV PTH の水平（FMSPG p.227。前は制限の高度で）。経路がその制限の下を通るなら、制限が機体より上でも VNAV SPD のまま経路の高さまで降りる（機体が制限と経路の両方より下なら、その時の高度で水平：同じ頁）。
+  - ENG OUT を MCP 高度の巡航で実行すると VNAV ALT（FCOM p.1268 の条件 2。前は捕捉の 20 ft の内だけ）。
+- 残り：
+  - FMC 2 台の故障で VNAV を外す（FCOM p.645）。今は段 11d2 の master FMC の故障と同じモード故障（ATA22 p.382）。
+  - 前の VNAV の死んだコード（`VNAV_modeSwitch` の後ろ、`vnav.lua`、`vnavspd.lua` の速度の状態機械）を消すこと。
+  - 有効な経路の無い上昇の VNAV SPD（ATA34_2 p.621）、FMC の最大高度の上で VNAV を使えないこと（FCTM p.128 (4.6)）、END OF DES の高度を固定すること（今は毎フレームの今の高度）。
+  - （前から、段 9i では直さない）SID の無い区間では、予測（`B747.68.pred_model.lua` の `clb_last`）とつなぎ（`vnav_geo_set`）が E/D までの距離の前半の制限を「上昇の制限」とする。巡航と降下でも同じで、前半に入った到着・進入の制限が降下の経路（`des_cons`）と降下の FMC 高度（`g.des`）から抜ける（LuaJIT で確かめた：降下の 20,000 ft で 20 NM 先の AT 15,000 が経路に入らず、そこの予測が 20,000 ft。`clb_last` を 0 にすると 15,000）。ILS の進入では G/S で VNAV が終わるので目立たない。到着・進入の手続きの脚を上昇に入れない（FCOM p.1258）のが直し方の候補。予測が変わるので、性能計測の作業と順番を合わせる。
+- 試験：
+  - 回帰：新しい `tests/autopilot/vnav_mode_model_test.lua` 80 件（engage と PERF/VNAV UNAVAILABLE、上昇の VNAV SPD・MCP の捕捉・押し・FMC 高度の捕捉と順送り・同時の捕捉・MCP にいる engage・MCP が下・下の制限・巡航・`td_hold`・VNAV ALT から PTH・cruise descent・driftdown の条件 2・降下の経路・MCP が上・on approach の 300 ft と VNAV ALT を解くこと・経路の水平な所の捕捉・経路の下の再開・早期降下・降下の下限と AT OR BELOW の FMC 高度・データの喪失・進入復行、MCP が後ろ 30 ft・80 ft でその時の高度、落ち着かない MCP では水平を作らない）、新しい `tests/autopilot/vnav_mode_glue_test.lua` 45 件（つなぎを通して：データの無い arm と 400 ft、上昇の MCP が下（3 秒で）、下の制限、T/D の VNAV ALT と押し、降下の MCP が上と on approach、データの喪失で VNAV のまま ALT の則、進入で着陸復行の高度をノブで回す、on approach の 250 ft から 350 ft、降下でノブを機体の下まで回して最後の値で VNAV ALT）、新しい `tests/fms/vnav_targets_test.lua` 13 件（FMS のモジュールで：予測の脚の手続き、到着の AT OR BELOW は上昇の目標にならない、T/C の前の航路の制限はなる、降下の AT OR BELOW の FMC 高度は経路との低い方）、`afds_glue_test.lua` 280 件（PERF/VNAV UNAVAILABLE でも arm、データの喪失で VNAV PTH、arm の待ち。MCP を変える所は押しで落ち着かせた。フレームの数は前と同じにした：試験の機体は答えないので、ピッチの指令は G/S の試験の前で下限の近く）、`afds_model_test.lua` 393 件（latch）、`afds_vnav_alt_test.lua` 11 件（LF2 の試験。MCP を変えた後に落ち着くのを待つ）、`vnav_model_test.lua` 224 件（`td_hold`、`clb_target` と `clb_keep`、`des_target`）、`vnav_msgs_test.lua` 30 件（FMS のモジュールで `td_hold`）。全 231 本（2026-11-08 の取り込みでは 233 本、構文 563 本）。最初のパッチでは、新しい試験のうち model 8 件・glue 5 件・vnav_targets 5 件・vnav_model 6 件が落ちる（無い関数は仮に置いて数えた）。
+  - X-Plane（カスタム acf、2026-11-08 00:59〜05:43、X-Plane を起動し直して読み込ませた）：
+    - 回帰の 18 本は合格：s137 13/13、s139 28/28、s140 16/16、s141 47/47、s143 15/15、s144 29/29、s145 30/30、s146 30/30、s149 27/27、s150 34/34、s156 25/25、s157 34/34、s169 15/15、s206 17/17、s251 33/33、s253 33/33、s266 23/23、s267 15/15。直した `s148_vnav_speed_reversion` も 27/27。Lua の誤りなし。
+    - 最初の s264・s148 は、利用者の設定の Auto step climb（11-06 から ON）が、巡航の VNAV で MCP を FMC の AT NOW のステップ（FL350）にして高度セレクターを押し、上昇していった。ランナーが手順の前に切るようにした（TESTING.md §4.6、コミット 3e48cf29）。
+    - 新しい `s265_vnav_climb_conflicts` 22/22（警告 1）。最初は、VNAV を押したときの PERF/VNAV UNAVAILABLE がスクラッチパッドに残って、経路と PERF INIT の字が入らなかった（シナリオに CLR を足した。旗 30 は FMC が一度だけのメッセージとして出したら下ろすので、スクラッチパッドで見る）。直した後は、arm から FMC DATA VALID で VNAV SPD・THR REF。上昇で MCP を機体の下にすると、3 秒でその時の高度の VNAV ALT・A/T SPD になり、3,300 fpm から 0.05 g の引き起こしで 1,380 ft 上で止まって戻った（ALT HOLD を押したときと同じ。シナリオの幅を 1,000 ft から 1,500 ft に）。MCP を戻すだけでは VNAV ALT のまま、押すと VNAV SPD で上昇を続ける。
+    - 新しい `s264_vnav_alt_td_hold` 37/40。空中開始を s143 より 25 NM 西にして、T/D の前に FL300 で落ち着かせた（1 回目は T/D が揺れの終わりと重なり、MCP の 30〜140 ft 上で T/D を過ぎた）。T/D の 2 分前に RESET MCP ALT、T/D で td_hold・VNAV ALT・A/T SPD・FMC は巡航のまま、押すだけでは VNAV ALT のまま、MCP を 10,000 ft に下げても経路の上なので VNAV ALT のまま、は合格。MCP を下げてから押しても VNAV ALT が解けなかったのは、高度セレクターの押しが 2 回に 1 回失われていたため（本家からの、放しの届かない押しの扱い。次のコミットで直す）。

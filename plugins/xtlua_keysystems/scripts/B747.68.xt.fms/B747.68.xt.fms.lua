@@ -1398,9 +1398,10 @@ function B747_fms_pred_input(crz)
       rwy = rwy or i
     end
     -- (p0, p1: the great circle's ends, for the ND's profile points; step
-    -- 9e4: the leg's glide path angle down, the CIFP's: FCOM p.1262)
+    -- 9e4: the leg's glide path angle down, the CIFP's: FCOM p.1262; step
+    -- 9i: its procedure, for VNAV's climb constraints: vnav_geo_set)
     legs[i] = {name = l.fix and l.fix.ident or "", dist = d, con = con, p0 = p0, p1 = l.fix,
-      gp = (l.vangle and l.vangle < 0) and -l.vangle or nil, step = l.step}
+      gp = (l.vangle and l.vangle < 0) and -l.vangle or nil, step = l.step, proc = l.proc}
     if l.proc == "SID" then clbLast = i end
     if con and not rwy and not (missed and l.proc == "APPR") then lastCon, lastConX = i, total end
   end
@@ -1683,6 +1684,9 @@ B747DR_fms_vnav_perf = find_dataref("laminar/B747/fms/vnav/perf")
 B747DR_fms_vnav_dist = find_dataref("laminar/B747/fms/vnav/dist")
 -- (step 9h4b) the engine-out driftdown for the A/T
 B747DR_fms_vnav_dd = find_dataref("laminar/B747/fms/vnav/dd")
+-- (step 9i) past the T/D, the cruise kept by the MCP altitude: the AFDS's
+-- VNAV ALT (FMSPG p.34 (2-22))
+B747DR_fms_vnav_td_hold = find_dataref("laminar/B747/fms/vnav/td_hold")
 B747DR_fms_alt_sel_pushes = find_dataref("laminar/B747/autopilot/alt_sel_pushes")
 -- (step 9e3) the AFDS's pitch mode (the FMA's: 1 TO/GA, in the air G/A's)
 B747DR_fms_afds_pitch = find_dataref("laminar/B747/autopilot/FMA/active_pitch_mode")
@@ -1793,14 +1797,25 @@ function vnav_geo_set(s, r)
       if l.p1 and lx[i] < r.td then g.pre_td[l.p1] = true end
     end
   end
+  -- (step 9i) the climb's own constraints, kept at any altitude until their
+  -- waypoints (B747_vnav_model.clb_keep): the SID's, and the enroute legs'
+  -- before the T/C or, a short flight's, the T/D where the climb meets the
+  -- path; none in a cruise climb (estimates: FCOM p.1258, a constraint
+  -- entered in the cruise a descent one). The descent's kinds and points,
+  -- for its FMC altitude (B747_vnav_model.des_target)
+  local line = vnavState.crz_chg ~= "CLB" and (r.tc or r.td) or nil
+  g.des_k, g.des_p = {}, {}
   for i, l in ipairs(s.legs) do
     local c = l.con
     if c and (not s.ed or i < s.ed) then
       if i <= clbLast then
         -- (2026-11-05) with its waypoint, for the target's choice below
-        if c.kind == "AT" or c.kind == "B" or c.kind == "W" then g.clb[#g.clb + 1] = {a = c.a, p = l.p1} end
+        if c.kind == "AT" or c.kind == "B" or c.kind == "W" then
+          g.clb[#g.clb + 1] = {a = c.a, p = l.p1, keep = B747_vnav_model.clb_keep(l.proc, lx[i], line)}
+        end
       else
-        g.des[#g.des + 1] = c.kind == "W" and c.b or c.a
+        local n = #g.des + 1
+        g.des[n], g.des_k[n], g.des_p[n] = c.kind == "W" and c.b or c.a, c.kind, l.p1
       end
     end
   end
@@ -2203,13 +2218,22 @@ local function update_vnav()
   inp.ias = simDR_ias_pilot
   inp.engaged = B747DR_ap_vnav_state == 2
   inp.clb_alt, inp.des_alt, inp.path, inp.d_ed = nil, nil, nil, nil
+  inp.des_kind, inp.des_e = nil, nil
   if g then
     -- the climb's next AT, AT OR BELOW or block constraint: (2026-11-05)
     -- kept through a level-off's overshoot while its waypoint is ahead
     -- (B747_vnav_model.clb_target; before, 100 ft over it went on to the
-    -- next: s253)
+    -- next: s253; step 9i: a climb constraint at any altitude)
     inp.clb_alt = B747_vnav_model.clb_target(g.clb, inp.alt, inp.crz_alt, point_passed)
     inp.des_alt = g.des[1] or g.hed
+    -- (step 9i) its kind and its point's distance to go to the E/D: an AT
+    -- OR BELOW's FMC altitude the lower of it and the path there
+    -- (B747_vnav_model.des_target; FMSPG p.227 (4-16))
+    if g.des[1] then
+      local p = g.des_p and g.des_p[1]
+      inp.des_kind = g.des_k and g.des_k[1] or nil
+      inp.des_e = p and g.rem and g.rem[p] or nil
+    end
     if g.path and g.first then
       -- the distance to go: to the active route's first point the
       -- predictions had (step 9c: the active leg's once LNAV sequenced),
@@ -2253,6 +2277,8 @@ local function update_vnav()
   B747DR_fms_vnav_vs = out.vs or 0
   B747DR_fms_vnav_path_dev = out.path_dev or 0
   B747DR_fms_vnav_at = out.at or 0
+  local tdh = out.td_hold and 1 or 0
+  if B747DR_fms_vnav_td_hold ~= tdh then B747DR_fms_vnav_td_hold = tdh end
   -- (step 9h4b) the driftdown; the predictions at once when it starts or
   -- ends (its level off: s157's first ones were before it)
   local dd = out.dd and 1 or 0

@@ -209,6 +209,9 @@ B747DR_fms_vnav_on_app					= deferred_dataref("laminar/B747/fms/vnav/on_app", "n
 -- (step 9h4b) the engine-out driftdown (1: FCOM p.1268): the A/T's THR
 -- without its HOLD at the V/S
 B747DR_fms_vnav_dd						= deferred_dataref("laminar/B747/fms/vnav/dd", "number")
+-- (step 9i) past the T/D, the cruise kept by the MCP altitude (1): the
+-- AFDS's VNAV ALT (B747.70.vnav_mode_model.lua; FMSPG p.34 (2-22))
+B747DR_fms_vnav_td_hold					= deferred_dataref("laminar/B747/fms/vnav/td_hold", "number")
 -- (step 9g3) the thrust limit's assumed temperature (°C, -99 none) and the
 -- takeoff derate (%) for the EEC's reference (B747.42.ref_thrust_model.lua)
 B747DR_fms_thrlim_sel					= deferred_dataref("laminar/B747/fms/thrlim/sel", "number")

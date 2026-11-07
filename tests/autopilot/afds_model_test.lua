@@ -13,8 +13,9 @@
 -- (TO/GA as the 1e model has it: T/O by the first F/D ON on the ground, G/A
 -- by A.toga in the air.)
 -- 1c: the pitch modes V/S (synced: 000 after ALT and TO/GA descending),
--- ALT HOLD, the capture, FLCH (its speed), VNAV (arm, second push, the old
--- VNAV's engage and end), the transitions, the SPD switch, the FMA's pitch.
+-- ALT HOLD, the capture, FLCH (its speed), VNAV (arm, second push, the
+-- engage on FMC DATA VALID and its latch: the FMC's step 9i), the
+-- transitions, the SPD switch, the FMA's pitch.
 -- 1d: the approach modes LOC, G/S and APP (arms, second pushes, the mutual
 -- disarms with LNAV and VNAV, captures within 120 and 80 degrees, either
 -- first (the 109, the 570) or after LOC (a 405), deselects, TO/GA, the
@@ -35,8 +36,8 @@ local function inp(o)
         old_armed_roll = o.old_armed_roll, dt = o.dt or 0.1, at_spd = o.at_spd or false,
         vs = o.vs or 0, alt = o.alt or 10000, old_pitch = o.old_pitch, window_open = o.window_open,
         ias = o.ias or 250, mcp_ias = o.mcp_ias or 250, fmc_speed = o.fmc_speed, capture = o.capture or false,
-        capture_alt = o.capture_alt, vnav_engaged = o.vnav_engaged or false, vnav_fma = o.vnav_fma,
-        old_law = o.old_law, old_armed_pitch = o.old_armed_pitch, old_hold_alt = o.old_hold_alt,
+        capture_alt = o.capture_alt, vnav_valid = o.vnav_valid or false, vnav_fma = o.vnav_fma,
+        old_armed_pitch = o.old_armed_pitch,
         loc_detect = o.loc_detect, gs_detect = o.gs_detect, course_err = o.course_err,
         gs_after_loc = o.gs_after_loc, sensors = o.sensors, power = o.power, gear_alt = o.gear_alt,
         fcc = o.fcc, mcp = o.mcp, stby = o.stby, iru = o.iru, adc = o.adc, trim = o.trim, wheel = o.wheel,
@@ -542,8 +543,9 @@ A.alt_hold(pc, inp({alt = 9000}))
 A.update(pc, inp({fdL = true, capture = true, capture_alt = 9500}))
 T.equal(pc.hold_alt, 9000, "ALT HOLD is not a capture: still 9,000")
 -- VNAV (FCOM p.645; ATA22 p.340): armed by the first push, the active mode
--- stays (the old arm forced ALT HOLD); the second push disarms; engaged by
--- the old VNAV; V/S ends it, not its arm; not armed with G/S active
+-- stays (the old arm forced ALT HOLD); the second push disarms; engaged on
+-- FMC DATA VALID (the FMC's step 9i); V/S ends it, not its arm; not armed
+-- with G/S active
 local pv = A.new()
 A.update(pv, inp({fdL = true}))
 A.alt_hold(pv, inp({alt = 9000}))
@@ -554,9 +556,9 @@ T.check(va == 9 and varm == 4, "the FMA: ALT, VNAV armed")
 A.vnav(pv, inp())
 T.check(not pv.vnav_arm, "the second push disarms")
 A.vnav(pv, inp())
-A.update(pv, inp({fdL = true, vnav_engaged = true}))
-T.check(pv.pitch == "VNAV" and not pv.vnav_arm, "the old VNAV engaged: VNAV")
-T.equal(select(1, A.pitch_fma(pv, inp({vnav_fma = 6}))), 6, "the FMA: the old VNAV's VNAV PTH")
+A.update(pv, inp({fdL = true, vnav_valid = true}))
+T.check(pv.pitch == "VNAV" and not pv.vnav_arm, "FMC DATA VALID: VNAV engaged (ATA22 p.341)")
+T.equal(select(1, A.pitch_fma(pv, inp({vnav_fma = 6}))), 6, "the FMA: the VNAV mode model's VNAV PTH")
 A.vnav(pv, inp())
 T.equal(pv.pitch, "VNAV", "a push while active: nothing")
 A.vnav(pv, inp())
@@ -572,13 +574,26 @@ pv2.pitch = "VS"
 A.vnav(pv2, inp())
 A.vs(pv2, inp({vs = 0}))
 T.check(pv2.vnav_arm, "V/S keeps VNAV's arm")
--- VNAV ended by the old VNAV (no route): the old law's mode then
+-- (the FMC's step 9i) VNAV engaged is a latch (ATA22 p.341: a new pitch
+-- mode resets it): the FMC's data lost does not end it (before, into ALT
+-- HOLD at the altitude); armed without the data, it waits (ATA22 p.340:
+-- VNAV ARM until FMC DATA VALID; before, the glue cancelled the arm)
 local pv3 = A.new()
 A.update(pv3, inp({fdL = true}))
 A.vnav(pv3, inp())
-A.update(pv3, inp({fdL = true, vnav_engaged = true}))
-A.update(pv3, inp({fdL = true, vnav_engaged = false, old_law = "ALT", alt = 31000}))
-T.check(pv3.pitch == "ALT" and pv3.hold_alt == 31000, "the old VNAV ended: its ALT")
+A.update(pv3, inp({fdL = true, vnav_valid = true}))
+A.update(pv3, inp({fdL = true, vnav_valid = false, alt = 31000}))
+T.check(pv3.pitch == "VNAV" and not pv3.hold_alt, "the FMC's data lost: VNAV still (the mode model holds the altitude)")
+local pv5 = A.new()
+A.update(pv5, inp({fdL = true}))
+A.alt_hold(pv5, inp({alt = 9000}))
+A.vnav(pv5, inp())
+for _ = 1, 50 do A.update(pv5, inp({fdL = true, vnav_valid = false})) end
+T.check(pv5.vnav_arm and pv5.pitch == "ALT", "no FMC DATA VALID: VNAV stays armed, ALT active")
+A.update(pv5, inp({fdL = true, vnav_valid = true}))
+T.check(pv5.pitch == "VNAV" and not pv5.vnav_arm, "valid: engaged from the arm")
+A.alt_hold(pv3, inp({alt = 31000}))
+T.check(pv3.pitch == "ALT" and pv3.hold_alt == 31000, "ALT HOLD ends it")
 -- the SPD switch (FCOM p.642)
 T.equal(A.spd_works(pv3, inp()), true, "SPD works in ALT")
 A.flch(pv3, inp({window_open = true}))
@@ -594,20 +609,6 @@ A.update(po, inp({fdL = true}))
 A.vnav(po, inp())
 A.update(po, inp())
 T.check(not po.pitch and not po.vnav_arm, "everything off: no pitch mode, no VNAV arm")
--- the old VNAV ended into ALT: at the old law's altitude
-local pv4 = A.new()
-A.update(pv4, inp({fdL = true}))
-A.vnav(pv4, inp())
-A.update(pv4, inp({fdL = true, vnav_engaged = true}))
-A.update(pv4, inp({fdL = true, vnav_engaged = false, old_law = "ALT", alt = 30950, old_hold_alt = 31000}))
-T.check(pv4.pitch == "ALT" and pv4.hold_alt == 31000, "the old VNAV ended: ALT at its 31,000 (not the present 30,950)")
--- VNAV lost (no route for the old VNAV): the arm ends, the active mode stays
-local pv5 = A.new()
-A.update(pv5, inp({fdL = true}))
-A.alt_hold(pv5, inp({alt = 9000}))
-A.vnav(pv5, inp())
-A.vnav_lost(pv5)
-T.check(not pv5.vnav_arm and pv5.pitch == "ALT", "VNAV lost: the arm ends, ALT stays")
 -- G/S captured ends the pitch mode (FCOM p.645)
 local pg2 = A.new()
 A.update(pg2, inp({fdL = true}))
@@ -647,7 +648,7 @@ T.equal(select(1, A.pitch_fma(pt4, inp())), 1, "the FMA's TO/GA")
 local pt5 = A.new()
 A.update(pt5, inp({fdL = true}))
 A.vnav(pt5, inp())
-A.update(pt5, inp({fdL = true, vnav_engaged = true}))
+A.update(pt5, inp({fdL = true, vnav_valid = true}))
 A.toga(pt5, inp({fdL = true}))
 T.check(pt5.pitch == "GA", "TO/GA ends VNAV")
 -- VNAV from G/A at any height (table p.335: V/S, ALT HOLD and FLCH only
@@ -808,7 +809,7 @@ A.update(to2, inp({fdL = true, ra = 40, lnav_valid = true}))
 T.equal(to2.roll, "TO", "below 50 ft: T/O's roll")
 A.update(to2, inp({fdL = true, ra = 60, lnav_valid = true}))
 T.check(to2.roll == "LNAV" and to2.pitch == "TO", "above 50 ft: LNAV, T/O's pitch")
-A.update(to2, inp({fdL = true, ra = 420, lnav_valid = true, vnav_engaged = true}))
+A.update(to2, inp({fdL = true, ra = 420, lnav_valid = true, vnav_valid = true}))
 T.equal(to2.pitch, "VNAV", "VNAV engaged: T/O's pitch ends")
 -- the MCP altitude captured from T/O only above 800 ft RA (table p.335)
 local tc = A.new()
@@ -1133,7 +1134,7 @@ T.check(A.engaged(mn2) == 0 and mn2.disc, "two receivers failed: disengaged (p.3
 -- the MCP altitude ALT HOLD; a sensor lost meanwhile stays failed
 local function fmc_inp(o)
     o = o or {}
-    o.fdL, o.lnav_valid, o.vnav_engaged = true, true, true
+    o.fdL, o.lnav_valid, o.vnav_valid = true, true, true
     o.capture_alt = o.capture_alt or 20000
     return inp(o)
 end

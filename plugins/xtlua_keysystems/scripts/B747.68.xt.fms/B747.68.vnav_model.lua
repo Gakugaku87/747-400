@@ -349,6 +349,26 @@ local function reversion(s, P, inp, kind, tr, target)
     s.rev, s.rev_cas = kind, cas
 end
 
+-- (6-1/6-2 step 9i) the descent's FMC altitude (VNAV SPD captures it,
+-- B747.70.vnav_mode_model.lua levels under it once behind: its "far"): the
+-- next constraint's (an AT's, an AT OR ABOVE's, a window's lower) or the
+-- E/D's; an AT OR BELOW the lower of it and the path at its point (FMSPG
+-- p.227 (4-16): in the descent the FMC descends until reaching an AT OR
+-- BELOW constraint or the descent path altitude, whichever is lowest; the
+-- page's holding pattern, the same elsewhere an estimate). An AT OR BELOW's
+-- altitude itself, the path under it, would level VNAV SPD in speed
+-- intervention or the speed reversion under it (FCOM p.643: VNAV SPD until
+-- the airplane intercepts an altitude constraint); before step 9i, the AFDS
+-- did not level under the FMC altitude
+function M.des_target(inp)
+    local a = inp.des_alt
+    if a and inp.des_kind == "B" and inp.path and inp.des_e then
+        local h = M.path_at(inp.path, inp.des_e)
+        if h and h < a then a = h end
+    end
+    return a
+end
+
 -- inp:
 --   P            the performance database (cas_to_mach, mach_to_cas,
 --                econ_limit)
@@ -376,7 +396,10 @@ end
 --                altitude (ft; the CRZ page's MAX), else nil
 --   clb_alt      the climb's next AT or AT OR BELOW constraint below CRZ
 --                ALT ahead (ft) or nil; des_alt the descent's next
---                constraint ahead or the E/D's (ft) or nil
+--                constraint ahead or the E/D's (ft) or nil; (step 9i)
+--                des_kind its kind ("AT", "A", "B", "W": des_alt a
+--                window's lower) and des_e its point's distance to go to
+--                the E/D (NM), or nil (see des_target)
 --   path         the descent path ({e, h, k}: see path_at) or nil;
 --                d_ed the distance to go to the E/D (NM) or nil
 -- out: valid, phase ("CLB", "CRZ", "DES"), crz_chg (the cruise climb's
@@ -387,7 +410,8 @@ end
 --   above the path), at (the A/T mode), msg ("DRAG" for DRAG REQUIRED,
 --   "THRUST" for THRUST REQUIRED, else nil: step 9e1), end_des (END OF DES:
 --   step 9e2), title ("LIM SPD", "VREF + 100" or nil: step 9h3b), dd (the
---   driftdown: step 9h4b), check_alt (CHECK ALT TGT: step 11c2b)
+--   driftdown: step 9h4b), check_alt (CHECK ALT TGT: step 11c2b), td_hold
+--   (step 9i: past the T/D, the cruise kept by the MCP altitude)
 function M.update(s, inp)
     local out = s.out
     local P = inp.P
@@ -406,6 +430,7 @@ function M.update(s, inp)
 
     -- the phase
     local ph = s.phase
+    local tdHold = false
     if inp.ground or not inp.active then
         ph = "CLB"
         s.early, s.crz_chg = false, nil
@@ -436,7 +461,16 @@ function M.update(s, inp)
             local ref = inp.crz_alt and math.min(inp.alt, inp.crz_alt) or inp.alt
             local mcpBelow = inp.mcp_alt and inp.mcp_alt < ref - M.MCP_BELOW
             local past = path_h and etd and inp.d_ed <= etd + 1e-6
-            if past and path_h <= inp.alt + 50 and mcpBelow then ph, s.crz_chg = "DES", nil end
+            if past and path_h <= inp.alt + 50 then
+                if mcpBelow then
+                    ph, s.crz_chg = "DES", nil
+                elseif ph == "CRZ" and not s.crz_chg then
+                    -- (step 9i) the cruise kept by the MCP altitude where the
+                    -- descent would begin: the AFDS's VNAV ALT there
+                    -- (FMSPG p.34 (2-22); B747.70.vnav_mode_model.lua)
+                    tdHold = true
+                end
+            end
         end
         -- the early descent until the path comes down to the airplane (at
         -- once on or above it where it descends: past the T/D)
@@ -450,6 +484,7 @@ function M.update(s, inp)
     s.crz_last = inp.crz_alt
     out.phase = ph
     out.crz_chg = s.crz_chg
+    out.td_hold = tdHold
     -- (step 9h4b) the driftdown: from the cruise descent's start over the
     -- engine-out maximum (or ENG OUT's execution in it), until CRZ ALT or
     -- under the maximum at its start
@@ -494,6 +529,9 @@ function M.update(s, inp)
         if cas < out.cas then out.cas, out.mach, out.mach_mode = cas, P.cas_to_mach(cas, inp.alt), false end
     end
     out.path_alt, out.path_dev, out.vs, out.msg = nil, nil, nil, nil
+    -- (step 9i) the descent's FMC altitude: an AT OR BELOW's the lower of it
+    -- and the path at its point (des_target)
+    local desAlt = M.des_target(inp)
     -- (step 9e2) on approach speed intervention keeps the path; END OF DES
     local int = inp.spd_int and not inp.on_app
     out.end_des = (ph == "DES" and inp.end_des) and true or nil
@@ -524,7 +562,7 @@ function M.update(s, inp)
         -- the early descent: VNAV SPD, the A/T's THR to the rate (speed/
         -- thrust: ATA34_2 p.615)
         out.mode, out.at, out.vs = "SPD", M.AT_THR, -M.EARLY_VS
-        out.alt = inp.des_alt
+        out.alt = desAlt
         if path_h then out.path_alt, out.path_dev = path_h, inp.alt - path_h end
     elseif out.end_des then
         -- (step 9e2) END OF DES (FCOM p.1391: the E/D passed, no climb after
@@ -540,11 +578,11 @@ function M.update(s, inp)
         -- On approach VNAV PTH stays with the A/T on speed (p.643, p.1261:
         -- step 9e2, below)
         out.mode, out.at = "SPD", M.AT_IDLE
-        out.alt = inp.des_alt
+        out.alt = desAlt
         if path_h then out.path_alt, out.path_dev = path_h, inp.alt - path_h end
     else
         out.mode = "PTH"
-        out.alt = inp.des_alt
+        out.alt = desAlt
         out.at = M.AT_IDLE
         local tr = inp.des and inp.des.trans_alt or 10000
         local ias = inp.ias
@@ -632,25 +670,49 @@ end
 
 -- (2026-11-05) the climb's next AT, AT OR BELOW or block constraint, VNAV's
 -- target (`clb_alt` above): `list` the climb's constraints in route order
--- ({a = feet, p = its waypoint or nil}), `passed(p)` true once a waypoint
--- is passed. Its waypoint not passed, and kept up to CLB_HOLD_FT under the
--- airplane (a level-off's overshoot; estimate): VNAV PTH remains within the
--- departure's constraints (FCOM p.1255). One without a waypoint 100 ft
--- under, as before. Under CRZ ALT; nil without one. Before, any constraint
--- 100 ft under the airplane was taken as passed: s253 (GE, FAOR's EXOB1C)
--- went 104 ft over FL090B short of OR390 in the level-off, the target became
+-- ({a = feet, p = its waypoint or nil, keep = a climb constraint's: see
+-- clb_keep}), `passed(p)` true once a waypoint is passed. Its waypoint not
+-- passed, and kept up to CLB_HOLD_FT under the airplane (a level-off's
+-- overshoot; estimate): VNAV PTH remains within the departure's
+-- constraints (FCOM p.1255). One without a waypoint 100 ft under, as
+-- before. Under CRZ ALT; nil without one. Before, any constraint 100 ft
+-- under the airplane was taken as passed: s253 (GE, FAOR's EXOB1C) went
+-- 104 ft over FL090B short of OR390 in the level-off, the target became
 -- the next constraint, and VNAV SPD climbed on to the MCP's 15,000 ft (the
 -- user's report there, "LNAV and VNAV in a mess", flew the GE: perhaps
--- this)
+-- this). (Step 9i) A climb constraint (`keep`) with a waypoint is kept at
+-- any altitude until the waypoint is passed (FMSPG p.128 (3.3-19): a climb
+-- constraint entered below the airplane, VNAV engaged levels and holds the
+-- altitude until sequencing the waypoint): below the airplane it is the
+-- AFDS's level (B747.70.vnav_mode_model.lua's "far", or CHECK ALT TGT at
+-- the engage). The others in the list (the predictions' climb by the half
+-- of the way, an estimate, can hold an arrival's constraints on a short
+-- route) as before: one more than CLB_HOLD_FT under the airplane missed,
+-- the climb on (kept at any altitude, an arrival's AT OR BELOW the airplane
+-- had climbed over would stop the climb until its waypoint, in the descent)
 M.CLB_HOLD_FT = 300
 function M.clb_target(list, alt, crz_alt, passed)
     for _, e in ipairs(list) do
-        if e.a > alt - (e.p and M.CLB_HOLD_FT or 100) and (not crz_alt or e.a < crz_alt)
-                and not (e.p and passed(e.p)) then
+        local under = (e.p and e.keep) or e.a > alt - (e.p and M.CLB_HOLD_FT or 100)
+        if under and (not crz_alt or e.a < crz_alt) and not (e.p and passed(e.p)) then
             return e.a
         end
     end
     return nil
+end
+
+-- (step 9i) a constraint of the climb's list a climb constraint (`keep`
+-- above): a departure's (the SID's legs: FCOM p.1255, "departure or
+-- waypoint constraints"), or an enroute leg's (no procedure: the crew's
+-- entry, FMSPG p.114 (3.3-5) and p.128 (3.3-19)) before the predictions'
+-- T/C `tc` (NM ahead; nil: none, the cruise). Not an arrival's or an
+-- approach's (FCOM p.1258: their waypoints are the descent's) nor one after
+-- the T/C (FCOM p.1258: entered in the cruise on a downstream waypoint, an
+-- E/D). The line at the T/C, for an enroute leg: estimate. `proc` the leg's
+-- procedure ("SID", "STAR", "APPR" or nil), `x` its distance ahead (NM)
+function M.clb_keep(proc, x, tc)
+    if proc == "SID" then return true end
+    return proc == nil and tc ~= nil and x ~= nil and x <= tc + 0.01
 end
 
 return M

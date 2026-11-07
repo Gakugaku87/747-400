@@ -1262,4 +1262,4 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
   - 回帰：`s261_mcp_mach_limit` 9/9、`s262_at_vmin_margin` 8/8、`s263_alt_hold_light_high` 11/11、`s07_cruise_ff` 7/7、`s10_overspeed` 22/22。Lua の誤りなし（`Output/B747_xtlua_errors.txt` が出ない）。
 - 残り：
   - ALT のまま戻る降下でも切り替わる（空中開始の上昇の後）。実機の FCC が ALT HOLD で切り替えるかは資料に無い。空中開始の機首上げ（PROGRESS.md の「気づいたこと」、Fable の予定）を直せば、キットの点では起きにくくなる。
-  - VNAV の arm の間は切り替えが働かない（`vnav_state == 0` の条件）。VNAV の作り直し（段 9i）で arm が長く続くので、その取り込みのときに扱う。
+  - VNAV の arm の間は切り替えが働かない（`vnav_state == 0` の条件）。VNAV の作り直し（段 9i）で arm が長く続くので、その取り込みのときに扱う。→ 段 9i の取り込みで直した（2026-11-08。`vnav_state < 2`：arm の間も。notes/ATA-34-61-FMC.md §150 の第 3 の手直し）。

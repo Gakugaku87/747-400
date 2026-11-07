@@ -453,10 +453,11 @@ end
 function B747_vnav_speed()
     
     if B747DR_ap_vnav_state==0 then return end
+    -- (no longer called: the FMC's step 9c took the old VNAV's speeds off;
+    -- step 9i took VNAV's cancel without CRZ ALT off, B747_afds_vnav_lost:
+    -- VNAV's arm waits for the FMC's data, ATA22 p.340)
     if getFMSData("crzalt")==nil then
         print("B747_vnav_speed nil "..B747BR_cruiseAlt)
-        -- through the AFDS model (6-3 step 1c: its arm would set it again)
-        B747_afds_vnav_lost()
     end
     local radarAltRefresh=simDR_radarAlt1
     local pressureAltRefresh=simDR_pressureAlt1
