@@ -16,5 +16,7 @@ and `Exterior_Fuselage(fornml).png` (in `objects/747_exterior/`) are not
 in this branch (2026-11-06). X-Plane loads a .dds in place of the .png of
 the same name, so they would be drawn on the custom acf's objects.
 
-The other acf files, `747-400_XP11.acf` and `747-400LCF.acf`, are not in
-this branch either (2026-11-08): `747-400.acf` is the only acf here.
+The other acf files, `747-400_XP11.acf` and `747-400LCF.acf`, and the
+files named after them (their sounds in `fmod/`, icons, terrain radar and
+VR files, and their icons in the liveries) are not in this branch either
+(2026-11-08): `747-400.acf` is the only acf here.

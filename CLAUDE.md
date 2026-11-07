@@ -11,7 +11,7 @@ Boeing 747-400（Sparky744）のシステムとアビオニクスを、実機に
   - `archive/old-master`：旧フォークの最終状態。参照専用。
   - `master`：2026-10-23 から `overhaul` と同じ中身（旧フォークの履歴は、マージコミットの親と `archive/old-master` に残る）。
   - `overhaul-base`：`overhaul` の土台（本家の `041c9ffa`）。動かさない。作り直しの差分は `overhaul-base...overhaul` で見る。
-  - `custom`：`overhaul` に、カスタム acf を `747-400.acf`（音は `fmod/747-400.snd`）として入れたもの（2026-10-24 利用者）。純正 acf の外装のテクスチャ 5 枚は入れない（X-Plane が同じ名前の `.png` の代わりに読み、カスタム acf の外装に貼られるため。2026-11-06 利用者）。`747-400.acf` のほかの acf（XP11 用の `747-400_XP11.acf` と `747-400LCF.acf`）も入れない（2026-11-08 利用者）。作業ツリーでは切り替えない。`overhaul` にコミットするたびに `bash docs/overhaul/tools/update_custom_branch.sh` でマージコミットを作り（作業ツリー・index・HEAD は触らない）、push する。手でコミットしない。
+  - `custom`：`overhaul` に、カスタム acf を `747-400.acf`（音は `fmod/747-400.snd`）として入れたもの（2026-10-24 利用者）。純正 acf の外装のテクスチャ 5 枚は入れない（X-Plane が同じ名前の `.png` の代わりに読み、カスタム acf の外装に貼られるため。2026-11-06 利用者）。`747-400.acf` のほかの acf（XP11 用の `747-400_XP11.acf` と `747-400LCF.acf`）と、その名前で始まる付属のファイル（音・アイコン・リバリーの中のアイコンなど）も入れない（2026-11-08 利用者）。作業ツリーでは切り替えない。`overhaul` にコミットするたびに `bash docs/overhaul/tools/update_custom_branch.sh` でマージコミットを作り（作業ツリー・index・HEAD は触らない）、push する。手でコミットしない。
 - 3D モデル・テクスチャ・サウンドは対象外。
 - 進み具合：`docs/overhaul/PROGRESS.md`。計画：`docs/overhaul/PLAN.md`。
 
