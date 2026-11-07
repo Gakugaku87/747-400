@@ -301,7 +301,7 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
     - 上昇率は、気圧高度の 60 秒の最小二乗の傾きを窓の中央に置く（`Get-PerfClimbRates`）。フェーズ1の軽い重量の ALT HOLD は、周期 10.5 秒・130 fpm で揺れていた。60 秒で平均すると、その影響は 2 fpm 足らずになる。
     - いったん 600 fpm を超えた後、300 fpm を切って 10 秒そのままなら、切った所の高度（前の窓との間を補間）を上限高度にする（`Get-PerfCeiling`）。
     - 45,000 ft の 100 ft 下まで上がれば `top`、40 分で切らなければ `timeout`。1,000 ft ごとの記録と、上限高度での時間・燃料・距離・重量・Mach・Vminm を残す。
-  - 上昇と上限高度は、どちらも推力の基準は CLB のまま。空中スタートでは CLB（`B747.68.thrlim_model.lua` 143、推定）、FLCH は A/T の THR でその基準まで出す。記録の `thrlim`（`laminar/B747/fms/thrlim/code`：CLB 2、CRZ 3）が通して 2 かを確かめる。
+  - 上昇と上限高度は、どちらも推力の基準は CLB のまま。空中スタートでは CLB（`B747.68.thrlim_model.lua` 143、推定）、FLCH は A/T の THR でその基準まで出す。記録の `thrlim`（`laminar/B747/fms/thrlim/code`：10 × 方式 + 減格で、CLB 20、CLB 1 21、CRZ 30。`B747.68.xt.fms.lua` 2408）が通して 20 かを確かめる（2026-11-08 までキットは 2 を探していて、上昇のたびに不合格になるところだった。フェーズ1の巡航の記録は 20）。
   - 記録の列に、推力の基準・`laminar/B747/airspeed/Vminm`（最小機動速度。PFD の amber band の上端）・`Vmax` を足した（87 列）。A/T と AFDS の速さの保護が効いたかを、後から見分けるため。
   - 出力：`climb.csv`（1 標点 1 行、20 列。降下も `descent` として同じファイルに入る）、`ceiling.csv`（1 本 1 行、15 列）、`check.md` の上昇・降下・上限高度の表。ほかは `cruise` と同じ。
 - 空中スタート：`POST /flight` の `lle_air_start`（真の速さ）・`weight`（ペイロードは acf の `_fixed_max` の比で分け、燃料は機体の積み込み順：`B747.25.xt.fuel.lua` の `fuel_distribution`）・`engine_status`・気象のカスタム定義（ISA の 15 ℃・1013.25 hPa、13 層とも無風・乱気流 0、雲なし、`static`）。初期化が HTTP の誤りで断られたら止まる（`xp.ps1` の `Start-XPFlight` は警告だけで、前のフライトが続いて見える）。キットのランナーと同じく、8 秒後に全エンジンの燃焼を確かめて、もう一度かける。

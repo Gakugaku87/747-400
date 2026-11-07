@@ -825,10 +825,12 @@ $colSpec += @(
     @('fma_at', 'laminar/B747/autopilot/FMA/autothrottle_mode', -1, 'last'),
     @('servos_on', 'laminar/B747/autopilot/servos_on', -1, 'last'),
     @('cmd_l', 'laminar/B747/autopilot/cmd_L_mode/status', -1, 'last'),
-    # (phase 2) the reference thrust limit (B747.68.xt.fms.lua THRLIM_CODE: TO
-    # 1, CLB 2, CRZ 3, CON 4, GA 5; an air start's CLB, thrlim_model.lua 143)
-    # and the speeds the AFDS and A/T protect (the PFD's amber band's top and
-    # the maximum)
+    # (phase 2) the reference thrust limit (B747.68.xt.fms.lua 2408: 10 x
+    # THRLIM_CODE's TO 1, CLB 2, CRZ 3, CON 4, GA 5, plus the derate 1 or 2,
+    # plus 100 for D-TO: CLB 20, CLB 1 21, CRZ 30; an air start's CLB,
+    # thrlim_model.lua 143; the phase 1 runs logged 20 in their cruises) and
+    # the speeds the AFDS and A/T protect (the PFD's amber band's top and the
+    # maximum)
     @('thrlim', 'laminar/B747/fms/thrlim/code', -1, 'last'),
     @('vminm', 'laminar/B747/airspeed/Vminm', -1, 'mean'),
     @('vmax', 'laminar/B747/airspeed/Vmax', -1, 'mean')
@@ -1561,7 +1563,9 @@ function Measure-PerfClimb($Rows, [int]$From, [double[]]$MarksFt, $TopFt, [int]$
     $m.rows_to_end = $lastRow - $From + 1
     $m.rows_real_time = $rt
     $m.thrlim_codes = (@($codes.Keys | ForEach-Object { '{0}: {1} rows' -f $_, $codes[$_] })) -join ', '
-    $m.thrlim_clb_only = ($codes.Count -eq 1 -and $codes.Contains('2'))
+    # (CLB without a derate: 20; before 2026-11-08 the kit looked for 2, the
+    # code's old form, and would have failed every climb)
+    $m.thrlim_clb_only = ($codes.Count -eq 1 -and $codes.Contains('20'))
     return $m
 }
 
@@ -1687,7 +1691,7 @@ function Start-PerfFlch($Res, [double]$McpFt, [int[]]$At = @(4, 5), [string]$AtN
 function Add-PerfClimbChecks($Res) {
     $c = $Res.climb
     Add-Check $Res 'climb_real_time' ($c.rows_real_time -eq $c.rows_to_end) ('{0} of {1} rows to the last mark' -f $c.rows_real_time, $c.rows_to_end) 'all (no time acceleration, not paused)'
-    Add-Check $Res 'climb_thrust_clb' $c.thrlim_clb_only $c.thrlim_codes 'the reference thrust CLB (2) all the way'
+    Add-Check $Res 'climb_thrust_clb' $c.thrlim_clb_only $c.thrlim_codes 'the reference thrust CLB (20, no derate) all the way'
 }
 
 # A climb (suite climb; PERF_SIMBRIEF.md phase 2): an air start at 10,000 ft
