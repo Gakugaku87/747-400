@@ -715,4 +715,33 @@ rt:set("laminar/B747/debug/aero_corr_off", 0)
 for i = 0, 4 do rt:set(GEAR, i, 0) end
 frames(0.1)
 T.near(get(FUSE), 0.085, 1e-6, "gear up: the acf's own")
+-- (2026-11-07) the cruise above about M.83 by the Mach, the weight and the
+-- lift (the dynamic pressure, Pa) (B747.45.aero_corr_model.lua's cd_mach),
+-- off with aero_corr_off
+local AC = dofile("plugins/xtlua/scripts/B747.45.xt.fltCtrls/B747.45.aero_corr_model.lua")
+local Q350 = 0.7 * 23842 * 0.86 ^ 2     -- FL350, M.86: 12,344 Pa
+rt:set("sim/flightmodel/misc/machno", 0.86)
+rt:set("sim/flightmodel/weight/m_total", 306000)
+rt:set("sim/flightmodel/misc/Qstatic", Q350)
+frames(0.1)
+local cl350 = 306000 * 9.80665 / (Q350 * 541.2)
+T.near(cl350, 0.449, 0.001, "FL350, M.86, 306 t: CL 0.449")
+T.near(get(FUSE), 0.085 - AC.cd_mach(0.86, 306000, cl350) / AC.CD_PER_FUSE_CD, 1e-6, "M.86, 306 t: the acf's less the excess at its lift")
+T.check(get(FUSE) < 0.05, "well under the acf's (" .. get(FUSE) .. ")")
+rt:set("laminar/B747/debug/aero_corr_off", 1)
+frames(0.1)
+T.near(get(FUSE), 0.085, 1e-6, "aero_corr_off 1: the acf's own at M.86 too")
+rt:set("laminar/B747/debug/aero_corr_off", 0)
+rt:set("sim/flightmodel/misc/machno", 0.80)
+frames(0.1)
+T.near(get(FUSE), 0.085, 1e-6, "M.80 at FL350: the acf's own")
+-- light and low (CL 0.29, under the FCOM's cells): the FCOM's onset later
+rt:set("sim/flightmodel/misc/machno", 0.86)
+rt:set("sim/flightmodel/weight/m_total", 237000)
+local Q310 = 0.7 * 28745 * 0.86 ^ 2     -- FL310, M.86
+rt:set("sim/flightmodel/misc/Qstatic", Q310)
+frames(0.1)
+local cl310 = 237000 * 9.80665 / (Q310 * 541.2)
+T.check(cl310 < AC.RT_CL_MIN, "237 t FL310 M.86: CL " .. string.format("%.3f", cl310) .. " under the cells'")
+T.near(get(FUSE), 0.085 - AC.cd_mach(0.86, 237000, cl310) / AC.CD_PER_FUSE_CD, 1e-6, "237 t FL310 M.86: the acf's less the excess at its lift")
 T.done()
