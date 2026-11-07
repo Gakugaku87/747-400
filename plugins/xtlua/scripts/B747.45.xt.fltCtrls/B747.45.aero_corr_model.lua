@@ -54,9 +54,10 @@ M.CD_PER_FUSE_CD = 0.0664
 --     SFC for that thrust (the perf kit's: 0.516 lb/lbf/h to 40 kN an
 --     engine, 0.00035 more a kN above) and the FL370+ SFC correction
 --     (B747.42.sfc_corr_model.lua): all 32 within 1 % (rms 0.5 %);
---   * the fuel a mile around it from FCTM p.129 (4.10): the LRC gives 1 %
---     less fuel mileage than the best, on the fast side, and 0.01 M above
---     the scheduled speed takes 2 % more fuel. Both at once make a parabola
+--   * the fuel a mile around it from the FCTM: the LRC gives 1 % less fuel
+--     mileage than the best, on the fast side (p.129, 4.7), and 0.01 M
+--     above the scheduled speed takes 2 % more trip fuel (p.132, 4.10;
+--     there the LRC about M.86 near the optimum altitude). Both at once make a parabola
 --     around the best 0.0137 M under the LRC: at LRC - 0.01 M -0.93 %, at
 --     + 0.01 M +2.0 %. The fit: -1.0 and +1.9 % on the mean (+0.5 to +3.5 %:
 --     flatter at CL 0.41, steeper at 0.53). X-Plane's fuel per thrust holds
