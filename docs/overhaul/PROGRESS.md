@@ -2003,5 +2003,5 @@ X-Plane（カスタム acf）：`s07_cruise_ff`（FL350 の ALT HOLD：最後の
   - 残り（推定）：M.85〜.87 の軽い点の Mach による増え方は v4 のまま緩い。LRC の線の近くでは約 0.008 M で抵抗が立ち上がり、高度や重さの小さな違いで足す量が変わる。同じ Mach で重さが減ると足す抵抗が増える（実際の圧縮性と逆の向き）。
 - 2026-11-08 未明：利用者の依頼で、custom ブランチから `747-400.acf` のほかの acf（XP11 用の `747-400_XP11.acf` と `747-400LCF.acf`）を外した（`update_custom_branch.sh` の `other_acf`。custom の CUSTOM_BRANCH.md と CLAUDE.md にも書いた）。
   - 続けて利用者の「外して」で、その 2 つの acf の名前で始まる付属のファイルも外した（`fmod/747-400_XP11.snd`・`fmod/747-400LCF.snd`、アイコン、`.terrain_radar_descr`、`747-400_XP11_vrconfig.txt`、リバリーの中のアイコン 50 個。acf と合わせて 61 個。スクリプトは木から名前で選ぶので、あとで足したリバリーのアイコンも外れる）。
-  - 残したもの：`documentation/developer assets/747-400.acf`（本家の開発用の資料）と、LCF の 3D の `objects/LCF/`（16 ファイル、47.6 MB。カスタム acf は使わない）。overhaul と master には、全部の acf を残す。
+  - さらに利用者の「外す」で、LCF の 3D の `objects/LCF/`（16 ファイル、47.6 MB。カスタム acf はどれも使わない）も外した。残したのは `documentation/developer assets/747-400.acf`（本家の開発用の資料）だけ。overhaul と master には全部を残す。
   - 同じ依頼の外装のテクスチャ 5 枚は、11-06 から custom に無い（f6bec975 のマージ f6dad456 から。上の 11-06 夜の項）。
