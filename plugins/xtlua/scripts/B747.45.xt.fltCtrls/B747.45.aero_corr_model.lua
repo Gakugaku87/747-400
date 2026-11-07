@@ -91,9 +91,37 @@ M.CD_PER_FUSE_CD = 0.0664
 -- FL430): the fuel per thrust is more up there, the engine's (the perf
 -- session, 2026-11-07). Not taken here (it would ask 1.5 to 3 % more thrust
 -- and EPR, and lower the thrust's ceiling): notes/AERO.md §3.17
+--
+-- (v6, 2026-11-08) The same again at high thrust, whatever the altitude:
+-- the cells' EPR column, through the EPR model (B747.42.epr_model.lua,
+-- whose high side the FCOM pins without any fuel figure: PI.10.38's climb
+-- rates against its cruise EPR at .84 and PI.13.4's one-engine-inoperative
+-- LRC on three engines, both within 2 %), gives 0 to 5.5 % less thrust
+-- than the fuel flow does at the perf
+-- kit's fuel per thrust: 0.00082 a kN of corrected thrust from 200 kN an
+-- engine up (31 cells with the LRC from M.85, rms 0.6 %; the same against
+-- the lift, nothing against the altitude). v4 and v5 had put that fuel
+-- into this drag. It is now the engine's (B747.42.sfc_corr_model.lua's
+-- thrust factor) and C_A is refitted on v4's targets (the same 32 cells
+-- and the FCTM's shape along each cell's line) with that factor in the
+-- fuel flow: 0.00146 to 0.00105, C_KC, C_S and cd_low as they were (C_KC
+-- free comes to 0.245; C_S free to 0.0254 with C_KC 0.284, a little
+-- closer to the FCTM's +2.0 % over the LRC, not taken: the Mach shape
+-- X-Plane confirmed for v4 stays). The fit: the LRC's fuel flow rms
+-- 0.49 %, at worst -1.3 % (400 t FL270); the fuel a mile 0.01 M under the
+-- LRC -0.84 %, over it +2.53 % on the mean (the FCTM's -0.93 and +2.0; v4
+-- +1.9: the fuel per thrust now rises with the thrust along the line).
+-- The FCOM's part at M.86: CL 0.44 0.0009 (v5 0.0013), 0.52 0.0024
+-- (0.0034), 0.546 0.0033 (0.0047). Estimates (推定): as v4's, and that the
+-- cells' excess is the fuel per thrust's and not the drag's above CL 0.53
+-- (the ceilings, PI.11.1, need 2.4 to 4 % less thrust than the cells'
+-- EPR and the Max Climb EPR give through the model: an inconsistency of
+-- the FCOM's own, left where it is; offline the ceilings at ISA+10 come
+-- out 475 ft above the FCOM's at 240 t, 328 ft at 280 t, within 170 ft
+-- from 300 t: v5 +69 to -533 ft)
 M.XP_SLOPE = 0.17
 M.XP_M0 = {{237, 0.8373}, {305, 0.8342}, {353, 0.8289}}
-M.C_A, M.C_M0, M.C_KC, M.C_S, M.C_CL_MAX = 0.00146, 0.860, 0.25, 0.0207, 0.65
+M.C_A, M.C_M0, M.C_KC, M.C_S, M.C_CL_MAX = 0.00105, 0.860, 0.25, 0.0207, 0.65
 M.M_TOP = 0.870
 M.AREA = 541.2
 
