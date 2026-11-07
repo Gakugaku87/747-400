@@ -594,5 +594,21 @@ $cjc = Get-Content -Raw "$runDir4\check.json" | ConvertFrom-Json
 Check (@($cjc.tests).Count -eq 5 -and $cjc.suite -eq 'climb') 'climb files: check.json the tests'
 Remove-Item -Recurse -Force $runDir4 -ErrorAction SilentlyContinue
 
+# the flights take the logger's columns after the air start: Start-PerfLogger
+# makes a new $script:ix, and a copy taken before it is the last flight's, or
+# a run's first flight's empty one (2026-11-08 the first climb stopped on it)
+$kitFns = @(Get-ChildItem function: | Where-Object { $_.ScriptBlock.File -and [IO.Path]::GetFileName($_.ScriptBlock.File) -eq 'perf.ps1' })
+$flightFns = @($kitFns | Where-Object { $_.Name -ne 'Start-PerfFlight' -and $_.ScriptBlock.ToString().Contains('Start-PerfFlight ') })
+Check ($flightFns.Count -ge 5) "the flights' functions: $(@($flightFns | ForEach-Object { $_.Name }) -join ', ')"
+foreach ($fn in $flightFns) {
+    $fnBody = $fn.ScriptBlock.ToString()
+    $iFlight = $fnBody.IndexOf('Start-PerfFlight ')
+    $iCopy = $fnBody.IndexOf('$ix = $script:ix')
+    Check ($iCopy -lt 0 -or $iCopy -gt $iFlight) "$($fn.Name): the logger's columns taken after the air start"
+}
+# a stopped flight's error with where it was thrown
+try { throw 'a test error' } catch { $flightErr = Format-PerfError $_ }
+Check ($flightErr -match '^a test error \(perf_offline_test\.ps1 line \d+\)$') "a flight's error with its line ($flightErr)"
+
 if ($fails.Count -gt 0) { throw ("{0} of {1} checks failed" -f $fails.Count, $count) }
 Write-Host ("perf offline: {0} checks passed" -f $count)

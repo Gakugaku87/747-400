@@ -1213,6 +1213,16 @@ function Add-Check($Res, [string]$Name, $Pass, [string]$Value, [string]$Limit) {
     Note $mark ('{0} {1}: {2} ({3})' -f $Res.id, $Name, $Value, $Limit)
 }
 
+# a stopped flight's error: its message and where it was thrown, the script
+# and the line (2026-11-08 the first climb's "the array index evaluated to
+# null" came without one)
+function Format-PerfError($E) {
+    $where = $E.InvocationInfo
+    if ($null -eq $where -or $where.ScriptLineNumber -le 0) { return [string]$E.Exception.Message }
+    $file = if ([string]::IsNullOrEmpty($where.ScriptName)) { 'script' } else { [IO.Path]::GetFileName($where.ScriptName) }
+    return ('{0} ({1} line {2})' -f $E.Exception.Message, $file, $where.ScriptLineNumber)
+}
+
 # ---------------------------------------------------------------- a point
 
 # The flight for a check point or a cruise level ($Pt: id, fl, mach, and
@@ -1383,7 +1393,7 @@ function Invoke-PerfCheckPoint($Pt, $Acf, [double[]]$StationKg) {
         Add-PerfWritesChecks $res
     } catch {
         $res.status = 'aborted'
-        $res.error = $_.Exception.Message
+        $res.error = Format-PerfError $_
         Note fail "$($Pt.id): $($res.error)"
     } finally {
         $res.raw_file = "raw/$($Pt.id).csv"
@@ -1460,7 +1470,7 @@ function Invoke-PerfLevel($Lv, $Acf, [double[]]$StationKg) {
         Add-PerfWritesChecks $res
     } catch {
         $res.status = 'aborted'
-        $res.error = $_.Exception.Message
+        $res.error = Format-PerfError $_
         Note fail "$($Lv.id): $($res.error)"
     } finally {
         $res.raw_file = "raw/$($Lv.id).csv"
@@ -1702,11 +1712,15 @@ function Add-PerfClimbChecks($Res) {
 # in 45 min of sim time: timeout, with the marks reached.
 function Invoke-PerfClimb($T, $Acf, [double[]]$StationKg) {
     $res = [ordered]@{ id = $T.id; kind = 'climb'; target = $T; status = 'done'; checks = [ordered]@{} }
-    $ix = $script:ix
     try {
         $m0 = Get-MachFromCas $ClimbStartKias $ClimbStartFt
         $pt = [ordered]@{ id = $T.id; fl = $ClimbStartFt / 100; mach = $m0; gw_pct = $T.gw_pct; fuel_kg = $T.fuel_kg }
         Start-PerfFlight $res $pt $Acf $StationKg
+        # the logger's columns once it runs: Start-PerfLogger makes a new
+        # table, and one taken before is the last flight's, or a run's first
+        # flight's empty one (2026-11-08 the first climb stopped on it: "the
+        # array index evaluated to null")
+        $ix = $script:ix
         $res.setup = Set-PerfCruise $ClimbStartFt $m0 $ClimbStartKias
         $s = $res.setup
         Add-Check $res 'ap_alt_spd_ias' (($s.fma_pitch -eq 9) -and ($s.fma_at -eq 3) -and ($s.is_mach -eq 0) -and ($s.servos_on -eq 1)) `
@@ -1764,7 +1778,7 @@ function Invoke-PerfClimb($T, $Acf, [double[]]$StationKg) {
         Add-PerfWritesChecks $res
     } catch {
         $res.status = 'aborted'
-        $res.error = $_.Exception.Message
+        $res.error = Format-PerfError $_
         Note fail "$($T.id): $($res.error)"
     } finally {
         $res.raw_file = "raw/$($T.id).csv"
@@ -1785,10 +1799,10 @@ function Invoke-PerfClimb($T, $Acf, [double[]]$StationKg) {
 # time: timeout, with the marks reached.
 function Invoke-PerfDescent($T, $Acf, [double[]]$StationKg) {
     $res = [ordered]@{ id = $T.id; kind = 'descent'; target = $T; status = 'done'; checks = [ordered]@{} }
-    $ix = $script:ix
     try {
         $pt = [ordered]@{ id = $T.id; fl = $T.from_ft / 100; mach = $DescentMach; gw_pct = $T.gw_pct; fuel_kg = $T.fuel_kg }
         Start-PerfFlight $res $pt $Acf $StationKg
+        $ix = $script:ix   # the logger's columns once it runs (Invoke-PerfClimb)
         $res.setup = Set-PerfCruise $T.from_ft $DescentMach
         Add-PerfSetupCheck $res $DescentMach
         $lv = Wait-PerfLevelAt $T.from_ft 0 $DescentMach 30 240
@@ -1861,7 +1875,7 @@ function Invoke-PerfDescent($T, $Acf, [double[]]$StationKg) {
         Add-PerfWritesChecks $res
     } catch {
         $res.status = 'aborted'
-        $res.error = $_.Exception.Message
+        $res.error = Format-PerfError $_
         Note fail "$($T.id): $($res.error)"
     } finally {
         $res.raw_file = "raw/$($T.id).csv"
@@ -1879,10 +1893,10 @@ function Invoke-PerfDescent($T, $Acf, [double[]]$StationKg) {
 # ceiling the time, fuel and distance from FL310 (Measure-PerfClimb).
 function Invoke-PerfCeiling($T, $Acf, [double[]]$StationKg) {
     $res = [ordered]@{ id = $T.id; kind = 'ceiling'; target = $T; status = 'done'; checks = [ordered]@{} }
-    $ix = $script:ix
     try {
         $pt = [ordered]@{ id = $T.id; fl = $CeilingStartFt / 100; mach = $CeilingMach; gw_pct = $T.gw_pct; fuel_kg = $T.fuel_kg }
         Start-PerfFlight $res $pt $Acf $StationKg
+        $ix = $script:ix   # the logger's columns once it runs (Invoke-PerfClimb)
         $res.setup = Set-PerfCruise $CeilingStartFt $CeilingMach
         Add-PerfSetupCheck $res $CeilingMach
         $lv = Wait-PerfLevelAt $CeilingStartFt 0 $CeilingMach 30 240
@@ -1925,7 +1939,7 @@ function Invoke-PerfCeiling($T, $Acf, [double[]]$StationKg) {
         Add-PerfWritesChecks $res 8 @(4, 5) 'FLCH, THR or THR REF'
     } catch {
         $res.status = 'aborted'
-        $res.error = $_.Exception.Message
+        $res.error = Format-PerfError $_
         Note fail "$($T.id): $($res.error)"
     } finally {
         $res.raw_file = "raw/$($T.id).csv"
