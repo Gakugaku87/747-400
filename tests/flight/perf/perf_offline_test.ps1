@@ -27,6 +27,12 @@ $stations = New-Object double[] 9
 foreach ($i in 0..8) { if ($keys.Contains("_fixed_max/$i")) { $stations[$i] = [double]::Parse($keys["_fixed_max/$i"].value, $inv) * $LB } }
 $sumSt = 0.0; foreach ($v in $stations) { $sumSt += $v }
 Near $sumSt (194800 * $LB) 0.5 'payload stations (kg)'
+# the fuel per thrust (lb/lbf/h in the file, ACF_DIFF.md; the datarefs kg/(N s))
+Near ([double]::Parse($keys['_jet_SFC_hicrz'].value, $inv)) 0.535 1e-9 'acf _jet_SFC_hicrz (lb/lbf/h)'
+$script:acfSfc = Get-PerfAcfSfc $keys
+Check ((@($script:acfSfc.Keys) -join ',') -eq 'takeoff,climb,locrz,hicrz') 'the acf''s fuel per thrust: its four points'
+Near $script:acfSfc.takeoff (0.300 / 3600 / 9.80665) 1e-15 'the acf''s takeoff fuel per thrust (kg/(N s))'
+Near $script:acfSfc.hicrz 1.51541e-5 1e-9 'the acf''s high cruise fuel per thrust (kg/(N s))'
 
 # the points' gross weights: the FCOM's MTOW for the 109 (p.78), not the acf's
 Near $MtowKg 394625 0.01 'MTOW (FCOM p.78, 109)'
@@ -119,6 +125,23 @@ Check (@($lvs | Where-Object { $null -ne $_.fuel_kg }).Count -eq 5 -and @($lvs |
 Check (@($lvs | Where-Object { $_.gw_pct -eq 90 }).Count -eq 2) 'cruise: 90 % at FL310 and FL330 only'
 Near ((183523.4 + $PayloadKg + $LightFuelKg) / $MtowKg * 100) 60.44 0.01 'cruise: the light weight 60 % of the MTOW'
 
+# -Only: the levels, tests or points listed, in the suite's order
+$o1 = Select-PerfOnly $lvs @('crz_l15_fl390')
+Check (@($o1).Count -eq 1 -and $o1[0].id -eq 'crz_l15_fl390' -and (@($o1[0].machs) -join ',') -eq '0.85,0.86,0.87') '-Only: a level and its three Machs'
+$o2 = Select-PerfOnly $lvs @('crz_l15_fl390,crz_078_fl350 ')
+Check ((@($o2 | ForEach-Object { $_.id }) -join ',') -eq 'crz_078_fl350,crz_l15_fl390') '-Only: "a,b" as one string (powershell -File), in the suite''s order'
+$o3 = Select-PerfOnly $lvs @('rep_078_fl350', 'crz_l15_fl390')
+Check ((@($o3 | ForEach-Object { $_.id }) -join ',') -eq 'crz_l15_fl390,rep_078_fl350') '-Only: two ids, in the suite''s order'
+$err = $null
+try { [void](Select-PerfOnly $lvs @('crz_l15_fl410')) } catch { $err = $_.Exception.Message }
+Check ($null -ne $err -and $err.StartsWith('-Only: not in the suite: crz_l15_fl410 (its ids: crz_078_fl350,')) "-Only: an id not in the suite stops the run ($err)"
+$o0 = Select-PerfOnly $lvs @('', ',')
+Check (@($o0).Count -eq 12) "-Only: no ids, the whole suite (got $(@($o0).Count))"
+$o4 = Select-PerfOnly (Get-PerfClimbTests) @('cel_l15')
+Check (@($o4).Count -eq 1 -and $o4[0].kind -eq 'ceiling') '-Only: a climb suite''s test'
+$o5 = Select-PerfOnly $points @('chk_090_fl310_m085')
+Check (@($o5).Count -eq 1 -and $o5[0].fl -eq 310) '-Only: a check suite''s point'
+
 # ---------------------------------------------------------------- the run's files
 
 # Write-PerfFiles with stand-in results: a cruise run stopped in its second
@@ -159,6 +182,19 @@ Check ($mdl.Contains('| crz_078_fl350_m850 | done | 306.9 | 35002 | 0.8522 |') -
 Check ($mdl.Contains('Error: no A/P servos')) 'files: check.md a stopped level''s error'
 $cj = Get-Content -Raw "$runDir\check.json" | ConvertFrom-Json
 Check (@($cj.levels).Count -eq 3 -and $cj.repeat.within_1_pct -eq $true) 'files: check.json the levels and the repeat'
+# a part run (-Only crz_l15_fl390): its level's points only, no repeat, the ids in check.md
+$r5 = [ordered]@{ id = 'crz_l15_fl390'; target = $o1[0]; status = 'done'; checks = [ordered]@{}; request = [ordered]@{ gw_pct = 60.4 }
+    points = @([ordered]@{ id = 'crz_l15_fl390_m850'; target_mach = 0.85; status = 'done'; window = (New-Win 8100.0 8110.0); settle = [ordered]@{ after_s = 150 }; raw_file = 'raw/crz_l15_fl390_m850.csv' }) }
+$meta5 = [ordered]@{ xplane = $meta0.xplane; git = $meta0.git; acf = $meta0.acf; only = @('crz_l15_fl390') }
+$runDir5 = "$tmpBase.run5"; New-Item -ItemType Directory -Path $runDir5 | Out-Null
+$sum5 = Write-PerfFiles $runDir5 'cruise' @($r5) $meta5 $null @() $o1 "$runDir\none.txt" 0 "$runDir\none2.txt" 0
+Check ($sum5 -eq 'points: 1 of 3 done') "-Only files: the summary ($sum5)"
+$pcl5 = @(Get-Content "$runDir5\points.csv")
+Check ($pcl5.Count -eq 4 -and $pcl5[1].StartsWith('crz_l15_fl390_m850,A,60.4,390,0.85,306922,') -and $pcl5[3] -match '^crz_l15_fl390_m870,A,60\.4,390,0\.87,(,){11}not_run,$') "-Only files: points.csv the level's three points ($($pcl5[3]))"
+$md5 = [IO.File]::ReadAllText("$runDir5\check.md")
+Check ($md5.Contains('Only (-Only): crz_l15_fl390') -and $md5.Contains('Repeat: not measured') -and $md5.Contains('Points: 1 of 3 done; not_run 2')) '-Only files: check.md the ids, no repeat, the count'
+Check (-not $mdl.Contains('Only (-Only)')) 'files: a whole run''s check.md without the -Only line'
+Remove-Item -Recurse -Force $runDir5 -ErrorAction SilentlyContinue
 # a check run: plan A with only the fuel flow failing, B with another check failing
 $c1 = [ordered]@{ id = 'chk_078_fl350_m085'; target = $points0[0]; status = 'done'; window = (New-Win 10389.0 11000.0); settle = [ordered]@{ after_s = 148 }
     checks = [ordered]@{ readback_payload = [ordered]@{ pass = $true; value = 'x'; limit = 'y' }; fuel_flow_agreement = [ordered]@{ pass = $false; value = '-5.55 %'; limit = '2 %' } } }
@@ -187,6 +223,9 @@ foreach ($c in $colSpec) {
     }
 }
 $state = [hashtable]::Synchronized(@{ listening = $false; done = $false; error = $null; sub = $null; sent = 0 })
+# the fuel per thrust as the aircraft writes it at FL390: the acf's x 1.018
+$state.sfc = @{}
+foreach ($k in $SfcPoints) { $state.sfc["sim/aircraft/overflow/jet_SFC_$k"] = $script:acfSfc[$k] * 1.018 }
 $server = {
     param($prefix, $names, $state)
     $l = $null
@@ -217,7 +256,8 @@ $server = {
             foreach ($d in $sub.params.datarefs) {
                 $name = $names[[string]$d.id]
                 $v = $null
-                switch ($name) {
+                if ($state.sfc.ContainsKey($name)) { if ($m -eq 0) { $v = $state.sfc[$name] } }
+                else { switch ($name) {
                     'sim/time/total_running_time_sec' { $v = $t }
                     'sim/flightmodel/weight/m_fuel_total' { $v = $fuel }
                     'sim/flightmodel/weight/m_total' { $v = 223523.4 + $fuel }
@@ -236,7 +276,7 @@ $server = {
                             if ($null -ne $d.index) { $v = @($d.index | ForEach-Object { 0 }) } else { $v = 0 }
                         }
                     }
-                }
+                } }
                 if ($null -eq $v) { continue }
                 if ($v -is [array]) { $vt = '[' + ((@($v | ForEach-Object { ([double]$_).ToString('R', $inv) })) -join ',') + ']' }
                 else { $vt = ([double]$v).ToString('R', $inv) }
@@ -304,6 +344,15 @@ Near $w.ff_totaliser_kgph (2.47 * 3600) 0.5 'window: the FUEL USED rate (kg/h)'
 Check (-not [double]::IsNaN($w.sim_period_share) -and $w.sim_period_share -gt 0) 'window: the share of the wall time SIM_PERIOD covered'
 Near $w.mach 0.85 0.0005 'window: Mach'
 Near $w.isa_dev_c (0 - (Get-IsaC $w.press_alt_ft)) 1e-6 'window: ISA deviation from the OAT column'
+Near $w.sfc_kgns.hicrz ($script:acfSfc.hicrz * 1.018) 1e-15 'window: the fuel per thrust (high cruise, kg/(N s))'
+Near $w.sfc_factor 1.018 1e-9 'window: the fuel per thrust x1.018 the acf''s'
+Near $w.sfc_factor_spread 0 1e-9 'window: one factor on the four points'
+Check ($w.sfc_corr_off -eq 0) 'window: the correction''s switch at the end (0: on)'
+Check ((Format-PerfFlows $w).EndsWith('; fuel per thrust x1.0180 the acf''s')) 'window: the flows'' note with the factor'
+$keep = $script:acfSfc; $script:acfSfc = $null
+$w0 = Measure-PerfWindow @($rows[1..($rows.Count - 1)])
+Check ([double]::IsNaN($w0.sfc_factor) -and -not (Format-PerfFlows $w0).Contains('fuel per thrust')) 'window: no factor without the acf''s'
+$script:acfSfc = $keep
 Check (Test-Stable $rows 35000 0.85 20) 'stable within 30 ft, M.003 and 100 fpm'
 Check (-not (Test-Stable $rows 35100 0.85 20)) 'not stable 100 ft off'
 $wr = Measure-PerfWrites $rows

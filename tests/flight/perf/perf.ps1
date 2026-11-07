@@ -3,10 +3,15 @@
 # a SimBrief custom airframe on the B744 base. Unattended: one run a script,
 # its files read afterwards.
 #
-#   powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\perf.ps1 -Suite check|cruise|climb [-StartXPlane]
+#   powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\perf.ps1 -Suite check|cruise|climb [-StartXPlane] [-Only <ids>]
 #
 # -StartXPlane starts X-Plane when it is not running (tools\xp_restart.ps1:
 # the custom acf on RJAA 34L once, the throwaway first flight after a start).
+# -Only runs the suite's levels (cruise, e.g. crz_l15_fl390), tests (climb,
+# e.g. cel_l15) or points (check) listed, comma-separated, in the suite's
+# order; the run's folder ends in _part and meta.json's only lists them (a
+# re-measure after an aircraft fix: 2026-11-07, the 15 t FL390 points after
+# the fuel per thrust above FL370, notes/AERO.md 3.18).
 #
 # Suites
 #   check  phase 0. Two air starts over the sea east of Choshi (35.40N 141.30E,
@@ -45,7 +50,7 @@
 # the burn from the fuel's weight (m_fuel_total), the FF gauges
 # (fuel_flow_kg_sec) beside it; a run's folder never overwritten.
 #
-# Output: tests\flight\perf\runs\<yyyyMMdd_HHmmss>_<suite>\ (local only)
+# Output: tests\flight\perf\runs\<yyyyMMdd_HHmmss>_<suite>[_part]\ (local only)
 #   meta.json        the aircraft's commit, the acf's SHA-256, X-Plane's
 #                    version, the date, the suite, the points, the aircraft's
 #                    weights and where they come from
@@ -62,7 +67,8 @@
 param(
     [ValidateSet('check', 'cruise', 'climb')][string]$Suite = 'check',
     [switch]$StartXPlane,
-    [string]$RunsDir
+    [string]$RunsDir,
+    [string[]]$Only
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '..\xp.ps1')
@@ -191,6 +197,18 @@ function Get-PerfClimbTests {
 $tests = @()
 if ($Suite -eq 'climb') { $tests = Get-PerfClimbTests }
 
+# -Only: the suite's items with those ids, in the suite's order. Commas split
+# them (powershell -File hands "a,b" over as one string); an id not in the
+# suite stops the run before X-Plane is touched.
+function Select-PerfOnly($Items, [string[]]$Ids) {
+    $want = @($Ids | ForEach-Object { ([string]$_) -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
+    if ($want.Count -eq 0) { return ,@($Items) }
+    $have = @($Items | ForEach-Object { [string]$_.id })
+    $unknown = @($want | Where-Object { $have -notcontains $_ })
+    if ($unknown.Count -gt 0) { throw ('-Only: not in the suite: {0} (its ids: {1})' -f ($unknown -join ', '), ($have -join ', ')) }
+    return ,@($Items | Where-Object { $want -contains [string]$_.id })
+}
+
 $wall = [Diagnostics.Stopwatch]::StartNew()
 $events = New-Object System.Collections.ArrayList
 function Note([string]$Level, [string]$Text) {
@@ -267,12 +285,31 @@ function Get-GitInfo {
     return [ordered]@{ commit = $head; branch = $branch; tracked_changes = $changed.Count; changed = @($changed); acf_last_commit = $acfCommit }
 }
 
-# the acf's lines for the weights (pounds in the file), the payload stations
-# and the tanks: key -> @{ line; value }
+# X-Plane's four points of the fuel per thrust: the acf's _jet_SFC_<point>
+# (lb/lbf/h), the datarefs sim/aircraft/overflow/jet_SFC_<point> in kg/(N s)
+# (1 lb/lbf/h = 1 / (3600 x 9.80665) kg/(N s), as tests/eec's). Since
+# 2026-11-07 the aircraft writes those each frame as the acf's x (1 + a table
+# by pressure altitude: 0 to FL370, FL390 +1.8 %; B747.42.xt.sfc_corr.lua,
+# notes/AERO.md 3.18): the logger records them, a window their factor.
+$SfcPoints = @('takeoff', 'climb', 'locrz', 'hicrz')
+$SfcKgNsPerLbLbfH = 1 / 3600 / 9.80665
+function Get-PerfAcfSfc($Keys) {
+    $s = [ordered]@{}
+    foreach ($k in $SfcPoints) {
+        $s[$k] = $null
+        if ($Keys.Contains("_jet_SFC_$k")) { $s[$k] = [double]::Parse($Keys["_jet_SFC_$k"].value, $inv) * $SfcKgNsPerLbLbfH }
+    }
+    return $s
+}
+$script:acfSfc = $null
+
+# the acf's lines for the weights (pounds in the file), the payload stations,
+# the tanks and the fuel per thrust (lb/lbf/h): key -> @{ line; value }
 function Read-AcfKeys([string]$File) {
     $want = @{}
     foreach ($k in '_m_empty', '_m_max', '_m_fuel_max_tot') { $want[$k] = $true }
     foreach ($i in 0..8) { foreach ($k in '_fixed_max', '_fixed_name', '_tank_rat', '_tank_name') { $want["$k/$i"] = $true } }
+    foreach ($k in $SfcPoints) { $want["_jet_SFC_$k"] = $true }
     $found = [ordered]@{}
     $n = 0
     foreach ($line in [IO.File]::ReadLines($File)) {
@@ -776,6 +813,11 @@ $colSpec += @(
     @('vminm', 'laminar/B747/airspeed/Vminm', -1, 'mean'),
     @('vmax', 'laminar/B747/airspeed/Vmax', -1, 'mean')
 )
+# (2026-11-07) X-Plane's fuel per thrust as the aircraft writes it (kg/(N s),
+# $SfcPoints) and the correction's switch (1: the acf's own; a dataref of the
+# aircraft from that day: left out before)
+foreach ($k in $SfcPoints) { $colSpec += , @("sfc_$k", "sim/aircraft/overflow/jet_SFC_$k", -1, 'mean') }
+$colSpec += , @('sfc_corr_off', 'laminar/B747/debug/sfc_corr_off', -1, 'last')
 
 # the WebSocket's reader, in a runspace of its own: every update a sample of
 # every column (held values), a row each second of sim time
@@ -1092,6 +1134,21 @@ function Measure-PerfWindow($Rows) {
     $m.epr_avg = $epr / 4
     $m.display_epr_avg = $depr / 4
     $m.fps = 1 / $m.frame_period
+    # the fuel per thrust ($SfcPoints, kg/(N s)): each point's mean, and over
+    # the acf's own ($script:acfSfc) the factor on them, the four's mean and
+    # spread (the aircraft puts one factor on all four: spread 0; none
+    # without the columns or the acf's); the correction's switch at the end
+    $m.sfc_kgns = [ordered]@{}
+    $fs = New-Object System.Collections.ArrayList
+    foreach ($k in $SfcPoints) {
+        $v = Get-Mean (Get-Col $rt "sfc_$k")
+        $m.sfc_kgns[$k] = $v
+        if ($null -ne $script:acfSfc -and $script:acfSfc[$k] -gt 0 -and -not [double]::IsNaN($v)) { [void]$fs.Add($v / $script:acfSfc[$k]) }
+    }
+    $m.sfc_factor = [double]::NaN; $m.sfc_factor_spread = [double]::NaN
+    if ($fs.Count -eq $SfcPoints.Count) { $m.sfc_factor = Get-Mean ([double[]]$fs.ToArray()); $m.sfc_factor_spread = Get-Range ([double[]]$fs.ToArray()) }
+    $m.sfc_corr_off = $null
+    if ($script:ix.ContainsKey('sfc_corr_off')) { $m.sfc_corr_off = $rt[$rt.Count - 1][$script:ix['sfc_corr_off']] }
     return $m
 }
 
@@ -1255,7 +1312,8 @@ function Format-PerfFlows($W) {
     return ('fuel weight {0} kg/h, gauges {1} kg/h: {2} %; on wall time {3} kg/h ({4} %); FUEL USED {5} kg/h, on wall time {6} kg/h (SIM_PERIOD covered {7} of the wall time); sim/wall {8}, {9} fps' -f
         (F $W.ff_fuelmass_kgph '0'), (F $W.ff_gauge_kgph '0'), (F $W.ff_diff_pct '0.00'), (F $W.ff_fuelmass_wall_kgph '0'),
         (F $W.ff_wall_diff_pct '0.00'), (F $W.ff_totaliser_kgph '0'), (F $W.ff_totaliser_wall_kgph '0'), (F $W.sim_period_share '0.0000'),
-        (F $W.sim_per_wall '0.0000'), (F $W.fps '0'))
+        (F $W.sim_per_wall '0.0000'), (F $W.fps '0')) +
+        $(if ($null -ne $W.sfc_factor -and -not [double]::IsNaN([double]$W.sfc_factor)) { '; fuel per thrust x{0} the acf''s' -f (F $W.sfc_factor '0.0000') } else { '' })
 }
 
 # writes by the aircraft from the logger's start (3 s on) to now, and the
@@ -1929,6 +1987,7 @@ function Write-PerfFiles([string]$RunOut, [string]$RunSuite, $RunResults, $RunMe
     [void]$md.Add('')
     [void]$md.Add(('X-Plane {0}; {1} {2} ({3} tracked files changed); acf SHA-256 {4}' -f $RunMeta.xplane.version, $RunMeta.git.branch, $RunMeta.git.commit,
         $RunMeta.git.tracked_changes, $RunMeta.acf.sha256))
+    if ($RunMeta.only) { [void]$md.Add(''); [void]$md.Add(('Only (-Only): {0}' -f (@($RunMeta.only) -join ', '))) }
     if ($RunAborted) { [void]$md.Add(''); [void]$md.Add("**Stopped:** $RunAborted") }
     $count = [ordered]@{}
     foreach ($q in $prow) { $count[$q.status] = 1 + [int]$count[$q.status] }
@@ -2075,6 +2134,7 @@ function Write-PerfClimbFiles([string]$RunOut, $RunResults, $RunMeta, $RunAborte
     [void]$md.Add('')
     [void]$md.Add(('X-Plane {0}; {1} {2} ({3} tracked files changed); acf SHA-256 {4}' -f $RunMeta.xplane.version, $RunMeta.git.branch, $RunMeta.git.commit,
         $RunMeta.git.tracked_changes, $RunMeta.acf.sha256))
+    if ($RunMeta.only) { [void]$md.Add(''); [void]$md.Add(('Only (-Only): {0}' -f (@($RunMeta.only) -join ', '))) }
     if ($RunAborted) { [void]$md.Add(''); [void]$md.Add("**Stopped:** $RunAborted") }
     [void]$md.Add('')
     [void]$md.Add(('Climbs: from {0} ft and {1} kt, FLCH at {2} kt, then M{3} (the schedule {1}/{2}/{4}); the top''s mark {5} ft below it. Descents: from the top at M{6}, FLCH (idle) to {7} ft, {8} kt once that is M{6}''s CAS (the schedule {9}/{8}/250); the bottom''s mark {5} ft above it. Ceilings: from {10} ft at M{11}, FLCH until the climb rate (a {12} s line) stays under {13} fpm.' -f
@@ -2161,15 +2221,22 @@ function Write-PerfClimbFiles([string]$RunOut, $RunResults, $RunMeta, $RunAborte
 # dot-sourced (tests/flight/perf/perf_offline_test.ps1): the functions only
 if ($MyInvocation.InvocationName -eq '.') { return }
 
+$onlyIds = $null
+if ($Only) {
+    if ($Suite -eq 'check') { $points = Select-PerfOnly $points $Only; $onlyIds = @($points | ForEach-Object { $_.id }) }
+    elseif ($Suite -eq 'cruise') { $levels = Select-PerfOnly $levels $Only; $onlyIds = @($levels | ForEach-Object { $_.id }) }
+    else { $tests = Select-PerfOnly $tests $Only; $onlyIds = @($tests | ForEach-Object { $_.id }) }
+}
+
 if (-not $RunsDir) { $RunsDir = Join-Path $PSScriptRoot 'runs' }
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-$out = Join-Path $RunsDir "${stamp}_$Suite"
+$out = Join-Path $RunsDir ("${stamp}_$Suite" + $(if ($null -ne $onlyIds) { '_part' } else { '' }))
 if (Test-Path $out) { throw "the run's folder exists: $out" }
 New-Item -ItemType Directory -Force -Path (Join-Path $out 'raw') | Out-Null
 
 $results = New-Object System.Collections.ArrayList
 $payloadAtStart = $null
-$meta = [ordered]@{ suite = $Suite; plan = 'A'; started = (Get-Date).ToString('o'); out = $out; points = $points; levels = $levels
+$meta = [ordered]@{ suite = $Suite; plan = 'A'; started = (Get-Date).ToString('o'); out = $out; only = $onlyIds; points = $points; levels = $levels
     measure_s = $MeasureS; cruise_ci = $CruiseCi; light_fuel_kg = $LightFuelKg; tests = $tests }
 if ($Suite -eq 'climb') {
     $meta.climb = [ordered]@{ schedule = ('{0}/{1}/{2}' -f $ClimbStartKias, $ClimbKias, [int][math]::Round($ClimbMach * 100)); start_ft = $ClimbStartFt
@@ -2210,9 +2277,12 @@ try {
     Note info ('X-Plane {0}; {1} {2}{3}; acf {4}' -f $meta.xplane.version, $meta.git.branch, $c8,
         $(if ($meta.git.tracked_changes) { " (+$($meta.git.tracked_changes) changed)" } else { '' }), $meta.acf.sha256.Substring(0, 12))
 
-    # the acf's own lines (the weights' sources), the payload stations
+    # the acf's own lines (the weights' sources), the payload stations, the
+    # fuel per thrust (the windows' factor over it)
     $keys = Read-AcfKeys $acfFile
     $meta.acf_lines = $keys
+    $script:acfSfc = Get-PerfAcfSfc $keys
+    $meta.acf_sfc_kgns = $script:acfSfc
     $stationKg = New-Object double[] 9
     foreach ($i in 0..8) { if ($keys.Contains("_fixed_max/$i")) { $stationKg[$i] = [double]::Parse($keys["_fixed_max/$i"].value, $inv) * $LB } }
 
