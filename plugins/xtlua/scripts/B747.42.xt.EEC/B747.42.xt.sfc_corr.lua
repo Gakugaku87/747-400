@@ -1,11 +1,20 @@
--- The engines' fuel per thrust above FL370 (B747.42.sfc_corr_model.lua,
--- 補正) in the aircraft: X-Plane's four jet SFC figures, the acf's own (read
--- on the first frame they are there, before anything is written) times the
--- altitude's factor, every frame. The P&W only: the factor is the PW4056's
--- FCOM tables' (GE and RR: none yet, the acf's own). laminar/B747/debug/
--- sfc_corr_off 1 puts the acf's own back once and then leaves them alone (for
--- comparing in X-Plane, or tests/flight/measure/aero_sfc_sweep.json's
--- writes). B747.42.xt.EEC.lua loads it and calls B747_sfc_corr every frame.
+-- The engines' fuel per thrust above FL370 and at high thrust in the cruise
+-- (B747.42.sfc_corr_model.lua, 補正) in the aircraft: X-Plane's four jet SFC
+-- figures, the acf's own (read on the first frame they are there, before
+-- anything is written) times the altitude's and the thrust's factors, every
+-- frame. The P&W only: the factors are the PW4056's FCOM tables' (GE and
+-- RR: none yet, the acf's own). laminar/B747/debug/sfc_corr_off 1 puts the
+-- acf's own back once and then leaves them alone (for comparing in X-Plane,
+-- or tests/flight/measure/aero_sfc_sweep.json's writes). B747.42.xt.EEC.lua
+-- loads it and calls B747_sfc_corr every frame.
+-- (2026-11-08) The thrust's factor takes the highest engine's corrected
+-- thrust F/delta (kN): X-Plane's net thrust an engine (simDR_thrust_n,
+-- B747.42.xt.EEC.lua's) over the ambient pressure's ratio to 101,325 Pa
+-- (simDR_epr_ambient_pa) at the Mach (simDR_epr_mach), both
+-- B747.42.xt.EEC.PW.lua's. All three are bound in this module before this
+-- file loads and are read here, not bound again (a global bound twice
+-- writes to the first). The highest engine: all four alike in normal
+-- flight, the running ones with one out
 dofile("B747.42.sfc_corr_model.lua")
 local SC = B747_sfc_corr_model
 
@@ -20,6 +29,19 @@ B747DR_sc_off                   = find_dataref("laminar/B747/debug/sfc_corr_off"
 -- last frame wrote the corrected ones
 local acf_to, acf_clb, acf_lo, acf_hi = nil, nil, nil, nil
 local written = false
+
+-- the highest engine's corrected thrust F/delta (kN); nil with no pressure
+-- yet
+local function corrected_thrust()
+    local d = simDR_epr_ambient_pa / 101325
+    if d < 0.05 then return nil end
+    local t = 0
+    for i = 0, 3 do
+        local n = simDR_thrust_n[i]
+        if n > t then t = n end
+    end
+    return t / 1000 / d
+end
 
 function B747_sfc_corr()
     if acf_hi == nil then
@@ -40,7 +62,7 @@ function B747_sfc_corr()
         return
     end
     local f = 1
-    if B747DR_engineType == 0 then f = SC.factor(simDR_sc_press_alt) end
+    if B747DR_engineType == 0 then f = SC.total(simDR_sc_press_alt, corrected_thrust(), simDR_epr_mach) end
     simDR_sc_sfc_to = acf_to * f
     simDR_sc_sfc_clb = acf_clb * f
     simDR_sc_sfc_lo = acf_lo * f
