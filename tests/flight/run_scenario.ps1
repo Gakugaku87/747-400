@@ -317,6 +317,20 @@ if ($Reload) {
 }
 $loaded = Get-XPDataref 'sim/aircraft/view/acf_relative_path'
 Add-Result @{ do = 'aircraft' } 'info' $loaded
+# The aircraft's native plugin's sim options (Plugins > 747-400), read from
+# the user's preferences at each load: off for the scenario, not saved (a
+# write does not save them). 2026-11-08: the user's "Auto step climb", on
+# since 11-06, put the MCP at the step altitude and pushed the altitude
+# selector in s264's cruise. A scenario that needs one turns it on in its
+# steps (s204, s205, s252).
+foreach ($opt in 'laminar/B747/options/auto_step_climb', 'laminar/B747/options/pause_at_td') {
+    try {
+        if ([int](Get-XPDataref $opt) -ne 0) {
+            Set-XPDataref $opt 0
+            Add-Result @{ do = 'options' } 'info' "$opt was on: off for the scenario (not saved)"
+        }
+    } catch { }
+}
 $fov0 = Get-XPDataref 'sim/graphics/view/field_of_view_deg'
 
 $stopped = $false
