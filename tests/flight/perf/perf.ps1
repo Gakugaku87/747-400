@@ -476,11 +476,31 @@ function Start-PerfAirStart($Init) {
         $t = Invoke-PerfFlight $Init
         if ($off.Count -eq 0) {
             Note info ('every engine burning 8 s on: the air start once more for the point (sim time {0} s)' -f (F $t '0.0'))
+            Set-PerfSimOptionsOff
             return $t
         }
         Note warn ('engines {0} not burning 8 s after the air start: the air start again (sim time {1} s)' -f ($off -join ','), (F $t '0.0'))
     }
+    Set-PerfSimOptionsOff
     return $t
+}
+# The aircraft's native plugin's sim options (Plugins > 747-400: the
+# automatic step climb and the pause before the T/D), read from the user's
+# preferences (Output/preferences/B747-400_options.prf) at each load: off
+# for the measurement, not saved (a write does not save them; the kit's
+# runner does the same, run_scenario.ps1, 2026-11-08). The step climb acts
+# only in VNAV (B747.68.simopts_model.lua M.step), which the kit does not
+# fly, so the runs of 11-06 to 11-08 (the user's step climb on) were not
+# touched by it.
+function Set-PerfSimOptionsOff {
+    foreach ($opt in 'laminar/B747/options/auto_step_climb', 'laminar/B747/options/pause_at_td') {
+        try {
+            if ([int](Get-XPDataref $opt) -ne 0) {
+                Set-XPDataref $opt 0
+                Note info ('{0} was on: off for the measurement (not saved)' -f $opt)
+            }
+        } catch { Note warn ('{0}: not read or written ({1})' -f $opt, $_.Exception.Message) }
+    }
 }
 function Set-PerfMcpMark {
     try { Set-XPDataref 'laminar/B747/autopilot/heading/altitude_dial_ft' $McpAltMark } catch { }
