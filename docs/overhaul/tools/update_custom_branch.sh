@@ -11,6 +11,7 @@
 #   fmod/747-400.snd  <- fmod/747-400_custom.snd
 #   747-400_custom.acf, fmod/747-400_custom.snd removed
 #   the stock acf's exterior textures in stock_textures removed (2026-11-06)
+#   the other acf files in other_acf (XP11, LCF) removed (2026-11-08)
 #   CUSTOM_BRANCH.md  added (what this branch is)
 # The first commit has overhaul as its parent; each update is a merge of
 # overhaul into custom with that tree, so the branch only moves forward.
@@ -55,6 +56,14 @@ stock_textures=(
     'objects/747_exterior/Exterior_Fuselage(fornml).png'
 )
 git update-index --force-remove "${stock_textures[@]}"
+# The other acf files, the XP11 one and the LCF (the user's request,
+# 2026-11-08): the custom acf as 747-400.acf is the only acf at the root.
+# Their own files (fmod/*.snd, icons, terrain_radar_descr, vrconfig) stay.
+other_acf=(
+    '747-400_XP11.acf'
+    '747-400LCF.acf'
+)
+git update-index --force-remove "${other_acf[@]}"
 note=$(git hash-object -w --stdin <<'EOF'
 # The custom branch
 
@@ -73,6 +82,9 @@ The stock acf's exterior textures `Exterior_Fuselage.dds`,
 and `Exterior_Fuselage(fornml).png` (in `objects/747_exterior/`) are not
 in this branch (2026-11-06). X-Plane loads a .dds in place of the .png of
 the same name, so they would be drawn on the custom acf's objects.
+
+The other acf files, `747-400_XP11.acf` and `747-400LCF.acf`, are not in
+this branch either (2026-11-08): `747-400.acf` is the only acf here.
 EOF
 )
 git update-index --add --cacheinfo "100644,$note,CUSTOM_BRANCH.md"
@@ -96,8 +108,9 @@ else
 
 $short: $subject
 
-The tree is $base's with the custom acf as 747-400.acf and without the
-stock acf's exterior textures (docs/overhaul/tools/update_custom_branch.sh).
+The tree is $base's with the custom acf as 747-400.acf, without the
+stock acf's exterior textures and without the other acf files
+(docs/overhaul/tools/update_custom_branch.sh).
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     new=$(git -c user.name="$name" -c user.email="$mail" commit-tree "$tree" -p "$old" -p "$base_sha" -m "$msg")
