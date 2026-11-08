@@ -308,6 +308,27 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
   - 上昇と上限高度は、どちらも推力の基準は CLB のまま。空中スタートでは CLB（`B747.68.thrlim_model.lua` 143、推定）、FLCH は A/T の THR でその基準まで出す。記録の `thrlim`（`laminar/B747/fms/thrlim/code`：10 × 方式 + 減格で、CLB 20、CLB 1 21、CRZ 30。`B747.68.xt.fms.lua` 2408）が通して 20 かを確かめる（2026-11-08 までキットは 2 を探していて、上昇のたびに不合格になるところだった。フェーズ1の巡航の記録は 20）。
   - 記録の列に、推力の基準・`laminar/B747/airspeed/Vminm`（最小機動速度。PFD の amber band の上端）・`Vmax` を足した（87 列）。A/T と AFDS の速さの保護が効いたかを、後から見分けるため。
   - 出力：`climb.csv`（1 標点 1 行、20 列。降下も `descent` として同じファイルに入る）、`ceiling.csv`（1 本 1 行、17 列。2026-11-08 に `limit` と `fcom_130g_ft` を足した）、`check.md` の上昇・降下・上限高度の表。ほかは `cruise` と同じ。
+- フェーズ3の突き合わせ（2026-11-08 に作った）：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\compare.ps1`（X-Plane なし。`-CruiseRun`・`-ClimbRun`・`-CeilingRun`・`-OfpDir` で記録を選ぶ。省くと 11-08 の記録）。
+  - 比較用の OFP（SimBrief の標準の B744・P00）を、`runs/simbrief_ofp_<日付>/<ルート>.json` に置く。個人の情報を含むので、リポジトリには入れない（runs と同じく管理外）。
+  - フェーズ1の巡航・フェーズ2の上昇と降下・上限高度の記録と突き合わせ、`runs/<日時>_compare/` に `report.md`・`simbrief_airframe.md`（入力シート）・`compare.json`・`legs_<ルート>.csv` を書く。
+  - 比べる範囲：OFP の上昇で最初に 10,000 ft 以上になる点（A）から、降下で最後に 10,000 ft 以上の点（B）まで。A より前と B より後は、両方とも OFP の燃料にする（仕様の「0〜10,000 ft は比較から外してよい」）。
+  - 機体の側は、A での OFP の重量から飛ぶ。
+    - 上昇：フェーズ2の上昇を重量で補間する。FL350 より上は上限高度の上昇（M.85。推定）。
+    - 巡航：OFP の区間ごとの高度・Mach・ISA 偏差・対地速度で、巡航の模型を使う。
+    - 降下：フェーズ2の降下。FL350 より上は、33,000〜31,000 ft の区間の 1 ft あたりの値（推定）。
+    - 上昇と降下の対地距離は、OFP のその区間の平均の風で出す。巡航は、A〜B の対地距離の残りを飛ぶ。
+    - 段階上昇：上限高度の上昇の燃料から、その時間の巡航の燃料を引いた分（推定）。
+  - 巡航の模型：
+    - 形：補正燃料流量 FFc ＝ FF ÷ (δ√θ) を、W/δ の二次式と高度の一次の項で表す（目標の Mach ごとの最小二乗）。
+    - 値は測った点から取る。高さと重量の段ごとに、3 つの Mach を段の平均の重量へ形で移し、実際の Mach で区分的に線形。段の間は、形との比を重量で線形。高さの間は、同じ W/δ で線形。
+    - 測った 33 点には 0.05 % 以内で戻る。補正燃料流量は W/δ の 1 本の線には乗らない（形だけでは rms 0.85〜1.06 %）。
+  - Fuel Factor：Trip Fuel の誤差（機体 ÷ OFP − 1）を、記入欄の距離帯の割合で重みづける。FMC の CI 200 の ECON の Mach（`B747.68.perf_db.lua` の `econ_cruise` を LuaJIT で）で巡航したときの値も並べる。
+  - 巡航高度オフセット：T/C と段階上昇の高さを、その重量の FCOM の 1.30 g の高さ（p.267）と比べる。
+  - スクリプトは BOM 付きの UTF-8 にした（入力シートの日本語のため）。Windows PowerShell 5.1 は、BOM の無いファイルを cp932 で読む。
+  - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\compare_offline_test.ps1`（72 項目）。
+    - 大気、補間と最小二乗、作った点での巡航の模型、作った上昇・降下・上限高度の記録、OFP の読み込み。
+    - 作った OFP に沿った燃料：距離の釣り合い、追い風、段階上昇、FL350 より上の降下。
+    - Fuel Factor の書き方、FMC の ECON の Mach。
 - 空中スタート：`POST /flight` の `lle_air_start`（真の速さ）・`weight`（ペイロードは acf の `_fixed_max` の比で分け、燃料は機体の積み込み順：`B747.25.xt.fuel.lua` の `fuel_distribution`）・`engine_status`・気象のカスタム定義（ISA の 15 ℃・1013.25 hPa、13 層とも無風・乱気流 0、雲なし、`static`）。初期化が HTTP の誤りで断られたら止まる（`xp.ps1` の `Start-XPFlight` は警告だけで、前のフライトが続いて見える）。キットのランナーと同じく、8 秒後に全エンジンの燃焼を確かめて、もう一度かける。
   - 走らせ終わりに、始めに読んだペイロード（`m_fixed`）へ戻す（2026-11-07 から）。最後の点の 40 t が、後のフライトの機体の読み直しの後も X-Plane に残り、機体の修正のセッションの s108 が 310 t で流れた（前は 270 t）。燃料は戻さない（タンクは機体の燃料モデルが持つ）。
 - 空中スタートの後は、FMC の初期化（F/D・A/T ARM・MCP の速さを今の速さへ巻き取り、ALT HOLD・CMD L：`B747.68.xt.fms.lua` の `activate_inflightAP`）を待ってから MCP を操作する。初期化の終わりは、開始の前に MCP 高度へ 49,000 を書いておき、初期化がそれを今の高度に変えて巻き取りが終わったこと（`altitude/target`・`speed/target` が −1、CMD L、サーボ）で見分ける。2 回目からの空中スタートで、前の点の A/P の状態を初期化の終わりと取り違えないため。MCP は開始の前に IAS に戻す（Mach の窓のまま開始すると、初期化が窓をノットの値へ巻き取る）。
