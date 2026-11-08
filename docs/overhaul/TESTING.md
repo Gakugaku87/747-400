@@ -370,8 +370,12 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
     - OFP のステップ上昇（`-Steps ofp`、既定）：そのフィックスを通ったら、MCP 高度をその高度にして高度セレクタを押す（FCOM p.649、p.1257）。通過は、2 NM 以内か、最も近づいた所から 0.5 NM 離れたとき。`-Steps fmc` なら、FMC のステップ（シムの Auto step climb）に任せる。
     - T/D の前に、MCP を標高 + 3,000 ft（100 ft 単位で切り上げ）へ下げる。E/D までの距離が「(巡航高度 − 標高) ÷ 1,000 × 3.3 + 40 NM」を切ったとき（推定）。VNAV が T/D で止まったら（`td_hold`）、高度セレクタを押す。
     - 目的地の転移レベルの下で QNH にする（X-Plane の、機体の場所の QNH）。
-  - 進入と着陸：E/D の 28 NM 手前から、s198 の手順を FCOM の操作速度で行う。
-    - 速度介入（フラップ 1 の速さ）とスピードブレーキ。UP の速さの下でフラップ 1。on approach でフラップ 5 の速さにし、フラップ 1 の速さの下でフラップ 5。APP・CMD C・CMD R。
+  - 進入と着陸：E/D の 28 NM 手前（か、下の VECTORS の脚）から、s198 の手順を FCOM の操作速度で行う。1 秒ごとに状態を見て進める。
+    - 速度介入（フラップ 1 の速さ）とスピードブレーキ。UP の速さの下でフラップ 1。on approach（か、誘導のベースかインターセプト）でフラップ 5 の速さにし、フラップ 1 の速さの下でフラップ 5。APP・CMD C・CMD R。
+    - 誘導（レーダー・ベクター）：STAR が VECTORS の脚（FM 脚）で終わると、LNAV はその方位を飛び続ける（例：KLAX の IRNMN2 は GADDO のあと 071° のダウンウインド。FCOM p.1237、p.1249）。FMC の今の点が VECTORS になったら、管制の代わりに HDG SEL で最終進入コースへ導く（推定：大きさは目安）。
+      - 滑走路の端と最終進入の向きは、X-Plane の CIFP の RWY の行（`Custom Data/CIFP/<空港>.dat`）の、その滑走路と反対の端から。
+      - ダウンウインド（コースと平行に外向き。コースから 4 NM 以内なら 45° 離れる）→ 外に (13 + 5 ÷ tan 30°) NM 出たらベース（コースへ直角）→ コースから 5 NM でインターセプト（コースへ 30°）。LOC は約 13 NM 以遠で乗り、G/S は MCP の標高 + 3,000 ft で下から捕まえる。
+      - MCP の方位は磁方位（真方位 −（`psi` − `mag_psi`））。始めに MCP 高度より 300 ft 以上高ければ FLCH で降りる。LOC を捕まえたら終わり。
     - LOC の後、G/S alive で脚・フラップ 20・オートブレーキ 2・スピードブレーキ ARM。G/S の捕捉でフラップ 30 と VREF 30 + 5。
     - LAND 3（か 2）、FLARE、接地、逆推力、60 kt の下でパーキング・ブレーキ、止まったら A/P を外す。
   - 記録：`flight_log.ps1` を別のプロセスで回す（`runs/<日時>_autoflight/flight/`）。止まって 2 分で終わり、`report.md` を書く。
@@ -379,9 +383,10 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
   - 他の飛行（シナリオのランナー、ランリスト、`perf.ps1`、別の `auto_flight.ps1`）が動いていれば始めない（`-Force` で始める）。
   - 終わりに、始めに読んだペイロード（`m_fixed`）へ戻す（地上にいるとき）。
   - 出力：`runs/<日時>_autoflight/`（`ofp.json`、`plan.json`、`events.txt`、`status.txt`、`flight/`）。`-DryRun` は計画を書くだけ。
-  - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\auto_flight_offline_test.ps1`（84 項目）。
+  - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\auto_flight_offline_test.ps1`（116 項目）。
     - acf の数。作った OFP からの計画（滑走路、重量、ステーション、タンク、フラップ、SID・STAR、転移、ステップ、単位、誤りの検出）。
     - 初期化、操作速度、MCP を下げる距離、QNH、フィックスの通過。
+    - 誘導：CIFP の緯度経度、反対の端の名前、方位、作った滑走路の座標系、ダウンウインド・ベース・インターセプトの移り方と方位（左右とも）。この PC に CIFP があれば KLAX 24R（真 263.0°）。
     - CDU の画面（語と印、キー、ROUTE DISCONTINUITY、ページ番号）。
 - 空中スタート：`POST /flight` の `lle_air_start`（真の速さ）・`weight`（ペイロードは acf の `_fixed_max` の比で分け、燃料は機体の積み込み順：`B747.25.xt.fuel.lua` の `fuel_distribution`）・`engine_status`・気象のカスタム定義（ISA の 15 ℃・1013.25 hPa、13 層とも無風・乱気流 0、雲なし、`static`）。初期化が HTTP の誤りで断られたら止まる（`xp.ps1` の `Start-XPFlight` は警告だけで、前のフライトが続いて見える）。キットのランナーと同じく、8 秒後に全エンジンの燃焼を確かめて、もう一度かける。
   - 走らせ終わりに、始めに読んだペイロード（`m_fixed`）へ戻す（2026-11-07 から）。最後の点の 40 t が、後のフライトの機体の読み直しの後も X-Plane に残り、機体の修正のセッションの s108 が 310 t で流れた（前は 270 t）。燃料は戻さない（タンクは機体の燃料モデルが持つ）。

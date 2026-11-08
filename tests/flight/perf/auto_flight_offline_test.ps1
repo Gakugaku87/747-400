@@ -146,6 +146,71 @@ Check ((Test-AutoPassed $st 30) -eq $false -and (Test-AutoPassed $st 1.5) -eq $t
 $st = @{ min = $null }
 Check ((Test-AutoPassed $st 60) -eq $false -and (Test-AutoPassed $st 45) -eq $false -and (Test-AutoPassed $st 50) -eq $false) 'passed: not when never within 40 NM'
 
+# the OFP's own SID and STAR names first
+$o6 = New-TestOfp
+$o6.general | Add-Member -NotePropertyName sid_ident -NotePropertyValue 'SUMMA2'
+$o6.general | Add-Member -NotePropertyName star_ident -NotePropertyValue 'IRNMN2'
+$p6 = Get-AutoPlan $o6 $acf
+Check ($p6.sid -eq 'SUMMA2' -and $p6.star -eq 'IRNMN2' -and $p6.star_end -eq 'BBB02') 'plan: general.sid_ident and star_ident first, the STAR''s last fix from the navlog'
+
+# ---------------------------------------------------------------- vectors to final
+Near (ConvertFrom-CifpAngle 'N33570757') (33 + 57 / 60 + 7.57 / 3600) 1e-9 'cifp: latitude N33570757'
+Near (ConvertFrom-CifpAngle 'W118240702') (-(118 + 24 / 60 + 7.02 / 3600)) 1e-9 'cifp: longitude W118240702'
+Near (ConvertFrom-CifpAngle 'S01300000') -1.5 1e-9 'cifp: south'
+Check ($null -eq (ConvertFrom-CifpAngle 'X123')) 'cifp: not an angle'
+$opp = @{ '24R' = '06L'; '06L' = '24R'; '09' = '27'; '27' = '09'; '36C' = '18C'; '18' = '36'; '01' = '19'; '19' = '01'; '25L' = '07R' }
+$ok = $true
+foreach ($k in $opp.Keys) { if ((Get-AutoOppositeRunway $k) -ne $opp[$k]) { $ok = $false; Write-Host ('  {0}: {1}' -f $k, (Get-AutoOppositeRunway $k)) } }
+Check $ok 'runway: the other end''s name'
+Check ($null -eq (Get-AutoOppositeRunway 'X1')) 'runway: not a runway'
+Near (Get-AutoBearing 0 0 0 1) 90 1e-9 'bearing: east'
+Near (Get-AutoBearing 0 0 1 0) 0 1e-9 'bearing: north'
+Near (Get-AutoBearing 0 0 0 -1) 270 1e-9 'bearing: west'
+# a made-up runway 27 at 0 N 0 E, its other end 3 minutes west
+$cifp = [string[]]@('APPCH:010,A,I27,ABC,ABC,K1,P,C,E  A, ,   ,IF, , , , , ,      ,    ,    ,    ,    ,+,03000,     ,18000, ,   ,    ,   , , , , , , , , ;',
+    'RWY:RW27,     ,      ,00100, ,ITST,1,   ;N00000000,E000000000,0000;', 'RWY:RW09,     ,      ,00100, ,IFOO,1,   ;N00000000,W000030000,0000;')
+$rw = Get-AutoRunway $cifp '27'
+Check ($null -ne $rw) 'runway: found'
+if ($rw) {
+    Near $rw.course_true 270 1e-6 'runway: 27''s final course west'
+    Near $rw.length_nm 3.0 0.01 'runway: 3 NM long'
+    Check ($rw.other -eq '09') 'runway: the other end 09'
+    $fr = Get-AutoRwyFrame $rw (5 / 60) (20 / 60)
+    Near $fr.a 20 0.01 'frame: 20 NM out on the approach side (east of a runway 27)'
+    Near $fr.c 5 0.01 'frame: 5 NM right of the inbound course (north for one flown west)'
+    $fr = Get-AutoRwyFrame $rw (-3 / 60) (-1 / 60)
+    Near $fr.a -1 0.01 'frame: past the threshold, negative'
+    Near $fr.c -3 0.01 'frame: south, left'
+}
+Check ($null -eq (Get-AutoRunway $cifp '09L')) 'runway: none for a runway not there'
+Check ($null -eq (Get-AutoRunway ([string[]]@($cifp[1])) '27')) 'runway: none without the other end'
+# KLAX 24R from X-Plane's CIFP when this PC has it (the 11-08 flight's)
+$klax = Get-AutoRunwayFromCifp 'KLAX' '24R'
+if ($klax) { Check ($klax.course_true -gt 255 -and $klax.course_true -lt 270 -and $klax.other -eq '06L') ('runway: KLAX 24R''s final course {0:0.0} true' -f $klax.course_true) }
+# the vectors: runway 27 (inbound west), the join 13 NM out, the intercept from 5 NM
+function VecStep($S, $A, $C) { return Get-AutoVectorStep $S $A $C 270 13 5 4 }
+$v1 = VecStep $null 5 6
+Check ($v1.state -eq 'downwind' -and [math]::Abs($v1.hdg_true - 90) -lt 1e-6) ('vectors: downwind outbound east ({0} {1:0.0})' -f $v1.state, $v1.hdg_true)
+$v2 = VecStep 'downwind' 10 2
+Check ($v2.state -eq 'downwind' -and [math]::Abs($v2.hdg_true - 45) -lt 1e-6) ('vectors: within 4 NM, 45 degrees away ({0:0.0})' -f $v2.hdg_true)
+$v3 = VecStep 'downwind' 21 6
+Check ($v3.state -eq 'downwind') 'vectors: the downwind until the base turn (21.7 NM)'
+$v3 = VecStep 'downwind' 22 6
+Check ($v3.state -eq 'base' -and [math]::Abs($v3.hdg_true - 180) -lt 1e-6) ('vectors: base south toward the course ({0} {1:0.0})' -f $v3.state, $v3.hdg_true)
+$v4 = VecStep 'base' 22 4.9
+Check ($v4.state -eq 'intercept' -and [math]::Abs($v4.hdg_true - 240) -lt 1e-6) ('vectors: the intercept 30 degrees ({0} {1:0.0})' -f $v4.state, $v4.hdg_true)
+$v5 = VecStep 'downwind' 22 -6
+Check ($v5.state -eq 'base' -and [math]::Abs($v5.hdg_true - 0) -lt 1e-6) ('vectors: base north from the south ({0:0.0})' -f $v5.hdg_true)
+$v6 = VecStep 'base' 22 -4
+Check ($v6.state -eq 'intercept' -and [math]::Abs($v6.hdg_true - 300) -lt 1e-6) ('vectors: the intercept from the south 300 ({0:0.0})' -f $v6.hdg_true)
+$v7 = VecStep $null 30 1
+Check ($v7.state -eq 'intercept' -and [math]::Abs($v7.hdg_true - 240) -lt 1e-6) 'vectors: far out near the course, the intercept at once'
+$v8 = VecStep $null 30 12
+Check ($v8.state -eq 'base') 'vectors: far out to the side, base at once'
+Check ((VecStep 'intercept' 10 6).state -eq 'intercept' -and (VecStep 'base' 10 8).state -eq 'base') 'vectors: forward only'
+$joinAt = 21.7 - 5 / [math]::Tan(30 * [math]::PI / 180)
+Near $joinAt 13 0.05 'vectors: from the base turn the intercept joins about 13 NM out'
+
 # ---------------------------------------------------------------- the CDU's pages
 # B744.fms.pages.deparr.lua's lines: lr(l, r) on 24 columns, the left
 # column's mark after it, the right's before it
