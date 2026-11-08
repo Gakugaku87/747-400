@@ -281,7 +281,7 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
   - 最初の高度（78 %・FL350）で、CDU の PERF INIT に CI 200（記入欄のふだんの巡航）と CRZ ALT を入れ、VNAV CRZ ページの ECON SPD を読む。FMC の `update_econ` が 5 秒ごとに `perf_db.econ_cruise` で出す値で、X-Plane なしの計算では M.858（238〜355 t・FL310〜390 で M.855〜.861）。
   - 最後に 78 %・FL350・M.85 をもう一度測り、最初との燃料流量の差を出す（1 % を超えたら報告）。
   - 記録：点ごとの `raw/<点>.csv`（その Mach にしてから平均の終わりまで）と、高度ごとの通しの `raw/<高度>.csv`。`points.csv` は 34 行（届かなかった点は `not_run`）。1 高度 約 17 分、全体で約 3.5 時間。
-- `climb`（フェーズ2。`-Suite climb`）：同じ場所と大気で、フェーズ1と同じ 3 段の重量。上昇 3 本・降下 3 本・上限高度 3 本（`Get-PerfClimbTests`）。2026-11-07 に作った。X-Plane では 2026-11-08 に上昇を回した（最初の回しで、記録の列の表を空中スタートの前に写していた誤りが出て直した）。降下と上限高度は、まだ回していない。
+- `climb`（フェーズ2。`-Suite climb`）：同じ場所と大気で、フェーズ1と同じ 3 段の重量。上昇 3 本・降下 3 本・上限高度 3 本（`Get-PerfClimbTests`）。2026-11-07 に作った。X-Plane では 2026-11-08 に上昇を回した（最初の回しで、記録の列の表を空中スタートの前に写していた誤りが出て直した）。降下と上限高度も同じ日に回した（上限高度の決め方を FCOM のものにしたのは、その後）。
   - 上昇と降下のスケジュールは、比較用 OFP と同じにする。利用者の最新の B744 の OFP（2026-11-07 に取得）の、上昇 250/340/84・降下 84/340/250（利用者「OFPに合わせて降下も測って」。前は 250/300/78）。
   - 上昇：10,000 ft・250 kt で空中スタートし、そこで水平に落ち着かせる（高度 50 ft・3 kt・300 fpm の内に 20 秒。3 分まで）。窓を 340 kt にしてすぐ FLCH を押し、そこを始まりにする。
     - Mach が .84 に達したら、MCP を Mach .84 にする（ISA で約 27,250 ft）。機体の FLCH の上昇も、M.84 で窓を Mach に切り替える（`B747.70.xt.autopilot.lua` 2484–2495、FCOM p.643）。
@@ -300,11 +300,14 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
     - MCP を 45,000 ft にしたのは、FCOM の最大運用高度 45,100 ft（p.77、L.10.1）を超えないため。
     - FLCH を押した直後は一瞬沈む（約 −400 fpm）。FL310 の M.85 は 318 kt なので、機体の IAS/MACH の自動の切り替え（目標が 310 kt を超えて下りるとき IAS へ：`B747.70.xt.autopilot.lua` 2532–2543）が窓を一度 IAS にする。M.84 を超えて上り始めると Mach に戻り（2520–2531）、窓はそのときの Mach になる（2026-11-08、機体の修正のセッションの知らせ）。そこで、300 fpm を超えて上り、窓が Mach に戻るのを待って（60 秒まで）、目標が M.85 でなければ窓を M.85 に合わせ直す（`Set-PerfMcpMachClimbing`。IAS のままなら `Set-PerfMcpMach`）。確かめ `mcp_mach_climbing` に、見つけた窓と、したこと（none・window・mcp_mach）を残す。
     - 上昇率は、気圧高度の 60 秒の最小二乗の傾きを窓の中央に置く（`Get-PerfClimbRates`）。フェーズ1の軽い重量の ALT HOLD は、周期 10.5 秒・130 fpm で揺れていた。60 秒で平均すると、その影響は 2 fpm 足らずになる。
-    - いったん 600 fpm を超えた後、300 fpm を切って 10 秒そのままなら、切った所の高度（前の窓との間を補間）を上限高度にする（`Get-PerfCeiling`）。
-    - 45,000 ft の 100 ft 下まで上がれば `top`、40 分で切らなければ `timeout`。1,000 ft ごとの記録と、上限高度での時間・燃料・距離・重量・Mach・Vminm を残す。
+    - 上限高度（`Get-PerfCeiling`）は、次の 2 つのうち先に来た方にする。FCOM p.267（PI.11.1）の決め方で、FMC の MAX ALT の既定も 100 fpm（p.1350、11.42.6）。2026-11-08 利用者。どちらだったかを `limit` に残す。
+      - `thrust`：いったん 600 fpm を超えた後、100 fpm を切って 10 秒そのままなら、切った所の高度（前の窓との間を補間）。
+      - `buffet`：その行の重量の、FCOM の 1.30 g の高さ（p.267 の ISA+10 以下の表。`B747.68.perf_db.lua` の `max_alt` と同じ表：`Get-PerfFcomBuffet130Ft`）に下から着いた所（行の間を補間）。表では、どの重量でも 1.30 g の高さが推力で決まる高さより低い。
+    - 2026-11-08 までは 300 fpm で切っていた。その所は推力の尽きた所ではなかった。M.85 が琥珀の帯の上端（最小機動速度）に当たり、AFDS の速度の保護（FCOM p.675）が速さを上げた所で、3 本ともそのあとも上昇推力のまま帯の上端を 250〜310 fpm で上がり続けた（`runs/20261108_110001_climb_part`）。
+    - 45,000 ft の 100 ft 下まで上がれば `top`、40 分で切らなければ `timeout`。1,000 ft ごとの記録と、上限高度での時間・燃料・距離・重量・Mach・Vminm と、その重量の FCOM の 1.30 g の高さ（見つからなければ最後の行の重量のもの）を残す。
   - 上昇と上限高度は、どちらも推力の基準は CLB のまま。空中スタートでは CLB（`B747.68.thrlim_model.lua` 143、推定）、FLCH は A/T の THR でその基準まで出す。記録の `thrlim`（`laminar/B747/fms/thrlim/code`：10 × 方式 + 減格で、CLB 20、CLB 1 21、CRZ 30。`B747.68.xt.fms.lua` 2408）が通して 20 かを確かめる（2026-11-08 までキットは 2 を探していて、上昇のたびに不合格になるところだった。フェーズ1の巡航の記録は 20）。
   - 記録の列に、推力の基準・`laminar/B747/airspeed/Vminm`（最小機動速度。PFD の amber band の上端）・`Vmax` を足した（87 列）。A/T と AFDS の速さの保護が効いたかを、後から見分けるため。
-  - 出力：`climb.csv`（1 標点 1 行、20 列。降下も `descent` として同じファイルに入る）、`ceiling.csv`（1 本 1 行、15 列）、`check.md` の上昇・降下・上限高度の表。ほかは `cruise` と同じ。
+  - 出力：`climb.csv`（1 標点 1 行、20 列。降下も `descent` として同じファイルに入る）、`ceiling.csv`（1 本 1 行、17 列。2026-11-08 に `limit` と `fcom_130g_ft` を足した）、`check.md` の上昇・降下・上限高度の表。ほかは `cruise` と同じ。
 - 空中スタート：`POST /flight` の `lle_air_start`（真の速さ）・`weight`（ペイロードは acf の `_fixed_max` の比で分け、燃料は機体の積み込み順：`B747.25.xt.fuel.lua` の `fuel_distribution`）・`engine_status`・気象のカスタム定義（ISA の 15 ℃・1013.25 hPa、13 層とも無風・乱気流 0、雲なし、`static`）。初期化が HTTP の誤りで断られたら止まる（`xp.ps1` の `Start-XPFlight` は警告だけで、前のフライトが続いて見える）。キットのランナーと同じく、8 秒後に全エンジンの燃焼を確かめて、もう一度かける。
   - 走らせ終わりに、始めに読んだペイロード（`m_fixed`）へ戻す（2026-11-07 から）。最後の点の 40 t が、後のフライトの機体の読み直しの後も X-Plane に残り、機体の修正のセッションの s108 が 310 t で流れた（前は 270 t）。燃料は戻さない（タンクは機体の燃料モデルが持つ）。
 - 空中スタートの後は、FMC の初期化（F/D・A/T ARM・MCP の速さを今の速さへ巻き取り、ALT HOLD・CMD L：`B747.68.xt.fms.lua` の `activate_inflightAP`）を待ってから MCP を操作する。初期化の終わりは、開始の前に MCP 高度へ 49,000 を書いておき、初期化がそれを今の高度に変えて巻き取りが終わったこと（`altitude/target`・`speed/target` が −1、CMD L、サーボ）で見分ける。2 回目からの空中スタートで、前の点の A/P の状態を初期化の終わりと取り違えないため。MCP は開始の前に IAS に戻す（Mach の窓のまま開始すると、初期化が窓をノットの値へ巻き取る）。
@@ -317,7 +320,7 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
   - FUEL USED（`laminar/B747/fuel/totaliser[4]`）も記録する。機体は各発の流量 × `SIM_PERIOD` を、タンクから燃料を取るのと同じフレームで足す（`B747.25.xt.fuel.lua` 1355–1362、1417–1418）。その PC の時刻への傾きを計器の和で割ると、フレームの `SIM_PERIOD` が PC の時刻のどれだけを覆ったかが分かる（`sim_period_share`）。X-Plane 自身の totalizer（`fuel_totalizer_sum_kg`）は使えない（機体が始めの値をタンクの合計に書き直すので 0 のまま：1550）。
 - 出力 `tests/flight/perf/runs/<日時>_<suite>[_part]/`（`.git/info/exclude` で管理外）：`meta.json`（機体のコミット、acf の SHA-256、X-Plane の版、点、重量とその出典の acf の行）、`init_<点>.json`、`raw/`、`points.csv`（仕様の列）、`check.json`・`check.md`、`events.txt`、`log_excerpt.txt`。上書きしない。
 - JSON は、辞書・配列・文字列・数・真偽値だけに直してから書く（`Save-Json` の `ConvertTo-PlainData`。それ以外の物は文字列にする）。PowerShell 5.1 の `ConvertTo-Json` は渡された物の属性を全部たどる。`Get-Content` で読んだ行には PSDrive・PSProvider が付いていて、`-Depth 30` では型の情報を際限なくたどった（2026-11-06 の 1 回目の `check`：`meta.json` を書くところで 3.5 時間止まり、メモリを 79 GB 使った。Log.txt の 1 行目を `Get-Content` で読んでいた）。
-- X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\perf_offline_test.ps1`（acf の行、タンクへの配分、フライトの初期化、JSON の書き出し、模擬の Web API（`HttpListener`）を相手にした記録と集計、`cruise` の高度の一覧・不安定の分け方・CDU の CRZ ページの読み取り・再現性の比較、結果のファイル（`Write-PerfFiles` に模擬の結果を渡す）。`climb` は、ISA の気圧と CAS・Mach の換算、降下の速さの切り替え、試験の一覧、作った記録での上昇と降下の標点（行の間の補間、途中で切れたもの）、上限高度（周期 10.5 秒の揺れを乗せた上昇率の減り）、結果のファイル（`Write-PerfClimbFiles`）。`-Only` の選び方とその結果のファイル、acf の燃費の 4 点の単位、窓の燃費の倍率（模擬の値は acf の 1.018 倍）。291 項目）。
+- X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\perf_offline_test.ps1`（acf の行、タンクへの配分、フライトの初期化、JSON の書き出し、模擬の Web API（`HttpListener`）を相手にした記録と集計、`cruise` の高度の一覧・不安定の分け方・CDU の CRZ ページの読み取り・再現性の比較、結果のファイル（`Write-PerfFiles` に模擬の結果を渡す）。`climb` は、ISA の気圧と CAS・Mach の換算、降下の速さの切り替え、試験の一覧、作った記録での上昇と降下の標点（行の間の補間、途中で切れたもの）、上限高度（周期 10.5 秒の揺れを乗せた上昇率の減り。FCOM の 1.30 g の高さで止まるもの・100 fpm で止まるもの・その先後）、FCOM の 1.30 g の表、結果のファイル（`Write-PerfClimbFiles`）。`-Only` の選び方とその結果のファイル、acf の燃費の 4 点の単位、窓の燃費の倍率（模擬の値は acf の 1.018 倍）。323 項目）。
 
 ## 5. 1 項目ごとの流れ（フェーズ1以降）
 

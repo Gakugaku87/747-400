@@ -452,9 +452,19 @@ Check ($ClimbStartFt -eq 10000 -and $ClimbStartKias -eq 250 -and $ClimbKias -eq 
 Check ($DescentMach -eq 0.84 -and $DescentKias -eq 340 -and $DescentEndFt -eq 10000) 'descent: the schedule 84/340/250 to 10,000 ft (the latest B744 OFP)'
 Check ((@($ClimbMarksFt) -join ',') -eq '15000,20000,25000,30000') 'climb: the marks every 5,000 ft'
 Check ((@($DescentMarksFt) -join ',') -eq '30000,25000,20000,15000') 'descent: the marks every 5,000 ft down'
-Check ($CeilingStartFt -eq 31000 -and $CeilingMach -eq 0.85 -and $CeilingRateFpm -eq 300) 'ceiling: from FL310 at M.85 to 300 fpm'
+Check ($CeilingStartFt -eq 31000 -and $CeilingMach -eq 0.85 -and $CeilingRateFpm -eq 100) 'ceiling: from FL310 at M.85 to 100 fpm (FCOM p.267, p.1350; the user 2026-11-08)'
 Check ($CeilingTopFt -le 45100) 'ceiling: the MCP under the maximum operating altitude 45,100 ft (FCOM p.77)'
 Check (@($CeilingMarksFt).Count -eq 13 -and $CeilingMarksFt[0] -eq 32000 -and $CeilingMarksFt[12] -eq 44000) 'ceiling: the marks every 1,000 ft, 32,000-44,000'
+# the FCOM's 1.30 g altitude (p.267): the 2026-11-08 ceilings' weights (the
+# 43,139, 37,769 and 34,755 ft of PROGRESS.md), a table weight, the ends
+Check ($FcomBuffet130T.Count -eq 12 -and $FcomBuffet130Ft.Count -eq 12) 'FCOM 1.30 g: 12 weights, 400-180 t'
+Near (Get-PerfFcomBuffet130Ft 236231) 43139.2 0.1 'FCOM 1.30 g: 236.2 t between 240 and 220 t'
+Near (Get-PerfFcomBuffet130Ft 305094) 37768.8 0.1 'FCOM 1.30 g: 305.1 t between 320 and 300 t'
+Near (Get-PerfFcomBuffet130Ft 352409) 34755.5 0.1 'FCOM 1.30 g: 352.4 t between 360 and 340 t'
+Near (Get-PerfFcomBuffet130Ft 307807.5) 37592.5 0.1 'FCOM 1.30 g: 307.8 t (the kit''s FL390 left out above 37,600 ft)'
+Near (Get-PerfFcomBuffet130Ft 240000) 42800 1e-9 'FCOM 1.30 g: a table weight'
+Near (Get-PerfFcomBuffet130Ft 420000) 32100 1e-9 'FCOM 1.30 g: heavier than the table, its heaviest'
+Near (Get-PerfFcomBuffet130Ft 150000) 45000 1e-9 'FCOM 1.30 g: lighter than the table, its lightest'
 
 # a climb's rows (1 s): the altitude by $Alt, the TAS and ground speed, the
 # fuel going at $FuelRate kg/s by the weight and by the gauges
@@ -526,24 +536,47 @@ $md3 = Measure-PerfClimb @($rowsD[0..300]) 0 $DescentMarksFt $DescentEndFt -1
 Check ($md3.marks.Count -eq 3 -and -not $md3.top_reached) "descent marks: cut short, the marks reached only (got $($md3.marks.Count))"
 
 # the ceiling: 40 s level, then a climb from 1,500 fpm falling to 0 in 600 s
-# with ALT HOLD's swing (4 ft, 10.5 s: 144 fpm); 300 fpm at 520 s, 38,200 ft
-# (a 60 s window's mean 6.25 ft lower)
+# (38,500 ft at 640 s, then down) with ALT HOLD's swing (4 ft, 10.5 s: 144
+# fpm); 100 fpm at 600 s, 38,466.7 ft (a 60 s window's mean 6.25 ft lower).
+# At 300 t less 3 kg/s the FCOM's 1.30 g altitude is 38,100 + 0.225 ft a s:
+# the climb meets it first, at about 524 s and 38,218 ft (buffet).
 $alt = { param($t) if ($t -lt 40) { 31000.0 } else { $u = $t - 40; 31000 + 25 * ($u - $u * $u / 1200) + 4 * [math]::Sin(2 * [math]::PI * $t / 10.5) } }
-$rowsK = New-ClimbRows 600 $alt
+$rowsK = New-ClimbRows 700 $alt
 $rk = Get-PerfClimbRates $rowsK 0 60
-Check ($rk.Count -eq 541) "ceiling: a rate a window (got $($rk.Count))"
+Check ($rk.Count -eq 641) "ceiling: a rate a window (got $($rk.Count))"
 Near $rk[200].rate_fpm (1500 * (1 - (200 + 29.5 - 40) / 600)) 3 'ceiling: a window''s rate (the swing averaged out)'
 $ck = Get-PerfCeiling $rowsK 0 $CeilingRateFpm $CeilingWinS $CeilingArmFpm $CeilingHoldS
-Check ($ck.found -and $ck.armed) 'ceiling: found'
-Near $ck.ceiling_ft 38193.75 10 'ceiling: the altitude where the rate crossed 300 fpm'
-Near $ck.t_s 520 1 'ceiling: its time'
+Check ($ck.found -and $ck.armed -and $ck.limit -eq 'buffet') "ceiling: found, the FCOM's 1.30 g altitude first (got $($ck.limit))"
+Near $ck.ceiling_ft 38218 3 'ceiling: the altitude where the climb met the FCOM''s 1.30 g altitude'
+Near $ck.t_s 524 1.5 'ceiling: its time'
+Near $ck.fcom_ft (38100 + 0.225 * $ck.row) 0.01 'ceiling: the FCOM''s 1.30 g altitude at the ceiling''s row'
 Near $ck.max_rate_fpm (1500 * (1 - 29.5 / 600)) 3 'ceiling: the most climb rate (the first window all in the climb)'
-$ckEarly = Get-PerfCeiling @($rowsK[0..554]) 0 $CeilingRateFpm $CeilingWinS $CeilingArmFpm $CeilingHoldS
-Check (-not $ckEarly.found -and $ckEarly.armed) 'ceiling: not yet, under 300 fpm for less than 10 s'
+# the same climb 20 t lighter: the FCOM's altitude (39,600 ft and up) out of
+# reach, the climb rate decides (thrust)
+$rowsT = New-ClimbRows 700 $alt
+foreach ($r in $rowsT) { $r[$script:ix['weight']] -= 20000 }
+$ckT = Get-PerfCeiling $rowsT 0 $CeilingRateFpm $CeilingWinS $CeilingArmFpm $CeilingHoldS
+Check ($ckT.found -and $ckT.armed -and $ckT.limit -eq 'thrust') "ceiling: found, the climb rate first (got $($ckT.limit))"
+Near $ckT.ceiling_ft 38460.42 10 'ceiling: the altitude where the rate crossed 100 fpm'
+Near $ckT.t_s 600 1 'ceiling: its time'
+Near $ckT.fcom_ft (39600 + 75 * (280 - (280000 - 3.0 * $ckT.row) / 1000)) 0.01 'ceiling: the FCOM''s altitude at that row''s weight, above it'
+$ckEarly = Get-PerfCeiling @($rowsT[0..634]) 0 $CeilingRateFpm $CeilingWinS $CeilingArmFpm $CeilingHoldS
+Check (-not $ckEarly.found -and $ckEarly.armed) 'ceiling: not yet, under 100 fpm for less than 10 s'
+# a constant 294.9 t: the FCOM's 38,482.5 ft met at about 611 s, after the
+# climb rate's 100 fpm at 600 s: thrust, the first
+$rowsT2 = New-ClimbRows 700 $alt
+foreach ($r in $rowsT2) { $r[$script:ix['weight']] = 294900 }
+$ckT2 = Get-PerfCeiling $rowsT2 0 $CeilingRateFpm $CeilingWinS $CeilingArmFpm $CeilingHoldS
+Check ($ckT2.found -and $ckT2.limit -eq 'thrust') "ceiling: the climb rate before the FCOM's altitude, thrust (got $($ckT2.limit))"
+Near $ckT2.ceiling_ft 38460.42 10 'ceiling: the 100 fpm altitude, below the FCOM''s'
+Near $ckT2.fcom_ft 38482.5 0.01 'ceiling: the FCOM''s altitude at 294.9 t'
+$ckT2b = Get-PerfCeiling @($rowsT2[0..605]) 0 $CeilingRateFpm $CeilingWinS $CeilingArmFpm $CeilingHoldS
+Check (-not $ckT2b.found -and $ckT2b.armed) 'ceiling: none yet (the rates over 100 fpm, the FCOM''s altitude not met)'
 $rowsW = New-ClimbRows 300 { param($t) 31000 + 400 / 60 * $t }
 $ckW = Get-PerfCeiling $rowsW 0 $CeilingRateFpm $CeilingWinS $CeilingArmFpm $CeilingHoldS
-Check (-not $ckW.found -and -not $ckW.armed) 'ceiling: never 600 fpm, never armed'
+Check (-not $ckW.found -and -not $ckW.armed -and $null -eq $ckW.limit) 'ceiling: never 600 fpm, never armed'
 Near $ckW.max_rate_fpm 400 1 'ceiling: never armed, its most rate'
+Near $ckW.fcom_ft (38100 + 75 * (300 - 299.103)) 0.01 'ceiling: none found, the FCOM''s altitude at the last row''s weight'
 $atK = (Measure-PerfClimb $rowsK 0 @($ck.ceiling_ft) $null).marks[1]
 Near $atK.press_alt_ft $ck.ceiling_ft 0.01 'ceiling: the mark at the ceiling'
 
@@ -576,17 +609,20 @@ Check (@($cll | Where-Object { $_ -match '^des_l15,descent,' }).Count -eq 6) 'cl
 Check (@($cll | Where-Object { $_ -match '^des_l15,descent,A,60\.4,238523,30000,30000,121\.5,364\.4,364\.4,16\.40,16\.40,299636,300\.0,0\.7800,-2470,95\.00,20,done,raw/des_l15\.csv$' }).Count -eq 1) 'climb files: a descent mark''s row, its rate down'
 Check (@($cll | Where-Object { $_ -match '^des_0[79][80],descent,A,[79][80],(,){14}not_run,$' }).Count -eq 2) 'climb files: two descents not run'
 $ccl = @(Get-Content "$runDir4\ceiling.csv")
-Check ($ccl.Count -eq 4 -and $ccl[0] -eq 'test_id,plan,target_gw_pct,gw_start_kg,ceiling_ft,t_s,fuel_used_kg,dist_air_nm,gw_kg,mach,ias_kt,vminm_kt,max_rate_fpm,status,raw_file') 'climb files: ceiling.csv a row a ceiling'
-Check (@($ccl | ForEach-Object { ($_ -split ',', -1).Count } | Sort-Object -Unique) -join ',' -eq '15') 'climb files: ceiling.csv 15 columns in every row'
-Check ($ccl[1] -match '^cel_l15,A,60\.4,238523,3819[0-9],5[12][0-9]\.[0-9],15[0-9]{2}\.[0-9],[0-9]+\.[0-9]{2},29[0-9]{4},0\.7800,300\.0,230\.0,142[0-9],done,raw/cel_l15\.csv$') "climb files: a ceiling's row ($($ccl[1]))"
-Check ($ccl[2] -match '^cel_078,A,78,307808,(,){8}400,top,raw/cel_078\.csv$') "climb files: a ceiling at the top, its most rate ($($ccl[2]))"
-Check ($ccl[3] -match '^cel_090,A,90,(,){10}not_run,$') "climb files: a ceiling not run ($($ccl[3]))"
+Check ($ccl.Count -eq 4 -and $ccl[0] -eq 'test_id,plan,target_gw_pct,gw_start_kg,ceiling_ft,t_s,fuel_used_kg,dist_air_nm,gw_kg,mach,ias_kt,vminm_kt,max_rate_fpm,limit,fcom_130g_ft,status,raw_file') 'climb files: ceiling.csv a row a ceiling'
+Check (@($ccl | ForEach-Object { ($_ -split ',', -1).Count } | Sort-Object -Unique) -join ',' -eq '17') 'climb files: ceiling.csv 17 columns in every row'
+Check ($ccl[1] -match '^cel_l15,A,60\.4,238523,382[12][0-9],52[2-6]\.[0-9],15[67][0-9]\.[0-9],[0-9]+\.[0-9]{2},298[0-9]{3},0\.7800,300\.0,230\.0,142[0-9],buffet,382[12][0-9],done,raw/cel_l15\.csv$') "climb files: a ceiling's row, its limit and the FCOM's altitude ($($ccl[1]))"
+Check ($ccl[2] -match '^cel_078,A,78,307808,(,){8}400,,3816[0-9],top,raw/cel_078\.csv$') "climb files: a ceiling at the top, its most rate and the FCOM's altitude at the last row ($($ccl[2]))"
+Check ($ccl[3] -match '^cel_090,A,90,(,){12}not_run,$') "climb files: a ceiling not run ($($ccl[3]))"
 $mdc = [IO.File]::ReadAllText("$runDir4\check.md")
 Check ($mdc.Contains('| climb | status | start t | top ft | time s | fuel kg | gauges kg | air NM | ground NM | M0.84 at ft |')) 'climb files: check.md the climbs'' table''s head'
 Check ($mdc.Contains('| clb_l15 | done | 300.0 | 35000 | 768 | 2305 | 2305 | 103.7 | 103.7 | 27260 |')) 'climb files: check.md the climbs'' table'
 Check ($mdc.Contains('| des_l15 | done | 300.0 | 35000 | 607 | 1820 | 1820 | 81.9 | 81.9 | 31480 | 27250 |')) 'climb files: check.md the descents'' table'
 Check ($mdc.Contains('| des_090 | not_run | | 33000 | | | | | | | |')) 'climb files: check.md a descent not run'
-Check ($mdc -match '\| cel_l15 \| done \| 238\.5 \| 3819[0-9] \|') 'climb files: check.md the ceilings'' table'
+Check ($mdc.Contains('| ceiling | status | start t | ceiling ft | limit | time s | fuel kg | t there | Mach | IAS kt | amber band kt | max rate fpm | FCOM 1.30 g ft |')) 'climb files: check.md the ceilings'' table''s head'
+Check ($mdc -match '\| cel_l15 \| done \| 238\.5 \| 382[12][0-9] \| buffet \| 52[2-6] \|') 'climb files: check.md the ceilings'' table'
+Check ($mdc -match '\| cel_078 \| top \| 307\.8 \|( \|){8} 400 \| 3816[0-9] \|') 'climb files: check.md a ceiling at the top, the FCOM''s altitude at its last row'
+Check ($mdc.Contains('stays under 100 fpm (thrust) or the aircraft reaches the FCOM''s 1.30 g altitude at its weight (buffet; FCOM p.267, PI.11.1), whichever first')) 'climb files: check.md the ceilings'' criteria'
 Check ($mdc.Contains('Tests: 3 of 9 done; aborted 1, not_run 4, top 1')) 'climb files: check.md the tests'' count'
 Check ($mdc.Contains('the schedule 84/340/250') -and $mdc.Contains('the schedule 250/340/84')) 'climb files: check.md the schedules'
 Check ($mdc.Contains('| top 35000 | 34970 | 768 |') -and $mdc.Contains('Error: no A/P servos')) 'climb files: check.md a climb''s marks and a stopped one''s error'

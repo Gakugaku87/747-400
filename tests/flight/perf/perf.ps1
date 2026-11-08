@@ -41,7 +41,8 @@
 #          at every 5,000 ft and at 10,000 ft.
 #          Ceilings: an air start at FL310 and M.85, then FLCH to 45,000 ft at
 #          M.85 until the climb rate (60 s of pressure altitude) falls below
-#          300 fpm: that altitude.
+#          100 fpm or the aircraft reaches the FCOM's 1.30 g altitude at its
+#          weight, whichever first (the FCOM's criteria): that altitude.
 #
 # PERF_SIMBRIEF.md's rules: the custom acf only; no file of the aircraft,
 # X-Plane or a plugin written (a flight's datarefs and commands only); no time
@@ -167,20 +168,44 @@ $DescentMach = 0.84
 $DescentKias = 340
 $DescentEndFt = 10000
 $DescentMarksFt = @(30000, 25000, 20000, 15000)
-# The ceilings: from FL310 at M.85 in FLCH (the climb thrust) until the climb
-# rate falls below 300 fpm (PERF_SIMBRIEF.md phase 2). The rate: a straight
-# line through 60 s of pressure altitude, at the window's middle (the light
-# weights' ALT HOLD swung 10.5 s, 130 fpm: phase 1), once over 600 fpm and
-# then under 300 for 10 s. The MCP at 45,000 ft, under the FCOM's maximum
-# operating altitude 45,100 ft (p.77, L.10.1). Marks every 1,000 ft.
+# The ceilings (PERF_SIMBRIEF.md phase 2; the FCOM's criteria since
+# 2026-11-08, the user): from FL310 at M.85 in FLCH (the climb thrust) until
+# the climb rate falls below 100 fpm (the thrust-limited altitude's residual
+# climb, FCOM p.267, PI.11.1; the FMC's MAX ALT's default, p.1350, 11.42.6)
+# or the aircraft reaches the FCOM's 1.30 g altitude at its weight (below),
+# whichever first. Before, 300 fpm: that was where M.85 met the amber band's
+# top and the AFDS's speed protection (p.675) took the speed up, not where
+# the thrust ran out (the 2026-11-08 ceilings climbed on at 250-310 fpm on
+# the band's top). The rate: a straight line through 60 s of pressure
+# altitude, at the window's middle (the light weights' ALT HOLD swung 10.5 s,
+# 130 fpm: phase 1), once over 600 fpm and then under 100 for 10 s. The MCP
+# at 45,000 ft, under the FCOM's maximum operating altitude 45,100 ft (p.77,
+# L.10.1). Marks every 1,000 ft.
 $CeilingStartFt = 31000
 $CeilingMach = 0.85
-$CeilingRateFpm = 300
+$CeilingRateFpm = 100
 $CeilingArmFpm = 600
 $CeilingWinS = 60
 $CeilingHoldS = 10
 $CeilingTopFt = 45000
 $CeilingMarksFt = @(32..44 | ForEach-Object { 1000.0 * $_ })
+# FCOM p.267 (PI.11.1, the long range cruise maximum operating altitude, max
+# climb thrust, ISA+10 and colder): the altitude with 1.30 g to initial
+# buffet (39 degrees of bank) by the weight (t); B747.68.perf_db.lua max_alt
+# (the FMC's MAX ALT) has the same table. At every weight it is below the
+# thrust-limited altitude (the starred 1.20 g column, 100 fpm). Linear
+# between the weights, the ends beyond them.
+$FcomBuffet130T = @(400, 380, 360, 340, 320, 300, 280, 260, 240, 220, 200, 180)
+$FcomBuffet130Ft = @(32100, 33200, 34300, 35500, 36800, 38100, 39600, 41100, 42800, 44600, 45000, 45000)
+function Get-PerfFcomBuffet130Ft([double]$GwKg) {
+    $wt = $GwKg / 1000
+    $tw = $FcomBuffet130T; $ta = $FcomBuffet130Ft
+    if ($wt -ge $tw[0]) { return [double]$ta[0] }
+    for ($i = 1; $i -lt $tw.Count; $i++) {
+        if ($wt -ge $tw[$i]) { return $ta[$i - 1] + ($tw[$i - 1] - $wt) / ($tw[$i - 1] - $tw[$i]) * ($ta[$i] - $ta[$i - 1]) }
+    }
+    return [double]$ta[$tw.Count - 1]
+}
 function Get-PerfClimbTests {
     $l = New-Object System.Collections.ArrayList
     [void]$l.Add([ordered]@{ id = 'clb_l15'; kind = 'climb'; fuel_kg = $LightFuelKg; top_ft = 35000 })
@@ -1645,17 +1670,23 @@ function Get-PerfClimbRates($Rows, [int]$From, [int]$Win) {
     return ,$out.ToArray()
 }
 
-# The ceiling (PERF_SIMBRIEF.md phase 2: the climb thrust, M.85, the climb
-# rate under 300 fpm) from the rates (Get-PerfClimbRates): once a rate has
-# been $ArmFpm or more (the climb under way), the first one under $RateFpm
-# that stays under it for the $HoldN rates on; the altitude and time where
-# the rate crossed $RateFpm, between that rate and the one before. found
-# false while there is none (yet).
+# The ceiling (PERF_SIMBRIEF.md phase 2: the climb thrust, M.85; the FCOM's
+# criteria since 2026-11-08), the first of
+#   thrust  from the rates (Get-PerfClimbRates): once a rate has been
+#           $ArmFpm or more (the climb under way), the first one under
+#           $RateFpm that stays under it for the $HoldN rates on; the altitude
+#           and time where the rate crossed $RateFpm, between that rate and
+#           the one before;
+#   buffet  the first row at or over the FCOM's 1.30 g altitude at its weight
+#           (Get-PerfFcomBuffet130Ft) after one under it; the altitude and
+#           time of the crossing, between the two rows.
+# limit says which; fcom_ft is the FCOM's 1.30 g altitude at the ceiling's
+# row's weight (none found: the last row's). found false while there is none
+# (yet).
 function Get-PerfCeiling($Rows, [int]$From, [double]$RateFpm, [int]$Win, [double]$ArmFpm, [int]$HoldN) {
     $rates = Get-PerfClimbRates $Rows $From $Win
-    $c = [ordered]@{ found = $false; ceiling_ft = [double]::NaN; t_s = [double]::NaN; row = $null; armed = $false
-        max_rate_fpm = [double]::NaN; last_rate_fpm = [double]::NaN; last_alt_ft = [double]::NaN; rates = $rates.Count }
-    if ($rates.Count -eq 0) { return $c }
+    $c = [ordered]@{ found = $false; limit = $null; ceiling_ft = [double]::NaN; t_s = [double]::NaN; row = $null; armed = $false
+        max_rate_fpm = [double]::NaN; last_rate_fpm = [double]::NaN; last_alt_ft = [double]::NaN; fcom_ft = [double]::NaN; rates = $rates.Count }
     $max = [double]::NegativeInfinity
     $armed = $false
     for ($j = 0; $j -lt $rates.Count; $j++) {
@@ -1672,15 +1703,48 @@ function Get-PerfCeiling($Rows, [int]$From, [double]$RateFpm, [int]$Win, [double
         $f = 1.0
         if ($p.rate_fpm -ne $q.rate_fpm) { $f = ($p.rate_fpm - $RateFpm) / ($p.rate_fpm - $q.rate_fpm) }
         $c.found = $true
+        $c.limit = 'thrust'
         $c.ceiling_ft = $p.alt_ft + $f * ($q.alt_ft - $p.alt_ft)
         $c.t_s = $p.t_s + $f * ($q.t_s - $p.t_s)
         $c.row = $q.row
         break
     }
     $c.armed = $armed
-    $c.max_rate_fpm = $max
-    $c.last_rate_fpm = $rates[$rates.Count - 1].rate_fpm
-    $c.last_alt_ft = $rates[$rates.Count - 1].alt_ft
+    if ($rates.Count -gt 0) {
+        $c.max_rate_fpm = $max
+        $c.last_rate_fpm = $rates[$rates.Count - 1].rate_fpm
+        $c.last_alt_ft = $rates[$rates.Count - 1].alt_ft
+    }
+    # the buffet: the rows against the FCOM's 1.30 g altitude at their weight,
+    # until the thrust's ceiling if that came first
+    $ix = $script:ix; $iT = $ix['sim_t']; $iA = $ix['press_alt_ft']; $iW = $ix['weight']
+    if ($Rows.Count -gt $From + 1) {
+        $t0 = $Rows[$From][$iT]
+        $capP = Get-PerfFcomBuffet130Ft $Rows[$From][$iW]
+        for ($k = $From + 1; $k -lt $Rows.Count; $k++) {
+            $p = $Rows[$k - 1]; $q = $Rows[$k]
+            if ($c.found -and $p[$iT] - $t0 -ge $c.t_s) { break }
+            $capQ = Get-PerfFcomBuffet130Ft $q[$iW]
+            if ($p[$iA] -lt $capP -and $q[$iA] -ge $capQ) {
+                $dp = $capP - $p[$iA]; $dq = $q[$iA] - $capQ
+                $f = if ($dp + $dq -gt 0) { $dp / ($dp + $dq) } else { 1.0 }
+                $bt = $p[$iT] - $t0 + $f * ($q[$iT] - $p[$iT])
+                if (-not $c.found -or $bt -lt $c.t_s) {
+                    $c.found = $true
+                    $c.limit = 'buffet'
+                    $c.ceiling_ft = $p[$iA] + $f * ($q[$iA] - $p[$iA])
+                    $c.t_s = $bt
+                    $c.row = $k
+                }
+                break
+            }
+            $capP = $capQ
+        }
+    }
+    if ($Rows.Count -gt 0) {
+        $wr = if ($c.found) { [math]::Min([int]$c.row, $Rows.Count - 1) } else { $Rows.Count - 1 }
+        $c.fcom_ft = Get-PerfFcomBuffet130Ft $Rows[$wr][$iW]
+    }
     return $c
 }
 
@@ -1923,9 +1987,10 @@ function Invoke-PerfDescent($T, $Acf, [double[]]$StationKg) {
 # A ceiling (suite climb; PERF_SIMBRIEF.md phase 2): an air start at FL310
 # and M.85, level there (30 s within the limits, in 4 min), then FLCH to
 # 45,000 ft at M.85 (the climb thrust: the reference CLB) until the climb
-# rate stays under 300 fpm (Get-PerfCeiling); at most 45,000 ft ("top") and
-# 40 min of sim time ("timeout"). The marks every 1,000 ft, and at the
-# ceiling the time, fuel and distance from FL310 (Measure-PerfClimb).
+# rate stays under 100 fpm or the aircraft reaches the FCOM's 1.30 g
+# altitude at its weight (Get-PerfCeiling); at most 45,000 ft ("top") and 40
+# min of sim time ("timeout"). The marks every 1,000 ft, and at the ceiling
+# the time, fuel and distance from FL310 (Measure-PerfClimb).
 function Invoke-PerfCeiling($T, $Acf, [double[]]$StationKg) {
     $res = [ordered]@{ id = $T.id; kind = 'ceiling'; target = $T; status = 'done'; checks = [ordered]@{} }
     try {
@@ -1967,11 +2032,12 @@ function Invoke-PerfCeiling($T, $Acf, [double[]]$StationKg) {
             if ($at.marks.Count -ge 2) { $res.at_ceiling = $at.marks[1] }
         }
         $ac = $res.at_ceiling
-        Add-Check $res 'ceiling' $c.found $(if ($c.found -and $null -ne $ac) { '{0} ft after {1} s: {2} t, M{3}, {4} kt (the amber band''s top {5} kt), fuel {6} kg' -f
-            (F $c.ceiling_ft '0'), (F $c.t_s '0'), (F ($ac.gw_kg / 1000) '0.0'), (F $ac.mach '0.000'), (F $ac.ias_kt '0'), (F $ac.vminm_kt '0'),
-            (F $ac.fuel_used_kg '0') } else { '{0}: the rate last {1} fpm at {2} ft, at most {3} fpm' -f $res.status, (F $c.last_rate_fpm '0'),
-            (F $c.last_alt_ft '0'), (F $c.max_rate_fpm '0') }) ('the climb rate under {0} fpm (a {1} s line) for {2} s, once over {3}' -f $CeilingRateFpm,
-            $CeilingWinS, $CeilingHoldS, $CeilingArmFpm)
+        Add-Check $res 'ceiling' $c.found $(if ($c.found -and $null -ne $ac) { '{0} ft ({1}) after {2} s: {3} t, M{4}, {5} kt (the amber band''s top {6} kt), fuel {7} kg; the FCOM''s 1.30 g altitude {8} ft' -f
+            (F $c.ceiling_ft '0'), $c.limit, (F $c.t_s '0'), (F ($ac.gw_kg / 1000) '0.0'), (F $ac.mach '0.000'), (F $ac.ias_kt '0'), (F $ac.vminm_kt '0'),
+            (F $ac.fuel_used_kg '0'), (F $c.fcom_ft '0') } else { '{0}: the rate last {1} fpm at {2} ft, at most {3} fpm; the FCOM''s 1.30 g altitude {4} ft' -f
+            $res.status, (F $c.last_rate_fpm '0'), (F $c.last_alt_ft '0'), (F $c.max_rate_fpm '0'), (F $c.fcom_ft '0') }) `
+            ('the climb rate under {0} fpm (a {1} s line) for {2} s, once over {3} (thrust); or the FCOM''s 1.30 g altitude at the weight, p.267 (buffet)' -f
+            $CeilingRateFpm, $CeilingWinS, $CeilingHoldS, $CeilingArmFpm)
         Add-PerfClimbChecks $res
         # the Mach held (the AFDS's FLCH on the MCP's M.85; its speed protection
         # would hold the amber band's top above it)
@@ -2173,7 +2239,7 @@ function Write-PerfClimbFiles([string]$RunOut, $RunResults, $RunMeta, $RunAborte
     $cl = New-Object System.Collections.ArrayList
     [void]$cl.Add('test_id,kind,plan,target_gw_pct,gw_start_kg,mark,press_alt_ft,t_s,fuel_used_kg,ff_gauge_used_kg,dist_air_nm,dist_gnd_nm,gw_kg,ias_kt,mach,seg_vs_fpm,n1_avg_pct,thrlim,status,raw_file')
     $cc = New-Object System.Collections.ArrayList
-    [void]$cc.Add('test_id,plan,target_gw_pct,gw_start_kg,ceiling_ft,t_s,fuel_used_kg,dist_air_nm,gw_kg,mach,ias_kt,vminm_kt,max_rate_fpm,status,raw_file')
+    [void]$cc.Add('test_id,plan,target_gw_pct,gw_start_kg,ceiling_ft,t_s,fuel_used_kg,dist_air_nm,gw_kg,mach,ias_kt,vminm_kt,max_rate_fpm,limit,fcom_130g_ft,status,raw_file')
     $count = [ordered]@{}
     foreach ($t in $RunTests) {
         $r = $byId[$t.id]
@@ -2199,10 +2265,11 @@ function Write-PerfClimbFiles([string]$RunOut, $RunResults, $RunMeta, $RunAborte
             if ($null -ne $c -and $c.found -and $null -ne $ac) {
                 [void]$cc.Add((@($t.id, 'A', $pct, $gw0, (Format-PerfCsv $c.ceiling_ft '0'), (Format-PerfCsv $ac.t_s '0.0'), (Format-PerfCsv $ac.fuel_used_kg '0.0'),
                     (Format-PerfCsv $ac.dist_air_nm '0.00'), (Format-PerfCsv $ac.gw_kg '0'), (Format-PerfCsv $ac.mach '0.0000'), (Format-PerfCsv $ac.ias_kt '0.0'),
-                    (Format-PerfCsv $ac.vminm_kt '0.0'), (Format-PerfCsv $c.max_rate_fpm '0'), $status, $raw)) -join ',')
+                    (Format-PerfCsv $ac.vminm_kt '0.0'), (Format-PerfCsv $c.max_rate_fpm '0'), $c.limit, (Format-PerfCsv $c.fcom_ft '0'), $status, $raw)) -join ',')
             } else {
                 $mx = if ($null -ne $c) { Format-PerfCsv $c.max_rate_fpm '0' } else { '' }
-                [void]$cc.Add(('{0},A,{1},{2},,,,,,,,,{3},{4},{5}' -f $t.id, $pct, $gw0, $mx, $status, $raw))
+                $fc = if ($null -ne $c) { Format-PerfCsv $c.fcom_ft '0' } else { '' }
+                [void]$cc.Add(('{0},A,{1},{2},,,,,,,,,{3},,{4},{5},{6}' -f $t.id, $pct, $gw0, $mx, $fc, $status, $raw))
             }
         }
     }
@@ -2217,7 +2284,7 @@ function Write-PerfClimbFiles([string]$RunOut, $RunResults, $RunMeta, $RunAborte
     if ($RunMeta.only) { [void]$md.Add(''); [void]$md.Add(('Only (-Only): {0}' -f (@($RunMeta.only) -join ', '))) }
     if ($RunAborted) { [void]$md.Add(''); [void]$md.Add("**Stopped:** $RunAborted") }
     [void]$md.Add('')
-    [void]$md.Add(('Climbs: from {0} ft and {1} kt, FLCH at {2} kt, then M{3} (the schedule {1}/{2}/{4}); the top''s mark {5} ft below it. Descents: from the top at M{6}, FLCH (idle) to {7} ft, {8} kt once that is M{6}''s CAS (the schedule {9}/{8}/250); the bottom''s mark {5} ft above it. Ceilings: from {10} ft at M{11}, FLCH until the climb rate (a {12} s line) stays under {13} fpm.' -f
+    [void]$md.Add(('Climbs: from {0} ft and {1} kt, FLCH at {2} kt, then M{3} (the schedule {1}/{2}/{4}); the top''s mark {5} ft below it. Descents: from the top at M{6}, FLCH (idle) to {7} ft, {8} kt once that is M{6}''s CAS (the schedule {9}/{8}/250); the bottom''s mark {5} ft above it. Ceilings: from {10} ft at M{11}, FLCH until the climb rate (a {12} s line) stays under {13} fpm (thrust) or the aircraft reaches the FCOM''s 1.30 g altitude at its weight (buffet; FCOM p.267, PI.11.1), whichever first.' -f
         $ClimbStartFt, $ClimbStartKias, $ClimbKias, $ClimbMach, [int][math]::Round($ClimbMach * 100), $ClimbTopMarginFt, $DescentMach, $DescentEndFt,
         $DescentKias, [int][math]::Round($DescentMach * 100), $CeilingStartFt, $CeilingMach, $CeilingWinS, $CeilingRateFpm))
     [void]$md.Add('')
@@ -2252,21 +2319,21 @@ function Write-PerfClimbFiles([string]$RunOut, $RunResults, $RunMeta, $RunAborte
             (F $mk.ff_gauge_used_kg '0'), (F $mk.dist_air_nm '0.0'), (F $mk.dist_gnd_nm '0.0'), $sIas, $sCas))
     }
     [void]$md.Add('')
-    [void]$md.Add('| ceiling | status | start t | ceiling ft | time s | fuel kg | t there | Mach | IAS kt | amber band kt | max rate fpm |')
-    [void]$md.Add('|---|---|---|---|---|---|---|---|---|---|---|')
+    [void]$md.Add('| ceiling | status | start t | ceiling ft | limit | time s | fuel kg | t there | Mach | IAS kt | amber band kt | max rate fpm | FCOM 1.30 g ft |')
+    [void]$md.Add('|---|---|---|---|---|---|---|---|---|---|---|---|---|')
     foreach ($t in @($RunTests | Where-Object { $_.kind -eq 'ceiling' })) {
         $r = $byId[$t.id]
         $c = if ($null -ne $r) { $r.ceiling } else { $null }
         $ac = if ($null -ne $r) { $r.at_ceiling } else { $null }
         $g0 = if ($null -ne $r -and $null -ne $r.request) { F ($r.request.gw_kg / 1000) '0.0' } else { '' }
         if ($null -eq $c -or -not $c.found -or $null -eq $ac) {
-            [void]$md.Add(('| {0} | {1} | {2} | | | | | | | | {3} |' -f $t.id, $(if ($null -ne $r) { $r.status } else { 'not_run' }), $g0,
-                $(if ($null -ne $c) { F $c.max_rate_fpm '0' } else { '' })))
+            [void]$md.Add((('| {0} | {1} | {2} |' + (' |' * 8) + ' {3} | {4} |') -f $t.id, $(if ($null -ne $r) { $r.status } else { 'not_run' }), $g0,
+                $(if ($null -ne $c) { F $c.max_rate_fpm '0' } else { '' }), $(if ($null -ne $c) { F $c.fcom_ft '0' } else { '' })))
             continue
         }
-        [void]$md.Add(('| {0} | {1} | {2} | {3} | {4} | {5} | {6} | {7} | {8} | {9} | {10} |' -f $t.id, $r.status, $g0, (F $c.ceiling_ft '0'),
-            (F $ac.t_s '0'), (F $ac.fuel_used_kg '0'), (F ($ac.gw_kg / 1000) '0.0'), (F $ac.mach '0.000'), (F $ac.ias_kt '0'), (F $ac.vminm_kt '0'),
-            (F $c.max_rate_fpm '0')))
+        [void]$md.Add(('| {0} | {1} | {2} | {3} | {4} | {5} | {6} | {7} | {8} | {9} | {10} | {11} | {12} |' -f $t.id, $r.status, $g0, (F $c.ceiling_ft '0'),
+            $c.limit, (F $ac.t_s '0'), (F $ac.fuel_used_kg '0'), (F ($ac.gw_kg / 1000) '0.0'), (F $ac.mach '0.000'), (F $ac.ias_kt '0'), (F $ac.vminm_kt '0'),
+            (F $c.max_rate_fpm '0'), (F $c.fcom_ft '0')))
     }
     [void]$md.Add('')
     [void]$md.Add(('Tests: {0} of {1} done{2}' -f [int]$count['done'], @($RunTests).Count,
@@ -2324,7 +2391,9 @@ if ($Suite -eq 'climb') {
     $meta.descent = [ordered]@{ schedule = ('{0}/{1}/250' -f [int][math]::Round($DescentMach * 100), $DescentKias); mach = $DescentMach
         kias = $DescentKias; end_ft = $DescentEndFt; marks_ft = $DescentMarksFt; bottom_margin_ft = $ClimbTopMarginFt }
     $meta.ceiling = [ordered]@{ start_ft = $CeilingStartFt; mach = $CeilingMach; rate_fpm = $CeilingRateFpm; arm_fpm = $CeilingArmFpm
-        window_s = $CeilingWinS; hold_s = $CeilingHoldS; mcp_top_ft = $CeilingTopFt; marks_ft = $CeilingMarksFt }
+        window_s = $CeilingWinS; hold_s = $CeilingHoldS; mcp_top_ft = $CeilingTopFt; marks_ft = $CeilingMarksFt
+        criteria = 'FCOM p.267 (PI.11.1): the lower of the 1.30 g altitude and the climb rate under rate_fpm (the user, 2026-11-08; before, 300 fpm)'
+        fcom_130g = [ordered]@{ source = 'FCOM p.267 (PI.11.1), ISA+10 and colder, max climb thrust, 1.30 g (39 degrees of bank)'; weight_t = $FcomBuffet130T; alt_ft = $FcomBuffet130Ft } }
 }
 $xpLog = Join-Path $script:XPRoot 'Log.txt'
 $xtErr = Join-Path $script:XPRoot 'Output\B747_xtlua_errors.txt'
