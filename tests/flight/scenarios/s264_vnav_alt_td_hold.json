@@ -1,11 +1,15 @@
 {
   "name": "s264_vnav_alt_td_hold",
-  "description": "6-1/6-2 段 9i（VNAV の engage とサブモードの作り直し：notes/ATA-34-61-FMC.md §150）の X-Plane での確認、T/D と降下の MCP 高度の食い違い。s143 と同じ経路（FL300 の T/D の手前、ATMUG の約 85 NM 西から東へ空中開始：2026-11-08 から s143 より約 55 NM 西にして、T/D（開始から約 7 分）の前に空中開始の揺れを収めて FL300 で落ち着かせる、機体を読み直す、RJAA→RJBB の ATMUGA・ILS06LY、LNAV、ZFW 200・CI 100・FL300、MCP は FL300 のまま VNAV）。T/D の 2 分前に RESET MCP ALT、T/D を過ぎると FMC の td_hold で VNAV ALT（5）・A/T SPD で FL300 を保つ（FMSPG p.34 (2-22)、ATA22 p.280：前は VNAV PTH）。押すだけでは VNAV ALT のまま、MCP を 10,000 ft に下げても経路の上なので押すまで VNAV ALT（FCOM p.645、p.665）、押すと VNAV PTH の降下。降下中に MCP を機体の 2,000 ft 上に上げると、その時の高度で VNAV ALT の水平（FCOM p.665、FMSPG p.227 (4-16)：前は降下を続けた）、MCP を戻して押すと VNAV PTH。Lua の誤りも確かめる。",
+  "description": "6-1/6-2 段 9i（VNAV の engage とサブモードの作り直し：notes/ATA-34-61-FMC.md §150）の X-Plane での確認、T/D と降下の MCP 高度の食い違い。s143 と同じ経路（FL300 の T/D の手前、ATMUG の約 85 NM 西から東へ空中開始：2026-11-08 から s143 より約 55 NM 西にして、T/D（開始から約 7 分）の前に空中開始の揺れを収めて FL300 で落ち着かせる、機体を読み直す、重さは約 310 t（ペイロード 40.0 t は s269、燃料 86.5 t は s270 と同じ。2026-11-08 夕方までは前のシナリオの重さを引き継ぎ、270 t の回は空中開始の機首上げで 31,160 ft まで上がり、VNAV PTH の巡航の戻りが約 −170 fpm で、FL300 に戻る前に T/D を過ぎた。310 t の回は 30,902 ft から 174 秒で FL300）、RJAA→RJBB の ATMUGA・ILS06LY、LNAV、ZFW 200・CI 100・FL300、MCP は FL300 のまま VNAV）。T/D の 2 分前に RESET MCP ALT、T/D を過ぎると FMC の td_hold で VNAV ALT（5）・A/T SPD で FL300 を保つ（FMSPG p.34 (2-22)、ATA22 p.280：前は VNAV PTH）。押すだけでは VNAV ALT のまま、MCP を 10,000 ft に下げても経路の上なので押すまで VNAV ALT（FCOM p.645、p.665）、押すと VNAV PTH の降下。降下中に MCP を機体の 2,000 ft 上に上げると、その時の高度で VNAV ALT の水平（FCOM p.665、FMSPG p.227 (4-16)：前は降下を続けた）、MCP を戻して押すと VNAV PTH。Lua の誤りも確かめる。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 34.73, "longitude": 132.42, "elevation_in_meters": 9144, "heading_true": 97, "speed_in_meters_per_second": 225 },
     "engine_status": { "all_engines": { "running": true } },
     "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weight": {
+      "payload_weight_in_kilograms": [ 3901.4, 4106.8, 4928.1, 6365.5, 1232, 10287.5, 9178.6, 0, 0 ],
+      "fueltank_weight_in_kilograms": [ 0, 13499.4, 29767.9, 29767.9, 13499.4, 0, 0, 0, 0 ]
+    },
     "weather": {
       "definition": "vfr_few_clouds",
       "vertical_speed_in_thermal_in_feet_per_minute": 0,

@@ -1377,7 +1377,7 @@ function B747_fms_pred_input(crz)
   -- for the first), across a conditional leg or a discontinuity too (an
   -- estimate; a conditional leg itself none)
   local from = {lat = simDR_latitude, lon = simDR_longitude}
-  local total, lastConX = 0, 0
+  local total, lxs = 0, {}
   for i, l in ipairs(r.legs) do
     local d, p0 = 0, from
     if l.fix then
@@ -1386,6 +1386,7 @@ function B747_fms_pred_input(crz)
       from = l.fix
     end
     total = total + d
+    lxs[i] = total
     local con = nil
     if l.alt then
       if l.akind == "A" then con = {kind = "A", a = l.alt}
@@ -1402,22 +1403,38 @@ function B747_fms_pred_input(crz)
     -- 9i: its procedure, for VNAV's climb constraints: vnav_geo_set)
     legs[i] = {name = l.fix and l.fix.ident or "", dist = d, con = con, p0 = p0, p1 = l.fix,
       gp = (l.vangle and l.vangle < 0) and -l.vangle or nil, step = l.step, proc = l.proc}
-    if l.proc == "SID" then clbLast = i end
-    if con and not rwy and not (missed and l.proc == "APPR") then lastCon, lastConX = i, total end
+    if con and not rwy and not (missed and l.proc == "APPR") then lastCon = i end
   end
   -- (step LF2; notes/ATA-34-61-FMC.md §127) each leg the longer (a turn
   -- flown over its fix) or shorter (a fly-by turn) by the turn into it as
   -- LNAV flies it
   B747_fms_turns(legs, r)
+  -- the phase: the FMC's VNAV's (step 9b; before, the old AP's flightPhase)
+  local phase = "clb"
+  local vph = B747_fms_vnav_phase and B747_fms_vnav_phase()
+  if simDR_onGround ~= 1 and vph then phase = string.lower(vph) end
+  -- (2026-11-08, step 9i's review, finding 3) the climb's legs, the
+  -- predictions' and VNAV's (vnav_geo_set): B747_vnav_model.clb_last, the
+  -- rule of the climb constraints' clb_keep. The SID's; in the climb the
+  -- enroute legs on to the last predictions' T/C or a short flight's T/D
+  -- (none in a cruise climb), before there are predictions those within
+  -- half the route ahead (estimate, as before); never an arrival's or an
+  -- approach's. Before, the SID's, else those before half the way in any
+  -- phase: in the descent an arrival's constraint there was left out of the
+  -- path
+  local chg = nil
+  if B747_fms_vnav_page then
+    local _, c = B747_fms_vnav_page()
+    chg = c
+  end
+  local line = chg ~= "CLB" and predResult and (predResult.tc or predResult.td) or nil
+  clbLast = B747_vnav_model.clb_last(legs, lxs, phase, line, total / 2)
   -- the E/D: the approach's runway, else the last constraint after the
-  -- climb's legs, the SID's or, without one and in the climb, those in the
-  -- first half of the route ahead (the predictions' climb,
-  -- B747.68.pred_model.lua's clb_last: an estimate); in the cruise and the
-  -- descent any. Before, without a SID the last constraint anywhere: one
-  -- 20 NM out on the climb was the E/D, the T/D before it (2026-11-01, s185)
+  -- climb's legs (before 2026-11-01 without a SID the last constraint
+  -- anywhere: one 20 NM out on the climb was the E/D, the T/D before it:
+  -- s185)
   local ed = rwy
-  if not ed and lastCon and lastCon > (clbLast or 0)
-    and (clbLast or lastConX > total / 2 or B747_fms_vnav_phase() ~= "CLB") then ed = lastCon end
+  if not ed and lastCon and lastCon > clbLast then ed = lastCon end
   local perf, isa = B747_fms_perf(), B747_fms_isa_dev()
   local clb, des, crzspd = B747_fms_schedules(perf)
   -- (step 9h4b) ENG OUT active: the engine-out data (no step climbs:
@@ -1440,16 +1457,9 @@ function B747_fms_pred_input(crz)
       return to, w
     end
   end
-  -- the phase: the FMC's VNAV's (step 9b; before, the old AP's flightPhase)
-  local phase = "clb"
-  local vph = B747_fms_vnav_phase and B747_fms_vnav_phase()
-  if simDR_onGround ~= 1 and vph then phase = string.lower(vph) end
   -- (step 9h4b) VNAV's cruise descent under way, its driftdown
   local crzDes = nil
-  if B747_fms_vnav_page then
-    local _, chg = B747_fms_vnav_page()
-    if chg == "DES" then crzDes = B747_fms_vnav_dd() and "dd" or "des" end
-  end
+  if chg == "DES" then crzDes = B747_fms_vnav_dd() and "dd" or "des" end
   -- the winds and temperatures along the route (step 8e3; notes/
   -- ATA-34-61-FMC.md §53): the WIND pages' and DESCENT FORECAST's mixed
   -- with the measured wind (true) and temperature
@@ -1778,17 +1788,23 @@ function vnav_geo_set(s, r)
   local g = {clb = {}, des = {}}
   local lx, acc = {}, 0
   for i, l in ipairs(s.legs) do acc = acc + l.dist; lx[i] = acc end
-  -- the climb's legs: the SID's, else those before half the way (the
-  -- predictions')
+  -- the climb's legs: the predictions' (B747_fms_pred_input's, from
+  -- 2026-11-08 B747_vnav_model.clb_last), else those before half the way
   local clbLast = s.clb_last
   if not clbLast then
     local half = ((s.ed and lx[s.ed]) or acc) / 2
     clbLast = 0
     for i = 1, #s.legs do if lx[i] <= half then clbLast = i end end
   end
-  -- (step 9d1) the climb's last point, for the altitude selector's push
-  g.clb_end = clbLast > 0 and s.legs[clbLast] and s.legs[clbLast].p1 or nil
-  g.clb_none = clbLast == 0
+  -- (step 9d1) the climb's last point, for the altitude selector's push:
+  -- the last of the climb's legs with a point (2026-11-08: they can end on
+  -- a discontinuity or a vector, without one; nil then ran the climb's
+  -- constraints on to the route's end), none without one
+  g.clb_end = nil
+  for i = math.min(clbLast, #s.legs), 1, -1 do
+    if s.legs[i].p1 then g.clb_end = s.legs[i].p1 break end
+  end
+  g.clb_none = g.clb_end == nil
   -- (step 9d2a) the points of the legs before the T/D (the climb's and the
   -- cruise's: the early descent deletes their constraints, FMSPG p.3.5-5)
   g.pre_td = {}

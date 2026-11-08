@@ -149,7 +149,18 @@ enter("350", "L1")
 frames(1.2)
 T.check(not pad():find("LIMIT ALT", 1, true), "CRZ ALT FL350: no LIMIT ALT (the short route's UNABLE CRZ ALT may show): " .. pad())
 
--- DESCENT PATH DELETED: BRAVO 10000, the E/D; deleted, no constraint left
+-- DESCENT PATH DELETED: BRAVO 10000, the E/D; deleted, no constraint left.
+-- In the cruise at FL350 (2026-11-08, step 9i's review, finding 3: in the
+-- climb an enroute waypoint's constraint before the T/C is the climb's,
+-- B747_vnav_model.clb_last; before, BRAVO in the route's second half was
+-- the descent's in the climb too); back to 2,000 ft after
+local function at(ft)
+    rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", ft)
+    rt:set("sim/flightmodel2/position/pressure_altitude", ft)
+    rt:set("sim/flightmodel/position/elevation", ft * 0.3048)
+end
+at(35000)
+frames(0.3)
 key("func_key/legs")
 clear()
 rt:command(K .. "key/del")
@@ -174,6 +185,8 @@ T.equal(pad(), "DESCENT PATH DELETED", "DESCENT PATH DELETED (FCOM p.1431)")
 clear()
 frames(0.3)
 T.equal(pad(), "", "an event: cleared")
+at(2000)
+frames(0.3)
 
 -- (step 11c2b) CHECK ALT TGT (FCOM p.1431): VNAV engaged at 2,000 ft with
 -- the MCP altitude below (1,000) and the FMC's above: level, the message;
