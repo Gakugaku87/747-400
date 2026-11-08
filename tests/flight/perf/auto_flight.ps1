@@ -653,8 +653,9 @@ function Set-AutoApproach($Plan) {
     foreach ($pg in $pages) {
         $have = Find-CduText $pg $Plan.approach 'R' -Prefix -Marked
         if ($have) { Note info ('the uplink''s approach {0} ({1})' -f $have.text, $have.mark); Send-Cdu @('RTE'); return }
+        # another approach uplinked (an RNAV one): the ILS chosen instead (the autoland's)
         $any = @(foreach ($k in 1..6) { Get-CduItems ([string]$pg[2 * $k]) | Where-Object { $_.side -eq 'R' -and $_.mark } })
-        if ($any.Count -gt 0) { Note warn ('the uplink''s approach {0}, not {1}: kept' -f $any[0].text, $Plan.approach); Send-Cdu @('RTE'); return }
+        if ($any.Count -gt 0) { Note warn ('the uplink''s approach {0}, not {1}: the ILS chosen' -f $any[0].text, $Plan.approach) }
     }
     $hit = Select-CduItem $open $Plan.approach 'R' -Prefix
     if (-not $hit) { Note warn ('no approach {0} at {1}: the route without one' -f $Plan.approach, $Plan.dest); Send-Cdu @('RTE'); return }
