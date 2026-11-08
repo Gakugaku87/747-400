@@ -213,6 +213,36 @@ i = inp({mode = "FLCH", ias = 250, spd_sel = 250, vs = 0, tas = 290})
 r = fly_spd(s, i, 120, ramp(-0.8, 5))
 T.check(r.vmin > 240 and r.vmax < 255, ("FLCH's descent entry (%.1f..%.1f)"):format(r.vmin, r.vmax))
 T.near(i.ias, 250, 1, "descending on the speed")
+-- (2026-11-08) a Mach held in FLCH: its IAS target moving 0.33 kt a second
+-- (M.84 climbing at 2,800 fpm) down in the climb, up in the descent; the
+-- speed on it within 1 kt (the target's rate fed forward). Before, the
+-- closing in SPD_TAU_S lagged it by the rate x 15 s, 5 kt: the perf
+-- session's phase 2 climbed at M.851-.854 for M.840
+local function moving(rate, thrust)
+    local ms = P.new()
+    local mi = inp({mode = "FLCH", ias = 300, spd_sel = 300, vs = 0, tas = 480, tas_ratio = 1.6, alt = 28000})
+    fly_spd(ms, mi, 60, ramp(thrust, 8))
+    local sum, n, t0 = 0, 0, nil
+    fly_spd(ms, mi, 150, function() return thrust end, nil, nil, nil, function(t, ii)
+        ii.spd_sel = 300 + rate * t
+        if t > 90 then sum, n = sum + (ii.ias - ii.spd_sel), n + 1 end
+    end)
+    return sum / n, mi
+end
+local e1, c1 = moving(-0.33, 1.5)
+T.check(math.abs(e1) < 1, ("a Mach held in the climb (the target 0.33 kt/s down): the speed on it (%+.2f kt; before about +5)"):format(e1))
+T.check(c1.vs > 1000, "climbing (" .. math.floor(c1.vs) .. " fpm)")
+local e2, c2 = moving(0.33, -0.8)
+T.check(math.abs(e2) < 1, ("a Mach held in the descent (the target 0.33 kt/s up): the speed on it (%+.2f kt; before about -5)"):format(e2))
+T.check(c2.vs < -500, "descending (" .. math.floor(c2.vs) .. " fpm)")
+-- a new speed selected (a step) is no rate: 300 to 280 kt as before
+local ss = P.new()
+local si = inp({mode = "FLCH", ias = 300, spd_sel = 300, vs = 0, tas = 480, tas_ratio = 1.6, alt = 28000})
+fly_spd(ss, si, 60, ramp(1.5, 8))
+si.spd_sel = 280
+local rs = fly_spd(ss, si, 150, function() return 1.5 end)
+T.check(rs.vmin > 278, ("a step to 280 kt: no undershoot over 2 kt (%.1f)"):format(rs.vmin))
+T.near(si.ias, 280, 1, "at 280 kt")
 T.check(i.vs < -1000, "descending (" .. i.vs .. ")")
 -- the reference protected: under the minimum maneuvering speed with the
 -- flaps out, 5 kt above it
