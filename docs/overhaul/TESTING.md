@@ -333,6 +333,21 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
     - 作った OFP に沿った燃料：距離の釣り合い、追い風、段階上昇、FL350 より上の降下。
     - 作った上限高度の記録からの Service Ceiling（FCOM の 1.30 g の高さで止まるもの、上昇中に止まったもの）、入力シートの行。
     - Fuel Factor の書き方、FMC の ECON の Mach。
+- フェーズ4の記録と比べ（2026-11-08 に作った。X-Plane ではまだ回していない：利用者の最初の飛行の前に、ゲートで確かめる）：
+  - 記録：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\flight_log.ps1 -SimbriefUser <名前>`（または `-OfpFile <ofp.json>`）。
+    - 機体がゲートにいるうちに始める（X-Plane の Web API を 10 分まで待つ）。SimBrief の最新の OFP を取り、キットの 1 秒の記録（perf.ps1 の列）を `runs/<日時>_flight/raw/flight_<番号>.csv` に書く。
+    - WebSocket が切れたら、新しい番号で記録し直す。X-Plane は読むだけ。
+    - 終わり：一度 60 秒続けて飛んだ後、地上で 1 kt 未満が 2 分続いたとき（`Test-FlightEnded`）。`-MaxHours`（既定 20）か、フォルダに `STOP` というファイルを置いても終わる。終わると `report.md` と `compare.json` を書く。
+    - 時間加速は使わない。機体の燃料系は XTLua の `SIM_PERIOD`（実時間）で燃料を減らすので、時間加速の間の燃料は正しくない。レポートは、時間加速の行を数えて知らせる。
+  - 比べ（`flight_report.ps1 -Run <フォルダ>`。記録の終わりにも自動で）：
+    - 離陸は、地上から離れて 30 秒そのまま（60 kt 以上）の最初の行。接地は、最後に地上に戻って 30 秒そのままの行。
+    - OFP のフィックスごとに、航跡の最接近点を探す（前に通ったフィックスの後から、最も近い所より 60 NM 離れるまで。前後の行の間は放物線で補間）。5 NM 以内なら通ったとし、その時刻（離陸から）・残燃料・消費を計画と並べる。到着地は接地。
+    - 計画の T/C と T/D の位置で、上昇・巡航・降下に分ける。Trip Fuel（離陸〜接地の燃料重量の減り）を計画と比べ、±2 % を超えたら、いちばんずれた区間と Fuel Factor の案（今の係数 × 実際 ÷ 計画）を出す。
+    - 巡航の風（計画と、GS − TAS）、重量（計画と実際の ZFW・TOW）、FF 計器の積分も並べる。
+  - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\flight_offline_test.ps1`（47 項目）。
+    - 距離、OFP の係数。
+    - 作った飛行（赤道を東へ）：離陸・接地・最接近・航路から外れたフィックス・区間・Trip・FF 計器・時間加速・修正案。
+    - レポートのファイル、飛行の終わりの判定。
 - 空中スタート：`POST /flight` の `lle_air_start`（真の速さ）・`weight`（ペイロードは acf の `_fixed_max` の比で分け、燃料は機体の積み込み順：`B747.25.xt.fuel.lua` の `fuel_distribution`）・`engine_status`・気象のカスタム定義（ISA の 15 ℃・1013.25 hPa、13 層とも無風・乱気流 0、雲なし、`static`）。初期化が HTTP の誤りで断られたら止まる（`xp.ps1` の `Start-XPFlight` は警告だけで、前のフライトが続いて見える）。キットのランナーと同じく、8 秒後に全エンジンの燃焼を確かめて、もう一度かける。
   - 走らせ終わりに、始めに読んだペイロード（`m_fixed`）へ戻す（2026-11-07 から）。最後の点の 40 t が、後のフライトの機体の読み直しの後も X-Plane に残り、機体の修正のセッションの s108 が 310 t で流れた（前は 270 t）。燃料は戻さない（タンクは機体の燃料モデルが持つ）。
 - 空中スタートの後は、FMC の初期化（F/D・A/T ARM・MCP の速さを今の速さへ巻き取り、ALT HOLD・CMD L：`B747.68.xt.fms.lua` の `activate_inflightAP`）を待ってから MCP を操作する。初期化の終わりは、開始の前に MCP 高度へ 49,000 を書いておき、初期化がそれを今の高度に変えて巻き取りが終わったこと（`altitude/target`・`speed/target` が −1、CMD L、サーボ）で見分ける。2 回目からの空中スタートで、前の点の A/P の状態を初期化の終わりと取り違えないため。MCP は開始の前に IAS に戻す（Mach の窓のまま開始すると、初期化が窓をノットの値へ巻き取る）。
